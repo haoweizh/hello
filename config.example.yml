@@ -1,0 +1,15 @@
+amountrate: 0.7
+between: 5
+binanceorderdis: 0.0009
+channels: 1
+channelslot: 60000 #按照毫秒计算的检查时间间隔
+dbconnection: host= port=5432 user= dbname=testDB password= sslmode=disable
+delay: 7000 #按照毫秒计算时间差
+env: test
+handle: 1
+hangrate: 0.2
+inchina: 0
+mail:
+port: 80
+predealdis: 100
+refreshtimeslot: 60 #second
