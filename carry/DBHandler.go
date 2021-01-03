@@ -117,7 +117,12 @@ func MaintainBalance() {
 		balances := make([]*model.Balance, 0)
 		for _, market := range markets {
 			balances = append(balances, api.GetTransfers(``, ``, market)...)
-			balances = append(balances, api.GetBalance(``, ``, market)...)
+			balance := api.GetBalance(``, ``, market)
+			balances = append(balances, balance...)
+			for _, item := range balance {
+				key := fmt.Sprintf(`[balance]%s_%s_%s`, item.Market, item.Coin, item.BalanceTime.String())
+				model.SetCarryInfo(key, fmt.Sprintf(`%f`, item.Amount))
+			}
 			util.Notice(fmt.Sprintf(`get balances %s %d`, market, len(balances)))
 		}
 		for _, balance := range balances {
@@ -128,7 +133,7 @@ func MaintainBalance() {
 			}
 		}
 		util.Notice(fmt.Sprintf(`get markets %d balances %d`, len(markets), len(balances)))
-		time.Sleep(time.Hour * 12)
+		time.Sleep(time.Hour * 4)
 	}
 }
 
