@@ -121,7 +121,9 @@ func MaintainBalance() {
 			balances = append(balances, balance...)
 			for _, item := range balance {
 				key := fmt.Sprintf(`[balance]%s_%s_%s`, item.Market, item.Coin, item.BalanceTime.String())
-				model.SetCarryInfo(key, fmt.Sprintf(`%f`, item.Amount))
+				if item.Amount > 10 || strings.ToLower(item.Coin) == `btc` {
+					model.SetCarryInfo(key, fmt.Sprintf(`%f`, item.Amount))
+				}
 			}
 			util.Notice(fmt.Sprintf(`get balances %s %d`, market, len(balances)))
 		}
