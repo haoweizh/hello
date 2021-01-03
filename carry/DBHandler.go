@@ -110,13 +110,20 @@ func getBalance(key, secret, market, symbol, accountType string) (
 //}
 
 var feeIndex int
+var balanceMaintainDay = util.GetNow()
 
 func MaintainBalance() {
 	for true {
 		markets := model.GetMarkets()
 		balances := make([]*model.Balance, 0)
+		balanceTime := util.GetNow()
+		duration, _ := time.ParseDuration(`-24h`)
+		balanceTime = balanceTime.Add(duration)
 		for _, market := range markets {
-			balances = append(balances, api.GetTransfers(``, ``, market)...)
+			if balanceTime.After(balanceMaintainDay) {
+				balances = append(balances, api.GetTransfers(``, ``, market)...)
+				balanceMaintainDay = util.GetNow()
+			}
 			balance := api.GetBalance(``, ``, market)
 			balances = append(balances, balance...)
 			for _, item := range balance {
