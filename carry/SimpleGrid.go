@@ -61,19 +61,23 @@ func getGridPos(setting *model.Setting) (gridPos *GridPos) {
 	util.Notice(fmt.Sprintf(`%s %s yesterday:%s get new grid pos with avgN:%f n:%f`,
 		setting.Market, setting.Symbol, yesterdayStr, candle.PriceHigh-candle.PriceLow, candle.N))
 	if candle.PriceHigh-candle.PriceLow < candle.N*2/3 {
-		gridPos = &GridPos{orders: make([]*model.Order, 3), pos: make([]float64, 3), posLength: 3, posMiddle: 1}
-		gridPos.pos[0] = candle.PriceLow - 2*(candle.PriceHigh-p)
-		gridPos.pos[1] = p
-		gridPos.pos[2] = candle.PriceHigh - 2*(candle.PriceLow-p)
+		gridPos = &GridPos{orders: make([]*model.Order, 5), pos: make([]float64, 5), posLength: 5, posMiddle: 2}
+		gridPos.pos[1] = candle.PriceLow - 2*(candle.PriceHigh-p)
+		gridPos.pos[0] = 2*gridPos.pos[1] - p
+		gridPos.pos[2] = p
+		gridPos.pos[3] = candle.PriceHigh - 2*(candle.PriceLow-p)
+		gridPos.pos[4] = 2*gridPos.pos[3] - p
 	} else {
-		gridPos = &GridPos{orders: make([]*model.Order, 7), pos: make([]float64, 7), posLength: 7, posMiddle: 3}
-		gridPos.pos[0] = candle.PriceLow - 2*(candle.PriceHigh-p)
-		gridPos.pos[1] = p - candle.PriceHigh + candle.PriceLow
-		gridPos.pos[2] = 2*p - candle.PriceHigh
-		gridPos.pos[3] = p
-		gridPos.pos[4] = 2*p - candle.PriceLow
-		gridPos.pos[5] = p + candle.PriceHigh - candle.PriceLow
-		gridPos.pos[6] = candle.PriceHigh - 2*(candle.PriceLow-p)
+		gridPos = &GridPos{orders: make([]*model.Order, 9), pos: make([]float64, 9), posLength: 9, posMiddle: 4}
+		gridPos.pos[1] = candle.PriceLow - 2*(candle.PriceHigh-p)
+		gridPos.pos[0] = 2*gridPos.pos[1] - p
+		gridPos.pos[2] = p - candle.PriceHigh + candle.PriceLow
+		gridPos.pos[3] = 2*p - candle.PriceHigh
+		gridPos.pos[4] = p
+		gridPos.pos[5] = 2*p - candle.PriceLow
+		gridPos.pos[6] = p + candle.PriceHigh - candle.PriceLow
+		gridPos.pos[7] = candle.PriceHigh - 2*(candle.PriceLow-p)
+		gridPos.pos[8] = 2*gridPos.pos[7] - p
 	}
 	gridPos.n = candle.N
 	gridPos.amount = calcGridAmount(setting.Market, setting.Symbol, p)

@@ -127,9 +127,9 @@ func MaintainBalance() {
 			balance := api.GetBalance(``, ``, market)
 			balances = append(balances, balance...)
 			for _, item := range balance {
-				key := fmt.Sprintf(`[balance]%s_%s_%s`, item.Market, item.Coin, item.BalanceTime.String())
+				key := fmt.Sprintf(`[balance]%s_%s`, item.Market, item.Coin)
 				if item.Amount > 10 || strings.ToLower(item.Coin) == `btc` {
-					model.SetCarryInfo(key, fmt.Sprintf(`%f`, item.Amount))
+					model.SetCarryInfo(key, fmt.Sprintf(`%f %s`, item.Amount, item.BalanceTime.String()))
 				}
 			}
 			util.Notice(fmt.Sprintf(`get balances %s %d`, market, len(balances)))
