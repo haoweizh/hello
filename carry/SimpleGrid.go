@@ -42,7 +42,7 @@ func calcGridAmount(market, symbol string, price float64) (amount float64) {
 		switch symbol {
 		case `btcusd_p`: //使用10分之一的资本
 			amount = math.Round(value/price) / 10
-		case `linkusd_p`: // 使用五分之一的资本
+		case `linkusd_p`: // 使用10分之一的资本
 			amount = math.Round(value/price/1000) * 100
 		}
 	}
