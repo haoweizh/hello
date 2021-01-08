@@ -44,6 +44,8 @@ func calcGridAmount(market, symbol string, price float64) (amount float64) {
 			amount = math.Round(value/price) / 10
 		case `linkusd_p`: // 使用10分之一的资本
 			amount = math.Round(value/price/1000) * 100
+		case `ethusd_p`:
+			amount = math.Round(value / price / 10)
 		}
 	}
 	return amount
