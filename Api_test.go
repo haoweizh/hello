@@ -11,6 +11,7 @@ import (
 	"hello/util"
 	"math"
 	"testing"
+	"time"
 )
 
 func Test_chan(t *testing.T) {
@@ -95,6 +96,9 @@ func Test_initTurtleN(t *testing.T) {
 func Test_RefreshAccount(t *testing.T) {
 	model.NewConfig()
 	_ = configor.Load(model.AppConfig, "./config.yml")
+	str := `2021-01-11T05:00:00+00:00`
+	testTime, _ := time.Parse(time.RFC3339, str)
+	fmt.Println(testTime)
 	fmt.Println(model.AppConfig.FromMail)
 	fmt.Println(model.AppConfig.FromMailAuth)
 	var err error

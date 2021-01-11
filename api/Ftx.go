@@ -567,6 +567,24 @@ func placeOrderFtx(order *model.Order, key, secret, orderSide, orderType, orderP
 	return
 }
 
+func getFundingRatesFtx() (fundingRates []*model.FundingRate) {
+	response := SignedRequestFtx(``, ``, `GET`,
+		`/funding_rates`, nil, nil)
+	rateJson, err := util.NewJSON(response)
+	if err == nil && rateJson.Get(`result`) != nil {
+		items, _ := rateJson.Get(`result`).Array()
+		fundingRates = make([]*model.FundingRate, len(items))
+		for i, item := range items {
+			value := item.(map[string]interface{})
+			fundingTime, _ := time.Parse(time.RFC3339, value[`time`].(string))
+			rate, _ := value[`rate`].(json.Number).Float64()
+			fundingRates[i] = &model.FundingRate{Symbol: value[`future`].(string), FundingTime: fundingTime,
+				Rate: rate, ID: value[`future`].(string) + value[`time`].(string)}
+		}
+	}
+	return fundingRates
+}
+
 func SignedRequestFtx(key, secret, method, path string, param, body map[string]interface{}) []byte {
 	if key == `` {
 		key = model.AppConfig.FtxKey

@@ -133,6 +133,10 @@ func MaintainBalance() {
 				}
 			}
 			util.Notice(fmt.Sprintf(`get balances %s %d`, market, len(balances)))
+			fundingRates := api.GetFundingRates(market)
+			for _, rate := range fundingRates {
+				model.AppDB.Save(&rate)
+			}
 		}
 		for _, balance := range balances {
 			util.Notice(fmt.Sprintf(`balance info: %s %s %s %f %f %s`,

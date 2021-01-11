@@ -167,7 +167,9 @@ func GetPriceDecimal(market, symbol string) float64 {
 		}
 	case model.Ftx:
 		switch symbol {
-		case `btcusd_p`, `ethusd_p`, `ltcusd_p`, `bchusd_p`, `bsvusd_p`:
+		case `btcusd_p`:
+			return 0
+		case `ethusd_p`, `ltcusd_p`, `bchusd_p`, `bsvusd_p`:
 			return 2
 		case `etcusd_p`:
 			return 4
@@ -497,6 +499,14 @@ func GetBtcBalance(key, secret, market string) (balance float64) {
 		//model.SetBtcBalance(market, today, balance)
 	}
 	return
+}
+
+func GetFundingRates(market string) (fundingRates []*model.FundingRate) {
+	switch market {
+	case market:
+		return getFundingRatesFtx()
+	}
+	return nil
 }
 
 func GetFundingRate(market, symbol string) (fundingRate float64, expireTime int64) {
