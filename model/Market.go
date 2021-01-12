@@ -290,7 +290,7 @@ func (markets *Markets) SetBidAsk(symbol, marketName string, bidAsk *BidAsk) boo
 			markets.lastUp[symbol][marketName] = bidAsk.Ts
 		}
 		current := util.GetNow()
-		AppMetric.addTick(marketName, symbol, current, int(current.UnixNano()/1000000)-bidAsk.Ts)
+		AppMetric.addTick(marketName, symbol, current, bidAsk)
 		return true
 	}
 	return false

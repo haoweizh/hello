@@ -21,7 +21,6 @@ var code = ``
 func ParameterServe() {
 	router := gin.Default()
 	router.LoadHTMLGlob("templates/*")
-	router.GET("/get", GetParameters)
 	router.GET("/", GetParameters)
 	router.GET("/set", SetParameters)
 	router.GET(`/refresh`, RefreshParameters)
@@ -195,24 +194,6 @@ func GetParameters(c *gin.Context) {
 		msg += fmt.Sprintf("%s %s %s %f\n", setting.Function, setting.Market, setting.Symbol, setting.GridAmount)
 	}
 	var orders model.Order
-	//d, _ := time.ParseDuration("-72h")
-	//day := util.GetNow().Add(d)
-	//dayStr := fmt.Sprintf(`%d-%d-%d`, day.Year(), day.Month(), day.Day())
-	//earnRows, _ := model.AppDB.Model(&orders).
-	//	Select(`refresh_type, date(order_time at time zone 'CCT'), order_side, symbol, sum(deal_amount),
-	//		sum(deal_amount/deal_price),sum(deal_amount)/sum(deal_amount/deal_price)`).
-	//	Where(`deal_amount>? and order_time at time zone 'CCT'>?`, 0, dayStr).
-	//	Group(`refresh_type, order_side, date(order_time at time zone 'CCT') , symbol`).
-	//	Order(`date(order_time at time zone 'CCT') desc`).Rows()
-	//if earnRows != nil {
-	//	for earnRows.Next() {
-	//		var refreshType, date, orderSide, symbol, dealAmount, coinAmount, price string
-	//		_ = earnRows.Scan(&refreshType, &date, &orderSide, &symbol, &dealAmount, &coinAmount, &price)
-	//		msg += fmt.Sprintf("[%s实际收支%s]%s %s合约数:%s 代币数:%s 均价:%s \n",
-	//			refreshType, orderSide, date, symbol, dealAmount, coinAmount, price)
-	//	}
-	//	earnRows.Close()
-	//}
 	turtleRows, _ := model.AppDB.Model(&orders).Select(`market,symbol,order_side,price,deal_price,deal_amount`).
 		Where(`deal_amount>? and refresh_type=?`, 0, model.FunctionTurtle).
 		Order(`order_time desc`).Limit(10).Rows()

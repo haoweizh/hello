@@ -14,6 +14,8 @@ type TickMetric struct {
 	delayHigh  int
 	delayAvg   float64
 	delaySum   int
+	priceLow   float64
+	priceHigh  float64
 	countValid int
 	countAll   int
 	start      time.Time
@@ -32,7 +34,7 @@ type MetricManager struct {
 	index       map[string]int                    // market_symbol - index
 }
 
-func (metricManager *MetricManager) addTick(market, symbol string, current time.Time, delay int) {
+func (metricManager *MetricManager) addTick(market, symbol string, current time.Time, bidAsk *BidAsk) {
 	defer metricManager.Lock.Unlock()
 	metricManager.Lock.Lock()
 	marketSymbol := fmt.Sprintf(`%s_%s`, market, symbol)
@@ -44,9 +46,10 @@ func (metricManager *MetricManager) addTick(market, symbol string, current time.
 	}
 	timeStr := fmt.Sprintf(`%d/%d %d`, current.Month(), current.Day(), current.Hour())
 	if metricManager.metricHour[marketSymbol][timeStr] == nil {
-		metricManager.metricHour[marketSymbol][timeStr] = &TickMetric{}
+		metricManager.metricHour[marketSymbol][timeStr] = &TickMetric{priceLow: 0, priceHigh: 0}
 	}
 	tickMetric := metricManager.metricHour[marketSymbol][timeStr]
+	delay := int(current.UnixNano()/1000000) - bidAsk.Ts
 	if tickMetric.delayLow == 0 || tickMetric.delayLow > delay {
 		tickMetric.delayLow = delay
 	}
@@ -55,6 +58,12 @@ func (metricManager *MetricManager) addTick(market, symbol string, current time.
 	}
 	if delay < 100 {
 		tickMetric.countValid++
+	}
+	if tickMetric.priceHigh < bidAsk.Asks[0].Price {
+		tickMetric.priceHigh = bidAsk.Asks[0].Price
+	}
+	if tickMetric.priceLow == 0 || tickMetric.priceLow > bidAsk.Bids[0].Price {
+		tickMetric.priceLow = bidAsk.Bids[0].Price
 	}
 	tickMetric.countAll++
 	tickMetric.delaySum += delay
@@ -98,10 +107,10 @@ func (metricManager *MetricManager) ToString() (metricStr string) {
 			}
 		}
 		tickMetric.delayAvg = float64(tickMetric.delaySum) / float64(tickMetric.countAll)
-		metricStr = metricStr + fmt.Sprintf("[最近tick %s][%d:%d:%d-%d:%d:%d]all:%d <100:%d delay: %d-%d avg: %f\n",
-			marketSymbol, tickMetric.start.Hour(), tickMetric.start.Minute(), tickMetric.start.Second(),
-			tickMetric.end.Hour(), tickMetric.end.Minute(), tickMetric.end.Second(), tickMetric.countAll,
-			tickMetric.countValid, tickMetric.delayLow, tickMetric.delayHigh, tickMetric.delayAvg)
+		metricStr = metricStr + fmt.Sprintf("[最近tick %s][%d:%d:%d-%d:%d:%d]all:%d <100:%d delay: %d-%d avg: %f low-high %f %f\n",
+			marketSymbol, tickMetric.start.Hour(), tickMetric.start.Minute(), tickMetric.start.Second(), tickMetric.end.Hour(),
+			tickMetric.end.Minute(), tickMetric.end.Second(), tickMetric.countAll, tickMetric.countValid, tickMetric.delayLow,
+			tickMetric.delayHigh, tickMetric.delayAvg, tickMetric.priceLow, tickMetric.priceHigh)
 	}
 	now := util.GetNow()
 	timeMap := make(map[string]bool, 12)
