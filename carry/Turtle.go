@@ -399,18 +399,20 @@ func handleBreak(setting *model.Setting, turtleData *TurtleData, orderSide strin
 
 func placeTurtleOrders(turtleData *TurtleData, setting *model.Setting,
 	currentN int64, priceShort, priceLong float64) (short, long float64) {
-	if setting.Chance > 0 && turtleData.end1/turtleData.highDays20 < 0.87 && turtleData.orderShort == nil {
+	amountLimit := int64(setting.AmountLimit)
+	if setting.Chance > 0 && turtleData.end1/turtleData.highDays20 < 0.87 &&
+		(currentN >= amountLimit || setting.Chance >= amountLimit) {
 		priceShort = math.Max(turtleData.lowDays5, setting.PriceX-2*turtleData.n)
 		//util.Notice(fmt.Sprintf(`提前止盈 chance:%f, end1:%f h20:%f`,
 		//	setting.Chance, turtleData.end1, turtleData.highDays20))
 	}
-	if setting.Chance < 0 && turtleData.end1/turtleData.lowDays20 > 1.13 && turtleData.orderLong == nil {
+	if setting.Chance < 0 && turtleData.end1/turtleData.lowDays20 > 1.13 &&
+		(currentN <= -1*amountLimit || setting.Chance <= -1*amountLimit) {
 		priceLong = math.Min(turtleData.highDays5, setting.PriceX+2*turtleData.n)
 		//util.Notice(fmt.Sprintf(`提前止盈 chance: %f, end1:%f l20:%f`,
 		//	setting.Chance, turtleData.end1, turtleData.lowDays20))
 	}
 	instrument, _ := api.GetCurrentInstrument(setting.Market, setting.Symbol)
-	amountLimit := int64(setting.AmountLimit)
 	if turtleData.orderLong == nil && currentN < amountLimit && setting.Chance < amountLimit {
 		orderSide := model.OrderSideBuy
 		typeLong := model.OrderTypeStop

@@ -123,7 +123,7 @@ func (metricManager *MetricManager) ToString() (metricStr string) {
 		metricStr = metricStr + fmt.Sprintf("[%s tick状况]\n", marketSymbol)
 		for str, metric := range timeMetric {
 			if timeMap[str] {
-				metricStr += fmt.Sprintf("%s: all:%d <100:%d delay: %d-%d avg: %f tick low-hign %f %f\n",
+				metricStr += fmt.Sprintf("%s: all:%d <100:%d delay: %d-%d avg: %f tick low-high %f %f\n",
 					str, metric.countAll, metric.countValid, metric.delayLow, metric.delayHigh, metric.delayAvg,
 					metric.priceLow, metric.priceHigh)
 			}
