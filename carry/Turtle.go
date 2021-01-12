@@ -13,6 +13,7 @@ import (
 
 type TurtleData struct {
 	turtleTime time.Time
+	checkTime  time.Time
 	highDays10 float64
 	lowDays10  float64
 	highDays20 float64
@@ -106,7 +107,7 @@ func GetTurtleData(setting *model.Setting) (turtleData *TurtleData) {
 		return dataSet[setting.Market][setting.Symbol][todayStr]
 	}
 	util.Notice(`need to create turtle ` + setting.Market + setting.Symbol)
-	turtleData = &TurtleData{turtleTime: today}
+	turtleData = &TurtleData{turtleTime: today, checkTime: util.GetNow()}
 	var orderLong, orderShort *model.Order
 	model.AppDB.Where("market= ? and symbol= ? and refresh_type= ? and amount>deal_amount and status=? and order_side=?",
 		setting.Market, setting.Symbol, model.FunctionTurtle, model.CarryStatusWorking, model.OrderSideBuy).
@@ -217,9 +218,6 @@ func GetTurtleData(setting *model.Setting) (turtleData *TurtleData) {
 var ProcessTurtle = func(setting *model.Setting) {
 	result, tick := model.AppMarkets.GetBidAsk(setting.Symbol, setting.Market)
 	now := util.GetNowUnixMillion()
-	current := util.GetNow()
-	minute := current.Minute()
-	second := current.Second()
 	if !result || tick == nil || tick.Asks == nil || tick.Bids == nil || model.AppConfig.Handle != `1` ||
 		model.AppPause || now-int64(tick.Ts) > 1000 {
 		return
@@ -248,12 +246,9 @@ var ProcessTurtle = func(setting *model.Setting) {
 		turtleData.amount, setting.Symbol, setting.Chance, currentN, tick.Bids[0].Price, tick.Asks[0].Price))
 	priceLong := turtleData.highDays20
 	priceShort := turtleData.lowDays20
+	longBreak, shortBreak := checkTurtleBreak(setting, turtleData, tick)
 	if setting.Chance == 0 { // 开初始仓
 		priceShort, priceLong = placeTurtleOrders(turtleData, setting, currentN, priceShort, priceLong)
-		if minute%15 == 0 && second == 0 {
-			util.Notice(fmt.Sprintf(`-----chance %d bid-ask %f %f short-long %f %f`,
-				setting.Chance, tick.Bids[0].Price, tick.Asks[0].Price, priceShort, priceLong))
-		}
 		if tick.Asks[0].Price >= priceLong && currentN < int64(setting.AmountLimit) {
 			handleBreak(setting, turtleData, model.OrderSideBuy, priceLong)
 			setting.Chance = 1
@@ -281,12 +276,8 @@ var ProcessTurtle = func(setting *model.Setting) {
 		priceLong = math.Max(turtleData.highDays20, setting.PriceX+turtleData.n/2)
 		priceShort = math.Max(turtleData.lowDays10, setting.PriceX-2*turtleData.n)
 		priceShort, priceLong = placeTurtleOrders(turtleData, setting, currentN, priceShort, priceLong)
-		if minute%15 == 0 && second == 0 {
-			util.Notice(fmt.Sprintf(`-----chance %d bid-ask %f %f short-long %f %f`,
-				setting.Chance, tick.Bids[0].Price, tick.Asks[0].Price, priceShort, priceLong))
-		}
 		// 加仓一个单位
-		if tick.Asks[0].Price >= priceLong && setting.Chance < int64(setting.AmountLimit) &&
+		if (tick.Asks[0].Price >= priceLong || longBreak) && setting.Chance < int64(setting.AmountLimit) &&
 			currentN < int64(setting.AmountLimit) {
 			handleBreak(setting, turtleData, model.OrderSideBuy, priceLong)
 			setting.Chance = setting.Chance + 1
@@ -298,7 +289,7 @@ var ProcessTurtle = func(setting *model.Setting) {
 				setting.Market, setting.Symbol, setting.Chance, setting.GridAmount, currentN, priceShort, priceLong,
 				setting.PriceX, turtleData.n))
 		} // 平多
-		if tick.Bids[0].Price <= priceShort {
+		if tick.Bids[0].Price <= priceShort || shortBreak {
 			handleBreak(setting, turtleData, model.OrderSideSell, priceShort)
 			go util.SendMail(model.AppConfig.FromMail, model.AppConfig.FromMailAuth, `haoweizh@qq.com`, `平多`+setting.Market+setting.Symbol,
 				fmt.Sprintf(`止盈止损at%f 仓位%d 数量 %f`, priceShort, setting.Chance, setting.GridAmount))
@@ -315,12 +306,8 @@ var ProcessTurtle = func(setting *model.Setting) {
 		priceLong = math.Min(turtleData.highDays10, setting.PriceX+2*turtleData.n)
 		priceShort = math.Min(turtleData.lowDays20, setting.PriceX-turtleData.n/2)
 		priceShort, priceLong = placeTurtleOrders(turtleData, setting, currentN, priceShort, priceLong)
-		if minute%15 == 0 && second == 0 {
-			util.Notice(fmt.Sprintf(`-----chance %d bid-ask %f %f short-long %f %f`,
-				setting.Chance, tick.Bids[0].Price, tick.Asks[0].Price, priceShort, priceLong))
-		}
 		// 加仓一个单位
-		if tick.Bids[0].Price <= priceShort && math.Abs(float64(setting.Chance)) < setting.AmountLimit &&
+		if (tick.Bids[0].Price <= priceShort || shortBreak) && math.Abs(float64(setting.Chance)) < setting.AmountLimit &&
 			currentN > int64(-1*setting.AmountLimit) {
 			handleBreak(setting, turtleData, model.OrderSideSell, priceShort)
 			setting.Chance = setting.Chance - 1
@@ -332,7 +319,7 @@ var ProcessTurtle = func(setting *model.Setting) {
 				setting.Market, setting.Symbol, setting.Chance, setting.GridAmount, currentN, priceShort, priceLong,
 				setting.PriceX, turtleData.n))
 		} // liquidate short
-		if tick.Asks[0].Price >= priceLong {
+		if tick.Asks[0].Price >= priceLong || longBreak {
 			handleBreak(setting, turtleData, model.OrderSideBuy, priceLong)
 			go util.SendMail(model.AppConfig.FromMail, model.AppConfig.FromMailAuth, `haoweizh@qq.com`, `平空`+setting.Market+setting.Symbol,
 				fmt.Sprintf(`止盈止损at%f 仓位%d 数量 %f`, priceLong, setting.Chance, setting.GridAmount))
@@ -346,6 +333,33 @@ var ProcessTurtle = func(setting *model.Setting) {
 				setting.PriceX, turtleData.n))
 		}
 	}
+}
+
+func checkTurtleBreak(setting *model.Setting, turtleData *TurtleData, tick *model.BidAsk) (longBreak, shortBreak bool) {
+	duration, _ := time.ParseDuration(`-900s`)
+	now := util.GetNow().Add(duration)
+	if now.After(turtleData.checkTime) {
+		turtleData.checkTime = util.GetNow()
+		if turtleData.orderLong != nil {
+			util.Notice(fmt.Sprintf(`-----chance %s %s %d bid-ask %f %f short %f`,
+				setting.Market, setting.Symbol, setting.Chance, tick.Bids[0].Price, tick.Asks[0].Price, turtleData.orderLong.Price))
+			order := api.QueryOrderById(``, ``, setting.Market, setting.Symbol,
+				turtleData.orderLong.Instrument, turtleData.orderLong.OrderType, turtleData.orderLong.OrderId)
+			if order != nil && order.Status == model.CarryStatusSuccess {
+				longBreak = true
+			}
+		}
+		if turtleData.orderShort != nil {
+			util.Notice(fmt.Sprintf(`-----chance %s %s %d bid-ask %f %f long %f`,
+				setting.Market, setting.Symbol, setting.Chance, tick.Bids[0].Price, tick.Asks[0].Price, turtleData.orderShort.Price))
+			order := api.QueryOrderById(``, ``, setting.Market, setting.Symbol,
+				turtleData.orderShort.Instrument, turtleData.orderShort.OrderType, turtleData.orderShort.OrderId)
+			if order != nil && order.Status == model.CarryStatusSuccess {
+				shortBreak = true
+			}
+		}
+	}
+	return longBreak, shortBreak
 }
 
 func handleBreak(setting *model.Setting, turtleData *TurtleData, orderSide string, price float64) {

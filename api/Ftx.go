@@ -508,8 +508,8 @@ func parseOrderFtx(order *model.Order, item map[string]interface{}) {
 			order.Status = model.CarryStatusFail
 		}
 	}
-	if item[`triggerPrice`] != nil {
-		order.Price, _ = item[`triggerPrice`].(json.Number).Float64()
+	if item[`orderPrice`] != nil {
+		order.Price, _ = item[`orderPrice`].(json.Number).Float64()
 	}
 	if item[`triggeredAt`] != nil {
 		order.OrderUpdateTime, _ = time.Parse(time.RFC3339, item[`triggeredAt`].(string))
