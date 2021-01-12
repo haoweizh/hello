@@ -9,7 +9,6 @@ import (
 	"hello/carry"
 	"hello/model"
 	"hello/util"
-	"math"
 	"testing"
 	"time"
 )
@@ -26,9 +25,15 @@ func Test_chan(t *testing.T) {
 	carry.MaintainMarketChan()
 }
 
+func returnParam(a int) (returnA int) {
+	a = 2
+	return a
+}
+
 func Test_initTurtleN(t *testing.T) {
-	testData := -2.3
-	fmt.Println(math.Ceil(testData))
+	a := 1
+	a = returnParam(a)
+	fmt.Println(a)
 	//model.NewConfig()
 	//_ = configor.Load(model.AppConfig, "./config.yml")
 	//balances := api.GetTransfers(``, ``, model.OKEX)

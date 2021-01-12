@@ -107,10 +107,10 @@ func (metricManager *MetricManager) ToString() (metricStr string) {
 			}
 		}
 		tickMetric.delayAvg = float64(tickMetric.delaySum) / float64(tickMetric.countAll)
-		metricStr = metricStr + fmt.Sprintf("[最近tick %s][%d:%d:%d-%d:%d:%d]all:%d <100:%d delay: %d-%d avg: %f low-high %f %f\n",
+		metricStr = metricStr + fmt.Sprintf("[最近tick %s][%d:%d:%d-%d:%d:%d]all:%d <100:%d delay: %d-%d avg: %f\n",
 			marketSymbol, tickMetric.start.Hour(), tickMetric.start.Minute(), tickMetric.start.Second(), tickMetric.end.Hour(),
 			tickMetric.end.Minute(), tickMetric.end.Second(), tickMetric.countAll, tickMetric.countValid, tickMetric.delayLow,
-			tickMetric.delayHigh, tickMetric.delayAvg, tickMetric.priceLow, tickMetric.priceHigh)
+			tickMetric.delayHigh, tickMetric.delayAvg)
 	}
 	now := util.GetNow()
 	timeMap := make(map[string]bool, 12)
@@ -123,8 +123,9 @@ func (metricManager *MetricManager) ToString() (metricStr string) {
 		metricStr = metricStr + fmt.Sprintf("[%s tick状况]\n", marketSymbol)
 		for str, metric := range timeMetric {
 			if timeMap[str] {
-				metricStr += fmt.Sprintf("%s: all:%d <100:%d delay: %d-%d avg: %f\n",
-					str, metric.countAll, metric.countValid, metric.delayLow, metric.delayHigh, metric.delayAvg)
+				metricStr += fmt.Sprintf("%s: all:%d <100:%d delay: %d-%d avg: %f tick low-hign %f %f\n",
+					str, metric.countAll, metric.countValid, metric.delayLow, metric.delayHigh, metric.delayAvg,
+					metric.priceLow, metric.priceHigh)
 			}
 		}
 	}

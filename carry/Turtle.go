@@ -483,5 +483,11 @@ func placeTurtleOrders(turtleData *TurtleData, setting *model.Setting,
 			turtleData.orderShort.Instrument, turtleData.orderShort.OrderType, turtleData.orderShort.OrderId, true)
 		turtleData.orderShort = nil
 	}
+	current := util.GetNow()
+	minute := current.Minute()
+	second := current.Second()
+	if minute%15 == 0 && second == 0 {
+		util.Notice(fmt.Sprintf(`-----place return short-long %f %f`, priceShort, priceLong))
+	}
 	return priceShort, priceLong
 }
