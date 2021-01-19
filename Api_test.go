@@ -118,9 +118,10 @@ func Test_RefreshAccount(t *testing.T) {
 	//api.PlaceOrder(model.AppConfig.HuobiKey, model.AppConfig.HuobiSecret, model.OrderSideBuy, model.OrderTypeStop,
 	//	model.HuobiDM, `btc_cq`, `BTC200925`, ``, ``, `5`, model.FunctionTurtle,
 	//	12110.2345, 12100, 1.4, true)
-	order2 := api.QueryOrderById(``, ``, model.OKFUTURE, `btc-usd`, `BTC-USD-210326`,
-		model.OrderTypeStop, `6200229905220608`)
-	fmt.Println(order2.Status)
+	//order2 := api.QueryOrderById(``, ``, model.HuobiDM, `btc_cq`, `BTC210326`,
+	//	model.OrderTypeStop, `28312676`)
+	//order2 := api.QueryOrderById(``, ``, model.OKFUTURE, `btc-usd`, `BTC-USD-210326`,
+	//	model.OrderTypeStop, `6200229905220608`)
 	//api.CancelOrder(model.AppConfig.HuobiKey, model.AppConfig.HuobiSecret, model.HuobiDM, `btc_cq`,
 	//	``, model.OrderTypeStop, "9")
 	//order := api.QueryOrderById(``, ``, model.HuobiDM, `btc_cq`, `BTC200925`, model.OrderTypeStop, `11`)

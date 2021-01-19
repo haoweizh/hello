@@ -250,7 +250,7 @@ var ProcessTurtle = func(setting *model.Setting) {
 	if setting.Chance == 0 { // 开初始仓
 		priceShort, priceLong = placeTurtleOrders(turtleData, setting, currentN, priceShort, priceLong)
 		if tick.Asks[0].Price >= priceLong && currentN < int64(setting.AmountLimit) {
-			handleBreak(setting, turtleData, model.OrderSideBuy, priceLong)
+			handleBreak(setting, turtleData, model.OrderSideBuy)
 			setting.Chance = 1
 			setting.GridAmount = turtleData.amount
 			model.AppDB.Model(&setting).Where("market= ? and symbol= ? and function= ?",
@@ -262,7 +262,7 @@ var ProcessTurtle = func(setting *model.Setting) {
 				priceLong, setting.PriceX, turtleData.n))
 		}
 		if tick.Bids[0].Price <= priceShort && currentN > -1*int64(setting.AmountLimit) {
-			handleBreak(setting, turtleData, model.OrderSideSell, priceShort)
+			handleBreak(setting, turtleData, model.OrderSideSell)
 			setting.Chance = -1
 			model.AppDB.Model(&setting).Where("market= ? and symbol= ? and function= ?",
 				setting.Market, setting.Symbol, model.FunctionTurtle).Updates(map[string]interface{}{
@@ -279,7 +279,7 @@ var ProcessTurtle = func(setting *model.Setting) {
 		// 加仓一个单位
 		if (tick.Asks[0].Price >= priceLong || longBreak) && setting.Chance < int64(setting.AmountLimit) &&
 			currentN < int64(setting.AmountLimit) {
-			handleBreak(setting, turtleData, model.OrderSideBuy, priceLong)
+			handleBreak(setting, turtleData, model.OrderSideBuy)
 			setting.Chance = setting.Chance + 1
 			setting.GridAmount = setting.GridAmount + turtleData.amount
 			model.AppDB.Model(&setting).Where("market= ? and symbol= ? and function= ?",
@@ -290,7 +290,7 @@ var ProcessTurtle = func(setting *model.Setting) {
 				setting.PriceX, turtleData.n))
 		} // 平多
 		if tick.Bids[0].Price <= priceShort || shortBreak {
-			handleBreak(setting, turtleData, model.OrderSideSell, priceShort)
+			handleBreak(setting, turtleData, model.OrderSideSell)
 			go util.SendMail(model.AppConfig.FromMail, model.AppConfig.FromMailAuth, `haoweizh@qq.com`, `平多`+setting.Market+setting.Symbol,
 				fmt.Sprintf(`止盈止损at%f 仓位%d 数量 %f`, priceShort, setting.Chance, setting.GridAmount))
 			setting.Chance = 0
@@ -309,7 +309,7 @@ var ProcessTurtle = func(setting *model.Setting) {
 		// 加仓一个单位
 		if (tick.Bids[0].Price <= priceShort || shortBreak) && math.Abs(float64(setting.Chance)) < setting.AmountLimit &&
 			currentN > int64(-1*setting.AmountLimit) {
-			handleBreak(setting, turtleData, model.OrderSideSell, priceShort)
+			handleBreak(setting, turtleData, model.OrderSideSell)
 			setting.Chance = setting.Chance - 1
 			setting.GridAmount = setting.GridAmount + turtleData.amount
 			model.AppDB.Model(&setting).Where("market= ? and symbol= ? and function= ?",
@@ -320,7 +320,7 @@ var ProcessTurtle = func(setting *model.Setting) {
 				setting.PriceX, turtleData.n))
 		} // liquidate short
 		if tick.Asks[0].Price >= priceLong || longBreak {
-			handleBreak(setting, turtleData, model.OrderSideBuy, priceLong)
+			handleBreak(setting, turtleData, model.OrderSideBuy)
 			go util.SendMail(model.AppConfig.FromMail, model.AppConfig.FromMailAuth, `haoweizh@qq.com`, `平空`+setting.Market+setting.Symbol,
 				fmt.Sprintf(`止盈止损at%f 仓位%d 数量 %f`, priceLong, setting.Chance, setting.GridAmount))
 			setting.Chance = 0
@@ -362,7 +362,7 @@ func checkTurtleBreak(setting *model.Setting, turtleData *TurtleData, tick *mode
 	return longBreak, shortBreak
 }
 
-func handleBreak(setting *model.Setting, turtleData *TurtleData, orderSide string, price float64) {
+func handleBreak(setting *model.Setting, turtleData *TurtleData, orderSide string) {
 	if turtleData == nil {
 		//util.Notice(fmt.Sprintf(`fatal error, nil order to break`))
 		return
@@ -374,22 +374,14 @@ func handleBreak(setting *model.Setting, turtleData *TurtleData, orderSide strin
 	if orderQuery != nil {
 		time.Sleep(time.Second * 3)
 		util.Notice(fmt.Sprintf(`query turtle break %s %s`, orderSide, orderQuery.OrderId))
-		order := api.QueryOrderById(``, ``,
-			setting.Market, setting.Symbol, orderQuery.Instrument, orderQuery.OrderType, orderQuery.OrderId)
-		if order != nil && order.DealPrice > 0 && order.Status == model.CarryStatusSuccess {
-			setting.PriceX = order.DealPrice
-		} else {
-			setting.PriceX = price
-			util.Notice(`query order not break`)
-			return
-		}
+		setting.PriceX = orderQuery.TriggerPrice
 		turtleData.orderLong = nil
 		turtleData.orderShort = nil
 		if orderSide == model.OrderSideBuy {
 			for _, short := range turtleData.shorts {
-				short = api.QueryOrderById(``, ``, setting.Market, setting.Symbol, short.Instrument,
+				temp := api.QueryOrderById(``, ``, setting.Market, setting.Symbol, short.Instrument,
 					short.OrderType, short.OrderId)
-				if short.Status == model.CarryStatusWorking {
+				if temp.Status == model.CarryStatusWorking {
 					go api.MustCancel(model.KeyDefault, model.SecretDefault, short.Market, short.Symbol,
 						short.Instrument, short.OrderType, short.OrderId, true)
 				}
@@ -398,9 +390,9 @@ func handleBreak(setting *model.Setting, turtleData *TurtleData, orderSide strin
 			turtleData.shorts = []*model.Order{}
 		} else {
 			for _, long := range turtleData.longs {
-				long = api.QueryOrderById(``, ``, setting.Market, setting.Symbol, long.Instrument,
+				temp := api.QueryOrderById(``, ``, setting.Market, setting.Symbol, long.Instrument,
 					long.OrderType, long.OrderId)
-				if long.Status == model.CarryStatusWorking {
+				if temp.Status == model.CarryStatusWorking {
 					go api.MustCancel(model.KeyDefault, model.SecretDefault, long.Market, long.Symbol,
 						long.Instrument, long.OrderType, long.OrderId, true)
 				}
