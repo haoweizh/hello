@@ -606,7 +606,7 @@ func QueryOrderById(key, secret, market, symbol, instrument, orderType, orderId 
 		}
 	}
 	return &model.Order{OrderId: orderId, Symbol: symbol, Market: market, DealAmount: dealAmount, DealPrice: dealPrice,
-		Status: status, Instrument: instrument}
+		Status: status, Instrument: instrument, OrderType: orderType}
 }
 
 func RefreshCoinAccount(key, secret, setMarket, symbol, setCoin, accountType string) {
