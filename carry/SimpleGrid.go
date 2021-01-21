@@ -131,38 +131,36 @@ func getGridPos(setting *model.Setting) (gridPos *GridPos) {
 	}
 	setting.Chance = int64(gridPos.posMiddle)
 	model.AppDB.Save(setting)
-	amount := 0.0
-	orderSide := model.OrderSideSell
-	for i := 0; i < len(gridPos.pos); i++ {
-		if i < gridPos.posMiddle {
-			orderSide = model.OrderSideBuy
-			amount = gridPos.amount
-		} else if i == gridPos.posMiddle {
-			amount = math.Min(gridPos.amount, math.Abs(setting.GridAmount)-gridPos.amount)
-			if setting.GridAmount > 0 {
-				orderSide = model.OrderSideSell
-			} else if setting.GridAmount < 0 {
-				orderSide = model.OrderSideBuy
-			}
-		} else if i > gridPos.posMiddle {
-			orderSide = model.OrderSideSell
-			amount = gridPos.amount
+	liquidateAmount := setting.GridAmount
+	for i := gridPos.posMiddle + 1; i < len(gridPos.pos); i++ {
+		amount := gridPos.amount
+		if liquidateAmount > 0 {
+			amount = math.Min(2*gridPos.amount, gridPos.amount+liquidateAmount)
+			liquidateAmount = liquidateAmount + setting.GridAmount - amount
 		}
-		if amount > 0 {
-			order := api.PlaceOrder(model.KeyDefault, model.SecretDefault, orderSide, model.OrderTypeLimit,
-				setting.Market, setting.Symbol, ``, ``, ``, ``,
-				model.FunctionGrid, gridPos.pos[i], gridPos.pos[i], amount, false)
-			if i != gridPos.posMiddle {
-				order.GridPos = int64(i)
-				dayGridPos[yesterdayStr][setting.Market][setting.Symbol].orders[i] = order
-			} else {
-				order.GridPos = -1
-				gridPos.orderLiquidate = order
-			}
-			util.Notice(fmt.Sprintf(`init grid %s %s %s at %d index %d pos %s %s %f %f`,
-				setting.Market, setting.Symbol, orderSide, i, order.GridPos, order.OrderId, order.Status, order.Price, order.Amount))
-			model.AppDB.Save(order)
+		order := api.PlaceOrder(model.KeyDefault, model.SecretDefault, model.OrderSideSell, model.OrderTypeLimit,
+			setting.Market, setting.Symbol, ``, ``, ``, ``,
+			model.FunctionGrid, gridPos.pos[i], gridPos.pos[i], amount, false)
+		order.GridPos = int64(i)
+		dayGridPos[yesterdayStr][setting.Market][setting.Symbol].orders[i] = order
+		model.AppDB.Save(order)
+		util.Notice(fmt.Sprintf(`init grid %s %s sell at %d index %d pos %s %s %f %f`,
+			setting.Market, setting.Symbol, i, order.GridPos, order.OrderId, order.Status, order.Price, order.Amount))
+	}
+	for i := gridPos.posMiddle - 1; i >= 0; i-- {
+		amount := gridPos.amount
+		if liquidateAmount < 0 {
+			amount = math.Min(2*gridPos.amount, gridPos.amount-liquidateAmount)
+			liquidateAmount = liquidateAmount + amount - setting.GridAmount
 		}
+		order := api.PlaceOrder(model.KeyDefault, model.SecretDefault, model.OrderSideBuy, model.OrderTypeLimit,
+			setting.Market, setting.Symbol, ``, ``, ``, ``,
+			model.FunctionGrid, gridPos.pos[i], gridPos.pos[i], amount, false)
+		order.GridPos = int64(i)
+		dayGridPos[yesterdayStr][setting.Market][setting.Symbol].orders[i] = order
+		model.AppDB.Save(order)
+		util.Notice(fmt.Sprintf(`init grid %s %s buy at %d index %d pos %s %s %f %f`,
+			setting.Market, setting.Symbol, i, order.GridPos, order.OrderId, order.Status, order.Price, order.Amount))
 	}
 	return gridPos
 }
