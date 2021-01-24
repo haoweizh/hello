@@ -402,33 +402,23 @@ func getAccountFtx(key, secret string, accounts *model.Accounts) {
 	}
 }
 
-func getFundingRateFtx(symbol string) (fundingRate float64, expire int64) {
-	postData := make(map[string]interface{})
-	symbol = model.GetDialectSymbol(model.Ftx, symbol)
-	postData[`future`] = symbol
+func getFundingRatesFtx() (fundingRates []*model.FundingRate) {
 	response := SignedRequestFtx(``, ``, `GET`,
-		`/funding_payments`, nil, postData)
-	instrumentJson, err := util.NewJSON(response)
-	if err == nil {
-		retCode := instrumentJson.Get(`ret_code`).MustFloat64()
-		if retCode != 0 {
-			return 0, 0
-		}
-		instrumentJson = instrumentJson.Get(`result`)
-		if instrumentJson != nil {
-			instrument, _ := instrumentJson.Map()
-			if instrument == nil {
-				return 0, 0
-			}
-			if instrument[`symbol`] != nil && instrument[`symbol`] == symbol &&
-				instrument[`funding_rate`] != nil && instrument[`funding_rate_timestamp`] != nil {
-				fundingRate, _ = strconv.ParseFloat(instrument[`funding_rate`].(string), 64)
-				expire, _ = instrument[`funding_rate_timestamp`].(json.Number).Int64()
-				expire += 28800
-			}
+		`/funding_rates`, nil, nil)
+	util.SocketInfo(string(response))
+	rateJson, err := util.NewJSON(response)
+	if err == nil && rateJson.Get(`result`) != nil {
+		items, _ := rateJson.Get(`result`).Array()
+		fundingRates = make([]*model.FundingRate, len(items))
+		for i, item := range items {
+			value := item.(map[string]interface{})
+			fundingTime, _ := time.Parse(time.RFC3339, value[`time`].(string))
+			rate, _ := value[`rate`].(json.Number).Float64()
+			fundingRates[i] = &model.FundingRate{Symbol: value[`future`].(string), FundingTime: fundingTime,
+				Rate: rate, ID: value[`future`].(string) + value[`time`].(string)}
 		}
 	}
-	return
+	return fundingRates
 }
 
 func parseAccountFtx(account *model.Account, item map[string]interface{}) {
@@ -565,24 +555,6 @@ func placeOrderFtx(order *model.Order, key, secret, orderSide, orderType, orderP
 		}
 	}
 	return
-}
-
-func getFundingRatesFtx() (fundingRates []*model.FundingRate) {
-	response := SignedRequestFtx(``, ``, `GET`,
-		`/funding_rates`, nil, nil)
-	rateJson, err := util.NewJSON(response)
-	if err == nil && rateJson.Get(`result`) != nil {
-		items, _ := rateJson.Get(`result`).Array()
-		fundingRates = make([]*model.FundingRate, len(items))
-		for i, item := range items {
-			value := item.(map[string]interface{})
-			fundingTime, _ := time.Parse(time.RFC3339, value[`time`].(string))
-			rate, _ := value[`rate`].(json.Number).Float64()
-			fundingRates[i] = &model.FundingRate{Symbol: value[`future`].(string), FundingTime: fundingTime,
-				Rate: rate, ID: value[`future`].(string) + value[`time`].(string)}
-		}
-	}
-	return fundingRates
 }
 
 func SignedRequestFtx(key, secret, method, path string, param, body map[string]interface{}) []byte {

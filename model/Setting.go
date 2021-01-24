@@ -15,6 +15,7 @@ type Setting struct {
 	Market            string
 	MarketRelated     string
 	Symbol            string
+	SymbolRelated     string
 	FunctionParameter string
 	AccountType       string
 	PriceX            float64

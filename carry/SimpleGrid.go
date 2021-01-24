@@ -136,7 +136,7 @@ func getGridPos(setting *model.Setting) (gridPos *GridPos) {
 		amount := gridPos.amount
 		if liquidateAmount > 0 {
 			amount = math.Min(2*gridPos.amount, gridPos.amount+liquidateAmount)
-			liquidateAmount = liquidateAmount + setting.GridAmount - amount
+			liquidateAmount = liquidateAmount + gridPos.amount - amount
 		}
 		order := api.PlaceOrder(model.KeyDefault, model.SecretDefault, model.OrderSideSell, model.OrderTypeLimit,
 			setting.Market, setting.Symbol, ``, ``, ``, ``,
@@ -151,7 +151,7 @@ func getGridPos(setting *model.Setting) (gridPos *GridPos) {
 		amount := gridPos.amount
 		if liquidateAmount < 0 {
 			amount = math.Min(2*gridPos.amount, gridPos.amount-liquidateAmount)
-			liquidateAmount = liquidateAmount + amount - setting.GridAmount
+			liquidateAmount = liquidateAmount + amount - gridPos.amount
 		}
 		order := api.PlaceOrder(model.KeyDefault, model.SecretDefault, model.OrderSideBuy, model.OrderTypeLimit,
 			setting.Market, setting.Symbol, ``, ``, ``, ``,

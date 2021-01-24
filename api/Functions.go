@@ -446,17 +446,24 @@ func GetDayCandle(key, secret, market, symbol, instrument string, timeCandle tim
 	return candle
 }
 
-func GetBalance(key, secret, market string) (balances []*model.Balance) {
+func GetBalance(key, secret, market string, delaySeconds int64) (balances []*model.Balance) {
+	now := util.GetNow().Unix()
+	var update int64
+	balances, update = model.GetBalance(market)
+	if now-update < delaySeconds {
+		return balances
+	}
 	switch market {
 	case model.Ftx:
-		return getBalanceFtx(key, secret)
+		balances = getBalanceFtx(key, secret)
 	case model.OKEX:
-		return getBalanceOKEX(key, secret)
+		balances = getBalanceOKEX(key, secret)
 	case model.OKFUTURE:
-		return getBalanceOkfuture(model.AppAccounts)
+		balances = getBalanceOkfuture(model.AppAccounts)
 	case model.HuobiDM:
-		return getBalanceHuobiDM(model.AppAccounts)
+		balances = getBalanceHuobiDM(model.AppAccounts)
 	}
+	model.SetBalance(market, balances, now)
 	return
 }
 
@@ -501,38 +508,47 @@ func GetBtcBalance(key, secret, market string) (balance float64) {
 	return
 }
 
-func GetFundingRates(market string) (fundingRates []*model.FundingRate) {
-	switch market {
-	case market:
-		return getFundingRatesFtx()
-	}
-	return nil
-}
-
-func GetFundingRate(market, symbol string) (fundingRate float64, expireTime int64) {
+func GetFundingRate(market, symbol string) (fundingRate interface{}, expireTime int64) {
 	fundingRate, expireTime = model.GetFundingRate(market, symbol)
 	now := util.GetNow()
-	//if now.Minute() < 30 && (now.Hour()%4 == 0) {
-	//	return 0, expireTime
-	//}
 	if now.Unix()-60 < expireTime {
-		return
+		return fundingRate, expireTime
 	}
 	util.Notice(fmt.Sprintf(`before update funding %s %s rate %f expire %d`,
 		market, symbol, fundingRate, expireTime))
 	switch market {
 	case model.Fmex:
 		fundingRate, expireTime = getFundingRateFmex(symbol)
+		model.SetFundingRate(market, symbol, fundingRate, expireTime)
 	case model.Bitmex:
 		fundingRate, expireTime = getFundingRateBitmex(symbol)
+		model.SetFundingRate(market, symbol, fundingRate, expireTime)
 	case model.Bybit:
 		fundingRate, expireTime = getFundingRateBybit(symbol)
+		model.SetFundingRate(market, symbol, fundingRate, expireTime)
 	case model.OKSwap:
 		fundingRate, expireTime = getFundingRateOKSwap(symbol)
+		model.SetFundingRate(market, symbol, fundingRate, expireTime)
 	case model.Ftx:
-		fundingRate, expireTime = getFundingRateFtx(symbol)
+		rates := getFundingRatesFtx()
+		for _, rate := range rates {
+			go model.AppDB.Save(&rate)
+		}
+		symbolRates := make(map[string][]*model.FundingRate)
+		for _, rate := range rates {
+			if symbolRates[rate.Symbol] == nil {
+				symbolRates[rate.Symbol] = make([]*model.FundingRate, 0)
+			}
+			symbolRates[rate.Symbol] = append(symbolRates[rate.Symbol], rate)
+		}
+		duration, _ := time.ParseDuration(`3600s`)
+		nextHour := now.Add(duration)
+		nextHour = time.Date(nextHour.Year(), nextHour.Month(), nextHour.Day(),
+			nextHour.Hour(), 0, 0, 0, now.Location())
+		for symbol, value := range symbolRates {
+			model.SetFundingRate(market, symbol, value, nextHour.Unix())
+		}
 	}
-	model.SetFundingRate(market, symbol, fundingRate, expireTime)
 	util.Notice(fmt.Sprintf(`after update funding %s %s rate %f expire %d`,
 		market, symbol, fundingRate, expireTime))
 	return

@@ -124,7 +124,7 @@ func MaintainBalance() {
 				balances = append(balances, api.GetTransfers(``, ``, market)...)
 				balanceMaintainDay = util.GetNow()
 			}
-			balance := api.GetBalance(``, ``, market)
+			balance := api.GetBalance(``, ``, market, 0)
 			balances = append(balances, balance...)
 			for _, item := range balance {
 				key := fmt.Sprintf(`[balance]%s_%s`, item.Market, item.Coin)
@@ -133,10 +133,6 @@ func MaintainBalance() {
 				}
 			}
 			util.Notice(fmt.Sprintf(`get balances %s %d`, market, len(balances)))
-			fundingRates := api.GetFundingRates(market)
-			for _, rate := range fundingRates {
-				model.AppDB.Save(&rate)
-			}
 		}
 		for _, balance := range balances {
 			util.Notice(fmt.Sprintf(`balance info: %s %s %s %f %f %s`,
