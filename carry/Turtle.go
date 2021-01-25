@@ -62,15 +62,15 @@ func calcTurtleAmount(market, symbol string, price, n float64) (amount float64) 
 		p := api.GetUSDBalance(``, ``, market)
 		amount = 0.01 * p / n
 		switch symbol {
-		case `btcusd_p`, `ethusd_p`, `eosusd_p`:
+		case `BTC-PERP`, `ETH-PERP`, `EOS-PERP`:
 			amount *= 2
-			if symbol == `btcusd_p` {
+			if symbol == `BTC-PERP` {
 				amount, _ = util.FormatNum(amount, 4)
 			}
-			if symbol == `ethusd_p` {
+			if symbol == `ETH-PERP` {
 				amount, _ = util.FormatNum(amount, 3)
 			}
-		case `htusd_p`, `okbusd_p`, `bnbusd_p`, `btmxusd_p`:
+		case `HT-PERP`, `OKB-PERP`, `BNB-PERP`, `BTMX-PERP`:
 			amount *= 1
 		}
 	case model.OKFUTURE, model.HuobiDM:

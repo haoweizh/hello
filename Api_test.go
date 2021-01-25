@@ -161,7 +161,7 @@ func Test_wallet(t *testing.T) {
 	_ = configor.Load(model.AppConfig, "./config.yml")
 	model.AppDB, _ = gorm.Open("postgres", model.AppConfig.DBConnection)
 	api.InitCarryFtx(5)
-	api.GetFundingRate(model.Ftx, `btcusd_p`)
+	api.GetFundingRate(model.Ftx, `BTC-PERP`)
 	//carry.GetTurtleData(model.Ftx, `okbusd_p`)
 	//var err error
 	//model.AppDB, err = gorm.Open("postgres", model.AppConfig.DBConnection)
@@ -180,9 +180,6 @@ func Test_wallet(t *testing.T) {
 	//order := api.QueryOrderById(model.AppConfig.FtxKey, model.AppConfig.FtxSecret, model.Ftx,
 	//	`btcusd_p`, model.OrderTypeStop, `903993`)
 	//fmt.Print(order.DealPrice)
-	result, _, _, _ := api.CancelOrder(model.AppConfig.BitmexKey, model.AppConfig.BitmexSecret, model.Bitmex,
-		`btcusd_p`, ``, model.OrderTypeStop, `fa9a9293-bcd1-4812-501d-c7529b42efed`)
-	fmt.Print(result)
 	//amount, transfer := api.GetWalletHistoryBitmex(model.AppConfig.BitmexKey, model.AppConfig.BitmexSecret)
 	//fmt.Println(fmt.Sprintf("%f \n%s", amount, transfer))
 	//fmt.Println(api.GetWalletBybit(model.AppConfig.BybitKey, model.AppConfig.BybitSecret))

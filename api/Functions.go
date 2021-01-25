@@ -115,15 +115,15 @@ func GetPriceDecimal(market, symbol string) float64 {
 		}
 	case model.Ftx:
 		switch symbol {
-		case `btcusd_p`:
+		case `BTC-PERP`:
 			return 0
-		case `ethusd_p`, `ltcusd_p`, `bchusd_p`, `bsvusd_p`:
+		case `ETH-PERP`, `LINK-PERP`, `BCH-PERP`, `BSV-PERP`:
 			return 2
-		case `etcusd_p`:
+		case `ETC-PERP`:
 			return 4
-		case `eosusd_p`:
+		case `EOS-PERP`:
 			return 5
-		case `xrpusd_p`:
+		case `XRP-PERP`:
 			return 6
 		}
 	case model.HuobiDM:
@@ -637,7 +637,6 @@ func RefreshAccount(key, secret, market string) {
 	case model.OKFUTURE:
 		getBalanceOkfuture(model.AppAccounts)
 	case model.OKSwap:
-		//getAccountOKSwap(key, secret, `btcusd_p`, model.AppAccounts)
 		symbols := model.GetMarketSymbols(model.OKSwap)
 		for symbol := range symbols {
 			getAccountOKSwap(key, secret, symbol, model.AppAccounts)

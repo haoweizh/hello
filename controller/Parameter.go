@@ -189,7 +189,7 @@ func GetBalance(c *gin.Context) {
 
 func GetParameters(c *gin.Context) {
 	msg := ``
-	settings := model.GetSetting(model.FunctionGrid, model.Ftx, `btcusd_p`)
+	settings := model.GetSetting(model.FunctionGrid, model.Ftx, `LINK-PERP`)
 	for _, setting := range settings {
 		msg += fmt.Sprintf("%s %s %s %f\n", setting.Function, setting.Market, setting.Symbol, setting.GridAmount)
 	}

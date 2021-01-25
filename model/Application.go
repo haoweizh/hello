@@ -137,11 +137,6 @@ func GetDialectSymbol(market, symbol string) (dialectSymbol string) {
 		} else if strings.Contains(symbol, `usdt_p`) {
 			return strings.ToUpper(strings.Split(symbol, `usdt`)[0]) + `-USDT-SWAP`
 		}
-	case Ftx:
-		if strings.Contains(symbol, `usd_p`) {
-			return strings.ToUpper(strings.Split(symbol, `usd`)[0]) + `-PERP`
-		}
-		return symbol
 	}
 	return ``
 }
@@ -159,8 +154,6 @@ func GetStandardSymbol(market, symbol string) (standardSymbol string) {
 		} else if strings.Contains(symbol, `-usdt-swap`) {
 			return strings.Split(symbol, `-usd`)[0] + `usdt_p`
 		}
-	case Ftx:
-		return strings.Split(symbol, `-`)[0] + `usd_p`
 	}
 	return standardSymbol
 }
