@@ -15,7 +15,6 @@ type Setting struct {
 	Market            string
 	MarketRelated     string
 	Symbol            string
-	SymbolRelated     string
 	FunctionParameter string
 	AccountType       string
 	PriceX            float64
@@ -127,6 +126,10 @@ func GetMarketSymbols(market string) map[string]bool {
 	for _, value := range AppSettings {
 		if value.Market == market {
 			symbols[value.Symbol] = true
+			related := value.GetRelatedSymbol()
+			if related != `` {
+				symbols[related] = true
+			}
 		}
 	}
 	return symbols
@@ -147,4 +150,15 @@ func GetMarkets() []string {
 		i++
 	}
 	return markets
+}
+
+func (setting *Setting) GetRelatedSymbol() (related string) {
+	switch setting.Market {
+	case Ftx:
+		parts := strings.Split(setting.Symbol, `-`)
+		if len(parts) == 2 && setting.Function == FunctionCarry {
+			related = parts[0] + `/USD`
+		}
+	}
+	return related
 }

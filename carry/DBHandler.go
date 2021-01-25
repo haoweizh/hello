@@ -276,7 +276,7 @@ func Maintain() {
 	model.HandlerMap[model.FunctionGrid] = ProcessSimpleGrid
 	model.HandlerMap[model.FunctionRefresh] = ProcessRefresh
 	model.HandlerMap[model.FunctionTurtle] = ProcessTurtle
-	model.HandlerMap[model.FunctionCarry] = ProcessCarrySameTime
+	model.HandlerMap[model.FunctionCarry] = ProcessCarry
 	model.HandlerMap[model.FunctionHang] = ProcessHang
 	model.HandlerMap[model.FunctionRank] = ProcessRank
 	model.HandlerMap[model.FunctionHangFar] = ProcessHangFar

@@ -265,7 +265,7 @@ func (markets *Markets) SetBidAsk(symbol, marketName string, bidAsk *BidAsk) boo
 		markets.bidAsks[symbol] = make(map[string]*BidAsk)
 	}
 	if bidAsk == nil || bidAsk.Bids == nil || bidAsk.Asks == nil || bidAsk.Bids.Len() == 0 || bidAsk.Asks.Len() == 0 {
-		util.SocketInfo(`do not set nil or empty bid ask`)
+		util.SocketInfo(marketName + `do not set nil or empty bid ask` + symbol)
 		return false
 	}
 	last := markets.bidAsks[symbol][marketName]

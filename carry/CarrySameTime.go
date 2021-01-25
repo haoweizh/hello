@@ -59,7 +59,8 @@ func _(key string) (carryChannel chan model.Order) {
 	return carryChannels[key]
 }
 
-var ProcessCarrySameTime = func(setting *model.Setting) {
+//ProcessCarrySameTime
+var _ = func(setting *model.Setting) {
 	startTime := util.GetNowUnixMillion()
 	if setting == nil || setting.MarketRelated == `` {
 		return

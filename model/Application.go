@@ -138,7 +138,10 @@ func GetDialectSymbol(market, symbol string) (dialectSymbol string) {
 			return strings.ToUpper(strings.Split(symbol, `usdt`)[0]) + `-USDT-SWAP`
 		}
 	case Ftx:
-		return strings.ToUpper(strings.Split(symbol, `usd`)[0]) + `-PERP`
+		if strings.Contains(symbol, `usd_p`) {
+			return strings.ToUpper(strings.Split(symbol, `usd`)[0]) + `-PERP`
+		}
+		return symbol
 	}
 	return ``
 }

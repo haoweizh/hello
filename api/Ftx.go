@@ -81,7 +81,7 @@ func handleDepthFtx(markets *model.Markets, response *simplejson.Json) {
 	if response == nil {
 		return
 	}
-	symbol := model.GetStandardSymbol(model.Ftx, response.Get("market").MustString())
+	symbol := response.Get("market").MustString()
 	dataType := response.Get(`type`).MustString()
 	data := response.Get(`data`)
 	if data != nil {
@@ -104,6 +104,11 @@ func handleDepthFtx(markets *model.Markets, response *simplejson.Json) {
 				bidAsk.Asks = append(bidAsk.Asks, model.Tick{Price: price, Amount: size})
 			}
 		} else if dataType == `update` {
+			_, oldBidAsk := markets.GetBidAsk(symbol, model.Ftx)
+			if oldBidAsk == nil {
+				util.Notice(fmt.Sprintf(`fatal: can not have old bidask %s %s`, model.Ftx, symbol))
+				return
+			}
 			priceAmountBid := make(map[float64]*model.Tick)
 			priceAmountAsk := make(map[float64]*model.Tick)
 			for _, item := range bids {
@@ -116,7 +121,6 @@ func handleDepthFtx(markets *model.Markets, response *simplejson.Json) {
 				size, _ := item.([]interface{})[1].(json.Number).Float64()
 				priceAmountAsk[price] = &model.Tick{Price: price, Amount: size}
 			}
-			_, oldBidAsk := markets.GetBidAsk(symbol, model.Ftx)
 			for _, bid := range oldBidAsk.Bids {
 				if priceAmountBid[bid.Price] == nil {
 					bidAsk.Bids = append(bidAsk.Bids, bid)
@@ -163,7 +167,6 @@ func handleDepthFtx(markets *model.Markets, response *simplejson.Json) {
 func getCandlesFtx(key, secret, symbol, binSize string, start, end time.Time, count int) (
 	candles map[string]*model.Candle) {
 	candles = make(map[string]*model.Candle)
-	symbolNew := model.GetDialectSymbol(model.Ftx, symbol)
 	param := make(map[string]interface{})
 	if binSize == `1d` {
 		param[`resolution`] = `86400`
@@ -172,7 +175,7 @@ func getCandlesFtx(key, secret, symbol, binSize string, start, end time.Time, co
 	param[`start_time`] = fmt.Sprintf(`%d`, start.Unix())
 	param[`end_time`] = fmt.Sprintf(`%d`, end.Unix())
 	response := SignedRequestFtx(key, secret, `GET`,
-		fmt.Sprintf(`/markets/%s/candles`, symbolNew), param, nil)
+		fmt.Sprintf(`/markets/%s/candles`, symbol), param, nil)
 	candleJson, err := util.NewJSON(response)
 	if err == nil {
 		candleJsons := candleJson.Get(`result`).MustArray()
@@ -348,7 +351,7 @@ func queryTriggerOrderId(key, secret, id string) (orderId string) {
 
 func queryOpenTriggerOrders(key, secret, symbol, triggerId string) (status string) {
 	param := make(map[string]interface{})
-	param[`market`] = model.GetDialectSymbol(model.Ftx, symbol)
+	param[`market`] = symbol
 	response := SignedRequestFtx(key, secret, `GET`, `/conditional_orders`, param, nil)
 	util.SocketInfo(fmt.Sprintf(`query open trigger orders ftx %s: %s`, symbol, string(response)))
 	orderJson, err := util.NewJSON(response)
@@ -429,7 +432,7 @@ func parseAccountFtx(account *model.Account, item map[string]interface{}) {
 		account.LiquidationPrice, _ = item[`estimatedLiquidationPrice`].(json.Number).Float64()
 	}
 	if item[`future`] != nil {
-		account.Currency = model.GetStandardSymbol(model.Ftx, item[`future`].(string))
+		account.Currency = item[`future`].(string)
 	}
 	if item[`netSize`] != nil {
 		account.Free, _ = item[`netSize`].(json.Number).Float64()
@@ -475,7 +478,7 @@ func parseOrderFtx(order *model.Order, item map[string]interface{}) {
 		order.OrderId = item[`id`].(json.Number).String()
 	}
 	if item[`market`] != nil {
-		order.Symbol = model.GetStandardSymbol(model.Ftx, item[`market`].(string))
+		order.Symbol = item[`market`].(string)
 	}
 	if item[`price`] != nil {
 		order.Price, _ = item[`price`].(json.Number).Float64()
@@ -521,7 +524,6 @@ func placeOrderFtx(order *model.Order, key, secret, orderSide, orderType, orderP
 	amount string) {
 	uri := `/orders`
 	param := make(map[string]interface{})
-	symbol = model.GetDialectSymbol(model.Ftx, symbol)
 	param[`market`] = symbol
 	postData := make(map[string]interface{})
 	postData[`market`] = symbol

@@ -67,31 +67,6 @@ func GetPriceDistance(market, symbol string) float64 {
 
 func GetMinAmount(market, symbol string) float64 {
 	switch market {
-	case model.Fcoin:
-		switch symbol {
-		case `btc_usdt`, `btc_pax`, `btc_tusd`, `btc_usdc`:
-			return 0.005
-		case `eth_usdt`, `eth_pax`, `eth_usdc`, `eth_btc`, `dash_usdt`, `dash_btc`, `dash_eth`, `bsv_usdt`, `bsv_btc`,
-			`bch_usdt`, `bch_btc`:
-			return 0.05
-		case `ltc_usdt`, `ltc_pax`, `ltc_usdc`, `ltc_btc`, `ltc_eth`, `zec_usdt`, `zec_btc`, `zec_eth`:
-			return 0.1
-		case `eos_usdt`, `eos_pax`, `eos_usdc`, `eos_btc`, `eos_eth`, `etc_usdt`, `etc_btc`, `etc_eth`, `pax_usdt`,
-			`tusd_usdt`, `usdc_usdt`, `gusd_usdt`:
-			return 1
-		case `xrp_usdt`, `xrp_btc`, `xrp_eth`, `ft_usdt`, `ft_pax`, `fmex_usdt`:
-			return 10
-		case `iota_usdt`, `iota_btc`, `iota_eth`:
-			return 20
-		case `xlm_usdt`, `xlm_btc`, `xlm_eth`:
-			return 50
-		case `ada_usdt`, `ada_btc`, `ada_eth`:
-			return 100
-		case `trx_usdt`, `trx_btc`, `trx_eth`:
-			return 200
-		}
-	case model.Fmex:
-		return 1
 	case model.Bitmex:
 		return 1
 	case model.Bybit:
@@ -110,33 +85,6 @@ func GetMinAmount(market, symbol string) float64 {
 // 根据不同的网站返回价格小数位
 func GetPriceDecimal(market, symbol string) float64 {
 	switch market {
-	case model.Fcoin:
-		//{"status":3022,"msg":"limit price decimal: 5"}
-		switch symbol {
-		case `btc_usdt`, `bch_usdt`, `btc_pax`, `btc_tusd`, `btc_usdc`, `dash_usdt`:
-			return 1
-		case `eth_usdt`, `eth_pax`, `eth_usdc`, `ltc_usdt`, `ltc_pax`, `ltc_usdc`, `zec_usdt`, `bsv_usdt`:
-			return 2
-		case `eos_usdt`, `eos_pax`, `eos_usdc`, `etc_usdt`:
-			return 3
-		case `ft_usdt`, `xrp_usdt`, `iota_usdt`, `ltc_eth`, `xlm_usdt`, `fmex_usdt`, `pax_usdt`, `tusd_usdt`,
-			`usdc_usdt`, `gusd_usdt`, `ft_pax`:
-			return 4
-		case `eth_btc`, `eos_eth`, `ltc_btc`, `bch_btc`, `etc_eth`, `zec_btc`, `trx_usdt`, `ada_usdt`, `dash_btc`,
-			`bsv_btc`:
-			return 5
-		case `etc_btc`, `xrp_eth`, `iota_eth`, `xlm_eth`, `zec_eth`, `dash_eth`:
-			return 6
-		case `eos_btc`, `ada_eth`:
-			return 7
-		case `ft_btc`, `xrp_btc`, `iota_btc`, `ft_eth`, `trx_btc`, `trx_eth`, `xlm_btc`, `ada_btc`:
-			return 8
-		}
-	case model.Fmex:
-		switch symbol {
-		case `btcusd_p`:
-			return 0.5
-		}
 	case model.Coinpark:
 		switch symbol {
 		case `cp_usdt`:
@@ -195,20 +143,6 @@ func GetAmountDecimal(market, symbol string) float64 {
 	case model.OKEX:
 		switch symbol {
 		case `eos_usdt`, `btc_usdt`:
-			return 4
-		}
-	case model.Fcoin:
-		//{"status":3006,"msg":"limit amount decimal: 2"}
-		switch symbol {
-		case `xrp_btc`, `xrp_eth`, `iota_btc`, `iota_eth`:
-			return 0
-		case `eos_btc`, `xrp_usdt`, `eos_eth`, `iota_usdt`, `ft_usdt`, `ft_btc`, `ft_eth`, `trx_usdt`, `fmex_usdt`,
-			`trx_btc`, `trx_eth`, `xlm_btc`, `ada_btc`, `ft_pax`:
-			return 2
-		case `btc_usdt`, `btc_pax`, `,btc_tusd`, `btc_usdc`, `eos_usdt`, `eth_btc`, `eth_usdt`, `ltc_usdt`, `ltc_btc`,
-			`ltc_eth`, `eth_pax`, `eth_usdc`, `eos_pax`, `eos_usdc`, `ltc_pax`, `ltc_usdc`, `xlm_eth`, `zec_eth`,
-			`etc_usdt`, `etc_btc`, `etc_eth`, `bch_btc`, `bch_usdt`, `bsv_usdt`, `zec_usdt`, `xlm_usdt`, `ada_usdt`,
-			`ada_eth`, `dash_usdt`, `dash_btc`, `dash_eth`, `bsv_btc`, `pax_usdt`, `tusd_usdt`, `usdc_usdt`, `gusd_usdt`:
 			return 4
 		}
 	case model.Bitmex, model.Bybit, model.Fmex, model.OKSwap:
@@ -531,8 +465,10 @@ func GetFundingRate(market, symbol string) (fundingRate interface{}, expireTime 
 		model.SetFundingRate(market, symbol, fundingRate, expireTime)
 	case model.Ftx:
 		rates := getFundingRatesFtx()
-		for _, rate := range rates {
-			go model.AppDB.Save(&rate)
+		if model.AppConfig.Env != `test` {
+			for _, rate := range rates {
+				model.AppDB.Save(&rate)
+			}
 		}
 		symbolRates := make(map[string][]*model.FundingRate)
 		for _, rate := range rates {
@@ -548,6 +484,7 @@ func GetFundingRate(market, symbol string) (fundingRate interface{}, expireTime 
 		for symbol, value := range symbolRates {
 			model.SetFundingRate(market, symbol, value, nextHour.Unix())
 		}
+		fundingRate, expireTime = model.GetFundingRate(market, symbol)
 	}
 	util.Notice(fmt.Sprintf(`after update funding %s %s rate %f expire %d`,
 		market, symbol, fundingRate, expireTime))
@@ -991,7 +928,7 @@ func GetWSSubscribe(market, symbol, subType string) (subscribe interface{}) {
 			return `orderBookL2_25.` + subSymbol
 		}
 	case model.Ftx:
-		return []string{`orderbook`, model.GetDialectSymbol(model.Ftx, symbol)}
+		return []string{`orderbook`, symbol}
 	case model.Coinbig:
 		switch symbol {
 		case `btc_usdt`:
@@ -1001,4 +938,26 @@ func GetWSSubscribe(market, symbol, subType string) (subscribe interface{}) {
 		}
 	}
 	return ""
+}
+
+func InitCarryFtx(start uint) {
+	rates := getFundingRatesFtx()
+	symbolRates := make(map[string]bool)
+	for _, rate := range rates {
+		if symbolRates[rate.Symbol] == false {
+			symbolRates[rate.Symbol] = true
+		}
+	}
+	model.AppDB.AutoMigrate(&model.Setting{})
+	for symbol := range symbolRates {
+		start++
+		setting := &model.Setting{
+			Valid:    true,
+			Function: model.FunctionCarry,
+			Market:   model.Ftx,
+			Symbol:   symbol,
+			ID:       start,
+		}
+		model.AppDB.Save(&setting)
+	}
 }
