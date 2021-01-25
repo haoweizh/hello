@@ -433,11 +433,6 @@ func placeTurtleOrders(turtleData *TurtleData, setting *model.Setting,
 				orderSide = model.OrderSideLiquidateShort
 			}
 		}
-		//if priceLong < tick.Asks[0].Price {
-		//	util.Notice(fmt.Sprintf(`fatal issue: (stop long price)%f < %f(market price)`,
-		//		priceLong, tick.Asks[0].Price))
-		//	typeLong = model.OrderTypeLimit
-		//}
 		util.Notice(fmt.Sprintf(`%s %s place stop long chance:%d amount:%f price:%f currentN-limit:%d %f
 			orderSide:%s end1:%f h20:%f h10:%f h5:%f l20:%f l10:%f l5%f`,
 			setting.Market, setting.Symbol, setting.Chance, amount, setting.PriceX, currentN,
