@@ -110,21 +110,6 @@ var _ = func(setting *model.Setting) {
 	placeBothOrders(setting.Market, setting.Symbol, key, tick, tickRelated, freeRelated, setting)
 }
 
-// checkLastBid
-func _(market, symbol, orderSide string) (valid bool) {
-	up, down := model.AppMarkets.GetLastUpDown(symbol, market)
-	now := util.GetNowUnixMillion()
-	if orderSide == model.OrderSideSell && now-int64(down) < 3000 {
-		util.Notice(fmt.Sprintf(`tick trend fail, last down %d`, down))
-		return false
-	}
-	if orderSide == model.OrderSideBuy && now-int64(up) < 3000 {
-		util.Notice(fmt.Sprintf(`tick trend fail, last up %d`, up))
-		return false
-	}
-	return true
-}
-
 func combineOKSwapAccounts(symbol string) (free float64) {
 	accountBuy := model.AppAccounts.GetAccount(model.OKSwap, model.OrderSideBuy+symbol)
 	accountSell := model.AppAccounts.GetAccount(model.OKSwap, model.OrderSideSell+symbol)

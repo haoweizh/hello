@@ -40,17 +40,17 @@ type Rule struct {
 
 type Markets struct {
 	lock            sync.Mutex
-	bmPendingOrders map[string]*Order                     // bm中的orderId-order
-	TrendEnd        map[string]map[string]*Deal           // symbol - market - deal
-	TrendStart      map[string]map[string]*Deal           // symbol - market - deal
-	bidAsks         map[string]map[string]*BidAsk         // symbol - market - bidAsk
-	lastUp          map[string]map[string]int             // symbol - market - time in million second
-	lastDown        map[string]map[string]int             // symbol - market - time in million second
-	trade           map[int64]map[string]map[string]*Deal // time in second - symbol - market - deal
-	BigDeals        map[string]map[string]*Deal           // symbol - market - Deal
-	wsDepth         map[string][]chan struct{}            // market - []depth channel
-	isWriting       map[string]bool                       // market - writing
-	conns           map[string]*websocket.Conn            // market - conn
+	bmPendingOrders map[string]*Order             // bm中的orderId-order
+	TrendEnd        map[string]map[string]*Deal   // symbol - market - deal
+	TrendStart      map[string]map[string]*Deal   // symbol - market - deal
+	bidAsks         map[string]map[string]*BidAsk // symbol - market - bidAsk
+	//lastUp          map[string]map[string]int             // symbol - market - time in million second
+	//lastDown        map[string]map[string]int             // symbol - market - time in million second
+	trade     map[int64]map[string]map[string]*Deal // time in second - symbol - market - deal
+	BigDeals  map[string]map[string]*Deal           // symbol - market - Deal
+	wsDepth   map[string][]chan struct{}            // market - []depth channel
+	isWriting map[string]bool                       // market - writing
+	conns     map[string]*websocket.Conn            // market - conn
 }
 
 func NewMarkets() *Markets {
@@ -242,16 +242,6 @@ func (markets *Markets) GetBidAsk(symbol, market string) (result bool, bidAsk *B
 	return true, markets.bidAsks[symbol][market]
 }
 
-func (markets *Markets) GetLastUpDown(symbol, marketName string) (up, down int) {
-	markets.lock.Lock()
-	defer markets.lock.Unlock()
-	if markets.lastUp == nil || markets.lastDown == nil || markets.lastUp[symbol] == nil ||
-		markets.lastDown[symbol] == nil {
-		return 0, 0
-	}
-	return markets.lastUp[symbol][marketName], markets.lastDown[symbol][marketName]
-}
-
 func (markets *Markets) SetBidAsk(symbol, marketName string, bidAsk *BidAsk) bool {
 	markets.lock.Lock()
 	defer markets.lock.Unlock()
@@ -271,26 +261,8 @@ func (markets *Markets) SetBidAsk(symbol, marketName string, bidAsk *BidAsk) boo
 	last := markets.bidAsks[symbol][marketName]
 	if last == nil || markets.bidAsks[symbol][marketName].Ts <= bidAsk.Ts {
 		markets.bidAsks[symbol][marketName] = bidAsk
-		if last != nil && last.Bids[0].Price > bidAsk.Bids[0].Price {
-			if markets.lastDown == nil {
-				markets.lastDown = make(map[string]map[string]int)
-			}
-			if markets.lastDown[symbol] == nil {
-				markets.lastDown[symbol] = make(map[string]int)
-			}
-			markets.lastDown[symbol][marketName] = bidAsk.Ts
-		}
-		if last != nil && last.Asks[0].Price < bidAsk.Asks[0].Price {
-			if markets.lastUp == nil {
-				markets.lastUp = make(map[string]map[string]int)
-			}
-			if markets.lastUp[symbol] == nil {
-				markets.lastUp[symbol] = make(map[string]int)
-			}
-			markets.lastUp[symbol][marketName] = bidAsk.Ts
-		}
-		current := util.GetNow()
-		AppMetric.addTick(marketName, symbol, current, bidAsk)
+		//current := util.GetNow()
+		//AppMetric.addTick(marketName, symbol, current, bidAsk)
 		return true
 	}
 	return false
