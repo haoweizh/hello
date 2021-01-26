@@ -52,7 +52,6 @@ func WsDepthServeFtx(markets *model.Markets, errHandler ErrHandler) (chan struct
 	wsHandler := func(event []byte) {
 		defer socketLockFtx.Unlock()
 		socketLockFtx.Lock()
-		fmt.Println(string(event))
 		responseJson, err := util.NewJSON(event)
 		if err != nil {
 			errHandler(err)
@@ -284,7 +283,6 @@ func parseTransactionFtx(data map[string]interface{}, action float64) (balance *
 	}
 	if data[`time`] != nil {
 		balance.BalanceTime, _ = time.Parse(time.RFC3339Nano, data[`time`].(string))
-		fmt.Println(balance.BalanceTime)
 	}
 	if data[`status`] != nil {
 		balance.Status, _ = data[`status`].(string)
