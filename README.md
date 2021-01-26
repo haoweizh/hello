@@ -1,39 +1,134 @@
-# Once task is done, refresh log data.
-        task_info = {}
-        response = {
-            'id': result.id,
-            'name': result.name, # Need set result_extended
-            'state': str(result.state),
-            'finished': finished,
-            'success': not result.failed(),
-            'worker': str(worker),
-            'log_link': log_link,
-            'date_done': None
-        }
-        standalone = result.name == "tasks.run_standalone"
-        finished = False
-        if result.ready():
-            try:
-                task_info = result.get()
-                # Only standalone task has gr result.
-                if task_info:
-                    response['node'] = task_info.get('node')
-                    response['testdir'] = task_info.get('testdir')
-                    response['receivers'] = task_info.get('receivers')
-                    response['cert_type'] = task_info.get('cert_type')
-                    response['enable_spf'] = task_info.get('enable_spf')
-                    response['gr_result'] = task_info.get('gr_result', 'unknown')
-                    response['gr_status'] = task_info.get('gr_status', {})
-                    response['finished'] = True
-                    start = task_info['started_at']
-                    end = task_info['finished_at']
-                    worker = task_info['worker']
-            except Exception as e:
-                logger.exception(e)
-                finished = True
-            # Only standalone task has result
-        log_link = compose_log_link(start, end=end, podname=worker)
-        # Update the data_done once task finished.
-        if result.date_done:
-            response['date_done'] = result.date_done.strftime('%Y-%m-%dT%H:%M:%S.%fZ')
-        return Response(response)
+[最近tick ftx_FTT-PERP][16:8:9-16:8:24]all:100 <100:100 delay: 6-44 avg: 14.470000
+[最近tick ftx_PAXG-PERP][16:7:50-16:8:24]all:100 <100:100 delay: 6-40 avg: 12.840000
+[最近tick ftx_OMG-PERP][16:8:11-16:8:24]all:100 <100:99 delay: 7-149 avg: 13.340000
+[最近tick ftx_UNI-PERP][16:8:19-16:8:24]all:100 <100:100 delay: 8-52 avg: 16.300000
+[最近tick ftx_OMG/USD][16:7:44-16:8:24]all:100 <100:100 delay: 7-28 avg: 11.000000
+[最近tick ftx_XMR-PERP][16:8:13-16:8:24]all:100 <100:100 delay: 7-61 avg: 14.920000
+[最近tick ftx_ZEC-PERP][16:8:13-16:8:24]all:100 <100:100 delay: 7-38 avg: 15.090000
+[最近tick ftx_LTC/USD][16:8:14-16:8:24]all:100 <100:100 delay: 7-21 avg: 10.750000
+[最近tick ftx_WAVES-PERP][16:8:19-16:8:24]all:100 <100:100 delay: 7-75 avg: 14.780000
+[最近tick ftx_XAUT/USD][16:7:40-16:8:23]all:100 <100:100 delay: 7-37 avg: 12.470000
+[最近tick ftx_CUSDT-PERP][16:7:16-16:8:24]all:100 <100:98 delay: 6-106 avg: 15.710000
+[最近tick ftx_DOGE/USD][16:8:0-16:8:24]all:100 <100:100 delay: 7-32 avg: 12.470000
+[最近tick ftx_YFI-PERP][16:8:16-16:8:24]all:100 <100:100 delay: 8-75 avg: 15.860000
+[最近tick ftx_TOMO/USD][16:7:51-16:8:23]all:100 <100:100 delay: 6-20 avg: 9.630000
+[最近tick ftx_1INCH/USD][16:7:47-16:8:24]all:100 <100:100 delay: 7-25 avg: 11.280000
+[最近tick ftx_XAUT-PERP][16:7:54-16:8:24]all:100 <100:100 delay: 6-24 avg: 10.850000
+[最近tick ftx_AAVE/USD][16:8:6-16:8:23]all:100 <100:100 delay: 7-21 avg: 11.270000
+[最近tick ftx_GRT/USD][16:7:37-16:8:23]all:100 <100:100 delay: 7-26 avg: 12.460000
+[最近tick ftx_HNT-PERP][16:8:14-16:8:24]all:100 <100:100 delay: 7-27 avg: 13.040000
+[最近tick ftx_XRP-PERP][16:8:20-16:8:24]all:100 <100:100 delay: 8-37 avg: 14.600000
+[最近tick ftx_BAND/USD][16:7:31-16:8:24]all:100 <100:100 delay: 7-26 avg: 11.490000
+[最近tick ftx_ALPHA/USD][16:8:6-16:8:24]all:100 <100:99 delay: 6-175 avg: 12.930000
+[最近tick ftx_SHIT-PERP][16:7:48-16:8:23]all:100 <100:100 delay: 8-37 avg: 14.270000
+[最近tick ftx_TRYB-PERP][16:7:27-16:8:24]all:100 <100:100 delay: 6-85 avg: 12.100000
+[最近tick ftx_SECO-PERP][16:7:3-16:8:23]all:100 <100:100 delay: 9-57 avg: 14.330000
+[最近tick ftx_TRX/USD][16:7:54-16:8:24]all:100 <100:100 delay: 10-73 avg: 14.550000
+[最近tick ftx_BTC-PERP][16:8:21-16:8:24]all:100 <100:100 delay: 7-36 avg: 13.940000
+[最近tick ftx_VET-PERP][16:8:14-16:8:24]all:100 <100:100 delay: 8-45 avg: 13.830000
+[最近tick ftx_MTA/USD][16:8:10-16:8:24]all:100 <100:100 delay: 7-20 avg: 10.490000
+[最近tick ftx_HOLY-PERP][16:7:16-16:8:24]all:100 <100:100 delay: 7-95 avg: 14.640000
+[最近tick ftx_XLM-PERP][16:8:19-16:8:24]all:100 <100:100 delay: 7-52 avg: 14.520000
+[最近tick ftx_KSM-PERP][16:8:10-16:8:24]all:100 <100:100 delay: 7-48 avg: 11.380000
+[最近tick ftx_USDT/USD][16:7:43-16:8:23]all:100 <100:99 delay: 9-187 avg: 16.190000
+[最近tick ftx_COMP/USD][16:8:3-16:8:24]all:100 <100:100 delay: 7-29 avg: 10.870000
+[最近tick ftx_KNC/USD][16:7:14-16:8:24]all:100 <100:100 delay: 6-16 avg: 9.730000
+[最近tick ftx_HOLY/USD][16:7:39-16:8:24]all:100 <100:100 delay: 6-49 avg: 14.020000
+[最近tick ftx_HNT/USD][16:7:37-16:8:24]all:100 <100:100 delay: 6-24 avg: 10.720000
+[最近tick ftx_AVAX-PERP][16:8:9-16:8:24]all:100 <100:100 delay: 8-42 avg: 15.890000
+[最近tick ftx_SNX-PERP][16:8:18-16:8:24]all:100 <100:99 delay: 7-184 avg: 15.640000
+[最近tick ftx_AMPL/USD][16:7:41-16:8:24]all:100 <100:100 delay: 10-38 avg: 14.650000
+[最近tick ftx_BSV-PERP][16:8:16-16:8:24]all:100 <100:100 delay: 7-64 avg: 16.420000
+[最近tick ftx_SXP-PERP][16:8:14-16:8:24]all:100 <100:100 delay: 8-61 avg: 16.500000
+[最近tick ftx_SECO/USD][16:7:31-16:8:23]all:100 <100:100 delay: 6-48 avg: 12.030000
+[最近tick ftx_BAT-PERP][16:8:8-16:8:24]all:100 <100:100 delay: 9-37 avg: 17.260000
+[最近tick ftx_RSR/USD][16:7:53-16:8:23]all:100 <100:100 delay: 9-45 avg: 13.610000
+[最近tick ftx_SUSHI-PERP][16:8:20-16:8:24]all:100 <100:100 delay: 8-44 avg: 14.020000
+[最近tick ftx_BCH-PERP][16:8:19-16:8:24]all:100 <100:100 delay: 11-54 avg: 18.880000
+[最近tick ftx_EOS-PERP][16:8:17-16:8:24]all:100 <100:100 delay: 8-64 avg: 15.440000
+[最近tick ftx_AAVE-PERP][16:8:17-16:8:24]all:100 <100:100 delay: 7-67 avg: 13.630000
+[最近tick ftx_SUSHI/USD][16:8:13-16:8:24]all:100 <100:100 delay: 7-41 avg: 11.650000
+[最近tick ftx_EXCH-PERP][16:7:52-16:8:24]all:100 <100:100 delay: 6-46 avg: 13.860000
+[最近tick ftx_YFII/USD][16:7:23-16:8:24]all:100 <100:100 delay: 7-23 avg: 11.490000
+[最近tick ftx_LEO-PERP][16:7:36-16:8:23]all:100 <100:100 delay: 6-35 avg: 12.510000
+[最近tick ftx_ALPHA-PERP][16:8:17-16:8:24]all:100 <100:100 delay: 7-54 avg: 12.330000
+[最近tick ftx_KNC-PERP][16:8:5-16:8:24]all:100 <100:100 delay: 8-37 avg: 14.220000
+[最近tick ftx_HT/USD][16:7:42-16:8:24]all:100 <100:100 delay: 7-26 avg: 10.570000
+[最近tick ftx_BCH/USD][16:8:14-16:8:24]all:100 <100:100 delay: 7-37 avg: 11.380000
+[最近tick ftx_OKB-PERP][16:8:2-16:8:24]all:100 <100:100 delay: 7-44 avg: 13.720000
+[最近tick ftx_GRT-PERP][16:8:17-16:8:24]all:100 <100:100 delay: 7-49 avg: 12.430000
+[最近tick ftx_TOMO-PERP][16:8:12-16:8:24]all:100 <100:100 delay: 7-33 avg: 12.800000
+[最近tick ftx_BAND-PERP][16:8:13-16:8:24]all:100 <100:100 delay: 8-40 avg: 15.690000
+[最近tick ftx_DOGE-PERP][16:8:15-16:8:24]all:100 <100:100 delay: 11-52 avg: 16.260000
+[最近tick ftx_ATOM-PERP][16:8:16-16:8:24]all:100 <100:100 delay: 7-61 avg: 15.260000
+[最近tick ftx_MATIC-PERP][16:8:16-16:8:24]all:100 <100:100 delay: 7-60 avg: 15.120000
+[最近tick ftx_UNI/USD][16:8:10-16:8:24]all:100 <100:100 delay: 7-25 avg: 10.900000
+[最近tick ftx_PAXG/USD][16:6:58-16:8:23]all:100 <100:100 delay: 10-32 avg: 13.690000
+[最近tick ftx_CRV/USD][16:7:31-16:8:24]all:100 <100:100 delay: 7-25 avg: 12.470000
+[最近tick ftx_NEO-PERP][16:8:14-16:8:24]all:100 <100:100 delay: 7-45 avg: 14.580000
+[最近tick ftx_EGLD-PERP][16:8:11-16:8:24]all:100 <100:100 delay: 8-43 avg: 14.720000
+[最近tick ftx_CUSDT/USD][16:7:1-16:8:23]all:100 <100:100 delay: 6-34 avg: 14.150000
+[最近tick ftx_BAT/USD][16:7:43-16:8:23]all:100 <100:100 delay: 7-37 avg: 12.270000
+[最近tick ftx_CHZ-PERP][16:8:2-16:8:24]all:100 <100:100 delay: 7-33 avg: 12.910000
+[最近tick ftx_ETH/USD][16:8:20-16:8:24]all:100 <100:100 delay: 10-36 avg: 14.720000
+[最近tick ftx_MTA-PERP][16:7:48-16:8:23]all:100 <100:98 delay: 7-205 avg: 16.420000
+[最近tick ftx_ETC-PERP][16:8:12-16:8:24]all:100 <100:100 delay: 10-41 avg: 14.980000
+[最近tick ftx_BTMX/USD][16:7:53-16:8:24]all:100 <100:100 delay: 6-49 avg: 17.760000
+[最近tick ftx_COMP-PERP][16:8:18-16:8:24]all:100 <100:100 delay: 8-94 avg: 18.820000
+[最近tick ftx_FIL-PERP][16:8:5-16:8:23]all:100 <100:100 delay: 8-31 avg: 12.980000
+[最近tick ftx_YFII-PERP][16:8:0-16:8:24]all:100 <100:100 delay: 7-43 avg: 14.200000
+[最近tick ftx_DOT-PERP][16:8:17-16:8:24]all:100 <100:99 delay: 8-242 avg: 16.910000
+[最近tick ftx_THETA-PERP][16:8:17-16:8:24]all:100 <100:99 delay: 10-104 avg: 18.650000
+[最近tick ftx_CREAM-PERP][16:8:1-16:8:24]all:100 <100:99 delay: 7-110 avg: 15.850000
+[最近tick ftx_DEFI-PERP][16:8:9-16:8:24]all:100 <100:100 delay: 8-85 avg: 17.100000
+[最近tick ftx_SNX/USD][16:7:51-16:8:24]all:100 <100:100 delay: 7-32 avg: 11.210000
+[最近tick ftx_HT-PERP][16:8:1-16:8:24]all:100 <100:100 delay: 7-35 avg: 11.610000
+[最近tick ftx_CREAM/USD][16:7:58-16:8:24]all:100 <100:100 delay: 7-24 avg: 12.180000
+[最近tick ftx_SOL-PERP][16:8:14-16:8:24]all:100 <100:100 delay: 10-71 avg: 16.740000
+[最近tick ftx_PRIV-PERP][16:7:52-16:8:24]all:100 <100:100 delay: 6-57 avg: 13.350000
+[最近tick ftx_SXP/USD][16:7:56-16:8:24]all:100 <100:100 delay: 7-21 avg: 11.920000
+[最近tick ftx_MATIC/USD][16:7:54-16:8:24]all:100 <100:100 delay: 7-57 avg: 11.550000
+[最近tick ftx_FTT/USD][16:8:7-16:8:24]all:100 <100:100 delay: 7-35 avg: 13.060000
+[最近tick ftx_OKB/USD][16:7:13-16:8:24]all:100 <100:100 delay: 6-39 avg: 12.000000
+[最近tick ftx_AMPL-PERP][16:7:55-16:8:24]all:100 <100:99 delay: 9-178 avg: 18.920000
+[最近tick ftx_ALT-PERP][16:8:3-16:8:24]all:100 <100:100 delay: 7-65 avg: 16.110000
+[最近tick ftx_CRV-PERP][16:8:15-16:8:24]all:100 <100:100 delay: 7-51 avg: 12.860000
+[最近tick ftx_ETH-PERP][16:8:21-16:8:24]all:100 <100:100 delay: 10-47 avg: 16.100000
+[最近tick ftx_YFI/USD][16:8:4-16:8:24]all:100 <100:100 delay: 7-36 avg: 11.180000
+[最近tick ftx_RUNE/USD][16:8:16-16:8:24]all:100 <100:100 delay: 10-54 avg: 15.480000
+[最近tick ftx_USDT-PERP][16:7:5-16:8:24]all:100 <100:99 delay: 9-140 avg: 17.270000
+[最近tick ftx_RUNE-PERP][16:8:15-16:8:24]all:100 <100:100 delay: 7-64 avg: 14.680000
+[最近tick ftx_FLM-PERP][16:8:5-16:8:24]all:100 <100:100 delay: 7-61 avg: 12.520000
+[最近tick ftx_CEL/USD][16:7:8-16:8:23]all:100 <100:100 delay: 10-31 avg: 15.310000
+[最近tick ftx_MKR/USD][16:7:7-16:8:23]all:100 <100:100 delay: 8-21 avg: 11.470000
+[最近tick ftx_LEO/USD][16:6:54-16:8:23]all:100 <100:100 delay: 8-32 avg: 13.540000
+[最近tick ftx_LTC-PERP][16:8:20-16:8:24]all:100 <100:99 delay: 8-102 avg: 16.060000
+[最近tick ftx_DRGN-PERP][16:7:55-16:8:23]all:100 <100:100 delay: 7-46 avg: 13.910000
+[最近tick ftx_XTZ-PERP][16:8:14-16:8:24]all:100 <100:100 delay: 9-75 avg: 18.540000
+[最近tick ftx_BRZ-PERP][16:7:1-16:8:24]all:100 <100:99 delay: 7-181 avg: 16.120000
+[最近tick ftx_LINK/USD][16:8:17-16:8:24]all:100 <100:100 delay: 7-25 avg: 11.050000
+[最近tick ftx_BTMX-PERP][16:8:0-16:8:24]all:100 <100:100 delay: 10-72 avg: 21.450000
+[最近tick ftx_BNB-PERP][16:8:19-16:8:24]all:100 <100:100 delay: 8-72 avg: 16.190000
+[最近tick ftx_RSR-PERP][16:8:15-16:8:24]all:100 <100:99 delay: 7-213 avg: 16.470000
+[最近tick ftx_XRP/USD][16:8:6-16:8:24]all:100 <100:100 delay: 9-26 avg: 13.700000
+[最近tick ftx_ADA-PERP][16:8:20-16:8:24]all:100 <100:100 delay: 7-35 avg: 12.090000
+[最近tick ftx_MKR-PERP][16:8:9-16:8:24]all:100 <100:100 delay: 7-55 avg: 14.940000
+[最近tick ftx_ONT-PERP][16:8:8-16:8:24]all:100 <100:100 delay: 10-27 avg: 12.780000
+[最近tick ftx_LINK-PERP][16:8:21-16:8:24]all:100 <100:100 delay: 8-40 avg: 15.350000
+[最近tick ftx_TRU/USD][16:7:46-16:8:24]all:100 <100:100 delay: 7-59 avg: 11.130000
+[最近tick ftx_DMG-PERP][16:7:26-16:8:23]all:100 <100:100 delay: 6-59 avg: 14.730000
+[最近tick ftx_SOL/USD][16:8:3-16:8:24]all:100 <100:100 delay: 8-26 avg: 12.730000
+[最近tick ftx_UNISWAP-PERP][16:7:28-16:8:23]all:100 <100:100 delay: 7-72 avg: 15.150000
+[最近tick ftx_BAL/USD][16:7:50-16:8:24]all:100 <100:100 delay: 7-55 avg: 10.930000
+[最近tick ftx_TRYB/USD][16:7:1-16:8:24]all:100 <100:100 delay: 6-41 avg: 15.060000
+[最近tick ftx_ALGO-PERP][16:8:14-16:8:24]all:100 <100:100 delay: 8-59 avg: 14.800000
+[最近tick ftx_MID-PERP][16:8:8-16:8:24]all:100 <100:100 delay: 6-38 avg: 12.600000
+[最近tick ftx_1INCH-PERP][16:8:20-16:8:24]all:100 <100:100 delay: 8-25 avg: 11.570000
+[最近tick ftx_DMG/USD][16:6:59-16:8:24]all:100 <100:99 delay: 7-172 avg: 17.980000
+[最近tick ftx_TRX-PERP][16:8:10-16:8:24]all:100 <100:99 delay: 10-187 avg: 20.930000
+[最近tick ftx_BTC/USD][16:8:20-16:8:24]all:100 <100:100 delay: 8-37 avg: 13.720000
+[最近tick ftx_WAVES/USD][16:8:5-16:8:24]all:100 <100:100 delay: 6-46 avg: 10.850000
+[最近tick ftx_TRU-PERP][16:8:1-16:8:24]all:100 <100:100 delay: 9-62 avg: 14.410000
+[最近tick ftx_CHZ/USD][16:7:59-16:8:23]all:100 <100:100 delay: 6-26 avg: 10.470000
+[最近tick ftx_BAL-PERP][16:8:12-16:8:24]all:100 <100:100 delay: 7-31 avg: 13.890000
+[最近tick ftx_BNB/USD][16:8:18-16:8:24]all:100 <100:100 delay: 7-47 avg: 13.030000
