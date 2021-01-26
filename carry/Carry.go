@@ -37,7 +37,8 @@ func setCarrying(value bool) {
 //ProcessCarry
 var ProcessCarry = func(setting *model.Setting) {
 	_, tickPerp := model.AppMarkets.GetBidAsk(setting.Symbol, setting.Market)
-	_, tickRelated := model.AppMarkets.GetBidAsk(setting.GetRelatedSymbol(), setting.Market)
+	symbolRelated := setting.GetRelatedSymbol()
+	_, tickRelated := model.AppMarkets.GetBidAsk(symbolRelated, setting.Market)
 	now := util.GetNowUnixMillion()
 	if tickPerp == nil || tickRelated == nil || tickPerp.Asks == nil || tickPerp.Bids == nil ||
 		tickRelated.Asks == nil || tickRelated.Bids == nil || model.AppConfig.Handle != `1` ||
@@ -65,6 +66,10 @@ var ProcessCarry = func(setting *model.Setting) {
 		util.Notice(fmt.Sprintf(`[carry] set wealth %f usd %f`, wealth, usdValue))
 		return
 	}
+	symbols := model.GetMarketSymbols(setting.Market)
+	if float64(len(perpSnapshot)) < 0.9*float64(len(symbols)) {
+		return
+	}
 	openAmount := math.Min((usdValue-wealth/2)/tickPerp.Asks[0].Price,
 		math.Min(tickPerp.Bids[0].Amount/2, tickRelated.Asks[0].Amount/2))
 	score := 1 - tickRelated.Asks[0].Price*(1+2*FTXFee)/tickPerp.Bids[0].Price + rateSum
@@ -77,10 +82,14 @@ var ProcessCarry = func(setting *model.Setting) {
 		}
 	}
 	if highestSymbol == setting.Symbol {
-		for s, value := range perpSnapshot {
-			util.Notice(fmt.Sprintf(`size: %d %s score: %f rateSum %f holding %f open: %f`,
-				len(perpSnapshot), s, value, rateSum, setting.GridAmount, openAmount))
-		}
+		go api.PlaceOrder(``, ``, model.OrderSideSell, model.OrderTypeMarket, setting.Market, setting.Symbol,
+			``, ``, ``, ``, model.FunctionCarry, tickPerp.Bids[0].Price,
+			tickPerp.Bids[0].Price, openAmount, true)
+		go api.PlaceOrder(``, ``, model.OrderSideBuy, model.OrderTypeMarket, setting.Market, symbolRelated,
+			``, ``, ``, ``, model.FunctionCarry, tickRelated.Asks[0].Price,
+			tickRelated.Asks[0].Price, openAmount, true)
+		setting.GridAmount += openAmount
+		model.AppDB.Save(&setting)
 		time.Sleep(time.Minute)
 	}
 }
