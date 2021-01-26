@@ -67,9 +67,6 @@ var ProcessCarry = func(setting *model.Setting) {
 		return
 	}
 	symbols := model.GetMarketSymbols(setting.Market)
-	if float64(len(perpSnapshot)) < 0.9*float64(len(symbols)) {
-		return
-	}
 	openAmount := math.Min((usdValue-wealth/2)/tickPerp.Asks[0].Price,
 		math.Min(tickPerp.Bids[0].Amount/2, tickRelated.Asks[0].Amount/2))
 	score := 1 - tickRelated.Asks[0].Price*(1+2*FTXFee)/tickPerp.Bids[0].Price + rateSum
@@ -81,7 +78,7 @@ var ProcessCarry = func(setting *model.Setting) {
 			highestSymbol = symbol
 		}
 	}
-	if highestSymbol == setting.Symbol && score > 0.001 {
+	if highestSymbol == setting.Symbol && score > 0.001 && float64(len(perpSnapshot)) > 0.9*float64(len(symbols)) {
 		util.Notice(fmt.Sprintf(`carry from %s to %s with score %f rate sum %f amount %f worth %f`,
 			setting.Symbol, symbolRelated, score, rateSum, openAmount, openAmount*tickRelated.Bids[0].Price))
 		go api.PlaceOrder(``, ``, model.OrderSideSell, model.OrderTypeMarket, setting.Market, setting.Symbol,
@@ -92,6 +89,8 @@ var ProcessCarry = func(setting *model.Setting) {
 			tickRelated.Asks[0].Price, openAmount, true)
 		setting.GridAmount += openAmount
 		model.AppDB.Save(&setting)
-		time.Sleep(time.Minute)
+		time.Sleep(time.Second * 10)
+	} else {
+		util.Notice(fmt.Sprintf(`not valid %s len %d score %f `, highestSymbol, len(perpSnapshot), score))
 	}
 }
