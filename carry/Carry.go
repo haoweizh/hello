@@ -51,6 +51,7 @@ var ProcessCarry = func(setting *model.Setting) {
 	setCarrying(true)
 	defer setCarrying(false)
 	rates, _ := api.GetFundingRate(setting.Market, setting.Symbol)
+	marketSymbols := model.GetMarketSymbols(setting.Market)
 	rateSum := 0.0
 	for _, item := range rates.([]*model.FundingRate) {
 		rateSum += item.Rate
@@ -66,7 +67,6 @@ var ProcessCarry = func(setting *model.Setting) {
 		util.Notice(fmt.Sprintf(`[carry] set wealth %f usd %f`, wealth, usdValue))
 		return
 	}
-	symbols := model.GetMarketSymbols(setting.Market)
 	openAmount := math.Min((usdValue-wealth/2)/tickPerp.Asks[0].Price,
 		math.Min(tickPerp.Bids[0].Amount/2, tickRelated.Asks[0].Amount/2))
 	score := 1 - tickRelated.Asks[0].Price*(1+2*FTXFee)/tickPerp.Bids[0].Price + rateSum
@@ -79,9 +79,10 @@ var ProcessCarry = func(setting *model.Setting) {
 		}
 	}
 	if highestSymbol == setting.Symbol {
-		model.SetCarryInfo(`grid`, fmt.Sprintf(`not valid %s len %d score %f `, highestSymbol, len(perpSnapshot), score))
+		model.SetCarryInfo(`grid`, fmt.Sprintf(`not valid %s len symbols:%f scores:%d score %f `,
+			highestSymbol, 0.9*float64(len(marketSymbols)), len(perpSnapshot), score))
 	}
-	if highestSymbol == setting.Symbol && score > 0.001 && float64(len(perpSnapshot)) > 0.9*float64(len(symbols)) {
+	if highestSymbol == setting.Symbol && score > 0.002 && float64(len(perpSnapshot)) > 0.9*float64(len(marketSymbols)) {
 		util.Notice(fmt.Sprintf(`carry from %s to %s with score %f rate sum %f amount %f worth %f`,
 			setting.Symbol, symbolRelated, score, rateSum, openAmount, openAmount*tickRelated.Bids[0].Price))
 		go api.PlaceOrder(``, ``, model.OrderSideSell, model.OrderTypeMarket, setting.Market, setting.Symbol,
