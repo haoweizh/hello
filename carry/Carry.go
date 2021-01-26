@@ -39,7 +39,7 @@ var ProcessCarry = func(setting *model.Setting) {
 	_, tickPerp := model.AppMarkets.GetBidAsk(setting.Symbol, setting.Market)
 	_, tickRelated := model.AppMarkets.GetBidAsk(setting.GetRelatedSymbol(), setting.Market)
 	now := util.GetNowUnixMillion()
-	if tickPerp != nil && tickRelated == nil {
+	if tickPerp != nil && tickRelated == nil && len(perpSnapshot) >= 52 {
 		util.Notice(fmt.Sprintf(`pls check symbol %s`, setting.GetRelatedSymbol()))
 	}
 	if tickPerp == nil || tickRelated == nil || tickPerp.Asks == nil || tickPerp.Bids == nil ||
