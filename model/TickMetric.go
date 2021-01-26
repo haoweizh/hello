@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-const recentTickLength = 10000
+const recentTickLength = 100
 
 type TickMetric struct {
 	delayLow   int

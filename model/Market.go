@@ -261,8 +261,8 @@ func (markets *Markets) SetBidAsk(symbol, marketName string, bidAsk *BidAsk) boo
 	last := markets.bidAsks[symbol][marketName]
 	if last == nil || markets.bidAsks[symbol][marketName].Ts <= bidAsk.Ts {
 		markets.bidAsks[symbol][marketName] = bidAsk
-		//current := util.GetNow()
-		//AppMetric.addTick(marketName, symbol, current, bidAsk)
+		current := util.GetNow()
+		AppMetric.addTick(marketName, symbol, current, bidAsk)
 		return true
 	}
 	return false
