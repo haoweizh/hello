@@ -39,10 +39,13 @@ var ProcessCarry = func(setting *model.Setting) {
 	_, tickPerp := model.AppMarkets.GetBidAsk(setting.Symbol, setting.Market)
 	symbolRelated := setting.GetRelatedSymbol()
 	_, tickRelated := model.AppMarkets.GetBidAsk(symbolRelated, setting.Market)
+	markedInfo := model.MarketInfos[setting.Market][setting.Symbol]
+	marketInfoRelated := model.MarketInfos[setting.Market][symbolRelated]
 	now := util.GetNowUnixMillion()
 	if tickPerp == nil || tickRelated == nil || tickPerp.Asks == nil || tickPerp.Bids == nil ||
 		tickRelated.Asks == nil || tickRelated.Bids == nil || model.AppConfig.Handle != `1` ||
-		model.AppPause || now-int64(tickRelated.Ts) > 1000 || now-int64(tickPerp.Ts) > 1000 {
+		model.AppPause || now-int64(tickRelated.Ts) > 1000 || now-int64(tickPerp.Ts) > 1000 ||
+		markedInfo == nil || marketInfoRelated == nil {
 		return
 	}
 	if setting == nil || isCarrying() {
@@ -81,8 +84,15 @@ var ProcessCarry = func(setting *model.Setting) {
 	if highestSymbol == setting.Symbol {
 		model.SetCarryInfo(`grid`, fmt.Sprintf(`not valid %s len symbols:%f scores:%d score %f `,
 			highestSymbol, 0.9*float64(len(marketSymbols)), len(perpSnapshot), score))
+		if openAmount < markedInfo.SizeIncrement || openAmount < marketInfoRelated.SizeIncrement {
+			util.Notice(fmt.Sprintf(`size not enough order size %f < perp limit %f or current size %f`,
+				openAmount, markedInfo.SizeIncrement, marketInfoRelated.SizeIncrement))
+			time.Sleep(time.Minute)
+			return
+		}
 	}
-	if highestSymbol == setting.Symbol && score > 0.002 && float64(len(perpSnapshot)) > 0.45*float64(len(marketSymbols)) {
+	if highestSymbol == setting.Symbol && score > 0.002 &&
+		float64(len(perpSnapshot)) > 0.45*float64(len(marketSymbols)) {
 		util.Notice(fmt.Sprintf(`carry from %s to %s with score %f rate sum %f amount %f worth %f`,
 			setting.Symbol, symbolRelated, score, rateSum, openAmount, openAmount*tickRelated.Bids[0].Price))
 		go api.PlaceOrder(``, ``, model.OrderSideSell, model.OrderTypeMarket, setting.Market, setting.Symbol,
@@ -93,6 +103,8 @@ var ProcessCarry = func(setting *model.Setting) {
 			tickRelated.Asks[0].Price, openAmount, true)
 		setting.GridAmount += openAmount
 		model.AppDB.Save(&setting)
-		time.Sleep(time.Second * 10)
+		wealth = 0
+		usdValue = 0
+		time.Sleep(time.Second * 30)
 	}
 }

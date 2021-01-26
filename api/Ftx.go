@@ -437,17 +437,27 @@ func getAccountFtx(key, secret string, accounts *model.Accounts) {
 	}
 }
 
-func getMarketsFtx() (symbols map[string]bool) {
+func getMarketsFtx() (marketInfos map[string]*model.MarketInfo) {
 	response := SignedRequestFtx(``, ``, `GET`,
 		`/markets`, nil, nil)
 	util.SocketInfo(string(response))
-	symbols = make(map[string]bool)
+	marketInfos = make(map[string]*model.MarketInfo)
 	rateJson, err := util.NewJSON(response)
 	if err == nil && rateJson.Get(`result`) != nil {
 		items, _ := rateJson.Get(`result`).Array()
 		for _, item := range items {
 			value := item.(map[string]interface{})
-			symbols[value[`name`].(string)] = true
+			marketInfo := &model.MarketInfo{}
+			if value[`name`] != nil {
+				marketInfo.Name = value[`name`].(string)
+			}
+			if value[`priceIncrement`] != nil {
+				marketInfo.PriceIncrement, _ = value[`priceIncrement`].(json.Number).Float64()
+			}
+			if value[`sizeIncrement`] != nil {
+				marketInfo.SizeIncrement, _ = value[`sizeIncrement`].(json.Number).Float64()
+			}
+			marketInfos[marketInfo.Name] = marketInfo
 		}
 	}
 	return

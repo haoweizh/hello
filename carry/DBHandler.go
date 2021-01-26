@@ -277,6 +277,7 @@ func Maintain() {
 		model.AppDB.AutoMigrate(&model.FundingRate{})
 	}
 	model.LoadSettings()
+	api.InitMarketInfos()
 	//go CheckPastRefresh()
 	go MaintainTransFee(model.KeyDefault, model.SecretDefault)
 	//go util.StartMidNightTimer(CancelAllOrders)
