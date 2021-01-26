@@ -94,7 +94,6 @@ func handleTickerFtx(markets *model.Markets, response *simplejson.Json) {
 	bidAsk := &model.BidAsk{}
 	ts := data.Get(`time`).MustFloat64()
 	bidAsk.Ts = int(ts * 1000)
-	util.Notice(fmt.Sprintf(`tick delay %d %s`, util.GetNowUnixMillion()-int64(bidAsk.Ts), symbol))
 	if dataType == `update` {
 		bidAsk.Bids = []model.Tick{{Price: data.Get(`bid`).MustFloat64(), Amount: data.Get(`bidSize`).MustFloat64()}}
 		bidAsk.Asks = []model.Tick{{Price: data.Get(`ask`).MustFloat64(), Amount: data.Get(`askSize`).MustFloat64()}}
@@ -104,7 +103,7 @@ func handleTickerFtx(markets *model.Markets, response *simplejson.Json) {
 			if handler != nil {
 				settings := model.GetSetting(function, model.Ftx, symbol)
 				for _, setting := range settings {
-					handler(setting)
+					go handler(setting)
 				}
 			}
 		}
@@ -190,7 +189,7 @@ func handleDepthFtx(markets *model.Markets, response *simplejson.Json) {
 				if handler != nil {
 					settings := model.GetSetting(function, model.Ftx, symbol)
 					for _, setting := range settings {
-						handler(setting)
+						go handler(setting)
 					}
 				}
 			}
