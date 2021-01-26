@@ -77,10 +77,10 @@ var ProcessCarry = func(setting *model.Setting) {
 		}
 	}
 	if highestSymbol == setting.Symbol {
-		for s := range perpSnapshot {
+		for s, value := range perpSnapshot {
 			util.Notice(fmt.Sprintf(`size: %d %s score: %f rateSum %f holding %f open: %f`,
-				len(perpSnapshot), s, score, rateSum, setting.GridAmount, openAmount))
+				len(perpSnapshot), s, value, rateSum, setting.GridAmount, openAmount))
 		}
-		time.Sleep(time.Minute)
+		time.Sleep(time.Minute * 5)
 	}
 }
