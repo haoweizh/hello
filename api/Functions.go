@@ -451,9 +451,6 @@ func GetFundingRate(market, symbol string) (fundingRate interface{}, expireTime 
 	util.Notice(fmt.Sprintf(`before update funding %s %s rate %f expire %d`,
 		market, symbol, fundingRate, expireTime))
 	switch market {
-	case model.Fmex:
-		fundingRate, expireTime = getFundingRateFmex(symbol)
-		model.SetFundingRate(market, symbol, fundingRate, expireTime)
 	case model.Bitmex:
 		fundingRate, expireTime = getFundingRateBitmex(symbol)
 		model.SetFundingRate(market, symbol, fundingRate, expireTime)
@@ -486,8 +483,6 @@ func GetFundingRate(market, symbol string) (fundingRate interface{}, expireTime 
 		}
 		fundingRate, expireTime = model.GetFundingRate(market, symbol)
 	}
-	util.Notice(fmt.Sprintf(`after update funding %s %s rate %f expire %d`,
-		market, symbol, fundingRate, expireTime))
 	return
 }
 

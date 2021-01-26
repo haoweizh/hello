@@ -24,7 +24,7 @@ type symbolRate struct {
 	amount, score, holding, rateSum float64
 }
 
-var perpSnapshot map[string]*symbolRate = make(map[string]*symbolRate)
+var perpSnapshot = make(map[string]*symbolRate)
 
 func isCarrying() (value bool) {
 	carryLock.Lock()
@@ -87,8 +87,8 @@ var ProcessCarry = func(setting *model.Setting) {
 	}
 	if highestSymbol == setting.Symbol {
 		for s, snapshot := range perpSnapshot {
-			util.Notice(fmt.Sprintf(`%s amount: %f score: %f rateSum %f holding %f`,
-				s, snapshot.amount, snapshot.score, snapshot.rateSum, snapshot.holding))
+			util.Notice(fmt.Sprintf(`size: %d %s amount: %f score: %f rateSum %f holding %f`,
+				len(perpSnapshot), s, snapshot.amount, snapshot.score, snapshot.rateSum, snapshot.holding))
 		}
 		time.Sleep(time.Minute)
 	}

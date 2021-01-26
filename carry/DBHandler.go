@@ -203,10 +203,6 @@ func createMarketDepthServer(markets *model.Markets, market string) chan struct{
 		channel, err = api.WsDepthServeOKSwap(markets, WSErrHandler)
 	case model.Binance:
 		channel, err = api.WsDepthServeBinance(markets, WSErrHandler)
-	case model.Fcoin:
-		channel, err = api.WsDepthServeFcoin(markets, WSErrHandler)
-	case model.Fmex:
-		channel, err = api.WsDepthServeFmex(markets, WSErrHandler)
 	case model.Coinpark:
 		channel, err = api.WsDepthServeCoinpark(markets, WSErrHandler)
 	case model.Bitmex:
@@ -227,17 +223,6 @@ var socketMaintaining = false
 func ResetChannel(market string, channel chan struct{}) {
 	model.AppPause = true
 	model.AppMarkets.PutDepthChan(market, 0, nil)
-	symbols := model.GetMarketSymbols(market)
-	for symbol := range symbols {
-		for function := range model.GetFunctions(model.Bitmex, symbol) {
-			if model.FunctionRefresh == function {
-				go CancelRefreshHang(model.KeyDefault, model.SecretDefault, market, symbol, RefreshTypeGrid)
-			}
-			if model.FunctionHangFar == function {
-				go CancelHang(model.KeyDefault, model.SecretDefault, market, symbol)
-			}
-		}
-	}
 	channel <- struct{}{}
 	close(channel)
 	model.AppMarkets.PutDepthChan(market, 0, createMarketDepthServer(model.AppMarkets, market))
