@@ -81,7 +81,9 @@ var ProcessCarry = func(setting *model.Setting) {
 			highestSymbol = symbol
 		}
 	}
-	if highestSymbol == setting.Symbol {
+	if highestSymbol == setting.Symbol && score > 0.001 {
+		util.Notice(fmt.Sprintf(`carry from %s to %s with score %f rate sum %f amount %f worth %f`,
+			setting.Symbol, symbolRelated, score, rateSum, openAmount, openAmount*tickRelated.Bids[0].Price))
 		go api.PlaceOrder(``, ``, model.OrderSideSell, model.OrderTypeMarket, setting.Market, setting.Symbol,
 			``, ``, ``, ``, model.FunctionCarry, tickPerp.Bids[0].Price,
 			tickPerp.Bids[0].Price, openAmount, true)
