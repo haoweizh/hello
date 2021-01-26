@@ -78,6 +78,9 @@ var ProcessCarry = func(setting *model.Setting) {
 			highestSymbol = symbol
 		}
 	}
+	if highestSymbol == setting.Symbol {
+		model.SetCarryInfo(`grid`, fmt.Sprintf(`not valid %s len %d score %f `, highestSymbol, len(perpSnapshot), score))
+	}
 	if highestSymbol == setting.Symbol && score > 0.001 && float64(len(perpSnapshot)) > 0.9*float64(len(symbols)) {
 		util.Notice(fmt.Sprintf(`carry from %s to %s with score %f rate sum %f amount %f worth %f`,
 			setting.Symbol, symbolRelated, score, rateSum, openAmount, openAmount*tickRelated.Bids[0].Price))
@@ -90,7 +93,5 @@ var ProcessCarry = func(setting *model.Setting) {
 		setting.GridAmount += openAmount
 		model.AppDB.Save(&setting)
 		time.Sleep(time.Second * 10)
-	} else {
-		util.Notice(fmt.Sprintf(`not valid %s len %d score %f `, highestSymbol, len(perpSnapshot), score))
 	}
 }
