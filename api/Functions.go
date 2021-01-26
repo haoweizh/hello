@@ -5,7 +5,6 @@ import (
 	"hello/model"
 	"hello/util"
 	"math"
-	"math/rand"
 	"strconv"
 	"strings"
 	"sync"
@@ -22,25 +21,14 @@ func RequireDepthChanReset(markets *model.Markets, market string) bool {
 	needReset := true
 	now := util.GetNowUnixMillion()
 	symbols := markets.GetSymbols()
-	delay := 0.0
 	for symbol := range symbols {
 		_, bidAsk := markets.GetBidAsk(symbol, market)
 		if bidAsk == nil {
 			continue
 		}
-		delay = float64(now - int64(bidAsk.Ts))
 		if float64(now-int64(bidAsk.Ts)) < model.AppConfig.Delay {
-			numRand := rand.Intn(100)
-			if numRand == 0 && len(bidAsk.Bids) > 0 && len(bidAsk.Asks) > 0 {
-				util.SocketInfo(fmt.Sprintf(`%s bidask time %d len %d %d price %f %f amount %f %f`,
-					symbol, bidAsk.Ts, bidAsk.Bids.Len(), bidAsk.Asks.Len(), bidAsk.Bids[0].Price,
-					bidAsk.Asks[0].Price, bidAsk.Bids[0].Amount, bidAsk.Asks[0].Amount))
-			}
 			needReset = false
 		}
-	}
-	if needReset {
-		util.SocketInfo(fmt.Sprintf(`socket need reset %v %f`, needReset, delay))
 	}
 	return needReset
 }
@@ -922,7 +910,8 @@ func GetWSSubscribe(market, symbol, subType string) (subscribe interface{}) {
 			return `orderBookL2_25.` + subSymbol
 		}
 	case model.Ftx:
-		return []string{`orderbook`, symbol}
+		//return []string{`orderbook`, symbol}
+		return []string{`ticker`, symbol}
 	case model.Coinbig:
 		switch symbol {
 		case `btc_usdt`:

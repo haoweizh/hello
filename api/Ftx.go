@@ -52,6 +52,7 @@ func WsDepthServeFtx(markets *model.Markets, errHandler ErrHandler) (chan struct
 	wsHandler := func(event []byte) {
 		defer socketLockFtx.Unlock()
 		socketLockFtx.Lock()
+		fmt.Println(string(event))
 		responseJson, err := util.NewJSON(event)
 		if err != nil {
 			errHandler(err)
@@ -70,12 +71,44 @@ func WsDepthServeFtx(markets *model.Markets, errHandler ErrHandler) (chan struct
 		msgType := responseJson.Get(`channel`).MustString()
 		if msgType == `orderbook` {
 			handleDepthFtx(markets, responseJson)
+		} else if msgType == `ticker` {
+			handleTickerFtx(markets, responseJson)
 		}
 	}
 	requestUrl := model.AppConfig.WSUrls[model.Ftx]
 	//subType := model.SubscribeDepth + `,` + model.SubscribeDeal
 	return WebSocketServe(model.Ftx, requestUrl, ``, GetWSSubscribes(model.Ftx, ``),
 		subscribeHandlerFtx, wsHandler, errHandler)
+}
+
+func handleTickerFtx(markets *model.Markets, response *simplejson.Json) {
+	if response == nil {
+		return
+	}
+	symbol := response.Get("market").MustString()
+	dataType := response.Get(`type`).MustString()
+	data := response.Get(`data`)
+	if data == nil || data.Get(`bid`) == nil || data.Get(`ask`) == nil || data.Get(`bidSize`) == nil ||
+		data.Get(`askSize`) == nil {
+		return
+	}
+	bidAsk := &model.BidAsk{}
+	ts := data.Get(`time`).MustFloat64()
+	bidAsk.Ts = int(ts * 1000)
+	if dataType == `update` {
+		bidAsk.Bids = []model.Tick{{Price: data.Get(`bid`).MustFloat64(), Amount: data.Get(`bidSize`).MustFloat64()}}
+		bidAsk.Asks = []model.Tick{{Price: data.Get(`ask`).MustFloat64(), Amount: data.Get(`askSize`).MustFloat64()}}
+	}
+	if markets.SetBidAsk(symbol, model.Ftx, bidAsk) {
+		for function, handler := range model.GetFunctions(model.Ftx, symbol) {
+			if handler != nil {
+				settings := model.GetSetting(function, model.Ftx, symbol)
+				for _, setting := range settings {
+					handler(setting)
+				}
+			}
+		}
+	}
 }
 
 func handleDepthFtx(markets *model.Markets, response *simplejson.Json) {
