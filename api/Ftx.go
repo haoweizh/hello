@@ -94,6 +94,7 @@ func handleTickerFtx(markets *model.Markets, response *simplejson.Json) {
 	bidAsk := &model.BidAsk{}
 	ts := data.Get(`time`).MustFloat64()
 	bidAsk.Ts = int(ts * 1000)
+	util.Notice(fmt.Sprintf(`tick delay %d %s`, util.GetNowUnixMillion()-int64(bidAsk.Ts), symbol))
 	if dataType == `update` {
 		bidAsk.Bids = []model.Tick{{Price: data.Get(`bid`).MustFloat64(), Amount: data.Get(`bidSize`).MustFloat64()}}
 		bidAsk.Asks = []model.Tick{{Price: data.Get(`ask`).MustFloat64(), Amount: data.Get(`askSize`).MustFloat64()}}
