@@ -99,14 +99,14 @@ func handleTickerFtx(markets *model.Markets, response *simplejson.Json) {
 		bidAsk.Asks = []model.Tick{{Price: data.Get(`ask`).MustFloat64(), Amount: data.Get(`askSize`).MustFloat64()}}
 	}
 	if markets.SetBidAsk(symbol, model.Ftx, bidAsk) {
-		//for function, handler := range model.GetFunctions(model.Ftx, symbol) {
-		//	if handler != nil {
-		//		settings := model.GetSetting(function, model.Ftx, symbol)
-		//		for _, setting := range settings {
-		//			handler(setting)
-		//		}
-		//	}
-		//}
+		for function, handler := range model.GetFunctions(model.Ftx, symbol) {
+			if handler != nil {
+				settings := model.GetSetting(function, model.Ftx, symbol)
+				for _, setting := range settings {
+					handler(setting)
+				}
+			}
+		}
 	}
 }
 

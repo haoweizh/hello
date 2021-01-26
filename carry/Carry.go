@@ -81,6 +81,6 @@ var ProcessCarry = func(setting *model.Setting) {
 			util.Notice(fmt.Sprintf(`size: %d %s score: %f rateSum %f holding %f open: %f`,
 				len(perpSnapshot), s, value, rateSum, setting.GridAmount, openAmount))
 		}
-		time.Sleep(time.Minute * 5)
+		time.Sleep(time.Minute)
 	}
 }
