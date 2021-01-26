@@ -82,7 +82,7 @@ var ProcessCarry = func(setting *model.Setting) {
 		model.SetCarryInfo(`grid`, fmt.Sprintf(`not valid %s len symbols:%f scores:%d score %f `,
 			highestSymbol, 0.9*float64(len(marketSymbols)), len(perpSnapshot), score))
 	}
-	if highestSymbol == setting.Symbol && score > 0.002 && float64(len(perpSnapshot)) > 0.9*float64(len(marketSymbols)) {
+	if highestSymbol == setting.Symbol && score > 0.002 && float64(len(perpSnapshot)) > 0.45*float64(len(marketSymbols)) {
 		util.Notice(fmt.Sprintf(`carry from %s to %s with score %f rate sum %f amount %f worth %f`,
 			setting.Symbol, symbolRelated, score, rateSum, openAmount, openAmount*tickRelated.Bids[0].Price))
 		go api.PlaceOrder(``, ``, model.OrderSideSell, model.OrderTypeMarket, setting.Market, setting.Symbol,

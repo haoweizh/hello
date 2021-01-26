@@ -160,6 +160,8 @@ func Test_wallet(t *testing.T) {
 	model.NewConfig()
 	_ = configor.Load(model.AppConfig, "./config.yml")
 	model.AppDB, _ = gorm.Open("postgres", model.AppConfig.DBConnection)
+	symbols := model.GetMarketSymbols(model.Ftx)
+	fmt.Println(len(symbols))
 	api.InitCarryFtx(1)
 	api.GetFundingRate(model.Ftx, `BTC-PERP`)
 	//carry.GetTurtleData(model.Ftx, `okbusd_p`)
