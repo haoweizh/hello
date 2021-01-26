@@ -60,6 +60,7 @@ func chanHandler(market string, stopC chan struct{}, errHandler ErrHandler, msgH
 	conn := model.AppMarkets.GetConn(market)
 	defer func() {
 		err := conn.Close()
+		util.Notice(`connection closed`)
 		if err != nil {
 			errHandler(err)
 		}

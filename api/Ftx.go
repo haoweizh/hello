@@ -43,6 +43,7 @@ var subscribeHandlerFtx = func(subscribes []interface{}, subType string) error {
 			util.SocketInfo("ftx can not subscribe " + err.Error())
 			return err
 		}
+		util.Notice(`send subscribe ` + subCmd)
 	}
 	return err
 }

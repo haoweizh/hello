@@ -20,11 +20,7 @@ var carryLock sync.Mutex
 var carrying bool
 var wealth, usdValue float64
 
-type symbolRate struct {
-	amount, score, holding, rateSum float64
-}
-
-var perpSnapshot = make(map[string]*symbolRate)
+var perpSnapshot = make(map[string]float64)
 
 func isCarrying() (value bool) {
 	carryLock.Lock()
@@ -72,23 +68,18 @@ var ProcessCarry = func(setting *model.Setting) {
 	openAmount := math.Min((usdValue-wealth/2)/tickPerp.Asks[0].Price,
 		math.Min(tickPerp.Bids[0].Amount/2, tickRelated.Asks[0].Amount/2))
 	score := 1 - tickRelated.Asks[0].Price*(1+2*FTXFee)/tickPerp.Bids[0].Price + rateSum
-	perpSnapshot[setting.Symbol] = &symbolRate{
-		rateSum: rateSum,
-		score:   score,
-		holding: setting.GridAmount,
-		amount:  openAmount,
-	}
+	perpSnapshot[setting.Symbol] = score
 	highestScore := 0.0
 	highestSymbol := ``
-	for symbol, snapshot := range perpSnapshot {
-		if snapshot.score > highestScore {
+	for symbol, value := range perpSnapshot {
+		if value > highestScore {
 			highestSymbol = symbol
 		}
 	}
 	if highestSymbol == setting.Symbol {
-		for s, snapshot := range perpSnapshot {
-			util.Notice(fmt.Sprintf(`size: %d %s amount: %f score: %f rateSum %f holding %f`,
-				len(perpSnapshot), s, snapshot.amount, snapshot.score, snapshot.rateSum, snapshot.holding))
+		for s := range perpSnapshot {
+			util.Notice(fmt.Sprintf(`size: %d %s score: %f rateSum %f holding %f open: %f`,
+				len(perpSnapshot), s, score, rateSum, setting.GridAmount, openAmount))
 		}
 		time.Sleep(time.Minute)
 	}
