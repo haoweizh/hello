@@ -85,8 +85,9 @@ var ProcessCarry = func(setting *model.Setting) {
 		model.SetCarryInfo(`grid`, fmt.Sprintf(`not valid %s len symbols:%f scores:%d score %f `,
 			highestSymbol, 0.9*float64(len(marketSymbols)), len(perpSnapshot), score))
 		if openAmount < markedInfo.SizeIncrement || openAmount < marketInfoRelated.SizeIncrement {
-			util.Notice(fmt.Sprintf(`size not enough order size %f < perp limit %f or current size %f`,
-				openAmount, markedInfo.SizeIncrement, marketInfoRelated.SizeIncrement))
+			util.Notice(fmt.Sprintf(`size not enough order size %f < %s size %f or %s size %f score %f`,
+				openAmount, markedInfo.Name, markedInfo.SizeIncrement, marketInfoRelated.Name,
+				marketInfoRelated.SizeIncrement, score))
 			time.Sleep(time.Minute)
 			return
 		}
