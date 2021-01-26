@@ -437,6 +437,22 @@ func getAccountFtx(key, secret string, accounts *model.Accounts) {
 	}
 }
 
+func getMarketsFtx() (symbols map[string]bool) {
+	response := SignedRequestFtx(``, ``, `GET`,
+		`/markets`, nil, nil)
+	util.SocketInfo(string(response))
+	symbols = make(map[string]bool)
+	rateJson, err := util.NewJSON(response)
+	if err == nil && rateJson.Get(`result`) != nil {
+		items, _ := rateJson.Get(`result`).Array()
+		for _, item := range items {
+			value := item.(map[string]interface{})
+			symbols[value[`name`].(string)] = true
+		}
+	}
+	return
+}
+
 func getFundingRatesFtx() (fundingRates []*model.FundingRate) {
 	response := SignedRequestFtx(``, ``, `GET`,
 		`/funding_rates`, nil, nil)

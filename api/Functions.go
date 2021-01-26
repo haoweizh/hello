@@ -932,9 +932,9 @@ func InitCarryFtx(start uint) {
 			symbolRates[rate.Symbol] = true
 		}
 	}
+	relateSymbols := getMarketsFtx()
 	model.AppDB.AutoMigrate(&model.Setting{})
 	for symbol := range symbolRates {
-		start++
 		setting := &model.Setting{
 			Valid:    true,
 			Function: model.FunctionCarry,
@@ -942,6 +942,14 @@ func InitCarryFtx(start uint) {
 			Symbol:   symbol,
 			ID:       start,
 		}
+		related := setting.GetRelatedSymbol()
+		fmt.Println(fmt.Sprintf(`%s %s`, symbol, related))
+		if relateSymbols[related] == false {
+			fmt.Println(related + ` no`)
+			continue
+		}
+		start++
 		model.AppDB.Save(&setting)
+		fmt.Println(fmt.Sprintf(`%s %s saved %d`, symbol, related, start))
 	}
 }
