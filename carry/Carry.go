@@ -61,14 +61,14 @@ var ProcessCarry = func(setting *model.Setting) {
 	}
 	duration, _ := time.ParseDuration(`-600s`)
 	current := util.GetNow()
-	if holding == 0 || usdAvailable == 0 || holdingUpdateTime.Before(current.Add(duration)) {
+	if usdAvailable == 0 || holdingUpdateTime.Before(current.Add(duration)) {
 		holdingUpdateTime = current
 		balances := api.GetBalance(``, ``, setting.Market, 0)
 		symbols := model.GetMarketSymbols(setting.Market)
 		for _, value := range balances {
 			if strings.ToLower(value.Coin) == `usd` {
 				usdAvailable = value.Amount
-			} else if symbols[value.Coin+`/USD`] {
+			} else if symbols[strings.ToUpper(value.Coin)+`/USD`] {
 				holding += math.Abs(value.UsdValue)
 			}
 		}
