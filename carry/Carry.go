@@ -168,6 +168,7 @@ func calcCarryOpen(setting *model.Setting, marketInfo, marketInfoRelated *model.
 		util.Notice(fmt.Sprintf(`size not enough order size %f < %s size %f or %s size %f %s:%f %s:%f`,
 			amount, marketInfo.Name, marketInfo.SizeIncrement, marketInfoRelated.Name,
 			marketInfoRelated.SizeIncrement, symbolLow, scoreLow, symbolHigh, scoreHigh))
+		time.Sleep(time.Second * 30)
 		return ``, ``, 0
 	}
 	return sidePerp, sideRelated, amount
