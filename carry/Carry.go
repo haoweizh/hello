@@ -11,7 +11,9 @@ import (
 	"time"
 )
 
-const FTXClose = 0
+const FTXHighOpen = 0.004
+const FTXLowOpen = -0.006
+const FTXClose = 0.001
 const OrderLimitUsd = 10.0
 
 var carryLock sync.Mutex
@@ -74,10 +76,10 @@ var ProcessCarry = func(setting *model.Setting) {
 		score = math.Min(1-tickRelated.Bids[0].Price/tickPerp.Asks[0].Price+rateSum, 0)
 	}
 	if setting.OpenShortMargin <= 0 {
-		setting.OpenShortMargin = 0.0015
+		setting.OpenShortMargin = FTXHighOpen
 	}
 	if setting.CloseShortMargin >= 0 {
-		setting.CloseShortMargin = -0.002
+		setting.CloseShortMargin = FTXLowOpen
 	}
 	perpSnapshot[setting.Symbol] = score
 	var scoreHigh, scoreLow float64
