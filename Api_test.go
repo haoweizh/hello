@@ -9,6 +9,8 @@ import (
 	"hello/carry"
 	"hello/model"
 	"hello/util"
+	"math"
+	"strings"
 	"testing"
 	"time"
 )
@@ -162,6 +164,21 @@ func Test_wallet(t *testing.T) {
 	model.AppDB, _ = gorm.Open("postgres", model.AppConfig.DBConnection)
 	api.InitCarryFtx(1)
 	api.GetFundingRate(model.Ftx, `BTC-PERP`)
+
+	balances := api.GetBalance(``, ``, model.Ftx, 0)
+	symbols := model.GetMarketSymbols(model.Ftx)
+	usdAvailable := 0.0
+	holding := 0.0
+	for _, value := range balances {
+		if strings.ToLower(value.Coin) == `usd` {
+			usdAvailable = value.Amount
+		} else if symbols[strings.ToUpper(value.Coin)+`/USD`] {
+			holding += math.Abs(value.UsdValue)
+		}
+	}
+	fmt.Println(usdAvailable)
+	fmt.Println(holding)
+
 	//carry.GetTurtleData(model.Ftx, `okbusd_p`)
 	//var err error
 	//model.AppDB, err = gorm.Open("postgres", model.AppConfig.DBConnection)
