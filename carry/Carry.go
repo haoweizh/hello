@@ -78,6 +78,7 @@ var ProcessCarry = func(setting *model.Setting) {
 	perpSnapshot[setting.Symbol] = score
 	var scoreHigh, scoreLow float64
 	var symbolHigh, symbolLow string
+	scoreMsg := "[score list]\n"
 	for symbol, value := range perpSnapshot {
 		if value > scoreHigh {
 			symbolHigh = symbol
@@ -86,7 +87,10 @@ var ProcessCarry = func(setting *model.Setting) {
 			symbolLow = symbol
 			scoreLow = value
 		}
+		scoreMsg = fmt.Sprintf("%s %f\n", symbol, value)
 	}
+	model.SetCarryInfo(`[grid]`, fmt.Sprintf(`symbol low: %s %f high: %s %f symbols: %d available usd: %f %s`,
+		symbolLow, scoreLow, symbolHigh, scoreHigh, len(perpSnapshot), usdAvailable, scoreMsg))
 	sidePerp, sideRelated, amount := calcCarryOpen(setting, marketInfo, marketInfoRelated, tickPerp,
 		tickRelated, symbolHigh, symbolLow, score, scoreHigh, scoreLow)
 	if amount > 0 {
@@ -132,8 +136,6 @@ func calcCarryOpen(setting *model.Setting, marketInfo, marketInfoRelated *model.
 		sidePerp = model.OrderSideSell
 		sideRelated = model.OrderSideBuy
 	}
-	model.SetCarryInfo(`[grid]`, fmt.Sprintf(`symbo low: %s %f high: %s %f symbols: %d available usd: %f`,
-		symbolLow, scoreLow, symbolHigh, scoreHigh, len(perpSnapshot), usdAvailable))
 	if bidAmount == 0 || askAmount == 0 {
 		return ``, ``, 0
 	}
