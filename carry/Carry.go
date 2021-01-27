@@ -87,7 +87,7 @@ var ProcessCarry = func(setting *model.Setting) {
 			symbolLow = symbol
 			scoreLow = value
 		}
-		scoreMsg = fmt.Sprintf("%s %f\n", symbol, value)
+		scoreMsg += fmt.Sprintf("%s %f\n", symbol, value)
 	}
 	model.SetCarryInfo(`[grid]`, fmt.Sprintf(`symbol low: %s %f high: %s %f symbols: %d available usd: %f %s`,
 		symbolLow, scoreLow, symbolHigh, scoreHigh, len(perpSnapshot), usdAvailable, scoreMsg))
