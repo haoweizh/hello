@@ -64,13 +64,11 @@ var ProcessCarry = func(setting *model.Setting) {
 	if holding == 0 || usdAvailable == 0 || holdingUpdateTime.Before(current.Add(duration)) {
 		holdingUpdateTime = current
 		balances := api.GetBalance(``, ``, setting.Market, 0)
+		symbols := model.GetMarketSymbols(setting.Market)
 		for _, value := range balances {
-			if strings.ToLower(value.Coin) == `ftt` {
-				continue
-			}
 			if strings.ToLower(value.Coin) == `usd` {
 				usdAvailable = value.Amount
-			} else {
+			} else if symbols[strings.ToLower(value.Coin)] {
 				holding += math.Abs(value.UsdValue)
 			}
 		}
