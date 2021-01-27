@@ -936,11 +936,13 @@ func InitCarryFtx(start uint) {
 	model.AppDB.AutoMigrate(&model.Setting{})
 	for symbol := range symbolRates {
 		setting := &model.Setting{
-			Valid:    true,
-			Function: model.FunctionCarry,
-			Market:   model.Ftx,
-			Symbol:   symbol,
-			ID:       start,
+			Valid:            true,
+			Function:         model.FunctionCarry,
+			OpenShortMargin:  0.004,
+			CloseShortMargin: -0.006,
+			Market:           model.Ftx,
+			Symbol:           symbol,
+			ID:               start,
 		}
 		related := setting.GetRelatedSymbol()
 		fmt.Println(fmt.Sprintf(`%s %s`, symbol, related))
