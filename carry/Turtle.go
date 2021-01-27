@@ -264,6 +264,7 @@ var ProcessTurtle = func(setting *model.Setting) {
 		if tick.Bids[0].Price <= priceShort && currentN > -1*int64(setting.AmountLimit) {
 			handleBreak(setting, turtleData, model.OrderSideSell)
 			setting.Chance = -1
+			setting.GridAmount = turtleData.amount
 			model.AppDB.Model(&setting).Where("market= ? and symbol= ? and function= ?",
 				setting.Market, setting.Symbol, model.FunctionTurtle).Updates(map[string]interface{}{
 				`price_x`: setting.PriceX, `chance`: setting.Chance, `grid_amount`: setting.GridAmount})
