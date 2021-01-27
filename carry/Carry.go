@@ -65,6 +65,9 @@ var ProcessCarry = func(setting *model.Setting) {
 		holdingUpdateTime = current
 		balances := api.GetBalance(``, ``, setting.Market, 0)
 		for _, value := range balances {
+			if strings.ToLower(value.Coin) == `ftt` {
+				continue
+			}
 			if strings.ToLower(value.Coin) == `usd` {
 				usdAvailable = value.Amount
 			} else {
@@ -162,7 +165,7 @@ func calcCarryOpen(setting *model.Setting, marketInfo, marketInfoRelated *model.
 	}
 	amount = math.Floor(amount/marketInfo.SizeIncrement) * marketInfo.SizeIncrement
 	if amount < marketInfo.SizeIncrement || amount < marketInfoRelated.SizeIncrement {
-		util.Notice(fmt.Sprintf(`size not enough order size %f < %s size %f or %s size %f %s-%f %s-%f`,
+		util.Notice(fmt.Sprintf(`size not enough order size %f < %s size %f or %s size %f %s:%f %s:%f`,
 			amount, marketInfo.Name, marketInfo.SizeIncrement, marketInfoRelated.Name,
 			marketInfoRelated.SizeIncrement, symbolLow, scoreLow, symbolHigh, scoreHigh))
 		return ``, ``, 0

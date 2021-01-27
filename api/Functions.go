@@ -946,7 +946,7 @@ func InitCarryFtx(start uint) {
 		}
 		related := setting.GetRelatedSymbol()
 		fmt.Println(fmt.Sprintf(`%s %s`, symbol, related))
-		if marketInfos[related] == nil {
+		if marketInfos[related] == nil || symbol == `FTT-PERP` {
 			fmt.Println(related + ` no`)
 			continue
 		}
