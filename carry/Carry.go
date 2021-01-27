@@ -68,7 +68,7 @@ var ProcessCarry = func(setting *model.Setting) {
 		for _, value := range balances {
 			if strings.ToLower(value.Coin) == `usd` {
 				usdAvailable = value.Amount
-			} else if symbols[strings.ToLower(value.Coin)] {
+			} else if symbols[value.Coin+`/USD`] {
 				holding += math.Abs(value.UsdValue)
 			}
 		}
