@@ -19,6 +19,7 @@ const OrderLimitUsd = 10.0
 var carryLock sync.Mutex
 var carrying bool
 var holding, usdAvailable float64
+var holdingUpdateTime = util.GetNow()
 
 var perpSnapshot = make(map[string]float64)
 
@@ -58,7 +59,10 @@ var ProcessCarry = func(setting *model.Setting) {
 	for _, item := range rates.([]*model.FundingRate) {
 		rateSum += item.Rate
 	}
-	if holding == 0 || usdAvailable == 0 {
+	duration, _ := time.ParseDuration(`-600s`)
+	current := util.GetNow()
+	if holding == 0 || usdAvailable == 0 || holdingUpdateTime.Before(current.Add(duration)) {
+		holdingUpdateTime = current
 		balances := api.GetBalance(``, ``, setting.Market, 0)
 		for _, value := range balances {
 			if strings.ToLower(value.Coin) == `usd` {
