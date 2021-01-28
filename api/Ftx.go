@@ -443,13 +443,28 @@ func getMarketsFtx() (marketInfos map[string]*model.MarketInfo) {
 	util.SocketInfo(string(response))
 	marketInfos = make(map[string]*model.MarketInfo)
 	rateJson, err := util.NewJSON(response)
-	if err == nil && rateJson.Get(`result`) != nil {
+	response = SignedRequestFtx(``, ``, `GET`,
+		`/spot_margin/borrow_rates`, nil, nil)
+	borrowJson, _ := util.NewJSON(response)
+	if err == nil && rateJson.Get(`result`) != nil && borrowJson.Get(`result`) != nil {
 		items, _ := rateJson.Get(`result`).Array()
+		borrows, _ := borrowJson.Get(`result`).Array()
+		canBorrows := make(map[string]bool)
+		for _, borrow := range borrows {
+			value := borrow.(map[string]interface{})
+			canBorrows[value[`coin`].(string)] = true
+		}
 		for _, item := range items {
 			value := item.(map[string]interface{})
-			marketInfo := &model.MarketInfo{}
+			marketInfo := &model.MarketInfo{CanBorrow: true}
 			if value[`name`] != nil {
 				marketInfo.Name = value[`name`].(string)
+			} else {
+				continue
+			}
+			if value[`baseCurrency`] != nil && value[`type`] != nil && value[`type`].(string) == `spot` &&
+				!canBorrows[value[`baseCurrency`].(string)] {
+				marketInfo.CanBorrow = false
 			}
 			if value[`priceIncrement`] != nil {
 				marketInfo.PriceIncrement, _ = value[`priceIncrement`].(json.Number).Float64()

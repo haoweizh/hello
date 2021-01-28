@@ -5,6 +5,7 @@ var MarketInfos = make(map[string]map[string]*MarketInfo) // market - symbol - M
 type MarketInfo struct {
 	Name                          string
 	SizeIncrement, PriceIncrement float64
+	CanBorrow                     bool
 	//"ask":2.2966,
 	//"baseCurrency":null,
 	//"bid":2.2943,

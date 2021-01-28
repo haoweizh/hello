@@ -938,21 +938,25 @@ func InitCarryFtx(start uint) {
 		setting := &model.Setting{
 			Valid:            true,
 			Function:         model.FunctionCarry,
-			OpenShortMargin:  0.004,
-			CloseShortMargin: -0.006,
+			OpenShortMargin:  0.005,
+			CloseShortMargin: -0.007,
 			Market:           model.Ftx,
 			Symbol:           symbol,
 			ID:               start,
 		}
 		related := setting.GetRelatedSymbol()
-		fmt.Println(fmt.Sprintf(`%s %s`, symbol, related))
+		//fmt.Println(fmt.Sprintf(`%s %s`, symbol, related))
 		if marketInfos[related] == nil || symbol == `FTT-PERP` || symbol == `USDT-PERP` || symbol == `UNI-PERP` {
-			fmt.Println(related + ` no`)
+			//fmt.Println(related + ` no`)
 			continue
+		}
+		if !marketInfos[related].CanBorrow {
+			setting.CloseShortMargin = -1
+			fmt.Println(related + `do not have borrow`)
 		}
 		start++
 		model.AppDB.Save(&setting)
-		fmt.Println(fmt.Sprintf(`%s %s saved %d`, symbol, related, start))
+		fmt.Println(fmt.Sprintf(`%s %s saved %d %f`, symbol, related, start, setting.CloseShortMargin))
 	}
 }
 

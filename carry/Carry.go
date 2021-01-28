@@ -87,10 +87,10 @@ var ProcessCarry = func(setting *model.Setting) {
 		setting.CloseShortMargin = FTXLowOpen
 	}
 	checkPair := tickRelated.Bids[0].Price / tickPerp.Bids[0].Price
-	if checkPair > 1.1 || checkPair < 0.9 {
+	if checkPair > 1.2 || checkPair < 0.8 {
 		util.Info(fmt.Sprintf(`fatal %s %s %f %f`,
 			setting.Symbol, symbolRelated, tickPerp.Bids[0].Price, tickRelated.Bids[0].Price))
-		return
+		//return
 	}
 	perpSnapshot[setting.Symbol] = score
 	var scoreHigh, scoreLow float64
