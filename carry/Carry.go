@@ -66,9 +66,9 @@ var ProcessCarry = func(setting *model.Setting) {
 		holdingUpdateTime = current
 		balances := api.GetBalance(``, ``, setting.Market, 0)
 		symbols := model.GetMarketSymbols(setting.Market)
+		usdAvailable = 0
+		holding = 0
 		for _, value := range balances {
-			usdAvailable = 0
-			holding = 0
 			usdSymbol := strings.ToUpper(value.Coin) + `/USD`
 			carryBalances[usdSymbol] = value.Amount
 			util.Notice(fmt.Sprintf(`set usd symbol %s balance %f `, usdSymbol, value.Amount))
