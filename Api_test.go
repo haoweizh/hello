@@ -108,6 +108,8 @@ func Test_RefreshAccount(t *testing.T) {
 		util.Notice(err.Error())
 		return
 	}
+
+	api.InitMarketInfos()
 	//setting := &model.Setting{Market: model.HuobiDM, Symbol: `BTC_CQ`}
 	//carry.GetTurtleData(setting)
 	//api.GetDayCandle(``, ``, model.HuobiDM, `btc_cq`, ``, time.Now())

@@ -69,8 +69,11 @@ var ProcessCarry = func(setting *model.Setting) {
 		for _, value := range balances {
 			usdSymbol := strings.ToUpper(value.Coin) + `/USD`
 			carryBalances[usdSymbol] = value.Amount
-			util.Notice(fmt.Sprintf(`set usd symbol %s balance %f can borrow:%v`,
-				usdSymbol, value.Amount, marketInfoRelated.CanBorrow))
+			util.Notice(fmt.Sprintf(`set usd symbol %s balance %f `, usdSymbol, value.Amount))
+			tempMarketInfo := model.MarketInfos[setting.Market][usdSymbol]
+			if tempMarketInfo != nil {
+				util.Notice(fmt.Sprintf(`can borrow:%v`, tempMarketInfo.CanBorrow))
+			}
 			if strings.ToLower(value.Coin) == `usd` {
 				usdAvailable = value.Amount
 			} else if symbols[usdSymbol] {
