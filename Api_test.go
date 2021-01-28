@@ -108,7 +108,14 @@ func Test_RefreshAccount(t *testing.T) {
 		util.Notice(err.Error())
 		return
 	}
-
+	holding := 0.0
+	balances := api.GetBalance(``, ``, model.Ftx, 0)
+	for _, value := range balances {
+		//usdSymbol := strings.ToUpper(value.Coin) + `/USD`
+		holding += math.Abs(value.UsdValue)
+		fmt.Println(fmt.Sprintf(`+%f=%f`, value.UsdValue, holding))
+	}
+	fmt.Println(holding)
 	api.InitMarketInfos()
 	//setting := &model.Setting{Market: model.HuobiDM, Symbol: `BTC_CQ`}
 	//carry.GetTurtleData(setting)

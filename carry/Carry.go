@@ -67,6 +67,8 @@ var ProcessCarry = func(setting *model.Setting) {
 		balances := api.GetBalance(``, ``, setting.Market, 0)
 		symbols := model.GetMarketSymbols(setting.Market)
 		for _, value := range balances {
+			usdAvailable = 0
+			holding = 0
 			usdSymbol := strings.ToUpper(value.Coin) + `/USD`
 			carryBalances[usdSymbol] = value.Amount
 			util.Notice(fmt.Sprintf(`set usd symbol %s balance %f `, usdSymbol, value.Amount))
@@ -114,8 +116,9 @@ var ProcessCarry = func(setting *model.Setting) {
 		}
 		scoreMsg += fmt.Sprintf("%s %f\n", symbol, value)
 	}
-	model.SetCarryInfo(`[grid]`, fmt.Sprintf(`symbol low: %s %f high: %s %f symbols: %d available usd: %f %s`,
-		symbolLow, scoreLow, symbolHigh, scoreHigh, len(perpSnapshot), usdAvailable, scoreMsg))
+	model.SetCarryInfo(`[grid]`,
+		fmt.Sprintf(`symbol low: %s %f high: %s %f symbols: %d available usd: %f holding: %f %s`,
+			symbolLow, scoreLow, symbolHigh, scoreHigh, len(perpSnapshot), usdAvailable, holding, scoreMsg))
 	sidePerp, sideRelated, amount := calcCarryOpen(setting, marketInfo, marketInfoRelated, tickPerp,
 		tickRelated, symbolHigh, symbolLow, score, scoreHigh, scoreLow)
 	if amount > 0 {
