@@ -22,6 +22,7 @@ var holding, usdAvailable float64
 var holdingUpdateTime = util.GetNow()
 
 var perpSnapshot = make(map[string]float64)
+var carryBalances = make(map[string]float64)
 
 func isCarrying() (value bool) {
 	carryLock.Lock()
@@ -66,9 +67,12 @@ var ProcessCarry = func(setting *model.Setting) {
 		balances := api.GetBalance(``, ``, setting.Market, 0)
 		symbols := model.GetMarketSymbols(setting.Market)
 		for _, value := range balances {
+			usdSymbol := strings.ToUpper(value.Coin) + `/USD`
+			carryBalances[usdSymbol] = value.Amount
+			util.Notice(fmt.Sprintf(`set usd symbol %s balance %f`, usdSymbol, value.Amount))
 			if strings.ToLower(value.Coin) == `usd` {
 				usdAvailable = value.Amount
-			} else if symbols[strings.ToUpper(value.Coin)+`/USD`] {
+			} else if symbols[usdSymbol] {
 				holding += math.Abs(value.UsdValue)
 			}
 		}
@@ -124,8 +128,14 @@ var ProcessCarry = func(setting *model.Setting) {
 			perpPrice = tickPerp.Asks[0].Price
 			relatedPrice = tickRelated.Bids[0].Price
 		}
+		perpAmount := amount
+		relatedAmount := amount
+		if amount > carryBalances[symbolRelated] && !marketInfoRelated.CanBorrow {
+			relatedAmount = carryBalances[symbolRelated]
+			util.Notice(fmt.Sprintf(`adjust usd symbol %s sell amount %f -> %f`, symbolRelated, amount, relatedAmount))
+		}
 		go api.PlaceOrder(``, ``, sidePerp, model.OrderTypeMarket, setting.Market, setting.Symbol, ``,
-			``, ``, ``, model.FunctionCarry, perpPrice, perpPrice, amount, true)
+			``, ``, ``, model.FunctionCarry, perpPrice, perpPrice, perpAmount, true)
 		go api.PlaceOrder(``, ``, sideRelated, model.OrderTypeMarket, setting.Market, symbolRelated, ``,
 			``, ``, ``, model.FunctionCarry, relatedPrice, relatedPrice, amount, true)
 		model.AppDB.Save(&setting)

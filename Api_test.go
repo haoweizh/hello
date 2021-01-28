@@ -12,7 +12,6 @@ import (
 	"math"
 	"strings"
 	"testing"
-	"time"
 )
 
 func Test_chan(t *testing.T) {
@@ -103,11 +102,6 @@ func Test_initTurtleN(t *testing.T) {
 func Test_RefreshAccount(t *testing.T) {
 	model.NewConfig()
 	_ = configor.Load(model.AppConfig, "./config.yml")
-	str := `2021-01-11T05:00:00+00:00`
-	testTime, _ := time.Parse(time.RFC3339, str)
-	fmt.Println(testTime)
-	fmt.Println(model.AppConfig.FromMail)
-	fmt.Println(model.AppConfig.FromMailAuth)
 	var err error
 	model.AppDB, err = gorm.Open("postgres", model.AppConfig.DBConnection)
 	if err != nil {
@@ -120,8 +114,9 @@ func Test_RefreshAccount(t *testing.T) {
 	//api.PlaceOrder(model.AppConfig.HuobiKey, model.AppConfig.HuobiSecret, model.OrderSideBuy, model.OrderTypeStop,
 	//	model.HuobiDM, `btc_cq`, `BTC200925`, ``, ``, `5`, model.FunctionTurtle,
 	//	12110.2345, 12100, 1.4, true)
-	//order2 := api.QueryOrderById(``, ``, model.HuobiDM, `btc_cq`, `BTC210326`,
-	//	model.OrderTypeStop, `28312676`)
+	order2 := api.QueryOrderById(``, ``, model.Ftx, `DOGE/USD`, ``,
+		model.OrderTypeMarket, `24824776206`)
+	fmt.Println(order2.Status)
 	//order2 := api.QueryOrderById(``, ``, model.OKFUTURE, `btc-usd`, `BTC-USD-210326`,
 	//	model.OrderTypeStop, `6200229905220608`)
 	//api.CancelOrder(model.AppConfig.HuobiKey, model.AppConfig.HuobiSecret, model.HuobiDM, `btc_cq`,
