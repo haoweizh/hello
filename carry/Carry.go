@@ -21,7 +21,8 @@ var carrying bool
 var holding, usdAvailable float64
 var holdingUpdateTime = util.GetNow()
 
-var perpSnapshot = make(map[string]float64)
+var carryScoreOpen = make(map[string]float64)
+var carryScoreClose = make(map[string]float64)
 var carryBalances = make(map[string]float64)
 
 func isCarrying() (value bool) {
@@ -86,10 +87,8 @@ var ProcessCarry = func(setting *model.Setting) {
 		util.Notice(fmt.Sprintf(`[carry] set holding %f usd %f`, holding, usdAvailable))
 		return
 	}
-	score := math.Max(1-tickRelated.Asks[0].Price/tickPerp.Bids[0].Price+rateSum, 0)
-	if rateSum < 0 {
-		score = math.Min(1-tickRelated.Bids[0].Price/tickPerp.Asks[0].Price+rateSum, 0)
-	}
+	scoreOpen := 1 - tickRelated.Asks[0].Price/tickPerp.Bids[0].Price + rateSum
+	scoreClose := 1 - tickRelated.Bids[0].Price/tickPerp.Asks[0].Price + rateSum
 	if setting.OpenShortMargin <= 0 {
 		setting.OpenShortMargin = FTXHighOpen
 	}
@@ -102,28 +101,31 @@ var ProcessCarry = func(setting *model.Setting) {
 			setting.Symbol, symbolRelated, tickPerp.Bids[0].Price, tickRelated.Bids[0].Price))
 		//return
 	}
-	perpSnapshot[setting.Symbol] = score
+	carryScoreOpen[setting.Symbol] = scoreOpen
+	carryScoreClose[setting.Symbol] = scoreClose
 	var scoreHigh, scoreLow float64
 	var symbolHigh, symbolLow string
 	scoreMsg := "[score list]\n"
-	for symbol, value := range perpSnapshot {
-		if value > scoreHigh {
+	for symbol, valueOpen := range carryScoreOpen {
+		if valueOpen > scoreHigh {
 			symbolHigh = symbol
-			scoreHigh = value
-		} else if value < scoreLow {
-			symbolLow = symbol
-			scoreLow = value
+			scoreHigh = valueOpen
 		}
-		scoreMsg += fmt.Sprintf("%s %f\n", symbol, value)
+		valueClose := carryScoreClose[symbol]
+		if valueClose < scoreLow {
+			symbolLow = symbol
+			scoreLow = valueClose
+		}
+		scoreMsg += fmt.Sprintf("%s open:%f close:%f\n", symbol, valueOpen, valueClose)
 	}
 	model.SetCarryInfo(`[grid]`,
 		fmt.Sprintf(`symbol low: %s %f high: %s %f symbols: %d available usd: %f holding: %f %s`,
-			symbolLow, scoreLow, symbolHigh, scoreHigh, len(perpSnapshot), usdAvailable, holding, scoreMsg))
+			symbolLow, scoreLow, symbolHigh, scoreHigh, len(carryScoreOpen), usdAvailable, holding, scoreMsg))
 	sidePerp, sideRelated, amount := calcCarryOpen(setting, marketInfo, marketInfoRelated, tickPerp,
-		tickRelated, symbolHigh, symbolLow, score, scoreHigh, scoreLow)
+		tickRelated, symbolHigh, symbolLow, scoreOpen, scoreClose, scoreHigh, scoreLow)
 	if amount > 0 {
-		util.Notice(fmt.Sprintf(`carry between %s %s with score %f rate sum %f amount %f worth %f`,
-			setting.Symbol, symbolRelated, score, rateSum, amount, amount*tickPerp.Asks[0].Price))
+		util.Notice(fmt.Sprintf(`carry between %s %s with score open:%f close:%f rate sum %f amount %f worth %f`,
+			setting.Symbol, symbolRelated, scoreOpen, scoreClose, rateSum, amount, amount*tickPerp.Asks[0].Price))
 		perpPrice := tickPerp.Asks[0].Price
 		relatedPrice := tickRelated.Bids[0].Price
 		if sidePerp == model.OrderSideSell {
@@ -153,18 +155,18 @@ var ProcessCarry = func(setting *model.Setting) {
 }
 
 func calcCarryOpen(setting *model.Setting, marketInfo, marketInfoRelated *model.MarketInfo, tickPerp, tickRelated *model.BidAsk,
-	symbolHigh, symbolLow string, score, scoreHigh, scoreLow float64) (sidePerp, sideRelated string, amount float64) {
+	symbolHigh, symbolLow string, scoreOpen, scoreClose, scoreHigh, scoreLow float64) (sidePerp, sideRelated string, amount float64) {
 	//marketSymbols := model.GetMarketSymbols(setting.Market)
 	//if float64(len(perpSnapshot)) < 0.45*float64(len(marketSymbols)) {
 	//	return ``, ``, 0
 	//}
 	var bidAmount, askAmount float64
-	if (scoreLow < setting.CloseShortMargin && setting.Symbol == symbolLow) || (setting.GridAmount > 0 && score <= -1*FTXClose) {
+	if (scoreLow < setting.CloseShortMargin && setting.Symbol == symbolLow) || (setting.GridAmount > 0 && scoreClose <= -1*FTXClose) {
 		bidAmount = tickPerp.Asks[0].Amount
 		askAmount = tickRelated.Bids[0].Amount
 		sidePerp = model.OrderSideBuy
 		sideRelated = model.OrderSideSell
-	} else if (scoreHigh > setting.OpenShortMargin && setting.Symbol == symbolHigh) || (setting.GridAmount < 0 && score >= FTXClose) {
+	} else if (scoreHigh > setting.OpenShortMargin && setting.Symbol == symbolHigh) || (setting.GridAmount < 0 && scoreOpen >= FTXClose) {
 		bidAmount = tickRelated.Asks[0].Amount
 		askAmount = tickPerp.Bids[0].Amount
 		sidePerp = model.OrderSideSell
