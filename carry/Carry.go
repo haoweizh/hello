@@ -13,7 +13,7 @@ import (
 
 const FTXHighOpen = 0.004
 const FTXLowOpen = -0.006
-const FTXClose = 0.001
+const FTXClose = 0
 const OrderLimitUsd = 10.0
 
 var carryLock sync.Mutex
@@ -159,12 +159,12 @@ func calcCarryOpen(setting *model.Setting, marketInfo, marketInfoRelated *model.
 	//	return ``, ``, 0
 	//}
 	var bidAmount, askAmount float64
-	if (scoreLow < setting.CloseShortMargin && setting.Symbol == symbolLow) || (setting.GridAmount > 0 && score < -1*FTXClose) {
+	if (scoreLow < setting.CloseShortMargin && setting.Symbol == symbolLow) || (setting.GridAmount > 0 && score <= -1*FTXClose) {
 		bidAmount = tickPerp.Asks[0].Amount
 		askAmount = tickRelated.Bids[0].Amount
 		sidePerp = model.OrderSideBuy
 		sideRelated = model.OrderSideSell
-	} else if (scoreHigh > setting.OpenShortMargin && setting.Symbol == symbolHigh) || (setting.GridAmount < 0 && score > FTXClose) {
+	} else if (scoreHigh > setting.OpenShortMargin && setting.Symbol == symbolHigh) || (setting.GridAmount < 0 && score >= FTXClose) {
 		bidAmount = tickRelated.Asks[0].Amount
 		askAmount = tickPerp.Bids[0].Amount
 		sidePerp = model.OrderSideSell
