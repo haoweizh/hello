@@ -154,7 +154,6 @@ var ProcessCarry = func(setting *model.Setting) {
 			right := <-stChan
 			if (left.Symbol == setting.Symbol || left.Symbol == symbolRelated) && (right.Symbol == setting.Symbol ||
 				right.Symbol == symbolRelated) {
-				time.Sleep(time.Second * 3)
 				handleOrders(setting, &left, &right)
 			}
 			break
@@ -170,22 +169,24 @@ func handleOrders(setting *model.Setting, left, right *model.Order) {
 	if left == nil || right == nil {
 		return
 	}
-	if left.OrderId != `` {
+	for left.OrderId != `` && left.Status == model.CarryStatusWorking {
 		left = api.QueryOrderById(``, ``, left.Market, left.Symbol, left.Instrument, left.OrderType, left.OrderId)
+		time.Sleep(time.Second * 5)
 	}
-	if right.OrderId != `` {
+	for right.OrderId != `` && right.Status == model.CarryStatusWorking {
 		right = api.QueryOrderById(``, ``, right.Market, right.Symbol, right.Instrument, right.OrderType, right.OrderId)
+		time.Sleep(time.Second * 5)
 	}
 	amount := math.Abs(left.DealAmount - right.DealAmount)
 	orderSide := left.OrderSide
-	price := left.Price
+	price := left.DealPrice
 	if left.DealAmount > right.DealAmount {
 		orderSide = right.OrderSide
 	}
 	symbol := left.Symbol
 	if left.DealAmount < right.DealAmount {
 		symbol = right.Symbol
-		price = right.Price
+		price = right.DealPrice
 	}
 	amount = api.FormatAmount(setting.Market, symbol, amount)
 	if amount > 0 {

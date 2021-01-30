@@ -508,14 +508,6 @@ func QueryOrderById(key, secret, market, symbol, instrument, orderType, orderId 
 		dealAmount, dealPrice, status = queryOrderBinance(symbol, orderId)
 	case model.Coinpark:
 		dealAmount, dealPrice, status = queryOrderCoinpark(orderId)
-	case model.Bitmex:
-		orders := queryOrderBitmex(key, secret, symbol, orderId)
-		for _, value := range orders {
-			if value.OrderId == orderId {
-				return value
-			}
-		}
-		return nil
 	case model.Bybit:
 		orders := queryOrderBybit(key, secret, symbol, orderId)
 		for _, value := range orders {
