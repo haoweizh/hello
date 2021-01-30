@@ -64,6 +64,7 @@ const AmountTypeNew = `new` // 用于okswap 开仓，而不平仓
 const FunctionTurtle = `turtle`
 const FunctionGrid = `grid`
 const FunctionCarry = `carry`
+const FunctionComplement = `complement`
 const FunctionHang = `hang`
 const FunctionHangFar = `hang_far`
 const FunctionRank = `rank`

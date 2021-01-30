@@ -506,8 +506,6 @@ func QueryOrderById(key, secret, market, symbol, instrument, orderType, orderId 
 		dealAmount, dealPrice, status = queryOrderOkfuture(instrument, orderType, orderId)
 	case model.Binance:
 		dealAmount, dealPrice, status = queryOrderBinance(symbol, orderId)
-	case model.Fcoin:
-		return queryOrderFcoin(key, secret, symbol, orderId)
 	case model.Coinpark:
 		dealAmount, dealPrice, status = queryOrderCoinpark(orderId)
 	case model.Bitmex:
@@ -518,9 +516,6 @@ func QueryOrderById(key, secret, market, symbol, instrument, orderType, orderId 
 			}
 		}
 		return nil
-	case model.Fmex:
-		order = queryOrderFmex(key, secret, orderId)
-		return order
 	case model.Bybit:
 		orders := queryOrderBybit(key, secret, symbol, orderId)
 		for _, value := range orders {
@@ -657,8 +652,7 @@ func RefreshAccount(key, secret, market string) {
 	}
 }
 
-// PlaceSyncOrders
-func _(key, secret, orderSide, orderType, market, symbol, instrument, amountType, accountType, orderParam,
+func PlaceSyncOrders(key, secret, orderSide, orderType, market, symbol, instrument, amountType, accountType, orderParam,
 	refreshType string, price, triggerPrice, amount float64, saveDB bool, channel chan model.Order, retry int) {
 	var order *model.Order
 	i := 0
@@ -968,4 +962,12 @@ func InitMarketInfos() {
 			model.MarketInfos[model.Ftx] = marketInfos
 		}
 	}
+}
+
+func FormatAmount(market, symbol string, amount float64) (formattedAmount float64) {
+	marketInfo := model.MarketInfos[market][symbol]
+	if marketInfo == nil || marketInfo.SizeIncrement == 0 {
+		return 0
+	}
+	return math.Floor(amount/marketInfo.SizeIncrement) * marketInfo.SizeIncrement
 }

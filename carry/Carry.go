@@ -16,6 +16,8 @@ const FTXLowOpen = -0.006
 const FTXClose = 0
 const OrderLimitUsd = 10.0
 
+//const FTXTakerFee = 0.000679
+
 var carryLock sync.Mutex
 var carrying bool
 var holding, usdAvailable float64
@@ -24,6 +26,7 @@ var holdingUpdateTime = util.GetNow()
 var carryScoreOpen = make(map[string]float64)
 var carryScoreClose = make(map[string]float64)
 var carryBalances = make(map[string]float64)
+var stChan = make(chan model.Order, 2)
 
 func isCarrying() (value bool) {
 	carryLock.Lock()
@@ -42,13 +45,10 @@ var ProcessCarry = func(setting *model.Setting) {
 	_, tickPerp := model.AppMarkets.GetBidAsk(setting.Symbol, setting.Market)
 	symbolRelated := setting.GetRelatedSymbol()
 	_, tickRelated := model.AppMarkets.GetBidAsk(symbolRelated, setting.Market)
-	marketInfo := model.MarketInfos[setting.Market][setting.Symbol]
-	marketInfoRelated := model.MarketInfos[setting.Market][symbolRelated]
 	now := util.GetNowUnixMillion()
 	if tickPerp == nil || tickRelated == nil || tickPerp.Asks == nil || tickPerp.Bids == nil ||
 		tickRelated.Asks == nil || tickRelated.Bids == nil || model.AppConfig.Handle != `1` ||
-		model.AppPause || now-int64(tickRelated.Ts) > 1000 || now-int64(tickPerp.Ts) > 1000 ||
-		marketInfo == nil || marketInfoRelated == nil {
+		model.AppPause || now-int64(tickRelated.Ts) > 1000 || now-int64(tickPerp.Ts) > 1000 {
 		return
 	}
 	if setting == nil || isCarrying() {
@@ -121,8 +121,8 @@ var ProcessCarry = func(setting *model.Setting) {
 	model.SetCarryInfo(`[grid]`,
 		fmt.Sprintf(`symbol low: %s %f high: %s %f symbols: %d available usd: %f holding: %f %s`,
 			symbolLow, scoreLow, symbolHigh, scoreHigh, len(carryScoreOpen), usdAvailable, holding, scoreMsg))
-	sidePerp, sideRelated, amount := calcCarryOpen(setting, marketInfo, marketInfoRelated, tickPerp,
-		tickRelated, symbolHigh, symbolLow, scoreOpen, scoreClose, scoreHigh, scoreLow)
+	sidePerp, sideRelated, amount := calcCarryOpen(setting, tickPerp, tickRelated, symbolHigh, symbolLow, scoreOpen,
+		scoreClose, scoreHigh, scoreLow)
 	if amount > 0 {
 		util.Notice(fmt.Sprintf(`carry between %s %s with score open:%f close:%f rate sum %f amount %f worth %f`,
 			setting.Symbol, symbolRelated, scoreOpen, scoreClose, rateSum, amount, amount*tickPerp.Asks[0].Price))
@@ -139,23 +139,65 @@ var ProcessCarry = func(setting *model.Setting) {
 		}
 		perpAmount := amount
 		relatedAmount := amount
-		if amount > carryBalances[symbolRelated] && !marketInfoRelated.CanBorrow {
+		if amount > carryBalances[symbolRelated] && setting.CloseShortMargin < -0.2 {
 			relatedAmount = carryBalances[symbolRelated]
 			util.Notice(fmt.Sprintf(`adjust usd symbol %s sell amount %f -> %f`, symbolRelated, amount, relatedAmount))
 		}
-		go api.PlaceOrder(``, ``, sidePerp, model.OrderTypeMarket, setting.Market, setting.Symbol, ``,
-			``, ``, ``, model.FunctionCarry, perpPrice, perpPrice, perpAmount, true)
-		go api.PlaceOrder(``, ``, sideRelated, model.OrderTypeMarket, setting.Market, symbolRelated, ``,
-			``, ``, ``, model.FunctionCarry, relatedPrice, relatedPrice, amount, true)
+		go api.PlaceSyncOrders(``, ``, sidePerp, model.OrderTypeMarket, setting.Market, setting.Symbol,
+			``, ``, ``, ``, model.FunctionCarry, perpPrice, perpPrice,
+			perpAmount, true, stChan, 1)
+		go api.PlaceSyncOrders(``, ``, sideRelated, model.OrderTypeMarket, setting.Market, symbolRelated,
+			``, ``, ``, ``, model.FunctionCarry, relatedPrice, relatedPrice,
+			amount, true, stChan, 1)
+		for true {
+			left := <-stChan
+			right := <-stChan
+			if (left.Symbol == setting.Symbol || left.Symbol == symbolRelated) && (right.Symbol == setting.Symbol ||
+				right.Symbol == symbolRelated) {
+				time.Sleep(time.Second * 3)
+				handleOrders(setting, &left, &right)
+			}
+		}
 		model.AppDB.Save(&setting)
 		holding = 0
 		usdAvailable = 0
-		time.Sleep(time.Second * 30)
+	}
+	time.Sleep(time.Second * 10)
+}
+
+func handleOrders(setting *model.Setting, left, right *model.Order) {
+	if left == nil || right == nil {
+		return
+	}
+	if left.OrderId != `` {
+		left = api.QueryOrderById(``, ``, left.Market, left.Symbol, left.Instrument, left.OrderType, left.OrderId)
+	}
+	if right.OrderId != `` {
+		right = api.QueryOrderById(``, ``, right.Market, right.Symbol, right.Instrument, right.OrderType, right.OrderId)
+	}
+	amount := math.Abs(left.DealAmount - right.DealAmount)
+	orderSide := left.OrderSide
+	price := left.Price
+	if left.DealAmount > right.DealAmount {
+		orderSide = right.OrderSide
+	}
+	symbol := left.Symbol
+	if left.DealAmount < right.DealAmount {
+		symbol = right.Symbol
+		price = right.Price
+	}
+	amount = api.FormatAmount(setting.Market, symbol, amount)
+	if amount > 0 {
+		util.Notice(fmt.Sprintf(`left: %s %s %s %f; right: %s %s %s %f; complement: %s %s %f`,
+			left.Market, left.Symbol, left.OrderSide, left.DealAmount, right.Market, right.Symbol, right.OrderSide,
+			right.DealAmount, symbol, orderSide, amount))
+		api.PlaceOrder(``, ``, orderSide, model.OrderTypeMarket, setting.Market, symbol, ``,
+			``, ``, ``, model.FunctionComplement, price, price, amount, true)
 	}
 }
 
-func calcCarryOpen(setting *model.Setting, marketInfo, marketInfoRelated *model.MarketInfo, tickPerp, tickRelated *model.BidAsk,
-	symbolHigh, symbolLow string, scoreOpen, scoreClose, scoreHigh, scoreLow float64) (sidePerp, sideRelated string, amount float64) {
+func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, symbolHigh, symbolLow string,
+	scoreOpen, scoreClose, scoreHigh, scoreLow float64) (sidePerp, sideRelated string, amount float64) {
 	//marketSymbols := model.GetMarketSymbols(setting.Market)
 	//if float64(len(perpSnapshot)) < 0.45*float64(len(marketSymbols)) {
 	//	return ``, ``, 0
@@ -186,13 +228,6 @@ func calcCarryOpen(setting *model.Setting, marketInfo, marketInfoRelated *model.
 	} else {
 		amount = math.Min(math.Abs(setting.GridAmount), math.Min(bidAmount, askAmount))
 	}
-	amount = math.Floor(amount/marketInfo.SizeIncrement) * marketInfo.SizeIncrement
-	if amount < marketInfo.SizeIncrement || amount < marketInfoRelated.SizeIncrement {
-		util.Notice(fmt.Sprintf(`size not enough order size %f < %s size %f or %s size %f %s:%f %s:%f`,
-			amount, marketInfo.Name, marketInfo.SizeIncrement, marketInfoRelated.Name,
-			marketInfoRelated.SizeIncrement, symbolLow, scoreLow, symbolHigh, scoreHigh))
-		time.Sleep(time.Second * 30)
-		return ``, ``, 0
-	}
+	amount = api.FormatAmount(setting.Market, setting.Symbol, amount)
 	return sidePerp, sideRelated, amount
 }
