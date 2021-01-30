@@ -129,11 +129,9 @@ var ProcessCarry = func(setting *model.Setting) {
 		perpPrice := tickPerp.Asks[0].Price
 		relatedPrice := tickRelated.Bids[0].Price
 		if sidePerp == model.OrderSideSell {
-			setting.GridAmount += amount
 			perpPrice = tickPerp.Bids[0].Price
 			relatedPrice = tickRelated.Asks[0].Price
 		} else if sidePerp == model.OrderSideBuy {
-			setting.GridAmount -= amount
 			perpPrice = tickPerp.Asks[0].Price
 			relatedPrice = tickRelated.Bids[0].Price
 		}
@@ -149,23 +147,29 @@ var ProcessCarry = func(setting *model.Setting) {
 		go api.PlaceSyncOrders(``, ``, sideRelated, model.OrderTypeMarket, setting.Market, symbolRelated,
 			``, ``, ``, ``, model.FunctionCarry, relatedPrice, relatedPrice,
 			amount, true, stChan, 1)
+		var left, right model.Order
 		for true {
-			left := <-stChan
-			right := <-stChan
-			if (left.Symbol == setting.Symbol || left.Symbol == symbolRelated) && (right.Symbol == setting.Symbol ||
-				right.Symbol == symbolRelated) {
-				handleOrders(setting, &left, &right)
-			}
+			left = <-stChan
+			right = <-stChan
 			break
+		}
+		if (left.Symbol == setting.Symbol || left.Symbol == symbolRelated) && (right.Symbol == setting.Symbol ||
+			right.Symbol == symbolRelated) {
+			amount = handleOrders(setting, &left, &right)
+			if sidePerp == model.OrderSideSell {
+				setting.GridAmount += amount
+			} else if sidePerp == model.OrderSideBuy {
+				setting.GridAmount -= amount
+			}
 		}
 		model.AppDB.Save(&setting)
 		holding = 0
 		usdAvailable = 0
 	}
-	time.Sleep(time.Second * 10)
+	time.Sleep(time.Second * 3)
 }
 
-func handleOrders(setting *model.Setting, left, right *model.Order) {
+func handleOrders(setting *model.Setting, left, right *model.Order) (actualAmount float64) {
 	if left == nil || right == nil {
 		return
 	}
@@ -182,11 +186,13 @@ func handleOrders(setting *model.Setting, left, right *model.Order) {
 	price := left.DealPrice
 	if left.DealAmount > right.DealAmount {
 		orderSide = right.OrderSide
+		actualAmount = right.DealAmount
 	}
 	symbol := left.Symbol
 	if left.DealAmount < right.DealAmount {
 		symbol = right.Symbol
 		price = right.DealPrice
+		actualAmount = left.DealAmount
 	}
 	amount = api.FormatAmount(setting.Market, symbol, amount)
 	if amount > 0 {
@@ -196,6 +202,7 @@ func handleOrders(setting *model.Setting, left, right *model.Order) {
 		api.PlaceOrder(``, ``, orderSide, model.OrderTypeMarket, setting.Market, symbol, ``,
 			``, ``, ``, model.FunctionComplement, price, price, amount, true)
 	}
+	return actualAmount
 }
 
 func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, symbolHigh, symbolLow string,
