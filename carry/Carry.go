@@ -157,6 +157,7 @@ var ProcessCarry = func(setting *model.Setting) {
 				time.Sleep(time.Second * 3)
 				handleOrders(setting, &left, &right)
 			}
+			break
 		}
 		model.AppDB.Save(&setting)
 		holding = 0
