@@ -194,16 +194,21 @@ func handleOrders(setting *model.Setting, left, right *model.Order) (actualAmoun
 		actualAmount = left.DealAmount
 	}
 	amount = api.FormatAmount(setting.Market, symbol, amount)
-	for i := 0; amount > 0 && i < 10; i++ {
+	for i := 0; amount > 0 && i < 100; i++ {
 		util.Notice(fmt.Sprintf(`left: %s %s %s %f; right: %s %s %s %f; complement %d times: %s %s %f`,
 			left.Market, left.Symbol, left.OrderSide, left.DealAmount, right.Market, right.Symbol, right.OrderSide,
 			right.DealAmount, i, symbol, orderSide, amount))
 		order := api.PlaceOrder(``, ``, orderSide, model.OrderTypeMarket, setting.Market, symbol, ``,
 			``, ``, ``, model.FunctionComplement, price, price, amount, true)
-		time.Sleep(time.Second * 10)
-		order = api.QueryOrderById(``, ``, setting.Market, symbol, ``, model.OrderTypeMarket, order.OrderId)
-		amount -= order.DealAmount
-		amount = api.FormatAmount(setting.Market, symbol, amount)
+		for order.Status == model.CarryStatusWorking {
+			time.Sleep(time.Second * 10)
+			order = api.QueryOrderById(``, ``, setting.Market, symbol, ``, model.OrderTypeMarket, order.OrderId)
+			if order.Status != model.CarryStatusWorking {
+				amount -= order.DealAmount
+				amount = api.FormatAmount(setting.Market, symbol, amount)
+				break
+			}
+		}
 	}
 	return actualAmount
 }
