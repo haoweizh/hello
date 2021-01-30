@@ -182,7 +182,6 @@ func handleOrders(setting *model.Setting, left, right *model.Order) (actualAmoun
 	}
 	amount := math.Abs(left.DealAmount - right.DealAmount)
 	orderSide := left.OrderSide
-	price := left.DealPrice
 	if left.DealAmount > right.DealAmount {
 		orderSide = right.OrderSide
 		actualAmount = right.DealAmount
@@ -190,7 +189,6 @@ func handleOrders(setting *model.Setting, left, right *model.Order) (actualAmoun
 	symbol := left.Symbol
 	if left.DealAmount < right.DealAmount {
 		symbol = right.Symbol
-		price = right.DealPrice
 		actualAmount = left.DealAmount
 	}
 	amount = api.FormatAmount(setting.Market, symbol, amount)
@@ -198,6 +196,26 @@ func handleOrders(setting *model.Setting, left, right *model.Order) (actualAmoun
 		util.Notice(fmt.Sprintf(`left: %s %s %s %f; right: %s %s %s %f; complement %d times: %s %s %f`,
 			left.Market, left.Symbol, left.OrderSide, left.DealAmount, right.Market, right.Symbol, right.OrderSide,
 			right.DealAmount, i, symbol, orderSide, amount))
+		_, tickPerp := model.AppMarkets.GetBidAsk(setting.Symbol, setting.Market)
+		symbolRelated := setting.GetRelatedSymbol()
+		_, tickRelated := model.AppMarkets.GetBidAsk(symbolRelated, setting.Market)
+		if tickPerp == nil || tickRelated == nil {
+			continue
+		}
+		price := tickPerp.Bids[0].Price
+		if symbol == setting.Symbol {
+			if orderSide == model.OrderSideBuy {
+				price = tickPerp.Asks[0].Price
+			} else {
+				price = tickPerp.Bids[0].Price
+			}
+		} else if symbol == symbolRelated {
+			if orderSide == model.OrderSideBuy {
+				price = tickRelated.Asks[0].Price
+			} else {
+				price = tickRelated.Bids[0].Price
+			}
+		}
 		order := api.PlaceOrder(``, ``, orderSide, model.OrderTypeMarket, setting.Market, symbol, ``,
 			``, ``, ``, model.FunctionComplement, price, price, amount, true)
 		for order.Status == model.CarryStatusWorking {
