@@ -931,8 +931,10 @@ func InitCarryFtx(start uint) {
 			ID:               start,
 		}
 		related := setting.GetRelatedSymbol()
-		//fmt.Println(fmt.Sprintf(`%s %s`, symbol, related))
-		if marketInfos[related] == nil || symbol == `FTT-PERP` || symbol == `USDT-PERP` || symbol == `UNI-PERP` {
+		// HOLY 1INCH too easy to be single completed order
+		if marketInfos[related] == nil || symbol == `FTT-PERP` || symbol == `USDT-PERP` || symbol == `HOLY-PERP` ||
+			symbol == `1INCH-PERP` || symbol == `AAVE-PERP` || symbol == `CHZ-PERP` || symbol == `XRP-PERP` ||
+			symbol == `RUNE-PERP` || symbol == `CREAM-PERP` || symbol == `AMPL-PERP` {
 			//fmt.Println(related + ` no`)
 			continue
 		}
