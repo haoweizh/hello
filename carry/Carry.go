@@ -16,7 +16,7 @@ const FTXLowOpen = -0.006
 const FTXClose = 0
 const OrderLimitUsd = 10.0
 
-//const FTXTakerFee = 0.000679
+const FTXTakerFee = 0.0007
 
 var carryLock sync.Mutex
 var carrying bool
@@ -137,16 +137,19 @@ var ProcessCarry = func(setting *model.Setting) {
 		}
 		perpAmount := amount
 		relatedAmount := amount
-		if amount > carryBalances[symbolRelated] && setting.CloseShortMargin < -0.2 {
+		if relatedAmount > carryBalances[symbolRelated] && setting.CloseShortMargin < -0.2 {
 			relatedAmount = carryBalances[symbolRelated]
 			util.Notice(fmt.Sprintf(`adjust usd symbol %s sell amount %f -> %f`, symbolRelated, amount, relatedAmount))
+		}
+		if sideRelated == model.OrderSideBuy {
+			relatedAmount = relatedAmount * (1 + FTXTakerFee)
 		}
 		go api.PlaceSyncOrders(``, ``, sidePerp, model.OrderTypeMarket, setting.Market, setting.Symbol,
 			``, ``, ``, ``, model.FunctionCarry, perpPrice, perpPrice,
 			perpAmount, true, stChan, 1)
 		go api.PlaceSyncOrders(``, ``, sideRelated, model.OrderTypeMarket, setting.Market, symbolRelated,
 			``, ``, ``, ``, model.FunctionCarry, relatedPrice, relatedPrice,
-			amount, true, stChan, 1)
+			relatedAmount, true, stChan, 1)
 		var left, right model.Order
 		for true {
 			left = <-stChan
@@ -182,12 +185,12 @@ func handleOrders(setting *model.Setting, left, right *model.Order) (diffAmount 
 	}
 	amount := math.Abs(left.DealAmount - right.DealAmount)
 	orderSide := left.OrderSide
-	if left.DealAmount > right.DealAmount {
-		orderSide = right.OrderSide
-	}
 	symbol := left.Symbol
-	if left.DealAmount < right.DealAmount {
+	if left.DealAmount > right.DealAmount {
 		symbol = right.Symbol
+	}
+	if left.DealAmount < right.DealAmount {
+		orderSide = right.OrderSide
 	}
 	amount = api.FormatAmount(setting.Market, symbol, amount)
 	for i := 0; amount > 0 && i < 100; i++ {
