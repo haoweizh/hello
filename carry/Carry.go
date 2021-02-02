@@ -155,7 +155,7 @@ var ProcessCarry = func(setting *model.Setting) {
 		}
 		if (left.Symbol == setting.Symbol || left.Symbol == symbolRelated) && (right.Symbol == setting.Symbol ||
 			right.Symbol == symbolRelated) {
-			amount = handleOrders(setting, &left, &right)
+			handleOrders(setting, &left, &right)
 			if sidePerp == model.OrderSideSell {
 				setting.GridAmount += amount
 			} else if sidePerp == model.OrderSideBuy {
@@ -168,7 +168,7 @@ var ProcessCarry = func(setting *model.Setting) {
 	}
 }
 
-func handleOrders(setting *model.Setting, left, right *model.Order) (actualAmount float64) {
+func handleOrders(setting *model.Setting, left, right *model.Order) (diffAmount float64) {
 	if left == nil || right == nil {
 		return
 	}
@@ -184,12 +184,10 @@ func handleOrders(setting *model.Setting, left, right *model.Order) (actualAmoun
 	orderSide := left.OrderSide
 	if left.DealAmount > right.DealAmount {
 		orderSide = right.OrderSide
-		actualAmount = right.DealAmount
 	}
 	symbol := left.Symbol
 	if left.DealAmount < right.DealAmount {
 		symbol = right.Symbol
-		actualAmount = left.DealAmount
 	}
 	amount = api.FormatAmount(setting.Market, symbol, amount)
 	for i := 0; amount > 0 && i < 100; i++ {
@@ -228,7 +226,7 @@ func handleOrders(setting *model.Setting, left, right *model.Order) (actualAmoun
 			}
 		}
 	}
-	return actualAmount
+	return amount
 }
 
 func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, symbolHigh, symbolLow string,
