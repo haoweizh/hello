@@ -124,7 +124,7 @@ var ProcessCarry = func(setting *model.Setting) {
 	sidePerp, sideRelated, amount := calcCarryOpen(setting, tickPerp, tickRelated, symbolHigh, symbolLow, scoreOpen,
 		scoreClose, scoreHigh, scoreLow)
 	if amount > 0 {
-		util.Notice(fmt.Sprintf(`carry between %s %s with score open:%f close:%f rate sum %f amount %f worth %f`,
+		util.Notice(fmt.Sprintf(`carry%s->%s with score open:%f close:%f rate sum %f amount %f worth %f`,
 			setting.Symbol, symbolRelated, scoreOpen, scoreClose, rateSum, amount, amount*tickPerp.Asks[0].Price))
 		perpPrice := tickPerp.Asks[0].Price
 		relatedPrice := tickRelated.Bids[0].Price

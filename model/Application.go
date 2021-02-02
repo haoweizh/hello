@@ -43,6 +43,7 @@ const Btcdo = `btcdo`
 const Bitmex = `bitmex`
 const AccountTypeNormal = ``
 const AccountTypeLever = `lever`
+const AccountTypeReduce = `reduceOnly`
 const SubscribeDepth = `SubscribeDepth`
 const SubscribeDeal = `subscribeDeal`
 const CarryStatusSuccess = "success"

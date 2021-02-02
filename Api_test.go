@@ -108,6 +108,10 @@ func Test_RefreshAccount(t *testing.T) {
 		util.Notice(err.Error())
 		return
 	}
+	order := api.PlaceOrder(model.AppConfig.FtxKey, model.AppConfig.FtxSecret, `buy`, model.OrderTypeMarket,
+		model.Ftx, `BTMX/USD`, ``,
+		``, `reduceOnly`, ``, model.FunctionComplement, 0.0657, 0.0675, 1, true)
+	fmt.Println(order.Status)
 	holding := 0.0
 	balances := api.GetBalance(``, ``, model.Ftx, 0)
 	for _, value := range balances {

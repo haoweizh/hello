@@ -593,7 +593,7 @@ func parseOrderFtx(order *model.Order, item map[string]interface{}) {
 }
 
 //orderType: "limit", "market", "stop", "trailingStop", "takeProfit"
-func placeOrderFtx(order *model.Order, key, secret, orderSide, orderType, orderParam, symbol, orderPrice, triggerPrice,
+func placeOrderFtx(order *model.Order, key, secret, orderSide, orderType, accountType, orderParam, symbol, orderPrice, triggerPrice,
 	amount string) {
 	uri := `/orders`
 	param := make(map[string]interface{})
@@ -603,6 +603,9 @@ func placeOrderFtx(order *model.Order, key, secret, orderSide, orderType, orderP
 	postData[`side`] = orderSide
 	postData[`size`], _ = strconv.ParseFloat(amount, 64)
 	postData[`type`] = orderType
+	if accountType == model.AccountTypeReduce {
+		postData[`reduceOnly`] = true
+	}
 	if orderType == `limit` || orderType == `market` {
 		postData[`price`], _ = strconv.ParseFloat(orderPrice, 64)
 		if orderParam == model.PostOnly {

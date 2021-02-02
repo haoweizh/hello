@@ -734,13 +734,6 @@ func PlaceOrder(key, secret, orderSide, orderType, market, symbol, instrument, a
 		placeOrderOkfuture(order, orderSide, orderType, symbol, instrument, strPrice, strTriggerPrice, strAmount)
 	case model.Binance:
 		placeOrderBinance(order, orderSide, orderType, symbol, strPrice, strAmount)
-	case model.Fcoin:
-		placeOrderFcoin(order, key, secret, orderSide, orderType, symbol, accountType, strPrice, strAmount)
-		if order.ErrCode == `1002` {
-			time.Sleep(time.Millisecond * 200)
-		}
-	case model.Fmex:
-		placeOrderFmex(order, key, secret, orderSide, orderType, symbol, strPrice, strAmount)
 	case model.Coinpark:
 		placeOrderCoinpark(order, orderSide, orderType, symbol, strPrice, strAmount)
 		if order.ErrCode == `4003` {
@@ -752,8 +745,8 @@ func PlaceOrder(key, secret, orderSide, orderType, market, symbol, instrument, a
 	case model.Bybit:
 		placeOrderBybit(order, key, secret, orderSide, orderType, orderParam, symbol, strPrice, strAmount)
 	case model.Ftx:
-		placeOrderFtx(order, key, secret, orderSide, orderType, orderParam, symbol, strPrice, strTriggerPrice,
-			fmt.Sprintf(`%f`, amount))
+		placeOrderFtx(order, key, secret, orderSide, orderType, accountType, orderParam, symbol, strPrice,
+			strTriggerPrice, fmt.Sprintf(`%f`, amount))
 	case model.OKSwap:
 		account := model.AppAccounts.GetAccount(model.OKSwap, model.OrderSideSell+symbol)
 		if orderSide == model.OrderSideSell {
