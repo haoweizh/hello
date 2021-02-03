@@ -215,6 +215,9 @@ func makeEqual(setting *model.Setting) (equal bool) {
 	orders := make([]*model.Order, 0)
 	_, tickPerp := model.AppMarkets.GetBidAsk(setting.Symbol, setting.Market)
 	_, tickRelated := model.AppMarkets.GetBidAsk(symbolRelated, setting.Market)
+	if tickPerp == nil || tickRelated == nil {
+		return true
+	}
 	if amount < math.Min(math.Abs(amountPerp), math.Abs(amountRelated)) {
 		symbol := setting.Symbol
 		amount = api.FormatAmount(setting.Market, setting.Symbol, amount)
