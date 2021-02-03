@@ -209,8 +209,6 @@ func makeEqual(setting *model.Setting) (equal bool) {
 	if amount > 0 {
 		orderSide = model.OrderSideSell
 	}
-	util.Notice(fmt.Sprintf(`try to equal %s %f %s %f diff: %f side: %s`,
-		setting.Symbol, amountPerp, symbolRelated, amountRelated, amount, orderSide))
 	amount = math.Abs(amount)
 	orders := make([]*model.Order, 0)
 	_, tickPerp := model.AppMarkets.GetBidAsk(setting.Symbol, setting.Market)
@@ -218,6 +216,8 @@ func makeEqual(setting *model.Setting) (equal bool) {
 	if tickPerp == nil || tickRelated == nil {
 		return true
 	}
+	util.Notice(fmt.Sprintf(`try to equal %s %f %s %f diff: %f side: %s`,
+		setting.Symbol, amountPerp, symbolRelated, amountRelated, amount, orderSide))
 	if amount < math.Min(math.Abs(amountPerp), math.Abs(amountRelated)) {
 		symbol := setting.Symbol
 		amount = api.FormatAmount(setting.Market, setting.Symbol, amount)
