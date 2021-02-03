@@ -142,18 +142,12 @@ var ProcessCarry = func(setting *model.Setting) {
 			perpPrice = tickPerp.Asks[0].Price
 			relatedPrice = tickRelated.Bids[0].Price
 		}
-		perpAmount := amount
-		relatedAmount := amount
-		if relatedAmount > carryBalances[symbolRelated] && setting.CloseShortMargin < -0.2 {
-			relatedAmount = carryBalances[symbolRelated]
-			util.Notice(fmt.Sprintf(`adjust usd symbol %s sell amount %f -> %f`, symbolRelated, amount, relatedAmount))
-		}
 		go api.PlaceSyncOrders(``, ``, sidePerp, model.OrderTypeMarket, setting.Market, setting.Symbol,
 			``, ``, ``, ``, model.FunctionCarry, perpPrice, perpPrice,
-			perpAmount, true, stChan, 1)
+			amount, true, stChan, 1)
 		go api.PlaceSyncOrders(``, ``, sideRelated, model.OrderTypeMarket, setting.Market, symbolRelated,
 			``, ``, ``, ``, model.FunctionCarry, relatedPrice, relatedPrice,
-			relatedAmount, true, stChan, 1)
+			amount, true, stChan, 1)
 		var left, right *model.Order
 		for true {
 			left = <-stChan
@@ -170,13 +164,13 @@ var ProcessCarry = func(setting *model.Setting) {
 				right = api.QueryOrderById(``, ``, right.Market, right.Symbol, right.Instrument, right.OrderType, right.OrderId)
 				time.Sleep(time.Second * 5)
 			}
-			balances := api.GetBalance(model.AppConfig.FtxKey, model.AppConfig.FtxSecret, model.Ftx, 0)
-			api.RefreshAccount(``, ``, setting.Market)
-			makeEqual(setting, balances)
-			balances = api.GetBalance(model.AppConfig.FtxKey, model.AppConfig.FtxSecret, model.Ftx, 0)
-			api.RefreshAccount(``, ``, setting.Market)
-			_, setting.GridAmount = getCarryAmounts(setting, balances)
 		}
+		balances := api.GetBalance(model.AppConfig.FtxKey, model.AppConfig.FtxSecret, model.Ftx, 0)
+		api.RefreshAccount(``, ``, setting.Market)
+		makeEqual(setting, balances)
+		balances = api.GetBalance(model.AppConfig.FtxKey, model.AppConfig.FtxSecret, model.Ftx, 0)
+		api.RefreshAccount(``, ``, setting.Market)
+		_, setting.GridAmount = getCarryAmounts(setting, balances)
 		model.AppDB.Save(&setting)
 		holding = 0
 		usdAvailable = 0
@@ -214,7 +208,7 @@ func makeEqual(setting *model.Setting, balances []*model.Balance) (equal bool) {
 	if tickPerp == nil || tickRelated == nil {
 		return true
 	}
-	if amount < math.Min(math.Abs(amountPerp), math.Abs(amountRelated)) {
+	if amount < math.Max(math.Abs(amountPerp), math.Abs(amountRelated)) {
 		symbol := setting.Symbol
 		amount = api.FormatAmount(setting.Market, setting.Symbol, amount)
 		price := tickPerp.Bids[0].Price
@@ -237,23 +231,23 @@ func makeEqual(setting *model.Setting, balances []*model.Balance) (equal bool) {
 				amount, true))
 		}
 	} else {
+		price := tickPerp.Asks[0].Price
+		if amountPerp > 0 {
+			price = tickPerp.Bids[0].Price
+		}
 		amountPerp = api.FormatAmount(model.Ftx, setting.Symbol, math.Abs(amountPerp))
 		if amountPerp > 0 {
-			price := tickPerp.Bids[0].Price
-			if orderSide == model.OrderSideBuy {
-				price = tickPerp.Asks[0].Price
-			}
 			util.Notice(fmt.Sprintf(`equal perp %s %s %f`, setting.Market, orderSide, amount))
 			orders = append(orders, api.PlaceOrder(``, ``, orderSide, model.OrderTypeMarket, setting.Market,
 				setting.Symbol, ``, ``, ``, ``, model.FunctionComplement,
 				price, price, amountPerp, true))
 		}
+		price = tickRelated.Asks[0].Price
+		if amountRelated > 0 {
+			price = tickRelated.Bids[0].Price
+		}
 		amountRelated = api.FormatAmount(model.Ftx, symbolRelated, math.Abs(amountRelated))
 		if amountRelated > 0 {
-			price := tickRelated.Bids[0].Price
-			if orderSide == model.OrderSideBuy {
-				price = tickRelated.Asks[0].Price
-			}
 			util.Notice(fmt.Sprintf(`equal related %s %s %f`, setting.Market, orderSide, amount))
 			orders = append(orders, api.PlaceOrder(``, ``, orderSide, model.OrderTypeMarket, setting.Market,
 				symbolRelated, ``, ``, ``, ``, model.FunctionComplement,
@@ -269,7 +263,9 @@ func makeEqual(setting *model.Setting, balances []*model.Balance) (equal bool) {
 			}
 			order = api.QueryOrderById(``, ``, order.Market, order.Symbol, order.Instrument,
 				order.OrderType, order.OrderId)
-			if order.Status == model.CarryStatusWorking {
+			if order == nil {
+				allDone = false
+			} else if order.Status == model.CarryStatusWorking {
 				allDone = false
 				util.Notice(fmt.Sprintf(`working set all done %v %s deal %f`,
 					allDone, order.Status, order.DealAmount))
