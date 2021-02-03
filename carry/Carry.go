@@ -16,7 +16,7 @@ const FTXLowOpen = -0.006
 const FTXClose = 0
 const OrderLimitUsd = 10.0
 
-const FTXTakerFee = 0.0007
+//const FTXTakerFee = 0.0007
 
 var carryLock sync.Mutex
 var carrying bool
@@ -141,9 +141,6 @@ var ProcessCarry = func(setting *model.Setting) {
 		if relatedAmount > carryBalances[symbolRelated] && setting.CloseShortMargin < -0.2 {
 			relatedAmount = carryBalances[symbolRelated]
 			util.Notice(fmt.Sprintf(`adjust usd symbol %s sell amount %f -> %f`, symbolRelated, amount, relatedAmount))
-		}
-		if sideRelated == model.OrderSideBuy {
-			relatedAmount = relatedAmount * (1 + FTXTakerFee)
 		}
 		go api.PlaceSyncOrders(``, ``, sidePerp, model.OrderTypeMarket, setting.Market, setting.Symbol,
 			``, ``, ``, ``, model.FunctionCarry, perpPrice, perpPrice,
