@@ -65,13 +65,14 @@ var ProcessCarry = func(setting *model.Setting) {
 	current := util.GetNow()
 	if usdAvailable == 0 || holdingUpdateTime.Before(current.Add(duration)) {
 		holdingUpdateTime = current
+		balances := api.GetBalance(``, ``, setting.Market, 0)
+		api.RefreshAccount(``, ``, setting.Market)
 		settings := model.GetSettings(setting.Function, setting.Market)
 		for _, items := range settings {
 			for _, item := range items {
-				makeEqual(item)
+				makeEqual(item, balances)
 			}
 		}
-		balances := api.GetBalance(``, ``, setting.Market, 0)
 		symbols := model.GetMarketSymbols(setting.Market)
 		usdAvailable = 0
 		holding = 0
@@ -169,8 +170,12 @@ var ProcessCarry = func(setting *model.Setting) {
 				right = api.QueryOrderById(``, ``, right.Market, right.Symbol, right.Instrument, right.OrderType, right.OrderId)
 				time.Sleep(time.Second * 5)
 			}
-			makeEqual(setting)
-			_, setting.GridAmount = getCarryAmounts(setting)
+			balances := api.GetBalance(model.AppConfig.FtxKey, model.AppConfig.FtxSecret, model.Ftx, 0)
+			api.RefreshAccount(``, ``, setting.Market)
+			makeEqual(setting, balances)
+			balances = api.GetBalance(model.AppConfig.FtxKey, model.AppConfig.FtxSecret, model.Ftx, 0)
+			api.RefreshAccount(``, ``, setting.Market)
+			_, setting.GridAmount = getCarryAmounts(setting, balances)
 			if sidePerp == model.OrderSideSell {
 				setting.GridAmount += amount
 			} else if sidePerp == model.OrderSideBuy {
@@ -183,10 +188,8 @@ var ProcessCarry = func(setting *model.Setting) {
 	}
 }
 
-func getCarryAmounts(setting *model.Setting) (amountPerp, amountRelated float64) {
-	api.RefreshAccount(model.AppConfig.FtxKey, model.AppConfig.FtxSecret, model.Ftx)
+func getCarryAmounts(setting *model.Setting, balances []*model.Balance) (amountPerp, amountRelated float64) {
 	account := model.AppAccounts.GetAccount(setting.Market, setting.Symbol)
-	balances := api.GetBalance(model.AppConfig.FtxKey, model.AppConfig.FtxSecret, model.Ftx, 0)
 	if account == nil || account.Currency == `` || !strings.Contains(account.Currency, `-`) {
 		amountPerp = 0
 	} else {
@@ -201,8 +204,8 @@ func getCarryAmounts(setting *model.Setting) (amountPerp, amountRelated float64)
 	return amountPerp, amountRelated
 }
 
-func makeEqual(setting *model.Setting) (equal bool) {
-	amountPerp, amountRelated := getCarryAmounts(setting)
+func makeEqual(setting *model.Setting, balances []*model.Balance) (equal bool) {
+	amountPerp, amountRelated := getCarryAmounts(setting, balances)
 	amount := amountPerp + amountRelated
 	symbolRelated := setting.GetRelatedSymbol()
 	orderSide := model.OrderSideBuy
@@ -256,6 +259,7 @@ func makeEqual(setting *model.Setting) (equal bool) {
 			}
 			if order.Status == model.CarryStatusWorking {
 				allDone = false
+				util.Notice(fmt.Sprintf(`working set all done %v`, allDone))
 				order = api.QueryOrderById(``, ``, order.Market, order.Symbol, order.Instrument,
 					order.OrderType, order.OrderId)
 				time.Sleep(time.Second * 5)
