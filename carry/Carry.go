@@ -176,11 +176,6 @@ var ProcessCarry = func(setting *model.Setting) {
 			balances = api.GetBalance(model.AppConfig.FtxKey, model.AppConfig.FtxSecret, model.Ftx, 0)
 			api.RefreshAccount(``, ``, setting.Market)
 			_, setting.GridAmount = getCarryAmounts(setting, balances)
-			if sidePerp == model.OrderSideSell {
-				setting.GridAmount += amount
-			} else if sidePerp == model.OrderSideBuy {
-				setting.GridAmount -= amount
-			}
 		}
 		model.AppDB.Save(&setting)
 		holding = 0
@@ -219,8 +214,6 @@ func makeEqual(setting *model.Setting, balances []*model.Balance) (equal bool) {
 	if tickPerp == nil || tickRelated == nil {
 		return true
 	}
-	util.Notice(fmt.Sprintf(`try to equal %s %f %s %f diff: %f side: %s`,
-		setting.Symbol, amountPerp, symbolRelated, amountRelated, amount, orderSide))
 	if amount < math.Min(math.Abs(amountPerp), math.Abs(amountRelated)) {
 		symbol := setting.Symbol
 		amount = api.FormatAmount(setting.Market, setting.Symbol, amount)
@@ -231,24 +224,28 @@ func makeEqual(setting *model.Setting, balances []*model.Balance) (equal bool) {
 			price = tickRelated.Bids[0].Price/2 + tickRelated.Asks[0].Price/2
 		}
 		if amount > 0 {
-			util.Notice(fmt.Sprintf(`equal %s %s %f`, symbol, orderSide, amount))
+			util.Notice(fmt.Sprintf(`equal one %s %s %f %s %f %s %f`,
+				symbol, orderSide, amount, setting.Market, amountPerp, symbolRelated, amountRelated))
 			orders = append(orders, api.PlaceOrder(``, ``, orderSide, model.OrderTypeMarket, setting.Market,
 				symbol, ``, ``, ``, ``, model.FunctionComplement, price, price,
 				amount, true))
 		}
 	} else {
 		price := tickPerp.Bids[0].Price/2 + tickPerp.Asks[0].Price/2
-		util.Notice(fmt.Sprintf(`equal both orders `))
 		amountPerp = api.FormatAmount(model.Ftx, setting.Symbol, math.Abs(amountPerp))
 		if amountPerp > 0 {
+			util.Notice(fmt.Sprintf(`equal perp %s %s %f`, setting.Market, orderSide, amount))
 			orders = append(orders, api.PlaceOrder(``, ``, orderSide, model.OrderTypeMarket, setting.Market,
 				setting.Symbol, ``, ``, ``, ``, model.FunctionComplement,
 				price, price, amountPerp, true))
 		}
 		amountRelated = api.FormatAmount(model.Ftx, symbolRelated, math.Abs(amountRelated))
-		orders = append(orders, api.PlaceOrder(``, ``, orderSide, model.OrderTypeMarket, setting.Market,
-			symbolRelated, ``, ``, ``, ``, model.FunctionComplement,
-			price, price, amountRelated, true))
+		if amountRelated > 0 {
+			util.Notice(fmt.Sprintf(`equal related %s %s %f`, setting.Market, orderSide, amount))
+			orders = append(orders, api.PlaceOrder(``, ``, orderSide, model.OrderTypeMarket, setting.Market,
+				symbolRelated, ``, ``, ``, ``, model.FunctionComplement,
+				price, price, amountRelated, true))
+		}
 	}
 	allDone := false
 	for i := 0; i < 30 && !allDone; i++ {
