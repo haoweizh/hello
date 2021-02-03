@@ -186,15 +186,16 @@ var ProcessCarry = func(setting *model.Setting) {
 func getCarryAmounts(setting *model.Setting) (amountPerp, amountRelated float64) {
 	api.RefreshAccount(model.AppConfig.FtxKey, model.AppConfig.FtxSecret, model.Ftx)
 	account := model.AppAccounts.GetAccount(setting.Market, setting.Symbol)
-	amountPerp = account.Free
 	balances := api.GetBalance(model.AppConfig.FtxKey, model.AppConfig.FtxSecret, model.Ftx, 0)
-	if account.Currency == `` || !strings.Contains(account.Currency, `-`) {
-		return
-	}
-	for _, balance := range balances {
-		coin := strings.ToUpper(strings.Split(account.Currency, `-`)[0])
-		if strings.ToUpper(balance.Coin) == coin {
-			amountRelated = balance.Amount
+	if account == nil || account.Currency == `` || !strings.Contains(account.Currency, `-`) {
+		amountPerp = 0
+	} else {
+		amountPerp = account.Free
+		for _, balance := range balances {
+			coin := strings.ToUpper(strings.Split(account.Currency, `-`)[0])
+			if strings.ToUpper(balance.Coin) == coin {
+				amountRelated = balance.Amount
+			}
 		}
 	}
 	return amountPerp, amountRelated
