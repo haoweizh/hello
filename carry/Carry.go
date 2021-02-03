@@ -25,7 +25,6 @@ var holdingUpdateTime = util.GetNow()
 
 var carryScoreOpen = make(map[string]float64)
 var carryScoreClose = make(map[string]float64)
-var carryBalances = make(map[string]float64)
 var stChan = make(chan *model.Order, 2)
 
 func isCarrying() (value bool) {
@@ -78,12 +77,7 @@ var ProcessCarry = func(setting *model.Setting) {
 		holding = 0
 		for _, value := range balances {
 			usdSymbol := strings.ToUpper(value.Coin) + `/USD`
-			carryBalances[usdSymbol] = value.Amount
 			util.Notice(fmt.Sprintf(`set usd symbol %s balance %f `, usdSymbol, value.Amount))
-			tempMarketInfo := model.MarketInfos[setting.Market][usdSymbol]
-			if tempMarketInfo != nil {
-				util.Notice(fmt.Sprintf(`can borrow:%v`, tempMarketInfo.CanBorrow))
-			}
 			if strings.ToLower(value.Coin) == `usd` {
 				usdAvailable = value.Amount
 			} else if symbols[usdSymbol] {
@@ -104,7 +98,7 @@ var ProcessCarry = func(setting *model.Setting) {
 	}
 	checkPair := tickRelated.Bids[0].Price / tickPerp.Bids[0].Price
 	if checkPair > 1.2 || checkPair < 0.8 {
-		util.Info(fmt.Sprintf(`fatal %s %s %f %f`,
+		util.Info(fmt.Sprintf(`fatal error: out of price range %s %s %f %f`,
 			setting.Symbol, symbolRelated, tickPerp.Bids[0].Price, tickRelated.Bids[0].Price))
 		//return
 	}
