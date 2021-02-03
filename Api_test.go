@@ -108,6 +108,9 @@ func Test_RefreshAccount(t *testing.T) {
 		util.Notice(err.Error())
 		return
 	}
+	order := api.QueryOrderById(model.AppConfig.FtxKey, model.AppConfig.FtxSecret, model.Ftx, `SNX-PERP`, ``, ``, `25933261043`)
+	fmt.Println(order.OrderType)
+	fmt.Println(order.Status)
 	api.RefreshAccount(model.AppConfig.FtxKey, model.AppConfig.FtxSecret, model.Ftx)
 	balances := api.GetBalance(model.AppConfig.FtxKey, model.AppConfig.FtxSecret, model.Ftx, 0)
 	for _, balance := range balances {
@@ -119,7 +122,7 @@ func Test_RefreshAccount(t *testing.T) {
 		}
 		fmt.Println(fmt.Sprintf(`%s %f %s %f`, balance.Coin, balance.Amount, name, free))
 	}
-	order := api.PlaceOrder(model.AppConfig.FtxKey, model.AppConfig.FtxSecret, `buy`, model.OrderTypeMarket,
+	api.PlaceOrder(model.AppConfig.FtxKey, model.AppConfig.FtxSecret, `buy`, model.OrderTypeMarket,
 		model.Ftx, `BTMX-USD`, ``,
 		``, `reduceOnly`, ``, model.FunctionComplement, 0.0657, 0.0675, 1, true)
 	fmt.Println(order.Status)

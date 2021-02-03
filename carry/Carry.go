@@ -267,11 +267,12 @@ func makeEqual(setting *model.Setting, balances []*model.Balance) (equal bool) {
 			if order == nil {
 				continue
 			}
+			order = api.QueryOrderById(``, ``, order.Market, order.Symbol, order.Instrument,
+				order.OrderType, order.OrderId)
 			if order.Status == model.CarryStatusWorking {
 				allDone = false
-				util.Notice(fmt.Sprintf(`working set all done %v`, allDone))
-				order = api.QueryOrderById(``, ``, order.Market, order.Symbol, order.Instrument,
-					order.OrderType, order.OrderId)
+				util.Notice(fmt.Sprintf(`working set all done %v %s deal %f`,
+					allDone, order.Status, order.DealAmount))
 				time.Sleep(time.Second * 5)
 			}
 		}
