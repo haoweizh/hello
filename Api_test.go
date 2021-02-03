@@ -108,12 +108,22 @@ func Test_RefreshAccount(t *testing.T) {
 		util.Notice(err.Error())
 		return
 	}
+	api.RefreshAccount(model.AppConfig.FtxKey, model.AppConfig.FtxSecret, model.Ftx)
+	balances := api.GetBalance(model.AppConfig.FtxKey, model.AppConfig.FtxSecret, model.Ftx, 0)
+	for _, balance := range balances {
+		name := strings.ToUpper(balance.Coin) + `-PERP`
+		account := model.AppAccounts.GetAccount(model.Ftx, name)
+		free := 0.0
+		if account != nil {
+			free = account.Free
+		}
+		fmt.Println(fmt.Sprintf(`%s %f %s %f`, balance.Coin, balance.Amount, name, free))
+	}
 	order := api.PlaceOrder(model.AppConfig.FtxKey, model.AppConfig.FtxSecret, `buy`, model.OrderTypeMarket,
-		model.Ftx, `BTMX/USD`, ``,
+		model.Ftx, `BTMX-USD`, ``,
 		``, `reduceOnly`, ``, model.FunctionComplement, 0.0657, 0.0675, 1, true)
 	fmt.Println(order.Status)
 	holding := 0.0
-	balances := api.GetBalance(``, ``, model.Ftx, 0)
 	for _, value := range balances {
 		//usdSymbol := strings.ToUpper(value.Coin) + `/USD`
 		holding += math.Abs(value.UsdValue)

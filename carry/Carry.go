@@ -26,7 +26,7 @@ var holdingUpdateTime = util.GetNow()
 var carryScoreOpen = make(map[string]float64)
 var carryScoreClose = make(map[string]float64)
 var carryBalances = make(map[string]float64)
-var stChan = make(chan model.Order, 2)
+var stChan = make(chan *model.Order, 2)
 
 func isCarrying() (value bool) {
 	carryLock.Lock()
@@ -65,6 +65,7 @@ var ProcessCarry = func(setting *model.Setting) {
 	current := util.GetNow()
 	if usdAvailable == 0 || holdingUpdateTime.Before(current.Add(duration)) {
 		holdingUpdateTime = current
+		makeEqual(setting)
 		balances := api.GetBalance(``, ``, setting.Market, 0)
 		symbols := model.GetMarketSymbols(setting.Market)
 		usdAvailable = 0
@@ -150,15 +151,24 @@ var ProcessCarry = func(setting *model.Setting) {
 		go api.PlaceSyncOrders(``, ``, sideRelated, model.OrderTypeMarket, setting.Market, symbolRelated,
 			``, ``, ``, ``, model.FunctionCarry, relatedPrice, relatedPrice,
 			relatedAmount, true, stChan, 1)
-		var left, right model.Order
+		var left, right *model.Order
 		for true {
 			left = <-stChan
 			right = <-stChan
 			break
 		}
-		if (left.Symbol == setting.Symbol || left.Symbol == symbolRelated) && (right.Symbol == setting.Symbol ||
-			right.Symbol == symbolRelated) {
-			handleOrders(setting, &left, &right)
+		if left != nil && right != nil && (left.Symbol == setting.Symbol || left.Symbol == symbolRelated) &&
+			(right.Symbol == setting.Symbol || right.Symbol == symbolRelated) {
+			for left.OrderId != `` && left.Status == model.CarryStatusWorking {
+				left = api.QueryOrderById(``, ``, left.Market, left.Symbol, left.Instrument, left.OrderType, left.OrderId)
+				time.Sleep(time.Second * 5)
+			}
+			for right.OrderId != `` && right.Status == model.CarryStatusWorking {
+				right = api.QueryOrderById(``, ``, right.Market, right.Symbol, right.Instrument, right.OrderType, right.OrderId)
+				time.Sleep(time.Second * 5)
+			}
+			makeEqual(setting)
+			_, setting.GridAmount = getCarryAmounts(setting)
 			if sidePerp == model.OrderSideSell {
 				setting.GridAmount += amount
 			} else if sidePerp == model.OrderSideBuy {
@@ -171,65 +181,82 @@ var ProcessCarry = func(setting *model.Setting) {
 	}
 }
 
-func handleOrders(setting *model.Setting, left, right *model.Order) (diffAmount float64) {
-	if left == nil || right == nil {
+func getCarryAmounts(setting *model.Setting) (amountPerp, amountRelated float64) {
+	api.RefreshAccount(model.AppConfig.FtxKey, model.AppConfig.FtxSecret, model.Ftx)
+	account := model.AppAccounts.GetAccount(setting.Market, setting.Symbol)
+	amountPerp = account.Free
+	balances := api.GetBalance(model.AppConfig.FtxKey, model.AppConfig.FtxSecret, model.Ftx, 0)
+	if account.Currency == `` || !strings.Contains(account.Currency, `-`) {
 		return
 	}
-	for left.OrderId != `` && left.Status == model.CarryStatusWorking {
-		left = api.QueryOrderById(``, ``, left.Market, left.Symbol, left.Instrument, left.OrderType, left.OrderId)
-		time.Sleep(time.Second * 5)
-	}
-	for right.OrderId != `` && right.Status == model.CarryStatusWorking {
-		right = api.QueryOrderById(``, ``, right.Market, right.Symbol, right.Instrument, right.OrderType, right.OrderId)
-		time.Sleep(time.Second * 5)
-	}
-	amount := math.Abs(left.DealAmount - right.DealAmount)
-	orderSide := left.OrderSide
-	symbol := left.Symbol
-	if left.DealAmount > right.DealAmount {
-		symbol = right.Symbol
-	}
-	if left.DealAmount < right.DealAmount {
-		orderSide = right.OrderSide
-	}
-	amount = api.FormatAmount(setting.Market, symbol, amount)
-	for i := 0; amount > 0 && i < 100; i++ {
-		util.Notice(fmt.Sprintf(`left: %s %s %s %f; right: %s %s %s %f; complement %d times: %s %s %f`,
-			left.Market, left.Symbol, left.OrderSide, left.DealAmount, right.Market, right.Symbol, right.OrderSide,
-			right.DealAmount, i, symbol, orderSide, amount))
-		_, tickPerp := model.AppMarkets.GetBidAsk(setting.Symbol, setting.Market)
-		symbolRelated := setting.GetRelatedSymbol()
-		_, tickRelated := model.AppMarkets.GetBidAsk(symbolRelated, setting.Market)
-		if tickPerp == nil || tickRelated == nil {
-			continue
-		}
-		price := tickPerp.Bids[0].Price
-		if symbol == setting.Symbol {
-			if orderSide == model.OrderSideBuy {
-				price = tickPerp.Asks[0].Price
-			} else {
-				price = tickPerp.Bids[0].Price
-			}
-		} else if symbol == symbolRelated {
-			if orderSide == model.OrderSideBuy {
-				price = tickRelated.Asks[0].Price
-			} else {
-				price = tickRelated.Bids[0].Price
-			}
-		}
-		order := api.PlaceOrder(``, ``, orderSide, model.OrderTypeMarket, setting.Market, symbol, ``,
-			``, ``, ``, model.FunctionComplement, price, price, amount, true)
-		for order.Status == model.CarryStatusWorking {
-			time.Sleep(time.Second * 10)
-			order = api.QueryOrderById(``, ``, setting.Market, symbol, ``, model.OrderTypeMarket, order.OrderId)
-			if order.Status != model.CarryStatusWorking {
-				amount -= order.DealAmount
-				amount = api.FormatAmount(setting.Market, symbol, amount)
-				break
-			}
+	for _, balance := range balances {
+		coin := strings.ToUpper(strings.Split(account.Currency, `-`)[0])
+		if strings.ToUpper(balance.Coin) == coin {
+			amountRelated = balance.Amount
 		}
 	}
-	return amount
+	return amountPerp, amountRelated
+}
+
+func makeEqual(setting *model.Setting) (equal bool) {
+	amountPerp, amountRelated := getCarryAmounts(setting)
+	amount := amountPerp + amountRelated
+	symbolRelated := setting.GetRelatedSymbol()
+	orderSide := model.OrderSideBuy
+	if amount > 0 {
+		orderSide = model.OrderSideSell
+	}
+	util.Notice(fmt.Sprintf(`try to equal %s %f %s %f diff: %f side: %s`,
+		setting.Symbol, amountPerp, symbolRelated, amountRelated, amount, orderSide))
+	amount = math.Abs(amount)
+	orders := make([]*model.Order, 0)
+	_, tickPerp := model.AppMarkets.GetBidAsk(setting.Symbol, setting.Market)
+	_, tickRelated := model.AppMarkets.GetBidAsk(symbolRelated, setting.Market)
+	if amount < math.Min(math.Abs(amountPerp), math.Abs(amountRelated)) {
+		symbol := setting.Symbol
+		amount = api.FormatAmount(setting.Market, setting.Symbol, amount)
+		price := tickPerp.Bids[0].Price/2 + tickPerp.Asks[0].Price/2
+		if math.Abs(amountPerp) < math.Abs(amountRelated) {
+			symbol = symbolRelated
+			amount = api.FormatAmount(setting.Market, symbolRelated, amount)
+			price = tickRelated.Bids[0].Price/2 + tickRelated.Asks[0].Price/2
+		}
+		if amount > 0 {
+			util.Notice(fmt.Sprintf(`equal %s %s %f`, symbol, orderSide, amount))
+			orders = append(orders, api.PlaceOrder(``, ``, orderSide, model.OrderTypeMarket, setting.Market,
+				symbol, ``, ``, ``, ``, model.FunctionComplement, price, price,
+				amount, true))
+		}
+	} else {
+		price := tickPerp.Bids[0].Price/2 + tickPerp.Asks[0].Price/2
+		util.Notice(fmt.Sprintf(`equal both orders `))
+		amountPerp = api.FormatAmount(model.Ftx, setting.Symbol, math.Abs(amountPerp))
+		if amountPerp > 0 {
+			orders = append(orders, api.PlaceOrder(``, ``, orderSide, model.OrderTypeMarket, setting.Market,
+				setting.Symbol, ``, ``, ``, ``, model.FunctionComplement,
+				price, price, amountPerp, true))
+		}
+		amountRelated = api.FormatAmount(model.Ftx, symbolRelated, math.Abs(amountRelated))
+		orders = append(orders, api.PlaceOrder(``, ``, orderSide, model.OrderTypeMarket, setting.Market,
+			symbolRelated, ``, ``, ``, ``, model.FunctionComplement,
+			price, price, amountRelated, true))
+	}
+	allDone := false
+	for i := 0; i < 30 && !allDone; i++ {
+		allDone = true
+		for _, order := range orders {
+			if order == nil {
+				continue
+			}
+			if order.Status == model.CarryStatusWorking {
+				allDone = false
+				order = api.QueryOrderById(``, ``, order.Market, order.Symbol, order.Instrument,
+					order.OrderType, order.OrderId)
+				time.Sleep(time.Second * 5)
+			}
+		}
+	}
+	return
 }
 
 func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, symbolHigh, symbolLow string,

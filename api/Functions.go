@@ -614,22 +614,6 @@ func RefreshAccount(key, secret, market string) {
 		}
 	case model.Binance:
 		getAccountBinance(model.AppAccounts)
-	case model.Fcoin:
-		accounts := getLeverAccountFcoin(key, secret)
-		for key, value := range accounts {
-			for coin, account := range value {
-				model.AppAccounts.SetAccount(key, coin, account)
-			}
-		}
-		currencies, fcoinAccounts := getAccountFcoin(key, secret)
-		for i := 0; i < len(currencies); i++ {
-			model.AppAccounts.SetAccount(model.Fcoin, currencies[i], fcoinAccounts[i])
-		}
-	case model.Fmex:
-		accounts := getAccountFmex(key, secret)
-		for _, account := range accounts {
-			model.AppAccounts.SetAccount(model.Fmex, account.Currency, account)
-		}
 	case model.Coinpark:
 		getAccountCoinpark(model.AppAccounts)
 	case model.Bitmex:
@@ -645,7 +629,7 @@ func RefreshAccount(key, secret, market string) {
 }
 
 func PlaceSyncOrders(key, secret, orderSide, orderType, market, symbol, instrument, amountType, accountType, orderParam,
-	refreshType string, price, triggerPrice, amount float64, saveDB bool, channel chan model.Order, retry int) {
+	refreshType string, price, triggerPrice, amount float64, saveDB bool, channel chan *model.Order, retry int) {
 	var order *model.Order
 	i := 0
 	forever := false
@@ -672,7 +656,7 @@ func PlaceSyncOrders(key, secret, orderSide, orderType, market, symbol, instrume
 	if order == nil {
 		order = &model.Order{}
 	}
-	channel <- *order
+	channel <- order
 }
 
 // orderSide: OrderSideBuy OrderSideSell OrderSideLiquidateLong OrderSideLiquidateShort
