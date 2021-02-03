@@ -217,11 +217,17 @@ func makeEqual(setting *model.Setting, balances []*model.Balance) (equal bool) {
 	if amount < math.Min(math.Abs(amountPerp), math.Abs(amountRelated)) {
 		symbol := setting.Symbol
 		amount = api.FormatAmount(setting.Market, setting.Symbol, amount)
-		price := tickPerp.Bids[0].Price/2 + tickPerp.Asks[0].Price/2
+		price := tickPerp.Bids[0].Price
+		if orderSide == model.OrderSideBuy {
+			price = tickPerp.Asks[0].Price
+		}
 		if math.Abs(amountPerp) < math.Abs(amountRelated) {
 			symbol = symbolRelated
 			amount = api.FormatAmount(setting.Market, symbolRelated, amount)
-			price = tickRelated.Bids[0].Price/2 + tickRelated.Asks[0].Price/2
+			price = tickRelated.Bids[0].Price
+			if orderSide == model.OrderSideBuy {
+				price = tickRelated.Asks[0].Price
+			}
 		}
 		if amount > 0 {
 			util.Notice(fmt.Sprintf(`equal one %s %s %f %s %f %s %f`,
@@ -231,9 +237,12 @@ func makeEqual(setting *model.Setting, balances []*model.Balance) (equal bool) {
 				amount, true))
 		}
 	} else {
-		price := tickPerp.Bids[0].Price/2 + tickPerp.Asks[0].Price/2
 		amountPerp = api.FormatAmount(model.Ftx, setting.Symbol, math.Abs(amountPerp))
 		if amountPerp > 0 {
+			price := tickPerp.Bids[0].Price
+			if orderSide == model.OrderSideBuy {
+				price = tickPerp.Asks[0].Price
+			}
 			util.Notice(fmt.Sprintf(`equal perp %s %s %f`, setting.Market, orderSide, amount))
 			orders = append(orders, api.PlaceOrder(``, ``, orderSide, model.OrderTypeMarket, setting.Market,
 				setting.Symbol, ``, ``, ``, ``, model.FunctionComplement,
@@ -241,6 +250,10 @@ func makeEqual(setting *model.Setting, balances []*model.Balance) (equal bool) {
 		}
 		amountRelated = api.FormatAmount(model.Ftx, symbolRelated, math.Abs(amountRelated))
 		if amountRelated > 0 {
+			price := tickRelated.Bids[0].Price
+			if orderSide == model.OrderSideBuy {
+				price = tickRelated.Asks[0].Price
+			}
 			util.Notice(fmt.Sprintf(`equal related %s %s %f`, setting.Market, orderSide, amount))
 			orders = append(orders, api.PlaceOrder(``, ``, orderSide, model.OrderTypeMarket, setting.Market,
 				symbolRelated, ``, ``, ``, ``, model.FunctionComplement,
