@@ -65,7 +65,12 @@ var ProcessCarry = func(setting *model.Setting) {
 	current := util.GetNow()
 	if usdAvailable == 0 || holdingUpdateTime.Before(current.Add(duration)) {
 		holdingUpdateTime = current
-		makeEqual(setting)
+		settings := model.GetSettings(setting.Function, setting.Market)
+		for _, items := range settings {
+			for _, item := range items {
+				makeEqual(item)
+			}
+		}
 		balances := api.GetBalance(``, ``, setting.Market, 0)
 		symbols := model.GetMarketSymbols(setting.Market)
 		usdAvailable = 0

@@ -36,6 +36,13 @@ type Setting struct {
 var marketSymbolSetting map[string]map[string]map[string][]*Setting // function - marketName - symbol - setting
 var handlers map[string]map[string]map[string]CarryHandler          // market - symbol - function- carryHandler
 
+func GetSettings(function, market string) map[string][]*Setting {
+	if marketSymbolSetting[function] == nil {
+		return nil
+	}
+	return marketSymbolSetting[function][market]
+}
+
 func GetSetting(function, market, symbol string) []*Setting {
 	if marketSymbolSetting[function] == nil || marketSymbolSetting[function][market] == nil {
 		return nil
