@@ -901,8 +901,8 @@ func InitCarryFtx(start uint) {
 		setting := &model.Setting{
 			Valid:            true,
 			Function:         model.FunctionCarry,
-			OpenShortMargin:  0.005,
-			CloseShortMargin: -0.007,
+			OpenShortMargin:  0.01,
+			CloseShortMargin: -0.012,
 			Market:           model.Ftx,
 			Symbol:           symbol,
 			ID:               start,
