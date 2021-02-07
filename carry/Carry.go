@@ -13,7 +13,6 @@ import (
 
 const FTXHighOpen = 0.004
 const FTXLowOpen = -0.006
-const FTXClose = 0
 const OrderLimitUsd = 10.0
 
 //const FTXTakerFee = 0.0007
@@ -39,7 +38,7 @@ func checkSetCarrying(value bool) (before bool) {
 	}
 }
 
-//ProcessCarry
+// setting.GridPriceDistance: 收回下单是要求的利润(可以为负数)
 var ProcessCarry = func(setting *model.Setting) {
 	_, tickPerp := model.AppMarkets.GetBidAsk(setting.Symbol, setting.Market)
 	symbolRelated := setting.GetRelatedSymbol()
@@ -120,9 +119,9 @@ var ProcessCarry = func(setting *model.Setting) {
 		scoreMsg += fmt.Sprintf("[%s] open-close [%f ~ %f]\n", symbol, valueOpen, valueClose)
 	}
 	model.SetCarryInfo(`[grid]`,
-		fmt.Sprintf(`current: [%s] score: [%f ~ %f] symbol low-high: [%s %f %s %f] symbols: %d available usd:{ %f } holding:{ %f } %s`,
-			setting.Symbol, setting.OpenShortMargin, setting.CloseShortMargin, symbolLow, scoreLow, symbolHigh, scoreHigh,
-			len(carryScoreOpen), usdAvailable, holding, scoreMsg))
+		fmt.Sprintf(`current: [%s] score: [%f ~ %f revert: [%f] symbol low-high: [%s %f %s %f] available usd: %f holding: %f %s`,
+			setting.Symbol, setting.OpenShortMargin, setting.CloseShortMargin, setting.GridPriceDistance,
+			symbolLow, scoreLow, symbolHigh, scoreHigh, usdAvailable, holding, scoreMsg))
 	sidePerp, sideRelated, amount := calcCarryOpen(setting, tickPerp, tickRelated, symbolHigh, symbolLow, scoreOpen,
 		scoreClose, scoreHigh, scoreLow)
 	if amount > 0 {
@@ -278,12 +277,14 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	//	return ``, ``, 0
 	//}
 	var bidAmount, askAmount float64
-	if (scoreLow < setting.CloseShortMargin && setting.Symbol == symbolLow) || (setting.GridAmount > 0 && scoreClose <= -1*FTXClose) {
+	if (scoreLow < setting.CloseShortMargin && setting.Symbol == symbolLow) ||
+		(setting.GridAmount > 0 && scoreClose <= -1*setting.GridPriceDistance) {
 		bidAmount = tickPerp.Asks[0].Amount
 		askAmount = tickRelated.Bids[0].Amount
 		sidePerp = model.OrderSideBuy
 		sideRelated = model.OrderSideSell
-	} else if (scoreHigh > setting.OpenShortMargin && setting.Symbol == symbolHigh) || (setting.GridAmount < 0 && scoreOpen >= FTXClose) {
+	} else if (scoreHigh > setting.OpenShortMargin && setting.Symbol == symbolHigh) ||
+		(setting.GridAmount < 0 && scoreOpen >= setting.GridPriceDistance) {
 		bidAmount = tickRelated.Asks[0].Amount
 		askAmount = tickPerp.Bids[0].Amount
 		sidePerp = model.OrderSideSell
