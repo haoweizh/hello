@@ -909,9 +909,10 @@ func InitCarryFtx(start uint) {
 		}
 		related := setting.GetRelatedSymbol()
 		// HOLY 1INCH too easy to be single completed order
-		if marketInfos[related] == nil || symbol == `FTT-PERP` || symbol == `USDT-PERP` || symbol == `HOLY-PERP` ||
-			symbol == `1INCH-PERP` || symbol == `AAVE-PERP` || symbol == `CHZ-PERP` || symbol == `XRP-PERP` ||
-			symbol == `RUNE-PERP` || symbol == `CREAM-PERP` || symbol == `AMPL-PERP` {
+		if marketInfos[related] == nil || symbol == `FTT-PERP` || symbol == `USDT-PERP` {
+			//symbol == `HOLY-PERP` || symbol == `1INCH-PERP` || symbol == `AAVE-PERP` || symbol == `CHZ-PERP` ||
+			//symbol == `XRP-PERP` || symbol == `RUNE-PERP` || symbol == `CREAM-PERP` || symbol == `AMPL-PERP` ||
+			//symbol == `DMG-PERP` || symbol == `BAO-PERP` {
 			//fmt.Println(related + ` no`)
 			continue
 		}

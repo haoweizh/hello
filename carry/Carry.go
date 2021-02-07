@@ -27,16 +27,16 @@ var carryScoreOpen = make(map[string]float64)
 var carryScoreClose = make(map[string]float64)
 var stChan = make(chan *model.Order, 2)
 
-func isCarrying() (value bool) {
+func checkSetCarrying(value bool) (before bool) {
 	carryLock.Lock()
 	defer carryLock.Unlock()
-	return carrying
-}
-
-func setCarrying(value bool) {
-	carryLock.Lock()
-	defer carryLock.Unlock()
-	carrying = value
+	if value && carrying {
+		return carrying
+	} else {
+		temp := carrying
+		carrying = value
+		return temp
+	}
 }
 
 //ProcessCarry
@@ -47,14 +47,14 @@ var ProcessCarry = func(setting *model.Setting) {
 	now := util.GetNowUnixMillion()
 	if tickPerp == nil || tickRelated == nil || tickPerp.Asks == nil || tickPerp.Bids == nil ||
 		tickRelated.Asks == nil || tickRelated.Bids == nil || model.AppConfig.Handle != `1` ||
-		model.AppPause || now-int64(tickRelated.Ts) > 1000 || now-int64(tickPerp.Ts) > 1000 {
+		model.AppPause || now-int64(tickRelated.Ts) > 1000 || now-int64(tickPerp.Ts) > 1000 || setting == nil {
 		return
 	}
-	if setting == nil || isCarrying() {
+	status := checkSetCarrying(true)
+	if status {
 		return
 	}
-	setCarrying(true)
-	defer setCarrying(false)
+	defer checkSetCarrying(false)
 	rates, _ := api.GetFundingRate(setting.Market, setting.Symbol)
 	rateSum := 0.0
 	for _, item := range rates.([]*model.FundingRate) {
@@ -112,12 +112,12 @@ var ProcessCarry = func(setting *model.Setting) {
 			symbolHigh = symbol
 			scoreHigh = valueOpen
 		}
-		valueClose := carryScoreClose[symbol]
+	}
+	for symbol, valueClose := range carryScoreClose {
 		if valueClose < scoreLow {
 			symbolLow = symbol
 			scoreLow = valueClose
 		}
-		scoreMsg += fmt.Sprintf("%s open:%f close:%f\n", symbol, valueOpen, valueClose)
 	}
 	model.SetCarryInfo(`[grid]`,
 		fmt.Sprintf(`symbol low: %s %f high: %s %f symbols: %d available usd: %f holding: %f %s`,
@@ -297,7 +297,8 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	if tickPerp.Asks[0].Price*askAmount > OrderLimitUsd {
 		askAmount /= 2
 	}
-	if setting.Symbol == symbolLow || setting.Symbol == symbolHigh {
+	if (setting.Symbol == symbolLow && scoreLow < setting.CloseShortMargin) ||
+		(setting.Symbol == symbolHigh && scoreHigh > setting.OpenShortMargin) {
 		amount = math.Min(usdAvailable/tickPerp.Asks[0].Price, math.Min(bidAmount, askAmount))
 	} else {
 		amount = math.Min(math.Abs(setting.GridAmount), math.Min(bidAmount, askAmount))
