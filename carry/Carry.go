@@ -112,14 +112,12 @@ var ProcessCarry = func(setting *model.Setting) {
 			symbolHigh = symbol
 			scoreHigh = valueOpen
 		}
-		scoreMsg += fmt.Sprintf("%s %f\n", symbol, valueOpen)
-	}
-	for symbol, valueClose := range carryScoreClose {
+		valueClose := carryScoreClose[symbol]
 		if valueClose < scoreLow {
 			symbolLow = symbol
 			scoreLow = valueClose
 		}
-		scoreMsg += fmt.Sprintf("%s %f\n", symbol, valueClose)
+		scoreMsg += fmt.Sprintf("%s open-close %f ~ %f\n", symbol, valueOpen, valueClose)
 	}
 	model.SetCarryInfo(`[grid]`,
 		fmt.Sprintf(`current: %s score: %f~%f symbol low: %s %f high: %s %f symbols: %d available usd: %f holding: %f %s`,
