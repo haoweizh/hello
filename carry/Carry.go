@@ -88,7 +88,7 @@ var ProcessCarry = func(setting *model.Setting) {
 		return
 	}
 	scoreOpen := 1 - tickRelated.Asks[0].Price/tickPerp.Bids[0].Price + rateSum
-	scoreClose := 1 - tickRelated.Bids[0].Price/tickPerp.Asks[0].Price + rateSum
+	scoreClose := 1 - tickRelated.Bids[0].Price/tickPerp.Asks[0].Price - rateSum
 	if setting.OpenShortMargin <= 0 {
 		setting.OpenShortMargin = FTXHighOpen
 	}
