@@ -66,6 +66,8 @@ func GetCurrentN(setting *Setting) (currentN int64) {
 }
 
 func GetFunctions(market, symbol string) map[string]CarryHandler {
+	infoLock.Lock()
+	defer infoLock.Unlock()
 	if handlers == nil {
 		LoadSettings()
 	}
@@ -76,6 +78,8 @@ func GetFunctions(market, symbol string) map[string]CarryHandler {
 }
 
 func LoadSettings() {
+	infoLock.Lock()
+	defer infoLock.Unlock()
 	AppSettings = []Setting{}
 	AppDB.Where(`valid = ?`, true).Find(&AppSettings)
 	marketSymbolSetting = make(map[string]map[string]map[string][]*Setting)
