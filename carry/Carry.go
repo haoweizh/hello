@@ -79,14 +79,17 @@ var ProcessCarry = func(setting *model.Setting) {
 	_, tickPerp := model.AppMarkets.GetBidAsk(setting.Symbol, setting.Market)
 	symbolRelated := setting.GetRelatedSymbol()
 	_, tickRelated := model.AppMarkets.GetBidAsk(symbolRelated, setting.Market)
-	status := checkSetCarrying(true)
-	defer checkSetCarrying(false)
 	now := util.GetNowUnixMillion()
-	if status || tickPerp == nil || tickRelated == nil || tickPerp.Asks == nil || tickPerp.Bids == nil ||
+	if tickPerp == nil || tickRelated == nil || tickPerp.Asks == nil || tickPerp.Bids == nil ||
 		tickRelated.Asks == nil || tickRelated.Bids == nil || model.AppConfig.Handle != `1` ||
 		model.AppPause || now-int64(tickRelated.Ts) > 1000 || now-int64(tickPerp.Ts) > 1000 || setting == nil {
 		return
 	}
+	status := checkSetCarrying(true)
+	if status {
+		return
+	}
+	defer checkSetCarrying(false)
 	scoreOpen := 1 - tickRelated.Asks[0].Price/tickPerp.Bids[0].Price
 	scoreClose := 1 - tickRelated.Bids[0].Price/tickPerp.Asks[0].Price
 	if setting.OpenShortMargin <= 0 {
@@ -145,6 +148,7 @@ var ProcessCarry = func(setting *model.Setting) {
 		}
 		time.Sleep(time.Millisecond * 200)
 		model.AppDB.Save(&setting)
+		util.Notice(`finish one carry` + setting.Symbol)
 	}
 }
 
