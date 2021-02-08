@@ -39,6 +39,12 @@ func checkSetCarrying(value bool) (before bool) {
 
 func ClearCarryBalance() {
 	for true {
+		for true {
+			if !checkSetCarrying(true) {
+				break
+			}
+		}
+		time.Sleep(time.Second)
 		util.Notice(`.. clearing carry balance`)
 		markets := model.GetMarkets()
 		for _, market := range markets {
@@ -70,6 +76,7 @@ func ClearCarryBalance() {
 			}
 			usdAvailable /= 2
 		}
+		checkSetCarrying(false)
 		time.Sleep(time.Second * 30)
 	}
 }
