@@ -191,6 +191,12 @@ func getCarryAmounts(setting *model.Setting, balances []*model.Balance) (amountP
 }
 
 func makeEqual(setting *model.Setting, balances []*model.Balance) (equal bool) {
+	symbol := setting.Symbol
+	if strings.Contains(symbol, `BTC`) || strings.Contains(symbol, `ETH`) ||
+		strings.Contains(symbol, `LINK`) || strings.Contains(symbol, `DOGE`) ||
+		strings.Contains(symbol, `FTT`) {
+		return true
+	}
 	amountPerp, amountRelated := getCarryAmounts(setting, balances)
 	amount := amountPerp + amountRelated
 	symbolRelated := setting.GetRelatedSymbol()
