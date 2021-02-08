@@ -15,7 +15,7 @@ const FTXHighOpen = 0.004
 const FTXLowOpen = -0.006
 const OrderLimitUsd = 10.0
 
-//const FTXTakerFee = 0.0007
+//const FtxTakerFee = 0.0004275
 
 var carryLock sync.Mutex
 var carrying bool
@@ -68,7 +68,9 @@ var ProcessCarry = func(setting *model.Setting) {
 		settings := model.GetSettings(setting.Function, setting.Market)
 		for _, items := range settings {
 			for _, item := range items {
-				makeEqual(item, balances)
+				if item.Function == model.FunctionCarry {
+					makeEqual(item, balances)
+				}
 			}
 		}
 		symbols := model.GetMarketSymbols(setting.Market)
