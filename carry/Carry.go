@@ -177,11 +177,6 @@ func makeEqual(setting *model.Setting, balances []*model.Balance) (equal bool) {
 	amountPerp, amountRelated := getCarryAmounts(setting, balances)
 	amount := amountPerp + amountRelated
 	symbolRelated := setting.GetRelatedSymbol()
-	score := carryScoreOpen[setting.Symbol]
-	orderSide := model.OrderSideBuy
-	if amount > 0 {
-		orderSide = model.OrderSideSell
-	}
 	amount = math.Abs(amount)
 	orders := make([]*model.Order, 0)
 	_, tickPerp := model.AppMarkets.GetBidAsk(setting.Symbol, setting.Market)
@@ -189,77 +184,65 @@ func makeEqual(setting *model.Setting, balances []*model.Balance) (equal bool) {
 	if tickPerp == nil || tickRelated == nil {
 		return true
 	}
+	orderSide := model.OrderSideBuy
+	if amount > 0 {
+		orderSide = model.OrderSideSell
+	}
+	limit := 0.001
 	if amount < math.Max(math.Abs(amountPerp), math.Abs(amountRelated)) {
 		symbol := setting.Symbol
-		if amountPerp < 0 && amountRelated > 0 {
-			if amountPerp+amountRelated < 0 {
-				if score > 0.005 {
-					symbol = symbolRelated
-				} else {
-					symbol = settingSymbol
-				}
-			} else {
-				if score > 0.005 {
-					symbol = settingSymbol
-				} else {
-					symbol = symbolRelated
-				}
-			}
-		} else if amountPerp > 0 && amountRelated < 0 {
-			if amountPerp+amountRelated < 0 {
-				if score < -0.005 {
-					symbol = settingSymbol
-				} else {
-					symbol = symbolRelated
-				}
-			} else {
-				if score < -0.005 {
-					symbol = symbolRelated
-				} else {
-					symbol = settingSymbol
-				}
-			}
-		}
 		amount = api.FormatAmount(setting.Market, symbol, amount)
 		price := tickPerp.Bids[0].Price
-		if symbol == settingSymbol {
-			price = tickPerp.Bids[0].Price
-			if orderSide == model.OrderSideBuy {
-				price = tickPerp.Asks[0].Price
+		if orderSide == model.OrderSideSell {
+			if tickPerp.Bids[0].Price < tickRelated.Bids[0].Price {
+				symbol = symbolRelated
+				price = tickRelated.Bids[0].Price * (1 - limit)
+			} else {
+				symbol = settingSymbol
+				price = tickPerp.Bids[0].Price * (1 - limit)
 			}
-		} else {
-			price = tickRelated.Bids[0].Price
-			if orderSide == model.OrderSideBuy {
-				price = tickRelated.Asks[0].Price
+		} else if orderSide == model.OrderSideBuy {
+			if tickPerp.Asks[0].Price < tickRelated.Asks[0].Price {
+				symbol = settingSymbol
+				price = tickPerp.Asks[0].Price * (1 + limit)
+			} else {
+				symbol = symbolRelated
+				price = tickRelated.Asks[0].Price * (1 + limit)
 			}
 		}
 		if amount > 0 {
-			util.Notice(fmt.Sprintf(`equal one %s %s %f %s %f %s %f`,
-				symbol, orderSide, amount, setting.Market, amountPerp, symbolRelated, amountRelated))
-			orders = append(orders, api.PlaceOrder(``, ``, orderSide, model.OrderTypeMarket, setting.Market,
+			resultPerp := api.CancelOrders(``, ``, setting.Market, settingSymbol)
+			resultRelated := api.CancelOrders(``, ``, setting.Market, symbolRelated)
+			util.Notice(fmt.Sprintf(`cancel all perp:%v related:%v equal %s %s %f %s %f %s %f`,
+				resultPerp, resultRelated, symbol, orderSide, amount, setting.Market, amountPerp, symbolRelated, amountRelated))
+			orders = append(orders, api.PlaceOrder(``, ``, orderSide, model.OrderTypeLimit, setting.Market,
 				symbol, ``, ``, ``, ``, model.FunctionComplement, price, price,
 				amount, true))
 		}
 	} else {
-		price := tickPerp.Asks[0].Price
+		price := tickPerp.Asks[0].Price * (1 + limit)
 		if amountPerp > 0 {
-			price = tickPerp.Bids[0].Price
+			price = tickPerp.Bids[0].Price * (1 - limit)
 		}
 		amountPerp = api.FormatAmount(model.Ftx, setting.Symbol, math.Abs(amountPerp))
 		if amountPerp > 0 {
-			util.Notice(fmt.Sprintf(`equal perp %s %s %f`, setting.Market, orderSide, amount))
-			orders = append(orders, api.PlaceOrder(``, ``, orderSide, model.OrderTypeMarket, setting.Market,
+			resultPerp := api.CancelOrders(``, ``, setting.Market, settingSymbol)
+			util.Notice(fmt.Sprintf(`cancel all %v equal perp %s %s %f`,
+				resultPerp, setting.Market, orderSide, amount))
+			orders = append(orders, api.PlaceOrder(``, ``, orderSide, model.OrderTypeLimit, setting.Market,
 				setting.Symbol, ``, ``, ``, ``, model.FunctionComplement,
 				price, price, amountPerp, true))
 		}
-		price = tickRelated.Asks[0].Price
+		price = tickRelated.Asks[0].Price * (1 + limit)
 		if amountRelated > 0 {
-			price = tickRelated.Bids[0].Price
+			price = tickRelated.Bids[0].Price * (1 - limit)
 		}
 		amountRelated = api.FormatAmount(model.Ftx, symbolRelated, math.Abs(amountRelated))
 		if amountRelated > 0 {
-			util.Notice(fmt.Sprintf(`equal related %s %s %f`, setting.Market, orderSide, amount))
-			orders = append(orders, api.PlaceOrder(``, ``, orderSide, model.OrderTypeMarket, setting.Market,
+			resultRelated := api.CancelOrders(``, ``, setting.Market, symbolRelated)
+			util.Notice(fmt.Sprintf(`cancel all %v equal related %s %s %f`,
+				resultRelated, setting.Market, orderSide, amount))
+			orders = append(orders, api.PlaceOrder(``, ``, orderSide, model.OrderTypeLimit, setting.Market,
 				symbolRelated, ``, ``, ``, ``, model.FunctionComplement,
 				price, price, amountRelated, true))
 		}

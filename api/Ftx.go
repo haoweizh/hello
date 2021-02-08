@@ -9,6 +9,7 @@ import (
 	"github.com/bitly/go-simplejson"
 	"hello/model"
 	"hello/util"
+	"net/http"
 	"net/url"
 	"sort"
 	"strconv"
@@ -345,6 +346,18 @@ func getBalanceFtx(key, secret string) (balances []*model.Balance) {
 		}
 	}
 	return
+}
+
+func cancelOrdersFtx(key, secret, symbol string) (result bool) {
+	postData := make(map[string]interface{})
+	postData[`market`] = symbol
+	response := SignedRequestFtx(key, secret, http.MethodDelete, `/orders`, postData, nil)
+	util.Notice(fmt.Sprintf(`[api cancelOrdersFtx]%s %s`, symbol, string(response)))
+	orderJson, err := util.NewJSON(response)
+	if err == nil {
+		return orderJson.Get(`success`).MustBool()
+	}
+	return false
 }
 
 func cancelOrderFtx(key, secret, orderType, orderId string) (result bool) {

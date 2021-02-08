@@ -168,6 +168,14 @@ func MustCancel(key, secret, market, symbol, instrument, orderType, orderId stri
 	return res, order
 }
 
+func CancelOrders(key, secret, market, symbol string) (result bool) {
+	switch market {
+	case model.Ftx:
+		return cancelOrdersFtx(key, secret, symbol)
+	}
+	return false
+}
+
 func CancelOrder(key, secret, market, symbol, instrument, orderType, orderId string) (
 	result bool, errCode, msg string, order *model.Order) {
 	if instrument == `` {
