@@ -191,10 +191,10 @@ func getCarryAmounts(setting *model.Setting, balances []*model.Balance) (amountP
 }
 
 func makeEqual(setting *model.Setting, balances []*model.Balance) (equal bool) {
-	symbol := setting.Symbol
-	if strings.Contains(symbol, `BTC`) || strings.Contains(symbol, `ETH`) ||
-		strings.Contains(symbol, `LINK`) || strings.Contains(symbol, `DOGE`) ||
-		strings.Contains(symbol, `FTT`) {
+	settingSymbol := setting.Symbol
+	if strings.Contains(settingSymbol, `BTC`) || strings.Contains(settingSymbol, `ETH`) ||
+		strings.Contains(settingSymbol, `LINK`) || strings.Contains(settingSymbol, `DOGE`) ||
+		strings.Contains(settingSymbol, `FTT`) {
 		return true
 	}
 	amountPerp, amountRelated := getCarryAmounts(setting, balances)
@@ -314,6 +314,7 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	} else {
 		amount = math.Min(math.Abs(setting.GridAmount), math.Min(bidAmount, askAmount))
 	}
+	amount = math.Min(amount, 50000/tickPerp.Asks[0].Price)
 	amount = api.FormatAmount(setting.Market, setting.Symbol, amount)
 	return sidePerp, sideRelated, amount
 }
