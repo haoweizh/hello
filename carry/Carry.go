@@ -59,7 +59,7 @@ var ProcessCarry = func(setting *model.Setting) {
 	//for _, item := range rates.([]*model.FundingRate) {
 	//	rateSum += item.Rate * 4
 	//}
-	duration, _ := time.ParseDuration(`-30`)
+	duration, _ := time.ParseDuration(`-30s`)
 	current := util.GetNow()
 	if usdAvailable == 0 || holdingUpdateTime.Before(current.Add(duration)) {
 		holdingUpdateTime = current
