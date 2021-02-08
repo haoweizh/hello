@@ -80,13 +80,16 @@ var ProcessCarry = func(setting *model.Setting) {
 	symbolRelated := setting.GetRelatedSymbol()
 	_, tickRelated := model.AppMarkets.GetBidAsk(symbolRelated, setting.Market)
 	now := util.GetNowUnixMillion()
-	status := checkSetCarrying(true)
-	if status || tickPerp == nil || tickRelated == nil || tickPerp.Asks == nil || tickPerp.Bids == nil ||
+	if tickPerp == nil || tickRelated == nil || tickPerp.Asks == nil || tickPerp.Bids == nil ||
 		tickRelated.Asks == nil || tickRelated.Bids == nil || model.AppConfig.Handle != `1` ||
 		model.AppPause || now-int64(tickRelated.Ts) > 1000 || now-int64(tickPerp.Ts) > 1000 || setting == nil {
 		return
 	}
-	defer checkSetCarrying(false)
+	if !checkSetCarrying(true) {
+		defer checkSetCarrying(false)
+	} else {
+		return
+	}
 	scoreOpen := 1 - tickRelated.Asks[0].Price/tickPerp.Bids[0].Price
 	scoreClose := 1 - tickRelated.Bids[0].Price/tickPerp.Asks[0].Price
 	if setting.OpenShortMargin <= 0 {
@@ -116,7 +119,6 @@ var ProcessCarry = func(setting *model.Setting) {
 		setting.Symbol, setting.OpenShortMargin, setting.CloseShortMargin, setting.GridPriceDistance,
 		symbolLow, scoreLow, symbolHigh, scoreHigh, usdAvailable, holding, scoreMsg)
 	model.SetCarryInfo(`[grid]`, carryInfo)
-	util.Notice(carryInfo)
 	sidePerp, sideRelated, amount := calcCarryOpen(setting, tickPerp, tickRelated, symbolHigh, symbolLow, scoreOpen,
 		scoreClose, scoreHigh, scoreLow)
 	if amount > 0 {
