@@ -20,7 +20,6 @@ const OrderLimitUsd = 10.0
 var carryLock sync.Mutex
 var carrying bool
 var holding, usdAvailable float64
-var holdingUpdateTime = util.GetNow()
 
 var carryScoreOpen = make(map[string]float64)
 var carryScoreClose = make(map[string]float64)
@@ -38,6 +37,42 @@ func checkSetCarrying(value bool) (before bool) {
 	}
 }
 
+func ClearCarryBalance() {
+	for true {
+		markets := model.GetMarkets()
+		for _, market := range markets {
+			balances := api.GetBalance(``, ``, market, 0)
+			api.RefreshAccount(``, ``, market)
+			settings := model.GetSettings(model.FunctionCarry, market)
+			for _, items := range settings {
+				for _, item := range items {
+					if item.Function == model.FunctionCarry {
+						makeEqual(item, balances)
+					}
+				}
+			}
+			symbols := model.GetMarketSymbols(market)
+			usdAvailable = 0
+			holding = 0
+			for _, value := range balances {
+				usdSymbol := strings.ToUpper(value.Coin) + `/USD`
+				util.Notice(fmt.Sprintf(`set usd symbol %s balance %f `, usdSymbol, value.Amount))
+				if strings.ToLower(value.Coin) == `usd` {
+					usdAvailable = value.Amount
+				} else if symbols[usdSymbol] {
+					holding += math.Abs(value.UsdValue)
+				}
+			}
+			util.Notice(fmt.Sprintf(`[carry] set holding %f usd %f`, holding, usdAvailable))
+			if model.AppConfig.Env != `dk` {
+				usdAvailable = usdAvailable - holding
+			}
+			usdAvailable /= 2
+		}
+		time.Sleep(time.Second * 30)
+	}
+}
+
 // setting.GridPriceDistance: 收回下单是要求的利润(可以为负数)
 var ProcessCarry = func(setting *model.Setting) {
 	_, tickPerp := model.AppMarkets.GetBidAsk(setting.Symbol, setting.Market)
@@ -49,39 +84,6 @@ var ProcessCarry = func(setting *model.Setting) {
 	if status || tickPerp == nil || tickRelated == nil || tickPerp.Asks == nil || tickPerp.Bids == nil ||
 		tickRelated.Asks == nil || tickRelated.Bids == nil || model.AppConfig.Handle != `1` ||
 		model.AppPause || now-int64(tickRelated.Ts) > 1000 || now-int64(tickPerp.Ts) > 1000 || setting == nil {
-		return
-	}
-	duration, _ := time.ParseDuration(`-30s`)
-	current := util.GetNow()
-	if usdAvailable == 0 || holdingUpdateTime.Before(current.Add(duration)) {
-		holdingUpdateTime = current
-		balances := api.GetBalance(``, ``, setting.Market, 0)
-		api.RefreshAccount(``, ``, setting.Market)
-		settings := model.GetSettings(setting.Function, setting.Market)
-		for _, items := range settings {
-			for _, item := range items {
-				if item.Function == model.FunctionCarry {
-					makeEqual(item, balances)
-				}
-			}
-		}
-		symbols := model.GetMarketSymbols(setting.Market)
-		usdAvailable = 0
-		holding = 0
-		for _, value := range balances {
-			usdSymbol := strings.ToUpper(value.Coin) + `/USD`
-			util.Notice(fmt.Sprintf(`set usd symbol %s balance %f `, usdSymbol, value.Amount))
-			if strings.ToLower(value.Coin) == `usd` {
-				usdAvailable = value.Amount
-			} else if symbols[usdSymbol] {
-				holding += math.Abs(value.UsdValue)
-			}
-		}
-		util.Notice(fmt.Sprintf(`[carry] set holding %f usd %f`, holding, usdAvailable))
-		if model.AppConfig.Env != `dk` {
-			usdAvailable = usdAvailable - holding
-		}
-		usdAvailable /= 2
 		return
 	}
 	scoreOpen := 1 - tickRelated.Asks[0].Price/tickPerp.Bids[0].Price
@@ -140,7 +142,7 @@ var ProcessCarry = func(setting *model.Setting) {
 			<-stChan
 			break
 		}
-		time.Sleep(time.Millisecond * 00)
+		time.Sleep(time.Millisecond * 200)
 		model.AppDB.Save(&setting)
 	}
 }
