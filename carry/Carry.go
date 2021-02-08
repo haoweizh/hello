@@ -86,7 +86,9 @@ var ProcessCarry = func(setting *model.Setting) {
 			}
 		}
 		util.Notice(fmt.Sprintf(`[carry] set holding %f usd %f`, holding, usdAvailable))
-		//usdAvailable = (usdAvailable - holding) / 2
+		if model.AppConfig.Env != `dk` {
+			usdAvailable = usdAvailable - holding
+		}
 		usdAvailable /= 2
 		return
 	}
