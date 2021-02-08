@@ -54,12 +54,12 @@ var ProcessCarry = func(setting *model.Setting) {
 		return
 	}
 	defer checkSetCarrying(false)
-	rates, _ := api.GetFundingRate(setting.Market, setting.Symbol)
-	rateSum := 0.0
-	for _, item := range rates.([]*model.FundingRate) {
-		rateSum += item.Rate * 4
-	}
-	duration, _ := time.ParseDuration(`-600s`)
+	//rates, _ := api.GetFundingRate(setting.Market, setting.Symbol)
+	//rateSum := 0.0
+	//for _, item := range rates.([]*model.FundingRate) {
+	//	rateSum += item.Rate * 4
+	//}
+	duration, _ := time.ParseDuration(`-30`)
 	current := util.GetNow()
 	if usdAvailable == 0 || holdingUpdateTime.Before(current.Add(duration)) {
 		holdingUpdateTime = current
@@ -92,8 +92,8 @@ var ProcessCarry = func(setting *model.Setting) {
 		usdAvailable /= 2
 		return
 	}
-	scoreOpen := 1 - tickRelated.Asks[0].Price/tickPerp.Bids[0].Price + rateSum
-	scoreClose := 1 - tickRelated.Bids[0].Price/tickPerp.Asks[0].Price + rateSum
+	scoreOpen := 1 - tickRelated.Asks[0].Price/tickPerp.Bids[0].Price
+	scoreClose := 1 - tickRelated.Bids[0].Price/tickPerp.Asks[0].Price
 	if setting.OpenShortMargin <= 0 {
 		setting.OpenShortMargin = FTXHighOpen
 	}
@@ -131,7 +131,7 @@ var ProcessCarry = func(setting *model.Setting) {
 		scoreClose, scoreHigh, scoreLow)
 	if amount > 0 {
 		util.Notice(fmt.Sprintf(`carry%s->%s with score open:%f close:%f rate sum %f amount %f worth %f`,
-			setting.Symbol, symbolRelated, scoreOpen, scoreClose, rateSum, amount, amount*tickPerp.Asks[0].Price))
+			setting.Symbol, symbolRelated, scoreOpen, scoreClose, 0.0, amount, amount*tickPerp.Asks[0].Price))
 		perpPrice := tickPerp.Asks[0].Price
 		relatedPrice := tickRelated.Bids[0].Price
 		if sidePerp == model.OrderSideSell {
@@ -155,24 +155,32 @@ var ProcessCarry = func(setting *model.Setting) {
 		}
 		if left != nil && right != nil && (left.Symbol == setting.Symbol || left.Symbol == symbolRelated) &&
 			(right.Symbol == setting.Symbol || right.Symbol == symbolRelated) {
+			retry := 0
 			for left.OrderId != `` && left.Status == model.CarryStatusWorking {
 				left = api.QueryOrderById(``, ``, left.Market, left.Symbol, left.Instrument, left.OrderType, left.OrderId)
-				time.Sleep(time.Second * 5)
+				retry++
+				if retry > 1 {
+					time.Sleep(time.Second * 1)
+				}
 			}
+			retry = 0
 			for right.OrderId != `` && right.Status == model.CarryStatusWorking {
 				right = api.QueryOrderById(``, ``, right.Market, right.Symbol, right.Instrument, right.OrderType, right.OrderId)
-				time.Sleep(time.Second * 5)
+				retry++
+				if retry > 1 {
+					time.Sleep(time.Second * 1)
+				}
 			}
 		}
-		balances := api.GetBalance(model.AppConfig.FtxKey, model.AppConfig.FtxSecret, model.Ftx, 0)
-		api.RefreshAccount(``, ``, setting.Market)
-		makeEqual(setting, balances)
-		balances = api.GetBalance(model.AppConfig.FtxKey, model.AppConfig.FtxSecret, model.Ftx, 0)
-		api.RefreshAccount(``, ``, setting.Market)
-		_, setting.GridAmount = getCarryAmounts(setting, balances)
-		model.AppDB.Save(&setting)
-		holding = 0
-		usdAvailable = 0
+		//balances := api.GetBalance(model.AppConfig.FtxKey, model.AppConfig.FtxSecret, model.Ftx, 0)
+		//api.RefreshAccount(``, ``, setting.Market)
+		//makeEqual(setting, balances)
+		//balances = api.GetBalance(model.AppConfig.FtxKey, model.AppConfig.FtxSecret, model.Ftx, 0)
+		//api.RefreshAccount(``, ``, setting.Market)
+		//_, setting.GridAmount = getCarryAmounts(setting, balances)
+		//model.AppDB.Save(&setting)
+		//holding = 0
+		//usdAvailable = 0
 	}
 }
 
