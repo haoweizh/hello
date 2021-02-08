@@ -39,6 +39,7 @@ func checkSetCarrying(value bool) (before bool) {
 
 func ClearCarryBalance() {
 	for true {
+		util.Notice(`.. clearing carry balance`)
 		markets := model.GetMarkets()
 		for _, market := range markets {
 			balances := api.GetBalance(``, ``, market, 0)
