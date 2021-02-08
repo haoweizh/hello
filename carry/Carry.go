@@ -43,22 +43,14 @@ var ProcessCarry = func(setting *model.Setting) {
 	_, tickPerp := model.AppMarkets.GetBidAsk(setting.Symbol, setting.Market)
 	symbolRelated := setting.GetRelatedSymbol()
 	_, tickRelated := model.AppMarkets.GetBidAsk(symbolRelated, setting.Market)
+	status := checkSetCarrying(true)
 	now := util.GetNowUnixMillion()
-	if tickPerp == nil || tickRelated == nil || tickPerp.Asks == nil || tickPerp.Bids == nil ||
+	if status || tickPerp == nil || tickRelated == nil || tickPerp.Asks == nil || tickPerp.Bids == nil ||
 		tickRelated.Asks == nil || tickRelated.Bids == nil || model.AppConfig.Handle != `1` ||
 		model.AppPause || now-int64(tickRelated.Ts) > 1000 || now-int64(tickPerp.Ts) > 1000 || setting == nil {
 		return
 	}
-	status := checkSetCarrying(true)
-	if status {
-		return
-	}
 	defer checkSetCarrying(false)
-	//rates, _ := api.GetFundingRate(setting.Market, setting.Symbol)
-	//rateSum := 0.0
-	//for _, item := range rates.([]*model.FundingRate) {
-	//	rateSum += item.Rate * 4
-	//}
 	duration, _ := time.ParseDuration(`-30s`)
 	current := util.GetNow()
 	if usdAvailable == 0 || holdingUpdateTime.Before(current.Add(duration)) {
@@ -100,12 +92,6 @@ var ProcessCarry = func(setting *model.Setting) {
 	if setting.CloseShortMargin >= 0 {
 		setting.CloseShortMargin = FTXLowOpen
 	}
-	checkPair := tickRelated.Bids[0].Price / tickPerp.Bids[0].Price
-	if checkPair > 1.2 || checkPair < 0.8 {
-		util.Info(fmt.Sprintf(`fatal error: out of price range %s %s %f %f`,
-			setting.Symbol, symbolRelated, tickPerp.Bids[0].Price, tickRelated.Bids[0].Price))
-		//return
-	}
 	carryScoreOpen[setting.Symbol] = scoreOpen
 	carryScoreClose[setting.Symbol] = scoreClose
 	var scoreHigh, scoreLow float64
@@ -137,9 +123,11 @@ var ProcessCarry = func(setting *model.Setting) {
 		if sidePerp == model.OrderSideSell {
 			perpPrice = tickPerp.Bids[0].Price
 			relatedPrice = tickRelated.Asks[0].Price
+			setting.GridAmount += amount
 		} else if sidePerp == model.OrderSideBuy {
 			perpPrice = tickPerp.Asks[0].Price
 			relatedPrice = tickRelated.Bids[0].Price
+			setting.GridAmount -= amount
 		}
 		go api.PlaceSyncOrders(``, ``, sidePerp, model.OrderTypeMarket, setting.Market, setting.Symbol,
 			``, ``, ``, ``, model.FunctionCarry, perpPrice, perpPrice,
@@ -147,32 +135,13 @@ var ProcessCarry = func(setting *model.Setting) {
 		go api.PlaceSyncOrders(``, ``, sideRelated, model.OrderTypeMarket, setting.Market, symbolRelated,
 			``, ``, ``, ``, model.FunctionCarry, relatedPrice, relatedPrice,
 			amount, true, stChan, 1)
-		var left, right *model.Order
 		for true {
-			left = <-stChan
-			right = <-stChan
+			<-stChan
+			<-stChan
 			break
 		}
-		if left != nil && right != nil && (left.Symbol == setting.Symbol || left.Symbol == symbolRelated) &&
-			(right.Symbol == setting.Symbol || right.Symbol == symbolRelated) {
-			for left.OrderId != `` && left.Status == model.CarryStatusWorking {
-				left = api.QueryOrderById(``, ``, left.Market, left.Symbol, left.Instrument, left.OrderType, left.OrderId)
-				time.Sleep(time.Millisecond * 300)
-			}
-			for right.OrderId != `` && right.Status == model.CarryStatusWorking {
-				right = api.QueryOrderById(``, ``, right.Market, right.Symbol, right.Instrument, right.OrderType, right.OrderId)
-				time.Sleep(time.Millisecond * 300)
-			}
-		}
-		//balances := api.GetBalance(model.AppConfig.FtxKey, model.AppConfig.FtxSecret, model.Ftx, 0)
-		//api.RefreshAccount(``, ``, setting.Market)
-		//makeEqual(setting, balances)
-		//balances = api.GetBalance(model.AppConfig.FtxKey, model.AppConfig.FtxSecret, model.Ftx, 0)
-		//api.RefreshAccount(``, ``, setting.Market)
-		//_, setting.GridAmount = getCarryAmounts(setting, balances)
-		//model.AppDB.Save(&setting)
-		//holding = 0
-		//usdAvailable = 0
+		time.Sleep(time.Millisecond * 00)
+		model.AppDB.Save(&setting)
 	}
 }
 
@@ -202,6 +171,7 @@ func makeEqual(setting *model.Setting, balances []*model.Balance) (equal bool) {
 	amountPerp, amountRelated := getCarryAmounts(setting, balances)
 	amount := amountPerp + amountRelated
 	symbolRelated := setting.GetRelatedSymbol()
+	score := carryScoreOpen[setting.Symbol]
 	orderSide := model.OrderSideBuy
 	if amount > 0 {
 		orderSide = model.OrderSideSell
@@ -215,14 +185,43 @@ func makeEqual(setting *model.Setting, balances []*model.Balance) (equal bool) {
 	}
 	if amount < math.Max(math.Abs(amountPerp), math.Abs(amountRelated)) {
 		symbol := setting.Symbol
-		amount = api.FormatAmount(setting.Market, setting.Symbol, amount)
-		price := tickPerp.Bids[0].Price
-		if orderSide == model.OrderSideBuy {
-			price = tickPerp.Asks[0].Price
+		if amountPerp < 0 && amountRelated > 0 {
+			if amountPerp+amountRelated < 0 {
+				if score > 0.005 {
+					symbol = symbolRelated
+				} else {
+					symbol = settingSymbol
+				}
+			} else {
+				if score > 0.005 {
+					symbol = settingSymbol
+				} else {
+					symbol = symbolRelated
+				}
+			}
+		} else if amountPerp > 0 && amountRelated < 0 {
+			if amountPerp+amountRelated < 0 {
+				if score < -0.005 {
+					symbol = settingSymbol
+				} else {
+					symbol = symbolRelated
+				}
+			} else {
+				if score < -0.005 {
+					symbol = symbolRelated
+				} else {
+					symbol = settingSymbol
+				}
+			}
 		}
-		if math.Abs(amountPerp) < math.Abs(amountRelated) {
-			symbol = symbolRelated
-			amount = api.FormatAmount(setting.Market, symbolRelated, amount)
+		amount = api.FormatAmount(setting.Market, symbol, amount)
+		price := tickPerp.Bids[0].Price
+		if symbol == settingSymbol {
+			price = tickPerp.Bids[0].Price
+			if orderSide == model.OrderSideBuy {
+				price = tickPerp.Asks[0].Price
+			}
+		} else {
 			price = tickRelated.Bids[0].Price
 			if orderSide == model.OrderSideBuy {
 				price = tickRelated.Asks[0].Price
@@ -316,7 +315,7 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	} else {
 		amount = math.Min(math.Abs(setting.GridAmount), math.Min(bidAmount, askAmount))
 	}
-	amount = math.Min(amount, 50000/tickPerp.Asks[0].Price)
+	amount = math.Min(amount, 10000/tickPerp.Asks[0].Price)
 	amount = api.FormatAmount(setting.Market, setting.Symbol, amount)
 	return sidePerp, sideRelated, amount
 }
