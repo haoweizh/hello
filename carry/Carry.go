@@ -116,6 +116,7 @@ var ProcessCarry = func(setting *model.Setting) {
 		setting.Symbol, setting.OpenShortMargin, setting.CloseShortMargin, setting.GridPriceDistance,
 		symbolLow, scoreLow, symbolHigh, scoreHigh, usdAvailable, holding, scoreMsg)
 	model.SetCarryInfo(`[grid]`, carryInfo)
+	util.Notice(carryInfo)
 	sidePerp, sideRelated, amount := calcCarryOpen(setting, tickPerp, tickRelated, symbolHigh, symbolLow, scoreOpen,
 		scoreClose, scoreHigh, scoreLow)
 	if amount > 0 {
