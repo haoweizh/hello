@@ -84,7 +84,8 @@ var ProcessCarry = func(setting *model.Setting) {
 			}
 		}
 		util.Notice(fmt.Sprintf(`[carry] set holding %f usd %f`, holding, usdAvailable))
-		usdAvailable = (usdAvailable - holding) / 2
+		//usdAvailable = (usdAvailable - holding) / 2
+		usdAvailable /= 2
 		return
 	}
 	scoreOpen := 1 - tickRelated.Asks[0].Price/tickPerp.Bids[0].Price + rateSum
