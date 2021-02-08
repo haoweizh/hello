@@ -155,21 +155,13 @@ var ProcessCarry = func(setting *model.Setting) {
 		}
 		if left != nil && right != nil && (left.Symbol == setting.Symbol || left.Symbol == symbolRelated) &&
 			(right.Symbol == setting.Symbol || right.Symbol == symbolRelated) {
-			retry := 0
 			for left.OrderId != `` && left.Status == model.CarryStatusWorking {
 				left = api.QueryOrderById(``, ``, left.Market, left.Symbol, left.Instrument, left.OrderType, left.OrderId)
-				retry++
-				if retry > 1 {
-					time.Sleep(time.Second * 1)
-				}
+				time.Sleep(time.Millisecond * 300)
 			}
-			retry = 0
 			for right.OrderId != `` && right.Status == model.CarryStatusWorking {
 				right = api.QueryOrderById(``, ``, right.Market, right.Symbol, right.Instrument, right.OrderType, right.OrderId)
-				retry++
-				if retry > 1 {
-					time.Sleep(time.Second * 1)
-				}
+				time.Sleep(time.Millisecond * 300)
 			}
 		}
 		//balances := api.GetBalance(model.AppConfig.FtxKey, model.AppConfig.FtxSecret, model.Ftx, 0)
