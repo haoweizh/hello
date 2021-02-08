@@ -80,13 +80,10 @@ var ProcessCarry = func(setting *model.Setting) {
 	symbolRelated := setting.GetRelatedSymbol()
 	_, tickRelated := model.AppMarkets.GetBidAsk(symbolRelated, setting.Market)
 	now := util.GetNowUnixMillion()
-	if tickPerp == nil || tickRelated == nil || tickPerp.Asks == nil || tickPerp.Bids == nil ||
+	status := checkSetCarrying(true)
+	if status || tickPerp == nil || tickRelated == nil || tickPerp.Asks == nil || tickPerp.Bids == nil ||
 		tickRelated.Asks == nil || tickRelated.Bids == nil || model.AppConfig.Handle != `1` ||
 		model.AppPause || now-int64(tickRelated.Ts) > 1000 || now-int64(tickPerp.Ts) > 1000 || setting == nil {
-		return
-	}
-	status := checkSetCarrying(true)
-	if status {
 		return
 	}
 	defer checkSetCarrying(false)
@@ -115,10 +112,10 @@ var ProcessCarry = func(setting *model.Setting) {
 		}
 		scoreMsg += fmt.Sprintf("[%s] open-close [%f ~ %f]\n", symbol, valueOpen, valueClose)
 	}
-	model.SetCarryInfo(`[grid]`,
-		fmt.Sprintf(`current: [%s] score: [%f ~ %f] revert: [%f] symbol low-high: [%s %f %s %f] available usd: %f holding: %f %s`,
-			setting.Symbol, setting.OpenShortMargin, setting.CloseShortMargin, setting.GridPriceDistance,
-			symbolLow, scoreLow, symbolHigh, scoreHigh, usdAvailable, holding, scoreMsg))
+	carryInfo := fmt.Sprintf(`current: [%s] score: [%f ~ %f] revert: [%f] symbol low-high: [%s %f %s %f] available usd: %f holding: %f %s`,
+		setting.Symbol, setting.OpenShortMargin, setting.CloseShortMargin, setting.GridPriceDistance,
+		symbolLow, scoreLow, symbolHigh, scoreHigh, usdAvailable, holding, scoreMsg)
+	model.SetCarryInfo(`[grid]`, carryInfo)
 	sidePerp, sideRelated, amount := calcCarryOpen(setting, tickPerp, tickRelated, symbolHigh, symbolLow, scoreOpen,
 		scoreClose, scoreHigh, scoreLow)
 	if amount > 0 {
@@ -148,7 +145,6 @@ var ProcessCarry = func(setting *model.Setting) {
 		}
 		time.Sleep(time.Millisecond * 200)
 		model.AppDB.Save(&setting)
-		util.Notice(`finish one carry` + setting.Symbol)
 	}
 }
 
