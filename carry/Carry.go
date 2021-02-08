@@ -44,13 +44,13 @@ var ProcessCarry = func(setting *model.Setting) {
 	symbolRelated := setting.GetRelatedSymbol()
 	_, tickRelated := model.AppMarkets.GetBidAsk(symbolRelated, setting.Market)
 	status := checkSetCarrying(true)
+	defer checkSetCarrying(false)
 	now := util.GetNowUnixMillion()
 	if status || tickPerp == nil || tickRelated == nil || tickPerp.Asks == nil || tickPerp.Bids == nil ||
 		tickRelated.Asks == nil || tickRelated.Bids == nil || model.AppConfig.Handle != `1` ||
 		model.AppPause || now-int64(tickRelated.Ts) > 1000 || now-int64(tickPerp.Ts) > 1000 || setting == nil {
 		return
 	}
-	defer checkSetCarrying(false)
 	duration, _ := time.ParseDuration(`-30s`)
 	current := util.GetNow()
 	if usdAvailable == 0 || holdingUpdateTime.Before(current.Add(duration)) {
