@@ -57,7 +57,7 @@ var ProcessCarry = func(setting *model.Setting) {
 	rates, _ := api.GetFundingRate(setting.Market, setting.Symbol)
 	rateSum := 0.0
 	for _, item := range rates.([]*model.FundingRate) {
-		rateSum += item.Rate
+		rateSum += item.Rate * 4
 	}
 	duration, _ := time.ParseDuration(`-600s`)
 	current := util.GetNow()
@@ -88,7 +88,7 @@ var ProcessCarry = func(setting *model.Setting) {
 		return
 	}
 	scoreOpen := 1 - tickRelated.Asks[0].Price/tickPerp.Bids[0].Price + rateSum
-	scoreClose := 1 - tickRelated.Bids[0].Price/tickPerp.Asks[0].Price - rateSum
+	scoreClose := 1 - tickRelated.Bids[0].Price/tickPerp.Asks[0].Price + rateSum
 	if setting.OpenShortMargin <= 0 {
 		setting.OpenShortMargin = FTXHighOpen
 	}
