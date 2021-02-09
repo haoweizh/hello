@@ -204,16 +204,28 @@ func makeEqual(setting *model.Setting, balances []*model.Balance) (symbol string
 	orderSide := model.OrderSideBuy
 	if amount > 0 {
 		orderSide = model.OrderSideSell
-		if tickPerp.Bids[0].Price < tickRelated.Bids[0].Price {
+		if tickPerp.Bids[0].Price < 0.99*tickRelated.Bids[0].Price {
 			symbol = symbolRelated
 			price = tickRelated.Bids[0].Price * (1 - OrderPriceLimit)
-		} else {
+		} else if tickPerp.Bids[0].Price > 1.01*tickRelated.Bids[0].Price {
 			symbol = settingSymbol
 			price = tickPerp.Bids[0].Price * (1 - OrderPriceLimit)
+		} else if math.Abs(amountPerp) > math.Abs(amountRelated) {
+			symbol = settingSymbol
+			price = tickPerp.Bids[0].Price * (1 - OrderPriceLimit)
+		} else {
+			symbol = symbolRelated
+			price = tickRelated.Bids[0].Price * (1 - OrderPriceLimit)
 		}
 	} else {
 		orderSide = model.OrderSideBuy
-		if tickPerp.Asks[0].Price < tickRelated.Asks[0].Price {
+		if tickPerp.Asks[0].Price < 0.99*tickRelated.Asks[0].Price {
+			symbol = settingSymbol
+			price = tickPerp.Asks[0].Price * (1 + OrderPriceLimit)
+		} else if tickPerp.Asks[0].Price > 1.01*tickRelated.Asks[0].Price {
+			symbol = symbolRelated
+			price = tickRelated.Asks[0].Price * (1 + OrderPriceLimit)
+		} else if math.Abs(amountPerp) > math.Abs(amountRelated) {
 			symbol = settingSymbol
 			price = tickPerp.Asks[0].Price * (1 + OrderPriceLimit)
 		} else {
