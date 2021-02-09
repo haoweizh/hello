@@ -44,7 +44,6 @@ func ClearCarryBalance() {
 				break
 			}
 		}
-		util.Notice(`...... enter clearing carry balance`)
 		time.Sleep(time.Second)
 		markets := model.GetMarkets()
 		for _, market := range markets {
@@ -63,20 +62,19 @@ func ClearCarryBalance() {
 			holding = 0
 			for _, value := range balances {
 				usdSymbol := strings.ToUpper(value.Coin) + `/USD`
-				util.Notice(fmt.Sprintf(`set usd symbol %s balance %f `, usdSymbol, value.Amount))
+				//util.Notice(fmt.Sprintf(`set usd symbol %s balance %f `, usdSymbol, value.Amount))
 				if strings.ToLower(value.Coin) == `usd` {
 					usdAvailable = value.Amount
 				} else if symbols[usdSymbol] {
 					holding += math.Abs(value.UsdValue)
 				}
 			}
-			util.Notice(fmt.Sprintf(`[carry] set holding %f usd %f`, holding, usdAvailable))
+			//util.Notice(fmt.Sprintf(`[carry] set holding %f usd %f`, holding, usdAvailable))
 			if model.AppConfig.Env != `dk` {
 				usdAvailable = usdAvailable - holding
 			}
 			usdAvailable /= 2
 		}
-		util.Notice(`...... exit clearing carry balance`)
 		checkSetCarrying(false)
 		time.Sleep(time.Second * 30)
 	}
