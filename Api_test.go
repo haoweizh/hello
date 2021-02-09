@@ -108,7 +108,7 @@ func Test_RefreshAccount(t *testing.T) {
 		util.Notice(err.Error())
 		return
 	}
-	result := api.CancelOrders(model.AppConfig.FtxKey, model.AppConfig.FtxSecret, model.Ftx, `BTC-PERP`)
+	result := api.CancelOrders(model.AppConfig.FtxKey, model.AppConfig.FtxSecret, model.Ftx, `CRV/USD`)
 	fmt.Println(result)
 	order := api.QueryOrderById(model.AppConfig.FtxKey, model.AppConfig.FtxSecret, model.Ftx, `SNX-PERP`, ``, ``, `25933261043`)
 	fmt.Println(order.OrderType)

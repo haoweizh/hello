@@ -351,7 +351,7 @@ func getBalanceFtx(key, secret string) (balances []*model.Balance) {
 func cancelOrdersFtx(key, secret, symbol string) (result bool) {
 	postData := make(map[string]interface{})
 	postData[`market`] = symbol
-	response := SignedRequestFtx(key, secret, http.MethodDelete, `/orders`, postData, nil)
+	response := SignedRequestFtx(key, secret, http.MethodDelete, `/orders`, nil, postData)
 	util.Notice(fmt.Sprintf(`[api cancelOrdersFtx]%s %s`, symbol, string(response)))
 	orderJson, err := util.NewJSON(response)
 	if err == nil {
@@ -673,7 +673,7 @@ func SignedRequestFtx(key, secret, method, path string, param, body map[string]i
 	if u.Query().Encode() != `` {
 		uri = fmt.Sprintf(`%s?%s`, u.Path, u.Query().Encode())
 	}
-	if method == `POST` {
+	if method == http.MethodPost || method == http.MethodDelete {
 		hash.Write([]byte(fmt.Sprintf(`%d%s%s%s`, ts, method, uri, bodyStr)))
 	} else {
 		hash.Write([]byte(fmt.Sprintf(`%d%s%s`, ts, method, uri)))

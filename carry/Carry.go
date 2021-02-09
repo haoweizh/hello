@@ -185,15 +185,15 @@ func makeEqual(setting *model.Setting, balances []*model.Balance) (equal bool) {
 	amountPerp, amountRelated := getCarryAmounts(setting, balances)
 	amount := amountPerp + amountRelated
 	symbolRelated := setting.GetRelatedSymbol()
+	orderSide := model.OrderSideBuy
+	if amount > 0 {
+		orderSide = model.OrderSideSell
+	}
 	amount = math.Abs(amount)
 	_, tickPerp := model.AppMarkets.GetBidAsk(setting.Symbol, setting.Market)
 	_, tickRelated := model.AppMarkets.GetBidAsk(symbolRelated, setting.Market)
 	if tickPerp == nil || tickRelated == nil {
 		return true
-	}
-	orderSide := model.OrderSideBuy
-	if amount > 0 {
-		orderSide = model.OrderSideSell
 	}
 	util.Notice(fmt.Sprintf(`>>>>>> equal %s %f, %s %f = %s %f`,
 		settingSymbol, amountPerp, symbolRelated, amountRelated, orderSide, amount))
