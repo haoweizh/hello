@@ -131,7 +131,8 @@ var ProcessCarry = func(setting *model.Setting) {
 			symbolLow = symbol
 			scoreLow = valueClose
 		}
-		scoreMsg += fmt.Sprintf("[%s] open-close [%f ~ %f]\n", symbol, valueOpen, valueClose)
+		scoreMsg += fmt.Sprintf("[%s] open-close [%f ~ %f] amount limit:%f\n",
+			symbol, valueOpen, valueClose, setting.AmountLimit)
 	}
 	carryInfo := fmt.Sprintf(`current: [%s] score: [%f ~ %f] revert: [%f] symbol low-high: [%s %f %s %f] available usd: %f holding: %f %s`,
 		setting.Symbol, setting.OpenShortMargin, setting.CloseShortMargin, setting.GridPriceDistance,
