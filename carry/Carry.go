@@ -78,7 +78,7 @@ func clearCarryBalance() {
 		}
 		util.Notice(`...... exit clearing carry balance`)
 		checkSetCarrying(false)
-		time.Sleep(time.Second * 30)
+		time.Sleep(time.Second * 60)
 	}
 }
 
@@ -201,7 +201,7 @@ func makeEqual(setting *model.Setting, balances []*model.Balance) (equal bool) {
 	}
 	util.Notice(fmt.Sprintf(`>>>>>> equal %s %f, %s %f = %s %f`,
 		settingSymbol, amountPerp, symbolRelated, amountRelated, orderSide, amount))
-	limit := 0.001
+	limit := 0.002
 	if amount < math.Max(math.Abs(amountPerp), math.Abs(amountRelated)) {
 		symbol := setting.Symbol
 		amount = api.FormatAmount(setting.Market, symbol, amount)
