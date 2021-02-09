@@ -139,8 +139,9 @@ var ProcessCarry = func(setting *model.Setting) {
 		scoreMsg += fmt.Sprintf("[%s] open-close [%f ~ %f] amount limit:%f\n",
 			symbol, valueOpen, valueClose, setting.AmountLimit)
 	}
-	carryInfo := fmt.Sprintf(`current: [%s] score: [%f ~ %f] revert: [%f] symbol low-high: [%s %f %s %f] available usd: %f holding: %f %s`,
-		setting.Symbol, setting.OpenShortMargin, setting.CloseShortMargin, setting.GridPriceDistance,
+	carryInfo := fmt.Sprintf(`line :%f current: [%s] score: [%f ~ %f] revert: [%f] 
+		symbol low-high: [%s %f %s %f] available usd: %f holding: %f %s`,
+		model.AppConfig.Amount, setting.Symbol, setting.OpenShortMargin, setting.CloseShortMargin, setting.GridPriceDistance,
 		symbolLow, scoreLow, symbolHigh, scoreHigh, usdAvailable, holding, scoreMsg)
 	model.SetCarryInfo(`[grid]`, carryInfo)
 	sidePerp, sideRelated, amount := calcCarryOpen(setting, tickPerp, tickRelated, symbolHigh, symbolLow, scoreOpen,
@@ -268,8 +269,12 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	} else {
 		amount = math.Min(math.Abs(setting.GridAmount), math.Min(bidAmount, askAmount))
 	}
-	if setting.Symbol == symbolHigh && usdAvailable < 100000 {
-		util.Notice(fmt.Sprintf(`not enough usd %f<100000`, usdAvailable))
+	line := model.AppConfig.Amount
+	if line == 0 {
+		line = 100000
+	}
+	if setting.Symbol == symbolHigh && usdAvailable < line {
+		util.Notice(fmt.Sprintf(`not enough usd %f<%f`, usdAvailable, line))
 		amount = 0
 	}
 	amount = math.Min(amount, 10000/tickPerp.Asks[0].Price)

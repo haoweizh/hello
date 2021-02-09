@@ -85,16 +85,20 @@ var AppPause = false
 
 type Config struct {
 	lock            sync.Mutex
-	Env             string
-	DBConnection    string
 	Channels        int
 	InChina         int // 1 in china, otherwise outter china
 	RefreshTimeSlot int
 	Between         int64
 	ChannelSlot     float64
 	Delay           float64
+	PreDealDis      float64
+	AmountRate      float64 // 刷单填写数量比率
+	BinanceOrderDis float64
+	Amount          float64
 	WSUrls          map[string]string // marketName - ws url
 	RestUrls        map[string]string // marketName - rest url
+	DBConnection    string
+	Env             string
 	HuobiKey        string
 	HuobiSecret     string
 	OkexKey         string
@@ -113,10 +117,7 @@ type Config struct {
 	BybitSecret     string
 	FcoinKey        string
 	FcoinSecret     string
-	AmountRate      float64 // 刷单填写数量比率
-	PreDealDis      float64
 	Phase           string
-	BinanceOrderDis float64
 	Handle          string // 0 不执行处理程序，1执行处理程序
 	Mail            string
 	FromMail        string
@@ -555,5 +556,6 @@ func (config *Config) ToString() string {
 	str += fmt.Sprintf("channels: %d \n", config.Channels)
 	str += fmt.Sprintf("handle: %s\n", config.Handle)
 	str += fmt.Sprintf("amountrate: %f\n", config.AmountRate)
+	str += fmt.Sprintf("amount: %f\n", config.Amount)
 	return str
 }
