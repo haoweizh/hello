@@ -78,7 +78,7 @@ func clearCarryBalance() {
 			}
 			util.Notice(fmt.Sprintf(`[carry] all:%f usd:%f valuedUsd:%f holding:%f`,
 				all, usdAvailable, valueUsd, holding))
-			usdAvailable = (all - valueUsd) / 2
+			//usdAvailable = (all - valueUsd) / 2
 		}
 		util.Notice(`...... exit clearing carry balance`)
 		checkSetCarrying(false)
@@ -267,6 +267,9 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 		amount = math.Min(usdAvailable/tickPerp.Asks[0].Price, math.Min(bidAmount, askAmount))
 	} else {
 		amount = math.Min(math.Abs(setting.GridAmount), math.Min(bidAmount, askAmount))
+	}
+	if setting.Symbol == symbolHigh && usdAvailable < 100000 {
+		amount = 0
 	}
 	amount = math.Min(amount, 10000/tickPerp.Asks[0].Price)
 	amountPerp := api.FormatAmount(setting.Market, setting.Symbol, amount)
