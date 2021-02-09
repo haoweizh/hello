@@ -907,14 +907,15 @@ func InitCarryFtx(start uint) {
 	model.AppDB.AutoMigrate(&model.Setting{})
 	for symbol := range symbolRates {
 		setting := &model.Setting{
-			Valid:            true,
-			Function:         model.FunctionCarry,
-			OpenShortMargin:  0.01,
-			CloseShortMargin: -0.012,
-			Market:           model.Ftx,
-			Symbol:           symbol,
-			AmountLimit:      0,
-			ID:               start,
+			Valid:             true,
+			Function:          model.FunctionCarry,
+			OpenShortMargin:   0.015,
+			CloseShortMargin:  -0.015,
+			GridPriceDistance: -0.004,
+			Market:            model.Ftx,
+			Symbol:            symbol,
+			AmountLimit:       0,
+			ID:                start,
 		}
 		related := setting.GetRelatedSymbol()
 		// HOLY 1INCH too easy to be single completed order
