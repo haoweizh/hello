@@ -62,12 +62,10 @@ func clearCarryBalance() {
 			symbols := model.GetMarketSymbols(market)
 			holding = 0
 			valueUsd := 0.0
-			all := 0.0
 			for _, value := range balances {
 				usdSymbol := strings.ToUpper(value.Coin) + `/USD`
 				coin := strings.ToLower(value.Coin)
 				util.Notice(fmt.Sprintf(`set usd symbol %s balance %f `, usdSymbol, value.Amount))
-				all += value.UsdValue
 				if coin == `usd` {
 					usdAvailable = value.Amount
 				} else if coin == `btc` || coin == `usdt` || coin == `ftt` {
@@ -76,9 +74,10 @@ func clearCarryBalance() {
 					holding += math.Abs(value.UsdValue)
 				}
 			}
-			util.Notice(fmt.Sprintf(`[carry] all:%f usd:%f valuedUsd:%f holding:%f`,
-				all, usdAvailable, valueUsd, holding))
-			//usdAvailable = (all - valueUsd) / 2
+			if model.AppConfig.Env == `simon` {
+				usdAvailable = (usdAvailable - holding) / 2
+			}
+			util.Notice(fmt.Sprintf(`[carry] usd:%f valuedUsd:%f holding:%f`, usdAvailable, valueUsd, holding))
 		}
 		util.Notice(`...... exit clearing carry balance`)
 		checkSetCarrying(false)
