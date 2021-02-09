@@ -116,12 +116,24 @@ var ProcessCarry = func(setting *model.Setting) {
 	var symbolHigh, symbolLow string
 	scoreMsg := "\n[score list]\n"
 	for symbol, valueOpen := range carryScoreOpen {
-		if valueOpen > scoreHigh {
+		validOpen := true
+		validClose := true
+		if model.AppConfig.Env == `dk` {
+			validOpen = false
+			validClose = false
+		}
+		if tickPerp.Bids[0].Price*tickPerp.Bids[0].Amount > 20 && tickRelated.Asks[0].Price*tickRelated.Asks[0].Amount > 20 {
+			validOpen = true
+		}
+		if tickRelated.Bids[0].Price*tickRelated.Bids[0].Amount > 20 && tickPerp.Asks[0].Price*tickPerp.Asks[0].Amount > 20 {
+			validClose = true
+		}
+		if valueOpen > scoreHigh && validOpen {
 			symbolHigh = symbol
 			scoreHigh = valueOpen
 		}
 		valueClose := carryScoreClose[symbol]
-		if valueClose < scoreLow {
+		if valueClose < scoreLow && validClose {
 			symbolLow = symbol
 			scoreLow = valueClose
 		}
@@ -294,6 +306,8 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 		amount = math.Min(math.Abs(setting.GridAmount), math.Min(bidAmount, askAmount))
 	}
 	amount = math.Min(amount, 10000/tickPerp.Asks[0].Price)
-	amount = api.FormatAmount(setting.Market, setting.Symbol, amount)
-	return sidePerp, sideRelated, amount
+	amountPerp := api.FormatAmount(setting.Market, setting.Symbol, amount)
+	amountRelated := api.FormatAmount(setting.Market, setting.GetRelatedSymbol(), amount)
+	amount = math.Min(amountPerp, amountRelated)
+	return sidePerp, sideRelated, math.Min(amountPerp, amountRelated)
 }
