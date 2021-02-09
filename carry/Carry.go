@@ -120,14 +120,19 @@ var ProcessCarry = func(setting *model.Setting) {
 	var symbolHigh, symbolLow string
 	scoreMsg := "\n[score list]\n"
 	for symbol, valueOpen := range carryScoreOpen {
-		if valueOpen > scoreHigh && tickPerp.Bids[0].Price*tickPerp.Bids[0].Amount > setting.AmountLimit &&
-			tickRelated.Asks[0].Price*tickRelated.Asks[0].Amount > setting.AmountLimit {
+		_, bidAskPerp := model.AppMarkets.GetBidAsk(setting.Symbol, setting.Market)
+		_, bidAskRelated := model.AppMarkets.GetBidAsk(symbolRelated, setting.Market)
+		if bidAskPerp == nil || bidAskRelated == nil {
+			continue
+		}
+		if valueOpen > scoreHigh && bidAskPerp.Bids[0].Price*bidAskPerp.Bids[0].Amount > setting.AmountLimit &&
+			bidAskRelated.Asks[0].Price*bidAskRelated.Asks[0].Amount > setting.AmountLimit {
 			symbolHigh = symbol
 			scoreHigh = valueOpen
 		}
 		valueClose := carryScoreClose[symbol]
-		if valueClose < scoreLow && tickRelated.Bids[0].Price*tickRelated.Bids[0].Amount > setting.AmountLimit &&
-			tickPerp.Asks[0].Price*tickPerp.Asks[0].Amount > setting.AmountLimit {
+		if valueClose < scoreLow && bidAskRelated.Bids[0].Price*bidAskRelated.Bids[0].Amount > setting.AmountLimit &&
+			bidAskPerp.Asks[0].Price*bidAskPerp.Asks[0].Amount > setting.AmountLimit {
 			symbolLow = symbol
 			scoreLow = valueClose
 		}
