@@ -14,6 +14,7 @@ import (
 const FTXHighOpen = 0.004
 const FTXLowOpen = -0.006
 const OrderLimitUsd = 10.0
+const OrderPriceLimit = 0.002
 
 //const FtxTakerFee = 0.0004275
 
@@ -116,24 +117,14 @@ var ProcessCarry = func(setting *model.Setting) {
 	var symbolHigh, symbolLow string
 	scoreMsg := "\n[score list]\n"
 	for symbol, valueOpen := range carryScoreOpen {
-		validOpen := true
-		validClose := true
-		if model.AppConfig.Env == `dk` {
-			validOpen = false
-			validClose = false
-		}
-		if tickPerp.Bids[0].Price*tickPerp.Bids[0].Amount > 20 && tickRelated.Asks[0].Price*tickRelated.Asks[0].Amount > 20 {
-			validOpen = true
-		}
-		if tickRelated.Bids[0].Price*tickRelated.Bids[0].Amount > 20 && tickPerp.Asks[0].Price*tickPerp.Asks[0].Amount > 20 {
-			validClose = true
-		}
-		if valueOpen > scoreHigh && validOpen {
+		if valueOpen > scoreHigh && tickPerp.Bids[0].Price*tickPerp.Bids[0].Amount > setting.AmountLimit &&
+			tickRelated.Asks[0].Price*tickRelated.Asks[0].Amount > setting.AmountLimit {
 			symbolHigh = symbol
 			scoreHigh = valueOpen
 		}
 		valueClose := carryScoreClose[symbol]
-		if valueClose < scoreLow && validClose {
+		if valueClose < scoreLow && tickRelated.Bids[0].Price*tickRelated.Bids[0].Amount > setting.AmountLimit &&
+			tickPerp.Asks[0].Price*tickPerp.Asks[0].Amount > setting.AmountLimit {
 			symbolLow = symbol
 			scoreLow = valueClose
 		}
@@ -191,81 +182,44 @@ func getCarryAmounts(setting *model.Setting, balances []*model.Balance) (amountP
 	return amountPerp, amountRelated
 }
 
-func makeEqual(setting *model.Setting, balances []*model.Balance) (equal bool) {
+func makeEqual(setting *model.Setting, balances []*model.Balance) (symbol string, price float64, equal bool) {
 	settingSymbol := setting.Symbol
-	if strings.Contains(settingSymbol, `BTC`) || strings.Contains(settingSymbol, `ETH`) ||
-		strings.Contains(settingSymbol, `LINK`) || strings.Contains(settingSymbol, `DOGE`) ||
-		strings.Contains(settingSymbol, `FTT`) {
-		return true
-	}
-	amountPerp, amountRelated := getCarryAmounts(setting, balances)
-	amount := amountPerp + amountRelated
 	symbolRelated := setting.GetRelatedSymbol()
-	orderSide := model.OrderSideBuy
-	if amount > 0 {
-		orderSide = model.OrderSideSell
-	}
-	amount = math.Abs(amount)
 	_, tickPerp := model.AppMarkets.GetBidAsk(setting.Symbol, setting.Market)
 	_, tickRelated := model.AppMarkets.GetBidAsk(symbolRelated, setting.Market)
 	if tickPerp == nil || tickRelated == nil {
-		return true
+		return ``, 0, true
 	}
-	util.Notice(fmt.Sprintf(`>>>>>> equal %s %f, %s %f = %s %f`,
-		settingSymbol, amountPerp, symbolRelated, amountRelated, orderSide, amount))
-	limit := 0.002
-	if amount < math.Max(math.Abs(amountPerp), math.Abs(amountRelated)) {
-		symbol := setting.Symbol
-		amount = api.FormatAmount(setting.Market, symbol, amount)
-		price := tickPerp.Bids[0].Price
-		if orderSide == model.OrderSideSell {
-			if tickPerp.Bids[0].Price < tickRelated.Bids[0].Price {
-				symbol = symbolRelated
-				price = tickRelated.Bids[0].Price * (1 - limit)
-			} else {
-				symbol = settingSymbol
-				price = tickPerp.Bids[0].Price * (1 - limit)
-			}
-		} else if orderSide == model.OrderSideBuy {
-			if tickPerp.Asks[0].Price < tickRelated.Asks[0].Price {
-				symbol = settingSymbol
-				price = tickPerp.Asks[0].Price * (1 + limit)
-			} else {
-				symbol = symbolRelated
-				price = tickRelated.Asks[0].Price * (1 + limit)
-			}
-		}
-		if amount > 0 {
-			resultPerp := api.CancelOrders(``, ``, setting.Market, settingSymbol)
-			resultRelated := api.CancelOrders(``, ``, setting.Market, symbolRelated)
-			util.Notice(fmt.Sprintf(`cancel all perp:%v related:%v equal %s %s %f %s %f %s %f`,
-				resultPerp, resultRelated, symbol, orderSide, amount, setting.Market, amountPerp, symbolRelated, amountRelated))
-			api.PlaceOrder(``, ``, orderSide, model.OrderTypeLimit, setting.Market, symbol, ``,
-				``, ``, ``, model.FunctionComplement, price, price, amount, true)
+	amountPerp, amountRelated := getCarryAmounts(setting, balances)
+	amount := amountPerp + amountRelated
+	orderSide := model.OrderSideBuy
+	if amount > 0 {
+		orderSide = model.OrderSideSell
+		if tickPerp.Bids[0].Price < tickRelated.Bids[0].Price {
+			symbol = symbolRelated
+			price = tickRelated.Bids[0].Price * (1 - OrderPriceLimit)
+		} else {
+			symbol = settingSymbol
+			price = tickPerp.Bids[0].Price * (1 - OrderPriceLimit)
 		}
 	} else {
-		symbol := settingSymbol
-		price := tickPerp.Asks[0].Price * (1 + limit)
-		if amountPerp > 0 {
-			price = tickPerp.Bids[0].Price * (1 - limit)
-		}
-		amount = api.FormatAmount(model.Ftx, setting.Symbol, math.Abs(amountPerp))
-		if math.Abs(amountPerp) < math.Abs(amountRelated) {
+		orderSide = model.OrderSideBuy
+		if tickPerp.Asks[0].Price < tickRelated.Asks[0].Price {
+			symbol = settingSymbol
+			price = tickPerp.Asks[0].Price * (1 + OrderPriceLimit)
+		} else {
 			symbol = symbolRelated
-			price = tickRelated.Asks[0].Price * (1 + limit)
-			if amountRelated > 0 {
-				price = tickRelated.Bids[0].Price * (1 - limit)
-			}
-			amount = api.FormatAmount(model.Ftx, symbolRelated, math.Abs(amountRelated))
+			price = tickRelated.Asks[0].Price * (1 + OrderPriceLimit)
 		}
-		if amount > 0 {
-			result := api.CancelOrders(``, ``, setting.Market, symbol)
-			util.Notice(fmt.Sprintf(`>>>cancel all %v equal perp %s %s %f`,
-				result, symbol, orderSide, amount))
-			api.PlaceOrder(``, ``, orderSide, model.OrderTypeLimit, setting.Market,
-				symbol, ``, ``, ``, ``, model.FunctionComplement,
-				price, price, amount, true)
-		}
+	}
+	amount = api.FormatAmount(setting.Market, symbol, math.Abs(amount))
+	if amount > 0 {
+		resultPerp := api.CancelOrders(``, ``, setting.Market, settingSymbol)
+		resultRelated := api.CancelOrders(``, ``, setting.Market, symbolRelated)
+		util.Notice(fmt.Sprintf(`cancel all perp:%v related:%v >>>>>> equal %s %f, %s %f = %s %f`,
+			resultPerp, resultRelated, settingSymbol, amountPerp, symbolRelated, amountRelated, orderSide, amount))
+		api.PlaceOrder(``, ``, orderSide, model.OrderTypeLimit, setting.Market, symbol, ``,
+			``, ``, ``, model.FunctionComplement, price, price, amount, true)
 	}
 	return
 }
