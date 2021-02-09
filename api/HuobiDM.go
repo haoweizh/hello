@@ -23,7 +23,7 @@ var subscribeHandlerHuobiDM = func(subscribes []interface{}, subType string) err
 			util.SocketInfo("huobiDM can not subscribe " + err.Error())
 			return err
 		}
-		//util.SocketInfo(`huobi subscribed ` + v)
+		util.Notice(`huobi subscribed ` + string(subscribeMessage))
 	}
 	return err
 }

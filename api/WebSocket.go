@@ -84,7 +84,7 @@ func chanHandler(market string, stopC chan struct{}, errHandler ErrHandler, msgH
 
 func WebSocketServe(market, url, subType string, subscribes []interface{}, subHandler SubscribeHandler,
 	msgHandler MsgHandler, errHandler ErrHandler) (chan struct{}, error) {
-	util.Notice(`creat depth channel ` + url)
+	util.Notice(market + `creat depth channel ` + url)
 	conn, err := newConnection(url)
 	if err != nil {
 		util.SocketInfo("can not create web socket" + err.Error())
