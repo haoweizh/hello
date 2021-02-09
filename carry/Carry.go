@@ -269,6 +269,7 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 		amount = math.Min(math.Abs(setting.GridAmount), math.Min(bidAmount, askAmount))
 	}
 	if setting.Symbol == symbolHigh && usdAvailable < 100000 {
+		util.Notice(fmt.Sprintf(`not enough usd %f<100000`, usdAvailable))
 		amount = 0
 	}
 	amount = math.Min(amount, 10000/tickPerp.Asks[0].Price)
