@@ -73,7 +73,7 @@ func chanHandler(market string, stopC chan struct{}, errHandler ErrHandler, msgH
 		default:
 			_, message, err := conn.ReadMessage()
 			if err != nil {
-				util.Notice(market + " scan not read from websocket: " + err.Error())
+				util.Notice(market + " can not read from websocket: " + err.Error())
 				return
 			}
 			//util.SocketInfo(string(message))
