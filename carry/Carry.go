@@ -186,7 +186,6 @@ func makeEqual(setting *model.Setting, balances []*model.Balance) (equal bool) {
 	amount := amountPerp + amountRelated
 	symbolRelated := setting.GetRelatedSymbol()
 	amount = math.Abs(amount)
-	orders := make([]*model.Order, 0)
 	_, tickPerp := model.AppMarkets.GetBidAsk(setting.Symbol, setting.Market)
 	_, tickRelated := model.AppMarkets.GetBidAsk(symbolRelated, setting.Market)
 	if tickPerp == nil || tickRelated == nil {
@@ -225,57 +224,33 @@ func makeEqual(setting *model.Setting, balances []*model.Balance) (equal bool) {
 			resultRelated := api.CancelOrders(``, ``, setting.Market, symbolRelated)
 			util.Notice(fmt.Sprintf(`cancel all perp:%v related:%v equal %s %s %f %s %f %s %f`,
 				resultPerp, resultRelated, symbol, orderSide, amount, setting.Market, amountPerp, symbolRelated, amountRelated))
-			orders = append(orders, api.PlaceOrder(``, ``, orderSide, model.OrderTypeLimit, setting.Market,
-				symbol, ``, ``, ``, ``, model.FunctionComplement, price, price,
-				amount, true))
+			api.PlaceOrder(``, ``, orderSide, model.OrderTypeLimit, setting.Market, symbol, ``,
+				``, ``, ``, model.FunctionComplement, price, price, amount, true)
 		}
 	} else {
+		symbol := settingSymbol
 		price := tickPerp.Asks[0].Price * (1 + limit)
 		if amountPerp > 0 {
 			price = tickPerp.Bids[0].Price * (1 - limit)
 		}
-		amountPerp = api.FormatAmount(model.Ftx, setting.Symbol, math.Abs(amountPerp))
-		if amountPerp > 0 {
-			resultPerp := api.CancelOrders(``, ``, setting.Market, settingSymbol)
+		amount = api.FormatAmount(model.Ftx, setting.Symbol, math.Abs(amountPerp))
+		if math.Abs(amountPerp) < math.Abs(amountRelated) {
+			symbol = symbolRelated
+			price = tickRelated.Asks[0].Price * (1 + limit)
+			if amountRelated > 0 {
+				price = tickRelated.Bids[0].Price * (1 - limit)
+			}
+			amount = api.FormatAmount(model.Ftx, symbolRelated, math.Abs(amountRelated))
+		}
+		if amount > 0 {
+			result := api.CancelOrders(``, ``, setting.Market, symbol)
 			util.Notice(fmt.Sprintf(`>>>cancel all %v equal perp %s %s %f`,
-				resultPerp, setting.Market, orderSide, amountPerp))
-			orders = append(orders, api.PlaceOrder(``, ``, orderSide, model.OrderTypeLimit, setting.Market,
-				setting.Symbol, ``, ``, ``, ``, model.FunctionComplement,
-				price, price, amountPerp, true))
-		}
-		price = tickRelated.Asks[0].Price * (1 + limit)
-		if amountRelated > 0 {
-			price = tickRelated.Bids[0].Price * (1 - limit)
-		}
-		amountRelated = api.FormatAmount(model.Ftx, symbolRelated, math.Abs(amountRelated))
-		if amountRelated > 0 {
-			resultRelated := api.CancelOrders(``, ``, setting.Market, symbolRelated)
-			util.Notice(fmt.Sprintf(`>>>cancel all %v equal related %s %s %f`,
-				resultRelated, setting.Market, orderSide, amountRelated))
-			orders = append(orders, api.PlaceOrder(``, ``, orderSide, model.OrderTypeLimit, setting.Market,
-				symbolRelated, ``, ``, ``, ``, model.FunctionComplement,
-				price, price, amountRelated, true))
+				result, symbol, orderSide, amount))
+			api.PlaceOrder(``, ``, orderSide, model.OrderTypeLimit, setting.Market,
+				symbol, ``, ``, ``, ``, model.FunctionComplement,
+				price, price, amount, true)
 		}
 	}
-	//allDone := false
-	//for i := 0; i < 30 && !allDone; i++ {
-	//	allDone = true
-	//	for _, order := range orders {
-	//		if order == nil {
-	//			continue
-	//		}
-	//		order = api.QueryOrderById(``, ``, order.Market, order.Symbol, order.Instrument,
-	//			order.OrderType, order.OrderId)
-	//		if order == nil {
-	//			allDone = false
-	//		} else if order.Status == model.CarryStatusWorking {
-	//			allDone = false
-	//			util.Notice(fmt.Sprintf(`working set all done %v %s deal %f`,
-	//				allDone, order.Status, order.DealAmount))
-	//			time.Sleep(time.Second * 5)
-	//		}
-	//	}
-	//}
 	return
 }
 
