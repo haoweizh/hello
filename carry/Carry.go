@@ -44,8 +44,8 @@ func ClearCarryBalance() {
 				break
 			}
 		}
+		util.Notice(`...... enter clearing carry balance`)
 		time.Sleep(time.Second)
-		util.Notice(`.. clearing carry balance`)
 		markets := model.GetMarkets()
 		for _, market := range markets {
 			balances := api.GetBalance(``, ``, market, 0)
@@ -76,6 +76,7 @@ func ClearCarryBalance() {
 			}
 			usdAvailable /= 2
 		}
+		util.Notice(`...... exit clearing carry balance`)
 		checkSetCarrying(false)
 		time.Sleep(time.Second * 30)
 	}
@@ -195,6 +196,8 @@ func makeEqual(setting *model.Setting, balances []*model.Balance) (equal bool) {
 	if amount > 0 {
 		orderSide = model.OrderSideSell
 	}
+	util.Notice(fmt.Sprintf(`>>>>>> equal %s %f, %s %f = %s %f`,
+		settingSymbol, amountPerp, symbolRelated, amountRelated, orderSide, amount))
 	limit := 0.001
 	if amount < math.Max(math.Abs(amountPerp), math.Abs(amountRelated)) {
 		symbol := setting.Symbol
@@ -234,8 +237,8 @@ func makeEqual(setting *model.Setting, balances []*model.Balance) (equal bool) {
 		amountPerp = api.FormatAmount(model.Ftx, setting.Symbol, math.Abs(amountPerp))
 		if amountPerp > 0 {
 			resultPerp := api.CancelOrders(``, ``, setting.Market, settingSymbol)
-			util.Notice(fmt.Sprintf(`cancel all %v equal perp %s %s %f`,
-				resultPerp, setting.Market, orderSide, amount))
+			util.Notice(fmt.Sprintf(`>>>cancel all %v equal perp %s %s %f`,
+				resultPerp, setting.Market, orderSide, amountPerp))
 			orders = append(orders, api.PlaceOrder(``, ``, orderSide, model.OrderTypeLimit, setting.Market,
 				setting.Symbol, ``, ``, ``, ``, model.FunctionComplement,
 				price, price, amountPerp, true))
@@ -247,32 +250,32 @@ func makeEqual(setting *model.Setting, balances []*model.Balance) (equal bool) {
 		amountRelated = api.FormatAmount(model.Ftx, symbolRelated, math.Abs(amountRelated))
 		if amountRelated > 0 {
 			resultRelated := api.CancelOrders(``, ``, setting.Market, symbolRelated)
-			util.Notice(fmt.Sprintf(`cancel all %v equal related %s %s %f`,
-				resultRelated, setting.Market, orderSide, amount))
+			util.Notice(fmt.Sprintf(`>>>cancel all %v equal related %s %s %f`,
+				resultRelated, setting.Market, orderSide, amountRelated))
 			orders = append(orders, api.PlaceOrder(``, ``, orderSide, model.OrderTypeLimit, setting.Market,
 				symbolRelated, ``, ``, ``, ``, model.FunctionComplement,
 				price, price, amountRelated, true))
 		}
 	}
-	allDone := false
-	for i := 0; i < 30 && !allDone; i++ {
-		allDone = true
-		for _, order := range orders {
-			if order == nil {
-				continue
-			}
-			order = api.QueryOrderById(``, ``, order.Market, order.Symbol, order.Instrument,
-				order.OrderType, order.OrderId)
-			if order == nil {
-				allDone = false
-			} else if order.Status == model.CarryStatusWorking {
-				allDone = false
-				util.Notice(fmt.Sprintf(`working set all done %v %s deal %f`,
-					allDone, order.Status, order.DealAmount))
-				time.Sleep(time.Second * 5)
-			}
-		}
-	}
+	//allDone := false
+	//for i := 0; i < 30 && !allDone; i++ {
+	//	allDone = true
+	//	for _, order := range orders {
+	//		if order == nil {
+	//			continue
+	//		}
+	//		order = api.QueryOrderById(``, ``, order.Market, order.Symbol, order.Instrument,
+	//			order.OrderType, order.OrderId)
+	//		if order == nil {
+	//			allDone = false
+	//		} else if order.Status == model.CarryStatusWorking {
+	//			allDone = false
+	//			util.Notice(fmt.Sprintf(`working set all done %v %s deal %f`,
+	//				allDone, order.Status, order.DealAmount))
+	//			time.Sleep(time.Second * 5)
+	//		}
+	//	}
+	//}
 	return
 }
 
