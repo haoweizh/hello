@@ -76,7 +76,8 @@ func clearCarryBalance() {
 					holding += math.Abs(value.UsdValue)
 				}
 			}
-			util.Notice(fmt.Sprintf(`[carry] set holding %f usd %f`, holding, usdAvailable))
+			util.Notice(fmt.Sprintf(`[carry] all:%f usd:%f valuedUsd:%f holding:%f`,
+				all, usdAvailable, valueUsd, holding))
 			usdAvailable = (all - valueUsd) / 2
 		}
 		util.Notice(`...... exit clearing carry balance`)
