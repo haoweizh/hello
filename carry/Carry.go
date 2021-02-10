@@ -269,10 +269,10 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 		return ``, ``, 0
 	}
 	if tickPerp.Asks[0].Price*bidAmount > OrderLimitUsd {
-		bidAmount /= 2
+		bidAmount *= 0.8
 	}
 	if tickPerp.Asks[0].Price*askAmount > OrderLimitUsd {
-		askAmount /= 2
+		askAmount *= 0.8
 	}
 	if (setting.Symbol == symbolLow && scoreLow < setting.CloseShortMargin) ||
 		(setting.Symbol == symbolHigh && scoreHigh > setting.OpenShortMargin) {
