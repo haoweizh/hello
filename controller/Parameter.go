@@ -7,6 +7,7 @@ import (
 	"hello/carry"
 	"hello/model"
 	"hello/util"
+	"math"
 	"math/rand"
 	"net/http"
 	"strconv"
@@ -67,6 +68,7 @@ func setSymbol(c *gin.Context) {
 	gridAmountStr := c.Query(`gridamount`)
 	griddisStr := c.Query(`griddis`)
 	priceXStr := c.Query(`pricex`)
+	open := c.Query(`open`)
 	valid := false
 	if market == `` || symbol == `` || function == `` {
 		c.String(http.StatusOK, `market symbol function cannot be empty`)
@@ -79,9 +81,15 @@ func setSymbol(c *gin.Context) {
 	}
 	var setting model.Setting
 	amountLimit := 0.0
-	model.AppDB.Model(&setting).Where("function_parameter is null").Update("function_parameter", ``)
-	model.AppDB.Model(&setting).Where("account_type is null").Update("account_type", ``)
-	model.AppDB.Model(&setting).Where("amount_limit is null").Update("amount_limit", ``)
+	if open != `` {
+		openValue, err := strconv.ParseFloat(open, 64)
+		if err != nil {
+			openValue = math.Abs(openValue)
+			closeValue := -1 * openValue
+			model.AppDB.Model(&setting).Where(`market=? and function=?`, model.Ftx, model.FunctionCarry).Updates(
+				map[string]interface{}{`open_short_margin`: openValue, `close_short_margin`: closeValue})
+		}
+	}
 	if op != `` {
 		model.AppDB.Model(&setting).Where("market= ? and symbol= ? and function= ?",
 			market, symbol, function).Updates(map[string]interface{}{"valid": valid})

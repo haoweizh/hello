@@ -171,6 +171,8 @@ var ProcessCarry = func(setting *model.Setting) {
 		}
 		time.Sleep(time.Millisecond * 200)
 		//model.AppDB.Save(&setting)
+		model.AppDB.Model(&setting).Where("market= ? and symbol= ? and function= ?",
+			setting.Market, setting.Symbol, setting.Function).Updates(map[string]interface{}{`grid_amunt`: setting.GridAmount})
 	}
 }
 
