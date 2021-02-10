@@ -13,7 +13,6 @@ import (
 
 const FTXHighOpen = 0.004
 const FTXLowOpen = -0.006
-const OrderLimitUsd = 10.0
 const OrderPriceLimit = 0.002
 
 //const FtxTakerFee = 0.0004275
@@ -254,25 +253,16 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	var bidAmount, askAmount float64
 	if (scoreLow < setting.CloseShortMargin && setting.Symbol == symbolLow) ||
 		(setting.GridAmount > 0 && scoreClose <= -1*setting.GridPriceDistance) {
-		bidAmount = tickPerp.Asks[0].Amount
-		askAmount = tickRelated.Bids[0].Amount
+		bidAmount = tickPerp.Asks[0].Amount * 0.8
+		askAmount = tickRelated.Bids[0].Amount * 0.8
 		sidePerp = model.OrderSideBuy
 		sideRelated = model.OrderSideSell
 	} else if (scoreHigh > setting.OpenShortMargin && setting.Symbol == symbolHigh) ||
 		(setting.GridAmount < 0 && scoreOpen >= setting.GridPriceDistance) {
-		bidAmount = tickRelated.Asks[0].Amount
-		askAmount = tickPerp.Bids[0].Amount
+		bidAmount = tickRelated.Asks[0].Amount * 0.8
+		askAmount = tickPerp.Bids[0].Amount * 0.8
 		sidePerp = model.OrderSideSell
 		sideRelated = model.OrderSideBuy
-	}
-	if bidAmount == 0 || askAmount == 0 {
-		return ``, ``, 0
-	}
-	if tickPerp.Asks[0].Price*bidAmount > OrderLimitUsd {
-		bidAmount *= 0.8
-	}
-	if tickPerp.Asks[0].Price*askAmount > OrderLimitUsd {
-		askAmount *= 0.8
 	}
 	if (setting.Symbol == symbolLow && scoreLow < setting.CloseShortMargin) ||
 		(setting.Symbol == symbolHigh && scoreHigh > setting.OpenShortMargin) {
@@ -281,14 +271,14 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 		amount = math.Min(math.Abs(setting.GridAmount), math.Min(bidAmount, askAmount))
 	}
 	line := model.AppConfig.Amount
-	if line == 0 {
+	if line <= 0 {
 		line = 100000
 	}
 	amount = math.Min(amount, 10000/tickPerp.Asks[0].Price)
 	amountPerp := api.FormatAmount(setting.Market, setting.Symbol, amount)
 	amountRelated := api.FormatAmount(setting.Market, setting.GetRelatedSymbol(), amount)
 	amount = math.Min(amountPerp, amountRelated)
-	if setting.Symbol == symbolHigh && usdAvailable < line {
+	if sideRelated == model.OrderSideBuy && usdAvailable < line {
 		util.Notice(fmt.Sprintf(`not enough usd to carry %s %f<%f`, setting.Symbol, usdAvailable, line))
 		amount = 0
 	}
