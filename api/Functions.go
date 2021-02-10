@@ -459,11 +459,6 @@ func GetFundingRate(market, symbol string) (fundingRate interface{}, expireTime 
 		model.SetFundingRate(market, symbol, fundingRate, expireTime)
 	case model.Ftx:
 		rates := getFundingRatesFtx()
-		if model.AppConfig.Env != `test` {
-			for _, rate := range rates {
-				model.AppDB.Save(&rate)
-			}
-		}
 		symbolRates := make(map[string][]*model.FundingRate)
 		for _, rate := range rates {
 			if symbolRates[rate.Symbol] == nil {
