@@ -145,8 +145,13 @@ var ProcessCarry = func(setting *model.Setting) {
 			symbolLow = symbol
 			scoreLow = valueClose
 		}
+		parts := strings.Split(setting.Symbol, `-`)
+		borrowAble := 0.0
+		if len(parts) == 2 {
+			borrowAble = coinBorrowAble[parts[0]+`/USD`]
+		}
 		scoreMsg += fmt.Sprintf("[%s] open-close [%f ~ %f] amount limit:%f borrowAble: %f\n",
-			symbol, valueOpen, valueClose, setting.AmountLimit, coinBorrowAble[symbolRelated])
+			symbol, valueOpen, valueClose, setting.AmountLimit, borrowAble)
 	}
 	carryInfo := fmt.Sprintf(`line :%f current: [%s] score: [%f ~ %f] revert: [%f] 
 		symbol low-high: [%s %f %s %f] available usd: %f holding: %f %s`,
