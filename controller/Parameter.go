@@ -202,9 +202,7 @@ func GetParameters(c *gin.Context) {
 		}
 		turtleRows.Close()
 	}
-	for key, value := range model.CarryInfo {
-		msg += fmt.Sprintf("%s: %s\n", key, value)
-	}
+	msg += model.GetCarryInfo()
 	msg += model.AppMetric.ToString() + "\n"
 	msg += model.AppConfig.ToString()
 	c.String(http.StatusOK, msg)

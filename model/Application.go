@@ -282,6 +282,13 @@ var orderStatusMap = map[string]map[string]string{ // market - market status - u
 	},
 }
 
+func GetCarryInfo() (info string) {
+	for key, value := range CarryInfo {
+		info += fmt.Sprintf("%s: %s\n", key, value)
+	}
+	return
+}
+
 func SetCarryInfo(key, value string) {
 	infoLock.Lock()
 	defer infoLock.Unlock()
