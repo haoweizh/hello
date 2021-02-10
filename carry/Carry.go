@@ -128,6 +128,7 @@ var ProcessCarry = func(setting *model.Setting) {
 		}
 		coin := parts[0]
 		related := parts[0] + `/USD`
+		util.Notice(symbol + `related: ` + related)
 		_, bidAskPerp := model.AppMarkets.GetBidAsk(symbol, setting.Market)
 		_, bidAskRelated := model.AppMarkets.GetBidAsk(related, setting.Market)
 		if bidAskPerp == nil || bidAskRelated == nil {
