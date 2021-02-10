@@ -306,8 +306,7 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	amountPerp := api.FormatAmount(setting.Market, setting.Symbol, amount)
 	amountRelated := api.FormatAmount(setting.Market, setting.GetRelatedSymbol(), amount)
 	amount = math.Min(amountPerp, amountRelated)
-	if (sideRelated == model.OrderSideBuy && usdAvailable < line) || amount < setting.AmountLimit*TakeRate {
-		//util.Notice(fmt.Sprintf(`not enough usd to carry %s %f<%f`, setting.Symbol, usdAvailable, line))
+	if (sideRelated == model.OrderSideBuy && usdAvailable < line) || amount*tickPerp.Asks[0].Price < setting.AmountLimit {
 		amount = 0
 	}
 	return sidePerp, sideRelated, amount
