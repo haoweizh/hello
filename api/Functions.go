@@ -667,6 +667,26 @@ func PlaceSyncOrders(key, secret, orderSide, orderType, market, symbol, instrume
 	channel <- order
 }
 
+func MustPlaceOrder(key, secret, orderSide, orderType, market, symbol, instrument, amountType, accountType, orderParam,
+	refreshType string, price, triggerPrice, amount float64, saveDB bool) (order *model.Order) {
+	retry := 10
+	for i := 0; i < retry; i++ {
+		order = PlaceOrder(key, secret, orderSide, orderType, market, symbol, instrument, amountType, accountType,
+			orderParam, refreshType, price, triggerPrice, amount, saveDB)
+		if order != nil && order.OrderId != `` {
+			break
+		} else {
+			if market == model.OKSwap && order != nil && order.ErrCode == `35010` {
+				amountType = model.AmountTypeNew
+				RefreshAccount(key, secret, model.OKSwap)
+			}
+			time.Sleep(time.Second)
+			util.Notice(fmt.Sprintf(`fail to place order %d time, re order`, i))
+		}
+	}
+	return order
+}
+
 // orderSide: OrderSideBuy OrderSideSell OrderSideLiquidateLong OrderSideLiquidateShort
 // orderType: OrderTypeLimit OrderTypeMarket
 // amount:如果是限价单或市价卖单，amount是左侧币种的数量，如果是市价买单，amount是右测币种的数量

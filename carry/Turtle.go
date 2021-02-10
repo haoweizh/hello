@@ -439,7 +439,7 @@ func placeTurtleOrders(turtleData *TurtleData, setting *model.Setting,
 			setting.Market, setting.Symbol, setting.Chance, amount, setting.PriceX, currentN,
 			setting.AmountLimit, orderSide, turtleData.end1, turtleData.highDays20, turtleData.highDays10,
 			turtleData.highDays5, turtleData.lowDays20, turtleData.lowDays10, turtleData.lowDays5))
-		order := api.PlaceOrder(model.KeyDefault, model.SecretDefault, orderSide, typeLong, setting.Market,
+		order := api.MustPlaceOrder(model.KeyDefault, model.SecretDefault, orderSide, typeLong, setting.Market,
 			setting.Symbol, instrument, ``, setting.AccountType, ``, model.FunctionTurtle,
 			priceLong*(1+turtleTriggerDelta), priceLong, amount, true)
 		if order != nil && order.OrderId != `` && order.Status != model.CarryStatusFail {
@@ -475,7 +475,7 @@ func placeTurtleOrders(turtleData *TurtleData, setting *model.Setting,
 			setting.Market, setting.Symbol, setting.Chance, amount, setting.PriceX, currentN,
 			setting.AmountLimit, orderSide, turtleData.end1, turtleData.highDays20, turtleData.highDays10,
 			turtleData.highDays5, turtleData.lowDays20, turtleData.lowDays10, turtleData.lowDays5))
-		order := api.PlaceOrder(model.KeyDefault, model.SecretDefault, orderSide, typeShort, setting.Market,
+		order := api.MustPlaceOrder(model.KeyDefault, model.SecretDefault, orderSide, typeShort, setting.Market,
 			setting.Symbol, instrument, ``, setting.AccountType, ``, model.FunctionTurtle,
 			priceShort*(1-turtleTriggerDelta), priceShort, amount, true)
 		if order != nil && order.OrderId != `` && order.Status != model.CarryStatusFail {

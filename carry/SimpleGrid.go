@@ -138,7 +138,7 @@ func getGridPos(setting *model.Setting) (gridPos *GridPos) {
 			amount = math.Min(2*gridPos.amount, gridPos.amount+liquidateAmount)
 			liquidateAmount = liquidateAmount + gridPos.amount - amount
 		}
-		order := api.PlaceOrder(model.KeyDefault, model.SecretDefault, model.OrderSideSell, model.OrderTypeLimit,
+		order := api.MustPlaceOrder(model.KeyDefault, model.SecretDefault, model.OrderSideSell, model.OrderTypeLimit,
 			setting.Market, setting.Symbol, ``, ``, ``, ``,
 			model.FunctionGrid, gridPos.pos[i], gridPos.pos[i], amount, false)
 		order.GridPos = int64(i)
@@ -153,7 +153,7 @@ func getGridPos(setting *model.Setting) (gridPos *GridPos) {
 			amount = math.Min(2*gridPos.amount, gridPos.amount-liquidateAmount)
 			liquidateAmount = liquidateAmount + amount - gridPos.amount
 		}
-		order := api.PlaceOrder(model.KeyDefault, model.SecretDefault, model.OrderSideBuy, model.OrderTypeLimit,
+		order := api.MustPlaceOrder(model.KeyDefault, model.SecretDefault, model.OrderSideBuy, model.OrderTypeLimit,
 			setting.Market, setting.Symbol, ``, ``, ``, ``,
 			model.FunctionGrid, gridPos.pos[i], gridPos.pos[i], amount, false)
 		order.GridPos = int64(i)
@@ -200,7 +200,7 @@ var ProcessSimpleGrid = func(setting *model.Setting) {
 			}
 		}
 		if order != nil && (order.Price > tick.Bids[0].Price || order.Status == model.CarryStatusSuccess) {
-			orderR := api.PlaceOrder(model.KeyDefault, model.SecretDefault, model.OrderSideSell, model.OrderTypeLimit,
+			orderR := api.MustPlaceOrder(model.KeyDefault, model.SecretDefault, model.OrderSideSell, model.OrderTypeLimit,
 				setting.Market, setting.Symbol, ``, ``, ``, ``,
 				model.FunctionGrid, gridPos.pos[setting.Chance], gridPos.pos[setting.Chance], gridPos.amount, false)
 			orderR.GridPos = setting.Chance
@@ -235,7 +235,7 @@ var ProcessSimpleGrid = func(setting *model.Setting) {
 		if order != nil && (order.Price < tick.Asks[0].Price || order.Status == model.CarryStatusSuccess) {
 			util.Notice(fmt.Sprintf(`check sell %d chance: %d order pos: %d ask0: %f order price %f`,
 				len(gridPos.pos), setting.Chance, order.GridPos, tick.Asks[0].Price, order.Price))
-			orderS := api.PlaceOrder(model.KeyDefault, model.SecretDefault, model.OrderSideBuy, model.OrderTypeLimit,
+			orderS := api.MustPlaceOrder(model.KeyDefault, model.SecretDefault, model.OrderSideBuy, model.OrderTypeLimit,
 				setting.Market, setting.Symbol, ``, ``, ``, ``,
 				model.FunctionGrid, gridPos.pos[setting.Chance], gridPos.pos[setting.Chance], gridPos.amount, false)
 			orderS.GridPos = setting.Chance
