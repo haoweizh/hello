@@ -184,15 +184,10 @@ func GetCode(c *gin.Context) {
 		rnd := rand.New(rand.NewSource(time.Now().UnixNano()))
 		rnd = rand.New(rand.NewSource(rnd.Int63()))
 		code = fmt.Sprintf("%06v", rnd.Int31n(1000000))
-		ip, _ := util.ExternalIP()
-		verifyUrl := fmt.Sprintf(`http://%s:8080/set?pw=%s`, ip, code)
+		//ip, _ := util.ExternalIP()
+		//verifyUrl := fmt.Sprintf(`http://%s:8080/set?pw=%s`, ip, code)
 		err := util.SendMail(model.AppConfig.FromMail, model.AppConfig.FromMailAuth, model.AppConfig.Mail,
-			`启动验证码`, `验证码链接是 `+verifyUrl)
-		//auth := smtp.PlainAuth("", "94764906@qq.com", "urszfnsnanxebjga",
-		//	"smtp.qq.com")
-		//msg := []byte("To: " + strings.Join(to, ",") + "\r\nFrom: 刷单系统<" + user +
-		//	">\r\nSubject: 验证码\r\nContent-Type: text/plain; charset=UTF-8\r\n\r\n刷单验证码是" + code)
-		//err := smtp.SendMail("smtp.qq.com:465", auth, user, to, msg)
+			`启动验证码`, `验证码是 `+code)
 		if err == nil {
 			c.String(http.StatusOK, `发送成功，请查收邮箱`)
 		} else {
