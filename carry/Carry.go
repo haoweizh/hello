@@ -14,6 +14,7 @@ import (
 const FTXHighOpen = 0.004
 const FTXLowOpen = -0.006
 const OrderPriceLimit = 0.002
+const TakeRate = 0.8
 
 //const FtxTakerFee = 0.0004275
 
@@ -103,14 +104,14 @@ func rankCarryScore(market string, amountLimit float64) (symbolHigh, symbolLow s
 			continue
 		}
 		coinUsd := coinUsdValue[strings.ToLower(coin)]
-		if valueOpen > scoreHigh && bidAskPerp.Bids[0].Price*bidAskPerp.Bids[0].Amount > amountLimit &&
-			bidAskRelated.Asks[0].Price*bidAskRelated.Asks[0].Amount > amountLimit && coinUsd < 150000 {
+		if valueOpen > scoreHigh && bidAskPerp.Bids[0].Price*bidAskPerp.Bids[0].Amount*TakeRate > amountLimit &&
+			bidAskRelated.Asks[0].Price*bidAskRelated.Asks[0].Amount*TakeRate > amountLimit && coinUsd < 150000 {
 			symbolHigh = symbol
 			scoreHigh = valueOpen
 		}
 		valueClose := carryScoreClose[symbol]
-		if valueClose < scoreLow && bidAskRelated.Bids[0].Price*bidAskRelated.Bids[0].Amount > amountLimit &&
-			bidAskPerp.Asks[0].Price*bidAskPerp.Asks[0].Amount > amountLimit && coinUsd > -150000 &&
+		if valueClose < scoreLow && bidAskRelated.Bids[0].Price*bidAskRelated.Bids[0].Amount*TakeRate > amountLimit &&
+			bidAskPerp.Asks[0].Price*bidAskPerp.Asks[0].Amount*TakeRate > amountLimit && coinUsd > -150000 &&
 			bidAskRelated.Bids[0].Amount < coinBorrowAble[related] {
 			symbolLow = symbol
 			scoreLow = valueClose
@@ -280,14 +281,14 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	var bidAmount, askAmount float64
 	if (scoreLow < setting.CloseShortMargin && setting.Symbol == symbolLow) ||
 		(setting.GridAmount > 0 && scoreClose <= -1*setting.GridPriceDistance) {
-		bidAmount = tickPerp.Asks[0].Amount * 0.8
-		askAmount = tickRelated.Bids[0].Amount * 0.8
+		bidAmount = tickPerp.Asks[0].Amount * TakeRate
+		askAmount = tickRelated.Bids[0].Amount * TakeRate
 		sidePerp = model.OrderSideBuy
 		sideRelated = model.OrderSideSell
 	} else if (scoreHigh > setting.OpenShortMargin && setting.Symbol == symbolHigh) ||
 		(setting.GridAmount < 0 && scoreOpen >= setting.GridPriceDistance) {
-		bidAmount = tickRelated.Asks[0].Amount * 0.8
-		askAmount = tickPerp.Bids[0].Amount * 0.8
+		bidAmount = tickRelated.Asks[0].Amount * TakeRate
+		askAmount = tickPerp.Bids[0].Amount * TakeRate
 		sidePerp = model.OrderSideSell
 		sideRelated = model.OrderSideBuy
 	}
@@ -305,7 +306,7 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	amountPerp := api.FormatAmount(setting.Market, setting.Symbol, amount)
 	amountRelated := api.FormatAmount(setting.Market, setting.GetRelatedSymbol(), amount)
 	amount = math.Min(amountPerp, amountRelated)
-	if sideRelated == model.OrderSideBuy && usdAvailable < line {
+	if (sideRelated == model.OrderSideBuy && usdAvailable < line) || amount < setting.AmountLimit*TakeRate {
 		//util.Notice(fmt.Sprintf(`not enough usd to carry %s %f<%f`, setting.Symbol, usdAvailable, line))
 		amount = 0
 	}
