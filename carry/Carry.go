@@ -68,7 +68,6 @@ func clearCarryBalance() {
 				coin := strings.ToUpper(value.Coin)
 				usdSymbol := coin + `/USD`
 				coinUsdValue[coin] = value.UsdValue
-				util.Notice(fmt.Sprintf(`set usd symbol %s balance %f `, usdSymbol, value.Amount))
 				if coin == `USD` {
 					usdAvailable = value.Amount
 				} else if coin == `BTC` || coin == `USDT` || coin == `FTT` {
