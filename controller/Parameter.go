@@ -66,10 +66,9 @@ func setSymbol(c *gin.Context) {
 	chanceStr := c.Query(`chance`)
 	refreshSameTime := c.Query(`refreshsametime`)
 	gridAmountStr := c.Query(`gridamount`)
-	griddisStr := c.Query(`griddis`)
+	gridDisStr := c.Query(`griddis`)
 	priceXStr := c.Query(`pricex`)
 	openShortMargin := c.Query(`open`)
-	gridPriceDistance := c.Query(`close`)
 	valid := false
 	if market == `` || symbol == `` || function == `` {
 		c.String(http.StatusOK, `market symbol function cannot be empty`)
@@ -95,13 +94,6 @@ func setSymbol(c *gin.Context) {
 
 		}
 	}
-	if gridPriceDistance != `` {
-		distanceValue, err := strconv.ParseFloat(gridPriceDistance, 64)
-		if err == nil {
-			model.AppDB.Model(&setting).Where(`market=? and function=?`,
-				model.Ftx, model.FunctionCarry).Updates(map[string]interface{}{`grid_price_distance`: distanceValue})
-		}
-	}
 	if op != `` {
 		model.AppDB.Model(&setting).Where("market= ? and symbol= ? and function= ?",
 			market, symbol, function).Updates(map[string]interface{}{"valid": valid})
@@ -120,8 +112,8 @@ func setSymbol(c *gin.Context) {
 		model.AppDB.Model(&setting).Where("market= ? and symbol= ? and function= ?",
 			market, symbol, function).Updates(map[string]interface{}{`grid_amount`: gridAmount})
 	}
-	if griddisStr != `` {
-		gridPriceDistance, _ := strconv.ParseFloat(griddisStr, 64)
+	if gridDisStr != `` {
+		gridPriceDistance, _ := strconv.ParseFloat(gridDisStr, 64)
 		model.AppDB.Model(&setting).Where("market= ? and symbol= ? and function= ?",
 			market, symbol, function).Updates(map[string]interface{}{`grid_price_distance`: gridPriceDistance})
 	}
