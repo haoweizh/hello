@@ -68,7 +68,8 @@ func setSymbol(c *gin.Context) {
 	gridAmountStr := c.Query(`gridamount`)
 	griddisStr := c.Query(`griddis`)
 	priceXStr := c.Query(`pricex`)
-	open := c.Query(`open`)
+	openShortMargin := c.Query(`open`)
+	gridPriceDistance := c.Query(`close`)
 	valid := false
 	if market == `` || symbol == `` || function == `` {
 		c.String(http.StatusOK, `market symbol function cannot be empty`)
@@ -81,13 +82,24 @@ func setSymbol(c *gin.Context) {
 	}
 	var setting model.Setting
 	amountLimit := 0.0
-	if open != `` {
-		openValue, err := strconv.ParseFloat(open, 64)
-		if err != nil {
+	if openShortMargin != `` {
+		openValue, err := strconv.ParseFloat(openShortMargin, 64)
+		if err == nil {
 			openValue = math.Abs(openValue)
 			closeValue := -1 * openValue
-			model.AppDB.Model(&setting).Where(`market=? and function=?`, model.Ftx, model.FunctionCarry).Updates(
-				map[string]interface{}{`open_short_margin`: openValue, `close_short_margin`: closeValue})
+			model.AppDB.Model(&setting).Where(`market=? and function=? and close_short_margin>-1`,
+				model.Ftx, model.FunctionCarry).Updates(map[string]interface{}{
+				`open_short_margin`: openValue, `close_short_margin`: closeValue})
+			model.AppDB.Model(&setting).Where(`market=? and function=? and close_short_margin=-1`,
+				model.Ftx, model.FunctionCarry).Updates(map[string]interface{}{`open_short_margin`: openValue})
+
+		}
+	}
+	if gridPriceDistance != `` {
+		distanceValue, err := strconv.ParseFloat(gridPriceDistance, 64)
+		if err == nil {
+			model.AppDB.Model(&setting).Where(`market=? and function=?`,
+				model.Ftx, model.FunctionCarry).Updates(map[string]interface{}{`grid_price_distance`: distanceValue})
 		}
 	}
 	if op != `` {
