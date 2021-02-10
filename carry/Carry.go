@@ -65,13 +65,13 @@ func clearCarryBalance() {
 			holding = 0
 			valueUsd := 0.0
 			for _, value := range balances {
-				usdSymbol := strings.ToUpper(value.Coin) + `/USD`
-				coin := strings.ToLower(value.Coin)
+				coin := strings.ToUpper(value.Coin)
+				usdSymbol := coin + `/USD`
 				coinUsdValue[coin] = value.UsdValue
 				util.Notice(fmt.Sprintf(`set usd symbol %s balance %f `, usdSymbol, value.Amount))
-				if coin == `usd` {
+				if coin == `USD` {
 					usdAvailable = value.Amount
-				} else if coin == `btc` || coin == `usdt` || coin == `ftt` {
+				} else if coin == `BTC` || coin == `USDT` || coin == `FTT` {
 					valueUsd += value.UsdValue
 				} else if symbols[usdSymbol] {
 					coinBorrowAble[usdSymbol] = api.GetMarketInfo(market, usdSymbol)
@@ -123,16 +123,18 @@ var ProcessCarry = func(setting *model.Setting) {
 	var symbolHigh, symbolLow string
 	scoreMsg := "\n[score list]\n"
 	for symbol, valueOpen := range carryScoreOpen {
-		_, bidAskPerp := model.AppMarkets.GetBidAsk(setting.Symbol, setting.Market)
-		_, bidAskRelated := model.AppMarkets.GetBidAsk(symbolRelated, setting.Market)
+		parts := strings.Split(symbol, `-`)
+		if len(parts) != 2 {
+			continue
+		}
+		coin := parts[0]
+		related := parts[0] + `/USD`
+		_, bidAskPerp := model.AppMarkets.GetBidAsk(symbol, setting.Market)
+		_, bidAskRelated := model.AppMarkets.GetBidAsk(related, setting.Market)
 		if bidAskPerp == nil || bidAskRelated == nil {
 			continue
 		}
-		coinUsd := 0.0
-		if strings.Contains(symbolRelated, `/`) {
-			coinUsd = coinUsdValue[strings.ToLower(strings.Split(symbolRelated, `/`)[0])]
-			//util.Notice(fmt.Sprintf(`coin value %f`, coinUsd))
-		}
+		coinUsd := coinUsdValue[strings.ToLower(coin)]
 		if valueOpen > scoreHigh && bidAskPerp.Bids[0].Price*bidAskPerp.Bids[0].Amount > setting.AmountLimit &&
 			bidAskRelated.Asks[0].Price*bidAskRelated.Asks[0].Amount > setting.AmountLimit && coinUsd < 150000 {
 			symbolHigh = symbol
@@ -141,17 +143,12 @@ var ProcessCarry = func(setting *model.Setting) {
 		valueClose := carryScoreClose[symbol]
 		if valueClose < scoreLow && bidAskRelated.Bids[0].Price*bidAskRelated.Bids[0].Amount > setting.AmountLimit &&
 			bidAskPerp.Asks[0].Price*bidAskPerp.Asks[0].Amount > setting.AmountLimit && coinUsd > -150000 &&
-			bidAskRelated.Bids[0].Amount < coinBorrowAble[symbolRelated] {
+			bidAskRelated.Bids[0].Amount < coinBorrowAble[related] {
 			symbolLow = symbol
 			scoreLow = valueClose
 		}
-		parts := strings.Split(setting.Symbol, `-`)
-		borrowAble := 0.0
-		if len(parts) == 2 {
-			borrowAble = coinBorrowAble[parts[0]+`/USD`]
-		}
 		scoreMsg += fmt.Sprintf("[%s] open-close [%f ~ %f] amount limit:%f borrowAble: %f\n",
-			symbol, valueOpen, valueClose, setting.AmountLimit, borrowAble)
+			symbol, valueOpen, valueClose, setting.AmountLimit, coinBorrowAble[related])
 	}
 	carryInfo := fmt.Sprintf(`line :%f current: [%s] score: [%f ~ %f] revert: [%f] 
 		symbol low-high: [%s %f %s %f] available usd: %f holding: %f %s`,
