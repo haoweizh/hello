@@ -130,8 +130,8 @@ var ProcessCarry = func(setting *model.Setting) {
 			continue
 		}
 		coinUsd := 0.0
-		if strings.Contains(symbol, `/`) {
-			coinUsd = coinUsdValue[strings.ToLower(strings.Split(symbol, `/`)[0])]
+		if strings.Contains(symbolRelated, `/`) {
+			coinUsd = coinUsdValue[strings.ToLower(strings.Split(symbolRelated, `/`)[0])]
 			util.Notice(fmt.Sprintf(`coin value %f`, coinUsd))
 		}
 		if valueOpen > scoreHigh && bidAskPerp.Bids[0].Price*bidAskPerp.Bids[0].Amount > setting.AmountLimit &&
@@ -142,12 +142,12 @@ var ProcessCarry = func(setting *model.Setting) {
 		valueClose := carryScoreClose[symbol]
 		if valueClose < scoreLow && bidAskRelated.Bids[0].Price*bidAskRelated.Bids[0].Amount > setting.AmountLimit &&
 			bidAskPerp.Asks[0].Price*bidAskPerp.Asks[0].Amount > setting.AmountLimit && coinUsd > -150000 &&
-			bidAskRelated.Bids[0].Amount > coinBorrowAble[symbolRelated] {
+			bidAskRelated.Bids[0].Amount < coinBorrowAble[symbolRelated] {
 			symbolLow = symbol
 			scoreLow = valueClose
 		}
-		scoreMsg += fmt.Sprintf("[%s] open-close [%f ~ %f] amount limit:%f\n",
-			symbol, valueOpen, valueClose, setting.AmountLimit)
+		scoreMsg += fmt.Sprintf("[%s] open-close [%f ~ %f] amount limit:%f borrowAble: %f\n",
+			symbol, valueOpen, valueClose, setting.AmountLimit, coinBorrowAble[symbolRelated])
 	}
 	carryInfo := fmt.Sprintf(`line :%f current: [%s] score: [%f ~ %f] revert: [%f] 
 		symbol low-high: [%s %f %s %f] available usd: %f holding: %f %s`,
