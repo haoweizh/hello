@@ -75,7 +75,6 @@ func clearCarryBalance() {
 					valueUsd += value.UsdValue
 				} else if symbols[usdSymbol] {
 					coinBorrowAble[usdSymbol] = api.GetMarketInfo(market, usdSymbol)
-					util.Notice(fmt.Sprintf(`%s borrowable %f`, usdSymbol, coinBorrowAble[usdSymbol]))
 					holding += math.Abs(value.UsdValue)
 				}
 			}
@@ -132,7 +131,7 @@ var ProcessCarry = func(setting *model.Setting) {
 		coinUsd := 0.0
 		if strings.Contains(symbolRelated, `/`) {
 			coinUsd = coinUsdValue[strings.ToLower(strings.Split(symbolRelated, `/`)[0])]
-			util.Notice(fmt.Sprintf(`coin value %f`, coinUsd))
+			//util.Notice(fmt.Sprintf(`coin value %f`, coinUsd))
 		}
 		if valueOpen > scoreHigh && bidAskPerp.Bids[0].Price*bidAskPerp.Bids[0].Amount > setting.AmountLimit &&
 			bidAskRelated.Asks[0].Price*bidAskRelated.Asks[0].Amount > setting.AmountLimit && coinUsd < 150000 {
