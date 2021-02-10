@@ -68,7 +68,6 @@ func setSymbol(c *gin.Context) {
 	gridAmountStr := c.Query(`gridamount`)
 	gridDisStr := c.Query(`griddis`)
 	priceXStr := c.Query(`pricex`)
-	openShortMargin := c.Query(`open`)
 	valid := false
 	if market == `` || symbol == `` || function == `` {
 		c.String(http.StatusOK, `market symbol function cannot be empty`)
@@ -81,19 +80,6 @@ func setSymbol(c *gin.Context) {
 	}
 	var setting model.Setting
 	amountLimit := 0.0
-	if openShortMargin != `` {
-		openValue, err := strconv.ParseFloat(openShortMargin, 64)
-		if err == nil {
-			openValue = math.Abs(openValue)
-			closeValue := -1 * openValue
-			model.AppDB.Model(&setting).Where(`market=? and function=? and close_short_margin>-1`,
-				model.Ftx, model.FunctionCarry).Updates(map[string]interface{}{
-				`open_short_margin`: openValue, `close_short_margin`: closeValue})
-			model.AppDB.Model(&setting).Where(`market=? and function=? and close_short_margin=-1`,
-				model.Ftx, model.FunctionCarry).Updates(map[string]interface{}{`open_short_margin`: openValue})
-
-		}
-	}
 	if op != `` {
 		model.AppDB.Model(&setting).Where("market= ? and symbol= ? and function= ?",
 			market, symbol, function).Updates(map[string]interface{}{"valid": valid})
@@ -237,6 +223,9 @@ func RefreshParameters(c *gin.Context) {
 
 func SetParameters(c *gin.Context) {
 	handle := c.Query("handle")
+	openShortMargin := c.Query(`open`)
+	disStr := c.Query(`dis`)
+	var setting model.Setting
 	if len(handle) > 0 {
 		pw := c.Query(`pw`)
 		if code == `` {
@@ -257,6 +246,24 @@ func SetParameters(c *gin.Context) {
 	}
 	if handle != `` {
 		model.AppConfig.Handle = handle
+	}
+	if disStr != `` {
+		gridPriceDistance, _ := strconv.ParseFloat(disStr, 64)
+		model.AppDB.Model(&setting).Where("market= ? and function= ?",
+			model.Ftx, model.FunctionCarry).Updates(map[string]interface{}{`grid_price_distance`: gridPriceDistance})
+	}
+	if openShortMargin != `` {
+		openValue, err := strconv.ParseFloat(openShortMargin, 64)
+		if err == nil {
+			openValue = math.Abs(openValue)
+			closeValue := -1 * openValue
+			model.AppDB.Model(&setting).Where(`market=? and function=? and close_short_margin>-1`,
+				model.Ftx, model.FunctionCarry).Updates(map[string]interface{}{
+				`open_short_margin`: openValue, `close_short_margin`: closeValue})
+			model.AppDB.Model(&setting).Where(`market=? and function=? and close_short_margin=-1`,
+				model.Ftx, model.FunctionCarry).Updates(map[string]interface{}{`open_short_margin`: openValue})
+
+		}
 	}
 	predealdis := c.Query(`predealdis`)
 	if len(predealdis) > 0 {
@@ -287,5 +294,7 @@ func SetParameters(c *gin.Context) {
 		strDelay := strings.Replace(delay, " ", "", -1)
 		model.AppConfig.Delay, _ = strconv.ParseFloat(strDelay, 64)
 	}
+	model.LoadSettings()
+	carry.MaintainMarketChan()
 	c.String(http.StatusOK, model.AppConfig.ToString())
 }
