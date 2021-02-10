@@ -143,11 +143,11 @@ var ProcessCarry = func(setting *model.Setting) {
 		if valueClose < scoreLow && bidAskRelated.Bids[0].Price*bidAskRelated.Bids[0].Amount > setting.AmountLimit &&
 			bidAskPerp.Asks[0].Price*bidAskPerp.Asks[0].Amount > setting.AmountLimit && coinUsd > -150000 &&
 			bidAskRelated.Bids[0].Amount < coinBorrowAble[related] {
-			if related == `BAT/USD` {
-				util.Notice(fmt.Sprintf(`--------------bat borrowed %f %f`, bidAskRelated.Bids[0].Amount, coinBorrowAble[related]))
-			}
 			symbolLow = symbol
 			scoreLow = valueClose
+		}
+		if related == `BAT/USD` {
+			util.Notice(fmt.Sprintf(`--------------bat borrowed %f %f`, bidAskRelated.Bids[0].Amount, coinBorrowAble[related]))
 		}
 		scoreMsg += fmt.Sprintf("[%s] open-close [%f ~ %f] amount limit:%f %s in usd:%f borrowAble: %f\n",
 			symbol, valueOpen, valueClose, setting.AmountLimit, coin, coinUsd, coinBorrowAble[related])
