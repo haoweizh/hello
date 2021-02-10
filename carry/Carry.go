@@ -143,6 +143,7 @@ var ProcessCarry = func(setting *model.Setting) {
 		if valueClose < scoreLow && bidAskRelated.Bids[0].Price*bidAskRelated.Bids[0].Amount > setting.AmountLimit &&
 			bidAskPerp.Asks[0].Price*bidAskPerp.Asks[0].Amount > setting.AmountLimit && coinUsd > -150000 &&
 			bidAskRelated.Bids[0].Amount < coinBorrowAble[related] {
+			util.Notice(fmt.Sprintf(`check %s close borrow %f`, related, coinBorrowAble[related]))
 			symbolLow = symbol
 			scoreLow = valueClose
 		}
