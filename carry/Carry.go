@@ -24,6 +24,7 @@ var doCarry = false
 var carryScoreOpen = make(map[string]float64)
 var carryScoreClose = make(map[string]float64)
 var coinUsdValue = make(map[string]float64)
+var coinBorrowAble = make(map[string]float64)
 
 var stChan = make(chan *model.Order, 2)
 
@@ -73,6 +74,8 @@ func clearCarryBalance() {
 				} else if coin == `btc` || coin == `usdt` || coin == `ftt` {
 					valueUsd += value.UsdValue
 				} else if symbols[usdSymbol] {
+					coinBorrowAble[usdSymbol] = api.GetMarketInfo(market, usdSymbol)
+					util.Notice(fmt.Sprintf(`%s borrowable %f`, usdSymbol, coinBorrowAble[usdSymbol]))
 					holding += math.Abs(value.UsdValue)
 				}
 			}
@@ -138,7 +141,8 @@ var ProcessCarry = func(setting *model.Setting) {
 		}
 		valueClose := carryScoreClose[symbol]
 		if valueClose < scoreLow && bidAskRelated.Bids[0].Price*bidAskRelated.Bids[0].Amount > setting.AmountLimit &&
-			bidAskPerp.Asks[0].Price*bidAskPerp.Asks[0].Amount > setting.AmountLimit && coinUsd > -150000 {
+			bidAskPerp.Asks[0].Price*bidAskPerp.Asks[0].Amount > setting.AmountLimit && coinUsd > -150000 &&
+			bidAskRelated.Bids[0].Amount > coinBorrowAble[symbolRelated] {
 			symbolLow = symbol
 			scoreLow = valueClose
 		}
@@ -289,7 +293,7 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	amountRelated := api.FormatAmount(setting.Market, setting.GetRelatedSymbol(), amount)
 	amount = math.Min(amountPerp, amountRelated)
 	if sideRelated == model.OrderSideBuy && usdAvailable < line {
-		util.Notice(fmt.Sprintf(`not enough usd to carry %s %f<%f`, setting.Symbol, usdAvailable, line))
+		//util.Notice(fmt.Sprintf(`not enough usd to carry %s %f<%f`, setting.Symbol, usdAvailable, line))
 		amount = 0
 	}
 	return sidePerp, sideRelated, amount

@@ -451,6 +451,33 @@ func getAccountFtx(key, secret string, accounts *model.Accounts) {
 	}
 }
 
+func getMarketInfoFtx(symbol string) (borrowAble float64) {
+	if !strings.Contains(symbol, `/`) {
+		return 0
+	}
+	coin := strings.Split(symbol, `/`)[0]
+	param := map[string]interface{}{`market`: symbol}
+	response := SignedRequestFtx(``, ``, http.MethodGet, `/spot_margin/market_info`, param, nil)
+	borrowJson, err := util.NewJSON(response)
+	if err == nil {
+		results := borrowJson.Get(`result`).MustArray()
+		for _, result := range results {
+			value := result.(map[string]interface{})
+			if value[`coin`] == nil {
+				continue
+			}
+			if value[`coin`].(string) == coin {
+				if value[`free`] == nil {
+					return 0
+				}
+				borrowAble, _ = value[`free`].(json.Number).Float64()
+				return borrowAble
+			}
+		}
+	}
+	return 0
+}
+
 func getMarketsFtx() (marketInfos map[string]*model.MarketInfo) {
 	response := SignedRequestFtx(``, ``, `GET`,
 		`/markets`, nil, nil)
