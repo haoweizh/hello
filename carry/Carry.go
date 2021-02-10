@@ -23,6 +23,8 @@ var holding, usdAvailable float64
 var doCarry = false
 var carryScoreOpen = make(map[string]float64)
 var carryScoreClose = make(map[string]float64)
+var coinUsdValue = make(map[string]float64)
+
 var stChan = make(chan *model.Order, 2)
 
 func checkSetCarrying(value bool) (before bool) {
@@ -64,6 +66,7 @@ func clearCarryBalance() {
 			for _, value := range balances {
 				usdSymbol := strings.ToUpper(value.Coin) + `/USD`
 				coin := strings.ToLower(value.Coin)
+				coinUsdValue[coin] = value.UsdValue
 				util.Notice(fmt.Sprintf(`set usd symbol %s balance %f `, usdSymbol, value.Amount))
 				if coin == `usd` {
 					usdAvailable = value.Amount
@@ -123,14 +126,19 @@ var ProcessCarry = func(setting *model.Setting) {
 		if bidAskPerp == nil || bidAskRelated == nil {
 			continue
 		}
+		coinUsd := 0.0
+		if strings.Contains(symbol, `/`) {
+			coinUsd = coinUsdValue[strings.ToLower(strings.Split(symbol, `/`)[0])]
+			util.Notice(fmt.Sprintf(`coin value %f`, coinUsd))
+		}
 		if valueOpen > scoreHigh && bidAskPerp.Bids[0].Price*bidAskPerp.Bids[0].Amount > setting.AmountLimit &&
-			bidAskRelated.Asks[0].Price*bidAskRelated.Asks[0].Amount > setting.AmountLimit {
+			bidAskRelated.Asks[0].Price*bidAskRelated.Asks[0].Amount > setting.AmountLimit && coinUsd < 150000 {
 			symbolHigh = symbol
 			scoreHigh = valueOpen
 		}
 		valueClose := carryScoreClose[symbol]
 		if valueClose < scoreLow && bidAskRelated.Bids[0].Price*bidAskRelated.Bids[0].Amount > setting.AmountLimit &&
-			bidAskPerp.Asks[0].Price*bidAskPerp.Asks[0].Amount > setting.AmountLimit {
+			bidAskPerp.Asks[0].Price*bidAskPerp.Asks[0].Amount > setting.AmountLimit && coinUsd > -150000 {
 			symbolLow = symbol
 			scoreLow = valueClose
 		}
