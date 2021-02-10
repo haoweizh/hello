@@ -171,7 +171,7 @@ var ProcessCarry = func(setting *model.Setting) {
 			break
 		}
 		time.Sleep(time.Millisecond * 200)
-		model.AppDB.Save(&setting)
+		//model.AppDB.Save(&setting)
 	}
 }
 
