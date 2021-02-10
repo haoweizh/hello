@@ -88,6 +88,40 @@ func clearCarryBalance() {
 	}
 }
 
+func rankCarryScore(market string, amountLimit float64) (symbolHigh, symbolLow string, scoreHigh, scoreLow float64) {
+	scoreMsg := "\n[score list]\n"
+	for symbol, valueOpen := range carryScoreOpen {
+		parts := strings.Split(symbol, `-`)
+		if len(parts) != 2 {
+			continue
+		}
+		coin := parts[0]
+		related := parts[0] + `/USD`
+		_, bidAskPerp := model.AppMarkets.GetBidAsk(symbol, market)
+		_, bidAskRelated := model.AppMarkets.GetBidAsk(related, market)
+		if bidAskPerp == nil || bidAskRelated == nil {
+			continue
+		}
+		coinUsd := coinUsdValue[strings.ToLower(coin)]
+		if valueOpen > scoreHigh && bidAskPerp.Bids[0].Price*bidAskPerp.Bids[0].Amount > amountLimit &&
+			bidAskRelated.Asks[0].Price*bidAskRelated.Asks[0].Amount > amountLimit && coinUsd < 150000 {
+			symbolHigh = symbol
+			scoreHigh = valueOpen
+		}
+		valueClose := carryScoreClose[symbol]
+		if valueClose < scoreLow && bidAskRelated.Bids[0].Price*bidAskRelated.Bids[0].Amount > amountLimit &&
+			bidAskPerp.Asks[0].Price*bidAskPerp.Asks[0].Amount > amountLimit && coinUsd > -150000 &&
+			bidAskRelated.Bids[0].Amount < coinBorrowAble[related] {
+			symbolLow = symbol
+			scoreLow = valueClose
+		}
+		scoreMsg += fmt.Sprintf("[%s] open-close [%f ~ %f] amount limit:%f %s in usd:%f borrowAble: %f\n",
+			symbol, valueOpen, valueClose, amountLimit, coin, coinUsd, coinBorrowAble[related])
+	}
+	model.SetCarryInfo(`[grid]`, scoreMsg)
+	return
+}
+
 // setting.GridPriceDistance: 收回下单是要求的利润(可以为负数)
 var ProcessCarry = func(setting *model.Setting) {
 	_, tickPerp := model.AppMarkets.GetBidAsk(setting.Symbol, setting.Market)
@@ -118,48 +152,12 @@ var ProcessCarry = func(setting *model.Setting) {
 	}
 	carryScoreOpen[setting.Symbol] = scoreOpen
 	carryScoreClose[setting.Symbol] = scoreClose
-	var scoreHigh, scoreLow float64
-	var symbolHigh, symbolLow string
-	scoreMsg := "\n[score list]\n"
-	for symbol, valueOpen := range carryScoreOpen {
-		parts := strings.Split(symbol, `-`)
-		if len(parts) != 2 {
-			continue
-		}
-		coin := parts[0]
-		related := parts[0] + `/USD`
-		_, bidAskPerp := model.AppMarkets.GetBidAsk(symbol, setting.Market)
-		_, bidAskRelated := model.AppMarkets.GetBidAsk(related, setting.Market)
-		if bidAskPerp == nil || bidAskRelated == nil {
-			continue
-		}
-		coinUsd := coinUsdValue[strings.ToLower(coin)]
-		if valueOpen > scoreHigh && bidAskPerp.Bids[0].Price*bidAskPerp.Bids[0].Amount > setting.AmountLimit &&
-			bidAskRelated.Asks[0].Price*bidAskRelated.Asks[0].Amount > setting.AmountLimit && coinUsd < 150000 {
-			symbolHigh = symbol
-			scoreHigh = valueOpen
-		}
-		valueClose := carryScoreClose[symbol]
-		if valueClose < scoreLow && bidAskRelated.Bids[0].Price*bidAskRelated.Bids[0].Amount > setting.AmountLimit &&
-			bidAskPerp.Asks[0].Price*bidAskPerp.Asks[0].Amount > setting.AmountLimit && coinUsd > -150000 &&
-			bidAskRelated.Bids[0].Amount < coinBorrowAble[related] {
-			if symbol == `BAT-PERP` {
-				util.Notice(fmt.Sprintf(`%s bid %f borrowable %f`, related, bidAskRelated.Bids[0].Amount, coinBorrowAble[related]))
-			}
-			symbolLow = symbol
-			scoreLow = valueClose
-		}
-		//if bidAskRelated.Bids[0].Amount > coinBorrowAble[related] {
-		//	util.Notice(fmt.Sprintf(`can not close %s for no borrowable %f`, related, coinBorrowAble[related]))
-		//}
-		scoreMsg += fmt.Sprintf("[%s] open-close [%f ~ %f] amount limit:%f %s in usd:%f borrowAble: %f\n",
-			symbol, valueOpen, valueClose, setting.AmountLimit, coin, coinUsd, coinBorrowAble[related])
-	}
-	carryInfo := fmt.Sprintf(`line :%f current: [%s] score: [%f ~ %f] revert: [%f] 
-		symbol low-high: [%s %f %s %f] available usd: %f holding: %f %s`,
+	symbolHigh, symbolLow, scoreHigh, scoreLow := rankCarryScore(setting.Market, setting.AmountLimit)
+	carryInfo := fmt.Sprintf("up usd line :%f current: [%s] score range: [%f ~ %f] revert: [%f]\n"+
+		"[lowest: %s %f highest:%s %f] available usd: %f holding: %f",
 		model.AppConfig.Amount, setting.Symbol, setting.OpenShortMargin, setting.CloseShortMargin, setting.GridPriceDistance,
-		symbolLow, scoreLow, symbolHigh, scoreHigh, usdAvailable, holding, scoreMsg)
-	model.SetCarryInfo(`[grid]`, carryInfo)
+		symbolLow, scoreLow, symbolHigh, scoreHigh, usdAvailable, holding)
+	model.SetCarryInfo(`[grid-setting]`, carryInfo)
 	sidePerp, sideRelated, amount := calcCarryOpen(setting, tickPerp, tickRelated, symbolHigh, symbolLow, scoreOpen,
 		scoreClose, scoreHigh, scoreLow)
 	if amount > 0 {
@@ -188,9 +186,6 @@ var ProcessCarry = func(setting *model.Setting) {
 			break
 		}
 		time.Sleep(time.Millisecond * 200)
-		//model.AppDB.Save(&setting)
-		model.AppDB.Model(&setting).Where("market= ? and symbol= ? and function= ?",
-			setting.Market, setting.Symbol, setting.Function).Updates(map[string]interface{}{`grid_amunt`: setting.GridAmount})
 	}
 }
 
@@ -221,6 +216,18 @@ func makeEqual(setting *model.Setting, balances []*model.Balance) (symbol string
 	amountPerp, amountRelated := getCarryAmounts(setting, balances)
 	amount := amountPerp + amountRelated
 	orderSide := model.OrderSideBuy
+	if amount < math.Max(math.Abs(amountPerp), math.Abs(amountRelated)) {
+		if amountPerp < 0 && amountRelated > 0 {
+			setting.GridAmount = math.Min(math.Abs(amountPerp), math.Abs(amountRelated))
+		} else if amountPerp > 0 && amountRelated < 0 {
+			setting.GridAmount = -1 * math.Min(math.Abs(amountPerp), math.Abs(amountRelated))
+		}
+	} else {
+		setting.GridAmount = 0
+	}
+	go model.AppDB.Model(&setting).Where("market= ? and symbol= ? and function= ?",
+		setting.Market, setting.Symbol, setting.Function).Updates(
+		map[string]interface{}{`grid_amount`: setting.GridAmount})
 	if amount > 0 {
 		orderSide = model.OrderSideSell
 		if tickPerp.Bids[0].Price < 0.99*tickRelated.Bids[0].Price {
