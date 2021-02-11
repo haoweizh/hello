@@ -71,7 +71,7 @@ func clearCarryBalance() {
 				usdSymbol := coin + `/USD`
 				coinUsdValue[coin] = value.UsdValue
 				if coin == `USD` {
-					usdAvailable = value.Amount
+					usdAvailable = value.UsdValue
 				} else if coin == `BTC` || coin == `USDT` || coin == `FTT` {
 					valueUsd += value.UsdValue
 				} else if symbols[usdSymbol] {
@@ -153,7 +153,7 @@ var ProcessCarry = func(setting *model.Setting) {
 	carryScoreClose[setting.Symbol] = scoreClose
 	symbolHigh, symbolLow, scoreHigh, scoreLow := rankCarryScore(setting.Market, setting.AmountLimit)
 	carryInfo := fmt.Sprintf("up usd line :%f current: [%s] score range: [%f ~ %f] revert: [%f]\n"+
-		"[lowest: %s %f highest:%s %f] available usd: %f holding: %f",
+		"[lowest: %s %f highest:%s %f] [available usd: <%f>] holding: %f",
 		model.AppConfig.Amount, setting.Symbol, setting.OpenShortMargin, setting.CloseShortMargin, setting.GridPriceDistance,
 		symbolLow, scoreLow, symbolHigh, scoreHigh, usdAvailable, holding)
 	model.SetCarryInfo(`[grid-setting]`, carryInfo)
