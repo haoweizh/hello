@@ -15,6 +15,7 @@ const FTXHighOpen = 0.004
 const FTXLowOpen = -0.006
 const OrderPriceLimit = 0.002
 const TakeRate = 0.8
+const UsdUpLine = 200000
 
 //const FtxTakerFee = 0.0004275
 
@@ -105,13 +106,13 @@ func rankCarryScore(market string, amountLimit float64) (symbolHigh, symbolLow s
 		}
 		coinUsd := coinUsdValue[coin]
 		if valueOpen > scoreHigh && bidAskPerp.Bids[0].Price*bidAskPerp.Bids[0].Amount*TakeRate > amountLimit &&
-			bidAskRelated.Asks[0].Price*bidAskRelated.Asks[0].Amount*TakeRate > amountLimit && coinUsd < 150000 {
+			bidAskRelated.Asks[0].Price*bidAskRelated.Asks[0].Amount*TakeRate > amountLimit && coinUsd < UsdUpLine {
 			symbolHigh = symbol
 			scoreHigh = valueOpen
 		}
 		valueClose := carryScoreClose[symbol]
 		if valueClose < scoreLow && bidAskRelated.Bids[0].Price*bidAskRelated.Bids[0].Amount*TakeRate > amountLimit &&
-			bidAskPerp.Asks[0].Price*bidAskPerp.Asks[0].Amount*TakeRate > amountLimit && coinUsd > -150000 &&
+			bidAskPerp.Asks[0].Price*bidAskPerp.Asks[0].Amount*TakeRate > amountLimit && coinUsd > -1*UsdUpLine &&
 			bidAskRelated.Bids[0].Amount < coinBorrowAble[related] {
 			symbolLow = symbol
 			scoreLow = valueClose
