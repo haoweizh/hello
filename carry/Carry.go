@@ -79,6 +79,9 @@ func clearCarryBalance() {
 					holding += math.Abs(value.UsdValue)
 				}
 			}
+			if model.AppConfig.Env == `simon` {
+				usdAvailable = (usdAvailable - holding) / 2
+			}
 			util.Notice(fmt.Sprintf(`[carry] usd:%f valuedUsd:%f holding:%f`, usdAvailable, valueUsd, holding))
 		}
 		util.Notice(`...... exit clearing carry balance`)
