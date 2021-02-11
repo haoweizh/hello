@@ -103,7 +103,7 @@ func rankCarryScore(market string, amountLimit float64) (symbolHigh, symbolLow s
 		if bidAskPerp == nil || bidAskRelated == nil {
 			continue
 		}
-		coinUsd := coinUsdValue[strings.ToLower(coin)]
+		coinUsd := coinUsdValue[coin]
 		if valueOpen > scoreHigh && bidAskPerp.Bids[0].Price*bidAskPerp.Bids[0].Amount*TakeRate > amountLimit &&
 			bidAskRelated.Asks[0].Price*bidAskRelated.Asks[0].Amount*TakeRate > amountLimit && coinUsd < 150000 {
 			symbolHigh = symbol
