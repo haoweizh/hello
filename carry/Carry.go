@@ -117,7 +117,7 @@ func rankCarryScore(market string, amountLimit float64) (symbolHigh, symbolLow s
 			symbolLow = symbol
 			scoreLow = valueClose
 		}
-		scoreMsg += fmt.Sprintf("[%s] open-close [%f ~ %f] amount limit:%f %s in usd:%f borrowAble: %f\n",
+		scoreMsg += fmt.Sprintf("[%s] open-close [%f ~ %f] amount limit:%f %s in usd:%f free: [%f]\n",
 			symbol, valueOpen, valueClose, amountLimit, coin, carryBalance[coin].UsdValue, carryBalance[coin].Free)
 	}
 	model.SetCarryInfo(`[grid]`, scoreMsg)
