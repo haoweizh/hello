@@ -176,10 +176,10 @@ var ProcessCarry = func(setting *model.Setting) {
 			relatedPrice = tickRelated.Bids[0].Price
 			setting.GridAmount -= amount
 		}
-		go api.PlaceSyncOrders(``, ``, sidePerp, model.OrderTypeMarket, setting.Market, setting.Symbol,
+		go api.PlaceSyncOrders(``, ``, sidePerp, model.OrderTypeLimit, setting.Market, setting.Symbol,
 			``, ``, ``, ``, model.FunctionCarry, perpPrice, perpPrice,
 			amount, true, stChan, 1)
-		go api.PlaceSyncOrders(``, ``, sideRelated, model.OrderTypeMarket, setting.Market, symbolRelated,
+		go api.PlaceSyncOrders(``, ``, sideRelated, model.OrderTypeLimit, setting.Market, symbolRelated,
 			``, ``, ``, ``, model.FunctionCarry, relatedPrice, relatedPrice,
 			amount, true, stChan, 1)
 		for true {
