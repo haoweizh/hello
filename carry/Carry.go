@@ -13,7 +13,7 @@ import (
 
 const FTXHighOpen = 0.004
 const FTXLowOpen = -0.006
-const OrderPriceLimit = 0.002
+const OrderPriceLimit = 0
 const TakeRate = 0.8
 const UsdUpLine = 200000
 
@@ -80,7 +80,7 @@ func clearCarryBalance() {
 				}
 			}
 			if model.AppConfig.Env == `simon` {
-				usdAvailable = (usdAvailable - holding) / 2
+				usdAvailable = usdAvailable - holding
 			}
 			util.Notice(fmt.Sprintf(`[carry] usd:%f valuedUsd:%f holding:%f`, usdAvailable, valueUsd, holding))
 		}
