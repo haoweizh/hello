@@ -197,6 +197,7 @@ func getCarryAmounts(setting *model.Setting, balances []*model.Balance) (amountP
 		for _, balance := range balances {
 			if strings.ToUpper(balance.Coin)+`-PERP` == strings.ToUpper(account.Currency) {
 				amountRelated = balance.Amount
+				break
 			}
 		}
 	}

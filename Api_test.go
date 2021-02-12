@@ -191,7 +191,7 @@ func Test_wallet(t *testing.T) {
 	//fmt.Println(b)
 	//api.InitCarryFtx(1)
 	//api.GetFundingRate(model.Ftx, `BTC-PERP`)
-
+	api.RefreshAccount(``, ``, model.Ftx)
 	balances := api.GetBalance(``, ``, model.Ftx, 0)
 	for _, balance := range balances {
 		if balance.Coin == `USD` {
