@@ -242,15 +242,15 @@ func parseBalanceFtx(data map[string]interface{}) (balance *model.Balance) {
 	if data[`coin`] == nil {
 		return nil
 	}
-	coin := strings.ToLower(data[`coin`].(string))
+	coin := data[`coin`].(string)
 	balance = &model.Balance{
 		Market:      model.Ftx,
 		Coin:        coin,
 		ID:          model.Ftx + `_` + coin + `_` + util.GetNow().Format(time.RFC3339)[0:10],
 		BalanceTime: util.GetNow(),
 		AccountId:   model.AppConfig.FtxKey}
-	if data[`availableWithoutBorrow`] != nil {
-		balance.Amount, _ = data[`availableWithoutBorrow`].(json.Number).Float64()
+	if data[`total`] != nil {
+		balance.Amount, _ = data[`total`].(json.Number).Float64()
 	}
 	if data[`spotBorrow`] != nil {
 		borrow, _ := data[`spotBorrow`].(json.Number).Float64()
