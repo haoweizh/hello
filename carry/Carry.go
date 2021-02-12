@@ -50,7 +50,7 @@ func clearCarryBalance() {
 			}
 		}
 		util.Notice(`...... enter clearing carry balance`)
-		time.Sleep(time.Second)
+		time.Sleep(time.Second * 3)
 		markets := model.GetMarkets()
 		for _, market := range markets {
 			balances := api.GetBalance(``, ``, market, 0)
