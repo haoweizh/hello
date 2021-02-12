@@ -24,8 +24,6 @@ var doCarry = false
 var carryScoreOpen = make(map[string]float64)
 var carryScoreClose = make(map[string]float64)
 
-//var coinUsdValue = make(map[string]float64)
-//var coinBorrowAble = make(map[string]float64)
 var carryBalance = make(map[string]*model.Balance)
 
 var stChan = make(chan *model.Order, 2)
@@ -92,7 +90,6 @@ func rankCarryScore(market string, amountLimit float64) (symbolHigh, symbolLow s
 	i := 0
 	for symbol, valueOpen := range carryScoreOpen {
 		i++
-		scoreMsg += fmt.Sprintf("%s score open:%f\n", symbol, valueOpen)
 		parts := strings.Split(symbol, `-`)
 		if len(parts) != 2 {
 			continue
@@ -101,10 +98,12 @@ func rankCarryScore(market string, amountLimit float64) (symbolHigh, symbolLow s
 		related := parts[0] + `/USD`
 		_, bidAskPerp := model.AppMarkets.GetBidAsk(symbol, market)
 		_, bidAskRelated := model.AppMarkets.GetBidAsk(related, market)
+		if carryBalance[coin] == nil {
+			scoreMsg += fmt.Sprintf("没有查到账户币种信息：%s \n", coin)
+		}
 		if bidAskPerp == nil || bidAskRelated == nil || carryBalance[coin] == nil {
 			continue
 		}
-		scoreMsg += fmt.Sprintf("%s balance total:%f free:%f\n", coin, carryBalance[coin].Amount, carryBalance[coin].Free)
 		if valueOpen > scoreHigh && bidAskPerp.Bids[0].Price*bidAskPerp.Bids[0].Amount*TakeRate > amountLimit &&
 			bidAskRelated.Asks[0].Price*bidAskRelated.Asks[0].Amount*TakeRate > amountLimit &&
 			carryBalance[coin].UsdValue < UsdUpLine {
