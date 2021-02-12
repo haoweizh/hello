@@ -159,6 +159,10 @@ var ProcessCarry = func(setting *model.Setting) {
 	sidePerp, sideRelated, amount := calcCarryOpen(setting, tickPerp, tickRelated, symbolHigh, symbolLow, scoreOpen,
 		scoreClose, scoreHigh, scoreLow)
 	if amount > 0 {
+		parts := strings.Split(setting.Symbol, `-`)
+		if len(parts) != 2 || carryBalance[parts[0]] == nil {
+			return
+		}
 		util.Notice(fmt.Sprintf(`carry%s->%s with score open:%f close:%f rate sum %f amount %f worth %f`,
 			setting.Symbol, symbolRelated, scoreOpen, scoreClose, 0.0, amount, amount*tickPerp.Asks[0].Price))
 		perpPrice := tickPerp.Asks[0].Price
@@ -167,10 +171,12 @@ var ProcessCarry = func(setting *model.Setting) {
 			perpPrice = tickPerp.Bids[0].Price
 			relatedPrice = tickRelated.Asks[0].Price
 			setting.GridAmount += amount
+			carryBalance[parts[0]].Free += amount
 		} else if sidePerp == model.OrderSideBuy {
 			perpPrice = tickPerp.Asks[0].Price
 			relatedPrice = tickRelated.Bids[0].Price
 			setting.GridAmount -= amount
+			carryBalance[parts[0]].Free -= amount
 		}
 		go api.PlaceSyncOrders(``, ``, sidePerp, model.OrderTypeLimit, setting.Market, setting.Symbol,
 			``, ``, ``, ``, model.FunctionCarry, perpPrice, perpPrice,
