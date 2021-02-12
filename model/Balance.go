@@ -16,6 +16,7 @@ type Balance struct {
 	Fee           string // for transaction
 	Market        string
 	Notes         string
+	Free          float64 // 可卖数量(包含可借来卖掉的数量)
 	Price         float64 // price in usdt
 	Status        string  // for transaction
 	TransactionId string

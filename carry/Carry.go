@@ -25,8 +25,10 @@ var holding, usdAvailable float64
 var doCarry = false
 var carryScoreOpen = make(map[string]float64)
 var carryScoreClose = make(map[string]float64)
-var coinUsdValue = make(map[string]float64)
-var coinBorrowAble = make(map[string]float64)
+
+//var coinUsdValue = make(map[string]float64)
+//var coinBorrowAble = make(map[string]float64)
+var carryBalance = make(map[string]*model.Balance)
 
 var stChan = make(chan *model.Order, 2)
 
@@ -69,13 +71,13 @@ func clearCarryBalance() {
 			for _, value := range balances {
 				coin := strings.ToUpper(value.Coin)
 				usdSymbol := coin + `/USD`
-				coinUsdValue[coin] = value.UsdValue
+				carryBalance[coin] = value
 				if coin == `USD` {
 					usdAvailable = value.Available
 				} else if coin == `BTC` || coin == `USDT` || coin == `FTT` {
 					valueUsd += value.UsdValue
 				} else if symbols[usdSymbol] {
-					coinBorrowAble[usdSymbol] = api.GetMarketInfo(market, usdSymbol)
+					//coinBorrowAble[usdSymbol] = api.GetMarketInfo(market, usdSymbol)
 					holding += math.Abs(value.UsdValue)
 				}
 			}
@@ -98,24 +100,25 @@ func rankCarryScore(market string, amountLimit float64) (symbolHigh, symbolLow s
 		related := parts[0] + `/USD`
 		_, bidAskPerp := model.AppMarkets.GetBidAsk(symbol, market)
 		_, bidAskRelated := model.AppMarkets.GetBidAsk(related, market)
-		if bidAskPerp == nil || bidAskRelated == nil {
+		if bidAskPerp == nil || bidAskRelated == nil || carryBalance[coin] == nil {
 			continue
 		}
-		coinUsd := coinUsdValue[coin]
 		if valueOpen > scoreHigh && bidAskPerp.Bids[0].Price*bidAskPerp.Bids[0].Amount*TakeRate > amountLimit &&
-			bidAskRelated.Asks[0].Price*bidAskRelated.Asks[0].Amount*TakeRate > amountLimit && coinUsd < UsdUpLine {
+			bidAskRelated.Asks[0].Price*bidAskRelated.Asks[0].Amount*TakeRate > amountLimit &&
+			carryBalance[coin].UsdValue < UsdUpLine {
 			symbolHigh = symbol
 			scoreHigh = valueOpen
 		}
 		valueClose := carryScoreClose[symbol]
 		if valueClose < scoreLow && bidAskRelated.Bids[0].Price*bidAskRelated.Bids[0].Amount*TakeRate > amountLimit &&
-			bidAskPerp.Asks[0].Price*bidAskPerp.Asks[0].Amount*TakeRate > amountLimit && coinUsd > -1*UsdUpLine &&
-			bidAskRelated.Bids[0].Amount < coinBorrowAble[related] {
+			bidAskPerp.Asks[0].Price*bidAskPerp.Asks[0].Amount*TakeRate > amountLimit &&
+			carryBalance[coin].UsdValue > -1*UsdUpLine &&
+			bidAskRelated.Bids[0].Amount*TakeRate < carryBalance[coin].Free {
 			symbolLow = symbol
 			scoreLow = valueClose
 		}
 		scoreMsg += fmt.Sprintf("[%s] open-close [%f ~ %f] amount limit:%f %s in usd:%f borrowAble: %f\n",
-			symbol, valueOpen, valueClose, amountLimit, coin, coinUsd, coinBorrowAble[related])
+			symbol, valueOpen, valueClose, amountLimit, coin, carryBalance[coin].UsdValue, carryBalance[coin].Free)
 	}
 	model.SetCarryInfo(`[grid]`, scoreMsg)
 	return
