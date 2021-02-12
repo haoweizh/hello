@@ -71,7 +71,7 @@ func clearCarryBalance() {
 				usdSymbol := coin + `/USD`
 				coinUsdValue[coin] = value.UsdValue
 				if coin == `USD` {
-					usdAvailable = value.UsdValue
+					usdAvailable = value.Available
 				} else if coin == `BTC` || coin == `USDT` || coin == `FTT` {
 					valueUsd += value.UsdValue
 				} else if symbols[usdSymbol] {

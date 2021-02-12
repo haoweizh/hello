@@ -10,6 +10,7 @@ type Balance struct {
 	Action        float64 // 1: deposit, -1: withdraw, 0: snapshot
 	Address       string  // for transaction
 	Amount        float64
+	Available     float64
 	BalanceTime   time.Time // confirm time if transaction
 	Coin          string
 	Fee           string // for transaction
