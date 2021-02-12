@@ -89,7 +89,9 @@ func clearCarryBalance() {
 
 func rankCarryScore(market string, amountLimit float64) (symbolHigh, symbolLow string, scoreHigh, scoreLow float64) {
 	scoreMsg := "\n[score list]\n"
+	i := 0
 	for symbol, valueOpen := range carryScoreOpen {
+		i++
 		parts := strings.Split(symbol, `-`)
 		if len(parts) != 2 {
 			continue
@@ -115,8 +117,9 @@ func rankCarryScore(market string, amountLimit float64) (symbolHigh, symbolLow s
 			symbolLow = symbol
 			scoreLow = valueClose
 		}
-		scoreMsg += fmt.Sprintf("[%s] open-close [%f ~ %f] amount limit:%f %s in usd:%f free: [%f]\n",
-			symbol, valueOpen, valueClose, amountLimit, coin, carryBalance[coin].UsdValue, carryBalance[coin].Free)
+		scoreMsg += fmt.Sprintf("[%d/%d %s] open-close [%f ~ %f] amount limit:%f %s in usd:%f free: [%f]\n",
+			i, len(carryScoreOpen), symbol, valueOpen, valueClose, amountLimit, coin, carryBalance[coin].UsdValue,
+			carryBalance[coin].Free)
 	}
 	model.SetCarryInfo(`[grid]`, scoreMsg)
 	return
