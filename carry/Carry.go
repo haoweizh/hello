@@ -294,6 +294,9 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 		amount = math.Min(usdAvailable/tickPerp.Asks[0].Price, math.Min(bidAmount, askAmount))
 	} else {
 		amount = math.Min(math.Abs(setting.GridAmount), math.Min(bidAmount, askAmount))
+		if sideRelated == model.OrderSideBuy {
+			amount = math.Min(amount, usdAvailable/tickRelated.Asks[0].Price)
+		}
 	}
 	line := model.AppConfig.Amount
 	if line <= 0 {
