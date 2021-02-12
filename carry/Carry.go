@@ -11,8 +11,6 @@ import (
 	"time"
 )
 
-const FTXHighOpen = 0.004
-const FTXLowOpen = -0.006
 const OrderPriceLimit = 0
 const TakeRate = 0.8
 const UsdUpLine = 200000
@@ -126,6 +124,10 @@ func rankCarryScore(market string, amountLimit float64) (symbolHigh, symbolLow s
 
 // setting.GridPriceDistance: 收回下单是要求的利润(可以为负数)
 var ProcessCarry = func(setting *model.Setting) {
+	if !doCarry {
+		go clearCarryBalance()
+		doCarry = true
+	}
 	_, tickPerp := model.AppMarkets.GetBidAsk(setting.Symbol, setting.Market)
 	symbolRelated := setting.GetRelatedSymbol()
 	_, tickRelated := model.AppMarkets.GetBidAsk(symbolRelated, setting.Market)
@@ -140,25 +142,15 @@ var ProcessCarry = func(setting *model.Setting) {
 	} else {
 		return
 	}
-	if !doCarry {
-		go clearCarryBalance()
-		doCarry = true
-	}
 	scoreOpen := 1 - tickRelated.Asks[0].Price/tickPerp.Bids[0].Price
 	scoreClose := 1 - tickRelated.Bids[0].Price/tickPerp.Asks[0].Price
-	if setting.OpenShortMargin <= 0 {
-		setting.OpenShortMargin = FTXHighOpen
-	}
-	if setting.CloseShortMargin >= 0 {
-		setting.CloseShortMargin = FTXLowOpen
-	}
 	carryScoreOpen[setting.Symbol] = scoreOpen
 	carryScoreClose[setting.Symbol] = scoreClose
 	symbolHigh, symbolLow, scoreHigh, scoreLow := rankCarryScore(setting.Market, setting.AmountLimit)
-	carryInfo := fmt.Sprintf("up usd line :%f current: [%s] score range: [%f ~ %f] revert: [%f]\n"+
+	carryInfo := fmt.Sprintf("[%d]limit :%f current: [%s] score range: [%f ~ %f] revert: [%f]\n"+
 		"[lowest: %s %f highest:%s %f] [available usd: <%f>] holding: %f",
-		model.AppConfig.Amount, setting.Symbol, setting.OpenShortMargin, setting.CloseShortMargin, setting.GridPriceDistance,
-		symbolLow, scoreLow, symbolHigh, scoreHigh, usdAvailable, holding)
+		len(carryScoreOpen), model.AppConfig.Amount, setting.Symbol, setting.OpenShortMargin, setting.CloseShortMargin,
+		setting.GridPriceDistance, symbolLow, scoreLow, symbolHigh, scoreHigh, usdAvailable, holding)
 	model.SetCarryInfo(`[grid-setting]`, carryInfo)
 	sidePerp, sideRelated, amount := calcCarryOpen(setting, tickPerp, tickRelated, symbolHigh, symbolLow, scoreOpen,
 		scoreClose, scoreHigh, scoreLow)
