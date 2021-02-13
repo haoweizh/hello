@@ -82,6 +82,8 @@ func (metricManager *MetricManager) addTick(market, symbol string, current time.
 }
 
 func (metricManager *MetricManager) ToString() (metricStr string) {
+	defer metricManager.Lock.Unlock()
+	metricManager.Lock.Lock()
 	metricStr = ``
 	for marketSymbol, metrics := range metricManager.metricTicks {
 		index := metricManager.index[marketSymbol]
