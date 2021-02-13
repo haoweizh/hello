@@ -172,11 +172,13 @@ var ProcessCarry = func(setting *model.Setting) {
 			relatedPrice = tickRelated.Asks[0].Price
 			setting.GridAmount += amount
 			carryBalance[parts[0]].Free += amount
+			usdAvailable -= amount * perpPrice
 		} else if sidePerp == model.OrderSideBuy {
 			perpPrice = tickPerp.Asks[0].Price
 			relatedPrice = tickRelated.Bids[0].Price
 			setting.GridAmount -= amount
 			carryBalance[parts[0]].Free -= amount
+			usdAvailable += amount * relatedPrice
 		}
 		go api.PlaceSyncOrders(``, ``, sidePerp, model.OrderTypeLimit, setting.Market, setting.Symbol,
 			``, ``, ``, ``, model.FunctionCarry, perpPrice, perpPrice,
