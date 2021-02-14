@@ -12,7 +12,6 @@ import (
 )
 
 const OrderPriceLimit = 0
-const TakeRate = 0.8
 const UsdUpLine = 200000
 
 //const FtxTakerFee = 0.0004275
@@ -104,17 +103,17 @@ func rankCarryScore(market string, amountLimit float64) (symbolHigh, symbolLow s
 		if bidAskPerp == nil || bidAskRelated == nil || carryBalance[coin] == nil {
 			continue
 		}
-		if valueOpen > scoreHigh && bidAskPerp.Bids[0].Price*bidAskPerp.Bids[0].Amount*TakeRate > amountLimit &&
-			bidAskRelated.Asks[0].Price*bidAskRelated.Asks[0].Amount*TakeRate > amountLimit &&
+		if valueOpen > scoreHigh && bidAskPerp.Bids[0].Price*bidAskPerp.Bids[0].Amount > amountLimit &&
+			bidAskRelated.Asks[0].Price*bidAskRelated.Asks[0].Amount > amountLimit &&
 			carryBalance[coin].UsdValue < UsdUpLine {
 			symbolHigh = symbol
 			scoreHigh = valueOpen
 		}
 		valueClose := carryScoreClose[symbol]
-		if valueClose < scoreLow && bidAskRelated.Bids[0].Price*bidAskRelated.Bids[0].Amount*TakeRate > amountLimit &&
-			bidAskPerp.Asks[0].Price*bidAskPerp.Asks[0].Amount*TakeRate > amountLimit &&
+		if valueClose < scoreLow && bidAskRelated.Bids[0].Price*bidAskRelated.Bids[0].Amount > amountLimit &&
+			bidAskPerp.Asks[0].Price*bidAskPerp.Asks[0].Amount > amountLimit &&
 			carryBalance[coin].UsdValue > -1*UsdUpLine &&
-			bidAskRelated.Bids[0].Amount*TakeRate < carryBalance[coin].Free {
+			bidAskRelated.Bids[0].Amount < carryBalance[coin].Free {
 			symbolLow = symbol
 			scoreLow = valueClose
 		}
@@ -282,14 +281,14 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	var bidAmount, askAmount float64
 	if (scoreLow < setting.CloseShortMargin && setting.Symbol == symbolLow) ||
 		(setting.GridAmount > 0 && scoreClose <= -1*setting.GridPriceDistance) {
-		bidAmount = tickPerp.Asks[0].Amount * TakeRate
-		askAmount = tickRelated.Bids[0].Amount * TakeRate
+		bidAmount = tickPerp.Asks[0].Amount
+		askAmount = tickRelated.Bids[0].Amount
 		sidePerp = model.OrderSideBuy
 		sideRelated = model.OrderSideSell
 	} else if (scoreHigh > setting.OpenShortMargin && setting.Symbol == symbolHigh) ||
 		(setting.GridAmount < 0 && scoreOpen >= setting.GridPriceDistance) {
-		bidAmount = tickRelated.Asks[0].Amount * TakeRate
-		askAmount = tickPerp.Bids[0].Amount * TakeRate
+		bidAmount = tickRelated.Asks[0].Amount
+		askAmount = tickPerp.Bids[0].Amount
 		sidePerp = model.OrderSideSell
 		sideRelated = model.OrderSideBuy
 	}
