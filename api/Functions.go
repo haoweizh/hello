@@ -924,8 +924,8 @@ func InitCarryFtx(start uint) {
 		setting := &model.Setting{
 			Valid:             true,
 			Function:          model.FunctionCarry,
-			OpenShortMargin:   0.015,
-			CloseShortMargin:  -0.015,
+			OpenShortMargin:   0.013,
+			CloseShortMargin:  -0.013,
 			GridPriceDistance: -0.004,
 			Market:            model.Ftx,
 			Symbol:            symbol,
@@ -936,16 +936,12 @@ func InitCarryFtx(start uint) {
 		// HOLY 1INCH too easy to be single completed order
 		if marketInfos[related] == nil || symbol == `FTT-PERP` || symbol == `USDT-PERP` || symbol == `BTC-PERP` ||
 			symbol == `ETH-PERP` || symbol == `DOGE-PERP` || symbol == `LINK-PERP` {
-			//symbol == `HOLY-PERP` || symbol == `1INCH-PERP` || symbol == `AAVE-PERP` || symbol == `CHZ-PERP` ||
-			//symbol == `XRP-PERP` || symbol == `RUNE-PERP` || symbol == `CREAM-PERP` || symbol == `AMPL-PERP` ||
-			//symbol == `DMG-PERP` || symbol == `BAO-PERP` {
-			//fmt.Println(related + ` no`)
 			continue
 		}
-		if !marketInfos[related].CanBorrow {
-			setting.CloseShortMargin = -1
-			fmt.Println(related + `do not have borrow`)
-		}
+		//if !marketInfos[related].CanBorrow {
+		//	setting.CloseShortMargin = -1
+		//	fmt.Println(related + `do not have borrow`)
+		//}
 		start++
 		model.AppDB.Save(&setting)
 		fmt.Println(fmt.Sprintf(`%s %s saved %d %f`, symbol, related, start, setting.CloseShortMargin))

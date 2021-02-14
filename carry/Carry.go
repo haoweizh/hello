@@ -279,10 +279,6 @@ func makeEqual(setting *model.Setting, balances []*model.Balance) (symbol string
 
 func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, symbolHigh, symbolLow string,
 	scoreOpen, scoreClose, scoreHigh, scoreLow float64) (sidePerp, sideRelated string, amount float64) {
-	//marketSymbols := model.GetMarketSymbols(setting.Market)
-	//if float64(len(perpSnapshot)) < 0.45*float64(len(marketSymbols)) {
-	//	return ``, ``, 0
-	//}
 	var bidAmount, askAmount float64
 	if (scoreLow < setting.CloseShortMargin && setting.Symbol == symbolLow) ||
 		(setting.GridAmount > 0 && scoreClose <= -1*setting.GridPriceDistance) {
@@ -314,7 +310,12 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	amountPerp := api.FormatAmount(setting.Market, setting.Symbol, amount)
 	amountRelated := api.FormatAmount(setting.Market, setting.GetRelatedSymbol(), amount)
 	amount = math.Min(amountPerp, amountRelated)
-	if (sideRelated == model.OrderSideBuy && usdAvailable < line) || amount*tickPerp.Asks[0].Price < setting.AmountLimit {
+	if amount > 0 {
+		util.Notice(fmt.Sprintf(`high:%s %f low:%s %f symbl: %s usd available:%f`,
+			symbolHigh, scoreHigh, symbolLow, scoreLow, setting.Symbol, usdAvailable))
+	}
+	if (sideRelated == model.OrderSideBuy && usdAvailable < line) ||
+		(amount*tickPerp.Asks[0].Price < setting.AmountLimit && amount > math.Abs(setting.GridAmount)) {
 		amount = 0
 	}
 	return sidePerp, sideRelated, amount
