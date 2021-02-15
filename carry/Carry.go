@@ -137,7 +137,7 @@ var ProcessCarry = func(setting *model.Setting) {
 	now := util.GetNowUnixMillion()
 	if tickPerp == nil || tickRelated == nil || tickPerp.Asks == nil || tickPerp.Bids == nil ||
 		tickRelated.Asks == nil || tickRelated.Bids == nil || model.AppConfig.Handle != `1` ||
-		model.AppPause || now-int64(tickRelated.Ts) > 1000 || now-int64(tickPerp.Ts) > 1000 || setting == nil {
+		model.AppPause || now-int64(tickRelated.Ts) > 20 || now-int64(tickPerp.Ts) > 20 || setting == nil {
 		return
 	}
 	if !checkSetCarrying(true) {
