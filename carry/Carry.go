@@ -182,10 +182,10 @@ var ProcessCarry = func(setting *model.Setting) {
 	model.SetCarryInfo(`[grid-setting]`, carryInfo)
 	sidePerp, sideRelated, amount := calcCarryOpen(setting, tickPerp, tickRelated, symbolHigh, symbolLow, scoreOpen,
 		scoreClose, scoreHigh, scoreLow)
-	//if scoreOpen > 0.01 || scoreClose < -0.01 {
-	before := time.Now().UnixNano() / 1000000
-	util.Notice(fmt.Sprintf(`...... perp: %d related: %d %s`, before-int64(tickPerp.Ts), before-int64(tickRelated.Ts), carryInfo))
-	//}
+	if scoreOpen > 0.01 || scoreClose < -0.01 {
+		before := time.Now().UnixNano() / 1000000
+		util.Notice(fmt.Sprintf(`...... perp: %d related: %d %s`, before-int64(tickPerp.Ts), before-int64(tickRelated.Ts), carryInfo))
+	}
 	if amount > 0 {
 		parts := strings.Split(setting.Symbol, `-`)
 		if len(parts) != 2 {
