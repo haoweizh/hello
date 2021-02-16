@@ -357,21 +357,25 @@ func queryOrderBybit(key, secret, symbol, orderId string) (orders []*model.Order
 	return
 }
 
-func getAccountBybit(key, secret, symbol string, accounts *model.Accounts) {
+func getAccountBybit(key, secret, symbol string, accounts *model.Accounts) (success bool) {
 	postData := make(map[string]interface{})
 	postData[`symbol`] = model.GetDialectSymbol(model.Bybit, symbol)
 	response := SignedRequestBybit(key, secret, `GET`, `/v2/private/position/list`, postData)
-	util.Notice(fmt.Sprintf(string(response)))
+	util.SocketInfo(fmt.Sprintf(string(response)))
 	positionJson, err := util.NewJSON(response)
-	if err == nil {
-		positionJson = positionJson.Get(`result`)
-		if positionJson != nil {
-			account := &model.Account{Market: model.Bybit, Ts: util.GetNowUnixMillion(), Currency: symbol}
-			item, _ := positionJson.Map()
-			parseAccountBybit(account, item)
-			accounts.SetAccount(model.Bybit, account.Currency, account)
-		}
+	if err == nil || positionJson == nil || strings.ToLower(positionJson.Get(`ret_msg`).MustString()) != `ok` {
+		util.SocketInfo(`fail to refresh accounts bybit`)
+		time.Sleep(time.Second * 2)
+		return getAccountBybit(key, secret, symbol, accounts)
 	}
+	positionJson = positionJson.Get(`result`)
+	if positionJson != nil {
+		account := &model.Account{Market: model.Bybit, Ts: util.GetNowUnixMillion(), Currency: symbol}
+		item, _ := positionJson.Map()
+		parseAccountBybit(account, item)
+		accounts.SetAccount(model.Bybit, account.Currency, account)
+	}
+	return true
 }
 
 // timeInForce 有效选项:GoodTillCancel, ImmediateOrCancel, FillOrKill,PostOnly

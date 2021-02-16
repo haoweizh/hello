@@ -12,6 +12,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 )
 
 var lastTickId = make(map[string]int64) // symbol - int64
@@ -89,8 +90,8 @@ func WsDepthServeBinance(markets *model.Markets, errHandler ErrHandler) (chan st
 }
 func signBinance(postData *url.Values, secretKey string) {
 	postData.Set("recvWindow", "6000000")
-	time := strconv.FormatInt(util.GetNow().UnixNano(), 10)[0:13]
-	postData.Set("timestamp", time)
+	ts := strconv.FormatInt(util.GetNow().UnixNano(), 10)[0:13]
+	postData.Set("timestamp", ts)
 	hash := hmac.New(sha256.New, []byte(secretKey))
 	hash.Write([]byte(postData.Encode()))
 	postData.Set("signature", hex.EncodeToString(hash.Sum(nil)))
@@ -184,27 +185,30 @@ func queryOrderBinance(symbol string, orderId string) (dealAmount, dealPrice flo
 	return dealAmount, dealPrice, status
 }
 
-func getAccountBinance(accounts *model.Accounts) {
+func getAccountBinance(accounts *model.Accounts) (success bool) {
 	postData := url.Values{}
 	signBinance(&postData, model.AppConfig.BinanceSecret)
 	headers := map[string]string{"X-MBX-APIKEY": model.AppConfig.BinanceKey}
 	requestUrl := model.AppConfig.RestUrls[model.Binance] + "/api/v3/account?" + postData.Encode()
 	responseBody, _ := util.HttpRequest("GET", requestUrl, "", headers, 60)
-	balanceJson, err := util.NewJSON(responseBody)
-	if err == nil {
-		if balanceJson.Get("canTrade").MustBool() {
-			currencies, _ := balanceJson.Get("balances").Array()
-			for _, value := range currencies {
-				asset := value.(map[string]interface{})
-				free, _ := strconv.ParseFloat(asset["free"].(string), 64)
-				frozen, _ := strconv.ParseFloat(asset["locked"].(string), 64)
-				if free == 0 && frozen == 0 {
-					continue
-				}
-				currency := strings.ToLower(asset["asset"].(string))
-				account := &model.Account{Market: model.Binance, Currency: currency, Free: free, Frozen: frozen}
-				accounts.SetAccount(model.Binance, currency, account)
+	balanceJson, _ := util.NewJSON(responseBody)
+	if balanceJson.Get("canTrade").MustBool() {
+		currencies, _ := balanceJson.Get("balances").Array()
+		for _, value := range currencies {
+			asset := value.(map[string]interface{})
+			free, _ := strconv.ParseFloat(asset["free"].(string), 64)
+			frozen, _ := strconv.ParseFloat(asset["locked"].(string), 64)
+			if free == 0 && frozen == 0 {
+				continue
 			}
+			currency := strings.ToLower(asset["asset"].(string))
+			account := &model.Account{Market: model.Binance, Currency: currency, Free: free, Frozen: frozen}
+			accounts.SetAccount(model.Binance, currency, account)
 		}
+		return true
+	} else {
+		time.Sleep(time.Second * 2)
+		util.SocketInfo(`fail to refresh accounts binance`)
+		return getAccountBinance(accounts)
 	}
 }

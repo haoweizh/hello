@@ -121,12 +121,14 @@ func parseAccountHuobiDM(account *model.Account, data map[string]interface{}) (b
 	}
 }
 
-func getBalanceHuobiDM(accounts *model.Accounts) (balances []*model.Balance) {
+func getBalanceHuobiDM(accounts *model.Accounts) (success bool, balances []*model.Balance) {
 	responseBody := SignedRequestHuobi(model.HuobiDM, `POST`, "/api/v1/contract_account_info", nil)
-	util.SocketInfo(`get huobidm balance: ` + string(responseBody))
+	util.SocketInfo(`get huobiDM balance: ` + string(responseBody))
 	accountJson, err := util.NewJSON(responseBody)
-	if err != nil {
-		return nil
+	if err != nil || accountJson == nil || accountJson.Get(`status`).MustString() != `ok` {
+		time.Sleep(time.Second * 2)
+		util.SocketInfo(`fail to get huobiDM balance`)
+		return getBalanceHuobiDM(accounts)
 	}
 	balances = make([]*model.Balance, 0)
 	items := accountJson.Get(`data`).MustArray()
@@ -139,15 +141,16 @@ func getBalanceHuobiDM(accounts *model.Accounts) (balances []*model.Balance) {
 		}
 		accounts.SetAccount(model.HuobiDM, account.Currency, account)
 	}
-	return balances
+	return true, balances
 }
 
-func getHoldingHuobiDM(accounts *model.Accounts) {
+func getHoldingHuobiDM(accounts *model.Accounts) (success bool) {
 	responseBody := SignedRequestHuobi(model.HuobiDM, `POST`, `/api/v1/contract_position_info`, nil)
 	accountJson, err := util.NewJSON(responseBody)
-	if err != nil {
-		util.Notice(`fail to get huobiDM holding ` + err.Error())
-		return
+	if err != nil || accountJson == nil || accountJson.Get(`status`).MustString() != `ok` {
+		util.Notice(`fail to refresh account huobiDM holding `)
+		time.Sleep(time.Second * 2)
+		return getHoldingHuobiDM(accounts)
 	}
 	holdingArray := accountJson.Get(`data`).MustArray()
 	for _, value := range holdingArray {
@@ -200,6 +203,7 @@ func getHoldingHuobiDM(accounts *model.Accounts) {
 			accounts.SetAccount(model.HuobiDM, account.Currency, account)
 		}
 	}
+	return true
 }
 
 func placeOrderHuobiDM(order *model.Order, orderSide, orderType, contractCode, symbol, lever, price, triggerPrice, size string) {

@@ -651,7 +651,8 @@ func cancelOrderBitmex(key, secret, orderId string) (result bool, errCode, msg s
 	return false, ``, ``
 }
 
-func queryOrderBitmex(key, secret, symbol, orderId string) (orders []*model.Order) {
+//queryOrderBitmex
+func _(key, secret, symbol, orderId string) (orders []*model.Order) {
 	orders = make([]*model.Order, 0)
 	postData := make(map[string]interface{})
 	symbol = model.GetDialectSymbol(model.Bitmex, symbol)
@@ -680,13 +681,11 @@ func getAccountBitmex(key, secret string, accounts *model.Accounts) {
 	response := SignedRequestBitmex(key, secret, `GET`, `/position`, postData)
 	positionJson, err := util.NewJSON(response)
 	if err == nil {
-		positions, err := positionJson.Array()
-		if err == nil {
-			for _, data := range positions {
-				account := &model.Account{Market: model.Bitmex, Ts: util.GetNowUnixMillion()}
-				parseAccount(account, data.(map[string]interface{}))
-				accounts.SetAccount(model.Bitmex, account.Currency, account)
-			}
+		positions := positionJson.MustArray()
+		for _, data := range positions {
+			account := &model.Account{Market: model.Bitmex, Ts: util.GetNowUnixMillion()}
+			parseAccount(account, data.(map[string]interface{}))
+			accounts.SetAccount(model.Bitmex, account.Currency, account)
 		}
 	}
 }

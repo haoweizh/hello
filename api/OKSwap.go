@@ -235,22 +235,24 @@ func SignedRequestOKSwap(key, secret, method, path string, body map[string]inter
 	return responseBody
 }
 
-func getAccountOKSwap(key, secret, symbol string, accounts *model.Accounts) {
+func getAccountOKSwap(key, secret, symbol string, accounts *model.Accounts) (success bool) {
 	response := SignedRequestOKSwap(key, secret, `GET`,
 		fmt.Sprintf(`/api/swap/v3/%s/position`, model.GetDialectSymbol(model.OKSwap, symbol)), nil)
 	util.Notice(fmt.Sprintf(`get account rest:%s`, string(response)))
 	positionJson, err := util.NewJSON(response)
-	if err == nil {
-		positionJson = positionJson.Get(`holding`)
-		if positionJson != nil {
-			for _, item := range positionJson.MustArray() {
-				account := &model.Account{Market: model.OKSwap}
-				parseAccountOKSwap(account, item.(map[string]interface{}))
-				account.Currency = symbol
-				accounts.SetAccount(model.OKSwap, account.Currency, account)
-			}
+	if err != nil || positionJson == nil || positionJson.Get(`holding`) == nil {
+		return getAccountOKSwap(key, secret, symbol, accounts)
+	}
+	positionJson = positionJson.Get(`holding`)
+	if positionJson != nil {
+		for _, item := range positionJson.MustArray() {
+			account := &model.Account{Market: model.OKSwap}
+			parseAccountOKSwap(account, item.(map[string]interface{}))
+			account.Currency = symbol
+			accounts.SetAccount(model.OKSwap, account.Currency, account)
 		}
 	}
+	return true
 }
 
 func getFundingRateOKSwap(symbol string) (fundingRate float64, expire int64) {

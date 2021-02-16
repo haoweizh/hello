@@ -326,20 +326,23 @@ func getTransferFtx(key, secret string) (balances []*model.Balance) {
 	return
 }
 
-func getBalanceFtx(key, secret string) (balances []*model.Balance) {
+func getBalanceFtx(key, secret string) (success bool, balances []*model.Balance) {
 	balances = make([]*model.Balance, 0)
 	response := SignedRequestFtx(key, secret, `GET`, `/wallet/balances`, nil, nil)
 	util.SocketInfo(`get usd balance ftx: ` + string(response))
 	balanceJson, err := util.NewJSON(response)
-	if err == nil && balanceJson != nil {
-		for _, item := range balanceJson.Get(`result`).MustArray() {
-			balance := parseBalanceFtx(item.(map[string]interface{}))
-			if balance != nil {
-				balances = append(balances, balance)
-			}
+	if err != nil || balanceJson == nil || balanceJson.Get(`success`).MustBool() != true {
+		util.SocketInfo(`fail to get balance ftx`)
+		time.Sleep(time.Second * 2)
+		return getBalanceFtx(key, secret)
+	}
+	for _, item := range balanceJson.Get(`result`).MustArray() {
+		balance := parseBalanceFtx(item.(map[string]interface{}))
+		if balance != nil {
+			balances = append(balances, balance)
 		}
 	}
-	return
+	return true, balances
 }
 
 func cancelOrdersFtx(key, secret, symbol string) (result bool) {
@@ -427,22 +430,26 @@ func queryOrderFtx(key, secret, orderId string) (order *model.Order) {
 	return
 }
 
-func getAccountFtx(key, secret string, accounts *model.Accounts) {
+func getAccountFtx(key, secret string, accounts *model.Accounts) (success bool) {
 	postData := make(map[string]interface{})
 	response := SignedRequestFtx(key, secret, `GET`, `/positions`, nil, postData)
 	util.SocketInfo(`get account ftx ` + fmt.Sprintf(string(response)))
 	positionJson, err := util.NewJSON(response)
-	if err == nil {
-		positionJson = positionJson.Get(`result`)
-		if positionJson != nil {
-			data := positionJson.MustArray()
-			for _, item := range data {
-				account := &model.Account{Market: model.Ftx, Ts: util.GetNowUnixMillion()}
-				parseAccountFtx(account, item.(map[string]interface{}))
-				accounts.SetAccount(model.Ftx, account.Currency, account)
-			}
+	if err != nil || positionJson == nil || positionJson.Get(`success`).MustBool() != true {
+		util.SocketInfo(`fail to refresh account ftx`)
+		time.Sleep(time.Second * 2)
+		return getAccountFtx(key, secret, accounts)
+	}
+	positionJson = positionJson.Get(`result`)
+	if positionJson != nil {
+		data := positionJson.MustArray()
+		for _, item := range data {
+			account := &model.Account{Market: model.Ftx, Ts: util.GetNowUnixMillion()}
+			parseAccountFtx(account, item.(map[string]interface{}))
+			accounts.SetAccount(model.Ftx, account.Currency, account)
 		}
 	}
+	return true
 }
 
 func getMarketInfoFtx(symbol string) (borrowAble float64) {

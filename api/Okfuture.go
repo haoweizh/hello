@@ -174,12 +174,14 @@ func parseAccountOkfuture(account *model.Account, data map[string]interface{}) (
 	return balance
 }
 
-func getBalanceOkfuture(accounts *model.Accounts) (balances []*model.Balance) {
+func getBalanceOkfuture(accounts *model.Accounts) (success bool, balances []*model.Balance) {
 	responseBody := SignedRequestOKSwap(``, ``, `GET`, "/api/futures/v3/accounts", nil)
 	util.SocketInfo(`get okfuture balance: ` + string(responseBody))
 	accountJson, err := util.NewJSON(responseBody)
-	if err != nil {
-		return nil
+	if err != nil || accountJson == nil || accountJson.Get(`info`) == nil {
+		util.SocketInfo(`fail to get refresh accounts okfuture`)
+		time.Sleep(time.Second * 2)
+		return getBalanceOkfuture(accounts)
 	}
 	balances = make([]*model.Balance, 0)
 	items := accountJson.Get(`info`).MustMap()
@@ -198,7 +200,7 @@ func getBalanceOkfuture(accounts *model.Accounts) (balances []*model.Balance) {
 		account.Holding = holding
 		accounts.SetAccount(model.OKFUTURE, account.Currency, account)
 	}
-	return balances
+	return true, balances
 }
 
 func getHoldingOkfuture(instrument string) (amount float64) {
