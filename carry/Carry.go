@@ -50,7 +50,7 @@ func clearCarryBalance() {
 		time.Sleep(time.Second * 3)
 		markets := model.GetMarkets()
 		for _, market := range markets {
-			balances := api.GetBalance(``, ``, market, 0)
+			_, balances := api.GetBalance(``, ``, market, 0)
 			api.RefreshAccount(``, ``, market)
 			settings := model.GetSettings(model.FunctionCarry, market)
 			for _, items := range settings {
