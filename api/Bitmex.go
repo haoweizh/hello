@@ -675,6 +675,7 @@ func _(key, secret, symbol, orderId string) (orders []*model.Order) {
 	return
 }
 
+// note: not yet deal with net error issue
 func getAccountBitmex(key, secret string, accounts *model.Accounts) {
 	postData := make(map[string]interface{})
 	postData[`count`] = `100`
@@ -774,14 +775,17 @@ func getBtcBalanceBitmex(key, secret string) (balance float64) {
 	postData[`currency`] = `XBt`
 	response := SignedRequestBitmex(key, secret, `GET`, `/user/margin`, postData)
 	balanceJson, err := util.NewJSON(response)
-	if err == nil {
-		balanceJson = balanceJson.Get(`marginBalance`)
-		if balanceJson != nil {
-			balance, err = balanceJson.Float64()
-			balance = balance / 100000000
-		}
+	if err != nil || balanceJson == nil || balanceJson.Get(`marginBalance`) == nil {
+		time.Sleep(time.Second * 2)
+		util.SocketInfo(`fail to get btc balance binance`)
+		return getBtcBalanceBitmex(key, secret)
 	}
-	return
+	balanceJson = balanceJson.Get(`marginBalance`)
+	if balanceJson != nil {
+		balance, err = balanceJson.Float64()
+		balance = balance / 100000000
+	}
+	return balance
 }
 
 // update: 以unix second表示的下一次更新资金费率的时间

@@ -327,7 +327,7 @@ func _() (balances []*model.Balance) {
 	return
 }
 
-func getAccountHuobiSpot(accounts *model.Accounts) {
+func getAccountHuobiSpot(accounts *model.Accounts) (success bool) {
 	if model.HuobiAccountIds == nil || model.HuobiAccountIds[`spot`] == `` {
 		model.HuobiAccountIds, _ = GetAccountIdsHuobi()
 	}
@@ -336,30 +336,34 @@ func getAccountHuobiSpot(accounts *model.Accounts) {
 	postData["accountId-id"] = model.HuobiAccountIds[`spot`]
 	responseBody := SignedRequestHuobi(model.Huobi, `GET`, path, postData)
 	balanceJson, err := util.NewJSON(responseBody)
-	if err == nil {
-		accountType, _ := balanceJson.GetPath("data", "type").String()
-		state, _ := balanceJson.GetPath("data", "state").String()
-		if accountType == "spot" && state == "working" {
-			currencies, _ := balanceJson.GetPath("data", "list").Array()
-			for _, value := range currencies {
-				currency := value.(map[string]interface{})
-				balance, _ := strconv.ParseFloat(currency["balance"].(string), 64)
-				if balance == 0 {
-					continue
-				}
-				account := accounts.GetAccount(model.Huobi, currency["currency"].(string))
-				if account == nil {
-					currencyName := strings.ToLower(currency["currency"].(string))
-					account = &model.Account{Market: model.Huobi, Currency: currencyName}
-					accounts.SetAccount(model.Huobi, currencyName, account)
-				}
-				if currency["type"].(string) == "trade" {
-					account.Free = balance
-				}
-				if currency["type"].(string) == "frozen" {
-					account.Frozen = balance
-				}
+	if err != nil || balanceJson == nil || balanceJson.Get(`data`) == nil {
+		util.SocketInfo(`fail to refresh accounts huobi spot`)
+		time.Sleep(time.Second * 2)
+		return getAccountHuobiSpot(accounts)
+	}
+	accountType, _ := balanceJson.GetPath("data", "type").String()
+	state, _ := balanceJson.GetPath("data", "state").String()
+	if accountType == "spot" && state == "working" {
+		currencies, _ := balanceJson.GetPath("data", "list").Array()
+		for _, value := range currencies {
+			currency := value.(map[string]interface{})
+			balance, _ := strconv.ParseFloat(currency["balance"].(string), 64)
+			if balance == 0 {
+				continue
+			}
+			account := accounts.GetAccount(model.Huobi, currency["currency"].(string))
+			if account == nil {
+				currencyName := strings.ToLower(currency["currency"].(string))
+				account = &model.Account{Market: model.Huobi, Currency: currencyName}
+				accounts.SetAccount(model.Huobi, currencyName, account)
+			}
+			if currency["type"].(string) == "trade" {
+				account.Free = balance
+			}
+			if currency["type"].(string) == "frozen" {
+				account.Frozen = balance
 			}
 		}
 	}
+	return true
 }

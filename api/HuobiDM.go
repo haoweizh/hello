@@ -125,7 +125,7 @@ func getBalanceHuobiDM(accounts *model.Accounts) (success bool, balances []*mode
 	responseBody := SignedRequestHuobi(model.HuobiDM, `POST`, "/api/v1/contract_account_info", nil)
 	util.SocketInfo(`get huobiDM balance: ` + string(responseBody))
 	accountJson, err := util.NewJSON(responseBody)
-	if err != nil || accountJson == nil || accountJson.Get(`status`).MustString() != `ok` {
+	if err != nil || accountJson == nil || strings.ToLower(accountJson.Get(`status`).MustString()) != `ok` {
 		time.Sleep(time.Second * 2)
 		util.SocketInfo(`fail to get huobiDM balance`)
 		return getBalanceHuobiDM(accounts)
@@ -147,7 +147,7 @@ func getBalanceHuobiDM(accounts *model.Accounts) (success bool, balances []*mode
 func getHoldingHuobiDM(accounts *model.Accounts) (success bool) {
 	responseBody := SignedRequestHuobi(model.HuobiDM, `POST`, `/api/v1/contract_position_info`, nil)
 	accountJson, err := util.NewJSON(responseBody)
-	if err != nil || accountJson == nil || accountJson.Get(`status`).MustString() != `ok` {
+	if err != nil || accountJson == nil || strings.ToLower(accountJson.Get(`status`).MustString()) != `ok` {
 		util.Notice(`fail to refresh account huobiDM holding `)
 		time.Sleep(time.Second * 2)
 		return getHoldingHuobiDM(accounts)

@@ -238,9 +238,11 @@ func SignedRequestOKSwap(key, secret, method, path string, body map[string]inter
 func getAccountOKSwap(key, secret, symbol string, accounts *model.Accounts) (success bool) {
 	response := SignedRequestOKSwap(key, secret, `GET`,
 		fmt.Sprintf(`/api/swap/v3/%s/position`, model.GetDialectSymbol(model.OKSwap, symbol)), nil)
-	util.Notice(fmt.Sprintf(`get account rest:%s`, string(response)))
+	util.SocketInfo(fmt.Sprintf(`get account rest:%s`, string(response)))
 	positionJson, err := util.NewJSON(response)
 	if err != nil || positionJson == nil || positionJson.Get(`holding`) == nil {
+		time.Sleep(time.Second * 2)
+		util.SocketInfo(`fail to refresh accounts okswap`)
 		return getAccountOKSwap(key, secret, symbol, accounts)
 	}
 	positionJson = positionJson.Get(`holding`)
