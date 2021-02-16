@@ -110,8 +110,7 @@ func clearCarryBalance() {
 	}
 }
 
-// rankCarryScore
-func _(market string, amountLimit float64) (symbolHigh, symbolLow string, scoreHigh, scoreLow float64) {
+func rankCarryScore(market string, amountLimit float64) (symbolHigh, symbolLow string, scoreHigh, scoreLow float64) {
 	carryLock.Lock()
 	defer carryLock.Unlock()
 	scoreMsg := "\n[score list]\n"
@@ -175,11 +174,14 @@ var ProcessCarry = func(setting *model.Setting) {
 	scoreOpen := 1 - tickRelated.Asks[0].Price/tickPerp.Bids[0].Price
 	scoreClose := 1 - tickRelated.Bids[0].Price/tickPerp.Asks[0].Price
 	setScore(setting.Symbol, scoreOpen, scoreClose)
-	//symbolHigh, symbolLow, scoreHigh, scoreLow := rankCarryScore(setting.Market, setting.AmountLimit)
-	symbolHigh := setting.Symbol
-	symbolLow := setting.Symbol
-	scoreHigh := scoreOpen
-	scoreLow := scoreClose
+	before := time.Now().UnixNano()
+	symbolHigh, symbolLow, scoreHigh, scoreLow := rankCarryScore(setting.Market, setting.AmountLimit)
+	after := time.Now().UnixNano() - before
+	util.Notice(fmt.Sprintf(`...........%s %d`, setting.Symbol, after))
+	//symbolHigh := setting.Symbol
+	//symbolLow := setting.Symbol
+	//scoreHigh := scoreOpen
+	//scoreLow := scoreClose
 	carryInfo := fmt.Sprintf("limit :%f current: [%s] score range: [%f ~ %f] revert: [%f]\n"+
 		"[lowest: %s %f highest:%s %f] [available usd: <%f>] holding: %f",
 		model.AppConfig.Amount, setting.Symbol, setting.OpenShortMargin, setting.CloseShortMargin,
