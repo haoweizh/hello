@@ -254,8 +254,10 @@ func (markets *Markets) SetBidAsk(symbol, marketName string, bidAsk *BidAsk) boo
 	if markets.bidAsks[symbol] == nil {
 		markets.bidAsks[symbol] = make(map[string]*BidAsk)
 	}
-	if bidAsk == nil || bidAsk.Bids == nil || bidAsk.Asks == nil || bidAsk.Bids.Len() == 0 || bidAsk.Asks.Len() == 0 {
-		util.SocketInfo(marketName + `do not set nil or empty bid ask` + symbol)
+	if bidAsk == nil || bidAsk.Bids == nil || bidAsk.Asks == nil || bidAsk.Bids.Len() == 0 || bidAsk.Asks.Len() == 0 ||
+		bidAsk.Bids[0].Price >= bidAsk.Asks[0].Price {
+		markets.bidAsks[symbol][marketName] = nil
+		util.SocketInfo(marketName + `do not set nil or empty or mistake bid ask` + symbol)
 		return false
 	}
 	last := markets.bidAsks[symbol][marketName]

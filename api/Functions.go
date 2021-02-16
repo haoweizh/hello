@@ -935,7 +935,7 @@ func InitCarryFtx(start uint) {
 		related := setting.GetRelatedSymbol()
 		// HOLY 1INCH too easy to be single completed order
 		if marketInfos[related] == nil || symbol == `FTT-PERP` || symbol == `USDT-PERP` || symbol == `BTC-PERP` ||
-			symbol == `ETH-PERP` || symbol == `DOGE-PERP` || symbol == `LINK-PERP` {
+			symbol == `ETH-PERP` || symbol == `LINK-PERP` {
 			continue
 		}
 		//if !marketInfos[related].CanBorrow {

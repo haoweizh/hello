@@ -119,13 +119,10 @@ func handleDepthFtx(markets *model.Markets, response *simplejson.Json) {
 	dataType := response.Get(`type`).MustString()
 	data := response.Get(`data`)
 	if data != nil {
-		bidAsk := &model.BidAsk{}
-		ts := data.Get(`time`).MustFloat64()
-		bidAsk.Ts = int(ts * 1000)
+		bidAsk := &model.BidAsk{Ts: int(data.Get(`time`).MustFloat64() * 1000),
+			Bids: make([]model.Tick, 0), Asks: make([]model.Tick, 0)}
 		bids := data.Get(`bids`).MustArray()
 		asks := data.Get(`asks`).MustArray()
-		bidAsk.Bids = make([]model.Tick, 0)
-		bidAsk.Asks = make([]model.Tick, 0)
 		if dataType == `partial` {
 			for _, item := range bids {
 				price, _ := item.([]interface{})[0].(json.Number).Float64()
@@ -141,45 +138,40 @@ func handleDepthFtx(markets *model.Markets, response *simplejson.Json) {
 			_, oldBidAsk := markets.GetBidAsk(symbol, model.Ftx)
 			if oldBidAsk == nil {
 				util.Notice(fmt.Sprintf(`fatal: can not have old bidask %s %s`, model.Ftx, symbol))
-				return
+				oldBidAsk = &model.BidAsk{Ts: int(data.Get(`time`).MustFloat64() * 1000),
+					Bids: make([]model.Tick, 0), Asks: make([]model.Tick, 0)}
 			}
 			priceAmountBid := make(map[float64]*model.Tick)
 			priceAmountAsk := make(map[float64]*model.Tick)
+			for _, bid := range oldBidAsk.Bids {
+				priceAmountBid[bid.Price] = &bid
+			}
 			for _, item := range bids {
 				price, _ := item.([]interface{})[0].(json.Number).Float64()
 				size, _ := item.([]interface{})[1].(json.Number).Float64()
-				priceAmountBid[price] = &model.Tick{Price: price, Amount: size}
+				if size > 0 {
+					priceAmountBid[price] = &model.Tick{Price: price, Amount: size}
+				} else {
+					delete(priceAmountBid, price)
+				}
+			}
+			for _, ask := range oldBidAsk.Asks {
+				priceAmountAsk[ask.Price] = &ask
 			}
 			for _, item := range asks {
 				price, _ := item.([]interface{})[0].(json.Number).Float64()
 				size, _ := item.([]interface{})[1].(json.Number).Float64()
-				priceAmountAsk[price] = &model.Tick{Price: price, Amount: size}
-			}
-			for _, bid := range oldBidAsk.Bids {
-				if priceAmountBid[bid.Price] == nil {
-					bidAsk.Bids = append(bidAsk.Bids, bid)
-				} else if priceAmountBid[bid.Price].Amount > 0 {
-					bidAsk.Bids = append(bidAsk.Bids, *priceAmountBid[bid.Price])
-				}
-				delete(priceAmountBid, bid.Price)
-			}
-			for _, bid := range priceAmountBid {
-				if bid.Amount > 0 {
-					bidAsk.Bids = append(bidAsk.Bids, *bid)
+				if size > 0 {
+					priceAmountAsk[price] = &model.Tick{Price: price, Amount: size}
+				} else {
+					delete(priceAmountAsk, price)
 				}
 			}
-			for _, ask := range oldBidAsk.Asks {
-				if priceAmountAsk[ask.Price] == nil {
-					bidAsk.Asks = append(bidAsk.Asks, ask)
-				} else if priceAmountAsk[ask.Price].Amount > 0 {
-					bidAsk.Asks = append(bidAsk.Asks, *priceAmountAsk[ask.Price])
-				}
-				delete(priceAmountAsk, ask.Price)
+			for _, tick := range priceAmountBid {
+				bidAsk.Bids = append(bidAsk.Bids, *tick)
 			}
-			for _, ask := range priceAmountAsk {
-				if ask.Amount > 0 {
-					bidAsk.Asks = append(bidAsk.Asks, *ask)
-				}
+			for _, tick := range priceAmountAsk {
+				bidAsk.Asks = append(bidAsk.Asks, *tick)
 			}
 		}
 		sort.Sort(bidAsk.Asks)
