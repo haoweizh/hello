@@ -314,12 +314,14 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 		util.Notice(fmt.Sprintf(`>>>> high:%s %f low:%s %f symbl: %s usd available:%f amount：%f`,
 			symbolHigh, scoreHigh, symbolLow, scoreLow, setting.Symbol, usdAvailable, amount))
 	}
-	if sideRelated == model.OrderSideBuy && usdAvailable < line {
+	if (sideRelated == model.OrderSideBuy && usdAvailable < line) ||
+		(math.Abs(setting.GridAmount) > setting.AmountLimit/tickPerp.Asks[0].Price &&
+			amount*tickPerp.Asks[0].Price < setting.AmountLimit) {
 		amount = 0
 	}
 	if amount*tickPerp.Asks[0].Price < setting.AmountLimit {
-		if (sidePerp == model.OrderSideBuy && setting.GridAmount < 0) || (sidePerp == model.OrderSideSell &&
-			setting.GridAmount > 0) {
+		if (sidePerp == model.OrderSideBuy && setting.GridAmount < 0) ||
+			(sidePerp == model.OrderSideSell && setting.GridAmount > 0) {
 			amount = 0
 		}
 	}

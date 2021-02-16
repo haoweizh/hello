@@ -332,7 +332,7 @@ func getBalanceFtx(key, secret string) (success bool, balances []*model.Balance)
 	util.SocketInfo(`get usd balance ftx: ` + string(response))
 	balanceJson, err := util.NewJSON(response)
 	if err != nil || balanceJson == nil || balanceJson.Get(`success`).MustBool() != true {
-		util.SocketInfo(`fail to get balance ftx`)
+		util.SocketInfo(`w ftx`)
 		time.Sleep(time.Second * 2)
 		return getBalanceFtx(key, secret)
 	}
