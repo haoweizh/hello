@@ -24,6 +24,19 @@ var carryScoreOpen = make(map[string]float64)
 var carryScoreClose = make(map[string]float64)
 var carryBalance = make(map[string]*model.Balance)
 var stChan = make(chan *model.Order, 2)
+var symbolCarrying = make(map[string]bool)
+
+func getSymbolCarrying(symbol string) (value bool) {
+	carryLock.Lock()
+	defer carryLock.Unlock()
+	return symbolCarrying[symbol]
+}
+
+func setSymbolCarrying(symbol string, value bool) {
+	carryLock.Lock()
+	defer carryLock.Unlock()
+	symbolCarrying[symbol] = value
+}
 
 func getCarryBalance(coin string) (balance *model.Balance) {
 	carryLock.Lock()
@@ -97,7 +110,8 @@ func clearCarryBalance() {
 	}
 }
 
-func rankCarryScore(market string, amountLimit float64) (symbolHigh, symbolLow string, scoreHigh, scoreLow float64) {
+// rankCarryScore
+func _(market string, amountLimit float64) (symbolHigh, symbolLow string, scoreHigh, scoreLow float64) {
 	carryLock.Lock()
 	defer carryLock.Unlock()
 	scoreMsg := "\n[score list]\n"
@@ -150,20 +164,27 @@ var ProcessCarry = func(setting *model.Setting) {
 	symbolRelated := setting.GetRelatedSymbol()
 	_, tickRelated := model.AppMarkets.GetBidAsk(symbolRelated, setting.Market)
 	now := util.GetNowUnixMillion()
-	if getEqualing() || tickPerp == nil || tickRelated == nil || tickPerp.Asks == nil || tickPerp.Bids == nil ||
-		tickRelated.Asks == nil || tickRelated.Bids == nil || model.AppConfig.Handle != `1` ||
-		model.AppPause || now-int64(tickRelated.Ts) > 50 || now-int64(tickPerp.Ts) > 50 || setting == nil {
+	if getSymbolCarrying(setting.Symbol) || getEqualing() || tickPerp == nil || tickRelated == nil ||
+		tickPerp.Asks == nil || tickPerp.Bids == nil || tickRelated.Asks == nil || tickRelated.Bids == nil ||
+		model.AppConfig.Handle != `1` || model.AppPause || now-int64(tickRelated.Ts) > 50 ||
+		now-int64(tickPerp.Ts) > 50 || setting == nil {
 		return
 	}
+	setSymbolCarrying(setting.Symbol, true)
+	defer setSymbolCarrying(setting.Symbol, false)
 	scoreOpen := 1 - tickRelated.Asks[0].Price/tickPerp.Bids[0].Price
 	scoreClose := 1 - tickRelated.Bids[0].Price/tickPerp.Asks[0].Price
 	setScore(setting.Symbol, scoreOpen, scoreClose)
-	symbolHigh, symbolLow, scoreHigh, scoreLow := rankCarryScore(setting.Market, setting.AmountLimit)
+	//symbolHigh, symbolLow, scoreHigh, scoreLow := rankCarryScore(setting.Market, setting.AmountLimit)
+	symbolHigh := setting.Symbol
+	symbolLow := setting.Symbol
+	scoreHigh := scoreOpen
+	scoreLow := scoreClose
 	carryInfo := fmt.Sprintf("limit :%f current: [%s] score range: [%f ~ %f] revert: [%f]\n"+
 		"[lowest: %s %f highest:%s %f] [available usd: <%f>] holding: %f",
 		model.AppConfig.Amount, setting.Symbol, setting.OpenShortMargin, setting.CloseShortMargin,
 		setting.GridPriceDistance, symbolLow, scoreLow, symbolHigh, scoreHigh, usdAvailable, holding)
-	if scoreOpen > 0.12 || scoreClose < -0.12 {
+	if scoreOpen > 0.01 || scoreClose < -0.01 {
 		util.Notice(carryInfo)
 	}
 	model.SetCarryInfo(`[grid-setting]`, carryInfo)
