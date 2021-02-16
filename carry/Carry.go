@@ -264,6 +264,7 @@ func makeEqual(setting *model.Setting, balances []*model.Balance) (symbol string
 			price = tickRelated.Asks[0].Price * (1 + OrderPriceLimit)
 		}
 	}
+	amount = math.Min(amount, 10000/price)
 	amount = api.FormatAmount(setting.Market, symbol, math.Abs(amount))
 	if amount > 0 {
 		resultPerp := api.CancelOrders(``, ``, setting.Market, settingSymbol)
