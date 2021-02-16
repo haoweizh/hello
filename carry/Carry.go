@@ -179,13 +179,13 @@ var ProcessCarry = func(setting *model.Setting) {
 		"[lowest: %s %f highest:%s %f] [available usd: <%f>] holding: %f",
 		model.AppConfig.Amount, setting.Symbol, setting.OpenShortMargin, setting.CloseShortMargin,
 		setting.GridPriceDistance, symbolLow, scoreLow, symbolHigh, scoreHigh, usdAvailable, holding)
+	model.SetCarryInfo(`[grid-setting]`, carryInfo)
+	sidePerp, sideRelated, amount := calcCarryOpen(setting, tickPerp, tickRelated, symbolHigh, symbolLow, scoreOpen,
+		scoreClose, scoreHigh, scoreLow)
 	//if scoreOpen > 0.01 || scoreClose < -0.01 {
 	before := time.Now().UnixNano() / 1000000
 	util.Notice(fmt.Sprintf(`...... perp: %d related: %d %s`, before-int64(tickPerp.Ts), before-int64(tickRelated.Ts), carryInfo))
 	//}
-	model.SetCarryInfo(`[grid-setting]`, carryInfo)
-	sidePerp, sideRelated, amount := calcCarryOpen(setting, tickPerp, tickRelated, symbolHigh, symbolLow, scoreOpen,
-		scoreClose, scoreHigh, scoreLow)
 	if amount > 0 {
 		parts := strings.Split(setting.Symbol, `-`)
 		if len(parts) != 2 {
