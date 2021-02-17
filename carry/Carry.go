@@ -21,6 +21,8 @@ var carrying bool
 var holding, usdAvailable float64
 var doCarry = false
 var carryBalance = make(map[string]*model.Balance)
+var symbolHighest, symbolLowest string
+var highest, lowest float64
 
 func getCarryBalance(coin string) (balance *model.Balance) {
 	carryLock.Lock()
@@ -104,10 +106,18 @@ var ProcessCarry = func(setting *model.Setting) {
 	}
 	scoreOpen := 1 - tickRelated.Asks[0].Price/tickPerp.Bids[0].Price
 	scoreClose := 1 - tickRelated.Bids[0].Price/tickPerp.Asks[0].Price
+	if scoreOpen > highest || setting.Symbol == symbolHighest {
+		highest = scoreOpen
+		symbolHighest = setting.Symbol
+	}
+	if scoreClose < lowest || setting.Symbol == symbolLowest {
+		lowest = scoreClose
+		symbolLowest = setting.Symbol
+	}
 	carryInfo := fmt.Sprintf("limit :%f current: [%s] score range: [%f ~ %f] revert: [%f]\n"+
-		"[open %f close: %f] [available usd: <%f>] holding: %f",
+		"[open %f close: %f][lowest:%s %f][highest: %s %f][available usd: <%f>] holding: %f",
 		model.AppConfig.Amount, setting.Symbol, setting.OpenShortMargin, setting.CloseShortMargin,
-		setting.GridPriceDistance, scoreOpen, scoreClose, usdAvailable, holding)
+		setting.GridPriceDistance, scoreOpen, scoreClose, symbolLowest, lowest, symbolHighest, highest, usdAvailable, holding)
 	model.SetCarryInfo(`[grid-setting]`, carryInfo)
 	sidePerp, sideRelated, amount := calcCarryOpen(setting, tickPerp, tickRelated, setting.Symbol, setting.Symbol,
 		scoreOpen, scoreClose, scoreOpen, scoreClose)
