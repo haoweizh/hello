@@ -631,7 +631,8 @@ func RefreshAccount(key, secret, market string) {
 	}
 }
 
-func PlaceSyncOrders(key, secret, orderSide, orderType, market, symbol, instrument, amountType, accountType, orderParam,
+// PlaceSyncOrders
+func _(key, secret, orderSide, orderType, market, symbol, instrument, amountType, accountType, orderParam,
 	refreshType string, price, triggerPrice, amount float64, saveDB bool, channel chan *model.Order, retry int) {
 	var order *model.Order
 	i := 0
@@ -857,21 +858,6 @@ func GetWSSubscribe(market, symbol, subType string) (subscribe interface{}) {
 			symbol = `bchabc_` + symbol[4:]
 		}
 		return strings.ToLower(strings.Replace(symbol, "_", "", 1)) + `@depth5`
-	case model.Fcoin:
-		if subType == model.SubscribeDeal {
-			// btc_usdt: trade.btcusdt
-			return `trade.` + strings.ToLower(strings.Replace(symbol, "_", "", 1))
-		} else if subType == model.SubscribeDepth {
-			// btc_usdt: depth.L20.btcusdt
-			return `depth.L20.` + strings.ToLower(strings.Replace(symbol, "_", "", 1))
-		}
-	case model.Fmex:
-		if subType == model.SubscribeDepth {
-			// btc_usdt: depth.L20.btcusdt
-			return `depth.L20.` + symbol
-		} else if subType == model.SubscribeDeal {
-			return `trade.` + strings.ToUpper(symbol)
-		}
 	case model.Coinpark: //BTC_USDT bibox_sub_spot_BTC_USDT_ticker
 		//return `bibox_sub_spot_` + strings.ToUpper(symbol) + `_ticker`
 		return `bibox_sub_spot_` + strings.ToUpper(symbol) + `_depth`
@@ -897,8 +883,8 @@ func GetWSSubscribe(market, symbol, subType string) (subscribe interface{}) {
 			return `orderBookL2_25.` + subSymbol
 		}
 	case model.Ftx:
-		//return []string{`orderbook`, symbol}
-		return []string{`ticker`, symbol}
+		return []string{`orderbook`, symbol}
+		//return []string{`ticker`, symbol}
 	case model.Coinbig:
 		switch symbol {
 		case `btc_usdt`:
