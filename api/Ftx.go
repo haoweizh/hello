@@ -118,7 +118,7 @@ func handleDepthFtx(markets *model.Markets, response *simplejson.Json) {
 	symbol := response.Get("market").MustString()
 	dataType := response.Get(`type`).MustString()
 	data := response.Get(`data`)
-	if data.Interface() != nil {
+	if data.Interface() != nil && (dataType == `partial` || dataType == `update`) {
 		bidAsk := &model.BidAsk{Ts: int(data.Get(`time`).MustFloat64() * 1000),
 			Bids: make([]model.Tick, 0), Asks: make([]model.Tick, 0)}
 		bids := data.Get(`bids`).MustArray()
