@@ -45,6 +45,7 @@ const AccountTypeNormal = ``
 const AccountTypeLever = `lever`
 const AccountTypeReduce = `reduceOnly`
 const SubscribeDepth = `SubscribeDepth`
+const SubscribeTicker = `ticker`
 const SubscribeDeal = `subscribeDeal`
 const CarryStatusSuccess = "success"
 const CarryStatusFail = "fail"

@@ -883,8 +883,11 @@ func GetWSSubscribe(market, symbol, subType string) (subscribe interface{}) {
 			return `orderBookL2_25.` + subSymbol
 		}
 	case model.Ftx:
-		return []string{`orderbook`, symbol}
-		//return []string{`ticker`, symbol}
+		if subType == model.SubscribeDepth {
+			return []string{`orderbook`, symbol}
+		} else if subType == model.SubscribeTicker {
+			return []string{`ticker`, symbol}
+		}
 	case model.Coinbig:
 		switch symbol {
 		case `btc_usdt`:
