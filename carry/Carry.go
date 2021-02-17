@@ -20,10 +20,13 @@ var carryLock sync.Mutex
 var carrying bool
 var holding, usdAvailable float64
 var doCarry = false
-var carryScoreOpen = make(map[string]float64)
-var carryScoreClose = make(map[string]float64)
-
 var carryBalance = make(map[string]*model.Balance)
+
+func getCarryBalance(coin string) (balance *model.Balance) {
+	carryLock.Lock()
+	defer carryLock.Unlock()
+	return carryBalance[coin]
+}
 
 func checkSetCarrying(value bool) (before bool) {
 	carryLock.Lock()
@@ -42,6 +45,8 @@ func clearCarryBalance() {
 		for true {
 			if !checkSetCarrying(true) {
 				break
+			} else {
+				time.Sleep(time.Millisecond * 200)
 			}
 		}
 		util.Notice(`...... enter clearing carry balance`)
@@ -82,47 +87,6 @@ func clearCarryBalance() {
 	}
 }
 
-func rankCarryScore(market string, amountLimit float64) (symbolHigh, symbolLow string, scoreHigh, scoreLow float64) {
-	scoreMsg := "\n[score list]\n"
-	i := 0
-	for symbol, valueOpen := range carryScoreOpen {
-		i++
-		parts := strings.Split(symbol, `-`)
-		if len(parts) != 2 {
-			continue
-		}
-		coin := parts[0]
-		related := parts[0] + `/USD`
-		_, bidAskPerp := model.AppMarkets.GetBidAsk(symbol, market)
-		_, bidAskRelated := model.AppMarkets.GetBidAsk(related, market)
-		if carryBalance[coin] == nil {
-			scoreMsg += fmt.Sprintf("没有查到账户币种信息：%s \n", coin)
-		}
-		if bidAskPerp == nil || bidAskRelated == nil || carryBalance[coin] == nil {
-			continue
-		}
-		if valueOpen > scoreHigh && bidAskPerp.Bids[0].Price*bidAskPerp.Bids[0].Amount > amountLimit &&
-			bidAskRelated.Asks[0].Price*bidAskRelated.Asks[0].Amount > amountLimit &&
-			carryBalance[coin].UsdValue < UsdUpLine {
-			symbolHigh = symbol
-			scoreHigh = valueOpen
-		}
-		valueClose := carryScoreClose[symbol]
-		if valueClose < scoreLow && bidAskRelated.Bids[0].Price*bidAskRelated.Bids[0].Amount > amountLimit &&
-			bidAskPerp.Asks[0].Price*bidAskPerp.Asks[0].Amount > amountLimit &&
-			carryBalance[coin].UsdValue > -1*UsdUpLine &&
-			bidAskRelated.Bids[0].Amount < carryBalance[coin].Free {
-			symbolLow = symbol
-			scoreLow = valueClose
-		}
-		scoreMsg += fmt.Sprintf("[%d/%d %s] open-close [%f ~ %f] amount limit:%f %s in usd:%f free: [%f]\n",
-			i, len(carryScoreOpen), symbol, valueOpen, valueClose, amountLimit, coin, carryBalance[coin].UsdValue,
-			carryBalance[coin].Free)
-	}
-	model.SetCarryInfo(`[grid]`, scoreMsg)
-	return
-}
-
 // setting.GridPriceDistance: 收回下单是要求的利润(可以为负数)
 var ProcessCarry = func(setting *model.Setting) {
 	if !doCarry {
@@ -138,53 +102,62 @@ var ProcessCarry = func(setting *model.Setting) {
 		model.AppPause || now-int64(tickRelated.Ts) > 50 || now-int64(tickPerp.Ts) > 50 || setting == nil {
 		return
 	}
+	scoreOpen := 1 - tickRelated.Asks[0].Price/tickPerp.Bids[0].Price
+	scoreClose := 1 - tickRelated.Bids[0].Price/tickPerp.Asks[0].Price
+	carryInfo := fmt.Sprintf("limit :%f current: [%s] score range: [%f ~ %f] revert: [%f]\n"+
+		"[open %f close: %f] [available usd: <%f>] holding: %f",
+		model.AppConfig.Amount, setting.Symbol, setting.OpenShortMargin, setting.CloseShortMargin,
+		setting.GridPriceDistance, scoreOpen, scoreClose, usdAvailable, holding)
+	model.SetCarryInfo(`[grid-setting]`, carryInfo)
+	sidePerp, sideRelated, amount := calcCarryOpen(setting, tickPerp, tickRelated, setting.Symbol, setting.Symbol,
+		scoreOpen, scoreClose, scoreOpen, scoreClose)
+	if scoreOpen > 0.01 || scoreClose < -0.01 {
+		before := time.Now().UnixNano() / 1000000
+		util.Notice(fmt.Sprintf(`...... perp: %d related: %d %s`, before-int64(tickPerp.Ts),
+			before-int64(tickRelated.Ts), carryInfo))
+	}
+	if amount > 0 {
+		go placeCarry(setting, tickPerp, tickRelated, sidePerp, sideRelated, scoreOpen, scoreClose, amount)
+	}
+}
+
+func placeCarry(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, sidePerp, sideRelated string,
+	scoreOpen, scoreClose, amount float64) {
 	if !checkSetCarrying(true) {
 		defer checkSetCarrying(false)
 	} else {
+		util.Notice(fmt.Sprintf(`waiting for other ordering %s`, setting.Symbol))
 		return
 	}
-	scoreOpen := 1 - tickRelated.Asks[0].Price/tickPerp.Bids[0].Price
-	scoreClose := 1 - tickRelated.Bids[0].Price/tickPerp.Asks[0].Price
-	carryScoreOpen[setting.Symbol] = scoreOpen
-	carryScoreClose[setting.Symbol] = scoreClose
-	symbolHigh, symbolLow, scoreHigh, scoreLow := rankCarryScore(setting.Market, setting.AmountLimit)
-	carryInfo := fmt.Sprintf("[%d]limit :%f current: [%s] score range: [%f ~ %f] revert: [%f]\n"+
-		"[lowest: %s %f highest:%s %f] [available usd: <%f>] holding: %f",
-		len(carryScoreOpen), model.AppConfig.Amount, setting.Symbol, setting.OpenShortMargin, setting.CloseShortMargin,
-		setting.GridPriceDistance, symbolLow, scoreLow, symbolHigh, scoreHigh, usdAvailable, holding)
-	model.SetCarryInfo(`[grid-setting]`, carryInfo)
-	sidePerp, sideRelated, amount := calcCarryOpen(setting, tickPerp, tickRelated, symbolHigh, symbolLow, scoreOpen,
-		scoreClose, scoreHigh, scoreLow)
-	if amount > 0 {
-		parts := strings.Split(setting.Symbol, `-`)
-		if len(parts) != 2 || carryBalance[parts[0]] == nil {
-			return
-		}
-		util.Notice(fmt.Sprintf(`carry%s->%s with score open:%f close:%f rate sum %f amount %f worth %f`,
-			setting.Symbol, symbolRelated, scoreOpen, scoreClose, 0.0, amount, amount*tickPerp.Asks[0].Price))
-		perpPrice := tickPerp.Asks[0].Price
-		relatedPrice := tickRelated.Bids[0].Price
-		if sidePerp == model.OrderSideSell {
-			perpPrice = tickPerp.Bids[0].Price
-			relatedPrice = tickRelated.Asks[0].Price
-			setting.GridAmount += amount
-			carryBalance[parts[0]].Free += amount
-			usdAvailable -= amount * perpPrice
-		} else if sidePerp == model.OrderSideBuy {
-			perpPrice = tickPerp.Asks[0].Price
-			relatedPrice = tickRelated.Bids[0].Price
-			setting.GridAmount -= amount
-			carryBalance[parts[0]].Free -= amount
-			usdAvailable += amount * relatedPrice
-		}
-		go api.PlaceOrder(``, ``, sidePerp, model.OrderTypeLimit, setting.Market, setting.Symbol,
-			``, ``, ``, ``, model.FunctionCarry, perpPrice, perpPrice,
-			amount, true)
-		go api.PlaceOrder(``, ``, sideRelated, model.OrderTypeLimit, setting.Market, symbolRelated,
-			``, ``, ``, ``, model.FunctionCarry, relatedPrice, relatedPrice,
-			amount, true)
-		time.Sleep(time.Millisecond * 200)
+	symbolRelated := setting.GetRelatedSymbol()
+	balance := getCarryBalance(setting.GetCoin())
+	if balance == nil {
+		return
 	}
+	util.Notice(fmt.Sprintf(`carry%s->%s with score open:%f close:%f rate sum %f amount %f worth %f`,
+		setting.Symbol, symbolRelated, scoreOpen, scoreClose, 0.0, amount, amount*tickPerp.Asks[0].Price))
+	perpPrice := tickPerp.Asks[0].Price
+	relatedPrice := tickRelated.Bids[0].Price
+	if sidePerp == model.OrderSideSell {
+		perpPrice = tickPerp.Bids[0].Price
+		relatedPrice = tickRelated.Asks[0].Price
+		setting.GridAmount += amount
+		balance.Free += amount
+		usdAvailable -= amount * perpPrice
+	} else if sidePerp == model.OrderSideBuy {
+		perpPrice = tickPerp.Asks[0].Price
+		relatedPrice = tickRelated.Bids[0].Price
+		setting.GridAmount -= amount
+		balance.Free -= amount
+		usdAvailable += amount * relatedPrice
+	}
+	go api.PlaceOrder(``, ``, sidePerp, model.OrderTypeLimit, setting.Market, setting.Symbol,
+		``, ``, ``, ``, model.FunctionCarry, perpPrice, perpPrice,
+		amount, true)
+	api.PlaceOrder(``, ``, sideRelated, model.OrderTypeLimit, setting.Market, symbolRelated,
+		``, ``, ``, ``, model.FunctionCarry, relatedPrice, relatedPrice,
+		amount, true)
+	time.Sleep(time.Millisecond * 200)
 }
 
 func getCarryAmounts(setting *model.Setting, balances []*model.Balance) (amountPerp, amountRelated float64) {
@@ -303,20 +276,76 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	amountPerp := api.FormatAmount(setting.Market, setting.Symbol, amount)
 	amountRelated := api.FormatAmount(setting.Market, setting.GetRelatedSymbol(), amount)
 	amount = math.Min(amountPerp, amountRelated)
+	if (sideRelated == model.OrderSideBuy && usdAvailable < line) ||
+		(math.Abs(setting.GridAmount)*tickPerp.Asks[0].Price > setting.AmountLimit &&
+			amount*tickPerp.Asks[0].Price < setting.AmountLimit) {
+		amount = 0
+	}
+	if amount*tickPerp.Asks[0].Price < setting.AmountLimit &&
+		((sidePerp == model.OrderSideBuy && setting.GridAmount < 0) ||
+			(sidePerp == model.OrderSideSell && setting.GridAmount > 0)) {
+		amount = 0
+	}
+	coin := setting.GetCoin()
+	balance := getCarryBalance(coin)
+	if balance == nil || math.Abs(balance.UsdValue) > UsdUpLine ||
+		(sideRelated == model.OrderSideSell && amount > balance.Free) {
+		amount = 0
+	}
 	if amount > 0 {
 		util.Notice(fmt.Sprintf(`>>>> high:%s %f low:%s %f symbl: %s usd available:%f amount：%f`,
 			symbolHigh, scoreHigh, symbolLow, scoreLow, setting.Symbol, usdAvailable, amount))
 	}
-	if (sideRelated == model.OrderSideBuy && usdAvailable < line) ||
-		(math.Abs(setting.GridAmount) > setting.AmountLimit/tickPerp.Asks[0].Price &&
-			amount*tickPerp.Asks[0].Price < setting.AmountLimit) {
-		amount = 0
-	}
-	if amount*tickPerp.Asks[0].Price < setting.AmountLimit {
-		if (sidePerp == model.OrderSideBuy && setting.GridAmount < 0) ||
-			(sidePerp == model.OrderSideSell && setting.GridAmount > 0) {
-			amount = 0
-		}
-	}
 	return sidePerp, sideRelated, amount
 }
+
+//var carryScoreOpen = make(map[string]float64)
+//var carryScoreClose = make(map[string]float64)
+//func setScore(symbol string, open, close float64) {
+//	carryLock.Lock()
+//	defer carryLock.Unlock()
+//	carryScoreOpen[symbol] = open
+//	carryScoreClose[symbol] = close
+//}
+//func rankCarryScore(market string, amountLimit float64) (symbolHigh, symbolLow string, scoreHigh, scoreLow float64) {
+//	carryLock.Lock()
+//	defer carryLock.Unlock()
+//	scoreMsg := "\n[score list]\n"
+//	i := 0
+//	for symbol, valueOpen := range carryScoreOpen {
+//		i++
+//		parts := strings.Split(symbol, `-`)
+//		if len(parts) != 2 {
+//			continue
+//		}
+//		coin := parts[0]
+//		related := parts[0] + `/USD`
+//		_, bidAskPerp := model.AppMarkets.GetBidAsk(symbol, market)
+//		_, bidAskRelated := model.AppMarkets.GetBidAsk(related, market)
+//		if carryBalance[coin] == nil {
+//			scoreMsg += fmt.Sprintf("没有查到账户币种信息：%s \n", coin)
+//		}
+//		if bidAskPerp == nil || bidAskRelated == nil || carryBalance[coin] == nil {
+//			continue
+//		}
+//		if valueOpen > scoreHigh && bidAskPerp.Bids[0].Price*bidAskPerp.Bids[0].Amount > amountLimit &&
+//			bidAskRelated.Asks[0].Price*bidAskRelated.Asks[0].Amount > amountLimit &&
+//			carryBalance[coin].UsdValue < UsdUpLine {
+//			symbolHigh = symbol
+//			scoreHigh = valueOpen
+//		}
+//		valueClose := carryScoreClose[symbol]
+//		if valueClose < scoreLow && bidAskRelated.Bids[0].Price*bidAskRelated.Bids[0].Amount > amountLimit &&
+//			bidAskPerp.Asks[0].Price*bidAskPerp.Asks[0].Amount > amountLimit &&
+//			carryBalance[coin].UsdValue > -1*UsdUpLine &&
+//			bidAskRelated.Bids[0].Amount < carryBalance[coin].Free {
+//			symbolLow = symbol
+//			scoreLow = valueClose
+//		}
+//		scoreMsg += fmt.Sprintf("[%d/%d %s] open-close [%f ~ %f] amount limit:%f %s in usd:%f free: [%f]\n",
+//			i, len(carryScoreOpen), symbol, valueOpen, valueClose, amountLimit, coin, carryBalance[coin].UsdValue,
+//			carryBalance[coin].Free)
+//	}
+//	model.SetCarryInfo(`[grid]`, scoreMsg)
+//	return
+//}

@@ -173,3 +173,14 @@ func (setting *Setting) GetRelatedSymbol() (related string) {
 	}
 	return related
 }
+
+func (setting *Setting) GetCoin() (coin string) {
+	switch setting.Market {
+	case Ftx:
+		parts := strings.Split(setting.Symbol, `-`)
+		if len(parts) == 2 && setting.Function == FunctionCarry {
+			coin = parts[0]
+		}
+	}
+	return coin
+}
