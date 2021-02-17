@@ -144,16 +144,12 @@ func handleDepthFtx(markets *model.Markets, response *simplejson.Json) {
 			priceAmountBid := make(map[float64]*model.Tick)
 			priceAmountAsk := make(map[float64]*model.Tick)
 			for _, bid := range oldBidAsk.Bids {
-				priceAmountBid[bid.Price] = &bid
+				priceAmountBid[bid.Price] = &model.Tick{Price: bid.Price, Amount: bid.Amount}
 			}
 			for _, item := range bids {
 				price, _ := item.([]interface{})[0].(json.Number).Float64()
 				size, _ := item.([]interface{})[1].(json.Number).Float64()
-				if size > 0 {
-					priceAmountBid[price] = &model.Tick{Price: price, Amount: size}
-				} else {
-					delete(priceAmountBid, price)
-				}
+				priceAmountBid[price] = &model.Tick{Price: price, Amount: size}
 			}
 			for _, ask := range oldBidAsk.Asks {
 				priceAmountAsk[ask.Price] = &ask
@@ -161,17 +157,17 @@ func handleDepthFtx(markets *model.Markets, response *simplejson.Json) {
 			for _, item := range asks {
 				price, _ := item.([]interface{})[0].(json.Number).Float64()
 				size, _ := item.([]interface{})[1].(json.Number).Float64()
-				if size > 0 {
-					priceAmountAsk[price] = &model.Tick{Price: price, Amount: size}
-				} else {
-					delete(priceAmountAsk, price)
-				}
+				priceAmountAsk[price] = &model.Tick{Price: price, Amount: size}
 			}
 			for _, tick := range priceAmountBid {
-				bidAsk.Bids = append(bidAsk.Bids, *tick)
+				if tick.Amount > 0 {
+					bidAsk.Bids = append(bidAsk.Bids, *tick)
+				}
 			}
 			for _, tick := range priceAmountAsk {
-				bidAsk.Asks = append(bidAsk.Asks, *tick)
+				if tick.Amount > 0 {
+					bidAsk.Asks = append(bidAsk.Asks, *tick)
+				}
 			}
 		}
 		sort.Sort(bidAsk.Asks)
