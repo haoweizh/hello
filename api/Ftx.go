@@ -137,7 +137,7 @@ func handleDepthFtx(markets *model.Markets, response *simplejson.Json) {
 		} else if dataType == `update` {
 			_, oldBidAsk := markets.GetBidAsk(symbol, model.Ftx)
 			if oldBidAsk == nil {
-				util.Notice(fmt.Sprintf(`fatal: can not have old bidask %s %s`, model.Ftx, symbol))
+				util.SocketInfo(fmt.Sprintf(`fatal: can not have old bidask %s %s`, model.Ftx, symbol))
 				oldBidAsk = &model.BidAsk{Ts: int(data.Get(`time`).MustFloat64() * 1000),
 					Bids: make([]model.Tick, 0), Asks: make([]model.Tick, 0)}
 			}
