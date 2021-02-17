@@ -155,8 +155,11 @@ func placeCarry(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, sid
 		usdAvailable += amount * relatedPrice
 	}
 	before := time.Now().UnixNano() / 1000000
-	util.Notice(fmt.Sprintf(`carry%s->%s delay %d %d with score open:%f close:%f rate sum %f amount %f worth %f`,
-		setting.Symbol, symbolRelated, before-int64(tickPerp.Ts), before-int64(tickRelated.Ts), scoreOpen, scoreClose,
+	util.Notice(fmt.Sprintf(`carry%s->%s delay %d %d perp[%f %f %f %f] related[%f %f %f %f] with score open:%f close:%f 
+	rate sum %f amount %f worth %f`,
+		setting.Symbol, symbolRelated, before-int64(tickPerp.Ts), before-int64(tickRelated.Ts), tickPerp.Bids[0].Price,
+		tickPerp.Bids[0].Amount, tickPerp.Asks[0].Price, tickPerp.Asks[0].Amount, tickRelated.Bids[0].Price,
+		tickRelated.Bids[0].Amount, tickRelated.Asks[0].Price, tickRelated.Asks[0].Amount, scoreOpen, scoreClose,
 		0.0, amount, amount*tickPerp.Asks[0].Price))
 	go api.PlaceOrder(``, ``, sidePerp, model.OrderTypeLimit, setting.Market, setting.Symbol,
 		``, ``, ``, ``, model.FunctionCarry, perpPrice, perpPrice,
