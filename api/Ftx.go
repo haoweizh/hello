@@ -217,8 +217,8 @@ func getCandlesFtx(key, secret, symbol, binSize string, start, end time.Time, co
 				candle.PriceLow, _ = item[`low`].(json.Number).Float64()
 			}
 			if item[`startTime`] != nil {
-				start, _ := time.Parse(time.RFC3339, item[`startTime`].(string))
-				candle.UTCDate = start.Format(time.RFC3339)[0:10]
+				startTime, _ := time.Parse(time.RFC3339, item[`startTime`].(string))
+				candle.UTCDate = startTime.Format(time.RFC3339)[0:10]
 				candles[candle.UTCDate] = candle
 			}
 		}
