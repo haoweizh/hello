@@ -121,11 +121,6 @@ var ProcessCarry = func(setting *model.Setting) {
 	model.SetCarryInfo(`[grid-setting]`, carryInfo)
 	sidePerp, sideRelated, amount := calcCarryOpen(setting, tickPerp, tickRelated, setting.Symbol, setting.Symbol,
 		scoreOpen, scoreClose, scoreOpen, scoreClose)
-	if scoreOpen > 0.01 || scoreClose < -0.01 {
-		before := time.Now().UnixNano() / 1000000
-		util.Notice(fmt.Sprintf(`...... perp: %d related: %d %s`, before-int64(tickPerp.Ts),
-			before-int64(tickRelated.Ts), carryInfo))
-	}
 	if amount > 0 {
 		go placeCarry(setting, tickPerp, tickRelated, sidePerp, sideRelated, scoreOpen, scoreClose, amount)
 	}
@@ -144,8 +139,6 @@ func placeCarry(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, sid
 	if balance == nil {
 		return
 	}
-	util.Notice(fmt.Sprintf(`carry%s->%s with score open:%f close:%f rate sum %f amount %f worth %f`,
-		setting.Symbol, symbolRelated, scoreOpen, scoreClose, 0.0, amount, amount*tickPerp.Asks[0].Price))
 	perpPrice := tickPerp.Asks[0].Price
 	relatedPrice := tickRelated.Bids[0].Price
 	if sidePerp == model.OrderSideSell {
@@ -161,6 +154,10 @@ func placeCarry(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, sid
 		balance.Free -= amount
 		usdAvailable += amount * relatedPrice
 	}
+	before := time.Now().UnixNano() / 1000000
+	util.Notice(fmt.Sprintf(`carry%s->%s delay %d %d with score open:%f close:%f rate sum %f amount %f worth %f`,
+		setting.Symbol, symbolRelated, before-int64(tickPerp.Ts), before-int64(tickRelated.Ts), scoreOpen, scoreClose,
+		0.0, amount, amount*tickPerp.Asks[0].Price))
 	go api.PlaceOrder(``, ``, sidePerp, model.OrderTypeLimit, setting.Market, setting.Symbol,
 		``, ``, ``, ``, model.FunctionCarry, perpPrice, perpPrice,
 		amount, true)
