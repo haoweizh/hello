@@ -118,7 +118,7 @@ func handleDepthFtx(markets *model.Markets, response *simplejson.Json) {
 	symbol := response.Get("market").MustString()
 	dataType := response.Get(`type`).MustString()
 	data := response.Get(`data`)
-	if data != nil {
+	if data.Interface() != nil {
 		bidAsk := &model.BidAsk{Ts: int(data.Get(`time`).MustFloat64() * 1000),
 			Bids: make([]model.Tick, 0), Asks: make([]model.Tick, 0)}
 		bids := data.Get(`bids`).MustArray()
@@ -152,7 +152,8 @@ func handleDepthFtx(markets *model.Markets, response *simplejson.Json) {
 				priceAmountBid[price] = &model.Tick{Price: price, Amount: size}
 			}
 			for _, ask := range oldBidAsk.Asks {
-				priceAmountAsk[ask.Price] = &ask
+				//priceAmountAsk[ask.Price] = &ask
+				priceAmountAsk[ask.Price] = &model.Tick{Price: ask.Price, Amount: ask.Amount}
 			}
 			for _, item := range asks {
 				price, _ := item.([]interface{})[0].(json.Number).Float64()
