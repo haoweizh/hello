@@ -270,8 +270,6 @@ func (markets *Markets) SetBidAsk(symbol, marketName string, bidAsk *BidAsk) boo
 		current := util.GetNow()
 		AppMetric.addTick(marketName, symbol, current, bidAsk)
 		return true
-	} else if last.Ts == bidAsk.Ts {
-		util.Notice(symbol + `same ts`)
 	}
 	return false
 }
