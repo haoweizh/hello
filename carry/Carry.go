@@ -263,26 +263,26 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	scoreOpen, scoreClose, scoreHigh, scoreLow float64) (sidePerp, sideRelated string, amount float64) {
 	var bidAmount, askAmount float64
 	setOpen := setting.OpenShortMargin
-	setClose := setting.CloseShortMargin
+	revert := setting.GridPriceDistance
 	if model.AppConfig.Env == `simon` {
 		setOpen += (1 - usdRate) * 0.03
-		//setClose += usdRate*0.01
-		model.SetCarryInfo(`[dynamic]`, fmt.Sprintf(`%f %f`, setOpen, setClose))
+		revert += usdRate * 0.005
+		model.SetCarryInfo(`[dynamic]`, fmt.Sprintf(`%f %f`, setOpen, -1*setOpen))
 	}
-	if (scoreLow < setClose && setting.Symbol == symbolLow) ||
-		(setting.GridAmount > 0 && scoreClose <= -1*setting.GridPriceDistance) {
+	if (scoreLow < -1*setOpen && setting.Symbol == symbolLow) ||
+		(setting.GridAmount > 0 && scoreClose <= -1*revert) {
 		bidAmount = tickPerp.Asks[0].Amount
 		askAmount = tickRelated.Bids[0].Amount
 		sidePerp = model.OrderSideBuy
 		sideRelated = model.OrderSideSell
 	} else if (scoreHigh > setOpen && setting.Symbol == symbolHigh) ||
-		(setting.GridAmount < 0 && scoreOpen >= setting.GridPriceDistance) {
+		(setting.GridAmount < 0 && scoreOpen >= revert) {
 		bidAmount = tickRelated.Asks[0].Amount
 		askAmount = tickPerp.Bids[0].Amount
 		sidePerp = model.OrderSideSell
 		sideRelated = model.OrderSideBuy
 	}
-	if (setting.Symbol == symbolLow && scoreLow < setClose) ||
+	if (setting.Symbol == symbolLow && scoreLow < -1*setOpen) ||
 		(setting.Symbol == symbolHigh && scoreHigh > setOpen) {
 		amount = math.Min(usdAvailable/tickPerp.Asks[0].Price, math.Min(bidAmount, askAmount))
 	} else {
