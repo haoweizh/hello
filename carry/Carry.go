@@ -118,8 +118,8 @@ var ProcessCarry = func(setting *model.Setting) {
 		lowest = scoreClose
 		symbolLowest = setting.Symbol
 	}
-	carryInfo := fmt.Sprintf("limit :%f [lowest:%s %f][highest: %s %f][available usd: <%f>] holding: %f",
-		model.AppConfig.Amount, symbolLowest, lowest, symbolHighest, highest, usdAvailable, holding)
+	carryInfo := fmt.Sprintf("limit :%f [lowest:%s %f][highest: %s %f][available usd: <%f> %f] holding: %f",
+		model.AppConfig.Amount, symbolLowest, lowest, symbolHighest, highest, usdAvailable, usdRate, holding)
 	model.SetCarryInfo(`[grid-setting]`, carryInfo)
 	model.SetCarryInfo(`[grid] `+setting.Symbol,
 		fmt.Sprintf(`current: [%s] score range: [%f ~ %f] revert: [%f] [open %f close: %f]`,
@@ -262,21 +262,28 @@ func makeEqual(setting *model.Setting, balances []*model.Balance) (symbol string
 func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, symbolHigh, symbolLow string,
 	scoreOpen, scoreClose, scoreHigh, scoreLow float64) (sidePerp, sideRelated string, amount float64) {
 	var bidAmount, askAmount float64
-	if (scoreLow < setting.CloseShortMargin && setting.Symbol == symbolLow) ||
+	setOpen := setting.OpenShortMargin
+	setClose := setting.CloseShortMargin
+	if model.AppConfig.Env == `simon` {
+		setOpen += (1 - usdRate) * 0.03
+		//setClose += usdRate*0.01
+		model.SetCarryInfo(`[dynamic]`, fmt.Sprintf(`%f %f`, setOpen, setClose))
+	}
+	if (scoreLow < setClose && setting.Symbol == symbolLow) ||
 		(setting.GridAmount > 0 && scoreClose <= -1*setting.GridPriceDistance) {
 		bidAmount = tickPerp.Asks[0].Amount
 		askAmount = tickRelated.Bids[0].Amount
 		sidePerp = model.OrderSideBuy
 		sideRelated = model.OrderSideSell
-	} else if (scoreHigh > setting.OpenShortMargin && setting.Symbol == symbolHigh) ||
+	} else if (scoreHigh > setOpen && setting.Symbol == symbolHigh) ||
 		(setting.GridAmount < 0 && scoreOpen >= setting.GridPriceDistance) {
 		bidAmount = tickRelated.Asks[0].Amount
 		askAmount = tickPerp.Bids[0].Amount
 		sidePerp = model.OrderSideSell
 		sideRelated = model.OrderSideBuy
 	}
-	if (setting.Symbol == symbolLow && scoreLow < setting.CloseShortMargin) ||
-		(setting.Symbol == symbolHigh && scoreHigh > setting.OpenShortMargin) {
+	if (setting.Symbol == symbolLow && scoreLow < setClose) ||
+		(setting.Symbol == symbolHigh && scoreHigh > setOpen) {
 		amount = math.Min(usdAvailable/tickPerp.Asks[0].Price, math.Min(bidAmount, askAmount))
 	} else {
 		amount = math.Min(math.Abs(setting.GridAmount), math.Min(bidAmount, askAmount))
