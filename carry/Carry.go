@@ -22,7 +22,7 @@ var holding, usdAvailable float64
 var doCarry = false
 var carryBalance = make(map[string]*model.Balance)
 var symbolHighest, symbolLowest string
-var highest, lowest float64
+var highest, lowest, usdRate float64
 
 func getCarryBalance(coin string) (balance *model.Balance) {
 	carryLock.Lock()
@@ -68,10 +68,12 @@ func clearCarryBalance() {
 			symbols := model.GetMarketSymbols(market)
 			holding = 0
 			valueUsd := 0.0
+			balanceAll := 0.0
 			for _, value := range balances {
 				coin := strings.ToUpper(value.Coin)
 				usdSymbol := coin + `/USD`
 				carryBalance[coin] = value
+				balanceAll += value.UsdValue
 				if coin == `USD` {
 					usdAvailable = value.Available
 				} else if coin == `BTC` || coin == `USDT` || coin == `FTT` {
@@ -81,7 +83,9 @@ func clearCarryBalance() {
 					holding += math.Abs(value.UsdValue)
 				}
 			}
-			util.Notice(fmt.Sprintf(`[carry] usd:%f valuedUsd:%f holding:%f`, usdAvailable, valueUsd, holding))
+			usdRate = usdAvailable / balanceAll
+			util.Notice(fmt.Sprintf(`[carry] usd:%f %f valuedUsd:%f holding:%f`,
+				usdAvailable, usdRate, valueUsd, holding))
 		}
 		util.Notice(`...... exit clearing carry balance`)
 		checkSetCarrying(false)
