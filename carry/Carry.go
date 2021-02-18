@@ -12,7 +12,7 @@ import (
 )
 
 const OrderPriceLimit = 0
-const UsdUpLine = 200000
+const UsdUpLine = 300000
 
 //const FtxTakerFee = 0.0004275
 
@@ -114,11 +114,13 @@ var ProcessCarry = func(setting *model.Setting) {
 		lowest = scoreClose
 		symbolLowest = setting.Symbol
 	}
-	carryInfo := fmt.Sprintf("limit :%f current: [%s] score range: [%f ~ %f] revert: [%f]\n"+
-		"[open %f close: %f][lowest:%s %f][highest: %s %f][available usd: <%f>] holding: %f",
-		model.AppConfig.Amount, setting.Symbol, setting.OpenShortMargin, setting.CloseShortMargin,
-		setting.GridPriceDistance, scoreOpen, scoreClose, symbolLowest, lowest, symbolHighest, highest, usdAvailable, holding)
+	carryInfo := fmt.Sprintf("limit :%f [lowest:%s %f][highest: %s %f][available usd: <%f>] holding: %f",
+		model.AppConfig.Amount, symbolLowest, lowest, symbolHighest, highest, usdAvailable, holding)
 	model.SetCarryInfo(`[grid-setting]`, carryInfo)
+	model.SetCarryInfo(`[grid] `+setting.Symbol,
+		fmt.Sprintf(`current: [%s] score range: [%f ~ %f] revert: [%f] [open %f close: %f]`,
+			setting.Symbol, setting.OpenShortMargin, setting.CloseShortMargin, setting.GridPriceDistance,
+			scoreOpen, scoreClose))
 	sidePerp, sideRelated, amount := calcCarryOpen(setting, tickPerp, tickRelated, setting.Symbol, setting.Symbol,
 		scoreOpen, scoreClose, scoreOpen, scoreClose)
 	if amount > 0 {
