@@ -265,9 +265,9 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	setOpen := setting.OpenShortMargin
 	revert := setting.GridPriceDistance
 	if model.AppConfig.Env == `simon` {
-		setOpen += (1 - usdRate) * 0.03
+		setOpen += (1 - usdRate) * 0.02
 		revert += usdRate * 0.005
-		model.SetCarryInfo(`[dynamic]`, fmt.Sprintf(`%f %f`, setOpen, -1*setOpen))
+		model.SetCarryInfo(`[dynamic]`, fmt.Sprintf(`%f %f %f`, setOpen, -1*setOpen, revert))
 	}
 	if (scoreLow < -1*setOpen && setting.Symbol == symbolLow) ||
 		(setting.GridAmount > 0 && scoreClose <= -1*revert) {
