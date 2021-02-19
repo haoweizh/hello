@@ -98,6 +98,7 @@ var ProcessCarry = func(setting *model.Setting) {
 	if !doCarry {
 		go clearCarryBalance()
 		doCarry = true
+		return
 	}
 	_, tickPerp := model.AppMarkets.GetBidAsk(setting.Symbol, setting.Market)
 	symbolRelated := setting.GetRelatedSymbol()
@@ -246,7 +247,7 @@ func makeEqual(setting *model.Setting, balances []*model.Balance) (symbol string
 			price = tickRelated.Asks[0].Price * (1 + OrderPriceLimit)
 		}
 	}
-	amount = math.Min(amount, 10000/price)
+	amount = math.Min(math.Abs(amount), 20000/price)
 	amount = api.FormatAmount(setting.Market, symbol, math.Abs(amount))
 	if amount > 0 {
 		resultPerp := api.CancelOrders(``, ``, setting.Market, settingSymbol)
@@ -264,10 +265,13 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	var bidAmount, askAmount float64
 	setOpen := setting.OpenShortMargin
 	revert := setting.GridPriceDistance
+	if usdRate == 0 {
+		return ``, ``, 0
+	}
 	if model.AppConfig.Env == `simon` {
 		setOpen += (1 - usdRate) * 0.02
-		revert += usdRate * 0.005
-		model.SetCarryInfo(`[dynamic]`, fmt.Sprintf(`%f %f %f`, setOpen, -1*setOpen, revert))
+		revert += usdRate * 0.01
+		model.SetCarryInfo(`[dynamic]`, fmt.Sprintf(`%f %f %f`, setOpen, usdRate, revert))
 	}
 	if (scoreLow < -1*setOpen && setting.Symbol == symbolLow) ||
 		(setting.GridAmount > 0 && scoreClose <= -1*revert) {
