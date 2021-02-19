@@ -218,10 +218,10 @@ func makeEqual(setting *model.Setting, balances []*model.Balance) (symbol string
 		map[string]interface{}{`grid_amount`: setting.GridAmount})
 	if amount > 0 {
 		orderSide = model.OrderSideSell
-		if tickPerp.Bids[0].Price < 0.99*tickRelated.Bids[0].Price {
+		if tickPerp.Bids[0].Price < 0.97*tickRelated.Bids[0].Price {
 			symbol = symbolRelated
 			price = tickRelated.Bids[0].Price * (1 - OrderPriceLimit)
-		} else if tickPerp.Bids[0].Price > 1.01*tickRelated.Bids[0].Price {
+		} else if tickPerp.Bids[0].Price > 1.03*tickRelated.Bids[0].Price {
 			symbol = settingSymbol
 			price = tickPerp.Bids[0].Price * (1 - OrderPriceLimit)
 		} else if math.Abs(amountPerp) > math.Abs(amountRelated) {
@@ -270,7 +270,7 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	}
 	if model.AppConfig.Env == `simon` {
 		setOpen += (1 - usdRate) * 0.02
-		revert += usdRate * 0.01
+		revert += usdRate * 0.008
 		model.SetCarryInfo(`[dynamic]`, fmt.Sprintf(`%f %f %f`, setOpen, usdRate, revert))
 	}
 	if (scoreLow < -1*setOpen && setting.Symbol == symbolLow) ||
