@@ -241,15 +241,15 @@ func parseBalanceFtx(key string, data map[string]interface{}) (balance *model.Ba
 	if data[`availableWithoutBorrow`] != nil {
 		balance.Available, _ = data[`availableWithoutBorrow`].(json.Number).Float64()
 	}
-	//if data[`total`] != nil {
-	//	balance.Amount, _ = data[`total`].(json.Number).Float64()
-	//}
+	if data[`total`] != nil {
+		balance.Amount, _ = data[`total`].(json.Number).Float64()
+	}
 	if data[`usdValue`] != nil {
 		balance.UsdValue, _ = data[`usdValue`].(json.Number).Float64()
 	}
-	if data[`free`] != nil {
-		balance.Amount, _ = data[`free`].(json.Number).Float64()
-	}
+	//if data[`free`] != nil {
+	//	balance.free, _ = data[`free`].(json.Number).Float64()
+	//}
 	return balance
 }
 
