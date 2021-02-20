@@ -176,9 +176,14 @@ func (setting *Setting) GetRelatedSymbol() (related string) {
 
 func (setting *Setting) GetCoin() (coin string) {
 	switch setting.Market {
-	case Ftx:
+	case Ftx, OKFUTURE: // ftx:BTC-PERP okfuture:btc-usd
 		parts := strings.Split(setting.Symbol, `-`)
-		if len(parts) == 2 && setting.Function == FunctionCarry {
+		if len(parts) == 2 {
+			coin = parts[0]
+		}
+	case HuobiDM: // btc_cq
+		parts := strings.Split(setting.Symbol, `_`)
+		if len(parts) == 2 {
 			coin = parts[0]
 		}
 	}

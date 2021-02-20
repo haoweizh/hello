@@ -48,44 +48,37 @@ func setTurtling(value bool) {
 
 var dataSet = make(map[string]map[string]map[string]*TurtleData) // market - symbol - 2019-12-06 - *turtleData
 
-func calcTurtleAmount(market, symbol string, price, n float64) (amount float64) {
-	switch market {
+func calcTurtleAmount(setting *model.Setting, price, n float64) (amount float64) {
+	switch setting.Market {
 	case model.Bitmex:
-		p := api.GetBtcBalance(``, ``, market)
-		switch symbol {
+		p := api.GetBtcBalance(``, ``, setting.Market)
+		switch setting.Symbol {
 		case `btcusd_p`:
 			amount = 0.02 * p / n * price * price
 		case `ethusd_p`:
 			amount = 20000 * p / n
 		}
 	case model.Ftx:
-		p := api.GetUSDBalance(``, ``, market)
+		p := api.GetUSDBalance(``, ``, setting.Market)
 		amount = 0.01 * p / n
-		switch symbol {
+		switch setting.Symbol {
 		case `BTC-PERP`, `ETH-PERP`, `EOS-PERP`:
 			amount *= 2
-			if symbol == `BTC-PERP` {
+			if setting.Symbol == `BTC-PERP` {
 				amount, _ = util.FormatNum(amount, 4)
 			}
-			if symbol == `ETH-PERP` {
+			if setting.Symbol == `ETH-PERP` {
 				amount, _ = util.FormatNum(amount, 3)
 			}
 		case `HT-PERP`, `OKB-PERP`, `BNB-PERP`, `BTMX-PERP`:
 			amount *= 1
 		}
 	case model.OKFUTURE, model.HuobiDM:
-		api.RefreshAccount(``, ``, market)
-		account := model.AppAccounts.GetAccount(market, symbol)
-		if market == model.HuobiDM {
-			currency := symbol
-			if strings.Contains(symbol, `_`) {
-				currency = symbol[0:strings.Index(symbol, `_`)]
-			}
-			account = model.AppAccounts.GetAccount(market, currency)
-		}
-		if account != nil {
-			p := account.Free * price
-			if strings.Contains(strings.ToLower(symbol), `btc`) {
+		coin := setting.GetCoin()
+		balance := api.GetBalance(``, ``, setting.Market, coin, 0)
+		if balance != nil {
+			p := balance.Amount * price
+			if strings.Contains(strings.ToLower(setting.Symbol), `btc`) {
 				amount = 0.02 * p * price / n / model.OKEXBTCContractFaceValue
 			} else {
 				amount = 0.02 * p * price / n / model.OKEXOtherContractFaceValue
@@ -127,7 +120,7 @@ func GetTurtleData(setting *model.Setting) (turtleData *TurtleData) {
 			orderShort = order
 		}
 	}
-	instrument, isNext := api.GetCurrentInstrument(setting.Market, setting.Symbol)
+	instrument, isNext := api.GetCurrentInstrument(``, ``, setting.Market, setting.Symbol)
 	cross := false
 	if (setting.Market == model.OKFUTURE || setting.Market == model.HuobiDM) && isNext &&
 		((orderShort != nil && orderShort.Instrument != `` && instrument != orderShort.Instrument) ||
@@ -200,7 +193,7 @@ func GetTurtleData(setting *model.Setting) (turtleData *TurtleData) {
 		}
 		if i == 1 {
 			turtleData.n = candle.N
-			turtleData.amount = calcTurtleAmount(setting.Market, setting.Symbol, candle.PriceOpen, turtleData.n)
+			turtleData.amount = calcTurtleAmount(setting, candle.PriceOpen, turtleData.n)
 		}
 	}
 	if turtleData.amount > 0 && turtleData.n > 0 {
@@ -419,7 +412,7 @@ func placeTurtleOrders(turtleData *TurtleData, setting *model.Setting,
 		//util.Notice(fmt.Sprintf(`提前止盈 chance: %f, end1:%f l20:%f`,
 		//	setting.Chance, turtleData.end1, turtleData.lowDays20))
 	}
-	instrument, _ := api.GetCurrentInstrument(setting.Market, setting.Symbol)
+	instrument, _ := api.GetCurrentInstrument(``, ``, setting.Market, setting.Symbol)
 	if turtleData.orderLong == nil && currentN < amountLimit && setting.Chance < amountLimit {
 		orderSide := model.OrderSideBuy
 		typeLong := model.OrderTypeStop

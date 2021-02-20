@@ -99,89 +99,9 @@ func Test_initTurtleN(t *testing.T) {
 	////}
 }
 
-func Test_RefreshAccount(t *testing.T) {
-	model.NewConfig()
-	_ = configor.Load(model.AppConfig, "./config.yml")
-	var err error
-	model.AppDB, err = gorm.Open("postgres", model.AppConfig.DBConnection)
-	if err != nil {
-		util.Notice(err.Error())
-		return
-	}
-	result := api.CancelOrders(model.AppConfig.FtxKey, model.AppConfig.FtxSecret, model.Ftx, `CRV/USD`)
-	fmt.Println(result)
-	order := api.QueryOrderById(model.AppConfig.FtxKey, model.AppConfig.FtxSecret, model.Ftx, `SNX-PERP`, ``, ``, `25933261043`)
-	fmt.Println(order.OrderType)
-	fmt.Println(order.Status)
-	api.RefreshAccount(model.AppConfig.FtxKey, model.AppConfig.FtxSecret, model.Ftx)
-	balances := api.GetBalance(model.AppConfig.FtxKey, model.AppConfig.FtxSecret, model.Ftx, 0)
-	for _, balance := range balances {
-		name := strings.ToUpper(balance.Coin) + `-PERP`
-		account := model.AppAccounts.GetAccount(model.Ftx, name)
-		free := 0.0
-		if account != nil {
-			free = account.Free
-		}
-		fmt.Println(fmt.Sprintf(`%s %f %s %f`, balance.Coin, balance.Amount, name, free))
-	}
-	api.PlaceOrder(model.AppConfig.FtxKey, model.AppConfig.FtxSecret, `buy`, model.OrderTypeMarket,
-		model.Ftx, `BTMX-USD`, ``,
-		``, `reduceOnly`, ``, model.FunctionComplement, 0.0657, 0.0675, 1, true)
-	fmt.Println(order.Status)
-	holding := 0.0
-	for _, value := range balances {
-		//usdSymbol := strings.ToUpper(value.Coin) + `/USD`
-		holding += math.Abs(value.UsdValue)
-		fmt.Println(fmt.Sprintf(`+%f=%f`, value.UsdValue, holding))
-	}
-	fmt.Println(holding)
-	api.InitMarketInfos()
-	//setting := &model.Setting{Market: model.HuobiDM, Symbol: `BTC_CQ`}
-	//carry.GetTurtleData(setting)
-	//api.GetDayCandle(``, ``, model.HuobiDM, `btc_cq`, ``, time.Now())
-	//api.PlaceOrder(model.AppConfig.HuobiKey, model.AppConfig.HuobiSecret, model.OrderSideBuy, model.OrderTypeStop,
-	//	model.HuobiDM, `btc_cq`, `BTC200925`, ``, ``, `5`, model.FunctionTurtle,
-	//	12110.2345, 12100, 1.4, true)
-	order2 := api.QueryOrderById(``, ``, model.Ftx, `DOGE/USD`, ``,
-		model.OrderTypeMarket, `24824776206`)
-	fmt.Println(order2.Status)
-	//order2 := api.QueryOrderById(``, ``, model.OKFUTURE, `btc-usd`, `BTC-USD-210326`,
-	//	model.OrderTypeStop, `6200229905220608`)
-	//api.CancelOrder(model.AppConfig.HuobiKey, model.AppConfig.HuobiSecret, model.HuobiDM, `btc_cq`,
-	//	``, model.OrderTypeStop, "9")
-	//order := api.QueryOrderById(``, ``, model.HuobiDM, `btc_cq`, `BTC200925`, model.OrderTypeStop, `11`)
-	//fmt.Println(order.Status)
-	//fmt.Println(api.GetCurrentInstrument(model.HuobiDM, `btc_cq`))
-	//order1 := api.PlaceOrder(``, ``, model.OrderSideBuy, model.OrderTypeStop, model.OKFUTURE, `btc-usd`,
-	//	`BTC-USD-200626`, ``, model.AccountTypeLever, ``, ``, 9000.4,
-	//	1, false)
-	//fmt.Println(order1.OrderId)
-	//result, _, _, _ := api.CancelOrder(``, ``, model.OKFUTURE, `btc-usd`, `BTC-USD-200925`,
-	//	model.OrderTypeStop, `5264638`)
-	//fmt.Println(result)
-	//fmt.Println(order2.OrderId)
-	//api.RefreshAccount(model.AppConfig.HuobiKey, model.AppConfig.HuobiSecret, model.HuobiDM)
-	//rate, ts := api.GetFundingRate(model.Ftx, `btcusd_p`)
-	//fmt.Println(fmt.Sprintf(`%f %d`, rate, ts))
-	//api.RefreshAccount(``, ``, model.Ftx)
-	//api.CreateSubAccount(model.AppConfig.FtxKey, model.AppConfig.FtxSecret)
-	//order := api.PlaceOrder(model.AppConfig.FtxKey, model.AppConfig.FtxSecret,
-	//	model.OrderSideSell, model.OrderTypeMarket,
-	//	model.Bitmex, `btcusd_p`, ``, ``, ``, ``, 5188,
-	//	1, false)
-	//fmt.Println(order.OrderId)
-	//result, _, _, _ := api.CancelOrder(``, ``, model.Ftx, `htusd_p`, model.OrderTypeStop, "899071")
-	//fmt.Print(result)
-	//api.QueryOrderById("", "", model.Ftx, `htusd_p`, "899071")
-	//api.RefreshAccount(model.AppConfig.OkexKey, model.AppConfig.OkexSecret, model.OKSwap)
-	//api.PlaceOrder(model.AppConfig.OkexKey, model.AppConfig.OkexSecret, model.OrderSideBuy, ``, model.OKSwap,
-	//	`btcusd_p`, ``, ``, ``, 9666, 300, false)
-	//api.QueryOrderById(model.AppConfig.BitmexKey, model.AppConfig.BitmexSecret, model.Bitmex, `ethusd_p`,
-	//	`44202b24-36e5-d07e-bc6d-b717b4f198f1`)
-	//api.CancelOrder(model.AppConfig.BitmexKey, model.AppConfig.BitmexSecret, model.OKSwap, `btcusd_p`, `e7a8248a-ac13-fc5f-245c-496ca7a816b0`)
-}
-
 func Test_wallet(t *testing.T) {
+	str := `sdfsdfsdf`
+	fmt.Println(strings.Split(str, `,`)[0])
 	model.NewConfig()
 	_ = configor.Load(model.AppConfig, "./config.yml")
 	model.AppDB, _ = gorm.Open("postgres", model.AppConfig.DBConnection)
@@ -190,7 +110,7 @@ func Test_wallet(t *testing.T) {
 	api.InitCarryFtx(1)
 	api.GetFundingRate(model.Ftx, `BTC-PERP`)
 	api.RefreshAccount(``, ``, model.Ftx)
-	balances := api.GetBalance(``, ``, model.Ftx, 0)
+	_, balances := api.GetBalances(``, ``, model.Ftx, 0)
 	for _, balance := range balances {
 		if balance.Coin == `USD` {
 			fmt.Println(fmt.Sprintf(`free %f `, balance.Amount))

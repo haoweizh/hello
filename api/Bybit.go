@@ -24,11 +24,11 @@ var subscribeHandlerBybit = func(subscribes []interface{}, subType string) error
 	step := 1
 	expire := util.GetNowUnixMillion() + 1000
 	toBeSign := fmt.Sprintf(`GET/realtime%d`, expire)
-	hash := hmac.New(sha256.New, []byte(model.AppConfig.BybitSecret))
+	keys, secrets := model.AppConfig.GetKeys(model.Bybit)
+	hash := hmac.New(sha256.New, []byte(secrets[0]))
 	hash.Write([]byte(toBeSign))
 	sign := hex.EncodeToString(hash.Sum(nil))
-	authCmd := fmt.Sprintf(`{"op": "auth", "args": ["%s", %d, "%s"]}`,
-		model.AppConfig.BybitKey, expire, sign)
+	authCmd := fmt.Sprintf(`{"op": "auth", "args": ["%s", %d, "%s"]}`, keys[0], expire, sign)
 	if err = sendToWs(model.Bybit, []byte(authCmd)); err != nil {
 		util.SocketInfo("bybit can not auth " + err.Error())
 	}
@@ -278,11 +278,10 @@ func handleAccountBybit(dataJson *simplejson.Json) {
 }
 
 func SignedRequestBybit(key, secret, method, path string, body map[string]interface{}) []byte {
-	if key == `` {
-		key = model.AppConfig.BybitKey
-	}
-	if secret == `` {
-		secret = model.AppConfig.BybitSecret
+	if key == `` || secret == `` {
+		keys, secrets := model.AppConfig.GetKeys(model.Bybit)
+		key = keys[0]
+		secret = secrets[0]
 	}
 	if body == nil {
 		body = make(map[string]interface{})

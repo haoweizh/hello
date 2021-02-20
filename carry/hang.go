@@ -46,8 +46,7 @@ var ProcessHang = func(setting *model.Setting) {
 		}
 	}
 	if util.GetNowUnixMillion()-rank.getCheckTime(setting.Symbol) > 300000 {
-		queryOrders := api.QueryOrders(``, ``, setting.Market, setting.Symbol, ``,
-			model.CarryStatusWorking, setting.AccountType, 0, 0)
+		queryOrders := api.QueryOrders(``, ``, setting.Market, setting.Symbol)
 		for _, queryOrder := range queryOrders {
 			for _, order := range newOrders {
 				if queryOrder.OrderId == order.OrderId {

@@ -99,14 +99,12 @@ func WsDepthServeOkex(markets *model.Markets, errHandler ErrHandler) (chan struc
 		GetWSSubscribes(model.OKEX, model.SubscribeDepth), subscribeHandlerOkex, wsHandler, errHandler)
 }
 
-func getSign(postData *url.Values) string {
-	hash := md5.New()
-	toBeSign, _ := url.QueryUnescape(postData.Encode() + "&secret_key=" + model.AppConfig.OkexSecret)
-	hash.Write([]byte(toBeSign))
-	return strings.ToUpper(hex.EncodeToString(hash.Sum(nil)))
-}
-
-func sendSignRequest(method, path string, postData *url.Values, waitMillionSeconds int64) (response []byte) {
+func sendSignRequest(key, secret, method, path string, postData *url.Values, waitMillionSeconds int64) (response []byte) {
+	if key == `` || secret == `` {
+		keys, secrets := model.AppConfig.GetKeys(model.OKEX)
+		key = keys[0]
+		secret = secrets[0]
+	}
 	if apiLastAccessTime == nil {
 		apiLastAccessTime = make(map[string]*time.Time)
 	}
@@ -121,8 +119,11 @@ func sendSignRequest(method, path string, postData *url.Values, waitMillionSecon
 	if method == `GET` {
 		path += `?` + postData.Encode()
 	} else {
-		postData.Set("api_key", model.AppConfig.OkexKey)
-		postData.Set("sign", getSign(postData))
+		hash := md5.New()
+		toBeSign, _ := url.QueryUnescape(postData.Encode() + "&secret_key=" + secret)
+		hash.Write([]byte(toBeSign))
+		postData.Set("api_key", key)
+		postData.Set("sign", strings.ToUpper(hex.EncodeToString(hash.Sum(nil))))
 	}
 	responseBody, _ := util.HttpRequest(method, path, postData.Encode(), headers, 60)
 	util.SocketInfo(fmt.Sprintf(`[%s] %s returns: %s`, path, postData.Encode(), string(responseBody)))
@@ -131,7 +132,7 @@ func sendSignRequest(method, path string, postData *url.Values, waitMillionSecon
 
 // orderType:  限价单（buy/sell） 市价单（buy_market/sell_market）
 // okex中amount在市价买单中指的是右侧的钱
-func placeOrderOkex(order *model.Order, orderSide, orderType, symbol, price, amount string) {
+func placeOrderOkex(key, secret string, order *model.Order, orderSide, orderType, symbol, price, amount string) {
 	orderParam := ``
 	postData := url.Values{}
 	if orderSide == model.OrderSideBuy && orderType == model.OrderTypeLimit {
@@ -153,7 +154,7 @@ func placeOrderOkex(order *model.Order, orderSide, orderType, symbol, price, amo
 	}
 	postData.Set("symbol", symbol)
 	postData.Set("type", orderParam)
-	responseBody := sendSignRequest(`POST`, model.AppConfig.RestUrls[model.OKEX]+"/trade.do",
+	responseBody := sendSignRequest(key, secret, `POST`, model.AppConfig.RestUrls[model.OKEX]+"/trade.do",
 		&postData, 100)
 	orderJson, err := util.NewJSON(responseBody)
 	if err == nil {
@@ -170,11 +171,11 @@ func placeOrderOkex(order *model.Order, orderSide, orderType, symbol, price, amo
 		symbol, orderSide, orderType, price, amount, order.OrderId, string(responseBody)))
 }
 
-func cancelOrderOkex(symbol string, orderId string) (result bool, errCode, msg string) {
+func cancelOrderOkex(key, secret, symbol string, orderId string) (result bool, errCode, msg string) {
 	postData := url.Values{}
 	postData.Set("order_id", orderId)
 	postData.Set("symbol", symbol)
-	responseBody := sendSignRequest(`POST`, model.AppConfig.RestUrls[model.OKEX]+"/cancel_order.do",
+	responseBody := sendSignRequest(key, secret, `POST`, model.AppConfig.RestUrls[model.OKEX]+"/cancel_order.do",
 		&postData, 100)
 	util.Notice("okex cancel order" + orderId + string(responseBody))
 	orderJson, err := util.NewJSON(responseBody)
@@ -192,11 +193,11 @@ func cancelOrderOkex(symbol string, orderId string) (result bool, errCode, msg s
 	return false, err.Error(), err.Error()
 }
 
-func queryOrderOkex(symbol string, orderId string) (dealAmount, dealPrice float64, status string) {
+func queryOrderOkex(key, secret, symbol string, orderId string) (dealAmount, dealPrice float64, status string) {
 	postData := url.Values{}
 	postData.Set("order_id", orderId)
 	postData.Set("symbol", symbol)
-	responseBody := sendSignRequest(`POST`, model.AppConfig.RestUrls[model.OKEX]+"/order_info.do",
+	responseBody := sendSignRequest(key, secret, `POST`, model.AppConfig.RestUrls[model.OKEX]+"/order_info.do",
 		&postData, 100)
 	orderJson, err := util.NewJSON(responseBody)
 	if err == nil {
@@ -214,9 +215,9 @@ func queryOrderOkex(symbol string, orderId string) (dealAmount, dealPrice float6
 	return dealAmount, dealPrice, status
 }
 
-func getAccountOkex(accounts *model.Accounts) {
+func getAccountOkex(key, secret string, accounts *model.Accounts) {
 	postData := url.Values{}
-	responseBody := sendSignRequest(`POST`, model.AppConfig.RestUrls[model.OKEX]+"/userinfo.do",
+	responseBody := sendSignRequest(key, secret, `POST`, model.AppConfig.RestUrls[model.OKEX]+"/userinfo.do",
 		&postData, 340)
 	balanceJson, err := util.NewJSON(responseBody)
 	if err == nil {
@@ -259,7 +260,7 @@ func getTransferOK(key, secret string) (balances []*model.Balance) {
 		transfers := responseJson.MustArray()
 		for _, transfer := range transfers {
 			data := transfer.(map[string]interface{})
-			balance := parseBalanceOK(data, model.OKEX)
+			balance := parseBalanceOK(key, data, model.OKEX)
 			if balance != nil {
 				balances = append(balances, balance)
 			}
@@ -271,7 +272,7 @@ func getTransferOK(key, secret string) (balances []*model.Balance) {
 		transfers := responseJson.MustArray()
 		for _, transfer := range transfers {
 			data := transfer.(map[string]interface{})
-			balance := parseBalanceOK(data, model.OKEX)
+			balance := parseBalanceOK(key, data, model.OKEX)
 			if balance != nil {
 				balances = append(balances, balance)
 			}
@@ -292,7 +293,7 @@ func getBalanceOKEX(key, secret string) (balances []*model.Balance) {
 			data := item.(map[string]interface{})
 			if data[`currency`] != nil {
 				balance := &model.Balance{
-					AccountId:   model.AppConfig.OkexKey,
+					AccountId:   key,
 					BalanceTime: util.GetNow(),
 					Coin:        strings.ToLower(data[`currency`].(string)),
 					Market:      model.OKEX,
@@ -369,12 +370,12 @@ func _(symbol string) (buy float64, err error) {
 	return model.AppConfig.SymbolPrice[symbol], err
 }
 
-func _(symbol, timeSlot string, size int64) []*model.KLinePoint {
+func _(key, secret, symbol, timeSlot string, size int64) []*model.KLinePoint {
 	postData := url.Values{}
 	postData.Set(`symbol`, symbol)
 	postData.Set(`type`, timeSlot)
 	postData.Set(`size`, strconv.FormatInt(size, 10))
-	responseBody := sendSignRequest(`GET`, model.AppConfig.RestUrls[model.OKEX]+"/kline.do",
+	responseBody := sendSignRequest(key, secret, `GET`, model.AppConfig.RestUrls[model.OKEX]+"/kline.do",
 		&postData, 100)
 	//fmt.Println(string(responseBody))
 	dataJson, _ := util.NewJSON(responseBody)

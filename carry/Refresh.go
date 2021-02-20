@@ -477,8 +477,8 @@ var ProcessRefresh = func(setting *model.Setting) {
 		time.Sleep(time.Second)
 		util.Notice(fmt.Sprintf(`[reset balance]%s %s %s %s`,
 			setting.Market, setting.Symbol, resetCoin, setting.AccountType))
-		api.RefreshCoinAccount(model.KeyDefault, model.SecretDefault, setting.Market, setting.Symbol, resetCoin,
-			setting.AccountType)
+		//api.RefreshCoinAccount(model.KeyDefault, model.SecretDefault, setting.Market, setting.Symbol, resetCoin,
+		//	setting.AccountType)
 		refreshOrders.setNeedReset(setting.Symbol, setting.AccountType, ``)
 		return
 	}

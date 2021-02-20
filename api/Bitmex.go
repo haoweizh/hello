@@ -23,11 +23,11 @@ var subscribeHandlerBitmex = func(subscribes []interface{}, subType string) erro
 	step := 8
 	expire := util.GetNow().Unix() + 5
 	toBeSign := fmt.Sprintf(`GET/realtime%d`, expire)
-	hash := hmac.New(sha256.New, []byte(model.AppConfig.BitmexSecret))
+	keys, secrets := model.AppConfig.GetKeys(model.Bitmex)
+	hash := hmac.New(sha256.New, []byte(secrets[0]))
 	hash.Write([]byte(toBeSign))
 	sign := hex.EncodeToString(hash.Sum(nil))
-	authCmd := fmt.Sprintf(`{"op": "authKeyExpires", "args": ["%s", %d, "%s"]}`,
-		model.AppConfig.BitmexKey, expire, sign)
+	authCmd := fmt.Sprintf(`{"op": "authKeyExpires", "args": ["%s", %d, "%s"]}`, keys[0], expire, sign)
 	if err = sendToWs(model.Bitmex, []byte(authCmd)); err != nil {
 		util.SocketInfo("bitmex can not auth " + err.Error())
 	}
@@ -583,11 +583,10 @@ func handleTrade(markets *model.Markets, action string, data []interface{}) {
 }
 
 func SignedRequestBitmex(key, secret, method, path string, body map[string]interface{}) []byte {
-	if key == `` {
-		key = model.AppConfig.BitmexKey
-	}
-	if secret == `` {
-		secret = model.AppConfig.BitmexSecret
+	if key == `` || secret == `` {
+		keys, secrets := model.AppConfig.GetKeys(model.Binance)
+		key = keys[0]
+		secret = secrets[0]
 	}
 	uri := model.AppConfig.RestUrls[model.Bitmex] + path
 	expire := util.GetNow().Unix() + 5

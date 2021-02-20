@@ -86,12 +86,13 @@ func WsDepthServeCoinpark(markets *model.Markets, errHandler ErrHandler) (chan s
 }
 
 func SignedRequestCoinpark(method, path, cmds string) []byte {
-	hash := hmac.New(md5.New, []byte(model.AppConfig.CoinparkSecret))
+	keys, secrets := model.AppConfig.GetKeys(model.Coinpark)
+	hash := hmac.New(md5.New, []byte(secrets[0]))
 	hash.Write([]byte(cmds))
 	sign := hex.EncodeToString(hash.Sum(nil))
 	postData := &url.Values{}
 	postData.Set("cmds", cmds)
-	postData.Set("apikey", model.AppConfig.CoinparkKey)
+	postData.Set("apikey", keys[0])
 	postData.Set("sign", sign)
 	headers := map[string]string{"Content-Type": "application/x-www-form-urlencoded",
 		"User-Agent": "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/39.0.2171.71 Safari/537.36"}

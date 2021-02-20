@@ -119,8 +119,7 @@ var ProcessRank = func(setting *model.Setting) {
 		}
 	}
 	if util.GetNowUnixMillion()-rank.getCheckTime(setting.Symbol) > 300000 {
-		queryOrders := api.QueryOrders(``, ``, setting.Market, setting.Symbol, ``,
-			model.CarryStatusWorking, setting.AccountType, 0, 0)
+		queryOrders := api.QueryOrders(``, ``, setting.Market, ``)
 		for _, queryOrder := range queryOrders {
 			for _, order := range newOrders {
 				if queryOrder.OrderId == order.OrderId {
@@ -132,8 +131,7 @@ var ProcessRank = func(setting *model.Setting) {
 		newOrders = queryOrders
 		util.Info(fmt.Sprintf(`get working orders from api %s %d`, setting.Symbol, len(newOrders)))
 		rank.setCheckTime(setting.Symbol)
-	} else if !didSmth && model.AppConfig.FcoinKey != `` && model.AppConfig.FcoinSecret != `` &&
-		score.Point > (setting.OpenShortMargin+setting.CloseShortMargin)/2 {
+	} else if !didSmth && score.Point > (setting.OpenShortMargin+setting.CloseShortMargin)/2 {
 		leftFree, rightFree, _, _, _ := getBalance(model.KeyDefault, model.SecretDefault, setting.Market,
 			setting.Symbol, setting.AccountType)
 		if (score.OrderSide == model.OrderSideBuy && rightFree/score.Price > score.Amount) ||
@@ -206,7 +204,7 @@ func calcTrend(tick *model.BidAsk) (trend string) {
 
 func calcHighestScore(setting *model.Setting, tick *model.BidAsk) (scoreBid, scoreAsk *model.Score) {
 	coins := strings.Split(setting.Symbol, `_`)
-	perUsdt, _ := api.GetPrice(``, ``, coins[1]+`_usdt`)
+	perUsdt, _ := api.GetPrice(coins[1] + `_usdt`)
 	rankFt, err := strconv.ParseFloat(setting.FunctionParameter, 64)
 	if err != nil {
 		util.Notice(`rank function parameter err ` + setting.FunctionParameter)
@@ -272,7 +270,7 @@ func calcOrderScore(order *model.Order, setting *model.Setting, tick *model.BidA
 		return &model.Score{Point: 0}
 	}
 	coins := strings.Split(setting.Symbol, `_`)
-	perUsdt, _ := api.GetPrice(``, ``, coins[1]+`_usdt`)
+	perUsdt, _ := api.GetPrice(coins[1] + `_usdt`)
 	rankFt, err := strconv.ParseFloat(setting.FunctionParameter, 64)
 	if err != nil {
 		util.Notice(`rank function parameter err ` + setting.FunctionParameter)

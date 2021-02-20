@@ -176,9 +176,9 @@ func GetCode(c *gin.Context) {
 }
 
 func GetBalance(c *gin.Context) {
-	amount, transfer := api.GetWalletHistoryBitmex(model.AppConfig.BitmexKey, model.AppConfig.BitmexSecret)
+	amount, transfer := api.GetWalletHistoryBitmex(``, ``)
 	msg := fmt.Sprintf("[bitmex]\n%f \n%s\n", amount, transfer)
-	amountBybit, msgBybit := api.GetWalletBybit(model.AppConfig.BybitKey, model.AppConfig.BybitSecret)
+	amountBybit, msgBybit := api.GetWalletBybit(``, ``)
 	msg = fmt.Sprintf("%s\n[bybit] %f \n%s", msg, amountBybit, msgBybit)
 	c.String(http.StatusOK, msg)
 }

@@ -100,7 +100,7 @@ func signBinance(postData *url.Values, secretKey string) {
 // orderType: BUY SELL
 // 注意，binance中amount无论是市价还是限价，都指的是要买入或者卖出的左侧币种，而非右侧的钱,所以在市价买入的时候
 // 要把参数从左侧的币换成右测的钱
-func placeOrderBinance(order *model.Order, orderSide, orderType, symbol, price, amount string) {
+func placeOrderBinance(key, secret string, order *model.Order, orderSide, orderType, symbol, price, amount string) {
 	postData := url.Values{}
 	if orderSide == model.OrderSideBuy {
 		orderSide = `BUY`
@@ -128,8 +128,8 @@ func placeOrderBinance(order *model.Order, orderSide, orderType, symbol, price, 
 	postData.Set("type", orderType)
 	postData.Set("side", orderSide)
 	postData.Set("quantity", amount)
-	signBinance(&postData, model.AppConfig.BinanceSecret)
-	headers := map[string]string{"X-MBX-APIKEY": model.AppConfig.BinanceKey}
+	signBinance(&postData, secret)
+	headers := map[string]string{"X-MBX-APIKEY": key}
 	responseBody, _ := util.HttpRequest("POST",
 		model.AppConfig.RestUrls[model.Binance]+"/api/v3/order?", postData.Encode(), headers, 60)
 	orderJson, err := util.NewJSON(responseBody)
@@ -147,12 +147,12 @@ func placeOrderBinance(order *model.Order, orderSide, orderType, symbol, price, 
 		symbol, orderSide, orderType, price, amount, order.OrderId, string(responseBody)))
 }
 
-func cancelOrderBinance(symbol string, orderId string) (result bool, errCode, msg string) {
+func cancelOrderBinance(key, secret, symbol string, orderId string) (result bool, errCode, msg string) {
 	postData := url.Values{}
 	postData.Set("symbol", strings.ToUpper(strings.Replace(symbol, "_", "", 1)))
 	postData.Set("orderId", orderId)
-	signBinance(&postData, model.AppConfig.BinanceSecret)
-	headers := map[string]string{"X-MBX-APIKEY": model.AppConfig.BinanceKey}
+	signBinance(&postData, secret)
+	headers := map[string]string{"X-MBX-APIKEY": key}
 	requestUrl := model.AppConfig.RestUrls[model.Binance] + "/api/v3/order?" + postData.Encode()
 	responseBody, _ := util.HttpRequest("DELETE", requestUrl, "", headers, 60)
 	util.Notice("binance cancel order" + string(responseBody))
@@ -160,12 +160,12 @@ func cancelOrderBinance(symbol string, orderId string) (result bool, errCode, ms
 	return true, ``, ``
 }
 
-func queryOrderBinance(symbol string, orderId string) (dealAmount, dealPrice float64, status string) {
+func queryOrderBinance(key, secret, symbol string, orderId string) (dealAmount, dealPrice float64, status string) {
 	postData := url.Values{}
 	postData.Set("symbol", strings.ToUpper(strings.Replace(symbol, "_", "", 1)))
 	postData.Set("orderId", orderId)
-	signBinance(&postData, model.AppConfig.BinanceSecret)
-	headers := map[string]string{"X-MBX-APIKEY": model.AppConfig.BinanceKey}
+	signBinance(&postData, secret)
+	headers := map[string]string{"X-MBX-APIKEY": key}
 	requestUrl := model.AppConfig.RestUrls[model.Binance] + "/api/v3/order?" + postData.Encode()
 	responseBody, _ := util.HttpRequest("GET", requestUrl, "", headers, 60)
 	orderJson, err := util.NewJSON(responseBody)
@@ -185,10 +185,10 @@ func queryOrderBinance(symbol string, orderId string) (dealAmount, dealPrice flo
 	return dealAmount, dealPrice, status
 }
 
-func getAccountBinance(accounts *model.Accounts) (success bool) {
+func getAccountBinance(key, secret string, accounts *model.Accounts) (success bool) {
 	postData := url.Values{}
-	signBinance(&postData, model.AppConfig.BinanceSecret)
-	headers := map[string]string{"X-MBX-APIKEY": model.AppConfig.BinanceKey}
+	signBinance(&postData, secret)
+	headers := map[string]string{"X-MBX-APIKEY": key}
 	requestUrl := model.AppConfig.RestUrls[model.Binance] + "/api/v3/account?" + postData.Encode()
 	responseBody, _ := util.HttpRequest("GET", requestUrl, "", headers, 60)
 	balanceJson, _ := util.NewJSON(responseBody)
@@ -209,6 +209,6 @@ func getAccountBinance(accounts *model.Accounts) (success bool) {
 	} else {
 		time.Sleep(time.Second * 2)
 		util.SocketInfo(`fail to refresh accounts binance`)
-		return getAccountBinance(accounts)
+		return getAccountBinance(key, secret, accounts)
 	}
 }

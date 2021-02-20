@@ -189,26 +189,19 @@ func CancelOrder(key, secret, market, symbol, instrument, orderType, orderId str
 	msg = `market not supported ` + market
 	switch market {
 	case model.Huobi:
-		result, errCode, msg = cancelOrderHuobi(orderId)
+		result, errCode, msg = cancelOrderHuobi(key, secret, orderId)
 	case model.HuobiDM:
-		result, errCode, msg = cancelOrderHuobiDM(symbol, orderId)
+		result, errCode, msg = cancelOrderHuobiDM(key, secret, symbol, orderId)
 	case model.OKEX:
-		result, errCode, msg = cancelOrderOkex(symbol, orderId)
+		result, errCode, msg = cancelOrderOkex(key, secret, symbol, orderId)
 	case model.OKFUTURE:
-		result, errCode, msg = cancelOrderOkfuture(instrument, orderId, orderType)
+		result, errCode, msg = cancelOrderOkfuture(key, secret, instrument, orderId, orderType)
 	case model.Binance:
-		result, errCode, msg = cancelOrderBinance(symbol, orderId)
-	case model.Fcoin:
-		result, errCode, msg = cancelOrderFcoin(key, secret, orderId)
+		result, errCode, msg = cancelOrderBinance(key, secret, symbol, orderId)
 	case model.Coinpark:
 		result, errCode, msg = cancelOrderCoinpark(orderId)
 	case model.Bitmex:
 		result, errCode, msg = cancelOrderBitmex(key, secret, orderId)
-	case model.Fmex:
-		result, errCode, msg, order = cancelOrderFmex(key, secret, orderId)
-		if order != nil {
-			order.Symbol = symbol
-		}
 	case model.Bybit:
 		result, errCode, msg, order = cancelOrderBybit(key, secret, symbol, orderId)
 	case model.OKSwap:
@@ -220,26 +213,9 @@ func CancelOrder(key, secret, market, symbol, instrument, orderType, orderId str
 	return result, errCode, msg, order
 }
 
-func QueryOrders(key, secret, market, symbol, instrument, states, accountTypes string, before, after int64) (
+func QueryOrders(key, secret, market, instrument string) (
 	orders []*model.Order) {
 	switch market {
-	case model.Fcoin:
-		orders = make([]*model.Order, 0)
-		if strings.Contains(accountTypes, model.AccountTypeNormal) {
-			normal := queryOrdersFcoin(key, secret, symbol, states, model.AccountTypeNormal, before, after)
-			for _, value := range normal {
-				orders = append(orders, value)
-			}
-		}
-		if strings.Contains(accountTypes, model.AccountTypeLever) {
-			lever := queryOrdersFcoin(key, secret, symbol, states, model.AccountTypeLever, before, after)
-			for _, value := range lever {
-				orders = append(orders, value)
-			}
-		}
-		return orders
-	case model.Fmex:
-		return queryOrdersFmex(key, secret, symbol)
 	case model.OKFUTURE:
 		return queryOrdersOkfuture(key, secret, instrument)
 	default:
@@ -248,7 +224,7 @@ func QueryOrders(key, secret, market, symbol, instrument, states, accountTypes s
 	return nil
 }
 
-func GetCurrentInstrument(market, symbol string) (currentInstrument string, isNext bool) {
+func GetCurrentInstrument(key, secret, market, symbol string) (currentInstrument string, isNext bool) {
 	querySetter := querySetInstrumentsHuobiDM
 	currentType := `quarter`
 	nextType := `bi_quarter`
@@ -264,7 +240,7 @@ func GetCurrentInstrument(market, symbol string) (currentInstrument string, isNe
 		return ``, false
 	}
 	if instruments == nil || instruments[market] == nil || instruments[market][symbol] == nil {
-		querySetter()
+		querySetter(key, secret)
 	}
 	if instruments == nil || instruments[market] == nil || instruments[market][symbol] == nil {
 		util.Notice(fmt.Sprintf(`fatal error: can not get instrument %s %s`, market, symbol))
@@ -285,7 +261,7 @@ func GetCurrentInstrument(market, symbol string) (currentInstrument string, isNe
 	date := time.Date(int(year), time.Month(month), int(day), 0, 0, 0, 0, today.Location())
 	if today.After(date) {
 		util.Notice(`future go cross ` + symbol + date.String())
-		querySetter()
+		querySetter(key, secret)
 	}
 	if days13.Before(date) {
 		return instrument, false
@@ -333,7 +309,7 @@ func GetDayCandle(key, secret, market, symbol, instrument string, timeCandle tim
 	case model.OKFUTURE:
 		candles = getCandlesOkfuture(key, secret, symbol, instrument, `1d`, begin, end)
 	case model.HuobiDM:
-		candles = getCandlesHuobiDM(symbol, `1d`, begin, time.Now())
+		candles = getCandlesHuobiDM(key, secret, symbol, `1d`, begin, time.Now())
 	}
 	for _, value := range candles {
 		c := model.GetCandle(value.Market, value.Symbol, value.Period, value.UTCDate)
@@ -377,7 +353,20 @@ func GetDayCandle(key, secret, market, symbol, instrument string, timeCandle tim
 	return candle
 }
 
-func GetBalance(key, secret, market string, delaySeconds int64) (success bool, balances []*model.Balance) {
+func GetBalance(key, secret, market, coin string, delaySeconds int64) (balance *model.Balance) {
+	success, balances := GetBalances(key, secret, market, delaySeconds)
+	if !success {
+		return
+	}
+	for _, item := range balances {
+		if item.Coin == coin {
+			return item
+		}
+	}
+	return
+}
+
+func GetBalances(key, secret, market string, delaySeconds int64) (success bool, balances []*model.Balance) {
 	now := util.GetNow().Unix()
 	var update int64
 	balances, update = model.GetBalance(market)
@@ -390,9 +379,9 @@ func GetBalance(key, secret, market string, delaySeconds int64) (success bool, b
 	case model.OKEX:
 		balances = getBalanceOKEX(key, secret)
 	case model.OKFUTURE:
-		success, balances = getBalanceOkfuture(model.AppAccounts)
+		success, balances = getBalanceOkfuture(key, secret, model.AppAccounts)
 	case model.HuobiDM:
-		success, balances = getBalanceHuobiDM(model.AppAccounts)
+		success, balances = getBalanceHuobiDM(key, secret, model.AppAccounts)
 	}
 	model.SetBalance(market, balances, now)
 	return
@@ -405,7 +394,7 @@ func GetTransfers(key, secret, market string) (balances []*model.Balance) {
 	case model.OKEX, model.OKSwap, model.OKFUTURE:
 		return getTransferOK(key, secret)
 	case model.Huobi, model.HuobiDM:
-		return getTransferHuobi()
+		return getTransferHuobi(key, secret)
 	}
 	return balances
 }
@@ -486,29 +475,29 @@ func QueryOrderById(key, secret, market, symbol, instrument, orderType, orderId 
 	var status string
 	switch market {
 	case model.Huobi:
-		dealAmount, dealPrice, status = queryOrderHuobi(orderId)
+		dealAmount, dealPrice, status = queryOrderHuobi(key, secret, orderId)
 	case model.HuobiDM:
 		if orderType == model.OrderTypeStop {
-			isWorking := queryOpenTriggerOrderHuobiDM(symbol, orderId)
+			isWorking := queryOpenTriggerOrderHuobiDM(key, secret, symbol, orderId)
 			if isWorking {
 				status = model.CarryStatusWorking
 			} else {
-				relatedOrderId := queryHisTriggerOrderHuobiDM(symbol, orderId)
+				relatedOrderId := queryHisTriggerOrderHuobiDM(key, secret, symbol, orderId)
 				if relatedOrderId == `-1` || relatedOrderId == `` {
 					status = model.CarryStatusFail
 				} else {
-					dealAmount, dealPrice, status = queryOrderHuobiDM(symbol, relatedOrderId)
+					dealAmount, dealPrice, status = queryOrderHuobiDM(key, secret, symbol, relatedOrderId)
 				}
 			}
 		} else {
-			dealAmount, dealPrice, status = queryOrderHuobiDM(symbol, orderId)
+			dealAmount, dealPrice, status = queryOrderHuobiDM(key, secret, symbol, orderId)
 		}
 	case model.OKEX:
-		dealAmount, dealPrice, status = queryOrderOkex(symbol, orderId)
+		dealAmount, dealPrice, status = queryOrderOkex(key, secret, symbol, orderId)
 	case model.OKFUTURE:
-		dealAmount, dealPrice, status = queryOrderOkfuture(instrument, orderType, orderId)
+		dealAmount, dealPrice, status = queryOrderOkfuture(key, secret, instrument, orderType, orderId)
 	case model.Binance:
-		dealAmount, dealPrice, status = queryOrderBinance(symbol, orderId)
+		dealAmount, dealPrice, status = queryOrderBinance(key, secret, symbol, orderId)
 	case model.Coinpark:
 		dealAmount, dealPrice, status = queryOrderCoinpark(orderId)
 	case model.Bybit:
@@ -536,57 +525,6 @@ func QueryOrderById(key, secret, market, symbol, instrument, orderType, orderId 
 		Status: status, Instrument: instrument, OrderType: orderType}
 }
 
-func RefreshCoinAccount(key, secret, setMarket, symbol, setCoin, accountType string) {
-	//util.Notice(fmt.Sprintf(`[RefreshCoinAccount]%s %s %s %s`, setMarket, symbol, setCoin, accountType))
-	switch setMarket {
-	case model.Fcoin:
-		if accountType == model.AccountTypeLever {
-			setMarket = fmt.Sprintf(`%s_%s_%s`, setMarket, model.AccountTypeLever,
-				strings.Replace(symbol, `_`, ``, 1))
-			accounts := getLeverAccountFcoin(key, secret)
-			for market, value := range accounts {
-				if market == setMarket {
-					for coin, account := range value {
-						if coin == setCoin {
-							util.Notice(fmt.Sprintf(`[update single coin]%s %s %s`, setMarket, symbol, setCoin))
-							model.AppAccounts.SetAccount(setMarket, coin, account)
-						}
-					}
-				}
-			}
-		} else if accountType == model.AccountTypeNormal {
-			currencies, fcoinAccounts := getAccountFcoin(key, secret)
-			for i := 0; i < len(currencies); i++ {
-				if currencies[i] == setCoin {
-					util.Notice(fmt.Sprintf(`[update single coin]%s %s %s`, setMarket, symbol, setCoin))
-					model.AppAccounts.SetAccount(setMarket, currencies[i], fcoinAccounts[i])
-				}
-			}
-		}
-	}
-}
-
-//RefreshExclusive
-func _(key, secret, market string, coins map[string]bool) {
-	switch market {
-	case model.Fcoin:
-		accounts := getLeverAccountFcoin(key, secret)
-		for key, value := range accounts {
-			for coin, account := range value {
-				if coins[coin] == false {
-					model.AppAccounts.SetAccount(key, coin, account)
-				}
-			}
-		}
-		currencies, fcoinAccounts := getAccountFcoin(key, secret)
-		for i := 0; i < len(currencies); i++ {
-			if coins[currencies[i]] == false {
-				model.AppAccounts.SetAccount(model.Fcoin, currencies[i], fcoinAccounts[i])
-			}
-		}
-	}
-}
-
 var refreshTime = make(map[string]*time.Time)
 
 func RefreshAccount(key, secret, market string) {
@@ -602,21 +540,21 @@ func RefreshAccount(key, secret, market string) {
 	model.AppAccounts.ClearAccounts(market)
 	switch market {
 	case model.Huobi:
-		getAccountHuobiSpot(model.AppAccounts)
+		getAccountHuobiSpot(key, secret, model.AppAccounts)
 	case model.HuobiDM:
-		getBalanceHuobiDM(model.AppAccounts)
-		getHoldingHuobiDM(model.AppAccounts)
+		getBalanceHuobiDM(key, secret, model.AppAccounts)
+		getHoldingHuobiDM(key, secret, model.AppAccounts)
 	case model.OKEX:
-		getAccountOkex(model.AppAccounts)
+		getAccountOkex(key, secret, model.AppAccounts)
 	case model.OKFUTURE:
-		getBalanceOkfuture(model.AppAccounts)
+		getBalanceOkfuture(key, secret, model.AppAccounts)
 	case model.OKSwap:
 		symbols := model.GetMarketSymbols(model.OKSwap)
 		for symbol := range symbols {
 			getAccountOKSwap(key, secret, symbol, model.AppAccounts)
 		}
 	case model.Binance:
-		getAccountBinance(model.AppAccounts)
+		getAccountBinance(key, secret, model.AppAccounts)
 	case model.Coinpark:
 		getAccountCoinpark(model.AppAccounts)
 	case model.Bitmex:
@@ -728,20 +666,20 @@ func PlaceOrder(key, secret, orderSide, orderType, market, symbol, instrument, a
 	}
 	switch market {
 	case model.Huobi:
-		placeOrderHuobi(order, orderSide, orderType, symbol, strPrice, strAmount)
+		placeOrderHuobi(key, secret, order, orderSide, orderType, symbol, strPrice, strAmount)
 	case model.HuobiDM:
 		account := model.AppAccounts.GetAccount(market, symbol)
 		lever := `5`
 		if account != nil {
 			lever = strconv.FormatInt(account.LeverRate, 10)
 		}
-		placeOrderHuobiDM(order, orderSide, orderType, instrument, symbol, lever, strPrice, strTriggerPrice, strAmount)
+		placeOrderHuobiDM(key, secret, order, orderSide, orderType, instrument, symbol, lever, strPrice, strTriggerPrice, strAmount)
 	case model.OKEX:
-		placeOrderOkex(order, orderSide, orderType, symbol, strPrice, strAmount)
+		placeOrderOkex(key, secret, order, orderSide, orderType, symbol, strPrice, strAmount)
 	case model.OKFUTURE:
-		placeOrderOkfuture(order, orderSide, orderType, symbol, instrument, strPrice, strTriggerPrice, strAmount)
+		placeOrderOkfuture(key, secret, order, orderSide, orderType, symbol, instrument, strPrice, strTriggerPrice, strAmount)
 	case model.Binance:
-		placeOrderBinance(order, orderSide, orderType, symbol, strPrice, strAmount)
+		placeOrderBinance(key, secret, order, orderSide, orderType, symbol, strPrice, strAmount)
 	case model.Coinpark:
 		placeOrderCoinpark(order, orderSide, orderType, symbol, strPrice, strAmount)
 		if order.ErrCode == `4003` {
@@ -788,7 +726,7 @@ func PlaceOrder(key, secret, orderSide, orderType, market, symbol, instrument, a
 	return
 }
 
-func GetPrice(key, secret, symbol string) (buy float64, err error) {
+func GetPrice(symbol string) (buy float64, err error) {
 	if model.AppConfig == nil {
 		model.NewConfig()
 	}
@@ -808,13 +746,7 @@ func GetPrice(key, secret, symbol string) (buy float64, err error) {
 		return price, nil
 	}
 	model.AppConfig.SetUpdatePriceTime(symbol, util.GetNowUnixMillion())
-	if strs[0] == `BIX` || strs[1] == `BIX` || strs[0] == `CP` || strs[1] == `CP` {
-		return getBuyPriceCoinpark(symbol)
-	}
-	if strs[0] == `FT` || strs[1] == `FT` || model.AppConfig.InChina == 1 {
-		return getBuyPriceFcoin(key, secret, symbol)
-	}
-	return getBuyPriceFcoin(key, secret, symbol)
+	return getBuyPriceCoinpark(symbol)
 }
 
 func GetWSSubscribes(market, subType string) []interface{} {
@@ -851,7 +783,7 @@ func GetWSSubscribe(market, symbol, subType string) (subscribe interface{}) {
 		return "ok_sub_spot_" + symbol + "_depth_5"
 	case model.OKFUTURE:
 		// btc-usd futures/ticker:BTC-USD-170310
-		instrument, _ := GetCurrentInstrument(market, symbol)
+		instrument, _ := GetCurrentInstrument(``, ``, market, symbol)
 		return `futures/depth5:` + instrument
 	case model.Binance: // xrp_btc: xrpbtc@depth5
 		if len(symbol) > 4 && symbol[0:4] == `bch_` {

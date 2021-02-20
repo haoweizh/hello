@@ -21,16 +21,16 @@ import (
 //永续合约API
 
 var subscribeHandlerOKSwap = func(subscribes []interface{}, subType string) error {
+	keys, secrets := model.AppConfig.GetKeys(model.OKSwap)
 	var err error = nil
 	step := 5
 	epoch := time.Now().UnixNano() / int64(time.Millisecond)
 	timestamp := fmt.Sprintf(`%d.%d`, epoch/1000, epoch%1000)
 	toBeSign := fmt.Sprintf(`%s%s%s`, timestamp, `GET`, `/users/self/verify`)
-	hash := hmac.New(sha256.New, []byte(model.AppConfig.OkexSecret))
+	hash := hmac.New(sha256.New, []byte(secrets[0]))
 	hash.Write([]byte(toBeSign))
 	sign := base64.StdEncoding.EncodeToString(hash.Sum(nil))
-	authCmd := fmt.Sprintf(`{"op":"login","args":["%s","%s","%s","%s"]}`,
-		model.AppConfig.OkexKey, `OKSwap`, timestamp, sign)
+	authCmd := fmt.Sprintf(`{"op":"login","args":["%s","%s","%s","%s"]}`, keys[0], `OKSwap`, timestamp, sign)
 	if err = sendToWs(model.OKSwap, []byte(authCmd)); err != nil {
 		util.SocketInfo("okswap can not auth " + err.Error())
 	}
@@ -208,11 +208,10 @@ func handleDepthOkSwap(markets *model.Markets, response *simplejson.Json) {
 }
 
 func SignedRequestOKSwap(key, secret, method, path string, body map[string]interface{}) []byte {
-	if key == `` {
-		key = model.AppConfig.OkexKey
-	}
-	if secret == `` {
-		secret = model.AppConfig.OkexSecret
+	if key == `` || secret == `` {
+		keys, secrets := model.AppConfig.GetKeys(model.OKSwap)
+		key = keys[0]
+		secret = secrets[0]
 	}
 	if body == nil {
 		body = make(map[string]interface{})
@@ -227,7 +226,7 @@ func SignedRequestOKSwap(key, secret, method, path string, body map[string]inter
 		toBeSign = toBeSign + string(util.JsonEncodeMapToByte(body))
 		headers["Content-Type"] = "application/json"
 	}
-	hash := hmac.New(sha256.New, []byte(model.AppConfig.OkexSecret))
+	hash := hmac.New(sha256.New, []byte(secret))
 	hash.Write([]byte(toBeSign))
 	sign := base64.StdEncoding.EncodeToString(hash.Sum(nil))
 	headers[`OK-ACCESS-SIGN`] = sign
@@ -424,8 +423,8 @@ func parseTransferAmount(response []byte) (info string) {
 	return
 }
 
-func parseBalanceOK(data map[string]interface{}, market string) (balance *model.Balance) {
-	balance = &model.Balance{AccountId: model.AppConfig.OkexKey, Market: market}
+func parseBalanceOK(key string, data map[string]interface{}, market string) (balance *model.Balance) {
+	balance = &model.Balance{AccountId: key, Market: market}
 	if data[`deposit_id`] != nil {
 		balance.ID = model.OKEX + `_` + data[`deposit_id`].(string)
 		balance.Action = 1

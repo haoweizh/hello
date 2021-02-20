@@ -124,7 +124,7 @@ func MaintainBalance() {
 				balances = append(balances, api.GetTransfers(``, ``, market)...)
 				balanceMaintainDay = util.GetNow()
 			}
-			_, balance := api.GetBalance(``, ``, market, 0)
+			_, balance := api.GetBalances(``, ``, market, 0)
 			balances = append(balances, balance...)
 			for _, item := range balance {
 				key := fmt.Sprintf(`[balance]%s_%s`, item.Market, item.Coin)

@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/jinzhu/configor"
 	"github.com/jinzhu/gorm"
-	"github.com/pkg/errors"
 	"hello/util"
 	"strings"
 	"sync"
@@ -41,7 +40,6 @@ const Coinbig = "coinbig"
 const Coinpark = "coinpark"
 const Btcdo = `btcdo`
 const Bitmex = `bitmex`
-const AccountTypeNormal = ``
 const AccountTypeLever = `lever`
 const AccountTypeReduce = `reduceOnly`
 const SubscribeDepth = `SubscribeDepth`
@@ -84,50 +82,6 @@ var AppAccounts = NewAccounts()
 var HuobiAccountIds = make(map[string]string)
 var AppPause = false
 
-type Config struct {
-	lock            sync.Mutex
-	Channels        int
-	InChina         int // 1 in china, otherwise outter china
-	RefreshTimeSlot int
-	Between         int64
-	ChannelSlot     float64
-	Delay           float64
-	PreDealDis      float64
-	AmountRate      float64 // 刷单填写数量比率
-	BinanceOrderDis float64
-	Amount          float64
-	WSUrls          map[string]string // marketName - ws url
-	RestUrls        map[string]string // marketName - rest url
-	DBConnection    string
-	Env             string
-	HuobiKey        string
-	HuobiSecret     string
-	OkexKey         string
-	OkexSecret      string
-	FtxKey          string
-	FtxSecret       string
-	BinanceKey      string
-	BinanceSecret   string
-	CoinbigKey      string
-	CoinbigSecret   string
-	CoinparkKey     string
-	CoinparkSecret  string
-	BitmexKey       string
-	BitmexSecret    string
-	BybitKey        string
-	BybitSecret     string
-	FcoinKey        string
-	FcoinSecret     string
-	Phase           string
-	Handle          string // 0 不执行处理程序，1执行处理程序
-	Mail            string
-	FromMail        string
-	FromMailAuth    string
-	Port            string
-	SymbolPrice     map[string]float64 // symbol - price
-	UpdatePriceTime map[string]int64   // symbol -time
-}
-
 func GetDialectSymbol(market, symbol string) (dialectSymbol string) {
 	switch market {
 	case Bitmex:
@@ -160,21 +114,6 @@ func GetStandardSymbol(market, symbol string) (standardSymbol string) {
 		}
 	}
 	return standardSymbol
-}
-
-var dictMap = map[string]map[string]string{ // market - union name - market name
-	Fcoin: {
-		OrderTypeLimit:  `limit`,
-		OrderTypeMarket: `market`,
-		OrderSideBuy:    `buy`,
-		OrderSideSell:   `sell`,
-	},
-	Fmex: {
-		OrderTypeLimit:  `limit`,
-		OrderTypeMarket: `market`,
-		OrderSideBuy:    `long`,
-		OrderSideSell:   `short`,
-	},
 }
 
 var orderStatusMap = map[string]map[string]string{ // market - market status - united status
@@ -355,41 +294,6 @@ func SetCandle(market, symbol, period, utcDate string, candle *Candle) {
 	candles[key] = candle
 }
 
-func GetOrderStatusRevert(market, status string) (combinedStatus string, err error) {
-	combinedStatus = ``
-	if orderStatusMap[market] == nil {
-		return ``, errors.New(`no market ` + market)
-	}
-	for key, value := range orderStatusMap[market] {
-		if value == status {
-			if combinedStatus != `` {
-				combinedStatus += `,`
-			}
-			combinedStatus += key
-		}
-	}
-	return combinedStatus, nil
-}
-
-func GetDictMapRevert(market, marketWord string) (uninoWord string) {
-	if dictMap[market] == nil {
-		return ``
-	}
-	for key, value := range dictMap[market] {
-		if value == marketWord {
-			return key
-		}
-	}
-	return ``
-}
-
-func GetDictMap(market, unionWord string) (marketWord string) {
-	if dictMap[market] == nil {
-		return ``
-	}
-	return dictMap[market][unionWord]
-}
-
 func GetOrderStatus(market, marketStatus string) (status string) {
 	if orderStatusMap[market] == nil {
 		return CarryStatusWorking
@@ -522,18 +426,6 @@ func NewConfig() {
 	AppConfig.RestUrls[Ftx] = `https://ftx.com/api`
 	AppConfig.SymbolPrice = make(map[string]float64)
 	AppConfig.UpdatePriceTime = make(map[string]int64)
-}
-
-func (config *Config) SetSymbolPrice(symbol string, price float64) {
-	config.lock.Lock()
-	defer config.lock.Unlock()
-	config.SymbolPrice[symbol] = price
-}
-
-func (config *Config) SetUpdatePriceTime(symbol string, updateTime int64) {
-	config.lock.Lock()
-	defer config.lock.Unlock()
-	config.UpdatePriceTime[symbol] = updateTime
 }
 
 func GetMarketYesterday(market string) (yesterday time.Time, strYesterday string) {

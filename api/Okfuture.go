@@ -122,8 +122,8 @@ func depthHandlerOkFuture(markets *model.Markets, data map[string]interface{}) {
 	}
 }
 
-func querySetInstrumentsOkFuture() {
-	responseBody := SignedRequestOKSwap(model.AppConfig.OkexKey, model.AppConfig.OkexSecret, `GET`,
+func querySetInstrumentsOkFuture(key, secret string) {
+	responseBody := SignedRequestOKSwap(key, secret, `GET`,
 		`/api/futures/v3/instruments`, nil)
 	instrumentJson, err := util.NewJSON(responseBody)
 	if err == nil {
@@ -138,14 +138,22 @@ func querySetInstrumentsOkFuture() {
 	}
 }
 
-func parseAccountOkfuture(account *model.Account, data map[string]interface{}) (balance *model.Balance) {
+func parseAccountOkfuture(key string, account *model.Account, data map[string]interface{}) (balance *model.Balance) {
 	if data[`currency`] == nil {
 		return
+	}
+	balance = &model.Balance{
+		AccountId:   key,
+		Action:      0,
+		BalanceTime: util.GetNow(),
+		Market:      model.OKFUTURE,
+		ID:          model.OKFUTURE + `_` + account.Currency + `_` + util.GetNow().String()[0:10],
 	}
 	account.Currency = strings.ToLower(data[`currency`].(string))
 	// 账户权益
 	if data[`equity`] != nil {
 		account.Free, _ = strconv.ParseFloat(data[`equity`].(string), 64)
+		balance.Amount, _ = strconv.ParseFloat(data[`equity`].(string), 64)
 	}
 	if data[`margin`] != nil {
 		account.Margin, _ = strconv.ParseFloat(data[`margin`].(string), 64)
@@ -159,60 +167,50 @@ func parseAccountOkfuture(account *model.Account, data map[string]interface{}) (
 	if data[`underlying`] != nil {
 		account.Currency = strings.ToLower(data[`underlying`].(string))
 	}
-	balance = &model.Balance{
-		AccountId:   model.AppConfig.OkexKey,
-		Action:      0,
-		Amount:      account.Free,
-		BalanceTime: util.GetNow(),
-		Coin:        account.Currency,
-		Market:      model.OKFUTURE,
-		ID:          model.OKFUTURE + `_` + account.Currency + `_` + util.GetNow().String()[0:10],
-	}
 	if data[`currency`] != nil {
 		balance.Coin = strings.ToLower(data[`currency`].(string))
 	}
 	return balance
 }
 
-func getBalanceOkfuture(accounts *model.Accounts) (success bool, balances []*model.Balance) {
+func getBalanceOkfuture(key, secret string, accounts *model.Accounts) (success bool, balances []*model.Balance) {
 	responseBody := SignedRequestOKSwap(``, ``, `GET`, "/api/futures/v3/accounts", nil)
 	util.SocketInfo(`get okfuture balance: ` + string(responseBody))
 	accountJson, err := util.NewJSON(responseBody)
 	if err != nil || accountJson == nil || accountJson.Get(`info`) == nil {
 		util.SocketInfo(`fail to get refresh accounts okfuture`)
 		time.Sleep(time.Second * 2)
-		return getBalanceOkfuture(accounts)
+		return getBalanceOkfuture(key, secret, accounts)
 	}
 	balances = make([]*model.Balance, 0)
 	items := accountJson.Get(`info`).MustMap()
-	for key, value := range items {
-		account := accounts.GetAccount(model.OKFUTURE, key)
+	for i, value := range items {
+		account := accounts.GetAccount(model.OKFUTURE, i)
 		if account == nil {
 			account = &model.Account{Market: model.OKFUTURE, Ts: util.GetNowUnixMillion()}
 		}
 		data := value.(map[string]interface{})
-		balance := parseAccountOkfuture(account, data)
+		balance := parseAccountOkfuture(key, account, data)
 		if balance != nil {
 			balances = append(balances, balance)
 		}
-		instrument, _ := GetCurrentInstrument(model.OKFUTURE, account.Currency)
-		holding := getHoldingOkfuture(instrument)
-		account.Holding = holding
+		instrument, _ := GetCurrentInstrument(key, secret, model.OKFUTURE, account.Currency)
+		long, short := getHoldingOkfuture(key, secret, instrument)
+		account.Free = long - short
 		accounts.SetAccount(model.OKFUTURE, account.Currency, account)
 	}
 	return true, balances
 }
 
-func getHoldingOkfuture(instrument string) (amount float64) {
-	long := 0.0
-	short := 0.0
-	responseBody := SignedRequestOKSwap(``, ``, `GET`,
+func getHoldingOkfuture(key, secret, instrument string) (long, short float64) {
+	responseBody := SignedRequestOKSwap(key, secret, `GET`,
 		fmt.Sprintf(`/api/futures/v3/%s/position`, instrument), nil)
 	accountJson, err := util.NewJSON(responseBody)
 	if err != nil {
 		util.Notice(`fail to get okfuture holding ` + err.Error())
 		return
 	}
+	util.SocketInfo(fmt.Sprintf(`okfuture get holding return: %s`, string(responseBody)))
 	holdingArray := accountJson.Get(`holding`).MustArray()
 	for _, value := range holdingArray {
 		holding := value.(map[string]interface{})
@@ -227,13 +225,13 @@ func getHoldingOkfuture(instrument string) (amount float64) {
 		}
 	}
 	util.SocketInfo(fmt.Sprintf(`get okfuture %s holding %f`, instrument, long-short))
-	return long - short
+	return long, short
 }
 
 // orderSide:  1:开多 2:开空 3:平多 4:平空
 // orderType: 是否为对手价 0:不是 1:是
 // price == `0` 市价单， != `0` 限价单
-func placeOrderOkfuture(order *model.Order, orderSide, orderType, symbol, instrument, price, triggerPrice, size string) {
+func placeOrderOkfuture(key, secret string, order *model.Order, orderSide, orderType, symbol, instrument, price, triggerPrice, size string) {
 	switch orderSide {
 	case model.OrderSideBuy:
 		orderSide = `1`
@@ -241,29 +239,23 @@ func placeOrderOkfuture(order *model.Order, orderSide, orderType, symbol, instru
 		orderSide = `2`
 	case model.OrderSideLiquidateLong:
 		orderSide = `3`
-		holding := getHoldingOkfuture(instrument)
+		long, _ := getHoldingOkfuture(key, secret, instrument)
 		sizeFloat, _ := strconv.ParseFloat(size, 64)
-		if holding < sizeFloat {
-			util.Notice(fmt.Sprintf(`holding okfuture size %s to %f`, size, holding))
-			if holding > 0 {
-				_, strAmount := util.FormatNum(holding, GetAmountDecimal(model.OKFUTURE, symbol))
-				size = strAmount
-			} else {
-				size = `0`
-			}
+		if long < sizeFloat {
+			order.Amount = long
+			util.Notice(fmt.Sprintf(`holding okfuture size %s long: %f`, size, long))
+			_, strAmount := util.FormatNum(long, GetAmountDecimal(model.OKFUTURE, symbol))
+			size = strAmount
 		}
 	case model.OrderSideLiquidateShort:
 		orderSide = `4`
-		holding := math.Abs(getHoldingOkfuture(instrument))
+		_, short := getHoldingOkfuture(key, secret, instrument)
 		sizeFloat, _ := strconv.ParseFloat(size, 64)
-		if holding < sizeFloat {
-			util.Notice(fmt.Sprintf(`holding okfuture size %s to %f`, size, holding))
-			if holding > 0 {
-				_, strAmount := util.FormatNum(holding, GetAmountDecimal(model.OKFUTURE, symbol))
-				size = strAmount
-			} else {
-				holding = 0
-			}
+		if math.Abs(short) < sizeFloat {
+			order.Amount = short
+			util.Notice(fmt.Sprintf(`holding okfuture size %s to %f`, size, short))
+			_, strAmount := util.FormatNum(math.Abs(short), GetAmountDecimal(model.OKFUTURE, symbol))
+			size = strAmount
 		}
 	default:
 		util.Notice(`wrong order side for placeOrderOkfuture ` + orderSide)
@@ -296,7 +288,7 @@ func placeOrderOkfuture(order *model.Order, orderSide, orderType, symbol, instru
 		util.Notice(`wrong order type for placeOrderOkfuture ` + orderType)
 		return
 	}
-	responseBody := SignedRequestOKSwap(model.AppConfig.OkexKey, model.AppConfig.OkexSecret, http.MethodPost,
+	responseBody := SignedRequestOKSwap(key, secret, http.MethodPost,
 		`/api/futures/v3/`+algo, postData)
 	resultJson, err := util.NewJSON(responseBody)
 	if err == nil {
@@ -328,7 +320,7 @@ func queryOrdersOkfuture(key, secret, instrument string) (orders []*model.Order)
 		if id == `` {
 			continue
 		}
-		result, code, msg := cancelOrderOkfuture(instrument, id, model.OrderTypeStop)
+		result, code, msg := cancelOrderOkfuture(key, secret, instrument, id, model.OrderTypeStop)
 		util.SocketInfo(fmt.Sprintf(`queryOrdersOkfuture cancel algo id %v %s %s`, result, code, msg))
 		time.Sleep(time.Second)
 	}
@@ -336,12 +328,12 @@ func queryOrdersOkfuture(key, secret, instrument string) (orders []*model.Order)
 }
 
 //status: 订单状态(0等待成交 1部分成交 2全部成交 -1撤单 4撤单处理中 5撤单中)
-func queryOrderOkfuture(instrument, orderType, orderId string) (dealAmount, dealPrice float64, status string) {
+func queryOrderOkfuture(key, secret, instrument, orderType, orderId string) (dealAmount, dealPrice float64, status string) {
 	if orderType == model.OrderTypeStop {
 		param := url.Values{}
 		param.Set(`order_type`, `1`)
 		param.Set(`algo_id`, orderId)
-		responseBody := SignedRequestOKSwap(``, ``, `GET`,
+		responseBody := SignedRequestOKSwap(key, secret, `GET`,
 			fmt.Sprintf(`/api/futures/v3/order_algo/%s?%s`, instrument, param.Encode()), nil)
 		orderJson, err := util.NewJSON(responseBody)
 		if err != nil {
@@ -368,7 +360,7 @@ func queryOrderOkfuture(instrument, orderType, orderId string) (dealAmount, deal
 					}
 				}
 				if data[`order_id`] != nil && status == model.CarryStatusSuccess {
-					return queryOrderOkfuture(instrument, model.OrderTypeLimit, data[`order_id`].(string))
+					return queryOrderOkfuture(key, secret, instrument, model.OrderTypeLimit, data[`order_id`].(string))
 				}
 			}
 		}
@@ -396,7 +388,7 @@ func queryOrderOkfuture(instrument, orderType, orderId string) (dealAmount, deal
 	return
 }
 
-func cancelOrderOkfuture(instrument string, orderId string, orderType string) (result bool, errCode, msg string) {
+func cancelOrderOkfuture(key, secret, instrument string, orderId string, orderType string) (result bool, errCode, msg string) {
 	var responseBody []byte
 	if orderType == model.OrderTypeStop {
 		postData := make(map[string]interface{})
@@ -407,7 +399,7 @@ func cancelOrderOkfuture(instrument string, orderId string, orderType string) (r
 		responseBody = SignedRequestOKSwap(``, ``, `POST`,
 			`/api/futures/v3/cancel_algos`, postData)
 	} else {
-		responseBody = SignedRequestOKSwap(``, ``, `POST`,
+		responseBody = SignedRequestOKSwap(key, secret, `POST`,
 			fmt.Sprintf(`/api/futures/v3/cancel_order/%s/%s`, instrument, orderId), nil)
 	}
 	util.SocketInfo(string(responseBody))
