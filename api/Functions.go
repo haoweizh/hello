@@ -527,6 +527,14 @@ func QueryOrderById(key, secret, market, symbol, instrument, orderType, orderId 
 
 var refreshTime = make(map[string]*time.Time)
 
+func GetAccounts(key, secret, market string) (success bool, accounts []*model.Account) {
+	switch market {
+	case model.Ftx:
+		return getAccountsFtx(key, secret)
+	}
+	return false, nil
+}
+
 func RefreshAccount(key, secret, market string) {
 	util.SocketInfo(`refresh all accounts in market ` + market)
 	duration, _ := time.ParseDuration(`-10s`)
