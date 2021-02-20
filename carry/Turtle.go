@@ -75,7 +75,7 @@ func calcTurtleAmount(setting *model.Setting, price, n float64) (amount float64)
 		}
 	case model.OKFUTURE, model.HuobiDM:
 		coin := setting.GetCoin()
-		balance := api.GetBalance(``, ``, setting.Market, coin, 0)
+		balance := api.GetBalance(``, ``, setting.Market, coin, 60)
 		if balance != nil {
 			p := balance.Amount * price
 			if strings.Contains(strings.ToLower(setting.Symbol), `btc`) {
@@ -84,6 +84,8 @@ func calcTurtleAmount(setting *model.Setting, price, n float64) (amount float64)
 				amount = 0.02 * p * price / n / model.OKEXOtherContractFaceValue
 			}
 			util.Notice(fmt.Sprintf(`%s get %f`, coin, balance.Amount))
+		} else {
+			util.Notice(fmt.Sprintf(`%s can not get balance`, coin))
 		}
 	}
 	return amount
