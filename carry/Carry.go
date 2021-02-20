@@ -187,20 +187,21 @@ func placeCarry(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, key
 	}
 }
 
-func getCarryAmounts(setting *model.Setting, balances []*model.Balance) (amountPerp, amountRelated float64) {
+func getCarryAmounts(setting *model.Setting, balances []*model.Balance) (success bool, amountPerp, amountRelated float64) {
 	account := model.AppAccounts.GetAccount(setting.Market, setting.Symbol)
 	if account == nil || account.Currency == `` || !strings.Contains(account.Currency, `-`) {
-		amountPerp = 0
+		return false, 0, 0
 	} else {
 		amountPerp = account.Free
 		for _, balance := range balances {
 			if strings.ToUpper(balance.Coin)+`-PERP` == strings.ToUpper(account.Currency) {
 				amountRelated = balance.Amount
+				success = true
 				break
 			}
 		}
 	}
-	return amountPerp, amountRelated
+	return success, amountPerp, amountRelated
 }
 
 func makeEqual(key, secret string, setting *model.Setting, balances []*model.Balance) (
@@ -212,7 +213,10 @@ func makeEqual(key, secret string, setting *model.Setting, balances []*model.Bal
 	if tickPerp == nil || tickRelated == nil {
 		return ``, 0, true
 	}
-	amountPerp, amountRelated := getCarryAmounts(setting, balances)
+	success, amountPerp, amountRelated := getCarryAmounts(setting, balances)
+	if !success {
+		return
+	}
 	amount := amountPerp + amountRelated
 	orderSide := model.OrderSideBuy
 	if amount < math.Max(math.Abs(amountPerp), math.Abs(amountRelated)) {
