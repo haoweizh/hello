@@ -645,7 +645,7 @@ func PlaceOrder(key, secret, orderSide, orderType, market, symbol, instrument, a
 	}
 	order = &model.Order{OrderSide: markSide, OrderType: orderType, Market: market, Symbol: symbol, Price: price,
 		Amount: amount, DealAmount: 0, DealPrice: price, RefreshType: refreshType, TriggerPrice: triggerPrice,
-		OrderTime: util.GetNow(), UnfilledQuantity: amount, Instrument: instrument}
+		OrderTime: util.GetNow(), UnfilledQuantity: amount, Instrument: instrument, AmountType: key}
 	if market == model.OKSwap {
 		amount = amount / 100
 	}
