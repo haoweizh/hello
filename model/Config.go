@@ -21,22 +21,20 @@ type Config struct {
 	RestUrls        map[string]string // marketName - rest url
 	DBConnection    string
 	Env             string
-	huobiKey        string
-	huobiSecret     string
-	okexKey         string
-	okexSecret      string
-	ftxKey          string
-	ftxSecret       string
-	binanceKey      string
-	binanceSecret   string
-	coinbigKey      string
-	coinbigSecret   string
-	coinparkKey     string
-	coinparkSecret  string
-	bitmexKey       string
-	bitmexSecret    string
-	bybitKey        string
-	bybitSecret     string
+	HuobiKey        string
+	HuobiSecret     string
+	OkexKey         string
+	OkexSecret      string
+	FtxKey          string
+	FtxSecret       string
+	BinanceKey      string
+	BinanceSecret   string
+	CoinparkKey     string
+	CoinparkSecret  string
+	BitmexKey       string
+	BitmexSecret    string
+	BybitKey        string
+	BybitSecret     string
 	Phase           string
 	Handle          string // 0 不执行处理程序，1执行处理程序
 	Mail            string
@@ -64,21 +62,19 @@ func (config *Config) GetKeys(market string) (keys, secrets []string) {
 	defer config.lock.Unlock()
 	switch market {
 	case Ftx:
-		return strings.Split(config.ftxKey, `,`), strings.Split(config.ftxSecret, `,`)
+		return strings.Split(config.FtxKey, `,`), strings.Split(config.FtxSecret, `,`)
 	case Huobi, HuobiDM:
-		return strings.Split(config.huobiKey, `,`), strings.Split(config.huobiSecret, `,`)
+		return strings.Split(config.HuobiKey, `,`), strings.Split(config.HuobiSecret, `,`)
 	case OKEX, OKFUTURE, OKSwap:
-		return strings.Split(config.okexKey, `,`), strings.Split(config.okexSecret, `,`)
+		return strings.Split(config.OkexKey, `,`), strings.Split(config.OkexSecret, `,`)
 	case Binance:
-		return strings.Split(config.binanceKey, `,`), strings.Split(config.binanceSecret, `,`)
-	case Coinbig:
-		return strings.Split(config.coinbigKey, `,`), strings.Split(config.coinbigSecret, `,`)
+		return strings.Split(config.BinanceKey, `,`), strings.Split(config.BinanceSecret, `,`)
 	case Coinpark:
-		return strings.Split(config.coinparkKey, `,`), strings.Split(config.coinparkSecret, `,`)
+		return strings.Split(config.CoinparkKey, `,`), strings.Split(config.CoinparkSecret, `,`)
 	case Bitmex:
-		return strings.Split(config.bitmexKey, `,`), strings.Split(config.bitmexSecret, `,`)
+		return strings.Split(config.BitmexKey, `,`), strings.Split(config.BitmexSecret, `,`)
 	case Bybit:
-		return strings.Split(config.bybitKey, `,`), strings.Split(config.bybitSecret, `,`)
+		return strings.Split(config.BybitKey, `,`), strings.Split(config.BybitSecret, `,`)
 	}
 	return nil, nil
 }

@@ -820,13 +820,6 @@ func GetWSSubscribe(market, symbol, subType string) (subscribe interface{}) {
 		} else if subType == model.SubscribeTicker {
 			return []string{`ticker`, symbol}
 		}
-	case model.Coinbig:
-		switch symbol {
-		case `btc_usdt`:
-			return `27`
-		case `eth_usdt`:
-			return `28`
-		}
 	}
 	return ""
 }

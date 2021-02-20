@@ -36,7 +36,6 @@ const Binance = "binance"
 const Fcoin = "fcoin"
 const Fmex = `fmex`
 const Ftx = `ftx`
-const Coinbig = "coinbig"
 const Coinpark = "coinpark"
 const Btcdo = `btcdo`
 const Bitmex = `bitmex`
@@ -185,14 +184,6 @@ var orderStatusMap = map[string]map[string]string{ // market - market status - u
 		`4`: CarryStatusSuccess, //部分撤销
 		`5`: CarryStatusFail,    //完全撤销
 		`6`: CarryStatusWorking, //待撤销
-	},
-	Coinbig: {
-		`1`: CarryStatusWorking, //未成交
-		`2`: CarryStatusWorking, //部分成交,
-		`3`: CarryStatusSuccess, //完全成交,
-		`4`: CarryStatusFail,    //用户撤销,
-		`5`: CarryStatusSuccess, //部分撤回,
-		`6`: CarryStatusFail,    //成交失败
 	},
 	Bybit: {
 		`Created`:         CarryStatusWorking,
@@ -360,13 +351,6 @@ func GetSymbol(market, subscribe string) (symbol string) {
 		subscribe = strings.Replace(subscribe, `bibox_sub_spot_`, ``, 1)
 		subscribe = strings.Replace(subscribe, `_ticker`, ``, 1)
 		return subscribe
-	case Coinbig: // btc_usdt 27 // eth_usdt 28
-		switch subscribe {
-		case `27`:
-			return `btc_usdt`
-		case `28`:
-			return `eth_usdt`
-		}
 	case Bitmex:
 		return subscribe
 	}
@@ -402,7 +386,6 @@ func NewConfig() {
 		AppConfig.WSUrls[Bybit] = `wss://stream.bybit.com/realtime`
 		AppConfig.RestUrls[Bybit] = `https://api.bybit.com`
 	}
-	AppConfig.WSUrls[Coinbig] = "wss://ws.coinbig.com/ws"
 	AppConfig.WSUrls[Coinpark] = "wss://push.coinpark.cc/"
 	AppConfig.WSUrls[Btcdo] = `wss://onli-quotation.btcdo.com/v1/market/?EIO=3&transport=websocket`
 	AppConfig.WSUrls[Bitmex] = `wss://www.bitmex.com/realtime/`
@@ -418,7 +401,6 @@ func NewConfig() {
 	AppConfig.RestUrls[OKSwap] = `https://www.okex.com`
 	AppConfig.RestUrls[OKFUTURE] = `https://www.okex.com`
 	AppConfig.RestUrls[Binance] = "https://api.binance.com"
-	AppConfig.RestUrls[Coinbig] = "https://www.coinbig.com/api/publics/v1"
 	AppConfig.RestUrls[Coinpark] = "https://api.coinpark.cc/v1"
 	AppConfig.RestUrls[Btcdo] = `https://api.btcdo.com`
 	//AppConfig.RestUrls[Bitmex] = `https://testnet.bitmex.com`

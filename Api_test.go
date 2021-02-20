@@ -100,10 +100,14 @@ func Test_initTurtleN(t *testing.T) {
 }
 
 func Test_wallet(t *testing.T) {
-	str := `sdfsdfsdf`
-	fmt.Println(strings.Split(str, `,`)[0])
 	model.NewConfig()
 	_ = configor.Load(model.AppConfig, "./config.yml")
+
+	keys, secrets := model.AppConfig.GetKeys(model.Huobi)
+	key := keys[0]
+	secret := secrets[0]
+	fmt.Println(key)
+	fmt.Println(secret)
 	model.AppDB, _ = gorm.Open("postgres", model.AppConfig.DBConnection)
 	a := api.GetMarketInfo(model.Ftx, `SECO/USD`)
 	fmt.Println(a)
