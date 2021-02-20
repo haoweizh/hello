@@ -125,15 +125,32 @@ var ProcessCarry = func(setting *model.Setting) {
 			setting.Symbol, setting.OpenShortMargin, setting.CloseShortMargin, setting.GridPriceDistance,
 			scoreOpen, scoreClose))
 	keys, secrets := model.AppConfig.GetKeys(setting.Market)
-	for i, key := range keys {
-		carryInfo := fmt.Sprintf("limit :%f [lowest:%s %f][highest: %s %f][available usd: <%f> %f]",
-			model.AppConfig.Amount, symbolLowest, lowest, symbolHighest, highest, usdAvailable[key], usdRate[key])
-		model.SetCarryInfo(fmt.Sprintf(`[grid-setting]%s`, key[0:5]), carryInfo)
-		sidePerp, sideRelated, amount := calcCarryOpen(setting, tickPerp, tickRelated, key, setting.Symbol, setting.Symbol,
-			scoreOpen, scoreClose, scoreOpen, scoreClose)
-		if amount > 0 {
-			go placeCarry(setting, tickPerp, tickRelated, key, secrets[i], sidePerp, sideRelated, scoreOpen, scoreClose, amount)
-			break
+	hour := time.Now().Hour()
+	if hour > 2 && hour < 6 {
+		for i := len(keys) - 1; i >= 0; i-- {
+			carryInfo := fmt.Sprintf("limit :%f [lowest:%s %f][highest: %s %f][available usd: <%f> %f]",
+				model.AppConfig.Amount, symbolLowest, lowest, symbolHighest, highest, usdAvailable[keys[i]], usdRate[keys[i]])
+			model.SetCarryInfo(fmt.Sprintf(`[grid-setting]%s`, keys[i][0:5]), carryInfo)
+			sidePerp, sideRelated, amount := calcCarryOpen(setting, tickPerp, tickRelated, keys[i], setting.Symbol,
+				setting.Symbol, scoreOpen, scoreClose, scoreOpen, scoreClose)
+			if amount > 0 {
+				go placeCarry(setting, tickPerp, tickRelated, keys[i], secrets[i], sidePerp, sideRelated, scoreOpen,
+					scoreClose, amount)
+				break
+			}
+		}
+	} else {
+		for i := 0; i < len(keys); i++ {
+			carryInfo := fmt.Sprintf("limit :%f [lowest:%s %f][highest: %s %f][available usd: <%f> %f]",
+				model.AppConfig.Amount, symbolLowest, lowest, symbolHighest, highest, usdAvailable[keys[i]], usdRate[keys[i]])
+			model.SetCarryInfo(fmt.Sprintf(`[grid-setting]%s`, keys[i][0:5]), carryInfo)
+			sidePerp, sideRelated, amount := calcCarryOpen(setting, tickPerp, tickRelated, keys[i], setting.Symbol,
+				setting.Symbol, scoreOpen, scoreClose, scoreOpen, scoreClose)
+			if amount > 0 {
+				go placeCarry(setting, tickPerp, tickRelated, keys[i], secrets[i], sidePerp, sideRelated,
+					scoreOpen, scoreClose, amount)
+				break
+			}
 		}
 	}
 }
@@ -285,8 +302,8 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	}
 	keys, _ := model.AppConfig.GetKeys(setting.Market)
 	if len(keys) > 1 && keys[1] == key {
-		setOpen += (1 - usdRate[key]) * 0.02
-		revert += usdRate[key] * 0.008
+		setOpen = setOpen/2 + (1-usdRate[key])*0.02
+		revert = revert*2 + usdRate[key]*0.01
 		model.SetCarryInfo(`[dynamic]`, fmt.Sprintf(`%f %f %f`, setOpen, usdRate[key], revert))
 	}
 	if (scoreLow < -1*setOpen && setting.Symbol == symbolLow) ||
