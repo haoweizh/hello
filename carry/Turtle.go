@@ -83,6 +83,7 @@ func calcTurtleAmount(setting *model.Setting, price, n float64) (amount float64)
 			} else {
 				amount = 0.02 * p * price / n / model.OKEXOtherContractFaceValue
 			}
+			util.Notice(fmt.Sprintf(`%s get %f`, coin, balance.Amount))
 		}
 	}
 	return amount
