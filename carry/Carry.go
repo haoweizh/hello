@@ -316,7 +316,8 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	if len(keys) > 1 && keys[1] == key {
 		setOpen = setOpen/2 + (1-usdRate[key])*0.02
 		revert = revert*2 + usdRate[key]*0.01
-		model.SetCarryInfo(`[dynamic]`, fmt.Sprintf(`%f %f %f`, setOpen, usdRate[key], revert))
+		model.SetCarryInfo(`[dynamic]`, fmt.Sprintf(`%f %f %f available:%f rate:%f`,
+			setOpen, usdRate[key], revert, usdAvailable[key], usdRate[key]))
 	}
 	carryAmount := getCarryAmount(key, setting.Symbol)
 	if (scoreLow < -1*setOpen && setting.Symbol == symbolLow) ||

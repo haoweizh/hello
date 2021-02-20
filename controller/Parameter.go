@@ -202,6 +202,22 @@ func GetParameters(c *gin.Context) {
 		}
 		turtleRows.Close()
 	}
+	//keys, _ := model.AppConfig.GetKeys(model.Ftx)
+	//duration, _ := time.ParseDuration(`-96h`)
+	//timeBegin := time.Now().Add(duration)
+	//timeBegin = time.Date(timeBegin.Year(), timeBegin.Month(), timeBegin.Day(), 0, 0, 0, 0, timeBegin.Location())
+	carryRows, _ := model.AppDB.Model(&orders).Select(`order_side,sum(price*amount),date(order_time)`).
+		Group(`order_side,date(order_time)`).Order(`date(order_time) desc`).Rows()
+	carryMsg := ``
+	if carryRows != nil {
+		for carryRows.Next() {
+			var side, date string
+			var value float64
+			_ = carryRows.Scan(&side, &value, &date)
+			carryMsg += fmt.Sprintf("交易额in USD%s %s %f\n", date, side, value)
+		}
+	}
+	msg += carryMsg
 	msg += model.GetCarryInfo()
 	msg += model.AppMetric.ToString() + "\n"
 	msg += model.AppConfig.ToString()
