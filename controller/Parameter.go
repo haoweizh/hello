@@ -217,9 +217,9 @@ func GetParameters(c *gin.Context) {
 			var value float64
 			_ = carryRows.Scan(&amountType, &side, &value, &date, &refreshType)
 			if amountType == keys[0] {
-				carryFrontMsg += fmt.Sprintf("交易额in USD%s %s %f 类型：%s\n", date, side, value, refreshType)
+				carryFrontMsg += fmt.Sprintf("交易额 in USD: %s %s %f 类型：%s\n", date, side, value, refreshType)
 			} else {
-				carryBackMsg += fmt.Sprintf("交易额in USD%s %s %f 类型：%s\n", date, side, value, refreshType)
+				carryBackMsg += fmt.Sprintf("交易额 in USD: %s %s %f 类型：%s\n", date, side, value, refreshType)
 			}
 		}
 		carryRows.Close()
