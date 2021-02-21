@@ -28,6 +28,8 @@ var carryBalance = make(map[string]map[string]*model.Balance) // key - coin - ba
 var carryAmount = make(map[string]map[string]float64)         // key - perp - float64
 
 func getCarryAmount(key, perp string) float64 {
+	carryLock.Lock()
+	defer carryLock.Unlock()
 	if carryAmount[key] == nil {
 		return 0
 	}
@@ -35,6 +37,8 @@ func getCarryAmount(key, perp string) float64 {
 }
 
 func setCarryAmount(key, perp string, amount float64) {
+	carryLock.Lock()
+	defer carryLock.Unlock()
 	if carryAmount[key] == nil {
 		carryAmount[key] = make(map[string]float64)
 	}
@@ -145,7 +149,7 @@ var ProcessCarry = func(setting *model.Setting) {
 	hour := time.Now().Hour()
 	if hour > 2 && hour < 6 {
 		for i := len(keys) - 1; i >= 0; i-- {
-			carryInfo := fmt.Sprintf("limit :%f [lowest:%s %f][highest: %s %f][available usd: <%f> %f]",
+			carryInfo := fmt.Sprintf("limit: %f [lowest:%s %f][highest: %s %f][available usd: <%f> %f]",
 				model.AppConfig.Amount, symbolLowest, lowest, symbolHighest, highest, usdAvailable[keys[i]], usdRate[keys[i]])
 			model.SetCarryInfo(fmt.Sprintf(`[grid-setting]%s`, keys[i][0:5]), carryInfo)
 			sidePerp, sideRelated, amount := calcCarryOpen(setting, tickPerp, tickRelated, keys[i], setting.Symbol,
@@ -324,7 +328,11 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	keys, _ := model.AppConfig.GetKeys(setting.Market)
 	if len(keys) > 1 && keys[1] == key {
 		setOpen = (1.35 - usdRate[key]) * setOpen
-		revert = (usdRate[key] - 1) * 0.006
+		if revert < 0 {
+			revert = (1.7 - usdRate[key]) * revert
+		} else {
+			revert = 0.5 / (1.5 - usdRate[key]) * revert
+		}
 		amountLow = 0
 		line = 5000
 		model.SetCarryInfo(`[dynamic]`, fmt.Sprintf(`%f %f %f available:%f rate:%f`,
