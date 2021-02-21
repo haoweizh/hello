@@ -11,6 +11,7 @@ type Balance struct {
 	Address       string  // for transaction
 	Amount        float64
 	Available     float64
+	Borrow        float64
 	BalanceTime   time.Time // confirm time if transaction
 	Coin          string
 	Fee           string // for transaction

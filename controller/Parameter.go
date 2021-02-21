@@ -202,25 +202,33 @@ func GetParameters(c *gin.Context) {
 		}
 		turtleRows.Close()
 	}
-	//keys, _ := model.AppConfig.GetKeys(model.Ftx)
-	//duration, _ := time.ParseDuration(`-96h`)
-	//timeBegin := time.Now().Add(duration)
-	//timeBegin = time.Date(timeBegin.Year(), timeBegin.Month(), timeBegin.Day(), 0, 0, 0, 0, timeBegin.Location())
-	carryRows, _ := model.AppDB.Model(&orders).Select(`order_side,sum(price*amount),date(order_time)`).
-		Group(`order_side,date(order_time)`).Order(`date(order_time) desc`).Rows()
-	carryMsg := ``
+	keys, _ := model.AppConfig.GetKeys(model.Ftx)
+	duration, _ := time.ParseDuration(`-96h`)
+	timeBegin := time.Now().Add(duration)
+	timeBegin = time.Date(timeBegin.Year(), timeBegin.Month(), timeBegin.Day(), 0, 0, 0, 0, timeBegin.Location())
+	model.AppDB.Model(&orders).Delete(`order_time<? and refresh_function=?`, timeBegin.String(), model.FunctionCarry)
+	carryRows, _ := model.AppDB.Model(&orders).Select(`amount_type,order_side,sum(price*amount),date(order_time),refresh_type`).
+		Group(`order_side,date(order_time),amount_type,refresh_type`).Order(`date(order_time) desc`).Rows()
+	carryFrontMsg := ``
+	carryBackMsg := ``
 	if carryRows != nil {
 		for carryRows.Next() {
-			var side, date string
+			var side, date, amountType, refreshType string
 			var value float64
-			_ = carryRows.Scan(&side, &value, &date)
-			carryMsg += fmt.Sprintf("交易额in USD%s %s %f\n", date, side, value)
+			_ = carryRows.Scan(&amountType, &side, &value, &date, &refreshType)
+			if amountType == keys[0] {
+				carryFrontMsg += fmt.Sprintf("交易额in USD%s %s %f 类型：%s\n", date, side, value, refreshType)
+			} else {
+				carryBackMsg += fmt.Sprintf("交易额in USD%s %s %f 类型：%s\n", date, side, value, refreshType)
+			}
 		}
+		carryRows.Close()
 	}
-	msg += carryMsg
+	msg += carryFrontMsg
 	msg += model.GetCarryInfo()
 	msg += model.AppMetric.ToString() + "\n"
 	msg += model.AppConfig.ToString()
+	msg += carryBackMsg
 	c.String(http.StatusOK, msg)
 }
 

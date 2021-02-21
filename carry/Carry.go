@@ -11,7 +11,6 @@ import (
 	"time"
 )
 
-// setting.AmountLimit
 const OrderPriceLimit = 0
 const UsdUpLine = 300000
 const revertDis = 0.005
@@ -23,6 +22,7 @@ var symbolHighest, symbolLowest string
 var highest, lowest float64
 
 var usdAvailable = make(map[string]float64)                   // key - float64
+var usdBorrow = make(map[string]float64)                      // key - float64
 var usdRate = make(map[string]float64)                        // key - float64
 var carryBalance = make(map[string]map[string]*model.Balance) // key - coin - balance
 var carryAmount = make(map[string]map[string]float64)         // key - perp - float64
@@ -87,7 +87,6 @@ func clearCarryBalance() {
 						}
 					}
 				}
-				//symbols := model.GetMarketSymbols(market)
 				balanceAll := 0.0
 				if carryBalance[key] == nil {
 					carryBalance[key] = make(map[string]*model.Balance)
@@ -98,10 +97,12 @@ func clearCarryBalance() {
 					balanceAll += value.UsdValue
 					if coin == `USD` {
 						usdAvailable[key] = value.Available
+						usdBorrow[key] = value.Borrow
 					}
 				}
 				usdRate[key] = usdAvailable[key] / balanceAll
-				util.Notice(fmt.Sprintf(`[carry] usd:%f %f`, usdAvailable[key], usdRate[key]))
+				util.Notice(fmt.Sprintf(`[carry] %s usd:%f %f borrow:%f`,
+					key, usdAvailable[key], usdRate[key], usdBorrow[key]))
 			}
 		}
 		util.Notice(`...... exit clearing carry balance`)
@@ -290,6 +291,9 @@ func makeEqual(key, secret string, setting *model.Setting, balances []*model.Bal
 			symbol = symbolRelated
 			price = tickRelated.Asks[0].Price * (1 + OrderPriceLimit)
 		}
+		if symbol == symbolRelated && usdBorrow[key] > 0 {
+			amount = 0
+		}
 	}
 	amount = math.Min(math.Abs(amount), 20000/price)
 	amount = api.FormatAmount(setting.Market, symbol, math.Abs(amount))
@@ -309,13 +313,20 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	var bidAmount, askAmount float64
 	setOpen := setting.OpenShortMargin
 	revert := setting.GridPriceDistance
+	amountLow := setting.AmountLimit
 	if usdRate[key] == 0 {
 		return ``, ``, 0
+	}
+	line := model.AppConfig.Amount
+	if line <= 0 {
+		line = 100000
 	}
 	keys, _ := model.AppConfig.GetKeys(setting.Market)
 	if len(keys) > 1 && keys[1] == key {
 		setOpen = setOpen/2 + (1-usdRate[key])*0.02
 		revert = revert*2 + usdRate[key]*0.01
+		amountLow = 0
+		line = 5000
 		model.SetCarryInfo(`[dynamic]`, fmt.Sprintf(`%f %f %f available:%f rate:%f`,
 			setOpen, usdRate[key], revert, usdAvailable[key], usdRate[key]))
 	}
@@ -326,8 +337,8 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 		askAmount = tickRelated.Bids[0].Amount
 		sidePerp = model.OrderSideBuy
 		sideRelated = model.OrderSideSell
-	} else if (scoreHigh > setOpen && setting.Symbol == symbolHigh) ||
-		(carryAmount < 0 && scoreOpen >= revert) {
+	} else if ((scoreHigh > setOpen && setting.Symbol == symbolHigh) ||
+		(carryAmount < 0 && scoreOpen >= revert)) && usdBorrow[key] <= 0 {
 		bidAmount = tickRelated.Asks[0].Amount
 		askAmount = tickPerp.Bids[0].Amount
 		sidePerp = model.OrderSideSell
@@ -342,20 +353,15 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 			amount = math.Min(amount, usdAvailable[key]/tickRelated.Asks[0].Price)
 		}
 	}
-	line := model.AppConfig.Amount
-	if line <= 0 {
-		line = 100000
-	}
 	amount = math.Min(amount, 10000/tickPerp.Asks[0].Price)
 	amountPerp := api.FormatAmount(setting.Market, setting.Symbol, amount)
 	amountRelated := api.FormatAmount(setting.Market, setting.GetRelatedSymbol(), amount)
 	amount = math.Min(amountPerp, amountRelated)
 	if (sideRelated == model.OrderSideBuy && usdAvailable[key] < line) ||
-		(math.Abs(carryAmount)*tickPerp.Asks[0].Price > setting.AmountLimit &&
-			amount*tickPerp.Asks[0].Price < setting.AmountLimit) {
+		(math.Abs(carryAmount)*tickPerp.Asks[0].Price > amountLow && amount*tickPerp.Asks[0].Price < amountLow) {
 		amount = 0
 	}
-	if amount*tickPerp.Asks[0].Price < setting.AmountLimit &&
+	if amount*tickPerp.Asks[0].Price < amountLow &&
 		((sidePerp == model.OrderSideBuy && carryAmount < 0) || (sidePerp == model.OrderSideSell && carryAmount > 0)) {
 		amount = 0
 	}
