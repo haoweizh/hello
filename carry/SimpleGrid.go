@@ -40,12 +40,12 @@ func calcGridAmount(market, symbol string, price float64) (amount float64) {
 	case model.Ftx:
 		value := api.GetUSDBalance(``, ``, market)
 		switch symbol {
-		case `BTC-PERP`: //使用10分之一的资本
-			amount = math.Round(value/price) / 10
-		case `LINK-PERP`: // 使用10分之一的资本
-			amount = math.Round(value/price/1000) * 100
+		case `BTC-PERP`: //使用15分之一的资本
+			amount = math.Round(value/price) / 15
+		case `LINK-PERP`: // 使用15分之一的资本
+			amount = math.Round(value/price/1500) * 100
 		case `ETH-PERP`:
-			amount = math.Round(value / price / 10)
+			amount = math.Round(value / price / 15)
 		}
 	}
 	return amount
