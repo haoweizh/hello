@@ -45,6 +45,15 @@ func setCarryAmount(key, perp string, amount float64) {
 	carryAmount[key][perp] = amount
 }
 
+func setCarryBalance(key, coin string, balance *model.Balance) {
+	carryLock.Lock()
+	defer carryLock.Unlock()
+	if carryBalance[key] == nil {
+		carryBalance[key] = make(map[string]*model.Balance)
+	}
+	carryBalance[key][coin] = balance
+}
+
 func getCarryBalance(key, coin string) (balance *model.Balance) {
 	carryLock.Lock()
 	defer carryLock.Unlock()
@@ -92,12 +101,9 @@ func clearCarryBalance() {
 					}
 				}
 				balanceAll := 0.0
-				if carryBalance[key] == nil {
-					carryBalance[key] = make(map[string]*model.Balance)
-				}
 				for _, value := range balances {
 					coin := strings.ToUpper(value.Coin)
-					carryBalance[key][coin] = value
+					setCarryBalance(key, coin, value)
 					balanceAll += value.UsdValue
 					if coin == `USD` {
 						usdAvailable[key] = value.Available
