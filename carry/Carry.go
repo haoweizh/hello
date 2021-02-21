@@ -324,7 +324,7 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	keys, _ := model.AppConfig.GetKeys(setting.Market)
 	if len(keys) > 1 && keys[1] == key {
 		setOpen = (1.5 - usdRate[key]) * setOpen
-		revert = -0.008 + usdRate[key]*0.006
+		revert = (usdRate[key] - 1) * 0.006
 		amountLow = 0
 		line = 5000
 		model.SetCarryInfo(`[dynamic]`, fmt.Sprintf(`%f %f %f available:%f rate:%f`,
