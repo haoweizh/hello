@@ -46,7 +46,7 @@ type MetricManager struct {
 	index       map[string]int                     // market_symbol - index
 }
 
-func (metricManager *MetricManager) addCarry(market, symbol string, carryHigh, carryLow float64) {
+func (metricManager *MetricManager) AddCarry(market, symbol string, carryHigh, carryLow float64) {
 	defer metricManager.Lock.Unlock()
 	metricManager.Lock.Lock()
 	marketSymbol := fmt.Sprintf(`%s_%s`, market, symbol)
@@ -75,7 +75,7 @@ func (metricManager *MetricManager) addCarry(market, symbol string, carryHigh, c
 	carryMetric.avgLow = carryMetric.totalLow / float64(carryMetric.count)
 }
 
-func (metricManager *MetricManager) addTick(market, symbol string, current time.Time, bidAsk *BidAsk) {
+func (metricManager *MetricManager) AddTick(market, symbol string, current time.Time, bidAsk *BidAsk) {
 	defer metricManager.Lock.Unlock()
 	metricManager.Lock.Lock()
 	marketSymbol := fmt.Sprintf(`%s_%s`, market, symbol)

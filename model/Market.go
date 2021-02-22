@@ -267,12 +267,12 @@ func (markets *Markets) SetBidAsk(symbol, marketName string, bidAsk *BidAsk) boo
 	last := markets.bidAsks[symbol][marketName]
 	if last == nil || last.Ts < bidAsk.Ts {
 		if last != nil && last.Bids[0].Price == bidAsk.Bids[0].Price && last.Bids[0].Amount == bidAsk.Bids[0].Amount &&
-			last.Asks[0].Price == bidAsk.Asks[0].Price && last.Asks[0].Amount == bidAsk.Asks[0].Amount {
+			last.Asks[0].Price == bidAsk.Asks[0].Price && last.Asks[0].Amount == bidAsk.Asks[0].Amount && symbol == `DMG/USD` {
 			util.Info(fmt.Sprintf(`%s %s same as before`, marketName, symbol))
 		}
 		markets.bidAsks[symbol][marketName] = bidAsk
 		current := util.GetNow()
-		AppMetric.addTick(marketName, symbol, current, bidAsk)
+		AppMetric.AddTick(marketName, symbol, current, bidAsk)
 		return true
 	}
 	return false

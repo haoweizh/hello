@@ -139,6 +139,7 @@ var ProcessCarry = func(setting *model.Setting) {
 	}
 	scoreOpen := 1 - tickRelated.Asks[0].Price/tickPerp.Bids[0].Price
 	scoreClose := 1 - tickRelated.Bids[0].Price/tickPerp.Asks[0].Price
+	model.AppMetric.AddCarry(setting.Market, setting.Symbol, scoreOpen, scoreClose)
 	if scoreOpen > highest || setting.Symbol == symbolHighest {
 		highest = scoreOpen
 		symbolHighest = setting.Symbol
