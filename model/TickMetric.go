@@ -8,18 +8,29 @@ import (
 )
 
 const recentTickLength = 100
+const tickErrorMsg = `有效tick低于2成或平均延迟大于50ms[最近tick %s]`
 
 type TickMetric struct {
 	delayLow   int
 	delayHigh  int
-	delayAvg   float64
 	delaySum   int
-	priceLow   float64
-	priceHigh  float64
 	countValid int
 	countAll   int
+	delayAvg   float64
+	priceLow   float64
+	priceHigh  float64
 	start      time.Time
 	end        time.Time
+}
+
+type CarryMetric struct {
+	count        int64
+	carryHighest float64
+	carryLowest  float64
+	totalHigh    float64
+	totalLow     float64
+	avgHigh      float64
+	avgLow       float64
 }
 
 type TickDelay struct {
@@ -29,26 +40,56 @@ type TickDelay struct {
 
 type MetricManager struct {
 	Lock        sync.Mutex
-	metricHour  map[string]map[string]*TickMetric // market_symbol - MMDDHH - tickMetric
-	metricTicks map[string][]*TickDelay           // market_symbol - []TickDelay
-	index       map[string]int                    // market_symbol - index
+	tickHour    map[string]map[string]*TickMetric  // market_symbol - MMDDHH - tickMetric
+	carryHour   map[string]map[string]*CarryMetric // market_symbol - MMDDHH - carryMetric
+	metricTicks map[string][]*TickDelay            // market_symbol - []TickDelay
+	index       map[string]int                     // market_symbol - index
+}
+
+func (metricManager *MetricManager) addCarry(market, symbol string, carryHigh, carryLow float64) {
+	defer metricManager.Lock.Unlock()
+	metricManager.Lock.Lock()
+	marketSymbol := fmt.Sprintf(`%s_%s`, market, symbol)
+	if metricManager.carryHour == nil {
+		metricManager.carryHour = make(map[string]map[string]*CarryMetric)
+	}
+	if metricManager.carryHour[marketSymbol] == nil {
+		metricManager.carryHour[marketSymbol] = make(map[string]*CarryMetric)
+	}
+	current := util.GetNow()
+	timeStr := fmt.Sprintf(`%d/%d %d`, current.Month(), current.Day(), current.Hour())
+	if metricManager.carryHour[marketSymbol][timeStr] == nil {
+		metricManager.carryHour[marketSymbol][timeStr] = &CarryMetric{}
+	}
+	carryMetric := metricManager.carryHour[marketSymbol][timeStr]
+	carryMetric.count++
+	if carryHigh > carryMetric.carryHighest {
+		carryMetric.carryHighest = carryHigh
+	}
+	if carryLow < carryMetric.carryLowest {
+		carryMetric.carryLowest = carryLow
+	}
+	carryMetric.totalHigh += carryHigh
+	carryMetric.totalLow += carryLow
+	carryMetric.avgHigh = carryMetric.totalHigh / float64(carryMetric.count)
+	carryMetric.avgLow = carryMetric.totalLow / float64(carryMetric.count)
 }
 
 func (metricManager *MetricManager) addTick(market, symbol string, current time.Time, bidAsk *BidAsk) {
 	defer metricManager.Lock.Unlock()
 	metricManager.Lock.Lock()
 	marketSymbol := fmt.Sprintf(`%s_%s`, market, symbol)
-	if metricManager.metricHour == nil {
-		metricManager.metricHour = make(map[string]map[string]*TickMetric)
+	if metricManager.tickHour == nil {
+		metricManager.tickHour = make(map[string]map[string]*TickMetric)
 	}
-	if metricManager.metricHour[marketSymbol] == nil {
-		metricManager.metricHour[marketSymbol] = make(map[string]*TickMetric)
+	if metricManager.tickHour[marketSymbol] == nil {
+		metricManager.tickHour[marketSymbol] = make(map[string]*TickMetric)
 	}
 	timeStr := fmt.Sprintf(`%d/%d %d`, current.Month(), current.Day(), current.Hour())
-	if metricManager.metricHour[marketSymbol][timeStr] == nil {
-		metricManager.metricHour[marketSymbol][timeStr] = &TickMetric{priceLow: 0, priceHigh: 0}
+	if metricManager.tickHour[marketSymbol][timeStr] == nil {
+		metricManager.tickHour[marketSymbol][timeStr] = &TickMetric{priceLow: 0, priceHigh: 0}
 	}
-	tickMetric := metricManager.metricHour[marketSymbol][timeStr]
+	tickMetric := metricManager.tickHour[marketSymbol][timeStr]
 	delay := int(current.UnixNano()/1000000) - bidAsk.Ts
 	if tickMetric.delayLow == 0 || tickMetric.delayLow > delay {
 		tickMetric.delayLow = delay
@@ -109,10 +150,12 @@ func (metricManager *MetricManager) ToString() (metricStr string) {
 			}
 		}
 		tickMetric.delayAvg = float64(tickMetric.delaySum) / float64(tickMetric.countAll)
-		metricStr = metricStr + fmt.Sprintf("[最近tick %s][%d:%d:%d-%d:%d:%d]all:%d <100:%d delay: %d-%d avg: %f\n",
-			marketSymbol, tickMetric.start.Hour(), tickMetric.start.Minute(), tickMetric.start.Second(), tickMetric.end.Hour(),
-			tickMetric.end.Minute(), tickMetric.end.Second(), tickMetric.countAll, tickMetric.countValid, tickMetric.delayLow,
-			tickMetric.delayHigh, tickMetric.delayAvg)
+		if float64(tickMetric.countValid)/float64(tickMetric.countAll) < 0.2 || tickMetric.delayAvg > 100 {
+			metricStr = metricStr + fmt.Sprintf("%s[最近tick %s][%d:%d:%d-%d:%d:%d]all:%d <100:%d delay: %d-%d avg: %f\n",
+				tickErrorMsg, marketSymbol, tickMetric.start.Hour(), tickMetric.start.Minute(), tickMetric.start.Second(),
+				tickMetric.end.Hour(), tickMetric.end.Minute(), tickMetric.end.Second(), tickMetric.countAll,
+				tickMetric.countValid, tickMetric.delayLow, tickMetric.delayHigh, tickMetric.delayAvg)
+		}
 	}
 	now := util.GetNow()
 	timeMap := make(map[string]bool, 12)
@@ -121,13 +164,22 @@ func (metricManager *MetricManager) ToString() (metricStr string) {
 		then := now.Add(duration)
 		timeMap[fmt.Sprintf(`%d/%d %d`, then.Month(), then.Day(), then.Hour())] = true
 	}
-	for marketSymbol, timeMetric := range metricManager.metricHour {
+	for marketSymbol, timeMetric := range metricManager.tickHour {
 		metricStr = metricStr + fmt.Sprintf("[%s tick状况]\n", marketSymbol)
 		for str, metric := range timeMetric {
+			if timeMap[str] && float64(metric.countValid)/float64(metric.countAll) < 0.2 || metric.delayAvg > 100 {
+				metricStr += fmt.Sprintf("%s %s: all:%d <100:%d delay: %d-%d avg: %f tick low-high %f %f\n",
+					tickErrorMsg, str, metric.countAll, metric.countValid, metric.delayLow, metric.delayHigh,
+					metric.delayAvg, metric.priceLow, metric.priceHigh)
+			}
+		}
+	}
+	for marketSymbol, timeMetric := range metricManager.carryHour {
+		metricStr = metricStr + fmt.Sprintf("[%s 价差状况]\n", marketSymbol)
+		for str, metric := range timeMetric {
 			if timeMap[str] {
-				metricStr += fmt.Sprintf("%s: all:%d <100:%d delay: %d-%d avg: %f tick low-high %f %f\n",
-					str, metric.countAll, metric.countValid, metric.delayLow, metric.delayHigh, metric.delayAvg,
-					metric.priceLow, metric.priceHigh)
+				metricStr += fmt.Sprintf("%s: all:%d lowest: %f highest: %f avgHigh: %f avgLow: %f\n",
+					str, metric.count, metric.carryLowest, metric.carryHighest, metric.avgLow, metric.avgHigh)
 			}
 		}
 	}
