@@ -65,10 +65,10 @@ func (metricManager *MetricManager) AddCarry(market, symbol string, carryHigh, c
 	}
 	carryMetric := metricManager.carryHour[marketSymbol][timeStr]
 	carryMetric.count++
-	if carryHigh > carryMetric.carryHighest || !math.IsNaN(carryMetric.carryHighest) {
+	if carryHigh > carryMetric.carryHighest || math.IsNaN(carryMetric.carryHighest) {
 		carryMetric.carryHighest = carryHigh
 	}
-	if carryLow < carryMetric.carryLowest || !math.IsNaN(carryMetric.carryLowest) {
+	if carryLow < carryMetric.carryLowest || math.IsNaN(carryMetric.carryLowest) {
 		carryMetric.carryLowest = carryLow
 	}
 	carryMetric.totalHigh += carryHigh
