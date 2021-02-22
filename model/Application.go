@@ -217,6 +217,7 @@ func GetCarryInfo() (info string) {
 	for key, value := range CarryInfo {
 		info += fmt.Sprintf("%s: %s\n", key, value)
 	}
+	info += fmt.Sprintf("%s\n", CarryInfo[`dynamic`])
 	return
 }
 

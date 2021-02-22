@@ -102,16 +102,10 @@ func Test_initTurtleN(t *testing.T) {
 func Test_wallet(t *testing.T) {
 	model.NewConfig()
 	_ = configor.Load(model.AppConfig, "./config.yml")
-
-	keys, secrets := model.AppConfig.GetKeys(model.Huobi)
-	key := keys[0]
-	secret := secrets[0]
-	fmt.Println(key)
-	fmt.Println(secret)
 	model.AppDB, _ = gorm.Open("postgres", model.AppConfig.DBConnection)
-	a := api.GetMarketInfo(model.Ftx, `SECO/USD`)
-	fmt.Println(a)
-	api.InitCarryFtx(1)
+	//a := api.GetMarketInfo(model.Ftx, `SECO/USD`)
+	//fmt.Println(a)
+	api.InitCarryFtx(57)
 	api.GetFundingRate(model.Ftx, `BTC-PERP`)
 	api.RefreshAccount(``, ``, model.Ftx)
 	_, balances := api.GetBalances(``, ``, model.Ftx, 0)
