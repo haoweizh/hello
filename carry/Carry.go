@@ -333,12 +333,12 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	}
 	keys, _ := model.AppConfig.GetKeys(setting.Market)
 	if len(keys) > 1 && keys[1] == key {
-		setOpen = (1.35 - usdRate[key]) * setOpen
+		setOpen = (1.3 - usdRate[key]) * setOpen
 		if setting.Symbol == `BTMX-PERP` {
 			setOpen = math.Min(setOpen, 0.01)
 		}
 		if revert < 0 {
-			revert = (1.7 - usdRate[key]) * revert
+			revert = math.Max((2.3-usdRate[key])*revert, -0.07)
 		} else {
 			revert = 0.5 / (1.5 - usdRate[key]) * revert
 		}
