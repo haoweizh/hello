@@ -22,10 +22,33 @@ var symbolHighest, symbolLowest string
 var highest, lowest float64
 
 var usdAvailable = make(map[string]float64)                   // key - float64
-var usdBorrow = make(map[string]float64)                      // key - float64
 var usdRate = make(map[string]float64)                        // key - float64
 var carryBalance = make(map[string]map[string]*model.Balance) // key - coin - balance
 var carryAmount = make(map[string]map[string]float64)         // key - perp - float64
+
+func getUsdAvailable(key string) float64 {
+	carryLock.Lock()
+	defer carryLock.Unlock()
+	return usdAvailable[key]
+}
+
+func setUsdAvailable(key string, value float64) {
+	carryLock.Lock()
+	defer carryLock.Unlock()
+	usdAvailable[key] = value
+}
+
+func getUsdRate(key string) float64 {
+	carryLock.Lock()
+	defer carryLock.Unlock()
+	return usdRate[key]
+}
+
+func setUsdRate(key string, value float64) {
+	carryLock.Lock()
+	defer carryLock.Unlock()
+	usdRate[key] = value
+}
 
 func getCarryAmount(key, perp string) float64 {
 	carryLock.Lock()
@@ -101,18 +124,18 @@ func clearCarryBalance() {
 					}
 				}
 				balanceAll := 0.0
+				usdAvailable := 0.0
 				for _, value := range balances {
 					coin := strings.ToUpper(value.Coin)
 					setCarryBalance(key, coin, value)
 					balanceAll += value.UsdValue
 					if coin == `USD` {
-						usdAvailable[key] = value.Available
-						usdBorrow[key] = value.Borrow
+						usdAvailable = value.Available
+						setUsdAvailable(key, value.Available)
 					}
 				}
-				usdRate[key] = usdAvailable[key] / balanceAll
-				util.Notice(fmt.Sprintf(`[carry] %s usd:%f %f borrow:%f`,
-					key, usdAvailable[key], usdRate[key], usdBorrow[key]))
+				setUsdRate(key, usdAvailable/balanceAll)
+				util.Notice(fmt.Sprintf(`[carry] %s usd:%f %f`, key, usdAvailable, usdRate[key]))
 			}
 		}
 		util.Notice(`...... exit clearing carry balance`)
@@ -157,8 +180,10 @@ var ProcessCarry = func(setting *model.Setting, tick *model.BidAsk) {
 	hour := time.Now().Hour()
 	if hour > 2 && hour < 6 {
 		for i := len(keys) - 1; i >= 0; i-- {
+			usdRate := getUsdRate(keys[i])
+			usdAvailable := getUsdAvailable(keys[i])
 			carryInfo := fmt.Sprintf("limit: %f [lowest:%s %f][highest: %s %f][available usd: <%f> %f]",
-				model.AppConfig.Amount, symbolLowest, lowest, symbolHighest, highest, usdAvailable[keys[i]], usdRate[keys[i]])
+				model.AppConfig.Amount, symbolLowest, lowest, symbolHighest, highest, usdAvailable, usdRate)
 			model.SetCarryInfo(fmt.Sprintf(`[grid-setting]%s`, keys[i][0:5]), carryInfo)
 			sidePerp, sideRelated, amount := calcCarryOpen(setting, tickPerp, tickRelated, keys[i], setting.Symbol,
 				setting.Symbol, scoreOpen, scoreClose, scoreOpen, scoreClose)
@@ -170,8 +195,10 @@ var ProcessCarry = func(setting *model.Setting, tick *model.BidAsk) {
 		}
 	} else {
 		for i := 0; i < len(keys); i++ {
+			usdRate := getUsdRate(keys[i])
+			usdAvailable := getUsdAvailable(keys[i])
 			carryInfo := fmt.Sprintf("limit :%f [lowest:%s %f][highest: %s %f][available usd: <%f> %f]",
-				model.AppConfig.Amount, symbolLowest, lowest, symbolHighest, highest, usdAvailable[keys[i]], usdRate[keys[i]])
+				model.AppConfig.Amount, symbolLowest, lowest, symbolHighest, highest, usdAvailable, usdRate)
 			model.SetCarryInfo(fmt.Sprintf(`[grid-setting]%s`, keys[i][0:5]), carryInfo)
 			sidePerp, sideRelated, amount := calcCarryOpen(setting, tickPerp, tickRelated, keys[i], setting.Symbol,
 				setting.Symbol, scoreOpen, scoreClose, scoreOpen, scoreClose)
@@ -204,13 +231,13 @@ func placeCarry(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, key
 		relatedPrice = tickRelated.Asks[0].Price
 		setCarryAmount(key, setting.Symbol, getCarryAmount(key, setting.Symbol)+amount)
 		balance.Amount += amount
-		usdAvailable[key] -= amount * perpPrice
+		setUsdAvailable(key, getUsdAvailable(key)-amount*perpPrice)
 	} else if sidePerp == model.OrderSideBuy {
 		perpPrice = tickPerp.Asks[0].Price
 		relatedPrice = tickRelated.Bids[0].Price
 		setCarryAmount(key, setting.Symbol, getCarryAmount(key, setting.Symbol)-amount)
 		balance.Amount -= amount
-		usdAvailable[key] += amount * relatedPrice
+		setUsdAvailable(key, getUsdAvailable(key)+amount*relatedPrice)
 	}
 	before := time.Now().UnixNano() / 1000000
 	util.Notice(fmt.Sprintf(`carry%s->%s delay %d %d perp[%f %f %f %f] related[%f %f %f %f] with score open:%f close:%f 
@@ -303,7 +330,8 @@ func makeEqual(key, secret string, setting *model.Setting, balances []*model.Bal
 			symbol = symbolRelated
 			price = tickRelated.Asks[0].Price * (1 + OrderPriceLimit)
 		}
-		if symbol == symbolRelated && usdBorrow[key] > 0 {
+		balance := getCarryBalance(key, `USD`)
+		if symbol == symbolRelated && (balance != nil && balance.Borrow > 0) {
 			amount = 0
 		}
 	}
@@ -326,7 +354,10 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	setOpen := setting.OpenShortMargin
 	revert := setting.GridPriceDistance
 	amountLow := setting.AmountLimit
-	if usdRate[key] == 0 {
+	usdBalance := getCarryBalance(key, `USD`)
+	usdRate := getUsdRate(key)
+	usdAvailable := getUsdAvailable(key)
+	if usdRate == 0 || usdBalance == nil {
 		return ``, ``, 0
 	}
 	line := model.AppConfig.Amount
@@ -335,19 +366,19 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	}
 	keys, _ := model.AppConfig.GetKeys(setting.Market)
 	if len(keys) > 1 && keys[1] == key {
-		setOpen = (1.3 - usdRate[key]) * setOpen
+		setOpen = (1.3 - usdRate) * setOpen
 		if setting.Symbol == `BTMX-PERP` {
 			setOpen = math.Min(setOpen, 0.01)
 		}
 		if revert < 0 {
-			revert = math.Max((2.3-usdRate[key])*revert, -0.07)
+			revert = math.Max((2.3-usdRate)*revert, -0.07)
 		} else {
-			revert = 0.5 / (1.5 - usdRate[key]) * revert
+			revert = 0.5 / (1.5 - usdRate) * revert
 		}
 		amountLow = 0
 		line = 5000
 		model.SetCarryInfo(`[dynamic]`, fmt.Sprintf(`[lowest:%s %f][highest: %s %f] %f %f %f available:%f`,
-			symbolLowest, lowest, symbolHighest, highest, setOpen, usdRate[key], revert, usdAvailable[key]))
+			symbolLowest, lowest, symbolHighest, highest, setOpen, usdRate, revert, usdAvailable))
 	}
 	carryAmount := getCarryAmount(key, setting.Symbol)
 	if (scoreLow < -1*setOpen && setting.Symbol == symbolLow) ||
@@ -357,7 +388,7 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 		sidePerp = model.OrderSideBuy
 		sideRelated = model.OrderSideSell
 	} else if ((scoreHigh > setOpen && setting.Symbol == symbolHigh) ||
-		(carryAmount < 0 && scoreOpen >= revert)) && usdBorrow[key] <= 0 {
+		(carryAmount < 0 && scoreOpen >= revert)) && usdBalance.Borrow <= 0 {
 		bidAmount = tickRelated.Asks[0].Amount
 		askAmount = tickPerp.Bids[0].Amount
 		sidePerp = model.OrderSideSell
@@ -365,18 +396,18 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	}
 	if (setting.Symbol == symbolLow && scoreLow < -1*setOpen) ||
 		(setting.Symbol == symbolHigh && scoreHigh > setOpen) {
-		amount = math.Min(usdAvailable[key]/tickPerp.Asks[0].Price, math.Min(bidAmount, askAmount))
+		amount = math.Min(usdAvailable/tickPerp.Asks[0].Price, math.Min(bidAmount, askAmount))
 	} else {
 		amount = math.Min(math.Abs(carryAmount), math.Min(bidAmount, askAmount))
 		if sideRelated == model.OrderSideBuy {
-			amount = math.Min(amount, usdAvailable[key]/tickRelated.Asks[0].Price)
+			amount = math.Min(amount, usdAvailable/tickRelated.Asks[0].Price)
 		}
 	}
 	amount = math.Min(amount, 10000/tickPerp.Asks[0].Price)
 	amountPerp := api.FormatAmount(setting.Market, setting.Symbol, amount)
 	amountRelated := api.FormatAmount(setting.Market, setting.GetRelatedSymbol(), amount)
 	amount = math.Min(amountPerp, amountRelated)
-	if (sideRelated == model.OrderSideBuy && usdAvailable[key] < line) ||
+	if (sideRelated == model.OrderSideBuy && usdAvailable < line) ||
 		(math.Abs(carryAmount)*tickPerp.Asks[0].Price > amountLow && amount*tickPerp.Asks[0].Price < amountLow) {
 		amount = 0
 	}
@@ -392,7 +423,7 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	}
 	if amount > 0 {
 		util.Notice(fmt.Sprintf(`>>>> %s high:%s %f low:%s %f symbl: %s usd available:%f amount：%f`,
-			key, symbolHigh, scoreHigh, symbolLow, scoreLow, setting.Symbol, usdAvailable[key], amount))
+			key, symbolHigh, scoreHigh, symbolLow, scoreLow, setting.Symbol, usdAvailable, amount))
 	}
 	return sidePerp, sideRelated, amount
 }
