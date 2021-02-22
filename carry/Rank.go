@@ -70,9 +70,8 @@ func (rank *Rank) setOrders(symbol string, orders []*model.Order) {
 	rank.orders[symbol] = orders
 }
 
-var ProcessRank = func(setting *model.Setting) {
-	result, tick := model.AppMarkets.GetBidAsk(setting.Symbol, setting.Market)
-	if !result || tick == nil || tick.Asks == nil || tick.Bids == nil || tick.Asks.Len() < 11 ||
+var ProcessRank = func(setting *model.Setting, tick *model.BidAsk) {
+	if tick == nil || tick.Asks == nil || tick.Bids == nil || tick.Asks.Len() < 11 ||
 		tick.Bids.Len() < 11 {
 		util.Notice(fmt.Sprintf(`[tick not good]%s %s`, setting.Market, setting.Symbol))
 		return

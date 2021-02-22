@@ -291,7 +291,7 @@ func handOrderBook10(markets *model.Markets, data []interface{}) {
 			if handler != nil {
 				settings := model.GetSetting(function, model.Bitmex, symbol)
 				for _, setting := range settings {
-					handler(setting)
+					handler(setting, bidAsk)
 				}
 			}
 		}
@@ -322,7 +322,7 @@ func handleQuote(markets *model.Markets, action string, data []interface{}) {
 				if handler != nil {
 					settings := model.GetSetting(function, model.Bitmex, symbol)
 					for _, setting := range settings {
-						handler(setting)
+						handler(setting, bidAsks)
 					}
 				}
 			}
@@ -360,7 +360,7 @@ func handleOrder(markets *model.Markets, action string, data []interface{}) {
 					markets.AddBMPendingOrder(order)
 					settings := model.GetSetting(function, model.Bitmex, order.Symbol)
 					for _, setting := range settings {
-						go handler(setting)
+						go handler(setting, nil)
 					}
 				}
 			}
@@ -515,7 +515,7 @@ func handleOrderBook(markets *model.Markets, action string, data []interface{}) 
 					if handler != nil && model.AppConfig.Env != `test` {
 						settings := model.GetSetting(function, model.Bitmex, symbol)
 						for _, setting := range settings {
-							handler(setting)
+							handler(setting, bidAsks)
 						}
 					}
 				}

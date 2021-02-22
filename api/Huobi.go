@@ -87,7 +87,7 @@ func WsDepthServeHuobi(markets *model.Markets, errHandler ErrHandler) (chan stru
 						if handler != nil {
 							settings := model.GetSetting(function, model.Huobi, symbol)
 							for _, setting := range settings {
-								go handler(setting)
+								go handler(setting, &bidAsk)
 							}
 						}
 					}

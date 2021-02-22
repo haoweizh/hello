@@ -380,15 +380,8 @@ func (refreshOrders *RefreshOrders) setHanging(in bool) {
 	refreshOrders.hanging = in
 }
 
-var ProcessRefresh = func(setting *model.Setting) {
+var ProcessRefresh = func(setting *model.Setting, tick *model.BidAsk) {
 	start := util.GetNowUnixMillion()
-	result, tick := model.AppMarkets.GetBidAsk(setting.Symbol, setting.Market)
-	if !result {
-		util.Notice(fmt.Sprintf(`[tick not good result]%s %s`, setting.Market, setting.Symbol))
-		CancelRefreshHang(model.KeyDefault, model.SecretDefault, setting.Market, setting.Symbol,
-			RefreshTypeGrid+RefreshTypeFar)
-		return
-	}
 	if tick == nil || tick.Asks == nil || tick.Bids == nil || tick.Asks.Len() < 15 || tick.Bids.Len() < 15 ||
 		int(start)-tick.Ts > 500 {
 		timeDis := 0

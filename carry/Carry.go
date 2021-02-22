@@ -122,7 +122,7 @@ func clearCarryBalance() {
 }
 
 // setting.GridPriceDistance: 收回下单是要求的利润(可以为负数)
-var ProcessCarry = func(setting *model.Setting) {
+var ProcessCarry = func(setting *model.Setting, tick *model.BidAsk) {
 	if !doCarry {
 		go clearCarryBalance()
 		doCarry = true
@@ -133,8 +133,8 @@ var ProcessCarry = func(setting *model.Setting) {
 	_, tickRelated := model.AppMarkets.GetBidAsk(symbolRelated, setting.Market)
 	now := util.GetNowUnixMillion()
 	if tickPerp == nil || tickRelated == nil || tickPerp.Asks == nil || tickPerp.Bids == nil ||
-		tickRelated.Asks == nil || tickRelated.Bids == nil || model.AppConfig.Handle != `1` ||
-		model.AppPause || now-int64(tickRelated.Ts) > 50 || now-int64(tickPerp.Ts) > 50 || setting == nil {
+		tickRelated.Asks == nil || tickRelated.Bids == nil || model.AppConfig.Handle != `1` || setting == nil ||
+		model.AppPause || now-int64(tickRelated.Ts) > 2000 || now-int64(tickPerp.Ts) > 2000 || now-int64(tick.Ts) > 30 {
 		return
 	}
 	scoreOpen := 1 - tickRelated.Asks[0].Price/tickPerp.Bids[0].Price

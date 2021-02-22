@@ -8,7 +8,8 @@ import (
 )
 
 const recentTickLength = 100
-const tickErrorMsg = `有效tick低于2成或平均延迟大于50ms[最近tick %s]`
+
+//const tickErrorMsg = `有效tick低于2成或平均延迟大于50ms[最近tick %s]`
 
 type TickMetric struct {
 	delayLow   int
@@ -126,6 +127,32 @@ func (metricManager *MetricManager) ToString() (metricStr string) {
 	defer metricManager.Lock.Unlock()
 	metricManager.Lock.Lock()
 	metricStr = ``
+	now := util.GetNow()
+	timeMap := make(map[string]bool, 12)
+	for i := 0; i < 12; i++ {
+		duration, _ := time.ParseDuration(fmt.Sprintf(`-%dh`, i))
+		then := now.Add(duration)
+		timeMap[fmt.Sprintf(`%d/%d %d`, then.Month(), then.Day(), then.Hour())] = true
+	}
+	for marketSymbol, timeMetric := range metricManager.carryHour {
+		metricStr = metricStr + fmt.Sprintf("[%s 价差状况]\n", marketSymbol)
+		for str, metric := range timeMetric {
+			if timeMap[str] {
+				metricStr += fmt.Sprintf("%s: all:%d lowest: %f highest: %f avgHigh: %f avgLow: %f\n",
+					str, metric.count, metric.carryLowest, metric.carryHighest, metric.avgLow, metric.avgHigh)
+			}
+		}
+	}
+	for marketSymbol, timeMetric := range metricManager.tickHour {
+		metricStr = metricStr + fmt.Sprintf("[%s tick状况]\n", marketSymbol)
+		for str, metric := range timeMetric {
+			if timeMap[str] {
+				metricStr += fmt.Sprintf("%s: all:%d <100:%d delay: %d-%d avg: %f tick low-high %f %f\n",
+					str, metric.countAll, metric.countValid, metric.delayLow, metric.delayHigh,
+					metric.delayAvg, metric.priceLow, metric.priceHigh)
+			}
+		}
+	}
 	for marketSymbol, metrics := range metricManager.metricTicks {
 		index := metricManager.index[marketSymbol]
 		pre := (metricManager.index[marketSymbol] - 1 + recentTickLength) % recentTickLength
@@ -150,38 +177,12 @@ func (metricManager *MetricManager) ToString() (metricStr string) {
 			}
 		}
 		tickMetric.delayAvg = float64(tickMetric.delaySum) / float64(tickMetric.countAll)
-		if float64(tickMetric.countValid)/float64(tickMetric.countAll) < 0.2 || tickMetric.delayAvg > 100 {
-			metricStr = metricStr + fmt.Sprintf("%s[最近tick %s][%d:%d:%d-%d:%d:%d]all:%d <100:%d delay: %d-%d avg: %f\n",
-				tickErrorMsg, marketSymbol, tickMetric.start.Hour(), tickMetric.start.Minute(), tickMetric.start.Second(),
-				tickMetric.end.Hour(), tickMetric.end.Minute(), tickMetric.end.Second(), tickMetric.countAll,
-				tickMetric.countValid, tickMetric.delayLow, tickMetric.delayHigh, tickMetric.delayAvg)
-		}
-	}
-	now := util.GetNow()
-	timeMap := make(map[string]bool, 12)
-	for i := 0; i < 12; i++ {
-		duration, _ := time.ParseDuration(fmt.Sprintf(`-%dh`, i))
-		then := now.Add(duration)
-		timeMap[fmt.Sprintf(`%d/%d %d`, then.Month(), then.Day(), then.Hour())] = true
-	}
-	for marketSymbol, timeMetric := range metricManager.tickHour {
-		metricStr = metricStr + fmt.Sprintf("[%s tick状况]\n", marketSymbol)
-		for str, metric := range timeMetric {
-			if timeMap[str] && float64(metric.countValid)/float64(metric.countAll) < 0.2 || metric.delayAvg > 100 {
-				metricStr += fmt.Sprintf("%s %s: all:%d <100:%d delay: %d-%d avg: %f tick low-high %f %f\n",
-					tickErrorMsg, str, metric.countAll, metric.countValid, metric.delayLow, metric.delayHigh,
-					metric.delayAvg, metric.priceLow, metric.priceHigh)
-			}
-		}
-	}
-	for marketSymbol, timeMetric := range metricManager.carryHour {
-		metricStr = metricStr + fmt.Sprintf("[%s 价差状况]\n", marketSymbol)
-		for str, metric := range timeMetric {
-			if timeMap[str] {
-				metricStr += fmt.Sprintf("%s: all:%d lowest: %f highest: %f avgHigh: %f avgLow: %f\n",
-					str, metric.count, metric.carryLowest, metric.carryHighest, metric.avgLow, metric.avgHigh)
-			}
-		}
+		//if float64(tickMetric.countValid)/float64(tickMetric.countAll) < 0.2 || tickMetric.delayAvg > 100 {
+		//}
+		metricStr = metricStr + fmt.Sprintf("[最近tick %s][%d:%d:%d-%d:%d:%d]all:%d <100:%d delay: %d-%d avg: %f\n",
+			marketSymbol, tickMetric.start.Hour(), tickMetric.start.Minute(), tickMetric.start.Second(),
+			tickMetric.end.Hour(), tickMetric.end.Minute(), tickMetric.end.Second(), tickMetric.countAll,
+			tickMetric.countValid, tickMetric.delayLow, tickMetric.delayHigh, tickMetric.delayAvg)
 	}
 	return
 }

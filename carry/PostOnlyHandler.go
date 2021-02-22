@@ -8,13 +8,12 @@ import (
 	"time"
 )
 
-var PostonlyHandler = func(setting *model.Setting) {
+var PostonlyHandler = func(setting *model.Setting, tick *model.BidAsk) {
 	orderPostonly := model.AppMarkets.RemoveBmPendingOrder()
 	if setting == nil || model.AppConfig.Handle != `1` || orderPostonly == nil {
 		return
 	}
 	startTime := util.GetNowUnixMillion()
-	_, tick := model.AppMarkets.GetBidAsk(setting.Symbol, setting.Market)
 	if orderPostonly.RefreshType != model.PostOnly || orderPostonly.Amount-orderPostonly.DealAmount < 1 ||
 		orderPostonly.OrderId == `` || orderPostonly.Status != model.CarryStatusFail {
 		if orderPostonly.RefreshType == model.PostOnly {

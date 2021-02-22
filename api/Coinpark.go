@@ -74,7 +74,7 @@ func WsDepthServeCoinpark(markets *model.Markets, errHandler ErrHandler) (chan s
 					for function, handler := range model.GetFunctions(model.Coinpark, symbol) {
 						settings := model.GetSetting(function, model.Coinpark, symbol)
 						for _, setting := range settings {
-							go handler(setting)
+							go handler(setting, &bidAsk)
 						}
 					}
 				}

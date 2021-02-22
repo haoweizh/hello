@@ -116,7 +116,7 @@ func depthHandlerOkFuture(markets *model.Markets, data map[string]interface{}) {
 		for function, handler := range model.GetFunctions(model.OKFUTURE, symbol) {
 			settings := model.GetSetting(function, model.OKFUTURE, symbol)
 			for _, setting := range settings {
-				go handler(setting)
+				go handler(setting, bidAsks)
 			}
 		}
 	}

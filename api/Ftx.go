@@ -105,7 +105,7 @@ func handleTickerFtx(markets *model.Markets, response *simplejson.Json) {
 			if handler != nil {
 				settings := model.GetSetting(function, model.Ftx, symbol)
 				for _, setting := range settings {
-					go handler(setting)
+					go handler(setting, bidAsk)
 				}
 			}
 		}
@@ -180,7 +180,7 @@ func handleDepthFtx(markets *model.Markets, response *simplejson.Json) {
 				if handler != nil {
 					settings := model.GetSetting(function, model.Ftx, symbol)
 					for _, setting := range settings {
-						go handler(setting)
+						go handler(setting, bidAsk)
 					}
 				}
 			}

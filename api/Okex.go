@@ -87,7 +87,7 @@ func WsDepthServeOkex(markets *model.Markets, errHandler ErrHandler) (chan struc
 						for function, handler := range model.GetFunctions(model.OKEX, symbol) {
 							settings := model.GetSetting(function, model.OKEX, symbol)
 							for _, setting := range settings {
-								go handler(setting)
+								go handler(setting, &bidAsk)
 							}
 						}
 					}

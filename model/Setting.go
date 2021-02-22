@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-type CarryHandler func(setting *Setting)
+type CarryHandler func(setting *Setting, bidAsk *BidAsk)
 
 type Setting struct {
 	Valid             bool

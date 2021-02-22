@@ -208,14 +208,13 @@ func handleOrderBookBybit(markets *model.Markets, symbol string, ts int64, respo
 		sort.Sort(bidAsk.Asks)
 		sort.Sort(sort.Reverse(bidAsk.Bids))
 		//util.SocketInfo(markets.ToStringBidAsk(bidAsk))
-		if !markets.SetBidAsk(symbol, model.Bybit, bidAsk) {
-			util.Info(`fail to set new by tick update`)
-		}
-		for function, handler := range model.GetFunctions(model.Bybit, symbol) {
-			if handler != nil {
-				settings := model.GetSetting(function, model.Bybit, symbol)
-				for _, setting := range settings {
-					handler(setting)
+		if markets.SetBidAsk(symbol, model.Bybit, bidAsk) {
+			for function, handler := range model.GetFunctions(model.Bybit, symbol) {
+				if handler != nil {
+					settings := model.GetSetting(function, model.Bybit, symbol)
+					for _, setting := range settings {
+						handler(setting, bidAsk)
+					}
 				}
 			}
 		}

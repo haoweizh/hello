@@ -9,12 +9,11 @@ import (
 	"strings"
 )
 
-var ProcessHang = func(setting *model.Setting) {
+var ProcessHang = func(setting *model.Setting, tick *model.BidAsk) {
 	if setting == nil {
 		return
 	}
-	result, tick := model.AppMarkets.GetBidAsk(setting.Symbol, setting.Market)
-	if !result || tick == nil || tick.Asks == nil || tick.Bids == nil || tick.Asks.Len() < 11 ||
+	if tick == nil || tick.Asks == nil || tick.Bids == nil || tick.Asks.Len() < 11 ||
 		tick.Bids.Len() < 11 {
 		util.Notice(fmt.Sprintf(`[tick not good]%s %s`, setting.Market, setting.Symbol))
 		return
