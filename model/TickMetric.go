@@ -3,6 +3,7 @@ package model
 import (
 	"fmt"
 	"hello/util"
+	"math"
 	"sync"
 	"time"
 )
@@ -60,14 +61,14 @@ func (metricManager *MetricManager) AddCarry(market, symbol string, carryHigh, c
 	current := util.GetNow()
 	timeStr := fmt.Sprintf(`%d/%d %d`, current.Month(), current.Day(), current.Hour())
 	if metricManager.carryHour[marketSymbol][timeStr] == nil {
-		metricManager.carryHour[marketSymbol][timeStr] = &CarryMetric{}
+		metricManager.carryHour[marketSymbol][timeStr] = &CarryMetric{carryHighest: math.NaN(), carryLowest: math.NaN()}
 	}
 	carryMetric := metricManager.carryHour[marketSymbol][timeStr]
 	carryMetric.count++
-	if carryHigh > carryMetric.carryHighest {
+	if carryHigh > carryMetric.carryHighest || carryMetric.carryHighest == math.NaN() {
 		carryMetric.carryHighest = carryHigh
 	}
-	if carryLow < carryMetric.carryLowest {
+	if carryLow < carryMetric.carryLowest || carryMetric.carryLowest == math.NaN() {
 		carryMetric.carryLowest = carryLow
 	}
 	carryMetric.totalHigh += carryHigh
