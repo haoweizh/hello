@@ -346,8 +346,8 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 		}
 		amountLow = 0
 		line = 5000
-		model.SetCarryInfo(`[dynamic]`, fmt.Sprintf(`[lowest:%s %f][highest: %s %f] %f %f %f available:%f rate:%f`,
-			symbolLowest, lowest, symbolHighest, highest, setOpen, usdRate[key], revert, usdAvailable[key], usdRate[key]))
+		model.SetCarryInfo(`[dynamic]`, fmt.Sprintf(`[lowest:%s %f][highest: %s %f] %f %f %f available:%f`,
+			symbolLowest, lowest, symbolHighest, highest, setOpen, usdRate[key], revert, usdAvailable[key]))
 	}
 	carryAmount := getCarryAmount(key, setting.Symbol)
 	if (scoreLow < -1*setOpen && setting.Symbol == symbolLow) ||
