@@ -413,8 +413,7 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	}
 	coin := setting.GetCoin()
 	balance := getCarryBalance(key, coin)
-	if balance == nil || math.Abs(balance.UsdValue) > UsdUpLine ||
-		(sideRelated == model.OrderSideSell && amount > balance.Amount) {
+	if balance == nil || (math.Abs(balance.UsdValue) > UsdUpLine && sideRelated == model.OrderSideBuy) {
 		amount = 0
 	}
 	if amount > 0 {
