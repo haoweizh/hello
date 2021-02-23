@@ -19,8 +19,8 @@ var carryLock sync.Mutex
 var carrying bool
 var doCarry = false
 var symbolHighest, symbolLowest string
-var highest, lowest float64
-
+var lowest = math.NaN()
+var highest = math.NaN()
 var usdAvailable = make(map[string]float64)                   // key - float64
 var usdRate = make(map[string]float64)                        // key - float64
 var carryBalance = make(map[string]map[string]*model.Balance) // key - coin - balance
@@ -163,15 +163,16 @@ var ProcessCarry = func(setting *model.Setting, tick *model.BidAsk) {
 	scoreOpen := 1 - tickRelated.Asks[0].Price/tickPerp.Bids[0].Price
 	scoreClose := 1 - tickRelated.Bids[0].Price/tickPerp.Asks[0].Price
 	model.AppMetric.AddCarry(setting.Market, setting.Symbol, scoreOpen, scoreClose)
-	if scoreOpen > highest || setting.Symbol == symbolHighest {
+	if math.IsNaN(highest) || scoreOpen > highest || setting.Symbol == symbolHighest {
 		highest = scoreOpen
 		symbolHighest = setting.Symbol
+		model.AppMetric.AddCarry(setting.Market, `ftx开仓价差++++`, highest, math.NaN())
 	}
-	if scoreClose < lowest || setting.Symbol == symbolLowest {
+	if math.IsNaN(lowest) || scoreClose < lowest || setting.Symbol == symbolLowest {
 		lowest = scoreClose
 		symbolLowest = setting.Symbol
+		model.AppMetric.AddCarry(setting.Market, `ftx开仓价差----`, math.NaN(), lowest)
 	}
-	model.AppMetric.AddCarry(setting.Market, `整个市场的最大开仓价差>>>>>>>>>>>>>>>`, highest, lowest)
 	model.SetCarryInfo(`[grid] `+setting.Symbol,
 		fmt.Sprintf(`current: [%s] score range: [%f ~ %f] revert: [%f] [open %f close: %f]`,
 			setting.Symbol, setting.OpenShortMargin, setting.CloseShortMargin, setting.GridPriceDistance,

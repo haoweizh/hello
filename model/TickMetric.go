@@ -71,10 +71,14 @@ func (metricManager *MetricManager) AddCarry(market, symbol string, carryHigh, c
 	if carryLow < carryMetric.carryLowest || math.IsNaN(carryMetric.carryLowest) {
 		carryMetric.carryLowest = carryLow
 	}
-	carryMetric.totalHigh += carryHigh
-	carryMetric.totalLow += carryLow
-	carryMetric.avgHigh = carryMetric.totalHigh / float64(carryMetric.count)
-	carryMetric.avgLow = carryMetric.totalLow / float64(carryMetric.count)
+	if !math.IsNaN(carryHigh) {
+		carryMetric.totalHigh += carryHigh
+		carryMetric.avgHigh = carryMetric.totalHigh / float64(carryMetric.count)
+	}
+	if !math.IsNaN(carryLow) {
+		carryMetric.totalLow += carryLow
+		carryMetric.avgLow = carryMetric.totalLow / float64(carryMetric.count)
+	}
 }
 
 func (metricManager *MetricManager) AddTick(market, symbol string, current time.Time, bidAsk *BidAsk) {
@@ -140,7 +144,7 @@ func (metricManager *MetricManager) ToString() (metricStr string) {
 		for str, metric := range timeMetric {
 			if timeMap[str] {
 				metricStr += fmt.Sprintf("%s: all:%d lowest: %f highest: %f avgHigh: %f avgLow: %f\n",
-					str, metric.count, metric.carryLowest, metric.carryHighest, metric.avgLow, metric.avgHigh)
+					str, metric.count, metric.carryLowest, metric.carryHighest, metric.avgHigh, metric.avgLow)
 			}
 		}
 	}
