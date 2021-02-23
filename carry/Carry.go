@@ -408,10 +408,12 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	amountPerp := api.FormatAmount(setting.Market, setting.Symbol, amount)
 	amountRelated := api.FormatAmount(setting.Market, setting.GetRelatedSymbol(), amount)
 	amount = math.Min(amountPerp, amountRelated)
-	if (sideRelated == model.OrderSideBuy && usdAvailable < line) ||
-		(math.Abs(carryAmount)*tickPerp.Asks[0].Price > amountLow && amount*tickPerp.Asks[0].Price < amountLow) {
+	// 持仓数大于最小开仓量时，开仓量不能小于最小开仓量
+	if (sideRelated == model.OrderSideBuy && usdAvailable < line) || ((math.Abs(carryAmount)*tickPerp.Asks[0].Price > amountLow ||
+		api.FormatAmount(setting.Market, setting.Symbol, carryAmount) == 0) && amount*tickPerp.Asks[0].Price < amountLow) {
 		amount = 0
 	}
+	// 加大现有仓位时，控制开仓数额
 	if amount*tickPerp.Asks[0].Price < amountLow &&
 		((sidePerp == model.OrderSideBuy && carryAmount < 0) || (sidePerp == model.OrderSideSell && carryAmount > 0)) {
 		amount = 0
