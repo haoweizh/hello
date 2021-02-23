@@ -33,8 +33,26 @@ func ParameterServe() {
 }
 
 func test(c *gin.Context) {
-	util.SocketInfo(fmt.Sprintf(`get test request %d`, util.GetNowUnixMillion()))
-	c.String(http.StatusOK, `thank you ray`)
+	carryRows, _ := model.AppDB.Model(&model.Order{}).Select(`amount_type,order_side,sum(price*amount),date(order_time),refresh_type`).
+		Group(`order_side,date(order_time),amount_type,refresh_type`).Order(`date(order_time) desc`).Rows()
+	carryBackMsg := ``
+	keys, _ := model.AppConfig.GetKeys(model.Ftx)
+	if carryRows != nil {
+		for carryRows.Next() {
+			var side, date, amountType, refreshType string
+			var value float64
+			_ = carryRows.Scan(&amountType, &side, &value, &date, &refreshType)
+			if amountType != keys[0] {
+				carryBackMsg += fmt.Sprintf("交易额 in USD: %s %s %f 类型：%s\n", date, side, value, refreshType)
+			}
+			//else {
+			//	carryBackMsg += fmt.Sprintf("交易额 in USD: %s %s %f 类型：%s\n", date, side, value, refreshType)
+			//}
+		}
+		carryRows.Close()
+	}
+	carryBackMsg += model.GetCarryInfo(`dynamic`)
+	c.String(http.StatusOK, carryBackMsg)
 }
 
 func setSymbol(c *gin.Context) {
@@ -218,14 +236,15 @@ func GetParameters(c *gin.Context) {
 			_ = carryRows.Scan(&amountType, &side, &value, &date, &refreshType)
 			if amountType == keys[0] {
 				carryFrontMsg += fmt.Sprintf("交易额 in USD: %s %s %f 类型：%s\n", date, side, value, refreshType)
-			} else {
-				carryBackMsg += fmt.Sprintf("交易额 in USD: %s %s %f 类型：%s\n", date, side, value, refreshType)
 			}
+			//else {
+			//	carryBackMsg += fmt.Sprintf("交易额 in USD: %s %s %f 类型：%s\n", date, side, value, refreshType)
+			//}
 		}
 		carryRows.Close()
 	}
 	msg += carryFrontMsg
-	msg += model.GetCarryInfo()
+	msg += model.GetCarryInfo(``)
 	msg += model.AppMetric.ToString() + "\n"
 	msg += model.AppConfig.ToString()
 	msg += carryBackMsg

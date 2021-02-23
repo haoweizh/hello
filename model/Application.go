@@ -213,11 +213,12 @@ var orderStatusMap = map[string]map[string]string{ // market - market status - u
 	},
 }
 
-func GetCarryInfo() (info string) {
+func GetCarryInfo(mark string) (info string) {
 	for key, value := range CarryInfo {
-		info += fmt.Sprintf("%s: %s\n", key, value)
+		if mark == `` || strings.Contains(key, mark) {
+			info += fmt.Sprintf("%s: %s\n", key, value)
+		}
 	}
-	info += fmt.Sprintf("%s\n", CarryInfo[`[dynamic]`])
 	return
 }
 
