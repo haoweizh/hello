@@ -163,7 +163,6 @@ var ProcessCarry = func(setting *model.Setting, tick *model.BidAsk) {
 	scoreOpen := 1 - tickRelated.Asks[0].Price/tickPerp.Bids[0].Price
 	scoreClose := 1 - tickRelated.Bids[0].Price/tickPerp.Asks[0].Price
 	model.AppMetric.AddCarry(setting.Market, setting.Symbol, scoreOpen, scoreClose)
-	model.AppMetric.AddCarry(setting.Market, `整个市场的最大开仓价差>>>>>>>>>>>>>>>`, highest, lowest)
 	if scoreOpen > highest || setting.Symbol == symbolHighest {
 		highest = scoreOpen
 		symbolHighest = setting.Symbol
@@ -172,6 +171,7 @@ var ProcessCarry = func(setting *model.Setting, tick *model.BidAsk) {
 		lowest = scoreClose
 		symbolLowest = setting.Symbol
 	}
+	model.AppMetric.AddCarry(setting.Market, `整个市场的最大开仓价差>>>>>>>>>>>>>>>`, highest, lowest)
 	model.SetCarryInfo(`[grid] `+setting.Symbol,
 		fmt.Sprintf(`current: [%s] score range: [%f ~ %f] revert: [%f] [open %f close: %f]`,
 			setting.Symbol, setting.OpenShortMargin, setting.CloseShortMargin, setting.GridPriceDistance,
@@ -368,10 +368,10 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	if len(keys) > 1 && keys[1] == key {
 		setOpen = (1.3 - usdRate) * setOpen
 		if setting.Symbol == `BTMX-PERP` {
-			setOpen = math.Min(setOpen, 0.01)
+			setOpen = math.Min(setOpen, 0.0095)
 		}
 		if revert < 0 {
-			revert = math.Max((2.3-usdRate)*revert, -0.07)
+			revert = math.Max((4-usdRate)*revert, -0.05)
 		} else {
 			revert = 0.5 / (1.5 - usdRate) * revert
 		}
