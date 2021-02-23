@@ -76,8 +76,8 @@ func WsDepthServeFtx(markets *model.Markets, errHandler ErrHandler) (chan struct
 		}
 	}
 	requestUrl := model.AppConfig.WSUrls[model.Ftx]
-	subType := model.SubscribeTicker
-	//subType := model.SubscribeDepth + `,` + model.SubscribeTicker
+	//subType := model.SubscribeDepth
+	subType := model.SubscribeDepth + `,` + model.SubscribeTicker
 	return WebSocketServe(model.Ftx, requestUrl, ``, GetWSSubscribes(model.Ftx, subType),
 		subscribeHandlerFtx, wsHandler, errHandler)
 }

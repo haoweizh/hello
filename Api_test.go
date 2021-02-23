@@ -105,7 +105,7 @@ func Test_wallet(t *testing.T) {
 	model.AppDB, _ = gorm.Open("postgres", model.AppConfig.DBConnection)
 	//a := api.GetMarketInfo(model.Ftx, `SECO/USD`)
 	//fmt.Println(a)
-	api.InitCarryFtx(57)
+	api.InitCarryFtx(1)
 	api.GetFundingRate(model.Ftx, `BTC-PERP`)
 	api.RefreshAccount(``, ``, model.Ftx)
 	_, balances := api.GetBalances(``, ``, model.Ftx, 0)
