@@ -251,9 +251,9 @@ func parseBalanceFtx(key string, data map[string]interface{}) (balance *model.Ba
 	if data[`spotBorrow`] != nil {
 		balance.Borrow, _ = data[`spotBorrow`].(json.Number).Float64()
 	}
-	//if data[`free`] != nil {
-	//	balance.free, _ = data[`free`].(json.Number).Float64()
-	//}
+	if data[`free`] != nil {
+		balance.AvailableWithBorrow, _ = data[`free`].(json.Number).Float64()
+	}
 	return balance
 }
 

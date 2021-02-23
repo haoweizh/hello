@@ -404,16 +404,22 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 			amount = math.Min(amount, usdAvailable/tickRelated.Asks[0].Price)
 		}
 	}
+	coin := setting.GetCoin()
+	balance := getCarryBalance(key, coin)
+	if balance == nil {
+		return ``, ``, 0
+	}
 	amount = math.Min(amount, 10000/tickPerp.Asks[0].Price)
+	if balance.AvailableWithBorrow < math.Abs(amount) && model.OrderSideSell == sideRelated {
+		amount = balance.AvailableWithBorrow
+	}
 	amountPerp := api.FormatAmount(setting.Market, setting.Symbol, amount)
 	amountRelated := api.FormatAmount(setting.Market, setting.GetRelatedSymbol(), amount)
 	amount = math.Min(amountPerp, amountRelated)
 	if (sideRelated == model.OrderSideBuy && usdAvailable < line) || math.Abs(amount)*tickPerp.Asks[0].Price < amountLow {
 		amount = 0
 	}
-	coin := setting.GetCoin()
-	balance := getCarryBalance(key, coin)
-	if balance == nil || (math.Abs(balance.UsdValue) > UsdUpLine && sideRelated == model.OrderSideBuy) {
+	if math.Abs(balance.UsdValue) > UsdUpLine && sideRelated == model.OrderSideBuy {
 		amount = 0
 	}
 	if amount > 0 {
