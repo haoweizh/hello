@@ -12,6 +12,7 @@ import (
 	"math"
 	"strings"
 	"testing"
+	"time"
 )
 
 func Test_chan(t *testing.T) {
@@ -100,6 +101,21 @@ func Test_initTurtleN(t *testing.T) {
 }
 
 func Test_wallet(t *testing.T) {
+	for true {
+		keyLen := 2
+		now := time.Now()
+		begin := 0
+		step := 1
+		if (now.Hour() < 6 && now.Hour() > 2) || now.Second()%3 == 1 {
+			begin = keyLen - 1
+			step = -1
+		}
+		for i := begin; i >= 0 && i < keyLen; i += step {
+			fmt.Println(i)
+		}
+		fmt.Println(fmt.Sprintf(`>>>>>>>>>>>>>%d`, now.Second()))
+		time.Sleep(time.Second)
+	}
 	model.NewConfig()
 	_ = configor.Load(model.AppConfig, "./config.yml")
 	model.AppDB, _ = gorm.Open("postgres", model.AppConfig.DBConnection)

@@ -214,6 +214,8 @@ var orderStatusMap = map[string]map[string]string{ // market - market status - u
 }
 
 func GetCarryInfo(mark string) (info string) {
+	infoLock.Lock()
+	defer infoLock.Unlock()
 	for key, value := range CarryInfo {
 		if mark == `` || strings.Contains(key, mark) {
 			info += fmt.Sprintf("%s: %s\n", key, value)
