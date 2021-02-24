@@ -670,8 +670,11 @@ func placeOrderFtx(order *model.Order, key, secret, orderSide, orderType, accoun
 	postData[`side`] = orderSide
 	postData[`size`], _ = strconv.ParseFloat(amount, 64)
 	postData[`type`] = orderType
+	postData[`ioc`] = false
 	if accountType == model.AccountTypeReduce {
 		postData[`reduceOnly`] = true
+	} else {
+		postData[`reduceOnly`] = false
 	}
 	if orderType == `limit` || orderType == `market` {
 		postData[`price`], _ = strconv.ParseFloat(orderPrice, 64)
