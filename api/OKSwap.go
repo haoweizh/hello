@@ -164,6 +164,7 @@ func handleDepthOkSwap(markets *model.Markets, response *simplejson.Json) {
 			ts, err := time.Parse(time.RFC3339, value[`timestamp`].(string))
 			if err == nil {
 				bidAsk.Ts = int(ts.UnixNano()) / 1000000
+				bidAsk.TsReceived = int(util.GetNowUnixMillion())
 			}
 			if value[`bids`] != nil {
 				for _, items := range value[`bids`].([]interface{}) {

@@ -5,6 +5,7 @@ import (
 	"crypto/tls"
 	"errors"
 	"fmt"
+	"hello/model"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -33,7 +34,8 @@ func getIpFromAddr(addr net.Addr) net.IP {
 	return ip
 }
 
-func ExternalIP() (net.IP, error) {
+// ExternalIP
+func _() (net.IP, error) {
 	iFaces, err := net.Interfaces()
 	if err != nil {
 		return nil, err
@@ -127,13 +129,15 @@ func HttpRequest(method string, reqUrl string, body string, requestHeaders map[s
 	}
 	ctx, cncl := context.WithTimeout(context.Background(), time.Second*time.Duration(timeout))
 	defer cncl()
+	if strings.Contains(reqUrl, `orders`) && strings.Contains(reqUrl, model.Ftx) {
+		notice.Println(fmt.Sprintf(`orders send time:%d`, GetNowUnixMillion()))
+	}
 	resp, err := http.DefaultClient.Do(req.WithContext(ctx))
 	if err != nil {
 		SocketInfo("can not process request " + err.Error())
 		return nil, err
 	}
 	defer resp.Body.Close()
-
 	bodyData, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		SocketInfo("can not read message from request " + err.Error())

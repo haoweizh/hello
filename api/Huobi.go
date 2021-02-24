@@ -82,6 +82,7 @@ func WsDepthServeHuobi(markets *model.Markets, errHandler ErrHandler) (chan stru
 				sort.Sort(bidAsk.Asks)
 				sort.Sort(sort.Reverse(bidAsk.Bids))
 				bidAsk.Ts = message.Ts
+				bidAsk.TsReceived = int(util.GetNowUnixMillion())
 				if markets.SetBidAsk(symbol, model.Huobi, &bidAsk) {
 					for function, handler := range model.GetFunctions(model.Huobi, symbol) {
 						if handler != nil {

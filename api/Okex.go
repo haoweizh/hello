@@ -83,6 +83,7 @@ func WsDepthServeOkex(markets *model.Markets, errHandler ErrHandler) (chan struc
 					sort.Sort(bidAsk.Asks)
 					sort.Sort(sort.Reverse(bidAsk.Bids))
 					bidAsk.Ts = message.Data.Timestamp
+					bidAsk.TsReceived = int(util.GetNowUnixMillion())
 					if markets.SetBidAsk(symbol, model.OKEX, &bidAsk) {
 						for function, handler := range model.GetFunctions(model.OKEX, symbol) {
 							settings := model.GetSetting(function, model.OKEX, symbol)

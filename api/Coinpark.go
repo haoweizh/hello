@@ -49,7 +49,7 @@ func WsDepthServeCoinpark(markets *model.Markets, errHandler ErrHandler) (chan s
 				}
 				symbol := strings.ToLower(data[`pair`].(string))
 				time, _ := data[`update_time`].(json.Number).Int64()
-				bidAsk := model.BidAsk{Ts: int(time)}
+				bidAsk := model.BidAsk{Ts: int(time), TsReceived: int(util.GetNowUnixMillion())}
 				askArray := data[`asks`].([]interface{})
 				bidArray := data[`bids`].([]interface{})
 				bidAsk.Asks = make([]model.Tick, len(askArray))

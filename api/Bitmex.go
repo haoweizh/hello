@@ -240,6 +240,7 @@ func handOrderBook10(markets *model.Markets, data []interface{}) {
 	if item[`timestamp`] != nil {
 		tickTime, _ := time.Parse(time.RFC3339, item[`timestamp`].(string))
 		bidAsk.Ts = int(tickTime.UnixNano() / 1000000)
+		bidAsk.TsReceived = int(util.GetNowUnixMillion())
 	}
 	if item[`bids`] != nil {
 		bidItems := item[`bids`].([]interface{})
@@ -307,12 +308,12 @@ func handleQuote(markets *model.Markets, action string, data []interface{}) {
 		switch action {
 		case `partial`:
 			symbolTicks[symbol] = &model.BidAsk{Ts: int(quoteTime.UnixNano() / 1000000),
-				Bids: []model.Tick{*bid}, Asks: []model.Tick{*ask}}
+				TsReceived: int(util.GetNowUnixMillion()), Bids: []model.Tick{*bid}, Asks: []model.Tick{*ask}}
 		case `insert`:
 			if compareTime == nil || compareTime.Before(quoteTime) {
 				compareTime = &quoteTime
 				symbolTicks[symbol] = &model.BidAsk{Ts: int(quoteTime.UnixNano() / 1000000),
-					Bids: []model.Tick{*bid}, Asks: []model.Tick{*ask}}
+					TsReceived: int(util.GetNowUnixMillion()), Bids: []model.Tick{*bid}, Asks: []model.Tick{*ask}}
 			}
 		}
 	}
@@ -500,6 +501,7 @@ func handleOrderBook(markets *model.Markets, action string, data []interface{}) 
 		sort.Sort(sort.Reverse(bidAsks.Bids))
 		if bidAsks.Bids != nil && bidAsks.Asks != nil {
 			bidAsks.Ts = int(util.GetNowUnixMillion())
+			bidAsks.TsReceived = int(util.GetNowUnixMillion())
 			if model.AppConfig.Env == "test" && symbol == "btcusd_p" &&
 				bidAsks.Bids.Len() > 0 && bidAsks.Asks.Len() > 0 {
 				if prePriceB != bidAsks.Bids[0].Price || prePriceA != bidAsks.Asks[0].Price {

@@ -65,6 +65,7 @@ func WsDepthServeHuobiDM(markets *model.Markets, errHandler ErrHandler) (chan st
 				bidAsk.Asks[i] = model.Tick{Price: price, Amount: amount}
 			}
 			bidAsk.Ts = responseJson.Get(`ts`).MustInt()
+			bidAsk.TsReceived = int(util.GetNowUnixMillion())
 			symbol := responseJson.Get(`ch`).MustString()
 			strs := strings.Split(symbol, `.`)
 			if strs != nil && len(strs) > 1 {

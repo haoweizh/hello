@@ -96,6 +96,7 @@ func handleTickerFtx(markets *model.Markets, response *simplejson.Json) {
 	bidAsk := &model.BidAsk{}
 	ts := data.Get(`time`).MustFloat64()
 	bidAsk.Ts = int(ts * 1000)
+	bidAsk.TsReceived = int(util.GetNowUnixMillion())
 	if dataType == `update` {
 		bidAsk.Bids = []model.Tick{{Price: data.Get(`bid`).MustFloat64(), Amount: data.Get(`bidSize`).MustFloat64()}}
 		bidAsk.Asks = []model.Tick{{Price: data.Get(`ask`).MustFloat64(), Amount: data.Get(`askSize`).MustFloat64()}}
@@ -121,7 +122,7 @@ func handleDepthFtx(markets *model.Markets, response *simplejson.Json) {
 	data := response.Get(`data`)
 	if data.Interface() != nil && (dataType == `partial` || dataType == `update`) {
 		bidAsk := &model.BidAsk{Ts: int(data.Get(`time`).MustFloat64() * 1000),
-			Bids: make([]model.Tick, 0), Asks: make([]model.Tick, 0)}
+			TsReceived: int(util.GetNowUnixMillion()), Bids: make([]model.Tick, 0), Asks: make([]model.Tick, 0)}
 		bids := data.Get(`bids`).MustArray()
 		asks := data.Get(`asks`).MustArray()
 		if dataType == `partial` {
@@ -140,7 +141,7 @@ func handleDepthFtx(markets *model.Markets, response *simplejson.Json) {
 			if oldBidAsk == nil {
 				util.SocketInfo(fmt.Sprintf(`fatal: can not have old bidask %s %s`, model.Ftx, symbol))
 				oldBidAsk = &model.BidAsk{Ts: int(data.Get(`time`).MustFloat64() * 1000),
-					Bids: make([]model.Tick, 0), Asks: make([]model.Tick, 0)}
+					TsReceived: int(util.GetNowUnixMillion()), Bids: make([]model.Tick, 0), Asks: make([]model.Tick, 0)}
 			}
 			priceAmountBid := make(map[float64]*model.Tick)
 			priceAmountAsk := make(map[float64]*model.Tick)

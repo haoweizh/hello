@@ -69,6 +69,7 @@ func parseTickByOkFuture(data map[string]interface{}) (bidAsks *model.BidAsk, sy
 	}
 	ts, _ := time.Parse(time.RFC3339, data[`timestamp`].(string))
 	bidAsks.Ts = int(ts.UnixNano() / int64(time.Millisecond))
+	bidAsks.TsReceived = int(util.GetNowUnixMillion())
 	return
 }
 

@@ -240,13 +240,13 @@ func placeCarry(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, key
 		balance.Amount -= amount
 		setUsdAvailable(key, getUsdAvailable(key)+amount*relatedPrice)
 	}
-	before := time.Now().UnixNano() / 1000000
+	now := int(util.GetNowUnixMillion())
 	util.Notice(fmt.Sprintf(`carry%s->%s delay %d %d perp[%f %f %f %f] related[%f %f %f %f] with score open:%f close:%f 
-	rate sum %f amount %f worth %f`,
-		setting.Symbol, symbolRelated, before-int64(tickPerp.Ts), before-int64(tickRelated.Ts), tickPerp.Bids[0].Price,
+	rate sum %f amount %f worth %f time in million %d`,
+		setting.Symbol, symbolRelated, now-tickPerp.TsReceived, now-tickRelated.TsReceived, tickPerp.Bids[0].Price,
 		tickPerp.Bids[0].Amount, tickPerp.Asks[0].Price, tickPerp.Asks[0].Amount, tickRelated.Bids[0].Price,
 		tickRelated.Bids[0].Amount, tickRelated.Asks[0].Price, tickRelated.Asks[0].Amount, scoreOpen, scoreClose,
-		0.0, amount, amount*tickPerp.Asks[0].Price))
+		0.0, amount, amount*tickPerp.Asks[0].Price, util.GetNowUnixMillion()))
 	go api.PlaceOrder(key, secret, sidePerp, model.OrderTypeLimit, setting.Market, setting.Symbol,
 		``, ``, ``, ``, model.FunctionCarry, perpPrice, perpPrice,
 		amount, true)
@@ -371,15 +371,15 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 		if setting.Symbol == `BTMX-PERP` {
 			setOpen = math.Min(setOpen, 0.0095)
 		}
-		if revert < 0 {
-			revert = math.Max((4-usdRate)*revert, -0.05)
+		if revert <= 0 {
+			revert = math.Min(math.Max((4-usdRate)*revert, -0.05), -0.01)
 		} else {
 			revert = 0.5 / (1.5 - usdRate) * revert
 		}
 		amountLow = 0
 		line = 5000
-		model.SetCarryInfo(`[dynamic]`, fmt.Sprintf(`[lowest:%s %f][highest: %s %f] %f %f %f available:%f`,
-			symbolLowest, lowest, symbolHighest, highest, setOpen, usdRate, revert, usdAvailable))
+		model.SetCarryInfo(`[dynamic]`, fmt.Sprintf(`[lowest:%s %f][highest: %s %f] open:%f revert:%f usdRate:%favailable:%f`,
+			symbolLowest, lowest, symbolHighest, highest, setOpen, revert, usdRate, usdAvailable))
 	}
 	carryAmount := getCarryAmount(key, setting.Symbol)
 	if (scoreLow < -1*setOpen && setting.Symbol == symbolLow) ||
@@ -417,6 +417,7 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	amountRelated := api.FormatAmount(setting.Market, setting.GetRelatedSymbol(), amount)
 	amount = math.Min(amountPerp, amountRelated)
 	if (sideRelated == model.OrderSideBuy && usdAvailable < line) || math.Abs(amount)*tickPerp.Asks[0].Price < amountLow {
+		util.Notice(fmt.Sprintf(`usd too low: %s %f<%f`, key, usdAvailable, line))
 		amount = 0
 	}
 	if math.Abs(balance.UsdValue) > UsdUpLine && sideRelated == model.OrderSideBuy {

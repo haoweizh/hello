@@ -28,9 +28,10 @@ type Deal struct {
 }
 
 type BidAsk struct {
-	Ts   int // time in unix epoch million seconds
-	Bids Ticks
-	Asks Ticks
+	Ts         int // time in unix epoch million seconds
+	TsReceived int
+	Bids       Ticks
+	Asks       Ticks
 }
 
 type Rule struct {

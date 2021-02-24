@@ -40,6 +40,7 @@ func WsDepthServeBinance(markets *model.Markets, errHandler ErrHandler) (chan st
 			if tickId > lastTickId[symbol] {
 				lastTickId[symbol] = tickId
 				bidAsk.Ts = int(util.GetNowUnixMillion())
+				bidAsk.TsReceived = int(util.GetNowUnixMillion())
 			} else {
 				return
 			}
