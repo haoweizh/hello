@@ -192,6 +192,8 @@ var ProcessCarry = func(setting *model.Setting, tick *model.BidAsk) {
 				go placeCarry(setting, tickPerp, tickRelated, keys[i], secrets[i], sidePerp, sideRelated, scoreOpen,
 					scoreClose, amount)
 				break
+			} else {
+				util.Notice(`finally i get a chance`)
 			}
 		}
 	} else {
