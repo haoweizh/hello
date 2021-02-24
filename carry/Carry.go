@@ -409,7 +409,7 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	}
 	amount = math.Min(amount, 10000/tickPerp.Asks[0].Price)
 	if model.OrderSideSell == sideRelated {
-		amount = math.Min(balance.AvailableWithBorrow, math.Abs(amount))
+		amount = math.Min(balance.AvailableWithBorrow-10000, math.Abs(amount))
 	}
 	amountPerp := api.FormatAmount(setting.Market, setting.Symbol, amount)
 	amountRelated := api.FormatAmount(setting.Market, setting.GetRelatedSymbol(), amount)
