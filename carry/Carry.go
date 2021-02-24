@@ -382,14 +382,12 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 			symbolLowest, lowest, symbolHighest, highest, setOpen, revert, usdRate, usdAvailable))
 	}
 	carryAmount := getCarryAmount(key, setting.Symbol)
-	if (scoreLow < -1*setOpen && setting.Symbol == symbolLow) ||
-		(carryAmount > 0 && scoreClose <= -1*revert) {
+	if (scoreLow < -1*setOpen && setting.Symbol == symbolLow) || (carryAmount > 0 && scoreClose <= -1*revert) {
 		bidAmount = tickPerp.Asks[0].Amount
 		askAmount = tickRelated.Bids[0].Amount
 		sidePerp = model.OrderSideBuy
 		sideRelated = model.OrderSideSell
-	} else if ((scoreHigh > setOpen && setting.Symbol == symbolHigh) ||
-		(carryAmount < 0 && scoreOpen >= revert)) && usdBalance.Borrow <= 0 {
+	} else if (scoreHigh > setOpen && setting.Symbol == symbolHigh) || (carryAmount < 0 && scoreOpen >= revert) {
 		bidAmount = tickRelated.Asks[0].Amount
 		askAmount = tickPerp.Bids[0].Amount
 		sidePerp = model.OrderSideSell
@@ -410,8 +408,8 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 		return ``, ``, 0
 	}
 	amount = math.Min(amount, 10000/tickPerp.Asks[0].Price)
-	if balance.AvailableWithBorrow < math.Abs(amount) && model.OrderSideSell == sideRelated {
-		amount = balance.AvailableWithBorrow
+	if model.OrderSideSell == sideRelated {
+		amount = math.Min(balance.AvailableWithBorrow, math.Abs(amount))
 	}
 	amountPerp := api.FormatAmount(setting.Market, setting.Symbol, amount)
 	amountRelated := api.FormatAmount(setting.Market, setting.GetRelatedSymbol(), amount)

@@ -243,16 +243,16 @@ func parseBalanceFtx(key string, data map[string]interface{}) (balance *model.Ba
 	if data[`availableWithoutBorrow`] != nil {
 		balance.Available, _ = data[`availableWithoutBorrow`].(json.Number).Float64()
 	}
-	if data[`total`] != nil {
+	if data[`total`] != nil { // 持仓
 		balance.Amount, _ = data[`total`].(json.Number).Float64()
 	}
 	if data[`usdValue`] != nil {
 		balance.UsdValue, _ = data[`usdValue`].(json.Number).Float64()
 	}
-	if data[`spotBorrow`] != nil {
+	if data[`spotBorrow`] != nil { //已借数量
 		balance.Borrow, _ = data[`spotBorrow`].(json.Number).Float64()
 	}
-	if data[`free`] != nil {
+	if data[`free`] != nil { //可借+持仓-已挂的卖单=现在总的可下卖单数量（千万别用这个作为持仓！）
 		balance.AvailableWithBorrow, _ = data[`free`].(json.Number).Float64()
 	}
 	return balance
