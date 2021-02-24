@@ -14,8 +14,7 @@ import (
 const OrderPriceLimit = 0
 const UsdUpLine = 300000
 const revertDis = 0.005
-
-var openValueLimit = 10000.0
+const openValueLimit = 10000.0
 
 var carryLock sync.Mutex
 var carrying bool
@@ -361,6 +360,7 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 		line = 100000
 	}
 	keys, _ := model.AppConfig.GetKeys(setting.Market)
+	localLimit := openValueLimit
 	if len(keys) > 1 && keys[1] == key {
 		setOpen = (1.3 - usdRate) * setOpen
 		if setting.Symbol == `BTMX-PERP` {
@@ -373,7 +373,7 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 		}
 		valueLow = 0
 		line = 5000
-		openValueLimit = 1000.0
+		localLimit = 1000.0
 		model.SetCarryInfo(`[dynamic]`, fmt.Sprintf(`[lowest:%s %f][highest: %s %f] open:%f revert:%f usdRate:%favailable:%f`,
 			symbolLowest, lowest, symbolHighest, highest, setOpen, revert, usdRate, usdAvailable))
 	}
@@ -394,7 +394,7 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	// 开仓时:数量<持仓+可借
 	if (setting.Symbol == symbolLow && scoreLow < -1*setOpen) || (setting.Symbol == symbolHigh && scoreHigh > setOpen) {
 		if sideRelated == model.OrderSideSell {
-			amount = math.Max(0, math.Min(balance.AvailableWithBorrow-openValueLimit/markPrice, math.Abs(amount)))
+			amount = math.Max(0, math.Min(balance.AvailableWithBorrow-localLimit/markPrice, math.Abs(amount)))
 		}
 	} else { // 反向关仓量要<=持仓
 		amount = math.Min(math.Abs(carryAmount), amount)
@@ -402,7 +402,7 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	if sideRelated == model.OrderSideBuy {
 		amount = math.Min(amount, usdAvailable/markPrice)
 	}
-	amount = math.Min(amount, openValueLimit/markPrice)
+	amount = math.Min(amount, localLimit/markPrice)
 	amountPerp := api.FormatAmount(setting.Market, setting.Symbol, amount)
 	amountRelated := api.FormatAmount(setting.Market, setting.GetRelatedSymbol(), amount)
 	amount = math.Min(amountPerp, amountRelated)
