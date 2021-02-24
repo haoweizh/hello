@@ -372,7 +372,7 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 			setOpen = math.Min(setOpen, 0.0095)
 		}
 		if revert <= 0 {
-			revert = math.Min(math.Max((4-usdRate)*revert, -0.05), -0.01)
+			revert = math.Min(math.Max((4-usdRate)*revert, -0.005), -0.001)
 		} else {
 			revert = 0.5 / (1.5 - usdRate) * revert
 		}
