@@ -5,7 +5,6 @@ import (
 	"crypto/tls"
 	"errors"
 	"fmt"
-	"hello/model"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -129,7 +128,7 @@ func HttpRequest(method string, reqUrl string, body string, requestHeaders map[s
 	}
 	ctx, cncl := context.WithTimeout(context.Background(), time.Second*time.Duration(timeout))
 	defer cncl()
-	if strings.Contains(reqUrl, `orders`) && strings.Contains(reqUrl, model.Ftx) {
+	if strings.Contains(reqUrl, `orders`) && strings.Contains(reqUrl, `ftx`) {
 		notice.Println(fmt.Sprintf(`orders send time:%d`, GetNowUnixMillion()))
 	}
 	resp, err := http.DefaultClient.Do(req.WithContext(ctx))
