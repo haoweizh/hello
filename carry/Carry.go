@@ -117,14 +117,6 @@ func clearCarryBalance() {
 			for i, key := range keys {
 				_, balances := api.GetBalances(key, secrets[i], market, 0)
 				_, accounts := api.GetAccounts(key, secrets[i], market)
-				settings := model.GetSettings(model.FunctionCarry, market)
-				for _, items := range settings {
-					for _, item := range items {
-						if item.Function == model.FunctionCarry {
-							makeEqual(key, secrets[i], item, balances, accounts)
-						}
-					}
-				}
 				balanceAll := 0.0
 				usdAvailable := 0.0
 				for _, value := range balances {
@@ -138,6 +130,14 @@ func clearCarryBalance() {
 				}
 				setUsdRate(key, usdAvailable/balanceAll)
 				util.Notice(fmt.Sprintf(`[carry] %s usd:%f %f`, key, usdAvailable, usdRate[key]))
+				settings := model.GetSettings(model.FunctionCarry, market)
+				for _, items := range settings {
+					for _, item := range items {
+						if item.Function == model.FunctionCarry {
+							makeEqual(key, secrets[i], item, balances, accounts)
+						}
+					}
+				}
 			}
 		}
 		util.Notice(`...... exit clearing carry balance`)
@@ -271,6 +271,7 @@ func getCarryAmounts(setting *model.Setting, balances []*model.Balance, accounts
 func makeEqual(key, secret string, setting *model.Setting, balances []*model.Balance, accounts []*model.Account) (
 	symbol string, price float64, equal bool) {
 	settingSymbol := setting.Symbol
+	coin := setting.GetCoin()
 	symbolRelated := setting.GetRelatedSymbol()
 	_, tickPerp := model.AppMarkets.GetBidAsk(setting.Symbol, setting.Market)
 	_, tickRelated := model.AppMarkets.GetBidAsk(symbolRelated, setting.Market)
@@ -292,20 +293,21 @@ func makeEqual(key, secret string, setting *model.Setting, balances []*model.Bal
 	} else {
 		setCarryAmount(key, settingSymbol, 0)
 	}
+	balance := getCarryBalance(key, coin)
 	if amount > 0 {
 		orderSide = model.OrderSideSell
-		if tickPerp.Bids[0].Price < (1-revertDis)*tickRelated.Bids[0].Price {
+		if tickPerp.Bids[0].Price < (1-revertDis)*tickRelated.Bids[0].Price && amount < balance.AvailableWithBorrow {
 			symbol = symbolRelated
 			price = tickRelated.Bids[0].Price * (1 - OrderPriceLimit)
 		} else if tickPerp.Bids[0].Price > (1+revertDis)*tickRelated.Bids[0].Price {
 			symbol = settingSymbol
 			price = tickPerp.Bids[0].Price * (1 - OrderPriceLimit)
-		} else if math.Abs(amountPerp) > math.Abs(amountRelated) {
-			symbol = settingSymbol
-			price = tickPerp.Bids[0].Price * (1 - OrderPriceLimit)
-		} else {
+		} else if math.Abs(amountPerp) < math.Abs(amountRelated) && amount < balance.AvailableWithBorrow {
 			symbol = symbolRelated
 			price = tickRelated.Bids[0].Price * (1 - OrderPriceLimit)
+		} else {
+			symbol = settingSymbol
+			price = tickPerp.Bids[0].Price * (1 - OrderPriceLimit)
 		}
 	} else {
 		orderSide = model.OrderSideBuy
