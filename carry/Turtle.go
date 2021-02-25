@@ -270,7 +270,7 @@ var ProcessTurtle = func(setting *model.Setting, tick *model.BidAsk) {
 		}
 	} else if setting.Chance > 0 {
 		priceLong = math.Max(turtleData.highDays20, setting.PriceX+turtleData.n/2)
-		priceShort = math.Max(turtleData.lowDays10, setting.PriceX-2*turtleData.n)
+		priceShort = math.Max(turtleData.lowDays10, math.Max(turtleData.highDays20, setting.PriceX)-2*turtleData.n)
 		priceShort, priceLong = placeTurtleOrders(turtleData, setting, currentN, priceShort, priceLong)
 		// 加仓一个单位
 		if (tick.Asks[0].Price >= priceLong || longBreak) && setting.Chance < int64(setting.AmountLimit) &&
@@ -299,7 +299,7 @@ var ProcessTurtle = func(setting *model.Setting, tick *model.BidAsk) {
 				setting.PriceX, turtleData.n))
 		}
 	} else if setting.Chance < 0 {
-		priceLong = math.Min(turtleData.highDays10, setting.PriceX+2*turtleData.n)
+		priceLong = math.Min(turtleData.highDays10, math.Min(turtleData.lowDays20, setting.PriceX)+2*turtleData.n)
 		priceShort = math.Min(turtleData.lowDays20, setting.PriceX-turtleData.n/2)
 		priceShort, priceLong = placeTurtleOrders(turtleData, setting, currentN, priceShort, priceLong)
 		// 加仓一个单位
@@ -402,18 +402,14 @@ func handleBreak(setting *model.Setting, turtleData *TurtleData, orderSide strin
 func placeTurtleOrders(turtleData *TurtleData, setting *model.Setting,
 	currentN int64, priceShort, priceLong float64) (short, long float64) {
 	amountLimit := int64(setting.AmountLimit)
-	if setting.Chance > 0 && turtleData.end1/turtleData.highDays20 < 0.87 &&
-		(currentN >= amountLimit || setting.Chance >= amountLimit) {
-		priceShort = math.Max(turtleData.lowDays5, setting.PriceX-2*turtleData.n)
-		//util.Notice(fmt.Sprintf(`提前止盈 chance:%f, end1:%f h20:%f`,
-		//	setting.Chance, turtleData.end1, turtleData.highDays20))
-	}
-	if setting.Chance < 0 && turtleData.end1/turtleData.lowDays20 > 1.13 &&
-		(currentN <= -1*amountLimit || setting.Chance <= -1*amountLimit) {
-		priceLong = math.Min(turtleData.highDays5, setting.PriceX+2*turtleData.n)
-		//util.Notice(fmt.Sprintf(`提前止盈 chance: %f, end1:%f l20:%f`,
-		//	setting.Chance, turtleData.end1, turtleData.lowDays20))
-	}
+	//if setting.Chance > 0 && turtleData.end1/turtleData.highDays20 < 0.87 &&
+	//	(currentN >= amountLimit || setting.Chance >= amountLimit) {
+	//	priceShort = math.Max(turtleData.lowDays5, setting.PriceX-2*turtleData.n)
+	//}
+	//if setting.Chance < 0 && turtleData.end1/turtleData.lowDays20 > 1.13 &&
+	//	(currentN <= -1*amountLimit || setting.Chance <= -1*amountLimit) {
+	//	priceLong = math.Min(turtleData.highDays5, setting.PriceX+2*turtleData.n)
+	//}
 	instrument, _ := api.GetCurrentInstrument(``, ``, setting.Market, setting.Symbol)
 	if turtleData.orderLong == nil && currentN < amountLimit && setting.Chance < amountLimit {
 		orderSide := model.OrderSideBuy
