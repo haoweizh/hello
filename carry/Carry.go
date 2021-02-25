@@ -159,7 +159,7 @@ var ProcessCarry = func(setting *model.Setting, tick *model.BidAsk) {
 	million := util.GetNowUnixMillion()
 	if tickPerp == nil || tickRelated == nil || tickPerp.Asks == nil || tickPerp.Bids == nil ||
 		tickRelated.Asks == nil || tickRelated.Bids == nil || model.AppConfig.Handle != `1` || setting == nil ||
-		model.AppPause || million-int64(tickRelated.Ts) > 2000 || million-int64(tickPerp.Ts) > 2000 || million-int64(tick.Ts) > 30 {
+		model.AppPause || million-int64(tickRelated.Ts) > 2000 || million-int64(tickPerp.Ts) > 2000 || million-int64(tick.Ts) > 20 {
 		return
 	}
 	scoreOpen := 1 - tickRelated.Asks[0].Price/tickPerp.Bids[0].Price
@@ -190,8 +190,8 @@ var ProcessCarry = func(setting *model.Setting, tick *model.BidAsk) {
 		usdRate := getUsdRate(keys[i])
 		usdAvailable := getUsdAvailable(keys[i])
 		carryInfo := fmt.Sprintf("%s limit :%f [lowest:%s %f][highest: %s %f][available usd: <%f> %f]",
-			keys[i], model.AppConfig.Amount, symbolLowest, lowest, symbolHighest, highest, usdAvailable, usdRate)
-		model.SetCarryInfo(fmt.Sprintf(`[grid-setting]%s`, keys[i][0:5]), carryInfo)
+			keys[0], model.AppConfig.Amount, symbolLowest, lowest, symbolHighest, highest, usdAvailable, usdRate)
+		model.SetCarryInfo(fmt.Sprintf(`[grid-setting]`), carryInfo)
 		sidePerp, sideRelated, amount := calcCarryOpen(setting, tickPerp, tickRelated, keys[i], setting.Symbol,
 			setting.Symbol, scoreOpen, scoreClose, scoreOpen, scoreClose)
 		if amount > 0 {
