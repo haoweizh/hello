@@ -352,13 +352,14 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	usdAvailable := getUsdAvailable(key)
 	coin := setting.GetCoin()
 	balance := getCarryBalance(key, coin)
-	if balance == nil || usdBalance == nil {
+	if balance == nil {
+		model.SetCarryInfo(key, fmt.Sprintf(`balace not available!!! %s %s`, key, coin))
+		return ``, ``, 0
+	}
+	if usdBalance == nil {
 		return ``, ``, 0
 	}
 	line := model.AppConfig.Amount
-	if line <= 0 {
-		line = 100000
-	}
 	keys, _ := model.AppConfig.GetKeys(setting.Market)
 	localLimit := openValueLimit
 	if len(keys) > 1 && keys[0] != key {
