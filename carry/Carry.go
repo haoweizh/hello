@@ -353,7 +353,7 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	coin := setting.GetCoin()
 	balance := getCarryBalance(key, coin)
 	if balance == nil {
-		model.SetCarryInfo(key, fmt.Sprintf(`balace not available!!! %s %s`, key, coin))
+		model.SetCarryInfo(`warning`+coin, fmt.Sprintf(`balace not available!!! %s`, key))
 		return ``, ``, 0
 	}
 	if usdBalance == nil {
@@ -376,7 +376,11 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 			revert = 0.5 / (1.5 - usdRate) * revert
 		}
 		valueLow = 0
-		line = 5000
+		if keys[1] == key {
+			line = 5000
+		} else {
+			line = 500
+		}
 		localLimit = 1000.0
 		model.SetCarryInfo(`[dynamic]`, fmt.Sprintf(`[lowest:%s %f][highest: %s %f] open:%f revert:%f usdRate:%favailable:%f`,
 			symbolLowest, lowest, symbolHighest, highest, setOpen, revert, usdRate, usdAvailable))

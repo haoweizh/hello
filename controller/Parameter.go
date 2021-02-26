@@ -52,7 +52,7 @@ func test(c *gin.Context) {
 		carryRows.Close()
 	}
 	carryBackMsg += model.GetCarryInfo(`dynamic`)
-	carryBackMsg += model.GetCarryInfo(`balance not available`)
+	carryBackMsg += model.GetCarryInfo(`warning`)
 	c.String(http.StatusOK, carryBackMsg)
 }
 
