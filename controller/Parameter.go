@@ -51,8 +51,8 @@ func test(c *gin.Context) {
 		}
 		carryRows.Close()
 	}
-	carryBackMsg += model.GetCarryInfo(`dynamic`)
-	carryBackMsg += model.GetCarryInfo(`warning`)
+	carryBackMsg += model.GetCarryInfo(`dynamic`, ``)
+	carryBackMsg += model.GetCarryInfo(`warning`, ``)
 	c.String(http.StatusOK, carryBackMsg)
 }
 
@@ -245,7 +245,7 @@ func GetParameters(c *gin.Context) {
 		carryRows.Close()
 	}
 	msg += carryFrontMsg
-	msg += model.GetCarryInfo(``)
+	msg += model.GetCarryInfo(``, `slave`)
 	msg += model.AppMetric.ToString() + "\n"
 	msg += model.AppConfig.ToString()
 	msg += carryBackMsg

@@ -345,6 +345,7 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	scoreOpen, scoreClose, scoreHigh, scoreLow float64) (sidePerp, sideRelated string, amount float64) {
 	var bidAmount, askAmount float64
 	setOpen := setting.OpenShortMargin
+	setClose := setting.CloseShortMargin
 	revert := setting.GridPriceDistance
 	valueLow := setting.AmountLimit
 	usdBalance := getCarryBalance(key, `USD`)
@@ -353,7 +354,7 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	coin := setting.GetCoin()
 	balance := getCarryBalance(key, coin)
 	if balance == nil {
-		model.SetCarryInfo(`warning`+coin, fmt.Sprintf(`balace not available!!! %s`, key))
+		model.SetCarryInfo(`warning`+coin, fmt.Sprintf(`slave: balace not available!!! %s`, key))
 		return ``, ``, 0
 	}
 	if usdBalance == nil {
@@ -362,11 +363,8 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	line := model.AppConfig.Amount
 	keys, _ := model.AppConfig.GetKeys(setting.Market)
 	localLimit := openValueLimit
-	if len(keys) > 1 && keys[0] != key {
+	if len(keys) > 1 && keys[0] != key && setting.Symbol != `BTMX-PERP` {
 		setOpen = (1.3 - usdRate) * setOpen
-		if setting.Symbol == `BTMX-PERP` {
-			setOpen = math.Min(setOpen, 0.0095)
-		}
 		if revert == 0 {
 			revert = -0.001
 		}
@@ -382,11 +380,13 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 			line = 500
 		}
 		localLimit = 1000.0
-		model.SetCarryInfo(`[dynamic]`, fmt.Sprintf(`[lowest:%s %f][highest: %s %f] open:%f revert:%f usdRate:%favailable:%f`,
-			symbolLowest, lowest, symbolHighest, highest, setOpen, revert, usdRate, usdAvailable))
+		setClose = -1 * setOpen
+		model.SetCarryInfo(`[dynamic]`, fmt.Sprintf(`[lowest:%s %f][highest: %s %f] open:%f close:%f 
+			revert:%f usdRate:%favailable:%f`,
+			symbolLowest, lowest, symbolHighest, highest, setOpen, setClose, revert, usdRate, usdAvailable))
 	}
 	carryAmount := getCarryAmount(key, setting.Symbol)
-	if (scoreLow < -1*setOpen && setting.Symbol == symbolLow) || (carryAmount > 0 && scoreClose <= -1*revert) {
+	if (scoreLow < setClose && setting.Symbol == symbolLow) || (carryAmount > 0 && scoreClose <= -1*revert) {
 		bidAmount = tickPerp.Asks[0].Amount
 		askAmount = tickRelated.Bids[0].Amount
 		sidePerp = model.OrderSideBuy
@@ -400,7 +400,7 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	markPrice := tickPerp.Asks[0].Price
 	amount = math.Min(bidAmount, askAmount)
 	// 开仓时:数量<持仓+可借
-	if (setting.Symbol == symbolLow && scoreLow < -1*setOpen) || (setting.Symbol == symbolHigh && scoreHigh > setOpen) {
+	if (setting.Symbol == symbolLow && scoreLow < setClose) || (setting.Symbol == symbolHigh && scoreHigh > setOpen) {
 		if sideRelated == model.OrderSideSell {
 			amount = math.Max(0, math.Min(balance.AvailableWithBorrow-localLimit/markPrice, math.Abs(amount)))
 		}
@@ -424,4 +424,34 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 			key, symbolHigh, scoreHigh, symbolLow, scoreLow, setting.Symbol, usdAvailable, amount))
 	}
 	return sidePerp, sideRelated, amount
+}
+
+func InitFtxBalance(key, secret, function string) {
+	api.InitMarketInfos()
+	settings := model.GetSettings(function, model.Ftx)
+	_, balances := api.GetBalances(key, secret, model.Ftx, 0)
+	balanceMap := make(map[string]*model.Balance)
+	for _, balance := range balances {
+		balanceMap[balance.Coin] = balance
+	}
+	i := 0
+	for _, items := range settings {
+		coin := items[0].GetCoin()
+		balance := balanceMap[coin]
+		if balance == nil {
+			if model.MarketInfos[model.Ftx] == nil {
+				continue
+			}
+			marketInfo := model.MarketInfos[model.Ftx][items[0].GetRelatedSymbol()]
+			if marketInfo == nil {
+				continue
+			}
+			order := api.PlaceOrder(key, secret, model.OrderSideBuy, model.OrderTypeMarket, model.Ftx, items[0].Symbol, ``,
+				``, ``, ``, ``, 0, 0, marketInfo.SizeIncrement, false)
+			if order.OrderId == `` {
+				i++
+				fmt.Println(fmt.Sprintf(`%d order return :%s %s`, i, order.ErrCode, items[0].Symbol))
+			}
+		}
+	}
 }

@@ -12,7 +12,6 @@ import (
 	"math"
 	"strings"
 	"testing"
-	"time"
 )
 
 func Test_chan(t *testing.T) {
@@ -101,26 +100,15 @@ func Test_initTurtleN(t *testing.T) {
 }
 
 func Test_wallet(t *testing.T) {
-	for true {
-		keyLen := 2
-		now := time.Now()
-		begin := 0
-		step := 1
-		if (now.Hour() < 6 && now.Hour() > 2) || now.Second()%3 == 1 {
-			begin = keyLen - 1
-			step = -1
-		}
-		for i := begin; i >= 0 && i < keyLen; i += step {
-			fmt.Println(i)
-		}
-		fmt.Println(fmt.Sprintf(`>>>>>>>>>>>>>%d`, now.Second()))
-		time.Sleep(time.Second)
-	}
 	model.NewConfig()
 	_ = configor.Load(model.AppConfig, "./config.yml")
 	model.AppDB, _ = gorm.Open("postgres", model.AppConfig.DBConnection)
 	//a := api.GetMarketInfo(model.Ftx, `SECO/USD`)
 	//fmt.Println(a)
+	//carry.InitFtxBalance(`ZK6_FPdUIhDnjv_JWklHAkgWXRRindBw-qIg18bU`,
+	//	`4bbFXcuVk_VE2JJ0_mnLFa3J-kcCOeUVM0sRmYN5`, model.FunctionCarry)
+	carry.InitFtxBalance(`iRD9B_hEjFExv9RKWR3ND4ZXHArWz_OorwonBk6N`,
+		`uwR9deKdtPT3BDALrypWUwNwELLLG5XU9XWCWJui`, model.FunctionCarry)
 	api.InitCarryFtx(1)
 	api.GetFundingRate(model.Ftx, `BTC-PERP`)
 	api.RefreshAccount(``, ``, model.Ftx)

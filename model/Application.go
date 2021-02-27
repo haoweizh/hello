@@ -147,24 +147,6 @@ var orderStatusMap = map[string]map[string]string{ // market - market status - u
 		`-1`: CarryStatusFail,    //撤单成功
 		`-2`: CarryStatusFail,    //失败
 	},
-	Fcoin: {
-		`submitted`:        CarryStatusWorking, //已提交
-		`partial_filled`:   CarryStatusWorking, //部分成交
-		`partial_canceled`: CarryStatusSuccess, //部分成交已撤销
-		`filled`:           CarryStatusSuccess, //完全成交
-		`canceled`:         CarryStatusFail,    //已撤销
-		`pending_cancel`:   CarryStatusWorking, //撤销已提交
-	},
-	Fmex: {
-		`PENDING`:           CarryStatusWorking, //	等待成交
-		`PARTIAL_FILLED`:    CarryStatusWorking, //	部分成交
-		`FULLY_FILLED`:      CarryStatusSuccess, //	完全成交
-		`PARTIAL_CANCELLED`: CarryStatusSuccess, //	部分取消
-		`FULLY_CANCELLED`:   CarryStatusFail,    //	全部取消
-		`STOP_PENDING`:      CarryStatusWorking, //	stop订单正在等待触发
-		`STOP_FAILED`:       CarryStatusFail,    //	stop订单被触发，但执行失败（例如：冻结失败）
-		`STOP_CANCELLED`:    CarryStatusFail,    //	stop订单未被触发而取消
-	},
 	Bitmex: {
 		"New":             CarryStatusWorking,
 		"PartiallyFilled": CarryStatusWorking,
@@ -213,11 +195,11 @@ var orderStatusMap = map[string]map[string]string{ // market - market status - u
 	},
 }
 
-func GetCarryInfo(mark string) (info string) {
+func GetCarryInfo(mark, except string) (info string) {
 	infoLock.Lock()
 	defer infoLock.Unlock()
 	for key, value := range CarryInfo {
-		if mark == `` || strings.Contains(key, mark) {
+		if (mark == `` || strings.Contains(key, mark)) && !strings.Contains(value, except) {
 			info += fmt.Sprintf("%s: %s\n", key, value)
 		}
 	}
