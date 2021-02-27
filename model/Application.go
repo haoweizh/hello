@@ -199,7 +199,7 @@ func GetCarryInfo(mark, except string) (info string) {
 	infoLock.Lock()
 	defer infoLock.Unlock()
 	for key, value := range CarryInfo {
-		if (mark == `` || strings.Contains(key, mark)) && !strings.Contains(value, except) {
+		if (mark == `` || strings.Contains(key, mark)) && (except == `` || !strings.Contains(value, except)) {
 			info += fmt.Sprintf("%s: %s\n", key, value)
 		}
 	}
