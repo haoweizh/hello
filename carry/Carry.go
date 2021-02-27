@@ -364,15 +364,15 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	keys, _ := model.AppConfig.GetKeys(setting.Market)
 	localLimit := openValueLimit
 	if len(keys) > 1 && keys[0] != key && setting.Symbol != `BTMX-PERP` {
-		setOpen = (1.3 - usdRate) * setOpen
-		if revert == 0 {
-			revert = -0.001
-		}
-		if revert <= 0 {
-			revert = math.Min(math.Max((3.3-usdRate)*revert, -0.005), -0.001)
-		} else {
-			revert = 0.5 / (1.5 - usdRate) * revert
-		}
+		//setOpen = (1.3 - usdRate) * setOpen
+		//if revert == 0 {
+		//	revert = -0.001
+		//}
+		//if revert <= 0 {
+		//	revert = math.Min(math.Max((3.3-usdRate)*revert, -0.005), -0.001)
+		//} else {
+		//	revert = 0.5 / (1.5 - usdRate) * revert
+		//}
 		valueLow = 0
 		if keys[1] == key {
 			line = 5000
@@ -439,6 +439,7 @@ func InitFtxBalance(key, secret, function string) {
 		coin := items[0].GetCoin()
 		balance := balanceMap[coin]
 		if balance == nil {
+			fmt.Println(`absent ` + coin)
 			if model.MarketInfos[model.Ftx] == nil {
 				continue
 			}
