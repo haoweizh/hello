@@ -375,7 +375,7 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 		//}
 		valueLow = 0
 		if keys[1] == key {
-			line = 5000
+			line = 10000
 		} else {
 			line = 500
 		}
