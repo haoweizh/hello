@@ -379,7 +379,7 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 		setClose = -1 * setOpen
 		if keys[1] != key {
 			setOpen = 0.02
-			setClose = 0.02
+			setClose = -0.02
 			revert = 0.001
 			line = 1000
 			localLimit = 10
