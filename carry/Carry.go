@@ -379,7 +379,8 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 		setClose = -1 * setOpen
 		if keys[1] != key {
 			setOpen = 0.02
-			setClose = 0.001
+			setClose = 0.02
+			revert = 0.001
 		}
 		model.SetCarryInfo(`[dynamic]`, fmt.Sprintf(`[lowest:%s %f][highest: %s %f] open:%f close:%f 
 			revert:%f usdRate:%favailable:%f`,
