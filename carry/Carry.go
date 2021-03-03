@@ -423,8 +423,9 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 		amount = 0
 	}
 	if amount > 0 {
-		util.Notice(fmt.Sprintf(`>>>> %s high:%s %f low:%s %f symbl: %s usd available:%f amount：%f`,
-			key, symbolHigh, scoreHigh, symbolLow, scoreLow, setting.Symbol, usdAvailable, amount))
+		util.Notice(fmt.Sprintf(`>>>> %s high:%s %f low:%s %f symbl: %s %s usd available:%f amount：%f 
+			carryAmount: %f`,
+			key, symbolHigh, scoreHigh, symbolLow, scoreLow, setting.Symbol, sidePerp, usdAvailable, amount, carryAmount))
 	}
 	return sidePerp, sideRelated, amount
 }
