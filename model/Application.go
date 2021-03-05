@@ -26,6 +26,7 @@ const SecretDefault = ``
 //const ArbitraryCarryUSDT = 100.0
 const OKEXBTCContractFaceValue = 100.0
 const OKEXOtherContractFaceValue = 10.0
+const DFuture = `dfuture`
 const Bybit = `bybit`
 const OKEX = "okex"
 const OKFUTURE = `okfuture`
@@ -377,6 +378,7 @@ func NewConfig() {
 	AppConfig.WSUrls[Bitmex] = `wss://www.bitmex.com/realtime/`
 	AppConfig.WSUrls[OKFUTURE] = `wss://real.okex.com:8443/ws/v3`
 	AppConfig.WSUrls[OKSwap] = `wss://real.okex.com:8443/ws/v3`
+	AppConfig.WSUrls[DFuture] = `wss://heco_prod_kline_wss.dfuture.com/ws`
 	//AppConfig.WSUrls[Bitmex] = `wss://testnet.bitmex.com/realtime`
 	// HUOBI用于交易的API，可能不适用于行情
 	//config.RestUrls[Huobi] = "https://api.huobipro.com/v1"

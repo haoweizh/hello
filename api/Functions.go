@@ -828,6 +828,8 @@ func GetWSSubscribe(market, symbol, subType string) (subscribe interface{}) {
 		} else if subType == model.SubscribeTicker {
 			return []string{`ticker`, symbol}
 		}
+	case model.DFuture:
+		return `dfuture.market.` + symbol + `.kline.1min`
 	}
 	return ""
 }
@@ -888,7 +890,8 @@ func FormatAmount(market, symbol string, amount float64) (formattedAmount float6
 	return math.Floor(amount/marketInfo.SizeIncrement) * marketInfo.SizeIncrement
 }
 
-func GetMarketInfo(market, symbol string) (borrowAble float64) {
+// GetMarketInfo
+func _(market, symbol string) (borrowAble float64) {
 	switch market {
 	case model.Ftx:
 		return getMarketInfoFtx(symbol)

@@ -159,7 +159,7 @@ var ProcessCarry = func(setting *model.Setting, tick *model.BidAsk) {
 	million := util.GetNowUnixMillion()
 	if tickPerp == nil || tickRelated == nil || tickPerp.Asks == nil || tickPerp.Bids == nil ||
 		tickRelated.Asks == nil || tickRelated.Bids == nil || model.AppConfig.Handle != `1` || setting == nil ||
-		model.AppPause || million-int64(tickRelated.Ts) > 2000 || million-int64(tickPerp.Ts) > 2000 || million-int64(tick.Ts) > 20 {
+		model.AppPause || million-int64(tickRelated.Ts) > 2000 || million-int64(tickPerp.Ts) > 2000 || million-int64(tick.Ts) > 100 {
 		return
 	}
 	scoreOpen := 1 - tickRelated.Asks[0].Price/tickPerp.Bids[0].Price
