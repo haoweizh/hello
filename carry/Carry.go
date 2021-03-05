@@ -366,13 +366,13 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	if len(keys) > 1 && keys[0] != key && setting.Symbol != `BTMX-PERP` && setting.Symbol != `AMPL-PERP` {
 		setOpen = (1.3 - usdRate) * setOpen
 		if revert == 0 {
-			revert = 0.001 * (usdRate - 0.5)
+			revert = 0.001
 		}
-		//if revert <= 0 {
-		//	revert = math.Min(math.Max((3.3-usdRate)*revert, -0.005), -0.001)
-		//} else {
-		//	revert = 0.5 / (1.5 - usdRate) * revert
-		//}
+		if revert > 0 {
+			revert = revert * (usdRate - 0.5)
+		} else if revert < 0 {
+			revert = revert * (1.5 - usdRate)
+		}
 		valueLow = 0
 		line = 10000
 		localLimit = 1000.0
