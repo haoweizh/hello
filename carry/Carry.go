@@ -159,7 +159,7 @@ var ProcessCarry = func(setting *model.Setting, tick *model.BidAsk) {
 	million := util.GetNowUnixMillion()
 	if tickPerp == nil || tickRelated == nil || tickPerp.Asks == nil || tickPerp.Bids == nil ||
 		tickRelated.Asks == nil || tickRelated.Bids == nil || model.AppConfig.Handle != `1` || setting == nil ||
-		model.AppPause || million-int64(tickRelated.Ts) > 2000 || million-int64(tickPerp.Ts) > 2000 || million-int64(tick.Ts) > 100 {
+		model.AppPause || million-int64(tickRelated.Ts) > 2000 || million-int64(tickPerp.Ts) > 2000 || million-int64(tick.Ts) > 20 {
 		return
 	}
 	scoreOpen := 1 - tickRelated.Asks[0].Price/tickPerp.Bids[0].Price
@@ -363,7 +363,8 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	line := model.AppConfig.Amount
 	keys, _ := model.AppConfig.GetKeys(setting.Market)
 	localLimit := openValueLimit
-	if len(keys) > 1 && keys[0] != key && setting.Symbol != `BTMX-PERP` && setting.Symbol != `AMPL-PERP` {
+	// setting.Symbol != `BTMX-PERP` && setting.Symbol != `AMPL-PERP`
+	if len(keys) > 1 && keys[0] != key {
 		setOpen = (1.3 - usdRate) * setOpen
 		if revert == 0 {
 			revert = 0.001
