@@ -363,6 +363,9 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	line := model.AppConfig.Amount
 	keys, _ := model.AppConfig.GetKeys(setting.Market)
 	localLimit := openValueLimit
+	if len(keys) > 1 && keys[0] != key && setting.Symbol == `BTMX-PERP` {
+		revert = -0.0025
+	}
 	if len(keys) > 1 && keys[0] != key && setting.Symbol != `BTMX-PERP` && setting.Symbol != `AMPL-PERP` {
 		setOpen = (1.5 - usdRate) * setOpen
 		if revert == 0 {
