@@ -32,7 +32,9 @@ func WsDepthServeDFuture(markets *model.Markets, errHandler ErrHandler) (chan st
 		if responseJson == nil {
 			return
 		}
-		fmt.Println(string(event))
+		if !strings.Contains(string(event), `202`) {
+			fmt.Println(string(event))
+		}
 		if util.GetNowUnixMillion()-lastDepthPingDFuture > 15000 {
 			lastDepthPingDFuture = util.GetNowUnixMillion()
 			ts := time.Now().UnixNano() / int64(time.Second)
@@ -64,10 +66,10 @@ func handleTickerDFuture(markets *model.Markets, response *simplejson.Json) {
 	if len(chs) > 2 {
 		symbol = chs[2]
 	}
-	ts := response.GetPath(`data`, `ts`).MustInt()
+	//ts := response.GetPath(`data`, `ts`).MustInt()
 	price := response.GetPath(`data`, `tick`, `close`).MustFloat64()
 	bidAsk := &model.BidAsk{
-		Ts:         ts * 1000,
+		Ts:         int(util.GetNowUnixMillion()),
 		TsReceived: int(util.GetNowUnixMillion()),
 		Bids:       []model.Tick{{Price: 0, Amount: 0}},
 		Asks:       []model.Tick{{Price: price, Amount: 0}},
@@ -78,7 +80,8 @@ func handleTickerDFuture(markets *model.Markets, response *simplejson.Json) {
 				settings := model.GetSetting(function, model.DFuture, symbol)
 				for _, setting := range settings {
 					//go handler(setting, bidAsk)
-					fmt.Println(fmt.Sprintf(`handle %s %s %s `, setting.Market, setting.Symbol, setting.Function))
+					fmt.Println(fmt.Sprintf(`%s %s >>> %f`,
+						time.Now().String(), setting.Symbol, bidAsk.Asks[0].Price))
 				}
 			}
 		}
