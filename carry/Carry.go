@@ -133,7 +133,9 @@ func clearCarryBalance() {
 				for _, items := range settings {
 					for _, item := range items {
 						if item.Function == model.FunctionCarry {
-							makeEqual(key, secrets[i], item, balances, accounts)
+							if item.Symbol != `TOMO-PERP` {
+								makeEqual(key, secrets[i], item, balances, accounts)
+							}
 						}
 					}
 				}
