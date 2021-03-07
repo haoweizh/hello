@@ -1,29 +1,53 @@
 package main
 
 import (
+	"flag"
 	"fmt"
+	"github.com/gorilla/websocket"
 	"github.com/jinzhu/configor"
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/postgres"
 	"hello/api"
 	"hello/carry"
 	"hello/model"
-	"hello/util"
 	"math"
+	"net/url"
 	"strings"
 	"testing"
+	"time"
 )
 
+func timeWriter(conn *websocket.Conn) {
+	for {
+		time.Sleep(time.Second * 2)
+		_ = conn.WriteMessage(websocket.TextMessage, []byte(time.Now().Format("2006-01-02 15:04:05")))
+	}
+}
+
 func Test_chan(t *testing.T) {
-	model.NewConfig()
-	var err error
-	model.AppDB, err = gorm.Open("postgres", model.AppConfig.DBConnection)
+
+	var addr = flag.String("addr", "39.108.105.51:8000", "http service address")
+
+	u := url.URL{Scheme: "ws", Host: *addr, Path: "/ws"}
+	var dialer *websocket.Dialer
+
+	conn, _, err := dialer.Dial(u.String(), nil)
 	if err != nil {
-		util.Notice(err.Error())
+		fmt.Println(err)
 		return
 	}
-	defer model.AppDB.Close()
-	carry.MaintainMarketChan()
+
+	go timeWriter(conn)
+
+	for {
+		_, message, err := conn.ReadMessage()
+		if err != nil {
+			fmt.Println("read:", err)
+			return
+		}
+
+		fmt.Printf("received: %s\n", message)
+	}
 }
 
 func returnParam(a int) (returnA int) {

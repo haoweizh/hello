@@ -81,6 +81,11 @@ var AppMarkets = NewMarkets()
 var AppAccounts = NewAccounts()
 var HuobiAccountIds = make(map[string]string)
 var AppPause = false
+var AppWSManager = WSManager{
+	Register:   make(chan *WSClient),
+	Unregister: make(chan *WSClient),
+	Clients:    make(map[*WSClient]bool),
+}
 
 func GetDialectSymbol(market, symbol string) (dialectSymbol string) {
 	switch market {

@@ -3,6 +3,8 @@ package controller
 import (
 	"fmt"
 	"github.com/gin-gonic/gin"
+	"github.com/gorilla/websocket"
+	"github.com/satori/go.uuid"
 	"hello/api"
 	"hello/carry"
 	"hello/model"
@@ -34,17 +36,16 @@ func ParameterServe() {
 }
 
 func WsPage(c *gin.Context) {
-	fmt.Println(c.Errors)
-	//conn, error := (&websocket.Upgrader{
-	//	CheckOrigin: func(r *http.Request) bool { return true }}).Upgrade(c.Writer, c.Request, nil)
-	//if error != nil {
-	//	http.NotFound(c.Writer, c.Request)
-	//	return
-	//}
-	//client := &api.Client{Id: uuid.NewV4().String(), Socket: conn, Channel: make(chan []byte)}
-	//api.Manager.Register <- client
-	//go client.Read(nil)
-	//go client.Write()
+	conn, err := (&websocket.Upgrader{
+		CheckOrigin: func(r *http.Request) bool { return true }}).Upgrade(c.Writer, c.Request, nil)
+	if err != nil {
+		http.NotFound(c.Writer, c.Request)
+		return
+	}
+	wsClient := &model.WSClient{ID: uuid.NewV4().String(), Socket: conn, Channel: make(chan []byte), Manager: &model.AppWSManager}
+	wsClient.Manager.Register <- wsClient
+	go wsClient.Read(nil)
+	go wsClient.Write()
 }
 
 func test(c *gin.Context) {
