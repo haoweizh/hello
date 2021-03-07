@@ -36,15 +36,27 @@ func ParameterServe() {
 }
 
 func WsPage(c *gin.Context) {
+	wsHandler := func(client *api.WSClient, event []byte) {
+		fmt.Println(`receive from ws ` + string(event))
+		//Manager.Broadcast <- jsonMessage
+		client.Manager.Send(event, nil)
+	}
 	conn, err := (&websocket.Upgrader{
 		CheckOrigin: func(r *http.Request) bool { return true }}).Upgrade(c.Writer, c.Request, nil)
 	if err != nil {
 		http.NotFound(c.Writer, c.Request)
 		return
 	}
-	wsClient := &model.WSClient{ID: uuid.NewV4().String(), Socket: conn, Channel: make(chan []byte), Manager: &model.AppWSManager}
+	wsClient := &api.WSClient{
+		ID:        uuid.NewV4().String(),
+		Socket:    conn,
+		ChanRead:  make(chan []byte),
+		ChanWrite: make(chan []byte),
+		Pinged:    true,
+		Timer:     time.NewTimer(30 * time.Second),
+		Manager:   &api.AppWSManager}
 	wsClient.Manager.Register <- wsClient
-	go wsClient.Read(nil)
+	go wsClient.Read(wsHandler)
 	go wsClient.Write()
 }
 

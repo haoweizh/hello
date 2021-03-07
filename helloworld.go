@@ -1,6 +1,7 @@
 package main
 
 import (
+	"hello/api"
 	"hello/carry"
 	"hello/controller"
 	"hello/model"
@@ -9,7 +10,7 @@ import (
 func main() {
 	model.NewConfig()
 	go controller.ParameterServe()
-	go model.AppWSManager.Start()
+	go api.AppWSManager.Start()
 	carry.Maintain()
 	select {}
 }

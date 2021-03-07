@@ -24,9 +24,8 @@ func timeWriter(conn *websocket.Conn) {
 	}
 }
 
-func Test_chan(t *testing.T) {
-
-	var addr = flag.String("addr", "39.108.105.51:8000", "http service address")
+func Test_ws(t *testing.T) {
+	var addr = flag.String("addr", "localhost:80", "http service address")
 
 	u := url.URL{Scheme: "ws", Host: *addr, Path: "/ws"}
 	var dialer *websocket.Dialer
@@ -36,16 +35,13 @@ func Test_chan(t *testing.T) {
 		fmt.Println(err)
 		return
 	}
-
 	go timeWriter(conn)
-
 	for {
 		_, message, err := conn.ReadMessage()
 		if err != nil {
 			fmt.Println("read:", err)
 			return
 		}
-
 		fmt.Printf("received: %s\n", message)
 	}
 }

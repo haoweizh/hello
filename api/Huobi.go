@@ -54,7 +54,7 @@ var subscribeHandlerHuobi = func(subscribes []interface{}, subType string) error
 	return err
 }
 
-func WsDepthServeHuobi(markets *model.Markets, errHandler model.ErrHandler) (chan struct{}, error) {
+func WsDepthServeHuobi(markets *model.Markets, errHandler ErrHandler) (chan struct{}, error) {
 	wsHandler := func(event []byte) {
 		res := util.UnGzip(event)
 		resMap := util.JsonDecodeByte(res)
