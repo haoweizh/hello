@@ -15,6 +15,7 @@ const OrderPriceLimit = 0
 const UsdUpLine = 300000
 const revertDis = 0.005
 const openValueLimit = 10000.0
+const singleUpLine = 500000.0
 
 var carryLock sync.Mutex
 var carrying bool
@@ -361,9 +362,11 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 		return ``, ``, 0
 	}
 	line := model.AppConfig.Amount
+	coinUpLine := singleUpLine
 	keys, _ := model.AppConfig.GetKeys(setting.Market)
 	localLimit := openValueLimit
 	if len(keys) > 1 && keys[0] != key && setting.Symbol != `BTMX-PERP` && setting.Symbol != `AMPL-PERP` {
+		coinUpLine = 50000.0
 		setOpen = (1.5 - usdRate) * setOpen
 		setClose = 1.3 * setClose
 		if revert == 0 {
@@ -381,6 +384,7 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 			//setOpen = 0.01
 			//setClose = -0.01
 			//revert = 0.001
+			coinUpLine = 1000.0
 			line = 1000
 			localLimit = 10
 		}
@@ -420,6 +424,9 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	// usd所剩太少且还要再买 || 持仓太多且还要再买 || 下单太小
 	if (sideRelated == model.OrderSideBuy && (usdAvailable < line || balance.UsdValue > UsdUpLine)) ||
 		math.Abs(amount)*markPrice < valueLow {
+		amount = 0
+	}
+	if math.Abs(carryAmount) > coinUpLine {
 		amount = 0
 	}
 	if amount > 0 {
