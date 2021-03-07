@@ -423,7 +423,8 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	amountRelated := api.FormatAmount(setting.Market, setting.GetRelatedSymbol(), amount)
 	amount = math.Min(amountPerp, amountRelated)
 	// usd所剩太少且还要再买 || 持仓太多且还要再买 || 下单太小
-	if (sideRelated == model.OrderSideBuy && usdAvailable < line) || math.Abs(balance.UsdValue) > localUsdUpLine ||
+	if (sideRelated == model.OrderSideBuy && (usdAvailable < line || balance.UsdValue > localUsdUpLine)) ||
+		(sideRelated == model.OrderSideSell && (balance.UsdValue < localUsdUpLine/-10 || balance.UsdValue < -50000.0)) ||
 		math.Abs(amount)*markPrice < valueLow {
 		amount = 0
 	}
