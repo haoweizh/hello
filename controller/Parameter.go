@@ -53,7 +53,7 @@ func WsPage(c *gin.Context) {
 		ChanRead:  make(chan []byte),
 		ChanWrite: make(chan []byte),
 		Pinged:    true,
-		Timer:     time.NewTimer(30 * time.Second),
+		Timer:     time.NewTimer(3 * time.Second),
 		Manager:   &api.AppWSManager}
 	wsClient.Manager.Register <- wsClient
 	go wsClient.Read(wsHandler)

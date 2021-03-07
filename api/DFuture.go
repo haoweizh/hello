@@ -80,8 +80,8 @@ func handleTickerDFuture(markets *model.Markets, response *simplejson.Json) {
 				settings := model.GetSetting(function, model.DFuture, symbol)
 				for _, setting := range settings {
 					//go handler(setting, bidAsk)
-					fmt.Println(fmt.Sprintf(`%s %s >>> %f`,
-						time.Now().String(), setting.Symbol, bidAsk.Asks[0].Price))
+					_ = fmt.Sprintf(`%s %s >>> %f`,
+						time.Now().String(), setting.Symbol, bidAsk.Asks[0].Price)
 				}
 			}
 		}

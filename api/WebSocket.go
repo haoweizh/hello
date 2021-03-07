@@ -8,6 +8,7 @@ import (
 	"hello/model"
 	"hello/util"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -136,13 +137,14 @@ func (manager *WSManager) Start() {
 			manager.Clients[conn] = true
 			jsonMessage, _ := json.Marshal(&Message{Content: "/A new socket has connected."})
 			manager.Send(jsonMessage, conn)
+			fmt.Println(fmt.Sprintf(`after registerd %d`, len(manager.Clients)))
 		case conn := <-manager.Unregister:
 			if _, ok := manager.Clients[conn]; ok {
-				close(conn.ChanWrite)
-				close(conn.ChanRead)
+				conn.Close()
 				delete(manager.Clients, conn)
 				jsonMessage, _ := json.Marshal(&Message{Content: "/A socket has disconnected."})
 				manager.Send(jsonMessage, conn)
+				fmt.Println(fmt.Sprintf(`after unregister %d`, len(manager.Clients)))
 			}
 		}
 	}
@@ -156,10 +158,15 @@ func (manager *WSManager) Send(message []byte, ignore *WSClient) {
 	}
 }
 
+func (c *WSClient) Close() {
+	close(c.ChanRead)
+	close(c.ChanWrite)
+	_ = c.Socket.Close()
+}
+
 func (c *WSClient) Read(msgHandler WSMsgHandler) {
 	defer func() {
 		c.Manager.Unregister <- c
-		_ = c.Socket.Close()
 	}()
 	go func() {
 		for true {
@@ -177,8 +184,19 @@ func (c *WSClient) Read(msgHandler WSMsgHandler) {
 				return
 			}
 			jsonMessage, _ := json.Marshal(&Message{Sender: c.ID, Content: string(message)})
+			if strings.Contains(string(jsonMessage), `ping`) {
+				c.Pinged = true
+			}
 			if msgHandler != nil {
 				msgHandler(c, jsonMessage)
+			}
+		case <-c.Timer.C:
+			c.Timer.Reset(30 * time.Second)
+			if c.Pinged {
+				c.Pinged = false
+			} else {
+				fmt.Println(`time out no ping`)
+				return
 			}
 		}
 	}
@@ -187,7 +205,6 @@ func (c *WSClient) Read(msgHandler WSMsgHandler) {
 func (c *WSClient) Write() {
 	defer func() {
 		c.Manager.Unregister <- c
-		_ = c.Socket.Close()
 	}()
 	for {
 		select {

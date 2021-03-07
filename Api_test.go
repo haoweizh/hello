@@ -20,11 +20,12 @@ import (
 func timeWriter(conn *websocket.Conn) {
 	for {
 		time.Sleep(time.Second * 2)
-		_ = conn.WriteMessage(websocket.TextMessage, []byte(time.Now().Format("2006-01-02 15:04:05")))
+		_ = conn.WriteMessage(websocket.TextMessage, []byte(time.Now().Format("2006-01-02 15:04:05")+`ping`))
 	}
 }
 
 func Test_ws(t *testing.T) {
+	//var addr = flag.String("addr", "18.179.17.108:8080", "http service address")
 	var addr = flag.String("addr", "localhost:80", "http service address")
 
 	u := url.URL{Scheme: "ws", Host: *addr, Path: "/ws"}
