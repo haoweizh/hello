@@ -12,10 +12,9 @@ import (
 )
 
 const OrderPriceLimit = 0
-const UsdUpLine = 300000
+const UsdUpLine = 500000.0
 const revertDis = 0.005
 const openValueLimit = 10000.0
-const singleUpLine = 500000.0
 
 var carryLock sync.Mutex
 var carrying bool
@@ -362,11 +361,24 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 		return ``, ``, 0
 	}
 	line := model.AppConfig.Amount
-	coinUpLine := singleUpLine
 	keys, _ := model.AppConfig.GetKeys(setting.Market)
 	localLimit := openValueLimit
+	localUsdUpLine := UsdUpLine
+	if len(keys) > 1 && keys[0] != key {
+		valueLow = 0
+		line = 10000
+		localUsdUpLine = 50000
+		localLimit = 1000.0
+		if keys[1] != key {
+			//setOpen = 0.01
+			//setClose = -0.01
+			//revert = 0.001
+			localUsdUpLine = 1000
+			line = 1000
+			localLimit = 10
+		}
+	}
 	if len(keys) > 1 && keys[0] != key && setting.Symbol != `BTMX-PERP` && setting.Symbol != `AMPL-PERP` {
-		coinUpLine = 50000.0
 		setOpen = (1.5 - usdRate) * setOpen
 		setClose = 1.3 * setClose
 		if revert == 0 {
@@ -376,17 +388,6 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 			revert = revert * (usdRate - 0.5)
 		} else if revert < 0 {
 			revert = revert * (1.5 - usdRate)
-		}
-		valueLow = 0
-		line = 10000
-		localLimit = 1000.0
-		if keys[1] != key {
-			//setOpen = 0.01
-			//setClose = -0.01
-			//revert = 0.001
-			coinUpLine = 1000.0
-			line = 1000
-			localLimit = 10
 		}
 		model.SetCarryInfo(`[dynamic]`, fmt.Sprintf(`[lowest:%s %f][highest: %s %f] open:%f close:%f 
 			revert:%f usdRate:%favailable:%f`,
@@ -422,11 +423,8 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	amountRelated := api.FormatAmount(setting.Market, setting.GetRelatedSymbol(), amount)
 	amount = math.Min(amountPerp, amountRelated)
 	// usd所剩太少且还要再买 || 持仓太多且还要再买 || 下单太小
-	if (sideRelated == model.OrderSideBuy && (usdAvailable < line || balance.UsdValue > UsdUpLine)) ||
+	if (sideRelated == model.OrderSideBuy && usdAvailable < line) || math.Abs(balance.UsdValue) > localUsdUpLine ||
 		math.Abs(amount)*markPrice < valueLow {
-		amount = 0
-	}
-	if math.Abs(carryAmount) > coinUpLine {
 		amount = 0
 	}
 	if amount > 0 {
