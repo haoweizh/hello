@@ -22,7 +22,7 @@ var subscribeHandlerDFuture = func(subscribes []interface{}, subType string) err
 	return err
 }
 
-func WsDepthServeDFuture(markets *model.Markets, errHandler ErrHandler) (chan struct{}, error) {
+func WsDepthServeDFuture(markets *model.Markets, errHandler model.ErrHandler) (chan struct{}, error) {
 	wsHandler := func(event []byte) {
 		responseJson, err := util.NewJSON(event)
 		if err != nil {

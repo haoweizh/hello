@@ -73,7 +73,7 @@ func parseTickByOkFuture(data map[string]interface{}) (bidAsks *model.BidAsk, sy
 	return
 }
 
-func WsDepthServeOKFuture(markets *model.Markets, errHandler ErrHandler) (chan struct{}, error) {
+func WsDepthServeOKFuture(markets *model.Markets, errHandler model.ErrHandler) (chan struct{}, error) {
 	lastPingTime := util.GetNow().Unix()
 	wsHandler := func(event []byte) {
 		if util.GetNow().Unix()-lastPingTime > 20 { // ping okfuture server every 30 seconds

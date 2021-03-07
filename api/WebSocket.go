@@ -9,10 +9,6 @@ import (
 	"net/http"
 )
 
-type MsgHandler func(message []byte)
-type SubscribeHandler func(subscribes []interface{}, subType string) error
-type ErrHandler func(err error)
-
 func sendToWs(market string, msg []byte) (err error) {
 	if model.AppMarkets.GetIsWriting(market) {
 		return errors.New(fmt.Sprintf(`conn %s is writing`, market))
@@ -56,7 +52,7 @@ func newConnection(url string) (*websocket.Conn, error) {
 	return c, nil
 }
 
-func chanHandler(market string, stopC chan struct{}, errHandler ErrHandler, msgHandler MsgHandler) {
+func chanHandler(market string, stopC chan struct{}, errHandler model.ErrHandler, msgHandler model.MsgHandler) {
 	conn := model.AppMarkets.GetConn(market)
 	defer func() {
 		err := conn.Close()
@@ -82,8 +78,8 @@ func chanHandler(market string, stopC chan struct{}, errHandler ErrHandler, msgH
 	}
 }
 
-func WebSocketClient(market, url, subType string, subscribes []interface{}, subHandler SubscribeHandler,
-	msgHandler MsgHandler, errHandler ErrHandler) (chan struct{}, error) {
+func WebSocketClient(market, url, subType string, subscribes []interface{}, subHandler model.SubscribeHandler,
+	msgHandler model.MsgHandler, errHandler model.ErrHandler) (chan struct{}, error) {
 	util.Notice(market + `creat depth channel ` + url)
 	conn, err := newConnection(url)
 	if err != nil {

@@ -30,7 +30,7 @@ var subscribeHandlerCoinpark = func(subscribes []interface{}, subType string) er
 	return err
 }
 
-func WsDepthServeCoinpark(markets *model.Markets, errHandler ErrHandler) (chan struct{}, error) {
+func WsDepthServeCoinpark(markets *model.Markets, errHandler model.ErrHandler) (chan struct{}, error) {
 	wsHandler := func(event []byte) {
 		depthJson, err := util.NewJSON(event)
 		if err != nil {

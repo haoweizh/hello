@@ -51,7 +51,7 @@ var subscribeHandlerBybit = func(subscribes []interface{}, subType string) error
 	return err
 }
 
-func WsDepthServeBybit(markets *model.Markets, errHandler ErrHandler) (chan struct{}, error) {
+func WsDepthServeBybit(markets *model.Markets, errHandler model.ErrHandler) (chan struct{}, error) {
 	lastPingTime := util.GetNow().Unix()
 	wsHandler := func(event []byte) {
 		socketLockBybit.Lock()

@@ -21,7 +21,7 @@ var subscribeHandlerBinance = func(subscribes []interface{}, subType string) err
 	return nil
 }
 
-func WsDepthServeBinance(markets *model.Markets, errHandler ErrHandler) (chan struct{}, error) {
+func WsDepthServeBinance(markets *model.Markets, errHandler model.ErrHandler) (chan struct{}, error) {
 	wsHandler := func(event []byte) {
 		json, err := util.NewJSON(event)
 		if err != nil {

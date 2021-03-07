@@ -50,7 +50,7 @@ var subscribeHandlerBitmex = func(subscribes []interface{}, subType string) erro
 	return err
 }
 
-func WsDepthServeBitmex(markets *model.Markets, errHandler ErrHandler) (chan struct{}, error) {
+func WsDepthServeBitmex(markets *model.Markets, errHandler model.ErrHandler) (chan struct{}, error) {
 	lastPingTime := util.GetNow().Unix()
 	wsHandler := func(event []byte) {
 		socketLockBitmex.Lock()

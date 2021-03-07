@@ -4,9 +4,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/gorilla/websocket"
-	"hello/api"
 	"hello/util"
 )
+
+type MsgHandler func(message []byte)
+type SubscribeHandler func(subscribes []interface{}, subType string) error
+type ErrHandler func(err error)
 
 type WSManager struct {
 	Clients    map[*WSClient]bool
@@ -54,7 +57,7 @@ func (manager *WSManager) Send(message []byte, ignore *WSClient) {
 	}
 }
 
-func (c *WSClient) Read(msgHandler api.MsgHandler) {
+func (c *WSClient) Read(msgHandler MsgHandler) {
 	defer func() {
 		c.Manager.Unregister <- c
 		_ = c.Socket.Close()

@@ -49,7 +49,7 @@ var subscribeHandlerFtx = func(subscribes []interface{}, subType string) error {
 	return err
 }
 
-func WsDepthServeFtx(markets *model.Markets, errHandler ErrHandler) (chan struct{}, error) {
+func WsDepthServeFtx(markets *model.Markets, errHandler model.ErrHandler) (chan struct{}, error) {
 	wsHandler := func(event []byte) {
 		defer socketLockFtx.Unlock()
 		socketLockFtx.Lock()

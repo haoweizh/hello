@@ -53,7 +53,7 @@ var subscribeHandlerOKSwap = func(subscribes []interface{}, subType string) erro
 	return err
 }
 
-func WsDepthServeOKSwap(markets *model.Markets, errHandler ErrHandler) (chan struct{}, error) {
+func WsDepthServeOKSwap(markets *model.Markets, errHandler model.ErrHandler) (chan struct{}, error) {
 	lastPingTime := util.GetNow().Unix()
 	wsHandler := func(event []byte) {
 		if util.GetNow().Unix()-lastPingTime > 30 { // ping ws server every 30 seconds
