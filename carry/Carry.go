@@ -133,9 +133,7 @@ func clearCarryBalance() {
 				for _, items := range settings {
 					for _, item := range items {
 						if item.Function == model.FunctionCarry {
-							if item.Symbol != `TOMO-PERP` {
-								makeEqual(key, secrets[i], item, balances, accounts)
-							}
+							makeEqual(key, secrets[i], item, balances, accounts)
 						}
 					}
 				}
@@ -380,11 +378,7 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 			localLimit = 10
 		}
 	}
-	if keys[0] == key && setting.Symbol == `TOMO-PERP` {
-		return ``, ``, 0
-	}
-	if len(keys) > 1 && keys[0] != key && setting.Symbol != `BTMX-PERP` && setting.Symbol != `AMPL-PERP` &&
-		setting.Symbol != `TOMO-PERP` {
+	if len(keys) > 1 && keys[0] != key && setting.Symbol != `BTMX-PERP` && setting.Symbol != `AMPL-PERP` {
 		setOpen = (1.5 - usdRate) * setOpen
 		setClose = 1.3 * setClose
 		if revert == 0 {
