@@ -102,7 +102,7 @@ func WsDepthServeOKFuture(markets *model.Markets, errHandler ErrHandler) (chan s
 			}
 		}
 	}
-	return WebSocketServe(model.OKFUTURE, model.AppConfig.WSUrls[model.OKFUTURE], model.SubscribeDepth,
+	return WebSocketClient(model.OKFUTURE, model.AppConfig.WSUrls[model.OKFUTURE], model.SubscribeDepth,
 		GetWSSubscribes(model.OKFUTURE, ``), subscribeHandlerOKFuture, wsHandler, errHandler)
 }
 

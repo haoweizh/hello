@@ -85,7 +85,7 @@ func WsDepthServeOKSwap(markets *model.Markets, errHandler ErrHandler) (chan str
 			util.SocketInfo(fmt.Sprintf(`position get : %s`, string(event)))
 		}
 	}
-	return WebSocketServe(model.OKSwap, model.AppConfig.WSUrls[model.OKSwap], model.SubscribeDepth,
+	return WebSocketClient(model.OKSwap, model.AppConfig.WSUrls[model.OKSwap], model.SubscribeDepth,
 		GetWSSubscribes(model.OKSwap, model.SubscribeDepth),
 		subscribeHandlerOKSwap, wsHandler, errHandler)
 }

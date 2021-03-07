@@ -29,7 +29,22 @@ func ParameterServe() {
 	router.GET("/balance", GetBalance)
 	router.GET(`/symbol`, setSymbol)
 	router.GET(`/test`, test)
+	router.GET(`ws`, WsPage)
 	_ = router.Run(":" + model.AppConfig.Port)
+}
+
+func WsPage(c *gin.Context) {
+	fmt.Println(c.Errors)
+	//conn, error := (&websocket.Upgrader{
+	//	CheckOrigin: func(r *http.Request) bool { return true }}).Upgrade(c.Writer, c.Request, nil)
+	//if error != nil {
+	//	http.NotFound(c.Writer, c.Request)
+	//	return
+	//}
+	//client := &api.Client{Id: uuid.NewV4().String(), Socket: conn, Channel: make(chan []byte)}
+	//api.Manager.Register <- client
+	//go client.Read(nil)
+	//go client.Write()
 }
 
 func test(c *gin.Context) {
@@ -45,9 +60,6 @@ func test(c *gin.Context) {
 			if amountType != keys[0] {
 				carryBackMsg += fmt.Sprintf("交易额 in USD: %s %s %f 类型：%s\n", date, side, value, refreshType)
 			}
-			//else {
-			//	carryBackMsg += fmt.Sprintf("交易额 in USD: %s %s %f 类型：%s\n", date, side, value, refreshType)
-			//}
 		}
 		carryRows.Close()
 	}

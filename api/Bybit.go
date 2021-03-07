@@ -83,7 +83,7 @@ func WsDepthServeBybit(markets *model.Markets, errHandler ErrHandler) (chan stru
 			handleAccountBybit(depthJson.Get(`data`))
 		}
 	}
-	return WebSocketServe(model.Bybit, model.AppConfig.WSUrls[model.Bybit], model.SubscribeDepth,
+	return WebSocketClient(model.Bybit, model.AppConfig.WSUrls[model.Bybit], model.SubscribeDepth,
 		GetWSSubscribes(model.Bybit, model.SubscribeDepth),
 		subscribeHandlerBybit, wsHandler, errHandler)
 }

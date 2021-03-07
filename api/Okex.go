@@ -96,7 +96,7 @@ func WsDepthServeOkex(markets *model.Markets, errHandler ErrHandler) (chan struc
 			}
 		}
 	}
-	return WebSocketServe(model.OKEX, model.AppConfig.WSUrls[model.OKEX], model.SubscribeDepth,
+	return WebSocketClient(model.OKEX, model.AppConfig.WSUrls[model.OKEX], model.SubscribeDepth,
 		GetWSSubscribes(model.OKEX, model.SubscribeDepth), subscribeHandlerOkex, wsHandler, errHandler)
 }
 

@@ -85,7 +85,7 @@ func WsDepthServeBinance(markets *model.Markets, errHandler ErrHandler) (chan st
 			requestUrl += str + "/"
 		}
 	}
-	return WebSocketServe(model.Binance, requestUrl, model.SubscribeDepth,
+	return WebSocketClient(model.Binance, requestUrl, model.SubscribeDepth,
 		GetWSSubscribes(model.Binance, model.SubscribeDepth),
 		subscribeHandlerBinance, wsHandler, errHandler)
 }

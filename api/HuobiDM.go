@@ -85,7 +85,7 @@ func WsDepthServeHuobiDM(markets *model.Markets, errHandler ErrHandler) (chan st
 			}
 		}
 	}
-	return WebSocketServe(model.HuobiDM, model.AppConfig.WSUrls[model.HuobiDM]+`ws`, model.SubscribeDepth,
+	return WebSocketClient(model.HuobiDM, model.AppConfig.WSUrls[model.HuobiDM]+`ws`, model.SubscribeDepth,
 		GetWSSubscribes(model.HuobiDM, model.SubscribeDepth), subscribeHandlerHuobiDM, wsHandler, errHandler)
 }
 

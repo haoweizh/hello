@@ -48,7 +48,7 @@ func WsDepthServeDFuture(markets *model.Markets, errHandler ErrHandler) (chan st
 	}
 	requestUrl := model.AppConfig.WSUrls[model.DFuture]
 	subType := model.SubscribeDepth + `,` + model.SubscribeTicker
-	return WebSocketServe(model.DFuture, requestUrl, ``, GetWSSubscribes(model.DFuture, subType),
+	return WebSocketClient(model.DFuture, requestUrl, ``, GetWSSubscribes(model.DFuture, subType),
 		subscribeHandlerDFuture, wsHandler, errHandler)
 }
 
