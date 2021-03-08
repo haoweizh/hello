@@ -369,14 +369,6 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 		line = 10000
 		localUsdUpLine = 50000
 		localLimit = 1000.0
-		if keys[1] != key {
-			//setOpen = 0.01
-			//setClose = -0.01
-			//revert = 0.001
-			localUsdUpLine = 1000
-			line = 1000
-			localLimit = 10
-		}
 	}
 	if len(keys) > 1 && keys[0] != key && setting.Symbol != `BTMX-PERP` && setting.Symbol != `AMPL-PERP` {
 		setOpen = (1.5 - usdRate) * setOpen
@@ -392,6 +384,14 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 		model.SetCarryInfo(`[dynamic]`, fmt.Sprintf(`[lowest:%s %f][highest: %s %f] open:%f close:%f 
 			revert:%f usdRate:%favailable:%f`,
 			symbolLowest, lowest, symbolHighest, highest, setOpen, setClose, revert, usdRate, usdAvailable))
+	}
+	if len(keys) > 2 && keys[2] == key {
+		localUsdUpLine = 1000
+		line = 1000
+		localLimit = 10
+		setOpen = 0.1
+		setClose = -0.1
+		revert = -0.001
 	}
 	carryAmount := getCarryAmount(key, setting.Symbol)
 	if (scoreLow < setClose && setting.Symbol == symbolLow) || (carryAmount > 0 && scoreClose <= -1*revert) {
