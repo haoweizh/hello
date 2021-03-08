@@ -191,7 +191,7 @@ func (c *WSClient) Read(msgHandler WSMsgHandler) {
 				msgHandler(c, jsonMessage)
 			}
 		case <-c.Timer.C:
-			c.Timer.Reset(30 * time.Second)
+			c.Timer.Reset(3600 * time.Second)
 			if c.Pinged {
 				c.Pinged = false
 			} else {
