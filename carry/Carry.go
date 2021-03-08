@@ -182,7 +182,7 @@ var ProcessCarry = func(setting *model.Setting, tick *model.BidAsk) {
 	keys, secrets := model.AppConfig.GetKeys(setting.Market)
 	begin := 0
 	step := 1
-	if (now.Hour() < 6 && now.Hour() > 2) || now.Second()%3 == 0 {
+	if (now.Hour() < 6 && now.Hour() > 2) || now.Second()%2 == 0 {
 		begin = len(keys) - 1
 		step = -1
 	}
@@ -364,33 +364,31 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	keys, _ := model.AppConfig.GetKeys(setting.Market)
 	localLimit := openValueLimit
 	localUsdUpLine := UsdUpLine
+	setOpen = (1.5 - usdRate) * setOpen
+	setClose = -1
+	if revert == 0 {
+		revert = 0.003
+	}
+	if revert > 0 {
+		revert = revert * (usdRate - 0.5)
+	} else if revert < 0 {
+		revert = revert * (1.5 - usdRate)
+	}
+	model.SetCarryInfo(`[====]`, fmt.Sprintf(`[lowest:%s %f][highest: %s %f] open:%f close:%f 
+			revert:%f usdRate:%favailable:%f`,
+		symbolLowest, lowest, symbolHighest, highest, setOpen, setClose, revert, usdRate, usdAvailable))
 	if len(keys) > 1 && keys[0] != key {
 		valueLow = 0
 		line = 10000
 		localUsdUpLine = 50000
 		localLimit = 1000.0
 	}
-	if len(keys) > 1 && keys[0] != key && setting.Symbol != `BTMX-PERP` && setting.Symbol != `AMPL-PERP` {
-		setOpen = (1.5 - usdRate) * setOpen
-		setClose = 1.3 * setClose
-		if revert == 0 {
-			revert = 0.002
-		}
-		if revert > 0 {
-			revert = revert * (usdRate - 0.5)
-		} else if revert < 0 {
-			revert = revert * (1.5 - usdRate)
-		}
-		model.SetCarryInfo(`[dynamic]`, fmt.Sprintf(`[lowest:%s %f][highest: %s %f] open:%f close:%f 
-			revert:%f usdRate:%favailable:%f`,
-			symbolLowest, lowest, symbolHighest, highest, setOpen, setClose, revert, usdRate, usdAvailable))
-	}
 	if len(keys) > 2 && keys[2] == key {
-		localUsdUpLine = 1000
+		valueLow = 0
 		line = 1000
+		localUsdUpLine = 1000
 		localLimit = 10
 		setOpen = 0.1
-		setClose = -0.1
 		revert = -0.001
 	}
 	carryAmount := getCarryAmount(key, setting.Symbol)
