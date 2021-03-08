@@ -31,7 +31,7 @@ func ParameterServe() {
 	router.GET("/balance", GetBalance)
 	router.GET(`/symbol`, setSymbol)
 	router.GET(`/test`, test)
-	router.GET(`ws`, WsPage)
+	router.GET(`wss`, WsPage)
 	_ = router.Run(":" + model.AppConfig.Port)
 }
 
