@@ -121,7 +121,7 @@ func clearCarryBalance() {
 				for _, value := range balances {
 					coin := strings.ToUpper(value.Coin)
 					setCarryBalance(key, coin, value)
-					if strings.ToLower(coin) != `btc` && strings.ToLower(coin) != `ftt` {
+					if coin != `BTC` && coin != `FTT` {
 						balanceAll += value.UsdValue
 					}
 					if coin == `USD` {
