@@ -12,7 +12,7 @@ import (
 )
 
 const OrderPriceLimit = 0
-const UsdUpLine = 500000.0
+const UsdUpLine = 500000.0 //单币种持仓最大限额，正负范围
 const revertDis = 0.005
 const openValueLimit = 10000.0
 
