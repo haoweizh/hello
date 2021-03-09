@@ -389,7 +389,7 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 		valueLow = 0
 		line = 10000
 		localUsdUpLine = 50000
-		localLimit = 4000.0
+		localLimit = 5000.0
 	}
 	if len(keys) > 2 && keys[2] == key {
 		valueLow = 0
