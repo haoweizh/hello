@@ -25,10 +25,10 @@ func timeWriter(conn *websocket.Conn) {
 }
 
 func Test_ws(t *testing.T) {
-	//var addr = flag.String("addr", "18.179.17.108:8080", "http service address")
-	var addr = flag.String("addr", "localhost:80", "http service address")
+	var addr = flag.String("addr", "18.179.17.108:8080", "http service address")
+	//var addr = flag.String("addr", "localhost:80", "http service address")
 
-	u := url.URL{Scheme: "ws", Host: *addr, Path: "/ws"}
+	u := url.URL{Scheme: "ws", Host: *addr, Path: "/wss"}
 	var dialer *websocket.Dialer
 
 	conn, _, err := dialer.Dial(u.String(), nil)
