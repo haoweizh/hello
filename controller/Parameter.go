@@ -32,7 +32,8 @@ func ParameterServe() {
 	router.GET(`/symbol`, setSymbol)
 	router.GET(`/test`, test)
 	router.GET(`wss`, WsPage)
-	_ = router.RunTLS(":"+model.AppConfig.Port, ``, ``)
+	//_ = router.RunTLS(":"+model.AppConfig.Port, ``, ``)
+	_ = router.Run(":" + model.AppConfig.Port)
 }
 
 func WsPage(c *gin.Context) {
