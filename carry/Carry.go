@@ -128,6 +128,7 @@ func clearCarryBalance() {
 					if coin == `USD` {
 						usdAvailable = value.Available
 						setUsdAvailable(key, value.Available)
+						balanceAll += value.Available
 					}
 				}
 				setUsdRate(key, usdAvailable/balanceAll)
