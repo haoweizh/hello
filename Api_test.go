@@ -47,25 +47,19 @@ func Test_ws(t *testing.T) {
 	}
 }
 
-func returnParam(a int) (returnA int) {
-	a = 2
-	return a
-}
-
 func Test_initTurtleN(t *testing.T) {
-	a := 1
-	a = returnParam(a)
-	fmt.Println(a)
-	//model.NewConfig()
-	//_ = configor.Load(model.AppConfig, "./config.yml")
+	model.NewConfig()
+	_ = configor.Load(model.AppConfig, "./config.yml")
 	//balances := api.GetTransfers(``, ``, model.OKEX)
 	//balances = append(balances, api.GetBalance(``, ``, model.OKEX)...)
 	//var err error
-	//model.AppDB, err = gorm.Open("postgres", model.AppConfig.DBConnection)
+	model.AppDB, _ = gorm.Open("postgres", model.AppConfig.DBConnection)
 	//if err != nil {
 	//	util.Notice(err.Error())
 	//	return
 	//}
+	symbols := model.GetSettingCoins(model.FunctionCarry, model.Ftx)
+	fmt.Println(len(symbols))
 	//model.AppDB.AutoMigrate(&model.Candle{})
 	//order := api.QueryOrderById(``, ``, model.OKFUTURE, `btcusd_p`, `BTC-USD-201225`,
 	//	model.OrderTypeStop, `6024698277970944`)

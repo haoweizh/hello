@@ -278,7 +278,7 @@ func Maintain() {
 		model.AppDB.AutoMigrate(&model.Balance{})
 		model.AppDB.AutoMigrate(&model.FundingRate{})
 	}
-	model.LoadSettings()
+	//model.LoadSettings()
 	api.InitMarketInfos()
 	//go CheckPastRefresh()
 	go MaintainTransFee(model.KeyDefault, model.SecretDefault)

@@ -118,7 +118,6 @@ func handleOrderDeal(key, secret string, grid *grid, order *model.Order, setting
 		if grid.sameSide > 15 {
 			setting.GridPriceDistance = setting.GridPriceDistance * 2
 			model.AppDB.Save(setting)
-			model.LoadSettings()
 			grid.sameSide = 0
 		}
 	} else {

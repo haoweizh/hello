@@ -36,7 +36,32 @@ type Setting struct {
 var marketSymbolSetting map[string]map[string]map[string][]*Setting // function - marketName - symbol - setting
 var handlers map[string]map[string]map[string]CarryHandler          // market - symbol - function- carryHandler
 
+func GetSettingCoins(function, market string) (coins map[string]bool) {
+	if handlers == nil {
+		LoadSettings()
+	}
+	if marketSymbolSetting[function] == nil {
+		return nil
+	}
+	if marketSymbolSetting[function][market] == nil {
+		return nil
+	}
+	coins = make(map[string]bool)
+	for _, settings := range marketSymbolSetting[function][market] {
+		for _, setting := range settings {
+			if setting == nil {
+				continue
+			}
+			coins[setting.GetCoin()] = true
+		}
+	}
+	return
+}
+
 func GetSettings(function, market string) map[string][]*Setting {
+	if handlers == nil {
+		LoadSettings()
+	}
 	if marketSymbolSetting[function] == nil {
 		return nil
 	}
@@ -44,6 +69,9 @@ func GetSettings(function, market string) map[string][]*Setting {
 }
 
 func GetSetting(function, market, symbol string) []*Setting {
+	if handlers == nil {
+		LoadSettings()
+	}
 	if marketSymbolSetting[function] == nil || marketSymbolSetting[function][market] == nil {
 		return nil
 	}

@@ -121,7 +121,8 @@ func clearCarryBalance() {
 				for _, value := range balances {
 					coin := strings.ToUpper(value.Coin)
 					setCarryBalance(key, coin, value)
-					if coin != `BTC` && coin != `FTT` {
+					settingCoins := model.GetSettingCoins(model.FunctionCarry, model.Ftx)
+					if settingCoins[coin] {
 						balanceAll += value.UsdValue
 					}
 					if coin == `USD` {
@@ -134,9 +135,7 @@ func clearCarryBalance() {
 				settings := model.GetSettings(model.FunctionCarry, market)
 				for _, items := range settings {
 					for _, item := range items {
-						if item.Function == model.FunctionCarry {
-							makeEqual(key, secrets[i], item, balances, accounts)
-						}
+						makeEqual(key, secrets[i], item, balances, accounts)
 					}
 				}
 			}
@@ -362,11 +361,16 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	if usdBalance == nil {
 		return ``, ``, 0
 	}
+	balanceAll := usdAvailable / usdRate
+	coinRate := math.Abs(balance.UsdValue) / balanceAll
 	line := model.AppConfig.Amount
 	keys, _ := model.AppConfig.GetKeys(setting.Market)
-	localLimit := openValueLimit
+	localOpenValueLimit := math.Min(openValueLimit, 0.5*balanceAll)
 	localUsdUpLine := UsdUpLine
 	setOpen = (1.5 - usdRate) * setOpen
+	if len(keys) > 1 && keys[0] != key {
+		setOpen = setOpen * (1 + 6*coinRate)
+	}
 	setClose = -1
 	if revert == 0 {
 		revert = 0.003
@@ -378,8 +382,8 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	}
 	if keys[0] != key {
 		model.SetCarryInfo(`[dynamic]`, fmt.Sprintf(`slave[lowest:%s %f][highest: %s %f] open:%f close:%f 
-			revert:%f usdRate:%favailable:%f`,
-			symbolLowest, lowest, symbolHighest, highest, setOpen, setClose, revert, usdRate, usdAvailable))
+			revert:%f usdRate:%favailable:%f coinRate: %f`,
+			symbolLowest, lowest, symbolHighest, highest, setOpen, setClose, revert, usdRate, usdAvailable, coinRate))
 	} else {
 		model.SetCarryInfo(`[===]`, fmt.Sprintf(`[lowest:%s %f][highest: %s %f] open:%f close:%f 
 			revert:%f usdRate:%favailable:%f`,
@@ -389,13 +393,11 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 		valueLow = 0
 		line = 10000
 		localUsdUpLine = 50000
-		localLimit = 5000.0
 	}
 	if len(keys) > 2 && keys[2] == key {
 		valueLow = 0
 		line = 1000
 		localUsdUpLine = 1000
-		localLimit = 10
 		setOpen = 0.1
 		revert = -0.001
 	}
@@ -416,7 +418,7 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	// 开仓时:数量<持仓+可借
 	if (setting.Symbol == symbolLow && scoreLow < setClose) || (setting.Symbol == symbolHigh && scoreHigh > setOpen) {
 		if sideRelated == model.OrderSideSell {
-			amount = math.Max(0, math.Min(balance.AvailableWithBorrow-localLimit/markPrice, math.Abs(amount)))
+			amount = math.Max(0, math.Min(balance.AvailableWithBorrow-localOpenValueLimit/markPrice, math.Abs(amount)))
 		}
 	} else { // 反向关仓量要<=持仓
 		amount = math.Min(math.Abs(carryAmount), amount)
@@ -424,7 +426,7 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	if sideRelated == model.OrderSideBuy {
 		amount = math.Min(amount, usdAvailable/markPrice)
 	}
-	amount = math.Min(amount, localLimit/markPrice)
+	amount = math.Min(amount, localOpenValueLimit/markPrice)
 	amountPerp := api.FormatAmount(setting.Market, setting.Symbol, amount)
 	amountRelated := api.FormatAmount(setting.Market, setting.GetRelatedSymbol(), amount)
 	amount = math.Min(amountPerp, amountRelated)
