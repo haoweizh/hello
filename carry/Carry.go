@@ -370,7 +370,7 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	localUsdUpLine := UsdUpLine
 	setOpen = (1.5 - usdRate) * setOpen
 	if len(keys) > 1 && keys[0] != key {
-		setOpen = setOpen * (1 + 6*coinRate)
+		setOpen = math.Max(setOpen*(0.7+6*coinRate), 0.003)
 	}
 	setClose = -1
 	if revert == 0 {
