@@ -76,18 +76,13 @@ func setCarryBalance(key, coin string, balance *model.Balance) {
 		carryBalance[key] = make(map[string]*model.Balance)
 	}
 	carryBalance[key][coin] = balance
-	util.Notice(fmt.Sprintf(`set balance %s %s`, key, coin))
 }
 
 func getCarryBalance(key, coin string) (balance *model.Balance) {
 	carryLock.Lock()
 	defer carryLock.Unlock()
 	if carryBalance[key] == nil {
-		util.Notice(fmt.Sprintf(`%s %s 0 nil`, key, coin))
 		return nil
-	}
-	if carryBalance[key][coin] == nil {
-		util.Notice(fmt.Sprintf(`%s %s 1 nil %d`, key, coin, len(carryBalance[key])))
 	}
 	return carryBalance[key][coin]
 }
@@ -123,7 +118,6 @@ func clearCarryBalance() {
 				_, accounts := api.GetAccounts(key, secrets[i], market)
 				balanceAll := 0.0
 				localUsdAvailable := 0.0
-				util.Notice(fmt.Sprintf(`get balances %s %d`, key, len(balances)))
 				for _, value := range balances {
 					coin := strings.ToUpper(value.Coin)
 					setCarryBalance(key, coin, value)
@@ -138,7 +132,8 @@ func clearCarryBalance() {
 					}
 				}
 				setUsdRate(key, localUsdAvailable/balanceAll)
-				util.Notice(fmt.Sprintf(`[carry] %s usd:%f %f`, key, localUsdAvailable, usdRate[key]))
+				util.Notice(fmt.Sprintf(`[carry] %s usd:%f %f len(blances):%d`,
+					key, localUsdAvailable, usdRate[key], len(balances)))
 				settings := model.GetSettings(model.FunctionCarry, market)
 				for _, items := range settings {
 					for _, item := range items {
@@ -363,8 +358,9 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	balance := getCarryBalance(key, coin)
 	if balance == nil {
 		model.SetCarryInfo(`warning `+coin, fmt.Sprintf(`slave: balace not available!!! %s`, key))
-		util.Notice(fmt.Sprintf(`get nil from balance %s %s`, key, coin))
 		return ``, ``, 0
+	} else {
+		model.RemoveCarryInfo(`warning ` + coin)
 	}
 	if usdBalance == nil {
 		return ``, ``, 0

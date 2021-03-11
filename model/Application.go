@@ -216,6 +216,14 @@ func SetCarryInfo(key, value string) {
 	CarryInfo[key] = value
 }
 
+func RemoveCarryInfo(key string) {
+	infoLock.Lock()
+	defer infoLock.Unlock()
+	if CarryInfo != nil {
+		delete(CarryInfo, key)
+	}
+}
+
 //func GetUSDBalance(market string, timeBalance time.Time) (balance float64) {
 //	infoLock.Lock()
 //	defer infoLock.Unlock()
