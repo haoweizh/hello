@@ -370,7 +370,7 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	localUsdUpLine := UsdUpLine
 	setOpen = (1.5 - usdRate) * setOpen
 	if len(keys) > 1 && keys[0] != key {
-		setOpen = math.Max(setOpen*(0.8+6*coinRate), 0.003)
+		setOpen = math.Max(setOpen*(0.5+5*coinRate), 0.003)
 	}
 	setClose = -1
 	if revert == 0 {
@@ -394,13 +394,6 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 		valueLow = 0
 		line = 10000
 		localUsdUpLine = 50000
-	}
-	if len(keys) > 2 && keys[2] == key {
-		valueLow = 0
-		line = 1000
-		localUsdUpLine = 1000
-		setOpen = 0.1
-		revert = -0.001
 	}
 	carryAmount := getCarryAmount(key, setting.Symbol)
 	if (scoreLow < setClose && setting.Symbol == symbolLow) || (carryAmount > 0 && scoreClose <= -1*revert) {
