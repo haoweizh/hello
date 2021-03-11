@@ -83,7 +83,11 @@ func getCarryBalance(key, coin string) (balance *model.Balance) {
 	carryLock.Lock()
 	defer carryLock.Unlock()
 	if carryBalance[key] == nil {
+		util.Notice(fmt.Sprintf(`%s %s 0 nil`, key, coin))
 		return nil
+	}
+	if carryBalance[key][coin] == nil {
+		util.Notice(fmt.Sprintf(`%s %s 1 nil %d`, key, coin, len(carryBalance[key])))
 	}
 	return carryBalance[key][coin]
 }
@@ -358,7 +362,8 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	coin := setting.GetCoin()
 	balance := getCarryBalance(key, coin)
 	if balance == nil {
-		model.SetCarryInfo(`warning`+coin, fmt.Sprintf(`slave: balace not available!!! %s`, key))
+		model.SetCarryInfo(`warning `+coin, fmt.Sprintf(`slave: balace not available!!! %s`, key))
+		util.Notice(fmt.Sprintf(`get nil from balance %s %s`, key, coin))
 		return ``, ``, 0
 	}
 	if usdBalance == nil {
@@ -366,7 +371,7 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	}
 	balanceAll := usdAvailable / usdRate
 	coinRate := math.Abs(balance.UsdValue) / balanceAll
-	line := model.AppConfig.Amount
+	usdLowLine := model.AppConfig.Amount
 	keys, _ := model.AppConfig.GetKeys(setting.Market)
 	localOpenValueLimit := math.Min(openValueLimit, 0.5*balanceAll)
 	localUsdUpLine := UsdUpLine
@@ -383,18 +388,15 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	} else if revert < 0 {
 		revert = revert * (1.5 - usdRate)
 	}
-	if keys[0] != key {
-		model.SetCarryInfo(`[dynamic]`+setting.Symbol,
-			fmt.Sprintf(`slave[lowest:%s %f][highest: %s %f] open:%f close:%f revert:%f usdRate:%favailable:%f coinRate: %f`,
-				symbolLowest, lowest, symbolHighest, highest, setOpen, setClose, revert, usdRate, usdAvailable, coinRate))
-	} else {
-		model.SetCarryInfo(`[===]`, fmt.Sprintf(`[lowest:%s %f][highest: %s %f] open:%f close:%f 
+	model.SetCarryInfo(`[dynamic]`+setting.Symbol,
+		fmt.Sprintf(`slave[lowest:%s %f][highest: %s %f] open:%f close:%f revert:%f usdRate:%favailable:%f coinRate: %f`,
+			symbolLowest, lowest, symbolHighest, highest, setOpen, setClose, revert, usdRate, usdAvailable, coinRate))
+	model.SetCarryInfo(`[===]`, fmt.Sprintf(`[lowest:%s %f][highest: %s %f] open:%f close:%f 
 			revert:%f usdRate:%favailable:%f`,
-			symbolLowest, lowest, symbolHighest, highest, setOpen, setClose, revert, usdRate, usdAvailable))
-	}
+		symbolLowest, lowest, symbolHighest, highest, setOpen, setClose, revert, usdRate, usdAvailable))
 	if len(keys) > 1 && keys[0] != key {
 		valueLow = 0
-		line = 10000
+		usdLowLine = 10000
 		localUsdUpLine = 50000
 	}
 	carryAmount := getCarryAmount(key, setting.Symbol)
@@ -427,7 +429,7 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	amountRelated := api.FormatAmount(setting.Market, setting.GetRelatedSymbol(), amount)
 	amount = math.Min(amountPerp, amountRelated)
 	// usd所剩太少且还要再买 || 持仓太多且还要再买 || 下单太小
-	if (sideRelated == model.OrderSideBuy && (usdAvailable < line || balance.UsdValue > localUsdUpLine)) ||
+	if (sideRelated == model.OrderSideBuy && (usdAvailable < usdLowLine || balance.UsdValue > localUsdUpLine)) ||
 		(sideRelated == model.OrderSideSell && (balance.UsdValue < localUsdUpLine/-10 || balance.UsdValue < -50000.0)) ||
 		math.Abs(amount)*markPrice < valueLow {
 		amount = 0
