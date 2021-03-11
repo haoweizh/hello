@@ -225,12 +225,14 @@ func placeCarry(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, key
 		relatedPrice = tickRelated.Asks[0].Price
 		setCarryAmount(key, setting.Symbol, getCarryAmount(key, setting.Symbol)+amount)
 		balance.Amount += amount
+		balance.UsdValue += amount * perpPrice
 		setUsdAvailable(key, getUsdAvailable(key)-amount*perpPrice)
 	} else if sidePerp == model.OrderSideBuy {
 		perpPrice = tickPerp.Asks[0].Price
 		relatedPrice = tickRelated.Bids[0].Price
 		setCarryAmount(key, setting.Symbol, getCarryAmount(key, setting.Symbol)-amount)
 		balance.Amount -= amount
+		balance.UsdValue -= amount * perpPrice
 		setUsdAvailable(key, getUsdAvailable(key)+amount*relatedPrice)
 	}
 	now := int(util.GetNowUnixMillion())
@@ -386,7 +388,7 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 		if revert > 0 {
 			revert = revert / (1 + 10*coinRate)
 		} else {
-			revert = revert / (1 - math.Min(0.9, 5*coinRate))
+			revert = revert / (1 - math.Min(0.9, 10*coinRate))
 		}
 		revert = math.Max(revert, -0.002)
 		model.SetCarryInfo(`[dynamic]`+setting.Symbol,
@@ -398,7 +400,7 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 		symbolLowest, lowest, symbolHighest, highest, setOpen, setClose, revert, usdRate, usdAvailable))
 	if len(keys) > 1 && keys[0] != key {
 		valueLow = 0
-		usdLowLine = 10000
+		usdLowLine = 30000
 		localUsdUpLine = 50000
 	}
 	carryAmount := getCarryAmount(key, setting.Symbol)
