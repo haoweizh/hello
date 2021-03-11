@@ -176,7 +176,6 @@ func handleDepthFtx(markets *model.Markets, response *simplejson.Json) {
 		sort.Sort(bidAsk.Asks)
 		sort.Sort(sort.Reverse(bidAsk.Bids))
 		if markets.SetBidAsk(symbol, model.Ftx, bidAsk) {
-			//util.SocketInfo(markets.ToStringBidAsk(bidAsk))
 			for function, handler := range model.GetFunctions(model.Ftx, symbol) {
 				if handler != nil {
 					settings := model.GetSetting(function, model.Ftx, symbol)
@@ -304,7 +303,6 @@ func parseTransactionFtx(key string, data map[string]interface{}, action float64
 func getTransferFtx(key, secret string) (balances []*model.Balance) {
 	balances = make([]*model.Balance, 0)
 	response := SignedRequestFtx(key, secret, `GET`, `/wallet/deposits`, nil, nil)
-	util.SocketInfo(`ftx deposit: ` + string(response))
 	deposit, err := util.NewJSON(response)
 	if err == nil && deposit != nil {
 		for _, item := range deposit.Get(`result`).MustArray() {
@@ -315,7 +313,6 @@ func getTransferFtx(key, secret string) (balances []*model.Balance) {
 		}
 	}
 	response = SignedRequestFtx(key, secret, `GET`, `/wallet/withdrawals`, nil, nil)
-	util.SocketInfo(`ftx withdraw ` + string(response))
 	withdraw, err := util.NewJSON(response)
 	if err == nil && withdraw != nil {
 		for _, item := range withdraw.Get(`result`).MustArray() {
@@ -331,7 +328,6 @@ func getTransferFtx(key, secret string) (balances []*model.Balance) {
 func getBalanceFtx(key, secret string) (success bool, balances []*model.Balance) {
 	balances = make([]*model.Balance, 0)
 	response := SignedRequestFtx(key, secret, `GET`, `/wallet/balances`, nil, nil)
-	util.SocketInfo(`get usd balance ftx: ` + string(response))
 	balanceJson, err := util.NewJSON(response)
 	if err != nil || balanceJson == nil || balanceJson.Get(`success`).MustBool() != true {
 		util.SocketInfo(`fail to get ftx balance`)
@@ -380,7 +376,6 @@ func queryTriggerOrderId(key, secret, id string) (orderId string) {
 	response := SignedRequestFtx(key, secret, `GET`,
 		fmt.Sprintf(`/conditional_orders/%s/triggers`, id), nil, nil)
 	orderJson, err := util.NewJSON(response)
-	util.SocketInfo(fmt.Sprintf(`query trigger orderid from %s:%s`, id, string(response)))
 	if err == nil && orderJson.Get(`success`).MustBool() {
 		orders := orderJson.Get(`result`).MustArray()
 		for _, item := range orders {
@@ -398,7 +393,6 @@ func queryOpenTriggerOrders(key, secret, symbol, triggerId string) (status strin
 	param := make(map[string]interface{})
 	param[`market`] = symbol
 	response := SignedRequestFtx(key, secret, `GET`, `/conditional_orders`, param, nil)
-	util.SocketInfo(fmt.Sprintf(`query open trigger orders ftx %s: %s`, symbol, string(response)))
 	orderJson, err := util.NewJSON(response)
 	status = model.CarryStatusWorking
 	if err == nil {
@@ -422,7 +416,6 @@ func queryOpenTriggerOrders(key, secret, symbol, triggerId string) (status strin
 
 func queryOrderFtx(key, secret, orderId string) (order *model.Order) {
 	response := SignedRequestFtx(key, secret, `GET`, fmt.Sprintf(`/orders/%s`, orderId), nil, nil)
-	util.SocketInfo(fmt.Sprintf(`query orders ftx: %s`, string(response)))
 	orderJson, err := util.NewJSON(response)
 	if err == nil && orderJson.Get(`success`).MustBool() {
 		data, _ := orderJson.Get(`result`).Map()
@@ -435,7 +428,6 @@ func queryOrderFtx(key, secret, orderId string) (order *model.Order) {
 func getAccountsFtx(key, secret string) (success bool, accounts []*model.Account) {
 	postData := make(map[string]interface{})
 	response := SignedRequestFtx(key, secret, `GET`, `/positions`, nil, postData)
-	util.SocketInfo(`get accounts ftx ` + fmt.Sprintf(string(response)))
 	positionJson, err := util.NewJSON(response)
 	if err != nil || positionJson == nil || positionJson.Get(`success`).MustBool() != true {
 		util.SocketInfo(`fail to refresh account ftx`)
@@ -458,7 +450,6 @@ func getAccountsFtx(key, secret string) (success bool, accounts []*model.Account
 func getAccountFtx(key, secret string, accounts *model.Accounts) (success bool) {
 	postData := make(map[string]interface{})
 	response := SignedRequestFtx(key, secret, `GET`, `/positions`, nil, postData)
-	util.SocketInfo(`get account ftx ` + fmt.Sprintf(string(response)))
 	positionJson, err := util.NewJSON(response)
 	if err != nil || positionJson == nil || positionJson.Get(`success`).MustBool() != true {
 		util.SocketInfo(`fail to refresh account ftx`)
@@ -507,7 +498,6 @@ func getMarketInfoFtx(symbol string) (borrowAble float64) {
 func getMarketsFtx() (marketInfos map[string]*model.MarketInfo) {
 	response := SignedRequestFtx(``, ``, `GET`,
 		`/markets`, nil, nil)
-	util.SocketInfo(string(response))
 	marketInfos = make(map[string]*model.MarketInfo)
 	rateJson, err := util.NewJSON(response)
 	response = SignedRequestFtx(``, ``, `GET`,
@@ -548,7 +538,6 @@ func getMarketsFtx() (marketInfos map[string]*model.MarketInfo) {
 func getFundingRatesFtx() (fundingRates []*model.FundingRate) {
 	response := SignedRequestFtx(``, ``, `GET`,
 		`/funding_rates`, nil, nil)
-	util.SocketInfo(string(response))
 	rateJson, err := util.NewJSON(response)
 	if err == nil && rateJson.Get(`result`) != nil {
 		items, _ := rateJson.Get(`result`).Array()
@@ -743,5 +732,7 @@ func SignedRequestFtx(key, secret, method, path string, param, body map[string]i
 		headers[`FTX-SUBACCOUNT`] = `test2`
 	}
 	responseBody, _ := util.HttpRequest(method, u.String(), bodyStr, headers, 60)
+	util.SocketInfo(fmt.Sprintf(`ftx key %s request %s body %s return %s`,
+		key, u.String(), bodyStr, string(responseBody)))
 	return responseBody
 }
