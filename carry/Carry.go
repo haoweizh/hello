@@ -372,10 +372,6 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	localOpenValueLimit := math.Min(openValueLimit, 0.5*balanceAll)
 	localUsdUpLine := UsdUpLine
 	setOpen = (1.5 - usdRate) * setOpen
-	if len(keys) > 1 && keys[0] != key {
-		setOpen = math.Max(setOpen*(0.5+5*coinRate), 0.003)
-	}
-	setClose = -1
 	if revert == 0 {
 		revert = 0.003
 	}
@@ -384,9 +380,19 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	} else if revert < 0 {
 		revert = revert * (1.5 - usdRate)
 	}
-	model.SetCarryInfo(`[dynamic]`+setting.Symbol,
-		fmt.Sprintf(`slave[lowest:%s %f][highest: %s %f] open:%f close:%f revert:%f usdRate:%favailable:%f coinRate: %f`,
-			symbolLowest, lowest, symbolHighest, highest, setOpen, setClose, revert, usdRate, usdAvailable, coinRate))
+	setClose = -1
+	if len(keys) > 1 && keys[0] != key {
+		setOpen = math.Max(setOpen*(0.5+5*coinRate), 0.003)
+		if revert > 0 {
+			revert = revert / (1 + 10*coinRate)
+		} else {
+			revert = revert / (1 - math.Min(0.9, 5*coinRate))
+		}
+		revert = math.Max(revert, -0.002)
+		model.SetCarryInfo(`[dynamic]`+setting.Symbol,
+			fmt.Sprintf(`slave[lowest:%s %f][highest: %s %f] open:%f close:%f revert:%f usdRate:%favailable:%f coinRate: %f`,
+				symbolLowest, lowest, symbolHighest, highest, setOpen, setClose, revert, usdRate, usdAvailable, coinRate))
+	}
 	model.SetCarryInfo(`[===]`, fmt.Sprintf(`[lowest:%s %f][highest: %s %f] open:%f close:%f 
 			revert:%f usdRate:%favailable:%f`,
 		symbolLowest, lowest, symbolHighest, highest, setOpen, setClose, revert, usdRate, usdAvailable))
