@@ -171,17 +171,13 @@ var ProcessCarry = func(setting *model.Setting, tick *model.BidAsk) {
 	if math.IsNaN(highest) || scoreOpen > highest || setting.Symbol == symbolHighest {
 		highest = scoreOpen
 		symbolHighest = setting.Symbol
-		model.AppMetric.AddCarry(setting.Market, `ftx开仓价差++++`, highest, math.NaN())
+		model.AppMetric.AddCarry(setting.Market, `ftx开仓价差++++`+symbolHighest, highest, math.NaN())
 	}
 	if math.IsNaN(lowest) || scoreClose < lowest || setting.Symbol == symbolLowest {
 		lowest = scoreClose
 		symbolLowest = setting.Symbol
-		model.AppMetric.AddCarry(setting.Market, `ftx开仓价差----`, math.NaN(), lowest)
+		model.AppMetric.AddCarry(setting.Market, `ftx开仓价差----`+symbolLowest, math.NaN(), lowest)
 	}
-	model.SetCarryInfo(`[grid] `+setting.Symbol,
-		fmt.Sprintf(`current: [%s] score range: [%f ~ %f] revert: [%f] [open %f close: %f]`,
-			setting.Symbol, setting.OpenShortMargin, setting.CloseShortMargin, setting.GridPriceDistance,
-			scoreOpen, scoreClose))
 	keys, secrets := model.AppConfig.GetKeys(setting.Market)
 	begin := 0
 	step := 1
@@ -190,11 +186,6 @@ var ProcessCarry = func(setting *model.Setting, tick *model.BidAsk) {
 		step = -1
 	}
 	for i := begin; i >= 0 && i < len(keys); i += step {
-		usdRate := getUsdRate(keys[i])
-		usdAvailable := getUsdAvailable(keys[i])
-		carryInfo := fmt.Sprintf("%s limit :%f [lowest:%s %f][highest: %s %f][available usd: <%f> %f]",
-			keys[0], model.AppConfig.Amount, symbolLowest, lowest, symbolHighest, highest, usdAvailable, usdRate)
-		model.SetCarryInfo(fmt.Sprintf(`[grid-setting]`), carryInfo)
 		sidePerp, sideRelated, amount := calcCarryOpen(setting, tickPerp, tickRelated, keys[i], setting.Symbol,
 			setting.Symbol, scoreOpen, scoreClose, scoreOpen, scoreClose)
 		if amount > 0 {
@@ -351,7 +342,6 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	var bidAmount, askAmount float64
 	setOpen := setting.OpenShortMargin
 	setClose := setting.CloseShortMargin
-	revert := setting.GridPriceDistance
 	valueLow := setting.AmountLimit
 	usdBalance := getCarryBalance(key, `USD`)
 	usdRate := getUsdRate(key)
@@ -374,16 +364,15 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	localOpenValueLimit := math.Min(openValueLimit, 0.5*balanceAll)
 	localUsdUpLine := UsdUpLine
 	setOpen = (1.5 - usdRate) * setOpen
-	if revert == 0 {
-		revert = 0.003
-	}
-	if revert > 0 {
-		revert = revert * (usdRate - 0.5)
-	} else if revert < 0 {
-		revert = revert * (1.5 - usdRate)
-	}
+	revert := math.Abs(setting.GridPriceDistance) * (0.5 - usdRate)
 	setClose = -1
+	msgFilter := ``
 	if len(keys) > 1 && keys[0] != key {
+		msgFilter = `slave`
+		localOpenValueLimit = 3500
+		valueLow = 0
+		usdLowLine = 30000
+		localUsdUpLine = 60000
 		setOpen = math.Max(setOpen*(0.5+5*coinRate), 0.003)
 		if revert > 0 {
 			revert = revert / (1 + 10*coinRate)
@@ -391,18 +380,11 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 			revert = revert / (1 - math.Min(0.9, 10*coinRate))
 		}
 		revert = math.Max(revert, -0.002)
-		model.SetCarryInfo(`[dynamic]`+setting.Symbol,
-			fmt.Sprintf(`slave[lowest:%s %f][highest: %s %f] open:%f close:%f revert:%f usdRate:%favailable:%f coinRate: %f`,
-				symbolLowest, lowest, symbolHighest, highest, setOpen, setClose, revert, usdRate, usdAvailable, coinRate))
 	}
-	model.SetCarryInfo(`[===]`, fmt.Sprintf(`[lowest:%s %f][highest: %s %f] open:%f close:%f 
-			revert:%f usdRate:%favailable:%f`,
-		symbolLowest, lowest, symbolHighest, highest, setOpen, setClose, revert, usdRate, usdAvailable))
-	if len(keys) > 1 && keys[0] != key {
-		valueLow = 0
-		usdLowLine = 30000
-		localUsdUpLine = 50000
-	}
+	model.SetCarryInfo(`[dynamic]`+setting.Symbol,
+		fmt.Sprintf(`%s 参数:(%f %f %f) 计算结果(%f %f %f) 当前市场(%f %f) usdRate:%favailable:%f coinRate: %f`,
+			msgFilter, setting.OpenShortMargin, setting.CloseShortMargin, setting.GridPriceDistance, scoreOpen, scoreClose,
+			setOpen, setClose, revert, usdRate, usdAvailable, coinRate))
 	carryAmount := getCarryAmount(key, setting.Symbol)
 	if (scoreLow < setClose && setting.Symbol == symbolLow) || (carryAmount > 0 && scoreClose <= -1*revert) {
 		bidAmount = tickPerp.Asks[0].Amount
