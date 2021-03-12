@@ -195,7 +195,7 @@ func getBalanceOkfuture(key, secret string, accounts *model.Accounts) (success b
 		if balance != nil {
 			balances = append(balances, balance)
 		}
-		instrument, _ := GetCurrentInstrument(key, secret, model.OKFUTURE, account.Currency)
+		instrument := GetCurrentInstrument(key, secret, model.OKFUTURE, account.Currency)
 		long, short := getHoldingOkfuture(key, secret, instrument)
 		account.Free = long - short
 		accounts.SetAccount(model.OKFUTURE, account.Currency, account)

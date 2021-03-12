@@ -224,50 +224,52 @@ func QueryOrders(key, secret, market, instrument string) (
 	return nil
 }
 
-func GetCurrentInstrument(key, secret, market, symbol string) (currentInstrument string, isNext bool) {
+func GetCurrentInstrument(key, secret, market, symbol string) (currentInstrument string) {
 	querySetter := querySetInstrumentsHuobiDM
 	currentType := `quarter`
-	nextType := `bi_quarter`
+	//nextType := `bi_quarter`
 	switch market {
 	case model.OKFUTURE:
 		querySetter = querySetInstrumentsOkFuture
-		nextType = `bi_quarter`
+		//nextType = `bi_quarter`
 	case model.HuobiDM:
 		querySetter = querySetInstrumentsHuobiDM
-		nextType = `next_quarter`
+		//nextType = `next_quarter`
 		symbol = symbol[0:strings.Index(symbol, `_`)]
 	default:
-		return ``, false
+		return ``
 	}
+	querySetter(key, secret)
 	if instruments == nil || instruments[market] == nil || instruments[market][symbol] == nil {
-		querySetter(key, secret)
+		return ``
 	}
-	if instruments == nil || instruments[market] == nil || instruments[market][symbol] == nil {
-		util.Notice(fmt.Sprintf(`fatal error: can not get instrument %s %s`, market, symbol))
-		return ``, false
-	}
-	instrument := instruments[market][symbol][currentType]
-	instrumentNext := instruments[market][symbol][nextType]
-	index := strings.LastIndex(instrument, `-`)
-	if index == -1 {
-		index = len(symbol) - 1
-	}
-	year, _ := strconv.ParseInt(`20`+instrument[index+1:index+3], 10, 64)
-	month, _ := strconv.ParseInt(instrument[index+3:index+5], 10, 64)
-	day, _ := strconv.ParseInt(instrument[index+5:index+7], 10, 64)
-	today := time.Now().In(time.UTC)
-	duration, _ := time.ParseDuration(`312h`)
-	days13 := today.Add(duration)
-	date := time.Date(int(year), time.Month(month), int(day), 0, 0, 0, 0, today.Location())
-	if today.After(date) {
-		util.Notice(`future go cross ` + symbol + date.String())
-		querySetter(key, secret)
-	}
-	if days13.Before(date) {
-		return instrument, false
-	} else {
-		return instrumentNext, true
-	}
+	return instruments[market][symbol][currentType]
+	//if instruments == nil || instruments[market] == nil || instruments[market][symbol] == nil {
+	//	util.Notice(fmt.Sprintf(`fatal error: can not get instrument %s %s`, market, symbol))
+	//	return ``
+	//}
+	//instrument := instruments[market][symbol][currentType]
+	//instrumentNext := instruments[market][symbol][nextType]
+	//index := strings.LastIndex(instrument, `-`)
+	//if index == -1 {
+	//	index = len(symbol) - 1
+	//}
+	//year, _ := strconv.ParseInt(`20`+instrument[index+1:index+3], 10, 64)
+	//month, _ := strconv.ParseInt(instrument[index+3:index+5], 10, 64)
+	//day, _ := strconv.ParseInt(instrument[index+5:index+7], 10, 64)
+	//today := time.Now().In(time.UTC)
+	//duration, _ := time.ParseDuration(`312h`)
+	//days13 := today.Add(duration)
+	//date := time.Date(int(year), time.Month(month), int(day), 0, 0, 0, 0, today.Location())
+	//if today.After(date) {
+	//	util.Notice(`future go cross ` + symbol + date.String())
+	//	querySetter(key, secret)
+	//}
+	//if days13.Before(date) {
+	//	return instrument, false
+	//} else {
+	//	return instrumentNext, true
+	//}
 }
 
 func setInstrument(market, symbol, alias, instrument string) {
@@ -791,7 +793,7 @@ func GetWSSubscribe(market, symbol, subType string) (subscribe interface{}) {
 		return "ok_sub_spot_" + symbol + "_depth_5"
 	case model.OKFUTURE:
 		// btc-usd futures/ticker:BTC-USD-170310
-		instrument, _ := GetCurrentInstrument(``, ``, market, symbol)
+		instrument := GetCurrentInstrument(``, ``, market, symbol)
 		return `futures/depth5:` + instrument
 	case model.Binance: // xrp_btc: xrpbtc@depth5
 		if len(symbol) > 4 && symbol[0:4] == `bch_` {
