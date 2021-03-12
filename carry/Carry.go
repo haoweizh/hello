@@ -374,14 +374,14 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 		valueLow = 0
 		usdLowLine = 30000
 		localUsdUpLine = 60000
-		setOpen = math.Max(setOpen*(0.5+5*coinRate), 0.003)
-		if revert > 0 {
-			revert = revert / (1 + 10*coinRate)
-		} else {
-			revert = revert / (1 - math.Min(0.9, 10*coinRate))
-		}
-		revert = math.Max(revert, -0.002)
 	}
+	setOpen = math.Max(setOpen*(0.5+5*coinRate), 0.003)
+	if revert > 0 {
+		revert = revert / (1 + 2*coinRate)
+	} else {
+		revert = revert / (1 - math.Min(0.9, 2*coinRate))
+	}
+	revert = math.Max(revert, -0.002)
 	model.SetCarryInfo(`[dynamic]`+setting.Symbol,
 		fmt.Sprintf(`%s 参数:(%f %f %f) 计算结果(%f %f %f) 当前市场(%f %f) usdRate:%favailable:%f coinRate: %f`,
 			msgFilter, setting.OpenShortMargin, setting.CloseShortMargin, setting.GridPriceDistance, scoreOpen, scoreClose,
