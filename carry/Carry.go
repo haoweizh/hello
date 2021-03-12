@@ -171,13 +171,14 @@ var ProcessCarry = func(setting *model.Setting, tick *model.BidAsk) {
 	if math.IsNaN(highest) || scoreOpen > highest || setting.Symbol == symbolHighest {
 		highest = scoreOpen
 		symbolHighest = setting.Symbol
-		model.AppMetric.AddCarry(setting.Market, `ftx开仓价差++++`+symbolHighest, highest, math.NaN())
+		model.AppMetric.AddCarry(setting.Market, `ftx开仓价差++++`, highest, math.NaN())
 	}
 	if math.IsNaN(lowest) || scoreClose < lowest || setting.Symbol == symbolLowest {
 		lowest = scoreClose
 		symbolLowest = setting.Symbol
-		model.AppMetric.AddCarry(setting.Market, `ftx开仓价差----`+symbolLowest, math.NaN(), lowest)
+		model.AppMetric.AddCarry(setting.Market, `ftx开仓价差----`, math.NaN(), lowest)
 	}
+	model.SetCarryInfo(`[current high-low]`, fmt.Sprintf(`highest %s %f lowest %s %f`, symbolHighest, highest, symbolLowest, lowest))
 	keys, secrets := model.AppConfig.GetKeys(setting.Market)
 	begin := 0
 	step := 1
