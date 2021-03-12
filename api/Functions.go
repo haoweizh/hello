@@ -285,16 +285,13 @@ func setInstrument(market, symbol, alias, instrument string) {
 }
 
 func GetDayCandle(key, secret, market, symbol, instrument string, timeCandle time.Time) (candle *model.Candle) {
-	if instrument == `` {
-		instrument = symbol
-	}
 	candle = model.GetCandle(market, symbol+instrument, `1d`, timeCandle.Format(time.RFC3339)[0:10])
 	if candle != nil && candle.N > 0 {
 		return
 	}
 	candle = &model.Candle{}
 	model.AppDB.Where(`market = ? and symbol = ? and period = ? and utc_date = ?`,
-		market, symbol+instrument, `1d`, timeCandle.String()[0:10]).First(candle)
+		market, symbol, `1d`, timeCandle.String()[0:10]).First(candle)
 	if candle.N > 0 {
 		return
 	}
@@ -314,16 +311,16 @@ func GetDayCandle(key, secret, market, symbol, instrument string, timeCandle tim
 		candles = getCandlesHuobiDM(key, secret, symbol, `1d`, begin, time.Now())
 	}
 	for _, value := range candles {
-		value.Symbol = value.Symbol + instrument
-		c := model.GetCandle(value.Market, value.Symbol+instrument, value.Period, value.UTCDate)
+		value.SymbolInstrument = value.SymbolInstrument + instrument
+		c := model.GetCandle(value.Market, value.SymbolInstrument, value.Period, value.UTCDate)
 		if c == nil || c.N == 0 {
 			candleDB := &model.Candle{}
 			model.AppDB.Where(`market = ? and symbol = ? and period = ? and utc_date = ?`,
-				market, symbol+instrument, `1d`, value.UTCDate).First(candleDB)
+				market, value.SymbolInstrument, `1d`, value.UTCDate).First(candleDB)
 			if candleDB.N > 0 {
 				value.N = candleDB.N
 			}
-			model.SetCandle(market, symbol+instrument, `1d`, value.UTCDate, value)
+			model.SetCandle(market, value.SymbolInstrument, `1d`, value.UTCDate, value)
 		}
 	}
 	candle = model.GetCandle(market, symbol+instrument, `1d`, timeCandle.Format(time.RFC3339)[0:10])

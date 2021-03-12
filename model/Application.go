@@ -16,7 +16,7 @@ var Currencies = []string{`btc`, `eth`, `usdt`, `ft`, `ft1808`, `pax`, `usdc`, `
 
 //var btcBalance = make(map[string]float64) // market+rfc3339, btc balance
 //var usdBalance = make(map[string]float64) // market_rfc3339, usd balance
-var candles = make(map[string]*Candle)  // market+symbol+period+rfc3339, candle
+var candles = make(map[string]*Candle)  // market+symbolInstrument+period+rfc3339, candle
 var CarryInfo = make(map[string]string) // function - msg
 var AppMetric = &MetricManager{}
 
@@ -260,13 +260,13 @@ func RemoveCarryInfo(key string) {
 //	btcBalance[market+timeBalance.Format(time.RFC3339)[0:19]] = balance
 //}
 
-func GetCandle(market, symbol, period, utcDate string) (candle *Candle) {
+func GetCandle(market, symbolInstrument, period, utcDate string) (candle *Candle) {
 	infoLock.Lock()
 	defer infoLock.Unlock()
 	if candles == nil {
 		candles = make(map[string]*Candle)
 	}
-	key := market + symbol + period + utcDate
+	key := market + symbolInstrument + period + utcDate
 	return candles[key]
 }
 
