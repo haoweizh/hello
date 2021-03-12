@@ -375,11 +375,12 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 		usdLowLine = 30000
 		localUsdUpLine = 60000
 	}
-	setOpen = math.Max(setOpen*(0.5+5*coinRate), 0.003)
+	jump := 7.0
+	setOpen = math.Max(setOpen*(0.5+jump*coinRate), 0.003)
 	if revert > 0 {
-		revert = revert / (1 + 2*coinRate)
+		revert = revert / (1 + jump*coinRate)
 	} else {
-		revert = revert / (1 - math.Min(0.9, 2*coinRate))
+		revert = revert / (1 - math.Min(0.9, jump*coinRate))
 	}
 	revert = math.Max(revert, -0.002)
 	model.SetCarryInfo(`[dynamic]`+setting.Symbol,
