@@ -365,7 +365,7 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	localOpenValueLimit := math.Min(openValueLimit, 0.5*balanceAll)
 	localUsdUpLine := UsdUpLine
 	setOpen = (1.5 - usdRate) * setOpen
-	revert := math.Abs(setting.GridPriceDistance) * (0.5 - usdRate)
+	revert := math.Abs(setting.GridPriceDistance) * (usdRate - 0.5)
 	setClose = -1
 	msgFilter := ``
 	if len(keys) > 1 && keys[0] != key {
