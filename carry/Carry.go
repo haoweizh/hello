@@ -385,8 +385,8 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	revert = math.Max(revert, -0.002)
 	model.SetCarryInfo(`[dynamic]`+setting.Symbol,
 		fmt.Sprintf(`%s 参数:(%f %f %f) 计算结果(%f %f %f) 当前市场(%f %f) usdRate:%favailable:%f coinRate: %f`,
-			msgFilter, setting.OpenShortMargin, setting.CloseShortMargin, setting.GridPriceDistance, scoreOpen, scoreClose,
-			setOpen, setClose, revert, usdRate, usdAvailable, coinRate))
+			msgFilter, setting.OpenShortMargin, setting.CloseShortMargin, setting.GridPriceDistance, setOpen, setClose, revert,
+			scoreOpen, scoreClose, usdRate, usdAvailable, coinRate))
 	carryAmount := getCarryAmount(key, setting.Symbol)
 	if (scoreLow < setClose && setting.Symbol == symbolLow) || (carryAmount > 0 && scoreClose <= -1*revert) {
 		bidAmount = tickPerp.Asks[0].Amount
