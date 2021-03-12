@@ -156,7 +156,8 @@ func GetTurtleData(setting *model.Setting) (turtleData *TurtleData) {
 	for i := 1; i < 21; i++ {
 		duration, _ := time.ParseDuration(fmt.Sprintf(`%dh`, -24*i))
 		day := today.Add(duration)
-		candle := api.GetDayCandle(model.KeyDefault, model.SecretDefault, setting.Market, setting.Symbol, turtleData.instrument, day)
+		candle := api.GetDayCandle(model.KeyDefault, model.SecretDefault, setting.Market, setting.Symbol,
+			turtleData.instrument, day)
 		if candle == nil {
 			continue
 		}

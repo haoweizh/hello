@@ -288,13 +288,13 @@ func GetDayCandle(key, secret, market, symbol, instrument string, timeCandle tim
 	if instrument == `` {
 		instrument = symbol
 	}
-	candle = model.GetCandle(market, symbol, `1d`, timeCandle.Format(time.RFC3339)[0:10])
+	candle = model.GetCandle(market, symbol+instrument, `1d`, timeCandle.Format(time.RFC3339)[0:10])
 	if candle != nil && candle.N > 0 {
 		return
 	}
 	candle = &model.Candle{}
 	model.AppDB.Where(`market = ? and symbol = ? and period = ? and utc_date = ?`,
-		market, symbol, `1d`, timeCandle.String()[0:10]).First(candle)
+		market, symbol+instrument, `1d`, timeCandle.String()[0:10]).First(candle)
 	if candle.N > 0 {
 		return
 	}
@@ -314,18 +314,19 @@ func GetDayCandle(key, secret, market, symbol, instrument string, timeCandle tim
 		candles = getCandlesHuobiDM(key, secret, symbol, `1d`, begin, time.Now())
 	}
 	for _, value := range candles {
-		c := model.GetCandle(value.Market, value.Symbol, value.Period, value.UTCDate)
+		value.Symbol = value.Symbol + instrument
+		c := model.GetCandle(value.Market, value.Symbol+instrument, value.Period, value.UTCDate)
 		if c == nil || c.N == 0 {
 			candleDB := &model.Candle{}
 			model.AppDB.Where(`market = ? and symbol = ? and period = ? and utc_date = ?`,
-				market, symbol, `1d`, value.UTCDate).First(candleDB)
+				market, symbol+instrument, `1d`, value.UTCDate).First(candleDB)
 			if candleDB.N > 0 {
 				value.N = candleDB.N
 			}
-			model.SetCandle(market, symbol, `1d`, value.UTCDate, value)
+			model.SetCandle(market, symbol+instrument, `1d`, value.UTCDate, value)
 		}
 	}
-	candle = model.GetCandle(market, symbol, `1d`, timeCandle.Format(time.RFC3339)[0:10])
+	candle = model.GetCandle(market, symbol+instrument, `1d`, timeCandle.Format(time.RFC3339)[0:10])
 	if candle == nil {
 		util.Notice(fmt.Sprintf(`error: can not get candle %s %s %s %s`,
 			market, symbol, `1d`, timeCandle.String()))
@@ -335,7 +336,7 @@ func GetDayCandle(key, secret, market, symbol, instrument string, timeCandle tim
 	for i := 1; i < 20; i++ {
 		d, _ := time.ParseDuration(fmt.Sprintf(`%dh`, -24*i))
 		index := timeCandle.Add(d)
-		candleCurrent := model.GetCandle(market, symbol, `1d`, index.Format(time.RFC3339)[0:10])
+		candleCurrent := model.GetCandle(market, symbol+instrument, `1d`, index.Format(time.RFC3339)[0:10])
 		if candleCurrent == nil {
 			util.Notice(fmt.Sprintf(`error: can not get candle %s %s`, `1d`, index.String()))
 			continue
@@ -351,7 +352,7 @@ func GetDayCandle(key, secret, market, symbol, instrument string, timeCandle tim
 		}
 	}
 	model.AppDB.Save(&candle)
-	model.SetCandle(market, symbol, `1d`, timeCandle.Format(time.RFC3339)[0:10], candle)
+	model.SetCandle(market, symbol+instrument, `1d`, timeCandle.Format(time.RFC3339)[0:10], candle)
 	return candle
 }
 
