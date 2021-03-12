@@ -23,6 +23,7 @@ type TurtleData struct {
 	end1       float64
 	n          float64
 	amount     float64
+	instrument string
 	orderLong  *model.Order
 	orderShort *model.Order
 	longs      []*model.Order
@@ -124,16 +125,16 @@ func GetTurtleData(setting *model.Setting) (turtleData *TurtleData) {
 		}
 	}
 	cross := false
-	instrument := api.GetCurrentInstrument(``, ``, setting.Market, setting.Symbol)
+	turtleData.instrument = api.GetCurrentInstrument(``, ``, setting.Market, setting.Symbol)
 	if orderLong != nil && orderLong.OrderId != `` {
-		if orderLong.Instrument != instrument {
+		if orderLong.Instrument != turtleData.instrument {
 			cross = true
 		}
 		go api.MustCancel(model.KeyDefault, model.SecretDefault, setting.Market, setting.Symbol,
 			orderLong.Instrument, orderLong.OrderType, orderLong.OrderId, true)
 	}
 	if orderShort != nil && orderShort.OrderId != `` {
-		if orderShort.Instrument != instrument {
+		if orderShort.Instrument != turtleData.instrument {
 			cross = true
 		}
 		go api.MustCancel(model.KeyDefault, model.SecretDefault, setting.Market, setting.Symbol,
@@ -143,18 +144,19 @@ func GetTurtleData(setting *model.Setting) (turtleData *TurtleData) {
 		setting.Chance = 0
 		model.AppDB.Model(&setting).Where("market= ? and symbol= ? and function= ?",
 			setting.Market, setting.Symbol, model.FunctionTurtle).Updates(map[string]interface{}{`chance`: 0})
-		go util.SendMail(model.AppConfig.FromMail, model.AppConfig.FromMailAuth, "haoweizh@qq.com", `跨期交割`, setting.Market+instrument)
+		go util.SendMail(model.AppConfig.FromMail, model.AppConfig.FromMailAuth, "haoweizh@qq.com", `跨期交割`,
+			setting.Market+turtleData.instrument)
 		channel := model.AppMarkets.GetDepthChan(setting.Market, 0)
 		if channel == nil {
 			ResetChannel(setting.Market, channel)
 		}
 		util.Notice(fmt.Sprintf(`%s need to go cross %s to %s set chance 0`,
-			setting.Market, setting.Symbol, instrument))
+			setting.Market, setting.Symbol, turtleData.instrument))
 	}
 	for i := 1; i < 21; i++ {
 		duration, _ := time.ParseDuration(fmt.Sprintf(`%dh`, -24*i))
 		day := today.Add(duration)
-		candle := api.GetDayCandle(model.KeyDefault, model.SecretDefault, setting.Market, setting.Symbol, instrument, day)
+		candle := api.GetDayCandle(model.KeyDefault, model.SecretDefault, setting.Market, setting.Symbol, turtleData.instrument, day)
 		if candle == nil {
 			continue
 		}
@@ -395,7 +397,6 @@ func placeTurtleOrders(turtleData *TurtleData, setting *model.Setting,
 	//	(currentN <= -1*amountLimit || setting.Chance <= -1*amountLimit) {
 	//	priceLong = math.Min(turtleData.highDays5, setting.PriceX+2*turtleData.n)
 	//}
-	instrument := api.GetCurrentInstrument(``, ``, setting.Market, setting.Symbol)
 	if turtleData.orderLong == nil && currentN < amountLimit && setting.Chance < amountLimit {
 		orderSide := model.OrderSideBuy
 		typeLong := model.OrderTypeStop
@@ -416,7 +417,7 @@ func placeTurtleOrders(turtleData *TurtleData, setting *model.Setting,
 			setting.AmountLimit, orderSide, turtleData.end1, turtleData.highDays20, turtleData.highDays10,
 			turtleData.highDays5, turtleData.lowDays20, turtleData.lowDays10, turtleData.lowDays5))
 		order := api.MustPlaceOrder(model.KeyDefault, model.SecretDefault, orderSide, typeLong, setting.Market,
-			setting.Symbol, instrument, ``, setting.AccountType, ``, model.FunctionTurtle,
+			setting.Symbol, turtleData.instrument, ``, setting.AccountType, ``, model.FunctionTurtle,
 			priceLong*(1+turtleTriggerDelta), priceLong, amount, true)
 		if order != nil && order.OrderId != `` && order.Status != model.CarryStatusFail {
 			turtleData.orderLong = order
@@ -452,7 +453,7 @@ func placeTurtleOrders(turtleData *TurtleData, setting *model.Setting,
 			setting.AmountLimit, orderSide, turtleData.end1, turtleData.highDays20, turtleData.highDays10,
 			turtleData.highDays5, turtleData.lowDays20, turtleData.lowDays10, turtleData.lowDays5))
 		order := api.MustPlaceOrder(model.KeyDefault, model.SecretDefault, orderSide, typeShort, setting.Market,
-			setting.Symbol, instrument, ``, setting.AccountType, ``, model.FunctionTurtle,
+			setting.Symbol, turtleData.instrument, ``, setting.AccountType, ``, model.FunctionTurtle,
 			priceShort*(1-turtleTriggerDelta), priceShort, amount, true)
 		if order != nil && order.OrderId != `` && order.Status != model.CarryStatusFail {
 			turtleData.orderShort = order
