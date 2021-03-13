@@ -32,8 +32,11 @@ func ParameterServe() {
 	router.GET(`/symbol`, setSymbol)
 	router.GET(`/test`, test)
 	router.GET(`wss`, WsPage)
-	_ = router.RunTLS(":"+model.AppConfig.Port, `./server.pem`, `./server.key`)
-	//_ = router.Run(":" + model.AppConfig.Port)
+	if model.AppConfig.Port == `443` {
+		_ = router.RunTLS(":"+model.AppConfig.Port, `./server.pem`, `./server.key`)
+	} else {
+		_ = router.Run(":" + model.AppConfig.Port)
+	}
 }
 
 func WsPage(c *gin.Context) {
