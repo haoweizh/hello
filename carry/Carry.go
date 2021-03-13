@@ -24,6 +24,7 @@ var lowest = math.NaN()
 var highest = math.NaN()
 var usdAvailable = make(map[string]float64)                   // key - float64
 var usdRate = make(map[string]float64)                        // key - float64
+var balanceAll = make(map[string]float64)                     // key - balance value in all
 var carryBalance = make(map[string]map[string]*model.Balance) // key - coin - balance
 var carryAmount = make(map[string]map[string]float64)         // key - perp - float64
 
@@ -37,6 +38,18 @@ func setUsdAvailable(key string, value float64) {
 	carryLock.Lock()
 	defer carryLock.Unlock()
 	usdAvailable[key] = value
+}
+
+func setBalanceAll(key string, value float64) {
+	carryLock.Lock()
+	defer carryLock.Unlock()
+	balanceAll[key] = value
+}
+
+func getBalanceAll(key string) (value float64) {
+	carryLock.Lock()
+	defer carryLock.Unlock()
+	return balanceAll[key]
 }
 
 func getUsdRate(key string) float64 {
@@ -116,22 +129,23 @@ func clearCarryBalance() {
 			for i, key := range keys {
 				_, balances := api.GetBalances(key, secrets[i], market, 0)
 				_, accounts := api.GetAccounts(key, secrets[i], market)
-				balanceAll := 0.0
+				balanceAllValue := 0.0
 				localUsdAvailable := 0.0
 				for _, value := range balances {
 					coin := strings.ToUpper(value.Coin)
 					setCarryBalance(key, coin, value)
 					settingCoins := model.GetSettingCoins(model.FunctionCarry, model.Ftx)
 					if settingCoins[coin] {
-						balanceAll += value.UsdValue
+						balanceAllValue += value.UsdValue
 					}
 					if coin == `USD` {
 						localUsdAvailable = value.Available
 						setUsdAvailable(key, value.Available)
-						balanceAll += value.Available
+						balanceAllValue += value.Available
 					}
 				}
-				setUsdRate(key, localUsdAvailable/balanceAll)
+				setUsdRate(key, localUsdAvailable/balanceAllValue)
+				setBalanceAll(key, balanceAllValue)
 				util.Notice(fmt.Sprintf(`[carry] %s usd:%f %f len(blances):%d`,
 					key, localUsdAvailable, usdRate[key], len(balances)))
 				settings := model.GetSettings(model.FunctionCarry, market)
@@ -358,11 +372,11 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	if usdBalance == nil {
 		return ``, ``, 0
 	}
-	balanceAll := usdAvailable / usdRate
-	coinRate := math.Abs(balance.UsdValue) / balanceAll
+	balanceAllValue := getBalanceAll(key)
+	coinRate := math.Abs(balance.UsdValue) / balanceAllValue
 	usdLowLine := model.AppConfig.Amount
 	keys, _ := model.AppConfig.GetKeys(setting.Market)
-	localOpenValueLimit := math.Min(openValueLimit, 0.5*balanceAll)
+	localOpenValueLimit := math.Min(openValueLimit, 0.5*balanceAllValue)
 	localUsdUpLine := UsdUpLine
 	setOpen = (1.5 - usdRate) * setOpen
 	revert := math.Abs(setting.GridPriceDistance) * (usdRate - 0.5)
