@@ -237,7 +237,7 @@ func GetCurrentInstrument(key, secret, market, symbol string) (currentInstrument
 		//nextType = `next_quarter`
 		symbol = symbol[0:strings.Index(symbol, `_`)]
 	default:
-		return ``
+		return symbol
 	}
 	querySetter(key, secret)
 	if instruments == nil || instruments[market] == nil || instruments[market][symbol] == nil {
