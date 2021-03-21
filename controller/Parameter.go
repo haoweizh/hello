@@ -32,6 +32,7 @@ func ParameterServe() {
 	router.GET(`/symbol`, setSymbol)
 	router.GET(`/test`, test)
 	router.GET(`wss`, WsPage)
+	router.GET(`/master`, GetCarryInfo)
 	if model.AppConfig.Port == `443` {
 		_ = router.RunTLS(":"+model.AppConfig.Port, `./server.pem`, `./server.key`)
 	} else {
@@ -231,6 +232,52 @@ func GetBalance(c *gin.Context) {
 	c.String(http.StatusOK, msg)
 }
 
+func GetCarryInfo(c *gin.Context) {
+	info := model.GetCarryInfos(model.FunctionCarry + ` dynamic slave`)
+	tableOrder := make([]map[string]interface{}, 0)
+	tableDeal := make([]map[string]interface{}, 0)
+	metricTables := model.AppMetric.ToTables()
+	for _, table := range metricTables {
+		info = append(info, table)
+	}
+	var orders model.Order
+	turtleRows, _ := model.AppDB.Model(&orders).Select(`market,symbol,order_side,price,deal_price,deal_amount`).
+		Where(`deal_amount>? and refresh_type=?`, 0, model.FunctionTurtle).
+		Order(`order_time desc`).Limit(10).Rows()
+	if turtleRows != nil {
+		for turtleRows.Next() {
+			var market, symbol, orderSide, price, dealPrice, dealAmount string
+			_ = turtleRows.Scan(&market, &symbol, &orderSide, &price, &dealPrice, &dealAmount)
+			turtleMsg := map[string]interface{}{`订单`: `turtle`, `market`: market, `symbol`: symbol, `side`: orderSide,
+				`price`: price, `deal price`: dealPrice, `deal amount`: dealAmount}
+			tableOrder = append(tableOrder, turtleMsg)
+		}
+		turtleRows.Close()
+	}
+	keys, _ := model.AppConfig.GetKeys(model.Ftx)
+	duration, _ := time.ParseDuration(`-96h`)
+	timeBegin := time.Now().Add(duration)
+	model.AppDB.Model(&orders).Delete("order_time < ? and refresh_function = ?", timeBegin.String()[0:10], model.FunctionCarry)
+	carryRows, _ := model.AppDB.Model(&orders).Select(`market,amount_type,order_side,sum(price*amount),date(order_time),refresh_type`).
+		Group(`market,order_side,date(order_time),amount_type,refresh_type`).Order(`date(order_time) desc`).Rows()
+	if carryRows != nil {
+		for carryRows.Next() {
+			var market, side, date, amountType, refreshType string
+			var value float64
+			_ = carryRows.Scan(&market, &amountType, &side, &value, &date, &refreshType)
+			if amountType == keys[0] {
+				dealMsg := map[string]interface{}{`carry`: market, `交易额(usd)`: value, `date`: date, `side`: side,
+					`type`: refreshType}
+				tableDeal = append(tableDeal, dealMsg)
+			}
+		}
+		carryRows.Close()
+	}
+	info = append(info, tableDeal)
+	info = append(info, tableOrder)
+	c.JSON(http.StatusOK, info)
+}
+
 func GetParameters(c *gin.Context) {
 	msg := ``
 	settings := model.GetSetting(model.FunctionGrid, model.Ftx, `LINK-PERP`)
@@ -267,9 +314,6 @@ func GetParameters(c *gin.Context) {
 			if amountType == keys[0] {
 				carryFrontMsg += fmt.Sprintf("交易额 in USD: %s %s %f 类型：%s\n", date, side, value, refreshType)
 			}
-			//else {
-			//	carryBackMsg += fmt.Sprintf("交易额 in USD: %s %s %f 类型：%s\n", date, side, value, refreshType)
-			//}
 		}
 		carryRows.Close()
 	}

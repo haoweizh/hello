@@ -176,7 +176,8 @@ var ProcessCarry = func(setting *model.Setting, tick *model.BidAsk) {
 	million := util.GetNowUnixMillion()
 	if tickPerp == nil || tickRelated == nil || tickPerp.Asks == nil || tickPerp.Bids == nil ||
 		tickRelated.Asks == nil || tickRelated.Bids == nil || model.AppConfig.Handle != `1` || setting == nil ||
-		model.AppPause || million-int64(tickRelated.Ts) > 2000 || million-int64(tickPerp.Ts) > 2000 || million-int64(tick.Ts) > 20 {
+		model.AppPause || (model.AppConfig.Env != `test` &&
+		(million-int64(tickRelated.Ts) > 2000 || million-int64(tickPerp.Ts) > 2000 || million-int64(tick.Ts) > 20)) {
 		return
 	}
 	scoreOpen := 1 - tickRelated.Asks[0].Price/tickPerp.Bids[0].Price
@@ -193,6 +194,14 @@ var ProcessCarry = func(setting *model.Setting, tick *model.BidAsk) {
 		model.AppMetric.AddCarry(setting.Market, `ftx开仓价差----`, math.NaN(), lowest)
 	}
 	model.SetCarryInfo(`[current high-low]`, fmt.Sprintf(`highest %s %f lowest %s %f`, symbolHighest, highest, symbolLowest, lowest))
+	marketInfo := map[string]interface{}{`symbol highest`: symbolHighest, `symbol lowest`: symbolLowest}
+	if !math.IsNaN(highest) {
+		marketInfo[`highest`] = highest
+	}
+	if !math.IsNaN(lowest) {
+		marketInfo[`lowest`] = lowest
+	}
+	model.SetCarryInfos(`market info`, `market info`, marketInfo)
 	keys, secrets := model.AppConfig.GetKeys(setting.Market)
 	begin := 0
 	step := 1
@@ -365,9 +374,11 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	balance := getCarryBalance(key, coin)
 	if balance == nil {
 		model.SetCarryInfo(`warning `+coin, fmt.Sprintf(`slave: balace not available!!! %s`, key))
+		model.SetCarryInfos(`coin absent`, key+``+coin, map[string]interface{}{`absent `: coin, `key`: key})
 		return ``, ``, 0
 	} else {
 		model.RemoveCarryInfo(`warning ` + coin)
+		model.RemoveCarryInfos(`coin absent`, key+``+coin)
 	}
 	if usdBalance == nil {
 		return ``, ``, 0
@@ -381,9 +392,9 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	setOpen = (1.5 - usdRate) * setOpen
 	revert := math.Abs(setting.GridPriceDistance) * (usdRate - 0.5)
 	setClose = -1
-	msgFilter := ``
+	table := fmt.Sprintf(`%s dynamic `, model.FunctionCarry)
 	if len(keys) > 1 && keys[0] != key {
-		msgFilter = `slave`
+		table += `slave`
 		localOpenValueLimit = 3500
 		valueLow = 0
 		usdLowLine = 30000
@@ -398,10 +409,15 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 		revert = revert / (1 - math.Min(0.9, jumpRevert*coinRate))
 	}
 	revert = math.Max(revert, -0.003)
-	model.SetCarryInfo(`[dynamic]`+setting.Symbol+msgFilter,
+	model.SetCarryInfo(table+setting.Symbol,
 		fmt.Sprintf(`%s 参数:(%f %f %f) 计算结果(%f %f %f) 当前市场(%f %f) usdRate:%favailable:%f coinRate: %f`,
-			msgFilter, setting.OpenShortMargin, setting.CloseShortMargin, setting.GridPriceDistance, setOpen, setClose, revert,
-			scoreOpen, scoreClose, usdRate, usdAvailable, coinRate))
+			table, setting.OpenShortMargin, setting.CloseShortMargin, setting.GridPriceDistance, setOpen, setClose,
+			revert, scoreOpen, scoreClose, usdRate, usdAvailable, coinRate))
+	carryInfo := map[string]interface{}{`+开仓`: setting.OpenShortMargin, `-开仓`: setting.CloseShortMargin,
+		`平仓`: setting.GridPriceDistance, `动态+开仓`: setOpen, `动态-开仓`: setClose, `动态平仓`: revert,
+		table: setting.Symbol, `市场+开`: scoreOpen, `市场-开`: scoreClose, `usdRate`: usdRate,
+		`usdAvailable`: usdAvailable, `coinRate`: coinRate}
+	model.SetCarryInfos(table, setting.Symbol, carryInfo)
 	carryAmount := getCarryAmount(key, setting.Symbol)
 	if (scoreLow < setClose && setting.Symbol == symbolLow) || (carryAmount > 0 && scoreClose <= -1*revert) {
 		bidAmount = tickPerp.Asks[0].Amount

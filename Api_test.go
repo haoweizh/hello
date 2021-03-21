@@ -48,6 +48,11 @@ func Test_ws(t *testing.T) {
 }
 
 func Test_initTurtleN(t *testing.T) {
+	begin := time.Now()
+	time.Sleep(time.Second * 5)
+
+	duration := begin.Sub(time.Now())
+	fmt.Println(duration)
 	model.NewConfig()
 	_ = configor.Load(model.AppConfig, "./config.yml")
 	//balances := api.GetTransfers(``, ``, model.OKEX)

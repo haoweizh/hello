@@ -163,17 +163,15 @@ func placeBothOrders(market, symbol, key string, tick, tickRelated *model.BidAsk
 	} else if priceX < -7 {
 		priceX = priceX/2 - 3.5
 	}
-	model.SetCarryInfo(fmt.Sprintf("【%s_%s_%s】\n", model.FunctionCarry, market, setting.MarketRelated),
-		fmt.Sprintf("1. [搬砖参数] %s %s资金费率:%f %s资金费率%f p1:%f p2:%f py:%f px:%f 对应持仓:%f %s 延时 %dms\n"+
-			"2. [设置]下单数量: %f, 价差参数:%f,  A总: %f, 最低数量: %f\n"+
-			"3. %d-%d %f %f %f %f %f - %f %f %f %f %f",
-			util.GetNow().String(), market, zFee, setting.MarketRelated, zFeeRelated,
-			p1, p2, py, priceX, freeRelated, util.GetNow().String(), util.GetNowUnixMillion()-int64(tick.Ts),
-			// refreshLimitLow 限制
-			setting.GridAmount, setting.GridPriceDistance, setting.AmountLimit, setting.RefreshLimitLow,
-			tick.Bids.Len(), tick.Asks.Len(), tick.Bids[4].Price, tick.Bids[3].Price, tick.Bids[2].Price,
-			tick.Bids[1].Price, tick.Bids[0].Price, tick.Asks[0].Price, tick.Asks[1].Price, tick.Asks[2].Price,
-			tick.Asks[3].Price, tick.Asks[4].Price))
+	carryInfo := map[string]interface{}{`zFee`: zFee, `zFeeRelated`: zFeeRelated, `related`: setting.MarketRelated,
+		`p1`: p1, `p2`: p2, `py`: py, `priceX`: priceX, `freeRelated`: freeRelated, `time`: util.GetNow().String(),
+		`延时`: util.GetNowUnixMillion() - int64(tick.Ts), `grid amount`: setting.GridAmount,
+		`grid distance`: setting.GridPriceDistance, `最低数量amount limit`: setting.AmountLimit,
+		`refresh limit low`: setting.RefreshLimitLow,
+		`bid len`:           tick.Bids.Len(), `ask len`: tick.Asks.Len(), `bid5`: tick.Bids[4].Price, `bid4`: tick.Bids[3].Price,
+		`bid3`: tick.Bids[2].Price, `bid2`: tick.Bids[1].Price, `bid1`: tick.Bids[0].Price, `ask1`: tick.Asks[0].Price,
+		`ask2`: tick.Asks[1].Price, `ask3`: tick.Asks[2].Price, `ask4`: tick.Asks[3].Price, `ask5`: tick.Asks[4].Price}
+	model.SetCarryInfos(model.FunctionCarry+`_`+market, setting.MarketRelated, carryInfo)
 	priceDistance := 0.1 / math.Pow(10, api.GetPriceDecimal(setting.MarketRelated, symbol))
 	calcAmtPriceBuy := tick.Asks[0].Price - api.GetPriceDistance(market, symbol) +
 		setting.GridPriceDistance - p1 - priceX

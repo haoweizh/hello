@@ -128,6 +128,78 @@ func (metricManager *MetricManager) AddTick(market, symbol string, current time.
 	metricManager.index[marketSymbol] = (metricManager.index[marketSymbol] + 1) % recentTickLength
 }
 
+func (metricManager *MetricManager) ToTables() (tables [][]map[string]interface{}) {
+	defer metricManager.Lock.Unlock()
+	metricManager.Lock.Lock()
+	tablePriceDis := make([]map[string]interface{}, 0)
+	tableTick := make([]map[string]interface{}, 0)
+	tableTickRecent := make([]map[string]interface{}, 0)
+	now := util.GetNow()
+	timeMap := make(map[string]bool, 12)
+	for i := 0; i < 12; i++ {
+		duration, _ := time.ParseDuration(fmt.Sprintf(`-%dh`, i))
+		then := now.Add(duration)
+		timeMap[fmt.Sprintf(`%d/%d %d`, then.Month(), then.Day(), then.Hour())] = true
+	}
+	for marketSymbol, timeMetric := range metricManager.carryHour {
+		for str, metric := range timeMetric {
+			if timeMap[str] {
+				metricMsg := map[string]interface{}{`价差`: marketSymbol, `time`: str, `count`: metric.count,
+					`avg high`: metric.avgHigh, `avg low`: metric.avgLow}
+				if !math.IsNaN(metric.carryHighest) {
+					metricMsg[`highest`] = metric.carryHighest
+				}
+				if !math.IsNaN(metric.carryLowest) {
+					metricMsg[`lowest`] = metric.carryLowest
+				}
+				tablePriceDis = append(tablePriceDis, metricMsg)
+			}
+		}
+	}
+	for marketSymbol, timeMetric := range metricManager.tickHour {
+		for str, metric := range timeMetric {
+			if timeMap[str] {
+				metricMsg := map[string]interface{}{`tick`: marketSymbol, `time`: str, `all`: metric.countAll,
+					`valid`: metric.countValid, `delay low`: metric.delayLow, `delay high`: metric.delayHigh,
+					`delay avg`: metric.delayAvg, `price low`: metric.priceLow, `price high`: metric.priceHigh}
+				tableTick = append(tableTick, metricMsg)
+			}
+		}
+	}
+	for marketSymbol, metrics := range metricManager.metricTicks {
+		index := metricManager.index[marketSymbol]
+		pre := (metricManager.index[marketSymbol] - 1 + recentTickLength) % recentTickLength
+		if metrics[index] == nil {
+			index = 0
+		}
+		tickMetric := TickMetric{start: metrics[index].receiveTime, end: metrics[pre].receiveTime}
+		for _, tick := range metrics {
+			if tick == nil {
+				continue
+			}
+			if tick.delay > tickMetric.delayHigh {
+				tickMetric.delayHigh = tick.delay
+			}
+			if tick.delay < tickMetric.delayLow || tickMetric.delayLow == 0 {
+				tickMetric.delayLow = tick.delay
+			}
+			tickMetric.delaySum += tick.delay
+			tickMetric.countAll++
+			if tick.delay < 100 {
+				tickMetric.countValid++
+			}
+		}
+		tickMetric.delayAvg = float64(tickMetric.delaySum) / float64(tickMetric.countAll)
+		metricMsg := map[string]interface{}{`最近tick`: marketSymbol, `all`: tickMetric.countAll,
+			`valid`: tickMetric.countValid, `delay low`: tickMetric.delayLow, `delay high`: tickMetric.delayHigh,
+			`delay avg`: tickMetric.delayAvg,
+			`start`:     fmt.Sprintf(`%d:%d:%d`, tickMetric.start.Hour(), tickMetric.start.Minute(), tickMetric.start.Second()),
+			`end`:       fmt.Sprintf(`%d:%d:%d`, tickMetric.end.Hour(), tickMetric.end.Minute(), tickMetric.end.Second())}
+		tableTickRecent = append(tableTickRecent, metricMsg)
+	}
+	return [][]map[string]interface{}{tablePriceDis, tableTick, tableTickRecent}
+}
+
 func (metricManager *MetricManager) ToString() (metricStr string) {
 	defer metricManager.Lock.Unlock()
 	metricManager.Lock.Lock()
