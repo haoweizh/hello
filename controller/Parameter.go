@@ -33,6 +33,7 @@ func ParameterServe() {
 	router.GET(`/test`, test)
 	router.GET(`wss`, WsPage)
 	router.GET(`/master`, GetCarryInfo)
+	router.GET(`slave`, GetCarryInfoSlave)
 	if model.AppConfig.Port == `443` {
 		_ = router.RunTLS(":"+model.AppConfig.Port, `./server.pem`, `./server.key`)
 	} else {
@@ -232,6 +233,29 @@ func GetBalance(c *gin.Context) {
 	c.String(http.StatusOK, msg)
 }
 
+func GetCarryInfoSlave(c *gin.Context) {
+	info := model.GetCarryInfos(model.FunctionCarry + ` dynamic `)
+	tableDeal := make([]map[string]interface{}, 0)
+	carryRows, _ := model.AppDB.Model(&model.Order{}).Select(`market,amount_type,order_side,sum(price*amount),date(order_time),refresh_type`).
+		Group(`market,order_side,date(order_time),amount_type,refresh_type`).Order(`date(order_time) desc`).Rows()
+	keys, _ := model.AppConfig.GetKeys(model.Ftx)
+	if carryRows != nil {
+		for carryRows.Next() {
+			var market, side, date, amountType, refreshType string
+			var value float64
+			_ = carryRows.Scan(&market, &amountType, &side, &value, &date, &refreshType)
+			if amountType != keys[0] {
+				dealMsg := map[string]interface{}{`carry`: market, `交易额(usd)`: value, `date`: date, `side`: side,
+					`type`: refreshType}
+				tableDeal = append(tableDeal, dealMsg)
+			}
+		}
+		carryRows.Close()
+	}
+	info = append(info, tableDeal)
+	c.JSON(http.StatusOK, info)
+}
+
 func GetCarryInfo(c *gin.Context) {
 	info := model.GetCarryInfos(model.FunctionCarry + ` dynamic slave`)
 	tableOrder := make([]map[string]interface{}, 0)
@@ -257,7 +281,7 @@ func GetCarryInfo(c *gin.Context) {
 	keys, _ := model.AppConfig.GetKeys(model.Ftx)
 	duration, _ := time.ParseDuration(`-96h`)
 	timeBegin := time.Now().Add(duration)
-	model.AppDB.Model(&orders).Delete("order_time < ? and refresh_function = ?", timeBegin.String()[0:10], model.FunctionCarry)
+	model.AppDB.Model(&orders).Delete("order_time<? and refresh_type=?", timeBegin.String()[0:10], model.FunctionCarry)
 	carryRows, _ := model.AppDB.Model(&orders).Select(`market,amount_type,order_side,sum(price*amount),date(order_time),refresh_type`).
 		Group(`market,order_side,date(order_time),amount_type,refresh_type`).Order(`date(order_time) desc`).Rows()
 	if carryRows != nil {
@@ -301,7 +325,7 @@ func GetParameters(c *gin.Context) {
 	duration, _ := time.ParseDuration(`-96h`)
 	timeBegin := time.Now().Add(duration)
 	timeBegin = time.Date(timeBegin.Year(), timeBegin.Month(), timeBegin.Day(), 0, 0, 0, 0, timeBegin.Location())
-	model.AppDB.Model(&orders).Delete(`order_time<? and refresh_function=?`, timeBegin.String(), model.FunctionCarry)
+	model.AppDB.Model(&orders).Delete(`order_time<? and refresh_type=?`, timeBegin.String()[0:10], model.FunctionCarry)
 	carryRows, _ := model.AppDB.Model(&orders).Select(`amount_type,order_side,sum(price*amount),date(order_time),refresh_type`).
 		Group(`order_side,date(order_time),amount_type,refresh_type`).Order(`date(order_time) desc`).Rows()
 	carryFrontMsg := ``
