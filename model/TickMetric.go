@@ -91,7 +91,7 @@ func (metricManager *MetricManager) AddTick(market, symbol string, current time.
 	if metricManager.tickHour[marketSymbol] == nil {
 		metricManager.tickHour[marketSymbol] = make(map[string]*TickMetric)
 	}
-	timeStr := fmt.Sprintf(`%d/%d %d`, current.Month(), current.Day(), current.Hour())
+	timeStr := fmt.Sprintf(`%d/%d_%d`, current.Month(), current.Day(), current.Hour())
 	if metricManager.tickHour[marketSymbol][timeStr] == nil {
 		metricManager.tickHour[marketSymbol][timeStr] = &TickMetric{priceLow: 0, priceHigh: 0}
 	}
@@ -139,7 +139,7 @@ func (metricManager *MetricManager) ToTables() (tables [][]map[string]interface{
 	for i := 0; i < 12; i++ {
 		duration, _ := time.ParseDuration(fmt.Sprintf(`-%dh`, i))
 		then := now.Add(duration)
-		timeMap[fmt.Sprintf(`%d/%d %d`, then.Month(), then.Day(), then.Hour())] = true
+		timeMap[fmt.Sprintf(`%d/%d_%d`, then.Month(), then.Day(), then.Hour())] = true
 	}
 	for marketSymbol, timeMetric := range metricManager.carryHour {
 		for str, metric := range timeMetric {
@@ -209,7 +209,7 @@ func (metricManager *MetricManager) ToString() (metricStr string) {
 	for i := 0; i < 12; i++ {
 		duration, _ := time.ParseDuration(fmt.Sprintf(`-%dh`, i))
 		then := now.Add(duration)
-		timeMap[fmt.Sprintf(`%d/%d %d`, then.Month(), then.Day(), then.Hour())] = true
+		timeMap[fmt.Sprintf(`%d/%d_%d`, then.Month(), then.Day(), then.Hour())] = true
 	}
 	for marketSymbol, timeMetric := range metricManager.carryHour {
 		metricStr = metricStr + fmt.Sprintf("[%s 价差状况]\n", marketSymbol)
