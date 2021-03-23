@@ -145,7 +145,7 @@ func (metricManager *MetricManager) ToTables() (tables [][]map[string]interface{
 		for str, metric := range timeMetric {
 			if timeMap[str] {
 				metricMsg := map[string]interface{}{`价差`: marketSymbol, `time`: str, `count`: metric.count,
-					`avg high`: metric.avgHigh, `avg low`: metric.avgLow}
+					`avg_high`: metric.avgHigh, `avg_low`: metric.avgLow}
 				if !math.IsNaN(metric.carryHighest) {
 					metricMsg[`highest`] = metric.carryHighest
 				}
@@ -160,8 +160,8 @@ func (metricManager *MetricManager) ToTables() (tables [][]map[string]interface{
 		for str, metric := range timeMetric {
 			if timeMap[str] {
 				metricMsg := map[string]interface{}{`tick`: marketSymbol, `time`: str, `all`: metric.countAll,
-					`valid`: metric.countValid, `delay low`: metric.delayLow, `delay high`: metric.delayHigh,
-					`delay avg`: metric.delayAvg, `price low`: metric.priceLow, `price high`: metric.priceHigh}
+					`valid`: metric.countValid, `delay_low`: metric.delayLow, `delay_high`: metric.delayHigh,
+					`delay_avg`: metric.delayAvg, `price_low`: metric.priceLow, `price_high`: metric.priceHigh}
 				tableTick = append(tableTick, metricMsg)
 			}
 		}
@@ -191,8 +191,8 @@ func (metricManager *MetricManager) ToTables() (tables [][]map[string]interface{
 		}
 		tickMetric.delayAvg = float64(tickMetric.delaySum) / float64(tickMetric.countAll)
 		metricMsg := map[string]interface{}{`最近tick`: marketSymbol, `all`: tickMetric.countAll,
-			`valid`: tickMetric.countValid, `delay low`: tickMetric.delayLow, `delay high`: tickMetric.delayHigh,
-			`delay avg`: tickMetric.delayAvg,
+			`valid`: tickMetric.countValid, `delay_low`: tickMetric.delayLow, `delay_high`: tickMetric.delayHigh,
+			`delay_avg`: tickMetric.delayAvg,
 			`start`:     fmt.Sprintf(`%d:%d:%d`, tickMetric.start.Hour(), tickMetric.start.Minute(), tickMetric.start.Second()),
 			`end`:       fmt.Sprintf(`%d:%d:%d`, tickMetric.end.Hour(), tickMetric.end.Minute(), tickMetric.end.Second())}
 		tableTickRecent = append(tableTickRecent, metricMsg)

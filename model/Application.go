@@ -35,13 +35,9 @@ const OKSwap = `okswap`
 const Huobi = "huobi"
 const HuobiDM = `huobiDM`
 const Binance = "binance"
-const Fcoin = "fcoin"
-const Fmex = `fmex`
 const Ftx = `ftx`
 const Coinpark = "coinpark"
-const Btcdo = `btcdo`
 const Bitmex = `bitmex`
-const AccountTypeLever = `lever`
 const AccountTypeReduce = `reduceOnly`
 const SubscribeDepth = `SubscribeDepth`
 const SubscribeTicker = `ticker`
@@ -66,12 +62,13 @@ const FunctionTurtle = `turtle`
 const FunctionGrid = `grid`
 const FunctionCarry = `carry`
 const FunctionComplement = `complement`
-const FunctionHang = `hang`
 const FunctionHangFar = `hang_far`
-const FunctionRank = `rank`
 const FunctionHangRevert = `hang_revert`
 const FunctionPostonlyHandler = `postonly`
-const FunctionRefresh = `refresh`
+
+//const FunctionRefresh = `refresh`
+//const FunctionRank = `rank`
+//const FunctionHang = `hang`
 
 const PostOnly = `ParticipateDoNotInitiate`
 
@@ -133,13 +130,6 @@ var orderStatusMap = map[string]map[string]string{ // market - market status - u
 		`partial-canceled`: CarryStatusSuccess, //部分成交撤销,
 		`filled`:           CarryStatusSuccess, //完全成交,
 		`canceled`:         CarryStatusFail},   //已撤销
-	OKEX: {
-		"-1": CarryStatusFail,    //已撤销
-		"0":  CarryStatusWorking, //未成交
-		"1":  CarryStatusWorking, //部分成交
-		"2":  CarryStatusSuccess, //完全成交
-		"3":  CarryStatusWorking, //撤单处理中
-	},
 	OKFUTURE: {
 		`0`:  CarryStatusWorking, //等待成交
 		`1`:  CarryStatusWorking, //部分成交
@@ -335,18 +325,6 @@ func GetSymbol(market, subscribe string) (symbol string) {
 		}
 		subscribe = subscribe[0:strings.Index(subscribe, `@`)]
 		return getSymbolWithSplit(subscribe, `_`)
-	case Fcoin: // btc_usdt: depth.L20.btcusdt  btc_usdt: trade.btcusdt
-		if strings.Contains(subscribe, `depth`) {
-			subscribe = strings.Replace(subscribe, "depth.L20.", "", 1)
-			return getSymbolWithSplit(subscribe, "_")
-		}
-		if strings.Contains(subscribe, `trade`) {
-			subscribe = strings.Replace(subscribe, `trade.`, ``, 1)
-			return getSymbolWithSplit(subscribe, `_`)
-		}
-	case Fmex:
-		subscribe = strings.Replace(subscribe, "depth.l20.", "", 1)
-		return subscribe
 	case Coinpark: //BTC_USDT bibox_sub_spot_BTC_USDT_ticker
 		subscribe = strings.Replace(subscribe, `bibox_sub_spot_`, ``, 1)
 		subscribe = strings.Replace(subscribe, `_ticker`, ``, 1)
@@ -369,25 +347,16 @@ func NewConfig() {
 	AppConfig.WSUrls[Huobi] = `wss://api-aws.huobi.pro/feed`
 	AppConfig.WSUrls[HuobiDM] = `wss://api.hbdm.com/`
 	AppConfig.WSUrls[Binance] = "wss://stream.binance.com:9443/stream?streams="
-	AppConfig.WSUrls[Fcoin] = "wss://api.fcoin.com/v2/ws"
 	AppConfig.WSUrls[Ftx] = `wss://ftx.com/ws`
+	AppConfig.WSUrls[OKEX] = `wss://ws.okex.com:8443/ws/v5/public?brokerId=9999`
 	if AppConfig.Env == `test` {
-		//AppConfig.WSUrls[Fmex] = `wss://api.testnet.fmex.com/v2/ws`
-		//AppConfig.RestUrls[Fmex] = `https://api.testnet.fmex.com/`
-		//AppConfig.WSUrls[Bybit] = `wss://stream-testnet.bybit.com/realtime`
-		//AppConfig.RestUrls[Bybit] = `https://api-testnet.bybit.com`
-		AppConfig.WSUrls[Fmex] = `wss://api.fmex.com/v2/ws`
-		AppConfig.RestUrls[Fmex] = `https://api.fmex.com/`
 		AppConfig.WSUrls[Bybit] = `wss://stream.bybit.com/realtime`
 		AppConfig.RestUrls[Bybit] = `https://api.bybit.com`
 	} else {
-		AppConfig.WSUrls[Fmex] = `wss://api.fmex.com/v2/ws`
-		AppConfig.RestUrls[Fmex] = `https://api.fmex.com/`
 		AppConfig.WSUrls[Bybit] = `wss://stream.bybit.com/realtime`
 		AppConfig.RestUrls[Bybit] = `https://api.bybit.com`
 	}
 	AppConfig.WSUrls[Coinpark] = "wss://push.coinpark.cc/"
-	AppConfig.WSUrls[Btcdo] = `wss://onli-quotation.btcdo.com/v1/market/?EIO=3&transport=websocket`
 	AppConfig.WSUrls[Bitmex] = `wss://www.bitmex.com/realtime/`
 	AppConfig.WSUrls[OKFUTURE] = `wss://real.okex.com:8443/ws/v3`
 	AppConfig.WSUrls[OKSwap] = `wss://real.okex.com:8443/ws/v3`
@@ -396,14 +365,13 @@ func NewConfig() {
 	// HUOBI用于交易的API，可能不适用于行情
 	//config.RestUrls[Huobi] = "https://api.huobipro.com/v1"
 	//AppConfig.RestUrls[Huobi] = "https://api.huobi.pro"
-	AppConfig.RestUrls[Fcoin] = "https://api.fcoin.com/v2"
+	AppConfig.RestUrls[OKEX] = `https://www.okex.com`
 	AppConfig.RestUrls[Huobi] = `api-aws.huobi.pro`
 	AppConfig.RestUrls[HuobiDM] = `api.hbdm.com`
 	AppConfig.RestUrls[OKSwap] = `https://www.okex.com`
 	AppConfig.RestUrls[OKFUTURE] = `https://www.okex.com`
 	AppConfig.RestUrls[Binance] = "https://api.binance.com"
 	AppConfig.RestUrls[Coinpark] = "https://api.coinpark.cc/v1"
-	AppConfig.RestUrls[Btcdo] = `https://api.btcdo.com`
 	//AppConfig.RestUrls[Bitmex] = `https://testnet.bitmex.com`
 	AppConfig.RestUrls[Bitmex] = `https://www.bitmex.com/api/v1`
 	AppConfig.RestUrls[Ftx] = `https://ftx.com/api`

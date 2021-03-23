@@ -676,21 +676,21 @@ func _(key, secret, symbol, orderId string) (orders []*model.Order) {
 	return
 }
 
-// note: not yet deal with net error issue
-func getAccountBitmex(key, secret string, accounts *model.Accounts) {
-	postData := make(map[string]interface{})
-	postData[`count`] = `100`
-	response := SignedRequestBitmex(key, secret, `GET`, `/position`, postData)
-	positionJson, err := util.NewJSON(response)
-	if err == nil {
-		positions := positionJson.MustArray()
-		for _, data := range positions {
-			account := &model.Account{Market: model.Bitmex, Ts: util.GetNowUnixMillion()}
-			parseAccount(account, data.(map[string]interface{}))
-			accounts.SetAccount(model.Bitmex, account.Currency, account)
-		}
-	}
-}
+//// note: not yet deal with net error issue
+//func getAccountBitmex(key, secret string, accounts *model.Accounts) {
+//	postData := make(map[string]interface{})
+//	postData[`count`] = `100`
+//	response := SignedRequestBitmex(key, secret, `GET`, `/position`, postData)
+//	positionJson, err := util.NewJSON(response)
+//	if err == nil {
+//		positions := positionJson.MustArray()
+//		for _, data := range positions {
+//			account := &model.Account{Market: model.Bitmex, Ts: util.GetNowUnixMillion()}
+//			parseAccount(account, data.(map[string]interface{}))
+//			accounts.SetAccount(model.Bitmex, account.Currency, account)
+//		}
+//	}
+//}
 
 func placeOrderBitmex(order *model.Order, key, secret, orderSide, orderType, execInst, symbol, price, amount string) {
 	postData := make(map[string]interface{})

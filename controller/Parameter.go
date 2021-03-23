@@ -234,7 +234,7 @@ func GetBalance(c *gin.Context) {
 }
 
 func GetCarryInfoSlave(c *gin.Context) {
-	info := model.GetCarryInfos(model.FunctionCarry + ` dynamic `)
+	info := model.GetCarryInfos(model.FunctionCarry + `_dynamic_`)
 	tableDeal := make([]map[string]interface{}, 0)
 	carryRows, _ := model.AppDB.Model(&model.Order{}).Select(`market,amount_type,order_side,sum(price*amount),date(order_time),refresh_type`).
 		Group(`market,order_side,date(order_time),amount_type,refresh_type`).Order(`date(order_time) desc`).Rows()
@@ -257,7 +257,7 @@ func GetCarryInfoSlave(c *gin.Context) {
 }
 
 func GetCarryInfo(c *gin.Context) {
-	info := model.GetCarryInfos(model.FunctionCarry + ` dynamic slave`)
+	info := model.GetCarryInfos(model.FunctionCarry + `_dynamic_slave`)
 	tableOrder := make([]map[string]interface{}, 0)
 	tableDeal := make([]map[string]interface{}, 0)
 	metricTables := model.AppMetric.ToTables()

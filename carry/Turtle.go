@@ -211,7 +211,7 @@ var ProcessTurtle = func(setting *model.Setting, tick *model.BidAsk) {
 	if setting.Chance != 0 && setting.PriceX == 0 {
 		carryInfo := map[string]interface{}{`缺少上次成交价`: setting.Symbol, `market`: setting.Market,
 			`chance`: setting.Chance, `priceX`: setting.PriceX}
-		model.SetCarryInfos(model.FunctionTurtle+` error `+setting.Market, setting.Symbol, carryInfo)
+		model.SetCarryInfos(model.FunctionTurtle+`_error_`+setting.Market, setting.Symbol, carryInfo)
 		return
 	}
 	setTurtling(true)
@@ -227,12 +227,12 @@ var ProcessTurtle = func(setting *model.Setting, tick *model.BidAsk) {
 		turtleData.turtleTime.String()[0:10], showMsg, setting.AmountLimit, setting.GridAmount, setting.PriceX,
 		turtleData.lowDays20, turtleData.highDays20, turtleData.lowDays10, turtleData.highDays10, turtleData.n,
 		turtleData.amount, setting.Symbol, setting.Chance, currentN, tick.Bids[0].Price, tick.Asks[0].Price))
-	carryInfo := map[string]interface{}{`turtle status`: showMsg, `date`: turtleData.turtleTime.String()[0:10],
+	carryInfo := map[string]interface{}{`turtle_status`: showMsg, `date`: turtleData.turtleTime.String()[0:10],
 		`加仓次数限制`: setting.AmountLimit, `当前已经持仓数量`: setting.GridAmount, `上一次开仓的价格`: setting.PriceX,
 		`20日low`: turtleData.lowDays20, `20日high`: turtleData.highDays20, `10日low`: turtleData.lowDays10,
 		`10日high`: turtleData.highDays10, `n`: turtleData.n, `数量`: turtleData.amount, `持仓数`: setting.Chance,
 		`总持仓数`: currentN, `bid0`: tick.Bids[0].Price, `ask0`: tick.Asks[0].Price}
-	model.SetCarryInfos(model.FunctionTurtle+` status `, setting.Market+`_`+setting.Symbol, carryInfo)
+	model.SetCarryInfos(model.FunctionTurtle+`_status_`, setting.Market+`_`+setting.Symbol, carryInfo)
 	priceLong := turtleData.highDays20
 	priceShort := turtleData.lowDays20
 	longBreak, shortBreak := checkTurtleBreak(setting, turtleData, tick)

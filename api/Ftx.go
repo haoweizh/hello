@@ -447,26 +447,26 @@ func getAccountsFtx(key, secret string) (success bool, accounts []*model.Account
 	return true, accounts
 }
 
-func getAccountFtx(key, secret string, accounts *model.Accounts) (success bool) {
-	postData := make(map[string]interface{})
-	response := SignedRequestFtx(key, secret, `GET`, `/positions`, nil, postData)
-	positionJson, err := util.NewJSON(response)
-	if err != nil || positionJson == nil || positionJson.Get(`success`).MustBool() != true {
-		util.SocketInfo(`fail to refresh account ftx`)
-		time.Sleep(time.Second * 2)
-		return getAccountFtx(key, secret, accounts)
-	}
-	positionJson = positionJson.Get(`result`)
-	if positionJson != nil {
-		data := positionJson.MustArray()
-		for _, item := range data {
-			account := &model.Account{Market: model.Ftx, Ts: util.GetNowUnixMillion()}
-			parseAccountFtx(account, item.(map[string]interface{}))
-			accounts.SetAccount(model.Ftx, account.Currency, account)
-		}
-	}
-	return true
-}
+//func getAccountFtx(key, secret string, accounts *model.Accounts) (success bool) {
+//	postData := make(map[string]interface{})
+//	response := SignedRequestFtx(key, secret, `GET`, `/positions`, nil, postData)
+//	positionJson, err := util.NewJSON(response)
+//	if err != nil || positionJson == nil || positionJson.Get(`success`).MustBool() != true {
+//		util.SocketInfo(`fail to refresh account ftx`)
+//		time.Sleep(time.Second * 2)
+//		return getAccountFtx(key, secret, accounts)
+//	}
+//	positionJson = positionJson.Get(`result`)
+//	if positionJson != nil {
+//		data := positionJson.MustArray()
+//		for _, item := range data {
+//			account := &model.Account{Market: model.Ftx, Ts: util.GetNowUnixMillion()}
+//			parseAccountFtx(account, item.(map[string]interface{}))
+//			accounts.SetAccount(model.Ftx, account.Currency, account)
+//		}
+//	}
+//	return true
+//}
 
 func getMarketInfoFtx(symbol string) (borrowAble float64) {
 	if !strings.Contains(symbol, `/`) {

@@ -12,7 +12,6 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	"time"
 )
 
 var lastTickId = make(map[string]int64) // symbol - int64
@@ -186,30 +185,30 @@ func queryOrderBinance(key, secret, symbol string, orderId string) (dealAmount, 
 	return dealAmount, dealPrice, status
 }
 
-func getAccountBinance(key, secret string, accounts *model.Accounts) (success bool) {
-	postData := url.Values{}
-	signBinance(&postData, secret)
-	headers := map[string]string{"X-MBX-APIKEY": key}
-	requestUrl := model.AppConfig.RestUrls[model.Binance] + "/api/v3/account?" + postData.Encode()
-	responseBody, _ := util.HttpRequest("GET", requestUrl, "", headers, 60)
-	balanceJson, _ := util.NewJSON(responseBody)
-	if balanceJson.Get("canTrade").MustBool() {
-		currencies, _ := balanceJson.Get("balances").Array()
-		for _, value := range currencies {
-			asset := value.(map[string]interface{})
-			free, _ := strconv.ParseFloat(asset["free"].(string), 64)
-			frozen, _ := strconv.ParseFloat(asset["locked"].(string), 64)
-			if free == 0 && frozen == 0 {
-				continue
-			}
-			currency := strings.ToLower(asset["asset"].(string))
-			account := &model.Account{Market: model.Binance, Currency: currency, Free: free, Frozen: frozen}
-			accounts.SetAccount(model.Binance, currency, account)
-		}
-		return true
-	} else {
-		time.Sleep(time.Second * 2)
-		util.SocketInfo(`fail to refresh accounts binance`)
-		return getAccountBinance(key, secret, accounts)
-	}
-}
+//func getAccountBinance(key, secret string, accounts *model.Accounts) (success bool) {
+//	postData := url.Values{}
+//	signBinance(&postData, secret)
+//	headers := map[string]string{"X-MBX-APIKEY": key}
+//	requestUrl := model.AppConfig.RestUrls[model.Binance] + "/api/v3/account?" + postData.Encode()
+//	responseBody, _ := util.HttpRequest("GET", requestUrl, "", headers, 60)
+//	balanceJson, _ := util.NewJSON(responseBody)
+//	if balanceJson.Get("canTrade").MustBool() {
+//		currencies, _ := balanceJson.Get("balances").Array()
+//		for _, value := range currencies {
+//			asset := value.(map[string]interface{})
+//			free, _ := strconv.ParseFloat(asset["free"].(string), 64)
+//			frozen, _ := strconv.ParseFloat(asset["locked"].(string), 64)
+//			if free == 0 && frozen == 0 {
+//				continue
+//			}
+//			currency := strings.ToLower(asset["asset"].(string))
+//			account := &model.Account{Market: model.Binance, Currency: currency, Free: free, Frozen: frozen}
+//			accounts.SetAccount(model.Binance, currency, account)
+//		}
+//		return true
+//	} else {
+//		time.Sleep(time.Second * 2)
+//		util.SocketInfo(`fail to refresh accounts binance`)
+//		return getAccountBinance(key, secret, accounts)
+//	}
+//}

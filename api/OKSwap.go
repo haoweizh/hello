@@ -235,27 +235,27 @@ func SignedRequestOKSwap(key, secret, method, path string, body map[string]inter
 	return responseBody
 }
 
-func getAccountOKSwap(key, secret, symbol string, accounts *model.Accounts) (success bool) {
-	response := SignedRequestOKSwap(key, secret, `GET`,
-		fmt.Sprintf(`/api/swap/v3/%s/position`, model.GetDialectSymbol(model.OKSwap, symbol)), nil)
-	util.SocketInfo(fmt.Sprintf(`get account rest:%s`, string(response)))
-	positionJson, err := util.NewJSON(response)
-	if err != nil || positionJson == nil || positionJson.Get(`holding`) == nil {
-		time.Sleep(time.Second * 2)
-		util.SocketInfo(`fail to refresh accounts okswap`)
-		return getAccountOKSwap(key, secret, symbol, accounts)
-	}
-	positionJson = positionJson.Get(`holding`)
-	if positionJson != nil {
-		for _, item := range positionJson.MustArray() {
-			account := &model.Account{Market: model.OKSwap}
-			parseAccountOKSwap(account, item.(map[string]interface{}))
-			account.Currency = symbol
-			accounts.SetAccount(model.OKSwap, account.Currency, account)
-		}
-	}
-	return true
-}
+//func getAccountOKSwap(key, secret, symbol string, accounts *model.Accounts) (success bool) {
+//	response := SignedRequestOKSwap(key, secret, `GET`,
+//		fmt.Sprintf(`/api/swap/v3/%s/position`, model.GetDialectSymbol(model.OKSwap, symbol)), nil)
+//	util.SocketInfo(fmt.Sprintf(`get account rest:%s`, string(response)))
+//	positionJson, err := util.NewJSON(response)
+//	if err != nil || positionJson == nil || positionJson.Get(`holding`) == nil {
+//		time.Sleep(time.Second * 2)
+//		util.SocketInfo(`fail to refresh accounts okswap`)
+//		return getAccountOKSwap(key, secret, symbol, accounts)
+//	}
+//	positionJson = positionJson.Get(`holding`)
+//	if positionJson != nil {
+//		for _, item := range positionJson.MustArray() {
+//			account := &model.Account{Market: model.OKSwap}
+//			parseAccountOKSwap(account, item.(map[string]interface{}))
+//			account.Currency = symbol
+//			accounts.SetAccount(model.OKSwap, account.Currency, account)
+//		}
+//	}
+//	return true
+//}
 
 func getFundingRateOKSwap(symbol string) (fundingRate float64, expire int64) {
 	response := SignedRequestOKSwap(``, ``, `GET`,
@@ -424,44 +424,44 @@ func parseTransferAmount(response []byte) (info string) {
 	return
 }
 
-func parseBalanceOK(key string, data map[string]interface{}, market string) (balance *model.Balance) {
-	balance = &model.Balance{AccountId: key, Market: market}
-	if data[`deposit_id`] != nil {
-		balance.ID = model.OKEX + `_` + data[`deposit_id`].(string)
-		balance.Action = 1
-		if data[`from`] != nil {
-			balance.Address, _ = data[`from`].(string)
-		}
-	} else if data[`withdrawal_id`] != nil {
-		balance.ID = model.OKEX + `_` + data[`withdrawal_id`].(string)
-		balance.Action = -1
-		if data[`to`] != nil {
-			balance.Address, _ = data[`to`].(string)
-		}
-	} else {
-		return nil
-	}
-	if data[`currency`] != nil {
-		balance.Coin = strings.ToLower(data[`currency`].(string))
-	}
-	if data[`amount`] != nil {
-		balance.Amount, _ = strconv.ParseFloat(data[`amount`].(string), 64)
-	}
-	if data[`txid`] != nil {
-		balance.TransactionId, _ = data[`txid`].(string)
-	}
-	if data[`fee`] != nil {
-		balance.Fee, _ = data[`fee`].(string)
-	}
-	if data[`status`] != nil {
-		balance.Status, _ = data[`status`].(string)
-	}
-	if data[`timestamp`] != nil {
-		balance.BalanceTime, _ = time.Parse(time.RFC3339, data[`timestamp`].(string))
-		fmt.Println(balance.BalanceTime.String())
-	}
-	return balance
-}
+//func parseBalanceOK(key string, data map[string]interface{}, market string) (balance *model.Balance) {
+//	balance = &model.Balance{AccountId: key, Market: market}
+//	if data[`deposit_id`] != nil {
+//		balance.ID = model.OKEX + `_` + data[`deposit_id`].(string)
+//		balance.Action = 1
+//		if data[`from`] != nil {
+//			balance.Address, _ = data[`from`].(string)
+//		}
+//	} else if data[`withdrawal_id`] != nil {
+//		balance.ID = model.OKEX + `_` + data[`withdrawal_id`].(string)
+//		balance.Action = -1
+//		if data[`to`] != nil {
+//			balance.Address, _ = data[`to`].(string)
+//		}
+//	} else {
+//		return nil
+//	}
+//	if data[`currency`] != nil {
+//		balance.Coin = strings.ToLower(data[`currency`].(string))
+//	}
+//	if data[`amount`] != nil {
+//		balance.Amount, _ = strconv.ParseFloat(data[`amount`].(string), 64)
+//	}
+//	if data[`txid`] != nil {
+//		balance.TransactionId, _ = data[`txid`].(string)
+//	}
+//	if data[`fee`] != nil {
+//		balance.Fee, _ = data[`fee`].(string)
+//	}
+//	if data[`status`] != nil {
+//		balance.Status, _ = data[`status`].(string)
+//	}
+//	if data[`timestamp`] != nil {
+//		balance.BalanceTime, _ = time.Parse(time.RFC3339, data[`timestamp`].(string))
+//		fmt.Println(balance.BalanceTime.String())
+//	}
+//	return balance
+//}
 
 //GetWalletHistoryOKSwap
 func _(key, secret, symbol string) (info string) {

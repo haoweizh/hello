@@ -126,12 +126,11 @@ func (markets *Markets) SetTrade(deal *Deal) {
 	}
 	markets.trade[second][symbol][deal.Market] = deal
 	if markets.trade[second] != nil && markets.trade[second][symbol] != nil &&
-		markets.trade[second][symbol][Bitmex] != nil && markets.trade[second][symbol][Fmex] != nil {
+		markets.trade[second][symbol][Bitmex] != nil {
 		chance := 15.0
 		compareSecond := second - int64(chance)
 		compare := markets.trade[compareSecond]
-		if compare != nil && compare[symbol] != nil && compare[symbol][Bitmex] != nil &&
-			compare[symbol][Fmex] != nil {
+		if compare != nil && compare[symbol] != nil && compare[symbol][Bitmex] != nil {
 			markets.TrendStart = compare
 			markets.TrendEnd = markets.trade[second]
 		}

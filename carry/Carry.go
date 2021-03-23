@@ -201,7 +201,7 @@ var ProcessCarry = func(setting *model.Setting, tick *model.BidAsk) {
 	if !math.IsNaN(lowest) {
 		marketInfo[`lowest`] = lowest
 	}
-	model.SetCarryInfos(`market info`, `market info`, marketInfo)
+	model.SetCarryInfos(`market_info`, `market_info`, marketInfo)
 	keys, secrets := model.AppConfig.GetKeys(setting.Market)
 	begin := 0
 	step := 1
@@ -374,11 +374,11 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	balance := getCarryBalance(key, coin)
 	if balance == nil {
 		model.SetCarryInfo(`warning `+coin, fmt.Sprintf(`slave: balace not available!!! %s`, key))
-		model.SetCarryInfos(`coin absent`, key+``+coin, map[string]interface{}{`absent `: coin, `key`: key})
+		model.SetCarryInfos(`coin_absent`, key+`_`+coin, map[string]interface{}{`absent`: coin, `key`: key})
 		return ``, ``, 0
 	} else {
 		model.RemoveCarryInfo(`warning ` + coin)
-		model.RemoveCarryInfos(`coin absent`, key+``+coin)
+		model.RemoveCarryInfos(`coin_absent`, key+`_`+coin)
 	}
 	if usdBalance == nil {
 		return ``, ``, 0
@@ -392,7 +392,7 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	setOpen = (1.5 - usdRate) * setOpen
 	revert := math.Abs(setting.GridPriceDistance) * (usdRate - 0.5)
 	setClose = -1
-	table := fmt.Sprintf(`%s dynamic `, model.FunctionCarry)
+	table := fmt.Sprintf(`%s_dynamic_`, model.FunctionCarry)
 	if len(keys) > 1 && keys[0] != key {
 		table += `slave`
 		localOpenValueLimit = 3500
@@ -474,7 +474,6 @@ func InitFtxBalance(key, secret, function string) {
 		coin := items[0].GetCoin()
 		balance := balanceMap[coin]
 		if balance == nil {
-			fmt.Println(`absent ` + coin)
 			if model.MarketInfos[model.Ftx] == nil {
 				continue
 			}

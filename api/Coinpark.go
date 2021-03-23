@@ -101,47 +101,6 @@ func SignedRequestCoinpark(method, path, cmds string) []byte {
 	return responseBody
 }
 
-func getBuyPriceCoinpark(symbol string) (float64, error) {
-	symbol = strings.ToUpper(symbol)
-	//cmd := fmt.Sprintf(`[{"cmd":"api/ticker","body":{"pair":"%s"}}]`, strings.ToUpper(symbol))
-	//responseBody := SignedRequestCoinpark(`POST`, "/mdata", cmd)
-	responseBody, _ := util.HttpRequest(`GET`, fmt.Sprintf(`%s/mdata?cmd=ticker&pair=%s`,
-		model.AppConfig.RestUrls[model.Coinpark], symbol), ``, nil, 60)
-	util.Notice(symbol + `[account]` + string(responseBody))
-	accountJson, err := util.NewJSON(responseBody)
-	if err == nil {
-		strPrice, _ := accountJson.GetPath("result", `last`).String()
-		return strconv.ParseFloat(strPrice, 64)
-	}
-	return 0, err
-}
-
-func getAccountCoinpark(accounts *model.Accounts) {
-	cmds := `[{"cmd":"transfer/assets","body":{"select":1}}]`
-	responseBody := SignedRequestCoinpark(`POST`, `/transfer`, cmds)
-	accountJson, err := util.NewJSON(responseBody)
-	if accountJson == nil {
-		return
-	}
-	if err == nil {
-		results, err := accountJson.Get("result").Array()
-		if err == nil && len(results) > 0 {
-			assets := results[0].(map[string]interface{})["result"].(map[string]interface{})["assets_list"].([]interface{})
-			for _, value := range assets {
-				value := value.(map[string]interface{})
-				currencyName := strings.ToLower(value["coin_symbol"].(string))
-				account := accounts.GetAccount(model.Coinpark, currencyName)
-				if account == nil {
-					account = &model.Account{Market: model.Coinpark, Currency: currencyName}
-					accounts.SetAccount(model.Coinpark, currencyName, account)
-				}
-				account.Free, _ = strconv.ParseFloat(value["balance"].(string), 64)
-				account.Frozen, _ = strconv.ParseFloat(value["freeze"].(string), 64)
-			}
-		}
-	}
-}
-
 // order_side 交易方向，1-买，2-卖
 // order_type 交易类型，2-限价单
 func placeOrderCoinpark(order *model.Order, orderSide, orderType, symbol, price, amount string) {

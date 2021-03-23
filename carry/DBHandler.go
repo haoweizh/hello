@@ -1,14 +1,12 @@
 package carry
 
 import (
-	"errors"
 	"fmt"
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/postgres"
 	"hello/api"
 	"hello/model"
 	"hello/util"
-	"strings"
 	"time"
 )
 
@@ -16,98 +14,6 @@ var WSErrHandler = func(err error) {
 	print(err)
 	util.SocketInfo(`get error ` + err.Error())
 }
-
-//CancelAllOrders
-//var _ = func() {
-//	model.AppPause = true
-//	time.Sleep(time.Second)
-//	markets := model.GetMarkets()
-//	for _, market := range markets {
-//		symbols := model.GetMarketSymbols(market)
-//		for symbol := range symbols {
-//			util.Notice(fmt.Sprintf(`[cancel old orders] %s %s`, market, symbol))
-//			orders := api.QueryOrders(model.KeyDefault, model.SecretDefault, market, symbol, model.CarryStatusWorking,
-//				model.AccountTypeLever+model.AccountTypeNormal, 0, 0)
-//			for _, order := range orders {
-//				if order != nil && order.OrderId != `` {
-//					result, errCode, msg, _ := api.CancelOrder(model.KeyDefault, model.SecretDefault,
-//						market, symbol, ``, order.OrderId)
-//					util.Notice(fmt.Sprintf(`[cancel old]%v %s %s`, result, errCode, msg))
-//					time.Sleep(time.Millisecond * 100)
-//				}
-//			}
-//		}
-//	}
-//	model.LoadSettings()
-//	model.AppPause = false
-//}
-
-func discountBalance(market, symbol, accountType, coin string, discountRate float64) {
-	leverMarket := market
-	if accountType == model.AccountTypeLever {
-		leverMarket = fmt.Sprintf(`%s_%s_%s`, market, model.AccountTypeLever,
-			strings.Replace(symbol, `_`, ``, 1))
-	}
-	account := model.AppAccounts.GetAccount(leverMarket, coin)
-	if account != nil {
-		util.Notice(fmt.Sprintf(`discount account %s %s %f`, market, coin, discountRate))
-		account.Free = account.Free * discountRate
-		model.AppAccounts.SetAccount(leverMarket, coin, account)
-	}
-}
-
-func getBalance(key, secret, market, symbol, accountType string) (
-	left, right, leftFroze, rightFroze float64, err error) {
-	leverMarket := market
-	if accountType == model.AccountTypeLever {
-		leverMarket = fmt.Sprintf(`%s_%s_%s`, market, model.AccountTypeLever,
-			strings.Replace(symbol, `_`, ``, 1))
-	}
-	coins := strings.Split(symbol, `_`)
-	leftAccount := model.AppAccounts.GetAccount(leverMarket, coins[0])
-	if leftAccount == nil {
-		util.Notice(`nil account ` + market + coins[0])
-		//time.Sleep(time.Second * 2)
-		api.RefreshAccount(key, secret, market)
-		return 0, 0, 0, 0, errors.New(`no left balance`)
-	}
-	rightAccount := model.AppAccounts.GetAccount(leverMarket, coins[1])
-	if rightAccount == nil {
-		util.Notice(`nil account ` + market + coins[1])
-		//time.Sleep(time.Second * 2)
-		api.RefreshAccount(key, secret, market)
-		return 0, 0, 0, 0, errors.New(`no right balance`)
-	}
-	return leftAccount.Free, rightAccount.Free, leftAccount.Frozen, rightAccount.Frozen, nil
-}
-
-//func RefreshAccounts() {
-//	for true {
-//		if model.AppConfig.Handle == `1` {
-//			model.AppConfig.Handle = `0`
-//			time.Sleep(time.Second * 5)
-//			model.AppConfig.Handle = `1`
-//		}
-//		markets := model.GetMarkets()
-//		timestamp := util.GetNow()
-//		for _, value := range markets {
-//			api.RefreshAccount(value)
-//			if model.AppAccounts.Data[value] == nil {
-//				continue
-//			}
-//			//accounts.MarketTotal[marketName] = 0
-//			symbols := model.GetMarketSymbols(value)
-//			for key, account := range model.AppAccounts.Data[value] {
-//				if symbols[key+"_usdt"] || key == `usdt` {
-//					account.PriceInUsdt, _ = api.GetPrice(key + "_usdt")
-//					account.Timestamp = timestamp
-//				}
-//			}
-//			model.AccountChannel <- model.AppAccounts.Data[value]
-//		}
-//		time.Sleep(time.Hour)
-//	}
-//}
 
 var feeIndex int
 var balanceMaintainDay = util.GetNow()
@@ -196,7 +102,7 @@ func createMarketDepthServer(markets *model.Markets, market string) chan struct{
 	case model.HuobiDM:
 		channel, err = api.WsDepthServeHuobiDM(markets, WSErrHandler)
 	case model.OKEX:
-		channel, err = api.WsDepthServeOkex(markets, WSErrHandler)
+		channel, err = api.WsDepthServeOKEX(markets, WSErrHandler)
 	case model.OKFUTURE:
 		channel, err = api.WsDepthServeOKFuture(markets, WSErrHandler)
 	case model.OKSwap:
@@ -261,11 +167,8 @@ func Maintain() {
 		return
 	}
 	model.HandlerMap[model.FunctionGrid] = ProcessSimpleGrid
-	model.HandlerMap[model.FunctionRefresh] = ProcessRefresh
 	model.HandlerMap[model.FunctionTurtle] = ProcessTurtle
 	model.HandlerMap[model.FunctionCarry] = ProcessCarry
-	model.HandlerMap[model.FunctionHang] = ProcessHang
-	model.HandlerMap[model.FunctionRank] = ProcessRank
 	model.HandlerMap[model.FunctionHangFar] = ProcessHangFar
 	model.HandlerMap[model.FunctionPostonlyHandler] = PostonlyHandler
 	defer model.AppDB.Close()
