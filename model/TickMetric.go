@@ -59,7 +59,7 @@ func (metricManager *MetricManager) AddCarry(market, symbol string, carryHigh, c
 		metricManager.carryHour[marketSymbol] = make(map[string]*CarryMetric)
 	}
 	current := util.GetNow()
-	timeStr := fmt.Sprintf(`%d/%d %d`, current.Month(), current.Day(), current.Hour())
+	timeStr := fmt.Sprintf(`%d/%d_%d`, current.Month(), current.Day(), current.Hour())
 	if metricManager.carryHour[marketSymbol][timeStr] == nil {
 		metricManager.carryHour[marketSymbol][timeStr] = &CarryMetric{carryHighest: math.NaN(), carryLowest: math.NaN()}
 	}

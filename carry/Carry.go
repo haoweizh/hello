@@ -194,7 +194,7 @@ var ProcessCarry = func(setting *model.Setting, tick *model.BidAsk) {
 		model.AppMetric.AddCarry(setting.Market, `ftx开仓价差----`, math.NaN(), lowest)
 	}
 	model.SetCarryInfo(`[current high-low]`, fmt.Sprintf(`highest %s %f lowest %s %f`, symbolHighest, highest, symbolLowest, lowest))
-	marketInfo := map[string]interface{}{`symbol highest`: symbolHighest, `symbol lowest`: symbolLowest}
+	marketInfo := map[string]interface{}{`symbol_highest`: symbolHighest, `symbol_lowest`: symbolLowest}
 	if !math.IsNaN(highest) {
 		marketInfo[`highest`] = highest
 	}
