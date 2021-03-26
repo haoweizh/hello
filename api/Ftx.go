@@ -707,7 +707,7 @@ func SignedRequestFtx(key, secret, method, path string, param, body map[string]i
 	u.Path += path
 	ts := time.Now().UnixNano() / int64(time.Millisecond)
 	hash := hmac.New(sha256.New, []byte(secret))
-	bodyStr := string(util.JsonEncodeMapToByte(body))
+	bodyStr := string(util.JsonEncodeToByte(body))
 	q := u.Query()
 	for k, v := range param {
 		q.Set(k, v.(string))

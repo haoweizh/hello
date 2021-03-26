@@ -29,7 +29,7 @@ var subscribeHandlerOKEX = func(subscribes []interface{}, subType string) error 
 		subscribeMap := make(map[string]interface{})
 		subscribeMap["op"] = "subscribe"
 		subscribeMap["args"] = []map[string]string{{`channel`: `books5`, `instId`: v.(string)}}
-		subscribeMessage := util.JsonEncodeMapToByte(subscribeMap)
+		subscribeMessage := util.JsonEncodeToByte(subscribeMap)
 		if err = sendToWs(model.OKEX, subscribeMessage); err != nil {
 			util.SocketInfo("okex can not subscribe " + err.Error())
 			return err
@@ -64,18 +64,18 @@ func WsDepthServeOKEX(markets *model.Markets, errHandler ErrHandler) (chan struc
 		bids := data[`bids`].([]interface{})
 		bidAsk.Bids = make([]model.Tick, len(bids))
 		for i, ask := range asks {
-			value := ask.([]string)
+			value := ask.([]interface{})
 			if len(value) >= 2 {
-				price, _ := strconv.ParseFloat(value[0], 64)
-				amount, _ := strconv.ParseFloat(value[1], 64)
+				price, _ := strconv.ParseFloat(value[0].(string), 64)
+				amount, _ := strconv.ParseFloat(value[1].(string), 64)
 				bidAsk.Asks[i] = model.Tick{Price: price, Amount: amount, Symbol: instrument}
 			}
 		}
 		for i, bid := range bids {
-			value := bid.([]string)
+			value := bid.([]interface{})
 			if len(value) >= 2 {
-				price, _ := strconv.ParseFloat(value[0], 64)
-				amount, _ := strconv.ParseFloat(value[1], 64)
+				price, _ := strconv.ParseFloat(value[0].(string), 64)
+				amount, _ := strconv.ParseFloat(value[1].(string), 64)
 				bidAsk.Bids[i] = model.Tick{Price: price, Amount: amount, Symbol: instrument}
 			}
 		}
@@ -95,7 +95,7 @@ func WsDepthServeOKEX(markets *model.Markets, errHandler ErrHandler) (chan struc
 		GetWSSubscribes(model.OKEX, model.SubscribeDepth), subscribeHandlerOKEX, wsHandler, errHandler)
 }
 
-func sendSignRequestOKEX(key, secret, method, path string, body map[string]interface{}) []byte {
+func sendSignRequestOKEX(key, secret, method, path string, body interface{}) []byte {
 	if key == `` || secret == `` {
 		keys, secrets := model.AppConfig.GetKeys(model.OKEX)
 		key = keys[0]
@@ -111,16 +111,16 @@ func sendSignRequestOKEX(key, secret, method, path string, body map[string]inter
 	headers := map[string]string{`OK-ACCESS-KEY`: key, `OK-ACCESS-PASSPHRASE`: model.AppConfig.Phase,
 		"OK-ACCESS-TIMESTAMP": timestamp}
 	if method == http.MethodPost {
-		toBeSign = toBeSign + string(util.JsonEncodeMapToByte(body))
+		toBeSign = toBeSign + string(util.JsonEncodeToByte(body))
 		headers["Content-Type"] = "application/json"
 	} else if method == http.MethodGet {
-		uri = uri + `?` + util.ComposeParams(body)
+		uri = uri + `?` + util.ComposeParams(body.(map[string]interface{}))
 	}
 	hash := hmac.New(sha256.New, []byte(secret))
 	hash.Write([]byte(toBeSign))
 	sign := base64.StdEncoding.EncodeToString(hash.Sum(nil))
 	headers[`OK-ACCESS-SIGN`] = sign
-	responseBody, _ := util.HttpRequest(method, uri, string(util.JsonEncodeMapToByte(body)), headers, 60)
+	responseBody, _ := util.HttpRequest(method, uri, string(util.JsonEncodeToByte(body)), headers, 60)
 	util.SocketInfo(fmt.Sprintf(`okex key %s request %s body %s return %s`,
 		key, uri, toBeSign, string(responseBody)))
 	return responseBody
@@ -151,6 +151,35 @@ func placeOrderOKEX(key, secret string, order *model.Order, price, amount string
 			}
 		}
 	}
+}
+
+// consider spot future size calc
+func getMarketsOKEX() (marketInfos map[string]*model.MarketInfo) {
+	//responseBody := sendSignRequestOKEX(``, ``, http.MethodGet,
+	//	model.AppConfig.RestUrls[model.OKEX]+"/api/v5/trade/orders-pending",
+	//	map[string]interface{}{`instId`: instrument})
+	return
+}
+
+func cancelOrdersOKEX(key, secret, instrument string) (result bool, code, msg string) {
+	orders := queryPendingOrdersOKEX(key, secret, instrument)
+	if len(orders) <= 0 {
+		return true, ``, ``
+	}
+	postData := make([]map[string]string, len(orders))
+	for i, order := range orders {
+		postData[i] = map[string]string{`instId`: instrument, `ordId`: order.OrderId}
+	}
+	responseBody := sendSignRequestOKEX(key, secret, http.MethodPost,
+		model.AppConfig.RestUrls[model.OKEX]+"/api/v5/trade/cancel-batch-orders", postData)
+	resultJson, err := util.NewJSON(responseBody)
+	if err == nil && resultJson != nil {
+		code = resultJson.Get(`code`).MustString()
+		if code == `0` {
+			return true, code, resultJson.Get(`msg`).MustString()
+		}
+	}
+	return false, code, ``
 }
 
 func cancelOrderOkex(key, secret, instrument string, orderId string) (result bool, errCode, msg string) {
@@ -226,6 +255,26 @@ func parseOrderOKEX(value map[string]interface{}) (order *model.Order) {
 		order.OrderTime = time.Unix(ts/1000, 0)
 	}
 	return order
+}
+
+func queryPendingOrdersOKEX(key, secret, instrument string) (orders []*model.Order) {
+	responseBody := sendSignRequestOKEX(key, secret, http.MethodGet,
+		model.AppConfig.RestUrls[model.OKEX]+"/api/v5/trade/orders-pending",
+		map[string]interface{}{`instId`: instrument})
+	orderJson, err := util.NewJSON(responseBody)
+	if err != nil || orderJson == nil || orderJson.Get(`data`) == nil {
+		return
+	}
+	ordersJson := orderJson.Get("data").MustArray()
+	orders = make([]*model.Order, 0)
+	for _, item := range ordersJson {
+		value := item.(map[string]interface{})
+		order := parseOrderOKEX(value)
+		if order.OrderId != `` {
+			orders = append(orders, order)
+		}
+	}
+	return
 }
 
 func queryOrderOKEX(key, secret, instrument string, orderId string) (order *model.Order) {

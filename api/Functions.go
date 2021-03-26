@@ -155,6 +155,9 @@ func CancelOrders(key, secret, market, symbol string) (result bool) {
 	switch market {
 	case model.Ftx:
 		return cancelOrdersFtx(key, secret, symbol)
+	case model.OKEX:
+		result, _, _ = cancelOrdersOKEX(key, secret, symbol)
+		return result
 	}
 	return false
 }
@@ -219,6 +222,8 @@ func GetCurrentInstrument(key, secret, market, symbol string) (currentInstrument
 		querySetter = querySetInstrumentsHuobiDM
 		//nextType = `next_quarter`
 		symbol = symbol[0:strings.Index(symbol, `_`)]
+	case model.OKSwap, model.OKEX:
+		return symbol
 	default:
 		return symbol
 	}
@@ -227,32 +232,6 @@ func GetCurrentInstrument(key, secret, market, symbol string) (currentInstrument
 		return ``
 	}
 	return instruments[market][symbol][currentType]
-	//if instruments == nil || instruments[market] == nil || instruments[market][symbol] == nil {
-	//	util.Notice(fmt.Sprintf(`fatal error: can not get instrument %s %s`, market, symbol))
-	//	return ``
-	//}
-	//instrument := instruments[market][symbol][currentType]
-	//instrumentNext := instruments[market][symbol][nextType]
-	//index := strings.LastIndex(instrument, `-`)
-	//if index == -1 {
-	//	index = len(symbol) - 1
-	//}
-	//year, _ := strconv.ParseInt(`20`+instrument[index+1:index+3], 10, 64)
-	//month, _ := strconv.ParseInt(instrument[index+3:index+5], 10, 64)
-	//day, _ := strconv.ParseInt(instrument[index+5:index+7], 10, 64)
-	//today := time.Now().In(time.UTC)
-	//duration, _ := time.ParseDuration(`312h`)
-	//days13 := today.Add(duration)
-	//date := time.Date(int(year), time.Month(month), int(day), 0, 0, 0, 0, today.Location())
-	//if today.After(date) {
-	//	util.Notice(`future go cross ` + symbol + date.String())
-	//	querySetter(key, secret)
-	//}
-	//if days13.Before(date) {
-	//	return instrument, false
-	//} else {
-	//	return instrumentNext, true
-	//}
 }
 
 func setInstrument(market, symbol, alias, instrument string) {
@@ -695,9 +674,9 @@ func GetWSSubscribes(market, subType string) []interface{} {
 				subscribes = append(subscribes, subscribe)
 			}
 		}
-		if market == model.OKSwap {
-			subscribes = append(subscribes, model.GetWSSubscribePos(market, symbol))
-		}
+		//if market == model.OKSwap {
+		//	subscribes = append(subscribes, model.GetWSSubscribePos(market, symbol))
+		//}
 	}
 	if market == model.Bitmex || market == model.Bybit {
 		subscribes = append(subscribes, `position`)
@@ -728,8 +707,8 @@ func GetWSSubscribe(market, symbol, subType string) (subscribe interface{}) {
 	case model.Coinpark: //BTC_USDT bibox_sub_spot_BTC_USDT_ticker
 		//return `bibox_sub_spot_` + strings.ToUpper(symbol) + `_ticker`
 		return `bibox_sub_spot_` + strings.ToUpper(symbol) + `_depth`
-	case model.OKSwap:
-		return `swap/depth5:` + model.GetDialectSymbol(model.OKSwap, symbol)
+	//case model.OKSwap:
+	//	return `swap/depth5:` + model.GetDialectSymbol(model.OKSwap, symbol)
 	case model.Bitmex:
 		if subType == model.SubscribeDeal {
 			return `trade:` + model.GetDialectSymbol(model.Bitmex, symbol)
@@ -802,10 +781,13 @@ func InitCarryFtx(start uint) {
 func InitMarketInfos() {
 	markets := model.GetMarkets()
 	for _, market := range markets {
-		if market == model.Ftx {
-			marketInfos := getMarketsFtx()
-			model.MarketInfos[model.Ftx] = marketInfos
+		switch market {
+		case model.Ftx:
+			model.MarketInfos[model.Ftx] = getMarketsFtx()
+		case model.OKEX:
+			model.MarketInfos[model.OKEX] = getMarketsOKEX()
 		}
+
 	}
 }
 
@@ -824,4 +806,34 @@ func _(market, symbol string) (borrowAble float64) {
 		return getMarketInfoFtx(symbol)
 	}
 	return 0
+}
+
+func InitFtxBalance(key, secret, function string) {
+	InitMarketInfos()
+	settings := model.GetSettings(function, model.Ftx)
+	_, balances := GetBalances(key, secret, model.Ftx, 0)
+	balanceMap := make(map[string]*model.Balance)
+	for _, balance := range balances {
+		balanceMap[balance.Coin] = balance
+	}
+	i := 0
+	for _, items := range settings {
+		coin := items[0].GetCoin()
+		balance := balanceMap[coin]
+		if balance == nil {
+			if model.MarketInfos[model.Ftx] == nil {
+				continue
+			}
+			marketInfo := model.MarketInfos[model.Ftx][items[0].GetRelatedSymbol()]
+			if marketInfo == nil {
+				continue
+			}
+			order := PlaceOrder(key, secret, model.OrderSideBuy, model.OrderTypeMarket, model.Ftx, items[0].Symbol, ``,
+				``, ``, ``, ``, 0, 0, marketInfo.SizeIncrement, false)
+			if order.OrderId == `` {
+				i++
+				fmt.Println(fmt.Sprintf(`%d order return :%s %s`, i, order.ErrCode, items[0].Symbol))
+			}
+		}
+	}
 }

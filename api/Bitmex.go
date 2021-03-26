@@ -41,7 +41,7 @@ var subscribeHandlerBitmex = func(subscribes []interface{}, subType string) erro
 			stepSubscribes = subscribes[i*step:]
 		}
 		subscribeMap[`args`] = stepSubscribes
-		subscribeMessage := util.JsonEncodeMapToByte(subscribeMap)
+		subscribeMessage := util.JsonEncodeToByte(subscribeMap)
 		if err = sendToWs(model.Bitmex, subscribeMessage); err != nil {
 			util.SocketInfo("bitmex can not subscribe " + err.Error())
 			return err
@@ -602,7 +602,7 @@ func SignedRequestBitmex(key, secret, method, path string, body map[string]inter
 	}
 	toBeSign := fmt.Sprintf(`%s%s%d`, method, signPath, expire)
 	//if method != `GET` {
-	toBeSign += string(util.JsonEncodeMapToByte(body))
+	toBeSign += string(util.JsonEncodeToByte(body))
 	//}
 	hash := hmac.New(sha256.New, []byte(secret))
 	hash.Write([]byte(toBeSign))
@@ -613,7 +613,7 @@ func SignedRequestBitmex(key, secret, method, path string, body map[string]inter
 	if body == nil {
 		responseBody, _ = util.HttpRequest(method, uri, ``, headers, 60)
 	} else {
-		responseBody, _ = util.HttpRequest(method, uri, string(util.JsonEncodeMapToByte(body)), headers, 60)
+		responseBody, _ = util.HttpRequest(method, uri, string(util.JsonEncodeToByte(body)), headers, 60)
 	}
 	return responseBody
 }

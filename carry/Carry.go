@@ -134,7 +134,7 @@ func clearCarryBalance() {
 				for _, value := range balances {
 					coin := strings.ToUpper(value.Coin)
 					setCarryBalance(key, coin, value)
-					settingCoins := model.GetSettingCoins(model.FunctionCarry, model.Ftx)
+					settingCoins := model.GetSettingCoins(model.FunctionCarry, market)
 					if settingCoins[coin] {
 						balanceAllValue += value.UsdValue
 					}
@@ -162,6 +162,7 @@ func clearCarryBalance() {
 	}
 }
 
+// todo: getAccount/initMarkets
 // setting.GridPriceDistance: 收回下单是要求的利润(可以为负数)
 var ProcessCarry = func(setting *model.Setting, tick *model.BidAsk) {
 	if !doCarry {
@@ -186,12 +187,12 @@ var ProcessCarry = func(setting *model.Setting, tick *model.BidAsk) {
 	if math.IsNaN(highest) || scoreOpen > highest || setting.Symbol == symbolHighest {
 		highest = scoreOpen
 		symbolHighest = setting.Symbol
-		model.AppMetric.AddCarry(setting.Market, `ftx开仓价差++++`, highest, math.NaN())
+		model.AppMetric.AddCarry(setting.Market, setting.Market+`开仓价差++++`, highest, math.NaN())
 	}
 	if math.IsNaN(lowest) || scoreClose < lowest || setting.Symbol == symbolLowest {
 		lowest = scoreClose
 		symbolLowest = setting.Symbol
-		model.AppMetric.AddCarry(setting.Market, `ftx开仓价差----`, math.NaN(), lowest)
+		model.AppMetric.AddCarry(setting.Market, setting.Market+`开仓价差----`, math.NaN(), lowest)
 	}
 	model.SetCarryInfo(`[current high-low]`, fmt.Sprintf(`highest %s %f lowest %s %f`, symbolHighest, highest, symbolLowest, lowest))
 	marketInfo := map[string]interface{}{`symbol_highest`: symbolHighest, `symbol_lowest`: symbolLowest}
@@ -395,7 +396,7 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	table := fmt.Sprintf(`%s_dynamic_`, model.FunctionCarry)
 	if len(keys) > 1 && keys[0] != key {
 		table += `slave`
-		localOpenValueLimit = 3500
+		localOpenValueLimit = 6666
 		valueLow = 0
 		usdLowLine = 30000
 		localUsdUpLine = 60000
@@ -459,34 +460,4 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 			key, symbolHigh, scoreHigh, symbolLow, scoreLow, setting.Symbol, sidePerp, usdAvailable, amount, carryAmount))
 	}
 	return sidePerp, sideRelated, amount
-}
-
-func InitFtxBalance(key, secret, function string) {
-	api.InitMarketInfos()
-	settings := model.GetSettings(function, model.Ftx)
-	_, balances := api.GetBalances(key, secret, model.Ftx, 0)
-	balanceMap := make(map[string]*model.Balance)
-	for _, balance := range balances {
-		balanceMap[balance.Coin] = balance
-	}
-	i := 0
-	for _, items := range settings {
-		coin := items[0].GetCoin()
-		balance := balanceMap[coin]
-		if balance == nil {
-			if model.MarketInfos[model.Ftx] == nil {
-				continue
-			}
-			marketInfo := model.MarketInfos[model.Ftx][items[0].GetRelatedSymbol()]
-			if marketInfo == nil {
-				continue
-			}
-			order := api.PlaceOrder(key, secret, model.OrderSideBuy, model.OrderTypeMarket, model.Ftx, items[0].Symbol, ``,
-				``, ``, ``, ``, 0, 0, marketInfo.SizeIncrement, false)
-			if order.OrderId == `` {
-				i++
-				fmt.Println(fmt.Sprintf(`%d order return :%s %s`, i, order.ErrCode, items[0].Symbol))
-			}
-		}
-	}
 }

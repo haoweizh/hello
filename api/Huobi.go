@@ -44,7 +44,7 @@ var subscribeHandlerHuobi = func(subscribes []interface{}, subType string) error
 		subscribeMap := make(map[string]interface{})
 		subscribeMap["id"] = strconv.Itoa(util.GetNow().Nanosecond())
 		subscribeMap["sub"] = v
-		subscribeMessage := util.JsonEncodeMapToByte(subscribeMap)
+		subscribeMessage := util.JsonEncodeToByte(subscribeMap)
 		if err = sendToWs(model.Huobi, subscribeMessage); err != nil {
 			util.SocketInfo("huobi can not subscribe " + err.Error())
 			return err
@@ -63,7 +63,7 @@ func WsDepthServeHuobi(markets *model.Markets, errHandler ErrHandler) (chan stru
 		if v, ok := resMap["ping"]; ok {
 			pingMap := make(map[string]interface{})
 			pingMap["pong"] = v
-			pingParams := util.JsonEncodeMapToByte(pingMap)
+			pingParams := util.JsonEncodeToByte(pingMap)
 			if err := sendToWs(model.Huobi, pingParams); err != nil {
 				util.SocketInfo("huobi server ping client error " + err.Error())
 			}
@@ -114,7 +114,7 @@ func SignedRequestHuobi(key, secret, market, method, path string, data map[strin
 			param[key] = value
 		}
 	} else if method == `POST` && data != nil {
-		strData = string(util.JsonEncodeMapToByte(data))
+		strData = string(util.JsonEncodeToByte(data))
 	}
 	strParam := util.ComposeParams(param)
 	toBeSign := fmt.Sprintf("%s\n%s\n%s\n%s",

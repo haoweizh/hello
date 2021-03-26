@@ -193,7 +193,9 @@ func GetMarkets() []string {
 
 func GetInstrumentSymbol(market, instrument string) (symbol string) {
 	switch market {
-	case OKEX:
+	case OKEX, OKSwap:
+		return instrument
+	case OKFUTURE:
 		parts := strings.Split(instrument, `-`)
 		if len(parts) > 2 {
 			return parts[0] + `-` + parts[1]
@@ -208,6 +210,14 @@ func (setting *Setting) GetRelatedSymbol() (related string) {
 		parts := strings.Split(setting.Symbol, `-`)
 		if len(parts) == 2 && setting.Function == FunctionCarry {
 			related = parts[0] + `/USD`
+		}
+	case OKEX:
+		parts := strings.Split(setting.Symbol, `-`)
+		if len(parts) > 2 {
+			if parts[1] == `USD` {
+				parts[1] = `USDT`
+			}
+			return parts[0] + `-` + parts[1]
 		}
 	}
 	return related

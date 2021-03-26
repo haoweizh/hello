@@ -44,7 +44,7 @@ var subscribeHandlerOKSwap = func(subscribes []interface{}, subType string) erro
 			stepSubscribes = subscribes[i*step:]
 		}
 		subscribeMap[`args`] = stepSubscribes
-		subscribeMessage := util.JsonEncodeMapToByte(subscribeMap)
+		subscribeMessage := util.JsonEncodeToByte(subscribeMap)
 		if err = sendToWs(model.OKSwap, subscribeMessage); err != nil {
 			util.SocketInfo("okswap can not subscribe " + err.Error())
 			return err
@@ -53,7 +53,8 @@ var subscribeHandlerOKSwap = func(subscribes []interface{}, subType string) erro
 	return err
 }
 
-func WsDepthServeOKSwap(markets *model.Markets, errHandler ErrHandler) (chan struct{}, error) {
+//WsDepthServeOKSwap
+func _(markets *model.Markets, errHandler ErrHandler) (chan struct{}, error) {
 	lastPingTime := util.GetNow().Unix()
 	wsHandler := func(event []byte) {
 		if util.GetNow().Unix()-lastPingTime > 30 { // ping ws server every 30 seconds
@@ -224,14 +225,14 @@ func SignedRequestOKSwap(key, secret, method, path string, body map[string]inter
 	headers := map[string]string{`OK-ACCESS-KEY`: key, `OK-ACCESS-PASSPHRASE`: model.AppConfig.Phase,
 		"OK-ACCESS-TIMESTAMP": timestamp}
 	if method == `POST` {
-		toBeSign = toBeSign + string(util.JsonEncodeMapToByte(body))
+		toBeSign = toBeSign + string(util.JsonEncodeToByte(body))
 		headers["Content-Type"] = "application/json"
 	}
 	hash := hmac.New(sha256.New, []byte(secret))
 	hash.Write([]byte(toBeSign))
 	sign := base64.StdEncoding.EncodeToString(hash.Sum(nil))
 	headers[`OK-ACCESS-SIGN`] = sign
-	responseBody, _ := util.HttpRequest(method, uri, string(util.JsonEncodeMapToByte(body)), headers, 60)
+	responseBody, _ := util.HttpRequest(method, uri, string(util.JsonEncodeToByte(body)), headers, 60)
 	return responseBody
 }
 

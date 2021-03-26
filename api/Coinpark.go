@@ -21,7 +21,7 @@ var subscribeHandlerCoinpark = func(subscribes []interface{}, subType string) er
 		subscribeMap["event"] = "addChannel"
 		subscribeMap["channel"] = v
 		subscribeMap[`binary`] = 0
-		subscribeMessage := util.JsonEncodeMapToByte(subscribeMap)
+		subscribeMessage := util.JsonEncodeToByte(subscribeMap)
 		if err = sendToWs(model.Coinpark, subscribeMessage); err != nil {
 			util.SocketInfo("coinpark can not subscribe " + err.Error())
 			return err

@@ -8,7 +8,6 @@ import (
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/postgres"
 	"hello/api"
-	"hello/carry"
 	"hello/model"
 	"math"
 	"net/url"
@@ -127,7 +126,7 @@ func Test_wallet(t *testing.T) {
 	//fmt.Println(a)
 	//carry.InitFtxBalance(`ZK6_FPdUIhDnjv_JWklHAkgWXRRindBw-qIg18bU`,
 	//	`4bbFXcuVk_VE2JJ0_mnLFa3J-kcCOeUVM0sRmYN5`, model.FunctionCarry)
-	carry.InitFtxBalance(`iRD9B_hEjFExv9RKWR3ND4ZXHArWz_OorwonBk6N`,
+	api.InitFtxBalance(`iRD9B_hEjFExv9RKWR3ND4ZXHArWz_OorwonBk6N`,
 		`uwR9deKdtPT3BDALrypWUwNwELLLG5XU9XWCWJui`, model.FunctionCarry)
 	api.InitCarryFtx(1)
 	api.GetFundingRate(model.Ftx, `BTC-PERP`)
