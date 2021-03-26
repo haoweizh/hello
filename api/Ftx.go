@@ -425,7 +425,7 @@ func queryOrderFtx(key, secret, orderId string) (order *model.Order) {
 	return
 }
 
-func getAccountsFtx(key, secret string) (success bool, accounts []*model.Account) {
+func getAccountsFtx(key, secret string) (success bool, accounts []*model.Position) {
 	postData := make(map[string]interface{})
 	response := SignedRequestFtx(key, secret, `GET`, `/positions`, nil, postData)
 	positionJson, err := util.NewJSON(response)
@@ -435,11 +435,11 @@ func getAccountsFtx(key, secret string) (success bool, accounts []*model.Account
 		return getAccountsFtx(key, secret)
 	}
 	positionJson = positionJson.Get(`result`)
-	accounts = make([]*model.Account, 0)
+	accounts = make([]*model.Position, 0)
 	if positionJson != nil {
 		data := positionJson.MustArray()
 		for _, item := range data {
-			account := &model.Account{Market: model.Ftx, Ts: util.GetNowUnixMillion()}
+			account := &model.Position{Market: model.Ftx, Ts: util.GetNowUnixMillion()}
 			parseAccountFtx(account, item.(map[string]interface{}))
 			accounts = append(accounts, account)
 		}
@@ -553,7 +553,7 @@ func getFundingRatesFtx() (fundingRates []*model.FundingRate) {
 	return fundingRates
 }
 
-func parseAccountFtx(account *model.Account, item map[string]interface{}) {
+func parseAccountFtx(account *model.Position, item map[string]interface{}) {
 	if item[`entryPrice`] != nil {
 		account.EntryPrice, _ = item[`entryPrice`].(json.Number).Float64()
 	}

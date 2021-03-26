@@ -139,7 +139,7 @@ func querySetInstrumentsOkFuture(key, secret string) {
 	}
 }
 
-func parseAccountOkfuture(key string, account *model.Account, data map[string]interface{}) (balance *model.Balance) {
+func parseAccountOkfuture(key string, account *model.Position, data map[string]interface{}) (balance *model.Balance) {
 	if data[`currency`] == nil {
 		return
 	}
@@ -188,7 +188,7 @@ func getBalanceOkfuture(key, secret string, accounts *model.Accounts) (success b
 	for i, value := range items {
 		account := accounts.GetAccount(model.OKFUTURE, i)
 		if account == nil {
-			account = &model.Account{Market: model.OKFUTURE, Ts: util.GetNowUnixMillion()}
+			account = &model.Position{Market: model.OKFUTURE, Ts: util.GetNowUnixMillion()}
 		}
 		data := value.(map[string]interface{})
 		balance := parseAccountOkfuture(key, account, data)

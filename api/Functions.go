@@ -490,7 +490,7 @@ func QueryOrderById(key, secret, market, symbol, instrument, orderType, orderId 
 		Status: status, Instrument: instrument, OrderType: orderType}
 }
 
-func GetAccounts(key, secret, market string) (success bool, accounts []*model.Account) {
+func GetAccounts(key, secret, market string) (success bool, positions []*model.Position) {
 	switch market {
 	case model.Ftx:
 		return getAccountsFtx(key, secret)
@@ -778,6 +778,7 @@ func InitCarryFtx(start uint) {
 	}
 }
 
+// 只支持现货spot和永续PERP SWAP
 func InitMarketInfos() {
 	markets := model.GetMarkets()
 	for _, market := range markets {
@@ -787,7 +788,6 @@ func InitMarketInfos() {
 		case model.OKEX:
 			model.MarketInfos[model.OKEX] = getMarketsOKEX()
 		}
-
 	}
 }
 
@@ -796,7 +796,11 @@ func FormatAmount(market, symbol string, amount float64) (formattedAmount float6
 	if marketInfo == nil || marketInfo.SizeIncrement == 0 {
 		return 0
 	}
-	return math.Floor(amount/marketInfo.SizeIncrement) * marketInfo.SizeIncrement
+	formattedAmount = math.Floor(amount/marketInfo.SizeIncrement) * marketInfo.SizeIncrement
+	if formattedAmount < marketInfo.SizeMin {
+		return 0
+	}
+	return formattedAmount
 }
 
 // GetMarketInfo

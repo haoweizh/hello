@@ -162,7 +162,7 @@ func clearCarryBalance() {
 	}
 }
 
-// todo: getAccount/initMarkets
+// todo: getAccount
 // setting.GridPriceDistance: 收回下单是要求的利润(可以为负数)
 var ProcessCarry = func(setting *model.Setting, tick *model.BidAsk) {
 	if !doCarry {
@@ -272,7 +272,7 @@ func placeCarry(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, key
 	}
 }
 
-func getCarryAmounts(setting *model.Setting, balances []*model.Balance, accounts []*model.Account) (
+func getCarryAmounts(setting *model.Setting, balances []*model.Balance, accounts []*model.Position) (
 	success bool, amountPerp, amountRelated float64) {
 	for _, account := range accounts {
 		if account != nil && account.Currency == setting.Symbol {
@@ -288,7 +288,7 @@ func getCarryAmounts(setting *model.Setting, balances []*model.Balance, accounts
 	return false, amountPerp, amountRelated
 }
 
-func makeEqual(key, secret string, setting *model.Setting, balances []*model.Balance, accounts []*model.Account) (
+func makeEqual(key, secret string, setting *model.Setting, balances []*model.Balance, accounts []*model.Position) (
 	symbol string, price float64, equal bool) {
 	settingSymbol := setting.Symbol
 	coin := setting.GetCoin()

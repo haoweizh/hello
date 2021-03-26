@@ -222,7 +222,7 @@ func handleOrderBookBybit(markets *model.Markets, symbol string, ts int64, respo
 	}
 }
 
-func parseAccountBybit(account *model.Account, item map[string]interface{}) {
+func parseAccountBybit(account *model.Position, item map[string]interface{}) {
 	if item[`symbol`] != nil {
 		account.Currency = model.GetStandardSymbol(model.Bybit, item[`symbol`].(string))
 	}
@@ -266,7 +266,7 @@ func handleAccountBybit(dataJson *simplejson.Json) {
 	}
 	data, _ := dataJson.Array()
 	for _, value := range data {
-		account := &model.Account{Market: model.Bybit, Ts: util.GetNowUnixMillion()}
+		account := &model.Position{Market: model.Bybit, Ts: util.GetNowUnixMillion()}
 		if value != nil {
 			item := value.(map[string]interface{})
 			parseAccountBybit(account, item)

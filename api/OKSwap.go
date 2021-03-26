@@ -91,7 +91,7 @@ func _(markets *model.Markets, errHandler ErrHandler) (chan struct{}, error) {
 		subscribeHandlerOKSwap, wsHandler, errHandler)
 }
 
-func parseAccountOKSwap(account *model.Account, item map[string]interface{}) {
+func parseAccountOKSwap(account *model.Position, item map[string]interface{}) {
 	if item[`liquidation_price`] != nil {
 		account.LiquidationPrice, _ = strconv.ParseFloat(item[`liquidation_price`].(string), 64)
 	}
@@ -139,7 +139,7 @@ func handlePositionOKSwap(response *simplejson.Json) {
 					if item[`holding`] != nil {
 						holdings := item[`holding`].([]interface{})
 						for _, holding := range holdings {
-							account := &model.Account{Market: model.OKSwap, Ts: ts, Currency: currency}
+							account := &model.Position{Market: model.OKSwap, Ts: ts, Currency: currency}
 							parseAccountOKSwap(account, holding.(map[string]interface{}))
 							model.AppAccounts.SetAccount(model.OKSwap, account.Currency, account)
 						}

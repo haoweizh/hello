@@ -89,7 +89,7 @@ func WsDepthServeHuobiDM(markets *model.Markets, errHandler ErrHandler) (chan st
 		GetWSSubscribes(model.HuobiDM, model.SubscribeDepth), subscribeHandlerHuobiDM, wsHandler, errHandler)
 }
 
-func parseAccountHuobiDM(key string, account *model.Account, data map[string]interface{}) (balance *model.Balance) {
+func parseAccountHuobiDM(key string, account *model.Position, data map[string]interface{}) (balance *model.Balance) {
 	if data[`symbol`] == nil {
 		return nil
 	}
@@ -135,7 +135,7 @@ func getBalanceHuobiDM(key, secret string, accounts *model.Accounts) (success bo
 	balances = make([]*model.Balance, 0)
 	items := accountJson.Get(`data`).MustArray()
 	for _, value := range items {
-		account := &model.Account{Market: model.HuobiDM, Ts: util.GetNowUnixMillion()}
+		account := &model.Position{Market: model.HuobiDM, Ts: util.GetNowUnixMillion()}
 		data := value.(map[string]interface{})
 		balance := parseAccountHuobiDM(key, account, data)
 		if balance != nil {
@@ -175,7 +175,7 @@ func getHoldingHuobiDM(key, secret string, accounts *model.Accounts) (success bo
 			}
 			symbol += holding[`direction`].(string)
 			symbol = strings.ToLower(symbol)
-			account := &model.Account{Market: model.HuobiDM, Ts: util.GetNowUnixMillion(), Currency: symbol}
+			account := &model.Position{Market: model.HuobiDM, Ts: util.GetNowUnixMillion(), Currency: symbol}
 			if holding[`volume`] != nil { // 持仓量
 				account.Holding, _ = holding[`volume`].(json.Number).Float64()
 			}

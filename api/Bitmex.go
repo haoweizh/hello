@@ -98,7 +98,7 @@ func WsDepthServeBitmex(markets *model.Markets, errHandler ErrHandler) (chan str
 		subscribeHandlerBitmex, wsHandler, errHandler)
 }
 
-func parseAccount(account *model.Account, item map[string]interface{}) {
+func parseAccount(account *model.Position, item map[string]interface{}) {
 	if item == nil {
 		return
 	}
@@ -528,7 +528,7 @@ func handleOrderBook(markets *model.Markets, action string, data []interface{}) 
 
 func handleAccount(action string, data []interface{}) {
 	for _, value := range data {
-		account := &model.Account{Market: model.Bitmex, Ts: util.GetNowUnixMillion()}
+		account := &model.Position{Market: model.Bitmex, Ts: util.GetNowUnixMillion()}
 		parseAccount(account, value.(map[string]interface{}))
 		switch action {
 		case `partial`:

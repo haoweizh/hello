@@ -11,10 +11,10 @@ type Accounts struct {
 	//MarketTotal        map[string]float64             // marketName - totalInUsdt
 	//CurrencyTotal      map[string]float64             // currency - totalInUsdt
 	//CurrencyPercentage map[string]float64             // currency - percentage
-	Data map[string]map[string]*Account // marketName - currency - Account
+	Data map[string]map[string]*Position // marketName - currency - Position
 }
 
-type Account struct {
+type Position struct {
 	Market                       string
 	Currency                     string
 	Free                         float64
@@ -40,7 +40,7 @@ type Account struct {
 
 func NewAccounts() *Accounts {
 	accounts := &Accounts{}
-	accounts.Data = make(map[string]map[string]*Account)
+	accounts.Data = make(map[string]map[string]*Position)
 	return accounts
 }
 
@@ -50,11 +50,11 @@ func (accounts *Accounts) ClearAccounts(marketName string) {
 	accounts.Data[marketName] = nil
 }
 
-func (accounts *Accounts) GetAccount(marketName string, currency string) *Account {
+func (accounts *Accounts) GetAccount(marketName string, currency string) *Position {
 	accounts.Lock.Lock()
 	defer accounts.Lock.Unlock()
 	if accounts.Data[marketName] == nil {
-		accounts.Data[marketName] = make(map[string]*Account)
+		accounts.Data[marketName] = make(map[string]*Position)
 	}
 	//if accounts.Data[marketName][currency] == nil && AppConfig.Env == `test` {
 	//	accounts.Data[marketName][currency] = &Account{
@@ -63,11 +63,11 @@ func (accounts *Accounts) GetAccount(marketName string, currency string) *Accoun
 	return accounts.Data[marketName][currency]
 }
 
-func (accounts *Accounts) SetAccount(marketName string, currency string, account *Account) {
+func (accounts *Accounts) SetAccount(marketName string, currency string, account *Position) {
 	accounts.Lock.Lock()
 	defer accounts.Lock.Unlock()
 	if accounts.Data[marketName] == nil {
-		accounts.Data[marketName] = make(map[string]*Account)
+		accounts.Data[marketName] = make(map[string]*Position)
 	}
 	if marketName == OKSwap && account != nil {
 		currency = account.Direction + account.Currency

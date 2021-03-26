@@ -155,9 +155,32 @@ func placeOrderOKEX(key, secret string, order *model.Order, price, amount string
 
 // consider spot future size calc
 func getMarketsOKEX() (marketInfos map[string]*model.MarketInfo) {
-	//responseBody := sendSignRequestOKEX(``, ``, http.MethodGet,
-	//	model.AppConfig.RestUrls[model.OKEX]+"/api/v5/trade/orders-pending",
-	//	map[string]interface{}{`instId`: instrument})
+	marketInfos = make(map[string]*model.MarketInfo)
+	instTypes := []string{`SPOT`, `SWAP`}
+	for _, instType := range instTypes {
+		responseBody := sendSignRequestOKEX(``, ``, http.MethodGet,
+			model.AppConfig.RestUrls[model.OKEX]+"/api/v5/public/instruments",
+			map[string]interface{}{`instId`: instType})
+		resultJson, err := util.NewJSON(responseBody)
+		if err == nil && resultJson != nil && resultJson.Get(`data`) != nil {
+			for _, info := range resultJson.Get(`data`).MustArray() {
+				value := info.(map[string]interface{})
+				if value[`instId`] != nil {
+					marketInfo := &model.MarketInfo{Name: value[`instId`].(string), CanBorrow: false}
+					if value[`lotSz`] != nil {
+						marketInfo.SizeIncrement, _ = strconv.ParseFloat(value[`lotSz`].(string), 64)
+					}
+					if value[`minSz`] != nil {
+						marketInfo.SizeMin, _ = strconv.ParseFloat(value[`minSz`].(string), 64)
+					}
+					if value[`tickSz`] != nil {
+						marketInfo.PriceIncrement, _ = strconv.ParseFloat(value[`tickSz`].(string), 64)
+					}
+					marketInfos[marketInfo.Name] = marketInfo
+				}
+			}
+		}
+	}
 	return
 }
 
@@ -375,7 +398,7 @@ func getBalanceOKEX(key, secret string) (balances []*model.Balance) {
 	response := sendSignRequestOKEX(key, secret, http.MethodGet, `/api/v5/account/balance`, nil)
 	responseJson, err := util.NewJSON(response)
 	if err != nil || responseJson == nil || responseJson.Get(`data`) == nil {
-		util.SocketInfo(`fail to get okex balance`)
+		util.SocketInfo(`fail to get okex balance `)
 		time.Sleep(time.Second * 2)
 		return getBalanceOKEX(key, secret)
 	}
