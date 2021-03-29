@@ -499,46 +499,6 @@ func GetPositions(key, secret, market string) (success bool, positions []*model.
 	return false, nil
 }
 
-//func RefreshAccount(key, secret, market string) {
-//	util.SocketInfo(`refresh all accounts in market ` + market)
-//	duration, _ := time.ParseDuration(`-10s`)
-//	now := time.Now()
-//	checkTime := now.Add(duration)
-//	if refreshTime[market] != nil && refreshTime[market].After(checkTime) {
-//		return
-//	} else {
-//		refreshTime[market] = &now
-//	}
-//	model.AppAccounts.ClearAccounts(market)
-//	switch market {
-//	case model.Huobi:
-//		getAccountHuobiSpot(key, secret, model.AppAccounts)
-//	case model.HuobiDM:
-//		getBalanceHuobiDM(key, secret, model.AppAccounts)
-//		getHoldingHuobiDM(key, secret, model.AppAccounts)
-//	case model.OKFUTURE:
-//		getBalanceOkfuture(key, secret, model.AppAccounts)
-//	case model.OKSwap:
-//		symbols := model.GetMarketSymbols(model.OKSwap)
-//		for symbol := range symbols {
-//			getAccountOKSwap(key, secret, symbol, model.AppAccounts)
-//		}
-//	case model.Binance:
-//		getAccountBinance(key, secret, model.AppAccounts)
-//	case model.Coinpark:
-//		getAccountCoinpark(model.AppAccounts)
-//	case model.Bitmex:
-//		getAccountBitmex(key, secret, model.AppAccounts)
-//	case model.Bybit:
-//		symbols := model.GetMarketSymbols(model.Bybit)
-//		for symbol := range symbols {
-//			getAccountBybit(key, secret, symbol, model.AppAccounts)
-//		}
-//	case model.Ftx:
-//		getAccountFtx(key, secret, model.AppAccounts)
-//	}
-//}
-
 func MustPlaceOrder(key, secret, orderSide, orderType, market, symbol, instrument, accountType, orderParam,
 	refreshType string, price, triggerPrice, amount float64, saveDB bool) (order *model.Order) {
 	retry := 10
@@ -771,7 +731,7 @@ func InitCarryFtx(start uint) {
 	}
 }
 
-// 只支持现货spot和永续PERP SWAP
+// 只支持现货SPOT和永续PERP SWAP
 func InitMarketInfos() (success bool) {
 	success = true
 	markets := model.GetMarkets()
@@ -799,7 +759,7 @@ func FormatPrice(market, symbol string, price float64) (formattedPrice float64) 
 	return marketInfo.PriceIncrement * math.Round(price/marketInfo.PriceIncrement)
 }
 
-func parseRealAmount(market, symbol string, amount float64) (success bool, realAmount float64) {
+func ParseRealAmount(market, symbol string, amount float64) (success bool, realAmount float64) {
 	marketInfo := model.MarketInfos[market][symbol]
 	if marketInfo == nil || marketInfo.SizeIncrement == 0 || marketInfo.CTValue == 0 ||
 		marketInfo.CTCurrency != model.GetCoin(market, symbol) {
@@ -832,10 +792,18 @@ func _(market, symbol string) (borrowAble float64) {
 	return 0
 }
 
-func InitFtxBalance(key, secret, function string) {
+func GetLastPrice(key, secret, market, symbol string) float64 {
+	switch market {
+	case model.OKEX:
+		return getLastPriceOKEX(key, secret, symbol)
+	}
+	return 0
+}
+
+func InitCoinBalance(key, secret, function, market string) {
 	InitMarketInfos()
-	settings := model.GetSettings(function, model.Ftx)
-	_, balances := GetBalances(key, secret, model.Ftx, 0)
+	settings := model.GetSettings(function, market)
+	_, balances := GetBalances(key, secret, market, 0)
 	balanceMap := make(map[string]*model.Balance)
 	for _, balance := range balances {
 		balanceMap[balance.Coin] = balance
@@ -845,18 +813,22 @@ func InitFtxBalance(key, secret, function string) {
 		coin := model.GetCoin(items[0].Market, items[0].Symbol)
 		balance := balanceMap[coin]
 		if balance == nil {
-			if model.MarketInfos[model.Ftx] == nil {
+			if model.MarketInfos[market] == nil {
 				continue
 			}
-			marketInfo := model.MarketInfos[model.Ftx][items[0].GetRelatedSymbol()]
+			related := items[0].GetRelatedSymbol()
+			marketInfo := model.MarketInfos[market][related]
 			if marketInfo == nil {
 				continue
 			}
-			order := PlaceOrder(key, secret, model.OrderSideBuy, model.OrderTypeMarket, model.Ftx, items[0].Symbol, ``,
-				``, ``, ``, 0, 0, marketInfo.SizeIncrement, false)
+			price := GetLastPrice(key, secret, market, related)
+			order := PlaceOrder(key, secret, model.OrderSideBuy, model.OrderTypeMarket, market, related, related,
+				``, ``, ``, price, price, marketInfo.SizeMin, false)
 			if order.OrderId == `` {
 				i++
-				fmt.Println(fmt.Sprintf(`%d order return :%s %s`, i, order.ErrCode, items[0].Symbol))
+				fmt.Println(fmt.Sprintf(`%d order return :%s %s`, i, order.ErrCode, related))
+			} else {
+				fmt.Println(fmt.Sprintf(`%s success order`, related))
 			}
 		}
 	}

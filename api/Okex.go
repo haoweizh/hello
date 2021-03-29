@@ -75,7 +75,7 @@ func WsDepthServeOKEX(markets *model.Markets, errHandler ErrHandler) (chan struc
 				price, _ := strconv.ParseFloat(value[0].(string), 64)
 				amount, _ := strconv.ParseFloat(value[1].(string), 64)
 				if !isSpot {
-					_, amount = parseRealAmount(model.OKEX, instrument, amount)
+					_, amount = ParseRealAmount(model.OKEX, instrument, amount)
 				}
 				bidAsk.Asks[i] = model.Tick{Price: price, Amount: amount, Symbol: instrument}
 			}
@@ -86,7 +86,7 @@ func WsDepthServeOKEX(markets *model.Markets, errHandler ErrHandler) (chan struc
 				price, _ := strconv.ParseFloat(value[0].(string), 64)
 				amount, _ := strconv.ParseFloat(value[1].(string), 64)
 				if !isSpot {
-					_, amount = parseRealAmount(model.OKEX, instrument, amount)
+					_, amount = ParseRealAmount(model.OKEX, instrument, amount)
 				}
 				bidAsk.Bids[i] = model.Tick{Price: price, Amount: amount, Symbol: instrument}
 			}
@@ -140,6 +140,10 @@ func placeOrderOKEX(key, secret string, order *model.Order) {
 		order.Status = model.CarryStatusFail
 		return
 	}
+	if order.OrderType == model.OrderTypeMarket {
+		usdAmount, _ := strconv.ParseFloat(amount, 64)
+		amount = fmt.Sprintf(`%v`, usdAmount*order.Price)
+	}
 	postData := map[string]interface{}{`instId`: order.Instrument, `tdMode`: `cross`, `side`: order.OrderSide,
 		`sz`: amount, `px`: price, `ordType`: order.OrderType}
 	responseBody := sendSignRequestOKEX(key, secret, http.MethodPost, "/api/v5/trade/order", postData)
@@ -168,7 +172,7 @@ func placeOrderOKEX(key, secret string, order *model.Order) {
 // consider spot future size calc
 func getMarketsOKEX() (marketInfos map[string]*model.MarketInfo) {
 	marketInfos = make(map[string]*model.MarketInfo)
-	instTypes := []string{`SPOT`, `SWAP`}
+	instTypes := []string{`MARGIN`, `SWAP`}
 	for _, instType := range instTypes {
 		path := fmt.Sprintf(`/api/v5/public/instruments?%s`,
 			util.ComposeParams(map[string]interface{}{`instType`: instType}))
@@ -303,8 +307,8 @@ func parseOrderOKEX(value map[string]interface{}) (order *model.Order) {
 		order.OrderTime = time.Unix(ts/1000, 0)
 	}
 	if strings.Contains(order.Instrument, `SWAP`) || len(strings.Split(order.Instrument, `-`)) > 2 {
-		_, order.Amount = parseRealAmount(model.OKEX, order.Instrument, order.Amount)
-		_, order.DealAmount = parseRealAmount(model.OKEX, order.Instrument, order.DealAmount)
+		_, order.Amount = ParseRealAmount(model.OKEX, order.Instrument, order.Amount)
+		_, order.DealAmount = ParseRealAmount(model.OKEX, order.Instrument, order.DealAmount)
 	}
 	return order
 }
@@ -409,7 +413,7 @@ func parsePositionOKEX(value map[string]interface{}) (success bool, position *mo
 	if value[`pos`] != nil {
 		pos, _ := strconv.ParseFloat(value[`pos`].(string), 64)
 		if strings.Contains(position.Currency, `SWAP`) || len(strings.Split(position.Currency, `-`)) > 2 {
-			success, position.Free = parseRealAmount(model.OKEX, position.Currency, pos)
+			success, position.Free = ParseRealAmount(model.OKEX, position.Currency, pos)
 		} else {
 			position.Free = pos
 		}
@@ -510,6 +514,21 @@ func setAccountModeOKEX(key, secret string) (success bool) {
 		return false
 	}
 	return true
+}
+
+func getLastPriceOKEX(key, secret, instrument string) (price float64) {
+	path := fmt.Sprintf(`/api/v5/market/ticker?instId=%s`, instrument)
+	response := sendSignRequestOKEX(key, secret, http.MethodGet, path, nil)
+	responseJson, err := util.NewJSON(response)
+	if responseJson == nil || err != nil || responseJson.Get(`data`) == nil ||
+		len(responseJson.Get(`data`).MustArray()) == 0 {
+		return 0
+	}
+	value := responseJson.Get(`data`).MustArray()[0].(map[string]interface{})
+	if value[`last`] != nil {
+		price, _ = strconv.ParseFloat(value[`last`].(string), 64)
+	}
+	return price
 }
 
 // todo 目前只支持永续 swap

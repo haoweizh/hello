@@ -9,9 +9,7 @@ import (
 	_ "github.com/jinzhu/gorm/dialects/postgres"
 	"hello/api"
 	"hello/model"
-	"math"
 	"net/url"
-	"strings"
 	"testing"
 	"time"
 )
@@ -122,40 +120,19 @@ func Test_wallet(t *testing.T) {
 	model.NewConfig()
 	_ = configor.Load(model.AppConfig, "./config.yml")
 	model.AppDB, _ = gorm.Open("postgres", model.AppConfig.DBConnection)
-	api.InitMarketInfos()
-	order := api.PlaceOrder(``, ``, model.OrderSideSell, model.OrderTypeMarket, model.OKEX, `BTC-USDT-SWAP`,
-		`BTC-USDT-SWAP`, ``, ``, model.FunctionCarry, 5555.23452, 0, 0.1444444444876, false)
-	fmt.Println(order.OrderId)
-	suc, pos := api.GetPositions(``, ``, model.Ftx)
-	fmt.Println(fmt.Sprintf(`%v %d`, suc, len(pos)))
-	model.AppDB, _ = gorm.Open("postgres", model.AppConfig.DBConnection)
+	api.InitCoinBalance(``, ``, model.FunctionCarry, model.OKEX)
+	//api.InitMarketInfos()
+	//order := api.PlaceOrder(``, ``, model.OrderSideSell, model.OrderTypeMarket, model.OKEX, `BTC-USDT-SWAP`,
+	//	`BTC-USDT-SWAP`, ``, ``, model.FunctionCarry, 5555.23452, 0, 0.1444444444876, false)
+	//fmt.Println(order.OrderId)
+	//suc, pos := api.GetPositions(``, ``, model.Ftx)
+	//fmt.Println(fmt.Sprintf(`%v %d`, suc, len(pos)))
 	//a := api.GetMarketInfo(model.Ftx, `SECO/USD`)
 	//fmt.Println(a)
 	//carry.InitFtxBalance(`ZK6_FPdUIhDnjv_JWklHAkgWXRRindBw-qIg18bU`,
 	//	`4bbFXcuVk_VE2JJ0_mnLFa3J-kcCOeUVM0sRmYN5`, model.FunctionCarry)
-	api.InitFtxBalance(`iRD9B_hEjFExv9RKWR3ND4ZXHArWz_OorwonBk6N`,
-		`uwR9deKdtPT3BDALrypWUwNwELLLG5XU9XWCWJui`, model.FunctionCarry)
 	api.InitCarryFtx(1)
 	api.GetFundingRate(model.Ftx, `BTC-PERP`)
-	_, balances := api.GetBalances(``, ``, model.Ftx, 0)
-	for _, balance := range balances {
-		if balance.Coin == `USD` {
-			fmt.Println(fmt.Sprintf(`free %f `, balance.Amount))
-		}
-	}
-	symbols := model.GetMarketSymbols(model.Ftx)
-	usdAvailable := 0.0
-	holding := 0.0
-	for _, value := range balances {
-		if strings.ToLower(value.Coin) == `usd` {
-			usdAvailable = value.Amount
-		} else if symbols[strings.ToUpper(value.Coin)+`/USD`] {
-			holding += math.Abs(value.UsdValue)
-		}
-	}
-	fmt.Println(usdAvailable)
-	fmt.Println(holding)
-
 	//carry.GetTurtleData(model.Ftx, `okbusd_p`)
 	//var err error
 	//today := time.Now().In(time.UTC)

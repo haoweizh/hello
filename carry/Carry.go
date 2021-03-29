@@ -217,9 +217,7 @@ var ProcessCarry = func(setting *model.Setting, tick *model.BidAsk) {
 	for i := begin; i >= 0 && i < len(keys); i += step {
 		sidePerp, sideRelated, amount := calcCarryOpen(setting, tickPerp, tickRelated, keys[i], setting.Symbol,
 			setting.Symbol, scoreOpen, scoreClose, scoreOpen, scoreClose)
-		amountPerp := api.FormatAmount(setting.Market, setting.Symbol, amount)
-		amountRelated := api.FormatAmount(setting.Market, setting.GetRelatedSymbol(), amount)
-		if amount > 0 && amountPerp > 0 && amountRelated > 0 {
+		if amount > 0 {
 			go placeCarry(setting, tickPerp, tickRelated, keys[i], secrets[i], sidePerp, sideRelated,
 				scoreOpen, scoreClose, amount)
 			break
@@ -236,26 +234,35 @@ func placeCarry(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, key
 		return
 	}
 	symbolRelated := setting.GetRelatedSymbol()
-	balance := getCarryBalance(key, model.GetCoin(setting.Market, setting.Symbol))
+	coin := model.GetCoin(setting.Market, setting.Symbol)
+	balance := getCarryBalance(key, coin)
 	if balance == nil {
 		return
 	}
 	perpPrice := tickPerp.Asks[0].Price
 	relatedPrice := tickRelated.Bids[0].Price
+	usdAvailable := getUsdAvailable(key)
+	balanceAllValue := getBalanceAll(key)
 	if sidePerp == model.OrderSideSell {
 		perpPrice = tickPerp.Bids[0].Price
 		relatedPrice = tickRelated.Asks[0].Price
 		setCarryAmount(key, setting.Symbol, getCarryAmount(key, setting.Symbol)+amount)
 		balance.Amount += amount
 		balance.UsdValue += amount * perpPrice
-		setUsdAvailable(key, getUsdAvailable(key)-amount*perpPrice)
+		usdAvailable -= amount * perpPrice
+		setUsdAvailable(key, usdAvailable)
+		setCarryBalance(key, coin, balance)
+		setUsdRate(key, usdAvailable/balanceAllValue)
 	} else if sidePerp == model.OrderSideBuy {
 		perpPrice = tickPerp.Asks[0].Price
 		relatedPrice = tickRelated.Bids[0].Price
 		setCarryAmount(key, setting.Symbol, getCarryAmount(key, setting.Symbol)-amount)
 		balance.Amount -= amount
 		balance.UsdValue -= amount * perpPrice
-		setUsdAvailable(key, getUsdAvailable(key)+amount*relatedPrice)
+		usdAvailable += amount * relatedPrice
+		setCarryBalance(key, coin, balance)
+		setUsdAvailable(key, usdAvailable)
+		setUsdRate(key, usdAvailable/balanceAllValue)
 	}
 	now := int(util.GetNowUnixMillion())
 	util.Notice(fmt.Sprintf(`carry%s->%s delay %d %d perp[%f %f %f %f] related[%f %f %f %f] with score open:%f close:%f 
@@ -459,6 +466,12 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 		math.Abs(amount)*markPrice < valueLow {
 		amount = 0
 	}
+	amountPerp := api.FormatAmount(setting.Market, setting.Symbol, amount)
+	amountRelated := api.FormatAmount(setting.Market, setting.GetRelatedSymbol(), amount)
+	if setting.Market == model.OKEX {
+		_, amountPerp = api.ParseRealAmount(setting.Market, setting.Symbol, amountPerp)
+	}
+	amount = math.Min(amountPerp, amountRelated)
 	if amount > 0 {
 		util.Notice(fmt.Sprintf(`>>>> %s high:%s %f low:%s %f symbl: %s %s usd available:%f amount：%f 
 			carryAmount: %f`,
