@@ -24,9 +24,22 @@ var lowest = math.NaN()
 var highest = math.NaN()
 var usdAvailable = make(map[string]float64)                   // key - float64
 var usdRate = make(map[string]float64)                        // key - float64
+var cachePositions = make(map[string][]*model.Position)       // key - []position
 var balanceAll = make(map[string]float64)                     // key - balance value in all
 var carryBalance = make(map[string]map[string]*model.Balance) // key - coin - balance
 var carryAmount = make(map[string]map[string]float64)         // key - perp - float64
+
+func getPositions(key string) []*model.Position {
+	carryLock.Lock()
+	defer carryLock.Unlock()
+	return cachePositions[key]
+}
+
+func setPositions(key string, value []*model.Position) {
+	carryLock.Lock()
+	defer carryLock.Unlock()
+	cachePositions[key] = value
+}
 
 func getUsdAvailable(key string) float64 {
 	carryLock.Lock()
@@ -122,9 +135,9 @@ func getPerpTail(market string) string {
 	return ``
 }
 
-func initEmptyBalance(key, secret, market, coin string) (balance *model.Balance) {
-	resultPosition, positions := api.GetPositions(key, secret, market)
-	if !resultPosition {
+func initEmptyBalance(key, market, coin string) (balance *model.Balance) {
+	positions := getPositions(key)
+	if positions == nil {
 		return nil
 	}
 	tail := getPerpTail(market)
@@ -149,7 +162,6 @@ func initEmptyBalance(key, secret, market, coin string) (balance *model.Balance)
 		setCarryBalance(key, coin, balance)
 	}
 	util.Notice(fmt.Sprintf(`need to set empty balance for %s`, coin))
-	time.Sleep(time.Second * 10)
 	return balance
 }
 
@@ -170,6 +182,7 @@ func clearCarryBalance() {
 			for i, key := range keys {
 				resultBalance, balances := api.GetBalances(key, secrets[i], market, 0)
 				resultPosition, positions := api.GetPositions(key, secrets[i], market)
+				setPositions(key, positions)
 				if !resultBalance || !resultPosition {
 					util.Notice(`fatal error: can not get balance/position ` + market)
 					continue
@@ -256,7 +269,7 @@ var ProcessCarry = func(setting *model.Setting, tick *model.BidAsk) {
 		step = -1
 	}
 	for i := begin; i >= 0 && i < len(keys); i += step {
-		sidePerp, sideRelated, amount := calcCarryOpen(setting, tickPerp, tickRelated, keys[i], secrets[i], setting.Symbol,
+		sidePerp, sideRelated, amount := calcCarryOpen(setting, tickPerp, tickRelated, keys[i], setting.Symbol,
 			setting.Symbol, scoreOpen, scoreClose, scoreOpen, scoreClose)
 		if amount > 0 {
 			go placeCarry(setting, tickPerp, tickRelated, keys[i], secrets[i], sidePerp, sideRelated,
@@ -416,7 +429,7 @@ func makeEqual(key, secret string, setting *model.Setting, balances []*model.Bal
 	return
 }
 
-func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, key, secret, symbolHigh, symbolLow string,
+func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, key, symbolHigh, symbolLow string,
 	scoreOpen, scoreClose, scoreHigh, scoreLow float64) (sidePerp, sideRelated string, amount float64) {
 	var bidAmount, askAmount float64
 	setOpen := setting.OpenShortMargin
@@ -429,7 +442,7 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	if balance == nil {
 		model.SetCarryInfo(`warning `+coin, fmt.Sprintf(`slave: balace not available!!! %s`, key))
 		model.SetCarryInfos(`coin_absent`, key+`_`+coin, map[string]interface{}{`absent`: coin, `key`: key})
-		initEmptyBalance(key, secret, setting.Market, coin)
+		initEmptyBalance(key, setting.Market, coin)
 		return ``, ``, 0
 	} else {
 		model.RemoveCarryInfo(`warning ` + coin)
