@@ -50,9 +50,6 @@ func WsDepthServeOKEX(markets *model.Markets, errHandler ErrHandler) (chan struc
 			}
 		}
 		responseJson, err := util.NewJSON(event)
-		//if strings.Contains(string(event), `subscribe`) {
-		fmt.Println(string(event))
-		//}
 		if err != nil || responseJson == nil || responseJson.Get(`data`) == nil ||
 			len(responseJson.Get(`data`).MustArray()) == 0 || responseJson.GetPath(`arg`, `instId`) == nil {
 			return
