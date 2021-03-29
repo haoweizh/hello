@@ -768,7 +768,7 @@ func ParseRealAmount(market, symbol string, amount float64) (success bool, realA
 	return true, amount * marketInfo.CTValue
 }
 
-func FormatAmount(market, symbol string, amount float64) (formattedAmount float64) {
+func FormatAmount(market, symbol string, amount float64, round bool) (formattedAmount float64) {
 	marketInfo := model.MarketInfos[market][symbol]
 	if marketInfo == nil || marketInfo.SizeIncrement == 0 {
 		return 0
@@ -776,7 +776,11 @@ func FormatAmount(market, symbol string, amount float64) (formattedAmount float6
 	if marketInfo.CTValue > 0 && marketInfo.CTCurrency == model.GetCoin(market, symbol) {
 		amount = amount / marketInfo.CTValue
 	}
-	formattedAmount = math.Floor(amount/marketInfo.SizeIncrement) * marketInfo.SizeIncrement
+	if round {
+		formattedAmount = math.Round(amount/marketInfo.SizeIncrement) * marketInfo.SizeIncrement
+	} else {
+		formattedAmount = math.Floor(amount/marketInfo.SizeIncrement) * marketInfo.SizeIncrement
+	}
 	if formattedAmount < marketInfo.SizeMin {
 		return 0
 	}

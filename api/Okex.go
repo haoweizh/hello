@@ -134,8 +134,8 @@ func sendSignRequestOKEX(key, secret, method, path string, body interface{}) (re
 }
 
 func placeOrderOKEX(key, secret string, order *model.Order) {
-	price := fmt.Sprintf(`%v`, FormatPrice(model.OKEX, order.Instrument, order.Price))
-	amount := fmt.Sprintf(`%v`, FormatAmount(model.OKEX, order.Instrument, order.Amount))
+	price := strconv.FormatFloat(FormatPrice(model.OKEX, order.Instrument, order.Price), 'f', -1, 64)
+	amount := strconv.FormatFloat(FormatAmount(model.OKEX, order.Instrument, order.Amount, true), 'f', -1, 64)
 	if price == `0` || amount == `0` {
 		order.Status = model.CarryStatusFail
 		return

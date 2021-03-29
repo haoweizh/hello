@@ -369,7 +369,7 @@ func makeEqual(key, secret string, setting *model.Setting, balances []*model.Bal
 		}
 	}
 	amount = math.Min(math.Abs(amount), 20000/price)
-	orderAmount := api.FormatAmount(setting.Market, symbol, math.Abs(amount))
+	orderAmount := api.FormatAmount(setting.Market, symbol, math.Abs(amount), false)
 	if orderAmount > 0 {
 		resultPerp := api.CancelOrders(key, secret, setting.Market, settingSymbol)
 		resultRelated := api.CancelOrders(key, secret, setting.Market, symbolRelated)
@@ -466,8 +466,8 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 		math.Abs(amount)*markPrice < valueLow {
 		amount = 0
 	}
-	amountPerp := api.FormatAmount(setting.Market, setting.Symbol, amount)
-	amountRelated := api.FormatAmount(setting.Market, setting.GetRelatedSymbol(), amount)
+	amountPerp := api.FormatAmount(setting.Market, setting.Symbol, amount, false)
+	amountRelated := api.FormatAmount(setting.Market, setting.GetRelatedSymbol(), amount, false)
 	if setting.Market == model.OKEX {
 		_, amountPerp = api.ParseRealAmount(setting.Market, setting.Symbol, amountPerp)
 	}
