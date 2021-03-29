@@ -179,7 +179,6 @@ func Maintain() {
 		model.AppDB.AutoMigrate(&model.Score{})
 		model.AppDB.AutoMigrate(&model.Candle{})
 		model.AppDB.AutoMigrate(&model.Balance{})
-		//model.AppDB.AutoMigrate(&model.FundingRate{})
 	}
 	//model.LoadSettings()
 	if !api.InitMarketInfos() {

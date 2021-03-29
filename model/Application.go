@@ -335,7 +335,7 @@ func NewConfig() {
 	AppConfig.WSUrls[HuobiDM] = `wss://api.hbdm.com/`
 	AppConfig.WSUrls[Binance] = "wss://stream.binance.com:9443/stream?streams="
 	AppConfig.WSUrls[Ftx] = `wss://ftx.com/ws`
-	AppConfig.WSUrls[OKEX] = `wss://ws.okex.com:8443/ws/v5/public?brokerId=9999`
+	AppConfig.WSUrls[OKEX] = `wss://ws.okex.com:8443/ws/v5/public`
 	if AppConfig.Env == `test` {
 		AppConfig.WSUrls[Bybit] = `wss://stream.bybit.com/realtime`
 		AppConfig.RestUrls[Bybit] = `https://api.bybit.com`
