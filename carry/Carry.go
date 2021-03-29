@@ -112,6 +112,45 @@ func checkSetCarrying(value bool) (before bool) {
 	}
 }
 
+func getPerpTail(market string) string {
+	switch market {
+	case model.Ftx:
+		return `-PERP`
+	case model.OKEX:
+		return `-USDT-SWAP`
+	}
+	return ``
+}
+
+func initEmptyBalance(key, secret, market, coin string) (balance *model.Balance) {
+	resultPosition, positions := api.GetPositions(key, secret, market)
+	if !resultPosition {
+		return nil
+	}
+	tail := getPerpTail(market)
+	name := coin + tail
+	needCreate := true
+	for _, position := range positions {
+		if position.Currency == name && position.Free != 0 {
+			needCreate = false
+		}
+	}
+	if needCreate {
+		balance = &model.Balance{
+			Amount:              0,
+			Available:           0,
+			AvailableWithBorrow: 0,
+			Borrow:              0,
+			Coin:                coin,
+			Market:              market,
+			Price:               0,
+			UsdValue:            0,
+		}
+		setCarryBalance(key, coin, balance)
+	}
+	return balance
+}
+
 func clearCarryBalance() {
 	for doCarry {
 		for true {
@@ -215,7 +254,7 @@ var ProcessCarry = func(setting *model.Setting, tick *model.BidAsk) {
 		step = -1
 	}
 	for i := begin; i >= 0 && i < len(keys); i += step {
-		sidePerp, sideRelated, amount := calcCarryOpen(setting, tickPerp, tickRelated, keys[i], setting.Symbol,
+		sidePerp, sideRelated, amount := calcCarryOpen(setting, tickPerp, tickRelated, keys[i], secrets[i], setting.Symbol,
 			setting.Symbol, scoreOpen, scoreClose, scoreOpen, scoreClose)
 		if amount > 0 {
 			go placeCarry(setting, tickPerp, tickRelated, keys[i], secrets[i], sidePerp, sideRelated,
@@ -287,13 +326,7 @@ func placeCarry(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, key
 
 func getCarryAmounts(setting *model.Setting, balances []*model.Balance, positions []*model.Position) (
 	success bool, amountPerp, amountRelated float64) {
-	tail := ``
-	switch setting.Market {
-	case model.Ftx:
-		tail = `-PERP`
-	case model.OKEX:
-		tail = `-USDT-SWAP`
-	}
+	tail := getPerpTail(setting.Market)
 	for _, position := range positions {
 		if position != nil && position.Currency == setting.Symbol {
 			amountPerp = position.Free
@@ -381,7 +414,7 @@ func makeEqual(key, secret string, setting *model.Setting, balances []*model.Bal
 	return
 }
 
-func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, key, symbolHigh, symbolLow string,
+func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, key, secret, symbolHigh, symbolLow string,
 	scoreOpen, scoreClose, scoreHigh, scoreLow float64) (sidePerp, sideRelated string, amount float64) {
 	var bidAmount, askAmount float64
 	setOpen := setting.OpenShortMargin
@@ -394,6 +427,7 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	if balance == nil {
 		model.SetCarryInfo(`warning `+coin, fmt.Sprintf(`slave: balace not available!!! %s`, key))
 		model.SetCarryInfos(`coin_absent`, key+`_`+coin, map[string]interface{}{`absent`: coin, `key`: key})
+		initEmptyBalance(key, secret, setting.Market, coin)
 		return ``, ``, 0
 	} else {
 		model.RemoveCarryInfo(`warning ` + coin)
