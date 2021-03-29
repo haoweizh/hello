@@ -52,12 +52,6 @@ const OrderSideBuy = `buy`
 const OrderSideSell = `sell`
 const OrderSideLiquidateLong = `liquidateLong`
 const OrderSideLiquidateShort = `liquidateShort`
-
-//const CarryTypeFuture = `future`
-//const CarryTypeArbitrarySell = `arbitrarysell`
-//const CarryTypeArbitraryBuy = `arbitrarybuy`
-const AmountTypeNew = `new` // 用于okswap 开仓，而不平仓
-
 const FunctionTurtle = `turtle`
 const FunctionGrid = `grid`
 const FunctionCarry = `carry`
@@ -76,7 +70,8 @@ var AppDB *gorm.DB
 var AppSettings []Setting
 var AppConfig *Config
 var AppMarkets = NewMarkets()
-var AppAccounts = NewAccounts()
+
+//var AppAccounts = NewAccounts()
 var HuobiAccountIds = make(map[string]string)
 var AppPause = false
 
@@ -283,14 +278,6 @@ func GetOrderStatus(market, marketStatus string) (status string) {
 		return CarryStatusWorking
 	}
 	return orderStatusMap[market][marketStatus]
-}
-
-func GetWSSubscribePos(market, symbol string) (subscribe interface{}) {
-	switch market {
-	case OKSwap:
-		return `swap/position:` + GetDialectSymbol(market, symbol)
-	}
-	return ``
 }
 
 func getSymbolWithSplit(original, split string) (symbol string) {

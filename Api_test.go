@@ -122,6 +122,13 @@ func Test_wallet(t *testing.T) {
 	model.NewConfig()
 	_ = configor.Load(model.AppConfig, "./config.yml")
 	model.AppDB, _ = gorm.Open("postgres", model.AppConfig.DBConnection)
+	api.InitMarketInfos()
+	order := api.PlaceOrder(``, ``, model.OrderSideSell, model.OrderTypeMarket, model.OKEX, `BTC-USDT-SWAP`,
+		`BTC-USDT-SWAP`, ``, ``, model.FunctionCarry, 5555.23452, 0, 0.1444444444876, false)
+	fmt.Println(order.OrderId)
+	suc, pos := api.GetPositions(``, ``, model.Ftx)
+	fmt.Println(fmt.Sprintf(`%v %d`, suc, len(pos)))
+	model.AppDB, _ = gorm.Open("postgres", model.AppConfig.DBConnection)
 	//a := api.GetMarketInfo(model.Ftx, `SECO/USD`)
 	//fmt.Println(a)
 	//carry.InitFtxBalance(`ZK6_FPdUIhDnjv_JWklHAkgWXRRindBw-qIg18bU`,
@@ -151,11 +158,6 @@ func Test_wallet(t *testing.T) {
 
 	//carry.GetTurtleData(model.Ftx, `okbusd_p`)
 	//var err error
-	//model.AppDB, err = gorm.Open("postgres", model.AppConfig.DBConnection)
-	//if err != nil {
-	//	util.Notice(err.Error())
-	//	return
-	//}
 	//today := time.Now().In(time.UTC)
 	//today = time.Date(today.Year(), today.Month(), today.Day(), 0, 0, 0, 0, today.Location())
 	//api.GetDayCandle(model.AppConfig.BitmexKey, model.AppConfig.BitmexSecret, model.Bitmex, `btcusd_p`, today)

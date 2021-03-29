@@ -3,9 +3,9 @@ package model
 var MarketInfos = make(map[string]map[string]*MarketInfo) // market - symbol - MarketInfo
 
 type MarketInfo struct {
-	Name                                   string
-	SizeMin, SizeIncrement, PriceIncrement float64
-	CanBorrow                              bool
+	Name, CTCurrency                                string
+	SizeMin, SizeIncrement, PriceIncrement, CTValue float64
+	CanBorrow                                       bool
 	//"ask":2.2966,
 	//"baseCurrency":null,
 	//"bid":2.2943,

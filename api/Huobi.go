@@ -110,8 +110,8 @@ func SignedRequestHuobi(key, secret, market, method, path string, data map[strin
 		"SignatureVersion": "2", `Timestamp`: url.QueryEscape(time.Now().UTC().Format("2006-01-02T15:04:05"))}
 	strData := ``
 	if method == `GET` {
-		for key, value := range data {
-			param[key] = value
+		for i, value := range data {
+			param[i] = value
 		}
 	} else if method == `POST` && data != nil {
 		strData = string(util.JsonEncodeToByte(data))

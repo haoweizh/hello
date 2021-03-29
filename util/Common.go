@@ -51,6 +51,9 @@ func JsonDecodeByte(bytes []byte) map[string]interface{} {
 }
 
 func JsonEncodeToByte(stringMap interface{}) []byte {
+	if stringMap == nil {
+		return []byte(``)
+	}
 	jsonBytes, err := json.Marshal(stringMap)
 	if err != nil {
 		return nil

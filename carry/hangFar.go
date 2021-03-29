@@ -185,7 +185,7 @@ func revertCancelOrder(key, secret, market, symbol, accountType string, tick *mo
 			orderSide = model.OrderSideSell
 			price = tick.Asks[0].Price
 		}
-		revertOrder := api.PlaceOrder(key, secret, orderSide, model.OrderTypeLimit, market, symbol, ``, ``,
+		revertOrder := api.PlaceOrder(key, secret, orderSide, model.OrderTypeLimit, market, symbol, ``,
 			accountType, ``, ``, price, 0, cancelOrder.DealAmount, false)
 		if revertOrder != nil && revertOrder.OrderId != `` {
 			hangFarOrders.addRevertOrder(revertOrder)
@@ -235,7 +235,7 @@ func hang(key, secret, market, symbol, accountType string, pos, amount map[strin
 		if ordersBids[str] == nil {
 			dosmth = true
 			order := api.PlaceOrder(key, secret, model.OrderSideBuy, model.OrderTypeLimit, market, symbol, ``,
-				``, accountType, ``, ``, bidPrice, 0, amount[str], false)
+				accountType, ``, ``, bidPrice, 0, amount[str], false)
 			if order != nil && order.OrderId != `` {
 				util.Notice(fmt.Sprintf(`=hang= at %s %s`, str, order.OrderId))
 				ordersBids[str] = order
@@ -246,7 +246,7 @@ func hang(key, secret, market, symbol, accountType string, pos, amount map[strin
 		if orderAsks[str] == nil {
 			dosmth = true
 			order := api.PlaceOrder(key, secret, model.OrderSideSell, model.OrderTypeLimit, market, symbol, ``,
-				``, accountType, ``, ``, askPrice, 0, amount[str], false)
+				accountType, ``, ``, askPrice, 0, amount[str], false)
 			if order != nil && order.OrderId != `` {
 				util.Notice(fmt.Sprintf(`=hang= at %s %s`, str, order.OrderId))
 				orderAsks[str] = order

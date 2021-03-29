@@ -9,7 +9,6 @@ import (
 	"github.com/bitly/go-simplejson"
 	"hello/model"
 	"hello/util"
-	"math"
 	"sort"
 	"strconv"
 	"strings"
@@ -80,7 +79,8 @@ func WsDepthServeBybit(markets *model.Markets, errHandler ErrHandler) (chan stru
 			symbol := model.GetStandardSymbol(model.Bybit, topic[strings.LastIndex(topic, `.`)+1:])
 			handleOrderBookBybit(markets, symbol, ts, depthJson)
 		} else if topic == `position` {
-			handleAccountBybit(depthJson.Get(`data`))
+			// todo handle position
+			//handleAccountBybit(depthJson.Get(`data`))
 		}
 	}
 	return WebSocketClient(model.Bybit, model.AppConfig.WSUrls[model.Bybit], model.SubscribeDepth,
@@ -222,60 +222,22 @@ func handleOrderBookBybit(markets *model.Markets, symbol string, ts int64, respo
 	}
 }
 
-func parseAccountBybit(account *model.Position, item map[string]interface{}) {
-	if item[`symbol`] != nil {
-		account.Currency = model.GetStandardSymbol(model.Bybit, item[`symbol`].(string))
-	}
-	if item[`size`] != nil && item[`side`] != nil {
-		account.Direction = strings.ToLower(item[`side`].(string))
-		free, err := item[`size`].(json.Number).Float64()
-		if err == nil {
-			if model.OrderSideSell == account.Direction {
-				account.Free = math.Abs(free) * -1
-			} else {
-				account.Free = free
-			}
-		}
-	}
-	if item[`entry_price`] != nil {
-		account.EntryPrice, _ = strconv.ParseFloat(item[`entry_price`].(string), 64)
-	}
-	if item[`liq_price`] != nil {
-		account.LiquidationPrice, _ = strconv.ParseFloat(item[`liq_price`].(string), 64)
-	}
-	if item[`bust_price`] != nil {
-		account.BankruptcyPrice, _ = strconv.ParseFloat(item[`bust_price`].(string), 64)
-	}
-	if item[`position_margin`] != nil {
-		account.Margin, _ = strconv.ParseFloat(item[`position_margin`].(string), 64)
-	}
-	if item[`realised_pnl`] != nil {
-		account.ProfitReal, _ = strconv.ParseFloat(item[`realised_pnl`].(string), 64)
-	}
-	if item[`unrealised_pnl`] != nil {
-		pnlUnreal, err := item[`unrealised_pnl`].(json.Number).Float64()
-		if err == nil {
-			account.ProfitUnreal = pnlUnreal
-		}
-	}
-}
-
-func handleAccountBybit(dataJson *simplejson.Json) {
-	if dataJson == nil {
-		return
-	}
-	data, _ := dataJson.Array()
-	for _, value := range data {
-		account := &model.Position{Market: model.Bybit, Ts: util.GetNowUnixMillion()}
-		if value != nil {
-			item := value.(map[string]interface{})
-			parseAccountBybit(account, item)
-		}
-		accountEvent, _ := dataJson.String()
-		util.Info(`---- set bybit account from position socket` + accountEvent)
-		model.AppAccounts.SetAccount(model.Bybit, account.Currency, account)
-	}
-}
+//func handleAccountBybit(dataJson *simplejson.Json) {
+//	if dataJson == nil {
+//		return
+//	}
+//	data, _ := dataJson.Array()
+//	for _, value := range data {
+//		account := &model.Position{Market: model.Bybit, Ts: util.GetNowUnixMillion()}
+//		if value != nil {
+//			item := value.(map[string]interface{})
+//			parseAccountBybit(account, item)
+//		}
+//		accountEvent, _ := dataJson.String()
+//		util.Info(`---- set bybit account from position socket` + accountEvent)
+//		model.AppAccounts.SetAccount(model.Bybit, account.Currency, account)
+//	}
+//}
 
 func SignedRequestBybit(key, secret, method, path string, body map[string]interface{}) []byte {
 	if key == `` || secret == `` {

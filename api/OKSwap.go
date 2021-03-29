@@ -141,7 +141,6 @@ func handlePositionOKSwap(response *simplejson.Json) {
 						for _, holding := range holdings {
 							account := &model.Position{Market: model.OKSwap, Ts: ts, Currency: currency}
 							parseAccountOKSwap(account, holding.(map[string]interface{}))
-							model.AppAccounts.SetAccount(model.OKSwap, account.Currency, account)
 						}
 					}
 				}
@@ -280,28 +279,28 @@ func getFundingRateOKSwap(symbol string) (fundingRate float64, expire int64) {
 
 // type 1开多 2开空 3平多 4平空
 // order_type 0：普通委托 1：只做Maker（Post only） 2：全部成交或立即取消（FOK） 3：立即成交并取消剩余（IOC）
-func placeOrderOKSwap(order *model.Order, key, secret, orderSide, orderType, symbol, price,
-	amount string) {
-	postData := make(map[string]interface{})
-	postData[`size`] = amount
-	postData[`type`] = orderSide
-	postData["order_type"] = orderType
-	postData["instrument_id"] = model.GetDialectSymbol(model.OKSwap, symbol)
-	postData[`price`] = price
-	response := SignedRequestOKSwap(key, secret, `POST`, `/api/swap/v3/order`, postData)
-	util.Notice(`place okswap` + string(response))
-	orderJson, err := util.NewJSON(response)
-	if err == nil {
-		errCode := orderJson.Get(`error_code`).MustString()
-		if errCode == "0" {
-			order.OrderId = orderJson.Get(`order_id`).MustString()
-		} else {
-			order.ErrCode = errCode
-			order.Status = model.CarryStatusFail
-		}
-	}
-	return
-}
+//func placeOrderOKSwap(order *model.Order, key, secret, orderSide, orderType, symbol, price,
+//	amount string) {
+//	postData := make(map[string]interface{})
+//	postData[`size`] = amount
+//	postData[`type`] = orderSide
+//	postData["order_type"] = orderType
+//	postData["instrument_id"] = model.GetDialectSymbol(model.OKSwap, symbol)
+//	postData[`price`] = price
+//	response := SignedRequestOKSwap(key, secret, `POST`, `/api/swap/v3/order`, postData)
+//	util.Notice(`place okswap` + string(response))
+//	orderJson, err := util.NewJSON(response)
+//	if err == nil {
+//		errCode := orderJson.Get(`error_code`).MustString()
+//		if errCode == "0" {
+//			order.OrderId = orderJson.Get(`order_id`).MustString()
+//		} else {
+//			order.ErrCode = errCode
+//			order.Status = model.CarryStatusFail
+//		}
+//	}
+//	return
+//}
 
 func parseOrderOKSwap(order *model.Order, item map[string]interface{}) {
 	if order == nil {

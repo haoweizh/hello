@@ -174,31 +174,27 @@ func parseAccountOkfuture(key string, account *model.Position, data map[string]i
 	return balance
 }
 
-func getBalanceOkfuture(key, secret string, accounts *model.Accounts) (success bool, balances []*model.Balance) {
+func getBalanceOkfuture(key, secret string) (success bool, balances []*model.Balance) {
 	responseBody := SignedRequestOKSwap(``, ``, `GET`, "/api/futures/v3/accounts", nil)
 	util.SocketInfo(`get okfuture balance: ` + string(responseBody))
 	accountJson, err := util.NewJSON(responseBody)
 	if err != nil || accountJson == nil || accountJson.Get(`info`) == nil {
 		util.SocketInfo(`fail to get refresh accounts okfuture`)
 		time.Sleep(time.Second * 2)
-		return getBalanceOkfuture(key, secret, accounts)
+		return getBalanceOkfuture(key, secret)
 	}
 	balances = make([]*model.Balance, 0)
 	items := accountJson.Get(`info`).MustMap()
-	for i, value := range items {
-		account := accounts.GetAccount(model.OKFUTURE, i)
-		if account == nil {
-			account = &model.Position{Market: model.OKFUTURE, Ts: util.GetNowUnixMillion()}
-		}
+	for _, value := range items {
+		position := &model.Position{Market: model.OKFUTURE, Ts: util.GetNowUnixMillion()}
 		data := value.(map[string]interface{})
-		balance := parseAccountOkfuture(key, account, data)
+		balance := parseAccountOkfuture(key, position, data)
 		if balance != nil {
 			balances = append(balances, balance)
 		}
-		instrument := GetCurrentInstrument(key, secret, model.OKFUTURE, account.Currency)
+		instrument := GetCurrentInstrument(key, secret, model.OKFUTURE, position.Currency)
 		long, short := getHoldingOkfuture(key, secret, instrument)
-		account.Free = long - short
-		accounts.SetAccount(model.OKFUTURE, account.Currency, account)
+		position.Free = long - short
 	}
 	return true, balances
 }

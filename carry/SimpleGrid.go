@@ -140,7 +140,7 @@ func getGridPos(setting *model.Setting) (gridPos *GridPos) {
 			liquidateAmount = liquidateAmount + gridPos.amount - amount
 		}
 		order := api.MustPlaceOrder(model.KeyDefault, model.SecretDefault, model.OrderSideSell, model.OrderTypeLimit,
-			setting.Market, setting.Symbol, ``, ``, ``, ``,
+			setting.Market, setting.Symbol, ``, ``, ``,
 			model.FunctionGrid, gridPos.pos[i], gridPos.pos[i], amount, false)
 		order.GridPos = int64(i)
 		dayGridPos[yesterdayStr][setting.Market][setting.Symbol].orders[i] = order
@@ -155,7 +155,7 @@ func getGridPos(setting *model.Setting) (gridPos *GridPos) {
 			liquidateAmount = liquidateAmount + amount - gridPos.amount
 		}
 		order := api.MustPlaceOrder(model.KeyDefault, model.SecretDefault, model.OrderSideBuy, model.OrderTypeLimit,
-			setting.Market, setting.Symbol, ``, ``, ``, ``,
+			setting.Market, setting.Symbol, ``, ``, ``,
 			model.FunctionGrid, gridPos.pos[i], gridPos.pos[i], amount, false)
 		order.GridPos = int64(i)
 		dayGridPos[yesterdayStr][setting.Market][setting.Symbol].orders[i] = order
@@ -201,7 +201,7 @@ var ProcessSimpleGrid = func(setting *model.Setting, tick *model.BidAsk) {
 		}
 		if order != nil && (order.Price > tick.Bids[0].Price || order.Status == model.CarryStatusSuccess) {
 			orderR := api.MustPlaceOrder(model.KeyDefault, model.SecretDefault, model.OrderSideSell, model.OrderTypeLimit,
-				setting.Market, setting.Symbol, ``, ``, ``, ``,
+				setting.Market, setting.Symbol, ``, ``, ``,
 				model.FunctionGrid, gridPos.pos[setting.Chance], gridPos.pos[setting.Chance], gridPos.amount, false)
 			orderR.GridPos = setting.Chance
 			gridPos.orders[setting.Chance] = orderR
@@ -236,7 +236,7 @@ var ProcessSimpleGrid = func(setting *model.Setting, tick *model.BidAsk) {
 			util.Notice(fmt.Sprintf(`check sell %d chance: %d order pos: %d ask0: %f order price %f`,
 				len(gridPos.pos), setting.Chance, order.GridPos, tick.Asks[0].Price, order.Price))
 			orderS := api.MustPlaceOrder(model.KeyDefault, model.SecretDefault, model.OrderSideBuy, model.OrderTypeLimit,
-				setting.Market, setting.Symbol, ``, ``, ``, ``,
+				setting.Market, setting.Symbol, ``, ``, ``,
 				model.FunctionGrid, gridPos.pos[setting.Chance], gridPos.pos[setting.Chance], gridPos.amount, false)
 			orderS.GridPos = setting.Chance
 			gridPos.orders[setting.Chance] = orderS

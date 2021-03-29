@@ -4,12 +4,14 @@ import (
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"hello/model"
 	"hello/util"
 	"net/http"
 	"sort"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -59,6 +61,10 @@ func WsDepthServeOKEX(markets *model.Markets, errHandler ErrHandler) (chan struc
 			bidAsk.Ts = int(ts)
 		}
 		instrument := responseJson.GetPath(`arg`, `instId`).MustString()
+		isSpot := true
+		if strings.Contains(instrument, `SWAP`) || len(strings.Split(instrument, `-`)) > 2 {
+			isSpot = false
+		}
 		asks := data[`asks`].([]interface{})
 		bidAsk.Asks = make([]model.Tick, len(asks))
 		bids := data[`bids`].([]interface{})
@@ -68,6 +74,9 @@ func WsDepthServeOKEX(markets *model.Markets, errHandler ErrHandler) (chan struc
 			if len(value) >= 2 {
 				price, _ := strconv.ParseFloat(value[0].(string), 64)
 				amount, _ := strconv.ParseFloat(value[1].(string), 64)
+				if !isSpot {
+					_, amount = parseRealAmount(model.OKEX, instrument, amount)
+				}
 				bidAsk.Asks[i] = model.Tick{Price: price, Amount: amount, Symbol: instrument}
 			}
 		}
@@ -76,6 +85,9 @@ func WsDepthServeOKEX(markets *model.Markets, errHandler ErrHandler) (chan struc
 			if len(value) >= 2 {
 				price, _ := strconv.ParseFloat(value[0].(string), 64)
 				amount, _ := strconv.ParseFloat(value[1].(string), 64)
+				if !isSpot {
+					_, amount = parseRealAmount(model.OKEX, instrument, amount)
+				}
 				bidAsk.Bids[i] = model.Tick{Price: price, Amount: amount, Symbol: instrument}
 			}
 		}
@@ -95,44 +107,48 @@ func WsDepthServeOKEX(markets *model.Markets, errHandler ErrHandler) (chan struc
 		GetWSSubscribes(model.OKEX, model.SubscribeDepth), subscribeHandlerOKEX, wsHandler, errHandler)
 }
 
-func sendSignRequestOKEX(key, secret, method, path string, body interface{}) []byte {
+func sendSignRequestOKEX(key, secret, method, path string, body interface{}) (responseBody []byte) {
 	if key == `` || secret == `` {
 		keys, secrets := model.AppConfig.GetKeys(model.OKEX)
 		key = keys[0]
 		secret = secrets[0]
 	}
-	if body == nil {
-		body = make(map[string]interface{})
-	}
 	uri := model.AppConfig.RestUrls[model.OKEX] + path
-	epoch := time.Now().UnixNano() / int64(time.Millisecond)
-	timestamp := fmt.Sprintf(`%d.%d`, epoch/1000, epoch%1000)
-	toBeSign := fmt.Sprintf(`%s%s%s`, timestamp, method, path)
+	current := time.Now().In(time.UTC).Format(time.RFC3339)
+	// , `x-simulated-trading`: `1`
 	headers := map[string]string{`OK-ACCESS-KEY`: key, `OK-ACCESS-PASSPHRASE`: model.AppConfig.Phase,
-		"OK-ACCESS-TIMESTAMP": timestamp}
+		"OK-ACCESS-TIMESTAMP": current, "Content-Type": "application/json"}
+	postContent := ``
 	if method == http.MethodPost {
-		toBeSign = toBeSign + string(util.JsonEncodeToByte(body))
-		headers["Content-Type"] = "application/json"
-	} else if method == http.MethodGet {
-		uri = uri + `?` + util.ComposeParams(body.(map[string]interface{}))
+		postContent = string(util.JsonEncodeToByte(body))
 	}
+	toBeSign := fmt.Sprintf(`%s%s%s%s`, current, method, path, postContent)
 	hash := hmac.New(sha256.New, []byte(secret))
 	hash.Write([]byte(toBeSign))
 	sign := base64.StdEncoding.EncodeToString(hash.Sum(nil))
 	headers[`OK-ACCESS-SIGN`] = sign
-	responseBody, _ := util.HttpRequest(method, uri, string(util.JsonEncodeToByte(body)), headers, 60)
+	responseBody, _ = util.HttpRequest(method, uri, postContent, headers, 60)
 	util.SocketInfo(fmt.Sprintf(`okex key %s request %s body %s return %s`,
 		key, uri, toBeSign, string(responseBody)))
 	return responseBody
 }
 
-func placeOrderOKEX(key, secret string, order *model.Order, price, amount string) {
-	postData := map[string]interface{}{`instId`: order.Instrument, `tdMode`: `cross`, `side`: order.OrderSide,
+func placeOrderOKEX(key, secret string, order *model.Order) {
+	price := fmt.Sprintf(`%v`, FormatPrice(model.OKEX, order.Instrument, order.Price))
+	tdMode := `cash`
+	amount := fmt.Sprintf(`%v`, FormatAmount(model.OKEX, order.Instrument, order.Amount))
+	if price == `0` || amount == `0` {
+		order.Status = model.CarryStatusFail
+		return
+	}
+	if strings.Contains(order.Instrument, `SWAP`) || len(strings.Split(order.Instrument, `-`)) > 2 {
+		tdMode = `cross`
+	}
+	postData := map[string]interface{}{`instId`: order.Instrument, `tdMode`: tdMode, `side`: order.OrderSide,
 		`sz`: amount, `px`: price, `ordType`: order.OrderType}
-	responseBody := sendSignRequestOKEX(key, secret, http.MethodPost,
-		model.AppConfig.RestUrls[model.OKEX]+"/api/v5/trade/order", postData)
+	responseBody := sendSignRequestOKEX(key, secret, http.MethodPost, "/api/v5/trade/order", postData)
 	orderJson, err := util.NewJSON(responseBody)
-	if err == nil && orderJson != nil && orderJson.Get(`data`) == nil {
+	if err == nil && orderJson != nil && orderJson.Get(`data`) != nil {
 		orders := orderJson.Get(`data`).MustArray()
 		for _, item := range orders {
 			if item == nil {
@@ -158,9 +174,9 @@ func getMarketsOKEX() (marketInfos map[string]*model.MarketInfo) {
 	marketInfos = make(map[string]*model.MarketInfo)
 	instTypes := []string{`SPOT`, `SWAP`}
 	for _, instType := range instTypes {
-		responseBody := sendSignRequestOKEX(``, ``, http.MethodGet,
-			model.AppConfig.RestUrls[model.OKEX]+"/api/v5/public/instruments",
-			map[string]interface{}{`instId`: instType})
+		path := fmt.Sprintf(`/api/v5/public/instruments?%s`,
+			util.ComposeParams(map[string]interface{}{`instType`: instType}))
+		responseBody := sendSignRequestOKEX(``, ``, http.MethodGet, path, nil)
 		resultJson, err := util.NewJSON(responseBody)
 		if err == nil && resultJson != nil && resultJson.Get(`data`) != nil {
 			for _, info := range resultJson.Get(`data`).MustArray() {
@@ -176,7 +192,21 @@ func getMarketsOKEX() (marketInfos map[string]*model.MarketInfo) {
 					if value[`tickSz`] != nil {
 						marketInfo.PriceIncrement, _ = strconv.ParseFloat(value[`tickSz`].(string), 64)
 					}
+					if value[`ctVal`] != nil {
+						marketInfo.CTValue, _ = strconv.ParseFloat(value[`ctVal`].(string), 64)
+					}
+					if value[`ctValCcy`] != nil {
+						marketInfo.CTCurrency = value[`ctValCcy`].(string)
+					}
 					marketInfos[marketInfo.Name] = marketInfo
+					//if instType == `SWAP` && strings.Contains(marketInfo.Name, `-USDT-SWAP`) {
+					//	symbol := strings.Split(marketInfo.Name, `-`)[0] + `-USDT`
+					//	if marketInfos[symbol] != nil {
+					//		fmt.Println(marketInfo.Name)
+					//	} else {
+					//		fmt.Println(`do not have ` + marketInfo.Name)
+					//	}
+					//}
 				}
 			}
 		}
@@ -193,8 +223,7 @@ func cancelOrdersOKEX(key, secret, instrument string) (result bool, code, msg st
 	for i, order := range orders {
 		postData[i] = map[string]string{`instId`: instrument, `ordId`: order.OrderId}
 	}
-	responseBody := sendSignRequestOKEX(key, secret, http.MethodPost,
-		model.AppConfig.RestUrls[model.OKEX]+"/api/v5/trade/cancel-batch-orders", postData)
+	responseBody := sendSignRequestOKEX(key, secret, http.MethodPost, "/api/v5/trade/cancel-batch-orders", postData)
 	resultJson, err := util.NewJSON(responseBody)
 	if err == nil && resultJson != nil {
 		code = resultJson.Get(`code`).MustString()
@@ -207,7 +236,7 @@ func cancelOrdersOKEX(key, secret, instrument string) (result bool, code, msg st
 
 func cancelOrderOkex(key, secret, instrument string, orderId string) (result bool, errCode, msg string) {
 	postData := map[string]interface{}{`instId`: instrument, `ordId`: orderId}
-	uri := model.AppConfig.RestUrls[model.OKEX] + "/api/v5/trade/cancel-order"
+	uri := "/api/v5/trade/cancel-order"
 	responseBody := sendSignRequestOKEX(key, secret, http.MethodPost, uri, postData)
 	orderJson, err := util.NewJSON(responseBody)
 	cancelResult := false
@@ -242,14 +271,14 @@ func parseOrderOKEX(value map[string]interface{}) (order *model.Order) {
 	if value[`px`] != nil {
 		order.Price, _ = strconv.ParseFloat(value[`px`].(string), 64)
 	}
-	if value[`sz`] != nil {
-		order.Amount, _ = strconv.ParseFloat(value[`sz`].(string), 64)
-	}
 	if value[`ordType`] != nil { // market：市价单 limit：限价单 post_only：只做maker单 fok：全部成交或立即取消 ioc：立即成交并取消剩余
 		order.OrderType = value[`ordType`].(string)
 	}
 	if value[`side`] != nil {
 		order.OrderSide = value[`side`].(string)
+	}
+	if value[`sz`] != nil {
+		order.Amount, _ = strconv.ParseFloat(value[`sz`].(string), 64)
 	}
 	if value[`accFillSz`] != nil {
 		order.DealAmount, _ = strconv.ParseFloat(value[`accFillSz`].(string), 64)
@@ -277,13 +306,17 @@ func parseOrderOKEX(value map[string]interface{}) (order *model.Order) {
 		ts, _ := strconv.ParseInt(value[`cTime`].(string), 10, 64)
 		order.OrderTime = time.Unix(ts/1000, 0)
 	}
+	if strings.Contains(order.Instrument, `SWAP`) || len(strings.Split(order.Instrument, `-`)) > 2 {
+		_, order.Amount = parseRealAmount(model.OKEX, order.Instrument, order.Amount)
+		_, order.DealAmount = parseRealAmount(model.OKEX, order.Instrument, order.DealAmount)
+	}
 	return order
 }
 
 func queryPendingOrdersOKEX(key, secret, instrument string) (orders []*model.Order) {
-	responseBody := sendSignRequestOKEX(key, secret, http.MethodGet,
-		model.AppConfig.RestUrls[model.OKEX]+"/api/v5/trade/orders-pending",
-		map[string]interface{}{`instId`: instrument})
+	path := fmt.Sprintf("/api/v5/trade/orders-pending?%s",
+		util.ComposeParams(map[string]interface{}{`instId`: instrument}))
+	responseBody := sendSignRequestOKEX(key, secret, http.MethodGet, path, nil)
 	orderJson, err := util.NewJSON(responseBody)
 	if err != nil || orderJson == nil || orderJson.Get(`data`) == nil {
 		return
@@ -301,9 +334,9 @@ func queryPendingOrdersOKEX(key, secret, instrument string) (orders []*model.Ord
 }
 
 func queryOrderOKEX(key, secret, instrument string, orderId string) (order *model.Order) {
-	responseBody := sendSignRequestOKEX(key, secret, http.MethodGet,
-		model.AppConfig.RestUrls[model.OKEX]+"/api/v5/trade/order",
-		map[string]interface{}{"ordId": orderId, "instId": instrument})
+	path := fmt.Sprintf(`/api/v5/trade/order?%s`,
+		util.ComposeParams(map[string]interface{}{"ordId": orderId, "instId": instrument}))
+	responseBody := sendSignRequestOKEX(key, secret, http.MethodGet, path, nil)
 	orderJson, err := util.NewJSON(responseBody)
 	if err != nil || orderJson == nil || orderJson.Get(`data`) == nil {
 		return nil
@@ -331,7 +364,7 @@ func getTransferOKEX(key, secret string) (balances []*model.Balance) {
 			}
 		}
 	}
-	response = SignedRequestOKSwap(key, secret, http.MethodGet, `/api/v5/asset/withdrawal-history`, nil)
+	response = sendSignRequestOKEX(key, secret, http.MethodGet, `/api/v5/asset/withdrawal-history`, nil)
 	responseJson, err = util.NewJSON(response)
 	if err == nil && responseJson != nil && responseJson.Get(`data`) != nil {
 		transfers := responseJson.Get(`data`).MustArray()
@@ -343,6 +376,50 @@ func getTransferOKEX(key, secret string) (balances []*model.Balance) {
 		}
 	}
 	return balances
+}
+
+func parsePositionOKEX(value map[string]interface{}) (success bool, position *model.Position) {
+	position = &model.Position{Market: model.OKEX}
+	if value[`lever`] != nil { // 杠杆倍数，不适用于期权
+		position.LeverRate, _ = strconv.ParseInt(value[`lever`].(string), 10, 64)
+	}
+	if value[`liqPx`] != nil { // 预估强平价 不适用于跨币种保证金模式下交割/永续的全仓 不适用于期权
+		position.LiquidationPrice, _ = strconv.ParseFloat(value[`liqPx`].(string), 64)
+	}
+	if value[`mmr`] != nil { // 维持保证金
+		position.MinimumMaintenanceMargin, _ = strconv.ParseFloat(value[`mmr`].(string), 64)
+	}
+	if value[`avgPx`] != nil { // 开仓平均价
+		position.EntryPrice, _ = strconv.ParseFloat(value[`avgPx`].(string), 64)
+	}
+	if value[`upl`] != nil { // 未实现收益
+		position.ProfitUnreal, _ = strconv.ParseFloat(value[`upl`].(string), 64)
+	}
+	if value[`uTime`] != nil { // 最近一次持仓更新时间，Unix时间戳的毫秒数格式，如 1597026383085
+		position.Ts, _ = strconv.ParseInt(value[`uTime`].(string), 10, 64)
+	}
+	// 持仓方向 long：双向持仓多头 short：双向持仓空头 net：单向持仓（交割/永续/期权：pos为正代表多头，pos为负代表空头。
+	// 币币杠杆：posCcy为交易货币时，代表多头；posCcy为计价货币时，代表空头。）
+	if value[`posSide`] != nil {
+		position.Direction = value[`posSide`].(string)
+	}
+	if value[`margin`] != nil { // 保证金余额，可增减，仅适用于逐仓
+		position.Margin, _ = strconv.ParseFloat(value[`margin`].(string), 64)
+	}
+	if value[`instId`] != nil { // 	产品ID，如 BTC-USD-180216
+		position.Currency = value[`instId`].(string)
+	}
+	//posCcy 仓位资产币种，仅适用于币币杠杆仓位
+	if value[`pos`] != nil {
+		pos, _ := strconv.ParseFloat(value[`pos`].(string), 64)
+		if strings.Contains(position.Currency, `SWAP`) || len(strings.Split(position.Currency, `-`)) > 2 {
+			success, position.Free = parseRealAmount(model.OKEX, position.Currency, pos)
+		} else {
+			position.Free = pos
+		}
+	}
+	//pos 持仓数量
+	return
 }
 
 func parseBalanceOKEX(value map[string]interface{}) (balance *model.Balance) {
@@ -391,23 +468,118 @@ func parseBalanceOKEX(value map[string]interface{}) (balance *model.Balance) {
 	if value[`crossLiab`] != nil {
 		balance.Borrow, _ = strconv.ParseFloat(value[`crossLiab`].(string), 64)
 	}
+	balance.AvailableWithBorrow = balance.Available
 	return
 }
 
-func getBalanceOKEX(key, secret string) (balances []*model.Balance) {
+func getBalanceOKEX(key, secret string) (success bool, balances []*model.Balance) {
 	response := sendSignRequestOKEX(key, secret, http.MethodGet, `/api/v5/account/balance`, nil)
 	responseJson, err := util.NewJSON(response)
-	if err != nil || responseJson == nil || responseJson.Get(`data`) == nil {
+	if err != nil || responseJson == nil || responseJson.GetPath(`data`) == nil {
 		util.SocketInfo(`fail to get okex balance `)
 		time.Sleep(time.Second * 2)
 		return getBalanceOKEX(key, secret)
 	}
 	balances = make([]*model.Balance, 0)
+	if responseJson.Get(`code`).MustString() == `0` {
+		success = true
+	}
 	balanceArray := responseJson.Get(`data`).MustArray()
-	balances = make([]*model.Balance, 0)
-	for _, item := range balanceArray {
+	if len(balanceArray) == 0 {
+		return
+	}
+	details := balanceArray[0].(map[string]interface{})[`details`]
+	for _, item := range details.([]interface{}) {
 		balance := parseBalanceOKEX(item.(map[string]interface{}))
 		balances = append(balances, balance)
 	}
-	return balances
+	return success, balances
+}
+
+func getAccountConfigOKEX(key, secret string) (mode string) {
+	response := sendSignRequestOKEX(key, secret, http.MethodGet, `/api/v5/account/config`, nil)
+	responseJson, err := util.NewJSON(response)
+	if err != nil || responseJson.Get(`data`) == nil || len(responseJson.Get(`data`).MustArray()) == 0 {
+		return ``
+	}
+	data := responseJson.Get(`data`).MustArray()[0].(map[string]interface{})
+	return data[`posMode`].(string)
+}
+
+func setAccountModeOKEX(key, secret string) (success bool) {
+	response := sendSignRequestOKEX(key, secret, http.MethodPost, `/api/v5/account/set-position-mode`,
+		map[string]interface{}{`posMode`: `net_mode`})
+	responseJson, err := util.NewJSON(response)
+	if err != nil || responseJson.Get(`code`).MustString() != `0` {
+		return false
+	}
+	return true
+}
+
+// todo 目前只支持永续 swap
+func getPositionsOKEX(key, secret string) (success bool, positions []*model.Position) {
+	path := fmt.Sprintf("/api/v5/account/positions?%s",
+		util.ComposeParams(map[string]interface{}{"instType": `SWAP`}))
+	responseBody := sendSignRequestOKEX(key, secret, http.MethodGet, path, nil)
+	responseJson, err := util.NewJSON(responseBody)
+	if err != nil || responseJson == nil || responseJson.Get(`data`) == nil {
+		util.SocketInfo(`fail to get okex positions `)
+		time.Sleep(time.Second * 2)
+		return getPositionsOKEX(key, secret)
+	}
+	if responseJson.Get(`code`).MustString() == `0` {
+		success = true
+	}
+	positions = make([]*model.Position, 0)
+	positionArray := responseJson.Get(`data`).MustArray()
+	for _, item := range positionArray {
+		result, position := parsePositionOKEX(item.(map[string]interface{}))
+		if result {
+			positions = append(positions, position)
+		} else {
+			success = false
+		}
+	}
+	return success, positions
+}
+
+//getCandlesOKEX
+func _(key, secret, symbol, binSize string, start, end time.Time, count int) (
+	candles map[string]*model.Candle) {
+	candles = make(map[string]*model.Candle)
+	param := make(map[string]interface{})
+	if binSize == `1d` {
+		param[`resolution`] = `86400`
+	}
+	param[`limit`] = fmt.Sprintf(`%d`, count)
+	param[`start_time`] = fmt.Sprintf(`%d`, start.Unix())
+	param[`end_time`] = fmt.Sprintf(`%d`, end.Unix())
+	response := SignedRequestFtx(key, secret, `GET`,
+		fmt.Sprintf(`/markets/%s/candles`, symbol), param, nil)
+	candleJson, err := util.NewJSON(response)
+	if err == nil {
+		candleJsons := candleJson.Get(`result`).MustArray()
+		for _, value := range candleJsons {
+			item := value.(map[string]interface{})
+			candle := &model.Candle{Market: model.Ftx, SymbolInstrument: symbol, Period: binSize}
+			if item[`open`] != nil {
+				candle.PriceOpen, _ = item[`open`].(json.Number).Float64()
+			}
+			if item[`close`] != nil {
+				candle.PriceClose, _ = item[`close`].(json.Number).Float64()
+			}
+			if item[`high`] != nil {
+				candle.PriceHigh, _ = item[`high`].(json.Number).Float64()
+			}
+			if item[`low`] != nil {
+				candle.PriceLow, _ = item[`low`].(json.Number).Float64()
+			}
+			if item[`startTime`] != nil {
+				startTime, _ := time.Parse(time.RFC3339, item[`startTime`].(string))
+				candle.UTCDate = startTime.Format(time.RFC3339)[0:10]
+				candles[candle.UTCDate] = candle
+			}
+		}
+	}
+	return
 }

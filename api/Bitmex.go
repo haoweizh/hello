@@ -90,7 +90,8 @@ func WsDepthServeBitmex(markets *model.Markets, errHandler ErrHandler) (chan str
 		case `order`:
 			handleOrder(markets, action, data)
 		case `position`:
-			handleAccount(action, data)
+			// todo handle position
+			//handleAccount(action, data)
 		}
 	}
 	return WebSocketClient(model.Bitmex, model.AppConfig.WSUrls[model.Bitmex], model.SubscribeDepth,
@@ -98,28 +99,28 @@ func WsDepthServeBitmex(markets *model.Markets, errHandler ErrHandler) (chan str
 		subscribeHandlerBitmex, wsHandler, errHandler)
 }
 
-func parseAccount(account *model.Position, item map[string]interface{}) {
-	if item == nil {
-		return
-	}
-	if item[`symbol`] != nil {
-		account.Currency = model.GetStandardSymbol(model.Bitmex, item[`symbol`].(string))
-	}
-	if item[`currentQty`] != nil {
-		free, err := item[`currentQty`].(json.Number).Float64()
-		if err == nil {
-			account.Free = free
-		}
-	}
-	if item[`avgEntryPrice`] != nil {
-		price, err := item[`avgEntryPrice`].(json.Number).Float64()
-		if err == nil {
-			account.EntryPrice = price
-		}
-	}
-	account.Ts = util.GetNowUnixMillion()
-	return
-}
+//func parseAccount(account *model.Position, item map[string]interface{}) {
+//	if item == nil {
+//		return
+//	}
+//	if item[`symbol`] != nil {
+//		account.Currency = model.GetStandardSymbol(model.Bitmex, item[`symbol`].(string))
+//	}
+//	if item[`currentQty`] != nil {
+//		free, err := item[`currentQty`].(json.Number).Float64()
+//		if err == nil {
+//			account.Free = free
+//		}
+//	}
+//	if item[`avgEntryPrice`] != nil {
+//		price, err := item[`avgEntryPrice`].(json.Number).Float64()
+//		if err == nil {
+//			account.EntryPrice = price
+//		}
+//	}
+//	account.Ts = util.GetNowUnixMillion()
+//	return
+//}
 
 func parseQuote(item map[string]interface{}) (bid, ask *model.Tick, quoteTime time.Time, symbol string) {
 	if item == nil {
@@ -526,22 +527,22 @@ func handleOrderBook(markets *model.Markets, action string, data []interface{}) 
 	}
 }
 
-func handleAccount(action string, data []interface{}) {
-	for _, value := range data {
-		account := &model.Position{Market: model.Bitmex, Ts: util.GetNowUnixMillion()}
-		parseAccount(account, value.(map[string]interface{}))
-		switch action {
-		case `partial`:
-			model.AppAccounts.SetAccount(model.Bitmex, account.Currency, account)
-		case `update`:
-			preAccount := model.AppAccounts.GetAccount(model.Bitmex, account.Currency)
-			if preAccount != nil {
-				parseAccount(preAccount, value.(map[string]interface{}))
-			}
-			model.AppAccounts.SetAccount(model.Bitmex, account.Currency, preAccount)
-		}
-	}
-}
+//func handleAccount(action string, data []interface{}) {
+//	for _, value := range data {
+//		account := &model.Position{Market: model.Bitmex, Ts: util.GetNowUnixMillion()}
+//		parseAccount(account, value.(map[string]interface{}))
+//		switch action {
+//		case `partial`:
+//			model.AppAccounts.SetAccount(model.Bitmex, account.Currency, account)
+//		case `update`:
+//			preAccount := model.AppAccounts.GetAccount(model.Bitmex, account.Currency)
+//			if preAccount != nil {
+//				parseAccount(preAccount, value.(map[string]interface{}))
+//			}
+//			model.AppAccounts.SetAccount(model.Bitmex, account.Currency, preAccount)
+//		}
+//	}
+//}
 
 func handleTrade(markets *model.Markets, action string, data []interface{}) {
 	switch action {

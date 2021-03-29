@@ -179,10 +179,13 @@ func Maintain() {
 		model.AppDB.AutoMigrate(&model.Score{})
 		model.AppDB.AutoMigrate(&model.Candle{})
 		model.AppDB.AutoMigrate(&model.Balance{})
-		model.AppDB.AutoMigrate(&model.FundingRate{})
+		//model.AppDB.AutoMigrate(&model.FundingRate{})
 	}
 	//model.LoadSettings()
-	api.InitMarketInfos()
+	if !api.InitMarketInfos() {
+		util.Notice(`fatal error: can not set okex account mode to net!!`)
+		return
+	}
 	//go CheckPastRefresh()
 	go MaintainTransFee(model.KeyDefault, model.SecretDefault)
 	//go util.StartMidNightTimer(CancelAllOrders)

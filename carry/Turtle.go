@@ -75,7 +75,7 @@ func calcTurtleAmount(setting *model.Setting, price, n float64) (amount float64)
 			amount *= 1
 		}
 	case model.OKFUTURE, model.HuobiDM:
-		coin := setting.GetCoin()
+		coin := model.GetCoin(setting.Market, setting.Symbol)
 		balance := api.GetBalance(``, ``, setting.Market, coin, 60)
 		if balance != nil {
 			p := balance.Amount * price
@@ -424,7 +424,7 @@ func placeTurtleOrders(turtleData *TurtleData, setting *model.Setting,
 			setting.AmountLimit, orderSide, turtleData.end1, turtleData.highDays20, turtleData.highDays10,
 			turtleData.highDays5, turtleData.lowDays20, turtleData.lowDays10, turtleData.lowDays5))
 		order := api.MustPlaceOrder(model.KeyDefault, model.SecretDefault, orderSide, typeLong, setting.Market,
-			setting.Symbol, turtleData.instrument, ``, setting.AccountType, ``, model.FunctionTurtle,
+			setting.Symbol, turtleData.instrument, setting.AccountType, ``, model.FunctionTurtle,
 			priceLong*(1+turtleTriggerDelta), priceLong, amount, true)
 		if order != nil && order.OrderId != `` && order.Status != model.CarryStatusFail {
 			turtleData.orderLong = order
@@ -460,7 +460,7 @@ func placeTurtleOrders(turtleData *TurtleData, setting *model.Setting,
 			setting.AmountLimit, orderSide, turtleData.end1, turtleData.highDays20, turtleData.highDays10,
 			turtleData.highDays5, turtleData.lowDays20, turtleData.lowDays10, turtleData.lowDays5))
 		order := api.MustPlaceOrder(model.KeyDefault, model.SecretDefault, orderSide, typeShort, setting.Market,
-			setting.Symbol, turtleData.instrument, ``, setting.AccountType, ``, model.FunctionTurtle,
+			setting.Symbol, turtleData.instrument, setting.AccountType, ``, model.FunctionTurtle,
 			priceShort*(1-turtleTriggerDelta), priceShort, amount, true)
 		if order != nil && order.OrderId != `` && order.Status != model.CarryStatusFail {
 			turtleData.orderShort = order

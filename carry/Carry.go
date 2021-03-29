@@ -127,8 +127,12 @@ func clearCarryBalance() {
 		for _, market := range markets {
 			keys, secrets := model.AppConfig.GetKeys(market)
 			for i, key := range keys {
-				_, balances := api.GetBalances(key, secrets[i], market, 0)
-				_, accounts := api.GetAccounts(key, secrets[i], market)
+				resultBalance, balances := api.GetBalances(key, secrets[i], market, 0)
+				resultPosition, positions := api.GetPositions(key, secrets[i], market)
+				if !resultBalance || !resultPosition {
+					util.Notice(`fatal error: can not get balance/position ` + market)
+					continue
+				}
 				balanceAllValue := 0.0
 				localUsdAvailable := 0.0
 				for _, value := range balances {
@@ -138,10 +142,10 @@ func clearCarryBalance() {
 					if settingCoins[coin] {
 						balanceAllValue += value.UsdValue
 					}
-					if coin == `USD` {
-						localUsdAvailable = value.Available
-						setUsdAvailable(key, value.Available)
-						balanceAllValue += value.Available
+					if (coin == `USD` && market == model.Ftx) || (coin == `USDT` && market == model.OKEX) {
+						localUsdAvailable = value.Amount
+						setUsdAvailable(key, value.Amount)
+						balanceAllValue += value.Amount
 					}
 				}
 				setUsdRate(key, localUsdAvailable/balanceAllValue)
@@ -151,7 +155,7 @@ func clearCarryBalance() {
 				settings := model.GetSettings(model.FunctionCarry, market)
 				for _, items := range settings {
 					for _, item := range items {
-						makeEqual(key, secrets[i], item, balances, accounts)
+						makeEqual(key, secrets[i], item, balances, positions)
 					}
 				}
 			}
@@ -213,7 +217,9 @@ var ProcessCarry = func(setting *model.Setting, tick *model.BidAsk) {
 	for i := begin; i >= 0 && i < len(keys); i += step {
 		sidePerp, sideRelated, amount := calcCarryOpen(setting, tickPerp, tickRelated, keys[i], setting.Symbol,
 			setting.Symbol, scoreOpen, scoreClose, scoreOpen, scoreClose)
-		if amount > 0 {
+		amountPerp := api.FormatAmount(setting.Market, setting.Symbol, amount)
+		amountRelated := api.FormatAmount(setting.Market, setting.GetRelatedSymbol(), amount)
+		if amount > 0 && amountPerp > 0 && amountRelated > 0 {
 			go placeCarry(setting, tickPerp, tickRelated, keys[i], secrets[i], sidePerp, sideRelated,
 				scoreOpen, scoreClose, amount)
 			break
@@ -230,7 +236,7 @@ func placeCarry(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, key
 		return
 	}
 	symbolRelated := setting.GetRelatedSymbol()
-	balance := getCarryBalance(key, setting.GetCoin())
+	balance := getCarryBalance(key, model.GetCoin(setting.Market, setting.Symbol))
 	if balance == nil {
 		return
 	}
@@ -259,10 +265,10 @@ func placeCarry(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, key
 		tickRelated.Bids[0].Amount, tickRelated.Asks[0].Price, tickRelated.Asks[0].Amount, scoreOpen, scoreClose,
 		0.0, amount, amount*tickPerp.Asks[0].Price, util.GetNowUnixMillion()))
 	go api.PlaceOrder(key, secret, sidePerp, model.OrderTypeLimit, setting.Market, setting.Symbol,
-		``, ``, ``, ``, model.FunctionCarry, perpPrice, perpPrice,
+		``, ``, ``, model.FunctionCarry, perpPrice, perpPrice,
 		amount, true)
 	api.PlaceOrder(key, secret, sideRelated, model.OrderTypeLimit, setting.Market, symbolRelated,
-		``, ``, ``, ``, model.FunctionCarry, relatedPrice, relatedPrice,
+		``, ``, ``, model.FunctionCarry, relatedPrice, relatedPrice,
 		amount, true)
 	keys, _ := model.AppConfig.GetKeys(setting.Market)
 	if key == keys[0] {
@@ -272,33 +278,39 @@ func placeCarry(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, key
 	}
 }
 
-func getCarryAmounts(setting *model.Setting, balances []*model.Balance, accounts []*model.Position) (
+func getCarryAmounts(setting *model.Setting, balances []*model.Balance, positions []*model.Position) (
 	success bool, amountPerp, amountRelated float64) {
-	for _, account := range accounts {
-		if account != nil && account.Currency == setting.Symbol {
-			amountPerp = account.Free
-			for _, balance := range balances {
-				if strings.ToUpper(balance.Coin)+`-PERP` == strings.ToUpper(account.Currency) {
-					amountRelated = balance.Amount
-					return true, amountPerp, amountRelated
-				}
-			}
+	tail := ``
+	switch setting.Market {
+	case model.Ftx:
+		tail = `-PERP`
+	case model.OKEX:
+		tail = `-USDT-SWAP`
+	}
+	for _, position := range positions {
+		if position != nil && position.Currency == setting.Symbol {
+			amountPerp = position.Free
 		}
 	}
-	return false, amountPerp, amountRelated
+	for _, balance := range balances {
+		if strings.ToUpper(balance.Coin+tail) == setting.Symbol {
+			amountRelated = balance.Amount
+		}
+	}
+	return true, amountPerp, amountRelated
 }
 
-func makeEqual(key, secret string, setting *model.Setting, balances []*model.Balance, accounts []*model.Position) (
+func makeEqual(key, secret string, setting *model.Setting, balances []*model.Balance, positions []*model.Position) (
 	symbol string, price float64, equal bool) {
 	settingSymbol := setting.Symbol
-	coin := setting.GetCoin()
+	coin := model.GetCoin(setting.Market, setting.Symbol)
 	symbolRelated := setting.GetRelatedSymbol()
 	_, tickPerp := model.AppMarkets.GetBidAsk(setting.Symbol, setting.Market)
 	_, tickRelated := model.AppMarkets.GetBidAsk(symbolRelated, setting.Market)
 	if tickPerp == nil || tickRelated == nil {
 		return ``, 0, true
 	}
-	success, amountPerp, amountRelated := getCarryAmounts(setting, balances, accounts)
+	success, amountPerp, amountRelated := getCarryAmounts(setting, balances, positions)
 	if !success {
 		return
 	}
@@ -344,20 +356,20 @@ func makeEqual(key, secret string, setting *model.Setting, balances []*model.Bal
 			symbol = symbolRelated
 			price = tickRelated.Asks[0].Price * (1 + OrderPriceLimit)
 		}
-		balance := getCarryBalance(key, `USD`)
-		if symbol == symbolRelated && (balance != nil && balance.Borrow > 0) {
+		usdBalance := getCarryBalance(key, `USD`)
+		if symbol == symbolRelated && (usdBalance != nil && usdBalance.Borrow > 0) {
 			amount = 0
 		}
 	}
 	amount = math.Min(math.Abs(amount), 20000/price)
-	amount = api.FormatAmount(setting.Market, symbol, math.Abs(amount))
-	if amount > 0 {
+	orderAmount := api.FormatAmount(setting.Market, symbol, math.Abs(amount))
+	if orderAmount > 0 {
 		resultPerp := api.CancelOrders(key, secret, setting.Market, settingSymbol)
 		resultRelated := api.CancelOrders(key, secret, setting.Market, symbolRelated)
 		util.Notice(fmt.Sprintf(`cancel all perp:%v related:%v >>>>>> equal %s %f, %s %f = %s %f`,
 			resultPerp, resultRelated, settingSymbol, amountPerp, symbolRelated, amountRelated, orderSide, amount))
 		api.PlaceOrder(key, secret, orderSide, model.OrderTypeLimit, setting.Market, symbol, ``,
-			``, ``, ``, model.FunctionComplement, price, price, amount, true)
+			``, ``, model.FunctionComplement, price, price, amount, true)
 	}
 	return
 }
@@ -368,10 +380,9 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	setOpen := setting.OpenShortMargin
 	setClose := setting.CloseShortMargin
 	valueLow := setting.AmountLimit
-	usdBalance := getCarryBalance(key, `USD`)
 	usdRate := getUsdRate(key)
 	usdAvailable := getUsdAvailable(key)
-	coin := setting.GetCoin()
+	coin := model.GetCoin(setting.Market, setting.Symbol)
 	balance := getCarryBalance(key, coin)
 	if balance == nil {
 		model.SetCarryInfo(`warning `+coin, fmt.Sprintf(`slave: balace not available!!! %s`, key))
@@ -380,9 +391,6 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	} else {
 		model.RemoveCarryInfo(`warning ` + coin)
 		model.RemoveCarryInfos(`coin_absent`, key+`_`+coin)
-	}
-	if usdBalance == nil {
-		return ``, ``, 0
 	}
 	balanceAllValue := getBalanceAll(key)
 	coinRate := math.Abs(balance.UsdValue) / balanceAllValue
@@ -445,9 +453,6 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 		amount = math.Min(amount, usdAvailable/markPrice)
 	}
 	amount = math.Min(amount, localOpenValueLimit/markPrice)
-	amountPerp := api.FormatAmount(setting.Market, setting.Symbol, amount)
-	amountRelated := api.FormatAmount(setting.Market, setting.GetRelatedSymbol(), amount)
-	amount = math.Min(amountPerp, amountRelated)
 	// usd所剩太少且还要再买 || 持仓太多且还要再买 || 下单太小
 	if (sideRelated == model.OrderSideBuy && (usdAvailable < usdLowLine || balance.UsdValue > localUsdUpLine)) ||
 		(sideRelated == model.OrderSideSell && (balance.UsdValue < localUsdUpLine/-10 || balance.UsdValue < -50000.0)) ||

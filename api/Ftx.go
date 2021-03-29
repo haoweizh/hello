@@ -334,13 +334,14 @@ func getBalanceFtx(key, secret string) (success bool, balances []*model.Balance)
 		time.Sleep(time.Second * 2)
 		return getBalanceFtx(key, secret)
 	}
+	success = balanceJson.Get(`success`).MustBool()
 	for _, item := range balanceJson.Get(`result`).MustArray() {
 		balance := parseBalanceFtx(key, item.(map[string]interface{}))
 		if balance != nil {
 			balances = append(balances, balance)
 		}
 	}
-	return true, balances
+	return success, balances
 }
 
 func cancelOrdersFtx(key, secret, symbol string) (result bool) {
@@ -425,26 +426,27 @@ func queryOrderFtx(key, secret, orderId string) (order *model.Order) {
 	return
 }
 
-func getAccountsFtx(key, secret string) (success bool, accounts []*model.Position) {
+func getPositionsFtx(key, secret string) (success bool, positions []*model.Position) {
 	postData := make(map[string]interface{})
 	response := SignedRequestFtx(key, secret, `GET`, `/positions`, nil, postData)
 	positionJson, err := util.NewJSON(response)
 	if err != nil || positionJson == nil || positionJson.Get(`success`).MustBool() != true {
 		util.SocketInfo(`fail to refresh account ftx`)
 		time.Sleep(time.Second * 2)
-		return getAccountsFtx(key, secret)
+		return getPositionsFtx(key, secret)
 	}
+	success = positionJson.Get(`success`).MustBool()
 	positionJson = positionJson.Get(`result`)
-	accounts = make([]*model.Position, 0)
+	positions = make([]*model.Position, 0)
 	if positionJson != nil {
 		data := positionJson.MustArray()
 		for _, item := range data {
-			account := &model.Position{Market: model.Ftx, Ts: util.GetNowUnixMillion()}
-			parseAccountFtx(account, item.(map[string]interface{}))
-			accounts = append(accounts, account)
+			position := &model.Position{Market: model.Ftx, Ts: util.GetNowUnixMillion()}
+			parsePositionFtx(position, item.(map[string]interface{}))
+			positions = append(positions, position)
 		}
 	}
-	return true, accounts
+	return success, positions
 }
 
 //func getAccountFtx(key, secret string, accounts *model.Accounts) (success bool) {
@@ -553,37 +555,35 @@ func getFundingRatesFtx() (fundingRates []*model.FundingRate) {
 	return fundingRates
 }
 
-func parseAccountFtx(account *model.Position, item map[string]interface{}) {
+func parsePositionFtx(position *model.Position, item map[string]interface{}) {
 	if item[`entryPrice`] != nil {
-		account.EntryPrice, _ = item[`entryPrice`].(json.Number).Float64()
+		position.EntryPrice, _ = item[`entryPrice`].(json.Number).Float64()
 	}
 	if item[`estimatedLiquidationPrice`] != nil {
-		account.LiquidationPrice, _ = item[`estimatedLiquidationPrice`].(json.Number).Float64()
+		position.LiquidationPrice, _ = item[`estimatedLiquidationPrice`].(json.Number).Float64()
 	}
 	if item[`future`] != nil {
-		account.Currency = item[`future`].(string)
+		position.Currency = item[`future`].(string)
 	}
 	if item[`netSize`] != nil {
-		account.Free, _ = item[`netSize`].(json.Number).Float64()
-		account.Holding = account.Free
+		position.Free, _ = item[`netSize`].(json.Number).Float64()
 		//account.Free = account.Free * account.EntryPrice
 	}
 	if item[`realizedPnl`] != nil {
-		account.ProfitReal, _ = item[`realizedPnl`].(json.Number).Float64()
+		position.ProfitReal, _ = item[`realizedPnl`].(json.Number).Float64()
 	}
 	if item[`side`] != nil {
-		account.Direction = item[`side`].(string)
+		position.Direction = item[`side`].(string)
 	}
 	if item[`bust_price`] != nil {
-		account.BankruptcyPrice, _ = strconv.ParseFloat(item[`bust_price`].(string), 64)
+		position.BankruptcyPrice, _ = strconv.ParseFloat(item[`bust_price`].(string), 64)
 	}
 	if item[`position_margin`] != nil {
-		account.Margin, _ = strconv.ParseFloat(item[`position_margin`].(string), 64)
+		position.Margin, _ = strconv.ParseFloat(item[`position_margin`].(string), 64)
 	}
 	if item[`unrealizedPnl`] != nil {
-		account.ProfitUnreal, _ = item[`unrealizedPnl`].(json.Number).Float64()
+		position.ProfitUnreal, _ = item[`unrealizedPnl`].(json.Number).Float64()
 	}
-
 }
 
 //remainingSize	number	31431.0

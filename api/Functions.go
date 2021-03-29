@@ -5,7 +5,6 @@ import (
 	"hello/model"
 	"hello/util"
 	"math"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -115,7 +114,7 @@ func GetAmountDecimal(market, symbol string) float64 {
 	case model.OKEX:
 		switch symbol {
 		case `eos_usdt`, `btc_usdt`:
-			return 4
+			return 44
 		}
 	case model.Bitmex, model.Bybit, model.OKSwap:
 		return 0
@@ -339,11 +338,11 @@ func GetBalances(key, secret, market string, delaySeconds int64) (success bool, 
 	case model.Ftx:
 		success, balances = getBalanceFtx(key, secret)
 	case model.OKEX:
-		balances = getBalanceOKEX(key, secret)
+		success, balances = getBalanceOKEX(key, secret)
 	case model.OKFUTURE:
-		success, balances = getBalanceOkfuture(key, secret, model.AppAccounts)
+		success, balances = getBalanceOkfuture(key, secret)
 	case model.HuobiDM:
-		success, balances = getBalanceHuobiDM(key, secret, model.AppAccounts)
+		success, balances = getBalanceHuobiDM(key, secret)
 	}
 	model.SetBalance(market, balances, now)
 	return
@@ -490,10 +489,12 @@ func QueryOrderById(key, secret, market, symbol, instrument, orderType, orderId 
 		Status: status, Instrument: instrument, OrderType: orderType}
 }
 
-func GetAccounts(key, secret, market string) (success bool, positions []*model.Position) {
+func GetPositions(key, secret, market string) (success bool, positions []*model.Position) {
 	switch market {
 	case model.Ftx:
-		return getAccountsFtx(key, secret)
+		return getPositionsFtx(key, secret)
+	case model.OKEX:
+		return getPositionsOKEX(key, secret)
 	}
 	return false, nil
 }
@@ -538,11 +539,11 @@ func GetAccounts(key, secret, market string) (success bool, positions []*model.P
 //	}
 //}
 
-func MustPlaceOrder(key, secret, orderSide, orderType, market, symbol, instrument, amountType, accountType, orderParam,
+func MustPlaceOrder(key, secret, orderSide, orderType, market, symbol, instrument, accountType, orderParam,
 	refreshType string, price, triggerPrice, amount float64, saveDB bool) (order *model.Order) {
 	retry := 10
 	for i := 0; i < retry; i++ {
-		order = PlaceOrder(key, secret, orderSide, orderType, market, symbol, instrument, amountType, accountType,
+		order = PlaceOrder(key, secret, orderSide, orderType, market, symbol, instrument, accountType,
 			orderParam, refreshType, price, triggerPrice, amount, saveDB)
 		if order != nil && order.OrderId != `` {
 			break
@@ -561,7 +562,7 @@ func MustPlaceOrder(key, secret, orderSide, orderType, market, symbol, instrumen
 // orderSide: OrderSideBuy OrderSideSell OrderSideLiquidateLong OrderSideLiquidateShort
 // orderType: OrderTypeLimit OrderTypeMarket
 // amount:如果是限价单或市价卖单，amount是左侧币种的数量，如果是市价买单，amount是右测币种的数量
-func PlaceOrder(key, secret, orderSide, orderType, market, symbol, instrument, amountType, accountType, orderParam,
+func PlaceOrder(key, secret, orderSide, orderType, market, symbol, instrument, accountType, orderParam,
 	refreshType string, price, triggerPrice, amount float64, saveDB bool) (order *model.Order) {
 	if instrument == `` {
 		instrument = symbol
@@ -605,14 +606,9 @@ func PlaceOrder(key, secret, orderSide, orderType, market, symbol, instrument, a
 	case model.Huobi:
 		placeOrderHuobi(key, secret, order, orderSide, orderType, symbol, strPrice, strAmount)
 	case model.HuobiDM:
-		account := model.AppAccounts.GetAccount(market, symbol)
-		lever := `5`
-		if account != nil {
-			lever = strconv.FormatInt(account.LeverRate, 10)
-		}
-		placeOrderHuobiDM(key, secret, order, orderSide, orderType, instrument, symbol, lever, strPrice, strTriggerPrice, strAmount)
+		placeOrderHuobiDM(key, secret, order, orderSide, orderType, instrument, symbol, strPrice, strTriggerPrice, strAmount)
 	case model.OKEX:
-		placeOrderOKEX(key, secret, order, strPrice, strAmount)
+		placeOrderOKEX(key, secret, order)
 	case model.OKFUTURE:
 		placeOrderOkfuture(key, secret, order, orderSide, orderType, symbol, instrument, strPrice, strTriggerPrice, strAmount)
 	case model.Binance:
@@ -631,22 +627,22 @@ func PlaceOrder(key, secret, orderSide, orderType, market, symbol, instrument, a
 		placeOrderFtx(order, key, secret, orderSide, orderType, accountType, orderParam, symbol, strPrice,
 			strTriggerPrice, fmt.Sprintf(`%f`, amount))
 	case model.OKSwap:
-		account := model.AppAccounts.GetAccount(model.OKSwap, model.OrderSideSell+symbol)
-		if orderSide == model.OrderSideSell {
-			account = model.AppAccounts.GetAccount(model.OKSwap, model.OrderSideBuy+symbol)
-			if amountType != model.AmountTypeNew && account != nil && account.Free > amount*100 { // 平多
-				orderSide = `3`
-			} else { // 开空
-				orderSide = `2`
-			}
-		} else if orderSide == model.OrderSideBuy {
-			if amountType != model.AmountTypeNew && account != nil && math.Abs(account.Free) > amount*100 { // 平空
-				orderSide = `4`
-			} else { // 开多
-				orderSide = `1`
-			}
-		}
-		placeOrderOKSwap(order, key, secret, orderSide, `0`, symbol, strPrice, strAmount)
+		//account := model.AppAccounts.GetAccount(model.OKSwap, model.OrderSideSell+symbol)
+		//if orderSide == model.OrderSideSell {
+		//	account = model.AppAccounts.GetAccount(model.OKSwap, model.OrderSideBuy+symbol)
+		//	if amountType != model.AmountTypeNew && account != nil && account.Free > amount*100 { // 平多
+		//		orderSide = `3`
+		//	} else { // 开空
+		//		orderSide = `2`
+		//	}
+		//} else if orderSide == model.OrderSideBuy {
+		//	if amountType != model.AmountTypeNew && account != nil && math.Abs(account.Free) > amount*100 { // 平空
+		//		orderSide = `4`
+		//	} else { // 开多
+		//		orderSide = `1`
+		//	}
+		//}
+		//placeOrderOKSwap(order, key, secret, orderSide, `0`, symbol, strPrice, strAmount)
 	}
 	if order.OrderId == "0" || order.OrderId == "" {
 		order.Status = model.CarryStatusFail
@@ -674,9 +670,6 @@ func GetWSSubscribes(market, subType string) []interface{} {
 				subscribes = append(subscribes, subscribe)
 			}
 		}
-		//if market == model.OKSwap {
-		//	subscribes = append(subscribes, model.GetWSSubscribePos(market, symbol))
-		//}
 	}
 	if market == model.Bitmex || market == model.Bybit {
 		subscribes = append(subscribes, `position`)
@@ -779,7 +772,8 @@ func InitCarryFtx(start uint) {
 }
 
 // 只支持现货spot和永续PERP SWAP
-func InitMarketInfos() {
+func InitMarketInfos() (success bool) {
+	success = true
 	markets := model.GetMarkets()
 	for _, market := range markets {
 		switch market {
@@ -787,14 +781,40 @@ func InitMarketInfos() {
 			model.MarketInfos[model.Ftx] = getMarketsFtx()
 		case model.OKEX:
 			model.MarketInfos[model.OKEX] = getMarketsOKEX()
+			if getAccountConfigOKEX(``, ``) != `net_mode` {
+				if !setAccountModeOKEX(``, ``) {
+					success = false
+				}
+			}
 		}
 	}
+	return success
+}
+
+func FormatPrice(market, symbol string, price float64) (formattedPrice float64) {
+	marketInfo := model.MarketInfos[market][symbol]
+	if marketInfo == nil || marketInfo.SizeIncrement == 0 {
+		return 0
+	}
+	return marketInfo.PriceIncrement * math.Round(price/marketInfo.PriceIncrement)
+}
+
+func parseRealAmount(market, symbol string, amount float64) (success bool, realAmount float64) {
+	marketInfo := model.MarketInfos[market][symbol]
+	if marketInfo == nil || marketInfo.SizeIncrement == 0 || marketInfo.CTValue == 0 ||
+		marketInfo.CTCurrency != model.GetCoin(market, symbol) {
+		return false, 0
+	}
+	return true, amount * marketInfo.CTValue
 }
 
 func FormatAmount(market, symbol string, amount float64) (formattedAmount float64) {
 	marketInfo := model.MarketInfos[market][symbol]
 	if marketInfo == nil || marketInfo.SizeIncrement == 0 {
 		return 0
+	}
+	if marketInfo.CTValue > 0 && marketInfo.CTCurrency == model.GetCoin(market, symbol) {
+		amount = amount / marketInfo.CTValue
 	}
 	formattedAmount = math.Floor(amount/marketInfo.SizeIncrement) * marketInfo.SizeIncrement
 	if formattedAmount < marketInfo.SizeMin {
@@ -822,7 +842,7 @@ func InitFtxBalance(key, secret, function string) {
 	}
 	i := 0
 	for _, items := range settings {
-		coin := items[0].GetCoin()
+		coin := model.GetCoin(items[0].Market, items[0].Symbol)
 		balance := balanceMap[coin]
 		if balance == nil {
 			if model.MarketInfos[model.Ftx] == nil {
@@ -833,7 +853,7 @@ func InitFtxBalance(key, secret, function string) {
 				continue
 			}
 			order := PlaceOrder(key, secret, model.OrderSideBuy, model.OrderTypeMarket, model.Ftx, items[0].Symbol, ``,
-				``, ``, ``, ``, 0, 0, marketInfo.SizeIncrement, false)
+				``, ``, ``, 0, 0, marketInfo.SizeIncrement, false)
 			if order.OrderId == `` {
 				i++
 				fmt.Println(fmt.Sprintf(`%d order return :%s %s`, i, order.ErrCode, items[0].Symbol))

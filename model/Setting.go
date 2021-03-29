@@ -52,7 +52,7 @@ func GetSettingCoins(function, market string) (coins map[string]bool) {
 			if setting == nil {
 				continue
 			}
-			coins[setting.GetCoin()] = true
+			coins[GetCoin(setting.Market, setting.Symbol)] = true
 		}
 	}
 	return
@@ -223,17 +223,22 @@ func (setting *Setting) GetRelatedSymbol() (related string) {
 	return related
 }
 
-func (setting *Setting) GetCoin() (coin string) {
-	switch setting.Market {
+func GetCoin(market, symbol string) (coin string) {
+	switch market {
 	case Ftx, OKFUTURE: // ftx:BTC-PERP okfuture:btc-usd
-		parts := strings.Split(setting.Symbol, `-`)
+		parts := strings.Split(symbol, `-`)
 		if len(parts) == 2 {
 			coin = parts[0]
 		}
 	case HuobiDM: // btc_cq
-		parts := strings.Split(setting.Symbol, `_`)
+		parts := strings.Split(symbol, `_`)
 		if len(parts) == 2 {
 			coin = parts[0]
+		}
+	case OKEX:
+		index := strings.Index(symbol, `-`)
+		if index > 0 {
+			coin = symbol[0:index]
 		}
 	}
 	return coin
