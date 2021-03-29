@@ -135,16 +135,12 @@ func sendSignRequestOKEX(key, secret, method, path string, body interface{}) (re
 
 func placeOrderOKEX(key, secret string, order *model.Order) {
 	price := fmt.Sprintf(`%v`, FormatPrice(model.OKEX, order.Instrument, order.Price))
-	tdMode := `cash`
 	amount := fmt.Sprintf(`%v`, FormatAmount(model.OKEX, order.Instrument, order.Amount))
 	if price == `0` || amount == `0` {
 		order.Status = model.CarryStatusFail
 		return
 	}
-	if strings.Contains(order.Instrument, `SWAP`) || len(strings.Split(order.Instrument, `-`)) > 2 {
-		tdMode = `cross`
-	}
-	postData := map[string]interface{}{`instId`: order.Instrument, `tdMode`: tdMode, `side`: order.OrderSide,
+	postData := map[string]interface{}{`instId`: order.Instrument, `tdMode`: `cross`, `side`: order.OrderSide,
 		`sz`: amount, `px`: price, `ordType`: order.OrderType}
 	responseBody := sendSignRequestOKEX(key, secret, http.MethodPost, "/api/v5/trade/order", postData)
 	orderJson, err := util.NewJSON(responseBody)
