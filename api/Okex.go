@@ -133,9 +133,12 @@ func sendSignRequestOKEX(key, secret, method, path string, body interface{}) (re
 	return responseBody
 }
 
+// amount、price不能使用 fmt %v 因为有e+5 的情况；不能使用 fmt %f 因为有000后缀；不能使用 strconv.FormatFloat 因为有 2.00000001问题
 func placeOrderOKEX(key, secret string, order *model.Order) {
 	price := fmt.Sprintf(`%f`, FormatPrice(model.OKEX, order.Instrument, order.Price))
 	amount := fmt.Sprintf(`%f`, FormatAmount(model.OKEX, order.Instrument, order.Amount, true))
+	price = util.CutTailZero(price)
+	amount = util.CutTailZero(amount)
 	if price == `0` || amount == `0` {
 		order.Status = model.CarryStatusFail
 		return
