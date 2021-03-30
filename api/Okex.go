@@ -106,7 +106,7 @@ func sendSignRequestOKEX(key, secret, method, path string, body interface{}) (re
 	current := time.Now().In(time.UTC).Format(time.RFC3339)
 	// , `x-simulated-trading`: `1`
 	headers := map[string]string{`OK-ACCESS-KEY`: key, `OK-ACCESS-PASSPHRASE`: model.AppConfig.Phase,
-		"OK-ACCESS-TIMESTAMP": current, "Content-Type": "application/json", `x-simulated-trading`: `1`}
+		"OK-ACCESS-TIMESTAMP": current, "Content-Type": "application/json"}
 	postContent := ``
 	if method == http.MethodPost {
 		postContent = string(util.JsonEncodeToByte(body))
