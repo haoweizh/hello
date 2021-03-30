@@ -211,11 +211,11 @@ func clearCarryBalance() {
 						setUsdAvailable(key, value.Amount)
 						balanceAllValue += value.Amount
 					}
-					success, bidAsk := model.AppMarkets.GetBidAsk(coin+getSpotTail(market), model.OKEX)
+					success, bidAsk := model.AppMarkets.GetBidAsk(coin+getSpotTail(market), market)
 					if success {
 						borrow += value.Borrow * bidAsk.Bids[0].Price
 					} else {
-						util.Notice(fmt.Sprintf(`fatal: can not get price `))
+						util.Notice(fmt.Sprintf(`fatal: can not get price %s %s`, market, coin))
 					}
 				}
 				localUsdAvailable = localUsdAvailable - borrow
