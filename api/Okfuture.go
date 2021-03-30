@@ -433,7 +433,7 @@ func getCandlesOkfuture(key, secret, symbol, instrument, binSize string, start, 
 			if len(item) < 5 {
 				continue
 			}
-			candle := &model.Candle{Market: model.OKFUTURE, SymbolInstrument: symbol, Period: binSize}
+			candle := &model.Candle{Market: model.OKFUTURE, Symbol: symbol, Period: binSize}
 			candle.PriceOpen, _ = strconv.ParseFloat(item[1].(string), 64)
 			candle.PriceHigh, _ = strconv.ParseFloat(item[2].(string), 64)
 			candle.PriceLow, _ = strconv.ParseFloat(item[3].(string), 64)

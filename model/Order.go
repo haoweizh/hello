@@ -40,15 +40,3 @@ type Order struct {
 	Hidden            bool    //是否隐藏
 	OrderUpdateTime   time.Time
 }
-
-type Score struct {
-	Symbol    string
-	OrderSide string
-	Point     float64
-	Amount    float64
-	Price     float64
-	Position  int
-	ID        uint `gorm:"primary_key"`
-	CreatedAt time.Time
-	UpdatedAt time.Time
-}

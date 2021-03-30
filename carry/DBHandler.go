@@ -173,11 +173,8 @@ func Maintain() {
 	model.HandlerMap[model.FunctionPostonlyHandler] = PostonlyHandler
 	defer model.AppDB.Close()
 	if model.AppConfig.Env != `test` {
-		model.AppDB.AutoMigrate(&model.Position{})
 		model.AppDB.AutoMigrate(&model.Setting{})
 		model.AppDB.AutoMigrate(&model.Order{})
-		model.AppDB.AutoMigrate(&model.Score{})
-		model.AppDB.AutoMigrate(&model.Candle{})
 		model.AppDB.AutoMigrate(&model.Balance{})
 	}
 	//model.LoadSettings()

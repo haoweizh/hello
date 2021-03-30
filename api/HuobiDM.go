@@ -407,7 +407,7 @@ func getCandlesHuobiDM(key, secret, symbol, binSize string, start, end time.Time
 		candleJsons := candleJson.Get(`data`).MustArray()
 		for _, value := range candleJsons {
 			item := value.(map[string]interface{})
-			candle := &model.Candle{Market: model.HuobiDM, SymbolInstrument: symbol, Period: binSize}
+			candle := &model.Candle{Market: model.HuobiDM, Symbol: symbol, Period: binSize}
 			if item[`open`] != nil {
 				candle.PriceOpen, _ = item[`open`].(json.Number).Float64()
 			}

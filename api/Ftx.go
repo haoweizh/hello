@@ -205,7 +205,7 @@ func getCandlesFtx(key, secret, symbol, binSize string, start, end time.Time, co
 		candleJsons := candleJson.Get(`result`).MustArray()
 		for _, value := range candleJsons {
 			item := value.(map[string]interface{})
-			candle := &model.Candle{Market: model.Ftx, SymbolInstrument: symbol, Period: binSize}
+			candle := &model.Candle{Market: model.Ftx, Symbol: symbol, Period: binSize}
 			if item[`open`] != nil {
 				candle.PriceOpen, _ = item[`open`].(json.Number).Float64()
 			}

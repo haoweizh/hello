@@ -747,7 +747,7 @@ func getCandlesBitmex(key, secret, symbol, binSize string, start, end time.Time,
 			duration, _ := time.ParseDuration(`-24h`)
 			for _, value := range candleJsons {
 				item := value.(map[string]interface{})
-				candle := &model.Candle{Market: model.Bitmex, SymbolInstrument: symbol, Period: binSize}
+				candle := &model.Candle{Market: model.Bitmex, Symbol: symbol, Period: binSize}
 				if item[`open`] != nil {
 					candle.PriceOpen, _ = item[`open`].(json.Number).Float64()
 				}

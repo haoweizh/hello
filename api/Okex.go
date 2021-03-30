@@ -4,7 +4,6 @@ import (
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/base64"
-	"encoding/json"
 	"fmt"
 	"hello/model"
 	"hello/util"
@@ -578,29 +577,23 @@ func getCandlesOKEX(key, secret, symbol, binSize string, before, after time.Time
 		symbol, binSize, before.UnixNano()/int64(time.Millisecond), after.UnixNano()/int64(time.Millisecond), count)
 	response := sendSignRequestOKEX(key, secret, http.MethodGet, path, nil)
 	candleJson, err := util.NewJSON(response)
-	if err == nil {
-		candleJsons := candleJson.Get(`result`).MustArray()
-		for _, value := range candleJsons {
-			item := value.(map[string]interface{})
-			candle := &model.Candle{Market: model.Ftx, SymbolInstrument: symbol, Period: binSize}
-			if item[`open`] != nil {
-				candle.PriceOpen, _ = item[`open`].(json.Number).Float64()
-			}
-			if item[`close`] != nil {
-				candle.PriceClose, _ = item[`close`].(json.Number).Float64()
-			}
-			if item[`high`] != nil {
-				candle.PriceHigh, _ = item[`high`].(json.Number).Float64()
-			}
-			if item[`low`] != nil {
-				candle.PriceLow, _ = item[`low`].(json.Number).Float64()
-			}
-			if item[`startTime`] != nil {
-				startTime, _ := time.Parse(time.RFC3339, item[`startTime`].(string))
-				candle.UTCDate = startTime.Format(time.RFC3339)[0:10]
-				candles[candle.UTCDate] = candle
-			}
+	if err != nil || candleJson == nil || candleJson.Get(`data`) == nil || len(candleJson.Get(`data`).MustArray()) == 0 {
+		return
+	}
+	candleJsons := candleJson.Get(`data`).MustArray()
+	for _, value := range candleJsons {
+		item := value.([]interface{})
+		if len(item) < 7 {
+			continue
 		}
+		candle := &model.Candle{Market: model.OKEX, Symbol: symbol, Period: strings.ToLower(binSize)}
+		ts, _ := strconv.ParseInt(item[0].(string), 10, 64)
+		candle.UTCDate = time.Unix(ts/1000, 0).In(time.UTC).Format(time.RFC3339)[:10]
+		candle.PriceOpen, _ = strconv.ParseFloat(item[1].(string), 64)
+		candle.PriceHigh, _ = strconv.ParseFloat(item[2].(string), 64)
+		candle.PriceLow, _ = strconv.ParseFloat(item[3].(string), 64)
+		candle.PriceClose, _ = strconv.ParseFloat(item[4].(string), 64)
+		candles[candle.UTCDate] = candle
 	}
 	return
 }
