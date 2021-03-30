@@ -133,7 +133,10 @@ func sendSignRequestOKEX(key, secret, method, path string, body interface{}) (re
 	return responseBody
 }
 
-// amount、price不能使用 fmt %v 因为有e+5 的情况；不能使用 fmt %f 因为有000后缀；不能使用 strconv.FormatFloat 因为有 2.00000001问题
+// amount、price
+// 不能使用 fmt %v 因为有e+5 的情况；
+// 不能使用 fmt %f 因为有000后缀；
+// 不能使用 strconv.FormatFloat 因为有 2.00000001问题
 func placeOrderOKEX(key, secret string, order *model.Order) {
 	price := fmt.Sprintf(`%f`, FormatPrice(model.OKEX, order.Instrument, order.Price))
 	amount := fmt.Sprintf(`%f`, FormatAmount(model.OKEX, order.Instrument, order.Amount, true))
@@ -567,19 +570,13 @@ func getPositionsOKEX(key, secret string) (success bool, positions []*model.Posi
 	return success, positions
 }
 
-//getCandlesOKEX
-func _(key, secret, symbol, binSize string, start, end time.Time, count int) (
+// bar 1m/3m/5m/15m/30m/1H/2H/4H/6H/12H/1D/1W/1M/3M/6M/1Y
+func getCandlesOKEX(key, secret, symbol, binSize string, before, after time.Time, count int) (
 	candles map[string]*model.Candle) {
 	candles = make(map[string]*model.Candle)
-	param := make(map[string]interface{})
-	if binSize == `1d` {
-		param[`resolution`] = `86400`
-	}
-	param[`limit`] = fmt.Sprintf(`%d`, count)
-	param[`start_time`] = fmt.Sprintf(`%d`, start.Unix())
-	param[`end_time`] = fmt.Sprintf(`%d`, end.Unix())
-	response := SignedRequestFtx(key, secret, `GET`,
-		fmt.Sprintf(`/markets/%s/candles`, symbol), param, nil)
+	path := fmt.Sprintf(`/api/v5/market/candles?instId=%s&bar=%s&before=%d&after=%d&limit=%d`,
+		symbol, binSize, before.UnixNano()/int64(time.Millisecond), after.UnixNano()/int64(time.Millisecond), count)
+	response := sendSignRequestOKEX(key, secret, http.MethodGet, path, nil)
 	candleJson, err := util.NewJSON(response)
 	if err == nil {
 		candleJsons := candleJson.Get(`result`).MustArray()

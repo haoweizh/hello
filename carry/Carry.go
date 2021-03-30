@@ -12,7 +12,6 @@ import (
 )
 
 const OrderPriceLimit = 0
-const UsdUpLine = 500000.0 //单币种持仓最大限额，正负范围
 const revertDis = 0.005
 const openValueLimit = 10000.0
 
@@ -125,6 +124,16 @@ func checkSetCarrying(value bool) (before bool) {
 	}
 }
 
+func getSpotTail(market string) string {
+	switch market {
+	case model.Ftx:
+		return `/USD`
+	case model.OKEX:
+		return `-USDT`
+	}
+	return ``
+}
+
 func getPerpTail(market string) string {
 	switch market {
 	case model.Ftx:
@@ -189,6 +198,7 @@ func clearCarryBalance() {
 				}
 				balanceAllValue := 0.0
 				localUsdAvailable := 0.0
+				borrow := 0.0
 				for _, value := range balances {
 					coin := strings.ToUpper(value.Coin)
 					setCarryBalance(key, coin, value)
@@ -201,7 +211,14 @@ func clearCarryBalance() {
 						setUsdAvailable(key, value.Amount)
 						balanceAllValue += value.Amount
 					}
+					success, bidAsk := model.AppMarkets.GetBidAsk(coin+getSpotTail(market), model.OKEX)
+					if success {
+						borrow += value.Borrow * bidAsk.Bids[0].Price
+					} else {
+						util.Notice(fmt.Sprintf(`fatal: can not get price `))
+					}
 				}
+				localUsdAvailable = localUsdAvailable - borrow
 				setUsdRate(key, localUsdAvailable/balanceAllValue)
 				setBalanceAll(key, balanceAllValue)
 				util.Notice(fmt.Sprintf(`[carry] %s usd:%f %f len(blances):%d`,
@@ -220,7 +237,6 @@ func clearCarryBalance() {
 	}
 }
 
-// todo: getAccount
 // setting.GridPriceDistance: 收回下单是要求的利润(可以为负数)
 var ProcessCarry = func(setting *model.Setting, tick *model.BidAsk) {
 	if !doCarry {
@@ -432,8 +448,6 @@ func makeEqual(key, secret string, setting *model.Setting, balances []*model.Bal
 func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, key, symbolHigh, symbolLow string,
 	scoreOpen, scoreClose, scoreHigh, scoreLow float64) (sidePerp, sideRelated string, amount float64) {
 	var bidAmount, askAmount float64
-	setOpen := setting.OpenShortMargin
-	setClose := setting.CloseShortMargin
 	valueLow := setting.AmountLimit
 	usdRate := getUsdRate(key)
 	usdAvailable := getUsdAvailable(key)
@@ -453,43 +467,44 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	usdLowLine := model.AppConfig.Amount
 	keys, _ := model.AppConfig.GetKeys(setting.Market)
 	localOpenValueLimit := math.Min(openValueLimit, 0.5*balanceAllValue)
-	localUsdUpLine := UsdUpLine
-	setOpen = (1.5 - usdRate) * setOpen
-	revert := math.Abs(setting.GridPriceDistance) * (usdRate - 0.5)
-	setClose = -1
 	table := fmt.Sprintf(`%s_dynamic_`, model.FunctionCarry)
 	if len(keys) > 1 && keys[0] != key {
 		table += `slave`
 		localOpenValueLimit = 6666
 		valueLow = 0
 		usdLowLine = 30000
-		localUsdUpLine = 60000
 	}
 	jump := 7.0
 	jumpRevert := 5.0
-	setOpen = math.Max(setOpen*(0.5+jump*coinRate), 0.003)
-	if revert > 0 {
-		revert = revert / (1 + jumpRevert*coinRate)
-	} else {
-		revert = revert / (1 - math.Min(0.9, jumpRevert*coinRate))
+	setOpen := math.Max((1.5-usdRate)*setting.OpenShortMargin*(0.5+jump*coinRate), 0.003)
+	setClose := -1.0
+	if setting.Market == model.OKEX {
+		setClose = math.Min(setting.CloseShortMargin*(0.5+jump*coinRate), -0.003)
 	}
-	revert = math.Max(revert, -0.003)
+	revertOpen := math.Abs(setting.GridPriceDistance) * (usdRate - 0.5)
+	if revertOpen > 0 {
+		revertOpen = revertOpen / (1 + jumpRevert*coinRate)
+	} else {
+		revertOpen = revertOpen / (1 - math.Min(0.9, jumpRevert*coinRate))
+	}
+	revertOpen = math.Max(revertOpen, -0.003)
+	revertClose := -0.0005 / (1 - math.Min(0.9, jumpRevert*coinRate))
 	model.SetCarryInfo(table+setting.Symbol,
-		fmt.Sprintf(`%s 参数:(%f %f %f) 计算结果(%f %f %f) 当前市场(%f %f) usdRate:%favailable:%f coinRate: %f`,
+		fmt.Sprintf(`%s 参数:(%f %f %f) 计算结果(%f %f %f %f) 当前市场(%f %f) usdRate:%favailable:%f coinRate: %f`,
 			table, setting.OpenShortMargin, setting.CloseShortMargin, setting.GridPriceDistance, setOpen, setClose,
-			revert, scoreOpen, scoreClose, usdRate, usdAvailable, coinRate))
+			revertOpen, revertClose, scoreOpen, scoreClose, usdRate, usdAvailable, coinRate))
 	carryInfo := map[string]interface{}{`+开仓`: setting.OpenShortMargin, `-开仓`: setting.CloseShortMargin,
-		`平仓`: setting.GridPriceDistance, `动态+开仓`: setOpen, `动态-开仓`: setClose, `动态平仓`: revert,
-		table: setting.Symbol, `市场+开`: scoreOpen, `市场-开`: scoreClose, `usdRate`: usdRate,
+		`平仓`: setting.GridPriceDistance, `动态+开仓`: setOpen, `动态-开仓`: setClose, `open平仓`: revertOpen,
+		`close平仓`: revertClose, table: setting.Symbol, `市场+开`: scoreOpen, `市场-开`: scoreClose, `usdRate`: usdRate,
 		`usdAvailable`: usdAvailable, `coinRate`: coinRate}
 	model.SetCarryInfos(table, setting.Symbol, carryInfo)
 	carryAmount := getCarryAmount(key, setting.Symbol)
-	if (scoreLow < setClose && setting.Symbol == symbolLow) || (carryAmount > 0 && scoreClose <= -1*revert) {
+	if (scoreLow < setClose && setting.Symbol == symbolLow) || (carryAmount > 0 && scoreClose <= -1*revertOpen) {
 		bidAmount = tickPerp.Asks[0].Amount
 		askAmount = tickRelated.Bids[0].Amount
 		sidePerp = model.OrderSideBuy
 		sideRelated = model.OrderSideSell
-	} else if (scoreHigh > setOpen && setting.Symbol == symbolHigh) || (carryAmount < 0 && scoreOpen >= revert) {
+	} else if (scoreHigh > setOpen && setting.Symbol == symbolHigh) || (carryAmount < 0 && scoreOpen >= revertClose) {
 		bidAmount = tickRelated.Asks[0].Amount
 		askAmount = tickPerp.Bids[0].Amount
 		sidePerp = model.OrderSideSell
@@ -509,9 +524,9 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 		amount = math.Min(amount, usdAvailable/markPrice)
 	}
 	amount = math.Min(amount, localOpenValueLimit/markPrice)
-	// usd所剩太少且还要再买 || 持仓太多且还要再买 || 下单太小
-	if (sideRelated == model.OrderSideBuy && (usdAvailable < usdLowLine || balance.UsdValue > localUsdUpLine)) ||
-		(sideRelated == model.OrderSideSell && (balance.UsdValue < localUsdUpLine/-10 || balance.UsdValue < -50000.0)) ||
+	// usd所剩太少且还要再买 || 反向持仓太多且还要再卖 || 下单太小
+	if (sideRelated == model.OrderSideBuy && (usdAvailable < usdLowLine || (balance.UsdValue > 0 && coinRate > 0.5))) ||
+		(sideRelated == model.OrderSideSell && (balance.UsdValue < 0 && coinRate > 0.5)) ||
 		math.Abs(amount)*markPrice < valueLow {
 		amount = 0
 	}

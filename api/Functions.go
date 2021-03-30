@@ -266,6 +266,8 @@ func GetDayCandle(key, secret, market, symbol, instrument string, timeCandle tim
 		candles = getCandlesBitmex(key, secret, symbol, `1d`, begin, end, 20)
 	case model.Ftx:
 		candles = getCandlesFtx(key, secret, symbol, `1d`, begin, end, 20)
+	case model.OKEX:
+		candles = getCandlesOKEX(key, secret, symbol, `1D`, begin, end, 20)
 	case model.OKFUTURE:
 		candles = getCandlesOkfuture(key, secret, symbol, instrument, `1d`, begin, end)
 	case model.HuobiDM:
