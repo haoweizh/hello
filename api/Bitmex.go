@@ -772,7 +772,7 @@ func getCandlesBitmex(key, secret, symbol, binSize string, start, end time.Time,
 	return
 }
 
-func getBtcBalanceBitmex(key, secret string) (balance float64) {
+func GetBtcBalanceBitmex(key, secret string) (balance float64) {
 	postData := make(map[string]interface{})
 	postData[`currency`] = `XBt`
 	response := SignedRequestBitmex(key, secret, `GET`, `/user/margin`, postData)
@@ -780,7 +780,7 @@ func getBtcBalanceBitmex(key, secret string) (balance float64) {
 	if err != nil || balanceJson == nil || balanceJson.Get(`marginBalance`) == nil {
 		time.Sleep(time.Second * 2)
 		util.SocketInfo(`fail to get btc balance binance`)
-		return getBtcBalanceBitmex(key, secret)
+		return GetBtcBalanceBitmex(key, secret)
 	}
 	balanceJson = balanceJson.Get(`marginBalance`)
 	if balanceJson != nil {

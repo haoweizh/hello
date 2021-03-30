@@ -189,7 +189,7 @@ func clearCarryBalance() {
 		for _, market := range markets {
 			keys, secrets := model.AppConfig.GetKeys(market)
 			for i, key := range keys {
-				resultBalance, balances := api.GetBalances(key, secrets[i], market, 0)
+				resultBalance, balances, _ := api.GetBalances(key, secrets[i], market, 0)
 				resultPosition, positions := api.GetPositions(key, secrets[i], market)
 				setPositions(key, positions)
 				if !resultBalance || !resultPosition {
@@ -210,6 +210,7 @@ func clearCarryBalance() {
 						localUsdAvailable = value.Amount
 						setUsdAvailable(key, value.Amount)
 						balanceAllValue += value.Amount
+						borrow += value.Borrow
 					}
 					success, bidAsk := model.AppMarkets.GetBidAsk(coin+getSpotTail(market), market)
 					if success {
@@ -474,7 +475,7 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 		valueLow = 0
 		usdLowLine = 30000
 	}
-	jump := 7.0
+	jump := 5.0
 	jumpRevert := 5.0
 	setOpen := math.Max((1.5-usdRate)*setting.OpenShortMargin*(0.5+jump*coinRate), 0.003)
 	setClose := -1.0

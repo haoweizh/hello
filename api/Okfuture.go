@@ -228,7 +228,7 @@ func getHoldingOkfuture(key, secret, instrument string) (long, short float64) {
 // orderSide:  1:开多 2:开空 3:平多 4:平空
 // orderType: 是否为对手价 0:不是 1:是
 // price == `0` 市价单， != `0` 限价单
-func placeOrderOkfuture(key, secret string, order *model.Order, orderSide, orderType, symbol, instrument, price, triggerPrice, size string) {
+func placeOrderOkfuture(key, secret string, order *model.Order, orderSide, orderType, instrument, price, triggerPrice, size string) {
 	switch orderSide {
 	case model.OrderSideBuy:
 		orderSide = `1`
@@ -241,7 +241,7 @@ func placeOrderOkfuture(key, secret string, order *model.Order, orderSide, order
 		if long < sizeFloat {
 			order.Amount = long
 			util.Notice(fmt.Sprintf(`holding okfuture size %s long: %f`, size, long))
-			_, strAmount := util.FormatNum(long, GetAmountDecimal(model.OKFUTURE, symbol))
+			_, strAmount := util.FormatNum(long, GetAmountDecimal(model.OKFUTURE))
 			size = strAmount
 		}
 	case model.OrderSideLiquidateShort:
@@ -251,7 +251,7 @@ func placeOrderOkfuture(key, secret string, order *model.Order, orderSide, order
 		if math.Abs(short) < sizeFloat {
 			order.Amount = short
 			util.Notice(fmt.Sprintf(`holding okfuture size %s to %f`, size, short))
-			_, strAmount := util.FormatNum(math.Abs(short), GetAmountDecimal(model.OKFUTURE, symbol))
+			_, strAmount := util.FormatNum(math.Abs(short), GetAmountDecimal(model.OKFUTURE))
 			size = strAmount
 		}
 	default:

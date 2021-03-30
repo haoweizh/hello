@@ -325,7 +325,7 @@ func getTransferFtx(key, secret string) (balances []*model.Balance) {
 	return
 }
 
-func getBalanceFtx(key, secret string) (success bool, balances []*model.Balance) {
+func getBalanceFtx(key, secret string) (success bool, balances []*model.Balance, totalInUsd float64) {
 	balances = make([]*model.Balance, 0)
 	response := SignedRequestFtx(key, secret, `GET`, `/wallet/balances`, nil, nil)
 	balanceJson, err := util.NewJSON(response)
@@ -339,9 +339,10 @@ func getBalanceFtx(key, secret string) (success bool, balances []*model.Balance)
 		balance := parseBalanceFtx(key, item.(map[string]interface{}))
 		if balance != nil {
 			balances = append(balances, balance)
+			totalInUsd += balance.UsdValue
 		}
 	}
-	return success, balances
+	return success, balances, totalInUsd
 }
 
 func cancelOrdersFtx(key, secret, symbol string) (result bool) {

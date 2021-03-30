@@ -38,7 +38,7 @@ func getSimpleGriding() (value bool) {
 func calcGridAmount(market, symbol string, price float64) (amount float64) {
 	switch market {
 	case model.Ftx:
-		value := api.GetUSDBalance(``, ``, market)
+		_, _, value := api.GetBalances(``, ``, market, 0)
 		switch symbol {
 		case `BTC-PERP`: //使用15分之一的资本
 			amount = math.Round(value/price) / 15

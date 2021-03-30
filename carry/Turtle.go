@@ -52,25 +52,19 @@ var dataSet = make(map[string]map[string]map[string]*TurtleData) // market - sym
 func calcTurtleAmount(setting *model.Setting, price, n float64) (amount float64) {
 	switch setting.Market {
 	case model.Bitmex:
-		p := api.GetBtcBalance(``, ``, setting.Market)
+		p := api.GetBtcBalanceBitmex(``, ``)
 		switch setting.Symbol {
 		case `btcusd_p`:
 			amount = 0.02 * p / n * price * price
 		case `ethusd_p`:
 			amount = 20000 * p / n
 		}
-	case model.Ftx:
-		p := api.GetUSDBalance(``, ``, setting.Market)
+	case model.Ftx, model.OKEX:
+		_, _, p := api.GetBalances(``, ``, setting.Market, 0)
 		amount = 0.01 * p / n
 		switch setting.Symbol {
 		case `BTC-PERP`, `ETH-PERP`, `EOS-PERP`:
 			amount *= 2
-			if setting.Symbol == `BTC-PERP` {
-				amount, _ = util.FormatNum(amount, 4)
-			}
-			if setting.Symbol == `ETH-PERP` {
-				amount, _ = util.FormatNum(amount, 3)
-			}
 		case `HT-PERP`, `OKB-PERP`, `BNB-PERP`, `BTMX-PERP`:
 			amount *= 1
 		}

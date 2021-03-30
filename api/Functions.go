@@ -77,26 +77,6 @@ func GetPriceDecimal(market, symbol string) float64 {
 		case `ethusd_p`:
 			return 1.5
 		}
-	case model.OKSwap:
-		switch symbol {
-		case `btcusd_p`:
-			return 1
-		case `ethusd_p`:
-			return 2
-		}
-	case model.Ftx:
-		switch symbol {
-		case `BTC-PERP`:
-			return 0
-		case `ETH-PERP`, `LINK-PERP`, `BCH-PERP`, `BSV-PERP`:
-			return 2
-		case `ETC-PERP`:
-			return 4
-		case `EOS-PERP`:
-			return 5
-		case `XRP-PERP`:
-			return 6
-		}
 	case model.HuobiDM:
 		return 2
 	case model.OKFUTURE:
@@ -109,13 +89,8 @@ func GetPriceDecimal(market, symbol string) float64 {
 	return 8
 }
 
-func GetAmountDecimal(market, symbol string) float64 {
+func GetAmountDecimal(market string) float64 {
 	switch market {
-	case model.OKEX:
-		switch symbol {
-		case `eos_usdt`, `btc_usdt`:
-			return 44
-		}
 	case model.Bitmex, model.Bybit, model.OKSwap:
 		return 0
 	case model.OKFUTURE, model.HuobiDM:
@@ -178,7 +153,7 @@ func CancelOrder(key, secret, market, symbol, instrument, orderType, orderId str
 	case model.HuobiDM:
 		result, errCode, msg = cancelOrderHuobiDM(key, secret, symbol, orderId)
 	case model.OKEX:
-		result, errCode, msg = cancelOrderOkex(key, secret, symbol, orderId)
+		result, errCode, msg = cancelOrderOkex(key, secret, symbol, orderId, orderType)
 	case model.OKFUTURE:
 		result, errCode, msg = cancelOrderOkfuture(key, secret, instrument, orderId, orderType)
 	case model.Binance:
@@ -246,6 +221,12 @@ func setInstrument(market, symbol, alias, instrument string) {
 }
 
 func GetDayCandle(key, secret, market, symbol, instrument string, timeCandle time.Time) (candle *model.Candle) {
+	if symbol == `` {
+		symbol = instrument
+	}
+	if instrument == `` {
+		instrument = symbol
+	}
 	candle = model.GetCandle(market, symbol, `1d`, timeCandle.Format(time.RFC3339)[0:10])
 	if candle != nil && candle.N > 0 {
 		return
@@ -303,7 +284,7 @@ func GetDayCandle(key, secret, market, symbol, instrument string, timeCandle tim
 }
 
 func GetBalance(key, secret, market, coin string, delaySeconds int64) (balance *model.Balance) {
-	success, balances := GetBalances(key, secret, market, delaySeconds)
+	success, balances, _ := GetBalances(key, secret, market, delaySeconds)
 	if !success {
 		return
 	}
@@ -315,24 +296,25 @@ func GetBalance(key, secret, market, coin string, delaySeconds int64) (balance *
 	return
 }
 
-func GetBalances(key, secret, market string, delaySeconds int64) (success bool, balances []*model.Balance) {
+func GetBalances(key, secret, market string, delaySeconds int64) (
+	success bool, balances []*model.Balance, totalInUsd float64) {
 	now := util.GetNow().Unix()
 	var update int64
-	balances, update = model.GetBalance(market)
+	balances, totalInUsd, update = model.GetBalance(market)
 	if now-update < delaySeconds {
-		return true, balances
+		return true, balances, totalInUsd
 	}
 	switch market {
 	case model.Ftx:
-		success, balances = getBalanceFtx(key, secret)
+		success, balances, totalInUsd = getBalanceFtx(key, secret)
 	case model.OKEX:
-		success, balances = getBalanceOKEX(key, secret)
+		success, balances, totalInUsd = getBalanceOKEX(key, secret)
 	case model.OKFUTURE:
 		success, balances = getBalanceOkfuture(key, secret)
 	case model.HuobiDM:
 		success, balances = getBalanceHuobiDM(key, secret)
 	}
-	model.SetBalance(market, balances, now)
+	model.SetBalance(market, balances, totalInUsd, now)
 	return
 }
 
@@ -346,35 +328,6 @@ func GetTransfers(key, secret, market string) (balances []*model.Balance) {
 		return getTransferHuobi(key, secret)
 	}
 	return balances
-}
-
-func GetUSDBalance(key, secret, market string) (balance float64) {
-	balance = 0
-	switch market {
-	case model.Ftx:
-		_, balances := getBalanceFtx(key, secret)
-		for _, item := range balances {
-			balance += item.UsdValue * 0.9
-		}
-		//case model.OKFUTURE:
-		//	balance = getUSDBalanceOkfuture(key, secret)
-	}
-	return
-}
-
-func GetBtcBalance(key, secret, market string) (balance float64) {
-	today := util.GetNow()
-	today = time.Date(today.Year(), today.Month(), today.Day(), 0, 0, 0, 0, today.Location())
-	//balance = model.GetBtcBalance(market, today)
-	if balance > 0 {
-		return
-	}
-	switch market {
-	case model.Bitmex:
-		balance = getBtcBalanceBitmex(key, secret)
-		//model.SetBtcBalance(market, today, balance)
-	}
-	return
 }
 
 func GetFundingRate(market, symbol string) (fundingRate interface{}, expireTime int64) {
@@ -537,7 +490,7 @@ func PlaceOrder(key, secret, orderSide, orderType, market, symbol, instrument, a
 	}
 	price, strPrice := util.FormatNum(price, GetPriceDecimal(market, symbol))
 	triggerPrice, strTriggerPrice := util.FormatNum(triggerPrice, GetPriceDecimal(market, symbol))
-	_, strAmount := util.FormatNum(amount, GetAmountDecimal(market, symbol))
+	_, strAmount := util.FormatNum(amount, GetAmountDecimal(market))
 	util.Notice(fmt.Sprintf(`...%s %s %s before order %d amount:%s %f price:%s %f triggerPrice:%s`,
 		orderSide, market, symbol, start, strAmount, amount, strPrice, price, strTriggerPrice))
 	if model.AppConfig.Env == `test` {
@@ -558,7 +511,7 @@ func PlaceOrder(key, secret, orderSide, orderType, market, symbol, instrument, a
 	case model.OKEX:
 		placeOrderOKEX(key, secret, order)
 	case model.OKFUTURE:
-		placeOrderOkfuture(key, secret, order, orderSide, orderType, symbol, instrument, strPrice, strTriggerPrice, strAmount)
+		placeOrderOkfuture(key, secret, order, orderSide, orderType, instrument, strPrice, strTriggerPrice, strAmount)
 	case model.Binance:
 		placeOrderBinance(key, secret, order, orderSide, orderType, symbol, strPrice, strAmount)
 	case model.Coinpark:
@@ -795,7 +748,7 @@ func GetLastPrice(key, secret, market, symbol string) float64 {
 func InitCoinBalance(key, secret, function, market string) {
 	InitMarketInfos()
 	settings := model.GetSettings(function, market)
-	_, balances := GetBalances(key, secret, market, 0)
+	_, balances, _ := GetBalances(key, secret, market, 0)
 	balanceMap := make(map[string]*model.Balance)
 	for _, balance := range balances {
 		balanceMap[balance.Coin] = balance

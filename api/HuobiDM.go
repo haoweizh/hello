@@ -239,7 +239,7 @@ func placeOrderHuobiDM(key, secret string, order *model.Order,
 			holding := math.Abs(position.Free)
 			util.Notice(fmt.Sprintf(`holding huobiDM size %s to %f`, size, holding))
 			if holding < sizeFloat {
-				_, strAmount := util.FormatNum(holding, GetAmountDecimal(model.HuobiDM, symbol))
+				_, strAmount := util.FormatNum(holding, GetAmountDecimal(model.HuobiDM))
 				size = strAmount
 			}
 		} else {
@@ -255,7 +255,7 @@ func placeOrderHuobiDM(key, secret string, order *model.Order,
 			holding := math.Abs(position.Free)
 			util.Notice(fmt.Sprintf(`holding huobiDM size %s to %f`, size, holding))
 			if holding < sizeFloat {
-				_, strAmount := util.FormatNum(holding, GetAmountDecimal(model.HuobiDM, symbol))
+				_, strAmount := util.FormatNum(holding, GetAmountDecimal(model.HuobiDM))
 				size = strAmount
 			}
 		} else {
