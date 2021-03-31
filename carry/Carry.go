@@ -15,6 +15,7 @@ const OrderPriceLimit = 0
 const revertDis = 0.005
 const openValueLimit = 10000.0
 
+var resetInitialized = false
 var carryLock sync.Mutex
 var carrying bool
 var doCarry = false
@@ -219,6 +220,7 @@ func initEmptyBalance(key, market, coin string) (balance *model.Balance) {
 }
 
 func resetTradeMax(market string) {
+	resetInitialized = true
 	if market != model.OKEX {
 		return
 	}
@@ -298,7 +300,7 @@ func clearCarryBalance() {
 			}
 		}
 		util.Notice(`...... exit clearing carry balance`)
-		if time.Now().Minute()%9 == 0 {
+		if time.Now().Minute()%9 == 0 || !resetInitialized {
 			resetTradeMax(model.OKEX)
 		}
 		checkSetCarrying(false)
