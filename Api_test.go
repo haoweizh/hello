@@ -50,6 +50,7 @@ func Test_initTurtleN(t *testing.T) {
 	fmt.Println(util.CutTailZero(`10.566464`))
 	fmt.Println(util.CutTailZero(`0.566464000`))
 	fmt.Println(util.CutTailZero(`0.000`))
+	fmt.Println(util.CutTailZero(`00.003240`))
 	begin := time.Now()
 	time.Sleep(time.Second * 5)
 	duration := begin.Sub(time.Now())

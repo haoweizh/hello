@@ -70,14 +70,15 @@ func test(c *gin.Context) {
 	carryRows, _ := model.AppDB.Model(&model.Order{}).Select(`amount_type,order_side,sum(price*amount),date(order_time),refresh_type`).
 		Group(`order_side,date(order_time),amount_type,refresh_type`).Order(`date(order_time) desc`).Rows()
 	carryBackMsg := ``
-	keys, _ := model.AppConfig.GetKeys(model.Ftx)
+	keysFtx, _ := model.AppConfig.GetKeys(model.Ftx)
+	keysOKEX, _ := model.AppConfig.GetKeys(model.OKEX)
 	if carryRows != nil {
 		for carryRows.Next() {
-			var side, date, amountType, refreshType string
+			var market, side, date, amountType, refreshType string
 			var value float64
-			_ = carryRows.Scan(&amountType, &side, &value, &date, &refreshType)
-			if amountType != keys[0] {
-				carryBackMsg += fmt.Sprintf("交易额 in USD: %s %s %f 类型：%s\n", date, side, value, refreshType)
+			_ = carryRows.Scan(&market, &amountType, &side, &value, &date, &refreshType)
+			if amountType != keysFtx[0] && amountType != keysOKEX[0] {
+				carryBackMsg += fmt.Sprintf("%s交易额 in USD: %s %s %f 类型：%s\n", market, date, side, value, refreshType)
 			}
 		}
 		carryRows.Close()
