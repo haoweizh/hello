@@ -361,8 +361,12 @@ func queryOrderOKEX(key, secret, instrument, orderId, orderType string) (order *
 	}
 	responseBody := sendSignRequestOKEX(key, secret, http.MethodGet, path, nil)
 	orderJson, err := util.NewJSON(responseBody)
-	if err != nil || orderJson == nil || orderJson.Get(`data`) == nil {
+	if err != nil || orderJson == nil || orderJson.Get(`data`) == nil || orderJson.Get(`code`) == nil {
 		return nil
+	}
+	if strings.Trim(orderJson.Get(`code`).MustString(), ` `) == `51603` {
+		return &model.Order{Instrument: instrument, OrderId: orderId, OrderType: orderType,
+			Status: model.CarryStatusFail, Symbol: instrument}
 	}
 	orders := orderJson.Get("data").MustArray()
 	for _, item := range orders {
