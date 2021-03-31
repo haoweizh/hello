@@ -33,25 +33,21 @@ func RequireDepthChanReset(markets *model.Markets, market string) bool {
 	return needReset
 }
 
-func GetPriceDistance(market, symbol string) float64 {
-	switch symbol {
-	case `btcusd_p`:
-		switch market {
-		case model.Bitmex, model.Bybit:
-			return 0.5
-		case model.OKSwap:
-			return 0.1
-		}
-	case `ethusd_p`:
-		switch market {
-		case model.Bitmex, model.Bybit:
-			return 0.05
-		case model.OKSwap:
-			return 0.01
-		}
-	}
-	return 0
-}
+//func GetPriceDistance(market, symbol string) float64 {
+//	switch symbol {
+//	case `btcusd_p`:
+//		switch market {
+//		case model.Bitmex, model.Bybit:
+//			return 0.5
+//		}
+//	case `ethusd_p`:
+//		switch market {
+//		case model.Bitmex, model.Bybit:
+//			return 0.05
+//		}
+//	}
+//	return 0
+//}
 
 // 根据不同的网站返回价格小数位
 func GetPriceDecimal(market, symbol string) float64 {
@@ -91,7 +87,7 @@ func GetPriceDecimal(market, symbol string) float64 {
 
 func GetAmountDecimal(market string) float64 {
 	switch market {
-	case model.Bitmex, model.Bybit, model.OKSwap:
+	case model.Bitmex, model.Bybit:
 		return 0
 	case model.OKFUTURE, model.HuobiDM:
 		return 0
@@ -162,8 +158,6 @@ func CancelOrder(key, secret, market, symbol, instrument, orderType, orderId str
 		result, errCode, msg = cancelOrderBitmex(key, secret, orderId)
 	case model.Bybit:
 		result, errCode, msg, order = cancelOrderBybit(key, secret, symbol, orderId)
-	case model.OKSwap:
-		result = cancelOrderOKSwap(key, secret, symbol, orderId)
 	case model.Ftx:
 		result = cancelOrderFtx(key, secret, orderType, orderId)
 	}
@@ -183,7 +177,7 @@ func GetCurrentInstrument(key, secret, market, symbol string) (currentInstrument
 		querySetter = querySetInstrumentsHuobiDM
 		//nextType = `next_quarter`
 		symbol = symbol[0:strings.Index(symbol, `_`)]
-	case model.OKSwap, model.OKEX:
+	case model.OKEX:
 		return symbol
 	default:
 		return symbol
@@ -305,7 +299,7 @@ func GetTransfers(key, secret, market string) (balances []*model.Balance) {
 	switch market {
 	case model.Ftx:
 		return getTransferFtx(key, secret)
-	case model.OKEX, model.OKSwap, model.OKFUTURE:
+	case model.OKEX, model.OKFUTURE:
 		return getTransferOKEX(key, secret)
 	case model.Huobi, model.HuobiDM:
 		return getTransferHuobi(key, secret)
@@ -327,9 +321,6 @@ func GetFundingRate(market, symbol string) (fundingRate interface{}, expireTime 
 		model.SetFundingRate(market, symbol, fundingRate, expireTime)
 	case model.Bybit:
 		fundingRate, expireTime = getFundingRateBybit(symbol)
-		model.SetFundingRate(market, symbol, fundingRate, expireTime)
-	case model.OKSwap:
-		fundingRate, expireTime = getFundingRateOKSwap(symbol)
 		model.SetFundingRate(market, symbol, fundingRate, expireTime)
 	case model.Ftx:
 		rates := getFundingRatesFtx()
@@ -397,8 +388,6 @@ func QueryOrderById(key, secret, market, symbol, instrument, orderType, orderId 
 				return value
 			}
 		}
-	case model.OKSwap:
-		return queryOrderOKSwap(key, secret, symbol, orderId)
 	case model.Ftx:
 		if orderType == model.OrderTypeStop {
 			newOrderId := queryTriggerOrderId(key, secret, orderId)
@@ -470,9 +459,6 @@ func PlaceOrder(key, secret, orderSide, orderType, market, symbol, instrument, a
 	order = &model.Order{OrderSide: markSide, OrderType: orderType, Market: market, Symbol: symbol, Price: price,
 		Amount: amount, DealAmount: 0, DealPrice: price, RefreshType: refreshType, TriggerPrice: triggerPrice,
 		OrderTime: util.GetNow(), UnfilledQuantity: amount, Instrument: instrument, AmountType: key}
-	if market == model.OKSwap {
-		amount = amount / 100
-	}
 	price, strPrice := util.FormatNum(price, GetPriceDecimal(market, symbol))
 	triggerPrice, strTriggerPrice := util.FormatNum(triggerPrice, GetPriceDecimal(market, symbol))
 	_, strAmount := util.FormatNum(amount, GetAmountDecimal(market))
@@ -512,23 +498,6 @@ func PlaceOrder(key, secret, orderSide, orderType, market, symbol, instrument, a
 	case model.Ftx:
 		placeOrderFtx(order, key, secret, orderSide, orderType, accountType, orderParam, symbol, strPrice,
 			strTriggerPrice, fmt.Sprintf(`%f`, amount))
-	case model.OKSwap:
-		//account := model.AppAccounts.GetAccount(model.OKSwap, model.OrderSideSell+symbol)
-		//if orderSide == model.OrderSideSell {
-		//	account = model.AppAccounts.GetAccount(model.OKSwap, model.OrderSideBuy+symbol)
-		//	if amountType != model.AmountTypeNew && account != nil && account.Free > amount*100 { // 平多
-		//		orderSide = `3`
-		//	} else { // 开空
-		//		orderSide = `2`
-		//	}
-		//} else if orderSide == model.OrderSideBuy {
-		//	if amountType != model.AmountTypeNew && account != nil && math.Abs(account.Free) > amount*100 { // 平空
-		//		orderSide = `4`
-		//	} else { // 开多
-		//		orderSide = `1`
-		//	}
-		//}
-		//placeOrderOKSwap(order, key, secret, orderSide, `0`, symbol, strPrice, strAmount)
 	}
 	if order.OrderId == "0" || order.OrderId == "" {
 		order.Status = model.CarryStatusFail

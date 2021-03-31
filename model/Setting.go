@@ -193,7 +193,7 @@ func GetMarkets() []string {
 
 func GetInstrumentSymbol(market, instrument string) (symbol string) {
 	switch market {
-	case OKEX, OKSwap:
+	case OKEX:
 		return instrument
 	case OKFUTURE:
 		parts := strings.Split(instrument, `-`)

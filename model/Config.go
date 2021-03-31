@@ -65,7 +65,7 @@ func (config *Config) GetKeys(market string) (keys, secrets []string) {
 		return strings.Split(config.FtxKey, `,`), strings.Split(config.FtxSecret, `,`)
 	case Huobi, HuobiDM:
 		return strings.Split(config.HuobiKey, `,`), strings.Split(config.HuobiSecret, `,`)
-	case OKEX, OKFUTURE, OKSwap:
+	case OKEX, OKFUTURE:
 		return strings.Split(config.OkexKey, `,`), strings.Split(config.OkexSecret, `,`)
 	case Binance:
 		return strings.Split(config.BinanceKey, `,`), strings.Split(config.BinanceSecret, `,`)

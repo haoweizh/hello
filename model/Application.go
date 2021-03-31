@@ -31,7 +31,6 @@ const DFuture = `dfuture`
 const Bybit = `bybit`
 const OKEX = "okex"
 const OKFUTURE = `okfuture`
-const OKSwap = `okswap`
 const Huobi = "huobi"
 const HuobiDM = `huobiDM`
 const Binance = "binance"
@@ -82,12 +81,6 @@ func GetDialectSymbol(market, symbol string) (dialectSymbol string) {
 		return strings.ToUpper(strings.Split(symbol, `_`)[0])
 	case Bybit:
 		return strings.ToUpper(strings.Split(symbol, `_`)[0])
-	case OKSwap:
-		if strings.Contains(symbol, `usd_p`) {
-			return strings.ToUpper(strings.Split(symbol, `usd`)[0]) + `-USD-SWAP`
-		} else if strings.Contains(symbol, `usdt_p`) {
-			return strings.ToUpper(strings.Split(symbol, `usdt`)[0]) + `-USDT-SWAP`
-		}
 	}
 	return ``
 }
@@ -99,12 +92,6 @@ func GetStandardSymbol(market, symbol string) (standardSymbol string) {
 		return strings.Replace(symbol, `xbt`, `btc`, -1) + `_p`
 	case Bybit:
 		return symbol + `_p`
-	case OKSwap:
-		if strings.Contains(symbol, `-usd-swap`) {
-			return strings.Split(symbol, `-usd`)[0] + `usd_p`
-		} else if strings.Contains(symbol, `-usdt-swap`) {
-			return strings.Split(symbol, `-usd`)[0] + `usdt_p`
-		}
 	}
 	return standardSymbol
 }
@@ -163,15 +150,6 @@ var orderStatusMap = map[string]map[string]string{ // market - market status - u
 		`Rejected`:        CarryStatusFail,
 		`PendingCancel`:   CarryStatusWorking,
 		`Deactivated`:     CarryStatusFail,
-	},
-	OKSwap: {
-		`-2`: CarryStatusFail,    // 失败
-		`-1`: CarryStatusFail,    // 撤单成功
-		`0`:  CarryStatusWorking, // 等待成交
-		`1`:  CarryStatusWorking, // 部分成交
-		`2`:  CarryStatusSuccess, // 完全成交
-		`3`:  CarryStatusWorking, // 下单中
-		`4`:  CarryStatusWorking, // 撤单中
 	},
 	Ftx: {
 		`new`:       CarryStatusWorking,
@@ -346,7 +324,6 @@ func NewConfig() {
 	AppConfig.WSUrls[Coinpark] = "wss://push.coinpark.cc/"
 	AppConfig.WSUrls[Bitmex] = `wss://www.bitmex.com/realtime/`
 	AppConfig.WSUrls[OKFUTURE] = `wss://real.okex.com:8443/ws/v3`
-	AppConfig.WSUrls[OKSwap] = `wss://real.okex.com:8443/ws/v3`
 	AppConfig.WSUrls[DFuture] = `wss://heco_prod_kline_wss.dfuture.com/ws`
 	//AppConfig.WSUrls[Bitmex] = `wss://testnet.bitmex.com/realtime`
 	// HUOBI用于交易的API，可能不适用于行情
@@ -355,7 +332,6 @@ func NewConfig() {
 	AppConfig.RestUrls[OKEX] = `https://www.okex.com`
 	AppConfig.RestUrls[Huobi] = `api-aws.huobi.pro`
 	AppConfig.RestUrls[HuobiDM] = `api.hbdm.com`
-	AppConfig.RestUrls[OKSwap] = `https://www.okex.com`
 	AppConfig.RestUrls[OKFUTURE] = `https://www.okex.com`
 	AppConfig.RestUrls[Binance] = "https://api.binance.com"
 	AppConfig.RestUrls[Coinpark] = "https://api.coinpark.cc/v1"

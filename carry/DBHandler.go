@@ -101,7 +101,7 @@ func createMarketDepthServer(markets *model.Markets, market string) chan struct{
 		channel, err = api.WsDepthServeHuobi(markets, WSErrHandler)
 	case model.HuobiDM:
 		channel, err = api.WsDepthServeHuobiDM(markets, WSErrHandler)
-	case model.OKEX, model.OKSwap:
+	case model.OKEX:
 		channel, err = api.WsDepthServeOKEX(markets, WSErrHandler)
 	//case model.OKFUTURE:
 	//	channel, err = api.WsDepthServeOKFuture(markets, WSErrHandler)
@@ -170,7 +170,7 @@ func Maintain() {
 	model.HandlerMap[model.FunctionTurtle] = ProcessTurtle
 	model.HandlerMap[model.FunctionCarry] = ProcessCarry
 	//model.HandlerMap[model.FunctionHangFar] = ProcessHangFar
-	model.HandlerMap[model.FunctionPostonlyHandler] = PostonlyHandler
+	//model.HandlerMap[model.FunctionPostonlyHandler] = PostonlyHandler
 	defer model.AppDB.Close()
 	if model.AppConfig.Env != `test` {
 		model.AppDB.AutoMigrate(&model.Setting{})
