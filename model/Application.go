@@ -10,6 +10,7 @@ import (
 	"time"
 )
 
+type PostOrder func(order *Order) // 处理下单后的函数
 var HandlerMap = make(map[string]CarryHandler)
 var infoLock sync.Mutex
 var Currencies = []string{`btc`, `eth`, `usdt`, `ft`, `ft1808`, `pax`, `usdc`, `tusd`}

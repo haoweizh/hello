@@ -609,6 +609,26 @@ func getPositionsOKEX(key, secret string) (success bool, positions []*model.Posi
 	return success, positions
 }
 
+func GetMaxSize(key, secret, instrument string) (success bool, maxBuy, maxSell float64) {
+	response := sendSignRequestOKEX(key, secret, http.MethodGet,
+		fmt.Sprintf(`/api/v5/account/max-size?instId=%s&tdMode=cross`, instrument), nil)
+	responseJson, err := util.NewJSON(response)
+	if responseJson == nil || err != nil || responseJson.Get(`data`) == nil ||
+		responseJson.Get(`data`).MustArray() == nil || len(responseJson.Get(`data`).MustArray()) == 0 {
+		return false, 0, 0
+	}
+	data := responseJson.Get(`data`).MustArray()[0].(map[string]interface{})
+	if data[`instId`] != nil && data[`instId`].(string) == instrument {
+		if data[`maxBuy`] != nil {
+			maxBuy, _ = strconv.ParseFloat(data[`maxBuy`].(string), 64)
+		}
+		if data[`maxSell`] != nil {
+			maxSell, _ = strconv.ParseFloat(data[`maxSell`].(string), 64)
+		}
+	}
+	return true, maxBuy, maxSell
+}
+
 // bar 1m/3m/5m/15m/30m/1H/2H/4H/6H/12H/1D/1W/1M/3M/6M/1Y
 func getCandlesOKEX(key, secret, symbol, binSize string, before, after time.Time, count int) (
 	candles map[string]*model.Candle) {

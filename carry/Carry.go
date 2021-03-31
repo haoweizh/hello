@@ -27,10 +27,52 @@ var cachePositions = make(map[string][]*model.Position)       // key - []positio
 var balanceAll = make(map[string]float64)                     // key - balance value in all
 var carryBalance = make(map[string]map[string]*model.Balance) // key - coin - balance
 var carryAmount = make(map[string]map[string]float64)         // key - perp - float64
+var tradeMax = make(map[string]map[string][]float64)          // key - instrument - [maxBuy合约张数/币币个数, maxSell]
+
+var postOrderCarry = func(order *model.Order) {
+	if order == nil || order.OrderId == `` || order.Status == model.CarryStatusFail {
+		resetTradeMax(model.OKEX)
+		return
+	}
+	maxBuy, maxSell := getTradeMax(order.AmountType, order.Symbol)
+	// 需要经过转化成张数（合约）
+	amount := api.FormatAmount(model.OKEX, order.Instrument, order.Amount, false)
+	if order.OrderSide == model.OrderSideBuy {
+		maxBuy -= amount
+		maxSell += amount
+	} else if order.OrderSide == model.OrderSideSell {
+		maxBuy += amount
+		maxSell -= amount
+	}
+	setTradeMax(order.AmountType, order.Instrument, maxBuy, maxSell)
+	util.Notice(fmt.Sprintf(`+++++ set trade max key: %s %s instrument: %s %f`,
+		order.AmountType, order.Instrument, order.OrderSide, amount))
+}
+
+func getTradeMax(key, instrument string) (maxBuy, maxSell float64) {
+	defer carryLock.Unlock()
+	carryLock.Lock()
+	if tradeMax[key] == nil {
+		return 0, 0
+	}
+	if tradeMax[key][instrument] == nil || len(tradeMax[key][instrument]) != 2 {
+		return 0, 0
+	}
+	return tradeMax[key][instrument][0], tradeMax[key][instrument][1]
+}
+
+func setTradeMax(key, instrument string, maxBuy, maxSell float64) {
+	defer carryLock.Unlock()
+	carryLock.Lock()
+	if tradeMax[key] == nil {
+		tradeMax[key] = make(map[string][]float64)
+	}
+	tradeMax[key][instrument] = []float64{maxBuy, maxSell}
+}
 
 func getPositions(key string) []*model.Position {
-	carryLock.Lock()
 	defer carryLock.Unlock()
+	carryLock.Lock()
 	return cachePositions[key]
 }
 
@@ -174,6 +216,37 @@ func initEmptyBalance(key, market, coin string) (balance *model.Balance) {
 	return balance
 }
 
+func resetTradeMax(market string) {
+	defer checkSetCarrying(false)
+	for true {
+		if !checkSetCarrying(true) {
+			break
+		} else {
+			time.Sleep(time.Millisecond * 200)
+		}
+	}
+	if market != model.OKEX {
+		return
+	}
+	keys, secrets := model.AppConfig.GetKeys(market)
+	settings := model.GetSettings(model.FunctionCarry, market)
+	for _, items := range settings {
+		if items == nil || len(items) == 0 {
+			continue
+		}
+		for i := range keys {
+			_, maxBuy, maxSell := api.GetMaxSize(keys[i], secrets[i], items[0].Symbol)
+			setTradeMax(keys[i], items[0].Symbol, maxBuy, maxSell)
+			util.Notice(fmt.Sprintf(`++++++++++ %s %s %f %f`, keys[i], items[0].Symbol, maxBuy, maxSell))
+			related := items[0].GetRelatedSymbol()
+			_, maxBuy, maxSell = api.GetMaxSize(keys[i], secrets[i], related)
+			setTradeMax(keys[i], related, maxBuy, maxSell)
+			util.Notice(fmt.Sprintf(`--------- %s %s %f %f`, keys[i], related, maxBuy, maxSell))
+		}
+		time.Sleep(time.Millisecond * 200)
+	}
+}
+
 func clearCarryBalance() {
 	for doCarry {
 		for true {
@@ -184,7 +257,7 @@ func clearCarryBalance() {
 			}
 		}
 		util.Notice(`...... enter clearing carry balance`)
-		time.Sleep(time.Second * 3)
+		time.Sleep(time.Second * 2)
 		markets := model.GetMarkets()
 		for _, market := range markets {
 			keys, secrets := model.AppConfig.GetKeys(market)
@@ -234,6 +307,9 @@ func clearCarryBalance() {
 		}
 		util.Notice(`...... exit clearing carry balance`)
 		checkSetCarrying(false)
+		if time.Now().Minute()%9 == 0 {
+			resetTradeMax(model.OKEX)
+		}
 		time.Sleep(time.Second * 60)
 	}
 }
@@ -343,11 +419,11 @@ func placeCarry(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, key
 		tickRelated.Bids[0].Amount, tickRelated.Asks[0].Price, tickRelated.Asks[0].Amount, scoreOpen, scoreClose,
 		0.0, amount, amount*tickPerp.Asks[0].Price, util.GetNowUnixMillion()))
 	go api.PlaceOrder(key, secret, sidePerp, model.OrderTypeLimit, setting.Market, setting.Symbol,
-		``, ``, ``, model.FunctionCarry, perpPrice, perpPrice,
-		amount, true)
+		setting.Symbol, ``, ``, model.FunctionCarry, perpPrice, perpPrice,
+		amount, true, postOrderCarry)
 	api.PlaceOrder(key, secret, sideRelated, model.OrderTypeLimit, setting.Market, symbolRelated,
-		``, ``, ``, model.FunctionCarry, relatedPrice, relatedPrice,
-		amount, true)
+		setting.Symbol, ``, ``, model.FunctionCarry, relatedPrice, relatedPrice,
+		amount, true, postOrderCarry)
 	keys, _ := model.AppConfig.GetKeys(setting.Market)
 	if key == keys[0] {
 		time.Sleep(time.Millisecond * 150)
@@ -440,8 +516,8 @@ func makeEqual(key, secret string, setting *model.Setting, balances []*model.Bal
 		resultRelated := api.CancelOrders(key, secret, setting.Market, symbolRelated)
 		util.Notice(fmt.Sprintf(`cancel all perp:%v related:%v >>>>>> equal %s %f, %s %f = %s %f`,
 			resultPerp, resultRelated, settingSymbol, amountPerp, symbolRelated, amountRelated, orderSide, amount))
-		api.PlaceOrder(key, secret, orderSide, model.OrderTypeLimit, setting.Market, symbol, ``,
-			``, ``, model.FunctionComplement, price, price, amount, true)
+		api.PlaceOrder(key, secret, orderSide, model.OrderTypeLimit, setting.Market, symbol, symbol,
+			``, ``, model.FunctionComplement, price, price, amount, true, nil)
 	}
 	return
 }
@@ -533,7 +609,16 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	}
 	amountPerp := api.FormatAmount(setting.Market, setting.Symbol, amount, false)
 	amountRelated := api.FormatAmount(setting.Market, setting.GetRelatedSymbol(), amount, false)
-	if setting.Market == model.OKEX {
+	if model.OKEX == setting.Market {
+		maxBuyPerp, maxSellPerp := getTradeMax(key, setting.Symbol)
+		maxBuyRelated, maxSellRelated := getTradeMax(key, setting.GetRelatedSymbol())
+		if sidePerp == model.OrderSideBuy && sideRelated == model.OrderSideSell {
+			amountPerp = math.Min(amountPerp, maxBuyPerp)
+			amountRelated = math.Min(amountRelated, maxSellRelated)
+		} else if sidePerp == model.OrderSideSell && sideRelated == model.OrderSideBuy {
+			amountPerp = math.Min(amountPerp, maxSellPerp)
+			amountRelated = math.Min(amountRelated, maxBuyRelated)
+		}
 		_, amountPerp = api.ParseRealAmount(setting.Market, setting.Symbol, amountPerp)
 	}
 	amount = math.Min(amountPerp, amountRelated)

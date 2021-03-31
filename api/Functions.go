@@ -419,7 +419,7 @@ func MustPlaceOrder(key, secret, orderSide, orderType, market, symbol, instrumen
 	retry := 10
 	for i := 0; i < retry; i++ {
 		order = PlaceOrder(key, secret, orderSide, orderType, market, symbol, instrument, accountType,
-			orderParam, refreshType, price, triggerPrice, amount, saveDB)
+			orderParam, refreshType, price, triggerPrice, amount, saveDB, nil)
 		if order != nil && order.OrderId != `` {
 			break
 		} else {
@@ -438,7 +438,7 @@ func MustPlaceOrder(key, secret, orderSide, orderType, market, symbol, instrumen
 // orderType: OrderTypeLimit OrderTypeMarket
 // amount:如果是限价单或市价卖单，amount是左侧币种的数量，如果是市价买单，amount是右测币种的数量
 func PlaceOrder(key, secret, orderSide, orderType, market, symbol, instrument, accountType, orderParam,
-	refreshType string, price, triggerPrice, amount float64, saveDB bool) (order *model.Order) {
+	refreshType string, price, triggerPrice, amount float64, saveDB bool, postOrder model.PostOrder) (order *model.Order) {
 	if instrument == `` {
 		instrument = symbol
 	}
@@ -510,6 +510,9 @@ func PlaceOrder(key, secret, orderSide, orderType, market, symbol, instrument, a
 	order.RefreshType = refreshType
 	if saveDB {
 		go model.AppDB.Save(&order)
+	}
+	if postOrder != nil {
+		postOrder(order)
 	}
 	return
 }
@@ -722,7 +725,7 @@ func InitCoinBalance(key, secret, function, market string) {
 			}
 			price := GetLastPrice(key, secret, market, related)
 			order := PlaceOrder(key, secret, model.OrderSideBuy, model.OrderTypeMarket, market, related, related,
-				``, ``, ``, price, price, marketInfo.SizeMin, false)
+				``, ``, ``, price, price, marketInfo.SizeMin, false, nil)
 			if order.OrderId == `` {
 				i++
 				fmt.Println(fmt.Sprintf(`%d order return :%s %s`, i, order.ErrCode, related))
