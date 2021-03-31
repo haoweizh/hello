@@ -622,6 +622,7 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 			amountRelated = math.Min(amountRelated, maxBuyRelated)
 		}
 		_, amountPerp = api.ParseRealAmount(setting.Market, setting.Symbol, amountPerp)
+		amountPerp = math.Floor(amountPerp)
 	}
 	amount = math.Min(amountPerp, amountRelated)
 	if amount > 0 {
