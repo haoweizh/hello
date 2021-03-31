@@ -63,7 +63,7 @@ func calcTurtleAmount(setting *model.Setting, price, n float64) (amount float64)
 		_, _, p := api.GetBalances(``, ``, setting.Market, 0)
 		amount = 0.01 * p / n
 		switch setting.Symbol {
-		case `BTC-PERP`, `ETH-PERP`, `EOS-PERP`:
+		case `BTC-PERP`, `ETH-PERP`, `BTC-USDT-SWAP`, `ETH-USDT-SWAP`, `EOS-PERP`:
 			amount *= 2
 		case `HT-PERP`, `OKB-PERP`, `BNB-PERP`, `BTMX-PERP`:
 			amount *= 1
