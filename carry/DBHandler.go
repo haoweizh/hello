@@ -40,13 +40,13 @@ func MaintainBalance() {
 			//}
 			//util.Notice(fmt.Sprintf(`get balances %s %d`, market, len(balances)))
 		}
-		for _, balance := range balances {
-			util.Notice(fmt.Sprintf(`balance info: %s %s %s %f %f %s`,
-				balance.ID, balance.Market, balance.Coin, balance.Action, balance.Amount, balance.BalanceTime.String()))
-			if balance.Amount > 1 {
-				model.AppDB.Save(&balance)
-			}
-		}
+		//for _, balance := range balances {
+		//util.Notice(fmt.Sprintf(`balance info: %s %s %s %f %f %s`,
+		//	balance.ID, balance.Market, balance.Coin, balance.Action, balance.Amount, balance.BalanceTime.String()))
+		//if balance.Amount > 1 {
+		//	model.AppDB.Save(&balance)
+		//}
+		//}
 		util.Notice(fmt.Sprintf(`get markets %d balances %d`, len(markets), len(balances)))
 		time.Sleep(time.Hour * 12)
 	}
