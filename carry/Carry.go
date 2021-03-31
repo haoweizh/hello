@@ -45,8 +45,6 @@ var postOrderCarry = func(order *model.Order) {
 		maxSell -= amount
 	}
 	setTradeMax(order.AmountType, order.Instrument, maxBuy, maxSell)
-	//util.Notice(fmt.Sprintf(`+++++ set trade max key: %s %s instrument: %s %f`,
-	//	order.AmountType, order.Instrument, order.OrderSide, amount))
 }
 
 func getTradeMax(key, instrument string) (maxBuy, maxSell float64) {
