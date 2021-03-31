@@ -9,7 +9,10 @@ import (
 	_ "github.com/jinzhu/gorm/dialects/postgres"
 	"hello/api"
 	"hello/model"
+	"hello/util"
+	"math"
 	"net/url"
+	"strconv"
 	"testing"
 	"time"
 )
@@ -45,6 +48,14 @@ func Test_ws(t *testing.T) {
 }
 
 func Test_initTurtleN(t *testing.T) {
+	inc := 0.0000001
+	price := 0.0050747
+	price = inc * math.Round(price/inc)
+	fmt.Println(strconv.FormatFloat(price, 'f', 7, 64))
+	str := fmt.Sprintf(`%.20f`, price)
+	fmt.Println(str)
+	fmt.Println(util.CutTailZero(str))
+
 	model.NewConfig()
 	_ = configor.Load(model.AppConfig, "./config.yml")
 	_, buy, sell := api.GetMaxSize(``, ``, `TORN-USDT-SWAP`)

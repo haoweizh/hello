@@ -31,6 +31,10 @@ var tradeMax = make(map[string]map[string][]float64)          // key - instrumen
 
 var postOrderCarry = func(order *model.Order) {
 	if order == nil || order.OrderId == `` || order.Status == model.CarryStatusFail {
+		if order != nil {
+			util.Notice(fmt.Sprintf(`order fail, reset trade max %s %s %s`,
+				order.Instrument, order.AmountType, order.ErrCode))
+		}
 		resetTradeMax(model.OKEX)
 		return
 	}
@@ -215,14 +219,6 @@ func initEmptyBalance(key, market, coin string) (balance *model.Balance) {
 }
 
 func resetTradeMax(market string) {
-	defer checkSetCarrying(false)
-	for true {
-		if !checkSetCarrying(true) {
-			break
-		} else {
-			time.Sleep(time.Millisecond * 200)
-		}
-	}
 	if market != model.OKEX {
 		return
 	}
@@ -235,11 +231,9 @@ func resetTradeMax(market string) {
 		for i := range keys {
 			_, maxBuy, maxSell := api.GetMaxSize(keys[i], secrets[i], items[0].Symbol)
 			setTradeMax(keys[i], items[0].Symbol, maxBuy, maxSell)
-			util.Notice(fmt.Sprintf(`++++++++++ %s %s %f %f`, keys[i], items[0].Symbol, maxBuy, maxSell))
 			related := items[0].GetRelatedSymbol()
 			_, maxBuy, maxSell = api.GetMaxSize(keys[i], secrets[i], related)
 			setTradeMax(keys[i], related, maxBuy, maxSell)
-			util.Notice(fmt.Sprintf(`--------- %s %s %f %f`, keys[i], related, maxBuy, maxSell))
 		}
 		time.Sleep(time.Millisecond * 200)
 	}
@@ -304,10 +298,10 @@ func clearCarryBalance() {
 			}
 		}
 		util.Notice(`...... exit clearing carry balance`)
-		checkSetCarrying(false)
 		if time.Now().Minute()%9 == 0 {
 			resetTradeMax(model.OKEX)
 		}
+		checkSetCarrying(false)
 		time.Sleep(time.Second * 60)
 	}
 }
@@ -611,9 +605,17 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 		maxBuyPerp, maxSellPerp := getTradeMax(key, setting.Symbol)
 		maxBuyRelated, maxSellRelated := getTradeMax(key, setting.GetRelatedSymbol())
 		if sidePerp == model.OrderSideBuy && sideRelated == model.OrderSideSell {
+			if amountPerp > maxBuyPerp || amountRelated > maxSellRelated {
+				util.Notice(fmt.Sprintf(`max limit works %s %s %s  %f > %f %f > %f`,
+					setting.Symbol, sidePerp, sideRelated, amountPerp, maxBuyPerp, amountRelated, maxSellRelated))
+			}
 			amountPerp = math.Min(amountPerp, maxBuyPerp)
 			amountRelated = math.Min(amountRelated, maxSellRelated)
 		} else if sidePerp == model.OrderSideSell && sideRelated == model.OrderSideBuy {
+			if amountPerp > maxSellPerp || amountRelated > maxBuyRelated {
+				util.Notice(fmt.Sprintf(`max limit works %s %s %s  %f > %f %f > %f`,
+					setting.Symbol, sidePerp, sideRelated, amountRelated, maxSellPerp, amountRelated, maxBuyRelated))
+			}
 			amountPerp = math.Min(amountPerp, maxSellPerp)
 			amountRelated = math.Min(amountRelated, maxBuyRelated)
 		}

@@ -6,6 +6,7 @@ type MarketInfo struct {
 	Name, CTCurrency                                string
 	SizeMin, SizeIncrement, PriceIncrement, CTValue float64
 	CanBorrow                                       bool
+	PriceDecimal                                    int // 价格精确到小数点后几位
 	//"ask":2.2966,
 	//"baseCurrency":null,
 	//"bid":2.2943,

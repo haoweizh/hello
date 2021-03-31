@@ -127,14 +127,16 @@ func sendSignRequestOKEX(key, secret, method, path string, body interface{}) (re
 // 不能使用 fmt %f 因为有000后缀；
 // 不能使用 strconv.FormatFloat 因为有 2.00000001问题
 func placeOrderOKEX(key, secret string, order *model.Order) {
-	price := util.CutTailZero(fmt.Sprintf(`%f`, FormatPrice(model.OKEX, order.Instrument, order.Price)))
-	triggerPrice := util.CutTailZero(fmt.Sprintf(`%f`, FormatPrice(model.OKEX, order.Instrument, order.TriggerPrice)))
+	price, decimal := FormatPrice(model.OKEX, order.Instrument, order.Price)
+	priceStr := util.CutTailZero(strconv.FormatFloat(price, 'f', decimal, 64))
+	priceTrigger, decimal := FormatPrice(model.OKEX, order.Instrument, order.TriggerPrice)
+	triggerPriceStr := util.CutTailZero(strconv.FormatFloat(priceTrigger, 'f', decimal, 64))
 	amount := util.CutTailZero(fmt.Sprintf(`%f`, FormatAmount(model.OKEX, order.Instrument, order.Amount, true)))
 	if order.OrderType == model.OrderTypeMarket {
 		usdAmount, _ := strconv.ParseFloat(amount, 64)
 		amount = util.CutTailZero(fmt.Sprintf(`%f`, usdAmount*order.Price))
 	}
-	if price == `0` || amount == `0` {
+	if priceStr == `0` || amount == `0` {
 		order.Status = model.CarryStatusFail
 		return
 	}
@@ -143,11 +145,11 @@ func placeOrderOKEX(key, secret string, order *model.Order) {
 	var responseBody []byte
 	if order.OrderType == model.OrderTypeStop {
 		postData[`ordType`] = `conditional`
-		postData[`slOrdPx`] = price
-		postData[`slTriggerPx`] = triggerPrice
+		postData[`slOrdPx`] = priceStr
+		postData[`slTriggerPx`] = triggerPriceStr
 		responseBody = sendSignRequestOKEX(key, secret, http.MethodPost, `/api/v5/trade/order-algo`, postData)
 	} else {
-		postData[`px`] = price
+		postData[`px`] = priceStr
 		responseBody = sendSignRequestOKEX(key, secret, http.MethodPost, "/api/v5/trade/order", postData)
 	}
 	orderJson, err := util.NewJSON(responseBody)
@@ -196,7 +198,15 @@ func getMarketsOKEX() (marketInfos map[string]*model.MarketInfo) {
 						marketInfo.SizeMin, _ = strconv.ParseFloat(value[`minSz`].(string), 64)
 					}
 					if value[`tickSz`] != nil {
-						marketInfo.PriceIncrement, _ = strconv.ParseFloat(value[`tickSz`].(string), 64)
+						tickSz := strings.Trim(value[`tickSz`].(string), ` `)
+						marketInfo.PriceIncrement, _ = strconv.ParseFloat(tickSz, 64)
+						if marketInfo.PriceIncrement > 1 {
+							marketInfo.PriceDecimal = 0
+						} else if strings.Contains(tickSz, `.`) {
+							tickSz = strings.Trim(tickSz, `0`)
+							index := strings.Index(tickSz, `.`)
+							marketInfo.PriceDecimal = len(tickSz[index+1:])
+						}
 					}
 					if value[`ctVal`] != nil {
 						marketInfo.CTValue, _ = strconv.ParseFloat(value[`ctVal`].(string), 64)
