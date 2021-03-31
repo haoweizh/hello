@@ -67,8 +67,8 @@ func WsPage(c *gin.Context) {
 }
 
 func test(c *gin.Context) {
-	carryRows, _ := model.AppDB.Model(&model.Order{}).Select(`amount_type,order_side,sum(price*amount),date(order_time),refresh_type`).
-		Group(`order_side,date(order_time),amount_type,refresh_type`).Order(`date(order_time) desc`).Rows()
+	carryRows, _ := model.AppDB.Model(&model.Order{}).Select(`market,amount_type,order_side,sum(price*amount),date(order_time),refresh_type`).
+		Group(`market,order_side,date(order_time),amount_type,refresh_type`).Order(`date(order_time) desc`).Rows()
 	carryBackMsg := ``
 	keysFtx, _ := model.AppConfig.GetKeys(model.Ftx)
 	keysOKEX, _ := model.AppConfig.GetKeys(model.OKEX)
