@@ -21,6 +21,8 @@ type Config struct {
 	RestUrls        map[string]string // marketName - rest url
 	DBConnection    string
 	Env             string
+	SimonUsdLow     float64
+	SimonOpenMax    float64
 	HuobiKey        string
 	HuobiSecret     string
 	OkexKey         string
@@ -41,14 +43,7 @@ type Config struct {
 	FromMail        string
 	FromMailAuth    string
 	Port            string
-	SymbolPrice     map[string]float64 // symbol - price
-	UpdatePriceTime map[string]int64   // symbol -time
-}
-
-func (config *Config) SetSymbolPrice(symbol string, price float64) {
-	config.lock.Lock()
-	defer config.lock.Unlock()
-	config.SymbolPrice[symbol] = price
+	UpdatePriceTime map[string]int64 // symbol -time
 }
 
 func (config *Config) SetUpdatePriceTime(symbol string, updateTime int64) {

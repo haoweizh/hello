@@ -14,8 +14,6 @@ var HandlerMap = make(map[string]CarryHandler)
 var infoLock sync.Mutex
 var Currencies = []string{`btc`, `eth`, `usdt`, `ft`, `ft1808`, `pax`, `usdc`, `tusd`}
 
-//var btcBalance = make(map[string]float64) // market+rfc3339, btc balance
-//var usdBalance = make(map[string]float64) // market_rfc3339, usd balance
 var candles = make(map[string]*Candle)                              // market+symbol+period+rfc3339, candle
 var CarryInfo = make(map[string]string)                             // function - msg
 var carryInfos = make(map[string]map[string]map[string]interface{}) // table - line name - key - value
@@ -24,7 +22,6 @@ var AppMetric = &MetricManager{}
 const KeyDefault = ``
 const SecretDefault = ``
 
-//const ArbitraryCarryUSDT = 100.0
 const OKEXBTCContractFaceValue = 100.0
 const OKEXOtherContractFaceValue = 10.0
 const DFuture = `dfuture`
@@ -56,13 +53,6 @@ const FunctionGrid = `grid`
 const FunctionCarry = `carry`
 const FunctionComplement = `complement`
 const FunctionPostonlyHandler = `postonly`
-
-//const FunctionHangRevert = `hang_revert`
-//const FunctionHangFar = `hang_far`
-//const FunctionRefresh = `refresh`
-//const FunctionRank = `rank`
-//const FunctionHang = `hang`
-
 const PostOnly = `ParticipateDoNotInitiate`
 
 var AppDB *gorm.DB
@@ -70,7 +60,6 @@ var AppSettings []Setting
 var AppConfig *Config
 var AppMarkets = NewMarkets()
 
-//var AppAccounts = NewAccounts()
 var HuobiAccountIds = make(map[string]string)
 var AppPause = false
 
@@ -338,7 +327,6 @@ func NewConfig() {
 	//AppConfig.RestUrls[Bitmex] = `https://testnet.bitmex.com`
 	AppConfig.RestUrls[Bitmex] = `https://www.bitmex.com/api/v1`
 	AppConfig.RestUrls[Ftx] = `https://ftx.com/api`
-	AppConfig.SymbolPrice = make(map[string]float64)
 	AppConfig.UpdatePriceTime = make(map[string]int64)
 }
 

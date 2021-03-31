@@ -65,8 +65,6 @@ func calcTurtleAmount(setting *model.Setting, price, n float64) (amount float64)
 		switch setting.Symbol {
 		case `BTC-PERP`, `ETH-PERP`, `BTC-USDT-SWAP`, `ETH-USDT-SWAP`, `EOS-PERP`:
 			amount *= 2
-		case `HT-PERP`, `OKB-PERP`, `BNB-PERP`, `BTMX-PERP`:
-			amount *= 1
 		}
 	case model.OKFUTURE, model.HuobiDM:
 		coin := model.GetCoin(setting.Market, setting.Symbol)

@@ -471,9 +471,9 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	table := fmt.Sprintf(`%s_dynamic_`, model.FunctionCarry)
 	if len(keys) > 1 && keys[0] != key {
 		table += `slave`
-		localOpenValueLimit = 6666
+		localOpenValueLimit = model.AppConfig.SimonOpenMax
+		usdLowLine = model.AppConfig.SimonUsdLow
 		valueLow = 0
-		usdLowLine = 30000
 	}
 	jump := 5.0
 	jumpRevert := 5.0
