@@ -139,14 +139,15 @@ func placeOrderOKEX(key, secret string, order *model.Order) {
 		return
 	}
 	postData := map[string]interface{}{`instId`: order.Instrument, `tdMode`: `cross`, `side`: order.OrderSide,
-		`sz`: amount, `ordType`: order.OrderType, `px`: price, `reduceOnly`: `false`}
+		`sz`: amount, `ordType`: order.OrderType}
 	var responseBody []byte
 	if order.OrderType == model.OrderTypeStop {
-		postData[`ordType`] = `trigger`
-		postData[`orderPx`] = price
-		postData[`triggerPx`] = triggerPrice
+		postData[`ordType`] = `conditional`
+		postData[`slOrdPx`] = price
+		postData[`slTriggerPx`] = triggerPrice
 		responseBody = sendSignRequestOKEX(key, secret, http.MethodPost, `/api/v5/trade/order-algo`, postData)
 	} else {
+		postData[`px`] = price
 		responseBody = sendSignRequestOKEX(key, secret, http.MethodPost, "/api/v5/trade/order", postData)
 	}
 	orderJson, err := util.NewJSON(responseBody)
@@ -241,13 +242,14 @@ func cancelOrdersOKEX(key, secret, instrument string) (result bool, code, msg st
 }
 
 func cancelOrderOkex(key, secret, instrument string, orderId, orderType string) (result bool, errCode, msg string) {
-	postData := map[string]interface{}{`instId`: instrument, `ordId`: orderId}
+	postData := map[string]interface{}{`instId`: instrument}
 	var responseBody []byte
 	if orderType == model.OrderTypeStop {
 		postData[`algoId`] = orderId
 		data := []interface{}{postData}
 		responseBody = sendSignRequestOKEX(key, secret, http.MethodPost, `/api/v5/trade/cancel-algos`, data)
 	} else {
+		postData[`ordId`] = orderId
 		responseBody = sendSignRequestOKEX(key, secret, http.MethodPost, "/api/v5/trade/cancel-order", postData)
 	}
 	orderJson, err := util.NewJSON(responseBody)
@@ -256,10 +258,10 @@ func cancelOrderOkex(key, secret, instrument string, orderId, orderType string) 
 		items, _ := orderJson.Get(`data`).Array()
 		for _, item := range items {
 			value := item.(map[string]interface{})
-			if value[`ordId`].(string) == orderId && value[`sCode`].(string) == `0` {
+			if value[`ordId`] != nil && value[`ordId`].(string) == orderId && value[`sCode`].(string) == `0` {
 				cancelResult = true
 				break
-			} else if value[`algoId`].(string) == orderId && value[`sCode`].(string) == `0` {
+			} else if value[`algoId`] != nil && value[`algoId`].(string) == orderId && value[`sCode`].(string) == `0` {
 				cancelResult = true
 				break
 			}
@@ -274,7 +276,7 @@ func parseOrderOKEX(value map[string]interface{}) (order *model.Order) {
 		return nil
 	}
 	order = &model.Order{}
-	if value[`avgPx`] != nil {
+	if value[`avgPx`] != nil && value[`avgPx`] != `` {
 		order.DealPrice, _ = strconv.ParseFloat(value[`avgPx`].(string), 64)
 	}
 	if value[`instId`] != nil {
@@ -282,23 +284,25 @@ func parseOrderOKEX(value map[string]interface{}) (order *model.Order) {
 	}
 	if value[`ordId`] != nil {
 		order.OrderId = value[`ordId`].(string)
+	} else if value[`algoId`] != nil {
+		order.OrderId = value[`algoId`].(string)
 	}
-	if value[`px`] != nil {
+	if value[`px`] != nil && value[`px`] != `` {
 		order.Price, _ = strconv.ParseFloat(value[`px`].(string), 64)
 	}
-	if value[`ordType`] != nil { // market：市价单 limit：限价单 post_only：只做maker单 fok：全部成交或立即取消 ioc：立即成交并取消剩余
-		order.OrderType = value[`ordType`].(string)
-	}
+	//if value[`ordType`] != nil { // market：市价单 limit：限价单 post_only：只做maker单 fok：全部成交或立即取消 ioc：立即成交并取消剩余
+	//	order.OrderType = value[`ordType`].(string)
+	//}
 	if value[`side`] != nil {
 		order.OrderSide = value[`side`].(string)
 	}
-	if value[`sz`] != nil {
+	if value[`sz`] != nil && value[`sz`] != `` {
 		order.Amount, _ = strconv.ParseFloat(value[`sz`].(string), 64)
 	}
-	if value[`accFillSz`] != nil {
+	if value[`accFillSz`] != nil && value[`accFillSz`] != `` {
 		order.DealAmount, _ = strconv.ParseFloat(value[`accFillSz`].(string), 64)
 	}
-	if value[`avgPx`] != nil {
+	if value[`avgPx`] != nil && value[`avgPx`] != `` {
 		order.DealPrice, _ = strconv.ParseFloat(value[`avgPx`].(string), 64)
 	}
 	if value[`state`] != nil {
@@ -306,7 +310,7 @@ func parseOrderOKEX(value map[string]interface{}) (order *model.Order) {
 		switch status {
 		case `canceled`:
 			order.Status = model.CarryStatusFail
-		case `live`, `partially_filled`:
+		case `live`, `partially_filled`, `pending`:
 			order.Status = model.CarryStatusWorking
 		case `filled`:
 			order.Status = model.CarryStatusSuccess
@@ -314,10 +318,10 @@ func parseOrderOKEX(value map[string]interface{}) (order *model.Order) {
 			order.Status = model.CarryStatusFail
 		}
 	}
-	if value[`fee`] != nil { // 订单交易手续费，平台向用户收取的交易手续费，手续费扣除 为负数。如： -0.01
+	if value[`fee`] != nil && value[`fee`] != `` { // 订单交易手续费，平台向用户收取的交易手续费，手续费扣除 为负数。如： -0.01
 		order.Fee, _ = strconv.ParseFloat(value[`fee`].(string), 64)
 	}
-	if value[`cTime`] != nil {
+	if value[`cTime`] != nil && value[`cTime`] != `` {
 		ts, _ := strconv.ParseInt(value[`cTime`].(string), 10, 64)
 		order.OrderTime = time.Unix(ts/1000, 0)
 	}
@@ -349,9 +353,12 @@ func queryPendingOrdersOKEX(key, secret, instrument string) (orders []*model.Ord
 	return
 }
 
-func queryOrderOKEX(key, secret, instrument string, orderId string) (order *model.Order) {
+func queryOrderOKEX(key, secret, instrument, orderId, orderType string) (order *model.Order) {
 	path := fmt.Sprintf(`/api/v5/trade/order?%s`,
 		util.ComposeParams(map[string]interface{}{"ordId": orderId, "instId": instrument}))
+	if orderType == model.OrderTypeStop {
+		path = fmt.Sprintf(`/api/v5/trade/orders-algo-pending?algoId=%s&ordType=conditional`, orderId)
+	}
 	responseBody := sendSignRequestOKEX(key, secret, http.MethodGet, path, nil)
 	orderJson, err := util.NewJSON(responseBody)
 	if err != nil || orderJson == nil || orderJson.Get(`data`) == nil {
@@ -360,11 +367,29 @@ func queryOrderOKEX(key, secret, instrument string, orderId string) (order *mode
 	orders := orderJson.Get("data").MustArray()
 	for _, item := range orders {
 		value := item.(map[string]interface{})
-		if value[`ordId`].(string) == orderId {
-			return parseOrderOKEX(value)
+		if orderType != model.OrderTypeStop {
+			if value[`ordId`] != nil && value[`ordId`].(string) == orderId {
+				order = parseOrderOKEX(value)
+				break
+			}
+		} else {
+			if value[`ordId`] != nil {
+				ordId := strings.Trim(value[`ordId`].(string), ` `)
+				if ordId != `` && ordId != `0` {
+					orderType = model.OrderTypeLimit
+					return queryOrderOKEX(key, secret, instrument, ordId, orderType)
+				}
+			}
+			if value[`algoId`] == orderId {
+				order = parseOrderOKEX(value)
+				break
+			}
 		}
 	}
-	return nil
+	if order != nil {
+		order.OrderType = orderType
+	}
+	return order
 }
 
 func getTransferOKEX(key, secret string) (balances []*model.Balance) {
@@ -396,22 +421,22 @@ func getTransferOKEX(key, secret string) (balances []*model.Balance) {
 
 func parsePositionOKEX(value map[string]interface{}) (success bool, position *model.Position) {
 	position = &model.Position{Market: model.OKEX}
-	if value[`lever`] != nil { // 杠杆倍数，不适用于期权
+	if value[`lever`] != nil && value[`lever`] != `` { // 杠杆倍数，不适用于期权
 		position.LeverRate, _ = strconv.ParseInt(value[`lever`].(string), 10, 64)
 	}
-	if value[`liqPx`] != nil { // 预估强平价 不适用于跨币种保证金模式下交割/永续的全仓 不适用于期权
+	if value[`liqPx`] != nil && value[`liqPx`] != `` { // 预估强平价 不适用于跨币种保证金模式下交割/永续的全仓 不适用于期权
 		position.LiquidationPrice, _ = strconv.ParseFloat(value[`liqPx`].(string), 64)
 	}
-	if value[`mmr`] != nil { // 维持保证金
+	if value[`mmr`] != nil && value[`mmr`] != `` { // 维持保证金
 		position.MinimumMaintenanceMargin, _ = strconv.ParseFloat(value[`mmr`].(string), 64)
 	}
-	if value[`avgPx`] != nil { // 开仓平均价
+	if value[`avgPx`] != nil && value[`avgPx`] != `` { // 开仓平均价
 		position.EntryPrice, _ = strconv.ParseFloat(value[`avgPx`].(string), 64)
 	}
-	if value[`upl`] != nil { // 未实现收益
+	if value[`upl`] != nil && value[`upl`] != `` { // 未实现收益
 		position.ProfitUnreal, _ = strconv.ParseFloat(value[`upl`].(string), 64)
 	}
-	if value[`uTime`] != nil { // 最近一次持仓更新时间，Unix时间戳的毫秒数格式，如 1597026383085
+	if value[`uTime`] != nil && value[`uTime`] != `` { // 最近一次持仓更新时间，Unix时间戳的毫秒数格式，如 1597026383085
 		position.Ts, _ = strconv.ParseInt(value[`uTime`].(string), 10, 64)
 	}
 	// 持仓方向 long：双向持仓多头 short：双向持仓空头 net：单向持仓（交割/永续/期权：pos为正代表多头，pos为负代表空头。
@@ -419,7 +444,7 @@ func parsePositionOKEX(value map[string]interface{}) (success bool, position *mo
 	if value[`posSide`] != nil {
 		position.Direction = value[`posSide`].(string)
 	}
-	if value[`margin`] != nil { // 保证金余额，可增减，仅适用于逐仓
+	if value[`margin`] != nil && value[`margin`] != `` { // 保证金余额，可增减，仅适用于逐仓
 		position.Margin, _ = strconv.ParseFloat(value[`margin`].(string), 64)
 	}
 	if value[`instId`] != nil { // 	产品ID，如 BTC-USD-180216
@@ -445,13 +470,13 @@ func parseBalanceOKEX(value map[string]interface{}) (balance *model.Balance) {
 	balance = &model.Balance{Market: model.OKEX, Action: 0, Coin: value[`ccy`].(string),
 		ID: model.OKEX + `_` + value[`ccy`].(string) + `_` + util.GetNow().String()[0:10]}
 	// for transfer
-	if value[`amt`] != nil {
+	if value[`amt`] != nil && value[`amt`] != `` {
 		balance.Amount, _ = strconv.ParseFloat(value[`amt`].(string), 64)
 	}
 	if value[`from`] != nil && value[`to`] != nil {
 		balance.Address = fmt.Sprintf(`%s : %s`, value[`from`].(string), value[`to`].(string))
 	}
-	if value[`ts`] != nil {
+	if value[`ts`] != nil && value[`ts`] != `` {
 		ts, _ := strconv.ParseInt(value[`ts`].(string), 10, 64)
 		balance.BalanceTime = time.Unix(ts/1000, 0)
 	}
@@ -462,7 +487,7 @@ func parseBalanceOKEX(value map[string]interface{}) (balance *model.Balance) {
 		balance.Fee, _ = value[`fee`].(string)
 	}
 	if value[`state`] != nil {
-		switch value[`state`].(string) {
+		switch strings.Trim(value[`state`].(string), ` `) {
 		case `-3`, `0`, `1`, `3`, `4`, `5`:
 			balance.Status = model.CarryStatusWorking
 		case `-2`, `-1`:
@@ -472,13 +497,13 @@ func parseBalanceOKEX(value map[string]interface{}) (balance *model.Balance) {
 		}
 	}
 	// for balance
-	if value[`availEq`] != nil {
+	if value[`availEq`] != nil && value[`availEq`] != `` {
 		balance.Available, _ = strconv.ParseFloat(value[`availEq`].(string), 64)
 	}
-	if value[`eq`] != nil {
+	if value[`eq`] != nil && value[`eq`] != `` {
 		balance.Amount, _ = strconv.ParseFloat(value[`eq`].(string), 64)
 	}
-	if value[`disEq`] != nil {
+	if value[`disEq`] != nil && value[`disEq`] != `` {
 		balance.UsdValue, _ = strconv.ParseFloat(value[`disEq`].(string), 64)
 		if balance.UsdValue == 0 && balance.Amount > 0 {
 			success, bidAsk := model.AppMarkets.GetBidAsk(balance.Coin+`-USDT`, model.OKEX)
@@ -487,7 +512,7 @@ func parseBalanceOKEX(value map[string]interface{}) (balance *model.Balance) {
 			}
 		}
 	}
-	if value[`crossLiab`] != nil {
+	if value[`crossLiab`] != nil && value[`crossLiab`] != `` {
 		balance.Borrow, _ = strconv.ParseFloat(value[`crossLiab`].(string), 64)
 	}
 	balance.AvailableWithBorrow = balance.Available

@@ -154,8 +154,6 @@ func CancelOrder(key, secret, market, symbol, instrument, orderType, orderId str
 		result, errCode, msg = cancelOrderHuobiDM(key, secret, symbol, orderId)
 	case model.OKEX:
 		result, errCode, msg = cancelOrderOkex(key, secret, symbol, orderId, orderType)
-	case model.OKFUTURE:
-		result, errCode, msg = cancelOrderOkfuture(key, secret, instrument, orderId, orderType)
 	case model.Binance:
 		result, errCode, msg = cancelOrderBinance(key, secret, symbol, orderId)
 	case model.Coinpark:
@@ -173,25 +171,14 @@ func CancelOrder(key, secret, market, symbol, instrument, orderType, orderId str
 	return result, errCode, msg, order
 }
 
-func QueryOrders(key, secret, market, instrument string) (
-	orders []*model.Order) {
-	switch market {
-	case model.OKFUTURE:
-		return queryOrdersOkfuture(key, secret, instrument)
-	default:
-		util.Notice(market + ` not supported`)
-	}
-	return nil
-}
-
 func GetCurrentInstrument(key, secret, market, symbol string) (currentInstrument string) {
 	querySetter := querySetInstrumentsHuobiDM
 	currentType := `quarter`
 	//nextType := `bi_quarter`
 	switch market {
-	case model.OKFUTURE:
-		querySetter = querySetInstrumentsOkFuture
-		//nextType = `bi_quarter`
+	//case model.OKFUTURE:
+	//	querySetter = querySetInstrumentsOkFuture
+	//	//nextType = `bi_quarter`
 	case model.HuobiDM:
 		querySetter = querySetInstrumentsHuobiDM
 		//nextType = `next_quarter`
@@ -243,8 +230,6 @@ func GetDayCandle(key, secret, market, symbol, instrument string, timeCandle tim
 		candles = getCandlesFtx(key, secret, symbol, `1d`, begin, end, 40)
 	case model.OKEX:
 		candles = getCandlesOKEX(key, secret, instrument, `1D`, begin, end, 40)
-	case model.OKFUTURE:
-		candles = getCandlesOkfuture(key, secret, symbol, instrument, `1d`, begin, end)
 	case model.HuobiDM:
 		candles = getCandlesHuobiDM(key, secret, symbol, `1d`, begin, time.Now())
 	}
@@ -309,8 +294,6 @@ func GetBalances(key, secret, market string, delaySeconds int64) (
 		success, balances, totalInUsd = getBalanceFtx(key, secret)
 	case model.OKEX:
 		success, balances, totalInUsd = getBalanceOKEX(key, secret)
-	case model.OKFUTURE:
-		success, balances = getBalanceOkfuture(key, secret)
 	case model.HuobiDM:
 		success, balances = getBalanceHuobiDM(key, secret)
 	}
@@ -395,12 +378,14 @@ func QueryOrderById(key, secret, market, symbol, instrument, orderType, orderId 
 			dealAmount, dealPrice, status = queryOrderHuobiDM(key, secret, symbol, orderId)
 		}
 	case model.OKEX:
-		order = queryOrderOKEX(key, secret, instrument, orderId)
-		order.Market = market
-		order.Symbol = symbol
+		order = queryOrderOKEX(key, secret, instrument, orderId, orderType)
+		if order != nil {
+			order.Market = market
+			order.Symbol = symbol
+		}
 		return order
-	case model.OKFUTURE:
-		dealAmount, dealPrice, status = queryOrderOkfuture(key, secret, instrument, orderType, orderId)
+	//case model.OKFUTURE:
+	//	dealAmount, dealPrice, status = queryOrderOkfuture(key, secret, instrument, orderType, orderId)
 	case model.Binance:
 		dealAmount, dealPrice, status = queryOrderBinance(key, secret, symbol, orderId)
 	case model.Coinpark:
@@ -510,8 +495,8 @@ func PlaceOrder(key, secret, orderSide, orderType, market, symbol, instrument, a
 		placeOrderHuobiDM(key, secret, order, orderSide, orderType, instrument, symbol, strPrice, strTriggerPrice, strAmount)
 	case model.OKEX:
 		placeOrderOKEX(key, secret, order)
-	case model.OKFUTURE:
-		placeOrderOkfuture(key, secret, order, orderSide, orderType, instrument, strPrice, strTriggerPrice, strAmount)
+	//case model.OKFUTURE:
+	//	placeOrderOkfuture(key, secret, order, orderSide, orderType, instrument, strPrice, strTriggerPrice, strAmount)
 	case model.Binance:
 		placeOrderBinance(key, secret, order, orderSide, orderType, symbol, strPrice, strAmount)
 	case model.Coinpark:

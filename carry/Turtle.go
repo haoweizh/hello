@@ -365,7 +365,7 @@ func handleBreak(setting *model.Setting, turtleData *TurtleData, orderSide strin
 			for _, short := range turtleData.shorts {
 				temp := api.QueryOrderById(``, ``, setting.Market, setting.Symbol, short.Instrument,
 					short.OrderType, short.OrderId)
-				if temp.Status == model.CarryStatusWorking {
+				if temp != nil && temp.Status == model.CarryStatusWorking {
 					go api.MustCancel(model.KeyDefault, model.SecretDefault, short.Market, short.Symbol,
 						short.Instrument, short.OrderType, short.OrderId, true)
 				}
@@ -376,7 +376,7 @@ func handleBreak(setting *model.Setting, turtleData *TurtleData, orderSide strin
 			for _, long := range turtleData.longs {
 				temp := api.QueryOrderById(``, ``, setting.Market, setting.Symbol, long.Instrument,
 					long.OrderType, long.OrderId)
-				if temp.Status == model.CarryStatusWorking {
+				if temp != nil && temp.Status == model.CarryStatusWorking {
 					go api.MustCancel(model.KeyDefault, model.SecretDefault, long.Market, long.Symbol,
 						long.Instrument, long.OrderType, long.OrderId, true)
 				}

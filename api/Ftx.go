@@ -680,7 +680,6 @@ func placeOrderFtx(order *model.Order, key, secret, orderSide, orderType, accoun
 		}
 	}
 	response := SignedRequestFtx(key, secret, `POST`, uri, param, postData)
-	util.Notice(`place ftx: ` + string(response))
 	orderJson, err := util.NewJSON(response)
 	if err == nil {
 		success := orderJson.Get(`success`).MustBool()

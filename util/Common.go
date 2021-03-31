@@ -10,23 +10,14 @@ import (
 	"math"
 	"net/url"
 	"strconv"
+	"strings"
 	"time"
 )
 
 func CutTailZero(in string) (out string) {
-	if in == `` || in == `0` {
-		return in
-	}
-	index := len(in) - 1
-	for ; index >= 0; index-- {
-		if in[index] != '0' {
-			break
-		}
-	}
-	if in[index] == '.' {
-		index -= 1
-	}
-	return in[0 : index+1]
+	out = strings.Trim(in, ` `)
+	out = strings.Trim(out, `0`)
+	return strings.Trim(out, `.`)
 }
 
 func UnGzip(byte []byte) []byte {

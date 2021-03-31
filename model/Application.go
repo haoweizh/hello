@@ -56,10 +56,10 @@ const FunctionTurtle = `turtle`
 const FunctionGrid = `grid`
 const FunctionCarry = `carry`
 const FunctionComplement = `complement`
-const FunctionHangFar = `hang_far`
-const FunctionHangRevert = `hang_revert`
 const FunctionPostonlyHandler = `postonly`
 
+//const FunctionHangRevert = `hang_revert`
+//const FunctionHangFar = `hang_far`
 //const FunctionRefresh = `refresh`
 //const FunctionRank = `rank`
 //const FunctionHang = `hang`
