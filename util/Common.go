@@ -17,6 +17,9 @@ import (
 func CutTailZero(in string) (out string) {
 	out = strings.Trim(in, ` `)
 	out = strings.Trim(out, `0`)
+	if out[0] == '.' {
+		out = `0` + out
+	}
 	return strings.Trim(out, `.`)
 }
 

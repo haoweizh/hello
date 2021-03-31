@@ -9,6 +9,7 @@ import (
 	_ "github.com/jinzhu/gorm/dialects/postgres"
 	"hello/api"
 	"hello/model"
+	"hello/util"
 	"net/url"
 	"testing"
 	"time"
@@ -45,9 +46,12 @@ func Test_ws(t *testing.T) {
 }
 
 func Test_initTurtleN(t *testing.T) {
+	fmt.Println(util.CutTailZero(`0.566464`))
+	fmt.Println(util.CutTailZero(`10.566464`))
+	fmt.Println(util.CutTailZero(`0.566464000`))
+	fmt.Println(util.CutTailZero(`0.000`))
 	begin := time.Now()
 	time.Sleep(time.Second * 5)
-
 	duration := begin.Sub(time.Now())
 	fmt.Println(duration)
 	model.NewConfig()
