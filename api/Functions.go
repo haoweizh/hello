@@ -465,7 +465,7 @@ func PlaceOrder(key, secret, orderSide, orderType, market, symbol, instrument, a
 	util.Notice(fmt.Sprintf(`...%s %s %s before order %d amount:%s %f price:%s %f triggerPrice:%s`,
 		orderSide, market, symbol, start, strAmount, amount, strPrice, price, strTriggerPrice))
 	if model.AppConfig.Env == `test` {
-		order.Status = model.CarryStatusSuccess
+		order.Status = model.CarryStatusWorking
 		order.OrderId = fmt.Sprintf(`%s%s%d`, market, symbol, util.GetNow().UnixNano())
 		order.DealPrice = price
 		order.DealAmount = amount
