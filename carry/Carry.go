@@ -178,6 +178,7 @@ func getPerpTail(market string) string {
 }
 
 func resetSingleTradeMax(key, market, symbol string) {
+	setTradeMax(key, symbol, 0, 0)
 	keys, secrets := model.AppConfig.GetKeys(market)
 	for i, value := range keys {
 		if value == key {
