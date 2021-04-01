@@ -41,7 +41,7 @@ var postOrderCarry = func(order *model.Order) {
 	}
 	maxBuy, maxSell := getTradeMax(order.AmountType, order.Symbol)
 	// 需要经过转化成张数（合约）
-	amount := api.FormatAmount(model.OKEX, order.Instrument, order.Amount)
+	amount, _ := api.FormatAmount(model.OKEX, order.Instrument, order.Amount)
 	if order.OrderSide == model.OrderSideBuy {
 		maxBuy -= amount
 		maxSell += amount
@@ -508,7 +508,7 @@ func makeEqual(key, secret string, setting *model.Setting, balances []*model.Bal
 		}
 	}
 	amount = math.Min(math.Abs(amount), 20000/price)
-	orderAmount := api.FormatAmount(setting.Market, symbol, math.Abs(amount))
+	orderAmount, _ := api.FormatAmount(setting.Market, symbol, math.Abs(amount))
 	if orderAmount > 0 {
 		resultPerp := api.CancelOrders(key, secret, setting.Market, settingSymbol)
 		resultRelated := api.CancelOrders(key, secret, setting.Market, symbolRelated)
@@ -605,8 +605,8 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 		math.Abs(amount)*markPrice < valueLow {
 		amount = 0
 	}
-	amountPerp := api.FormatAmount(setting.Market, setting.Symbol, amount)
-	amountRelated := api.FormatAmount(setting.Market, setting.GetRelatedSymbol(), amount)
+	amountPerp, minPerp := api.FormatAmount(setting.Market, setting.Symbol, amount)
+	amountRelated, minRelated := api.FormatAmount(setting.Market, setting.GetRelatedSymbol(), amount)
 	if model.OKEX == setting.Market {
 		maxBuyPerp, maxSellPerp := getTradeMax(key, setting.Symbol)
 		maxBuyRelated, maxSellRelated := getTradeMax(key, setting.GetRelatedSymbol())
@@ -629,8 +629,8 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	}
 	amount = math.Min(amountPerp, amountRelated)
 	if amount > 0 {
-		util.Notice(fmt.Sprintf(`+++ %s high:%s %f low:%s %f symbol: %s %s usd available:%f amount：%f （%f %f）carryAmount: %f`,
-			key, symbolHigh, scoreHigh, symbolLow, scoreLow, setting.Symbol, sidePerp, usdAvailable, amount, amountPerp, amountRelated, carryAmount))
+		util.Notice(fmt.Sprintf(`+++%s high:%s %f low:%s %f symbol: %s %s usd available:%f amount%f(%f %f)carryAmount: %f minSize %f %f`,
+			key, symbolHigh, scoreHigh, symbolLow, scoreLow, setting.Symbol, sidePerp, usdAvailable, amount, amountPerp, amountRelated, carryAmount, minPerp, minRelated))
 	}
 	return sidePerp, sideRelated, amount
 }

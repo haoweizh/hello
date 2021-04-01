@@ -131,7 +131,8 @@ func placeOrderOKEX(key, secret string, order *model.Order) {
 	priceStr := util.CutTailZero(strconv.FormatFloat(price, 'f', decimal, 64))
 	priceTrigger, decimal := FormatPrice(model.OKEX, order.Instrument, order.TriggerPrice)
 	triggerPriceStr := util.CutTailZero(strconv.FormatFloat(priceTrigger, 'f', decimal, 64))
-	amount := util.CutTailZero(fmt.Sprintf(`%f`, FormatAmount(model.OKEX, order.Instrument, order.Amount)))
+	formattedAmount, _ := FormatAmount(model.OKEX, order.Instrument, order.Amount)
+	amount := util.CutTailZero(fmt.Sprintf(`%f`, formattedAmount))
 	if order.OrderType == model.OrderTypeMarket {
 		usdAmount, _ := strconv.ParseFloat(amount, 64)
 		amount = util.CutTailZero(fmt.Sprintf(`%f`, usdAmount*order.Price))
