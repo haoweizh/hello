@@ -28,6 +28,7 @@ var balanceAll = make(map[string]float64)                     // key - balance v
 var carryBalance = make(map[string]map[string]*model.Balance) // key - coin - balance
 var carryAmount = make(map[string]map[string]float64)         // key - perp - float64
 var tradeMax = make(map[string]map[string][]float64)          // key - instrument - [maxBuy合约张数/币币个数, maxSell]
+var maxResetting bool
 
 var postOrderCarry = func(order *model.Order) {
 	if order == nil || order.OrderId == `` || order.Status == model.CarryStatusFail {
@@ -49,6 +50,18 @@ var postOrderCarry = func(order *model.Order) {
 		maxSell -= amount
 	}
 	setTradeMax(order.AmountType, order.Instrument, maxBuy, maxSell)
+}
+
+func getMaxReset() bool {
+	defer carryLock.Unlock()
+	carryLock.Lock()
+	return maxResetting
+}
+
+func setMaxReset(value bool) {
+	defer carryLock.Unlock()
+	carryLock.Lock()
+	maxResetting = value
 }
 
 func getTradeMax(key, instrument string) (maxBuy, maxSell float64) {
@@ -178,6 +191,11 @@ func getPerpTail(market string) string {
 
 func resetTradeMax(market string) {
 	resetInitialized = true
+	if getMaxReset() {
+		return
+	}
+	defer setMaxReset(false)
+	setMaxReset(true)
 	if market != model.OKEX {
 		return
 	}
