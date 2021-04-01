@@ -649,12 +649,16 @@ func InitMarketInfos() (success bool) {
 	return success
 }
 
-func FormatPrice(market, symbol string, price float64) (formattedPrice float64, decimal int) {
+func FormatPrice(market, symbol, orderSide string, price float64) (formattedPrice float64, decimal int) {
 	marketInfo := model.MarketInfos[market][symbol]
 	if marketInfo == nil || marketInfo.SizeIncrement == 0 {
 		return 0, 0
 	}
-	return marketInfo.PriceIncrement * math.Round(price/marketInfo.PriceIncrement), marketInfo.PriceDecimal
+	if orderSide == model.OrderSideBuy {
+		return marketInfo.PriceIncrement * math.Ceil(price/marketInfo.PriceIncrement), marketInfo.PriceDecimal
+	} else {
+		return marketInfo.PriceIncrement * math.Floor(price/marketInfo.PriceIncrement), marketInfo.PriceDecimal
+	}
 }
 
 func ParseRealAmount(market, symbol string, amount float64) (success bool, realAmount float64) {
