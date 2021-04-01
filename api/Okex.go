@@ -117,6 +117,10 @@ func sendSignRequestOKEX(key, secret, method, path string, body interface{}) (re
 	sign := base64.StdEncoding.EncodeToString(hash.Sum(nil))
 	headers[`OK-ACCESS-SIGN`] = sign
 	responseBody, _ = util.HttpRequest(method, uri, postContent, headers, 60)
+	if strings.Contains(uri, `/api/v5/trade/order`) {
+		util.Notice(fmt.Sprintf(`okex key %s request %s body %s return %s`,
+			key, uri, toBeSign, string(responseBody)))
+	}
 	util.SocketInfo(fmt.Sprintf(`okex key %s request %s body %s return %s`,
 		key, uri, toBeSign, string(responseBody)))
 	return responseBody
