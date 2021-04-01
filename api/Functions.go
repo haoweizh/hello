@@ -674,6 +674,7 @@ func FormatAmount(market, symbol string, amount float64) (formattedAmount float6
 	if marketInfo.CTValue > 0 && marketInfo.CTCurrency == model.GetCoin(market, symbol) {
 		amount = amount / marketInfo.CTValue
 	}
+	util.Notice(fmt.Sprintf(`check %s %f > %f ?`, symbol, amount, marketInfo.SizeMin))
 	formattedAmount = math.Round(amount/marketInfo.SizeIncrement) * marketInfo.SizeIncrement
 	if formattedAmount < marketInfo.SizeMin {
 		return 0
