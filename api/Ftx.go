@@ -9,6 +9,7 @@ import (
 	"github.com/bitly/go-simplejson"
 	"hello/model"
 	"hello/util"
+	"math"
 	"net/http"
 	"net/url"
 	"sort"
@@ -531,6 +532,10 @@ func getMarketsFtx() (marketInfos map[string]*model.MarketInfo) {
 			}
 			if value[`sizeIncrement`] != nil {
 				marketInfo.SizeIncrement, _ = value[`sizeIncrement`].(json.Number).Float64()
+			}
+			if value[`minProvideSize`] != nil {
+				marketInfo.SizeMin, _ = value[`minProvideSize`].(json.Number).Float64()
+				marketInfo.SizeMin = math.Max(marketInfo.SizeMin, marketInfo.SizeIncrement)
 			}
 			marketInfos[marketInfo.Name] = marketInfo
 		}
