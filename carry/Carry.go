@@ -41,7 +41,7 @@ var postOrderCarry = func(order *model.Order) {
 	}
 	maxBuy, maxSell := getTradeMax(order.AmountType, order.Symbol)
 	// 需要经过转化成张数（合约）
-	amount := api.FormatAmount(model.OKEX, order.Instrument, order.Amount, false)
+	amount := api.FormatAmount(model.OKEX, order.Instrument, order.Amount)
 	if order.OrderSide == model.OrderSideBuy {
 		maxBuy -= amount
 		maxSell += amount
@@ -504,7 +504,7 @@ func makeEqual(key, secret string, setting *model.Setting, balances []*model.Bal
 		}
 	}
 	amount = math.Min(math.Abs(amount), 20000/price)
-	orderAmount := api.FormatAmount(setting.Market, symbol, math.Abs(amount), false)
+	orderAmount := api.FormatAmount(setting.Market, symbol, math.Abs(amount))
 	if orderAmount > 0 {
 		resultPerp := api.CancelOrders(key, secret, setting.Market, settingSymbol)
 		resultRelated := api.CancelOrders(key, secret, setting.Market, symbolRelated)
@@ -563,11 +563,11 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	model.SetCarryInfo(table+setting.Symbol,
 		fmt.Sprintf(`%s 参数:(%f %f %f) 计算结果(%f %f %f %f) 当前市场(%f %f) usdRate:%favailable:%f coinRate: %f`,
 			table, setting.OpenShortMargin, setting.CloseShortMargin, setting.GridPriceDistance, setOpen, setClose,
-			revertOpen, revertClose, scoreOpen, scoreClose, usdRate, usdAvailable, coinRate))
+			revertOpen, revertClose, scoreOpen, scoreClose, usdRate, usdAvailable, balance.UsdValue/balanceAllValue))
 	carryInfo := map[string]interface{}{`+开仓`: setting.OpenShortMargin, `-开仓`: setting.CloseShortMargin,
 		`平仓`: setting.GridPriceDistance, `动态+开仓`: setOpen, `动态-开仓`: setClose, `open平仓`: revertOpen,
 		`close平仓`: revertClose, table: setting.Symbol, `市场+开`: scoreOpen, `市场-开`: scoreClose, `usdRate`: usdRate,
-		`usdAvailable`: usdAvailable, `coinRate`: coinRate}
+		`usdAvailable`: usdAvailable, `coinRate`: balance.UsdValue / balanceAllValue}
 	model.SetCarryInfos(table, setting.Symbol, carryInfo)
 	carryAmount := getCarryAmount(key, setting.Symbol)
 	if (scoreLow < setClose && setting.Symbol == symbolLow) || (carryAmount > 0 && scoreClose <= -1*revertOpen) {
@@ -601,8 +601,8 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 		math.Abs(amount)*markPrice < valueLow {
 		amount = 0
 	}
-	amountPerp := api.FormatAmount(setting.Market, setting.Symbol, amount, false)
-	amountRelated := api.FormatAmount(setting.Market, setting.GetRelatedSymbol(), amount, false)
+	amountPerp := api.FormatAmount(setting.Market, setting.Symbol, amount)
+	amountRelated := api.FormatAmount(setting.Market, setting.GetRelatedSymbol(), amount)
 	if model.OKEX == setting.Market {
 		maxBuyPerp, maxSellPerp := getTradeMax(key, setting.Symbol)
 		maxBuyRelated, maxSellRelated := getTradeMax(key, setting.GetRelatedSymbol())
