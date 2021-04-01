@@ -24,7 +24,6 @@ var lowest = math.NaN()
 var highest = math.NaN()
 var usdAvailable = make(map[string]float64)                   // key - float64
 var usdRate = make(map[string]float64)                        // key - float64
-var cachePositions = make(map[string][]*model.Position)       // key - []position
 var balanceAll = make(map[string]float64)                     // key - balance value in all
 var carryBalance = make(map[string]map[string]*model.Balance) // key - coin - balance
 var carryAmount = make(map[string]map[string]float64)         // key - perp - float64
@@ -71,18 +70,6 @@ func setTradeMax(key, instrument string, maxBuy, maxSell float64) {
 		tradeMax[key] = make(map[string][]float64)
 	}
 	tradeMax[key][instrument] = []float64{maxBuy, maxSell}
-}
-
-func getPositions(key string) []*model.Position {
-	defer carryLock.Unlock()
-	carryLock.Lock()
-	return cachePositions[key]
-}
-
-func setPositions(key string, value []*model.Position) {
-	carryLock.Lock()
-	defer carryLock.Unlock()
-	cachePositions[key] = value
 }
 
 func getUsdAvailable(key string) float64 {
@@ -189,36 +176,6 @@ func getPerpTail(market string) string {
 	return ``
 }
 
-func initEmptyBalance(key, market, coin string) (balance *model.Balance) {
-	positions := getPositions(key)
-	if positions == nil {
-		return nil
-	}
-	tail := getPerpTail(market)
-	name := coin + tail
-	needCreate := true
-	for _, position := range positions {
-		if position.Currency == name && position.Free != 0 {
-			needCreate = false
-		}
-	}
-	if needCreate {
-		balance = &model.Balance{
-			Amount:              0,
-			Available:           0,
-			AvailableWithBorrow: 0,
-			Borrow:              0,
-			Coin:                coin,
-			Market:              market,
-			Price:               0,
-			UsdValue:            0,
-		}
-		setCarryBalance(key, coin, balance)
-	}
-	util.Notice(fmt.Sprintf(`need to set empty balance for %s`, coin))
-	return balance
-}
-
 func resetTradeMax(market string) {
 	resetInitialized = true
 	if market != model.OKEX {
@@ -258,7 +215,6 @@ func clearCarryBalance() {
 			for i, key := range keys {
 				resultBalance, balances, _ := api.GetBalances(key, secrets[i], market, 0)
 				resultPosition, positions := api.GetPositions(key, secrets[i], market)
-				setPositions(key, positions)
 				if !resultBalance || !resultPosition {
 					util.Notice(`fatal error: can not get balance/position ` + market)
 					continue
@@ -531,7 +487,17 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	if balance == nil {
 		model.SetCarryInfo(`warning `+coin, fmt.Sprintf(`slave: balace not available!!! %s`, key))
 		model.SetCarryInfos(`coin_absent`, key+`_`+coin, map[string]interface{}{`absent`: coin, `key`: key})
-		initEmptyBalance(key, setting.Market, coin)
+		balance = &model.Balance{
+			Amount:              0,
+			Available:           0,
+			AvailableWithBorrow: 0,
+			Borrow:              0,
+			Coin:                coin,
+			Market:              setting.Market,
+			Price:               0,
+			UsdValue:            0,
+		}
+		setCarryBalance(key, coin, balance)
 		return ``, ``, 0
 	} else {
 		model.RemoveCarryInfo(`warning ` + coin)
@@ -634,3 +600,44 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	}
 	return sidePerp, sideRelated, amount
 }
+
+//var cachePositions = make(map[string][]*model.Position)       // key - []position
+//func setPositions(key string, value []*model.Position) {
+//	carryLock.Lock()
+//	defer carryLock.Unlock()
+//	cachePositions[key] = value
+//}
+//func getPositions(key string) []*model.Position {
+//	defer carryLock.Unlock()
+//	carryLock.Lock()
+//	return cachePositions[key]
+//}
+//func initEmptyBalance(key, market, coin string) (balance *model.Balance) {
+//	positions := getPositions(key)
+//	if positions == nil {
+//		return nil
+//	}
+//	tail := getPerpTail(market)
+//	name := coin + tail
+//	needCreate := true
+//	for _, position := range positions {
+//		if position.Currency == name && position.Free != 0 {
+//			needCreate = false
+//		}
+//	}
+//	if needCreate {
+//		balance = &model.Balance{
+//			Amount:              0,
+//			Available:           0,
+//			AvailableWithBorrow: 0,
+//			Borrow:              0,
+//			Coin:                coin,
+//			Market:              market,
+//			Price:               0,
+//			UsdValue:            0,
+//		}
+//		setCarryBalance(key, coin, balance)
+//	}
+//	util.Notice(fmt.Sprintf(`need to set empty balance for %s`, coin))
+//	return balance
+//}

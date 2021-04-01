@@ -172,11 +172,9 @@ func Maintain() {
 	//model.HandlerMap[model.FunctionHangFar] = ProcessHangFar
 	//model.HandlerMap[model.FunctionPostonlyHandler] = PostonlyHandler
 	defer model.AppDB.Close()
-	if model.AppConfig.Env != `test` {
-		model.AppDB.AutoMigrate(&model.Setting{})
-		model.AppDB.AutoMigrate(&model.Order{})
-		model.AppDB.AutoMigrate(&model.Balance{})
-	}
+	model.AppDB.AutoMigrate(&model.Setting{})
+	model.AppDB.AutoMigrate(&model.Order{})
+	model.AppDB.AutoMigrate(&model.Balance{})
 	//model.LoadSettings()
 	if !api.InitMarketInfos() {
 		util.Notice(`fatal error: can not set okex account mode to net!!`)
