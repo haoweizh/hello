@@ -626,12 +626,11 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 			amountRelated = math.Min(amountRelated, maxBuyRelated)
 		}
 		_, amountPerp = api.ParseRealAmount(setting.Market, setting.Symbol, amountPerp)
-		amountPerp = math.Floor(amountPerp)
 	}
 	amount = math.Min(amountPerp, amountRelated)
 	if amount > 0 {
-		util.Notice(fmt.Sprintf(`+++ %s high:%s %f low:%s %f symbol: %s %s usd available:%f amount：%f carryAmount: %f`,
-			key, symbolHigh, scoreHigh, symbolLow, scoreLow, setting.Symbol, sidePerp, usdAvailable, amount, carryAmount))
+		util.Notice(fmt.Sprintf(`+++ %s high:%s %f low:%s %f symbol: %s %s usd available:%f amount：%f （%f %f）carryAmount: %f`,
+			key, symbolHigh, scoreHigh, symbolLow, scoreLow, setting.Symbol, sidePerp, usdAvailable, amount, amountPerp, amountRelated, carryAmount))
 	}
 	return sidePerp, sideRelated, amount
 }

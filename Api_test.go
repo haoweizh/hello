@@ -46,7 +46,20 @@ func Test_ws(t *testing.T) {
 	}
 }
 
+func Test_OKFormatAmount(t *testing.T) {
+	model.NewConfig()
+	_ = configor.Load(model.AppConfig, "./config.yml")
+	model.AppDB, _ = gorm.Open("postgres", model.AppConfig.DBConnection)
+	api.InitMarketInfos()
+	amountPerp := api.FormatAmount(model.OKEX, `BTT-USDT-SWAP`, 285854.42347684357)
+	amountRelated := api.FormatAmount(model.OKEX, `BTT-USDT`, 285854.42347684357)
+	_, amountPerp = api.ParseRealAmount(model.OKEX, `BTT-USDT-SWAP`, amountPerp)
+	amount := math.Min(amountPerp, amountRelated)
+	fmt.Println(amount)
+}
+
 func Test_initTurtleN(t *testing.T) {
+
 	amount := 27213.361367394158 / 10000
 	formattedAmount := math.Round(amount/0.0000001) * 0.0000001
 	amountStr := util.CutTailZero(fmt.Sprintf(`%f`, formattedAmount))

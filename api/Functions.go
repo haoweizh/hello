@@ -675,7 +675,7 @@ func FormatAmount(market, symbol string, amount float64) (formattedAmount float6
 		amount = amount / marketInfo.CTValue
 	}
 	formattedAmount = math.Floor(amount/marketInfo.SizeIncrement) * marketInfo.SizeIncrement
-	if formattedAmount < marketInfo.SizeMin {
+	if formattedAmount < marketInfo.SizeMin || marketInfo.SizeMin == 0 {
 		return 0
 	}
 	return formattedAmount
