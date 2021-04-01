@@ -126,11 +126,16 @@ func sendSignRequestOKEX(key, secret, method, path string, body interface{}) (re
 // 不能使用 fmt %v 因为有e+5 的情况；
 // 不能使用 fmt %f 因为有000后缀；
 // 不能使用 strconv.FormatFloat 因为有 2.00000001问题
+// todo 不能完全信任价格精度
 func placeOrderOKEX(key, secret string, order *model.Order) {
-	price, decimal := FormatPrice(model.OKEX, order.Instrument, order.Price)
-	priceStr := util.CutTailZero(strconv.FormatFloat(price, 'f', decimal, 64))
-	priceTrigger, decimal := FormatPrice(model.OKEX, order.Instrument, order.TriggerPrice)
-	triggerPriceStr := util.CutTailZero(strconv.FormatFloat(priceTrigger, 'f', decimal, 64))
+	priceStr := strconv.FormatFloat(order.Price, 'f', -1, 64)
+	triggerPriceStr := strconv.FormatFloat(order.TriggerPrice, 'f', -1, 64)
+	if order.RefreshType != model.FunctionCarry {
+		price, decimal := FormatPrice(model.OKEX, order.Instrument, order.Price)
+		priceStr = util.CutTailZero(strconv.FormatFloat(price, 'f', decimal, 64))
+		priceTrigger, decimal := FormatPrice(model.OKEX, order.Instrument, order.TriggerPrice)
+		triggerPriceStr = util.CutTailZero(strconv.FormatFloat(priceTrigger, 'f', decimal, 64))
+	}
 	formattedAmount, _ := FormatAmount(model.OKEX, order.Instrument, order.Amount)
 	amount := util.CutTailZero(fmt.Sprintf(`%f`, formattedAmount))
 	if order.OrderType == model.OrderTypeMarket {
