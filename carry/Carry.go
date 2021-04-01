@@ -429,17 +429,21 @@ func placeCarry(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, key
 func getCarryAmounts(setting *model.Setting, balances []*model.Balance, positions []*model.Position) (
 	success bool, amountPerp, amountRelated float64) {
 	tail := getPerpTail(setting.Market)
+	positionExist := false
+	balanceExist := false
 	for _, position := range positions {
 		if position != nil && position.Currency == setting.Symbol {
 			amountPerp = position.Free
+			positionExist = true
 		}
 	}
 	for _, balance := range balances {
 		if strings.ToUpper(balance.Coin+tail) == setting.Symbol {
 			amountRelated = balance.Amount
+			balanceExist = true
 		}
 	}
-	return true, amountPerp, amountRelated
+	return positionExist && balanceExist, amountPerp, amountRelated
 }
 
 func makeEqual(key, secret string, setting *model.Setting, balances []*model.Balance, positions []*model.Position) (
@@ -626,8 +630,7 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	}
 	amount = math.Min(amountPerp, amountRelated)
 	if amount > 0 {
-		util.Notice(fmt.Sprintf(`>>>> %s high:%s %f low:%s %f symbl: %s %s usd available:%f amount：%f 
-			carryAmount: %f`,
+		util.Notice(fmt.Sprintf(`+++ %s high:%s %f low:%s %f symbol: %s %s usd available:%f amount：%f carryAmount: %f`,
 			key, symbolHigh, scoreHigh, symbolLow, scoreLow, setting.Symbol, sidePerp, usdAvailable, amount, carryAmount))
 	}
 	return sidePerp, sideRelated, amount
