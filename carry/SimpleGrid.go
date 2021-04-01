@@ -61,8 +61,8 @@ func getGridPos(setting *model.Setting) (gridPos *GridPos) {
 	instrument := api.GetCurrentInstrument(``, ``, setting.Market, setting.Symbol)
 	candle := api.GetDayCandle(model.KeyDefault, model.SecretDefault, setting.Market, setting.Symbol, instrument, yesterday)
 	p := (candle.PriceHigh + candle.PriceLow + candle.PriceClose) / 3
-	util.Notice(fmt.Sprintf(`%s %s yesterday:%s get new grid pos with avgN:%f n:%f`,
-		setting.Market, setting.Symbol, yesterdayStr, candle.PriceHigh-candle.PriceLow, candle.N))
+	util.Notice(fmt.Sprintf(`%s %s yesterday:%s grid candleh p: %f n:%f low %f high %f open %f close %f`,
+		setting.Market, setting.Symbol, yesterdayStr, p, candle.N, candle.PriceLow, candle.PriceHigh, candle.PriceOpen, candle.PriceClose))
 	if candle.PriceHigh-candle.PriceLow < candle.N*2/3 {
 		gridPos = &GridPos{orders: make([]*model.Order, 5), pos: make([]float64, 5), posLength: 5, posMiddle: 2}
 		gridPos.pos[1] = candle.PriceLow - 2*(candle.PriceHigh-p)
