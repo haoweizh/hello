@@ -508,10 +508,6 @@ func makeEqual(key, secret string, setting *model.Setting, balances []*model.Bal
 	if orderAmount > 0 {
 		resultPerp := api.CancelOrders(key, secret, setting.Market, settingSymbol)
 		resultRelated := api.CancelOrders(key, secret, setting.Market, symbolRelated)
-		marketInfo := model.MarketInfos[setting.Market][symbol]
-		if marketInfo != nil {
-			util.Notice(fmt.Sprintf(`min size %f %s`, marketInfo.SizeMin, symbol))
-		}
 		util.Notice(fmt.Sprintf(`%s cancel all perp:%v related:%v >>>>>> equal %s %f, %s %f = %s %f`,
 			setting.Market, resultPerp, resultRelated, settingSymbol, amountPerp, symbolRelated, amountRelated, orderSide, amount))
 		api.PlaceOrder(key, secret, orderSide, model.OrderTypeLimit, setting.Market, symbol, symbol,
