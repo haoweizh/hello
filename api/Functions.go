@@ -481,8 +481,6 @@ func PlaceOrder(key, secret, orderSide, orderType, market, symbol, instrument, a
 		placeOrderHuobiDM(key, secret, order, orderSide, orderType, instrument, symbol, strPrice, strTriggerPrice, strAmount)
 	case model.OKEX:
 		placeOrderOKEX(key, secret, order)
-	//case model.OKFUTURE:
-	//	placeOrderOkfuture(key, secret, order, orderSide, orderType, instrument, strPrice, strTriggerPrice, strAmount)
 	case model.Binance:
 		placeOrderBinance(key, secret, order, orderSide, orderType, symbol, strPrice, strAmount)
 	case model.Coinpark:
@@ -499,7 +497,7 @@ func PlaceOrder(key, secret, orderSide, orderType, market, symbol, instrument, a
 		placeOrderFtx(order, key, secret, orderSide, orderType, accountType, orderParam, symbol, strPrice,
 			strTriggerPrice, fmt.Sprintf(`%f`, amount))
 	}
-	if order.OrderId == "0" || order.OrderId == "" {
+	if order.OrderId == "0" || strings.Trim(order.OrderId, ` `) == "" {
 		order.Status = model.CarryStatusFail
 	} else if order.Status == `` {
 		order.Status = model.CarryStatusWorking
@@ -670,19 +668,28 @@ func ParseRealAmount(market, symbol string, amount float64) (success bool, realA
 	return true, amount * marketInfo.CTValue
 }
 
-func FormatAmount(market, symbol string, amount float64) (formattedAmount, sizeMin float64) {
-	marketInfo := model.MarketInfos[market][symbol]
-	if marketInfo == nil || marketInfo.SizeIncrement == 0 || marketInfo.SizeMin == 0 {
-		return 0, 0
+// symbol 期货; related 现货
+func FormatAmountPair(market, symbolPerp, symbolRelated string, amount float64) (formattedAmount float64) {
+	marketPerp := model.MarketInfos[market][symbolPerp]
+	marketRelated := model.MarketInfos[market][symbolRelated]
+	if marketPerp == nil || marketPerp.SizeIncrement == 0 || marketPerp.SizeMin == 0 ||
+		marketRelated == nil || marketRelated.SizeIncrement == 0 || marketRelated.SizeMin == 0 {
+		return 0
 	}
-	if marketInfo.CTValue > 0 && marketInfo.CTCurrency == model.GetCoin(market, symbol) {
-		amount = amount / marketInfo.CTValue
+	sizeInc := marketPerp.SizeIncrement
+	sizeMinPerp := marketPerp.SizeMin
+	if marketPerp.CTValue > 0 && marketPerp.CTCurrency == model.GetCoin(market, symbolPerp) {
+		sizeInc = sizeInc * marketPerp.CTValue
+		sizeMinPerp = sizeMinPerp * marketPerp.CTValue
 	}
-	formattedAmount = math.Floor(amount/marketInfo.SizeIncrement) * marketInfo.SizeIncrement
-	if formattedAmount < marketInfo.SizeMin || marketInfo.SizeMin == 0 {
-		return 0, 0
+	if sizeInc < marketRelated.SizeIncrement {
+		sizeInc = marketRelated.SizeIncrement
 	}
-	return formattedAmount, marketInfo.SizeMin
+	formattedAmount = math.Floor(amount/sizeInc) * sizeInc
+	if formattedAmount < sizeMinPerp || formattedAmount < marketRelated.SizeMin {
+		return 0
+	}
+	return formattedAmount
 }
 
 // GetMarketInfo

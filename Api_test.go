@@ -47,21 +47,36 @@ func Test_ws(t *testing.T) {
 	}
 }
 
+func getAmount(amountIn float64) {
+	amount := api.FormatAmountPair(model.OKEX, `BTT-USDT-SWAP`, `BTT-USDT`, amountIn)
+	amountInPerp := api.GetAmountInPerpOKEX(model.OKEX, `BTT-USDT-SWAP`, amount)
+	_, amountInReal := api.ParseRealAmount(model.OKEX, `BTT-USDT-SWAP`, amountInPerp)
+	amount = math.Min(amount, amountInReal)
+	amount = api.FormatAmountPair(model.OKEX, `BTT-USDT-SWAP`, `BTT-USDT`, amount)
+	fmt.Println(fmt.Sprintf(`%f %f`, amountIn, amount))
+}
+
 func Test_OKFormatAmount(t *testing.T) {
 	model.NewConfig()
 	_ = configor.Load(model.AppConfig, "./config.yml")
 	model.AppDB, _ = gorm.Open("postgres", model.AppConfig.DBConnection)
 	api.InitMarketInfos()
-	btt, _ := api.FormatAmount(model.OKEX, `BTT-USDT`, 0.000076)
-	fmt.Println(btt)
+
+	getAmount(0.1)
+	getAmount(0)
+	getAmount(0.1)
+	getAmount(4444)
+	getAmount(9999)
+	getAmount(19999)
+	getAmount(2349999)
+
 	price, decimal := api.FormatPrice(model.OKEX, `JST-USDT`, model.OrderSideBuy, 0.13175)
 	priceStr := util.CutTailZero(strconv.FormatFloat(price, 'f', decimal, 64))
 	fmt.Println(priceStr)
-	amountPerp, _ := api.FormatAmount(model.OKEX, `BTT-USDT-SWAP`, 285854.42347684357)
-	amountRelated, _ := api.FormatAmount(model.OKEX, `BTT-USDT`, 285854.42347684357)
-	_, amountPerp = api.ParseRealAmount(model.OKEX, `BTT-USDT-SWAP`, amountPerp)
-	amount := math.Min(amountPerp, amountRelated)
-	fmt.Println(amount)
+	//amountPerp, _ := api.FormatAmount(model.OKEX, `BTT-USDT-SWAP`, 285854.42347684357)
+	//amountRelated, _ := api.FormatAmount(model.OKEX, `BTT-USDT`, 285854.42347684357)
+	//_, amountPerp = api.ParseRealAmount(model.OKEX, `BTT-USDT-SWAP`, amountPerp)
+	//amount = math.Min(amountPerp, amountRelated)
 }
 
 func Test_initTurtleN(t *testing.T) {

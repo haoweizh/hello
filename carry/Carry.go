@@ -41,7 +41,7 @@ var postOrderCarry = func(order *model.Order) {
 	}
 	maxBuy, maxSell := getTradeMax(order.AmountType, order.Symbol)
 	// 需要经过转化成张数（合约）
-	amount, _ := api.FormatAmount(model.OKEX, order.Instrument, order.Amount)
+	amount := api.GetAmountInPerpOKEX(model.OKEX, order.Instrument, order.Amount)
 	if order.OrderSide == model.OrderSideBuy {
 		maxBuy -= amount
 		maxSell += amount
@@ -375,11 +375,11 @@ func placeCarry(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, key
 	}
 	now := int(util.GetNowUnixMillion())
 	util.Notice(fmt.Sprintf(`carry%s->%s delay %d %d perp[%f %f %f %f] related[%f %f %f %f] with score open:%f close:%f 
-	rate sum %f amount %f worth %f time in million %d`,
+	    amount %f worth %f time in million %d`,
 		setting.Symbol, symbolRelated, now-tickPerp.TsReceived, now-tickRelated.TsReceived, tickPerp.Bids[0].Price,
 		tickPerp.Bids[0].Amount, tickPerp.Asks[0].Price, tickPerp.Asks[0].Amount, tickRelated.Bids[0].Price,
 		tickRelated.Bids[0].Amount, tickRelated.Asks[0].Price, tickRelated.Asks[0].Amount, scoreOpen, scoreClose,
-		0.0, amount, amount*tickPerp.Asks[0].Price, util.GetNowUnixMillion()))
+		amount, amount*tickPerp.Asks[0].Price, util.GetNowUnixMillion()))
 	go api.PlaceOrder(key, secret, sidePerp, model.OrderTypeLimit, setting.Market, setting.Symbol,
 		``, ``, ``, model.FunctionCarry, perpPrice, perpPrice,
 		amount, true, postOrderCarry)
@@ -476,7 +476,7 @@ func makeEqual(key, secret string, setting *model.Setting, balances []*model.Bal
 		}
 	}
 	amount = math.Min(math.Abs(amount), 20000/price)
-	orderAmount, _ := api.FormatAmount(setting.Market, symbol, math.Abs(amount))
+	orderAmount := api.GetAmountInPerpOKEX(setting.Market, symbol, math.Abs(amount))
 	if orderAmount > 0 {
 		resultPerp := api.CancelOrders(key, secret, setting.Market, settingSymbol)
 		resultRelated := api.CancelOrders(key, secret, setting.Market, symbolRelated)
@@ -583,30 +583,25 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 		math.Abs(amount)*markPrice < valueLow {
 		amount = 0
 	}
-	amountPerp, minPerp := api.FormatAmount(setting.Market, setting.Symbol, amount)
-	amountRelated, minRelated := api.FormatAmount(setting.Market, setting.GetRelatedSymbol(), amount)
+	amount = api.FormatAmountPair(setting.Market, setting.Symbol, setting.GetRelatedSymbol(), amount)
 	if model.OKEX == setting.Market {
+		amountInPerp := api.GetAmountInPerpOKEX(setting.Market, setting.Symbol, amount)
 		maxBuyPerp, maxSellPerp := getTradeMax(key, setting.Symbol)
 		maxBuyRelated, maxSellRelated := getTradeMax(key, setting.GetRelatedSymbol())
 		if sidePerp == model.OrderSideBuy && sideRelated == model.OrderSideSell {
-			amountPerp = math.Min(amountPerp, maxBuyPerp)
-			amountRelated = math.Min(amountRelated, maxSellRelated)
+			amountInPerp = math.Min(amountInPerp, maxBuyPerp)
+			amount = math.Min(amount, maxSellRelated)
 		} else if sidePerp == model.OrderSideSell && sideRelated == model.OrderSideBuy {
-			amountPerp = math.Min(amountPerp, maxSellPerp)
-			amountRelated = math.Min(amountRelated, maxBuyRelated)
+			amountInPerp = math.Min(amountInPerp, maxSellPerp)
+			amount = math.Min(amount, maxBuyRelated)
 		}
-		// 因为之前有校验可交易数量，导致数量可能被设置成不合规数量格式，所以要从新解析成非张数数量后再从新比较，再解析成真实币数
-		_, amountPerp = api.ParseRealAmount(setting.Market, setting.Symbol, amountPerp)
-		amountPerp, minPerp = api.FormatAmount(setting.Market, setting.Symbol, amountPerp)
-		amountRelated, minRelated = api.FormatAmount(setting.Market, setting.GetRelatedSymbol(), amountRelated)
-		_, amountPerp = api.ParseRealAmount(setting.Market, setting.Symbol, amountPerp)
+		_, amountInReal := api.ParseRealAmount(setting.Market, setting.Symbol, amountInPerp)
+		amount = math.Min(amount, amountInReal)
+		amount = api.FormatAmountPair(setting.Market, setting.Symbol, setting.GetRelatedSymbol(), amount)
 	}
-	amount = math.Min(amountPerp, amountRelated)
 	if amount > 0 {
-		util.Notice(fmt.Sprintf(`+++ %s high:%s %f low:%s %f symbol: %s %s usd available:%f 
-			amount%f(%f %f) carryAmount: %f minSize %f %f`,
-			key, symbolHigh, scoreHigh, symbolLow, scoreLow, setting.Symbol, sidePerp, usdAvailable,
-			amount, amountPerp, amountRelated, carryAmount, minPerp, minRelated))
+		util.Notice(fmt.Sprintf(`+++ %s high:%s %f low:%s %f symbol: %s %s usd available:%f amount %f carryAmount: %f`,
+			key, symbolHigh, scoreHigh, symbolLow, scoreLow, setting.Symbol, sidePerp, usdAvailable, amount, carryAmount))
 	}
 	return sidePerp, sideRelated, amount
 }
