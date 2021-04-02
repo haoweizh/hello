@@ -208,10 +208,10 @@ func GetDayCandle(key, secret, market, symbol, instrument string, timeCandle tim
 	if instrument == `` {
 		instrument = symbol
 	}
-	candle = model.GetCandle(market, symbol, `1d`, timeCandle.Format(time.RFC3339)[0:10])
-	if candle != nil && candle.N > 0 {
-		return
-	}
+	//candle = model.GetCandle(market, symbol, `1d`, timeCandle.Format(time.RFC3339)[0:10])
+	//if candle != nil && candle.N > 0 {
+	//	return
+	//}
 	dBegin, _ := time.ParseDuration(`-960h`)
 	dEnd, _ := time.ParseDuration(`24h`)
 	begin := timeCandle.Add(dBegin)
@@ -227,13 +227,11 @@ func GetDayCandle(key, secret, market, symbol, instrument string, timeCandle tim
 	case model.HuobiDM:
 		candles = getCandlesHuobiDM(key, secret, symbol, `1d`, begin, time.Now())
 	}
+	keyedCandles := make(map[string]*model.Candle)
 	for _, value := range candles {
-		c := model.GetCandle(value.Market, value.Symbol, value.Period, value.UTCDate)
-		if c == nil {
-			model.SetCandle(market, value.Symbol, `1d`, value.UTCDate, value)
-		}
+		keyedCandles[market+symbol+value.Period+value.UTCDate] = value
 	}
-	candle = model.GetCandle(market, symbol, `1d`, timeCandle.Format(time.RFC3339)[0:10])
+	candle = keyedCandles[market+symbol+`1d`+timeCandle.Format(time.RFC3339)[0:10]]
 	if candle == nil {
 		util.Notice(fmt.Sprintf(`error: can not get candle %s %s %s %s`,
 			market, symbol, `1d`, timeCandle.String()))
@@ -243,7 +241,7 @@ func GetDayCandle(key, secret, market, symbol, instrument string, timeCandle tim
 	for i := 1; i < 20; i++ {
 		d, _ := time.ParseDuration(fmt.Sprintf(`%dh`, -24*i))
 		index := timeCandle.Add(d)
-		candleCurrent := model.GetCandle(market, symbol, `1d`, index.Format(time.RFC3339)[0:10])
+		candleCurrent := keyedCandles[market+symbol+`1d`+index.Format(time.RFC3339)[0:10]]
 		if candleCurrent == nil {
 			util.Notice(fmt.Sprintf(`error: can not get candle %s %s`, `1d`, index.String()))
 			continue
@@ -258,7 +256,6 @@ func GetDayCandle(key, secret, market, symbol, instrument string, timeCandle tim
 			candle.N += (candleCurrent.PriceHigh - candleCurrent.PriceLow) / 20
 		}
 	}
-	model.SetCandle(market, symbol, `1d`, timeCandle.Format(time.RFC3339)[0:10], candle)
 	return candle
 }
 

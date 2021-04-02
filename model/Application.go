@@ -14,8 +14,6 @@ type PostOrder func(order *Order) // 处理下单后的函数
 var HandlerMap = make(map[string]CarryHandler)
 var infoLock sync.Mutex
 var Currencies = []string{`btc`, `eth`, `usdt`, `ft`, `ft1808`, `pax`, `usdc`, `tusd`}
-
-var candles = make(map[string]*Candle)                              // market+symbol+period+rfc3339, candle
 var CarryInfo = make(map[string]string)                             // function - msg
 var carryInfos = make(map[string]map[string]map[string]interface{}) // table - line name - key - value
 var AppMetric = &MetricManager{}
@@ -218,26 +216,6 @@ func RemoveCarryInfo(key string) {
 	}
 }
 
-func GetCandle(market, symbol, period, utcDate string) (candle *Candle) {
-	infoLock.Lock()
-	defer infoLock.Unlock()
-	if candles == nil {
-		candles = make(map[string]*Candle)
-	}
-	key := market + symbol + period + utcDate
-	return candles[key]
-}
-
-func SetCandle(market, symbol, period, utcDate string, candle *Candle) {
-	infoLock.Lock()
-	defer infoLock.Unlock()
-	if candles == nil {
-		candles = make(map[string]*Candle)
-	}
-	key := market + symbol + period + utcDate
-	candles[key] = candle
-}
-
 func GetOrderStatus(market, marketStatus string) (status string) {
 	if orderStatusMap[market] == nil {
 		return CarryStatusWorking
@@ -333,7 +311,7 @@ func NewConfig() {
 
 func GetMarketYesterday(market string) (yesterday time.Time, strYesterday string) {
 	yesterday = time.Now().In(time.UTC)
-	if market == OKFUTURE || market == HuobiDM {
+	if market == OKFUTURE || market == HuobiDM || market == OKEX {
 		yesterday = util.GetNow()
 	}
 	duration, _ := time.ParseDuration(`-24h`)
@@ -344,7 +322,7 @@ func GetMarketYesterday(market string) (yesterday time.Time, strYesterday string
 
 func GetMarketToday(market string) (today time.Time, strToday string) {
 	today = time.Now().In(time.UTC)
-	if market == OKFUTURE || market == HuobiDM {
+	if market == OKEX || market == HuobiDM || market == OKFUTURE {
 		today = util.GetNow()
 	}
 	today = time.Date(today.Year(), today.Month(), today.Day(), 0, 0, 0, 0, today.Location())

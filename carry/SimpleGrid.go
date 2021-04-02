@@ -60,6 +60,9 @@ func getGridPos(setting *model.Setting) (gridPos *GridPos) {
 	}
 	instrument := api.GetCurrentInstrument(``, ``, setting.Market, setting.Symbol)
 	candle := api.GetDayCandle(model.KeyDefault, model.SecretDefault, setting.Market, setting.Symbol, instrument, yesterday)
+	if candle == nil {
+		return
+	}
 	p := (candle.PriceHigh + candle.PriceLow + candle.PriceClose) / 3
 	util.Notice(fmt.Sprintf(`%s %s yesterday:%s grid candleh p: %f n:%f low %f high %f open %f close %f`,
 		setting.Market, setting.Symbol, yesterdayStr, p, candle.N, candle.PriceLow, candle.PriceHigh, candle.PriceOpen, candle.PriceClose))
@@ -179,6 +182,9 @@ var ProcessSimpleGrid = func(setting *model.Setting, tick *model.BidAsk) {
 	setSimpleGriding(true)
 	defer setSimpleGriding(false)
 	gridPos := getGridPos(setting)
+	if gridPos == nil {
+		return
+	}
 	showMsg := ``
 	duration, _ := time.ParseDuration(`-180s`)
 	checkTime := util.GetNow().Add(duration)
