@@ -674,6 +674,7 @@ func getCandlesOKEX(key, secret, symbol, binSize string, before, after time.Time
 		return
 	}
 	candleJsons := candleJson.Get(`data`).MustArray()
+	location, _ := time.LoadLocation("Asia/Shanghai")
 	for _, value := range candleJsons {
 		item := value.([]interface{})
 		if len(item) < 7 {
@@ -681,7 +682,7 @@ func getCandlesOKEX(key, secret, symbol, binSize string, before, after time.Time
 		}
 		candle := &model.Candle{Market: model.OKEX, Symbol: symbol, Period: strings.ToLower(binSize)}
 		ts, _ := strconv.ParseInt(item[0].(string), 10, 64)
-		candle.UTCDate = time.Unix(ts/1000, 0).In(time.UTC).Format(time.RFC3339)[:10]
+		candle.UTCDate = time.Unix(ts/1000, 0).In(location).Format(time.RFC3339)[:10]
 		candle.PriceOpen, _ = strconv.ParseFloat(item[1].(string), 64)
 		candle.PriceHigh, _ = strconv.ParseFloat(item[2].(string), 64)
 		candle.PriceLow, _ = strconv.ParseFloat(item[3].(string), 64)
