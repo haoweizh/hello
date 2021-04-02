@@ -267,10 +267,10 @@ func clearCarryBalance() {
 				}
 			}
 		}
-		util.Notice(`...... exit clearing carry balance`)
 		if time.Now().Minute()%9 == 0 || !resetInitialized {
 			resetTradeMax(model.OKEX)
 		}
+		util.Notice(`...... exit clearing carry balance`)
 		checkSetCarrying(false)
 		time.Sleep(time.Second * 60)
 	}
@@ -589,26 +589,24 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 		maxBuyPerp, maxSellPerp := getTradeMax(key, setting.Symbol)
 		maxBuyRelated, maxSellRelated := getTradeMax(key, setting.GetRelatedSymbol())
 		if sidePerp == model.OrderSideBuy && sideRelated == model.OrderSideSell {
-			if amountPerp > maxBuyPerp || amountRelated > maxSellRelated {
-				util.Notice(fmt.Sprintf(`max limit works %s %s %s  %f > %f %f > %f`,
-					setting.Symbol, sidePerp, sideRelated, amountPerp, maxBuyPerp, amountRelated, maxSellRelated))
-			}
 			amountPerp = math.Min(amountPerp, maxBuyPerp)
 			amountRelated = math.Min(amountRelated, maxSellRelated)
 		} else if sidePerp == model.OrderSideSell && sideRelated == model.OrderSideBuy {
-			if amountPerp > maxSellPerp || amountRelated > maxBuyRelated {
-				util.Notice(fmt.Sprintf(`max limit works %s %s %s  %f > %f %f > %f`,
-					setting.Symbol, sidePerp, sideRelated, amountRelated, maxSellPerp, amountRelated, maxBuyRelated))
-			}
 			amountPerp = math.Min(amountPerp, maxSellPerp)
 			amountRelated = math.Min(amountRelated, maxBuyRelated)
 		}
+		// 因为之前有校验可交易数量，导致数量可能被设置成不合规数量格式，所以要从新解析成非张数数量后再从新比较，再解析成真实币数
+		_, amountPerp = api.ParseRealAmount(setting.Market, setting.Symbol, amountPerp)
+		amountPerp, minPerp = api.FormatAmount(setting.Market, setting.Symbol, amountPerp)
+		amountRelated, minRelated = api.FormatAmount(setting.Market, setting.GetRelatedSymbol(), amountRelated)
 		_, amountPerp = api.ParseRealAmount(setting.Market, setting.Symbol, amountPerp)
 	}
 	amount = math.Min(amountPerp, amountRelated)
 	if amount > 0 {
-		util.Notice(fmt.Sprintf(`+++%s high:%s %f low:%s %f symbol: %s %s usd available:%f amount%f(%f %f)carryAmount: %f minSize %f %f`,
-			key, symbolHigh, scoreHigh, symbolLow, scoreLow, setting.Symbol, sidePerp, usdAvailable, amount, amountPerp, amountRelated, carryAmount, minPerp, minRelated))
+		util.Notice(fmt.Sprintf(`+++ %s high:%s %f low:%s %f symbol: %s %s usd available:%f 
+			amount%f(%f %f) carryAmount: %f minSize %f %f`,
+			key, symbolHigh, scoreHigh, symbolLow, scoreLow, setting.Symbol, sidePerp, usdAvailable,
+			amount, amountPerp, amountRelated, carryAmount, minPerp, minRelated))
 	}
 	return sidePerp, sideRelated, amount
 }

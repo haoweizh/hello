@@ -52,8 +52,9 @@ func Test_OKFormatAmount(t *testing.T) {
 	_ = configor.Load(model.AppConfig, "./config.yml")
 	model.AppDB, _ = gorm.Open("postgres", model.AppConfig.DBConnection)
 	api.InitMarketInfos()
-
-	price, decimal := api.FormatPrice(model.OKEX, `JST-USDT`, 0.13175)
+	btt, _ := api.FormatAmount(model.OKEX, `BTT-USDT`, 0.000076)
+	fmt.Println(btt)
+	price, decimal := api.FormatPrice(model.OKEX, `JST-USDT`, model.OrderSideBuy, 0.13175)
 	priceStr := util.CutTailZero(strconv.FormatFloat(price, 'f', decimal, 64))
 	fmt.Println(priceStr)
 	amountPerp, _ := api.FormatAmount(model.OKEX, `BTT-USDT-SWAP`, 285854.42347684357)
