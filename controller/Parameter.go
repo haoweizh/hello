@@ -373,6 +373,7 @@ func RefreshParameters(c *gin.Context) {
 			carry.ResetChannel(market, channel)
 		}
 	}
+	api.InitMarketInfos()
 	c.String(http.StatusOK, model.AppConfig.ToString())
 }
 
