@@ -305,6 +305,20 @@ func GetCarryInfo(c *gin.Context) {
 
 func GetParameters(c *gin.Context) {
 	msg := ``
+	market := model.OKEX
+	marketInfos := model.MarketInfos[market]
+	if marketInfos != nil {
+		symbols := model.GetMarketSymbols(market)
+		for symbol := range marketInfos {
+			coin := model.GetCoin(market, symbol)
+			symbolPerp := coin + `-USDT-SWAP`
+			symbolRelated := coin + `-USDT`
+			if (marketInfos[symbolPerp] != nil && marketInfos[symbolRelated] != nil) && (symbols[symbolPerp] == false ||
+				symbols[symbolRelated] == false) && symbol == symbolPerp {
+				msg += fmt.Sprintf("新币 %s\n", symbolPerp)
+			}
+		}
+	}
 	settings := model.GetSetting(model.FunctionGrid, model.Ftx, `LINK-PERP`)
 	for _, setting := range settings {
 		msg += fmt.Sprintf("%s %s %s %f\n", setting.Function, setting.Market, setting.Symbol, setting.GridAmount)
