@@ -2,7 +2,7 @@ package model
 
 import "time"
 
-var fundingRate = make(map[string]map[string]interface{}) // market - symbol - funding rate
+var fundingRate = make(map[string]map[string]float64)     // market - symbol - funding rate
 var fundingRateUpdate = make(map[string]map[string]int64) // market - symbol - update time
 
 type FundingRate struct {
@@ -14,14 +14,14 @@ type FundingRate struct {
 	UpdatedAt   time.Time
 }
 
-func GetFundingRate(market, symbol string) (rate interface{}, updateTime int64) {
+func GetFundingRate(market, symbol string) (rate float64, updateTime int64) {
 	infoLock.Lock()
 	defer infoLock.Unlock()
 	if fundingRate == nil {
-		fundingRate = make(map[string]map[string]interface{})
+		fundingRate = make(map[string]map[string]float64)
 	}
 	if fundingRate[market] == nil {
-		fundingRate[market] = make(map[string]interface{})
+		fundingRate[market] = make(map[string]float64)
 	}
 	if fundingRateUpdate == nil {
 		fundingRateUpdate = make(map[string]map[string]int64)
@@ -32,14 +32,14 @@ func GetFundingRate(market, symbol string) (rate interface{}, updateTime int64) 
 	return fundingRate[market][symbol], fundingRateUpdate[market][symbol]
 }
 
-func SetFundingRate(market, symbol string, rate interface{}, updateTime int64) {
+func SetFundingRate(market, symbol string, rate float64, updateTime int64) {
 	infoLock.Lock()
 	defer infoLock.Unlock()
 	if fundingRate == nil {
-		fundingRate = make(map[string]map[string]interface{})
+		fundingRate = make(map[string]map[string]float64)
 	}
 	if fundingRate[market] == nil {
-		fundingRate[market] = make(map[string]interface{})
+		fundingRate[market] = make(map[string]float64)
 	}
 	if fundingRateUpdate == nil {
 		fundingRateUpdate = make(map[string]map[string]int64)

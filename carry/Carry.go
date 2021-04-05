@@ -496,6 +496,11 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	usdAvailable := getUsdAvailable(key)
 	coin := model.GetCoin(setting.Market, setting.Symbol)
 	balance := getCarryBalance(key, coin)
+	fundingRate := 0.0
+	if setting.Market == model.OKEX {
+		fundingRate, _ = api.GetFundingRate(setting.Market, setting.Symbol)
+		fundingRate *= 0.66
+	}
 	if balance == nil {
 		model.SetCarryInfo(`warning `+coin, fmt.Sprintf(`slave: balace not available!!! %s`, key))
 		model.SetCarryInfos(`coin_absent`, key+`_`+coin, map[string]interface{}{`absent`: coin, `key`: key})
@@ -529,10 +534,10 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	}
 	jump := 5.0
 	jumpRevert := 5.0
-	setOpen := math.Max((1.5-usdRate)*setting.OpenShortMargin*(0.5+jump*coinRate), 0.003)
+	setOpen := math.Max((1.5-usdRate)*setting.OpenShortMargin*(0.5+jump*coinRate), 0.003) - fundingRate
 	setClose := -1.0
 	if setting.Market == model.OKEX {
-		setClose = math.Min(setting.CloseShortMargin*(0.5+jump*coinRate), -0.003)
+		setClose = math.Min(setting.CloseShortMargin*(0.5+jump*coinRate), -0.003) - fundingRate
 	}
 	revertOpen := math.Abs(setting.GridPriceDistance) * (usdRate - 0.5)
 	if revertOpen > 0 {
@@ -540,8 +545,8 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	} else {
 		revertOpen = revertOpen / (1 - math.Min(0.9, jumpRevert*coinRate))
 	}
-	revertOpen = math.Max(revertOpen, -0.003)
-	revertClose := math.Max(-0.0005/(1-math.Min(0.9, jumpRevert*coinRate)), -0.003)
+	revertOpen = math.Max(revertOpen, -0.003) + fundingRate
+	revertClose := math.Max(-0.0005/(1-math.Min(0.9, jumpRevert*coinRate)), -0.003) + fundingRate
 	model.SetCarryInfo(table+setting.Symbol,
 		fmt.Sprintf(`%s 参数:(%f %f %f) 计算结果(%f %f %f %f) 当前市场(%f %f) usdRate:%favailable:%f coinRate: %f`,
 			table, setting.OpenShortMargin, setting.CloseShortMargin, setting.GridPriceDistance, setOpen, setClose,

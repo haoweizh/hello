@@ -304,10 +304,10 @@ func GetTransfers(key, secret, market string) (balances []*model.Balance) {
 	return balances
 }
 
-func GetFundingRate(market, symbol string) (fundingRate interface{}, expireTime int64) {
+func GetFundingRate(market, symbol string) (fundingRate float64, expireTime int64) {
 	fundingRate, expireTime = model.GetFundingRate(market, symbol)
 	now := util.GetNow()
-	if now.Unix()-60 < expireTime {
+	if now.Unix() < expireTime {
 		return fundingRate, expireTime
 	}
 	util.Notice(fmt.Sprintf(`before update funding %s %s rate %f expire %d`,
@@ -320,22 +320,26 @@ func GetFundingRate(market, symbol string) (fundingRate interface{}, expireTime 
 		fundingRate, expireTime = getFundingRateBybit(symbol)
 		model.SetFundingRate(market, symbol, fundingRate, expireTime)
 	case model.Ftx:
-		rates := getFundingRatesFtx()
-		symbolRates := make(map[string][]*model.FundingRate)
-		for _, rate := range rates {
-			if symbolRates[rate.Symbol] == nil {
-				symbolRates[rate.Symbol] = make([]*model.FundingRate, 0)
-			}
-			symbolRates[rate.Symbol] = append(symbolRates[rate.Symbol], rate)
-		}
-		duration, _ := time.ParseDuration(`3600s`)
-		nextHour := now.Add(duration)
-		nextHour = time.Date(nextHour.Year(), nextHour.Month(), nextHour.Day(),
-			nextHour.Hour(), 0, 0, 0, now.Location())
-		for symbol, value := range symbolRates {
-			model.SetFundingRate(market, symbol, value, nextHour.Unix())
-		}
-		fundingRate, expireTime = model.GetFundingRate(market, symbol)
+		return 0, 0
+		//rates := getFundingRatesFtx()
+		//symbolRates := make(map[string][]*model.FundingRate)
+		//for _, rate := range rates {
+		//	if symbolRates[rate.Symbol] == nil {
+		//		symbolRates[rate.Symbol] = make([]*model.FundingRate, 0)
+		//	}
+		//	symbolRates[rate.Symbol] = append(symbolRates[rate.Symbol], rate)
+		//}
+		//duration, _ := time.ParseDuration(`3600s`)
+		//nextHour := now.Add(duration)
+		//nextHour = time.Date(nextHour.Year(), nextHour.Month(), nextHour.Day(),
+		//	nextHour.Hour(), 0, 0, 0, now.Location())
+		//for symbol, value := range symbolRates {
+		//	model.SetFundingRate(market, symbol, value, nextHour.Unix())
+		//}
+		//fundingRate, expireTime = model.GetFundingRate(market, symbol)
+	case model.OKEX:
+		fundingRate, expireTime = getFundingRateOKEX(``, ``, symbol)
+		model.SetFundingRate(market, symbol, fundingRate, expireTime)
 	}
 	return
 }

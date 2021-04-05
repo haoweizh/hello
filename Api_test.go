@@ -159,6 +159,12 @@ func Test_initTurtleN(t *testing.T) {
 func Test_wallet(t *testing.T) {
 	model.NewConfig()
 	_ = configor.Load(model.AppConfig, "./config.yml")
+	rate, timeInt := api.GetFundingRate(model.OKEX, `BTC-USDT-SWAP`)
+	fmt.Println(rate)
+	fmt.Println(time.Unix(timeInt, 0).String())
+	rate, timeInt = api.GetFundingRate(model.OKEX, `BTC-USDT-SWAP`)
+	fmt.Println(rate)
+	fmt.Println(time.Unix(timeInt, 0).String())
 	//balance := api.GetBalance(``, ``, model.OKEX, `USDT`, 0)
 	today := time.Now().In(time.UTC)
 	today = time.Date(today.Year(), today.Month(), today.Day(), 0, 0, 0, 0, today.Location())
@@ -179,7 +185,6 @@ func Test_wallet(t *testing.T) {
 	//carry.InitFtxBalance(`ZK6_FPdUIhDnjv_JWklHAkgWXRRindBw-qIg18bU`,
 	//	`4bbFXcuVk_VE2JJ0_mnLFa3J-kcCOeUVM0sRmYN5`, model.FunctionCarry)
 	api.InitCarryFtx(1)
-	api.GetFundingRate(model.Ftx, `BTC-PERP`)
 	//carry.GetTurtleData(model.Ftx, `okbusd_p`)
 	//var err error
 	//api.GetDayCandle(model.AppConfig.FtxKey, model.AppConfig.FtxSecret, model.Ftx, `htusd_p`, today)

@@ -662,6 +662,24 @@ func GetMaxSize(key, secret, instrument string) (success bool, maxBuy, maxSell f
 	return true, maxBuy, maxSell
 }
 
+func getFundingRateOKEX(key, secret, instrumentId string) (fundingRate float64, rateTime int64) {
+	path := fmt.Sprintf(`/api/v5/public/funding-rate?instId=%s`, instrumentId)
+	response := sendSignRequestOKEX(key, secret, http.MethodGet, path, nil)
+	fundingJson, _ := util.NewJSON(response)
+	if fundingJson == nil || fundingJson.Get(`data`) == nil || fundingJson.Get(`data`).MustArray() == nil ||
+		len(fundingJson.Get(`data`).MustArray()) == 0 {
+		return 0, 0
+	}
+	data := fundingJson.Get(`data`).MustArray()[0].(map[string]interface{})
+	if data[`instId`] == instrumentId {
+		fundingRate, _ = strconv.ParseFloat(data[`fundingRate`].(string), 64)
+		rateTime, _ = strconv.ParseInt(data[`fundingTime`].(string), 10, 64)
+		rateTime /= 1000
+		return fundingRate, rateTime
+	}
+	return 0, 0
+}
+
 // bar 1m/3m/5m/15m/30m/1H/2H/4H/6H/12H/1D/1W/1M/3M/6M/1Y
 func getCandlesOKEX(key, secret, symbol, binSize string, before, after time.Time, count int) (
 	candles map[string]*model.Candle) {
