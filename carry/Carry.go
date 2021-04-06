@@ -522,16 +522,6 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	}
 	balanceAllValue := getBalanceAll(key)
 	coinRate := math.Abs(balance.UsdValue) / balanceAllValue
-	usdLowLine := model.AppConfig.Amount
-	keys, _ := model.AppConfig.GetKeys(setting.Market)
-	localOpenValueLimit := math.Min(openValueLimit, 0.5*balanceAllValue)
-	table := fmt.Sprintf(`%s_dynamic_`, model.FunctionCarry)
-	if len(keys) > 1 && keys[0] != key {
-		table += `slave`
-		localOpenValueLimit = model.AppConfig.SimonOpenMax
-		usdLowLine = model.AppConfig.SimonUsdLow
-		valueLow = 0
-	}
 	jump := 5.0
 	jumpRevert := 5.0
 	setOpen := math.Max((1.5-usdRate)*setting.OpenShortMargin*(0.5+jump*coinRate), 0.003) - fundingRate
@@ -547,6 +537,21 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	}
 	revertOpen = math.Max(revertOpen, -0.003) + fundingRate
 	revertClose := math.Max(-0.0005/(1-math.Min(0.9, jumpRevert*coinRate)), -0.003) - fundingRate
+	usdLowLine := model.AppConfig.Amount
+	keys, _ := model.AppConfig.GetKeys(setting.Market)
+	localOpenValueLimit := math.Min(openValueLimit, 0.5*balanceAllValue)
+	table := fmt.Sprintf(`%s_dynamic_`, model.FunctionCarry)
+	if len(keys) > 1 && keys[0] != key {
+		table += `slave`
+		localOpenValueLimit = model.AppConfig.SimonOpenMax
+		usdLowLine = model.AppConfig.SimonUsdLow
+		valueLow = 0
+		carryCloses := model.AppConfig.GetCarryClose()
+		if len(carryCloses) > 1 && carryCloses[1] == `true` {
+			setOpen = 1
+			setClose = -1
+		}
+	}
 	model.SetCarryInfo(table+setting.Symbol,
 		fmt.Sprintf(`%s 参数:(%f %f %f) 计算结果(%f %f %f %f) 当前市场(%f %f) usdRate:%favailable:%f coinRate: %f`,
 			table, setting.OpenShortMargin, setting.CloseShortMargin, setting.GridPriceDistance, setOpen, setClose,

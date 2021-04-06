@@ -12,6 +12,7 @@ type Config struct {
 	RefreshTimeSlot int
 	Between         int64
 	ChannelSlot     float64
+	CarryClose      string
 	Delay           float64
 	PreDealDis      float64
 	AmountRate      float64 // 刷单填写数量比率
@@ -50,6 +51,12 @@ func (config *Config) SetUpdatePriceTime(symbol string, updateTime int64) {
 	config.lock.Lock()
 	defer config.lock.Unlock()
 	config.UpdatePriceTime[symbol] = updateTime
+}
+
+func (config *Config) GetCarryClose() (carryCloses []string) {
+	config.lock.Lock()
+	defer config.lock.Unlock()
+	return strings.Split(config.CarryClose, `,`)
 }
 
 func (config *Config) GetKeys(market string) (keys, secrets []string) {
