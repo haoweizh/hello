@@ -50,6 +50,8 @@ const OrderSideLiquidateShort = `liquidateShort`
 const FunctionTurtle = `turtle`
 const FunctionGrid = `grid`
 const FunctionCarry = `carry`
+
+//const FunctionDefi = `defi`
 const FunctionComplement = `complement`
 const FunctionPostonlyHandler = `postonly`
 const PostOnly = `ParticipateDoNotInitiate`
