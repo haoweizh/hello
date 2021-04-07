@@ -307,7 +307,7 @@ func GetParameters(c *gin.Context) {
 	msg := ``
 	market := model.OKEX
 	marketInfos := model.MarketInfos[market]
-	if marketInfos != nil {
+	if marketInfos != nil && model.GetSettings(model.FunctionCarry, market) != nil {
 		symbols := model.GetMarketSymbols(market)
 		for symbol := range marketInfos {
 			coin := model.GetCoin(market, symbol)
