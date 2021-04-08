@@ -585,6 +585,9 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	// 开仓时:数量<持仓+可借
 	if (setting.Symbol == symbolLow && scoreLow < setClose) || (setting.Symbol == symbolHigh && scoreHigh > setOpen) {
 		if sideRelated == model.OrderSideSell {
+			if balance.AvailableWithBorrow == 0 {
+				util.Notice(fmt.Sprintf(`with borrow %s %f`, setting.Symbol, balance.AvailableWithBorrow))
+			}
 			amount = math.Min(balance.AvailableWithBorrow, math.Abs(amount))
 		}
 	} else { // 反向关仓量要<=持仓
