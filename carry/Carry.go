@@ -237,11 +237,6 @@ func clearCarryBalance() {
 				borrow := 0.0
 				for _, value := range balances {
 					coin := strings.ToUpper(value.Coin)
-					if !borrowInitialized || value.Amount < 0 {
-						maxLoan := api.GetMaxLoan(key, secrets[i], market, coin)
-						value.AvailableWithBorrow = maxLoan
-						time.Sleep(time.Millisecond * 100)
-					}
 					setCarryBalance(key, coin, value)
 					settingCoins := model.GetSettingCoins(model.FunctionCarry, market)
 					if settingCoins[coin] {
@@ -256,6 +251,11 @@ func clearCarryBalance() {
 					success, bidAsk := model.AppMarkets.GetBidAsk(coin+getSpotTail(market), market)
 					if success {
 						borrow += value.Borrow * bidAsk.Bids[0].Price
+						if !borrowInitialized || value.Borrow*bidAsk.Bids[0].Price > 100 {
+							maxLoan := api.GetMaxLoan(key, secrets[i], market, coin)
+							value.AvailableWithBorrow = maxLoan
+							time.Sleep(time.Millisecond * 100)
+						}
 					} else {
 						util.Notice(fmt.Sprintf(`fatal: can not get price %s %s`, market, coin))
 					}
