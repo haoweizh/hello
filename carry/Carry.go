@@ -319,7 +319,7 @@ var ProcessCarry = func(setting *model.Setting, tick *model.BidAsk) {
 	keys, secrets := model.AppConfig.GetKeys(setting.Market)
 	begin := 0
 	step := 1
-	if (now.Hour() < 6 && now.Hour() > 2) || now.Second()%2 == 0 {
+	if (now.Hour() < 6 && now.Hour() > 2 && now.Second()%4 != 0) || now.Second()%2 == 0 {
 		begin = len(keys) - 1
 		step = -1
 	}
@@ -581,7 +581,7 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	// 开仓时:数量<持仓+可借
 	if (setting.Symbol == symbolLow && scoreLow < setClose) || (setting.Symbol == symbolHigh && scoreHigh > setOpen) {
 		if sideRelated == model.OrderSideSell {
-			amount = math.Min(math.Min(balance.AvailableWithBorrow, localOpenValueLimit/markPrice), math.Abs(amount))
+			amount = math.Min(balance.AvailableWithBorrow, math.Abs(amount))
 		}
 	} else { // 反向关仓量要<=持仓
 		amount = math.Min(math.Abs(carryAmount), amount)
