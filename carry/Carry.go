@@ -16,6 +16,7 @@ const revertDis = 0.005
 const openValueLimit = 10000.0
 
 var resetInitialized = false
+var borrowInitialized = false
 var carryLock sync.Mutex
 var carrying bool
 var doCarry = false
@@ -236,8 +237,11 @@ func clearCarryBalance() {
 				borrow := 0.0
 				for _, value := range balances {
 					coin := strings.ToUpper(value.Coin)
-					maxLoan := api.GetMaxLoan(key, secrets[i], market, coin)
-					value.AvailableWithBorrow = maxLoan
+					if !borrowInitialized || value.Amount < 0 {
+						maxLoan := api.GetMaxLoan(key, secrets[i], market, coin)
+						value.AvailableWithBorrow = maxLoan
+						time.Sleep(time.Millisecond * 100)
+					}
 					setCarryBalance(key, coin, value)
 					settingCoins := model.GetSettingCoins(model.FunctionCarry, market)
 					if settingCoins[coin] {
@@ -272,6 +276,7 @@ func clearCarryBalance() {
 		if time.Now().Minute()%9 == 0 || !resetInitialized {
 			resetTradeMax(model.OKEX)
 		}
+		borrowInitialized = true
 		util.Notice(`...... exit clearing carry balance`)
 		checkSetCarrying(false)
 		time.Sleep(time.Second * 60)
@@ -480,6 +485,9 @@ func makeEqual(key, secret string, setting *model.Setting, balances []*model.Bal
 		}
 	}
 	amount = math.Min(math.Abs(amount), 20000/price)
+	if amount <= 0 {
+		return
+	}
 	orderAmount := api.GetAmountInPerpOKEX(setting.Market, symbol, math.Abs(amount))
 	if orderAmount > 0 {
 		resultPerp := api.CancelOrders(key, secret, setting.Market, settingSymbol)
@@ -510,7 +518,6 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 		model.SetCarryInfos(`coin_absent`, key+`_`+coin, map[string]interface{}{`absent`: coin, `key`: key})
 		balance = &model.Balance{
 			Amount:              0,
-			Available:           0,
 			AvailableWithBorrow: 0,
 			Borrow:              0,
 			Coin:                coin,
