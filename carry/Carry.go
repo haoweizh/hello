@@ -236,6 +236,8 @@ func clearCarryBalance() {
 				borrow := 0.0
 				for _, value := range balances {
 					coin := strings.ToUpper(value.Coin)
+					maxLoan := api.GetMaxLoan(key, secrets[i], market, coin)
+					value.AvailableWithBorrow = maxLoan
 					setCarryBalance(key, coin, value)
 					settingCoins := model.GetSettingCoins(model.FunctionCarry, market)
 					if settingCoins[coin] {
@@ -357,6 +359,7 @@ func placeCarry(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, key
 		relatedPrice = tickRelated.Asks[0].Price
 		setCarryAmount(key, setting.Symbol, getCarryAmount(key, setting.Symbol)+amount)
 		balance.Amount += amount
+		balance.AvailableWithBorrow += amount
 		balance.UsdValue += amount * perpPrice
 		usdAvailable -= amount * perpPrice
 		setUsdAvailable(key, usdAvailable)
@@ -367,6 +370,7 @@ func placeCarry(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, key
 		relatedPrice = tickRelated.Bids[0].Price
 		setCarryAmount(key, setting.Symbol, getCarryAmount(key, setting.Symbol)-amount)
 		balance.Amount -= amount
+		balance.AvailableWithBorrow -= amount
 		balance.UsdValue -= amount * perpPrice
 		usdAvailable += amount * relatedPrice
 		setCarryBalance(key, coin, balance)

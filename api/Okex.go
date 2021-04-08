@@ -552,7 +552,7 @@ func parseBalanceOKEX(value map[string]interface{}) (balance *model.Balance) {
 	if value[`crossLiab`] != nil && value[`crossLiab`] != `` {
 		balance.Borrow, _ = strconv.ParseFloat(value[`crossLiab`].(string), 64)
 	}
-	balance.AvailableWithBorrow = balance.Available
+	//balance.AvailableWithBorrow = balance.Available
 	return
 }
 
@@ -678,6 +678,23 @@ func getFundingRateOKEX(key, secret, instrumentId string) (fundingRate float64, 
 		return fundingRate, rateTime
 	}
 	return 0, 0
+}
+
+func getMaxLoanOKEX(key, secret, coin string) (maxLoan float64) {
+	path := fmt.Sprintf(`/api/v5/account/max-loan?instId=%s-USDT&mgnMode=cross`, coin)
+	response := sendSignRequestOKEX(key, secret, http.MethodGet, path, nil)
+	loanJson, err := util.NewJSON(response)
+	if loanJson == nil || err != nil || loanJson.Get(`data`) == nil {
+		return 0
+	}
+	value := loanJson.Get(`data`).MustArray()
+	for _, item := range value {
+		data := item.(map[string]interface{})
+		if data[`maxLoan`] != nil && data[`ccy`] != nil && data[`ccy`].(string) == coin {
+			maxLoan, _ = strconv.ParseFloat(data[`maxLoan`].(string), 64)
+		}
+	}
+	return maxLoan
 }
 
 // bar 1m/3m/5m/15m/30m/1H/2H/4H/6H/12H/1D/1W/1M/3M/6M/1Y
