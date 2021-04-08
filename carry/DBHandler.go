@@ -55,7 +55,12 @@ func MaintainBalance() {
 func MaintainTransFee(key, secret string) {
 	for true {
 		d, _ := time.ParseDuration("-48h")
-		lastDays2 := util.GetNow().Add(d)
+		now := util.GetNow()
+		if now.Minute() > 30 && now.Minute() < 35 {
+			model.LoadSettings()
+			api.InitMarketInfos()
+		}
+		lastDays2 := now.Add(d)
 		//d, _ = time.ParseDuration(`-1h`)
 		//lastHour := util.GetNow().Add(d)
 		var orders []model.Order

@@ -521,6 +521,9 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 		model.RemoveCarryInfos(`coin_absent`, key+`_`+coin)
 	}
 	balanceAllValue := getBalanceAll(key)
+	if balanceAllValue == 0 {
+		return
+	}
 	coinRate := math.Abs(balance.UsdValue) / balanceAllValue
 	jump := 5.0
 	jumpRevert := 5.0
@@ -578,7 +581,7 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	// 开仓时:数量<持仓+可借
 	if (setting.Symbol == symbolLow && scoreLow < setClose) || (setting.Symbol == symbolHigh && scoreHigh > setOpen) {
 		if sideRelated == model.OrderSideSell {
-			amount = math.Max(0, math.Min(balance.AvailableWithBorrow-localOpenValueLimit/markPrice, math.Abs(amount)))
+			amount = math.Min(math.Min(balance.AvailableWithBorrow, localOpenValueLimit/markPrice), math.Abs(amount))
 		}
 	} else { // 反向关仓量要<=持仓
 		amount = math.Min(math.Abs(carryAmount), amount)
