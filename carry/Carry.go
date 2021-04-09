@@ -251,7 +251,7 @@ func clearCarryBalance() {
 					success, bidAsk := model.AppMarkets.GetBidAsk(coin+getSpotTail(market), market)
 					if success {
 						borrow += value.Borrow * bidAsk.Bids[0].Price
-						if !borrowInitialized || value.Borrow*bidAsk.Bids[0].Price > 100 {
+						if !borrowInitialized || borrow > 100 {
 							maxLoan := api.GetMaxLoan(key, secrets[i], market, coin)
 							value.AvailableWithBorrow = maxLoan
 							time.Sleep(time.Millisecond * 100)
