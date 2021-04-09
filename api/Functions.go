@@ -346,10 +346,10 @@ func GetFundingRate(market, symbol string) (fundingRate float64, expireTime int6
 	return
 }
 
-func GetMaxLoan(key, secret, market, instrument string) (success bool, maxLoan float64) {
+func GetMaxLoan(key, secret, market, coin string) (success bool, maxLoan float64) {
 	switch market {
 	case model.OKEX:
-		return getMaxLoanOKEX(key, secret, instrument)
+		return getMaxLoanOKEX(key, secret, coin)
 	}
 	return false, 0
 }

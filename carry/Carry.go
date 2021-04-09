@@ -503,6 +503,24 @@ func makeEqual(key, secret string, setting *model.Setting, balances []*model.Bal
 	return
 }
 
+func initEmptyBalance(key, market, coin string) {
+	if !checkSetCarrying(true) {
+		defer checkSetCarrying(false)
+	} else {
+		util.Notice(fmt.Sprintf(`init empty wait for other ordering %s %s`, market, coin))
+		return
+	}
+	keys, secrets := model.AppConfig.GetKeys(market)
+	for i, current := range keys {
+		if current == key {
+			_, maxLoan := api.GetMaxLoan(key, secrets[i], market, coin)
+			balance := &model.Balance{Coin: coin, Market: market, AvailableWithBorrow: maxLoan}
+			setCarryBalance(key, coin, balance)
+			time.Sleep(time.Second / 8)
+		}
+	}
+}
+
 func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, key, symbolHigh, symbolLow string,
 	scoreOpen, scoreClose, scoreHigh, scoreLow float64) (sidePerp, sideRelated string, amount float64) {
 	var bidAmount, askAmount float64
@@ -519,15 +537,7 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	if balance == nil {
 		model.SetCarryInfo(`warning `+coin, fmt.Sprintf(`slave: balace not available!!! %s`, key))
 		model.SetCarryInfos(`coin_absent`, key+`_`+coin, map[string]interface{}{`absent`: coin, `key`: key})
-		balance = &model.Balance{
-			Amount:   0,
-			Borrow:   200 / tickRelated.Asks[0].Price,
-			Coin:     coin,
-			Market:   setting.Market,
-			Price:    0,
-			UsdValue: 0,
-		}
-		setCarryBalance(key, coin, balance)
+		go initEmptyBalance(key, setting.Market, coin)
 		return ``, ``, 0
 	} else {
 		model.RemoveCarryInfo(`warning ` + coin)
@@ -569,13 +579,14 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 		}
 	}
 	model.SetCarryInfo(table+setting.Symbol,
-		fmt.Sprintf(`%s 参数:(%f %f %f) 计算结果(%f %f %f %f) 当前市场(%f %f) usdRate:%favailable:%f coinRate:%f 资金费率 %f`,
+		fmt.Sprintf(`%s 参数:(%f %f %f) 计算结果(%f %f %f %f) 当前市场(%f %f) 可用：%f usdRate:%favailable:%f coinRate:%f 资金费率 %f`,
 			table, setting.OpenShortMargin, setting.CloseShortMargin, setting.GridPriceDistance, setOpen, setClose,
-			revertOpen, revertClose, scoreOpen, scoreClose, usdRate, usdAvailable, balance.UsdValue/balanceAllValue, fundingRate))
+			revertOpen, revertClose, scoreOpen, scoreClose, balance.AvailableWithBorrow, usdRate, usdAvailable, balance.UsdValue/balanceAllValue, fundingRate))
 	carryInfo := map[string]interface{}{`+开仓`: setting.OpenShortMargin, `-开仓`: setting.CloseShortMargin,
 		`平仓`: setting.GridPriceDistance, `动态+开仓`: setOpen, `动态-开仓`: setClose, `open平仓`: revertOpen,
 		`close平仓`: revertClose, table: setting.Symbol, `市场+开`: scoreOpen, `市场-开`: scoreClose, `usdRate`: usdRate,
-		`usdAvailable`: usdAvailable, `coinRate`: balance.UsdValue / balanceAllValue, `fundingRate`: fundingRate}
+		`usdAvailable`: usdAvailable, `coinRate`: balance.UsdValue / balanceAllValue, `fundingRate`: fundingRate,
+		`可用`: balance.AvailableWithBorrow}
 	model.SetCarryInfos(table, setting.Symbol, carryInfo)
 	carryAmount := getCarryAmount(key, setting.Symbol)
 	if (scoreLow < setClose && setting.Symbol == symbolLow) || (carryAmount > 0 && scoreClose <= -1*revertOpen) {
@@ -594,9 +605,6 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	// 开仓时:数量<持仓+可借
 	if (setting.Symbol == symbolLow && scoreLow < setClose) || (setting.Symbol == symbolHigh && scoreHigh > setOpen) {
 		if sideRelated == model.OrderSideSell {
-			if balance.AvailableWithBorrow == 0 {
-				util.Notice(fmt.Sprintf(`with borrow %s %f`, setting.Symbol, balance.AvailableWithBorrow))
-			}
 			amount = math.Min(balance.AvailableWithBorrow, math.Abs(amount))
 		}
 	} else { // 反向关仓量要<=持仓
