@@ -495,9 +495,9 @@ func initEmptyBalance(key, secret, market string) {
 		if success {
 			balance.AvailableWithBorrow = maxLoan
 		}
-		util.Notice(fmt.Sprintf(`max loan %s %s %f`, coin, market, balance.AvailableWithBorrow))
 		time.Sleep(time.Second / 8)
 		setCarryBalance(key, coin, balance)
+		util.Notice(fmt.Sprintf(`max loan %s %s %f %s`, coin, market, getCarryBalance(key, coin).AvailableWithBorrow, key))
 	}
 	util.Notice(fmt.Sprintf(`set available with borrow %s %s`, market, key))
 }
