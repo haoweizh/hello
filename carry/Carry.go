@@ -14,6 +14,9 @@ import (
 const OrderPriceLimit = 0
 const revertDis = 0.005
 const openValueLimit = 10000.0
+const carryTypeOpen = `carryOpen`
+const carryTypeClose = `carryClose`
+const carryTypeRevert = `carryRevert`
 
 var marketInitTime = make(map[string]int64) // market - initTime
 var resetInitialized = false
@@ -310,18 +313,18 @@ var ProcessCarry = func(setting *model.Setting, tick *model.BidAsk) {
 		step = -1
 	}
 	for i := begin; i >= 0 && i < len(keys); i += step {
-		sidePerp, sideRelated, amount := calcCarryOpen(setting, tickPerp, tickRelated, keys[i], setting.Symbol,
+		sidePerp, sideRelated, amount, carryType := calcCarryOpen(setting, tickPerp, tickRelated, keys[i], setting.Symbol,
 			setting.Symbol, scoreOpen, scoreClose, scoreOpen, scoreClose)
 		if amount > 0 {
-			go placeCarry(setting, tickPerp, tickRelated, keys[i], secrets[i], sidePerp, sideRelated,
+			go placeCarry(setting, tickPerp, tickRelated, keys[i], secrets[i], sidePerp, sideRelated, carryType,
 				scoreOpen, scoreClose, amount)
 			break
 		}
 	}
 }
 
-func placeCarry(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, key, secret, sidePerp, sideRelated string,
-	scoreOpen, scoreClose, amount float64) {
+func placeCarry(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, key, secret, sidePerp,
+	sideRelated, carryType string, scoreOpen, scoreClose, amount float64) {
 	if !checkSetCarrying(true) {
 		defer checkSetCarrying(false)
 	} else {
@@ -345,8 +348,10 @@ func placeCarry(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, key
 		balance.Amount += amount
 		balance.AvailableWithBorrow += amount
 		balance.UsdValue += amount * perpPrice
-		usdAvailable -= amount * perpPrice
-		setUsdAvailable(key, usdAvailable)
+		if carryType == carryTypeOpen {
+			usdAvailable -= amount * perpPrice
+			setUsdAvailable(key, usdAvailable)
+		}
 		setCarryBalance(key, coin, balance)
 		setUsdRate(key, usdAvailable/balanceAllValue)
 	} else if sidePerp == model.OrderSideBuy {
@@ -356,9 +361,11 @@ func placeCarry(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, key
 		balance.Amount -= amount
 		balance.AvailableWithBorrow -= amount
 		balance.UsdValue -= amount * perpPrice
-		usdAvailable += amount * relatedPrice
+		if carryType == carryTypeRevert {
+			usdAvailable += amount * relatedPrice
+			setUsdAvailable(key, usdAvailable)
+		}
 		setCarryBalance(key, coin, balance)
-		setUsdAvailable(key, usdAvailable)
 		setUsdRate(key, usdAvailable/balanceAllValue)
 	}
 	now := int(util.GetNowUnixMillion())
@@ -369,10 +376,10 @@ func placeCarry(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, key
 		tickRelated.Bids[0].Amount, tickRelated.Asks[0].Price, tickRelated.Asks[0].Amount, scoreOpen, scoreClose,
 		amount, amount*tickPerp.Asks[0].Price, util.GetNowUnixMillion()))
 	go api.PlaceOrder(key, secret, sidePerp, model.OrderTypeLimit, setting.Market, setting.Symbol,
-		``, ``, ``, model.FunctionCarry, perpPrice, perpPrice,
+		``, ``, ``, carryType, perpPrice, perpPrice,
 		amount, true, postOrderCarry)
 	api.PlaceOrder(key, secret, sideRelated, model.OrderTypeLimit, setting.Market, symbolRelated,
-		``, ``, ``, model.FunctionCarry, relatedPrice, relatedPrice,
+		``, ``, ``, carryType, relatedPrice, relatedPrice,
 		amount, true, postOrderCarry)
 	keys, _ := model.AppConfig.GetKeys(setting.Market)
 	if key == keys[0] {
@@ -509,7 +516,7 @@ func initEmptyBalance(key, secret, market string) {
 }
 
 func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, key, symbolHigh, symbolLow string,
-	scoreOpen, scoreClose, scoreHigh, scoreLow float64) (sidePerp, sideRelated string, amount float64) {
+	scoreOpen, scoreClose, scoreHigh, scoreLow float64) (sidePerp, sideRelated string, amount float64, carryType string) {
 	var bidAmount, askAmount float64
 	valueLow := setting.AmountLimit
 	usdRate := getUsdRate(key)
@@ -524,7 +531,7 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	if balance == nil {
 		model.SetCarryInfo(`warning `+coin, fmt.Sprintf(`slave: balace not available!!! %s`, key))
 		model.SetCarryInfos(`coin_absent`, key+`_`+coin, map[string]interface{}{`absent`: coin, `key`: key})
-		return ``, ``, 0
+		return ``, ``, 0, carryType
 	} else {
 		model.RemoveCarryInfo(`warning ` + coin)
 		model.RemoveCarryInfos(`coin_absent`, key+`_`+coin)
@@ -570,11 +577,21 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 		askAmount = tickRelated.Bids[0].Amount
 		sidePerp = model.OrderSideBuy
 		sideRelated = model.OrderSideSell
+		if scoreLow < setClose {
+			carryType = carryTypeClose
+		} else {
+			carryType = carryTypeRevert
+		}
 	} else if (scoreHigh > setOpen && setting.Symbol == symbolHigh) || (carryAmount < 0 && scoreOpen >= revertClose) {
 		bidAmount = tickRelated.Asks[0].Amount
 		askAmount = tickPerp.Bids[0].Amount
 		sidePerp = model.OrderSideSell
 		sideRelated = model.OrderSideBuy
+		if scoreHigh > setOpen {
+			carryType = carryTypeOpen
+		} else {
+			carryType = carryTypeRevert
+		}
 	}
 	markPrice := tickPerp.Asks[0].Price
 	amount = math.Min(bidAmount, askAmount)
@@ -629,5 +646,5 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 		`usdAvailable`: usdAvailable, `coinRate`: balance.UsdValue / balanceAllValue, `fundingRate`: fundingRate,
 		`可用`: balance.AvailableWithBorrow}
 	model.SetCarryInfos(table, setting.Symbol, carryInfo)
-	return sidePerp, sideRelated, amount
+	return sidePerp, sideRelated, amount, carryType
 }
