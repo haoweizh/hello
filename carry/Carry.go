@@ -202,6 +202,7 @@ func clearCarryBalance() {
 		time.Sleep(time.Second * 2)
 		markets := model.GetMarkets()
 		for _, market := range markets {
+			settings := model.GetSettings(model.FunctionCarry, market)
 			keys, secrets := model.AppConfig.GetKeys(market)
 			for i, key := range keys {
 				resultBalance, balances, _ := api.GetBalances(key, secrets[i], market, 0)
@@ -228,13 +229,16 @@ func clearCarryBalance() {
 						localUsdAvailable = value.Amount
 						balanceAllValue += value.Amount
 						borrowAll += value.Borrow
-					}
-					success, bidAsk := model.AppMarkets.GetBidAsk(coin+api.GetSpotTail(market), market)
-					if success {
-						borrow := value.Borrow * bidAsk.Bids[0].Price
-						borrowAll += borrow
 					} else {
-						util.Notice(fmt.Sprintf(`fatal: can not get price %s %s`, market, coin))
+						symbolPerp := coin + api.GetPerpTail(market)
+						if settings[symbolPerp] != nil && len(settings[symbolPerp]) > 0 {
+							success, bidAsk := model.AppMarkets.GetBidAsk(coin+api.GetSpotTail(market), market)
+							if success {
+								borrowAll += value.Borrow * bidAsk.Bids[0].Price
+							} else {
+								util.Notice(fmt.Sprintf(`fatal: can not get price %s %s`, market, coin))
+							}
+						}
 					}
 				}
 				localUsdAvailable = localUsdAvailable - borrowAll
@@ -243,7 +247,6 @@ func clearCarryBalance() {
 				setBalanceAll(key, balanceAllValue)
 				util.Notice(fmt.Sprintf(`[carry] %s usd:%f %f len(blances):%d`,
 					key, localUsdAvailable, usdRate[key], len(balances)))
-				settings := model.GetSettings(model.FunctionCarry, market)
 				for _, items := range settings {
 					for _, item := range items {
 						makeEqual(key, secrets[i], item, balances, positions)
