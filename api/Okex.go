@@ -680,21 +680,23 @@ func getFundingRateOKEX(key, secret, instrumentId string) (fundingRate float64, 
 	return 0, 0
 }
 
-func getMaxLoanOKEX(key, secret, coin string) (maxLoan float64) {
+func getMaxLoanOKEX(key, secret, coin string) (succcess bool, maxLoan float64) {
 	path := fmt.Sprintf(`/api/v5/account/max-loan?instId=%s-USDT&mgnMode=cross`, coin)
 	response := sendSignRequestOKEX(key, secret, http.MethodGet, path, nil)
 	loanJson, err := util.NewJSON(response)
+	succes := false
 	if loanJson == nil || err != nil || loanJson.Get(`data`) == nil {
-		return 0
+		return false, 0
 	}
 	value := loanJson.Get(`data`).MustArray()
 	for _, item := range value {
 		data := item.(map[string]interface{})
 		if data[`maxLoan`] != nil && data[`ccy`] != nil && data[`ccy`].(string) == coin {
 			maxLoan, _ = strconv.ParseFloat(data[`maxLoan`].(string), 64)
+			succes = true
 		}
 	}
-	return maxLoan
+	return succes, maxLoan
 }
 
 // bar 1m/3m/5m/15m/30m/1H/2H/4H/6H/12H/1D/1W/1M/3M/6M/1Y

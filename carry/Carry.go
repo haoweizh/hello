@@ -253,8 +253,10 @@ func clearCarryBalance() {
 						borrow := value.Borrow * bidAsk.Bids[0].Price
 						borrowAll += borrow
 						if !borrowInitialized || borrow > 100 {
-							maxLoan := api.GetMaxLoan(key, secrets[i], market, coin)
-							value.AvailableWithBorrow = maxLoan
+							success, maxLoan := api.GetMaxLoan(key, secrets[i], market, coin)
+							if success {
+								value.AvailableWithBorrow = maxLoan
+							}
 							time.Sleep(time.Millisecond * 100)
 						}
 					} else {
@@ -649,12 +651,14 @@ func initEmptyBalance(key, market, coin string) (balance *model.Balance) {
 	keys, secrets := model.AppConfig.GetKeys(market)
 	for i, current := range keys {
 		if current == key {
-			maxLoan := api.GetMaxLoan(key, secrets[i], market, coin)
-			time.Sleep(time.Millisecond * 100)
+			success, maxLoan := api.GetMaxLoan(key, secrets[i], market, coin)
+			time.Sleep(time.Millisecond * 150)
 			balance.AvailableWithBorrow = maxLoan
+			if success {
+				setCarryBalance(key, coin, balance)
+			}
+			util.Notice(fmt.Sprintf(`need to set empty balance for %s %s %v`, market, coin, success))
 		}
 	}
-	setCarryBalance(key, coin, balance)
-	util.Notice(fmt.Sprintf(`need to set empty balance for %s %s`, market, coin))
 	return balance
 }
