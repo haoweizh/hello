@@ -519,8 +519,15 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	if balance == nil {
 		model.SetCarryInfo(`warning `+coin, fmt.Sprintf(`slave: balace not available!!! %s`, key))
 		model.SetCarryInfos(`coin_absent`, key+`_`+coin, map[string]interface{}{`absent`: coin, `key`: key})
-		initEmptyBalance(key, setting.Market, coin)
-		time.Sleep(time.Second / 6)
+		balance = &model.Balance{
+			Amount:   0,
+			Borrow:   200 / tickRelated.Asks[0].Price,
+			Coin:     coin,
+			Market:   setting.Market,
+			Price:    0,
+			UsdValue: 0,
+		}
+		setCarryBalance(key, coin, balance)
 		return ``, ``, 0
 	} else {
 		model.RemoveCarryInfo(`warning ` + coin)
@@ -626,39 +633,4 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 			key, symbolHigh, scoreHigh, symbolLow, scoreLow, setting.Symbol, sidePerp, usdAvailable, amount, carryAmount))
 	}
 	return sidePerp, sideRelated, amount
-}
-
-//var cachePositions = make(map[string][]*model.Position)       // key - []position
-//func setPositions(key string, value []*model.Position) {
-//	carryLock.Lock()
-//	defer carryLock.Unlock()
-//	cachePositions[key] = value
-//}
-//func getPositions(key string) []*model.Position {
-//	defer carryLock.Unlock()
-//	carryLock.Lock()
-//	return cachePositions[key]
-//}
-
-func initEmptyBalance(key, market, coin string) (balance *model.Balance) {
-	balance = &model.Balance{
-		Amount:   0,
-		Borrow:   0,
-		Coin:     coin,
-		Market:   market,
-		Price:    0,
-		UsdValue: 0,
-	}
-	keys, secrets := model.AppConfig.GetKeys(market)
-	for i, current := range keys {
-		if current == key {
-			success, maxLoan := api.GetMaxLoan(key, secrets[i], market, coin)
-			balance.AvailableWithBorrow = maxLoan
-			if success {
-				setCarryBalance(key, coin, balance)
-			}
-			util.Notice(fmt.Sprintf(`need to set empty balance for %s %s %v`, market, coin, success))
-		}
-	}
-	return balance
 }
