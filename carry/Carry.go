@@ -215,6 +215,10 @@ func clearCarryBalance() {
 				borrowAll := 0.0
 				for _, value := range balances {
 					coin := strings.ToUpper(value.Coin)
+					preBalance := getCarryBalance(key, coin)
+					if preBalance != nil {
+						value.AvailableWithBorrow = preBalance.AvailableWithBorrow
+					}
 					setCarryBalance(key, coin, value)
 					settingCoins := model.GetSettingCoins(model.FunctionCarry, market)
 					if settingCoins[coin] {
@@ -489,7 +493,7 @@ func initEmptyBalance(key, secret, market string) {
 		balance := getCarryBalance(key, coin)
 		if balance == nil {
 			balance = &model.Balance{Coin: coin, Market: market}
-			util.Notice(fmt.Sprintf(`create new balance %s`, coin))
+			//util.Notice(fmt.Sprintf(`create new balance %s`, coin))
 		}
 		success, maxLoan := api.GetMaxLoan(key, secret, market, coin)
 		if success {
@@ -497,8 +501,8 @@ func initEmptyBalance(key, secret, market string) {
 		}
 		time.Sleep(time.Second / 8)
 		setCarryBalance(key, coin, balance)
-		util.Notice(fmt.Sprintf(`max loan %s %s %f %s`,
-			coin, market, getCarryBalance(key, coin).AvailableWithBorrow, key))
+		//util.Notice(fmt.Sprintf(`max loan %s %s %f %s`,
+		//	coin, market, getCarryBalance(key, coin).AvailableWithBorrow, key))
 	}
 	util.Notice(fmt.Sprintf(`set available with borrow %s %s`, market, key))
 }
