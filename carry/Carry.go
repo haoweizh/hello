@@ -563,16 +563,6 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 			setClose = -1
 		}
 	}
-	model.SetCarryInfo(table+setting.Symbol,
-		fmt.Sprintf(`%s 参数:(%f %f %f) 计算结果(%f %f %f %f) 当前市场(%f %f) 可用：%f usdRate:%favailable:%f coinRate:%f 资金费率 %f`,
-			table, setting.OpenShortMargin, setting.CloseShortMargin, setting.GridPriceDistance, setOpen, setClose,
-			revertOpen, revertClose, scoreOpen, scoreClose, balance.AvailableWithBorrow, usdRate, usdAvailable, balance.UsdValue/balanceAllValue, fundingRate))
-	carryInfo := map[string]interface{}{`+开仓`: setting.OpenShortMargin, `-开仓`: setting.CloseShortMargin,
-		`平仓`: setting.GridPriceDistance, `动态+开仓`: setOpen, `动态-开仓`: setClose, `open平仓`: revertOpen,
-		`close平仓`: revertClose, table: setting.Symbol, `市场+开`: scoreOpen, `市场-开`: scoreClose, `usdRate`: usdRate,
-		`usdAvailable`: usdAvailable, `coinRate`: balance.UsdValue / balanceAllValue, `fundingRate`: fundingRate,
-		`可用`: balance.AvailableWithBorrow}
-	model.SetCarryInfos(table, setting.Symbol, carryInfo)
 	carryAmount := getCarryAmount(key, setting.Symbol)
 	if (scoreLow < setClose && setting.Symbol == symbolLow) || (carryAmount > 0 && scoreClose <= -1*revertOpen) {
 		bidAmount = tickPerp.Asks[0].Amount
@@ -627,5 +617,15 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 			key, symbolHigh, scoreHigh, symbolLow, scoreLow, setting.Symbol, sidePerp, usdAvailable, amount,
 			carryAmount, scoreHigh, setOpen, scoreLow, setClose, revertOpen, revertClose))
 	}
+	model.SetCarryInfo(table+setting.Symbol,
+		fmt.Sprintf(`%s 参数:(%f %f %f) 计算结果(%f %f %f %f) 当前市场(%f %f) 可用：%f usdRate:%favailable:%f coinRate:%f 资金费率 %f`,
+			table, setting.OpenShortMargin, setting.CloseShortMargin, setting.GridPriceDistance, setOpen, setClose,
+			revertOpen, revertClose, scoreOpen, scoreClose, balance.AvailableWithBorrow, usdRate, usdAvailable, balance.UsdValue/balanceAllValue, fundingRate))
+	carryInfo := map[string]interface{}{`+开仓`: setting.OpenShortMargin, `-开仓`: setting.CloseShortMargin,
+		`平仓`: setting.GridPriceDistance, `动态+开仓`: setOpen, `动态-开仓`: setClose, `open平仓`: revertOpen,
+		`close平仓`: revertClose, table: setting.Symbol, `市场+开`: scoreOpen, `市场-开`: scoreClose, `usdRate`: usdRate,
+		`usdAvailable`: usdAvailable, `coinRate`: balance.UsdValue / balanceAllValue, `fundingRate`: fundingRate,
+		`可用`: balance.AvailableWithBorrow}
+	model.SetCarryInfos(table, setting.Symbol, carryInfo)
 	return sidePerp, sideRelated, amount
 }
