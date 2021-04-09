@@ -257,7 +257,7 @@ func clearCarryBalance() {
 							if success {
 								value.AvailableWithBorrow = maxLoan
 							}
-							time.Sleep(time.Millisecond * 100)
+							time.Sleep(time.Second / 6)
 						}
 					} else {
 						util.Notice(fmt.Sprintf(`fatal: can not get price %s %s`, market, coin))
@@ -400,9 +400,9 @@ func placeCarry(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, key
 		amount, true, postOrderCarry)
 	keys, _ := model.AppConfig.GetKeys(setting.Market)
 	if key == keys[0] {
-		time.Sleep(time.Millisecond * 150)
+		time.Sleep(time.Second / 10)
 	} else {
-		time.Sleep(time.Millisecond * 200)
+		time.Sleep(time.Second / 5)
 	}
 }
 
@@ -520,6 +520,7 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 		model.SetCarryInfo(`warning `+coin, fmt.Sprintf(`slave: balace not available!!! %s`, key))
 		model.SetCarryInfos(`coin_absent`, key+`_`+coin, map[string]interface{}{`absent`: coin, `key`: key})
 		initEmptyBalance(key, setting.Market, coin)
+		time.Sleep(time.Second / 6)
 		return ``, ``, 0
 	} else {
 		model.RemoveCarryInfo(`warning ` + coin)
@@ -652,7 +653,6 @@ func initEmptyBalance(key, market, coin string) (balance *model.Balance) {
 	for i, current := range keys {
 		if current == key {
 			success, maxLoan := api.GetMaxLoan(key, secrets[i], market, coin)
-			time.Sleep(time.Millisecond * 150)
 			balance.AvailableWithBorrow = maxLoan
 			if success {
 				setCarryBalance(key, coin, balance)
