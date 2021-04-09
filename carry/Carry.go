@@ -231,13 +231,11 @@ func clearCarryBalance() {
 						borrowAll += value.Borrow
 					} else {
 						symbolPerp := coin + api.GetPerpTail(market)
-						if settings[symbolPerp] != nil && len(settings[symbolPerp]) > 0 {
-							success, bidAsk := model.AppMarkets.GetBidAsk(coin+api.GetSpotTail(market), market)
-							if success {
-								borrowAll += value.Borrow * bidAsk.Bids[0].Price
-							} else {
-								util.Notice(fmt.Sprintf(`fatal: can not get price %s %s`, market, coin))
-							}
+						success, bidAsk := model.AppMarkets.GetBidAsk(coin+api.GetSpotTail(market), market)
+						if settings[symbolPerp] != nil && len(settings[symbolPerp]) > 0 && success {
+							borrowAll += value.Borrow * bidAsk.Bids[0].Price
+						} else {
+							util.Notice(fmt.Sprintf(`fatal: can not get price %s %s`, market, coin))
 						}
 					}
 				}
