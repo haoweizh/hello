@@ -712,7 +712,8 @@ func _(market, symbol string) (borrowAble float64) {
 	return 0
 }
 
-func GetLastPrice(key, secret, market, symbol string) float64 {
+// GetLastPrice
+func _(key, secret, market, symbol string) float64 {
 	switch market {
 	case model.OKEX:
 		return getLastPriceOKEX(key, secret, symbol)
@@ -720,36 +721,73 @@ func GetLastPrice(key, secret, market, symbol string) float64 {
 	return 0
 }
 
-func InitCoinBalance(key, secret, function, market string) {
-	InitMarketInfos()
-	settings := model.GetSettings(function, market)
-	_, balances, _ := GetBalances(key, secret, market, 0)
-	balanceMap := make(map[string]*model.Balance)
-	for _, balance := range balances {
-		balanceMap[balance.Coin] = balance
+func GetSpotTail(market string) string {
+	switch market {
+	case model.Ftx:
+		return `/USD`
+	case model.OKEX:
+		return `-USDT`
 	}
-	i := 0
-	for _, items := range settings {
-		coin := model.GetCoin(items[0].Market, items[0].Symbol)
-		balance := balanceMap[coin]
-		if balance == nil {
-			if model.MarketInfos[market] == nil {
-				continue
-			}
-			related := items[0].GetRelatedSymbol()
-			marketInfo := model.MarketInfos[market][related]
-			if marketInfo == nil {
-				continue
-			}
-			price := GetLastPrice(key, secret, market, related)
-			order := PlaceOrder(key, secret, model.OrderSideBuy, model.OrderTypeMarket, market, related, related,
-				``, ``, ``, price, price, marketInfo.SizeMin, false, nil)
-			if order.OrderId == `` {
-				i++
-				fmt.Println(fmt.Sprintf(`%d order return :%s %s`, i, order.ErrCode, related))
-			} else {
-				fmt.Println(fmt.Sprintf(`%s success order`, related))
+	return ``
+}
+
+func GetPerpTail(market string) string {
+	switch market {
+	case model.Ftx:
+		return `-PERP`
+	case model.OKEX:
+		return `-USDT-SWAP`
+	}
+	return ``
+}
+
+func GetCarryCoins() (coins map[string]map[string]bool) { //  market - coin - bool
+	InitMarketInfos()
+	markets := model.GetMarkets()
+	coins = make(map[string]map[string]bool)
+	for _, market := range markets {
+		marketInfos := model.MarketInfos[market]
+		coins[market] = make(map[string]bool)
+		if marketInfos != nil && model.GetSettings(model.FunctionCarry, market) != nil {
+			for symbol := range marketInfos {
+				coin := model.GetCoin(market, symbol)
+				coins[market][coin] = true
 			}
 		}
 	}
+	return coins
 }
+
+//func InitCoinBalance(key, secret, function, market string) {
+//	InitMarketInfos()
+//	settings := model.GetSettings(function, market)
+//	_, balances, _ := GetBalances(key, secret, market, 0)
+//	balanceMap := make(map[string]*model.Balance)
+//	for _, balance := range balances {
+//		balanceMap[balance.Coin] = balance
+//	}
+//	i := 0
+//	for _, items := range settings {
+//		coin := model.GetCoin(items[0].Market, items[0].Symbol)
+//		balance := balanceMap[coin]
+//		if balance == nil {
+//			if model.MarketInfos[market] == nil {
+//				continue
+//			}
+//			related := items[0].GetRelatedSymbol()
+//			marketInfo := model.MarketInfos[market][related]
+//			if marketInfo == nil {
+//				continue
+//			}
+//			price := GetLastPrice(key, secret, market, related)
+//			order := PlaceOrder(key, secret, model.OrderSideBuy, model.OrderTypeMarket, market, related, related,
+//				``, ``, ``, price, price, marketInfo.SizeMin, false, nil)
+//			if order.OrderId == `` {
+//				i++
+//				fmt.Println(fmt.Sprintf(`%d order return :%s %s`, i, order.ErrCode, related))
+//			} else {
+//				fmt.Println(fmt.Sprintf(`%s success order`, related))
+//			}
+//		}
+//	}
+//}

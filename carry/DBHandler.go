@@ -85,10 +85,6 @@ func MaintainTransFee(key, secret string) {
 					value.Symbol, value.OrderSide, value.OrderTime.String(), value.Status))
 				time.Sleep(time.Second)
 			}
-			if now.Minute() > 30 && now.Minute() < 35 {
-				model.LoadSettings()
-				api.InitMarketInfos()
-			}
 			time.Sleep(time.Minute * 5)
 		}
 		feeIndex = 0

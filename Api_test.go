@@ -175,10 +175,10 @@ func Test_wallet(t *testing.T) {
 	candle := api.GetDayCandle(``, ``, model.OKEX, ``, `BTC-USDT-SWAP`, today)
 	fmt.Println(candle.N)
 	model.AppDB, _ = gorm.Open("postgres", model.AppConfig.DBConnection)
-	api.InitCoinBalance(``, ``, model.FunctionCarry, model.OKEX)
+	//api.InitCoinBalance(``, ``, model.FunctionCarry, model.OKEX)
 	//api.InitMarketInfos()
 	//order := api.PlaceOrder(``, ``, model.OrderSideSell, model.OrderTypeMarket, model.OKEX, `BTC-USDT-SWAP`,
-	//	`BTC-USDT-SWAP`, ``, ``, model.FunctionCarry, 5555.23452, 0, 0.1444444444876, false)
+	//	`BTC-USDT-SWAP`, ``, ``, model.FunctionCarry, 5555.23452, w0, 0.1444444444876, false)
 	//fmt.Println(order.OrderId)
 	//suc, pos := api.GetPositions(``, ``, model.Ftx)
 	//fmt.Println(fmt.Sprintf(`%v %d`, suc, len(pos)))
