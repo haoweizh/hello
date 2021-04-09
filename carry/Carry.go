@@ -476,10 +476,10 @@ func makeEqual(key, secret string, setting *model.Setting, balances []*model.Bal
 
 func initEmptyBalance(key, secret, market string) {
 	now := util.GetNow().Unix()
-	if now-marketInitTime[market] < 3600 {
+	if now-marketInitTime[key] < 3600 {
 		return
 	} else {
-		marketInitTime[market] = now
+		marketInitTime[key] = now
 	}
 	coins := api.GetCarryCoins()
 	if coins == nil || coins[market] == nil {
@@ -497,7 +497,8 @@ func initEmptyBalance(key, secret, market string) {
 		}
 		time.Sleep(time.Second / 8)
 		setCarryBalance(key, coin, balance)
-		util.Notice(fmt.Sprintf(`max loan %s %s %f %s`, coin, market, getCarryBalance(key, coin).AvailableWithBorrow, key))
+		util.Notice(fmt.Sprintf(`max loan %s %s %f %s`,
+			coin, market, getCarryBalance(key, coin).AvailableWithBorrow, key))
 	}
 	util.Notice(fmt.Sprintf(`set available with borrow %s %s`, market, key))
 }
