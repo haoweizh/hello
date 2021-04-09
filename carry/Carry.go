@@ -516,16 +516,7 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	if balance == nil {
 		model.SetCarryInfo(`warning `+coin, fmt.Sprintf(`slave: balace not available!!! %s`, key))
 		model.SetCarryInfos(`coin_absent`, key+`_`+coin, map[string]interface{}{`absent`: coin, `key`: key})
-		balance = &model.Balance{
-			Amount:              0,
-			AvailableWithBorrow: 0,
-			Borrow:              0,
-			Coin:                coin,
-			Market:              setting.Market,
-			Price:               0,
-			UsdValue:            0,
-		}
-		setCarryBalance(key, coin, balance)
+		initEmptyBalance(key, setting.Market, coin)
 		return ``, ``, 0
 	} else {
 		model.RemoveCarryInfo(`warning ` + coin)
@@ -644,32 +635,24 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 //	carryLock.Lock()
 //	return cachePositions[key]
 //}
-//func initEmptyBalance(key, market, coin string) (balance *model.Balance) {
-//	positions := getPositions(key)
-//	if positions == nil {
-//		return nil
-//	}
-//	tail := getPerpTail(market)
-//	name := coin + tail
-//	needCreate := true
-//	for _, position := range positions {
-//		if position.Currency == name && position.Free != 0 {
-//			needCreate = false
-//		}
-//	}
-//	if needCreate {
-//		balance = &model.Balance{
-//			Amount:              0,
-//			Available:           0,
-//			AvailableWithBorrow: 0,
-//			Borrow:              0,
-//			Coin:                coin,
-//			Market:              market,
-//			Price:               0,
-//			UsdValue:            0,
-//		}
-//		setCarryBalance(key, coin, balance)
-//	}
-//	util.Notice(fmt.Sprintf(`need to set empty balance for %s`, coin))
-//	return balance
-//}
+
+func initEmptyBalance(key, market, coin string) (balance *model.Balance) {
+	balance = &model.Balance{
+		Amount:   0,
+		Borrow:   0,
+		Coin:     coin,
+		Market:   market,
+		Price:    0,
+		UsdValue: 0,
+	}
+	keys, secrets := model.AppConfig.GetKeys(market)
+	for i, current := range keys {
+		if current == key {
+			maxLoan := api.GetMaxLoan(key, secrets[i], market, coin)
+			balance.AvailableWithBorrow = maxLoan
+		}
+	}
+	setCarryBalance(key, coin, balance)
+	util.Notice(fmt.Sprintf(`need to set empty balance for %s`, coin))
+	return balance
+}
