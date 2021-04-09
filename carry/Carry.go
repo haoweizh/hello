@@ -234,7 +234,7 @@ func clearCarryBalance() {
 				}
 				balanceAllValue := 0.0
 				localUsdAvailable := 0.0
-				borrow := 0.0
+				borrowAll := 0.0
 				for _, value := range balances {
 					coin := strings.ToUpper(value.Coin)
 					setCarryBalance(key, coin, value)
@@ -246,11 +246,12 @@ func clearCarryBalance() {
 						localUsdAvailable = value.Amount
 						setUsdAvailable(key, value.Amount)
 						balanceAllValue += value.Amount
-						borrow += value.Borrow
+						borrowAll += value.Borrow
 					}
 					success, bidAsk := model.AppMarkets.GetBidAsk(coin+getSpotTail(market), market)
 					if success {
-						borrow += value.Borrow * bidAsk.Bids[0].Price
+						borrow := value.Borrow * bidAsk.Bids[0].Price
+						borrowAll += borrow
 						if !borrowInitialized || borrow > 100 {
 							maxLoan := api.GetMaxLoan(key, secrets[i], market, coin)
 							value.AvailableWithBorrow = maxLoan
@@ -260,7 +261,7 @@ func clearCarryBalance() {
 						util.Notice(fmt.Sprintf(`fatal: can not get price %s %s`, market, coin))
 					}
 				}
-				localUsdAvailable = localUsdAvailable - borrow
+				localUsdAvailable = localUsdAvailable - borrowAll
 				setUsdRate(key, localUsdAvailable/balanceAllValue)
 				setBalanceAll(key, balanceAllValue)
 				util.Notice(fmt.Sprintf(`[carry] %s usd:%f %f len(blances):%d`,
