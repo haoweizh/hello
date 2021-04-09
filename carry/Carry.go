@@ -257,7 +257,7 @@ func clearCarryBalance() {
 							if success {
 								value.AvailableWithBorrow = maxLoan
 							}
-							time.Sleep(time.Second / 6)
+							time.Sleep(time.Second / 8)
 						}
 					} else {
 						util.Notice(fmt.Sprintf(`fatal: can not get price %s %s`, market, coin))

@@ -307,7 +307,7 @@ func GetTransfers(key, secret, market string) (balances []*model.Balance) {
 func GetFundingRate(market, symbol string) (fundingRate float64, expireTime int64) {
 	fundingRate, expireTime = model.GetFundingRate(market, symbol)
 	now := util.GetNow()
-	if now.Unix()-180 < expireTime && now.Unix() > expireTime {
+	if now.Unix()-240 < expireTime && now.Unix() > expireTime {
 		return 0, expireTime
 	} else if now.Unix()-120 < expireTime {
 		return fundingRate, expireTime
