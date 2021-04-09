@@ -655,6 +655,6 @@ func initEmptyBalance(key, market, coin string) (balance *model.Balance) {
 		}
 	}
 	setCarryBalance(key, coin, balance)
-	util.Notice(fmt.Sprintf(`need to set empty balance for %s`, coin))
+	util.Notice(fmt.Sprintf(`need to set empty balance for %s %s`, market, coin))
 	return balance
 }
