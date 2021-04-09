@@ -489,11 +489,13 @@ func initEmptyBalance(key, secret, market string) {
 		balance := getCarryBalance(key, coin)
 		if balance == nil {
 			balance = &model.Balance{Coin: coin, Market: market}
+			util.Notice(fmt.Sprintf(`create new balance %s`, coin))
 		}
 		success, maxLoan := api.GetMaxLoan(key, secret, market, coin)
 		if success {
 			balance.AvailableWithBorrow = maxLoan
 		}
+		util.Notice(fmt.Sprintf(`max loan %s %s`, coin, market))
 		time.Sleep(time.Second / 8)
 		setCarryBalance(key, coin, balance)
 	}

@@ -680,7 +680,7 @@ func getFundingRateOKEX(key, secret, instrumentId string) (fundingRate float64, 
 	return 0, 0
 }
 
-func getMaxLoanOKEX(key, secret, coin string) (succcess bool, maxLoan float64) {
+func getMaxLoanOKEX(key, secret, coin string) (success bool, maxLoan float64) {
 	path := fmt.Sprintf(`/api/v5/account/max-loan?instId=%s-USDT&mgnMode=cross`, coin)
 	response := sendSignRequestOKEX(key, secret, http.MethodGet, path, nil)
 	loanJson, err := util.NewJSON(response)
