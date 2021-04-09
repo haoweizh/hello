@@ -226,7 +226,6 @@ func clearCarryBalance() {
 					}
 					if (coin == `USD` && market == model.Ftx) || (coin == `USDT` && market == model.OKEX) {
 						localUsdAvailable = value.Amount
-						setUsdAvailable(key, value.Amount)
 						balanceAllValue += value.Amount
 						borrowAll += value.Borrow
 					}
@@ -239,6 +238,7 @@ func clearCarryBalance() {
 					}
 				}
 				localUsdAvailable = localUsdAvailable - borrowAll
+				setUsdAvailable(key, localUsdAvailable)
 				setUsdRate(key, localUsdAvailable/balanceAllValue)
 				setBalanceAll(key, balanceAllValue)
 				util.Notice(fmt.Sprintf(`[carry] %s usd:%f %f len(blances):%d`,
@@ -613,12 +613,10 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	}
 	if amount > 0 {
 		util.Notice(fmt.Sprintf(`+++ usdRate: %f coinRate: %f %s high:%s %f low:%s %f symbol: %s %s 
-			usd available:%f amount %f carryAmount: %f scoreHigh: %f setOpen: %f == %f scoreLow: %f setClose: %f == %f 
+			usd available:%f amount %f carryAmount: %f scoreHigh: %f setOpen: %f scoreLow: %f setClose: %f
 			revertOpen: %f revertClose: %f`,
 			usdRate, coinRate, key, symbolHigh, scoreHigh, symbolLow, scoreLow, setting.Symbol, sidePerp, usdAvailable,
-			amount, carryAmount, scoreHigh, setOpen,
-			math.Max((1.5-usdRate)*setting.OpenShortMargin*(0.5+jump*coinRate), 0.003)-fundingRate, scoreLow,
-			setClose, math.Min(setting.CloseShortMargin*(0.5+jump*coinRate), -0.003)-fundingRate, revertOpen, revertClose))
+			amount, carryAmount, scoreHigh, setOpen, scoreLow, setClose, revertOpen, revertClose))
 	}
 	model.SetCarryInfo(table+setting.Symbol,
 		fmt.Sprintf(`%s 参数:(%f %f %f) 计算结果(%f %f %f %f) 当前市场(%f %f) 可用：%f usdRate:%favailable:%f coinRate:%f 资金费率 %f`,
