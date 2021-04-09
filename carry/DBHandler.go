@@ -54,17 +54,11 @@ func MaintainBalance() {
 
 func MaintainTransFee(key, secret string) {
 	for true {
-		d, _ := time.ParseDuration("-48h")
-		now := util.GetNow()
-		lastDays2 := now.Add(d)
-		//d, _ = time.ParseDuration(`-1h`)
-		//lastHour := util.GetNow().Add(d)
 		var orders []model.Order
 		for true {
-			if now.Minute() > 30 && now.Minute() < 35 {
-				model.LoadSettings()
-				api.InitMarketInfos()
-			}
+			d, _ := time.ParseDuration("-48h")
+			now := util.GetNow()
+			lastDays2 := now.Add(d)
 			model.AppDB.Limit(100).Offset(feeIndex).Where(
 				`date(order_time)>? and status=? and refresh_type!=?`,
 				lastDays2, model.CarryStatusWorking, model.FunctionCarry).Find(&orders)
@@ -90,6 +84,10 @@ func MaintainTransFee(key, secret string) {
 				util.Info(fmt.Sprintf(`save order %s %s %s %s`,
 					value.Symbol, value.OrderSide, value.OrderTime.String(), value.Status))
 				time.Sleep(time.Second)
+			}
+			if now.Minute() > 30 && now.Minute() < 35 {
+				model.LoadSettings()
+				api.InitMarketInfos()
 			}
 			time.Sleep(time.Minute * 5)
 		}
