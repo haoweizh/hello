@@ -650,6 +650,7 @@ func initEmptyBalance(key, market, coin string) (balance *model.Balance) {
 	for i, current := range keys {
 		if current == key {
 			maxLoan := api.GetMaxLoan(key, secrets[i], market, coin)
+			time.Sleep(time.Millisecond * 100)
 			balance.AvailableWithBorrow = maxLoan
 		}
 	}
