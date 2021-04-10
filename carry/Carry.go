@@ -376,10 +376,10 @@ func placeCarry(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, key
 		tickRelated.Bids[0].Amount, tickRelated.Asks[0].Price, tickRelated.Asks[0].Amount, scoreOpen, scoreClose,
 		amount, amount*tickPerp.Asks[0].Price, util.GetNowUnixMillion()))
 	go api.PlaceOrder(key, secret, sidePerp, model.OrderTypeLimit, setting.Market, setting.Symbol,
-		``, ``, ``, carryType, perpPrice, perpPrice,
+		``, ``, ``, model.FunctionCarry, perpPrice, perpPrice,
 		amount, true, postOrderCarry)
 	api.PlaceOrder(key, secret, sideRelated, model.OrderTypeLimit, setting.Market, symbolRelated,
-		``, ``, ``, carryType, relatedPrice, relatedPrice,
+		``, ``, ``, model.FunctionCarry, relatedPrice, relatedPrice,
 		amount, true, postOrderCarry)
 	keys, _ := model.AppConfig.GetKeys(setting.Market)
 	if key == keys[0] {
