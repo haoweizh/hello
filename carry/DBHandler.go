@@ -60,8 +60,8 @@ func MaintainTransFee(key, secret string) {
 			now := util.GetNow()
 			lastDays2 := now.Add(d)
 			model.AppDB.Limit(100).Offset(feeIndex).Where(
-				`date(order_time)>? and status=? and refresh_type!=? and refresh_type!=? and refresh_type!=? and refresh_type!=?`,
-				lastDays2, model.CarryStatusWorking, carryTypeRevert, carryTypeOpen, carryTypeClose, model.FunctionComplement).Find(&orders)
+				`date(order_time)>? and status=? and refresh_type!=? and refresh_type!=?`,
+				lastDays2, model.CarryStatusWorking, model.FunctionComplement, model.FunctionCarry).Find(&orders)
 			if len(orders) == 0 {
 				break
 			}

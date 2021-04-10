@@ -256,7 +256,12 @@ var ProcessTurtle = func(setting *model.Setting, tick *model.BidAsk) {
 		}
 	} else if setting.Chance > 0 {
 		priceLong = math.Max(turtleData.highDays20, setting.PriceX+turtleData.n/2)
-		priceShort = math.Max(turtleData.lowDays10, math.Max(turtleData.highDays20, setting.PriceX)-2*turtleData.n)
+		temp := setting.PriceX - 2*turtleData.n
+		if turtleData.lowDays10 < temp {
+			priceShort = temp
+		} else {
+			priceShort = math.Max(turtleData.lowDays10, turtleData.highDays20-2*turtleData.n)
+		}
 		priceShort, priceLong = placeTurtleOrders(turtleData, setting, currentN, priceShort, priceLong)
 		// 加仓一个单位
 		if (tick.Asks[0].Price >= priceLong || longBreak) && setting.Chance < int64(setting.AmountLimit) &&
@@ -285,8 +290,13 @@ var ProcessTurtle = func(setting *model.Setting, tick *model.BidAsk) {
 				setting.PriceX, turtleData.n))
 		}
 	} else if setting.Chance < 0 {
-		priceLong = math.Min(turtleData.highDays10, math.Min(turtleData.lowDays20, setting.PriceX)+2*turtleData.n)
 		priceShort = math.Min(turtleData.lowDays20, setting.PriceX-turtleData.n/2)
+		temp := setting.PriceX + 2*turtleData.n
+		if turtleData.highDays10 > temp {
+			priceLong = temp
+		} else {
+			priceLong = math.Min(turtleData.highDays10, turtleData.lowDays20+2*turtleData.n)
+		}
 		priceShort, priceLong = placeTurtleOrders(turtleData, setting, currentN, priceShort, priceLong)
 		// 加仓一个单位
 		if (tick.Bids[0].Price <= priceShort || shortBreak) && math.Abs(float64(setting.Chance)) < setting.AmountLimit &&
