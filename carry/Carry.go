@@ -574,6 +574,7 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 			setOpen = 1
 			setClose = -1
 		}
+		util.Notice(fmt.Sprintf(`limit: %f %f %f %f`, usdLowLine, localOpenValueLimit, setOpen, setClose))
 	}
 	carryAmount := getCarryAmount(key, setting.Symbol)
 	if (scoreLow < setClose && setting.Symbol == symbolLow) || (carryAmount > 0 && scoreClose <= -1*revertOpen) {
