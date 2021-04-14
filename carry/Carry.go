@@ -568,7 +568,6 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 		} else {
 			localOpenValueLimit = 0
 		}
-		util.Notice(fmt.Sprintf(`limit: %f %f`, usdLowLine, localOpenValueLimit))
 		valueLow = 0
 		carryCloses := model.AppConfig.GetCarryClose()
 		if len(carryCloses) > 1 && carryCloses[1] == `true` {
