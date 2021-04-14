@@ -8,6 +8,7 @@ import (
 	"hello/model"
 	"hello/util"
 	"math"
+	"math/rand"
 	"net/url"
 	"sort"
 	"strconv"
@@ -17,7 +18,14 @@ import (
 var lastTickId = make(map[string]int64) // symbol - int64
 
 var subscribeHandlerBinance = func(subscribes []interface{}, subType string) error {
-	return nil
+	var err error = nil
+	for _, subscribe := range subscribes {
+		subMsg := fmt.Sprintf(`{"method": "SUBSCRIBE","params":["%s"],"id": %d}`, subscribe, int(rand.Float64()*10000))
+		if err = sendToWs(model.Binance, []byte(subMsg)); err != nil {
+			util.SocketInfo("binance can not subscribe " + err.Error())
+		}
+	}
+	return err
 }
 
 func WsDepthServeBinance(markets *model.Markets, errHandler ErrHandler) (chan struct{}, error) {
@@ -78,15 +86,8 @@ func WsDepthServeBinance(markets *model.Markets, errHandler ErrHandler) (chan st
 		}
 	}
 	requestUrl := model.AppConfig.WSUrls[model.Binance]
-
-	for _, subscribe := range GetWSSubscribes(model.Binance, model.SubscribeDepth) {
-		if str, ok := subscribe.(string); ok {
-			requestUrl += str + "/"
-		}
-	}
 	return WebSocketClient(model.Binance, requestUrl, model.SubscribeDepth,
-		GetWSSubscribes(model.Binance, model.SubscribeDepth),
-		subscribeHandlerBinance, wsHandler, errHandler)
+		GetWSSubscribes(model.Binance, model.SubscribeDepth), subscribeHandlerBinance, wsHandler, errHandler)
 }
 func signBinance(postData *url.Values, secretKey string) {
 	postData.Set("recvWindow", "6000000")

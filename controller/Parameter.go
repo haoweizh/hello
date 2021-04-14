@@ -421,14 +421,6 @@ func SetParameters(c *gin.Context) {
 
 		}
 	}
-	predealdis := c.Query(`predealdis`)
-	if len(predealdis) > 0 {
-		model.AppConfig.PreDealDis, _ = strconv.ParseFloat(predealdis, 64)
-	}
-	binanceOrderDis := c.Query(`binanceorderdis`)
-	if len(binanceOrderDis) > 0 {
-		model.AppConfig.BinanceOrderDis, _ = strconv.ParseFloat(binanceOrderDis, 64)
-	}
 	amountRate := c.Query("amountrate")
 	if amountRate != `` {
 		model.AppConfig.AmountRate, _ = strconv.ParseFloat(amountRate, 64)

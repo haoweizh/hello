@@ -376,10 +376,10 @@ func placeCarry(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, key
 		tickRelated.Bids[0].Amount, tickRelated.Asks[0].Price, tickRelated.Asks[0].Amount, scoreOpen, scoreClose,
 		amount, amount*tickPerp.Asks[0].Price, util.GetNowUnixMillion()))
 	go api.PlaceOrder(key, secret, sidePerp, model.OrderTypeLimit, setting.Market, setting.Symbol,
-		``, ``, ``, model.FunctionCarry, perpPrice, perpPrice,
+		``, ``, model.FunctionCarry, perpPrice, perpPrice,
 		amount, true, postOrderCarry)
 	api.PlaceOrder(key, secret, sideRelated, model.OrderTypeLimit, setting.Market, symbolRelated,
-		``, ``, ``, model.FunctionCarry, relatedPrice, relatedPrice,
+		``, ``, model.FunctionCarry, relatedPrice, relatedPrice,
 		amount, true, postOrderCarry)
 	keys, _ := model.AppConfig.GetKeys(setting.Market)
 	if key == keys[0] {
@@ -481,7 +481,7 @@ func makeEqual(key, secret string, setting *model.Setting, balances []*model.Bal
 		util.Notice(fmt.Sprintf(`%s cancel all perp:%v related:%v >>>>>> equal %s %f, %s %f = %s %f`,
 			setting.Market, resultPerp, resultRelated, settingSymbol, amountPerp, symbolRelated, amountRelated, orderSide, amount))
 		api.PlaceOrder(key, secret, orderSide, model.OrderTypeLimit, setting.Market, symbol, symbol,
-			``, ``, model.FunctionComplement, price, price, amount, true, nil)
+			``, model.FunctionComplement, price, price, amount, true, nil)
 	}
 	return
 }
@@ -562,8 +562,12 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	table := fmt.Sprintf(`%s_dynamic_`, model.FunctionCarry)
 	if len(keys) > 1 && keys[0] != key {
 		table += `slave`
-		localOpenValueLimit = model.AppConfig.SimonOpenMax
-		usdLowLine = model.AppConfig.SimonUsdLow
+		if usdRate > 0 {
+			usdLowLine = 0.1 * usdAvailable / usdRate
+			localOpenValueLimit = usdLowLine / 2
+		} else {
+			localOpenValueLimit = 0
+		}
 		valueLow = 0
 		carryCloses := model.AppConfig.GetCarryClose()
 		if len(carryCloses) > 1 && carryCloses[1] == `true` {

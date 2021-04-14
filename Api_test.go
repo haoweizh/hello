@@ -159,6 +159,8 @@ func Test_initTurtleN(t *testing.T) {
 func Test_wallet(t *testing.T) {
 	model.NewConfig()
 	_ = configor.Load(model.AppConfig, "./config.yml")
+	api.PlaceOrder(model.AppConfig.DFutureKey, model.AppConfig.DFutureSecret, model.OrderSideBuy, ``,
+		model.DFuture, `btcusdt`, ``, `open`, model.FunctionDCarry, 60000, 63400, 0.001, true, nil)
 	_, loan := api.GetMaxLoan(model.AppConfig.OkexKey, model.AppConfig.OkexSecret, model.OKEX, `XEM`)
 	fmt.Println(loan)
 	rate, timeInt := api.GetFundingRate(model.OKEX, `BTC-USDT-SWAP`)

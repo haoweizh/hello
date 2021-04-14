@@ -415,21 +415,50 @@ func QueryOrderById(key, secret, market, symbol, instrument, orderType, orderId 
 		Status: status, Instrument: instrument, OrderType: orderType}
 }
 
+func GetPosition(market, symbol, address string) (success bool, position *model.Position) {
+	switch market {
+	case model.DFuture:
+		if symbol[len(symbol)-4:] == `usdt` {
+			symbol = symbol[0 : len(symbol)-4]
+		}
+		for true {
+			success, position = getPositionsDFuture(symbol, address)
+			if success {
+				return
+			}
+			time.Sleep(time.Second * 5)
+		}
+	}
+	return false, nil
+}
+
 func GetPositions(key, secret, market string) (success bool, positions []*model.Position) {
 	switch market {
 	case model.Ftx:
 		return getPositionsFtx(key, secret)
 	case model.OKEX:
 		return getPositionsOKEX(key, secret)
+	case model.DFuture:
+		symbols := model.GetMarketSymbols(market)
+		positions = make([]*model.Position, 0)
+		for symbol := range symbols {
+			temp, pos := getPositionsDFuture(symbol, model.AppConfig.HecoFutureAddress)
+			if temp {
+				positions = append(positions, pos)
+			} else {
+				success = temp
+			}
+		}
+		return success, positions
 	}
 	return false, nil
 }
 
-func MustPlaceOrder(key, secret, orderSide, orderType, market, symbol, instrument, accountType, orderParam,
+func MustPlaceOrder(key, secret, orderSide, orderType, market, symbol, instrument, orderParam,
 	refreshType string, price, triggerPrice, amount float64, saveDB bool) (order *model.Order) {
 	retry := 10
 	for i := 0; i < retry; i++ {
-		order = PlaceOrder(key, secret, orderSide, orderType, market, symbol, instrument, accountType,
+		order = PlaceOrder(key, secret, orderSide, orderType, market, symbol, instrument,
 			orderParam, refreshType, price, triggerPrice, amount, saveDB, nil)
 		if order != nil && order.OrderId != `` {
 			break
@@ -448,8 +477,8 @@ func MustPlaceOrder(key, secret, orderSide, orderType, market, symbol, instrumen
 // orderSide: OrderSideBuy OrderSideSell OrderSideLiquidateLong OrderSideLiquidateShort
 // orderType: OrderTypeLimit OrderTypeMarket
 // amount:如果是限价单或市价卖单，amount是左侧币种的数量，如果是市价买单，amount是右测币种的数量
-func PlaceOrder(key, secret, orderSide, orderType, market, symbol, instrument, accountType, orderParam,
-	refreshType string, price, triggerPrice, amount float64, saveDB bool, postOrder model.PostOrder) (order *model.Order) {
+func PlaceOrder(key, secret, orderSide, orderType, market, symbol, instrument, orderParam, refreshType string,
+	price, triggerPrice, amount float64, saveDB bool, postOrder model.PostOrder) (order *model.Order) {
 	if instrument == `` {
 		instrument = symbol
 	}
@@ -486,6 +515,15 @@ func PlaceOrder(key, secret, orderSide, orderType, market, symbol, instrument, a
 		return
 	}
 	switch market {
+	case model.DFuture:
+		if symbol[len(symbol)-4:] == `usdt` {
+			symbol = symbol[0 : len(symbol)-4]
+		}
+		if orderParam == `close` {
+			closeDFuture(key, secret, symbol, triggerPrice, price, amount)
+		} else {
+			openDFuture(key, secret, orderSide, symbol, triggerPrice, price, amount)
+		}
 	case model.Huobi:
 		placeOrderHuobi(key, secret, order, orderSide, orderType, symbol, strPrice, strAmount)
 	case model.HuobiDM:
@@ -505,7 +543,7 @@ func PlaceOrder(key, secret, orderSide, orderType, market, symbol, instrument, a
 	case model.Bybit:
 		placeOrderBybit(order, key, secret, orderSide, orderType, orderParam, symbol, strPrice, strAmount)
 	case model.Ftx:
-		placeOrderFtx(order, key, secret, orderSide, orderType, accountType, orderParam, symbol, strPrice,
+		placeOrderFtx(order, key, secret, orderSide, orderType, orderParam, symbol, strPrice,
 			strTriggerPrice, fmt.Sprintf(`%f`, amount))
 	}
 	if order.OrderId == "0" || strings.Trim(order.OrderId, ` `) == "" {
@@ -563,12 +601,10 @@ func GetWSSubscribe(market, symbol, subType string) (subscribe interface{}) {
 		if len(symbol) > 4 && symbol[0:4] == `bch_` {
 			symbol = `bchabc_` + symbol[4:]
 		}
-		return strings.ToLower(strings.Replace(symbol, "_", "", 1)) + `@depth5`
+		return strings.ToLower(strings.Replace(symbol, "_", "", 1)) + `@depth5@100ms`
 	case model.Coinpark: //BTC_USDT bibox_sub_spot_BTC_USDT_ticker
 		//return `bibox_sub_spot_` + strings.ToUpper(symbol) + `_ticker`
 		return `bibox_sub_spot_` + strings.ToUpper(symbol) + `_depth`
-	//case model.OKSwap:
-	//	return `swap/depth5:` + model.GetDialectSymbol(model.OKSwap, symbol)
 	case model.Bitmex:
 		if subType == model.SubscribeDeal {
 			return `trade:` + model.GetDialectSymbol(model.Bitmex, symbol)

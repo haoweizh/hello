@@ -15,8 +15,8 @@ type Setting struct {
 	Market            string
 	MarketRelated     string
 	Symbol            string
+	SymbolRelated     string
 	FunctionParameter string
-	AccountType       string
 	PriceX            float64
 	OpenShortMargin   float64 // arbitrary future use
 	CloseShortMargin  float64 // arbitrary future use
@@ -24,10 +24,6 @@ type Setting struct {
 	GridAmount        float64
 	GridPriceDistance float64
 	AmountLimit       float64
-	RefreshLimit      float64
-	RefreshLimitLow   float64
-	BinanceDisMin     float64
-	BinanceDisMax     float64
 	ID                uint `gorm:"primary_key"`
 	CreatedAt         time.Time
 	UpdatedAt         time.Time

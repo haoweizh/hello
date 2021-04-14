@@ -33,7 +33,6 @@ const Binance = "binance"
 const Ftx = `ftx`
 const Coinpark = "coinpark"
 const Bitmex = `bitmex`
-const AccountTypeReduce = `reduceOnly`
 const SubscribeDepth = `SubscribeDepth`
 const SubscribeTicker = `ticker`
 const SubscribeDeal = `subscribeDeal`
@@ -50,8 +49,7 @@ const OrderSideLiquidateShort = `liquidateShort`
 const FunctionTurtle = `turtle`
 const FunctionGrid = `grid`
 const FunctionCarry = `carry`
-
-//const FunctionDefi = `defi`
+const FunctionDCarry = `dcarry`
 const FunctionComplement = `complement`
 const FunctionPostonlyHandler = `postonly`
 const PostOnly = `ParticipateDoNotInitiate`
@@ -281,7 +279,7 @@ func NewConfig() {
 	AppConfig.RestUrls = make(map[string]string)
 	AppConfig.WSUrls[Huobi] = `wss://api-aws.huobi.pro/feed`
 	AppConfig.WSUrls[HuobiDM] = `wss://api.hbdm.com/`
-	AppConfig.WSUrls[Binance] = "wss://stream.binance.com:9443/stream?streams="
+	AppConfig.WSUrls[Binance] = "wss://stream.binance.com:9443/stream"
 	AppConfig.WSUrls[Ftx] = `wss://ftx.com/ws`
 	AppConfig.WSUrls[OKEX] = `wss://ws.okex.com:8443/ws/v5/public`
 	if AppConfig.Env == `test` {
@@ -299,6 +297,7 @@ func NewConfig() {
 	// HUOBI用于交易的API，可能不适用于行情
 	//config.RestUrls[Huobi] = "https://api.huobipro.com/v1"
 	//AppConfig.RestUrls[Huobi] = "https://api.huobi.pro"
+	AppConfig.RestUrls[DFuture] = `https://openoracle_prod_heco.dfuture.com/dev/web`
 	AppConfig.RestUrls[OKEX] = `https://www.okex.com`
 	AppConfig.RestUrls[Huobi] = `api-aws.huobi.pro`
 	AppConfig.RestUrls[HuobiDM] = `api.hbdm.com`
@@ -335,7 +334,6 @@ func (config *Config) ToString() string {
 	str := "markets-carry cost:\n"
 	str += fmt.Sprintf("delay: %f\n", config.Delay)
 	str += fmt.Sprintf("channelslot: %f\n", config.ChannelSlot)
-	str += fmt.Sprintf("PreDealDis: %f Binance order dis: %f\n", config.PreDealDis, config.BinanceOrderDis)
 	str += fmt.Sprintf("channels: %d \n", config.Channels)
 	str += fmt.Sprintf("handle: %s\n", config.Handle)
 	str += fmt.Sprintf("amountrate: %f\n", config.AmountRate)
