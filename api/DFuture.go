@@ -185,7 +185,7 @@ func closeDFuture(key, secret, symbol string, price, acceptablePrice, amount flo
 	return success
 }
 
-func getPositionsDFuture(address, symbol string) (success bool, position *model.Position) {
+func getPositionsDFuture(symbol, address string) (success bool, position *model.Position) {
 	path := fmt.Sprintf(`%s/query?symbol=%s&account_address=%s`, nodeServer, symbol, address)
 	responseBody, _ := util.HttpRequest(http.MethodGet, path, ``, nil, 60)
 	responseJson, _ := util.NewJSON(responseBody)
