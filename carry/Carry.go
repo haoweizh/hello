@@ -564,7 +564,7 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 		table += `slave`
 		if usdRate > 0 {
 			usdLowLine = 0.1 * usdAvailable / usdRate
-			localOpenValueLimit = usdLowLine / 2
+			localOpenValueLimit = usdLowLine
 		} else {
 			localOpenValueLimit = 0
 		}
@@ -574,7 +574,6 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 			setOpen = 1
 			setClose = -1
 		}
-		util.Notice(fmt.Sprintf(`limit: %f %f %f %f`, usdLowLine, localOpenValueLimit, setOpen, setClose))
 	}
 	carryAmount := getCarryAmount(key, setting.Symbol)
 	if (scoreLow < setClose && setting.Symbol == symbolLow) || (carryAmount > 0 && scoreClose <= -1*revertOpen) {
