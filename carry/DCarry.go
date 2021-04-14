@@ -75,6 +75,10 @@ var ProcessDCarry = func(setting *model.Setting, tickD *model.BidAsk) {
 		}
 		tickDPrice := tickD.Asks[0].Price
 		tickRelatedPrice := tickRelated.Asks[0].Price
+		model.SetCarryInfo(fmt.Sprintf(`dcarry price %s %s`, setting.Market, setting.Symbol),
+			fmt.Sprintf(`d: %f %s-%s %f rate: %f position: %f`,
+				tickDPrice, setting.MarketRelated, setting.SymbolRelated, tickRelatedPrice,
+				(tickDPrice-tickRelatedPrice)/tickRelatedPrice, position.Free))
 		amount := 0.0
 		orderSide := model.OrderSideBuy
 		line := setting.OpenShortMargin
