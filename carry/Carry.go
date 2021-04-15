@@ -314,8 +314,8 @@ var ProcessCarry = func(setting *model.Setting, tick *model.BidAsk) {
 		step = -1
 	}
 	for i := begin; i >= 0 && i < len(keys); i += step {
-		sidePerp, sideRelated, amount, carryType := calcCarryOpen(setting, tickPerp, tickRelated, keys[i], setting.Symbol,
-			setting.Symbol, doReverts[i], scoreOpen, scoreClose, scoreOpen, scoreClose)
+		sidePerp, sideRelated, amount, carryType := calcCarryOpen(setting, tickPerp, tickRelated, keys[i],
+			doReverts[i], scoreOpen, scoreClose, scoreOpen, scoreClose)
 		if amount > 0 {
 			go placeCarry(setting, tickPerp, tickRelated, keys[i], secrets[i], sidePerp, sideRelated, carryType,
 				scoreOpen, scoreClose, amount)
@@ -517,7 +517,7 @@ func initEmptyBalance(key, secret, market string) {
 	util.Notice(fmt.Sprintf(`set available with borrow %s %s`, market, key))
 }
 
-func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, key, symbolHigh, symbolLow, doRevert string,
+func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, key, doRevert string,
 	scoreOpen, scoreClose, scoreHigh, scoreLow float64) (sidePerp, sideRelated string, amount float64, carryType string) {
 	var bidAmount, askAmount float64
 	valueLow := setting.AmountLimit
@@ -579,7 +579,7 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 		revertClose = -0.003
 	}
 	carryAmount := getCarryAmount(key, setting.Symbol)
-	if (scoreLow < setClose && setting.Symbol == symbolLow) || (carryAmount > 0 && scoreClose <= -1*revertOpen) {
+	if scoreLow < setClose || (carryAmount > 0 && scoreClose <= -1*revertOpen) {
 		bidAmount = tickPerp.Asks[0].Amount
 		askAmount = tickRelated.Bids[0].Amount
 		sidePerp = model.OrderSideBuy
@@ -589,7 +589,7 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 		} else {
 			carryType = carryTypeRevert
 		}
-	} else if (scoreHigh > setOpen && setting.Symbol == symbolHigh) || (carryAmount < 0 && scoreOpen >= revertClose) {
+	} else if scoreHigh > setOpen || (carryAmount < 0 && scoreOpen >= revertClose) {
 		bidAmount = tickRelated.Asks[0].Amount
 		askAmount = tickPerp.Bids[0].Amount
 		sidePerp = model.OrderSideSell
@@ -603,7 +603,7 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	markPrice := tickPerp.Asks[0].Price
 	amount = math.Min(bidAmount, askAmount)
 	// 开仓时:数量<持仓+可借
-	if (setting.Symbol == symbolLow && scoreLow < setClose) || (setting.Symbol == symbolHigh && scoreHigh > setOpen) {
+	if scoreLow < setClose || scoreHigh > setOpen {
 		if sideRelated == model.OrderSideSell {
 			amount = math.Min(balance.AvailableWithBorrow, math.Abs(amount))
 		}
@@ -614,6 +614,7 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 		amount = math.Min(amount, usdAvailable/markPrice)
 	}
 	amount = math.Min(amount, localOpenValueLimit/markPrice)
+	temp := amount
 	// usd所剩太少且还要再买 || 反向持仓太多且还要再卖 || 下单太小
 	if (sideRelated == model.OrderSideBuy && (usdAvailable < usdLowLine || (balance.UsdValue > 0 && coinRate > 0.5))) ||
 		(sideRelated == model.OrderSideSell && (balance.UsdValue < 0 && coinRate > 0.5)) ||
@@ -621,7 +622,6 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 		amount = 0
 	}
 	amount = api.FormatAmountPair(setting.Market, setting.Symbol, setting.GetRelatedSymbol(), amount)
-	//temp := amount
 	if model.OKEX == setting.Market {
 		amountInPerp := api.GetAmountInPerpOKEX(setting.Market, setting.Symbol, amount)
 		maxBuyPerp, maxSellPerp := getTradeMax(key, setting.Symbol)
@@ -637,15 +637,15 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 		amount = math.Min(amount, amountInReal)
 		amount = api.FormatAmountPair(setting.Market, setting.Symbol, setting.GetRelatedSymbol(), amount)
 	}
-	//if bidAmount > 0 && askAmount > 0 {
-	//	util.Notice(fmt.Sprintf(`%s %s pos: %f open %f > %f close %f < %f revert %f %f orderLow: %f before>> %f %f b-a: %f %f`,
-	//		key, setting.SymbolRelated, carryAmount, scoreOpen, setOpen, scoreClose, setClose, revertOpen, revertClose, valueLow, temp, amount, bidAmount, askAmount))
-	//}
+	if bidAmount > 0 && askAmount > 0 && coinRate < 0.5 {
+		util.Notice(fmt.Sprintf(`%s %s %s usdAva: %f > %f coinUsd: %f %f orderLimit: %f pos: %f open %f > %f close %f < %f revert %f %f orderLow: %f before>> %f %f b-a: %f %f`,
+			key, setting.SymbolRelated, sideRelated, usdAvailable, usdLowLine, balance.UsdValue, coinRate, valueLow, carryAmount, scoreOpen, setOpen, scoreClose, setClose, revertOpen, revertClose, valueLow, temp, amount, bidAmount, askAmount))
+	}
 	if amount > 0 {
-		util.Notice(fmt.Sprintf(`+++ usdRate: %f coinRate: %f %s high:%s %f low:%s %f symbol: %s %s 
+		util.Notice(fmt.Sprintf(`+++ usdRate: %f coinRate: %f %s high: %f low: %f symbol: %s %s 
 			usd available:%f amount %f carryAmount: %f scoreHigh: %f setOpen: %f scoreLow: %f setClose: %f
 			revertOpen: %f revertClose: %f`,
-			usdRate, coinRate, key, symbolHigh, scoreHigh, symbolLow, scoreLow, setting.Symbol, sidePerp, usdAvailable,
+			usdRate, coinRate, key, scoreHigh, scoreLow, setting.Symbol, sidePerp, usdAvailable,
 			amount, carryAmount, scoreHigh, setOpen, scoreLow, setClose, revertOpen, revertClose))
 	}
 	model.SetCarryInfo(table+setting.Symbol,
