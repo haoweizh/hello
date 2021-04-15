@@ -56,12 +56,6 @@ func (config *Config) SetUpdatePriceTime(symbol string, updateTime int64) {
 	config.UpdatePriceTime[symbol] = updateTime
 }
 
-func (config *Config) GetCarryClose() (carryCloses []string) {
-	config.lock.Lock()
-	defer config.lock.Unlock()
-	return strings.Split(config.CarryClose, `,`)
-}
-
 func (config *Config) GetKeys(market string) (keys, secrets []string) {
 	config.lock.Lock()
 	defer config.lock.Unlock()

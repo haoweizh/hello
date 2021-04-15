@@ -570,11 +570,10 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 			localOpenValueLimit = 0
 		}
 		valueLow = 0
-		carryCloses := model.AppConfig.GetCarryClose()
-		if len(carryCloses) > 1 && carryCloses[1] == `true` {
-			setOpen = 1
-			setClose = -1
-		}
+	}
+	if model.AppConfig.CarryClose == `true` {
+		setOpen = 1
+		setClose = -1
 	}
 	carryAmount := getCarryAmount(key, setting.Symbol)
 	if (scoreLow < setClose && setting.Symbol == symbolLow) || (carryAmount > 0 && scoreClose <= -1*revertOpen) {
