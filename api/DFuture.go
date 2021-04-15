@@ -161,7 +161,7 @@ func openDFuture(key, secret, orderSide, symbol string, price, acceptablePrice, 
 	approvedUsdt := math.Ceil(amount * price / 15)
 	amount = getAmountToDFuture(symbol, amount)
 	data := map[string]interface{}{"symbol": symbol, "direction": direction, "amount": amount,
-		"acceptable_price": acceptablePrice, "approveUsdt": approvedUsdt, "access_key": key, "access_sk": secret,
+		"acceptable_price": int64(math.Round(acceptablePrice)), "approveUsdt": approvedUsdt, "access_key": key, "access_sk": secret,
 		"account_address": model.AppConfig.HecoFutureAddress, "private_key": model.AppConfig.WalletKey, "gas_level": 5}
 	responseBody := sendRequestDFuture(key, secret, http.MethodPost, `/open`, data)
 	responseJson, _ := util.NewJSON(responseBody)
@@ -174,7 +174,7 @@ func openDFuture(key, secret, orderSide, symbol string, price, acceptablePrice, 
 func closeDFuture(key, secret, symbol string, price, acceptablePrice, amount float64) (success bool) {
 	approvedUsdt := math.Ceil(amount * price / 15)
 	amount = getAmountToDFuture(symbol, amount)
-	data := map[string]interface{}{"symbol": symbol, "amount": amount, "acceptable_price": acceptablePrice,
+	data := map[string]interface{}{"symbol": symbol, "amount": amount, "acceptable_price": int64(math.Round(acceptablePrice)),
 		"approveUsdt": approvedUsdt, "access_key": key, "access_sk": secret,
 		"account_address": model.AppConfig.HecoFutureAddress, "private_key": model.AppConfig.WalletKey, "gas_level": 5}
 	responseBody := sendRequestDFuture(key, secret, http.MethodPost, `/close`, data)

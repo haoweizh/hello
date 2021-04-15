@@ -157,13 +157,10 @@ func Test_initTurtleN(t *testing.T) {
 }
 
 func Test_wallet(t *testing.T) {
-	fmt.Println(util.NumDecPlaces(5.23))
-	fmt.Println(util.FormatFloat(234.2346342346000000, 3))
-	fmt.Println(util.FormatFloat(234.234600000, 7))
 	model.NewConfig()
 	_ = configor.Load(model.AppConfig, "./config.yml")
 	api.PlaceOrder(model.AppConfig.DFutureKey, model.AppConfig.DFutureSecret, model.OrderSideBuy, ``,
-		model.DFuture, `btcusdt`, ``, `open`, model.FunctionDCarry, 60000, 63400, 0.001, true, nil)
+		model.DFuture, `btcusdt`, ``, `open`, model.FunctionDCarry, 62954, 63400, 0.001, true, nil)
 	_, loan := api.GetMaxLoan(model.AppConfig.OkexKey, model.AppConfig.OkexSecret, model.OKEX, `XEM`)
 	fmt.Println(loan)
 	rate, timeInt := api.GetFundingRate(model.OKEX, `BTC-USDT-SWAP`)
