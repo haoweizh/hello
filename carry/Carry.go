@@ -575,6 +575,8 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	if doRevert == `true` {
 		setOpen = 1
 		setClose = -1
+		revertOpen = -0.003
+		revertClose = -0.003
 	}
 	carryAmount := getCarryAmount(key, setting.Symbol)
 	if (scoreLow < setClose && setting.Symbol == symbolLow) || (carryAmount > 0 && scoreClose <= -1*revertOpen) {
