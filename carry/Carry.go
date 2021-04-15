@@ -306,6 +306,7 @@ var ProcessCarry = func(setting *model.Setting, tick *model.BidAsk) {
 	}
 	model.SetCarryInfos(`market_info`, `market_info`, marketInfo)
 	keys, secrets := model.AppConfig.GetKeys(setting.Market)
+	doReverts := strings.Split(model.AppConfig.CarryClose, `,`)
 	begin := 0
 	step := 1
 	if (now.Hour() < 6 && now.Hour() > 2 && now.Second()%4 != 0) || now.Second()%2 == 0 {
@@ -314,7 +315,7 @@ var ProcessCarry = func(setting *model.Setting, tick *model.BidAsk) {
 	}
 	for i := begin; i >= 0 && i < len(keys); i += step {
 		sidePerp, sideRelated, amount, carryType := calcCarryOpen(setting, tickPerp, tickRelated, keys[i], setting.Symbol,
-			setting.Symbol, scoreOpen, scoreClose, scoreOpen, scoreClose)
+			setting.Symbol, doReverts[i], scoreOpen, scoreClose, scoreOpen, scoreClose)
 		if amount > 0 {
 			go placeCarry(setting, tickPerp, tickRelated, keys[i], secrets[i], sidePerp, sideRelated, carryType,
 				scoreOpen, scoreClose, amount)
@@ -516,7 +517,7 @@ func initEmptyBalance(key, secret, market string) {
 	util.Notice(fmt.Sprintf(`set available with borrow %s %s`, market, key))
 }
 
-func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, key, symbolHigh, symbolLow string,
+func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, key, symbolHigh, symbolLow, doRevert string,
 	scoreOpen, scoreClose, scoreHigh, scoreLow float64) (sidePerp, sideRelated string, amount float64, carryType string) {
 	var bidAmount, askAmount float64
 	valueLow := setting.AmountLimit
@@ -571,7 +572,7 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 		}
 		valueLow = 0
 	}
-	if model.AppConfig.CarryClose == `true` {
+	if doRevert == `true` {
 		setOpen = 1
 		setClose = -1
 	}
