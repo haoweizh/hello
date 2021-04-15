@@ -519,6 +519,7 @@ func PlaceOrder(key, secret, orderSide, orderType, market, symbol, instrument, o
 		if symbol[len(symbol)-4:] == `usdt` {
 			symbol = symbol[0 : len(symbol)-4]
 		}
+		order.OrderId = refreshType + time.Now().String()
 		if orderParam == `close` {
 			closeDFuture(key, secret, symbol, triggerPrice, price, amount)
 		} else {

@@ -112,18 +112,22 @@ var ProcessDCarry = func(setting *model.Setting, tickD *model.BidAsk) {
 			}
 			decimalLength := util.NumDecPlaces(price)
 			acceptablePrice, _ = util.FormatNum(acceptablePrice, float64(decimalLength))
+			orderSideType := ``
 			if line > setting.CloseShortMargin {
+				orderSideType = `open`
 				api.PlaceOrder(keys[i], secrets[i], orderSide, ``, model.DFuture, setting.Symbol, ``,
-					`open`, model.FunctionDCarry, acceptablePrice, price, amount, true, nil)
+					`open`, model.FunctionDCarry+orderSideType, acceptablePrice, price, amount, true, nil)
 			} else {
+				orderSideType = `close`
 				api.PlaceOrder(keys[i], secrets[i], orderSide, ``, model.DFuture, setting.Symbol, ``,
-					`close`, model.FunctionDCarry, acceptablePrice, price, amount, true, nil)
+					`close`, model.FunctionDCarry+orderSideType, acceptablePrice, price, amount, true, nil)
 			}
-			util.Notice(fmt.Sprintf(`dcarry market %s vs %s symbol %s vs %s %s [%f %f] price: %f amount:%f`,
-				setting.Market, setting.MarketRelated, setting.Symbol, setting.SymbolRelated, orderSide,
+			util.Notice(fmt.Sprintf(`dcarry market %s vs %s symbol %s vs %s %s %s [%f %f] price: %f amount:%f`,
+				setting.Market, setting.MarketRelated, setting.Symbol, setting.SymbolRelated, orderSide, orderSideType,
 				tickDPrice, tickRelatedPrice, price, amount))
 			_, pos := api.GetPosition(setting.Market, setting.Symbol, address)
 			setPosition(address, setting.Market, setting.Symbol, pos)
+			util.Notice(fmt.Sprintf(`set position %s %f`, pos.Currency, pos.Free))
 		}
 	}
 }
