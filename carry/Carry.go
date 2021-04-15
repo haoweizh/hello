@@ -638,8 +638,8 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 		amount = api.FormatAmountPair(setting.Market, setting.Symbol, setting.GetRelatedSymbol(), amount)
 	}
 	if bidAmount > 0 && askAmount > 0 && coinRate < 0.5 && math.Abs(carryAmount) > 0 {
-		util.Notice(fmt.Sprintf(`%s %s %s coinUsd: %f %f orderLimit: %f pos: %f open %f > %f close %f < %f revert %f %f orderLow: %f before>> %f %f b-a: %f %f`,
-			key, setting.SymbolRelated, sideRelated, balance.UsdValue, coinRate, localOpenValueLimit, carryAmount, scoreOpen, setOpen, scoreClose, setClose, revertOpen, revertClose, valueLow, temp, amount, bidAmount, askAmount))
+		util.Notice(fmt.Sprintf(`%s %s %s coinUsd: %f %f %f orderLimit: %f pos: %f open %f > %f close %f < %f revert %f %f orderLow: %f before>> %f %f b-a: %f %f`,
+			key, setting.Symbol, sideRelated, balance.UsdValue, carryAmount*markPrice, coinRate, localOpenValueLimit, carryAmount, scoreOpen, setOpen, scoreClose, setClose, revertOpen, revertClose, valueLow, temp, amount, bidAmount, askAmount))
 	}
 	if amount > 0 {
 		util.Notice(fmt.Sprintf(`+++ usdRate: %f coinRate: %f %s high: %f low: %f symbol: %s %s 
