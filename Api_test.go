@@ -80,87 +80,17 @@ func Test_OKFormatAmount(t *testing.T) {
 }
 
 func Test_initTurtleN(t *testing.T) {
-	a := 0.23423423
-	fmt.Println(strconv.FormatFloat(a, 'f', -1, 64))
-	fmt.Println(fmt.Sprintf(`%f`, a))
-	amount := 27213.361367394158 / 10000
-	formattedAmount := math.Round(amount/0.0000001) * 0.0000001
-	amountStr := util.CutTailZero(fmt.Sprintf(`%f`, formattedAmount))
-	fmt.Println(amountStr)
 	model.NewConfig()
 	_ = configor.Load(model.AppConfig, "./config.yml")
-	_, buy, sell := api.GetMaxSize(``, ``, `TORN-USDT-SWAP`)
-	fmt.Println(buy)
-	fmt.Println(sell)
-	//balances := api.GetTransfers(``, ``, model.OKEX)
-	//balances = append(balances, api.GetBalance(``, ``, model.OKEX)...)
-	//var err error
-	model.AppDB, _ = gorm.Open("postgres", model.AppConfig.DBConnection)
-	//if err != nil {
-	//	util.Notice(err.Error())
-	//	return
-	//}
-	symbols := model.GetSettingCoins(model.FunctionCarry, model.Ftx)
-	fmt.Println(len(symbols))
-	//model.AppDB.AutoMigrate(&model.Candle{})
-	//order := api.QueryOrderById(``, ``, model.OKFUTURE, `btcusd_p`, `BTC-USD-201225`,
-	//	model.OrderTypeStop, `6024698277970944`)
-	//fmt.Println(order.Status)
-	//today := time.Now().In(time.UTC)
-	//fmt.Println(today.String())
-	//today = time.Date(today.Year(), today.Month(), today.Day(), 0, 0, 0, 0, today.Location())
-	//symbol := `ETH-USD-200605`
-	//instrument, _ := api.GetCurrentInstrument(model.OKFUTURE, symbol)
-	//api.GetDayCandle(``, ``, model.OKFUTURE, symbol, instrument, today)
-	//for i := 100; i > 0; i-- {
-	//	d, _ := time.ParseDuration(fmt.Sprintf(`%dh`, -24*i))
-	//	index := today.Add(d)
-	//	fmt.Println(index.String())
-	//	//api.GetDayCandle(`I9ZmxUz8KsgH6AekmsdQtIdZ33T7bH7SPg_WuBsD`, `WtGav2ou_f9HYUT4B9zj66kig7dJW8t1GEmsgFJp`,
-	//	//	model.Ftx, `ethusd_p`, index)
-	//	//api.GetDayCandle(`I9ZmxUz8KsgH6AekmsdQtIdZ33T7bH7SPg_WuBsD`, `WtGav2ou_f9HYUT4B9zj66kig7dJW8t1GEmsgFJp`,
-	//	//	model.Ftx, `btcusd_p`, index)
-	//	//api.GetDayCandle(`I9ZmxUz8KsgH6AekmsdQtIdZ33T7bH7SPg_WuBsD`, `WtGav2ou_f9HYUT4B9zj66kig7dJW8t1GEmsgFJp`,
-	//	//	model.Ftx, `eosusd_p`, index)
-	//	//api.GetDayCandle(`I9ZmxUz8KsgH6AekmsdQtIdZ33T7bH7SPg_WuBsD`, `WtGav2ou_f9HYUT4B9zj66kig7dJW8t1GEmsgFJp`,
-	//	//	model.Ftx, `htusd_p`, index)
-	//	//api.GetDayCandle(`I9ZmxUz8KsgH6AekmsdQtIdZ33T7bH7SPg_WuBsD`, `WtGav2ou_f9HYUT4B9zj66kig7dJW8t1GEmsgFJp`,
-	//	//	model.Ftx, `bnbusd_p`, index)
-	//	//api.GetDayCandle(`I9ZmxUz8KsgH6AekmsdQtIdZ33T7bH7SPg_WuBsD`, `WtGav2ou_f9HYUT4B9zj66kig7dJW8t1GEmsgFJp`,
-	//	//	model.Ftx, `okbusd_p`, index)
-	//}
-	//fmt.Println(`done`)
-	////go carry.CheckPastRefresh()
-	////for true {
-	////	time.Sleep(time.Minute)
-	////}
-	////d, _ := time.ParseDuration("-24h")
-	////timeLine := util.GetNow().Add(d)
-	////before := util.GetNow().Unix()
-	////after := timeLine.Unix()
-	////orders := api.QueryOrders(model.Fcoin, `eos_usdt`, model.CarryStatusWorking, before, after)
-	////for _, order := range orders {
-	////	if order != nil && order.OrderId != `` {
-	////		//result, errCode, msg := api.CancelOrder(market, symbol, order.OrderId)
-	////		util.Notice(fmt.Sprintf(`[cancel old]%v %s %f`, true, order.OrderId, order.Price))
-	////		time.Sleep(time.Millisecond * 100)
-	////	}
-	////}
-	////api.QueryOrderDealsFcoin(`3BgqYy6o70gMlDiCgH0JJEEynoJPqYnz5SZSq-No0EhA2-D4pKe6BB0RqdfJ0fXTDCfKUfhBVHyAFphKAWwylA==`)
-	////orders := api.QueryOrders(model.Fcoin, `btc_usdt`, `success`,
-	////	1557529200, 1557504000)
-	////for _, value := range orders {
-	////	util.Notice(fmt.Sprintf(`,symbol:%s,%s,%s,%s,%s,%f,%f,%f,%f`,
-	////		value.Symbol, value.OrderTime.String(), value.Function, value.OrderSide, value.Status,
-	////		value.DealAmount, value.DealPrice, value.Fee, value.FeeIncome))
-	////}
+	api.PlaceOrder(model.AppConfig.DFutureKey, model.AppConfig.DFutureSecret, model.OrderSideBuy, ``,
+		model.DFuture, `ethusdt`, ``, `open`, model.FunctionDCarry, 2222, 2222, 0.1, false, nil)
 }
 
 func Test_wallet(t *testing.T) {
 	model.NewConfig()
 	_ = configor.Load(model.AppConfig, "./config.yml")
 	api.PlaceOrder(model.AppConfig.DFutureKey, model.AppConfig.DFutureSecret, model.OrderSideBuy, ``,
-		model.DFuture, `btcusdt`, ``, `open`, model.FunctionDCarry, 62954, 63400, 0.001, true, nil)
+		model.DFuture, `ethusdt`, ``, `open`, model.FunctionDCarry, 2222, 2222, 0.1, true, nil)
 	_, loan := api.GetMaxLoan(model.AppConfig.OkexKey, model.AppConfig.OkexSecret, model.OKEX, `XEM`)
 	fmt.Println(loan)
 	rate, timeInt := api.GetFundingRate(model.OKEX, `BTC-USDT-SWAP`)

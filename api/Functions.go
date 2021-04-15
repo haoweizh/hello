@@ -442,7 +442,7 @@ func GetPositions(key, secret, market string) (success bool, positions []*model.
 		symbols := model.GetMarketSymbols(market)
 		positions = make([]*model.Position, 0)
 		for symbol := range symbols {
-			temp, pos := getPositionsDFuture(symbol, model.AppConfig.HecoFutureAddress)
+			temp, pos := getPositionsDFuture(symbol, model.AppConfig.FutureAddress)
 			if temp {
 				positions = append(positions, pos)
 			} else {

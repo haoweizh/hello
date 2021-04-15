@@ -58,7 +58,7 @@ var ProcessDCarry = func(setting *model.Setting, tickD *model.BidAsk) {
 		(million-int64(tickRelated.Ts) > 2000 || million-int64(tickD.Ts) > 2000 || million-int64(tickD.Ts) > 25)) {
 		return
 	}
-	addresses := strings.Split(model.AppConfig.HecoFutureAddress, `,`)
+	addresses := strings.Split(model.AppConfig.FutureAddress, `,`)
 	keys, secrets := model.AppConfig.GetKeys(setting.Market)
 	if !checkSetDCarrying(true) {
 		defer checkSetDCarrying(false)
