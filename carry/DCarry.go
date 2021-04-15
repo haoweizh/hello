@@ -110,6 +110,8 @@ var ProcessDCarry = func(setting *model.Setting, tickD *model.BidAsk) {
 			} else if orderSide == model.OrderSideSell {
 				acceptablePrice = 0.999 * price
 			}
+			decimalLength := util.NumDecPlaces(price)
+			acceptablePrice, _ = util.FormatNum(acceptablePrice, float64(decimalLength))
 			if line > setting.CloseShortMargin {
 				api.PlaceOrder(keys[i], secrets[i], orderSide, ``, model.DFuture, setting.Symbol, ``,
 					`open`, model.FunctionDCarry, acceptablePrice, price, amount, true, nil)

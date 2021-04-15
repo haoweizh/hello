@@ -157,6 +157,9 @@ func Test_initTurtleN(t *testing.T) {
 }
 
 func Test_wallet(t *testing.T) {
+	fmt.Println(util.NumDecPlaces(5.23))
+	fmt.Println(util.FormatFloat(234.2346342346000000, 3))
+	fmt.Println(util.FormatFloat(234.234600000, 7))
 	model.NewConfig()
 	_ = configor.Load(model.AppConfig, "./config.yml")
 	api.PlaceOrder(model.AppConfig.DFutureKey, model.AppConfig.DFutureSecret, model.OrderSideBuy, ``,
