@@ -636,11 +636,15 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 		_, amountInReal := api.ParseRealAmount(setting.Market, setting.Symbol, amountInPerp)
 		amount = math.Min(amount, amountInReal)
 		amount = api.FormatAmountPair(setting.Market, setting.Symbol, setting.GetRelatedSymbol(), amount)
+		if temp > 0 {
+			util.Notice(fmt.Sprintf(`%s %s %s %f %f max %f %f %f %f %f >>> %f`,
+				key, sideRelated, setting.Symbol, amountInPerp, amountInPerp, maxBuyPerp, maxSellPerp, maxBuyRelated, maxSellRelated, temp, amount))
+		}
 	}
-	if bidAmount > 0 && askAmount > 0 && coinRate < 0.5 && math.Abs(carryAmount) > 0 {
-		util.Notice(fmt.Sprintf(`%s %s %s coinUsd: %f %f %f orderLimit: %f pos: %f open %f > %f close %f < %f revert %f %f orderLow: %f before>> %f %f b-a: %f %f`,
-			key, setting.Symbol, sideRelated, balance.UsdValue, carryAmount*markPrice, coinRate, localOpenValueLimit, carryAmount, scoreOpen, setOpen, scoreClose, setClose, revertOpen, revertClose, valueLow, temp, amount, bidAmount, askAmount))
-	}
+	//if temp > 0 && amount == 0 {
+	//	util.Notice(fmt.Sprintf(`%s %s %s coinUsd: %f %f %f orderLimit: %f pos: %f open %f > %f close %f < %f revert %f %f orderLow: %f before>> %f %f b-a: %f %f`,
+	//		key, setting.Symbol, sideRelated, balance.UsdValue, carryAmount*markPrice, coinRate, localOpenValueLimit, carryAmount, scoreOpen, setOpen, scoreClose, setClose, revertOpen, revertClose, valueLow, temp, amount, bidAmount, askAmount))
+	//}
 	if amount > 0 {
 		util.Notice(fmt.Sprintf(`+++ usdRate: %f coinRate: %f %s high: %f low: %f symbol: %s %s 
 			usd available:%f amount %f carryAmount: %f scoreHigh: %f setOpen: %f scoreLow: %f setClose: %f
