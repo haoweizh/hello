@@ -621,7 +621,7 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 		amount = 0
 	}
 	amount = api.FormatAmountPair(setting.Market, setting.Symbol, setting.GetRelatedSymbol(), amount)
-	temp := amount
+	//temp := amount
 	if model.OKEX == setting.Market {
 		amountInPerp := api.GetAmountInPerpOKEX(setting.Market, setting.Symbol, amount)
 		maxBuyPerp, maxSellPerp := getTradeMax(key, setting.Symbol)
@@ -637,10 +637,10 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 		amount = math.Min(amount, amountInReal)
 		amount = api.FormatAmountPair(setting.Market, setting.Symbol, setting.GetRelatedSymbol(), amount)
 	}
-	if bidAmount > 0 && askAmount > 0 {
-		util.Notice(fmt.Sprintf(`%s %s pos: %f open %f > %f close %f < %f revert %f %f orderLow: %f before>> %f %f b-a: %f %f`,
-			key, setting.SymbolRelated, carryAmount, scoreOpen, setOpen, scoreClose, setClose, revertOpen, revertClose, valueLow, temp, amount, bidAmount, askAmount))
-	}
+	//if bidAmount > 0 && askAmount > 0 {
+	//	util.Notice(fmt.Sprintf(`%s %s pos: %f open %f > %f close %f < %f revert %f %f orderLow: %f before>> %f %f b-a: %f %f`,
+	//		key, setting.SymbolRelated, carryAmount, scoreOpen, setOpen, scoreClose, setClose, revertOpen, revertClose, valueLow, temp, amount, bidAmount, askAmount))
+	//}
 	if amount > 0 {
 		util.Notice(fmt.Sprintf(`+++ usdRate: %f coinRate: %f %s high:%s %f low:%s %f symbol: %s %s 
 			usd available:%f amount %f carryAmount: %f scoreHigh: %f setOpen: %f scoreLow: %f setClose: %f
