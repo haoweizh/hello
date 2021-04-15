@@ -314,6 +314,7 @@ var ProcessCarry = func(setting *model.Setting, tick *model.BidAsk) {
 		step = -1
 	}
 	for i := begin; i >= 0 && i < len(keys); i += step {
+		util.Notice(fmt.Sprintf(`current calc step %d %d`, step, i))
 		sidePerp, sideRelated, amount, carryType := calcCarryOpen(setting, tickPerp, tickRelated, keys[i], setting.Symbol,
 			setting.Symbol, doReverts[i], scoreOpen, scoreClose, scoreOpen, scoreClose)
 		if amount > 0 {
