@@ -565,7 +565,7 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 		table += fmt.Sprintf(`slave%s`, key[0:5])
 		if usdRate > 0 {
 			usdLowLine = 0.1 * usdAvailable / usdRate
-			localOpenValueLimit = usdLowLine
+			localOpenValueLimit = math.Min(usdLowLine, model.AppConfig.Amount)
 		} else {
 			localOpenValueLimit = 0
 		}
