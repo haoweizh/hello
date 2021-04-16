@@ -219,9 +219,11 @@ func clearCarryBalance() {
 				borrowAll := 0.0
 				for _, value := range balances {
 					coin := strings.ToUpper(value.Coin)
-					preBalance := getCarryBalance(key, coin)
-					if preBalance != nil {
-						value.AvailableWithBorrow = preBalance.AvailableWithBorrow
+					if market == model.OKEX { // 针对okex不能从balance或许可借数的问题进行特殊处理
+						preBalance := getCarryBalance(key, coin)
+						if preBalance != nil {
+							value.AvailableWithBorrow = preBalance.AvailableWithBorrow
+						}
 					}
 					setCarryBalance(key, coin, value)
 					settingCoins := model.GetSettingCoins(model.FunctionCarry, market)
