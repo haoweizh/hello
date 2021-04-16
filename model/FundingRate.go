@@ -2,51 +2,29 @@ package model
 
 import "time"
 
-var fundingRate = make(map[string]map[string]float64)     // market - symbol - funding rate
-var fundingRateUpdate = make(map[string]map[string]int64) // market - symbol - update time
+var fundingRates = make(map[string]map[string]*FundingRate) // market - symbol - funding rate
 
 type FundingRate struct {
-	FundingTime time.Time // confirm time if transaction
-	Rate        float64   // price in usdt
-	Symbol      string
-	ID          string `gorm:"primary_key"`
-	CreatedAt   time.Time
-	UpdatedAt   time.Time
+	FundingTime            time.Time // confirm time if transaction
+	Rate, RateNext         float64
+	UpdateTime, ExpireTime int64
+	Symbol                 string
 }
 
-func GetFundingRate(market, symbol string) (rate float64, updateTime int64) {
+func GetFundingRate(market, symbol string) (rate *FundingRate) {
 	infoLock.Lock()
 	defer infoLock.Unlock()
-	if fundingRate == nil {
-		fundingRate = make(map[string]map[string]float64)
+	if fundingRates == nil || fundingRates[market] == nil {
+		return nil
 	}
-	if fundingRate[market] == nil {
-		fundingRate[market] = make(map[string]float64)
-	}
-	if fundingRateUpdate == nil {
-		fundingRateUpdate = make(map[string]map[string]int64)
-	}
-	if fundingRateUpdate[market] == nil {
-		fundingRateUpdate[market] = make(map[string]int64)
-	}
-	return fundingRate[market][symbol], fundingRateUpdate[market][symbol]
+	return fundingRates[market][symbol]
 }
 
-func SetFundingRate(market, symbol string, rate float64, updateTime int64) {
+func SetFundingRate(market, symbol string, fundingRate *FundingRate) {
 	infoLock.Lock()
 	defer infoLock.Unlock()
-	if fundingRate == nil {
-		fundingRate = make(map[string]map[string]float64)
+	if fundingRates[market] == nil {
+		fundingRates[market] = make(map[string]*FundingRate)
 	}
-	if fundingRate[market] == nil {
-		fundingRate[market] = make(map[string]float64)
-	}
-	if fundingRateUpdate == nil {
-		fundingRateUpdate = make(map[string]map[string]int64)
-	}
-	if fundingRateUpdate[market] == nil {
-		fundingRateUpdate[market] = make(map[string]int64)
-	}
-	fundingRate[market][symbol] = rate
-	fundingRateUpdate[market][symbol] = updateTime
+	fundingRates[market][symbol] = fundingRate
 }

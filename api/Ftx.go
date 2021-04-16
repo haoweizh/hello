@@ -555,7 +555,7 @@ func getFundingRatesFtx() (fundingRates []*model.FundingRate) {
 			fundingTime, _ := time.Parse(time.RFC3339, value[`time`].(string))
 			rate, _ := value[`rate`].(json.Number).Float64()
 			fundingRates[i] = &model.FundingRate{Symbol: value[`future`].(string), FundingTime: fundingTime,
-				Rate: rate, ID: value[`future`].(string) + value[`time`].(string)}
+				Rate: rate}
 		}
 	}
 	return fundingRates

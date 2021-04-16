@@ -18,8 +18,8 @@ const carryTypeOpen = `carryOpen`
 const carryTypeClose = `carryClose`
 const carryTypeRevert = `carryRevert`
 
+var tradeMaxResetTime = int64(0)
 var marketInitTime = make(map[string]int64) // market - initTime
-var resetInitialized = false
 var carryLock sync.Mutex
 var carrying bool
 var doCarry = false
@@ -173,7 +173,7 @@ func resetSingleTradeMax(key, market, symbol string) {
 }
 
 func resetTradeMax(key, secret, market string) {
-	resetInitialized = true
+	tradeMaxResetTime = time.Now().Unix()
 	if market != model.OKEX {
 		return
 	}
@@ -255,7 +255,7 @@ func clearCarryBalance() {
 						makeEqual(key, secrets[i], item, balances, positions)
 					}
 				}
-				if time.Now().Minute()%9 == 0 || !resetInitialized {
+				if time.Now().Unix()-tradeMaxResetTime > 600 {
 					resetTradeMax(key, secrets[i], model.OKEX)
 				}
 				initEmptyBalance(key, secrets[i], market)
@@ -529,7 +529,7 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	balance := getCarryBalance(key, coin)
 	fundingRate := 0.0
 	if setting.Market == model.OKEX {
-		fundingRate, _ = api.GetFundingRate(setting.Market, setting.Symbol)
+		fundingRate = api.GetFundingRate(setting.Market, setting.Symbol)
 		fundingRate *= 0.9
 	}
 	if balance == nil {

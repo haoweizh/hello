@@ -304,25 +304,28 @@ func GetTransfers(key, secret, market string) (balances []*model.Balance) {
 	return balances
 }
 
-func GetFundingRate(market, symbol string) (fundingRate float64, expireTime int64) {
-	fundingRate, expireTime = model.GetFundingRate(market, symbol)
-	now := util.GetNow()
-	if now.Unix()-240 < expireTime && now.Unix() > expireTime {
-		return 0, expireTime
-	} else if now.Unix()-120 < expireTime {
-		return fundingRate, expireTime
+func GetFundingRate(market, symbol string) (value float64) {
+	fundingRate := model.GetFundingRate(market, symbol)
+	now := util.GetNow().Unix()
+	if fundingRate != nil && now < fundingRate.ExpireTime-60 {
+		return fundingRate.Rate
+	} else if fundingRate != nil && now > fundingRate.ExpireTime-60 && now < fundingRate.ExpireTime+240 &&
+		fundingRate.UpdateTime > fundingRate.ExpireTime-60 {
+		return fundingRate.RateNext
 	}
-	util.Notice(fmt.Sprintf(`before update funding %s %s rate %f expire %d`,
-		market, symbol, fundingRate, expireTime))
+	if fundingRate != nil {
+		util.Notice(fmt.Sprintf(`before update funding %s %s rate %f expire %d neext: %f update: %d`,
+			market, symbol, fundingRate.Rate, fundingRate.ExpireTime, fundingRate.RateNext, fundingRate.UpdateTime))
+	}
 	switch market {
 	case model.Bitmex:
-		fundingRate, expireTime = getFundingRateBitmex(symbol)
-		model.SetFundingRate(market, symbol, fundingRate, expireTime)
+		rate, expireTime := getFundingRateBitmex(symbol)
+		model.SetFundingRate(market, symbol, &model.FundingRate{Rate: rate, ExpireTime: expireTime, UpdateTime: now})
 	case model.Bybit:
-		fundingRate, expireTime = getFundingRateBybit(symbol)
-		model.SetFundingRate(market, symbol, fundingRate, expireTime)
+		rate, expireTime := getFundingRateBybit(symbol)
+		model.SetFundingRate(market, symbol, &model.FundingRate{Rate: rate, ExpireTime: expireTime, UpdateTime: now})
 	case model.Ftx:
-		return 0, 0
+		return 0
 		//rates := getFundingRatesFtx()
 		//symbolRates := make(map[string][]*model.FundingRate)
 		//for _, rate := range rates {
@@ -340,8 +343,8 @@ func GetFundingRate(market, symbol string) (fundingRate float64, expireTime int6
 		//}
 		//fundingRate, expireTime = model.GetFundingRate(market, symbol)
 	case model.OKEX:
-		fundingRate, expireTime = getFundingRateOKEX(``, ``, symbol)
-		model.SetFundingRate(market, symbol, fundingRate, expireTime)
+		fundingRate = getFundingRateOKEX(``, ``, symbol)
+		model.SetFundingRate(market, symbol, fundingRate)
 	}
 	return
 }

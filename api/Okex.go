@@ -662,22 +662,30 @@ func GetMaxSize(key, secret, instrument string) (success bool, maxBuy, maxSell f
 	return true, maxBuy, maxSell
 }
 
-func getFundingRateOKEX(key, secret, instrumentId string) (fundingRate float64, rateTime int64) {
+func getFundingRateOKEX(key, secret, instrumentId string) (fundingRate *model.FundingRate) {
 	path := fmt.Sprintf(`/api/v5/public/funding-rate?instId=%s`, instrumentId)
 	response := sendSignRequestOKEX(key, secret, http.MethodGet, path, nil)
 	fundingJson, _ := util.NewJSON(response)
 	if fundingJson == nil || fundingJson.Get(`data`) == nil || fundingJson.Get(`data`).MustArray() == nil ||
 		len(fundingJson.Get(`data`).MustArray()) == 0 {
-		return 0, 0
+		return nil
 	}
 	data := fundingJson.Get(`data`).MustArray()[0].(map[string]interface{})
 	if data[`instId`] == instrumentId {
-		fundingRate, _ = strconv.ParseFloat(data[`fundingRate`].(string), 64)
-		rateTime, _ = strconv.ParseInt(data[`fundingTime`].(string), 10, 64)
+		rate, _ := strconv.ParseFloat(data[`fundingRate`].(string), 64)
+		rateNext, _ := strconv.ParseFloat(data[`nextFundingRate`].(string), 64)
+		rateTime, _ := strconv.ParseInt(data[`fundingTime`].(string), 10, 64)
 		rateTime /= 1000
-		return fundingRate, rateTime
+		return &model.FundingRate{
+			FundingTime: time.Time{},
+			Rate:        rate,
+			RateNext:    rateNext,
+			UpdateTime:  util.GetNow().Unix(),
+			ExpireTime:  rateTime,
+			Symbol:      instrumentId,
+		}
 	}
-	return 0, 0
+	return nil
 }
 
 func getMaxLoanOKEX(key, secret, coin string) (success bool, maxLoan float64) {
