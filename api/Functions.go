@@ -311,7 +311,11 @@ func GetFundingRate(market, symbol string) (value float64) {
 		return fundingRate.Rate
 	} else if fundingRate != nil && now > fundingRate.ExpireTime-60 && now < fundingRate.ExpireTime+240 &&
 		fundingRate.UpdateTime > fundingRate.ExpireTime-60 {
-		return fundingRate.RateNext
+		if now < fundingRate.ExpireTime {
+			return fundingRate.Rate
+		} else {
+			return fundingRate.RateNext
+		}
 	}
 	if fundingRate != nil {
 		util.Notice(fmt.Sprintf(`before update funding %s %s rate %f expire %d neext: %f update: %d`,
