@@ -32,8 +32,8 @@ func ParameterServe() {
 	router.GET(`/symbol`, setSymbol)
 	router.GET(`/test`, test)
 	router.GET(`wss`, WsPage)
-	router.GET(`/master`, GetCarryInfo)
-	router.GET(`slave`, GetCarryInfoSlave)
+	router.GET(`api/master`, GetCarryInfo)
+	router.GET(`api/slave`, GetCarryInfoSlave)
 	if model.AppConfig.Port == `443` {
 		_ = router.RunTLS(":"+model.AppConfig.Port, `./server.pem`, `./server.key`)
 	} else {
