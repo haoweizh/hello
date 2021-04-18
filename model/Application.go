@@ -198,8 +198,8 @@ func GetCarryInfo(mark, except string) (info string) {
 	}
 	sort.Strings(keys)
 	for _, key := range keys {
-		if (mark == `` || strings.Contains(key, mark)) && (except == `` || !strings.Contains(CarryInfo[key], except)) {
-			info += fmt.Sprintf("%s: %s\n", key, CarryInfo[key])
+		if (mark == `` || strings.Contains(key, mark)) && (except == `` || !strings.Contains(key, except)) {
+			info += fmt.Sprintf("%s\n", CarryInfo[key])
 		}
 	}
 	return
