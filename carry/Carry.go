@@ -26,6 +26,7 @@ var doCarry = false
 var symbolHighest, symbolLowest string
 var lowest = math.NaN()
 var highest = math.NaN()
+var marginOKEX = make(map[string]float64)                     // key - okex margin available
 var usdAvailable = make(map[string]float64)                   // key - float64
 var usdRate = make(map[string]float64)                        // key - float64
 var balanceAll = make(map[string]float64)                     // key - balance value in all
@@ -54,6 +55,18 @@ var postOrderCarry = func(order *model.Order) {
 		maxSell -= amount
 	}
 	setTradeMax(order.AmountType, order.Instrument, maxBuy, maxSell)
+}
+
+func getMarginOKEX(key string) (margin float64) {
+	defer carryLock.Unlock()
+	carryLock.Lock()
+	return marginOKEX[key]
+}
+
+func setMarginOKEX(key string, margin float64) {
+	defer carryLock.Unlock()
+	carryLock.Lock()
+	marginOKEX[key] = margin
 }
 
 func getTradeMax(key, instrument string) (maxBuy, maxSell float64) {
@@ -208,7 +221,10 @@ func clearCarryBalance() {
 			settings := model.GetSettings(model.FunctionCarry, market)
 			keys, secrets := model.AppConfig.GetKeys(market)
 			for i, key := range keys {
-				resultBalance, balances, _ := api.GetBalances(key, secrets[i], market, 0)
+				resultBalance, balances, _, margin := api.GetBalances(key, secrets[i], market, 0)
+				if market == model.OKEX {
+					setMarginOKEX(key, margin)
+				}
 				resultPosition, positions := api.GetPositions(key, secrets[i], market)
 				if !resultBalance || !resultPosition {
 					util.Notice(`fatal error: can not get balance/position ` + market)
@@ -267,7 +283,7 @@ func clearCarryBalance() {
 	}
 }
 
-// setting.GridPriceDistance: 收回下单是要求的利润(可以为负数)
+// ProcessCarry setting.GridPriceDistance: 收回下单是要求的利润(可以为负数)
 var ProcessCarry = func(setting *model.Setting, tick *model.BidAsk) {
 	if !doCarry {
 		go clearCarryBalance()
@@ -299,14 +315,6 @@ var ProcessCarry = func(setting *model.Setting, tick *model.BidAsk) {
 		model.AppMetric.AddCarry(setting.Market, setting.Market+`开仓价差----`, math.NaN(), lowest)
 	}
 	model.SetCarryInfo(`[current high-low]`, fmt.Sprintf(`highest %s %f lowest %s %f`, symbolHighest, highest, symbolLowest, lowest))
-	marketInfo := map[string]interface{}{`symbol_highest`: symbolHighest, `symbol_lowest`: symbolLowest}
-	if !math.IsNaN(highest) {
-		marketInfo[`highest`] = highest
-	}
-	if !math.IsNaN(lowest) {
-		marketInfo[`lowest`] = lowest
-	}
-	model.SetCarryInfos(`market_info`, `market_info`, marketInfo)
 	keys, secrets := model.AppConfig.GetKeys(setting.Market)
 	doReverts := strings.Split(model.AppConfig.CarryClose, `,`)
 	begin := 0
@@ -505,7 +513,6 @@ func initEmptyBalance(key, secret, market string) {
 		balance := getCarryBalance(key, coin)
 		if balance == nil {
 			balance = &model.Balance{Coin: coin, Market: market}
-			//util.Notice(fmt.Sprintf(`create new balance %s`, coin))
 		}
 		success, maxLoan := api.GetMaxLoan(key, secret, market, coin)
 		if success {
@@ -513,8 +520,6 @@ func initEmptyBalance(key, secret, market string) {
 		}
 		time.Sleep(time.Second / 8)
 		setCarryBalance(key, coin, balance)
-		//util.Notice(fmt.Sprintf(`max loan %s %s %f %s`,
-		//	coin, market, getCarryBalance(key, coin).AvailableWithBorrow, key))
 	}
 	util.Notice(fmt.Sprintf(`set available with borrow %s %s`, market, key))
 }
@@ -560,16 +565,22 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	usdLowLine := model.AppConfig.Amount
 	keys, _ := model.AppConfig.GetKeys(setting.Market)
 	localOpenValueLimit := math.Min(openValueLimit, 0.5*balanceAllValue)
-	table := fmt.Sprintf(`%s_dynamic_`, model.FunctionCarry)
+	table := fmt.Sprintf(`%s_symbol_`, model.FunctionCarry)
 	if len(keys) > 1 && keys[0] != key {
 		table += fmt.Sprintf(`slave%s`, key[0:5])
 		if usdRate > 0 {
 			usdLowLine = 0.1 * usdAvailable / usdRate
-			localOpenValueLimit = math.Min(usdLowLine, model.AppConfig.Amount)
+			localOpenValueLimit = math.Min(usdLowLine, openValueLimit)
 		} else {
 			localOpenValueLimit = 0
 		}
 		valueLow = 0
+	}
+	if setting.Market == model.OKEX {
+		margin := getMarginOKEX(key)
+		if margin < usdLowLine {
+			doRevert = `true`
+		}
 	}
 	if doRevert == `true` {
 		setOpen = 1
@@ -638,19 +649,19 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	if amount > 0 {
 		util.Notice(fmt.Sprintf(`+++ usdRate: %f coinRate: %f %s high: %f low: %f symbol: %s %s 
 			usd available:%f amount %f carryAmount: %f scoreHigh: %f setOpen: %f scoreLow: %f setClose: %f
-			revertOpen: %f revertClose: %f`,
+			revertOpen: %f revertClose: %f margin: %f`,
 			usdRate, coinRate, key, scoreHigh, scoreLow, setting.Symbol, sidePerp, usdAvailable,
-			amount, carryAmount, scoreHigh, setOpen, scoreLow, setClose, revertOpen, revertClose))
+			amount, carryAmount, scoreHigh, setOpen, scoreLow, setClose, revertOpen, revertClose, getMarginOKEX(key)))
 	}
 	model.SetCarryInfo(table+setting.Symbol,
 		fmt.Sprintf(`%s 参数:(%f %f %f) 计算结果(%f %f %f %f) 当前市场(%f %f) 可用：%f usdRate:%favailable:%f coinRate:%f 资金费率 %f`,
 			table, setting.OpenShortMargin, setting.CloseShortMargin, setting.GridPriceDistance, setOpen, setClose,
 			revertOpen, revertClose, scoreOpen, scoreClose, balance.AvailableWithBorrow, usdRate, usdAvailable, balance.UsdValue/balanceAllValue, fundingRate))
-	carryInfo := map[string]interface{}{`+开仓`: setting.OpenShortMargin, `-开仓`: setting.CloseShortMargin,
-		`平仓`: setting.GridPriceDistance, `动态+开仓`: setOpen, `动态-开仓`: setClose, `open平仓`: revertOpen,
-		`close平仓`: revertClose, table: setting.Symbol, `市场+开`: scoreOpen, `市场-开`: scoreClose, `usdRate`: usdRate,
-		`usdAvailable`: usdAvailable, `coinRate`: balance.UsdValue / balanceAllValue, `fundingRate`: fundingRate,
-		`可用`: balance.AvailableWithBorrow}
+	carryInfo := map[string]interface{}{`01.动态正开仓`: setOpen, `02.动态负开仓`: setClose, `03.动态平仓`: revertOpen,
+		`04.动态平仓`: revertClose, `0.5市场开仓`: scoreOpen, `06.市场关仓`: scoreClose, `07.usd rate`: usdRate,
+		`08.usd available`: usdAvailable, `09. coin rate`: balance.UsdValue / balanceAllValue,
+		`10.可用`: balance.AvailableWithBorrow, `11.资金费率`: fundingRate, `12.` + table: setting.Symbol,
+		`13.正开仓`: setting.OpenShortMargin, `14.负开仓`: setting.CloseShortMargin, `15.平仓`: setting.GridPriceDistance}
 	model.SetCarryInfos(table, setting.Symbol, carryInfo)
 	return sidePerp, sideRelated, amount, carryType
 }

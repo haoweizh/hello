@@ -4,6 +4,7 @@ import "time"
 
 var balanceValue = make(map[string][]*Balance) // market -
 var balanceUpdate = make(map[string]int64)     // market - update time in unix seconds
+var marginOKEX = make(map[string]float64)      // market - margin for okex only
 var fullValue = make(map[string]float64)       // market total in usd
 
 type Balance struct {
@@ -28,19 +29,20 @@ type Balance struct {
 	UpdatedAt           time.Time
 }
 
-func GetBalance(market string) (balances []*Balance, value float64, update int64) {
+func GetBalance(market string) (balances []*Balance, value, margin float64, update int64) {
 	infoLock.Lock()
 	defer infoLock.Unlock()
 	if balanceValue[market] == nil {
-		return nil, 0, 0
+		return nil, 0, 0, 0
 	}
-	return balanceValue[market], fullValue[market], balanceUpdate[market]
+	return balanceValue[market], fullValue[market], marginOKEX[market], balanceUpdate[market]
 }
 
-func SetBalance(market string, balances []*Balance, totalInUsd float64, update int64) {
+func SetBalance(market string, balances []*Balance, totalInUsd, margin float64, update int64) {
 	infoLock.Lock()
 	defer infoLock.Unlock()
 	balanceValue[market] = balances
 	balanceUpdate[market] = update
 	fullValue[market] = totalInUsd
+	marginOKEX[market] = margin
 }

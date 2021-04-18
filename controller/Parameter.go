@@ -25,13 +25,13 @@ func ParameterServe() {
 	router := gin.Default()
 	router.LoadHTMLGlob("templates/*")
 	router.GET("/", GetParameters)
-	router.GET("/set", SetParameters)
-	router.GET(`/refresh`, RefreshParameters)
-	router.GET(`/pw`, GetCode)
-	router.GET("/balance", GetBalance)
-	router.GET(`/symbol`, setSymbol)
-	router.GET(`/test`, test)
-	router.GET(`wss`, WsPage)
+	router.GET("api/set", SetParameters)
+	router.GET(`api/refresh`, RefreshParameters)
+	router.GET(`api/pw`, GetCode)
+	router.GET("api/balance", GetBalance)
+	router.GET(`api/symbol`, setSymbol)
+	router.GET(`api/test`, test)
+	router.GET(`api/wss`, WsPage)
 	router.GET(`api/master`, GetCarryInfo)
 	router.GET(`api/slave`, GetCarryInfoSlave)
 	if model.AppConfig.Port == `443` {
@@ -280,9 +280,6 @@ func GetCarryInfo(c *gin.Context) {
 		turtleRows.Close()
 	}
 	keys, _ := model.AppConfig.GetKeys(model.Ftx)
-	duration, _ := time.ParseDuration(`-96h`)
-	timeBegin := time.Now().Add(duration)
-	model.AppDB.Model(&orders).Delete("order_time<? and refresh_type=?", timeBegin.String()[0:10], model.FunctionCarry)
 	carryRows, _ := model.AppDB.Model(&orders).Select(`market,amount_type,order_side,sum(price*amount),date(order_time),refresh_type`).
 		Group(`market,order_side,date(order_time),amount_type,refresh_type`).Order(`date(order_time) desc`).Rows()
 	if carryRows != nil {
@@ -291,8 +288,8 @@ func GetCarryInfo(c *gin.Context) {
 			var value float64
 			_ = carryRows.Scan(&market, &amountType, &side, &value, &date, &refreshType)
 			if amountType == keys[0] {
-				dealMsg := map[string]interface{}{`carry`: market, `交易额(usd)`: value, `date`: date, `side`: side,
-					`type`: refreshType}
+				dealMsg := map[string]interface{}{`市场`: market, `交易额(usd)`: math.Round(value), `日期`: date[0:10],
+					`side`: side, `type`: refreshType}
 				tableDeal = append(tableDeal, dealMsg)
 			}
 		}

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"hello/util"
 	"math"
+	"strconv"
 	"sync"
 	"time"
 )
@@ -48,7 +49,7 @@ type MetricManager struct {
 	index       map[string]int                     // market_symbol - index
 }
 
-func (metricManager *MetricManager) AddCarry(market, symbol string, carryHigh, carryLow float64) {
+func (metricManager *MetricManager) AddCarry(market, symbol string, carryOpen, carryClose float64) {
 	defer metricManager.Lock.Unlock()
 	metricManager.Lock.Lock()
 	marketSymbol := fmt.Sprintf(`%s_%s`, market, symbol)
@@ -65,18 +66,18 @@ func (metricManager *MetricManager) AddCarry(market, symbol string, carryHigh, c
 	}
 	carryMetric := metricManager.carryHour[marketSymbol][timeStr]
 	carryMetric.count++
-	if carryHigh > carryMetric.carryHighest || math.IsNaN(carryMetric.carryHighest) {
-		carryMetric.carryHighest = carryHigh
+	if carryOpen > carryMetric.carryHighest || math.IsNaN(carryMetric.carryHighest) {
+		carryMetric.carryHighest = carryOpen
 	}
-	if carryLow < carryMetric.carryLowest || math.IsNaN(carryMetric.carryLowest) {
-		carryMetric.carryLowest = carryLow
+	if carryClose < carryMetric.carryLowest || math.IsNaN(carryMetric.carryLowest) {
+		carryMetric.carryLowest = carryClose
 	}
-	if !math.IsNaN(carryHigh) {
-		carryMetric.totalHigh += carryHigh
+	if !math.IsNaN(carryOpen) {
+		carryMetric.totalHigh += carryOpen
 		carryMetric.avgHigh = carryMetric.totalHigh / float64(carryMetric.count)
 	}
-	if !math.IsNaN(carryLow) {
-		carryMetric.totalLow += carryLow
+	if !math.IsNaN(carryClose) {
+		carryMetric.totalLow += carryClose
 		carryMetric.avgLow = carryMetric.totalLow / float64(carryMetric.count)
 	}
 }
@@ -145,12 +146,13 @@ func (metricManager *MetricManager) ToTables() (tables [][]map[string]interface{
 		for str, metric := range timeMetric {
 			if timeMap[str] {
 				metricMsg := map[string]interface{}{`价差`: marketSymbol, `time`: str, `count`: metric.count,
-					`avg_high`: metric.avgHigh, `avg_low`: metric.avgLow}
+					`平均正开仓差`: strconv.FormatFloat(metric.avgHigh, 'f', 5, 64),
+					`平均反开仓差`: strconv.FormatFloat(metric.avgLow, 'f', 5, 64)}
 				if !math.IsNaN(metric.carryHighest) {
-					metricMsg[`highest`] = metric.carryHighest
+					metricMsg[`最大正开仓`] = metric.carryHighest
 				}
 				if !math.IsNaN(metric.carryLowest) {
-					metricMsg[`lowest`] = metric.carryLowest
+					metricMsg[`最大反开仓`] = metric.carryLowest
 				}
 				tablePriceDis = append(tablePriceDis, metricMsg)
 			}
@@ -161,7 +163,7 @@ func (metricManager *MetricManager) ToTables() (tables [][]map[string]interface{
 			if timeMap[str] {
 				metricMsg := map[string]interface{}{`tick`: marketSymbol, `time`: str, `all`: metric.countAll,
 					`valid`: metric.countValid, `delay_low`: metric.delayLow, `delay_high`: metric.delayHigh,
-					`delay_avg`: metric.delayAvg, `price_low`: metric.priceLow, `price_high`: metric.priceHigh}
+					`delay_avg`: math.Round(metric.delayAvg), `price_low`: metric.priceLow, `price_high`: metric.priceHigh}
 				tableTick = append(tableTick, metricMsg)
 			}
 		}
@@ -192,7 +194,7 @@ func (metricManager *MetricManager) ToTables() (tables [][]map[string]interface{
 		tickMetric.delayAvg = float64(tickMetric.delaySum) / float64(tickMetric.countAll)
 		metricMsg := map[string]interface{}{`最近tick`: marketSymbol, `all`: tickMetric.countAll,
 			`valid`: tickMetric.countValid, `delay_low`: tickMetric.delayLow, `delay_high`: tickMetric.delayHigh,
-			`delay_avg`: tickMetric.delayAvg,
+			`delay_avg`: math.Round(tickMetric.delayAvg),
 			`start`:     fmt.Sprintf(`%d:%d:%d`, tickMetric.start.Hour(), tickMetric.start.Minute(), tickMetric.start.Second()),
 			`end`:       fmt.Sprintf(`%d:%d:%d`, tickMetric.end.Hour(), tickMetric.end.Minute(), tickMetric.end.Second())}
 		tableTickRecent = append(tableTickRecent, metricMsg)

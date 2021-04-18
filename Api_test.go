@@ -57,11 +57,16 @@ func getAmount(amountIn float64) {
 }
 
 func Test_OKFormatAmount(t *testing.T) {
+	a := math.Floor(0.1 / 0.000001)
+	fmt.Println(a)
+	a = a * 0.000001
+	fmt.Println(a)
 	model.NewConfig()
 	_ = configor.Load(model.AppConfig, "./config.yml")
 	model.AppDB, _ = gorm.Open("postgres", model.AppConfig.DBConnection)
 	api.InitMarketInfos()
-
+	api.PlaceOrder(``, ``, model.OrderSideBuy, model.OrderTypeLimit, model.OKEX, `DORA-USDT`,
+		`DORA-USDT`, ``, ``, 5555.23452, 0.1444444444876, 0.1, false, nil)
 	getAmount(0.1)
 	getAmount(0)
 	getAmount(0.1)

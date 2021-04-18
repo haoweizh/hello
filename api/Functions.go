@@ -49,7 +49,7 @@ func RequireDepthChanReset(markets *model.Markets, market string) bool {
 //	return 0
 //}
 
-// 根据不同的网站返回价格小数位
+// GetPriceDecimal 根据不同的网站返回价格小数位
 func GetPriceDecimal(market, symbol string) float64 {
 	switch market {
 	case model.Coinpark:
@@ -260,7 +260,7 @@ func GetDayCandle(key, secret, market, symbol, instrument string, timeCandle tim
 }
 
 func GetBalance(key, secret, market, coin string, delaySeconds int64) (balance *model.Balance) {
-	success, balances, _ := GetBalances(key, secret, market, delaySeconds)
+	success, balances, _, _ := GetBalances(key, secret, market, delaySeconds)
 	if !success {
 		return
 	}
@@ -273,22 +273,22 @@ func GetBalance(key, secret, market, coin string, delaySeconds int64) (balance *
 }
 
 func GetBalances(key, secret, market string, delaySeconds int64) (
-	success bool, balances []*model.Balance, totalInUsd float64) {
+	success bool, balances []*model.Balance, totalInUsd, margin float64) {
 	now := util.GetNow().Unix()
 	var update int64
-	balances, totalInUsd, update = model.GetBalance(market)
+	balances, totalInUsd, margin, update = model.GetBalance(market)
 	if now-update < delaySeconds {
-		return true, balances, totalInUsd
+		return true, balances, totalInUsd, margin
 	}
 	switch market {
 	case model.Ftx:
 		success, balances, totalInUsd = getBalanceFtx(key, secret)
 	case model.OKEX:
-		success, balances, totalInUsd = getBalanceOKEX(key, secret)
+		success, balances, totalInUsd, margin = getBalanceOKEX(key, secret)
 	case model.HuobiDM:
 		success, balances = getBalanceHuobiDM(key, secret)
 	}
-	model.SetBalance(market, balances, totalInUsd, now)
+	model.SetBalance(market, balances, totalInUsd, margin, now)
 	return
 }
 
@@ -481,7 +481,7 @@ func MustPlaceOrder(key, secret, orderSide, orderType, market, symbol, instrumen
 	return order
 }
 
-// orderSide: OrderSideBuy OrderSideSell OrderSideLiquidateLong OrderSideLiquidateShort
+// PlaceOrder orderSide: OrderSideBuy OrderSideSell OrderSideLiquidateLong OrderSideLiquidateShort
 // orderType: OrderTypeLimit OrderTypeMarket
 // amount:如果是限价单或市价卖单，amount是左侧币种的数量，如果是市价买单，amount是右测币种的数量
 func PlaceOrder(key, secret, orderSide, orderType, market, symbol, instrument, orderParam, refreshType string,
@@ -682,7 +682,7 @@ func InitCarryFtx(start uint) {
 	}
 }
 
-// 只支持现货SPOT和永续PERP SWAP
+// InitMarketInfos 只支持现货SPOT和永续PERP SWAP
 func InitMarketInfos() (success bool) {
 	success = true
 	markets := model.GetMarkets()
@@ -723,7 +723,7 @@ func ParseRealAmount(market, symbol string, amount float64) (success bool, realA
 	return true, amount * marketInfo.CTValue
 }
 
-// symbol 期货; related 现货
+// FormatAmountPair symbol 期货; related 现货
 func FormatAmountPair(market, symbolPerp, symbolRelated string, amount float64) (formattedAmount float64) {
 	marketPerp := model.MarketInfos[market][symbolPerp]
 	marketRelated := model.MarketInfos[market][symbolRelated]
