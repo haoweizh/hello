@@ -654,7 +654,7 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 			scoreHigh, setOpen, scoreLow, setClose, revertOpen, revertClose, doRevert))
 	}
 	model.SetCarryInfo(table+setting.Symbol,
-		fmt.Sprintf(`%s %f %f %f 计算%f %f %f %f 市场%f %f 币可用(%f %f) U可用(%f %f) 资金费率:%f`,
+		fmt.Sprintf(`%s %f %f %f 计算%f %f %f %f 市场%f %f 可用:%f coinRate:%f usdAva:%f usdRate:%f 资金费率:%f`,
 			key[0:5]+setting.Symbol, setting.OpenShortMargin, setting.CloseShortMargin, setting.GridPriceDistance, setOpen, setClose,
 			revertOpen, revertClose, scoreOpen, scoreClose, balance.AvailableWithBorrow, usdRate, usdAvailable,
 			balance.UsdValue/balanceAllValue, fundingRate))
