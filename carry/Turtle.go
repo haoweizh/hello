@@ -60,7 +60,7 @@ func calcTurtleAmount(setting *model.Setting, price, n float64) (amount float64)
 			amount = 20000 * p / n
 		}
 	case model.Ftx, model.OKEX:
-		_, _, p := api.GetBalances(``, ``, setting.Market, 0)
+		_, _, p, _ := api.GetBalances(``, ``, setting.Market, 0)
 		amount = 0.01 * p / n
 		switch setting.Symbol {
 		case `BTC-PERP`, `ETH-PERP`, `BTC-USDT-SWAP`, `ETH-USDT-SWAP`:
