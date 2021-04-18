@@ -655,7 +655,7 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	}
 	model.SetCarryInfo(table+setting.Symbol,
 		fmt.Sprintf(`%s %f %f %f 计算%f %f %f %f 市场%f %f 币可用(%f %f) U可用(%f %f) 资金费率:%f`,
-			setting.Symbol, setting.OpenShortMargin, setting.CloseShortMargin, setting.GridPriceDistance, setOpen, setClose,
+			key[0:5]+setting.Symbol, setting.OpenShortMargin, setting.CloseShortMargin, setting.GridPriceDistance, setOpen, setClose,
 			revertOpen, revertClose, scoreOpen, scoreClose, balance.AvailableWithBorrow, usdRate, usdAvailable,
 			balance.UsdValue/balanceAllValue, fundingRate))
 	carryInfo := map[string]interface{}{`01.动态正开仓`: setOpen, `02.动态负开仓`: setClose, `03.动态平仓`: revertOpen,
