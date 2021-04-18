@@ -565,7 +565,7 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	usdLowLine := model.AppConfig.Amount
 	keys, _ := model.AppConfig.GetKeys(setting.Market)
 	localOpenValueLimit := math.Min(openValueLimit, 0.5*balanceAllValue)
-	table := fmt.Sprintf(`%s_symbol_`, model.FunctionCarry)
+	table := fmt.Sprintf(`%s_dynamic_`, model.FunctionCarry)
 	if len(keys) > 1 && keys[0] != key {
 		table += fmt.Sprintf(`slave%s`, key[0:5])
 		if usdRate > 0 {
@@ -649,13 +649,13 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	if amount > 0 {
 		util.Notice(fmt.Sprintf(`+++ usdRate: %f coinRate: %f %s high: %f low: %f symbol: %s %s 
 			usd available:%f amount %f carryAmount: %f scoreHigh: %f setOpen: %f scoreLow: %f setClose: %f
-			revertOpen: %f revertClose: %f margin: %f`,
-			usdRate, coinRate, key, scoreHigh, scoreLow, setting.Symbol, sidePerp, usdAvailable,
-			amount, carryAmount, scoreHigh, setOpen, scoreLow, setClose, revertOpen, revertClose, getMarginOKEX(key)))
+			revertOpen: %f revertClose: %f do revert: %s`,
+			usdRate, coinRate, key, scoreHigh, scoreLow, setting.Symbol, sidePerp, usdAvailable, amount, carryAmount,
+			scoreHigh, setOpen, scoreLow, setClose, revertOpen, revertClose, doRevert))
 	}
 	model.SetCarryInfo(table+setting.Symbol,
-		fmt.Sprintf(`%s 参数:(%f %f %f) 计算结果(%f %f %f %f) 当前市场(%f %f) 可用：%f usdRate:%favailable:%f 
-			coinRate:%f 资金费率 %f`,
+		fmt.Sprintf(`%s 参数:(%f %f %f) 计算结果(%f %f %f %f) 当前市场(%f %f) 可用：%f usd rate: %f usd available: %f 
+			coin rate: %f 资金费率: %f`,
 			table, setting.OpenShortMargin, setting.CloseShortMargin, setting.GridPriceDistance, setOpen, setClose,
 			revertOpen, revertClose, scoreOpen, scoreClose, balance.AvailableWithBorrow, usdRate, usdAvailable,
 			balance.UsdValue/balanceAllValue, fundingRate))
