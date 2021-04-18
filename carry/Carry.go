@@ -659,10 +659,8 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 		msg = key[0:5] + msg
 	}
 	model.SetCarryInfo(table+setting.Symbol,
-		fmt.Sprintf("%s 可用:%s coinRate:%s\n%f %f %f usdAva:%s usdRate:%s 计算%s %s %s %s 市场%s %s资金费率:%s",
-			msg, strconv.FormatFloat(balance.AvailableWithBorrow, 'f', 2, 64),
-			strconv.FormatFloat(100*balance.UsdValue/balanceAllValue, 'f', 1, 64)+"%",
-			setting.OpenShortMargin, setting.CloseShortMargin, setting.GridPriceDistance,
+		fmt.Sprintf("%s\n%f %f %f usdAva:%s usdRate:%s 计算%s %s %s %s 市场%s %s资金费率:%s可用:%s coinRate:%s",
+			msg, setting.OpenShortMargin, setting.CloseShortMargin, setting.GridPriceDistance,
 			strconv.FormatFloat(usdAvailable, 'f', 0, 64),
 			strconv.FormatFloat(100*usdRate, 'f', 0, 64)+"%",
 			strconv.FormatFloat(setOpen, 'f', 4, 64),
@@ -671,7 +669,9 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 			strconv.FormatFloat(revertClose, 'f', 4, 64),
 			strconv.FormatFloat(scoreOpen, 'f', 4, 64),
 			strconv.FormatFloat(scoreClose, 'f', 4, 64),
-			strconv.FormatFloat(fundingRate*1000, 'f', 2, 64)+"‰"))
+			strconv.FormatFloat(fundingRate*1000, 'f', 2, 64)+"‰",
+			strconv.FormatFloat(balance.AvailableWithBorrow, 'f', 2, 64),
+			strconv.FormatFloat(100*balance.UsdValue/balanceAllValue, 'f', 1, 64)+"%"))
 	carryInfo := map[string]interface{}{`01.动态正开仓`: setOpen, `02.动态负开仓`: setClose, `03.动态平仓`: revertOpen,
 		`04.动态平仓`: revertClose, `0.5市场开仓`: scoreOpen, `06.市场关仓`: scoreClose, `07.usd rate`: usdRate,
 		`08.usd available`: usdAvailable, `09. coin rate`: balance.UsdValue / balanceAllValue,
