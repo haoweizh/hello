@@ -659,7 +659,7 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 		msg = key[0:5] + msg
 	}
 	model.SetCarryInfo(table+setting.Symbol,
-		fmt.Sprintf("%s\n 可用:%s coinRate:%s %f %f %f usdAva:%s usdRate:%s 计算%s %s %s %s 市场%s %s资金费率:%s",
+		fmt.Sprintf("%s 可用:%s coinRate:%s\n%f %f %f usdAva:%s usdRate:%s 计算%s %s %s %s 市场%s %s资金费率:%s",
 			msg, strconv.FormatFloat(balance.AvailableWithBorrow, 'f', 2, 64),
 			strconv.FormatFloat(100*balance.UsdValue/balanceAllValue, 'f', 1, 64)+"%",
 			setting.OpenShortMargin, setting.CloseShortMargin, setting.GridPriceDistance,
