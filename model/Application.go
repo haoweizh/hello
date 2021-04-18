@@ -5,6 +5,7 @@ import (
 	"github.com/jinzhu/configor"
 	"github.com/jinzhu/gorm"
 	"hello/util"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -191,9 +192,14 @@ func SetCarryInfos(table, key string, item map[string]interface{}) {
 func GetCarryInfo(mark, except string) (info string) {
 	infoLock.Lock()
 	defer infoLock.Unlock()
-	for key, value := range CarryInfo {
-		if (mark == `` || strings.Contains(key, mark)) && (except == `` || !strings.Contains(value, except)) {
-			info += fmt.Sprintf("%s: %s\n", key, value)
+	keys := make([]string, 0)
+	for key := range CarryInfo {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	for _, key := range keys {
+		if (mark == `` || strings.Contains(key, mark)) && (except == `` || !strings.Contains(CarryInfo[key], except)) {
+			info += fmt.Sprintf("%s: %s\n", key, CarryInfo[key])
 		}
 	}
 	return

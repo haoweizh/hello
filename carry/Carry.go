@@ -654,9 +654,11 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 			amount, carryAmount, scoreHigh, setOpen, scoreLow, setClose, revertOpen, revertClose, getMarginOKEX(key)))
 	}
 	model.SetCarryInfo(table+setting.Symbol,
-		fmt.Sprintf(`%s 参数:(%f %f %f) 计算结果(%f %f %f %f) 当前市场(%f %f) 可用：%f usdRate:%favailable:%f coinRate:%f 资金费率 %f`,
+		fmt.Sprintf(`%s 参数:(%f %f %f) 计算结果(%f %f %f %f) 当前市场(%f %f) 可用：%f usdRate:%favailable:%f 
+			coinRate:%f 资金费率 %f`,
 			table, setting.OpenShortMargin, setting.CloseShortMargin, setting.GridPriceDistance, setOpen, setClose,
-			revertOpen, revertClose, scoreOpen, scoreClose, balance.AvailableWithBorrow, usdRate, usdAvailable, balance.UsdValue/balanceAllValue, fundingRate))
+			revertOpen, revertClose, scoreOpen, scoreClose, balance.AvailableWithBorrow, usdRate, usdAvailable,
+			balance.UsdValue/balanceAllValue, fundingRate))
 	carryInfo := map[string]interface{}{`01.动态正开仓`: setOpen, `02.动态负开仓`: setClose, `03.动态平仓`: revertOpen,
 		`04.动态平仓`: revertClose, `0.5市场开仓`: scoreOpen, `06.市场关仓`: scoreClose, `07.usd rate`: usdRate,
 		`08.usd available`: usdAvailable, `09. coin rate`: balance.UsdValue / balanceAllValue,
