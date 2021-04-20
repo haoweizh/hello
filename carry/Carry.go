@@ -583,7 +583,8 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 			doRevert = `true`
 		}
 		if setting.Symbol == `IOTA-USDT-SWAP` {
-			revertOpen = -0.01
+			revertOpen = -0.01 + fundingRate
+			setOpen = 0.03 - fundingRate
 		}
 	}
 	if doRevert == `true` {
