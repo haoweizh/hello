@@ -538,7 +538,7 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	balance := getCarryBalance(key, coin)
 	fundingRate := 0.0
 	if setting.Market == model.OKEX {
-		fundingRate = api.GetFundingRate(setting.Market, setting.Symbol)
+		fundingRate = api.GetFundingRate(setting.Market, setting.Symbol, &carryLock)
 		fundingRate *= 0.9
 	}
 	if balance == nil {

@@ -307,7 +307,11 @@ func GetTransfers(key, secret, market string) (balances []*model.Balance) {
 	return balances
 }
 
-func GetFundingRate(market, symbol string) (value float64) {
+func GetFundingRate(market, symbol string, lock *sync.Mutex) (value float64) {
+	if lock != nil {
+		defer lock.Unlock()
+		lock.Lock()
+	}
 	fundingRate := model.GetFundingRate(market, symbol)
 	now := util.GetNow().Unix()
 	if fundingRate != nil && now < fundingRate.ExpireTime-60 {

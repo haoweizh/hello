@@ -13,8 +13,3 @@ mail:
 port: 80
 predealdis: 100
 refreshtimeslot: 60 #second
-
-
-
-  02b6e870a32 request https://www.okex.com/api/v5/trade/order body 2021-03-31T06:25:46ZPOST/api/v5/trade/order
-  {"instId":"BTT-USDT-SWAP","ordType":"limit","px":"00543","side":"buy","sz":"2","tdMode":"cross"} return {"code":"1","data":[{"clOrdId":"","ordId":"","sCode":"51006","sMsg":"Order price out of the limit. ","tag":""}],"msg":""}
