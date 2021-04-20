@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"hello/model"
 	"hello/util"
-	"math"
 	"net/http"
 	"sort"
 	"strconv"
@@ -127,24 +126,6 @@ func sendSignRequestOKEX(key, secret, method, path string, body interface{}) (re
 	return responseBody
 }
 
-func GetAmountInPerpOKEX(market, symbol string, amount float64) (formattedAmount float64) {
-	marketInfo := model.MarketInfos[market][symbol]
-	if marketInfo == nil || marketInfo.SizeIncrement == 0 || marketInfo.SizeMin == 0 {
-		return 0
-	}
-	if marketInfo.CTValue > 0 && marketInfo.CTCurrency == model.GetCoin(market, symbol) {
-		amount = amount / marketInfo.CTValue
-	}
-	formattedAmount = marketInfo.SizeIncrement * math.Floor(amount/marketInfo.SizeIncrement)
-	decimal := util.NumDecPlaces(marketInfo.SizeIncrement)
-	format := `%.` + strconv.Itoa(decimal) + `f`
-	formattedAmount, _ = strconv.ParseFloat(fmt.Sprintf(format, formattedAmount), 64)
-	if formattedAmount < marketInfo.SizeMin || marketInfo.SizeMin == 0 {
-		return 0
-	}
-	return formattedAmount
-}
-
 // amount、price
 // 不能使用 fmt %v 因为有e+5 的情况；
 // 不能使用 fmt %f 因为有000后缀；
@@ -156,7 +137,7 @@ func placeOrderOKEX(key, secret string, order *model.Order) {
 	priceStr := util.CutTailZero(strconv.FormatFloat(price, 'f', decimal, 64))
 	priceTrigger, decimal := FormatPrice(model.OKEX, order.Instrument, order.OrderSide, order.TriggerPrice)
 	triggerPriceStr := util.CutTailZero(strconv.FormatFloat(priceTrigger, 'f', decimal, 64))
-	formattedAmount := GetAmountInPerpOKEX(model.OKEX, order.Instrument, order.Amount)
+	formattedAmount := GetAmountInPerp(model.OKEX, order.Instrument, order.Amount)
 	amount := util.CutTailZero(fmt.Sprintf(`%f`, formattedAmount))
 	if order.OrderType == model.OrderTypeMarket {
 		usdAmount, _ := strconv.ParseFloat(amount, 64)

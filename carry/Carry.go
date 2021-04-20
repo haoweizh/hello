@@ -35,6 +35,7 @@ var carryBalance = make(map[string]map[string]*model.Balance) // key - coin - ba
 var carryAmount = make(map[string]map[string]float64)         // key - perp - float64
 var tradeMax = make(map[string]map[string][]float64)          // key - instrument - [maxBuy合约张数/币币个数, maxSell]
 
+// 专用于处理ok可买卖数量限制
 var postOrderCarry = func(order *model.Order) {
 	if order == nil || order.OrderId == `` || order.Status == model.CarryStatusFail {
 		if order != nil {
@@ -47,7 +48,7 @@ var postOrderCarry = func(order *model.Order) {
 	}
 	maxBuy, maxSell := getTradeMax(order.AmountType, order.Symbol)
 	// 需要经过转化成张数（合约）
-	amount := api.GetAmountInPerpOKEX(model.OKEX, order.Instrument, order.Amount)
+	amount := api.GetAmountInPerp(model.OKEX, order.Instrument, order.Amount)
 	if order.OrderSide == model.OrderSideBuy {
 		maxBuy -= amount
 		maxSell += amount
@@ -405,12 +406,12 @@ func placeCarry(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, key
 func getCarryAmounts(setting *model.Setting, balances []*model.Balance, positions []*model.Position) (
 	success bool, amountPerp, amountRelated float64) {
 	tail := api.GetPerpTail(setting.Market)
-	positionExist := false
+	//positionExist := false
 	balanceExist := false
 	for _, position := range positions {
 		if position != nil && position.Currency == setting.Symbol {
 			amountPerp = position.Free
-			positionExist = true
+			//positionExist = true
 		}
 	}
 	for _, balance := range balances {
@@ -419,7 +420,7 @@ func getCarryAmounts(setting *model.Setting, balances []*model.Balance, position
 			balanceExist = true
 		}
 	}
-	return positionExist && balanceExist, amountPerp, amountRelated
+	return balanceExist, amountPerp, amountRelated
 }
 
 func makeEqual(key, secret string, setting *model.Setting, balances []*model.Balance, positions []*model.Position) (
@@ -487,7 +488,7 @@ func makeEqual(key, secret string, setting *model.Setting, balances []*model.Bal
 	if amount <= 0 {
 		return
 	}
-	orderAmount := api.GetAmountInPerpOKEX(setting.Market, symbol, math.Abs(amount))
+	orderAmount := api.GetAmountInPerp(setting.Market, symbol, math.Abs(amount))
 	if orderAmount > 0 {
 		resultPerp := api.CancelOrders(key, secret, setting.Market, settingSymbol)
 		resultRelated := api.CancelOrders(key, secret, setting.Market, symbolRelated)
@@ -515,11 +516,13 @@ func initEmptyBalance(key, secret, market string) {
 		if balance == nil {
 			balance = &model.Balance{Coin: coin, Market: market}
 		}
-		success, maxLoan := api.GetMaxLoan(key, secret, market, coin)
-		if success {
-			balance.AvailableWithBorrow = maxLoan + balance.Amount
+		if market == model.OKEX {
+			success, maxLoan := api.GetMaxLoan(key, secret, market, coin)
+			if success {
+				balance.AvailableWithBorrow = maxLoan + balance.Amount
+			}
+			time.Sleep(time.Second / 8)
 		}
-		time.Sleep(time.Second / 8)
 		setCarryBalance(key, coin, balance)
 	}
 	util.Notice(fmt.Sprintf(`set available with borrow %s %s`, market, key))
@@ -583,8 +586,9 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 			doRevert = `true`
 		}
 		if setting.Symbol == `IOTA-USDT-SWAP` {
+			setOpen = 0.02 - fundingRate
+			setClose = -0.01 - fundingRate
 			revertOpen = -0.01 + fundingRate
-			setOpen = 0.03 - fundingRate
 		}
 	}
 	if doRevert == `true` {
@@ -637,7 +641,7 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	}
 	amount = api.FormatAmountPair(setting.Market, setting.Symbol, setting.GetRelatedSymbol(), amount)
 	if model.OKEX == setting.Market {
-		amountInPerp := api.GetAmountInPerpOKEX(setting.Market, setting.Symbol, amount)
+		amountInPerp := api.GetAmountInPerp(setting.Market, setting.Symbol, amount)
 		maxBuyPerp, maxSellPerp := getTradeMax(key, setting.Symbol)
 		maxBuyRelated, maxSellRelated := getTradeMax(key, setting.GetRelatedSymbol())
 		if sidePerp == model.OrderSideBuy && sideRelated == model.OrderSideSell {

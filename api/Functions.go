@@ -5,6 +5,7 @@ import (
 	"hello/model"
 	"hello/util"
 	"math"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -33,21 +34,23 @@ func RequireDepthChanReset(markets *model.Markets, market string) bool {
 	return needReset
 }
 
-//func GetPriceDistance(market, symbol string) float64 {
-//	switch symbol {
-//	case `btcusd_p`:
-//		switch market {
-//		case model.Bitmex, model.Bybit:
-//			return 0.5
-//		}
-//	case `ethusd_p`:
-//		switch market {
-//		case model.Bitmex, model.Bybit:
-//			return 0.05
-//		}
-//	}
-//	return 0
-//}
+func GetAmountInPerp(market, symbol string, amount float64) (formattedAmount float64) {
+	marketInfo := model.MarketInfos[market][symbol]
+	if marketInfo == nil || marketInfo.SizeIncrement == 0 || marketInfo.SizeMin == 0 {
+		return 0
+	}
+	if marketInfo.CTValue > 0 && marketInfo.CTCurrency == model.GetCoin(market, symbol) {
+		amount = amount / marketInfo.CTValue
+	}
+	formattedAmount = marketInfo.SizeIncrement * math.Floor(amount/marketInfo.SizeIncrement)
+	decimal := util.NumDecPlaces(marketInfo.SizeIncrement)
+	format := `%.` + strconv.Itoa(decimal) + `f`
+	formattedAmount, _ = strconv.ParseFloat(fmt.Sprintf(format, formattedAmount), 64)
+	if formattedAmount < marketInfo.SizeMin || marketInfo.SizeMin == 0 {
+		return 0
+	}
+	return formattedAmount
+}
 
 // GetPriceDecimal 根据不同的网站返回价格小数位
 func GetPriceDecimal(market, symbol string) float64 {

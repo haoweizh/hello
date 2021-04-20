@@ -49,7 +49,7 @@ func Test_ws(t *testing.T) {
 
 func getAmount(amountIn float64) {
 	amount := api.FormatAmountPair(model.OKEX, `BTT-USDT-SWAP`, `BTT-USDT`, amountIn)
-	amountInPerp := api.GetAmountInPerpOKEX(model.OKEX, `BTT-USDT-SWAP`, amount)
+	amountInPerp := api.GetAmountInPerp(model.OKEX, `BTT-USDT-SWAP`, amount)
 	_, amountInReal := api.ParseRealAmount(model.OKEX, `BTT-USDT-SWAP`, amountInPerp)
 	amount = math.Min(amount, amountInReal)
 	amount = api.FormatAmountPair(model.OKEX, `BTT-USDT-SWAP`, `BTT-USDT`, amount)
