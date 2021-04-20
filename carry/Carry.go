@@ -236,7 +236,7 @@ func clearCarryBalance() {
 				borrowAll := 0.0
 				for _, value := range balances {
 					coin := strings.ToUpper(value.Coin)
-					if market == model.OKEX { // 针对okex不能从balance或许可借数的问题进行特殊处理
+					if market == model.OKEX { // 针对okex不能从balance获取可借数的问题进行特殊处理
 						preBalance := getCarryBalance(key, coin)
 						if preBalance != nil {
 							value.AvailableWithBorrow = preBalance.AvailableWithBorrow
@@ -517,7 +517,7 @@ func initEmptyBalance(key, secret, market string) {
 		}
 		success, maxLoan := api.GetMaxLoan(key, secret, market, coin)
 		if success {
-			balance.AvailableWithBorrow = maxLoan
+			balance.AvailableWithBorrow = maxLoan + balance.Amount
 		}
 		time.Sleep(time.Second / 8)
 		setCarryBalance(key, coin, balance)
@@ -581,6 +581,9 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 		margin := getMarginOKEX(key)
 		if margin < usdLowLine {
 			doRevert = `true`
+		}
+		if setting.Symbol == `IOTA-USDT-SWAP` {
+			revertOpen = -0.01
 		}
 	}
 	if doRevert == `true` {
