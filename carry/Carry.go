@@ -285,7 +285,7 @@ func clearCarryBalance() {
 	}
 }
 
-var ProcessCarry = func(setting *model.Setting, tick *model.BidAsk) {
+var ProcessCarrySpotSwap = func(setting *model.Setting, tick *model.BidAsk) {
 	if !doCarry && model.AppConfig.Handle == `1` {
 		go clearCarryBalance()
 		doCarry = true
