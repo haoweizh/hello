@@ -266,7 +266,7 @@ func clearCarryBalance() {
 				setUsdAvailable(key, localUsdAvailable)
 				setUsdRate(key, localUsdAvailable/balanceAllValue)
 				setBalanceAll(key, balanceAllValue)
-				util.Notice(fmt.Sprintf(`[carry] %s usd:%f %f len(blances):%d`,
+				util.Notice(fmt.Sprintf(`[carry] %s usd:%f %f len(balances):%d`,
 					key, localUsdAvailable, usdRate[key], len(balances)))
 				for _, items := range settings {
 					for _, item := range items {
@@ -572,7 +572,7 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	if len(keys) > 1 && keys[0] != key {
 		table += fmt.Sprintf(`slave%s`, key[0:5])
 		if usdRate > 0 {
-			usdLowLine = 0.1 * usdAvailable / usdRate
+			usdLowLine = 0.2 * usdAvailable / usdRate
 			localOpenValueLimit = math.Min(usdLowLine, openValueLimit)
 		} else {
 			localOpenValueLimit = 0

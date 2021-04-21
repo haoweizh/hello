@@ -181,7 +181,7 @@ func handleBooksUpdate(instrument string, isSpot bool, data map[string]interface
 		}
 		crcValue := crc32.ChecksumIEEE([]byte(checkStr))
 		compare, _ := data[`checksum`].(json.Number).Int64()
-		util.Notice(fmt.Sprintf(`%d vs %d %v`, compare, crcValue, compare == int64(crcValue)))
+		util.Notice(fmt.Sprintf(`%d vs %d %v`, compare, crcValue, compare == int64(int32(crcValue))))
 	}
 	bidAsk.Bids = newBids
 	bidAsk.Asks = newAsks
