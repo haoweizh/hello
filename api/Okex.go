@@ -164,18 +164,18 @@ func handleBooksUpdate(instrument string, isSpot bool, data map[string]interface
 		checkStr := ``
 		for index := 0; index < 25; index++ {
 			if index < len(newBids) {
-				amount := newBids[i].Amount
+				amount := newBids[index].Amount
 				if !isSpot {
 					amount = GetAmountInPerp(model.OKEX, instrument, amount)
 				}
-				checkStr += fmt.Sprintf(`%f:%f`, newBids[i].Price, amount)
+				checkStr += fmt.Sprintf(`%f:%f`, newBids[index].Price, amount)
 			}
 			if index < len(newAsks) {
-				amount := newAsks[i].Amount
+				amount := newAsks[index].Amount
 				if !isSpot {
 					amount = GetAmountInPerp(model.OKEX, instrument, amount)
 				}
-				checkStr += fmt.Sprintf(`%f:%f`, newAsks[i].Price, amount)
+				checkStr += fmt.Sprintf(`%f:%f`, newAsks[index].Price, amount)
 			}
 		}
 		crcValue := crc32.ChecksumIEEE([]byte(checkStr))
