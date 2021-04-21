@@ -4,6 +4,7 @@ import (
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"hash/crc32"
 	"hello/model"
@@ -179,7 +180,8 @@ func handleBooksUpdate(instrument string, isSpot bool, data map[string]interface
 			}
 		}
 		crcValue := crc32.ChecksumIEEE([]byte(checkStr))
-		fmt.Println(fmt.Sprintf(`%s vs %d`, data[`checksum`].(string), crcValue))
+		compare, _ := data[`checksum`].(json.Number).Int64()
+		util.Notice(fmt.Sprintf(`%d vs %d %v`, compare, crcValue, compare == int64(crcValue)))
 	}
 	bidAsk.Bids = newBids
 	bidAsk.Asks = newAsks
