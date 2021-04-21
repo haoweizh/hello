@@ -47,7 +47,7 @@ func checkSetDCarrying(value bool) (before bool) {
 	}
 }
 
-// setting.GridAmount 下单数量
+// ProcessDCarry setting.GridAmount 下单数量
 // setting.open_short_margin 开仓利润线
 // setting.close_short_margin 关仓利润线
 var ProcessDCarry = func(setting *model.Setting, tickD *model.BidAsk) {

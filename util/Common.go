@@ -98,15 +98,6 @@ func FormatNum(input float64, decimal float64) (num float64, str string) {
 	return num, str
 }
 
-func FormatFloat(num float64, decimal int) string {
-	d := float64(1)
-	if decimal > 0 {
-		// 10的N次方
-		d = math.Pow10(decimal)
-	}
-	return strconv.FormatFloat(math.Trunc(num*d)/d, 'f', -1, 64)
-}
-
 func NumDecPlaces(v float64) int {
 	s := strconv.FormatFloat(v, 'f', -1, 64)
 	i := strings.IndexByte(s, '.')

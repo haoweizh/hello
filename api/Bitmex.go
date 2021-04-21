@@ -816,7 +816,8 @@ func getFundingRateBitmex(symbol string) (fundingRate float64, update int64) {
 	return
 }
 
-func GetOrderBook(key, secret, symbol string) (result bool, bid, ask *model.Tick) {
+// GetOrderBook
+func _(key, secret, symbol string) (result bool, bid, ask *model.Tick) {
 	postData := make(map[string]interface{})
 	postData[`symbol`] = model.GetDialectSymbol(model.Bitmex, symbol)
 	postData[`depth`] = `1`

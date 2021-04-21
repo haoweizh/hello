@@ -188,7 +188,7 @@ func GetTurtleData(setting *model.Setting) (turtleData *TurtleData) {
 	return
 }
 
-//setting.GridAmount 当前已经持仓数量
+// ProcessTurtle setting.GridAmount 当前已经持仓数量
 //setting.Chance 当前开仓的个数
 //setting.PriceX 上一次开仓的价格
 var ProcessTurtle = func(setting *model.Setting, tick *model.BidAsk) {

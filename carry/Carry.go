@@ -285,9 +285,8 @@ func clearCarryBalance() {
 	}
 }
 
-// ProcessCarry setting.GridPriceDistance: 收回下单是要求的利润(可以为负数)
 var ProcessCarry = func(setting *model.Setting, tick *model.BidAsk) {
-	if !doCarry {
+	if !doCarry && model.AppConfig.Handle == `1` {
 		go clearCarryBalance()
 		doCarry = true
 		return

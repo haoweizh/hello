@@ -169,7 +169,7 @@ func getGridPos(setting *model.Setting) (gridPos *GridPos) {
 	return gridPos
 }
 
-// setting: grid_amount持仓量, chance 当前position
+// ProcessSimpleGrid setting: grid_amount持仓量, chance 当前position
 var ProcessSimpleGrid = func(setting *model.Setting, tick *model.BidAsk) {
 	now := util.GetNowUnixMillion()
 	if tick == nil || tick.Asks == nil || tick.Bids == nil || model.AppConfig.Handle != `1` ||

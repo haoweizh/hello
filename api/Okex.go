@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"fmt"
+	"hash/crc32"
 	"hello/model"
 	"hello/util"
 	"net/http"
@@ -19,7 +20,8 @@ var subscribeHandlerOKEX = func(subscribes []interface{}, subType string) error 
 	for _, v := range subscribes {
 		subscribeMap := make(map[string]interface{})
 		subscribeMap["op"] = "subscribe"
-		subscribeMap["args"] = []map[string]string{{`channel`: `books5`, `instId`: v.(string)}}
+		subscribeMap["args"] = []map[string]string{{`channel`: `books-l2-tbt`, `instId`: v.(string)}}
+		//subscribeMap["args"] = []map[string]string{{`channel`: `books5`, `instId`: v.(string)}}
 		subscribeMessage := util.JsonEncodeToByte(subscribeMap)
 		if err = sendToWs(model.OKEX, subscribeMessage); err != nil {
 			util.SocketInfo("okex can not subscribe " + err.Error())
@@ -40,60 +42,182 @@ func WsDepthServeOKEX(markets *model.Markets, errHandler ErrHandler) (chan struc
 		}
 		responseJson, err := util.NewJSON(event)
 		if err != nil || responseJson == nil || responseJson.Get(`data`) == nil ||
-			len(responseJson.Get(`data`).MustArray()) == 0 || responseJson.GetPath(`arg`, `instId`) == nil {
+			responseJson.Get(`action`) == nil || len(responseJson.Get(`data`).MustArray()) == 0 ||
+			responseJson.GetPath(`arg`, `instId`) == nil {
 			return
-		}
-		data := responseJson.Get(`data`).MustArray()[0].(map[string]interface{})
-		bidAsk := model.BidAsk{TsReceived: int(util.GetNowUnixMillion())}
-		if data[`ts`] != nil {
-			ts, _ := strconv.ParseInt(data[`ts`].(string), 10, 64)
-			bidAsk.Ts = int(ts)
 		}
 		instrument := responseJson.GetPath(`arg`, `instId`).MustString()
 		isSpot := true
 		if strings.Contains(instrument, `SWAP`) || len(strings.Split(instrument, `-`)) > 2 {
 			isSpot = false
 		}
-		asks := data[`asks`].([]interface{})
-		bidAsk.Asks = make([]model.Tick, len(asks))
-		bids := data[`bids`].([]interface{})
-		bidAsk.Bids = make([]model.Tick, len(bids))
-		for i, ask := range asks {
-			value := ask.([]interface{})
-			if len(value) >= 2 {
-				price, _ := strconv.ParseFloat(value[0].(string), 64)
-				amount, _ := strconv.ParseFloat(value[1].(string), 64)
-				if !isSpot {
-					_, amount = ParseRealAmount(model.OKEX, instrument, amount)
-				}
-				bidAsk.Asks[i] = model.Tick{Price: price, Amount: amount, Symbol: instrument}
-			}
-		}
-		for i, bid := range bids {
-			value := bid.([]interface{})
-			if len(value) >= 2 {
-				price, _ := strconv.ParseFloat(value[0].(string), 64)
-				amount, _ := strconv.ParseFloat(value[1].(string), 64)
-				if !isSpot {
-					_, amount = ParseRealAmount(model.OKEX, instrument, amount)
-				}
-				bidAsk.Bids[i] = model.Tick{Price: price, Amount: amount, Symbol: instrument}
-			}
+		symbol := model.GetInstrumentSymbol(model.OKEX, instrument)
+		action := responseJson.Get(`action`).MustString()
+		data := responseJson.Get(`data`).MustArray()[0].(map[string]interface{})
+		_, bidAsk := markets.GetBidAsk(instrument, model.OKEX)
+		if action == `snapshot` {
+			bidAsk = handleBooksOKEX(instrument, isSpot, data)
+		} else if action == `update` && bidAsk != nil {
+			handleBooksUpdate(instrument, isSpot, data, bidAsk)
+		} else {
+			util.Notice(fmt.Sprintf(`fatal: wrong bidask msg %s`, string(event)))
+			return
 		}
 		sort.Sort(bidAsk.Asks)
 		sort.Sort(sort.Reverse(bidAsk.Bids))
-		symbol := model.GetInstrumentSymbol(model.OKEX, instrument)
-		if markets.SetBidAsk(instrument, model.OKEX, &bidAsk) {
+		if markets.SetBidAsk(instrument, model.OKEX, bidAsk) {
 			for function, handler := range model.GetFunctions(model.OKEX, symbol) {
 				settings := model.GetSetting(function, model.OKEX, symbol)
 				for _, setting := range settings {
-					go handler(setting, &bidAsk)
+					go handler(setting, bidAsk)
 				}
 			}
 		}
 	}
 	return WebSocketClient(model.OKEX, model.AppConfig.WSUrls[model.OKEX], model.SubscribeDepth,
 		GetWSSubscribes(model.OKEX, model.SubscribeDepth), subscribeHandlerOKEX, wsHandler, errHandler)
+}
+
+func handleBooksUpdate(instrument string, isSpot bool, data map[string]interface{}, bidAsk *model.BidAsk) {
+	if data[`ts`] != nil {
+		ts, _ := strconv.ParseInt(data[`ts`].(string), 10, 64)
+		bidAsk.Ts = int(ts)
+	}
+	newAsks := make([]model.Tick, 0)
+	newBids := make([]model.Tick, 0)
+	bidAskUpdate := handleBooksOKEX(instrument, isSpot, data)
+	i := 0
+	j := 0
+	for true {
+		if j >= len(bidAskUpdate.Asks) {
+			if i < len(bidAsk.Asks) {
+				newAsks = append(newAsks, bidAsk.Asks[i])
+				i++
+			} else {
+				break
+			}
+		} else if i >= len(bidAsk.Asks) {
+			if j < len(bidAskUpdate.Asks) {
+				if bidAskUpdate.Asks[j].Amount > 0 {
+					newAsks = append(newAsks, bidAskUpdate.Asks[j])
+				}
+				j++
+			} else {
+				break
+			}
+		} else {
+			if bidAsk.Asks[i].Price < bidAskUpdate.Asks[j].Price {
+				newAsks = append(newAsks, bidAsk.Asks[i])
+				i++
+			} else if bidAsk.Asks[i].Price == bidAskUpdate.Asks[j].Price {
+				if bidAskUpdate.Asks[j].Amount > 0 {
+					newAsks = append(newAsks, bidAskUpdate.Asks[j])
+				}
+				i++
+				j++
+			} else if bidAsk.Asks[i].Price > bidAskUpdate.Asks[j].Price {
+				if bidAskUpdate.Asks[j].Amount > 0 {
+					newAsks = append(newAsks, bidAskUpdate.Asks[j])
+				}
+				j++
+			}
+		}
+	}
+	i = 0
+	j = 0
+	for true {
+		if j >= len(bidAskUpdate.Bids) {
+			if i < len(bidAsk.Bids) {
+				i++
+				newBids = append(newBids, bidAsk.Bids[i])
+			} else {
+				break
+			}
+		} else if i >= len(bidAsk.Bids) {
+			if j < len(bidAskUpdate.Bids) {
+				j++
+				if bidAskUpdate.Bids[j].Amount > 0 {
+					newBids = append(newBids, bidAskUpdate.Bids[j])
+				}
+			} else {
+				break
+			}
+		} else {
+			if bidAsk.Bids[i].Price > bidAskUpdate.Bids[j].Price {
+				i++
+				newBids = append(newBids, bidAsk.Bids[i])
+			} else if bidAsk.Bids[i].Price == bidAskUpdate.Bids[j].Price {
+				i++
+				j++
+				if bidAskUpdate.Bids[j].Amount > 0 {
+					newBids = append(newBids, bidAskUpdate.Bids[j])
+				}
+			} else if bidAsk.Bids[i].Price < bidAskUpdate.Bids[j].Price {
+				j++
+				if bidAskUpdate.Bids[j].Amount > 0 {
+					newBids = append(newBids, bidAskUpdate.Bids[j])
+				}
+			}
+		}
+	}
+	if data[`checksum`] != nil {
+		checkStr := ``
+		for index := 0; index < 25; index++ {
+			if index < len(newBids) {
+				amount := newBids[i].Amount
+				if !isSpot {
+					amount = GetAmountInPerp(model.OKEX, instrument, amount)
+				}
+				checkStr += fmt.Sprintf(`%f:%f`, newBids[i].Price, amount)
+			}
+			if index < len(newAsks) {
+				amount := newAsks[i].Amount
+				if !isSpot {
+					amount = GetAmountInPerp(model.OKEX, instrument, amount)
+				}
+				checkStr += fmt.Sprintf(`%f:%f`, newAsks[i].Price, amount)
+			}
+		}
+		crcValue := crc32.ChecksumIEEE([]byte(checkStr))
+		fmt.Println(fmt.Sprintf(`%s vs %d`, data[`checksum`].(string), crcValue))
+	}
+	bidAsk.Bids = newBids
+	bidAsk.Asks = newAsks
+}
+
+func handleBooksOKEX(instrument string, isSpot bool, data map[string]interface{}) (bidAsk *model.BidAsk) {
+	bidAsk = &model.BidAsk{TsReceived: int(util.GetNowUnixMillion())}
+	if data[`ts`] != nil {
+		ts, _ := strconv.ParseInt(data[`ts`].(string), 10, 64)
+		bidAsk.Ts = int(ts)
+	}
+	asks := data[`asks`].([]interface{})
+	bidAsk.Asks = make([]model.Tick, len(asks))
+	bids := data[`bids`].([]interface{})
+	bidAsk.Bids = make([]model.Tick, len(bids))
+	for i, ask := range asks {
+		value := ask.([]interface{})
+		if len(value) >= 2 {
+			price, _ := strconv.ParseFloat(value[0].(string), 64)
+			amount, _ := strconv.ParseFloat(value[1].(string), 64)
+			if !isSpot {
+				_, amount = ParseRealAmount(model.OKEX, instrument, amount)
+			}
+			bidAsk.Asks[i] = model.Tick{Price: price, Amount: amount, Symbol: instrument}
+		}
+	}
+	for i, bid := range bids {
+		value := bid.([]interface{})
+		if len(value) >= 2 {
+			price, _ := strconv.ParseFloat(value[0].(string), 64)
+			amount, _ := strconv.ParseFloat(value[1].(string), 64)
+			if !isSpot {
+				_, amount = ParseRealAmount(model.OKEX, instrument, amount)
+			}
+			bidAsk.Bids[i] = model.Tick{Price: price, Amount: amount, Symbol: instrument}
+		}
+	}
+	return
 }
 
 func sendSignRequestOKEX(key, secret, method, path string, body interface{}) (responseBody []byte) {
