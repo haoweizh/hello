@@ -21,8 +21,8 @@ var subscribeHandlerOKEX = func(subscribes []interface{}, subType string) error 
 	for _, v := range subscribes {
 		subscribeMap := make(map[string]interface{})
 		subscribeMap["op"] = "subscribe"
-		subscribeMap["args"] = []map[string]string{{`channel`: `books-l2-tbt`, `instId`: v.(string)}}
-		//subscribeMap["args"] = []map[string]string{{`channel`: `books5`, `instId`: v.(string)}}
+		//subscribeMap["args"] = []map[string]string{{`channel`: `books-l2-tbt`, `instId`: v.(string)}}
+		subscribeMap["args"] = []map[string]string{{`channel`: `books5`, `instId`: v.(string)}}
 		subscribeMessage := util.JsonEncodeToByte(subscribeMap)
 		if err = sendToWs(model.OKEX, subscribeMessage); err != nil {
 			util.SocketInfo("okex can not subscribe " + err.Error())
