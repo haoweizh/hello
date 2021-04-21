@@ -128,35 +128,35 @@ func handleBooksUpdate(instrument string, isSpot bool, data map[string]interface
 	for true {
 		if j >= len(bidAskUpdate.Bids) {
 			if i < len(bidAsk.Bids) {
-				i++
 				newBids = append(newBids, bidAsk.Bids[i])
+				i++
 			} else {
 				break
 			}
 		} else if i >= len(bidAsk.Bids) {
 			if j < len(bidAskUpdate.Bids) {
-				j++
 				if bidAskUpdate.Bids[j].Amount > 0 {
 					newBids = append(newBids, bidAskUpdate.Bids[j])
 				}
+				j++
 			} else {
 				break
 			}
 		} else {
 			if bidAsk.Bids[i].Price > bidAskUpdate.Bids[j].Price {
-				i++
 				newBids = append(newBids, bidAsk.Bids[i])
+				i++
 			} else if bidAsk.Bids[i].Price == bidAskUpdate.Bids[j].Price {
+				if bidAskUpdate.Bids[j].Amount > 0 {
+					newBids = append(newBids, bidAskUpdate.Bids[j])
+				}
 				i++
 				j++
-				if bidAskUpdate.Bids[j].Amount > 0 {
-					newBids = append(newBids, bidAskUpdate.Bids[j])
-				}
 			} else if bidAsk.Bids[i].Price < bidAskUpdate.Bids[j].Price {
-				j++
 				if bidAskUpdate.Bids[j].Amount > 0 {
 					newBids = append(newBids, bidAskUpdate.Bids[j])
 				}
+				j++
 			}
 		}
 	}
