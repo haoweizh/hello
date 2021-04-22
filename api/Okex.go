@@ -21,8 +21,8 @@ var subscribeHandlerOKEX = func(subscribes []interface{}, subType string) error 
 	for _, v := range subscribes {
 		subscribeMap := make(map[string]interface{})
 		subscribeMap["op"] = "subscribe"
-		//subscribeMap["args"] = []map[string]string{{`channel`: `books-l2-tbt`, `instId`: v.(string)}}
-		subscribeMap["args"] = []map[string]string{{`channel`: `books5`, `instId`: v.(string)}}
+		subscribeMap["args"] = []map[string]string{{`channel`: `books-l2-tbt`, `instId`: v.(string)}}
+		//subscribeMap["args"] = []map[string]string{{`channel`: `books5`, `instId`: v.(string)}}
 		subscribeMessage := util.JsonEncodeToByte(subscribeMap)
 		if err = sendToWs(model.OKEX, subscribeMessage); err != nil {
 			util.SocketInfo("okex can not subscribe " + err.Error())
@@ -166,22 +166,24 @@ func handleBooksUpdate(instrument string, isSpot bool, data map[string]interface
 				if !isSpot {
 					amount = GetAmountInPerp(model.OKEX, instrument, amount)
 				}
-				checkStr += fmt.Sprintf(`%f:%f`, newBids[index].Price, amount)
+				checkStr += fmt.Sprintf(`%v:%v:`, newBids[index].Price, amount)
 			}
 			if index < len(newAsks) {
 				amount := newAsks[index].Amount
 				if !isSpot {
 					amount = GetAmountInPerp(model.OKEX, instrument, amount)
 				}
-				checkStr += fmt.Sprintf(`%f:%f`, newAsks[index].Price, amount)
+				checkStr += fmt.Sprintf(`%v:%v:`, newAsks[index].Price, amount)
 			}
 		}
+		checkStr = checkStr[0 : len(checkStr)-1]
 		crcValue := crc32.ChecksumIEEE([]byte(checkStr))
 		compare, _ := data[`checksum`].(json.Number).Int64()
-		util.Notice(fmt.Sprintf(`%d vs %d %v`, compare, crcValue, compare == int64(int32(crcValue))))
+		if compare == int64(int32(crcValue)) {
+			bidAsk.Bids = newBids
+			bidAsk.Asks = newAsks
+		}
 	}
-	bidAsk.Bids = newBids
-	bidAsk.Asks = newAsks
 }
 
 func handleBooksOKEX(instrument string, isSpot bool, data map[string]interface{}) (bidAsk *model.BidAsk) {
