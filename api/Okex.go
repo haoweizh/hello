@@ -79,7 +79,7 @@ func WsDepthServeOKEX(markets *model.Markets, errHandler ErrHandler) (chan struc
 		GetWSSubscribes(model.OKEX, model.SubscribeDepth), subscribeHandlerOKEX, wsHandler, errHandler)
 }
 
-func handleBooksUpdate(instrument string, isSpot bool, data map[string]interface{}, bidAsk *model.BidAsk) {
+func handleBooksUpdate(instrument string, isSpot bool, data map[string]interface{}, bidAsk *model.BidAsk) (success bool) {
 	if data[`ts`] != nil {
 		ts, _ := strconv.ParseInt(data[`ts`].(string), 10, 64)
 		bidAsk.Ts = int(ts)
@@ -182,14 +182,17 @@ func handleBooksUpdate(instrument string, isSpot bool, data map[string]interface
 		checkStr = checkStr[0 : len(checkStr)-1]
 		crcValue := int64(int32(crc32.ChecksumIEEE([]byte(checkStr))))
 		compare, _ := data[`checksum`].(json.Number).Int64()
+		bidAsk.Bids = newBids
+		bidAsk.Asks = newAsks
 		if compare == crcValue {
-			bidAsk.Bids = newBids
-			bidAsk.Asks = newAsks
+			success = true
 			util.Notice(fmt.Sprintf(`right checksum %s %v %d`, instrument, isSpot, bidAsk.Bids.Len()))
 		} else {
+			success = false
 			util.Notice(fmt.Sprintf(`wrong checksum %s %v %v`, instrument, isSpot, data))
 		}
 	}
+	return success
 }
 
 func handleBooksOKEX(instrument string, isSpot bool, data map[string]interface{}) (bidAsk *model.BidAsk) {
