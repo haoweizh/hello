@@ -105,6 +105,9 @@ func handleBooksUpdate(instrument string, isSpot bool, data map[string]interface
 	newAsks := make([]model.Tick, 0)
 	newBids := make([]model.Tick, 0)
 	bidAskUpdate := handleBooksOKEX(instrument, isSpot, data)
+	if bidAskUpdate.Asks.Len() == 0 || bidAskUpdate.Bids.Len() == 0 {
+		util.Notice(fmt.Sprintf(`empty bid/ask update %s`, instrument))
+	}
 	i := 0
 	j := 0
 	for true {
@@ -209,7 +212,8 @@ func handleBooksUpdate(instrument string, isSpot bool, data map[string]interface
 		} else {
 			success = false
 			wrongSize := setWrong(instrument, true)
-			util.Notice(fmt.Sprintf(`wrong checksum %s %d %v`, instrument, wrongSize, data))
+			util.Notice(fmt.Sprintf(`wrong checksum %s %d %d-%d %v`,
+				instrument, wrongSize, bidAsk.Bids.Len(), bidAsk.Asks.Len(), data))
 		}
 	}
 	return success
