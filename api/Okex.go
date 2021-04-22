@@ -73,11 +73,9 @@ func WsDepthServeOKEX(markets *model.Markets, errHandler ErrHandler) (chan struc
 		action := responseJson.Get(`action`).MustString()
 		data := responseJson.Get(`data`).MustArray()[0].(map[string]interface{})
 		_, bidAsk := markets.GetBidAsk(instrument, model.OKEX)
+		success := false
 		if action == `update` && bidAsk != nil {
-			success := handleBooksUpdate(instrument, isSpot, data, bidAsk)
-			if !success {
-				return
-			}
+			success = handleBooksUpdate(instrument, isSpot, data, bidAsk)
 		} else if action == `snapshot` || responseJson.GetPath(`arg`, `channel`).MustString() == `books5` {
 			bidAsk = handleBooksOKEX(instrument, isSpot, data)
 		}
@@ -90,7 +88,9 @@ func WsDepthServeOKEX(markets *model.Markets, errHandler ErrHandler) (chan struc
 			for function, handler := range model.GetFunctions(model.OKEX, symbol) {
 				settings := model.GetSetting(function, model.OKEX, symbol)
 				for _, setting := range settings {
-					go handler(setting, bidAsk)
+					if success {
+						go handler(setting, bidAsk)
+					}
 				}
 			}
 		}
