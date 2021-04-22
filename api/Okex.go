@@ -183,6 +183,7 @@ func handleBooksUpdate(instrument string, isSpot bool, data map[string]interface
 		if compare == int64(int32(crcValue)) {
 			bidAsk.Bids = newBids
 			bidAsk.Asks = newAsks
+			util.Notice(`right checksum`)
 		} else {
 			util.Notice(`wrong checksum`)
 		}
