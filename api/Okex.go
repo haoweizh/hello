@@ -9,9 +9,7 @@ import (
 	"hash/crc32"
 	"hello/model"
 	"hello/util"
-	"math"
 	"net/http"
-	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -22,8 +20,8 @@ var subscribeHandlerOKEX = func(subscribes []interface{}, subType string) error 
 	for _, v := range subscribes {
 		subscribeMap := make(map[string]interface{})
 		subscribeMap["op"] = "subscribe"
-		//subscribeMap["args"] = []map[string]string{{`channel`: `books-l2-tbt`, `instId`: v.(string)}}
-		subscribeMap["args"] = []map[string]string{{`channel`: `books5`, `instId`: v.(string)}}
+		subscribeMap["args"] = []map[string]string{{`channel`: `books-l2-tbt`, `instId`: v.(string)}}
+		//subscribeMap["args"] = []map[string]string{{`channel`: `books5`, `instId`: v.(string)}}
 		subscribeMessage := util.JsonEncodeToByte(subscribeMap)
 		if err = sendToWs(model.OKEX, subscribeMessage); err != nil {
 			util.SocketInfo("okex can not subscribe " + err.Error())
@@ -62,8 +60,8 @@ func WsDepthServeOKEX(markets *model.Markets, errHandler ErrHandler) (chan struc
 		} else {
 			bidAsk = handleBooksOKEX(instrument, isSpot, data)
 		}
-		sort.Sort(bidAsk.Asks)
-		sort.Sort(sort.Reverse(bidAsk.Bids))
+		//sort.Sort(bidAsk.Asks)
+		//sort.Sort(sort.Reverse(bidAsk.Bids))
 		if markets.SetBidAsk(instrument, model.OKEX, bidAsk) {
 			for function, handler := range model.GetFunctions(model.OKEX, symbol) {
 				settings := model.GetSetting(function, model.OKEX, symbol)
@@ -183,7 +181,6 @@ func handleBooksUpdate(instrument string, isSpot bool, data map[string]interface
 		if compare == int64(int32(crcValue)) {
 			bidAsk.Bids = newBids
 			bidAsk.Asks = newAsks
-			util.Notice(`right checksum`)
 		} else {
 			util.Notice(`wrong checksum`)
 		}
@@ -198,12 +195,12 @@ func handleBooksOKEX(instrument string, isSpot bool, data map[string]interface{}
 	}
 	asks := data[`asks`].([]interface{})
 	bids := data[`bids`].([]interface{})
-	askLength := int64(math.Min(float64(len(asks)), 50))
-	bidLength := int64(math.Min(float64(len(bids)), 50))
-	asks = asks[0:askLength]
-	bids = bids[0:bidLength]
-	bidAsk.Asks = make([]model.Tick, askLength)
-	bidAsk.Bids = make([]model.Tick, bidLength)
+	//askLength := int64(math.Min(float64(len(asks)), 50))
+	//bidLength := int64(math.Min(float64(len(bids)), 50))
+	//asks = asks[0:askLength]
+	//bids = bids[0:bidLength]
+	bidAsk.Asks = make([]model.Tick, len(asks))
+	bidAsk.Bids = make([]model.Tick, len(bids))
 	for i, ask := range asks {
 		value := ask.([]interface{})
 		if len(value) >= 2 {
