@@ -196,9 +196,13 @@ func handleBooksOKEX(instrument string, isSpot bool, data map[string]interface{}
 		bidAsk.Ts = int(ts)
 	}
 	asks := data[`asks`].([]interface{})
-	bidAsk.Asks = make([]model.Tick, int64(math.Min(float64(len(asks)), 50)))
 	bids := data[`bids`].([]interface{})
-	bidAsk.Bids = make([]model.Tick, int64(math.Min(float64(len(bids)), 50)))
+	askLength := int64(math.Min(float64(len(asks)), 50))
+	bidLength := int64(math.Min(float64(len(bids)), 50))
+	asks = asks[0:askLength]
+	bids = bids[0:bidLength]
+	bidAsk.Asks = make([]model.Tick, askLength)
+	bidAsk.Bids = make([]model.Tick, bidLength)
 	for i, ask := range asks {
 		value := ask.([]interface{})
 		if len(value) >= 2 {
