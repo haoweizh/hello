@@ -105,9 +105,9 @@ func handleBooksUpdate(instrument string, isSpot bool, data map[string]interface
 	newAsks := make([]model.Tick, 0)
 	newBids := make([]model.Tick, 0)
 	bidAskUpdate := handleBooksOKEX(instrument, isSpot, data)
-	if bidAskUpdate.Asks.Len() == 0 || bidAskUpdate.Bids.Len() == 0 {
-		util.Notice(fmt.Sprintf(`empty bid/ask update %s`, instrument))
-	}
+	//if bidAskUpdate.Asks.Len() == 0 || bidAskUpdate.Bids.Len() == 0 {
+	//	util.Notice(fmt.Sprintf(`empty bid/ask update %s`, instrument))
+	//}
 	i := 0
 	j := 0
 	for true {
