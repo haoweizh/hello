@@ -183,7 +183,7 @@ func handleBooksUpdate(instrument string, isSpot bool, data map[string]interface
 			bidAsk.Bids = newBids
 			bidAsk.Asks = newAsks
 		} else {
-			util.Notice(`wrong checksum`)
+			util.Notice(fmt.Sprintf(`wrong checksum %s %v %d`, instrument, isSpot, bidAsk.Bids.Len()))
 		}
 	}
 }
