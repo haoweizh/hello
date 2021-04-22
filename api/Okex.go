@@ -10,6 +10,7 @@ import (
 	"hello/model"
 	"hello/util"
 	"net/http"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -60,8 +61,8 @@ func WsDepthServeOKEX(markets *model.Markets, errHandler ErrHandler) (chan struc
 		} else {
 			bidAsk = handleBooksOKEX(instrument, isSpot, data)
 		}
-		//sort.Sort(bidAsk.Asks)
-		//sort.Sort(sort.Reverse(bidAsk.Bids))
+		sort.Sort(bidAsk.Asks)
+		sort.Sort(sort.Reverse(bidAsk.Bids))
 		if markets.SetBidAsk(instrument, model.OKEX, bidAsk) {
 			for function, handler := range model.GetFunctions(model.OKEX, symbol) {
 				settings := model.GetSetting(function, model.OKEX, symbol)
@@ -219,32 +220,32 @@ func handleBooksOKEX(instrument string, isSpot bool, data map[string]interface{}
 			bidAsk.Bids[i] = model.Tick{Price: price, Amount: amount, Symbol: instrument}
 		}
 	}
-	//if data[`checksum`] != nil {
-	//	checkStr := ``
-	//	for index := 0; index < 25; index++ {
-	//		if index < len(bidAsk.Bids) {
-	//			amount := bidAsk.Bids[index].Amount
-	//			if !isSpot {
-	//				amount = GetAmountInPerp(model.OKEX, instrument, amount)
-	//			}
-	//			checkStr += fmt.Sprintf(`%v:%v:`, bidAsk.Bids[index].Price, amount)
-	//		}
-	//		if index < len(bidAsk.Asks) {
-	//			amount := bidAsk.Asks[index].Amount
-	//			if !isSpot {
-	//				amount = GetAmountInPerp(model.OKEX, instrument, amount)
-	//			}
-	//			checkStr += fmt.Sprintf(`%v:%v:`, bidAsk.Asks[index].Price, amount)
-	//		}
-	//	}
-	//	checkStr = checkStr[0 : len(checkStr)-1]
-	//	crcValue := int64(int32(crc32.ChecksumIEEE([]byte(checkStr))))
-	//	compare, _ := data[`checksum`].(json.Number).Int64()
-	//	if compare == crcValue {
-	//	} else {
-	//		util.Notice(`wrong checksum`)
-	//	}
-	//}
+	if data[`checksum`] != nil {
+		checkStr := ``
+		for index := 0; index < 25; index++ {
+			if index < len(bidAsk.Bids) {
+				amount := bidAsk.Bids[index].Amount
+				if !isSpot {
+					amount = GetAmountInPerp(model.OKEX, instrument, amount)
+				}
+				checkStr += fmt.Sprintf(`%v:%v:`, bidAsk.Bids[index].Price, amount)
+			}
+			if index < len(bidAsk.Asks) {
+				amount := bidAsk.Asks[index].Amount
+				if !isSpot {
+					amount = GetAmountInPerp(model.OKEX, instrument, amount)
+				}
+				checkStr += fmt.Sprintf(`%v:%v:`, bidAsk.Asks[index].Price, amount)
+			}
+		}
+		checkStr = checkStr[0 : len(checkStr)-1]
+		crcValue := int64(int32(crc32.ChecksumIEEE([]byte(checkStr))))
+		compare, _ := data[`checksum`].(json.Number).Int64()
+		if compare == crcValue {
+		} else {
+			util.Notice(`wrong checksum`)
+		}
+	}
 	return
 }
 
