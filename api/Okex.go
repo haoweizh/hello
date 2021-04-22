@@ -57,7 +57,10 @@ func WsDepthServeOKEX(markets *model.Markets, errHandler ErrHandler) (chan struc
 		data := responseJson.Get(`data`).MustArray()[0].(map[string]interface{})
 		_, bidAsk := markets.GetBidAsk(instrument, model.OKEX)
 		if action == `update` && bidAsk != nil {
-			handleBooksUpdate(instrument, isSpot, data, bidAsk)
+			success := handleBooksUpdate(instrument, isSpot, data, bidAsk)
+			if !success {
+				return
+			}
 		} else if action == `snapshot` || responseJson.GetPath(`arg`, `channel`).MustString() == `books5` {
 			bidAsk = handleBooksOKEX(instrument, isSpot, data)
 		}
