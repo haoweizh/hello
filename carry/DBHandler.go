@@ -168,7 +168,7 @@ func Maintain() {
 	}
 	model.HandlerMap[model.FunctionGrid] = ProcessSimpleGrid
 	model.HandlerMap[model.FunctionTurtle] = ProcessTurtle
-	model.HandlerMap[model.FunctionCarry] = ProcessCarrySpotSwap
+	model.HandlerMap[model.FunctionCarry] = ProcessCarry
 	model.HandlerMap[model.FunctionDCarry] = ProcessDCarry
 	//model.HandlerMap[model.FunctionPostonlyHandler] = PostonlyHandler
 	defer model.AppDB.Close()
