@@ -189,7 +189,7 @@ func handleBooksUpdate(instrument string, isSpot bool, data map[string]interface
 		bidAsk.Asks = newAsks
 		if compare == crcValue {
 			success = true
-			util.Notice(fmt.Sprintf(`right checksum %s %v %d`, instrument, isSpot, bidAsk.Bids.Len()))
+			//util.Notice(fmt.Sprintf(`right checksum %s %v %d`, instrument, isSpot, bidAsk.Bids.Len()))
 		} else {
 			success = false
 			util.Notice(fmt.Sprintf(`wrong checksum %s %v %v`, instrument, isSpot, data))
