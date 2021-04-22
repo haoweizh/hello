@@ -48,17 +48,21 @@ var subscribeHandlerOKEX = func(subscribes []interface{}, subType string) error 
 }
 
 func WsDepthServeOKEX(markets *model.Markets, errHandler ErrHandler) (chan struct{}, error) {
-	lastPingTime := util.GetNow().Unix()
+	//lastPingTime := util.GetNow().Unix()
 	wsHandler := func(event []byte) {
-		if util.GetNow().Unix()-lastPingTime > 20 { // ping okex server every 30 seconds
-			lastPingTime = util.GetNow().Unix()
-			if err := sendToWs(model.OKEX, []byte(`ping`)); err != nil {
-				util.SocketInfo("okex server ping client error " + err.Error())
-			}
-		}
+		//now := util.GetNow().Unix()
+		//if now-lastPingTime > 25 { // ping okex server every 30 seconds
+		//	lastPingTime = now
+		//	go func() {
+		//		err := sendToWs(model.OKEX, []byte(`ping`))
+		//		if err != nil {
+		//			util.SocketInfo("okex server ping client error " + err.Error())
+		//		}
+		//	}()
+		//}
 		responseJson, err := util.NewJSON(event)
 		if err != nil || responseJson == nil || responseJson.Get(`data`) == nil ||
-			responseJson.Get(`action`) == nil || len(responseJson.Get(`data`).MustArray()) == 0 ||
+			len(responseJson.Get(`data`).MustArray()) == 0 ||
 			responseJson.GetPath(`arg`, `instId`) == nil {
 			return
 		}
