@@ -176,9 +176,9 @@ func handleBooksUpdate(instrument string, isSpot bool, data map[string]interface
 			}
 		}
 		checkStr = checkStr[0 : len(checkStr)-1]
-		crcValue := crc32.ChecksumIEEE([]byte(checkStr))
+		crcValue := int64(int32(crc32.ChecksumIEEE([]byte(checkStr))))
 		compare, _ := data[`checksum`].(json.Number).Int64()
-		if compare == int64(int32(crcValue)) {
+		if compare == crcValue {
 			bidAsk.Bids = newBids
 			bidAsk.Asks = newAsks
 		} else {
@@ -219,6 +219,32 @@ func handleBooksOKEX(instrument string, isSpot bool, data map[string]interface{}
 			bidAsk.Bids[i] = model.Tick{Price: price, Amount: amount, Symbol: instrument}
 		}
 	}
+	//if data[`checksum`] != nil {
+	//	checkStr := ``
+	//	for index := 0; index < 25; index++ {
+	//		if index < len(bidAsk.Bids) {
+	//			amount := bidAsk.Bids[index].Amount
+	//			if !isSpot {
+	//				amount = GetAmountInPerp(model.OKEX, instrument, amount)
+	//			}
+	//			checkStr += fmt.Sprintf(`%v:%v:`, bidAsk.Bids[index].Price, amount)
+	//		}
+	//		if index < len(bidAsk.Asks) {
+	//			amount := bidAsk.Asks[index].Amount
+	//			if !isSpot {
+	//				amount = GetAmountInPerp(model.OKEX, instrument, amount)
+	//			}
+	//			checkStr += fmt.Sprintf(`%v:%v:`, bidAsk.Asks[index].Price, amount)
+	//		}
+	//	}
+	//	checkStr = checkStr[0 : len(checkStr)-1]
+	//	crcValue := int64(int32(crc32.ChecksumIEEE([]byte(checkStr))))
+	//	compare, _ := data[`checksum`].(json.Number).Int64()
+	//	if compare == crcValue {
+	//	} else {
+	//		util.Notice(`wrong checksum`)
+	//	}
+	//}
 	return
 }
 
