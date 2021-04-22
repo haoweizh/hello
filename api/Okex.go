@@ -9,6 +9,7 @@ import (
 	"hash/crc32"
 	"hello/model"
 	"hello/util"
+	"math"
 	"net/http"
 	"sort"
 	"strconv"
@@ -182,6 +183,8 @@ func handleBooksUpdate(instrument string, isSpot bool, data map[string]interface
 		if compare == int64(int32(crcValue)) {
 			bidAsk.Bids = newBids
 			bidAsk.Asks = newAsks
+		} else {
+			util.Notice(`wrong checksum`)
 		}
 	}
 }
@@ -193,9 +196,9 @@ func handleBooksOKEX(instrument string, isSpot bool, data map[string]interface{}
 		bidAsk.Ts = int(ts)
 	}
 	asks := data[`asks`].([]interface{})
-	bidAsk.Asks = make([]model.Tick, len(asks))
+	bidAsk.Asks = make([]model.Tick, math.Min(float64(len(asks)), 50))
 	bids := data[`bids`].([]interface{})
-	bidAsk.Bids = make([]model.Tick, len(bids))
+	bidAsk.Bids = make([]model.Tick, math.Min(float64(len(bids)), 50))
 	for i, ask := range asks {
 		value := ask.([]interface{})
 		if len(value) >= 2 {
