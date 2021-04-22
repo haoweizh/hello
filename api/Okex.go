@@ -48,18 +48,18 @@ var subscribeHandlerOKEX = func(subscribes []interface{}, subType string) error 
 }
 
 func WsDepthServeOKEX(markets *model.Markets, errHandler ErrHandler) (chan struct{}, error) {
-	//lastPingTime := util.GetNow().Unix()
+	lastPingTime := util.GetNow().Unix()
 	wsHandler := func(event []byte) {
-		//now := util.GetNow().Unix()
-		//if now-lastPingTime > 25 { // ping okex server every 30 seconds
-		//	lastPingTime = now
-		//	go func() {
-		//		err := sendToWs(model.OKEX, []byte(`ping`))
-		//		if err != nil {
-		//			util.SocketInfo("okex server ping client error " + err.Error())
-		//		}
-		//	}()
-		//}
+		now := util.GetNow().Unix()
+		if now-lastPingTime > 25 { // ping okex server every 30 seconds
+			lastPingTime = now
+			go func() {
+				err := sendToWs(model.OKEX, []byte(`ping`))
+				if err != nil {
+					util.SocketInfo("okex server ping client error " + err.Error())
+				}
+			}()
+		}
 		responseJson, err := util.NewJSON(event)
 		if err != nil || responseJson == nil || responseJson.Get(`data`) == nil ||
 			len(responseJson.Get(`data`).MustArray()) == 0 ||
@@ -80,6 +80,7 @@ func WsDepthServeOKEX(markets *model.Markets, errHandler ErrHandler) (chan struc
 			success = handleBooksUpdate(instrument, isSpot, data, bidAsk)
 		} else if action == `snapshot` || responseJson.GetPath(`arg`, `channel`).MustString() == `books5` {
 			bidAsk = handleBooksOKEX(instrument, isSpot, data)
+			success = true
 		}
 		if bidAsk == nil {
 			return
