@@ -13,23 +13,21 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 )
 
-var wrongs = make(map[string]bool)
-var okLock sync.Mutex
-
-func setWrong(instrument string, add bool) int {
-	defer okLock.Unlock()
-	okLock.Lock()
-	if add {
-		wrongs[instrument] = true
-	} else {
-		delete(wrongs, instrument)
-	}
-	return len(wrongs)
-}
+//var okLock sync.Mutex
+//var wrongs = make(map[string]bool)
+//func setWrong(instrument string, add bool) int {
+//	defer okLock.Unlock()
+//	okLock.Lock()
+//	if add {
+//		wrongs[instrument] = true
+//	} else {
+//		delete(wrongs, instrument)
+//	}
+//	return len(wrongs)
+//}
 
 var subscribeHandlerOKEX = func(subscribes []interface{}, subType string) error {
 	var err error = nil
@@ -212,12 +210,12 @@ func handleBooksUpdate(instrument string, isSpot bool, data map[string]interface
 		if compare == crcValue {
 			success = true
 			//util.Notice(fmt.Sprintf(`right checksum %s %v %d`, instrument, isSpot, bidAsk.Bids.Len()))
-			setWrong(instrument, false)
+			//setWrong(instrument, false)
 		} else {
 			success = false
-			wrongSize := setWrong(instrument, true)
-			util.Notice(fmt.Sprintf(`wrong checksum %s %d %d-%d %v`,
-				instrument, wrongSize, bidAsk.Bids.Len(), bidAsk.Asks.Len(), data))
+			//wrongSize := setWrong(instrument, true)
+			//util.Notice(fmt.Sprintf(`wrong checksum %s %d %d-%d %v`,
+			//	instrument, wrongSize, bidAsk.Bids.Len(), bidAsk.Asks.Len(), data))
 		}
 	}
 	return success
@@ -255,35 +253,35 @@ func handleBooksOKEX(instrument string, isSpot bool, data map[string]interface{}
 			bidAsk.Bids[i] = model.Tick{Price: price, Amount: amount, Symbol: instrument}
 		}
 	}
-	//if data[`checksum`] != nil {
-	//	checkStr := ``
-	//	for index := 0; index < 25; index++ {
-	//		if index < len(bidAsk.Bids) {
-	//			amount := bidAsk.Bids[index].Amount
-	//			if !isSpot {
-	//				amount = GetAmountInPerp(model.OKEX, instrument, amount)
-	//			}
-	//			checkStr += fmt.Sprintf(`%v:%v:`, bidAsk.Bids[index].Price, amount)
-	//		}
-	//		if index < len(bidAsk.Asks) {
-	//			amount := bidAsk.Asks[index].Amount
-	//			if !isSpot {
-	//				amount = GetAmountInPerp(model.OKEX, instrument, amount)
-	//			}
-	//			checkStr += fmt.Sprintf(`%v:%v:`, bidAsk.Asks[index].Price, amount)
-	//		}
-	//	}
-	//	if len(checkStr) > 0 {
-	//		checkStr = checkStr[0 : len(checkStr)-1]
-	//	}
-	//	crcValue := int64(int32(crc32.ChecksumIEEE([]byte(checkStr))))
-	//	compare, _ := data[`checksum`].(json.Number).Int64()
-	//	if compare == crcValue {
-	//		util.Notice(fmt.Sprintf(`right checksum snapshot %s %v %d`, instrument, isSpot, bidAsk.Bids.Len()))
-	//	} else {
-	//		util.Notice(fmt.Sprintf(`wrong checksum snapshot %s %v %v`, instrument, isSpot, data))
-	//	}
-	//}
+	if data[`checksum`] != nil {
+		checkStr := ``
+		for index := 0; index < 25; index++ {
+			if index < len(bidAsk.Bids) {
+				amount := bidAsk.Bids[index].Amount
+				if !isSpot {
+					amount = GetAmountInPerp(model.OKEX, instrument, amount)
+				}
+				checkStr += fmt.Sprintf(`%v:%v:`, bidAsk.Bids[index].Price, amount)
+			}
+			if index < len(bidAsk.Asks) {
+				amount := bidAsk.Asks[index].Amount
+				if !isSpot {
+					amount = GetAmountInPerp(model.OKEX, instrument, amount)
+				}
+				checkStr += fmt.Sprintf(`%v:%v:`, bidAsk.Asks[index].Price, amount)
+			}
+		}
+		if len(checkStr) > 0 {
+			checkStr = checkStr[0 : len(checkStr)-1]
+		}
+		crcValue := int64(int32(crc32.ChecksumIEEE([]byte(checkStr))))
+		compare, _ := data[`checksum`].(json.Number).Int64()
+		if compare == crcValue {
+			util.Notice(fmt.Sprintf(`right checksum snapshot %s %v %d`, instrument, isSpot, bidAsk.Bids.Len()))
+		} else {
+			util.Notice(fmt.Sprintf(`wrong checksum snapshot %s %v %v`, instrument, isSpot, data))
+		}
+	}
 	return
 }
 
