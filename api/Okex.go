@@ -239,13 +239,15 @@ func handleBooksOKEX(instrument string, isSpot bool, data map[string]interface{}
 				checkStr += fmt.Sprintf(`%v:%v:`, bidAsk.Asks[index].Price, amount)
 			}
 		}
-		checkStr = checkStr[0 : len(checkStr)-1]
+		if len(checkStr) > 0 {
+			checkStr = checkStr[0 : len(checkStr)-1]
+		}
 		crcValue := int64(int32(crc32.ChecksumIEEE([]byte(checkStr))))
 		compare, _ := data[`checksum`].(json.Number).Int64()
 		if compare == crcValue {
 			util.Notice(fmt.Sprintf(`right checksum snapshot %s %v %d`, instrument, isSpot, bidAsk.Bids.Len()))
 		} else {
-			util.Notice(fmt.Sprintf(`wrong checksum snapshot %s %v %d`, instrument, isSpot, bidAsk.Bids.Len()))
+			util.Notice(fmt.Sprintf(`wrong checksum snapshot %s %v %v`, instrument, isSpot, data))
 		}
 	}
 	return
