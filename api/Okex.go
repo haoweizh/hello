@@ -13,21 +13,23 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
-//var okLock sync.Mutex
-//var wrongs = make(map[string]bool)
-//func setWrong(instrument string, add bool) int {
-//	defer okLock.Unlock()
-//	okLock.Lock()
-//	if add {
-//		wrongs[instrument] = true
-//	} else {
-//		delete(wrongs, instrument)
-//	}
-//	return len(wrongs)
-//}
+var okLock sync.Mutex
+var wrongs = make(map[string]bool)
+
+func setWrong(instrument string, add bool) int {
+	defer okLock.Unlock()
+	okLock.Lock()
+	if add {
+		wrongs[instrument] = true
+	} else {
+		delete(wrongs, instrument)
+	}
+	return len(wrongs)
+}
 
 var subscribeHandlerOKEX = func(subscribes []interface{}, subType string) error {
 	var err error = nil
@@ -209,12 +211,15 @@ func handleBooksUpdate(instrument string, isSpot bool, data map[string]interface
 		if compare == crcValue {
 			success = true
 			//util.Notice(fmt.Sprintf(`right checksum %s %v %d`, instrument, isSpot, bidAsk.Bids.Len()))
-			//setWrong(instrument, false)
+			setWrong(instrument, false)
 		} else {
 			success = false
-			//wrongSize := setWrong(instrument, true)
-			//util.Notice(fmt.Sprintf(`wrong checksum %s %d %d-%d %v`,
-			//	instrument, wrongSize, bidAsk.Bids.Len(), bidAsk.Asks.Len(), data))
+			wrongSize := setWrong(instrument, true)
+			now := time.Now()
+			if now.Second() == 0 && now.Minute() == 0 {
+				util.Notice(fmt.Sprintf(`wrong checksum %s %d %d-%d %v`,
+					instrument, wrongSize, bidAsk.Bids.Len(), bidAsk.Asks.Len(), data))
+			}
 		}
 	}
 	return success
