@@ -151,6 +151,7 @@ func MaintainMarketChan() {
 			if api.RequireDepthChanReset(model.AppMarkets, market) {
 				util.Notice(fmt.Sprintf("%s require new depth channel ", market))
 				ResetChannel(market, channel)
+				time.Sleep(time.Minute)
 			}
 		}
 	}
