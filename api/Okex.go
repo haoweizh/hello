@@ -182,6 +182,7 @@ func handleBooksUpdate(instrument string, isSpot bool, data map[string]interface
 		if compare == crcValue {
 			bidAsk.Bids = newBids
 			bidAsk.Asks = newAsks
+			util.Notice(fmt.Sprintf(`right checksum %s %v %d`, instrument, isSpot, bidAsk.Bids.Len()))
 		} else {
 			util.Notice(fmt.Sprintf(`wrong checksum %s %v %d`, instrument, isSpot, bidAsk.Bids.Len()))
 		}
@@ -242,8 +243,9 @@ func handleBooksOKEX(instrument string, isSpot bool, data map[string]interface{}
 		crcValue := int64(int32(crc32.ChecksumIEEE([]byte(checkStr))))
 		compare, _ := data[`checksum`].(json.Number).Int64()
 		if compare == crcValue {
+			util.Notice(fmt.Sprintf(`right checksum snapshot %s %v %d`, instrument, isSpot, bidAsk.Bids.Len()))
 		} else {
-			util.Notice(`wrong checksum`)
+			util.Notice(fmt.Sprintf(`wrong checksum snapshot %s %v %d`, instrument, isSpot, bidAsk.Bids.Len()))
 		}
 	}
 	return
