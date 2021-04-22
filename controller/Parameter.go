@@ -78,7 +78,8 @@ func test(c *gin.Context) {
 			var value float64
 			_ = carryRows.Scan(&market, &amountType, &side, &value, &date, &refreshType)
 			if amountType != keysFtx[0] && amountType != keysOKEX[0] {
-				carryBackMsg += fmt.Sprintf("%s交易额 in USD: %s %s %f 类型：%s\n", market, date, side, value, refreshType)
+				carryBackMsg += fmt.Sprintf("%s %s交易额 in USD: %s %s %f 类型：%s\n",
+					market, amountType, date, side, value, refreshType)
 			}
 		}
 		carryRows.Close()

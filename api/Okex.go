@@ -216,7 +216,7 @@ func handleBooksUpdate(instrument string, isSpot bool, data map[string]interface
 			success = false
 			wrongSize := setWrong(instrument, true)
 			now := time.Now()
-			if now.Second() == 0 && now.Minute() == 0 {
+			if now.Second() == 0 && now.Minute()%10 == 0 {
 				util.Notice(fmt.Sprintf(`wrong checksum %s %d %d-%d %v`,
 					instrument, wrongSize, bidAsk.Bids.Len(), bidAsk.Asks.Len(), data))
 			}
