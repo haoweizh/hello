@@ -58,8 +58,11 @@ func WsDepthServeOKEX(markets *model.Markets, errHandler ErrHandler) (chan struc
 		_, bidAsk := markets.GetBidAsk(instrument, model.OKEX)
 		if action == `update` && bidAsk != nil {
 			handleBooksUpdate(instrument, isSpot, data, bidAsk)
-		} else {
+		} else if action == `snapshot` || responseJson.GetPath(`arg`, `channel`).MustString() == `books5` {
 			bidAsk = handleBooksOKEX(instrument, isSpot, data)
+		}
+		if bidAsk == nil {
+			return
 		}
 		sort.Sort(bidAsk.Asks)
 		sort.Sort(sort.Reverse(bidAsk.Bids))
