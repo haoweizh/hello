@@ -17,7 +17,7 @@ import (
 )
 
 var okLock sync.Mutex
-var msgChanOKEX = make(chan []byte, 1000)
+var msgChanOKEX = make(chan []byte, 50000)
 var wrongs = make(map[string]bool)
 
 func init() {
@@ -36,15 +36,19 @@ func setWrong(instrument string, add bool) int {
 }
 
 func reSubscribe(instrument string) {
-	msg := fmt.Sprintf(`{"op":"unsubscribe","args":[{"unsubscribe":"books50-l2-tbt","instId":"%s"}]}`, instrument)
-	err := sendToWs(model.OKEX, []byte(msg))
+	unsubscribeMap := make(map[string]interface{})
+	unsubscribeMap["op"] = "unsubscribe"
+	unsubscribeMap[`args`] = []map[string]string{{`channel`: `books50-l2-tbt`, `instId`: instrument}}
+	err := sendToWs(model.OKEX, util.JsonEncodeToByte(unsubscribeMap))
 	if err != nil {
 		util.SocketInfo("okex can not unsubscribe " + err.Error())
 		return
 	}
 	time.Sleep(time.Second * 3)
-	msg = fmt.Sprintf(`{"op":"subscribe","args":[{"unsubscribe":"books50-l2-tbt","instId":"%s"}]}`, instrument)
-	err = sendToWs(model.OKEX, []byte(msg))
+	subscribeMap := make(map[string]interface{})
+	subscribeMap["op"] = "subscribe"
+	subscribeMap[`args`] = []map[string]string{{`channel`: `books50-l2-tbt`, `instId`: instrument}}
+	err = sendToWs(model.OKEX, util.JsonEncodeToByte(subscribeMap))
 	if err != nil {
 		util.SocketInfo("okex can not re-subscribe " + err.Error())
 	}
@@ -75,7 +79,7 @@ var subscribeHandlerOKEX = func(subscribes []interface{}, subType string) error 
 func handleMsgOKEX() {
 	for true {
 		event := <-msgChanOKEX
-		if len(msgChanOKEX) > 10 {
+		if len(msgChanOKEX) > cap(msgChanOKEX)/10 {
 			util.Notice(fmt.Sprintf(`current chan to be handle %d wrong size %d`, len(msgChanOKEX), len(wrongs)))
 		}
 		responseJson, err := util.NewJSON(event)
@@ -134,26 +138,6 @@ func WsDepthServeOKEX(errHandler ErrHandler) (chan struct{}, error) {
 	return WebSocketClient(model.OKEX, model.AppConfig.WSUrls[model.OKEX], model.SubscribeDepth,
 		GetWSSubscribes(model.OKEX, model.SubscribeDepth), subscribeHandlerOKEX, wsHandler, errHandler)
 }
-
-//func mergeBidAsk(old, new *model.BidAsk) (bidAsk *model.BidAsk) {
-//	for i := 0; i < new.Bids.Len(); i++ {
-//		if old.Bids.Len() > i {
-//			old.Bids[i] = new.Bids[i]
-//		} else {
-//			old.Bids = append(old.Bids, new.Bids[i])
-//		}
-//	}
-//	for i := 0; i < new.Asks.Len(); i++ {
-//		if old.Asks.Len() > i {
-//			old.Asks[i] = new.Asks[i]
-//		} else {
-//			old.Asks = append(old.Asks, new.Asks[i])
-//		}
-//	}
-//	new.Asks = old.Asks
-//	new.Bids = old.Bids
-//	return new
-//}
 
 func handleBooksUpdate(instrument string, isSpot bool, data map[string]interface{}, bidAsk *model.BidAsk) (
 	success bool, bidAskUpdate *model.BidAsk) {
@@ -266,7 +250,7 @@ func handleBooksUpdate(instrument string, isSpot bool, data map[string]interface
 		now := time.Now()
 		if compare == crcValue {
 			success = true
-			if now.Second() == 0 {
+			if wrongs[instrument] {
 				util.Notice(fmt.Sprintf(`right checksum %s %v %d`, instrument, isSpot, bidAsk.Bids.Len()))
 				setWrong(instrument, false)
 			}
