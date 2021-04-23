@@ -19,7 +19,8 @@ import (
 )
 
 var okLock sync.Mutex
-var locksOKEX = make(map[string]*sync.Mutex)
+
+//var locksOKEX = make(map[string]*sync.Mutex)
 
 var wrongs = make(map[string]bool)
 
@@ -34,14 +35,14 @@ func setWrong(instrument string, add bool) int {
 	return len(wrongs)
 }
 
-func getLockOKEX(instrument string) *sync.Mutex {
-	defer okLock.Unlock()
-	okLock.Lock()
-	if locksOKEX[instrument] == nil {
-		locksOKEX[instrument] = &sync.Mutex{}
-	}
-	return locksOKEX[instrument]
-}
+//func getLockOKEX(instrument string) *sync.Mutex {
+//	defer okLock.Unlock()
+//	okLock.Lock()
+//	if locksOKEX[instrument] == nil {
+//		locksOKEX[instrument] = &sync.Mutex{}
+//	}
+//	return locksOKEX[instrument]
+//}
 
 var subscribeHandlerOKEX = func(subscribes []interface{}, subType string) error {
 	var err error = nil
@@ -65,9 +66,9 @@ var subscribeHandlerOKEX = func(subscribes []interface{}, subType string) error 
 }
 
 func handleMsgOKEX(markets *model.Markets, instrument string, responseJson *simplejson.Json) {
-	lock := getLockOKEX(instrument)
-	defer lock.Unlock()
-	lock.Lock()
+	//lock := getLockOKEX(instrument)
+	//defer lock.Unlock()
+	//lock.Lock()
 	isSpot := true
 	if strings.Contains(instrument, `SWAP`) || len(strings.Split(instrument, `-`)) > 2 {
 		isSpot = false
@@ -120,7 +121,7 @@ func WsDepthServeOKEX(markets *model.Markets, errHandler ErrHandler) (chan struc
 			return
 		}
 		instrument := responseJson.GetPath(`arg`, `instId`).MustString()
-		go handleMsgOKEX(markets, instrument, responseJson)
+		handleMsgOKEX(markets, instrument, responseJson)
 	}
 	return WebSocketClient(model.OKEX, model.AppConfig.WSUrls[model.OKEX], model.SubscribeDepth,
 		GetWSSubscribes(model.OKEX, model.SubscribeDepth), subscribeHandlerOKEX, wsHandler, errHandler)
