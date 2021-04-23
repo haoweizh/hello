@@ -21,6 +21,10 @@ var okLock sync.Mutex
 var msgChanOKEX = make(chan []byte, 100000)
 var wrongs = make(map[string]bool)
 
+func init() {
+	go handleMsgOKEX()
+}
+
 func setWrong(instrument string, add bool) int {
 	defer okLock.Unlock()
 	okLock.Lock()
@@ -53,9 +57,10 @@ var subscribeHandlerOKEX = func(subscribes []interface{}, subType string) error 
 	return err
 }
 
-func handleMsgOKEX(markets *model.Markets) {
+func handleMsgOKEX() {
 	for true {
 		event := <-msgChanOKEX
+		util.Notice(fmt.Sprintf(`current chan to be handle %d`, len(msgChanOKEX)))
 		responseJson, err := util.NewJSON(event)
 		if err != nil || responseJson == nil || responseJson.Get(`data`) == nil ||
 			len(responseJson.Get(`data`).MustArray()) == 0 ||
@@ -70,7 +75,7 @@ func handleMsgOKEX(markets *model.Markets) {
 		symbol := model.GetInstrumentSymbol(model.OKEX, instrument)
 		action := responseJson.Get(`action`).MustString()
 		data := responseJson.Get(`data`).MustArray()[0].(map[string]interface{})
-		_, bidAsk := markets.GetBidAsk(instrument, model.OKEX)
+		_, bidAsk := model.AppMarkets.GetBidAsk(instrument, model.OKEX)
 		success := false
 		if action == `update` && bidAsk != nil {
 			success, bidAsk = handleBooksUpdate(instrument, isSpot, data, bidAsk)
@@ -83,7 +88,7 @@ func handleMsgOKEX(markets *model.Markets) {
 		}
 		sort.Sort(bidAsk.Asks)
 		sort.Sort(sort.Reverse(bidAsk.Bids))
-		if markets.SetBidAsk(instrument, model.OKEX, bidAsk) {
+		if model.AppMarkets.SetBidAsk(instrument, model.OKEX, bidAsk) {
 			for function, handler := range model.GetFunctions(model.OKEX, symbol) {
 				settings := model.GetSetting(function, model.OKEX, symbol)
 				for _, setting := range settings {
@@ -96,8 +101,7 @@ func handleMsgOKEX(markets *model.Markets) {
 	}
 }
 
-func WsDepthServeOKEX(markets *model.Markets, errHandler ErrHandler) (chan struct{}, error) {
-	go handleMsgOKEX(markets)
+func WsDepthServeOKEX(errHandler ErrHandler) (chan struct{}, error) {
 	//lastPingTime := util.GetNow().Unix()
 	wsHandler := func(event []byte) {
 		//now := util.GetNow().Unix()
