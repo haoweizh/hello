@@ -32,25 +32,25 @@ func setWrong(instrument string, add bool) int {
 	return len(wrongs)
 }
 
-func reSubscribe(instrument string) {
-	unsubscribeMap := make(map[string]interface{})
-	unsubscribeMap["op"] = "unsubscribe"
-	unsubscribeMap[`args`] = []map[string]string{{`channel`: `books50-l2-tbt`, `instId`: instrument}}
-	err := sendToWs(model.OKEX, util.JsonEncodeToByte(unsubscribeMap))
-	if err != nil {
-		util.SocketInfo("okex can not unsubscribe " + err.Error())
-		return
-	}
-	time.Sleep(time.Second * 3)
-	subscribeMap := make(map[string]interface{})
-	subscribeMap["op"] = "subscribe"
-	subscribeMap[`args`] = []map[string]string{{`channel`: `books50-l2-tbt`, `instId`: instrument}}
-	err = sendToWs(model.OKEX, util.JsonEncodeToByte(subscribeMap))
-	if err != nil {
-		util.SocketInfo("okex can not re-subscribe " + err.Error())
-	}
-	util.Notice(fmt.Sprintf(`resubscribe %s`, instrument))
-}
+//func reSubscribe(instrument string) {
+//	unsubscribeMap := make(map[string]interface{})
+//	unsubscribeMap["op"] = "unsubscribe"
+//	unsubscribeMap[`args`] = []map[string]string{{`channel`: `books50-l2-tbt`, `instId`: instrument}}
+//	err := sendToWs(model.OKEX, util.JsonEncodeToByte(unsubscribeMap))
+//	if err != nil {
+//		util.SocketInfo("okex can not unsubscribe " + err.Error())
+//		return
+//	}
+//	time.Sleep(time.Second * 3)
+//	subscribeMap := make(map[string]interface{})
+//	subscribeMap["op"] = "subscribe"
+//	subscribeMap[`args`] = []map[string]string{{`channel`: `books50-l2-tbt`, `instId`: instrument}}
+//	err = sendToWs(model.OKEX, util.JsonEncodeToByte(subscribeMap))
+//	if err != nil {
+//		util.SocketInfo("okex can not re-subscribe " + err.Error())
+//	}
+//	util.Notice(fmt.Sprintf(`resubscribe %s`, instrument))
+//}
 
 var subscribeHandlerOKEX = func(subscribes []interface{}, subType string) error {
 	var err error = nil
@@ -260,7 +260,6 @@ func handleBooksUpdate(instrument string, isSpot bool, data map[string]interface
 			}
 		} else {
 			success = false
-			reSubscribe(instrument)
 			wrongSize := setWrong(instrument, true)
 			if now.Second() == 0 {
 				util.Notice(fmt.Sprintf(`ts %d wrong checksum %s %d %d-%d %v`,
