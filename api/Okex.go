@@ -51,8 +51,8 @@ var subscribeHandlerOKEX = func(subscribes []interface{}, subType string) error 
 		subscribeMap["op"] = "subscribe"
 		subArray := make([]map[string]string, 0)
 		for j := i; j < len(subscribes) && j < i+step; j++ {
-			subArray = append(subArray, map[string]string{`channel`: `books-l2-tbt`, `instId`: subscribes[j].(string)})
-			//subArray = append(subArray, map[string]string{`channel`: `books5`, `instId`: subscribes[j].(string)})
+			//subArray = append(subArray, map[string]string{`channel`: `books-l2-tbt`, `instId`: subscribes[j].(string)})
+			subArray = append(subArray, map[string]string{`channel`: `books5`, `instId`: subscribes[j].(string)})
 		}
 		subscribeMap[`args`] = subArray
 		subscribeMessage := util.JsonEncodeToByte(subscribeMap)
