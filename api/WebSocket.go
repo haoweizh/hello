@@ -87,7 +87,7 @@ func chanHandler(market string, stopC chan struct{}, errHandler ErrHandler, msgH
 				return
 			}
 			//util.SocketInfo(string(message))
-			msgHandler(message)
+			go msgHandler(message)
 		}
 	}
 }
