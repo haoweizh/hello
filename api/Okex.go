@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"github.com/bitly/go-simplejson"
 	"hash/crc32"
 	"hello/model"
 	"hello/util"
@@ -17,12 +18,8 @@ import (
 )
 
 var okLock sync.Mutex
-var msgChanOKEX = make(chan []byte, 50000)
+var msgChanOKEX = make(map[string]chan *simplejson.Json)
 var wrongs = make(map[string]bool)
-
-func init() {
-	go handleMsgOKEX()
-}
 
 func setWrong(instrument string, add bool) int {
 	defer okLock.Unlock()
@@ -76,51 +73,47 @@ var subscribeHandlerOKEX = func(subscribes []interface{}, subType string) error 
 	return err
 }
 
-func handleMsgOKEX() {
-	for true {
-		event := <-msgChanOKEX
-		if len(msgChanOKEX) > cap(msgChanOKEX)/10 {
-			util.Notice(fmt.Sprintf(`current chan to be handle %d wrong size %d`, len(msgChanOKEX), len(wrongs)))
-		}
-		responseJson, err := util.NewJSON(event)
-		if err != nil || responseJson == nil || responseJson.Get(`data`) == nil ||
-			len(responseJson.Get(`data`).MustArray()) == 0 ||
-			responseJson.GetPath(`arg`, `instId`) == nil {
-			continue
-		}
-		instrument := responseJson.GetPath(`arg`, `instId`).MustString()
-		isSpot := true
-		if strings.Contains(instrument, `SWAP`) || len(strings.Split(instrument, `-`)) > 2 {
-			isSpot = false
-		}
-		symbol := model.GetInstrumentSymbol(model.OKEX, instrument)
-		action := responseJson.Get(`action`).MustString()
-		data := responseJson.Get(`data`).MustArray()[0].(map[string]interface{})
-		_, bidAsk := model.AppMarkets.GetBidAsk(instrument, model.OKEX)
-		success := false
-		if action == `update` && bidAsk != nil {
-			success, bidAsk = handleBooksUpdate(instrument, isSpot, data, bidAsk)
-		} else if action == `snapshot` || responseJson.GetPath(`arg`, `channel`).MustString() == `books5` {
-			bidAsk = handleBooksOKEX(instrument, isSpot, data)
-			success = true
-		}
-		if bidAsk == nil {
-			continue
-		}
-		if model.AppMarkets.SetBidAsk(instrument, model.OKEX, bidAsk) {
-			for function, handler := range model.GetFunctions(model.OKEX, symbol) {
-				settings := model.GetSetting(function, model.OKEX, symbol)
-				for _, setting := range settings {
-					if success {
-						go handler(setting, bidAsk)
-					}
+func handleMsgOKEX(channel chan *simplejson.Json, instrument string) {
+	responseJson := <-channel
+	if len(channel) > cap(channel)/10 {
+		util.Notice(fmt.Sprintf(`current chan to be handle %d wrong size %d`, len(msgChanOKEX), len(wrongs)))
+	}
+	isSpot := true
+	if strings.Contains(instrument, `SWAP`) || len(strings.Split(instrument, `-`)) > 2 {
+		isSpot = false
+	}
+	symbol := model.GetInstrumentSymbol(model.OKEX, instrument)
+	action := responseJson.Get(`action`).MustString()
+	data := responseJson.Get(`data`).MustArray()[0].(map[string]interface{})
+	_, bidAsk := model.AppMarkets.GetBidAsk(instrument, model.OKEX)
+	success := false
+	if action == `update` && bidAsk != nil {
+		success, bidAsk = handleBooksUpdate(instrument, isSpot, data, bidAsk)
+	} else if action == `snapshot` || responseJson.GetPath(`arg`, `channel`).MustString() == `books5` {
+		bidAsk = handleBooksOKEX(instrument, isSpot, data)
+		success = true
+	}
+	if bidAsk == nil {
+		return
+	}
+	if model.AppMarkets.SetBidAsk(instrument, model.OKEX, bidAsk) {
+		for function, handler := range model.GetFunctions(model.OKEX, symbol) {
+			settings := model.GetSetting(function, model.OKEX, symbol)
+			for _, setting := range settings {
+				if success {
+					go handler(setting, bidAsk)
 				}
 			}
 		}
 	}
 }
 
-func WsDepthServeOKEX(errHandler ErrHandler) (chan struct{}, error) {
+func WsDepthServeOKEX(instruments map[string]bool, errHandler ErrHandler) (chan struct{}, error) {
+	for s := range instruments {
+		if msgChanOKEX[s] == nil {
+			msgChanOKEX[s] = make(chan *simplejson.Json, 1000)
+		}
+	}
 	//lastPingTime := util.GetNow().Unix()
 	wsHandler := func(event []byte) {
 		//now := util.GetNow().Unix()
@@ -133,7 +126,18 @@ func WsDepthServeOKEX(errHandler ErrHandler) (chan struct{}, error) {
 		//		}
 		//	}()
 		//}
-		msgChanOKEX <- event
+		responseJson, err := util.NewJSON(event)
+		if err != nil || responseJson == nil || responseJson.Get(`data`) == nil ||
+			len(responseJson.Get(`data`).MustArray()) == 0 ||
+			responseJson.GetPath(`arg`, `instId`) == nil {
+			return
+		}
+		instrument := responseJson.GetPath(`arg`, `instId`).MustString()
+		channel := msgChanOKEX[instrument]
+		if channel != nil {
+			channel <- responseJson
+			go handleMsgOKEX(channel, instrument)
+		}
 	}
 	return WebSocketClient(model.OKEX, model.AppConfig.WSUrls[model.OKEX], model.SubscribeDepth,
 		GetWSSubscribes(model.OKEX, model.SubscribeDepth), subscribeHandlerOKEX, wsHandler, errHandler)

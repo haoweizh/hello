@@ -101,7 +101,8 @@ func createMarketDepthServer(markets *model.Markets, market string) chan struct{
 	case model.HuobiDM:
 		channel, err = api.WsDepthServeHuobiDM(markets, WSErrHandler)
 	case model.OKEX:
-		channel, err = api.WsDepthServeOKEX(WSErrHandler)
+		instruments := model.GetMarketSymbols(model.OKEX)
+		channel, err = api.WsDepthServeOKEX(instruments, WSErrHandler)
 	//case model.OKFUTURE:
 	//	channel, err = api.WsDepthServeOKFuture(markets, WSErrHandler)
 	case model.Binance:
