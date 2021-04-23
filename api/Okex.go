@@ -20,14 +20,14 @@ var msgChanOKEX = make(map[string]chan *simplejson.Json)
 
 var subscribeHandlerOKEX = func(subscribes []interface{}, subType string) error {
 	var err error = nil
-	step := 15
+	step := 30
 	for i := 0; i < len(subscribes); i += step {
 		subscribeMap := make(map[string]interface{})
 		subscribeMap["op"] = "subscribe"
 		subArray := make([]map[string]string, 0)
 		for j := i; j < len(subscribes) && j < i+step; j++ {
-			subArray = append(subArray, map[string]string{`channel`: `books50-l2-tbt`, `instId`: subscribes[j].(string)})
-			//subArray = append(subArray, map[string]string{`channel`: `books5`, `instId`: subscribes[j].(string)})
+			//subArray = append(subArray, map[string]string{`channel`: `books50-l2-tbt`, `instId`: subscribes[j].(string)})
+			subArray = append(subArray, map[string]string{`channel`: `books5`, `instId`: subscribes[j].(string)})
 		}
 		subscribeMap[`args`] = subArray
 		subscribeMessage := util.JsonEncodeToByte(subscribeMap)
