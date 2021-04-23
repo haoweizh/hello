@@ -35,6 +35,22 @@ func setWrong(instrument string, add bool) int {
 	return len(wrongs)
 }
 
+func reSubscribe(instrument string) {
+	msg := fmt.Sprintf(`{"op":"unsubscribe","args":[{"unsubscribe":"books50-l2-tbt","instId":"%s"}]}`, instrument)
+	err := sendToWs(model.OKEX, []byte(msg))
+	if err != nil {
+		util.SocketInfo("okex can not unsubscribe " + err.Error())
+		return
+	}
+	time.Sleep(time.Second * 3)
+	msg = fmt.Sprintf(`{"op":"subscribe","args":[{"unsubscribe":"books50-l2-tbt","instId":"%s"}]}`, instrument)
+	err = sendToWs(model.OKEX, []byte(msg))
+	if err != nil {
+		util.SocketInfo("okex can not re-subscribe " + err.Error())
+	}
+	util.Notice(fmt.Sprintf(`resubscribe %s`, instrument))
+}
+
 var subscribeHandlerOKEX = func(subscribes []interface{}, subType string) error {
 	var err error = nil
 	step := 15
@@ -82,17 +98,11 @@ func handleMsgOKEX() {
 			success, bidAsk = handleBooksUpdate(instrument, isSpot, data, bidAsk)
 		} else if action == `snapshot` || responseJson.GetPath(`arg`, `channel`).MustString() == `books5` {
 			bidAsk = handleBooksOKEX(instrument, isSpot, data)
-			//if wrongs[instrument] {
-			//	newBidAsk := handleBooksOKEX(instrument, isSpot, data)
-			//	bidAsk = mergeBidAsk(bidAsk, newBidAsk)
-			//}
 			success = true
 		}
 		if bidAsk == nil {
 			continue
 		}
-		//sort.Sort(bidAsk.Asks)
-		//sort.Sort(sort.Reverse(bidAsk.Bids))
 		if model.AppMarkets.SetBidAsk(instrument, model.OKEX, bidAsk) {
 			for function, handler := range model.GetFunctions(model.OKEX, symbol) {
 				settings := model.GetSetting(function, model.OKEX, symbol)
@@ -262,6 +272,7 @@ func handleBooksUpdate(instrument string, isSpot bool, data map[string]interface
 			}
 		} else {
 			success = false
+			reSubscribe(instrument)
 			wrongSize := setWrong(instrument, true)
 			if now.Second() == 0 {
 				util.Notice(fmt.Sprintf(`ts %d wrong checksum %s %d %d-%d %v`,
