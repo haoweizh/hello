@@ -65,6 +65,7 @@ func WsDepthServeOKEX(markets *model.Markets, errHandler ErrHandler) (chan struc
 				}
 			}()
 		}
+		fmt.Println(string(event))
 		responseJson, err := util.NewJSON(event)
 		if err != nil || responseJson == nil || responseJson.Get(`data`) == nil ||
 			len(responseJson.Get(`data`).MustArray()) == 0 ||
@@ -82,7 +83,7 @@ func WsDepthServeOKEX(markets *model.Markets, errHandler ErrHandler) (chan struc
 		_, bidAsk := markets.GetBidAsk(instrument, model.OKEX)
 		success := false
 		if action == `update` && bidAsk != nil {
-			success = handleBooksUpdate(instrument, isSpot, data, bidAsk)
+			success, bidAsk = handleBooksUpdate(instrument, isSpot, data, bidAsk)
 		} else if action == `snapshot` || responseJson.GetPath(`arg`, `channel`).MustString() == `books5` {
 			bidAsk = handleBooksOKEX(instrument, isSpot, data)
 			success = true
@@ -107,14 +108,15 @@ func WsDepthServeOKEX(markets *model.Markets, errHandler ErrHandler) (chan struc
 		GetWSSubscribes(model.OKEX, model.SubscribeDepth), subscribeHandlerOKEX, wsHandler, errHandler)
 }
 
-func handleBooksUpdate(instrument string, isSpot bool, data map[string]interface{}, bidAsk *model.BidAsk) (success bool) {
+func handleBooksUpdate(instrument string, isSpot bool, data map[string]interface{}, bidAsk *model.BidAsk) (
+	success bool, bidAskUpdate *model.BidAsk) {
+	bidAskUpdate = handleBooksOKEX(instrument, isSpot, data)
 	if data[`ts`] != nil {
 		ts, _ := strconv.ParseInt(data[`ts`].(string), 10, 64)
-		bidAsk.Ts = int(ts)
+		bidAskUpdate.Ts = int(ts)
 	}
 	newAsks := make([]model.Tick, 0)
 	newBids := make([]model.Tick, 0)
-	bidAskUpdate := handleBooksOKEX(instrument, isSpot, data)
 	//if bidAskUpdate.Asks.Len() == 0 || bidAskUpdate.Bids.Len() == 0 {
 	//	util.Notice(fmt.Sprintf(`empty bid/ask update %s`, instrument)) //}
 	i := 0
@@ -212,8 +214,8 @@ func handleBooksUpdate(instrument string, isSpot bool, data map[string]interface
 		checkStr = checkStr[0 : len(checkStr)-1]
 		crcValue := int64(int32(crc32.ChecksumIEEE([]byte(checkStr))))
 		compare, _ := data[`checksum`].(json.Number).Int64()
-		bidAsk.Bids = newBids
-		bidAsk.Asks = newAsks
+		bidAskUpdate.Bids = newBids
+		bidAskUpdate.Asks = newAsks
 		if compare == crcValue {
 			success = true
 			//util.Notice(fmt.Sprintf(`right checksum %s %v %d`, instrument, isSpot, bidAsk.Bids.Len()))
@@ -223,20 +225,20 @@ func handleBooksUpdate(instrument string, isSpot bool, data map[string]interface
 			wrongSize := setWrong(instrument, true)
 			now := time.Now()
 			if now.Second() == 0 {
-				util.Notice(fmt.Sprintf(`wrong checksum %s %d %d-%d %v`,
-					instrument, wrongSize, bidAsk.Bids.Len(), bidAsk.Asks.Len(), data))
+				util.Notice(fmt.Sprintf(`ts %d wrong checksum %s %d %d-%d %v`,
+					bidAskUpdate.Ts, instrument, wrongSize, bidAskUpdate.Bids.Len(), bidAskUpdate.Asks.Len(), data))
 				if bidAsk.Bids.Len() > 5 && bidAsk.Asks.Len() > 5 {
 					util.Notice(fmt.Sprintf(`%f %f %f %f %f - %f %f %f %f %f`,
-						bidAsk.Bids[0].Price, bidAsk.Bids[1].Price, bidAsk.Bids[2].Price, bidAsk.Bids[3].Price,
-						bidAsk.Bids[4].Price, bidAsk.Asks[0].Price, bidAsk.Asks[1].Price, bidAsk.Asks[2].Price,
-						bidAsk.Asks[3].Price, bidAsk.Asks[4].Price))
+						bidAskUpdate.Bids[0].Price, bidAskUpdate.Bids[1].Price, bidAskUpdate.Bids[2].Price, bidAskUpdate.Bids[3].Price,
+						bidAskUpdate.Bids[4].Price, bidAskUpdate.Asks[0].Price, bidAskUpdate.Asks[1].Price, bidAskUpdate.Asks[2].Price,
+						bidAskUpdate.Asks[3].Price, bidAskUpdate.Asks[4].Price))
 				} else {
 					util.Notice(`>>>>>>>>>>> size too small for ` + instrument)
 				}
 			}
 		}
 	}
-	return success
+	return success, bidAskUpdate
 }
 
 func handleBooksOKEX(instrument string, isSpot bool, data map[string]interface{}) (bidAsk *model.BidAsk) {

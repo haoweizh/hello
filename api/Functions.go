@@ -18,7 +18,6 @@ var instruments = make(map[string]map[string]map[string]string) // market - symb
 func RequireDepthChanReset(markets *model.Markets, market string) bool {
 	channelLock.Lock()
 	defer channelLock.Unlock()
-	needReset := true
 	now := util.GetNowUnixMillion()
 	symbols := markets.GetSymbols()
 	for symbol := range symbols {
@@ -28,10 +27,10 @@ func RequireDepthChanReset(markets *model.Markets, market string) bool {
 		}
 		delay := float64(now - int64(bidAsk.Ts))
 		if delay < model.AppConfig.Delay {
-			needReset = false
+			return false
 		}
 	}
-	return needReset
+	return true
 }
 
 func GetAmountInPerp(market, symbol string, amount float64) (formattedAmount float64) {
