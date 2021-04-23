@@ -194,12 +194,14 @@ func handleBooksUpdate(instrument string, data map[string]interface{}, bidAsk *m
 		checkStr := ``
 		for index := 0; index < 25; index++ {
 			if index < len(newBids) {
-				amount := newBids[index].Amount
-				checkStr += fmt.Sprintf(`%v:%v:`, newBids[index].Price, amount)
+				amount := util.CutTailZero(fmt.Sprintf(`%f`, newBids[index].Amount))
+				price := util.CutTailZero(fmt.Sprintf(`%f`, newBids[index].Price))
+				checkStr += fmt.Sprintf(`%s:%s:`, price, amount)
 			}
 			if index < len(newAsks) {
-				amount := newAsks[index].Amount
-				checkStr += fmt.Sprintf(`%v:%v:`, newAsks[index].Price, amount)
+				amount := util.CutTailZero(fmt.Sprintf(`%f`, newAsks[index].Amount))
+				price := util.CutTailZero(fmt.Sprintf(`%f`, newAsks[index].Price))
+				checkStr += fmt.Sprintf(`%s:%s:`, price, amount)
 			}
 		}
 		checkStr = checkStr[0 : len(checkStr)-1]
