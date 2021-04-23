@@ -137,15 +137,18 @@ func WsDepthServeOKEX(instruments map[string]bool, errHandler ErrHandler) (chan 
 		//	}()
 		//}
 		responseJson, err := util.NewJSON(event)
-		if err != nil || responseJson == nil || responseJson.Get(`data`) == nil ||
+		if responseJson == nil {
+			return
+		}
+		sub := responseJson.Get(`event`).MustString()
+		instrument := responseJson.GetPath(`arg`, `instId`).MustString()
+		if sub == `subscribe` || sub == `unsubscribe` {
+			util.Notice(fmt.Sprintf(`%s %s`, sub, instrument))
+		}
+		if err != nil || responseJson.Get(`data`) == nil ||
 			len(responseJson.Get(`data`).MustArray()) == 0 ||
 			responseJson.GetPath(`arg`, `instId`) == nil {
 			return
-		}
-		instrument := responseJson.GetPath(`arg`, `instId`).MustString()
-		sub := responseJson.Get(`event`).MustString()
-		if sub == `subscribe` || sub == `unsubscribe` {
-			util.Notice(fmt.Sprintf(`%s %s`, sub, instrument))
 		}
 		channel := msgChanOKEX[instrument]
 		if channel != nil {
