@@ -26,8 +26,8 @@ var subscribeHandlerOKEX = func(subscribes []interface{}, subType string) error 
 		subscribeMap["op"] = "subscribe"
 		subArray := make([]map[string]string, 0)
 		for j := i; j < len(subscribes) && j < i+step; j++ {
-			//subArray = append(subArray, map[string]string{`channel`: `books50-l2-tbt`, `instId`: subscribes[j].(string)})
-			subArray = append(subArray, map[string]string{`channel`: `books5`, `instId`: subscribes[j].(string)})
+			subArray = append(subArray, map[string]string{`channel`: `books50-l2-tbt`, `instId`: subscribes[j].(string)})
+			//subArray = append(subArray, map[string]string{`channel`: `books5`, `instId`: subscribes[j].(string)})
 		}
 		subscribeMap[`args`] = subArray
 		subscribeMessage := util.JsonEncodeToByte(subscribeMap)
@@ -211,10 +211,10 @@ func handleBooksUpdate(instrument string, data map[string]interface{}, bidAsk *m
 			success = true
 		} else {
 			success = false
-			if time.Now().Second() == 0 {
-				util.Notice(fmt.Sprintf(`ts %d wrong checksum %s %d-%d %v`,
-					bidAskUpdate.Ts, instrument, bidAskUpdate.Bids.Len(), bidAskUpdate.Asks.Len(), data))
-			}
+		}
+		if time.Now().Second() == 0 {
+			util.Notice(fmt.Sprintf(`%v >>>>>>>>ts %d checksum %s %d-%d`,
+				success, bidAskUpdate.Ts, instrument, bidAskUpdate.Bids.Len(), bidAskUpdate.Asks.Len()))
 		}
 	}
 	return success, bidAskUpdate
@@ -235,9 +235,6 @@ func handleBooksOKEX(instrument string, data map[string]interface{}) (bidAsk *mo
 		if len(value) >= 2 {
 			price, _ := strconv.ParseFloat(value[0].(string), 64)
 			amount, _ := strconv.ParseFloat(value[1].(string), 64)
-			//if !isSpot {
-			//	_, amount = ParseRealAmount(model.OKEX, instrument, amount)
-			//}
 			bidAsk.Asks[i] = model.Tick{Price: price, Amount: amount, Symbol: instrument}
 		}
 	}
@@ -246,9 +243,6 @@ func handleBooksOKEX(instrument string, data map[string]interface{}) (bidAsk *mo
 		if len(value) >= 2 {
 			price, _ := strconv.ParseFloat(value[0].(string), 64)
 			amount, _ := strconv.ParseFloat(value[1].(string), 64)
-			//if !isSpot {
-			//	_, amount = ParseRealAmount(model.OKEX, instrument, amount)
-			//}
 			bidAsk.Bids[i] = model.Tick{Price: price, Amount: amount, Symbol: instrument}
 		}
 	}
