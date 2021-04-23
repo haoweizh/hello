@@ -222,14 +222,16 @@ func handleBooksUpdate(instrument string, isSpot bool, data map[string]interface
 		compare, _ := data[`checksum`].(json.Number).Int64()
 		bidAskUpdate.Bids = newBids
 		bidAskUpdate.Asks = newAsks
+		now := time.Now()
 		if compare == crcValue {
 			success = true
-			//util.Notice(fmt.Sprintf(`right checksum %s %v %d`, instrument, isSpot, bidAsk.Bids.Len()))
-			setWrong(instrument, false)
+			if now.Second() == 0 {
+				util.Notice(fmt.Sprintf(`right checksum %s %v %d`, instrument, isSpot, bidAsk.Bids.Len()))
+				setWrong(instrument, false)
+			}
 		} else {
 			success = false
 			wrongSize := setWrong(instrument, true)
-			now := time.Now()
 			if now.Second() == 0 {
 				util.Notice(fmt.Sprintf(`ts %d wrong checksum %s %d %d-%d %v`,
 					bidAskUpdate.Ts, instrument, wrongSize, bidAskUpdate.Bids.Len(), bidAskUpdate.Asks.Len(), data))
