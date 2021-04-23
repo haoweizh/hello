@@ -18,7 +18,7 @@ import (
 )
 
 var okLock sync.Mutex
-var msgChanOKEX = make(chan []byte, 100000)
+var msgChanOKEX = make(chan []byte, 10000)
 var wrongs = make(map[string]bool)
 
 func init() {
@@ -65,7 +65,7 @@ func handleMsgOKEX() {
 		if err != nil || responseJson == nil || responseJson.Get(`data`) == nil ||
 			len(responseJson.Get(`data`).MustArray()) == 0 ||
 			responseJson.GetPath(`arg`, `instId`) == nil {
-			return
+			continue
 		}
 		instrument := responseJson.GetPath(`arg`, `instId`).MustString()
 		isSpot := true
@@ -84,7 +84,7 @@ func handleMsgOKEX() {
 			success = true
 		}
 		if bidAsk == nil {
-			return
+			continue
 		}
 		sort.Sort(bidAsk.Asks)
 		sort.Sort(sort.Reverse(bidAsk.Bids))
