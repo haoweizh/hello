@@ -501,7 +501,7 @@ func makeEqual(key, secret string, setting *model.Setting, balances []*model.Bal
 
 func initEmptyBalance(key, secret, market string) {
 	now := util.GetNow().Unix()
-	if now-marketInitTime[key] < 3600 {
+	if now-marketInitTime[key] < 600 {
 		return
 	} else {
 		marketInitTime[key] = now
@@ -518,7 +518,7 @@ func initEmptyBalance(key, secret, market string) {
 		if market == model.OKEX {
 			success, maxLoan := api.GetMaxLoan(key, secret, market, coin)
 			if success {
-				balance.AvailableWithBorrow = maxLoan + balance.Amount
+				balance.AvailableWithBorrow = maxLoan + math.Max(0, balance.Amount)
 			}
 			time.Sleep(time.Second / 8)
 		}

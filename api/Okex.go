@@ -143,6 +143,10 @@ func WsDepthServeOKEX(instruments map[string]bool, errHandler ErrHandler) (chan 
 			return
 		}
 		instrument := responseJson.GetPath(`arg`, `instId`).MustString()
+		sub := responseJson.Get(`event`).MustString()
+		if sub == `subscribe` || sub == `unsubscribe` {
+			util.Notice(fmt.Sprintf(`%s %s`, sub, instrument))
+		}
 		channel := msgChanOKEX[instrument]
 		if channel != nil {
 			channel <- responseJson
