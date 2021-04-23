@@ -21,6 +21,10 @@ var okLock sync.Mutex
 var msgChanOKEX = make(map[string]chan *simplejson.Json)
 var wrongs = make(map[string]bool)
 
+func init() {
+	go reSubscribe()
+}
+
 func setWrong(instrument string, add bool) int {
 	defer okLock.Unlock()
 	okLock.Lock()
@@ -32,25 +36,31 @@ func setWrong(instrument string, add bool) int {
 	return len(wrongs)
 }
 
-//func reSubscribe(instrument string) {
-//	unsubscribeMap := make(map[string]interface{})
-//	unsubscribeMap["op"] = "unsubscribe"
-//	unsubscribeMap[`args`] = []map[string]string{{`channel`: `books50-l2-tbt`, `instId`: instrument}}
-//	err := sendToWs(model.OKEX, util.JsonEncodeToByte(unsubscribeMap))
-//	if err != nil {
-//		util.SocketInfo("okex can not unsubscribe " + err.Error())
-//		return
-//	}
-//	time.Sleep(time.Second * 3)
-//	subscribeMap := make(map[string]interface{})
-//	subscribeMap["op"] = "subscribe"
-//	subscribeMap[`args`] = []map[string]string{{`channel`: `books50-l2-tbt`, `instId`: instrument}}
-//	err = sendToWs(model.OKEX, util.JsonEncodeToByte(subscribeMap))
-//	if err != nil {
-//		util.SocketInfo("okex can not re-subscribe " + err.Error())
-//	}
-//	util.Notice(fmt.Sprintf(`resubscribe %s`, instrument))
-//}
+func reSubscribe() {
+	for true {
+		util.Notice(fmt.Sprintf(`wrong instrument %d`, len(wrongs)))
+		for instrument := range wrongs {
+			unsubscribeMap := make(map[string]interface{})
+			unsubscribeMap["op"] = "unsubscribe"
+			unsubscribeMap[`args`] = []map[string]string{{`channel`: `books50-l2-tbt`, `instId`: instrument}}
+			err := sendToWs(model.OKEX, util.JsonEncodeToByte(unsubscribeMap))
+			if err != nil {
+				util.SocketInfo("okex can not unsubscribe " + err.Error())
+				return
+			}
+			time.Sleep(time.Second * 3)
+			subscribeMap := make(map[string]interface{})
+			subscribeMap["op"] = "subscribe"
+			subscribeMap[`args`] = []map[string]string{{`channel`: `books50-l2-tbt`, `instId`: instrument}}
+			err = sendToWs(model.OKEX, util.JsonEncodeToByte(subscribeMap))
+			if err != nil {
+				util.SocketInfo("okex can not re-subscribe " + err.Error())
+			}
+			util.Notice(fmt.Sprintf(`resubscribe %s`, instrument))
+		}
+		time.Sleep(time.Minute)
+	}
+}
 
 var subscribeHandlerOKEX = func(subscribes []interface{}, subType string) error {
 	var err error = nil
@@ -251,28 +261,28 @@ func handleBooksUpdate(instrument string, isSpot bool, data map[string]interface
 		compare, _ := data[`checksum`].(json.Number).Int64()
 		bidAskUpdate.Bids = newBids
 		bidAskUpdate.Asks = newAsks
-		now := time.Now()
 		if compare == crcValue {
 			success = true
-			if wrongs[instrument] {
-				util.Notice(fmt.Sprintf(`right checksum %s %v %d`, instrument, isSpot, bidAsk.Bids.Len()))
-				setWrong(instrument, false)
-			}
+			//if wrongs[instrument] {
+			//	util.Notice(fmt.Sprintf(`right checksum %s %v %d`, instrument, isSpot, bidAsk.Bids.Len()))
+			//	setWrong(instrument, false)
+			//}
 		} else {
 			success = false
-			wrongSize := setWrong(instrument, true)
-			if now.Second() == 0 {
-				util.Notice(fmt.Sprintf(`ts %d wrong checksum %s %d %d-%d %v`,
-					bidAskUpdate.Ts, instrument, wrongSize, bidAskUpdate.Bids.Len(), bidAskUpdate.Asks.Len(), data))
-				if bidAsk.Bids.Len() > 5 && bidAsk.Asks.Len() > 5 {
-					util.Notice(fmt.Sprintf(`%v %v %v %v %v - %v %v %v %v %v`,
-						bidAskUpdate.Bids[0].Price, bidAskUpdate.Bids[1].Price, bidAskUpdate.Bids[2].Price, bidAskUpdate.Bids[3].Price,
-						bidAskUpdate.Bids[4].Price, bidAskUpdate.Asks[0].Price, bidAskUpdate.Asks[1].Price, bidAskUpdate.Asks[2].Price,
-						bidAskUpdate.Asks[3].Price, bidAskUpdate.Asks[4].Price))
-				} else {
-					util.Notice(`>>>>>>>>>>> size too small for ` + instrument)
-				}
-			}
+			setWrong(instrument, true)
+			//now := time.Now()
+			//if now.Second() == 0 {
+			//	util.Notice(fmt.Sprintf(`ts %d wrong checksum %s %d %d-%d %v`,
+			//		bidAskUpdate.Ts, instrument, wrongSize, bidAskUpdate.Bids.Len(), bidAskUpdate.Asks.Len(), data))
+			//	if bidAsk.Bids.Len() > 5 && bidAsk.Asks.Len() > 5 {
+			//		util.Notice(fmt.Sprintf(`%v %v %v %v %v - %v %v %v %v %v`,
+			//			bidAskUpdate.Bids[0].Price, bidAskUpdate.Bids[1].Price, bidAskUpdate.Bids[2].Price, bidAskUpdate.Bids[3].Price,
+			//			bidAskUpdate.Bids[4].Price, bidAskUpdate.Asks[0].Price, bidAskUpdate.Asks[1].Price, bidAskUpdate.Asks[2].Price,
+			//			bidAskUpdate.Asks[3].Price, bidAskUpdate.Asks[4].Price))
+			//	} else {
+			//		util.Notice(`>>>>>>>>>>> size too small for ` + instrument)
+			//	}
+			//}
 		}
 	}
 	return success, bidAskUpdate
