@@ -33,11 +33,17 @@ func setWrong(instrument string, add bool) int {
 
 var subscribeHandlerOKEX = func(subscribes []interface{}, subType string) error {
 	var err error = nil
-	for _, v := range subscribes {
+	step := 30
+	for i := 0; i < len(subscribes); i += step {
 		subscribeMap := make(map[string]interface{})
 		subscribeMap["op"] = "subscribe"
-		subscribeMap["args"] = []map[string]string{{`channel`: `books-l2-tbt`, `instId`: v.(string)}}
-		//subscribeMap["args"] = []map[string]string{{`channel`: `books5`, `instId`: v.(string)}}
+		subArray := make([]map[string]string, 0)
+		for j := i; j < len(subscribes) && j < i+step; j++ {
+			subArray = append(subArray, map[string]string{`channel`: `books-l2-tbt`, `instId`: subscribes[j].(string)})
+			//subscribeMap["args"] = []map[string]string{{`channel`: `books-l2-tbt`, `instId`: subscribes[j].(string)}}
+			//subscribeMap["args"] = []map[string]string{{`channel`: `books5`, `instId`: v.(string)}}
+		}
+		subscribeMap[`args`] = subArray
 		subscribeMessage := util.JsonEncodeToByte(subscribeMap)
 		if err = sendToWs(model.OKEX, subscribeMessage); err != nil {
 			util.SocketInfo("okex can not subscribe " + err.Error())
