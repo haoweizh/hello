@@ -57,13 +57,14 @@ func reSubscribe() {
 		for instrument := range wrongs {
 			subArray = append(subArray, map[string]string{`channel`: `books50-l2-tbt`, `instId`: instrument})
 		}
+		subscribeMap[`args`] = subArray
 		err = sendToWs(model.OKEX, util.JsonEncodeToByte(subscribeMap))
 		if err != nil {
 			util.SocketInfo("okex can not re-subscribe " + err.Error())
 		}
 		wrongs = map[string]bool{}
+		time.Sleep(time.Minute)
 	}
-	time.Sleep(time.Minute)
 }
 
 var subscribeHandlerOKEX = func(subscribes []interface{}, subType string) error {
@@ -147,7 +148,7 @@ func WsDepthServeOKEX(instruments map[string]bool, errHandler ErrHandler) (chan 
 		sub := responseJson.Get(`event`).MustString()
 		instrument := responseJson.GetPath(`arg`, `instId`).MustString()
 		if sub == `subscribe` || sub == `unsubscribe` {
-			util.Notice(fmt.Sprintf(`%s %s`, sub, instrument))
+			util.Notice(fmt.Sprintf(`++++++++++++%s %s`, sub, instrument))
 		}
 		if err != nil || responseJson.Get(`data`) == nil ||
 			len(responseJson.Get(`data`).MustArray()) == 0 ||
