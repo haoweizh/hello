@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"github.com/bitly/go-simplejson"
 	"hash/crc32"
 	"hello/model"
 	"hello/util"
@@ -18,6 +19,8 @@ import (
 )
 
 var okLock sync.Mutex
+var locksOKEX = make(map[string]*sync.Mutex)
+
 var wrongs = make(map[string]bool)
 
 func setWrong(instrument string, add bool) int {
@@ -29,6 +32,15 @@ func setWrong(instrument string, add bool) int {
 		delete(wrongs, instrument)
 	}
 	return len(wrongs)
+}
+
+func getLockOKEX(instrument string) *sync.Mutex {
+	defer okLock.Unlock()
+	okLock.Lock()
+	if locksOKEX[instrument] == nil {
+		locksOKEX[instrument] = &sync.Mutex{}
+	}
+	return locksOKEX[instrument]
 }
 
 var subscribeHandlerOKEX = func(subscribes []interface{}, subType string) error {
@@ -52,20 +64,55 @@ var subscribeHandlerOKEX = func(subscribes []interface{}, subType string) error 
 	return err
 }
 
-func WsDepthServeOKEX(markets *model.Markets, errHandler ErrHandler) (chan struct{}, error) {
-	lastPingTime := util.GetNow().Unix()
-	wsHandler := func(event []byte) {
-		now := util.GetNow().Unix()
-		if now-lastPingTime > 25 { // ping okex server every 30 seconds
-			lastPingTime = now
-			go func() {
-				err := sendToWs(model.OKEX, []byte(`ping`))
-				if err != nil {
-					util.SocketInfo("okex server ping client error " + err.Error())
+func handleMsgOKEX(markets *model.Markets, instrument string, responseJson *simplejson.Json) {
+	lock := getLockOKEX(instrument)
+	defer lock.Unlock()
+	lock.Lock()
+	isSpot := true
+	if strings.Contains(instrument, `SWAP`) || len(strings.Split(instrument, `-`)) > 2 {
+		isSpot = false
+	}
+	symbol := model.GetInstrumentSymbol(model.OKEX, instrument)
+	action := responseJson.Get(`action`).MustString()
+	data := responseJson.Get(`data`).MustArray()[0].(map[string]interface{})
+	_, bidAsk := markets.GetBidAsk(instrument, model.OKEX)
+	success := false
+	if action == `update` && bidAsk != nil {
+		success, bidAsk = handleBooksUpdate(instrument, isSpot, data, bidAsk)
+	} else if action == `snapshot` || responseJson.GetPath(`arg`, `channel`).MustString() == `books5` {
+		bidAsk = handleBooksOKEX(instrument, isSpot, data)
+		success = true
+	}
+	if bidAsk == nil {
+		return
+	}
+	sort.Sort(bidAsk.Asks)
+	sort.Sort(sort.Reverse(bidAsk.Bids))
+	if markets.SetBidAsk(instrument, model.OKEX, bidAsk) {
+		for function, handler := range model.GetFunctions(model.OKEX, symbol) {
+			settings := model.GetSetting(function, model.OKEX, symbol)
+			for _, setting := range settings {
+				if success {
+					go handler(setting, bidAsk)
 				}
-			}()
+			}
 		}
-		fmt.Println(string(event))
+	}
+}
+
+func WsDepthServeOKEX(markets *model.Markets, errHandler ErrHandler) (chan struct{}, error) {
+	//lastPingTime := util.GetNow().Unix()
+	wsHandler := func(event []byte) {
+		//now := util.GetNow().Unix()
+		//if now-lastPingTime > 25 { // ping okex server every 30 seconds
+		//	lastPingTime = now
+		//	go func() {
+		//		err := sendToWs(model.OKEX, []byte(`ping`))
+		//		if err != nil {
+		//			util.SocketInfo("okex server ping client error " + err.Error())
+		//		}
+		//	}()
+		//}
 		responseJson, err := util.NewJSON(event)
 		if err != nil || responseJson == nil || responseJson.Get(`data`) == nil ||
 			len(responseJson.Get(`data`).MustArray()) == 0 ||
@@ -73,36 +120,7 @@ func WsDepthServeOKEX(markets *model.Markets, errHandler ErrHandler) (chan struc
 			return
 		}
 		instrument := responseJson.GetPath(`arg`, `instId`).MustString()
-		isSpot := true
-		if strings.Contains(instrument, `SWAP`) || len(strings.Split(instrument, `-`)) > 2 {
-			isSpot = false
-		}
-		symbol := model.GetInstrumentSymbol(model.OKEX, instrument)
-		action := responseJson.Get(`action`).MustString()
-		data := responseJson.Get(`data`).MustArray()[0].(map[string]interface{})
-		_, bidAsk := markets.GetBidAsk(instrument, model.OKEX)
-		success := false
-		if action == `update` && bidAsk != nil {
-			success, bidAsk = handleBooksUpdate(instrument, isSpot, data, bidAsk)
-		} else if action == `snapshot` || responseJson.GetPath(`arg`, `channel`).MustString() == `books5` {
-			bidAsk = handleBooksOKEX(instrument, isSpot, data)
-			success = true
-		}
-		if bidAsk == nil {
-			return
-		}
-		sort.Sort(bidAsk.Asks)
-		sort.Sort(sort.Reverse(bidAsk.Bids))
-		if markets.SetBidAsk(instrument, model.OKEX, bidAsk) {
-			for function, handler := range model.GetFunctions(model.OKEX, symbol) {
-				settings := model.GetSetting(function, model.OKEX, symbol)
-				for _, setting := range settings {
-					if success {
-						go handler(setting, bidAsk)
-					}
-				}
-			}
-		}
+		go handleMsgOKEX(markets, instrument, responseJson)
 	}
 	return WebSocketClient(model.OKEX, model.AppConfig.WSUrls[model.OKEX], model.SubscribeDepth,
 		GetWSSubscribes(model.OKEX, model.SubscribeDepth), subscribeHandlerOKEX, wsHandler, errHandler)

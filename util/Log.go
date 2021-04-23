@@ -63,7 +63,7 @@ func SocketInfo(message string) {
 		}
 		socket, socketInfoFile, _ = initLog(getPath("socketInfo"))
 	}
-	socket.Println(message)
+	go socket.Println(message)
 	socketCount++
 }
 
@@ -74,7 +74,7 @@ func Info(message string) {
 		}
 		info, infoFile, _ = initLog(getPath("info"))
 	}
-	info.Println(message)
+	go info.Println(message)
 	infoCount++
 }
 
@@ -85,6 +85,6 @@ func Notice(message string) {
 		}
 		notice, noticeFile, _ = initLog(getPath("notice"))
 	}
-	notice.Println(message)
+	go notice.Println(message)
 	noticeCount++
 }
