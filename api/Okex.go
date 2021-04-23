@@ -18,7 +18,7 @@ import (
 )
 
 var okLock sync.Mutex
-var msgChanOKEX = make(chan []byte)
+var msgChanOKEX = make(chan []byte, 100000)
 var wrongs = make(map[string]bool)
 
 func setWrong(instrument string, add bool) int {
@@ -54,40 +54,42 @@ var subscribeHandlerOKEX = func(subscribes []interface{}, subType string) error 
 }
 
 func handleMsgOKEX(markets *model.Markets) {
-	event := <-msgChanOKEX
-	responseJson, err := util.NewJSON(event)
-	if err != nil || responseJson == nil || responseJson.Get(`data`) == nil ||
-		len(responseJson.Get(`data`).MustArray()) == 0 ||
-		responseJson.GetPath(`arg`, `instId`) == nil {
-		return
-	}
-	instrument := responseJson.GetPath(`arg`, `instId`).MustString()
-	isSpot := true
-	if strings.Contains(instrument, `SWAP`) || len(strings.Split(instrument, `-`)) > 2 {
-		isSpot = false
-	}
-	symbol := model.GetInstrumentSymbol(model.OKEX, instrument)
-	action := responseJson.Get(`action`).MustString()
-	data := responseJson.Get(`data`).MustArray()[0].(map[string]interface{})
-	_, bidAsk := markets.GetBidAsk(instrument, model.OKEX)
-	success := false
-	if action == `update` && bidAsk != nil {
-		success, bidAsk = handleBooksUpdate(instrument, isSpot, data, bidAsk)
-	} else if action == `snapshot` || responseJson.GetPath(`arg`, `channel`).MustString() == `books5` {
-		bidAsk = handleBooksOKEX(instrument, isSpot, data)
-		success = true
-	}
-	if bidAsk == nil {
-		return
-	}
-	sort.Sort(bidAsk.Asks)
-	sort.Sort(sort.Reverse(bidAsk.Bids))
-	if markets.SetBidAsk(instrument, model.OKEX, bidAsk) {
-		for function, handler := range model.GetFunctions(model.OKEX, symbol) {
-			settings := model.GetSetting(function, model.OKEX, symbol)
-			for _, setting := range settings {
-				if success {
-					go handler(setting, bidAsk)
+	for true {
+		event := <-msgChanOKEX
+		responseJson, err := util.NewJSON(event)
+		if err != nil || responseJson == nil || responseJson.Get(`data`) == nil ||
+			len(responseJson.Get(`data`).MustArray()) == 0 ||
+			responseJson.GetPath(`arg`, `instId`) == nil {
+			return
+		}
+		instrument := responseJson.GetPath(`arg`, `instId`).MustString()
+		isSpot := true
+		if strings.Contains(instrument, `SWAP`) || len(strings.Split(instrument, `-`)) > 2 {
+			isSpot = false
+		}
+		symbol := model.GetInstrumentSymbol(model.OKEX, instrument)
+		action := responseJson.Get(`action`).MustString()
+		data := responseJson.Get(`data`).MustArray()[0].(map[string]interface{})
+		_, bidAsk := markets.GetBidAsk(instrument, model.OKEX)
+		success := false
+		if action == `update` && bidAsk != nil {
+			success, bidAsk = handleBooksUpdate(instrument, isSpot, data, bidAsk)
+		} else if action == `snapshot` || responseJson.GetPath(`arg`, `channel`).MustString() == `books5` {
+			bidAsk = handleBooksOKEX(instrument, isSpot, data)
+			success = true
+		}
+		if bidAsk == nil {
+			return
+		}
+		sort.Sort(bidAsk.Asks)
+		sort.Sort(sort.Reverse(bidAsk.Bids))
+		if markets.SetBidAsk(instrument, model.OKEX, bidAsk) {
+			for function, handler := range model.GetFunctions(model.OKEX, symbol) {
+				settings := model.GetSetting(function, model.OKEX, symbol)
+				for _, setting := range settings {
+					if success {
+						go handler(setting, bidAsk)
+					}
 				}
 			}
 		}
