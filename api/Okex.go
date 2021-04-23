@@ -60,7 +60,9 @@ var subscribeHandlerOKEX = func(subscribes []interface{}, subType string) error 
 func handleMsgOKEX() {
 	for true {
 		event := <-msgChanOKEX
-		util.Notice(fmt.Sprintf(`current chan to be handle %d`, len(msgChanOKEX)))
+		if len(msgChanOKEX) > 100 {
+			util.Notice(fmt.Sprintf(`current chan to be handle %d`, len(msgChanOKEX)))
+		}
 		responseJson, err := util.NewJSON(event)
 		if err != nil || responseJson == nil || responseJson.Get(`data`) == nil ||
 			len(responseJson.Get(`data`).MustArray()) == 0 ||
