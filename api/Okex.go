@@ -13,59 +13,10 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 )
 
-var okLock sync.Mutex
 var msgChanOKEX = make(map[string]chan *simplejson.Json)
-var wrongs = make(map[string]bool)
-
-//func init() {
-//	go reSubscribe()
-//}
-
-func setWrong(instrument string, add bool) int {
-	defer okLock.Unlock()
-	okLock.Lock()
-	if add {
-		wrongs[instrument] = true
-	} else {
-		delete(wrongs, instrument)
-	}
-	return len(wrongs)
-}
-
-//func reSubscribe() {
-//	for true {
-//		util.Notice(fmt.Sprintf(`>>>>>>>>wrong instrument %d`, len(wrongs)))
-//		unsubscribeMap := make(map[string]interface{})
-//		unsubscribeMap["op"] = "unsubscribe"
-//		unsubArray := make([]map[string]string, 0)
-//		for instrument := range wrongs {
-//			unsubArray = append(unsubArray, map[string]string{`channel`: `books50-l2-tbt`, `instId`: instrument})
-//		}
-//		unsubscribeMap[`args`] = unsubArray
-//		err := sendToWs(model.OKEX, util.JsonEncodeToByte(unsubscribeMap))
-//		if err != nil {
-//			util.SocketInfo("okex can not unsubscribe " + err.Error())
-//		}
-//		time.Sleep(time.Second * 3)
-//		subscribeMap := make(map[string]interface{})
-//		subscribeMap["op"] = "subscribe"
-//		subArray := make([]map[string]string, 0)
-//		for instrument := range wrongs {
-//			subArray = append(subArray, map[string]string{`channel`: `books50-l2-tbt`, `instId`: instrument})
-//		}
-//		subscribeMap[`args`] = subArray
-//		err = sendToWs(model.OKEX, util.JsonEncodeToByte(subscribeMap))
-//		if err != nil {
-//			util.SocketInfo("okex can not re-subscribe " + err.Error())
-//		}
-//		wrongs = map[string]bool{}
-//		time.Sleep(time.Minute)
-//	}
-//}
 
 var subscribeHandlerOKEX = func(subscribes []interface{}, subType string) error {
 	var err error = nil
@@ -75,8 +26,8 @@ var subscribeHandlerOKEX = func(subscribes []interface{}, subType string) error 
 		subscribeMap["op"] = "subscribe"
 		subArray := make([]map[string]string, 0)
 		for j := i; j < len(subscribes) && j < i+step; j++ {
-			//subArray = append(subArray, map[string]string{`channel`: `books50-l2-tbt`, `instId`: subscribes[j].(string)})
-			subArray = append(subArray, map[string]string{`channel`: `books5`, `instId`: subscribes[j].(string)})
+			subArray = append(subArray, map[string]string{`channel`: `books50-l2-tbt`, `instId`: subscribes[j].(string)})
+			//subArray = append(subArray, map[string]string{`channel`: `books5`, `instId`: subscribes[j].(string)})
 		}
 		subscribeMap[`args`] = subArray
 		subscribeMessage := util.JsonEncodeToByte(subscribeMap)
@@ -91,12 +42,8 @@ var subscribeHandlerOKEX = func(subscribes []interface{}, subType string) error 
 func handleMsgOKEX(channel chan *simplejson.Json, instrument string) {
 	responseJson := <-channel
 	if len(channel) > cap(channel)/10 {
-		util.Notice(fmt.Sprintf(`current chan to be handle %d wrong size %d`, len(msgChanOKEX), len(wrongs)))
+		util.Notice(fmt.Sprintf(`current chan to be handle %d`, len(msgChanOKEX)))
 	}
-	//isSpot := true
-	//if strings.Contains(instrument, `SWAP`) || len(strings.Split(instrument, `-`)) > 2 {
-	//	isSpot = false
-	//}
 	symbol := model.GetInstrumentSymbol(model.OKEX, instrument)
 	action := responseJson.Get(`action`).MustString()
 	data := responseJson.Get(`data`).MustArray()[0].(map[string]interface{})
@@ -248,16 +195,10 @@ func handleBooksUpdate(instrument string, data map[string]interface{}, bidAsk *m
 		for index := 0; index < 25; index++ {
 			if index < len(newBids) {
 				amount := newBids[index].Amount
-				//if !isSpot {
-				//	amount = GetAmountInPerp(model.OKEX, instrument, amount)
-				//}
 				checkStr += fmt.Sprintf(`%v:%v:`, newBids[index].Price, amount)
 			}
 			if index < len(newAsks) {
 				amount := newAsks[index].Amount
-				//if !isSpot {
-				//	amount = GetAmountInPerp(model.OKEX, instrument, amount)
-				//}
 				checkStr += fmt.Sprintf(`%v:%v:`, newAsks[index].Price, amount)
 			}
 		}
@@ -268,26 +209,12 @@ func handleBooksUpdate(instrument string, data map[string]interface{}, bidAsk *m
 		bidAskUpdate.Asks = newAsks
 		if compare == crcValue {
 			success = true
-			//if wrongs[instrument] {
-			//	util.Notice(fmt.Sprintf(`right checksum %s %v %d`, instrument, isSpot, bidAsk.Bids.Len()))
-			//	setWrong(instrument, false)
-			//}
 		} else {
 			success = false
-			wrongSize := setWrong(instrument, true)
-			//now := time.Now()
-			//if now.Second() == 0 {
-			util.Notice(fmt.Sprintf(`ts %d wrong checksum %s %d %d-%d %v`,
-				bidAskUpdate.Ts, instrument, wrongSize, bidAskUpdate.Bids.Len(), bidAskUpdate.Asks.Len(), data))
-			if bidAsk.Bids.Len() > 5 && bidAsk.Asks.Len() > 5 {
-				util.Notice(fmt.Sprintf(`%v %v %v %v %v - %v %v %v %v %v`,
-					bidAskUpdate.Bids[0].Price, bidAskUpdate.Bids[1].Price, bidAskUpdate.Bids[2].Price, bidAskUpdate.Bids[3].Price,
-					bidAskUpdate.Bids[4].Price, bidAskUpdate.Asks[0].Price, bidAskUpdate.Asks[1].Price, bidAskUpdate.Asks[2].Price,
-					bidAskUpdate.Asks[3].Price, bidAskUpdate.Asks[4].Price))
-			} else {
-				util.Notice(`>>>>>>>>>>> size too small for ` + instrument)
+			if time.Now().Second() == 0 {
+				util.Notice(fmt.Sprintf(`ts %d wrong checksum %s %d-%d %v`,
+					bidAskUpdate.Ts, instrument, bidAskUpdate.Bids.Len(), bidAskUpdate.Asks.Len(), data))
 			}
-			//}
 		}
 	}
 	return success, bidAskUpdate
@@ -325,35 +252,6 @@ func handleBooksOKEX(instrument string, data map[string]interface{}) (bidAsk *mo
 			bidAsk.Bids[i] = model.Tick{Price: price, Amount: amount, Symbol: instrument}
 		}
 	}
-	//if data[`checksum`] != nil {
-	//	checkStr := ``
-	//	for index := 0; index < 25; index++ {
-	//		if index < len(bidAsk.Bids) {
-	//			amount := bidAsk.Bids[index].Amount
-	//			if !isSpot {
-	//				amount = GetAmountInPerp(model.OKEX, instrument, amount)
-	//			}
-	//			checkStr += fmt.Sprintf(`%v:%v:`, bidAsk.Bids[index].Price, amount)
-	//		}
-	//		if index < len(bidAsk.Asks) {
-	//			amount := bidAsk.Asks[index].Amount
-	//			if !isSpot {
-	//				amount = GetAmountInPerp(model.OKEX, instrument, amount)
-	//			}
-	//			checkStr += fmt.Sprintf(`%v:%v:`, bidAsk.Asks[index].Price, amount)
-	//		}
-	//	}
-	//	if len(checkStr) > 0 {
-	//		checkStr = checkStr[0 : len(checkStr)-1]
-	//	}
-	//	crcValue := int64(int32(crc32.ChecksumIEEE([]byte(checkStr))))
-	//	compare, _ := data[`checksum`].(json.Number).Int64()
-	//	if compare == crcValue {
-	//		util.Notice(fmt.Sprintf(`right checksum snapshot %s %v %d`, instrument, isSpot, bidAsk.Bids.Len()))
-	//	} else {
-	//		util.Notice(fmt.Sprintf(`wrong checksum snapshot %s %v %v`, instrument, isSpot, data))
-	//	}
-	//}
 	return
 }
 

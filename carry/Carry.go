@@ -600,6 +600,9 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	carryAmount := getCarryAmount(key, setting.Symbol)
 	if scoreLow < setClose || (carryAmount > 0 && scoreClose <= -1*revertOpen) {
 		bidAmount = tickPerp.Asks[0].Amount
+		if setting.Market == model.OKEX {
+			_, bidAmount = api.ParseRealAmount(setting.Market, setting.Symbol, bidAmount)
+		}
 		askAmount = tickRelated.Bids[0].Amount
 		sidePerp = model.OrderSideBuy
 		sideRelated = model.OrderSideSell
@@ -611,6 +614,9 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	} else if scoreHigh > setOpen || (carryAmount < 0 && scoreOpen >= revertClose) {
 		bidAmount = tickRelated.Asks[0].Amount
 		askAmount = tickPerp.Bids[0].Amount
+		if setting.Market == model.OKEX {
+			_, askAmount = api.ParseRealAmount(setting.Market, setting.Symbol, askAmount)
+		}
 		sidePerp = model.OrderSideSell
 		sideRelated = model.OrderSideBuy
 		if scoreHigh > setOpen {
