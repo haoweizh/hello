@@ -10,7 +10,6 @@ import (
 	"hello/model"
 	"hello/util"
 	"net/http"
-	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -38,13 +37,13 @@ func setWrong(instrument string, add bool) int {
 
 var subscribeHandlerOKEX = func(subscribes []interface{}, subType string) error {
 	var err error = nil
-	step := 30
+	step := 15
 	for i := 0; i < len(subscribes); i += step {
 		subscribeMap := make(map[string]interface{})
 		subscribeMap["op"] = "subscribe"
 		subArray := make([]map[string]string, 0)
 		for j := i; j < len(subscribes) && j < i+step; j++ {
-			subArray = append(subArray, map[string]string{`channel`: `books-l2-tbt`, `instId`: subscribes[j].(string)})
+			subArray = append(subArray, map[string]string{`channel`: `books50-l2-tbt`, `instId`: subscribes[j].(string)})
 			//subArray = append(subArray, map[string]string{`channel`: `books5`, `instId`: subscribes[j].(string)})
 		}
 		subscribeMap[`args`] = subArray
@@ -82,14 +81,17 @@ func handleMsgOKEX() {
 		if action == `update` && bidAsk != nil {
 			success, bidAsk = handleBooksUpdate(instrument, isSpot, data, bidAsk)
 		} else if action == `snapshot` || responseJson.GetPath(`arg`, `channel`).MustString() == `books5` {
-			bidAsk = handleBooksOKEX(instrument, isSpot, data)
+			if wrongs[instrument] {
+				newBidAsk := handleBooksOKEX(instrument, isSpot, data)
+				bidAsk = mergeBidAsk(bidAsk, newBidAsk)
+			}
 			success = true
 		}
 		if bidAsk == nil {
 			continue
 		}
-		sort.Sort(bidAsk.Asks)
-		sort.Sort(sort.Reverse(bidAsk.Bids))
+		//sort.Sort(bidAsk.Asks)
+		//sort.Sort(sort.Reverse(bidAsk.Bids))
 		if model.AppMarkets.SetBidAsk(instrument, model.OKEX, bidAsk) {
 			for function, handler := range model.GetFunctions(model.OKEX, symbol) {
 				settings := model.GetSetting(function, model.OKEX, symbol)
@@ -120,6 +122,26 @@ func WsDepthServeOKEX(errHandler ErrHandler) (chan struct{}, error) {
 	}
 	return WebSocketClient(model.OKEX, model.AppConfig.WSUrls[model.OKEX], model.SubscribeDepth,
 		GetWSSubscribes(model.OKEX, model.SubscribeDepth), subscribeHandlerOKEX, wsHandler, errHandler)
+}
+
+func mergeBidAsk(old, new *model.BidAsk) (bidAsk *model.BidAsk) {
+	for i := 0; i < new.Bids.Len(); i++ {
+		if old.Bids.Len() > i {
+			old.Bids[i] = new.Bids[i]
+		} else {
+			old.Bids = append(old.Bids, new.Bids[i])
+		}
+	}
+	for i := 0; i < new.Asks.Len(); i++ {
+		if old.Asks.Len() > i {
+			old.Asks[i] = new.Asks[i]
+		} else {
+			old.Asks = append(old.Asks, new.Asks[i])
+		}
+	}
+	new.Asks = old.Asks
+	new.Bids = old.Bids
+	return new
 }
 
 func handleBooksUpdate(instrument string, isSpot bool, data map[string]interface{}, bidAsk *model.BidAsk) (
