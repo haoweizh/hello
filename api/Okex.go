@@ -49,7 +49,6 @@ func reSubscribe() {
 		err := sendToWs(model.OKEX, util.JsonEncodeToByte(unsubscribeMap))
 		if err != nil {
 			util.SocketInfo("okex can not unsubscribe " + err.Error())
-			return
 		}
 		time.Sleep(time.Second * 3)
 		subscribeMap := make(map[string]interface{})
