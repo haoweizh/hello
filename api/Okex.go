@@ -225,6 +225,14 @@ func handleBooksUpdate(instrument string, isSpot bool, data map[string]interface
 			if now.Second() == 0 {
 				util.Notice(fmt.Sprintf(`wrong checksum %s %d %d-%d %v`,
 					instrument, wrongSize, bidAsk.Bids.Len(), bidAsk.Asks.Len(), data))
+				if bidAsk.Bids.Len() > 5 && bidAsk.Asks.Len() > 5 {
+					util.Notice(fmt.Sprintf(`%f %f %f %f %f - %f %f %f %f %f`,
+						bidAsk.Bids[0].Price, bidAsk.Bids[1].Price, bidAsk.Bids[2].Price, bidAsk.Bids[3].Price,
+						bidAsk.Bids[4].Price, bidAsk.Asks[0].Price, bidAsk.Asks[1].Price, bidAsk.Asks[2].Price,
+						bidAsk.Asks[3].Price, bidAsk.Asks[4].Price))
+				} else {
+					util.Notice(`>>>>>>>>>>> size too small for ` + instrument)
+				}
 			}
 		}
 	}
