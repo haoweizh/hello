@@ -228,7 +228,7 @@ func handleBooksUpdate(instrument string, isSpot bool, data map[string]interface
 				util.Notice(fmt.Sprintf(`ts %d wrong checksum %s %d %d-%d %v`,
 					bidAskUpdate.Ts, instrument, wrongSize, bidAskUpdate.Bids.Len(), bidAskUpdate.Asks.Len(), data))
 				if bidAsk.Bids.Len() > 5 && bidAsk.Asks.Len() > 5 {
-					util.Notice(fmt.Sprintf(`%f %f %f %f %f - %f %f %f %f %f`,
+					util.Notice(fmt.Sprintf(`%v %v %v %v %v - %v %v %v %v %v`,
 						bidAskUpdate.Bids[0].Price, bidAskUpdate.Bids[1].Price, bidAskUpdate.Bids[2].Price, bidAskUpdate.Bids[3].Price,
 						bidAskUpdate.Bids[4].Price, bidAskUpdate.Asks[0].Price, bidAskUpdate.Asks[1].Price, bidAskUpdate.Asks[2].Price,
 						bidAskUpdate.Asks[3].Price, bidAskUpdate.Asks[4].Price))
