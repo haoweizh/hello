@@ -18,7 +18,7 @@ import (
 )
 
 var okLock sync.Mutex
-var msgChanOKEX = make(chan []byte, 10000)
+var msgChanOKEX = make(chan []byte, 1000)
 var wrongs = make(map[string]bool)
 
 func init() {
@@ -60,8 +60,8 @@ var subscribeHandlerOKEX = func(subscribes []interface{}, subType string) error 
 func handleMsgOKEX() {
 	for true {
 		event := <-msgChanOKEX
-		if len(msgChanOKEX) > 100 {
-			util.Notice(fmt.Sprintf(`current chan to be handle %d`, len(msgChanOKEX)))
+		if len(msgChanOKEX) > 10 {
+			util.Notice(fmt.Sprintf(`current chan to be handle %d wrong size %d`, len(msgChanOKEX), len(wrongs)))
 		}
 		responseJson, err := util.NewJSON(event)
 		if err != nil || responseJson == nil || responseJson.Get(`data`) == nil ||
@@ -230,28 +230,28 @@ func handleBooksUpdate(instrument string, isSpot bool, data map[string]interface
 		compare, _ := data[`checksum`].(json.Number).Int64()
 		bidAskUpdate.Bids = newBids
 		bidAskUpdate.Asks = newAsks
-		now := time.Now()
+		//now := time.Now()
 		if compare == crcValue {
 			success = true
-			if now.Second() == 0 {
-				util.Notice(fmt.Sprintf(`right checksum %s %v %d`, instrument, isSpot, bidAsk.Bids.Len()))
-				setWrong(instrument, false)
-			}
+			//if now.Second() == 0 {
+			//	util.Notice(fmt.Sprintf(`right checksum %s %v %d`, instrument, isSpot, bidAsk.Bids.Len()))
+			//	setWrong(instrument, false)
+			//}
 		} else {
 			success = false
-			wrongSize := setWrong(instrument, true)
-			if now.Second() == 0 {
-				util.Notice(fmt.Sprintf(`ts %d wrong checksum %s %d %d-%d %v`,
-					bidAskUpdate.Ts, instrument, wrongSize, bidAskUpdate.Bids.Len(), bidAskUpdate.Asks.Len(), data))
-				if bidAsk.Bids.Len() > 5 && bidAsk.Asks.Len() > 5 {
-					util.Notice(fmt.Sprintf(`%v %v %v %v %v - %v %v %v %v %v`,
-						bidAskUpdate.Bids[0].Price, bidAskUpdate.Bids[1].Price, bidAskUpdate.Bids[2].Price, bidAskUpdate.Bids[3].Price,
-						bidAskUpdate.Bids[4].Price, bidAskUpdate.Asks[0].Price, bidAskUpdate.Asks[1].Price, bidAskUpdate.Asks[2].Price,
-						bidAskUpdate.Asks[3].Price, bidAskUpdate.Asks[4].Price))
-				} else {
-					util.Notice(`>>>>>>>>>>> size too small for ` + instrument)
-				}
-			}
+			setWrong(instrument, true)
+			//if now.Second() == 0 {
+			//	util.Notice(fmt.Sprintf(`ts %d wrong checksum %s %d %d-%d %v`,
+			//		bidAskUpdate.Ts, instrument, wrongSize, bidAskUpdate.Bids.Len(), bidAskUpdate.Asks.Len(), data))
+			//	if bidAsk.Bids.Len() > 5 && bidAsk.Asks.Len() > 5 {
+			//		util.Notice(fmt.Sprintf(`%v %v %v %v %v - %v %v %v %v %v`,
+			//			bidAskUpdate.Bids[0].Price, bidAskUpdate.Bids[1].Price, bidAskUpdate.Bids[2].Price, bidAskUpdate.Bids[3].Price,
+			//			bidAskUpdate.Bids[4].Price, bidAskUpdate.Asks[0].Price, bidAskUpdate.Asks[1].Price, bidAskUpdate.Asks[2].Price,
+			//			bidAskUpdate.Asks[3].Price, bidAskUpdate.Asks[4].Price))
+			//	} else {
+			//		util.Notice(`>>>>>>>>>>> size too small for ` + instrument)
+			//	}
+			//}
 		}
 	}
 	return success, bidAskUpdate
