@@ -38,28 +38,33 @@ func setWrong(instrument string, add bool) int {
 
 func reSubscribe() {
 	for true {
-		util.Notice(fmt.Sprintf(`wrong instrument %d`, len(wrongs)))
+		util.Notice(fmt.Sprintf(`>>>>>>>>wrong instrument %d`, len(wrongs)))
+		unsubscribeMap := make(map[string]interface{})
+		unsubscribeMap["op"] = "unsubscribe"
+		unsubArray := make([]map[string]string, 0)
 		for instrument := range wrongs {
-			unsubscribeMap := make(map[string]interface{})
-			unsubscribeMap["op"] = "unsubscribe"
-			unsubscribeMap[`args`] = []map[string]string{{`channel`: `books50-l2-tbt`, `instId`: instrument}}
-			err := sendToWs(model.OKEX, util.JsonEncodeToByte(unsubscribeMap))
-			if err != nil {
-				util.SocketInfo("okex can not unsubscribe " + err.Error())
-				return
-			}
-			time.Sleep(time.Second * 3)
-			subscribeMap := make(map[string]interface{})
-			subscribeMap["op"] = "subscribe"
-			subscribeMap[`args`] = []map[string]string{{`channel`: `books50-l2-tbt`, `instId`: instrument}}
-			err = sendToWs(model.OKEX, util.JsonEncodeToByte(subscribeMap))
-			if err != nil {
-				util.SocketInfo("okex can not re-subscribe " + err.Error())
-			}
-			util.Notice(fmt.Sprintf(`resubscribe %s`, instrument))
+			unsubArray = append(unsubArray, map[string]string{`channel`: `books50-l2-tbt`, `instId`: instrument})
 		}
-		time.Sleep(time.Minute)
+		unsubscribeMap[`args`] = unsubArray
+		err := sendToWs(model.OKEX, util.JsonEncodeToByte(unsubscribeMap))
+		if err != nil {
+			util.SocketInfo("okex can not unsubscribe " + err.Error())
+			return
+		}
+		time.Sleep(time.Second * 3)
+		subscribeMap := make(map[string]interface{})
+		subscribeMap["op"] = "subscribe"
+		subArray := make([]map[string]string, 0)
+		for instrument := range wrongs {
+			subArray = append(subArray, map[string]string{`channel`: `books50-l2-tbt`, `instId`: instrument})
+		}
+		err = sendToWs(model.OKEX, util.JsonEncodeToByte(subscribeMap))
+		if err != nil {
+			util.SocketInfo("okex can not re-subscribe " + err.Error())
+		}
+		wrongs = map[string]bool{}
 	}
+	time.Sleep(time.Minute)
 }
 
 var subscribeHandlerOKEX = func(subscribes []interface{}, subType string) error {
