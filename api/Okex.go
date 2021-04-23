@@ -81,10 +81,11 @@ func handleMsgOKEX() {
 		if action == `update` && bidAsk != nil {
 			success, bidAsk = handleBooksUpdate(instrument, isSpot, data, bidAsk)
 		} else if action == `snapshot` || responseJson.GetPath(`arg`, `channel`).MustString() == `books5` {
-			if wrongs[instrument] {
-				newBidAsk := handleBooksOKEX(instrument, isSpot, data)
-				bidAsk = mergeBidAsk(bidAsk, newBidAsk)
-			}
+			bidAsk = handleBooksOKEX(instrument, isSpot, data)
+			//if wrongs[instrument] {
+			//	newBidAsk := handleBooksOKEX(instrument, isSpot, data)
+			//	bidAsk = mergeBidAsk(bidAsk, newBidAsk)
+			//}
 			success = true
 		}
 		if bidAsk == nil {
@@ -124,25 +125,25 @@ func WsDepthServeOKEX(errHandler ErrHandler) (chan struct{}, error) {
 		GetWSSubscribes(model.OKEX, model.SubscribeDepth), subscribeHandlerOKEX, wsHandler, errHandler)
 }
 
-func mergeBidAsk(old, new *model.BidAsk) (bidAsk *model.BidAsk) {
-	for i := 0; i < new.Bids.Len(); i++ {
-		if old.Bids.Len() > i {
-			old.Bids[i] = new.Bids[i]
-		} else {
-			old.Bids = append(old.Bids, new.Bids[i])
-		}
-	}
-	for i := 0; i < new.Asks.Len(); i++ {
-		if old.Asks.Len() > i {
-			old.Asks[i] = new.Asks[i]
-		} else {
-			old.Asks = append(old.Asks, new.Asks[i])
-		}
-	}
-	new.Asks = old.Asks
-	new.Bids = old.Bids
-	return new
-}
+//func mergeBidAsk(old, new *model.BidAsk) (bidAsk *model.BidAsk) {
+//	for i := 0; i < new.Bids.Len(); i++ {
+//		if old.Bids.Len() > i {
+//			old.Bids[i] = new.Bids[i]
+//		} else {
+//			old.Bids = append(old.Bids, new.Bids[i])
+//		}
+//	}
+//	for i := 0; i < new.Asks.Len(); i++ {
+//		if old.Asks.Len() > i {
+//			old.Asks[i] = new.Asks[i]
+//		} else {
+//			old.Asks = append(old.Asks, new.Asks[i])
+//		}
+//	}
+//	new.Asks = old.Asks
+//	new.Bids = old.Bids
+//	return new
+//}
 
 func handleBooksUpdate(instrument string, isSpot bool, data map[string]interface{}, bidAsk *model.BidAsk) (
 	success bool, bidAskUpdate *model.BidAsk) {
