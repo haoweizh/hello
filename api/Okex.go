@@ -21,6 +21,10 @@ var msgChanOKEX = make(map[string]chan *simplejson.Json)
 var wrongs = make(map[string]bool)
 var wrongLock sync.Mutex
 
+func init() {
+	go reSubscribe()
+}
+
 func setWrong(instrument string, success bool) {
 	defer wrongLock.Unlock()
 	wrongLock.Lock()
@@ -30,24 +34,36 @@ func setWrong(instrument string, success bool) {
 		delete(wrongs, instrument)
 	}
 }
-func reSubscribe(instrument string) {
-	unsubscribeMap := make(map[string]interface{})
-	unsubscribeMap["op"] = "unsubscribe"
-	unsubscribeMap[`args`] = []map[string]string{{`channel`: `books50-l2-tbt`, `instId`: instrument}}
-	err := sendToWs(model.OKEX, util.JsonEncodeToByte(unsubscribeMap))
-	if err != nil {
-		util.SocketInfo("okex can not unsubscribe " + err.Error())
-		return
+
+func reSubscribe() {
+	for true {
+		util.Notice(fmt.Sprintf(`>>>>>>>>wrong instrument %d`, len(wrongs)))
+		unsubscribeMap := make(map[string]interface{})
+		unsubscribeMap["op"] = "unsubscribe"
+		unsubArray := make([]map[string]string, 0)
+		for instrument := range wrongs {
+			unsubArray = append(unsubArray, map[string]string{`channel`: `books50-l2-tbt`, `instId`: instrument})
+		}
+		unsubscribeMap[`args`] = unsubArray
+		err := sendToWs(model.OKEX, util.JsonEncodeToByte(unsubscribeMap))
+		if err != nil {
+			util.SocketInfo("okex can not unsubscribe " + err.Error())
+		}
+		time.Sleep(time.Second * 3)
+		subscribeMap := make(map[string]interface{})
+		subscribeMap["op"] = "subscribe"
+		subArray := make([]map[string]string, 0)
+		for instrument := range wrongs {
+			subArray = append(subArray, map[string]string{`channel`: `books50-l2-tbt`, `instId`: instrument})
+		}
+		subscribeMap[`args`] = subArray
+		err = sendToWs(model.OKEX, util.JsonEncodeToByte(subscribeMap))
+		if err != nil {
+			util.SocketInfo("okex can not re-subscribe " + err.Error())
+		}
+		wrongs = map[string]bool{}
+		time.Sleep(time.Minute)
 	}
-	time.Sleep(time.Second * 3)
-	subscribeMap := make(map[string]interface{})
-	subscribeMap["op"] = "subscribe"
-	subscribeMap[`args`] = []map[string]string{{`channel`: `books50-l2-tbt`, `instId`: instrument}}
-	err = sendToWs(model.OKEX, util.JsonEncodeToByte(subscribeMap))
-	if err != nil {
-		util.SocketInfo("okex can not re-subscribe " + err.Error())
-	}
-	util.Notice(fmt.Sprintf(`resubscribe %s`, instrument))
 }
 
 var subscribeHandlerOKEX = func(subscribes []interface{}, subType string) error {
@@ -241,7 +257,6 @@ func handleBooksUpdate(instrument string, data map[string]interface{}, bidAsk *m
 			success = true
 		} else {
 			success = false
-			go reSubscribe(instrument)
 		}
 		setWrong(instrument, success)
 		if !success && time.Now().Second() == 0 {
