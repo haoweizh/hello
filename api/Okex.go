@@ -37,7 +37,7 @@ func setWrong(instrument string, success bool) {
 
 func reSubscribe() {
 	for true {
-		util.Notice(fmt.Sprintf(`>>>>>>>>wrong instrument %d`, len(wrongs)))
+		util.Notice(fmt.Sprintf(`>>>>>>>>wrong instrument %v`, wrongs))
 		unsubscribeMap := make(map[string]interface{})
 		unsubscribeMap["op"] = "unsubscribe"
 		unsubArray := make([]map[string]string, 0)
@@ -61,7 +61,6 @@ func reSubscribe() {
 		if err != nil {
 			util.SocketInfo("okex can not re-subscribe " + err.Error())
 		}
-		wrongs = map[string]bool{}
 		time.Sleep(time.Minute)
 	}
 }
@@ -101,6 +100,7 @@ func handleMsgOKEX(channel chan *simplejson.Json, instrument string) {
 		if action == `update` && bidAsk != nil {
 			success, bidAsk = handleBooksUpdate(instrument, data, bidAsk)
 		} else if action == `snapshot` || responseJson.GetPath(`arg`, `channel`).MustString() == `books5` {
+			util.Notice(fmt.Sprintf(`initial ticker %v`, data))
 			bidAsk = handleBooksOKEX(instrument, data)
 			success = true
 		}
