@@ -212,7 +212,7 @@ func handleBooksUpdate(instrument string, data map[string]interface{}, bidAsk *m
 		} else {
 			success = false
 		}
-		if !success {
+		if !success && time.Now().Second() == 0 {
 			util.Notice(fmt.Sprintf("%v >>>>>>>>ts %d checksum %s\n %s\n %v",
 				success, bidAskUpdate.Ts, instrument, checkStr, data))
 		}
