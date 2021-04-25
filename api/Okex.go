@@ -86,7 +86,7 @@ var subscribeHandlerOKEX = func(subscribes []interface{}, subType string) error 
 func handleMsgOKEX(channel chan *simplejson.Json, instrument string) {
 	var responseJson *simplejson.Json
 	for responseJson = range channel {
-		if len(channel) > 20 {
+		if len(channel) > 20 || time.Now().Second() == 0 {
 			util.Notice(fmt.Sprintf(`current chan to be handle %d`, len(msgChanOKEX)))
 		}
 		symbol := model.GetInstrumentSymbol(model.OKEX, instrument)
