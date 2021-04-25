@@ -241,7 +241,7 @@ func handleBooksUpdate(instrument string, data map[string]interface{}, bidAsk *m
 			success = true
 		} else {
 			success = false
-			reSubscribe(instrument)
+			go reSubscribe(instrument)
 		}
 		setWrong(instrument, success)
 		if !success && time.Now().Second() == 0 {
