@@ -21,9 +21,9 @@ var msgChanOKEX = make(map[string]chan *simplejson.Json)
 var wrongs = make(map[string]bool)
 var wrongLock sync.Mutex
 
-func init() {
-	go reSubscribe()
-}
+//func init() {
+//	go reSubscribe()
+//}
 
 func setWrong(instrument string, success bool) {
 	defer wrongLock.Unlock()
@@ -35,32 +35,32 @@ func setWrong(instrument string, success bool) {
 	}
 }
 
-func reSubscribe() {
-	for true {
-		if len(wrongs) == 0 {
-			continue
-		}
-		util.Notice(fmt.Sprintf(`>>>>>>>>wrong instrument %v`, wrongs))
-		subscribeMap := make(map[string]interface{})
-		subscribeMap["op"] = "unsubscribe"
-		subArray := make([]map[string]string, 0)
-		for instrument := range wrongs {
-			subArray = append(subArray, map[string]string{`channel`: `books50-l2-tbt`, `instId`: instrument})
-		}
-		subscribeMap[`args`] = subArray
-		err := sendToWs(model.OKEX, util.JsonEncodeToByte(subscribeMap))
-		if err != nil {
-			util.SocketInfo("okex can not unsubscribe " + err.Error())
-		}
-		time.Sleep(time.Second * 3)
-		subscribeMap["op"] = "subscribe"
-		err = sendToWs(model.OKEX, util.JsonEncodeToByte(subscribeMap))
-		if err != nil {
-			util.SocketInfo("okex can not re-subscribe " + err.Error())
-		}
-		time.Sleep(time.Minute)
-	}
-}
+//func reSubscribe() {
+//	for true {
+//		if len(wrongs) == 0 {
+//			continue
+//		}
+//		util.Notice(fmt.Sprintf(`>>>>>>>>wrong instrument %v`, wrongs))
+//		subscribeMap := make(map[string]interface{})
+//		subscribeMap["op"] = "unsubscribe"
+//		subArray := make([]map[string]string, 0)
+//		for instrument := range wrongs {
+//			subArray = append(subArray, map[string]string{`channel`: `books50-l2-tbt`, `instId`: instrument})
+//		}
+//		subscribeMap[`args`] = subArray
+//		err := sendToWs(model.OKEX, util.JsonEncodeToByte(subscribeMap))
+//		if err != nil {
+//			util.SocketInfo("okex can not unsubscribe " + err.Error())
+//		}
+//		time.Sleep(time.Second * 3)
+//		subscribeMap["op"] = "subscribe"
+//		err = sendToWs(model.OKEX, util.JsonEncodeToByte(subscribeMap))
+//		if err != nil {
+//			util.SocketInfo("okex can not re-subscribe " + err.Error())
+//		}
+//		time.Sleep(time.Minute)
+//	}
+//}
 
 var subscribeHandlerOKEX = func(subscribes []interface{}, subType string) error {
 	var err error = nil
@@ -70,8 +70,8 @@ var subscribeHandlerOKEX = func(subscribes []interface{}, subType string) error 
 		subscribeMap["op"] = "subscribe"
 		subArray := make([]map[string]string, 0)
 		for j := i; j < len(subscribes) && j < i+step; j++ {
-			//subArray = append(subArray, map[string]string{`channel`: `books50-l2-tbt`, `instId`: subscribes[j].(string)})
-			subArray = append(subArray, map[string]string{`channel`: `books5`, `instId`: subscribes[j].(string)})
+			subArray = append(subArray, map[string]string{`channel`: `books50-l2-tbt`, `instId`: subscribes[j].(string)})
+			//subArray = append(subArray, map[string]string{`channel`: `books5`, `instId`: subscribes[j].(string)})
 		}
 		subscribeMap[`args`] = subArray
 		subscribeMessage := util.JsonEncodeToByte(subscribeMap)
@@ -86,7 +86,7 @@ var subscribeHandlerOKEX = func(subscribes []interface{}, subType string) error 
 func handleMsgOKEX(channel chan *simplejson.Json, instrument string) {
 	var responseJson *simplejson.Json
 	for responseJson = range channel {
-		if len(channel) > cap(channel)/10 {
+		if len(channel) > 20 {
 			util.Notice(fmt.Sprintf(`current chan to be handle %d`, len(msgChanOKEX)))
 		}
 		symbol := model.GetInstrumentSymbol(model.OKEX, instrument)
@@ -98,7 +98,7 @@ func handleMsgOKEX(channel chan *simplejson.Json, instrument string) {
 			success, bidAsk = handleBooksUpdate(instrument, data, bidAsk)
 		} else if action == `snapshot` || responseJson.GetPath(`arg`, `channel`).MustString() == `books5` {
 			if action == `snapshot` {
-				util.Notice(fmt.Sprintf(`initial ticker %v`, data))
+				util.Notice(fmt.Sprintf(`++++ %s initial ticker %v`, instrument, data))
 			}
 			bidAsk = handleBooksOKEX(instrument, data)
 			success = true
