@@ -68,7 +68,25 @@ func Test_ws(t *testing.T) {
 //	fmt.Println(fmt.Sprintf(`%f %f`, amountIn, amount))
 //}
 
+func send() {
+	for true {
+		now := time.Now().Second()
+		testChan <- now
+		testChan <- now
+		testChan <- now
+		time.Sleep(time.Second)
+	}
+}
+
+var testChan = make(chan int, 1000)
+
 func Test_OKFormatAmount(t *testing.T) {
+	go send()
+	msg := 1
+	for msg = range testChan {
+		fmt.Println(fmt.Sprintf(`get %d length %d`, msg, len(testChan)))
+		time.Sleep(time.Second * 5)
+	}
 	price, _ := strconv.ParseFloat(`5077.13021003`, 64)
 	amount := util.CutTailZero(fmt.Sprintf(`%f`, price))
 	fmt.Println(amount)
