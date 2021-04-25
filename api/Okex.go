@@ -37,26 +37,23 @@ func setWrong(instrument string, success bool) {
 
 func reSubscribe() {
 	for true {
+		if len(wrongs) == 0 {
+			continue
+		}
 		util.Notice(fmt.Sprintf(`>>>>>>>>wrong instrument %v`, wrongs))
-		unsubscribeMap := make(map[string]interface{})
-		unsubscribeMap["op"] = "unsubscribe"
-		unsubArray := make([]map[string]string, 0)
-		for instrument := range wrongs {
-			unsubArray = append(unsubArray, map[string]string{`channel`: `books50-l2-tbt`, `instId`: instrument})
-		}
-		unsubscribeMap[`args`] = unsubArray
-		err := sendToWs(model.OKEX, util.JsonEncodeToByte(unsubscribeMap))
-		if err != nil {
-			util.SocketInfo("okex can not unsubscribe " + err.Error())
-		}
-		time.Sleep(time.Second * 3)
 		subscribeMap := make(map[string]interface{})
-		subscribeMap["op"] = "subscribe"
+		subscribeMap["op"] = "unsubscribe"
 		subArray := make([]map[string]string, 0)
 		for instrument := range wrongs {
 			subArray = append(subArray, map[string]string{`channel`: `books50-l2-tbt`, `instId`: instrument})
 		}
 		subscribeMap[`args`] = subArray
+		err := sendToWs(model.OKEX, util.JsonEncodeToByte(subscribeMap))
+		if err != nil {
+			util.SocketInfo("okex can not unsubscribe " + err.Error())
+		}
+		time.Sleep(time.Second * 3)
+		subscribeMap["op"] = "subscribe"
 		err = sendToWs(model.OKEX, util.JsonEncodeToByte(subscribeMap))
 		if err != nil {
 			util.SocketInfo("okex can not re-subscribe " + err.Error())
@@ -73,8 +70,8 @@ var subscribeHandlerOKEX = func(subscribes []interface{}, subType string) error 
 		subscribeMap["op"] = "subscribe"
 		subArray := make([]map[string]string, 0)
 		for j := i; j < len(subscribes) && j < i+step; j++ {
-			subArray = append(subArray, map[string]string{`channel`: `books50-l2-tbt`, `instId`: subscribes[j].(string)})
-			//subArray = append(subArray, map[string]string{`channel`: `books5`, `instId`: subscribes[j].(string)})
+			//subArray = append(subArray, map[string]string{`channel`: `books50-l2-tbt`, `instId`: subscribes[j].(string)})
+			subArray = append(subArray, map[string]string{`channel`: `books5`, `instId`: subscribes[j].(string)})
 		}
 		subscribeMap[`args`] = subArray
 		subscribeMessage := util.JsonEncodeToByte(subscribeMap)
