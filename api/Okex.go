@@ -87,7 +87,7 @@ func handleMsgOKEX(channel chan *simplejson.Json, instrument string) {
 	var responseJson *simplejson.Json
 	for responseJson = range channel {
 		if len(channel) > 20 || time.Now().Second() == 0 {
-			util.Notice(fmt.Sprintf(`%s current chan to be handle %d`, instrument, len(msgChanOKEX)))
+			util.Notice(fmt.Sprintf(`%s current chan to be handle %d`, instrument, len(channel)))
 		}
 		symbol := model.GetInstrumentSymbol(model.OKEX, instrument)
 		action := responseJson.Get(`action`).MustString()
