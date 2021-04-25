@@ -13,10 +13,23 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
 var msgChanOKEX = make(map[string]chan *simplejson.Json)
+var wrongs = make(map[string]bool)
+var wrongLock sync.Mutex
+
+func setWrong(instrument string, success bool) {
+	defer wrongLock.Unlock()
+	wrongLock.Lock()
+	if !success {
+		wrongs[instrument] = true
+	} else {
+		delete(wrongs, instrument)
+	}
+}
 
 var subscribeHandlerOKEX = func(subscribes []interface{}, subType string) error {
 	var err error = nil
@@ -212,9 +225,10 @@ func handleBooksUpdate(instrument string, data map[string]interface{}, bidAsk *m
 		} else {
 			success = false
 		}
+		setWrong(instrument, success)
 		if !success && time.Now().Second() == 0 {
-			util.Notice(fmt.Sprintf("%v >>>>>>>>ts %d checksum %s\n %s\n %v",
-				success, bidAskUpdate.Ts, instrument, checkStr, data))
+			util.Notice(fmt.Sprintf("%v ts %d checksum %s wrong size: %d \n [[[ %s\n ]]] %v",
+				success, bidAskUpdate.Ts, instrument, len(wrongs), checkStr, data))
 		}
 	}
 	return success, bidAskUpdate
