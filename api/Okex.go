@@ -40,30 +40,32 @@ var subscribeHandlerOKEX = func(subscribes []interface{}, subType string) error 
 }
 
 func handleMsgOKEX(channel chan *simplejson.Json, instrument string) {
-	responseJson := <-channel
-	if len(channel) > cap(channel)/10 {
-		util.Notice(fmt.Sprintf(`current chan to be handle %d`, len(msgChanOKEX)))
-	}
-	symbol := model.GetInstrumentSymbol(model.OKEX, instrument)
-	action := responseJson.Get(`action`).MustString()
-	data := responseJson.Get(`data`).MustArray()[0].(map[string]interface{})
-	_, bidAsk := model.AppMarkets.GetBidAsk(instrument, model.OKEX)
-	success := false
-	if action == `update` && bidAsk != nil {
-		success, bidAsk = handleBooksUpdate(instrument, data, bidAsk)
-	} else if action == `snapshot` || responseJson.GetPath(`arg`, `channel`).MustString() == `books5` {
-		bidAsk = handleBooksOKEX(instrument, data)
-		success = true
-	}
-	if bidAsk == nil {
-		return
-	}
-	if model.AppMarkets.SetBidAsk(instrument, model.OKEX, bidAsk) {
-		for function, handler := range model.GetFunctions(model.OKEX, symbol) {
-			settings := model.GetSetting(function, model.OKEX, symbol)
-			for _, setting := range settings {
-				if success {
-					go handler(setting, bidAsk)
+	var responseJson *simplejson.Json
+	for responseJson = range channel {
+		if len(channel) > cap(channel)/10 {
+			util.Notice(fmt.Sprintf(`current chan to be handle %d`, len(msgChanOKEX)))
+		}
+		symbol := model.GetInstrumentSymbol(model.OKEX, instrument)
+		action := responseJson.Get(`action`).MustString()
+		data := responseJson.Get(`data`).MustArray()[0].(map[string]interface{})
+		_, bidAsk := model.AppMarkets.GetBidAsk(instrument, model.OKEX)
+		success := false
+		if action == `update` && bidAsk != nil {
+			success, bidAsk = handleBooksUpdate(instrument, data, bidAsk)
+		} else if action == `snapshot` || responseJson.GetPath(`arg`, `channel`).MustString() == `books5` {
+			bidAsk = handleBooksOKEX(instrument, data)
+			success = true
+		}
+		if bidAsk == nil {
+			return
+		}
+		if model.AppMarkets.SetBidAsk(instrument, model.OKEX, bidAsk) {
+			for function, handler := range model.GetFunctions(model.OKEX, symbol) {
+				settings := model.GetSetting(function, model.OKEX, symbol)
+				for _, setting := range settings {
+					if success {
+						go handler(setting, bidAsk)
+					}
 				}
 			}
 		}
@@ -74,6 +76,7 @@ func WsDepthServeOKEX(instruments map[string]bool, errHandler ErrHandler) (chan 
 	for s := range instruments {
 		if msgChanOKEX[s] == nil {
 			msgChanOKEX[s] = make(chan *simplejson.Json, 1000)
+			go handleMsgOKEX(msgChanOKEX[s], s)
 		}
 	}
 	//lastPingTime := util.GetNow().Unix()
@@ -98,7 +101,6 @@ func WsDepthServeOKEX(instruments map[string]bool, errHandler ErrHandler) (chan 
 		channel := msgChanOKEX[instrument]
 		if channel != nil {
 			channel <- responseJson
-			go handleMsgOKEX(channel, instrument)
 		}
 	}
 	return WebSocketClient(model.OKEX, model.AppConfig.WSUrls[model.OKEX], model.SubscribeDepth,
@@ -194,14 +196,10 @@ func handleBooksUpdate(instrument string, data map[string]interface{}, bidAsk *m
 		checkStr := ``
 		for index := 0; index < 25; index++ {
 			if index < len(newBids) {
-				amount := util.CutTailZero(fmt.Sprintf(`%f`, newBids[index].Amount))
-				price := util.CutTailZero(fmt.Sprintf(`%f`, newBids[index].Price))
-				checkStr += fmt.Sprintf(`%s:%s:`, price, amount)
+				checkStr += fmt.Sprintf(`%s:%s:`, newBids[index].PriceStr, newBids[index].AmountStr)
 			}
 			if index < len(newAsks) {
-				amount := util.CutTailZero(fmt.Sprintf(`%f`, newAsks[index].Amount))
-				price := util.CutTailZero(fmt.Sprintf(`%f`, newAsks[index].Price))
-				checkStr += fmt.Sprintf(`%s:%s:`, price, amount)
+				checkStr += fmt.Sprintf(`%s:%s:`, newAsks[index].PriceStr, newAsks[index].AmountStr)
 			}
 		}
 		checkStr = checkStr[0 : len(checkStr)-1]
@@ -214,10 +212,8 @@ func handleBooksUpdate(instrument string, data map[string]interface{}, bidAsk *m
 		} else {
 			success = false
 		}
-		if time.Now().Second() == 0 && !success {
-			util.Notice(fmt.Sprintf("%v >>>>>>>>ts %d checksum %s\n %s\n %v",
-				success, bidAskUpdate.Ts, instrument, checkStr, data))
-		}
+		util.Notice(fmt.Sprintf("%v >>>>>>>>ts %d checksum %s\n %s\n %v",
+			success, bidAskUpdate.Ts, instrument, checkStr, data))
 	}
 	return success, bidAskUpdate
 }
@@ -235,19 +231,45 @@ func handleBooksOKEX(instrument string, data map[string]interface{}) (bidAsk *mo
 	for i, ask := range asks {
 		value := ask.([]interface{})
 		if len(value) >= 2 {
-			price, _ := strconv.ParseFloat(value[0].(string), 64)
-			amount, _ := strconv.ParseFloat(value[1].(string), 64)
-			bidAsk.Asks[i] = model.Tick{Price: price, Amount: amount, Symbol: instrument}
+			priceStr := value[0].(string)
+			amountStr := value[1].(string)
+			price, _ := strconv.ParseFloat(priceStr, 64)
+			amount, _ := strconv.ParseFloat(amountStr, 64)
+			bidAsk.Asks[i] = model.Tick{Price: price, Amount: amount, Symbol: instrument, PriceStr: priceStr, AmountStr: amountStr}
 		}
 	}
 	for i, bid := range bids {
 		value := bid.([]interface{})
 		if len(value) >= 2 {
-			price, _ := strconv.ParseFloat(value[0].(string), 64)
-			amount, _ := strconv.ParseFloat(value[1].(string), 64)
-			bidAsk.Bids[i] = model.Tick{Price: price, Amount: amount, Symbol: instrument}
+			priceStr := value[0].(string)
+			amountStr := value[1].(string)
+			price, _ := strconv.ParseFloat(priceStr, 64)
+			amount, _ := strconv.ParseFloat(amountStr, 64)
+			bidAsk.Bids[i] = model.Tick{Price: price, Amount: amount, Symbol: instrument, PriceStr: priceStr, AmountStr: amountStr}
 		}
 	}
+	//if data[`checksum`] != nil {
+	//	checkStr := ``
+	//	for index := 0; index < 25; index++ {
+	//		if index < len(bidAsk.Bids) {
+	//			checkStr += fmt.Sprintf(`%s:%s:`, bidAsk.Bids[index].PriceStr, bidAsk.Bids[index].AmountStr)
+	//		}
+	//		if index < len(bidAsk.Asks) {
+	//			checkStr += fmt.Sprintf(`%s:%s:`, bidAsk.Asks[index].PriceStr, bidAsk.Asks[index].AmountStr)
+	//		}
+	//	}
+	//	if len(checkStr) > 0 {
+	//		checkStr = checkStr[0 : len(checkStr)-1]
+	//	}
+	//	crcValue := int64(int32(crc32.ChecksumIEEE([]byte(checkStr))))
+	//	compare, _ := data[`checksum`].(json.Number).Int64()
+	//	if compare == crcValue {
+	//		util.Notice(fmt.Sprintf(`right checksum snapshot %s %d`, instrument, bidAsk.Bids.Len()))
+	//	} else {
+	//		util.Notice(fmt.Sprintf("%v +++++++ checksum %s\n %s\n %v",
+	//			false, instrument, checkStr, data))
+	//	}
+	//}
 	return
 }
 

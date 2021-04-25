@@ -3,11 +3,13 @@ package model
 type Ticks []Tick
 
 type Tick struct {
-	Id     string
-	Side   string
-	Symbol string
-	Price  float64
-	Amount float64
+	Id        string
+	Side      string
+	Symbol    string
+	PriceStr  string
+	AmountStr string
+	Price     float64
+	Amount    float64
 }
 
 func (ticks Ticks) Len() int {

@@ -9,7 +9,9 @@ import (
 	_ "github.com/jinzhu/gorm/dialects/postgres"
 	"hello/api"
 	"hello/model"
+	"hello/util"
 	"net/url"
+	"strconv"
 	"testing"
 	"time"
 )
@@ -67,6 +69,9 @@ func Test_ws(t *testing.T) {
 //}
 
 func Test_OKFormatAmount(t *testing.T) {
+	price, _ := strconv.ParseFloat(`5077.13021003`, 64)
+	amount := util.CutTailZero(fmt.Sprintf(`%f`, price))
+	fmt.Println(amount)
 	strs := []string{`1`, `2`, `3`, `4`, `5`}
 	for _, str := range strs {
 		msgChan <- str
