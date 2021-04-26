@@ -394,12 +394,7 @@ func placeCarry(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, key
 	api.PlaceOrder(key, secret, sideRelated, model.OrderTypeLimit, setting.Market, symbolRelated,
 		``, ``, model.FunctionCarry, relatedPrice, relatedPrice,
 		amount, true, postOrderCarry)
-	keys, _ := model.AppConfig.GetKeys(setting.Market)
-	if key == keys[0] {
-		time.Sleep(time.Second / 10)
-	} else {
-		time.Sleep(time.Second / 5)
-	}
+	time.Sleep(time.Second / 5)
 }
 
 func getCarryAmounts(setting *model.Setting, balances []*model.Balance, positions []*model.Position) (
