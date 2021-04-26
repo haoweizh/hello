@@ -47,6 +47,7 @@ func setWrong(instrument string, success bool) {
 
 func reSubscribe() {
 	for true {
+		time.Sleep(time.Minute)
 		if len(wrongs) == 0 {
 			continue
 		}
@@ -69,7 +70,6 @@ func reSubscribe() {
 		if err != nil {
 			util.SocketInfo("okex can not re-subscribe " + err.Error())
 		}
-		time.Sleep(time.Minute)
 	}
 }
 
