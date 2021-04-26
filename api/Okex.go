@@ -25,6 +25,16 @@ func init() {
 	go reSubscribe()
 }
 
+func getWrongs() []string {
+	defer wrongLock.Unlock()
+	wrongLock.Lock()
+	array := make([]string, len(wrongs))
+	for s := range wrongs {
+		array = append(array, s)
+	}
+	return array
+}
+
 func setWrong(instrument string, success bool) {
 	defer wrongLock.Unlock()
 	wrongLock.Lock()
@@ -40,11 +50,12 @@ func reSubscribe() {
 		if len(wrongs) == 0 {
 			continue
 		}
-		util.Notice(fmt.Sprintf(`>>>>>>>>wrong instrument %v`, wrongs))
+		wrongArray := getWrongs()
+		util.Notice(fmt.Sprintf(`>>>>>>>>wrong instrument %v`, wrongArray))
 		subscribeMap := make(map[string]interface{})
 		subscribeMap["op"] = "unsubscribe"
 		subArray := make([]map[string]string, 0)
-		for instrument := range wrongs {
+		for _, instrument := range wrongArray {
 			subArray = append(subArray, map[string]string{`channel`: `books50-l2-tbt`, `instId`: instrument})
 		}
 		subscribeMap[`args`] = subArray
