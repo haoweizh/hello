@@ -55,6 +55,7 @@ func pingOKEX() {
 			keys, _ := model.AppConfig.GetKeys(model.OKEX)
 			for _, key := range keys {
 				channelKey := model.OKEX + `_` + key
+				util.Info(`send ping`)
 				err := sendToWs(channelKey, []byte(`ping`))
 				if err != nil {
 					util.SocketInfo("okex server ping client error " + err.Error())
@@ -111,6 +112,7 @@ var subscriberOKEXPrivate = func(subscribes []interface{}, key string) error {
 	loginArray := []map[string]interface{}{{
 		`apiKey`: key, `passphrase`: model.AppConfig.Phase, `timestamp`: timestamp, `sign`: sign}}
 	loginMap[`args`] = loginArray
+	util.Info(`send login`)
 	err = sendToWs(model.OKEX+`_`+key, util.JsonEncodeToByte(loginMap))
 	if err != nil {
 		util.SocketInfo(fmt.Sprintf(`fail to login okex ws: %s return %s`, key, err.Error()))
@@ -126,8 +128,9 @@ var subscriberOKEXPrivate = func(subscribes []interface{}, key string) error {
 		subscribeMap[`args`] = subArray
 		if err = sendToWs(model.OKEX+`_`+key, util.JsonEncodeToByte(subscribeMap)); err != nil {
 			util.SocketInfo("okex can not subscribe private " + err.Error())
-			return err
+			continue
 		}
+		util.Info(`send sub`)
 	}
 	return err
 
@@ -500,6 +503,7 @@ func placeOrderOKEX(key, secret string, isWs bool, order *model.Order) {
 		subscribeMap["op"] = "order"
 		postData[`tag`] = order.RefreshType
 		subscribeMap[`args`] = postData
+		util.Info(`send place order`)
 		err := sendToWs(model.OKEX+`_`+key, util.JsonEncodeToByte(postData))
 		if err != nil {
 			util.Notice(fmt.Sprintf(`fail to send order ws %s %s return %s`, key, order.Instrument, err.Error()))
