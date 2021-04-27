@@ -215,6 +215,7 @@ var wsHandler = func(event []byte, orderHandler OrderHandler) {
 
 var wsHandlerPrivate = func(event []byte, orderHandler OrderHandler) {
 	responseJson, err := util.NewJSON(event)
+	util.Info(fmt.Sprintf(`>>> %s`, string(event)))
 	if err != nil || responseJson == nil || responseJson.Get(`data`) == nil ||
 		len(responseJson.Get(`data`).MustArray()) == 0 {
 		return
@@ -497,6 +498,7 @@ func placeOrderOKEX(key, secret string, isWs bool, order *model.Order) {
 		subscribeMap := make(map[string]interface{})
 		subscribeMap[`id`] = time.Now().UnixNano()
 		subscribeMap["op"] = "order"
+		postData[`tag`] = order.RefreshType
 		subscribeMap[`args`] = postData
 		err := sendToWs(model.OKEX+`_`+key, util.JsonEncodeToByte(postData))
 		if err != nil {
@@ -688,6 +690,9 @@ func parseOrderOKEX(value map[string]interface{}) (order *model.Order) {
 	if value[`cTime`] != nil && value[`cTime`] != `` {
 		ts, _ := strconv.ParseInt(value[`cTime`].(string), 10, 64)
 		order.OrderTime = time.Unix(ts/1000, 0)
+	}
+	if value[`tag`] != nil {
+		order.RefreshType = value[`tag`].(string)
 	}
 	if strings.Contains(order.Instrument, `SWAP`) || len(strings.Split(order.Instrument, `-`)) > 2 {
 		_, order.Amount = ParseRealAmount(model.OKEX, order.Instrument, order.Amount)
