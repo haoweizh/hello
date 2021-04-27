@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"github.com/gorilla/websocket"
 	"github.com/jinzhu/configor"
-	"github.com/jinzhu/gorm"
-	_ "github.com/jinzhu/gorm/dialects/postgres"
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
 	"hello/api"
 	"hello/model"
 	"hello/util"
@@ -135,7 +135,7 @@ func Test_wallet(t *testing.T) {
 	today = today.Add(duration)
 	candle := api.GetDayCandle(``, ``, model.OKEX, ``, `BTC-USDT-SWAP`, today)
 	fmt.Println(candle.N)
-	model.AppDB, _ = gorm.Open("postgres", model.AppConfig.DBConnection)
+	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
 	//api.InitCoinBalance(``, ``, model.FunctionCarry, model.OKEX)
 	//api.InitMarketInfos()
 	//order := api.PlaceOrder(``, ``, model.OrderSideSell, model.OrderTypeMarket, model.OKEX, `BTC-USDT-SWAP`,

@@ -100,10 +100,10 @@ func GetTurtleData(setting *model.Setting) (turtleData *TurtleData) {
 	var orderLong, orderShort *model.Order
 	model.AppDB.Where("market= ? and symbol= ? and refresh_type= ? and amount>deal_amount and status=? and order_side=?",
 		setting.Market, setting.Symbol, model.FunctionTurtle, model.CarryStatusWorking, model.OrderSideBuy).
-		Order(`order_time desc`).Limit(setting.AmountLimit).Find(&turtleData.longs)
+		Order(`order_time desc`).Limit(int(setting.AmountLimit)).Find(&turtleData.longs)
 	model.AppDB.Where("market= ? and symbol= ? and refresh_type= ? and amount>deal_amount and status=? and order_side=?",
 		setting.Market, setting.Symbol, model.FunctionTurtle, model.CarryStatusWorking, model.OrderSideSell).
-		Order(`order_time desc`).Limit(setting.AmountLimit).Find(&turtleData.shorts)
+		Order(`order_time desc`).Limit(int(setting.AmountLimit)).Find(&turtleData.shorts)
 	util.Notice(fmt.Sprintf(`load db turtle orders longs %d shorts %d`,
 		len(turtleData.longs), len(turtleData.shorts)))
 	for _, order := range turtleData.longs {

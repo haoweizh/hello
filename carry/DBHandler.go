@@ -2,8 +2,8 @@ package carry
 
 import (
 	"fmt"
-	"github.com/jinzhu/gorm"
-	_ "github.com/jinzhu/gorm/dialects/postgres"
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
 	"hello/api"
 	"hello/model"
 	"hello/util"
@@ -155,7 +155,7 @@ func MaintainMarketChan() {
 func Maintain() {
 	util.Notice("start carrying")
 	var err error
-	model.AppDB, err = gorm.Open("postgres", model.AppConfig.DBConnection)
+	model.AppDB, err = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
 	if err != nil {
 		util.Notice(err.Error())
 		return
@@ -165,10 +165,9 @@ func Maintain() {
 	model.HandlerMap[model.FunctionCarry] = ProcessCarry
 	model.HandlerMap[model.FunctionDCarry] = ProcessDCarry
 	//model.HandlerMap[model.FunctionPostonlyHandler] = PostonlyHandler
-	defer model.AppDB.Close()
-	model.AppDB.AutoMigrate(&model.Setting{})
-	model.AppDB.AutoMigrate(&model.Order{})
-	model.AppDB.AutoMigrate(&model.Balance{})
+	_ = model.AppDB.AutoMigrate(&model.Setting{})
+	_ = model.AppDB.AutoMigrate(&model.Order{})
+	_ = model.AppDB.AutoMigrate(&model.Balance{})
 	//model.LoadSettings()
 	if !api.InitMarketInfos() {
 		util.Notice(`fatal error: can not set okex account mode to net!!`)

@@ -3,7 +3,7 @@ package model
 import (
 	"fmt"
 	"github.com/jinzhu/configor"
-	"github.com/jinzhu/gorm"
+	"gorm.io/gorm"
 	"hello/util"
 	"sort"
 	"strings"

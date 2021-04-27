@@ -14,7 +14,7 @@ type Order struct {
 	GridPos      int64
 	Instrument   string
 	Market       string
-	OrderId      string
+	OrderId      string `gorm:"unique"`
 	OrderSide    string
 	OrderTime    time.Time
 	OrderType    string
