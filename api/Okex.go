@@ -505,7 +505,9 @@ func placeOrderOKEX(key, secret string, isWs bool, order *model.Order) {
 		subscribeMap["op"] = "order"
 		postData[`tag`] = order.RefreshType
 		subscribeMap[`args`] = postData
-		err := sendToWs(model.OKEX+`_`+key, util.JsonEncodeToByte(subscribeMap))
+		wsOrderMsg := util.JsonEncodeToByte(subscribeMap)
+		util.Info(`ws order ` + string(wsOrderMsg))
+		err := sendToWs(model.OKEX+`_`+key, wsOrderMsg)
 		if err != nil {
 			util.Notice(fmt.Sprintf(`fail to send order ws %s %s return %s`, key, order.Instrument, err.Error()))
 		}
