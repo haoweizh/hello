@@ -242,6 +242,9 @@ func handleWSOrderOKEX(value map[string]interface{}, orderHandler OrderHandler) 
 	model.AppDB.Where(`order_id=?`, order.OrderId).First(&dbOrder)
 	if dbOrder.OrderId != `` {
 		order.ID = dbOrder.ID
+		util.Info(fmt.Sprintf(`query order %s id %d`, order.OrderId, dbOrder.ID))
+	} else {
+		util.Info(`db can not get orderId %s`, order.OrderId)
 	}
 	model.AppDB.Save(order)
 	orderHandler(order)

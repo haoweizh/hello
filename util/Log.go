@@ -1,6 +1,7 @@
 package util
 
 import (
+	"fmt"
 	"log"
 	"os"
 	"strconv"
@@ -56,35 +57,35 @@ func getPath(name string) string {
 	return logRoot + name + strDate + "_" + strTime + ".log"
 }
 
-func SocketInfo(message string) {
+func SocketInfo(format string, a ...interface{}) {
 	if socketCount%10000 == 0 {
 		if socketInfoFile != nil {
 			_ = socketInfoFile.Close()
 		}
 		socket, socketInfoFile, _ = initLog(getPath("socketInfo"))
 	}
-	go socket.Println(message)
+	go socket.Println(fmt.Sprintf(format, a...))
 	socketCount++
 }
 
-func Info(message string) {
+func Info(format string, a ...interface{}) {
 	if infoCount%10000 == 0 {
 		if infoFile != nil {
 			_ = infoFile.Close()
 		}
 		info, infoFile, _ = initLog(getPath("info"))
 	}
-	go info.Println(message)
+	go info.Println(fmt.Sprintf(format, a...))
 	infoCount++
 }
 
-func Notice(message string) {
+func Notice(format string, a ...interface{}) {
 	if noticeCount%10000 == 0 {
 		if noticeFile != nil {
 			_ = noticeFile.Close()
 		}
 		notice, noticeFile, _ = initLog(getPath("notice"))
 	}
-	go notice.Println(message)
+	go notice.Println(fmt.Sprintf(format, a...))
 	noticeCount++
 }
