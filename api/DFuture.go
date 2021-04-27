@@ -27,11 +27,11 @@ var subscribeHandlerDFuture = func(subscribes []interface{}, subType string) err
 	return err
 }
 
-func WsDepthServeDFuture(markets *model.Markets, errHandler ErrHandler) (chan struct{}, error) {
-	wsHandler := func(event []byte) {
+func WsDepthServeDFuture(markets *model.Markets, orderHandler OrderHandler) (chan struct{}, error) {
+	wsHandler := func(event []byte, orderHandler OrderHandler) {
 		responseJson, err := util.NewJSON(event)
 		if err != nil {
-			errHandler(err)
+			util.SocketInfo(`fail to unmarshal DFuture json ` + err.Error())
 			return
 		}
 		if responseJson == nil {
@@ -54,7 +54,7 @@ func WsDepthServeDFuture(markets *model.Markets, errHandler ErrHandler) (chan st
 	requestUrl := model.AppConfig.WSUrls[model.DFuture]
 	subType := model.SubscribeDepth + `,` + model.SubscribeTicker
 	return WebSocketClient(model.DFuture, requestUrl, ``, GetWSSubscribes(model.DFuture, subType),
-		subscribeHandlerDFuture, wsHandler, errHandler)
+		subscribeHandlerDFuture, wsHandler, orderHandler)
 }
 
 func handleTickerDFuture(markets *model.Markets, response *simplejson.Json) {

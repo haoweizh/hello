@@ -1,6 +1,9 @@
 package model
 
-var MarketInfos = make(map[string]map[string]*MarketInfo) // market - symbol - MarketInfo
+import "sync"
+
+var marketInfos = make(map[string]map[string]*MarketInfo) // market - symbol - MarketInfo
+var marketInfoLock sync.Mutex
 
 type MarketInfo struct {
 	Name, CTCurrency                                string
@@ -28,4 +31,34 @@ type MarketInfo struct {
 	//"type":"future",
 	//"underlying":"1INCH",
 	//"volumeUsd24h":19693372.9568
+}
+
+func GetMarketInfo(market, instrument string) (marketInfo *MarketInfo) {
+	defer marketInfoLock.Unlock()
+	marketInfoLock.Lock()
+	if marketInfos == nil || marketInfos[market] == nil {
+		return nil
+	}
+	return marketInfos[market][instrument]
+}
+
+//func SetMarketInfo(market, instrument string, marketInfo *MarketInfo) {
+//	defer marketInfoLock.Unlock()
+//	marketInfoLock.Lock()
+//	if marketInfos[market] == nil {
+//		marketInfos[market] = make(map[string]*MarketInfo)
+//	}
+//	marketInfos[market][instrument] = marketInfo
+//}
+
+func SetMarketInfos(market string, value map[string]*MarketInfo) {
+	defer marketInfoLock.Unlock()
+	marketInfoLock.Lock()
+	marketInfos[market] = value
+}
+
+func GetMarketInfos(market string) (value map[string]*MarketInfo) {
+	defer marketInfoLock.Unlock()
+	marketInfoLock.Lock()
+	return marketInfos[market]
 }

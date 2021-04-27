@@ -177,6 +177,7 @@ func checkSetCarrying(value bool) (before bool) {
 }
 
 func resetSingleTradeMax(key, market, symbol string) {
+	util.Notice(fmt.Sprintf(`reset single %s %s %s`, key, market, symbol))
 	setTradeMax(key, symbol, 0, 0)
 	keys, secrets := model.AppConfig.GetKeys(market)
 	for i, value := range keys {
@@ -390,10 +391,10 @@ func placeCarry(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, key
 		amount, amount*tickPerp.Asks[0].Price, util.GetNowUnixMillion()))
 	go api.PlaceOrder(key, secret, sidePerp, model.OrderTypeLimit, setting.Market, setting.Symbol,
 		``, ``, model.FunctionCarry, perpPrice, perpPrice,
-		amount, true, postOrderCarry)
+		amount, false, postOrderCarry)
 	api.PlaceOrder(key, secret, sideRelated, model.OrderTypeLimit, setting.Market, symbolRelated,
 		``, ``, model.FunctionCarry, relatedPrice, relatedPrice,
-		amount, true, postOrderCarry)
+		amount, false, postOrderCarry)
 	time.Sleep(time.Second / 5)
 }
 
@@ -489,7 +490,7 @@ func makeEqual(key, secret string, setting *model.Setting, balances []*model.Bal
 		util.Notice(fmt.Sprintf(`%s cancel all perp:%v related:%v >>>>>> equal %s %f, %s %f = %s %f`,
 			setting.Market, resultPerp, resultRelated, settingSymbol, amountPerp, symbolRelated, amountRelated, orderSide, amount))
 		api.PlaceOrder(key, secret, orderSide, model.OrderTypeLimit, setting.Market, symbol, symbol,
-			``, model.FunctionComplement, price, price, amount, true, nil)
+			``, model.FunctionComplement, price, price, amount, false, nil)
 	}
 	return
 }

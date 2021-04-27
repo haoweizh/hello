@@ -304,7 +304,7 @@ func GetCarryInfo(c *gin.Context) {
 func GetParameters(c *gin.Context) {
 	msg := ``
 	market := model.OKEX
-	marketInfos := model.MarketInfos[market]
+	marketInfos := model.GetMarketInfos(market)
 	if marketInfos != nil && model.GetSettings(model.FunctionCarry, market) != nil {
 		symbols := model.GetMarketSymbols(market)
 		for symbol := range marketInfos {

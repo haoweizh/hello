@@ -28,11 +28,11 @@ var subscribeHandlerBinance = func(subscribes []interface{}, subType string) err
 	return err
 }
 
-func WsDepthServeBinance(markets *model.Markets, errHandler ErrHandler) (chan struct{}, error) {
-	wsHandler := func(event []byte) {
+func WsDepthServeBinance(markets *model.Markets, orderHandler OrderHandler) (chan struct{}, error) {
+	wsHandler := func(event []byte, orderHandler OrderHandler) {
 		json, err := util.NewJSON(event)
 		if err != nil {
-			errHandler(err)
+			util.SocketInfo(`binance fail to unmarshal json ` + err.Error())
 			return
 		}
 		subscribe, _ := json.Get("stream").String()
@@ -87,7 +87,7 @@ func WsDepthServeBinance(markets *model.Markets, errHandler ErrHandler) (chan st
 	}
 	requestUrl := model.AppConfig.WSUrls[model.Binance]
 	return WebSocketClient(model.Binance, requestUrl, model.SubscribeDepth,
-		GetWSSubscribes(model.Binance, model.SubscribeDepth), subscribeHandlerBinance, wsHandler, errHandler)
+		GetWSSubscribes(model.Binance, model.SubscribeDepth), subscribeHandlerBinance, wsHandler, orderHandler)
 }
 func signBinance(postData *url.Values, secretKey string) {
 	postData.Set("recvWindow", "6000000")

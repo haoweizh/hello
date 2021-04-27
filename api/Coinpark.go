@@ -30,11 +30,11 @@ var subscribeHandlerCoinpark = func(subscribes []interface{}, subType string) er
 	return err
 }
 
-func WsDepthServeCoinpark(markets *model.Markets, errHandler ErrHandler) (chan struct{}, error) {
-	wsHandler := func(event []byte) {
+func WsDepthServeCoinpark(markets *model.Markets, orderHandler OrderHandler) (chan struct{}, error) {
+	wsHandler := func(event []byte, orderHandler OrderHandler) {
 		depthJson, err := util.NewJSON(event)
 		if err != nil {
-			errHandler(err)
+			util.SocketInfo(`fail to unmarshal coinpark json ` + err.Error())
 			return
 		}
 		if depthJson == nil {
@@ -82,7 +82,7 @@ func WsDepthServeCoinpark(markets *model.Markets, errHandler ErrHandler) (chan s
 		}
 	}
 	return WebSocketClient(model.Coinpark, model.AppConfig.WSUrls[model.Coinpark], model.SubscribeDepth,
-		GetWSSubscribes(model.Coinpark, model.SubscribeDepth), subscribeHandlerCoinpark, wsHandler, errHandler)
+		GetWSSubscribes(model.Coinpark, model.SubscribeDepth), subscribeHandlerCoinpark, wsHandler, orderHandler)
 }
 
 func SignedRequestCoinpark(method, path, cmds string) []byte {

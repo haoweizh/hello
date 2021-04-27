@@ -54,8 +54,8 @@ var subscribeHandlerHuobi = func(subscribes []interface{}, subType string) error
 	return err
 }
 
-func WsDepthServeHuobi(markets *model.Markets, errHandler ErrHandler) (chan struct{}, error) {
-	wsHandler := func(event []byte) {
+func WsDepthServeHuobi(markets *model.Markets, orderHandler OrderHandler) (chan struct{}, error) {
+	wsHandler := func(event []byte, orderHandler OrderHandler) {
 		res := util.UnGzip(event)
 		resMap := util.JsonDecodeByte(res)
 		message := &HuobiMessage{}
@@ -97,7 +97,7 @@ func WsDepthServeHuobi(markets *model.Markets, errHandler ErrHandler) (chan stru
 		}
 	}
 	return WebSocketClient(model.Huobi, model.AppConfig.WSUrls[model.Huobi], model.SubscribeDepth,
-		GetWSSubscribes(model.Huobi, model.SubscribeDepth), subscribeHandlerHuobi, wsHandler, errHandler)
+		GetWSSubscribes(model.Huobi, model.SubscribeDepth), subscribeHandlerHuobi, wsHandler, orderHandler)
 }
 
 func SignedRequestHuobi(key, secret, market, method, path string, data map[string]interface{}) []byte {

@@ -50,9 +50,9 @@ var subscribeHandlerBitmex = func(subscribes []interface{}, subType string) erro
 	return err
 }
 
-func WsDepthServeBitmex(markets *model.Markets, errHandler ErrHandler) (chan struct{}, error) {
+func WsDepthServeBitmex(markets *model.Markets, orderHandler OrderHandler) (chan struct{}, error) {
 	lastPingTime := util.GetNow().Unix()
-	wsHandler := func(event []byte) {
+	wsHandler := func(event []byte, orderHandler OrderHandler) {
 		socketLockBitmex.Lock()
 		defer socketLockBitmex.Unlock()
 		if util.GetNow().Unix()-lastPingTime > 30 { // ping bitmex server every 5 seconds
@@ -90,13 +90,11 @@ func WsDepthServeBitmex(markets *model.Markets, errHandler ErrHandler) (chan str
 		case `order`:
 			handleOrder(markets, action, data)
 		case `position`:
-			// todo handle position
-			//handleAccount(action, data)
 		}
 	}
 	return WebSocketClient(model.Bitmex, model.AppConfig.WSUrls[model.Bitmex], model.SubscribeDepth,
 		GetWSSubscribes(model.Bitmex, model.SubscribeDepth),
-		subscribeHandlerBitmex, wsHandler, errHandler)
+		subscribeHandlerBitmex, wsHandler, orderHandler)
 }
 
 //func parseAccount(account *model.Position, item map[string]interface{}) {

@@ -50,9 +50,9 @@ var subscribeHandlerBybit = func(subscribes []interface{}, subType string) error
 	return err
 }
 
-func WsDepthServeBybit(markets *model.Markets, errHandler ErrHandler) (chan struct{}, error) {
+func WsDepthServeBybit(markets *model.Markets, orderHandler OrderHandler) (chan struct{}, error) {
 	lastPingTime := util.GetNow().Unix()
-	wsHandler := func(event []byte) {
+	wsHandler := func(event []byte, orderHandler OrderHandler) {
 		socketLockBybit.Lock()
 		defer socketLockBybit.Unlock()
 		if util.GetNow().Unix()-lastPingTime > 30 { // ping ws server every 5 seconds
@@ -79,13 +79,11 @@ func WsDepthServeBybit(markets *model.Markets, errHandler ErrHandler) (chan stru
 			symbol := model.GetStandardSymbol(model.Bybit, topic[strings.LastIndex(topic, `.`)+1:])
 			handleOrderBookBybit(markets, symbol, ts, depthJson)
 		} else if topic == `position` {
-			// todo handle position
-			//handleAccountBybit(depthJson.Get(`data`))
 		}
 	}
 	return WebSocketClient(model.Bybit, model.AppConfig.WSUrls[model.Bybit], model.SubscribeDepth,
 		GetWSSubscribes(model.Bybit, model.SubscribeDepth),
-		subscribeHandlerBybit, wsHandler, errHandler)
+		subscribeHandlerBybit, wsHandler, orderHandler)
 }
 
 func parseTickBybit(item map[string]interface{}) (tick *model.Tick) {

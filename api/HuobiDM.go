@@ -28,8 +28,8 @@ var subscribeHandlerHuobiDM = func(subscribes []interface{}, subType string) err
 	return err
 }
 
-func WsDepthServeHuobiDM(markets *model.Markets, errHandler ErrHandler) (chan struct{}, error) {
-	wsHandler := func(event []byte) {
+func WsDepthServeHuobiDM(markets *model.Markets, orderHandler OrderHandler) (chan struct{}, error) {
+	wsHandler := func(event []byte, orderHandler OrderHandler) {
 		res := util.UnGzip(event)
 		responseJson, _ := util.NewJSON(res)
 		if responseJson.Get(`ping`).MustInt() > 0 {
@@ -86,7 +86,7 @@ func WsDepthServeHuobiDM(markets *model.Markets, errHandler ErrHandler) (chan st
 		}
 	}
 	return WebSocketClient(model.HuobiDM, model.AppConfig.WSUrls[model.HuobiDM]+`ws`, model.SubscribeDepth,
-		GetWSSubscribes(model.HuobiDM, model.SubscribeDepth), subscribeHandlerHuobiDM, wsHandler, errHandler)
+		GetWSSubscribes(model.HuobiDM, model.SubscribeDepth), subscribeHandlerHuobiDM, wsHandler, orderHandler)
 }
 
 func parseBalanceHuobiDM(key string, data map[string]interface{}) (balance *model.Balance) {

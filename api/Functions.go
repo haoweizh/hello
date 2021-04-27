@@ -34,7 +34,7 @@ func RequireDepthChanReset(markets *model.Markets, market string) bool {
 }
 
 func GetAmountInPerp(market, symbol string, amount float64) (formattedAmount float64) {
-	marketInfo := model.MarketInfos[market][symbol]
+	marketInfo := model.GetMarketInfo(market, symbol)
 	if marketInfo == nil || marketInfo.SizeIncrement == 0 || marketInfo.SizeMin == 0 {
 		return 0
 	}
@@ -543,7 +543,7 @@ func PlaceOrder(key, secret, orderSide, orderType, market, symbol, instrument, o
 	case model.HuobiDM:
 		placeOrderHuobiDM(key, secret, order, orderSide, orderType, instrument, symbol, strPrice, strTriggerPrice, strAmount)
 	case model.OKEX:
-		placeOrderOKEX(key, secret, order)
+		placeOrderOKEX(key, secret, true, order)
 	case model.Binance:
 		placeOrderBinance(key, secret, order, orderSide, orderType, symbol, strPrice, strAmount)
 	case model.Coinpark:
@@ -695,9 +695,9 @@ func InitMarketInfos() (success bool) {
 	for _, market := range markets {
 		switch market {
 		case model.Ftx:
-			model.MarketInfos[model.Ftx] = getMarketsFtx()
+			model.SetMarketInfos(model.Ftx, getMarketsFtx())
 		case model.OKEX:
-			model.MarketInfos[model.OKEX] = getMarketsOKEX()
+			model.SetMarketInfos(model.OKEX, getMarketsOKEX())
 			if getAccountConfigOKEX(``, ``) != `net_mode` {
 				if !setAccountModeOKEX(``, ``) {
 					success = false
@@ -709,7 +709,7 @@ func InitMarketInfos() (success bool) {
 }
 
 func FormatPrice(market, symbol, orderSide string, price float64) (formattedPrice float64, decimal int) {
-	marketInfo := model.MarketInfos[market][symbol]
+	marketInfo := model.GetMarketInfo(market, symbol)
 	if marketInfo == nil || marketInfo.SizeIncrement == 0 {
 		return 0, 0
 	}
@@ -721,7 +721,7 @@ func FormatPrice(market, symbol, orderSide string, price float64) (formattedPric
 }
 
 func ParseRealAmount(market, symbol string, amount float64) (success bool, realAmount float64) {
-	marketInfo := model.MarketInfos[market][symbol]
+	marketInfo := model.GetMarketInfo(market, symbol)
 	if marketInfo == nil || marketInfo.SizeIncrement == 0 || marketInfo.CTValue == 0 ||
 		marketInfo.CTCurrency != model.GetCoin(market, symbol) {
 		return false, 0
@@ -731,8 +731,8 @@ func ParseRealAmount(market, symbol string, amount float64) (success bool, realA
 
 // FormatAmountPair symbol 期货; related 现货
 func FormatAmountPair(market, symbolPerp, symbolRelated string, amount float64) (formattedAmount float64) {
-	marketPerp := model.MarketInfos[market][symbolPerp]
-	marketRelated := model.MarketInfos[market][symbolRelated]
+	marketPerp := model.GetMarketInfo(market, symbolPerp)
+	marketRelated := model.GetMarketInfo(market, symbolRelated)
 	if marketPerp == nil || marketPerp.SizeIncrement == 0 || marketPerp.SizeMin == 0 ||
 		marketRelated == nil || marketRelated.SizeIncrement == 0 || marketRelated.SizeMin == 0 {
 		return 0
@@ -796,7 +796,7 @@ func GetCarryCoins() (coins map[string]map[string]bool) { //  market - coin - bo
 	markets := model.GetMarkets()
 	coins = make(map[string]map[string]bool)
 	for _, market := range markets {
-		marketInfos := model.MarketInfos[market]
+		marketInfos := model.GetMarketInfos(market)
 		coins[market] = make(map[string]bool)
 		if marketInfos != nil && model.GetSettings(model.FunctionCarry, market) != nil {
 			for symbol := range marketInfos {

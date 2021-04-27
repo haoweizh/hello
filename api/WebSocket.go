@@ -12,10 +12,10 @@ import (
 	"time"
 )
 
-type MsgHandler func(message []byte)
+type OrderHandler func(order *model.Order)
+type MsgHandler func(message []byte, orderHandler OrderHandler)
 type WSMsgHandler func(client *WSClient, message []byte)
 type SubscribeHandler func(subscribes []interface{}, subType string) error
-type ErrHandler func(err error)
 
 var AppWSManager = WSManager{
 	Register:   make(chan *WSClient),
@@ -66,13 +66,12 @@ func newConnection(url string) (*websocket.Conn, error) {
 	return c, nil
 }
 
-func chanHandler(market string, stopC chan struct{}, errHandler ErrHandler, msgHandler MsgHandler) {
+func chanHandler(market string, stopC chan struct{}, msgHandler MsgHandler, orderHandler OrderHandler) {
 	conn := model.AppMarkets.GetConn(market)
 	defer func() {
 		err := conn.Close()
-		util.Notice(`connection closed`)
 		if err != nil {
-			errHandler(err)
+			util.Notice(`connection closed ` + err.Error())
 		}
 	}()
 	for true {
@@ -87,24 +86,23 @@ func chanHandler(market string, stopC chan struct{}, errHandler ErrHandler, msgH
 				return
 			}
 			//util.SocketInfo(string(message))
-			msgHandler(message)
+			msgHandler(message, orderHandler)
 		}
 	}
 }
 
 func WebSocketClient(market, url, subType string, subscribes []interface{}, subHandler SubscribeHandler,
-	msgHandler MsgHandler, errHandler ErrHandler) (chan struct{}, error) {
+	msgHandler MsgHandler, orderHandler OrderHandler) (chan struct{}, error) {
 	util.Notice(market + `creat depth channel ` + url)
 	conn, err := newConnection(url)
 	if err != nil {
 		util.SocketInfo("can not create web socket" + err.Error())
-		errHandler(err)
 		return nil, err
 	}
 	model.AppMarkets.SetConn(market, conn)
 	_ = subHandler(subscribes, subType)
 	stopC := make(chan struct{}, 10)
-	go chanHandler(market, stopC, errHandler, msgHandler)
+	go chanHandler(market, stopC, msgHandler, orderHandler)
 	return stopC, err
 }
 

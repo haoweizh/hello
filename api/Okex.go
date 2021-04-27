@@ -17,12 +17,15 @@ import (
 	"time"
 )
 
+const wsPrivateOKEX = `wss://ws.okex.com:8443/ws/v5/private`
+
 var msgChanOKEX = make(map[string]chan *simplejson.Json)
 var wrongs = make(map[string]bool)
 var wrongLock sync.Mutex
 
 func init() {
 	go reSubscribe()
+	go pingOKEX()
 }
 
 func getWrongs() []string {
@@ -42,6 +45,22 @@ func setWrong(instrument string, success bool) {
 		wrongs[instrument] = true
 	} else {
 		delete(wrongs, instrument)
+	}
+}
+
+func pingOKEX() {
+	for true {
+		time.Sleep(time.Second * 20)
+		go func() {
+			keys, _ := model.AppConfig.GetKeys(model.OKEX)
+			for _, key := range keys {
+				channelKey := model.OKEX + `_` + key
+				err := sendToWs(channelKey, []byte(`ping`))
+				if err != nil {
+					util.SocketInfo("okex server ping client error " + err.Error())
+				}
+			}
+		}()
 	}
 }
 
@@ -71,6 +90,48 @@ func reSubscribe() {
 			util.SocketInfo("okex can not re-subscribe " + err.Error())
 		}
 	}
+}
+
+var subscriberOKEXPrivate = func(subscribes []interface{}, key string) error {
+	var err error = nil
+	loginMap := make(map[string]interface{})
+	loginMap[`op`] = `login`
+	keys, secrets := model.AppConfig.GetKeys(model.OKEX)
+	secret := ``
+	for i, value := range keys {
+		if value == key {
+			secret = secrets[i]
+		}
+	}
+	timestamp := time.Now().Unix()
+	toBeSign := fmt.Sprintf(`%dGET/users/self/verify`, timestamp)
+	hash := hmac.New(sha256.New, []byte(secret))
+	hash.Write([]byte(toBeSign))
+	sign := base64.StdEncoding.EncodeToString(hash.Sum(nil))
+	loginArray := []map[string]interface{}{{
+		`apiKey`: key, `passphrase`: model.AppConfig.Phase, `timestamp`: timestamp, `sign`: sign}}
+	loginMap[`args`] = loginArray
+	err = sendToWs(model.OKEX+`_`+key, util.JsonEncodeToByte(loginMap))
+	if err != nil {
+		util.SocketInfo(fmt.Sprintf(`fail to login okex ws: %s return %s`, key, err.Error()))
+	}
+	step := 30
+	for i := 0; i < len(subscribes); i += step {
+		subscribeMap := make(map[string]interface{})
+		subscribeMap["op"] = "subscribe"
+		subArray := make([]map[string]string, 0)
+		for j := i; j < len(subscribes) && j < i+step; j++ {
+			subArray = append(subArray, map[string]string{`channel`: `orders`, `instType`: `ANY`, `instId`: subscribes[j].(string)})
+		}
+		subscribeMap[`args`] = subArray
+		subscribeMessage := util.JsonEncodeToByte(subscribeMap)
+		if err = sendToWs(model.OKEX, subscribeMessage); err != nil {
+			util.SocketInfo("okex can not subscribe " + err.Error())
+			return err
+		}
+	}
+	return err
+
 }
 
 var subscribeHandlerOKEX = func(subscribes []interface{}, subType string) error {
@@ -128,39 +189,78 @@ func handleMsgOKEX(channel chan *simplejson.Json, instrument string) {
 	}
 }
 
-func WsDepthServeOKEX(instruments map[string]bool, errHandler ErrHandler) (chan struct{}, error) {
+//lastPingTime := util.GetNow().Unix()
+var wsHandler = func(event []byte, orderHandler OrderHandler) {
+	//now := util.GetNow().Unix()
+	//if now-lastPingTime > 25 { // ping okex server every 30 seconds
+	//	lastPingTime = now
+	//	go func() {
+	//		err := sendToWs(model.OKEX, []byte(`ping`))
+	//		if err != nil {
+	//			util.SocketInfo("okex server ping client error " + err.Error())
+	//		}
+	//	}()
+	//}
+	responseJson, err := util.NewJSON(event)
+	if err != nil || responseJson == nil || responseJson.Get(`data`) == nil ||
+		len(responseJson.Get(`data`).MustArray()) == 0 ||
+		responseJson.GetPath(`arg`, `instId`) == nil {
+		return
+	}
+	instrument := responseJson.GetPath(`arg`, `instId`).MustString()
+	channel := msgChanOKEX[instrument]
+	if channel != nil {
+		channel <- responseJson
+	}
+}
+
+var wsHandlerPrivate = func(event []byte, orderHandler OrderHandler) {
+	responseJson, err := util.NewJSON(event)
+	if err != nil || responseJson == nil || responseJson.Get(`data`) == nil ||
+		len(responseJson.Get(`data`).MustArray()) == 0 {
+		return
+	}
+	if responseJson.Get(`code`).MustString() != `0` {
+		util.Notice(fmt.Sprintf(`okex private channel error: %s`, string(event)))
+	}
+	data := responseJson.Get(`data`).MustArray()
+	for _, item := range data {
+		value := item.(map[string]interface{})
+		go handleWSOrderOKEX(value, orderHandler)
+	}
+}
+
+func handleWSOrderOKEX(value map[string]interface{}, orderHandler OrderHandler) {
+	order := parseOrderOKEX(value)
+	dbOrder := model.Order{}
+	model.AppDB.Where(`order_id=?`, order.OrderId).First(&dbOrder)
+	if dbOrder.OrderId != `` {
+		order.ID = dbOrder.ID
+	}
+	model.AppDB.Save(order)
+	orderHandler(order)
+}
+
+func WsDepthServeOKEX(instruments map[string]bool, orderHandler OrderHandler) (chan struct{}, error) {
 	for s := range instruments {
 		if msgChanOKEX[s] == nil {
 			msgChanOKEX[s] = make(chan *simplejson.Json, 1000)
 			go handleMsgOKEX(msgChanOKEX[s], s)
 		}
 	}
-	//lastPingTime := util.GetNow().Unix()
-	wsHandler := func(event []byte) {
-		//now := util.GetNow().Unix()
-		//if now-lastPingTime > 25 { // ping okex server every 30 seconds
-		//	lastPingTime = now
-		//	go func() {
-		//		err := sendToWs(model.OKEX, []byte(`ping`))
-		//		if err != nil {
-		//			util.SocketInfo("okex server ping client error " + err.Error())
-		//		}
-		//	}()
-		//}
-		responseJson, err := util.NewJSON(event)
-		if err != nil || responseJson == nil || responseJson.Get(`data`) == nil ||
-			len(responseJson.Get(`data`).MustArray()) == 0 ||
-			responseJson.GetPath(`arg`, `instId`) == nil {
-			return
-		}
-		instrument := responseJson.GetPath(`arg`, `instId`).MustString()
-		channel := msgChanOKEX[instrument]
-		if channel != nil {
-			channel <- responseJson
-		}
+	keys, _ := model.AppConfig.GetKeys(model.OKEX)
+	for _, key := range keys {
+		channelKey := key
+		go func() {
+			_, err := WebSocketClient(model.OKEX+`_`+channelKey, wsPrivateOKEX, channelKey,
+				GetWSSubscribes(model.OKEX, model.SubscribeDepth), subscriberOKEXPrivate, wsHandlerPrivate, orderHandler)
+			if err != nil {
+				util.SocketInfo(fmt.Sprintf(`fail to connect okex private %s %s`, channelKey, err.Error()))
+			}
+		}()
 	}
 	return WebSocketClient(model.OKEX, model.AppConfig.WSUrls[model.OKEX], model.SubscribeDepth,
-		GetWSSubscribes(model.OKEX, model.SubscribeDepth), subscribeHandlerOKEX, wsHandler, errHandler)
+		GetWSSubscribes(model.OKEX, model.SubscribeDepth), subscribeHandlerOKEX, wsHandler, orderHandler)
 }
 
 func handleBooksUpdate(instrument string, data map[string]interface{}, bidAsk *model.BidAsk) (
@@ -368,7 +468,7 @@ func sendSignRequestOKEX(key, secret, method, path string, body interface{}) (re
 // 不能使用 strconv.FormatFloat 因为有 2.00000001问题
 //priceStr := strconv.FormatFloat(order.Price, 'f', -1, 64)
 //triggerPriceStr := strconv.FormatFloat(order.TriggerPrice, 'f', -1, 64)
-func placeOrderOKEX(key, secret string, order *model.Order) {
+func placeOrderOKEX(key, secret string, isWs bool, order *model.Order) {
 	price, decimal := FormatPrice(model.OKEX, order.Instrument, order.OrderSide, order.Price)
 	priceStr := util.CutTailZero(strconv.FormatFloat(price, 'f', decimal, 64))
 	priceTrigger, decimal := FormatPrice(model.OKEX, order.Instrument, order.OrderSide, order.TriggerPrice)
@@ -385,36 +485,48 @@ func placeOrderOKEX(key, secret string, order *model.Order) {
 	}
 	postData := map[string]interface{}{`instId`: order.Instrument, `tdMode`: `cross`, `side`: order.OrderSide,
 		`sz`: amount, `ordType`: order.OrderType}
-	var responseBody []byte
+	path := "/api/v5/trade/order"
 	if order.OrderType == model.OrderTypeStop {
 		postData[`ordType`] = `conditional`
 		postData[`slOrdPx`] = priceStr
 		postData[`slTriggerPx`] = triggerPriceStr
-		responseBody = sendSignRequestOKEX(key, secret, http.MethodPost, `/api/v5/trade/order-algo`, postData)
+		path = `/api/v5/trade/order-algo`
 	} else {
 		postData[`px`] = priceStr
-		responseBody = sendSignRequestOKEX(key, secret, http.MethodPost, "/api/v5/trade/order", postData)
 	}
-	orderJson, err := util.NewJSON(responseBody)
-	if err == nil && orderJson != nil && orderJson.Get(`data`) != nil {
-		orders := orderJson.Get(`data`).MustArray()
-		for _, item := range orders {
-			if item == nil {
-				continue
-			}
-			value := item.(map[string]interface{})
-			if value[`sCode`] != nil && value[`sCode`] != `0` {
-				order.Status = model.CarryStatusFail
-			}
-			if value[`sMsg`] != nil {
-				order.ErrCode = value[`sMsg`].(string)
-			}
-			if value[`ordId`] != nil {
-				order.OrderId = value[`ordId`].(string)
-				return
-			} else if value[`algoId`] != nil {
-				order.OrderId = value[`algoId`].(string)
-				return
+	if isWs {
+		subscribeMap := make(map[string]interface{})
+		subscribeMap[`id`] = time.Now().UnixNano()
+		subscribeMap["op"] = "order"
+		subscribeMap[`args`] = postData
+		err := sendToWs(model.OKEX+`_`+key, util.JsonEncodeToByte(postData))
+		if err != nil {
+			util.Notice(fmt.Sprintf(`fail to send order ws %s %s return %s`, key, order.Instrument, err.Error()))
+		}
+	} else {
+		var responseBody []byte
+		responseBody = sendSignRequestOKEX(key, secret, http.MethodPost, path, postData)
+		orderJson, err := util.NewJSON(responseBody)
+		if err == nil && orderJson != nil && orderJson.Get(`data`) != nil {
+			orders := orderJson.Get(`data`).MustArray()
+			for _, item := range orders {
+				if item == nil {
+					continue
+				}
+				value := item.(map[string]interface{})
+				if value[`sCode`] != nil && value[`sCode`] != `0` {
+					order.Status = model.CarryStatusFail
+				}
+				if value[`sMsg`] != nil {
+					order.ErrCode = value[`sMsg`].(string)
+				}
+				if value[`ordId`] != nil {
+					order.OrderId = value[`ordId`].(string)
+					return
+				} else if value[`algoId`] != nil {
+					order.OrderId = value[`algoId`].(string)
+					return
+				}
 			}
 		}
 	}

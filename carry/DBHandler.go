@@ -10,11 +10,6 @@ import (
 	"time"
 )
 
-var WSErrHandler = func(err error) {
-	print(err)
-	util.SocketInfo(`get error ` + err.Error())
-}
-
 var feeIndex int
 var balanceMaintainDay = util.GetNow()
 
@@ -97,26 +92,26 @@ func createMarketDepthServer(markets *model.Markets, market string) chan struct{
 	var err error
 	switch market {
 	case model.Huobi:
-		channel, err = api.WsDepthServeHuobi(markets, WSErrHandler)
+		channel, err = api.WsDepthServeHuobi(markets, nil)
 	case model.HuobiDM:
-		channel, err = api.WsDepthServeHuobiDM(markets, WSErrHandler)
+		channel, err = api.WsDepthServeHuobiDM(markets, nil)
 	case model.OKEX:
 		instruments := model.GetMarketSymbols(model.OKEX)
-		channel, err = api.WsDepthServeOKEX(instruments, WSErrHandler)
+		channel, err = api.WsDepthServeOKEX(instruments, postOrderCarry)
 	//case model.OKFUTURE:
-	//	channel, err = api.WsDepthServeOKFuture(markets, WSErrHandler)
+	//	channel, err = api.WsDepthServeOKFuture(markets, nil)
 	case model.Binance:
-		channel, err = api.WsDepthServeBinance(markets, WSErrHandler)
+		channel, err = api.WsDepthServeBinance(markets, nil)
 	case model.Coinpark:
-		channel, err = api.WsDepthServeCoinpark(markets, WSErrHandler)
+		channel, err = api.WsDepthServeCoinpark(markets, nil)
 	case model.Bitmex:
-		channel, err = api.WsDepthServeBitmex(markets, WSErrHandler)
+		channel, err = api.WsDepthServeBitmex(markets, nil)
 	case model.Bybit:
-		channel, err = api.WsDepthServeBybit(markets, WSErrHandler)
+		channel, err = api.WsDepthServeBybit(markets, nil)
 	case model.Ftx:
-		channel, err = api.WsDepthServeFtx(markets, WSErrHandler)
+		channel, err = api.WsDepthServeFtx(markets, nil)
 	case model.DFuture:
-		channel, err = api.WsDepthServeDFuture(markets, WSErrHandler)
+		channel, err = api.WsDepthServeDFuture(markets, nil)
 	}
 	if err != nil {
 		util.SocketInfo(market + ` can not create depth server ` + err.Error())
