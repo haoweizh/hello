@@ -484,7 +484,7 @@ func placeOrderOKEX(key, secret string, isWs bool, order *model.Order) {
 		usdAmount, _ := strconv.ParseFloat(amount, 64)
 		amount = util.CutTailZero(fmt.Sprintf(`%f`, usdAmount*order.Price))
 	}
-	if priceStr == `0` || amount == `0` {
+	if price == 0 || formattedAmount == 0 {
 		order.Status = model.CarryStatusFail
 		return
 	}
