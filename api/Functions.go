@@ -569,7 +569,7 @@ func PlaceOrder(key, secret, orderSide, orderType, market, symbol, instrument, o
 	util.Notice(fmt.Sprintf(`...%s %s %s return order at %d distance %d %s`,
 		orderSide, market, symbol, end, end-start, order.Status))
 	order.RefreshType = refreshType
-	if saveDB {
+	if saveDB && !(isWs && market == model.OKEX) {
 		go model.AppDB.Save(order)
 	}
 	if postOrder != nil {
