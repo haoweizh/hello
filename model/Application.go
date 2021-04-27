@@ -51,7 +51,7 @@ const FunctionTurtle = `turtle`
 const FunctionGrid = `grid`
 const FunctionCarry = `carry`
 const FunctionDCarry = `dcarry`
-const FunctionComplement = `complement`
+const FunctionComplement = `comp`
 const FunctionPostonlyHandler = `postonly`
 const PostOnly = `ParticipateDoNotInitiate`
 
