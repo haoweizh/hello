@@ -369,7 +369,7 @@ func handleBooksUpdate(instrument string, data map[string]interface{}, bidAsk *m
 		}
 		setWrong(instrument, success)
 		if !success && time.Now().Second() == 0 {
-			util.Notice(fmt.Sprintf("%v ts %d checksum %s wrong size: %d \n [[[ %s\n ]]] %v",
+			util.Info(fmt.Sprintf("%v ts %d checksum %s wrong size: %d \n [[[ %s\n ]]] %v",
 				success, bidAskUpdate.Ts, instrument, len(wrongs), checkStr, data))
 		}
 	}
