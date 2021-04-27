@@ -124,9 +124,8 @@ var subscriberOKEXPrivate = func(subscribes []interface{}, key string) error {
 			subArray = append(subArray, map[string]string{`channel`: `orders`, `instType`: `ANY`, `instId`: subscribes[j].(string)})
 		}
 		subscribeMap[`args`] = subArray
-		subscribeMessage := util.JsonEncodeToByte(subscribeMap)
-		if err = sendToWs(model.OKEX, subscribeMessage); err != nil {
-			util.SocketInfo("okex can not subscribe " + err.Error())
+		if err = sendToWs(model.OKEX+`_`+key, util.JsonEncodeToByte(subscribeMap)); err != nil {
+			util.SocketInfo("okex can not subscribe private " + err.Error())
 			return err
 		}
 	}
