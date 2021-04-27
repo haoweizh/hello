@@ -164,11 +164,11 @@ func Maintain() {
 	model.HandlerMap[model.FunctionTurtle] = ProcessTurtle
 	model.HandlerMap[model.FunctionCarry] = ProcessCarry
 	model.HandlerMap[model.FunctionDCarry] = ProcessDCarry
-	//model.HandlerMap[model.FunctionPostonlyHandler] = PostonlyHandler
 	_ = model.AppDB.AutoMigrate(&model.Setting{})
 	_ = model.AppDB.AutoMigrate(&model.Order{})
 	_ = model.AppDB.AutoMigrate(&model.Balance{})
-	//model.LoadSettings()
+	api.CancelOrders(model.AppConfig.FtxKey, model.AppConfig.FtxSecret, model.Ftx, `BTC-PERP`)
+	api.CancelOrders(model.AppConfig.FtxKey, model.AppConfig.FtxSecret, model.Ftx, `LINK-PERP`)
 	if !api.InitMarketInfos() {
 		util.Notice(`fatal error: can not set okex account mode to net!!`)
 		return
