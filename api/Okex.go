@@ -231,6 +231,7 @@ var wsHandlerPrivate = func(channelKey string, event []byte, orderHandler OrderH
 	data := responseJson.Get(`data`).MustArray()
 	for _, item := range data {
 		value := item.(map[string]interface{})
+		value[`channelKey`] = channelKey
 		go handleWSOrderOKEX(value, orderHandler)
 	}
 }
@@ -648,12 +649,16 @@ func parseOrderOKEX(value map[string]interface{}) (order *model.Order) {
 	if value == nil {
 		return nil
 	}
-	order = &model.Order{}
+	order = &model.Order{Market: model.OKEX}
 	if value[`avgPx`] != nil && value[`avgPx`] != `` {
 		order.DealPrice, _ = strconv.ParseFloat(value[`avgPx`].(string), 64)
 	}
+	if value[`channelKey`] != nil {
+		order.AmountType = value[`channelKey`].(string)
+	}
 	if value[`instId`] != nil {
 		order.Instrument = value[`instId`].(string)
+		order.Symbol = value[`instId`].(string)
 	}
 	if value[`ordId`] != nil {
 		order.OrderId = value[`ordId`].(string)
