@@ -482,7 +482,8 @@ func makeEqual(key, secret string, setting *model.Setting, balances []*model.Bal
 	if amount <= 0 {
 		return
 	}
-	if amount > 0 {
+	checkAmount := api.GetAmountInMarket(setting.Market, symbol, amount)
+	if checkAmount > 0 {
 		resultPerp := api.CancelOrders(key, secret, setting.Market, settingSymbol)
 		resultRelated := api.CancelOrders(key, secret, setting.Market, symbolRelated)
 		util.Notice(fmt.Sprintf(`%s cancel all perp:%v related:%v >>>>>> equal %s %f, %s %f = %s %f`,
