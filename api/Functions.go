@@ -468,11 +468,11 @@ func GetPositions(key, secret, market string) (success bool, positions []*model.
 }
 
 func MustPlaceOrder(key, secret, orderSide, orderType, market, symbol, instrument, orderParam,
-	refreshType string, price, triggerPrice, amount float64, saveDB bool) (order *model.Order) {
+	refreshType string, price, triggerPrice, amount float64, saveDB, isWs bool) (order *model.Order) {
 	retry := 10
 	for i := 0; i < retry; i++ {
 		order = PlaceOrder(key, secret, orderSide, orderType, market, symbol, instrument,
-			orderParam, refreshType, price, triggerPrice, amount, saveDB, nil)
+			orderParam, refreshType, price, triggerPrice, amount, saveDB, isWs, nil)
 		if order != nil && order.OrderId != `` {
 			break
 		} else {
@@ -491,7 +491,7 @@ func MustPlaceOrder(key, secret, orderSide, orderType, market, symbol, instrumen
 // orderType: OrderTypeLimit OrderTypeMarket
 // amount:如果是限价单或市价卖单，amount是左侧币种的数量，如果是市价买单，amount是右测币种的数量
 func PlaceOrder(key, secret, orderSide, orderType, market, symbol, instrument, orderParam, refreshType string,
-	price, triggerPrice, amount float64, saveDB bool, postOrder model.PostOrder) (order *model.Order) {
+	price, triggerPrice, amount float64, saveDB, isWs bool, postOrder model.PostOrder) (order *model.Order) {
 	if instrument == `` {
 		instrument = symbol
 	}
@@ -543,7 +543,7 @@ func PlaceOrder(key, secret, orderSide, orderType, market, symbol, instrument, o
 	case model.HuobiDM:
 		placeOrderHuobiDM(key, secret, order, orderSide, orderType, instrument, symbol, strPrice, strTriggerPrice, strAmount)
 	case model.OKEX:
-		placeOrderOKEX(key, secret, true, order)
+		placeOrderOKEX(key, secret, isWs, order)
 	case model.Binance:
 		placeOrderBinance(key, secret, order, orderSide, orderType, symbol, strPrice, strAmount)
 	case model.Coinpark:
@@ -659,7 +659,7 @@ func InitCarryFtx(start uint) {
 		}
 	}
 	marketInfos := getMarketsFtx()
-	model.AppDB.AutoMigrate(&model.Setting{})
+	_ = model.AppDB.AutoMigrate(&model.Setting{})
 	for symbol := range symbolRates {
 		setting := &model.Setting{
 			Valid:             true,

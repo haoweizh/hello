@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/bitly/go-simplejson"
-	"gorm.io/gorm/clause"
 	"hash/crc32"
 	"hello/model"
 	"hello/util"
@@ -247,9 +246,7 @@ func handleWSOrderOKEX(value map[string]interface{}, orderHandler OrderHandler) 
 	} else {
 		util.Info(`db can not get orderId %s`, order.OrderId)
 	}
-	model.AppDB.Clauses(clause.OnConflict{
-		UpdateAll: true,
-	}).Create(&order)
+	model.AppDB.Save(&order)
 	orderHandler(order)
 }
 
