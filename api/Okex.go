@@ -246,7 +246,7 @@ func handleWSOrderOKEX(value map[string]interface{}, orderHandler OrderHandler) 
 	} else {
 		util.Info(`db can not get orderId %s`, order.OrderId)
 	}
-	model.AppDB.Save(&order)
+	model.AppDB.Save(order)
 	orderHandler(order)
 }
 

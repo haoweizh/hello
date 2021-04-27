@@ -167,7 +167,6 @@ func Maintain() {
 	_ = model.AppDB.AutoMigrate(&model.Setting{})
 	_ = model.AppDB.AutoMigrate(&model.Order{})
 	_ = model.AppDB.AutoMigrate(&model.Balance{})
-	api.CancelOrders(model.AppConfig.FtxKey, model.AppConfig.FtxSecret, model.Ftx, `BTC-PERP`)
 	//api.CancelOrders(model.AppConfig.FtxKey, model.AppConfig.FtxSecret, model.Ftx, `LINK-PERP`)
 	if !api.InitMarketInfos() {
 		util.Notice(`fatal error: can not set okex account mode to net!!`)

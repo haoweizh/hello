@@ -523,7 +523,7 @@ func PlaceOrder(key, secret, orderSide, orderType, market, symbol, instrument, o
 		order.DealPrice = price
 		order.DealAmount = amount
 		if saveDB {
-			go model.AppDB.Save(&order)
+			go model.AppDB.Save(order)
 		}
 		return
 	}
@@ -683,7 +683,7 @@ func InitCarryFtx(start uint) {
 		//	fmt.Println(related + `do not have borrow`)
 		//}
 		start++
-		model.AppDB.Save(&setting)
+		model.AppDB.Save(setting)
 		fmt.Println(fmt.Sprintf(`%s %s saved %d %f`, symbol, related, start, setting.CloseShortMargin))
 	}
 }

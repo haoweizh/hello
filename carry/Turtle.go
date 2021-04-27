@@ -134,7 +134,7 @@ func GetTurtleData(setting *model.Setting) (turtleData *TurtleData) {
 	}
 	if cross {
 		setting.Chance = 0
-		model.AppDB.Model(&setting).Where("market= ? and symbol= ? and function= ?",
+		model.AppDB.Model(setting).Where("market= ? and symbol= ? and function= ?",
 			setting.Market, setting.Symbol, model.FunctionTurtle).Updates(map[string]interface{}{`chance`: 0})
 		go util.SendMail(model.AppConfig.FromMail, model.AppConfig.FromMailAuth, "haoweizh@qq.com", `跨期交割`,
 			setting.Market+turtleData.instrument)
@@ -234,7 +234,7 @@ var ProcessTurtle = func(setting *model.Setting, tick *model.BidAsk) {
 			handleBreak(setting, turtleData, model.OrderSideBuy)
 			setting.Chance = 1
 			setting.GridAmount = turtleData.amount
-			model.AppDB.Model(&setting).Where("market= ? and symbol= ? and function= ?",
+			model.AppDB.Model(setting).Where("market= ? and symbol= ? and function= ?",
 				setting.Market, setting.Symbol, model.FunctionTurtle).Updates(map[string]interface{}{
 				`price_x`: setting.PriceX, `chance`: setting.Chance, `grid_amount`: setting.GridAmount})
 			util.Notice(fmt.Sprintf(
@@ -246,7 +246,7 @@ var ProcessTurtle = func(setting *model.Setting, tick *model.BidAsk) {
 			handleBreak(setting, turtleData, model.OrderSideSell)
 			setting.Chance = -1
 			setting.GridAmount = turtleData.amount
-			model.AppDB.Model(&setting).Where("market= ? and symbol= ? and function= ?",
+			model.AppDB.Model(setting).Where("market= ? and symbol= ? and function= ?",
 				setting.Market, setting.Symbol, model.FunctionTurtle).Updates(map[string]interface{}{
 				`price_x`: setting.PriceX, `chance`: setting.Chance, `grid_amount`: setting.GridAmount})
 			util.Notice(fmt.Sprintf(
@@ -269,7 +269,7 @@ var ProcessTurtle = func(setting *model.Setting, tick *model.BidAsk) {
 			handleBreak(setting, turtleData, model.OrderSideBuy)
 			setting.Chance = setting.Chance + 1
 			setting.GridAmount = setting.GridAmount + turtleData.amount
-			model.AppDB.Model(&setting).Where("market= ? and symbol= ? and function= ?",
+			model.AppDB.Model(setting).Where("market= ? and symbol= ? and function= ?",
 				setting.Market, setting.Symbol, model.FunctionTurtle).Updates(map[string]interface{}{
 				`price_x`: setting.PriceX, `chance`: setting.Chance, `grid_amount`: setting.GridAmount})
 			util.Notice(fmt.Sprintf(`加多 %s %s chance:%d amount:%f currentN:%d short-long:%f %f px:%f n:%f`,
@@ -282,7 +282,7 @@ var ProcessTurtle = func(setting *model.Setting, tick *model.BidAsk) {
 				fmt.Sprintf(`止盈止损at%f 仓位%d 数量 %f`, priceShort, setting.Chance, setting.GridAmount))
 			setting.Chance = 0
 			setting.GridAmount = 0
-			model.AppDB.Model(&setting).Where("market= ? and symbol= ? and function= ?",
+			model.AppDB.Model(setting).Where("market= ? and symbol= ? and function= ?",
 				setting.Market, setting.Symbol, model.FunctionTurtle).Updates(map[string]interface{}{
 				`price_x`: setting.PriceX, `chance`: setting.Chance, `grid_amount`: setting.GridAmount})
 			util.Notice(fmt.Sprintf(`liquidate long %s %s chance:%d amount:%f currentN:%d short-long:%f %f px:%f n:%f`,
@@ -304,7 +304,7 @@ var ProcessTurtle = func(setting *model.Setting, tick *model.BidAsk) {
 			handleBreak(setting, turtleData, model.OrderSideSell)
 			setting.Chance = setting.Chance - 1
 			setting.GridAmount = setting.GridAmount + turtleData.amount
-			model.AppDB.Model(&setting).Where("market= ? and symbol= ? and function= ?",
+			model.AppDB.Model(setting).Where("market= ? and symbol= ? and function= ?",
 				setting.Market, setting.Symbol, model.FunctionTurtle).Updates(map[string]interface{}{
 				`price_x`: setting.PriceX, `chance`: setting.Chance, `grid_amount`: setting.GridAmount})
 			util.Notice(fmt.Sprintf(`加空 %s %s chance:%d amount:%f currentN:%d short-long:%f %f px:%f n:%f`,
@@ -317,7 +317,7 @@ var ProcessTurtle = func(setting *model.Setting, tick *model.BidAsk) {
 				fmt.Sprintf(`止盈止损at%f 仓位%d 数量 %f`, priceLong, setting.Chance, setting.GridAmount))
 			setting.Chance = 0
 			setting.GridAmount = 0
-			model.AppDB.Model(&setting).Where("market= ? and symbol= ? and function= ?",
+			model.AppDB.Model(setting).Where("market= ? and symbol= ? and function= ?",
 				setting.Market, setting.Symbol, model.FunctionTurtle).Updates(map[string]interface{}{
 				`price_x`: setting.PriceX, `chance`: setting.Chance, `grid_amount`: setting.GridAmount})
 			util.Notice(fmt.Sprintf(`liquidate short result: %s %s chance:%d amount:%f currentN:%d short-long:%f %f px:%f n:%f`,
