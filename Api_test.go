@@ -7,7 +7,6 @@ import (
 	"github.com/jinzhu/configor"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
-	"gorm.io/gorm/clause"
 	"hello/api"
 	"hello/model"
 	"hello/util"
@@ -126,7 +125,7 @@ func Test_wallet(t *testing.T) {
 	model.NewConfig()
 	_ = configor.Load(model.AppConfig, "./config.yml")
 	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
-	order := model.Order{OrderId: `2`, Market: `m4`}
+	order := &model.Order{OrderId: `2`, Market: `m4`}
 	//model.AppDB.Save(&order)
 	dbOrder := model.Order{}
 	model.AppDB.Where(`order_id=?`, order.OrderId).First(&dbOrder)
@@ -136,13 +135,13 @@ func Test_wallet(t *testing.T) {
 	} else {
 		util.Info(`db can not get orderId %s`, order.OrderId)
 	}
-	model.AppDB.Save(&order)
+	model.AppDB.Save(order)
 	//model.AppDB.Save(&order)
 	//model.AppDB.Clauses(clause.OnConflict{UpdateAll: true}).Save(&order)
 	//order = model.Order{OrderId: `2`, Market: `m2`}
 	//model.AppDB.Clauses(clause.OnConflict{UpdateAll: true}).Save(&order)
-	order = model.Order{ID: 1, OrderId: `2`, Market: `m3`}
-	model.AppDB.Clauses(clause.OnConflict{DoNothing: true}).Create(&order)
+	//order = model.Order{ID: 1, OrderId: `2`, Market: `m3`}
+	//model.AppDB.Clauses(clause.OnConflict{DoNothing: true}).Create(&order)
 	//model.AppDB.Clauses(clause.OnConflict{
 	//	Columns:   []clause.Column{{Name: "id"}},
 	//	DoUpdates: clause.AssignmentColumns([]string{"name", "age"}),

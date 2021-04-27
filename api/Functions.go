@@ -570,7 +570,7 @@ func PlaceOrder(key, secret, orderSide, orderType, market, symbol, instrument, o
 		orderSide, market, symbol, end, end-start, order.Status))
 	order.RefreshType = refreshType
 	if saveDB {
-		go model.AppDB.Save(&order)
+		go model.AppDB.Save(order)
 	}
 	if postOrder != nil {
 		go postOrder(order)
