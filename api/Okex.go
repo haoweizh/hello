@@ -168,9 +168,9 @@ func handleMsgOKEX(channel chan *simplejson.Json, instrument string) {
 		if action == `update` && bidAsk != nil {
 			success, bidAsk = handleBooksUpdate(instrument, data, bidAsk)
 		} else if action == `snapshot` || responseJson.GetPath(`arg`, `channel`).MustString() == `books5` {
-			if action == `snapshot` {
-				util.Notice(fmt.Sprintf(`++++ %s initial ticker %v`, instrument, data))
-			}
+			//if action == `snapshot` {
+			//	util.Notice(fmt.Sprintf(`++++ %s initial ticker %v`, instrument, data))
+			//}
 			bidAsk = handleBooksOKEX(instrument, data)
 			success = true
 		}
