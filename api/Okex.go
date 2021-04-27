@@ -249,7 +249,7 @@ func handleWSOrderOKEX(value map[string]interface{}, orderHandler OrderHandler) 
 	}
 	model.AppDB.Clauses(clause.OnConflict{
 		UpdateAll: true,
-	}).Create(order)
+	}).Create(&order)
 	orderHandler(order)
 }
 
