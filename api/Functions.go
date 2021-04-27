@@ -33,7 +33,7 @@ func RequireDepthChanReset(markets *model.Markets, market string) bool {
 	return true
 }
 
-func GetAmountInPerp(market, symbol string, amount float64) (formattedAmount float64) {
+func GetAmountInMarket(market, symbol string, amount float64) (formattedAmount float64) {
 	marketInfo := model.GetMarketInfo(market, symbol)
 	if marketInfo == nil || marketInfo.SizeIncrement == 0 || marketInfo.SizeMin == 0 {
 		return 0

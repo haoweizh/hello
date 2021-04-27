@@ -28,7 +28,7 @@ var subscribeHandlerDFuture = func(subscribes []interface{}, subType string) err
 }
 
 func WsDepthServeDFuture(markets *model.Markets, orderHandler OrderHandler) (chan struct{}, error) {
-	wsHandler := func(event []byte, orderHandler OrderHandler) {
+	wsHandler := func(channelKey string, event []byte, orderHandler OrderHandler) {
 		responseJson, err := util.NewJSON(event)
 		if err != nil {
 			util.SocketInfo(`fail to unmarshal DFuture json ` + err.Error())

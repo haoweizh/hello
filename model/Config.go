@@ -8,7 +8,6 @@ import (
 type Config struct {
 	lock            sync.Mutex
 	Channels        int
-	InChina         int // 1 in china, otherwise outter china
 	RefreshTimeSlot int
 	Between         int64
 	ChannelSlot     float64

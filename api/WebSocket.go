@@ -13,7 +13,7 @@ import (
 )
 
 type OrderHandler func(order *model.Order)
-type MsgHandler func(message []byte, orderHandler OrderHandler)
+type MsgHandler func(channelKey string, message []byte, orderHandler OrderHandler)
 type WSMsgHandler func(client *WSClient, message []byte)
 type SubscribeHandler func(subscribes []interface{}, subType string) error
 
@@ -66,8 +66,8 @@ func newConnection(url string) (*websocket.Conn, error) {
 	return c, nil
 }
 
-func chanHandler(market string, stopC chan struct{}, msgHandler MsgHandler, orderHandler OrderHandler) {
-	conn := model.AppMarkets.GetConn(market)
+func chanHandler(channelKey string, stopC chan struct{}, msgHandler MsgHandler, orderHandler OrderHandler) {
+	conn := model.AppMarkets.GetConn(channelKey)
 	defer func() {
 		err := conn.Close()
 		if err != nil {
@@ -82,11 +82,11 @@ func chanHandler(market string, stopC chan struct{}, msgHandler MsgHandler, orde
 		default:
 			_, message, err := conn.ReadMessage()
 			if err != nil {
-				util.Notice(market + " can not read from websocket: " + err.Error())
+				util.Notice(channelKey + " can not read from websocket: " + err.Error())
 				return
 			}
 			//util.SocketInfo(string(message))
-			msgHandler(message, orderHandler)
+			msgHandler(channelKey, message, orderHandler)
 		}
 	}
 }

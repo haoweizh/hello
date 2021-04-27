@@ -55,7 +55,7 @@ var subscribeHandlerHuobi = func(subscribes []interface{}, subType string) error
 }
 
 func WsDepthServeHuobi(markets *model.Markets, orderHandler OrderHandler) (chan struct{}, error) {
-	wsHandler := func(event []byte, orderHandler OrderHandler) {
+	wsHandler := func(channelKey string, event []byte, orderHandler OrderHandler) {
 		res := util.UnGzip(event)
 		resMap := util.JsonDecodeByte(res)
 		message := &HuobiMessage{}

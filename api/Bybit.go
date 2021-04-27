@@ -52,7 +52,7 @@ var subscribeHandlerBybit = func(subscribes []interface{}, subType string) error
 
 func WsDepthServeBybit(markets *model.Markets, orderHandler OrderHandler) (chan struct{}, error) {
 	lastPingTime := util.GetNow().Unix()
-	wsHandler := func(event []byte, orderHandler OrderHandler) {
+	wsHandler := func(channelKey string, event []byte, orderHandler OrderHandler) {
 		socketLockBybit.Lock()
 		defer socketLockBybit.Unlock()
 		if util.GetNow().Unix()-lastPingTime > 30 { // ping ws server every 5 seconds

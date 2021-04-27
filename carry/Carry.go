@@ -47,8 +47,7 @@ var postOrderCarry = func(order *model.Order) {
 		return
 	}
 	maxBuy, maxSell := getTradeMax(order.AmountType, order.Symbol)
-	// 需要经过转化成张数（合约）
-	amount := api.GetAmountInPerp(model.OKEX, order.Instrument, order.Amount)
+	amount := api.GetAmountInMarket(model.OKEX, order.Instrument, order.Amount)
 	if order.OrderSide == model.OrderSideBuy {
 		maxBuy -= amount
 		maxSell += amount
@@ -483,8 +482,7 @@ func makeEqual(key, secret string, setting *model.Setting, balances []*model.Bal
 	if amount <= 0 {
 		return
 	}
-	orderAmount := api.GetAmountInPerp(setting.Market, symbol, math.Abs(amount))
-	if orderAmount > 0 {
+	if amount > 0 {
 		resultPerp := api.CancelOrders(key, secret, setting.Market, settingSymbol)
 		resultRelated := api.CancelOrders(key, secret, setting.Market, symbolRelated)
 		util.Notice(fmt.Sprintf(`%s cancel all perp:%v related:%v >>>>>> equal %s %f, %s %f = %s %f`,
@@ -643,7 +641,7 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	}
 	amount = api.FormatAmountPair(setting.Market, setting.Symbol, setting.GetRelatedSymbol(), amount)
 	if model.OKEX == setting.Market {
-		amountInPerp := api.GetAmountInPerp(setting.Market, setting.Symbol, amount)
+		amountInPerp := api.GetAmountInMarket(setting.Market, setting.Symbol, amount)
 		maxBuyPerp, maxSellPerp := getTradeMax(key, setting.Symbol)
 		maxBuyRelated, maxSellRelated := getTradeMax(key, setting.GetRelatedSymbol())
 		if sidePerp == model.OrderSideBuy && sideRelated == model.OrderSideSell {

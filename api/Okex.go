@@ -55,7 +55,6 @@ func pingOKEX() {
 			keys, _ := model.AppConfig.GetKeys(model.OKEX)
 			for _, key := range keys {
 				channelKey := model.OKEX + `_` + key
-				util.Info(`send ping`)
 				err := sendToWs(channelKey, []byte(`ping`))
 				if err != nil {
 					util.SocketInfo("okex server ping client error " + err.Error())
@@ -112,25 +111,9 @@ var subscriberOKEXPrivate = func(subscribes []interface{}, key string) error {
 	loginArray := []map[string]interface{}{{
 		`apiKey`: key, `passphrase`: model.AppConfig.Phase, `timestamp`: timestamp, `sign`: sign}}
 	loginMap[`args`] = loginArray
-	util.Info(`send login`)
 	err = sendToWs(model.OKEX+`_`+key, util.JsonEncodeToByte(loginMap))
 	if err != nil {
 		util.SocketInfo(fmt.Sprintf(`fail to login okex ws: %s return %s`, key, err.Error()))
-	}
-	step := 30
-	for i := 0; i < len(subscribes); i += step {
-		subscribeMap := make(map[string]interface{})
-		subscribeMap["op"] = "subscribe"
-		subArray := make([]map[string]string, 0)
-		for j := i; j < len(subscribes) && j < i+step; j++ {
-			subArray = append(subArray, map[string]string{`channel`: `orders`, `instType`: `ANY`, `instId`: subscribes[j].(string)})
-		}
-		subscribeMap[`args`] = subArray
-		if err = sendToWs(model.OKEX+`_`+key, util.JsonEncodeToByte(subscribeMap)); err != nil {
-			util.SocketInfo("okex can not subscribe private " + err.Error())
-			continue
-		}
-		util.Info(`send sub`)
 	}
 	return err
 
@@ -192,7 +175,7 @@ func handleMsgOKEX(channel chan *simplejson.Json, instrument string) {
 }
 
 //lastPingTime := util.GetNow().Unix()
-var wsHandler = func(event []byte, orderHandler OrderHandler) {
+var wsHandler = func(channelKey string, event []byte, orderHandler OrderHandler) {
 	//now := util.GetNow().Unix()
 	//if now-lastPingTime > 25 { // ping okex server every 30 seconds
 	//	lastPingTime = now
@@ -216,11 +199,30 @@ var wsHandler = func(event []byte, orderHandler OrderHandler) {
 	}
 }
 
-var wsHandlerPrivate = func(event []byte, orderHandler OrderHandler) {
+var wsHandlerPrivate = func(channelKey string, event []byte, orderHandler OrderHandler) {
 	responseJson, err := util.NewJSON(event)
+	if err != nil || responseJson == nil {
+		return
+	}
+	if responseJson.Get(`event`).MustString() == `login` {
+		subscribes := GetWSSubscribes(model.OKEX, model.SubscribeDepth)
+		step := 30
+		for i := 0; i < len(subscribes); i += step {
+			subscribeMap := make(map[string]interface{})
+			subscribeMap["op"] = "subscribe"
+			subArray := make([]map[string]string, 0)
+			for j := i; j < len(subscribes) && j < i+step; j++ {
+				subArray = append(subArray, map[string]string{`channel`: `orders`, `instType`: `ANY`, `instId`: subscribes[j].(string)})
+			}
+			subscribeMap[`args`] = subArray
+			if err = sendToWs(channelKey, util.JsonEncodeToByte(subscribeMap)); err != nil {
+				util.SocketInfo("okex can not subscribe private " + err.Error())
+				continue
+			}
+		}
+	}
 	util.Info(fmt.Sprintf(`>>> %s`, string(event)))
-	if err != nil || responseJson == nil || responseJson.Get(`data`) == nil ||
-		len(responseJson.Get(`data`).MustArray()) == 0 {
+	if responseJson.Get(`data`) == nil || len(responseJson.Get(`data`).MustArray()) == 0 {
 		return
 	}
 	if responseJson.Get(`code`).MustString() != `0` {
@@ -476,7 +478,7 @@ func placeOrderOKEX(key, secret string, isWs bool, order *model.Order) {
 	priceStr := util.CutTailZero(strconv.FormatFloat(price, 'f', decimal, 64))
 	priceTrigger, decimal := FormatPrice(model.OKEX, order.Instrument, order.OrderSide, order.TriggerPrice)
 	triggerPriceStr := util.CutTailZero(strconv.FormatFloat(priceTrigger, 'f', decimal, 64))
-	formattedAmount := GetAmountInPerp(model.OKEX, order.Instrument, order.Amount)
+	formattedAmount := GetAmountInMarket(model.OKEX, order.Instrument, order.Amount)
 	amount := util.CutTailZero(fmt.Sprintf(`%f`, formattedAmount))
 	if order.OrderType == model.OrderTypeMarket {
 		usdAmount, _ := strconv.ParseFloat(amount, 64)
@@ -503,7 +505,6 @@ func placeOrderOKEX(key, secret string, isWs bool, order *model.Order) {
 		subscribeMap["op"] = "order"
 		postData[`tag`] = order.RefreshType
 		subscribeMap[`args`] = postData
-		util.Info(`send place order`)
 		err := sendToWs(model.OKEX+`_`+key, util.JsonEncodeToByte(postData))
 		if err != nil {
 			util.Notice(fmt.Sprintf(`fail to send order ws %s %s return %s`, key, order.Instrument, err.Error()))

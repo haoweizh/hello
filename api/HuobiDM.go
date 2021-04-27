@@ -29,7 +29,7 @@ var subscribeHandlerHuobiDM = func(subscribes []interface{}, subType string) err
 }
 
 func WsDepthServeHuobiDM(markets *model.Markets, orderHandler OrderHandler) (chan struct{}, error) {
-	wsHandler := func(event []byte, orderHandler OrderHandler) {
+	wsHandler := func(channelKey string, event []byte, orderHandler OrderHandler) {
 		res := util.UnGzip(event)
 		responseJson, _ := util.NewJSON(res)
 		if responseJson.Get(`ping`).MustInt() > 0 {

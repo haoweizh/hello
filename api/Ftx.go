@@ -51,7 +51,7 @@ var subscribeHandlerFtx = func(subscribes []interface{}, subType string) error {
 }
 
 func WsDepthServeFtx(markets *model.Markets, orderHandler OrderHandler) (chan struct{}, error) {
-	wsHandler := func(event []byte, orderHandler OrderHandler) {
+	wsHandler := func(channelKey string, event []byte, orderHandler OrderHandler) {
 		defer socketLockFtx.Unlock()
 		socketLockFtx.Lock()
 		responseJson, err := util.NewJSON(event)

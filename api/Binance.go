@@ -29,7 +29,7 @@ var subscribeHandlerBinance = func(subscribes []interface{}, subType string) err
 }
 
 func WsDepthServeBinance(markets *model.Markets, orderHandler OrderHandler) (chan struct{}, error) {
-	wsHandler := func(event []byte, orderHandler OrderHandler) {
+	wsHandler := func(channelKey string, event []byte, orderHandler OrderHandler) {
 		json, err := util.NewJSON(event)
 		if err != nil {
 			util.SocketInfo(`binance fail to unmarshal json ` + err.Error())

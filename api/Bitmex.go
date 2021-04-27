@@ -52,7 +52,7 @@ var subscribeHandlerBitmex = func(subscribes []interface{}, subType string) erro
 
 func WsDepthServeBitmex(markets *model.Markets, orderHandler OrderHandler) (chan struct{}, error) {
 	lastPingTime := util.GetNow().Unix()
-	wsHandler := func(event []byte, orderHandler OrderHandler) {
+	wsHandler := func(channelKey string, event []byte, orderHandler OrderHandler) {
 		socketLockBitmex.Lock()
 		defer socketLockBitmex.Unlock()
 		if util.GetNow().Unix()-lastPingTime > 30 { // ping bitmex server every 5 seconds
