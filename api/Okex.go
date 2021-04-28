@@ -514,6 +514,14 @@ func PlacePairOKEX(key, coin, sidePerp, sideSpot, orderType string, pricePerp, p
 	msg := util.JsonEncodeToByte(subscribeMap)
 	err := sendToWs(model.OKEX+`_`+key, msg)
 	util.Notice(`place pair %s`, msg)
+	order := &model.Order{OrderSide: sidePerp, OrderType: orderType, Market: model.OKEX, Symbol: coin + tailPerp,
+		Price: pricePerp, Amount: amount, RefreshType: model.FunctionCarry, OrderTime: util.GetNow(),
+		UnfilledQuantity: amount, Instrument: coin + tailPerp, AmountType: key}
+	model.AppDB.Save(order)
+	order = &model.Order{OrderSide: sideSpot, OrderType: orderType, Market: model.OKEX, Symbol: coin + tailSpot,
+		Price: priceSpot, Amount: amount, RefreshType: model.FunctionCarry, OrderTime: util.GetNow(),
+		UnfilledQuantity: amount, Instrument: coin + tailSpot, AmountType: key}
+	model.AppDB.Save(order)
 	if err != nil {
 		util.Notice(fmt.Sprintf(`fail to send order ws %s %s return %s`, key, coin, err.Error()))
 	}

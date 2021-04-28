@@ -125,28 +125,9 @@ func Test_wallet(t *testing.T) {
 	model.NewConfig()
 	_ = configor.Load(model.AppConfig, "./config.yml")
 	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
-	order := &model.Order{OrderId: `2`, Market: `m4`}
-	//model.AppDB.Save(&order)
-	dbOrder := model.Order{}
-	model.AppDB.Where(`order_id=?`, order.OrderId).First(&dbOrder)
-	if dbOrder.OrderId != `` {
-		order.ID = dbOrder.ID
-		util.Info(fmt.Sprintf(`query order %s id %d`, order.OrderId, dbOrder.ID))
-	} else {
-		util.Info(`db can not get orderId %s`, order.OrderId)
-	}
-	model.AppDB.Save(order)
-	//model.AppDB.Save(&order)
-	//model.AppDB.Clauses(clause.OnConflict{UpdateAll: true}).Save(&order)
-	//order = model.Order{OrderId: `2`, Market: `m2`}
-	//model.AppDB.Clauses(clause.OnConflict{UpdateAll: true}).Save(&order)
-	//order = model.Order{ID: 1, OrderId: `2`, Market: `m3`}
-	//model.AppDB.Clauses(clause.OnConflict{DoNothing: true}).Create(&order)
-	//model.AppDB.Clauses(clause.OnConflict{
-	//	Columns:   []clause.Column{{Name: "id"}},
-	//	DoUpdates: clause.AssignmentColumns([]string{"name", "age"}),
-	//}).Create(&users)
-
+	api.InitMarketInfos()
+	amount := api.GetAmountInMarket(model.OKEX, `DOGE-USDT-SWAP`, 4)
+	fmt.Println(amount)
 	api.PlaceOrder(model.AppConfig.DFutureKey, model.AppConfig.DFutureSecret, model.OrderSideBuy, ``,
 		model.DFuture, `ethusdt`, ``, `open`, model.FunctionDCarry, 2222, 2222, 0.1, true, false, nil)
 	_, loan := api.GetMaxLoan(model.AppConfig.OkexKey, model.AppConfig.OkexSecret, model.OKEX, `XEM`)
