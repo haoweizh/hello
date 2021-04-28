@@ -346,10 +346,10 @@ func GetParameters(c *gin.Context) {
 	carryBackMsg := ``
 	if carryRows != nil {
 		for carryRows.Next() {
-			var market, side, date, amountType, refreshType string
+			var marketName, side, date, amountType, refreshType string
 			var value float64
-			_ = carryRows.Scan(&market, &amountType, &side, &value, &date, &refreshType)
-			if amountType == keyFtx[0] || amountType == keyOKEX[0] {
+			_ = carryRows.Scan(&marketName, &amountType, &side, &value, &date, &refreshType)
+			if strings.Contains(amountType, keyFtx[0]) || strings.Contains(amountType, keyOKEX[0]) {
 				carryFrontMsg += fmt.Sprintf("%s交易额 in USD: %s %s %f 类型：%s\n", market, date, side, value, refreshType)
 			}
 		}
