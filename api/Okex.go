@@ -238,15 +238,15 @@ var wsHandlerPrivate = func(channelKey string, event []byte, orderHandler OrderH
 
 func handleWSOrderOKEX(value map[string]interface{}, orderHandler OrderHandler) {
 	order := parseOrderOKEX(value)
-	dbOrder := model.Order{}
-	model.AppDB.Where(`order_id=?`, order.OrderId).First(&dbOrder)
-	if dbOrder.OrderId != `` {
-		order.ID = dbOrder.ID
-		util.Info(fmt.Sprintf(`query order %s id %d`, order.OrderId, dbOrder.ID))
-	} else {
-		util.Info(`db can not get orderId %s`, order.OrderId)
-	}
-	model.AppDB.Save(order)
+	//dbOrder := model.Order{}
+	//model.AppDB.Where(`order_id=?`, order.OrderId).First(&dbOrder)
+	//if dbOrder.OrderId != `` {
+	//	order.ID = dbOrder.ID
+	//	util.Info(fmt.Sprintf(`query order %s id %d`, order.OrderId, dbOrder.ID))
+	//} else {
+	//	util.Info(`db can not get orderId %s`, order.OrderId)
+	//}
+	//model.AppDB.Save(order)
 	orderHandler(order)
 }
 
