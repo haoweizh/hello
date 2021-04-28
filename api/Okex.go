@@ -517,12 +517,12 @@ func PlacePairOKEX(key, coin, sidePerp, sideSpot, orderType string, pricePerp, p
 	orderPerp := &model.Order{OrderSide: sidePerp, OrderType: orderType, Market: model.OKEX, Symbol: coin + tailPerp,
 		Price: pricePerp, Amount: amount, RefreshType: model.FunctionCarry, OrderTime: util.GetNow(),
 		UnfilledQuantity: amount, Instrument: coin + tailPerp, AmountType: key, Status: model.CarryStatusSuccess,
-		OrderId: strconv.FormatInt(now, 10)}
+		OrderId: strconv.FormatInt(now, 10) + `PERP`}
 	go model.AppDB.Save(orderPerp)
 	orderSpot := &model.Order{OrderSide: sideSpot, OrderType: orderType, Market: model.OKEX, Symbol: coin + tailSpot,
 		Price: priceSpot, Amount: amount, RefreshType: model.FunctionCarry, OrderTime: util.GetNow(),
 		UnfilledQuantity: amount, Instrument: coin + tailSpot, AmountType: key, Status: model.CarryStatusSuccess,
-		OrderId: strconv.FormatInt(now, 10)}
+		OrderId: strconv.FormatInt(now, 10) + `SPOT`}
 	go model.AppDB.Save(orderSpot)
 	if err != nil {
 		util.Notice(fmt.Sprintf(`fail to send order ws %s %s return %s`, key, coin, err.Error()))
