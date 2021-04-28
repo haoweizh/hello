@@ -471,6 +471,54 @@ func sendSignRequestOKEX(key, secret, method, path string, body interface{}) (re
 	return responseBody
 }
 
+var lastSameTime = make(map[string]int64)
+var lastCarryTime = int64(0)
+
+func PlacePairOKEX(key, coin, sidePerp, sideSpot, orderType string, pricePerp, priceSpot, amount float64) {
+	now := time.Now().UnixNano()
+	if time.Duration(now-lastCarryTime)/time.Millisecond < 50 {
+		util.Notice(`ignore carry for last carry time < 50ms`)
+		return
+	} else if time.Duration(now-lastSameTime[coin])/time.Millisecond < 150 {
+		util.Notice(`ignore same pair carry in time < 150ms`)
+		return
+	}
+	lastSameTime[coin] = now
+	lastCarryTime = now
+	tailPerp := GetPerpTail(model.OKEX)
+	tailSpot := GetSpotTail(model.OKEX)
+	pricePerp, decimalPerp := FormatPrice(model.OKEX, coin+tailPerp, sidePerp, pricePerp)
+	priceStrPerp := util.CutTailZero(strconv.FormatFloat(pricePerp, 'f', decimalPerp, 64))
+	formattedAmountPerp := GetAmountInMarket(model.OKEX, coin+tailPerp, amount)
+	amountStrPerp := util.CutTailZero(fmt.Sprintf(`%f`, formattedAmountPerp))
+	if orderType == model.OrderTypeMarket {
+		usdAmount, _ := strconv.ParseFloat(amountStrPerp, 64)
+		amountStrPerp = util.CutTailZero(fmt.Sprintf(`%f`, usdAmount*pricePerp))
+	}
+	priceSpot, decimalSpot := FormatPrice(model.OKEX, coin+tailSpot, sideSpot, priceSpot)
+	priceStrSpot := util.CutTailZero(strconv.FormatFloat(priceSpot, 'f', decimalSpot, 64))
+	formattedAmountSpot := GetAmountInMarket(model.OKEX, coin+tailSpot, amount)
+	amountStrSpot := util.CutTailZero(fmt.Sprintf(`%f`, formattedAmountSpot))
+	if orderType == model.OrderTypeMarket {
+		usdAmount, _ := strconv.ParseFloat(amountStrSpot, 64)
+		amountStrSpot = util.CutTailZero(fmt.Sprintf(`%f`, usdAmount*priceSpot))
+	}
+	subscribeMap := make(map[string]interface{})
+	subscribeMap[`id`] = strconv.FormatInt(time.Now().UnixNano(), 10)
+	subscribeMap["op"] = "batch-orders"
+	subscribeMap[`args`] = []map[string]interface{}{
+		{`instId`: coin + tailPerp, `tdMode`: `cross`, `side`: sidePerp, `sz`: amountStrPerp, `ordType`: orderType,
+			`px`: priceStrPerp, `tag`: model.FunctionCarry},
+		{`instId`: coin + tailSpot, `tdMode`: `cross`, `side`: sideSpot, `sz`: amountStrSpot, `ordType`: orderType,
+			`px`: priceStrSpot, `tag`: model.FunctionCarry}}
+	msg := util.JsonEncodeToByte(subscribeMap)
+	err := sendToWs(model.OKEX+`_`+key, msg)
+	util.Notice(`place pair %s`, msg)
+	if err != nil {
+		util.Notice(fmt.Sprintf(`fail to send order ws %s %s return %s`, key, coin, err.Error()))
+	}
+}
+
 // amount、price
 // 不能使用 fmt %v 因为有e+5 的情况；
 // 不能使用 fmt %f 因为有000后缀；

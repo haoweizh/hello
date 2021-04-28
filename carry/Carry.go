@@ -388,13 +388,18 @@ func placeCarry(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, key
 		tickPerp.Bids[0].Amount, tickPerp.Asks[0].Price, tickPerp.Asks[0].Amount, tickRelated.Bids[0].Price,
 		tickRelated.Bids[0].Amount, tickRelated.Asks[0].Price, tickRelated.Asks[0].Amount, scoreOpen, scoreClose,
 		amount, amount*tickPerp.Asks[0].Price, util.GetNowUnixMillion()))
-	go api.PlaceOrder(key, secret, sidePerp, model.OrderTypeLimit, setting.Market, setting.Symbol,
-		``, ``, model.FunctionCarry, perpPrice, perpPrice,
-		amount, true, true, postOrderCarry)
-	api.PlaceOrder(key, secret, sideRelated, model.OrderTypeLimit, setting.Market, symbolRelated,
-		``, ``, model.FunctionCarry, relatedPrice, relatedPrice,
-		amount, true, true, postOrderCarry)
-	time.Sleep(time.Second / 5)
+	if setting.Market == model.OKEX {
+		api.PlacePairOKEX(key, model.GetCoin(setting.Market, setting.Symbol), sidePerp, sideRelated,
+			model.OrderTypeLimit, perpPrice, relatedPrice, amount)
+	} else {
+		go api.PlaceOrder(key, secret, sidePerp, model.OrderTypeLimit, setting.Market, setting.Symbol,
+			``, ``, model.FunctionCarry, perpPrice, perpPrice,
+			amount, true, true, postOrderCarry)
+		api.PlaceOrder(key, secret, sideRelated, model.OrderTypeLimit, setting.Market, symbolRelated,
+			``, ``, model.FunctionCarry, relatedPrice, relatedPrice,
+			amount, true, true, postOrderCarry)
+		time.Sleep(time.Second / 5)
+	}
 }
 
 func getCarryAmounts(setting *model.Setting, balances []*model.Balance, positions []*model.Position) (
