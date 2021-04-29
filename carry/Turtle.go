@@ -138,10 +138,8 @@ func GetTurtleData(setting *model.Setting) (turtleData *TurtleData) {
 			setting.Market, setting.Symbol, model.FunctionTurtle).Updates(map[string]interface{}{`chance`: 0})
 		go util.SendMail(model.AppConfig.FromMail, model.AppConfig.FromMailAuth, "haoweizh@qq.com", `跨期交割`,
 			setting.Market+turtleData.instrument)
-		channel := model.AppMarkets.GetDepthChan(setting.Market, 0)
-		if channel == nil {
-			ResetChannel(setting.Market, channel)
-		}
+		channels := model.AppMarkets.GetDepthChan(setting.Market)
+		ResetChannels(setting.Market, channels)
 		util.Notice(fmt.Sprintf(`%s need to go cross %s to %s set chance 0`,
 			setting.Market, setting.Symbol, turtleData.instrument))
 	}

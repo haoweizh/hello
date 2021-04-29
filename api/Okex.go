@@ -72,6 +72,10 @@ func reSubscribe() {
 		}
 		wrongArray := getWrongs()
 		util.Notice(fmt.Sprintf(`>>>>>>>>wrong instrument %v`, wrongArray))
+		if len(wrongArray) > 5 {
+			SetRequireReset(model.OKEX, true)
+			util.Notice(fmt.Sprintf(`requrie reset all okex channel, wrong instrument %d`, len(wrongArray)))
+		}
 		subscribeMap := make(map[string]interface{})
 		subscribeMap["op"] = "unsubscribe"
 		subArray := make([]map[string]string, 0)
@@ -250,26 +254,30 @@ func handleWSOrderOKEX(value map[string]interface{}, orderHandler OrderHandler) 
 	orderHandler(order)
 }
 
-func WsDepthServeOKEX(instruments map[string]bool, orderHandler OrderHandler) (chan struct{}, error) {
+func WsDepthServeOKEX(instruments map[string]bool, orderHandler OrderHandler) (channels []chan struct{}, err error) {
 	for s := range instruments {
 		if msgChanOKEX[s] == nil {
 			msgChanOKEX[s] = make(chan *simplejson.Json, 1000)
 			go handleMsgOKEX(msgChanOKEX[s], s)
 		}
 	}
+	channels = make([]chan struct{}, 0)
 	keys, _ := model.AppConfig.GetKeys(model.OKEX)
 	for _, key := range keys {
 		channelKey := key
 		go func() {
-			_, err := WebSocketClient(model.OKEX+`_`+channelKey, wsPrivateOKEX, channelKey,
+			channel, errPrivate := WebSocketClient(model.OKEX+`_`+channelKey, wsPrivateOKEX, channelKey,
 				GetWSSubscribes(model.OKEX, model.SubscribeDepth), subscriberOKEXPrivate, wsHandlerPrivate, orderHandler)
-			if err != nil {
+			if errPrivate != nil {
 				util.SocketInfo(fmt.Sprintf(`fail to connect okex private %s %s`, channelKey, err.Error()))
 			}
+			channels = append(channels, channel)
 		}()
 	}
-	return WebSocketClient(model.OKEX, model.AppConfig.WSUrls[model.OKEX], model.SubscribeDepth,
+	channel, errPublic := WebSocketClient(model.OKEX, model.AppConfig.WSUrls[model.OKEX], model.SubscribeDepth,
 		GetWSSubscribes(model.OKEX, model.SubscribeDepth), subscribeHandlerOKEX, wsHandler, orderHandler)
+	channels = append(channels, channel)
+	return channels, errPublic
 }
 
 func handleBooksUpdate(instrument string, data map[string]interface{}, bidAsk *model.BidAsk) (

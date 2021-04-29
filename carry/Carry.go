@@ -318,7 +318,6 @@ var ProcessCarry = func(setting *model.Setting, tick *model.BidAsk) {
 	model.SetCarryInfo(`[current high-low]`, fmt.Sprintf(`highest %s %f lowest %s %f`, symbolHighest, highest, symbolLowest, lowest))
 	keys, secrets := model.AppConfig.GetKeys(setting.Market)
 	doReverts := strings.Split(model.AppConfig.CarryClose, `,`)
-	util.Info(`+++++++++ %v`, doReverts)
 	begin := 0
 	step := 1
 	if (now.Hour() < 6 && now.Hour() > 2 && now.Second()%4 != 0) || now.Second()%2 == 0 {

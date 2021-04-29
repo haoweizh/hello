@@ -86,47 +86,58 @@ func MaintainTransFee(key, secret string) {
 	}
 }
 
-func createMarketDepthServer(markets *model.Markets, market string) chan struct{} {
+func createMarketDepthServer(markets *model.Markets, market string) (channels []chan struct{}) {
 	util.SocketInfo(" create depth chan for " + market)
 	var channel chan struct{}
+	channels = make([]chan struct{}, 1)
 	var err error
 	switch market {
 	case model.Huobi:
 		channel, err = api.WsDepthServeHuobi(markets, nil)
+		channels[0] = channel
 	case model.HuobiDM:
 		channel, err = api.WsDepthServeHuobiDM(markets, nil)
+		channels[0] = channel
 	case model.OKEX:
 		instruments := model.GetMarketSymbols(model.OKEX)
-		channel, err = api.WsDepthServeOKEX(instruments, postOrderCarry)
+		channels, err = api.WsDepthServeOKEX(instruments, postOrderCarry)
 	//case model.OKFUTURE:
 	//	channel, err = api.WsDepthServeOKFuture(markets, nil)
 	case model.Binance:
 		channel, err = api.WsDepthServeBinance(markets, nil)
+		channels[0] = channel
 	case model.Coinpark:
 		channel, err = api.WsDepthServeCoinpark(markets, nil)
+		channels[0] = channel
 	case model.Bitmex:
 		channel, err = api.WsDepthServeBitmex(markets, nil)
+		channels[0] = channel
 	case model.Bybit:
 		channel, err = api.WsDepthServeBybit(markets, nil)
+		channels[0] = channel
 	case model.Ftx:
 		channel, err = api.WsDepthServeFtx(markets, nil)
+		channels[0] = channel
 	case model.DFuture:
 		channel, err = api.WsDepthServeDFuture(markets, nil)
+		channels[0] = channel
 	}
 	if err != nil {
 		util.SocketInfo(market + ` can not create depth server ` + err.Error())
 	}
-	return channel
+	return channels
 }
 
 var socketMaintaining = false
 
-func ResetChannel(market string, channel chan struct{}) {
+func ResetChannels(market string, channels []chan struct{}) {
 	model.AppPause = true
-	model.AppMarkets.PutDepthChan(market, 0, nil)
-	channel <- struct{}{}
-	close(channel)
-	model.AppMarkets.PutDepthChan(market, 0, createMarketDepthServer(model.AppMarkets, market))
+	model.AppMarkets.PutDepthChan(market, nil)
+	for _, channel := range channels {
+		channel <- struct{}{}
+		close(channel)
+	}
+	model.AppMarkets.PutDepthChan(market, createMarketDepthServer(model.AppMarkets, market))
 	model.AppPause = false
 	util.SocketInfo(market + " reset depth channel ")
 }
@@ -137,14 +148,14 @@ func MaintainMarketChan() {
 	}
 	socketMaintaining = true
 	for _, market := range model.GetMarkets() {
-		channel := model.AppMarkets.GetDepthChan(market, 0)
-		if channel == nil {
-			model.AppMarkets.PutDepthChan(market, 0, createMarketDepthServer(model.AppMarkets, market))
+		channels := model.AppMarkets.GetDepthChan(market)
+		if channels == nil || len(channels) == 0 {
+			model.AppMarkets.PutDepthChan(market, createMarketDepthServer(model.AppMarkets, market))
 			util.Notice(fmt.Sprintf("%s create new depth channel ", market))
 		} else {
 			if api.RequireDepthChanReset(model.AppMarkets, market) {
 				util.Notice(fmt.Sprintf("%s require new depth channel ", market))
-				ResetChannel(market, channel)
+				ResetChannels(market, channels)
 				time.Sleep(time.Minute)
 			}
 		}

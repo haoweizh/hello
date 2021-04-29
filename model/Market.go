@@ -278,22 +278,22 @@ func (markets *Markets) SetBidAsk(symbol, marketName string, bidAsk *BidAsk) boo
 	return false
 }
 
-func (markets *Markets) GetDepthChan(marketName string, index int) chan struct{} {
+func (markets *Markets) GetDepthChan(marketName string) []chan struct{} {
 	markets.lock.Lock()
 	defer markets.lock.Unlock()
 	if markets.wsDepth[marketName] == nil {
 		markets.wsDepth[marketName] = make([]chan struct{}, AppConfig.Channels)
 	}
-	return markets.wsDepth[marketName][index]
+	return markets.wsDepth[marketName]
 }
 
-func (markets *Markets) PutDepthChan(marketName string, index int, channel chan struct{}) {
+func (markets *Markets) PutDepthChan(marketName string, channels []chan struct{}) {
 	markets.lock.Lock()
 	defer markets.lock.Unlock()
 	if markets.wsDepth[marketName] == nil {
 		markets.wsDepth[marketName] = make([]chan struct{}, AppConfig.Channels)
 	}
-	markets.wsDepth[marketName][index] = channel
+	markets.wsDepth[marketName] = channels
 }
 
 func (markets *Markets) GetSymbols() (symbols map[string]bool) {

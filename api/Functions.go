@@ -14,10 +14,21 @@ import (
 var channelLock sync.Mutex
 var instrumentLock sync.Mutex
 var instruments = make(map[string]map[string]map[string]string) // market - symbol - (quarter;bi_quarter) - instrument
+var requireReset = make(map[string]bool)
+
+func SetRequireReset(market string, reset bool) {
+	channelLock.Lock()
+	defer channelLock.Unlock()
+	requireReset[market] = reset
+}
 
 func RequireDepthChanReset(markets *model.Markets, market string) bool {
 	channelLock.Lock()
 	defer channelLock.Unlock()
+	if requireReset[market] {
+		requireReset[market] = false
+		return true
+	}
 	now := util.GetNowUnixMillion()
 	symbols := markets.GetSymbols()
 	for symbol := range symbols {
