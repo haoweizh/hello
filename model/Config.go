@@ -7,7 +7,6 @@ import (
 
 type Config struct {
 	lock            sync.Mutex
-	Channels        int
 	RefreshTimeSlot int
 	Between         int64
 	ChannelSlot     float64

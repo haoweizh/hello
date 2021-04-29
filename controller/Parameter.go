@@ -428,11 +428,6 @@ func SetParameters(c *gin.Context) {
 			model.AppConfig.ChannelSlot = value
 		}
 	}
-	channels := c.Query("channels")
-	if len(strings.TrimSpace(channels)) > 0 {
-		temp, _ := strconv.ParseInt(channels, 10, 64)
-		model.AppConfig.Channels = int(temp)
-	}
 	delay := c.Query("delay")
 	if len(strings.TrimSpace(delay)) > 0 {
 		strDelay := strings.Replace(delay, " ", "", -1)
