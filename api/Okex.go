@@ -922,10 +922,10 @@ func parseBalanceOKEX(value map[string]interface{}) (balance *model.Balance) {
 	if value[`from`] != nil && value[`to`] != nil {
 		balance.Address = fmt.Sprintf(`%s : %s`, value[`from`].(string), value[`to`].(string))
 	}
-	if value[`ts`] != nil && value[`ts`] != `` {
-		ts, _ := strconv.ParseInt(value[`ts`].(string), 10, 64)
-		balance.BalanceTime = time.Unix(ts/1000, 0)
-	}
+	//if value[`ts`] != nil && value[`ts`] != `` {
+	//	ts, _ := strconv.ParseInt(value[`ts`].(string), 10, 64)
+	//	balance.BalanceTime = time.Unix(ts/1000, 0)
+	//}
 	if value[`txId`] != nil {
 		balance.TransactionId = value[`txId`].(string)
 	}
