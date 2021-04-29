@@ -303,17 +303,18 @@ func GetCarryInfo(c *gin.Context) {
 
 func GetParameters(c *gin.Context) {
 	msg := ``
-	market := model.OKEX
-	marketInfos := model.GetMarketInfos(market)
-	if marketInfos != nil && model.GetSettings(model.FunctionCarry, market) != nil {
-		symbols := model.GetMarketSymbols(market)
-		for symbol := range marketInfos {
-			coin := model.GetCoin(market, symbol)
-			symbolPerp := coin + `-USDT-SWAP`
-			symbolRelated := coin + `-USDT`
-			if (marketInfos[symbolPerp] != nil && marketInfos[symbolRelated] != nil) && (symbols[symbolPerp] == false ||
-				symbols[symbolRelated] == false) && symbol == symbolPerp {
-				msg += fmt.Sprintf("新币 %s\n", symbolPerp)
+	markets := model.GetMarkets()
+	for _, market := range markets {
+		marketInfos := model.GetMarketInfos(market)
+		if marketInfos != nil && model.GetSettings(model.FunctionCarry, market) != nil {
+			symbols := model.GetMarketSymbols(market)
+			for symbol := range marketInfos {
+				coin := model.GetCoin(market, symbol)
+				symbolPerp := coin + api.GetPerpTail(market)
+				symbolRelated := coin + api.GetSpotTail(market)
+				if (marketInfos[symbolPerp] != nil && marketInfos[symbolRelated] != nil) && (symbols[symbolPerp] == false || symbols[symbolRelated] == false) && symbol == symbolPerp {
+					msg += fmt.Sprintf("新币 %s\n", symbolPerp)
+				}
 			}
 		}
 	}
@@ -350,7 +351,8 @@ func GetParameters(c *gin.Context) {
 			var value float64
 			_ = carryRows.Scan(&marketName, &amountType, &side, &value, &date, &refreshType)
 			if strings.Contains(amountType, keyFtx[0]) || strings.Contains(amountType, keyOKEX[0]) {
-				carryFrontMsg += fmt.Sprintf("%s交易额 in USD: %s %s %f 类型：%s\n", market, date, side, value, refreshType)
+				carryFrontMsg += fmt.Sprintf("%s交易额 in USD: %s %s %f 类型：%s\n",
+					marketName, date, side, value, refreshType)
 			}
 		}
 		carryRows.Close()
