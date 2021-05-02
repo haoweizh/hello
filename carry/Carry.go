@@ -90,6 +90,7 @@ func setTradeMax(key, instrument string, maxBuy, maxSell float64) {
 		tradeMax[key] = make(map[string][]float64)
 	}
 	tradeMax[key][instrument] = []float64{maxBuy, maxSell}
+	util.Notice(`set trade max %s %s %f %f`, key, instrument, maxBuy, maxSell)
 }
 
 func getUsdAvailable(key string) float64 {
