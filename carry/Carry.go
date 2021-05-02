@@ -73,11 +73,12 @@ func setMarginOKEX(key string, margin float64) {
 func getTradeMax(key, instrument string) (maxBuy, maxSell float64) {
 	defer carryLock.Unlock()
 	carryLock.Lock()
-	if tradeMax[key] == nil {
+	if tradeMax[key] == nil || tradeMax[key][instrument] == nil || len(tradeMax[key][instrument]) != 2 {
+		util.Notice(`trade max 0 %s %s`, key, instrument)
 		return 0, 0
 	}
-	if tradeMax[key][instrument] == nil || len(tradeMax[key][instrument]) != 2 {
-		return 0, 0
+	if tradeMax[key][instrument][0] == 0 || tradeMax[key][instrument][1] == 0 {
+		util.Notice(`trade max 0 %s %s`, key, instrument)
 	}
 	return tradeMax[key][instrument][0], tradeMax[key][instrument][1]
 }
@@ -297,9 +298,9 @@ var ProcessCarry = func(setting *model.Setting, tick *model.BidAsk) {
 	now := time.Now()
 	million := util.GetNowUnixMillion()
 	if tickPerp == nil || tickRelated == nil || tickPerp.Asks == nil || tickPerp.Bids == nil ||
-		tickRelated.Asks == nil || tickRelated.Bids == nil || model.AppConfig.Handle != `1` || setting == nil ||
-		model.AppPause || (model.AppConfig.Env != `test` &&
-		(million-int64(tickRelated.Ts) > 2000 || million-int64(tickPerp.Ts) > 2000 || million-int64(tick.Ts) > 25)) {
+		tickRelated.Asks == nil || tickRelated.Bids == nil || setting == nil ||
+		model.AppPause || (model.AppConfig.Env != `test` && (model.AppConfig.Handle != `1` ||
+		(million-int64(tickRelated.Ts) > 2000 || million-int64(tickPerp.Ts) > 2000 || million-int64(tick.Ts) > 25))) {
 		return
 	}
 	scoreOpen := 1 - tickRelated.Asks[0].Price/tickPerp.Bids[0].Price
