@@ -19,7 +19,7 @@ const carryTypeOpen = `carryOpen`
 const carryTypeClose = `carryClose`
 const carryTypeRevert = `carryRevert`
 
-var tradeMaxResetTime = make(map[string]int64)
+var tradeMaxResetTime = int64(0)
 var marketInitTime = make(map[string]int64) // market - initTime
 var carryLock sync.Mutex
 var carrying bool
@@ -184,8 +184,8 @@ func resetSingleTradeMax(key, market, symbol string) {
 	}
 }
 
-func resetTradeMax(key, secret, market string) {
-	tradeMaxResetTime[key] = time.Now().Unix()
+func resetTradeMax(keys, secrets []string, market string) {
+	tradeMaxResetTime = time.Now().Unix()
 	if market != model.OKEX {
 		return
 	}
@@ -194,12 +194,14 @@ func resetTradeMax(key, secret, market string) {
 		return
 	}
 	for coin := range coins[market] {
-		symbolPerp := coin + api.GetPerpTail(market)
-		symbolRelated := coin + api.GetSpotTail(market)
-		_, maxBuy, maxSell := api.GetMaxSize(key, secret, symbolPerp)
-		setTradeMax(key, symbolPerp, maxBuy, maxSell)
-		_, maxBuy, maxSell = api.GetMaxSize(key, secret, symbolRelated)
-		setTradeMax(key, symbolRelated, maxBuy, maxSell)
+		for i, key := range keys {
+			symbolPerp := coin + api.GetPerpTail(market)
+			symbolRelated := coin + api.GetSpotTail(market)
+			_, maxBuy, maxSell := api.GetMaxSize(key, secrets[i], symbolPerp)
+			setTradeMax(key, symbolPerp, maxBuy, maxSell)
+			_, maxBuy, maxSell = api.GetMaxSize(key, secrets[i], symbolRelated)
+			setTradeMax(key, symbolRelated, maxBuy, maxSell)
+		}
 		time.Sleep(time.Second / 4)
 	}
 }
@@ -270,8 +272,8 @@ func clearCarryBalance() {
 						makeEqual(key, secrets[i], item, balances, positions)
 					}
 				}
-				if time.Now().Unix()-tradeMaxResetTime[key] > 600 {
-					resetTradeMax(key, secrets[i], model.OKEX)
+				if time.Now().Unix()-tradeMaxResetTime > 600 {
+					resetTradeMax(keys, secrets, model.OKEX)
 				}
 				initEmptyBalance(key, secrets[i], market)
 			}
