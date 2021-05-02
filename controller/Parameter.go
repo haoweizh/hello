@@ -351,8 +351,8 @@ func GetParameters(c *gin.Context) {
 			var value float64
 			_ = carryRows.Scan(&marketName, &amountType, &side, &value, &date, &refreshType)
 			if strings.Contains(amountType, keyFtx[0]) || strings.Contains(amountType, keyOKEX[0]) {
-				carryFrontMsg += fmt.Sprintf("%s交易额 in USD: %s %s %f 类型：%s\n",
-					marketName, date, side, value, refreshType)
+				carryFrontMsg += fmt.Sprintf("%s %s交易额 in USD: %s %s %f 类型：%s\n",
+					amountType, marketName, date, side, value, refreshType)
 			}
 		}
 		carryRows.Close()
