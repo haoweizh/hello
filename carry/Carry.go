@@ -19,7 +19,7 @@ const carryTypeOpen = `carryOpen`
 const carryTypeClose = `carryClose`
 const carryTypeRevert = `carryRevert`
 
-var tradeMaxResetTime = int64(0)
+var tradeMaxResetTime = make(map[string]int64)
 var marketInitTime = make(map[string]int64) // market - initTime
 var carryLock sync.Mutex
 var carrying bool
@@ -74,11 +74,7 @@ func getTradeMax(key, instrument string) (maxBuy, maxSell float64) {
 	defer carryLock.Unlock()
 	carryLock.Lock()
 	if tradeMax[key] == nil || tradeMax[key][instrument] == nil || len(tradeMax[key][instrument]) != 2 {
-		util.Notice(`trade max 0 %s %s`, key, instrument)
 		return 0, 0
-	}
-	if tradeMax[key][instrument][0] == 0 || tradeMax[key][instrument][1] == 0 {
-		util.Notice(`trade max 0 %s %s`, key, instrument)
 	}
 	return tradeMax[key][instrument][0], tradeMax[key][instrument][1]
 }
@@ -90,7 +86,6 @@ func setTradeMax(key, instrument string, maxBuy, maxSell float64) {
 		tradeMax[key] = make(map[string][]float64)
 	}
 	tradeMax[key][instrument] = []float64{maxBuy, maxSell}
-	util.Notice(`set trade max %s %s %f %f`, key, instrument, maxBuy, maxSell)
 }
 
 func getUsdAvailable(key string) float64 {
@@ -190,7 +185,7 @@ func resetSingleTradeMax(key, market, symbol string) {
 }
 
 func resetTradeMax(key, secret, market string) {
-	tradeMaxResetTime = time.Now().Unix()
+	tradeMaxResetTime[key] = time.Now().Unix()
 	if market != model.OKEX {
 		return
 	}
@@ -275,7 +270,7 @@ func clearCarryBalance() {
 						makeEqual(key, secrets[i], item, balances, positions)
 					}
 				}
-				if time.Now().Unix()-tradeMaxResetTime > 600 {
+				if time.Now().Unix()-tradeMaxResetTime[key] > 600 {
 					resetTradeMax(key, secrets[i], model.OKEX)
 				}
 				initEmptyBalance(key, secrets[i], market)
