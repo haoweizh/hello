@@ -573,6 +573,8 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	localOpenValueLimit := math.Min(openValueLimit, 0.5*balanceAllValue)
 	table := fmt.Sprintf(`%s_dynamic_`, model.FunctionCarry)
 	if len(keys) > 1 && keys[0] != key {
+		setOpen *= 0.8
+		setClose *= 0.8
 		table += fmt.Sprintf(`slave%s`, key[0:5])
 		if usdRate > 0 {
 			usdLowLine = 0.2 * usdAvailable / usdRate
