@@ -329,7 +329,7 @@ var ProcessCarry = func(setting *model.Setting, tick *model.BidAsk) {
 		if amount > 0 {
 			go placeCarry(setting, tickPerp, tickRelated, keys[i], secrets[i], sidePerp, sideRelated, carryType,
 				scoreOpen, scoreClose, amount)
-			break
+			return
 		}
 	}
 }
@@ -351,38 +351,6 @@ func placeCarry(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, key
 	}
 	perpPrice := tickPerp.Asks[0].Price
 	relatedPrice := tickRelated.Bids[0].Price
-	usdAvailable := getUsdAvailable(key)
-	balanceAllValue := getBalanceAll(key)
-	preAmount := balance.AvailableWithBorrow
-	if sidePerp == model.OrderSideSell {
-		perpPrice = tickPerp.Bids[0].Price
-		relatedPrice = tickRelated.Asks[0].Price
-		setCarryAmount(key, setting.Symbol, getCarryAmount(key, setting.Symbol)+amount)
-		balance.Amount += amount
-		balance.AvailableWithBorrow += amount
-		balance.UsdValue += amount * perpPrice
-		if carryType == carryTypeOpen {
-			usdAvailable -= amount * perpPrice
-			setUsdAvailable(key, usdAvailable)
-		}
-		util.Notice(`set availableWithBorrow %s %f + %f = %f`,
-			balance.Coin, preAmount, amount, balance.AvailableWithBorrow)
-	} else if sidePerp == model.OrderSideBuy {
-		perpPrice = tickPerp.Asks[0].Price
-		relatedPrice = tickRelated.Bids[0].Price
-		setCarryAmount(key, setting.Symbol, getCarryAmount(key, setting.Symbol)-amount)
-		balance.Amount -= amount
-		balance.AvailableWithBorrow -= amount
-		balance.UsdValue -= amount * perpPrice
-		if carryType == carryTypeRevert {
-			usdAvailable += amount * relatedPrice
-			setUsdAvailable(key, usdAvailable)
-		}
-		util.Notice(`set availableWithBorrow %s %f - %f = %f`,
-			balance.Coin, preAmount, amount, balance.AvailableWithBorrow)
-	}
-	setCarryBalance(key, coin, balance)
-	setUsdRate(key, usdAvailable/balanceAllValue)
 	now := int(util.GetNowUnixMillion())
 	util.Notice(fmt.Sprintf(`carry%s->%s delay %d %d perp[%f %f %f %f] related[%f %f %f %f] with score open:%f close:%f 
 	    amount %f worth %f time in million %d`,
@@ -390,8 +358,9 @@ func placeCarry(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, key
 		tickPerp.Bids[0].Amount, tickPerp.Asks[0].Price, tickPerp.Asks[0].Amount, tickRelated.Bids[0].Price,
 		tickRelated.Bids[0].Amount, tickRelated.Asks[0].Price, tickRelated.Asks[0].Amount, scoreOpen, scoreClose,
 		amount, amount*tickPerp.Asks[0].Price, util.GetNowUnixMillion()))
+	placeSuccess := true
 	if setting.Market == model.OKEX {
-		api.PlacePairOKEX(key, model.GetCoin(setting.Market, setting.Symbol), sidePerp, sideRelated,
+		placeSuccess = api.PlacePairOKEX(key, model.GetCoin(setting.Market, setting.Symbol), sidePerp, sideRelated,
 			model.OrderTypeLimit, perpPrice, relatedPrice, amount)
 	} else {
 		go api.PlaceOrder(key, secret, sidePerp, model.OrderTypeLimit, setting.Market, setting.Symbol,
@@ -401,6 +370,40 @@ func placeCarry(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, key
 			``, ``, model.FunctionCarry, relatedPrice, relatedPrice,
 			amount, true, true, postOrderCarry)
 		time.Sleep(time.Second / 5)
+	}
+	if placeSuccess {
+		usdAvailable := getUsdAvailable(key)
+		balanceAllValue := getBalanceAll(key)
+		preAmount := balance.AvailableWithBorrow
+		if sidePerp == model.OrderSideSell {
+			perpPrice = tickPerp.Bids[0].Price
+			relatedPrice = tickRelated.Asks[0].Price
+			setCarryAmount(key, setting.Symbol, getCarryAmount(key, setting.Symbol)+amount)
+			balance.Amount += amount
+			balance.AvailableWithBorrow += amount
+			balance.UsdValue += amount * perpPrice
+			if carryType == carryTypeOpen {
+				usdAvailable -= amount * perpPrice
+				setUsdAvailable(key, usdAvailable)
+			}
+			util.Notice(`set availableWithBorrow %s %f + %f = %f`,
+				balance.Coin, preAmount, amount, balance.AvailableWithBorrow)
+		} else if sidePerp == model.OrderSideBuy {
+			perpPrice = tickPerp.Asks[0].Price
+			relatedPrice = tickRelated.Bids[0].Price
+			setCarryAmount(key, setting.Symbol, getCarryAmount(key, setting.Symbol)-amount)
+			balance.Amount -= amount
+			balance.AvailableWithBorrow -= amount
+			balance.UsdValue -= amount * perpPrice
+			if carryType == carryTypeRevert {
+				usdAvailable += amount * relatedPrice
+				setUsdAvailable(key, usdAvailable)
+			}
+			util.Notice(`set availableWithBorrow %s %f - %f = %f`,
+				balance.Coin, preAmount, amount, balance.AvailableWithBorrow)
+		}
+		setCarryBalance(key, coin, balance)
+		setUsdRate(key, usdAvailable/balanceAllValue)
 	}
 }
 

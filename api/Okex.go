@@ -482,14 +482,14 @@ func sendSignRequestOKEX(key, secret, method, path string, body interface{}) (re
 var lastSameTime = make(map[string]int64)
 var lastCarryTime = int64(0)
 
-func PlacePairOKEX(key, coin, sidePerp, sideSpot, orderType string, pricePerp, priceSpot, amount float64) {
+func PlacePairOKEX(key, coin, sidePerp, sideSpot, orderType string, pricePerp, priceSpot, amount float64) (success bool) {
 	now := time.Now().UnixNano()
 	if time.Duration(now-lastCarryTime)/time.Millisecond < 50 {
 		util.Notice(`ignore carry for last carry time < 50ms`)
-		return
+		return false
 	} else if time.Duration(now-lastSameTime[coin])/time.Millisecond < 150 {
 		util.Notice(`ignore same pair carry in time < 150ms`)
-		return
+		return false
 	}
 	lastSameTime[coin] = now
 	lastCarryTime = now
@@ -534,7 +534,9 @@ func PlacePairOKEX(key, coin, sidePerp, sideSpot, orderType string, pricePerp, p
 	go model.AppDB.Save(orderSpot)
 	if err != nil {
 		util.Notice(fmt.Sprintf(`fail to send order ws %s %s return %s`, key, coin, err.Error()))
+		return false
 	}
+	return true
 }
 
 // amount、price
