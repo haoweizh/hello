@@ -10,8 +10,26 @@ import (
 var socket, info, notice *log.Logger
 var socketInfoFile, infoFile, noticeFile *os.File
 var socketCount, infoCount, noticeCount int
+var logChan = make(chan string, 100)
 
 const logRoot = "./log/"
+
+func init() {
+	go logChanHandler()
+}
+
+func logChanHandler() {
+	for true {
+		msg := <-logChan
+		if msg[0:4] == `info` {
+			info.Println(msg[4:])
+		} else if msg[0:6] == `notice` {
+			notice.Println(msg[6:])
+		} else if msg[0:6] == `socket` {
+			socket.Println(msg[6:])
+		}
+	}
+}
 
 func initLog(path string) (*log.Logger, *os.File, error) {
 	//removeOldFiles()
@@ -64,8 +82,9 @@ func SocketInfo(format string, a ...interface{}) {
 		}
 		socket, socketInfoFile, _ = initLog(getPath("socketInfo"))
 	}
-	go socket.Println(fmt.Sprintf(format, a...))
 	socketCount++
+	msg := `socket` + fmt.Sprintf(format, a...)
+	logChan <- msg
 }
 
 func Info(format string, a ...interface{}) {
@@ -75,8 +94,9 @@ func Info(format string, a ...interface{}) {
 		}
 		info, infoFile, _ = initLog(getPath("info"))
 	}
-	go info.Println(fmt.Sprintf(format, a...))
 	infoCount++
+	msg := `info` + fmt.Sprintf(format, a...)
+	logChan <- msg
 }
 
 func Notice(format string, a ...interface{}) {
@@ -86,6 +106,7 @@ func Notice(format string, a ...interface{}) {
 		}
 		notice, noticeFile, _ = initLog(getPath("notice"))
 	}
-	go notice.Println(fmt.Sprintf(format, a...))
 	noticeCount++
+	msg := `notice` + fmt.Sprintf(format, a...)
+	logChan <- msg
 }
