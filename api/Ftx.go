@@ -517,7 +517,7 @@ func getMarketsFtx() (marketInfos map[string]*model.MarketInfo) {
 		}
 		for _, item := range items {
 			value := item.(map[string]interface{})
-			marketInfo := &model.MarketInfo{CanBorrow: true}
+			marketInfo := &model.MarketInfo{}
 			if value[`name`] != nil {
 				marketInfo.Name = value[`name`].(string)
 			} else {
@@ -525,7 +525,7 @@ func getMarketsFtx() (marketInfos map[string]*model.MarketInfo) {
 			}
 			if value[`baseCurrency`] != nil && value[`type`] != nil && value[`type`].(string) == `spot` &&
 				!canBorrows[value[`baseCurrency`].(string)] {
-				marketInfo.CanBorrow = false
+				//marketInfo.CanBorrow = false
 			}
 			if value[`priceIncrement`] != nil {
 				marketInfo.PriceIncrement, _ = value[`priceIncrement`].(json.Number).Float64()

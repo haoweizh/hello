@@ -613,7 +613,7 @@ func placeOrderOKEX(key, secret string, isWs bool, order *model.Order) {
 // consider spot future size calc
 func getMarketsOKEX() (marketInfos map[string]*model.MarketInfo) {
 	marketInfos = make(map[string]*model.MarketInfo)
-	instTypes := []string{`MARGIN`, `SWAP`}
+	instTypes := []string{`SPOT`, `SWAP`}
 	for _, instType := range instTypes {
 		path := fmt.Sprintf(`/api/v5/public/instruments?%s`,
 			util.ComposeParams(map[string]interface{}{`instType`: instType}))
@@ -623,7 +623,7 @@ func getMarketsOKEX() (marketInfos map[string]*model.MarketInfo) {
 			for _, info := range resultJson.Get(`data`).MustArray() {
 				value := info.(map[string]interface{})
 				if value[`instId`] != nil {
-					marketInfo := &model.MarketInfo{Name: value[`instId`].(string), CanBorrow: false}
+					marketInfo := &model.MarketInfo{Name: value[`instId`].(string)}
 					if value[`lotSz`] != nil {
 						marketInfo.SizeIncrement, _ = strconv.ParseFloat(value[`lotSz`].(string), 64)
 					}
