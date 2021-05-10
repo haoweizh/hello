@@ -655,6 +655,7 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 		amountInPerp := api.GetAmountInMarket(setting.Market, setting.Symbol, amount)
 		maxBuyPerp, maxSellPerp := getTradeMax(key, setting.Symbol)
 		maxBuyRelated, maxSellRelated := getTradeMax(key, setting.GetRelatedSymbol())
+		maxSellRelated = math.Max(maxSellRelated, balance.AvailableWithBorrow)
 		if sidePerp == model.OrderSideBuy && sideRelated == model.OrderSideSell {
 			amountInPerp = math.Min(amountInPerp, maxBuyPerp)
 			amount = math.Min(amount, maxSellRelated)
