@@ -1084,6 +1084,15 @@ func GetMaxSize(key, secret, instrument string) (success bool, maxBuy, maxSell f
 		}
 		if data[`maxSell`] != nil {
 			maxSell, _ = strconv.ParseFloat(data[`maxSell`].(string), 64)
+			if strings.Index(instrument, `-USDT`)+5 == len(instrument) {
+				havePrice, price := model.AppMarkets.GetPrice(instrument)
+				if !havePrice {
+					util.Notice(`fail to get price from bidAsk %s`, instrument)
+				} else {
+					maxSell = maxSell / price
+					util.Notice(`get max sell %f after price %f`, maxSell, price)
+				}
+			}
 		}
 	}
 	return true, maxBuy, maxSell

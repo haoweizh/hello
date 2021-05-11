@@ -381,7 +381,6 @@ func placeCarry(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, key
 	if placeSuccess {
 		usdAvailable := getUsdAvailable(key)
 		balanceAllValue := getBalanceAll(key)
-		preAmount := balance.AvailableWithBorrow
 		if sidePerp == model.OrderSideSell {
 			perpPrice = tickPerp.Bids[0].Price
 			relatedPrice = tickRelated.Asks[0].Price
@@ -393,8 +392,6 @@ func placeCarry(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, key
 				usdAvailable -= amount * perpPrice
 				setUsdAvailable(key, usdAvailable)
 			}
-			util.Notice(`set availableWithBorrow %s %f + %f = %f`,
-				balance.Coin, preAmount, amount, balance.AvailableWithBorrow)
 		} else if sidePerp == model.OrderSideBuy {
 			perpPrice = tickPerp.Asks[0].Price
 			relatedPrice = tickRelated.Bids[0].Price
@@ -406,8 +403,6 @@ func placeCarry(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, key
 				usdAvailable += amount * relatedPrice
 				setUsdAvailable(key, usdAvailable)
 			}
-			util.Notice(`set availableWithBorrow %s %f - %f = %f`,
-				balance.Coin, preAmount, amount, balance.AvailableWithBorrow)
 		}
 		setCarryBalance(key, coin, balance)
 		setUsdRate(key, usdAvailable/balanceAllValue)
