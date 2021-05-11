@@ -366,6 +366,7 @@ func GetParameters(c *gin.Context) {
 }
 
 func RefreshParameters(c *gin.Context) {
+	util.Notice(`controller refreshing`)
 	model.LoadSettings()
 	for _, market := range model.GetMarkets() {
 		channels := model.AppMarkets.GetDepthChan(market)
