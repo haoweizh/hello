@@ -712,8 +712,8 @@ func InitMarketInfos() (success bool) {
 			model.SetMarketInfos(model.Ftx, getMarketsFtx())
 		case model.OKEX:
 			model.SetMarketInfos(model.OKEX, getMarketsOKEX())
+			util.Notice(`okex config: ` + getAccountConfigOKEX(``, ``))
 			if getAccountConfigOKEX(``, ``) != `net_mode` {
-				util.Notice(getAccountConfigOKEX(``, ``))
 				if !setAccountModeOKEX(``, ``) {
 					success = false
 				}
@@ -807,7 +807,6 @@ func GetPerpTail(market string) string {
 }
 
 func GetCarryCoins() (coins map[string]map[string]bool) { //  market - coin - bool
-	InitMarketInfos()
 	markets := model.GetMarkets()
 	coins = make(map[string]map[string]bool)
 	for _, market := range markets {
