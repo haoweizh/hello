@@ -174,16 +174,15 @@ func GetMarkets() []string {
 	if AppSettings == nil {
 		LoadSettings()
 	}
-	markets := make([]string, 0)
+	marketMap := make(map[string]bool)
 	for _, value := range AppSettings {
-		market := strings.TrimSpace(value.Market)
-		if market != `` {
-			markets = append(markets, market)
-		}
-		market = strings.TrimSpace(value.MarketRelated)
-		if market != `` {
-			markets = append(markets, market)
-		}
+		marketMap[value.Market] = true
+	}
+	markets := make([]string, len(marketMap))
+	i := 0
+	for key := range marketMap {
+		markets[i] = key
+		i++
 	}
 	return markets
 }
