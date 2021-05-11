@@ -487,7 +487,7 @@ func PlacePairOKEX(key, coin, sidePerp, sideSpot, orderType string, pricePerp, p
 	if time.Duration(now-lastCarryTime)/time.Millisecond < 50 {
 		util.Notice(`ignore carry for last carry time < 50ms`)
 		return false
-	} else if time.Duration(now-lastSameTime[coin])/time.Millisecond < 150 {
+	} else if time.Duration(now-lastSameTime[coin])/time.Millisecond < 200 {
 		util.Notice(`ignore same pair carry in time < 150ms`)
 		return false
 	}
