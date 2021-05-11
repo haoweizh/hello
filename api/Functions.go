@@ -713,6 +713,7 @@ func InitMarketInfos() (success bool) {
 		case model.OKEX:
 			model.SetMarketInfos(model.OKEX, getMarketsOKEX())
 			if getAccountConfigOKEX(``, ``) != `net_mode` {
+				util.Notice(getAccountConfigOKEX(``, ``))
 				if !setAccountModeOKEX(``, ``) {
 					success = false
 				}
