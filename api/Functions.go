@@ -687,9 +687,8 @@ func InitCarryFtx(start uint) {
 			AmountLimit:       0,
 			ID:                start,
 		}
-		related := setting.GetRelatedSymbol()
 		// HOLY 1INCH too easy to be single completed order
-		if marketInfos[related] == nil || symbol == `FTT-PERP` || symbol == `USDT-PERP` || symbol == `BTC-PERP` ||
+		if marketInfos[setting.SymbolRelated] == nil || symbol == `FTT-PERP` || symbol == `USDT-PERP` || symbol == `BTC-PERP` ||
 			symbol == `ETH-PERP` || symbol == `LINK-PERP` {
 			continue
 		}
@@ -699,7 +698,7 @@ func InitCarryFtx(start uint) {
 		//}
 		start++
 		model.AppDB.Save(setting)
-		fmt.Println(fmt.Sprintf(`%s %s saved %d %f`, symbol, related, start, setting.CloseShortMargin))
+		fmt.Println(fmt.Sprintf(`%s %s saved %d %f`, symbol, setting.SymbolRelated, start, setting.CloseShortMargin))
 	}
 }
 
@@ -814,7 +813,8 @@ func GetCarryCoins() (coins map[string]map[string]bool) { //  market - coin - bo
 		marketInfos := model.GetMarketInfos(market)
 		coins[market] = make(map[string]bool)
 		if marketInfos != nil && model.GetSettings(model.FunctionCarry, market) != nil {
-			for symbol := range marketInfos {
+			symbols := model.GetMarketSymbols(market)
+			for symbol := range symbols {
 				coin := model.GetCoin(market, symbol)
 				coins[market][coin] = true
 			}

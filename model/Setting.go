@@ -160,7 +160,7 @@ func GetMarketSymbols(market string) map[string]bool {
 	symbols := make(map[string]bool)
 	for _, value := range AppSettings {
 		if value.Market == market {
-			related := value.GetRelatedSymbol()
+			related := value.SymbolRelated
 			symbols[value.Symbol] = true
 			if related != `` {
 				symbols[related] = true
@@ -174,15 +174,16 @@ func GetMarkets() []string {
 	if AppSettings == nil {
 		LoadSettings()
 	}
-	marketMap := make(map[string]bool)
+	markets := make([]string, 0)
 	for _, value := range AppSettings {
-		marketMap[value.Market] = true
-	}
-	markets := make([]string, len(marketMap))
-	i := 0
-	for key := range marketMap {
-		markets[i] = key
-		i++
+		market := strings.TrimSpace(value.Market)
+		if market != `` {
+			markets = append(markets, market)
+		}
+		market = strings.TrimSpace(value.MarketRelated)
+		if market != `` {
+			markets = append(markets, market)
+		}
 	}
 	return markets
 }
@@ -198,25 +199,6 @@ func GetInstrumentSymbol(market, instrument string) (symbol string) {
 		}
 	}
 	return
-}
-
-func (setting *Setting) GetRelatedSymbol() (related string) {
-	switch setting.Market {
-	case Ftx:
-		parts := strings.Split(setting.Symbol, `-`)
-		if len(parts) == 2 && setting.Function == FunctionCarry {
-			related = parts[0] + `/USD`
-		}
-	case OKEX:
-		parts := strings.Split(setting.Symbol, `-`)
-		if len(parts) > 2 {
-			if parts[1] == `USD` {
-				parts[1] = `USDT`
-			}
-			return parts[0] + `-` + parts[1]
-		}
-	}
-	return related
 }
 
 func GetCoin(market, symbol string) (coin string) {

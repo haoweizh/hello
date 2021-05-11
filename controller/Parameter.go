@@ -313,7 +313,7 @@ func GetParameters(c *gin.Context) {
 				symbolPerp := coin + api.GetPerpTail(market)
 				symbolRelated := coin + api.GetSpotTail(market)
 				if (marketInfos[symbolPerp] != nil && marketInfos[symbolRelated] != nil) && (symbols[symbolPerp] == false || symbols[symbolRelated] == false) && symbol == symbolPerp {
-					msg += fmt.Sprintf("新币 %s\n", symbolPerp)
+					msg += fmt.Sprintf("新币 %s %s\n", market, symbolPerp)
 				}
 			}
 		}

@@ -1090,7 +1090,7 @@ func GetMaxSize(key, secret, instrument string) (success bool, maxBuy, maxSell f
 					util.Notice(`fail to get price from bidAsk %s`, instrument)
 				} else {
 					maxSell = maxSell / price
-					util.Notice(`get max sell %f after price %f`, maxSell, price)
+					util.Notice(`get max sell %f after price %f %s`, maxSell, price, instrument)
 				}
 			}
 		}
