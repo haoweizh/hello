@@ -359,6 +359,13 @@ func placeCarry(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, key
 		tickRelated.Bids[0].Amount, tickRelated.Asks[0].Price, tickRelated.Asks[0].Amount, scoreOpen, scoreClose,
 		amount, amount*tickPerp.Asks[0].Price, util.GetNowUnixMillion()))
 	placeSuccess := true
+	if sidePerp == model.OrderSideBuy && sideRelated == model.OrderSideSell {
+		perpPrice = tickPerp.Asks[0].Price
+		relatedPrice = tickRelated.Bids[0].Price
+	} else if sidePerp == model.OrderSideSell && sideRelated == model.OrderSideBuy {
+		perpPrice = tickPerp.Bids[0].Price
+		relatedPrice = tickRelated.Asks[0].Price
+	}
 	if setting.Market == model.OKEX {
 		placeSuccess = api.PlacePairOKEX(key, model.GetCoin(setting.Market, setting.Symbol), sidePerp, sideRelated,
 			model.OrderTypeLimit, perpPrice, relatedPrice, amount)
