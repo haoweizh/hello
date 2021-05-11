@@ -339,7 +339,7 @@ func placeCarry(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, key
 	if !checkSetCarrying(true) {
 		defer checkSetCarrying(false)
 	} else {
-		util.Notice(fmt.Sprintf(`waiting for other ordering %s`, setting.Symbol))
+		//util.Notice(fmt.Sprintf(`waiting for other ordering %s`, setting.Symbol))
 		return
 	}
 	coin := model.GetCoin(setting.Market, setting.Symbol)
@@ -549,7 +549,7 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 		fundingRate *= 0.9
 	}
 	if balance == nil {
-		model.SetCarryInfo(`warning `+coin, fmt.Sprintf(`slave: balace not available!!! %s`, key))
+		model.SetCarryInfo(`warning `+coin, fmt.Sprintf(`slave: balace not available!!! %s %s`, key, coin))
 		model.SetCarryInfos(`coin_absent`, key+`_`+coin, map[string]interface{}{`absent`: coin, `key`: key})
 		return ``, ``, 0, carryType
 	} else {
