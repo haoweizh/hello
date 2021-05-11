@@ -712,7 +712,7 @@ func InitMarketInfos() (success bool) {
 			model.SetMarketInfos(model.Ftx, getMarketsFtx())
 		case model.OKEX:
 			model.SetMarketInfos(model.OKEX, getMarketsOKEX())
-			util.Notice(`okex config: ` + getAccountConfigOKEX(``, ``))
+			util.Notice(`okex config and set: ` + getAccountConfigOKEX(``, ``))
 			if getAccountConfigOKEX(``, ``) != `net_mode` {
 				if !setAccountModeOKEX(``, ``) {
 					success = false
