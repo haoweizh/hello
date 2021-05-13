@@ -449,7 +449,7 @@ func makeEqual(key, secret string, setting *model.Setting, balances []*model.Bal
 	}
 	balance := getCarryBalance(key, coin)
 	if amount > 0 { //现货数量多、合约数量少
-		util.Notice(fmt.Sprintf("【数量不平】现货：%f， 合约：%f", amountRelated, amountPerp))
+		//util.Notice(fmt.Sprintf("【数量不平】现货：%f， 合约：%f", amountRelated, amountPerp))
 		orderSide = model.OrderSideSell
 		if tickPerp.Bids[0].Price < (1-revertDis)*tickRelated.Bids[0].Price && amount < balance.AvailableWithBorrow {
 			symbol = symbolRelated
@@ -465,7 +465,7 @@ func makeEqual(key, secret string, setting *model.Setting, balances []*model.Bal
 			price = tickPerp.Bids[0].Price * (1 - OrderPriceLimit)
 		}
 	} else if amount < 0 { //合约数量多、现货数量少
-		util.Notice(fmt.Sprintf("【数量不平】现货：%f， 合约：%f", amountRelated, amountPerp))
+		//util.Notice(fmt.Sprintf("【数量不平】现货：%f， 合约：%f", amountRelated, amountPerp))
 		orderSide = model.OrderSideBuy
 		if tickPerp.Asks[0].Price < (1-revertDis)*tickRelated.Asks[0].Price {
 			symbol = settingSymbol
