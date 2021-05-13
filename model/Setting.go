@@ -202,6 +202,12 @@ func GetInstrumentSymbol(market, instrument string) (symbol string) {
 
 func (setting *Setting) GetRelatedSymbol() (related string) {
 	switch setting.Market {
+	case Binance:
+		related = setting.SymbolRelated
+		//parts := strings.Split(setting.Symbol, `-`)
+		//if len(parts) == 2 && setting.Function == FunctionCarry {
+		//	related = parts[0] + `USDT`
+		//}
 	case Ftx:
 		parts := strings.Split(setting.Symbol, `-`)
 		if len(parts) == 2 && setting.Function == FunctionCarry {
@@ -221,7 +227,7 @@ func (setting *Setting) GetRelatedSymbol() (related string) {
 
 func GetCoin(market, symbol string) (coin string) {
 	switch market {
-	case Ftx, OKFUTURE: // ftx:BTC-PERP okfuture:btc-usd
+	case Ftx, OKFUTURE, Binance: // ftx:BTC-PERP okfuture:btc-usd
 		parts := strings.Split(symbol, `-`)
 		if len(parts) == 2 {
 			coin = parts[0]

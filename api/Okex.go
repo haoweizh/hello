@@ -25,7 +25,7 @@ var wrongLock sync.Mutex
 
 func init() {
 	go reSubscribe()
-	go pingOKEX()
+	//go pingOKEX()
 }
 
 func getWrongs() []string {

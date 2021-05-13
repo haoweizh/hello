@@ -7,6 +7,7 @@ import (
 	"hello/api"
 	"hello/model"
 	"hello/util"
+	"strings"
 	"time"
 )
 
@@ -104,8 +105,17 @@ func createMarketDepthServer(markets *model.Markets, market string) (channels []
 	//case model.OKFUTURE:
 	//	channel, err = api.WsDepthServeOKFuture(markets, nil)
 	case model.Binance:
-		channel, err = api.WsDepthServeBinance(markets, nil)
+		wsUrls := strings.Split(model.AppConfig.WSUrls[model.Binance], ",")
+		channel, err = api.WsDepthServeBinance(markets, nil, wsUrls[0])
+		if err != nil {
+			util.SocketInfo(market + ` can not create Binance channel1 depth server ` + err.Error())
+		}
 		channels[0] = channel
+		channel, err = api.WsDepthServeBinance(markets, nil, wsUrls[1])
+		if err != nil {
+			util.SocketInfo(market + ` can not create Binance channel2 depth server ` + err.Error())
+		}
+		channels = append(channels, channel)
 	case model.Coinpark:
 		channel, err = api.WsDepthServeCoinpark(markets, nil)
 		channels[0] = channel

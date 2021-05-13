@@ -247,7 +247,7 @@ func clearCarryBalance() {
 					if settingCoins[coin] {
 						balanceAllValue += value.UsdValue
 					}
-					if (coin == `USD` && market == model.Ftx) || (coin == `USDT` && market == model.OKEX) {
+					if (coin == `USD` && market == model.Ftx) || (coin == `USDT` && market == model.OKEX) || (coin == `USDT` && market == model.Binance) {
 						localUsdAvailable = value.Amount
 						balanceAllValue += value.Amount
 						borrowAll += value.Borrow
@@ -435,6 +435,7 @@ func makeEqual(key, secret string, setting *model.Setting, balances []*model.Bal
 	if !success {
 		return
 	}
+	usdAvailable := getUsdAvailable(key)
 	amount := amountPerp + amountRelated
 	orderSide := model.OrderSideBuy
 	if amount < math.Max(math.Abs(amountPerp), math.Abs(amountRelated)) {
@@ -447,7 +448,8 @@ func makeEqual(key, secret string, setting *model.Setting, balances []*model.Bal
 		setCarryAmount(key, settingSymbol, 0)
 	}
 	balance := getCarryBalance(key, coin)
-	if amount > 0 {
+	if amount > 0 { //现货数量多、合约数量少
+		util.Notice(fmt.Sprintf("【数量不平】现货：%f， 合约：%f", amountRelated, amountPerp))
 		orderSide = model.OrderSideSell
 		if tickPerp.Bids[0].Price < (1-revertDis)*tickRelated.Bids[0].Price && amount < balance.AvailableWithBorrow {
 			symbol = symbolRelated
@@ -462,13 +464,14 @@ func makeEqual(key, secret string, setting *model.Setting, balances []*model.Bal
 			symbol = settingSymbol
 			price = tickPerp.Bids[0].Price * (1 - OrderPriceLimit)
 		}
-	} else {
+	} else if amount < 0 { //合约数量多、现货数量少
+		util.Notice(fmt.Sprintf("【数量不平】现货：%f， 合约：%f", amountRelated, amountPerp))
 		orderSide = model.OrderSideBuy
 		if tickPerp.Asks[0].Price < (1-revertDis)*tickRelated.Asks[0].Price {
 			symbol = settingSymbol
 			price = tickPerp.Asks[0].Price * (1 + OrderPriceLimit)
-		} else if tickPerp.Asks[0].Price > (1+revertDis)*tickRelated.Asks[0].Price {
-			symbol = symbolRelated
+		} else if tickPerp.Asks[0].Price > (1+revertDis)*tickRelated.Asks[0].Price && amount < usdAvailable/(tickRelated.Asks[0].Price*(1+OrderPriceLimit)) {
+			symbol = symbolRelated //现货余额不足
 			price = tickRelated.Asks[0].Price * (1 + OrderPriceLimit)
 		} else if math.Abs(amountPerp) > math.Abs(amountRelated) {
 			symbol = settingSymbol

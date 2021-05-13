@@ -263,7 +263,8 @@ func GetSymbol(market, subscribe string) (symbol string) {
 			return ``
 		}
 		subscribe = subscribe[0:strings.Index(subscribe, `@`)]
-		return getSymbolWithSplit(subscribe, `_`)
+		return strings.ToUpper(subscribe) //返回格式 XRPUSDT
+		//return getSymbolWithSplit(subscribe, `_`)
 	case Coinpark: //BTC_USDT bibox_sub_spot_BTC_USDT_ticker
 		subscribe = strings.Replace(subscribe, `bibox_sub_spot_`, ``, 1)
 		subscribe = strings.Replace(subscribe, `_ticker`, ``, 1)
@@ -285,7 +286,7 @@ func NewConfig() {
 	AppConfig.RestUrls = make(map[string]string)
 	AppConfig.WSUrls[Huobi] = `wss://api-aws.huobi.pro/feed`
 	AppConfig.WSUrls[HuobiDM] = `wss://api.hbdm.com/`
-	AppConfig.WSUrls[Binance] = "wss://stream.binance.com:9443/stream"
+	AppConfig.WSUrls[Binance] = "wss://stream.binance.com:9443/stream,wss://fstream.binance.com/stream"
 	AppConfig.WSUrls[Ftx] = `wss://ftx.com/ws`
 	AppConfig.WSUrls[OKEX] = `wss://ws.okex.com:8443/ws/v5/public`
 	if AppConfig.Env == `test` {
@@ -308,7 +309,7 @@ func NewConfig() {
 	AppConfig.RestUrls[Huobi] = `api-aws.huobi.pro`
 	AppConfig.RestUrls[HuobiDM] = `api.hbdm.com`
 	AppConfig.RestUrls[OKFUTURE] = `https://www.okex.com`
-	AppConfig.RestUrls[Binance] = "https://api.binance.com"
+	AppConfig.RestUrls[Binance] = "https://api.binance.com,https://fapi.binance.com"
 	AppConfig.RestUrls[Coinpark] = "https://api.coinpark.cc/v1"
 	//AppConfig.RestUrls[Bitmex] = `https://testnet.bitmex.com`
 	AppConfig.RestUrls[Bitmex] = `https://www.bitmex.com/api/v1`
