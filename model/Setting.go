@@ -219,7 +219,14 @@ func (setting *Setting) GetRelatedSymbol() (related string) {
 
 func GetCoin(market, symbol string) (coin string) {
 	switch market {
-	case Ftx, OKFUTURE, Binance: // ftx:BTC-PERP okfuture:btc-usd
+	case Ftx:
+		tails := []string{`-PERP`, `/USD`}
+		for _, tail := range tails {
+			if strings.Contains(symbol, tail) {
+				coin = symbol[0:strings.Index(symbol, tail)]
+			}
+		}
+	case OKFUTURE, Binance: // ftx:BTC-PERP okfuture:btc-usd
 		parts := strings.Split(symbol, `-`)
 		if len(parts) == 2 {
 			coin = parts[0]
