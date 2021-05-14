@@ -49,22 +49,21 @@ type MetricManager struct {
 	index       map[string]int                     // market_symbol - index
 }
 
-func (metricManager *MetricManager) AddCarry(market, symbol string, carryOpen, carryClose float64) {
+func (metricManager *MetricManager) AddCarry(mark string, carryOpen, carryClose float64) {
 	defer metricManager.Lock.Unlock()
 	metricManager.Lock.Lock()
-	marketSymbol := fmt.Sprintf(`%s_%s`, market, symbol)
 	if metricManager.carryHour == nil {
 		metricManager.carryHour = make(map[string]map[string]*CarryMetric)
 	}
-	if metricManager.carryHour[marketSymbol] == nil {
-		metricManager.carryHour[marketSymbol] = make(map[string]*CarryMetric)
+	if metricManager.carryHour[mark] == nil {
+		metricManager.carryHour[mark] = make(map[string]*CarryMetric)
 	}
 	current := util.GetNow()
 	timeStr := fmt.Sprintf(`%d/%d_%d`, current.Month(), current.Day(), current.Hour())
-	if metricManager.carryHour[marketSymbol][timeStr] == nil {
-		metricManager.carryHour[marketSymbol][timeStr] = &CarryMetric{carryHighest: math.NaN(), carryLowest: math.NaN()}
+	if metricManager.carryHour[mark][timeStr] == nil {
+		metricManager.carryHour[mark][timeStr] = &CarryMetric{carryHighest: math.NaN(), carryLowest: math.NaN()}
 	}
-	carryMetric := metricManager.carryHour[marketSymbol][timeStr]
+	carryMetric := metricManager.carryHour[mark][timeStr]
 	carryMetric.count++
 	if carryOpen > carryMetric.carryHighest || math.IsNaN(carryMetric.carryHighest) {
 		carryMetric.carryHighest = carryOpen

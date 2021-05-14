@@ -482,14 +482,14 @@ func sendSignRequestOKEX(key, secret, method, path string, body interface{}) (re
 var lastSameTime = make(map[string]int64)
 var lastCarryTime = int64(0)
 
-func PlacePairOKEX(key, coin, sidePerp, sideSpot, orderType string, pricePerp, priceSpot, amount float64) {
+func PlacePairOKEX(key, coin, sidePerp, sideSpot, orderType string, pricePerp, priceSpot, amount float64) (success bool) {
 	now := time.Now().UnixNano()
 	if time.Duration(now-lastCarryTime)/time.Millisecond < 50 {
-		util.Notice(`ignore carry for last carry time < 50ms`)
-		return
-	} else if time.Duration(now-lastSameTime[coin])/time.Millisecond < 150 {
-		util.Notice(`ignore same pair carry in time < 150ms`)
-		return
+		util.Notice(coin + ` ignore carry for last time < 50ms`)
+		return false
+	} else if time.Duration(now-lastSameTime[coin])/time.Millisecond < 200 {
+		util.Notice(coin + ` ignore carry for same pair last time < 200ms`)
+		return false
 	}
 	lastSameTime[coin] = now
 	lastCarryTime = now
@@ -534,7 +534,9 @@ func PlacePairOKEX(key, coin, sidePerp, sideSpot, orderType string, pricePerp, p
 	go model.AppDB.Save(orderSpot)
 	if err != nil {
 		util.Notice(fmt.Sprintf(`fail to send order ws %s %s return %s`, key, coin, err.Error()))
+		return false
 	}
+	return true
 }
 
 // amount、price
@@ -1082,6 +1084,15 @@ func GetMaxSize(key, secret, instrument string) (success bool, maxBuy, maxSell f
 		}
 		if data[`maxSell`] != nil {
 			maxSell, _ = strconv.ParseFloat(data[`maxSell`].(string), 64)
+			if strings.Index(instrument, `-USDT`)+5 == len(instrument) {
+				havePrice, price := model.AppMarkets.GetPrice(instrument)
+				if !havePrice {
+					util.Notice(`fail to get price from bidAsk %s`, instrument)
+				} else {
+					maxSell = maxSell / price
+					util.Notice(`get max sell %f after price %f %s`, maxSell, price, instrument)
+				}
+			}
 		}
 	}
 	return true, maxBuy, maxSell

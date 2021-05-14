@@ -14,7 +14,8 @@ import (
 var feeIndex int
 var balanceMaintainDay = util.GetNow()
 
-func MaintainBalance() {
+//MaintainBalance
+func _() {
 	for true {
 		markets := model.GetMarkets()
 		balances := make([]*model.Balance, 0)
@@ -196,7 +197,7 @@ func Maintain() {
 	//go CheckPastRefresh()
 	go MaintainTransFee(model.KeyDefault, model.SecretDefault)
 	//go util.StartMidNightTimer(CancelAllOrders)
-	go MaintainBalance()
+	//go MaintainBalance()
 	for true {
 		go MaintainMarketChan()
 		time.Sleep(time.Duration(model.AppConfig.ChannelSlot) * time.Millisecond)

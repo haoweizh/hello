@@ -160,7 +160,7 @@ func GetMarketSymbols(market string) map[string]bool {
 	symbols := make(map[string]bool)
 	for _, value := range AppSettings {
 		if value.Market == market {
-			related := value.GetRelatedSymbol()
+			related := value.SymbolRelated
 			symbols[value.Symbol] = true
 			if related != `` {
 				symbols[related] = true
