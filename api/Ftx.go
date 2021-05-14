@@ -88,6 +88,8 @@ func handleTickerFtx(markets *model.Markets, response *simplejson.Json) {
 		return
 	}
 	symbol := response.Get("market").MustString()
+	findSettingSymbol := getFindSettingSymbol(symbol)
+
 	dataType := response.Get(`type`).MustString()
 	data := response.Get(`data`)
 	if data == nil || data.Get(`bid`) == nil || data.Get(`ask`) == nil || data.Get(`bidSize`) == nil ||
@@ -103,9 +105,9 @@ func handleTickerFtx(markets *model.Markets, response *simplejson.Json) {
 		bidAsk.Asks = []model.Tick{{Price: data.Get(`ask`).MustFloat64(), Amount: data.Get(`askSize`).MustFloat64()}}
 	}
 	if markets.SetBidAsk(symbol, model.Ftx, bidAsk) {
-		for function, handler := range model.GetFunctions(model.Ftx, symbol) {
+		for function, handler := range model.GetFunctions(model.Ftx, findSettingSymbol) {
 			if handler != nil {
-				settings := model.GetSetting(function, model.Ftx, symbol)
+				settings := model.GetSetting(function, model.Ftx, findSettingSymbol)
 				for _, setting := range settings {
 					go handler(setting, bidAsk)
 				}
@@ -114,11 +116,21 @@ func handleTickerFtx(markets *model.Markets, response *simplejson.Json) {
 	}
 }
 
+func getFindSettingSymbol(symbol string) string {
+	if strings.Contains(symbol, "-PERP") {
+		return symbol
+	} else {
+		return strings.ReplaceAll(symbol, "/USD", "-PERP")
+	}
+}
+
 func handleDepthFtx(markets *model.Markets, response *simplejson.Json) {
 	if response == nil {
 		return
 	}
 	symbol := response.Get("market").MustString()
+	findSettingSymbol := getFindSettingSymbol(symbol)
+
 	dataType := response.Get(`type`).MustString()
 	data := response.Get(`data`)
 	if data.Interface() != nil && (dataType == `partial` || dataType == `update`) {
@@ -177,9 +189,9 @@ func handleDepthFtx(markets *model.Markets, response *simplejson.Json) {
 		sort.Sort(bidAsk.Asks)
 		sort.Sort(sort.Reverse(bidAsk.Bids))
 		if markets.SetBidAsk(symbol, model.Ftx, bidAsk) {
-			for function, handler := range model.GetFunctions(model.Ftx, symbol) {
+			for function, handler := range model.GetFunctions(model.Ftx, findSettingSymbol) {
 				if handler != nil {
-					settings := model.GetSetting(function, model.Ftx, symbol)
+					settings := model.GetSetting(function, model.Ftx, findSettingSymbol)
 					for _, setting := range settings {
 						go handler(setting, bidAsk)
 					}

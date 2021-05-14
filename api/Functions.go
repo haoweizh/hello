@@ -136,6 +136,8 @@ func MustCancel(key, secret, market, symbol, instrument, orderType, orderId stri
 
 func CancelOrders(key, secret, market, symbol string) (result bool) {
 	switch market {
+	case model.Binance:
+		return cancelOrdersBinance(key, secret, symbol)
 	case model.Ftx:
 		return cancelOrdersFtx(key, secret, symbol)
 	case model.OKEX:
@@ -300,6 +302,8 @@ func GetBalances(key, secret, market string, delaySeconds int64) (
 		success, balances, totalInUsd, margin = getBalanceOKEX(key, secret)
 	case model.HuobiDM:
 		success, balances = getBalanceHuobiDM(key, secret)
+	case model.Binance:
+		success, balances = getBalanceBinance(key, secret)
 	}
 	model.SetBalance(market, balances, totalInUsd, margin, now)
 	return
@@ -458,6 +462,8 @@ func GetPosition(market, symbol, address string) (success bool, position *model.
 
 func GetPositions(key, secret, market string) (success bool, positions []*model.Position) {
 	switch market {
+	case model.Binance:
+		return getPositionsBinance(key, secret)
 	case model.Ftx:
 		return getPositionsFtx(key, secret)
 	case model.OKEX:
@@ -792,6 +798,8 @@ func GetSpotTail(market string) string {
 		return `/USD`
 	case model.OKEX:
 		return `-USDT`
+	case model.Binance:
+		return `USDT`
 	}
 	return ``
 }
@@ -802,6 +810,8 @@ func GetPerpTail(market string) string {
 		return `-PERP`
 	case model.OKEX:
 		return `-USDT-SWAP`
+	case model.Binance:
+		return `-PERP`
 	}
 	return ``
 }
