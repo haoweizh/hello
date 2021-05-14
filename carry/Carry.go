@@ -268,10 +268,12 @@ func clearCarryBalance() {
 				setBalanceAll(key, balanceAllValue)
 				util.Notice(fmt.Sprintf(`[carry] %s usd:%f %f len(balances):%d`,
 					key, localUsdAvailable, usdRate[key], len(balances)))
-				for _, items := range settings {
-					for _, item := range items {
-						makeEqual(key, secrets[i], item, balances, positions)
-					}
+				equalSettings := make(map[string]*model.Setting)
+				for _, setting := range settings {
+					equalSettings[setting[0].Symbol] = setting[0]
+				}
+				for _, setting := range equalSettings {
+					makeEqual(key, secrets[i], setting, balances, positions)
 				}
 				if time.Now().Unix()-tradeMaxResetTime > 600 {
 					resetTradeMax(keys, secrets, model.OKEX)
