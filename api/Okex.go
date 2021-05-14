@@ -25,7 +25,7 @@ var wrongLock sync.Mutex
 
 func init() {
 	go reSubscribe()
-	//go pingOKEX()
+	go pingOKEX()
 }
 
 func getWrongs() []string {
@@ -150,7 +150,6 @@ func handleMsgOKEX(channel chan *simplejson.Json, instrument string) {
 		if len(channel) > 20 {
 			util.Notice(fmt.Sprintf(`%s current chan to be handle %d`, instrument, len(channel)))
 		}
-		symbol := model.GetInstrumentSymbol(model.OKEX, instrument)
 		action := responseJson.Get(`action`).MustString()
 		data := responseJson.Get(`data`).MustArray()[0].(map[string]interface{})
 		_, bidAsk := model.AppMarkets.GetBidAsk(instrument, model.OKEX)
@@ -168,8 +167,8 @@ func handleMsgOKEX(channel chan *simplejson.Json, instrument string) {
 			continue
 		}
 		if model.AppMarkets.SetBidAsk(instrument, model.OKEX, bidAsk) {
-			for function, handler := range model.GetFunctions(model.OKEX, symbol) {
-				settings := model.GetSetting(function, model.OKEX, symbol)
+			for function, handler := range model.GetFunctions(model.OKEX, instrument) {
+				settings := model.GetSetting(function, model.OKEX, instrument)
 				for _, setting := range settings {
 					go handler(setting, bidAsk)
 				}
@@ -179,7 +178,7 @@ func handleMsgOKEX(channel chan *simplejson.Json, instrument string) {
 }
 
 //lastPingTime := util.GetNow().Unix()
-var wsHandler = func(channelKey string, event []byte, orderHandler OrderHandler) {
+var wsHandlerOKEX = func(channelKey string, event []byte, orderHandler OrderHandler) {
 	//now := util.GetNow().Unix()
 	//if now-lastPingTime > 25 { // ping okex server every 30 seconds
 	//	lastPingTime = now
@@ -275,7 +274,7 @@ func WsDepthServeOKEX(instruments map[string]bool, orderHandler OrderHandler) (c
 		}()
 	}
 	channel, errPublic := WebSocketClient(model.OKEX, model.AppConfig.WSUrls[model.OKEX], model.SubscribeDepth,
-		GetWSSubscribes(model.OKEX, model.SubscribeDepth), subscribeHandlerOKEX, wsHandler, orderHandler)
+		GetWSSubscribes(model.OKEX, model.SubscribeDepth), subscribeHandlerOKEX, wsHandlerOKEX, orderHandler)
 	channels = append(channels, channel)
 	return channels, errPublic
 }

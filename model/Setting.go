@@ -113,35 +113,40 @@ func LoadSettings() {
 	for i := range AppSettings {
 		market := AppSettings[i].Market
 		function := AppSettings[i].Function
-		symbol := AppSettings[i].Symbol
-		if marketSymbolSetting[function] == nil {
-			marketSymbolSetting[function] = make(map[string]map[string][]*Setting)
+		symbols := []string{AppSettings[i].Symbol}
+		if function == FunctionCarry {
+			symbols = append(symbols, AppSettings[i].SymbolRelated)
 		}
-		if marketSymbolSetting[function][market] == nil {
-			marketSymbolSetting[function][market] = make(map[string][]*Setting)
-		}
-		if marketSymbolSetting[function][market][symbol] == nil {
-			marketSymbolSetting[function][market][symbol] = make([]*Setting, 0)
-		}
-		marketSymbolSetting[function][market][symbol] = append(marketSymbolSetting[function][market][symbol],
-			&AppSettings[i])
-		if AppSettings[i].MarketRelated != `` {
-			marketsRelated := strings.Split(AppSettings[i].MarketRelated, `,`)
-			for _, value := range marketsRelated {
-				AppSettings = append(AppSettings, Setting{Market: value, Symbol: AppSettings[i].Symbol, Valid: true})
+		for _, symbol := range symbols {
+			if marketSymbolSetting[function] == nil {
+				marketSymbolSetting[function] = make(map[string]map[string][]*Setting)
 			}
-		}
-		if handlers[market] == nil {
-			handlers[market] = make(map[string]map[string]CarryHandler)
-		}
-		if handlers[market][symbol] == nil {
-			handlers[market][symbol] = make(map[string]CarryHandler)
-		}
-		if handlers[market][symbol][function] == nil {
-			handlers[market][symbol][function] = HandlerMap[function]
-		} else {
-			handlers[market][symbol][fmt.Sprintf(`%s_%d`, function, util.GetNow().UnixNano())] =
-				HandlerMap[function]
+			if marketSymbolSetting[function][market] == nil {
+				marketSymbolSetting[function][market] = make(map[string][]*Setting)
+			}
+			if marketSymbolSetting[function][market][symbol] == nil {
+				marketSymbolSetting[function][market][symbol] = make([]*Setting, 0)
+			}
+			marketSymbolSetting[function][market][symbol] = append(marketSymbolSetting[function][market][symbol],
+				&AppSettings[i])
+			if AppSettings[i].MarketRelated != `` {
+				marketsRelated := strings.Split(AppSettings[i].MarketRelated, `,`)
+				for _, value := range marketsRelated {
+					AppSettings = append(AppSettings, Setting{Market: value, Symbol: AppSettings[i].Symbol, Valid: true})
+				}
+			}
+			if handlers[market] == nil {
+				handlers[market] = make(map[string]map[string]CarryHandler)
+			}
+			if handlers[market][symbol] == nil {
+				handlers[market][symbol] = make(map[string]CarryHandler)
+			}
+			if handlers[market][symbol][function] == nil {
+				handlers[market][symbol][function] = HandlerMap[function]
+			} else {
+				handlers[market][symbol][fmt.Sprintf(`%s_%d`, function, util.GetNow().UnixNano())] =
+					HandlerMap[function]
+			}
 		}
 	}
 	for _, setting := range relatedSettings {
@@ -187,19 +192,6 @@ func GetMarkets() []string {
 	return markets
 }
 
-func GetInstrumentSymbol(market, instrument string) (symbol string) {
-	switch market {
-	case OKEX:
-		return instrument
-	case OKFUTURE:
-		parts := strings.Split(instrument, `-`)
-		if len(parts) > 2 {
-			return parts[0] + `-` + parts[1]
-		}
-	}
-	return
-}
-
 func (setting *Setting) GetRelatedSymbol() (related string) {
 	switch setting.Market {
 	case Binance:
@@ -227,7 +219,14 @@ func (setting *Setting) GetRelatedSymbol() (related string) {
 
 func GetCoin(market, symbol string) (coin string) {
 	switch market {
-	case Ftx, OKFUTURE, Binance: // ftx:BTC-PERP okfuture:btc-usd
+	case Ftx:
+		tails := []string{`-PERP`, `/USD`}
+		for _, tail := range tails {
+			if strings.Contains(symbol, tail) {
+				coin = symbol[0:strings.Index(symbol, tail)]
+			}
+		}
+	case OKFUTURE, Binance: // ftx:BTC-PERP okfuture:btc-usd
 		parts := strings.Split(symbol, `-`)
 		if len(parts) == 2 {
 			coin = parts[0]
