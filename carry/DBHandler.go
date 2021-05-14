@@ -49,6 +49,15 @@ func _() {
 	}
 }
 
+func RefreshMarketInfo() {
+	for true {
+		if !api.InitMarketInfos() {
+			util.Notice(`fatal error: can not set okex account mode to net!!`)
+		}
+		time.Sleep(time.Hour * 8)
+	}
+}
+
 func MaintainTransFee(key, secret string) {
 	for true {
 		var orders []model.Order
@@ -190,14 +199,11 @@ func Maintain() {
 	_ = model.AppDB.AutoMigrate(&model.Order{})
 	_ = model.AppDB.AutoMigrate(&model.Balance{})
 	//api.CancelOrders(model.AppConfig.FtxKey, model.AppConfig.FtxSecret, model.Ftx, `LINK-PERP`)
-	if !api.InitMarketInfos() {
-		util.Notice(`fatal error: can not set okex account mode to net!!`)
-		return
-	}
 	//go CheckPastRefresh()
 	go MaintainTransFee(model.KeyDefault, model.SecretDefault)
 	//go util.StartMidNightTimer(CancelAllOrders)
 	//go MaintainBalance()
+	go RefreshMarketInfo()
 	for true {
 		go MaintainMarketChan()
 		time.Sleep(time.Duration(model.AppConfig.ChannelSlot) * time.Millisecond)
