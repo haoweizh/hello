@@ -163,41 +163,27 @@ func checkSetCarrying(value bool) (before bool) {
 
 // 专用于处理ok可买卖数量限制
 var postOrderCarry = func(order *model.Order) {
-	if order == nil || order.OrderId == `` || order.Status == model.CarryStatusFail {
-		if order != nil && order.Status == model.CarryStatusFail {
-			resetSingleTradeMax(order.AmountType, order.Market, order.Symbol)
-			util.Notice(fmt.Sprintf(`order fail, reset trade max %s %s %s`,
-				order.Instrument, order.AmountType, order.ErrCode))
-		}
+	if order == nil {
+		return
+	}
+	if order.Status == model.CarryStatusFail {
 		keys, secrets := model.AppConfig.GetKeys(model.OKEX)
 		for i, key := range keys {
-			if order != nil && key == order.AmountType {
+			if key == order.AmountType && order.ErrCode == `51119` {
 				resetTradeMax(key, secrets[i], model.OKEX)
 			}
 		}
-		return
-	}
-	maxBuy, maxSell := getTradeMax(order.AmountType, order.Symbol)
-	amount := api.GetAmountInMarket(model.OKEX, order.Instrument, order.Amount)
-	if order.OrderSide == model.OrderSideBuy {
-		maxBuy -= amount
-		maxSell += amount
-	} else if order.OrderSide == model.OrderSideSell {
-		maxBuy += amount
-		maxSell -= amount
-	}
-	setTradeMax(order.AmountType, order.Instrument, maxBuy, maxSell)
-}
-
-func resetSingleTradeMax(key, market, symbol string) {
-	util.Notice(fmt.Sprintf(`reset single %s %s %s`, key, market, symbol))
-	setTradeMax(key, symbol, 0, 0)
-	keys, secrets := model.AppConfig.GetKeys(market)
-	for i, value := range keys {
-		if value == key {
-			_, maxBuy, maxSell := api.GetMaxSize(key, secrets[i], symbol)
-			setTradeMax(key, symbol, maxBuy, maxSell)
+	} else {
+		maxBuy, maxSell := getTradeMax(order.AmountType, order.Symbol)
+		amount := api.GetAmountInMarket(model.OKEX, order.Instrument, order.Amount)
+		if order.OrderSide == model.OrderSideBuy {
+			maxBuy -= amount
+			maxSell += amount
+		} else if order.OrderSide == model.OrderSideSell {
+			maxBuy += amount
+			maxSell -= amount
 		}
+		setTradeMax(order.AmountType, order.Instrument, maxBuy, maxSell)
 	}
 }
 

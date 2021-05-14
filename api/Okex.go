@@ -595,9 +595,7 @@ func placeOrderOKEX(key, secret string, isWs bool, order *model.Order) {
 				value := item.(map[string]interface{})
 				if value[`sCode`] != nil && value[`sCode`] != `0` {
 					order.Status = model.CarryStatusFail
-				}
-				if value[`sMsg`] != nil {
-					order.ErrCode = value[`sMsg`].(string)
+					order.ErrCode = value[`sCode`].(string)
 				}
 				if value[`ordId`] != nil {
 					order.OrderId = value[`ordId`].(string)
