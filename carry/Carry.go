@@ -19,7 +19,6 @@ const carryTypeOpen = `carryOpen`
 const carryTypeClose = `carryClose`
 const carryTypeRevert = `carryRevert`
 
-var tradeMaxResetTime = int64(0)
 var marketInitTime = make(map[string]int64) // market - initTime
 var carryLock sync.Mutex
 var carrying bool
@@ -27,6 +26,7 @@ var doCarry = false
 var symbolHighest, symbolLowest string
 var lowest = math.NaN()
 var highest = math.NaN()
+var tradeMaxResetTime = make(map[string]int64)                // key - init time in second
 var marginOKEX = make(map[string]float64)                     // key - okex margin available
 var usdAvailable = make(map[string]float64)                   // key - float64
 var usdRate = make(map[string]float64)                        // key - float64
@@ -35,27 +35,16 @@ var carryBalance = make(map[string]map[string]*model.Balance) // key - coin - ba
 var carryAmount = make(map[string]map[string]float64)         // key - perp - float64
 var tradeMax = make(map[string]map[string][]float64)          // key - instrument - [maxBuy合约张数/币币个数, maxSell]
 
-// 专用于处理ok可买卖数量限制
-var postOrderCarry = func(order *model.Order) {
-	if order == nil || order.OrderId == `` || order.Status == model.CarryStatusFail {
-		if order != nil {
-			resetSingleTradeMax(order.AmountType, order.Market, order.Symbol)
-			util.Notice(fmt.Sprintf(`order fail, reset trade max %s %s %s`,
-				order.Instrument, order.AmountType, order.ErrCode))
-		}
-		//resetTradeMax(model.OKEX)
-		return
-	}
-	maxBuy, maxSell := getTradeMax(order.AmountType, order.Symbol)
-	amount := api.GetAmountInMarket(model.OKEX, order.Instrument, order.Amount)
-	if order.OrderSide == model.OrderSideBuy {
-		maxBuy -= amount
-		maxSell += amount
-	} else if order.OrderSide == model.OrderSideSell {
-		maxBuy += amount
-		maxSell -= amount
-	}
-	setTradeMax(order.AmountType, order.Instrument, maxBuy, maxSell)
+func getTradeMaxResetTime(key string) (resetTime int64) {
+	defer carryLock.Unlock()
+	carryLock.Lock()
+	return tradeMaxResetTime[key]
+}
+
+func setTradeMaxResetTime(key string, resetTime int64) {
+	defer carryLock.Unlock()
+	carryLock.Lock()
+	tradeMaxResetTime[key] = resetTime
 }
 
 func getMarginOKEX(key string) (margin float64) {
@@ -172,6 +161,34 @@ func checkSetCarrying(value bool) (before bool) {
 	}
 }
 
+// 专用于处理ok可买卖数量限制
+var postOrderCarry = func(order *model.Order) {
+	if order == nil || order.OrderId == `` || order.Status == model.CarryStatusFail {
+		if order != nil && order.Status == model.CarryStatusFail {
+			resetSingleTradeMax(order.AmountType, order.Market, order.Symbol)
+			util.Notice(fmt.Sprintf(`order fail, reset trade max %s %s %s`,
+				order.Instrument, order.AmountType, order.ErrCode))
+		}
+		keys, secrets := model.AppConfig.GetKeys(model.OKEX)
+		for i, key := range keys {
+			if order != nil && key == order.AmountType {
+				resetTradeMax(key, secrets[i], model.OKEX)
+			}
+		}
+		return
+	}
+	maxBuy, maxSell := getTradeMax(order.AmountType, order.Symbol)
+	amount := api.GetAmountInMarket(model.OKEX, order.Instrument, order.Amount)
+	if order.OrderSide == model.OrderSideBuy {
+		maxBuy -= amount
+		maxSell += amount
+	} else if order.OrderSide == model.OrderSideSell {
+		maxBuy += amount
+		maxSell -= amount
+	}
+	setTradeMax(order.AmountType, order.Instrument, maxBuy, maxSell)
+}
+
 func resetSingleTradeMax(key, market, symbol string) {
 	util.Notice(fmt.Sprintf(`reset single %s %s %s`, key, market, symbol))
 	setTradeMax(key, symbol, 0, 0)
@@ -184,26 +201,24 @@ func resetSingleTradeMax(key, market, symbol string) {
 	}
 }
 
-func resetTradeMax(keys, secrets []string, market string) {
-	tradeMaxResetTime = time.Now().Unix()
+func resetTradeMax(key, secret string, market string) {
+	setTradeMaxResetTime(key, time.Now().Unix())
 	if market != model.OKEX {
 		return
 	}
-	api.InitMarketInfos()
+	util.Notice(fmt.Sprintf(`reset all trade max %s %s`, key, market))
 	coins := api.GetCarryCoins()
 	if coins == nil || coins[market] == nil {
 		return
 	}
 	for coin := range coins[market] {
-		for i, key := range keys {
-			symbolPerp := coin + api.GetPerpTail(market)
-			symbolRelated := coin + api.GetSpotTail(market)
-			_, maxBuy, maxSell := api.GetMaxSize(key, secrets[i], symbolPerp)
-			setTradeMax(key, symbolPerp, maxBuy, maxSell)
-			_, maxBuy, maxSell = api.GetMaxSize(key, secrets[i], symbolRelated)
-			setTradeMax(key, symbolRelated, maxBuy, maxSell)
-		}
-		time.Sleep(time.Second / 4)
+		symbolPerp := coin + api.GetPerpTail(market)
+		symbolRelated := coin + api.GetSpotTail(market)
+		_, maxBuy, maxSell := api.GetMaxSize(key, secret, symbolPerp)
+		setTradeMax(key, symbolPerp, maxBuy, maxSell)
+		_, maxBuy, maxSell = api.GetMaxSize(key, secret, symbolRelated)
+		setTradeMax(key, symbolRelated, maxBuy, maxSell)
+		time.Sleep(time.Second / 5)
 	}
 }
 
@@ -275,10 +290,13 @@ func clearCarryBalance() {
 				for _, setting := range equalSettings {
 					makeEqual(key, secrets[i], setting, balances, positions)
 				}
-				if time.Now().Unix()-tradeMaxResetTime > 600 {
-					resetTradeMax(keys, secrets, model.OKEX)
-				}
 				initEmptyBalance(key, secrets[i], market)
+			}
+			for i, key := range keys {
+				localMaxResetTime := getTradeMaxResetTime(key)
+				if time.Now().Unix()-localMaxResetTime > 600 {
+					go resetTradeMax(key, secrets[i], model.OKEX)
+				}
 			}
 		}
 		util.Notice(`...... exit clearing carry balance`)

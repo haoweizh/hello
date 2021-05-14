@@ -234,7 +234,7 @@ var wsHandlerPrivate = func(channelKey string, event []byte, orderHandler OrderH
 	data := responseJson.Get(`data`).MustArray()
 	for _, item := range data {
 		value := item.(map[string]interface{})
-		value[`channelKey`] = channelKey
+		value[`channelKey`] = channelKey[5:] //去除掉开头的 okex_
 		go handleWSOrderOKEX(value, orderHandler)
 	}
 }
