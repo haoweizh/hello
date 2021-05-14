@@ -817,7 +817,6 @@ func GetPerpTail(market string) string {
 }
 
 func GetCarryCoins() (coins map[string]map[string]bool) { //  market - coin - bool
-	InitMarketInfos()
 	markets := model.GetMarkets()
 	coins = make(map[string]map[string]bool)
 	for _, market := range markets {

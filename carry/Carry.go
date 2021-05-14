@@ -189,6 +189,7 @@ func resetTradeMax(keys, secrets []string, market string) {
 	if market != model.OKEX {
 		return
 	}
+	api.InitMarketInfos()
 	coins := api.GetCarryCoins()
 	if coins == nil || coins[market] == nil {
 		return
@@ -449,7 +450,6 @@ func makeEqual(key, secret string, setting *model.Setting, balances []*model.Bal
 	}
 	balance := getCarryBalance(key, coin)
 	if amount > 0 { //现货数量多、合约数量少
-		//util.Notice(fmt.Sprintf("【数量不平】现货：%f， 合约：%f", amountRelated, amountPerp))
 		orderSide = model.OrderSideSell
 		if tickPerp.Bids[0].Price < (1-revertDis)*tickRelated.Bids[0].Price && amount < balance.AvailableWithBorrow {
 			symbol = symbolRelated
@@ -465,7 +465,6 @@ func makeEqual(key, secret string, setting *model.Setting, balances []*model.Bal
 			price = tickPerp.Bids[0].Price * (1 - OrderPriceLimit)
 		}
 	} else if amount < 0 { //合约数量多、现货数量少
-		//util.Notice(fmt.Sprintf("【数量不平】现货：%f， 合约：%f", amountRelated, amountPerp))
 		orderSide = model.OrderSideBuy
 		if tickPerp.Asks[0].Price < (1-revertDis)*tickRelated.Asks[0].Price {
 			symbol = settingSymbol
@@ -559,18 +558,17 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 		return
 	}
 	coinRate := math.Abs(balance.UsdValue) / balanceAllValue
-	jump := 5.0
-	jumpRevert := 5.0
+	jump := 7.0
 	setOpen := math.Max((1.5-usdRate)*setting.OpenShortMargin*(0.5+jump*coinRate), 0.003) - fundingRate
 	setClose := math.Min(setting.CloseShortMargin*(0.5+jump*coinRate), -0.003) - fundingRate
 	revertOpen := math.Abs(setting.GridPriceDistance) * (usdRate - 0.5)
 	if revertOpen > 0 {
-		revertOpen = revertOpen / (1 + jumpRevert*coinRate)
+		revertOpen = revertOpen / (1 + jump*coinRate)
 	} else {
-		revertOpen = revertOpen / (1 - math.Min(0.9, jumpRevert*coinRate))
+		revertOpen = revertOpen / (1 - math.Min(0.9, jump*coinRate))
 	}
 	revertOpen = math.Max(revertOpen, -0.003) + fundingRate
-	revertClose := math.Max(-0.0005/(1-math.Min(0.9, jumpRevert*coinRate)), -0.003) - fundingRate
+	revertClose := math.Max(-0.0005/(1-math.Min(0.9, jump*coinRate)), -0.003) - fundingRate
 	usdLowLine := model.AppConfig.Amount
 	keys, _ := model.AppConfig.GetKeys(setting.Market)
 	localOpenValueLimit := math.Min(openValueLimit, 0.5*balanceAllValue)
