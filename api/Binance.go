@@ -16,8 +16,13 @@ import (
 	"time"
 )
 
-var lastTickId = make(map[string]int64) // symbol - int64
-var lastTradeTime = make(map[string]int64)
+const restBinance = "https://api.binance.com"
+const restBinanceFuture = `https://fapi.binance.com`
+const wsBinance = "wss://stream.binance.com:9443/stream"
+const wsBinanceFuture = `wss://fstream.binance.com/stream`
+
+var lastTickIdBinance = make(map[string]int64) // symbol - int64
+var lastTradeTimeBinance = make(map[string]int64)
 
 var subscribeHandlerBinance = func(subscribes []interface{}, subType string) error {
 	var err error = nil
@@ -40,7 +45,7 @@ func WsDepthServeBinance(markets *model.Markets, orderHandler OrderHandler, requ
 		util.SocketInfo("收到币安ws信息：", json)
 		subscribe, _ := json.Get("stream").String()
 		symbol := model.GetSymbol(model.Binance, subscribe) //当前获取到的币种的推送
-		var findSettingSymbol string                        //用来寻找配置的币种 对应setting的Symbol
+		var findSettingSymbol string
 		if symbol != "" {
 			json = json.Get("data")
 			if json == nil {
@@ -48,35 +53,31 @@ func WsDepthServeBinance(markets *model.Markets, orderHandler OrderHandler, requ
 			}
 			bidAsk := model.BidAsk{}
 			var bids, asks []interface{}
-
 			tickId, _ := json.Get(`lastUpdateId`).Int64()
 			depthUpdate, _ := json.Get(`e`).String()
 			if tickId > 0 { //存在lastUpdateId字段 表示是现货深度推送
-				if tickId > lastTickId[symbol] {
-					lastTickId[symbol] = tickId
+				if tickId > lastTickIdBinance[symbol] {
+					lastTickIdBinance[symbol] = tickId
 					bidAsk.Ts = int(util.GetNowUnixMillion())
 					bidAsk.TsReceived = int(util.GetNowUnixMillion())
 				} else {
 					return
 				}
-
 				bidArray, _ := json.Get(`bids`).Array()
 				bids = bidArray
 				askArray, _ := json.Get(`asks`).Array()
 				asks = askArray
-
 				if strings.Contains(symbol, "USDT") {
 					findSettingSymbol = strings.ReplaceAll(symbol, "USDT", "-PERP")
 				}
-			} else if depthUpdate == "depthUpdate" { //存在depthUpdate字段 表示是合约深度推送
+			} else if depthUpdate == "depthUpdate" {
 				nowTradeTime, _ := json.Get(`T`).Int64()
-				if nowTradeTime <= 0 || nowTradeTime < lastTradeTime[symbol] {
+				if nowTradeTime <= 0 || nowTradeTime < lastTradeTimeBinance[symbol] {
 					return
 				}
-				lastTradeTime[symbol] = nowTradeTime
+				lastTradeTimeBinance[symbol] = nowTradeTime
 				bidAsk.Ts = int(util.GetNowUnixMillion())
 				bidAsk.TsReceived = int(util.GetNowUnixMillion())
-
 				bidArray, _ := json.Get(`b`).Array()
 				bids = bidArray
 				askArray, _ := json.Get(`a`).Array()
@@ -85,10 +86,7 @@ func WsDepthServeBinance(markets *model.Markets, orderHandler OrderHandler, requ
 				if strings.Contains(symbol, "USDT") {
 					symbol = strings.ReplaceAll(symbol, "USDT", "-PERP")
 				}
-
-				findSettingSymbol = symbol
 			}
-
 			bidAsk.Bids = make([]model.Tick, len(bids))
 			for i, value := range bids {
 				if len(value.([]interface{})) < 2 {
@@ -123,17 +121,20 @@ func WsDepthServeBinance(markets *model.Markets, orderHandler OrderHandler, requ
 	}
 	//requestUrl := model.AppConfig.WSUrls[model.Binance]
 	return WebSocketClient(model.Binance, requestUrl, model.SubscribeDepth,
-		GetBinanceWSSubscribes(model.Binance, model.SubscribeDepth, requestUrl), subscribeHandlerBinance, wsHandler, orderHandler)
+		GetBinanceWSSubscribes(model.Binance, model.SubscribeDepth), subscribeHandlerBinance, wsHandler, orderHandler)
 }
 
-func GetBinanceWSSubscribes(market, subType, requestUrl string) []interface{} {
+//func getMarketsBinance(marketInfos map[string]*model.MarketInfo) {
+//	///api/v3/exchangeInfo
+//}
+
+func GetBinanceWSSubscribes(market, subType string) []interface{} {
 	symbols := model.GetMarketSymbols(market)
 	subscribes := make([]interface{}, 0)
 	for symbol := range symbols {
 		if strings.Contains(symbol, "-PERP") {
 			continue
 		}
-
 		subTypes := strings.Split(subType, `,`)
 		for _, value := range subTypes {
 			subscribe := GetWSSubscribe(market, symbol, value)
@@ -159,23 +160,18 @@ func signBinance(postData *url.Values, secretKey string) {
 // 要把参数从左侧的币换成右测的钱
 func placeOrderBinance(key, secret string, order *model.Order, orderSide, orderType, symbol, price, amount string) {
 	postData := url.Values{}
-
-	urls := strings.Split(model.AppConfig.RestUrls[model.Binance], ",")
 	var urlMapping string
 	if strings.Contains(symbol, "-PERP") {
-		urlMapping = urls[1] + "/fapi/v1/order"
-
+		urlMapping = restBinanceFuture + "/fapi/v1/order"
 		symbol = strings.ReplaceAll(symbol, "-PERP", "USDT")
 	} else {
-		urlMapping = urls[0] + "/sapi/v1/margin/order"
-
+		urlMapping = restBinance + "/sapi/v1/margin/order"
 		if orderSide == model.OrderSideSell {
 			postData.Set("sideEffectType", "MARGIN_BUY")
 		} else if orderSide == model.OrderSideBuy {
 			postData.Set("sideEffectType", "AUTO_REPAY")
 		}
 	}
-
 	if orderSide == model.OrderSideBuy {
 		orderSide = `BUY`
 	} else if orderSide == model.OrderSideSell {
@@ -222,14 +218,12 @@ func placeOrderBinance(key, secret string, order *model.Order, orderSide, orderT
 
 func cancelOrdersBinance(key string, secret string, symbol string) bool {
 	postData := url.Values{}
-
-	urls := strings.Split(model.AppConfig.RestUrls[model.Binance], ",")
 	var urlMapping string
 	if strings.Contains(symbol, "-PERP") {
 		symbol = strings.ReplaceAll(symbol, "-PERP", "USDT")
-		urlMapping = urls[1] + "/fapi/v1/allOpenOrders"
+		urlMapping = restBinanceFuture + "/fapi/v1/allOpenOrders"
 	} else {
-		urlMapping = urls[0] + "/sapi/v1/margin/openOrders"
+		urlMapping = restBinance + "/sapi/v1/margin/openOrders"
 	}
 	postData.Set("symbol", symbol)
 	signBinance(&postData, secret)
@@ -241,49 +235,47 @@ func cancelOrdersBinance(key string, secret string, symbol string) bool {
 	return true
 }
 
-func cancelOrderBinance(key, secret, symbol string, orderId string) (result bool, errCode, msg string) {
-	postData := url.Values{}
-	postData.Set("symbol", strings.ToUpper(strings.Replace(symbol, "_", "", 1)))
-	postData.Set("orderId", orderId)
-	signBinance(&postData, secret)
-	headers := map[string]string{"X-MBX-APIKEY": key}
-	requestUrl := model.AppConfig.RestUrls[model.Binance] + "/api/v3/order?" + postData.Encode()
-	responseBody, _ := util.HttpRequest("DELETE", requestUrl, "", headers, 60)
-	util.Notice("binance cancel order" + string(responseBody))
-
-	return true, ``, ``
-}
-
-func queryOrderBinance(key, secret, symbol string, orderId string) (dealAmount, dealPrice float64, status string) {
-	postData := url.Values{}
-	postData.Set("symbol", strings.ReplaceAll(symbol, "-PERP", "USDT"))
-	postData.Set("orderId", orderId)
-	signBinance(&postData, secret)
-	headers := map[string]string{"X-MBX-APIKEY": key}
-	requestUrl := model.AppConfig.RestUrls[model.Binance] + "/api/v3/order?" + postData.Encode()
-	responseBody, _ := util.HttpRequest("GET", requestUrl, "", headers, 60)
-	orderJson, err := util.NewJSON(responseBody)
-	if err == nil {
-		str, _ := orderJson.Get("executedQty").String()
-		if str != "" {
-			dealAmount, _ = strconv.ParseFloat(str, 64)
-		}
-		strDealPrice, _ := orderJson.Get(`price`).String()
-		if strDealPrice != `` {
-			dealPrice, _ = strconv.ParseFloat(strDealPrice, 64)
-		}
-		status, _ = orderJson.Get("status").String()
-		status = model.GetOrderStatus(model.Binance, status)
-	}
-	util.Notice(fmt.Sprintf("%s binance query order %f %s", status, dealAmount, responseBody))
-	return dealAmount, dealPrice, status
-}
+//func cancelOrderBinance(key, secret, symbol string, orderId string) (result bool, errCode, msg string) {
+//	postData := url.Values{}
+//	postData.Set("symbol", strings.ToUpper(strings.Replace(symbol, "_", "", 1)))
+//	postData.Set("orderId", orderId)
+//	signBinance(&postData, secret)
+//	headers := map[string]string{"X-MBX-APIKEY": key}
+//	requestUrl := model.AppConfig.RestUrls[model.Binance] + "/api/v3/order?" + postData.Encode()
+//	responseBody, _ := util.HttpRequest("DELETE", requestUrl, "", headers, 60)
+//	util.Notice("binance cancel order" + string(responseBody))
+//	return true, ``, ``
+//}
+//
+//func queryOrderBinance(key, secret, symbol string, orderId string) (dealAmount, dealPrice float64, status string) {
+//	postData := url.Values{}
+//	postData.Set("symbol", strings.ReplaceAll(symbol, "-PERP", "USDT"))
+//	postData.Set("orderId", orderId)
+//	signBinance(&postData, secret)
+//	headers := map[string]string{"X-MBX-APIKEY": key}
+//	requestUrl := model.AppConfig.RestUrls[model.Binance] + "/api/v3/order?" + postData.Encode()
+//	responseBody, _ := util.HttpRequest("GET", requestUrl, "", headers, 60)
+//	orderJson, err := util.NewJSON(responseBody)
+//	if err == nil {
+//		str, _ := orderJson.Get("executedQty").String()
+//		if str != "" {
+//			dealAmount, _ = strconv.ParseFloat(str, 64)
+//		}
+//		strDealPrice, _ := orderJson.Get(`price`).String()
+//		if strDealPrice != `` {
+//			dealPrice, _ = strconv.ParseFloat(strDealPrice, 64)
+//		}
+//		status, _ = orderJson.Get("status").String()
+//		status = model.GetOrderStatus(model.Binance, status)
+//	}
+//	util.Notice(fmt.Sprintf("%s binance query order %f %s", status, dealAmount, responseBody))
+//	return dealAmount, dealPrice, status
+//}
 
 func getBalanceBinance(key string, secret string) (success bool, balances []*model.Balance) {
 	postData := url.Values{}
 	signBinance(&postData, secret)
-	urls := strings.Split(model.AppConfig.RestUrls[model.Binance], ",")
-	requestUrl := urls[0] + "/sapi/v1/margin/account?" + postData.Encode()
+	requestUrl := restBinance + "/sapi/v1/margin/account?" + postData.Encode()
 	headers := map[string]string{"X-MBX-APIKEY": key}
 	responseBody, _ := util.HttpRequest("GET", requestUrl, "", headers, 60)
 	balanceJson, _ := util.NewJSON(responseBody)
@@ -328,12 +320,10 @@ func getBalanceBinance(key string, secret string) (success bool, balances []*mod
 func getPositionsBinance(key, secret string) (success bool, positions []*model.Position) {
 	postData := url.Values{}
 	signBinance(&postData, secret)
-	urls := strings.Split(model.AppConfig.RestUrls[model.Binance], ",")
-	requestUrl := urls[1] + "/fapi/v2/account?" + postData.Encode()
+	requestUrl := wsBinanceFuture + "/fapi/v2/account?" + postData.Encode()
 	headers := map[string]string{"X-MBX-APIKEY": key}
 	responseBody, _ := util.HttpRequest("GET", requestUrl, "", headers, 60)
 	positionJson, _ := util.NewJSON(responseBody)
-
 	success = positionJson.Get("canTrade").MustBool()
 	if success {
 		positions = make([]*model.Position, 0)

@@ -17,7 +17,8 @@ package api
 //)
 //
 //// 交割合约API
-//
+//	//AppConfig.WSUrls[OKFUTURE] = `wss://real.okex.com:8443/ws/v3`
+//	//AppConfig.RestUrls[OKFUTURE] = `https://www.okex.com`
 //var subscribeHandlerOKFuture = func(subscribes []interface{}, subType string) (err error) {
 //	subscribe := ``
 //	for _, item := range subscribes {

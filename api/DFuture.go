@@ -14,6 +14,9 @@ import (
 
 const nodeServer = `http://localhost:3000`
 
+//const restDFuture = `https://openoracle_prod_heco.dfuture.com/dev/web`
+const wsDFuture = `wss://heco_prod_kline_wss.dfuture.com/ws`
+
 var lastDepthPingDFuture = util.GetNowUnixMillion()
 
 var subscribeHandlerDFuture = func(subscribes []interface{}, subType string) error {
@@ -51,9 +54,8 @@ func WsDepthServeDFuture(markets *model.Markets, orderHandler OrderHandler) (cha
 		}
 		handleTickerDFuture(markets, responseJson)
 	}
-	requestUrl := model.AppConfig.WSUrls[model.DFuture]
 	subType := model.SubscribeDepth + `,` + model.SubscribeTicker
-	return WebSocketClient(model.DFuture, requestUrl, ``, GetWSSubscribes(model.DFuture, subType),
+	return WebSocketClient(model.DFuture, wsDFuture, ``, GetWSSubscribes(model.DFuture, subType),
 		subscribeHandlerDFuture, wsHandler, orderHandler)
 }
 

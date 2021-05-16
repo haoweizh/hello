@@ -19,6 +19,9 @@ import (
 	"time"
 )
 
+const restFtx = `https://ftx.com/api`
+const wsFtx = `wss://ftx.com/ws`
+
 var lastDepthPingFtx = util.GetNowUnixMillion()
 var socketLockFtx sync.Mutex
 
@@ -76,10 +79,9 @@ func WsDepthServeFtx(markets *model.Markets, orderHandler OrderHandler) (chan st
 			handleTickerFtx(markets, responseJson)
 		}
 	}
-	requestUrl := model.AppConfig.WSUrls[model.Ftx]
 	//subType := model.SubscribeDepth
 	subType := model.SubscribeDepth + `,` + model.SubscribeTicker
-	return WebSocketClient(model.Ftx, requestUrl, ``, GetWSSubscribes(model.Ftx, subType),
+	return WebSocketClient(model.Ftx, wsFtx, ``, GetWSSubscribes(model.Ftx, subType),
 		subscribeHandlerFtx, wsHandler, orderHandler)
 }
 
@@ -704,7 +706,7 @@ func SignedRequestFtx(key, secret, method, path string, param, body map[string]i
 	if body == nil {
 		body = make(map[string]interface{})
 	}
-	u, _ := url.ParseRequestURI(model.AppConfig.RestUrls[model.Ftx])
+	u, _ := url.ParseRequestURI(restFtx)
 	u.Path += path
 	ts := time.Now().UnixNano() / int64(time.Millisecond)
 	hash := hmac.New(sha256.New, []byte(secret))

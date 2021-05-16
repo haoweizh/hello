@@ -12,6 +12,9 @@ import (
 	"time"
 )
 
+const restHuobiDM = `api.hbdm.com`
+const wsHuobiDM = `wss://api.hbdm.com/ws`
+
 var subscribeHandlerHuobiDM = func(subscribes []interface{}, subType string) error {
 	var err error = nil
 	for _, v := range subscribes {
@@ -85,7 +88,7 @@ func WsDepthServeHuobiDM(markets *model.Markets, orderHandler OrderHandler) (cha
 			}
 		}
 	}
-	return WebSocketClient(model.HuobiDM, model.AppConfig.WSUrls[model.HuobiDM]+`ws`, model.SubscribeDepth,
+	return WebSocketClient(model.HuobiDM, wsHuobiDM, model.SubscribeDepth,
 		GetWSSubscribes(model.HuobiDM, model.SubscribeDepth), subscribeHandlerHuobiDM, wsHandler, orderHandler)
 }
 

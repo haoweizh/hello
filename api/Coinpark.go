@@ -14,6 +14,9 @@ import (
 	"strings"
 )
 
+const restCoinPark = "https://api.coinpark.cc/v1"
+const wsCoinPark = "wss://push.coinpark.cc/"
+
 var subscribeHandlerCoinpark = func(subscribes []interface{}, subType string) error {
 	var err error = nil
 	for _, v := range subscribes {
@@ -81,7 +84,7 @@ func WsDepthServeCoinpark(markets *model.Markets, orderHandler OrderHandler) (ch
 			}
 		}
 	}
-	return WebSocketClient(model.Coinpark, model.AppConfig.WSUrls[model.Coinpark], model.SubscribeDepth,
+	return WebSocketClient(model.Coinpark, wsCoinPark, model.SubscribeDepth,
 		GetWSSubscribes(model.Coinpark, model.SubscribeDepth), subscribeHandlerCoinpark, wsHandler, orderHandler)
 }
 
@@ -96,7 +99,7 @@ func SignedRequestCoinpark(method, path, cmds string) []byte {
 	postData.Set("sign", sign)
 	headers := map[string]string{"Content-Type": "application/x-www-form-urlencoded",
 		"User-Agent": "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/39.0.2171.71 Safari/537.36"}
-	responseBody, _ := util.HttpRequest(method, model.AppConfig.RestUrls[model.Coinpark]+path,
+	responseBody, _ := util.HttpRequest(method, restCoinPark+path,
 		postData.Encode(), headers, 60)
 	return responseBody
 }

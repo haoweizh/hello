@@ -15,6 +15,9 @@ import (
 	"time"
 )
 
+const restBitmex = `https://www.bitmex.com/api/v1`
+const wsBitmex = `wss://www.bitmex.com/realtime/`
+
 var socketLockBitmex sync.Mutex
 var prePriceB, prePriceA, prePriceB10, prePriceA10 float64
 
@@ -92,7 +95,7 @@ func WsDepthServeBitmex(markets *model.Markets, orderHandler OrderHandler) (chan
 		case `position`:
 		}
 	}
-	return WebSocketClient(model.Bitmex, model.AppConfig.WSUrls[model.Bitmex], model.SubscribeDepth,
+	return WebSocketClient(model.Bitmex, wsBitmex, model.SubscribeDepth,
 		GetWSSubscribes(model.Bitmex, model.SubscribeDepth),
 		subscribeHandlerBitmex, wsHandler, orderHandler)
 }
@@ -589,7 +592,7 @@ func SignedRequestBitmex(key, secret, method, path string, body map[string]inter
 		key = keys[0]
 		secret = secrets[0]
 	}
-	uri := model.AppConfig.RestUrls[model.Bitmex] + path
+	uri := restBitmex + path
 	expire := util.GetNow().Unix() + 5
 	if method == `GET` && len(body) > 0 {
 		uri += `?` + util.ComposeParams(body)

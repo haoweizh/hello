@@ -282,38 +282,6 @@ func NewConfig() {
 		util.Notice(err.Error())
 		return
 	}
-	AppConfig.WSUrls = make(map[string]string)
-	AppConfig.RestUrls = make(map[string]string)
-	AppConfig.WSUrls[Huobi] = `wss://api-aws.huobi.pro/feed`
-	AppConfig.WSUrls[HuobiDM] = `wss://api.hbdm.com/`
-	AppConfig.WSUrls[Binance] = "wss://stream.binance.com:9443/stream,wss://fstream.binance.com/stream"
-	AppConfig.WSUrls[Ftx] = `wss://ftx.com/ws`
-	AppConfig.WSUrls[OKEX] = `wss://ws.okex.com:8443/ws/v5/public`
-	if AppConfig.Env == `test` {
-		AppConfig.WSUrls[Bybit] = `wss://stream.bybit.com/realtime`
-		AppConfig.RestUrls[Bybit] = `https://api.bybit.com`
-	} else {
-		AppConfig.WSUrls[Bybit] = `wss://stream.bybit.com/realtime`
-		AppConfig.RestUrls[Bybit] = `https://api.bybit.com`
-	}
-	AppConfig.WSUrls[Coinpark] = "wss://push.coinpark.cc/"
-	AppConfig.WSUrls[Bitmex] = `wss://www.bitmex.com/realtime/`
-	AppConfig.WSUrls[OKFUTURE] = `wss://real.okex.com:8443/ws/v3`
-	AppConfig.WSUrls[DFuture] = `wss://heco_prod_kline_wss.dfuture.com/ws`
-	//AppConfig.WSUrls[Bitmex] = `wss://testnet.bitmex.com/realtime`
-	// HUOBI用于交易的API，可能不适用于行情
-	//config.RestUrls[Huobi] = "https://api.huobipro.com/v1"
-	//AppConfig.RestUrls[Huobi] = "https://api.huobi.pro"
-	AppConfig.RestUrls[DFuture] = `https://openoracle_prod_heco.dfuture.com/dev/web`
-	AppConfig.RestUrls[OKEX] = `https://www.okex.com`
-	AppConfig.RestUrls[Huobi] = `api-aws.huobi.pro`
-	AppConfig.RestUrls[HuobiDM] = `api.hbdm.com`
-	AppConfig.RestUrls[OKFUTURE] = `https://www.okex.com`
-	AppConfig.RestUrls[Binance] = "https://api.binance.com,https://fapi.binance.com"
-	AppConfig.RestUrls[Coinpark] = "https://api.coinpark.cc/v1"
-	//AppConfig.RestUrls[Bitmex] = `https://testnet.bitmex.com`
-	AppConfig.RestUrls[Bitmex] = `https://www.bitmex.com/api/v1`
-	AppConfig.RestUrls[Ftx] = `https://ftx.com/api`
 	AppConfig.UpdatePriceTime = make(map[string]int64)
 }
 

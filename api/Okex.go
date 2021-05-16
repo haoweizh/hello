@@ -17,6 +17,8 @@ import (
 	"time"
 )
 
+const restOKEX = `https://www.okex.com`
+const wsOKEX = `wss://ws.okex.com:8443/ws/v5/public`
 const wsPrivateOKEX = `wss://ws.okex.com:8443/ws/v5/private`
 
 var msgChanOKEX = make(map[string]chan *simplejson.Json)
@@ -273,7 +275,7 @@ func WsDepthServeOKEX(instruments map[string]bool, orderHandler OrderHandler) (c
 			channels = append(channels, channel)
 		}()
 	}
-	channel, errPublic := WebSocketClient(model.OKEX, model.AppConfig.WSUrls[model.OKEX], model.SubscribeDepth,
+	channel, errPublic := WebSocketClient(model.OKEX, wsOKEX, model.SubscribeDepth,
 		GetWSSubscribes(model.OKEX, model.SubscribeDepth), subscribeHandlerOKEX, wsHandlerOKEX, orderHandler)
 	channels = append(channels, channel)
 	return channels, errPublic
@@ -454,7 +456,7 @@ func sendSignRequestOKEX(key, secret, method, path string, body interface{}) (re
 		key = keys[0]
 		secret = secrets[0]
 	}
-	uri := model.AppConfig.RestUrls[model.OKEX] + path
+	uri := restOKEX + path
 	current := time.Now().In(time.UTC).Format(time.RFC3339)
 	// , `x-simulated-trading`: `1`
 	headers := map[string]string{`OK-ACCESS-KEY`: key, `OK-ACCESS-PASSPHRASE`: model.AppConfig.Phase,
@@ -1024,7 +1026,8 @@ func setAccountModeOKEX(key, secret string) (success bool) {
 	return true
 }
 
-func getLastPriceOKEX(key, secret, instrument string) (price float64) {
+// getLastPriceOKEX
+func _(key, secret, instrument string) (price float64) {
 	path := fmt.Sprintf(`/api/v5/market/ticker?instId=%s`, instrument)
 	response := sendSignRequestOKEX(key, secret, http.MethodGet, path, nil)
 	responseJson, err := util.NewJSON(response)

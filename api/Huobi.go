@@ -16,6 +16,9 @@ import (
 	"time"
 )
 
+const restHuobi = `api-aws.huobi.pro`
+const wsHuobi = `wss://api-aws.huobi.pro/feed`
+
 type HuobiMessage struct {
 	Ping   int    `json:"ping"`
 	Ch     string `json:"ch"`
@@ -96,7 +99,7 @@ func WsDepthServeHuobi(markets *model.Markets, orderHandler OrderHandler) (chan 
 			}
 		}
 	}
-	return WebSocketClient(model.Huobi, model.AppConfig.WSUrls[model.Huobi], model.SubscribeDepth,
+	return WebSocketClient(model.Huobi, wsHuobi, model.SubscribeDepth,
 		GetWSSubscribes(model.Huobi, model.SubscribeDepth), subscribeHandlerHuobi, wsHandler, orderHandler)
 }
 
@@ -105,6 +108,10 @@ func SignedRequestHuobi(key, secret, market, method, path string, data map[strin
 		keys, secrets := model.AppConfig.GetKeys(model.Huobi)
 		key = keys[0]
 		secret = secrets[0]
+	}
+	restUrl := restHuobiDM
+	if market == model.Huobi {
+		restUrl = restHuobi
 	}
 	param := map[string]interface{}{"AccessKeyId": key, "SignatureMethod": "HmacSHA256",
 		"SignatureVersion": "2", `Timestamp`: url.QueryEscape(time.Now().UTC().Format("2006-01-02T15:04:05"))}
@@ -117,13 +124,12 @@ func SignedRequestHuobi(key, secret, market, method, path string, data map[strin
 		strData = string(util.JsonEncodeToByte(data))
 	}
 	strParam := util.ComposeParams(param)
-	toBeSign := fmt.Sprintf("%s\n%s\n%s\n%s",
-		method, model.AppConfig.RestUrls[market], path, strParam)
+	toBeSign := fmt.Sprintf("%s\n%s\n%s\n%s", method, restUrl, path, strParam)
 	hash := hmac.New(sha256.New, []byte(secret))
 	hash.Write([]byte(toBeSign))
 	sign := url.QueryEscape(base64.StdEncoding.EncodeToString(hash.Sum(nil)))
 	param["Signature"] = sign
-	requestUrl := fmt.Sprintf(`https://%s%s?%s`, model.AppConfig.RestUrls[market], path, util.ComposeParams(param))
+	requestUrl := fmt.Sprintf(`https://%s%s?%s`, restUrl, path, util.ComposeParams(param))
 	headers := map[string]string{"Content-Type": "application/json", "Accept-Language": "zh-cn",
 		"User-Agent": "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/39.0.2171.71 Safari/537.36"}
 	responseBody, _ := util.HttpRequest(method, requestUrl, strData, headers, 60)

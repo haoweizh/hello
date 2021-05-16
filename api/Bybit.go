@@ -16,6 +16,9 @@ import (
 	"time"
 )
 
+const restBybit = `https://api.bybit.com`
+const wsBybit = `wss://stream.bybit.com/realtime`
+
 var socketLockBybit sync.Mutex
 
 var subscribeHandlerBybit = func(subscribes []interface{}, subType string) error {
@@ -81,7 +84,7 @@ func WsDepthServeBybit(markets *model.Markets, orderHandler OrderHandler) (chan 
 		} else if topic == `position` {
 		}
 	}
-	return WebSocketClient(model.Bybit, model.AppConfig.WSUrls[model.Bybit], model.SubscribeDepth,
+	return WebSocketClient(model.Bybit, wsBybit, model.SubscribeDepth,
 		GetWSSubscribes(model.Bybit, model.SubscribeDepth),
 		subscribeHandlerBybit, wsHandler, orderHandler)
 }
@@ -248,7 +251,7 @@ func SignedRequestBybit(key, secret, method, path string, body map[string]interf
 	}
 	body[`api_key`] = key
 	body[`timestamp`] = strconv.FormatInt(util.GetNowUnixMillion(), 10)
-	uri := model.AppConfig.RestUrls[model.Bybit] + path
+	uri := restBybit + path
 	paramStr := util.ComposeParams(body)
 	hash := hmac.New(sha256.New, []byte(secret))
 	hash.Write([]byte(paramStr))

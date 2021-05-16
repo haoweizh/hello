@@ -14,8 +14,8 @@ type Config struct {
 	Delay           float64
 	AmountRate      float64 // 刷单填写数量比率
 	Amount          float64
-	WSUrls          map[string]string // marketName - ws url
-	RestUrls        map[string]string // marketName - rest url
+	//WSUrls          map[string]string // marketName - ws url
+	//RestUrls        map[string]string // marketName - rest url
 	DBConnection    string
 	Env             string
 	FutureAddress   string

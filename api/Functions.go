@@ -166,7 +166,7 @@ func CancelOrder(key, secret, market, symbol, instrument, orderType, orderId str
 	case model.OKEX:
 		result, errCode, msg = cancelOrderOkex(key, secret, symbol, orderId, orderType)
 	case model.Binance:
-		result, errCode, msg = cancelOrderBinance(key, secret, symbol, orderId)
+		//result, errCode, msg = cancelOrderBinance(key, secret, symbol, orderId)
 	case model.Coinpark:
 		result, errCode, msg = cancelOrderCoinpark(orderId)
 	case model.Bitmex:
@@ -417,7 +417,7 @@ func QueryOrderById(key, secret, market, symbol, instrument, orderType, orderId 
 	//case model.OKFUTURE:
 	//	dealAmount, dealPrice, status = queryOrderOkfuture(key, secret, instrument, orderType, orderId)
 	case model.Binance:
-		dealAmount, dealPrice, status = queryOrderBinance(key, secret, symbol, orderId)
+		//dealAmount, dealPrice, status = queryOrderBinance(key, secret, symbol, orderId)
 	case model.Coinpark:
 		dealAmount, dealPrice, status = queryOrderCoinpark(orderId)
 	case model.Bybit:
@@ -783,13 +783,52 @@ func _(market, symbol string) (borrowAble float64) {
 	return 0
 }
 
-// GetLastPrice
-func _(key, secret, market, symbol string) float64 {
+func CreateMarketDepthServer(markets *model.Markets, market string, orderHandler OrderHandler) (
+	channels []chan struct{}) {
+	util.SocketInfo(" create depth chan for " + market)
+	var channel chan struct{}
+	channels = make([]chan struct{}, 1)
+	var err error
 	switch market {
+	case model.Huobi:
+		channel, err = WsDepthServeHuobi(markets, nil)
+		channels[0] = channel
+	case model.HuobiDM:
+		channel, err = WsDepthServeHuobiDM(markets, nil)
+		channels[0] = channel
 	case model.OKEX:
-		return getLastPriceOKEX(key, secret, symbol)
+		channels, err = WsDepthServeOKEX(model.GetMarketSymbols(model.OKEX), orderHandler)
+	case model.Binance:
+		channel, err = WsDepthServeBinance(markets, nil, wsBinance)
+		if err != nil {
+			util.SocketInfo(market + ` can not create Binance channel1 depth server ` + err.Error())
+		}
+		channels[0] = channel
+		channel, err = WsDepthServeBinance(markets, nil, wsBinanceFuture)
+		if err != nil {
+			util.SocketInfo(market + ` can not create Binance channel2 depth server ` + err.Error())
+		}
+		channels = append(channels, channel)
+	case model.Coinpark:
+		channel, err = WsDepthServeCoinpark(markets, nil)
+		channels[0] = channel
+	case model.Bitmex:
+		channel, err = WsDepthServeBitmex(markets, nil)
+		channels[0] = channel
+	case model.Bybit:
+		channel, err = WsDepthServeBybit(markets, nil)
+		channels[0] = channel
+	case model.Ftx:
+		channel, err = WsDepthServeFtx(markets, nil)
+		channels[0] = channel
+	case model.DFuture:
+		channel, err = WsDepthServeDFuture(markets, nil)
+		channels[0] = channel
 	}
-	return 0
+	if err != nil {
+		util.SocketInfo(market + ` can not create depth server ` + err.Error())
+	}
+	return channels
 }
 
 func GetSpotTail(market string) string {
