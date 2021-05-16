@@ -724,6 +724,8 @@ func InitMarketInfos() (success bool) {
 					success = false
 				}
 			}
+		case model.Binance:
+			model.SetMarketInfos(model.Binance, getMarketsBinance())
 		}
 	}
 	return success
