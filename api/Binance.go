@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"hello/model"
 	"hello/util"
-	"math"
 	"math/rand"
 	"net/http"
 	"net/url"
@@ -194,6 +193,7 @@ func setMarketInfoFilters(marketInfo *model.MarketInfo, filters []interface{}) {
 	}
 }
 
+// 查询MARGIN和永续合约信息，不包含其他市场
 func getMarketsBinance() (marketInfos map[string]*model.MarketInfo) {
 	marketInfos = make(map[string]*model.MarketInfo)
 	requestUrls := []string{restBinance + `/api/v3/exchangeInfo`, restBinanceFuture + `/fapi/v1/exchangeInfo`}
@@ -209,6 +209,18 @@ func getMarketsBinance() (marketInfos map[string]*model.MarketInfo) {
 				}
 				var symbol string
 				if value[`contractType`] == nil {
+					haveMargin := false
+					if value[`permissions`] != nil {
+						permissions := value[`permissions`].([]interface{})
+						for _, permission := range permissions {
+							if permission.(string) == `MARGIN` {
+								haveMargin = true
+							}
+						}
+					}
+					if !haveMargin {
+						continue
+					}
 					symbol = value[`baseAsset`].(string) + value[`quoteAsset`].(string)
 				} else if value[`contractType`] != nil && value[`contractType`].(string) == `PERPETUAL` {
 					symbol = value[`baseAsset`].(string) + `-PERP`
@@ -227,10 +239,15 @@ func getMarketsBinance() (marketInfos map[string]*model.MarketInfo) {
 // orderType: BUY SELL
 // 注意，binance中amount无论是市价还是限价，都指的是要买入或者卖出的左侧币种，而非右侧的钱,所以在市价买入的时候
 // 要把参数从左侧的币换成右测的钱
-func placeOrderBinance(key, secret string, order *model.Order, orderSide, orderType, symbol, price, amount string) {
+func placeOrderBinance(key, secret string, order *model.Order, orderSide, orderType, symbol string, price, amount float64) {
 	postData := &url.Values{}
+	price, decimal := FormatPrice(model.Binance, symbol, orderSide, price)
+	priceStr := util.CutTailZero(strconv.FormatFloat(price, 'f', decimal, 64))
+	formattedAmount := GetAmountInMarket(model.Binance, symbol, amount)
+	amountStr := util.CutTailZero(fmt.Sprintf(`%f`, formattedAmount))
+	postData.Set("quantity", amountStr)
 	var requestUrl string
-	if strings.Contains(symbol, "-PERP") {
+	if symbol[len(symbol)-5:] == `-PERP` {
 		requestUrl = restBinanceFuture + "/fapi/v1/order"
 		symbol = strings.ReplaceAll(symbol, "-PERP", "USDT")
 	} else {
@@ -242,31 +259,18 @@ func placeOrderBinance(key, secret string, order *model.Order, orderSide, orderT
 		}
 	}
 	if orderSide == model.OrderSideBuy {
-		orderSide = `BUY`
+		postData.Set("side", `BUY`)
 	} else if orderSide == model.OrderSideSell {
-		orderSide = `SELL`
-	} else {
-		util.Notice(fmt.Sprintf(`[parameter error] order side: %s`, orderSide))
+		postData.Set("side", `SELL`)
 	}
 	if orderType == model.OrderTypeMarket {
-		orderType = `MARKET`
-		if orderSide == model.OrderSideBuy {
-			amountFloat, _ := strconv.ParseFloat(amount, 64)
-			priceFloat, _ := strconv.ParseFloat(price, 64)
-			amountFloat = amountFloat / priceFloat
-			amount = strconv.FormatFloat(math.Floor(amountFloat*100)/100, 'f', 2, 64)
-		}
+		postData.Set("type", `MARKET`)
 	} else if orderType == model.OrderTypeLimit {
-		orderType = `LIMIT`
-		postData.Set("price", price)
+		postData.Set("type", `LIMIT`)
+		postData.Set("price", priceStr)
 		postData.Set("timeInForce", "GTC")
-	} else {
-		util.Notice(fmt.Sprintf(`[parameter error] order type: %s`, orderType))
 	}
 	postData.Set("symbol", symbol)
-	postData.Set("type", orderType)
-	postData.Set("side", orderSide)
-	postData.Set("quantity", amount)
 	responseBody := signedRequestBinance(key, secret, http.MethodPost, requestUrl, postData)
 	orderJson, err := util.NewJSON(responseBody)
 	if err == nil {
@@ -276,7 +280,7 @@ func placeOrderBinance(key, secret string, order *model.Order, orderSide, orderT
 		}
 		errCodeInt, _ := orderJson.Get("code").Int()
 		if errCodeInt != 0 {
-			order.OrderId = strconv.Itoa(errCodeInt)
+			order.OrderId = ``
 		}
 	}
 }
@@ -401,6 +405,16 @@ func getPositionsBinance(key, secret string) (success bool, positions []*model.P
 		}
 	}
 	return success, positions
+}
+
+// MARGIN_UMFUTURE 杠杆全仓钱包转向U本位合约钱包
+// UMFUTURE_MARGIN U本位合约钱包转向杠杆全仓钱包
+func transferBinance(key, secret, transferType string, amount float64) {
+	postData := &url.Values{}
+	postData.Set(`type`, transferType)
+	postData.Set(`asset`, `USDT`)
+	postData.Set(`amount`, strconv.FormatFloat(amount, 'f', 0, 64))
+	signedRequestBinance(key, secret, http.MethodPost, restBinance+`/sapi/v1/asset/transfer`, postData)
 }
 
 //func getAccountBinance(key, secret string, accounts *model.Accounts) (success bool) {

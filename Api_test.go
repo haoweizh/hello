@@ -117,8 +117,14 @@ func Test_OKFormatAmount(t *testing.T) {
 func Test_initTurtleN(t *testing.T) {
 	model.NewConfig()
 	_ = configor.Load(model.AppConfig, "./config.yml")
-	api.PlaceOrder(model.AppConfig.DFutureKey, model.AppConfig.DFutureSecret, model.OrderSideBuy, ``,
-		model.DFuture, `ethusdt`, ``, `open`, model.FunctionDCarry, 2222, 2222, 0.1, false, false, nil)
+	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
+	api.Transfer(``, ``, model.Binance, `MARGIN_UMFUTURE`, 75)
+	//api.InitMarketInfos()
+	//order := api.PlaceOrder(``, ``, model.OrderSideBuy, model.OrderTypeMarket, model.Binance, `BTCUSDT`,
+	//	`BTCUSDT`, ``, ``, 45678.12345, 45678, 0.001, false, false, nil)
+	//fmt.Println(order.OrderId)
+	//api.PlaceOrder(model.AppConfig.DFutureKey, model.AppConfig.DFutureSecret, model.OrderSideBuy, ``,
+	//	model.DFuture, `ethusdt`, ``, `open`, model.FunctionDCarry, 2222, 2222, 0.1, false, false, nil)
 }
 
 func Test_wallet(t *testing.T) {
@@ -142,8 +148,6 @@ func Test_wallet(t *testing.T) {
 	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
 	//api.InitCoinBalance(``, ``, model.FunctionCarry, model.OKEX)
 	//api.InitMarketInfos()
-	//order := api.PlaceOrder(``, ``, model.OrderSideSell, model.OrderTypeMarket, model.OKEX, `BTC-USDT-SWAP`,
-	//	`BTC-USDT-SWAP`, ``, ``, model.FunctionCarry, 5555.23452, w0, 0.1444444444876, false)
 	//fmt.Println(order.OrderId)
 	//suc, pos := api.GetPositions(``, ``, model.Ftx)
 	//fmt.Println(fmt.Sprintf(`%v %d`, suc, len(pos)))

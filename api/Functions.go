@@ -88,12 +88,6 @@ func GetPriceDecimal(market, symbol string) float64 {
 		}
 	case model.HuobiDM:
 		return 2
-	case model.OKFUTURE:
-		if strings.Contains(strings.ToLower(symbol), `btc`) {
-			return 1
-		} else if strings.Contains(strings.ToLower(symbol), `eth`) {
-			return 2
-		}
 	}
 	return 8
 }
@@ -562,7 +556,7 @@ func PlaceOrder(key, secret, orderSide, orderType, market, symbol, instrument, o
 	case model.OKEX:
 		placeOrderOKEX(key, secret, isWs, order)
 	case model.Binance:
-		placeOrderBinance(key, secret, order, orderSide, orderType, symbol, strPrice, strAmount)
+		placeOrderBinance(key, secret, order, orderSide, orderType, symbol, price, amount)
 	case model.Coinpark:
 		placeOrderCoinpark(order, orderSide, orderType, symbol, strPrice, strAmount)
 		if order.ErrCode == `4003` {
@@ -708,6 +702,14 @@ func InitCarryFtx(start uint) {
 	}
 }
 
+func Transfer(key, secret, market, transferType string, amount float64) {
+	if market == model.Binance {
+		// MARGIN_UMFUTURE 杠杆全仓钱包转向U本位合约钱包
+		// UMFUTURE_MARGIN U本位合约钱包转向杠杆全仓钱包
+		transferBinance(key, secret, transferType, amount)
+	}
+}
+
 // InitMarketInfos 只支持现货SPOT和永续PERP SWAP
 func InitMarketInfos() (success bool) {
 	success = true
@@ -718,8 +720,9 @@ func InitMarketInfos() (success bool) {
 			model.SetMarketInfos(model.Ftx, getMarketsFtx())
 		case model.OKEX:
 			model.SetMarketInfos(model.OKEX, getMarketsOKEX())
-			util.Notice(`okex config and set: ` + getAccountConfigOKEX(``, ``))
-			if getAccountConfigOKEX(``, ``) != `net_mode` {
+			accountMode := getAccountConfigOKEX(``, ``)
+			util.Notice(`okex config and set: ` + accountMode)
+			if accountMode != `net_mode` {
 				if !setAccountModeOKEX(``, ``) {
 					success = false
 				}
