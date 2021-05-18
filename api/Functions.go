@@ -364,6 +364,9 @@ func GetFundingRate(market, symbol string, lock *sync.Mutex) (value float64) {
 	case model.OKEX:
 		fundingRate = getFundingRateOKEX(``, ``, symbol)
 		model.SetFundingRate(market, symbol, fundingRate)
+	case model.Binance:
+		fundingRate = getFundingRateBinance(``, ``, symbol)
+		model.SetFundingRate(market, symbol, fundingRate)
 	}
 	return
 }

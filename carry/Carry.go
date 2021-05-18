@@ -530,7 +530,7 @@ func initEmptyBalance(key, secret, market string) {
 		if market == model.OKEX {
 			success, maxLoan := api.GetMaxLoan(key, secret, market, coin)
 			if success {
-				balance.AvailableWithBorrow = maxLoan + math.Max(0, balance.Amount)
+				balance.AvailableWithBorrow = maxLoan + math.Max(0, balance.Amount) - balance.Borrow
 			}
 			time.Sleep(time.Second / 8)
 		}

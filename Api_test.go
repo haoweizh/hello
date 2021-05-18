@@ -119,10 +119,15 @@ func Test_initTurtleN(t *testing.T) {
 	_ = configor.Load(model.AppConfig, "./config.yml")
 	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
 	api.Transfer(``, ``, model.Binance, `MARGIN_UMFUTURE`, 75)
-	//api.InitMarketInfos()
-	//order := api.PlaceOrder(``, ``, model.OrderSideBuy, model.OrderTypeMarket, model.Binance, `BTCUSDT`,
-	//	`BTCUSDT`, ``, ``, 45678.12345, 45678, 0.001, false, false, nil)
+	api.GetFundingRate(model.Binance, `BTCUSDT`, nil)
+	api.GetMaxSizeBinance(``, ``, `BTC`)
+	api.InitMarketInfos()
+	//order := api.PlaceOrder(``, ``, model.OrderSideBuy, model.OrderTypeLimit, model.Binance, `BTCUSDT`,
+	//	``, ``, ``, 41678.12345, 45678, 0.001, false, false, nil)
 	//fmt.Println(order.OrderId)
+	//api.CancelOrders(``, ``, model.Binance, `BTCUSDT`)
+	api.GetPositions(``, ``, model.Binance)
+	api.GetBalances(``, ``, model.Binance, 100)
 	//api.PlaceOrder(model.AppConfig.DFutureKey, model.AppConfig.DFutureSecret, model.OrderSideBuy, ``,
 	//	model.DFuture, `ethusdt`, ``, `open`, model.FunctionDCarry, 2222, 2222, 0.1, false, false, nil)
 }

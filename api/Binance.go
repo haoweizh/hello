@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"hello/model"
 	"hello/util"
+	"math"
 	"math/rand"
 	"net/http"
 	"net/url"
@@ -42,7 +43,6 @@ func WsDepthServeBinance(markets *model.Markets, orderHandler OrderHandler, requ
 			util.SocketInfo(`binance fail to unmarshal json ` + err.Error())
 			return
 		}
-		fmt.Println(json)
 		subscribe, _ := json.Get("stream").String()
 		symbol := model.GetSymbol(model.Binance, subscribe) //当前获取到的币种的推送
 		var findSettingSymbol string
@@ -76,7 +76,7 @@ func WsDepthServeBinance(markets *model.Markets, orderHandler OrderHandler, requ
 					return
 				}
 				lastTradeTimeBinance[symbol] = nowTradeTime
-				bidAsk.Ts = int(util.GetNowUnixMillion())
+				bidAsk.Ts = json.Get(`E`).MustInt()
 				bidAsk.TsReceived = int(util.GetNowUnixMillion())
 				bidArray, _ := json.Get(`b`).Array()
 				bids = bidArray
@@ -143,7 +143,7 @@ func GetBinanceWSSubscribes(market, subType string) []interface{} {
 	return subscribes
 }
 
-func signedRequestBinance(key, secret, method, requestUrl string, param *url.Values) []byte {
+func signedRequestBinance(key, secret, method, requestUrl string, withApiKey bool, param *url.Values) []byte {
 	if key == `` || secret == `` {
 		keys, secrets := model.AppConfig.GetKeys(model.Binance)
 		key = keys[0]
@@ -152,7 +152,7 @@ func signedRequestBinance(key, secret, method, requestUrl string, param *url.Val
 	if param == nil {
 		param = &url.Values{}
 	}
-	if http.MethodGet != method {
+	if withApiKey {
 		param.Set("recvWindow", "60000")
 		ts := strconv.FormatInt(util.GetNow().UnixNano(), 10)[0:13]
 		param.Set("timestamp", ts)
@@ -167,7 +167,7 @@ func signedRequestBinance(key, secret, method, requestUrl string, param *url.Val
 		key, requestUrl, param, string(responseBody))
 	if strings.Contains(requestUrl, `/order`) {
 		util.Notice(logMsg)
-	} else {
+	} else if !strings.Contains(requestUrl, `exchangeInfo`) {
 		util.SocketInfo(logMsg)
 	}
 	return responseBody
@@ -198,7 +198,7 @@ func getMarketsBinance() (marketInfos map[string]*model.MarketInfo) {
 	marketInfos = make(map[string]*model.MarketInfo)
 	requestUrls := []string{restBinance + `/api/v3/exchangeInfo`, restBinanceFuture + `/fapi/v1/exchangeInfo`}
 	for _, requestUrl := range requestUrls {
-		responseBody := signedRequestBinance(``, ``, http.MethodGet, requestUrl, nil)
+		responseBody := signedRequestBinance(``, ``, http.MethodGet, requestUrl, false, nil)
 		resultJson, err := util.NewJSON(responseBody)
 		if err == nil && resultJson.Get(`symbols`) != nil {
 			data := resultJson.Get(`symbols`).MustArray()
@@ -271,7 +271,7 @@ func placeOrderBinance(key, secret string, order *model.Order, orderSide, orderT
 		postData.Set("timeInForce", "GTC")
 	}
 	postData.Set("symbol", symbol)
-	responseBody := signedRequestBinance(key, secret, http.MethodPost, requestUrl, postData)
+	responseBody := signedRequestBinance(key, secret, http.MethodPost, requestUrl, true, postData)
 	orderJson, err := util.NewJSON(responseBody)
 	if err == nil {
 		orderIdInt, _ := orderJson.Get("orderId").Int()
@@ -288,15 +288,14 @@ func placeOrderBinance(key, secret string, order *model.Order, orderSide, orderT
 func cancelOrdersBinance(key string, secret string, symbol string) bool {
 	postData := &url.Values{}
 	var requestUrl string
-	if strings.Contains(symbol, "-PERP") {
-		symbol = strings.ReplaceAll(symbol, "-PERP", "USDT")
+	if symbol[len(symbol)-5:] == `-PERP` {
+		symbol = symbol[len(symbol)-5:] + "USDT"
 		requestUrl = restBinanceFuture + "/fapi/v1/allOpenOrders"
 	} else {
 		requestUrl = restBinance + "/sapi/v1/margin/openOrders"
 	}
 	postData.Set("symbol", symbol)
-	responseBody := signedRequestBinance(key, secret, http.MethodDelete, requestUrl, postData)
-	util.Notice("binance cancel order" + string(responseBody))
+	signedRequestBinance(key, secret, http.MethodDelete, requestUrl, true, postData)
 	return true
 }
 
@@ -339,14 +338,13 @@ func cancelOrdersBinance(key string, secret string, symbol string) bool {
 
 func getBalanceBinance(key string, secret string) (success bool, balances []*model.Balance) {
 	requestUrl := restBinance + "/sapi/v1/margin/account"
-	responseBody := signedRequestBinance(key, secret, http.MethodGet, requestUrl, nil)
+	responseBody := signedRequestBinance(key, secret, http.MethodGet, requestUrl, true, nil)
 	balanceJson, _ := util.NewJSON(responseBody)
 	if balanceJson.Get("tradeEnabled").MustBool() {
 		balances = make([]*model.Balance, 0)
 		currencies, _ := balanceJson.Get("userAssets").Array()
 		for _, value := range currencies {
 			asset := value.(map[string]interface{})
-
 			if asset[`asset`] == nil {
 				continue
 			}
@@ -357,20 +355,18 @@ func getBalanceBinance(key string, secret string) (success bool, balances []*mod
 				ID:          model.Binance + `_` + coin + `_` + util.GetNow().Format(time.RFC3339)[0:10],
 				BalanceTime: util.GetNow(),
 				AccountId:   key}
-			if asset[`netAsset`] != nil {
-				balance.Available, _ = strconv.ParseFloat(asset[`netAsset`].(string), 64)
-			}
 			if asset[`free`] != nil { // 持仓
-				balance.Amount, _ = strconv.ParseFloat(asset[`free`].(string), 64)
+				balance.Available, _ = strconv.ParseFloat(asset[`free`].(string), 64)
+			}
+			if asset[`netAsset`] != nil {
+				balance.Amount, _ = strconv.ParseFloat(asset[`netAsset`].(string), 64)
 			}
 			if asset[`borrowed`] != nil { //已借数量
 				balance.Borrow, _ = strconv.ParseFloat(asset[`borrowed`].(string), 64)
 			}
-
 			balances = append(balances, balance)
 			//totalInUsd += balance.UsdValue
 		}
-
 		return true, balances
 	} else {
 		time.Sleep(time.Second * 2)
@@ -380,7 +376,7 @@ func getBalanceBinance(key string, secret string) (success bool, balances []*mod
 }
 
 func getPositionsBinance(key, secret string) (success bool, positions []*model.Position) {
-	responseBody := signedRequestBinance(key, secret, http.MethodGet, restBinanceFuture+"/fapi/v2/account", nil)
+	responseBody := signedRequestBinance(key, secret, http.MethodGet, restBinanceFuture+"/fapi/v2/account", true, nil)
 	positionJson, _ := util.NewJSON(responseBody)
 	success = positionJson.Get("canTrade").MustBool()
 	if success {
@@ -399,12 +395,45 @@ func getPositionsBinance(key, secret string) (success bool, positions []*model.P
 				if asset[`entryPrice`] != nil {
 					position.EntryPrice, _ = strconv.ParseFloat(asset[`entryPrice`].(string), 64)
 				}
-
 				positions = append(positions, position)
 			}
 		}
 	}
 	return success, positions
+}
+
+func getFundingRateBinance(key, secret, symbol string) (fundingRate *model.FundingRate) {
+	postData := &url.Values{}
+	postData.Set(`symbol`, symbol)
+	response := signedRequestBinance(key, secret, http.MethodGet, restBinanceFuture+`/fapi/v1/premiumIndex`, false, postData)
+	fundingJson, err := util.NewJSON(response)
+	if err != nil {
+		return nil
+	}
+	rateStr := fundingJson.Get(`lastFundingRate`).MustString()
+	rate, _ := strconv.ParseFloat(rateStr, 64)
+	nextFundingTime := fundingJson.Get(`nextFundingTime`).MustInt64()
+	fundingRate = &model.FundingRate{
+		FundingTime: time.Time{},
+		Rate:        rate,
+		UpdateTime:  util.GetNow().Unix(),
+		ExpireTime:  nextFundingTime / 1000,
+		Symbol:      symbol,
+	}
+	return
+}
+
+func GetMaxSizeBinance(key, secret, coin string) (maxBorrow float64) {
+	postData := &url.Values{}
+	postData.Set(`asset`, coin)
+	response := signedRequestBinance(key, secret, http.MethodGet, restBinance+`/sapi/v1/margin/maxBorrowable`, true, postData)
+	borrowJson, err := util.NewJSON(response)
+	if err == nil {
+		amount := borrowJson.Get(`amount`).MustFloat64()
+		borrowLimit := borrowJson.GetPath(`borrowLimit`).MustFloat64()
+		return math.Min(amount, borrowLimit)
+	}
+	return 0
 }
 
 // MARGIN_UMFUTURE 杠杆全仓钱包转向U本位合约钱包
@@ -414,7 +443,7 @@ func transferBinance(key, secret, transferType string, amount float64) {
 	postData.Set(`type`, transferType)
 	postData.Set(`asset`, `USDT`)
 	postData.Set(`amount`, strconv.FormatFloat(amount, 'f', 0, 64))
-	signedRequestBinance(key, secret, http.MethodPost, restBinance+`/sapi/v1/asset/transfer`, postData)
+	signedRequestBinance(key, secret, http.MethodPost, restBinance+`/sapi/v1/asset/transfer`, true, postData)
 }
 
 //func getAccountBinance(key, secret string, accounts *model.Accounts) (success bool) {
