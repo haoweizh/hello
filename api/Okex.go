@@ -24,10 +24,17 @@ const wsPrivateOKEX = `wss://ws.okex.com:8443/ws/v5/private`
 var msgChanOKEX = make(map[string]chan *simplejson.Json)
 var wrongs = make(map[string]bool)
 var wrongLock sync.Mutex
+var channelMaintainingOKEX = false
 
-func init() {
-	go reSubscribe()
-	go pingOKEX()
+func maintainChannelOKEX() {
+	if !channelMaintainingOKEX {
+		channelMaintainingOKEX = true
+		for true {
+			time.Sleep(time.Second * 25)
+			reSubscribe()
+			pingOKEX()
+		}
+	}
 }
 
 func getWrongs() []string {
@@ -51,50 +58,44 @@ func setWrong(instrument string, success bool) {
 }
 
 func pingOKEX() {
-	for true {
-		time.Sleep(time.Second * 20)
-		go func() {
-			keys, _ := model.AppConfig.GetKeys(model.OKEX)
-			for _, key := range keys {
-				channelKey := model.OKEX + `_` + key
-				err := sendToWs(channelKey, []byte(`ping`))
-				if err != nil {
-					util.SocketInfo("okex server ping client error " + err.Error())
-				}
+	go func() {
+		keys, _ := model.AppConfig.GetKeys(model.OKEX)
+		for _, key := range keys {
+			channelKey := model.OKEX + `_` + key
+			err := sendToWs(channelKey, []byte(`ping`))
+			if err != nil {
+				util.SocketInfo("okex server ping client error " + err.Error())
 			}
-		}()
-	}
+		}
+	}()
 }
 
 func reSubscribe() {
-	for true {
-		time.Sleep(time.Minute)
-		if len(wrongs) == 0 {
-			continue
-		}
-		wrongArray := getWrongs()
-		util.Notice(fmt.Sprintf(`>>>>>>>>wrong instrument %v`, wrongArray))
-		if len(wrongArray) > 5 {
-			SetRequireReset(model.OKEX, true)
-			util.Notice(fmt.Sprintf(`requrie reset all okex channel, wrong instrument %d`, len(wrongArray)))
-		}
-		subscribeMap := make(map[string]interface{})
-		subscribeMap["op"] = "unsubscribe"
-		subArray := make([]map[string]string, 0)
-		for _, instrument := range wrongArray {
-			subArray = append(subArray, map[string]string{`channel`: `books50-l2-tbt`, `instId`: instrument})
-		}
-		subscribeMap[`args`] = subArray
-		err := sendToWs(model.OKEX, util.JsonEncodeToByte(subscribeMap))
-		if err != nil {
-			util.SocketInfo("okex can not unsubscribe " + err.Error())
-		}
-		time.Sleep(time.Second * 3)
-		subscribeMap["op"] = "subscribe"
-		err = sendToWs(model.OKEX, util.JsonEncodeToByte(subscribeMap))
-		if err != nil {
-			util.SocketInfo("okex can not re-subscribe " + err.Error())
-		}
+	if len(wrongs) == 0 {
+		return
+	}
+	wrongArray := getWrongs()
+	util.Notice(fmt.Sprintf(`>>>>>>>>wrong instrument %v`, wrongArray))
+	if len(wrongArray) > 5 {
+		SetRequireReset(model.OKEX, true)
+		util.Notice(fmt.Sprintf(`requrie reset all okex channel, wrong instrument %d`, len(wrongArray)))
+	}
+	subscribeMap := make(map[string]interface{})
+	subscribeMap["op"] = "unsubscribe"
+	subArray := make([]map[string]string, 0)
+	for _, instrument := range wrongArray {
+		subArray = append(subArray, map[string]string{`channel`: `books50-l2-tbt`, `instId`: instrument})
+	}
+	subscribeMap[`args`] = subArray
+	err := sendToWs(model.OKEX, util.JsonEncodeToByte(subscribeMap))
+	if err != nil {
+		util.SocketInfo("okex can not unsubscribe " + err.Error())
+	}
+	time.Sleep(time.Second * 3)
+	subscribeMap["op"] = "subscribe"
+	err = sendToWs(model.OKEX, util.JsonEncodeToByte(subscribeMap))
+	if err != nil {
+		util.SocketInfo("okex can not re-subscribe " + err.Error())
 	}
 }
 
@@ -122,7 +123,6 @@ var subscriberOKEXPrivate = func(subscribes []interface{}, key string) error {
 		util.SocketInfo(fmt.Sprintf(`fail to login okex ws: %s return %s`, key, err.Error()))
 	}
 	return err
-
 }
 
 var subscribeHandlerOKEX = func(subscribes []interface{}, subType string) error {
@@ -1129,7 +1129,7 @@ func getMaxLoanOKEX(key, secret, coin string) (success bool, maxLoan float64) {
 	path := fmt.Sprintf(`/api/v5/account/max-loan?instId=%s-USDT&mgnMode=cross`, coin)
 	response := sendSignRequestOKEX(key, secret, http.MethodGet, path, nil)
 	loanJson, err := util.NewJSON(response)
-	succes := false
+	success = false
 	if loanJson == nil || err != nil || loanJson.Get(`data`) == nil {
 		return false, 0
 	}
@@ -1138,10 +1138,10 @@ func getMaxLoanOKEX(key, secret, coin string) (success bool, maxLoan float64) {
 		data := item.(map[string]interface{})
 		if data[`maxLoan`] != nil && data[`ccy`] != nil && data[`ccy`].(string) == coin {
 			maxLoan, _ = strconv.ParseFloat(data[`maxLoan`].(string), 64)
-			succes = true
+			success = true
 		}
 	}
-	return succes, maxLoan
+	return success, maxLoan
 }
 
 // bar 1m/3m/5m/15m/30m/1H/2H/4H/6H/12H/1D/1W/1M/3M/6M/1Y

@@ -26,128 +26,6 @@ var doCarry = false
 var symbolHighest, symbolLowest string
 var lowest = math.NaN()
 var highest = math.NaN()
-var tradeMaxResetTime = make(map[string]int64)                // key - init time in second
-var marginOKEX = make(map[string]float64)                     // key - okex margin available
-var usdAvailable = make(map[string]float64)                   // key - float64
-var usdRate = make(map[string]float64)                        // key - float64
-var balanceAll = make(map[string]float64)                     // key - balance value in all
-var carryBalance = make(map[string]map[string]*model.Balance) // key - coin - balance
-var carryAmount = make(map[string]map[string]float64)         // key - perp - float64
-var tradeMax = make(map[string]map[string][]float64)          // key - instrument - [maxBuy合约张数/币币个数, maxSell]
-
-func getTradeMaxResetTime(key string) (resetTime int64) {
-	defer carryLock.Unlock()
-	carryLock.Lock()
-	return tradeMaxResetTime[key]
-}
-
-func setTradeMaxResetTime(key string, resetTime int64) {
-	defer carryLock.Unlock()
-	carryLock.Lock()
-	tradeMaxResetTime[key] = resetTime
-}
-
-func getMarginOKEX(key string) (margin float64) {
-	defer carryLock.Unlock()
-	carryLock.Lock()
-	return marginOKEX[key]
-}
-
-func setMarginOKEX(key string, margin float64) {
-	defer carryLock.Unlock()
-	carryLock.Lock()
-	marginOKEX[key] = margin
-}
-
-func getTradeMax(key, instrument string) (maxBuy, maxSell float64) {
-	defer carryLock.Unlock()
-	carryLock.Lock()
-	if tradeMax[key] == nil || tradeMax[key][instrument] == nil || len(tradeMax[key][instrument]) != 2 {
-		return 0, 0
-	}
-	return tradeMax[key][instrument][0], tradeMax[key][instrument][1]
-}
-
-func setTradeMax(key, instrument string, maxBuy, maxSell float64) {
-	defer carryLock.Unlock()
-	carryLock.Lock()
-	if tradeMax[key] == nil {
-		tradeMax[key] = make(map[string][]float64)
-	}
-	tradeMax[key][instrument] = []float64{maxBuy, maxSell}
-}
-
-func getUsdAvailable(key string) float64 {
-	carryLock.Lock()
-	defer carryLock.Unlock()
-	return usdAvailable[key]
-}
-
-func setUsdAvailable(key string, value float64) {
-	carryLock.Lock()
-	defer carryLock.Unlock()
-	usdAvailable[key] = value
-}
-
-func setBalanceAll(key string, value float64) {
-	carryLock.Lock()
-	defer carryLock.Unlock()
-	balanceAll[key] = value
-}
-
-func getBalanceAll(key string) (value float64) {
-	carryLock.Lock()
-	defer carryLock.Unlock()
-	return balanceAll[key]
-}
-
-func getUsdRate(key string) float64 {
-	carryLock.Lock()
-	defer carryLock.Unlock()
-	return usdRate[key]
-}
-
-func setUsdRate(key string, value float64) {
-	carryLock.Lock()
-	defer carryLock.Unlock()
-	usdRate[key] = value
-}
-
-func getCarryAmount(key, perp string) float64 {
-	carryLock.Lock()
-	defer carryLock.Unlock()
-	if carryAmount[key] == nil {
-		return 0
-	}
-	return carryAmount[key][perp]
-}
-
-func setCarryAmount(key, perp string, amount float64) {
-	carryLock.Lock()
-	defer carryLock.Unlock()
-	if carryAmount[key] == nil {
-		carryAmount[key] = make(map[string]float64)
-	}
-	carryAmount[key][perp] = amount
-}
-
-func setCarryBalance(key, coin string, balance *model.Balance) {
-	carryLock.Lock()
-	defer carryLock.Unlock()
-	if carryBalance[key] == nil {
-		carryBalance[key] = make(map[string]*model.Balance)
-	}
-	carryBalance[key][coin] = balance
-}
-
-func getCarryBalance(key, coin string) (balance *model.Balance) {
-	carryLock.Lock()
-	defer carryLock.Unlock()
-	if carryBalance[key] == nil {
-		return nil
-	}
-	return carryBalance[key][coin]
-}
 
 func checkSetCarrying(value bool) (before bool) {
 	carryLock.Lock()
@@ -188,23 +66,49 @@ var postOrderCarry = func(order *model.Order) {
 }
 
 func resetTradeMax(key, secret string, market string) {
-	setTradeMaxResetTime(key, time.Now().Unix())
-	if market != model.OKEX {
-		return
+	if market == model.Ftx {
+		return // ftx无需设置
 	}
+	setTradeMaxResetTime(key, time.Now().Unix())
 	util.Notice(fmt.Sprintf(`reset all trade max %s %s`, key, market))
 	coins := api.GetCarryCoins()
 	if coins == nil || coins[market] == nil {
 		return
 	}
 	for coin := range coins[market] {
-		symbolPerp := coin + api.GetPerpTail(market)
-		symbolRelated := coin + api.GetSpotTail(market)
-		_, maxBuy, maxSell := api.GetMaxSize(key, secret, symbolPerp)
-		setTradeMax(key, symbolPerp, maxBuy, maxSell)
-		_, maxBuy, maxSell = api.GetMaxSize(key, secret, symbolRelated)
-		setTradeMax(key, symbolRelated, maxBuy, maxSell)
-		time.Sleep(time.Second / 5)
+		switch market {
+		case model.OKEX:
+			symbolPerp := coin + api.GetPerpTail(market)
+			symbolRelated := coin + api.GetSpotTail(market)
+			_, maxBuy, maxSell := api.GetMaxSize(key, secret, symbolPerp)
+			setTradeMax(key, symbolPerp, maxBuy, maxSell)
+			_, maxBuy, maxSell = api.GetMaxSize(key, secret, symbolRelated)
+			setTradeMax(key, symbolRelated, maxBuy, maxSell)
+			time.Sleep(time.Second / 5)
+		case model.Binance:
+			_, maxLoan := api.GetMaxLoan(key, secret, market, coin)
+			balance := getCarryBalance(key, coin)
+			if balance != nil {
+				balance.AvailableWithBorrow = balance.Amount + maxLoan - balance.Borrow
+				setCarryBalance(key, coin, balance)
+			}
+		}
+	}
+}
+
+// MARGIN_UMFUTURE 杠杆全仓钱包转向U本位合约钱包
+// UMFUTURE_MARGIN U本位合约钱包转向杠杆全仓钱包
+// 7:3和8:2是比例范围，超过范围自动平衡成7.5:2.5
+func checkProcessTransfer(key, secret, market string) {
+	switch market {
+	case model.Binance:
+		balance := getBalanceAll(key)
+		balancePos := getPosBal(key)
+		if balance/balancePos > 4 {
+			api.Transfer(key, secret, market, `MARGIN_UMFUTURE`, 0.25*balance-0.75*balancePos)
+		} else if balance/balancePos < 2.33 {
+			api.Transfer(key, secret, market, `UMFUTURE_MARGIN`, 0.75*balancePos-0.25*balance)
+		}
 	}
 }
 
@@ -222,6 +126,7 @@ func clearCarryBalance() {
 		markets := model.GetMarkets()
 		for _, market := range markets {
 			settings := model.GetSettings(model.FunctionCarry, market)
+			settingCoins := model.GetSettingCoins(model.FunctionCarry, market)
 			keys, secrets := model.AppConfig.GetKeys(market)
 			for i, key := range keys {
 				resultBalance, balances, _, margin := api.GetBalances(key, secrets[i], market, 0)
@@ -233,11 +138,17 @@ func clearCarryBalance() {
 					util.Notice(`fatal error: can not get balance/position ` + market)
 					continue
 				}
+				setPosBal(key, api.GetPosBal(key, secrets[i], market))
 				balanceAllValue := 0.0
 				localUsdAvailable := 0.0
 				borrowAll := 0.0
 				for _, value := range balances {
 					coin := strings.ToUpper(value.Coin)
+					success, bidAsk := model.AppMarkets.GetBidAsk(coin+api.GetSpotTail(market), market)
+					if !success && settingCoins[coin] {
+						util.Notice(`fail to get setting coin bid ask %s , return`, coin)
+						continue
+					}
 					if market == model.OKEX { // 针对okex不能从balance获取可借数的问题进行特殊处理
 						preBalance := getCarryBalance(key, coin)
 						if preBalance != nil {
@@ -245,22 +156,17 @@ func clearCarryBalance() {
 						}
 					}
 					setCarryBalance(key, coin, value)
-					settingCoins := model.GetSettingCoins(model.FunctionCarry, market)
-					if settingCoins[coin] {
-						balanceAllValue += value.UsdValue
-					}
-					if (coin == `USD` && market == model.Ftx) || (coin == `USDT` && market == model.OKEX) || (coin == `USDT` && market == model.Binance) {
+					if (coin == `USD` && market == model.Ftx) || (coin == `USDT` && (market == model.OKEX || market == model.Binance)) {
 						localUsdAvailable = value.Amount
 						balanceAllValue += value.Amount
 						borrowAll += value.Borrow
-					} else {
-						symbolPerp := coin + api.GetPerpTail(market)
-						success, bidAsk := model.AppMarkets.GetBidAsk(coin+api.GetSpotTail(market), market)
-						if settings[symbolPerp] != nil && len(settings[symbolPerp]) > 0 && success {
-							borrowAll += value.Borrow * bidAsk.Bids[0].Price
+					} else if settingCoins[coin] {
+						if value.UsdValue > 0 {
+							balanceAllValue += value.UsdValue
 						} else {
-							util.Notice(fmt.Sprintf(`fatal: can not get price %s %s`, market, coin))
+							balanceAllValue += value.Amount * bidAsk.Bids[0].Price
 						}
+						borrowAll += value.Borrow * bidAsk.Bids[0].Price
 					}
 				}
 				localUsdAvailable = localUsdAvailable - borrowAll
@@ -277,6 +183,7 @@ func clearCarryBalance() {
 					makeEqual(key, secrets[i], setting, balances, positions)
 				}
 				initEmptyBalance(key, secrets[i], market)
+				checkProcessTransfer(key, secrets[i], market)
 			}
 			for i, key := range keys {
 				localMaxResetTime := getTradeMaxResetTime(key)
@@ -527,7 +434,7 @@ func initEmptyBalance(key, secret, market string) {
 		if balance == nil {
 			balance = &model.Balance{Coin: coin, Market: market}
 		}
-		if market == model.OKEX {
+		if market == model.OKEX || market == model.Binance {
 			success, maxLoan := api.GetMaxLoan(key, secret, market, coin)
 			if success {
 				balance.AvailableWithBorrow = maxLoan + math.Max(0, balance.Amount) - balance.Borrow
@@ -548,7 +455,7 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	coin := model.GetCoin(setting.Market, setting.Symbol)
 	balance := getCarryBalance(key, coin)
 	fundingRate := 0.0
-	if setting.Market == model.OKEX {
+	if setting.Market == model.OKEX || setting.Market == model.Binance {
 		now := time.Now()
 		if now.Hour()%8 == 0 && now.Minute() == 0 && now.Second() < 30 {
 			return

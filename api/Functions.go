@@ -315,7 +315,7 @@ func GetTransfers(key, secret, market string) (balances []*model.Balance) {
 	return balances
 }
 
-func GetFundingRate(market, symbol string, lock *sync.Mutex) (value float64) {
+func GetFundingRate(market, symbol string, lock *sync.Mutex) (rate float64) {
 	if lock != nil {
 		defer lock.Unlock()
 		lock.Lock()
@@ -336,12 +336,13 @@ func GetFundingRate(market, symbol string, lock *sync.Mutex) (value float64) {
 		util.Notice(fmt.Sprintf(`before update funding %s %s rate %f expire %d neext: %f update: %d`,
 			market, symbol, fundingRate.Rate, fundingRate.ExpireTime, fundingRate.RateNext, fundingRate.UpdateTime))
 	}
+	var expireTime int64
 	switch market {
 	case model.Bitmex:
-		rate, expireTime := getFundingRateBitmex(symbol)
+		rate, expireTime = getFundingRateBitmex(symbol)
 		model.SetFundingRate(market, symbol, &model.FundingRate{Rate: rate, ExpireTime: expireTime, UpdateTime: now})
 	case model.Bybit:
-		rate, expireTime := getFundingRateBybit(symbol)
+		rate, expireTime = getFundingRateBybit(symbol)
 		model.SetFundingRate(market, symbol, &model.FundingRate{Rate: rate, ExpireTime: expireTime, UpdateTime: now})
 	case model.Ftx:
 		return 0
@@ -368,13 +369,18 @@ func GetFundingRate(market, symbol string, lock *sync.Mutex) (value float64) {
 		fundingRate = getFundingRateBinance(``, ``, symbol)
 		model.SetFundingRate(market, symbol, fundingRate)
 	}
-	return
+	if fundingRate != nil {
+		rate = fundingRate.Rate
+	}
+	return rate
 }
 
 func GetMaxLoan(key, secret, market, coin string) (success bool, maxLoan float64) {
 	switch market {
 	case model.OKEX:
 		return getMaxLoanOKEX(key, secret, coin)
+	case model.Binance:
+		return getMaxLoanBinance(key, secret, coin)
 	}
 	return false, 0
 }
@@ -614,6 +620,9 @@ func GetWSSubscribes(market, subType string) []interface{} {
 	if market == model.Bitmex {
 		subscribes = append(subscribes, `order`)
 	}
+	if market == model.OKEX {
+		maintainChannelOKEX()
+	}
 	return subscribes
 }
 
@@ -629,11 +638,11 @@ func GetWSSubscribe(market, symbol, subType string) (subscribe interface{}) {
 		// btc-usd futures/ticker:BTC-USD-170310
 		instrument := GetCurrentInstrument(``, ``, market, symbol)
 		return `futures/depth5:` + instrument
-	case model.Binance: // xrp_btc: xrpbtc@depth5
-		if len(symbol) > 4 && symbol[0:4] == `bch_` {
-			symbol = `bchabc_` + symbol[4:]
+	case model.Binance: // XRPUSDT: XRPUSDT@depth5   XRP-PERP: XRPUSDT@depth5
+		if symbol[len(symbol)-5:] == `-PERP` {
+			return ``
 		}
-		return strings.ToLower(strings.Replace(symbol, "_", "", 1)) + `@depth5@100ms`
+		return strings.ToLower(symbol) + `@depth5@100ms`
 	case model.Coinpark: //BTC_USDT bibox_sub_spot_BTC_USDT_ticker
 		//return `bibox_sub_spot_` + strings.ToUpper(symbol) + `_ticker`
 		return `bibox_sub_spot_` + strings.ToUpper(symbol) + `_depth`
@@ -705,10 +714,16 @@ func InitCarryFtx(start uint) {
 	}
 }
 
+func GetPosBal(key, secret, market string) (value float64) {
+	switch market {
+	case model.Binance:
+		return getPosBalBinance(key, secret)
+	}
+	return 0
+}
+
 func Transfer(key, secret, market, transferType string, amount float64) {
 	if market == model.Binance {
-		// MARGIN_UMFUTURE 杠杆全仓钱包转向U本位合约钱包
-		// UMFUTURE_MARGIN U本位合约钱包转向杠杆全仓钱包
 		transferBinance(key, secret, transferType, amount)
 	}
 }
@@ -776,7 +791,7 @@ func FormatAmountPair(market, symbolPerp, symbolRelated string, amount float64) 
 		sizeInc = marketRelated.SizeIncrement
 	}
 	formattedAmount = math.Floor(amount/sizeInc) * sizeInc
-	if formattedAmount < sizeMinPerp || formattedAmount < marketRelated.SizeMin {
+	if formattedAmount < marketPerp.SizeMin || formattedAmount < marketRelated.SizeMin {
 		return 0
 	}
 	return formattedAmount

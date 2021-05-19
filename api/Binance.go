@@ -122,25 +122,7 @@ func WsDepthServeBinance(markets *model.Markets, orderHandler OrderHandler, requ
 	}
 	//requestUrl := model.AppConfig.WSUrls[model.Binance]
 	return WebSocketClient(model.Binance, requestUrl, model.SubscribeDepth,
-		GetBinanceWSSubscribes(model.Binance, model.SubscribeDepth), subscribeHandlerBinance, wsHandler, orderHandler)
-}
-
-func GetBinanceWSSubscribes(market, subType string) []interface{} {
-	symbols := model.GetMarketSymbols(market)
-	subscribes := make([]interface{}, 0)
-	for symbol := range symbols {
-		if strings.Contains(symbol, "-PERP") {
-			continue
-		}
-		subTypes := strings.Split(subType, `,`)
-		for _, value := range subTypes {
-			subscribe := GetWSSubscribe(market, symbol, value)
-			if subscribe != `` {
-				subscribes = append(subscribes, subscribe)
-			}
-		}
-	}
-	return subscribes
+		GetWSSubscribes(model.Binance, model.SubscribeDepth), subscribeHandlerBinance, wsHandler, orderHandler)
 }
 
 func signedRequestBinance(key, secret, method, requestUrl string, withApiKey bool, param *url.Values) []byte {
@@ -375,6 +357,24 @@ func getBalanceBinance(key string, secret string) (success bool, balances []*mod
 	}
 }
 
+func getPosBalBinance(key, secret string) (value float64) {
+	responseBody := signedRequestBinance(key, secret, http.MethodGet, restBinanceFuture+`/fapi/v2/balance`, true, nil)
+	positionJson, err := util.NewJSON(responseBody)
+	if err != nil {
+		return 0
+	}
+	assets := positionJson.MustArray()
+	for _, asset := range assets {
+		item := asset.(map[string]interface{})
+		if item[`asset`].(string) == `USDT` {
+			if item[`balance`] != nil {
+				value, _ = strconv.ParseFloat(item[`balance`].(string), 64)
+			}
+		}
+	}
+	return value
+}
+
 func getPositionsBinance(key, secret string) (success bool, positions []*model.Position) {
 	responseBody := signedRequestBinance(key, secret, http.MethodGet, restBinanceFuture+"/fapi/v2/account", true, nil)
 	positionJson, _ := util.NewJSON(responseBody)
@@ -404,6 +404,10 @@ func getPositionsBinance(key, secret string) (success bool, positions []*model.P
 
 func getFundingRateBinance(key, secret, symbol string) (fundingRate *model.FundingRate) {
 	postData := &url.Values{}
+	if symbol[len(symbol)-5:] != `-PERP` {
+		return nil
+	}
+	symbol = symbol[0:len(symbol)-5] + `USDT`
 	postData.Set(`symbol`, symbol)
 	response := signedRequestBinance(key, secret, http.MethodGet, restBinanceFuture+`/fapi/v1/premiumIndex`, false, postData)
 	fundingJson, err := util.NewJSON(response)
@@ -423,7 +427,7 @@ func getFundingRateBinance(key, secret, symbol string) (fundingRate *model.Fundi
 	return
 }
 
-func GetMaxSizeBinance(key, secret, coin string) (maxBorrow float64) {
+func getMaxLoanBinance(key, secret, coin string) (success bool, maxBorrow float64) {
 	postData := &url.Values{}
 	postData.Set(`asset`, coin)
 	response := signedRequestBinance(key, secret, http.MethodGet, restBinance+`/sapi/v1/margin/maxBorrowable`, true, postData)
@@ -431,9 +435,9 @@ func GetMaxSizeBinance(key, secret, coin string) (maxBorrow float64) {
 	if err == nil {
 		amount := borrowJson.Get(`amount`).MustFloat64()
 		borrowLimit := borrowJson.GetPath(`borrowLimit`).MustFloat64()
-		return math.Min(amount, borrowLimit)
+		return true, math.Min(amount, borrowLimit)
 	}
-	return 0
+	return false, 0
 }
 
 // MARGIN_UMFUTURE 杠杆全仓钱包转向U本位合约钱包

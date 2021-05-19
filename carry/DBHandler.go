@@ -50,10 +50,10 @@ func _() {
 
 func RefreshMarketInfo() {
 	for true {
+		time.Sleep(time.Hour * 8)
 		if !api.InitMarketInfos() {
 			util.Notice(`fatal error: can not set okex account mode to net!!`)
 		}
-		time.Sleep(time.Hour * 8)
 	}
 }
 
@@ -90,9 +90,9 @@ func MaintainTransFee(key, secret string) {
 					value.Symbol, value.OrderSide, value.OrderTime.String(), value.Status))
 				time.Sleep(time.Second)
 			}
-			time.Sleep(time.Minute * 5)
 		}
 		feeIndex = 0
+		time.Sleep(time.Minute * 5)
 	}
 }
 
@@ -151,6 +151,7 @@ func Maintain() {
 	go MaintainTransFee(model.KeyDefault, model.SecretDefault)
 	//go util.StartMidNightTimer(CancelAllOrders)
 	//go MaintainBalance()
+	api.InitMarketInfos()
 	go RefreshMarketInfo()
 	for true {
 		go MaintainMarketChan()
