@@ -473,7 +473,7 @@ func sendSignRequestOKEX(key, secret, method, path string, body interface{}) (re
 	responseBody, _ = util.HttpRequest(method, uri, postContent, headers, 60)
 	logMsg := fmt.Sprintf(`okex key %s request %s body %s return %s`,
 		key, uri, toBeSign, string(responseBody))
-	if strings.Contains(uri, `/api/v5/trade/order`) {
+	if strings.Contains(uri, `/api/v5/trade/order`) && method == http.MethodPost {
 		util.Notice(logMsg)
 	} else {
 		util.SocketInfo(logMsg)

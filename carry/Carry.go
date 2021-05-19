@@ -517,9 +517,7 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	}
 	if doRevert == `true` {
 		setOpen = 1
-		setClose = -1
-		revertOpen = -0.003
-		revertClose = -0.003
+		setClose = 01
 	}
 	carryAmount := getCarryAmount(key, setting.Symbol)
 	if scoreLow < setClose || (carryAmount > 0 && scoreClose <= -1*revertOpen) {
@@ -570,10 +568,11 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 		amount = 0
 	}
 	amount = api.FormatAmountPair(setting.Market, setting.Symbol, setting.SymbolRelated, amount)
-	if model.OKEX == setting.Market {
+	if model.OKEX == setting.Market && amount > 0 {
 		amountInPerp := api.GetAmountInMarket(setting.Market, setting.Symbol, amount)
 		maxBuyPerp, maxSellPerp := getTradeMax(key, setting.Symbol)
 		maxBuyRelated, maxSellRelated := getTradeMax(key, setting.SymbolRelated)
+		maxBuyRelated += balance.Borrow
 		maxSellRelated = math.Max(maxSellRelated, balance.AvailableWithBorrow)
 		if sidePerp == model.OrderSideBuy && sideRelated == model.OrderSideSell {
 			amountInPerp = math.Min(amountInPerp, maxBuyPerp)
@@ -583,6 +582,9 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 			amount = math.Min(amount, maxBuyRelated)
 		}
 		_, amountInReal := api.ParseRealAmount(setting.Market, setting.Symbol, amountInPerp)
+		if setting.Symbol == `1INCH-USDT-SWAP` {
+			util.Notice(`sizes %f %f %f %f in perp %f`, maxBuyRelated, maxSellRelated, maxBuyPerp, maxSellPerp, amountInPerp)
+		}
 		amount = math.Min(amount, amountInReal)
 		amount = api.FormatAmountPair(setting.Market, setting.Symbol, setting.SymbolRelated, amount)
 	}
