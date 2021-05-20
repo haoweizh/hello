@@ -226,7 +226,7 @@ var wsHandlerPrivate = func(channelKey string, event []byte, orderHandler OrderH
 			}
 		}
 	}
-	util.Info(fmt.Sprintf(`>>> %s`, string(event)))
+	//util.Info(fmt.Sprintf(`>>> %s`, string(event)))
 	if responseJson.Get(`data`) == nil || len(responseJson.Get(`data`).MustArray()) == 0 {
 		return
 	}
@@ -776,6 +776,9 @@ func parseOrderOKEX(value map[string]interface{}) (order *model.Order) {
 	}
 	if value[`tag`] != nil {
 		order.RefreshType = value[`tag`].(string)
+	}
+	if value[`sCode`] != nil {
+		order.ErrCode = value[`sCode`].(string)
 	}
 	if strings.Contains(order.Instrument, `SWAP`) || len(strings.Split(order.Instrument, `-`)) > 2 {
 		_, order.Amount = ParseRealAmount(model.OKEX, order.Instrument, order.Amount)

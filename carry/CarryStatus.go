@@ -4,6 +4,8 @@ import (
 	"hello/model"
 )
 
+//var carryOrderFails = make(map[string]int64)                  // key fail num
+//var carryOrderSuccess = make(map[string]int64)                // key success num
 var tradeMaxResetTime = make(map[string]int64)                // key - init time in second
 var marginOKEX = make(map[string]float64)                     // key - okex margin available
 var usdAvailable = make(map[string]float64)                   // key - float64
@@ -13,6 +15,19 @@ var carryBalance = make(map[string]map[string]*model.Balance) // key - coin - ba
 var posBal = make(map[string]float64)                         // key - coin - position balance
 var carryAmount = make(map[string]map[string]float64)         // key - perp - float64
 var tradeMax = make(map[string]map[string][]float64)          // key - instrument - [maxBuy合约张数/币币个数, maxSell]
+
+//func getCarryOrderResults(key string) (success, fail int64) {
+//	defer carryLock.Unlock()
+//	carryLock.Lock()
+//	return carryOrderSuccess[key], carryOrderFails[key]
+//}
+//
+//func setCarryOrderResults(key string, success, fail int64) {
+//	defer carryLock.Unlock()
+//	carryLock.Lock()
+//	carryOrderFails[key] = success
+//	carryOrderSuccess[key] = fail
+//}
 
 func getPosBal(key string) (value float64) {
 	defer carryLock.Unlock()

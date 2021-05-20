@@ -18,6 +18,7 @@ const openValueLimit = 10000.0
 const carryTypeOpen = `carryOpen`
 const carryTypeClose = `carryClose`
 const carryTypeRevert = `carryRevert`
+const InsufficientCodeOKEX = `51008 51119 51120 51131 51502 58350 59108 59200`
 
 var marketInitTime = make(map[string]int64) // market - initTime
 var carryLock sync.Mutex
@@ -44,14 +45,17 @@ var postOrderCarry = func(order *model.Order) {
 	if order == nil {
 		return
 	}
+	unknownFail := true
 	if order.Status == model.CarryStatusFail {
 		keys, secrets := model.AppConfig.GetKeys(model.OKEX)
 		for i, key := range keys {
-			if key == order.AmountType && order.ErrCode == `51119` {
+			if key == order.AmountType && strings.Contains(InsufficientCodeOKEX, order.ErrCode) {
 				resetTradeMax(key, secrets[i], model.OKEX)
+				unknownFail = false
 			}
 		}
 	} else {
+		unknownFail = false
 		maxBuy, maxSell := getTradeMax(order.AmountType, order.Symbol)
 		amount := api.GetAmountInMarket(model.OKEX, order.Instrument, order.Amount)
 		if order.OrderSide == model.OrderSideBuy {
@@ -63,6 +67,8 @@ var postOrderCarry = func(order *model.Order) {
 		}
 		setTradeMax(order.AmountType, order.Instrument, maxBuy, maxSell)
 	}
+	fmt.Println(unknownFail)
+	//setCarryOrderResults(order.AmountType, )
 }
 
 func resetTradeMax(key, secret string, market string) {
@@ -517,7 +523,7 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	}
 	if doRevert == `true` {
 		setOpen = 1
-		setClose = 01
+		setClose = -1
 	}
 	carryAmount := getCarryAmount(key, setting.Symbol)
 	if scoreLow < setClose || (carryAmount > 0 && scoreClose <= -1*revertOpen) {
