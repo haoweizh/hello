@@ -67,8 +67,11 @@ var postOrderCarry = func(order *model.Order) {
 		}
 		setTradeMax(order.AmountType, order.Instrument, maxBuy, maxSell)
 	}
-	fmt.Println(unknownFail)
-	//setCarryOrderResults(order.AmountType, )
+	if unknownFail {
+		addCarryResult(order.AmountType, false)
+	} else {
+		addCarryResult(order.AmountType, true)
+	}
 }
 
 func resetTradeMax(key, secret string, market string) {
@@ -481,6 +484,10 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	if balanceAllValue == 0 {
 		return
 	}
+	if getCarryStop(key) {
+		util.Notice(`stop carry for 10 times unknown carry %s`, key)
+		return
+	}
 	coinRate := math.Abs(balance.UsdValue) / balanceAllValue
 	jump := 7.0
 	setOpen := math.Max((1.5-usdRate)*setting.OpenShortMargin*(0.5+jump*coinRate), 0.003) - fundingRate
@@ -511,7 +518,7 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	}
 	if setting.Market == model.OKEX {
 		margin := getMarginOKEX(key)
-		if margin < usdLowLine {
+		if margin < usdLowLine*2 {
 			doRevert = `true`
 		}
 		if setting.Symbol == `IOTA-USDT-SWAP` {

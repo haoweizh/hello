@@ -2,10 +2,11 @@ package carry
 
 import (
 	"hello/model"
+	"hello/util"
 )
 
-//var carryOrderFails = make(map[string]int64)                  // key fail num
-//var carryOrderSuccess = make(map[string]int64)                // key success num
+var carryFail = make(map[string]int64)                        // key fail num
+var carryStop = make(map[string]bool)                         // key - stop carry bool
 var tradeMaxResetTime = make(map[string]int64)                // key - init time in second
 var marginOKEX = make(map[string]float64)                     // key - okex margin available
 var usdAvailable = make(map[string]float64)                   // key - float64
@@ -16,18 +17,28 @@ var posBal = make(map[string]float64)                         // key - coin - po
 var carryAmount = make(map[string]map[string]float64)         // key - perp - float64
 var tradeMax = make(map[string]map[string][]float64)          // key - instrument - [maxBuy合约张数/币币个数, maxSell]
 
-//func getCarryOrderResults(key string) (success, fail int64) {
-//	defer carryLock.Unlock()
-//	carryLock.Lock()
-//	return carryOrderSuccess[key], carryOrderFails[key]
-//}
-//
-//func setCarryOrderResults(key string, success, fail int64) {
-//	defer carryLock.Unlock()
-//	carryLock.Lock()
-//	carryOrderFails[key] = success
-//	carryOrderSuccess[key] = fail
-//}
+func getCarryStop(key string) (stop bool) {
+	defer carryLock.Unlock()
+	carryLock.Lock()
+	return carryStop[key]
+}
+
+func addCarryResult(key string, success bool) {
+	defer carryLock.Unlock()
+	carryLock.Lock()
+	if success {
+		if carryFail[key] > 0 {
+			carryFail[key] -= 1
+		}
+	} else {
+		carryFail[key] += 2
+	}
+	if carryFail[key] > 6 {
+		carryStop[key] = true
+		util.Notice(`----------stop carry %s %d`, key, carryFail[key])
+		carryFail[key] = 0
+	}
+}
 
 func getPosBal(key string) (value float64) {
 	defer carryLock.Unlock()
