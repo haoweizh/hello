@@ -275,8 +275,10 @@ func WsDepthServeOKEX(instruments map[string]bool, orderHandler OrderHandler) (c
 			channels = append(channels, channel)
 		}()
 	}
+	util.Notice(`try to connect public okex `)
 	channel, errPublic := WebSocketClient(model.OKEX, wsOKEX, model.SubscribeDepth,
 		GetWSSubscribes(model.OKEX, model.SubscribeDepth), subscribeHandlerOKEX, wsHandlerOKEX, orderHandler)
+	util.Notice(`finish connect public okex `)
 	channels = append(channels, channel)
 	return channels, errPublic
 }
