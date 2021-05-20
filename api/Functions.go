@@ -621,7 +621,7 @@ func GetWSSubscribes(market, subType string) []interface{} {
 		subscribes = append(subscribes, `order`)
 	}
 	if market == model.OKEX {
-		maintainChannelOKEX()
+		go maintainChannelOKEX()
 	}
 	return subscribes
 }
