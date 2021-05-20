@@ -265,16 +265,16 @@ func WsDepthServeOKEX(instruments map[string]bool, orderHandler OrderHandler) (c
 	channels = make([]chan struct{}, 0)
 	keys, _ := model.AppConfig.GetKeys(model.OKEX)
 	for _, key := range keys {
-		util.Notice(`in key %s`, key)
-		//channelKey := key
-		//go func() {
-		//	channel, errPrivate := WebSocketClient(model.OKEX+`_`+channelKey, wsPrivateOKEX, channelKey,
-		//		GetWSSubscribes(model.OKEX, model.SubscribeDepth), subscriberOKEXPrivate, wsHandlerPrivate, orderHandler)
-		//	if errPrivate != nil {
-		//		util.SocketInfo(fmt.Sprintf(`fail to connect okex private %s %s`, channelKey, err.Error()))
-		//	}
-		//	channels = append(channels, channel)
-		//}()
+		channelKey := key
+		go func() {
+			channel, errPrivate := WebSocketClient(model.OKEX+`_`+channelKey, wsPrivateOKEX, channelKey,
+				GetWSSubscribes(model.OKEX, model.SubscribeDepth), subscriberOKEXPrivate, wsHandlerPrivate, orderHandler)
+			if errPrivate != nil {
+				util.SocketInfo(fmt.Sprintf(`fail to connect okex private %s %s`, channelKey, err.Error()))
+			}
+			channels = append(channels, channel)
+		}()
+		util.Notice(`start thread to create okex private key %s`, channelKey)
 	}
 	util.Notice(`try to connect public okex `)
 	channel, errPublic := WebSocketClient(model.OKEX, wsOKEX, model.SubscribeDepth,
