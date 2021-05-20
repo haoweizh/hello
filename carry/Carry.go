@@ -79,6 +79,11 @@ func resetTradeMax(key, secret string, market string) {
 	if market == model.Ftx {
 		return // ftx无需设置
 	}
+	if getTradeMaxResetting(key) {
+		return
+	}
+	defer setTradeMaxResetting(key, false)
+	setTradeMaxResetting(key, true)
 	setTradeMaxResetTime(key, time.Now().Unix())
 	util.Notice(fmt.Sprintf(`reset all trade max %s %s`, key, market))
 	coins := api.GetCarryCoins()

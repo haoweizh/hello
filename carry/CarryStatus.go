@@ -16,6 +16,19 @@ var carryBalance = make(map[string]map[string]*model.Balance) // key - coin - ba
 var posBal = make(map[string]float64)                         // key - coin - position balance
 var carryAmount = make(map[string]map[string]float64)         // key - perp - float64
 var tradeMax = make(map[string]map[string][]float64)          // key - instrument - [maxBuy合约张数/币币个数, maxSell]
+var tradeMaxResetting = make(map[string]bool)                 // key - bool
+
+func getTradeMaxResetting(key string) bool {
+	defer carryLock.Unlock()
+	carryLock.Lock()
+	return tradeMaxResetting[key]
+}
+
+func setTradeMaxResetting(key string, value bool) {
+	defer carryLock.Unlock()
+	carryLock.Lock()
+	tradeMaxResetting[key] = value
+}
 
 func getCarryStop(key string) (stop bool) {
 	defer carryLock.Unlock()
