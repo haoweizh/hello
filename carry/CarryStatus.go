@@ -32,6 +32,7 @@ func addCarryResult(key string, success bool) {
 		}
 	} else {
 		carryFail[key] += 2
+		util.Notice(`---------- fail size %s %d`, key, carryFail[key])
 	}
 	if carryFail[key] > 6 {
 		carryStop[key] = true

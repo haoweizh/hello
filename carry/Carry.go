@@ -50,6 +50,7 @@ var postOrderCarry = func(order *model.Order) {
 		keys, secrets := model.AppConfig.GetKeys(model.OKEX)
 		for i, key := range keys {
 			if key == order.AmountType && strings.Contains(InsufficientCodeOKEX, order.ErrCode) {
+				util.Notice(`reset okex trade max with %s %s`, order.ErrCode, order.AmountType)
 				resetTradeMax(key, secrets[i], model.OKEX)
 				unknownFail = false
 			}
