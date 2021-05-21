@@ -35,6 +35,11 @@ func getCarryStop(key string) (stop bool) {
 	carryLock.Lock()
 	return carryStop[key]
 }
+func GetCarryResult() map[string]int64 {
+	defer carryLock.Unlock()
+	carryLock.Lock()
+	return carryFail
+}
 
 func addCarryResult(key string, success bool) {
 	defer carryLock.Unlock()

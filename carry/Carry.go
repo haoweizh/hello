@@ -524,7 +524,7 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	}
 	if setting.Market == model.OKEX {
 		margin := getMarginOKEX(key)
-		if margin < usdLowLine*2 {
+		if (len(keys) > 1 && keys[0] != key && margin < usdLowLine) || (keys[0] == key && margin < 200000) {
 			doRevert = `true`
 		}
 		if setting.Symbol == `IOTA-USDT-SWAP` {
