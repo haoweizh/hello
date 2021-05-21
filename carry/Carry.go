@@ -498,7 +498,7 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 		return
 	}
 	if getCarryStop(key) {
-		util.Notice(`stop carry for 10 times unknown carry %s`, key)
+		//util.Notice(`stop carry for 10 times unknown carry %s`, key)
 		return
 	}
 	coinRate := math.Abs(balance.UsdValue) / balanceAllValue
