@@ -418,6 +418,9 @@ func makeEqual(key, secret string, setting *model.Setting, balances []*model.Bal
 		}
 	}
 	amount = math.Min(math.Abs(amount), 20000/price)
+	if setting.Market == model.Ftx {
+		amount = math.Min(amount, 90000000)
+	}
 	if amount <= 0 {
 		return
 	}
@@ -607,6 +610,8 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 		}
 		amount = math.Min(amount, amountInReal)
 		amount = api.FormatAmountPair(setting.Market, setting.Symbol, setting.SymbolRelated, amount)
+	} else if model.Ftx == setting.Market && amount > 90000000 {
+		amount = 90000000
 	}
 	if amount > 0 {
 		util.Info(fmt.Sprintf(`+++ usdRate: %f coinRate: %f %s high: %f low: %f symbol: %s %s 

@@ -349,7 +349,8 @@ func GetParameters(c *gin.Context) {
 	duration, _ := time.ParseDuration(`-96h`)
 	timeBegin := time.Now().Add(duration)
 	timeBegin = time.Date(timeBegin.Year(), timeBegin.Month(), timeBegin.Day(), 0, 0, 0, 0, timeBegin.Location())
-	model.AppDB.Model(&orders).Delete(`order_time<? and refresh_type like ？`, timeBegin.String()[0:10], `carry%`)
+	//model.AppDB.Model(&orders).Delete(`order_time<? and refresh_type=？`, timeBegin.String()[0:10], `carry`)
+	//model.AppDB.Model(&orders).Delete(`order_time<? and refresh_type=？`, timeBegin.String()[0:10],  `comp`)
 	carryRows, _ := model.AppDB.Model(&orders).Select(`market,amount_type,order_side,sum(price*amount),date(order_time),refresh_type`).
 		Group(`market,order_side,date(order_time),amount_type,refresh_type`).Order(`date(order_time) desc`).Rows()
 	carryFrontMsg := ``
