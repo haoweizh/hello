@@ -50,7 +50,7 @@ var subscribeHandlerBinance = func(subscribes []interface{}, keyChannel string) 
 	for _, subscribe := range subscribes {
 		subMsg := fmt.Sprintf(`{"method": "SUBSCRIBE","params":["%s"],"id": %d}`, subscribe, int(rand.Float64()*10000))
 		if err = sendToWs(keyChannel, []byte(subMsg)); err != nil {
-			util.SocketInfo("binance can not subscribe " + err.Error())
+			util.SocketInfo(" binance can not subscribe %s %s %s", keyChannel, subscribe, err.Error())
 		}
 		time.Sleep(time.Millisecond * 200)
 	}
