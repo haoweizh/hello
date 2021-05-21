@@ -52,7 +52,7 @@ var subscribeHandlerBinance = func(subscribes []interface{}, keyChannel string) 
 		if err = sendToWs(keyChannel, []byte(subMsg)); err != nil {
 			util.SocketInfo("binance can not subscribe " + err.Error())
 		}
-		time.Sleep(time.Millisecond * 150)
+		time.Sleep(time.Millisecond * 200)
 	}
 	return err
 }
