@@ -609,7 +609,14 @@ func GetWSSubscribes(market, subType string) []interface{} {
 		subTypes := strings.Split(subType, `,`)
 		for _, value := range subTypes {
 			subscribe := GetWSSubscribe(market, symbol, value)
-			if subscribe != `` {
+			duplicated := false
+			for _, sub := range subscribes {
+				if sub == subscribe {
+					duplicated = true
+					break
+				}
+			}
+			if !duplicated {
 				subscribes = append(subscribes, subscribe)
 			}
 		}
@@ -640,7 +647,7 @@ func GetWSSubscribe(market, symbol, subType string) (subscribe interface{}) {
 		return `futures/depth5:` + instrument
 	case model.Binance: // XRPUSDT: XRPUSDT@depth5   XRP-PERP: XRPUSDT@depth5
 		if symbol[len(symbol)-5:] == `-PERP` {
-			return ``
+			symbol = symbol[0:len(symbol)-5] + `USDT`
 		}
 		return strings.ToLower(symbol) + `@depth5@100ms`
 	case model.Coinpark: //BTC_USDT bibox_sub_spot_BTC_USDT_ticker

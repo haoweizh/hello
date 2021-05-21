@@ -43,6 +43,7 @@ func WsDepthServeBinance(markets *model.Markets, orderHandler OrderHandler, requ
 			util.SocketInfo(`binance fail to unmarshal json ` + err.Error())
 			return
 		}
+		fmt.Println(string(event))
 		subscribe, _ := json.Get("stream").String()
 		symbol := model.GetSymbol(model.Binance, subscribe) //当前获取到的币种的推送
 		var findSettingSymbol string
