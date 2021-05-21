@@ -611,7 +611,7 @@ func GetWSSubscribes(market, subType string) []interface{} {
 			subscribe := GetWSSubscribe(market, symbol, value)
 			duplicated := false
 			for _, sub := range subscribes {
-				if sub == subscribe {
+				if sub.(string) == subscribe.(string) {
 					duplicated = true
 					break
 				}
