@@ -479,7 +479,11 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 			return
 		}
 		fundingRate = api.GetFundingRate(setting.Market, setting.Symbol, &carryLock)
-		fundingRate *= 0.9
+		if setting.Market == model.OKEX && setting.Symbol == `TRB-USDT-SWAP` {
+			fundingRate *= 3
+		} else {
+			fundingRate *= 0.9
+		}
 	}
 	if balance == nil {
 		model.SetCarryInfo(`warning `+coin, fmt.Sprintf(`slave: balace not available!!! %s %s`, key, coin))
