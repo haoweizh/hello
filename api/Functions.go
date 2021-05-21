@@ -609,14 +609,18 @@ func GetWSSubscribes(market, subType string) []interface{} {
 		subTypes := strings.Split(subType, `,`)
 		for _, value := range subTypes {
 			subscribe := GetWSSubscribe(market, symbol, value)
-			duplicated := false
-			for _, sub := range subscribes {
-				if sub.(string) == subscribe.(string) {
-					duplicated = true
-					break
+			if market == model.Binance {
+				duplicated := false
+				for _, sub := range subscribes {
+					if sub.(string) == subscribe.(string) {
+						duplicated = true
+						break
+					}
 				}
-			}
-			if !duplicated {
+				if !duplicated {
+					subscribes = append(subscribes, subscribe)
+				}
+			} else if subscribe != `` {
 				subscribes = append(subscribes, subscribe)
 			}
 		}
