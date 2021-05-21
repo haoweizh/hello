@@ -21,6 +21,8 @@ const restBinance = "https://api.binance.com"
 const restBinanceFuture = `https://fapi.binance.com`
 const wsBinance = "wss://stream.binance.com:9443/stream"
 const wsBinanceFuture = `wss://fstream.binance.com/stream`
+const binanceMargin = `binanceMargin`
+const binancePerp = `binancePerp`
 
 var lastTickIdBinance = make(map[string]int64) // symbol - int64
 var lastTradeTimeBinance = make(map[string]int64)
@@ -31,11 +33,11 @@ func maintainChannelBinance() {
 		channelMaintainingBinance = true
 		for true {
 			time.Sleep(time.Minute)
-			err := sendToWs(wsBinance, []byte(`ping`))
+			err := sendToWs(binanceMargin, []byte(`ping`))
 			if err != nil {
 				util.SocketInfo("ping binance ws client error " + err.Error())
 			}
-			err = sendToWs(wsBinanceFuture, []byte(`ping`))
+			err = sendToWs(binancePerp, []byte(`ping`))
 			if err != nil {
 				util.SocketInfo("ping binance future ws client error " + err.Error())
 			}
@@ -43,11 +45,11 @@ func maintainChannelBinance() {
 	}
 }
 
-var subscribeHandlerBinance = func(subscribes []interface{}, subType string) error {
+var subscribeHandlerBinance = func(subscribes []interface{}, keyChannel string) error {
 	var err error = nil
 	for _, subscribe := range subscribes {
 		subMsg := fmt.Sprintf(`{"method": "SUBSCRIBE","params":["%s"],"id": %d}`, subscribe, int(rand.Float64()*10000))
-		if err = sendToWs(model.Binance, []byte(subMsg)); err != nil {
+		if err = sendToWs(keyChannel, []byte(subMsg)); err != nil {
 			util.SocketInfo("binance can not subscribe " + err.Error())
 		}
 		time.Sleep(time.Millisecond * 150)
@@ -141,9 +143,9 @@ func WsDepthServeBinance(markets *model.Markets, orderHandler OrderHandler) (cha
 	}
 	channels = make([]chan struct{}, 2)
 	//requestUrl := model.AppConfig.WSUrls[model.Binance]
-	channels[0], err = WebSocketClient(wsBinance, wsBinance, model.SubscribeDepth,
+	channels[0], err = WebSocketClient(binanceMargin, wsBinance, binanceMargin,
 		GetWSSubscribes(model.Binance, model.SubscribeDepth), subscribeHandlerBinance, wsHandler, orderHandler)
-	channels[1], err = WebSocketClient(wsBinanceFuture, wsBinanceFuture, model.SubscribeDepth,
+	channels[1], err = WebSocketClient(binancePerp, wsBinanceFuture, binancePerp,
 		GetWSSubscribes(model.Binance, model.SubscribeDepth), subscribeHandlerBinance, wsHandler, orderHandler)
 	return channels, err
 }
