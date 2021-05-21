@@ -32,7 +32,7 @@ var subscribeHandlerBinance = func(subscribes []interface{}, subType string) err
 		if err = sendToWs(model.Binance, []byte(subMsg)); err != nil {
 			util.SocketInfo("binance can not subscribe " + err.Error())
 		}
-		time.Sleep(time.Millisecond * 150)
+		time.Sleep(time.Millisecond * 250)
 	}
 	return err
 }
