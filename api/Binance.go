@@ -33,13 +33,13 @@ func maintainChannelBinance() {
 		channelMaintainingBinance = true
 		for true {
 			time.Sleep(time.Minute)
-			err := sendToWs(binanceMargin, []byte(`ping`))
+			err := sendToWs(binanceMargin, []byte(`{pong}`))
 			if err != nil {
-				util.SocketInfo("ping binance ws client error " + err.Error())
+				util.SocketInfo("pong binance ws client error " + err.Error())
 			}
-			err = sendToWs(binancePerp, []byte(`ping`))
+			err = sendToWs(binancePerp, []byte(`{pong}`))
 			if err != nil {
-				util.SocketInfo("ping binance future ws client error " + err.Error())
+				util.SocketInfo("pong binance future ws client error " + err.Error())
 			}
 		}
 	}
