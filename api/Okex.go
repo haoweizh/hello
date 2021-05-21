@@ -1004,6 +1004,7 @@ func getBalanceOKEX(key, secret string) (success bool, balances []*model.Balance
 		marginOccupied, _ := strconv.ParseFloat(data[`imr`].(string), 64) // 被占用保证金
 		margin = marginAll - marginOccupied
 	}
+	util.Notice(`00000000 %s %s`, key, data[`mgnRatio`])
 	for _, item := range data[`details`].([]interface{}) {
 		balance := parseBalanceOKEX(item.(map[string]interface{}))
 		balances = append(balances, balance)
