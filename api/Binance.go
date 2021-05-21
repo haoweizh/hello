@@ -14,6 +14,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -24,8 +25,33 @@ const wsBinanceFuture = `wss://fstream.binance.com/stream`
 const binanceMargin = `binanceMargin`
 const binancePerp = `binancePerp`
 
+var lockWSBinance sync.Mutex
 var lastTickIdBinance = make(map[string]int64) // symbol - int64
 var lastTradeTimeBinance = make(map[string]int64)
+
+func getLastTickIdBinance(symbol string) int64 {
+	defer lockWSBinance.Unlock()
+	lockWSBinance.Lock()
+	return lastTickIdBinance[symbol]
+}
+
+func setLastTickIdBinance(symbol string, tickId int64) {
+	defer lockWSBinance.Unlock()
+	lockWSBinance.Lock()
+	lastTickIdBinance[symbol] = tickId
+}
+
+func getLastTradeTimeBinance(symbol string) int64 {
+	defer lockWSBinance.Unlock()
+	lockWSBinance.Lock()
+	return lastTradeTimeBinance[symbol]
+}
+
+func setLastTradeTimeBinance(symbol string, tradeTime int64) {
+	defer lockWSBinance.Unlock()
+	lockWSBinance.Lock()
+	lastTradeTimeBinance[symbol] = tradeTime
+}
 
 //var channelMaintainingBinance = false
 
@@ -80,8 +106,8 @@ func WsDepthServeBinance(markets *model.Markets, orderHandler OrderHandler) (cha
 			tickId, _ := json.Get(`lastUpdateId`).Int64()
 			depthUpdate, _ := json.Get(`e`).String()
 			if tickId > 0 { //存在lastUpdateId字段 表示是现货深度推送，此区分方式不稳定，暂用
-				if tickId > lastTickIdBinance[symbol] {
-					lastTickIdBinance[symbol] = tickId
+				if tickId > getLastTickIdBinance(symbol) {
+					setLastTickIdBinance(symbol, tickId)
 					bidAsk.Ts = int(util.GetNowUnixMillion())
 					bidAsk.TsReceived = int(util.GetNowUnixMillion())
 				} else {
@@ -96,10 +122,10 @@ func WsDepthServeBinance(markets *model.Markets, orderHandler OrderHandler) (cha
 				}
 			} else if depthUpdate == "depthUpdate" { //存在depthUpdate字段 表示是合约深度推送，此区分方式不稳定，暂用
 				nowTradeTime, _ := json.Get(`T`).Int64()
-				if nowTradeTime <= 0 || nowTradeTime < lastTradeTimeBinance[symbol] {
+				if nowTradeTime <= 0 || nowTradeTime < getLastTradeTimeBinance(symbol) {
 					return
 				}
-				lastTradeTimeBinance[symbol] = nowTradeTime
+				setLastTradeTimeBinance(symbol, nowTradeTime)
 				bidAsk.Ts = json.Get(`E`).MustInt()
 				bidAsk.TsReceived = int(util.GetNowUnixMillion())
 				bidArray, _ := json.Get(`b`).Array()
