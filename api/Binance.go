@@ -32,6 +32,7 @@ var subscribeHandlerBinance = func(subscribes []interface{}, subType string) err
 		if err = sendToWs(model.Binance, []byte(subMsg)); err != nil {
 			util.SocketInfo("binance can not subscribe " + err.Error())
 		}
+		time.Sleep(time.Millisecond * 150)
 	}
 	return err
 }
@@ -43,7 +44,7 @@ func WsDepthServeBinance(markets *model.Markets, orderHandler OrderHandler, requ
 			util.SocketInfo(`binance fail to unmarshal json ` + err.Error())
 			return
 		}
-		fmt.Println(string(event))
+		util.Notice(`----` + string(event))
 		subscribe, _ := json.Get("stream").String()
 		symbol := model.GetSymbol(model.Binance, subscribe) //当前获取到的币种的推送
 		var findSettingSymbol string
