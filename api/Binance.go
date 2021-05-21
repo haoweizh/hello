@@ -26,25 +26,26 @@ const binancePerp = `binancePerp`
 
 var lastTickIdBinance = make(map[string]int64) // symbol - int64
 var lastTradeTimeBinance = make(map[string]int64)
-var channelMaintainingBinance = false
+
+//var channelMaintainingBinance = false
 
 func maintainChannelBinance() {
-	if !channelMaintainingBinance {
-		channelMaintainingBinance = true
-		for true {
-			time.Sleep(time.Minute * 5)
-			ts := time.Now().UnixNano() / int64(time.Millisecond)
-			pong := []byte(fmt.Sprintf(`{"method":"PONG","E":%d}`, ts))
-			err := sendToWs(binanceMargin, pong)
-			if err != nil {
-				util.SocketInfo("pong binance ws client error " + err.Error())
-			}
-			err = sendToWs(binancePerp, pong)
-			if err != nil {
-				util.SocketInfo("pong binance future ws client error " + err.Error())
-			}
-		}
-	}
+	//if !channelMaintainingBinance {
+	//	channelMaintainingBinance = true
+	//	for true {
+	//		time.Sleep(time.Minute * 5)
+	//		ts := time.Now().UnixNano() / int64(time.Millisecond)
+	//		pong := []byte(fmt.Sprintf(`{"method":"PONG","E":%d}`, ts))
+	//		err := sendToWs(binanceMargin, pong)
+	//		if err != nil {
+	//			util.SocketInfo("pong binance ws client error " + err.Error())
+	//		}
+	//		err = sendToWs(binancePerp, pong)
+	//		if err != nil {
+	//			util.SocketInfo("pong binance future ws client error " + err.Error())
+	//		}
+	//	}
+	//}
 }
 
 var subscribeHandlerBinance = func(subscribes []interface{}, keyChannel string) error {
@@ -143,12 +144,31 @@ func WsDepthServeBinance(markets *model.Markets, orderHandler OrderHandler) (cha
 			}
 		}
 	}
-	channels = make([]chan struct{}, 2)
+	channels = make([]chan struct{}, 0)
 	//requestUrl := model.AppConfig.WSUrls[model.Binance]
-	channels[0], err = WebSocketClient(binanceMargin, wsBinance, binanceMargin,
-		GetWSSubscribes(model.Binance, model.SubscribeDepth), subscribeHandlerBinance, wsHandler, orderHandler)
-	channels[1], err = WebSocketClient(binancePerp, wsBinanceFuture, binancePerp,
-		GetWSSubscribes(model.Binance, model.SubscribeDepth), subscribeHandlerBinance, wsHandler, orderHandler)
+	marginSubs := GetWSSubscribes(model.Binance, model.SubscribeDepth)
+	perpSubs := GetWSSubscribes(model.Binance, model.SubscribeDepth)
+	step := 20
+	for i := 0; i < len(marginSubs); i += step {
+		subs := marginSubs[i:int64(math.Min(float64(len(marginSubs)), float64(i+step)))]
+		channel, channelErr := WebSocketClient(binanceMargin, wsBinance, binanceMargin, subs,
+			subscribeHandlerBinance, wsHandler, orderHandler)
+		if channelErr != nil {
+			util.SocketInfo(`fail to create binance margin conn %s`, channelErr.Error())
+			continue
+		}
+		channels = append(channels, channel)
+	}
+	for i := 0; i < len(perpSubs); i += step {
+		subs := perpSubs[i:int64(math.Min(float64(len(perpSubs)), float64(i+step)))]
+		channel, channelErr := WebSocketClient(binancePerp, wsBinanceFuture, binancePerp, subs,
+			subscribeHandlerBinance, wsHandler, orderHandler)
+		if channelErr != nil {
+			util.SocketInfo(`fail to create binance perp conn %s`, channelErr.Error())
+			continue
+		}
+		channels = append(channels, channel)
+	}
 	return channels, err
 }
 
