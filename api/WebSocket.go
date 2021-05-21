@@ -91,18 +91,18 @@ func chanHandler(channelKey string, stopC chan struct{}, msgHandler MsgHandler, 
 	}
 }
 
-func WebSocketClient(market, url, subType string, subscribes []interface{}, subHandler SubscribeHandler,
+func WebSocketClient(channelKey, url, subType string, subscribes []interface{}, subHandler SubscribeHandler,
 	msgHandler MsgHandler, orderHandler OrderHandler) (chan struct{}, error) {
-	util.Notice(market + `create depth channel ` + url)
+	util.Notice(channelKey + `create depth channel ` + url)
 	conn, err := newConnection(url)
 	if err != nil {
 		util.SocketInfo("can not create web socket" + err.Error())
 		return nil, err
 	}
-	model.AppMarkets.SetConn(market, conn)
+	model.AppMarkets.SetConn(channelKey, conn)
 	_ = subHandler(subscribes, subType)
 	stopC := make(chan struct{}, 10)
-	go chanHandler(market, stopC, msgHandler, orderHandler)
+	go chanHandler(channelKey, stopC, msgHandler, orderHandler)
 	return stopC, err
 }
 

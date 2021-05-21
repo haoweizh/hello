@@ -24,6 +24,24 @@ const wsBinanceFuture = `wss://fstream.binance.com/stream`
 
 var lastTickIdBinance = make(map[string]int64) // symbol - int64
 var lastTradeTimeBinance = make(map[string]int64)
+var channelMaintainingBinance = false
+
+func maintainChannelBinance() {
+	if !channelMaintainingBinance {
+		channelMaintainingBinance = true
+		for true {
+			time.Sleep(time.Minute)
+			err := sendToWs(wsBinance, []byte(`ping`))
+			if err != nil {
+				util.SocketInfo("ping binance ws client error " + err.Error())
+			}
+			err = sendToWs(wsBinanceFuture, []byte(`ping`))
+			if err != nil {
+				util.SocketInfo("ping binance future ws client error " + err.Error())
+			}
+		}
+	}
+}
 
 var subscribeHandlerBinance = func(subscribes []interface{}, subType string) error {
 	var err error = nil
@@ -37,14 +55,13 @@ var subscribeHandlerBinance = func(subscribes []interface{}, subType string) err
 	return err
 }
 
-func WsDepthServeBinance(markets *model.Markets, orderHandler OrderHandler, requestUrl string) (chan struct{}, error) {
+func WsDepthServeBinance(markets *model.Markets, orderHandler OrderHandler) (channels []chan struct{}, err error) {
 	wsHandler := func(channelKey string, event []byte, orderHandler OrderHandler) {
 		json, err := util.NewJSON(event)
 		if err != nil {
 			util.SocketInfo(`binance fail to unmarshal json ` + err.Error())
 			return
 		}
-		util.Notice(`----` + string(event))
 		subscribe, _ := json.Get("stream").String()
 		symbol := model.GetSymbol(model.Binance, subscribe) //当前获取到的币种的推送
 		var findSettingSymbol string
@@ -122,9 +139,13 @@ func WsDepthServeBinance(markets *model.Markets, orderHandler OrderHandler, requ
 			}
 		}
 	}
+	channels = make([]chan struct{}, 2)
 	//requestUrl := model.AppConfig.WSUrls[model.Binance]
-	return WebSocketClient(model.Binance, requestUrl, model.SubscribeDepth,
+	channels[0], err = WebSocketClient(wsBinance, wsBinance, model.SubscribeDepth,
 		GetWSSubscribes(model.Binance, model.SubscribeDepth), subscribeHandlerBinance, wsHandler, orderHandler)
+	channels[1], err = WebSocketClient(wsBinanceFuture, wsBinanceFuture, model.SubscribeDepth,
+		GetWSSubscribes(model.Binance, model.SubscribeDepth), subscribeHandlerBinance, wsHandler, orderHandler)
+	return channels, err
 }
 
 func signedRequestBinance(key, secret, method, requestUrl string, withApiKey bool, param *url.Values) []byte {

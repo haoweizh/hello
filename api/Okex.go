@@ -32,7 +32,18 @@ func maintainChannelOKEX() {
 		for true {
 			time.Sleep(time.Second * 25)
 			reSubscribe()
-			pingOKEX()
+			keys, _ := model.AppConfig.GetKeys(model.OKEX)
+			for _, key := range keys {
+				channelKey := model.OKEX + `_` + key
+				err := sendToWs(channelKey, []byte(`ping`))
+				if err != nil {
+					util.SocketInfo("okex server ping client error " + err.Error())
+				}
+			}
+			err := sendToWs(model.OKEX, []byte(`ping`))
+			if err != nil {
+				util.SocketInfo("okex server ping client error " + err.Error())
+			}
 		}
 	}
 }
@@ -55,19 +66,6 @@ func setWrong(instrument string, success bool) {
 	} else {
 		delete(wrongs, instrument)
 	}
-}
-
-func pingOKEX() {
-	go func() {
-		keys, _ := model.AppConfig.GetKeys(model.OKEX)
-		for _, key := range keys {
-			channelKey := model.OKEX + `_` + key
-			err := sendToWs(channelKey, []byte(`ping`))
-			if err != nil {
-				util.SocketInfo("okex server ping client error " + err.Error())
-			}
-		}
-	}()
 }
 
 func reSubscribe() {

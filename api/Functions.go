@@ -627,8 +627,11 @@ func GetWSSubscribes(market, subType string) []interface{} {
 	if market == model.Bitmex {
 		subscribes = append(subscribes, `order`)
 	}
-	if market == model.OKEX {
+	switch market {
+	case model.OKEX:
 		go maintainChannelOKEX()
+	case model.Binance:
+		go maintainChannelBinance()
 	}
 	return subscribes
 }
@@ -829,16 +832,7 @@ func CreateMarketDepthServer(markets *model.Markets, market string, orderHandler
 	case model.OKEX:
 		channels, err = WsDepthServeOKEX(model.GetMarketSymbols(model.OKEX), orderHandler)
 	case model.Binance:
-		channel, err = WsDepthServeBinance(markets, nil, wsBinance)
-		if err != nil {
-			util.SocketInfo(market + ` can not create Binance channel1 depth server ` + err.Error())
-		}
-		channels[0] = channel
-		channel, err = WsDepthServeBinance(markets, nil, wsBinanceFuture)
-		if err != nil {
-			util.SocketInfo(market + ` can not create Binance channel2 depth server ` + err.Error())
-		}
-		channels = append(channels, channel)
+		channels, err = WsDepthServeBinance(markets, nil)
 	case model.Coinpark:
 		channel, err = WsDepthServeCoinpark(markets, nil)
 		channels[0] = channel
