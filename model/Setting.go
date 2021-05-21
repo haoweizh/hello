@@ -108,7 +108,7 @@ func LoadSettings() {
 	AppDB.Where(`valid = ?`, true).Find(&AppSettings)
 	marketSymbolSetting = make(map[string]map[string]map[string][]*Setting)
 	//binanceSettings := make(map[string]*Setting)
-	relatedSettings := make(map[string]*Setting)
+	//relatedSettings := make(map[string]*Setting)
 	handlers = make(map[string]map[string]map[string]CarryHandler)
 	for i := range AppSettings {
 		market := AppSettings[i].Market
@@ -129,12 +129,12 @@ func LoadSettings() {
 			}
 			marketSymbolSetting[function][market][symbol] = append(marketSymbolSetting[function][market][symbol],
 				&AppSettings[i])
-			if AppSettings[i].MarketRelated != `` {
-				marketsRelated := strings.Split(AppSettings[i].MarketRelated, `,`)
-				for _, value := range marketsRelated {
-					AppSettings = append(AppSettings, Setting{Market: value, Symbol: AppSettings[i].Symbol, Valid: true})
-				}
-			}
+			//if AppSettings[i].MarketRelated != `` {
+			//	marketsRelated := strings.Split(AppSettings[i].MarketRelated, `,`)
+			//	for _, value := range marketsRelated {
+			//		AppSettings = append(AppSettings, Setting{Market: value, Symbol: AppSettings[i].Symbol, Valid: true})
+			//	}
+			//}
 			if handlers[market] == nil {
 				handlers[market] = make(map[string]map[string]CarryHandler)
 			}
@@ -149,9 +149,9 @@ func LoadSettings() {
 			}
 		}
 	}
-	for _, setting := range relatedSettings {
-		AppSettings = append(AppSettings, *setting)
-	}
+	//for _, setting := range relatedSettings {
+	//	AppSettings = append(AppSettings, *setting)
+	//}
 	for _, setting := range AppSettings {
 		util.Notice(fmt.Sprintf(`load setting %s %s %s %v`,
 			setting.Market, setting.Symbol, setting.Function, setting.Valid))
