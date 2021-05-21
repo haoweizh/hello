@@ -269,7 +269,7 @@ func GetDayCandle(key, secret, market, symbol, instrument string, timeCandle tim
 }
 
 func GetBalance(key, secret, market, coin string, delaySeconds int64) (balance *model.Balance) {
-	success, balances, _, _ := GetBalances(key, secret, market, delaySeconds)
+	success, balances, _, _, _ := GetBalances(key, secret, market, delaySeconds)
 	if !success {
 		return
 	}
@@ -282,18 +282,18 @@ func GetBalance(key, secret, market, coin string, delaySeconds int64) (balance *
 }
 
 func GetBalances(key, secret, market string, delaySeconds int64) (
-	success bool, balances []*model.Balance, totalInUsd, margin float64) {
+	success bool, balances []*model.Balance, totalInUsd, margin, marginRate float64) {
 	now := util.GetNow().Unix()
 	var update int64
 	balances, totalInUsd, margin, update = model.GetBalance(market)
 	if now-update < delaySeconds {
-		return true, balances, totalInUsd, margin
+		return true, balances, totalInUsd, margin, marginRate
 	}
 	switch market {
 	case model.Ftx:
 		success, balances, totalInUsd = getBalanceFtx(key, secret)
 	case model.OKEX:
-		success, balances, totalInUsd, margin = getBalanceOKEX(key, secret)
+		success, balances, totalInUsd, margin, marginRate = getBalanceOKEX(key, secret)
 	case model.HuobiDM:
 		success, balances = getBalanceHuobiDM(key, secret)
 	case model.Binance:

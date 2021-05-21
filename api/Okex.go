@@ -980,7 +980,7 @@ func parseBalanceOKEX(value map[string]interface{}) (balance *model.Balance) {
 }
 
 // margin: 可用保证金
-func getBalanceOKEX(key, secret string) (success bool, balances []*model.Balance, totalInUsd, margin float64) {
+func getBalanceOKEX(key, secret string) (success bool, balances []*model.Balance, totalInUsd, margin, marginRate float64) {
 	response := sendSignRequestOKEX(key, secret, http.MethodGet, `/api/v5/account/balance`, nil)
 	responseJson, err := util.NewJSON(response)
 	if err != nil || responseJson == nil || responseJson.GetPath(`data`) == nil ||
@@ -1004,12 +1004,14 @@ func getBalanceOKEX(key, secret string) (success bool, balances []*model.Balance
 		marginOccupied, _ := strconv.ParseFloat(data[`imr`].(string), 64) // 被占用保证金
 		margin = marginAll - marginOccupied
 	}
-	util.Notice(`00000000 %s %s`, key, data[`mgnRatio`])
+	if data[`mgnRatio`] != nil {
+		marginRate, _ = strconv.ParseFloat(data[`mgnRatio`].(string), 64)
+	}
 	for _, item := range data[`details`].([]interface{}) {
 		balance := parseBalanceOKEX(item.(map[string]interface{}))
 		balances = append(balances, balance)
 	}
-	return success, balances, totalInUsd, margin
+	return success, balances, totalInUsd, margin, marginRate
 }
 
 func getAccountConfigOKEX(key, secret string) (mode string) {

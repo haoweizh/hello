@@ -144,9 +144,9 @@ func clearCarryBalance() {
 			settingCoins := model.GetSettingCoins(model.FunctionCarry, market)
 			keys, secrets := model.AppConfig.GetKeys(market)
 			for i, key := range keys {
-				resultBalance, balances, _, margin := api.GetBalances(key, secrets[i], market, 0)
+				resultBalance, balances, _, margin, marginRate := api.GetBalances(key, secrets[i], market, 0)
 				if market == model.OKEX {
-					setMarginOKEX(key, margin)
+					setMarginOKEX(key, margin, marginRate)
 				}
 				resultPosition, positions := api.GetPositions(key, secrets[i], market)
 				if !resultBalance || !resultPosition {
@@ -523,8 +523,9 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 		valueLow = 0
 	}
 	if setting.Market == model.OKEX {
-		margin := getMarginOKEX(key)
-		if (len(keys) > 1 && keys[0] != key && margin < usdLowLine) || (keys[0] == key && margin < 200000) {
+		margin, marginRate := GetMarginOKEX(key)
+		if (keys[0] != key && marginRate < 4) || (keys[0] == key && margin < 200000) {
+			util.Notice(`doRevert true %s %f %f`, key, marginRate, margin)
 			doRevert = `true`
 		}
 		if setting.Symbol == `IOTA-USDT-SWAP` {
