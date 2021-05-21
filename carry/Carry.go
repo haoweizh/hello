@@ -104,7 +104,7 @@ func resetTradeMax(key, secret string, market string) {
 			_, maxLoan := api.GetMaxLoan(key, secret, market, coin)
 			balance := getCarryBalance(key, coin)
 			if balance != nil {
-				balance.AvailableWithBorrow = balance.Amount + maxLoan - balance.Borrow
+				balance.AvailableWithBorrow = balance.Amount + maxLoan
 				setCarryBalance(key, coin, balance)
 			}
 		}
@@ -146,7 +146,7 @@ func clearCarryBalance() {
 			for i, key := range keys {
 				resultBalance, balances, _, margin, marginRate := api.GetBalances(key, secrets[i], market, 0)
 				if market == model.OKEX {
-					setMarginOKEX(key, margin, marginRate)
+					setMargin(key, margin, marginRate)
 				}
 				resultPosition, positions := api.GetPositions(key, secrets[i], market)
 				if !resultBalance || !resultPosition {
@@ -452,7 +452,7 @@ func initEmptyBalance(key, secret, market string) {
 		if market == model.OKEX || market == model.Binance {
 			success, maxLoan := api.GetMaxLoan(key, secret, market, coin)
 			if success {
-				balance.AvailableWithBorrow = maxLoan + math.Max(0, balance.Amount) - balance.Borrow
+				balance.AvailableWithBorrow = maxLoan + math.Max(0, balance.Amount)
 			}
 			time.Sleep(time.Second / 8)
 		}
@@ -523,7 +523,7 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 		valueLow = 0
 	}
 	if setting.Market == model.OKEX {
-		margin, marginRate := GetMarginOKEX(key)
+		margin, marginRate := GetMargin(key)
 		if (keys[0] != key && marginRate < 4) || (keys[0] == key && margin < 200000) {
 			util.Notice(`doRevert true %s %f %f`, key, marginRate, margin)
 			doRevert = `true`

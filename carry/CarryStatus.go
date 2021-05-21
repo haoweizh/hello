@@ -36,10 +36,10 @@ func getCarryStop(key string) (stop bool) {
 	carryLock.Lock()
 	return carryStop[key]
 }
-func GetCarryResult() map[string]int64 {
+func GetCarryResult(key string) int64 {
 	defer carryLock.Unlock()
 	carryLock.Lock()
-	return carryFail
+	return carryFail[key]
 }
 
 func addCarryResult(key string, success bool) {
@@ -84,13 +84,13 @@ func setTradeMaxResetTime(key string, resetTime int64) {
 	tradeMaxResetTime[key] = resetTime
 }
 
-func GetMarginOKEX(key string) (margin, marginRate float64) {
+func GetMargin(key string) (margin, marginRate float64) {
 	defer carryLock.Unlock()
 	carryLock.Lock()
 	return marginOKEX[key], marginRateOKEX[key]
 }
 
-func setMarginOKEX(key string, margin, marginRate float64) {
+func setMargin(key string, margin, marginRate float64) {
 	defer carryLock.Unlock()
 	carryLock.Lock()
 	marginOKEX[key] = margin

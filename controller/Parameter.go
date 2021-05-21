@@ -70,10 +70,14 @@ func test(c *gin.Context) {
 	carryRows, _ := model.AppDB.Model(&model.Order{}).Select(`market,amount_type,order_side,sum(price*amount),date(order_time),refresh_type`).
 		Group(`market,order_side,date(order_time),amount_type,refresh_type`).Order(`date(order_time) desc`).Rows()
 	carryBackMsg := "account info:\n"
-	fails := carry.GetCarryResult()
-	for key, i := range fails {
-		margin, marginRate := carry.GetMarginOKEX(key)
-		carryBackMsg += fmt.Sprintf("fails %s %d margin: %f rate: %f\n", key, i, margin, marginRate)
+	markets := model.GetMarkets()
+	for _, market := range markets {
+		keys, _ := model.AppConfig.GetKeys(market)
+		for _, key := range keys {
+			failNum := carry.GetCarryResult(key)
+			margin, marginRate := carry.GetMargin(key)
+			carryBackMsg += fmt.Sprintf("fails %s %d margin: %f rate: %f\n", key, failNum, margin, marginRate)
+		}
 	}
 	keysFtx, _ := model.AppConfig.GetKeys(model.Ftx)
 	keysOKEX, _ := model.AppConfig.GetKeys(model.OKEX)
