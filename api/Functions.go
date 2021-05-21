@@ -747,19 +747,25 @@ func InitMarketInfos() (success bool) {
 	success = true
 	markets := model.GetMarkets()
 	for _, market := range markets {
+		keys, secrets := model.AppConfig.GetKeys(market)
 		switch market {
 		case model.Ftx:
 			model.SetMarketInfos(model.Ftx, getMarketsFtx())
 		case model.OKEX:
 			model.SetMarketInfos(model.OKEX, getMarketsOKEX())
-			accountMode := getAccountConfigOKEX(``, ``)
-			util.Notice(`okex config and set: ` + accountMode)
-			if accountMode != `net_mode` {
-				if !setAccountModeOKEX(``, ``) {
-					success = false
+			for i, key := range keys {
+				accountMode := getAccountConfigOKEX(key, secrets[i])
+				util.Notice(`okex config and set: ` + accountMode)
+				if accountMode != `net_mode` {
+					if !setAccountModeOKEX(key, secrets[i]) {
+						success = false
+					}
 				}
 			}
 		case model.Binance:
+			for i, key := range keys {
+				setPosSideBinance(key, secrets[i])
+			}
 			model.SetMarketInfos(model.Binance, getMarketsBinance())
 		}
 	}

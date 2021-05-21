@@ -228,6 +228,13 @@ func signedRequestBinance(key, secret, method, requestUrl string, withApiKey boo
 	return responseBody
 }
 
+func setPosSideBinance(key, secret string) {
+	postData := &url.Values{}
+	requestUrl := restBinanceFuture + "/fapi/v1/positionSide/dual"
+	postData.Set("dualSidePosition", `false`)
+	signedRequestBinance(key, secret, http.MethodPost, requestUrl, true, postData)
+}
+
 func setMarketInfoFilters(marketInfo *model.MarketInfo, filters []interface{}) {
 	for _, filter := range filters {
 		data := filter.(map[string]interface{})
