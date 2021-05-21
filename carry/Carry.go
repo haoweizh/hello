@@ -203,7 +203,7 @@ func clearCarryBalance() {
 			for i, key := range keys {
 				localMaxResetTime := getTradeMaxResetTime(key)
 				if time.Now().Unix()-localMaxResetTime > 600 {
-					go resetTradeMax(key, secrets[i], model.OKEX)
+					go resetTradeMax(key, secrets[i], market)
 				}
 			}
 		}
