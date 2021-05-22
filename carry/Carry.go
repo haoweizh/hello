@@ -169,6 +169,10 @@ func clearCarryBalance() {
 						}
 					}
 					setCarryBalance(key, coin, value)
+					if coin == `BTC` && market == model.OKEX { // 把okex中btc价值的usd按一半计入
+						localUsdAvailable += value.UsdValue / 2
+						balanceAllValue += value.UsdValue / 2
+					}
 					if (coin == `USD` && market == model.Ftx) || (coin == `USDT` && (market == model.OKEX || market == model.Binance)) {
 						localUsdAvailable = value.Amount
 						balanceAllValue += value.Amount
