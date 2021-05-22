@@ -338,38 +338,36 @@ func placeCarry(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, key
 }
 
 func getCarryAmounts(setting *model.Setting, balances []*model.Balance, positions []*model.Position) (
-	success bool, amountPerp, amountRelated float64) {
+	relatedBalance *model.Balance, amountPerp, amountRelated float64) {
 	tail := api.GetPerpTail(setting.Market)
-	//positionExist := false
-	balanceExist := false
 	for _, position := range positions {
 		if position != nil && position.Currency == setting.Symbol {
 			amountPerp = position.Free
-			//positionExist = true
 		}
 	}
 	for _, balance := range balances {
 		if strings.ToUpper(balance.Coin+tail) == setting.Symbol {
 			amountRelated = balance.Amount
-			balanceExist = true
+			relatedBalance = balance
 		}
 	}
-	return balanceExist, amountPerp, amountRelated
+	return relatedBalance, amountPerp, amountRelated
 }
 
 func makeEqual(key, secret string, setting *model.Setting, balances []*model.Balance, positions []*model.Position) (
 	symbol string, price float64, equal bool) {
 	coin := model.GetCoin(setting.Market, setting.Symbol)
-	util.Notice(`make equal %s %s %s %s %s`, setting.Market, setting.Symbol, setting.MarketRelated, setting.SymbolRelated, coin)
 	_, tickPerp := model.AppMarkets.GetBidAsk(setting.Symbol, setting.Market)
 	_, tickRelated := model.AppMarkets.GetBidAsk(setting.SymbolRelated, setting.Market)
 	if tickPerp == nil || tickRelated == nil {
 		return ``, 0, true
 	}
-	success, amountPerp, amountRelated := getCarryAmounts(setting, balances, positions)
-	if !success {
+	balance, amountPerp, amountRelated := getCarryAmounts(setting, balances, positions)
+	if balance == nil {
+		util.Notice(`can not get balance %s %s`, key, coin)
 		return
 	}
+	util.Notice(`make equal %s %s %s %s %s`, setting.Market, setting.Symbol, setting.MarketRelated, setting.SymbolRelated, coin)
 	usdAvailable := getUsdAvailable(key)
 	amount := amountPerp + amountRelated
 	orderSide := model.OrderSideBuy
@@ -381,11 +379,6 @@ func makeEqual(key, secret string, setting *model.Setting, balances []*model.Bal
 		}
 	} else {
 		setCarryAmount(key, setting.Symbol, 0)
-	}
-	balance := getCarryBalance(key, coin)
-	if balance == nil {
-		util.Notice(`can not get balance %s %s`, key, coin)
-		return
 	}
 	if amount > 0 { //现货数量多、合约数量少
 		orderSide = model.OrderSideSell
