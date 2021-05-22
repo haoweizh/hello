@@ -231,7 +231,7 @@ func signedRequestBinance(key, secret, method, requestUrl string, withApiKey boo
 		return nil
 	}
 	code := responseJson.Get(`code`).MustInt()
-	if code != 0 && code != -3027 {
+	if code != 0 && code != -3027 && code != 200 && code != -2011 {
 		util.Notice(`request err %d`, code)
 	}
 	return responseBody
