@@ -382,6 +382,10 @@ func makeEqual(key, secret string, setting *model.Setting, balances []*model.Bal
 		setCarryAmount(key, setting.Symbol, 0)
 	}
 	balance := getCarryBalance(key, coin)
+	if balance == nil {
+		util.Notice(`can not get balance %s %s`, key, coin)
+		return
+	}
 	if amount > 0 { //现货数量多、合约数量少
 		orderSide = model.OrderSideSell
 		if tickPerp.Bids[0].Price < (1-revertDis)*tickRelated.Bids[0].Price && amount < balance.AvailableWithBorrow {
