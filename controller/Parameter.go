@@ -75,8 +75,11 @@ func test(c *gin.Context) {
 		keys, _ := model.AppConfig.GetKeys(market)
 		for _, key := range keys {
 			failNum := carry.GetCarryResult(key)
-			margin, marginRate := carry.GetMargin(key)
-			carryBackMsg += fmt.Sprintf("fails %s %d margin: %f rate: %f\n", key, failNum, margin, marginRate)
+			collateral := carry.GetCollateral(key)
+			if collateral != nil {
+				carryBackMsg += fmt.Sprintf("fails %s %d 可用保证金: %f 占用保证金: %f 保证金率: rate: %f\n",
+					key, failNum, collateral.Available, collateral.Occupied, collateral.Rate)
+			}
 		}
 	}
 	keysFtx, _ := model.AppConfig.GetKeys(model.Ftx)

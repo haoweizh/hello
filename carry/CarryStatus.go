@@ -8,8 +8,7 @@ import (
 var carryFail = make(map[string]int64)                        // key fail num
 var carryStop = make(map[string]bool)                         // key - stop carry bool
 var tradeMaxResetTime = make(map[string]int64)                // key - init time in second
-var marginOKEX = make(map[string]float64)                     // key - okex margin available
-var marginRateOKEX = make(map[string]float64)                 // key - okex margin rate
+var collaterals = make(map[string]*model.Collateral)          // key - okex collateral status
 var usdAvailable = make(map[string]float64)                   // key - float64
 var usdRate = make(map[string]float64)                        // key - float64
 var balanceAll = make(map[string]float64)                     // key - balance value in all
@@ -84,17 +83,16 @@ func setTradeMaxResetTime(key string, resetTime int64) {
 	tradeMaxResetTime[key] = resetTime
 }
 
-func GetMargin(key string) (margin, marginRate float64) {
+func GetCollateral(key string) (collateral *model.Collateral) {
 	defer carryLock.Unlock()
 	carryLock.Lock()
-	return marginOKEX[key], marginRateOKEX[key]
+	return collaterals[key]
 }
 
-func setMargin(key string, margin, marginRate float64) {
+func setCollateral(key string, collateral *model.Collateral) {
 	defer carryLock.Unlock()
 	carryLock.Lock()
-	marginOKEX[key] = margin
-	marginRateOKEX[key] = marginRate
+	collaterals[key] = collateral
 }
 
 func getTradeMax(key, instrument string) (maxBuy, maxSell float64) {
