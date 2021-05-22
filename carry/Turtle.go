@@ -259,10 +259,11 @@ var ProcessTurtle = func(setting *model.Setting, tick *model.BidAsk) {
 		}
 	} else if setting.Chance > 0 {
 		priceLong = math.Max(turtleData.highDays20, setting.PriceX+turtleData.n/2)
-		temp := setting.PriceX - 2*turtleData.n
-		if turtleData.lowDays10 < temp {
-			priceShort = temp
-		} else {
+		if turtleData.lowDays10 < setting.PriceX-2*turtleData.n {
+			priceShort = setting.PriceX - 2*turtleData.n
+		} else if turtleData.lowDays10 < setting.PriceX {
+			priceShort = turtleData.lowDays10
+		} else if turtleData.lowDays10 > setting.PriceX {
 			priceShort = math.Max(turtleData.lowDays10, turtleData.highDays20-2*turtleData.n)
 		}
 		priceShort, priceLong = placeTurtleOrders(turtleData, setting, currentN, priceShort, priceLong)
@@ -299,10 +300,11 @@ var ProcessTurtle = func(setting *model.Setting, tick *model.BidAsk) {
 		}
 	} else if setting.Chance < 0 {
 		priceShort = math.Min(turtleData.lowDays20, setting.PriceX-turtleData.n/2)
-		temp := setting.PriceX + 2*turtleData.n
-		if turtleData.highDays10 > temp {
-			priceLong = temp
-		} else {
+		if turtleData.highDays10 > setting.PriceX+2*turtleData.n {
+			priceLong = setting.PriceX + 2*turtleData.n
+		} else if turtleData.highDays10 > setting.PriceX {
+			priceLong = turtleData.highDays10
+		} else if turtleData.highDays10 < setting.PriceX {
 			priceLong = math.Min(turtleData.highDays10, turtleData.lowDays20+2*turtleData.n)
 		}
 		priceShort, priceLong = placeTurtleOrders(turtleData, setting, currentN, priceShort, priceLong)

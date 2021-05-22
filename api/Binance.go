@@ -225,6 +225,15 @@ func signedRequestBinance(key, secret, method, requestUrl string, withApiKey boo
 	} else if !strings.Contains(requestUrl, `exchangeInfo`) {
 		util.SocketInfo(logMsg)
 	}
+	responseJson, err := util.NewJSON(responseBody)
+	if err != nil || responseJson == nil {
+		util.Notice(`fail to parse json`)
+		return nil
+	}
+	code := responseJson.Get(`code`).MustInt()
+	if code != 0 && code != -3027 {
+		util.Notice(`request err %d`, code)
+	}
 	return responseBody
 }
 
@@ -351,7 +360,7 @@ func cancelOrdersBinance(key string, secret string, symbol string) bool {
 	postData := &url.Values{}
 	var requestUrl string
 	if symbol[len(symbol)-5:] == `-PERP` {
-		symbol = symbol[len(symbol)-5:] + "USDT"
+		symbol = symbol[:len(symbol)-5] + "USDT"
 		requestUrl = restBinanceFuture + "/fapi/v1/allOpenOrders"
 	} else {
 		requestUrl = restBinance + "/sapi/v1/margin/openOrders"
