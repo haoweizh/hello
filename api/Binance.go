@@ -476,7 +476,11 @@ func getPositionsBinance(key, secret string) (success bool, positions []*model.P
 				position := &model.Position{Market: model.Binance, Ts: util.GetNowUnixMillion()}
 				asset := item.(map[string]interface{})
 				if asset[`symbol`] != nil {
-					position.Currency = asset[`symbol`].(string)
+					symbol := asset[`symbol`].(string)
+					if symbol[len(symbol)-4:] == `USDT` {
+						symbol = symbol[0:len(symbol)-4] + "-PERP"
+					}
+					position.Currency = symbol
 				}
 				if asset[`positionAmt`] != nil {
 					position.Free, _ = strconv.ParseFloat(asset[`positionAmt`].(string), 64)
