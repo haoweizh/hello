@@ -380,7 +380,8 @@ func makeEqual(key, secret string, setting *model.Setting, balances []*model.Bal
 		setCarryAmount(key, setting.Symbol, 0)
 	}
 	if amount > 0 { //现货数量多、合约数量少
-		util.Notice(`make equal %s %s %s %s %s`, setting.Market, setting.Symbol, setting.MarketRelated, setting.SymbolRelated, coin)
+		util.Notice(`%s make equal %s %s %s %s %s`,
+			key, setting.Market, setting.Symbol, setting.MarketRelated, setting.SymbolRelated, coin)
 		orderSide = model.OrderSideSell
 		if tickPerp.Bids[0].Price < (1-revertDis)*tickRelated.Bids[0].Price && amount < balance.AvailableWithBorrow {
 			symbol = setting.SymbolRelated
