@@ -24,6 +24,29 @@ const wsFtx = `wss://ftx.com/ws`
 
 var lastDepthPingFtx = util.GetNowUnixMillion()
 var socketLockFtx sync.Mutex
+var channelMaintainingFtx = false
+
+func maintainChannelFtx(subscribes []interface{}) {
+	if !channelMaintainingFtx {
+		channelMaintainingFtx = true
+		for true {
+			time.Sleep(time.Minute)
+			for _, value := range subscribes {
+				subscribe := value.([]string)
+				_, bidAsk := model.AppMarkets.GetBidAsk(subscribe[1], model.Ftx)
+				now := time.Now().UnixNano() / int64(time.Millisecond)
+				if bidAsk == nil || now-int64(bidAsk.Ts) > 60000 {
+					subCmd := fmt.Sprintf(`{"op": "subscribe", "channel": "%s", "market": "%s"}`,
+						subscribe[0], subscribe[1])
+					if err := sendToWs(model.Ftx, []byte(subCmd)); err != nil {
+						util.SocketInfo("ftx can not resubscribe " + err.Error())
+					}
+					util.Notice(`send resubscribe %s`, subCmd)
+				}
+			}
+		}
+	}
+}
 
 var subscribeHandlerFtx = func(subscribes []interface{}, subType string) error {
 	var err error = nil
@@ -124,6 +147,7 @@ func handleDepthFtx(markets *model.Markets, response *simplejson.Json) {
 	dataType := response.Get(`type`).MustString()
 	data := response.Get(`data`)
 	if data.Interface() != nil && (dataType == `partial` || dataType == `update`) {
+		// ftx服务器传回来的数据是保留小数点后6位的，所以别担心精度不够
 		bidAsk := &model.BidAsk{Ts: int(data.Get(`time`).MustFloat64() * 1000),
 			TsReceived: int(util.GetNowUnixMillion()), Bids: make([]model.Tick, 0), Asks: make([]model.Tick, 0)}
 		bids := data.Get(`bids`).MustArray()

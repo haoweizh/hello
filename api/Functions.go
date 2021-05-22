@@ -609,18 +609,23 @@ func GetWSSubscribes(market, subType string) []interface{} {
 		subTypes := strings.Split(subType, `,`)
 		for _, value := range subTypes {
 			subscribe := GetWSSubscribe(market, symbol, value)
-			if market == model.Binance {
-				duplicated := false
-				for _, sub := range subscribes {
+			duplicated := false
+			for _, sub := range subscribes {
+				if market == model.Ftx { // subscribe类型为[]string
+					itemSub := sub.([]string)
+					itemSubscribe := subscribe.([]string)
+					if itemSub[0] == itemSubscribe[0] && itemSub[1] == itemSubscribe[1] {
+						duplicated = true
+						break
+					}
+				} else { // subscribe类型为string
 					if sub.(string) == subscribe.(string) {
 						duplicated = true
 						break
 					}
 				}
-				if !duplicated {
-					subscribes = append(subscribes, subscribe)
-				}
-			} else if subscribe != `` {
+			}
+			if !duplicated {
 				subscribes = append(subscribes, subscribe)
 			}
 		}
@@ -636,6 +641,8 @@ func GetWSSubscribes(market, subType string) []interface{} {
 		go maintainChannelOKEX()
 	case model.Binance:
 		go maintainChannelBinance()
+	case model.Ftx:
+		go maintainChannelFtx(subscribes)
 	}
 	return subscribes
 }
