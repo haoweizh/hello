@@ -360,6 +360,7 @@ func getCarryAmounts(setting *model.Setting, balances []*model.Balance, position
 func makeEqual(key, secret string, setting *model.Setting, balances []*model.Balance, positions []*model.Position) (
 	symbol string, price float64, equal bool) {
 	coin := model.GetCoin(setting.Market, setting.Symbol)
+	util.Notice(`make equal %s %s %s %s %s`, setting.Market, setting.Symbol, setting.MarketRelated, setting.SymbolRelated, coin)
 	_, tickPerp := model.AppMarkets.GetBidAsk(setting.Symbol, setting.Market)
 	_, tickRelated := model.AppMarkets.GetBidAsk(setting.SymbolRelated, setting.Market)
 	if tickPerp == nil || tickRelated == nil {
