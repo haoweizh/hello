@@ -147,13 +147,13 @@ func clearCarryBalance() {
 				resultBalance, balances, _, collateral := api.GetBalances(key, secrets[i], market)
 				setCollateral(key, collateral)
 				resultPosition, positions, posBalance := api.GetPositions(key, secrets[i], market)
-        setPosBal(key, posBalance)
-        
+				setPosBal(key, posBalance)
+
 				if !resultBalance || !resultPosition {
 					util.Notice(`fatal error: can not get balance/position ` + market)
 					continue
 				}
-				
+
 				balanceAllValue := 0.0
 				localUsdAvailable := 0.0
 				borrowAll := 0.0
@@ -427,9 +427,6 @@ func makeEqual(key, secret string, setting *model.Setting, balances []*model.Bal
 			util.Notice(fmt.Sprintf("binance can't order %s low fee: %f ", symbol, price*amount))
 			amount = 0
 		}
-	}
-	if amount*price <= 10 {
-		amount = 0
 	}
 	if amount <= 0 {
 		return
