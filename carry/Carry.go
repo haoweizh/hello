@@ -421,7 +421,7 @@ func makeEqual(key, secret string, setting *model.Setting, balances []*model.Bal
 	if setting.Market == model.Ftx {
 		amount = math.Min(amount, 90000000)
 	} else if setting.Market == model.Binance {
-		if (symbol == setting.Symbol && price*amount < 10) || (symbol == setting.SymbolRelated && price*amount < 5) {
+		if (symbol == setting.Symbol && price*amount < 5) || (symbol == setting.SymbolRelated && price*amount < 10) {
 			util.Notice(fmt.Sprintf("binance can't order %s low fee: %f ", symbol, price*amount))
 			amount = 0
 		}
