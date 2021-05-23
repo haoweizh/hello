@@ -353,6 +353,7 @@ func placeOrderBinance(key, secret string, order *model.Order, orderSide, orderT
 		errCodeInt, _ := orderJson.Get("code").Int()
 		if errCodeInt != 0 {
 			order.OrderId = ``
+			order.ErrCode = strconv.Itoa(errCodeInt)
 		}
 	}
 }
