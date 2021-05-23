@@ -93,7 +93,7 @@ func chanHandler(channelKey string, stopC chan struct{}, msgHandler MsgHandler, 
 
 func WebSocketClient(channelKey, url, subType string, subscribes []interface{}, subHandler SubscribeHandler,
 	msgHandler MsgHandler, orderHandler OrderHandler) (chan struct{}, error) {
-	util.Notice(channelKey + `create depth channel ` + url)
+	util.Notice(channelKey + ` create depth channel ` + url)
 	conn, err := newConnection(url)
 	if err != nil {
 		util.SocketInfo("can not create web socket" + err.Error())

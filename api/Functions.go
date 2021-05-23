@@ -595,6 +595,9 @@ func PlaceOrder(key, secret, orderSide, orderType, market, symbol, instrument, o
 			order.Status = model.CarryStatusSuccess
 			order.OrderId = strconv.FormatInt(time.Now().UnixNano(), 10)
 		}
+		if order.OrderId == `` {
+			order.OrderId = fmt.Sprintf(`%s_error_%d`, order.ErrCode, time.Now().UnixNano())
+		}
 		go model.AppDB.Save(order)
 	}
 	if postOrder != nil {
