@@ -149,7 +149,7 @@ func clearCarryBalance() {
 				resultPosition, positions, posBalance := api.GetPositions(key, secrets[i], market)
 				setPosBal(key, posBalance)
 				if !resultBalance || !resultPosition {
-					util.Notice(`%s fatal error: can not get balance %v position %v`, key, market, resultBalance, resultPosition)
+					util.Notice(`%s %s fatal error: can not get balance %v position %v`, key, market, resultBalance, resultPosition)
 					continue
 				}
 				balanceAllValue := 0.0
