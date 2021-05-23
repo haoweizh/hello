@@ -431,9 +431,15 @@ func getBalanceBinance(key string, secret string) (success bool, balances []*mod
 				AccountId:   key}
 			if asset[`free`] != nil { // 持仓
 				balance.AvailableWithBorrow, _ = strconv.ParseFloat(asset[`free`].(string), 64)
-				if asset[`locked`] != nil {
-					lockAmount, _ := strconv.ParseFloat(asset[`locked`].(string), 64)
-					balance.Amount = balance.AvailableWithBorrow + lockAmount
+			}
+			if asset[`locked`] != nil {
+				lockAmount, _ := strconv.ParseFloat(asset[`locked`].(string), 64)
+				balance.Amount = balance.AvailableWithBorrow + lockAmount
+			}
+			if balance.UsdValue == 0 && balance.Amount > 0 {
+				getTick, bidAsk := model.AppMarkets.GetBidAsk(balance.Coin+`USDT`, model.Binance)
+				if getTick {
+					balance.UsdValue = balance.Amount * bidAsk.Bids[0].Price
 				}
 			}
 			//if asset[`netAsset`] != nil {
