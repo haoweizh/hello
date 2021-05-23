@@ -268,8 +268,8 @@ func GetDayCandle(key, secret, market, symbol, instrument string, timeCandle tim
 	return candle
 }
 
-func GetBalance(key, secret, market, coin string, delaySeconds int64) (balance *model.Balance) {
-	success, balances, _, _, _ := GetBalances(key, secret, market, delaySeconds)
+func GetBalance(key, secret, market, coin string) (balance *model.Balance) {
+	success, balances, _, _ := GetBalances(key, secret, market)
 	if !success {
 		return
 	}
@@ -281,26 +281,26 @@ func GetBalance(key, secret, market, coin string, delaySeconds int64) (balance *
 	return
 }
 
-func GetBalances(key, secret, market string, delaySeconds int64) (
-	success bool, balances []*model.Balance, totalInUsd, margin, marginRate float64) {
-	now := util.GetNow().Unix()
-	var update int64
-	balances, totalInUsd, margin, update = model.GetBalance(market)
-	if now-update < delaySeconds {
-		return true, balances, totalInUsd, margin, marginRate
-	}
+func GetBalances(key, secret, market string) (
+	success bool, balances []*model.Balance, totalInUsd float64, collateral *model.Collateral) {
+	//now := util.GetNow().Unix()
+	//var update int64
+	//balances, totalInUsd, collateral, update = model.GetBalance(market)
+	//if now-update < delaySeconds {
+	//	return true, balances, totalInUsd, collateral
+	//}
 	switch market {
 	case model.Ftx:
 		success, balances, totalInUsd = getBalanceFtx(key, secret)
 	case model.OKEX:
-		success, balances, totalInUsd, margin, marginRate = getBalanceOKEX(key, secret)
+		success, balances, totalInUsd, collateral = getBalanceOKEX(key, secret)
 	case model.HuobiDM:
 		success, balances = getBalanceHuobiDM(key, secret)
 	case model.Binance:
 		success, balances = getBalanceBinance(key, secret)
 	}
-	model.SetBalance(market, balances, totalInUsd, margin, now)
-	return
+	//model.SetBalance(market, balances, totalInUsd, collateral, now)
+	return success, balances, totalInUsd, collateral
 }
 
 func GetTransfers(key, secret, market string) (balances []*model.Balance) {

@@ -127,7 +127,7 @@ func Test_initTurtleN(t *testing.T) {
 	//fmt.Println(order.OrderId)
 	//api.CancelOrders(``, ``, model.Binance, `BTCUSDT`)
 	api.GetPositions(``, ``, model.Binance)
-	api.GetBalances(``, ``, model.Binance, 100)
+	api.GetBalances(``, ``, model.Binance)
 	//api.PlaceOrder(model.AppConfig.DFutureKey, model.AppConfig.DFutureSecret, model.OrderSideBuy, ``,
 	//	model.DFuture, `ethusdt`, ``, `open`, model.FunctionDCarry, 2222, 2222, 0.1, false, false, nil)
 }

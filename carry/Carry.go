@@ -144,16 +144,16 @@ func clearCarryBalance() {
 			settingCoins := model.GetSettingCoins(model.FunctionCarry, market)
 			keys, secrets := model.AppConfig.GetKeys(market)
 			for i, key := range keys {
-				resultBalance, balances, _, margin, marginRate := api.GetBalances(key, secrets[i], market, 0)
-				if market == model.OKEX {
-					setMargin(key, margin, marginRate)
-				}
+				resultBalance, balances, _, collateral := api.GetBalances(key, secrets[i], market)
+				setCollateral(key, collateral)
 				resultPosition, positions, posBalance := api.GetPositions(key, secrets[i], market)
+        setPosBal(key, posBalance)
+        
 				if !resultBalance || !resultPosition {
 					util.Notice(`fatal error: can not get balance/position ` + market)
 					continue
 				}
-				setPosBal(key, posBalance)
+				
 				balanceAllValue := 0.0
 				localUsdAvailable := 0.0
 				borrowAll := 0.0
@@ -171,6 +171,10 @@ func clearCarryBalance() {
 						}
 					}
 					setCarryBalance(key, coin, value)
+					if coin == `BTC` && market == model.OKEX { // 把okex中btc价值的usd按一半计入
+						localUsdAvailable += value.UsdValue / 2
+						balanceAllValue += value.UsdValue / 2
+					}
 					if (coin == `USD` && market == model.Ftx) || (coin == `USDT` && (market == model.OKEX || market == model.Binance)) {
 						localUsdAvailable = value.Amount
 						balanceAllValue += value.Amount
@@ -380,8 +384,6 @@ func makeEqual(key, secret string, setting *model.Setting, balances []*model.Bal
 		setCarryAmount(key, setting.Symbol, 0)
 	}
 	if amount > 0 { //现货数量多、合约数量少
-		util.Notice(`%s make equal %s %s %s %s %s`,
-			key, setting.Market, setting.Symbol, setting.MarketRelated, setting.SymbolRelated, coin)
 		orderSide = model.OrderSideSell
 		if tickPerp.Bids[0].Price < (1-revertDis)*tickRelated.Bids[0].Price && amount < balance.AvailableWithBorrow {
 			symbol = setting.SymbolRelated
@@ -426,6 +428,9 @@ func makeEqual(key, secret string, setting *model.Setting, balances []*model.Bal
 			amount = 0
 		}
 	}
+	if amount*price <= 10 {
+		amount = 0
+	}
 	if amount <= 0 {
 		return
 	}
@@ -433,8 +438,8 @@ func makeEqual(key, secret string, setting *model.Setting, balances []*model.Bal
 	if checkAmount > 0 {
 		resultPerp := api.CancelOrders(key, secret, setting.Market, setting.Symbol)
 		resultRelated := api.CancelOrders(key, secret, setting.Market, setting.SymbolRelated)
-		util.Notice(fmt.Sprintf(`%s cancel all perp:%v related:%v >>>>>> equal %s %f, %s %f = %s %f`,
-			setting.Market, resultPerp, resultRelated, setting.Symbol, amountPerp, setting.SymbolRelated, amountRelated, orderSide, amount))
+		util.Notice(fmt.Sprintf(`%s %s cancel all perp:%v related:%v >>>>>> equal %s %f, %s %f = %s %f`,
+			key, setting.Market, resultPerp, resultRelated, setting.Symbol, amountPerp, setting.SymbolRelated, amountRelated, orderSide, amount))
 		api.PlaceOrder(key, secret, orderSide, model.OrderTypeLimit, setting.Market, symbol, symbol,
 			``, model.FunctionComplement, price, price, amount, true, true, nil)
 	}
@@ -518,26 +523,24 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	}
 	revertOpen = math.Max(revertOpen, -0.003) + fundingRate
 	revertClose := math.Max(-0.0005/(1-math.Min(0.9, jump*coinRate)), -0.003) - fundingRate
-	usdLowLine := model.AppConfig.Amount
+	usdLowLine := 0.1 * balanceAllValue
 	keys, _ := model.AppConfig.GetKeys(setting.Market)
-	localOpenValueLimit := math.Min(openValueLimit, 0.5*balanceAllValue)
+	localOpenValueLimit := math.Min(openValueLimit, usdLowLine/3)
 	table := fmt.Sprintf(`%s_dynamic_`, model.FunctionCarry)
 	if len(keys) > 1 && keys[0] != key {
 		setOpen *= 0.8
 		setClose *= 0.8
 		table += fmt.Sprintf(`slave%s`, key[0:5])
-		if usdRate > 0 {
-			usdLowLine = 0.2 * usdAvailable / usdRate
-			localOpenValueLimit = math.Min(usdLowLine, openValueLimit)
-		} else {
-			localOpenValueLimit = 0
-		}
+		usdLowLine = 0.2 * balanceAllValue
 		valueLow = 0
 	}
+	if setting.Market == model.Binance || setting.MarketRelated == model.Binance {
+		valueLow = 11
+	}
 	if setting.Market == model.OKEX {
-		margin, marginRate := GetMargin(key)
-		if (keys[0] != key && marginRate < 4) || (keys[0] == key && margin < 200000) {
-			util.Notice(`doRevert true %s %f %f`, key, marginRate, margin)
+		collateral := GetCollateral(key)
+		if collateral == nil || (keys[0] != key && collateral.Rate < 5) || (keys[0] == key && (collateral.Available-collateral.Occupied)/collateral.Available < 0.1) {
+			util.Notice(`doRevert true %s %f %f`, key, collateral.Available, collateral.Occupied, collateral.Rate)
 			doRevert = `true`
 		}
 	}
