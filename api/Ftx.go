@@ -454,7 +454,7 @@ func queryOrderFtx(key, secret, orderId string) (order *model.Order) {
 	return
 }
 
-func getPositionsFtx(key, secret string) (success bool, positions []*model.Position) {
+func getPositionsFtx(key, secret string) (success bool, positions []*model.Position, posBalance float64) {
 	postData := make(map[string]interface{})
 	response := SignedRequestFtx(key, secret, `GET`, `/positions`, nil, postData)
 	positionJson, err := util.NewJSON(response)
@@ -474,7 +474,7 @@ func getPositionsFtx(key, secret string) (success bool, positions []*model.Posit
 			positions = append(positions, position)
 		}
 	}
-	return success, positions
+	return success, positions, 0
 }
 
 //func getAccountFtx(key, secret string, accounts *model.Accounts) (success bool) {

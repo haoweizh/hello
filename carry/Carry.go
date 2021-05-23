@@ -101,12 +101,12 @@ func resetTradeMax(key, secret string, market string) {
 			setTradeMax(key, symbolRelated, maxBuy, maxSell)
 			time.Sleep(time.Second / 5)
 		case model.Binance:
-			_, maxLoan := api.GetMaxLoan(key, secret, market, coin)
-			balance := getCarryBalance(key, coin)
-			if balance != nil {
-				balance.AvailableWithBorrow = balance.Amount + maxLoan
-				setCarryBalance(key, coin, balance)
-			}
+			//_, maxLoan := api.GetMaxLoan(key, secret, market, coin)
+			//balance := getCarryBalance(key, coin)
+			//if balance != nil {
+			//	balance.AvailableWithBorrow = balance.Amount + maxLoan
+			//	setCarryBalance(key, coin, balance)
+			//}
 		}
 	}
 }
@@ -120,9 +120,9 @@ func checkProcessTransfer(key, secret, market string) {
 		balance := getBalanceAll(key)
 		balancePos := getPosBal(key)
 		if balance/balancePos > 4 {
-			api.Transfer(key, secret, market, `MARGIN_UMFUTURE`, 0.25*balance-0.75*balancePos)
+			api.Transfer(key, secret, market, `MAIN_UMFUTURE`, 0.25*balance-0.75*balancePos)
 		} else if balance/balancePos < 2.33 {
-			api.Transfer(key, secret, market, `UMFUTURE_MARGIN`, 0.75*balancePos-0.25*balance)
+			api.Transfer(key, secret, market, `UMFUTURE_MAIN`, 0.75*balancePos-0.25*balance)
 		}
 	}
 }
@@ -148,12 +148,12 @@ func clearCarryBalance() {
 				if market == model.OKEX {
 					setMargin(key, margin, marginRate)
 				}
-				resultPosition, positions := api.GetPositions(key, secrets[i], market)
+				resultPosition, positions, posBalance := api.GetPositions(key, secrets[i], market)
 				if !resultBalance || !resultPosition {
 					util.Notice(`fatal error: can not get balance/position ` + market)
 					continue
 				}
-				setPosBal(key, api.GetPosBal(key, secrets[i], market))
+				setPosBal(key, posBalance)
 				balanceAllValue := 0.0
 				localUsdAvailable := 0.0
 				borrowAll := 0.0
@@ -416,9 +416,15 @@ func makeEqual(key, secret string, setting *model.Setting, balances []*model.Bal
 			amount = 0
 		}
 	}
+
 	amount = math.Min(math.Abs(amount), 20000/price)
 	if setting.Market == model.Ftx {
 		amount = math.Min(amount, 90000000)
+	} else if setting.Market == model.Binance {
+		if (symbol == setting.Symbol && price*amount < 10) || (symbol == setting.SymbolRelated && price*amount < 5) {
+			util.Notice(fmt.Sprintf("binance can't order %s low fee: %f ", symbol, price*amount))
+			amount = 0
+		}
 	}
 	if amount <= 0 {
 		return
