@@ -365,7 +365,7 @@ func cancelOrdersBinance(key string, secret string, symbol string) bool {
 		symbol = symbol[:len(symbol)-5] + "USDT"
 		requestUrl = restBinanceFuture + "/fapi/v1/allOpenOrders"
 	} else {
-		requestUrl = restBinance + "/sapi/v1/margin/openOrders"
+		requestUrl = restBinance + "/api/v3/openOrders"
 	}
 	postData.Set("symbol", symbol)
 	signedRequestBinance(key, secret, http.MethodDelete, requestUrl, true, postData)
