@@ -978,7 +978,7 @@ func parseBalanceOKEX(value map[string]interface{}) (balance *model.Balance) {
 }
 
 // margin: 可用保证金
-func getBalanceOKEX(key, secret string) (success bool, balances []*model.Balance, totalInUsd, margin, marginRate float64) {
+func getBalanceOKEX(key, secret string) (success bool, balances []*model.Balance, totalInUsd float64, collateral *model.Collateral) {
 	response := sendSignRequestOKEX(key, secret, http.MethodGet, `/api/v5/account/balance`, nil)
 	responseJson, err := util.NewJSON(response)
 	if err != nil || responseJson == nil || responseJson.GetPath(`data`) == nil ||
@@ -997,19 +997,21 @@ func getBalanceOKEX(key, secret string) (success bool, balances []*model.Balance
 	if data[`totalEq`] != nil {
 		totalInUsd, _ = strconv.ParseFloat(data[`totalEq`].(string), 64)
 	}
-	if data[`adjEq`] != nil && data[`imr`] != nil {
-		marginAll, _ := strconv.ParseFloat(data[`adjEq`].(string), 64)    // 可用保证金
-		marginOccupied, _ := strconv.ParseFloat(data[`imr`].(string), 64) // 被占用保证金
-		margin = marginAll - marginOccupied
+	collateral = &model.Collateral{}
+	if data[`adjEq`] != nil {
+		collateral.Available, _ = strconv.ParseFloat(data[`adjEq`].(string), 64) // 可用保证金
+	}
+	if data[`imr`] != nil {
+		collateral.Occupied, _ = strconv.ParseFloat(data[`imr`].(string), 64) // 被占用保证金
 	}
 	if data[`mgnRatio`] != nil {
-		marginRate, _ = strconv.ParseFloat(data[`mgnRatio`].(string), 64)
+		collateral.Rate, _ = strconv.ParseFloat(data[`mgnRatio`].(string), 64)
 	}
 	for _, item := range data[`details`].([]interface{}) {
 		balance := parseBalanceOKEX(item.(map[string]interface{}))
 		balances = append(balances, balance)
 	}
-	return success, balances, totalInUsd, margin, marginRate
+	return success, balances, totalInUsd, collateral
 }
 
 func getAccountConfigOKEX(key, secret string) (mode string) {
