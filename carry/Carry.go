@@ -416,7 +416,6 @@ func makeEqual(key, secret string, setting *model.Setting, balances []*model.Bal
 			amount = 0
 		}
 	}
-
 	amount = math.Min(math.Abs(amount), 20000/price)
 	if setting.Market == model.Ftx {
 		amount = math.Min(amount, 90000000)

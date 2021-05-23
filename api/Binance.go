@@ -430,7 +430,11 @@ func getBalanceBinance(key string, secret string) (success bool, balances []*mod
 				BalanceTime: util.GetNow(),
 				AccountId:   key}
 			if asset[`free`] != nil { // 持仓
-				balance.Amount, _ = strconv.ParseFloat(asset[`free`].(string), 64)
+				balance.AvailableWithBorrow, _ = strconv.ParseFloat(asset[`free`].(string), 64)
+				if asset[`locked`] != nil {
+					lockAmount, _ := strconv.ParseFloat(asset[`locked`].(string), 64)
+					balance.Amount = balance.AvailableWithBorrow + lockAmount
+				}
 			}
 			//if asset[`netAsset`] != nil {
 			//	balance.Amount, _ = strconv.ParseFloat(asset[`netAsset`].(string), 64)
