@@ -771,9 +771,9 @@ func InitMarketInfos() (success bool) {
 				}
 			}
 		case model.Binance:
-			//for i, key := range keys {
-			//	setPosSideBinance(key, secrets[i])
-			//}
+			for i, key := range keys {
+				setPosSideBinance(key, secrets[i])
+			}
 			model.SetMarketInfos(model.Binance, getMarketsBinance())
 		}
 	}

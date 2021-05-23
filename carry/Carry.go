@@ -148,12 +148,10 @@ func clearCarryBalance() {
 				setCollateral(key, collateral)
 				resultPosition, positions, posBalance := api.GetPositions(key, secrets[i], market)
 				setPosBal(key, posBalance)
-
 				if !resultBalance || !resultPosition {
 					util.Notice(`fatal error: can not get balance/position ` + market)
 					continue
 				}
-
 				balanceAllValue := 0.0
 				localUsdAvailable := 0.0
 				borrowAll := 0.0

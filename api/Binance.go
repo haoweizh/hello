@@ -485,7 +485,6 @@ func getPositionsBinance(key, secret string) (success bool, positions []*model.P
 					}
 				}
 			}
-
 			for _, item := range data {
 				position := &model.Position{Market: model.Binance, Ts: util.GetNowUnixMillion()}
 				asset := item.(map[string]interface{})
@@ -534,7 +533,8 @@ func getFundingRateBinance(key, secret, symbol string) (fundingRate *model.Fundi
 	return
 }
 
-func getMaxLoanBinance(key, secret, coin string) (success bool, maxBorrow float64) {
+// getMaxLoanBinance
+func _(key, secret, coin string) (success bool, maxBorrow float64) {
 	postData := &url.Values{}
 	postData.Set(`asset`, coin)
 	response := signedRequestBinance(key, secret, http.MethodGet, restBinance+`/sapi/v1/margin/maxBorrowable`, true, postData)
