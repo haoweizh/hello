@@ -315,21 +315,27 @@ func GetTransfers(key, secret, market string) (balances []*model.Balance) {
 	return balances
 }
 
-func GetFundingRate(market, symbol string, lock *sync.Mutex) (rate float64) {
+func GetFundingRate(market, symbol string, lock *sync.Mutex) (success bool, rate float64) {
 	if lock != nil {
 		defer lock.Unlock()
 		lock.Lock()
 	}
 	fundingRate := model.GetFundingRate(market, symbol)
 	now := util.GetNow().Unix()
-	if fundingRate != nil && now < fundingRate.ExpireTime-60 {
-		return fundingRate.Rate
-	} else if fundingRate != nil && now > fundingRate.ExpireTime-60 && now < fundingRate.ExpireTime+240 &&
-		fundingRate.UpdateTime > fundingRate.ExpireTime-60 {
-		if now < fundingRate.ExpireTime {
-			return fundingRate.Rate
-		} else {
-			return fundingRate.RateNext
+	if market == model.OKEX { // 针对ok用新expireTime返回旧数据问题的特殊处理
+		if fundingRate != nil && now < fundingRate.ExpireTime-60 {
+			return true, fundingRate.Rate
+		} else if fundingRate != nil && now > fundingRate.ExpireTime-60 && now < fundingRate.ExpireTime+240 &&
+			fundingRate.UpdateTime > fundingRate.ExpireTime-60 {
+			if now < fundingRate.ExpireTime {
+				return true, fundingRate.Rate
+			} else {
+				return true, fundingRate.RateNext
+			}
+		}
+	} else {
+		if fundingRate != nil && now < fundingRate.ExpireTime {
+			return true, fundingRate.Rate
 		}
 	}
 	if fundingRate != nil {
@@ -345,7 +351,7 @@ func GetFundingRate(market, symbol string, lock *sync.Mutex) (rate float64) {
 		rate, expireTime = getFundingRateBybit(symbol)
 		model.SetFundingRate(market, symbol, &model.FundingRate{Rate: rate, ExpireTime: expireTime, UpdateTime: now})
 	case model.Ftx:
-		return 0
+		return true, 0
 		//rates := getFundingRatesFtx()
 		//symbolRates := make(map[string][]*model.FundingRate)
 		//for _, rate := range rates {
@@ -369,10 +375,10 @@ func GetFundingRate(market, symbol string, lock *sync.Mutex) (rate float64) {
 		fundingRate = getFundingRateBinance(``, ``, symbol)
 		model.SetFundingRate(market, symbol, fundingRate)
 	}
-	if fundingRate != nil {
-		rate = fundingRate.Rate
+	if fundingRate != nil && now < fundingRate.ExpireTime {
+		return true, fundingRate.Rate
 	}
-	return rate
+	return false, 0
 }
 
 func GetMaxLoan(key, secret, market, coin string) (success bool, maxLoan float64) {

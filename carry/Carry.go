@@ -478,12 +478,16 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	coin := model.GetCoin(setting.Market, setting.Symbol)
 	balance := getCarryBalance(key, coin)
 	fundingRate := 0.0
+	fundingRateSuccess := false
 	if setting.Market == model.OKEX || setting.Market == model.Binance {
 		now := time.Now()
 		if now.Hour()%8 == 0 && now.Minute() == 0 && now.Second() < 30 {
 			return
 		}
-		fundingRate = api.GetFundingRate(setting.Market, setting.Symbol, &carryLock)
+		fundingRateSuccess, fundingRate = api.GetFundingRate(setting.Market, setting.Symbol, &carryLock)
+		if !fundingRateSuccess {
+			return
+		}
 		if setting.Market == model.OKEX && setting.Symbol == `TRB-USDT-SWAP` {
 			fundingRate *= 3
 		} else {

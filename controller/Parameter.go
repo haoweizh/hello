@@ -349,23 +349,43 @@ func GetParameters(c *gin.Context) {
 	}
 	keyFtx, _ := model.AppConfig.GetKeys(model.Ftx)
 	keyOKEX, _ := model.AppConfig.GetKeys(model.OKEX)
+	keyBinance, _ := model.AppConfig.GetKeys(model.Binance)
 	duration, _ := time.ParseDuration(`-96h`)
 	timeBegin := time.Now().Add(duration)
 	timeBegin = time.Date(timeBegin.Year(), timeBegin.Month(), timeBegin.Day(), 0, 0, 0, 0, timeBegin.Location())
 	//model.AppDB.Model(&orders).Delete(`order_time<? and refresh_type=？`, timeBegin.String()[0:10], `carry`)
 	//model.AppDB.Model(&orders).Delete(`order_time<? and refresh_type=？`, timeBegin.String()[0:10],  `comp`)
-	carryRows, _ := model.AppDB.Model(&orders).Select(`market,amount_type,order_side,sum(price*amount),date(order_time),refresh_type`).
+	failRows, _ := model.AppDB.Model(&orders).Select(`market,amount_type,order_side,date(order_time),refresh_type,count(*)`).
+		Where(`status=?`, `fail`).Group(`market,order_side,date(order_time),amount_type,refresh_type`).
+		Order(`date(order_time) desc`).Rows()
+	failData := make(map[string]float64) // market - amount_type - side - date - fail count
+	if failRows != nil {
+		for failRows.Next() {
+			var marketName, side, date, amountType, refreshType string
+			var orderNum float64
+			_ = failRows.Scan(&marketName, &amountType, &side, &date, &refreshType, &orderNum)
+			key := fmt.Sprintf(`%s-%s-%s-%s-%s`, marketName, amountType, side, date, refreshType)
+			failData[key] = orderNum
+		}
+	}
+	carryRows, _ := model.AppDB.Model(&orders).Select(`market,amount_type,order_side,sum(price*amount),date(order_time),refresh_type,count(*)`).
 		Group(`market,order_side,date(order_time),amount_type,refresh_type`).Order(`date(order_time) desc`).Rows()
 	carryFrontMsg := ``
 	carryBackMsg := ``
 	if carryRows != nil {
 		for carryRows.Next() {
 			var marketName, side, date, amountType, refreshType string
-			var value float64
-			_ = carryRows.Scan(&marketName, &amountType, &side, &value, &date, &refreshType)
-			if (marketName == model.Ftx && strings.Contains(amountType, keyFtx[0])) || (marketName == model.OKEX && strings.Contains(amountType, keyOKEX[0])) {
-				carryFrontMsg += fmt.Sprintf("%s交易额 in USD: %s %s %f 类型：%s\n",
-					marketName, date, side, value, refreshType)
+			var value, orderNum, failRate float64
+			_ = carryRows.Scan(&marketName, &amountType, &side, &value, &date, &refreshType, &orderNum)
+			key := fmt.Sprintf(`%s-%s-%s-%s-%s`, marketName, amountType, side, date, refreshType)
+			if (marketName == model.Ftx && amountType == keyFtx[0]) ||
+				(marketName == model.OKEX && amountType == keyOKEX[0]) ||
+				(marketName == model.Binance && amountType == keyBinance[0]) {
+				if orderNum > 0 {
+					failRate = failData[key] / orderNum
+				}
+				carryFrontMsg += fmt.Sprintf("%s交易额 in USD: %s %s %f 类型：%s 单数:%f 失败率: %f\n",
+					marketName, date, side, value, refreshType, orderNum, failRate)
 			}
 		}
 		carryRows.Close()
