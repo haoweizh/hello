@@ -264,7 +264,7 @@ func setMarketInfoFilters(marketInfo *model.MarketInfo, filters []interface{}) {
 	}
 }
 
-// 查询MARGIN和永续合约信息，不包含其他市场
+// 查询SPOT和永续合约信息，不包含其他市场
 func getMarketsBinance() (marketInfos map[string]*model.MarketInfo) {
 	marketInfos = make(map[string]*model.MarketInfo)
 	requestUrls := []string{restBinance + `/api/v3/exchangeInfo`, restBinanceFuture + `/fapi/v1/exchangeInfo`}
@@ -280,16 +280,16 @@ func getMarketsBinance() (marketInfos map[string]*model.MarketInfo) {
 				}
 				var symbol string
 				if value[`contractType`] == nil {
-					haveMargin := false
+					haveSpot := false
 					if value[`permissions`] != nil {
 						permissions := value[`permissions`].([]interface{})
 						for _, permission := range permissions {
-							if permission.(string) == `MARGIN` {
-								haveMargin = true
+							if permission.(string) == `SPOT` {
+								haveSpot = true
 							}
 						}
 					}
-					if !haveMargin {
+					if !haveSpot {
 						continue
 					}
 					symbol = value[`baseAsset`].(string) + value[`quoteAsset`].(string)
@@ -322,12 +322,13 @@ func placeOrderBinance(key, secret string, order *model.Order, orderSide, orderT
 		requestUrl = restBinanceFuture + "/fapi/v1/order"
 		symbol = strings.ReplaceAll(symbol, "-PERP", "USDT")
 	} else {
-		requestUrl = restBinance + "/sapi/v1/margin/order"
-		if orderSide == model.OrderSideSell {
-			postData.Set("sideEffectType", "MARGIN_BUY")
-		} else if orderSide == model.OrderSideBuy {
-			postData.Set("sideEffectType", "AUTO_REPAY")
-		}
+		requestUrl = restBinance + "/api/v3/order"
+		//requestUrl = restBinance + "/sapi/v1/margin/order"
+		//if orderSide == model.OrderSideSell {
+		//	postData.Set("sideEffectType", "MARGIN_BUY")
+		//} else if orderSide == model.OrderSideBuy {
+		//	postData.Set("sideEffectType", "AUTO_REPAY")
+		//}
 	}
 	if orderSide == model.OrderSideBuy {
 		postData.Set("side", `BUY`)
@@ -408,12 +409,13 @@ func cancelOrdersBinance(key string, secret string, symbol string) bool {
 //}
 
 func getBalanceBinance(key string, secret string) (success bool, balances []*model.Balance) {
-	requestUrl := restBinance + "/sapi/v1/margin/account"
+	//requestUrl := restBinance + "/sapi/v1/margin/account"
+	requestUrl := restBinance + "/api/v3/account"
 	responseBody := signedRequestBinance(key, secret, http.MethodGet, requestUrl, true, nil)
 	balanceJson, _ := util.NewJSON(responseBody)
-	if balanceJson.Get("tradeEnabled").MustBool() {
+	if balanceJson.Get("canTrade").MustBool() {
 		balances = make([]*model.Balance, 0)
-		currencies, _ := balanceJson.Get("userAssets").Array()
+		currencies, _ := balanceJson.Get("balances").Array()
 		for _, value := range currencies {
 			asset := value.(map[string]interface{})
 			if asset[`asset`] == nil {
@@ -427,14 +429,14 @@ func getBalanceBinance(key string, secret string) (success bool, balances []*mod
 				BalanceTime: util.GetNow(),
 				AccountId:   key}
 			if asset[`free`] != nil { // 持仓
-				balance.Available, _ = strconv.ParseFloat(asset[`free`].(string), 64)
+				balance.Amount, _ = strconv.ParseFloat(asset[`free`].(string), 64)
 			}
-			if asset[`netAsset`] != nil {
-				balance.Amount, _ = strconv.ParseFloat(asset[`netAsset`].(string), 64)
-			}
-			if asset[`borrowed`] != nil { //已借数量
-				balance.Borrow, _ = strconv.ParseFloat(asset[`borrowed`].(string), 64)
-			}
+			//if asset[`netAsset`] != nil {
+			//	balance.Amount, _ = strconv.ParseFloat(asset[`netAsset`].(string), 64)
+			//}
+			//if asset[`borrowed`] != nil { //已借数量
+			//	balance.Borrow, _ = strconv.ParseFloat(asset[`borrowed`].(string), 64)
+			//}
 			balances = append(balances, balance)
 			//totalInUsd += balance.UsdValue
 		}
@@ -464,7 +466,7 @@ func getPosBalBinance(key, secret string) (value float64) {
 	return value
 }
 
-func getPositionsBinance(key, secret string) (success bool, positions []*model.Position) {
+func getPositionsBinance(key, secret string) (success bool, positions []*model.Position, posBalance float64) {
 	responseBody := signedRequestBinance(key, secret, http.MethodGet, restBinanceFuture+"/fapi/v2/account", true, nil)
 	positionJson, _ := util.NewJSON(responseBody)
 	success = positionJson.Get("canTrade").MustBool()
@@ -472,6 +474,18 @@ func getPositionsBinance(key, secret string) (success bool, positions []*model.P
 		positions = make([]*model.Position, 0)
 		if positionJson != nil {
 			data := positionJson.Get("positions").MustArray()
+
+			assets := positionJson.Get("assets").MustArray()
+			for _, asset := range assets {
+				item := asset.(map[string]interface{})
+				if item[`asset`].(string) == `USDT` {
+					if item[`walletBalance`] != nil {
+						posBalance, _ = strconv.ParseFloat(item[`walletBalance`].(string), 64)
+						break
+					}
+				}
+			}
+
 			for _, item := range data {
 				position := &model.Position{Market: model.Binance, Ts: util.GetNowUnixMillion()}
 				asset := item.(map[string]interface{})
@@ -492,7 +506,7 @@ func getPositionsBinance(key, secret string) (success bool, positions []*model.P
 			}
 		}
 	}
-	return success, positions
+	return success, positions, posBalance
 }
 
 func getFundingRateBinance(key, secret, symbol string) (fundingRate *model.FundingRate) {

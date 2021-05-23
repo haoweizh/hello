@@ -380,7 +380,8 @@ func GetMaxLoan(key, secret, market, coin string) (success bool, maxLoan float64
 	case model.OKEX:
 		return getMaxLoanOKEX(key, secret, coin)
 	case model.Binance:
-		return getMaxLoanBinance(key, secret, coin)
+		return true, 0
+		//return getMaxLoanBinance(key, secret, coin)
 	}
 	return false, 0
 }
@@ -463,7 +464,7 @@ func GetPosition(market, symbol, address string) (success bool, position *model.
 	return false, nil
 }
 
-func GetPositions(key, secret, market string) (success bool, positions []*model.Position) {
+func GetPositions(key, secret, market string) (success bool, positions []*model.Position, posBalance float64) {
 	switch market {
 	case model.Binance:
 		return getPositionsBinance(key, secret)
@@ -482,9 +483,9 @@ func GetPositions(key, secret, market string) (success bool, positions []*model.
 				success = temp
 			}
 		}
-		return success, positions
+		return success, positions, 0
 	}
-	return false, nil
+	return false, nil, 0
 }
 
 func MustPlaceOrder(key, secret, orderSide, orderType, market, symbol, instrument, orderParam,
@@ -770,9 +771,9 @@ func InitMarketInfos() (success bool) {
 				}
 			}
 		case model.Binance:
-			for i, key := range keys {
-				setPosSideBinance(key, secrets[i])
-			}
+			//for i, key := range keys {
+			//	setPosSideBinance(key, secrets[i])
+			//}
 			model.SetMarketInfos(model.Binance, getMarketsBinance())
 		}
 	}
