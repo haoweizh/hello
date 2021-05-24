@@ -174,7 +174,7 @@ func clearCarryBalance() {
 						balanceAllValue += value.UsdValue / 2
 					}
 					if (coin == `USD` && market == model.Ftx) || (coin == `USDT` && (market == model.OKEX || market == model.Binance)) {
-						localUsdAvailable = value.Amount
+						localUsdAvailable += value.Amount
 						balanceAllValue += value.Amount
 						borrowAll += value.Borrow
 					} else if settingCoins[coin] {
