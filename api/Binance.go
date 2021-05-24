@@ -102,18 +102,15 @@ func handleTickerBinance(markets *model.Markets, json *simplejson.Json, symbol s
 		bidAsk := model.BidAsk{Ts: ts, TsReceived: now,
 			Bids: []model.Tick{{Price: bidPrice, Amount: bidAmount}},
 			Asks: []model.Tick{{Price: askPrice, Amount: askAmount}}}
-		var findSettingSymbol string
 		if bookTicker == `bookTicker` { //有e字段 表示是U合约推送，否则现货，此区分方式不稳定，暂用
 			if symbol[len(symbol)-4:] == `USDT` {
-				findSettingSymbol = symbol[0:len(symbol)-4] + "-PERP"
+				symbol = symbol[0:len(symbol)-4] + "-PERP"
 			}
-		} else {
-			findSettingSymbol = symbol
 		}
 		if markets.SetBidAsk(symbol, model.Binance, &bidAsk) {
-			for function, handler := range model.GetFunctions(model.Binance, findSettingSymbol) {
+			for function, handler := range model.GetFunctions(model.Binance, symbol) {
 				if handler != nil {
-					settings := model.GetSetting(function, model.Binance, findSettingSymbol)
+					settings := model.GetSetting(function, model.Binance, symbol)
 					for _, setting := range settings {
 						go handler(setting, &bidAsk)
 					}
