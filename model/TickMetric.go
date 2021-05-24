@@ -20,6 +20,7 @@ type TickMetric struct {
 	countValid int
 	countAll   int
 	delayAvg   float64
+	betweenAvg float64 // 两个tick之间的平均时间
 	priceLow   float64
 	priceHigh  float64
 	start      time.Time

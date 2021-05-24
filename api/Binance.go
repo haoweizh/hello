@@ -87,7 +87,7 @@ var subscribeHandlerBinance = func(subscribes []interface{}, keyChannel string) 
 	return err
 }
 
-func handleTickerBinance(markets *model.Markets, json *simplejson.Json, symbol string) {
+func handleTickerBinance(markets *model.Markets, json *simplejson.Json, symbol string, updateId int64) {
 	bidPrice, _ := strconv.ParseFloat(json.Get(`b`).MustString(), 64)
 	bidAmount, _ := strconv.ParseFloat(json.Get(`B`).MustString(), 64)
 	askPrice, _ := strconv.ParseFloat(json.Get(`a`).MustString(), 64)
@@ -99,13 +99,17 @@ func handleTickerBinance(markets *model.Markets, json *simplejson.Json, symbol s
 	}
 	bookTicker := json.Get(`e`).MustString()
 	if symbol != `` && bidPrice > 0 && bidAmount > 0 && askPrice > 0 && askAmount > 0 {
-		bidAsk := model.BidAsk{Ts: ts, TsReceived: now,
+		bidAsk := model.BidAsk{Ts: ts, TsReceived: now, UpdateId: updateId,
 			Bids: []model.Tick{{Price: bidPrice, Amount: bidAmount}},
 			Asks: []model.Tick{{Price: askPrice, Amount: askAmount}}}
 		if bookTicker == `bookTicker` { //有e字段 表示是U合约推送，否则现货，此区分方式不稳定，暂用
 			if symbol[len(symbol)-4:] == `USDT` {
 				symbol = symbol[0:len(symbol)-4] + "-PERP"
 			}
+		}
+		haveOld, old := markets.GetBidAsk(symbol, model.Binance)
+		if haveOld && old.UpdateId > bidAsk.UpdateId {
+			return
 		}
 		if markets.SetBidAsk(symbol, model.Binance, &bidAsk) {
 			for function, handler := range model.GetFunctions(model.Binance, symbol) {
@@ -120,9 +124,9 @@ func handleTickerBinance(markets *model.Markets, json *simplejson.Json, symbol s
 	}
 }
 
-func handleDepthBinance(markets *model.Markets, json *simplejson.Json, symbol string) {
+func handleDepthBinance(markets *model.Markets, json *simplejson.Json, symbol string, updateId int64) {
 	var findSettingSymbol string
-	bidAsk := model.BidAsk{}
+	bidAsk := model.BidAsk{UpdateId: updateId}
 	var bids, asks []interface{}
 	tickId, _ := json.Get(`lastUpdateId`).Int64()
 	depthUpdate, _ := json.Get(`e`).String()
@@ -179,6 +183,10 @@ func handleDepthBinance(markets *model.Markets, json *simplejson.Json, symbol st
 	}
 	sort.Sort(bidAsk.Asks)
 	sort.Sort(sort.Reverse(bidAsk.Bids))
+	haveOld, old := markets.GetBidAsk(symbol, model.Binance)
+	if haveOld && old.UpdateId > bidAsk.UpdateId {
+		return
+	}
 	if markets.SetBidAsk(symbol, model.Binance, &bidAsk) {
 		for function, handler := range model.GetFunctions(model.Binance, findSettingSymbol) {
 			if handler != nil {
@@ -205,13 +213,14 @@ func WsDepthServeBinance(markets *model.Markets, orderHandler OrderHandler) (cha
 			return
 		}
 		symbol := json.Get(`s`).MustString()
+		updateId := json.Get(`u`).MustInt64()
 		if symbol == `` {
 			return
 		}
 		if strings.Contains(subscribe, `@depth`) {
-			handleDepthBinance(markets, json, symbol)
+			handleDepthBinance(markets, json, symbol, updateId)
 		} else if strings.Contains(subscribe, `@bookTicker`) {
-			handleTickerBinance(markets, json, symbol)
+			handleTickerBinance(markets, json, symbol, updateId)
 		}
 	}
 	channels = make([]chan struct{}, 0)
