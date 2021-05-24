@@ -87,8 +87,7 @@ var subscribeHandlerBinance = func(subscribes []interface{}, keyChannel string) 
 	return err
 }
 
-func handleTickerBinance(markets *model.Markets, json *simplejson.Json) {
-	symbol := json.Get(`s`).MustString()
+func handleTickerBinance(markets *model.Markets, json *simplejson.Json, symbol string) {
 	bidPrice, _ := strconv.ParseFloat(json.Get(`b`).MustString(), 64)
 	bidAmount, _ := strconv.ParseFloat(json.Get(`B`).MustString(), 64)
 	askPrice, _ := strconv.ParseFloat(json.Get(`a`).MustString(), 64)
@@ -124,79 +123,71 @@ func handleTickerBinance(markets *model.Markets, json *simplejson.Json) {
 	}
 }
 
-func handleDepthBinance(markets *model.Markets, json *simplejson.Json) {
-	subscribe, _ := json.Get("stream").String()
-	symbol := model.GetSymbol(model.Binance, subscribe) //当前获取到的币种的推送
+func handleDepthBinance(markets *model.Markets, json *simplejson.Json, symbol string) {
 	var findSettingSymbol string
-	if symbol != "" {
-		json = json.Get("data")
-		if json == nil {
+	bidAsk := model.BidAsk{}
+	var bids, asks []interface{}
+	tickId, _ := json.Get(`lastUpdateId`).Int64()
+	depthUpdate, _ := json.Get(`e`).String()
+	if tickId > 0 { //存在lastUpdateId字段 表示是现货深度推送，此区分方式不稳定，暂用
+		if tickId > getLastTickIdBinance(symbol) {
+			setLastTickIdBinance(symbol, tickId)
+			bidAsk.Ts = int(util.GetNowUnixMillion())
+			bidAsk.TsReceived = int(util.GetNowUnixMillion())
+		} else {
 			return
 		}
-		bidAsk := model.BidAsk{}
-		var bids, asks []interface{}
-		tickId, _ := json.Get(`lastUpdateId`).Int64()
-		depthUpdate, _ := json.Get(`e`).String()
-		if tickId > 0 { //存在lastUpdateId字段 表示是现货深度推送，此区分方式不稳定，暂用
-			if tickId > getLastTickIdBinance(symbol) {
-				setLastTickIdBinance(symbol, tickId)
-				bidAsk.Ts = int(util.GetNowUnixMillion())
-				bidAsk.TsReceived = int(util.GetNowUnixMillion())
-			} else {
-				return
-			}
-			bidArray, _ := json.Get(`bids`).Array()
-			bids = bidArray
-			askArray, _ := json.Get(`asks`).Array()
-			asks = askArray
-			if symbol[len(symbol)-4:] == `USDT` {
-				findSettingSymbol = symbol[0:len(symbol)-4] + "-PERP"
-			}
-		} else if depthUpdate == "depthUpdate" { //存在depthUpdate字段 表示是合约深度推送，此区分方式不稳定，暂用
-			nowTradeTime, _ := json.Get(`T`).Int64()
-			if nowTradeTime <= 0 || nowTradeTime < getLastTradeTimeBinance(symbol) {
-				return
-			}
-			setLastTradeTimeBinance(symbol, nowTradeTime)
-			bidAsk.Ts = json.Get(`E`).MustInt()
-			bidAsk.TsReceived = int(util.GetNowUnixMillion())
-			bidArray, _ := json.Get(`b`).Array()
-			bids = bidArray
-			askArray, _ := json.Get(`a`).Array()
-			asks = askArray
-			symbol = json.Get(`s`).MustString()
-			if symbol[len(symbol)-4:] == `USDT` {
-				symbol = symbol[0:len(symbol)-4] + "-PERP"
-			}
-			findSettingSymbol = symbol
+		bidArray, _ := json.Get(`bids`).Array()
+		bids = bidArray
+		askArray, _ := json.Get(`asks`).Array()
+		asks = askArray
+		if symbol[len(symbol)-4:] == `USDT` {
+			findSettingSymbol = symbol[0:len(symbol)-4] + "-PERP"
 		}
-		bidAsk.Bids = make([]model.Tick, len(bids))
-		for i, value := range bids {
-			if len(value.([]interface{})) < 2 {
-				return
-			}
-			price, _ := strconv.ParseFloat(value.([]interface{})[0].(string), 64)
-			amount, _ := strconv.ParseFloat(value.([]interface{})[1].(string), 64)
-			bidAsk.Bids[i] = model.Tick{Price: price, Amount: amount}
+	} else if depthUpdate == "depthUpdate" { //存在depthUpdate字段 表示是合约深度推送，此区分方式不稳定，暂用
+		nowTradeTime, _ := json.Get(`T`).Int64()
+		if nowTradeTime <= 0 || nowTradeTime < getLastTradeTimeBinance(symbol) {
+			return
 		}
-		bidAsk.Asks = make([]model.Tick, len(asks))
-		for i, value := range asks {
-			if len(value.([]interface{})) < 2 {
-				return
-			}
-			price, _ := strconv.ParseFloat(value.([]interface{})[0].(string), 64)
-			amount, _ := strconv.ParseFloat(value.([]interface{})[1].(string), 64)
-			bidAsk.Asks[i] = model.Tick{Price: price, Amount: amount}
+		setLastTradeTimeBinance(symbol, nowTradeTime)
+		bidAsk.Ts = json.Get(`E`).MustInt()
+		bidAsk.TsReceived = int(util.GetNowUnixMillion())
+		bidArray, _ := json.Get(`b`).Array()
+		bids = bidArray
+		askArray, _ := json.Get(`a`).Array()
+		asks = askArray
+		symbol = json.Get(`s`).MustString()
+		if symbol[len(symbol)-4:] == `USDT` {
+			symbol = symbol[0:len(symbol)-4] + "-PERP"
 		}
-		sort.Sort(bidAsk.Asks)
-		sort.Sort(sort.Reverse(bidAsk.Bids))
-		if markets.SetBidAsk(symbol, model.Binance, &bidAsk) {
-			for function, handler := range model.GetFunctions(model.Binance, findSettingSymbol) {
-				if handler != nil {
-					settings := model.GetSetting(function, model.Binance, findSettingSymbol)
-					for _, setting := range settings {
-						go handler(setting, &bidAsk)
-					}
+		findSettingSymbol = symbol
+	}
+	bidAsk.Bids = make([]model.Tick, len(bids))
+	for i, value := range bids {
+		if len(value.([]interface{})) < 2 {
+			return
+		}
+		price, _ := strconv.ParseFloat(value.([]interface{})[0].(string), 64)
+		amount, _ := strconv.ParseFloat(value.([]interface{})[1].(string), 64)
+		bidAsk.Bids[i] = model.Tick{Price: price, Amount: amount}
+	}
+	bidAsk.Asks = make([]model.Tick, len(asks))
+	for i, value := range asks {
+		if len(value.([]interface{})) < 2 {
+			return
+		}
+		price, _ := strconv.ParseFloat(value.([]interface{})[0].(string), 64)
+		amount, _ := strconv.ParseFloat(value.([]interface{})[1].(string), 64)
+		bidAsk.Asks[i] = model.Tick{Price: price, Amount: amount}
+	}
+	sort.Sort(bidAsk.Asks)
+	sort.Sort(sort.Reverse(bidAsk.Bids))
+	if markets.SetBidAsk(symbol, model.Binance, &bidAsk) {
+		for function, handler := range model.GetFunctions(model.Binance, findSettingSymbol) {
+			if handler != nil {
+				settings := model.GetSetting(function, model.Binance, findSettingSymbol)
+				for _, setting := range settings {
+					go handler(setting, &bidAsk)
 				}
 			}
 		}
@@ -211,10 +202,19 @@ func WsDepthServeBinance(markets *model.Markets, orderHandler OrderHandler) (cha
 			util.SocketInfo(`binance fail to unmarshal json ` + err.Error())
 			return
 		}
-		if subType == model.SubscribeDepth {
-			handleDepthBinance(markets, json)
-		} else {
-			handleTickerBinance(markets, json)
+		subscribe, _ := json.Get("stream").String()
+		json = json.Get(`data`)
+		if json == nil {
+			return
+		}
+		symbol := json.Get(`s`).MustString()
+		if symbol == `` {
+			return
+		}
+		if strings.Contains(subscribe, `@depth`) {
+			handleDepthBinance(markets, json, symbol)
+		} else if strings.Contains(subscribe, `@bookTicker`) {
+			handleTickerBinance(markets, json, symbol)
 		}
 	}
 	channels = make([]chan struct{}, 0)
