@@ -487,11 +487,7 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 		if !fundingRateSuccess {
 			return
 		}
-		if setting.Market == model.OKEX && setting.Symbol == `TRB-USDT-SWAP` {
-			fundingRate *= 3
-		} else {
-			fundingRate *= 0.9
-		}
+		fundingRate *= 0.9
 	}
 	if balance == nil {
 		model.SetCarryInfo(`warning `+coin, fmt.Sprintf(`slave: balace not available!!! %s %s`, key, coin))
@@ -537,6 +533,12 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	}
 	if setting.Market == model.OKEX {
 		collateral := GetCollateral(key)
+		if setting.Symbol == `IOTA-USDT-SWAP` || setting.Symbol == `TRB-USDT-SWAP` {
+			setOpen += 0.01
+			setClose += 0.005
+			revertOpen -= 0.01
+			revertClose += 0.005
+		}
 		if collateral == nil || (keys[0] != key && collateral.Rate < 5) || (keys[0] == key && (collateral.Available-collateral.Occupied)/collateral.Available < 0.1) {
 			util.Notice(`doRevert true %s %f %f`, key, collateral.Available, collateral.Occupied, collateral.Rate)
 			doRevert = `true`
