@@ -673,7 +673,10 @@ func GetWSSubscribe(market, symbol, subType string) (subscribe interface{}) {
 		if symbol[len(symbol)-5:] == `-PERP` {
 			symbol = symbol[0:len(symbol)-5] + `USDT`
 		}
-		return strings.ToLower(symbol) + `@depth5@100ms`
+		if subType == model.SubscribeDepth {
+			return strings.ToLower(symbol) + `@depth5@100ms`
+		}
+		return strings.ToLower(symbol) + `@bookTicker`
 	case model.Coinpark: //BTC_USDT bibox_sub_spot_BTC_USDT_ticker
 		//return `bibox_sub_spot_` + strings.ToUpper(symbol) + `_ticker`
 		return `bibox_sub_spot_` + strings.ToUpper(symbol) + `_depth`

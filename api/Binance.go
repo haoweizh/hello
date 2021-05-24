@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"github.com/bitly/go-simplejson"
 	"hello/model"
 	"hello/util"
 	"math"
@@ -86,94 +87,140 @@ var subscribeHandlerBinance = func(subscribes []interface{}, keyChannel string) 
 	return err
 }
 
-func WsDepthServeBinance(markets *model.Markets, orderHandler OrderHandler) (channels []chan struct{}, err error) {
-	wsHandler := func(channelKey string, event []byte, orderHandler OrderHandler) {
-		json, err := util.NewJSON(event)
-		if err != nil {
-			util.SocketInfo(`binance fail to unmarshal json ` + err.Error())
-			return
-		}
-		subscribe, _ := json.Get("stream").String()
-		symbol := model.GetSymbol(model.Binance, subscribe) //当前获取到的币种的推送
+func handleTickerBinance(markets *model.Markets, json *simplejson.Json) {
+	symbol := json.Get(`s`).MustString()
+	bidPrice, _ := strconv.ParseFloat(json.Get(`b`).MustString(), 64)
+	bidAmount, _ := strconv.ParseFloat(json.Get(`B`).MustString(), 64)
+	askPrice, _ := strconv.ParseFloat(json.Get(`a`).MustString(), 64)
+	askAmount, _ := strconv.ParseFloat(json.Get(`A`).MustString(), 64)
+	ts := json.Get(`E`).MustInt()
+	now := int(time.Now().UnixNano() / int64(time.Millisecond))
+	if ts == 0 {
+		ts = now
+	}
+	bookTicker := json.Get(`e`).MustString()
+	if symbol != `` && bidPrice > 0 && bidAmount > 0 && askPrice > 0 && askAmount > 0 {
+		bidAsk := model.BidAsk{Ts: ts, TsReceived: now,
+			Bids: []model.Tick{{Price: bidPrice, Amount: bidAmount}},
+			Asks: []model.Tick{{Price: askPrice, Amount: askAmount}}}
 		var findSettingSymbol string
-		if symbol != "" {
-			json = json.Get("data")
-			if json == nil {
-				return
+		if bookTicker == `bookTicker` { //有e字段 表示是U合约推送，否则现货，此区分方式不稳定，暂用
+			if symbol[len(symbol)-4:] == `USDT` {
+				findSettingSymbol = symbol[0:len(symbol)-4] + "-PERP"
 			}
-			bidAsk := model.BidAsk{}
-			var bids, asks []interface{}
-			tickId, _ := json.Get(`lastUpdateId`).Int64()
-			depthUpdate, _ := json.Get(`e`).String()
-			if tickId > 0 { //存在lastUpdateId字段 表示是现货深度推送，此区分方式不稳定，暂用
-				if tickId > getLastTickIdBinance(symbol) {
-					setLastTickIdBinance(symbol, tickId)
-					bidAsk.Ts = int(util.GetNowUnixMillion())
-					bidAsk.TsReceived = int(util.GetNowUnixMillion())
-				} else {
-					return
-				}
-				bidArray, _ := json.Get(`bids`).Array()
-				bids = bidArray
-				askArray, _ := json.Get(`asks`).Array()
-				asks = askArray
-				if symbol[len(symbol)-4:] == `USDT` {
-					findSettingSymbol = symbol[0:len(symbol)-4] + "-PERP"
-				}
-			} else if depthUpdate == "depthUpdate" { //存在depthUpdate字段 表示是合约深度推送，此区分方式不稳定，暂用
-				nowTradeTime, _ := json.Get(`T`).Int64()
-				if nowTradeTime <= 0 || nowTradeTime < getLastTradeTimeBinance(symbol) {
-					return
-				}
-				setLastTradeTimeBinance(symbol, nowTradeTime)
-				bidAsk.Ts = json.Get(`E`).MustInt()
-				bidAsk.TsReceived = int(util.GetNowUnixMillion())
-				bidArray, _ := json.Get(`b`).Array()
-				bids = bidArray
-				askArray, _ := json.Get(`a`).Array()
-				asks = askArray
-				symbol = json.Get(`s`).MustString()
-				if symbol[len(symbol)-4:] == `USDT` {
-					symbol = symbol[0:len(symbol)-4] + "-PERP"
-				}
-				findSettingSymbol = symbol
-			}
-			bidAsk.Bids = make([]model.Tick, len(bids))
-			for i, value := range bids {
-				if len(value.([]interface{})) < 2 {
-					return
-				}
-				price, _ := strconv.ParseFloat(value.([]interface{})[0].(string), 64)
-				amount, _ := strconv.ParseFloat(value.([]interface{})[1].(string), 64)
-				bidAsk.Bids[i] = model.Tick{Price: price, Amount: amount}
-			}
-			bidAsk.Asks = make([]model.Tick, len(asks))
-			for i, value := range asks {
-				if len(value.([]interface{})) < 2 {
-					return
-				}
-				price, _ := strconv.ParseFloat(value.([]interface{})[0].(string), 64)
-				amount, _ := strconv.ParseFloat(value.([]interface{})[1].(string), 64)
-				bidAsk.Asks[i] = model.Tick{Price: price, Amount: amount}
-			}
-			sort.Sort(bidAsk.Asks)
-			sort.Sort(sort.Reverse(bidAsk.Bids))
-			if markets.SetBidAsk(symbol, model.Binance, &bidAsk) {
-				for function, handler := range model.GetFunctions(model.Binance, findSettingSymbol) {
-					if handler != nil {
-						settings := model.GetSetting(function, model.Binance, findSettingSymbol)
-						for _, setting := range settings {
-							go handler(setting, &bidAsk)
-						}
+		} else {
+			findSettingSymbol = symbol
+		}
+		if markets.SetBidAsk(symbol, model.Binance, &bidAsk) {
+			for function, handler := range model.GetFunctions(model.Binance, findSettingSymbol) {
+				if handler != nil {
+					settings := model.GetSetting(function, model.Binance, findSettingSymbol)
+					for _, setting := range settings {
+						go handler(setting, &bidAsk)
 					}
 				}
 			}
 		}
 	}
+}
+
+func handleDepthBinance(markets *model.Markets, json *simplejson.Json) {
+	subscribe, _ := json.Get("stream").String()
+	symbol := model.GetSymbol(model.Binance, subscribe) //当前获取到的币种的推送
+	var findSettingSymbol string
+	if symbol != "" {
+		json = json.Get("data")
+		if json == nil {
+			return
+		}
+		bidAsk := model.BidAsk{}
+		var bids, asks []interface{}
+		tickId, _ := json.Get(`lastUpdateId`).Int64()
+		depthUpdate, _ := json.Get(`e`).String()
+		if tickId > 0 { //存在lastUpdateId字段 表示是现货深度推送，此区分方式不稳定，暂用
+			if tickId > getLastTickIdBinance(symbol) {
+				setLastTickIdBinance(symbol, tickId)
+				bidAsk.Ts = int(util.GetNowUnixMillion())
+				bidAsk.TsReceived = int(util.GetNowUnixMillion())
+			} else {
+				return
+			}
+			bidArray, _ := json.Get(`bids`).Array()
+			bids = bidArray
+			askArray, _ := json.Get(`asks`).Array()
+			asks = askArray
+			if symbol[len(symbol)-4:] == `USDT` {
+				findSettingSymbol = symbol[0:len(symbol)-4] + "-PERP"
+			}
+		} else if depthUpdate == "depthUpdate" { //存在depthUpdate字段 表示是合约深度推送，此区分方式不稳定，暂用
+			nowTradeTime, _ := json.Get(`T`).Int64()
+			if nowTradeTime <= 0 || nowTradeTime < getLastTradeTimeBinance(symbol) {
+				return
+			}
+			setLastTradeTimeBinance(symbol, nowTradeTime)
+			bidAsk.Ts = json.Get(`E`).MustInt()
+			bidAsk.TsReceived = int(util.GetNowUnixMillion())
+			bidArray, _ := json.Get(`b`).Array()
+			bids = bidArray
+			askArray, _ := json.Get(`a`).Array()
+			asks = askArray
+			symbol = json.Get(`s`).MustString()
+			if symbol[len(symbol)-4:] == `USDT` {
+				symbol = symbol[0:len(symbol)-4] + "-PERP"
+			}
+			findSettingSymbol = symbol
+		}
+		bidAsk.Bids = make([]model.Tick, len(bids))
+		for i, value := range bids {
+			if len(value.([]interface{})) < 2 {
+				return
+			}
+			price, _ := strconv.ParseFloat(value.([]interface{})[0].(string), 64)
+			amount, _ := strconv.ParseFloat(value.([]interface{})[1].(string), 64)
+			bidAsk.Bids[i] = model.Tick{Price: price, Amount: amount}
+		}
+		bidAsk.Asks = make([]model.Tick, len(asks))
+		for i, value := range asks {
+			if len(value.([]interface{})) < 2 {
+				return
+			}
+			price, _ := strconv.ParseFloat(value.([]interface{})[0].(string), 64)
+			amount, _ := strconv.ParseFloat(value.([]interface{})[1].(string), 64)
+			bidAsk.Asks[i] = model.Tick{Price: price, Amount: amount}
+		}
+		sort.Sort(bidAsk.Asks)
+		sort.Sort(sort.Reverse(bidAsk.Bids))
+		if markets.SetBidAsk(symbol, model.Binance, &bidAsk) {
+			for function, handler := range model.GetFunctions(model.Binance, findSettingSymbol) {
+				if handler != nil {
+					settings := model.GetSetting(function, model.Binance, findSettingSymbol)
+					for _, setting := range settings {
+						go handler(setting, &bidAsk)
+					}
+				}
+			}
+		}
+	}
+}
+
+func WsDepthServeBinance(markets *model.Markets, orderHandler OrderHandler) (channels []chan struct{}, err error) {
+	subType := model.SubscribeTicker
+	wsHandler := func(channelKey string, event []byte, orderHandler OrderHandler) {
+		json, wsErr := util.NewJSON(event)
+		if wsErr != nil {
+			util.SocketInfo(`binance fail to unmarshal json ` + err.Error())
+			return
+		}
+		if subType == model.SubscribeDepth {
+			handleDepthBinance(markets, json)
+		} else {
+			handleTickerBinance(markets, json)
+		}
+	}
 	channels = make([]chan struct{}, 0)
 	//requestUrl := model.AppConfig.WSUrls[model.Binance]
-	marginSubs := GetWSSubscribes(model.Binance, model.SubscribeDepth)
-	perpSubs := GetWSSubscribes(model.Binance, model.SubscribeDepth)
+	marginSubs := GetWSSubscribes(model.Binance, subType)
+	perpSubs := GetWSSubscribes(model.Binance, subType)
 	step := 20
 	for i := 0; i < len(marginSubs); i += step {
 		subs := marginSubs[i:int64(math.Min(float64(len(marginSubs)), float64(i+step)))]
