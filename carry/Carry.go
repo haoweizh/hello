@@ -225,16 +225,16 @@ var ProcessCarry = func(setting *model.Setting, tick *model.BidAsk) {
 	_, tickRelated := model.AppMarkets.GetBidAsk(setting.SymbolRelated, setting.MarketRelated)
 	now := time.Now()
 	million := util.GetNowUnixMillion()
-	if (setting.Market == model.Binance &&
-		(million-int64(tick.Ts) > 25 || million-int64(tickRelated.Ts) > 200 || million-int64(tickPerp.Ts) > 200)) ||
-		(setting.Market == model.Ftx && million-int64(tick.Ts) > 90) ||
-		(setting.Market != model.Ftx && setting.Market != model.Binance && million-int64(tick.Ts) > 25) {
-		return
-	}
 	if tickPerp == nil || tickRelated == nil || tickPerp.Asks == nil || tickPerp.Bids == nil ||
 		tickRelated.Asks == nil || tickRelated.Bids == nil || setting == nil ||
 		model.AppPause || (model.AppConfig.Env != `test` && (model.AppConfig.Handle != `1` ||
 		(million-int64(tickRelated.Ts) > 3000 || million-int64(tickPerp.Ts) > 3000))) {
+		return
+	}
+	if (setting.Market == model.Binance &&
+		(million-int64(tick.Ts) > 25 || million-int64(tickRelated.Ts) > 200 || million-int64(tickPerp.Ts) > 200)) ||
+		(setting.Market == model.Ftx && million-int64(tick.Ts) > 90) ||
+		(setting.Market != model.Ftx && setting.Market != model.Binance && million-int64(tick.Ts) > 25) {
 		return
 	}
 	scoreOpen := 1 - tickRelated.Asks[0].Price/tickPerp.Bids[0].Price
