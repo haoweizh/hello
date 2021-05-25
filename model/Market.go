@@ -273,7 +273,7 @@ func (markets *Markets) SetBidAsk(symbol, marketName string, bidAsk *BidAsk) boo
 		//}
 		markets.bidAsks[symbol][marketName] = bidAsk
 		current := util.GetNow()
-		AppMetric.AddTick(marketName, symbol, current, bidAsk)
+		AppMetric.AddTick(marketName, symbol, current, last, bidAsk)
 		return true
 	}
 	return false

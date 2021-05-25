@@ -85,7 +85,7 @@ func (metricManager *MetricManager) AddCarry(mark string, carryOpen, carryClose 
 	}
 }
 
-func (metricManager *MetricManager) AddTick(market, symbol string, current time.Time, bidAsk *BidAsk) {
+func (metricManager *MetricManager) AddTick(market, symbol string, current time.Time, lastBidAsk, bidAsk *BidAsk) {
 	defer metricManager.Lock.Unlock()
 	metricManager.Lock.Lock()
 	marketSymbol := fmt.Sprintf(`%s_%s`, market, symbol)
@@ -101,10 +101,9 @@ func (metricManager *MetricManager) AddTick(market, symbol string, current time.
 	}
 	now := int(current.UnixNano() / int64(time.Millisecond))
 	tickMetric := metricManager.tickHour[marketSymbol][timeStr]
-	getOld, oldTick := AppMarkets.GetBidAsk(symbol, market)
 	lastTime := now
-	if getOld {
-		lastTime = oldTick.Ts
+	if lastBidAsk != nil {
+		lastTime = lastBidAsk.Ts
 	}
 	between := bidAsk.Ts - lastTime
 	tickMetric.betweenSum += between
