@@ -225,8 +225,9 @@ var ProcessCarry = func(setting *model.Setting, tick *model.BidAsk) {
 	_, tickRelated := model.AppMarkets.GetBidAsk(setting.SymbolRelated, setting.MarketRelated)
 	now := time.Now()
 	million := util.GetNowUnixMillion()
-	if (setting.Market == model.Ftx && million-int64(tick.Ts) > 90) ||
-		(setting.Market == model.Binance && million-int64(tick.Ts) > 100) ||
+	if (setting.Market == model.Binance &&
+		(million-int64(tick.Ts) > 25 || million-int64(tickRelated.Ts) > 200 || million-int64(tickPerp.Ts) > 200)) ||
+		(setting.Market == model.Ftx && million-int64(tick.Ts) > 90) ||
 		(setting.Market != model.Ftx && setting.Market != model.Binance && million-int64(tick.Ts) > 25) {
 		return
 	}
