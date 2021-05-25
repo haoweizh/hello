@@ -14,17 +14,20 @@ const recentTickLength = 100
 //const tickErrorMsg = `有效tick低于2成或平均延迟大于50ms[最近tick %s]`
 
 type TickMetric struct {
-	delayLow   int
-	delayHigh  int
-	delaySum   int
-	countValid int
-	countAll   int
-	delayAvg   float64
-	betweenAvg float64 // 两个tick之间的平均时间
-	priceLow   float64
-	priceHigh  float64
-	start      time.Time
-	end        time.Time
+	delayLow    int
+	delayHigh   int
+	delaySum    int
+	betweenLow  int
+	betweenHigh int
+	betweenSum  int
+	countValid  int
+	countAll    int
+	delayAvg    float64
+	betweenAvg  float64 // 两个tick之间的平均时间
+	priceLow    float64
+	priceHigh   float64
+	start       time.Time
+	end         time.Time
 }
 
 type CarryMetric struct {
@@ -96,8 +99,22 @@ func (metricManager *MetricManager) AddTick(market, symbol string, current time.
 	if metricManager.tickHour[marketSymbol][timeStr] == nil {
 		metricManager.tickHour[marketSymbol][timeStr] = &TickMetric{priceLow: 0, priceHigh: 0}
 	}
+	now := int(current.UnixNano() / int64(time.Millisecond))
 	tickMetric := metricManager.tickHour[marketSymbol][timeStr]
-	delay := int(current.UnixNano()/1000000) - bidAsk.Ts
+	getOld, oldTick := AppMarkets.GetBidAsk(symbol, market)
+	lastTime := now
+	if getOld {
+		lastTime = oldTick.Ts
+	}
+	between := bidAsk.Ts - lastTime
+	tickMetric.betweenSum += between
+	if tickMetric.betweenLow == 0 || tickMetric.betweenLow > between {
+		tickMetric.betweenLow = between
+	}
+	if tickMetric.betweenHigh < between {
+		tickMetric.betweenHigh = between
+	}
+	delay := now - bidAsk.Ts
 	if tickMetric.delayLow == 0 || tickMetric.delayLow > delay {
 		tickMetric.delayLow = delay
 	}
@@ -116,6 +133,7 @@ func (metricManager *MetricManager) AddTick(market, symbol string, current time.
 	tickMetric.countAll++
 	tickMetric.delaySum += delay
 	tickMetric.delayAvg = float64(tickMetric.delaySum) / float64(tickMetric.countAll)
+	tickMetric.betweenAvg = float64(tickMetric.betweenSum) / float64(tickMetric.countAll)
 	if metricManager.metricTicks == nil || metricManager.index == nil {
 		metricManager.metricTicks = make(map[string][]*TickDelay)
 		metricManager.index = make(map[string]int)
@@ -226,9 +244,9 @@ func (metricManager *MetricManager) ToString() (metricStr string) {
 		metricStr = metricStr + fmt.Sprintf("[%s tick状况]\n", marketSymbol)
 		for str, metric := range timeMetric {
 			if timeMap[str] {
-				metricStr += fmt.Sprintf("%s: all:%d <100:%d delay: %d-%d avg: %f tick low-high %f %f\n",
-					str, metric.countAll, metric.countValid, metric.delayLow, metric.delayHigh,
-					metric.delayAvg, metric.priceLow, metric.priceHigh)
+				metricStr += fmt.Sprintf("%s: all:%d <100:%d delay:[%d-%d %f] price[%f-%f] 间隔[%d-%d %f]\n",
+					str, metric.countAll, metric.countValid, metric.delayLow, metric.delayHigh, metric.delayAvg,
+					metric.priceLow, metric.priceHigh, metric.betweenLow, metric.betweenHigh, metric.betweenAvg)
 			}
 		}
 	}
