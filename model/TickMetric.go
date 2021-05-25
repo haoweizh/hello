@@ -101,11 +101,10 @@ func (metricManager *MetricManager) AddTick(market, symbol string, current time.
 	}
 	now := int(current.UnixNano() / int64(time.Millisecond))
 	tickMetric := metricManager.tickHour[marketSymbol][timeStr]
-	lastTime := now
+	between := 0
 	if lastBidAsk != nil {
-		lastTime = lastBidAsk.Ts
+		between = bidAsk.Ts - lastBidAsk.Ts
 	}
-	between := bidAsk.Ts - lastTime
 	tickMetric.betweenSum += between
 	if tickMetric.betweenLow == 0 || tickMetric.betweenLow > between {
 		tickMetric.betweenLow = between
