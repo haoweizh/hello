@@ -6,7 +6,6 @@ import (
 	"hello/model"
 	"hello/util"
 	"math"
-	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -44,11 +43,19 @@ func WsDepthServeHuobiDM(markets *model.Markets, orderHandler OrderHandler) (cha
 			}
 		} else {
 			responseJson = responseJson.Get(`tick`)
+			symbol := responseJson.Get(`ch`).MustString()
+			strs := strings.Split(symbol, `.`)
+			if strs == nil || len(strs) <= 1 {
+				return
+			}
+			symbol = strings.ToLower(strs[1])
+
 			bidAsk := model.BidAsk{}
 			bids := responseJson.Get(`bids`).MustArray()
 			asks := responseJson.Get(`asks`).MustArray()
 			bidAsk.Bids = make([]model.Tick, len(bids))
 			bidAsk.Asks = make([]model.Tick, len(asks))
+
 			for i, item := range bids {
 				value := item.([]interface{})
 				if value == nil || len(value) < 2 {
@@ -56,6 +63,10 @@ func WsDepthServeHuobiDM(markets *model.Markets, orderHandler OrderHandler) (cha
 				}
 				price, _ := value[0].(json.Number).Float64()
 				amount, _ := value[1].(json.Number).Float64()
+				success, amount := ParseRealAmount(model.HuobiDM, symbol, amount)
+				if !success {
+					return
+				}
 				bidAsk.Bids[i] = model.Tick{Price: price, Amount: amount}
 			}
 			for i, item := range asks {
@@ -65,31 +76,36 @@ func WsDepthServeHuobiDM(markets *model.Markets, orderHandler OrderHandler) (cha
 				}
 				price, _ := value[0].(json.Number).Float64()
 				amount, _ := value[1].(json.Number).Float64()
+				success, amount := ParseRealAmount(model.HuobiDM, symbol, amount)
+				if !success {
+					return
+				}
+
 				bidAsk.Asks[i] = model.Tick{Price: price, Amount: amount}
 			}
 			bidAsk.Ts = responseJson.Get(`ts`).MustInt()
 			bidAsk.TsReceived = int(util.GetNowUnixMillion())
-			symbol := responseJson.Get(`ch`).MustString()
-			strs := strings.Split(symbol, `.`)
-			if strs != nil && len(strs) > 1 {
-				symbol = strings.ToLower(strs[1])
-				sort.Sort(bidAsk.Asks)
-				sort.Sort(sort.Reverse(bidAsk.Bids))
-				if markets.SetBidAsk(symbol, model.HuobiDM, &bidAsk) {
-					for function, handler := range model.GetFunctions(model.HuobiDM, symbol) {
-						if handler != nil {
-							settings := model.GetSetting(function, model.HuobiDM, symbol)
-							for _, setting := range settings {
-								go handler(setting, &bidAsk)
-							}
+			bidAsk.UpdateId = responseJson.Get("ts").MustInt64()
+
+			haveOld, old := markets.GetBidAsk(symbol, model.HuobiDM)
+			if haveOld && old.UpdateId > bidAsk.UpdateId {
+				return
+			}
+
+			if markets.SetBidAsk(symbol, model.HuobiDM, &bidAsk) {
+				for function, handler := range model.GetFunctions(model.HuobiDM, symbol) {
+					if handler != nil {
+						settings := model.GetSetting(function, model.HuobiDM, symbol)
+						for _, setting := range settings {
+							go handler(setting, &bidAsk)
 						}
 					}
 				}
 			}
 		}
 	}
-	return WebSocketClient(model.HuobiDM, wsHuobiDM, model.SubscribeDepth,
-		GetWSSubscribes(model.HuobiDM, model.SubscribeDepth), subscribeHandlerHuobiDM, wsHandler, orderHandler)
+	return WebSocketClient(model.HuobiDM, wsHuobiDM, model.SubscribeTicker,
+		GetWSSubscribes(model.HuobiDM, model.SubscribeTicker), subscribeHandlerHuobiDM, wsHandler, orderHandler)
 }
 
 func parseBalanceHuobiDM(key string, data map[string]interface{}) (balance *model.Balance) {
@@ -123,6 +139,37 @@ func parseBalanceHuobiDM(key string, data map[string]interface{}) (balance *mode
 	//	account.LeverRate, _ = data[`lever_rate`].(json.Number).Int64()
 	//}
 	return
+}
+
+func getMarketsHuobiDM() (marketInfos map[string]*model.MarketInfo) {
+	//param := map[string]interface{}{`support_margin_mode`: "cross"}//全仓模式
+	responseBody := SignedRequestHuobi(``, ``, model.HuobiDM, `GET`, "/linear-swap-api/v1/swap_contract_info", nil)
+	contractsJson, err := util.NewJSON(responseBody)
+
+	marketInfos = make(map[string]*model.MarketInfo)
+	if err != nil || contractsJson == nil || strings.ToLower(contractsJson.Get(`status`).MustString()) != `ok` {
+		return marketInfos
+	}
+
+	items, _ := contractsJson.Get("data").Array()
+	for _, item := range items {
+		value := item.(map[string]interface{})
+
+		//只获取all-全逐仓都支持、cross-全仓模式
+		if value["support_margin_mode"] != nil && (value["support_margin_mode"].(string) == "all" || value["support_margin_mode"].(string) == "cross") {
+			marketInfo := &model.MarketInfo{Name: strings.ToLower(value["contract_code"].(string))}
+
+			if value["symbol"] != nil {
+				marketInfo.CTCurrency = strings.ToLower(value["symbol"].(string))
+			}
+			if value["contract_size"] != nil {
+				marketInfo.CTValue, _ = value["contract_size"].(json.Number).Float64()
+			}
+
+			marketInfos[marketInfo.Name] = marketInfo
+		}
+	}
+	return marketInfos
 }
 
 func getBalanceHuobiDM(key, secret string) (success bool, balances []*model.Balance) {

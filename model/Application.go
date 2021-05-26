@@ -19,8 +19,8 @@ var CarryInfo = make(map[string]string)                             // function 
 var carryInfos = make(map[string]map[string]map[string]interface{}) // table - line name - key - value
 var AppMetric = &MetricManager{}
 
-const KeyDefault = ``
-const SecretDefault = ``
+const KeyDefault = `bn2wed5t4y-b57c5de3-a9808690-45bbc`
+const SecretDefault = `5e740dfc-92a2d639-0f7458bf-63030`
 
 const OKEXBTCContractFaceValue = 100.0
 const OKEXOtherContractFaceValue = 10.0
@@ -246,6 +246,10 @@ func getSymbolWithSplit(original, split string) (symbol string) {
 func GetSymbol(market, subscribe string) (symbol string) {
 	switch market {
 	case Huobi: //market.xrpbtc.depth.step0: xrp_btc
+		if strings.Contains(subscribe, "bbo") {
+			return strings.Split(subscribe, ".")[1]
+		}
+
 		subscribe = strings.Replace(subscribe, "market.", "", 1)
 		subscribe = strings.Replace(subscribe, ".depth.step0", "", 1)
 		return getSymbolWithSplit(subscribe, "_")

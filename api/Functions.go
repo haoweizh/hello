@@ -659,9 +659,17 @@ func GetWSSubscribes(market, subType string) []interface{} {
 
 func GetWSSubscribe(market, symbol, subType string) (subscribe interface{}) {
 	switch market {
-	case model.Huobi: // xrp_btc: market.xrpbtc.mbp.refresh.
-		return "market." + strings.Replace(symbol, "_", "", 1) + ".mbp.refresh.5"
+	case model.Huobi: // xrpbtc: market.xrpbtc.mbp.refresh.
+		if subType == model.SubscribeTicker {
+			return "market." + symbol + ".bbo"
+		}
+
+		return "market." + symbol + ".mbp.refresh.5"
 	case model.HuobiDM:
+		if subType == model.SubscribeTicker {
+			return "market." + symbol + ".bbo"
+		}
+
 		return fmt.Sprintf(`market.%s.depth.step6`, symbol)
 	case model.OKEX: // 未来基于market兼容okfuture LTC-USD-190628
 		return GetCurrentInstrument(``, ``, market, symbol)
@@ -789,8 +797,9 @@ func InitMarketInfos() (success bool) {
 			model.SetMarketInfos(model.Binance, getMarketsBinance())
 		case model.Huobi:
 			model.SetMarketInfos(model.Huobi, getMarketsHuobi())
+		case model.HuobiDM:
+			model.SetMarketInfos(model.HuobiDM, getMarketsHuobiDM())
 		}
-
 	}
 	return success
 }
