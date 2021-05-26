@@ -225,15 +225,25 @@ var ProcessCarry = func(setting *model.Setting, tick *model.BidAsk) {
 	_, tickRelated := model.AppMarkets.GetBidAsk(setting.SymbolRelated, setting.MarketRelated)
 	now := time.Now()
 	million := util.GetNowUnixMillion()
+	delayTick := int64(0)
+	if tick != nil {
+		delayTick = million - int64(tick.Ts)
+	}
+	delayPerp := int64(0)
+	if tickPerp != nil {
+		delayPerp = million - int64(tickPerp.Ts)
+	}
+	delayRelated := int64(0)
+	if tickRelated != nil {
+		delayRelated = million - int64(tickRelated.Ts)
+	}
 	if tickPerp == nil || tickRelated == nil || tickPerp.Asks == nil || tickPerp.Bids == nil ||
-		tickRelated.Asks == nil || tickRelated.Bids == nil || setting == nil ||
-		model.AppPause || (model.AppConfig.Env != `test` && (model.AppConfig.Handle != `1` ||
-		(million-int64(tickRelated.Ts) > 100 || million-int64(tickPerp.Ts) > 100))) {
+		tickRelated.Asks == nil || tickRelated.Bids == nil || setting == nil || model.AppPause ||
+		(model.AppConfig.Env != `test` && (model.AppConfig.Handle != `1` || (delayRelated > 300 || delayPerp > 300))) {
 		return
 	}
-	if (setting.Market == model.Binance && million-int64(tick.Ts) > 25) ||
-		(setting.Market == model.Ftx && million-int64(tick.Ts) > 90) ||
-		(setting.Market != model.Ftx && setting.Market != model.Binance && million-int64(tick.Ts) > 25) {
+	if (setting.Market == model.Binance && (delayPerp > 100 || delayRelated > 100 || tick == tickPerp)) ||
+		(setting.Market != model.Binance && delayTick > 30) {
 		return
 	}
 	scoreOpen := 1 - tickRelated.Asks[0].Price/tickPerp.Bids[0].Price
