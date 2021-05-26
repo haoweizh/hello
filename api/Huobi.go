@@ -103,6 +103,23 @@ func WsDepthServeHuobi(markets *model.Markets, orderHandler OrderHandler) (chan 
 		GetWSSubscribes(model.Huobi, model.SubscribeDepth), subscribeHandlerHuobi, wsHandler, orderHandler)
 }
 
+func getMarketsHuobi() (marketInfos map[string]*model.MarketInfo) {
+	responseBody := SignedRequestHuobi(``, ``, model.Huobi, `GET`, "/v1/common/symbols", nil)
+	symbolsJson, err := util.NewJSON(responseBody)
+
+	marketInfos = make(map[string]*model.MarketInfo)
+	if err == nil {
+		status, _ := symbolsJson.Get("status").String()
+		if status == "ok" {
+			items, _ := symbolsJson.Get("data").Array()
+			for _, item := range items {
+				value := item.(map[string]interface{})
+				marketInfo := &model.MarketInfo{}
+			}
+		}
+	}
+}
+
 func SignedRequestHuobi(key, secret, market, method, path string, data map[string]interface{}) []byte {
 	if key == `` || secret == `` {
 		keys, secrets := model.AppConfig.GetKeys(model.Huobi)

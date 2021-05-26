@@ -787,7 +787,10 @@ func InitMarketInfos() (success bool) {
 				setPosSideBinance(key, secrets[i])
 			}
 			model.SetMarketInfos(model.Binance, getMarketsBinance())
+		case model.Huobi:
+			model.SetMarketInfos(model.Huobi, getMarketsHuobi())
 		}
+
 	}
 	return success
 }
