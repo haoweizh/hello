@@ -225,9 +225,18 @@ var ProcessCarry = func(setting *model.Setting, tick *model.BidAsk) {
 	_, tickRelated := model.AppMarkets.GetBidAsk(setting.SymbolRelated, setting.MarketRelated)
 	now := time.Now()
 	million := util.GetNowUnixMillion()
-	delayTick := million - int64(tick.Ts)
-	delayPerp := million - int64(tickPerp.Ts)
-	delayRelated := million - int64(tickRelated.Ts)
+	delayTick := int64(0)
+	if tick != nil {
+		delayTick = million - int64(tick.Ts)
+	}
+	delayPerp := int64(0)
+	if tickPerp != nil {
+		delayPerp = million - int64(tickPerp.Ts)
+	}
+	delayRelated := int64(0)
+	if tickRelated != nil {
+		delayRelated = million - int64(tickRelated.Ts)
+	}
 	if tickPerp == nil || tickRelated == nil || tickPerp.Asks == nil || tickPerp.Bids == nil ||
 		tickRelated.Asks == nil || tickRelated.Bids == nil || setting == nil || model.AppPause ||
 		(model.AppConfig.Env != `test` && (model.AppConfig.Handle != `1` || (delayRelated > 300 || delayPerp > 300))) {
