@@ -12,7 +12,9 @@ import (
 )
 
 const restHuobiDM = `api.hbdm.com`
-const wsHuobiDM = `wss://api.hbdm.com/ws`
+
+//const wsHuobiDM = `wss://api.hbdm.com/ws`
+const wsHuobiDM = `wss://api.hbdm.vn/linear-swap-ws`
 
 var subscribeHandlerHuobiDM = func(subscribes []interface{}, subType string) error {
 	var err error = nil
@@ -25,7 +27,7 @@ var subscribeHandlerHuobiDM = func(subscribes []interface{}, subType string) err
 			util.SocketInfo("huobiDM can not subscribe " + err.Error())
 			return err
 		}
-		util.Notice(`huobi subscribed ` + string(subscribeMessage))
+		util.Notice(`huobiDM subscribed ` + string(subscribeMessage))
 	}
 	return err
 }
@@ -42,50 +44,44 @@ func WsDepthServeHuobiDM(markets *model.Markets, orderHandler OrderHandler) (cha
 				util.SocketInfo("huobiDM server ping client error " + err.Error())
 			}
 		} else {
-			responseJson = responseJson.Get(`tick`)
+			tickJson := responseJson.Get(`tick`)
+			if tickJson.Interface() == nil {
+				return
+			}
 			symbol := responseJson.Get(`ch`).MustString()
 			strs := strings.Split(symbol, `.`)
 			if strs == nil || len(strs) <= 1 {
 				return
 			}
 			symbol = strings.ToLower(strs[1])
+			now := int(time.Now().UnixNano() / int64(time.Millisecond))
 
-			bidAsk := model.BidAsk{}
-			bids := responseJson.Get(`bids`).MustArray()
-			asks := responseJson.Get(`asks`).MustArray()
-			bidAsk.Bids = make([]model.Tick, len(bids))
-			bidAsk.Asks = make([]model.Tick, len(asks))
+			bidAsk := model.BidAsk{Ts: responseJson.Get(`ts`).MustInt(), TsReceived: now, UpdateId: tickJson.Get("ts").MustInt64()}
+			bid := tickJson.Get(`bid`).MustArray()
+			ask := tickJson.Get(`ask`).MustArray()
+			bidAsk.Bids = make([]model.Tick, 1)
+			bidAsk.Asks = make([]model.Tick, 1)
 
-			for i, item := range bids {
-				value := item.([]interface{})
-				if value == nil || len(value) < 2 {
-					continue
-				}
-				price, _ := value[0].(json.Number).Float64()
-				amount, _ := value[1].(json.Number).Float64()
-				success, amount := ParseRealAmount(model.HuobiDM, symbol, amount)
-				if !success {
-					return
-				}
-				bidAsk.Bids[i] = model.Tick{Price: price, Amount: amount}
+			if bid == nil || len(bid) < 2 || ask == nil || len(ask) < 2 {
+				return
 			}
-			for i, item := range asks {
-				value := item.([]interface{})
-				if value == nil || len(value) < 2 {
-					continue
-				}
-				price, _ := value[0].(json.Number).Float64()
-				amount, _ := value[1].(json.Number).Float64()
-				success, amount := ParseRealAmount(model.HuobiDM, symbol, amount)
-				if !success {
-					return
-				}
 
-				bidAsk.Asks[i] = model.Tick{Price: price, Amount: amount}
+			bidAmount, _ := bid[1].(json.Number).Float64()
+			bidPrice, _ := bid[0].(json.Number).Float64()
+			bidSuccess, bidAmount := ParseRealAmount(model.HuobiDM, symbol, bidAmount)
+			if !bidSuccess {
+				return
 			}
-			bidAsk.Ts = responseJson.Get(`ts`).MustInt()
-			bidAsk.TsReceived = int(util.GetNowUnixMillion())
-			bidAsk.UpdateId = responseJson.Get("ts").MustInt64()
+
+			askAmount, _ := ask[1].(json.Number).Float64()
+			askPrice, _ := ask[0].(json.Number).Float64()
+			askSuccess, askAmount := ParseRealAmount(model.HuobiDM, symbol, askAmount)
+			if !askSuccess {
+				return
+			}
+
+			bidAsk.Bids = []model.Tick{{Price: bidPrice, Amount: bidAmount}}
+			bidAsk.Asks = []model.Tick{{Price: askPrice, Amount: askAmount}}
 
 			haveOld, old := markets.GetBidAsk(symbol, model.HuobiDM)
 			if haveOld && old.UpdateId > bidAsk.UpdateId {
@@ -165,6 +161,10 @@ func getMarketsHuobiDM() (marketInfos map[string]*model.MarketInfo) {
 			if value["contract_size"] != nil {
 				marketInfo.CTValue, _ = value["contract_size"].(json.Number).Float64()
 			}
+			if value["price_tick"] != nil {
+				marketInfo.PriceIncrement, _ = value["price_tick"].(json.Number).Float64()
+			}
+			marketInfo.SizeIncrement = 1
 
 			marketInfos[marketInfo.Name] = marketInfo
 		}

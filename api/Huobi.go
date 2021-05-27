@@ -16,7 +16,9 @@ import (
 )
 
 const restHuobi = `api-aws.huobi.pro`
-const wsHuobi = `wss://api-aws.huobi.pro/feed`
+
+//const wsHuobi = `wss://api-aws.huobi.pro/feed`
+const wsHuobi = `wss://api-aws.huobi.pro/ws`
 
 type HuobiMessage struct {
 	Ping   int    `json:"ping"`
@@ -51,7 +53,7 @@ var subscribeHandlerHuobi = func(subscribes []interface{}, subType string) error
 			util.SocketInfo("huobi can not subscribe " + err.Error())
 			return err
 		}
-		//util.SocketInfo(`huobi subscribed ` + v)
+		util.Notice(`huobi subscribed ` + string(subscribeMessage))
 	}
 	return err
 }
@@ -59,41 +61,37 @@ var subscribeHandlerHuobi = func(subscribes []interface{}, subType string) error
 func WsDepthServeHuobi(markets *model.Markets, orderHandler OrderHandler) (chan struct{}, error) {
 	wsHandler := func(channelKey string, event []byte, orderHandler OrderHandler) {
 		res := util.UnGzip(event)
-		resMap := util.JsonDecodeByte(res)
+		responseJson, _ := util.NewJSON(res)
+		//resMap := util.JsonDecodeByte(res)
 		//message := &HuobiMessage{}
 		//_ = json.Unmarshal(res, message)
-		if v, ok := resMap["ping"]; ok {
+		if responseJson.Get(`ping`).MustInt() > 0 {
 			pingMap := make(map[string]interface{})
-			pingMap["pong"] = v
+			pingMap["pong"] = responseJson.Get(`ping`).MustInt()
 			pingParams := util.JsonEncodeToByte(pingMap)
 			if err := sendToWs(model.Huobi, pingParams); err != nil {
 				util.SocketInfo("huobi server ping client error " + err.Error())
 			}
 		} else {
+			tickJson := responseJson.Get(`tick`)
+			if tickJson.Interface() == nil {
+				return
+			}
+
 			now := int(time.Now().UnixNano() / int64(time.Millisecond))
-			tickInfo := resMap["tick"].(map[string]interface{})
-			symbol := model.GetSymbol(model.Huobi, tickInfo["symbol"].(string))
+			symbol := model.GetSymbol(model.Huobi, tickJson.Get("symbol").MustString())
 			if symbol != "" {
-				bidAsk := model.BidAsk{Ts: resMap["ts"].(int), TsReceived: now, UpdateId: tickInfo["quoteTime"].(int64),
-					Bids: []model.Tick{{Price: tickInfo["bid"].(float64), Amount: tickInfo["bidSize"].(float64)}},
-					Asks: []model.Tick{{Price: tickInfo["ask"].(float64), Amount: tickInfo["askSize"].(float64)}}}
+				symbol = strings.ReplaceAll(symbol, "_", "")
+
+				bidAsk := model.BidAsk{Ts: responseJson.Get("ts").MustInt(), TsReceived: now, UpdateId: tickJson.Get("quoteTime").MustInt64(),
+					Bids: []model.Tick{{Price: tickJson.Get("bid").MustFloat64(), Amount: tickJson.Get("bidSize").MustFloat64()}},
+					Asks: []model.Tick{{Price: tickJson.Get("ask").MustFloat64(), Amount: tickJson.Get("askSize").MustFloat64()}}}
 
 				haveOld, old := markets.GetBidAsk(symbol, model.Huobi)
 				if haveOld && old.UpdateId > bidAsk.UpdateId {
 					return
 				}
-				//bidAsk.Asks = make([]model.Tick, len(message.Tick.Asks))
-				//bidAsk.Bids = make([]model.Tick, len(message.Tick.Bids))
-				//for key, value := range message.Tick.Asks {
-				//	bidAsk.Asks[key] = model.Tick{Price: value[0], Amount: value[1]}
-				//}
-				//for key, value := range message.Tick.Bids {
-				//	bidAsk.Bids[key] = model.Tick{Price: value[0], Amount: value[1]}
-				//}
-				//sort.Sort(bidAsk.Asks)
-				//sort.Sort(sort.Reverse(bidAsk.Bids))
-				//bidAsk.Ts = message.Ts
-				//bidAsk.TsReceived = int(util.GetNowUnixMillion())
+
 				if markets.SetBidAsk(symbol, model.Huobi, &bidAsk) {
 					for function, handler := range model.GetFunctions(model.Huobi, symbol) {
 						if handler != nil {
@@ -126,19 +124,16 @@ func getMarketsHuobi() (marketInfos map[string]*model.MarketInfo) {
 					continue
 				}
 				marketInfo := &model.MarketInfo{Name: value["symbol"].(string)}
-				if value["value-precision"] != nil {
-					priceDecimal, _ := value["value-precision"].(json.Number).Int64()
+				if value["price-precision"] != nil {
+					priceDecimal, _ := value["price-precision"].(json.Number).Int64()
 					marketInfo.PriceDecimal = int(priceDecimal)
 				}
 				if value["limit-order-min-order-amt"] != nil {
 					marketInfo.SizeMin, _ = value["limit-order-min-order-amt"].(json.Number).Float64()
 				}
-				if value["limit-order-max-order-amt"] != nil {
-					marketInfo.SizeIncrement, _ = value["limit-order-max-order-amt"].(json.Number).Float64()
-				}
-				if value["max-order-value"] != nil {
-					marketInfo.PriceIncrement, _ = value["max-order-value"].(json.Number).Float64()
-				}
+
+				//price-precision	true	integer	交易对报价的精度（小数点后位数）
+				//amount-precision	true	integer	交易对基础币种计数精度（小数点后位数）
 
 				marketInfos[marketInfo.Name] = marketInfo
 			}
