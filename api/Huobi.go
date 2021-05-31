@@ -145,14 +145,14 @@ func WsDepthServeHuobi(markets *model.Markets, orderHandler OrderHandler) (chann
 
 			bidAmount, _ := bid[1].(json.Number).Float64()
 			bidPrice, _ := bid[0].(json.Number).Float64()
-			bidSuccess, bidAmount := ParseRealAmount(model.HuobiDM, symbol, bidAmount)
+			bidSuccess, bidAmount := ParseRealAmount(model.Huobi, symbol, bidAmount)
 			if !bidSuccess {
 				return
 			}
 
 			askAmount, _ := ask[1].(json.Number).Float64()
 			askPrice, _ := ask[0].(json.Number).Float64()
-			askSuccess, askAmount := ParseRealAmount(model.HuobiDM, symbol, askAmount)
+			askSuccess, askAmount := ParseRealAmount(model.Huobi, symbol, askAmount)
 			if !askSuccess {
 				return
 			}
@@ -463,9 +463,33 @@ func getPositionsHuobi(key string, secret string) (success bool, positions []*mo
 		return getPositionsHuobi(key, secret)
 	}
 	positions = make([]*model.Position, 0)
-	items := responseJson.Get(`data`).MustArray()
+	contracts := responseJson.Get(`data`).Get(`positions`).MustArray()
 	posBalance = responseJson.Get(`margin_balance`).MustFloat64()
 
+	for _, contract := range contracts {
+		item := contract.(map[string]interface{})
+
+		position := &model.Position{Market: model.Huobi, Ts: util.GetNowUnixMillion()}
+		if item[`contract_code`] != nil {
+			position.Currency = strings.ToLower(item[`contract_code`].(string))
+		}
+		if item[`cost_open`] != nil {
+			position.EntryPrice, _ = strconv.ParseFloat(item[`cost_open`].(string), 64)
+		}
+		if item[`volume`] != nil && item[`direction`] != nil {
+			position.Direction = item[`direction`].(string)
+
+			amount := item[`volume`].(float64)
+			_, realAmount := ParseRealAmount(model.Huobi, position.Currency, amount)
+			if item[`direction`].(string) == "sell" {
+				position.Free = realAmount * -1
+			} else {
+				position.Free = realAmount
+			}
+		}
+		positions = append(positions, position)
+	}
+	return success, positions, posBalance
 }
 
 // 资产账户 getBalanceHuobi
@@ -499,6 +523,8 @@ func getBalanceHuobi(key string, secret string) (success bool, balances []*model
 				balance.BalanceTime = util.GetNow()
 				balance.Market = model.Huobi
 				balance.Coin = coin
+
+				balanceMap[coin] = balance
 			}
 			if value[`type`] != nil && value[`balance`] != nil && value["type"] == "trade" {
 				balance.Available, _ = strconv.ParseFloat(value[`balance`].(string), 64)
