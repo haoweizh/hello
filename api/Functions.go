@@ -294,8 +294,8 @@ func GetBalances(key, secret, market string) (
 		success, balances, totalInUsd = getBalanceFtx(key, secret)
 	case model.OKEX:
 		success, balances, totalInUsd, collateral = getBalanceOKEX(key, secret)
-	case model.HuobiDM:
-		success, balances = getBalanceHuobiDM(key, secret)
+	case model.Huobi:
+		success, balances = getBalanceHuobi(key, secret)
 	case model.Binance:
 		success, balances = getBalanceBinance(key, secret)
 	}
@@ -472,6 +472,8 @@ func GetPosition(market, symbol, address string) (success bool, position *model.
 
 func GetPositions(key, secret, market string) (success bool, positions []*model.Position, posBalance float64) {
 	switch market {
+	case model.Huobi:
+		return getPositionsHuobi(key, secret)
 	case model.Binance:
 		return getPositionsBinance(key, secret)
 	case model.Ftx:
@@ -668,14 +670,10 @@ func GetWSSubscribe(market, symbol, subType string) (subscribe interface{}) {
 		if subType == model.SubscribeTicker && !strings.Contains(symbol, "-") {
 			return "market." + symbol + ".bbo"
 		}
-
-		//return "market." + symbol + ".mbp.refresh.5"
 	case model.HuobiDM:
 		if subType == model.SubscribeTicker && strings.Contains(symbol, "-") {
 			return "market." + symbol + ".bbo"
 		}
-
-		//return fmt.Sprintf(`market.%s.depth.step6`, symbol)
 	case model.OKEX: // 未来基于market兼容okfuture LTC-USD-190628
 		return GetCurrentInstrument(``, ``, market, symbol)
 	case model.OKFUTURE:
@@ -802,8 +800,6 @@ func InitMarketInfos() (success bool) {
 			model.SetMarketInfos(model.Binance, getMarketsBinance())
 		case model.Huobi:
 			model.SetMarketInfos(model.Huobi, getMarketsHuobi())
-		case model.HuobiDM:
-			model.SetMarketInfos(model.HuobiDM, getMarketsHuobiDM())
 		}
 	}
 	return success
@@ -871,11 +867,11 @@ func CreateMarketDepthServer(markets *model.Markets, market string, orderHandler
 	var err error
 	switch market {
 	case model.Huobi:
-		channel, err = WsDepthServeHuobi(markets, nil)
-		channels[0] = channel
-	case model.HuobiDM:
-		channel, err = WsDepthServeHuobiDM(markets, nil)
-		channels[0] = channel
+		channels, err = WsDepthServeHuobi(markets, nil)
+		//channels[0] = channel
+	//case model.HuobiDM:
+	//	channel, err = WsDepthServeHuobiDM(markets, nil)
+	//	channels[0] = channel
 	case model.OKEX:
 		channels, err = WsDepthServeOKEX(model.GetMarketSymbols(model.OKEX), orderHandler)
 	case model.Binance:

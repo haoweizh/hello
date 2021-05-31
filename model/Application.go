@@ -60,7 +60,7 @@ var AppSettings []Setting
 var AppConfig *Config
 var AppMarkets = NewMarkets()
 
-var HuobiAccountIds = make(map[string]string)
+//var HuobiAccountIds = make(map[string]string)
 var AppPause = false
 
 func GetDialectSymbol(market, symbol string) (dialectSymbol string) {

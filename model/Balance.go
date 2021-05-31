@@ -9,6 +9,7 @@ type Balance struct {
 	Amount              float64
 	Available           float64
 	AvailableWithBorrow float64 //可借+持仓-已挂的卖单=现在总的可下卖单数量（千万别用这个作为持仓！）
+	LockAmount          float64 //锁仓数量
 	Borrow              float64
 	BalanceTime         time.Time // confirm time if transaction
 	Coin                string
