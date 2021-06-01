@@ -137,7 +137,7 @@ func parseBalanceHuobiDM(key string, data map[string]interface{}) (balance *mode
 
 func getMarketsHuobiDM() (marketInfos map[string]*model.MarketInfo) {
 	//param := map[string]interface{}{`support_margin_mode`: "cross"}//全仓模式
-	responseBody := SignedRequestHuobi(``, ``, `GET`, restHuobiDM+"/linear-swap-api/v1/swap_contract_info", nil)
+	responseBody := SignedRequestHuobi(``, ``, `GET`, restHuobiDM, "/linear-swap-api/v1/swap_contract_info", nil)
 	contractsJson, err := util.NewJSON(responseBody)
 
 	marketInfos = make(map[string]*model.MarketInfo)
@@ -171,7 +171,7 @@ func getMarketsHuobiDM() (marketInfos map[string]*model.MarketInfo) {
 }
 
 func getBalanceHuobiDM(key, secret string) (success bool, balances []*model.Balance) {
-	responseBody := SignedRequestHuobi(key, secret, `POST`, restHuobiDM+"/api/v1/contract_account_info", nil)
+	responseBody := SignedRequestHuobi(key, secret, `POST`, restHuobiDM, "/api/v1/contract_account_info", nil)
 	util.SocketInfo(`get huobiDM balance: ` + string(responseBody))
 	accountJson, err := util.NewJSON(responseBody)
 	if err != nil || accountJson == nil || strings.ToLower(accountJson.Get(`status`).MustString()) != `ok` {
@@ -193,7 +193,7 @@ func getBalanceHuobiDM(key, secret string) (success bool, balances []*model.Bala
 }
 
 func getHoldingHuobiDM(key, secret, symbolSide string) (position *model.Position) {
-	responseBody := SignedRequestHuobi(key, secret, `POST`, restHuobiDM+`/api/v1/contract_position_info`, nil)
+	responseBody := SignedRequestHuobi(key, secret, `POST`, restHuobiDM, `/api/v1/contract_position_info`, nil)
 	accountJson, err := util.NewJSON(responseBody)
 	if err != nil || accountJson == nil || strings.ToLower(accountJson.Get(`status`).MustString()) != `ok` {
 		util.Notice(`fail to refresh account huobiDM holding `)
@@ -318,7 +318,7 @@ func placeOrderHuobiDM(key, secret string, order *model.Order,
 	param := map[string]interface{}{`contract_code`: contractCode, `trigger_type`: triggerType,
 		`trigger_price`: triggerPrice, `order_price`: price, `volume`: size,
 		`direction`: direction, `offset`: offset, `lever_rate`: `5`}
-	responseBody := SignedRequestHuobi(key, secret, `POST`, restHuobiDM+`/api/v1/contract_trigger_order`, param)
+	responseBody := SignedRequestHuobi(key, secret, `POST`, restHuobiDM, `/api/v1/contract_trigger_order`, param)
 	orderJson, err := util.NewJSON(responseBody)
 	if err == nil {
 		data := orderJson.Get(`data`).MustMap()
@@ -333,7 +333,7 @@ func cancelOrderHuobiDM(key, secret, symbol, orderId string) (result bool, errCo
 		symbol = symbol[0:strings.Index(symbol, `_`)]
 	}
 	param := map[string]interface{}{`symbol`: symbol, `order_id`: orderId}
-	responseBody := SignedRequestHuobi(key, secret, `POST`, restHuobiDM+`/api/v1/contract_trigger_cancel`, param)
+	responseBody := SignedRequestHuobi(key, secret, `POST`, restHuobiDM, `/api/v1/contract_trigger_cancel`, param)
 	cancelJson, err := util.NewJSON(responseBody)
 	if err == nil {
 		successIds := cancelJson.GetPath(`data`, `successes`).MustString()
@@ -349,7 +349,7 @@ func queryOpenTriggerOrderHuobiDM(key, secret, symbol, orderId string) (isWorkin
 		symbol = symbol[0:strings.Index(symbol, `_`)]
 	}
 	data := map[string]interface{}{`symbol`: symbol}
-	responseBody := SignedRequestHuobi(key, secret, `POST`, restHuobiDM+`/api/v1/contract_trigger_openorders`, data)
+	responseBody := SignedRequestHuobi(key, secret, `POST`, restHuobiDM, `/api/v1/contract_trigger_openorders`, data)
 	orderJson, err := util.NewJSON(responseBody)
 	if err == nil {
 		items := orderJson.GetPath(`data`, `orders`).MustArray()
@@ -368,7 +368,7 @@ func queryHisTriggerOrderHuobiDM(key, secret, symbol, orderId string) (relatedOr
 		symbol = symbol[0:strings.Index(symbol, `_`)]
 	}
 	data := map[string]interface{}{`symbol`: symbol, `trade_type`: `0`, `status`: `0`, `create_date`: `3`}
-	responseBody := SignedRequestHuobi(key, secret, `POST`, restHuobiDM+`/api/v1/contract_trigger_hisorders`, data)
+	responseBody := SignedRequestHuobi(key, secret, `POST`, restHuobiDM, `/api/v1/contract_trigger_hisorders`, data)
 	orderJson, err := util.NewJSON(responseBody)
 	if err == nil {
 		items := orderJson.GetPath(`data`, `orders`).MustArray()
@@ -390,7 +390,7 @@ func queryOrderHuobiDM(key, secret, symbol, orderId string) (dealAmount, dealPri
 		symbol = symbol[0:strings.Index(symbol, `_`)]
 	}
 	data := map[string]interface{}{`symbol`: symbol, `order_id`: orderId}
-	responseBody := SignedRequestHuobi(key, secret, `POST`, restHuobiDM+`/api/v1/contract_order_info`, data)
+	responseBody := SignedRequestHuobi(key, secret, `POST`, restHuobiDM, `/api/v1/contract_order_info`, data)
 	orderJson, err := util.NewJSON(responseBody)
 	if err == nil {
 		items := orderJson.Get(`data`).MustArray()
@@ -422,7 +422,7 @@ func queryOrderHuobiDM(key, secret, symbol, orderId string) (dealAmount, dealPri
 }
 
 func querySetInstrumentsHuobiDM(key, secret string) {
-	responseBody := SignedRequestHuobi(key, secret, `GET`, restHuobiDM+`/api/v1/contract_contract_info`, nil)
+	responseBody := SignedRequestHuobi(key, secret, `GET`, restHuobiDM, `/api/v1/contract_contract_info`, nil)
 	instrumentJson, err := util.NewJSON(responseBody)
 	if err == nil {
 		for _, item := range instrumentJson.Get(`data`).MustArray() {
@@ -443,7 +443,7 @@ func getCandlesHuobiDM(key, secret, symbol, binSize string, start, end time.Time
 		param[`period`] = `1day`
 	}
 	candles = make(map[string]*model.Candle)
-	response := SignedRequestHuobi(key, secret, `GET`, restHuobiDM+`/market/history/kline`, param)
+	response := SignedRequestHuobi(key, secret, `GET`, restHuobiDM, `/market/history/kline`, param)
 	//duration, _ := time.ParseDuration(`8h`)
 	candleJson, err := util.NewJSON(response)
 	if err == nil {

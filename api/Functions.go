@@ -669,11 +669,7 @@ func GetWSSubscribes(market, subType string) []interface{} {
 func GetWSSubscribe(market, symbol, subType string) (subscribe interface{}) {
 	switch market {
 	case model.Huobi: // xrpbtc: market.xrpbtc.mbp.refresh.
-		if subType == model.SubscribeTicker && !strings.Contains(symbol, "-") {
-			return "market." + symbol + ".bbo"
-		}
-	case model.HuobiDM:
-		if subType == model.SubscribeTicker && strings.Contains(symbol, "-") {
+		if subType == model.SubscribeTicker {
 			return "market." + symbol + ".bbo"
 		}
 	case model.OKEX: // 未来基于market兼容okfuture LTC-USD-190628
