@@ -58,16 +58,11 @@ var postOrderCarry = func(order *model.Order) {
 				}
 			}
 		} else if order.Market == model.Binance {
-			keys, _ := model.AppConfig.GetKeys(model.Binance)
-			for _, key := range keys {
+			keys, secrets := model.AppConfig.GetKeys(model.Binance)
+			for i, key := range keys {
 				if key == order.AmountType && strings.Contains(InsufficientCodeBinance, order.ErrCode) {
 					util.Notice(`reset binance trade max with %s %s`, order.ErrCode, order.AmountType)
-					coin := model.GetCoin(model.Binance, order.Symbol)
-					balance := getCarryBalance(key, coin)
-					if balance != nil {
-						balance.AvailableWithBorrow = 0
-					}
-					setCarryBalance(key, coin, balance)
+					clearCarry(model.Binance, key, secrets[i])
 					unknownFail = false
 				}
 			}
@@ -144,6 +139,68 @@ func checkProcessTransfer(key, secret, market string) {
 	}
 }
 
+func clearCarry(market, key, secret string) {
+	settings := model.GetSettings(model.FunctionCarry, market)
+	settingCoins := model.GetSettingCoins(model.FunctionCarry, market)
+	resultBalance, balances, _, collateral := api.GetBalances(key, secret, market)
+	setCollateral(key, collateral)
+	resultPosition, positions, posBalance := api.GetPositions(key, secret, market)
+	setPosBal(key, posBalance)
+	if !resultBalance || !resultPosition {
+		util.Notice(`%s %s fatal error: can not get balance %v position %v`, key, market, resultBalance, resultPosition)
+		return
+	}
+	balanceAllValue := 0.0
+	localUsdAvailable := 0.0
+	borrowAll := 0.0
+	for _, value := range balances {
+		coin := strings.ToUpper(value.Coin)
+		success, bidAsk := model.AppMarkets.GetBidAsk(coin+api.GetSpotTail(market), market)
+		if !success && settingCoins[coin] {
+			util.Notice(`fail to get setting coin bid ask %s , return`, coin)
+			continue
+		}
+		if market == model.OKEX { // 针对okex不能从balance获取可借数的问题进行特殊处理
+			preBalance := getCarryBalance(key, coin)
+			if preBalance != nil {
+				value.AvailableWithBorrow = preBalance.AvailableWithBorrow
+			}
+		}
+		setCarryBalance(key, coin, value)
+		if coin == `BTC` && market == model.OKEX { // 把okex中btc价值的usd按一半计入
+			localUsdAvailable += value.UsdValue / 2
+			balanceAllValue += value.UsdValue / 2
+		}
+		if (coin == `USD` && market == model.Ftx) || (coin == `USDT` && (market == model.OKEX || market == model.Binance)) {
+			localUsdAvailable += value.Amount
+			balanceAllValue += value.Amount
+			borrowAll += value.Borrow
+		} else if settingCoins[coin] {
+			if value.UsdValue > 0 {
+				balanceAllValue += value.UsdValue
+			} else {
+				balanceAllValue += value.Amount * bidAsk.Bids[0].Price
+			}
+			borrowAll += value.Borrow * bidAsk.Bids[0].Price
+		}
+	}
+	localUsdAvailable = localUsdAvailable - borrowAll
+	setUsdAvailable(key, localUsdAvailable)
+	setUsdRate(key, localUsdAvailable/balanceAllValue)
+	setBalanceAll(key, balanceAllValue)
+	util.Notice(fmt.Sprintf(`[carry] %s usd:%f %f len(balances):%d`,
+		key, localUsdAvailable, usdRate[key], len(balances)))
+	equalSettings := make(map[string]*model.Setting)
+	for _, setting := range settings {
+		equalSettings[setting[0].Symbol] = setting[0]
+	}
+	for _, setting := range equalSettings {
+		makeEqual(key, secret, setting, balances, positions)
+	}
+	initEmptyBalance(key, secret, market)
+	checkProcessTransfer(key, secret, market)
+}
+
 func clearCarryBalance() {
 	for doCarry {
 		for true {
@@ -157,67 +214,9 @@ func clearCarryBalance() {
 		time.Sleep(time.Second * 2)
 		markets := model.GetMarkets()
 		for _, market := range markets {
-			settings := model.GetSettings(model.FunctionCarry, market)
-			settingCoins := model.GetSettingCoins(model.FunctionCarry, market)
 			keys, secrets := model.AppConfig.GetKeys(market)
 			for i, key := range keys {
-				resultBalance, balances, _, collateral := api.GetBalances(key, secrets[i], market)
-				setCollateral(key, collateral)
-				resultPosition, positions, posBalance := api.GetPositions(key, secrets[i], market)
-				setPosBal(key, posBalance)
-				if !resultBalance || !resultPosition {
-					util.Notice(`%s %s fatal error: can not get balance %v position %v`, key, market, resultBalance, resultPosition)
-					continue
-				}
-				balanceAllValue := 0.0
-				localUsdAvailable := 0.0
-				borrowAll := 0.0
-				for _, value := range balances {
-					coin := strings.ToUpper(value.Coin)
-					success, bidAsk := model.AppMarkets.GetBidAsk(coin+api.GetSpotTail(market), market)
-					if !success && settingCoins[coin] {
-						util.Notice(`fail to get setting coin bid ask %s , return`, coin)
-						continue
-					}
-					if market == model.OKEX { // 针对okex不能从balance获取可借数的问题进行特殊处理
-						preBalance := getCarryBalance(key, coin)
-						if preBalance != nil {
-							value.AvailableWithBorrow = preBalance.AvailableWithBorrow
-						}
-					}
-					setCarryBalance(key, coin, value)
-					if coin == `BTC` && market == model.OKEX { // 把okex中btc价值的usd按一半计入
-						localUsdAvailable += value.UsdValue / 2
-						balanceAllValue += value.UsdValue / 2
-					}
-					if (coin == `USD` && market == model.Ftx) || (coin == `USDT` && (market == model.OKEX || market == model.Binance)) {
-						localUsdAvailable += value.Amount
-						balanceAllValue += value.Amount
-						borrowAll += value.Borrow
-					} else if settingCoins[coin] {
-						if value.UsdValue > 0 {
-							balanceAllValue += value.UsdValue
-						} else {
-							balanceAllValue += value.Amount * bidAsk.Bids[0].Price
-						}
-						borrowAll += value.Borrow * bidAsk.Bids[0].Price
-					}
-				}
-				localUsdAvailable = localUsdAvailable - borrowAll
-				setUsdAvailable(key, localUsdAvailable)
-				setUsdRate(key, localUsdAvailable/balanceAllValue)
-				setBalanceAll(key, balanceAllValue)
-				util.Notice(fmt.Sprintf(`[carry] %s usd:%f %f len(balances):%d`,
-					key, localUsdAvailable, usdRate[key], len(balances)))
-				equalSettings := make(map[string]*model.Setting)
-				for _, setting := range settings {
-					equalSettings[setting[0].Symbol] = setting[0]
-				}
-				for _, setting := range equalSettings {
-					makeEqual(key, secrets[i], setting, balances, positions)
-				}
-				initEmptyBalance(key, secrets[i], market)
-				checkProcessTransfer(key, secrets[i], market)
+				clearCarry(market, key, secrets[i])
 			}
 			for i, key := range keys {
 				localMaxResetTime := getTradeMaxResetTime(key)
