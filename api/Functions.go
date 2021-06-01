@@ -130,6 +130,8 @@ func MustCancel(key, secret, market, symbol, instrument, orderType, orderId stri
 
 func CancelOrders(key, secret, market, symbol string) (result bool) {
 	switch market {
+	case model.Huobi:
+		return cancelOrderHuobi(key, secret, symbol)
 	case model.Binance:
 		return cancelOrdersBinance(key, secret, symbol)
 	case model.Ftx:
@@ -153,10 +155,10 @@ func CancelOrder(key, secret, market, symbol, instrument, orderType, orderId str
 	errCode = `market-not-supported ` + market
 	msg = `market not supported ` + market
 	switch market {
-	case model.Huobi:
-		result, errCode, msg = cancelOrderHuobi(key, secret, orderId)
-	case model.HuobiDM:
-		result, errCode, msg = cancelOrderHuobiDM(key, secret, symbol, orderId)
+	//case model.Huobi:
+	//	result, errCode, msg = cancelOrderHuobi(key, secret, orderId)
+	//case model.HuobiDM:
+	//	result, errCode, msg = cancelOrderHuobiDM(key, secret, symbol, orderId)
 	case model.OKEX:
 		result, errCode, msg = cancelOrderOkex(key, secret, symbol, orderId, orderType)
 	case model.Binance:
@@ -175,7 +177,7 @@ func CancelOrder(key, secret, market, symbol, instrument, orderType, orderId str
 }
 
 func GetCurrentInstrument(key, secret, market, symbol string) (currentInstrument string) {
-	querySetter := querySetInstrumentsHuobiDM
+	//querySetter := querySetInstrumentsHuobiDM
 	currentType := `quarter`
 	//nextType := `bi_quarter`
 	switch market {
@@ -183,7 +185,7 @@ func GetCurrentInstrument(key, secret, market, symbol string) (currentInstrument
 	//	querySetter = querySetInstrumentsOkFuture
 	//	//nextType = `bi_quarter`
 	case model.HuobiDM:
-		querySetter = querySetInstrumentsHuobiDM
+		//querySetter = querySetInstrumentsHuobiDM
 		//nextType = `next_quarter`
 		symbol = symbol[0:strings.Index(symbol, `_`)]
 	case model.OKEX:
@@ -191,7 +193,7 @@ func GetCurrentInstrument(key, secret, market, symbol string) (currentInstrument
 	default:
 		return symbol
 	}
-	querySetter(key, secret)
+	//querySetter(key, secret)
 	if instruments == nil || instruments[market] == nil || instruments[market][symbol] == nil {
 		return ``
 	}
@@ -233,8 +235,8 @@ func GetDayCandle(key, secret, market, symbol, instrument string, timeCandle tim
 		candles = getCandlesFtx(key, secret, symbol, `1d`, begin, end, 40)
 	case model.OKEX:
 		candles = getCandlesOKEX(key, secret, instrument, `1D`, begin, end, 40)
-	case model.HuobiDM:
-		candles = getCandlesHuobiDM(key, secret, symbol, `1d`, begin, time.Now())
+		//case model.HuobiDM:
+		//	candles = getCandlesHuobiDM(key, secret, symbol, `1d`, begin, time.Now())
 	}
 	keyedCandles := make(map[string]*model.Candle)
 	for _, value := range candles {
@@ -401,22 +403,22 @@ func QueryOrderById(key, secret, market, symbol, instrument, orderType, orderId 
 	switch market {
 	case model.Huobi:
 		dealAmount, dealPrice, status = queryOrderHuobi(key, secret, orderId)
-	case model.HuobiDM:
-		if orderType == model.OrderTypeStop {
-			isWorking := queryOpenTriggerOrderHuobiDM(key, secret, symbol, orderId)
-			if isWorking {
-				status = model.CarryStatusWorking
-			} else {
-				relatedOrderId := queryHisTriggerOrderHuobiDM(key, secret, symbol, orderId)
-				if relatedOrderId == `-1` || relatedOrderId == `` {
-					status = model.CarryStatusFail
-				} else {
-					dealAmount, dealPrice, status = queryOrderHuobiDM(key, secret, symbol, relatedOrderId)
-				}
-			}
-		} else {
-			dealAmount, dealPrice, status = queryOrderHuobiDM(key, secret, symbol, orderId)
-		}
+	//case model.HuobiDM:
+	//	if orderType == model.OrderTypeStop {
+	//		isWorking := queryOpenTriggerOrderHuobiDM(key, secret, symbol, orderId)
+	//		if isWorking {
+	//			status = model.CarryStatusWorking
+	//		} else {
+	//			relatedOrderId := queryHisTriggerOrderHuobiDM(key, secret, symbol, orderId)
+	//			if relatedOrderId == `-1` || relatedOrderId == `` {
+	//				status = model.CarryStatusFail
+	//			} else {
+	//				dealAmount, dealPrice, status = queryOrderHuobiDM(key, secret, symbol, relatedOrderId)
+	//			}
+	//		}
+	//	} else {
+	//		dealAmount, dealPrice, status = queryOrderHuobiDM(key, secret, symbol, orderId)
+	//	}
 	case model.OKEX:
 		order = queryOrderOKEX(key, secret, instrument, orderId, orderType)
 		if order != nil {
@@ -770,6 +772,8 @@ func GetPosBal(key, secret, market string) (value float64) {
 func Transfer(key, secret, market, transferType string, amount float64) {
 	if market == model.Binance {
 		transferBinance(key, secret, transferType, amount)
+	} else if market == model.Huobi {
+		transferHuobi(key, secret, transferType, amount)
 	}
 }
 
@@ -900,6 +904,8 @@ func CreateMarketDepthServer(markets *model.Markets, market string, orderHandler
 
 func GetSpotTail(market string) string {
 	switch market {
+	case model.Huobi:
+		return "usdt"
 	case model.Ftx:
 		return `/USD`
 	case model.OKEX:
@@ -912,6 +918,8 @@ func GetSpotTail(market string) string {
 
 func GetPerpTail(market string) string {
 	switch market {
+	case model.Huobi:
+		return `-usdt`
 	case model.Ftx:
 		return `-PERP`
 	case model.OKEX:

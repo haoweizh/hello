@@ -17,8 +17,6 @@ import (
 
 const restHuobi = `api-aws.huobi.pro`
 const wsHuobi = `wss://api-aws.huobi.pro/ws`
-const restHuobiDM = `api.hbdm.com`
-const wsHuobiDM = `wss://api.hbdm.vn/linear-swap-ws`
 
 //spot：现货账户, margin：逐仓杠杆账户, otc：OTC 账户, point：点卡账户, super-margin：全仓杠杆账户, investment: C2C杠杆借出账户,
 //borrow: C2C杠杆借入账户，矿池账户: minepool, ETF账户: etf, 抵押借贷账户: crypto-loans
@@ -308,38 +306,69 @@ func GetAccountIdsHuobi(key, secret string) (err error) {
 // orderType: buy-market：市价买, sell-market：市价卖, buy-limit：限价买, sell-limit：限价卖
 // huobi中amount在市价买单中指的是右侧的钱
 func placeOrderHuobi(key, secret string, order *model.Order, orderSide, orderType, symbol, price, amount string) {
-	orderParam := ``
-	if orderSide == model.OrderSideBuy && orderType == model.OrderTypeLimit {
-		orderParam = `buy-limit`
-	} else if orderSide == model.OrderSideBuy && orderType == model.OrderTypeMarket {
-		orderParam = `buy-market`
-	} else if orderSide == model.OrderSideSell && orderType == model.OrderTypeLimit {
-		orderParam = `sell-limit`
-	} else if orderSide == model.OrderSideSell && orderType == model.OrderTypeMarket {
-		orderParam = `sell-market`
-	} else {
-		util.Notice(fmt.Sprintf(`[parameter error] order side: %s order type: %s`, orderSide, orderType))
-	}
-
-	if huobiAccountMap[key] == nil || huobiAccountMap[key][spotAccount] == "" {
-		_ = GetAccountIdsHuobi(key, secret)
-	}
-
-	path := "/v1/order/orders/place"
 	postData := make(map[string]interface{})
-	postData["account-id"] = huobiAccountMap[key][spotAccount]
-	postData["amount"] = amount
-	postData["symbol"] = strings.ToLower(strings.Replace(symbol, "_", "", 1))
-	postData["type"] = orderParam
-	if orderType == model.OrderTypeLimit {
-		postData["price"] = price
+	var requestUrl string
+	if symbol[len(symbol)-5:] == `-usdt` { //合约
+		requestUrl = "/linear-swap-api/v1/swap_cross_order"
+
+		postData["lever_rate"] = 5
+		postData["contract_code"] = symbol
+		if orderSide == model.OrderSideBuy {
+			postData["direction"] = "buy"
+			postData["offset"] = "close"
+		} else {
+			postData["direction"] = "sell"
+			postData["offset"] = "open"
+		}
+
+		if orderType == model.OrderTypeLimit {
+			postData["price"] = price
+			postData["order_price_type"] = "limit"
+		} else if orderType == model.OrderTypeMarket {
+			postData["order_price_type"] = "opponent"
+		}
+
+		marketInfo := model.GetMarketInfo(model.Huobi, symbol)
+		if marketInfo == nil || marketInfo.SizeIncrement == 0 || marketInfo.CTValue == 0 ||
+			marketInfo.CTCurrency != model.GetCoin(model.Huobi, symbol) {
+			return
+		}
+		amount, _ := strconv.ParseFloat(amount, 64)
+		postData["volume"] = amount / marketInfo.CTValue
+	} else { //现货
+		requestUrl = "/v1/order/orders/place"
+
+		if orderSide == model.OrderSideBuy && orderType == model.OrderTypeLimit {
+			postData["type"] = `buy-limit`
+		} else if orderSide == model.OrderSideBuy && orderType == model.OrderTypeMarket {
+			postData["type"] = `buy-market`
+		} else if orderSide == model.OrderSideSell && orderType == model.OrderTypeLimit {
+			postData["type"] = `sell-limit`
+		} else if orderSide == model.OrderSideSell && orderType == model.OrderTypeMarket {
+			postData["type"] = `sell-market`
+		} else {
+			util.Notice(fmt.Sprintf(`[parameter error] order side: %s order type: %s`, orderSide, orderType))
+		}
+		if huobiAccountMap[key] == nil || huobiAccountMap[key][spotAccount] == "" {
+			_ = GetAccountIdsHuobi(key, secret)
+		}
+		postData["account-id"] = huobiAccountMap[key][spotAccount]
+		postData["amount"] = amount
+		postData["symbol"] = symbol
+		if orderType == model.OrderTypeLimit {
+			postData["price"] = price
+		}
 	}
-	responseBody := SignedRequestHuobi(key, secret, `POST`, restHuobi+path, postData)
+
+	responseBody := SignedRequestHuobi(key, secret, `POST`, requestUrl, postData)
 	orderJson, err := util.NewJSON(responseBody)
 	if err == nil {
 		status, _ := orderJson.Get("status").String()
 		if status == "ok" {
-			order.OrderId, _ = orderJson.Get("data").String()
+			order.OrderId, _ = orderJson.Get("data").Get("order_id").String()
+			if order.OrderId == "" {
+				order.OrderId, _ = orderJson.Get("data").String()
+			}
 		} else if status == "error" {
 			order.OrderId, _ = orderJson.Get("err-code").String()
 		}
@@ -348,24 +377,33 @@ func placeOrderHuobi(key, secret string, order *model.Order, orderSide, orderTyp
 		symbol, orderSide, orderType, price, amount, order.OrderId, string(responseBody)))
 }
 
-func cancelOrderHuobi(key, secret, orderId string) (result bool, errCode, msg string) {
-	path := fmt.Sprintf("/v1/order/orders/%s/submitcancel", orderId)
-	responseBody := SignedRequestHuobi(key, secret, `POST`, restHuobi+path, nil)
+func cancelOrderHuobi(key, secret, symbol string) (result bool) {
+	postData := make(map[string]interface{})
+	var requestUrl string
+	if strings.Contains(symbol, "-usdt") {
+		requestUrl = restHuobiDM + "/linear-swap-api/v1/swap_cross_cancelall"
+		postData[`contract_code`] = symbol
+	} else {
+		requestUrl = restHuobi + "/v1/order/orders/batchCancelOpenOrders"
+		postData[`symbol`] = symbol
+	}
+
+	responseBody := SignedRequestHuobi(key, secret, `POST`, requestUrl, postData)
 	orderJson, err := util.NewJSON(responseBody)
-	util.Notice("huobi cancel order" + orderId + string(responseBody))
+
 	if err == nil {
 		status, _ := orderJson.Get("status").String()
 		if status == "ok" {
-			return true, ``, ``
+			return true
 		} else if status == "error" {
-			errCode, _ = orderJson.Get("err-code").String()
-			msg, _ = orderJson.Get(`err-msg`).String()
-			return false, errCode, msg
+			//errCode, _ = orderJson.Get("err-code").String()
+			//msg, _ = orderJson.Get(`err-msg`).String()
+			return false
 		}
 	} else {
-		return false, err.Error(), err.Error()
+		return false
 	}
-	return false, ``, ``
+	return false
 }
 
 func queryOrderHuobi(key, secret, orderId string) (dealAmount, dealPrice float64, status string) {
@@ -452,6 +490,18 @@ func getTransferHuobi(key, secret string) (balances []*model.Balance) {
 		}
 	}
 	return balances
+}
+
+func transferHuobi(key string, secret string, transferType string, amount float64) {
+	postData := make(map[string]interface{})
+	postData["currency"] = "usdt"
+	postData["amount"] = amount
+	if transferType == "MAIN_UMFUTURE" {
+		postData["type"] = "pro-to-futures"
+	} else {
+		postData["type"] = "futures-to-pro"
+	}
+	SignedRequestHuobi(key, secret, http.MethodPost, restHuobi+"/v1/futures/transfer", postData)
 }
 
 func getPositionsHuobi(key string, secret string) (success bool, positions []*model.Position, posBalance float64) {

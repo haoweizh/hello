@@ -116,7 +116,7 @@ func resetTradeMax(key, secret string, market string) {
 // 7:3和8:2是比例范围，超过范围自动平衡成7.5:2.5
 func checkProcessTransfer(key, secret, market string) {
 	switch market {
-	case model.Binance:
+	case model.Binance, model.Huobi:
 		balance := getBalanceAll(key)
 		balancePos := getPosBal(key)
 		if balance/balancePos > 4 {
@@ -157,6 +157,9 @@ func clearCarryBalance() {
 				borrowAll := 0.0
 				for _, value := range balances {
 					coin := strings.ToUpper(value.Coin)
+					if model.Huobi == market {
+						coin = strings.ToLower(value.Coin)
+					}
 					success, bidAsk := model.AppMarkets.GetBidAsk(coin+api.GetSpotTail(market), market)
 					if !success && settingCoins[coin] {
 						util.Notice(`fail to get setting coin bid ask %s , return`, coin)
@@ -173,7 +176,7 @@ func clearCarryBalance() {
 						localUsdAvailable += value.UsdValue / 2
 						balanceAllValue += value.UsdValue / 2
 					}
-					if (coin == `USD` && market == model.Ftx) || (coin == `USDT` && (market == model.OKEX || market == model.Binance)) {
+					if (coin == `USD` && market == model.Ftx) || (coin == `USDT` && (market == model.OKEX || market == model.Binance)) || (coin == `usdt` && market == model.Huobi) {
 						localUsdAvailable += value.Amount
 						balanceAllValue += value.Amount
 						borrowAll += value.Borrow
@@ -363,7 +366,7 @@ func getCarryAmounts(setting *model.Setting, balances []*model.Balance, position
 		}
 	}
 	for _, balance := range balances {
-		if strings.ToUpper(balance.Coin+tail) == setting.Symbol {
+		if strings.ToUpper(balance.Coin+tail) == setting.Symbol || (setting.Market == model.Huobi && strings.ToLower(balance.Coin+tail) == setting.Symbol) {
 			amountRelated = balance.Amount
 			relatedBalance = balance
 		}
