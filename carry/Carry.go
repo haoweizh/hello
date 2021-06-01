@@ -19,6 +19,7 @@ const carryTypeOpen = `carryOpen`
 const carryTypeClose = `carryClose`
 const carryTypeRevert = `carryRevert`
 const InsufficientCodeOKEX = `51008,51119,51120,51131,51502,58350,59108,59200`
+const InsufficientCodeBinance = `-2010`
 
 var marketInitTime = make(map[string]int64) // market - initTime
 var carryLock sync.Mutex
@@ -47,12 +48,28 @@ var postOrderCarry = func(order *model.Order) {
 	}
 	unknownFail := true
 	if order.OrderId == `` {
-		keys, secrets := model.AppConfig.GetKeys(model.OKEX)
-		for i, key := range keys {
-			if key == order.AmountType && strings.Contains(InsufficientCodeOKEX, order.ErrCode) {
-				util.Notice(`reset okex trade max with %s %s`, order.ErrCode, order.AmountType)
-				resetTradeMax(key, secrets[i], model.OKEX)
-				unknownFail = false
+		if order.Market == `` || order.Market == model.OKEX {
+			keys, secrets := model.AppConfig.GetKeys(model.OKEX)
+			for i, key := range keys {
+				if key == order.AmountType && strings.Contains(InsufficientCodeOKEX, order.ErrCode) {
+					util.Notice(`reset okex trade max with %s %s`, order.ErrCode, order.AmountType)
+					resetTradeMax(key, secrets[i], model.OKEX)
+					unknownFail = false
+				}
+			}
+		} else if order.Market == model.Binance {
+			keys, _ := model.AppConfig.GetKeys(model.Binance)
+			for _, key := range keys {
+				if key == order.AmountType && strings.Contains(InsufficientCodeBinance, order.ErrCode) {
+					util.Notice(`reset binance trade max with %s %s`, order.ErrCode, order.AmountType)
+					coin := model.GetCoin(model.Binance, order.Symbol)
+					balance := getCarryBalance(key, coin)
+					if balance != nil {
+						balance.AvailableWithBorrow = 0
+					}
+					setCarryBalance(key, coin, balance)
+					unknownFail = false
+				}
 			}
 		}
 	} else {
