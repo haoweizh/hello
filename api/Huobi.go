@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"hello/model"
 	"hello/util"
+	"math"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -225,7 +226,8 @@ func getMarketsHuobi() (marketInfos map[string]*model.MarketInfo) {
 			if value["limit-order-min-order-amt"] != nil {
 				marketInfo.SizeMin, _ = value["limit-order-min-order-amt"].(json.Number).Float64()
 			}
-
+			amountPrecision, _ := value["amount-precision"].(json.Number).Int64()
+			marketInfo.SizeIncrement = 1 / math.Pow10(int(amountPrecision))
 			//price-precision	true	integer	交易对报价的精度（小数点后位数）
 			//amount-precision	true	integer	交易对基础币种计数精度（小数点后位数）
 
@@ -247,12 +249,13 @@ func getMarketsHuobi() (marketInfos map[string]*model.MarketInfo) {
 			}
 			if value["contract_size"] != nil {
 				marketInfo.CTValue, _ = value["contract_size"].(json.Number).Float64()
+				marketInfo.SizeMin, _ = value["contract_size"].(json.Number).Float64()
 			}
 			if value["price_tick"] != nil {
 				marketInfo.PriceIncrement, _ = value["price_tick"].(json.Number).Float64()
 			}
-			marketInfo.SizeIncrement = 1
 
+			marketInfo.SizeIncrement = 1
 			marketInfos[marketInfo.Name] = marketInfo
 		}
 	}
@@ -509,12 +512,16 @@ func transferHuobi(key string, secret string, transferType string, amount float6
 	postData := make(map[string]interface{})
 	postData["currency"] = "usdt"
 	postData["amount"], _ = strconv.ParseFloat(fmt.Sprintf("%.8f", amount), 64)
+	postData["margin-account"] = "usdt"
+
 	if transferType == "MAIN_UMFUTURE" {
-		postData["type"] = "pro-to-futures"
+		postData["from"] = "spot"
+		postData["to"] = "linear-swap"
 	} else {
-		postData["type"] = "futures-to-pro"
+		postData["from"] = "linear-swap"
+		postData["to"] = "spot"
 	}
-	SignedRequestHuobi(key, secret, http.MethodPost, restHuobi, "/v1/futures/transfer", postData)
+	SignedRequestHuobi(key, secret, http.MethodPost, restHuobi, "/v2/account/transfer", postData)
 }
 
 func getPositionsHuobi(key string, secret string) (success bool, positions []*model.Position, posBalance float64) {
