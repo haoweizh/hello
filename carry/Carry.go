@@ -47,7 +47,7 @@ var postOrderCarry = func(order *model.Order) {
 		return
 	}
 	unknownFail := true
-	if order.OrderId == `` {
+	if order.OrderId == `` || order.ErrCode != `` {
 		if order.Market == `` || order.Market == model.OKEX {
 			keys, secrets := model.AppConfig.GetKeys(model.OKEX)
 			for i, key := range keys {
