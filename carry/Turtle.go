@@ -117,7 +117,7 @@ func GetTurtleData(setting *model.Setting) (turtleData *TurtleData) {
 		}
 	}
 	cross := false
-	turtleData.instrument = api.GetCurrentInstrument(``, ``, setting.Market, setting.Symbol)
+	turtleData.instrument = api.GetCurrentInstrument(setting.Market, setting.Symbol)
 	if orderLong != nil && orderLong.OrderId != `` {
 		if orderLong.Instrument != turtleData.instrument {
 			cross = true

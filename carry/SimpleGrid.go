@@ -58,7 +58,7 @@ func getGridPos(setting *model.Setting) (gridPos *GridPos) {
 		dayGridPos[yesterdayStr][setting.Market][setting.Symbol] != nil {
 		return dayGridPos[yesterdayStr][setting.Market][setting.Symbol]
 	}
-	instrument := api.GetCurrentInstrument(``, ``, setting.Market, setting.Symbol)
+	instrument := api.GetCurrentInstrument(setting.Market, setting.Symbol)
 	candle := api.GetDayCandle(model.KeyDefault, model.SecretDefault, setting.Market, setting.Symbol, instrument, yesterday)
 	if candle == nil {
 		return

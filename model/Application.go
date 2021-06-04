@@ -60,7 +60,6 @@ var AppSettings []Setting
 var AppConfig *Config
 var AppMarkets = NewMarkets()
 
-//var HuobiAccountIds = make(map[string]string)
 var AppPause = false
 
 func GetDialectSymbol(market, symbol string) (dialectSymbol string) {
@@ -249,7 +248,6 @@ func GetSymbol(market, subscribe string) (symbol string) {
 		if strings.Contains(subscribe, "bbo") {
 			return strings.Split(subscribe, ".")[1]
 		}
-
 		subscribe = strings.Replace(subscribe, "market.", "", 1)
 		subscribe = strings.Replace(subscribe, ".depth.step0", "", 1)
 		return getSymbolWithSplit(subscribe, "_")

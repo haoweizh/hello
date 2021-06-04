@@ -241,6 +241,11 @@ func GetCoin(market, symbol string) (coin string) {
 		if len(parts) == 2 {
 			coin = parts[0]
 		}
+	case HuobiDM: // btc_cq
+		parts := strings.Split(symbol, `_`)
+		if len(parts) == 2 {
+			coin = parts[0]
+		}
 	case Huobi: // btc-usdt
 		parts := strings.Split(symbol, `-`)
 		if len(parts) == 2 {
