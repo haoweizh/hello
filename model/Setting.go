@@ -182,6 +182,9 @@ func GetMarkets() []string {
 	marketMap := make(map[string]bool)
 	for _, value := range AppSettings {
 		marketMap[value.Market] = true
+		if value.MarketRelated != "" {
+			marketMap[value.MarketRelated] = true
+		}
 	}
 	markets := make([]string, len(marketMap))
 	i := 0
@@ -238,8 +241,8 @@ func GetCoin(market, symbol string) (coin string) {
 		if len(parts) == 2 {
 			coin = parts[0]
 		}
-	case HuobiDM: // btc_cq
-		parts := strings.Split(symbol, `_`)
+	case Huobi: // btc-usdt
+		parts := strings.Split(symbol, `-`)
 		if len(parts) == 2 {
 			coin = parts[0]
 		}
