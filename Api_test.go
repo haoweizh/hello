@@ -59,15 +59,6 @@ func Test_ws(t *testing.T) {
 	}
 }
 
-//func getAmount(amountIn float64) {
-//	amount := api.FormatAmountPair(model.OKEX, `BTT-USDT-SWAP`, `BTT-USDT`, amountIn)
-//	amountInPerp := api.GetAmountInPerp(model.OKEX, `BTT-USDT-SWAP`, amount)
-//	_, amountInReal := api.ParseRealAmount(model.OKEX, `BTT-USDT-SWAP`, amountInPerp)
-//	amount = math.Min(amount, amountInReal)
-//	amount = api.FormatAmountPair(model.OKEX, `BTT-USDT-SWAP`, `BTT-USDT`, amount)
-//	fmt.Println(fmt.Sprintf(`%f %f`, amountIn, amount))
-//}
-
 func send() {
 	for true {
 		now := time.Now().Second()
@@ -137,37 +128,39 @@ func Test_wallet(t *testing.T) {
 	_ = configor.Load(model.AppConfig, "./config.yml")
 	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
 	api.InitMarketInfos()
-	amount := api.GetAmountInMarket(model.OKEX, `DOGE-USDT-SWAP`, 4)
-	fmt.Println(amount)
-	api.PlaceOrder(model.AppConfig.DFutureKey, model.AppConfig.DFutureSecret, model.OrderSideBuy, ``,
-		model.DFuture, `ethusdt`, ``, `open`, model.FunctionDCarry, 2222, 2222, 0.1, true, false, nil)
-	_, loan := api.GetMaxLoan(model.AppConfig.OkexKey, model.AppConfig.OkexSecret, model.OKEX, `XEM`)
-	fmt.Println(loan)
-	//balance := api.GetBalance(``, ``, model.OKEX, `USDT`, 0)
-	today := time.Now().In(time.UTC)
-	today = time.Date(today.Year(), today.Month(), today.Day(), 0, 0, 0, 0, today.Location())
-	duration, _ := time.ParseDuration(fmt.Sprintf(`%dh`, -24))
-	today = today.Add(duration)
-	candle := api.GetDayCandle(``, ``, model.OKEX, ``, `BTC-USDT-SWAP`, today)
-	fmt.Println(candle.N)
-	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
+	order := api.QueryOrderById(``, ``, model.OKEX, `ETH-USDT-SWAP`, `ETH-USDT-SWAP`, model.OrderTypeStop, `320881041032523776`)
+	fmt.Println(order.DealAmount)
+	fmt.Println(order.DealPrice)
+	fmt.Println(order.Status)
+	//amount := api.GetAmountInMarket(model.OKEX, `DOGE-USDT-SWAP`, 4)
+	//fmt.Println(amount)
+	//api.PlaceOrder(model.AppConfig.DFutureKey, model.AppConfig.DFutureSecret, model.OrderSideBuy, ``,
+	//	model.DFuture, `ethusdt`, ``, `open`, model.FunctionDCarry, 2222, 2222, 0.1, true, false, nil)
+	//_, loan := api.GetMaxLoan(model.AppConfig.OkexKey, model.AppConfig.OkexSecret, model.OKEX, `XEM`)
+	//fmt.Println(loan)
+	////balance := api.GetBalance(``, ``, model.OKEX, `USDT`, 0)
+	//today := time.Now().In(time.UTC)
+	//today = time.Date(today.Year(), today.Month(), today.Day(), 0, 0, 0, 0, today.Location())
+	//duration, _ := time.ParseDuration(fmt.Sprintf(`%dh`, -24))
+	//today = today.Add(duration)
+	//candle := api.GetDayCandle(``, ``, model.OKEX, ``, `BTC-USDT-SWAP`, today)
+	//fmt.Println(candle.N)
+	//model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
 	//api.InitCoinBalance(``, ``, model.FunctionCarry, model.OKEX)
 	//api.InitMarketInfos()
-	//fmt.Println(order.OrderId)
 	//suc, pos := api.GetPositions(``, ``, model.Ftx)
 	//fmt.Println(fmt.Sprintf(`%v %d`, suc, len(pos)))
 	//a := api.GetMarketInfo(model.Ftx, `SECO/USD`)
+	order = api.PlaceOrder(``, ``, model.OrderSideBuy, model.OrderTypeStop, model.OKEX, `ETH-USDT-SWAP`,
+		`ETH-USDT-SWAP`, ``, ``, 2723, 2723, 0.1, false, false, nil)
+	fmt.Println(order.OrderId)
 	//fmt.Println(a)
-	//carry.InitFtxBalance(`ZK6_FPdUIhDnjv_JWklHAkgWXRRindBw-qIg18bU`,
-	//	`4bbFXcuVk_VE2JJ0_mnLFa3J-kcCOeUVM0sRmYN5`, model.FunctionCarry)
 	api.InitCarryFtx(1)
 	//carry.GetTurtleData(model.Ftx, `okbusd_p`)
 	//var err error
 	//api.GetDayCandle(model.AppConfig.FtxKey, model.AppConfig.FtxSecret, model.Ftx, `htusd_p`, today)
 	//balanceUSD := api.GetWalletHistoryFtx(model.AppConfig.FtxKey, model.AppConfig.FtxSecret)
 	//balanceUSD := api.GetUSDBalance(model.AppConfig.FtxKey, model.AppConfig.FtxSecret, model.Ftx)
-	//fmt.Print(balanceUSD)
-	//api.RefreshAccount(model.AppConfig.FtxKey, model.AppConfig.FtxSecret, model.Ftx)
 	//order := api.QueryOrderById(model.AppConfig.FtxKey, model.AppConfig.FtxSecret, model.Ftx,
 	//	`btcusd_p`, model.OrderTypeStop, `903993`)
 	//fmt.Print(order.DealPrice)

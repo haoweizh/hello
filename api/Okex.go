@@ -807,6 +807,24 @@ func queryPendingOrdersOKEX(key, secret, instrument string) (orders []*model.Ord
 	return
 }
 
+func getAlgoOrderIdOKEX(key, secret, algoId string) (ordId string) {
+	path := fmt.Sprintf("/api/v5/trade/orders-algo-history?%s",
+		util.ComposeParams(map[string]interface{}{`algoId`: algoId, `ordType`: `conditional`}))
+	responseBody := sendSignRequestOKEX(key, secret, http.MethodGet, path, nil)
+	orderJson, err := util.NewJSON(responseBody)
+	if err != nil || orderJson == nil || orderJson.Get(`data`) == nil || orderJson.Get(`code`).MustString() != `0` {
+		return ``
+	}
+	orders := orderJson.Get(`data`).MustArray()
+	for _, item := range orders {
+		value := item.(map[string]interface{})
+		if value[`algoId`] == algoId {
+			return value[`ordId`].(string)
+		}
+	}
+	return ``
+}
+
 func queryOrderOKEX(key, secret, instrument, orderId, orderType string) (order *model.Order) {
 	path := fmt.Sprintf(`/api/v5/trade/order?%s`,
 		util.ComposeParams(map[string]interface{}{"ordId": orderId, "instId": instrument}))
@@ -819,6 +837,12 @@ func queryOrderOKEX(key, secret, instrument, orderId, orderType string) (order *
 		return nil
 	}
 	if strings.Trim(orderJson.Get(`code`).MustString(), ` `) == `51603` {
+		if orderType == model.OrderTypeStop {
+			orderId = getAlgoOrderIdOKEX(key, secret, orderId)
+			if orderId != `` {
+				return queryOrderOKEX(key, secret, instrument, orderId, model.OrderTypeLimit)
+			}
+		}
 		return &model.Order{Instrument: instrument, OrderId: orderId, OrderType: orderType,
 			Status: model.CarryStatusFail, Symbol: instrument}
 	}

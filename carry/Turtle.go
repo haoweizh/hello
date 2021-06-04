@@ -381,11 +381,6 @@ func handleBreak(setting *model.Setting, turtleData *TurtleData, orderSide strin
 	if orderQuery != nil {
 		time.Sleep(time.Second * 3)
 		util.Notice(fmt.Sprintf(`query turtle break %s %s`, orderSide, orderQuery.OrderId))
-		if setting.Market == model.OKEX {
-			orderQuery.Status = model.CarryStatusSuccess
-			orderQuery.DealAmount = orderQuery.Amount
-			model.AppDB.Save(orderQuery)
-		}
 		setting.PriceX = orderQuery.TriggerPrice
 		turtleData.orderLong = nil
 		turtleData.orderShort = nil
