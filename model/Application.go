@@ -19,8 +19,8 @@ var CarryInfo = make(map[string]string)                             // function 
 var carryInfos = make(map[string]map[string]map[string]interface{}) // table - line name - key - value
 var AppMetric = &MetricManager{}
 
-const KeyDefault = `bn2wed5t4y-b57c5de3-a9808690-45bbc`
-const SecretDefault = `5e740dfc-92a2d639-0f7458bf-63030`
+const KeyDefault = ``
+const SecretDefault = ``
 
 const OKEXBTCContractFaceValue = 100.0
 const OKEXOtherContractFaceValue = 10.0
@@ -30,6 +30,7 @@ const OKEX = "okex"
 const OKFUTURE = `okfuture`
 const Huobi = "huobi"
 const HuobiDM = `huobiDM`
+const HuobiFuture = `HuobiFuture`
 const Binance = "binance"
 const Ftx = `ftx`
 const Coinpark = "coinpark"

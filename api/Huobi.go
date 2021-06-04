@@ -19,6 +19,9 @@ import (
 const restHuobi = `api-aws.huobi.pro`
 const wsHuobi = `wss://api-aws.huobi.pro/ws`
 
+const restHuobiFuture = `api.hbdm.com`
+const wsHuobiFuture = `wss://api.hbdm.com/linear-swap-ws`
+
 //spot：现货账户, margin：逐仓杠杆账户, otc：OTC 账户, point：点卡账户, super-margin：全仓杠杆账户, investment: C2C杠杆借出账户,
 //borrow: C2C杠杆借入账户，矿池账户: minepool, ETF账户: etf, 抵押借贷账户: crypto-loans
 const spotAccount = "spot"
@@ -111,8 +114,8 @@ func WsDepthServeHuobi(markets *model.Markets, orderHandler OrderHandler) (chann
 			pingMap := make(map[string]interface{})
 			pingMap["pong"] = responseJson.Get(`ping`).MustInt()
 			pingParams := util.JsonEncodeToByte(pingMap)
-			if err := sendToWs(model.HuobiDM, pingParams); err != nil {
-				util.SocketInfo("huobiDM server ping client error " + err.Error())
+			if err := sendToWs(model.HuobiFuture, pingParams); err != nil {
+				util.SocketInfo("HuobiFuture server ping client error " + err.Error())
 			}
 		} else {
 			tickJson := responseJson.Get(`tick`)
@@ -183,10 +186,10 @@ func WsDepthServeHuobi(markets *model.Markets, orderHandler OrderHandler) (chann
 	} else {
 		channels = append(channels, channel)
 	}
-	dmChannel, dmChannelErr := WebSocketClient(model.HuobiDM, wsHuobiDM, model.HuobiDM,
+	dmChannel, dmChannelErr := WebSocketClient(model.HuobiFuture, wsHuobiFuture, model.HuobiFuture,
 		futureSubscribes, subscribeHandlerHuobi, wsHandlerDM, orderHandler)
 	if dmChannelErr != nil {
-		util.SocketInfo(`fail to create huobidm %s`, dmChannelErr.Error())
+		util.SocketInfo(`fail to create HuobiFuture %s`, dmChannelErr.Error())
 	} else {
 		channels = append(channels, dmChannel)
 	}
@@ -220,7 +223,7 @@ func getMarketsHuobi() (marketInfos map[string]*model.MarketInfo) {
 			marketInfos[marketInfo.Name] = marketInfo
 		}
 	}
-	futureResponseBody := SignedRequestHuobi(``, ``, http.MethodGet, restHuobiDM, `/linear-swap-api/v1/swap_contract_info`, nil)
+	futureResponseBody := SignedRequestHuobi(``, ``, http.MethodGet, restHuobiFuture, `/linear-swap-api/v1/swap_contract_info`, nil)
 	futureSymbolsJson, err := util.NewJSON(futureResponseBody)
 	if err == nil && futureSymbolsJson != nil && strings.ToLower(futureSymbolsJson.Get(`status`).MustString()) == `ok` {
 		items, _ := futureSymbolsJson.Get("data").Array()
@@ -303,7 +306,7 @@ func placeOrderHuobi(key, secret string, order *model.Order, orderSide, orderTyp
 	postData := make(map[string]interface{})
 	var host, path string
 	if symbol[len(symbol)-5:] == `-usdt` { //合约
-		host = restHuobiDM
+		host = restHuobiFuture
 		path = "/linear-swap-api/v1/swap_cross_order"
 		postData["lever_rate"] = 5
 		postData["contract_code"] = symbol
@@ -377,7 +380,7 @@ func cancelOrdersHuobi(key, secret, symbol string) (result bool) {
 	postData := make(map[string]interface{})
 	var host, path string
 	if strings.Contains(symbol, "-usdt") {
-		host = restHuobiDM
+		host = restHuobiFuture
 		path = "/linear-swap-api/v1/swap_cross_cancelall"
 		postData[`contract_code`] = symbol
 	} else {
@@ -507,11 +510,11 @@ func transferHuobi(key string, secret string, transferType string, amount float6
 func getPositionsHuobi(key string, secret string) (success bool, positions []*model.Position, posBalance float64) {
 	postData := make(map[string]interface{})
 	postData["margin_account"] = "USDT"
-	response := SignedRequestHuobi(key, secret, http.MethodPost, restHuobiDM, "/linear-swap-api/v1/swap_cross_account_position_info", postData)
+	response := SignedRequestHuobi(key, secret, http.MethodPost, restHuobiFuture, "/linear-swap-api/v1/swap_cross_account_position_info", postData)
 	responseJson, err := util.NewJSON(response)
 	if err != nil || responseJson == nil || strings.ToLower(responseJson.Get(`status`).MustString()) != `ok` {
 		time.Sleep(time.Second * 2)
-		util.SocketInfo(`fail to get huobiDM balance`)
+		util.SocketInfo(`fail to get HuobiFuture balance`)
 		return getPositionsHuobi(key, secret)
 	}
 	positions = make([]*model.Position, 0)
