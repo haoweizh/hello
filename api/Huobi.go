@@ -16,11 +16,11 @@ import (
 	"time"
 )
 
-const restHuobi = `api-aws.huobi.pro`
-const wsHuobi = `wss://api-aws.huobi.pro/ws`
+const restHuobi = `api.huobi.pro`
+const wsHuobi = `wss://api.huobi.pro/ws`
 
-const restHuobiFuture = `api.hbdm.com`
-const wsHuobiFuture = `wss://api.hbdm.com/linear-swap-ws`
+const restHuobiFuture = `api.hbdm.vn`
+const wsHuobiFuture = `wss://api.hbdm.vn/linear-swap-ws`
 
 //spot：现货账户, margin：逐仓杠杆账户, otc：OTC 账户, point：点卡账户, super-margin：全仓杠杆账户, investment: C2C杠杆借出账户,
 //borrow: C2C杠杆借入账户，矿池账户: minepool, ETF账户: etf, 抵押借贷账户: crypto-loans
@@ -373,6 +373,7 @@ func placeOrderHuobi(key, secret string, order *model.Order, orderSide, orderTyp
 }
 
 func cancelOrderHuobi(key, secret, orderId string) (result bool, errCode, msg string) {
+	util.Notice(`not yet %s %s %s`, key, secret, orderId)
 	return false, ``, ``
 }
 

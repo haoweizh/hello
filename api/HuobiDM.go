@@ -16,8 +16,8 @@ import (
 	"time"
 )
 
-const restHuobiDM = `api.hbdm.com`
-const wsHuobiDM = `wss://api.hbdm.com/ws`
+const restHuobiDM = `api.hbdm.vn`
+const wsHuobiDM = `wss://api.hbdm.vn/ws`
 
 var subscribeHandlerHuobiDM = func(subscribes []interface{}, subType string) error {
 	var err error = nil
