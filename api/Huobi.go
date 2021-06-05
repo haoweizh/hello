@@ -211,12 +211,14 @@ func getMarketsHuobi() (marketInfos map[string]*model.MarketInfo) {
 			if value["price-precision"] != nil {
 				priceDecimal, _ := value["price-precision"].(json.Number).Int64()
 				marketInfo.PriceDecimal = int(priceDecimal)
+				marketInfo.PriceIncrement = 1 / math.Pow10(int(priceDecimal))
 			}
 			if value["limit-order-min-order-amt"] != nil {
 				marketInfo.SizeMin, _ = value["limit-order-min-order-amt"].(json.Number).Float64()
 			}
 			amountPrecision, _ := value["amount-precision"].(json.Number).Int64()
 			marketInfo.SizeIncrement = 1 / math.Pow10(int(amountPrecision))
+
 			//price-precision	true	integer	交易对报价的精度（小数点后位数）
 			//amount-precision	true	integer	交易对基础币种计数精度（小数点后位数）
 
@@ -229,6 +231,10 @@ func getMarketsHuobi() (marketInfos map[string]*model.MarketInfo) {
 		items, _ := futureSymbolsJson.Get("data").Array()
 		for _, item := range items {
 			value := item.(map[string]interface{})
+
+			if value["support_margin_mode"].(string) != "all" && value["support_margin_mode"].(string) != "cross" {
+				continue
+			}
 
 			marketInfo := &model.MarketInfo{Name: strings.ToLower(value["contract_code"].(string))}
 
@@ -319,7 +325,11 @@ func placeOrderHuobi(key, secret string, order *model.Order, orderSide, orderTyp
 		}
 
 		if orderType == model.OrderTypeLimit {
+			price, _ := strconv.ParseFloat(price, 64)
+			//priceFuture, decimalFuture := FormatPrice(model.Huobi, symbol, model.OrderSideBuy, price)
+			//priceStrFuture := util.CutTailZero(strconv.FormatFloat(priceFuture, 'f', decimalFuture, 64))
 			postData["price"] = price
+
 			postData["order_price_type"] = "limit"
 		} else if orderType == model.OrderTypeMarket {
 			postData["order_price_type"] = "opponent"
@@ -330,7 +340,9 @@ func placeOrderHuobi(key, secret string, order *model.Order, orderSide, orderTyp
 			return
 		}
 		amount, _ := strconv.ParseFloat(amount, 64)
-		postData["volume"] = amount / marketInfo.CTValue
+		formattedAmount := GetAmountInMarket(model.Huobi, symbol, amount)
+		futureAmount := util.CutTailZero(fmt.Sprintf(`%f`, formattedAmount))
+		postData["volume"] = futureAmount
 	} else { //现货
 		host = restHuobi
 		path = "/v1/order/orders/place"
@@ -349,10 +361,18 @@ func placeOrderHuobi(key, secret string, order *model.Order, orderSide, orderTyp
 			_ = GetAccountIdsHuobi(key, secret)
 		}
 		postData["account-id"] = huobiAccountMap[key][spotAccount]
-		postData["amount"] = amount
+
+		amount, _ := strconv.ParseFloat(amount, 64)
+		formattedAmount := GetAmountInMarket(model.Huobi, symbol, amount)
+		spotAmount := util.CutTailZero(fmt.Sprintf(`%f`, formattedAmount))
+		postData["amount"] = spotAmount
+
 		postData["symbol"] = symbol
 		if orderType == model.OrderTypeLimit {
-			postData["price"] = price
+			price, _ := strconv.ParseFloat(price, 64)
+			priceSpot, decimalSpot := FormatPrice(model.Huobi, symbol, model.OrderSideBuy, price)
+			priceStrSpot := util.CutTailZero(strconv.FormatFloat(priceSpot, 'f', decimalSpot, 64))
+			postData["price"] = priceStrSpot
 		}
 	}
 	responseBody := SignedRequestHuobi(key, secret, `POST`, host, path, postData)
@@ -360,7 +380,7 @@ func placeOrderHuobi(key, secret string, order *model.Order, orderSide, orderTyp
 	if err == nil {
 		status, _ := orderJson.Get("status").String()
 		if status == "ok" {
-			order.OrderId, _ = orderJson.Get("data").Get("order_id").String()
+			order.OrderId, _ = orderJson.Get("data").Get("order_id_str").String()
 			if order.OrderId == "" {
 				order.OrderId, _ = orderJson.Get("data").String()
 			}
@@ -530,12 +550,12 @@ func getPositionsHuobi(key string, secret string) (success bool, positions []*mo
 			position.Currency = strings.ToLower(item[`contract_code`].(string))
 		}
 		if item[`cost_open`] != nil {
-			position.EntryPrice, _ = strconv.ParseFloat(item[`cost_open`].(string), 64)
+			position.EntryPrice, _ = item[`cost_open`].(json.Number).Float64()
 		}
 		if item[`volume`] != nil && item[`direction`] != nil {
 			position.Direction = item[`direction`].(string)
 
-			amount := item[`volume`].(float64)
+			amount, _ := item[`volume`].(json.Number).Float64()
 			_, realAmount := ParseRealAmount(model.Huobi, position.Currency, amount)
 			if item[`direction`].(string) == "sell" {
 				position.Free = realAmount * -1
