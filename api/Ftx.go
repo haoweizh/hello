@@ -681,29 +681,27 @@ func parseOrderFtx(order *model.Order, item map[string]interface{}) {
 }
 
 //orderType: "limit", "market", "stop", "trailingStop", "takeProfit"
-func placeOrderFtx(order *model.Order, key, secret, orderSide, orderType, orderParam, symbol, orderPrice, triggerPrice,
-	amount string) {
+func placeOrderFtx(order *model.Order, key, secret, orderSide, orderType, orderParam, symbol string, orderPrice, triggerPrice, amount float64) {
 	uri := `/orders`
 	param := make(map[string]interface{})
 	param[`market`] = symbol
 	postData := make(map[string]interface{})
 	postData[`market`] = symbol
 	postData[`side`] = orderSide
-	postData[`size`], _ = strconv.ParseFloat(amount, 64)
+	postData[`size`] = amount
 	postData[`type`] = orderType
 	postData[`ioc`] = false
 	postData[`reduceOnly`] = false
 	if orderType == `limit` || orderType == `market` {
-		postData[`price`], _ = strconv.ParseFloat(orderPrice, 64)
+		postData[`price`] = orderPrice
 		if orderParam == model.PostOnly {
 			postData[`postOnly`] = true
 		}
 	} else if orderType == `stop` || orderType == `trailingStop` || orderType == `takeProfit` {
 		uri = `/conditional_orders`
-		postData[`triggerPrice`], _ = strconv.ParseFloat(triggerPrice, 64)
-		orderPriceValue, _ := strconv.ParseFloat(orderPrice, 64)
-		if orderPriceValue > 0 {
-			postData[`orderPrice`] = orderPriceValue
+		postData[`triggerPrice`] = triggerPrice
+		if orderPrice > 0 {
+			postData[`orderPrice`] = orderPrice
 		}
 	}
 	response := SignedRequestFtx(key, secret, `POST`, uri, param, postData)

@@ -219,7 +219,7 @@ func getHoldingHuobiDM(key, secret, symbolSide string) (position *model.Position
 
 // 不适宜快速下单
 func placeOrderHuobiDM(key, secret string, order *model.Order,
-	orderSide, orderType, contractCode, symbol, price, triggerPrice, size string) {
+	orderSide, orderType, contractCode, symbol string, price, triggerPrice, size float64) {
 	if orderType != model.OrderTypeStop {
 		return
 	}
@@ -241,16 +241,14 @@ func placeOrderHuobiDM(key, secret string, order *model.Order,
 		direction = `buy`
 		offset = `close`
 		position := getHoldingHuobiDM(key, secret, symbol+model.OrderSideSell)
-		sizeFloat, _ := strconv.ParseFloat(size, 64)
 		if position != nil {
 			holding := math.Abs(position.Free)
-			util.Notice(fmt.Sprintf(`holding huobiDM size %s to %f`, size, holding))
-			if holding < sizeFloat {
-				_, strAmount := util.FormatNum(holding, GetAmountDecimal(model.HuobiDM))
-				size = strAmount
+			util.Notice(fmt.Sprintf(`holding huobiDM size %f to %f`, size, holding))
+			if holding < size {
+				size = holding
 			}
 		} else {
-			size = `0`
+			size = 0
 		}
 	case model.OrderSideLiquidateLong:
 		triggerType = `le`
@@ -258,15 +256,13 @@ func placeOrderHuobiDM(key, secret string, order *model.Order,
 		offset = `close`
 		position := getHoldingHuobiDM(key, secret, symbol+model.OrderSideBuy)
 		if position != nil {
-			sizeFloat, _ := strconv.ParseFloat(size, 64)
 			holding := math.Abs(position.Free)
-			util.Notice(fmt.Sprintf(`holding huobiDM size %s to %f`, size, holding))
-			if holding < sizeFloat {
-				_, strAmount := util.FormatNum(holding, GetAmountDecimal(model.HuobiDM))
-				size = strAmount
+			util.Notice(fmt.Sprintf(`holding huobiDM size %f to %f`, size, holding))
+			if holding < size {
+				size = holding
 			}
 		} else {
-			size = `0`
+			size = 0
 		}
 	}
 	//account := model.AppAccounts.GetAccount(market, symbol)
@@ -274,8 +270,10 @@ func placeOrderHuobiDM(key, secret string, order *model.Order,
 	//if account != nil {
 	//	lever = strconv.FormatInt(account.LeverRate, 10)
 	//}
+	_, strPrice := util.FormatNum(price, 2)
+	_, strAmount := util.FormatNum(size, 2)
 	param := map[string]interface{}{`contract_code`: contractCode, `trigger_type`: triggerType,
-		`trigger_price`: triggerPrice, `order_price`: price, `volume`: size,
+		`trigger_price`: triggerPrice, `order_price`: strPrice, `volume`: strAmount,
 		`direction`: direction, `offset`: offset, `lever_rate`: `5`}
 	responseBody := SignedRequestHuobiDM(key, secret, model.HuobiDM, `POST`, `/api/v1/contract_trigger_order`, param)
 	orderJson, err := util.NewJSON(responseBody)

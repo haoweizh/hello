@@ -106,14 +106,13 @@ func SignedRequestCoinpark(method, path, cmds string) []byte {
 
 // order_side 交易方向，1-买，2-卖
 // order_type 交易类型，2-限价单
-func placeOrderCoinpark(order *model.Order, orderSide, orderType, symbol, price, amount string) {
+func placeOrderCoinpark(order *model.Order, orderSide, orderType, symbol string, price, amount float64) {
 	if orderSide == model.OrderSideBuy {
 		orderSide = `1`
 	} else if orderSide == model.OrderSideSell {
 		orderSide = `2`
-		temp, _ := strconv.ParseFloat(amount, 64)
-		if temp > 50000 {
-			util.Notice(orderType + `==sell==do not execute ` + amount)
+		if amount > 50000 {
+			util.Notice(`%s ==sell==do not execute %f`, orderType, amount)
 		}
 	} else {
 		util.Notice(fmt.Sprintf(`[parameter error] order side: %s`, orderSide))

@@ -341,8 +341,7 @@ func queryOrderBybit(key, secret, symbol, orderId string) (orders []*model.Order
 //}
 
 // timeInForce 有效选项:GoodTillCancel, ImmediateOrCancel, FillOrKill,PostOnly
-func placeOrderBybit(order *model.Order, key, secret, orderSide, orderType, timeInForce, symbol, price,
-	amount string) {
+func placeOrderBybit(order *model.Order, key, secret, orderSide, orderType, timeInForce, symbol string, price, amount float64) {
 	postData := make(map[string]interface{})
 	symbol = model.GetDialectSymbol(model.Bybit, symbol)
 	postData["side"] = strings.ToUpper(orderSide[0:1]) + orderSide[1:]

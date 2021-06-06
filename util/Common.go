@@ -54,12 +54,6 @@ func NewJSON(data []byte) (j *simplejson.Json, err error) {
 	return j, nil
 }
 
-func JsonDecodeByte(bytes []byte) map[string]interface{} {
-	jsonMap := make(map[string]interface{})
-	_ = json.Unmarshal(bytes, &jsonMap)
-	return jsonMap
-}
-
 func JsonEncodeToByte(stringMap interface{}) []byte {
 	if stringMap == nil {
 		return []byte(``)
@@ -98,6 +92,7 @@ func FormatNum(input float64, decimal float64) (num float64, str string) {
 	return num, str
 }
 
+// NumDecPlaces 返回小数点后有效数字位数
 func NumDecPlaces(v float64) int {
 	s := strconv.FormatFloat(v, 'f', -1, 64)
 	i := strings.IndexByte(s, '.')

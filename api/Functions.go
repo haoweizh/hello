@@ -42,46 +42,6 @@ func RequireDepthChanReset(markets *model.Markets, market string) bool {
 	return true
 }
 
-// GetPriceDecimal 根据不同的网站返回价格小数位
-func GetPriceDecimal(market, symbol string) float64 {
-	switch market {
-	case model.Coinpark:
-		switch symbol {
-		case `cp_usdt`:
-			return 4
-		case `cp_eth`, `cp_btc`:
-			return 8
-		}
-	case model.Bitmex:
-		switch symbol {
-		case `btcusd_p`:
-			return 0.5
-		case `ethusd_p`:
-			return 1.5
-		}
-	case model.Bybit:
-		switch symbol {
-		case `btcusd_p`:
-			return 0.5
-		case `ethusd_p`:
-			return 1.5
-		}
-	case model.HuobiDM:
-		return 2
-	}
-	return 8
-}
-
-func GetAmountDecimal(market string) float64 {
-	switch market {
-	case model.Bitmex, model.Bybit:
-		return 0
-	case model.OKFUTURE, model.HuobiDM:
-		return 0
-	}
-	return 4
-}
-
 func MustCancel(key, secret, market, symbol, instrument, orderType, orderId string, mustCancel bool) (
 	res bool, order *model.Order) {
 	sleepTime := 1
@@ -525,11 +485,11 @@ func PlaceOrder(key, secret, orderSide, orderType, market, symbol, instrument, o
 	order = &model.Order{OrderSide: markSide, OrderType: orderType, Market: market, Symbol: symbol, Price: price,
 		Amount: amount, DealAmount: 0, DealPrice: price, RefreshType: refreshType, TriggerPrice: triggerPrice,
 		OrderTime: util.GetNow(), UnfilledQuantity: amount, Instrument: instrument, AmountType: key}
-	price, strPrice := util.FormatNum(price, GetPriceDecimal(market, symbol))
-	triggerPrice, strTriggerPrice := util.FormatNum(triggerPrice, GetPriceDecimal(market, symbol))
-	_, strAmount := util.FormatNum(amount, GetAmountDecimal(market))
-	util.Notice(fmt.Sprintf(`...%s %s %s before order %d amount:%s %f price:%s %f triggerPrice:%s`,
-		orderSide, market, symbol, start, strAmount, amount, strPrice, price, strTriggerPrice))
+	//price, strPrice := util.FormatNum(price, GetPriceDecimal(market, symbol))
+	//triggerPrice, strTriggerPrice := util.FormatNum(triggerPrice, GetPriceDecimal(market, symbol))
+	//_, strAmount := util.FormatNum(amount, GetAmountDecimal(market))
+	util.Notice(fmt.Sprintf(`...%s %s %s before order %d amount: %f price:%f triggerPrice:%f`,
+		orderSide, market, symbol, start, amount, price, triggerPrice))
 	if model.AppConfig.Env == `test` {
 		order.Status = model.CarryStatusWorking
 		order.OrderId = fmt.Sprintf(`%s%s%d`, market, symbol, util.GetNow().UnixNano())
@@ -552,26 +512,25 @@ func PlaceOrder(key, secret, orderSide, orderType, market, symbol, instrument, o
 			openDFuture(key, secret, orderSide, symbol, triggerPrice, price, amount)
 		}
 	case model.Huobi:
-		placeOrderHuobi(key, secret, order, orderSide, orderType, symbol, strPrice, strAmount)
+		placeOrderHuobi(key, secret, order, orderSide, orderType, symbol, price, amount)
 	case model.HuobiDM:
-		placeOrderHuobiDM(key, secret, order, orderSide, orderType, instrument, symbol, strPrice, strTriggerPrice, strAmount)
+		placeOrderHuobiDM(key, secret, order, orderSide, orderType, instrument, symbol, price, triggerPrice, amount)
 	case model.OKEX:
 		placeOrderOKEX(key, secret, isWs, order)
 	case model.Binance:
 		placeOrderBinance(key, secret, order, orderSide, orderType, symbol, price, amount)
 	case model.Coinpark:
-		placeOrderCoinpark(order, orderSide, orderType, symbol, strPrice, strAmount)
+		placeOrderCoinpark(order, orderSide, orderType, symbol, price, amount)
 		if order.ErrCode == `4003` {
 			util.Notice(`【发现4003错误】sleep 3 minutes`)
 			time.Sleep(time.Minute * 3)
 		}
 	case model.Bitmex:
-		placeOrderBitmex(order, key, secret, orderSide, orderType, orderParam, symbol, strPrice, strAmount)
+		placeOrderBitmex(order, key, secret, orderSide, orderType, orderParam, symbol, price, amount)
 	case model.Bybit:
-		placeOrderBybit(order, key, secret, orderSide, orderType, orderParam, symbol, strPrice, strAmount)
+		placeOrderBybit(order, key, secret, orderSide, orderType, orderParam, symbol, price, amount)
 	case model.Ftx:
-		placeOrderFtx(order, key, secret, orderSide, orderType, orderParam, symbol, strPrice,
-			strTriggerPrice, fmt.Sprintf(`%f`, amount))
+		placeOrderFtx(order, key, secret, orderSide, orderType, orderParam, symbol, price, triggerPrice, amount)
 	}
 	if order.OrderId == "0" || strings.Trim(order.OrderId, ` `) == "" {
 		order.Status = model.CarryStatusFail

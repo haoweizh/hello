@@ -694,7 +694,7 @@ func _(key, secret, symbol, orderId string) (orders []*model.Order) {
 //	}
 //}
 
-func placeOrderBitmex(order *model.Order, key, secret, orderSide, orderType, execInst, symbol, price, amount string) {
+func placeOrderBitmex(order *model.Order, key, secret, orderSide, orderType, execInst, symbol string, price, amount float64) {
 	postData := make(map[string]interface{})
 	symbol = model.GetDialectSymbol(model.Bitmex, symbol)
 	postData["symbol"] = symbol
@@ -715,8 +715,8 @@ func placeOrderBitmex(order *model.Order, key, secret, orderSide, orderType, exe
 	util.Notice(`---- place bitmex` + string(response))
 	orderJson, err := util.NewJSON(response)
 	if err == nil {
-		item, err := orderJson.Map()
-		if err == nil {
+		item, orderErr := orderJson.Map()
+		if orderErr == nil {
 			parseOrderBM(order, item)
 		}
 	}

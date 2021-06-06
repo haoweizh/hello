@@ -650,9 +650,6 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 			amount = math.Min(amount, maxBuyRelated)
 		}
 		_, amountInReal := model.ParseRealAmount(setting.Market, setting.Symbol, amountInPerp)
-		if setting.Symbol == `1INCH-USDT-SWAP` {
-			util.Notice(`sizes %f %f %f %f in perp %f`, maxBuyRelated, maxSellRelated, maxBuyPerp, maxSellPerp, amountInPerp)
-		}
 		amount = math.Min(amount, amountInReal)
 		amount = model.FormatAmountPair(setting.Market, setting.Symbol, setting.SymbolRelated, amount)
 	} else if model.Ftx == setting.Market && amount > 90000000 {

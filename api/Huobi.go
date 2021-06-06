@@ -235,11 +235,12 @@ func getMarketsHuobi() (marketInfos map[string]*model.MarketInfo) {
 			if value["contract_size"] != nil {
 				marketInfo.CTValue, _ = value["contract_size"].(json.Number).Float64()
 				marketInfo.SizeMin, _ = value["contract_size"].(json.Number).Float64()
-				marketInfo.SizeIncrement, _ = value["contract_size"].(json.Number).Float64()
 			}
 			if value["price_tick"] != nil {
 				marketInfo.PriceIncrement, _ = value["price_tick"].(json.Number).Float64()
+				marketInfo.PriceDecimal = util.NumDecPlaces(marketInfo.PriceIncrement)
 			}
+			marketInfo.SizeIncrement = 1
 			marketInfos[marketInfo.Name] = marketInfo
 		}
 	}
@@ -299,7 +300,7 @@ func GetAccountIdsHuobi(key, secret string) (err error) {
 
 // orderType: buy-market：市价买, sell-market：市价卖, buy-limit：限价买, sell-limit：限价卖
 // huobi中amount在市价买单中指的是右侧的钱
-func placeOrderHuobi(key, secret string, order *model.Order, orderSide, orderType, symbol, price, amount string) {
+func placeOrderHuobi(key, secret string, order *model.Order, orderSide, orderType, symbol string, price, amount float64) {
 	postData := make(map[string]interface{})
 	var host, path string
 	if symbol[len(symbol)-5:] == `-usdt` { //合约
@@ -315,10 +316,9 @@ func placeOrderHuobi(key, secret string, order *model.Order, orderSide, orderTyp
 			postData["offset"] = "open"
 		}
 		if orderType == model.OrderTypeLimit {
-			orderPrice, _ := strconv.ParseFloat(price, 64)
-			//priceFuture, decimalFuture := FormatPrice(model.Huobi, symbol, model.OrderSideBuy, price)
-			//priceStrFuture := util.CutTailZero(strconv.FormatFloat(priceFuture, 'f', decimalFuture, 64))
-			postData["price"] = orderPrice
+			priceFuture, decimalFuture := model.FormatPrice(model.Huobi, symbol, model.OrderSideBuy, price)
+			priceStrFuture := util.CutTailZero(strconv.FormatFloat(priceFuture, 'f', decimalFuture, 64))
+			postData["price"] = priceStrFuture
 			postData["order_price_type"] = "limit"
 		} else if orderType == model.OrderTypeMarket {
 			postData["order_price_type"] = "opponent"
@@ -328,10 +328,7 @@ func placeOrderHuobi(key, secret string, order *model.Order, orderSide, orderTyp
 			marketInfo.CTCurrency != model.GetCoin(model.Huobi, symbol) {
 			return
 		}
-		orderAmount, _ := strconv.ParseFloat(amount, 64)
-		formattedAmount := model.GetAmountInMarket(model.Huobi, symbol, orderAmount)
-		futureAmount := util.CutTailZero(fmt.Sprintf(`%f`, formattedAmount))
-		postData["volume"] = futureAmount
+		postData["volume"] = util.CutTailZero(fmt.Sprintf(`%f`, model.GetAmountInMarket(model.Huobi, symbol, amount)))
 	} else { //现货
 		host = restHuobi
 		path = "/v1/order/orders/place"
@@ -350,17 +347,11 @@ func placeOrderHuobi(key, secret string, order *model.Order, orderSide, orderTyp
 			_ = GetAccountIdsHuobi(key, secret)
 		}
 		postData["account-id"] = huobiAccountMap[key][spotAccount]
-		orderAmount, _ := strconv.ParseFloat(amount, 64)
-		formattedAmount := model.GetAmountInMarket(model.Huobi, symbol, orderAmount)
-		spotAmount := util.CutTailZero(fmt.Sprintf(`%f`, formattedAmount))
-		postData["amount"] = spotAmount
-
+		postData["amount"] = util.CutTailZero(fmt.Sprintf(`%f`, model.GetAmountInMarket(model.Huobi, symbol, amount)))
 		postData["symbol"] = symbol
 		if orderType == model.OrderTypeLimit {
-			orderPrice, _ := strconv.ParseFloat(price, 64)
-			priceSpot, decimalSpot := model.FormatPrice(model.Huobi, symbol, model.OrderSideBuy, orderPrice)
-			priceStrSpot := util.CutTailZero(strconv.FormatFloat(priceSpot, 'f', decimalSpot, 64))
-			postData["price"] = priceStrSpot
+			priceSpot, decimalSpot := model.FormatPrice(model.Huobi, symbol, model.OrderSideBuy, price)
+			postData["price"] = util.CutTailZero(strconv.FormatFloat(priceSpot, 'f', decimalSpot, 64))
 		}
 	}
 	responseBody := SignedRequestHuobi(key, secret, `POST`, host, path, postData)
@@ -376,7 +367,7 @@ func placeOrderHuobi(key, secret string, order *model.Order, orderSide, orderTyp
 			order.OrderId, _ = orderJson.Get("err-code").String()
 		}
 	}
-	util.Notice(fmt.Sprintf(`[挂单huobi] %s side: %s type: %s price: %s amount: %s order id %s 返回%s`,
+	util.Notice(fmt.Sprintf(`[挂单huobi] %s side: %s type: %s price: %f amount: %f order id %s 返回%s`,
 		symbol, orderSide, orderType, price, amount, order.OrderId, string(responseBody)))
 }
 
