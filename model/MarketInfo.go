@@ -136,7 +136,7 @@ func FormatAmountPair(market, symbolPerp, symbolRelated string, amount float64) 
 		sizeInc = marketRelated.SizeIncrement
 	}
 	formattedAmount = math.Floor(amount/sizeInc) * sizeInc
-	if formattedAmount < marketPerp.SizeMin || formattedAmount < marketRelated.SizeMin {
+	if formattedAmount < sizeMinPerp || formattedAmount < marketRelated.SizeMin {
 		return 0
 	}
 	return formattedAmount
