@@ -365,9 +365,9 @@ func getMarketsBinance() (marketInfos map[string]*model.MarketInfo) {
 // 要把参数从左侧的币换成右测的钱
 func placeOrderBinance(key, secret string, order *model.Order, orderSide, orderType, symbol string, price, amount float64) {
 	postData := &url.Values{}
-	price, decimal := FormatPrice(model.Binance, symbol, orderSide, price)
+	price, decimal := model.FormatPrice(model.Binance, symbol, orderSide, price)
 	priceStr := util.CutTailZero(strconv.FormatFloat(price, 'f', decimal, 64))
-	formattedAmount := GetAmountInMarket(model.Binance, symbol, amount)
+	formattedAmount := model.GetAmountInMarket(model.Binance, symbol, amount)
 	amountStr := util.CutTailZero(fmt.Sprintf(`%f`, formattedAmount))
 	postData.Set("quantity", amountStr)
 	var requestUrl string

@@ -1,6 +1,12 @@
 package model
 
-import "sync"
+import (
+	"fmt"
+	"hello/util"
+	"math"
+	"strconv"
+	"sync"
+)
 
 var marketInfos = make(map[string]map[string]*MarketInfo) // market - symbol - MarketInfo
 var marketInfoLock sync.Mutex
@@ -42,15 +48,6 @@ func GetMarketInfo(market, instrument string) (marketInfo *MarketInfo) {
 	return marketInfos[market][instrument]
 }
 
-//func SetMarketInfo(market, instrument string, marketInfo *MarketInfo) {
-//	defer marketInfoLock.Unlock()
-//	marketInfoLock.Lock()
-//	if marketInfos[market] == nil {
-//		marketInfos[market] = make(map[string]*MarketInfo)
-//	}
-//	marketInfos[market][instrument] = marketInfo
-//}
-
 func SetMarketInfos(market string, value map[string]*MarketInfo) {
 	defer marketInfoLock.Unlock()
 	marketInfoLock.Lock()
@@ -61,4 +58,69 @@ func GetMarketInfos(market string) (value map[string]*MarketInfo) {
 	defer marketInfoLock.Unlock()
 	marketInfoLock.Lock()
 	return marketInfos[market]
+}
+
+// ParseRealAmount 返回以币为单位的数量
+func ParseRealAmount(market, symbol string, amount float64) (success bool, realAmount float64) {
+	marketInfo := GetMarketInfo(market, symbol)
+	if marketInfo == nil || marketInfo.SizeIncrement == 0 || marketInfo.CTValue == 0 ||
+		marketInfo.CTCurrency != GetCoin(market, symbol) {
+		return false, 0
+	}
+	return true, amount * marketInfo.CTValue
+}
+
+// GetAmountInMarket 返回交易所可下单数量格式
+func GetAmountInMarket(market, symbol string, amount float64) (formattedAmount float64) {
+	marketInfo := GetMarketInfo(market, symbol)
+	if marketInfo == nil || marketInfo.SizeIncrement == 0 || marketInfo.SizeMin == 0 {
+		return 0
+	}
+	if marketInfo.CTValue > 0 && marketInfo.CTCurrency == GetCoin(market, symbol) {
+		amount = amount / marketInfo.CTValue
+	}
+	formattedAmount = marketInfo.SizeIncrement * math.Floor(amount/marketInfo.SizeIncrement)
+	decimal := util.NumDecPlaces(marketInfo.SizeIncrement)
+	format := `%.` + strconv.Itoa(decimal) + `f`
+	formattedAmount, _ = strconv.ParseFloat(fmt.Sprintf(format, formattedAmount), 64)
+	if formattedAmount < marketInfo.SizeMin || marketInfo.SizeMin == 0 {
+		return 0
+	}
+	return formattedAmount
+}
+
+func FormatPrice(market, symbol, orderSide string, price float64) (formattedPrice float64, decimal int) {
+	marketInfo := GetMarketInfo(market, symbol)
+	if marketInfo == nil || marketInfo.SizeIncrement == 0 {
+		return 0, 0
+	}
+	if orderSide == OrderSideBuy {
+		return marketInfo.PriceIncrement * math.Ceil(price/marketInfo.PriceIncrement), marketInfo.PriceDecimal
+	} else {
+		return marketInfo.PriceIncrement * math.Floor(price/marketInfo.PriceIncrement), marketInfo.PriceDecimal
+	}
+}
+
+// FormatAmountPair symbol 期货; related 现货
+func FormatAmountPair(market, symbolPerp, symbolRelated string, amount float64) (formattedAmount float64) {
+	marketPerp := GetMarketInfo(market, symbolPerp)
+	marketRelated := GetMarketInfo(market, symbolRelated)
+	if marketPerp == nil || marketPerp.SizeIncrement == 0 || marketPerp.SizeMin == 0 ||
+		marketRelated == nil || marketRelated.SizeIncrement == 0 || marketRelated.SizeMin == 0 {
+		return 0
+	}
+	sizeInc := marketPerp.SizeIncrement
+	sizeMinPerp := marketPerp.SizeMin
+	if marketPerp.CTValue > 0 && marketPerp.CTCurrency == GetCoin(market, symbolPerp) {
+		sizeInc = sizeInc * marketPerp.CTValue
+		sizeMinPerp = sizeMinPerp * marketPerp.CTValue
+	}
+	if sizeInc < marketRelated.SizeIncrement {
+		sizeInc = marketRelated.SizeIncrement
+	}
+	formattedAmount = math.Floor(amount/sizeInc) * sizeInc
+	if formattedAmount < marketPerp.SizeMin || formattedAmount < marketRelated.SizeMin {
+		return 0
+	}
+	return formattedAmount
 }

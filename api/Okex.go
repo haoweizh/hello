@@ -496,17 +496,17 @@ func PlacePairOKEX(key, coin, sidePerp, sideSpot, orderType string, pricePerp, p
 	lastCarryTime = now
 	tailPerp := GetPerpTail(model.OKEX)
 	tailSpot := GetSpotTail(model.OKEX)
-	pricePerp, decimalPerp := FormatPrice(model.OKEX, coin+tailPerp, sidePerp, pricePerp)
+	pricePerp, decimalPerp := model.FormatPrice(model.OKEX, coin+tailPerp, sidePerp, pricePerp)
 	priceStrPerp := util.CutTailZero(strconv.FormatFloat(pricePerp, 'f', decimalPerp, 64))
-	formattedAmountPerp := GetAmountInMarket(model.OKEX, coin+tailPerp, amount)
+	formattedAmountPerp := model.GetAmountInMarket(model.OKEX, coin+tailPerp, amount)
 	amountStrPerp := util.CutTailZero(fmt.Sprintf(`%f`, formattedAmountPerp))
 	if orderType == model.OrderTypeMarket {
 		usdAmount, _ := strconv.ParseFloat(amountStrPerp, 64)
 		amountStrPerp = util.CutTailZero(fmt.Sprintf(`%f`, usdAmount*pricePerp))
 	}
-	priceSpot, decimalSpot := FormatPrice(model.OKEX, coin+tailSpot, sideSpot, priceSpot)
+	priceSpot, decimalSpot := model.FormatPrice(model.OKEX, coin+tailSpot, sideSpot, priceSpot)
 	priceStrSpot := util.CutTailZero(strconv.FormatFloat(priceSpot, 'f', decimalSpot, 64))
-	formattedAmountSpot := GetAmountInMarket(model.OKEX, coin+tailSpot, amount)
+	formattedAmountSpot := model.GetAmountInMarket(model.OKEX, coin+tailSpot, amount)
 	amountStrSpot := util.CutTailZero(fmt.Sprintf(`%f`, formattedAmountSpot))
 	if orderType == model.OrderTypeMarket {
 		usdAmount, _ := strconv.ParseFloat(amountStrSpot, 64)
@@ -547,11 +547,11 @@ func PlacePairOKEX(key, coin, sidePerp, sideSpot, orderType string, pricePerp, p
 //priceStr := strconv.FormatFloat(order.Price, 'f', -1, 64)
 //triggerPriceStr := strconv.FormatFloat(order.TriggerPrice, 'f', -1, 64)
 func placeOrderOKEX(key, secret string, isWs bool, order *model.Order) {
-	price, decimal := FormatPrice(model.OKEX, order.Instrument, order.OrderSide, order.Price)
+	price, decimal := model.FormatPrice(model.OKEX, order.Instrument, order.OrderSide, order.Price)
 	priceStr := util.CutTailZero(strconv.FormatFloat(price, 'f', decimal, 64))
-	priceTrigger, decimal := FormatPrice(model.OKEX, order.Instrument, order.OrderSide, order.TriggerPrice)
+	priceTrigger, decimal := model.FormatPrice(model.OKEX, order.Instrument, order.OrderSide, order.TriggerPrice)
 	triggerPriceStr := util.CutTailZero(strconv.FormatFloat(priceTrigger, 'f', decimal, 64))
-	formattedAmount := GetAmountInMarket(model.OKEX, order.Instrument, order.Amount)
+	formattedAmount := model.GetAmountInMarket(model.OKEX, order.Instrument, order.Amount)
 	amount := util.CutTailZero(fmt.Sprintf(`%f`, formattedAmount))
 	if order.OrderType == model.OrderTypeMarket {
 		usdAmount, _ := strconv.ParseFloat(amount, 64)
@@ -780,8 +780,8 @@ func parseOrderOKEX(value map[string]interface{}) (order *model.Order) {
 		order.ErrCode = value[`sCode`].(string)
 	}
 	if strings.Contains(order.Instrument, `SWAP`) || len(strings.Split(order.Instrument, `-`)) > 2 {
-		_, order.Amount = ParseRealAmount(model.OKEX, order.Instrument, order.Amount)
-		_, order.DealAmount = ParseRealAmount(model.OKEX, order.Instrument, order.DealAmount)
+		_, order.Amount = model.ParseRealAmount(model.OKEX, order.Instrument, order.Amount)
+		_, order.DealAmount = model.ParseRealAmount(model.OKEX, order.Instrument, order.DealAmount)
 	}
 	return order
 }
@@ -936,7 +936,7 @@ func parsePositionOKEX(value map[string]interface{}) (success bool, position *mo
 	if value[`pos`] != nil {
 		pos, _ := strconv.ParseFloat(value[`pos`].(string), 64)
 		if strings.Contains(position.Currency, `SWAP`) || len(strings.Split(position.Currency, `-`)) > 2 {
-			success, position.Free = ParseRealAmount(model.OKEX, position.Currency, pos)
+			success, position.Free = model.ParseRealAmount(model.OKEX, position.Currency, pos)
 		} else {
 			position.Free = pos
 		}

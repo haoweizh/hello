@@ -70,7 +70,7 @@ var postOrderCarry = func(order *model.Order) {
 	} else {
 		unknownFail = false
 		maxBuy, maxSell := getTradeMax(order.AmountType, order.Symbol)
-		amount := api.GetAmountInMarket(model.OKEX, order.Instrument, order.Amount)
+		amount := model.GetAmountInMarket(model.OKEX, order.Instrument, order.Amount)
 		if order.OrderSide == model.OrderSideBuy {
 			maxBuy -= amount
 			maxSell += amount
@@ -464,7 +464,7 @@ func makeEqual(key, secret string, setting *model.Setting, balances []*model.Bal
 	if amount <= 0 {
 		return
 	}
-	checkAmount := api.GetAmountInMarket(setting.Market, symbol, amount)
+	checkAmount := model.GetAmountInMarket(setting.Market, symbol, amount)
 	if checkAmount > 0 {
 		resultPerp := api.CancelOrders(key, secret, setting.Market, setting.Symbol)
 		resultRelated := api.CancelOrders(key, secret, setting.Market, setting.SymbolRelated)
@@ -591,7 +591,7 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	if scoreLow < setClose || (carryAmount > 0 && scoreClose <= -1*revertOpen) {
 		bidAmount = tickPerp.Asks[0].Amount
 		if setting.Market == model.OKEX {
-			_, bidAmount = api.ParseRealAmount(setting.Market, setting.Symbol, bidAmount)
+			_, bidAmount = model.ParseRealAmount(setting.Market, setting.Symbol, bidAmount)
 		}
 		askAmount = tickRelated.Bids[0].Amount
 		sidePerp = model.OrderSideBuy
@@ -605,7 +605,7 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 		bidAmount = tickRelated.Asks[0].Amount
 		askAmount = tickPerp.Bids[0].Amount
 		if setting.Market == model.OKEX {
-			_, askAmount = api.ParseRealAmount(setting.Market, setting.Symbol, askAmount)
+			_, askAmount = model.ParseRealAmount(setting.Market, setting.Symbol, askAmount)
 		}
 		sidePerp = model.OrderSideSell
 		sideRelated = model.OrderSideBuy
@@ -635,9 +635,9 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 		math.Abs(amount)*markPrice < valueLow {
 		amount = 0
 	}
-	amount = api.FormatAmountPair(setting.Market, setting.Symbol, setting.SymbolRelated, amount)
+	amount = model.FormatAmountPair(setting.Market, setting.Symbol, setting.SymbolRelated, amount)
 	if model.OKEX == setting.Market && amount > 0 {
-		amountInPerp := api.GetAmountInMarket(setting.Market, setting.Symbol, amount)
+		amountInPerp := model.GetAmountInMarket(setting.Market, setting.Symbol, amount)
 		maxBuyPerp, maxSellPerp := getTradeMax(key, setting.Symbol)
 		maxBuyRelated, maxSellRelated := getTradeMax(key, setting.SymbolRelated)
 		maxBuyRelated += balance.Borrow
@@ -649,12 +649,12 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 			amountInPerp = math.Min(amountInPerp, maxSellPerp)
 			amount = math.Min(amount, maxBuyRelated)
 		}
-		_, amountInReal := api.ParseRealAmount(setting.Market, setting.Symbol, amountInPerp)
+		_, amountInReal := model.ParseRealAmount(setting.Market, setting.Symbol, amountInPerp)
 		if setting.Symbol == `1INCH-USDT-SWAP` {
 			util.Notice(`sizes %f %f %f %f in perp %f`, maxBuyRelated, maxSellRelated, maxBuyPerp, maxSellPerp, amountInPerp)
 		}
 		amount = math.Min(amount, amountInReal)
-		amount = api.FormatAmountPair(setting.Market, setting.Symbol, setting.SymbolRelated, amount)
+		amount = model.FormatAmountPair(setting.Market, setting.Symbol, setting.SymbolRelated, amount)
 	} else if model.Ftx == setting.Market && amount > 90000000 {
 		amount = 90000000
 	}

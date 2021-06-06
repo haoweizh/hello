@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"hello/model"
 	"hello/util"
-	"math"
 	"strconv"
 	"strings"
 	"sync"
@@ -41,24 +40,6 @@ func RequireDepthChanReset(markets *model.Markets, market string) bool {
 		}
 	}
 	return true
-}
-
-func GetAmountInMarket(market, symbol string, amount float64) (formattedAmount float64) {
-	marketInfo := model.GetMarketInfo(market, symbol)
-	if marketInfo == nil || marketInfo.SizeIncrement == 0 || marketInfo.SizeMin == 0 {
-		return 0
-	}
-	if marketInfo.CTValue > 0 && marketInfo.CTCurrency == model.GetCoin(market, symbol) {
-		amount = amount / marketInfo.CTValue
-	}
-	formattedAmount = marketInfo.SizeIncrement * math.Floor(amount/marketInfo.SizeIncrement)
-	decimal := util.NumDecPlaces(marketInfo.SizeIncrement)
-	format := `%.` + strconv.Itoa(decimal) + `f`
-	formattedAmount, _ = strconv.ParseFloat(fmt.Sprintf(format, formattedAmount), 64)
-	if formattedAmount < marketInfo.SizeMin || marketInfo.SizeMin == 0 {
-		return 0
-	}
-	return formattedAmount
 }
 
 // GetPriceDecimal 根据不同的网站返回价格小数位
@@ -804,51 +785,6 @@ func InitMarketInfos() (success bool) {
 		}
 	}
 	return success
-}
-
-func FormatPrice(market, symbol, orderSide string, price float64) (formattedPrice float64, decimal int) {
-	marketInfo := model.GetMarketInfo(market, symbol)
-	if marketInfo == nil || marketInfo.SizeIncrement == 0 {
-		return 0, 0
-	}
-	if orderSide == model.OrderSideBuy {
-		return marketInfo.PriceIncrement * math.Ceil(price/marketInfo.PriceIncrement), marketInfo.PriceDecimal
-	} else {
-		return marketInfo.PriceIncrement * math.Floor(price/marketInfo.PriceIncrement), marketInfo.PriceDecimal
-	}
-}
-
-func ParseRealAmount(market, symbol string, amount float64) (success bool, realAmount float64) {
-	marketInfo := model.GetMarketInfo(market, symbol)
-	if marketInfo == nil || marketInfo.SizeIncrement == 0 || marketInfo.CTValue == 0 ||
-		marketInfo.CTCurrency != model.GetCoin(market, symbol) {
-		return false, 0
-	}
-	return true, amount * marketInfo.CTValue
-}
-
-// FormatAmountPair symbol 期货; related 现货
-func FormatAmountPair(market, symbolPerp, symbolRelated string, amount float64) (formattedAmount float64) {
-	marketPerp := model.GetMarketInfo(market, symbolPerp)
-	marketRelated := model.GetMarketInfo(market, symbolRelated)
-	if marketPerp == nil || marketPerp.SizeIncrement == 0 || marketPerp.SizeMin == 0 ||
-		marketRelated == nil || marketRelated.SizeIncrement == 0 || marketRelated.SizeMin == 0 {
-		return 0
-	}
-	sizeInc := marketPerp.SizeIncrement
-	sizeMinPerp := marketPerp.SizeMin
-	if marketPerp.CTValue > 0 && marketPerp.CTCurrency == model.GetCoin(market, symbolPerp) {
-		sizeInc = sizeInc * marketPerp.CTValue
-		sizeMinPerp = sizeMinPerp * marketPerp.CTValue
-	}
-	if sizeInc < marketRelated.SizeIncrement {
-		sizeInc = marketRelated.SizeIncrement
-	}
-	formattedAmount = math.Floor(amount/sizeInc) * sizeInc
-	if formattedAmount < marketPerp.SizeMin || formattedAmount < marketRelated.SizeMin {
-		return 0
-	}
-	return formattedAmount
 }
 
 // GetMarketInfo
