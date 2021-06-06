@@ -494,8 +494,8 @@ func PlacePairOKEX(key, coin, sidePerp, sideSpot, orderType string, pricePerp, p
 	}
 	lastSameTime[coin] = now
 	lastCarryTime = now
-	tailPerp := GetPerpTail(model.OKEX)
-	tailSpot := GetSpotTail(model.OKEX)
+	tailPerp := model.GetPerpTail(model.OKEX)
+	tailSpot := model.GetSpotTail(model.OKEX)
 	pricePerp, decimalPerp := model.FormatPrice(model.OKEX, coin+tailPerp, sidePerp, pricePerp)
 	priceStrPerp := util.CutTailZero(strconv.FormatFloat(pricePerp, 'f', decimalPerp, 64))
 	formattedAmountPerp := model.GetAmountInMarket(model.OKEX, coin+tailPerp, amount)

@@ -98,15 +98,15 @@ func resetTradeMax(key, secret string, market string) {
 	setTradeMaxResetting(key, true)
 	setTradeMaxResetTime(key, time.Now().Unix())
 	util.Notice(fmt.Sprintf(`reset all trade max %s %s`, key, market))
-	coins := api.GetCarryCoins()
+	coins := model.GetCarryCoins()
 	if coins == nil || coins[market] == nil {
 		return
 	}
 	for coin := range coins[market] {
 		switch market {
 		case model.OKEX:
-			symbolPerp := coin + api.GetPerpTail(market)
-			symbolRelated := coin + api.GetSpotTail(market)
+			symbolPerp := coin + model.GetPerpTail(market)
+			symbolRelated := coin + model.GetSpotTail(market)
 			_, maxBuy, maxSell := api.GetMaxSize(key, secret, symbolPerp)
 			setTradeMax(key, symbolPerp, maxBuy, maxSell)
 			_, maxBuy, maxSell = api.GetMaxSize(key, secret, symbolRelated)
@@ -158,7 +158,7 @@ func clearCarry(market, key, secret string) {
 		if model.Huobi == market {
 			coin = strings.ToLower(value.Coin)
 		}
-		success, bidAsk := model.AppMarkets.GetBidAsk(coin+api.GetSpotTail(market), market)
+		success, bidAsk := model.AppMarkets.GetBidAsk(coin+model.GetSpotTail(market), market)
 		if !success && settingCoins[coin] {
 			util.Notice(`fail to get setting coin bid ask %s , return`, coin)
 			continue
@@ -377,7 +377,7 @@ func placeCarry(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, key
 
 func getCarryAmounts(setting *model.Setting, balances []*model.Balance, positions []*model.Position) (
 	relatedBalance *model.Balance, amountPerp, amountRelated float64) {
-	tail := api.GetPerpTail(setting.Market)
+	tail := model.GetPerpTail(setting.Market)
 	for _, position := range positions {
 		if position != nil && position.Currency == setting.Symbol {
 			amountPerp = position.Free
@@ -483,7 +483,7 @@ func initEmptyBalance(key, secret, market string) {
 	} else {
 		marketInitTime[key] = now
 	}
-	coins := api.GetCarryCoins()
+	coins := model.GetCarryCoins()
 	if coins == nil || coins[market] == nil {
 		return
 	}

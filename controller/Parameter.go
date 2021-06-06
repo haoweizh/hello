@@ -322,8 +322,8 @@ func GetParameters(c *gin.Context) {
 			symbols := model.GetMarketSymbols(market)
 			for symbol := range marketInfos {
 				coin := model.GetCoin(market, symbol)
-				symbolPerp := coin + api.GetPerpTail(market)
-				symbolRelated := coin + api.GetSpotTail(market)
+				symbolPerp := coin + model.GetPerpTail(market)
+				symbolRelated := coin + model.GetSpotTail(market)
 				if (marketInfos[symbolPerp] != nil && marketInfos[symbolRelated] != nil) && (symbols[symbolPerp] == false || symbols[symbolRelated] == false) && symbol == symbolPerp {
 					msg += fmt.Sprintf("新币 %s %s\n", market, symbolPerp)
 				}

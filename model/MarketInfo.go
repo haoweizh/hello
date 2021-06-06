@@ -60,6 +60,22 @@ func GetMarketInfos(market string) (value map[string]*MarketInfo) {
 	return marketInfos[market]
 }
 
+func GetCarryCoins() (coins map[string]map[string]bool) { //  market - coin - bool
+	markets := GetMarkets()
+	coins = make(map[string]map[string]bool)
+	for _, market := range markets {
+		coins[market] = make(map[string]bool)
+		if marketInfos != nil && GetSettings(FunctionCarry, market) != nil {
+			symbols := GetMarketSymbols(market)
+			for symbol := range symbols {
+				coin := GetCoin(market, symbol)
+				coins[market][coin] = true
+			}
+		}
+	}
+	return coins
+}
+
 // ParseRealAmount 返回以币为单位的数量
 func ParseRealAmount(market, symbol string, amount float64) (success bool, realAmount float64) {
 	marketInfo := GetMarketInfo(market, symbol)

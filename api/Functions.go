@@ -835,51 +835,6 @@ func CreateMarketDepthServer(markets *model.Markets, market string, orderHandler
 	return channels
 }
 
-func GetSpotTail(market string) string {
-	switch market {
-	case model.Huobi:
-		return "usdt"
-	case model.Ftx:
-		return `/USD`
-	case model.OKEX:
-		return `-USDT`
-	case model.Binance:
-		return `USDT`
-	}
-	return ``
-}
-
-func GetPerpTail(market string) string {
-	switch market {
-	case model.Huobi:
-		return `-usdt`
-	case model.Ftx:
-		return `-PERP`
-	case model.OKEX:
-		return `-USDT-SWAP`
-	case model.Binance:
-		return `-PERP`
-	}
-	return ``
-}
-
-func GetCarryCoins() (coins map[string]map[string]bool) { //  market - coin - bool
-	markets := model.GetMarkets()
-	coins = make(map[string]map[string]bool)
-	for _, market := range markets {
-		marketInfos := model.GetMarketInfos(market)
-		coins[market] = make(map[string]bool)
-		if marketInfos != nil && model.GetSettings(model.FunctionCarry, market) != nil {
-			symbols := model.GetMarketSymbols(market)
-			for symbol := range symbols {
-				coin := model.GetCoin(market, symbol)
-				coins[market][coin] = true
-			}
-		}
-	}
-	return coins
-}
-
 //func InitCoinBalance(key, secret, function, market string) {
 //	InitMarketInfos()
 //	settings := model.GetSettings(function, market)

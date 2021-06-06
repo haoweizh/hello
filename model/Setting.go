@@ -259,3 +259,31 @@ func GetCoin(market, symbol string) (coin string) {
 	}
 	return coin
 }
+
+func GetSpotTail(market string) string {
+	switch market {
+	case Huobi:
+		return "usdt"
+	case Ftx:
+		return `/USD`
+	case OKEX:
+		return `-USDT`
+	case Binance:
+		return `USDT`
+	}
+	return ``
+}
+
+func GetPerpTail(market string) string {
+	switch market {
+	case Huobi:
+		return `-usdt`
+	case Ftx:
+		return `-PERP`
+	case OKEX:
+		return `-USDT-SWAP`
+	case Binance:
+		return `-PERP`
+	}
+	return ``
+}
