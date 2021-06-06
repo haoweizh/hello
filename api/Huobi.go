@@ -244,11 +244,12 @@ func getMarketsHuobi() (marketInfos map[string]*model.MarketInfo) {
 			if value["contract_size"] != nil {
 				marketInfo.CTValue, _ = value["contract_size"].(json.Number).Float64()
 				marketInfo.SizeMin, _ = value["contract_size"].(json.Number).Float64()
+				marketInfo.SizeIncrement, _ = value["contract_size"].(json.Number).Float64()
 			}
 			if value["price_tick"] != nil {
 				marketInfo.PriceIncrement, _ = value["price_tick"].(json.Number).Float64()
 			}
-			marketInfo.SizeIncrement = 1
+
 			marketInfos[marketInfo.Name] = marketInfo
 		}
 	}
