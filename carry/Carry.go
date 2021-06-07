@@ -264,7 +264,8 @@ var ProcessCarry = func(setting *model.Setting, tick *model.BidAsk) {
 		return
 	}
 	if (setting.Market == model.Binance && (delayPerp > 100 || delayRelated > 100)) ||
-		(setting.Market == model.OKEX && delayTick > 30) || (setting.Market == model.Ftx && delayTick > 95) {
+		(setting.Market == model.OKEX && delayTick > 25) || (setting.Market == model.Ftx && delayTick > 95) ||
+		(setting.Market == model.Huobi && delayTick > 25) {
 		return
 	}
 	scoreOpen := 1 - tickRelated.Asks[0].Price/tickPerp.Bids[0].Price
