@@ -13,6 +13,7 @@ import (
 var channelLock sync.Mutex
 var instruments = make(map[string]map[string]map[string]string) // market - symbol - (quarter;bi_quarter) - instrument
 var requireReset = make(map[string]bool)
+var instrumentLock sync.Mutex
 
 func SetRequireReset(market string, reset bool) {
 	channelLock.Lock()
@@ -116,8 +117,8 @@ func CancelOrder(key, secret, market, symbol, instrument, orderType, orderId str
 	return result, errCode, msg, order
 }
 
-func GetCurrentInstrument(market, symbol string) (currentInstrument string) {
-	//querySetter := querySetInstrumentsHuobiDM
+func GetCurrentInstrument(key, secret, market, symbol string) (currentInstrument string) {
+	querySetter := querySetInstrumentsHuobiDM
 	currentType := `quarter`
 	//nextType := `bi_quarter`
 	switch market {
@@ -125,7 +126,7 @@ func GetCurrentInstrument(market, symbol string) (currentInstrument string) {
 	//	querySetter = querySetInstrumentsOkFuture
 	//	//nextType = `bi_quarter`
 	case model.HuobiDM:
-		//querySetter = querySetInstrumentsHuobiDM
+		querySetter = querySetInstrumentsHuobiDM
 		//nextType = `next_quarter`
 		symbol = symbol[0:strings.Index(symbol, `_`)]
 	case model.OKEX:
@@ -133,24 +134,24 @@ func GetCurrentInstrument(market, symbol string) (currentInstrument string) {
 	default:
 		return symbol
 	}
-	//querySetter(key, secret)
+	querySetter(key, secret)
 	if instruments == nil || instruments[market] == nil || instruments[market][symbol] == nil {
 		return ``
 	}
 	return instruments[market][symbol][currentType]
 }
 
-//func setInstrument(market, symbol, alias, instrument string) {
-//	instrumentLock.Lock()
-//	defer instrumentLock.Unlock()
-//	if instruments[market] == nil {
-//		instruments[market] = make(map[string]map[string]string)
-//	}
-//	if instruments[market][symbol] == nil {
-//		instruments[market][symbol] = make(map[string]string)
-//	}
-//	instruments[market][symbol][alias] = instrument
-//}
+func setInstrument(market, symbol, alias, instrument string) {
+	instrumentLock.Lock()
+	defer instrumentLock.Unlock()
+	if instruments[market] == nil {
+		instruments[market] = make(map[string]map[string]string)
+	}
+	if instruments[market][symbol] == nil {
+		instruments[market][symbol] = make(map[string]string)
+	}
+	instruments[market][symbol][alias] = instrument
+}
 
 func GetDayCandle(key, secret, market, symbol, instrument string, timeCandle time.Time) (candle *model.Candle) {
 	if symbol == `` {
@@ -614,10 +615,10 @@ func GetWSSubscribe(market, symbol, subType string) (subscribe interface{}) {
 	case model.HuobiDM:
 		return fmt.Sprintf(`market.%s.depth.step6`, symbol)
 	case model.OKEX: // 未来基于market兼容okfuture LTC-USD-190628
-		return GetCurrentInstrument(market, symbol)
+		return GetCurrentInstrument(``, ``, market, symbol)
 	case model.OKFUTURE:
 		// btc-usd futures/ticker:BTC-USD-170310
-		instrument := GetCurrentInstrument(market, symbol)
+		instrument := GetCurrentInstrument(``, ``, market, symbol)
 		return `futures/depth5:` + instrument
 	case model.Binance: // XRPUSDT: XRPUSDT@depth5   XRP-PERP: XRPUSDT@depth5
 		if symbol[len(symbol)-5:] == `-PERP` {
@@ -696,14 +697,6 @@ func InitCarryFtx(start uint) {
 		model.AppDB.Save(setting)
 		fmt.Println(fmt.Sprintf(`%s %s saved %d %f`, symbol, setting.SymbolRelated, start, setting.CloseShortMargin))
 	}
-}
-
-func GetPosBal(key, secret, market string) (value float64) {
-	switch market {
-	case model.Binance:
-		return getPosBalBinance(key, secret)
-	}
-	return 0
 }
 
 func Transfer(key, secret, market, transferType string, amount float64) {

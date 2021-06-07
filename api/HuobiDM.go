@@ -383,19 +383,19 @@ func queryOrderHuobiDM(key, secret, symbol, orderId string) (dealAmount, dealPri
 	return 0, 0, model.CarryStatusFail
 }
 
-//func querySetInstrumentsHuobiDM(key, secret string) {
-//	responseBody := SignedRequestHuobiDM(key, secret, model.HuobiDM, `GET`, `/api/v1/contract_contract_info`, nil)
-//	instrumentJson, err := util.NewJSON(responseBody)
-//	if err == nil {
-//		for _, item := range instrumentJson.Get(`data`).MustArray() {
-//			future := item.(map[string]interface{})
-//			if future[`contract_code`] != nil && future[`contract_type`] != nil {
-//				setInstrument(model.HuobiDM, strings.ToLower(future[`symbol`].(string)),
-//					future[`contract_type`].(string), future[`contract_code`].(string))
-//			}
-//		}
-//	}
-//}
+func querySetInstrumentsHuobiDM(key, secret string) {
+	responseBody := SignedRequestHuobiDM(key, secret, model.HuobiDM, `GET`, `/api/v1/contract_contract_info`, nil)
+	instrumentJson, err := util.NewJSON(responseBody)
+	if err == nil {
+		for _, item := range instrumentJson.Get(`data`).MustArray() {
+			future := item.(map[string]interface{})
+			if future[`contract_code`] != nil && future[`contract_type`] != nil {
+				setInstrument(model.HuobiDM, strings.ToLower(future[`symbol`].(string)),
+					future[`contract_type`].(string), future[`contract_code`].(string))
+			}
+		}
+	}
+}
 
 func getCandlesHuobiDM(key, secret, symbol, binSize string, start, end time.Time) (
 	candles map[string]*model.Candle) {

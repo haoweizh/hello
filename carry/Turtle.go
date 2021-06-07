@@ -117,7 +117,7 @@ func GetTurtleData(setting *model.Setting) (turtleData *TurtleData) {
 		}
 	}
 	cross := false
-	turtleData.instrument = api.GetCurrentInstrument(setting.Market, setting.Symbol)
+	turtleData.instrument = api.GetCurrentInstrument(``, ``, setting.Market, setting.Symbol)
 	if orderLong != nil && orderLong.OrderId != `` {
 		if orderLong.Instrument != turtleData.instrument {
 			cross = true
@@ -197,7 +197,7 @@ func GetTurtleData(setting *model.Setting) (turtleData *TurtleData) {
 var ProcessTurtle = func(setting *model.Setting, tick *model.BidAsk) {
 	now := util.GetNowUnixMillion()
 	if tick == nil || tick.Asks == nil || tick.Bids == nil || model.AppConfig.Handle != `1` ||
-		model.AppPause || now-int64(tick.Ts) > 1000 {
+		model.AppPause || (model.AppConfig.Env != `test` && now-int64(tick.Ts) > 1000) {
 		return
 	}
 	if setting == nil || getTurtling() {
