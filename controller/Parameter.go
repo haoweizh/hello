@@ -84,12 +84,15 @@ func test(c *gin.Context) {
 	}
 	keysFtx, _ := model.AppConfig.GetKeys(model.Ftx)
 	keysOKEX, _ := model.AppConfig.GetKeys(model.OKEX)
+	keysBinance, _ := model.AppConfig.GetKeys(model.Binance)
+	keysHuobi, _ := model.AppConfig.GetKeys(model.Huobi)
 	if carryRows != nil {
 		for carryRows.Next() {
 			var market, side, date, amountType, refreshType string
 			var value float64
 			_ = carryRows.Scan(&market, &amountType, &side, &value, &date, &refreshType)
-			if !strings.Contains(amountType, keysFtx[0]) && !strings.Contains(amountType, keysOKEX[0]) {
+			if !strings.Contains(amountType, keysFtx[0]) && !strings.Contains(amountType, keysOKEX[0]) &&
+				!strings.Contains(amountType, keysBinance[0]) && !strings.Contains(amountType, keysHuobi[0]) {
 				carryBackMsg += fmt.Sprintf("%s %s交易额 in USD: %s %s %f 类型：%s\n",
 					market, amountType, date, side, value, refreshType)
 			}
@@ -350,6 +353,7 @@ func GetParameters(c *gin.Context) {
 	keyFtx, _ := model.AppConfig.GetKeys(model.Ftx)
 	keyOKEX, _ := model.AppConfig.GetKeys(model.OKEX)
 	keyBinance, _ := model.AppConfig.GetKeys(model.Binance)
+	keyHuobi, _ := model.AppConfig.GetKeys(model.Huobi)
 	duration, _ := time.ParseDuration(`-96h`)
 	timeBegin := time.Now().Add(duration)
 	timeBegin = time.Date(timeBegin.Year(), timeBegin.Month(), timeBegin.Day(), 0, 0, 0, 0, timeBegin.Location())
@@ -380,7 +384,8 @@ func GetParameters(c *gin.Context) {
 			key := fmt.Sprintf(`%s-%s-%s-%s-%s`, marketName, amountType, side, date, refreshType)
 			if (marketName == model.Ftx && amountType == keyFtx[0]) ||
 				(marketName == model.OKEX && amountType == keyOKEX[0]) ||
-				(marketName == model.Binance && amountType == keyBinance[0]) {
+				(marketName == model.Binance && amountType == keyBinance[0] ||
+					(marketName == model.Huobi && amountType == keyHuobi[0])) {
 				if orderNum > 0 {
 					failRate = failData[key] / orderNum
 				}
