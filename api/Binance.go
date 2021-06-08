@@ -467,7 +467,7 @@ func getBalanceBinance(key string, secret string) (success bool, balances []*mod
 	requestUrl := restBinance + "/api/v3/account"
 	responseBody := signedRequestBinance(key, secret, http.MethodGet, requestUrl, true, nil)
 	balanceJson, _ := util.NewJSON(responseBody)
-	if balanceJson.Get("canTrade").MustBool() {
+	if balanceJson != nil && balanceJson.Get("canTrade").MustBool() {
 		balances = make([]*model.Balance, 0)
 		currencies, _ := balanceJson.Get("balances").Array()
 		for _, value := range currencies {
@@ -512,23 +512,23 @@ func getBalanceBinance(key string, secret string) (success bool, balances []*mod
 	}
 }
 
-func getPosBalBinance(key, secret string) (value float64) {
-	responseBody := signedRequestBinance(key, secret, http.MethodGet, restBinanceFuture+`/fapi/v2/balance`, true, nil)
-	positionJson, err := util.NewJSON(responseBody)
-	if err != nil {
-		return 0
-	}
-	assets := positionJson.MustArray()
-	for _, asset := range assets {
-		item := asset.(map[string]interface{})
-		if item[`asset`].(string) == `USDT` {
-			if item[`balance`] != nil {
-				value, _ = strconv.ParseFloat(item[`balance`].(string), 64)
-			}
-		}
-	}
-	return value
-}
+//func getPosBalBinance(key, secret string) (value float64) {
+//	responseBody := signedRequestBinance(key, secret, http.MethodGet, restBinanceFuture+`/fapi/v2/balance`, true, nil)
+//	positionJson, err := util.NewJSON(responseBody)
+//	if err != nil {
+//		return 0
+//	}
+//	assets := positionJson.MustArray()
+//	for _, asset := range assets {
+//		item := asset.(map[string]interface{})
+//		if item[`asset`].(string) == `USDT` {
+//			if item[`balance`] != nil {
+//				value, _ = strconv.ParseFloat(item[`balance`].(string), 64)
+//			}
+//		}
+//	}
+//	return value
+//}
 
 func getPositionsBinance(key, secret string) (success bool, positions []*model.Position, posBalance float64) {
 	responseBody := signedRequestBinance(key, secret, http.MethodGet, restBinanceFuture+"/fapi/v2/account", true, nil)
