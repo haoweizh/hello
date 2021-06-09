@@ -532,41 +532,41 @@ func getBalanceBinance(key string, secret string) (success bool, balances []*mod
 
 func getPositionsBinance(key, secret string) (success bool, positions []*model.Position, posBalance float64) {
 	responseBody := signedRequestBinance(key, secret, http.MethodGet, restBinanceFuture+"/fapi/v2/account", true, nil)
-	positionJson, _ := util.NewJSON(responseBody)
+	positionJson, err := util.NewJSON(responseBody)
+	if err != nil || positionJson == nil {
+		return false, nil, 0
+	}
 	success = positionJson.Get("canTrade").MustBool()
 	if success {
 		positions = make([]*model.Position, 0)
-		if positionJson != nil {
-			data := positionJson.Get("positions").MustArray()
-
-			assets := positionJson.Get("assets").MustArray()
-			for _, asset := range assets {
-				item := asset.(map[string]interface{})
-				if item[`asset`].(string) == `USDT` {
-					if item[`walletBalance`] != nil {
-						posBalance, _ = strconv.ParseFloat(item[`walletBalance`].(string), 64)
-						break
-					}
+		data := positionJson.Get("positions").MustArray()
+		assets := positionJson.Get("assets").MustArray()
+		for _, asset := range assets {
+			item := asset.(map[string]interface{})
+			if item[`asset`].(string) == `USDT` {
+				if item[`walletBalance`] != nil {
+					posBalance, _ = strconv.ParseFloat(item[`walletBalance`].(string), 64)
+					break
 				}
 			}
-			for _, item := range data {
-				position := &model.Position{Market: model.Binance, Ts: util.GetNowUnixMillion()}
-				asset := item.(map[string]interface{})
-				if asset[`symbol`] != nil {
-					symbol := asset[`symbol`].(string)
-					if symbol[len(symbol)-4:] == `USDT` {
-						symbol = symbol[0:len(symbol)-4] + "-PERP"
-					}
-					position.Currency = symbol
+		}
+		for _, item := range data {
+			position := &model.Position{Market: model.Binance, Ts: util.GetNowUnixMillion()}
+			asset := item.(map[string]interface{})
+			if asset[`symbol`] != nil {
+				symbol := asset[`symbol`].(string)
+				if symbol[len(symbol)-4:] == `USDT` {
+					symbol = symbol[0:len(symbol)-4] + "-PERP"
 				}
-				if asset[`positionAmt`] != nil {
-					position.Free, _ = strconv.ParseFloat(asset[`positionAmt`].(string), 64)
-				}
-				if asset[`entryPrice`] != nil {
-					position.EntryPrice, _ = strconv.ParseFloat(asset[`entryPrice`].(string), 64)
-				}
-				positions = append(positions, position)
+				position.Currency = symbol
 			}
+			if asset[`positionAmt`] != nil {
+				position.Free, _ = strconv.ParseFloat(asset[`positionAmt`].(string), 64)
+			}
+			if asset[`entryPrice`] != nil {
+				position.EntryPrice, _ = strconv.ParseFloat(asset[`entryPrice`].(string), 64)
+			}
+			positions = append(positions, position)
 		}
 	}
 	return success, positions, posBalance
