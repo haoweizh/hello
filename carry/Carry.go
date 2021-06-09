@@ -573,7 +573,7 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	}
 	if setting.Market == model.OKEX {
 		collateral := GetCollateral(key)
-		if setting.Symbol == `IOTA-USDT-SWAP` {
+		if setting.Symbol == `IOTA-USDT-SWAP` || setting.Symbol == `KNC-USDT-SWAP` {
 			setOpen += 0.01
 			setClose += 0.005
 			revertOpen -= 0.01
