@@ -482,7 +482,7 @@ func getBalanceBinance(key string, secret string) (success bool, balances []*mod
 				ID:          model.Binance + `_` + coin + `_` + util.GetNow().Format(time.RFC3339)[0:10],
 				BalanceTime: util.GetNow(),
 				AccountId:   key}
-			if asset[`free`] != nil { // 持仓
+			if asset[`free`] != nil { // 持仓,此处按照不进行借币计算
 				balance.AvailableWithBorrow, _ = strconv.ParseFloat(asset[`free`].(string), 64)
 			}
 			if asset[`locked`] != nil {
