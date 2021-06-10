@@ -128,6 +128,7 @@ func Test_initTurtleN(t *testing.T) {
 func Test_wallet(t *testing.T) {
 	model.NewConfig()
 	_ = configor.Load(model.AppConfig, "./config.yml")
+	api.GetBalances(``, ``, model.Huobi)
 	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
 	api.InitMarketInfos()
 	order := api.QueryOrderById(``, ``, model.OKEX, `ETH-USDT-SWAP`, `ETH-USDT-SWAP`, model.OrderTypeStop, `320881041032523776`)
