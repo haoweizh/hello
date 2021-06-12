@@ -264,7 +264,7 @@ var ProcessTurtle = func(setting *model.Setting, tick *model.BidAsk) {
 		} else if turtleData.lowDays10 < setting.PriceX {
 			priceShort = turtleData.lowDays10
 		} else if turtleData.lowDays10 > setting.PriceX {
-			priceShort = math.Max(turtleData.lowDays10, turtleData.highDays20-2*turtleData.n)
+			priceShort = math.Max(turtleData.lowDays10, turtleData.highDays10-2*turtleData.n)
 		}
 		priceShort, priceLong = placeTurtleOrders(turtleData, setting, currentN, priceShort, priceLong)
 		// 加仓一个单位
@@ -305,7 +305,7 @@ var ProcessTurtle = func(setting *model.Setting, tick *model.BidAsk) {
 		} else if turtleData.highDays10 > setting.PriceX {
 			priceLong = turtleData.highDays10
 		} else if turtleData.highDays10 < setting.PriceX {
-			priceLong = math.Min(turtleData.highDays10, turtleData.lowDays20+2*turtleData.n)
+			priceLong = math.Min(turtleData.highDays10, turtleData.lowDays10+2*turtleData.n)
 		}
 		priceShort, priceLong = placeTurtleOrders(turtleData, setting, currentN, priceShort, priceLong)
 		// 加仓一个单位
