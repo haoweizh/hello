@@ -25,6 +25,7 @@ const wsHuobiFuture = `wss://api.hbdm.vn/linear-swap-ws`
 //spot：现货账户, margin：逐仓杠杆账户, otc：OTC 账户, point：点卡账户, super-margin：全仓杠杆账户, investment: C2C杠杆借出账户,
 //borrow: C2C杠杆借入账户，矿池账户: minepool, ETF账户: etf, 抵押借贷账户: crypto-loans
 const spotAccount = "spot"
+const marginAccountHuobi = `super-margin`
 
 var huobiAccountMap = make(map[string]map[string]string) //key-type-accountId
 
@@ -549,8 +550,7 @@ func getBalanceHuobi(key string, secret string) (success bool, balances []*model
 	if huobiAccountMap[key] == nil || huobiAccountMap[key][spotAccount] == "" {
 		_ = GetAccountIdsHuobi(key, secret)
 	}
-	balances = make([]*model.Balance, 0)
-	accountId := huobiAccountMap[key][spotAccount]
+	accountId := huobiAccountMap[key][marginAccountHuobi]
 	path := fmt.Sprintf("/v1/account/accounts/%s/balance", accountId)
 	response := SignedRequestHuobi(key, secret, http.MethodGet, restHuobi, path, nil)
 	responseJson, err := util.NewJSON(response)
@@ -560,41 +560,34 @@ func getBalanceHuobi(key string, secret string) (success bool, balances []*model
 		for _, item := range balanceArray {
 			value := item.(map[string]interface{})
 			//trade: 交易余额，frozen: 冻结余额, loan: 待还借贷本金, interest: 待还借贷利息, lock: 锁仓, bank: 储蓄
-			if (value["type"] != "trade" && value["type"] != "lock") || (value[`currency`] == nil) {
+			if value[`currency`] == nil || value[`type`] == nil || value[`balance`] == nil {
 				continue
 			}
-			balance := &model.Balance{}
 			coin := value[`currency`].(string)
-			if balanceMap[coin] != nil {
-				balance = balanceMap[coin]
-			} else {
-				balance.AccountId = accountId
-				balance.BalanceTime = util.GetNow()
-				balance.Market = model.Huobi
-				balance.Coin = coin
+			balance := balanceMap[coin]
+			if balance == nil {
+				balance = &model.Balance{AccountId: accountId, BalanceTime: util.GetNow(), Market: model.Huobi, Coin: coin}
 				balanceMap[coin] = balance
 			}
-			if value[`type`] != nil && value[`balance`] != nil && value["type"] == "trade" {
-				balance.Available, _ = strconv.ParseFloat(value[`balance`].(string), 64)
+			switch value["type"] {
+			case `trade`: // 此处未计算可以借入的金额
+				balance.AvailableWithBorrow, _ = strconv.ParseFloat(value[`balance`].(string), 64)
+			case `frozen`:
+				balance.FrozenAmount, _ = strconv.ParseFloat(value[`balance`].(string), 64)
+			case `loan`:
+				balance.Borrow, _ = strconv.ParseFloat(value[`balance`].(string), 64)
+				balance.Borrow *= -1 // 借时为负数
 			}
-			if value[`type`] != nil && value[`balance`] != nil && value["type"] == "lock" {
-				balance.LockAmount, _ = strconv.ParseFloat(value[`balance`].(string), 64)
+		}
+		balances = make([]*model.Balance, 0)
+		for _, balance := range balanceMap {
+			balance.Amount = balance.AvailableWithBorrow + balance.FrozenAmount - balance.Borrow
+			priceGet, bidAsk := model.AppMarkets.GetBidAsk(balance.Coin+`usdt`, model.Huobi)
+			if priceGet {
+				balance.UsdValue = balance.Amount * bidAsk.Bids[0].Price
 			}
-			balance.Amount = balance.Available + balance.LockAmount
-			//if value[`currency`] != nil {
-			//	balance.Coin = value[`currency`].(string)
-			//}
-			//if value[`type`] != nil {
-			//	balance.Status = value[`type`].(string)
-			//}
-			//if value[`balance`] != nil {
-			//	balance.Amount, _ = strconv.ParseFloat(value[`balance`].(string), 64)
-			//}
-			if balance.Amount > 0 {
-				balance.ID = fmt.Sprintf(`%s_%s_%s_%s`,
-					balance.Market, balance.Coin, balance.Status, balance.BalanceTime.String()[0:10])
-				balances = append(balances, balance)
-			}
+			balance.ID = fmt.Sprintf(`%s_%s_%s`, balance.Market, balance.Coin, balance.BalanceTime.String()[0:10])
+			balances = append(balances, balance)
 		}
 	} else {
 		time.Sleep(time.Second * 2)
