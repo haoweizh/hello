@@ -197,7 +197,8 @@ func GetTurtleData(setting *model.Setting) (turtleData *TurtleData) {
 var ProcessTurtle = func(setting *model.Setting, tick *model.BidAsk) {
 	now := util.GetNowUnixMillion()
 	if tick == nil || tick.Asks == nil || tick.Bids == nil || model.AppConfig.Handle != `1` ||
-		model.AppPause || (model.AppConfig.Env != `test` && now-int64(tick.Ts) > 1000) {
+		model.AppPause || (model.AppConfig.Env != `test` && now-int64(tick.Ts) > 1000) ||
+		(time.Now().Hour() == 0 && time.Now().Minute() == 0) {
 		return
 	}
 	if setting == nil || getTurtling() {
