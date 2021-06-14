@@ -271,9 +271,10 @@ func placeOrderHuobiDM(key, secret string, order *model.Order,
 	//	lever = strconv.FormatInt(account.LeverRate, 10)
 	//}
 	_, strPrice := util.FormatNum(price, 2)
+	_, strTriggerPrice := util.FormatNum(triggerPrice, 2)
 	_, strAmount := util.FormatNum(math.Floor(size), 0)
 	param := map[string]interface{}{`contract_code`: contractCode, `trigger_type`: triggerType,
-		`trigger_price`: triggerPrice, `order_price`: strPrice, `volume`: strAmount,
+		`trigger_price`: strTriggerPrice, `order_price`: strPrice, `volume`: strAmount,
 		`direction`: direction, `offset`: offset, `lever_rate`: `5`}
 	responseBody := SignedRequestHuobiDM(key, secret, model.HuobiDM, `POST`, `/api/v1/contract_trigger_order`, param)
 	orderJson, err := util.NewJSON(responseBody)
