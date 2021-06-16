@@ -345,44 +345,39 @@ func placeOrderFutureHuobi(key, secret string, order *model.Order, orderSide, or
 func placeOrderHuobi(key, secret string, order *model.Order, orderSide, orderType, symbol string, price, amount float64) {
 	if symbol[len(symbol)-5:] == `-usdt` { //合约
 		position := huobiPositionMap[symbol]
-		if orderSide == model.OrderSideBuy { //看多
-			if position.DirectionDetail != nil {
-				sellAmount := position.DirectionDetail[model.OrderSideSell] //取出-方向，优先平仓
-
-				if amount > math.Abs(sellAmount) {
-					placeOrderFutureHuobi(key, secret, order, orderSide, orderType, symbol, "close", price, sellAmount)
-					position.DirectionDetail = nil
-					placeOrderFutureHuobi(key, secret, order, orderSide, orderType, symbol, "open", price, amount-sellAmount)
-				} else {
-					placeOrderFutureHuobi(key, secret, order, orderSide, orderType, symbol, "close", price, amount)
+		if position == nil { //没有持仓信息，直接开仓
+			placeOrderFutureHuobi(key, secret, order, orderSide, orderType, symbol, "open", price, amount)
+		} else { //存在持仓信息
+			if position.DirectionDetail != nil { //存在双向持仓
+				if orderSide == model.OrderSideBuy { //买
+					sellAmount := position.DirectionDetail[model.OrderSideSell] //取出-方向，优先平仓
+					if amount > math.Abs(sellAmount) {
+						placeOrderFutureHuobi(key, secret, order, orderSide, orderType, symbol, "close", price, sellAmount)
+						placeOrderFutureHuobi(key, secret, order, orderSide, orderType, symbol, "open", price, amount-sellAmount)
+					} else {
+						placeOrderFutureHuobi(key, secret, order, orderSide, orderType, symbol, "close", price, amount)
+					}
+				} else { //卖
+					buyAmount := position.DirectionDetail[model.OrderSideBuy] //取出+方向，优先平仓
+					if amount > buyAmount {
+						placeOrderFutureHuobi(key, secret, order, orderSide, orderType, symbol, "close", price, buyAmount)
+						placeOrderFutureHuobi(key, secret, order, orderSide, orderType, symbol, "open", price, amount-buyAmount)
+					} else {
+						placeOrderFutureHuobi(key, secret, order, orderSide, orderType, symbol, "close", price, amount)
+					}
 				}
-			} else {
-				offset := ""
-				if position.Direction == model.OrderSideBuy { //目前持仓方向为+
-					offset = "open"
-				} else { //目前持仓方向为-
-					offset = "close"
+				position.DirectionDetail = nil //简单处理-清除双向持仓信息
+			} else { //单向持仓
+				if position.Direction == orderSide { //持仓方向和买卖方向一致，开仓
+					placeOrderFutureHuobi(key, secret, order, orderSide, orderType, symbol, "open", price, amount)
+				} else { //持仓方向和买卖方向不一致，先平仓，多余的再开仓
+					if amount > math.Abs(position.Free) {
+						placeOrderFutureHuobi(key, secret, order, orderSide, orderType, symbol, "close", price, math.Abs(position.Free))
+						placeOrderFutureHuobi(key, secret, order, orderSide, orderType, symbol, "open", price, amount-math.Abs(position.Free))
+					} else {
+						placeOrderFutureHuobi(key, secret, order, orderSide, orderType, symbol, "close", price, amount)
+					}
 				}
-				placeOrderFutureHuobi(key, secret, order, orderSide, orderType, symbol, offset, price, amount)
-			}
-		} else { //看空
-			if position.DirectionDetail != nil {
-				buyAmount := position.DirectionDetail[model.OrderSideBuy] //取出+方向，优先平仓
-				if amount > buyAmount {
-					placeOrderFutureHuobi(key, secret, order, orderSide, orderType, symbol, "close", price, buyAmount)
-					position.DirectionDetail = nil
-					placeOrderFutureHuobi(key, secret, order, orderSide, orderType, symbol, "open", price, amount-buyAmount)
-				} else {
-					placeOrderFutureHuobi(key, secret, order, orderSide, orderType, symbol, "close", price, amount)
-				}
-			} else {
-				offset := ""
-				if position.Direction == model.OrderSideBuy { //目前持仓方向为+
-					offset = "close"
-				} else { //目前持仓方向为-
-					offset = "open"
-				}
-				placeOrderFutureHuobi(key, secret, order, orderSide, orderType, symbol, offset, price, amount)
 			}
 		}
 	} else { //现货
