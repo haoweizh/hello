@@ -458,10 +458,6 @@ func SetParameters(c *gin.Context) {
 
 		}
 	}
-	amountRate := c.Query("amountrate")
-	if amountRate != `` {
-		model.AppConfig.AmountRate, _ = strconv.ParseFloat(amountRate, 64)
-	}
 	channelSlot := c.Query("channelslot")
 	if len(strings.TrimSpace(channelSlot)) > 0 {
 		value, _ := strconv.ParseFloat(channelSlot, 64)

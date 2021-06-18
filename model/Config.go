@@ -6,51 +6,37 @@ import (
 )
 
 type Config struct {
-	lock            sync.Mutex
-	RefreshTimeSlot int
-	Between         int64
-	ChannelSlot     float64
-	CarryClose      string
-	Delay           float64
-	AmountRate      float64 // 刷单填写数量比率
-	Amount          float64
-	//WSUrls          map[string]string // marketName - ws url
-	//RestUrls        map[string]string // marketName - rest url
-	DBConnection    string
-	Env             string
-	FutureAddress   string
-	SimonUsdLow     float64
-	SimonOpenMax    float64
-	HuobiKey        string
-	HuobiSecret     string
-	OkexKey         string
-	OkexSecret      string
-	FtxKey          string
-	FtxSecret       string
-	BinanceKey      string
-	BinanceSecret   string
-	CoinparkKey     string
-	CoinparkSecret  string
-	DFutureKey      string
-	DFutureSecret   string
-	BitmexKey       string
-	BitmexSecret    string
-	BybitKey        string
-	BybitSecret     string
-	Phase           string
-	Handle          string // 0 不执行处理程序，1执行处理程序
-	Mail            string
-	FromMail        string
-	FromMailAuth    string
-	Port            string
-	UpdatePriceTime map[string]int64 // symbol -time
-	WalletKey       string
-}
-
-func (config *Config) SetUpdatePriceTime(symbol string, updateTime int64) {
-	config.lock.Lock()
-	defer config.lock.Unlock()
-	config.UpdatePriceTime[symbol] = updateTime
+	lock           sync.Mutex
+	ChannelSlot    float64
+	CarryClose     string
+	Delay          float64
+	AccountRate    string // 不同账户开仓门槛比例
+	DBConnection   string
+	Env            string
+	FutureAddress  string
+	HuobiKey       string
+	HuobiSecret    string
+	OkexKey        string
+	OkexSecret     string
+	FtxKey         string
+	FtxSecret      string
+	BinanceKey     string
+	BinanceSecret  string
+	CoinparkKey    string
+	CoinparkSecret string
+	DFutureKey     string
+	DFutureSecret  string
+	BitmexKey      string
+	BitmexSecret   string
+	BybitKey       string
+	BybitSecret    string
+	Phase          string
+	Handle         string // 0 不执行处理程序，1执行处理程序
+	Mail           string
+	FromMail       string
+	FromMailAuth   string
+	Port           string
+	WalletKey      string
 }
 
 func (config *Config) GetKeys(market string) (keys, secrets []string) {

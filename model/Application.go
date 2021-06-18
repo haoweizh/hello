@@ -285,7 +285,6 @@ func NewConfig() {
 		util.Notice(err.Error())
 		return
 	}
-	AppConfig.UpdatePriceTime = make(map[string]int64)
 }
 
 func GetMarketYesterday(market string) (yesterday time.Time, strYesterday string) {
@@ -313,7 +312,5 @@ func (config *Config) ToString() string {
 	str += fmt.Sprintf("delay: %f\n", config.Delay)
 	str += fmt.Sprintf("channelslot: %f\n", config.ChannelSlot)
 	str += fmt.Sprintf("handle: %s\n", config.Handle)
-	str += fmt.Sprintf("amountrate: %f\n", config.AmountRate)
-	str += fmt.Sprintf("amount: %f\n", config.Amount)
 	return str
 }
