@@ -352,7 +352,7 @@ func placeOrderHuobi(key, secret string, order *model.Order, orderSide, orderTyp
 				if orderSide == model.OrderSideBuy { //买
 					sellAmount := position.DirectionDetail[model.OrderSideSell] //取出-方向，优先平仓
 					if amount > math.Abs(sellAmount) {
-						placeOrderFutureHuobi(key, secret, order, orderSide, orderType, symbol, "close", price, sellAmount)
+						go placeOrderFutureHuobi(key, secret, order, orderSide, orderType, symbol, "close", price, sellAmount)
 						placeOrderFutureHuobi(key, secret, order, orderSide, orderType, symbol, "open", price, amount-sellAmount)
 					} else {
 						placeOrderFutureHuobi(key, secret, order, orderSide, orderType, symbol, "close", price, amount)
@@ -360,19 +360,19 @@ func placeOrderHuobi(key, secret string, order *model.Order, orderSide, orderTyp
 				} else { //卖
 					buyAmount := position.DirectionDetail[model.OrderSideBuy] //取出+方向，优先平仓
 					if amount > buyAmount {
-						placeOrderFutureHuobi(key, secret, order, orderSide, orderType, symbol, "close", price, buyAmount)
+						go placeOrderFutureHuobi(key, secret, order, orderSide, orderType, symbol, "close", price, buyAmount)
 						placeOrderFutureHuobi(key, secret, order, orderSide, orderType, symbol, "open", price, amount-buyAmount)
 					} else {
 						placeOrderFutureHuobi(key, secret, order, orderSide, orderType, symbol, "close", price, amount)
 					}
 				}
-				position.DirectionDetail = nil //简单处理-清除双向持仓信息
+				//position.DirectionDetail = nil //简单处理-清除双向持仓信息
 			} else { //单向持仓
 				if position.Direction == orderSide { //持仓方向和买卖方向一致，开仓
 					placeOrderFutureHuobi(key, secret, order, orderSide, orderType, symbol, "open", price, amount)
 				} else { //持仓方向和买卖方向不一致，先平仓，多余的再开仓
 					if amount > math.Abs(position.Free) {
-						placeOrderFutureHuobi(key, secret, order, orderSide, orderType, symbol, "close", price, math.Abs(position.Free))
+						go placeOrderFutureHuobi(key, secret, order, orderSide, orderType, symbol, "close", price, math.Abs(position.Free))
 						placeOrderFutureHuobi(key, secret, order, orderSide, orderType, symbol, "open", price, amount-math.Abs(position.Free))
 					} else {
 						placeOrderFutureHuobi(key, secret, order, orderSide, orderType, symbol, "close", price, amount)
@@ -380,6 +380,7 @@ func placeOrderHuobi(key, secret string, order *model.Order, orderSide, orderTyp
 				}
 			}
 		}
+		position = nil
 	} else { //现货
 		postData := make(map[string]interface{})
 		if orderSide == model.OrderSideBuy && orderType == model.OrderTypeLimit {
