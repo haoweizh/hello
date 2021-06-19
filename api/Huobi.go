@@ -322,7 +322,6 @@ func placeOrderFutureHuobi(key, secret string, order *model.Order, orderSide, or
 		return
 	}
 	postData["volume"] = util.CutTailZero(fmt.Sprintf(`%f`, model.GetAmountInMarket(model.Huobi, symbol, amount)))
-
 	responseBody := SignedRequestHuobi(key, secret, `POST`, host, path, postData)
 	orderJson, err := util.NewJSON(responseBody)
 	if err == nil {
@@ -343,46 +342,49 @@ func placeOrderFutureHuobi(key, secret string, order *model.Order, orderSide, or
 // orderType: buy-market：市价买, sell-market：市价卖, buy-limit：限价买, sell-limit：限价卖
 // huobi中amount在市价买单中指的是右侧的钱
 func placeOrderHuobi(key, secret string, order *model.Order, orderSide, orderType, symbol string, price, amount float64) {
+	postData := make(map[string]interface{})
 	if symbol[len(symbol)-5:] == `-usdt` { //合约
+		offset := "open"
 		position := huobiPositionMap[symbol]
-		if position == nil { //没有持仓信息，直接开仓
-			placeOrderFutureHuobi(key, secret, order, orderSide, orderType, symbol, "open", price, amount)
-		} else { //存在持仓信息
-			if position.DirectionDetail != nil { //存在双向持仓
-				if orderSide == model.OrderSideBuy { //买
-					sellAmount := position.DirectionDetail[model.OrderSideSell] //取出-方向，优先平仓
-					if amount > math.Abs(sellAmount) {
-						go placeOrderFutureHuobi(key, secret, order, orderSide, orderType, symbol, "close", price, sellAmount)
-						placeOrderFutureHuobi(key, secret, order, orderSide, orderType, symbol, "open", price, amount-sellAmount)
-					} else {
-						placeOrderFutureHuobi(key, secret, order, orderSide, orderType, symbol, "close", price, amount)
-					}
-				} else { //卖
-					buyAmount := position.DirectionDetail[model.OrderSideBuy] //取出+方向，优先平仓
-					if amount > buyAmount {
-						go placeOrderFutureHuobi(key, secret, order, orderSide, orderType, symbol, "close", price, buyAmount)
-						placeOrderFutureHuobi(key, secret, order, orderSide, orderType, symbol, "open", price, amount-buyAmount)
-					} else {
-						placeOrderFutureHuobi(key, secret, order, orderSide, orderType, symbol, "close", price, amount)
-					}
-				}
-				//position.DirectionDetail = nil //简单处理-清除双向持仓信息
-			} else { //单向持仓
-				if position.Direction == orderSide { //持仓方向和买卖方向一致，开仓
-					placeOrderFutureHuobi(key, secret, order, orderSide, orderType, symbol, "open", price, amount)
-				} else { //持仓方向和买卖方向不一致，先平仓，多余的再开仓
-					if amount > math.Abs(position.Free) {
-						go placeOrderFutureHuobi(key, secret, order, orderSide, orderType, symbol, "close", price, math.Abs(position.Free))
-						placeOrderFutureHuobi(key, secret, order, orderSide, orderType, symbol, "open", price, amount-math.Abs(position.Free))
-					} else {
-						placeOrderFutureHuobi(key, secret, order, orderSide, orderType, symbol, "close", price, amount)
-					}
-				}
+		if position == nil ||
+			(orderSide == model.OrderSideBuy && amount > math.Abs(position.DirectionDetail[model.OrderSideSell])) ||
+			(orderSide == model.OrderSideSell && amount > position.DirectionDetail[model.OrderSideBuy]) { //没有持仓信息或者对手仓位小于当前数量，直接开仓
+			offset = "open"
+		} else {
+			offset = "close"
+		}
+		postData["lever_rate"] = 5
+		postData["contract_code"] = symbol
+		postData["direction"] = orderSide
+		postData["offset"] = offset
+		if orderType == model.OrderTypeLimit {
+			priceFuture, decimalFuture := model.FormatPrice(model.Huobi, symbol, model.OrderSideBuy, price)
+			priceStrFuture := util.CutTailZero(strconv.FormatFloat(priceFuture, 'f', decimalFuture, 64))
+			postData["price"] = priceStrFuture
+			postData["order_price_type"] = "limit"
+		} else if orderType == model.OrderTypeMarket {
+			postData["order_price_type"] = "opponent"
+		}
+		marketInfo := model.GetMarketInfo(model.Huobi, symbol)
+		if marketInfo == nil || marketInfo.SizeIncrement == 0 || marketInfo.CTValue == 0 ||
+			marketInfo.CTCurrency != model.GetCoin(model.Huobi, symbol) {
+			return
+		}
+		postData["volume"] = util.CutTailZero(fmt.Sprintf(`%f`, model.GetAmountInMarket(model.Huobi, symbol, amount)))
+		responseBody := SignedRequestHuobi(key, secret, `POST`, restHuobiFuture, "/linear-swap-api/v1/swap_cross_order", postData)
+		orderJson, err := util.NewJSON(responseBody)
+		if err == nil {
+			status, _ := orderJson.Get("status").String()
+			if status == "ok" {
+				position = nil
+				order.OrderId, _ = orderJson.Get("data").Get("order_id_str").String()
+			} else if status == "error" {
+				order.OrderId, _ = orderJson.Get("err-code").String()
 			}
 		}
-		position = nil
+		util.Notice(fmt.Sprintf(`[挂单huobi] %s side: %s type: %s price: %f amount: %f order id %s 返回%s`,
+			symbol, orderSide, orderType, price, amount, order.OrderId, string(responseBody)))
 	} else { //现货
-		postData := make(map[string]interface{})
 		if orderSide == model.OrderSideBuy && orderType == model.OrderTypeLimit {
 			postData["type"] = `buy-limit`
 		} else if orderSide == model.OrderSideBuy && orderType == model.OrderTypeMarket {
@@ -404,19 +406,10 @@ func placeOrderHuobi(key, secret string, order *model.Order, orderSide, orderTyp
 			priceSpot, decimalSpot := model.FormatPrice(model.Huobi, symbol, model.OrderSideBuy, price)
 			postData["price"] = util.CutTailZero(strconv.FormatFloat(priceSpot, 'f', decimalSpot, 64))
 		}
-
 		responseBody := SignedRequestHuobi(key, secret, `POST`, restHuobi, "/v1/order/orders/place", postData)
 		orderJson, err := util.NewJSON(responseBody)
 		if err == nil {
-			status, _ := orderJson.Get("status").String()
-			if status == "ok" {
-				order.OrderId, _ = orderJson.Get("data").Get("order_id_str").String()
-				if order.OrderId == "" {
-					order.OrderId, _ = orderJson.Get("data").String()
-				}
-			} else if status == "error" {
-				order.OrderId, _ = orderJson.Get("err-code").String()
-			}
+			order.OrderId, _ = orderJson.Get("data").String()
 		}
 		util.Notice(fmt.Sprintf(`[挂单huobi] %s side: %s type: %s price: %f amount: %f order id %s 返回%s`,
 			symbol, orderSide, orderType, price, amount, order.OrderId, string(responseBody)))
@@ -572,11 +565,9 @@ func getPositionsHuobi(key string, secret string) (success bool, positions []*mo
 	positions = make([]*model.Position, 0)
 	contracts := responseJson.Get(`data`).Get(`positions`).MustArray()
 	posBalance = responseJson.Get(`data`).Get(`margin_balance`).MustFloat64()
-
 	positionMap := make(map[string]*model.Position)
 	for _, contract := range contracts {
 		item := contract.(map[string]interface{})
-
 		if item[`contract_code`] == nil {
 			continue
 		}
@@ -586,7 +577,6 @@ func getPositionsHuobi(key string, secret string) (success bool, positions []*mo
 			position = &model.Position{Market: model.Huobi, Ts: util.GetNowUnixMillion(), Currency: currency}
 			positionMap[currency] = position
 		}
-
 		if item[`cost_open`] != nil {
 			position.EntryPrice, _ = item[`cost_open`].(json.Number).Float64()
 		}
@@ -594,18 +584,13 @@ func getPositionsHuobi(key string, secret string) (success bool, positions []*mo
 			direction := item[`direction`].(string)
 			amount, _ := item[`volume`].(json.Number).Float64()
 			_, realAmount := model.ParseRealAmount(model.Huobi, position.Currency, amount)
-
 			if direction == model.OrderSideSell {
 				realAmount = realAmount * -1
 			}
-			//钱包内该币种持仓方向不为空且与当前持仓方向不一致，将2个不同的持仓方向和数量放入DirectionDetail
-			if position.Direction != "" && direction != position.Direction {
-				directionDetail := make(map[string]float64)
-				directionDetail[position.Direction] = position.Free
-				directionDetail[direction] = realAmount
-				position.DirectionDetail = directionDetail
+			if position.DirectionDetail == nil {
+				position.DirectionDetail = make(map[string]float64)
 			}
-
+			position.DirectionDetail[direction] = realAmount
 			position.Direction = direction
 			position.Free = position.Free + realAmount
 		}
