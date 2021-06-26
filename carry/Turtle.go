@@ -154,7 +154,9 @@ func GetTurtleData(setting *model.Setting) (turtleData *TurtleData) {
 		candle := api.GetDayCandle(model.KeyDefault, model.SecretDefault, setting.Market, setting.Symbol,
 			turtleData.instrument, day)
 		if candle == nil {
-			continue
+			util.Notice(`can not calc turtleDate as nil candle %s %s %s %s`,
+				setting.Market, setting.Symbol, turtleData.instrument, day.String())
+			return nil
 		}
 		if i == 1 {
 			turtleData.end1 = candle.PriceClose
