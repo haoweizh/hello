@@ -27,7 +27,6 @@ const OKEXOtherContractFaceValue = 10.0
 const DFuture = `dfuture`
 const Bybit = `bybit`
 const OKEX = "okex"
-const OKFUTURE = `okfuture`
 const Huobi = "huobi"
 const HuobiDM = `huobiDM`
 const HuobiFuture = `HuobiFuture`
@@ -51,6 +50,7 @@ const OrderSideLiquidateShort = `liquidateShort`
 const FunctionTurtle = `turtle`
 const FunctionGrid = `grid`
 const FunctionCarry = `carry`
+const FunctionCross = `cross`
 const FunctionDCarry = `dcarry`
 const FunctionComplement = `comp`
 const FunctionPostonlyHandler = `postonly`
@@ -101,15 +101,6 @@ var orderStatusMap = map[string]map[string]string{ // market - market status - u
 		`partial-canceled`: CarryStatusSuccess, //部分成交撤销,
 		`filled`:           CarryStatusSuccess, //完全成交,
 		`canceled`:         CarryStatusFail},   //已撤销
-	OKFUTURE: {
-		`0`:  CarryStatusWorking, //等待成交
-		`1`:  CarryStatusWorking, //部分成交
-		`2`:  CarryStatusSuccess, //完全成交
-		`3`:  CarryStatusWorking, //下单中
-		`4`:  CarryStatusWorking, //撤单中
-		`-1`: CarryStatusFail,    //撤单成功
-		`-2`: CarryStatusFail,    //失败
-	},
 	Bitmex: {
 		"New":             CarryStatusWorking,
 		"PartiallyFilled": CarryStatusWorking,
@@ -256,11 +247,6 @@ func GetSymbol(market, subscribe string) (symbol string) {
 		subscribe = strings.Replace(subscribe, "ok_sub_spot_", "", 1)
 		subscribe = strings.Replace(subscribe, "_depth_5", "", 1)
 		return subscribe
-	case OKFUTURE: // ok_sub_futureusd_btc_depth_this_week_5: btc_this_week
-		subscribe = strings.Replace(subscribe, `ok_sub_futureusd_`, ``, 1)
-		subscribe = strings.Replace(subscribe, `_depth`, ``, 1)
-		subscribe = strings.Replace(subscribe, `_5`, ``, 1)
-		return subscribe
 	case Binance: // eosusdt@depth5: xrpbtc
 		if strings.Index(subscribe, `@`) == -1 {
 			return ``
@@ -289,7 +275,7 @@ func NewConfig() {
 
 func GetMarketYesterday(market string) (yesterday time.Time, strYesterday string) {
 	yesterday = time.Now().In(time.UTC)
-	if market == OKFUTURE || market == HuobiDM || market == OKEX {
+	if market == HuobiDM || market == OKEX {
 		yesterday = util.GetNow()
 	}
 	duration, _ := time.ParseDuration(`-24h`)
@@ -300,7 +286,7 @@ func GetMarketYesterday(market string) (yesterday time.Time, strYesterday string
 
 func GetMarketToday(market string) (today time.Time, strToday string) {
 	today = time.Now().In(time.UTC)
-	if market == OKEX || market == HuobiDM || market == OKFUTURE {
+	if market == OKEX || market == HuobiDM {
 		today = util.GetNow()
 	}
 	today = time.Date(today.Year(), today.Month(), today.Day(), 0, 0, 0, 0, today.Location())

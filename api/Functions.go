@@ -252,7 +252,7 @@ func GetTransfers(key, secret, market string) (balances []*model.Balance) {
 	switch market {
 	case model.Ftx:
 		return getTransferFtx(key, secret)
-	case model.OKEX, model.OKFUTURE:
+	case model.OKEX:
 		return getTransferOKEX(key, secret)
 	case model.Huobi, model.HuobiDM:
 		return getTransferHuobi(key, secret)
@@ -616,10 +616,6 @@ func GetWSSubscribe(market, symbol, subType string) (subscribe interface{}) {
 		return fmt.Sprintf(`market.%s.depth.step6`, symbol)
 	case model.OKEX: // 未来基于market兼容okfuture LTC-USD-190628
 		return GetCurrentInstrument(``, ``, market, symbol)
-	case model.OKFUTURE:
-		// btc-usd futures/ticker:BTC-USD-170310
-		instrument := GetCurrentInstrument(``, ``, market, symbol)
-		return `futures/depth5:` + instrument
 	case model.Binance: // XRPUSDT: XRPUSDT@depth5   XRP-PERP: XRPUSDT@depth5
 		if symbol[len(symbol)-5:] == `-PERP` {
 			symbol = symbol[0:len(symbol)-5] + `USDT`

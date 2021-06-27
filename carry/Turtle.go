@@ -66,7 +66,7 @@ func calcTurtleAmount(setting *model.Setting, price, n float64) (amount float64)
 		case `BTC-PERP`, `ETH-PERP`, `BTC-USDT-SWAP`, `ETH-USDT-SWAP`:
 			amount *= 2
 		}
-	case model.OKFUTURE, model.HuobiDM:
+	case model.HuobiDM:
 		coin := model.GetCoin(setting.Market, setting.Symbol)
 		balance := api.GetBalance(``, ``, setting.Market, coin)
 		if balance != nil {
@@ -434,7 +434,7 @@ func placeTurtleOrders(turtleData *TurtleData, setting *model.Setting,
 				`liquidate short %s %s chance:%d amount:%f currentN:%d short-long:%f %f px:%f n:%f`,
 				setting.Market, setting.Symbol, setting.Chance, amount, currentN, priceShort,
 				priceLong, setting.PriceX, turtleData.n))
-			if setting.Market == model.OKFUTURE || setting.Market == model.HuobiDM {
+			if setting.Market == model.HuobiDM {
 				orderSide = model.OrderSideLiquidateShort
 			}
 		}
@@ -465,7 +465,7 @@ func placeTurtleOrders(turtleData *TurtleData, setting *model.Setting,
 				`liquidate long %s %s chance:%d amount:%f currentN:%d short-long:%f %f px:%f n:%f`,
 				setting.Market, setting.Symbol, setting.Chance, amount, currentN, priceShort,
 				priceLong, setting.PriceX, turtleData.n))
-			if setting.Market == model.OKFUTURE || setting.Market == model.HuobiDM {
+			if setting.Market == model.HuobiDM {
 				orderSide = model.OrderSideLiquidateLong
 			}
 		}

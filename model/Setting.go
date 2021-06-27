@@ -31,6 +31,7 @@ type Setting struct {
 
 var marketSymbolSetting map[string]map[string]map[string][]*Setting // function - marketName - symbol - setting
 var handlers map[string]map[string]map[string]CarryHandler          // market - symbol - function- carryHandler
+var coinSettings map[string]map[string][]*Setting                   // function - coin - setting
 
 func GetSettingCoins(function, market string) (coins map[string]bool) {
 	if handlers == nil {
@@ -101,18 +102,34 @@ func GetFunctions(market, symbol string) map[string]CarryHandler {
 	return handlers[market][symbol]
 }
 
+func GetCoinSetting(function, coin string) []*Setting {
+	infoLock.Lock()
+	defer infoLock.Unlock()
+	if coinSettings == nil || coinSettings[function] == nil {
+		return nil
+	}
+	return coinSettings[function][coin]
+}
+
 func LoadSettings() {
 	infoLock.Lock()
 	defer infoLock.Unlock()
 	AppSettings = []Setting{}
 	AppDB.Where(`valid = ?`, true).Find(&AppSettings)
 	marketSymbolSetting = make(map[string]map[string]map[string][]*Setting)
-	//binanceSettings := make(map[string]*Setting)
-	//relatedSettings := make(map[string]*Setting)
 	handlers = make(map[string]map[string]map[string]CarryHandler)
+	coinSettings = make(map[string]map[string][]*Setting)
 	for i := range AppSettings {
 		market := AppSettings[i].Market
 		function := AppSettings[i].Function
+		if coinSettings[function] == nil {
+			coinSettings[function] = make(map[string][]*Setting)
+		}
+		if coinSettings[function][AppSettings[i].SymbolRelated] == nil {
+			coinSettings[function][AppSettings[i].SymbolRelated] = make([]*Setting, 0)
+		}
+		coinSettings[function][AppSettings[i].SymbolRelated] =
+			append(coinSettings[function][AppSettings[i].SymbolRelated], &AppSettings[i])
 		symbols := []string{AppSettings[i].Symbol}
 		if function == FunctionCarry {
 			symbols = append(symbols, AppSettings[i].SymbolRelated)
@@ -129,12 +146,6 @@ func LoadSettings() {
 			}
 			marketSymbolSetting[function][market][symbol] = append(marketSymbolSetting[function][market][symbol],
 				&AppSettings[i])
-			//if AppSettings[i].MarketRelated != `` {
-			//	marketsRelated := strings.Split(AppSettings[i].MarketRelated, `,`)
-			//	for _, value := range marketsRelated {
-			//		AppSettings = append(AppSettings, Setting{Market: value, Symbol: AppSettings[i].Symbol, Valid: true})
-			//	}
-			//}
 			if handlers[market] == nil {
 				handlers[market] = make(map[string]map[string]CarryHandler)
 			}
@@ -149,9 +160,6 @@ func LoadSettings() {
 			}
 		}
 	}
-	//for _, setting := range relatedSettings {
-	//	AppSettings = append(AppSettings, *setting)
-	//}
 	for _, setting := range AppSettings {
 		util.Notice(fmt.Sprintf(`load setting %s %s %s %v`,
 			setting.Market, setting.Symbol, setting.Function, setting.Valid))
@@ -195,31 +203,6 @@ func GetMarkets() []string {
 	return markets
 }
 
-func (setting *Setting) GetRelatedSymbol() (related string) {
-	switch setting.Market {
-	case Binance:
-		related = setting.SymbolRelated
-		//parts := strings.Split(setting.Symbol, `-`)
-		//if len(parts) == 2 && setting.Function == FunctionCarry {
-		//	related = parts[0] + `USDT`
-		//}
-	case Ftx:
-		parts := strings.Split(setting.Symbol, `-`)
-		if len(parts) == 2 && setting.Function == FunctionCarry {
-			related = parts[0] + `/USD`
-		}
-	case OKEX:
-		parts := strings.Split(setting.Symbol, `-`)
-		if len(parts) > 2 {
-			if parts[1] == `USD` {
-				parts[1] = `USDT`
-			}
-			return parts[0] + `-` + parts[1]
-		}
-	}
-	return related
-}
-
 func GetCoin(market, symbol string) (coin string) {
 	switch market {
 	case Binance:
@@ -235,11 +218,6 @@ func GetCoin(market, symbol string) (coin string) {
 			if strings.Contains(symbol, tail) {
 				coin = symbol[0:strings.Index(symbol, tail)]
 			}
-		}
-	case OKFUTURE: // ftx:BTC-PERP okfuture:btc-usd
-		parts := strings.Split(symbol, `-`)
-		if len(parts) == 2 {
-			coin = parts[0]
 		}
 	case HuobiDM: // btc_cq
 		parts := strings.Split(symbol, `_`)
