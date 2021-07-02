@@ -4,15 +4,6 @@ import (
 	"time"
 )
 
-//type Accounts struct {
-//	Lock sync.Mutex
-//	//TotalInUsdt float64
-//	//MarketTotal        map[string]float64             // marketName - totalInUsdt
-//	//CurrencyTotal      map[string]float64             // currency - totalInUsdt
-//	//CurrencyPercentage map[string]float64             // currency - percentage
-//	Data map[string]map[string]*Position // marketName - currency - Position
-//}
-
 type Position struct {
 	Market                   string
 	Currency                 string
@@ -34,40 +25,3 @@ type Position struct {
 	CreatedAt time.Time
 	UpdatedAt time.Time
 }
-
-//func NewAccounts() *Accounts {
-//	accounts := &Accounts{}
-//	accounts.Data = make(map[string]map[string]*Position)
-//	return accounts
-//}
-//
-//func (accounts *Accounts) ClearAccounts(marketName string) {
-//	accounts.Lock.Lock()
-//	defer accounts.Lock.Unlock()
-//	accounts.Data[marketName] = nil
-//}
-//
-//func (accounts *Accounts) GetAccount(marketName string, currency string) *Position {
-//	accounts.Lock.Lock()
-//	defer accounts.Lock.Unlock()
-//	if accounts.Data[marketName] == nil {
-//		accounts.Data[marketName] = make(map[string]*Position)
-//	}
-//	//if accounts.Data[marketName][currency] == nil && AppConfig.Env == `test` {
-//	//	accounts.Data[marketName][currency] = &Account{
-//	//		Market: marketName, Ts: util.GetNowUnixMillion(), Currency: currency}
-//	//}
-//	return accounts.Data[marketName][currency]
-//}
-//
-//func (accounts *Accounts) SetAccount(marketName string, currency string, account *Position) {
-//	accounts.Lock.Lock()
-//	defer accounts.Lock.Unlock()
-//	if accounts.Data[marketName] == nil {
-//		accounts.Data[marketName] = make(map[string]*Position)
-//	}
-//	if marketName == OKSwap && account != nil {
-//		currency = account.Direction + account.Currency
-//	}
-//	accounts.Data[marketName][currency] = account
-//}

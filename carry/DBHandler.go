@@ -5,6 +5,7 @@ import (
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"hello/api"
+	"hello/carry/cross"
 	"hello/model"
 	"hello/util"
 	"time"
@@ -142,7 +143,7 @@ func Maintain() {
 	model.HandlerMap[model.FunctionGrid] = ProcessSimpleGrid
 	model.HandlerMap[model.FunctionTurtle] = ProcessTurtle
 	model.HandlerMap[model.FunctionCarry] = ProcessCarry
-	model.HandlerMap[model.FunctionCross] = ProcessCross
+	model.HandlerMap[model.FunctionCross] = cross.ProcessCross
 	model.HandlerMap[model.FunctionDCarry] = ProcessDCarry
 	_ = model.AppDB.AutoMigrate(&model.Setting{})
 	_ = model.AppDB.AutoMigrate(&model.Order{})
