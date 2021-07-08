@@ -244,7 +244,15 @@ func GetBalances(key, secret, market string) (
 	case model.Binance:
 		success, balances = getBalanceBinance(key, secret)
 	}
-	//model.SetBalance(market, balances, totalInUsd, collateral, now)
+	if market == model.Huobi || market == model.Binance {
+		for _, balance := range balances {
+			symbol := balance.Coin + model.GetSpotTail(market)
+			getTick, tick := model.AppMarkets.GetBidAsk(symbol, market)
+			if getTick {
+				totalInUsd += tick.Bids[0].Price * balance.Amount
+			}
+		}
+	}
 	return success, balances, totalInUsd, collateral
 }
 
@@ -319,6 +327,9 @@ func GetFundingRate(market, symbol string, lock *sync.Mutex) (success bool, rate
 	case model.Binance:
 		fundingRate = getFundingRateBinance(``, ``, symbol)
 		model.SetFundingRate(market, symbol, fundingRate)
+	case model.Huobi:
+		return true, 0
+		// todo set huobi funding rate
 	}
 	if fundingRate != nil && now < fundingRate.ExpireTime {
 		return true, fundingRate.Rate

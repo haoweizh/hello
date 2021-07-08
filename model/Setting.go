@@ -15,6 +15,7 @@ type Setting struct {
 	Market            string
 	MarketRelated     string
 	Symbol            string
+	Coin              string
 	SymbolRelated     string
 	FunctionParameter string
 	PriceX            float64
@@ -125,11 +126,11 @@ func LoadSettings() {
 		if coinSettings[function] == nil {
 			coinSettings[function] = make(map[string][]*Setting)
 		}
-		if coinSettings[function][AppSettings[i].SymbolRelated] == nil {
-			coinSettings[function][AppSettings[i].SymbolRelated] = make([]*Setting, 0)
+		if coinSettings[function][AppSettings[i].Coin] == nil {
+			coinSettings[function][AppSettings[i].Coin] = make([]*Setting, 0)
 		}
-		coinSettings[function][AppSettings[i].SymbolRelated] =
-			append(coinSettings[function][AppSettings[i].SymbolRelated], &AppSettings[i])
+		coinSettings[function][AppSettings[i].Coin] =
+			append(coinSettings[function][AppSettings[i].Coin], &AppSettings[i])
 		symbols := []string{AppSettings[i].Symbol}
 		if function == FunctionCarry {
 			symbols = append(symbols, AppSettings[i].SymbolRelated)
@@ -181,6 +182,16 @@ func GetMarketSymbols(market string) map[string]bool {
 		}
 	}
 	return symbols
+}
+
+func GetCoinSettings(function string) map[string][]*Setting {
+	if AppSettings == nil {
+		LoadSettings()
+	}
+	if coinSettings == nil {
+		return nil
+	}
+	return coinSettings[function]
 }
 
 func GetMarkets() []string {
