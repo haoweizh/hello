@@ -153,6 +153,10 @@ func Maintain() {
 	go MaintainTransFee(model.KeyDefault, model.SecretDefault)
 	//go util.StartMidNightTimer(CancelAllOrders)
 	//go MaintainBalance()
+	coinSettings := model.GetCoinSettings(model.FunctionCross)
+	if coinSettings != nil {
+		go cross.ClearCarry()
+	}
 	api.InitMarketInfos()
 	go RefreshMarketInfo()
 	for true {

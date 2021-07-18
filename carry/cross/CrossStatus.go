@@ -6,9 +6,10 @@ import (
 	"time"
 )
 
-var status = make(map[string]map[string]map[string]map[string]*CarryStatus) // coin - market - symbol - key - CarryStatus
-var okTradeMaxResetTime = make(map[string]map[string]int64)                 // key - symbol - init time in second
+var status map[string]map[string]map[string]map[string]*CarryStatus // coin - market - symbol - key - CarryStatus
+var okTradeMaxResetTime = make(map[string]map[string]int64)         // key - symbol - init time in second
 var crossLock sync.Mutex
+var crossing bool
 var collaterals = make(map[string]*model.Collateral) // key - okex collateral status
 
 type CarryStatus struct {
