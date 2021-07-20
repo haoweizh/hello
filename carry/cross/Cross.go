@@ -60,6 +60,9 @@ func createFromBalance(key, secret string, setting *model.Setting) (carryStatus 
 	if balances[key] == nil {
 		balances[key] = make(map[string][]*model.Balance)
 	}
+	if usdAmount[key] == nil {
+		usdAmount[key] = make(map[string]float64)
+	}
 	if balances[key][setting.Market] == nil {
 		success, apiBalances, totalInUsd, collateral := api.GetBalances(key, secret, setting.Market)
 		if success && totalInUsd > 0 {
@@ -69,16 +72,21 @@ func createFromBalance(key, secret string, setting *model.Setting) (carryStatus 
 		}
 	}
 	for _, balance := range balances[key][setting.Market] {
-		if balance == nil || balance.Coin != setting.Coin {
+		if balance == nil || strings.ToUpper(balance.Coin) != setting.Coin {
 			continue
 		}
+		if (strings.ToUpper(balance.Coin) == `USDT` && setting.Market != model.Ftx) ||
+			(strings.ToUpper(balance.Coin) == `USD` && setting.Market == model.Ftx) {
+			usdAmount[key][setting.Market] += balance.Amount
+			// todo 可用usd数量需要减去现有所有借币负债总额
+		}
 		carryStatus = &CarryStatus{Market: setting.Market, Symbol: setting.Symbol, LimitSell: balance.AvailableWithBorrow,
-			LimitBuy: math.NaN(), Holding: balance.Amount, UsdValue: balance.UsdValue,
+			LimitBuy: math.NaN(), Holding: balance.Amount, ValueInUsd: balance.UsdValue,
 			RateInAll: balance.UsdValue / spotBalance[key][setting.Market]}
 	}
 	if carryStatus == nil { // todo 目前都按照不可借币处理
 		carryStatus = &CarryStatus{Market: setting.Market, Symbol: setting.Symbol, LimitSell: 0, LimitBuy: math.NaN(),
-			Holding: 0, UsdValue: 0, RateInAll: 0}
+			Holding: 0, ValueInUsd: 0, RateInAll: 0}
 	}
 	return carryStatus
 }
@@ -103,14 +111,14 @@ func initStatus(key, secret string, setting *model.Setting) {
 	}
 	getTick, tick := model.AppMarkets.GetBidAsk(setting.Symbol, setting.Market)
 	status[setting.Coin][setting.Market][setting.Symbol][key] = carryStatus
-	if getTick && carryStatus.UsdValue == 0 {
-		carryStatus.UsdValue = carryStatus.Holding * tick.Bids[0].Price
+	if getTick && carryStatus.ValueInUsd == 0 {
+		carryStatus.ValueInUsd = carryStatus.Holding * tick.Bids[0].Price
 		marketBalance := swapBalance[key][setting.Market]
 		if marketBalance == 0 {
 			marketBalance = spotBalance[key][setting.Market]
 		}
 		if marketBalance > 0 {
-			carryStatus.RateInAll = carryStatus.UsdValue / marketBalance
+			carryStatus.RateInAll = carryStatus.ValueInUsd / marketBalance
 		}
 	}
 	now := time.Now().Unix()
@@ -171,6 +179,7 @@ func ClearCarry() {
 			status = make(map[string]map[string]map[string]map[string]*CarryStatus)
 		}
 		balances = make(map[string]map[string][]*model.Balance)
+		usdAmount = make(map[string]map[string]float64)
 		positions = make(map[string]map[string][]*model.Position)
 		coinSettings := model.GetCoinSettings(model.FunctionCross)
 		for coin, settings := range coinSettings {
@@ -299,18 +308,73 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 			}
 			amount := math.Min(tick.Bids[0].Amount, tickRelate.Asks[0].Amount)
 			line := (tick.Bids[0].Price - tickRelate.Asks[0].Price) / tick.Bids[0].Price
-			if (math.IsNaN(statusCross.LimitSell) || statusCross.LimitSell > amount) && (math.IsNaN(statusRelate.LimitBuy) || statusRelate.LimitBuy > amount) &&
+			if (math.IsNaN(statusCross.LimitSell) || statusCross.LimitSell > amount) &&
+				(math.IsNaN(statusRelate.LimitBuy) || statusRelate.LimitBuy > amount) &&
 				statusCross.TradeLineSell < line && statusRelate.TradeLineBuy < line {
 				util.Notice(`cross trade `)
+				go api.PlaceOrder(keys[i], secrets[i], model.OrderSideSell, model.OrderTypeLimit, setting.Market,
+					setting.Symbol, setting.Symbol, ``, model.FunctionCross, tick.Bids[0].Price, tick.Bids[0].Price, amount, true, true, nil)
 				return
 			}
 			amount = math.Min(tick.Asks[0].Amount, tickRelate.Bids[0].Amount)
-			line = (tick.Asks[0].Price - tickRelate.Bids[0].Price) / tick.Asks[0].Price
-			if (math.IsNaN(statusCross.LimitBuy) || statusCross.LimitBuy > amount) && (math.IsNaN(statusRelate.LimitSell) || statusRelate.LimitSell > amount) &&
+			line = (tickRelate.Bids[0].Price - tick.Asks[0].Price) / tick.Asks[0].Price
+			if (math.IsNaN(statusCross.LimitBuy) || statusCross.LimitBuy > amount) &&
+				(math.IsNaN(statusRelate.LimitSell) || statusRelate.LimitSell > amount) &&
 				statusCross.TradeLineBuy < line && statusRelate.TradeLineSell < line {
 				util.Notice(`cross trade `)
 				return
 			}
 		}
+	}
+}
+
+func placeCross(key, keyRelate, secret, secretRelate, side, sideRelate string, price, priceRelate, amount, amountRelate float64) {
+	if !checkSetCrossing(true) {
+		defer checkSetCrossing(false)
+	} else {
+		//util.Notice(fmt.Sprintf(`waiting for other ordering %s`, setting.Symbol))
+		return
+	}
+	placeSuccess := true
+	if setting.Market == model.OKEX {
+		placeSuccess = api.PlacePairOKEX(key, model.GetCoin(setting.Market, setting.Symbol), sidePerp, sideRelated,
+			model.OrderTypeLimit, perpPrice, relatedPrice, amount)
+	} else {
+		go api.PlaceOrder(key, secret, sidePerp, model.OrderTypeLimit, setting.Market, setting.Symbol,
+			``, ``, model.FunctionCarry, perpPrice, perpPrice,
+			amount, true, true, postOrderCarry)
+		api.PlaceOrder(key, secret, sideRelated, model.OrderTypeLimit, setting.Market, setting.SymbolRelated,
+			``, ``, model.FunctionCarry, relatedPrice, relatedPrice,
+			amount, true, true, postOrderCarry)
+		time.Sleep(time.Second / 5)
+	}
+	if placeSuccess {
+		usdAvailable := getUsdAvailable(key)
+		balanceAllValue := getBalanceAll(key)
+		if sidePerp == model.OrderSideSell {
+			perpPrice = tickPerp.Bids[0].Price
+			relatedPrice = tickRelated.Asks[0].Price
+			setCarryAmount(key, setting.Symbol, getCarryAmount(key, setting.Symbol)+amount)
+			balance.Amount += amount
+			balance.AvailableWithBorrow += amount
+			balance.UsdValue += amount * perpPrice
+			if carryType == carryTypeOpen {
+				usdAvailable -= amount * perpPrice
+				setUsdAvailable(key, usdAvailable)
+			}
+		} else if sidePerp == model.OrderSideBuy {
+			perpPrice = tickPerp.Asks[0].Price
+			relatedPrice = tickRelated.Bids[0].Price
+			setCarryAmount(key, setting.Symbol, getCarryAmount(key, setting.Symbol)-amount)
+			balance.Amount -= amount
+			balance.AvailableWithBorrow -= amount
+			balance.UsdValue -= amount * perpPrice
+			if carryType == carryTypeRevert {
+				usdAvailable += amount * relatedPrice
+				setUsdAvailable(key, usdAvailable)
+			}
+		}
+		setCarryBalance(key, coin, balance)
+		setUsdRate(key, usdAvailable/balanceAllValue)
 	}
 }
