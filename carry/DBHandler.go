@@ -5,7 +5,6 @@ import (
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"hello/api"
-	"hello/carry/cross"
 	"hello/model"
 	"hello/util"
 	"time"
@@ -143,20 +142,20 @@ func Maintain() {
 	model.HandlerMap[model.FunctionGrid] = ProcessSimpleGrid
 	model.HandlerMap[model.FunctionTurtle] = ProcessTurtle
 	model.HandlerMap[model.FunctionCarry] = ProcessCarry
-	model.HandlerMap[model.FunctionCross] = cross.ProcessCross
+	//model.HandlerMap[model.FunctionCross] = cross.ProcessCross
 	model.HandlerMap[model.FunctionDCarry] = ProcessDCarry
 	_ = model.AppDB.AutoMigrate(&model.Setting{})
 	_ = model.AppDB.AutoMigrate(&model.Order{})
 	_ = model.AppDB.AutoMigrate(&model.Balance{})
 	//api.CancelOrders(model.AppConfig.FtxKey, model.AppConfig.FtxSecret, model.Ftx, `LINK-PERP`)
 	//go CheckPastRefresh()
-	go MaintainTransFee(model.KeyDefault, model.SecretDefault)
 	//go util.StartMidNightTimer(CancelAllOrders)
 	//go MaintainBalance()
-	coinSettings := model.GetCoinSettings(model.FunctionCross)
-	if coinSettings != nil {
-		go cross.ClearCarry()
-	}
+	go MaintainTransFee(model.KeyDefault, model.SecretDefault)
+	//coinSettings := model.GetCoinSettings(model.FunctionCross)
+	//if coinSettings != nil {
+	//	go cross.ClearCarry()
+	//}
 	api.InitMarketInfos()
 	go RefreshMarketInfo()
 	for true {
