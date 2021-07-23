@@ -55,6 +55,8 @@ const FunctionDCarry = `dcarry`
 const FunctionComplement = `comp`
 const FunctionPostonlyHandler = `postonly`
 const PostOnly = `ParticipateDoNotInitiate`
+const SymbolTypeSpot = `spot`
+const SymbolTypePerp = `perp`
 
 var AppDB *gorm.DB
 var AppSettings []Setting
