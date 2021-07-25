@@ -9,6 +9,7 @@ import (
 var status map[string]map[string]map[string]map[string]*CarryStatus // coin - market - symbol - key - CarryStatus
 var usdAmount map[string]map[string]float64                         // key - market - amount
 var okTradeMaxResetTime = make(map[string]map[string]int64)         // key - symbol - init time in second
+var perpHoldInU map[string]map[string]float64                       // key - market - abs value in usd
 var crossLock sync.Mutex
 var crossing bool
 var collaterals = make(map[string]*model.Collateral) // key - okex collateral status
@@ -22,6 +23,7 @@ type CarryStatus struct {
 	Holding                     float64
 	ValueInUsd                  float64
 	RateInAll                   float64 // 当前币种或持仓占总权益的比例
+	IsUniAccount                bool    // 是否是统一账户
 }
 
 func GetCollateral(key string) (collateral *model.Collateral) {
