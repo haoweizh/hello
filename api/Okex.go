@@ -150,6 +150,8 @@ func handleMsgOKEX(channel chan *simplejson.Json, instrument string) {
 		if len(channel) > 20 {
 			util.Notice(fmt.Sprintf(`%s current chan to be handle %d`, instrument, len(channel)))
 		}
+		testJson, _ := responseJson.String()
+		util.Notice(`test %s`, testJson)
 		action := responseJson.Get(`action`).MustString()
 		data := responseJson.Get(`data`).MustArray()[0].(map[string]interface{})
 		_, bidAsk := model.AppMarkets.GetBidAsk(instrument, model.OKEX)
@@ -228,7 +230,7 @@ var wsHandlerPrivate = func(channelKey string, event []byte, orderHandler OrderH
 	if responseJson.Get(`data`) == nil || len(responseJson.Get(`data`).MustArray()) == 0 {
 		return
 	}
-	if responseJson.Get(`code`).MustString() != `0` {
+	if responseJson.Get(`code`).MustString() != `0` && responseJson.Get(`code`).MustString() != `` {
 		util.Notice(fmt.Sprintf(`okex private channel error: %s`, string(event)))
 	}
 	data := responseJson.Get(`data`).MustArray()
