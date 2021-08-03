@@ -18,9 +18,9 @@ const openValueLimit = 10000.0
 const carryTypeOpen = `carryOpen`
 const carryTypeClose = `carryClose`
 const carryTypeRevert = `carryRevert`
-const InsufficientCodeOKEX = `51008,51119,51120,51131,51502,58350,59108,59200`
 const InsufficientCodeBinance = `-2010`
 
+var InsufficientCodeOKEX = map[string]bool{`51008`: true, `51119`: true, `51120`: true, `51131`: true, `51502`: true, `58350`: true, `59108`: true, `59200`: true}
 var marketInitTime = make(map[string]int64) // market - initTime
 var carryLock sync.Mutex
 var carrying bool
@@ -51,7 +51,7 @@ var postOrderCarry = func(order *model.Order) {
 		if order.Market == `` || order.Market == model.OKEX {
 			keys, secrets := model.AppConfig.GetKeys(model.OKEX)
 			for i, key := range keys {
-				if key == order.AmountType && strings.Contains(InsufficientCodeOKEX, order.ErrCode) {
+				if key == order.AmountType && InsufficientCodeOKEX[order.ErrCode] {
 					util.Notice(`reset okex trade max with %s %s`, order.ErrCode, order.AmountType)
 					resetTradeMax(key, secrets[i], model.OKEX)
 					unknownFail = false
