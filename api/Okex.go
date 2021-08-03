@@ -150,8 +150,8 @@ func handleMsgOKEX(channel chan *simplejson.Json, instrument string) {
 		if len(channel) > 20 {
 			util.Notice(fmt.Sprintf(`%s current chan to be handle %d`, instrument, len(channel)))
 		}
-		testJson, _ := responseJson.String()
-		util.Notice(`test %s`, testJson)
+		testJson, e := responseJson.String()
+		util.Notice(`test %s, %s`, testJson, e.Error())
 		action := responseJson.Get(`action`).MustString()
 		data := responseJson.Get(`data`).MustArray()[0].(map[string]interface{})
 		_, bidAsk := model.AppMarkets.GetBidAsk(instrument, model.OKEX)
@@ -191,6 +191,7 @@ var wsHandlerOKEX = func(channelKey string, event []byte, orderHandler OrderHand
 	//		}
 	//	}()
 	//}
+	util.Notice(`test` + string(event))
 	responseJson, err := util.NewJSON(event)
 	if err != nil || responseJson == nil || responseJson.Get(`data`) == nil ||
 		len(responseJson.Get(`data`).MustArray()) == 0 ||
