@@ -107,7 +107,7 @@ func ResetChannels(market string, channels []chan struct{}) {
 	}
 	model.AppMarkets.PutDepthChan(market, api.CreateMarketDepthServer(model.AppMarkets, market, postOrderCarry))
 	model.AppPause = false
-	util.SocketInfo(market + " reset depth channel ")
+	util.Notice(market + " reset depth channel ")
 }
 
 func MaintainMarketChan() {
@@ -120,12 +120,10 @@ func MaintainMarketChan() {
 		if channels == nil || len(channels) == 0 {
 			model.AppMarkets.PutDepthChan(market, api.CreateMarketDepthServer(model.AppMarkets, market, postOrderCarry))
 			util.Notice(fmt.Sprintf("%s create new depth channel ", market))
-		} else {
-			if api.RequireDepthChanReset(model.AppMarkets, market) {
-				util.Notice(fmt.Sprintf("%s require new depth channel ", market))
-				ResetChannels(market, channels)
-				time.Sleep(time.Minute)
-			}
+		} else if api.RequireDepthChanReset(model.AppMarkets, market) {
+			util.Notice(fmt.Sprintf("%s require new depth channel ", market))
+			ResetChannels(market, channels)
+			time.Sleep(time.Minute)
 		}
 	}
 	socketMaintaining = false
