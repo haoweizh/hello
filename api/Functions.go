@@ -29,6 +29,7 @@ func RequireDepthChanReset(markets *model.Markets, market string) bool {
 		return true
 	}
 	now := util.GetNowUnixMillion()
+	util.Notice(`get time now %d`, now)
 	symbols := markets.GetSymbols()
 	for symbol := range symbols {
 		_, bidAsk := markets.GetBidAsk(symbol, market)
@@ -36,6 +37,7 @@ func RequireDepthChanReset(markets *model.Markets, market string) bool {
 			continue
 		}
 		delay := float64(now - int64(bidAsk.Ts))
+		util.Notice(`delay %s %d`, symbol, delay)
 		if delay < model.AppConfig.Delay {
 			return false
 		}
