@@ -74,9 +74,9 @@ func reSubscribe() {
 	}
 	wrongArray := getWrongs()
 	util.Notice(fmt.Sprintf(`>>>>>>>>wrong instrument %v`, wrongArray))
-	if len(wrongArray) > 5 {
+	if len(wrongArray) > 10 {
 		SetRequireReset(model.OKEX, true)
-		util.Notice(fmt.Sprintf(`requrie reset all okex channel, wrong instrument %d`, len(wrongArray)))
+		util.Notice(fmt.Sprintf(`require reset all okex channel, wrong instrument %d`, len(wrongArray)))
 	}
 	subscribeMap := make(map[string]interface{})
 	subscribeMap["op"] = "unsubscribe"
