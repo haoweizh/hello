@@ -73,8 +73,8 @@ func reSubscribe() {
 		return
 	}
 	wrongArray := getWrongs()
-	util.Notice(fmt.Sprintf(`>>>>>>>>wrong instrument %v`, wrongArray))
-	if len(wrongArray) > 10 {
+	util.Notice(fmt.Sprintf(`>>>>>>>>wrong instrument %v %d`, wrongArray, len(wrongArray)))
+	if len(wrongArray) > 20 {
 		SetRequireReset(model.OKEX, true)
 		util.Notice(fmt.Sprintf(`require reset all okex channel, wrong instrument %d`, len(wrongArray)))
 	}
@@ -1122,7 +1122,7 @@ func GetMaxSize(key, secret, instrument string) (success bool, maxBuy, maxSell f
 					util.Notice(`fail to get price from bidAsk %s`, instrument)
 				} else {
 					maxSell = maxSell / price
-					util.Notice(`get max sell %f after price %f %s`, maxSell, price, instrument)
+					util.Info(`get max sell %f after price %f %s`, maxSell, price, instrument)
 				}
 			}
 		}

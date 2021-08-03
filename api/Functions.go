@@ -37,7 +37,6 @@ func RequireDepthChanReset(markets *model.Markets, market string) bool {
 			continue
 		}
 		delay := float64(now - int64(bidAsk.Ts))
-		util.Notice(`delay %s %d`, symbol, delay)
 		if delay < model.AppConfig.Delay {
 			return false
 		}
