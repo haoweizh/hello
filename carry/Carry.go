@@ -287,7 +287,7 @@ var ProcessCarry = func(setting *model.Setting, tick *model.BidAsk) {
 	doReverts := strings.Split(model.AppConfig.CarryClose, `,`)
 	begin := 0
 	step := 1
-	if (now.Hour() < 6 && now.Hour() > 2 && now.Second()%4 != 0) || now.Second()%2 == 0 {
+	if (now.Hour() < 8 && now.Hour() > 2 && now.Second()%8 != 0) || now.Second()%3 == 0 {
 		begin = len(keys) - 1
 		step = -1
 	}
