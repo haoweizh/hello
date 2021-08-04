@@ -295,6 +295,7 @@ var ProcessCarry = func(setting *model.Setting, tick *model.BidAsk) {
 		sidePerp, sideRelated, amount, carryType := calcCarryOpen(setting, tickPerp, tickRelated, keys[i],
 			doReverts[i], scoreOpen, scoreClose, scoreOpen, scoreClose)
 		if amount > 0 {
+			util.Notice(`begin=%d step=%d i=%d len=%d hour=%d`, begin, step, i, len(keys), now.Hour())
 			go placeCarry(setting, tickPerp, tickRelated, keys[i], secrets[i], sidePerp, sideRelated, carryType,
 				scoreOpen, scoreClose, amount)
 			return
@@ -320,11 +321,11 @@ func placeCarry(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, key
 	relatedPrice := tickRelated.Bids[0].Price
 	now := int(util.GetNowUnixMillion())
 	util.Notice(fmt.Sprintf(`carry%s->%s delay %d %d perp[%f %f %f %f] related[%f %f %f %f] with score open:%f close:%f 
-	    amount %f worth %f time in million %d`,
+	    amount %f worth %f time in million %d key %s`,
 		setting.Symbol, setting.SymbolRelated, now-tickPerp.TsReceived, now-tickRelated.TsReceived, tickPerp.Bids[0].Price,
 		tickPerp.Bids[0].Amount, tickPerp.Asks[0].Price, tickPerp.Asks[0].Amount, tickRelated.Bids[0].Price,
 		tickRelated.Bids[0].Amount, tickRelated.Asks[0].Price, tickRelated.Asks[0].Amount, scoreOpen, scoreClose,
-		amount, amount*tickPerp.Asks[0].Price, util.GetNowUnixMillion()))
+		amount, amount*tickPerp.Asks[0].Price, util.GetNowUnixMillion(), key))
 	placeSuccess := true
 	if sidePerp == model.OrderSideBuy && sideRelated == model.OrderSideSell {
 		perpPrice = tickPerp.Asks[0].Price
