@@ -51,7 +51,7 @@ func maintainChannelOKEX() {
 func getWrongs() []string {
 	defer wrongLock.Unlock()
 	wrongLock.Lock()
-	array := make([]string, len(wrongs))
+	array := make([]string, 0)
 	for s := range wrongs {
 		array = append(array, s)
 	}
@@ -74,7 +74,7 @@ func reSubscribe() {
 	}
 	wrongArray := getWrongs()
 	util.Notice(fmt.Sprintf(`>>>>>>>>wrong instrument %v %d`, wrongArray, len(wrongArray)))
-	if len(wrongArray) > 20 {
+	if len(wrongArray) > 15 {
 		SetRequireReset(model.OKEX, true)
 		util.Notice(fmt.Sprintf(`require reset all okex channel, wrong instrument %d`, len(wrongArray)))
 	}
