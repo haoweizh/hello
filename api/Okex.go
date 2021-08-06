@@ -74,7 +74,7 @@ func reSubscribe() {
 	}
 	wrongArray := getWrongs()
 	util.Notice(fmt.Sprintf(`>>>>>>>>wrong instrument %v %d`, wrongArray, len(wrongArray)))
-	if len(wrongArray) > 15 {
+	if len(wrongArray) > 8 {
 		SetRequireReset(model.OKEX, true)
 		util.Notice(fmt.Sprintf(`require reset all okex channel, wrong instrument %d`, len(wrongArray)))
 	}
