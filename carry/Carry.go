@@ -626,8 +626,8 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 			carryType = carryTypeRevert
 		}
 	} else {
-		util.Debug(`>>>>scoreLow%f<setClose%f scoreHigh%f>setOpen%f carryAmount%f scoreClose%f<=-1*revertOpe%f scoreOpen%f>=revertClose%f`,
-			scoreLow, setClose, scoreHigh, setOpen, carryAmount, scoreClose, revertOpen, scoreOpen, revertClose)
+		util.Debug(`>>>>scoreLow%f<setClose%f scoreHigh%f>setOpen%f carryAmount%f scoreClose%f<=-1*revertOpe%f scoreOpen%f>=revertClose%f %s %s`,
+			scoreLow, setClose, scoreHigh, setOpen, carryAmount, scoreClose, revertOpen, scoreOpen, revertClose, key, coin)
 		return
 	}
 	markPrice := tickPerp.Asks[0].Price
