@@ -228,7 +228,8 @@ var wsHandlerPrivate = func(channelKey string, event []byte, orderHandler OrderH
 	if responseJson.Get(`data`) == nil || len(responseJson.Get(`data`).MustArray()) == 0 {
 		return
 	}
-	if responseJson.Get(`code`).MustString() != `0` && responseJson.Get(`code`).MustString() != `` {
+	errCode := responseJson.Get(`code`).MustString()
+	if errCode != `` && errCode != `0` {
 		util.Notice(fmt.Sprintf(`okex private channel error: %s`, string(event)))
 	}
 	data := responseJson.Get(`data`).MustArray()

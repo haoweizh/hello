@@ -296,8 +296,6 @@ var ProcessCarry = func(setting *model.Setting, tick *model.BidAsk) {
 		sidePerp, sideRelated, amount, carryType := calcCarryOpen(setting, tickPerp, tickRelated, keys[i],
 			doReverts[i], scoreOpen, scoreClose, scoreOpen, scoreClose)
 		if amount > 0 {
-			util.Debug(`begin=%d step=%d i=%d len=%d hour=%d %s %s %s revert:%s`,
-				begin, step, i, len(keys), now.Hour(), keys[i], setting.Symbol, carryType, doReverts[i])
 			go placeCarry(setting, tickPerp, tickRelated, keys[i], secrets[i], sidePerp, sideRelated, carryType,
 				scoreOpen, scoreClose, amount)
 			return
@@ -518,7 +516,6 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	balance := getCarryBalance(key, coin)
 	fundingRate := 0.0
 	fundingRateSuccess := false
-	printDebug := true
 	if setting.Market == model.OKEX || setting.Market == model.Binance {
 		now := time.Now()
 		if now.Hour()%8 == 0 && now.Minute() == 0 && now.Second() < 30 {
@@ -626,10 +623,6 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 		} else {
 			carryType = carryTypeRevert
 		}
-	} else {
-		util.Debug(`>>>>scoreLow%f<setClose%f scoreHigh%f>setOpen%f carryAmount%f scoreClose%f<=-1*revertOpe%f scoreOpen%f>=revertClose%f %s %s`,
-			scoreLow, setClose, scoreHigh, setOpen, carryAmount, scoreClose, revertOpen, scoreOpen, revertClose, key, coin)
-		printDebug = false
 	}
 	markPrice := tickPerp.Asks[0].Price
 	amount = math.Min(bidAmount, askAmount)
@@ -645,24 +638,13 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 		amount = math.Min(amount, usdAvailable/markPrice)
 	}
 	amount = math.Min(amount, localOpenValueLimit/markPrice)
-	if printDebug {
-		util.Debug(fmt.Sprintf(`calc amount%f %s usd%f usdLowLine%f coinValue%f coinRate%f coinAva%f %s %s bid%f ask%f price%f carry%f limit%f`,
-			amount, sideRelated, usdAvailable, usdLowLine, balance.UsdValue, coinRate, balance.AvailableWithBorrow,
-			key, coin, bidAmount, askAmount, markPrice, carryAmount, localOpenValueLimit))
-	}
 	// usd所剩太少且还要再买 || 反向持仓太多且还要再卖 || 下单太小
 	if (sideRelated == model.OrderSideBuy && (usdAvailable < usdLowLine || (balance.UsdValue > 0 && coinRate > 0.5))) ||
 		(sideRelated == model.OrderSideSell && (balance.UsdValue < 0 && coinRate > 0.5)) ||
 		math.Abs(amount)*markPrice < valueLow {
 		amount = 0
 	}
-	if printDebug {
-		util.Debug(`before format %f %s %s revert:%s`, amount, key, coin, doRevert)
-	}
 	amount = model.FormatAmountPair(setting.Market, setting.Symbol, setting.SymbolRelated, amount)
-	if printDebug {
-		util.Debug(`after format %f %s %s`, amount, key, coin)
-	}
 	if model.OKEX == setting.Market && amount > 0 {
 		amountInPerp := model.GetAmountInMarket(setting.Market, setting.Symbol, amount)
 		maxBuyPerp, maxSellPerp := getTradeMax(key, setting.Symbol)
@@ -679,15 +661,8 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 		_, amountInReal := model.ParseRealAmount(setting.Market, setting.Symbol, amountInPerp)
 		amount = math.Min(amount, amountInReal)
 		amount = model.FormatAmountPair(setting.Market, setting.Symbol, setting.SymbolRelated, amount)
-		if printDebug {
-			util.Debug(`in format maxSpotBuy%f maxSpotSell%f amountInPerp%f %s %s`,
-				maxBuyRelated, maxSellRelated, amountInPerp, key, coin)
-		}
 	} else if model.Ftx == setting.Market && amount > 90000000 {
 		amount = 90000000
-	}
-	if printDebug {
-		util.Debug(`after format %f %s %s`, amount, key, coin)
 	}
 	if amount > 0 {
 		util.Info(fmt.Sprintf(`+++ usdRate: %f coinRate: %f %s high: %f low: %f symbol: %s %s 
