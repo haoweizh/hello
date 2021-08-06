@@ -296,7 +296,8 @@ var ProcessCarry = func(setting *model.Setting, tick *model.BidAsk) {
 		sidePerp, sideRelated, amount, carryType := calcCarryOpen(setting, tickPerp, tickRelated, keys[i],
 			doReverts[i], scoreOpen, scoreClose, scoreOpen, scoreClose)
 		if amount > 0 {
-			util.Debug(`begin=%d step=%d i=%d len=%d hour=%d`, begin, step, i, len(keys), now.Hour())
+			util.Debug(`begin=%d step=%d i=%d len=%d hour=%d %s %s %s revert:%s`,
+				begin, step, i, len(keys), now.Hour(), keys[i], setting.Symbol, carryType, doReverts[i])
 			go placeCarry(setting, tickPerp, tickRelated, keys[i], secrets[i], sidePerp, sideRelated, carryType,
 				scoreOpen, scoreClose, amount)
 			return
@@ -598,6 +599,7 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 		setClose = -1
 	}
 	carryAmount := getCarryAmount(key, setting.Symbol)
+	util.Debug(`perp %f %f spot %f %f`, tickPerp.Bids[0].Amount, tickPerp.Asks[0].Amount, tickRelated.Bids[0].Amount, tickRelated.Asks[0].Amount)
 	if scoreLow < setClose || (carryAmount > 0 && scoreClose <= -1*revertOpen) {
 		bidAmount = tickPerp.Asks[0].Amount
 		if setting.Market == model.OKEX {
@@ -648,9 +650,9 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 		math.Abs(amount)*markPrice < valueLow {
 		amount = 0
 	}
-	util.Debug(`before format %f`, amount)
+	util.Debug(`before format %f %s %s revert:%s`, amount, key, coin, doRevert)
 	amount = model.FormatAmountPair(setting.Market, setting.Symbol, setting.SymbolRelated, amount)
-	util.Debug(`after format %f`, amount)
+	util.Debug(`after format %f %s %s`, amount, key, coin)
 	if model.OKEX == setting.Market && amount > 0 {
 		amountInPerp := model.GetAmountInMarket(setting.Market, setting.Symbol, amount)
 		maxBuyPerp, maxSellPerp := getTradeMax(key, setting.Symbol)
@@ -667,11 +669,12 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 		_, amountInReal := model.ParseRealAmount(setting.Market, setting.Symbol, amountInPerp)
 		amount = math.Min(amount, amountInReal)
 		amount = model.FormatAmountPair(setting.Market, setting.Symbol, setting.SymbolRelated, amount)
-		util.Debug(`in format maxSpotBuy%f maxSpotSell%f amountInPerp%f`, maxBuyRelated, maxSellRelated, amountInPerp)
+		util.Debug(`in format maxSpotBuy%f maxSpotSell%f amountInPerp%f %s %s`,
+			maxBuyRelated, maxSellRelated, amountInPerp, key, coin)
 	} else if model.Ftx == setting.Market && amount > 90000000 {
 		amount = 90000000
 	}
-	util.Debug(`after format %f`, amount)
+	util.Debug(`after format %f %s %s`, amount, key, coin)
 	if amount > 0 {
 		util.Info(fmt.Sprintf(`+++ usdRate: %f coinRate: %f %s high: %f low: %f symbol: %s %s 
 			usd available:%f amount %f carryAmount: %f scoreHigh: %f setOpen: %f scoreLow: %f setClose: %f
