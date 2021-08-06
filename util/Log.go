@@ -103,6 +103,9 @@ func Debug(format string, a ...interface{}) {
 			debug, debugFile, _ = initLog(getPath(`debug`))
 		}
 		DebugCount++
+		if DebugCount > 100000 {
+			DoDebug = false
+		}
 		msg := `debug  ` + fmt.Sprintf(format, a...)
 		logChan <- msg
 	}
