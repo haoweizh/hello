@@ -31,6 +31,7 @@ func ParameterServe() {
 	router.GET("balance", GetBalance)
 	router.GET(`symbol`, setSymbol)
 	router.GET(`test`, test)
+	router.GET(`debug`, debug)
 	router.GET(`wss`, WsPage)
 	router.GET(`api/master`, GetCarryInfo)
 	router.GET(`api/slave`, GetCarryInfoSlave)
@@ -64,6 +65,16 @@ func WsPage(c *gin.Context) {
 	wsClient.Manager.Register <- wsClient
 	go wsClient.Read(wsHandler)
 	go wsClient.Write()
+}
+
+func debug(c *gin.Context) {
+	doDebug := c.Query(`count`)
+	if doDebug != `0` {
+		util.DoDebug = true
+		util.DebugCount = 0
+	} else {
+		util.DoDebug = false
+	}
 }
 
 func test(c *gin.Context) {

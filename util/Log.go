@@ -7,9 +7,10 @@ import (
 	"strconv"
 )
 
-var socket, info, notice *log.Logger
-var socketInfoFile, infoFile, noticeFile *os.File
-var socketCount, infoCount, noticeCount int
+var socket, info, notice, debug *log.Logger
+var socketFile, infoFile, noticeFile, debugFile *os.File
+var socketCount, infoCount, noticeCount, DebugCount int
+var DoDebug = false
 var logChan = make(chan string, 100)
 
 const logRoot = "./log/"
@@ -21,12 +22,17 @@ func init() {
 func logChanHandler() {
 	for true {
 		msg := <-logChan
-		if msg[0:4] == `info` {
-			info.Println(msg[4:])
-		} else if msg[0:6] == `notice` {
-			notice.Println(msg[6:])
-		} else if msg[0:6] == `socket` {
-			socket.Println(msg[6:])
+		msgType := msg[0:7]
+		msgContent := msg[4:]
+		switch msgType {
+		case `info   `:
+			info.Println(msgContent)
+		case `notice `:
+			notice.Println(msgContent)
+		case `socket `:
+			socket.Println(msgContent)
+		case `debug  `:
+			debug.Println(msgContent)
 		}
 	}
 }
@@ -77,14 +83,28 @@ func getPath(name string) string {
 
 func SocketInfo(format string, a ...interface{}) {
 	if socketCount%10000 == 0 {
-		if socketInfoFile != nil {
-			_ = socketInfoFile.Close()
+		if socketFile != nil {
+			_ = socketFile.Close()
 		}
-		socket, socketInfoFile, _ = initLog(getPath("socketInfo"))
+		socket, socketFile, _ = initLog(getPath("socketInfo"))
 	}
 	socketCount++
-	msg := `socket` + fmt.Sprintf(format, a...)
+	msg := `socket ` + fmt.Sprintf(format, a...)
 	logChan <- msg
+}
+
+func Debug(format string, a ...interface{}) {
+	if DoDebug {
+		if DebugCount == 0 {
+			if debugFile != nil {
+				_ = debugFile.Close()
+			}
+			debug, debugFile, _ = initLog(getPath(`debug`))
+		}
+		DebugCount++
+		msg := `debug ` + fmt.Sprintf(format, a...)
+		logChan <- msg
+	}
 }
 
 func Info(format string, a ...interface{}) {
@@ -95,7 +115,7 @@ func Info(format string, a ...interface{}) {
 		info, infoFile, _ = initLog(getPath("info"))
 	}
 	infoCount++
-	msg := `info` + fmt.Sprintf(format, a...)
+	msg := `info   ` + fmt.Sprintf(format, a...)
 	logChan <- msg
 }
 
@@ -107,6 +127,6 @@ func Notice(format string, a ...interface{}) {
 		notice, noticeFile, _ = initLog(getPath("notice"))
 	}
 	noticeCount++
-	msg := `notice` + fmt.Sprintf(format, a...)
+	msg := `notice ` + fmt.Sprintf(format, a...)
 	logChan <- msg
 }

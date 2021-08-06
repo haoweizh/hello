@@ -282,7 +282,8 @@ var ProcessCarry = func(setting *model.Setting, tick *model.BidAsk) {
 		symbolLowest = setting.Symbol
 		model.AppMetric.AddCarry(`开仓价差----`, math.NaN(), lowest)
 	}
-	model.SetCarryInfo(`[current high-low]`, fmt.Sprintf(`highest %s %f lowest %s %f`, symbolHighest, highest, symbolLowest, lowest))
+	model.SetCarryInfo(`[current high-low]`, fmt.Sprintf(`highest %s %f lowest %s %f time:%s`,
+		symbolHighest, highest, symbolLowest, lowest, time.Now().String()))
 	keys, secrets := model.AppConfig.GetKeys(setting.Market)
 	doReverts := strings.Split(model.AppConfig.CarryClose, `,`)
 	begin := 0
@@ -295,7 +296,7 @@ var ProcessCarry = func(setting *model.Setting, tick *model.BidAsk) {
 		sidePerp, sideRelated, amount, carryType := calcCarryOpen(setting, tickPerp, tickRelated, keys[i],
 			doReverts[i], scoreOpen, scoreClose, scoreOpen, scoreClose)
 		if amount > 0 {
-			util.Notice(`begin=%d step=%d i=%d len=%d hour=%d`, begin, step, i, len(keys), now.Hour())
+			util.Debug(`begin=%d step=%d i=%d len=%d hour=%d`, begin, step, i, len(keys), now.Hour())
 			go placeCarry(setting, tickPerp, tickRelated, keys[i], secrets[i], sidePerp, sideRelated, carryType,
 				scoreOpen, scoreClose, amount)
 			return
@@ -530,6 +531,7 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	if balance == nil {
 		model.SetCarryInfo(`warning `+coin, fmt.Sprintf(`slave: balace not available!!! %s %s`, key, coin))
 		model.SetCarryInfos(`coin_absent`, key+`_`+coin, map[string]interface{}{`absent`: coin, `key`: key})
+		util.Debug(fmt.Sprintf(`calc amount fail balance absent %s %s`, key, coin))
 		return ``, ``, 0, carryType
 	} else {
 		model.RemoveCarryInfo(`warning ` + coin)
@@ -537,10 +539,11 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	}
 	balanceAllValue := getBalanceAll(key)
 	if balanceAllValue == 0 {
+		util.Debug(`balance all value 0 %s %s`, key, coin)
 		return
 	}
 	if getCarryStop(key) {
-		//util.Notice(`stop carry for 10 times unknown carry %s`, key)
+		util.Debug(`stop carry for 10 times unknown carry %s %s`, key, coin)
 		return
 	}
 	coinRate := math.Abs(balance.UsdValue) / balanceAllValue
@@ -636,13 +639,17 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 		amount = math.Min(amount, usdAvailable/markPrice)
 	}
 	amount = math.Min(amount, localOpenValueLimit/markPrice)
+	util.Debug(`calc amount%f %s usd%f usdLowLine%f coinValue%f coinRate%f coinAva%f %s %s bid%f ask%f price%f carry%f limit%f`,
+		amount, sideRelated, usdAvailable, usdLowLine, balance.UsdValue, coinRate, balance.AvailableWithBorrow, key, coin, markPrice, carryAmount, localOpenValueLimit)
 	// usd所剩太少且还要再买 || 反向持仓太多且还要再卖 || 下单太小
 	if (sideRelated == model.OrderSideBuy && (usdAvailable < usdLowLine || (balance.UsdValue > 0 && coinRate > 0.5))) ||
 		(sideRelated == model.OrderSideSell && (balance.UsdValue < 0 && coinRate > 0.5)) ||
 		math.Abs(amount)*markPrice < valueLow {
 		amount = 0
 	}
+	util.Debug(`before format %f`, amount)
 	amount = model.FormatAmountPair(setting.Market, setting.Symbol, setting.SymbolRelated, amount)
+	util.Debug(`after format %f`, amount)
 	if model.OKEX == setting.Market && amount > 0 {
 		amountInPerp := model.GetAmountInMarket(setting.Market, setting.Symbol, amount)
 		maxBuyPerp, maxSellPerp := getTradeMax(key, setting.Symbol)
@@ -659,9 +666,11 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 		_, amountInReal := model.ParseRealAmount(setting.Market, setting.Symbol, amountInPerp)
 		amount = math.Min(amount, amountInReal)
 		amount = model.FormatAmountPair(setting.Market, setting.Symbol, setting.SymbolRelated, amount)
+		util.Debug(`in format maxSpotBuy%f maxSpotSell%f amountInPerp%f`, maxBuyRelated, maxSellRelated, amountInPerp)
 	} else if model.Ftx == setting.Market && amount > 90000000 {
 		amount = 90000000
 	}
+	util.Debug(`after format %f`, amount)
 	if amount > 0 {
 		util.Info(fmt.Sprintf(`+++ usdRate: %f coinRate: %f %s high: %f low: %f symbol: %s %s 
 			usd available:%f amount %f carryAmount: %f scoreHigh: %f setOpen: %f scoreLow: %f setClose: %f
