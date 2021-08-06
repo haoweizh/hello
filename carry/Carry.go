@@ -639,8 +639,9 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 		amount = math.Min(amount, usdAvailable/markPrice)
 	}
 	amount = math.Min(amount, localOpenValueLimit/markPrice)
-	util.Debug(`calc amount%f %s usd%f usdLowLine%f coinValue%f coinRate%f coinAva%f %s %s bid%f ask%f price%f carry%f limit%f`,
-		amount, sideRelated, usdAvailable, usdLowLine, balance.UsdValue, coinRate, balance.AvailableWithBorrow, key, coin, markPrice, carryAmount, localOpenValueLimit)
+	util.Debug(fmt.Sprintf(`calc amount%f %s usd%f usdLowLine%f coinValue%f coinRate%f coinAva%f %s %s bid%f ask%f price%f carry%f limit%f`,
+		amount, sideRelated, usdAvailable, usdLowLine, balance.UsdValue, coinRate, balance.AvailableWithBorrow,
+		key, coin, bidAmount, askAmount, markPrice, carryAmount, localOpenValueLimit))
 	// usd所剩太少且还要再买 || 反向持仓太多且还要再卖 || 下单太小
 	if (sideRelated == model.OrderSideBuy && (usdAvailable < usdLowLine || (balance.UsdValue > 0 && coinRate > 0.5))) ||
 		(sideRelated == model.OrderSideSell && (balance.UsdValue < 0 && coinRate > 0.5)) ||

@@ -24,7 +24,7 @@ func logChanHandler() {
 	for true {
 		msg := <-logChan
 		msgType := msg[0:7]
-		msgContent := msg[4:]
+		msgContent := msg[7:]
 		switch msgType {
 		case `info   `:
 			info.Println(msgContent)
