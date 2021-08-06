@@ -75,6 +75,7 @@ func debug(c *gin.Context) {
 	} else {
 		util.DoDebug = false
 	}
+	c.String(http.StatusOK, fmt.Sprintf(`set do debug 0-false, !0-true %s`, doDebug))
 }
 
 func test(c *gin.Context) {

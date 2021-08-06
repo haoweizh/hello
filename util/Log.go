@@ -9,7 +9,8 @@ import (
 
 var socket, info, notice, debug *log.Logger
 var socketFile, infoFile, noticeFile, debugFile *os.File
-var socketCount, infoCount, noticeCount, DebugCount int
+var socketCount, infoCount, noticeCount int
+var DebugCount int
 var DoDebug = false
 var logChan = make(chan string, 100)
 
@@ -102,7 +103,7 @@ func Debug(format string, a ...interface{}) {
 			debug, debugFile, _ = initLog(getPath(`debug`))
 		}
 		DebugCount++
-		msg := `debug ` + fmt.Sprintf(format, a...)
+		msg := `debug  ` + fmt.Sprintf(format, a...)
 		logChan <- msg
 	}
 }
