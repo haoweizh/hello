@@ -599,12 +599,13 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 		setClose = -1
 	}
 	carryAmount := getCarryAmount(key, setting.Symbol)
-	util.Debug(`perp %f %f spot %f %f`, tickPerp.Bids[0].Amount, tickPerp.Asks[0].Amount, tickRelated.Bids[0].Amount, tickRelated.Asks[0].Amount)
 	if scoreLow < setClose || (carryAmount > 0 && scoreClose <= -1*revertOpen) {
 		bidAmount = tickPerp.Asks[0].Amount
+		util.Debug(`before parse %f %s %s`, bidAmount, key, coin)
 		if setting.Market == model.OKEX {
 			_, bidAmount = model.ParseRealAmount(setting.Market, setting.Symbol, bidAmount)
 		}
+		util.Debug(`after parse %f`, bidAmount, key, coin)
 		askAmount = tickRelated.Bids[0].Amount
 		sidePerp = model.OrderSideBuy
 		sideRelated = model.OrderSideSell
