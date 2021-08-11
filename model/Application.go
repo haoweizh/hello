@@ -24,6 +24,7 @@ const SecretDefault = ``
 
 const OKEXBTCContractFaceValue = 100.0
 const OKEXOtherContractFaceValue = 10.0
+const Gate = `gate`
 const DFuture = `dfuture`
 const Bybit = `bybit`
 const OKEX = "okex"

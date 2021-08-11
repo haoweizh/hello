@@ -4,6 +4,9 @@ go 1.15
 
 require (
 	github.com/bitly/go-simplejson v0.5.0
+	github.com/bmizerany/assert v0.0.0-20160611221934-b7ed37b82869 // indirect
+	github.com/gateio/gateapi-go/v6 v6.21.5
+	github.com/gateio/gatews/go v0.0.0-20210723083854-06274d833362
 	github.com/gin-gonic/gin v1.6.3
 	github.com/gorilla/websocket v1.4.2
 	github.com/jinzhu/configor v1.2.1

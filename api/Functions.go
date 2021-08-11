@@ -742,6 +742,8 @@ func InitMarketInfos() (success bool) {
 			model.SetMarketInfos(model.Binance, getMarketsBinance())
 		case model.Huobi:
 			model.SetMarketInfos(model.Huobi, getMarketsHuobi())
+		case model.Gate:
+			model.SetMarketInfos(model.Gate, getMarketsGate())
 		}
 	}
 	return success
@@ -763,6 +765,8 @@ func CreateMarketDepthServer(markets *model.Markets, market string, orderHandler
 	channels = make([]chan struct{}, 1)
 	var err error
 	switch market {
+	case model.Gate:
+		channels, err = WsDepthServeGate(markets, nil)
 	case model.Huobi:
 		channels, err = WsDepthServeHuobi(markets, nil)
 		//channels[0] = channel

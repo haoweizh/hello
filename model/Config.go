@@ -14,6 +14,8 @@ type Config struct {
 	DBConnection   string
 	Env            string
 	FutureAddress  string
+	Gatekey        string
+	GateSecret     string
 	HuobiKey       string
 	HuobiSecret    string
 	OkexKey        string
