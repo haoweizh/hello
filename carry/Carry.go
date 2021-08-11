@@ -128,7 +128,7 @@ func resetTradeMax(key, secret string, market string) {
 // 7:3和8:2是比例范围，超过范围自动平衡成7.5:2.5
 func checkProcessTransfer(key, secret, market string) {
 	switch market {
-	case model.Binance, model.Huobi:
+	case model.Binance, model.Huobi, model.Gate:
 		balance := getBalanceAll(key)
 		balancePos := getPosBal(key)
 		if balance/balancePos > 4 {
@@ -175,7 +175,7 @@ func clearCarry(market, key, secret string) {
 			balanceAllValue += value.UsdValue / 2
 		}
 		if (coin == `USD` && market == model.Ftx) ||
-			(coin == `USDT` && (market == model.OKEX || market == model.Binance)) ||
+			(coin == `USDT` && (market == model.OKEX || market == model.Binance || market == model.Gate)) ||
 			(coin == `usdt` && market == model.Huobi) {
 			localUsdAvailable += value.Amount
 			balanceAllValue += value.Amount
