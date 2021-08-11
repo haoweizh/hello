@@ -244,7 +244,6 @@ var ProcessCarry = func(setting *model.Setting, tick *model.BidAsk) {
 	}
 	_, tickPerp := model.AppMarkets.GetBidAsk(setting.Symbol, setting.Market)
 	_, tickRelated := model.AppMarkets.GetBidAsk(setting.SymbolRelated, setting.MarketRelated)
-	now := time.Now()
 	million := util.GetNowUnixMillion()
 	delayTick := int64(0)
 	if tick != nil {
@@ -286,12 +285,13 @@ var ProcessCarry = func(setting *model.Setting, tick *model.BidAsk) {
 		symbolHighest, highest, symbolLowest, lowest, time.Now().String()))
 	keys, secrets := model.AppConfig.GetKeys(setting.Market)
 	doReverts := strings.Split(model.AppConfig.CarryClose, `,`)
-	begin := 0
-	step := 1
-	if (now.Hour() < 8 && now.Hour() > 2 && now.Second()%8 != 0) || now.Second()%3 == 0 {
-		begin = len(keys) - 1
-		step = -1
-	}
+	begin := len(keys) - 1
+	step := -1
+	//now := time.Now()
+	//if (now.Hour() < 8 && now.Hour() > 2 && now.Second()%8 != 0) || now.Second()%3 == 0 {
+	//	begin = len(keys) - 1
+	//	step = -1
+	//}
 	for i := begin; i >= 0 && i < len(keys); i += step {
 		sidePerp, sideRelated, amount, carryType := calcCarryOpen(setting, tickPerp, tickRelated, keys[i],
 			doReverts[i], scoreOpen, scoreClose, scoreOpen, scoreClose)
