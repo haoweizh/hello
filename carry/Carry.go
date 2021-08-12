@@ -630,6 +630,8 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	if scoreLow < setClose || scoreHigh > setOpen {
 		if sideRelated == model.OrderSideSell {
 			amount = math.Min(balance.AvailableWithBorrow, math.Abs(amount))
+
+			//todo 大于最小可借数量
 		}
 	} else { // 反向关仓量要<=持仓
 		amount = math.Min(math.Abs(carryAmount), amount)

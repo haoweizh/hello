@@ -26,10 +26,10 @@ func getMarketsGate() (marketInfos map[string]*model.MarketInfo) {
 	marginCurrencyPairs, _, marginErr := client.MarginApi.ListCrossMarginCurrencies(ctx)
 	spotCurrencyPairs, _, spotErr := client.SpotApi.ListCurrencyPairs(ctx)
 	if marginErr != nil {
-		panicGateError(marginErr)
+		panicGateError("ListCrossMarginCurrencies", marginErr)
 	}
 	if spotErr != nil {
-		panicGateError(spotErr)
+		panicGateError("ListCurrencyPairs", spotErr)
 	}
 A:
 	for _, margin := range marginCurrencyPairs {
@@ -43,7 +43,6 @@ A:
 				//marginData, _ := json.Marshal(margin)
 				//util.Notice(fmt.Sprintf("现货交易对：%s", spotData))
 				//util.Notice(fmt.Sprintf("杠杆交易对：%s", marginData))
-				//util.Notice(fmt.Sprintln())
 
 				marketInfo := &model.MarketInfo{}
 				marketInfo.Name = symbol
@@ -68,7 +67,7 @@ A:
 
 	contracts, _, futureErr := client.FuturesApi.ListFuturesContracts(ctx, "usdt")
 	if futureErr != nil {
-		panicGateError(futureErr)
+		panicGateError("ListFuturesContracts", futureErr)
 	}
 	for _, contract := range contracts {
 		if contract.InDelisting {
@@ -100,7 +99,7 @@ func setPosSideGate(key, secret string) {
 	})
 	mode, _, err := client.FuturesApi.SetDualMode(ctx, "usdt", false)
 	if err != nil {
-		panicGateError(err)
+		panicGateError("setPosSideGate", err)
 	}
 	marshal, _ := json.Marshal(mode)
 	util.Notice(fmt.Sprintf("set gate dual mode success,position: %s", marshal))
@@ -114,21 +113,55 @@ func setMarginSettingGate(key, secret string) {
 	})
 	mode, _, err := client.MarginApi.SetAutoRepay(ctx, "on")
 	if err != nil {
-		panicGateError(err)
+		panicGateError("setMarginSettingGate", err)
 	}
 	marshal, _ := json.Marshal(mode)
 	util.Notice(fmt.Sprintf("set gate margin auto repay success,response: %s", marshal))
 }
 
 func transferGate(key string, secret string, transferType string, amount float64) {
-	//todo 账户间转钱
+	//client := gateapi.NewAPIClient(gateapi.NewConfiguration())
+	//ctx := context.WithValue(context.Background(), gateapi.ContextGateAPIV4, gateapi.GateAPIV4{
+	//	Key:    key,
+	//	Secret: secret,
+	//})
+	//param := gateapi.Transfer{Currency: "USDT", Amount: fmt.Sprintf("%.6f", amount), Settle: "usdt"}
+	//if transferType == "MAIN_UMFUTURE" {
+	//	param.From = "cross_margin"
+	//	param.To = "spot"
+	//	_, err := client.WalletApi.Transfer(ctx, param)
+	//	if err != nil {
+	//		panicGateError("transferGate", err)
+	//	} else {
+	//		param.From = "spot"
+	//		param.To = "futures"
+	//		_, endErr := client.WalletApi.Transfer(ctx, param)
+	//		if endErr != nil {
+	//			panicGateError("transferGate", endErr)
+	//		}
+	//	}
+	//} else if transferType == "UMFUTURE_MAIN" {
+	//	param.From = "futures"
+	//	param.To = "spot"
+	//	_, err := client.WalletApi.Transfer(ctx, param)
+	//	if err != nil {
+	//		panicGateError("transferGate", err)
+	//	} else {
+	//		param.From = "spot"
+	//		param.To = "cross_margin"
+	//		_, endErr := client.WalletApi.Transfer(ctx, param)
+	//		if endErr != nil {
+	//			panicGateError("transferGate", endErr)
+	//		}
+	//	}
+	//}
 }
 
-func panicGateError(err error) {
+func panicGateError(function string, err error) {
 	if e, ok := err.(gateapi.GateAPIError); ok {
-		util.SocketInfo(fmt.Sprintf("Gate API error, label: %s, message: %s", e.Label, e.Message))
+		util.SocketInfo(fmt.Sprintf("function: %s Gate API error, label: %s, message: %s", function, e.Label, e.Message))
 	}
-	util.Notice(err.Error())
+	util.Notice(function + err.Error())
 }
 
 type FuturesBookTickerModel struct {
@@ -199,7 +232,6 @@ func WsDepthServeGate(markets *model.Markets, orderHandler OrderHandler) (channe
 		}
 	})
 	callFutureBookTicker := gate.NewCallBack(func(msg *gate.UpdateMsg) {
-		// parse the message to struct we need
 		var update FuturesBookTickerModel
 		if err := json.Unmarshal(msg.Result, &update); err != nil {
 			util.Notice(fmt.Sprintf("future book ticker Unmarshal err:%s", err.Error()))
@@ -280,7 +312,7 @@ func getBalanceGate(key string, secret string) (success bool, balances []*model.
 	})
 	account, _, err := client.MarginApi.GetCrossMarginAccount(ctx)
 	if err != nil {
-		panicGateError(err)
+		panicGateError("getBalanceGate", err)
 		time.Sleep(time.Second * 2)
 		util.SocketInfo(`fail to refresh margin balance gate`)
 		return getBalanceGate(key, secret)
@@ -294,7 +326,8 @@ func getBalanceGate(key string, secret string) (success bool, balances []*model.
 		balance := &model.Balance{AccountId: key, BalanceTime: util.GetNow(), Market: model.Gate, Coin: index}
 		balance.FrozenAmount, _ = strconv.ParseFloat(item.Freeze, 64)
 		balance.Borrow, _ = strconv.ParseFloat(item.Borrowed, 64)
-		balance.Borrow = balance.Borrow * -1
+		//balance.Borrow = balance.Borrow * -1
+		// 此处未计算可以借入的金额
 		balance.AvailableWithBorrow, _ = strconv.ParseFloat(item.Available, 64)
 		balance.Amount = balance.AvailableWithBorrow + balance.FrozenAmount - balance.Borrow
 		priceGet, bidAsk := model.AppMarkets.GetBidAsk(balance.Coin+model.GetSpotTail(model.Gate), model.Gate)
@@ -316,10 +349,10 @@ func getPositionsGate(key string, secret string) (success bool, positions []*mod
 	positionList, _, positionsErr := client.FuturesApi.ListPositions(ctx, "usdt")
 	if accountErr != nil || positionsErr != nil {
 		if accountErr != nil {
-			panicGateError(accountErr)
+			panicGateError("getFuturesAccountsGate", accountErr)
 		}
 		if positionsErr != nil {
-			panicGateError(positionsErr)
+			panicGateError("getPositionsGate", positionsErr)
 		}
 		time.Sleep(time.Second * 2)
 		util.SocketInfo(`fail to refresh future balance gate`)
@@ -351,7 +384,7 @@ func cancelOrdersGate(key string, secret string, symbol string) (result bool) {
 		param := &gateapi.CancelOrdersOpts{Account: optional.NewString("cross_margin")}
 		orders, _, err := client.SpotApi.CancelOrders(ctx, symbol, param)
 		if err != nil {
-			panicGateError(err)
+			panicGateError("cancelSpotOrdersGate", err)
 			return false
 		}
 		marshal, _ := json.Marshal(orders)
@@ -361,7 +394,7 @@ func cancelOrdersGate(key string, secret string, symbol string) (result bool) {
 		symbol = strings.Split(symbol, "_")[0] + model.GetPerpTail(model.Gate)
 		orders, _, err := client.FuturesApi.CancelFuturesOrders(ctx, "usdt", symbol, nil)
 		if err != nil {
-			panicGateError(err)
+			panicGateError("cancelFutureOrdersGate", err)
 			return false
 		}
 		marshal, _ := json.Marshal(orders)
@@ -392,7 +425,7 @@ func placeOrderGate(key, secret string, order *model.Order, orderSide, orderType
 		}
 		createOrder, _, err := client.SpotApi.CreateOrder(ctx, marginOrder)
 		if err != nil {
-			panicGateError(err)
+			panicGateError("placeSpotOrderGate", err)
 			order.Status = model.CarryStatusFail
 			order.OrderId = ``
 		} else {
@@ -422,7 +455,7 @@ func placeOrderGate(key, secret string, order *model.Order, orderSide, orderType
 		futuresOrder.Price = priceStrFuture
 		createFuturesOrder, _, err := client.FuturesApi.CreateFuturesOrder(ctx, "usdt", futuresOrder)
 		if err != nil {
-			panicGateError(err)
+			panicGateError("placeFutureOrderGate", err)
 			order.Status = model.CarryStatusFail
 			order.OrderId = ``
 		} else {
