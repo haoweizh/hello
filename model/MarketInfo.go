@@ -14,8 +14,11 @@ var marketInfoLock sync.Mutex
 type MarketInfo struct {
 	Name, CTCurrency                                string
 	SizeMin, SizeIncrement, PriceIncrement, CTValue float64
-	UsdtMin                                         float64 //最小下单金额需达到的usdt值
 	PriceDecimal                                    int     // 价格精确到小数点后几位
+	UsdtMin                                         float64 //最小下单金额需达到的usdt值
+	BorrowSizeMin                                   float64 //最小借款数量
+	BorrowUsdtMax                                   float64 //最大借款usdt数额
+
 	//CanBorrow                                       bool
 	//"ask":2.2966,
 	//"baseCurrency":null,

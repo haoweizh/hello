@@ -43,22 +43,18 @@ A:
 				//marginData, _ := json.Marshal(margin)
 				//util.Notice(fmt.Sprintf("现货交易对：%s", spotData))
 				//util.Notice(fmt.Sprintf("杠杆交易对：%s", marginData))
-
 				marketInfo := &model.MarketInfo{}
 				marketInfo.Name = symbol
 				marketInfo.PriceDecimal = int(spot.Precision)
 				marketInfo.PriceIncrement = 1 / math.Pow10(int(spot.Precision))
 				marketInfo.SizeIncrement = 1 / math.Pow10(int(spot.AmountPrecision))
-
 				if spot.MinQuoteAmount != "" {
 					marketInfo.UsdtMin, _ = strconv.ParseFloat(spot.MinQuoteAmount, 64)
 					marketInfo.SizeMin = marketInfo.SizeIncrement
 				}
-
 				if spot.MinBaseAmount != "" {
 					marketInfo.SizeMin, _ = strconv.ParseFloat(spot.MinBaseAmount, 64)
 				}
-
 				marketInfos[symbol] = marketInfo
 				//todo 最大最小借款数量
 			}
@@ -83,9 +79,7 @@ A:
 		marketInfo.SizeIncrement = marketInfo.SizeMin
 		marketInfo.CTCurrency = coin
 		marketInfo.CTValue, _ = strconv.ParseFloat(contract.QuantoMultiplier, 64)
-
 		marketInfos[marketInfo.Name] = marketInfo
-
 		//todo 最大下单数量
 	}
 	return marketInfos
@@ -473,4 +467,8 @@ func placeOrderGate(key, secret string, order *model.Order, orderSide, orderType
 			return
 		}
 	}
+}
+
+func getMaxLoanGate(key string, secret string, coin string) (bool, float64) {
+	aaa
 }

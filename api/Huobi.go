@@ -590,7 +590,7 @@ func getBalanceHuobi(key string, secret string) (success bool, balances []*model
 				balance.FrozenAmount, _ = strconv.ParseFloat(value[`balance`].(string), 64)
 			case `loan`:
 				balance.Borrow, _ = strconv.ParseFloat(value[`balance`].(string), 64)
-				balance.Borrow *= -1 // 借时为负数
+				//balance.Borrow *= -1 // 借时为负数
 			}
 		}
 		balances = make([]*model.Balance, 0)

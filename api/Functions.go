@@ -344,6 +344,8 @@ func GetFundingRate(market, symbol string, lock *sync.Mutex) (success bool, rate
 
 func GetMaxLoan(key, secret, market, coin string) (success bool, maxLoan float64) {
 	switch market {
+	case model.Gate:
+		return getMaxLoanGate(key, secret, coin)
 	case model.OKEX:
 		return getMaxLoanOKEX(key, secret, coin)
 	case model.Binance:
