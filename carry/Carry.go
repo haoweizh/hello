@@ -462,6 +462,18 @@ func makeEqual(key, secret string, setting *model.Setting, balances []*model.Bal
 			util.Notice(fmt.Sprintf("binance can't order %s low fee: %f ", symbol, price*amount))
 			amount = 0
 		}
+	} else if setting.Market == model.Gate {
+		//marketPerp := model.GetMarketInfo(setting.Market, setting.Symbol)
+		//_, amountInReal := model.ParseRealAmount(setting.Market, setting.Symbol, marketPerp.SizeMax)
+		//amount = math.Min(amount, amountInReal)
+		//marketRelated := model.GetMarketInfo(setting.Market, setting.SymbolRelated)
+		//minBorrow := marketRelated.BorrowSizeMin
+		//if balance.Amount > 0 {
+		//	minBorrow += balance.Amount
+		//}
+		//if (symbol == setting.Symbol && amount < minBorrow) {
+		//	amount = 0
+		//}
 	}
 	if amount <= 0 {
 		return
@@ -630,8 +642,6 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	if scoreLow < setClose || scoreHigh > setOpen {
 		if sideRelated == model.OrderSideSell {
 			amount = math.Min(balance.AvailableWithBorrow, math.Abs(amount))
-
-			//todo 大于最小可借数量
 		}
 	} else { // 反向关仓量要<=持仓
 		amount = math.Min(math.Abs(carryAmount), amount)
@@ -665,6 +675,21 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 		amount = model.FormatAmountPair(setting.Market, setting.Symbol, setting.SymbolRelated, amount)
 	} else if model.Ftx == setting.Market && amount > 90000000 {
 		amount = 90000000
+	} else if model.Gate == setting.Market && amount > 0 { //gate限制合约最大下单数量
+		marketPerp := model.GetMarketInfo(setting.Market, setting.Symbol)
+		_, amountInReal := model.ParseRealAmount(setting.Market, setting.Symbol, marketPerp.SizeMax)
+		amount = math.Min(amount, amountInReal)
+		if (scoreLow < setClose || scoreHigh > setOpen) && sideRelated == model.OrderSideSell {
+			//开仓且卖现货时，最小单笔可借数量限制。有持仓的，需要卖出所有持仓数额再加上最小可借
+			marketRelated := model.GetMarketInfo(setting.Market, setting.SymbolRelated)
+			minBorrow := marketRelated.BorrowSizeMin
+			if balance.Amount > 0 {
+				minBorrow += balance.Amount
+			}
+			if amount < minBorrow {
+				amount = 0
+			}
+		}
 	}
 	if amount > 0 {
 		util.Info(fmt.Sprintf(`+++ usdRate: %f coinRate: %f %s high: %f low: %f symbol: %s %s 

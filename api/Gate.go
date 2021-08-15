@@ -55,8 +55,10 @@ A:
 				if spot.MinBaseAmount != "" {
 					marketInfo.SizeMin, _ = strconv.ParseFloat(spot.MinBaseAmount, 64)
 				}
+				marketInfo.BorrowSizeMin, _ = strconv.ParseFloat(margin.MinBorrowAmount, 64)
+				marketInfo.BorrowUsdtMax, _ = strconv.ParseFloat(margin.UserMaxBorrowAmount, 64)
 				marketInfos[symbol] = marketInfo
-				//todo 最大最小借款数量
+				continue A
 			}
 		}
 	}
@@ -76,11 +78,11 @@ A:
 		marketInfo.PriceIncrement = minPrice
 		marketInfo.PriceDecimal = util.NumDecPlaces(minPrice)
 		marketInfo.SizeMin = float64(contract.OrderSizeMin)
+		marketInfo.SizeMax = float64(contract.OrderSizeMax)
 		marketInfo.SizeIncrement = marketInfo.SizeMin
 		marketInfo.CTCurrency = coin
 		marketInfo.CTValue, _ = strconv.ParseFloat(contract.QuantoMultiplier, 64)
 		marketInfos[marketInfo.Name] = marketInfo
-		//todo 最大下单数量
 	}
 	return marketInfos
 }
@@ -114,41 +116,41 @@ func setMarginSettingGate(key, secret string) {
 }
 
 func transferGate(key string, secret string, transferType string, amount float64) {
-	//client := gateapi.NewAPIClient(gateapi.NewConfiguration())
-	//ctx := context.WithValue(context.Background(), gateapi.ContextGateAPIV4, gateapi.GateAPIV4{
-	//	Key:    key,
-	//	Secret: secret,
-	//})
-	//param := gateapi.Transfer{Currency: "USDT", Amount: fmt.Sprintf("%.6f", amount), Settle: "usdt"}
-	//if transferType == "MAIN_UMFUTURE" {
-	//	param.From = "cross_margin"
-	//	param.To = "spot"
-	//	_, err := client.WalletApi.Transfer(ctx, param)
-	//	if err != nil {
-	//		panicGateError("transferGate", err)
-	//	} else {
-	//		param.From = "spot"
-	//		param.To = "futures"
-	//		_, endErr := client.WalletApi.Transfer(ctx, param)
-	//		if endErr != nil {
-	//			panicGateError("transferGate", endErr)
-	//		}
-	//	}
-	//} else if transferType == "UMFUTURE_MAIN" {
-	//	param.From = "futures"
-	//	param.To = "spot"
-	//	_, err := client.WalletApi.Transfer(ctx, param)
-	//	if err != nil {
-	//		panicGateError("transferGate", err)
-	//	} else {
-	//		param.From = "spot"
-	//		param.To = "cross_margin"
-	//		_, endErr := client.WalletApi.Transfer(ctx, param)
-	//		if endErr != nil {
-	//			panicGateError("transferGate", endErr)
-	//		}
-	//	}
-	//}
+	client := gateapi.NewAPIClient(gateapi.NewConfiguration())
+	ctx := context.WithValue(context.Background(), gateapi.ContextGateAPIV4, gateapi.GateAPIV4{
+		Key:    key,
+		Secret: secret,
+	})
+	param := gateapi.Transfer{Currency: "USDT", Amount: fmt.Sprintf("%.6f", amount), Settle: "usdt"}
+	if transferType == "MAIN_UMFUTURE" {
+		param.From = "cross_margin"
+		param.To = "spot"
+		_, err := client.WalletApi.Transfer(ctx, param)
+		if err != nil {
+			panicGateError("transferGate", err)
+		} else {
+			param.From = "spot"
+			param.To = "futures"
+			_, endErr := client.WalletApi.Transfer(ctx, param)
+			if endErr != nil {
+				panicGateError("transferGate", endErr)
+			}
+		}
+	} else if transferType == "UMFUTURE_MAIN" {
+		param.From = "futures"
+		param.To = "spot"
+		_, err := client.WalletApi.Transfer(ctx, param)
+		if err != nil {
+			panicGateError("transferGate", err)
+		} else {
+			param.From = "spot"
+			param.To = "cross_margin"
+			_, endErr := client.WalletApi.Transfer(ctx, param)
+			if endErr != nil {
+				panicGateError("transferGate", endErr)
+			}
+		}
+	}
 }
 
 func panicGateError(function string, err error) {
@@ -469,6 +471,10 @@ func placeOrderGate(key, secret string, order *model.Order, orderSide, orderType
 	}
 }
 
-func getMaxLoanGate(key string, secret string, coin string) (bool, float64) {
-	aaa
+func getMaxLoanGate(key string, secret string, coin string) (success bool, maxLoan float64) {
+	symbol := coin + model.GetSpotTail(model.Gate)
+	marketMargin := model.GetMarketInfo(model.Gate, symbol)
+	_, tickRelated := model.AppMarkets.GetBidAsk(symbol, model.Gate)
+	maxLoan = marketMargin.BorrowUsdtMax / tickRelated.Bids[0].Price
+	return true, maxLoan
 }

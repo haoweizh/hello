@@ -18,7 +18,7 @@ type MarketInfo struct {
 	UsdtMin                                         float64 //最小下单金额需达到的usdt值
 	BorrowSizeMin                                   float64 //最小借款数量
 	BorrowUsdtMax                                   float64 //最大借款usdt数额
-
+	SizeMax                                         float64 //最大下单数量
 	//CanBorrow                                       bool
 	//"ask":2.2966,
 	//"baseCurrency":null,
