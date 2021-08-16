@@ -459,28 +459,18 @@ func makeEqual(key, secret string, setting *model.Setting, balances []*model.Bal
 		}
 	}
 	amount = math.Min(math.Abs(amount), 20000/price)
-	if setting.Market == model.Ftx {
+	switch setting.Market {
+	case model.Ftx:
 		amount = math.Min(amount, 90000000)
-	} else if setting.Market == model.Binance {
+	case model.Binance:
 		if (symbol == setting.Symbol && price*amount < 5) || (symbol == setting.SymbolRelated && price*amount < 10) {
 			util.Notice(fmt.Sprintf("binance can't order %s low fee: %f ", symbol, price*amount))
 			amount = 0
 		}
-	} else if setting.Market == model.Gate {
+	case model.Gate:
 		if price*amount < 1 {
 			amount = 0
 		}
-		//marketPerp := model.GetMarketInfo(setting.Market, setting.Symbol)
-		//_, amountInReal := model.ParseRealAmount(setting.Market, setting.Symbol, marketPerp.SizeMax)
-		//amount = math.Min(amount, amountInReal)
-		//marketRelated := model.GetMarketInfo(setting.Market, setting.SymbolRelated)
-		//minBorrow := marketRelated.BorrowSizeMin
-		//if balance.Amount > 0 {
-		//	minBorrow += balance.Amount
-		//}
-		//if (symbol == setting.Symbol && amount < minBorrow) {
-		//	amount = 0
-		//}
 	}
 	if amount <= 0 {
 		return
