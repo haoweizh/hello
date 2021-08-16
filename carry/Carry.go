@@ -683,7 +683,7 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 			if balance.Amount > 0 {
 				minBorrow += balance.Amount
 			}
-			if amount < minBorrow {
+			if amount < minBorrow && amount > math.Abs(balance.Amount) {
 				amount = 0
 			}
 		}
