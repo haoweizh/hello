@@ -151,6 +151,9 @@ func initStatus(key, secret string, setting *model.Setting) {
 		carryStatus.TradeLineBuy = math.Max(setting.OpenShortMargin*(0.5+jump*carryStatus.RateInAll), loseRateMax) + fundingRate
 		carryStatus.TradeLineSell = math.Max(setting.OpenShortMargin*(0.5-jump*carryStatus.RateInAll), winRateMin) - fundingRate
 	}
+	if carryStatus.RateInAll > 0.5 {
+		carryStatus.TradeLineBuy =
+	}
 	keys, _ := model.AppConfig.GetKeys(setting.Market)
 	doReverts := strings.Split(model.AppConfig.CarryClose, `,`)
 	accountRates := strings.Split(model.AppConfig.AccountRate, `,`)
@@ -298,197 +301,196 @@ func makeEqual(settings []*model.Setting, coinStatus map[string]map[string]map[s
 }
 
 // ProcessCross todo 计算fundingRate后30s不下单
-//var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
-//	million := util.GetNowUnixMillion()
-//	delayTick := int64(0)
-//	if tick != nil {
-//		delayTick = million - int64(tick.Ts)
-//	}
-//	settings := model.GetCoinSetting(setting.Function, setting.Coin)
-//	keys, secrets := model.AppConfig.GetKeys(setting.Market)
-//	if tick == nil || tick.Asks == nil || tick.Bids == nil || setting == nil || model.AppPause ||
-//		(model.AppConfig.Env != `test` && (model.AppConfig.Handle != `1` || delayTick > 30)) ||
-//		status[setting.Coin] == nil || status[setting.Coin][setting.Market] == nil ||
-//		status[setting.Coin][setting.Market][setting.Symbol] == nil || settings == nil || len(settings) == 0 {
-//		return
-//	}
-//	for _, settingRelate := range settings {
-//		tickGet, tickRelate := model.AppMarkets.GetBidAsk(settingRelate.Symbol, settingRelate.Market)
-//		if !tickGet || million-int64(tickRelate.Ts) > 100 {
-//			continue
-//		}
-//		keysRelate, secretsRelate := model.AppConfig.GetKeys(settingRelate.Market)
-//		for i, keyRelated := range keysRelate {
-//			if status[settingRelate.Coin] == nil || status[settingRelate.Coin][settingRelate.Market] == nil ||
-//				status[settingRelate.Coin][settingRelate.Market][settingRelate.Symbol] != nil ||
-//				status[settingRelate.Coin][settingRelate.Market][settingRelate.Symbol][keyRelated] == nil || !tickGet {
-//				util.Notice(`fail to get status makeEqual %s %s %s`,
-//					settingRelate.Market, settingRelate.Symbol, keyRelated)
-//				continue
-//			}
-//			statusCross := status[setting.Coin][setting.Market][setting.Symbol][keys[i]]
-//			statusRelate := status[settingRelate.Coin][settingRelate.Market][setting.Symbol][keysRelate[i]]
-//			if statusCross == nil || statusRelate == nil {
-//				continue
-//			}
-//		}
-//	}
-//}
-//
-//func calcAmount(setting, settingRelate *model.Setting, carryStatus, carryStatusRelate *CarryStatus, tick,
-//	tickRelate *model.BidAsk, key, keyRelate string) {
-//	line := (tick.Bids[0].Price - tickRelate.Asks[0].Price) / tick.Bids[0].Price
-//	var marketBuy, marketSell, symbolBuy, symbolSell string
-//	var priceBuy, priceSell, bidAmount, askAmount, amount float64
-//	if carryStatus.TradeLineSell < line && carryStatusRelate.TradeLineBuy < line {
-//		util.Notice(`cross trade `)
-//		marketSell = setting.Market
-//		marketBuy = settingRelate.Market
-//		symbolSell = setting.Symbol
-//		symbolBuy = settingRelate.Symbol
-//		priceSell = tick.Bids[0].Price
-//		priceBuy = tickRelate.Asks[0].Price
-//		askAmount = tick.Bids[0].Amount
-//		bidAmount = tickRelate.Asks[0].Amount
-//		if setting.Market == model.OKEX {
-//			_, askAmount = model.ParseRealAmount(setting.Market, setting.Symbol, tick.Bids[0].Amount)
-//		}
-//		if settingRelate.Market == model.OKEX {
-//			_, bidAmount = model.ParseRealAmount(settingRelate.Market, settingRelate.Symbol, tickRelate.Asks[0].Amount)
-//		}
-//		if !math.IsNaN(carryStatus.LimitSell) {
-//			askAmount = math.Min(carryStatus.LimitSell, askAmount)
-//		}
-//		if !math.IsNaN(carryStatusRelate.LimitBuy) {
-//			bidAmount = math.Min(carryStatusRelate.LimitBuy, bidAmount)
-//		}
-//		if carryStatusRelate.Type == model.SymbolTypeSpot || carryStatusRelate.IsUniAccount {
-//			bidAmount = math.Min(getUsdAmount(key, carryStatusRelate.Market)/priceBuy/5, bidAmount)
-//		} else if carryStatusRelate.Type == model.SymbolTypePerp {
-//			bidAmount = math.Min(getPerpMarginUsd(key, carryStatusRelate.Market)/priceBuy/5, bidAmount)
-//		}
-//	}
-//	line = (tickRelate.Bids[0].Price - tick.Asks[0].Price) / tick.Asks[0].Price
-//	if carryStatus.TradeLineBuy < line && carryStatusRelate.TradeLineSell < line {
-//		util.Notice(`cross trade `)
-//		marketSell = settingRelate.Market
-//		marketBuy = setting.Market
-//		symbolSell = settingRelate.Symbol
-//		symbolBuy = setting.Symbol
-//		priceSell = tickRelate.Bids[0].Price
-//		priceBuy = tick.Asks[0].Price
-//		askAmount = tickRelate.Bids[0].Amount
-//		bidAmount = tick.Bids[0].Amount
-//		if setting.Market == model.OKEX {
-//			_, bidAmount = model.ParseRealAmount(settingRelate.Market, settingRelate.Symbol, tickRelate.Asks[0].Amount)
-//		}
-//		if settingRelate.Market == model.OKEX {
-//			_, askAmount = model.ParseRealAmount(setting.Market, setting.Symbol, tick.Bids[0].Amount)
-//		}
-//		if !math.IsNaN(carryStatus.LimitBuy) {
-//			bidAmount = math.Min(carryStatus.LimitBuy, bidAmount)
-//		}
-//		if !math.IsNaN(carryStatusRelate.LimitSell) {
-//			askAmount = math.Min(carryStatusRelate.LimitSell, askAmount)
-//		}
-//		if carryStatus.Type == model.SymbolTypeSpot || carryStatus.IsUniAccount {
-//			bidAmount = math.Min(getUsdAmount(key, carryStatus.Market)/priceBuy/5, bidAmount)
-//		} else if carryStatus.Type == model.SymbolTypePerp {
-//			bidAmount = math.Min(getPerpMarginUsd(key, carryStatus.Market)/priceBuy/5, bidAmount)
-//		}
-//	}
-//	openValueMin := setting.AmountLimit
-//	if setting.Market == model.Binance || settingRelate.Market == model.Binance {
-//		openValueMin = 11
-//	}
-//	if setting.Market == model.OKEX || setting.Market == model.Binance {
-//		now := time.Now()
-//		if now.Hour()%8 == 0 && now.Minute() == 0 && now.Second() < 30 {
-//			return
-//		}
-//		fundingRateSuccess, fundingRate := api.GetFundingRate(setting.Market, setting.Symbol, nil)
-//		if !fundingRateSuccess {
-//			return
-//		}
-//		fundingRate *= 0.9
-//	}
-//	amount = math.Min(bidAmount, askAmount)
-//	amount = math.Min(amount, localOpenValueLimit/markPrice)
-//	// usd所剩太少且还要再买 || 反向持仓太多且还要再卖 || 下单太小
-//	if (sideRelated == model.OrderSideBuy && (usdAvailable < usdLowLine || (balance.UsdValue > 0 && coinRate > 0.5))) ||
-//		(sideRelated == model.OrderSideSell && (balance.UsdValue < 0 && coinRate > 0.5)) ||
-//		math.Abs(amount)*markPrice < valueLow {
-//		amount = 0
-//	}
-//	amount = model.FormatAmountPair(setting.Market, setting.Symbol, setting.SymbolRelated, amount)
-//	if model.OKEX == setting.Market && amount > 0 {
-//		amountInPerp := model.GetAmountInMarket(setting.Market, setting.Symbol, amount)
-//		maxBuyPerp, maxSellPerp := getTradeMax(key, setting.Symbol)
-//		maxBuyRelated, maxSellRelated := getTradeMax(key, setting.SymbolRelated)
-//		maxBuyRelated += balance.Borrow
-//		maxSellRelated = math.Max(maxSellRelated, balance.AvailableWithBorrow)
-//		if sidePerp == model.OrderSideBuy && sideRelated == model.OrderSideSell {
-//			amountInPerp = math.Min(amountInPerp, maxBuyPerp)
-//			amount = math.Min(amount, maxSellRelated)
-//		} else if sidePerp == model.OrderSideSell && sideRelated == model.OrderSideBuy {
-//			amountInPerp = math.Min(amountInPerp, maxSellPerp)
-//			amount = math.Min(amount, maxBuyRelated)
-//		}
-//		_, amountInReal := model.ParseRealAmount(setting.Market, setting.Symbol, amountInPerp)
-//		amount = math.Min(amount, amountInReal)
-//		amount = model.FormatAmountPair(setting.Market, setting.Symbol, setting.SymbolRelated, amount)
-//	} else if model.Ftx == setting.Market && amount > 90000000 {
-//		amount = 90000000
-//	}
-//}
-//
-//func placeCross(key, keyRelate, secret, secretRelate, side, sideRelate string, price, priceRelate, amount, amountRelate float64) {
-//	if !checkSetCrossing(true) {
-//		defer checkSetCrossing(false)
-//	} else {
-//		//util.Notice(fmt.Sprintf(`waiting for other ordering %s`, setting.Symbol))
-//		return
-//	}
-//	placeSuccess := true
-//	if setting.Market == model.OKEX {
-//		placeSuccess = api.PlacePairOKEX(key, model.GetCoin(setting.Market, setting.Symbol), sidePerp, sideRelated,
-//			model.OrderTypeLimit, perpPrice, relatedPrice, amount)
-//	} else {
-//		go api.PlaceOrder(key, secret, sidePerp, model.OrderTypeLimit, setting.Market, setting.Symbol,
-//			``, ``, model.FunctionCarry, perpPrice, perpPrice,
-//			amount, true, true, postOrderCarry)
-//		api.PlaceOrder(key, secret, sideRelated, model.OrderTypeLimit, setting.Market, setting.SymbolRelated,
-//			``, ``, model.FunctionCarry, relatedPrice, relatedPrice,
-//			amount, true, true, postOrderCarry)
-//		time.Sleep(time.Second / 5)
-//	}
-//	if placeSuccess {
-//		usdAvailable := getUsdAvailable(key)
-//		balanceAllValue := getBalanceAll(key)
-//		if sidePerp == model.OrderSideSell {
-//			perpPrice = tickPerp.Bids[0].Price
-//			relatedPrice = tickRelated.Asks[0].Price
-//			setCarryAmount(key, setting.Symbol, getCarryAmount(key, setting.Symbol)+amount)
-//			balance.Amount += amount
-//			balance.AvailableWithBorrow += amount
-//			balance.UsdValue += amount * perpPrice
-//			if carryType == carryTypeOpen {
-//				usdAvailable -= amount * perpPrice
-//				setUsdAvailable(key, usdAvailable)
-//			}
-//		} else if sidePerp == model.OrderSideBuy {
-//			perpPrice = tickPerp.Asks[0].Price
-//			relatedPrice = tickRelated.Bids[0].Price
-//			setCarryAmount(key, setting.Symbol, getCarryAmount(key, setting.Symbol)-amount)
-//			balance.Amount -= amount
-//			balance.AvailableWithBorrow -= amount
-//			balance.UsdValue -= amount * perpPrice
-//			if carryType == carryTypeRevert {
-//				usdAvailable += amount * relatedPrice
-//				setUsdAvailable(key, usdAvailable)
-//			}
-//		}
-//		setCarryBalance(key, coin, balance)
-//		setUsdRate(key, usdAvailable/balanceAllValue)
-//	}
-//}
+var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
+	million := util.GetNowUnixMillion()
+	delayTick := int64(0)
+	if tick != nil {
+		delayTick = million - int64(tick.Ts)
+	}
+	settings := model.GetCoinSetting(setting.Function, setting.Coin)
+	keys, secrets := model.AppConfig.GetKeys(setting.Market)
+	if tick == nil || tick.Asks == nil || tick.Bids == nil || setting == nil || model.AppPause ||
+		(model.AppConfig.Env != `test` && (model.AppConfig.Handle != `1` || delayTick > 30)) ||
+		status[setting.Coin] == nil || status[setting.Coin][setting.Market] == nil ||
+		status[setting.Coin][setting.Market][setting.Symbol] == nil || settings == nil || len(settings) == 0 {
+		return
+	}
+	for _, settingRelate := range settings {
+		tickGet, tickRelate := model.AppMarkets.GetBidAsk(settingRelate.Symbol, settingRelate.Market)
+		if !tickGet || million-int64(tickRelate.Ts) > 100 {
+			continue
+		}
+		keysRelate, secretsRelate := model.AppConfig.GetKeys(settingRelate.Market)
+		for i, keyRelated := range keysRelate {
+			if status[settingRelate.Coin] == nil || status[settingRelate.Coin][settingRelate.Market] == nil ||
+				status[settingRelate.Coin][settingRelate.Market][settingRelate.Symbol] != nil ||
+				status[settingRelate.Coin][settingRelate.Market][settingRelate.Symbol][keyRelated] == nil || !tickGet {
+				util.Notice(`fail to get status makeEqual %s %s %s`,
+					settingRelate.Market, settingRelate.Symbol, keyRelated)
+				continue
+			}
+			statusCross := status[setting.Coin][setting.Market][setting.Symbol][keys[i]]
+			statusRelate := status[settingRelate.Coin][settingRelate.Market][setting.Symbol][keysRelate[i]]
+			if statusCross == nil || statusRelate == nil {
+				continue
+			}
+		}
+	}
+}
+
+func calcAmount(setting, settingRelate *model.Setting, carryStatus, carryStatusRelate *CarryStatus, tick,
+	tickRelate *model.BidAsk, key, keyRelate string) {
+	var marketBuy, marketSell, symbolBuy, symbolSell string
+	var priceBuy, priceSell, bidAmount, askAmount, amount float64
+	line := (tick.Bids[0].Price - tickRelate.Asks[0].Price) / tick.Bids[0].Price
+	if carryStatus.TradeLineSell < line && carryStatusRelate.TradeLineBuy < line {
+		util.Notice(`cross trade `)
+		marketSell = setting.Market
+		marketBuy = settingRelate.Market
+		symbolSell = setting.Symbol
+		symbolBuy = settingRelate.Symbol
+		priceSell = tick.Bids[0].Price
+		priceBuy = tickRelate.Asks[0].Price
+		askAmount = tick.Bids[0].Amount
+		bidAmount = tickRelate.Asks[0].Amount
+		if setting.Market == model.OKEX {
+			_, askAmount = model.ParseRealAmount(setting.Market, setting.Symbol, tick.Bids[0].Amount)
+		}
+		if settingRelate.Market == model.OKEX {
+			_, bidAmount = model.ParseRealAmount(settingRelate.Market, settingRelate.Symbol, tickRelate.Asks[0].Amount)
+		}
+		if !math.IsNaN(carryStatus.LimitSell) {
+			askAmount = math.Min(carryStatus.LimitSell, askAmount)
+		}
+		if !math.IsNaN(carryStatusRelate.LimitBuy) {
+			bidAmount = math.Min(carryStatusRelate.LimitBuy, bidAmount)
+		}
+		if carryStatusRelate.Type == model.SymbolTypeSpot || carryStatusRelate.IsUniAccount {
+			bidAmount = math.Min(getUsdAmount(key, carryStatusRelate.Market)/priceBuy/5, bidAmount)
+		} else if carryStatusRelate.Type == model.SymbolTypePerp {
+			bidAmount = math.Min(getPerpMarginUsd(key, carryStatusRelate.Market)/priceBuy/5, bidAmount)
+		}
+	}
+	line = (tickRelate.Bids[0].Price - tick.Asks[0].Price) / tick.Asks[0].Price
+	if carryStatus.TradeLineBuy < line && carryStatusRelate.TradeLineSell < line {
+		util.Notice(`cross trade `)
+		marketSell = settingRelate.Market
+		marketBuy = setting.Market
+		symbolSell = settingRelate.Symbol
+		symbolBuy = setting.Symbol
+		priceSell = tickRelate.Bids[0].Price
+		priceBuy = tick.Asks[0].Price
+		askAmount = tickRelate.Bids[0].Amount
+		bidAmount = tick.Bids[0].Amount
+		if setting.Market == model.OKEX {
+			_, bidAmount = model.ParseRealAmount(settingRelate.Market, settingRelate.Symbol, tickRelate.Asks[0].Amount)
+		}
+		if settingRelate.Market == model.OKEX {
+			_, askAmount = model.ParseRealAmount(setting.Market, setting.Symbol, tick.Bids[0].Amount)
+		}
+		if !math.IsNaN(carryStatus.LimitBuy) {
+			bidAmount = math.Min(carryStatus.LimitBuy, bidAmount)
+		}
+		if !math.IsNaN(carryStatusRelate.LimitSell) {
+			askAmount = math.Min(carryStatusRelate.LimitSell, askAmount)
+		}
+		if carryStatus.Type == model.SymbolTypeSpot || carryStatus.IsUniAccount {
+			bidAmount = math.Min(getUsdAmount(key, carryStatus.Market)/priceBuy/5, bidAmount)
+		} else if carryStatus.Type == model.SymbolTypePerp {
+			bidAmount = math.Min(getPerpMarginUsd(key, carryStatus.Market)/priceBuy/5, bidAmount)
+		}
+	}
+	openValueMin := setting.AmountLimit
+	if setting.Market == model.Binance || settingRelate.Market == model.Binance {
+		openValueMin = 11
+	}
+	if setting.Market == model.OKEX || setting.Market == model.Binance {
+		now := time.Now()
+		if now.Hour()%8 == 0 && now.Minute() == 0 && now.Second() < 30 {
+			return
+		}
+		fundingRateSuccess, fundingRate := api.GetFundingRate(setting.Market, setting.Symbol, nil)
+		if !fundingRateSuccess {
+			return
+		}
+		fundingRate *= 0.9
+	}
+	amount = math.Min(bidAmount, askAmount)
+	// usd所剩太少且还要再买 || 反向持仓太多且还要再卖 || 下单太小
+	if (sideRelated == model.OrderSideBuy && (balance.UsdValue > 0 && coinRate > 0.5)) ||
+		(sideRelated == model.OrderSideSell && (balance.UsdValue < 0 && coinRate > 0.5)) ||
+		math.Abs(amount)*priceBuy < openValueMin {
+		amount = 0
+	}
+	amount = model.FormatAmountPair(setting.Market, setting.Symbol, setting.SymbolRelated, amount)
+	if model.OKEX == setting.Market && amount > 0 {
+		amountInPerp := model.GetAmountInMarket(setting.Market, setting.Symbol, amount)
+		maxBuyPerp, maxSellPerp := getTradeMax(key, setting.Symbol)
+		maxBuyRelated, maxSellRelated := getTradeMax(key, setting.SymbolRelated)
+		maxBuyRelated += balance.Borrow
+		maxSellRelated = math.Max(maxSellRelated, balance.AvailableWithBorrow)
+		if sidePerp == model.OrderSideBuy && sideRelated == model.OrderSideSell {
+			amountInPerp = math.Min(amountInPerp, maxBuyPerp)
+			amount = math.Min(amount, maxSellRelated)
+		} else if sidePerp == model.OrderSideSell && sideRelated == model.OrderSideBuy {
+			amountInPerp = math.Min(amountInPerp, maxSellPerp)
+			amount = math.Min(amount, maxBuyRelated)
+		}
+		_, amountInReal := model.ParseRealAmount(setting.Market, setting.Symbol, amountInPerp)
+		amount = math.Min(amount, amountInReal)
+		amount = model.FormatAmountPair(setting.Market, setting.Symbol, setting.SymbolRelated, amount)
+	} else if model.Ftx == setting.Market && amount > 90000000 {
+		amount = 90000000
+	}
+}
+
+func placeCross(key, keyRelate, secret, secretRelate, side, sideRelate string, price, priceRelate, amount, amountRelate float64) {
+	if !checkSetCrossing(true) {
+		defer checkSetCrossing(false)
+	} else {
+		//util.Notice(fmt.Sprintf(`waiting for other ordering %s`, setting.Symbol))
+		return
+	}
+	placeSuccess := true
+	if setting.Market == model.OKEX {
+		placeSuccess = api.PlacePairOKEX(key, model.GetCoin(setting.Market, setting.Symbol), sidePerp, sideRelated,
+			model.OrderTypeLimit, perpPrice, relatedPrice, amount)
+	} else {
+		go api.PlaceOrder(key, secret, sidePerp, model.OrderTypeLimit, setting.Market, setting.Symbol,
+			``, ``, model.FunctionCarry, perpPrice, perpPrice,
+			amount, true, true, postOrderCarry)
+		api.PlaceOrder(key, secret, sideRelated, model.OrderTypeLimit, setting.Market, setting.SymbolRelated,
+			``, ``, model.FunctionCarry, relatedPrice, relatedPrice,
+			amount, true, true, postOrderCarry)
+		time.Sleep(time.Second / 5)
+	}
+	if placeSuccess {
+		usdAvailable := getUsdAvailable(key)
+		balanceAllValue := getBalanceAll(key)
+		if sidePerp == model.OrderSideSell {
+			perpPrice = tickPerp.Bids[0].Price
+			relatedPrice = tickRelated.Asks[0].Price
+			setCarryAmount(key, setting.Symbol, getCarryAmount(key, setting.Symbol)+amount)
+			balance.Amount += amount
+			balance.AvailableWithBorrow += amount
+			balance.UsdValue += amount * perpPrice
+			if carryType == carryTypeOpen {
+				usdAvailable -= amount * perpPrice
+				setUsdAvailable(key, usdAvailable)
+			}
+		} else if sidePerp == model.OrderSideBuy {
+			perpPrice = tickPerp.Asks[0].Price
+			relatedPrice = tickRelated.Bids[0].Price
+			setCarryAmount(key, setting.Symbol, getCarryAmount(key, setting.Symbol)-amount)
+			balance.Amount -= amount
+			balance.AvailableWithBorrow -= amount
+			balance.UsdValue -= amount * perpPrice
+			if carryType == carryTypeRevert {
+				usdAvailable += amount * relatedPrice
+				setUsdAvailable(key, usdAvailable)
+			}
+		}
+		setCarryBalance(key, coin, balance)
+		setUsdRate(key, usdAvailable/balanceAllValue)
+	}
+}
