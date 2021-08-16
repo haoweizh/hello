@@ -14,6 +14,8 @@ type Config struct {
 	DBConnection   string
 	Env            string
 	FutureAddress  string
+	Gatekey        string
+	GateSecret     string
 	HuobiKey       string
 	HuobiSecret    string
 	OkexKey        string
@@ -43,6 +45,8 @@ func (config *Config) GetKeys(market string) (keys, secrets []string) {
 	config.lock.Lock()
 	defer config.lock.Unlock()
 	switch market {
+	case Gate:
+		return strings.Split(config.Gatekey, `,`), strings.Split(config.GateSecret, `,`)
 	case Ftx:
 		return strings.Split(config.FtxKey, `,`), strings.Split(config.FtxSecret, `,`)
 	case Huobi, HuobiDM:

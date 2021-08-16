@@ -72,6 +72,8 @@ func MustCancel(key, secret, market, symbol, instrument, orderType, orderId stri
 
 func CancelOrders(key, secret, market, symbol string) (result bool) {
 	switch market {
+	case model.Gate:
+		return cancelOrdersGate(key, secret, symbol)
 	case model.Huobi:
 		return cancelOrdersHuobi(key, secret, symbol)
 	case model.Binance:
@@ -234,6 +236,8 @@ func GetBalances(key, secret, market string) (
 	//	return true, balances, totalInUsd, collateral
 	//}
 	switch market {
+	case model.Gate:
+		success, balances = getBalanceGate(key, secret)
 	case model.Ftx:
 		success, balances, totalInUsd = getBalanceFtx(key, secret)
 	case model.OKEX:
@@ -340,6 +344,8 @@ func GetFundingRate(market, symbol string, lock *sync.Mutex) (success bool, rate
 
 func GetMaxLoan(key, secret, market, coin string) (success bool, maxLoan float64) {
 	switch market {
+	case model.Gate:
+		return getMaxLoanGate(key, secret, coin)
 	case model.OKEX:
 		return getMaxLoanOKEX(key, secret, coin)
 	case model.Binance:
@@ -429,6 +435,8 @@ func GetPosition(market, symbol, address string) (success bool, position *model.
 
 func GetPositions(key, secret, market string) (success bool, positions []*model.Position, posBalance float64) {
 	switch market {
+	case model.Gate:
+		return getPositionsGate(key, secret)
 	case model.Huobi:
 		return getPositionsHuobi(key, secret)
 	case model.Binance:
@@ -514,6 +522,8 @@ func PlaceOrder(key, secret, orderSide, orderType, market, symbol, instrument, o
 		return
 	}
 	switch market {
+	case model.Gate:
+		placeOrderGate(key, secret, order, orderSide, orderType, symbol, price, amount)
 	case model.DFuture:
 		if symbol[len(symbol)-4:] == `usdt` {
 			symbol = symbol[0 : len(symbol)-4]
@@ -712,6 +722,8 @@ func Transfer(key, secret, market, transferType string, amount float64) {
 		transferBinance(key, secret, transferType, amount)
 	} else if market == model.Huobi {
 		transferHuobi(key, secret, transferType, amount)
+	} else if market == model.Gate {
+		transferGate(key, secret, transferType, amount)
 	}
 }
 
@@ -742,6 +754,12 @@ func InitMarketInfos() (success bool) {
 			model.SetMarketInfos(model.Binance, getMarketsBinance())
 		case model.Huobi:
 			model.SetMarketInfos(model.Huobi, getMarketsHuobi())
+		case model.Gate:
+			model.SetMarketInfos(model.Gate, getMarketsGate())
+			for i, key := range keys {
+				setPosSideGate(key, secrets[i])
+				setMarginSettingGate(key, secrets[i])
+			}
 		}
 	}
 	return success
@@ -763,6 +781,8 @@ func CreateMarketDepthServer(markets *model.Markets, market string, orderHandler
 	channels = make([]chan struct{}, 1)
 	var err error
 	switch market {
+	case model.Gate:
+		channels, err = WsDepthServeGate(markets, nil)
 	case model.Huobi:
 		channels, err = WsDepthServeHuobi(markets, nil)
 		//channels[0] = channel

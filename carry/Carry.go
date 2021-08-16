@@ -128,7 +128,7 @@ func resetTradeMax(key, secret string, market string) {
 // 7:3和8:2是比例范围，超过范围自动平衡成7.5:2.5
 func checkProcessTransfer(key, secret, market string) {
 	switch market {
-	case model.Binance, model.Huobi:
+	case model.Binance, model.Huobi, model.Gate:
 		balance := getBalanceAll(key)
 		balancePos := getPosBal(key)
 		if balance/balancePos > 4 {
@@ -175,7 +175,7 @@ func clearCarry(market, key, secret string) {
 			balanceAllValue += value.UsdValue / 2
 		}
 		if (coin == `USD` && market == model.Ftx) ||
-			(coin == `USDT` && (market == model.OKEX || market == model.Binance)) ||
+			(coin == `USDT` && (market == model.OKEX || market == model.Binance || market == model.Gate)) ||
 			(coin == `usdt` && market == model.Huobi) {
 			localUsdAvailable += value.Amount
 			balanceAllValue += value.Amount
@@ -404,8 +404,12 @@ func makeEqual(key, secret string, setting *model.Setting, balances []*model.Bal
 	}
 	balance, amountPerp, amountRelated := getCarryAmounts(setting, balances, positions)
 	if balance == nil {
-		util.Notice(`can not get balance %s %s`, key, coin)
-		return
+		if amountPerp != 0 {
+			balance = &model.Balance{Coin: coin, Market: setting.Market}
+		} else {
+			util.Notice(`can not get balance %s %s`, key, coin)
+			return
+		}
 	}
 	usdAvailable := getUsdAvailable(key)
 	amount := amountPerp + amountRelated
@@ -462,6 +466,21 @@ func makeEqual(key, secret string, setting *model.Setting, balances []*model.Bal
 			util.Notice(fmt.Sprintf("binance can't order %s low fee: %f ", symbol, price*amount))
 			amount = 0
 		}
+	} else if setting.Market == model.Gate {
+		if price*amount < 1 {
+			amount = 0
+		}
+		//marketPerp := model.GetMarketInfo(setting.Market, setting.Symbol)
+		//_, amountInReal := model.ParseRealAmount(setting.Market, setting.Symbol, marketPerp.SizeMax)
+		//amount = math.Min(amount, amountInReal)
+		//marketRelated := model.GetMarketInfo(setting.Market, setting.SymbolRelated)
+		//minBorrow := marketRelated.BorrowSizeMin
+		//if balance.Amount > 0 {
+		//	minBorrow += balance.Amount
+		//}
+		//if (symbol == setting.Symbol && amount < minBorrow) {
+		//	amount = 0
+		//}
 	}
 	if amount <= 0 {
 		return
@@ -494,7 +513,7 @@ func initEmptyBalance(key, secret, market string) {
 		if balance == nil {
 			balance = &model.Balance{Coin: coin, Market: market}
 		}
-		if market == model.OKEX || market == model.Binance {
+		if market == model.OKEX || market == model.Binance || market == model.Gate {
 			success, maxLoan := api.GetMaxLoan(key, secret, market, coin)
 			if success {
 				balance.AvailableWithBorrow = maxLoan + math.Max(0, balance.Amount)
@@ -663,6 +682,21 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 		amount = model.FormatAmountPair(setting.Market, setting.Symbol, setting.SymbolRelated, amount)
 	} else if model.Ftx == setting.Market && amount > 90000000 {
 		amount = 90000000
+	} else if model.Gate == setting.Market && amount > 0 { //gate限制合约最大下单数量
+		marketPerp := model.GetMarketInfo(setting.Market, setting.Symbol)
+		_, amountInReal := model.ParseRealAmount(setting.Market, setting.Symbol, marketPerp.SizeMax)
+		amount = math.Min(amount, amountInReal)
+		if (scoreLow < setClose || scoreHigh > setOpen) && sideRelated == model.OrderSideSell {
+			//开仓且卖现货时，最小单笔可借数量限制。有持仓的，需要卖出所有持仓数额再加上最小可借
+			marketRelated := model.GetMarketInfo(setting.Market, setting.SymbolRelated)
+			minBorrow := marketRelated.BorrowSizeMin
+			if balance.Amount > 0 {
+				minBorrow += balance.Amount
+			}
+			if amount < minBorrow {
+				amount = 0
+			}
+		}
 	}
 	if amount > 0 {
 		util.Info(fmt.Sprintf(`+++ usdRate: %f coinRate: %f %s high: %f low: %f symbol: %s %s 

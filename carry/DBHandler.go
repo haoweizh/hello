@@ -122,6 +122,10 @@ func MaintainMarketChan() {
 			util.Notice(fmt.Sprintf("%s create new depth channel ", market))
 		} else if api.RequireDepthChanReset(model.AppMarkets, market) {
 			util.Notice(fmt.Sprintf("%s require new depth channel ", market))
+			if model.Gate == market {
+				util.Notice(fmt.Sprintf("%s need reset websocket ", market))
+				continue
+			}
 			ResetChannels(market, channels)
 			time.Sleep(time.Minute)
 		}
