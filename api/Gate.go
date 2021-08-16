@@ -387,7 +387,7 @@ func cancelOrdersGate(key string, secret string, symbol string) (result bool) {
 		util.SocketInfo(`cancel margin orders response: %s`, marshal)
 		return true
 	} else {
-		symbol = strings.Split(symbol, "_")[0] + model.GetPerpTail(model.Gate)
+		symbol = strings.Split(symbol, "_")[0] + model.GetSpotTail(model.Gate)
 		orders, _, err := client.FuturesApi.CancelFuturesOrders(ctx, "usdt", symbol, nil)
 		if err != nil {
 			panicGateError("cancelFutureOrdersGate", err)
@@ -443,12 +443,15 @@ func placeOrderGate(key, secret string, order *model.Order, orderSide, orderType
 		}
 	} else {
 		futuresOrder := gateapi.FuturesOrder{}
-		futuresOrder.Contract = strings.Split(symbol, "_")[0] + model.GetSpotTail(model.Gate)
-		futuresOrder.Size, _ = strconv.ParseInt(
-			util.CutTailZero(fmt.Sprintf(`%f`, model.GetAmountInMarket(model.Gate, symbol, amount))), 10, 64)
+		futuresOrder.Size, _ = strconv.ParseInt(util.CutTailZero(
+			fmt.Sprintf(`%f`, model.GetAmountInMarket(model.Gate, symbol, amount))), 10, 64)
 		priceFuture, decimalFuture := model.FormatPrice(model.Gate, symbol, model.OrderSideBuy, price)
 		priceStrFuture := util.CutTailZero(strconv.FormatFloat(priceFuture, 'f', decimalFuture, 64))
 		futuresOrder.Price = priceStrFuture
+		if orderSide == model.OrderSideSell {
+			futuresOrder.Size = -1 * futuresOrder.Size
+		}
+		futuresOrder.Contract = strings.Split(symbol, "_")[0] + model.GetSpotTail(model.Gate)
 		createFuturesOrder, _, err := client.FuturesApi.CreateFuturesOrder(ctx, "usdt", futuresOrder)
 		if err != nil {
 			panicGateError("placeFutureOrderGate", err)
@@ -456,12 +459,12 @@ func placeOrderGate(key, secret string, order *model.Order, orderSide, orderType
 			order.OrderId = ``
 		} else {
 			marshal, _ := json.Marshal(createFuturesOrder)
-			util.SocketInfo(`create margin order response: %s`, marshal)
+			util.SocketInfo(`create future order response: %s`, marshal)
 			if createFuturesOrder.IsLiq {
 				util.Notice(fmt.Sprintf("warning warning, blow up!!!"))
 			}
 			order.OrderId = string(createFuturesOrder.Id)
-			order.Symbol = strings.Split(createFuturesOrder.Contract, "_")[0] + model.GetPerpTail(model.Gate)
+			order.Symbol = strings.Split(symbol, "_")[0] + model.GetPerpTail(model.Gate)
 			order.OrderTime = time.Unix(int64(createFuturesOrder.CreateTime), 0)
 			order.Price, _ = strconv.ParseFloat(createFuturesOrder.Price, 64)
 			order.Amount = float64(createFuturesOrder.Size)
@@ -475,6 +478,8 @@ func getMaxLoanGate(key string, secret string, coin string) (success bool, maxLo
 	symbol := coin + model.GetSpotTail(model.Gate)
 	marketMargin := model.GetMarketInfo(model.Gate, symbol)
 	_, tickRelated := model.AppMarkets.GetBidAsk(symbol, model.Gate)
-	maxLoan = marketMargin.BorrowUsdtMax / tickRelated.Bids[0].Price
+	if tickRelated != nil {
+		maxLoan = marketMargin.BorrowUsdtMax / tickRelated.Bids[0].Price
+	}
 	return true, maxLoan
 }

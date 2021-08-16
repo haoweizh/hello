@@ -404,8 +404,12 @@ func makeEqual(key, secret string, setting *model.Setting, balances []*model.Bal
 	}
 	balance, amountPerp, amountRelated := getCarryAmounts(setting, balances, positions)
 	if balance == nil {
-		util.Notice(`can not get balance %s %s`, key, coin)
-		return
+		if amountPerp != 0 {
+			balance = &model.Balance{Coin: coin, Market: setting.Market}
+		} else {
+			util.Notice(`can not get balance %s %s`, key, coin)
+			return
+		}
 	}
 	usdAvailable := getUsdAvailable(key)
 	amount := amountPerp + amountRelated
@@ -463,6 +467,9 @@ func makeEqual(key, secret string, setting *model.Setting, balances []*model.Bal
 			amount = 0
 		}
 	} else if setting.Market == model.Gate {
+		if price*amount < 1 {
+			amount = 0
+		}
 		//marketPerp := model.GetMarketInfo(setting.Market, setting.Symbol)
 		//_, amountInReal := model.ParseRealAmount(setting.Market, setting.Symbol, marketPerp.SizeMax)
 		//amount = math.Min(amount, amountInReal)
@@ -506,7 +513,7 @@ func initEmptyBalance(key, secret, market string) {
 		if balance == nil {
 			balance = &model.Balance{Coin: coin, Market: market}
 		}
-		if market == model.OKEX || market == model.Binance {
+		if market == model.OKEX || market == model.Binance || market == model.Gate {
 			success, maxLoan := api.GetMaxLoan(key, secret, market, coin)
 			if success {
 				balance.AvailableWithBorrow = maxLoan + math.Max(0, balance.Amount)
