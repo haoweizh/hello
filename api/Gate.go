@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/antihax/optional"
-	"github.com/gateio/gateapi-go/v6"
 	gate "github.com/gateio/gatews/go"
 	"hello/model"
 	"hello/util"
@@ -28,13 +27,12 @@ func getMarketsGate(key, secret string) (marketInfos map[string]*model.MarketInf
 	if spotErr != nil {
 		panicGateError(key, "ListCurrencyPairs", spotErr)
 	}
-A:
 	for _, margin := range marginCurrencyPairs {
 		symbol := margin.Name + model.GetSpotTail(model.Gate)
 		for _, spot := range spotCurrencyPairs {
 			if spot.Id == symbol {
 				if spot.TradeStatus != "tradable" {
-					continue A
+					break
 				}
 				//spotData, _ := json.Marshal(spot)
 				//marginData, _ := json.Marshal(margin)
@@ -55,7 +53,7 @@ A:
 				marketInfo.BorrowSizeMin, _ = strconv.ParseFloat(margin.MinBorrowAmount, 64)
 				marketInfo.BorrowUsdtMax, _ = strconv.ParseFloat(margin.UserMaxBorrowAmount, 64)
 				marketInfos[symbol] = marketInfo
-				continue A
+				break
 			}
 		}
 	}
