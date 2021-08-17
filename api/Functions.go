@@ -345,7 +345,7 @@ func GetFundingRate(market, symbol string, lock *sync.Mutex) (success bool, rate
 func GetMaxLoan(key, secret, market, coin string) (success bool, maxLoan float64) {
 	switch market {
 	case model.Gate:
-		return getMaxLoanGate(key, secret, coin)
+		return getMaxLoanGate(key, coin)
 	case model.OKEX:
 		return getMaxLoanOKEX(key, secret, coin)
 	case model.Binance:
@@ -755,8 +755,8 @@ func InitMarketInfos() (success bool) {
 		case model.Huobi:
 			model.SetMarketInfos(model.Huobi, getMarketsHuobi())
 		case model.Gate:
-			model.SetMarketInfos(model.Gate, getMarketsGate())
 			for i, key := range keys {
+				model.SetMarketInfos(model.Gate+`_`+key, getMarketsGate(key, secrets[i]))
 				setPosSideGate(key, secrets[i])
 				setMarginSettingGate(key, secrets[i])
 			}
