@@ -52,7 +52,7 @@ func RefreshMarketInfo() {
 	for true {
 		time.Sleep(time.Hour * 8)
 		if !api.InitMarketInfos() {
-			util.Notice(`fatal error: can not set okex account mode to net!!`)
+			util.Notice(`fatal error: can not set market mode!!`)
 		}
 	}
 }
