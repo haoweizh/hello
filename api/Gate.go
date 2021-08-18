@@ -429,7 +429,8 @@ func placeOrderGate(key, secret string, order *model.Order, orderSide, orderType
 			util.SocketInfo(`create margin order response: %s`, marshal)
 			order.OrderId = createOrder.Id
 			order.Symbol = createOrder.CurrencyPair
-			order.OrderTime, _ = time.Parse(time.RFC3339, createOrder.CreateTime)
+			secondUnix, _ := strconv.ParseInt(createOrder.CreateTime, 10, 64)
+			order.OrderTime = time.Unix(secondUnix, 0)
 			order.Price, _ = strconv.ParseFloat(createOrder.Price, 64)
 			order.OrderSide = createOrder.Side
 			order.Amount, _ = strconv.ParseFloat(createOrder.Amount, 64)
