@@ -430,6 +430,7 @@ func placeOrderGate(key, secret string, order *model.Order, orderSide, orderType
 			order.Price, _ = strconv.ParseFloat(createOrder.Price, 64)
 			order.OrderSide = createOrder.Side
 			order.Amount, _ = strconv.ParseFloat(createOrder.Amount, 64)
+			order.DealAmount = order.Amount
 			order.OrderType = createOrder.Type
 			if createOrder.Status == "cancelled" {
 				order.Status = model.CarryStatusFail
@@ -464,7 +465,8 @@ func placeOrderGate(key, secret string, order *model.Order, orderSide, orderType
 			order.Symbol = strings.Split(symbol, "_")[0] + model.GetPerpTail(model.Gate)
 			order.OrderTime = time.Unix(int64(createFuturesOrder.CreateTime), 0)
 			order.Price, _ = strconv.ParseFloat(createFuturesOrder.Price, 64)
-			order.Amount = float64(createFuturesOrder.Size)
+			_, order.Amount = model.ParseRealAmount(model.Gate, order.Symbol, float64(createFuturesOrder.Size))
+			order.DealAmount = order.Amount
 			order.Status = model.CarryStatusWorking
 			return
 		}
