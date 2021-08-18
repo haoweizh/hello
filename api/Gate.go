@@ -474,9 +474,9 @@ func placeOrderGate(key, secret string, order *model.Order, orderSide, orderType
 	}
 }
 
-func getMaxLoanGate(key string, coin string) (success bool, maxLoan float64) {
+func getMaxLoanGate(coin string) (success bool, maxLoan float64) {
 	symbol := coin + model.GetSpotTail(model.Gate)
-	marketMargin := model.GetMarketInfo(model.Gate+`_`+key, symbol)
+	marketMargin := model.GetMarketInfo(model.Gate, symbol)
 	_, tickRelated := model.AppMarkets.GetBidAsk(symbol, model.Gate)
 	if tickRelated != nil {
 		maxLoan = marketMargin.BorrowUsdtMax / tickRelated.Bids[0].Price
