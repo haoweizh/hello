@@ -15,7 +15,7 @@ import (
 	"time"
 )
 
-func getMarketsGate(key, secret string) (marketInfos map[string]*model.MarketInfo) {
+func getMarketsGate(key, secret string) (success bool, marketInfos map[string]*model.MarketInfo) {
 	marketInfos = make(map[string]*model.MarketInfo)
 	client := gateApi.NewAPIClient(gateApi.NewConfiguration())
 	ctx := context.WithValue(context.Background(), gateApi.ContextGateAPIV4, gateApi.GateAPIV4{
@@ -24,9 +24,11 @@ func getMarketsGate(key, secret string) (marketInfos map[string]*model.MarketInf
 	spotCurrencyPairs, _, spotErr := client.SpotApi.ListCurrencyPairs(ctx)
 	if marginErr != nil {
 		panicGateError(key, "ListCrossMarginCurrencies", marginErr)
+		return false, nil
 	}
 	if spotErr != nil {
 		panicGateError(key, "ListCurrencyPairs", spotErr)
+		return false, nil
 	}
 	for _, margin := range marginCurrencyPairs {
 		symbol := margin.Name + model.GetSpotTail(model.Gate)
@@ -61,6 +63,7 @@ func getMarketsGate(key, secret string) (marketInfos map[string]*model.MarketInf
 	contracts, _, futureErr := client.FuturesApi.ListFuturesContracts(ctx, "usdt")
 	if futureErr != nil {
 		panicGateError(key, "ListFuturesContracts", futureErr)
+		return false, nil
 	}
 	for _, contract := range contracts {
 		if contract.InDelisting {
@@ -79,7 +82,7 @@ func getMarketsGate(key, secret string) (marketInfos map[string]*model.MarketInf
 		marketInfo.CTValue, _ = strconv.ParseFloat(contract.QuantoMultiplier, 64)
 		marketInfos[marketInfo.Name] = marketInfo
 	}
-	return marketInfos
+	return true, marketInfos
 }
 
 func setPosSideGate(key, secret string) {

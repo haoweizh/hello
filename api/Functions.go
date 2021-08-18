@@ -756,9 +756,15 @@ func InitMarketInfos() (success bool) {
 			model.SetMarketInfos(model.Huobi, getMarketsHuobi())
 		case model.Gate:
 			for i, key := range keys {
-				model.SetMarketInfos(model.Gate+`_`+key, getMarketsGate(key, secrets[i]))
 				setPosSideGate(key, secrets[i])
 				setMarginSettingGate(key, secrets[i])
+				if i == 0 {
+					var marketInfos map[string]*model.MarketInfo
+					success, marketInfos = getMarketsGate(key, secrets[i])
+					if success {
+						model.SetMarketInfos(model.Gate, marketInfos)
+					}
+				}
 			}
 		}
 	}
