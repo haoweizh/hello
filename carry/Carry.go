@@ -259,12 +259,14 @@ var ProcessCarry = func(setting *model.Setting, tick *model.BidAsk) {
 	}
 	if tickPerp == nil || tickRelated == nil || tickPerp.Asks == nil || tickPerp.Bids == nil ||
 		tickRelated.Asks == nil || tickRelated.Bids == nil || setting == nil || model.AppPause ||
-		(model.AppConfig.Env != `test` && (model.AppConfig.Handle != `1` || (delayRelated > 300 || delayPerp > 300))) {
+		(model.AppConfig.Env != `test` && model.AppConfig.Handle != `1`) {
 		return
 	}
 	if (setting.Market == model.Binance && (delayPerp > 100 || delayRelated > 100)) ||
-		(setting.Market == model.OKEX && delayTick > 25) || (setting.Market == model.Ftx && delayTick > 95) ||
-		(setting.Market == model.Huobi && delayTick > 25) {
+		(setting.Market == model.OKEX && (delayTick > 25 || delayRelated > 300 || delayPerp > 300)) ||
+		(setting.Market == model.Ftx && delayTick > 95 || delayRelated > 300 || delayPerp > 300) ||
+		(setting.Market == model.Huobi && (delayTick > 25 || delayRelated > 300 || delayPerp > 300)) ||
+		(setting.Market == model.Gate && (delayTick > 40 || delayRelated > 3000 || delayPerp > 3000)) {
 		return
 	}
 	scoreOpen := 1 - tickRelated.Asks[0].Price/tickPerp.Bids[0].Price
@@ -407,7 +409,7 @@ func makeEqual(key, secret string, setting *model.Setting, balances []*model.Bal
 		if amountPerp != 0 {
 			balance = &model.Balance{Coin: coin, Market: setting.Market}
 		} else {
-			util.Notice(`can not get balance %s %s`, key, coin)
+			util.Notice(`func:makeEqual can not get balance %s %s`, key, coin)
 			return
 		}
 	}
