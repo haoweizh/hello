@@ -266,7 +266,7 @@ var ProcessCarry = func(setting *model.Setting, tick *model.BidAsk) {
 		(setting.Market == model.OKEX && (delayTick > 25 || delayRelated > 300 || delayPerp > 300)) ||
 		(setting.Market == model.Ftx && delayTick > 95 || delayRelated > 300 || delayPerp > 300) ||
 		(setting.Market == model.Huobi && (delayTick > 25 || delayRelated > 300 || delayPerp > 300)) ||
-		(setting.Market == model.Gate && (delayTick > 40 || delayRelated > 3000 || delayPerp > 3000)) {
+		(setting.Market == model.Gate && (delayTick > 40 || delayRelated > 30000 || delayPerp > 30000)) {
 		return
 	}
 	scoreOpen := 1 - tickRelated.Asks[0].Price/tickPerp.Bids[0].Price
