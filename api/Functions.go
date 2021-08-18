@@ -572,6 +572,7 @@ func PlaceOrder(key, secret, orderSide, orderType, market, symbol, instrument, o
 		if order.OrderId == `` {
 			order.OrderId = fmt.Sprintf(`%s_error_%d`, order.ErrCode, time.Now().UnixNano())
 		}
+		util.Notice(`save order %s %s %s %f`, order.Market, order.Symbol, order.OrderSide, order.Amount)
 		go model.AppDB.Save(order)
 	}
 	if postOrder != nil {
