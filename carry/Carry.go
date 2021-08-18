@@ -428,7 +428,7 @@ func makeEqual(key, secret string, setting *model.Setting, balances []*model.Bal
 		if amountPerp != 0 {
 			balance = &model.Balance{Coin: coin, Market: setting.Market}
 		} else {
-			util.Notice(`func:makeEqual can not get balance %s %s`, key, coin)
+			//util.Notice(`func:makeEqual can not get balance %s %s`, key, coin)
 			return
 		}
 	}
