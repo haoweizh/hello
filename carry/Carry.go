@@ -555,7 +555,6 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 		if !fundingRateSuccess {
 			return
 		}
-		fundingRate *= 0.9
 	}
 	if balance == nil {
 		model.SetCarryInfo(`warning `+coin, fmt.Sprintf(`slave: balace not available!!! %s %s`, key, coin))
