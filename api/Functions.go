@@ -345,7 +345,7 @@ func GetFundingRate(market, symbol string, lock *sync.Mutex) (success bool, rate
 func GetMaxLoan(key, secret, market, coin string) (success bool, maxLoan float64) {
 	switch market {
 	case model.Gate:
-		return getMaxLoanGate(key, coin)
+		return getMaxLoanGate(coin)
 	case model.OKEX:
 		return getMaxLoanOKEX(key, secret, coin)
 	case model.Binance:
@@ -572,6 +572,7 @@ func PlaceOrder(key, secret, orderSide, orderType, market, symbol, instrument, o
 		if order.OrderId == `` {
 			order.OrderId = fmt.Sprintf(`%s_error_%d`, order.ErrCode, time.Now().UnixNano())
 		}
+		util.Notice(`save order %s %s %s %f`, order.Market, order.Symbol, order.OrderSide, order.Amount)
 		go model.AppDB.Save(order)
 	}
 	if postOrder != nil {
@@ -756,9 +757,15 @@ func InitMarketInfos() (success bool) {
 			model.SetMarketInfos(model.Huobi, getMarketsHuobi())
 		case model.Gate:
 			for i, key := range keys {
-				model.SetMarketInfos(model.Gate+`_`+key, getMarketsGate(key, secrets[i]))
 				setPosSideGate(key, secrets[i])
 				setMarginSettingGate(key, secrets[i])
+				if i == 0 {
+					var marketInfos map[string]*model.MarketInfo
+					success, marketInfos = getMarketsGate(key, secrets[i])
+					if success {
+						model.SetMarketInfos(model.Gate, marketInfos)
+					}
+				}
 			}
 		}
 	}
