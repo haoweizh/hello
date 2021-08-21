@@ -57,7 +57,7 @@ func appendRelatedMarketsGate(key string, client *gateApi.APIClient, ctx context
 	if model.AppConfig.GateSpot {
 		for _, spot := range spotCurrencyPairs {
 			if spot.TradeStatus != "tradable" {
-				break
+				continue
 			}
 			marketInfo := &model.MarketInfo{}
 			marketInfo.Name = spot.Id
