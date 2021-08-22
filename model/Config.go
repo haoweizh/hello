@@ -16,6 +16,7 @@ type Config struct {
 	FutureAddress  string
 	GateKey        string
 	GateSecret     string
+	GateSpot       bool
 	HuobiKey       string
 	HuobiSecret    string
 	OkexKey        string
