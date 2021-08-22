@@ -447,7 +447,7 @@ func cancelOrdersGate(key string, secret string, symbol string) (result bool) {
 			return false
 		}
 		marshal, _ := json.Marshal(orders)
-		util.SocketInfo(`cancel margin orders response: %s`, marshal)
+		util.SocketInfo(`cancel related orders response: %s`, marshal)
 		return true
 	} else {
 		symbol = strings.Split(symbol, "_")[0] + model.GetSpotTail(model.Gate)
@@ -469,31 +469,33 @@ func placeOrderGate(key, secret string, order *model.Order, orderSide, orderType
 		Secret: secret,
 	})
 	if strings.Contains(symbol, model.GetSpotTail(model.Gate)) {
-		marginOrder := gateApi.Order{}
-		marginOrder.CurrencyPair = symbol
-		marginOrder.Type = orderType
+		relatedOrder := gateApi.Order{}
+		relatedOrder.CurrencyPair = symbol
+		relatedOrder.Type = orderType
 		if model.AppConfig.GateSpot {
-			marginOrder.Account = "spot"
+			relatedOrder.Account = "spot"
 		} else {
-			marginOrder.Account = "cross_margin"
+			relatedOrder.Account = "cross_margin"
 			if orderSide == model.OrderSideBuy {
-				marginOrder.AutoRepay = true
+				relatedOrder.AutoRepay = true
 			} else {
-				marginOrder.AutoBorrow = true
+				relatedOrder.AutoBorrow = true
 			}
 		}
-		marginOrder.Side = orderSide
-		marginOrder.Amount = util.CutTailZero(fmt.Sprintf(`%f`, model.GetAmountInMarket(model.Gate, symbol, amount)))
+		relatedOrder.Side = orderSide
+		relatedOrder.Amount = util.CutTailZero(fmt.Sprintf(`%f`, model.GetAmountInMarket(model.Gate, symbol, amount)))
 		priceSpot, decimalSpot := model.FormatPrice(model.Gate, symbol, model.OrderSideBuy, price)
-		marginOrder.Price = util.CutTailZero(strconv.FormatFloat(priceSpot, 'f', decimalSpot, 64))
-		createOrder, _, err := client.SpotApi.CreateOrder(ctx, marginOrder)
+		relatedOrder.Price = util.CutTailZero(strconv.FormatFloat(priceSpot, 'f', decimalSpot, 64))
+		orderReq, _ := json.Marshal(relatedOrder)
+		util.SocketInfo(`create related order request: %s`, orderReq)
+		createOrder, _, err := client.SpotApi.CreateOrder(ctx, relatedOrder)
 		if err != nil {
 			panicGateError(key, "placeSpotOrderGate", err)
 			order.Status = model.CarryStatusFail
 			order.OrderId = ``
 		} else {
-			marshal, _ := json.Marshal(createOrder)
-			util.SocketInfo(`create margin order response: %s`, marshal)
+			orderResp, _ := json.Marshal(createOrder)
+			util.SocketInfo(`create related order response: %s`, orderResp)
 			order.OrderId = createOrder.Id
 			order.Symbol = createOrder.CurrencyPair
 			secondUnix, _ := strconv.ParseInt(createOrder.CreateTime, 10, 64)
@@ -521,14 +523,16 @@ func placeOrderGate(key, secret string, order *model.Order, orderSide, orderType
 			futuresOrder.Size = -1 * futuresOrder.Size
 		}
 		futuresOrder.Contract = strings.Split(symbol, "_")[0] + model.GetSpotTail(model.Gate)
+		orderReq, _ := json.Marshal(futuresOrder)
+		util.SocketInfo(`create related order request: %s`, orderReq)
 		createFuturesOrder, _, err := client.FuturesApi.CreateFuturesOrder(ctx, "usdt", futuresOrder)
 		if err != nil {
 			panicGateError(key, "placeFutureOrderGate", err)
 			order.Status = model.CarryStatusFail
 			order.OrderId = ``
 		} else {
-			marshal, _ := json.Marshal(createFuturesOrder)
-			util.SocketInfo(`create future order response: %s`, marshal)
+			orderResp, _ := json.Marshal(createFuturesOrder)
+			util.SocketInfo(`create future order response: %s`, orderResp)
 			if createFuturesOrder.IsLiq {
 				util.Notice(fmt.Sprintf("warning warning, blow up!!!"))
 			}
