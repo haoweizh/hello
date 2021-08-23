@@ -584,8 +584,8 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	} else {
 		revertOpen = revertOpen / (1 - math.Min(0.9, jump*coinRate))
 	}
-	revertOpen = math.Max(revertOpen, -0.003) + fundingRate
-	revertClose := math.Max(-0.0005/(1-math.Min(0.9, jump*coinRate)), -0.003) - fundingRate
+	revertOpen = math.Max(revertOpen, -0.01) + fundingRate
+	revertClose := math.Max(-0.0005/(1-math.Min(0.9, jump*coinRate)), -0.01) - fundingRate
 	usdLowLine := 0.1 * balanceAllValue
 	keys, _ := model.AppConfig.GetKeys(setting.Market)
 	localOpenValueLimit := math.Min(openValueLimit, usdLowLine/3)

@@ -364,6 +364,7 @@ func GetParameters(c *gin.Context) {
 	}
 	keyFtx, _ := model.AppConfig.GetKeys(model.Ftx)
 	keyOKEX, _ := model.AppConfig.GetKeys(model.OKEX)
+	keyGate, _ := model.AppConfig.GetKeys(model.Gate)
 	keyBinance, _ := model.AppConfig.GetKeys(model.Binance)
 	keyHuobi, _ := model.AppConfig.GetKeys(model.Huobi)
 	duration, _ := time.ParseDuration(`-96h`)
@@ -396,8 +397,9 @@ func GetParameters(c *gin.Context) {
 			key := fmt.Sprintf(`%s-%s-%s-%s-%s`, marketName, amountType, side, date, refreshType)
 			if (marketName == model.Ftx && amountType == keyFtx[0]) ||
 				(marketName == model.OKEX && amountType == keyOKEX[0]) ||
-				(marketName == model.Binance && amountType == keyBinance[0] ||
-					(marketName == model.Huobi && amountType == keyHuobi[0])) {
+				(marketName == model.Binance && amountType == keyBinance[0]) ||
+				(marketName == model.Huobi && amountType == keyHuobi[0]) ||
+				(marketName == model.Gate && amountType == keyGate[0]) {
 				if orderNum > 0 {
 					failRate = failData[key] / orderNum
 				}
