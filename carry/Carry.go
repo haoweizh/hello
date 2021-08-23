@@ -584,8 +584,8 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	} else {
 		revertOpen = revertOpen / (1 - math.Min(0.9, jump*coinRate))
 	}
-	revertOpen = math.Max(revertOpen, -0.01) + fundingRate
-	revertClose := math.Max(-0.0005/(1-math.Min(0.9, jump*coinRate)), -0.01) - fundingRate
+	revertOpen = math.Max(revertOpen, setting.CloseShortMargin/2) + fundingRate
+	revertClose := math.Max(-0.0005/(1-math.Min(0.9, jump*coinRate)), setting.CloseShortMargin/2) - fundingRate
 	usdLowLine := 0.1 * balanceAllValue
 	keys, _ := model.AppConfig.GetKeys(setting.Market)
 	localOpenValueLimit := math.Min(openValueLimit, usdLowLine/3)
@@ -610,12 +610,12 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	revertClose += 0.001
 	if setting.Market == model.OKEX {
 		collateral := GetCollateral(key)
-		if setting.Symbol == `MINA-USDT-SWAP` {
-			setOpen += 0.01
-			setClose += 0.005
-			revertOpen -= 0.01
-			revertClose += 0.005
-		}
+		//if setting.Symbol == `MINA-USDT-SWAP` {
+		//	setOpen += 0.01
+		//	setClose += 0.005
+		//	revertOpen -= 0.01
+		//	revertClose += 0.005
+		//}
 		if collateral == nil || (keys[0] != key && collateral.Rate < 5) || (keys[0] == key && (collateral.Available-collateral.Occupied)/collateral.Available < 0.1) {
 			util.Notice(`doRevert true %s %f %f`, key, collateral.Available, collateral.Occupied, collateral.Rate)
 			doRevert = `true`
