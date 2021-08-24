@@ -385,7 +385,7 @@ func GetParameters(c *gin.Context) {
 			failData[key] = orderNum
 		}
 	}
-	carryRows, _ := model.AppDB.Model(&orders).Select(`market,amount_type,order_side,sum(price*amount),date(order_time),refresh_type,count(*)`).
+	carryRows, _ := model.AppDB.Model(&orders).Select(`market,amount_type,order_side,sum(price*abs(amount),date(order_time),refresh_type,count(*)`).
 		Group(`market,order_side,date(order_time),amount_type,refresh_type`).Order(`date(order_time) desc`).Rows()
 	carryFrontMsg := ``
 	carryBackMsg := ``
