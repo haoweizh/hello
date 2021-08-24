@@ -14,7 +14,6 @@ var usdRate = make(map[string]float64)                        // key - float64
 var balanceAll = make(map[string]float64)                     // key - balance value in all
 var carryBalance = make(map[string]map[string]*model.Balance) // key - coin - balance
 var posBal = make(map[string]float64)                         // key - coin - position balance
-var carryAmount = make(map[string]map[string]float64)         // key - perp - float64
 var tradeMax = make(map[string]map[string][]float64)          // key - instrument - [maxBuy合约张数/币币个数, maxSell]
 var tradeMaxResetting = make(map[string]bool)                 // key - bool
 
@@ -165,24 +164,6 @@ func setUsdRate(key string, value float64) {
 	usdRate[key] = value
 }
 
-func getCarryAmount(key, perp string) float64 {
-	carryLock.Lock()
-	defer carryLock.Unlock()
-	if carryAmount[key] == nil {
-		return 0
-	}
-	return carryAmount[key][perp]
-}
-
-func setCarryAmount(key, perp string, amount float64) {
-	carryLock.Lock()
-	defer carryLock.Unlock()
-	if carryAmount[key] == nil {
-		carryAmount[key] = make(map[string]float64)
-	}
-	carryAmount[key][perp] = amount
-}
-
 func setCarryBalance(key, coin string, balance *model.Balance) {
 	carryLock.Lock()
 	defer carryLock.Unlock()
@@ -200,3 +181,22 @@ func getCarryBalance(key, coin string) (balance *model.Balance) {
 	}
 	return carryBalance[key][coin]
 }
+
+//var carryAmount = make(map[string]map[string]float64)         // key - perp - float64
+//func getCarryAmount(key, perp string) float64 {
+//	carryLock.Lock()
+//	defer carryLock.Unlock()
+//	if carryAmount[key] == nil {
+//		return 0
+//	}
+//	return carryAmount[key][perp]
+//}
+//
+//func setCarryAmount(key, symbol string, amount float64) {
+//	carryLock.Lock()
+//	defer carryLock.Unlock()
+//	if carryAmount[key] == nil {
+//		carryAmount[key] = make(map[string]float64)
+//	}
+//	carryAmount[key][symbol] = amount
+//}

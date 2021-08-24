@@ -3,11 +3,11 @@ package model
 import "time"
 
 type Balance struct {
-	AccountId           string
-	Action              float64 // 1: deposit, -1: withdraw, 0: snapshot
-	Address             string  // for transaction
-	Amount              float64 //实际持仓头寸
-	Available           float64
+	AccountId string
+	Action    float64 // 1: deposit, -1: withdraw, 0: snapshot
+	Address   string  // for transaction
+	Amount    float64 //实际持仓头寸
+	//Available           float64
 	AvailableWithBorrow float64 //可借+持仓-已挂的卖单=现在总的可下卖单数量（千万别用这个作为持仓！）,binance、huobi现货按0计算可借
 	FrozenAmount        float64 //冻结数量
 	Borrow              float64

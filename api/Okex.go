@@ -981,9 +981,9 @@ func parseBalanceOKEX(value map[string]interface{}) (balance *model.Balance) {
 		}
 	}
 	// for balance
-	if value[`availEq`] != nil && value[`availEq`] != `` {
-		balance.Available, _ = strconv.ParseFloat(value[`availEq`].(string), 64)
-	}
+	//if value[`availEq`] != nil && value[`availEq`] != `` {
+	//	balance.Available, _ = strconv.ParseFloat(value[`availEq`].(string), 64)
+	//}
 	if value[`eq`] != nil && value[`eq`] != `` {
 		balance.Amount, _ = strconv.ParseFloat(value[`eq`].(string), 64)
 	}

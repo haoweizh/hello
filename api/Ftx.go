@@ -266,9 +266,9 @@ func parseBalanceFtx(key string, data map[string]interface{}) (balance *model.Ba
 		ID:          model.Ftx + `_` + coin + `_` + util.GetNow().Format(time.RFC3339)[0:10],
 		BalanceTime: util.GetNow(),
 		AccountId:   key}
-	if data[`availableWithoutBorrow`] != nil {
-		balance.Available, _ = data[`availableWithoutBorrow`].(json.Number).Float64()
-	}
+	//if data[`availableWithoutBorrow`] != nil {
+	//	balance.Available, _ = data[`availableWithoutBorrow`].(json.Number).Float64()
+	//}
 	if data[`total`] != nil { // 持仓
 		balance.Amount, _ = data[`total`].(json.Number).Float64()
 	}

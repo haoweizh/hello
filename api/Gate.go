@@ -356,7 +356,7 @@ func getBalanceGate(key string, secret string) (success bool, balances []*model.
 			balance.FrozenAmount, _ = strconv.ParseFloat(account.Locked, 64)
 			// 此处未计算可以借入的金额
 			balance.AvailableWithBorrow, _ = strconv.ParseFloat(account.Available, 64)
-			balance.Amount = balance.AvailableWithBorrow + balance.FrozenAmount
+			balance.Amount = balance.AvailableWithBorrow + balance.FrozenAmount - balance.Borrow
 			priceGet, bidAsk := model.AppMarkets.GetBidAsk(balance.Coin+model.GetSpotTail(model.Gate), model.Gate)
 			if priceGet {
 				balance.UsdValue = balance.Amount * bidAsk.Bids[0].Price
