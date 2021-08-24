@@ -567,12 +567,12 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	jump := 7.0
 	setOpen := math.Max((1.5-usdRate)*setting.OpenShortMargin*(0.5+jump*coinRate), 0.003) - fundingRate
 	setClose := math.Min(setting.CloseShortMargin*(0.5+jump*coinRate), -0.003) - fundingRate
-	revertOpen := setOpen / -4
-	revertClose := setClose / 4
-	if balance.Amount > 0 {
-		revertOpen = math.NaN()
+	revertOpen := math.NaN()
+	revertClose := math.NaN()
+	if balance.Amount < 0 {
+		revertClose = setClose / 4
 	} else {
-		revertClose = math.NaN()
+		revertOpen = setOpen / -4
 	}
 	//revertOpen := math.Abs(setting.GridPriceDistance) * (usdRate - 0.5)
 	//if revertOpen > 0 {
