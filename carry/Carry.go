@@ -578,14 +578,16 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	jump := 7.0
 	setOpen := math.Max((1.5-usdRate)*setting.OpenShortMargin*(0.5+jump*coinRate), 0.003) - fundingRate
 	setClose := math.Min(setting.CloseShortMargin*(0.5+jump*coinRate), -0.003) - fundingRate
-	revertOpen := math.Abs(setting.GridPriceDistance) * (usdRate - 0.5)
-	if revertOpen > 0 {
-		revertOpen = revertOpen / (1 + jump*coinRate)
-	} else {
-		revertOpen = revertOpen / (1 - math.Min(0.9, jump*coinRate))
-	}
-	revertOpen = math.Max(revertOpen, setting.CloseShortMargin/2) + fundingRate
-	revertClose := math.Max(-0.0005/(1-math.Min(0.9, jump*coinRate)), setting.CloseShortMargin/2) - fundingRate
+	revertOpen := setOpen / -3
+	revertClose := setClose / -3
+	//revertOpen := math.Abs(setting.GridPriceDistance) * (usdRate - 0.5)
+	//if revertOpen > 0 {
+	//	revertOpen = revertOpen / (1 + jump*coinRate)
+	//} else {
+	//	revertOpen = revertOpen / (1 - math.Min(0.9, jump*coinRate))
+	//}
+	//revertOpen = math.Max(revertOpen, setting.CloseShortMargin/2) + fundingRate
+	//revertClose := math.Max(-0.0005/(1-math.Min(0.9, jump*coinRate)), setting.CloseShortMargin/2) - fundingRate
 	usdLowLine := 0.1 * balanceAllValue
 	keys, _ := model.AppConfig.GetKeys(setting.Market)
 	localOpenValueLimit := math.Min(openValueLimit, usdLowLine/3)
@@ -606,8 +608,6 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	if setting.Market == model.Binance || setting.MarketRelated == model.Binance {
 		valueLow = 11
 	}
-	revertOpen += 0.001
-	revertClose += 0.001
 	if setting.Market == model.OKEX {
 		collateral := GetCollateral(key)
 		//if setting.Symbol == `MINA-USDT-SWAP` {
