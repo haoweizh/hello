@@ -573,9 +573,9 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	revertClose := math.NaN()
 	if setting.Market == model.Gate {
 		if balance.Amount < 0 {
-			revertClose = setClose / 4
+			revertClose = setClose / float64(setting.Chance)
 		} else {
-			revertOpen = setOpen / -4
+			revertOpen = -1 * setOpen / float64(setting.Chance)
 		}
 	} else {
 		revertOpen = math.Abs(setting.GridPriceDistance) * (usdRate - 0.5)
