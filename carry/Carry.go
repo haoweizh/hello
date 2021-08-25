@@ -571,19 +571,22 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	setClose := math.Min(setting.CloseShortMargin*(0.5+jump*coinRate), -0.003) - fundingRate
 	revertOpen := math.NaN()
 	revertClose := math.NaN()
-	if balance.Amount < 0 {
-		revertClose = setClose / 4
+	if setting.Market == model.Gate {
+		if balance.Amount < 0 {
+			revertClose = setClose / 4
+		} else {
+			revertOpen = setOpen / -4
+		}
 	} else {
-		revertOpen = setOpen / -4
+		revertOpen = math.Abs(setting.GridPriceDistance) * (usdRate - 0.5)
+		if revertOpen > 0 {
+			revertOpen = revertOpen / (1 + jump*coinRate)
+		} else {
+			revertOpen = revertOpen / (1 - math.Min(0.9, jump*coinRate))
+		}
+		revertOpen = math.Max(revertOpen, setting.CloseShortMargin/2) + fundingRate + 0.001
+		revertClose = math.Max(-0.0005/(1-math.Min(0.9, jump*coinRate)), setting.CloseShortMargin/2) - fundingRate + 0.001
 	}
-	//revertOpen := math.Abs(setting.GridPriceDistance) * (usdRate - 0.5)
-	//if revertOpen > 0 {
-	//	revertOpen = revertOpen / (1 + jump*coinRate)
-	//} else {
-	//	revertOpen = revertOpen / (1 - math.Min(0.9, jump*coinRate))
-	//}
-	//revertOpen = math.Max(revertOpen, setting.CloseShortMargin/2) + fundingRate
-	//revertClose := math.Max(-0.0005/(1-math.Min(0.9, jump*coinRate)), setting.CloseShortMargin/2) - fundingRate
 	usdLowLine := 0.1 * balanceAllValue
 	keys, _ := model.AppConfig.GetKeys(setting.Market)
 	localOpenValueLimit := math.Min(openValueLimit, usdLowLine/3)
