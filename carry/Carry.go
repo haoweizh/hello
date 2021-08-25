@@ -315,7 +315,7 @@ var ProcessCarry = func(setting *model.Setting, tick *model.BidAsk) {
 	//}
 	for i := begin; i >= 0 && i < len(keys); i += step {
 		sidePerp, sideRelated, amount, carryType := calcCarryOpen(setting, tickPerp, tickRelated, keys[i],
-			doReverts[i], scoreOpen, scoreClose, scoreOpen, scoreClose)
+			doReverts[i], scoreOpen, scoreClose)
 		if amount > 0 {
 			go placeCarry(setting, tickPerp, tickRelated, keys[i], secrets[i], sidePerp, sideRelated, carryType,
 				scoreOpen, scoreClose, amount)
@@ -525,8 +525,10 @@ func initEmptyBalance(key, secret, market string) {
 	util.Notice(fmt.Sprintf(`set available with borrow %s %s`, market, key))
 }
 
+// revertOpen: 已经正向开仓情况下，平仓时可接受的最低盈利率（可以为负数）
+// revertClose: 已经负向开仓的情况下，平仓时可接受的最低盈利率（可以为负数）
 func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, key, doRevert string,
-	scoreOpen, scoreClose, scoreHigh, scoreLow float64) (sidePerp, sideRelated string, amount float64, carryType string) {
+	scoreOpen, scoreClose float64) (sidePerp, sideRelated string, amount float64, carryType string) {
 	var bidAmount, askAmount float64
 	valueLow := setting.AmountLimit
 	usdRate := getUsdRate(key)
@@ -619,7 +621,7 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 		setOpen = 1
 		setClose = -1
 	}
-	if scoreLow < setClose || (balance.Amount > 0 && scoreClose <= -1*revertOpen) {
+	if scoreClose < setClose || (balance.Amount > 0 && scoreClose <= -1*revertOpen) {
 		bidAmount = tickPerp.Asks[0].Amount
 		if setting.Market == model.OKEX {
 			_, bidAmount = model.ParseRealAmount(setting.Market, setting.Symbol, bidAmount)
@@ -627,12 +629,12 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 		askAmount = tickRelated.Bids[0].Amount
 		sidePerp = model.OrderSideBuy
 		sideRelated = model.OrderSideSell
-		if scoreLow < setClose {
+		if scoreClose < setClose {
 			carryType = carryTypeClose
 		} else {
 			carryType = carryTypeRevert
 		}
-	} else if scoreHigh > setOpen || (balance.Amount < 0 && scoreOpen >= revertClose) {
+	} else if scoreOpen > setOpen || (balance.Amount < 0 && scoreOpen >= revertClose) {
 		bidAmount = tickRelated.Asks[0].Amount
 		askAmount = tickPerp.Bids[0].Amount
 		if setting.Market == model.OKEX {
@@ -640,7 +642,7 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 		}
 		sidePerp = model.OrderSideSell
 		sideRelated = model.OrderSideBuy
-		if scoreHigh > setOpen {
+		if scoreOpen > setOpen {
 			carryType = carryTypeOpen
 		} else {
 			carryType = carryTypeRevert
@@ -649,7 +651,7 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	markPrice := tickPerp.Asks[0].Price
 	amount = math.Min(bidAmount, askAmount) * 0.5
 	// 开仓时:数量<持仓+可借
-	if scoreLow < setClose || scoreHigh > setOpen {
+	if scoreClose < setClose || scoreOpen > setOpen {
 		if sideRelated == model.OrderSideSell {
 			amount = math.Min(balance.AvailableWithBorrow, math.Abs(amount))
 		}
@@ -689,7 +691,7 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 		marketPerp := model.GetMarketInfo(setting.Market, setting.Symbol)
 		_, amountInReal := model.ParseRealAmount(setting.Market, setting.Symbol, marketPerp.SizeMax)
 		amount = math.Min(amount, amountInReal)
-		if (scoreLow < setClose || scoreHigh > setOpen) && sideRelated == model.OrderSideSell {
+		if (scoreClose < setClose || scoreOpen > setOpen) && sideRelated == model.OrderSideSell {
 			//开仓且卖现货时，最小单笔可借数量限制。有持仓的，需要卖出所有持仓数额再加上最小可借
 			marketRelated := model.GetMarketInfo(setting.Market, setting.SymbolRelated)
 			minBorrow := marketRelated.BorrowSizeMin
@@ -702,11 +704,11 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 		}
 	}
 	if amount > 0 {
-		util.Info(fmt.Sprintf(`+++ usdRate: %f coinRate: %f %s high: %f low: %f symbol: %s %s 
+		util.Info(fmt.Sprintf(`+++ usdRate: %f coinRate: %f %s symbol: %s %s 
 			usd available:%f amount %f balance.Amount: %f scoreHigh: %f setOpen: %f scoreLow: %f setClose: %f
 			revertOpen: %f revertClose: %f do revert: %s`,
-			usdRate, coinRate, key, scoreHigh, scoreLow, setting.Symbol, sidePerp,
-			usdAvailable, amount, balance.Amount, scoreHigh, setOpen, scoreLow, setClose,
+			usdRate, coinRate, key, setting.Symbol, sidePerp,
+			usdAvailable, amount, balance.Amount, scoreOpen, setOpen, scoreClose, setClose,
 			revertOpen, revertClose, doRevert))
 	}
 	msg := setting.Symbol
