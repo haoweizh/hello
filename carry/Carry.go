@@ -571,7 +571,7 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	setClose := math.Min(setting.CloseShortMargin*(0.5+jump*coinRate), -0.003) - fundingRate
 	revertOpen := math.NaN()
 	revertClose := math.NaN()
-	if setting.Market == model.Gate {
+	if setting.Market == model.Gate || setting.Market == model.Ftx {
 		if balance.Amount < 0 {
 			revertClose = setClose / float64(setting.Chance)
 		} else {
