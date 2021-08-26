@@ -577,6 +577,8 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 		} else {
 			revertOpen = -1 * setOpen / float64(setting.Chance)
 		}
+		revertOpen += fundingRate
+		revertClose -= fundingRate
 		if setting.Market != model.Gate {
 			revertOpen += 0.001
 			revertClose += 0.001
