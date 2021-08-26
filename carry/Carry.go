@@ -577,6 +577,10 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 		} else {
 			revertOpen = -1 * setOpen / float64(setting.Chance)
 		}
+		if setting.Market == model.Ftx {
+			revertOpen += 0.001
+			revertClose += 0.001
+		}
 	} else {
 		revertOpen = math.Abs(setting.GridPriceDistance) * (usdRate - 0.5)
 		if revertOpen > 0 {
