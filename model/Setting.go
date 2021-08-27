@@ -23,7 +23,6 @@ type Setting struct {
 	CloseShortMargin  float64 // arbitrary future use
 	Chance            int64   // arbitrary future use
 	GridAmount        float64
-	GridPriceDistance float64
 	AmountLimit       float64
 	ID                uint `gorm:"primary_key"`
 	CreatedAt         time.Time

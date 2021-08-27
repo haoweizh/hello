@@ -527,6 +527,7 @@ func initEmptyBalance(key, secret, market string) {
 
 // revertOpen: 已经正向开仓情况下，平仓时可接受的最低盈利率（可以为负数）
 // revertClose: 已经负向开仓的情况下，平仓时可接受的最低盈利率（可以为负数）
+// setting.GridAmount: revertOpen/revertClose的调整值
 func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, key, doRevert string,
 	scoreOpen, scoreClose float64) (sidePerp, sideRelated string, amount float64, carryType string) {
 	var bidAmount, askAmount float64
@@ -571,30 +572,19 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	setClose := math.Min(setting.CloseShortMargin*(0.5+jump*coinRate), -0.003) - fundingRate
 	revertOpen := math.NaN()
 	revertClose := math.NaN()
-	if setting.Market == model.Gate || setting.Market == model.Ftx || setting.Market == model.OKEX {
-		if balance.Amount < 0 {
-			revertClose = setClose / float64(setting.Chance)
-			if setting.Market != model.Gate {
-				revertClose += 0.001
-			}
-			revertClose -= fundingRate
-		} else {
-			revertOpen = -1 * setOpen / float64(setting.Chance)
-			if setting.Market != model.Gate {
-				revertOpen += 0.001
-			}
-			revertOpen += fundingRate
-		}
+	if balance.Amount < 0 {
+		revertClose = setClose/float64(setting.Chance) + setting.GridAmount - fundingRate
 	} else {
-		revertOpen = math.Abs(setting.GridPriceDistance) * (usdRate - 0.5)
-		if revertOpen > 0 {
-			revertOpen = revertOpen / (1 + jump*coinRate)
-		} else {
-			revertOpen = revertOpen / (1 - math.Min(0.9, jump*coinRate))
-		}
-		revertOpen = math.Max(revertOpen, setting.CloseShortMargin/2) + fundingRate + 0.001
-		revertClose = math.Max(-0.0005/(1-math.Min(0.9, jump*coinRate)), setting.CloseShortMargin/2) - fundingRate + 0.001
+		revertOpen = -1*setOpen/float64(setting.Chance) + setting.GridAmount + fundingRate
 	}
+	//revertOpen = math.Abs(setting.GridPriceDistance) * (usdRate - 0.5)
+	//if revertOpen > 0 {
+	//	revertOpen = revertOpen / (1 + jump*coinRate)
+	//} else {
+	//	revertOpen = revertOpen / (1 - math.Min(0.9, jump*coinRate))
+	//}
+	//revertOpen = math.Max(revertOpen, setting.CloseShortMargin/2) + fundingRate + 0.001
+	//revertClose = math.Max(-0.0005/(1-math.Min(0.9, jump*coinRate)), setting.CloseShortMargin/2) - fundingRate + 0.001
 	usdLowLine := 0.1 * balanceAllValue
 	keys, _ := model.AppConfig.GetKeys(setting.Market)
 	localOpenValueLimit := math.Min(openValueLimit, usdLowLine/3)
@@ -727,8 +717,8 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 		msg = key[0:5] + msg
 	}
 	model.SetCarryInfo(table+setting.Symbol,
-		fmt.Sprintf("%s\n%f %f %f usdAva:%s usdRate:%s 计算%s %s %s %s 市场%s %s 资金费率:%s coinRate:%s 可用:%s ",
-			msg, setting.OpenShortMargin, setting.CloseShortMargin, setting.GridPriceDistance,
+		fmt.Sprintf("%s\n%f %f usdAva:%s usdRate:%s 计算%s %s %s %s 市场%s %s 资金费率:%s coinRate:%s 可用:%s ",
+			msg, setting.OpenShortMargin, setting.CloseShortMargin,
 			strconv.FormatFloat(usdAvailable, 'f', 0, 64),
 			strconv.FormatFloat(100*usdRate, 'f', 0, 64)+"%",
 			strconv.FormatFloat(setOpen, 'f', 4, 64),
@@ -744,7 +734,7 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 		`04.动态平仓`: revertClose, `0.5市场开仓`: scoreOpen, `06.市场关仓`: scoreClose, `07.usd rate`: usdRate,
 		`08.usd available`: usdAvailable, `09. coin rate`: balance.UsdValue / balanceAllValue,
 		`10.可用`: balance.AvailableWithBorrow, `11.资金费率`: fundingRate, `12.` + table: setting.Symbol,
-		`13.正开仓`: setting.OpenShortMargin, `14.负开仓`: setting.CloseShortMargin, `15.平仓`: setting.GridPriceDistance}
+		`13.正开仓`: setting.OpenShortMargin, `14.负开仓`: setting.CloseShortMargin}
 	model.SetCarryInfos(table, setting.Symbol, carryInfo)
 	return sidePerp, sideRelated, amount, carryType
 }
