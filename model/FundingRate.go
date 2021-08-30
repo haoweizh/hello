@@ -1,11 +1,8 @@
 package model
 
-import "time"
-
 var fundingRates = make(map[string]map[string]*FundingRate) // market - symbol - funding rate
 
 type FundingRate struct {
-	FundingTime            time.Time // confirm time if transaction
 	Rate, RateNext         float64
 	UpdateTime, ExpireTime int64
 	Symbol                 string

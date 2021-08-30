@@ -536,17 +536,13 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	usdAvailable := getUsdAvailable(key)
 	coin := model.GetCoin(setting.Market, setting.Symbol)
 	balance := getCarryBalance(key, coin)
-	fundingRate := 0.0
-	fundingRateSuccess := false
-	if setting.Market == model.OKEX || setting.Market == model.Binance {
-		now := time.Now()
-		if now.Hour()%8 == 0 && now.Minute() == 0 && now.Second() < 30 {
-			return
-		}
-		fundingRateSuccess, fundingRate = api.GetFundingRate(setting.Market, setting.Symbol, &carryLock)
-		if !fundingRateSuccess {
-			return
-		}
+	now := time.Now()
+	if now.Hour()%8 == 0 && now.Minute() == 0 && now.Second() < 30 {
+		return
+	}
+	fundingRateSuccess, fundingRate := api.GetFundingRate(setting.Market, setting.Symbol, &carryLock)
+	if !fundingRateSuccess {
+		return
 	}
 	if balance == nil {
 		model.SetCarryInfo(`warning `+coin, fmt.Sprintf(`slave: balace not available!!! %s %s`, key, coin))

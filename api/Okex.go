@@ -1147,12 +1147,11 @@ func getFundingRateOKEX(key, secret, instrumentId string) (fundingRate *model.Fu
 		rateTime, _ := strconv.ParseInt(data[`fundingTime`].(string), 10, 64)
 		rateTime /= 1000
 		return &model.FundingRate{
-			FundingTime: time.Time{},
-			Rate:        rate,
-			RateNext:    rateNext,
-			UpdateTime:  util.GetNow().Unix(),
-			ExpireTime:  rateTime,
-			Symbol:      instrumentId,
+			Rate:       rate,
+			RateNext:   rateNext,
+			UpdateTime: util.GetNow().Unix(),
+			ExpireTime: rateTime,
+			Symbol:     instrumentId,
 		}
 	}
 	return nil

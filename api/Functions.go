@@ -334,7 +334,9 @@ func GetFundingRate(market, symbol string, lock *sync.Mutex) (success bool, rate
 		model.SetFundingRate(market, symbol, fundingRate)
 	case model.Huobi:
 		return true, 0
-		// todo set huobi funding rate
+	case model.Gate:
+		fundingRate = getFundingRateGate(``, ``, symbol)
+		model.SetFundingRate(market, symbol, fundingRate)
 	}
 	if fundingRate != nil && now < fundingRate.ExpireTime {
 		return true, fundingRate.Rate

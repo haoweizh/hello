@@ -588,11 +588,10 @@ func getFundingRateBinance(key, secret, symbol string) (fundingRate *model.Fundi
 	rate, _ := strconv.ParseFloat(rateStr, 64)
 	nextFundingTime := fundingJson.Get(`nextFundingTime`).MustInt64()
 	fundingRate = &model.FundingRate{
-		FundingTime: time.Time{},
-		Rate:        rate,
-		UpdateTime:  util.GetNow().Unix(),
-		ExpireTime:  nextFundingTime / 1000,
-		Symbol:      symbol,
+		Rate:       rate,
+		UpdateTime: util.GetNow().Unix(),
+		ExpireTime: nextFundingTime / 1000,
+		Symbol:     symbol,
 	}
 	return
 }
