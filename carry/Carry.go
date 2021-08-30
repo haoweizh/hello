@@ -595,7 +595,6 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 			}
 			table += fmt.Sprintf(`slave%s`, key[0:5])
 			usdLowLine = 0.2 * balanceAllValue
-			valueLow = 0
 		}
 	}
 	if setting.Market == model.Binance || setting.MarketRelated == model.Binance {
