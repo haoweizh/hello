@@ -646,7 +646,7 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 		}
 	}
 	markPrice := tickPerp.Asks[0].Price
-	amount = math.Min(bidAmount, askAmount) * 0.5
+	amount = math.Min(bidAmount, askAmount) * 0.9
 	// 开仓时:数量<持仓+可借
 	if scoreClose < setClose || scoreOpen > setOpen {
 		if sideRelated == model.OrderSideSell {
