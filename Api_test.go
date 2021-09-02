@@ -134,6 +134,8 @@ func Test_initTurtleN(t *testing.T) {
 
 func Test_wallet(t *testing.T) {
 	model.NewConfig()
+	keys, secrets := model.AppConfig.GetKeys(model.Gate)
+	api.QueryOrderById(keys[0], secrets[0], model.Gate, `ROSE_USDT`, ``, model.OrderTypeLimit, `74164937038`)
 	api.GetFundingRate(model.Gate, `FIL_PERP`, nil)
 	_ = configor.Load(model.AppConfig, "./config.yml")
 	api.GetBalances(``, ``, model.Huobi)

@@ -361,26 +361,27 @@ func QueryOrderById(key, secret, market, symbol, instrument, orderType, orderId 
 	if instrument == `` {
 		instrument = symbol
 	}
-	var dealAmount, dealPrice float64
-	var status string
+	order = &model.Order{OrderId: orderId, Symbol: symbol, Market: market, Instrument: instrument, OrderType: orderType}
 	switch market {
+	case model.Gate:
+		queryOrderGate(key, secret, order)
 	case model.Huobi:
-		dealAmount, dealPrice, status = queryOrderHuobi(key, secret, orderId)
+		order.DealAmount, order.DealPrice, order.Status = queryOrderHuobi(key, secret, orderId)
 	case model.HuobiDM:
 		if orderType == model.OrderTypeStop {
 			isWorking := queryOpenTriggerOrderHuobiDM(key, secret, symbol, orderId)
 			if isWorking {
-				status = model.CarryStatusWorking
+				order.Status = model.CarryStatusWorking
 			} else {
 				relatedOrderId := queryHisTriggerOrderHuobiDM(key, secret, symbol, orderId)
 				if relatedOrderId == `-1` || relatedOrderId == `` {
-					status = model.CarryStatusFail
+					order.Status = model.CarryStatusFail
 				} else {
-					dealAmount, dealPrice, status = queryOrderHuobiDM(key, secret, symbol, relatedOrderId)
+					order.DealAmount, order.DealPrice, order.Status = queryOrderHuobiDM(key, secret, symbol, relatedOrderId)
 				}
 			}
 		} else {
-			dealAmount, dealPrice, status = queryOrderHuobiDM(key, secret, symbol, orderId)
+			order.DealAmount, order.DealPrice, order.Status = queryOrderHuobiDM(key, secret, symbol, orderId)
 		}
 	case model.OKEX:
 		order = queryOrderOKEX(key, secret, instrument, orderId, orderType)
@@ -394,7 +395,7 @@ func QueryOrderById(key, secret, market, symbol, instrument, orderType, orderId 
 	case model.Binance:
 		//dealAmount, dealPrice, status = queryOrderBinance(key, secret, symbol, orderId)
 	case model.Coinpark:
-		dealAmount, dealPrice, status = queryOrderCoinpark(orderId)
+		order.DealAmount, order.DealPrice, order.Status = queryOrderCoinpark(orderId)
 	case model.Bybit:
 		orders := queryOrderBybit(key, secret, symbol, orderId)
 		for _, value := range orders {
@@ -408,14 +409,13 @@ func QueryOrderById(key, secret, market, symbol, instrument, orderType, orderId 
 			if newOrderId != `` {
 				return queryOrderFtx(key, secret, newOrderId)
 			} else {
-				status = queryOpenTriggerOrders(key, secret, symbol, orderId)
+				order.Status = queryOpenTriggerOrders(key, secret, symbol, orderId)
 			}
 		} else {
 			return queryOrderFtx(key, secret, orderId)
 		}
 	}
-	return &model.Order{OrderId: orderId, Symbol: symbol, Market: market, DealAmount: dealAmount, DealPrice: dealPrice,
-		Status: status, Instrument: instrument, OrderType: orderType}
+	return
 }
 
 func GetPosition(market, symbol, address string) (success bool, position *model.Position) {

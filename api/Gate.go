@@ -556,3 +556,53 @@ func getFundingRateGate(key, secret, symbol string) (fundingRate *model.FundingR
 		Symbol:     symbol,
 	}
 }
+
+func queryOrderGate(key, secret string, order *model.Order) {
+	client, ctx := getClientGate(key, secret)
+	tailPerp := model.GetPerpTail(model.Gate)
+	tailSpot := model.GetSpotTail(model.Gate)
+	if tailPerp == order.Symbol[len(order.Symbol)-len(tailPerp):] {
+		orderFuture, _, err := client.FuturesApi.GetFuturesOrder(ctx, `usdt`, order.OrderId)
+		if err != nil {
+			panicGateError(key, "GetFuturesOrder", err)
+			return
+		}
+		order.DealPrice, _ = strconv.ParseFloat(orderFuture.FillPrice, 64)
+		if orderFuture.Status == `open` {
+			order.Status = model.CarryStatusWorking
+		} else if orderFuture.Status == `finished` {
+			switch orderFuture.FinishAs {
+			case `filled`:
+				order.Status = model.CarryStatusSuccess
+			case `cancelled`, `liquidated`, `ioc`, `auto_deleveraged`, `reduce_only`, `position_closed`, `reduce_out`:
+				order.Status = model.CarryStatusFail
+			}
+		}
+		switch orderFuture.Status {
+		case `open`:
+			order.Status = model.CarryStatusWorking
+		case `closed`:
+			order.Status = model.CarryStatusSuccess
+		case `cancelled`:
+			order.Status = model.CarryStatusFail
+		}
+		order.Status = orderFuture.Status
+	} else if tailSpot == order.Symbol[len(order.Symbol)-len(tailSpot):] {
+		orderSpot, _, err := client.SpotApi.GetOrder(ctx, order.OrderId, order.Symbol, nil)
+		if err != nil {
+			panicGateError(key, "GetSpotOrder", err)
+			return
+		}
+		order.DealAmount, _ = strconv.ParseFloat(orderSpot.FilledTotal, 64)
+		order.DealPrice, _ = strconv.ParseFloat(orderSpot.FillPrice, 64)
+		switch orderSpot.Status {
+		case `open`:
+			order.Status = model.CarryStatusWorking
+		case `closed`:
+			order.Status = model.CarryStatusSuccess
+		case `cancelled`:
+			order.Status = model.CarryStatusFail
+		}
+		order.Status = orderSpot.Status
+	}
+}
