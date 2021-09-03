@@ -773,6 +773,16 @@ func InitMarketInfos() (success bool) {
 	return success
 }
 
+func SetBidAsk(key, secret, market, symbol string) {
+	switch market {
+	case model.Gate:
+		tailPerp := model.GetPerpTail(model.Gate)
+		if symbol[len(symbol)-len(tailPerp):] == tailPerp {
+			setBidAskGate(key, secret, symbol)
+		}
+	}
+}
+
 // GetMarketInfo
 func _(market, symbol string) (borrowAble float64) {
 	switch market {
@@ -790,7 +800,7 @@ func CreateMarketDepthServer(markets *model.Markets, market string, orderHandler
 	var err error
 	switch market {
 	case model.Gate:
-		channels, err = WsDepthServeGate(markets, nil)
+		err = WsDepthServeGate()
 	case model.Huobi:
 		channels, err = WsDepthServeHuobi(markets, nil)
 		//channels[0] = channel

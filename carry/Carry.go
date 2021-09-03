@@ -493,6 +493,7 @@ func makeEqual(key, secret string, setting *model.Setting, balances []*model.Bal
 			key, setting.Market, resultPerp, resultRelated, setting.Symbol, amountPerp, setting.SymbolRelated, amountRelated, orderSide, amount))
 		api.PlaceOrder(key, secret, orderSide, model.OrderTypeLimit, setting.Market, symbol, symbol,
 			``, model.FunctionComplement, price, price, amount, true, true, nil)
+		go api.SetBidAsk(key, secret, setting.Market, setting.Symbol)
 	}
 	return
 }
