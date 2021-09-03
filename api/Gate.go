@@ -218,13 +218,13 @@ func WsDepthServeGate(markets *model.Markets, orderHandler OrderHandler) (channe
 	spotWs, spotErr := gateWs.NewWsService(nil, nil, gateWs.NewConnConfFromOption(&gateWs.ConfOptions{
 		URL:          gateWs.BaseUrl,
 		Key:          keys[0],
-		Secret:       model.AppConfig.GateSecret,
+		Secret:       secrets[0],
 		MaxRetryConn: 10,
 	}))
 	futureWs, futureErr := gateWs.NewWsService(nil, nil, gateWs.NewConnConfFromOption(&gateWs.ConfOptions{
 		URL:          gateWs.FuturesUsdtUrl,
-		Key:          secrets[0],
-		Secret:       model.AppConfig.GateSecret,
+		Key:          keys[0],
+		Secret:       secrets[0],
 		MaxRetryConn: 10,
 	}))
 	if spotErr != nil {
@@ -236,6 +236,9 @@ func WsDepthServeGate(markets *model.Markets, orderHandler OrderHandler) (channe
 		return channels, futureErr
 	}
 	callSpotBookTicker := gateWs.NewCallBack(func(msg *gateWs.UpdateMsg) {
+		if msg.Error != nil {
+			util.Notice(fmt.Sprintf("spot ws callback error:%s", msg.Error.Error()))
+		}
 		var update gateWs.SpotBookTickerMsg
 		if err := json.Unmarshal(msg.Result, &update); err != nil {
 			util.Notice(fmt.Sprintf("spot book ticker Unmarshal err:%s", err.Error()))
@@ -253,7 +256,42 @@ func WsDepthServeGate(markets *model.Markets, orderHandler OrderHandler) (channe
 			Bids: []model.Tick{{Price: bidPrice, Amount: bidAmount}},
 			Asks: []model.Tick{{Price: askPrice, Amount: askAmount}}}
 		haveOld, old := markets.GetBidAsk(symbol, model.Gate)
-		if haveOld && old.UpdateId > bidAsk.UpdateId {
+		if haveOld && old.Ts > bidAsk.Ts {
+			return
+		}
+		if markets.SetBidAsk(symbol, model.Gate, &bidAsk) {
+			for function, handler := range model.GetFunctions(model.Gate, symbol) {
+				if handler != nil {
+					settings := model.GetSetting(function, model.Gate, symbol)
+					for _, setting := range settings {
+						go handler(setting, &bidAsk)
+					}
+				}
+			}
+		}
+	})
+	callSpotOrderBook := gateWs.NewCallBack(func(msg *gateWs.UpdateMsg) {
+		if msg.Error != nil {
+			util.Notice(fmt.Sprintf("spot book ws callback error:%s", msg.Error.Error()))
+		}
+		var update gateWs.SpotUpdateAllDepthMsg
+		if err := json.Unmarshal(msg.Result, &update); err != nil {
+			util.Notice(fmt.Sprintf("spot book ticker Unmarshal err:%s", err.Error()))
+		}
+		if update.CurrencyPair == "" {
+			return
+		}
+		symbol := update.CurrencyPair
+		now := int(time.Now().UnixNano() / int64(time.Millisecond))
+		bidPrice, _ := strconv.ParseFloat(update.Bid[0][0], 64)
+		bidAmount, _ := strconv.ParseFloat(update.Bid[0][1], 64)
+		askPrice, _ := strconv.ParseFloat(update.Ask[0][0], 64)
+		askAmount, _ := strconv.ParseFloat(update.Ask[0][1], 64)
+		bidAsk := model.BidAsk{Ts: int(update.TimeInMilli), TsReceived: now, UpdateId: update.LastUpdateId,
+			Bids: []model.Tick{{Price: bidPrice, Amount: bidAmount}},
+			Asks: []model.Tick{{Price: askPrice, Amount: askAmount}}}
+		haveOld, old := markets.GetBidAsk(symbol, model.Gate)
+		if haveOld && old.Ts > bidAsk.Ts {
 			return
 		}
 		if markets.SetBidAsk(symbol, model.Gate, &bidAsk) {
@@ -268,6 +306,9 @@ func WsDepthServeGate(markets *model.Markets, orderHandler OrderHandler) (channe
 		}
 	})
 	callFutureBookTicker := gateWs.NewCallBack(func(msg *gateWs.UpdateMsg) {
+		if msg.Error != nil {
+			util.Notice(fmt.Sprintf("future ws callback error:%s", msg.Error.Error()))
+		}
 		var update FuturesBookTickerModel
 		if err := json.Unmarshal(msg.Result, &update); err != nil {
 			util.Notice(fmt.Sprintf("future book ticker Unmarshal err:%s", err.Error()))
@@ -285,7 +326,7 @@ func WsDepthServeGate(markets *model.Markets, orderHandler OrderHandler) (channe
 			Bids: []model.Tick{{Price: bidPrice, Amount: bidAmount}},
 			Asks: []model.Tick{{Price: askPrice, Amount: askAmount}}}
 		haveOld, old := markets.GetBidAsk(symbol, model.Gate)
-		if haveOld && old.UpdateId > bidAsk.UpdateId {
+		if haveOld && old.Ts > bidAsk.Ts {
 			return
 		}
 		if markets.SetBidAsk(symbol, model.Gate, &bidAsk) {
@@ -299,26 +340,112 @@ func WsDepthServeGate(markets *model.Markets, orderHandler OrderHandler) (channe
 			}
 		}
 	})
-	spotSubscribes := make([]string, 0)
-	futureSubscribes := make([]string, 0)
+	//callFutureOrderBook := gateWs.NewCallBack(func(msg *gateWs.UpdateMsg) {
+	//	if msg.Error != nil {
+	//		util.Notice(fmt.Sprintf("future book ws callback error:%s", msg.Error.Error()))
+	//	}
+	//	var update gateWs.FuturesOrderBookUpdate
+	//	if err := json.Unmarshal(msg.Result, &update); err != nil {
+	//		util.Notice(fmt.Sprintf("future book ticker Unmarshal err:%s", err.Error()))
+	//	}
+	//	if update.Contract == "" {
+	//		return
+	//	}
+	//	symbol := strings.Split(update.Contract, "_")[0] + model.GetPerpTail(model.Gate)
+	//	now := int(time.Now().UnixNano() / int64(time.Millisecond))
+	//	if len(update.Bids) == 0 || len(update.Asks) == 0 {
+	//		return
+	//	}
+	//	var bidPrice,bidAmount,askPrice,askAmount float64
+	//	for _, bid := range update.Bids {
+	//		if bid.P == "" || bid.S == 0 {
+	//			continue
+	//		}
+	//		bidPrice, _ = strconv.ParseFloat(bid.P, 64)
+	//		_, bidAmount = model.ParseRealAmount(model.Gate, symbol, float64(bid.S))
+	//		break
+	//	}
+	//	for _, ask := range update.Asks {
+	//		if ask.P == "" || ask.S == 0 {
+	//			continue
+	//		}
+	//		askPrice, _ = strconv.ParseFloat(ask.P, 64)
+	//		_, askAmount = model.ParseRealAmount(model.Gate, symbol, float64(ask.S))
+	//		break
+	//	}
+	//	if bidPrice == 0 || bidAmount == 0 || askPrice == 0 || askAmount == 0 {
+	//		return
+	//	}
+	//	bidAsk := model.BidAsk{Ts: int(update.TimeMillis), TsReceived: now, UpdateId: update.LastId,
+	//		Bids: []model.Tick{{Price: bidPrice, Amount: bidAmount}},
+	//		Asks: []model.Tick{{Price: askPrice, Amount: askAmount}}}
+	//	haveOld, old := markets.GetBidAsk(symbol, model.Gate)
+	//	if haveOld && old.Ts > bidAsk.Ts {
+	//		return
+	//	}
+	//	if markets.SetBidAsk(symbol, model.Gate, &bidAsk) {
+	//		for function, handler := range model.GetFunctions(model.Gate, symbol) {
+	//			if handler != nil {
+	//				settings := model.GetSetting(function, model.Gate, symbol)
+	//				for _, setting := range settings {
+	//					go handler(setting, &bidAsk)
+	//				}
+	//			}
+	//		}
+	//	}
+	//})
+	tickerSubscribes := make([]string, 0)
+	bookSubscribes := make([]string, 0)
 	symbols := model.GetMarketSymbols(model.Gate)
 	for symbol := range symbols {
 		if strings.Contains(symbol, model.GetSpotTail(model.Gate)) {
-			spotSubscribes = append(spotSubscribes, symbol)
-		} else if strings.Contains(symbol, model.GetPerpTail(model.Gate)) {
-			futureSubscribes = append(futureSubscribes, symbol)
+			tickerSubscribes = append(tickerSubscribes, symbol)
+			bookSubscribes = append(bookSubscribes, symbol)
 		}
 	}
 	spotWs.SetCallBack(gateWs.ChannelSpotBookTicker, callSpotBookTicker)
-	if spotSubErr := spotWs.Subscribe(gateWs.ChannelSpotBookTicker, spotSubscribes); err != nil {
-		util.Notice(fmt.Sprintf("spotWs Subscribe err:%s", err.Error()))
+	if spotSubErr := spotWs.Subscribe(gateWs.ChannelSpotBookTicker, tickerSubscribes); spotSubErr != nil {
+		util.Notice(fmt.Sprintf("spotWs Subscribe err:%s", spotSubErr.Error()))
 		return channels, spotSubErr
 	}
 	futureWs.SetCallBack(gateWs.ChannelFutureBookTicker, callFutureBookTicker)
-	if futureSubErr := futureWs.Subscribe(gateWs.ChannelFutureBookTicker, spotSubscribes); err != nil {
-		util.Notice(fmt.Sprintf("futureWs Subscribe err:%s", err.Error()))
+	if futureSubErr := futureWs.Subscribe(gateWs.ChannelFutureBookTicker, tickerSubscribes); futureSubErr != nil {
+		util.Notice(fmt.Sprintf("futureWs Subscribe err:%s", futureSubErr.Error()))
 		return channels, futureSubErr
 	}
+
+	for _, symbol := range bookSubscribes {
+		spotBookWs, spotBookErr := gateWs.NewWsService(nil, nil, gateWs.NewConnConfFromOption(&gateWs.ConfOptions{
+			URL:          gateWs.BaseUrl,
+			Key:          keys[0],
+			Secret:       secrets[0],
+			MaxRetryConn: 10,
+		}))
+		if spotBookErr != nil {
+			util.Notice(fmt.Sprintf("new spot book wsService err:%s", spotBookErr))
+		}
+		spotBookWs.SetCallBack(gateWs.ChannelSpotOrderBook, callSpotOrderBook)
+		spotPayload := append(make([]string, 0), symbol, "5", "100ms")
+		if spotBookSubErr := spotBookWs.Subscribe(gateWs.ChannelSpotOrderBook, spotPayload); spotBookSubErr != nil {
+			util.Notice(fmt.Sprintf("spotBookWs Subscribe err:%s", spotBookSubErr.Error()))
+		}
+
+		//futureBookWs, futureBookErr := gateWs.NewWsService(nil, nil, gateWs.NewConnConfFromOption(&gateWs.ConfOptions{
+		//	URL:          gateWs.FuturesUsdtUrl,
+		//	Key:          keys[0],
+		//	Secret:       secrets[0],
+		//	MaxRetryConn: 10,
+		//}))
+		//if futureBookErr != nil {
+		//	util.Notice(fmt.Sprintf("new future book wsService err:%s", futureBookErr))
+		//}
+		//futurePayload := append(make([]string, 0), symbol, "100ms", "5")
+		//futureBookWs.SetCallBack(gateWs.ChannelFutureOrderBookUpdate, callFutureOrderBook)
+		//if futureBookSubErr := futureBookWs.Subscribe(gateWs.ChannelFutureOrderBookUpdate, futurePayload); futureBookSubErr != nil {
+		//	util.Notice(fmt.Sprintf("futureBookWs Subscribe err:%s", futureBookSubErr.Error()))
+		//}
+	}
+
 	channels = make([]chan struct{}, 0)
 	ch := make(chan struct{}, 10)
 	channels = append(channels, ch)
