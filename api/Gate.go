@@ -259,18 +259,6 @@ var tickerHandler = gateWs.NewCallBack(func(msg *gateWs.UpdateMsg) {
 			bidAsk.Bids = append(bidAsk.Bids, model.Tick{Price: bidPrice, Amount: bidAmount})
 			bidAsk.Asks = append(bidAsk.Asks, model.Tick{Price: askPrice, Amount: askAmount})
 		}
-		m := model.AppMarkets
-		_, o := m.GetBidAsk(symbol, model.Gate)
-		if symbol == `ROSE_USDT` && o != nil {
-			c := false
-			for i := 0; i < bidAsk.Bids.Len() && i < o.Bids.Len(); i++ {
-				if o.Bids[i].Price != bidAsk.Bids[i].Price || o.Bids[i].Amount != bidAsk.Bids[i].Amount ||
-					o.Asks[i].Price != bidAsk.Asks[i].Price || o.Asks[i].Amount != bidAsk.Asks[i].Amount {
-					c = true
-				}
-			}
-			fmt.Println(fmt.Sprintf(`%d %d %v`, bidAsk.Ts-o.Ts, bidAsk.Bids.Len(), c))
-		}
 	// Push best bid and ask in real-time.
 	case gateWs.ChannelFutureBookTicker:
 		var update FuturesBookTickerModel
