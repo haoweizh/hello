@@ -35,6 +35,9 @@ const turtleTriggerDelta = 0.005
 var turtling = false
 var turtleLock sync.Mutex
 
+// 当天是否有平仓
+var turtleClosed = make(map[string]map[string]bool) // market - symbol - closed
+
 func getTurtling() (value bool) {
 	turtleLock.Lock()
 	defer turtleLock.Unlock()
@@ -88,9 +91,11 @@ func GetTurtleData(setting *model.Setting) (turtleData *TurtleData) {
 	today, todayStr := model.GetMarketToday(setting.Market)
 	if dataSet[setting.Market] == nil {
 		dataSet[setting.Market] = make(map[string]map[string]*TurtleData)
+		turtleClosed[setting.Market] = make(map[string]bool)
 	}
 	if dataSet[setting.Market][setting.Symbol] == nil {
 		dataSet[setting.Market][setting.Symbol] = make(map[string]*TurtleData)
+		turtleClosed[setting.Market][setting.Symbol] = false
 	}
 	if dataSet[setting.Market][setting.Symbol][todayStr] != nil {
 		return dataSet[setting.Market][setting.Symbol][todayStr]
@@ -234,7 +239,7 @@ var ProcessTurtle = func(setting *model.Setting, tick *model.BidAsk) {
 	priceLong := turtleData.highDays20
 	priceShort := turtleData.lowDays20
 	longBreak, shortBreak := checkTurtleBreak(setting, turtleData, tick)
-	if setting.Chance == 0 { // 开初始仓
+	if setting.Chance == 0 && !turtleClosed[setting.Market][setting.Symbol] { // 开初始仓
 		priceShort, priceLong = placeTurtleOrders(turtleData, setting, currentN, priceShort, priceLong)
 		if tick.Asks[0].Price >= priceLong && currentN < int64(setting.AmountLimit) {
 			handleBreak(setting, turtleData, model.OrderSideBuy)
@@ -292,6 +297,7 @@ var ProcessTurtle = func(setting *model.Setting, tick *model.BidAsk) {
 					util.Notice(`fail to send mail %s`, err.Error())
 				}
 			}()
+			turtleClosed[setting.Market][setting.Symbol] = true
 			setting.Chance = 0
 			setting.GridAmount = 0
 			model.AppDB.Model(setting).Where("market= ? and symbol= ? and function= ?",
@@ -335,6 +341,7 @@ var ProcessTurtle = func(setting *model.Setting, tick *model.BidAsk) {
 			}()
 			setting.Chance = 0
 			setting.GridAmount = 0
+			turtleClosed[setting.Market][setting.Symbol] = true
 			model.AppDB.Model(setting).Where("market= ? and symbol= ? and function= ?",
 				setting.Market, setting.Symbol, model.FunctionTurtle).Updates(map[string]interface{}{
 				`price_x`: setting.PriceX, `chance`: setting.Chance, `grid_amount`: setting.GridAmount})
