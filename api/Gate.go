@@ -640,7 +640,8 @@ func setBidAskGate(key, secret, symbol string) {
 		panicGateError(key, "setFutureTicker", err)
 	}
 	result, oldBidAsk := model.AppMarkets.GetBidAsk(symbol, model.Gate)
-	if result && float64(oldBidAsk.Ts) > orderBook.Update*1000 {
+	if result && float64(oldBidAsk.Ts) > orderBook.Update*1000 || orderBook.Bids == nil || len(orderBook.Bids) < 1 ||
+		orderBook.Asks == nil || len(orderBook.Asks) < 1 {
 		return
 	}
 	bidPrice, _ := strconv.ParseFloat(orderBook.Bids[0].P, 64)
