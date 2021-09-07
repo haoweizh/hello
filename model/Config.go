@@ -14,6 +14,8 @@ type Config struct {
 	DBConnection   string
 	Env            string
 	FutureAddress  string
+	KucoinKey      string
+	KucoinSecret   string
 	GateKey        string
 	GateSecret     string
 	GateSpot       bool
@@ -46,6 +48,8 @@ func (config *Config) GetKeys(market string) (keys, secrets []string) {
 	config.lock.Lock()
 	defer config.lock.Unlock()
 	switch market {
+	case Kucoin:
+		return strings.Split(config.KucoinKey, `,`), strings.Split(config.KucoinSecret, `,`)
 	case Gate:
 		return strings.Split(config.GateKey, `,`), strings.Split(config.GateSecret, `,`)
 	case Ftx:

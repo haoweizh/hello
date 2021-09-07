@@ -768,6 +768,9 @@ func InitMarketInfos() (success bool) {
 					}
 				}
 			}
+		case model.Kucoin:
+			_, marketInfos := getMarketsKucoin("", "")
+			model.SetMarketInfos(model.Kucoin, marketInfos)
 		}
 	}
 	return success
@@ -799,6 +802,8 @@ func CreateMarketDepthServer(markets *model.Markets, market string, orderHandler
 	channels = make([]chan struct{}, 1)
 	var err error
 	switch market {
+	case model.Kucoin:
+
 	case model.Gate:
 		err = WsDepthServeGate()
 	case model.Huobi:
