@@ -691,12 +691,10 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 		if !model.AppConfig.GateSpot && (scoreClose < setClose || scoreOpen > setOpen) && sideRelated == model.OrderSideSell {
 			//开仓且卖现货时，最小单笔可借数量限制。有持仓的，需要卖出所有持仓数额再加上最小可借
 			marketRelated := model.GetMarketInfo(setting.Market, setting.SymbolRelated)
-			minBorrow := marketRelated.BorrowSizeMin
-			if balance.Amount > 0 {
-				minBorrow += balance.Amount
-			}
-			if amount < minBorrow {
-				amount = math.Abs(balance.Amount)
+			if balance.Amount > 0 && balance.Amount < amount {
+				amount = math.Max(amount, balance.Amount+marketRelated.BorrowSizeMin)
+			} else if balance.Amount < 0 {
+				amount = math.Max(amount, marketRelated.BorrowSizeMin)
 			}
 		}
 	}
