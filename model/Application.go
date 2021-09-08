@@ -268,7 +268,7 @@ func GetSymbol(market, subscribe string) (symbol string) {
 }
 
 func NewConfig() {
-	AppConfig = &Config{}
+	AppConfig = &Config{GateSpot: true}
 	err := configor.Load(AppConfig, "./config.yml")
 	if err != nil {
 		util.Notice(err.Error())
