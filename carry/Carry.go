@@ -585,6 +585,9 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	usdLowLine := 0.1 * balanceAllValue
 	keys, _ := model.AppConfig.GetKeys(setting.Market)
 	localOpenValueLimit := math.Min(openValueLimit, usdLowLine/3)
+	if setting.Market == model.Gate {
+		localOpenValueLimit = math.Min(openValueLimit/2, usdLowLine/3)
+	}
 	table := fmt.Sprintf(`%s_dynamic_`, model.FunctionCarry)
 	accountRates := strings.Split(model.AppConfig.AccountRate, `,`)
 	for i := 1; i < len(keys); i++ {
