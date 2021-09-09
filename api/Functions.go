@@ -508,9 +508,6 @@ func PlaceOrder(key, secret, orderSide, orderType, market, symbol, instrument, o
 	order = &model.Order{OrderSide: markSide, OrderType: orderType, Market: market, Symbol: symbol, Price: price,
 		Amount: amount, DealAmount: 0, DealPrice: price, RefreshType: refreshType, TriggerPrice: triggerPrice,
 		OrderTime: util.GetNow(), UnfilledQuantity: amount, Instrument: instrument, AmountType: key}
-	//price, strPrice := util.FormatNum(price, GetPriceDecimal(market, symbol))
-	//triggerPrice, strTriggerPrice := util.FormatNum(triggerPrice, GetPriceDecimal(market, symbol))
-	//_, strAmount := util.FormatNum(amount, GetAmountDecimal(market))
 	util.Notice(fmt.Sprintf(`...%s %s %s before order %d amount: %f price:%f triggerPrice:%f`,
 		orderSide, market, symbol, start, amount, price, triggerPrice))
 	if model.AppConfig.Env == `test` {

@@ -135,6 +135,12 @@ func Test_initTurtleN(t *testing.T) {
 func Test_wallet(t *testing.T) {
 	model.NewConfig()
 	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
+	api.InitMarketInfos()
+	order := api.PlaceOrder(model.AppConfig.GateKey, model.AppConfig.GateSecret, model.OrderSideBuy, model.OrderTypeLimit, model.Gate, `ETH_USDT`, ``, ``, `carry`,
+		2000, 2000, 0.1, true, false, nil)
+	fmt.Println(order.OrderId)
+	api.CancelOrders(model.AppConfig.GateKey, model.AppConfig.GateSecret, model.Gate, `ETH_USDT`)
+	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
 	keys, secrets := model.AppConfig.GetKeys(model.Gate)
 	api.InitMarketInfos()
 	api.SetBidAsk(keys[0], secrets[0], model.Gate, `ROSE_PERP`)
@@ -145,7 +151,7 @@ func Test_wallet(t *testing.T) {
 	api.GetBalances(``, ``, model.Huobi)
 	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
 	api.InitMarketInfos()
-	order := api.QueryOrderById(``, ``, model.OKEX, `ETH-USDT-SWAP`, `ETH-USDT-SWAP`, model.OrderTypeStop, `320881041032523776`)
+	order = api.QueryOrderById(``, ``, model.OKEX, `ETH-USDT-SWAP`, `ETH-USDT-SWAP`, model.OrderTypeStop, `320881041032523776`)
 	fmt.Println(order.DealAmount)
 	fmt.Println(order.DealPrice)
 	fmt.Println(order.Status)
