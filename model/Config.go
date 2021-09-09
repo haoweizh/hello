@@ -6,42 +6,44 @@ import (
 )
 
 type Config struct {
-	lock           sync.Mutex
-	ChannelSlot    float64
-	CarryClose     string
-	Delay          float64
-	AccountRate    string // 不同账户开仓门槛比例
-	DBConnection   string
-	Env            string
-	FutureAddress  string
-	KucoinKey      string
-	KucoinSecret   string
-	GateKey        string
-	GateSecret     string
-	GateSpot       bool
-	HuobiKey       string
-	HuobiSecret    string
-	OkexKey        string
-	OkexSecret     string
-	FtxKey         string
-	FtxSecret      string
-	BinanceKey     string
-	BinanceSecret  string
-	CoinparkKey    string
-	CoinparkSecret string
-	DFutureKey     string
-	DFutureSecret  string
-	BitmexKey      string
-	BitmexSecret   string
-	BybitKey       string
-	BybitSecret    string
-	Phase          string
-	Handle         string // 0 不执行处理程序，1执行处理程序
-	Mail           string
-	FromMail       string
-	FromMailAuth   string
-	Port           string
-	WalletKey      string
+	lock                sync.Mutex
+	ChannelSlot         float64
+	CarryClose          string
+	Delay               float64
+	AccountRate         string // 不同账户开仓门槛比例
+	DBConnection        string
+	Env                 string
+	FutureAddress       string
+	KucoinRelatedKey    string
+	KucoinRelatedSecret string
+	KucoinFutureKey     string
+	KucoinFutureSecret  string
+	GateKey             string
+	GateSecret          string
+	GateSpot            bool
+	HuobiKey            string
+	HuobiSecret         string
+	OkexKey             string
+	OkexSecret          string
+	FtxKey              string
+	FtxSecret           string
+	BinanceKey          string
+	BinanceSecret       string
+	CoinparkKey         string
+	CoinparkSecret      string
+	DFutureKey          string
+	DFutureSecret       string
+	BitmexKey           string
+	BitmexSecret        string
+	BybitKey            string
+	BybitSecret         string
+	Phase               string
+	Handle              string // 0 不执行处理程序，1执行处理程序
+	Mail                string
+	FromMail            string
+	FromMailAuth        string
+	Port                string
+	WalletKey           string
 }
 
 func (config *Config) GetKeys(market string) (keys, secrets []string) {
@@ -49,7 +51,7 @@ func (config *Config) GetKeys(market string) (keys, secrets []string) {
 	defer config.lock.Unlock()
 	switch market {
 	case Kucoin:
-		return strings.Split(config.KucoinKey, `,`), strings.Split(config.KucoinSecret, `,`)
+		return strings.Split(config.KucoinRelatedSecret, `,`), strings.Split(config.KucoinRelatedSecret, `,`)
 	case Gate:
 		return strings.Split(config.GateKey, `,`), strings.Split(config.GateSecret, `,`)
 	case Ftx:

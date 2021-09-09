@@ -236,6 +236,8 @@ func GetBalances(key, secret, market string) (
 	//	return true, balances, totalInUsd, collateral
 	//}
 	switch market {
+	case model.Kucoin:
+		success, balances = getBalanceKucoin(key, secret)
 	case model.Gate:
 		success, balances = getBalanceGate(key, secret)
 	case model.Ftx:
@@ -437,6 +439,8 @@ func GetPosition(market, symbol, address string) (success bool, position *model.
 
 func GetPositions(key, secret, market string) (success bool, positions []*model.Position, posBalance float64) {
 	switch market {
+	case model.Kucoin:
+		return getPositionsKucoin(key, secret)
 	case model.Gate:
 		return getPositionsGate(key, secret)
 	case model.Huobi:
@@ -803,7 +807,7 @@ func CreateMarketDepthServer(markets *model.Markets, market string, orderHandler
 	var err error
 	switch market {
 	case model.Kucoin:
-
+		err = WsDepthServeKucoin()
 	case model.Gate:
 		err = WsDepthServeGate()
 	case model.Huobi:
