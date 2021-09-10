@@ -365,8 +365,8 @@ func placeCarry(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, key
 		api.PlaceOrder(key, secret, sideRelated, model.OrderTypeLimit, setting.Market, setting.SymbolRelated,
 			``, ``, model.FunctionCarry, relatedPrice, relatedPrice,
 			amount, true, true, postOrderCarry)
-		time.Sleep(time.Second / 5)
 	}
+	time.Sleep(time.Second / 4)
 	if placeSuccess {
 		usdAvailable := getUsdAvailable(key)
 		balanceAllValue := getBalanceAll(key)
