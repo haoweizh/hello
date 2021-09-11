@@ -72,6 +72,8 @@ func MustCancel(key, secret, market, symbol, instrument, orderType, orderId stri
 
 func CancelOrders(key, secret, market, symbol string) (result bool) {
 	switch market {
+	case model.Kucoin:
+		return cancelOrdersKucoin(key, secret, symbol)
 	case model.Gate:
 		return cancelOrdersGate(key, secret, symbol)
 	case model.Huobi:
@@ -339,6 +341,8 @@ func GetFundingRate(market, symbol string, lock *sync.Mutex) (success bool, rate
 	case model.Gate:
 		fundingRate = getFundingRateGate(``, ``, symbol)
 		model.SetFundingRate(market, symbol, fundingRate)
+	case model.Kucoin:
+		return true, 0
 	}
 	if fundingRate != nil && now < fundingRate.ExpireTime {
 		return true, fundingRate.Rate
@@ -528,6 +532,8 @@ func PlaceOrder(key, secret, orderSide, orderType, market, symbol, instrument, o
 		return
 	}
 	switch market {
+	case model.Kucoin:
+		placeOrderKucoin(key, symbol, order, orderSide, orderType, symbol, price, amount)
 	case model.Gate:
 		placeOrderGate(key, secret, order, orderSide, orderType, symbol, price, amount)
 	case model.DFuture:
@@ -730,6 +736,8 @@ func Transfer(key, secret, market, transferType string, amount float64) {
 		transferHuobi(key, secret, transferType, amount)
 	} else if market == model.Gate {
 		transferGate(key, secret, transferType, amount)
+	} else if market == model.Kucoin {
+		transferKucoin(key, secret, transferType, amount)
 	}
 }
 
@@ -807,7 +815,7 @@ func CreateMarketDepthServer(markets *model.Markets, market string, orderHandler
 	var err error
 	switch market {
 	case model.Kucoin:
-		err = WsDepthServeKucoin()
+		channels, err = WsDepthServeKucoin()
 	case model.Gate:
 		err = WsDepthServeGate()
 	case model.Huobi:
