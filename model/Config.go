@@ -45,7 +45,10 @@ type Config struct {
 	Port                string
 	WalletKey           string
 
-	Amount float64
+	Amount         float64
+	DelaySpotLimit int64
+	DelayPerpLimit int64
+	DelayTickLimit int64
 }
 
 func (config *Config) GetKeys(market string) (keys, secrets []string) {

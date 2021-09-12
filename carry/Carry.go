@@ -284,6 +284,13 @@ var ProcessCarry = func(setting *model.Setting, tick *model.BidAsk) {
 		if delayTick > 40 || delayRelated > 30000 || delayPerp > 30000 {
 			exit = true
 		}
+	case model.Kucoin:
+		delaySpotLimit := model.AppConfig.DelaySpotLimit
+		delayPerpLimit := model.AppConfig.DelayPerpLimit
+		delayTickLimit := model.AppConfig.DelayTickLimit
+		if delayTick > delayTickLimit || delayRelated > delaySpotLimit || delayPerp > delayPerpLimit {
+			exit = true
+		}
 	}
 	if exit {
 		return
@@ -563,10 +570,13 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 		util.Debug(`stop carry for 10 times unknown carry %s %s`, key, coin)
 		return
 	}
+
+	openGap := setting.PriceX
+
 	coinRate := math.Abs(balance.UsdValue) / balanceAllValue
 	jump := 7.0
-	setOpen := math.Max((1.5-usdRate)*setting.OpenShortMargin*(0.5+jump*coinRate), 0.003) - fundingRate
-	setClose := math.Min(setting.CloseShortMargin*(0.5+jump*coinRate), -0.003) - fundingRate
+	setOpen := math.Max((1.5-usdRate)*setting.OpenShortMargin*(0.5+jump*coinRate), openGap) - fundingRate
+	setClose := math.Min(setting.CloseShortMargin*(0.5+jump*coinRate), -1*openGap) - fundingRate
 	revertOpen := math.NaN()
 	revertClose := math.NaN()
 	if balance.Amount < 0 {
