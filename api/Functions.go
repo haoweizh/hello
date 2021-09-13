@@ -72,6 +72,8 @@ func MustCancel(key, secret, market, symbol, instrument, orderType, orderId stri
 
 func CancelOrders(key, secret, market, symbol string) (result bool) {
 	switch market {
+	case model.Kucoin:
+		return cancelOrdersKucoin(key, secret, symbol)
 	case model.Gate:
 		return cancelOrdersGate(key, secret, symbol)
 	case model.Huobi:
@@ -236,6 +238,8 @@ func GetBalances(key, secret, market string) (
 	//	return true, balances, totalInUsd, collateral
 	//}
 	switch market {
+	case model.Kucoin:
+		success, balances = getBalanceKucoin(key, secret)
 	case model.Gate:
 		success, balances = getBalanceGate(key, secret)
 	case model.Ftx:
@@ -337,6 +341,8 @@ func GetFundingRate(market, symbol string, lock *sync.Mutex) (success bool, rate
 	case model.Gate:
 		fundingRate = getFundingRateGate(``, ``, symbol)
 		model.SetFundingRate(market, symbol, fundingRate)
+	case model.Kucoin:
+		return true, 0
 	}
 	if fundingRate != nil && now < fundingRate.ExpireTime {
 		return true, fundingRate.Rate
@@ -437,6 +443,8 @@ func GetPosition(market, symbol, address string) (success bool, position *model.
 
 func GetPositions(key, secret, market string) (success bool, positions []*model.Position, posBalance float64) {
 	switch market {
+	case model.Kucoin:
+		return getPositionsKucoin(key, secret)
 	case model.Gate:
 		return getPositionsGate(key, secret)
 	case model.Huobi:
@@ -521,6 +529,8 @@ func PlaceOrder(key, secret, orderSide, orderType, market, symbol, instrument, o
 		return
 	}
 	switch market {
+	case model.Kucoin:
+		placeOrderKucoin(key, symbol, order, orderSide, orderType, symbol, price, amount)
 	case model.Gate:
 		placeOrderGate(key, secret, order, orderSide, orderType, symbol, price, amount)
 	case model.DFuture:
@@ -723,6 +733,8 @@ func Transfer(key, secret, market, transferType string, amount float64) {
 		transferHuobi(key, secret, transferType, amount)
 	} else if market == model.Gate {
 		transferGate(key, secret, transferType, amount)
+	} else if market == model.Kucoin {
+		transferKucoin(key, secret, transferType, amount)
 	}
 }
 
@@ -765,6 +777,9 @@ func InitMarketInfos() (success bool) {
 					}
 				}
 			}
+		case model.Kucoin:
+			_, marketInfos := getMarketsKucoin("", "")
+			model.SetMarketInfos(model.Kucoin, marketInfos)
 		}
 	}
 	return success
@@ -796,6 +811,8 @@ func CreateMarketDepthServer(markets *model.Markets, market string, orderHandler
 	channels = make([]chan struct{}, 1)
 	var err error
 	switch market {
+	case model.Kucoin:
+		channels, err = WsDepthServeKucoin()
 	case model.Gate:
 		err = WsDepthServeGate()
 	case model.Huobi:

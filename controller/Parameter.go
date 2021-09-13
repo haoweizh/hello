@@ -367,6 +367,7 @@ func GetParameters(c *gin.Context) {
 	keyGate, _ := model.AppConfig.GetKeys(model.Gate)
 	keyBinance, _ := model.AppConfig.GetKeys(model.Binance)
 	keyHuobi, _ := model.AppConfig.GetKeys(model.Huobi)
+	keyKucoin, _ := model.AppConfig.GetKeys(model.Kucoin)
 	duration, _ := time.ParseDuration(`-96h`)
 	timeBegin := time.Now().Add(duration)
 	timeBegin = time.Date(timeBegin.Year(), timeBegin.Month(), timeBegin.Day(), 0, 0, 0, 0, timeBegin.Location())
@@ -399,7 +400,8 @@ func GetParameters(c *gin.Context) {
 				(marketName == model.OKEX && amountType == keyOKEX[0]) ||
 				(marketName == model.Binance && amountType == keyBinance[0]) ||
 				(marketName == model.Huobi && amountType == keyHuobi[0]) ||
-				(marketName == model.Gate && amountType == keyGate[0]) {
+				(marketName == model.Gate && amountType == keyGate[0]) ||
+				(marketName == model.Kucoin && amountType == keyKucoin[0]) {
 				if orderNum > 0 {
 					failRate = failData[key] / orderNum
 				}

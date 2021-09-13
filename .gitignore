@@ -2,5 +2,5 @@
 log
 config.yml
 /vendor/
-go.mod
+#go.mod
 go.sum

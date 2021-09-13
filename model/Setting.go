@@ -249,6 +249,11 @@ func GetCoin(market, symbol string) (coin string) {
 		if len(parts) == 2 {
 			coin = parts[0]
 		}
+	case Kucoin:
+		parts := strings.Split(symbol, `-`)
+		if len(parts) == 2 {
+			coin = parts[0]
+		}
 	}
 	return coin
 }
@@ -265,6 +270,8 @@ func GetSpotTail(market string) string {
 		return `USDT`
 	case Gate:
 		return `_USDT`
+	case Kucoin:
+		return `-USDT`
 	}
 	return ``
 }
@@ -281,6 +288,8 @@ func GetPerpTail(market string) string {
 		return `-PERP`
 	case Gate:
 		return `_PERP`
+	case Kucoin:
+		return `-PERP`
 	}
 	return ``
 }
