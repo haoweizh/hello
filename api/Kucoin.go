@@ -551,7 +551,7 @@ func placeOrderKucoin(key, secret string, order *model.Order, orderSide, orderTy
 		params["side"] = orderSide
 		params["symbol"] = futureSymbol
 		params["type"] = orderType
-		params["leverage"] = "5"
+		params["leverage"] = "10"
 		priceFuture, decimalFuture := model.FormatPrice(model.Kucoin, symbol, orderSide, price)
 		params["price"] = util.CutTailZero(strconv.FormatFloat(priceFuture, 'f', decimalFuture, 64))
 		params["size"] = util.CutTailZero(fmt.Sprintf(`%f`, model.GetAmountInMarket(model.Kucoin, symbol, amount)))
@@ -577,7 +577,8 @@ func placeOrderKucoin(key, secret string, order *model.Order, orderSide, orderTy
 			order.OrderTime = time.Now()
 			order.Price, _ = strconv.ParseFloat(params["price"], 64)
 			order.OrderSide = orderSide
-			order.Amount, _ = strconv.ParseFloat(params["size"], 64)
+			orderAmount, _ := strconv.ParseFloat(params["size"], 64)
+			_, order.Amount = model.ParseRealAmount(model.Kucoin, order.Symbol, orderAmount)
 			order.DealAmount = order.Amount
 			order.OrderType = orderType
 			order.Status = model.CarryStatusWorking
