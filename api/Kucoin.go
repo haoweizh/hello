@@ -44,6 +44,20 @@ func kucoinRelatedClient(key, secret, passPhrase string) *kucoin.ApiService {
 	return client
 }
 
+func setFutureAutoDeposit(key, secret string) {
+	coins := model.GetSettingCoins(model.FunctionCarry, model.Kucoin)
+	for coin, _ := range coins {
+		params := make(map[string]string)
+		params["symbol"] = coin + "USDTM"
+		params["status"] = "true"
+		resp, err := kucoinFutureClient("", "", "").AutoDepositStatus(params)
+		if err != nil || !resp.HttpSuccessful() || !resp.ApiSuccessful() {
+			util.SocketInfo(fmt.Sprintf("function: %s symbol: %s kucoin API error", "setFutureAutoDeposit", params["symbol"]))
+		}
+	}
+
+}
+
 func getMarketsKucoin(key, secret string) (success bool, marketInfos map[string]*model.MarketInfo) {
 	marketInfos = make(map[string]*model.MarketInfo)
 	appendRelatedMarketsKucoin(key, secret, marketInfos)
@@ -67,7 +81,7 @@ func appendRelatedMarketsKucoin(key, secret string, marketInfos map[string]*mode
 		if !related.EnableTrading || related.QuoteCurrency != "USDT" {
 			continue
 		}
-		if !related.IsMarginEnabled {
+		if !model.AppConfig.KucoinSpot && !related.IsMarginEnabled {
 			continue
 		}
 		marketInfo := &model.MarketInfo{}
@@ -358,36 +372,64 @@ func handleKucoinWS(relatedMsg *kucoin.WebSocketDownstreamMessage, futureMsg *ku
 }
 
 func getBalanceKucoin(key string, secret string) (success bool, balances []*model.Balance) {
-	accountResp, err := kucoinRelatedClient("", "", "").MarginAccount()
-	if err != nil {
-		util.SocketInfo(fmt.Sprintf("fail to refresh margin balance kucoin, err:%s", err))
-		time.Sleep(time.Second * 2)
-		return getBalanceKucoin(key, secret)
-	}
-	marshal, _ := json.Marshal(accountResp)
-	util.SocketInfo(fmt.Sprintf(`get margin balance response: %s`, marshal))
-	marginAccount := &kucoin.MarginAccountModel{}
-	respError := accountResp.ReadData(marginAccount)
-	if respError != nil {
-		util.SocketInfo(fmt.Sprintf("fail to get margin balance response kucoin, err:%s", respError))
-		return false, balances
-	}
-	balances = make([]*model.Balance, 0)
-	for _, account := range marginAccount.Accounts {
-		balance := &model.Balance{AccountId: key, BalanceTime: util.GetNow(), Market: model.Kucoin, Coin: account.Currency}
-
-		balance.FrozenAmount, _ = account.HoldBalance.Float64()
-		available, _ := account.AvailableBalance.Float64()
-		balance.Borrow, _ = account.Liability.Float64()
-		canBorrow, _ := account.MaxBorrowSize.Float64()
-		balance.AvailableWithBorrow = available + canBorrow
-		balance.Amount, _ = account.TotalBalance.Float64()
-		balance.Amount = balance.Amount - balance.Borrow
-		priceGet, bidAsk := model.AppMarkets.GetBidAsk(balance.Coin+model.GetSpotTail(model.Kucoin), model.Kucoin)
-		if priceGet {
-			balance.UsdValue = balance.Amount * bidAsk.Bids[0].Price
+	if model.AppConfig.KucoinSpot {
+		accountResp, err := kucoinRelatedClient("", "", "").Accounts("", "trade")
+		if err != nil {
+			util.SocketInfo(fmt.Sprintf("fail to refresh spot balance kucoin, err:%s", err))
+			time.Sleep(time.Second * 2)
+			return getBalanceKucoin(key, secret)
 		}
-		balances = append(balances, balance)
+		marshal, _ := json.Marshal(accountResp)
+		util.SocketInfo(fmt.Sprintf(`get spot balance response: %s`, marshal))
+		spotAccounts := &kucoin.AccountsModel{}
+		respError := accountResp.ReadData(spotAccounts)
+		if respError != nil {
+			util.SocketInfo(fmt.Sprintf("fail to get spot balance response kucoin, err:%s", respError))
+			return false, balances
+		}
+		balances = make([]*model.Balance, 0)
+		for _, account := range *spotAccounts {
+			balance := &model.Balance{AccountId: key, BalanceTime: util.GetNow(), Market: model.Kucoin, Coin: account.Currency}
+			balance.FrozenAmount, _ = strconv.ParseFloat(account.Holds, 64)
+			balance.Amount, _ = strconv.ParseFloat(account.Balance, 64)
+			balance.AvailableWithBorrow, _ = strconv.ParseFloat(account.Available, 64)
+			priceGet, bidAsk := model.AppMarkets.GetBidAsk(balance.Coin+model.GetSpotTail(model.Kucoin), model.Kucoin)
+			if priceGet {
+				balance.UsdValue = balance.Amount * bidAsk.Bids[0].Price
+			}
+			balances = append(balances, balance)
+		}
+	} else {
+		accountResp, err := kucoinRelatedClient("", "", "").MarginAccount()
+		if err != nil {
+			util.SocketInfo(fmt.Sprintf("fail to refresh margin balance kucoin, err:%s", err))
+			time.Sleep(time.Second * 2)
+			return getBalanceKucoin(key, secret)
+		}
+		marshal, _ := json.Marshal(accountResp)
+		util.SocketInfo(fmt.Sprintf(`get margin balance response: %s`, marshal))
+		marginAccount := &kucoin.MarginAccountModel{}
+		respError := accountResp.ReadData(marginAccount)
+		if respError != nil {
+			util.SocketInfo(fmt.Sprintf("fail to get margin balance response kucoin, err:%s", respError))
+			return false, balances
+		}
+		balances = make([]*model.Balance, 0)
+		for _, account := range marginAccount.Accounts {
+			balance := &model.Balance{AccountId: key, BalanceTime: util.GetNow(), Market: model.Kucoin, Coin: account.Currency}
+			balance.FrozenAmount, _ = account.HoldBalance.Float64()
+			available, _ := account.AvailableBalance.Float64()
+			balance.Borrow, _ = account.Liability.Float64()
+			canBorrow, _ := account.MaxBorrowSize.Float64()
+			balance.AvailableWithBorrow = available + canBorrow
+			balance.Amount, _ = account.TotalBalance.Float64()
+			balance.Amount = balance.Amount - balance.Borrow
+			priceGet, bidAsk := model.AppMarkets.GetBidAsk(balance.Coin+model.GetSpotTail(model.Kucoin), model.Kucoin)
+			if priceGet {
+				balance.UsdValue = balance.Amount * bidAsk.Bids[0].Price
+			}
+			balances = append(balances, balance)
+		}
 	}
 	return true, balances
 }
@@ -495,12 +537,14 @@ func cancelOrdersKucoin(key string, secret string, symbol string) (result bool) 
 		}
 	} else {
 		param := map[string]string{}
+		if model.AppConfig.KucoinSpot {
+			param["tradeType"] = "TRADE"
+		} else {
+			param["tradeType"] = "MARGIN_TRADE"
+		}
 		param["symbol"] = symbol
-		param["tradeType"] = "MARGIN_TRADE"
 		req := kucoin.NewRequest(http.MethodDelete, "/api/v1/orders", param)
 		apiResponse, err := kucoinRelatedClient("", "", "").Call(req)
-		//杠杆不确实是否需要执行tradeType
-		//apiResponse, err := kucoinRelatedClient("", "", "").CancelOrders(symbol)
 		if err != nil {
 			util.SocketInfo(fmt.Sprintf("function: %s fail to cancel related orders kucoin, err:%s", "cancelOrdersKucoin", err))
 			return false
@@ -585,44 +629,83 @@ func placeOrderKucoin(key, secret string, order *model.Order, orderSide, orderTy
 			return
 		}
 	} else {
-		createOrder := &CreateMarginOrderModel{}
-		createOrder.ClientOid = "r" + strconv.FormatInt(time.Now().UnixNano(), 10)
-		createOrder.Symbol = symbol
-		createOrder.Side = orderSide
-		createOrder.Type = orderType
-		createOrder.MarginMode = "cross"
-		createOrder.AutoBorrow = true
-		priceSpot, decimalSpot := model.FormatPrice(model.Kucoin, symbol, orderSide, price)
-		createOrder.Price = util.CutTailZero(strconv.FormatFloat(priceSpot, 'f', decimalSpot, 64))
-		createOrder.Size = util.CutTailZero(fmt.Sprintf(`%f`, model.GetAmountInMarket(model.Kucoin, symbol, amount)))
-		util.SocketInfo(fmt.Sprintf(`create related order request: %s`, createOrder))
-		req := kucoin.NewRequest(http.MethodPost, "/api/v1/margin/order", createOrder)
-		marginOrderResp, err := kucoinRelatedClient("", "", "").Call(req)
-		if err != nil {
-			util.SocketInfo(fmt.Sprintf("function: %s fail to create related order kucoin, err:%s", "placeOrderKucoin", err))
-			order.Status = model.CarryStatusFail
-			order.OrderId = ``
-			return
-		} else {
-			util.SocketInfo(fmt.Sprintf(`create related order response: %s`, marginOrderResp))
-			orderResult := &kucoin.CreateOrderResultModel{}
-			respErr := marginOrderResp.ReadData(orderResult)
-			if respErr != nil {
-				util.SocketInfo(fmt.Sprintf("function: %s fail to get create related order response kucoin, err:%s", "placeOrderKucoin", respErr))
+		if model.AppConfig.KucoinSpot {
+			createOrder := &kucoin.CreateOrderModel{}
+			createOrder.ClientOid = "r" + strconv.FormatInt(time.Now().UnixNano(), 10)
+			createOrder.Symbol = symbol
+			createOrder.Side = orderSide
+			createOrder.Type = orderType
+			priceSpot, decimalSpot := model.FormatPrice(model.Kucoin, symbol, orderSide, price)
+			createOrder.Price = util.CutTailZero(strconv.FormatFloat(priceSpot, 'f', decimalSpot, 64))
+			createOrder.Size = util.CutTailZero(fmt.Sprintf(`%f`, model.GetAmountInMarket(model.Kucoin, symbol, amount)))
+			util.SocketInfo(fmt.Sprintf(`create spot order request: %s`, createOrder))
+			spotOrderResponse, err := kucoinRelatedClient("", "", "").CreateOrder(createOrder)
+			if err != nil {
+				util.SocketInfo(fmt.Sprintf("function: %s fail to create spot order kucoin, err:%s", "placeOrderKucoin", err))
 				order.Status = model.CarryStatusFail
 				order.OrderId = ``
 				return
+			} else {
+				util.SocketInfo(fmt.Sprintf(`create spot order response: %s`, spotOrderResponse))
+				orderResult := &kucoin.CreateOrderResultModel{}
+				respErr := spotOrderResponse.ReadData(orderResult)
+				if respErr != nil {
+					util.SocketInfo(fmt.Sprintf("function: %s fail to get create spot order response kucoin, err:%s", "placeOrderKucoin", respErr))
+					order.Status = model.CarryStatusFail
+					order.OrderId = ``
+					return
+				}
+				order.OrderId = orderResult.OrderId
+				order.Symbol = symbol
+				order.OrderTime = time.Now()
+				order.Price, _ = strconv.ParseFloat(createOrder.Price, 64)
+				order.OrderSide = createOrder.Side
+				order.Amount, _ = strconv.ParseFloat(createOrder.Size, 64)
+				order.DealAmount = order.Amount
+				order.OrderType = createOrder.Type
+				order.Status = model.CarryStatusWorking
+				return
 			}
-			order.OrderId = orderResult.OrderId
-			order.Symbol = symbol
-			order.OrderTime = time.Now()
-			order.Price, _ = strconv.ParseFloat(createOrder.Price, 64)
-			order.OrderSide = createOrder.Side
-			order.Amount, _ = strconv.ParseFloat(createOrder.Size, 64)
-			order.DealAmount = order.Amount
-			order.OrderType = createOrder.Type
-			order.Status = model.CarryStatusWorking
-			return
+		} else {
+			createOrder := &CreateMarginOrderModel{}
+			createOrder.ClientOid = "r" + strconv.FormatInt(time.Now().UnixNano(), 10)
+			createOrder.Symbol = symbol
+			createOrder.Side = orderSide
+			createOrder.Type = orderType
+			createOrder.MarginMode = "cross"
+			createOrder.AutoBorrow = true
+			priceSpot, decimalSpot := model.FormatPrice(model.Kucoin, symbol, orderSide, price)
+			createOrder.Price = util.CutTailZero(strconv.FormatFloat(priceSpot, 'f', decimalSpot, 64))
+			createOrder.Size = util.CutTailZero(fmt.Sprintf(`%f`, model.GetAmountInMarket(model.Kucoin, symbol, amount)))
+			util.SocketInfo(fmt.Sprintf(`create margin order request: %s`, createOrder))
+			req := kucoin.NewRequest(http.MethodPost, "/api/v1/margin/order", createOrder)
+			marginOrderResp, err := kucoinRelatedClient("", "", "").Call(req)
+			if err != nil {
+				util.SocketInfo(fmt.Sprintf("function: %s fail to create margin order kucoin, err:%s", "placeOrderKucoin", err))
+				order.Status = model.CarryStatusFail
+				order.OrderId = ``
+				return
+			} else {
+				util.SocketInfo(fmt.Sprintf(`create margin order response: %s`, marginOrderResp))
+				orderResult := &kucoin.CreateOrderResultModel{}
+				respErr := marginOrderResp.ReadData(orderResult)
+				if respErr != nil {
+					util.SocketInfo(fmt.Sprintf("function: %s fail to get create margin order response kucoin, err:%s", "placeOrderKucoin", respErr))
+					order.Status = model.CarryStatusFail
+					order.OrderId = ``
+					return
+				}
+				order.OrderId = orderResult.OrderId
+				order.Symbol = symbol
+				order.OrderTime = time.Now()
+				order.Price, _ = strconv.ParseFloat(createOrder.Price, 64)
+				order.OrderSide = createOrder.Side
+				order.Amount, _ = strconv.ParseFloat(createOrder.Size, 64)
+				order.DealAmount = order.Amount
+				order.OrderType = createOrder.Type
+				order.Status = model.CarryStatusWorking
+				return
+			}
 		}
 	}
 }
@@ -630,23 +713,36 @@ func placeOrderKucoin(key, secret string, order *model.Order, orderSide, orderTy
 func transferKucoin(key string, secret string, transferType string, amount float64) {
 	orderId := "t" + strconv.FormatInt(time.Now().UnixNano(), 10)
 	amountStr := util.CutTailZero(strconv.FormatFloat(amount, 'f', 8, 64))
+	var from, to string
 	if transferType == "MAIN_UMFUTURE" {
-		apiResponse, err := kucoinRelatedClient("", "", "").InnerTransferV2(orderId, "USDT", "margin", "contract", amountStr)
+		to = "contract"
+		if model.AppConfig.KucoinSpot {
+			from = "trade"
+		} else {
+			from = "margin"
+		}
+		apiResponse, err := kucoinRelatedClient("", "", "").InnerTransferV2(orderId, "USDT", from, to, amountStr)
 		if err != nil {
-			util.SocketInfo(fmt.Sprintf("function: %s transfer margin to future kucoin, err:%s", "transferKucoin", err))
+			util.SocketInfo(fmt.Sprintf("function: %s transfer related to future kucoin, err:%s", "transferKucoin", err))
 		}
 		transferResult := &kucoin.InnerTransferResultModel{}
 		if respErr := apiResponse.ReadData(transferResult); respErr != nil {
-			util.SocketInfo(fmt.Sprintf("function: %s fail to get transfer margin to future response kucoin, err:%s", "transferKucoin", respErr))
+			util.SocketInfo(fmt.Sprintf("function: %s fail to get transfer related to future response kucoin, err:%s", "transferKucoin", respErr))
 		}
 	} else {
-		apiResponse, err := kucoinRelatedClient("", "", "").InnerTransferV2(orderId, "USDT", "contract", "margin", amountStr)
+		from = "contract"
+		if model.AppConfig.KucoinSpot {
+			to = "trade"
+		} else {
+			to = "margin"
+		}
+		apiResponse, err := kucoinRelatedClient("", "", "").InnerTransferV2(orderId, "USDT", from, to, amountStr)
 		if err != nil {
-			util.SocketInfo(fmt.Sprintf("function: %s transfer future to margin kucoin, err:%s", "transferKucoin", err))
+			util.SocketInfo(fmt.Sprintf("function: %s transfer future to related kucoin, err:%s", "transferKucoin", err))
 		}
 		transferResult := &kucoin.InnerTransferResultModel{}
 		if respErr := apiResponse.ReadData(transferResult); respErr != nil {
-			util.SocketInfo(fmt.Sprintf("function: %s fail to get transfer future to margin response kucoin, err:%s", "transferKucoin", respErr))
+			util.SocketInfo(fmt.Sprintf("function: %s fail to get transfer future to related response kucoin, err:%s", "transferKucoin", respErr))
 		}
 	}
 }

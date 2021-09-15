@@ -780,6 +780,7 @@ func InitMarketInfos() (success bool) {
 		case model.Kucoin:
 			_, marketInfos := getMarketsKucoin("", "")
 			model.SetMarketInfos(model.Kucoin, marketInfos)
+			setFutureAutoDeposit("", "")
 		}
 	}
 	return success

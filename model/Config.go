@@ -18,6 +18,7 @@ type Config struct {
 	KucoinRelatedSecret string
 	KucoinFutureKey     string
 	KucoinFutureSecret  string
+	KucoinSpot          bool
 	GateKey             string
 	GateSecret          string
 	GateSpot            bool
