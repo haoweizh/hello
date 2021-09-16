@@ -99,10 +99,10 @@ func MaintainTransFee(key, secret string) {
 var socketMaintaining = false
 
 func ResetChannels(market string, channels []chan struct{}) {
-	//if market == model.Gate {
-	//	util.Notice(`gate do not reset channel`)
-	//	return
-	//}
+	if market == model.Gate {
+		util.Notice(`gate do not reset channel`)
+		return
+	}
 	model.AppPause = true
 	model.AppMarkets.PutDepthChan(market, nil)
 	for _, channel := range channels {

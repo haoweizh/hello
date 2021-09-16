@@ -341,35 +341,26 @@ var tickerHandler = gateWs.NewCallBack(func(msg *gateWs.UpdateMsg) {
 //	util.Notice(fmt.Sprintf("new future book wsService err:%s", futureBookErr))
 //}
 
-var wsSpotUpdate, wsFutureUpdate, wsSpot *gateWs.WsService
-
 func WsDepthServeGate() (err error) {
 	keys, secrets := model.AppConfig.GetKeys(model.Gate)
-	var spotErr, futureErr, spotBookErr error
-	if wsSpotUpdate == nil {
-		wsSpotUpdate, spotErr = gateWs.NewWsService(nil, nil, gateWs.NewConnConfFromOption(&gateWs.ConfOptions{
-			URL:          gateWs.BaseUrl,
-			Key:          keys[0],
-			Secret:       secrets[0],
-			MaxRetryConn: 10,
-		}))
-	}
-	if wsFutureUpdate == nil {
-		wsFutureUpdate, futureErr = gateWs.NewWsService(nil, nil, gateWs.NewConnConfFromOption(&gateWs.ConfOptions{
-			URL:          gateWs.FuturesUsdtUrl,
-			Key:          keys[0],
-			Secret:       secrets[0],
-			MaxRetryConn: 10,
-		}))
-	}
-	if wsSpot == nil {
-		wsSpot, spotBookErr = gateWs.NewWsService(nil, nil, gateWs.NewConnConfFromOption(&gateWs.ConfOptions{
-			URL:          gateWs.BaseUrl,
-			Key:          keys[0],
-			Secret:       secrets[0],
-			MaxRetryConn: 10,
-		}))
-	}
+	wsSpotUpdate, spotErr := gateWs.NewWsService(nil, nil, gateWs.NewConnConfFromOption(&gateWs.ConfOptions{
+		URL:          gateWs.BaseUrl,
+		Key:          keys[0],
+		Secret:       secrets[0],
+		MaxRetryConn: 10,
+	}))
+	wsFutureUpdate, futureErr := gateWs.NewWsService(nil, nil, gateWs.NewConnConfFromOption(&gateWs.ConfOptions{
+		URL:          gateWs.FuturesUsdtUrl,
+		Key:          keys[0],
+		Secret:       secrets[0],
+		MaxRetryConn: 10,
+	}))
+	wsSpot, spotBookErr := gateWs.NewWsService(nil, nil, gateWs.NewConnConfFromOption(&gateWs.ConfOptions{
+		URL:          gateWs.BaseUrl,
+		Key:          keys[0],
+		Secret:       secrets[0],
+		MaxRetryConn: 10,
+	}))
 	if spotBookErr != nil {
 		util.Notice(fmt.Sprintf("new spot book wsService err:%s", spotBookErr))
 	}
