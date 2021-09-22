@@ -34,21 +34,32 @@ var carryOrders = make([]*model.Order, 0)
 func addLastCarry(order *model.Order, setting *model.Setting) {
 	carryLock.Lock()
 	defer carryLock.Unlock()
+	if order == nil || setting == nil {
+		return
+	}
 	if lastCarrySetting != setting {
 		lastCarrySetting = setting
 		carryOrders = make([]*model.Order, 0)
 	} else {
 		carryOrders = append(carryOrders, order)
+		noDealNum := 0
 		if len(carryOrders) >= 8 {
-			//for _, carryOrder := range carryOrders {
-			//keys, secrets := model.AppConfig.GetKeys(setting.Market)
-			//
-			//api.QueryOrderById()
-			//carryOrder.OrderId
-			//}
+			for _, carryOrder := range carryOrders {
+				secret := model.AppConfig.GetSecret(order.Market, order.AmountType)
+				queryOrder := api.QueryOrderById(carryOrder.AmountType, secret, carryOrder.Market, carryOrder.Symbol,
+					carryOrder.Instrument, carryOrder.OrderType, carryOrder.OrderId)
+				if queryOrder == nil || queryOrder.DealAmount == 0 {
+					noDealNum++
+					if noDealNum > 3 {
+						util.Notice(fmt.Sprintf(`no deal order %s %s %d %d stop`,
+							setting.Market, setting.Symbol, len(carryOrders), noDealNum))
+						setting.Valid = false
+						break
+					}
+				}
+			}
 		}
 	}
-
 }
 
 func checkSetCarrying(value bool) (before bool) {

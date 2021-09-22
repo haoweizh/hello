@@ -47,6 +47,16 @@ type Config struct {
 	WalletKey           string
 }
 
+func (config *Config) GetSecret(market, key string) (secret string) {
+	keys, secrets := config.GetKeys(market)
+	for i, value := range keys {
+		if value == key {
+			return secrets[i]
+		}
+	}
+	return ``
+}
+
 func (config *Config) GetKeys(market string) (keys, secrets []string) {
 	config.lock.Lock()
 	defer config.lock.Unlock()

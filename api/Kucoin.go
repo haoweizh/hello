@@ -44,9 +44,9 @@ func kucoinRelatedClient(key, secret, passPhrase string) *kucoin.ApiService {
 	return client
 }
 
-func setFutureAutoDeposit(key, secret string) {
+func setFutureAutoDeposit() {
 	coins := model.GetSettingCoins(model.FunctionCarry, model.Kucoin)
-	for coin, _ := range coins {
+	for coin := range coins {
 		params := make(map[string]string)
 		params["symbol"] = coin + "USDTM"
 		params["status"] = "true"
@@ -58,14 +58,14 @@ func setFutureAutoDeposit(key, secret string) {
 
 }
 
-func getMarketsKucoin(key, secret string) (success bool, marketInfos map[string]*model.MarketInfo) {
+func getMarketsKucoin(key string) (success bool, marketInfos map[string]*model.MarketInfo) {
 	marketInfos = make(map[string]*model.MarketInfo)
-	appendRelatedMarketsKucoin(key, secret, marketInfos)
-	appendFutureMarketKucoin(key, secret, marketInfos)
+	appendRelatedMarketsKucoin(key, marketInfos)
+	appendFutureMarketKucoin(key, marketInfos)
 	return true, marketInfos
 }
 
-func appendRelatedMarketsKucoin(key, secret string, marketInfos map[string]*model.MarketInfo) {
+func appendRelatedMarketsKucoin(key string, marketInfos map[string]*model.MarketInfo) {
 	client := kucoinRelatedClient("", "", "")
 	resp, err := client.Symbols("")
 	if err != nil {
@@ -133,7 +133,7 @@ type KucoinContractModel struct {
 }
 type KucoinContractsModels []*KucoinContractModel
 
-func appendFutureMarketKucoin(key, secret string, marketInfos map[string]*model.MarketInfo) {
+func appendFutureMarketKucoin(key string, marketInfos map[string]*model.MarketInfo) {
 	client := kucoinFutureClient("", "", "")
 	resp, err := client.ActiveContracts()
 	if err != nil {
@@ -522,7 +522,7 @@ func getPositionsKucoin(key string, secret string) (success bool, positions []*m
 	return true, positions, posBalance
 }
 
-func cancelOrdersKucoin(key string, secret string, symbol string) (result bool) {
+func cancelOrdersKucoin(symbol string) (result bool) {
 	if strings.Contains(symbol, model.GetPerpTail(model.Kucoin)) {
 		symbol = strings.Split(symbol, "-")[0] + "USDTM"
 		apiResponse, err := kucoinFutureClient("", "", "").CancelOrders(symbol)
@@ -587,7 +587,7 @@ type CreateMarginOrderModel struct {
 	Funds string `json:"funds,omitempty"`
 }
 
-func placeOrderKucoin(key, secret string, order *model.Order, orderSide, orderType, symbol string, price, amount float64) {
+func placeOrderKucoin(order *model.Order, orderSide, orderType, symbol string, price, amount float64) {
 	if strings.Contains(symbol, model.GetPerpTail(model.Kucoin)) {
 		futureSymbol := strings.Split(symbol, "-")[0] + "USDTM"
 		params := make(map[string]string)
@@ -623,7 +623,6 @@ func placeOrderKucoin(key, secret string, order *model.Order, orderSide, orderTy
 			order.OrderSide = orderSide
 			orderAmount, _ := strconv.ParseFloat(params["size"], 64)
 			_, order.Amount = model.ParseRealAmount(model.Kucoin, order.Symbol, orderAmount)
-			order.DealAmount = order.Amount
 			order.OrderType = orderType
 			order.Status = model.CarryStatusWorking
 			return
@@ -661,7 +660,6 @@ func placeOrderKucoin(key, secret string, order *model.Order, orderSide, orderTy
 				order.Price, _ = strconv.ParseFloat(createOrder.Price, 64)
 				order.OrderSide = createOrder.Side
 				order.Amount, _ = strconv.ParseFloat(createOrder.Size, 64)
-				order.DealAmount = order.Amount
 				order.OrderType = createOrder.Type
 				order.Status = model.CarryStatusWorking
 				return
@@ -701,7 +699,6 @@ func placeOrderKucoin(key, secret string, order *model.Order, orderSide, orderTy
 				order.Price, _ = strconv.ParseFloat(createOrder.Price, 64)
 				order.OrderSide = createOrder.Side
 				order.Amount, _ = strconv.ParseFloat(createOrder.Size, 64)
-				order.DealAmount = order.Amount
 				order.OrderType = createOrder.Type
 				order.Status = model.CarryStatusWorking
 				return
@@ -710,7 +707,7 @@ func placeOrderKucoin(key, secret string, order *model.Order, orderSide, orderTy
 	}
 }
 
-func transferKucoin(key string, secret string, transferType string, amount float64) {
+func transferKucoin(transferType string, amount float64) {
 	orderId := "t" + strconv.FormatInt(time.Now().UnixNano(), 10)
 	amountStr := util.CutTailZero(strconv.FormatFloat(amount, 'f', 8, 64))
 	var from, to string

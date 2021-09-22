@@ -73,7 +73,7 @@ func MustCancel(key, secret, market, symbol, instrument, orderType, orderId stri
 func CancelOrders(key, secret, market, symbol string) (result bool) {
 	switch market {
 	case model.Kucoin:
-		return cancelOrdersKucoin(key, secret, symbol)
+		return cancelOrdersKucoin(symbol)
 	case model.Gate:
 		return cancelOrdersGate(key, secret, symbol)
 	case model.Huobi:
@@ -530,7 +530,7 @@ func PlaceOrder(key, secret, orderSide, orderType, market, symbol, instrument, o
 	}
 	switch market {
 	case model.Kucoin:
-		placeOrderKucoin(key, symbol, order, orderSide, orderType, symbol, price, amount)
+		placeOrderKucoin(order, orderSide, orderType, symbol, price, amount)
 	case model.Gate:
 		placeOrderGate(key, secret, order, orderSide, orderType, symbol, price, amount)
 	case model.DFuture:
@@ -739,7 +739,7 @@ func Transfer(key, secret, market, transferType string, amount float64) {
 	} else if market == model.Gate {
 		transferGate(key, secret, transferType, amount)
 	} else if market == model.Kucoin {
-		transferKucoin(key, secret, transferType, amount)
+		transferKucoin(transferType, amount)
 	}
 }
 
@@ -783,9 +783,9 @@ func InitMarketInfos() (success bool) {
 				}
 			}
 		case model.Kucoin:
-			_, marketInfos := getMarketsKucoin("", "")
+			_, marketInfos := getMarketsKucoin("")
 			model.SetMarketInfos(model.Kucoin, marketInfos)
-			setFutureAutoDeposit("", "")
+			setFutureAutoDeposit()
 		}
 	}
 	return success
