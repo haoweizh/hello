@@ -252,7 +252,7 @@ func handleWSOrderOKEX(value map[string]interface{}, orderHandler OrderHandler) 
 	//	util.Info(`db can not get orderId %s`, order.OrderId)
 	//}
 	//model.AppDB.Save(order)
-	orderHandler(order)
+	orderHandler(order, nil)
 }
 
 func WsDepthServeOKEX(instruments map[string]bool, orderHandler OrderHandler) (channels []chan struct{}, err error) {

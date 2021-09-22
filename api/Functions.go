@@ -472,11 +472,11 @@ func GetPositions(key, secret, market string) (success bool, positions []*model.
 }
 
 func MustPlaceOrder(key, secret, orderSide, orderType, market, symbol, instrument, orderParam,
-	refreshType string, price, triggerPrice, amount float64, saveDB, isWs bool) (order *model.Order) {
+	refreshType string, price, triggerPrice, amount float64, saveDB, isWs bool, setting *model.Setting) (order *model.Order) {
 	retry := 10
 	for i := 0; i < retry; i++ {
 		order = PlaceOrder(key, secret, orderSide, orderType, market, symbol, instrument,
-			orderParam, refreshType, price, triggerPrice, amount, saveDB, isWs, nil)
+			orderParam, refreshType, price, triggerPrice, amount, saveDB, isWs, nil, setting)
 		if order != nil && order.OrderId != `` {
 			break
 		} else {
@@ -495,7 +495,7 @@ func MustPlaceOrder(key, secret, orderSide, orderType, market, symbol, instrumen
 // orderType: OrderTypeLimit OrderTypeMarket
 // amount:如果是限价单或市价卖单，amount是左侧币种的数量，如果是市价买单，amount是右测币种的数量
 func PlaceOrder(key, secret, orderSide, orderType, market, symbol, instrument, orderParam, refreshType string,
-	price, triggerPrice, amount float64, saveDB, isWs bool, postOrder model.PostOrder) (order *model.Order) {
+	price, triggerPrice, amount float64, saveDB, isWs bool, postOrder model.PostOrder, setting *model.Setting) (order *model.Order) {
 	if instrument == `` {
 		instrument = symbol
 	}
@@ -570,8 +570,13 @@ func PlaceOrder(key, secret, orderSide, orderType, market, symbol, instrument, o
 		order.Status = model.CarryStatusWorking
 	}
 	end := util.GetNowUnixMillion()
-	util.Notice(fmt.Sprintf(`...%s %s %s return order at %d distance %d %s %s`,
-		orderSide, market, symbol, end, end-start, order.Status, order.ErrCode))
+	util.Notice(fmt.Sprintf(`...%s %s %s return order at %d distance %d %s %s price %f different %v`,
+		orderSide, market, symbol, end, end-start, order.Status, order.ErrCode, order.Price, price == order.Price))
+	if price != order.Price {
+		util.Notice(fmt.Sprintf(`pause carry %s %s %s order price %f != return %f`,
+			setting.Market, setting.Symbol, setting.Function, price, order.Price))
+		setting.Valid = false
+	}
 	order.RefreshType = refreshType
 	if saveDB {
 		if isWs && market == model.OKEX {
@@ -585,7 +590,7 @@ func PlaceOrder(key, secret, orderSide, orderType, market, symbol, instrument, o
 		go model.AppDB.Save(order)
 	}
 	if postOrder != nil {
-		go postOrder(order)
+		go postOrder(order, setting)
 	}
 	return
 }

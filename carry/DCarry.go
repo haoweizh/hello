@@ -116,11 +116,11 @@ var ProcessDCarry = func(setting *model.Setting, tickD *model.BidAsk) {
 			if line > setting.CloseShortMargin {
 				orderSideType = `open`
 				api.PlaceOrder(keys[i], secrets[i], orderSide, ``, model.DFuture, setting.Symbol, ``,
-					`open`, model.FunctionDCarry+orderSideType, acceptablePrice, price, amount, true, false, nil)
+					`open`, model.FunctionDCarry+orderSideType, acceptablePrice, price, amount, true, false, nil, setting)
 			} else {
 				orderSideType = `close`
 				api.PlaceOrder(keys[i], secrets[i], orderSide, ``, model.DFuture, setting.Symbol, ``,
-					`close`, model.FunctionDCarry+orderSideType, acceptablePrice, price, amount, true, false, nil)
+					`close`, model.FunctionDCarry+orderSideType, acceptablePrice, price, amount, true, false, nil, setting)
 			}
 			util.Notice(fmt.Sprintf(`dcarry market %s vs %s symbol %s vs %s %s %s [%f %f] price: %f amount:%f`,
 				setting.Market, setting.MarketRelated, setting.Symbol, setting.SymbolRelated, orderSide, orderSideType,

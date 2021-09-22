@@ -349,6 +349,11 @@ func GetParameters(c *gin.Context) {
 	for _, setting := range settings {
 		msg += fmt.Sprintf("%s %s %s %f\n", setting.Function, setting.Market, setting.Symbol, setting.GridAmount)
 	}
+	for _, setting := range model.AppSettings {
+		if setting.Valid == false {
+			msg += fmt.Sprintf("[pause carry] %s %s %s\n", setting.Function, setting.Market, setting.Symbol)
+		}
+	}
 	var orders model.Order
 	turtleRows, _ := model.AppDB.Model(&orders).Select(`market,symbol,order_side,price,deal_price,deal_amount`).
 		Where(`deal_amount>? and refresh_type=?`, 0, model.FunctionTurtle).

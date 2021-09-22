@@ -136,8 +136,9 @@ func Test_wallet(t *testing.T) {
 	model.NewConfig()
 	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
 	api.InitMarketInfos()
-	order := api.PlaceOrder(model.AppConfig.GateKey, model.AppConfig.GateSecret, model.OrderSideBuy, model.OrderTypeLimit, model.Gate, `ETH_USDT`, ``, ``, `carry`,
-		2000, 2000, 0.1, true, false, nil)
+	order := api.PlaceOrder(model.AppConfig.GateKey, model.AppConfig.GateSecret, model.OrderSideBuy, model.OrderTypeLimit,
+		model.Gate, `ETH_USDT`, ``, ``, `carry`,
+		2000, 2000, 0.1, true, false, nil, nil)
 	fmt.Println(order.OrderId)
 	api.CancelOrders(model.AppConfig.GateKey, model.AppConfig.GateSecret, model.Gate, `ETH_USDT`)
 	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
@@ -175,7 +176,7 @@ func Test_wallet(t *testing.T) {
 	//fmt.Println(fmt.Sprintf(`%v %d`, suc, len(pos)))
 	//a := api.GetMarketInfo(model.Ftx, `SECO/USD`)
 	order = api.PlaceOrder(``, ``, model.OrderSideBuy, model.OrderTypeStop, model.OKEX, `ETH-USDT-SWAP`,
-		`ETH-USDT-SWAP`, ``, ``, 2723, 2723, 0.1, false, false, nil)
+		`ETH-USDT-SWAP`, ``, ``, 2723, 2723, 0.1, false, false, nil, nil)
 	fmt.Println(order.OrderId)
 	//fmt.Println(a)
 	api.InitCarryFtx(1)

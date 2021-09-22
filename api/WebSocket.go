@@ -12,7 +12,7 @@ import (
 	"time"
 )
 
-type OrderHandler func(order *model.Order)
+type OrderHandler func(order *model.Order, setting *model.Setting)
 type MsgHandler func(channelKey string, message []byte, orderHandler OrderHandler)
 type WSMsgHandler func(client *WSClient, message []byte)
 type SubscribeHandler func(subscribes []interface{}, subType string) error

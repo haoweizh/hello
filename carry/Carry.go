@@ -28,6 +28,28 @@ var doCarry = false
 var symbolHighest, symbolLowest string
 var lowest = math.NaN()
 var highest = math.NaN()
+var lastCarrySetting *model.Setting
+var carryOrders = make([]*model.Order, 0)
+
+func addLastCarry(order *model.Order, setting *model.Setting) {
+	carryLock.Lock()
+	defer carryLock.Unlock()
+	if lastCarrySetting != setting {
+		lastCarrySetting = setting
+		carryOrders = make([]*model.Order, 0)
+	} else {
+		carryOrders = append(carryOrders, order)
+		if len(carryOrders) >= 8 {
+			//for _, carryOrder := range carryOrders {
+			//keys, secrets := model.AppConfig.GetKeys(setting.Market)
+			//
+			//api.QueryOrderById()
+			//carryOrder.OrderId
+			//}
+		}
+	}
+
+}
 
 func checkSetCarrying(value bool) (before bool) {
 	carryLock.Lock()
@@ -42,7 +64,7 @@ func checkSetCarrying(value bool) (before bool) {
 }
 
 // 专用于处理ok可买卖数量限制
-var postOrderCarry = func(order *model.Order) {
+var postOrderCarry = func(order *model.Order, setting *model.Setting) {
 	if order == nil {
 		return
 	}
@@ -79,6 +101,7 @@ var postOrderCarry = func(order *model.Order) {
 			maxSell -= amount
 		}
 		setTradeMax(order.AmountType, order.Instrument, maxBuy, maxSell)
+		addLastCarry(order, setting)
 	}
 	if unknownFail {
 		addCarryResult(order.AmountType, false)
@@ -260,7 +283,7 @@ var ProcessCarry = func(setting *model.Setting, tick *model.BidAsk) {
 	exit := false
 	if tickPerp == nil || tickRelated == nil || tickPerp.Asks == nil || tickPerp.Bids == nil ||
 		tickRelated.Asks == nil || tickRelated.Bids == nil || setting == nil || model.AppPause ||
-		(model.AppConfig.Env != `test` && model.AppConfig.Handle != `1`) {
+		(model.AppConfig.Env != `test` && model.AppConfig.Handle != `1` || setting.Valid == false) {
 		exit = true
 	}
 	switch setting.Market {
@@ -345,7 +368,7 @@ func placeCarry(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, key
 	perpPrice := tickPerp.Asks[0].Price
 	relatedPrice := tickRelated.Bids[0].Price
 	now := int(util.GetNowUnixMillion())
-	util.Notice(fmt.Sprintf(`carry%s->%s delay %d %d perp[%f %f %f %f] related[%f %f %f %f] with score open:%f close:%f 
+	util.Notice(fmt.Sprintf(`do carry %s->%s delay %d %d perp[%f %f %f %f] related[%f %f %f %f] with score open:%f close:%f 
 	    amount %f worth %f time in million %d key %s`,
 		setting.Symbol, setting.SymbolRelated, now-tickPerp.TsReceived, now-tickRelated.TsReceived, tickPerp.Bids[0].Price,
 		tickPerp.Bids[0].Amount, tickPerp.Asks[0].Price, tickPerp.Asks[0].Amount, tickRelated.Bids[0].Price,
@@ -365,10 +388,10 @@ func placeCarry(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, key
 	} else {
 		go api.PlaceOrder(key, secret, sidePerp, model.OrderTypeLimit, setting.Market, setting.Symbol,
 			``, ``, model.FunctionCarry, perpPrice, perpPrice,
-			amount, true, true, postOrderCarry)
+			amount, true, true, postOrderCarry, setting)
 		api.PlaceOrder(key, secret, sideRelated, model.OrderTypeLimit, setting.Market, setting.SymbolRelated,
 			``, ``, model.FunctionCarry, relatedPrice, relatedPrice,
-			amount, true, true, postOrderCarry)
+			amount, true, true, postOrderCarry, setting)
 	}
 	time.Sleep(time.Second / 4)
 	if placeSuccess {
@@ -496,7 +519,7 @@ func makeEqual(key, secret string, setting *model.Setting, balances []*model.Bal
 		util.Notice(fmt.Sprintf(`%s %s cancel all perp:%v related:%v >>>>>> equal %s %f, %s %f = %s %f`,
 			key, setting.Market, resultPerp, resultRelated, setting.Symbol, amountPerp, setting.SymbolRelated, amountRelated, orderSide, amount))
 		api.PlaceOrder(key, secret, orderSide, model.OrderTypeLimit, setting.Market, symbol, symbol,
-			``, model.FunctionComplement, price, price, amount, true, true, nil)
+			``, model.FunctionComplement, price, price, amount, true, true, nil, setting)
 		go api.SetBidAsk(key, secret, setting.Market, setting.Symbol)
 	}
 	return
