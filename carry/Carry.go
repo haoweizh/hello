@@ -48,7 +48,7 @@ func addLastCarry(order *model.Order, setting *model.Setting) {
 				secret := model.AppConfig.GetSecret(order.Market, order.AmountType)
 				queryOrder := api.QueryOrderById(carryOrder.AmountType, secret, carryOrder.Market, carryOrder.Symbol,
 					carryOrder.Instrument, carryOrder.OrderType, carryOrder.OrderId)
-				if queryOrder == nil || queryOrder.DealAmount == 0 {
+				if queryOrder == nil || queryOrder.DealAmount == 0 && order.Status != model.CarryStatusFail {
 					noDealNum++
 					if noDealNum > 3 {
 						util.Notice(fmt.Sprintf(`no deal order %s %s %d %d stop`,
@@ -699,8 +699,7 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	amount = math.Min(amount, localOpenValueLimit/markPrice)
 	// usd所剩太少且还要再买 || 反向持仓太多且还要再卖 || 下单太小
 	if (sideRelated == model.OrderSideBuy && (usdAvailable < usdLowLine || (balance.UsdValue > 0 && coinRate > 0.5))) ||
-		(sideRelated == model.OrderSideSell && (balance.UsdValue < 0 && coinRate > 0.5)) ||
-		math.Abs(amount)*tickPerp.Bids[0].Price < valueLow {
+		(sideRelated == model.OrderSideSell && (balance.UsdValue < 0 && coinRate > 0.5)) {
 		amount = 0
 	}
 	amount = model.FormatAmountPair(setting.Market, setting.Symbol, setting.SymbolRelated, amount)
@@ -735,6 +734,9 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 				amount = math.Max(amount, marketRelated.BorrowSizeMin)
 			}
 		}
+	}
+	if math.Abs(amount)*tickPerp.Bids[0].Price < valueLow {
+		amount = 0
 	}
 	if amount > 0 {
 		util.Info(fmt.Sprintf(`+++ usdRate: %f coinRate: %f %s symbol: %s %s 
