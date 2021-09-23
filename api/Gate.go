@@ -512,10 +512,10 @@ func cancelOrdersGate(key string, secret string, symbol string) (result bool) {
 
 func placeOrderGate(key, secret string, order *model.Order, orderSide, orderType, symbol string, price, amount float64) {
 	client, ctx := getClientGate(key, secret)
+	orderPrice, decimal := model.FormatPrice(model.Gate, symbol, model.OrderSideBuy, price)
+	orderPriceStr := util.CutTailZero(strconv.FormatFloat(orderPrice, 'f', decimal, 64))
 	if strings.Contains(symbol, model.GetSpotTail(model.Gate)) {
-		relatedOrder := gateApi.Order{}
-		relatedOrder.CurrencyPair = symbol
-		relatedOrder.Type = orderType
+		relatedOrder := gateApi.Order{Price: orderPriceStr, Side: orderSide, CurrencyPair: symbol, Type: orderType}
 		if model.AppConfig.GateSpot {
 			relatedOrder.Account = "spot"
 		} else {
@@ -526,12 +526,8 @@ func placeOrderGate(key, secret string, order *model.Order, orderSide, orderType
 				relatedOrder.AutoBorrow = true
 			}
 		}
-		relatedOrder.Side = orderSide
 		relatedOrder.Amount = util.CutTailZero(fmt.Sprintf(`%f`, model.GetAmountInMarket(model.Gate, symbol, amount)))
-		priceSpot, decimalSpot := model.FormatPrice(model.Gate, symbol, model.OrderSideBuy, price)
-		relatedOrder.Price = util.CutTailZero(strconv.FormatFloat(priceSpot, 'f', decimalSpot, 64))
-		orderReq, _ := json.Marshal(relatedOrder)
-		util.SocketInfo(`create related order request: %s`, orderReq)
+		util.Notice(`create related order request: %v`, relatedOrder)
 		createOrder, _, err := client.SpotApi.CreateOrder(ctx, relatedOrder)
 		if err != nil {
 			panicGateError(key, "placeSpotOrderGate", err)
@@ -544,6 +540,9 @@ func placeOrderGate(key, secret string, order *model.Order, orderSide, orderType
 			order.Symbol = createOrder.CurrencyPair
 			secondUnix, _ := strconv.ParseInt(createOrder.CreateTime, 10, 64)
 			order.OrderTime = time.Unix(secondUnix, 0)
+			if orderPriceStr != createOrder.Price {
+				util.Notice(fmt.Sprintf(`diff spot price req %s resp %s`, orderPriceStr, createOrder.Price))
+			}
 			order.Price, _ = strconv.ParseFloat(createOrder.Price, 64)
 			order.OrderSide = createOrder.Side
 			order.Amount, _ = strconv.ParseFloat(createOrder.Amount, 64)
@@ -556,18 +555,14 @@ func placeOrderGate(key, secret string, order *model.Order, orderSide, orderType
 			return
 		}
 	} else {
-		futuresOrder := gateApi.FuturesOrder{}
+		futuresOrder := gateApi.FuturesOrder{Price: orderPriceStr,
+			Contract: model.GetCoin(model.Gate, symbol) + model.GetSpotTail(model.Gate)}
 		futuresOrder.Size, _ = strconv.ParseInt(util.CutTailZero(
 			fmt.Sprintf(`%f`, model.GetAmountInMarket(model.Gate, symbol, amount))), 10, 64)
-		priceFuture, decimalFuture := model.FormatPrice(model.Gate, symbol, model.OrderSideBuy, price)
-		priceStrFuture := util.CutTailZero(strconv.FormatFloat(priceFuture, 'f', decimalFuture, 64))
-		futuresOrder.Price = priceStrFuture
 		if orderSide == model.OrderSideSell {
 			futuresOrder.Size = -1 * futuresOrder.Size
 		}
-		futuresOrder.Contract = model.GetCoin(model.Gate, symbol) + model.GetSpotTail(model.Gate)
-		orderReq, _ := json.Marshal(futuresOrder)
-		util.SocketInfo(`create related order request: %s`, orderReq)
+		util.Notice(`create future order request: %v`, futuresOrder)
 		createFuturesOrder, _, err := client.FuturesApi.CreateFuturesOrder(ctx, "usdt", futuresOrder)
 		if err != nil {
 			panicGateError(key, "placeFutureOrderGate", err)
@@ -582,6 +577,9 @@ func placeOrderGate(key, secret string, order *model.Order, orderSide, orderType
 			order.OrderId = strconv.FormatInt(createFuturesOrder.Id, 10)
 			order.Symbol = model.GetCoin(model.Gate, symbol) + model.GetPerpTail(model.Gate)
 			order.OrderTime = time.Unix(int64(createFuturesOrder.CreateTime), 0)
+			if orderPriceStr != createFuturesOrder.Price {
+				util.Notice(fmt.Sprintf(`diff future price req %s resp %s`, orderPriceStr, createFuturesOrder.Price))
+			}
 			order.Price, _ = strconv.ParseFloat(createFuturesOrder.Price, 64)
 			_, order.Amount = model.ParseRealAmount(model.Gate, order.Symbol, float64(createFuturesOrder.Size))
 			order.Status = model.CarryStatusWorking
