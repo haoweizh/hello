@@ -136,6 +136,8 @@ func Test_wallet(t *testing.T) {
 	model.NewConfig()
 	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
 	api.InitMarketInfos()
+	orderQuery := api.QueryOrderById(model.AppConfig.GateKey, model.AppConfig.GateSecret, model.Gate, `CFX_PERP`, `CFX_USDT`, model.OrderTypeLimit, `79852794326`)
+	fmt.Println(orderQuery.OrderSide)
 	order := api.PlaceOrder(model.AppConfig.GateKey, model.AppConfig.GateSecret, model.OrderSideBuy, model.OrderTypeLimit,
 		model.Gate, `ETH_USDT`, ``, ``, `carry`,
 		2000, 2000, 0.1, true, false, nil, nil)

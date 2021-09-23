@@ -367,7 +367,8 @@ func QueryOrderById(key, secret, market, symbol, instrument, orderType, orderId 
 	if instrument == `` {
 		instrument = symbol
 	}
-	order = &model.Order{OrderId: orderId, Symbol: symbol, Market: market, Instrument: instrument, OrderType: orderType}
+	order = &model.Order{
+		OrderId: orderId, Symbol: symbol, Market: market, Instrument: instrument, OrderType: orderType, Status: model.CarryStatusFail}
 	switch market {
 	case model.Gate:
 		queryOrderGate(key, secret, order)

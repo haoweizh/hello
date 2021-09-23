@@ -668,7 +668,6 @@ func queryOrderGate(key, secret string, order *model.Order) {
 		case `cancelled`:
 			order.Status = model.CarryStatusFail
 		}
-		order.Status = orderFuture.Status
 		_, order.DealAmount = model.ParseRealAmount(order.Market, order.Symbol, float64(orderFuture.Size-orderFuture.Left))
 	} else if tailSpot == order.Symbol[len(order.Symbol)-len(tailSpot):] {
 		orderSpot, _, err := client.SpotApi.GetOrder(ctx, order.OrderId, order.Symbol, nil)
@@ -686,6 +685,5 @@ func queryOrderGate(key, secret string, order *model.Order) {
 		case `cancelled`:
 			order.Status = model.CarryStatusFail
 		}
-		order.Status = orderSpot.Status
 	}
 }
