@@ -623,9 +623,6 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	usdLowLine := 0.1 * balanceAllValue
 	keys, _ := model.AppConfig.GetKeys(setting.Market)
 	localOpenValueLimit := math.Min(openValueLimit, usdLowLine/3)
-	if setting.Market == model.Gate {
-		localOpenValueLimit = math.Min(openValueLimit/2, usdLowLine/3)
-	}
 	table := fmt.Sprintf(`%s_dynamic_`, model.FunctionCarry)
 	accountRates := strings.Split(model.AppConfig.AccountRate, `,`)
 	for i := 1; i < len(keys); i++ {
@@ -703,7 +700,7 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	// usd所剩太少且还要再买 || 反向持仓太多且还要再卖 || 下单太小
 	if (sideRelated == model.OrderSideBuy && (usdAvailable < usdLowLine || (balance.UsdValue > 0 && coinRate > 0.5))) ||
 		(sideRelated == model.OrderSideSell && (balance.UsdValue < 0 && coinRate > 0.5)) ||
-		math.Abs(amount)*markPrice < valueLow {
+		math.Abs(amount)*tickPerp.Bids[0].Price < valueLow {
 		amount = 0
 	}
 	amount = model.FormatAmountPair(setting.Market, setting.Symbol, setting.SymbolRelated, amount)
