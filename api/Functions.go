@@ -571,8 +571,8 @@ func PlaceOrder(key, secret, orderSide, orderType, market, symbol, instrument, o
 		order.Status = model.CarryStatusWorking
 	}
 	end := util.GetNowUnixMillion()
-	util.Notice(fmt.Sprintf(`...%s %s %s return order at %d distance %d %s %s price %f different %v`,
-		orderSide, market, symbol, end, end-start, order.Status, order.ErrCode, order.Price, price == order.Price))
+	util.Notice(fmt.Sprintf(`...%s %s %s return order at %d distance %d %s %s price %f`,
+		orderSide, market, symbol, end, end-start, order.Status, order.ErrCode, order.Price))
 	order.RefreshType = refreshType
 	if saveDB {
 		if isWs && market == model.OKEX {

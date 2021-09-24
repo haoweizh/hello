@@ -535,7 +535,7 @@ func placeOrderGate(key, secret string, order *model.Order, orderSide, orderType
 			order.OrderId = ``
 		} else {
 			orderResp, _ := json.Marshal(createOrder)
-			util.SocketInfo(`create related order response: %s`, orderResp)
+			util.Notice(`create related order response: %s`, orderResp)
 			order.OrderId = createOrder.Id
 			order.Symbol = createOrder.CurrencyPair
 			secondUnix, _ := strconv.ParseInt(createOrder.CreateTime, 10, 64)
@@ -570,7 +570,7 @@ func placeOrderGate(key, secret string, order *model.Order, orderSide, orderType
 			order.OrderId = ``
 		} else {
 			orderResp, _ := json.Marshal(createFuturesOrder)
-			util.SocketInfo(`create future order response: %s`, orderResp)
+			util.Notice(`create future order response: %s`, orderResp)
 			if createFuturesOrder.IsLiq {
 				util.Notice(fmt.Sprintf("warning warning, blow up!!!"))
 			}
