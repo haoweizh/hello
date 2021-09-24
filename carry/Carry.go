@@ -48,7 +48,12 @@ func addLastCarry(order *model.Order, setting *model.Setting) {
 				secret := model.AppConfig.GetSecret(order.Market, order.AmountType)
 				queryOrder := api.QueryOrderById(carryOrder.AmountType, secret, carryOrder.Market, carryOrder.Symbol,
 					carryOrder.Instrument, carryOrder.OrderType, carryOrder.OrderId)
-				if queryOrder != nil && queryOrder.DealAmount == 0 && order.Status != model.CarryStatusFail {
+				if queryOrder == nil {
+					continue
+				}
+				util.Notice(fmt.Sprintf(`--- %s %s %f`,
+					queryOrder.Symbol, queryOrder.OrderId, queryOrder.DealAmount))
+				if queryOrder.DealAmount == 0 && order.Status != model.CarryStatusFail {
 					noDealNum++
 					if noDealNum > 3 {
 						util.Notice(fmt.Sprintf(`no deal order %s %s %d %d stop`,
