@@ -72,6 +72,9 @@ func addLastCarry(order *model.Order, setting *model.Setting) {
 				util.Notice(fmt.Sprintf(`no deal order %s %s %d %d stop`,
 					setting.Market, setting.Symbol, len(lastOrders), noDealNum))
 				setting.Valid = false
+				lastOrders = make([]*model.Order, lastOrderLength)
+				lastOrderIndex = 0
+				lastCarrySetting = nil
 				break
 			}
 		} else {
