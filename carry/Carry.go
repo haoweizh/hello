@@ -29,7 +29,10 @@ var symbolHighest, symbolLowest string
 var lowest = math.NaN()
 var highest = math.NaN()
 var lastCarrySetting *model.Setting
-var carryOrders = make([]*model.Order, 0)
+var lastOrderIndex = 0
+var lastOrders = make([]*model.Order, lastOrderLength)
+
+const lastOrderLength = 8
 
 func addLastCarry(order *model.Order, setting *model.Setting) {
 	carryLock.Lock()
@@ -39,30 +42,40 @@ func addLastCarry(order *model.Order, setting *model.Setting) {
 	}
 	if lastCarrySetting != setting {
 		lastCarrySetting = setting
-		carryOrders = make([]*model.Order, 0)
-	} else {
-		carryOrders = append(carryOrders, order)
-		noDealNum := 0
-		if len(carryOrders) >= 8 {
-			for _, carryOrder := range carryOrders {
-				secret := model.AppConfig.GetSecret(order.Market, order.AmountType)
-				queryOrder := api.QueryOrderById(carryOrder.AmountType, secret, carryOrder.Market, carryOrder.Symbol,
-					carryOrder.Instrument, carryOrder.OrderType, carryOrder.OrderId)
-				if queryOrder == nil {
-					continue
-				}
-				util.Notice(fmt.Sprintf(`--- %s %s %f`,
-					queryOrder.Symbol, queryOrder.OrderId, queryOrder.DealAmount))
-				if queryOrder.DealAmount == 0 && order.Status != model.CarryStatusFail {
-					noDealNum++
-					if noDealNum > 3 {
-						util.Notice(fmt.Sprintf(`no deal order %s %s %d %d stop`,
-							setting.Market, setting.Symbol, len(carryOrders), noDealNum))
-						setting.Valid = false
-						break
-					}
-				}
+		lastOrders = make([]*model.Order, lastOrderLength)
+		lastOrderIndex = 0
+	}
+	lastOrders[lastOrderIndex%lastOrderLength] = order
+	lastOrderIndex++
+	noDealNum := 0
+	lastOrderAmount := 0
+	for _, lastOrder := range lastOrders {
+		if lastOrder != nil {
+			lastOrderAmount++
+		}
+	}
+	if lastOrderAmount < lastOrderLength {
+		return
+	}
+	for _, lastOrder := range lastOrders {
+		secret := model.AppConfig.GetSecret(order.Market, order.AmountType)
+		if lastOrder == nil || lastOrder.Status == model.CarryStatusSuccess {
+			continue
+		}
+		queryOrder := api.QueryOrderById(lastOrder.AmountType, secret, lastOrder.Market, lastOrder.Symbol,
+			lastOrder.Instrument, lastOrder.OrderType, lastOrder.OrderId)
+		util.Notice(fmt.Sprintf(`--- %s %s %f`,
+			queryOrder.Symbol, queryOrder.OrderId, queryOrder.DealAmount))
+		if queryOrder.DealAmount == 0 && order.Status != model.CarryStatusFail {
+			noDealNum++
+			if noDealNum > 3 {
+				util.Notice(fmt.Sprintf(`no deal order %s %s %d %d stop`,
+					setting.Market, setting.Symbol, len(lastOrders), noDealNum))
+				setting.Valid = false
+				break
 			}
+		} else {
+			lastOrder.Status = model.CarryStatusSuccess
 		}
 	}
 }

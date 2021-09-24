@@ -10,7 +10,6 @@ import (
 	"hello/api"
 	"hello/model"
 	"hello/util"
-	"math"
 	"net/url"
 	"strconv"
 	"testing"
@@ -107,12 +106,10 @@ func Test_OKFormatAmount(t *testing.T) {
 }
 
 func Test_initTurtleN(t *testing.T) {
-	a := math.NaN()
-	if a > 0 {
-		fmt.Println(`>0`)
-	} else {
-		fmt.Println(`<0`)
-	}
+	a := make([]string, 2)
+	fmt.Println(len(a))
+	a[0] = `sdf`
+	fmt.Println(cap(a))
 	model.NewConfig()
 	_ = configor.Load(model.AppConfig, "./config.yml")
 	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
