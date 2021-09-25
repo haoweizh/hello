@@ -55,6 +55,9 @@ func addLastCarry(order *model.Order, setting *model.Setting) {
 	if queryOrder == nil {
 		util.Notice(`can not query %s %s %s %s %s`,
 			queryOrder.Market, queryOrder.Symbol, queryOrder.OrderId, queryOrder.AmountType, secret)
+	} else {
+		util.Notice(`can query %s %s %s %s %f`,
+			queryOrder.Market, queryOrder.Symbol, order.AmountType, setting, queryOrder.DealAmount)
 	}
 	lastOrderIndex++
 	noDealNum := 0

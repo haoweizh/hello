@@ -108,7 +108,8 @@ func Test_OKFormatAmount(t *testing.T) {
 func Test_initTurtleN(t *testing.T) {
 	model.NewConfig()
 	_ = configor.Load(model.AppConfig, "./config.yml")
-	api.QueryOrderById(model.AppConfig.FtxKey, model.AppConfig.FtxSecret, model.Ftx, ``, ``, model.OrderTypeLimit, `82424115039`)
+	testOrder := api.QueryOrderById(model.AppConfig.FtxKey, model.AppConfig.FtxSecret, model.Ftx, ``, ``, model.OrderTypeLimit, `82424115039`)
+	fmt.Println(testOrder.Market)
 	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
 	//fmt.Println(api.GetPosBal(``, ``, model.Binance))
 	//api.Transfer(``, ``, model.Binance, `MARGIN_UMFUTURE`, 75)
