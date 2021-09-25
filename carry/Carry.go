@@ -46,19 +46,6 @@ func addLastCarry(order *model.Order, setting *model.Setting) {
 		lastOrderIndex = 0
 	}
 	lastOrders[lastOrderIndex%lastOrderLength] = order
-	secret := model.AppConfig.GetSecret(order.Market, order.AmountType)
-	util.Notice(`---- %s %s %s %s %s %s %s`,
-		order.AmountType, secret, order.Market, order.Symbol,
-		order.Instrument, order.OrderType, order.OrderId)
-	queryOrder := api.QueryOrderById(order.AmountType, secret, order.Market, order.Symbol,
-		order.Instrument, order.OrderType, order.OrderId)
-	if queryOrder == nil {
-		util.Notice(`can not query %s %s %s %s %s`,
-			queryOrder.Market, queryOrder.Symbol, queryOrder.OrderId, queryOrder.AmountType, secret)
-	} else {
-		util.Notice(`can query %s %s %s %s %f`,
-			queryOrder.Market, queryOrder.Symbol, order.AmountType, secret, queryOrder.DealAmount)
-	}
 	lastOrderIndex++
 	noDealNum := 0
 	lastOrderAmount := 0
@@ -78,8 +65,6 @@ func addLastCarry(order *model.Order, setting *model.Setting) {
 		queryOrder := api.QueryOrderById(lastOrder.AmountType, secret, lastOrder.Market, lastOrder.Symbol,
 			lastOrder.Instrument, lastOrder.OrderType, lastOrder.OrderId)
 		if queryOrder == nil {
-			util.Notice(`can not query %s %s %s %s %s`,
-				lastOrder.Market, lastOrder.Symbol, lastOrder.OrderId, lastOrder.AmountType, secret)
 			continue
 		}
 		util.Notice(fmt.Sprintf(`--- %s %s %f`,
