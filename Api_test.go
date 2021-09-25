@@ -106,12 +106,9 @@ func Test_OKFormatAmount(t *testing.T) {
 }
 
 func Test_initTurtleN(t *testing.T) {
-	a := make([]string, 2)
-	fmt.Println(len(a))
-	a[0] = `sdf`
-	fmt.Println(cap(a))
 	model.NewConfig()
 	_ = configor.Load(model.AppConfig, "./config.yml")
+	api.QueryOrderById(model.AppConfig.FtxKey, model.AppConfig.FtxSecret, model.Ftx, ``, ``, model.OrderTypeLimit, `82424115039`)
 	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
 	//fmt.Println(api.GetPosBal(``, ``, model.Binance))
 	//api.Transfer(``, ``, model.Binance, `MARGIN_UMFUTURE`, 75)
