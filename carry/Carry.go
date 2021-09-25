@@ -59,7 +59,7 @@ func addLastCarry(order *model.Order, setting *model.Setting) {
 	}
 	for i, lastOrder := range lastOrders {
 		secret := model.AppConfig.GetSecret(order.Market, order.AmountType)
-		if lastOrder == nil {
+		if lastOrder == nil || order.Market == model.Ftx {
 			continue
 		}
 		queryOrder := api.QueryOrderById(lastOrder.AmountType, secret, lastOrder.Market, lastOrder.Symbol,
