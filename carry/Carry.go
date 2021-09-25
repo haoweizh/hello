@@ -46,6 +46,13 @@ func addLastCarry(order *model.Order, setting *model.Setting) {
 		lastOrderIndex = 0
 	}
 	lastOrders[lastOrderIndex%lastOrderLength] = order
+	util.Notice(`--- %s %s %s %s %s %s`,
+		order.AmountType, order.Market, order.Symbol,
+		order.Instrument, order.OrderType, order.OrderId)
+	secret := model.AppConfig.GetSecret(order.Market, order.AmountType)
+	order = api.QueryOrderById(order.AmountType, secret, order.Market, order.Symbol,
+		order.Instrument, order.OrderType, order.OrderId)
+	util.Notice(`get order %s %f`, order.Status, order.DealAmount)
 	lastOrderIndex++
 	noDealNum := 0
 	lastOrderAmount := 0
@@ -59,7 +66,7 @@ func addLastCarry(order *model.Order, setting *model.Setting) {
 	}
 	for i, lastOrder := range lastOrders {
 		secret := model.AppConfig.GetSecret(order.Market, order.AmountType)
-		if lastOrder == nil || order.Market == model.Ftx {
+		if lastOrder == nil {
 			continue
 		}
 		queryOrder := api.QueryOrderById(lastOrder.AmountType, secret, lastOrder.Market, lastOrder.Symbol,
@@ -81,7 +88,7 @@ func addLastCarry(order *model.Order, setting *model.Setting) {
 			lastOrders[i] = nil
 		}
 	}
-	util.Notice(`---- qadd done %s`, setting.Symbol)
+	util.Notice(`---- add done %s`, setting.Symbol)
 }
 
 func checkSetCarrying(value bool) (before bool) {
