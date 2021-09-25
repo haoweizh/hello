@@ -62,6 +62,9 @@ func addLastCarry(order *model.Order, setting *model.Setting) {
 		if lastOrder == nil {
 			continue
 		}
+		util.Notice(`%s %s %s %s %s %s %s`,
+			lastOrder.AmountType, secret, lastOrder.Market, lastOrder.Symbol,
+			lastOrder.Instrument, lastOrder.OrderType, lastOrder.OrderId)
 		queryOrder := api.QueryOrderById(lastOrder.AmountType, secret, lastOrder.Market, lastOrder.Symbol,
 			lastOrder.Instrument, lastOrder.OrderType, lastOrder.OrderId)
 		if queryOrder == nil {
