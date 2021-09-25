@@ -50,9 +50,11 @@ func addLastCarry(order *model.Order, setting *model.Setting) {
 		order.AmountType, order.Market, order.Symbol,
 		order.Instrument, order.OrderType, order.OrderId)
 	secret := model.AppConfig.GetSecret(order.Market, order.AmountType)
-	order = api.QueryOrderById(order.AmountType, secret, order.Market, order.Symbol,
-		order.Instrument, order.OrderType, order.OrderId)
-	util.Notice(`get order %s %f`, order.Status, order.DealAmount)
+	if order.Market == model.OKEX {
+		order = api.QueryOrderById(order.AmountType, secret, order.Market, order.Symbol,
+			order.Instrument, order.OrderType, order.OrderId)
+		util.Notice(`get order %s %f`, order.Status, order.DealAmount)
+	}
 	lastOrderIndex++
 	noDealNum := 0
 	lastOrderAmount := 0
