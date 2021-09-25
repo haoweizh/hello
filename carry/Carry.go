@@ -57,9 +57,9 @@ func addLastCarry(order *model.Order, setting *model.Setting) {
 	if lastOrderAmount < lastOrderLength {
 		return
 	}
-	for _, lastOrder := range lastOrders {
+	for i, lastOrder := range lastOrders {
 		secret := model.AppConfig.GetSecret(order.Market, order.AmountType)
-		if lastOrder == nil || lastOrder.Status == model.CarryStatusSuccess {
+		if lastOrder == nil {
 			continue
 		}
 		queryOrder := api.QueryOrderById(lastOrder.AmountType, secret, lastOrder.Market, lastOrder.Symbol,
@@ -78,9 +78,10 @@ func addLastCarry(order *model.Order, setting *model.Setting) {
 				break
 			}
 		} else {
-			lastOrder.Status = model.CarryStatusSuccess
+			lastOrders[i] = nil
 		}
 	}
+	util.Notice(`---- qadd done %s`, setting.Symbol)
 }
 
 func checkSetCarrying(value bool) (before bool) {
