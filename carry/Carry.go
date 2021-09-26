@@ -34,6 +34,11 @@ var lastOrders = make([]*model.Order, lastOrderLength)
 
 const lastOrderLength = 8
 
+func setSettingStatus(setting *model.Setting, status bool) {
+	time.Sleep(time.Hour * 2)
+	setting.Valid = status
+}
+
 func addLastCarry(order *model.Order, setting *model.Setting) {
 	carryLock.Lock()
 	defer carryLock.Unlock()
@@ -78,6 +83,7 @@ func addLastCarry(order *model.Order, setting *model.Setting) {
 				lastOrders = make([]*model.Order, lastOrderLength)
 				lastOrderIndex = 0
 				lastCarrySetting = nil
+				go setSettingStatus(setting, true)
 				break
 			}
 		} else {
