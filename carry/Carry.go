@@ -28,9 +28,8 @@ var doCarry = false
 var symbolHighest, symbolLowest string
 var lowest = math.NaN()
 var highest = math.NaN()
-var lastCarrySetting *model.Setting
-var lastOrderIndex = 0
-var lastOrders = make([]*model.Order, lastOrderLength)
+var lastOrderIndex = make(map[string]map[string]int64)                       // market - symbol - index
+var lastOrders = make(map[string]map[string][]*model.Order, lastOrderLength) // market - symbol - []order
 
 const lastOrderLength = 8
 
@@ -45,49 +44,45 @@ func addLastCarry(order *model.Order, setting *model.Setting) {
 	if order == nil || setting == nil {
 		return
 	}
-	if lastCarrySetting != setting {
-		lastCarrySetting = setting
-		lastOrders = make([]*model.Order, lastOrderLength)
-		lastOrderIndex = 0
+	if lastOrders[setting.Market] == nil {
+		lastOrders[setting.Market] = make(map[string][]*model.Order)
+		lastOrderIndex[setting.Market] = make(map[string]int64)
 	}
-	lastOrders[lastOrderIndex%lastOrderLength] = order
-	lastOrderIndex++
+	if lastOrders[setting.Market][setting.Symbol] == nil {
+		lastOrders[setting.Market][setting.Symbol] = make([]*model.Order, lastOrderLength)
+		lastOrderIndex[setting.Market][setting.Symbol] = 0
+	}
+	lastOrders[setting.Market][setting.Symbol][lastOrderIndex[setting.Market][setting.Symbol]%lastOrderLength] = order
+	lastOrderIndex[setting.Market][setting.Symbol]++
 	noDealNum := 0
-	lastOrderAmount := 0
-	for _, lastOrder := range lastOrders {
-		if lastOrder != nil {
-			lastOrderAmount++
-		}
-	}
-	if lastOrderAmount < lastOrderLength {
-		return
-	}
-	for i, lastOrder := range lastOrders {
-		secret := model.AppConfig.GetSecret(order.Market, order.AmountType)
-		if lastOrder == nil {
+	tenMins, _ := time.ParseDuration(`10m`)
+	second, _ := time.ParseDuration(`500ms`)
+	for i, lastOrder := range lastOrders[setting.Market][setting.Symbol] {
+		now := time.Now()
+		if lastOrder == nil || order.OrderTime.Add(tenMins).Before(now) || order.OrderTime.Add(second).After(now) {
 			continue
 		}
+		secret := model.AppConfig.GetSecret(order.Market, order.AmountType)
 		queryOrder := api.QueryOrderById(lastOrder.AmountType, secret, lastOrder.Market, lastOrder.Symbol,
 			lastOrder.Instrument, lastOrder.OrderType, lastOrder.OrderId)
 		if queryOrder == nil {
 			continue
 		}
-		util.Notice(fmt.Sprintf(`--- %s %s %f`,
-			queryOrder.Symbol, queryOrder.OrderId, queryOrder.DealAmount))
+		util.Notice(fmt.Sprintf(`query last %s %s %f index %d`,
+			queryOrder.Symbol, queryOrder.OrderId, queryOrder.DealAmount, lastOrderIndex[setting.Market][setting.Symbol]))
 		if queryOrder.DealAmount == 0 && order.Status != model.CarryStatusFail {
 			noDealNum++
 			if noDealNum > 3 {
-				util.Notice(fmt.Sprintf(`no deal order %s %s %d %d stop`,
-					setting.Market, setting.Symbol, len(lastOrders), noDealNum))
+				util.Notice(fmt.Sprintf(`no deal order %s %s %d %d stop at %d`,
+					setting.Market, setting.Symbol, len(lastOrders), noDealNum, lastOrderIndex[setting.Market][setting.Symbol]))
 				setting.Valid = false
-				lastOrders = make([]*model.Order, lastOrderLength)
-				lastOrderIndex = 0
-				lastCarrySetting = nil
+				lastOrders[setting.Market][setting.Symbol] = make([]*model.Order, lastOrderLength)
+				lastOrderIndex[setting.Market][setting.Symbol] = 0
 				go setSettingStatus(setting, true)
 				break
 			}
 		} else {
-			lastOrders[i] = nil
+			lastOrders[setting.Market][setting.Symbol][i] = nil
 		}
 	}
 	util.Notice(`---- add done %s`, setting.Symbol)
