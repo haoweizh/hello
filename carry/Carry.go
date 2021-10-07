@@ -76,6 +76,7 @@ func addLastCarry(order *model.Order, setting *model.Setting) {
 				util.Notice(fmt.Sprintf(`no deal order %s %s %d %d stop at %d`,
 					setting.Market, setting.Symbol, len(lastOrders), noDealNum, lastOrderIndex[setting.Market][setting.Symbol]))
 				setting.Valid = false
+				setting.UpdatedAt = now
 				lastOrders[setting.Market][setting.Symbol] = make([]*model.Order, lastOrderLength)
 				lastOrderIndex[setting.Market][setting.Symbol] = 0
 				go setSettingStatus(setting, true)

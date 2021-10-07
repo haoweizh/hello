@@ -351,7 +351,8 @@ func GetParameters(c *gin.Context) {
 	}
 	for _, setting := range model.AppSettings {
 		if setting.Valid == false {
-			msg += fmt.Sprintf("[pause carry] %s %s %s\n", setting.Function, setting.Market, setting.Symbol)
+			msg += fmt.Sprintf("[pause carry] %s %s %s at %s \n",
+				setting.Function, setting.Market, setting.Symbol, setting.UpdatedAt.String())
 		}
 	}
 	var orders model.Order
