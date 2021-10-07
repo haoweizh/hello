@@ -34,7 +34,7 @@ var lastOrders = make(map[string]map[string][]*model.Order, lastOrderLength) // 
 const lastOrderLength = 8
 
 func setSettingStatus(setting *model.Setting, status bool) {
-	time.Sleep(time.Minute * 40)
+	time.Sleep(time.Minute * 20)
 	setting.Valid = status
 }
 
