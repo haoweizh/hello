@@ -253,8 +253,8 @@ func clearCarry(market, key, secret string) {
 	setUsdAvailable(key, localUsdAvailable)
 	setUsdRate(key, localUsdAvailable/balanceAllValue)
 	setBalanceAll(key, balanceAllValue)
-	util.Notice(fmt.Sprintf(`[carry] %s usd:%f %f len(balances):%d`,
-		key, localUsdAvailable, usdRate[key], len(balances)))
+	util.Notice(fmt.Sprintf(`[carry] %s usd:%f/%f=%f len(balances):%d`,
+		key, localUsdAvailable, balanceAllValue, usdRate[key], len(balances)))
 	equalSettings := make(map[string]*model.Setting)
 	for _, setting := range settings {
 		equalSettings[setting[0].Symbol] = setting[0]
@@ -777,7 +777,7 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 		msg = key[0:5] + msg
 	}
 	model.SetCarryInfo(table+setting.Symbol,
-		fmt.Sprintf("%s\n%f %f usdAva:%s usdRate:%s 计算%s %s %s %s 市场%s %s 资金费率:%s coinRate:%s 可用:%s ",
+		fmt.Sprintf("%s\n%f %f usdAva:%s usdRate:%s 计算%s %s %s %s 市场%s %s 资金费率:%s coinRate:%s 持仓:%s 可用:%s ",
 			msg, setting.OpenShortMargin, setting.CloseShortMargin,
 			strconv.FormatFloat(usdAvailable, 'f', 0, 64),
 			strconv.FormatFloat(100*usdRate, 'f', 0, 64)+"%",
@@ -788,11 +788,12 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 			strconv.FormatFloat(scoreOpen, 'f', 4, 64),
 			strconv.FormatFloat(scoreClose, 'f', 4, 64),
 			strconv.FormatFloat(fundingRate*1000, 'f', 2, 64)+"‰",
-			strconv.FormatFloat(100*balance.UsdValue/balanceAllValue, 'f', 1, 64)+"%",
+			strconv.FormatFloat(100*coinRate, 'f', 1, 64)+"%",
+			strconv.FormatFloat(balance.UsdValue, 'f', 1, 64),
 			strconv.FormatFloat(balance.AvailableWithBorrow, 'f', 2, 64)))
 	carryInfo := map[string]interface{}{`01.动态正开仓`: setOpen, `02.动态负开仓`: setClose, `03.动态平仓`: revertOpen,
 		`04.动态平仓`: revertClose, `0.5市场开仓`: scoreOpen, `06.市场关仓`: scoreClose, `07.usd rate`: usdRate,
-		`08.usd available`: usdAvailable, `09. coin rate`: balance.UsdValue / balanceAllValue,
+		`08.usd available`: usdAvailable, `09. coin rate`: coinRate,
 		`10.可用`: balance.AvailableWithBorrow, `11.资金费率`: fundingRate, `12.` + table: setting.Symbol,
 		`13.正开仓`: setting.OpenShortMargin, `14.负开仓`: setting.CloseShortMargin}
 	model.SetCarryInfos(table, setting.Symbol, carryInfo)
