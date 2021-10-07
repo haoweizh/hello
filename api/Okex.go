@@ -987,14 +987,8 @@ func parseBalanceOKEX(value map[string]interface{}) (balance *model.Balance) {
 	if value[`eq`] != nil && value[`eq`] != `` {
 		balance.Amount, _ = strconv.ParseFloat(value[`eq`].(string), 64)
 	}
-	if value[`disEq`] != nil && value[`disEq`] != `` {
+	if value[`eqUsd`] != nil && value[`eqUsd`] != `` {
 		balance.UsdValue, _ = strconv.ParseFloat(value[`disEq`].(string), 64)
-		if balance.UsdValue == 0 && balance.Amount > 0 {
-			success, bidAsk := model.AppMarkets.GetBidAsk(balance.Coin+`-USDT`, model.OKEX)
-			if success {
-				balance.UsdValue = balance.Amount * bidAsk.Bids[0].Price
-			}
-		}
 	}
 	if value[`crossLiab`] != nil && value[`crossLiab`] != `` {
 		balance.Borrow, _ = strconv.ParseFloat(value[`crossLiab`].(string), 64)
