@@ -146,6 +146,7 @@ func Maintain() {
 	model.HandlerMap[model.FunctionCarry] = ProcessCarry
 	//model.HandlerMap[model.FunctionCross] = cross.ProcessCross
 	model.HandlerMap[model.FunctionDCarry] = ProcessDCarry
+	model.HandlerMap[model.FunctionHang] = ProcessHang
 	_ = model.AppDB.AutoMigrate(&model.Setting{})
 	_ = model.AppDB.AutoMigrate(&model.Order{})
 	_ = model.AppDB.AutoMigrate(&model.Balance{})

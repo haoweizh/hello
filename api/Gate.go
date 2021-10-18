@@ -480,6 +480,36 @@ func getPositionsGate(key string, secret string) (success bool, positions []*mod
 	return true, positions, posBalance
 }
 
+func cancelOrderGate(key, secret, symbol, orderId string) (result bool) {
+	client, ctx := getClientGate(key, secret)
+	if strings.Contains(symbol, model.GetSpotTail(model.Gate)) {
+		param := &gateApi.CancelOrderOpts{}
+		if model.AppConfig.GateSpot {
+			param.Account = optional.NewString("spot")
+		} else {
+			param.Account = optional.NewString("cross_margin")
+		}
+		order, _, err := client.SpotApi.CancelOrder(ctx, orderId, symbol, param)
+		if err != nil {
+			panicGateError(key, "cancelSpotOrdersGate", err)
+			return false
+		}
+		marshal, _ := json.Marshal(order)
+		util.SocketInfo(`cancel related order response: %s`, marshal)
+		return true
+	} else {
+		symbol = model.GetCoin(model.Gate, symbol) + model.GetSpotTail(model.Gate)
+		order, _, err := client.FuturesApi.CancelFuturesOrder(ctx, "usdt", orderId)
+		if err != nil {
+			panicGateError(key, "cancelFutureOrderGate", err)
+			return false
+		}
+		marshal, _ := json.Marshal(order)
+		util.SocketInfo(`cancel future order response: %s`, marshal)
+		return true
+	}
+}
+
 func cancelOrdersGate(key string, secret string, symbol string) (result bool) {
 	client, ctx := getClientGate(key, secret)
 	if strings.Contains(symbol, model.GetSpotTail(model.Gate)) {

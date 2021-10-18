@@ -49,16 +49,16 @@ const OrderSideBuy = `buy`
 const OrderSideSell = `sell`
 const OrderSideLiquidateLong = `liquidateLong`
 const OrderSideLiquidateShort = `liquidateShort`
+const FunctionHang = `hang`
 const FunctionTurtle = `turtle`
 const FunctionGrid = `grid`
 const FunctionCarry = `carry`
-const FunctionCross = `cross`
+
+//const FunctionCross = `cross`
 const FunctionDCarry = `dcarry`
 const FunctionComplement = `comp`
 const FunctionPostonlyHandler = `postonly`
 const PostOnly = `ParticipateDoNotInitiate`
-const SymbolTypeSpot = `spot`
-const SymbolTypePerp = `perp`
 
 var AppDB *gorm.DB
 var AppSettings []Setting
