@@ -33,7 +33,10 @@ var ProcessHang = func(setting *model.Setting, tick *model.BidAsk) {
 				order.DealAmount = order.Amount
 				go model.AppDB.Save(order)
 			} else if order.Price == price {
-				orders = append(orders, order)
+				order = api.QueryOrderById(``, ``, setting.Market, setting.Symbol, setting.Symbol, model.OrderTypeLimit, order.OrderId)
+				if order.Status == model.CarryStatusWorking && order.DealAmount == order.Amount {
+					orders = append(orders, order)
+				}
 			} else {
 				api.CancelOrder(``, ``, setting.Market, setting.Symbol, ``, model.OrderTypeLimit, order.OrderId)
 			}
