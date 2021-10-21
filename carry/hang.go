@@ -23,6 +23,8 @@ func getHanging() (value bool) {
 }
 
 // ProcessHang setting中chance代表以bid1价格为起点的价格单位，chance可以是负数
+// Setting.GridAmount 卖出数量
+// Setting.CloseShortMargin 最低卖出价格
 var ProcessHang = func(setting *model.Setting, tick *model.BidAsk) {
 	marketInfo := model.GetMarketInfo(setting.Market, setting.Symbol)
 	if marketInfo == nil || setting == nil || tick == nil || tick.Asks == nil || tick.Bids == nil || getHanging() ||
@@ -32,7 +34,7 @@ var ProcessHang = func(setting *model.Setting, tick *model.BidAsk) {
 	setHanging(true)
 	defer setHanging(false)
 	price := tick.Bids[0].Price + float64(setting.Chance)*marketInfo.PriceIncrement
-	if len(orderHang) == 0 {
+	if len(orderHang) == 0 && price > setting.CloseShortMargin {
 		order := api.PlaceOrder(``, ``, model.OrderSideSell, model.OrderTypeLimit, setting.Market, setting.Symbol,
 			setting.Symbol, ``, model.FunctionHang, price, price, setting.GridAmount, true, false, nil, setting)
 		if order.Status != model.CarryStatusFail && order != nil && len(order.OrderId) != 0 {
