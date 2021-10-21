@@ -11,6 +11,13 @@ import (
 var orderHang = make([]*model.Order, 0)
 var hanging = false
 var hangLock sync.Mutex
+var cancelAll = make(map[string]bool)
+
+func setCancelAll(symbol string, value bool) {
+	hangLock.Lock()
+	defer hangLock.Unlock()
+	cancelAll[symbol] = value
+}
 
 func setHanging(value bool) {
 	hangLock.Lock()
@@ -30,6 +37,10 @@ var ProcessHang = func(setting *model.Setting, tick *model.BidAsk) {
 	if marketInfo == nil || setting == nil || tick == nil || tick.Asks == nil || tick.Bids == nil || getHanging() ||
 		model.AppConfig.Handle != `1` || model.AppPause || util.GetNowUnixMillion()-int64(tick.Ts) > 40 {
 		return
+	}
+	if cancelAll[setting.Symbol] == false {
+		api.CancelOrders(``, ``, setting.Market, setting.Symbol)
+		setCancelAll(setting.Symbol, true)
 	}
 	setHanging(true)
 	defer setHanging(false)
@@ -59,7 +70,11 @@ var ProcessHang = func(setting *model.Setting, tick *model.BidAsk) {
 			} else {
 				api.CancelOrder(``, ``, setting.Market, setting.Symbol, ``, model.OrderTypeLimit, order.OrderId)
 				order = api.QueryOrderById(``, ``, setting.Market, setting.Symbol, setting.Symbol, model.OrderTypeLimit, order.OrderId)
-				go model.AppDB.Save(order)
+				if order.Status == model.CarryStatusWorking {
+					orders = append(orders, order)
+				} else {
+					go model.AppDB.Save(order)
+				}
 			}
 		}
 		orderHang = orders
