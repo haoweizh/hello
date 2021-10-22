@@ -679,6 +679,7 @@ func queryOrderGate(key, secret string, order *model.Order) {
 			panicGateError(key, "GetFuturesOrder", err)
 			return
 		}
+		util.SocketInfo(`%s %s %s query result: %v`, order.Market, order.Symbol, order.OrderId, orderFuture)
 		order.DealPrice, _ = strconv.ParseFloat(orderFuture.FillPrice, 64)
 		if orderFuture.Status == `open` {
 			order.Status = model.CarryStatusWorking
@@ -705,6 +706,7 @@ func queryOrderGate(key, secret string, order *model.Order) {
 			panicGateError(key, "GetSpotOrder", err)
 			return
 		}
+		util.SocketInfo(`%s %s %s query result: %v`, order.Market, order.Symbol, order.OrderId, orderSpot)
 		order.DealAmount, _ = strconv.ParseFloat(orderSpot.FilledTotal, 64)
 		order.DealPrice, _ = strconv.ParseFloat(orderSpot.FillPrice, 64)
 		switch orderSpot.Status {
