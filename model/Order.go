@@ -1,6 +1,9 @@
 package model
 
-import "time"
+import (
+	"strings"
+	"time"
+)
 
 type Order struct {
 	Amount       float64
@@ -39,4 +42,12 @@ type Order struct {
 	FrozenQuantity    float64 //冻结数量
 	Hidden            bool    //是否隐藏
 	OrderUpdateTime   time.Time
+}
+
+func (order *Order) HaveId() (result bool) {
+	orderId := strings.Trim(order.OrderId, ` `)
+	if orderId == `` || orderId == `0` || strings.Contains(orderId, `error`) {
+		return false
+	}
+	return true
 }

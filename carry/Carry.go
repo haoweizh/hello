@@ -101,50 +101,54 @@ func checkSetCarrying(value bool) (before bool) {
 	}
 }
 
-// 专用于处理ok可买卖数量限制
 var postOrderCarry = func(order *model.Order, setting *model.Setting) {
 	if order == nil {
 		return
 	}
-	unknownFail := true
-	if order.OrderId == `` && (order.ErrCode == `` || order.ErrCode == `0`) {
-		if order.Market == `` || order.Market == model.OKEX {
-			keys, secrets := model.AppConfig.GetKeys(model.OKEX)
-			for i, key := range keys {
-				if key == order.AmountType && InsufficientCodeOKEX[order.ErrCode] {
-					util.Notice(`reset okex trade max with %s %s`, order.ErrCode, order.AmountType)
-					resetTradeMax(key, secrets[i], model.OKEX)
-					unknownFail = false
-				}
+	if order.HaveId() {
+		if order.Market == model.OKEX {
+			maxBuy, maxSell := getTradeMax(order.AmountType, order.Symbol)
+			amount := model.GetAmountInMarket(model.OKEX, order.Instrument, order.Amount)
+			if order.OrderSide == model.OrderSideBuy {
+				maxBuy -= amount
+				maxSell += amount
+			} else if order.OrderSide == model.OrderSideSell {
+				maxBuy += amount
+				maxSell -= amount
 			}
-		} else if order.Market == model.Binance {
-			keys, secrets := model.AppConfig.GetKeys(model.Binance)
-			for i, key := range keys {
-				if key == order.AmountType && strings.Contains(InsufficientCodeBinance, order.ErrCode) {
-					util.Notice(`reset binance trade max with %s %s`, order.ErrCode, order.AmountType)
-					clearCarry(model.Binance, key, secrets[i])
-					unknownFail = false
-				}
-			}
+			setTradeMax(order.AmountType, order.Instrument, maxBuy, maxSell)
+			addLastCarry(order, setting)
 		}
 	} else {
-		unknownFail = false
-		maxBuy, maxSell := getTradeMax(order.AmountType, order.Symbol)
-		amount := model.GetAmountInMarket(model.OKEX, order.Instrument, order.Amount)
-		if order.OrderSide == model.OrderSideBuy {
-			maxBuy -= amount
-			maxSell += amount
-		} else if order.OrderSide == model.OrderSideSell {
-			maxBuy += amount
-			maxSell -= amount
+		unknownFail := true
+		if order.ErrCode == `` || order.ErrCode == `0` {
+			if order.Market == `` || order.Market == model.OKEX {
+				keys, secrets := model.AppConfig.GetKeys(model.OKEX)
+				for i, key := range keys {
+					if key == order.AmountType && InsufficientCodeOKEX[order.ErrCode] {
+						util.Notice(`reset okex trade max with %s %s`, order.ErrCode, order.AmountType)
+						resetTradeMax(key, secrets[i], model.OKEX)
+						unknownFail = false
+					}
+				}
+			} else if order.Market == model.Binance {
+				keys, secrets := model.AppConfig.GetKeys(model.Binance)
+				for i, key := range keys {
+					if key == order.AmountType && strings.Contains(InsufficientCodeBinance, order.ErrCode) {
+						util.Notice(`reset binance trade max with %s %s`, order.ErrCode, order.AmountType)
+						clearCarry(model.Binance, key, secrets[i])
+						unknownFail = false
+					}
+				}
+			} else {
+				unknownFail = true
+			}
 		}
-		setTradeMax(order.AmountType, order.Instrument, maxBuy, maxSell)
-		addLastCarry(order, setting)
-	}
-	if unknownFail {
-		addCarryResult(order.AmountType, false)
-	} else {
-		addCarryResult(order.AmountType, true)
+		if unknownFail {
+			addCarryResult(order.AmountType, false)
+		} else {
+			addCarryResult(order.AmountType, true)
+		}
 	}
 }
 
