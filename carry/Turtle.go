@@ -95,12 +95,12 @@ func GetTurtleData(setting *model.Setting) (turtleData *TurtleData) {
 	}
 	if dataSet[setting.Market][setting.Symbol] == nil {
 		dataSet[setting.Market][setting.Symbol] = make(map[string]*TurtleData)
-		turtleClosed[setting.Market][setting.Symbol] = false
 	}
 	if dataSet[setting.Market][setting.Symbol][todayStr] != nil {
 		return dataSet[setting.Market][setting.Symbol][todayStr]
 	}
 	util.Notice(`need to create turtle ` + setting.Market + setting.Symbol)
+	turtleClosed[setting.Market][setting.Symbol] = false
 	turtleData = &TurtleData{turtleTime: today, checkTime: util.GetNow()}
 	var orderLong, orderShort *model.Order
 	model.AppDB.Where("market= ? and symbol= ? and refresh_type= ? and amount>deal_amount and status=? and order_side=?",
@@ -226,10 +226,11 @@ var ProcessTurtle = func(setting *model.Setting, tick *model.BidAsk) {
 	currentN := model.GetCurrentN(setting)
 	showMsg := fmt.Sprintf("%s_%s_%s", model.FunctionTurtle, setting.Market, setting.Symbol)
 	model.SetCarryInfo(showMsg, fmt.Sprintf("[海龟参数]%s %s 加仓次数限制:%f 当前已经持仓数量:%f 上一次开仓的价格:%f"+
-		"20日:%f-%f 10日:%f-%f n:%f 数量:%f %s持仓数:%d 总持仓数%d bid-ask %f %f",
+		"20日:%f-%f 10日:%f-%f n:%f 数量:%f %s持仓数:%d 总持仓数%d bid-ask %f %f 当日有平仓：%v",
 		turtleData.turtleTime.String()[0:10], showMsg, setting.AmountLimit, setting.GridAmount, setting.PriceX,
 		turtleData.lowDays20, turtleData.highDays20, turtleData.lowDays10, turtleData.highDays10, turtleData.n,
-		turtleData.amount, setting.Symbol, setting.Chance, currentN, tick.Bids[0].Price, tick.Asks[0].Price))
+		turtleData.amount, setting.Symbol, setting.Chance, currentN, tick.Bids[0].Price, tick.Asks[0].Price,
+		turtleClosed[setting.Market][setting.Symbol]))
 	carryInfo := map[string]interface{}{`turtle_status`: showMsg, `date`: turtleData.turtleTime.String()[0:10],
 		`加仓次数限制`: setting.AmountLimit, `当前已经持仓数量`: setting.GridAmount, `上一次开仓的价格`: setting.PriceX,
 		`20日low`: turtleData.lowDays20, `20日high`: turtleData.highDays20, `10日low`: turtleData.lowDays10,
