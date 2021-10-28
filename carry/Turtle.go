@@ -30,7 +30,7 @@ type TurtleData struct {
 	shorts     []*model.Order
 }
 
-const turtleTriggerDelta = 0.005
+const turtleTriggerDelta = 0.01
 
 var turtling = false
 var turtleLock sync.Mutex
