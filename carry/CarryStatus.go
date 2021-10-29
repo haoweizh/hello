@@ -3,6 +3,7 @@ package carry
 import (
 	"hello/model"
 	"hello/util"
+	"time"
 )
 
 var carryFail = make(map[string]int64)                        // key fail num
@@ -40,6 +41,14 @@ func GetCarryResult(key string) int64 {
 	return carryFail[key]
 }
 
+func pauseCarry(key string) {
+	util.Notice(`%s carrying pause %v`, key, true)
+	carryStop[key] = true
+	time.Sleep(time.Minute * 60)
+	util.Notice(`%s carrying pause %v`, key, false)
+	carryStop[key] = false
+}
+
 func addCarryResult(key string, success bool) {
 	defer carryLock.Unlock()
 	carryLock.Lock()
@@ -52,7 +61,7 @@ func addCarryResult(key string, success bool) {
 		util.Notice(`---------- fail size %s %d`, key, carryFail[key])
 	}
 	if carryFail[key] > 6 {
-		carryStop[key] = true
+		pauseCarry(key)
 		markets := model.GetMarkets()
 		mailAddr := `haoweizh@qq.com`
 		marketPause := ``

@@ -106,42 +106,36 @@ var postOrderCarry = func(order *model.Order, setting *model.Setting) {
 		return
 	}
 	if order.HaveId() {
-		if order.Market == model.OKEX {
-			maxBuy, maxSell := getTradeMax(order.AmountType, order.Symbol)
-			amount := model.GetAmountInMarket(model.OKEX, order.Instrument, order.Amount)
-			if order.OrderSide == model.OrderSideBuy {
-				maxBuy -= amount
-				maxSell += amount
-			} else if order.OrderSide == model.OrderSideSell {
-				maxBuy += amount
-				maxSell -= amount
-			}
-			setTradeMax(order.AmountType, order.Instrument, maxBuy, maxSell)
-			addLastCarry(order, setting)
+		maxBuy, maxSell := getTradeMax(order.AmountType, order.Symbol)
+		amount := model.GetAmountInMarket(order.Market, order.Instrument, order.Amount)
+		if order.OrderSide == model.OrderSideBuy {
+			maxBuy -= amount
+			maxSell += amount
+		} else if order.OrderSide == model.OrderSideSell {
+			maxBuy += amount
+			maxSell -= amount
 		}
+		setTradeMax(order.AmountType, order.Instrument, maxBuy, maxSell)
+		addLastCarry(order, setting)
 	} else {
 		unknownFail := true
-		if order.ErrCode == `` || order.ErrCode == `0` {
-			if order.Market == `` || order.Market == model.OKEX {
-				keys, secrets := model.AppConfig.GetKeys(model.OKEX)
-				for i, key := range keys {
+		if order.Market == `` || order.Market == model.OKEX || order.Market == model.Binance {
+			keys, secrets := model.AppConfig.GetKeys(order.Market)
+			for i, key := range keys {
+				switch order.Market {
+				case model.OKEX:
 					if key == order.AmountType && InsufficientCodeOKEX[order.ErrCode] {
-						util.Notice(`reset okex trade max with %s %s`, order.ErrCode, order.AmountType)
+						util.Notice(`reset %s trade max with %s %s`, order.Market, order.ErrCode, order.AmountType)
 						resetTradeMax(key, secrets[i], model.OKEX)
 						unknownFail = false
 					}
-				}
-			} else if order.Market == model.Binance {
-				keys, secrets := model.AppConfig.GetKeys(model.Binance)
-				for i, key := range keys {
+				case model.Binance:
 					if key == order.AmountType && strings.Contains(InsufficientCodeBinance, order.ErrCode) {
 						util.Notice(`reset binance trade max with %s %s`, order.ErrCode, order.AmountType)
 						clearCarry(model.Binance, key, secrets[i])
 						unknownFail = false
 					}
 				}
-			} else {
-				unknownFail = true
 			}
 		}
 		if unknownFail {
