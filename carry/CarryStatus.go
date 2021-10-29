@@ -54,14 +54,16 @@ func addCarryResult(key string, success bool) {
 	carryLock.Lock()
 	if success {
 		if carryFail[key] > 0 {
-			carryFail[key] -= 1
+			carryFail[key] = carryFail[key] - 1
 		}
 	} else {
 		carryFail[key] += 2
+	}
+	if carryFail[key] > 0 {
 		util.Notice(`---------- fail size %s %d`, key, carryFail[key])
 	}
 	if carryFail[key] > 6 {
-		pauseCarry(key)
+		go pauseCarry(key)
 		markets := model.GetMarkets()
 		mailAddr := `haoweizh@qq.com`
 		marketPause := ``
