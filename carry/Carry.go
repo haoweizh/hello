@@ -117,6 +117,7 @@ var postOrderCarry = func(order *model.Order, setting *model.Setting) {
 		}
 		setTradeMax(order.AmountType, order.Instrument, maxBuy, maxSell)
 		addLastCarry(order, setting)
+		addCarryResult(order.AmountType, true)
 	} else {
 		unknownFail := true
 		if order.Market == `` || order.Market == model.OKEX || order.Market == model.Binance {

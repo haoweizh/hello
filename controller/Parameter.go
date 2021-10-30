@@ -92,7 +92,7 @@ func test(c *gin.Context) {
 				carryBackMsg += fmt.Sprintf("fails %s 可用保证金: %f 占用保证金: %f 保证金率: rate: %f\n",
 					key, collateral.Available, collateral.Occupied, collateral.Rate)
 			}
-			carryBackMsg += fmt.Sprintf(`current fails: %s %d`, key, failNum)
+			carryBackMsg += fmt.Sprintf("current fails: %s %d\n", key, failNum)
 		}
 	}
 	keysFtx, _ := model.AppConfig.GetKeys(model.Ftx)
