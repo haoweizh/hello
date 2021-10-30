@@ -89,9 +89,10 @@ func test(c *gin.Context) {
 			failNum := carry.GetCarryResult(key)
 			collateral := carry.GetCollateral(key)
 			if collateral != nil {
-				carryBackMsg += fmt.Sprintf("fails %s %d 可用保证金: %f 占用保证金: %f 保证金率: rate: %f\n",
-					key, failNum, collateral.Available, collateral.Occupied, collateral.Rate)
+				carryBackMsg += fmt.Sprintf("fails %s 可用保证金: %f 占用保证金: %f 保证金率: rate: %f\n",
+					key, collateral.Available, collateral.Occupied, collateral.Rate)
 			}
+			carryBackMsg += fmt.Sprintf(`current fails: %s %d`, key, failNum)
 		}
 	}
 	keysFtx, _ := model.AppConfig.GetKeys(model.Ftx)

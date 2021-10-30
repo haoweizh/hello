@@ -55,6 +55,7 @@ func addCarryResult(key string, success bool) {
 	if success {
 		if carryFail[key] > 0 {
 			carryFail[key] = carryFail[key] - 1
+			util.Notice(`---------- fail size -- %s %d`, key, carryFail[key])
 		}
 	} else {
 		carryFail[key] += 2
