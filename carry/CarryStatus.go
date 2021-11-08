@@ -44,7 +44,7 @@ func GetCarryResult(key string) int64 {
 func pauseCarry(key string) {
 	util.Notice(`%s carrying pause %v`, key, true)
 	carryStop[key] = true
-	time.Sleep(time.Minute * 60)
+	time.Sleep(time.Minute * 30)
 	util.Notice(`%s carrying pause %v`, key, false)
 	carryStop[key] = false
 }
@@ -55,7 +55,6 @@ func addCarryResult(key string, success bool) {
 	if success {
 		if carryFail[key] > 0 {
 			carryFail[key] = carryFail[key] - 1
-			util.Notice(`---------- fail size -- %s %d`, key, carryFail[key])
 		}
 	} else {
 		carryFail[key] += 2
@@ -79,10 +78,10 @@ func addCarryResult(key string, success bool) {
 				}
 			}
 		}
-		util.SendMail(model.AppConfig.FromMail, model.AppConfig.FromMailAuth, mailAddr,
-			`暂停下单`, `market: `+marketPause+` stop `+key)
 		util.Notice(`----------stop carry %s %d`, key, carryFail[key])
 		carryFail[key] = 0
+		_ = util.SendMail(model.AppConfig.FromMail, model.AppConfig.FromMailAuth, mailAddr,
+			`暂停下单`, `market: `+marketPause+` stop `+key)
 	}
 }
 
