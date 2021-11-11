@@ -610,7 +610,7 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 		return
 	}
 	if balance == nil {
-		model.SetCarryInfo(key, `warning `+coin, fmt.Sprintf(`slave: balace not available!!! %s %s`, key, coin))
+		model.SetCarryInfo(key, `warning `+coin, fmt.Sprintf(`balace not available!!! %s %s`, key, coin))
 		util.Debug(fmt.Sprintf(`calc amount fail balance absent %s %s`, key, coin))
 		return ``, ``, 0, carryType
 	} else {
