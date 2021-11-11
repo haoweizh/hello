@@ -5,7 +5,6 @@ import (
 	"github.com/jinzhu/configor"
 	"gorm.io/gorm"
 	"hello/util"
-	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -15,8 +14,7 @@ type PostOrder func(order *Order, setting *Setting) // 处理下单后的函数
 var HandlerMap = make(map[string]CarryHandler)
 var infoLock sync.Mutex
 var Currencies = []string{`btc`, `eth`, `usdt`, `ft`, `ft1808`, `pax`, `usdc`, `tusd`}
-var CarryInfo = make(map[string]string)                             // function - msg
-var carryInfos = make(map[string]map[string]map[string]interface{}) // table - line name - key - value
+var CarryInfo = make(map[string]map[string]string) // userKey - function - msg
 var AppMetric = &MetricManager{}
 
 const KeyDefault = ``
@@ -54,7 +52,8 @@ const FunctionTurtle = `turtle`
 const FunctionGrid = `grid`
 const FunctionCarry = `carry`
 
-//const FunctionCross = `cross`
+// const FunctionCross = `cross`
+
 const FunctionDCarry = `dcarry`
 const FunctionComplement = `comp`
 const FunctionPostonlyHandler = `postonly`
@@ -144,76 +143,34 @@ var orderStatusMap = map[string]map[string]string{ // market - market status - u
 	},
 }
 
-func GetCarryInfos(excludeTable string) (info [][]map[string]interface{}) {
+func GetCarryInfo(userKey, key string) (info string) {
 	infoLock.Lock()
 	defer infoLock.Unlock()
-	info = make([][]map[string]interface{}, 0)
-	for table, carryInfo := range carryInfos {
-		if table == excludeTable {
-			continue
+	if key != `` {
+		for _, value := range CarryInfo[userKey] {
+			info += fmt.Sprintf("%s\n", value)
 		}
-		copyTable := make([]map[string]interface{}, 0)
-		for _, item := range carryInfo {
-			copyItem := make(map[string]interface{})
-			for keyItem, value := range item {
-				copyItem[keyItem] = value
-			}
-			copyTable = append(copyTable, copyItem)
-		}
-		info = append(info, copyTable)
+	} else {
+		return CarryInfo[userKey][key]
 	}
 	return
 }
 
-func RemoveCarryInfos(table, key string) {
+// SetCarryInfo userKey[0] vs slaves
+func SetCarryInfo(userKey, key, value string) {
 	infoLock.Lock()
 	defer infoLock.Unlock()
-	carryInfo := carryInfos[table]
-	if carryInfo == nil || len(carryInfo) == 0 {
-		return
+	if CarryInfo[userKey] == nil {
+		CarryInfo[userKey] = make(map[string]string)
 	}
-	delete(carryInfo, key)
+	CarryInfo[userKey][key] = value
 }
 
-func SetCarryInfos(table, key string, item map[string]interface{}) {
+func RemoveCarryInfo(userKey, key string) {
 	infoLock.Lock()
 	defer infoLock.Unlock()
-	if carryInfos[table] == nil {
-		carryInfos[table] = make(map[string]map[string]interface{})
-	}
-	carryInfos[table][key] = item
-}
-
-func GetCarryInfo(mark, except string) (info string) {
-	infoLock.Lock()
-	defer infoLock.Unlock()
-	keys := make([]string, 0)
-	for key := range CarryInfo {
-		keys = append(keys, key)
-	}
-	sort.Strings(keys)
-	for _, key := range keys {
-		if (mark == `` || strings.Contains(key, mark)) && (except == `` || !strings.Contains(key, except)) {
-			info += fmt.Sprintf("%s\n", CarryInfo[key])
-		}
-	}
-	return
-}
-
-func SetCarryInfo(key, value string) {
-	infoLock.Lock()
-	defer infoLock.Unlock()
-	if CarryInfo == nil {
-		CarryInfo = make(map[string]string)
-	}
-	CarryInfo[key] = value
-}
-
-func RemoveCarryInfo(key string) {
-	infoLock.Lock()
-	defer infoLock.Unlock()
-	if CarryInfo != nil {
-		delete(CarryInfo, key)
+	if CarryInfo[userKey] != nil {
+		delete(CarryInfo[userKey], key)
 	}
 }
 

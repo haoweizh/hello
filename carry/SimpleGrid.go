@@ -287,10 +287,8 @@ var ProcessSimpleGrid = func(setting *model.Setting, tick *model.BidAsk) {
 			gridPos.orderLiquidate = nil
 		}
 	}
-	model.SetCarryInfo(fmt.Sprintf(`[Grid]%s_%s_%s`, setting.Market, setting.Symbol, model.FunctionGrid),
+	keys, _ := model.AppConfig.GetKeys(setting.Market)
+	model.SetCarryInfo(keys[0], fmt.Sprintf(`[Grid]%s_%s_%s`, setting.Market, setting.Symbol, model.FunctionGrid),
 		fmt.Sprintf(" chance:%d last price:%f holding:%f n值：%f\n%s",
 			setting.Chance, setting.PriceX, setting.GridAmount, gridPos.n, showMsg))
-	carryInfo := map[string]interface{}{model.FunctionGrid: setting.Market + `_` + setting.Symbol, `n`: gridPos.n,
-		`chance`: setting.Chance, `last_price`: setting.PriceX, `holding`: setting.GridAmount, `msg`: showMsg}
-	model.SetCarryInfos(model.FunctionGrid, setting.Market+`_`+setting.Symbol, carryInfo)
 }

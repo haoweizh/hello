@@ -366,9 +366,9 @@ var ProcessCarry = func(setting *model.Setting, tick *model.BidAsk) {
 		symbolLowest = setting.Symbol
 		model.AppMetric.AddCarry(`开仓价差----`, math.NaN(), lowest)
 	}
-	model.SetCarryInfo(`[current high-low]`, fmt.Sprintf(`highest %s %f lowest %s %f time:%s`,
-		symbolHighest, highest, symbolLowest, lowest, time.Now().String()))
 	keys, secrets := model.AppConfig.GetKeys(setting.Market)
+	model.SetCarryInfo(keys[0], `[current high-low]`, fmt.Sprintf(`highest %s %f lowest %s %f time:%s`,
+		symbolHighest, highest, symbolLowest, lowest, time.Now().String()))
 	doReverts := strings.Split(model.AppConfig.CarryClose, `,`)
 	begin := len(keys) - 1
 	step := -1
@@ -424,10 +424,10 @@ func placeCarry(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, key
 			model.OrderTypeLimit, perpPrice, relatedPrice, amount)
 	} else {
 		go api.PlaceOrder(key, secret, sidePerp, model.OrderTypeLimit, setting.Market, setting.Symbol,
-			``, ``, model.FunctionCarry, perpPrice, perpPrice,
+			``, ``, carryType, perpPrice, perpPrice,
 			amount, true, true, postOrderCarry, setting)
 		api.PlaceOrder(key, secret, sideRelated, model.OrderTypeLimit, setting.Market, setting.SymbolRelated,
-			``, ``, model.FunctionCarry, relatedPrice, relatedPrice,
+			``, ``, carryType, relatedPrice, relatedPrice,
 			amount, true, true, postOrderCarry, setting)
 	}
 	time.Sleep(time.Second / 4)
@@ -610,13 +610,11 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 		return
 	}
 	if balance == nil {
-		model.SetCarryInfo(`warning `+coin, fmt.Sprintf(`slave: balace not available!!! %s %s`, key, coin))
-		model.SetCarryInfos(`coin_absent`, key+`_`+coin, map[string]interface{}{`absent`: coin, `key`: key})
+		model.SetCarryInfo(key, `warning `+coin, fmt.Sprintf(`slave: balace not available!!! %s %s`, key, coin))
 		util.Debug(fmt.Sprintf(`calc amount fail balance absent %s %s`, key, coin))
 		return ``, ``, 0, carryType
 	} else {
-		model.RemoveCarryInfo(`warning ` + coin)
-		model.RemoveCarryInfos(`coin_absent`, key+`_`+coin)
+		model.RemoveCarryInfo(key, `warning `+coin)
 	}
 	balanceAllValue := getBalanceAll(key)
 	if balanceAllValue == 0 {
@@ -775,13 +773,9 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 			usdAvailable, amount, balance.Amount, scoreOpen, setOpen, scoreClose, setClose,
 			revertOpen, revertClose, doRevert))
 	}
-	msg := setting.Symbol
-	if keys[0] != key {
-		msg = key[0:5] + msg
-	}
-	model.SetCarryInfo(table+setting.Symbol,
+	model.SetCarryInfo(key, table+setting.Symbol,
 		fmt.Sprintf("%s\n%f %f usdAva:%s usdRate:%s 计算%s %s %s %s 市场%s %s 资金费率:%s coinRate:%s 持仓:%s 可用:%s ",
-			msg, setting.OpenShortMargin, setting.CloseShortMargin,
+			setting.Symbol, setting.OpenShortMargin, setting.CloseShortMargin,
 			strconv.FormatFloat(usdAvailable, 'f', 0, 64),
 			strconv.FormatFloat(100*usdRate, 'f', 0, 64)+"%",
 			strconv.FormatFloat(setOpen, 'f', 4, 64),
@@ -794,11 +788,5 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 			strconv.FormatFloat(100*coinRate, 'f', 1, 64)+"%",
 			strconv.FormatFloat(balance.UsdValue, 'f', 1, 64),
 			strconv.FormatFloat(balance.AvailableWithBorrow, 'f', 2, 64)))
-	carryInfo := map[string]interface{}{`01.动态正开仓`: setOpen, `02.动态负开仓`: setClose, `03.动态平仓`: revertOpen,
-		`04.动态平仓`: revertClose, `0.5市场开仓`: scoreOpen, `06.市场关仓`: scoreClose, `07.usd rate`: usdRate,
-		`08.usd available`: usdAvailable, `09. coin rate`: coinRate,
-		`10.可用`: balance.AvailableWithBorrow, `11.资金费率`: fundingRate, `12.` + table: setting.Symbol,
-		`13.正开仓`: setting.OpenShortMargin, `14.负开仓`: setting.CloseShortMargin}
-	model.SetCarryInfos(table, setting.Symbol, carryInfo)
 	return sidePerp, sideRelated, amount, carryType
 }

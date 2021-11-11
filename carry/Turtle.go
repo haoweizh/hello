@@ -212,9 +212,8 @@ var ProcessTurtle = func(setting *model.Setting, tick *model.BidAsk) {
 		return
 	}
 	if setting.Chance != 0 && setting.PriceX == 0 {
-		carryInfo := map[string]interface{}{`缺少上次成交价`: setting.Symbol, `market`: setting.Market,
-			`chance`: setting.Chance, `priceX`: setting.PriceX}
-		model.SetCarryInfos(model.FunctionTurtle+`_error_`+setting.Market, setting.Symbol, carryInfo)
+		util.Notice(fmt.Sprintf(`no last priceX %s %s %d %f`,
+			setting.Market, setting.Symbol, setting.Chance, setting.PriceX))
 		return
 	}
 	setTurtling(true)
@@ -225,18 +224,13 @@ var ProcessTurtle = func(setting *model.Setting, tick *model.BidAsk) {
 	}
 	currentN := model.GetCurrentN(setting)
 	showMsg := fmt.Sprintf("%s_%s_%s", model.FunctionTurtle, setting.Market, setting.Symbol)
-	model.SetCarryInfo(showMsg, fmt.Sprintf("[海龟参数]%s %s 加仓次数限制:%f 当前已经持仓数量:%f 上一次开仓的价格:%f"+
+	keys, _ := model.AppConfig.GetKeys(setting.Market)
+	model.SetCarryInfo(keys[0], showMsg, fmt.Sprintf("[海龟参数]%s %s 加仓次数限制:%f 当前已经持仓数量:%f 上一次开仓的价格:%f"+
 		"20日:%f-%f 10日:%f-%f n:%f 数量:%f %s持仓数:%d 总持仓数%d bid-ask %f %f 当日有平仓：%v",
 		turtleData.turtleTime.String()[0:10], showMsg, setting.AmountLimit, setting.GridAmount, setting.PriceX,
 		turtleData.lowDays20, turtleData.highDays20, turtleData.lowDays10, turtleData.highDays10, turtleData.n,
 		turtleData.amount, setting.Symbol, setting.Chance, currentN, tick.Bids[0].Price, tick.Asks[0].Price,
 		turtleClosed[setting.Market][setting.Symbol]))
-	carryInfo := map[string]interface{}{`turtle_status`: showMsg, `date`: turtleData.turtleTime.String()[0:10],
-		`加仓次数限制`: setting.AmountLimit, `当前已经持仓数量`: setting.GridAmount, `上一次开仓的价格`: setting.PriceX,
-		`20日low`: turtleData.lowDays20, `20日high`: turtleData.highDays20, `10日low`: turtleData.lowDays10,
-		`10日high`: turtleData.highDays10, `n`: turtleData.n, `数量`: turtleData.amount, `持仓数`: setting.Chance,
-		`总持仓数`: currentN, `bid0`: tick.Bids[0].Price, `ask0`: tick.Asks[0].Price}
-	model.SetCarryInfos(model.FunctionTurtle+`_status_`, setting.Market+`_`+setting.Symbol, carryInfo)
 	priceLong := turtleData.highDays20
 	priceShort := turtleData.lowDays20
 	longBreak, shortBreak := checkTurtleBreak(setting, turtleData, tick)

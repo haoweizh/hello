@@ -33,8 +33,6 @@ func ParameterServe() {
 	router.GET(`test`, test)
 	router.GET(`debug`, debug)
 	router.GET(`wss`, WsPage)
-	router.GET(`api/master`, GetCarryInfo)
-	router.GET(`api/slave`, GetCarryInfoSlave)
 	if model.AppConfig.Port == `443` {
 		_ = router.RunTLS(":"+model.AppConfig.Port, `./server.pem`, `./server.key`)
 	} else {
@@ -83,9 +81,11 @@ func test(c *gin.Context) {
 		Group(`market,order_side,date(order_time),amount_type,refresh_type`).Order(`date(order_time) desc`).Rows()
 	carryBackMsg := "account info:\n"
 	markets := model.GetMarkets()
+	userKeys := make([]string, 0)
 	for _, market := range markets {
 		keys, _ := model.AppConfig.GetKeys(market)
 		for _, key := range keys {
+			userKeys = append(userKeys, key)
 			failNum := carry.GetCarryResult(key)
 			collateral := carry.GetCollateral(key)
 			if collateral != nil {
@@ -112,8 +112,10 @@ func test(c *gin.Context) {
 		}
 		carryRows.Close()
 	}
-	carryBackMsg += model.GetCarryInfo(`dynamic`, ``)
-	carryBackMsg += model.GetCarryInfo(`warning`, ``)
+	for _, userKey := range userKeys {
+		carryBackMsg += model.GetCarryInfo(userKey, `dynamic`) + "\n"
+		carryBackMsg += model.GetCarryInfo(userKey, `warning`) + "\n"
+	}
 	c.String(http.StatusOK, carryBackMsg)
 }
 
@@ -263,76 +265,13 @@ func GetBalance(c *gin.Context) {
 	c.String(http.StatusOK, msg)
 }
 
-func GetCarryInfoSlave(c *gin.Context) {
-	info := model.GetCarryInfos(model.FunctionCarry + `_dynamic_`)
-	tableDeal := make([]map[string]interface{}, 0)
-	carryRows, _ := model.AppDB.Model(&model.Order{}).Select(`market,amount_type,order_side,sum(price*amount),date(order_time),refresh_type`).
-		Group(`market,order_side,date(order_time),amount_type,refresh_type`).Order(`date(order_time) desc`).Rows()
-	keys, _ := model.AppConfig.GetKeys(model.Ftx)
-	if carryRows != nil {
-		for carryRows.Next() {
-			var market, side, date, amountType, refreshType string
-			var value float64
-			_ = carryRows.Scan(&market, &amountType, &side, &value, &date, &refreshType)
-			if amountType != keys[0] {
-				dealMsg := map[string]interface{}{`carry`: market, `交易额(usd)`: value, `date`: date, `side`: side,
-					`type`: refreshType}
-				tableDeal = append(tableDeal, dealMsg)
-			}
-		}
-		carryRows.Close()
-	}
-	info = append(info, tableDeal)
-	c.JSON(http.StatusOK, info)
-}
-
-func GetCarryInfo(c *gin.Context) {
-	info := model.GetCarryInfos(model.FunctionCarry + `_dynamic_slave`)
-	tableOrder := make([]map[string]interface{}, 0)
-	tableDeal := make([]map[string]interface{}, 0)
-	metricTables := model.AppMetric.ToTables()
-	for _, table := range metricTables {
-		info = append(info, table)
-	}
-	var orders model.Order
-	turtleRows, _ := model.AppDB.Model(&orders).Select(`market,symbol,order_side,price,deal_price,deal_amount`).
-		Where(`deal_amount>? and refresh_type=?`, 0, model.FunctionTurtle).
-		Order(`order_time desc`).Limit(10).Rows()
-	if turtleRows != nil {
-		for turtleRows.Next() {
-			var market, symbol, orderSide, price, dealPrice, dealAmount string
-			_ = turtleRows.Scan(&market, &symbol, &orderSide, &price, &dealPrice, &dealAmount)
-			turtleMsg := map[string]interface{}{`订单`: `turtle`, `market`: market, `symbol`: symbol, `side`: orderSide,
-				`price`: price, `deal price`: dealPrice, `deal amount`: dealAmount}
-			tableOrder = append(tableOrder, turtleMsg)
-		}
-		turtleRows.Close()
-	}
-	keys, _ := model.AppConfig.GetKeys(model.Ftx)
-	carryRows, _ := model.AppDB.Model(&orders).Select(`market,amount_type,order_side,sum(price*amount),date(order_time),refresh_type`).
-		Group(`market,order_side,date(order_time),amount_type,refresh_type`).Order(`date(order_time) desc`).Rows()
-	if carryRows != nil {
-		for carryRows.Next() {
-			var market, side, date, amountType, refreshType string
-			var value float64
-			_ = carryRows.Scan(&market, &amountType, &side, &value, &date, &refreshType)
-			if amountType == keys[0] {
-				dealMsg := map[string]interface{}{`市场`: market, `交易额(usd)`: math.Round(value), `日期`: date[0:10],
-					`side`: side, `type`: refreshType}
-				tableDeal = append(tableDeal, dealMsg)
-			}
-		}
-		carryRows.Close()
-	}
-	info = append(info, tableDeal)
-	info = append(info, tableOrder)
-	c.JSON(http.StatusOK, info)
-}
-
 func GetParameters(c *gin.Context) {
 	msg := ``
 	markets := model.GetMarkets()
+	userKeys := make([]string, 0)
 	for _, market := range markets {
+		keys, _ := model.AppConfig.GetKeys(market)
+		userKeys = append(userKeys, keys[0])
 		marketInfos := model.GetMarketInfos(market)
 		if marketInfos != nil && model.GetSettings(model.FunctionCarry, market) != nil {
 			symbols := model.GetMarketSymbols(market)
@@ -419,7 +358,9 @@ func GetParameters(c *gin.Context) {
 		carryRows.Close()
 	}
 	msg += carryFrontMsg
-	msg += model.GetCarryInfo(``, `slave`)
+	for _, userKey := range userKeys {
+		msg += model.GetCarryInfo(userKey, ``) + "\n"
+	}
 	msg += model.AppMetric.ToString() + "\n"
 	msg += model.AppConfig.ToString()
 	msg += carryBackMsg
