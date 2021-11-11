@@ -32,7 +32,7 @@ func getHanging() (value bool) {
 // ProcessHang setting中chance代表以bid1价格为起点的价格单位，chance可以是负数
 // Setting.GridAmount 卖出数量
 // Setting.CloseShortMargin 最低卖出价格
-// Setting.AmountLimt 下单休息时间，单位为毫秒
+// Setting.AmountLimit 下单休息时间，单位为毫秒
 var ProcessHang = func(setting *model.Setting, tick *model.BidAsk) {
 	marketInfo := model.GetMarketInfo(setting.Market, setting.Symbol)
 	if marketInfo == nil || setting == nil || tick == nil || tick.Asks == nil || tick.Bids == nil || getHanging() ||

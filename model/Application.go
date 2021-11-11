@@ -5,6 +5,7 @@ import (
 	"github.com/jinzhu/configor"
 	"gorm.io/gorm"
 	"hello/util"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -147,8 +148,14 @@ func GetCarryInfo(userKey, key string) (info string) {
 	infoLock.Lock()
 	defer infoLock.Unlock()
 	if key == `` {
-		for _, value := range CarryInfo[userKey] {
-			info += value + "\n"
+		items := make([]string, 0)
+		for item := range CarryInfo[userKey] {
+			items = append(items, item)
+		}
+		sort.Strings(items)
+
+		for _, item := range items {
+			info += CarryInfo[userKey][item] + "\n"
 		}
 	} else {
 		return CarryInfo[userKey][key]
