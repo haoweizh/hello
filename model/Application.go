@@ -148,12 +148,12 @@ func GetCarryInfo(userKey, key string) (info string) {
 	defer infoLock.Unlock()
 	if key == `` {
 		for _, value := range CarryInfo[userKey] {
-			info += fmt.Sprintf("%s\n", value)
+			info += value + "\n"
 		}
 	} else {
 		return CarryInfo[userKey][key]
 	}
-	return
+	return info
 }
 
 // SetCarryInfo userKey[0] vs slaves

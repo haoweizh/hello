@@ -84,8 +84,10 @@ func test(c *gin.Context) {
 	userKeys := make([]string, 0)
 	for _, market := range markets {
 		keys, _ := model.AppConfig.GetKeys(market)
-		for _, key := range keys {
-			userKeys = append(userKeys, key)
+		for i, key := range keys {
+			if i > 0 {
+				userKeys = append(userKeys, key)
+			}
 			failNum := carry.GetCarryResult(key)
 			collateral := carry.GetCollateral(key)
 			if collateral != nil {
@@ -113,7 +115,7 @@ func test(c *gin.Context) {
 		carryRows.Close()
 	}
 	for _, userKey := range userKeys {
-		carryBackMsg += model.GetCarryInfo(userKey, ``) + "\n"
+		carryBackMsg += userKey + "\n" + model.GetCarryInfo(userKey, ``)
 	}
 	c.String(http.StatusOK, carryBackMsg)
 }
