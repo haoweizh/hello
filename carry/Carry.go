@@ -15,7 +15,7 @@ import (
 const OrderPriceLimit = 0
 const revertDis = 0.005
 const openValueLimit = 10000.0
-const carryTypeOpen = `carryOpen`
+const carryTypeOpen = `carry`
 const carryTypeClose = `carryClose`
 const carryTypeRevert = `carryRevert`
 const InsufficientCodeBinance = `-2010`
@@ -680,9 +680,9 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 		setOpen = 1
 	}
 	// 针对第一个key(老板账户)关闭反向开仓
-	//if len(keys) > 0 && keys[0] == key {
-	setClose = -1
-	//}
+	if len(keys) > 0 && keys[0] == key {
+		setClose = -1
+	}
 	if scoreClose < setClose || (balance.Amount > 0 && scoreClose <= -1*revertOpen) {
 		bidAmount = tickPerp.Asks[0].Amount
 		if setting.Market == model.OKEX {
