@@ -113,8 +113,7 @@ func test(c *gin.Context) {
 		carryRows.Close()
 	}
 	for _, userKey := range userKeys {
-		carryBackMsg += model.GetCarryInfo(userKey, `dynamic`) + "\n"
-		carryBackMsg += model.GetCarryInfo(userKey, `warning`) + "\n"
+		carryBackMsg += model.GetCarryInfo(userKey, ``) + "\n"
 	}
 	c.String(http.StatusOK, carryBackMsg)
 }
