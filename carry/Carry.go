@@ -680,8 +680,9 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	}
 	if doRevert == `true` {
 		setOpen = 1
-		setClose = -1
 	}
+	// 关闭反向开仓
+	setClose = -1
 	if scoreClose < setClose || (balance.Amount > 0 && scoreClose <= -1*revertOpen) {
 		bidAmount = tickPerp.Asks[0].Amount
 		if setting.Market == model.OKEX {
