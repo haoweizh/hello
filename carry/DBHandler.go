@@ -7,6 +7,7 @@ import (
 	"hello/api"
 	"hello/model"
 	"hello/util"
+	"strings"
 	"time"
 )
 
@@ -73,6 +74,9 @@ func MaintainTransFee(key, secret string) {
 			util.Info(fmt.Sprintf(`--- get working orders %d`, len(orders)))
 			feeIndex += len(orders)
 			for _, value := range orders {
+				if strings.Contains(value.RefreshType, `carry`) {
+					continue
+				}
 				order := api.QueryOrderById(key, secret, value.Market, value.Symbol, value.Instrument,
 					value.OrderType, value.OrderId)
 				if order == nil {
