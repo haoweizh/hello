@@ -55,11 +55,11 @@ func addLastCarry(order *model.Order, setting *model.Setting) {
 	lastOrders[setting.Market][setting.Symbol][lastOrderIndex[setting.Market][setting.Symbol]%lastOrderLength] = order
 	lastOrderIndex[setting.Market][setting.Symbol]++
 	noDealNum := 0
-	tenMins, _ := time.ParseDuration(`10m`)
+	tenMin, _ := time.ParseDuration(`10m`)
 	second, _ := time.ParseDuration(`500ms`)
 	for i, lastOrder := range lastOrders[setting.Market][setting.Symbol] {
 		now := time.Now()
-		if lastOrder == nil || order.OrderTime.Add(tenMins).Before(now) || order.OrderTime.Add(second).After(now) {
+		if lastOrder == nil || order.OrderTime.Add(tenMin).Before(now) || order.OrderTime.Add(second).After(now) {
 			continue
 		}
 		secret := model.AppConfig.GetSecret(order.Market, order.AmountType)
@@ -68,6 +68,7 @@ func addLastCarry(order *model.Order, setting *model.Setting) {
 		if queryOrder == nil {
 			continue
 		}
+		model.AppDB.Save(&queryOrder)
 		util.Notice(fmt.Sprintf(`query last %s %s %f index %d`,
 			queryOrder.Symbol, queryOrder.OrderId, queryOrder.DealAmount, lastOrderIndex[setting.Market][setting.Symbol]))
 		if queryOrder.DealAmount == 0 && order.Status != model.CarryStatusFail {

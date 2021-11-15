@@ -7,7 +7,6 @@ import (
 	"hello/api"
 	"hello/model"
 	"hello/util"
-	"strings"
 	"time"
 )
 
@@ -63,20 +62,22 @@ func MaintainTransFee(key, secret string) {
 		var orders []model.Order
 		for true {
 			d, _ := time.ParseDuration("-48h")
+			dMin10, _ := time.ParseDuration("-10m")
 			now := util.GetNow()
 			lastDays2 := now.Add(d)
+			lastMin10 := now.Add(dMin10)
 			model.AppDB.Limit(100).Offset(feeIndex).Where(
-				`date(order_time)>? and status=? and refresh_type!=? and refresh_type!=? and refresh_type!=?`,
-				lastDays2, model.CarryStatusWorking, model.FunctionComplement, model.FunctionCarry, model.FunctionDCarry).Find(&orders)
+				`date(created_at)>? and date(created_at)<? and status=? and refresh_type!=?`,
+				lastDays2, lastMin10, model.CarryStatusWorking, model.FunctionDCarry).Find(&orders)
 			if len(orders) == 0 {
 				break
 			}
 			util.Info(fmt.Sprintf(`--- get working orders %d`, len(orders)))
 			feeIndex += len(orders)
 			for _, value := range orders {
-				if strings.Contains(value.RefreshType, `carry`) {
-					continue
-				}
+				//if strings.Contains(value.RefreshType, `carry`) {
+				//	continue
+				//}
 				order := api.QueryOrderById(key, secret, value.Market, value.Symbol, value.Instrument,
 					value.OrderType, value.OrderId)
 				if order == nil {
