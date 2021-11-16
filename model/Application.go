@@ -41,6 +41,7 @@ const SubscribeDeal = `subscribeDeal`
 const CarryStatusSuccess = "success"
 const CarryStatusFail = "fail"
 const CarryStatusWorking = "working"
+const CarryStatusNotWorking = `not_working`
 const OrderTypeLimit = `limit`
 const OrderTypeMarket = `market`
 const OrderTypeStop = `stop`

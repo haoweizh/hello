@@ -81,6 +81,10 @@ func MaintainTransFee(key, secret string) {
 				order := api.QueryOrderById(key, secret, value.Market, value.Symbol, value.Instrument,
 					value.OrderType, value.OrderId)
 				if order == nil {
+					if value.Market == model.Ftx {
+						value.Status = model.CarryStatusNotWorking
+						model.AppDB.Save(&value)
+					}
 					continue
 				}
 				value.Fee = order.Fee

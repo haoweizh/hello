@@ -412,7 +412,7 @@ func QueryOrderById(key, secret, market, symbol, instrument, orderType, orderId 
 				return value
 			}
 		}
-	case model.Ftx:
+	case model.Ftx: // 查询是否是待成交状态，如果已成交或已取消，则ftx返回order not found信息，order为nil
 		if orderType == model.OrderTypeStop {
 			newOrderId := queryTriggerOrderId(key, secret, orderId)
 			if newOrderId != `` {
