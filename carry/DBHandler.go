@@ -73,12 +73,12 @@ func MaintainTransFee(key, secret string) {
 			if len(orders) == 0 {
 				break
 			}
-			util.Info(fmt.Sprintf(`--- get working orders %d`, len(orders)))
 			feeIndex += len(orders)
 			for _, value := range orders {
 				//if strings.Contains(value.RefreshType, `carry`) {
 				//	continue
 				//}
+				util.Info(fmt.Sprintf(`--- get working orders %d now %s`, len(orders), value.OrderId))
 				order := api.QueryOrderById(key, secret, value.Market, value.Symbol, value.Instrument,
 					value.OrderType, value.OrderId)
 				if order == nil {
@@ -96,8 +96,8 @@ func MaintainTransFee(key, secret string) {
 				}
 				value.DealPrice = order.DealPrice
 				model.AppDB.Save(&value)
-				util.Info(fmt.Sprintf(`save order %s %s %s %s`,
-					value.Symbol, value.OrderSide, value.OrderTime.String(), value.Status))
+				util.Info(fmt.Sprintf(`save order %s %s %s %s %s`,
+					value.OrderId, value.Symbol, value.OrderSide, value.OrderTime.String(), value.Status))
 				time.Sleep(time.Second)
 			}
 		}
