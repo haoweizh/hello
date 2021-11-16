@@ -70,11 +70,11 @@ func MaintainTransFee(key, secret string) {
 			model.AppDB.Limit(100).Offset(feeIndex).Where(
 				`date(created_at)>? and date(created_at)<? and status=? and refresh_type!=?`,
 				lastDays2, lastMin10, model.CarryStatusWorking, model.FunctionDCarry).Find(&orders)
+			util.Info(fmt.Sprintf(`--- get working orders %d %v %v`, len(orders), lastDays2, lastMin10))
 			if len(orders) == 0 {
 				break
 			}
 			feeIndex += len(orders)
-			util.Info(fmt.Sprintf(`--- get working orders %d`, len(orders)))
 			for i, value := range orders {
 				util.Info(fmt.Sprintf(`%d --- id %s`, i, value.OrderId))
 				order := api.QueryOrderById(key, secret, value.Market, value.Symbol, value.Instrument,
