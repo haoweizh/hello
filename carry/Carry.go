@@ -767,7 +767,7 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 		amount = 0
 	}
 	if amount > 0 {
-		util.Info(fmt.Sprintf(`+++ usdRate: %f coinRate: %f %s symbol: %s %s 
+		util.Debug(fmt.Sprintf(`+++ usdRate: %f coinRate: %f %s symbol: %s %s 
 			usd available:%f amount %f balance.Amount: %f scoreHigh: %f setOpen: %f scoreLow: %f setClose: %f
 			revertOpen: %f revertClose: %f do revert: %s`,
 			usdRate, coinRate, key, setting.Symbol, sidePerp,
