@@ -679,7 +679,6 @@ func queryOrderGate(key, secret string, order *model.Order) {
 			panicGateError(key, "GetFuturesOrder", err)
 			return
 		}
-		util.SocketInfo(`%s %s %s query result: %v`, order.Market, order.Symbol, order.OrderId, orderFuture)
 		order.DealPrice, _ = strconv.ParseFloat(orderFuture.FillPrice, 64)
 		if orderFuture.Status == `open` {
 			order.Status = model.CarryStatusWorking
@@ -691,22 +690,15 @@ func queryOrderGate(key, secret string, order *model.Order) {
 				order.Status = model.CarryStatusFail
 			}
 		}
-		switch orderFuture.Status {
-		case `open`:
-			order.Status = model.CarryStatusWorking
-		case `closed`:
-			order.Status = model.CarryStatusSuccess
-		case `cancelled`:
-			order.Status = model.CarryStatusFail
-		}
 		_, order.DealAmount = model.ParseRealAmount(order.Market, order.Symbol, float64(orderFuture.Size-orderFuture.Left))
+		util.SocketInfo(`%s %s %s query result:%s %v %f`,
+			order.Market, order.Symbol, order.OrderId, order.Status, order.DealAmount, orderFuture)
 	} else if tailSpot == order.Symbol[len(order.Symbol)-len(tailSpot):] {
 		orderSpot, _, err := client.SpotApi.GetOrder(ctx, order.OrderId, order.Symbol, nil)
 		if err != nil {
 			panicGateError(key, "GetSpotOrder", err)
 			return
 		}
-		util.SocketInfo(`%s %s %s query result: %v`, order.Market, order.Symbol, order.OrderId, orderSpot)
 		order.DealAmount, _ = strconv.ParseFloat(orderSpot.FilledTotal, 64)
 		order.DealPrice, _ = strconv.ParseFloat(orderSpot.FillPrice, 64)
 		switch orderSpot.Status {
@@ -717,5 +709,7 @@ func queryOrderGate(key, secret string, order *model.Order) {
 		case `cancelled`:
 			order.Status = model.CarryStatusFail
 		}
+		util.SocketInfo(`%s %s %s query result:%s %f %v`,
+			order.Market, order.Symbol, order.OrderId, order.Status, order.DealAmount, orderSpot)
 	}
 }

@@ -424,7 +424,7 @@ func QueryOrderById(key, secret, market, symbol, instrument, orderType, orderId 
 			return queryOrderFtx(key, secret, orderId)
 		}
 	}
-	return
+	return order
 }
 
 func GetPosition(market, symbol, address string) (success bool, position *model.Position) {
