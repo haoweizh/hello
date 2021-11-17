@@ -691,7 +691,7 @@ func queryOrderGate(key, secret string, order *model.Order) {
 			}
 		}
 		_, order.DealAmount = model.ParseRealAmount(order.Market, order.Symbol, float64(orderFuture.Size-orderFuture.Left))
-		util.SocketInfo(`%s %s %s query result:%s %v %f`,
+		util.SocketInfo(`%s %s %s query result:%s %f %v`,
 			order.Market, order.Symbol, order.OrderId, order.Status, order.DealAmount, orderFuture)
 	} else if tailSpot == order.Symbol[len(order.Symbol)-len(tailSpot):] {
 		orderSpot, _, err := client.SpotApi.GetOrder(ctx, order.OrderId, order.Symbol, nil)
