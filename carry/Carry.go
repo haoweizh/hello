@@ -68,9 +68,10 @@ func addLastCarry(order *model.Order, setting *model.Setting) {
 		if queryOrder == nil {
 			continue
 		}
-		model.AppDB.Save(&queryOrder)
-		util.Notice(fmt.Sprintf(`query last %s %s %f index %d`,
-			queryOrder.Symbol, queryOrder.OrderId, queryOrder.DealAmount, lastOrderIndex[setting.Market][setting.Symbol]))
+		model.AppDB.Model(&queryOrder).Where(`order_id=?`, queryOrder.OrderId).Updates(
+			map[string]interface{}{`deal_amount`: queryOrder.DealAmount, `deal_price`: queryOrder.DealPrice, `status`: queryOrder.Status})
+		util.Notice(fmt.Sprintf(`query last %s %s %s %f index %d`,
+			queryOrder.Symbol, queryOrder.OrderId, queryOrder.Status, queryOrder.DealAmount, lastOrderIndex[setting.Market][setting.Symbol]))
 		if queryOrder.DealAmount == 0 && order.Status != model.CarryStatusFail {
 			noDealNum++
 			if noDealNum > 3 {
