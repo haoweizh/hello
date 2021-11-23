@@ -9,6 +9,7 @@ import (
 	"hello/util"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -17,6 +18,8 @@ type MsgHandler func(channelKey string, message []byte, orderHandler OrderHandle
 type WSMsgHandler func(client *WSClient, message []byte)
 type SubscribeHandler func(subscribes []interface{}, subType string) error
 
+var wsLock sync.Mutex
+
 var AppWSManager = WSManager{
 	Register:   make(chan *WSClient),
 	Unregister: make(chan *WSClient),
@@ -24,6 +27,8 @@ var AppWSManager = WSManager{
 }
 
 func sendToWs(market string, msg []byte) (err error) {
+	defer wsLock.Unlock()
+	wsLock.Lock()
 	if model.AppMarkets.GetIsWriting(market) {
 		return errors.New(fmt.Sprintf(`conn %s is writing`, market))
 	}
