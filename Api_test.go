@@ -10,8 +10,10 @@ import (
 	"hello/api"
 	"hello/model"
 	"hello/util"
+	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 )
@@ -132,6 +134,53 @@ func Test_initTurtleN(t *testing.T) {
 	api.GetBalances(``, ``, model.Binance)
 	//api.PlaceOrder(model.AppConfig.DFutureKey, model.AppConfig.DFutureSecret, model.OrderSideBuy, ``,
 	//	model.DFuture, `ethusdt`, ``, `open`, model.FunctionDCarry, 2222, 2222, 0.1, false, false, nil)
+}
+
+func downList(workId, pageId int) (fileNum int) {
+	targetUrl := fmt.Sprintf(`https://user-api.foundingaz.com/api/submit-work/student-works?work_id=%d&page=%d&limit=1000`, workId, pageId)
+	headers := map[string]string{`Accept`: `application/json, text/plain, */*`, `Origin`: `https://xuexi.cyjiaomu.com`,
+		`token`: `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbi1kYXRhIjoieDlFdWd0ZmhmLVZRRWxoMmhSV2pTQ09XWHkxNUJxZnBJZE1Jc2FFZy13YS13MEV5UHV1LWNyYktFVmZuc3FNMHk1ZHB3LVpvanJkd1N4Li0uRjRmcGoxbUlZOGhabWV2V2RPTDR1Q21NZFVaLWtxS3JUdkNqVnVtTE8uQ0JYUGlBQlBDcmRMYXN5Ry1RNFFsNXdGRWNhIn0.vwFkT2FBH4ck3KprFyfuxJxSdL29TQGxa09KvgvOjR4`}
+	response, _ := util.HttpRequest(http.MethodGet, targetUrl, ``, headers, 200)
+	json, _ := util.NewJSON(response)
+	list := json.GetPath(`data`, `list`).MustArray()
+	for _, value := range list {
+		item := value.(map[string]interface{})[`file_list`]
+		if item == nil {
+			continue
+		}
+		files := item.([]interface{})
+		for _, file := range files {
+			fileValue := file.(map[string]interface{})[`content`]
+			if fileValue != nil {
+				if strings.Contains(strings.ToLower(fileValue.(string)), `review`) {
+					util.Notice(fmt.Sprintf(`%s`, fileValue))
+					fmt.Println(fileValue.(string))
+					fileNum++
+				}
+			}
+		}
+	}
+	return
+}
+
+func Test_download(t *testing.T) {
+	for workId := 51; workId > 0; workId-- {
+		//fmt.Println(fmt.Sprintf(`try work %d`, workId))
+		for pageId := 1; pageId < 20; pageId++ {
+			files := downList(workId, pageId)
+			if files <= 0 {
+				break
+			}
+			//fmt.Println(fmt.Sprintf(`get revew %d from work %d page %d`, files, workId, pageId))
+		}
+	}
+	//curl 'https://user-api.foundingaz.com/api/submit-work/student-works?work_id=51&class_id=0&class_name=&group_id=0&group_name=&page=1&limit=10' \
+	//-H 'Referer: https://xuexi.cyjiaomu.com/' \
+	//-H 'Host: user-api.foundingaz.com' \
+	//-H 'User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.1 Safari/605.1.15' \
+	//-H 'Accept-Language: zh-CN,zh-Hans;q=0.9' \
+	//-H 'Accept-Encoding: gzip, deflate, br' \
+	//-H 'Connection: keep-alive' \
 }
 
 func Test_wallet(t *testing.T) {
