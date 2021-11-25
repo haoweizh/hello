@@ -45,8 +45,9 @@ func sendToAllConnections(market string, msg []byte) (err error) {
 		if connection == nil {
 			continue
 		}
-		err = connection.WriteMessage(websocket.TextMessage, msg)
-		util.Notice(fmt.Sprintf(`fail to write connection %d return: %s`, i, err.Error()))
+		if err = connection.WriteMessage(websocket.TextMessage, msg); err != nil {
+			util.Notice(fmt.Sprintf(`fail to write connection %d return: %s`, i, err.Error()))
+		}
 	}
 	return err
 }
