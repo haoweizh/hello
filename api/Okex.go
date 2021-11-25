@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"github.com/bitly/go-simplejson"
 	"github.com/gorilla/websocket"
 	"hash/crc32"
 	"hello/model"
@@ -22,7 +23,7 @@ const wsOKEX = `wss://ws.okex.com:8443/ws/v5/public`
 const wsPrivateOKEX = `wss://ws.okex.com:8443/ws/v5/private`
 const wsStepOKEX = 30
 
-//var msgChanOKEX = make(map[string]chan *simplejson.Json)
+var msgChanOKEX = make(map[string]chan *simplejson.Json)
 var wrongs = make(map[string]bool)
 var wrongLock sync.Mutex
 var channelMaintainingOKEX = false
@@ -149,38 +150,38 @@ var subscribeHandlerOKEX = func(connection *websocket.Conn, subscribes []interfa
 	return err
 }
 
-//func handleMsgOKEX(channel chan *simplejson.Json, instrument string) {
-//	var responseJson *simplejson.Json
-//	for responseJson = range channel {
-//		if len(channel) > 20 {
-//			util.Notice(fmt.Sprintf(`%s current chan to be handle %d`, instrument, len(channel)))
-//		}
-//		action := responseJson.Get(`action`).MustString()
-//		data := responseJson.Get(`data`).MustArray()[0].(map[string]interface{})
-//		_, bidAsk := model.AppMarkets.GetBidAsk(instrument, model.OKEX)
-//		success := false
-//		if action == `update` && bidAsk != nil {
-//			success, bidAsk = handleBooksUpdate(instrument, data, bidAsk)
-//		} else if action == `snapshot` || responseJson.GetPath(`arg`, `channel`).MustString() == `books5` {
-//			//if action == `snapshot` {
-//			//	util.Notice(fmt.Sprintf(`++++ %s initial ticker %v`, instrument, data))
-//			//}
-//			bidAsk = handleBooksOKEX(instrument, data)
-//			success = true
-//		}
-//		if bidAsk == nil || !success {
-//			continue
-//		}
-//		if model.AppMarkets.SetBidAsk(instrument, model.OKEX, bidAsk) {
-//			for function, handler := range model.GetFunctions(model.OKEX, instrument) {
-//				settings := model.GetSetting(function, model.OKEX, instrument)
-//				for _, setting := range settings {
-//					go handler(setting, bidAsk)
-//				}
-//			}
-//		}
-//	}
-//}
+func handleMsgOKEX(channel chan *simplejson.Json, instrument string) {
+	var responseJson *simplejson.Json
+	for responseJson = range channel {
+		if len(channel) > 20 {
+			util.Notice(fmt.Sprintf(`%s current chan to be handle %d`, instrument, len(channel)))
+		}
+		action := responseJson.Get(`action`).MustString()
+		data := responseJson.Get(`data`).MustArray()[0].(map[string]interface{})
+		_, bidAsk := model.AppMarkets.GetBidAsk(instrument, model.OKEX)
+		success := false
+		if action == `update` && bidAsk != nil {
+			success, bidAsk = handleBooksUpdate(instrument, data, bidAsk)
+		} else if action == `snapshot` || responseJson.GetPath(`arg`, `channel`).MustString() == `books5` {
+			//if action == `snapshot` {
+			//	util.Notice(fmt.Sprintf(`++++ %s initial ticker %v`, instrument, data))
+			//}
+			bidAsk = handleBooksOKEX(instrument, data)
+			success = true
+		}
+		if bidAsk == nil || !success {
+			continue
+		}
+		if model.AppMarkets.SetBidAsk(instrument, model.OKEX, bidAsk) {
+			for function, handler := range model.GetFunctions(model.OKEX, instrument) {
+				settings := model.GetSetting(function, model.OKEX, instrument)
+				for _, setting := range settings {
+					go handler(setting, bidAsk)
+				}
+			}
+		}
+	}
+}
 
 //lastPingTime := util.GetNow().Unix()
 var wsHandlerOKEX = func(connection *websocket.Conn, event []byte, orderHandler OrderHandler) {
@@ -201,33 +202,9 @@ var wsHandlerOKEX = func(connection *websocket.Conn, event []byte, orderHandler 
 		return
 	}
 	instrument := responseJson.GetPath(`arg`, `instId`).MustString()
-	//channel := msgChanOKEX[instrument]
-	//if channel != nil {
-	//	channel <- responseJson
-	//}
-	action := responseJson.Get(`action`).MustString()
-	data := responseJson.Get(`data`).MustArray()[0].(map[string]interface{})
-	_, bidAsk := model.AppMarkets.GetBidAsk(instrument, model.OKEX)
-	success := false
-	if action == `update` && bidAsk != nil {
-		success, bidAsk = handleBooksUpdate(instrument, data, bidAsk)
-	} else if action == `snapshot` || responseJson.GetPath(`arg`, `channel`).MustString() == `books5` {
-		//if action == `snapshot` {
-		//	util.Notice(fmt.Sprintf(`++++ %s initial ticker %v`, instrument, data))
-		//}
-		bidAsk = handleBooksOKEX(instrument, data)
-		success = true
-	}
-	if bidAsk == nil || !success {
-		return
-	}
-	if model.AppMarkets.SetBidAsk(instrument, model.OKEX, bidAsk) {
-		for function, handler := range model.GetFunctions(model.OKEX, instrument) {
-			settings := model.GetSetting(function, model.OKEX, instrument)
-			for _, setting := range settings {
-				go handler(setting, bidAsk)
-			}
-		}
+	channel := msgChanOKEX[instrument]
+	if channel != nil {
+		channel <- responseJson
 	}
 }
 
@@ -282,13 +259,13 @@ func handleWSOrderOKEX(value map[string]interface{}, orderHandler OrderHandler) 
 	orderHandler(order, nil)
 }
 
-func WsDepthServeOKEX(orderHandler OrderHandler) (channels []chan struct{}, err error) {
-	//for s := range instruments {
-	//	if msgChanOKEX[s] == nil {
-	//		msgChanOKEX[s] = make(chan *simplejson.Json, 1000)
-	//		go handleMsgOKEX(msgChanOKEX[s], s)
-	//	}
-	//}
+func WsDepthServeOKEX(instruments map[string]bool, orderHandler OrderHandler) (channels []chan struct{}, err error) {
+	for s := range instruments {
+		if msgChanOKEX[s] == nil {
+			msgChanOKEX[s] = make(chan *simplejson.Json, 1000)
+			go handleMsgOKEX(msgChanOKEX[s], s)
+		}
+	}
 	channels = make([]chan struct{}, 0)
 	keys, secrets := model.AppConfig.GetKeys(model.OKEX)
 	keyMap := make(map[string]string)

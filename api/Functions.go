@@ -824,8 +824,7 @@ func CreateMarketDepthServer(markets *model.Markets, market string, orderHandler
 	case model.HuobiDM:
 		channels, err = WsDepthServeHuobiDM(markets, nil)
 	case model.OKEX:
-		//channels, err = WsDepthServeOKEX(model.GetMarketSymbols(model.OKEX), orderHandler)
-		channels, err = WsDepthServeOKEX(orderHandler)
+		channels, err = WsDepthServeOKEX(model.GetMarketSymbols(model.OKEX), orderHandler)
 	case model.Binance:
 		channels, err = WsDepthServeBinance(markets, nil)
 	case model.Coinpark:

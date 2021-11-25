@@ -125,6 +125,8 @@ func WebSocketClient(channelKey, url, subType string, subscribes []interface{}, 
 		}
 		go chanHandler(channelKey, stopChan, connection, msgHandler, orderHandler)
 		_ = subHandler(connection, stepSubscribes, subType)
+		stopChans = append(stopChans, stopChan)
+		connections = append(connections, connection)
 	}
 	model.AppMarkets.SetConnections(channelKey, connections)
 	return
