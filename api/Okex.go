@@ -97,6 +97,9 @@ func reSubscribe() {
 		return
 	}
 	connNum := len(model.AppMarkets.Connections[model.OKEX])
+	if connNum == 0 {
+		return
+	}
 	for i, item := range subArray {
 		connection := model.AppMarkets.Connections[model.OKEX][i%connNum]
 		if connection == nil {
