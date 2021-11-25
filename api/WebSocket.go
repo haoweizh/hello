@@ -120,7 +120,7 @@ func WebSocketClient(channelKey, url, subType string, subscribes []interface{}, 
 		connection, err := newConnection(url)
 		stopChan := make(chan struct{}, 2)
 		if err != nil {
-			util.SocketInfo("can not create web socket" + connectErr.Error())
+			util.SocketInfo("can not create web socket" + err.Error())
 			return nil, connectErr
 		}
 		go chanHandler(channelKey, stopChan, connection, msgHandler, orderHandler)
