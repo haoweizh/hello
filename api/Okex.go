@@ -93,9 +93,21 @@ func reSubscribe() {
 		util.SocketInfo("okex can not unsubscribe " + err.Error())
 	}
 	time.Sleep(time.Second * 3)
-	subscribeMap["op"] = "subscribe"
-	if reSubErr := sendToAllConnections(model.OKEX, util.JsonEncodeToByte(subscribeMap)); reSubErr != nil {
-		util.SocketInfo("okex can not re-subscribe " + reSubErr.Error())
+	if model.AppMarkets.Connections == nil || model.AppMarkets.Connections[model.OKEX] == nil {
+		return
+	}
+	connNum := len(model.AppMarkets.Connections[model.OKEX])
+	for i, item := range subArray {
+		connection := model.AppMarkets.Connections[model.OKEX][i%connNum]
+		if connection == nil {
+			continue
+		}
+		subscribe := make(map[string]interface{})
+		subscribe[`op`] = "subscribe"
+		subscribe[`args`] = []map[string]string{item}
+		if reSubErr := sendToConnection(connection, util.JsonEncodeToByte(subscribe)); reSubErr != nil {
+			util.SocketInfo("okex can not re-subscribe " + reSubErr.Error())
+		}
 	}
 }
 
@@ -253,14 +265,18 @@ func WsDepthServeOKEX(instruments map[string]bool, orderHandler OrderHandler) (c
 	}
 	channels = make([]chan struct{}, 0)
 	keys, secrets := model.AppConfig.GetKeys(model.OKEX)
+	keyMap := make(map[string]string)
 	for i, key := range keys {
+		keyMap[key] = secrets[i]
+	}
+	for key, secret := range keyMap {
 		privateConnectionOKEX[key], err = newConnection(wsPrivateOKEX)
 		stopChan := make(chan struct{}, 2)
 		if err != nil {
 			util.SocketInfo("can not create web socket " + err.Error())
 		} else {
 			go chanHandler(model.OKEX, stopChan, privateConnectionOKEX[key], wsHandlerPrivate, orderHandler)
-			_ = subscriberOKEXPrivate(privateConnectionOKEX[key], key, secrets[i])
+			_ = subscriberOKEXPrivate(privateConnectionOKEX[key], key, secret)
 		}
 		channels = append(channels, stopChan)
 	}
