@@ -48,11 +48,11 @@ type Markets struct {
 	bidAsks         map[string]map[string]*BidAsk // symbol - market - bidAsk
 	//lastUp          map[string]map[string]int             // symbol - market - time in million second
 	//lastDown        map[string]map[string]int             // symbol - market - time in million second
-	trade     map[int64]map[string]map[string]*Deal // time in second - symbol - market - deal
-	BigDeals  map[string]map[string]*Deal           // symbol - market - Deal
-	wsDepth   map[string][]chan struct{}            // market - []depth channel
-	isWriting map[string]bool                       // market - writing
-	conns     map[string]*websocket.Conn            // market - conn
+	trade    map[int64]map[string]map[string]*Deal // time in second - symbol - market - deal
+	BigDeals map[string]map[string]*Deal           // symbol - market - Deal
+	wsDepth  map[string][]chan struct{}            // market - []depth channel
+	//isWriting map[string]bool                       // market - writing
+	Connections map[string][]*websocket.Conn // market - conn
 }
 
 func NewMarkets() *Markets {
@@ -139,40 +139,13 @@ func (markets *Markets) SetTrade(deal *Deal) {
 	}
 }
 
-func (markets *Markets) GetIsWriting(market string) bool {
+func (markets *Markets) SetConnections(market string, connections []*websocket.Conn) {
 	markets.lock.Lock()
 	defer markets.lock.Unlock()
-	if markets.isWriting == nil {
-		markets.isWriting = make(map[string]bool)
+	if markets.Connections == nil {
+		markets.Connections = make(map[string][]*websocket.Conn)
 	}
-	return markets.isWriting[market]
-}
-
-func (markets *Markets) SetIsWriting(market string, isWriting bool) {
-	markets.lock.Lock()
-	defer markets.lock.Unlock()
-	if markets.isWriting == nil {
-		markets.isWriting = make(map[string]bool)
-	}
-	markets.isWriting[market] = isWriting
-}
-
-func (markets *Markets) SetConn(market string, conn *websocket.Conn) {
-	markets.lock.Lock()
-	defer markets.lock.Unlock()
-	if markets.conns == nil {
-		markets.conns = make(map[string]*websocket.Conn)
-	}
-	markets.conns[market] = conn
-}
-
-func (markets *Markets) GetConn(market string) *websocket.Conn {
-	markets.lock.Lock()
-	defer markets.lock.Unlock()
-	if markets.conns == nil {
-		markets.conns = make(map[string]*websocket.Conn)
-	}
-	return markets.conns[market]
+	markets.Connections[market] = connections
 }
 
 func (markets *Markets) GetBigDeal(symbol, market string) (deal *Deal) {

@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"github.com/bitly/go-simplejson"
+	"github.com/gorilla/websocket"
 	"hello/model"
 	"hello/util"
 	"math"
@@ -25,6 +26,7 @@ const wsBinance = "wss://stream.binance.com:9443/stream"
 const wsBinanceFuture = `wss://fstream.binance.com/stream`
 const binanceMargin = `binanceMargin`
 const binancePerp = `binancePerp`
+const wsStepBinance = 20
 
 var lockWSBinance sync.Mutex
 var lastTickIdBinance = make(map[string]int64) // symbol - int64
@@ -75,11 +77,11 @@ func maintainChannelBinance() {
 	//}
 }
 
-var subscribeHandlerBinance = func(subscribes []interface{}, keyChannel string) error {
+var subscribeHandlerBinance = func(connection *websocket.Conn, subscribes []interface{}, keyChannel string) error {
 	var err error = nil
 	for _, subscribe := range subscribes {
 		subMsg := fmt.Sprintf(`{"method": "SUBSCRIBE","params":["%s"],"id": %d}`, subscribe, int(rand.Float64()*10000))
-		if err = sendToWs(keyChannel, []byte(subMsg)); err != nil {
+		if err = sendToConnection(connection, []byte(subMsg)); err != nil {
 			util.SocketInfo(" binance can not subscribe %s %s %s", keyChannel, subscribe, err.Error())
 		}
 		time.Sleep(time.Millisecond * 300)
@@ -201,7 +203,7 @@ func handleDepthBinance(markets *model.Markets, json *simplejson.Json, symbol st
 
 func WsDepthServeBinance(markets *model.Markets, orderHandler OrderHandler) (channels []chan struct{}, err error) {
 	subType := model.SubscribeTicker
-	wsHandler := func(channelKey string, event []byte, orderHandler OrderHandler) {
+	wsHandler := func(connection *websocket.Conn, event []byte, orderHandler OrderHandler) {
 		json, wsErr := util.NewJSON(event)
 		if wsErr != nil {
 			util.SocketInfo(`binance fail to unmarshal json ` + err.Error())
@@ -227,28 +229,20 @@ func WsDepthServeBinance(markets *model.Markets, orderHandler OrderHandler) (cha
 	//requestUrl := model.AppConfig.WSUrls[model.Binance]
 	marginSubs := GetWSSubscribes(model.Binance, subType)
 	perpSubs := GetWSSubscribes(model.Binance, subType)
-	step := 20
-	for i := 0; i < len(marginSubs); i += step {
-		subs := marginSubs[i:int64(math.Min(float64(len(marginSubs)), float64(i+step)))]
-		channel, channelErr := WebSocketClient(binanceMargin, wsBinance, binanceMargin, subs,
-			subscribeHandlerBinance, wsHandler, orderHandler)
-		if channelErr != nil {
-			util.SocketInfo(`fail to create binance margin conn %s`, channelErr.Error())
-			continue
-		}
-		channels = append(channels, channel)
+	marginChans, marginErr := WebSocketClient(binanceMargin, wsBinance, binanceMargin, marginSubs,
+		subscribeHandlerBinance, wsHandler, orderHandler, wsStepBinance)
+	if marginErr != nil {
+		util.SocketInfo(`fail to create binance margin conn %s`, marginErr.Error())
 	}
-	for i := 0; i < len(perpSubs); i += step {
-		subs := perpSubs[i:int64(math.Min(float64(len(perpSubs)), float64(i+step)))]
-		channel, channelErr := WebSocketClient(binancePerp, wsBinanceFuture, binancePerp, subs,
-			subscribeHandlerBinance, wsHandler, orderHandler)
-		if channelErr != nil {
-			util.SocketInfo(`fail to create binance perp conn %s`, channelErr.Error())
-			continue
-		}
-		channels = append(channels, channel)
+	perpChans, perpErr := WebSocketClient(binancePerp, wsBinanceFuture, binancePerp, perpSubs,
+		subscribeHandlerBinance, wsHandler, orderHandler, wsStepBinance)
+	if perpErr != nil {
+		util.SocketInfo(`fail to create binance margin conn %s`, perpErr.Error())
 	}
-	return channels, err
+	for _, perpChan := range perpChans {
+		marginChans = append(marginChans, perpChan)
+	}
+	return marginChans, err
 }
 
 func signedRequestBinance(key, secret, method, requestUrl string, withApiKey bool, param *url.Values) []byte {

@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/bitly/go-simplejson"
+	"github.com/gorilla/websocket"
 	"hello/model"
 	"hello/util"
 	"math"
@@ -21,6 +22,7 @@ import (
 
 const restFtx = `https://ftx.com/api`
 const wsFtx = `wss://ftx.com/ws`
+const wsStepFtx = 50
 
 var lastDepthPingFtx = util.GetNowUnixMillion()
 var socketLockFtx sync.Mutex
@@ -38,7 +40,7 @@ func maintainChannelFtx(subscribes []interface{}) {
 				if bidAsk == nil || now-int64(bidAsk.Ts) > 60000 {
 					subCmd := fmt.Sprintf(`{"op": "subscribe", "channel": "%s", "market": "%s"}`,
 						subscribe[0], subscribe[1])
-					if err := sendToWs(model.Ftx, []byte(subCmd)); err != nil {
+					if err := sendToAllConnections(model.Ftx, []byte(subCmd)); err != nil {
 						util.SocketInfo("ftx can not resubscribe " + err.Error())
 					}
 					util.Notice(`send resubscribe %s`, subCmd)
@@ -48,7 +50,7 @@ func maintainChannelFtx(subscribes []interface{}) {
 	}
 }
 
-var subscribeHandlerFtx = func(subscribes []interface{}, subType string) error {
+var subscribeHandlerFtx = func(connection *websocket.Conn, subscribes []interface{}, subType string) error {
 	var err error = nil
 	keys, secrets := model.AppConfig.GetKeys(model.Ftx)
 	ts := time.Now().UnixNano() / int64(time.Millisecond)
@@ -57,17 +59,17 @@ var subscribeHandlerFtx = func(subscribes []interface{}, subType string) error {
 	hash.Write([]byte(toBeSign))
 	sign := hex.EncodeToString(hash.Sum(nil))
 	authCmd := fmt.Sprintf(`{"op":"login","args":{"key":"%s","sign":"%s","time":%d}}`, keys[0], sign, ts)
-	if err = sendToWs(model.Ftx, []byte(authCmd)); err != nil {
+	if err = sendToConnection(connection, []byte(authCmd)); err != nil {
 		util.SocketInfo("ftx can not auth " + err.Error())
 	}
-	if err = sendToWs(model.Ftx, []byte(`{"op": "subscribe", "channel": "fills"}`)); err != nil {
+	if err = sendToConnection(connection, []byte(`{"op": "subscribe", "channel": "fills"}`)); err != nil {
 		util.SocketInfo("ftx can not subscribe fill " + err.Error())
 	}
 	for i := 0; i < len(subscribes); i++ {
 		cmdSubscribe := subscribes[i].([]string)
 		subCmd := fmt.Sprintf(`{"op": "subscribe", "channel": "%s", "market": "%s"}`,
 			cmdSubscribe[0], cmdSubscribe[1])
-		if err = sendToWs(model.Ftx, []byte(subCmd)); err != nil {
+		if err = sendToConnection(connection, []byte(subCmd)); err != nil {
 			util.SocketInfo("ftx can not subscribe " + err.Error())
 			return err
 		}
@@ -76,8 +78,8 @@ var subscribeHandlerFtx = func(subscribes []interface{}, subType string) error {
 	return err
 }
 
-func WsDepthServeFtx(markets *model.Markets, orderHandler OrderHandler) (chan struct{}, error) {
-	wsHandler := func(channelKey string, event []byte, orderHandler OrderHandler) {
+func WsDepthServeFtx(markets *model.Markets, orderHandler OrderHandler) ([]chan struct{}, error) {
+	wsHandler := func(connection *websocket.Conn, event []byte, orderHandler OrderHandler) {
 		defer socketLockFtx.Unlock()
 		socketLockFtx.Lock()
 		responseJson, err := util.NewJSON(event)
@@ -91,7 +93,7 @@ func WsDepthServeFtx(markets *model.Markets, orderHandler OrderHandler) (chan st
 		if util.GetNowUnixMillion()-lastDepthPingFtx > 15000 {
 			lastDepthPingFtx = util.GetNowUnixMillion()
 			pingMsg := []byte(`{"op":"ping"}`)
-			if sendErr := sendToWs(model.Ftx, pingMsg); sendErr != nil {
+			if sendErr := sendToAllConnections(model.Ftx, pingMsg); sendErr != nil {
 				util.SocketInfo("ftx server ping client error " + sendErr.Error())
 			}
 		}
@@ -104,8 +106,8 @@ func WsDepthServeFtx(markets *model.Markets, orderHandler OrderHandler) (chan st
 	}
 	//subType := model.SubscribeDepth
 	subType := model.SubscribeDepth + `,` + model.SubscribeTicker
-	return WebSocketClient(model.Ftx, wsFtx, ``, GetWSSubscribes(model.Ftx, subType),
-		subscribeHandlerFtx, wsHandler, orderHandler)
+	subscribes := GetWSSubscribes(model.Ftx, subType)
+	return WebSocketClient(model.Ftx, wsFtx, ``, subscribes, subscribeHandlerFtx, wsHandler, orderHandler, wsStepFtx)
 }
 
 func handleTickerFtx(markets *model.Markets, response *simplejson.Json) {

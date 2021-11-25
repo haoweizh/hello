@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/bitly/go-simplejson"
+	"github.com/gorilla/websocket"
 	"hash/crc32"
 	"hello/model"
 	"hello/util"
@@ -20,11 +21,13 @@ import (
 const restOKEX = `https://www.okex.com`
 const wsOKEX = `wss://ws.okex.com:8443/ws/v5/public`
 const wsPrivateOKEX = `wss://ws.okex.com:8443/ws/v5/private`
+const wsStepOKEX = 30
 
 var msgChanOKEX = make(map[string]chan *simplejson.Json)
 var wrongs = make(map[string]bool)
 var wrongLock sync.Mutex
 var channelMaintainingOKEX = false
+var privateConnectionOKEX = make(map[string]*websocket.Conn) // key - connection
 
 func maintainChannelOKEX() {
 	if !channelMaintainingOKEX {
@@ -34,13 +37,14 @@ func maintainChannelOKEX() {
 			reSubscribe()
 			keys, _ := model.AppConfig.GetKeys(model.OKEX)
 			for _, key := range keys {
-				channelKey := model.OKEX + `_` + key
-				err := sendToWs(channelKey, []byte(`ping`))
-				if err != nil {
+				if privateConnectionOKEX[key] == nil {
+					util.Notice(fmt.Sprintf(`no private connection %s`, key))
+				}
+				if err := sendToConnection(privateConnectionOKEX[key], []byte(`ping`)); err != nil {
 					util.SocketInfo("okex server ping client error " + err.Error())
 				}
 			}
-			err := sendToWs(model.OKEX, []byte(`ping`))
+			err := sendToAllConnections(model.OKEX, []byte(`ping`))
 			if err != nil {
 				util.SocketInfo("okex server ping client error " + err.Error())
 			}
@@ -85,29 +89,20 @@ func reSubscribe() {
 		subArray = append(subArray, map[string]string{`channel`: `books50-l2-tbt`, `instId`: instrument})
 	}
 	subscribeMap[`args`] = subArray
-	err := sendToWs(model.OKEX, util.JsonEncodeToByte(subscribeMap))
-	if err != nil {
+	if err := sendToAllConnections(model.OKEX, util.JsonEncodeToByte(subscribeMap)); err != nil {
 		util.SocketInfo("okex can not unsubscribe " + err.Error())
 	}
 	time.Sleep(time.Second * 3)
 	subscribeMap["op"] = "subscribe"
-	err = sendToWs(model.OKEX, util.JsonEncodeToByte(subscribeMap))
-	if err != nil {
-		util.SocketInfo("okex can not re-subscribe " + err.Error())
+	if reSubErr := sendToAllConnections(model.OKEX, util.JsonEncodeToByte(subscribeMap)); reSubErr != nil {
+		util.SocketInfo("okex can not re-subscribe " + reSubErr.Error())
 	}
 }
 
-var subscriberOKEXPrivate = func(subscribes []interface{}, key string) error {
+var subscriberOKEXPrivate = func(connection *websocket.Conn, key, secret string) error {
 	var err error = nil
 	loginMap := make(map[string]interface{})
 	loginMap[`op`] = `login`
-	keys, secrets := model.AppConfig.GetKeys(model.OKEX)
-	secret := ``
-	for i, value := range keys {
-		if value == key {
-			secret = secrets[i]
-		}
-	}
 	timestamp := time.Now().Unix()
 	toBeSign := fmt.Sprintf(`%dGET/users/self/verify`, timestamp)
 	hash := hmac.New(sha256.New, []byte(secret))
@@ -116,30 +111,26 @@ var subscriberOKEXPrivate = func(subscribes []interface{}, key string) error {
 	loginArray := []map[string]interface{}{{
 		`apiKey`: key, `passphrase`: model.AppConfig.Phase, `timestamp`: timestamp, `sign`: sign}}
 	loginMap[`args`] = loginArray
-	err = sendToWs(model.OKEX+`_`+key, util.JsonEncodeToByte(loginMap))
+	err = sendToConnection(connection, util.JsonEncodeToByte(loginMap))
 	if err != nil {
 		util.SocketInfo(fmt.Sprintf(`fail to login okex ws: %s return %s`, key, err.Error()))
 	}
 	return err
 }
 
-var subscribeHandlerOKEX = func(subscribes []interface{}, subType string) error {
+var subscribeHandlerOKEX = func(connection *websocket.Conn, subscribes []interface{}, subType string) error {
 	var err error = nil
-	step := 30
-	for i := 0; i < len(subscribes); i += step {
-		subscribeMap := make(map[string]interface{})
-		subscribeMap["op"] = "subscribe"
-		subArray := make([]map[string]string, 0)
-		for j := i; j < len(subscribes) && j < i+step; j++ {
-			subArray = append(subArray, map[string]string{`channel`: `books50-l2-tbt`, `instId`: subscribes[j].(string)})
-			//subArray = append(subArray, map[string]string{`channel`: `books5`, `instId`: subscribes[j].(string)})
-		}
-		subscribeMap[`args`] = subArray
-		subscribeMessage := util.JsonEncodeToByte(subscribeMap)
-		if err = sendToWs(model.OKEX, subscribeMessage); err != nil {
-			util.SocketInfo("okex can not subscribe " + err.Error())
-			return err
-		}
+	subscribeMap := make(map[string]interface{})
+	subscribeMap["op"] = "subscribe"
+	subArray := make([]map[string]string, 0)
+	for _, subscribe := range subscribes {
+		subArray = append(subArray, map[string]string{`channel`: `books50-l2-tbt`, `instId`: subscribe.(string)})
+	}
+	subscribeMap[`args`] = subArray
+	subscribeMessage := util.JsonEncodeToByte(subscribeMap)
+	if err = sendToConnection(connection, subscribeMessage); err != nil {
+		util.SocketInfo("okex can not subscribe " + err.Error())
+		return err
 	}
 	return err
 }
@@ -178,7 +169,7 @@ func handleMsgOKEX(channel chan *simplejson.Json, instrument string) {
 }
 
 //lastPingTime := util.GetNow().Unix()
-var wsHandlerOKEX = func(channelKey string, event []byte, orderHandler OrderHandler) {
+var wsHandlerOKEX = func(connection *websocket.Conn, event []byte, orderHandler OrderHandler) {
 	//now := util.GetNow().Unix()
 	//if now-lastPingTime > 25 { // ping okex server every 30 seconds
 	//	lastPingTime = now
@@ -202,23 +193,22 @@ var wsHandlerOKEX = func(channelKey string, event []byte, orderHandler OrderHand
 	}
 }
 
-var wsHandlerPrivate = func(channelKey string, event []byte, orderHandler OrderHandler) {
+var wsHandlerPrivate = func(connection *websocket.Conn, event []byte, orderHandler OrderHandler) {
 	responseJson, err := util.NewJSON(event)
 	if err != nil || responseJson == nil {
 		return
 	}
 	if responseJson.Get(`event`).MustString() == `login` {
 		subscribes := GetWSSubscribes(model.OKEX, model.SubscribeDepth)
-		step := 30
-		for i := 0; i < len(subscribes); i += step {
+		for i := 0; i < len(subscribes); i += wsStepOKEX {
 			subscribeMap := make(map[string]interface{})
 			subscribeMap["op"] = "subscribe"
 			subArray := make([]map[string]string, 0)
-			for j := i; j < len(subscribes) && j < i+step; j++ {
+			for j := i; j < len(subscribes) && j < i+wsStepOKEX; j++ {
 				subArray = append(subArray, map[string]string{`channel`: `orders`, `instType`: `ANY`, `instId`: subscribes[j].(string)})
 			}
 			subscribeMap[`args`] = subArray
-			if err = sendToWs(channelKey, util.JsonEncodeToByte(subscribeMap)); err != nil {
+			if err = sendToConnection(connection, util.JsonEncodeToByte(subscribeMap)); err != nil {
 				util.SocketInfo("okex can not subscribe private " + err.Error())
 				continue
 			}
@@ -235,7 +225,6 @@ var wsHandlerPrivate = func(channelKey string, event []byte, orderHandler OrderH
 	data := responseJson.Get(`data`).MustArray()
 	for _, item := range data {
 		value := item.(map[string]interface{})
-		value[`channelKey`] = channelKey[5:] //去除掉开头的 okex_
 		go handleWSOrderOKEX(value, orderHandler)
 	}
 }
@@ -263,22 +252,24 @@ func WsDepthServeOKEX(instruments map[string]bool, orderHandler OrderHandler) (c
 		}
 	}
 	channels = make([]chan struct{}, 0)
-	keys, _ := model.AppConfig.GetKeys(model.OKEX)
-	for _, key := range keys {
-		channelKey := key
-		go func() {
-			channel, errPrivate := WebSocketClient(model.OKEX+`_`+channelKey, wsPrivateOKEX, channelKey,
-				GetWSSubscribes(model.OKEX, model.SubscribeDepth), subscriberOKEXPrivate, wsHandlerPrivate, orderHandler)
-			if errPrivate != nil {
-				util.SocketInfo(fmt.Sprintf(`fail to connect okex private %s %s`, channelKey, err.Error()))
-			}
-			channels = append(channels, channel)
-		}()
+	keys, secrets := model.AppConfig.GetKeys(model.OKEX)
+	for i, key := range keys {
+		privateConnectionOKEX[key], err = newConnection(wsPrivateOKEX)
+		stopChan := make(chan struct{}, 2)
+		if err != nil {
+			util.SocketInfo("can not create web socket " + err.Error())
+		} else {
+			go chanHandler(model.OKEX, stopChan, privateConnectionOKEX[key], wsHandlerPrivate, orderHandler)
+			_ = subscriberOKEXPrivate(privateConnectionOKEX[key], key, secrets[i])
+		}
+		channels = append(channels, stopChan)
 	}
-	channel, errPublic := WebSocketClient(model.OKEX, wsOKEX, model.SubscribeDepth,
-		GetWSSubscribes(model.OKEX, model.SubscribeDepth), subscribeHandlerOKEX, wsHandlerOKEX, orderHandler)
+	subChannels, errPublic := WebSocketClient(model.OKEX, wsOKEX, model.SubscribeDepth,
+		GetWSSubscribes(model.OKEX, model.SubscribeDepth), subscribeHandlerOKEX, wsHandlerOKEX, orderHandler, wsStepOKEX)
 	util.Notice(`finish connect public okex `)
-	channels = append(channels, channel)
+	for _, channel := range subChannels {
+		channels = append(channels, channel)
+	}
 	return channels, errPublic
 }
 
@@ -519,11 +510,15 @@ func PlacePairOKEX(key, coin, sidePerp, sideSpot, orderType string, pricePerp, p
 	subscribeMap["op"] = "batch-orders"
 	subscribeMap[`args`] = []map[string]interface{}{
 		{`instId`: coin + tailPerp, `tdMode`: `cross`, `side`: sidePerp, `sz`: amountStrPerp, `ordType`: orderType,
-			`px`: priceStrPerp, `tag`: model.FunctionCarry},
+			`px`: priceStrPerp, `tag`: model.FunctionCarry, `clOrdId`: key},
 		{`instId`: coin + tailSpot, `tdMode`: `cross`, `side`: sideSpot, `sz`: amountStrSpot, `ordType`: orderType,
-			`px`: priceStrSpot, `tag`: model.FunctionCarry}}
+			`px`: priceStrSpot, `tag`: model.FunctionCarry, `clOrdId`: key}}
 	msg := util.JsonEncodeToByte(subscribeMap)
-	err := sendToWs(model.OKEX+`_`+key, msg)
+	if privateConnectionOKEX == nil || privateConnectionOKEX[key] == nil {
+		util.Notice(fmt.Sprintf(`fail to get connection %s`, key))
+		return false
+	}
+	err := sendToConnection(privateConnectionOKEX[key], msg)
 	util.Notice(`place pair %s`, msg)
 	orderPerp := &model.Order{OrderSide: sidePerp, OrderType: orderType, Market: model.OKEX, Symbol: coin + tailPerp,
 		Price: pricePerp, Amount: amount, RefreshType: model.FunctionCarry, OrderTime: util.GetNow(),
@@ -582,9 +577,12 @@ func placeOrderOKEX(key, secret string, isWs bool, order *model.Order) {
 		subscribeMap[`args`] = []map[string]interface{}{postData}
 		wsOrderMsg := util.JsonEncodeToByte(subscribeMap)
 		util.Info(`ws order ` + string(wsOrderMsg))
-		err := sendToWs(model.OKEX+`_`+key, wsOrderMsg)
-		if err != nil {
-			util.Notice(fmt.Sprintf(`fail to send order ws %s %s return %s`, key, order.Instrument, err.Error()))
+		if privateConnectionOKEX == nil || privateConnectionOKEX[key] == nil {
+			util.Notice(fmt.Sprintf(`fail to get connection %s`, key))
+		} else {
+			if err := sendToConnection(privateConnectionOKEX[key], wsOrderMsg); err != nil {
+				util.Notice(fmt.Sprintf(`fail to send order ws %s %s return %s`, key, order.Instrument, err.Error()))
+			}
 		}
 	} else {
 		var responseBody []byte
@@ -725,9 +723,6 @@ func parseOrderOKEX(value map[string]interface{}) (order *model.Order) {
 	if value[`avgPx`] != nil && value[`avgPx`] != `` {
 		order.DealPrice, _ = strconv.ParseFloat(value[`avgPx`].(string), 64)
 	}
-	if value[`channelKey`] != nil {
-		order.AmountType = value[`channelKey`].(string)
-	}
 	if value[`instId`] != nil {
 		order.Instrument = value[`instId`].(string)
 		order.Symbol = value[`instId`].(string)
@@ -780,6 +775,9 @@ func parseOrderOKEX(value map[string]interface{}) (order *model.Order) {
 	}
 	if value[`sCode`] != nil {
 		order.ErrCode = value[`sCode`].(string)
+	}
+	if value[`clOrdId`] != nil {
+		order.AmountType = value[`clOrdId`].(string)
 	}
 	if strings.Contains(order.Instrument, `SWAP`) || len(strings.Split(order.Instrument, `-`)) > 2 {
 		_, order.Amount = model.ParseRealAmount(model.OKEX, order.Instrument, order.Amount)

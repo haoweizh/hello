@@ -3,6 +3,7 @@ package api
 import (
 	"fmt"
 	"github.com/bitly/go-simplejson"
+	"github.com/gorilla/websocket"
 	"hello/model"
 	"hello/util"
 	"math"
@@ -16,22 +17,23 @@ const nodeServer = `http://localhost:3000`
 
 //const restDFuture = `https://openoracle_prod_heco.dfuture.com/dev/web`
 const wsDFuture = `wss://heco_prod_kline_wss.dfuture.com/ws`
+const wsStepDFuture = 50
 
 var lastDepthPingDFuture = util.GetNowUnixMillion()
 
-var subscribeHandlerDFuture = func(subscribes []interface{}, subType string) error {
+var subscribeHandlerDFuture = func(connection *websocket.Conn, subscribes []interface{}, subType string) error {
 	var err error = nil
 	for _, subscribe := range subscribes {
 		subMsg := fmt.Sprintf(`{"id": "id1", "includeDfutureDay": "1", sub:"%s"}`, subscribe)
-		if err = sendToWs(model.DFuture, []byte(subMsg)); err != nil {
+		if err = sendToConnection(connection, []byte(subMsg)); err != nil {
 			util.SocketInfo("dfuture can not subscribe fill " + err.Error())
 		}
 	}
 	return err
 }
 
-func WsDepthServeDFuture(markets *model.Markets, orderHandler OrderHandler) (chan struct{}, error) {
-	wsHandler := func(channelKey string, event []byte, orderHandler OrderHandler) {
+func WsDepthServeDFuture(markets *model.Markets, orderHandler OrderHandler) ([]chan struct{}, error) {
+	wsHandler := func(connection *websocket.Conn, event []byte, orderHandler OrderHandler) {
 		responseJson, err := util.NewJSON(event)
 		if err != nil {
 			util.SocketInfo(`fail to unmarshal DFuture json ` + err.Error())
@@ -48,7 +50,7 @@ func WsDepthServeDFuture(markets *model.Markets, orderHandler OrderHandler) (cha
 			ts := time.Now().UnixNano() / int64(time.Second)
 			pingMsg := fmt.Sprintf(
 				`{"verify":1,"apiTime":%d,"deviceInfo":"326d7f7cfe5c0421cbfb50a1dc7e839f","token":"3f938b62ba748d891c48a6060bf8875b"}`, ts)
-			if err := sendToWs(model.DFuture, []byte(pingMsg)); err != nil {
+			if err := sendToAllConnections(model.DFuture, []byte(pingMsg)); err != nil {
 				util.SocketInfo("dfuture server ping client error " + err.Error())
 			}
 		}
@@ -56,7 +58,7 @@ func WsDepthServeDFuture(markets *model.Markets, orderHandler OrderHandler) (cha
 	}
 	subType := model.SubscribeDepth + `,` + model.SubscribeTicker
 	return WebSocketClient(model.DFuture, wsDFuture, ``, GetWSSubscribes(model.DFuture, subType),
-		subscribeHandlerDFuture, wsHandler, orderHandler)
+		subscribeHandlerDFuture, wsHandler, orderHandler, wsStepDFuture)
 }
 
 func handleTickerDFuture(markets *model.Markets, response *simplejson.Json) {

@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"github.com/gorilla/websocket"
 	"hello/model"
 	"hello/util"
 	"math"
@@ -19,14 +20,14 @@ import (
 const restHuobiDM = `api.hbdm.vn`
 const wsHuobiDM = `wss://api.hbdm.vn/ws`
 
-var subscribeHandlerHuobiDM = func(subscribes []interface{}, subType string) error {
+var subscribeHandlerHuobiDM = func(connection *websocket.Conn, subscribes []interface{}, subType string) error {
 	var err error = nil
 	for _, v := range subscribes {
 		subscribeMap := make(map[string]interface{})
 		subscribeMap["id"] = strconv.Itoa(util.GetNow().Nanosecond())
 		subscribeMap["sub"] = v
 		subscribeMessage := util.JsonEncodeToByte(subscribeMap)
-		if err = sendToWs(model.HuobiDM, subscribeMessage); err != nil {
+		if err = sendToConnection(connection, subscribeMessage); err != nil {
 			util.SocketInfo("huobiDM can not subscribe " + err.Error())
 			return err
 		}
@@ -35,15 +36,15 @@ var subscribeHandlerHuobiDM = func(subscribes []interface{}, subType string) err
 	return err
 }
 
-func WsDepthServeHuobiDM(markets *model.Markets, orderHandler OrderHandler) (chan struct{}, error) {
-	wsHandler := func(channelKey string, event []byte, orderHandler OrderHandler) {
+func WsDepthServeHuobiDM(markets *model.Markets, orderHandler OrderHandler) ([]chan struct{}, error) {
+	wsHandler := func(connection *websocket.Conn, event []byte, orderHandler OrderHandler) {
 		res := util.UnGzip(event)
 		responseJson, _ := util.NewJSON(res)
 		if responseJson.Get(`ping`).MustInt() > 0 {
 			pingMap := make(map[string]interface{})
 			pingMap["pong"] = responseJson.Get(`ping`).MustInt()
 			pingParams := util.JsonEncodeToByte(pingMap)
-			if err := sendToWs(model.HuobiDM, pingParams); err != nil {
+			if err := sendToConnection(connection, pingParams); err != nil {
 				util.SocketInfo("huobiDM server ping client error " + err.Error())
 			}
 		} else {
@@ -93,7 +94,7 @@ func WsDepthServeHuobiDM(markets *model.Markets, orderHandler OrderHandler) (cha
 		}
 	}
 	return WebSocketClient(model.HuobiDM, wsHuobiDM, model.SubscribeDepth,
-		GetWSSubscribes(model.HuobiDM, model.SubscribeDepth), subscribeHandlerHuobiDM, wsHandler, orderHandler)
+		GetWSSubscribes(model.HuobiDM, model.SubscribeDepth), subscribeHandlerHuobiDM, wsHandler, orderHandler, wsStepHuobi)
 }
 
 func parseBalanceHuobiDM(key string, data map[string]interface{}) (balance *model.Balance) {
@@ -286,7 +287,8 @@ func placeOrderHuobiDM(key, secret string, order *model.Order,
 	}
 }
 
-func cancelOrderHuobiDM(key, secret, symbol, orderId string) (result bool, errCode, msg string) {
+//cancelOrderHuobiDM
+func _(key, secret, symbol, orderId string) (result bool, errCode, msg string) {
 	if strings.Contains(symbol, `_`) {
 		symbol = symbol[0:strings.Index(symbol, `_`)]
 	}

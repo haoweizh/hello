@@ -6,8 +6,10 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"github.com/gorilla/websocket"
 	"hello/model"
 	"hello/util"
+	"math"
 	"net/url"
 	"sort"
 	"strconv"
@@ -17,7 +19,7 @@ import (
 const restCoinPark = "https://api.coinpark.cc/v1"
 const wsCoinPark = "wss://push.coinpark.cc/"
 
-var subscribeHandlerCoinpark = func(subscribes []interface{}, subType string) error {
+var subscribeHandlerCoinpark = func(connection *websocket.Conn, subscribes []interface{}, subType string) error {
 	var err error = nil
 	for _, v := range subscribes {
 		subscribeMap := make(map[string]interface{})
@@ -25,16 +27,16 @@ var subscribeHandlerCoinpark = func(subscribes []interface{}, subType string) er
 		subscribeMap["channel"] = v
 		subscribeMap[`binary`] = 0
 		subscribeMessage := util.JsonEncodeToByte(subscribeMap)
-		if err = sendToWs(model.Coinpark, subscribeMessage); err != nil {
-			util.SocketInfo("coinpark can not subscribe " + err.Error())
+		if err = sendToConnection(connection, subscribeMessage); err != nil {
+			util.SocketInfo("coinPark can not subscribe " + err.Error())
 			return err
 		}
 	}
 	return err
 }
 
-func WsDepthServeCoinpark(markets *model.Markets, orderHandler OrderHandler) (chan struct{}, error) {
-	wsHandler := func(channelKey string, event []byte, orderHandler OrderHandler) {
+func WsDepthServeCoinpark(markets *model.Markets, orderHandler OrderHandler) ([]chan struct{}, error) {
+	wsHandler := func(connection *websocket.Conn, event []byte, orderHandler OrderHandler) {
 		depthJson, err := util.NewJSON(event)
 		if err != nil {
 			util.SocketInfo(`fail to unmarshal coinpark json ` + err.Error())
@@ -84,8 +86,10 @@ func WsDepthServeCoinpark(markets *model.Markets, orderHandler OrderHandler) (ch
 			}
 		}
 	}
+	subscribes := GetWSSubscribes(model.Coinpark, model.SubscribeDepth)
+	connectionNum := int(math.Ceil(float64(len(subscribes)) / 50))
 	return WebSocketClient(model.Coinpark, wsCoinPark, model.SubscribeDepth,
-		GetWSSubscribes(model.Coinpark, model.SubscribeDepth), subscribeHandlerCoinpark, wsHandler, orderHandler)
+		subscribes, subscribeHandlerCoinpark, wsHandler, orderHandler, connectionNum)
 }
 
 func SignedRequestCoinpark(method, path, cmds string) []byte {

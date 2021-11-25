@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/gorilla/websocket"
-	"github.com/pkg/errors"
 	"hello/model"
 	"hello/util"
 	"net/http"
@@ -14,9 +13,9 @@ import (
 )
 
 type OrderHandler func(order *model.Order, setting *model.Setting)
-type MsgHandler func(channelKey string, message []byte, orderHandler OrderHandler)
+type MsgHandler func(connection *websocket.Conn, message []byte, orderHandler OrderHandler)
 type WSMsgHandler func(client *WSClient, message []byte)
-type SubscribeHandler func(subscribes []interface{}, subType string) error
+type SubscribeHandler func(connection *websocket.Conn, subscribes []interface{}, subType string) error
 
 var wsLock sync.Mutex
 
@@ -26,19 +25,30 @@ var AppWSManager = WSManager{
 	Clients:    make(map[*WSClient]bool),
 }
 
-func sendToWs(market string, msg []byte) (err error) {
+func sendToConnection(connection *websocket.Conn, msg []byte) (err error) {
 	defer wsLock.Unlock()
 	wsLock.Lock()
-	if model.AppMarkets.GetIsWriting(market) {
-		return errors.New(fmt.Sprintf(`conn %s is writing`, market))
+	if connection == nil {
+		util.Notice(`fail to write to nil connection`)
+		return
 	}
-	model.AppMarkets.SetIsWriting(market, true)
-	defer model.AppMarkets.SetIsWriting(market, false)
-	conn := model.AppMarkets.GetConn(market)
-	if conn == nil {
-		return errors.New(fmt.Sprintf(`conn %s is nil`, market))
+	if err := connection.WriteMessage(websocket.TextMessage, msg); err != nil {
+		util.Notice(`fail to write to connection ` + string(msg) + err.Error())
 	}
-	return conn.WriteMessage(websocket.TextMessage, msg)
+	return err
+}
+
+func sendToAllConnections(market string, msg []byte) (err error) {
+	defer wsLock.Unlock()
+	wsLock.Lock()
+	for i, connection := range model.AppMarkets.Connections[market] {
+		if connection == nil {
+			continue
+		}
+		err = connection.WriteMessage(websocket.TextMessage, msg)
+		util.Notice(fmt.Sprintf(`fail to write connection %d return: %s`, i, err.Error()))
+	}
+	return err
 }
 
 func newConnection(url string) (*websocket.Conn, error) {
@@ -71,44 +81,53 @@ func newConnection(url string) (*websocket.Conn, error) {
 	return c, nil
 }
 
-func chanHandler(channelKey string, stopC chan struct{}, msgHandler MsgHandler, orderHandler OrderHandler) {
-	conn := model.AppMarkets.GetConn(channelKey)
+func chanHandler(channelKey string, stopChan chan struct{}, connection *websocket.Conn, msgHandler MsgHandler, orderHandler OrderHandler) {
 	defer func() {
-		err := conn.Close()
+		err := connection.Close()
 		if err != nil {
-			util.Notice(`connection closed ` + err.Error())
+			util.Notice(fmt.Sprintf(`connection closed %s`, err.Error()))
 		}
 	}()
 	for true {
 		select {
-		case <-stopC:
+		case <-stopChan:
 			util.Notice("get stop struct, return")
 			return
 		default:
-			_, message, err := conn.ReadMessage()
+			_, message, err := connection.ReadMessage()
 			if err != nil {
 				util.Notice(channelKey + " can not read from websocket: " + err.Error())
 				return
 			}
 			//util.SocketInfo(string(message))
-			msgHandler(channelKey, message, orderHandler)
+			msgHandler(connection, message, orderHandler)
 		}
 	}
 }
 
 func WebSocketClient(channelKey, url, subType string, subscribes []interface{}, subHandler SubscribeHandler,
-	msgHandler MsgHandler, orderHandler OrderHandler) (chan struct{}, error) {
+	msgHandler MsgHandler, orderHandler OrderHandler, step int) (stopChans []chan struct{}, connectErr error) {
 	util.Notice(channelKey + ` create depth channel ` + url)
-	conn, err := newConnection(url)
-	if err != nil {
-		util.SocketInfo("can not create web socket" + err.Error())
-		return nil, err
+	connections := make([]*websocket.Conn, 0)
+	stopChans = make([]chan struct{}, 0)
+	var stepSubscribes []interface{}
+	for i := 0; i*step < len(subscribes); i++ {
+		if (i+1)*step < len(subscribes) {
+			stepSubscribes = subscribes[i*step : (i+1)*step]
+		} else {
+			stepSubscribes = subscribes[i*step:]
+		}
+		connection, err := newConnection(url)
+		stopChan := make(chan struct{}, 2)
+		if err != nil {
+			util.SocketInfo("can not create web socket" + connectErr.Error())
+			return nil, connectErr
+		}
+		go chanHandler(channelKey, stopChan, connection, msgHandler, orderHandler)
+		_ = subHandler(connection, stepSubscribes, subType)
 	}
-	model.AppMarkets.SetConn(channelKey, conn)
-	_ = subHandler(subscribes, subType)
-	stopC := make(chan struct{}, 10)
-	go chanHandler(channelKey, stopC, msgHandler, orderHandler)
-	return stopC, err
+	model.AppMarkets.SetConnections(channelKey, connections)
+	return
 }
 
 type WSManager struct {

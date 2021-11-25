@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"github.com/gorilla/websocket"
 	"hello/model"
 	"hello/util"
 	"math"
@@ -18,7 +19,7 @@ import (
 
 const restHuobi = `api.huobi.pro`
 const wsHuobi = `wss://api.huobi.pro/ws`
-
+const wsStepHuobi = 50
 const restHuobiFuture = `api.hbdm.vn`
 const wsHuobiFuture = `wss://api.hbdm.vn/linear-swap-ws`
 
@@ -52,14 +53,14 @@ type HuobiMessage struct {
 	} `json:"tick"`
 }
 
-var subscribeHandlerHuobi = func(subscribes []interface{}, keyChannel string) error {
+var subscribeHandlerHuobi = func(connection *websocket.Conn, subscribes []interface{}, keyChannel string) error {
 	var err error = nil
 	for _, v := range subscribes {
 		subscribeMap := make(map[string]interface{})
 		subscribeMap["id"] = strconv.Itoa(util.GetNow().Nanosecond())
 		subscribeMap["sub"] = v
 		subscribeMessage := util.JsonEncodeToByte(subscribeMap)
-		if err = sendToWs(keyChannel, subscribeMessage); err != nil {
+		if err = connection.WriteMessage(websocket.TextMessage, subscribeMessage); err != nil {
 			util.SocketInfo(" huobi can not subscribe %s %s %s", keyChannel, v, err.Error())
 		}
 		util.Notice(`huobi subscribed ` + string(subscribeMessage))
@@ -68,14 +69,14 @@ var subscribeHandlerHuobi = func(subscribes []interface{}, keyChannel string) er
 }
 
 func WsDepthServeHuobi(markets *model.Markets, orderHandler OrderHandler) (channels []chan struct{}, err error) {
-	wsHandler := func(channelKey string, event []byte, orderHandler OrderHandler) {
+	wsHandler := func(connection *websocket.Conn, event []byte, orderHandler OrderHandler) {
 		res := util.UnGzip(event)
 		responseJson, _ := util.NewJSON(res)
 		if responseJson.Get(`ping`).MustInt() > 0 {
 			pingMap := make(map[string]interface{})
 			pingMap["pong"] = responseJson.Get(`ping`).MustInt()
 			pingParams := util.JsonEncodeToByte(pingMap)
-			if err := sendToWs(model.Huobi, pingParams); err != nil {
+			if err := sendToAllConnections(model.Huobi, pingParams); err != nil {
 				util.SocketInfo("huobi server ping client error " + err.Error())
 			}
 		} else {
@@ -107,14 +108,14 @@ func WsDepthServeHuobi(markets *model.Markets, orderHandler OrderHandler) (chann
 			}
 		}
 	}
-	wsHandlerDM := func(channelKey string, event []byte, orderHandler OrderHandler) {
+	wsHandlerDM := func(connection *websocket.Conn, event []byte, orderHandler OrderHandler) {
 		res := util.UnGzip(event)
 		responseJson, _ := util.NewJSON(res)
 		if responseJson.Get(`ping`).MustInt() > 0 {
 			pingMap := make(map[string]interface{})
 			pingMap["pong"] = responseJson.Get(`ping`).MustInt()
 			pingParams := util.JsonEncodeToByte(pingMap)
-			if wsErr := sendToWs(model.HuobiFuture, pingParams); wsErr != nil {
+			if wsErr := sendToAllConnections(model.Huobi, pingParams); wsErr != nil {
 				util.SocketInfo("HuobiFuture server ping client error " + wsErr.Error())
 			}
 		} else {
@@ -178,20 +179,19 @@ func WsDepthServeHuobi(markets *model.Markets, orderHandler OrderHandler) (chann
 			spotSubscribes = append(spotSubscribes, subscribe)
 		}
 	}
-	channels = make([]chan struct{}, 0)
-	channel, channelErr := WebSocketClient(model.Huobi, wsHuobi, model.Huobi,
-		spotSubscribes, subscribeHandlerHuobi, wsHandler, orderHandler)
+	channels, channelErr := WebSocketClient(model.Huobi, wsHuobi, model.Huobi,
+		spotSubscribes, subscribeHandlerHuobi, wsHandler, orderHandler, wsStepHuobi)
 	if channelErr != nil {
 		util.SocketInfo(`fail to create huobi conn %s`, channelErr.Error())
-	} else {
-		channels = append(channels, channel)
 	}
-	dmChannel, dmChannelErr := WebSocketClient(model.HuobiFuture, wsHuobiFuture, model.HuobiFuture,
-		futureSubscribes, subscribeHandlerHuobi, wsHandlerDM, orderHandler)
+	dmChannels, dmChannelErr := WebSocketClient(model.Huobi, wsHuobiFuture, model.Huobi,
+		futureSubscribes, subscribeHandlerHuobi, wsHandlerDM, orderHandler, wsStepHuobi)
 	if dmChannelErr != nil {
 		util.SocketInfo(`fail to create HuobiFuture %s`, dmChannelErr.Error())
 	} else {
-		channels = append(channels, dmChannel)
+		for _, channel := range channels {
+			dmChannels = append(dmChannels, channel)
+		}
 	}
 	return channels, err
 }

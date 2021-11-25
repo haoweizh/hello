@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"github.com/gorilla/websocket"
 	"hello/model"
 	"hello/util"
 	"sort"
@@ -17,13 +18,13 @@ import (
 
 const restBitmex = `https://www.bitmex.com/api/v1`
 const wsBitmex = `wss://www.bitmex.com/realtime/`
+const wsStepBitmex = 8
 
 var socketLockBitmex sync.Mutex
 var prePriceB, prePriceA, prePriceB10, prePriceA10 float64
 
-var subscribeHandlerBitmex = func(subscribes []interface{}, subType string) error {
+var subscribeHandlerBitmex = func(connection *websocket.Conn, subscribes []interface{}, subType string) error {
 	var err error = nil
-	step := 8
 	expire := util.GetNow().Unix() + 5
 	toBeSign := fmt.Sprintf(`GET/realtime%d`, expire)
 	keys, secrets := model.AppConfig.GetKeys(model.Bitmex)
@@ -31,36 +32,28 @@ var subscribeHandlerBitmex = func(subscribes []interface{}, subType string) erro
 	hash.Write([]byte(toBeSign))
 	sign := hex.EncodeToString(hash.Sum(nil))
 	authCmd := fmt.Sprintf(`{"op": "authKeyExpires", "args": ["%s", %d, "%s"]}`, keys[0], expire, sign)
-	if err = sendToWs(model.Bitmex, []byte(authCmd)); err != nil {
+	if err = sendToConnection(connection, []byte(authCmd)); err != nil {
 		util.SocketInfo("bitmex can not auth " + err.Error())
 	}
-	stepSubscribes := make([]interface{}, 0)
-	for i := 0; i*step < len(subscribes); i++ {
-		subscribeMap := make(map[string]interface{})
-		subscribeMap[`op`] = `subscribe`
-		if (i+1)*step < len(subscribes) {
-			stepSubscribes = subscribes[i*step : (i+1)*step]
-		} else {
-			stepSubscribes = subscribes[i*step:]
-		}
-		subscribeMap[`args`] = stepSubscribes
-		subscribeMessage := util.JsonEncodeToByte(subscribeMap)
-		if err = sendToWs(model.Bitmex, subscribeMessage); err != nil {
-			util.SocketInfo("bitmex can not subscribe " + err.Error())
-			return err
-		}
+	subscribeMap := make(map[string]interface{})
+	subscribeMap[`op`] = `subscribe`
+	subscribeMap[`args`] = subscribes
+	subscribeMessage := util.JsonEncodeToByte(subscribeMap)
+	if err = sendToConnection(connection, subscribeMessage); err != nil {
+		util.SocketInfo("bitmex can not subscribe " + err.Error())
+		return err
 	}
 	return err
 }
 
-func WsDepthServeBitmex(markets *model.Markets, orderHandler OrderHandler) (chan struct{}, error) {
+func WsDepthServeBitmex(markets *model.Markets, orderHandler OrderHandler) ([]chan struct{}, error) {
 	lastPingTime := util.GetNow().Unix()
-	wsHandler := func(channelKey string, event []byte, orderHandler OrderHandler) {
+	wsHandler := func(connection *websocket.Conn, event []byte, orderHandler OrderHandler) {
 		socketLockBitmex.Lock()
 		defer socketLockBitmex.Unlock()
 		if util.GetNow().Unix()-lastPingTime > 30 { // ping bitmex server every 5 seconds
 			lastPingTime = util.GetNow().Unix()
-			if err := sendToWs(model.Bitmex, []byte(`ping`)); err != nil {
+			if err := sendToAllConnections(model.Bitmex, []byte(`ping`)); err != nil {
 				util.SocketInfo("bitmex server ping client error " + err.Error())
 			}
 		}
@@ -95,33 +88,10 @@ func WsDepthServeBitmex(markets *model.Markets, orderHandler OrderHandler) (chan
 		case `position`:
 		}
 	}
+	subscribes := GetWSSubscribes(model.Bitmex, model.SubscribeDepth)
 	return WebSocketClient(model.Bitmex, wsBitmex, model.SubscribeDepth,
-		GetWSSubscribes(model.Bitmex, model.SubscribeDepth),
-		subscribeHandlerBitmex, wsHandler, orderHandler)
+		subscribes, subscribeHandlerBitmex, wsHandler, orderHandler, wsStepBitmex)
 }
-
-//func parseAccount(account *model.Position, item map[string]interface{}) {
-//	if item == nil {
-//		return
-//	}
-//	if item[`symbol`] != nil {
-//		account.Currency = model.GetStandardSymbol(model.Bitmex, item[`symbol`].(string))
-//	}
-//	if item[`currentQty`] != nil {
-//		free, err := item[`currentQty`].(json.Number).Float64()
-//		if err == nil {
-//			account.Free = free
-//		}
-//	}
-//	if item[`avgEntryPrice`] != nil {
-//		price, err := item[`avgEntryPrice`].(json.Number).Float64()
-//		if err == nil {
-//			account.EntryPrice = price
-//		}
-//	}
-//	account.Ts = util.GetNowUnixMillion()
-//	return
-//}
 
 func parseQuote(item map[string]interface{}) (bid, ask *model.Tick, quoteTime time.Time, symbol string) {
 	if item == nil {
@@ -528,23 +498,6 @@ func handleOrderBook(markets *model.Markets, action string, data []interface{}) 
 	}
 }
 
-//func handleAccount(action string, data []interface{}) {
-//	for _, value := range data {
-//		account := &model.Position{Market: model.Bitmex, Ts: util.GetNowUnixMillion()}
-//		parseAccount(account, value.(map[string]interface{}))
-//		switch action {
-//		case `partial`:
-//			model.AppAccounts.SetAccount(model.Bitmex, account.Currency, account)
-//		case `update`:
-//			preAccount := model.AppAccounts.GetAccount(model.Bitmex, account.Currency)
-//			if preAccount != nil {
-//				parseAccount(preAccount, value.(map[string]interface{}))
-//			}
-//			model.AppAccounts.SetAccount(model.Bitmex, account.Currency, preAccount)
-//		}
-//	}
-//}
-
 func handleTrade(markets *model.Markets, action string, data []interface{}) {
 	switch action {
 	case `partial`:
@@ -677,22 +630,6 @@ func _(key, secret, symbol, orderId string) (orders []*model.Order) {
 	}
 	return
 }
-
-//// note: not yet deal with net error issue
-//func getAccountBitmex(key, secret string, accounts *model.Accounts) {
-//	postData := make(map[string]interface{})
-//	postData[`count`] = `100`
-//	response := SignedRequestBitmex(key, secret, `GET`, `/position`, postData)
-//	positionJson, err := util.NewJSON(response)
-//	if err == nil {
-//		positions := positionJson.MustArray()
-//		for _, data := range positions {
-//			account := &model.Account{Market: model.Bitmex, Ts: util.GetNowUnixMillion()}
-//			parseAccount(account, data.(map[string]interface{}))
-//			accounts.SetAccount(model.Bitmex, account.Currency, account)
-//		}
-//	}
-//}
 
 func placeOrderBitmex(order *model.Order, key, secret, orderSide, orderType, execInst, symbol string, price, amount float64) {
 	postData := make(map[string]interface{})

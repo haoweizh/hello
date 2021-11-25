@@ -103,8 +103,8 @@ func CancelOrder(key, secret, market, symbol, instrument, orderType, orderId str
 	switch market {
 	case model.Huobi:
 		result, errCode, msg = cancelOrderHuobi(key, secret, orderId)
-	case model.HuobiDM:
-		result, errCode, msg = cancelOrderHuobiDM(key, secret, symbol, orderId)
+	//case model.HuobiDM:
+	//	result, errCode, msg = cancelOrderHuobiDM(key, secret, symbol, orderId)
 	case model.OKEX:
 		result, errCode, msg = cancelOrderOkex(key, secret, symbol, orderId, orderType)
 	case model.Binance:
@@ -811,7 +811,6 @@ func _(market, symbol string) (borrowAble float64) {
 func CreateMarketDepthServer(markets *model.Markets, market string, orderHandler OrderHandler) (
 	channels []chan struct{}) {
 	util.SocketInfo(" create depth chan for " + market)
-	var channel chan struct{}
 	channels = make([]chan struct{}, 1)
 	var err error
 	switch market {
@@ -823,27 +822,21 @@ func CreateMarketDepthServer(markets *model.Markets, market string, orderHandler
 		channels, err = WsDepthServeHuobi(markets, nil)
 		//channels[0] = channel
 	case model.HuobiDM:
-		channel, err = WsDepthServeHuobiDM(markets, nil)
-		channels[0] = channel
+		channels, err = WsDepthServeHuobiDM(markets, nil)
 	case model.OKEX:
 		channels, err = WsDepthServeOKEX(model.GetMarketSymbols(model.OKEX), orderHandler)
 	case model.Binance:
 		channels, err = WsDepthServeBinance(markets, nil)
 	case model.Coinpark:
-		channel, err = WsDepthServeCoinpark(markets, nil)
-		channels[0] = channel
+		channels, err = WsDepthServeCoinpark(markets, nil)
 	case model.Bitmex:
-		channel, err = WsDepthServeBitmex(markets, nil)
-		channels[0] = channel
+		channels, err = WsDepthServeBitmex(markets, nil)
 	case model.Bybit:
-		channel, err = WsDepthServeBybit(markets, nil)
-		channels[0] = channel
+		channels, err = WsDepthServeBybit(markets, nil)
 	case model.Ftx:
-		channel, err = WsDepthServeFtx(markets, nil)
-		channels[0] = channel
+		channels, err = WsDepthServeFtx(markets, nil)
 	case model.DFuture:
-		channel, err = WsDepthServeDFuture(markets, nil)
-		channels[0] = channel
+		channels, err = WsDepthServeDFuture(markets, nil)
 	}
 	if err != nil {
 		util.SocketInfo(market + ` can not create depth server ` + err.Error())

@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/bitly/go-simplejson"
+	"github.com/gorilla/websocket"
 	"hello/model"
 	"hello/util"
 	"sort"
@@ -18,12 +19,12 @@ import (
 
 const restBybit = `https://api.bybit.com`
 const wsBybit = `wss://stream.bybit.com/realtime`
+const wsStepBybit = 1
 
 var socketLockBybit sync.Mutex
 
-var subscribeHandlerBybit = func(subscribes []interface{}, subType string) error {
+var subscribeHandlerBybit = func(connection *websocket.Conn, subscribes []interface{}, subType string) error {
 	var err error = nil
-	step := 1
 	expire := util.GetNowUnixMillion() + 1000
 	toBeSign := fmt.Sprintf(`GET/realtime%d`, expire)
 	keys, secrets := model.AppConfig.GetKeys(model.Bybit)
@@ -31,36 +32,28 @@ var subscribeHandlerBybit = func(subscribes []interface{}, subType string) error
 	hash.Write([]byte(toBeSign))
 	sign := hex.EncodeToString(hash.Sum(nil))
 	authCmd := fmt.Sprintf(`{"op": "auth", "args": ["%s", %d, "%s"]}`, keys[0], expire, sign)
-	if err = sendToWs(model.Bybit, []byte(authCmd)); err != nil {
+	if err = sendToConnection(connection, []byte(authCmd)); err != nil {
 		util.SocketInfo("bybit can not auth " + err.Error())
 	}
-	stepSubscribes := make([]interface{}, 0)
-	for i := 0; i*step < len(subscribes); i++ {
-		subscribeMap := make(map[string]interface{})
-		subscribeMap[`op`] = `subscribe`
-		if (i+1)*step < len(subscribes) {
-			stepSubscribes = subscribes[i*step : (i+1)*step]
-		} else {
-			stepSubscribes = subscribes[i*step:]
-		}
-		subscribeMap[`args`] = stepSubscribes
-		subscribeMessage := util.JsonEncodeToByte(subscribeMap)
-		if err = sendToWs(model.Bybit, subscribeMessage); err != nil {
-			util.SocketInfo("bybit can not subscribe " + err.Error())
-			return err
-		}
+	subscribeMap := make(map[string]interface{})
+	subscribeMap[`op`] = `subscribe`
+	subscribeMap[`args`] = subscribes
+	subscribeMessage := util.JsonEncodeToByte(subscribeMap)
+	if err = sendToConnection(connection, subscribeMessage); err != nil {
+		util.SocketInfo("bybit can not subscribe " + err.Error())
+		return err
 	}
 	return err
 }
 
-func WsDepthServeBybit(markets *model.Markets, orderHandler OrderHandler) (chan struct{}, error) {
+func WsDepthServeBybit(markets *model.Markets, orderHandler OrderHandler) ([]chan struct{}, error) {
 	lastPingTime := util.GetNow().Unix()
-	wsHandler := func(channelKey string, event []byte, orderHandler OrderHandler) {
+	wsHandler := func(connection *websocket.Conn, event []byte, orderHandler OrderHandler) {
 		socketLockBybit.Lock()
 		defer socketLockBybit.Unlock()
 		if util.GetNow().Unix()-lastPingTime > 30 { // ping ws server every 5 seconds
 			lastPingTime = util.GetNow().Unix()
-			if err := sendToWs(model.Bybit, []byte(`{"op":"ping"}`)); err != nil {
+			if err := sendToAllConnections(model.Bybit, []byte(`{"op":"ping"}`)); err != nil {
 				util.SocketInfo("bybit server ping client error " + err.Error())
 			}
 		}
@@ -84,9 +77,9 @@ func WsDepthServeBybit(markets *model.Markets, orderHandler OrderHandler) (chan 
 		} else if topic == `position` {
 		}
 	}
-	return WebSocketClient(model.Bybit, wsBybit, model.SubscribeDepth,
-		GetWSSubscribes(model.Bybit, model.SubscribeDepth),
-		subscribeHandlerBybit, wsHandler, orderHandler)
+	subscribes := GetWSSubscribes(model.Bybit, model.SubscribeDepth)
+	return WebSocketClient(model.Bybit, wsBybit, model.SubscribeDepth, subscribes,
+		subscribeHandlerBybit, wsHandler, orderHandler, wsStepBybit)
 }
 
 func parseTickBybit(item map[string]interface{}) (tick *model.Tick) {
