@@ -153,7 +153,7 @@ var subscribeHandlerOKEX = func(connection *websocket.Conn, subscribes []interfa
 func handleMsgOKEX(channel chan *simplejson.Json, instrument string) {
 	var responseJson *simplejson.Json
 	for responseJson = range channel {
-		if len(channel) > 20 {
+		if len(channel) > 20 && time.Now().Second() == 0 {
 			util.Notice(fmt.Sprintf(`%s current chan to be handle %d`, instrument, len(channel)))
 		}
 		action := responseJson.Get(`action`).MustString()
@@ -529,9 +529,9 @@ func PlacePairOKEX(key, coin, sidePerp, sideSpot, orderType string, pricePerp, p
 	subscribeMap["op"] = "batch-orders"
 	subscribeMap[`args`] = []map[string]interface{}{
 		{`instId`: coin + tailPerp, `tdMode`: `cross`, `side`: sidePerp, `sz`: amountStrPerp, `ordType`: orderType,
-			`px`: priceStrPerp, `tag`: model.FunctionCarry, `clOrdId`: key},
+			`px`: priceStrPerp, `tag`: strings.Split(key, `-`)[0]},
 		{`instId`: coin + tailSpot, `tdMode`: `cross`, `side`: sideSpot, `sz`: amountStrSpot, `ordType`: orderType,
-			`px`: priceStrSpot, `tag`: model.FunctionCarry, `clOrdId`: key}}
+			`px`: priceStrSpot, `tag`: strings.Split(key, `-`)[0]}}
 	msg := util.JsonEncodeToByte(subscribeMap)
 	if privateConnectionOKEX == nil || privateConnectionOKEX[key] == nil {
 		util.Notice(fmt.Sprintf(`fail to get connection %s`, key))
@@ -790,13 +790,10 @@ func parseOrderOKEX(value map[string]interface{}) (order *model.Order) {
 		order.OrderTime = time.Unix(ts/1000, 0)
 	}
 	if value[`tag`] != nil {
-		order.RefreshType = value[`tag`].(string)
+		order.AmountType = value[`tag`].(string)
 	}
 	if value[`sCode`] != nil {
 		order.ErrCode = value[`sCode`].(string)
-	}
-	if value[`clOrdId`] != nil {
-		order.AmountType = value[`clOrdId`].(string)
 	}
 	if strings.Contains(order.Instrument, `SWAP`) || len(strings.Split(order.Instrument, `-`)) > 2 {
 		_, order.Amount = model.ParseRealAmount(model.OKEX, order.Instrument, order.Amount)
