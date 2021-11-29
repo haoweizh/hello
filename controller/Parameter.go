@@ -285,6 +285,19 @@ func GetParameters(c *gin.Context) {
 				}
 			}
 		}
+		settingMap := model.GetSettings(model.FunctionTurtle, market)
+		msg := fmt.Sprintf("海龟币种：%s \n", market)
+		for symbol, settings := range settingMap {
+			if len(settings) == 0 {
+				continue
+			}
+			msgTail := ``
+			if settings[0].OpenShortMargin == 0 {
+				msgTail = `(去除平仓中)`
+			}
+			msg += fmt.Sprintf("%s%s, ", symbol, msgTail)
+		}
+		msg += "\n"
 	}
 	settings := model.GetSetting(model.FunctionGrid, model.Ftx, `LINK-PERP`)
 	for _, setting := range settings {
