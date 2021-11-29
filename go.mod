@@ -13,7 +13,7 @@ require (
 	github.com/gin-gonic/gin v1.7.4
 	github.com/gorilla/websocket v1.4.2
 	github.com/jinzhu/configor v1.2.1
-	github.com/pkg/errors v0.9.1
+	github.com/pkg/errors v0.9.1 // indirect
 	github.com/satori/go.uuid v1.2.0
 	gorm.io/driver/postgres v1.1.0
 	gorm.io/gorm v1.21.14

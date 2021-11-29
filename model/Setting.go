@@ -10,23 +10,22 @@ import (
 type CarryHandler func(setting *Setting, bidAsk *BidAsk)
 
 type Setting struct {
-	Valid             bool
-	Function          string
-	Market            string
-	MarketRelated     string
-	Symbol            string
-	Coin              string
-	SymbolRelated     string
-	FunctionParameter string
-	PriceX            float64
-	OpenShortMargin   float64 // arbitrary future use
-	CloseShortMargin  float64 // arbitrary future use
-	Chance            int64   // arbitrary future use
-	GridAmount        float64
-	AmountLimit       float64
-	ID                uint `gorm:"primary_key"`
-	CreatedAt         time.Time
-	UpdatedAt         time.Time
+	Valid            bool
+	Function         string
+	Market           string
+	MarketRelated    string
+	Symbol           string
+	Coin             string
+	SymbolRelated    string
+	PriceX           float64
+	OpenShortMargin  float64 // arbitrary future use
+	CloseShortMargin float64 // arbitrary future use
+	Chance           int64   // arbitrary future use
+	GridAmount       float64
+	AmountLimit      float64
+	ID               uint `gorm:"primary_key"`
+	CreatedAt        time.Time
+	UpdatedAt        time.Time
 }
 
 var marketSymbolSetting map[string]map[string]map[string][]*Setting // function - marketName - symbol - setting
@@ -82,7 +81,7 @@ func GetCurrentN(setting *Setting) (currentN int64) {
 	}
 	for _, value := range marketSymbolSetting[setting.Function][setting.Market] {
 		for _, item := range value {
-			if item != nil && item.FunctionParameter == setting.FunctionParameter {
+			if item != nil && item.Market == setting.Market && item.Function == setting.Function {
 				currentN += item.Chance
 			}
 		}
@@ -102,7 +101,8 @@ func GetFunctions(market, symbol string) map[string]CarryHandler {
 	return handlers[market][symbol]
 }
 
-func GetCoinSetting(function, coin string) []*Setting {
+// GetCoinSetting
+func _(function, coin string) []*Setting {
 	infoLock.Lock()
 	defer infoLock.Unlock()
 	if coinSettings == nil || coinSettings[function] == nil {
@@ -183,7 +183,8 @@ func GetMarketSymbols(market string) map[string]bool {
 	return symbols
 }
 
-func GetCoinSettings(function string) map[string][]*Setting {
+// GetCoinSettings
+func _(function string) map[string][]*Setting {
 	if AppSettings == nil {
 		LoadSettings()
 	}
