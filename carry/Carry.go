@@ -706,11 +706,7 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 		}
 		sidePerp = model.OrderSideSell
 		sideRelated = model.OrderSideBuy
-		if scoreOpen > setOpen {
-			carryType = carryTypeOpen
-		} else {
-			carryType = carryTypeRevert
-		}
+		carryType = carryTypeOpen
 	}
 	markPrice := tickPerp.Asks[0].Price
 	amount = math.Min(bidAmount, askAmount) * 0.9
