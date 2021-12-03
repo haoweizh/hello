@@ -685,6 +685,7 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	//if len(keys) > 0 && keys[0] == key {
 	setClose = -1
 	//}
+	carryType = carryTypeOpen
 	if scoreClose < setClose || (balance.Amount > 0 && scoreClose <= -1*revertOpen) {
 		bidAmount = tickPerp.Asks[0].Amount
 		if setting.Market == model.OKEX {
@@ -695,8 +696,6 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 		sideRelated = model.OrderSideSell
 		if scoreClose < setClose {
 			carryType = carryTypeClose
-		} else {
-			carryType = carryTypeRevert
 		}
 	} else if scoreOpen > setOpen || (balance.Amount < 0 && scoreOpen >= revertClose) {
 		bidAmount = tickRelated.Asks[0].Amount
@@ -706,7 +705,6 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 		}
 		sidePerp = model.OrderSideSell
 		sideRelated = model.OrderSideBuy
-		carryType = carryTypeOpen
 	}
 	markPrice := tickPerp.Asks[0].Price
 	amount = math.Min(bidAmount, askAmount) * 0.9
