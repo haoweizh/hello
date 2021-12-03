@@ -30,7 +30,6 @@ const Bybit = `bybit`
 const OKEX = "okex"
 const Huobi = "huobi"
 const HuobiDM = `huobiDM`
-const HuobiFuture = `HuobiFuture`
 const Binance = "binance"
 const Ftx = `ftx`
 const Coinpark = "coinpark"
@@ -41,7 +40,6 @@ const SubscribeDeal = `subscribeDeal`
 const CarryStatusSuccess = "success"
 const CarryStatusFail = "fail"
 const CarryStatusWorking = "working"
-const CarryStatusNotWorking = `not_working`
 const OrderTypeLimit = `limit`
 const OrderTypeMarket = `market`
 const OrderTypeStop = `stop`
@@ -53,8 +51,9 @@ const FunctionHang = `hang`
 const FunctionTurtle = `turtle`
 const FunctionGrid = `grid`
 const FunctionCarry = `carry`
-
-// const FunctionCross = `cross`
+const FunctionCross = `cross`
+const SymbolTypeSpot = `spot`
+const SymbolTypePerp = `perp`
 
 const FunctionDCarry = `dcarry`
 const FunctionComplement = `comp`
@@ -67,6 +66,32 @@ var AppConfig *Config
 var AppMarkets = NewMarkets()
 
 var AppPause = false
+
+func IsTickTimeout(market string, delay int64) (timeout bool) {
+	switch market {
+	case Gate:
+		return delay > 40
+	case Binance, Ftx:
+		return delay > 100
+	case OKEX, Huobi, Kucoin:
+		return delay > 25
+	}
+	return true
+}
+
+func IsRelatedTickTimeout(market string, delayRelated int64) (timeout bool) {
+	switch market {
+	case Binance:
+		return delayRelated > 100
+	case OKEX, Ftx, Huobi:
+		return delayRelated > 300
+	case Gate:
+		return delayRelated > 30000
+	case Kucoin:
+		return delayRelated > 1000
+	}
+	return true
+}
 
 func GetDialectSymbol(market, symbol string) (dialectSymbol string) {
 	switch market {

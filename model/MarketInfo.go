@@ -84,9 +84,11 @@ func GetCarryCoins() (coins map[string]map[string]bool) { //  market - coin - bo
 // ParseRealAmount 返回以币为单位的数量
 func ParseRealAmount(market, symbol string, amount float64) (success bool, realAmount float64) {
 	marketInfo := GetMarketInfo(market, symbol)
-	if marketInfo == nil || marketInfo.SizeIncrement == 0 || marketInfo.CTValue == 0 ||
-		marketInfo.CTCurrency != GetCoin(market, symbol) {
+	if marketInfo == nil || marketInfo.SizeIncrement == 0 || marketInfo.CTCurrency != GetCoin(market, symbol) {
 		return false, 0
+	}
+	if marketInfo.CTValue == 0 {
+		return true, amount
 	}
 	return true, amount * marketInfo.CTValue
 }

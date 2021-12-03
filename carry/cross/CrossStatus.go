@@ -16,11 +16,14 @@ var balances map[string]map[string][]*model.Balance                 // key - mar
 var positions map[string]map[string][]*model.Position               // key - market - positions
 var crossLock sync.Mutex
 var crossing bool
+var doCross = false
 var collaterals = make(map[string]*model.Collateral) // key - okex collateral status
 
 type CarryStatus struct {
 	Market                      string
 	Symbol                      string
+	Key                         string
+	Secret                      string
 	Type                        string  // spot or perp
 	LimitSell, LimitBuy         float64 // 最大可买卖币数
 	TradeLineBuy, TradeLineSell float64 // 买卖盈利线（可为负数）
@@ -29,6 +32,25 @@ type CarryStatus struct {
 	RateInAll                   float64 // 当前币种或持仓占总权益的比例
 	IsUniAccount                bool    // 是否是统一账户
 }
+
+//func setBalance(key, coin string, value []*model.Balance) {
+//	if balances[key] == nil {
+//		balances[key] = make(map[string][]*model.Balance)
+//	}
+//	balances[key][coin] = value
+//}
+//
+//func getBalance(key, market, coin string) (balance *model.Balance) {
+//	if balances[key] == nil || balances[key][market] == nil {
+//		return nil
+//	}
+//	for _, balance := range balances[key][market] {
+//		if balance != nil && strings.EqualFold(coin, balance.Coin) {
+//			return balance
+//		}
+//	}
+//	return nil
+//}
 
 func getPerpMarginUsd(key, market string) float64 {
 	if perpMarginUsd == nil || perpMarginUsd[key] == nil {

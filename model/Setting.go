@@ -101,8 +101,7 @@ func GetFunctions(market, symbol string) map[string]CarryHandler {
 	return handlers[market][symbol]
 }
 
-// GetCoinSetting
-func _(function, coin string) []*Setting {
+func GetCoinSetting(function, coin string) []*Setting {
 	infoLock.Lock()
 	defer infoLock.Unlock()
 	if coinSettings == nil || coinSettings[function] == nil {
@@ -183,8 +182,7 @@ func GetMarketSymbols(market string) map[string]bool {
 	return symbols
 }
 
-// GetCoinSettings
-func _(function string) map[string][]*Setting {
+func GetCoinSettings(function string) map[string][]*Setting {
 	if AppSettings == nil {
 		LoadSettings()
 	}
