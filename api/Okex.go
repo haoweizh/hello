@@ -606,6 +606,7 @@ func placeOrderOKEX(key, secret string, isWs bool, order *model.Order) {
 	} else {
 		var responseBody []byte
 		responseBody = sendSignRequestOKEX(key, secret, http.MethodPost, path, postData)
+		util.Notice(fmt.Sprintf(`place okex %s return %s`, path, string(responseBody)))
 		orderJson, err := util.NewJSON(responseBody)
 		if err == nil && orderJson != nil && orderJson.Get(`data`) != nil {
 			orders := orderJson.Get(`data`).MustArray()

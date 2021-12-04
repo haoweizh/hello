@@ -64,20 +64,20 @@ func calcTurtleAmount(setting *model.Setting, price, n float64) (amount float64)
 		case `ethusd_p`:
 			amount = 20000 * p / n
 		}
-	case model.Ftx:
+	case model.Ftx, model.OKEX:
 		_, _, p, _ := api.GetBalances(``, ``, setting.Market)
 		amount = 0.01 * p / n
 		switch setting.Symbol {
 		case `BTC-PERP`, `ETH-PERP`, `BTC-USDT-SWAP`, `ETH-USDT-SWAP`:
 			amount *= 2
 		}
-	case model.OKEX:
-		_, _, p, _ := api.GetBalances(``, ``, setting.Market)
-		amount = 0.01 * p / n
-		symbol := strings.ToUpper(setting.Symbol)
-		if symbol != `ETH-USDT-SWAP` && symbol != `BTC-USDT-SWAP` {
-			amount /= 2
-		}
+	//case model.OKEX:
+	//	_, _, p, _ := api.GetBalances(``, ``, setting.Market)
+	//	amount = 0.01 * p / n
+	//	symbol := strings.ToUpper(setting.Symbol)
+	//	if symbol != `ETH-USDT-SWAP` && symbol != `BTC-USDT-SWAP` {
+	//		amount /= 2
+	//	}
 	case model.HuobiDM:
 		coin := model.GetCoin(setting.Market, setting.Symbol)
 		balance := api.GetBalance(``, ``, setting.Market, coin)

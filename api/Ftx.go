@@ -760,7 +760,7 @@ func SignedRequestFtx(key, secret, method, path string, param, body map[string]i
 		headers[`FTX-SUBACCOUNT`] = `test2`
 	}
 	responseBody, _ := util.HttpRequest(method, u.String(), bodyStr, headers, 60)
-	util.SocketInfo(fmt.Sprintf(`ftx key %s request %s body %s return %s`,
-		key, u.String(), bodyStr, string(responseBody)))
+	util.SocketInfo(fmt.Sprintf(`ftx key %s request %s %s body %s return %s`,
+		key, u.String(), method, bodyStr, string(responseBody)))
 	return responseBody
 }
