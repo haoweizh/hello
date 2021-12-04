@@ -68,8 +68,8 @@ func MaintainTransFee(key, secret string) {
 			lastDays2 := now.Add(d)
 			lastMin10 := now.Add(dMin10)
 			model.AppDB.Limit(100).Offset(feeIndex).Where(
-				`created_at>? and created_at<? and status=? and refresh_type!=? and market!=? and market!=?`,
-				lastDays2, lastMin10, model.CarryStatusWorking, model.FunctionDCarry, model.Ftx, model.Gate).Find(&orders)
+				`created_at>? and created_at<? and status=? and refresh_type!=? and refresh_type!=?`,
+				lastDays2, lastMin10, model.CarryStatusWorking, model.FunctionDCarry, model.FunctionCarry).Find(&orders)
 			util.Info(fmt.Sprintf(`--- get working orders %d %v %v`, len(orders), lastDays2, lastMin10))
 			if len(orders) == 0 {
 				break

@@ -386,6 +386,8 @@ func cancelOrdersFtx(key, secret, symbol string) (result bool) {
 	return false
 }
 
+// {"success":false,"error":"Order already closed"}
+// {"success":true,"result":"Order cancelled"}
 func cancelOrderFtx(key, secret, orderType, orderId string) (result bool) {
 	path := `/orders/%s`
 	if orderType == model.OrderTypeStop {
