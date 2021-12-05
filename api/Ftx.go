@@ -716,6 +716,7 @@ func placeOrderFtx(order *model.Order, key, secret, orderSide, orderType, orderP
 			parseOrderFtx(order, data)
 		} else {
 			order.Status = model.CarryStatusFail
+			order.ErrCode = orderJson.Get(`error`).MustString()
 			order.OrderId = ``
 		}
 	}
