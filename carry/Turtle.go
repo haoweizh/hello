@@ -363,26 +363,32 @@ var ProcessTurtle = func(setting *model.Setting, tick *model.BidAsk) {
 }
 
 func checkTurtleBreak(setting *model.Setting, turtleData *TurtleData, tick *model.BidAsk) (checked bool) {
-	duration, _ := time.ParseDuration(`-60s`)
+	duration, _ := time.ParseDuration(`-300s`)
 	now := util.GetNow().Add(duration)
 	if now.After(turtleData.checkTime) {
 		turtleData.checkTime = util.GetNow()
 		if turtleData.orderLong != nil {
-			util.Notice(fmt.Sprintf(`-----chance %s %s %d bid-ask %f %f short %f`,
+			util.Debug(fmt.Sprintf(`-----chance %s %s %d bid-ask %f %f short %f`,
 				setting.Market, setting.Symbol, setting.Chance, tick.Bids[0].Price, tick.Asks[0].Price, turtleData.orderLong.Price))
 			order := api.QueryOrderById(``, ``, setting.Market, setting.Symbol,
 				turtleData.orderLong.Instrument, turtleData.orderLong.OrderType, turtleData.orderLong.OrderId)
 			if order != nil && order.Status == model.CarryStatusSuccess {
 				turtleData.breakLong = true
+				util.Debug(fmt.Sprintf(`-----order break long %s %s %d bid-ask %f %f short %f %v %v`,
+					setting.Market, setting.Symbol, setting.Chance, tick.Bids[0].Price, tick.Asks[0].Price,
+					turtleData.orderLong.Price, turtleData.breakLong, turtleData.waitBreakLong))
 			}
 		}
 		if turtleData.orderShort != nil {
-			util.Notice(fmt.Sprintf(`-----chance %s %s %d bid-ask %f %f long %f`,
+			util.Debug(fmt.Sprintf(`-----chance %s %s %d bid-ask %f %f long %f`,
 				setting.Market, setting.Symbol, setting.Chance, tick.Bids[0].Price, tick.Asks[0].Price, turtleData.orderShort.Price))
 			order := api.QueryOrderById(``, ``, setting.Market, setting.Symbol,
 				turtleData.orderShort.Instrument, turtleData.orderShort.OrderType, turtleData.orderShort.OrderId)
 			if order != nil && order.Status == model.CarryStatusSuccess {
 				turtleData.breakShort = true
+				util.Debug(fmt.Sprintf(`-----order break short %s %s %d bid-ask %f %f long %f %v %v`,
+					setting.Market, setting.Symbol, setting.Chance, tick.Bids[0].Price, tick.Asks[0].Price,
+					turtleData.orderShort.Price, turtleData.breakShort, turtleData.waitBreakShort))
 			}
 		}
 		return true
