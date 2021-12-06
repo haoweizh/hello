@@ -372,8 +372,12 @@ var ProcessCarry = func(setting *model.Setting, tick *model.BidAsk) {
 	model.SetCarryInfo(keys[0], `[current high-low]`, fmt.Sprintf(`highest %s %f lowest %s %f time:%s`,
 		symbolHighest, highest, symbolLowest, lowest, time.Now().String()))
 	doReverts := strings.Split(model.AppConfig.CarryClose, `,`)
-	begin := len(keys) - 1
-	step := -1
+	begin := 0
+	step := 1
+	if isRecentCarry(setting.Market, setting.Symbol) {
+		begin = len(keys) - 1
+		step = -1
+	}
 	//now := time.Now()
 	//if (now.Hour() < 8 && now.Hour() > 2 && now.Second()%8 != 0) || now.Second()%3 == 0 {
 	//	begin = len(keys) - 1
@@ -383,6 +387,7 @@ var ProcessCarry = func(setting *model.Setting, tick *model.BidAsk) {
 		sidePerp, sideRelated, amount, carryType := calcCarryOpen(setting, tickPerp, tickRelated, keys[i],
 			doReverts[i], scoreOpen, scoreClose)
 		if amount > 0 {
+			setRecentCarryTime(setting.Market, setting.Symbol)
 			go placeCarry(setting, tickPerp, tickRelated, keys[i], secrets[i], sidePerp, sideRelated, carryType,
 				scoreOpen, scoreClose, amount)
 			return

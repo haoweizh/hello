@@ -108,7 +108,6 @@ func Test_OKFormatAmount(t *testing.T) {
 }
 
 func Test_initTurtleN(t *testing.T) {
-	fmt.Println(time.Now().String())
 	time.Sleep(time.Duration(3000) * time.Millisecond)
 	fmt.Println(time.Now().String())
 	model.NewConfig()
