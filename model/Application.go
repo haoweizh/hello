@@ -52,6 +52,7 @@ const FunctionTurtle = `turtle`
 const FunctionGrid = `grid`
 const FunctionCarry = `carry`
 const FunctionCross = `cross`
+const FunctionRefresh = `refresh`
 const SymbolTypeSpot = `spot`
 const SymbolTypePerp = `perp`
 
