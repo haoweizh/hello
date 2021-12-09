@@ -16,7 +16,7 @@ var chance = make(map[string]map[string]int64)    // key - (market-symbol) - int
 //var updateBalance = make(map[string]bool)                       // market - bool
 
 // ProcessRefresh
-// setting.OpenShortMargin 币种原始数量
+// setting.OpenShortMargin 刚启动时buyMore数量
 // setting.Chance 要进行多少次刷单交易
 // setting.GridAmount 下单个数
 // setting.AmountLimit 下单后休息时间in million second
@@ -90,6 +90,12 @@ func addBuyMore(key, market, symbol string, amount float64) {
 //}
 
 func placeRefresh(setting *model.Setting, key, secret string, priceBuy, priceSell float64) {
+	if setting.OpenShortMargin != 0 {
+		addBuyMore(key, setting.Market, setting.Symbol, setting.OpenShortMargin)
+		setting.OpenShortMargin = 0
+		model.AppDB.Save(setting)
+		return
+	}
 	addChance(key, setting.Market, setting.Symbol)
 	if getChance(key, setting.Market, setting.Symbol) > setting.Chance {
 		return
