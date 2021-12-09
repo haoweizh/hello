@@ -76,7 +76,9 @@ var postOrderRefresh = func(order *model.Order, setting *model.Setting) {
 		} else if order.OrderSide == model.OrderSideSell {
 			buyMore -= order.DealAmount
 		}
-		util.Notice(fmt.Sprintf(`refresh %s %f buy more: %f`, order.OrderSide, order.DealAmount, buyMore))
-		api.MustCancel(key, secret, setting.Market, setting.Symbol, setting.Symbol, model.OrderTypeLimit, order.OrderId, true)
+		util.Notice(fmt.Sprintf(`refresh %s <%f %f> buy more: %f`, order.OrderSide, order.Amount, order.DealAmount, buyMore))
+		if order.Status == model.CarryStatusWorking {
+			api.MustCancel(key, secret, setting.Market, setting.Symbol, setting.Symbol, model.OrderTypeLimit, order.OrderId, true)
+		}
 	}
 }
