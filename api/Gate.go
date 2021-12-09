@@ -491,7 +491,7 @@ func cancelOrderGate(key, secret, symbol, orderId string) (result bool) {
 		}
 		order, _, err := client.SpotApi.CancelOrder(ctx, orderId, symbol, param)
 		if err != nil {
-			panicGateError(key, "cancelSpotOrdersGate", err)
+			panicGateError(key, fmt.Sprintf("cancelSpotOrdersGate %s %s", symbol, orderId), err)
 			return false
 		}
 		marshal, _ := json.Marshal(order)
