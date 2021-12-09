@@ -255,7 +255,7 @@ func GetBalances(key, secret, market string) (
 	case model.Binance:
 		success, balances = getBalanceBinance(key, secret)
 	}
-	if market == model.Huobi || market == model.Binance {
+	if market != model.Ftx && market != model.OKEX {
 		for _, balance := range balances {
 			symbol := balance.Coin + model.GetSpotTail(market)
 			getTick, tick := model.AppMarkets.GetBidAsk(symbol, market)
