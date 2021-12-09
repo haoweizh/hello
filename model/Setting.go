@@ -286,3 +286,25 @@ func GetPerpTail(market string) string {
 	}
 	return ``
 }
+
+func GetSpotCoins(market, symbol string) []string {
+	switch market {
+	case Huobi:
+		if strings.LastIndex(symbol, `usdt`) == len(symbol)-4 {
+			return []string{symbol[0 : len(symbol)-4], `usdt`}
+		}
+		return nil
+	case Ftx:
+		return strings.Split(symbol, `/`)
+	case OKEX, Kucoin:
+		return strings.Split(symbol, `-`)
+	case Binance:
+		if strings.LastIndex(symbol, `USDT`) == len(symbol)-4 {
+			return []string{symbol[0 : len(symbol)-4], `USDT`}
+		}
+		return nil
+	case Gate:
+		return strings.Split(symbol, `_`)
+	}
+	return nil
+}

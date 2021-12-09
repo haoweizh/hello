@@ -5,38 +5,91 @@ import (
 	"hello/api"
 	"hello/model"
 	"hello/util"
-	"sync"
 	"time"
 )
 
-var refreshLock sync.Mutex
-var buyMore = make(map[string]map[string]float64) // key - (market-symbol) - float
-var chance = make(map[string]map[string]int64)    // key - (market-symbol) - int
-//var marketBalances = make(map[string]map[string]*model.Balance) // key - coin - *balance
-//var updateBalance = make(map[string]bool)                       // market - bool
+var chance = make(map[string]map[string]int64)                  // key - (market-symbol) - int
+var marketBalances = make(map[string]map[string]*model.Balance) // key - (market-coin) - *balance
+var updateTime = make(map[string]map[string]time.Time)          // key - market = time
+var refreshing = false
 
 // ProcessRefresh
-// setting.OpenShortMargin 刚启动时buyMore数量
+// setting.OpenShortMargin 币种占账户总价值的比例
 // setting.Chance 要进行多少次刷单交易
-// setting.GridAmount 下单个数
+// setting.GridAmount 下单数量
 // setting.AmountLimit 下单后休息时间in million second
 // setting.PriceX 买卖单价差大于等于多少才会下单
 var ProcessRefresh = func(setting *model.Setting, tick *model.BidAsk) {
-	defer refreshLock.Unlock()
-	refreshLock.Lock()
-	//million := util.GetNowUnixMillion()
-	//delayTick := int64(0)
-	//if tick != nil {
-	//	delayTick = million - int64(tick.Ts)
-	//}
+	if !refreshing {
+		defer setRefreshing(false)
+		setRefreshing(true)
+	}
+	million := util.GetNowUnixMillion()
+	delayTick := int64(0)
+	if tick != nil {
+		delayTick = million - int64(tick.Ts)
+	}
 	keys, secrets := model.AppConfig.GetKeys(setting.Market)
 	if tick == nil || tick.Asks == nil || tick.Bids == nil || setting == nil || model.AppPause ||
-		(model.AppConfig.Env != `test` && model.AppConfig.Handle != `1`) || len(keys) != 1 ||
-		tick.Asks[0].Price-tick.Bids[0].Price < setting.PriceX { //} || model.IsTickTimeout(setting.Market, delayTick) {
+		(model.AppConfig.Env != `test` && (model.AppConfig.Handle != `1` || model.IsTickTimeout(setting.Market, delayTick))) ||
+		len(keys) != 1 || tick.Asks[0].Price-tick.Bids[0].Price < setting.PriceX {
 		return
 	}
-	placeRefresh(setting, keys[0], secrets[0], tick.Bids[0].Price, tick.Asks[0].Price)
+	if validBalance(keys[0], secrets[0], setting, tick) {
+		placeRefresh(setting, keys[0], secrets[0], tick.Bids[0].Price, tick.Asks[0].Price)
+	}
 	time.Sleep(time.Duration(setting.AmountLimit) * time.Millisecond)
+}
+
+func queryBalances(key, secret, market string) {
+	success, balances, _, _ := api.GetBalances(key, secret, market)
+	if success {
+		if updateTime[key] == nil {
+			updateTime[key] = make(map[string]time.Time)
+		}
+		updateTime[key][market] = time.Now()
+		for _, balance := range balances {
+			if marketBalances[key] == nil {
+				marketBalances[key] = make(map[string]*model.Balance)
+			}
+			marketBalances[key][market+`-`+balance.Coin] = balance
+		}
+	}
+}
+
+func validBalance(key, secret string, setting *model.Setting, tick *model.BidAsk) (valid bool) {
+	duration, _ := time.ParseDuration(`60s`)
+	if marketBalances[key] == nil || updateTime[key] == nil || updateTime[key][setting.Market].Add(duration).After(time.Now()) {
+		queryBalances(key, secret, setting.Market)
+		return false
+	}
+	coins := model.GetSpotCoins(setting.Market, setting.Symbol)
+	if marketBalances[key] == nil || updateTime[key] == nil || coins == nil || len(coins) != 2 {
+		return false
+	}
+	left := marketBalances[key][setting.Market+`-`+coins[0]]
+	right := marketBalances[key][setting.Market+`-`+coins[1]]
+	if left != nil && right != nil {
+		rate := left.Amount * tick.Asks[0].Price / right.Amount
+		if rate < 1.1*setting.OpenShortMargin && rate > 0.9*setting.OpenShortMargin {
+			return true
+		} else if rate > setting.OpenShortMargin {
+			amount := (rate - setting.OpenShortMargin) / 2 * (right.Amount / tick.Asks[0].Price)
+			api.PlaceOrder(key, secret, model.OrderSideSell, model.OrderTypeLimit, setting.Market, setting.Symbol, setting.Symbol,
+				``, model.FunctionRefresh, tick.Bids[0].Price, tick.Bids[0].Price, amount, true,
+				false, postOrderRefresh, setting)
+		} else if rate < setting.OpenShortMargin {
+			amount := (setting.OpenShortMargin - rate) / 2 * (right.Amount / tick.Asks[0].Price)
+			api.PlaceOrder(key, secret, model.OrderSideBuy, model.OrderTypeLimit, setting.Market, setting.Symbol, setting.Symbol,
+				``, model.FunctionRefresh, tick.Asks[0].Price, tick.Asks[0].Price, amount, true,
+				false, postOrderRefresh, setting)
+		}
+	}
+	return false
+}
+
+func setRefreshing(value bool) {
+	refreshing = value
 }
 
 func getChance(key, market, symbol string) (value int64) {
@@ -53,78 +106,23 @@ func addChance(key, market, symbol string) {
 	chance[key][market+`-`+symbol]++
 }
 
-func getBuyMore(key, market, symbol string) (value float64) {
-	if buyMore[key] == nil {
-		return 0
-	}
-	return buyMore[key][market+`-`+symbol]
-}
-
-func addBuyMore(key, market, symbol string, amount float64) {
-	if buyMore[key] == nil {
-		buyMore[key] = make(map[string]float64)
-	}
-	buyMore[key][market+`-`+symbol] += amount
-}
-
-//func refreshBalances() {
-//	for true {
-//		for market := range updateBalance {
-//			if updateBalance[market] {
-//				keys, secrets := model.AppConfig.GetKeys(market)
-//				for i, key := range keys {
-//					success, balances, _, _ := api.GetBalances(key, secrets[i], market)
-//					if success {
-//						for _, balance := range balances {
-//							if marketBalances[key] == nil {
-//								marketBalances[key] = make(map[string]*model.Balance)
-//								marketBalances[key][balance.Coin] = balance
-//							}
-//						}
-//					}
-//				}
-//			}
-//		}
-//		time.Sleep(time.Minute)
-//	}
-//}
-
 func placeRefresh(setting *model.Setting, key, secret string, priceBuy, priceSell float64) {
-	if setting.OpenShortMargin != 0 {
-		addBuyMore(key, setting.Market, setting.Symbol, setting.OpenShortMargin)
-		setting.OpenShortMargin = 0
-		model.AppDB.Save(setting)
-		return
-	}
 	addChance(key, setting.Market, setting.Symbol)
 	if getChance(key, setting.Market, setting.Symbol) > setting.Chance {
 		return
 	}
-	localBuyMore := getBuyMore(key, setting.Market, setting.Symbol)
-	if setting.GridAmount/3 < localBuyMore {
-		go api.PlaceOrder(key, secret, model.OrderSideSell, model.OrderTypeLimit, setting.Market, setting.Symbol, setting.Symbol,
-			``, model.FunctionRefresh, priceBuy, priceBuy, localBuyMore, true, false, postOrderRefresh, setting)
-	} else if setting.GridAmount/3 < -1*localBuyMore {
-		go api.PlaceOrder(key, secret, model.OrderSideBuy, model.OrderTypeLimit, setting.Market, setting.Symbol, setting.Symbol,
-			``, model.FunctionRefresh, priceSell, priceSell, -1*localBuyMore, true, false, postOrderRefresh, setting)
-	} else {
-		util.Notice(fmt.Sprintf(`place refresh %f index: %d`, setting.GridAmount, getChance(key, setting.Market, setting.Symbol)))
-		price := (priceBuy + priceSell) / 2
-		go api.PlaceOrder(key, secret, model.OrderSideBuy, model.OrderTypeLimit, setting.Market, setting.Symbol, setting.Symbol,
-			``, model.FunctionRefresh, price, price, setting.GridAmount, true, false, postOrderRefresh, setting)
-		go api.PlaceOrder(key, secret, model.OrderSideSell, model.OrderTypeLimit, setting.Market, setting.Symbol, setting.Symbol,
-			``, model.FunctionRefresh, price, price, setting.GridAmount, true, false, postOrderRefresh, setting)
-	}
+	util.Notice(fmt.Sprintf(`place refresh %f index: %d`, setting.GridAmount, getChance(key, setting.Market, setting.Symbol)))
+	price := (priceBuy + priceSell) / 2
+	go api.PlaceOrder(key, secret, model.OrderSideBuy, model.OrderTypeLimit, setting.Market, setting.Symbol, setting.Symbol,
+		``, model.FunctionRefresh, price, price, setting.GridAmount, true, false, postOrderRefresh, setting)
+	api.PlaceOrder(key, secret, model.OrderSideSell, model.OrderTypeLimit, setting.Market, setting.Symbol, setting.Symbol,
+		``, model.FunctionRefresh, price, price, setting.GridAmount, true, false, postOrderRefresh, setting)
 }
 
 var postOrderRefresh = func(order *model.Order, setting *model.Setting) {
 	if setting == nil {
 		return
 	}
-	//if !updateBalance[setting.Market] {
-	//	updateBalance[setting.Market] = true
-	//	go refreshBalances()
-	//}
 	keys, secrets := model.AppConfig.GetKeys(setting.Market)
 	var key, secret string
 	for i, value := range keys {
@@ -133,18 +131,8 @@ var postOrderRefresh = func(order *model.Order, setting *model.Setting) {
 			secret = secrets[i]
 		}
 	}
-	time.Sleep(time.Duration(setting.AmountLimit) * time.Millisecond)
+	time.Sleep(time.Duration(3000) * time.Millisecond)
 	if order != nil && order.Status == model.CarryStatusWorking {
-		order = api.QueryOrderById(key, secret, setting.Market, setting.Symbol, setting.Symbol, model.OrderTypeLimit, order.OrderId)
-		if order.OrderSide == model.OrderSideBuy {
-			addBuyMore(order.AmountType, setting.Market, setting.Symbol, order.DealAmount)
-		} else if order.OrderSide == model.OrderSideSell {
-			addBuyMore(order.AmountType, setting.Market, setting.Symbol, order.DealAmount*-1)
-		}
-		util.Notice(fmt.Sprintf(`refresh %s <%f %f> buy more: %f`, order.OrderSide, order.Amount, order.DealAmount,
-			getBuyMore(order.AmountType, setting.Market, setting.Symbol)))
-		if order.Status == model.CarryStatusWorking {
-			api.MustCancel(key, secret, setting.Market, setting.Symbol, setting.Symbol, model.OrderTypeLimit, order.OrderId, true)
-		}
+		api.MustCancel(key, secret, setting.Market, setting.Symbol, setting.Symbol, model.OrderTypeLimit, order.OrderId, true)
 	}
 }
