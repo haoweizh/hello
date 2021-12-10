@@ -30,7 +30,6 @@ var ProcessRefresh = func(setting *model.Setting, tick *model.BidAsk) {
 	if tick != nil {
 		delayTick = million - int64(tick.Ts)
 	}
-	util.Notice(fmt.Sprintf(`%d`, delayTick))
 	keys, secrets := model.AppConfig.GetKeys(setting.Market)
 	if tick == nil || tick.Asks == nil || tick.Bids == nil || setting == nil || model.AppPause ||
 		(model.AppConfig.Env != `test` && (model.AppConfig.Handle != `1` || model.IsTickTimeout(setting.Market, delayTick))) ||
