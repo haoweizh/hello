@@ -342,8 +342,8 @@ var ProcessCarry = func(setting *model.Setting, tick *model.BidAsk) {
 		if delayTick > 25 || delayRelated > 300 || delayPerp > 300 {
 			exit = true
 		}
-	case model.Gate:
-		if delayTick > 40 || delayRelated > 30000 || delayPerp > 30000 {
+	case model.Gate: //delayTick曾经40
+		if delayTick > 300 || delayRelated > 30000 || delayPerp > 30000 {
 			exit = true
 		}
 	case model.Kucoin:

@@ -71,7 +71,7 @@ var AppPause = false
 func IsTickTimeout(market string, delay int64) (timeout bool) {
 	switch market {
 	case Gate:
-		return delay > 50
+		return delay > 300
 	case Binance, Ftx:
 		return delay > 100
 	case OKEX, Huobi, Kucoin:
