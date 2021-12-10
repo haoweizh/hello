@@ -60,8 +60,12 @@ func queryBalances(key, secret, market string) {
 
 func validBalance(key, secret string, setting *model.Setting, tick *model.BidAsk) (valid bool) {
 	duration, _ := time.ParseDuration(`60s`)
-	if marketBalances[key] == nil || updateTime[key] == nil || updateTime[key][setting.Market].Add(duration).After(time.Now()) {
+	if marketBalances[key] == nil || updateTime[key] == nil || updateTime[key][setting.Market].Add(duration).Before(time.Now()) {
+		fmt.Println(fmt.Sprintf(`update %s now: %s %d %d`,
+			updateTime[key][setting.Market].String(), time.Now().String(), tick.Bids.Len(), tick.Asks.Len()))
 		queryBalances(key, secret, setting.Market)
+		api.CancelOrders(key, secret, setting.Market, setting.Symbol)
+		time.Sleep(time.Duration(2) * time.Second)
 		return false
 	}
 	coins := model.GetSpotCoins(setting.Market, setting.Symbol)
