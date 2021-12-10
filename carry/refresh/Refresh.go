@@ -75,8 +75,6 @@ func validBalance(key, secret string, setting *model.Setting, tick *model.BidAsk
 	var order *model.Order
 	if left != nil && right != nil {
 		rate := left.Amount * tick.Asks[0].Price / right.Amount
-		util.Notice(fmt.Sprintf(`coin rate=%f left:%s %f right:%s %f`,
-			rate, left.Coin, left.Amount, right.Coin, right.Amount/tick.Asks[0].Price))
 		if rate < 1.1*setting.OpenShortMargin && rate > 0.9*setting.OpenShortMargin {
 			return true
 		} else if rate > setting.OpenShortMargin {
@@ -93,9 +91,10 @@ func validBalance(key, secret string, setting *model.Setting, tick *model.BidAsk
 				false, nil, setting)
 		}
 		if order != nil && order.Status == model.CarryStatusWorking {
+			util.Notice(fmt.Sprintf(`coin rate=%f left:%s %f right:%s %f`,
+				rate, left.Coin, left.Amount, right.Coin, right.Amount/tick.Asks[0].Price))
 			time.Sleep(time.Duration(2) * time.Second)
-			api.MustCancel(key, secret, setting.Market, setting.Symbol, setting.Symbol, model.OrderTypeLimit, order.OrderId, true)
-			time.Sleep(time.Duration(2) * time.Second)
+			api.CancelOrders(key, secret, setting.Market, setting.Symbol)
 		}
 	}
 	return false
@@ -132,5 +131,4 @@ func placeRefresh(setting *model.Setting, key, secret string, priceBuy, priceSel
 		``, model.FunctionRefresh, price, price, setting.GridAmount, true, false, nil, setting)
 	time.Sleep(time.Duration(2) * time.Second)
 	api.CancelOrders(key, secret, setting.Market, setting.Symbol)
-	time.Sleep(time.Duration(2) * time.Second)
 }
