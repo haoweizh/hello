@@ -71,6 +71,8 @@ func validBalance(key, secret string, setting *model.Setting, tick *model.BidAsk
 	right := marketBalances[key][setting.Market+`-`+coins[1]]
 	if left != nil && right != nil {
 		rate := left.Amount * tick.Asks[0].Price / right.Amount
+		util.Notice(fmt.Sprintf(`coin rate=%f left:%s %f right:%s %f`,
+			rate, left.Coin, left.Amount, right.Coin, right.Amount/tick.Asks[0].Price))
 		if rate < 1.1*setting.OpenShortMargin && rate > 0.9*setting.OpenShortMargin {
 			return true
 		} else if rate > setting.OpenShortMargin {
