@@ -51,7 +51,7 @@ func appendFutureMarketGate(key, secret string, marketInfos map[string]*model.Ma
 		if contract.InDelisting {
 			continue
 		}
-		marketInfo := &model.MarketInfo{}
+		marketInfo := &model.MarketInfo{Market: model.Gate}
 		coin := strings.Split(contract.Name, `_`)[0]
 		marketInfo.Name = coin + model.GetPerpTail(model.Gate)
 		minPrice, _ := strconv.ParseFloat(contract.OrderPriceRound, 64)
@@ -77,7 +77,7 @@ func appendRelatedMarketsGate(key, secret string, marketInfos map[string]*model.
 			if spot.TradeStatus != "tradable" {
 				continue
 			}
-			marketInfo := &model.MarketInfo{}
+			marketInfo := &model.MarketInfo{Market: model.Gate}
 			marketInfo.Name = spot.Id
 			marketInfo.PriceDecimal = int(spot.Precision)
 			marketInfo.PriceIncrement = 1 / math.Pow10(int(spot.Precision))
@@ -107,7 +107,7 @@ func appendRelatedMarketsGate(key, secret string, marketInfos map[string]*model.
 					//marginData, _ := json.Marshal(margin)
 					//util.Notice(fmt.Sprintf("现货交易对：%s", spotData))
 					//util.Notice(fmt.Sprintf("杠杆交易对：%s", marginData))
-					marketInfo := &model.MarketInfo{}
+					marketInfo := &model.MarketInfo{Market: model.Gate}
 					marketInfo.Name = symbol
 					marketInfo.PriceDecimal = int(spot.Precision)
 					marketInfo.PriceIncrement = 1 / math.Pow10(int(spot.Precision))

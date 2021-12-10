@@ -287,6 +287,27 @@ func GetPerpTail(market string) string {
 	return ``
 }
 
+func GetCrossCoin(market, symbol string) (coin string) {
+	var tails []string
+	switch market {
+	case Ftx:
+		tails = []string{`/USD`, `-PERP`}
+	case OKEX:
+		tails = []string{`-USD-SWAP`}
+	case Gate:
+		tails = []string{`_PERP`}
+	case Binance:
+		tails = []string{`-PERP`}
+	}
+	for _, tail := range tails {
+		coinLen := len(symbol) - len(tail)
+		if strings.LastIndex(symbol, tail) == coinLen && coinLen > 0 {
+			return symbol[:len(symbol)-len(tail)]
+		}
+	}
+	return
+}
+
 func GetSpotCoins(market, symbol string) []string {
 	switch market {
 	case Huobi:

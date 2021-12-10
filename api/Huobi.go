@@ -207,7 +207,7 @@ func getMarketsHuobi() (marketInfos map[string]*model.MarketInfo) {
 			if value["symbol"] == nil || value["api-trading"].(string) == "disabled" || value["quote-currency"].(string) != "usdt" {
 				continue
 			}
-			marketInfo := &model.MarketInfo{Name: value["symbol"].(string)}
+			marketInfo := &model.MarketInfo{Market: model.Huobi, Name: value["symbol"].(string)}
 			if value["price-precision"] != nil {
 				priceDecimal, _ := value["price-precision"].(json.Number).Int64()
 				marketInfo.PriceDecimal = int(priceDecimal)
@@ -230,7 +230,7 @@ func getMarketsHuobi() (marketInfos map[string]*model.MarketInfo) {
 			if value["support_margin_mode"].(string) != "all" && value["support_margin_mode"].(string) != "cross" {
 				continue
 			}
-			marketInfo := &model.MarketInfo{Name: strings.ToLower(value["contract_code"].(string))}
+			marketInfo := &model.MarketInfo{Market: model.Huobi, Name: strings.ToLower(value["contract_code"].(string))}
 			if value["symbol"] != nil {
 				marketInfo.CTCurrency = strings.ToLower(value["symbol"].(string))
 			}

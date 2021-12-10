@@ -644,7 +644,7 @@ func getMarketsOKEX() (marketInfos map[string]*model.MarketInfo) {
 			for _, info := range resultJson.Get(`data`).MustArray() {
 				value := info.(map[string]interface{})
 				if value[`instId`] != nil {
-					marketInfo := &model.MarketInfo{Name: value[`instId`].(string)}
+					marketInfo := &model.MarketInfo{Market: model.OKEX, Name: value[`instId`].(string)}
 					if value[`lotSz`] != nil {
 						marketInfo.SizeIncrement, _ = strconv.ParseFloat(value[`lotSz`].(string), 64)
 					}

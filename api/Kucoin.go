@@ -84,7 +84,7 @@ func appendRelatedMarketsKucoin(key string, marketInfos map[string]*model.Market
 		if !model.AppConfig.KucoinSpot && !related.IsMarginEnabled {
 			continue
 		}
-		marketInfo := &model.MarketInfo{}
+		marketInfo := &model.MarketInfo{Market: model.Kucoin}
 		marketInfo.Name = related.Symbol
 		marketInfo.PriceIncrement, _ = strconv.ParseFloat(related.PriceIncrement, 64)
 		marketInfo.PriceDecimal = util.NumDecPlaces(marketInfo.PriceIncrement)
@@ -149,7 +149,7 @@ func appendFutureMarketKucoin(key string, marketInfos map[string]*model.MarketIn
 		if contract.Status != "Open" || contract.QuoteCurrency != "USDT" {
 			continue
 		}
-		marketInfo := &model.MarketInfo{}
+		marketInfo := &model.MarketInfo{Market: model.Kucoin}
 		marketInfo.Name = contract.BaseCurrency + model.GetPerpTail(model.Kucoin)
 		marketInfo.PriceIncrement = contract.TickSize
 		marketInfo.PriceDecimal = util.NumDecPlaces(contract.TickSize)

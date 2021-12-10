@@ -345,7 +345,7 @@ func getMarketsBinance() (marketInfos map[string]*model.MarketInfo) {
 				} else {
 					continue
 				}
-				marketInfo := &model.MarketInfo{Name: symbol, CTCurrency: value[`baseAsset`].(string)}
+				marketInfo := &model.MarketInfo{Market: model.Binance, Name: symbol, CTCurrency: value[`baseAsset`].(string)}
 				setMarketInfoFilters(marketInfo, value[`filters`].([]interface{}))
 				marketInfos[marketInfo.Name] = marketInfo
 			}

@@ -741,6 +741,55 @@ func Transfer(key, secret, market, transferType string, amount float64) {
 	}
 }
 
+func GetMarketInfos(market string) (marketInfo map[string]*model.MarketInfo) {
+	switch market {
+	case model.Ftx:
+		return getMarketsFtx()
+	case model.OKEX:
+		return getMarketsOKEX()
+	case model.Binance:
+		return getMarketsBinance()
+	case model.Gate:
+		keys, secrets := model.AppConfig.GetKeys(model.Gate)
+		if len(keys) < 1 {
+			return nil
+		}
+		_, marketInfo = getMarketsGate(keys[0], secrets[0])
+	case model.Kucoin:
+		_, marketInfo = getMarketsKucoin(``)
+	case model.Huobi:
+		return getMarketsHuobi()
+	}
+	return
+}
+
+// InitCrossMarketInfos 用以初始化cross carry的各个币种市场，调用前需要truncate settings数据库表，本方法会从新插入
+func InitCrossMarketInfos() {
+	infoPool := make(map[string][]*model.MarketInfo) // coin - []marketInfos
+	markets := []string{model.Binance, model.Ftx, model.Gate, model.OKEX}
+	for _, market := range markets {
+		marketInfo := GetMarketInfos(market)
+		for _, info := range marketInfo {
+			coin := model.GetCrossCoin(market, info.Name)
+			if coin != `` {
+				if infoPool[coin] == nil {
+					infoPool[coin] = make([]*model.MarketInfo, 0)
+				}
+				infoPool[coin] = append(infoPool[coin], info)
+			}
+		}
+	}
+	for coin, infos := range infoPool {
+		if len(infos) > 1 {
+			for _, info := range infos {
+				setting := &model.Setting{Valid: true, Function: model.FunctionCross, Market: info.Market, Symbol: info.Name, Coin: coin}
+				model.AppDB.Save(setting)
+				fmt.Println(fmt.Sprintf(`save setting %s %s %s`, info.Market, info.Name, coin))
+			}
+		}
+	}
+}
+
 // InitMarketInfos 只支持现货SPOT和永续PERP SWAP
 func InitMarketInfos() (success bool) {
 	success = true

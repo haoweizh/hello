@@ -547,7 +547,7 @@ func getMarketsFtx() (marketInfos map[string]*model.MarketInfo) {
 		}
 		for _, item := range items {
 			value := item.(map[string]interface{})
-			marketInfo := &model.MarketInfo{}
+			marketInfo := &model.MarketInfo{Market: model.Ftx}
 			if value[`name`] != nil {
 				marketInfo.Name = value[`name`].(string)
 			} else {

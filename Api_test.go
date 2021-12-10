@@ -107,6 +107,13 @@ func Test_OKFormatAmount(t *testing.T) {
 	//getAmount(2349999)
 }
 
+func Test_getCommonMarketInfos(t *testing.T) {
+	model.NewConfig()
+	_ = configor.Load(model.AppConfig, "./config.yml")
+	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
+	api.InitCrossMarketInfos()
+}
+
 func Test_initTurtleN(t *testing.T) {
 	time.Sleep(time.Duration(3000) * time.Millisecond)
 	fmt.Println(time.Now().String())
