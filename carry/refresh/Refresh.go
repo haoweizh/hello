@@ -61,8 +61,6 @@ func queryBalances(key, secret, market string) {
 func validBalance(key, secret string, setting *model.Setting, tick *model.BidAsk) (valid bool) {
 	duration, _ := time.ParseDuration(`60s`)
 	if marketBalances[key] == nil || updateTime[key] == nil || updateTime[key][setting.Market].Add(duration).Before(time.Now()) {
-		fmt.Println(fmt.Sprintf(`update %s now: %s %d %d`,
-			updateTime[key][setting.Market].String(), time.Now().String(), tick.Bids.Len(), tick.Asks.Len()))
 		queryBalances(key, secret, setting.Market)
 		api.CancelOrders(key, secret, setting.Market, setting.Symbol)
 		time.Sleep(time.Duration(2) * time.Second)
@@ -92,7 +90,7 @@ func validBalance(key, secret string, setting *model.Setting, tick *model.BidAsk
 			pos := int(math.Min(4, float64(tick.Asks.Len())))
 			order = api.PlaceOrder(key, secret, model.OrderSideBuy, model.OrderTypeLimit, setting.Market, setting.Symbol, setting.Symbol,
 				``, model.FunctionRefresh, tick.Asks[pos].Price, tick.Asks[pos].Price, amount, true,
-				false, postOrderRefresh, setting)
+				false, nil, setting)
 		}
 		if order != nil && order.Status == model.CarryStatusWorking {
 			time.Sleep(time.Duration(2) * time.Second)
@@ -129,25 +127,10 @@ func placeRefresh(setting *model.Setting, key, secret string, priceBuy, priceSel
 	util.Notice(fmt.Sprintf(`place refresh %f index: %d`, setting.GridAmount, getChance(key, setting.Market, setting.Symbol)))
 	price := (priceBuy + priceSell) / 2
 	go api.PlaceOrder(key, secret, model.OrderSideBuy, model.OrderTypeLimit, setting.Market, setting.Symbol, setting.Symbol,
-		``, model.FunctionRefresh, price, price, setting.GridAmount, true, false, postOrderRefresh, setting)
+		``, model.FunctionRefresh, price, price, setting.GridAmount, true, false, nil, setting)
 	api.PlaceOrder(key, secret, model.OrderSideSell, model.OrderTypeLimit, setting.Market, setting.Symbol, setting.Symbol,
-		``, model.FunctionRefresh, price, price, setting.GridAmount, true, false, postOrderRefresh, setting)
-}
-
-var postOrderRefresh = func(order *model.Order, setting *model.Setting) {
-	if setting == nil {
-		return
-	}
-	keys, secrets := model.AppConfig.GetKeys(setting.Market)
-	var key, secret string
-	for i, value := range keys {
-		if value == order.AmountType {
-			key = value
-			secret = secrets[i]
-		}
-	}
-	time.Sleep(time.Duration(3000) * time.Millisecond)
-	if order != nil && order.Status == model.CarryStatusWorking {
-		api.MustCancel(key, secret, setting.Market, setting.Symbol, setting.Symbol, model.OrderTypeLimit, order.OrderId, true)
-	}
+		``, model.FunctionRefresh, price, price, setting.GridAmount, true, false, nil, setting)
+	time.Sleep(time.Duration(2) * time.Second)
+	api.CancelOrders(key, secret, setting.Market, setting.Symbol)
+	time.Sleep(time.Duration(2) * time.Second)
 }
