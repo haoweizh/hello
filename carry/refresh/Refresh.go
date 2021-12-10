@@ -24,6 +24,8 @@ var ProcessRefresh = func(setting *model.Setting, tick *model.BidAsk) {
 	if !refreshing {
 		defer setRefreshing(false)
 		setRefreshing(true)
+	} else {
+		return
 	}
 	million := util.GetNowUnixMillion()
 	delayTick := int64(0)
