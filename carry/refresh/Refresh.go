@@ -76,7 +76,6 @@ func validBalance(key, secret string, setting *model.Setting, tick *model.BidAsk
 	right := marketBalances[key][setting.Market+`-`+coins[1]]
 	var order *model.Order
 	if left != nil && right != nil {
-		pos := int(math.Min(4, math.Min(float64(tick.Bids.Len()), float64(tick.Asks.Len()))))
 		rate := left.Amount * tick.Asks[0].Price / right.Amount
 		util.Notice(fmt.Sprintf(`coin rate=%f left:%s %f right:%s %f`,
 			rate, left.Coin, left.Amount, right.Coin, right.Amount/tick.Asks[0].Price))
@@ -84,11 +83,13 @@ func validBalance(key, secret string, setting *model.Setting, tick *model.BidAsk
 			return true
 		} else if rate > setting.OpenShortMargin {
 			amount := (rate - setting.OpenShortMargin) / 2 * (right.Amount / tick.Asks[0].Price)
+			pos := int(math.Min(4, float64(tick.Bids.Len())))
 			order = api.PlaceOrder(key, secret, model.OrderSideSell, model.OrderTypeLimit, setting.Market, setting.Symbol, setting.Symbol,
 				``, model.FunctionRefresh, tick.Bids[pos].Price, tick.Bids[pos].Price, amount, true,
 				false, nil, setting)
 		} else if rate < setting.OpenShortMargin {
 			amount := (setting.OpenShortMargin - rate) / 2 * (right.Amount / tick.Asks[0].Price)
+			pos := int(math.Min(4, float64(tick.Asks.Len())))
 			order = api.PlaceOrder(key, secret, model.OrderSideBuy, model.OrderTypeLimit, setting.Market, setting.Symbol, setting.Symbol,
 				``, model.FunctionRefresh, tick.Asks[pos].Price, tick.Asks[pos].Price, amount, true,
 				false, postOrderRefresh, setting)
