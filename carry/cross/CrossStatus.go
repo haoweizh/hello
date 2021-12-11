@@ -33,12 +33,27 @@ type CarryStatus struct {
 	IsUniAccount                bool    // 是否是统一账户
 }
 
-//func setBalance(key, coin string, value []*model.Balance) {
-//	if balances[key] == nil {
-//		balances[key] = make(map[string][]*model.Balance)
-//	}
-//	balances[key][coin] = value
-//}
+func getSpotBalance(key, market string) (value float64) {
+	if spotBalance[key] == nil {
+		return 0
+	}
+	return spotBalance[key][market]
+}
+
+func setSpotBalance(key, market string, value float64) {
+	if spotBalance[key] == nil {
+		spotBalance[key] = make(map[string]float64)
+	}
+	spotBalance[key][market] = value
+}
+
+func setBalance(key, market string, value []*model.Balance) {
+	if balances[key] == nil {
+		balances[key] = make(map[string][]*model.Balance)
+	}
+	balances[key][market] = value
+}
+
 //
 //func getBalance(key, market, coin string) (balance *model.Balance) {
 //	if balances[key] == nil || balances[key][market] == nil {

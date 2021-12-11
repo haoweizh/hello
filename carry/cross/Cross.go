@@ -69,8 +69,8 @@ func createFromBalance(key, secret string, setting *model.Setting) (carryStatus 
 	if balances[key][setting.Market] == nil {
 		success, apiBalances, totalInUsd, collateral := api.GetBalances(key, secret, setting.Market)
 		if success && totalInUsd > 0 {
-			balances[key][setting.Market] = apiBalances
-			spotBalance[key][setting.Market] = totalInUsd
+			setBalance(key, setting.Market, apiBalances)
+			setSpotBalance(key, setting.Market, totalInUsd)
 		}
 		if collateral != nil {
 			setCollateral(key, collateral)
@@ -170,8 +170,9 @@ func initStatus(key, secret string, setting *model.Setting) {
 					doReverts[i] = `true`
 				}
 			}
-			if carryStatus.Type == model.SymbolTypeSpot && (spotBalance[key][setting.Market] == 0 ||
-				usdAmount[key][setting.Market]/spotBalance[key][setting.Market] < 0.2) {
+			localUsdAmount := getUsdAmount(key, setting.Market)
+			localSpotBalance := getSpotBalance(key, setting.Market)
+			if carryStatus.Type == model.SymbolTypeSpot && (localSpotBalance == 0 || localUsdAmount/localSpotBalance < 0.2) {
 				doReverts[i] = `true`
 			}
 			if carryStatus.Type == model.SymbolTypePerp && perpHoldInU[key] != nil {
