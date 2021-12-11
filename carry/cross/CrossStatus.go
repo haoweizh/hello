@@ -14,10 +14,10 @@ var spotBalance map[string]map[string]float64                       // key - mar
 var perpMarginUsd map[string]map[string]float64                     // key - market - 期货账户中usd保证金数量
 var balances map[string]map[string][]*model.Balance                 // key - market - balances
 var positions map[string]map[string][]*model.Position               // key - market - positions
+var collaterals = make(map[string]*model.Collateral)                // key - okex collateral status
 var crossLock sync.Mutex
 var crossing bool
 var doCross = false
-var collaterals = make(map[string]*model.Collateral) // key - okex collateral status
 
 type CarryStatus struct {
 	Market                      string

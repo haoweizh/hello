@@ -32,6 +32,9 @@ var ProcessRefresh = func(setting *model.Setting, tick *model.BidAsk) {
 	if tick != nil {
 		delayTick = million - int64(tick.Ts)
 	}
+	if delayTick < 800 {
+		delayTick = 30
+	}
 	keys, secrets := model.AppConfig.GetKeys(setting.Market)
 	if tick == nil || tick.Asks == nil || tick.Bids == nil || setting == nil || model.AppPause ||
 		(model.AppConfig.Env != `test` && (model.AppConfig.Handle != `1` || model.IsTickTimeout(setting.Market, delayTick))) ||
@@ -63,9 +66,9 @@ func queryBalances(key, secret, market string) {
 func validBalance(key, secret string, setting *model.Setting, tick *model.BidAsk) (valid bool) {
 	duration, _ := time.ParseDuration(`60s`)
 	if marketBalances[key] == nil || updateTime[key] == nil || updateTime[key][setting.Market].Add(duration).Before(time.Now()) {
-		queryBalances(key, secret, setting.Market)
 		api.CancelOrders(key, secret, setting.Market, setting.Symbol)
 		time.Sleep(time.Duration(2) * time.Second)
+		queryBalances(key, secret, setting.Market)
 		return false
 	}
 	coins := model.GetSpotCoins(setting.Market, setting.Symbol)

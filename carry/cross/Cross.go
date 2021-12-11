@@ -341,7 +341,7 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 				continue
 			}
 			statusCross := status[setting.Coin][setting.Market][setting.Symbol][keys[i]]
-			statusRelate := status[settingRelate.Coin][settingRelate.Market][setting.Symbol][keyRelated]
+			statusRelate := status[settingRelate.Coin][settingRelate.Market][settingRelate.Symbol][keyRelated]
 			if statusCross == nil || statusRelate == nil {
 				continue
 			}
