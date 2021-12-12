@@ -6,91 +6,88 @@ import (
 	"time"
 )
 
-var status map[string]map[string]map[string]map[string]*CarryStatus // coin - market - symbol - key - CarryStatus
-var usdAmount map[string]map[string]float64                         // key - market - amount
-var okTradeMaxResetTime = make(map[string]map[string]int64)         // key - symbol - init time in second
-var perpHoldInU map[string]map[string]float64                       // key - market - abs value in usd
-var spotBalance map[string]map[string]float64                       // key - market - 统一账户或独立现货账户以usd计算的总权益
-var perpMarginUsd map[string]map[string]float64                     // key - market - 期货账户中usd保证金数量
-var balances map[string]map[string][]*model.Balance                 // key - market - balances
-var positions map[string]map[string][]*model.Position               // key - market - positions
-var collaterals = make(map[string]*model.Collateral)                // key - okex collateral status
+var carryStatus = make(map[string]map[string]map[string]map[string]*CarryStatus) // coin - market - symbol - key - CarryStatus
+var okTradeMaxResetTime = make(map[string]map[string]int64)                      // key - symbol - init time in second
+var contractMarkets = make(map[string]map[string]*contractMarket)
+var spotMarkets = make(map[string]map[string]*spotMarket)
+
 var crossLock sync.Mutex
 var crossing bool
 var doCross = false
+
+type contractMarket struct {
+	key, market      string
+	collateralsInU   float64 // 可用抵押币种价值总和，以U计算
+	contractValueInU float64 // 当前价格下开仓总额，以U计算
+	positions        map[string]*model.Position
+}
+
+type spotMarket struct {
+	key, market     string
+	availableU      float64
+	accountValueInU float64
+	balances        map[string]*model.Balance
+	collateral      *model.Collateral
+}
 
 type CarryStatus struct {
 	Market                      string
 	Symbol                      string
 	Key                         string
 	Secret                      string
-	Type                        string  // spot or perp
 	LimitSell, LimitBuy         float64 // 最大可买卖币数
 	TradeLineBuy, TradeLineSell float64 // 买卖盈利线（可为负数）
-	Holding                     float64
+	Holding                     float64 // fee for spot
 	ValueInUsd                  float64
-	RateInAll                   float64 // 当前币种或持仓占总权益的比例
-	IsUniAccount                bool    // 是否是统一账户
+	RateInAll                   float64 // 现货：该币种占总权益的比例；永续：以开仓价算该币种持仓占保证金百分比
 }
 
-func getSpotBalance(key, market string) (value float64) {
-	if spotBalance[key] == nil {
-		return 0
+func getContractMarket(key, market string) *contractMarket {
+	if contractMarkets[key] == nil {
+		return nil
 	}
-	return spotBalance[key][market]
+	return contractMarkets[key][market]
 }
 
-func setSpotBalance(key, market string, value float64) {
-	if spotBalance[key] == nil {
-		spotBalance[key] = make(map[string]float64)
+func setContractMarket(key, market string, cm *contractMarket) {
+	if contractMarkets[key] == nil {
+		contractMarkets[key] = make(map[string]*contractMarket)
 	}
-	spotBalance[key][market] = value
+	contractMarkets[key][market] = cm
 }
 
-func setBalance(key, market string, value []*model.Balance) {
-	if balances[key] == nil {
-		balances[key] = make(map[string][]*model.Balance)
+func getSpotMarket(key, market string) *spotMarket {
+	if spotMarkets[key] == nil {
+		spotMarkets[key] = make(map[string]*spotMarket)
 	}
-	balances[key][market] = value
+	return spotMarkets[key][market]
 }
 
-//
-//func getBalance(key, market, coin string) (balance *model.Balance) {
-//	if balances[key] == nil || balances[key][market] == nil {
-//		return nil
-//	}
-//	for _, balance := range balances[key][market] {
-//		if balance != nil && strings.EqualFold(coin, balance.Coin) {
-//			return balance
-//		}
-//	}
-//	return nil
-//}
-
-func getPerpMarginUsd(key, market string) float64 {
-	if perpMarginUsd == nil || perpMarginUsd[key] == nil {
-		return 0
+func setSpotMarket(key, market string, sm *spotMarket) {
+	if spotMarkets[key] == nil {
+		spotMarkets[key] = make(map[string]*spotMarket)
 	}
-	return perpMarginUsd[key][market]
+	spotMarkets[key][market] = sm
 }
 
-func getUsdAmount(key, market string) float64 {
-	if usdAmount == nil || usdAmount[key] == nil {
-		return 0
+func getCarryStatus(coin, market, symbol, key string) *CarryStatus {
+	if carryStatus[coin] == nil || carryStatus[coin][market] == nil || carryStatus[coin][market][symbol] == nil {
+		return nil
 	}
-	return usdAmount[key][market]
+	return carryStatus[coin][market][symbol][key]
 }
 
-func GetCollateral(key string) (collateral *model.Collateral) {
-	defer crossLock.Unlock()
-	crossLock.Lock()
-	return collaterals[key]
-}
-
-func setCollateral(key string, collateral *model.Collateral) {
-	defer crossLock.Unlock()
-	crossLock.Lock()
-	collaterals[key] = collateral
+func setCarryStatus(coin, market, symbol, key string, status *CarryStatus) {
+	if carryStatus[coin] == nil {
+		carryStatus[coin] = make(map[string]map[string]map[string]*CarryStatus)
+	}
+	if carryStatus[coin][market] == nil {
+		carryStatus[coin][market] = make(map[string]map[string]*CarryStatus)
+	}
+	if carryStatus[coin][market][symbol] == nil {
+		carryStatus[coin][market][symbol] = make(map[string]*CarryStatus)
+	}
+	carryStatus[coin][market][symbol][key] = status
 }
 
 func getOKTradeMaxResetTime(key, symbol string) (resetTime int64) {

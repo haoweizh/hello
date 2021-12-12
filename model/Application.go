@@ -53,8 +53,6 @@ const FunctionGrid = `grid`
 const FunctionCarry = `carry`
 const FunctionCross = `cross`
 const FunctionRefresh = `refresh`
-const SymbolTypeSpot = `spot`
-const SymbolTypePerp = `perp`
 
 const FunctionDCarry = `dcarry`
 const FunctionComplement = `comp`

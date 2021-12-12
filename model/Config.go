@@ -57,9 +57,17 @@ func (config *Config) GetSecret(market, key string) (secret string) {
 	return ``
 }
 
+func (config *Config) GetKey(market string, index int) (success bool, key, secret string) {
+	keys, secrets := config.GetKeys(market)
+	for i, value := range keys {
+		if value == key {
+			return true, value, secrets[i]
+		}
+	}
+	return false, ``, ``
+}
+
 func (config *Config) GetKeys(market string) (keys, secrets []string) {
-	config.lock.Lock()
-	defer config.lock.Unlock()
 	switch market {
 	case Kucoin:
 		return strings.Split(config.KucoinRelatedSecret, `,`), strings.Split(config.KucoinRelatedSecret, `,`)
