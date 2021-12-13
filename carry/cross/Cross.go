@@ -175,7 +175,7 @@ func initStatus(key, secret string, setting *model.Setting) {
 	keys, _ := model.AppConfig.GetKeys(setting.Market)
 	doReverts := strings.Split(model.AppConfig.CarryClose, `,`)
 	accountRates := strings.Split(model.AppConfig.AccountRate, `,`)
-	for i := 1; i < len(keys); i++ {
+	for i := 0; i < len(keys); i++ {
 		if keys[i] == key {
 			rate, _ := strconv.ParseFloat(accountRates[i], 64)
 			carryStatus.TradeLineBuy *= rate
@@ -314,17 +314,11 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 		keys, _ := model.AppConfig.GetKeys(setting.Market)
 		for i, key := range keys {
 			status := getCarryStatus(setting.Coin, setting.Market, setting.Symbol, key)
-			if status == nil {
-				return
-			}
 			success, keyRelate, _ := model.AppConfig.GetKey(settingRelate.Market, i)
-			if !success {
-				return
-			}
 			statusRelate := getCarryStatus(settingRelate.Coin, settingRelate.Market, settingRelate.Symbol, keyRelate)
-			if status == nil || statusRelate == nil || !tickGet {
-				util.Notice(`fail to get status makeEqual %s %s %s`,
-					settingRelate.Market, settingRelate.Symbol, keyRelate)
+			if !success || status == nil || statusRelate == nil {
+				util.Notice(`fail to get status makeEqual %s %s %s %s`,
+					settingRelate.Market, settingRelate.Symbol, settingRelate.Coin, keyRelate)
 				continue
 			}
 			statusBuy, statusSell, amount, priceBuy, priceSell :=
@@ -347,7 +341,6 @@ func calcAmount(carryStatus, carryStatusRelate *CarryStatus, tick,
 		model.AppMetric.AddCarry(mark, scoreOpen, -1*scoreClose)
 	}
 	if carryStatus.TradeLineSell < scoreOpen && carryStatusRelate.TradeLineBuy < scoreOpen {
-		util.Notice(`cross trade `)
 		statusBuy = carryStatusRelate
 		statusSell = carryStatus
 		priceSell = tick.Bids[0].Price
@@ -356,7 +349,6 @@ func calcAmount(carryStatus, carryStatusRelate *CarryStatus, tick,
 		bidAmount = tickRelate.Asks[0].Amount
 	}
 	if carryStatus.TradeLineBuy < scoreClose && carryStatusRelate.TradeLineSell < scoreClose {
-		util.Notice(`cross trade `)
 		statusSell = carryStatusRelate
 		statusBuy = carryStatus
 		priceSell = tickRelate.Bids[0].Price
