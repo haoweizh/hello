@@ -767,6 +767,17 @@ func GetMarketInfos(market string) (marketInfo map[string]*model.MarketInfo) {
 	return
 }
 
+func filterCross(market, symbol string) bool {
+	switch market {
+	case model.Ftx:
+		switch symbol {
+		case `DEFI-PERP`, `PRIV-PERP`, `ATL-PERP`, `SHIT-PERP`, `MID-PERP`, `EXCH-PERP`, `DRGN-PERP`:
+			return true
+		}
+	}
+	return false
+}
+
 // InitCrossMarketInfos 用以初始化cross carry的各个币种市场，调用前需要truncate settings数据库表，本方法会从新插入
 func InitCrossMarketInfos() {
 	infoPool := make(map[string][]*model.MarketInfo) // coin - []marketInfos
@@ -787,7 +798,7 @@ func InitCrossMarketInfos() {
 		if len(infos) > 1 {
 			for _, info := range infos {
 				setting := &model.Setting{Valid: true, Function: model.FunctionCross, Market: info.Market, Symbol: info.Name, Coin: coin}
-				if setting.Symbol == `DEFI-PERP` {
+				if filterCross(setting.Market, setting.Symbol) {
 					continue
 				}
 				model.AppDB.Save(setting)

@@ -678,18 +678,19 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 		//	revertOpen -= 0.01
 		//	revertClose += 0.005
 		//}
-		if collateral == nil || (keys[0] != key && collateral.Rate < 5) || (keys[0] == key && (collateral.Available-collateral.Occupied)/collateral.Available < 0.1) {
+		if collateral == nil || collateral.Rate < 10 || (keys[0] == key && (collateral.Available-collateral.Occupied)/collateral.Available < 0.1) {
 			util.Notice(`doRevert true %s %f %f`, key, collateral.Available, collateral.Occupied, collateral.Rate)
 			doRevert = `true`
 		}
 	}
 	if doRevert == `true` {
 		setOpen = 1
+		setClose = -1
 	}
 	// 针对第一个key(dk)关闭反向开仓
-	//if len(keys) > 0 && keys[0] == key {
-	setClose = -1
-	//}
+	if len(keys) > 0 && keys[0] == key {
+		setClose = -1
+	}
 	carryType = carryTypeOpen
 	if scoreClose < setClose || (balance.Amount > 0 && scoreClose <= -1*revertOpen) {
 		bidAmount = tickPerp.Asks[0].Amount
