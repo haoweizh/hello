@@ -787,6 +787,9 @@ func InitCrossMarketInfos() {
 		if len(infos) > 1 {
 			for _, info := range infos {
 				setting := &model.Setting{Valid: true, Function: model.FunctionCross, Market: info.Market, Symbol: info.Name, Coin: coin}
+				if setting.Symbol == `DEFI-PERP` {
+					continue
+				}
 				model.AppDB.Save(setting)
 				fmt.Println(fmt.Sprintf(`save setting %s %s %s %v`, info.Market, info.Name, coin, setting.Valid))
 			}

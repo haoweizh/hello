@@ -217,7 +217,7 @@ func ClearCross() {
 		for coin, settings := range coinSettings {
 			//makeEqual(settings, status[coin])
 			makeEqual()
-			fmt.Println(fmt.Sprintf(`%s %d`, coin, len(settings)))
+			fmt.Sprintf(`%s %d`, coin, len(settings))
 		}
 		timer.Reset(time.Second * 60)
 	}
@@ -432,7 +432,7 @@ func calcAmount(carryStatus, carryStatusRelate *CarryStatus, tick,
 	//} else if model.Ftx == setting.Market && amount > 90000000 {
 	//	amount = 90000000
 	//}
-	fmt.Println(priceSell)
+	fmt.Sprintf(`%f`, priceSell)
 	return statusBuy, statusSell, amount, priceBuy, priceSell
 }
 
