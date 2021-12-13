@@ -307,8 +307,8 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 	}
 	for _, settingRelate := range settings {
 		tickGet, tickRelate := model.AppMarkets.GetBidAsk(settingRelate.Symbol, settingRelate.Market)
-		if !tickGet || (model.AppConfig.Env != `test` &&
-			model.IsRelatedTickTimeout(settingRelate.Market, million-int64(tickRelate.Ts))) {
+		if !tickGet || setting.ID == settingRelate.ID ||
+			(model.AppConfig.Env != `test` && model.IsRelatedTickTimeout(settingRelate.Market, million-int64(tickRelate.Ts))) {
 			continue
 		}
 		keys, _ := model.AppConfig.GetKeys(setting.Market)
@@ -343,7 +343,9 @@ func calcAmount(carryStatus, carryStatusRelate *CarryStatus, tick,
 	scoreOpen := 1 - tickRelate.Asks[0].Price/tick.Bids[0].Price
 	scoreClose := tickRelate.Bids[0].Price/tick.Asks[0].Price - 1
 	mark := fmt.Sprintf(`%s-%s<->%s-%s`, carryStatus.market, carryStatus.symbol, carryStatusRelate.market, carryStatusRelate.symbol)
-	model.AppMetric.AddCarry(mark, scoreOpen, scoreClose)
+	if scoreOpen > 0.01 || -1*scoreClose < -0.01 {
+		model.AppMetric.AddCarry(mark, scoreOpen, -1*scoreClose)
+	}
 	if carryStatus.TradeLineSell < scoreOpen && carryStatusRelate.TradeLineBuy < scoreOpen {
 		util.Notice(`cross trade `)
 		statusBuy = carryStatusRelate
