@@ -43,8 +43,8 @@ var ProcessRefresh = func(setting *model.Setting, tick *model.BidAsk) {
 	}
 	if validBalance(keys[0], secrets[0], setting, tick) {
 		placeRefresh(setting, keys[0], secrets[0], tick.Bids[0].Price, tick.Asks[0].Price)
+		time.Sleep(time.Duration(setting.AmountLimit) * time.Millisecond)
 	}
-	time.Sleep(time.Duration(setting.AmountLimit) * time.Millisecond)
 }
 
 func queryBalances(key, secret, market string) {
