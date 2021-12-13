@@ -336,6 +336,18 @@ func calcAmount(carryStatus, carryStatusRelate *CarryStatus, tick,
 	var bidAmount, askAmount float64
 	scoreOpen := 1 - tickRelate.Asks[0].Price/tick.Bids[0].Price
 	scoreClose := tickRelate.Bids[0].Price/tick.Asks[0].Price - 1
+	if scoreOpen > 0.1 || scoreClose > 0.1 {
+		scoreOpen = 0
+		scoreClose = 0
+		msg := fmt.Sprintf(`different coin %s %s %s %s`, carryStatus.market, carryStatus.symbol,
+			carryStatusRelate.market, carryStatusRelate.symbol)
+		err := util.SendMail(model.AppConfig.FromMail, model.AppConfig.FromMailAuth, "haoweizh@qq.com",
+			`不同币种`, msg)
+		if err != nil {
+			util.Notice(`fail to send mail %s`, err.Error())
+		}
+		return nil, nil, 0, 0, 0
+	}
 	mark := fmt.Sprintf(`%s-%s<->%s-%s`, carryStatus.market, carryStatus.symbol, carryStatusRelate.market, carryStatusRelate.symbol)
 	if scoreOpen > 0.01 || -1*scoreClose < -0.01 {
 		model.AppMetric.AddCarry(mark, scoreOpen, -1*scoreClose)
