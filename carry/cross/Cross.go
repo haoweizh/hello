@@ -80,8 +80,20 @@ func createFromPosition(key, secret string, setting *model.Setting, price float6
 	}
 	if cm.positions[setting.Symbol] != nil {
 		carryStatus.Holding = cm.positions[setting.Symbol].Free
-		carryStatus.ValueInUsd = math.Abs(carryStatus.Holding) * cm.positions[setting.Symbol].EntryPrice
-		carryStatus.RateInAll = carryStatus.ValueInUsd / cm.contractValueInU
+		carryStatus.ValueInUsd = math.Abs(carryStatus.Holding) * price
+		if cm.collateralsInU > 0 {
+			carryStatus.RateInAll = carryStatus.ValueInUsd / cm.collateralsInU
+			if cm.contractValueInU/cm.collateralsInU < 0.2 {
+				if carryStatus.Holding > 0 {
+					carryStatus.TradeLineBuy = 1
+				} else if carryStatus.Holding < 0 {
+					carryStatus.TradeLineSell = 1
+				}
+			}
+		} else {
+			carryStatus.TradeLineBuy = 1
+			carryStatus.TradeLineSell = 1
+		}
 	}
 	return carryStatus
 }
@@ -104,6 +116,17 @@ func createFromBalance(key, secret string, setting *model.Setting) (carryStatus 
 		carryStatus.Holding = sm.balances[setting.Symbol].Amount
 		carryStatus.ValueInUsd = sm.balances[setting.Symbol].UsdValue
 		carryStatus.RateInAll = carryStatus.ValueInUsd / sm.accountValueInU
+		doRevert := false
+		if sm.accountValueInU <= 0 || sm.availableU/sm.accountValueInU < 0.2 ||
+			(sm.collateral != nil && (sm.collateral.Rate < 10 || sm.collateral.Available <= 0 ||
+				(sm.collateral.Available-sm.collateral.Occupied)/sm.collateral.Available < 0.1)) {
+			doRevert = true
+		}
+		if doRevert && carryStatus.Holding > 0 {
+			carryStatus.TradeLineBuy = 1
+		} else if doRevert && carryStatus.Holding < 0 {
+			carryStatus.TradeLineSell = 1
+		}
 	}
 	return
 }
@@ -131,14 +154,6 @@ func initStatus(key, secret string, setting *model.Setting) {
 		return
 	}
 	setCarryStatus(setting.Coin, setting.Market, setting.Symbol, key, carryStatus)
-	if carryStatus.Type == model.SymbolTypePerp {
-		carryStatus.ValueInUsd = carryStatus.Holding * tick.Bids[0].Price
-		if carryStatus.IsUniAccount && spotBalance[key][setting.Market] > 0 {
-			carryStatus.RateInAll = carryStatus.ValueInUsd / spotBalance[key][setting.Market]
-		} else if !carryStatus.IsUniAccount && perpMarginUsd[key][setting.Market] > 0 {
-			carryStatus.RateInAll = carryStatus.ValueInUsd / perpMarginUsd[key][setting.Market]
-		}
-	}
 	now := time.Now().Unix()
 	resetTime := getOKTradeMaxResetTime(key, setting.Symbol) + 600
 	if setting.Market == model.OKEX && now > resetTime {
@@ -167,27 +182,6 @@ func initStatus(key, secret string, setting *model.Setting) {
 			rate, _ := strconv.ParseFloat(accountRates[i], 64)
 			carryStatus.TradeLineBuy *= rate
 			carryStatus.TradeLineSell *= rate
-			if setting.Market == model.OKEX {
-				collateral := GetCollateral(key)
-				if collateral != nil && collateral.Available > 0 && (collateral.Available-collateral.Occupied)/collateral.Available < 0.1 {
-					doReverts[i] = `true`
-				}
-			}
-			localUsdAmount := getUsdAmount(key, setting.Market)
-			localSpotBalance := getSpotBalance(key, setting.Market)
-			if carryStatus.Type == model.SymbolTypeSpot && (localSpotBalance == 0 || localUsdAmount/localSpotBalance < 0.2) {
-				doReverts[i] = `true`
-			}
-			if carryStatus.Type == model.SymbolTypePerp && perpHoldInU[key] != nil {
-				if !carryStatus.IsUniAccount && (getPerpMarginUsd(key, setting.Market) == 0 ||
-					perpHoldInU[key][setting.Market]/getPerpMarginUsd(key, setting.Market) < 0.2) {
-					doReverts[i] = `true`
-				}
-				if carryStatus.IsUniAccount && (spotBalance[key][setting.Market] == 0 ||
-					perpHoldInU[key][setting.Market]/spotBalance[key][setting.Market] < 0.2) {
-					doReverts[i] = `true`
-				}
-			}
 			if doReverts[i] == `true` && carryStatus.Holding > 0 {
 				carryStatus.TradeLineBuy = 1
 			} else if doReverts[i] == `true` && carryStatus.Holding < 0 {
@@ -208,7 +202,8 @@ func ClearCross() {
 				time.Sleep(time.Millisecond * 10)
 			}
 		}
-		marketStatus = make(map[string]map[string]*MarketStatus)
+		spotMarkets = make(map[string]map[string]*spotMarket)
+		contractMarkets = make(map[string]map[string]*contractMarket)
 		coinSettings := model.GetCoinSettings(model.FunctionCross)
 		for _, settings := range coinSettings {
 			for _, setting := range settings {
@@ -368,6 +363,8 @@ func calcAmount(carryStatus, carryStatusRelate *CarryStatus, tick,
 		askAmount = tickRelate.Bids[0].Amount
 		bidAmount = tick.Bids[0].Amount
 	}
+	tailPerp := model.GetPerpTail()
+	statusBuy.Symbol
 	buyMarketStatus := getMarketStatus(statusBuy.Key, statusBuy.Market)
 	sellMarketStatus := getMarketStatus(statusSell.Key, statusSell.Market)
 	if buyMarketStatus == nil || sellMarketStatus == nil {

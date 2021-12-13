@@ -455,9 +455,13 @@ func GetPositions(key, secret, market string) (success bool, positions []*model.
 	case model.Binance:
 		return getPositionsBinance(key, secret)
 	case model.Ftx:
-		return getPositionsFtx(key, secret)
+		_, _, totalInU := getBalanceFtx(key, secret)
+		success, positions, _ = getPositionsFtx(key, secret)
+		return success, positions, totalInU
 	case model.OKEX:
-		return getPositionsOKEX(key, secret)
+		_, _, _, collateral := getBalanceOKEX(key, secret)
+		success, positions, _ = getPositionsOKEX(key, secret)
+		return success, positions, collateral.Available
 	case model.DFuture:
 		symbols := model.GetMarketSymbols(market)
 		positions = make([]*model.Position, 0)
