@@ -42,6 +42,7 @@ func createContractMarket(key, secret, market string) (cm *contractMarket) {
 		}
 		cm.collateralsInU = posBalance
 	}
+	setContractMarket(key, market, cm)
 	return
 }
 
@@ -64,10 +65,11 @@ func createSpotMarket(key, secret, market string) (sm *spotMarket) {
 			}
 		}
 	}
+	setSpotMarket(key, market, sm)
 	return
 }
 
-func createFromPosition(key, secret string, setting *model.Setting, price float64) (carryStatus *CarryStatus) {
+func createFromPosition(key, secret string, setting *model.Setting) (carryStatus *CarryStatus) {
 	cm := getContractMarket(key, setting.Market)
 	if cm == nil {
 		cm = createContractMarket(key, secret, setting.Market)
@@ -75,12 +77,12 @@ func createFromPosition(key, secret string, setting *model.Setting, price float6
 	if cm == nil {
 		return nil
 	}
-	carryStatus = &CarryStatus{Market: setting.Market, Symbol: setting.Symbol, Key: key, Secret: secret,
+	carryStatus = &CarryStatus{isSpot: false, market: setting.Market, symbol: setting.Symbol, key: key, secret: secret,
 		LimitSell: math.NaN(), LimitBuy: math.NaN(), TradeLineBuy: setting.OpenShortMargin, TradeLineSell: setting.CloseShortMargin,
 	}
 	if cm.positions[setting.Symbol] != nil {
 		carryStatus.Holding = cm.positions[setting.Symbol].Free
-		carryStatus.ValueInUsd = math.Abs(carryStatus.Holding) * price
+		carryStatus.ValueInUsd = math.Abs(carryStatus.Holding) * cm.positions[setting.Symbol].EntryPrice
 		if cm.collateralsInU > 0 {
 			carryStatus.RateInAll = carryStatus.ValueInUsd / cm.collateralsInU
 			if cm.contractValueInU/cm.collateralsInU < 0.2 {
@@ -106,7 +108,7 @@ func createFromBalance(key, secret string, setting *model.Setting) (carryStatus 
 	if sm == nil {
 		return
 	}
-	carryStatus = &CarryStatus{Market: setting.Market, Symbol: setting.Symbol, Key: key, Secret: secret,
+	carryStatus = &CarryStatus{isSpot: true, market: setting.Market, symbol: setting.Symbol, key: key, secret: secret,
 		LimitSell:     math.NaN(),
 		LimitBuy:      math.NaN(),
 		TradeLineBuy:  setting.OpenShortMargin,
@@ -139,14 +141,10 @@ func initStatus(key, secret string, setting *model.Setting) {
 	tailPerp := model.GetPerpTail(setting.Market)
 	var carryStatus *CarryStatus
 	fundingRate := 0.0
-	getTick, tick := model.AppMarkets.GetBidAsk(setting.Symbol, setting.Market)
-	if !getTick || tick == nil {
-		return
-	}
 	if setting.Symbol[len(setting.Symbol)-len(tailSpot):] == tailSpot {
 		carryStatus = createFromBalance(key, secret, setting)
 	} else if setting.Symbol[len(setting.Symbol)-len(tailPerp):] == tailPerp {
-		carryStatus = createFromPosition(key, secret, setting, tick.Bids[0].Price)
+		carryStatus = createFromPosition(key, secret, setting)
 		_, fundingRate = api.GetFundingRate(setting.Market, setting.Symbol, nil)
 		fundingRate *= 0.9
 	}
@@ -309,7 +307,8 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 	}
 	for _, settingRelate := range settings {
 		tickGet, tickRelate := model.AppMarkets.GetBidAsk(settingRelate.Symbol, settingRelate.Market)
-		if !tickGet || model.IsRelatedTickTimeout(settingRelate.Market, million-int64(tickRelate.Ts)) {
+		if !tickGet || (model.AppConfig.Env != `test` &&
+			model.IsRelatedTickTimeout(settingRelate.Market, million-int64(tickRelate.Ts))) {
 			continue
 		}
 		keys, _ := model.AppConfig.GetKeys(setting.Market)
@@ -343,7 +342,7 @@ func calcAmount(carryStatus, carryStatusRelate *CarryStatus, tick,
 	var bidAmount, askAmount float64
 	scoreOpen := 1 - tickRelate.Asks[0].Price/tick.Bids[0].Price
 	scoreClose := tickRelate.Bids[0].Price/tick.Asks[0].Price - 1
-	mark := fmt.Sprintf(`%s-%s<->%s-%s`, carryStatus.Market, carryStatus.Symbol, carryStatusRelate.Market, carryStatusRelate.Symbol)
+	mark := fmt.Sprintf(`%s-%s<->%s-%s`, carryStatus.market, carryStatus.symbol, carryStatusRelate.market, carryStatusRelate.symbol)
 	model.AppMetric.AddCarry(mark, scoreOpen, scoreClose)
 	if carryStatus.TradeLineSell < scoreOpen && carryStatusRelate.TradeLineBuy < scoreOpen {
 		util.Notice(`cross trade `)
@@ -363,23 +362,26 @@ func calcAmount(carryStatus, carryStatusRelate *CarryStatus, tick,
 		askAmount = tickRelate.Bids[0].Amount
 		bidAmount = tick.Bids[0].Amount
 	}
-	tailPerp := model.GetPerpTail()
-	statusBuy.Symbol
-	buyMarketStatus := getMarketStatus(statusBuy.Key, statusBuy.Market)
-	sellMarketStatus := getMarketStatus(statusSell.Key, statusSell.Market)
-	if buyMarketStatus == nil || sellMarketStatus == nil {
-		return statusBuy, statusSell, 0, 0, 0
+	if statusBuy == nil || statusSell == nil {
+		return nil, nil, 0, 0, 0
 	}
 	// todo test all markets real amount
-	_, bidAmount = model.ParseRealAmount(statusBuy.Market, statusBuy.Symbol, bidAmount)
-	_, askAmount = model.ParseRealAmount(statusSell.Market, statusSell.Symbol, askAmount)
+	_, bidAmount = model.ParseRealAmount(statusBuy.market, statusBuy.symbol, bidAmount)
+	_, askAmount = model.ParseRealAmount(statusSell.market, statusSell.symbol, askAmount)
 	if !math.IsNaN(statusSell.LimitSell) {
 		askAmount = math.Min(statusSell.LimitSell, askAmount)
 	}
 	if !math.IsNaN(statusBuy.LimitBuy) {
 		bidAmount = math.Min(statusBuy.LimitBuy, bidAmount)
 	}
-	bidAmount = math.Min(buyMarketStatus.usdAmount/priceBuy/5, bidAmount)
+	buyMarketU := 0.0
+	if statusBuy.isSpot {
+		buyMarket := getSpotMarket(statusBuy.key, statusBuy.market)
+		if buyMarket != nil {
+			buyMarketU = buyMarket.availableU
+		}
+	}
+	bidAmount = math.Min(buyMarketU/priceBuy/5, bidAmount)
 	// todo binance 要求下单金额大于10u，gate要求大于1u
 	//openValueMin := setting.AmountLimit
 	//if setting.Market == model.OKEX || setting.Market == model.Binance {

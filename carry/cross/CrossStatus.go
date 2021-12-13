@@ -31,10 +31,8 @@ type spotMarket struct {
 }
 
 type CarryStatus struct {
-	Market                      string
-	Symbol                      string
-	Key                         string
-	Secret                      string
+	isSpot                      bool
+	market, symbol, key, secret string
 	LimitSell, LimitBuy         float64 // 最大可买卖币数
 	TradeLineBuy, TradeLineSell float64 // 买卖盈利线（可为负数）
 	Holding                     float64 // fee for spot
@@ -43,6 +41,8 @@ type CarryStatus struct {
 }
 
 func getContractMarket(key, market string) *contractMarket {
+	crossLock.Lock()
+	defer crossLock.Unlock()
 	if contractMarkets[key] == nil {
 		return nil
 	}
@@ -50,6 +50,8 @@ func getContractMarket(key, market string) *contractMarket {
 }
 
 func setContractMarket(key, market string, cm *contractMarket) {
+	crossLock.Lock()
+	defer crossLock.Unlock()
 	if contractMarkets[key] == nil {
 		contractMarkets[key] = make(map[string]*contractMarket)
 	}
@@ -57,6 +59,8 @@ func setContractMarket(key, market string, cm *contractMarket) {
 }
 
 func getSpotMarket(key, market string) *spotMarket {
+	crossLock.Lock()
+	defer crossLock.Unlock()
 	if spotMarkets[key] == nil {
 		spotMarkets[key] = make(map[string]*spotMarket)
 	}
@@ -64,6 +68,8 @@ func getSpotMarket(key, market string) *spotMarket {
 }
 
 func setSpotMarket(key, market string, sm *spotMarket) {
+	crossLock.Lock()
+	defer crossLock.Unlock()
 	if spotMarkets[key] == nil {
 		spotMarkets[key] = make(map[string]*spotMarket)
 	}
@@ -71,6 +77,8 @@ func setSpotMarket(key, market string, sm *spotMarket) {
 }
 
 func getCarryStatus(coin, market, symbol, key string) *CarryStatus {
+	crossLock.Lock()
+	defer crossLock.Unlock()
 	if carryStatus[coin] == nil || carryStatus[coin][market] == nil || carryStatus[coin][market][symbol] == nil {
 		return nil
 	}
@@ -78,6 +86,8 @@ func getCarryStatus(coin, market, symbol, key string) *CarryStatus {
 }
 
 func setCarryStatus(coin, market, symbol, key string, status *CarryStatus) {
+	crossLock.Lock()
+	defer crossLock.Unlock()
 	if carryStatus[coin] == nil {
 		carryStatus[coin] = make(map[string]map[string]map[string]*CarryStatus)
 	}

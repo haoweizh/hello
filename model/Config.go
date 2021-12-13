@@ -60,7 +60,7 @@ func (config *Config) GetSecret(market, key string) (secret string) {
 func (config *Config) GetKey(market string, index int) (success bool, key, secret string) {
 	keys, secrets := config.GetKeys(market)
 	for i, value := range keys {
-		if value == key {
+		if i == index {
 			return true, value, secrets[i]
 		}
 	}
