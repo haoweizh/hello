@@ -688,9 +688,9 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 		setClose = -1
 	}
 	// 针对第一个key(dk)关闭反向开仓
-	if len(keys) > 0 && keys[0] == key {
-		setClose = -1
-	}
+	//if len(keys) > 0 && keys[0] == key {
+	setClose = -1
+	//}
 	carryType = carryTypeOpen
 	if scoreClose < setClose || (balance.Amount > 0 && scoreClose <= -1*revertOpen) {
 		bidAmount = tickPerp.Asks[0].Amount
