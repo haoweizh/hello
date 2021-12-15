@@ -397,10 +397,12 @@ func WsDepthServeGate() (err error) {
 			return spotSubErr
 		}
 	}
-	wsFutureUpdate.SetCallBack(gateWs.ChannelFutureBookTicker, tickerHandler)
-	if futureSubErr := wsFutureUpdate.Subscribe(gateWs.ChannelFutureBookTicker, futureSubs); futureSubErr != nil {
-		util.Notice(fmt.Sprintf("futureWs Subscribe err:%s", futureSubErr.Error()))
-		return futureSubErr
+	if len(futureSubs) > 0 {
+		wsFutureUpdate.SetCallBack(gateWs.ChannelFutureBookTicker, tickerHandler)
+		if futureSubErr := wsFutureUpdate.Subscribe(gateWs.ChannelFutureBookTicker, futureSubs); futureSubErr != nil {
+			util.Notice(fmt.Sprintf("futureWs Subscribe err:%s", futureSubErr.Error()))
+			return futureSubErr
+		}
 	}
 	return err
 }
