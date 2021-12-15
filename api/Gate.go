@@ -372,25 +372,31 @@ func WsDepthServeGate() (err error) {
 		util.Notice(fmt.Sprintf("new future wsService err:%s", futureErr))
 		return futureErr
 	}
-	bookSubscribes := make([]string, 0)
+	spotSubs := make([]string, 0)
+	futureSubs := make([]string, 0)
 	symbols := model.GetMarketSymbols(model.Gate)
 	for symbol := range symbols {
-		if strings.Contains(symbol, model.GetSpotTail(model.Gate)) {
-			bookSubscribes = append(bookSubscribes, symbol)
+		if strings.LastIndex(symbol, model.GetSpotTail(model.Gate)) == len(symbol)-len(model.GetSpotTail(model.Gate)) &&
+			len(symbol)-len(model.GetSpotTail(model.Gate)) > 0 {
+			spotSubs = append(spotSubs, symbol)
 			spotPayload := append(make([]string, 0), symbol, "5", "100ms")
 			if spotBookSubErr := wsSpot.Subscribe(gateWs.ChannelSpotOrderBook, spotPayload); spotBookSubErr != nil {
 				util.Notice(fmt.Sprintf("spotBookWs Subscribe err:%s", spotBookSubErr.Error()))
 			}
 		}
+		if strings.LastIndex(symbol, model.GetPerpTail(model.Gate)) == len(symbol)-len(model.GetPerpTail(model.Gate)) &&
+			len(symbol)-len(model.GetPerpTail(model.Gate)) > 0 {
+			futureSubs = append(futureSubs, symbol)
+		}
 	}
 	wsSpot.SetCallBack(gateWs.ChannelSpotOrderBook, tickerHandler)
 	wsSpotUpdate.SetCallBack(gateWs.ChannelSpotBookTicker, tickerHandler)
-	if spotSubErr := wsSpotUpdate.Subscribe(gateWs.ChannelSpotBookTicker, bookSubscribes); spotSubErr != nil {
+	if spotSubErr := wsSpotUpdate.Subscribe(gateWs.ChannelSpotBookTicker, spotSubs); spotSubErr != nil {
 		util.Notice(fmt.Sprintf("spotWs Subscribe err:%s", spotSubErr.Error()))
 		return spotSubErr
 	}
 	wsFutureUpdate.SetCallBack(gateWs.ChannelFutureBookTicker, tickerHandler)
-	if futureSubErr := wsFutureUpdate.Subscribe(gateWs.ChannelFutureBookTicker, bookSubscribes); futureSubErr != nil {
+	if futureSubErr := wsFutureUpdate.Subscribe(gateWs.ChannelFutureBookTicker, futureSubs); futureSubErr != nil {
 		util.Notice(fmt.Sprintf("futureWs Subscribe err:%s", futureSubErr.Error()))
 		return futureSubErr
 	}
