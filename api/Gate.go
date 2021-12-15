@@ -389,11 +389,13 @@ func WsDepthServeGate() (err error) {
 			futureSubs = append(futureSubs, symbol)
 		}
 	}
-	wsSpot.SetCallBack(gateWs.ChannelSpotOrderBook, tickerHandler)
-	wsSpotUpdate.SetCallBack(gateWs.ChannelSpotBookTicker, tickerHandler)
-	if spotSubErr := wsSpotUpdate.Subscribe(gateWs.ChannelSpotBookTicker, spotSubs); spotSubErr != nil {
-		util.Notice(fmt.Sprintf("spotWs Subscribe err:%s", spotSubErr.Error()))
-		return spotSubErr
+	if len(spotSubs) > 0 {
+		wsSpot.SetCallBack(gateWs.ChannelSpotOrderBook, tickerHandler)
+		wsSpotUpdate.SetCallBack(gateWs.ChannelSpotBookTicker, tickerHandler)
+		if spotSubErr := wsSpotUpdate.Subscribe(gateWs.ChannelSpotBookTicker, spotSubs); spotSubErr != nil {
+			util.Notice(fmt.Sprintf("spotWs Subscribe err:%s", spotSubErr.Error()))
+			return spotSubErr
+		}
 	}
 	wsFutureUpdate.SetCallBack(gateWs.ChannelFutureBookTicker, tickerHandler)
 	if futureSubErr := wsFutureUpdate.Subscribe(gateWs.ChannelFutureBookTicker, futureSubs); futureSubErr != nil {
