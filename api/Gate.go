@@ -386,7 +386,7 @@ func WsDepthServeGate() (err error) {
 		}
 		if strings.LastIndex(symbol, model.GetPerpTail(model.Gate)) == len(symbol)-len(model.GetPerpTail(model.Gate)) &&
 			len(symbol)-len(model.GetPerpTail(model.Gate)) > 0 {
-			futureSubs = append(futureSubs, symbol)
+			futureSubs = append(futureSubs, symbol[:len(symbol)-len(model.GetPerpTail(model.Gate))]+model.GetSpotTail(model.Gate))
 		}
 	}
 	if len(spotSubs) > 0 {
