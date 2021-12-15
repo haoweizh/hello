@@ -27,6 +27,7 @@ const wsStepFtx = 50
 var lastDepthPingFtx = util.GetNowUnixMillion()
 var socketLockFtx sync.Mutex
 var channelMaintainingFtx = false
+var ftxSymbolConnection = make(map[string]*websocket.Conn)
 
 func maintainChannelFtx(subscribes []interface{}) {
 	if !channelMaintainingFtx {
@@ -40,8 +41,12 @@ func maintainChannelFtx(subscribes []interface{}) {
 				if bidAsk == nil || now-int64(bidAsk.Ts) > 60000 {
 					subCmd := fmt.Sprintf(`{"op": "subscribe", "channel": "%s", "market": "%s"}`,
 						subscribe[0], subscribe[1])
-					if err := sendToAllConnections(model.Ftx, []byte(subCmd)); err != nil {
-						util.SocketInfo("ftx can not resubscribe " + err.Error())
+					if ftxSymbolConnection[subscribe[1]] != nil {
+						if err := sendToConnection(ftxSymbolConnection[subscribe[1]], []byte(subCmd)); err != nil {
+							util.SocketInfo("ftx can not resubscribe " + err.Error())
+						}
+					} else {
+						util.Notice(`ftx can not get connection for %s`, subscribe[1])
 					}
 					util.Notice(`send resubscribe %s`, subCmd)
 				}
@@ -50,8 +55,7 @@ func maintainChannelFtx(subscribes []interface{}) {
 	}
 }
 
-var subscribeHandlerFtx = func(connection *websocket.Conn, subscribes []interface{}, subType string) error {
-	var err error = nil
+var subscribeHandlerFtx = func(connection *websocket.Conn, subscribes []interface{}, subType string) (err error) {
 	keys, secrets := model.AppConfig.GetKeys(model.Ftx)
 	ts := time.Now().UnixNano() / int64(time.Millisecond)
 	toBeSign := fmt.Sprintf(`%dwebsocket_login`, ts)
@@ -67,6 +71,7 @@ var subscribeHandlerFtx = func(connection *websocket.Conn, subscribes []interfac
 	}
 	for i := 0; i < len(subscribes); i++ {
 		cmdSubscribe := subscribes[i].([]string)
+		ftxSymbolConnection[cmdSubscribe[1]] = connection
 		subCmd := fmt.Sprintf(`{"op": "subscribe", "channel": "%s", "market": "%s"}`,
 			cmdSubscribe[0], cmdSubscribe[1])
 		if err = sendToConnection(connection, []byte(subCmd)); err != nil {
@@ -107,6 +112,7 @@ func WsDepthServeFtx(markets *model.Markets, orderHandler OrderHandler) ([]chan 
 	//subType := model.SubscribeDepth
 	subType := model.SubscribeDepth + `,` + model.SubscribeTicker
 	subscribes := GetWSSubscribes(model.Ftx, subType)
+	ftxSymbolConnection = make(map[string]*websocket.Conn)
 	return WebSocketClient(model.Ftx, wsFtx, ``, subscribes, subscribeHandlerFtx, wsHandler, orderHandler, wsStepFtx)
 }
 
