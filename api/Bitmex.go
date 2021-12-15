@@ -23,7 +23,7 @@ const wsStepBitmex = 8
 var socketLockBitmex sync.Mutex
 var prePriceB, prePriceA, prePriceB10, prePriceA10 float64
 
-var subscribeHandlerBitmex = func(connection *websocket.Conn, subscribes []interface{}, subType string) error {
+var subscribeHandlerBitmex = func(connection *websocket.Conn, subscribes []interface{}) error {
 	var err error = nil
 	expire := util.GetNow().Unix() + 5
 	toBeSign := fmt.Sprintf(`GET/realtime%d`, expire)
@@ -89,8 +89,7 @@ func WsDepthServeBitmex(markets *model.Markets, orderHandler OrderHandler) ([]ch
 		}
 	}
 	subscribes := GetWSSubscribes(model.Bitmex, model.SubscribeDepth)
-	return WebSocketClient(model.Bitmex, wsBitmex, model.SubscribeDepth,
-		subscribes, subscribeHandlerBitmex, wsHandler, orderHandler, wsStepBitmex)
+	return WebSocketClient(model.Bitmex, wsBitmex, subscribes, subscribeHandlerBitmex, wsHandler, orderHandler, wsStepBitmex)
 }
 
 func parseQuote(item map[string]interface{}) (bid, ask *model.Tick, quoteTime time.Time, symbol string) {

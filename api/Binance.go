@@ -24,8 +24,9 @@ const restBinance = "https://api.binance.com"
 const restBinanceFuture = `https://fapi.binance.com`
 const wsBinance = "wss://stream.binance.com:9443/stream"
 const wsBinanceFuture = `wss://fstream.binance.com/stream`
-const binanceMargin = `binanceMargin`
-const binancePerp = `binancePerp`
+
+//const binanceMargin = `binanceMargin`
+//const binancePerp = `binancePerp`
 const wsStepBinance = 20
 
 var lockWSBinance sync.Mutex
@@ -77,12 +78,12 @@ func maintainChannelBinance() {
 	//}
 }
 
-var subscribeHandlerBinance = func(connection *websocket.Conn, subscribes []interface{}, keyChannel string) error {
+var subscribeHandlerBinance = func(connection *websocket.Conn, subscribes []interface{}) error {
 	var err error = nil
 	for _, subscribe := range subscribes {
 		subMsg := fmt.Sprintf(`{"method": "SUBSCRIBE","params":["%s"],"id": %d}`, subscribe, int(rand.Float64()*10000))
 		if err = sendToConnection(connection, []byte(subMsg)); err != nil {
-			util.SocketInfo(" binance can not subscribe %s %s %s", keyChannel, subscribe, err.Error())
+			util.SocketInfo(" binance can not subscribe %s %s", subscribe, err.Error())
 		}
 		time.Sleep(time.Millisecond * 300)
 	}
@@ -229,12 +230,12 @@ func WsDepthServeBinance(markets *model.Markets, orderHandler OrderHandler) (cha
 	//requestUrl := model.AppConfig.WSUrls[model.Binance]
 	marginSubs := GetWSSubscribes(model.Binance, subType)
 	perpSubs := GetWSSubscribes(model.Binance, subType)
-	marginChans, marginErr := WebSocketClient(binanceMargin, wsBinance, binanceMargin, marginSubs,
+	marginChans, marginErr := WebSocketClient(model.Binance, wsBinance, marginSubs,
 		subscribeHandlerBinance, wsHandler, orderHandler, wsStepBinance)
 	if marginErr != nil {
 		util.SocketInfo(`fail to create binance margin conn %s`, marginErr.Error())
 	}
-	perpChans, perpErr := WebSocketClient(binancePerp, wsBinanceFuture, binancePerp, perpSubs,
+	perpChans, perpErr := WebSocketClient(model.Binance, wsBinanceFuture, perpSubs,
 		subscribeHandlerBinance, wsHandler, orderHandler, wsStepBinance)
 	if perpErr != nil {
 		util.SocketInfo(`fail to create binance margin conn %s`, perpErr.Error())

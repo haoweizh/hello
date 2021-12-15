@@ -20,7 +20,7 @@ import (
 const restHuobiDM = `api.hbdm.vn`
 const wsHuobiDM = `wss://api.hbdm.vn/ws`
 
-var subscribeHandlerHuobiDM = func(connection *websocket.Conn, subscribes []interface{}, subType string) error {
+var subscribeHandlerHuobiDM = func(connection *websocket.Conn, subscribes []interface{}) error {
 	var err error = nil
 	for _, v := range subscribes {
 		subscribeMap := make(map[string]interface{})
@@ -93,8 +93,8 @@ func WsDepthServeHuobiDM(markets *model.Markets, orderHandler OrderHandler) ([]c
 			}
 		}
 	}
-	return WebSocketClient(model.HuobiDM, wsHuobiDM, model.SubscribeDepth,
-		GetWSSubscribes(model.HuobiDM, model.SubscribeDepth), subscribeHandlerHuobiDM, wsHandler, orderHandler, wsStepHuobi)
+	return WebSocketClient(model.HuobiDM, wsHuobiDM, GetWSSubscribes(model.HuobiDM, model.SubscribeDepth),
+		subscribeHandlerHuobiDM, wsHandler, orderHandler, wsStepHuobi)
 }
 
 func parseBalanceHuobiDM(key string, data map[string]interface{}) (balance *model.Balance) {

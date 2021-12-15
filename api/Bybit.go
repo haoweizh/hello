@@ -23,7 +23,7 @@ const wsStepBybit = 1
 
 var socketLockBybit sync.Mutex
 
-var subscribeHandlerBybit = func(connection *websocket.Conn, subscribes []interface{}, subType string) error {
+var subscribeHandlerBybit = func(connection *websocket.Conn, subscribes []interface{}) error {
 	var err error = nil
 	expire := util.GetNowUnixMillion() + 1000
 	toBeSign := fmt.Sprintf(`GET/realtime%d`, expire)
@@ -78,8 +78,7 @@ func WsDepthServeBybit(markets *model.Markets, orderHandler OrderHandler) ([]cha
 		}
 	}
 	subscribes := GetWSSubscribes(model.Bybit, model.SubscribeDepth)
-	return WebSocketClient(model.Bybit, wsBybit, model.SubscribeDepth, subscribes,
-		subscribeHandlerBybit, wsHandler, orderHandler, wsStepBybit)
+	return WebSocketClient(model.Bybit, wsBybit, subscribes, subscribeHandlerBybit, wsHandler, orderHandler, wsStepBybit)
 }
 
 func parseTickBybit(item map[string]interface{}) (tick *model.Tick) {

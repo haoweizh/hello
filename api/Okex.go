@@ -133,7 +133,7 @@ var subscriberOKEXPrivate = func(connection *websocket.Conn, key, secret string)
 	return err
 }
 
-var subscribeHandlerOKEX = func(connection *websocket.Conn, subscribes []interface{}, subType string) error {
+var subscribeHandlerOKEX = func(connection *websocket.Conn, subscribes []interface{}) error {
 	var err error = nil
 	subscribeMap := make(map[string]interface{})
 	subscribeMap["op"] = "subscribe"
@@ -283,8 +283,8 @@ func WsDepthServeOKEX(instruments map[string]bool, orderHandler OrderHandler) (c
 		}
 		channels = append(channels, stopChan)
 	}
-	subChannels, errPublic := WebSocketClient(model.OKEX, wsOKEX, model.SubscribeDepth,
-		GetWSSubscribes(model.OKEX, model.SubscribeDepth), subscribeHandlerOKEX, wsHandlerOKEX, orderHandler, wsStepOKEX)
+	subChannels, errPublic := WebSocketClient(model.OKEX, wsOKEX, GetWSSubscribes(model.OKEX, model.SubscribeDepth),
+		subscribeHandlerOKEX, wsHandlerOKEX, orderHandler, wsStepOKEX)
 	util.Notice(`finish connect public okex `)
 	for _, channel := range subChannels {
 		channels = append(channels, channel)

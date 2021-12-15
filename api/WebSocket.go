@@ -15,7 +15,7 @@ import (
 type OrderHandler func(order *model.Order, setting *model.Setting)
 type MsgHandler func(connection *websocket.Conn, message []byte, orderHandler OrderHandler)
 type WSMsgHandler func(client *WSClient, message []byte)
-type SubscribeHandler func(connection *websocket.Conn, subscribes []interface{}, subType string) error
+type SubscribeHandler func(connection *websocket.Conn, subscribes []interface{}) error
 
 var wsLock sync.Mutex
 
@@ -82,7 +82,7 @@ func newConnection(url string) (*websocket.Conn, error) {
 	return c, nil
 }
 
-func chanHandler(channelKey string, stopChan chan struct{}, connection *websocket.Conn, msgHandler MsgHandler, orderHandler OrderHandler) {
+func chanHandler(market string, stopChan chan struct{}, connection *websocket.Conn, msgHandler MsgHandler, orderHandler OrderHandler) {
 	defer func() {
 		err := connection.Close()
 		if err != nil {
@@ -97,7 +97,8 @@ func chanHandler(channelKey string, stopChan chan struct{}, connection *websocke
 		default:
 			_, message, err := connection.ReadMessage()
 			if err != nil {
-				util.Notice(channelKey + " can not read from websocket: " + err.Error())
+				SetRequireReset(market, true)
+				util.Notice(market + " can not read from websocket: " + err.Error())
 				return
 			}
 			//util.SocketInfo(string(message))
@@ -106,9 +107,9 @@ func chanHandler(channelKey string, stopChan chan struct{}, connection *websocke
 	}
 }
 
-func WebSocketClient(channelKey, url, subType string, subscribes []interface{}, subHandler SubscribeHandler,
+func WebSocketClient(market, url string, subscribes []interface{}, subHandler SubscribeHandler,
 	msgHandler MsgHandler, orderHandler OrderHandler, step int) (stopChans []chan struct{}, connectErr error) {
-	util.Notice(channelKey + ` create depth channel ` + url)
+	util.Notice(market + ` create depth channel ` + url)
 	connections := make([]*websocket.Conn, 0)
 	stopChans = make([]chan struct{}, 0)
 	var stepSubscribes []interface{}
@@ -124,12 +125,12 @@ func WebSocketClient(channelKey, url, subType string, subscribes []interface{}, 
 			util.SocketInfo("can not create web socket" + err.Error())
 			return nil, connectErr
 		}
-		go chanHandler(channelKey, stopChan, connection, msgHandler, orderHandler)
-		_ = subHandler(connection, stepSubscribes, subType)
+		go chanHandler(market, stopChan, connection, msgHandler, orderHandler)
+		_ = subHandler(connection, stepSubscribes)
 		stopChans = append(stopChans, stopChan)
 		connections = append(connections, connection)
 	}
-	model.AppMarkets.SetConnections(channelKey, connections)
+	model.AppMarkets.SetConnections(market, connections)
 	return
 }
 

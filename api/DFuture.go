@@ -21,7 +21,7 @@ const wsStepDFuture = 50
 
 var lastDepthPingDFuture = util.GetNowUnixMillion()
 
-var subscribeHandlerDFuture = func(connection *websocket.Conn, subscribes []interface{}, subType string) error {
+var subscribeHandlerDFuture = func(connection *websocket.Conn, subscribes []interface{}) error {
 	var err error = nil
 	for _, subscribe := range subscribes {
 		subMsg := fmt.Sprintf(`{"id": "id1", "includeDfutureDay": "1", sub:"%s"}`, subscribe)
@@ -57,7 +57,7 @@ func WsDepthServeDFuture(markets *model.Markets, orderHandler OrderHandler) ([]c
 		handleTickerDFuture(markets, responseJson)
 	}
 	subType := model.SubscribeDepth + `,` + model.SubscribeTicker
-	return WebSocketClient(model.DFuture, wsDFuture, ``, GetWSSubscribes(model.DFuture, subType),
+	return WebSocketClient(model.DFuture, wsDFuture, GetWSSubscribes(model.DFuture, subType),
 		subscribeHandlerDFuture, wsHandler, orderHandler, wsStepDFuture)
 }
 

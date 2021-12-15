@@ -42,17 +42,14 @@ type Rule struct {
 
 type Markets struct {
 	lock            sync.Mutex
-	bmPendingOrders map[string]*Order             // bm中的orderId-order
-	TrendEnd        map[string]map[string]*Deal   // symbol - market - deal
-	TrendStart      map[string]map[string]*Deal   // symbol - market - deal
-	bidAsks         map[string]map[string]*BidAsk // symbol - market - bidAsk
-	//lastUp          map[string]map[string]int             // symbol - market - time in million second
-	//lastDown        map[string]map[string]int             // symbol - market - time in million second
-	trade    map[int64]map[string]map[string]*Deal // time in second - symbol - market - deal
-	BigDeals map[string]map[string]*Deal           // symbol - market - Deal
-	wsDepth  map[string][]chan struct{}            // market - []depth channel
-	//isWriting map[string]bool                       // market - writing
-	Connections map[string][]*websocket.Conn // market - conn
+	bmPendingOrders map[string]*Order                     // bm中的orderId-order
+	TrendEnd        map[string]map[string]*Deal           // symbol - market - deal
+	TrendStart      map[string]map[string]*Deal           // symbol - market - deal
+	bidAsks         map[string]map[string]*BidAsk         // symbol - market - bidAsk
+	trade           map[int64]map[string]map[string]*Deal // time in second - symbol - market - deal
+	BigDeals        map[string]map[string]*Deal           // symbol - market - Deal
+	wsDepth         map[string][]chan struct{}            // market - []depth channel
+	Connections     map[string][]*websocket.Conn          // market - conn
 }
 
 func NewMarkets() *Markets {

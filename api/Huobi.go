@@ -53,7 +53,7 @@ type HuobiMessage struct {
 	} `json:"tick"`
 }
 
-var subscribeHandlerHuobi = func(connection *websocket.Conn, subscribes []interface{}, keyChannel string) error {
+var subscribeHandlerHuobi = func(connection *websocket.Conn, subscribes []interface{}) error {
 	var err error = nil
 	for _, v := range subscribes {
 		subscribeMap := make(map[string]interface{})
@@ -61,7 +61,7 @@ var subscribeHandlerHuobi = func(connection *websocket.Conn, subscribes []interf
 		subscribeMap["sub"] = v
 		subscribeMessage := util.JsonEncodeToByte(subscribeMap)
 		if err = connection.WriteMessage(websocket.TextMessage, subscribeMessage); err != nil {
-			util.SocketInfo(" huobi can not subscribe %s %s %s", keyChannel, v, err.Error())
+			util.SocketInfo(" huobi can not subscribe %s %s", v, err.Error())
 		}
 		util.Notice(`huobi subscribed ` + string(subscribeMessage))
 	}
@@ -179,13 +179,13 @@ func WsDepthServeHuobi(markets *model.Markets, orderHandler OrderHandler) (chann
 			spotSubscribes = append(spotSubscribes, subscribe)
 		}
 	}
-	channels, channelErr := WebSocketClient(model.Huobi, wsHuobi, model.Huobi,
-		spotSubscribes, subscribeHandlerHuobi, wsHandler, orderHandler, wsStepHuobi)
+	channels, channelErr := WebSocketClient(model.Huobi, wsHuobi, spotSubscribes, subscribeHandlerHuobi, wsHandler,
+		orderHandler, wsStepHuobi)
 	if channelErr != nil {
 		util.SocketInfo(`fail to create huobi conn %s`, channelErr.Error())
 	}
-	dmChannels, dmChannelErr := WebSocketClient(model.Huobi, wsHuobiFuture, model.Huobi,
-		futureSubscribes, subscribeHandlerHuobi, wsHandlerDM, orderHandler, wsStepHuobi)
+	dmChannels, dmChannelErr := WebSocketClient(model.Huobi, wsHuobiFuture, futureSubscribes, subscribeHandlerHuobi,
+		wsHandlerDM, orderHandler, wsStepHuobi)
 	if dmChannelErr != nil {
 		util.SocketInfo(`fail to create HuobiFuture %s`, dmChannelErr.Error())
 	} else {

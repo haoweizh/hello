@@ -19,7 +19,7 @@ import (
 const restCoinPark = "https://api.coinpark.cc/v1"
 const wsCoinPark = "wss://push.coinpark.cc/"
 
-var subscribeHandlerCoinpark = func(connection *websocket.Conn, subscribes []interface{}, subType string) error {
+var subscribeHandlerCoinpark = func(connection *websocket.Conn, subscribes []interface{}) error {
 	var err error = nil
 	for _, v := range subscribes {
 		subscribeMap := make(map[string]interface{})
@@ -88,8 +88,7 @@ func WsDepthServeCoinpark(markets *model.Markets, orderHandler OrderHandler) ([]
 	}
 	subscribes := GetWSSubscribes(model.Coinpark, model.SubscribeDepth)
 	connectionNum := int(math.Ceil(float64(len(subscribes)) / 50))
-	return WebSocketClient(model.Coinpark, wsCoinPark, model.SubscribeDepth,
-		subscribes, subscribeHandlerCoinpark, wsHandler, orderHandler, connectionNum)
+	return WebSocketClient(model.Coinpark, wsCoinPark, subscribes, subscribeHandlerCoinpark, wsHandler, orderHandler, connectionNum)
 }
 
 func SignedRequestCoinpark(method, path, cmds string) []byte {

@@ -344,7 +344,7 @@ func calcAmount(carryStatus, carryStatusRelate *CarryStatus, tick,
 		err := util.SendMail(model.AppConfig.FromMail, model.AppConfig.FromMailAuth, "haoweizh@qq.com",
 			`不同币种`, msg)
 		if err != nil {
-			util.Notice(`fail to send mail %s`, err.Error())
+			util.Notice(`fail to send mail msg %s %s`, msg, err.Error())
 		}
 		return nil, nil, 0, 0, 0
 	}

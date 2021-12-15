@@ -55,7 +55,7 @@ func maintainChannelFtx(subscribes []interface{}) {
 	}
 }
 
-var subscribeHandlerFtx = func(connection *websocket.Conn, subscribes []interface{}, subType string) (err error) {
+var subscribeHandlerFtx = func(connection *websocket.Conn, subscribes []interface{}) (err error) {
 	keys, secrets := model.AppConfig.GetKeys(model.Ftx)
 	ts := time.Now().UnixNano() / int64(time.Millisecond)
 	toBeSign := fmt.Sprintf(`%dwebsocket_login`, ts)
@@ -113,7 +113,7 @@ func WsDepthServeFtx(markets *model.Markets, orderHandler OrderHandler) ([]chan 
 	subType := model.SubscribeDepth + `,` + model.SubscribeTicker
 	subscribes := GetWSSubscribes(model.Ftx, subType)
 	ftxSymbolConnection = make(map[string]*websocket.Conn)
-	return WebSocketClient(model.Ftx, wsFtx, ``, subscribes, subscribeHandlerFtx, wsHandler, orderHandler, wsStepFtx)
+	return WebSocketClient(model.Ftx, wsFtx, subscribes, subscribeHandlerFtx, wsHandler, orderHandler, wsStepFtx)
 }
 
 func handleTickerFtx(markets *model.Markets, response *simplejson.Json) {
