@@ -771,7 +771,7 @@ func filterCross(market, symbol string) bool {
 	switch market {
 	case model.Ftx:
 		switch symbol {
-		case `DEFI-PERP`, `PRIV-PERP`, `ATL-PERP`, `SHIT-PERP`, `MID-PERP`, `EXCH-PERP`, `DRGN-PERP`:
+		case `DEFI-PERP`, `PRIV-PERP`, `ALT-PERP`, `SHIT-PERP`, `MID-PERP`, `EXCH-PERP`, `DRGN-PERP`:
 			return true
 		}
 	}
