@@ -170,7 +170,7 @@ func initStatus(key, secret string, setting *model.Setting) {
 		carryStatus.TradeLineSell = math.Max(setting.OpenShortMargin*(0.5-jump*carryStatus.RateInAll), winRateMin) - fundingRate
 	}
 	if carryStatus.RateInAll > 0.5 {
-		carryStatus.TradeLineBuy = 0
+		carryStatus.TradeLineBuy = 1
 	}
 	keys, _ := model.AppConfig.GetKeys(setting.Market)
 	doReverts := strings.Split(model.AppConfig.CarryClose, `,`)
