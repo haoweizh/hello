@@ -678,8 +678,11 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 		//	revertOpen -= 0.01
 		//	revertClose += 0.005
 		//}
-		if collateral == nil || collateral.Rate < 10 || (collateral.Available-collateral.Occupied)/collateral.Available < 0.1 {
-			util.Notice(`doRevert true %s %f %f %f`, key, collateral.Available, collateral.Occupied, collateral.Rate)
+		if collateral == nil || (collateral.Rate > 0 && (collateral.Rate < 10 ||
+			(collateral.Available-collateral.Occupied)/collateral.Available < 0.1)) {
+			if collateral != nil {
+				util.Notice(`doRevert true %s %f %f %f`, key, collateral.Available, collateral.Occupied, collateral.Rate)
+			}
 			doRevert = `true`
 		}
 	}
