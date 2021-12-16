@@ -1,50 +1,76 @@
 package model
 
 import (
+	"strconv"
 	"strings"
 	"sync"
 )
 
 type Config struct {
-	lock                sync.Mutex
-	ChannelSlot         float64
-	CarryClose          string
-	Delay               float64
-	AccountRate         string // 不同账户开仓门槛比例
-	DBConnection        string
-	Env                 string
-	FutureAddress       string
-	KucoinRelatedKey    string
-	KucoinRelatedSecret string
-	KucoinFutureKey     string
-	KucoinFutureSecret  string
-	KucoinSpot          bool
-	GateKey             string
-	GateSecret          string
-	GateSpot            bool
-	HuobiKey            string
-	HuobiSecret         string
-	OkexKey             string
-	OkexSecret          string
-	FtxKey              string
-	FtxSecret           string
-	BinanceKey          string
-	BinanceSecret       string
-	CoinparkKey         string
-	CoinparkSecret      string
-	DFutureKey          string
-	DFutureSecret       string
-	BitmexKey           string
-	BitmexSecret        string
-	BybitKey            string
-	BybitSecret         string
-	Phase               string
-	Handle              string // 0 不执行处理程序，1执行处理程序
-	Mail                string
-	FromMail            string
-	FromMailAuth        string
-	Port                string
-	WalletKey           string
+	lock                                                                                           sync.Mutex
+	ChannelSlot, Delay                                                                             float64
+	KucoinSpot, GateSpot                                                                           bool
+	KucoinRelatedKey, KucoinRelatedSecret, KucoinFutureKey, KucoinFutureSecret                     string
+	GateKey, GateSecret, GateCarryClose, GateCarryRate                                             string
+	HuobiKey, HuobiSecret, HuobiCarryClose, HuobiCarryRate                                         string
+	OkexKey, OkexSecret, OkexCarryClose, OkexCarryRate                                             string
+	FtxKey, FtxSecret, FtxCarryClose, FtxCarryRate                                                 string
+	BybitKey, BybitSecret, BybitCarryClose, BybitCarryRate                                         string
+	BinanceKey, BinanceSecret, BinanceCarryClose, BinanceCarryRate                                 string
+	CoinparkKey, CoinparkSecret, CoinparkCarryClose, CoinparkCarryRate                             string
+	DFutureKey, DFutureSecret                                                                      string
+	BitmexKey, BitmexSecret, BitmexCarryClose, BitmexCarryRate                                     string
+	Phase, Handle, Mail, FromMail, FromMailAuth, Port, WalletKey, DBConnection, Env, FutureAddress string
+}
+
+func (config *Config) GetCarrySetting(market string, index int) (closeCarry bool, rate float64) {
+	carryRate := ``
+	carryClose := ``
+	closeCarry = false
+	rate = 1
+	switch market {
+	case Kucoin:
+		return false, 1
+	case Gate:
+		carryClose = config.GateCarryClose
+		carryRate = config.GateCarryRate
+	case Ftx:
+		carryClose = config.FtxCarryClose
+		carryRate = config.FtxCarryRate
+	case Huobi, HuobiDM:
+		carryClose = config.HuobiCarryClose
+		carryRate = config.HuobiCarryRate
+	case OKEX:
+		carryClose = config.OkexCarryClose
+		carryRate = config.OkexCarryRate
+	case Binance:
+		carryClose = config.BinanceCarryClose
+		carryRate = config.BinanceCarryRate
+	case Coinpark:
+		carryClose = config.CoinparkCarryClose
+		carryRate = config.CoinparkCarryRate
+	case Bitmex:
+		carryClose = config.BitmexCarryClose
+		carryRate = config.BitmexCarryRate
+	case Bybit:
+		carryClose = config.BybitCarryClose
+		carryRate = config.BybitCarryRate
+	case DFuture:
+		return false, 1
+	}
+	closeValues := strings.Split(carryClose, `,`)
+	for i, str := range closeValues {
+		if i == index {
+			closeCarry = str == `true`
+		}
+	}
+	rateValues := strings.Split(carryRate, `,`)
+	for i, str := range rateValues {
+		if i == index {
+			rate, _ = strconv.ParseFloat(str, 64)
+		}
+	}
+	return closeCarry, rate
 }
 
 func (config *Config) GetSecret(market, key string) (secret string) {

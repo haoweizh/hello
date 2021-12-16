@@ -371,7 +371,6 @@ var ProcessCarry = func(setting *model.Setting, tick *model.BidAsk) {
 	keys, secrets := model.AppConfig.GetKeys(setting.Market)
 	model.SetCarryInfo(keys[0], `[current high-low]`, fmt.Sprintf(`highest %s %f lowest %s %f time:%s`,
 		symbolHighest, highest, symbolLowest, lowest, time.Now().String()))
-	doReverts := strings.Split(model.AppConfig.CarryClose, `,`)
 	begin := 0
 	step := 1
 	if isRecentCarry(setting.Market, setting.Symbol) {
@@ -384,8 +383,9 @@ var ProcessCarry = func(setting *model.Setting, tick *model.BidAsk) {
 	//	step = -1
 	//}
 	for i := begin; i >= 0 && i < len(keys); i += step {
+		closeCarry, _ := model.AppConfig.GetCarrySetting(setting.Market, i)
 		sidePerp, sideRelated, amount, carryType := calcCarryOpen(setting, tickPerp, tickRelated, keys[i],
-			doReverts[i], scoreOpen, scoreClose)
+			closeCarry, scoreOpen, scoreClose)
 		if amount > 0 {
 			setRecentCarryTime(setting.Market, setting.Symbol)
 			go placeCarry(setting, tickPerp, tickRelated, keys[i], secrets[i], sidePerp, sideRelated, carryType,
@@ -600,7 +600,7 @@ func initEmptyBalance(key, secret, market string) {
 // revertOpen: 已经正向开仓情况下，平仓时可接受的最低盈利率（可以为负数）
 // revertClose: 已经负向开仓的情况下，平仓时可接受的最低盈利率（可以为负数）
 // setting.GridAmount: revertOpen/revertClose的调整值
-func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, key, doRevert string,
+func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, key string, doRevert bool,
 	scoreOpen, scoreClose float64) (sidePerp, sideRelated string, amount float64, carryType string) {
 	var bidAmount, askAmount float64
 	valueLow := setting.AmountLimit
@@ -655,14 +655,11 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	keys, _ := model.AppConfig.GetKeys(setting.Market)
 	localOpenValueLimit := math.Min(openValueLimit, usdLowLine/3)
 	table := fmt.Sprintf(`%s_dynamic_`, model.FunctionCarry)
-	accountRates := strings.Split(model.AppConfig.AccountRate, `,`)
 	for i := 1; i < len(keys); i++ {
 		if keys[i] == key {
-			if len(accountRates) > i {
-				rate, _ := strconv.ParseFloat(accountRates[i], 64)
-				setOpen *= rate
-				setClose *= rate
-			}
+			_, carryRate := model.AppConfig.GetCarrySetting(setting.Market, i)
+			setOpen *= carryRate
+			setClose *= carryRate
 			table += fmt.Sprintf(`slave%s`, key[0:5])
 			usdLowLine = 0.2 * balanceAllValue
 		}
@@ -683,10 +680,10 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 			if collateral != nil {
 				util.Notice(`doRevert true %s %f %f %f`, key, collateral.Available, collateral.Occupied, collateral.Rate)
 			}
-			doRevert = `true`
+			doRevert = true
 		}
 	}
-	if doRevert == `true` {
+	if doRevert {
 		setOpen = 1
 		setClose = -1
 	}

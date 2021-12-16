@@ -6,7 +6,6 @@ import (
 	"hello/model"
 	"hello/util"
 	"math"
-	"strconv"
 	"strings"
 	"time"
 )
@@ -173,16 +172,14 @@ func initStatus(key, secret string, setting *model.Setting) {
 		carryStatus.TradeLineBuy = 1
 	}
 	keys, _ := model.AppConfig.GetKeys(setting.Market)
-	doReverts := strings.Split(model.AppConfig.CarryClose, `,`)
-	accountRates := strings.Split(model.AppConfig.AccountRate, `,`)
 	for i := 0; i < len(keys); i++ {
 		if keys[i] == key {
-			rate, _ := strconv.ParseFloat(accountRates[i], 64)
-			carryStatus.TradeLineBuy *= rate
-			carryStatus.TradeLineSell *= rate
-			if doReverts[i] == `true` && carryStatus.Holding > 0 {
+			closeCarry, carryRate := model.AppConfig.GetCarrySetting(setting.Market, i)
+			carryStatus.TradeLineBuy *= carryRate
+			carryStatus.TradeLineSell *= carryRate
+			if closeCarry && carryStatus.Holding > 0 {
 				carryStatus.TradeLineBuy = 1
-			} else if doReverts[i] == `true` && carryStatus.Holding < 0 {
+			} else if closeCarry && carryStatus.Holding < 0 {
 				carryStatus.TradeLineSell = 1
 			}
 		}
