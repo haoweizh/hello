@@ -12,6 +12,7 @@ import (
 	"math"
 	"math/rand"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -33,10 +34,15 @@ func ParameterServe() {
 	router.GET(`test`, test)
 	router.GET(`debug`, debug)
 	router.GET(`wss`, WsPage)
+	var err error
 	if model.AppConfig.Port == `443` {
-		_ = router.RunTLS(":"+model.AppConfig.Port, `./server.pem`, `./server.key`)
+		err = router.RunTLS(":"+model.AppConfig.Port, `./server.pem`, `./server.key`)
 	} else {
-		_ = router.Run(":" + model.AppConfig.Port)
+		err = router.Run(":" + model.AppConfig.Port)
+	}
+	if err != nil {
+		util.Notice(`port occupied, exit %s`, err.Error())
+		os.Exit(1)
 	}
 }
 
