@@ -27,11 +27,11 @@ var subscribeHandlerBitmex = func(connection *websocket.Conn, subscribes []inter
 	var err error = nil
 	expire := util.GetNow().Unix() + 5
 	toBeSign := fmt.Sprintf(`GET/realtime%d`, expire)
-	keys, secrets := model.AppConfig.GetKeys(model.Bitmex)
-	hash := hmac.New(sha256.New, []byte(secrets[0]))
+	account := model.AppConfig.GetAccount(model.Bitmex, 0)
+	hash := hmac.New(sha256.New, []byte(account.Secret))
 	hash.Write([]byte(toBeSign))
 	sign := hex.EncodeToString(hash.Sum(nil))
-	authCmd := fmt.Sprintf(`{"op": "authKeyExpires", "args": ["%s", %d, "%s"]}`, keys[0], expire, sign)
+	authCmd := fmt.Sprintf(`{"op": "authKeyExpires", "args": ["%s", %d, "%s"]}`, account.Key, expire, sign)
 	if err = sendToConnection(connection, []byte(authCmd)); err != nil {
 		util.SocketInfo("bitmex can not auth " + err.Error())
 	}
@@ -539,11 +539,6 @@ func handleTrade(markets *model.Markets, action string, data []interface{}) {
 }
 
 func SignedRequestBitmex(key, secret, method, path string, body map[string]interface{}) []byte {
-	if key == `` || secret == `` {
-		keys, secrets := model.AppConfig.GetKeys(model.Binance)
-		key = keys[0]
-		secret = secrets[0]
-	}
 	uri := restBitmex + path
 	expire := util.GetNow().Unix() + 5
 	if method == `GET` && len(body) > 0 {
@@ -728,11 +723,11 @@ func GetBtcBalanceBitmex(key, secret string) (balance float64) {
 }
 
 // update: 以unix second表示的下一次更新资金费率的时间
-func getFundingRateBitmex(symbol string) (fundingRate float64, update int64) {
+func getFundingRateBitmex(key, secret, symbol string) (fundingRate float64, update int64) {
 	postData := make(map[string]interface{})
 	symbol = model.GetDialectSymbol(model.Bitmex, symbol)
 	postData[`symbol`] = symbol
-	response := SignedRequestBitmex(``, ``, `GET`, `/instrument`, postData)
+	response := SignedRequestBitmex(key, secret, `GET`, `/instrument`, postData)
 	instrumentJson, err := util.NewJSON(response)
 	if err == nil {
 		array, err := instrumentJson.Array()
@@ -783,7 +778,8 @@ func _(key, secret, symbol string) (result bool, bid, ask *model.Tick) {
 	return result, bid, ask
 }
 
-func GetWalletHistoryBitmex(key, secret string) (amount float64, transfer string) {
+// GetWalletHistoryBitmex
+func _(key, secret string) (amount float64, transfer string) {
 	postData := make(map[string]interface{})
 	response := SignedRequestBitmex(key, secret, `GET`, `/user/walletHistory`, postData)
 	util.Notice(`bitmex wallet: ` + string(response))

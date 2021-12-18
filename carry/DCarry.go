@@ -59,14 +59,14 @@ var ProcessDCarry = func(setting *model.Setting, tickD *model.BidAsk) {
 		return
 	}
 	addresses := strings.Split(model.AppConfig.FutureAddress, `,`)
-	keys, secrets := model.AppConfig.GetKeys(setting.Market)
 	if !checkSetDCarrying(true) {
 		defer checkSetDCarrying(false)
 	} else {
 		util.Notice(fmt.Sprintf(`waiting for other ordering %s`, setting.Symbol))
 		return
 	}
-	for i, address := range addresses {
+	for _, address := range addresses {
+		account := model.AppConfig.GetAccount(setting.Market, 0)
 		position := getPosition(address, setting.Market, setting.Symbol)
 		if position == nil {
 			_, pos := api.GetPosition(setting.Market, setting.Symbol, address)
@@ -75,7 +75,7 @@ var ProcessDCarry = func(setting *model.Setting, tickD *model.BidAsk) {
 		}
 		tickDPrice := tickD.Asks[0].Price
 		tickRelatedPrice := tickRelated.Asks[0].Price
-		model.SetCarryInfo(keys[0], fmt.Sprintf(`dcarry price %s %s`, setting.Market, setting.Symbol),
+		model.SetCarryInfo(account.Key, fmt.Sprintf(`dcarry price %s %s`, setting.Market, setting.Symbol),
 			fmt.Sprintf(`d: %f %s-%s %f rate: %f position: %f`,
 				tickDPrice, setting.MarketRelated, setting.SymbolRelated, tickRelatedPrice,
 				(tickDPrice-tickRelatedPrice)/tickRelatedPrice, position.Free))
@@ -115,11 +115,11 @@ var ProcessDCarry = func(setting *model.Setting, tickD *model.BidAsk) {
 			orderSideType := ``
 			if line > setting.CloseShortMargin {
 				orderSideType = `open`
-				api.PlaceOrder(keys[i], secrets[i], orderSide, ``, model.DFuture, setting.Symbol, ``,
+				api.PlaceOrder(account.Key, account.Secret, orderSide, ``, model.DFuture, setting.Symbol, ``,
 					`open`, model.FunctionDCarry+orderSideType, acceptablePrice, price, amount, true, false, nil, setting)
 			} else {
 				orderSideType = `close`
-				api.PlaceOrder(keys[i], secrets[i], orderSide, ``, model.DFuture, setting.Symbol, ``,
+				api.PlaceOrder(account.Key, account.Secret, orderSide, ``, model.DFuture, setting.Symbol, ``,
 					`close`, model.FunctionDCarry+orderSideType, acceptablePrice, price, amount, true, false, nil, setting)
 			}
 			util.Notice(fmt.Sprintf(`dcarry market %s vs %s symbol %s vs %s %s %s [%f %f] price: %f amount:%f`,

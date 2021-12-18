@@ -58,12 +58,12 @@ func addLastCarry(order *model.Order, setting *model.Setting) {
 	tenMin, _ := time.ParseDuration(`10m`)
 	second, _ := time.ParseDuration(`500ms`)
 	for i, lastOrder := range lastOrders[setting.Market][setting.Symbol] {
+		account := model.AppConfig.GetAccountFromKey(order.Market, order.AmountType)
 		now := time.Now()
-		if lastOrder == nil || order.OrderTime.Add(tenMin).Before(now) || order.OrderTime.Add(second).After(now) {
+		if lastOrder == nil || order.OrderTime.Add(tenMin).Before(now) || order.OrderTime.Add(second).After(now) || account == nil {
 			continue
 		}
-		secret := model.AppConfig.GetSecret(order.Market, order.AmountType)
-		queryOrder := api.QueryOrderById(lastOrder.AmountType, secret, lastOrder.Market, lastOrder.Symbol,
+		queryOrder := api.QueryOrderById(lastOrder.AmountType, account.Secret, lastOrder.Market, lastOrder.Symbol,
 			lastOrder.Instrument, lastOrder.OrderType, lastOrder.OrderId)
 		if queryOrder == nil {
 			continue
@@ -119,32 +119,30 @@ var postOrderCarry = func(order *model.Order, setting *model.Setting) {
 		}
 		setTradeMax(order.AmountType, order.Instrument, maxBuy, maxSell)
 		addLastCarry(order, setting)
-		addCarryResult(order.AmountType, true)
+		addCarryResult(order.AmountType, order.Market, true)
 	} else {
 		unknownFail := true
-		if order.Market == `` || order.Market == model.OKEX || order.Market == model.Binance {
-			keys, secrets := model.AppConfig.GetKeys(order.Market)
-			for i, key := range keys {
-				switch order.Market {
-				case model.OKEX:
-					if key == order.AmountType && InsufficientCodeOKEX[order.ErrCode] {
-						util.Notice(`reset %s trade max with %s %s`, order.Market, order.ErrCode, order.AmountType)
-						resetTradeMax(key, secrets[i], model.OKEX)
-						unknownFail = false
-					}
-				case model.Binance:
-					if key == order.AmountType && strings.Contains(InsufficientCodeBinance, order.ErrCode) {
-						util.Notice(`reset binance trade max with %s %s`, order.ErrCode, order.AmountType)
-						clearCarry(model.Binance, key, secrets[i])
-						unknownFail = false
-					}
+		account := model.AppConfig.GetAccountFromKey(order.Market, order.AmountType)
+		if account != nil {
+			switch order.Market {
+			case model.OKEX:
+				if InsufficientCodeOKEX[order.ErrCode] {
+					util.Notice(`reset %s trade max with %s %s`, order.Market, order.ErrCode, order.AmountType)
+					resetTradeMax(account.Key, account.Secret, model.OKEX)
+					unknownFail = false
+				}
+			case model.Binance:
+				if strings.Contains(InsufficientCodeBinance, order.ErrCode) {
+					util.Notice(`reset binance trade max with %s %s`, order.ErrCode, order.AmountType)
+					clearCarry(account.Key, account.Secret, order.Market)
+					unknownFail = false
 				}
 			}
 		}
 		if unknownFail {
-			addCarryResult(order.AmountType, false)
+			addCarryResult(order.AmountType, order.Market, false)
 		} else {
-			addCarryResult(order.AmountType, true)
+			addCarryResult(order.AmountType, order.Market, true)
 		}
 	}
 }
@@ -201,7 +199,7 @@ func checkProcessTransfer(key, secret, market string) {
 	}
 }
 
-func clearCarry(market, key, secret string) {
+func clearCarry(key, secret, market string) {
 	settings := model.GetSettings(model.FunctionCarry, market)
 	settingCoins := model.GetSettingCoins(model.FunctionCarry, market)
 	resultBalance, balances, _, collateral := api.GetBalances(key, secret, market)
@@ -281,14 +279,16 @@ func clearCarryBalance() {
 		time.Sleep(time.Second * 2)
 		markets := model.GetMarkets()
 		for _, market := range markets {
-			keys, secrets := model.AppConfig.GetKeys(market)
-			for i, key := range keys {
-				clearCarry(market, key, secrets[i])
-			}
-			for i, key := range keys {
-				localMaxResetTime := getTradeMaxResetTime(key)
+			for i := 0; i < model.AppConfig.Accounts; i++ {
+				account := model.AppConfig.GetAccount(market, i)
+				if account == nil {
+					util.Notice(`fail to load account`)
+					continue
+				}
+				clearCarry(account.Key, account.Secret, market)
+				localMaxResetTime := getTradeMaxResetTime(account.Key)
 				if time.Now().Unix()-localMaxResetTime > 600 {
-					go resetTradeMax(key, secrets[i], market)
+					go resetTradeMax(account.Key, account.Secret, market)
 				}
 			}
 		}
@@ -368,13 +368,10 @@ var ProcessCarry = func(setting *model.Setting, tick *model.BidAsk) {
 		symbolLowest = setting.Symbol
 		model.AppMetric.AddCarry(`开仓价差----`, math.NaN(), lowest)
 	}
-	keys, secrets := model.AppConfig.GetKeys(setting.Market)
-	model.SetCarryInfo(keys[0], `[current high-low]`, fmt.Sprintf(`highest %s %f lowest %s %f time:%s`,
-		symbolHighest, highest, symbolLowest, lowest, time.Now().String()))
 	begin := 0
 	step := 1
 	if isRecentCarry(setting.Market, setting.Symbol) {
-		begin = len(keys) - 1
+		begin = model.AppConfig.Accounts - 1
 		step = -1
 	}
 	//now := time.Now()
@@ -382,13 +379,17 @@ var ProcessCarry = func(setting *model.Setting, tick *model.BidAsk) {
 	//	begin = len(keys) - 1
 	//	step = -1
 	//}
-	for i := begin; i >= 0 && i < len(keys); i += step {
-		closeCarry, _ := model.AppConfig.GetCarrySetting(setting.Market, i)
-		sidePerp, sideRelated, amount, carryType := calcCarryOpen(setting, tickPerp, tickRelated, keys[i],
-			closeCarry, scoreOpen, scoreClose)
+	for i := begin; i >= 0 && i < model.AppConfig.Accounts; i += step {
+		account := model.AppConfig.GetAccount(setting.Market, i)
+		if i == 0 {
+			model.SetCarryInfo(account.Key, `[current high-low]`, fmt.Sprintf(`highest %s %f lowest %s %f time:%s`,
+				symbolHighest, highest, symbolLowest, lowest, time.Now().String()))
+		}
+		sidePerp, sideRelated, amount, carryType := calcCarryOpen(setting, tickPerp, tickRelated, account.Key,
+			account.Secret, account.CarryClose, account.CarryRate, scoreOpen, scoreClose)
 		if amount > 0 {
 			setRecentCarryTime(setting.Market, setting.Symbol)
-			go placeCarry(setting, tickPerp, tickRelated, keys[i], secrets[i], sidePerp, sideRelated, carryType,
+			go placeCarry(setting, tickPerp, tickRelated, account.Key, account.Secret, sidePerp, sideRelated, carryType,
 				scoreOpen, scoreClose, amount)
 			return
 		}
@@ -600,7 +601,7 @@ func initEmptyBalance(key, secret, market string) {
 // revertOpen: 已经正向开仓情况下，平仓时可接受的最低盈利率（可以为负数）
 // revertClose: 已经负向开仓的情况下，平仓时可接受的最低盈利率（可以为负数）
 // setting.GridAmount: revertOpen/revertClose的调整值
-func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, key string, doRevert bool,
+func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, key, secret string, carryClose bool, carryRate,
 	scoreOpen, scoreClose float64) (sidePerp, sideRelated string, amount float64, carryType string) {
 	var bidAmount, askAmount float64
 	valueLow := setting.AmountLimit
@@ -612,7 +613,7 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	if now.Hour()%8 == 0 && now.Minute() == 0 && now.Second() < 30 {
 		return
 	}
-	fundingRateSuccess, fundingRate := api.GetFundingRate(setting.Market, setting.Symbol, &carryLock)
+	fundingRateSuccess, fundingRate := api.GetFundingRate(key, secret, setting.Market, setting.Symbol, &carryLock)
 	if !fundingRateSuccess {
 		return
 	}
@@ -652,18 +653,12 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	//revertOpen = math.Max(revertOpen, setting.CloseShortMargin/2) + fundingRate + 0.001
 	//revertClose = math.Max(-0.0005/(1-math.Min(0.9, jump*coinRate)), setting.CloseShortMargin/2) - fundingRate + 0.001
 	usdLowLine := 0.1 * balanceAllValue
-	keys, _ := model.AppConfig.GetKeys(setting.Market)
 	localOpenValueLimit := math.Min(openValueLimit, usdLowLine/3)
 	table := fmt.Sprintf(`%s_dynamic_`, model.FunctionCarry)
-	for i := 1; i < len(keys); i++ {
-		if keys[i] == key {
-			_, carryRate := model.AppConfig.GetCarrySetting(setting.Market, i)
-			setOpen *= carryRate
-			setClose *= carryRate
-			table += fmt.Sprintf(`slave%s`, key[0:5])
-			usdLowLine = 0.2 * balanceAllValue
-		}
-	}
+	setOpen *= carryRate
+	setClose *= carryRate
+	table += fmt.Sprintf(`slave%s`, key[0:5])
+	usdLowLine = 0.2 * balanceAllValue
 	if setting.Market == model.Binance || setting.MarketRelated == model.Binance {
 		valueLow = 11
 	}
@@ -680,10 +675,10 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 			if collateral != nil {
 				util.Notice(`doRevert true %s %f %f %f`, key, collateral.Available, collateral.Occupied, collateral.Rate)
 			}
-			doRevert = true
+			carryClose = true
 		}
 	}
-	if doRevert {
+	if carryClose {
 		setOpen = 1
 		setClose = -1
 	}
@@ -770,10 +765,10 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	if amount > 0 {
 		util.Debug(fmt.Sprintf(`+++ usdRate: %f coinRate: %f %s symbol: %s %s 
 			usd available:%f amount %f balance.Amount: %f scoreHigh: %f setOpen: %f scoreLow: %f setClose: %f
-			revertOpen: %f revertClose: %f do revert: %s`,
+			revertOpen: %f revertClose: %f do revert: %v`,
 			usdRate, coinRate, key, setting.Symbol, sidePerp,
 			usdAvailable, amount, balance.Amount, scoreOpen, setOpen, scoreClose, setClose,
-			revertOpen, revertClose, doRevert))
+			revertOpen, revertClose, carryClose))
 	}
 	model.SetCarryInfo(key, table+setting.Symbol,
 		fmt.Sprintf("%s\n%f %f usdAva:%s usdRate:%s 计算%s %s %s %s 市场%s %s 资金费率:%s coinRate:%s 持仓:%s 可用:%s ",

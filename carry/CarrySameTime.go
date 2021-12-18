@@ -72,7 +72,7 @@ package carry
 //	if (setting.MarketRelated != model.OKSwap && accountRelated == nil) || (setting.MarketRelated == model.OKSwap &&
 //		model.AppAccounts.GetAccount(model.OKSwap, model.OrderSideBuy+setting.Symbol) == nil &&
 //		model.AppAccounts.GetAccount(model.OKSwap, model.OrderSideSell+setting.Symbol) == nil) {
-//		api.RefreshAccount(``, ``, setting.MarketRelated)
+//		api.RefreshAccount(setting.MarketRelated)
 //		util.Info(`error1 account is nil, refresh and return`)
 //		return
 //	}
@@ -241,16 +241,16 @@ package carry
 //		setLastOrder(key, setting.MarketRelated, nil)
 //		//carryChannel := getCarryChannel(key)
 //		refreshType := fmt.Sprintf(`%s_%s_%s`, model.FunctionCarry, setting.Market, setting.MarketRelated)
-//		api.PlaceOrder(``, ``, orderSideRelated, model.OrderTypeLimit, setting.MarketRelated, symbol, ``,
+//		api.PlaceOrder(orderSideRelated, model.OrderTypeLimit, setting.MarketRelated, symbol, ``,
 //			``, setting.AccountType, ``, refreshType, orderPriceRelated, 0, amount, true)
 //		time.Sleep(time.Millisecond * 500)
 //		util.Notice(fmt.Sprintf(`ignore order %s %s %s %f %s`,
 //			setting.Market, symbol, orderSide, orderPrice, orderParam))
-//		api.RefreshAccount(``, ``, setting.MarketRelated)
-//		//go api.PlaceSyncOrders(``, ``, orderSideRelated, model.OrderTypeLimit, setting.MarketRelated, symbol,
+//		api.RefreshAccount(setting.MarketRelated)
+//		//go api.PlaceSyncOrders(orderSideRelated, model.OrderTypeLimit, setting.MarketRelated, symbol,
 //		//	``, ``, setting.AccountType, ``, refreshType, orderPriceRelated, amount,
 //		//	true, carryChannel, -1)
-//		//go api.PlaceSyncOrders(``, ``, orderSide, model.OrderTypeLimit, market, symbol, ``,
+//		//go api.PlaceSyncOrders(orderSide, model.OrderTypeLimit, market, symbol, ``,
 //		//	``, setting.AccountType, orderParam, refreshType, orderPrice, amount, true, carryChannel, -1)
 //		//for true {
 //		//	order := <-carryChannel
@@ -277,7 +277,7 @@ package carry
 //		//		}
 //		//		model.AppAccounts.SetAccount(setting.MarketRelated, symbol, accountBybit)
 //		//	} else {
-//		//		api.RefreshAccount(``, ``, model.OKSwap)
+//		//		api.RefreshAccount(model.OKSwap)
 //		//	}
 //		//}
 //	}

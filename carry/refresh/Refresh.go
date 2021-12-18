@@ -35,14 +35,14 @@ var ProcessRefresh = func(setting *model.Setting, tick *model.BidAsk) {
 	if delayTick < 800 {
 		delayTick = 30
 	}
-	keys, secrets := model.AppConfig.GetKeys(setting.Market)
+	account := model.AppConfig.GetAccount(setting.Market, 0)
 	if tick == nil || tick.Asks == nil || tick.Bids == nil || setting == nil || model.AppPause ||
 		(model.AppConfig.Env != `test` && (model.AppConfig.Handle != `1` || model.IsTickTimeout(setting.Market, delayTick))) ||
-		len(keys) != 1 || tick.Asks[0].Price-tick.Bids[0].Price < setting.PriceX {
+		tick.Asks[0].Price-tick.Bids[0].Price < setting.PriceX {
 		return
 	}
-	if validBalance(keys[0], secrets[0], setting, tick) {
-		placeRefresh(setting, keys[0], secrets[0], tick.Bids[0].Price, tick.Asks[0].Price)
+	if validBalance(account.Key, account.Secret, setting, tick) {
+		placeRefresh(account.Key, account.Secret, setting, tick.Bids[0].Price, tick.Asks[0].Price)
 		time.Sleep(time.Duration(setting.AmountLimit) * time.Millisecond)
 	}
 }
@@ -123,7 +123,7 @@ func addChance(key, market, symbol string) {
 	chance[key][market+`-`+symbol]++
 }
 
-func placeRefresh(setting *model.Setting, key, secret string, priceBuy, priceSell float64) {
+func placeRefresh(key, secret string, setting *model.Setting, priceBuy, priceSell float64) {
 	addChance(key, setting.Market, setting.Symbol)
 	if getChance(key, setting.Market, setting.Symbol) > setting.Chance {
 		return

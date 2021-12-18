@@ -247,11 +247,6 @@ func WsDepthServeBinance(markets *model.Markets, orderHandler OrderHandler) (cha
 }
 
 func signedRequestBinance(key, secret, method, requestUrl string, withApiKey bool, param *url.Values) []byte {
-	if key == `` || secret == `` {
-		keys, secrets := model.AppConfig.GetKeys(model.Binance)
-		key = keys[0]
-		secret = secrets[0]
-	}
 	if param == nil {
 		param = &url.Values{}
 	}
@@ -313,11 +308,11 @@ func setMarketInfoFilters(marketInfo *model.MarketInfo, filters []interface{}) {
 }
 
 // 查询SPOT和永续合约信息，不包含其他市场
-func getMarketsBinance() (marketInfos map[string]*model.MarketInfo) {
+func getMarketsBinance(key, secret string) (marketInfos map[string]*model.MarketInfo) {
 	marketInfos = make(map[string]*model.MarketInfo)
 	requestUrls := []string{restBinance + `/api/v3/exchangeInfo`, restBinanceFuture + `/fapi/v1/exchangeInfo`}
 	for _, requestUrl := range requestUrls {
-		responseBody := signedRequestBinance(``, ``, http.MethodGet, requestUrl, false, nil)
+		responseBody := signedRequestBinance(key, secret, http.MethodGet, requestUrl, false, nil)
 		resultJson, err := util.NewJSON(responseBody)
 		if err == nil && resultJson.Get(`symbols`) != nil {
 			data := resultJson.Get(`symbols`).MustArray()

@@ -35,10 +35,10 @@ func getSimpleGriding() (value bool) {
 	return simpleGriding
 }
 
-func calcGridAmount(market, symbol string, price float64) (amount float64) {
+func calcGridAmount(key, secret, market, symbol string, price float64) (amount float64) {
 	switch market {
 	case model.Ftx:
-		_, _, value, _ := api.GetBalances(``, ``, market)
+		_, _, value, _ := api.GetBalances(key, secret, market)
 		switch symbol { //使用20分之一的资本
 		case `BTC-PERP`:
 			amount = math.Round(value/price) / 20
@@ -51,14 +51,14 @@ func calcGridAmount(market, symbol string, price float64) (amount float64) {
 	return amount
 }
 
-func getGridPos(setting *model.Setting) (gridPos *GridPos) {
+func getGridPos(key, secret string, setting *model.Setting) (gridPos *GridPos) {
 	today, _ := model.GetMarketToday(setting.Market)
 	yesterday, yesterdayStr := model.GetMarketYesterday(setting.Market)
 	if dayGridPos[yesterdayStr] != nil && dayGridPos[yesterdayStr][setting.Market] != nil &&
 		dayGridPos[yesterdayStr][setting.Market][setting.Symbol] != nil {
 		return dayGridPos[yesterdayStr][setting.Market][setting.Symbol]
 	}
-	instrument := api.GetCurrentInstrument(``, ``, setting.Market, setting.Symbol)
+	instrument := api.GetCurrentInstrument(setting.Market, setting.Symbol)
 	candle := api.GetDayCandle(model.KeyDefault, model.SecretDefault, setting.Market, setting.Symbol, instrument, yesterday)
 	if candle == nil {
 		return
@@ -86,7 +86,7 @@ func getGridPos(setting *model.Setting) (gridPos *GridPos) {
 		gridPos.pos[8] = 2*gridPos.pos[7] - p
 	}
 	gridPos.n = candle.N
-	gridPos.amount = calcGridAmount(setting.Market, setting.Symbol, p)
+	gridPos.amount = calcGridAmount(key, secret, setting.Market, setting.Symbol, p)
 	if dayGridPos[yesterdayStr] == nil {
 		dayGridPos[yesterdayStr] = make(map[string]map[string]*GridPos)
 	}
@@ -181,7 +181,8 @@ var ProcessSimpleGrid = func(setting *model.Setting, tick *model.BidAsk) {
 	}
 	setSimpleGriding(true)
 	defer setSimpleGriding(false)
-	gridPos := getGridPos(setting)
+	account := model.AppConfig.GetAccount(setting.Market, 0)
+	gridPos := getGridPos(account.Key, account.Secret, setting)
 	if gridPos == nil {
 		return
 	}
@@ -287,8 +288,7 @@ var ProcessSimpleGrid = func(setting *model.Setting, tick *model.BidAsk) {
 			gridPos.orderLiquidate = nil
 		}
 	}
-	keys, _ := model.AppConfig.GetKeys(setting.Market)
-	model.SetCarryInfo(keys[0], fmt.Sprintf(`[Grid]%s_%s_%s`, setting.Market, setting.Symbol, model.FunctionGrid),
+	model.SetCarryInfo(account.Key, fmt.Sprintf(`[Grid]%s_%s_%s`, setting.Market, setting.Symbol, model.FunctionGrid),
 		fmt.Sprintf(" chance:%d last price:%f holding:%f n值：%f\n%s",
 			setting.Chance, setting.PriceX, setting.GridAmount, gridPos.n, showMsg))
 }

@@ -68,7 +68,7 @@ func pauseCarry(key string) {
 	carryStop[key] = false
 }
 
-func addCarryResult(key string, success bool) {
+func addCarryResult(key, market string, success bool) {
 	defer carryLock.Unlock()
 	carryLock.Lock()
 	if success {
@@ -83,24 +83,16 @@ func addCarryResult(key string, success bool) {
 	}
 	if carryFail[key] > 6 {
 		go pauseCarry(key)
-		markets := model.GetMarkets()
 		mailAddr := `haoweizh@qq.com`
-		marketPause := ``
-		for _, market := range markets {
-			keys, _ := model.AppConfig.GetKeys(market)
-			for i, s := range keys {
-				if s == key {
-					marketPause = market
-					if i == 0 {
-						mailAddr = model.AppConfig.Mail
-					}
-				}
-			}
+		account0 := model.AppConfig.GetAccount(market, 0)
+		account := model.AppConfig.GetAccountFromKey(market, key)
+		if account0.Key == account.Key {
+			mailAddr = model.AppConfig.Mail
 		}
 		util.Notice(`----------stop carry %s %d`, key, carryFail[key])
 		carryFail[key] = 0
 		_ = util.SendMail(model.AppConfig.FromMail, model.AppConfig.FromMailAuth, mailAddr,
-			`暂停下单`, `market: `+marketPause+` stop `+key)
+			`暂停下单`, `market: `+market+` stop `+key)
 	}
 }
 

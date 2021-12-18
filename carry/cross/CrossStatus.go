@@ -35,7 +35,7 @@ type CarryStatus struct {
 	market, symbol, key, secret string
 	LimitSell, LimitBuy         float64 // 最大可买卖币数
 	TradeLineBuy, TradeLineSell float64 // 买卖盈利线（可为负数）
-	Holding                     float64 // fee for spot
+	Holding                     float64
 	ValueInUsd                  float64
 	RateInAll                   float64 // 现货：该币种占总权益的比例；永续：以开仓价算该币种持仓占保证金百分比
 }

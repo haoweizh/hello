@@ -35,12 +35,12 @@ func maintainChannelOKEX() {
 		for true {
 			time.Sleep(time.Second * 25)
 			reSubscribe()
-			keys, _ := model.AppConfig.GetKeys(model.OKEX)
-			for _, key := range keys {
-				if privateConnectionOKEX[key] == nil {
-					util.Notice(fmt.Sprintf(`no private connection %s`, key))
+			for i := 0; i < model.AppConfig.Accounts; i++ {
+				account := model.AppConfig.GetAccount(model.OKEX, i)
+				if privateConnectionOKEX[account.Key] == nil {
+					util.Notice(fmt.Sprintf(`no private connection %s`, account.Key))
 				}
-				if err := sendToConnection(privateConnectionOKEX[key], []byte(`ping`)); err != nil {
+				if err := sendToConnection(privateConnectionOKEX[account.Key], []byte(`ping`)); err != nil {
 					util.SocketInfo("okex server ping client error " + err.Error())
 				}
 			}
@@ -267,19 +267,15 @@ func WsDepthServeOKEX(instruments map[string]bool, orderHandler OrderHandler) (c
 		}
 	}
 	channels = make([]chan struct{}, 0)
-	keys, secrets := model.AppConfig.GetKeys(model.OKEX)
-	keyMap := make(map[string]string)
-	for i, key := range keys {
-		keyMap[key] = secrets[i]
-	}
-	for key, secret := range keyMap {
-		privateConnectionOKEX[key], err = newConnection(wsPrivateOKEX)
+	for i := 0; i < model.AppConfig.Accounts; i++ {
+		account := model.AppConfig.GetAccount(model.OKEX, i)
+		privateConnectionOKEX[account.Key], err = newConnection(wsPrivateOKEX)
 		stopChan := make(chan struct{}, 2)
 		if err != nil {
 			util.SocketInfo("can not create web socket " + err.Error())
 		} else {
-			go chanHandler(model.OKEX, stopChan, privateConnectionOKEX[key], wsHandlerPrivate, orderHandler)
-			_ = subscriberOKEXPrivate(privateConnectionOKEX[key], key, secret)
+			go chanHandler(model.OKEX, stopChan, privateConnectionOKEX[account.Key], wsHandlerPrivate, orderHandler)
+			_ = subscriberOKEXPrivate(privateConnectionOKEX[account.Key], account.Key, account.Secret)
 		}
 		channels = append(channels, stopChan)
 	}
@@ -462,11 +458,6 @@ func handleBooksOKEX(instrument string, data map[string]interface{}) (bidAsk *mo
 }
 
 func sendSignRequestOKEX(key, secret, method, path string, body interface{}) (responseBody []byte) {
-	if key == `` || secret == `` {
-		keys, secrets := model.AppConfig.GetKeys(model.OKEX)
-		key = keys[0]
-		secret = secrets[0]
-	}
 	uri := restOKEX + path
 	current := time.Now().In(time.UTC).Format(time.RFC3339)
 	// , `x-simulated-trading`: `1`
@@ -632,13 +623,13 @@ func placeOrderOKEX(key, secret string, isWs bool, order *model.Order) {
 }
 
 // consider spot future size calc
-func getMarketsOKEX() (marketInfos map[string]*model.MarketInfo) {
+func getMarketsOKEX(key, secret string) (marketInfos map[string]*model.MarketInfo) {
 	marketInfos = make(map[string]*model.MarketInfo)
 	instTypes := []string{`SPOT`, `SWAP`}
 	for _, instType := range instTypes {
 		path := fmt.Sprintf(`/api/v5/public/instruments?%s`,
 			util.ComposeParams(map[string]interface{}{`instType`: instType}))
-		responseBody := sendSignRequestOKEX(``, ``, http.MethodGet, path, nil)
+		responseBody := sendSignRequestOKEX(key, secret, http.MethodGet, path, nil)
 		resultJson, err := util.NewJSON(responseBody)
 		if err == nil && resultJson != nil && resultJson.Get(`data`) != nil {
 			for _, info := range resultJson.Get(`data`).MustArray() {

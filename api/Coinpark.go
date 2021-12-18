@@ -91,14 +91,13 @@ func WsDepthServeCoinpark(markets *model.Markets, orderHandler OrderHandler) ([]
 	return WebSocketClient(model.Coinpark, wsCoinPark, subscribes, subscribeHandlerCoinpark, wsHandler, orderHandler, connectionNum)
 }
 
-func SignedRequestCoinpark(method, path, cmds string) []byte {
-	keys, secrets := model.AppConfig.GetKeys(model.Coinpark)
-	hash := hmac.New(md5.New, []byte(secrets[0]))
+func SignedRequestCoinpark(key, secret, method, path, cmds string) []byte {
+	hash := hmac.New(md5.New, []byte(secret))
 	hash.Write([]byte(cmds))
 	sign := hex.EncodeToString(hash.Sum(nil))
 	postData := &url.Values{}
 	postData.Set("cmds", cmds)
-	postData.Set("apikey", keys[0])
+	postData.Set("apikey", key)
 	postData.Set("sign", sign)
 	headers := map[string]string{"Content-Type": "application/x-www-form-urlencoded",
 		"User-Agent": "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/39.0.2171.71 Safari/537.36"}
@@ -109,7 +108,7 @@ func SignedRequestCoinpark(method, path, cmds string) []byte {
 
 // order_side 交易方向，1-买，2-卖
 // order_type 交易类型，2-限价单
-func placeOrderCoinpark(order *model.Order, orderSide, orderType, symbol string, price, amount float64) {
+func placeOrderCoinpark(key, secret string, order *model.Order, orderSide, orderType, symbol string, price, amount float64) {
 	if orderSide == model.OrderSideBuy {
 		orderSide = `1`
 	} else if orderSide == model.OrderSideSell {
@@ -130,7 +129,7 @@ func placeOrderCoinpark(order *model.Order, orderSide, orderType, symbol string,
 	cmds := fmt.Sprintf(`[{"cmd":"orderpending/trade",
 		"body":{"pair":"%s","account_type":0,"order_type":%s,"order_side":"%s","price":%s,"amount":"%s"}}]`,
 		symbol, orderType, orderSide, price, amount)
-	responseBody := SignedRequestCoinpark(`POST`, `/orderpending`, cmds)
+	responseBody := SignedRequestCoinpark(key, secret, `POST`, `/orderpending`, cmds)
 	util.Notice(cmds + `[place order]` + string(responseBody))
 	orderJson, _ := util.NewJSON(responseBody)
 	if orderJson == nil {
@@ -156,9 +155,9 @@ func placeOrderCoinpark(order *model.Order, orderSide, orderType, symbol string,
 }
 
 //dealPrice 返回委托价格，市价单是0
-func queryOrderCoinpark(orderId string) (dealAmount, dealPrice float64, status string) {
+func queryOrderCoinpark(key, secret, orderId string) (dealAmount, dealPrice float64, status string) {
 	cmds := fmt.Sprintf(`[{"cmd":"orderpending/order","body":{"id":"%s"}}]`, orderId)
-	responseBody := SignedRequestCoinpark(`POST`, `/orderpending`, cmds)
+	responseBody := SignedRequestCoinpark(key, secret, `POST`, `/orderpending`, cmds)
 	orderJson, err := util.NewJSON(responseBody)
 	util.Notice(string(responseBody))
 	if orderJson == nil {
@@ -183,9 +182,9 @@ func queryOrderCoinpark(orderId string) (dealAmount, dealPrice float64, status s
 	return dealAmount, dealPrice, status
 }
 
-func cancelOrderCoinpark(orderId string) (result bool, code, msg string) {
+func cancelOrderCoinpark(key, secret, orderId string) (result bool, code, msg string) {
 	cmds := fmt.Sprintf(`[{"cmd":"orderpending/cancelTrade","body":{"orders_id":"%s"}}]`, orderId)
-	responseBody := SignedRequestCoinpark(`POST`, `/orderpending`, cmds)
+	responseBody := SignedRequestCoinpark(key, secret, `POST`, `/orderpending`, cmds)
 	util.Notice(orderId + `[cancel order]` + string(responseBody))
 	if strings.TrimSpace(string(responseBody)) == `` {
 		return

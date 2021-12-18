@@ -196,9 +196,9 @@ func WsDepthServeHuobi(markets *model.Markets, orderHandler OrderHandler) (chann
 	return channels, err
 }
 
-func getMarketsHuobi() (marketInfos map[string]*model.MarketInfo) {
+func getMarketsHuobi(key, secret string) (marketInfos map[string]*model.MarketInfo) {
 	marketInfos = make(map[string]*model.MarketInfo)
-	spotResponseBody := SignedRequestHuobi(``, ``, http.MethodGet, restHuobi, `/v1/common/symbols`, nil)
+	spotResponseBody := SignedRequestHuobi(key, secret, http.MethodGet, restHuobi, `/v1/common/symbols`, nil)
 	spotSymbolsJson, err := util.NewJSON(spotResponseBody)
 	if err == nil && spotSymbolsJson != nil && strings.ToLower(spotSymbolsJson.Get(`status`).MustString()) == `ok` {
 		items, _ := spotSymbolsJson.Get("data").Array()
@@ -221,7 +221,7 @@ func getMarketsHuobi() (marketInfos map[string]*model.MarketInfo) {
 			marketInfos[marketInfo.Name] = marketInfo
 		}
 	}
-	futureResponseBody := SignedRequestHuobi(``, ``, http.MethodGet, restHuobiFuture, `/linear-swap-api/v1/swap_contract_info`, nil)
+	futureResponseBody := SignedRequestHuobi(key, secret, http.MethodGet, restHuobiFuture, `/linear-swap-api/v1/swap_contract_info`, nil)
 	futureSymbolsJson, err := util.NewJSON(futureResponseBody)
 	if err == nil && futureSymbolsJson != nil && strings.ToLower(futureSymbolsJson.Get(`status`).MustString()) == `ok` {
 		items, _ := futureSymbolsJson.Get("data").Array()
@@ -250,11 +250,6 @@ func getMarketsHuobi() (marketInfos map[string]*model.MarketInfo) {
 }
 
 func SignedRequestHuobi(key, secret, method, host, path string, data map[string]interface{}) []byte {
-	if key == `` || secret == `` {
-		keys, secrets := model.AppConfig.GetKeys(model.Huobi)
-		key = keys[0]
-		secret = secrets[0]
-	}
 	param := map[string]interface{}{"AccessKeyId": key, "SignatureMethod": "HmacSHA256",
 		"SignatureVersion": "2", `Timestamp`: url.QueryEscape(time.Now().UTC().Format("2006-01-02T15:04:05"))}
 	strData := ``

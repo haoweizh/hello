@@ -56,13 +56,13 @@ func maintainChannelFtx(subscribes []interface{}) {
 }
 
 var subscribeHandlerFtx = func(connection *websocket.Conn, subscribes []interface{}) (err error) {
-	keys, secrets := model.AppConfig.GetKeys(model.Ftx)
+	account := model.AppConfig.GetAccount(model.Ftx, 0)
 	ts := time.Now().UnixNano() / int64(time.Millisecond)
 	toBeSign := fmt.Sprintf(`%dwebsocket_login`, ts)
-	hash := hmac.New(sha256.New, []byte(secrets[0]))
+	hash := hmac.New(sha256.New, []byte(account.Secret))
 	hash.Write([]byte(toBeSign))
 	sign := hex.EncodeToString(hash.Sum(nil))
-	authCmd := fmt.Sprintf(`{"op":"login","args":{"key":"%s","sign":"%s","time":%d}}`, keys[0], sign, ts)
+	authCmd := fmt.Sprintf(`{"op":"login","args":{"key":"%s","sign":"%s","time":%d}}`, account.Key, sign, ts)
 	if err = sendToConnection(connection, []byte(authCmd)); err != nil {
 		util.SocketInfo("ftx can not auth " + err.Error())
 	}
@@ -508,13 +508,14 @@ func getPositionsFtx(key, secret string) (success bool, positions []*model.Posit
 //	return true
 //}
 
-func getMarketInfoFtx(symbol string) (borrowAble float64) {
+// getMarketInfoFtx
+func _(key, secret, symbol string) (borrowAble float64) {
 	if !strings.Contains(symbol, `/`) {
 		return 0
 	}
 	coin := strings.Split(symbol, `/`)[0]
 	param := map[string]interface{}{`market`: symbol}
-	response := SignedRequestFtx(``, ``, http.MethodGet, `/spot_margin/market_info`, param, nil)
+	response := SignedRequestFtx(key, secret, http.MethodGet, `/spot_margin/market_info`, param, nil)
 	borrowJson, err := util.NewJSON(response)
 	if err == nil {
 		results := borrowJson.Get(`result`).MustArray()
@@ -535,12 +536,12 @@ func getMarketInfoFtx(symbol string) (borrowAble float64) {
 	return 0
 }
 
-func getMarketsFtx() (marketInfos map[string]*model.MarketInfo) {
-	response := SignedRequestFtx(``, ``, `GET`,
+func getMarketsFtx(key, secret string) (marketInfos map[string]*model.MarketInfo) {
+	response := SignedRequestFtx(key, secret, `GET`,
 		`/markets`, nil, nil)
 	marketInfos = make(map[string]*model.MarketInfo)
 	rateJson, err := util.NewJSON(response)
-	response = SignedRequestFtx(``, ``, `GET`,
+	response = SignedRequestFtx(key, secret, `GET`,
 		`/spot_margin/borrow_rates`, nil, nil)
 	borrowJson, _ := util.NewJSON(response)
 	if err == nil && rateJson.Get(`result`) != nil && borrowJson.Get(`result`) != nil {
@@ -579,8 +580,8 @@ func getMarketsFtx() (marketInfos map[string]*model.MarketInfo) {
 	return
 }
 
-func getFundingRatesFtx() (fundingRates []*model.FundingRate) {
-	response := SignedRequestFtx(``, ``, `GET`,
+func getFundingRatesFtx(key, secret string) (fundingRates []*model.FundingRate) {
+	response := SignedRequestFtx(key, secret, `GET`,
 		`/funding_rates`, nil, nil)
 	rateJson, err := util.NewJSON(response)
 	if err == nil && rateJson.Get(`result`) != nil {
@@ -730,11 +731,6 @@ func placeOrderFtx(order *model.Order, key, secret, orderSide, orderType, orderP
 }
 
 func SignedRequestFtx(key, secret, method, path string, param, body map[string]interface{}) []byte {
-	if key == `` || secret == `` {
-		keys, secrets := model.AppConfig.GetKeys(model.Ftx)
-		key = keys[0]
-		secret = secrets[0]
-	}
 	if body == nil {
 		body = make(map[string]interface{})
 	}

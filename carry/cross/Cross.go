@@ -132,7 +132,7 @@ func createFromBalance(key, secret string, setting *model.Setting) (carryStatus 
 	return
 }
 
-func initStatus(key, secret string, setting *model.Setting) {
+func initStatus(key, secret string, carryClose bool, carryRate float64, setting *model.Setting) {
 	if setting == nil {
 		return
 	}
@@ -144,7 +144,7 @@ func initStatus(key, secret string, setting *model.Setting) {
 		carryStatus = createFromBalance(key, secret, setting)
 	} else if setting.Symbol[len(setting.Symbol)-len(tailPerp):] == tailPerp {
 		carryStatus = createFromPosition(key, secret, setting)
-		_, fundingRate = api.GetFundingRate(setting.Market, setting.Symbol, nil)
+		_, fundingRate = api.GetFundingRate(key, secret, setting.Market, setting.Symbol, nil)
 		fundingRate *= 0.9
 	}
 	if carryStatus == nil {
@@ -171,18 +171,12 @@ func initStatus(key, secret string, setting *model.Setting) {
 	if carryStatus.RateInAll > 0.5 {
 		carryStatus.TradeLineBuy = 1
 	}
-	keys, _ := model.AppConfig.GetKeys(setting.Market)
-	for i := 0; i < len(keys); i++ {
-		if keys[i] == key {
-			closeCarry, carryRate := model.AppConfig.GetCarrySetting(setting.Market, i)
-			carryStatus.TradeLineBuy *= carryRate
-			carryStatus.TradeLineSell *= carryRate
-			if closeCarry && carryStatus.Holding > 0 {
-				carryStatus.TradeLineBuy = 1
-			} else if closeCarry && carryStatus.Holding < 0 {
-				carryStatus.TradeLineSell = 1
-			}
-		}
+	carryStatus.TradeLineBuy *= carryRate
+	carryStatus.TradeLineSell *= carryRate
+	if carryClose && carryStatus.Holding > 0 {
+		carryStatus.TradeLineBuy = 1
+	} else if carryClose && carryStatus.Holding < 0 {
+		carryStatus.TradeLineSell = 1
 	}
 }
 
@@ -200,28 +194,24 @@ func ClearCross() {
 		spotMarkets = make(map[string]map[string]*spotMarket)
 		contractMarkets = make(map[string]map[string]*contractMarket)
 		coinSettings := model.GetCoinSettings(model.FunctionCross)
-		for _, settings := range coinSettings {
-			for _, setting := range settings {
-				if setting == nil {
-					continue
+		for i := 0; i < model.AppConfig.Accounts; i++ {
+			for _, settings := range coinSettings {
+				for _, setting := range settings {
+					if setting == nil {
+						continue
+					}
+					account := model.AppConfig.GetAccount(setting.Market, i)
+					initStatus(account.Key, account.Secret, account.CarryClose, account.CarryRate, setting)
 				}
-				keys, secrets := model.AppConfig.GetKeys(setting.Market)
-				for i, key := range keys {
-					initStatus(key, secrets[i], setting)
-				}
+				makeEqual(i, settings)
 			}
-		}
-		for coin, settings := range coinSettings {
-			//makeEqual(settings, status[coin])
-			makeEqual()
-			fmt.Sprintf(`%s %d`, coin, len(settings))
 		}
 		timer.Reset(time.Second * 60)
 	}
 }
 
 // settings []*model.Setting, coinStatus map[string]map[string]map[string]*CarryStatus
-func makeEqual() {
+func makeEqual(accountIndex int, settings []*model.Setting) {
 	//var holdings []float64
 	//for _, setting := range settings {
 	//	keys, _ := model.AppConfig.GetKeys(setting.Market)
@@ -308,18 +298,17 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 			(model.AppConfig.Env != `test` && model.IsRelatedTickTimeout(settingRelate.Market, million-int64(tickRelate.Ts))) {
 			continue
 		}
-		keys, _ := model.AppConfig.GetKeys(setting.Market)
-		for i, key := range keys {
-			status := getCarryStatus(setting.Coin, setting.Market, setting.Symbol, key)
-			success, keyRelate, _ := model.AppConfig.GetKey(settingRelate.Market, i)
-			statusRelate := getCarryStatus(settingRelate.Coin, settingRelate.Market, settingRelate.Symbol, keyRelate)
-			if !success || status == nil || statusRelate == nil {
-				util.Notice(`fail to get status makeEqual %s %s %s %s`,
-					settingRelate.Market, settingRelate.Symbol, settingRelate.Coin, keyRelate)
+		for i := 0; i < model.AppConfig.Accounts; i++ {
+			account := model.AppConfig.GetAccount(setting.Market, i)
+			status := getCarryStatus(setting.Coin, setting.Market, setting.Symbol, account.Key)
+			accountRelate := model.AppConfig.GetAccount(settingRelate.Market, i)
+			statusRelate := getCarryStatus(settingRelate.Coin, settingRelate.Market, settingRelate.Symbol, accountRelate.Key)
+			if status == nil || statusRelate == nil {
+				util.Notice(`fail to get status  %s %s-%s %s-%s %s %s`,
+					setting.Coin, setting.Market, setting.Symbol, settingRelate.Market, settingRelate.Symbol, account.Key, accountRelate.Key)
 				continue
 			}
-			statusBuy, statusSell, amount, priceBuy, priceSell :=
-				calcAmount(status, statusRelate, tick, tickRelate)
+			statusBuy, statusSell, amount, priceBuy, priceSell := calcAmount(status, statusRelate, tick, tickRelate)
 			if amount > 0 {
 				go placeCross(statusBuy, statusSell, priceBuy, priceSell, amount)
 				return

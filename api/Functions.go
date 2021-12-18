@@ -110,7 +110,7 @@ func CancelOrder(key, secret, market, symbol, instrument, orderType, orderId str
 	case model.Binance:
 		//result, errCode, msg = cancelOrderBinance(key, secret, symbol, orderId)
 	case model.Coinpark:
-		result, errCode, msg = cancelOrderCoinpark(orderId)
+		result, errCode, msg = cancelOrderCoinpark(key, secret, orderId)
 	case model.Bitmex:
 		result, errCode, msg = cancelOrderBitmex(key, secret, orderId)
 	case model.Bybit:
@@ -124,7 +124,7 @@ func CancelOrder(key, secret, market, symbol, instrument, orderType, orderId str
 	return result, errCode, msg, order
 }
 
-func GetCurrentInstrument(key, secret, market, symbol string) (currentInstrument string) {
+func GetCurrentInstrument(market, symbol string) (currentInstrument string) {
 	querySetter := querySetInstrumentsHuobiDM
 	currentType := `quarter`
 	//nextType := `bi_quarter`
@@ -141,7 +141,7 @@ func GetCurrentInstrument(key, secret, market, symbol string) (currentInstrument
 	default:
 		return symbol
 	}
-	querySetter(key, secret)
+	querySetter()
 	if instruments == nil || instruments[market] == nil || instruments[market][symbol] == nil {
 		return ``
 	}
@@ -279,7 +279,7 @@ func GetTransfers(key, secret, market string) (balances []*model.Balance) {
 	return balances
 }
 
-func GetFundingRate(market, symbol string, lock *sync.Mutex) (success bool, rate float64) {
+func GetFundingRate(key, secret, market, symbol string, lock *sync.Mutex) (success bool, rate float64) {
 	if lock != nil {
 		defer lock.Unlock()
 		lock.Lock()
@@ -309,10 +309,10 @@ func GetFundingRate(market, symbol string, lock *sync.Mutex) (success bool, rate
 	var expireTime int64
 	switch market {
 	case model.Bitmex:
-		rate, expireTime = getFundingRateBitmex(symbol)
+		rate, expireTime = getFundingRateBitmex(key, secret, symbol)
 		model.SetFundingRate(market, symbol, &model.FundingRate{Rate: rate, ExpireTime: expireTime, UpdateTime: now})
 	case model.Bybit:
-		rate, expireTime = getFundingRateBybit(symbol)
+		rate, expireTime = getFundingRateBybit(key, secret, symbol)
 		model.SetFundingRate(market, symbol, &model.FundingRate{Rate: rate, ExpireTime: expireTime, UpdateTime: now})
 	case model.Ftx:
 		return true, 0
@@ -333,15 +333,15 @@ func GetFundingRate(market, symbol string, lock *sync.Mutex) (success bool, rate
 		//}
 		//fundingRate, expireTime = model.GetFundingRate(market, symbol)
 	case model.OKEX:
-		fundingRate = getFundingRateOKEX(``, ``, symbol)
+		fundingRate = getFundingRateOKEX(key, secret, symbol)
 		model.SetFundingRate(market, symbol, fundingRate)
 	case model.Binance:
-		fundingRate = getFundingRateBinance(``, ``, symbol)
+		fundingRate = getFundingRateBinance(key, secret, symbol)
 		model.SetFundingRate(market, symbol, fundingRate)
 	case model.Huobi:
 		return true, 0
 	case model.Gate:
-		fundingRate = getFundingRateGate(``, ``, symbol)
+		fundingRate = getFundingRateGate(key, secret, symbol)
 		model.SetFundingRate(market, symbol, fundingRate)
 	case model.Kucoin:
 		return true, 0
@@ -404,7 +404,7 @@ func QueryOrderById(key, secret, market, symbol, instrument, orderType, orderId 
 	case model.Binance:
 		//dealAmount, dealPrice, status = queryOrderBinance(key, secret, symbol, orderId)
 	case model.Coinpark:
-		order.DealAmount, order.DealPrice, order.Status = queryOrderCoinpark(orderId)
+		order.DealAmount, order.DealPrice, order.Status = queryOrderCoinpark(key, secret, orderId)
 	case model.Bybit:
 		orders := queryOrderBybit(key, secret, symbol, orderId)
 		for _, value := range orders {
@@ -559,7 +559,7 @@ func PlaceOrder(key, secret, orderSide, orderType, market, symbol, instrument, o
 	case model.Binance:
 		placeOrderBinance(key, secret, order, orderSide, orderType, symbol, price, amount)
 	case model.Coinpark:
-		placeOrderCoinpark(order, orderSide, orderType, symbol, price, amount)
+		placeOrderCoinpark(key, secret, order, orderSide, orderType, symbol, price, amount)
 		if order.ErrCode == `4003` {
 			util.Notice(`【发现4003错误】sleep 3 minutes`)
 			time.Sleep(time.Minute * 3)
@@ -654,7 +654,7 @@ func GetWSSubscribe(market, symbol, subType string) (subscribe interface{}) {
 	case model.HuobiDM:
 		return fmt.Sprintf(`market.%s.depth.step6`, symbol)
 	case model.OKEX: // 未来基于market兼容okfuture LTC-USD-190628
-		return GetCurrentInstrument(``, ``, market, symbol)
+		return GetCurrentInstrument(market, symbol)
 	case model.Binance: // XRPUSDT: XRPUSDT@depth5   XRP-PERP: XRPUSDT@depth5
 		if symbol[len(symbol)-5:] == `-PERP` {
 			symbol = symbol[0:len(symbol)-5] + `USDT`
@@ -697,15 +697,15 @@ func GetWSSubscribe(market, symbol, subType string) (subscribe interface{}) {
 	return ""
 }
 
-func InitCarryFtx(start uint) {
-	rates := getFundingRatesFtx()
+func InitCarryFtx(key, secret string, start uint) {
+	rates := getFundingRatesFtx(key, secret)
 	symbolRates := make(map[string]bool)
 	for _, rate := range rates {
 		if symbolRates[rate.Symbol] == false {
 			symbolRates[rate.Symbol] = true
 		}
 	}
-	marketInfos := getMarketsFtx()
+	marketInfos := getMarketsFtx(key, secret)
 	_ = model.AppDB.AutoMigrate(&model.Setting{})
 	for symbol := range symbolRates {
 		setting := &model.Setting{
@@ -746,23 +746,20 @@ func Transfer(key, secret, market, transferType string, amount float64) {
 }
 
 func GetMarketInfos(market string) (marketInfo map[string]*model.MarketInfo) {
+	account := model.AppConfig.GetAccount(market, 0)
 	switch market {
 	case model.Ftx:
-		return getMarketsFtx()
+		return getMarketsFtx(account.Key, account.Secret)
 	case model.OKEX:
-		return getMarketsOKEX()
+		return getMarketsOKEX(account.Key, account.Secret)
 	case model.Binance:
-		return getMarketsBinance()
+		return getMarketsBinance(account.Key, account.Secret)
 	case model.Gate:
-		keys, secrets := model.AppConfig.GetKeys(model.Gate)
-		if len(keys) < 1 {
-			return nil
-		}
-		_, marketInfo = getMarketsGate(keys[0], secrets[0])
+		_, marketInfo = getMarketsGate(account.Key, account.Secret)
 	case model.Kucoin:
 		_, marketInfo = getMarketsKucoin(``)
 	case model.Huobi:
-		return getMarketsHuobi()
+		return getMarketsHuobi(account.Key, account.Secret)
 	}
 	return
 }
@@ -813,39 +810,40 @@ func InitMarketInfos() (success bool) {
 	success = true
 	markets := model.GetMarkets()
 	for _, market := range markets {
-		keys, secrets := model.AppConfig.GetKeys(market)
+		account := model.AppConfig.GetAccount(market, 0)
 		switch market {
 		case model.Ftx:
-			model.SetMarketInfos(model.Ftx, getMarketsFtx())
+			model.SetMarketInfos(model.Ftx, getMarketsFtx(account.Key, account.Secret))
 		case model.OKEX:
-			model.SetMarketInfos(model.OKEX, getMarketsOKEX())
-			for i, key := range keys {
-				accountMode := getAccountConfigOKEX(key, secrets[i])
+			model.SetMarketInfos(model.OKEX, getMarketsOKEX(account.Key, account.Secret))
+			for i := 0; i < model.AppConfig.Accounts; i++ {
+				okAccount := model.AppConfig.GetAccount(market, i)
+				accountMode := getAccountConfigOKEX(okAccount.Key, okAccount.Secret)
 				util.Notice(`okex config and set: ` + accountMode)
 				if accountMode != `net_mode` {
-					if !setAccountModeOKEX(key, secrets[i]) {
+					if !setAccountModeOKEX(okAccount.Key, okAccount.Secret) {
 						success = false
 					}
 				}
 			}
 		case model.Binance:
-			for i, key := range keys {
-				setPosSideBinance(key, secrets[i])
+			model.SetMarketInfos(model.Binance, getMarketsBinance(account.Key, account.Secret))
+			for i := 0; i < model.AppConfig.Accounts; i++ {
+				binanceAccount := model.AppConfig.GetAccount(model.Binance, i)
+				setPosSideBinance(binanceAccount.Key, binanceAccount.Secret)
 			}
-			model.SetMarketInfos(model.Binance, getMarketsBinance())
 		case model.Huobi:
-			model.SetMarketInfos(model.Huobi, getMarketsHuobi())
+			model.SetMarketInfos(model.Huobi, getMarketsHuobi(account.Key, account.Secret))
 		case model.Gate:
-			for i, key := range keys {
-				setPosSideGate(key, secrets[i])
-				setMarginSettingGate(key, secrets[i])
-				if i == 0 {
-					var marketInfos map[string]*model.MarketInfo
-					success, marketInfos = getMarketsGate(key, secrets[i])
-					if success {
-						model.SetMarketInfos(model.Gate, marketInfos)
-					}
-				}
+			for i := 0; i < model.AppConfig.Accounts; i++ {
+				gateAccount := model.AppConfig.GetAccount(model.Gate, i)
+				setPosSideGate(gateAccount.Key, gateAccount.Secret)
+				setMarginSettingGate(gateAccount.Key, gateAccount.Secret)
+			}
+			var marketInfos map[string]*model.MarketInfo
+			success, marketInfos = getMarketsGate(account.Key, account.Secret)
+			if success {
+				model.SetMarketInfos(model.Gate, marketInfos)
 			}
 		case model.Kucoin:
 			_, marketInfos := getMarketsKucoin("")
@@ -864,15 +862,6 @@ func SetBidAsk(key, secret, market, symbol string) {
 			setBidAskGate(key, secret, symbol)
 		}
 	}
-}
-
-// GetMarketInfo
-func _(market, symbol string) (borrowAble float64) {
-	switch market {
-	case model.Ftx:
-		return getMarketInfoFtx(symbol)
-	}
-	return 0
 }
 
 func CreateMarketDepthServer(markets *model.Markets, market string, orderHandler OrderHandler) (

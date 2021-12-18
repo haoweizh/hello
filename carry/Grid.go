@@ -143,7 +143,7 @@ package carry
 //		return
 //	}
 //	if grid.sellOrder == nil || grid.buyOrder == nil {
-//		if placeGridOrders(``, ``, setting, tick) {
+//		if placeGridOrders(setting, tick) {
 //			for true {
 //				<-syncGrid
 //				if grid.sellOrder != nil && grid.buyOrder != nil {
@@ -154,11 +154,11 @@ package carry
 //	} else if grid.sellOrder != nil && grid.sellOrder.Price < tick.Asks[0].Price {
 //		util.Notice(fmt.Sprintf(` sell id %s at price %f < %f`, grid.sellOrder.OrderId, grid.sellOrder.Price,
 //			tick.Asks[0].Price))
-//		handleOrderDeal(``, ``, grid, grid.sellOrder, setting, model.OrderSideSell)
+//		handleOrderDeal(grid, grid.sellOrder, setting, model.OrderSideSell)
 //	} else if grid.buyOrder != nil && grid.buyOrder.Price > tick.Bids[0].Price {
 //		util.Notice(fmt.Sprintf(`buy id %s at price %f < %f`, grid.buyOrder.OrderId, grid.buyOrder.Price,
 //			tick.Bids[0].Price))
-//		handleOrderDeal(``, ``, grid, grid.buyOrder, setting, model.OrderSideBuy)
+//		handleOrderDeal(grid, grid.buyOrder, setting, model.OrderSideBuy)
 //	}
 //	time.Sleep(time.Microsecond * 100)
 //}
@@ -650,7 +650,7 @@ package carry
 //		refreshOrders.amountIndex = index
 //		symbols := model.GetMarketSymbols(setting.Market)
 //		for key := range symbols {
-//			CancelRefreshHang(``, ``, setting.Market, setting.Symbol, RefreshTypeGrid)
+//			CancelRefreshHang(setting.Market, setting.Symbol, RefreshTypeGrid)
 //			refreshOrders.setInRefresh(key, true)
 //		}
 //		time.Sleep(time.Second * 2)

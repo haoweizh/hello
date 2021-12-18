@@ -27,11 +27,11 @@ var subscribeHandlerBybit = func(connection *websocket.Conn, subscribes []interf
 	var err error = nil
 	expire := util.GetNowUnixMillion() + 1000
 	toBeSign := fmt.Sprintf(`GET/realtime%d`, expire)
-	keys, secrets := model.AppConfig.GetKeys(model.Bybit)
-	hash := hmac.New(sha256.New, []byte(secrets[0]))
+	account := model.AppConfig.GetAccount(model.Bybit, 0)
+	hash := hmac.New(sha256.New, []byte(account.Secret))
 	hash.Write([]byte(toBeSign))
 	sign := hex.EncodeToString(hash.Sum(nil))
-	authCmd := fmt.Sprintf(`{"op": "auth", "args": ["%s", %d, "%s"]}`, keys[0], expire, sign)
+	authCmd := fmt.Sprintf(`{"op": "auth", "args": ["%s", %d, "%s"]}`, account.Key, expire, sign)
 	if err = sendToConnection(connection, []byte(authCmd)); err != nil {
 		util.SocketInfo("bybit can not auth " + err.Error())
 	}
@@ -233,11 +233,6 @@ func handleOrderBookBybit(markets *model.Markets, symbol string, ts int64, respo
 //}
 
 func SignedRequestBybit(key, secret, method, path string, body map[string]interface{}) []byte {
-	if key == `` || secret == `` {
-		keys, secrets := model.AppConfig.GetKeys(model.Bybit)
-		key = keys[0]
-		secret = secrets[0]
-	}
 	if body == nil {
 		body = make(map[string]interface{})
 	}
@@ -362,11 +357,11 @@ func placeOrderBybit(order *model.Order, key, secret, orderSide, orderType, time
 	return
 }
 
-func getFundingRateBybit(symbol string) (fundingRate float64, expire int64) {
+func getFundingRateBybit(key, secret, symbol string) (fundingRate float64, expire int64) {
 	postData := make(map[string]interface{})
 	symbol = model.GetDialectSymbol(model.Bybit, symbol)
 	postData[`symbol`] = symbol
-	response := SignedRequestBybit(``, ``, `GET`,
+	response := SignedRequestBybit(key, secret, `GET`,
 		`/open-api/funding/prev-funding-rate`, postData)
 	instrumentJson, err := util.NewJSON(response)
 	if err == nil {
@@ -440,7 +435,8 @@ func parseOrderBybit(order *model.Order, item map[string]interface{}) {
 	return
 }
 
-func GetWalletBybit(key, secret string) (balance float64, msg string) {
+// GetWalletBybit
+func _(key, secret string) (balance float64, msg string) {
 	postData := make(map[string]interface{})
 	postData[`limit`] = `50`
 	response := SignedRequestBybit(key, secret, `GET`,

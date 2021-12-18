@@ -19,13 +19,6 @@ var apiClientsGate = make(map[string]*gateApi.APIClient)
 var apiCtxGate = make(map[string]context.Context)
 
 func getClientGate(key, secret string) (apiClient *gateApi.APIClient, ctx context.Context) {
-	if key == `` {
-		keys, secrets := model.AppConfig.GetKeys(model.Gate)
-		if len(keys) > 0 && len(secrets) > 0 {
-			key = keys[0]
-			secret = secrets[0]
-		}
-	}
 	if apiClientsGate[key] == nil {
 		apiClientsGate[key] = gateApi.NewAPIClient(gateApi.NewConfiguration())
 		apiCtxGate[key] = context.WithValue(context.Background(), gateApi.ContextGateAPIV4, gateApi.GateAPIV4{
@@ -342,25 +335,13 @@ var tickerHandler = gateWs.NewCallBack(func(msg *gateWs.UpdateMsg) {
 //}
 
 func WsDepthServeGate() (err error) {
-	keys, secrets := model.AppConfig.GetKeys(model.Gate)
+	account := model.AppConfig.GetAccount(model.Gate, 0)
 	wsSpotUpdate, spotErr := gateWs.NewWsService(nil, nil, gateWs.NewConnConfFromOption(&gateWs.ConfOptions{
-		URL:          gateWs.BaseUrl,
-		Key:          keys[0],
-		Secret:       secrets[0],
-		MaxRetryConn: 10,
-	}))
+		URL: gateWs.BaseUrl, Key: account.Key, Secret: account.Secret, MaxRetryConn: 10}))
 	wsFutureUpdate, futureErr := gateWs.NewWsService(nil, nil, gateWs.NewConnConfFromOption(&gateWs.ConfOptions{
-		URL:          gateWs.FuturesUsdtUrl,
-		Key:          keys[0],
-		Secret:       secrets[0],
-		MaxRetryConn: 10,
-	}))
+		URL: gateWs.FuturesUsdtUrl, Key: account.Key, Secret: account.Secret, MaxRetryConn: 10}))
 	wsSpot, spotBookErr := gateWs.NewWsService(nil, nil, gateWs.NewConnConfFromOption(&gateWs.ConfOptions{
-		URL:          gateWs.BaseUrl,
-		Key:          keys[0],
-		Secret:       secrets[0],
-		MaxRetryConn: 10,
-	}))
+		URL: gateWs.BaseUrl, Key: account.Key, Secret: account.Secret, MaxRetryConn: 10}))
 	if spotBookErr != nil {
 		util.Notice(fmt.Sprintf("new spot book wsService err:%s", spotBookErr))
 	}

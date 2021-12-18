@@ -139,11 +139,6 @@ func getAmountToDFuture(symbol string, input float64) (output float64) {
 }
 
 func sendRequestDFuture(key, secret, method, path string, body interface{}) (responseBody []byte) {
-	if key == `` || secret == `` {
-		keys, secrets := model.AppConfig.GetKeys(model.DFuture)
-		key = keys[0]
-		secret = secrets[0]
-	}
 	uri := nodeServer + path
 	headers := map[string]string{"Content-Type": "application/json"}
 	postContent := ``
@@ -151,7 +146,7 @@ func sendRequestDFuture(key, secret, method, path string, body interface{}) (res
 		postContent = string(util.JsonEncodeToByte(body))
 	}
 	responseBody, _ = util.HttpRequest(method, uri, postContent, headers, 60)
-	util.SocketInfo(fmt.Sprintf(`request %s body %s return %s`, uri, postContent, string(responseBody)))
+	util.SocketInfo(fmt.Sprintf(`%s %s request %s body %s return %s`, key, secret, uri, postContent, string(responseBody)))
 	return responseBody
 }
 

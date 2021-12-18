@@ -10,6 +10,7 @@ import (
 	"hello/model"
 	"hello/util"
 	"math"
+	"net/http"
 	"net/url"
 	"sort"
 	"strconv"
@@ -386,8 +387,10 @@ func queryOrderHuobiDM(key, secret, symbol, orderId string) (dealAmount, dealPri
 	return 0, 0, model.CarryStatusFail
 }
 
-func querySetInstrumentsHuobiDM(key, secret string) {
-	responseBody := SignedRequestHuobiDM(key, secret, model.HuobiDM, `GET`, `/api/v1/contract_contract_info`, nil)
+func querySetInstrumentsHuobiDM() {
+	account := model.AppConfig.GetAccount(model.Huobi, 0)
+	responseBody := SignedRequestHuobiDM(account.Key, account.Secret, model.HuobiDM, http.MethodGet,
+		`/api/v1/contract_contract_info`, nil)
 	instrumentJson, err := util.NewJSON(responseBody)
 	if err == nil {
 		for _, item := range instrumentJson.Get(`data`).MustArray() {
@@ -439,11 +442,6 @@ func getCandlesHuobiDM(key, secret, symbol, binSize string, start, end time.Time
 }
 
 func SignedRequestHuobiDM(key, secret, market, method, path string, data map[string]interface{}) []byte {
-	if key == `` || secret == `` {
-		keys, secrets := model.AppConfig.GetKeys(model.Huobi)
-		key = keys[0]
-		secret = secrets[0]
-	}
 	restUrl := restHuobiDM
 	if market == model.Huobi {
 		restUrl = restHuobi

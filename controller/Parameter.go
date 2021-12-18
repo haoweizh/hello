@@ -29,7 +29,6 @@ func ParameterServe() {
 	router.GET("set", SetParameters)
 	router.GET(`refresh`, RefreshParameters)
 	router.GET(`pw`, GetCode)
-	router.GET("balance", GetBalance)
 	router.GET(`symbol`, setSymbol)
 	router.GET(`test`, test)
 	router.GET(`debug`, debug)
@@ -89,31 +88,31 @@ func test(c *gin.Context) {
 	markets := model.GetMarkets()
 	userKeys := make([]string, 0)
 	for _, market := range markets {
-		keys, _ := model.AppConfig.GetKeys(market)
-		for i, key := range keys {
+		for i := 0; i < model.AppConfig.Accounts; i++ {
+			account := model.AppConfig.GetAccount(market, i)
 			if i > 0 {
-				userKeys = append(userKeys, key)
+				userKeys = append(userKeys, account.Key)
 			}
-			failNum := carry.GetCarryResult(key)
-			collateral := carry.GetCollateral(key)
+			failNum := carry.GetCarryResult(account.Key)
+			collateral := carry.GetCollateral(account.Key)
 			if collateral != nil {
 				carryBackMsg += fmt.Sprintf("fails %s 可用保证金: %f 占用保证金: %f 保证金率: rate: %f\n",
-					key, collateral.Available, collateral.Occupied, collateral.Rate)
+					account.Key, collateral.Available, collateral.Occupied, collateral.Rate)
 			}
-			carryBackMsg += fmt.Sprintf("current fails: %s %d\n", key, failNum)
+			carryBackMsg += fmt.Sprintf("current fails: %s %d\n", account.Key, failNum)
 		}
 	}
-	keysFtx, _ := model.AppConfig.GetKeys(model.Ftx)
-	keysOKEX, _ := model.AppConfig.GetKeys(model.OKEX)
-	keysBinance, _ := model.AppConfig.GetKeys(model.Binance)
-	keysHuobi, _ := model.AppConfig.GetKeys(model.Huobi)
+	accountFtx := model.AppConfig.GetAccount(model.Ftx, 0)
+	accountOkex := model.AppConfig.GetAccount(model.OKEX, 0)
+	accountBinance := model.AppConfig.GetAccount(model.Binance, 0)
+	accountHuobi := model.AppConfig.GetAccount(model.Huobi, 0)
 	if carryRows != nil {
 		for carryRows.Next() {
 			var market, side, date, amountType, refreshType string
 			var value float64
 			_ = carryRows.Scan(&market, &amountType, &side, &value, &date, &refreshType)
-			if !strings.Contains(amountType, keysFtx[0]) && !strings.Contains(amountType, keysOKEX[0]) &&
-				!strings.Contains(amountType, keysBinance[0]) && !strings.Contains(amountType, keysHuobi[0]) {
+			if !strings.Contains(amountType, accountFtx.Key) && !strings.Contains(amountType, accountOkex.Key) &&
+				!strings.Contains(amountType, accountBinance.Key) && !strings.Contains(amountType, accountHuobi.Key) {
 				carryBackMsg += fmt.Sprintf("%s %s交易额 in USD: %s %s %f 类型：%s\n",
 					market, amountType, date, side, value, refreshType)
 			}
@@ -264,21 +263,13 @@ func GetCode(c *gin.Context) {
 	}
 }
 
-func GetBalance(c *gin.Context) {
-	amount, transfer := api.GetWalletHistoryBitmex(``, ``)
-	msg := fmt.Sprintf("[bitmex]\n%f \n%s\n", amount, transfer)
-	amountBybit, msgBybit := api.GetWalletBybit(``, ``)
-	msg = fmt.Sprintf("%s\n[bybit] %f \n%s", msg, amountBybit, msgBybit)
-	c.String(http.StatusOK, msg)
-}
-
 func GetParameters(c *gin.Context) {
 	msg := ``
 	markets := model.GetMarkets()
 	userKeys := make([]string, 0)
 	for _, market := range markets {
-		keys, _ := model.AppConfig.GetKeys(market)
-		userKeys = append(userKeys, keys[0])
+		account := model.AppConfig.GetAccount(market, 0)
+		userKeys = append(userKeys, account.Key)
 		marketInfos := model.GetMarketInfos(market)
 		if marketInfos != nil && model.GetSettings(model.FunctionCarry, market) != nil {
 			symbols := model.GetMarketSymbols(market)
@@ -328,12 +319,12 @@ func GetParameters(c *gin.Context) {
 		}
 		turtleRows.Close()
 	}
-	keyFtx, _ := model.AppConfig.GetKeys(model.Ftx)
-	keyOKEX, _ := model.AppConfig.GetKeys(model.OKEX)
-	keyGate, _ := model.AppConfig.GetKeys(model.Gate)
-	keyBinance, _ := model.AppConfig.GetKeys(model.Binance)
-	keyHuobi, _ := model.AppConfig.GetKeys(model.Huobi)
-	keyKucoin, _ := model.AppConfig.GetKeys(model.Kucoin)
+	accountFtx := model.AppConfig.GetAccount(model.Ftx, 0)
+	accountOkex := model.AppConfig.GetAccount(model.OKEX, 0)
+	accountGate := model.AppConfig.GetAccount(model.Gate, 0)
+	accountBinance := model.AppConfig.GetAccount(model.Binance, 0)
+	accountHuobi := model.AppConfig.GetAccount(model.Huobi, 0)
+	accountKucoin := model.AppConfig.GetAccount(model.Kucoin, 0)
 	duration, _ := time.ParseDuration(`-96h`)
 	timeBegin := time.Now().Add(duration)
 	timeBegin = time.Date(timeBegin.Year(), timeBegin.Month(), timeBegin.Day(), 0, 0, 0, 0, timeBegin.Location())
@@ -362,12 +353,12 @@ func GetParameters(c *gin.Context) {
 			var value, orderNum, failRate float64
 			_ = carryRows.Scan(&marketName, &amountType, &side, &value, &date, &refreshType, &orderNum)
 			key := fmt.Sprintf(`%s-%s-%s-%s-%s`, marketName, amountType, side, date, refreshType)
-			if (marketName == model.Ftx && amountType == keyFtx[0]) ||
-				(marketName == model.OKEX && amountType == keyOKEX[0]) ||
-				(marketName == model.Binance && amountType == keyBinance[0]) ||
-				(marketName == model.Huobi && amountType == keyHuobi[0]) ||
-				(marketName == model.Gate && amountType == keyGate[0]) ||
-				(marketName == model.Kucoin && amountType == keyKucoin[0]) {
+			if (marketName == model.Ftx && amountType == accountFtx.Key) ||
+				(marketName == model.OKEX && amountType == accountOkex.Key) ||
+				(marketName == model.Binance && amountType == accountBinance.Key) ||
+				(marketName == model.Huobi && amountType == accountHuobi.Key) ||
+				(marketName == model.Gate && amountType == accountGate.Key) ||
+				(marketName == model.Kucoin && amountType == accountKucoin.Key) {
 				if orderNum > 0 {
 					failRate = failData[key] / orderNum
 				}

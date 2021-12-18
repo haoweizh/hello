@@ -29,7 +29,7 @@ package carry
 //		priceAsk = tick.Asks[0].Price
 //	} else {
 //		util.Notice(`fatal error1: tick absent`)
-//		_, restBid, restAsk := api.GetOrderBook(``, ``, setting.Symbol)
+//		_, restBid, restAsk := api.GetOrderBook(setting.Symbol)
 //		if restBid != nil && restAsk != nil {
 //			priceBid = restBid.Price
 //			priceAsk = restAsk.Price
@@ -63,7 +63,7 @@ package carry
 //	//}
 //	amount := orderPostonly.Amount - orderPostonly.DealAmount
 //	for true {
-//		orderPostonly = api.PlaceOrder(``, ``, orderSide, model.OrderTypeLimit, setting.Market, setting.Symbol,
+//		orderPostonly = api.PlaceOrder(orderSide, model.OrderTypeLimit, setting.Market, setting.Symbol,
 //			``, ``, model.PostOnly, model.PostOnly, price, 0, amount, true)
 //		if orderPostonly != nil && orderPostonly.OrderId != `` {
 //			break

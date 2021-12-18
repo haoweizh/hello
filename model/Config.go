@@ -8,6 +8,7 @@ import (
 
 type Config struct {
 	lock                                                                                           sync.Mutex
+	Accounts                                                                                       int //账户个数
 	ChannelSlot, Delay                                                                             float64
 	KucoinSpot, GateSpot                                                                           bool
 	KucoinRelatedKey, KucoinRelatedSecret, KucoinFutureKey, KucoinFutureSecret                     string
@@ -23,98 +24,86 @@ type Config struct {
 	Phase, Handle, Mail, FromMail, FromMailAuth, Port, WalletKey, DBConnection, Env, FutureAddress string
 }
 
-func (config *Config) GetCarrySetting(market string, index int) (closeCarry bool, rate float64) {
-	carryRate := ``
-	carryClose := ``
-	closeCarry = false
-	rate = 1
+type Account struct {
+	Key, Secret string
+	CarryClose  bool
+	CarryRate   float64
+}
+
+var accounts = make(map[string][]*Account)
+
+func (config *Config) GetAccountFromKey(market, key string) (account *Account) {
+	if accounts[market] == nil {
+		config.GetAccount(market, 0)
+	}
+	if accounts[market] == nil {
+		return nil
+	}
+	for _, item := range accounts[market] {
+		if item.Key == key {
+			return item
+		}
+	}
+	return nil
+}
+
+func (config *Config) GetAccount(market string, index int) (account *Account) {
+	if index >= config.Accounts {
+		return nil
+	}
+	if accounts[market] != nil {
+		return accounts[market][index]
+	}
+	accounts[market] = make([]*Account, config.Accounts)
+	var rateValues, closeValues, keys, secrets []string
 	switch market {
-	case Kucoin:
-		return false, 1
+	//case Kucoin, DFuture:
+	//	return false, 1
 	case Gate:
-		carryClose = config.GateCarryClose
-		carryRate = config.GateCarryRate
+		keys = strings.Split(config.GateKey, `,`)
+		secrets = strings.Split(config.GateSecret, `,`)
+		closeValues = strings.Split(config.GateCarryClose, `,`)
+		rateValues = strings.Split(config.GateCarryRate, `,`)
 	case Ftx:
-		carryClose = config.FtxCarryClose
-		carryRate = config.FtxCarryRate
+		keys = strings.Split(config.FtxKey, `,`)
+		secrets = strings.Split(config.FtxSecret, `,`)
+		closeValues = strings.Split(config.FtxCarryClose, `,`)
+		rateValues = strings.Split(config.FtxCarryRate, `,`)
 	case Huobi, HuobiDM:
-		carryClose = config.HuobiCarryClose
-		carryRate = config.HuobiCarryRate
+		keys = strings.Split(config.HuobiKey, `,`)
+		secrets = strings.Split(config.HuobiSecret, `,`)
+		closeValues = strings.Split(config.HuobiCarryClose, `,`)
+		rateValues = strings.Split(config.HuobiCarryRate, `,`)
 	case OKEX:
-		carryClose = config.OkexCarryClose
-		carryRate = config.OkexCarryRate
+		keys = strings.Split(config.OkexKey, `,`)
+		secrets = strings.Split(config.OkexSecret, `,`)
+		closeValues = strings.Split(config.OkexCarryClose, `,`)
+		rateValues = strings.Split(config.OkexCarryRate, `,`)
 	case Binance:
-		carryClose = config.BinanceCarryClose
-		carryRate = config.BinanceCarryRate
+		keys = strings.Split(config.BinanceKey, `,`)
+		secrets = strings.Split(config.BinanceSecret, `,`)
+		closeValues = strings.Split(config.BinanceCarryClose, `,`)
+		rateValues = strings.Split(config.BinanceCarryRate, `,`)
 	case Coinpark:
-		carryClose = config.CoinparkCarryClose
-		carryRate = config.CoinparkCarryRate
+		keys = strings.Split(config.CoinparkKey, `,`)
+		secrets = strings.Split(config.CoinparkSecret, `,`)
+		closeValues = strings.Split(config.CoinparkCarryClose, `,`)
+		rateValues = strings.Split(config.CoinparkCarryRate, `,`)
 	case Bitmex:
-		carryClose = config.BitmexCarryClose
-		carryRate = config.BitmexCarryRate
+		keys = strings.Split(config.BitmexKey, `,`)
+		secrets = strings.Split(config.BitmexSecret, `,`)
+		closeValues = strings.Split(config.BitmexCarryClose, `,`)
+		rateValues = strings.Split(config.BitmexCarryRate, `,`)
 	case Bybit:
-		carryClose = config.BybitCarryClose
-		carryRate = config.BybitCarryRate
-	case DFuture:
-		return false, 1
+		keys = strings.Split(config.BybitKey, `,`)
+		secrets = strings.Split(config.BybitSecret, `,`)
+		closeValues = strings.Split(config.BybitCarryClose, `,`)
+		rateValues = strings.Split(config.BybitCarryRate, `,`)
 	}
-	closeValues := strings.Split(carryClose, `,`)
-	for i, str := range closeValues {
-		if i == index {
-			closeCarry = str == `true`
-		}
+	for i := 0; i < config.Accounts; i++ {
+		account = &Account{Key: keys[i], Secret: secrets[i]}
+		account.CarryClose, _ = strconv.ParseBool(closeValues[index])
+		account.CarryRate, _ = strconv.ParseFloat(rateValues[index], 64)
 	}
-	rateValues := strings.Split(carryRate, `,`)
-	for i, str := range rateValues {
-		if i == index {
-			rate, _ = strconv.ParseFloat(str, 64)
-		}
-	}
-	return closeCarry, rate
-}
-
-func (config *Config) GetSecret(market, key string) (secret string) {
-	keys, secrets := config.GetKeys(market)
-	for i, value := range keys {
-		if value == key {
-			return secrets[i]
-		}
-	}
-	return ``
-}
-
-func (config *Config) GetKey(market string, index int) (success bool, key, secret string) {
-	keys, secrets := config.GetKeys(market)
-	for i, value := range keys {
-		if i == index {
-			return true, value, secrets[i]
-		}
-	}
-	return false, ``, ``
-}
-
-func (config *Config) GetKeys(market string) (keys, secrets []string) {
-	switch market {
-	case Kucoin:
-		return strings.Split(config.KucoinRelatedSecret, `,`), strings.Split(config.KucoinRelatedSecret, `,`)
-	case Gate:
-		return strings.Split(config.GateKey, `,`), strings.Split(config.GateSecret, `,`)
-	case Ftx:
-		return strings.Split(config.FtxKey, `,`), strings.Split(config.FtxSecret, `,`)
-	case Huobi, HuobiDM:
-		return strings.Split(config.HuobiKey, `,`), strings.Split(config.HuobiSecret, `,`)
-	case OKEX:
-		return strings.Split(config.OkexKey, `,`), strings.Split(config.OkexSecret, `,`)
-	case Binance:
-		return strings.Split(config.BinanceKey, `,`), strings.Split(config.BinanceSecret, `,`)
-	case Coinpark:
-		return strings.Split(config.CoinparkKey, `,`), strings.Split(config.CoinparkSecret, `,`)
-	case Bitmex:
-		return strings.Split(config.BitmexKey, `,`), strings.Split(config.BitmexSecret, `,`)
-	case Bybit:
-		return strings.Split(config.BybitKey, `,`), strings.Split(config.BybitSecret, `,`)
-	case DFuture:
-		return strings.Split(config.DFutureKey, `,`), strings.Split(config.DFutureSecret, `,`)
-	}
-	return nil, nil
+	return accounts[market][index]
 }
