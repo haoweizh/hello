@@ -40,7 +40,7 @@ func ParameterServe() {
 		err = router.Run(":" + model.AppConfig.Port)
 	}
 	if err != nil {
-		util.Notice(`port occupied, exit %s`, err.Error())
+		fmt.Println(`port occupied, exit ` + err.Error())
 		os.Exit(1)
 	}
 }
@@ -88,8 +88,8 @@ func test(c *gin.Context) {
 	markets := model.GetMarkets()
 	userKeys := make([]string, 0)
 	for _, market := range markets {
-		for i := 0; i < model.AppConfig.Accounts; i++ {
-			account := model.AppConfig.GetAccount(market, i)
+		accounts := model.AppConfig.GetAccounts(market)
+		for i, account := range accounts {
 			if i > 0 {
 				userKeys = append(userKeys, account.Key)
 			}
@@ -102,17 +102,15 @@ func test(c *gin.Context) {
 			carryBackMsg += fmt.Sprintf("current fails: %s %d\n", account.Key, failNum)
 		}
 	}
-	accountFtx := model.AppConfig.GetAccount(model.Ftx, 0)
-	accountOkex := model.AppConfig.GetAccount(model.OKEX, 0)
-	accountBinance := model.AppConfig.GetAccount(model.Binance, 0)
-	accountHuobi := model.AppConfig.GetAccount(model.Huobi, 0)
 	if carryRows != nil {
 		for carryRows.Next() {
 			var market, side, date, amountType, refreshType string
 			var value float64
 			_ = carryRows.Scan(&market, &amountType, &side, &value, &date, &refreshType)
-			if !strings.Contains(amountType, accountFtx.Key) && !strings.Contains(amountType, accountOkex.Key) &&
-				!strings.Contains(amountType, accountBinance.Key) && !strings.Contains(amountType, accountHuobi.Key) {
+			if !strings.Contains(amountType, model.AppConfig.GetAccounts(model.Ftx)[0].Key) &&
+				!strings.Contains(amountType, model.AppConfig.GetAccounts(model.OKEX)[0].Key) &&
+				!strings.Contains(amountType, model.AppConfig.GetAccounts(model.Binance)[0].Key) &&
+				!strings.Contains(amountType, model.AppConfig.GetAccounts(model.Huobi)[0].Key) {
 				carryBackMsg += fmt.Sprintf("%s %s交易额 in USD: %s %s %f 类型：%s\n",
 					market, amountType, date, side, value, refreshType)
 			}
@@ -268,7 +266,7 @@ func GetParameters(c *gin.Context) {
 	markets := model.GetMarkets()
 	userKeys := make([]string, 0)
 	for _, market := range markets {
-		account := model.AppConfig.GetAccount(market, 0)
+		account := model.AppConfig.GetAccounts(market)[0]
 		userKeys = append(userKeys, account.Key)
 		marketInfos := model.GetMarketInfos(market)
 		if marketInfos != nil && model.GetSettings(model.FunctionCarry, market) != nil {
@@ -319,12 +317,6 @@ func GetParameters(c *gin.Context) {
 		}
 		turtleRows.Close()
 	}
-	accountFtx := model.AppConfig.GetAccount(model.Ftx, 0)
-	accountOkex := model.AppConfig.GetAccount(model.OKEX, 0)
-	accountGate := model.AppConfig.GetAccount(model.Gate, 0)
-	accountBinance := model.AppConfig.GetAccount(model.Binance, 0)
-	accountHuobi := model.AppConfig.GetAccount(model.Huobi, 0)
-	accountKucoin := model.AppConfig.GetAccount(model.Kucoin, 0)
 	duration, _ := time.ParseDuration(`-96h`)
 	timeBegin := time.Now().Add(duration)
 	timeBegin = time.Date(timeBegin.Year(), timeBegin.Month(), timeBegin.Day(), 0, 0, 0, 0, timeBegin.Location())
@@ -353,12 +345,12 @@ func GetParameters(c *gin.Context) {
 			var value, orderNum, failRate float64
 			_ = carryRows.Scan(&marketName, &amountType, &side, &value, &date, &refreshType, &orderNum)
 			key := fmt.Sprintf(`%s-%s-%s-%s-%s`, marketName, amountType, side, date, refreshType)
-			if (marketName == model.Ftx && amountType == accountFtx.Key) ||
-				(marketName == model.OKEX && amountType == accountOkex.Key) ||
-				(marketName == model.Binance && amountType == accountBinance.Key) ||
-				(marketName == model.Huobi && amountType == accountHuobi.Key) ||
-				(marketName == model.Gate && amountType == accountGate.Key) ||
-				(marketName == model.Kucoin && amountType == accountKucoin.Key) {
+			if (marketName == model.Ftx && amountType == model.AppConfig.GetAccounts(model.Ftx)[0].Key) ||
+				(marketName == model.OKEX && amountType == model.AppConfig.GetAccounts(model.OKEX)[0].Key) ||
+				(marketName == model.Binance && amountType == model.AppConfig.GetAccounts(model.Binance)[0].Key) ||
+				(marketName == model.Huobi && amountType == model.AppConfig.GetAccounts(model.Huobi)[0].Key) ||
+				(marketName == model.Gate && amountType == model.AppConfig.GetAccounts(model.Gate)[0].Key) ||
+				(marketName == model.Kucoin && amountType == model.AppConfig.GetAccounts(model.Kucoin)[0].Key) {
 				if orderNum > 0 {
 					failRate = failData[key] / orderNum
 				}

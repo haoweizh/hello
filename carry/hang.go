@@ -39,7 +39,7 @@ var ProcessHang = func(setting *model.Setting, tick *model.BidAsk) {
 		model.AppConfig.Handle != `1` || model.AppPause || util.GetNowUnixMillion()-int64(tick.Ts) > 40 {
 		return
 	}
-	account := model.AppConfig.GetAccount(setting.Market, 0)
+	account := model.AppConfig.GetAccounts(setting.Market)[0]
 	if cancelAll[setting.Symbol] == false {
 		api.CancelOrders(account.Key, account.Secret, setting.Market, setting.Symbol)
 		setCancelAll(setting.Symbol, true)

@@ -27,7 +27,7 @@ var subscribeHandlerBitmex = func(connection *websocket.Conn, subscribes []inter
 	var err error = nil
 	expire := util.GetNow().Unix() + 5
 	toBeSign := fmt.Sprintf(`GET/realtime%d`, expire)
-	account := model.AppConfig.GetAccount(model.Bitmex, 0)
+	account := model.AppConfig.GetAccounts(model.Bitmex)[0]
 	hash := hmac.New(sha256.New, []byte(account.Secret))
 	hash.Write([]byte(toBeSign))
 	sign := hex.EncodeToString(hash.Sum(nil))

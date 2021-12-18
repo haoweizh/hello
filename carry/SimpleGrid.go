@@ -181,7 +181,7 @@ var ProcessSimpleGrid = func(setting *model.Setting, tick *model.BidAsk) {
 	}
 	setSimpleGriding(true)
 	defer setSimpleGriding(false)
-	account := model.AppConfig.GetAccount(setting.Market, 0)
+	account := model.AppConfig.GetAccounts(setting.Market)[0]
 	gridPos := getGridPos(account.Key, account.Secret, setting)
 	if gridPos == nil {
 		return

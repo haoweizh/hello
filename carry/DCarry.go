@@ -66,7 +66,7 @@ var ProcessDCarry = func(setting *model.Setting, tickD *model.BidAsk) {
 		return
 	}
 	for _, address := range addresses {
-		account := model.AppConfig.GetAccount(setting.Market, 0)
+		account := model.AppConfig.GetAccounts(setting.Market)[0]
 		position := getPosition(address, setting.Market, setting.Symbol)
 		if position == nil {
 			_, pos := api.GetPosition(setting.Market, setting.Symbol, address)

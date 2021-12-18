@@ -35,8 +35,8 @@ func maintainChannelOKEX() {
 		for true {
 			time.Sleep(time.Second * 25)
 			reSubscribe()
-			for i := 0; i < model.AppConfig.Accounts; i++ {
-				account := model.AppConfig.GetAccount(model.OKEX, i)
+			accounts := model.AppConfig.GetAccounts(model.OKEX)
+			for _, account := range accounts {
 				if privateConnectionOKEX[account.Key] == nil {
 					util.Notice(fmt.Sprintf(`no private connection %s`, account.Key))
 				}
@@ -267,8 +267,8 @@ func WsDepthServeOKEX(instruments map[string]bool, orderHandler OrderHandler) (c
 		}
 	}
 	channels = make([]chan struct{}, 0)
-	for i := 0; i < model.AppConfig.Accounts; i++ {
-		account := model.AppConfig.GetAccount(model.OKEX, i)
+	accounts := model.AppConfig.GetAccounts(model.OKEX)
+	for _, account := range accounts {
 		privateConnectionOKEX[account.Key], err = newConnection(wsPrivateOKEX)
 		stopChan := make(chan struct{}, 2)
 		if err != nil {

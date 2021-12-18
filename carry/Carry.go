@@ -279,8 +279,8 @@ func clearCarryBalance() {
 		time.Sleep(time.Second * 2)
 		markets := model.GetMarkets()
 		for _, market := range markets {
-			for i := 0; i < model.AppConfig.Accounts; i++ {
-				account := model.AppConfig.GetAccount(market, i)
+			accounts := model.AppConfig.GetAccounts(market)
+			for _, account := range accounts {
 				if account == nil {
 					util.Notice(`fail to load account`)
 					continue
@@ -370,8 +370,9 @@ var ProcessCarry = func(setting *model.Setting, tick *model.BidAsk) {
 	}
 	begin := 0
 	step := 1
+	accounts := model.AppConfig.GetAccounts(setting.Market)
 	if isRecentCarry(setting.Market, setting.Symbol) {
-		begin = model.AppConfig.Accounts - 1
+		begin = len(accounts) - 1
 		step = -1
 	}
 	//now := time.Now()
@@ -379,17 +380,16 @@ var ProcessCarry = func(setting *model.Setting, tick *model.BidAsk) {
 	//	begin = len(keys) - 1
 	//	step = -1
 	//}
-	for i := begin; i >= 0 && i < model.AppConfig.Accounts; i += step {
-		account := model.AppConfig.GetAccount(setting.Market, i)
+	for i := begin; i >= 0 && i < len(accounts); i += step {
 		if i == 0 {
-			model.SetCarryInfo(account.Key, `[current high-low]`, fmt.Sprintf(`highest %s %f lowest %s %f time:%s`,
+			model.SetCarryInfo(accounts[i].Key, `[current high-low]`, fmt.Sprintf(`highest %s %f lowest %s %f time:%s`,
 				symbolHighest, highest, symbolLowest, lowest, time.Now().String()))
 		}
-		sidePerp, sideRelated, amount, carryType := calcCarryOpen(setting, tickPerp, tickRelated, account.Key,
-			account.Secret, account.CarryClose, account.CarryRate, scoreOpen, scoreClose)
+		sidePerp, sideRelated, amount, carryType := calcCarryOpen(setting, tickPerp, tickRelated, accounts[i].Key,
+			accounts[i].Secret, accounts[i].CarryClose, accounts[i].CarryRate, scoreOpen, scoreClose)
 		if amount > 0 {
 			setRecentCarryTime(setting.Market, setting.Symbol)
-			go placeCarry(setting, tickPerp, tickRelated, account.Key, account.Secret, sidePerp, sideRelated, carryType,
+			go placeCarry(setting, tickPerp, tickRelated, accounts[i].Key, accounts[i].Secret, sidePerp, sideRelated, carryType,
 				scoreOpen, scoreClose, amount)
 			return
 		}

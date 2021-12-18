@@ -56,7 +56,7 @@ func maintainChannelFtx(subscribes []interface{}) {
 }
 
 var subscribeHandlerFtx = func(connection *websocket.Conn, subscribes []interface{}) (err error) {
-	account := model.AppConfig.GetAccount(model.Ftx, 0)
+	account := model.AppConfig.GetAccounts(model.Ftx)[0]
 	ts := time.Now().UnixNano() / int64(time.Millisecond)
 	toBeSign := fmt.Sprintf(`%dwebsocket_login`, ts)
 	hash := hmac.New(sha256.New, []byte(account.Secret))

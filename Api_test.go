@@ -113,10 +113,15 @@ func Test_getCommonMarketInfos(t *testing.T) {
 }
 
 func Test_initTurtleN(t *testing.T) {
-	time.Sleep(time.Duration(3000) * time.Millisecond)
-	fmt.Println(time.Now().String())
 	model.NewConfig()
 	_ = configor.Load(model.AppConfig, "./config.yml")
+	fmt.Println(fmt.Sprintf(`cross: %d`, model.AppConfig.CrossAccounts))
+	account := model.AppConfig.GetAccounts(model.Binance)[1]
+	if account == nil {
+		fmt.Println(`right`)
+	} else {
+		fmt.Println(`wrong` + account.Key)
+	}
 	result, _, _, order := api.CancelOrder(model.AppConfig.GateKey, model.AppConfig.GateSecret, `gate`, `SUN_USDT`, ``,
 		model.OrderTypeLimit, `86007650678`)
 	fmt.Println(result)
@@ -212,7 +217,7 @@ func Test_wallet(t *testing.T) {
 	//api.InitMarketInfos()
 	//fmt.Println(fmt.Sprintf(`%v %d`, suc, len(pos)))
 	//a := api.GetMarketInfo(model.Ftx, `SECO/USD`)
-	account := model.AppConfig.GetAccount(model.Ftx, 0)
+	account := model.AppConfig.GetAccounts(model.Ftx)[0]
 	api.InitCarryFtx(account.Key, account.Secret, 1)
 	//carry.GetTurtleData(model.Ftx, `okbusd_p`)
 	//var err error

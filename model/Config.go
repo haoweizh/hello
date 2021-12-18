@@ -1,6 +1,8 @@
 package model
 
 import (
+	"fmt"
+	"os"
 	"strconv"
 	"strings"
 	"sync"
@@ -8,7 +10,7 @@ import (
 
 type Config struct {
 	lock                                                                                           sync.Mutex
-	Accounts                                                                                       int //账户个数
+	CrossAccounts                                                                                  int // 参与cross的账户个数
 	ChannelSlot, Delay                                                                             float64
 	KucoinSpot, GateSpot                                                                           bool
 	KucoinRelatedKey, KucoinRelatedSecret, KucoinFutureKey, KucoinFutureSecret                     string
@@ -30,16 +32,16 @@ type Account struct {
 	CarryRate   float64
 }
 
-var accounts = make(map[string][]*Account)
+var marketAccounts = make(map[string][]*Account)
 
 func (config *Config) GetAccountFromKey(market, key string) (account *Account) {
-	if accounts[market] == nil {
-		config.GetAccount(market, 0)
+	if marketAccounts[market] == nil {
+		config.GetAccounts(market)
 	}
-	if accounts[market] == nil {
+	if marketAccounts[market] == nil {
 		return nil
 	}
-	for _, item := range accounts[market] {
+	for _, item := range marketAccounts[market] {
 		if item.Key == key {
 			return item
 		}
@@ -47,14 +49,10 @@ func (config *Config) GetAccountFromKey(market, key string) (account *Account) {
 	return nil
 }
 
-func (config *Config) GetAccount(market string, index int) (account *Account) {
-	if index >= config.Accounts {
-		return nil
+func (config *Config) GetAccounts(market string) []*Account {
+	if marketAccounts[market] != nil {
+		return marketAccounts[market]
 	}
-	if accounts[market] != nil {
-		return accounts[market][index]
-	}
-	accounts[market] = make([]*Account, config.Accounts)
 	var rateValues, closeValues, keys, secrets []string
 	switch market {
 	//case Kucoin, DFuture:
@@ -100,10 +98,25 @@ func (config *Config) GetAccount(market string, index int) (account *Account) {
 		closeValues = strings.Split(config.BybitCarryClose, `,`)
 		rateValues = strings.Split(config.BybitCarryRate, `,`)
 	}
-	for i := 0; i < config.Accounts; i++ {
-		account = &Account{Key: keys[i], Secret: secrets[i]}
-		account.CarryClose, _ = strconv.ParseBool(closeValues[index])
-		account.CarryRate, _ = strconv.ParseFloat(rateValues[index], 64)
+	if len(keys) != len(secrets) || len(keys) != len(closeValues) || len(keys) != len(rateValues) {
+		fmt.Println(fmt.Sprintf(`wrong config format %s keys:%d secrets:%d close:%d rate:%d`,
+			market, len(keys), len(secrets), len(closeValues), len(rateValues)))
+		os.Exit(1)
 	}
-	return accounts[market][index]
+	if config.CrossAccounts > 0 && config.CrossAccounts != len(keys) {
+		fmt.Println(fmt.Sprintf(`wrong cross config %s keys:%d accounts:%d`, market, len(keys), config.CrossAccounts))
+		os.Exit(2)
+	}
+	marketAccounts[market] = make([]*Account, len(keys))
+	for i := 0; i < len(keys); i++ {
+		account := &Account{Key: keys[i], Secret: secrets[i]}
+		account.CarryClose, _ = strconv.ParseBool(closeValues[i])
+		account.CarryRate, _ = strconv.ParseFloat(rateValues[i], 64)
+		if len(strings.TrimSpace(account.Key)) > 0 {
+			marketAccounts[market][i] = account
+		} else {
+			marketAccounts[market][i] = nil
+		}
+	}
+	return marketAccounts[market]
 }

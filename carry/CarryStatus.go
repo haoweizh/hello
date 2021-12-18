@@ -84,9 +84,9 @@ func addCarryResult(key, market string, success bool) {
 	if carryFail[key] > 6 {
 		go pauseCarry(key)
 		mailAddr := `haoweizh@qq.com`
-		account0 := model.AppConfig.GetAccount(market, 0)
+		accounts := model.AppConfig.GetAccounts(market)
 		account := model.AppConfig.GetAccountFromKey(market, key)
-		if account0.Key == account.Key {
+		if accounts[0].Key == account.Key {
 			mailAddr = model.AppConfig.Mail
 		}
 		util.Notice(`----------stop carry %s %d`, key, carryFail[key])

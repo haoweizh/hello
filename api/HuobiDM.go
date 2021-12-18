@@ -388,7 +388,7 @@ func queryOrderHuobiDM(key, secret, symbol, orderId string) (dealAmount, dealPri
 }
 
 func querySetInstrumentsHuobiDM() {
-	account := model.AppConfig.GetAccount(model.Huobi, 0)
+	account := model.AppConfig.GetAccounts(model.Huobi)[0]
 	responseBody := SignedRequestHuobiDM(account.Key, account.Secret, model.HuobiDM, http.MethodGet,
 		`/api/v1/contract_contract_info`, nil)
 	instrumentJson, err := util.NewJSON(responseBody)

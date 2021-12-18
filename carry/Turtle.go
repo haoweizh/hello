@@ -232,7 +232,7 @@ var ProcessTurtle = func(setting *model.Setting, tick *model.BidAsk) {
 	}
 	setTurtling(true)
 	defer setTurtling(false)
-	account := model.AppConfig.GetAccount(setting.Market, 0)
+	account := model.AppConfig.GetAccounts(setting.Market)[0]
 	turtleData := GetTurtleData(account.Key, account.Secret, setting)
 	if turtleData == nil || turtleData.n == 0 || turtleData.amount == 0 {
 		return

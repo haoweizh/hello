@@ -138,45 +138,45 @@ func initStatus(key, secret string, carryClose bool, carryRate float64, setting 
 	}
 	tailSpot := model.GetSpotTail(setting.Market)
 	tailPerp := model.GetPerpTail(setting.Market)
-	var carryStatus *CarryStatus
+	var status *CarryStatus
 	fundingRate := 0.0
 	if setting.Symbol[len(setting.Symbol)-len(tailSpot):] == tailSpot {
-		carryStatus = createFromBalance(key, secret, setting)
+		status = createFromBalance(key, secret, setting)
 	} else if setting.Symbol[len(setting.Symbol)-len(tailPerp):] == tailPerp {
-		carryStatus = createFromPosition(key, secret, setting)
+		status = createFromPosition(key, secret, setting)
 		_, fundingRate = api.GetFundingRate(key, secret, setting.Market, setting.Symbol, nil)
 		fundingRate *= 0.9
 	}
 	if carryStatus == nil {
 		return
 	}
-	setCarryStatus(setting.Coin, setting.Market, setting.Symbol, key, carryStatus)
+	setCarryStatus(setting.Coin, setting.Market, setting.Symbol, key, status)
 	now := time.Now().Unix()
 	resetTime := getOKTradeMaxResetTime(key, setting.Symbol) + 600
 	if setting.Market == model.OKEX && now > resetTime {
 		setOKTradeMaxResetTime(key, setting.Symbol)
 		getMax, maxBuy, maxSell := api.GetMaxSize(key, secret, setting.Symbol)
 		if getMax {
-			carryStatus.LimitSell = maxSell
-			carryStatus.LimitBuy = maxBuy
+			status.LimitSell = maxSell
+			status.LimitBuy = maxBuy
 		}
 	}
-	if carryStatus.RateInAll > 0 {
-		carryStatus.TradeLineBuy = math.Max(setting.OpenShortMargin*(0.5+jump*carryStatus.RateInAll), winRateMin) + fundingRate
-		carryStatus.TradeLineSell = math.Max(setting.OpenShortMargin*(0.5-jump*carryStatus.RateInAll), loseRateMax) - fundingRate
+	if status.RateInAll > 0 {
+		status.TradeLineBuy = math.Max(setting.OpenShortMargin*(0.5+jump*status.RateInAll), winRateMin) + fundingRate
+		status.TradeLineSell = math.Max(setting.OpenShortMargin*(0.5-jump*status.RateInAll), loseRateMax) - fundingRate
 	} else {
-		carryStatus.TradeLineBuy = math.Max(setting.OpenShortMargin*(0.5+jump*carryStatus.RateInAll), loseRateMax) + fundingRate
-		carryStatus.TradeLineSell = math.Max(setting.OpenShortMargin*(0.5-jump*carryStatus.RateInAll), winRateMin) - fundingRate
+		status.TradeLineBuy = math.Max(setting.OpenShortMargin*(0.5+jump*status.RateInAll), loseRateMax) + fundingRate
+		status.TradeLineSell = math.Max(setting.OpenShortMargin*(0.5-jump*status.RateInAll), winRateMin) - fundingRate
 	}
-	if carryStatus.RateInAll > 0.5 {
-		carryStatus.TradeLineBuy = 1
+	if status.RateInAll > 0.5 {
+		status.TradeLineBuy = 1
 	}
-	carryStatus.TradeLineBuy *= carryRate
-	carryStatus.TradeLineSell *= carryRate
-	if carryClose && carryStatus.Holding > 0 {
-		carryStatus.TradeLineBuy = 1
-	} else if carryClose && carryStatus.Holding < 0 {
-		carryStatus.TradeLineSell = 1
+	status.TradeLineBuy *= carryRate
+	status.TradeLineSell *= carryRate
+	if carryClose && status.Holding > 0 {
+		status.TradeLineBuy = 1
+	} else if carryClose && status.Holding < 0 {
+		status.TradeLineSell = 1
 	}
 }
 
@@ -194,14 +194,16 @@ func ClearCross() {
 		spotMarkets = make(map[string]map[string]*spotMarket)
 		contractMarkets = make(map[string]map[string]*contractMarket)
 		coinSettings := model.GetCoinSettings(model.FunctionCross)
-		for i := 0; i < model.AppConfig.Accounts; i++ {
+		for i := 0; i < model.AppConfig.CrossAccounts; i++ {
 			for _, settings := range coinSettings {
 				for _, setting := range settings {
 					if setting == nil {
 						continue
 					}
-					account := model.AppConfig.GetAccount(setting.Market, i)
-					initStatus(account.Key, account.Secret, account.CarryClose, account.CarryRate, setting)
+					account := model.AppConfig.GetAccounts(setting.Market)[i]
+					if account != nil {
+						initStatus(account.Key, account.Secret, account.CarryClose, account.CarryRate, setting)
+					}
 				}
 				makeEqual(i, settings)
 			}
@@ -298,10 +300,13 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 			(model.AppConfig.Env != `test` && model.IsRelatedTickTimeout(settingRelate.Market, million-int64(tickRelate.Ts))) {
 			continue
 		}
-		for i := 0; i < model.AppConfig.Accounts; i++ {
-			account := model.AppConfig.GetAccount(setting.Market, i)
+		for i := 0; i < model.AppConfig.CrossAccounts; i++ {
+			account := model.AppConfig.GetAccounts(setting.Market)[i]
+			accountRelate := model.AppConfig.GetAccounts(settingRelate.Market)[i]
+			if account == nil || accountRelate == nil {
+				continue
+			}
 			status := getCarryStatus(setting.Coin, setting.Market, setting.Symbol, account.Key)
-			accountRelate := model.AppConfig.GetAccount(settingRelate.Market, i)
 			statusRelate := getCarryStatus(settingRelate.Coin, settingRelate.Market, settingRelate.Symbol, accountRelate.Key)
 			if status == nil || statusRelate == nil {
 				util.Notice(`fail to get status  %s %s-%s %s-%s %s %s`,

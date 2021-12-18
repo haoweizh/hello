@@ -746,20 +746,20 @@ func Transfer(key, secret, market, transferType string, amount float64) {
 }
 
 func GetMarketInfos(market string) (marketInfo map[string]*model.MarketInfo) {
-	account := model.AppConfig.GetAccount(market, 0)
+	accounts := model.AppConfig.GetAccounts(market)
 	switch market {
 	case model.Ftx:
-		return getMarketsFtx(account.Key, account.Secret)
+		return getMarketsFtx(accounts[0].Key, accounts[0].Secret)
 	case model.OKEX:
-		return getMarketsOKEX(account.Key, account.Secret)
+		return getMarketsOKEX(accounts[0].Key, accounts[0].Secret)
 	case model.Binance:
-		return getMarketsBinance(account.Key, account.Secret)
+		return getMarketsBinance(accounts[0].Key, accounts[0].Secret)
 	case model.Gate:
-		_, marketInfo = getMarketsGate(account.Key, account.Secret)
+		_, marketInfo = getMarketsGate(accounts[0].Key, accounts[0].Secret)
 	case model.Kucoin:
 		_, marketInfo = getMarketsKucoin(``)
 	case model.Huobi:
-		return getMarketsHuobi(account.Key, account.Secret)
+		return getMarketsHuobi(accounts[0].Key, accounts[0].Secret)
 	}
 	return
 }
@@ -810,38 +810,35 @@ func InitMarketInfos() (success bool) {
 	success = true
 	markets := model.GetMarkets()
 	for _, market := range markets {
-		account := model.AppConfig.GetAccount(market, 0)
+		accounts := model.AppConfig.GetAccounts(market)
 		switch market {
 		case model.Ftx:
-			model.SetMarketInfos(model.Ftx, getMarketsFtx(account.Key, account.Secret))
+			model.SetMarketInfos(model.Ftx, getMarketsFtx(accounts[0].Key, accounts[0].Secret))
 		case model.OKEX:
-			model.SetMarketInfos(model.OKEX, getMarketsOKEX(account.Key, account.Secret))
-			for i := 0; i < model.AppConfig.Accounts; i++ {
-				okAccount := model.AppConfig.GetAccount(market, i)
-				accountMode := getAccountConfigOKEX(okAccount.Key, okAccount.Secret)
+			model.SetMarketInfos(model.OKEX, getMarketsOKEX(accounts[0].Key, accounts[0].Secret))
+			for _, account := range accounts {
+				accountMode := getAccountConfigOKEX(account.Key, account.Secret)
 				util.Notice(`okex config and set: ` + accountMode)
 				if accountMode != `net_mode` {
-					if !setAccountModeOKEX(okAccount.Key, okAccount.Secret) {
+					if !setAccountModeOKEX(account.Key, account.Secret) {
 						success = false
 					}
 				}
 			}
 		case model.Binance:
-			model.SetMarketInfos(model.Binance, getMarketsBinance(account.Key, account.Secret))
-			for i := 0; i < model.AppConfig.Accounts; i++ {
-				binanceAccount := model.AppConfig.GetAccount(model.Binance, i)
-				setPosSideBinance(binanceAccount.Key, binanceAccount.Secret)
+			model.SetMarketInfos(model.Binance, getMarketsBinance(accounts[0].Key, accounts[0].Secret))
+			for _, account := range accounts {
+				setPosSideBinance(account.Key, account.Secret)
 			}
 		case model.Huobi:
-			model.SetMarketInfos(model.Huobi, getMarketsHuobi(account.Key, account.Secret))
+			model.SetMarketInfos(model.Huobi, getMarketsHuobi(accounts[0].Key, accounts[0].Secret))
 		case model.Gate:
-			for i := 0; i < model.AppConfig.Accounts; i++ {
-				gateAccount := model.AppConfig.GetAccount(model.Gate, i)
-				setPosSideGate(gateAccount.Key, gateAccount.Secret)
-				setMarginSettingGate(gateAccount.Key, gateAccount.Secret)
+			for _, account := range accounts {
+				setPosSideGate(account.Key, account.Secret)
+				setMarginSettingGate(account.Key, account.Secret)
 			}
 			var marketInfos map[string]*model.MarketInfo
-			success, marketInfos = getMarketsGate(account.Key, account.Secret)
+			success, marketInfos = getMarketsGate(accounts[0].Key, accounts[0].Secret)
 			if success {
 				model.SetMarketInfos(model.Gate, marketInfos)
 			}

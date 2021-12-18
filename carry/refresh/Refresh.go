@@ -35,7 +35,7 @@ var ProcessRefresh = func(setting *model.Setting, tick *model.BidAsk) {
 	if delayTick < 800 {
 		delayTick = 30
 	}
-	account := model.AppConfig.GetAccount(setting.Market, 0)
+	account := model.AppConfig.GetAccounts(setting.Market)[0]
 	if tick == nil || tick.Asks == nil || tick.Bids == nil || setting == nil || model.AppPause ||
 		(model.AppConfig.Env != `test` && (model.AppConfig.Handle != `1` || model.IsTickTimeout(setting.Market, delayTick))) ||
 		tick.Asks[0].Price-tick.Bids[0].Price < setting.PriceX {
