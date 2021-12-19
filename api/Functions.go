@@ -577,8 +577,8 @@ func PlaceOrder(key, secret, orderSide, orderType, market, symbol, instrument, o
 		order.Status = model.CarryStatusWorking
 	}
 	end := util.GetNowUnixMillion()
-	util.Notice(fmt.Sprintf(`...%s %s %s return order at %d distance %d %s %s price %f`,
-		orderSide, market, symbol, end, end-start, order.Status, order.ErrCode, order.Price))
+	util.Notice(fmt.Sprintf(`...%s %s %s return order at %d distance %d %s %s price %f id %s`,
+		orderSide, market, symbol, end, end-start, order.Status, order.ErrCode, order.Price, order.OrderId))
 	order.RefreshType = refreshType
 	if saveDB {
 		if isWs && market == model.OKEX {
@@ -588,7 +588,8 @@ func PlaceOrder(key, secret, orderSide, orderType, market, symbol, instrument, o
 		if order.OrderId == `` {
 			order.OrderId = fmt.Sprintf(`%s_error_%d`, order.ErrCode, time.Now().UnixNano())
 		}
-		util.Notice(`save order %s %s %s %f`, order.Market, order.Symbol, order.OrderSide, order.Amount)
+		util.Notice(`save order %s %s %s %s %s %f`,
+			order.RefreshType, order.Market, order.Symbol, order.OrderId, order.OrderSide, order.Amount)
 		go model.AppDB.Save(order)
 	}
 	if postOrder != nil {
@@ -863,7 +864,7 @@ func SetBidAsk(key, secret, market, symbol string) {
 
 func CreateMarketDepthServer(markets *model.Markets, market string, orderHandler OrderHandler) (
 	channels []chan struct{}) {
-	util.SocketInfo(" create depth chan for " + market)
+	util.Notice(" create depth chan for " + market)
 	channels = make([]chan struct{}, 1)
 	var err error
 	switch market {
@@ -892,7 +893,7 @@ func CreateMarketDepthServer(markets *model.Markets, market string, orderHandler
 		channels, err = WsDepthServeDFuture(markets, nil)
 	}
 	if err != nil {
-		util.SocketInfo(market + ` can not create depth server ` + err.Error())
+		util.Notice(market + ` can not create depth server ` + err.Error())
 	}
 	return channels
 }

@@ -115,13 +115,14 @@ func ResetChannels(market string, channels []chan struct{}) {
 	}
 	model.AppPause = true
 	model.AppMarkets.PutDepthChan(market, nil)
-	for _, channel := range channels {
+	for i, channel := range channels {
+		util.Notice(`send to stop connection %s %d`, market, i)
 		channel <- struct{}{}
 		close(channel)
 	}
 	model.AppMarkets.PutDepthChan(market, api.CreateMarketDepthServer(model.AppMarkets, market, postOrderCarry))
 	model.AppPause = false
-	util.Notice(market + " reset depth channel ")
+	util.Notice(market + " reset depth channel done")
 }
 
 func MaintainMarketChan() {

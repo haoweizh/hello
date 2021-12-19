@@ -272,7 +272,7 @@ func WsDepthServeOKEX(instruments map[string]bool, orderHandler OrderHandler) (c
 		privateConnectionOKEX[account.Key], err = newConnection(wsPrivateOKEX)
 		stopChan := make(chan struct{}, 2)
 		if err != nil {
-			util.SocketInfo("can not create web socket " + err.Error())
+			util.Notice("can not create web socket " + err.Error())
 		} else {
 			go chanHandler(model.OKEX, stopChan, privateConnectionOKEX[account.Key], wsHandlerPrivate, orderHandler)
 			_ = subscriberOKEXPrivate(privateConnectionOKEX[account.Key], account.Key, account.Secret)
@@ -281,10 +281,10 @@ func WsDepthServeOKEX(instruments map[string]bool, orderHandler OrderHandler) (c
 	}
 	subChannels, errPublic := WebSocketClient(model.OKEX, wsOKEX, GetWSSubscribes(model.OKEX, model.SubscribeDepth),
 		subscribeHandlerOKEX, wsHandlerOKEX, orderHandler, wsStepOKEX)
-	util.Notice(`finish connect public okex `)
 	for _, channel := range subChannels {
 		channels = append(channels, channel)
 	}
+	util.Notice(`finish connect public okex connections %d`, len(channels))
 	return channels, errPublic
 }
 

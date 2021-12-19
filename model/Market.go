@@ -142,6 +142,7 @@ func (markets *Markets) SetConnections(market string, connections []*websocket.C
 	if markets.Connections == nil {
 		markets.Connections = make(map[string][]*websocket.Conn)
 	}
+	util.Notice(`set connection %s, %d`, market, len(connections))
 	markets.Connections[market] = connections
 }
 
@@ -259,6 +260,7 @@ func (markets *Markets) PutDepthChan(marketName string, channels []chan struct{}
 	markets.lock.Lock()
 	defer markets.lock.Unlock()
 	markets.wsDepth[marketName] = channels
+	util.Notice(`set connection stopC %s %d`, marketName, len(channels))
 }
 
 func (markets *Markets) GetSymbols() (symbols map[string]bool) {
