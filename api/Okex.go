@@ -78,9 +78,10 @@ func reSubscribe() {
 	}
 	wrongArray := getWrongs()
 	util.Notice(fmt.Sprintf(`>>>>>>>>wrong instrument %v %d`, wrongArray, len(wrongArray)))
-	if len(wrongArray) > 8 {
+	if len(wrongArray) > len(model.AppMarkets.Connections[model.OKEX])*5 {
 		SetRequireReset(model.OKEX, true)
 		util.Notice(fmt.Sprintf(`require reset all okex channel, wrong instrument %d`, len(wrongArray)))
+		return
 	}
 	subscribeMap := make(map[string]interface{})
 	subscribeMap["op"] = "unsubscribe"
@@ -109,7 +110,9 @@ func reSubscribe() {
 		subscribe[`op`] = "subscribe"
 		subscribe[`args`] = []map[string]string{item}
 		if reSubErr := sendToConnection(connection, util.JsonEncodeToByte(subscribe)); reSubErr != nil {
-			util.SocketInfo("okex can not re-subscribe " + reSubErr.Error())
+			util.Notice("okex can not re-subscribe " + reSubErr.Error())
+		} else {
+			util.Notice(`okex resubscribe %s`, item[`instId`])
 		}
 	}
 }
