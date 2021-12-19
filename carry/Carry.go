@@ -735,7 +735,8 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 		amount = 0
 	}
 	if setting.Symbol == `REEF_PERP` {
-		util.Info(fmt.Sprintf(`REEF: %s balance: %fusd %f limit:%fusd`, key, balance.UsdValue, localHolingLimit))
+		util.Info(fmt.Sprintf(`REEF: %s account: %s balance: %fusd limit:%fusd`,
+			key, account.Key, balance.UsdValue, localHolingLimit))
 	}
 	amount = model.FormatAmountPair(setting.Market, setting.Symbol, setting.SymbolRelated, amount)
 	if model.OKEX == setting.Market && amount > 0 {
