@@ -686,7 +686,7 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	localHolingLimit := holdingLimitInU
 	account := model.AppConfig.GetAccounts(setting.Market)[0]
 	if account.Key != key {
-		localOpenValueLimit = holdingLimitInU / 10
+		localHolingLimit = holdingLimitInU / 10
 	}
 	// 针对第一个key(dk)关闭反向开仓
 	//if len(keys) > 0 && keys[0] == key {
@@ -733,10 +733,6 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 		(sideRelated == model.OrderSideSell &&
 			((balance.UsdValue < 0 && coinRate > 0.5) || balance.UsdValue < -1*localHolingLimit)) {
 		amount = 0
-	}
-	if setting.Symbol == `REEF_PERP` {
-		util.Info(fmt.Sprintf(`REEF: %s account: %s balance: %fusd limit:%fusd`,
-			key, account.Key, balance.UsdValue, localHolingLimit))
 	}
 	amount = model.FormatAmountPair(setting.Market, setting.Symbol, setting.SymbolRelated, amount)
 	if model.OKEX == setting.Market && amount > 0 {
