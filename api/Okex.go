@@ -112,7 +112,7 @@ func reSubscribe() {
 		if reSubErr := sendToConnection(connection, util.JsonEncodeToByte(subscribe)); reSubErr != nil {
 			util.Notice("okex can not re-subscribe " + reSubErr.Error())
 		} else {
-			util.Notice(`okex resubscribe %s`, item[`instId`])
+			util.Info(`okex resubscribe %s`, item[`instId`])
 		}
 	}
 }
