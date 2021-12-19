@@ -10,7 +10,6 @@ import (
 
 type Config struct {
 	lock                                                                                           sync.Mutex
-	CrossAccounts                                                                                  int // 参与cross的账户个数
 	ChannelSlot, Delay                                                                             float64
 	KucoinSpot, GateSpot                                                                           bool
 	KucoinRelatedKey, KucoinRelatedSecret, KucoinFutureKey, KucoinFutureSecret                     string
@@ -32,7 +31,46 @@ type Account struct {
 	CarryRate   float64
 }
 
+var crossLen int
+
 var marketAccounts = make(map[string][]*Account)
+
+func (config *Config) GetCrossLen() int {
+	if crossLen > 0 {
+		return crossLen
+	}
+	markets := GetMarkets()
+	for _, market := range markets {
+		accounts := config.GetAccounts(market)
+		if crossLen == 0 {
+			crossLen = len(accounts)
+		} else if len(accounts) != crossLen {
+			fmt.Println(fmt.Sprintf(`wrong cross config %s accounts:%d`, market, len(accounts)))
+			os.Exit(2)
+		}
+	}
+	return crossLen
+}
+
+//// GetCrossAccounts markets: market - bool
+//func (config *Config) GetCrossAccounts(markets map[string]bool) (crossAccounts []map[string]*Account) {
+//	for market := range markets {
+//		accounts := config.GetAccounts(market)
+//		if crossAccounts == nil {
+//			crossAccounts = make([]map[string]*Account, len(accounts))
+//		} else if len(crossAccounts) != len(accounts) {
+//			fmt.Println(fmt.Sprintf(`wrong cross config %s keys:%d accounts:%d`, market, len(accounts), len(accounts)))
+//			os.Exit(2)
+//		}
+//		for i, account := range accounts {
+//			if crossAccounts[i] == nil {
+//				crossAccounts[i] = make(map[string]*Account)
+//			}
+//			crossAccounts[i][market] = account
+//		}
+//	}
+//	return
+//}
 
 func (config *Config) GetAccountFromKey(market, key string) (account *Account) {
 	if marketAccounts[market] == nil {
@@ -102,10 +140,6 @@ func (config *Config) GetAccounts(market string) []*Account {
 		fmt.Println(fmt.Sprintf(`wrong config format %s keys:%d secrets:%d close:%d rate:%d`,
 			market, len(keys), len(secrets), len(closeValues), len(rateValues)))
 		os.Exit(1)
-	}
-	if config.CrossAccounts > 0 && config.CrossAccounts != len(keys) {
-		fmt.Println(fmt.Sprintf(`wrong cross config %s keys:%d accounts:%d`, market, len(keys), config.CrossAccounts))
-		os.Exit(2)
 	}
 	marketAccounts[market] = make([]*Account, len(keys))
 	for i := 0; i < len(keys); i++ {

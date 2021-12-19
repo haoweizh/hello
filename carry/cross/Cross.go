@@ -194,7 +194,7 @@ func ClearCross() {
 		spotMarkets = make(map[string]map[string]*spotMarket)
 		contractMarkets = make(map[string]map[string]*contractMarket)
 		coinSettings := model.GetCoinSettings(model.FunctionCross)
-		for i := 0; i < model.AppConfig.CrossAccounts; i++ {
+		for i := 0; i < model.AppConfig.GetCrossLen(); i++ {
 			for _, settings := range coinSettings {
 				for _, setting := range settings {
 					if setting == nil {
@@ -300,7 +300,7 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 			(model.AppConfig.Env != `test` && model.IsRelatedTickTimeout(settingRelate.Market, million-int64(tickRelate.Ts))) {
 			continue
 		}
-		for i := 0; i < model.AppConfig.CrossAccounts; i++ {
+		for i := 0; i < model.AppConfig.GetCrossLen(); i++ {
 			account := model.AppConfig.GetAccounts(setting.Market)[i]
 			accountRelate := model.AppConfig.GetAccounts(settingRelate.Market)[i]
 			if account == nil || accountRelate == nil {
