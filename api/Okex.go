@@ -1179,7 +1179,7 @@ func getMaxLoanOKEX(key, secret, coin string) (success bool, maxLoan float64) {
 	return success, maxLoan
 }
 
-// bar 1m/3m/5m/15m/30m/1H/2H/4H/6H/12H/1D/1W/1M/3M/6M/1Y
+// getCandlesOKEX bar 1m/3m/5m/15m/30m/1H/2H/4H/6H/12H/1D/1W/1M/3M/6M/1Y
 func getCandlesOKEX(key, secret, symbol, binSize string, before, after time.Time, count int) (
 	candles map[string]*model.Candle) {
 	candles = make(map[string]*model.Candle)
