@@ -139,14 +139,14 @@ func GetTurtleData(key, secret string, setting *model.Setting) (turtleData *Turt
 		if orderLong.Instrument != turtleData.instrument {
 			cross = true
 		}
-		go api.MustCancel(model.KeyDefault, model.SecretDefault, setting.Market, setting.Symbol,
+		go api.MustCancel(key, secret, setting.Market, setting.Symbol,
 			orderLong.Instrument, orderLong.OrderType, orderLong.OrderId, true)
 	}
 	if orderShort != nil && orderShort.OrderId != `` {
 		if orderShort.Instrument != turtleData.instrument {
 			cross = true
 		}
-		go api.MustCancel(model.KeyDefault, model.SecretDefault, setting.Market, setting.Symbol,
+		go api.MustCancel(key, secret, setting.Market, setting.Symbol,
 			orderShort.Instrument, orderShort.OrderType, orderShort.OrderId, true)
 	}
 	if cross {
@@ -168,7 +168,7 @@ func GetTurtleData(key, secret string, setting *model.Setting) (turtleData *Turt
 	for i := 1; i < 21; i++ {
 		duration, _ := time.ParseDuration(fmt.Sprintf(`%dh`, -24*i))
 		day := today.Add(duration)
-		candle := api.GetDayCandle(model.KeyDefault, model.SecretDefault, setting.Market, setting.Symbol,
+		candle := api.GetDayCandle(key, secret, setting.Market, setting.Symbol,
 			turtleData.instrument, day)
 		if candle == nil {
 			util.Notice(`can not calc turtleDate as nil candle %s %s %s %s`,
@@ -251,7 +251,7 @@ var ProcessTurtle = func(setting *model.Setting, tick *model.BidAsk) {
 		return
 	}
 	if setting.Chance == 0 && !turtleClosed[setting.Market][setting.Symbol] { // 开初始仓
-		placeTurtleOrders(turtleData, setting, currentN, priceShort, priceLong)
+		placeTurtleOrders(account.Key, account.Secret, turtleData, setting, currentN, priceShort, priceLong)
 		if turtleData.breakLong && turtleData.waitBreakLong {
 			handleBreak(account.Key, account.Secret, setting, turtleData, model.OrderSideBuy)
 			setting.Chance = 1
@@ -285,7 +285,7 @@ var ProcessTurtle = func(setting *model.Setting, tick *model.BidAsk) {
 		} else if turtleData.lowDays10 > setting.PriceX {
 			priceShort = math.Max(turtleData.lowDays10, turtleData.highDays10-2*turtleData.n)
 		}
-		placeTurtleOrders(turtleData, setting, currentN, priceShort, priceLong)
+		placeTurtleOrders(account.Key, account.Secret, turtleData, setting, currentN, priceShort, priceLong)
 		// 加仓一个单位
 		if turtleData.breakLong && turtleData.waitBreakLong {
 			handleBreak(account.Key, account.Secret, setting, turtleData, model.OrderSideBuy)
@@ -326,7 +326,7 @@ var ProcessTurtle = func(setting *model.Setting, tick *model.BidAsk) {
 		} else if turtleData.highDays10 < setting.PriceX {
 			priceLong = math.Min(turtleData.highDays10, turtleData.lowDays10+2*turtleData.n)
 		}
-		placeTurtleOrders(turtleData, setting, currentN, priceShort, priceLong)
+		placeTurtleOrders(account.Key, account.Secret, turtleData, setting, currentN, priceShort, priceLong)
 		// 加仓一个单位
 		if turtleData.breakShort && turtleData.waitBreakShort {
 			handleBreak(account.Key, account.Secret, setting, turtleData, model.OrderSideSell)
@@ -418,7 +418,7 @@ func handleBreak(key, secret string, setting *model.Setting, turtleData *TurtleD
 				temp := api.QueryOrderById(key, secret, setting.Market, setting.Symbol, short.Instrument,
 					short.OrderType, short.OrderId)
 				if temp != nil && temp.Status == model.CarryStatusWorking {
-					go api.MustCancel(model.KeyDefault, model.SecretDefault, short.Market, short.Symbol,
+					go api.MustCancel(key, secret, short.Market, short.Symbol,
 						short.Instrument, short.OrderType, short.OrderId, true)
 				}
 			}
@@ -429,7 +429,7 @@ func handleBreak(key, secret string, setting *model.Setting, turtleData *TurtleD
 				temp := api.QueryOrderById(key, secret, setting.Market, setting.Symbol, long.Instrument,
 					long.OrderType, long.OrderId)
 				if temp != nil && temp.Status == model.CarryStatusWorking {
-					go api.MustCancel(model.KeyDefault, model.SecretDefault, long.Market, long.Symbol,
+					go api.MustCancel(key, secret, long.Market, long.Symbol,
 						long.Instrument, long.OrderType, long.OrderId, true)
 				}
 			}
@@ -439,7 +439,7 @@ func handleBreak(key, secret string, setting *model.Setting, turtleData *TurtleD
 	}
 }
 
-func placeTurtleOrders(turtleData *TurtleData, setting *model.Setting,
+func placeTurtleOrders(key, secret string, turtleData *TurtleData, setting *model.Setting,
 	currentN int64, priceShort, priceLong float64) {
 	amountLimit := int64(setting.AmountLimit)
 	coinLimit := int64(setting.OpenShortMargin)
@@ -470,7 +470,7 @@ func placeTurtleOrders(turtleData *TurtleData, setting *model.Setting,
 			setting.Market, setting.Symbol, setting.Chance, amount, setting.PriceX, currentN, setting.AmountLimit,
 			orderSide, turtleData.end1, turtleData.highDays20, turtleData.highDays10, turtleData.highDays5,
 			turtleData.lowDays20, turtleData.lowDays10, turtleData.lowDays5, setting.OpenShortMargin))
-		order := api.MustPlaceOrder(model.KeyDefault, model.SecretDefault, orderSide, typeLong, setting.Market,
+		order := api.MustPlaceOrder(key, secret, orderSide, typeLong, setting.Market,
 			setting.Symbol, turtleData.instrument, ``, model.FunctionTurtle,
 			priceLong*(1+turtleTriggerDelta), priceLong, amount, true, false, setting)
 		if order != nil && order.OrderId != `` && order.Status != model.CarryStatusFail {
@@ -480,7 +480,7 @@ func placeTurtleOrders(turtleData *TurtleData, setting *model.Setting,
 			turtleData.breakLong = false
 		}
 	} else if turtleData.orderLong != nil && (currentN >= amountLimit || setting.Chance >= coinLimit) {
-		go api.MustCancel(model.KeyDefault, model.SecretDefault, setting.Market, setting.Symbol,
+		go api.MustCancel(key, secret, setting.Market, setting.Symbol,
 			turtleData.orderLong.Instrument, turtleData.orderLong.OrderType, turtleData.orderLong.OrderId, true)
 		turtleData.orderLong = nil
 	}
@@ -508,7 +508,7 @@ func placeTurtleOrders(turtleData *TurtleData, setting *model.Setting,
 			setting.Market, setting.Symbol, setting.Chance, amount, setting.PriceX, currentN, setting.AmountLimit,
 			orderSide, turtleData.end1, turtleData.highDays20, turtleData.highDays10, turtleData.highDays5,
 			turtleData.lowDays20, turtleData.lowDays10, turtleData.lowDays5, setting.OpenShortMargin))
-		order := api.MustPlaceOrder(model.KeyDefault, model.SecretDefault, orderSide, typeShort, setting.Market,
+		order := api.MustPlaceOrder(key, secret, orderSide, typeShort, setting.Market,
 			setting.Symbol, turtleData.instrument, ``, model.FunctionTurtle,
 			priceShort*(1-turtleTriggerDelta), priceShort, amount, true, false, setting)
 		if order != nil && order.OrderId != `` && order.Status != model.CarryStatusFail {
@@ -518,7 +518,7 @@ func placeTurtleOrders(turtleData *TurtleData, setting *model.Setting,
 			turtleData.breakShort = false
 		}
 	} else if turtleData.orderShort != nil && (currentN <= -1*amountLimit || setting.Chance <= -1*coinLimit) {
-		go api.MustCancel(model.KeyDefault, model.SecretDefault, setting.Market, setting.Symbol,
+		go api.MustCancel(key, secret, setting.Market, setting.Symbol,
 			turtleData.orderShort.Instrument, turtleData.orderShort.OrderType, turtleData.orderShort.OrderId, true)
 		turtleData.orderShort = nil
 	}

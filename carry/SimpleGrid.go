@@ -59,7 +59,7 @@ func getGridPos(key, secret string, setting *model.Setting) (gridPos *GridPos) {
 		return dayGridPos[yesterdayStr][setting.Market][setting.Symbol]
 	}
 	instrument := api.GetCurrentInstrument(setting.Market, setting.Symbol)
-	candle := api.GetDayCandle(model.KeyDefault, model.SecretDefault, setting.Market, setting.Symbol, instrument, yesterday)
+	candle := api.GetDayCandle(key, secret, setting.Market, setting.Symbol, instrument, yesterday)
 	if candle == nil {
 		return
 	}
@@ -101,7 +101,7 @@ func getGridPos(key, secret string, setting *model.Setting) (gridPos *GridPos) {
 	util.Notice(fmt.Sprintf(`grid pos absent load orders %d from %s`, len(orders), yesterdayStr))
 	for _, order := range orders {
 		if order.OrderTime.Before(today) {
-			tempOrder := api.QueryOrderById(model.KeyDefault, model.SecretDefault, order.Market, order.Symbol,
+			tempOrder := api.QueryOrderById(key, secret, order.Market, order.Symbol,
 				order.Instrument, order.OrderType, order.OrderId)
 			if tempOrder != nil {
 				order = tempOrder
@@ -113,7 +113,7 @@ func getGridPos(key, secret string, setting *model.Setting) (gridPos *GridPos) {
 			}
 			if order.Status == model.CarryStatusWorking {
 				util.Notice(fmt.Sprintf(`cancel old grid order %s at %s`, order.OrderId, order.OrderTime))
-				api.MustCancel(model.KeyDefault, model.SecretDefault, setting.Market, setting.Symbol, ``,
+				api.MustCancel(key, secret, setting.Market, setting.Symbol, ``,
 					order.OrderType, order.OrderId, true)
 			}
 			continue
@@ -142,7 +142,7 @@ func getGridPos(key, secret string, setting *model.Setting) (gridPos *GridPos) {
 			amount = math.Min(2*gridPos.amount, gridPos.amount+liquidateAmount)
 			liquidateAmount = liquidateAmount + gridPos.amount - amount
 		}
-		order := api.MustPlaceOrder(model.KeyDefault, model.SecretDefault, model.OrderSideSell, model.OrderTypeLimit,
+		order := api.MustPlaceOrder(key, secret, model.OrderSideSell, model.OrderTypeLimit,
 			setting.Market, setting.Symbol, ``, ``,
 			model.FunctionGrid, gridPos.pos[i], gridPos.pos[i], amount, false, false, setting)
 		order.GridPos = int64(i)
@@ -157,7 +157,7 @@ func getGridPos(key, secret string, setting *model.Setting) (gridPos *GridPos) {
 			amount = math.Min(2*gridPos.amount, gridPos.amount-liquidateAmount)
 			liquidateAmount = liquidateAmount + amount - gridPos.amount
 		}
-		order := api.MustPlaceOrder(model.KeyDefault, model.SecretDefault, model.OrderSideBuy, model.OrderTypeLimit,
+		order := api.MustPlaceOrder(key, secret, model.OrderSideBuy, model.OrderTypeLimit,
 			setting.Market, setting.Symbol, ``, ``,
 			model.FunctionGrid, gridPos.pos[i], gridPos.pos[i], amount, false, false, setting)
 		order.GridPos = int64(i)
@@ -198,7 +198,7 @@ var ProcessSimpleGrid = func(setting *model.Setting, tick *model.BidAsk) {
 		i := setting.Chance - 1
 		order := gridPos.orders[i]
 		if checkOrder && order != nil {
-			tempOrder := api.QueryOrderById(model.KeyDefault, model.SecretDefault, order.Market, order.Symbol, order.Instrument,
+			tempOrder := api.QueryOrderById(account.Key, account.Secret, order.Market, order.Symbol, order.Instrument,
 				order.OrderType, order.OrderId)
 			if tempOrder != nil {
 				order.Status = tempOrder.Status
@@ -207,7 +207,7 @@ var ProcessSimpleGrid = func(setting *model.Setting, tick *model.BidAsk) {
 			}
 		}
 		if order != nil && (order.Price > tick.Bids[0].Price || order.Status == model.CarryStatusSuccess) {
-			orderR := api.MustPlaceOrder(model.KeyDefault, model.SecretDefault, model.OrderSideSell, model.OrderTypeLimit,
+			orderR := api.MustPlaceOrder(account.Key, account.Secret, model.OrderSideSell, model.OrderTypeLimit,
 				setting.Market, setting.Symbol, ``, ``, model.FunctionGrid,
 				gridPos.pos[setting.Chance], gridPos.pos[setting.Chance], gridPos.amount, false, false, setting)
 			orderR.GridPos = setting.Chance
@@ -231,7 +231,7 @@ var ProcessSimpleGrid = func(setting *model.Setting, tick *model.BidAsk) {
 		i := setting.Chance + 1
 		order := gridPos.orders[i]
 		if checkOrder && order != nil {
-			tempOrder := api.QueryOrderById(model.KeyDefault, model.SecretDefault, order.Market, order.Symbol, order.Instrument,
+			tempOrder := api.QueryOrderById(account.Key, account.Secret, order.Market, order.Symbol, order.Instrument,
 				order.OrderType, order.OrderId)
 			if tempOrder != nil {
 				order.Status = tempOrder.Status
@@ -242,7 +242,7 @@ var ProcessSimpleGrid = func(setting *model.Setting, tick *model.BidAsk) {
 		if order != nil && (order.Price < tick.Asks[0].Price || order.Status == model.CarryStatusSuccess) {
 			util.Notice(fmt.Sprintf(`check sell %d chance: %d order pos: %d ask0: %f order price %f`,
 				len(gridPos.pos), setting.Chance, order.GridPos, tick.Asks[0].Price, order.Price))
-			orderS := api.MustPlaceOrder(model.KeyDefault, model.SecretDefault, model.OrderSideBuy, model.OrderTypeLimit,
+			orderS := api.MustPlaceOrder(account.Key, account.Secret, model.OrderSideBuy, model.OrderTypeLimit,
 				setting.Market, setting.Symbol, ``, ``, model.FunctionGrid, gridPos.pos[setting.Chance],
 				gridPos.pos[setting.Chance], gridPos.amount, false, false, setting)
 			orderS.GridPos = setting.Chance

@@ -18,9 +18,6 @@ var Currencies = []string{`btc`, `eth`, `usdt`, `ft`, `ft1808`, `pax`, `usdc`, `
 var CarryInfo = make(map[string]map[string]string) // userKey - function - msg
 var AppMetric = &MetricManager{}
 
-const KeyDefault = ``
-const SecretDefault = ``
-
 const OKEXBTCContractFaceValue = 100.0
 const OKEXOtherContractFaceValue = 10.0
 const Kucoin = `kucoin`

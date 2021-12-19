@@ -59,7 +59,7 @@ func RefreshMarketInfo() {
 	}
 }
 
-func MaintainTransFee(key, secret string) {
+func MaintainTransFee() {
 	for true {
 		var orders []model.Order
 		for true {
@@ -78,7 +78,12 @@ func MaintainTransFee(key, secret string) {
 			feeIndex += len(orders)
 			for i, value := range orders {
 				util.Info(fmt.Sprintf(`%d --- id %s`, i, value.OrderId))
-				order := api.QueryOrderById(key, secret, value.Market, value.Symbol, value.Instrument,
+				account := model.AppConfig.GetAccountFromKey(value.Market, value.AmountType)
+				if account == nil {
+					util.Notice(`can not maintain order status for nil account %s %s`, value.Market, value.AmountType)
+					continue
+				}
+				order := api.QueryOrderById(account.Key, account.Secret, value.Market, value.Symbol, value.Instrument,
 					value.OrderType, value.OrderId)
 				if order == nil {
 					//if value.Market == model.Ftx && (strings.Contains(value.RefreshType, `carry`) ||
@@ -166,7 +171,7 @@ func Maintain() {
 	//go CheckPastRefresh()
 	//go util.StartMidNightTimer(CancelAllOrders)
 	//go MaintainBalance()
-	go MaintainTransFee(model.KeyDefault, model.SecretDefault)
+	go MaintainTransFee()
 	//coinSettings := model.GetCoinSettings(model.FunctionCross)
 	//if coinSettings != nil {
 	//	go cross.ClearCarry()
