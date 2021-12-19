@@ -15,6 +15,7 @@ import (
 const OrderPriceLimit = 0
 const revertDis = 0.005
 const openValueLimit = 10000.0
+const holdingLimitInU = 500000.0
 const carryTypeOpen = `carry`
 const carryTypeClose = `carryClose`
 const carryTypeRevert = `carryRevert`
@@ -605,8 +606,8 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	scoreOpen, scoreClose float64) (sidePerp, sideRelated string, amount float64, carryType string) {
 	var bidAmount, askAmount float64
 	valueLow := setting.AmountLimit
-	usdRate := getUsdRate(key)
-	usdAvailable := getUsdAvailable(key)
+	localUsdRate := getUsdRate(key)
+	localUsdAvailable := getUsdAvailable(key)
 	coin := model.GetCoin(setting.Market, setting.Symbol)
 	balance := getCarryBalance(key, coin)
 	now := time.Now()
@@ -635,7 +636,7 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	}
 	coinRate := math.Abs(balance.UsdValue) / balanceAllValue
 	jump := 7.0
-	setOpen := math.Max((1.5-usdRate)*setting.OpenShortMargin*(0.5+jump*coinRate), 0.003) - fundingRate
+	setOpen := math.Max((1.5-localUsdRate)*setting.OpenShortMargin*(0.5+jump*coinRate), 0.003) - fundingRate
 	setClose := math.Min(setting.CloseShortMargin*(0.5+jump*coinRate), -0.003) - fundingRate
 	revertOpen := math.NaN()
 	revertClose := math.NaN()
@@ -682,6 +683,11 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 		setOpen = 1
 		setClose = -1
 	}
+	localHolingLimit := holdingLimitInU
+	account := model.AppConfig.GetAccounts(setting.Market)[0]
+	if account.Key != key {
+		localOpenValueLimit /= 10
+	}
 	// 针对第一个key(dk)关闭反向开仓
 	//if len(keys) > 0 && keys[0] == key {
 	setClose = -1
@@ -718,12 +724,14 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 		amount = math.Min(math.Abs(balance.Amount), amount)
 	}
 	if sideRelated == model.OrderSideBuy {
-		amount = math.Min(amount, usdAvailable/markPrice)
+		amount = math.Min(amount, localUsdAvailable/markPrice)
 	}
 	amount = math.Min(amount, localOpenValueLimit/markPrice)
 	// usd所剩太少且还要再买 || 反向持仓太多且还要再卖 || 下单太小
-	if (sideRelated == model.OrderSideBuy && (usdAvailable < usdLowLine || (balance.UsdValue > 0 && coinRate > 0.5))) ||
-		(sideRelated == model.OrderSideSell && (balance.UsdValue < 0 && coinRate > 0.5)) {
+	if (sideRelated == model.OrderSideBuy &&
+		(localUsdAvailable < usdLowLine || (balance.UsdValue > 0 && coinRate > 0.5)) || balance.UsdValue > localHolingLimit) ||
+		(sideRelated == model.OrderSideSell &&
+			((balance.UsdValue < 0 && coinRate > 0.5) || balance.UsdValue < -1*localHolingLimit)) {
 		amount = 0
 	}
 	amount = model.FormatAmountPair(setting.Market, setting.Symbol, setting.SymbolRelated, amount)
@@ -766,15 +774,15 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 		util.Debug(fmt.Sprintf(`+++ usdRate: %f coinRate: %f %s symbol: %s %s 
 			usd available:%f amount %f balance.Amount: %f scoreHigh: %f setOpen: %f scoreLow: %f setClose: %f
 			revertOpen: %f revertClose: %f do revert: %v`,
-			usdRate, coinRate, key, setting.Symbol, sidePerp,
-			usdAvailable, amount, balance.Amount, scoreOpen, setOpen, scoreClose, setClose,
+			localUsdRate, coinRate, key, setting.Symbol, sidePerp,
+			localUsdAvailable, amount, balance.Amount, scoreOpen, setOpen, scoreClose, setClose,
 			revertOpen, revertClose, carryClose))
 	}
 	model.SetCarryInfo(key, table+setting.Symbol,
 		fmt.Sprintf("%s\n%f %f usdAva:%s usdRate:%s 计算%s %s %s %s 市场%s %s 资金费率:%s coinRate:%s 持仓:%s 可用:%s ",
 			setting.Symbol, setting.OpenShortMargin, setting.CloseShortMargin,
-			strconv.FormatFloat(usdAvailable, 'f', 0, 64),
-			strconv.FormatFloat(100*usdRate, 'f', 0, 64)+"%",
+			strconv.FormatFloat(localUsdAvailable, 'f', 0, 64),
+			strconv.FormatFloat(100*localUsdRate, 'f', 0, 64)+"%",
 			strconv.FormatFloat(setOpen, 'f', 4, 64),
 			strconv.FormatFloat(setClose, 'f', 4, 64),
 			strconv.FormatFloat(revertOpen, 'f', 4, 64),
