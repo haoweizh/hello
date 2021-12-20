@@ -586,7 +586,7 @@ func placeOrderOKEX(key, secret string, isWs bool, order *model.Order) {
 		subscribeMap := make(map[string]interface{})
 		subscribeMap[`id`] = strconv.FormatInt(time.Now().UnixNano(), 10)
 		subscribeMap["op"] = "batch-orders"
-		postData[`tag`] = order.RefreshType
+		postData[`tag`] = strings.Split(order.RefreshType, `-`)[0]
 		subscribeMap[`args`] = []map[string]interface{}{postData}
 		wsOrderMsg := util.JsonEncodeToByte(subscribeMap)
 		util.Info(`ws order ` + string(wsOrderMsg))
