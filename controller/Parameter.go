@@ -338,7 +338,27 @@ func GetParameters(c *gin.Context) {
 	carryRows, _ := model.AppDB.Model(&orders).Select(`market,amount_type,order_side,sum(price*abs(amount)),date(order_time),refresh_type,count(*)`).
 		Group(`market,order_side,date(order_time),amount_type,refresh_type`).Order(`date(order_time) desc`).Rows()
 	carryFrontMsg := ``
-	carryBackMsg := ``
+	if carryRows != nil {
+		for carryRows.Next() {
+			var marketName, side, date, amountType, refreshType string
+			var value, orderNum, failRate float64
+			_ = carryRows.Scan(&marketName, &amountType, &side, &value, &date, &refreshType, &orderNum)
+			key := fmt.Sprintf(`%s-%s-%s-%s-%s`, marketName, amountType, side, date, refreshType)
+			if (marketName == model.OKEX && amountType == model.AppConfig.GetAccounts(model.OKEX)[0].Key) ||
+				(marketName == model.Binance && amountType == model.AppConfig.GetAccounts(model.Binance)[0].Key) ||
+				(marketName == model.Huobi && amountType == model.AppConfig.GetAccounts(model.Huobi)[0].Key) ||
+				(marketName == model.Kucoin && amountType == model.AppConfig.GetAccounts(model.Kucoin)[0].Key) {
+				if orderNum > 0 {
+					failRate = failData[key] / orderNum
+				}
+				carryFrontMsg += fmt.Sprintf("%s交易额 in USD: %s %s %f 类型：%s 单数:%f 失败率: %f\n",
+					marketName, date, side, value, refreshType, orderNum, failRate)
+			}
+		}
+		carryRows.Close()
+	}
+	carryRows, _ = model.AppDB.Model(&orders).Select(`market,amount_type,order_side,sum(price*abs(amount)),date(order_time-interval '8 hour'),refresh_type,count(*)`).
+		Group(`market,order_side,date(order_time-interval '8 hour'),amount_type,refresh_type`).Order(`date(order_time-interval '8 hour') desc`).Rows()
 	if carryRows != nil {
 		for carryRows.Next() {
 			var marketName, side, date, amountType, refreshType string
@@ -346,11 +366,7 @@ func GetParameters(c *gin.Context) {
 			_ = carryRows.Scan(&marketName, &amountType, &side, &value, &date, &refreshType, &orderNum)
 			key := fmt.Sprintf(`%s-%s-%s-%s-%s`, marketName, amountType, side, date, refreshType)
 			if (marketName == model.Ftx && amountType == model.AppConfig.GetAccounts(model.Ftx)[0].Key) ||
-				(marketName == model.OKEX && amountType == model.AppConfig.GetAccounts(model.OKEX)[0].Key) ||
-				(marketName == model.Binance && amountType == model.AppConfig.GetAccounts(model.Binance)[0].Key) ||
-				(marketName == model.Huobi && amountType == model.AppConfig.GetAccounts(model.Huobi)[0].Key) ||
-				(marketName == model.Gate && amountType == model.AppConfig.GetAccounts(model.Gate)[0].Key) ||
-				(marketName == model.Kucoin && amountType == model.AppConfig.GetAccounts(model.Kucoin)[0].Key) {
+				(marketName == model.Gate && amountType == model.AppConfig.GetAccounts(model.Gate)[0].Key) {
 				if orderNum > 0 {
 					failRate = failData[key] / orderNum
 				}
@@ -366,7 +382,6 @@ func GetParameters(c *gin.Context) {
 	}
 	msg += model.AppMetric.ToString() + "\n"
 	msg += model.AppConfig.ToString()
-	msg += carryBackMsg
 	c.String(http.StatusOK, msg)
 }
 
