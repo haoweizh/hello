@@ -436,19 +436,35 @@ func placeCross(statusBuy, statusSell *CarryStatus, priceBuy, priceSell, amount 
 		//util.Notice(fmt.Sprintf(`waiting for other ordering %s`, setting.Symbol))
 		return
 	}
-	//placeSuccess := true
-	//if setting.Market == model.OKEX {
-	//	placeSuccess = api.PlacePairOKEX(key, model.GetCoin(setting.Market, setting.Symbol), sidePerp, sideRelated,
-	//		model.OrderTypeLimit, perpPrice, relatedPrice, amount)
-	//} else {
-	//	go api.PlaceOrder(key, secret, sidePerp, model.OrderTypeLimit, setting.Market, setting.Symbol,
-	//		``, ``, model.FunctionCarry, perpPrice, perpPrice,
-	//		amount, true, true, postOrderCarry)
-	//	api.PlaceOrder(key, secret, sideRelated, model.OrderTypeLimit, setting.Market, setting.SymbolRelated,
-	//		``, ``, model.FunctionCarry, relatedPrice, relatedPrice,
-	//		amount, true, true, postOrderCarry)
-	//	time.Sleep(time.Second / 5)
-	//}
+	var sidePerp, sideRelated string
+	var perpPrice, relatedPrice float64
+
+	placeSuccess := true
+	if statusBuy.market == model.OKEX && statusSell.market == model.OKEX {
+		coin := model.GetCoin(statusBuy.market, statusBuy.symbol)
+		if statusBuy.isSpot {
+			sideRelated = model.OrderSideBuy
+			relatedPrice = priceBuy
+			sidePerp = model.OrderSideSell
+			perpPrice = priceSell
+		} else {
+			sideRelated = model.OrderSideSell
+			relatedPrice = priceSell
+			sidePerp = model.OrderSideBuy
+			perpPrice = priceBuy
+		}
+		placeSuccess = api.PlacePairOKEX(statusBuy.key, coin, sidePerp, sideRelated,
+			model.OrderTypeLimit, perpPrice, relatedPrice, amount)
+	} else {
+
+		go api.PlaceOrder(statusBuy.key, statusBuy.secret, sidePerp, model.OrderTypeLimit, statusBuy.market, statusBuy.symbol,
+			``, ``, model.FunctionCarry, perpPrice, perpPrice,
+			amount, true, true, postOrderCarry)
+		api.PlaceOrder(key, secret, sideRelated, model.OrderTypeLimit, setting.Market, setting.SymbolRelated,
+			``, ``, model.FunctionCarry, relatedPrice, relatedPrice,
+			amount, true, true, postOrderCarry)
+		time.Sleep(time.Second / 5)
+	}
 	//if placeSuccess {
 	//	usdAvailable := getUsdAvailable(key)
 	//	balanceAllValue := getBalanceAll(key)
