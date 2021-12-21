@@ -332,7 +332,27 @@ func GetParameters(c *gin.Context) {
 			var orderNum float64
 			_ = failRows.Scan(&marketName, &amountType, &side, &date, &refreshType, &orderNum)
 			key := fmt.Sprintf(`%s-%s-%s-%s-%s`, marketName, amountType, side, date, refreshType)
-			failData[key] = orderNum
+			if (marketName == model.OKEX && amountType == model.AppConfig.GetAccounts(model.OKEX)[0].Key) ||
+				(marketName == model.Binance && amountType == model.AppConfig.GetAccounts(model.Binance)[0].Key) ||
+				(marketName == model.Huobi && amountType == model.AppConfig.GetAccounts(model.Huobi)[0].Key) ||
+				(marketName == model.Kucoin && amountType == model.AppConfig.GetAccounts(model.Kucoin)[0].Key) {
+				failData[key] = orderNum
+			}
+		}
+	}
+	failRows, _ = model.AppDB.Model(&orders).Select(`market,amount_type,order_side,date(order_time-interval '8 hour'),refresh_type,count(*)`).
+		Where(`status=?`, `fail`).Group(`market,order_side,date(order_time-interval '8 hour'),amount_type,refresh_type`).
+		Order(`date(order_time) desc`).Rows()
+	if failRows != nil {
+		for failRows.Next() {
+			var marketName, side, date, amountType, refreshType string
+			var orderNum float64
+			_ = failRows.Scan(&marketName, &amountType, &side, &date, &refreshType, &orderNum)
+			key := fmt.Sprintf(`%s-%s-%s-%s-%s`, marketName, amountType, side, date, refreshType)
+			if (marketName == model.Ftx && amountType == model.AppConfig.GetAccounts(model.Ftx)[0].Key) ||
+				(marketName == model.Gate && amountType == model.AppConfig.GetAccounts(model.Gate)[0].Key) {
+				failData[key] = orderNum
+			}
 		}
 	}
 	carryRows, _ := model.AppDB.Model(&orders).Select(`market,amount_type,order_side,sum(price*abs(amount)),date(order_time),refresh_type,count(*)`).
