@@ -342,7 +342,7 @@ func GetParameters(c *gin.Context) {
 	}
 	failRows, _ = model.AppDB.Model(&orders).Select(`market,amount_type,order_side,date(order_time-interval '8 hour'),refresh_type,count(*)`).
 		Where(`status=?`, `fail`).Group(`market,order_side,date(order_time-interval '8 hour'),amount_type,refresh_type`).
-		Order(`date(order_time) desc`).Rows()
+		Order(`date(order_time-interval '8 hour') desc`).Rows()
 	if failRows != nil {
 		for failRows.Next() {
 			var marketName, side, date, amountType, refreshType string
