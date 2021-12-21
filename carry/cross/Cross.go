@@ -332,10 +332,12 @@ func calcAmount(carryStatus, carryStatusRelate *CarryStatus, tick,
 		scoreClose = 0
 		msg := fmt.Sprintf(`different coin %s %s %s %s %f %f`, carryStatus.market, carryStatus.symbol,
 			carryStatusRelate.market, carryStatusRelate.symbol, scoreOpen, scoreClose)
-		err := util.SendMail(model.AppConfig.FromMail, model.AppConfig.FromMailAuth, "haoweizh@qq.com",
-			`不同币种`, msg)
-		if err != nil {
-			util.Notice(`fail to send mail msg %s %s`, msg, err.Error())
+		for _, address := range model.TeamMails {
+			err := util.SendMail(model.AppConfig.FromMail, model.AppConfig.FromMailAuth, address,
+				`不同币种`, msg)
+			if err != nil {
+				util.Notice(`fail to send mail msg %s %s`, msg, err.Error())
+			}
 		}
 		return nil, nil, 0, 0, 0
 	}

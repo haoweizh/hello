@@ -85,7 +85,16 @@ func WsDepthServeHuobi(markets *model.Markets, orderHandler OrderHandler) (chann
 				return
 			}
 			now := int(time.Now().UnixNano() / int64(time.Millisecond))
-			symbol := model.GetSymbol(model.Huobi, tickJson.Get("symbol").MustString())
+			symbol := tickJson.Get("symbol").MustString()
+			//eg: market.xrpbtc.depth.step0 => xrp_btc
+			if strings.Contains(symbol, "bbo") {
+				symbol = strings.Split(symbol, ".")[1]
+			} else {
+				splits := strings.Split(symbol, `.`)
+				if len(splits) > 1 {
+					symbol = model.GetSymbolWithSplit(splits[1], "_")
+				}
+			}
 			if symbol != "" {
 				symbol = strings.ReplaceAll(symbol, "_", "")
 				bidAsk := model.BidAsk{Ts: responseJson.Get("ts").MustInt(), TsReceived: now, UpdateId: tickJson.Get("quoteTime").MustInt64(),

@@ -83,7 +83,6 @@ func addCarryResult(key, market string, success bool) {
 	}
 	if carryFail[key] > 6 {
 		go pauseCarry(key)
-		mailAddr := `haoweizh@qq.com`
 		//accounts := model.AppConfig.GetAccounts(market)
 		//account := model.AppConfig.GetAccountFromKey(market, key)
 		//if accounts[0].Key == account.Key {
@@ -91,8 +90,10 @@ func addCarryResult(key, market string, success bool) {
 		//}
 		util.Notice(`----------stop carry %s %d`, key, carryFail[key])
 		carryFail[key] = 0
-		_ = util.SendMail(model.AppConfig.FromMail, model.AppConfig.FromMailAuth, mailAddr,
-			`暂停下单`, `market: `+market+` stop `+key)
+		for _, address := range model.TeamMails {
+			_ = util.SendMail(model.AppConfig.FromMail, model.AppConfig.FromMailAuth, address,
+				`暂停下单`, `market: `+market+` stop `+key)
+		}
 	}
 }
 

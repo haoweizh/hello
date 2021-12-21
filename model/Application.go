@@ -14,7 +14,8 @@ import (
 type PostOrder func(order *Order, setting *Setting) // 处理下单后的函数
 var HandlerMap = make(map[string]CarryHandler)
 var infoLock sync.Mutex
-var Currencies = []string{`btc`, `eth`, `usdt`, `ft`, `ft1808`, `pax`, `usdc`, `tusd`}
+var Currencies = []string{`btc`, `eth`, `usdt`, `pax`, `usdc`, `tusd`}
+var TeamMails = []string{`13581512402@139.com`, `haoweizh@qq.com`}
 var CarryInfo = make(map[string]map[string]string) // userKey - function - msg
 var AppMetric = &MetricManager{}
 
@@ -213,7 +214,7 @@ func GetOrderStatus(market, marketStatus string) (status string) {
 	return orderStatusMap[market][marketStatus]
 }
 
-func getSymbolWithSplit(original, split string) (symbol string) {
+func GetSymbolWithSplit(original, split string) (symbol string) {
 	original = strings.ToLower(original)
 	for _, currency := range Currencies {
 		if strings.Contains(original, currency) && strings.LastIndex(original, currency)+len(currency) == len(original) {
@@ -222,36 +223,6 @@ func getSymbolWithSplit(original, split string) (symbol string) {
 	}
 	util.Notice(`can not parse symbol for currency absent ` + original)
 	return ``
-}
-
-func GetSymbol(market, subscribe string) (symbol string) {
-	switch market {
-	case Huobi: //market.xrpbtc.depth.step0: xrp_btc
-		if strings.Contains(subscribe, "bbo") {
-			return strings.Split(subscribe, ".")[1]
-		}
-		subscribe = strings.Replace(subscribe, "market.", "", 1)
-		subscribe = strings.Replace(subscribe, ".depth.step0", "", 1)
-		return getSymbolWithSplit(subscribe, "_")
-	case OKEX: //ok_sub_spot_xrp_btc_depth_5: xrp_btc
-		subscribe = strings.Replace(subscribe, "ok_sub_spot_", "", 1)
-		subscribe = strings.Replace(subscribe, "_depth_5", "", 1)
-		return subscribe
-	case Binance: // eosusdt@depth5: xrpbtc
-		if strings.Index(subscribe, `@`) == -1 {
-			return ``
-		}
-		subscribe = subscribe[0:strings.Index(subscribe, `@`)]
-		return strings.ToUpper(subscribe) //返回格式 XRPUSDT
-		//return getSymbolWithSplit(subscribe, `_`)
-	case Coinpark: //BTC_USDT bibox_sub_spot_BTC_USDT_ticker
-		subscribe = strings.Replace(subscribe, `bibox_sub_spot_`, ``, 1)
-		subscribe = strings.Replace(subscribe, `_ticker`, ``, 1)
-		return subscribe
-	case Bitmex:
-		return subscribe
-	}
-	return ""
 }
 
 func NewConfig() {

@@ -154,10 +154,12 @@ func GetTurtleData(key, secret string, setting *model.Setting) (turtleData *Turt
 		model.AppDB.Model(setting).Where("market= ? and symbol= ? and function= ?",
 			setting.Market, setting.Symbol, model.FunctionTurtle).Updates(map[string]interface{}{`chance`: 0})
 		go func() {
-			err := util.SendMail(model.AppConfig.FromMail, model.AppConfig.FromMailAuth, "haoweizh@qq.com", `跨期交割`,
-				setting.Market+turtleData.instrument)
-			if err != nil {
-				util.Notice(`fail to send mail %s`, err.Error())
+			for _, address := range model.TeamMails {
+				err := util.SendMail(model.AppConfig.FromMail, model.AppConfig.FromMailAuth, address, `跨期交割`,
+					setting.Market+turtleData.instrument)
+				if err != nil {
+					util.Notice(`fail to send mail %s`, err.Error())
+				}
 			}
 		}()
 		channels := model.AppMarkets.GetDepthChan(setting.Market)
@@ -301,10 +303,12 @@ var ProcessTurtle = func(setting *model.Setting, tick *model.BidAsk) {
 		if turtleData.breakShort && turtleData.waitBreakShort {
 			handleBreak(account.Key, account.Secret, setting, turtleData, model.OrderSideSell)
 			go func() {
-				err := util.SendMail(model.AppConfig.FromMail, model.AppConfig.FromMailAuth, `haoweizh@qq.com`, `平多`+setting.Market+setting.Symbol,
-					fmt.Sprintf(`止盈止损at%f 仓位%d 数量 %f`, priceShort, setting.Chance, setting.GridAmount))
-				if err != nil {
-					util.Notice(`fail to send mail %s`, err.Error())
+				for _, address := range model.TeamMails {
+					err := util.SendMail(model.AppConfig.FromMail, model.AppConfig.FromMailAuth, address, `平多`+setting.Market+setting.Symbol,
+						fmt.Sprintf(`止盈止损at%f 仓位%d 数量 %f`, priceShort, setting.Chance, setting.GridAmount))
+					if err != nil {
+						util.Notice(`fail to send mail %s`, err.Error())
+					}
 				}
 			}()
 			turtleClosed[setting.Market][setting.Symbol] = true
@@ -342,11 +346,13 @@ var ProcessTurtle = func(setting *model.Setting, tick *model.BidAsk) {
 		if turtleData.breakLong && turtleData.waitBreakLong {
 			handleBreak(account.Key, account.Secret, setting, turtleData, model.OrderSideBuy)
 			go func() {
-				err := util.SendMail(model.AppConfig.FromMail, model.AppConfig.FromMailAuth, `haoweizh@qq.com`,
-					`平空`+setting.Market+setting.Symbol, fmt.Sprintf(`止盈止损at%f 仓位%d 数量 %f`,
-						priceLong, setting.Chance, setting.GridAmount))
-				if err != nil {
-					util.Notice(`fail to send mail %s`, err.Error())
+				for _, address := range model.TeamMails {
+					err := util.SendMail(model.AppConfig.FromMail, model.AppConfig.FromMailAuth, address,
+						`平空`+setting.Market+setting.Symbol, fmt.Sprintf(`止盈止损at%f 仓位%d 数量 %f`,
+							priceLong, setting.Chance, setting.GridAmount))
+					if err != nil {
+						util.Notice(`fail to send mail %s`, err.Error())
+					}
 				}
 			}()
 			setting.Chance = 0
