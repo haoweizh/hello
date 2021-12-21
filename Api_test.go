@@ -115,7 +115,6 @@ func Test_getCommonMarketInfos(t *testing.T) {
 func Test_initTurtleN(t *testing.T) {
 	model.NewConfig()
 	_ = configor.Load(model.AppConfig, "./config.yml")
-	fmt.Println(fmt.Sprintf(`cross: %d`, model.AppConfig.CrossAccounts))
 	account := model.AppConfig.GetAccounts(model.Binance)[1]
 	if account == nil {
 		fmt.Println(`right`)
