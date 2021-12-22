@@ -520,7 +520,7 @@ func getBalanceBinance(key string, secret string) (success bool, balances []*mod
 //	return value
 //}
 
-func getPositionsBinance(key, secret string) (success bool, positions []*model.Position, posBalance float64) {
+func getPositionsBinance(key, secret string) (success bool, positions []*model.Position, margin float64) {
 	responseBody := signedRequestBinance(key, secret, http.MethodGet, restBinanceFuture+"/fapi/v2/account", true, nil)
 	positionJson, err := util.NewJSON(responseBody)
 	if err != nil || positionJson == nil {
@@ -529,37 +529,32 @@ func getPositionsBinance(key, secret string) (success bool, positions []*model.P
 	success = positionJson.Get("canTrade").MustBool()
 	if success {
 		positions = make([]*model.Position, 0)
+		marginJson := positionJson.Get(`totalMarginBalance`).MustString()
+		margin, _ = strconv.ParseFloat(marginJson, 64)
 		data := positionJson.Get("positions").MustArray()
-		assets := positionJson.Get("assets").MustArray()
-		for _, asset := range assets {
-			item := asset.(map[string]interface{})
-			if item[`asset`].(string) == `USDT` {
-				if item[`walletBalance`] != nil {
-					posBalance, _ = strconv.ParseFloat(item[`walletBalance`].(string), 64)
-					break
-				}
-			}
-		}
 		for _, item := range data {
 			position := &model.Position{Market: model.Binance, Ts: util.GetNowUnixMillion()}
-			asset := item.(map[string]interface{})
-			if asset[`symbol`] != nil {
-				symbol := asset[`symbol`].(string)
+			value := item.(map[string]interface{})
+			if value[`symbol`] != nil {
+				symbol := value[`symbol`].(string)
 				if symbol[len(symbol)-4:] == `USDT` {
 					symbol = symbol[0:len(symbol)-4] + "-PERP"
 				}
 				position.Currency = symbol
 			}
-			if asset[`positionAmt`] != nil {
-				position.Free, _ = strconv.ParseFloat(asset[`positionAmt`].(string), 64)
+			if value[`positionAmt`] != nil {
+				position.Free, _ = strconv.ParseFloat(value[`positionAmt`].(string), 64)
 			}
-			if asset[`entryPrice`] != nil {
-				position.EntryPrice, _ = strconv.ParseFloat(asset[`entryPrice`].(string), 64)
+			if value[`entryPrice`] != nil {
+				position.EntryPrice, _ = strconv.ParseFloat(value[`entryPrice`].(string), 64)
+			}
+			if value[`unrealizedProfit`] != nil {
+				position.ProfitUnreal, _ = strconv.ParseFloat(value[`unrealizedProfit`].(string), 64)
 			}
 			positions = append(positions, position)
 		}
 	}
-	return success, positions, posBalance
+	return success, positions, margin
 }
 
 func getFundingRateBinance(key, secret, symbol string) (fundingRate *model.FundingRate) {

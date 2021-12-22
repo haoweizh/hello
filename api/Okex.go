@@ -1080,7 +1080,7 @@ func _(key, secret, instrument string) (price float64) {
 }
 
 // 目前只支持永续 swap
-func getPositionsOKEX(key, secret string) (success bool, positions []*model.Position, posBalance float64) {
+func getPositionsOKEX(key, secret string) (success bool, positions []*model.Position) {
 	path := fmt.Sprintf("/api/v5/account/positions?%s",
 		util.ComposeParams(map[string]interface{}{"instType": `SWAP`}))
 	responseBody := sendSignRequestOKEX(key, secret, http.MethodGet, path, nil)
@@ -1103,7 +1103,7 @@ func getPositionsOKEX(key, secret string) (success bool, positions []*model.Posi
 			success = false
 		}
 	}
-	return success, positions, 0
+	return success, positions
 }
 
 func GetMaxSize(key, secret, instrument string) (success bool, maxBuy, maxSell float64) {

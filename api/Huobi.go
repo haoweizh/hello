@@ -555,6 +555,9 @@ func getPositionsHuobi(key string, secret string) (success bool, positions []*mo
 			positionMap[currency].Direction = direction
 			positionMap[currency].Free = positionMap[currency].Free + realAmount
 		}
+		if item[`profit_unreal`] != nil {
+			positionMap[currency].ProfitUnreal, _ = item[`profit_unreal`].(json.Number).Float64()
+		}
 	}
 	for _, position := range positionMap {
 		positions = append(positions, position)

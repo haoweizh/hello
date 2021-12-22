@@ -460,7 +460,7 @@ func GetPositions(key, secret, market string) (success bool, positions []*model.
 		return success, positions, totalInU
 	case model.OKEX:
 		_, _, _, collateral := getBalanceOKEX(key, secret)
-		success, positions, _ = getPositionsOKEX(key, secret)
+		success, positions = getPositionsOKEX(key, secret)
 		return success, positions, collateral.Available
 	case model.DFuture:
 		symbols := model.GetMarketSymbols(market)

@@ -517,6 +517,7 @@ func getPositionsKucoin(key string, secret string) (success bool, positions []*m
 		position.EntryPrice = contract.AvgEntryPrice
 		position.Margin = contract.PosMargin
 		position.LiquidationPrice = contract.LiquidationPrice
+		position.ProfitUnreal = contract.UnrealisedPnl
 		positions = append(positions, position)
 	}
 	return true, positions, posBalance
