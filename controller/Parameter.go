@@ -29,7 +29,7 @@ func ParameterServe() {
 	router.GET("set", SetParameters)
 	router.GET(`refresh`, RefreshParameters)
 	router.GET(`pw`, GetCode)
-	router.GET(`symbol`, setSymbol)
+	router.GET(`cross`, cross)
 	router.GET(`test`, test)
 	router.GET(`debug`, debug)
 	router.GET(`wss`, WsPage)
@@ -123,119 +123,9 @@ func test(c *gin.Context) {
 	c.String(http.StatusOK, carryBackMsg)
 }
 
-func setSymbol(c *gin.Context) {
-	pw := c.Query(`pw`)
-	if code == `` {
-		c.String(http.StatusOK, `请先获取验证码`)
-		return
-	}
-	if pw != code {
-		c.String(http.StatusOK, `验证码错误`)
-		return
-	}
-	waitTime := (util.GetNowUnixMillion() - codeGenTime) / 1000
-	if waitTime > 300 {
-		c.String(http.StatusOK, fmt.Sprintf(`验证码有效时间300秒，已超%d - %d > 300000`,
-			util.GetNowUnixMillion(), codeGenTime))
-		return
-	}
-	code = ``
-	market := c.Query(`market`)
-	symbol := c.Query(`symbol`)
-	function := c.Query(`function`)
-	strLimit := c.Query(`limit`)
-	parameter := c.Query(`parameter`)
-	binanceDisMin := c.Query(`binancedismin`)
-	binanceDisMax := c.Query(`binancedismax`)
-	refreshLimitLowStr := c.Query(`refreshlimitlow`)
-	refreshLimitStr := c.Query(`refreshlimit`)
-	chanceStr := c.Query(`chance`)
-	refreshSameTime := c.Query(`refreshsametime`)
-	gridAmountStr := c.Query(`gridamount`)
-	gridDisStr := c.Query(`griddis`)
-	priceXStr := c.Query(`pricex`)
-	valid := false
-	if market == `` || symbol == `` || function == `` {
-		c.String(http.StatusOK, `market symbol function cannot be empty`)
-	}
-	op := c.Query(`op`)
-	if op == `1` {
-		valid = true
-	} else if op == `0` {
-		valid = false
-	}
-	var setting model.Setting
-	amountLimit := 0.0
-	if op != `` {
-		model.AppDB.Model(&setting).Where("market= ? and symbol= ? and function= ?",
-			market, symbol, function).Updates(map[string]interface{}{"valid": valid})
-	}
-	if parameter != `` {
-		model.AppDB.Model(&setting).Where("market= ? and symbol= ? and function= ?",
-			market, symbol, function).Updates(map[string]interface{}{`function_parameter`: parameter})
-	}
-	if priceXStr != `` {
-		priceX, _ := strconv.ParseFloat(priceXStr, 64)
-		model.AppDB.Model(&setting).Where("market= ? and symbol= ? and function= ?",
-			market, symbol, function).Updates(map[string]interface{}{`price_x`: priceX})
-	}
-	if gridAmountStr != `` {
-		gridAmount, _ := strconv.ParseFloat(gridAmountStr, 64)
-		model.AppDB.Model(&setting).Where("market= ? and symbol= ? and function= ?",
-			market, symbol, function).Updates(map[string]interface{}{`grid_amount`: gridAmount})
-	}
-	if gridDisStr != `` {
-		gridPriceDistance, _ := strconv.ParseFloat(gridDisStr, 64)
-		model.AppDB.Model(&setting).Where("market= ? and symbol= ? and function= ?",
-			market, symbol, function).Updates(map[string]interface{}{`grid_price_distance`: gridPriceDistance})
-	}
-	if strLimit != `` {
-		amountLimit, _ = strconv.ParseFloat(strLimit, 64)
-		model.AppDB.Model(&setting).Where("market= ? and symbol= ? and function= ?",
-			market, symbol, function).Updates(map[string]interface{}{`amount_limit`: amountLimit})
-	}
-	if binanceDisMin != `` {
-		bDisMin, _ := strconv.ParseFloat(binanceDisMin, 64)
-		model.AppDB.Model(&setting).Where("market= ? and symbol= ? and function= ?",
-			market, symbol, function).Updates(map[string]interface{}{`binance_dis_min`: bDisMin})
-	}
-	if binanceDisMax != `` {
-		bDisMax, _ := strconv.ParseFloat(binanceDisMax, 64)
-		model.AppDB.Model(&setting).Where("market= ? and symbol= ? and function= ?",
-			market, symbol, function).Updates(map[string]interface{}{`binance_dis_max`: bDisMax})
-	}
-	if refreshLimitLowStr != `` {
-		refreshLimitLow, _ := strconv.ParseFloat(refreshLimitLowStr, 64)
-		model.AppDB.Model(&setting).Where("market= ? and symbol= ? and function= ?",
-			market, symbol, function).Updates(map[string]interface{}{`refresh_limit_low`: refreshLimitLow})
-	}
-	if refreshSameTime != `` {
-		value, _ := strconv.ParseFloat(refreshSameTime, 64)
-		model.AppDB.Model(&setting).Where("market= ? and symbol= ? and function= ?",
-			market, symbol, function).UpdateColumn("refresh_same_time", value)
-	}
-	if refreshLimitStr != `` {
-		refreshLimit, _ := strconv.ParseFloat(refreshLimitStr, 64)
-		model.AppDB.Model(&setting).Where("market= ? and symbol= ? and function= ?",
-			market, symbol, function).Updates(map[string]interface{}{`refresh_limit`: refreshLimit})
-	}
-	if chanceStr != `` {
-		chance, _ := strconv.ParseFloat(chanceStr, 64)
-		model.AppDB.Model(&setting).Where("market= ? and symbol= ? and function= ?",
-			market, symbol, function).UpdateColumn("chance", chance)
-	}
-	rows, _ := model.AppDB.Model(&setting).
-		Select(`market, symbol, function, function_parameter, amount_limit, refresh_same_time, valid`).Rows()
-	defer rows.Close()
-	msg := ``
-	for rows.Next() {
-		_ = rows.Scan(&market, &symbol, &function, &parameter, &amountLimit, &refreshSameTime, &valid)
-		msg += fmt.Sprintf("%s %s %s %s %f %s\n", market, symbol, function, parameter, amountLimit,
-			refreshSameTime)
-	}
-	model.LoadSettings()
-	carry.MaintainMarketChan()
-	c.String(http.StatusOK, msg)
+func cross(c *gin.Context) {
+
+	c.HTML(http.StatusOK, `./templates/balance.gohtml`, gin.H{})
 }
 
 func GetCode(c *gin.Context) {
