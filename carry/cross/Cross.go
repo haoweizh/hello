@@ -69,7 +69,7 @@ func createSpotMarket(key, secret, market string) (sm *spotMarket) {
 }
 
 func createFromPosition(key, secret string, setting *model.Setting) (carryStatus *CarryStatus) {
-	cm := getContractMarket(key, setting.Market)
+	cm := getContractMarket(key, setting.Market)aaa
 	if cm == nil {
 		cm = createContractMarket(key, secret, setting.Market)
 	}
@@ -100,7 +100,7 @@ func createFromPosition(key, secret string, setting *model.Setting) (carryStatus
 }
 
 func createFromBalance(key, secret string, setting *model.Setting) (carryStatus *CarryStatus) {
-	sm := getSpotMarket(key, setting.Market)
+	sm := getSpotMarket(key, setting.Market)aaa
 	if sm == nil {
 		sm = createSpotMarket(key, secret, setting.Market)
 	}
@@ -436,11 +436,11 @@ func placeCross(statusBuy, statusSell *CarryStatus, priceBuy, priceSell, amount 
 		//util.Notice(fmt.Sprintf(`waiting for other ordering %s`, setting.Symbol))
 		return
 	}
-	var sidePerp, sideRelated string
-	var perpPrice, relatedPrice float64
-
+	//todo postcarry
 	placeSuccess := true
 	if statusBuy.market == model.OKEX && statusSell.market == model.OKEX {
+		var sidePerp, sideRelated string
+		var perpPrice, relatedPrice float64
 		coin := model.GetCoin(statusBuy.market, statusBuy.symbol)
 		if statusBuy.isSpot {
 			sideRelated = model.OrderSideBuy
@@ -453,17 +453,34 @@ func placeCross(statusBuy, statusSell *CarryStatus, priceBuy, priceSell, amount 
 			sidePerp = model.OrderSideBuy
 			perpPrice = priceBuy
 		}
-		placeSuccess = api.PlacePairOKEX(statusBuy.key, coin, sidePerp, sideRelated,
-			model.OrderTypeLimit, perpPrice, relatedPrice, amount)
+		placeSuccess = api.PlacePairOKEX(statusBuy.key, coin, sidePerp, sideRelated, model.OrderTypeLimit, perpPrice, relatedPrice, amount)
 	} else {
-
-		go api.PlaceOrder(statusBuy.key, statusBuy.secret, sidePerp, model.OrderTypeLimit, statusBuy.market, statusBuy.symbol,
-			``, ``, model.FunctionCarry, perpPrice, perpPrice,
-			amount, true, true, postOrderCarry)
-		api.PlaceOrder(key, secret, sideRelated, model.OrderTypeLimit, setting.Market, setting.SymbolRelated,
-			``, ``, model.FunctionCarry, relatedPrice, relatedPrice,
-			amount, true, true, postOrderCarry)
+		go api.PlaceOrder(statusBuy.key, statusBuy.secret, model.OrderSideBuy, model.OrderTypeLimit, statusBuy.market, statusBuy.symbol,
+			``, ``, model.FunctionCarry, priceBuy, priceBuy,
+			amount, true, true, nil, nil)
+		api.PlaceOrder(statusSell.key, statusSell.secret, model.OrderSideSell, model.OrderTypeLimit, statusSell.market, statusSell.symbol,
+			``, ``, model.FunctionCarry, priceSell, priceSell,
+			amount, true, true, nil, nil)
 		time.Sleep(time.Second / 5)
+	}
+	if placeSuccess {
+		statusBuy.Holding += amount
+		if statusBuy.isSpot {
+			sm := getSpotMarket(statusBuy.key, statusBuy.market)
+			balance := sm.balances[statusBuy.symbol]
+			statusBuy.ValueInUsd = balance.UsdValue / balance.Amount * statusBuy.Holding
+			statusBuy.RateInAll = statusBuy.ValueInUsd / sm.accountValueInU
+		} else {
+			cm := getContractMarket(statusBuy.key, statusBuy.market)
+			statusBuy.ValueInUsd = math.Abs(statusBuy.Holding) * cm.positions[statusBuy.symbol].EntryPrice
+			statusBuy.RateInAll = statusBuy.ValueInUsd / cm.collateralsInU
+		}
+		statusBuy.LimitSell
+		statusBuy.LimitBuy
+		statusBuy.TradeLineBuy
+		statusBuy.TradeLineSell
+
+
 	}
 	//if placeSuccess {
 	//	usdAvailable := getUsdAvailable(key)
