@@ -444,7 +444,7 @@ func GetPosition(market, symbol, address string) (success bool, position *model.
 	return false, nil
 }
 
-func GetPositions(key, secret, market string) (success bool, positions []*model.Position, posBalance float64) {
+func GetPositions(key, secret, market string) (success bool, positions []*model.Position, availableUsd float64) {
 	switch market {
 	case model.Kucoin:
 		return getPositionsKucoin(key, secret)
@@ -455,9 +455,14 @@ func GetPositions(key, secret, market string) (success bool, positions []*model.
 	case model.Binance:
 		return getPositionsBinance(key, secret)
 	case model.Ftx:
-		_, _, totalInU := getBalanceFtx(key, secret)
+		success, balances, _ := getBalanceFtx(key, secret)
+		for _, balance := range balances {
+			if strings.EqualFold(balance.Coin, `usd`) {
+				availableUsd = balance.Amount
+			}
+		}
 		success, positions, _ = getPositionsFtx(key, secret)
-		return success, positions, totalInU
+		return success, positions, availableUsd
 	case model.OKEX:
 		_, _, _, collateral := getBalanceOKEX(key, secret)
 		success, positions = getPositionsOKEX(key, secret)

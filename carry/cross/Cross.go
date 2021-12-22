@@ -31,15 +31,15 @@ func checkSetCrossing(value bool) (before bool) {
 
 func createContractMarket(key, secret, market string) (cm *contractMarket) {
 	cm = &contractMarket{key: key, market: market}
-	success, positions, posBalance := api.GetPositions(key, secret, market)
+	success, positions, usdInFuture := api.GetPositions(key, secret, market)
 	if success {
 		cm.positions = make(map[string]*model.Position)
 		for _, position := range positions {
 			cm.positions[position.Currency] = position
 			// 只考虑USD(T)交易
-			cm.contractValueInU = position.EntryPrice * math.Abs(position.Free)
+			cm.contractValueInU += position.EntryPrice * math.Abs(position.Free)
 		}
-		cm.collateralsInU = posBalance
+		cm.collateralsInU = usdInFuture
 	}
 	setContractMarket(key, market, cm)
 	return
@@ -84,7 +84,7 @@ func createFromPosition(key, secret string, setting *model.Setting) (carryStatus
 		carryStatus.ValueInUsd = math.Abs(carryStatus.Holding) * cm.positions[setting.Symbol].EntryPrice
 		if cm.collateralsInU > 0 {
 			carryStatus.RateInAll = carryStatus.ValueInUsd / cm.collateralsInU
-			if cm.contractValueInU/cm.collateralsInU < 0.2 {
+			if cm.collateralsInU/cm.contractValueInU < 0.2 { // todo 需要review此限制
 				if carryStatus.Holding > 0 {
 					carryStatus.TradeLineBuy = 1
 				} else if carryStatus.Holding < 0 {
