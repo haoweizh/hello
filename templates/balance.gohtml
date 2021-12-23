@@ -5,7 +5,24 @@
     <title>{{$.today}}</title>
 </head>
 <body>
-<h4>交易频次</h4>
+<h4>markets</h4>
+<table border="1" cellspacing="0">
+    <tr>
+        <th>市场</th>
+        <th>现货权益</th>
+        <th>期货权益</th>
+        <th>保证金</th>
+        <th>现货持仓</th>
+        <th>期货持仓</th>
+    </tr>
+    {{range $i, $value := $.marketValue}}
+    <tr>
+        <td>{{index $.marketName $i}}</td><td>{{index $value 0}}</td><td>{{index $value 1}}</td><td>{{index $value 2}}</td><td>{{index $value 3}}</td><td>{{index $value 4}}</td>
+    </tr>
+    {{end}}
+    <td></td><td></td>
+</table>
+
 <table>
     <tr>
         <th>symbol</th>
@@ -15,18 +32,18 @@
         <th>价格</th>
     </tr>
     {{range $time := $.orderTimes}}
-    <td>{{$time}}</td>
-    {{$day := index $.orders $time}}
-    {{range $symbol, $symbolData := $day}}
-    {{range $side, $sideData := $symbolData}}
-    <tr>
-        <td>{{$symbol}}</td>
-        <td>{{$side}}</td>
-        <td>{{index $sideData 0}}</td>
-        <td>{{index $sideData 1}}</td>
-        <td>{{index $sideData 2}}</td>
-    </tr>
-    {{end}}{{end}}{{end}}
+        <td>{{$time}}</td>
+        {{$day := index $.orders $time}}
+        {{range $symbol, $symbolData := $day}}
+            {{range $side, $sideData := $symbolData}}
+                <tr>
+                    <td>{{$symbol}}</td>
+                    <td>{{$side}}</td>
+                    <td>{{index $sideData 0}}</td>
+                    <td>{{index $sideData 1}}</td>
+                    <td>{{index $sideData 2}}</td>
+                </tr>
+            {{end}}{{end}}{{end}}
 </table>
 <h4>{{.today}}账户持有(折合USDT)</h4>
 <table>
@@ -39,26 +56,26 @@
         <th>占比</th>
     </tr>
     {{range $time := $.times}}
-    {{$balance := index $.balances $time}}
-    {{$inAll := index $.inAlls $time}}
-    <td colspan="3">{{$time}}</td>
-    <td colspan="3">{{$inAll}}</td>
-    {{range $marketName, $marketBalance := $balance}}
-    {{range $currency, $money := $marketBalance}}
-    <tr>
-        <td>{{$marketName}}</td>
-        <td>{{$currency}}</td>
-        <td>{{index $money 2}}</td>
-        <td>{{index $money 0}}</td>
-        <td>{{index $money 1}}</td>
-        <td>{{index $money 3}}%</td>
-    </tr>
-    {{end}}{{end}}{{end}}
+        {{$balance := index $.balances $time}}
+        {{$inAll := index $.inAlls $time}}
+        <td colspan="3">{{$time}}</td>
+        <td colspan="3">{{$inAll}}</td>
+        {{range $marketName, $marketBalance := $balance}}
+            {{range $currency, $money := $marketBalance}}
+                <tr>
+                    <td>{{$marketName}}</td>
+                    <td>{{$currency}}</td>
+                    <td>{{index $money 2}}</td>
+                    <td>{{index $money 0}}</td>
+                    <td>{{index $money 1}}</td>
+                    <td>{{index $money 3}}%</td>
+                </tr>
+            {{end}}{{end}}{{end}}
 </table>
 
 <h3>最近一次交易:<br/>
     {{range $market, $updateAt :=$.lastUpdates}}
-    {{$market}}:{{$updateAt}}<br/>
+        {{$market}}:{{$updateAt}}<br/>
     {{end}}
 </h3>
 <h4>搬砖利差(单位：USDT，已按万分之七点五扣除了手续费)</h4>
@@ -66,44 +83,44 @@
     <tr>
         <th></th>
         {{range $symbol :=$.symbols}}
-        <th>{{$symbol}} 万{{index $.symbolMargin $symbol}}<br/>{{index $.symbolLastTrade $symbol}}</th>
+            <th>{{$symbol}} 万{{index $.symbolMargin $symbol}}<br/>{{index $.symbolLastTrade $symbol}}</th>
         {{end}}
         <th>可搬量</th>
         <th>利润</th>
         <th>资产</th>
     </tr>
     {{range $date := $.dates}}
-    <tr>
-        <td>{{$date}}</td>
-        {{range $symbol :=$.symbols}}
-        <td>all:{{index $.amounts $date $symbol}} margin:{{index $.margins $date $symbol}}<br/>
-            bid:{{index $.bidAmounts $date $symbol}} ask:{{index $.askAmounts $date $symbol}}<br/>
-            amountRate:{{index $.amountMarginRate $date $symbol}}%
-        </td>
-        {{end}}
-        <td>all:{{index $.dateAmount $date}} get:{{index $.dateDealAmount $date}}%<br/>
-            bid:{{index $.dateBidAmount $date}} ask:{{index $.dateAskAmount $date}}<br/>
-        </td>
-        <td>all:{{index $.dateMarginAmount $date}}<br/>
-            get:{{index $.dateMargin $date}}<br/>
-            dealRate:{{index $.dealMarginRate $date}}%
-        </td>
-        <td>USDT {{index $.historyBalanceInUsdt $date}}<br/>
-            BTC {{index $.historyBalanceInBtc $date}}<br/>
-            OKDK {{index $.historyOkdk $date}} BNB {{index $.historyBnb $date}}
-        </td>
-    </tr>
+        <tr>
+            <td>{{$date}}</td>
+            {{range $symbol :=$.symbols}}
+                <td>all:{{index $.amounts $date $symbol}} margin:{{index $.margins $date $symbol}}<br/>
+                    bid:{{index $.bidAmounts $date $symbol}} ask:{{index $.askAmounts $date $symbol}}<br/>
+                    amountRate:{{index $.amountMarginRate $date $symbol}}%
+                </td>
+            {{end}}
+            <td>all:{{index $.dateAmount $date}} get:{{index $.dateDealAmount $date}}%<br/>
+                bid:{{index $.dateBidAmount $date}} ask:{{index $.dateAskAmount $date}}<br/>
+            </td>
+            <td>all:{{index $.dateMarginAmount $date}}<br/>
+                get:{{index $.dateMargin $date}}<br/>
+                dealRate:{{index $.dealMarginRate $date}}%
+            </td>
+            <td>USDT {{index $.historyBalanceInUsdt $date}}<br/>
+                BTC {{index $.historyBalanceInBtc $date}}<br/>
+                OKDK {{index $.historyOkdk $date}} BNB {{index $.historyBnb $date}}
+            </td>
+        </tr>
     {{end}}
     <tr>
         <td>历史总可搬利润</td>
         {{range $symbol :=$.symbols}}
-        <td>{{index $.symbolAmount $symbol}}</td>
+            <td>{{index $.symbolAmount $symbol}}</td>
         {{end}}
     </tr>
     <tr>
         <td>历史平均达成率</td>
         {{range $symbol :=$.symbols}}
-        <td>{{index $.symbolDealAmount $symbol}}%</td>
+            <td>{{index $.symbolDealAmount $symbol}}%</td>
         {{end}}
     </tr>
 </table>
@@ -112,27 +129,27 @@
     <tr>
         <th>日期</th>
         {{range $currency := $.currencies}}
-        <th>{{$currency}}</th>
+            <th>{{$currency}}</th>
         {{end}}
     </tr>
     {{range $date := $.dates}}
-    <tr>
-        <td>{{$date}}</td>
-        {{range $currency := $.currencies}}
-        {{$percentage := index $.currencyPercentage $date $currency}}
-        <td>{{$percentage}} price:{{index $.historyPriceInUsdt $date $currency}}
-        </td>
-        {{end}}
-    </tr>
+        <tr>
+            <td>{{$date}}</td>
+            {{range $currency := $.currencies}}
+                {{$percentage := index $.currencyPercentage $date $currency}}
+                <td>{{$percentage}} price:{{index $.historyPriceInUsdt $date $currency}}
+                </td>
+            {{end}}
+        </tr>
     {{end}}
 </table>
 <h4>主要币种行情</h4>
 <table>
     {{range $currency, $price := $.prices}}
-    <tr>
-        <td>{{$currency}}</td>
-        <td>{{$price}}</td>
-    </tr>
+        <tr>
+            <td>{{$currency}}</td>
+            <td>{{$price}}</td>
+        </tr>
     {{end}}
 </table>
 </body>

@@ -8,8 +8,8 @@ import (
 
 var carryStatus = make(map[string]map[string]map[string]map[string]*CarryStatus) // coin - market - symbol - key - CarryStatus
 var okTradeMaxResetTime = make(map[string]map[string]int64)                      // key - symbol - init time in second
-var contractMarkets = make(map[string]map[string]*contractMarket)
-var spotMarkets = make(map[string]map[string]*spotMarket)
+var contractMarkets = make(map[string]*contractMarket)                           // key - contractMarket
+var spotMarkets = make(map[string]*spotMarket)                                   // key - spotMarket
 
 var crossLock sync.Mutex
 var crossing bool
@@ -40,40 +40,23 @@ type CarryStatus struct {
 	RateInAll                   float64 // 现货：该币种占总权益的比例；永续：以开仓价算该币种持仓占保证金百分比
 }
 
-func getContractMarket(key, market string) *contractMarket {
-	crossLock.Lock()
-	defer crossLock.Unlock()
-	if contractMarkets[key] == nil {
-		return nil
+func GetCrossMarketValue(key string) (market string, inAllSpot, collateral, holdingSpot, holdingFuture, unRealizedPnl float64) {
+	if spotMarkets[key] != nil {
+		market = spotMarkets[key].market
+		inAllSpot = spotMarkets[key].accountValueInU
+		holdingSpot = spotMarkets[key].accountValueInU - spotMarkets[key].availableU
 	}
-	return contractMarkets[key][market]
-}
-
-func setContractMarket(key, market string, cm *contractMarket) {
-	crossLock.Lock()
-	defer crossLock.Unlock()
-	if contractMarkets[key] == nil {
-		contractMarkets[key] = make(map[string]*contractMarket)
+	if contractMarkets[key] != nil {
+		if market == `` {
+			market = contractMarkets[key].market
+		}
+		collateral = contractMarkets[key].collateralsInU
+		for _, position := range contractMarkets[key].positions {
+			unRealizedPnl += position.ProfitUnreal
+		}
+		holdingFuture = contractMarkets[key].contractValueInU
 	}
-	contractMarkets[key][market] = cm
-}
-
-func getSpotMarket(key, market string) *spotMarket {
-	crossLock.Lock()
-	defer crossLock.Unlock()
-	if spotMarkets[key] == nil {
-		spotMarkets[key] = make(map[string]*spotMarket)
-	}
-	return spotMarkets[key][market]
-}
-
-func setSpotMarket(key, market string, sm *spotMarket) {
-	crossLock.Lock()
-	defer crossLock.Unlock()
-	if spotMarkets[key] == nil {
-		spotMarkets[key] = make(map[string]*spotMarket)
-	}
-	spotMarkets[key][market] = sm
+	return
 }
 
 func getCarryStatus(coin, market, symbol, key string) *CarryStatus {

@@ -7,6 +7,7 @@ import (
 	"github.com/satori/go.uuid"
 	"hello/api"
 	"hello/carry"
+	"hello/carry/cross"
 	"hello/model"
 	"hello/util"
 	"math"
@@ -29,7 +30,7 @@ func ParameterServe() {
 	router.GET("set", SetParameters)
 	router.GET(`refresh`, RefreshParameters)
 	router.GET(`pw`, GetCode)
-	router.GET(`cross`, cross)
+	router.GET(`cross`, crossPage)
 	router.GET(`test`, test)
 	router.GET(`debug`, debug)
 	router.GET(`wss`, WsPage)
@@ -123,9 +124,33 @@ func test(c *gin.Context) {
 	c.String(http.StatusOK, carryBackMsg)
 }
 
-func cross(c *gin.Context) {
-
-	c.HTML(http.StatusOK, `./templates/balance.gohtml`, gin.H{})
+func crossPage(c *gin.Context) {
+	accounts := make([]*model.Account, 0)
+	accounts = append(accounts, model.AppConfig.GetAccounts(model.Ftx)[0])
+	accounts = append(accounts, model.AppConfig.GetAccounts(model.OKEX)[0])
+	accounts = append(accounts, model.AppConfig.GetAccounts(model.Binance)[0])
+	accounts = append(accounts, model.AppConfig.GetAccounts(model.Gate)[0])
+	accounts = append(accounts, model.AppConfig.GetAccounts(model.Bybit)[0])
+	marketValues := make([][]float64, 0)
+	marketNames := make([]string, 0)
+	inAll := []float64{0, 0, 0, 0, 0, 0}
+	for _, account := range accounts {
+		if account != nil {
+			market, inAllSpot, collateral, holdingSpot, holdingFuture, unrealizedPnl := cross.GetCrossMarketValue(account.Key)
+			marketNames = append(marketNames, market)
+			marketValues = append(marketValues, []float64{inAllSpot, collateral + unrealizedPnl, collateral, holdingSpot, holdingFuture})
+			inAll[0] += inAllSpot + unrealizedPnl
+			if market != model.Ftx && market != model.OKEX {
+				inAll[0] += collateral
+			}
+			inAll[1] += inAllSpot
+			inAll[2] += collateral + unrealizedPnl
+			inAll[2] += collateral
+			inAll[3] += holdingSpot
+			inAll[4] += holdingFuture
+		}
+	}
+	c.HTML(http.StatusOK, `balance.gohtml`, gin.H{`marketName`: marketNames, `marketValue`: marketValues, `inAll`: inAll})
 }
 
 func GetCode(c *gin.Context) {

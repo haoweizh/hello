@@ -115,12 +115,16 @@ func Test_getCommonMarketInfos(t *testing.T) {
 func Test_initTurtleN(t *testing.T) {
 	model.NewConfig()
 	_ = configor.Load(model.AppConfig, "./config.yml")
-	account := model.AppConfig.GetAccounts(model.Binance)[1]
+	accounts := make([]*model.Account, 0)
+	account := model.AppConfig.GetAccounts(model.Binance)[0]
 	if account == nil {
 		fmt.Println(`right`)
 	} else {
 		fmt.Println(`wrong` + account.Key)
 	}
+	accounts = append(accounts, account)
+	accounts = append(accounts, nil)
+	fmt.Println(len(accounts))
 	result, _, _, order := api.CancelOrder(model.AppConfig.GateKey, model.AppConfig.GateSecret, `gate`, `SUN_USDT`, ``,
 		model.OrderTypeLimit, `86007650678`)
 	fmt.Println(result)

@@ -41,7 +41,7 @@ func createContractMarket(key, secret, market string) (cm *contractMarket) {
 		}
 		cm.collateralsInU = usdInFuture
 	}
-	setContractMarket(key, market, cm)
+	contractMarkets[key] = cm
 	return
 }
 
@@ -64,27 +64,26 @@ func createSpotMarket(key, secret, market string) (sm *spotMarket) {
 			}
 		}
 	}
-	setSpotMarket(key, market, sm)
+	spotMarkets[key] = sm
 	return
 }
 
 func createFromPosition(key, secret string, setting *model.Setting) (carryStatus *CarryStatus) {
-	cm := getContractMarket(key, setting.Market)
-	if cm == nil {
-		cm = createContractMarket(key, secret, setting.Market)
+	if contractMarkets[key] == nil {
+		contractMarkets[key] = createContractMarket(key, secret, setting.Market)
 	}
-	if cm == nil {
+	if contractMarkets[key] == nil {
 		return nil
 	}
 	carryStatus = &CarryStatus{isSpot: false, market: setting.Market, symbol: setting.Symbol, key: key, secret: secret,
 		LimitSell: math.NaN(), LimitBuy: math.NaN(), TradeLineBuy: setting.OpenShortMargin, TradeLineSell: setting.CloseShortMargin,
 	}
-	if cm.positions[setting.Symbol] != nil {
-		carryStatus.Holding = cm.positions[setting.Symbol].Free
-		carryStatus.ValueInUsd = math.Abs(carryStatus.Holding) * cm.positions[setting.Symbol].EntryPrice
-		if cm.collateralsInU > 0 {
-			carryStatus.RateInAll = carryStatus.ValueInUsd / cm.collateralsInU
-			if cm.collateralsInU/cm.contractValueInU < 0.2 { // todo 需要review此限制
+	if contractMarkets[key].positions[setting.Symbol] != nil {
+		carryStatus.Holding = contractMarkets[key].positions[setting.Symbol].Free
+		carryStatus.ValueInUsd = math.Abs(carryStatus.Holding) * contractMarkets[key].positions[setting.Symbol].EntryPrice
+		if contractMarkets[key].collateralsInU > 0 {
+			carryStatus.RateInAll = carryStatus.ValueInUsd / contractMarkets[key].collateralsInU
+			if contractMarkets[key].collateralsInU < contractMarkets[key].contractValueInU { // todo 需要review此限制
 				if carryStatus.Holding > 0 {
 					carryStatus.TradeLineBuy = 1
 				} else if carryStatus.Holding < 0 {
@@ -100,11 +99,10 @@ func createFromPosition(key, secret string, setting *model.Setting) (carryStatus
 }
 
 func createFromBalance(key, secret string, setting *model.Setting) (carryStatus *CarryStatus) {
-	sm := getSpotMarket(key, setting.Market)
-	if sm == nil {
-		sm = createSpotMarket(key, secret, setting.Market)
+	if spotMarkets[key] == nil {
+		spotMarkets[key] = createSpotMarket(key, secret, setting.Market)
 	}
-	if sm == nil {
+	if spotMarkets[key] == nil {
 		return
 	}
 	carryStatus = &CarryStatus{isSpot: true, market: setting.Market, symbol: setting.Symbol, key: key, secret: secret,
@@ -113,14 +111,14 @@ func createFromBalance(key, secret string, setting *model.Setting) (carryStatus 
 		TradeLineBuy:  setting.OpenShortMargin,
 		TradeLineSell: setting.CloseShortMargin,
 	}
-	if sm.balances[setting.Symbol] != nil {
-		carryStatus.Holding = sm.balances[setting.Symbol].Amount
-		carryStatus.ValueInUsd = sm.balances[setting.Symbol].UsdValue
-		carryStatus.RateInAll = carryStatus.ValueInUsd / sm.accountValueInU
+	if spotMarkets[key].balances[setting.Symbol] != nil {
+		carryStatus.Holding = spotMarkets[key].balances[setting.Symbol].Amount
+		carryStatus.ValueInUsd = spotMarkets[key].balances[setting.Symbol].UsdValue
+		carryStatus.RateInAll = carryStatus.ValueInUsd / spotMarkets[key].accountValueInU
 		doRevert := false
-		if sm.accountValueInU <= 0 || sm.availableU/sm.accountValueInU < 0.2 ||
-			(sm.collateral != nil && (sm.collateral.Rate < 10 || sm.collateral.Available <= 0 ||
-				(sm.collateral.Available-sm.collateral.Occupied)/sm.collateral.Available < 0.1)) {
+		if spotMarkets[key].accountValueInU <= 0 || spotMarkets[key].availableU/spotMarkets[key].accountValueInU < 0.2 ||
+			(spotMarkets[key].collateral != nil && (spotMarkets[key].collateral.Rate < 10 || spotMarkets[key].collateral.Available <= 0 ||
+				(spotMarkets[key].collateral.Available-spotMarkets[key].collateral.Occupied)/spotMarkets[key].collateral.Available < 0.1)) {
 			doRevert = true
 		}
 		if doRevert && carryStatus.Holding > 0 {
@@ -191,8 +189,8 @@ func ClearCross() {
 				time.Sleep(time.Millisecond * 10)
 			}
 		}
-		spotMarkets = make(map[string]map[string]*spotMarket)
-		contractMarkets = make(map[string]map[string]*contractMarket)
+		spotMarkets = make(map[string]*spotMarket)
+		contractMarkets = make(map[string]*contractMarket)
 		coinSettings := model.GetCoinSettings(model.FunctionCross)
 		for i := 0; i < model.AppConfig.GetCrossLen(); i++ {
 			for _, settings := range coinSettings {
@@ -375,7 +373,7 @@ func calcAmount(carryStatus, carryStatusRelate *CarryStatus, tick,
 	}
 	buyMarketU := 0.0
 	if statusBuy.isSpot {
-		buyMarket := getSpotMarket(statusBuy.key, statusBuy.market)
+		buyMarket := spotMarkets[statusBuy.key]
 		if buyMarket != nil {
 			buyMarketU = buyMarket.availableU
 		}
