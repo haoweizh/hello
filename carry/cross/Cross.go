@@ -475,12 +475,32 @@ func placeCross(statusBuy, statusSell *CarryStatus, priceBuy, priceSell, amount 
 			statusBuy.ValueInUsd = math.Abs(statusBuy.Holding) * cm.positions[statusBuy.symbol].EntryPrice
 			statusBuy.RateInAll = statusBuy.ValueInUsd / cm.collateralsInU
 		}
-		statusBuy.LimitSell
-		statusBuy.LimitBuy
+		if !math.IsNaN(statusBuy.LimitSell) {
+			statusBuy.LimitSell += amount
+		}
+		if !math.IsNaN(statusBuy.LimitBuy) {
+			statusBuy.LimitBuy -= amount
+		}
 		statusBuy.TradeLineBuy
 		statusBuy.TradeLineSell
 
-
+		if statusBuy.RateInAll > 0 {
+			statusBuy.TradeLineBuy = math.Max(setting.OpenShortMargin*(0.5+jump*statusBuy.RateInAll), winRateMin) + fundingRate
+			statusBuy.TradeLineSell = math.Max(setting.OpenShortMargin*(0.5-jump*statusBuy.RateInAll), loseRateMax) - fundingRate
+		} else {
+			statusBuy.TradeLineBuy = math.Max(setting.OpenShortMargin*(0.5+jump*statusBuy.RateInAll), loseRateMax) + fundingRate
+			statusBuy.TradeLineSell = math.Max(setting.OpenShortMargin*(0.5-jump*statusBuy.RateInAll), winRateMin) - fundingRate
+		}
+		if statusBuy.RateInAll > 0.5 {
+			statusBuy.TradeLineBuy = 1
+		}
+		status.TradeLineBuy *= carryRate
+		status.TradeLineSell *= carryRate
+		if carryClose && status.Holding > 0 {
+			status.TradeLineBuy = 1
+		} else if carryClose && status.Holding < 0 {
+			status.TradeLineSell = 1
+		}
 	}
 	//if placeSuccess {
 	//	usdAvailable := getUsdAvailable(key)
