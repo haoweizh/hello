@@ -357,17 +357,17 @@ var ProcessCarry = func(setting *model.Setting, tick *model.BidAsk) {
 	}
 	scoreOpen := 1 - tickRelated.Asks[0].Price/tickPerp.Bids[0].Price
 	scoreClose := 1 - tickRelated.Bids[0].Price/tickPerp.Asks[0].Price
-	mark := fmt.Sprintf(`%s_%s<->%s_%s`, setting.Market, setting.Symbol, setting.MarketRelated, setting.SymbolRelated)
+	mark := fmt.Sprintf(`%s_%s|%s_%s`, setting.Market, setting.Symbol, setting.MarketRelated, setting.SymbolRelated)
 	model.AppMetric.AddCarry(mark, scoreOpen, scoreClose)
 	if math.IsNaN(highest) || scoreOpen > highest || setting.Symbol == symbolHighest {
 		highest = scoreOpen
 		symbolHighest = setting.Symbol
-		model.AppMetric.AddCarry(`开仓价差++++`, highest, math.NaN())
+		model.AppMetric.AddCarry(`开仓_价差|++_++`, highest, math.NaN())
 	}
 	if math.IsNaN(lowest) || scoreClose < lowest || setting.Symbol == symbolLowest {
 		lowest = scoreClose
 		symbolLowest = setting.Symbol
-		model.AppMetric.AddCarry(`开仓价差----`, math.NaN(), lowest)
+		model.AppMetric.AddCarry(`开仓_价差|--_--`, math.NaN(), lowest)
 	}
 	begin := 0
 	step := 1

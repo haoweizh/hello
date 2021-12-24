@@ -125,32 +125,170 @@ func test(c *gin.Context) {
 }
 
 func crossPage(c *gin.Context) {
-	accounts := make([]*model.Account, 0)
-	accounts = append(accounts, model.AppConfig.GetAccounts(model.Ftx)[0])
-	accounts = append(accounts, model.AppConfig.GetAccounts(model.OKEX)[0])
-	accounts = append(accounts, model.AppConfig.GetAccounts(model.Binance)[0])
-	accounts = append(accounts, model.AppConfig.GetAccounts(model.Gate)[0])
-	accounts = append(accounts, model.AppConfig.GetAccounts(model.Bybit)[0])
-	marketValues := make([][]float64, 0)
-	marketNames := make([]string, 0)
+	indexStr := c.Query(`index`)
+	index, err := strconv.ParseInt(indexStr, 10, 64)
+	if err != nil {
+		index = 0
+	}
+	var accountFtx, accountOkex, accountBinance, accountGate, accountBybit, accountHuobi, accountKucoin *model.Account
+	tempAccounts := model.AppConfig.GetAccounts(model.Ftx)
+	if len(tempAccounts) > int(index) {
+		accountFtx = tempAccounts[index]
+	}
+	tempAccounts = model.AppConfig.GetAccounts(model.OKEX)
+	if len(tempAccounts) > int(index) {
+		accountOkex = tempAccounts[index]
+	}
+	tempAccounts = model.AppConfig.GetAccounts(model.Binance)
+	if len(tempAccounts) > int(index) {
+		accountBinance = tempAccounts[index]
+	}
+	tempAccounts = model.AppConfig.GetAccounts(model.Gate)
+	if len(tempAccounts) > int(index) {
+		accountGate = tempAccounts[index]
+	}
+	tempAccounts = model.AppConfig.GetAccounts(model.Bybit)
+	if len(tempAccounts) > int(index) {
+		accountBybit = tempAccounts[index]
+	}
+	tempAccounts = model.AppConfig.GetAccounts(model.Huobi)
+	if len(tempAccounts) > int(index) {
+		accountHuobi = tempAccounts[index]
+	}
+	tempAccounts = model.AppConfig.GetAccounts(model.Kucoin)
+	if len(tempAccounts) > int(index) {
+		accountKucoin = tempAccounts[index]
+	}
+	accounts := []*model.Account{accountFtx, accountOkex, accountBinance, accountGate, accountBybit, accountKucoin}
+	marketValues := make([][]string, 0)
 	inAll := []float64{0, 0, 0, 0, 0, 0}
 	for _, account := range accounts {
 		if account != nil {
 			market, inAllSpot, collateral, holdingSpot, holdingFuture, unrealizedPnl := cross.GetCrossMarketValue(account.Key)
-			marketNames = append(marketNames, market)
-			marketValues = append(marketValues, []float64{inAllSpot, collateral + unrealizedPnl, collateral, holdingSpot, holdingFuture})
+			marketValues = append(marketValues, []string{market,
+				strconv.FormatFloat(inAllSpot, 'f', 0, 64),
+				strconv.FormatFloat(collateral+unrealizedPnl, 'f', 0, 64),
+				strconv.FormatFloat(collateral, 'f', 0, 64),
+				strconv.FormatFloat(holdingSpot, 'f', 0, 64),
+				strconv.FormatFloat(holdingFuture, 'f', 0, 64)})
 			inAll[0] += inAllSpot + unrealizedPnl
 			if market != model.Ftx && market != model.OKEX {
 				inAll[0] += collateral
 			}
 			inAll[1] += inAllSpot
 			inAll[2] += collateral + unrealizedPnl
-			inAll[2] += collateral
-			inAll[3] += holdingSpot
-			inAll[4] += holdingFuture
+			inAll[3] += collateral
+			inAll[4] += holdingSpot
+			inAll[5] += holdingFuture
 		}
 	}
-	c.HTML(http.StatusOK, `balance.gohtml`, gin.H{`marketName`: marketNames, `marketValue`: marketValues, `inAll`: inAll})
+	marketValues = append(marketValues, []string{strconv.FormatFloat(inAll[0], 'f', 0, 64),
+		strconv.FormatFloat(inAll[1], 'f', 0, 64), strconv.FormatFloat(inAll[1], 'f', 0, 64),
+		strconv.FormatFloat(inAll[2], 'f', 0, 64), strconv.FormatFloat(inAll[3], 'f', 0, 64),
+		strconv.FormatFloat(inAll[4], 'f', 0, 64), strconv.FormatFloat(inAll[5], 'f', 0, 64),
+	})
+	tradeInfo := make([][]string, 0)
+	duration, _ := time.ParseDuration(`-96h`)
+	timeBegin := time.Now().Add(duration)
+	timeBegin = time.Date(timeBegin.Year(), timeBegin.Month(), timeBegin.Day(), 0, 0, 0, 0, timeBegin.Location())
+	failRows, _ := model.AppDB.Model(model.Order{}).Select(`market,amount_type,order_side,date(order_time),refresh_type,count(*)`).
+		Where(`status=?`, `fail`).Group(`market,order_side,date(order_time),amount_type,refresh_type`).
+		Order(`date(order_time) desc`).Rows()
+	failData := make(map[string]float64) // market - amount_type - side - date - fail count
+	if failRows != nil {
+		for failRows.Next() {
+			var marketName, side, date, amountType, refreshType string
+			var orderNum float64
+			_ = failRows.Scan(&marketName, &amountType, &side, &date, &refreshType, &orderNum)
+			dates := strings.Split(date, `-`)
+			date = fmt.Sprintf(`%s-%s`, dates[1], dates[2])
+			date = date[0:strings.Index(date, `T`)]
+			key := fmt.Sprintf(`%s-%s-%s-%s-%s`, marketName, amountType, side, date, refreshType)
+			if (marketName == model.OKEX && amountType == accountOkex.Key) ||
+				(marketName == model.Binance && amountType == accountBinance.Key) ||
+				(marketName == model.Huobi && amountType == accountHuobi.Key) ||
+				(marketName == model.Kucoin && amountType == accountKucoin.Key) {
+				failData[key] = orderNum
+			}
+		}
+	}
+	failRows, _ = model.AppDB.Model(model.Order{}).Select(`market,amount_type,order_side,date(order_time-interval '8 hour'),refresh_type,count(*)`).
+		Where(`status=?`, `fail`).Group(`market,order_side,date(order_time-interval '8 hour'),amount_type,refresh_type`).
+		Order(`date(order_time-interval '8 hour') desc`).Rows()
+	if failRows != nil {
+		for failRows.Next() {
+			var marketName, side, date, amountType, refreshType string
+			var orderNum float64
+			_ = failRows.Scan(&marketName, &amountType, &side, &date, &refreshType, &orderNum)
+			dates := strings.Split(date, `-`)
+			date = fmt.Sprintf(`%s-%s`, dates[1], dates[2])
+			date = date[0:strings.Index(date, `T`)]
+			key := fmt.Sprintf(`%s-%s-%s-%s-%s`, marketName, amountType, side, date, refreshType)
+			if (marketName == model.Ftx && amountType == accountFtx.Key) ||
+				(marketName == model.Gate && amountType == accountGate.Key) {
+				failData[key] = orderNum
+			}
+		}
+	}
+	carryRows, _ := model.AppDB.Model(model.Order{}).Select(`market,amount_type,order_side,sum(price*abs(amount)),date(order_time),refresh_type,count(*)`).
+		Group(`market,order_side,date(order_time),amount_type,refresh_type`).Order(`date(order_time) desc`).Rows()
+	if carryRows != nil {
+		for carryRows.Next() {
+			var marketName, side, date, amountType, refreshType string
+			var value, orderNum, failRate float64
+			_ = carryRows.Scan(&marketName, &amountType, &side, &value, &date, &refreshType, &orderNum)
+			dates := strings.Split(date, `-`)
+			date = fmt.Sprintf(`%s-%s`, dates[1], dates[2])
+			date = date[0:strings.Index(date, `T`)]
+			key := fmt.Sprintf(`%s-%s-%s-%s-%s`, marketName, amountType, side, date, refreshType)
+			if (marketName == model.OKEX && amountType == model.AppConfig.GetAccounts(model.OKEX)[0].Key) ||
+				(marketName == model.Binance && amountType == model.AppConfig.GetAccounts(model.Binance)[0].Key) ||
+				(marketName == model.Huobi && amountType == model.AppConfig.GetAccounts(model.Huobi)[0].Key) ||
+				(marketName == model.Kucoin && amountType == model.AppConfig.GetAccounts(model.Kucoin)[0].Key) {
+				if orderNum > 0 {
+					failRate = failData[key] / orderNum
+				}
+				tradeInfo = append(tradeInfo, []string{marketName, date, side,
+					strconv.FormatFloat(value, 'f', 0, 64), refreshType,
+					strconv.FormatFloat(orderNum, 'f', 0, 64),
+					strconv.FormatFloat(failRate, 'f', 2, 64)})
+			}
+		}
+		carryRows.Close()
+	}
+	carryRows, _ = model.AppDB.Model(model.Order{}).Select(`market,amount_type,order_side,sum(price*abs(amount)),date(order_time-interval '8 hour'),refresh_type,count(*)`).
+		Group(`market,order_side,date(order_time-interval '8 hour'),amount_type,refresh_type`).Order(`date(order_time-interval '8 hour') desc`).Rows()
+	if carryRows != nil {
+		for carryRows.Next() {
+			var marketName, side, date, amountType, refreshType string
+			var value, orderNum, failRate float64
+			_ = carryRows.Scan(&marketName, &amountType, &side, &value, &date, &refreshType, &orderNum)
+			dates := strings.Split(date, `-`)
+			date = fmt.Sprintf(`%s-%s`, dates[1], dates[2])
+			date = date[0:strings.Index(date, `T`)]
+			key := fmt.Sprintf(`%s-%s-%s-%s-%s`, marketName, amountType, side, date, refreshType)
+			if (marketName == model.Ftx && amountType == model.AppConfig.GetAccounts(model.Ftx)[0].Key) ||
+				(marketName == model.Gate && amountType == model.AppConfig.GetAccounts(model.Gate)[0].Key) {
+				if orderNum > 0 {
+					failRate = failData[key] / orderNum
+				}
+				tradeInfo = append(tradeInfo, []string{marketName, date, side,
+					strconv.FormatFloat(value, 'f', 0, 64), refreshType,
+					strconv.FormatFloat(orderNum, 'f', 0, 64),
+					strconv.FormatFloat(failRate, 'f', 2, 64)})
+			}
+		}
+		carryRows.Close()
+	}
+	priceDis, tickInfo, recentTickInfo := model.AppMetric.ToArray()
+	//for _, account := range accounts {
+	//	if account == nil {
+	//		continue
+	//	}
+	//	metrics += model.GetCarryInfo(account.Key, ``) + `\n`
+	//}
+	c.HTML(http.StatusOK, `balance.gohtml`, gin.H{`marketValue`: marketValues, `trade`: tradeInfo,
+		`priceDis`: priceDis, `tickInfo`: tickInfo, `recentTickInfo`: recentTickInfo})
 }
 
 func GetCode(c *gin.Context) {

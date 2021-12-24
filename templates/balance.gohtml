@@ -16,13 +16,85 @@
         <th>期货持仓</th>
     </tr>
     {{range $i, $value := $.marketValue}}
-    <tr>
-        <td>{{index $.marketName $i}}</td><td>{{index $value 0}}</td><td>{{index $value 1}}</td><td>{{index $value 2}}</td><td>{{index $value 3}}</td><td>{{index $value 4}}</td>
-    </tr>
+        <tr>
+            <td>{{index $value 0}}</td>
+            <td>{{index $value 1}}</td>
+            <td>{{index $value 2}}</td>
+            <td>{{index $value 3}}</td>
+            <td>{{index $value 4}}</td>
+            <td>{{index $value 5}}</td>
+        </tr>
     {{end}}
-    <td></td><td></td>
+    <th>市场</th>
+    <th>日期</th>
+    <th>方向</th>
+    <th>交易额/USD</th>
+    <th>类型</th>
+    <th>单数</th>
+    <th>失败率</th>
+    {{range $i, $value := $.trade}}
+        <tr>
+            <td>{{index $value 0}}</td>
+            <td>{{index $value 1}}</td>
+            <td>{{index $value 2}}</td>
+            <td>{{index $value 3}}</td>
+            <td>{{index $value 4}}</td>
+            <td>{{index $value 5}}</td>
+            <td>{{index $value 6}}%</td>
+        </tr>
+    {{end}}
+    <th>market</th>
+    <th>symbol</th>
+    <th>market</th>
+    <th>symbol</th>
+    <th>in all</th>
+    <th>价差%</th>
+    <th>均价差%</th>
+    {{range $i, $value := $.priceDis}}
+        <tr>
+            <td>{{index $value 0}}</td>
+            <td>{{index $value 1}}</td>
+            <td>{{index $value 2}}</td>
+            <td>{{index $value 3}}</td>
+            <td>{{index $value 4}}</td>
+            <td>{{index $value 5}}</td>
+            <td>{{index $value 6}}</td>
+        </tr>
+    {{end}}
+    <th>market</th>
+    <th>symbol</th>
+    <th>in all</th>
+    <th>delay<100</th>
+    <th>delay</th>
+    <th>间隔</th>
+    {{range $i, $value := $.tickInfo}}
+        <tr>
+            <td>{{index $value 0}}</td>
+            <td>{{index $value 1}}</td>
+            <td>{{index $value 2}}</td>
+            <td>{{index $value 3}}</td>
+            <td>{{index $value 4}}</td>
+            <td>{{index $value 5}}</td>
+        </tr>
+    {{end}}
+    <th>market</th>
+    <th>symbol</th>
+    <th>time</th>
+    <th>in all</th>
+    <th>delay<100</th>
+    <th>delay</th>
+    {{range $i, $value := $.tickInfo}}
+        <tr>
+            <td>{{index $value 0}}</td>
+            <td>{{index $value 1}}</td>
+            <td>{{index $value 2}}</td>
+            <td>{{index $value 3}}</td>
+            <td>{{index $value 4}}</td>
+            <td>{{index $value 5}}</td>
+        </tr>
+    {{end}}
 </table>
-
+{{$.metrics}}
 <table>
     <tr>
         <th>symbol</th>

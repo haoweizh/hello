@@ -455,7 +455,8 @@ func GetPositions(key, secret, market string) (success bool, positions []*model.
 	case model.Binance:
 		return getPositionsBinance(key, secret)
 	case model.Ftx:
-		success, balances, _ := getBalanceFtx(key, secret)
+		var balances []*model.Balance
+		success, balances, _ = getBalanceFtx(key, secret)
 		for _, balance := range balances {
 			if strings.EqualFold(balance.Coin, `usd`) {
 				availableUsd = balance.Amount

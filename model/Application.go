@@ -167,21 +167,20 @@ var orderStatusMap = map[string]map[string]string{ // market - market status - u
 	},
 }
 
-func GetCarryInfo(userKey, key string) (info string) {
+func GetCarryInfo(userKey, functionName string) (info string) {
 	infoLock.Lock()
 	defer infoLock.Unlock()
-	if key == `` {
+	if functionName == `` {
 		items := make([]string, 0)
 		for item := range CarryInfo[userKey] {
 			items = append(items, item)
 		}
 		sort.Strings(items)
-
 		for _, item := range items {
 			info += CarryInfo[userKey][item] + "\n"
 		}
 	} else {
-		return CarryInfo[userKey][key]
+		return CarryInfo[userKey][functionName]
 	}
 	return info
 }

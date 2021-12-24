@@ -71,6 +71,9 @@ func createSpotMarket(key, secret, market string) (sm *spotMarket) {
 func createFromPosition(key, secret string, setting *model.Setting) (carryStatus *CarryStatus) {
 	if contractMarkets[key] == nil {
 		contractMarkets[key] = createContractMarket(key, secret, setting.Market)
+		if (setting.Market == model.OKEX || setting.Market == model.Ftx) && spotMarkets[key] == nil {
+			spotMarkets[key] = createSpotMarket(key, secret, setting.Market)
+		}
 	}
 	if contractMarkets[key] == nil {
 		return nil
@@ -339,7 +342,7 @@ func calcAmount(carryStatus, carryStatusRelate *CarryStatus, tick,
 		}
 		return nil, nil, 0, 0, 0
 	}
-	mark := fmt.Sprintf(`%s-%s<->%s-%s`, carryStatus.market, carryStatus.symbol, carryStatusRelate.market, carryStatusRelate.symbol)
+	mark := fmt.Sprintf(`%s-%s|%s-%s`, carryStatus.market, carryStatus.symbol, carryStatusRelate.market, carryStatusRelate.symbol)
 	if scoreOpen > 0.01 || -1*scoreClose < -0.01 {
 		model.AppMetric.AddCarry(mark, scoreOpen, -1*scoreClose)
 	}
