@@ -6,6 +6,7 @@ import (
 	"hello/model"
 	"hello/util"
 	"math"
+	"sort"
 	"strings"
 	"time"
 )
@@ -133,13 +134,12 @@ func createFromBalance(key, secret string, setting *model.Setting) (carryStatus 
 	return
 }
 
-func initStatus(key, secret string, carryClose bool, carryRate float64, setting *model.Setting) {
+func initStatus(key, secret string, carryClose bool, carryRate float64, setting *model.Setting) (status *CarryStatus) {
 	if setting == nil {
 		return
 	}
 	tailSpot := model.GetSpotTail(setting.Market)
 	tailPerp := model.GetPerpTail(setting.Market)
-	var status *CarryStatus
 	fundingRate := 0.0
 	if setting.Symbol[len(setting.Symbol)-len(tailSpot):] == tailSpot {
 		status = createFromBalance(key, secret, setting)
@@ -179,6 +179,7 @@ func initStatus(key, secret string, carryClose bool, carryRate float64, setting 
 	} else if carryClose && status.Holding < 0 {
 		status.TradeLineSell = 1
 	}
+	return
 }
 
 func ClearCross() {
@@ -197,84 +198,76 @@ func ClearCross() {
 		coinSettings := model.GetCoinSettings(model.FunctionCross)
 		for i := 0; i < model.AppConfig.GetCrossLen(); i++ {
 			for _, settings := range coinSettings {
-				for _, setting := range settings {
+				equalStatuses := make([]*CarryStatus, len(settings))
+				for j, setting := range settings {
 					if setting == nil {
 						continue
 					}
 					account := model.AppConfig.GetAccounts(setting.Market)[i]
 					if account != nil {
-						initStatus(account.Key, account.Secret, account.CarryClose, account.CarryRate, setting)
+						equalStatuses[j] = initStatus(account.Key, account.Secret, account.CarryClose, account.CarryRate, setting)
 					}
 				}
-				makeEqual(i, settings)
+				makeEqual(equalStatuses)
 			}
 		}
 		timer.Reset(time.Second * 60)
 	}
 }
 
+// bybit 缺少按照symbol cancel all
 // settings []*model.Setting, coinStatus map[string]map[string]map[string]*CarryStatus
-func makeEqual(accountIndex int, settings []*model.Setting) {
-	//var holdings []float64
-	//for _, setting := range settings {
-	//	keys, _ := model.AppConfig.GetKeys(setting.Market)
-	//	if holdings == nil {
-	//		holdings = make([]float64, len(keys))
-	//	}
-	//	for i, key := range keys {
-	//		if coinStatus[setting.Market] != nil && coinStatus[setting.Market][setting.Symbol] != nil ||
-	//			coinStatus[setting.Market][setting.Symbol][key] == nil {
-	//			util.Notice(`fail to get status makeEqual %s %s %s`,
-	//				setting.Market, setting.Symbol, key)
-	//			continue
-	//		}
-	//		holdings[i] += coinStatus[setting.Market][setting.Symbol][key].Holding
-	//	}
-	//}
-	//var price float64
-	//var settingEqual *model.Setting
-	//orderSide := ``
-	//for i, holding := range holdings {
-	//	for _, setting := range settings {
-	//		keys, secrets := model.AppConfig.GetKeys(setting.Market)
-	//		tickGet, tick := model.AppMarkets.GetBidAsk(setting.Symbol, setting.Market)
-	//		if coinStatus[setting.Market] != nil && coinStatus[setting.Market][setting.Symbol] != nil ||
-	//			coinStatus[setting.Market][setting.Symbol][keys[i]] == nil || !tickGet {
-	//			util.Notice(`fail to get status makeEqual %s %s %s`,
-	//				setting.Market, setting.Symbol, keys[i])
-	//			continue
-	//		}
-	//		carryStatus := coinStatus[setting.Market][setting.Symbol][keys[i]]
-	//		if holding*tick.Bids[0].Price > 10 {
-	//			orderSide = model.OrderSideSell
-	//			if (math.IsNaN(carryStatus.LimitBuy) || carryStatus.LimitBuy > math.Abs(holding)) &&
-	//				tick.Bids[0].Price > price {
-	//				price = tick.Bids[0].Price
-	//				settingEqual = setting
-	//			}
-	//			go api.CancelOrders(keys[i], secrets[i], setting.Market, setting.Symbol)
-	//		}
-	//		if holding*tick.Asks[0].Price < -10 {
-	//			orderSide = model.OrderSideBuy
-	//			if (math.IsNaN(carryStatus.LimitSell) || carryStatus.LimitSell > math.Abs(holding)) &&
-	//				(tick.Asks[0].Price < price || price == 0) {
-	//				price = tick.Asks[0].Price
-	//				settingEqual = setting
-	//			}
-	//			go api.CancelOrders(keys[i], secrets[i], setting.Market, setting.Symbol)
-	//		}
-	//	}
-	//	if price > 0 && settingEqual != nil {
-	//		amount := math.Min(90000000, math.Min(math.Abs(holding), 20000/price))
-	//		amount = model.GetAmountInMarket(settingEqual.Market, settingEqual.Symbol, amount)
-	//		if amount > 0 {
-	//			keys, secrets := model.AppConfig.GetKeys(settingEqual.Market)
-	//			api.PlaceOrder(keys[i], secrets[i], orderSide, model.OrderTypeLimit, settingEqual.Market,
-	//				settingEqual.Symbol, settingEqual.Symbol, ``, model.FunctionComplement, price, price,
-	//				amount, true, false, nil, nil)
-	//		}
-	//	}
-	//}
+func makeEqual(statuses []*CarryStatus) (success bool, msg string) {
+	var holding, holdingInU, price float64
+	orderSide := ``
+	var equalStatus *CarryStatus
+	bids := model.Ticks{}
+	asks := model.Ticks{}
+	bidStatus := make(map[*model.Tick]*CarryStatus)
+	askStatus := make(map[*model.Tick]*CarryStatus)
+	for _, status := range statuses {
+		holding += status.Holding
+		getTick, tick := model.AppMarkets.GetBidAsk(status.symbol, status.market)
+		if getTick {
+			return false, fmt.Sprintf(`no tick when equal %s %s`, status.market, status.symbol)
+		}
+		bids = append(bids, tick.Bids[0])
+		asks = append(asks, tick.Asks[0])
+		bidStatus[&tick.Bids[0]] = status
+		askStatus[&tick.Asks[0]] = status
+		holdingInU += holding * tick.Bids[0].Price
+	}
+	if holdingInU > 10 {
+		orderSide = model.OrderSideSell
+		sort.Sort(sort.Reverse(bids))
+		for _, bid := range bids {
+			status := bidStatus[&bid]
+			if math.IsNaN(status.LimitSell) || status.LimitSell > holding {
+				equalStatus = status
+				price = bid.Price
+			}
+			go api.CancelOrders(status.key, status.secret, status.market, status.symbol)
+		}
+	}
+	if holding < -10 {
+		orderSide = model.OrderSideBuy
+		sort.Sort(asks)
+		for _, ask := range asks {
+			status := askStatus[&ask]
+			if math.IsNaN(status.LimitBuy) || status.LimitBuy > math.Abs(holding) {
+				equalStatus = status
+				price = ask.Price
+			}
+			go api.CancelOrders(status.key, status.secret, status.market, status.symbol)
+		}
+	}
+	if equalStatus != nil {
+		amount := model.GetAmountInMarket(equalStatus.market, equalStatus.symbol, math.Min(90000000, math.Abs(holding)))
+		api.PlaceOrder(equalStatus.key, equalStatus.secret, orderSide, model.OrderTypeLimit, equalStatus.market,
+			equalStatus.symbol, equalStatus.symbol, ``, model.FunctionComplement, price, price, amount,
+			true, true, nil, nil)
+	}
+	return
 }
 
 // ProcessCross todo 计算fundingRate后30s不下单

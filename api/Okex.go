@@ -1002,7 +1002,9 @@ func parseBalanceOKEX(value map[string]interface{}) (balance *model.Balance) {
 	if value[`crossLiab`] != nil && value[`crossLiab`] != `` {
 		balance.Borrow, _ = strconv.ParseFloat(value[`crossLiab`].(string), 64)
 	}
-	//balance.AvailableWithBorrow = balance.Available
+	if value[`maxLoan`] != nil && len(strings.TrimSpace(value[`maxLoan`].(string))) > 0 {
+		balance.AvailableWithBorrow, _ = strconv.ParseFloat(value[`maxLoan`].(string), 64)
+	}
 	return
 }
 

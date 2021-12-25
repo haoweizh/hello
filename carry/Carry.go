@@ -506,7 +506,7 @@ func makeEqual(key, secret string, setting *model.Setting, balances []*model.Bal
 	usdAvailable := getUsdAvailable(key)
 	amount := amountPerp + amountRelated
 	orderSide := model.OrderSideBuy
-	if amount > 0 { //现货数量多、合约数量少
+	if amount > 0 {
 		orderSide = model.OrderSideSell
 		if tickPerp.Bids[0].Price < (1-revertDis)*tickRelated.Bids[0].Price && amount < balance.AvailableWithBorrow {
 			symbol = setting.SymbolRelated
@@ -521,7 +521,7 @@ func makeEqual(key, secret string, setting *model.Setting, balances []*model.Bal
 			symbol = setting.Symbol
 			price = tickPerp.Bids[0].Price * (1 - OrderPriceLimit)
 		}
-	} else if amount < 0 { //合约数量多、现货数量少
+	} else if amount < 0 {
 		orderSide = model.OrderSideBuy
 		if tickPerp.Asks[0].Price < (1-revertDis)*tickRelated.Asks[0].Price {
 			symbol = setting.Symbol
@@ -587,14 +587,14 @@ func initEmptyBalance(key, secret, market string) {
 		if balance == nil {
 			balance = &model.Balance{Coin: coin, Market: market}
 		}
-		if market == model.OKEX || market == model.Binance || market == model.Gate {
-			success, maxLoan := api.GetMaxLoan(key, secret, market, coin)
-			if success {
-				balance.AvailableWithBorrow = maxLoan + math.Max(0, balance.Amount)
-			}
-			time.Sleep(time.Second / 8)
-		}
-		setCarryBalance(key, coin, balance)
+		//if market == model.Binance || market == model.Gate {
+		//	success, maxLoan := api.GetMaxLoan(key, secret, market, coin)
+		//	if success {
+		//		balance.AvailableWithBorrow = maxLoan + math.Max(0, balance.Amount)
+		//	}
+		//	time.Sleep(time.Second / 8)
+		//}
+		//setCarryBalance(key, coin, balance)
 	}
 	util.Notice(fmt.Sprintf(`set available with borrow %s %s`, market, key))
 }
