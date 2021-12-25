@@ -636,6 +636,10 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	}
 	coinRate := math.Abs(balance.UsdValue) / balanceAllValue
 	jump := 7.0
+	if setting.Symbol == `XCH-USDT-SWAP` {
+		util.Notice(fmt.Sprintf(`--- %s localUsdRate %f openShortMargin %f coinRate %f foundingRate %f = %f`,
+			key, localUsdRate, setting.OpenShortMargin, coinRate, fundingRate, math.Max((1.5-localUsdRate)*setting.OpenShortMargin*(0.5+jump*coinRate), 0.003)-fundingRate))
+	}
 	setOpen := math.Max((1.5-localUsdRate)*setting.OpenShortMargin*(0.5+jump*coinRate), 0.003) - fundingRate
 	setClose := math.Min(setting.CloseShortMargin*(0.5+jump*coinRate), -0.003) - fundingRate
 	revertOpen := math.NaN()
