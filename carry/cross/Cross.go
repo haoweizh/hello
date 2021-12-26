@@ -470,22 +470,22 @@ func placeCross(statusBuy, statusSell *CarryStatus, priceBuy, priceSell, amount 
 		statusBuy.Holding += amount
 		statusSell.Holding -= amount
 		if statusBuy.isSpot {
-			buySm := getSpotMarket(statusBuy.key, statusBuy.market)
+			buySm := spotMarkets[statusBuy.key]
 			balance := buySm.balances[statusBuy.symbol]
 			statusBuy.ValueInUsd = balance.UsdValue / balance.Amount * statusBuy.Holding
 			statusBuy.RateInAll = statusBuy.ValueInUsd / buySm.accountValueInU
 		} else {
-			buyCm := getContractMarket(statusBuy.key, statusBuy.market)
+			buyCm := contractMarkets[statusBuy.key]
 			statusBuy.ValueInUsd = math.Abs(statusBuy.Holding) * buyCm.positions[statusBuy.symbol].EntryPrice
 			statusBuy.RateInAll = statusBuy.ValueInUsd / buyCm.collateralsInU
 		}
 		if statusSell.isSpot {
-			sellSm := getSpotMarket(statusSell.key, statusSell.market)
+			sellSm := spotMarkets[statusSell.key]
 			balance := sellSm.balances[statusSell.symbol]
 			statusSell.ValueInUsd = balance.UsdValue / balance.Amount * statusSell.Holding
 			statusSell.RateInAll = statusSell.ValueInUsd / sellSm.accountValueInU
 		} else {
-			sellCm := getContractMarket(statusSell.key, statusSell.market)
+			sellCm := contractMarkets[statusSell.key]
 			statusSell.ValueInUsd = math.Abs(statusSell.Holding) * sellCm.positions[statusSell.symbol].EntryPrice
 			statusSell.RateInAll = statusSell.ValueInUsd / sellCm.collateralsInU
 		}
