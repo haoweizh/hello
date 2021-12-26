@@ -453,14 +453,14 @@ func placeCross(statusBuy, statusSell *CarryStatus, priceBuy, priceSell, amount 
 			sidePerp = model.OrderSideBuy
 			perpPrice = priceBuy
 		}
-		placeSuccess = api.PlacePairOKEX(statusBuy.key, coin, sidePerp, sideRelated, model.OrderTypeLimit, perpPrice, relatedPrice, amount)
+		placeSuccess = api.PlacePairOKEX(statusBuy.key, coin, sidePerp, sideRelated, model.OrderTypeLimit, model.FunctionCross, perpPrice, relatedPrice, amount)
 	} else {
 		go api.PlaceOrder(statusBuy.key, statusBuy.secret, model.OrderSideBuy, model.OrderTypeLimit, statusBuy.market, statusBuy.symbol,
-			``, ``, model.FunctionCarry, priceBuy, priceBuy,
-			amount, true, true, nil, nil)
+			``, ``, model.FunctionCross, priceBuy, priceBuy,
+			amount, true, true, postOrderCross, nil)
 		api.PlaceOrder(statusSell.key, statusSell.secret, model.OrderSideSell, model.OrderTypeLimit, statusSell.market, statusSell.symbol,
-			``, ``, model.FunctionCarry, priceSell, priceSell,
-			amount, true, true, nil, nil)
+			``, ``, model.FunctionCross, priceSell, priceSell,
+			amount, true, true, postOrderCross, nil)
 		time.Sleep(time.Second / 5)
 	}
 	if placeSuccess {
@@ -589,4 +589,48 @@ func placeCross(statusBuy, statusSell *CarryStatus, priceBuy, priceSell, amount 
 	//	setCarryBalance(key, coin, balance)
 	//	setUsdRate(key, usdAvailable/balanceAllValue)
 	//}
+}
+
+var postOrderCross = func(order *model.Order, setting *model.Setting) {
+	if order == nil {
+		return
+	}
+	if order.HaveId() {
+		maxBuy, maxSell := getTradeMax(order.AmountType, order.Symbol)
+		amount := model.GetAmountInMarket(order.Market, order.Instrument, order.Amount)
+		if order.OrderSide == model.OrderSideBuy {
+			maxBuy -= amount
+			maxSell += amount
+		} else if order.OrderSide == model.OrderSideSell {
+			maxBuy += amount
+			maxSell -= amount
+		}
+		setTradeMax(order.AmountType, order.Instrument, maxBuy, maxSell)
+		addLastCarry(order, setting)
+		addCarryResult(order.AmountType, order.Market, true)
+	} else {
+		unknownFail := true
+		account := model.AppConfig.GetAccountFromKey(order.Market, order.AmountType)
+		if account != nil {
+			switch order.Market {
+			case model.OKEX:
+				if InsufficientCodeOKEX[order.ErrCode] {
+					util.Notice(`reset %s trade max with %s %s`, order.Market, order.ErrCode, order.AmountType)
+					resetTradeMax(account.Key, account.Secret, model.OKEX)
+					unknownFail = false
+				}
+			case model.Binance:
+				if strings.Contains(InsufficientCodeBinance, order.ErrCode) {
+					util.Notice(`reset binance trade max with %s %s`, order.ErrCode, order.AmountType)
+					clearCarry(account.Key, account.Secret, order.Market)
+					unknownFail = false
+				}
+			}
+		}
+		if unknownFail {
+			addCarryResult(order.AmountType, order.Market, false)
+		} else {
+			addCarryResult(order.AmountType, order.Market, true)
+		}
+	}
 }

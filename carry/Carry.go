@@ -430,7 +430,7 @@ func placeCarry(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, key
 	}
 	if setting.Market == model.OKEX {
 		placeSuccess = api.PlacePairOKEX(key, model.GetCoin(setting.Market, setting.Symbol), sidePerp, sideRelated,
-			model.OrderTypeLimit, perpPrice, relatedPrice, amount)
+			model.OrderTypeLimit, model.FunctionCarry, perpPrice, relatedPrice, amount)
 	} else {
 		go api.PlaceOrder(key, secret, sidePerp, model.OrderTypeLimit, setting.Market, setting.Symbol,
 			``, ``, carryType, perpPrice, perpPrice,

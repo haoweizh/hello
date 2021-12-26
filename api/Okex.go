@@ -489,7 +489,7 @@ func sendSignRequestOKEX(key, secret, method, path string, body interface{}) (re
 var lastSameTime = make(map[string]int64)
 var lastCarryTime = int64(0)
 
-func PlacePairOKEX(key, coin, sidePerp, sideSpot, orderType string, pricePerp, priceSpot, amount float64) (success bool) {
+func PlacePairOKEX(key, coin, sidePerp, sideSpot, orderType, refreshType string, pricePerp, priceSpot, amount float64) (success bool) {
 	now := time.Now().UnixNano()
 	if time.Duration(now-lastCarryTime)/time.Millisecond < 50 {
 		util.Notice(coin + ` ignore carry for last time < 50ms`)
@@ -542,21 +542,23 @@ func PlacePairOKEX(key, coin, sidePerp, sideSpot, orderType string, pricePerp, p
 		return false
 	}
 	util.Notice(`place pair %s`, msg)
-	err := sendToConnection(privateConnectionOKEX[key], msg)
-	if err != nil {
-		util.Notice(fmt.Sprintf(`fail to send order ws %s %s return %s`, key, coin, err.Error()))
-		return false
+	if model.AppConfig.Env != `test` {
+		err := sendToConnection(privateConnectionOKEX[key], msg)
+		if err != nil {
+			util.Notice(fmt.Sprintf(`fail to send order ws %s %s return %s`, key, coin, err.Error()))
+			return false
+		}
 	}
 	if sidePerp != "" && pricePerp != 0 && amount != 0 {
 		orderPerp := &model.Order{OrderSide: sidePerp, OrderType: orderType, Market: model.OKEX, Symbol: coin + tailPerp,
-			Price: pricePerp, Amount: amount, RefreshType: model.FunctionCarry, OrderTime: util.GetNow(),
+			Price: pricePerp, Amount: amount, RefreshType: refreshType, OrderTime: util.GetNow(),
 			UnfilledQuantity: amount, Instrument: coin + tailPerp, AmountType: key, Status: model.CarryStatusSuccess,
 			OrderId: strconv.FormatInt(now, 10) + `PERP`}
 		go model.AppDB.Save(orderPerp)
 	}
 	if sideSpot != "" && priceSpot != 0 && amount != 0 {
 		orderSpot := &model.Order{OrderSide: sideSpot, OrderType: orderType, Market: model.OKEX, Symbol: coin + tailSpot,
-			Price: priceSpot, Amount: amount, RefreshType: model.FunctionCarry, OrderTime: util.GetNow(),
+			Price: priceSpot, Amount: amount, RefreshType: refreshType, OrderTime: util.GetNow(),
 			UnfilledQuantity: amount, Instrument: coin + tailSpot, AmountType: key, Status: model.CarryStatusSuccess,
 			OrderId: strconv.FormatInt(now, 10) + `SPOT`}
 		go model.AppDB.Save(orderSpot)
