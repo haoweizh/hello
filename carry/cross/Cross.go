@@ -262,10 +262,13 @@ func makeEqual(statuses []*CarryStatus) (success bool, msg string) {
 		}
 	}
 	if equalStatus != nil {
-		amount := model.GetAmountInMarket(equalStatus.market, equalStatus.symbol, math.Min(90000000, math.Abs(holding)))
-		api.PlaceOrder(equalStatus.key, equalStatus.secret, orderSide, model.OrderTypeLimit, equalStatus.market,
-			equalStatus.symbol, equalStatus.symbol, ``, model.FunctionComplement, price, price, amount,
-			true, true, nil, nil)
+		amount := math.Min(90000000, math.Abs(holding))
+		checkAmount := model.GetAmountInMarket(equalStatus.market, equalStatus.symbol, amount)
+		if checkAmount > 0 {
+			api.PlaceOrder(equalStatus.key, equalStatus.secret, orderSide, model.OrderTypeLimit, equalStatus.market,
+				equalStatus.symbol, equalStatus.symbol, ``, model.FunctionComplement, price, price, amount,
+				true, true, nil, nil)
+		}
 	}
 	return
 }
