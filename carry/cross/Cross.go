@@ -315,7 +315,7 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 			}
 			statusBuy, statusSell, amount, priceBuy, priceSell := calcAmount(status, statusRelate, tick, tickRelate)
 			if amount > 0 {
-				go placeCross(statusBuy, statusSell, priceBuy, priceSell, amount)
+				go placeCross(statusBuy, statusSell, priceBuy, priceSell, amount, setting, settingRelate)
 				return
 			}
 		}
@@ -429,7 +429,7 @@ func calcAmount(carryStatus, carryStatusRelate *CarryStatus, tick,
 	return statusBuy, statusSell, amount, priceBuy, priceSell
 }
 
-func placeCross(statusBuy, statusSell *CarryStatus, priceBuy, priceSell, amount float64) {
+func placeCross(statusBuy, statusSell *CarryStatus, priceBuy, priceSell, amount float64, setting, relateSetting *model.Setting) {
 	if !checkSetCrossing(true) {
 		defer checkSetCrossing(false)
 	} else {
@@ -464,16 +464,36 @@ func placeCross(statusBuy, statusSell *CarryStatus, priceBuy, priceSell, amount 
 		time.Sleep(time.Second / 5)
 	}
 	if placeSuccess {
-		statusBuy.Holding += amount
-		if statusBuy.isSpot {
-			sm := getSpotMarket(statusBuy.key, statusBuy.market)
-			balance := sm.balances[statusBuy.symbol]
-			statusBuy.ValueInUsd = balance.UsdValue / balance.Amount * statusBuy.Holding
-			statusBuy.RateInAll = statusBuy.ValueInUsd / sm.accountValueInU
+		var settingBuy, settingSell model.Setting
+		if statusBuy.symbol == setting.Symbol {
+			settingBuy = *setting
+			settingSell = *relateSetting
 		} else {
-			cm := getContractMarket(statusBuy.key, statusBuy.market)
-			statusBuy.ValueInUsd = math.Abs(statusBuy.Holding) * cm.positions[statusBuy.symbol].EntryPrice
-			statusBuy.RateInAll = statusBuy.ValueInUsd / cm.collateralsInU
+			settingBuy = *relateSetting
+			settingSell = *setting
+		}
+
+		statusBuy.Holding += amount
+		statusSell.Holding -= amount
+		if statusBuy.isSpot {
+			buySm := getSpotMarket(statusBuy.key, statusBuy.market)
+			balance := buySm.balances[statusBuy.symbol]
+			statusBuy.ValueInUsd = balance.UsdValue / balance.Amount * statusBuy.Holding
+			statusBuy.RateInAll = statusBuy.ValueInUsd / buySm.accountValueInU
+		} else {
+			buyCm := getContractMarket(statusBuy.key, statusBuy.market)
+			statusBuy.ValueInUsd = math.Abs(statusBuy.Holding) * buyCm.positions[statusBuy.symbol].EntryPrice
+			statusBuy.RateInAll = statusBuy.ValueInUsd / buyCm.collateralsInU
+		}
+		if statusSell.isSpot {
+			sellSm := getSpotMarket(statusSell.key, statusSell.market)
+			balance := sellSm.balances[statusSell.symbol]
+			statusSell.ValueInUsd = balance.UsdValue / balance.Amount * statusSell.Holding
+			statusSell.RateInAll = statusSell.ValueInUsd / sellSm.accountValueInU
+		} else {
+			sellCm := getContractMarket(statusSell.key, statusSell.market)
+			statusSell.ValueInUsd = math.Abs(statusSell.Holding) * sellCm.positions[statusSell.symbol].EntryPrice
+			statusSell.RateInAll = statusSell.ValueInUsd / sellCm.collateralsInU
 		}
 		if !math.IsNaN(statusBuy.LimitSell) {
 			statusBuy.LimitSell += amount
@@ -481,25 +501,63 @@ func placeCross(statusBuy, statusSell *CarryStatus, priceBuy, priceSell, amount 
 		if !math.IsNaN(statusBuy.LimitBuy) {
 			statusBuy.LimitBuy -= amount
 		}
-		statusBuy.TradeLineBuy
-		statusBuy.TradeLineSell
+		if !math.IsNaN(statusSell.LimitSell) {
+			statusSell.LimitSell -= amount
+		}
+		if !math.IsNaN(statusSell.LimitBuy) {
+			statusSell.LimitBuy += amount
+		}
 
+		buyFundingRate := 0.0
+		if !statusBuy.isSpot {
+			rateInfo := model.GetFundingRate(statusBuy.market, statusBuy.symbol)
+			if rateInfo != nil {
+				buyFundingRate = rateInfo.Rate
+			}
+		}
+		buyAccount := model.AppConfig.GetAccountFromKey(statusBuy.market, statusBuy.key)
 		if statusBuy.RateInAll > 0 {
-			statusBuy.TradeLineBuy = math.Max(setting.OpenShortMargin*(0.5+jump*statusBuy.RateInAll), winRateMin) + fundingRate
-			statusBuy.TradeLineSell = math.Max(setting.OpenShortMargin*(0.5-jump*statusBuy.RateInAll), loseRateMax) - fundingRate
+			statusBuy.TradeLineBuy = math.Max(settingBuy.OpenShortMargin*(0.5+jump*statusBuy.RateInAll), winRateMin) + buyFundingRate
+			statusBuy.TradeLineSell = math.Max(settingBuy.OpenShortMargin*(0.5-jump*statusBuy.RateInAll), loseRateMax) - buyFundingRate
 		} else {
-			statusBuy.TradeLineBuy = math.Max(setting.OpenShortMargin*(0.5+jump*statusBuy.RateInAll), loseRateMax) + fundingRate
-			statusBuy.TradeLineSell = math.Max(setting.OpenShortMargin*(0.5-jump*statusBuy.RateInAll), winRateMin) - fundingRate
+			statusBuy.TradeLineBuy = math.Max(settingBuy.OpenShortMargin*(0.5+jump*statusBuy.RateInAll), loseRateMax) + buyFundingRate
+			statusBuy.TradeLineSell = math.Max(settingBuy.OpenShortMargin*(0.5-jump*statusBuy.RateInAll), winRateMin) - buyFundingRate
 		}
 		if statusBuy.RateInAll > 0.5 {
 			statusBuy.TradeLineBuy = 1
 		}
-		status.TradeLineBuy *= carryRate
-		status.TradeLineSell *= carryRate
-		if carryClose && status.Holding > 0 {
-			status.TradeLineBuy = 1
-		} else if carryClose && status.Holding < 0 {
-			status.TradeLineSell = 1
+		statusBuy.TradeLineBuy *= buyAccount.CarryRate
+		statusBuy.TradeLineSell *= buyAccount.CarryRate
+		if buyAccount.CarryClose && statusBuy.Holding > 0 {
+			statusBuy.TradeLineBuy = 1
+		} else if buyAccount.CarryClose && statusBuy.Holding < 0 {
+			statusBuy.TradeLineSell = 1
+		}
+
+		sellFundingRate := 0.0
+		if !statusSell.isSpot {
+			rateInfo := model.GetFundingRate(statusSell.market, statusSell.symbol)
+			if rateInfo != nil {
+				sellFundingRate = rateInfo.Rate
+			}
+		}
+		sellAccount := model.AppConfig.GetAccountFromKey(statusSell.market, statusSell.key)
+		if statusSell.RateInAll > 0 {
+			statusSell.TradeLineBuy = math.Max(settingSell.OpenShortMargin*(0.5+jump*statusSell.RateInAll), winRateMin) + sellFundingRate
+			statusSell.TradeLineSell = math.Max(settingSell.OpenShortMargin*(0.5-jump*statusSell.RateInAll), loseRateMax) - sellFundingRate
+		} else {
+			statusSell.TradeLineBuy = math.Max(settingSell.OpenShortMargin*(0.5+jump*statusSell.RateInAll), loseRateMax) + sellFundingRate
+			statusSell.TradeLineSell = math.Max(settingSell.OpenShortMargin*(0.5-jump*statusSell.RateInAll), winRateMin) - sellFundingRate
+		}
+		if statusSell.RateInAll > 0.5 {
+			statusSell.TradeLineBuy = 1
+		}
+		statusSell.TradeLineBuy *= sellAccount.CarryRate
+		statusSell.TradeLineSell *= sellAccount.CarryRate
+		if sellAccount.CarryClose && statusSell.Holding > 0 {
+			statusSell.TradeLineBuy = 1
+		} else if sellAccount.CarryClose && statusSell.Holding < 0 {
+			statusSell.TradeLineSell = 1
 		}
 	}
 	//if placeSuccess {
