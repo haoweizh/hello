@@ -489,7 +489,7 @@ func sendSignRequestOKEX(key, secret, method, path string, body interface{}) (re
 var lastSameTime = make(map[string]int64)
 var lastCarryTime = int64(0)
 
-func PlacePairOKEX(key, coin, sidePerp, sideSpot, orderType string, pricePerp, priceSpot, amount float64) (success bool) {
+func PlacePairOKEX(key, coin, sidePerp, sideSpot, orderType, refreshType string, pricePerp, priceSpot, amount float64) (success bool) {
 	now := time.Now().UnixNano()
 	if time.Duration(now-lastCarryTime)/time.Millisecond < 50 {
 		util.Notice(coin + ` ignore carry for last time < 50ms`)
@@ -502,50 +502,66 @@ func PlacePairOKEX(key, coin, sidePerp, sideSpot, orderType string, pricePerp, p
 	lastCarryTime = now
 	tailPerp := model.GetPerpTail(model.OKEX)
 	tailSpot := model.GetSpotTail(model.OKEX)
-	pricePerp, decimalPerp := model.FormatPrice(model.OKEX, coin+tailPerp, sidePerp, pricePerp)
-	priceStrPerp := util.CutTailZero(strconv.FormatFloat(pricePerp, 'f', decimalPerp, 64))
-	formattedAmountPerp := model.GetAmountInMarket(model.OKEX, coin+tailPerp, amount)
-	amountStrPerp := util.CutTailZero(fmt.Sprintf(`%f`, formattedAmountPerp))
-	if orderType == model.OrderTypeMarket {
-		usdAmount, _ := strconv.ParseFloat(amountStrPerp, 64)
-		amountStrPerp = util.CutTailZero(fmt.Sprintf(`%f`, usdAmount*pricePerp))
+	var subscribeArgs []map[string]interface{}
+	if sidePerp != "" && pricePerp != 0 && amount != 0 {
+		pricePerp, decimalPerp := model.FormatPrice(model.OKEX, coin+tailPerp, sidePerp, pricePerp)
+		priceStrPerp := util.CutTailZero(strconv.FormatFloat(pricePerp, 'f', decimalPerp, 64))
+		formattedAmountPerp := model.GetAmountInMarket(model.OKEX, coin+tailPerp, amount)
+		amountStrPerp := util.CutTailZero(fmt.Sprintf(`%f`, formattedAmountPerp))
+		if orderType == model.OrderTypeMarket {
+			usdAmount, _ := strconv.ParseFloat(amountStrPerp, 64)
+			amountStrPerp = util.CutTailZero(fmt.Sprintf(`%f`, usdAmount*pricePerp))
+		}
+		perpArgs := map[string]interface{}{`instId`: coin + tailPerp, `tdMode`: `cross`, `side`: sidePerp, `sz`: amountStrPerp, `ordType`: orderType,
+			`px`: priceStrPerp, `tag`: strings.Split(key, `-`)[0]}
+		subscribeArgs = append(subscribeArgs, perpArgs)
 	}
-	priceSpot, decimalSpot := model.FormatPrice(model.OKEX, coin+tailSpot, sideSpot, priceSpot)
-	priceStrSpot := util.CutTailZero(strconv.FormatFloat(priceSpot, 'f', decimalSpot, 64))
-	formattedAmountSpot := model.GetAmountInMarket(model.OKEX, coin+tailSpot, amount)
-	amountStrSpot := util.CutTailZero(fmt.Sprintf(`%f`, formattedAmountSpot))
-	if orderType == model.OrderTypeMarket {
-		usdAmount, _ := strconv.ParseFloat(amountStrSpot, 64)
-		amountStrSpot = util.CutTailZero(fmt.Sprintf(`%f`, usdAmount*priceSpot))
+	if sideSpot != "" && priceSpot != 0 && amount != 0 {
+		priceSpot, decimalSpot := model.FormatPrice(model.OKEX, coin+tailSpot, sideSpot, priceSpot)
+		priceStrSpot := util.CutTailZero(strconv.FormatFloat(priceSpot, 'f', decimalSpot, 64))
+		formattedAmountSpot := model.GetAmountInMarket(model.OKEX, coin+tailSpot, amount)
+		amountStrSpot := util.CutTailZero(fmt.Sprintf(`%f`, formattedAmountSpot))
+		if orderType == model.OrderTypeMarket {
+			usdAmount, _ := strconv.ParseFloat(amountStrSpot, 64)
+			amountStrSpot = util.CutTailZero(fmt.Sprintf(`%f`, usdAmount*priceSpot))
+		}
+		spotArgs := map[string]interface{}{`instId`: coin + tailSpot, `tdMode`: `cross`, `side`: sideSpot, `sz`: amountStrSpot, `ordType`: orderType,
+			`px`: priceStrSpot, `tag`: strings.Split(key, `-`)[0]}
+		subscribeArgs = append(subscribeArgs, spotArgs)
+	}
+	if len(subscribeArgs) == 0 {
+		return
 	}
 	subscribeMap := make(map[string]interface{})
+	subscribeMap[`args`] = subscribeArgs
 	subscribeMap[`id`] = strconv.FormatInt(time.Now().UnixNano(), 10)
 	subscribeMap["op"] = "batch-orders"
-	subscribeMap[`args`] = []map[string]interface{}{
-		{`instId`: coin + tailPerp, `tdMode`: `cross`, `side`: sidePerp, `sz`: amountStrPerp, `ordType`: orderType,
-			`px`: priceStrPerp, `tag`: strings.Split(key, `-`)[0]},
-		{`instId`: coin + tailSpot, `tdMode`: `cross`, `side`: sideSpot, `sz`: amountStrSpot, `ordType`: orderType,
-			`px`: priceStrSpot, `tag`: strings.Split(key, `-`)[0]}}
 	msg := util.JsonEncodeToByte(subscribeMap)
 	if privateConnectionOKEX == nil || privateConnectionOKEX[key] == nil {
 		util.Notice(fmt.Sprintf(`fail to get connection %s`, key))
 		return false
 	}
-	err := sendToConnection(privateConnectionOKEX[key], msg)
 	util.Notice(`place pair %s`, msg)
-	orderPerp := &model.Order{OrderSide: sidePerp, OrderType: orderType, Market: model.OKEX, Symbol: coin + tailPerp,
-		Price: pricePerp, Amount: amount, RefreshType: model.FunctionCarry, OrderTime: util.GetNow(),
-		UnfilledQuantity: amount, Instrument: coin + tailPerp, AmountType: key, Status: model.CarryStatusSuccess,
-		OrderId: strconv.FormatInt(now, 10) + `PERP`}
-	go model.AppDB.Save(orderPerp)
-	orderSpot := &model.Order{OrderSide: sideSpot, OrderType: orderType, Market: model.OKEX, Symbol: coin + tailSpot,
-		Price: priceSpot, Amount: amount, RefreshType: model.FunctionCarry, OrderTime: util.GetNow(),
-		UnfilledQuantity: amount, Instrument: coin + tailSpot, AmountType: key, Status: model.CarryStatusSuccess,
-		OrderId: strconv.FormatInt(now, 10) + `SPOT`}
-	go model.AppDB.Save(orderSpot)
-	if err != nil {
-		util.Notice(fmt.Sprintf(`fail to send order ws %s %s return %s`, key, coin, err.Error()))
-		return false
+	if model.AppConfig.Env != `test` {
+		err := sendToConnection(privateConnectionOKEX[key], msg)
+		if err != nil {
+			util.Notice(fmt.Sprintf(`fail to send order ws %s %s return %s`, key, coin, err.Error()))
+			return false
+		}
+	}
+	if sidePerp != "" && pricePerp != 0 && amount != 0 {
+		orderPerp := &model.Order{OrderSide: sidePerp, OrderType: orderType, Market: model.OKEX, Symbol: coin + tailPerp,
+			Price: pricePerp, Amount: amount, RefreshType: refreshType, OrderTime: util.GetNow(),
+			UnfilledQuantity: amount, Instrument: coin + tailPerp, AmountType: key, Status: model.CarryStatusSuccess,
+			OrderId: strconv.FormatInt(now, 10) + `PERP`}
+		go model.AppDB.Save(orderPerp)
+	}
+	if sideSpot != "" && priceSpot != 0 && amount != 0 {
+		orderSpot := &model.Order{OrderSide: sideSpot, OrderType: orderType, Market: model.OKEX, Symbol: coin + tailSpot,
+			Price: priceSpot, Amount: amount, RefreshType: refreshType, OrderTime: util.GetNow(),
+			UnfilledQuantity: amount, Instrument: coin + tailSpot, AmountType: key, Status: model.CarryStatusSuccess,
+			OrderId: strconv.FormatInt(now, 10) + `SPOT`}
+		go model.AppDB.Save(orderSpot)
 	}
 	return true
 }

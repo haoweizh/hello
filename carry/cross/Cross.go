@@ -309,7 +309,7 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 			}
 			statusBuy, statusSell, amount, priceBuy, priceSell := calcAmount(status, statusRelate, tick, tickRelate)
 			if amount > 0 {
-				go placeCross(statusBuy, statusSell, priceBuy, priceSell, amount)
+				go placeCross(statusBuy, statusSell, priceBuy, priceSell, amount, setting, settingRelate)
 				return
 			}
 		}
@@ -423,26 +423,137 @@ func calcAmount(carryStatus, carryStatusRelate *CarryStatus, tick,
 	return statusBuy, statusSell, amount, priceBuy, priceSell
 }
 
-func placeCross(statusBuy, statusSell *CarryStatus, priceBuy, priceSell, amount float64) {
+func placeCross(statusBuy, statusSell *CarryStatus, priceBuy, priceSell, amount float64, setting, relateSetting *model.Setting) {
 	if !checkSetCrossing(true) {
 		defer checkSetCrossing(false)
 	} else {
 		//util.Notice(fmt.Sprintf(`waiting for other ordering %s`, setting.Symbol))
 		return
 	}
-	//placeSuccess := true
-	//if setting.Market == model.OKEX {
-	//	placeSuccess = api.PlacePairOKEX(key, model.GetCoin(setting.Market, setting.Symbol), sidePerp, sideRelated,
-	//		model.OrderTypeLimit, perpPrice, relatedPrice, amount)
-	//} else {
-	//	go api.PlaceOrder(key, secret, sidePerp, model.OrderTypeLimit, setting.Market, setting.Symbol,
-	//		``, ``, model.FunctionCarry, perpPrice, perpPrice,
-	//		amount, true, true, postOrderCarry)
-	//	api.PlaceOrder(key, secret, sideRelated, model.OrderTypeLimit, setting.Market, setting.SymbolRelated,
-	//		``, ``, model.FunctionCarry, relatedPrice, relatedPrice,
-	//		amount, true, true, postOrderCarry)
-	//	time.Sleep(time.Second / 5)
-	//}
+	//todo postcarry
+	placeSuccess := true
+	if statusBuy.market == model.OKEX && statusSell.market == model.OKEX {
+		var sidePerp, sideRelated string
+		var perpPrice, relatedPrice float64
+		coin := model.GetCoin(statusBuy.market, statusBuy.symbol)
+		if statusBuy.isSpot {
+			sideRelated = model.OrderSideBuy
+			relatedPrice = priceBuy
+			sidePerp = model.OrderSideSell
+			perpPrice = priceSell
+		} else {
+			sideRelated = model.OrderSideSell
+			relatedPrice = priceSell
+			sidePerp = model.OrderSideBuy
+			perpPrice = priceBuy
+		}
+		placeSuccess = api.PlacePairOKEX(statusBuy.key, coin, sidePerp, sideRelated, model.OrderTypeLimit, model.FunctionCross, perpPrice, relatedPrice, amount)
+	} else {
+		go api.PlaceOrder(statusBuy.key, statusBuy.secret, model.OrderSideBuy, model.OrderTypeLimit, statusBuy.market, statusBuy.symbol,
+			``, ``, model.FunctionCross, priceBuy, priceBuy,
+			amount, true, true, postOrderCross, nil)
+		api.PlaceOrder(statusSell.key, statusSell.secret, model.OrderSideSell, model.OrderTypeLimit, statusSell.market, statusSell.symbol,
+			``, ``, model.FunctionCross, priceSell, priceSell,
+			amount, true, true, postOrderCross, nil)
+		time.Sleep(time.Second / 5)
+	}
+	if placeSuccess {
+		var settingBuy, settingSell model.Setting
+		if statusBuy.symbol == setting.Symbol {
+			settingBuy = *setting
+			settingSell = *relateSetting
+		} else {
+			settingBuy = *relateSetting
+			settingSell = *setting
+		}
+
+		statusBuy.Holding += amount
+		statusSell.Holding -= amount
+		if statusBuy.isSpot {
+			buySm := getSpotMarket(statusBuy.key, statusBuy.market)
+			balance := buySm.balances[statusBuy.symbol]
+			statusBuy.ValueInUsd = balance.UsdValue / balance.Amount * statusBuy.Holding
+			statusBuy.RateInAll = statusBuy.ValueInUsd / buySm.accountValueInU
+		} else {
+			buyCm := getContractMarket(statusBuy.key, statusBuy.market)
+			statusBuy.ValueInUsd = math.Abs(statusBuy.Holding) * buyCm.positions[statusBuy.symbol].EntryPrice
+			statusBuy.RateInAll = statusBuy.ValueInUsd / buyCm.collateralsInU
+		}
+		if statusSell.isSpot {
+			sellSm := getSpotMarket(statusSell.key, statusSell.market)
+			balance := sellSm.balances[statusSell.symbol]
+			statusSell.ValueInUsd = balance.UsdValue / balance.Amount * statusSell.Holding
+			statusSell.RateInAll = statusSell.ValueInUsd / sellSm.accountValueInU
+		} else {
+			sellCm := getContractMarket(statusSell.key, statusSell.market)
+			statusSell.ValueInUsd = math.Abs(statusSell.Holding) * sellCm.positions[statusSell.symbol].EntryPrice
+			statusSell.RateInAll = statusSell.ValueInUsd / sellCm.collateralsInU
+		}
+		if !math.IsNaN(statusBuy.LimitSell) {
+			statusBuy.LimitSell += amount
+		}
+		if !math.IsNaN(statusBuy.LimitBuy) {
+			statusBuy.LimitBuy -= amount
+		}
+		if !math.IsNaN(statusSell.LimitSell) {
+			statusSell.LimitSell -= amount
+		}
+		if !math.IsNaN(statusSell.LimitBuy) {
+			statusSell.LimitBuy += amount
+		}
+
+		buyFundingRate := 0.0
+		if !statusBuy.isSpot {
+			rateInfo := model.GetFundingRate(statusBuy.market, statusBuy.symbol)
+			if rateInfo != nil {
+				buyFundingRate = rateInfo.Rate
+			}
+		}
+		buyAccount := model.AppConfig.GetAccountFromKey(statusBuy.market, statusBuy.key)
+		if statusBuy.RateInAll > 0 {
+			statusBuy.TradeLineBuy = math.Max(settingBuy.OpenShortMargin*(0.5+jump*statusBuy.RateInAll), winRateMin) + buyFundingRate
+			statusBuy.TradeLineSell = math.Max(settingBuy.OpenShortMargin*(0.5-jump*statusBuy.RateInAll), loseRateMax) - buyFundingRate
+		} else {
+			statusBuy.TradeLineBuy = math.Max(settingBuy.OpenShortMargin*(0.5+jump*statusBuy.RateInAll), loseRateMax) + buyFundingRate
+			statusBuy.TradeLineSell = math.Max(settingBuy.OpenShortMargin*(0.5-jump*statusBuy.RateInAll), winRateMin) - buyFundingRate
+		}
+		if statusBuy.RateInAll > 0.5 {
+			statusBuy.TradeLineBuy = 1
+		}
+		statusBuy.TradeLineBuy *= buyAccount.CarryRate
+		statusBuy.TradeLineSell *= buyAccount.CarryRate
+		if buyAccount.CarryClose && statusBuy.Holding > 0 {
+			statusBuy.TradeLineBuy = 1
+		} else if buyAccount.CarryClose && statusBuy.Holding < 0 {
+			statusBuy.TradeLineSell = 1
+		}
+
+		sellFundingRate := 0.0
+		if !statusSell.isSpot {
+			rateInfo := model.GetFundingRate(statusSell.market, statusSell.symbol)
+			if rateInfo != nil {
+				sellFundingRate = rateInfo.Rate
+			}
+		}
+		sellAccount := model.AppConfig.GetAccountFromKey(statusSell.market, statusSell.key)
+		if statusSell.RateInAll > 0 {
+			statusSell.TradeLineBuy = math.Max(settingSell.OpenShortMargin*(0.5+jump*statusSell.RateInAll), winRateMin) + sellFundingRate
+			statusSell.TradeLineSell = math.Max(settingSell.OpenShortMargin*(0.5-jump*statusSell.RateInAll), loseRateMax) - sellFundingRate
+		} else {
+			statusSell.TradeLineBuy = math.Max(settingSell.OpenShortMargin*(0.5+jump*statusSell.RateInAll), loseRateMax) + sellFundingRate
+			statusSell.TradeLineSell = math.Max(settingSell.OpenShortMargin*(0.5-jump*statusSell.RateInAll), winRateMin) - sellFundingRate
+		}
+		if statusSell.RateInAll > 0.5 {
+			statusSell.TradeLineBuy = 1
+		}
+		statusSell.TradeLineBuy *= sellAccount.CarryRate
+		statusSell.TradeLineSell *= sellAccount.CarryRate
+		if sellAccount.CarryClose && statusSell.Holding > 0 {
+			statusSell.TradeLineBuy = 1
+		} else if sellAccount.CarryClose && statusSell.Holding < 0 {
+			statusSell.TradeLineSell = 1
+		}
+	}
 	//if placeSuccess {
 	//	usdAvailable := getUsdAvailable(key)
 	//	balanceAllValue := getBalanceAll(key)
@@ -471,5 +582,39 @@ func placeCross(statusBuy, statusSell *CarryStatus, priceBuy, priceSell, amount 
 	//	}
 	//	setCarryBalance(key, coin, balance)
 	//	setUsdRate(key, usdAvailable/balanceAllValue)
+	//}
+}
+
+var postOrderCross = func(order *model.Order, setting *model.Setting) {
+	//if order == nil {
+	//	return
+	//}
+	//if order.HaveId() {
+	//	addLastCarry(order, setting)
+	//	addCarryResult(order.AmountType, order.Market, true)
+	//} else {
+	//	unknownFail := true
+	//	account := model.AppConfig.GetAccountFromKey(order.Market, order.AmountType)
+	//	if account != nil {
+	//		switch order.Market {
+	//		case model.OKEX:
+	//			if InsufficientCodeOKEX[order.ErrCode] {
+	//				util.Notice(`reset %s trade max with %s %s`, order.Market, order.ErrCode, order.AmountType)
+	//				resetTradeMax(account.Key, account.Secret, model.OKEX)
+	//				unknownFail = false
+	//			}
+	//		case model.Binance:
+	//			if strings.Contains(InsufficientCodeBinance, order.ErrCode) {
+	//				util.Notice(`reset binance trade max with %s %s`, order.ErrCode, order.AmountType)
+	//				clearCarry(account.Key, account.Secret, order.Market)
+	//				unknownFail = false
+	//			}
+	//		}
+	//	}
+	//	if unknownFail {
+	//		addCarryResult(order.AmountType, order.Market, false)
+	//	} else {
+	//		addCarryResult(order.AmountType, order.Market, true)
+	//	}
 	//}
 }
