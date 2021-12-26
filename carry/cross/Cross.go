@@ -69,7 +69,7 @@ func createSpotMarket(key, secret, market string) (sm *spotMarket) {
 }
 
 func createFromPosition(key, secret string, setting *model.Setting) (carryStatus *CarryStatus) {
-	cm := getContractMarket(key, setting.Market)aaa
+	cm := getContractMarket(key, setting.Market)
 	if cm == nil {
 		cm = createContractMarket(key, secret, setting.Market)
 	}
@@ -100,7 +100,7 @@ func createFromPosition(key, secret string, setting *model.Setting) (carryStatus
 }
 
 func createFromBalance(key, secret string, setting *model.Setting) (carryStatus *CarryStatus) {
-	sm := getSpotMarket(key, setting.Market)aaa
+	sm := getSpotMarket(key, setting.Market)
 	if sm == nil {
 		sm = createSpotMarket(key, secret, setting.Market)
 	}
