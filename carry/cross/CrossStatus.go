@@ -15,6 +15,7 @@ var crossing bool
 var doCross = false
 
 const openValueLimit = 10000.0
+const holdingLimitInU = 500000.0
 
 type contractMarket struct {
 	key, market      string
