@@ -96,8 +96,8 @@ func parseQuote(item map[string]interface{}) (bid, ask *model.Tick, quoteTime ti
 	if item == nil {
 		return
 	}
-	bid = &model.Tick{Side: model.OrderSideBuy}
-	ask = &model.Tick{Side: model.OrderSideSell}
+	bid = &model.Tick{Market: model.Bitmex, Side: model.OrderSideBuy}
+	ask = &model.Tick{Market: model.Bitmex, Side: model.OrderSideSell}
 	if item[`symbol`] != nil {
 		symbol = model.GetStandardSymbol(model.Bitmex, item[`symbol`].(string))
 		bid.Symbol = symbol
@@ -137,7 +137,7 @@ func parseTick(item map[string]interface{}) (tick *model.Tick) {
 	if item == nil {
 		return nil
 	}
-	tick = &model.Tick{}
+	tick = &model.Tick{Market: model.Bitmex}
 	if item[`symbol`] != nil {
 		tick.Symbol = model.GetStandardSymbol(model.Bitmex, item[`symbol`].(string))
 	}
@@ -224,7 +224,7 @@ func handOrderBook10(markets *model.Markets, data []interface{}) {
 			if len(pair) == 2 {
 				price, _ := pair[0].(json.Number).Float64()
 				amount, _ := pair[1].(json.Number).Float64()
-				bidAsk.Bids[key] = model.Tick{Side: model.OrderSideBuy, Symbol: symbol, Price: price, Amount: amount}
+				bidAsk.Bids[key] = model.Tick{Side: model.OrderSideBuy, Symbol: symbol, Price: price, Amount: amount, Market: model.Bitmex}
 			}
 		}
 	}
@@ -239,7 +239,7 @@ func handOrderBook10(markets *model.Markets, data []interface{}) {
 			if len(pair) == 2 {
 				price, _ := pair[0].(json.Number).Float64()
 				amount, _ := pair[1].(json.Number).Float64()
-				bidAsk.Asks[key] = model.Tick{Side: model.OrderSideSell, Symbol: symbol, Price: price, Amount: amount}
+				bidAsk.Asks[key] = model.Tick{Side: model.OrderSideSell, Symbol: symbol, Price: price, Amount: amount, Market: model.Bitmex}
 			}
 		}
 	}

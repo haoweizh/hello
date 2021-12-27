@@ -85,7 +85,7 @@ func parseTickBybit(item map[string]interface{}) (tick *model.Tick) {
 	if item == nil {
 		return nil
 	}
-	tick = &model.Tick{}
+	tick = &model.Tick{Market: model.Bybit}
 	if item[`symbol`] != nil {
 		tick.Symbol = model.GetStandardSymbol(model.Bybit, item[`symbol`].(string))
 	}
