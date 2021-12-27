@@ -476,49 +476,60 @@ func placeCross(statusBuy, statusSell *CarryStatus, priceBuy, priceSell, amount 
 
 func placeStatus(status *CarryStatus, price float64, setting *model.Setting, amount float64, orderSide string) {
 	if model.OrderSideBuy == orderSide {
-		status.Holding += amount
-		status.LimitSell += amount
-		status.LimitBuy -= amount
+		if status.isSpot {
+			sMarket := spotMarkets[status.key]
+			balance := sMarket.balances[status.symbol]
+			balance.Amount += amount
+			balance.UsdValue = balance.Amount * price
+			sMarket.availableU -= amount * price
+			if status.market == model.Ftx {
+				contractMarkets[status.key].collateralsInU -= amount * price
+			} else if status.market == model.OKEX {
+				sMarket.collateral.Available -= amount * price
+				sMarket.collateral.Occupied += amount * price
+			}
+		} else {
+			pMarket := contractMarkets[status.key]
+			position := pMarket.positions[status.symbol]
+			position.Free += amount
+			position.EntryPrice = price
+			pMarket.collateralsInU -= amount * price * 0.2
+			if status.market == model.Ftx {
+				spotMarkets[status.key].availableU -= amount * price * 0.2
+			} else if status.market == model.OKEX {
+				spotMarkets[status.key].collateral.Available -= amount * price * 0.1
+				spotMarkets[status.key].collateral.Occupied += amount * price * 0.1
+			}
+		}
 	} else {
-		status.Holding -= amount
-		status.LimitSell -= amount
-		status.LimitBuy += amount
-	}
-	if status.isSpot {
-		buySm := spotMarkets[status.key]
-		status.ValueInUsd = price * status.Holding
-		status.RateInAll = status.ValueInUsd / buySm.accountValueInU
-	} else {
-		buyCm := contractMarkets[status.key]
-		status.ValueInUsd = math.Abs(status.Holding) * price
-		status.RateInAll = status.ValueInUsd / buyCm.collateralsInU
-	}
-
-	fundingRate := 0.0
-	if !status.isSpot {
-		rateInfo := model.GetFundingRate(status.market, status.symbol)
-		if rateInfo != nil {
-			fundingRate = rateInfo.Rate
+		if status.isSpot {
+			sMarket := spotMarkets[status.key]
+			balance := sMarket.balances[status.symbol]
+			balance.Amount -= amount
+			balance.UsdValue = balance.Amount * price
+			sMarket.availableU += amount * price
+			if status.market == model.Ftx {
+				contractMarkets[status.key].collateralsInU += amount * price
+			} else if status.market == model.OKEX {
+				sMarket.collateral.Available += amount * price
+				sMarket.collateral.Occupied -= amount * price
+			}
+		} else {
+			pMarket := contractMarkets[status.key]
+			position := pMarket.positions[status.symbol]
+			position.Free -= amount
+			position.EntryPrice = price
+			pMarket.collateralsInU += amount * price * 0.2
+			if status.market == model.Ftx {
+				spotMarkets[status.key].availableU += amount * price * 0.2
+			} else if status.market == model.OKEX {
+				spotMarkets[status.key].collateral.Available += amount * price * 0.1
+				spotMarkets[status.key].collateral.Occupied -= amount * price * 0.1
+			}
 		}
 	}
-	account := model.AppConfig.GetAccountFromKey(status.market, status.key)
-	if status.RateInAll > 0 {
-		status.TradeLineBuy = math.Max(setting.OpenShortMargin*(0.5+jump*status.RateInAll), winRateMin) + fundingRate
-		status.TradeLineSell = math.Max(setting.OpenShortMargin*(0.5-jump*status.RateInAll), loseRateMax) - fundingRate
-	} else {
-		status.TradeLineBuy = math.Max(setting.OpenShortMargin*(0.5+jump*status.RateInAll), loseRateMax) + fundingRate
-		status.TradeLineSell = math.Max(setting.OpenShortMargin*(0.5-jump*status.RateInAll), winRateMin) - fundingRate
-	}
-	if status.RateInAll > 0.5 {
-		status.TradeLineBuy = 1
-	}
-	status.TradeLineBuy *= account.CarryRate
-	status.TradeLineSell *= account.CarryRate
-	if account.CarryClose && status.Holding > 0 {
-		status.TradeLineBuy = 1
-	} else if account.CarryClose && status.Holding < 0 {
-		status.TradeLineSell = 1
-	}
+	buyAccount := model.AppConfig.GetAccountFromKey(status.market, status.key)
+	initStatus(status.key, status.secret, buyAccount.CarryClose, buyAccount.CarryRate, setting)
 }
 
 var postOrderCross = func(order *model.Order, setting *model.Setting) {
