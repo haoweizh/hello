@@ -522,8 +522,8 @@ func placeStatus(status *CarryStatus, price float64, setting *model.Setting, amo
 			}
 		}
 	}
-	buyAccount := model.AppConfig.GetAccountFromKey(status.market, status.key)
-	initStatus(status.key, status.secret, buyAccount.CarryClose, buyAccount.CarryRate, setting)
+	account := model.AppConfig.GetAccountFromKey(status.market, status.key)
+	initStatus(status.key, status.secret, account.CarryClose, account.CarryRate, setting)
 }
 
 var postOrderCross = func(order *model.Order, setting *model.Setting) {
