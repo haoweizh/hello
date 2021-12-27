@@ -481,6 +481,7 @@ func placeStatus(status *CarryStatus, price float64, setting *model.Setting, amo
 			} else if status.market == model.OKEX {
 				sMarket.collateral.Available -= amount * price
 				sMarket.collateral.Occupied += amount * price
+				contractMarkets[status.key].collateralsInU -= amount * price
 			}
 		} else {
 			pMarket := contractMarkets[status.key]
@@ -493,6 +494,7 @@ func placeStatus(status *CarryStatus, price float64, setting *model.Setting, amo
 			} else if status.market == model.OKEX {
 				spotMarkets[status.key].collateral.Available -= amount * price * 0.1
 				spotMarkets[status.key].collateral.Occupied += amount * price * 0.1
+				spotMarkets[status.key].availableU -= amount * price * 0.1
 			}
 		}
 	} else {
@@ -507,6 +509,7 @@ func placeStatus(status *CarryStatus, price float64, setting *model.Setting, amo
 			} else if status.market == model.OKEX {
 				sMarket.collateral.Available += amount * price
 				sMarket.collateral.Occupied -= amount * price
+				contractMarkets[status.key].collateralsInU += amount * price
 			}
 		} else {
 			pMarket := contractMarkets[status.key]
@@ -519,6 +522,7 @@ func placeStatus(status *CarryStatus, price float64, setting *model.Setting, amo
 			} else if status.market == model.OKEX {
 				spotMarkets[status.key].collateral.Available += amount * price * 0.1
 				spotMarkets[status.key].collateral.Occupied -= amount * price * 0.1
+				spotMarkets[status.key].availableU += amount * price * 0.1
 			}
 		}
 	}
