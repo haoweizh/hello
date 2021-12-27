@@ -463,67 +463,37 @@ func placeCross(statusBuy, statusSell *CarryStatus, priceBuy, priceSell, amount 
 			settingBuy = *relateSetting
 			settingSell = *setting
 		}
-		placeStatus(statusBuy, priceBuy, &settingBuy, amount, model.OrderSideBuy)
-		placeStatus(statusSell, priceSell, &settingSell, amount, model.OrderSideSell)
+		placeStatus(statusBuy, priceBuy, &settingBuy, amount)
+		placeStatus(statusSell, priceSell, &settingSell, -1*amount)
 	}
 }
 
-func placeStatus(status *CarryStatus, price float64, setting *model.Setting, amount float64, orderSide string) {
-	if model.OrderSideBuy == orderSide {
-		if status.isSpot {
-			sMarket := spotMarkets[status.key]
-			balance := sMarket.balances[status.symbol]
-			balance.Amount += amount
-			balance.UsdValue = balance.Amount * price
-			sMarket.availableU -= amount * price
-			if status.market == model.Ftx {
-				contractMarkets[status.key].collateralsInU -= amount * price
-			} else if status.market == model.OKEX {
-				sMarket.collateral.Available -= amount * price
-				sMarket.collateral.Occupied += amount * price
-				contractMarkets[status.key].collateralsInU -= amount * price
-			}
-		} else {
-			pMarket := contractMarkets[status.key]
-			position := pMarket.positions[status.symbol]
-			position.Free += amount
-			position.EntryPrice = price
-			pMarket.collateralsInU -= amount * price * 0.2
-			if status.market == model.Ftx {
-				spotMarkets[status.key].availableU -= amount * price * 0.2
-			} else if status.market == model.OKEX {
-				spotMarkets[status.key].collateral.Available -= amount * price * 0.1
-				spotMarkets[status.key].collateral.Occupied += amount * price * 0.1
-				spotMarkets[status.key].availableU -= amount * price * 0.1
-			}
+func placeStatus(status *CarryStatus, price float64, setting *model.Setting, amount float64) {
+	if status.isSpot {
+		sMarket := spotMarkets[status.key]
+		balance := sMarket.balances[status.symbol]
+		balance.Amount += amount
+		balance.UsdValue = balance.Amount * price
+		sMarket.availableU -= amount * price
+		if status.market == model.Ftx {
+			contractMarkets[status.key].collateralsInU -= amount * price
+		} else if status.market == model.OKEX {
+			sMarket.collateral.Available -= amount * price
+			sMarket.collateral.Occupied += amount * price
+			contractMarkets[status.key].collateralsInU -= amount * price
 		}
 	} else {
-		if status.isSpot {
-			sMarket := spotMarkets[status.key]
-			balance := sMarket.balances[status.symbol]
-			balance.Amount -= amount
-			balance.UsdValue = balance.Amount * price
-			sMarket.availableU += amount * price
-			if status.market == model.Ftx {
-				contractMarkets[status.key].collateralsInU += amount * price
-			} else if status.market == model.OKEX {
-				sMarket.collateral.Available += amount * price
-				sMarket.collateral.Occupied -= amount * price
-				contractMarkets[status.key].collateralsInU += amount * price
-			}
-		} else {
-			pMarket := contractMarkets[status.key]
-			position := pMarket.positions[status.symbol]
-			position.Free -= amount
-			position.EntryPrice = price
-			pMarket.collateralsInU += amount * price * 0.2
-			if status.market == model.Ftx {
-				spotMarkets[status.key].availableU += amount * price * 0.2
-			} else if status.market == model.OKEX {
-				spotMarkets[status.key].collateral.Available += amount * price * 0.1
-				spotMarkets[status.key].collateral.Occupied -= amount * price * 0.1
-				spotMarkets[status.key].availableU += amount * price * 0.1
-			}
+		pMarket := contractMarkets[status.key]
+		position := pMarket.positions[status.symbol]
+		position.Free += amount
+		position.EntryPrice = price
+		pMarket.collateralsInU -= amount * price * 0.2
+		if status.market == model.Ftx {
+			spotMarkets[status.key].availableU -= amount * price * 0.2
+		} else if status.market == model.OKEX {
+			spotMarkets[status.key].collateral.Available -= amount * price * 0.1
+			spotMarkets[status.key].collateral.Occupied += amount * price * 0.1
+			spotMarkets[status.key].availableU -= amount * price * 0.1
 		}
 	}
 	account := model.AppConfig.GetAccountFromKey(status.market, status.key)
