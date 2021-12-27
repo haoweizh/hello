@@ -84,18 +84,22 @@ func createFromPosition(key, secret string, setting *model.Setting) (carryStatus
 	}
 	if contractMarkets[key].positions[setting.Symbol] != nil {
 		carryStatus.Holding = contractMarkets[key].positions[setting.Symbol].Free
-		carryStatus.ValueInUsd = math.Abs(carryStatus.Holding) * contractMarkets[key].positions[setting.Symbol].EntryPrice
-		if contractMarkets[key].collateralsInU > 0 {
-			carryStatus.RateInAll = carryStatus.ValueInUsd / contractMarkets[key].collateralsInU
-			if contractMarkets[key].collateralsInU < contractMarkets[key].contractValueInU { // todo 需要review此限制
-				if carryStatus.Holding > 0 {
-					carryStatus.TradeLineBuy = 1
-				} else if carryStatus.Holding < 0 {
-					carryStatus.TradeLineSell = 1
-				}
-			}
-		} else {
+		carryStatus.ValueInUsd = math.Abs(carryStatus.Holding)*contractMarkets[key].positions[setting.Symbol].EntryPrice +
+			contractMarkets[key].positions[setting.Symbol].ProfitUnreal
+	}
+	carryStatus.RateInAll = carryStatus.ValueInUsd / contractMarkets[key].collateralsInU
+	holdLimit := holdingLimitInU
+	account0 := model.AppConfig.GetAccounts(setting.Market)[0]
+	if account0.Key != key {
+		holdLimit /= 10
+	}
+	if contractMarkets[key].contractValueInU/contractMarkets[key].collateralsInU > 3 ||
+		carryStatus.ValueInUsd > holdLimit {
+		util.Notice(fmt.Sprintf(`杠杆较高，停止开仓 %s %f %f`,
+			key, contractMarkets[key].contractValueInU, contractMarkets[key].collateralsInU))
+		if carryStatus.Holding > 0 {
 			carryStatus.TradeLineBuy = 1
+		} else if carryStatus.Holding < 0 {
 			carryStatus.TradeLineSell = 1
 		}
 	}
@@ -375,14 +379,11 @@ func calcAmount(carryStatus, carryStatusRelate *CarryStatus, tick,
 	if !math.IsNaN(statusBuy.LimitBuy) {
 		bidAmount = math.Min(statusBuy.LimitBuy, bidAmount)
 	}
-	buyMarketU := 0.0
-	if statusBuy.isSpot {
-		buyMarket := spotMarkets[statusBuy.key]
-		if buyMarket != nil {
-			buyMarketU = buyMarket.availableU
-		}
+	buyLimit := math.Min(statusBuy.ValueInUsd/15, openValueLimit)
+	if statusBuy.isSpot && spotMarkets[statusBuy.key] != nil {
+		buyLimit = math.Min(spotMarkets[statusBuy.key].availableU/5, buyLimit)
 	}
-	bidAmount = math.Min(buyMarketU/priceBuy/5, bidAmount)
+	bidAmount = math.Min(bidAmount, buyLimit/priceBuy)
 	// todo binance 要求下单金额大于10u，gate要求大于1u
 	//openValueMin := setting.AmountLimit
 	amount = math.Min(bidAmount, askAmount)
