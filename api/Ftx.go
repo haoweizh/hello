@@ -132,8 +132,10 @@ func handleTickerFtx(markets *model.Markets, response *simplejson.Json) {
 	bidAsk.Ts = int(ts * 1000)
 	bidAsk.TsReceived = int(util.GetNowUnixMillion())
 	if dataType == `update` {
-		bidAsk.Bids = []model.Tick{{Price: data.Get(`bid`).MustFloat64(), Amount: data.Get(`bidSize`).MustFloat64()}}
-		bidAsk.Asks = []model.Tick{{Price: data.Get(`ask`).MustFloat64(), Amount: data.Get(`askSize`).MustFloat64()}}
+		bidAsk.Bids = []model.Tick{{Price: data.Get(`bid`).MustFloat64(), Amount: data.Get(`bidSize`).MustFloat64(),
+			Market: model.Ftx, Symbol: symbol, Side: model.OrderSideBuy}}
+		bidAsk.Asks = []model.Tick{{Price: data.Get(`ask`).MustFloat64(), Amount: data.Get(`askSize`).MustFloat64(),
+			Market: model.Ftx, Symbol: symbol, Side: model.OrderSideSell}}
 	}
 	if markets.SetBidAsk(symbol, model.Ftx, bidAsk) {
 		for function, handler := range model.GetFunctions(model.Ftx, symbol) {
@@ -164,12 +166,12 @@ func handleDepthFtx(markets *model.Markets, response *simplejson.Json) {
 			for _, item := range bids {
 				price, _ := item.([]interface{})[0].(json.Number).Float64()
 				size, _ := item.([]interface{})[1].(json.Number).Float64()
-				bidAsk.Bids = append(bidAsk.Bids, model.Tick{Price: price, Amount: size})
+				bidAsk.Bids = append(bidAsk.Bids, model.Tick{Price: price, Amount: size, Market: model.Ftx, Symbol: symbol, Side: model.OrderSideBuy})
 			}
 			for _, item := range asks {
 				price, _ := item.([]interface{})[0].(json.Number).Float64()
 				size, _ := item.([]interface{})[1].(json.Number).Float64()
-				bidAsk.Asks = append(bidAsk.Asks, model.Tick{Price: price, Amount: size})
+				bidAsk.Asks = append(bidAsk.Asks, model.Tick{Price: price, Amount: size, Market: model.Ftx, Symbol: symbol, Side: model.OrderSideSell})
 			}
 		} else if dataType == `update` {
 			_, oldBidAsk := markets.GetBidAsk(symbol, model.Ftx)
@@ -181,21 +183,21 @@ func handleDepthFtx(markets *model.Markets, response *simplejson.Json) {
 			priceAmountBid := make(map[float64]*model.Tick)
 			priceAmountAsk := make(map[float64]*model.Tick)
 			for _, bid := range oldBidAsk.Bids {
-				priceAmountBid[bid.Price] = &model.Tick{Price: bid.Price, Amount: bid.Amount}
+				priceAmountBid[bid.Price] = &model.Tick{Price: bid.Price, Amount: bid.Amount, Market: model.Ftx, Symbol: symbol, Side: model.OrderSideBuy}
 			}
 			for _, item := range bids {
 				price, _ := item.([]interface{})[0].(json.Number).Float64()
 				size, _ := item.([]interface{})[1].(json.Number).Float64()
-				priceAmountBid[price] = &model.Tick{Price: price, Amount: size}
+				priceAmountBid[price] = &model.Tick{Price: price, Amount: size, Market: model.Ftx, Symbol: symbol, Side: model.OrderSideBuy}
 			}
 			for _, ask := range oldBidAsk.Asks {
 				//priceAmountAsk[ask.Price] = &ask
-				priceAmountAsk[ask.Price] = &model.Tick{Price: ask.Price, Amount: ask.Amount}
+				priceAmountAsk[ask.Price] = &model.Tick{Price: ask.Price, Amount: ask.Amount, Market: model.Ftx, Symbol: symbol, Side: model.OrderSideSell}
 			}
 			for _, item := range asks {
 				price, _ := item.([]interface{})[0].(json.Number).Float64()
 				size, _ := item.([]interface{})[1].(json.Number).Float64()
-				priceAmountAsk[price] = &model.Tick{Price: price, Amount: size}
+				priceAmountAsk[price] = &model.Tick{Price: price, Amount: size, Market: model.Ftx, Symbol: symbol, Side: model.OrderSideSell}
 			}
 			for _, tick := range priceAmountBid {
 				if tick.Amount > 0 {

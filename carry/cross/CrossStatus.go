@@ -10,10 +10,11 @@ var carryStatus = make(map[string]map[string]map[string]map[string]*CarryStatus)
 var okTradeMaxResetTime = make(map[string]map[string]int64)                      // key - symbol - init time in second
 var contractMarkets = make(map[string]*contractMarket)                           // key - contractMarket
 var spotMarkets = make(map[string]*spotMarket)                                   // key - spotMarket
-
 var crossLock sync.Mutex
 var crossing bool
 var doCross = false
+
+const openValueLimit = 10000.0
 
 type contractMarket struct {
 	key, market      string
@@ -38,6 +39,21 @@ type CarryStatus struct {
 	Holding                     float64
 	ValueInUsd                  float64
 	RateInAll                   float64 // 现货：该币种占总权益的比例；永续：以开仓价算该币种持仓占保证金百分比
+}
+
+func getUsdBalance(market string) (balance *model.Balance) {
+	if spotMarkets == nil || spotMarkets[market] == nil {
+		return nil
+	}
+	usdName := `USDT`
+	if market == model.Ftx {
+
+		usdName = `USD`
+	}
+	if spotMarkets[market].balances == nil {
+		return nil
+	}
+	return spotMarkets[market].balances[usdName]
 }
 
 func GetCrossMarketValue(key string) (market string, inAllSpot, collateral, holdingSpot, holdingFuture, unRealizedPnl float64) {

@@ -314,8 +314,8 @@ func handleKucoinWS(relatedMsg *kucoin.WebSocketDownstreamMessage, futureMsg *ku
 		askPrice, _ := strconv.ParseFloat(ticker.BestAskPrice, 64)
 		_, askAmount := model.ParseRealAmount(model.Kucoin, symbol, float64(ticker.BestAskSize))
 		bidAsk := model.BidAsk{Ts: ts, TsReceived: now,
-			Bids: []model.Tick{{Price: bidPrice, Amount: bidAmount}},
-			Asks: []model.Tick{{Price: askPrice, Amount: askAmount}}}
+			Bids: []model.Tick{{Price: bidPrice, Amount: bidAmount, Market: model.Kucoin, Symbol: symbol, Side: model.OrderSideBuy}},
+			Asks: []model.Tick{{Price: askPrice, Amount: askAmount, Market: model.Kucoin, Symbol: symbol, Side: model.OrderSideSell}}}
 		markets := model.AppMarkets
 		haveOld, old := markets.GetBidAsk(symbol, model.Kucoin)
 		if haveOld && old.Ts > bidAsk.Ts {
@@ -351,8 +351,8 @@ func handleKucoinWS(relatedMsg *kucoin.WebSocketDownstreamMessage, futureMsg *ku
 		askPrice, _ := strconv.ParseFloat(ticker.BestAsk, 64)
 		askAmount, _ := strconv.ParseFloat(ticker.BestAskSize, 64)
 		bidAsk := model.BidAsk{Ts: now, TsReceived: now, UpdateId: updateId,
-			Bids: []model.Tick{{Price: bidPrice, Amount: bidAmount}},
-			Asks: []model.Tick{{Price: askPrice, Amount: askAmount}}}
+			Bids: []model.Tick{{Price: bidPrice, Amount: bidAmount, Market: model.Kucoin, Symbol: symbol, Side: model.OrderSideBuy}},
+			Asks: []model.Tick{{Price: askPrice, Amount: askAmount, Market: model.Kucoin, Symbol: symbol, Side: model.OrderSideSell}}}
 		markets := model.AppMarkets
 		haveOld, old := markets.GetBidAsk(symbol, model.Kucoin)
 		if haveOld && old.UpdateId > bidAsk.UpdateId {

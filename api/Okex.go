@@ -422,7 +422,8 @@ func handleBooksOKEX(instrument string, data map[string]interface{}) (bidAsk *mo
 			amountStr := value[1].(string)
 			price, _ := strconv.ParseFloat(priceStr, 64)
 			amount, _ := strconv.ParseFloat(amountStr, 64)
-			bidAsk.Asks[i] = model.Tick{Price: price, Amount: amount, Symbol: instrument, PriceStr: priceStr, AmountStr: amountStr}
+			bidAsk.Asks[i] = model.Tick{Price: price, Amount: amount, Symbol: instrument, PriceStr: priceStr,
+				AmountStr: amountStr, Market: model.OKEX, Side: model.OrderSideSell}
 		}
 	}
 	for i, bid := range bids {
@@ -432,7 +433,8 @@ func handleBooksOKEX(instrument string, data map[string]interface{}) (bidAsk *mo
 			amountStr := value[1].(string)
 			price, _ := strconv.ParseFloat(priceStr, 64)
 			amount, _ := strconv.ParseFloat(amountStr, 64)
-			bidAsk.Bids[i] = model.Tick{Price: price, Amount: amount, Symbol: instrument, PriceStr: priceStr, AmountStr: amountStr}
+			bidAsk.Bids[i] = model.Tick{Price: price, Amount: amount, Symbol: instrument, PriceStr: priceStr,
+				AmountStr: amountStr, Market: model.OKEX, Side: model.OrderSideBuy}
 		}
 	}
 	//if data[`checksum`] != nil {

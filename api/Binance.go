@@ -103,8 +103,8 @@ func handleTickerBinance(markets *model.Markets, json *simplejson.Json, symbol s
 	bookTicker := json.Get(`e`).MustString()
 	if symbol != `` && bidPrice > 0 && bidAmount > 0 && askPrice > 0 && askAmount > 0 {
 		bidAsk := model.BidAsk{Ts: ts, TsReceived: now, UpdateId: updateId,
-			Bids: []model.Tick{{Price: bidPrice, Amount: bidAmount}},
-			Asks: []model.Tick{{Price: askPrice, Amount: askAmount}}}
+			Bids: []model.Tick{{Price: bidPrice, Amount: bidAmount, Market: model.Binance, Symbol: symbol, Side: model.OrderSideBuy}},
+			Asks: []model.Tick{{Price: askPrice, Amount: askAmount, Market: model.Binance, Symbol: symbol, Side: model.OrderSideSell}}}
 		if bookTicker == `bookTicker` { //有e字段 表示是U合约推送，否则现货，此区分方式不稳定，暂用
 			if symbol[len(symbol)-4:] == `USDT` {
 				symbol = symbol[0:len(symbol)-4] + "-PERP"
@@ -173,7 +173,7 @@ func handleDepthBinance(markets *model.Markets, json *simplejson.Json, symbol st
 		}
 		price, _ := strconv.ParseFloat(value.([]interface{})[0].(string), 64)
 		amount, _ := strconv.ParseFloat(value.([]interface{})[1].(string), 64)
-		bidAsk.Bids[i] = model.Tick{Price: price, Amount: amount}
+		bidAsk.Bids[i] = model.Tick{Price: price, Amount: amount, Market: model.Binance, Symbol: symbol, Side: model.OrderSideBuy}
 	}
 	bidAsk.Asks = make([]model.Tick, len(asks))
 	for i, value := range asks {
@@ -182,7 +182,7 @@ func handleDepthBinance(markets *model.Markets, json *simplejson.Json, symbol st
 		}
 		price, _ := strconv.ParseFloat(value.([]interface{})[0].(string), 64)
 		amount, _ := strconv.ParseFloat(value.([]interface{})[1].(string), 64)
-		bidAsk.Asks[i] = model.Tick{Price: price, Amount: amount}
+		bidAsk.Asks[i] = model.Tick{Price: price, Amount: amount, Market: model.Binance, Symbol: symbol, Side: model.OrderSideSell}
 	}
 	sort.Sort(bidAsk.Asks)
 	sort.Sort(sort.Reverse(bidAsk.Bids))

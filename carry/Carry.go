@@ -653,13 +653,13 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	//}
 	//revertOpen = math.Max(revertOpen, setting.CloseShortMargin/2) + fundingRate + 0.001
 	//revertClose = math.Max(-0.0005/(1-math.Min(0.9, jump*coinRate)), setting.CloseShortMargin/2) - fundingRate + 0.001
-	usdLowLine := 0.1 * balanceAllValue
-	localOpenValueLimit := math.Min(openValueLimit, usdLowLine/3)
+	//usdLowLine := 0.1 * balanceAllValue
 	table := fmt.Sprintf(`%s_dynamic_`, model.FunctionCarry)
 	setOpen *= carryRate
 	setClose *= carryRate
 	table += fmt.Sprintf(`slave%s`, key[0:5])
-	usdLowLine = 0.2 * balanceAllValue
+	usdLowLine := 0.2 * balanceAllValue
+	localOpenValueLimit := math.Min(openValueLimit, usdLowLine/3)
 	if setting.Market == model.Binance || setting.MarketRelated == model.Binance {
 		valueLow = 11
 	}

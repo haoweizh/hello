@@ -64,14 +64,14 @@ func WsDepthServeCoinpark(markets *model.Markets, orderHandler OrderHandler) ([]
 					price, _ := strconv.ParseFloat(str, 64)
 					str = value.(map[string]interface{})["volume"].(string)
 					amount, _ := strconv.ParseFloat(str, 64)
-					bidAsk.Bids[i] = model.Tick{Price: price, Amount: amount}
+					bidAsk.Bids[i] = model.Tick{Price: price, Amount: amount, Market: model.Coinpark, Symbol: symbol, Side: model.OrderSideBuy}
 				}
 				for i, value := range askArray {
 					str := value.(map[string]interface{})["price"].(string)
 					price, _ := strconv.ParseFloat(str, 64)
 					str = value.(map[string]interface{})["volume"].(string)
 					amount, _ := strconv.ParseFloat(str, 64)
-					bidAsk.Asks[i] = model.Tick{Price: price, Amount: amount}
+					bidAsk.Asks[i] = model.Tick{Price: price, Amount: amount, Market: model.Coinpark, Symbol: symbol, Side: model.OrderSideSell}
 				}
 				sort.Sort(bidAsk.Asks)
 				sort.Sort(sort.Reverse(bidAsk.Bids))

@@ -79,8 +79,8 @@ func handleTickerDFuture(markets *model.Markets, response *simplejson.Json) {
 	bidAsk := &model.BidAsk{
 		Ts:         int(util.GetNowUnixMillion()),
 		TsReceived: int(util.GetNowUnixMillion()),
-		Bids:       []model.Tick{{Price: 0, Amount: 0}},
-		Asks:       []model.Tick{{Price: price, Amount: 0}},
+		Bids:       []model.Tick{{Price: 0, Amount: 0, Market: model.DFuture, Symbol: symbol, Side: model.OrderSideBuy}},
+		Asks:       []model.Tick{{Price: price, Amount: 0, Market: model.DFuture, Symbol: symbol, Side: model.OrderSideSell}},
 	}
 	if markets.SetBidAsk(symbol, model.DFuture, bidAsk) {
 		for function, handler := range model.GetFunctions(model.DFuture, symbol) {
