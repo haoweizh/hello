@@ -93,7 +93,7 @@ func createFromPosition(key, secret string, setting *model.Setting) (carryStatus
 	if account0.Key != key {
 		holdLimit /= 10
 	}
-	if contractMarkets[key].contractValueInU/contractMarkets[key].collateralsInU > 3 ||
+	if contractMarkets[key].contractValueInU/contractMarkets[key].collateralsInU > 4 ||
 		carryStatus.ValueInUsd > holdLimit {
 		util.Notice(fmt.Sprintf(`杠杆较高，停止开仓 %s %f %f`,
 			key, contractMarkets[key].contractValueInU, contractMarkets[key].collateralsInU))
