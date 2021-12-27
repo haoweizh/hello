@@ -486,15 +486,17 @@ func placeStatus(status *CarryStatus, price float64, setting *model.Setting, amo
 	} else {
 		pMarket := contractMarkets[status.key]
 		position := pMarket.positions[status.symbol]
+		originFreeAbs := math.Abs(position.Free)
 		position.Free += amount
 		position.EntryPrice = price
-		pMarket.collateralsInU -= amount * price * 0.2
+		changeU := (originFreeAbs - math.Abs(position.Free)) * price
+		pMarket.collateralsInU += changeU * 0.2
 		if status.market == model.Ftx {
-			spotMarkets[status.key].availableU -= amount * price * 0.2
+			spotMarkets[status.key].availableU += changeU * 0.2
 		} else if status.market == model.OKEX {
-			spotMarkets[status.key].collateral.Available -= amount * price * 0.1
-			spotMarkets[status.key].collateral.Occupied += amount * price * 0.1
-			spotMarkets[status.key].availableU -= amount * price * 0.1
+			spotMarkets[status.key].collateral.Available += changeU * 0.1
+			spotMarkets[status.key].collateral.Occupied -= changeU * 0.1
+			spotMarkets[status.key].availableU += changeU * 0.1
 		}
 	}
 	account := model.AppConfig.GetAccountFromKey(status.market, status.key)
