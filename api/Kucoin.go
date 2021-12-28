@@ -608,7 +608,7 @@ func placeOrderKucoin(order *model.Order, orderSide, orderType, symbol string, p
 			order.OrderId = ``
 			return
 		} else {
-			util.SocketInfo(fmt.Sprintf(`create future order response: %s`, futureOrderResp))
+			util.SocketInfo(fmt.Sprintf(`create future order response: %v`, futureOrderResp))
 			orderResult := &kumex.CreateOrderResultModel{}
 			respErr := futureOrderResp.ReadData(orderResult)
 			if respErr != nil {
@@ -638,7 +638,7 @@ func placeOrderKucoin(order *model.Order, orderSide, orderType, symbol string, p
 			priceSpot, decimalSpot := model.FormatPrice(model.Kucoin, symbol, orderSide, price)
 			createOrder.Price = util.CutTailZero(strconv.FormatFloat(priceSpot, 'f', decimalSpot, 64))
 			createOrder.Size = util.CutTailZero(fmt.Sprintf(`%f`, model.GetAmountInMarket(model.Kucoin, symbol, amount)))
-			util.SocketInfo(fmt.Sprintf(`create spot order request: %s`, createOrder))
+			util.SocketInfo(fmt.Sprintf(`create spot order request: %v`, createOrder))
 			spotOrderResponse, err := kucoinRelatedClient("", "", "").CreateOrder(createOrder)
 			if err != nil {
 				util.SocketInfo(fmt.Sprintf("function: %s fail to create spot order kucoin, err:%s", "placeOrderKucoin", err))
@@ -646,7 +646,7 @@ func placeOrderKucoin(order *model.Order, orderSide, orderType, symbol string, p
 				order.OrderId = ``
 				return
 			} else {
-				util.SocketInfo(fmt.Sprintf(`create spot order response: %s`, spotOrderResponse))
+				util.SocketInfo(fmt.Sprintf(`create spot order response: %v`, spotOrderResponse))
 				orderResult := &kucoin.CreateOrderResultModel{}
 				respErr := spotOrderResponse.ReadData(orderResult)
 				if respErr != nil {
@@ -676,7 +676,7 @@ func placeOrderKucoin(order *model.Order, orderSide, orderType, symbol string, p
 			priceSpot, decimalSpot := model.FormatPrice(model.Kucoin, symbol, orderSide, price)
 			createOrder.Price = util.CutTailZero(strconv.FormatFloat(priceSpot, 'f', decimalSpot, 64))
 			createOrder.Size = util.CutTailZero(fmt.Sprintf(`%f`, model.GetAmountInMarket(model.Kucoin, symbol, amount)))
-			util.SocketInfo(fmt.Sprintf(`create margin order request: %s`, createOrder))
+			util.SocketInfo(fmt.Sprintf(`create margin order request: %v`, createOrder))
 			req := kucoin.NewRequest(http.MethodPost, "/api/v1/margin/order", createOrder)
 			marginOrderResp, err := kucoinRelatedClient("", "", "").Call(req)
 			if err != nil {

@@ -139,7 +139,7 @@ func createFromBalance(key, secret string, setting *model.Setting) (carryStatus 
 }
 
 // todo 增加更新status在网页上的显示数据
-func initStatus(key, secret string, carryClose bool, carryRate float64, setting *model.Setting) (status *CarryStatus) {
+func initStatus(account *model.Account, setting *model.Setting) (status *CarryStatus) {
 	if setting == nil {
 		return
 	}
@@ -147,21 +147,21 @@ func initStatus(key, secret string, carryClose bool, carryRate float64, setting 
 	tailPerp := model.GetPerpTail(setting.Market)
 	fundingRate := 0.0
 	if setting.Symbol[len(setting.Symbol)-len(tailSpot):] == tailSpot {
-		status = createFromBalance(key, secret, setting)
+		status = createFromBalance(account.Key, account.Secret, setting)
 	} else if setting.Symbol[len(setting.Symbol)-len(tailPerp):] == tailPerp {
-		status = createFromPosition(key, secret, setting)
-		_, fundingRate = api.GetFundingRate(key, secret, setting.Market, setting.Symbol, nil)
+		status = createFromPosition(account.Key, account.Secret, setting)
+		_, fundingRate = api.GetFundingRate(account.Key, account.Secret, setting.Market, setting.Symbol, nil)
 		fundingRate *= 0.9
 	}
 	if carryStatus == nil {
 		return
 	}
-	setCarryStatus(setting.Coin, setting.Market, setting.Symbol, key, status)
+	setCarryStatus(setting.Coin, setting.Market, setting.Symbol, account.Key, status)
 	now := time.Now().Unix()
-	resetTime := getOKTradeMaxResetTime(key, setting.Symbol) + 600
+	resetTime := getOKTradeMaxResetTime(account.Key, setting.Symbol) + 600
 	if setting.Market == model.OKEX && now > resetTime {
-		setOKTradeMaxResetTime(key, setting.Symbol)
-		getMax, maxBuy, maxSell := api.GetMaxSize(key, secret, setting.Symbol)
+		setOKTradeMaxResetTime(account.Key, setting.Symbol)
+		getMax, maxBuy, maxSell := api.GetMaxSize(account.Key, account.Secret, setting.Symbol)
 		if getMax {
 			status.LimitSell = maxSell
 			status.LimitBuy = maxBuy
@@ -177,11 +177,11 @@ func initStatus(key, secret string, carryClose bool, carryRate float64, setting 
 	if status.RateInAll > 0.5 {
 		status.TradeLineBuy = 1
 	}
-	status.TradeLineBuy *= carryRate
-	status.TradeLineSell *= carryRate
-	if carryClose && status.Holding > 0 {
+	status.TradeLineBuy *= account.CarryRate
+	status.TradeLineSell *= account.CarryRate
+	if account.CarryClose && status.Holding > 0 {
 		status.TradeLineBuy = 1
-	} else if carryClose && status.Holding < 0 {
+	} else if account.CarryClose && status.Holding < 0 {
 		status.TradeLineSell = 1
 	}
 	return
@@ -210,7 +210,7 @@ func ClearCross() {
 					}
 					account := model.AppConfig.GetAccounts(setting.Market)[i]
 					if account != nil {
-						equalStatuses[j] = initStatus(account.Key, account.Secret, account.CarryClose, account.CarryRate, setting)
+						equalStatuses[j] = initStatus(account, setting)
 					}
 				}
 				makeEqual(equalStatuses)
@@ -356,23 +356,20 @@ func calcAmount(carryStatus, carryStatusRelate *CarryStatus, tick,
 		statusBuy = carryStatusRelate
 		priceSell = tick.Bids[0].Price
 		priceBuy = tickRelate.Asks[0].Price
-		askAmount = tick.Bids[0].Amount
-		bidAmount = tickRelate.Asks[0].Amount
+		askAmount = tick.Bids[0].Amount * 0.9
+		bidAmount = tickRelate.Asks[0].Amount * 0.9
 	}
 	if carryStatus.TradeLineBuy < scoreRelate && carryStatusRelate.TradeLineSell < scoreRelate {
 		statusSell = carryStatusRelate
 		statusBuy = carryStatus
 		priceSell = tickRelate.Bids[0].Price
 		priceBuy = tick.Asks[0].Price
-		askAmount = tickRelate.Bids[0].Amount
-		bidAmount = tick.Bids[0].Amount
+		askAmount = tickRelate.Bids[0].Amount * 0.9
+		bidAmount = tick.Bids[0].Amount * 0.9
 	}
 	if statusBuy == nil || statusSell == nil {
 		return nil, nil, 0, 0, 0
 	}
-	// todo test all markets real amount
-	_, bidAmount = model.ParseRealAmount(statusBuy.market, statusBuy.symbol, bidAmount)
-	_, askAmount = model.ParseRealAmount(statusSell.market, statusSell.symbol, askAmount)
 	if !math.IsNaN(statusSell.LimitSell) {
 		askAmount = math.Min(statusSell.LimitSell, askAmount)
 	}
@@ -428,7 +425,7 @@ func placeCross(statusBuy, statusSell *CarryStatus, priceBuy, priceSell, amount 
 		//util.Notice(fmt.Sprintf(`waiting for other ordering %s`, setting.Symbol))
 		return
 	}
-	//todo postcarry
+	//todo postCarry
 	placeSuccess := true
 	if statusBuy.market == model.OKEX && statusSell.market == model.OKEX {
 		var sidePerp, sideRelated string
@@ -500,7 +497,7 @@ func placeStatus(status *CarryStatus, price float64, setting *model.Setting, amo
 		}
 	}
 	account := model.AppConfig.GetAccountFromKey(status.market, status.key)
-	initStatus(status.key, status.secret, account.CarryClose, account.CarryRate, setting)
+	initStatus(account, setting)
 }
 
 var postOrderCross = func(order *model.Order, setting *model.Setting) {

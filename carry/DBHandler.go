@@ -2,8 +2,6 @@ package carry
 
 import (
 	"fmt"
-	"gorm.io/driver/postgres"
-	"gorm.io/gorm"
 	"hello/api"
 	"hello/carry/cross"
 	"hello/carry/refresh"
@@ -151,12 +149,6 @@ func MaintainMarketChan() {
 
 func Maintain() {
 	util.Notice("start carrying")
-	var err error
-	model.AppDB, err = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
-	if err != nil {
-		util.Notice(err.Error())
-		return
-	}
 	model.HandlerMap[model.FunctionGrid] = ProcessSimpleGrid
 	model.HandlerMap[model.FunctionTurtle] = ProcessTurtle
 	model.HandlerMap[model.FunctionCarry] = ProcessCarry

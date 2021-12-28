@@ -263,7 +263,7 @@ func clearCarry(key, secret, market string) {
 	for _, setting := range equalSettings {
 		makeEqual(key, secret, setting, balances, positions)
 	}
-	initEmptyBalance(key, secret, market)
+	initEmptyBalance(key, market)
 	checkProcessTransfer(key, secret, market)
 }
 
@@ -571,7 +571,7 @@ func makeEqual(key, secret string, setting *model.Setting, balances []*model.Bal
 	return
 }
 
-func initEmptyBalance(key, secret, market string) {
+func initEmptyBalance(key, market string) {
 	now := util.GetNow().Unix()
 	if now-marketInitTime[key] < 600 {
 		return
@@ -695,9 +695,6 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	carryType = carryTypeOpen
 	if scoreClose < setClose || (balance.Amount > 0 && scoreClose <= -1*revertOpen) {
 		bidAmount = tickPerp.Asks[0].Amount
-		if setting.Market == model.OKEX {
-			_, bidAmount = model.ParseRealAmount(setting.Market, setting.Symbol, bidAmount)
-		}
 		askAmount = tickRelated.Bids[0].Amount
 		sidePerp = model.OrderSideBuy
 		sideRelated = model.OrderSideSell
@@ -707,9 +704,6 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	} else if scoreOpen > setOpen || (balance.Amount < 0 && scoreOpen >= revertClose) {
 		bidAmount = tickRelated.Asks[0].Amount
 		askAmount = tickPerp.Bids[0].Amount
-		if setting.Market == model.OKEX {
-			_, askAmount = model.ParseRealAmount(setting.Market, setting.Symbol, askAmount)
-		}
 		sidePerp = model.OrderSideSell
 		sideRelated = model.OrderSideBuy
 	}

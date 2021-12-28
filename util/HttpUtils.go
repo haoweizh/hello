@@ -5,6 +5,7 @@ import (
 	"crypto/tls"
 	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -133,7 +134,12 @@ func HttpRequest(method string, reqUrl string, body string, requestHeaders map[s
 		SocketInfo("can not process request " + err.Error())
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func(Body io.ReadCloser) {
+		err = Body.Close()
+		if err != nil {
+			Notice(`fail to request, return %s`, err.Error())
+		}
+	}(resp.Body)
 	bodyData, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		SocketInfo("can not read message from request " + err.Error())

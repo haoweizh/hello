@@ -127,7 +127,7 @@ func placeOrderCoinpark(key, secret string, order *model.Order, orderSide, order
 	}
 	symbol = strings.ToUpper(symbol)
 	cmds := fmt.Sprintf(`[{"cmd":"orderpending/trade",
-		"body":{"pair":"%s","account_type":0,"order_type":%s,"order_side":"%s","price":%s,"amount":"%s"}}]`,
+		"body":{"pair":"%s","account_type":0,"order_type":%s,"order_side":"%s","price":%f,"amount":"%f"}}]`,
 		symbol, orderType, orderSide, price, amount)
 	responseBody := SignedRequestCoinpark(key, secret, `POST`, `/orderpending`, cmds)
 	util.Notice(cmds + `[place order]` + string(responseBody))

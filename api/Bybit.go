@@ -10,6 +10,7 @@ import (
 	"github.com/gorilla/websocket"
 	"hello/model"
 	"hello/util"
+	"math"
 	"sort"
 	"strconv"
 	"strings"
@@ -340,7 +341,7 @@ func placeOrderBybit(order *model.Order, key, secret, orderSide, orderType, time
 		timeInForce = `GoodTillCancel`
 	}
 	postData["symbol"] = symbol
-	postData["qty"] = amount
+	postData["qty"] = math.Round(amount * price)
 	postData[`time_in_force`] = timeInForce
 	response := SignedRequestBybit(key, secret, `POST`, `/v2/private/order/create`, postData)
 	util.Notice(`place bybit` + string(response))

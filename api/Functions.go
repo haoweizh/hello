@@ -352,7 +352,8 @@ func GetFundingRate(key, secret, market, symbol string, lock *sync.Mutex) (succe
 	return false, 0
 }
 
-func GetMaxLoan(key, secret, market, coin string) (success bool, maxLoan float64) {
+// GetMaxLoan
+func _(key, secret, market, coin string) (success bool, maxLoan float64) {
 	switch market {
 	case model.Gate:
 		return getMaxLoanGate(coin)
