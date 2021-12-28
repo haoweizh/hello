@@ -19,7 +19,7 @@ const holdingLimitInU = 500000.0
 
 type contractMarket struct {
 	key, market      string
-	collateralsInU   float64 // 可用抵押币种价值总和，以U计算
+	collateralsInU   float64 // 可用抵押币种价值总和（目前只有U）
 	contractValueInU float64 // 当前价格下开仓总额，以U计算
 	positions        map[string]*model.Position
 }
@@ -38,8 +38,8 @@ type CarryStatus struct {
 	LimitSell, LimitBuy         float64 // 最大可买卖币数
 	TradeLineBuy, TradeLineSell float64 // 买卖盈利线（可为负数）
 	Holding                     float64
-	ValueInUsd                  float64
-	RateInAll                   float64 // 现货：该币种占总权益的比例；永续：以开仓价算该币种持仓占保证金百分比
+	//ValueInUsd                  float64
+	RateInAll float64 // 现货：该币种占总权益的比例；永续：以开仓价算该币种持仓占保证金百分比
 }
 
 func GetCrossMarketValue(key string) (market string, inAllSpot, collateral, holdingSpot, holdingFuture, unRealizedPnl float64) {

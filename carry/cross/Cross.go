@@ -69,7 +69,7 @@ func createSpotMarket(key, secret, market string) (sm *spotMarket) {
 	return
 }
 
-func createFromPosition(key, secret string, setting *model.Setting) (carryStatus *CarryStatus) {
+func createFromPosition(key, secret string, setting *model.Setting, valueLimit float64) (carryStatus *CarryStatus, doRevert bool) {
 	if contractMarkets[key] == nil {
 		contractMarkets[key] = createContractMarket(key, secret, setting.Market)
 		if (setting.Market == model.OKEX || setting.Market == model.Ftx) && spotMarkets[key] == nil {
@@ -77,36 +77,28 @@ func createFromPosition(key, secret string, setting *model.Setting) (carryStatus
 		}
 	}
 	if contractMarkets[key] == nil {
-		return nil
+		return nil, false
 	}
 	carryStatus = &CarryStatus{isSpot: false, market: setting.Market, symbol: setting.Symbol, key: key, secret: secret,
 		LimitSell: math.NaN(), LimitBuy: math.NaN(), TradeLineBuy: setting.OpenShortMargin, TradeLineSell: setting.CloseShortMargin,
 	}
+	valueInUsd := 0.0
 	if contractMarkets[key].positions[setting.Symbol] != nil {
 		carryStatus.Holding = contractMarkets[key].positions[setting.Symbol].Free
-		carryStatus.ValueInUsd = math.Abs(carryStatus.Holding)*contractMarkets[key].positions[setting.Symbol].EntryPrice +
+		valueInUsd = math.Abs(carryStatus.Holding)*contractMarkets[key].positions[setting.Symbol].EntryPrice +
 			contractMarkets[key].positions[setting.Symbol].ProfitUnreal
+		carryStatus.RateInAll = valueInUsd / contractMarkets[key].collateralsInU
 	}
-	carryStatus.RateInAll = carryStatus.ValueInUsd / contractMarkets[key].collateralsInU
-	holdLimit := holdingLimitInU
-	account0 := model.AppConfig.GetAccounts(setting.Market)[0]
-	if account0.Key != key {
-		holdLimit /= 10
-	}
-	if contractMarkets[key].contractValueInU/contractMarkets[key].collateralsInU > 4 ||
-		carryStatus.ValueInUsd > holdLimit {
+	if contractMarkets[key].contractValueInU/contractMarkets[key].collateralsInU > 3 || valueInUsd > valueLimit ||
+		valueInUsd/contractMarkets[key].collateralsInU > 0.5 {
 		util.Notice(fmt.Sprintf(`杠杆较高，停止开仓 %s %f %f`,
 			key, contractMarkets[key].contractValueInU, contractMarkets[key].collateralsInU))
-		if carryStatus.Holding > 0 {
-			carryStatus.TradeLineBuy = 1
-		} else if carryStatus.Holding < 0 {
-			carryStatus.TradeLineSell = 1
-		}
+		doRevert = true
 	}
-	return carryStatus
+	return carryStatus, doRevert
 }
 
-func createFromBalance(key, secret string, setting *model.Setting) (carryStatus *CarryStatus) {
+func createFromBalance(key, secret string, setting *model.Setting, valueLimit float64) (carryStatus *CarryStatus, doRevert bool) {
 	if spotMarkets[key] == nil {
 		spotMarkets[key] = createSpotMarket(key, secret, setting.Market)
 	}
@@ -121,21 +113,16 @@ func createFromBalance(key, secret string, setting *model.Setting) (carryStatus 
 	}
 	if spotMarkets[key].balances[setting.Symbol] != nil {
 		carryStatus.Holding = spotMarkets[key].balances[setting.Symbol].Amount
-		carryStatus.ValueInUsd = spotMarkets[key].balances[setting.Symbol].UsdValue
-		carryStatus.RateInAll = carryStatus.ValueInUsd / spotMarkets[key].accountValueInU
-		doRevert := false
-		if spotMarkets[key].accountValueInU <= 0 || spotMarkets[key].availableU/spotMarkets[key].accountValueInU < 0.2 ||
+		carryStatus.RateInAll = math.Abs(spotMarkets[key].balances[setting.Symbol].UsdValue / spotMarkets[key].accountValueInU)
+		if spotMarkets[key].availableU/spotMarkets[key].accountValueInU < 0.2 ||
+			spotMarkets[key].accountValueInU <= 0 || carryStatus.RateInAll > 0.5 ||
+			math.Abs(spotMarkets[key].balances[setting.Symbol].UsdValue) > valueLimit ||
 			(spotMarkets[key].collateral != nil && (spotMarkets[key].collateral.Rate < 10 || spotMarkets[key].collateral.Available <= 0 ||
 				(spotMarkets[key].collateral.Available-spotMarkets[key].collateral.Occupied)/spotMarkets[key].collateral.Available < 0.1)) {
 			doRevert = true
 		}
-		if doRevert && carryStatus.Holding > 0 {
-			carryStatus.TradeLineBuy = 1
-		} else if doRevert && carryStatus.Holding < 0 {
-			carryStatus.TradeLineSell = 1
-		}
 	}
-	return
+	return carryStatus, doRevert
 }
 
 // todo 增加更新status在网页上的显示数据
@@ -146,10 +133,16 @@ func initStatus(account *model.Account, setting *model.Setting) (status *CarrySt
 	tailSpot := model.GetSpotTail(setting.Market)
 	tailPerp := model.GetPerpTail(setting.Market)
 	fundingRate := 0.0
+	doRevert := false
+	holdLimit := holdingLimitInU
+	account0 := model.AppConfig.GetAccounts(setting.Market)[0]
+	if account0.Key != account.Key {
+		holdLimit /= 10
+	}
 	if setting.Symbol[len(setting.Symbol)-len(tailSpot):] == tailSpot {
-		status = createFromBalance(account.Key, account.Secret, setting)
+		status, doRevert = createFromBalance(account.Key, account.Secret, setting, holdLimit)
 	} else if setting.Symbol[len(setting.Symbol)-len(tailPerp):] == tailPerp {
-		status = createFromPosition(account.Key, account.Secret, setting)
+		status, doRevert = createFromPosition(account.Key, account.Secret, setting, holdLimit)
 		_, fundingRate = api.GetFundingRate(account.Key, account.Secret, setting.Market, setting.Symbol, nil)
 		fundingRate *= 0.9
 	}
@@ -167,21 +160,18 @@ func initStatus(account *model.Account, setting *model.Setting) (status *CarrySt
 			status.LimitBuy = maxBuy
 		}
 	}
-	if status.RateInAll > 0 {
+	if status.Holding > 0 {
 		status.TradeLineBuy = math.Max(setting.OpenShortMargin*(0.5+jump*status.RateInAll), winRateMin) + fundingRate
 		status.TradeLineSell = math.Max(setting.OpenShortMargin*(0.5-jump*status.RateInAll), loseRateMax) - fundingRate
 	} else {
 		status.TradeLineBuy = math.Max(setting.OpenShortMargin*(0.5+jump*status.RateInAll), loseRateMax) + fundingRate
 		status.TradeLineSell = math.Max(setting.OpenShortMargin*(0.5-jump*status.RateInAll), winRateMin) - fundingRate
 	}
-	if status.RateInAll > 0.5 {
-		status.TradeLineBuy = 1
-	}
 	status.TradeLineBuy *= account.CarryRate
 	status.TradeLineSell *= account.CarryRate
-	if account.CarryClose && status.Holding > 0 {
+	if status.Holding > 0 && (doRevert || account.CarryClose) {
 		status.TradeLineBuy = 1
-	} else if account.CarryClose && status.Holding < 0 {
+	} else if status.Holding < 0 && (doRevert || account.CarryClose) {
 		status.TradeLineSell = 1
 	}
 	return
@@ -376,45 +366,23 @@ func calcAmount(carryStatus, carryStatusRelate *CarryStatus, tick,
 	if !math.IsNaN(statusBuy.LimitBuy) {
 		bidAmount = math.Min(statusBuy.LimitBuy, bidAmount)
 	}
-	buyLimit := math.Min(statusBuy.ValueInUsd/15, openValueLimit)
+	buyLimit := 0.0
 	if statusBuy.isSpot && spotMarkets[statusBuy.key] != nil {
+		buyLimit = math.Min(spotMarkets[statusBuy.key].accountValueInU/15, openValueLimit)
 		buyLimit = math.Min(spotMarkets[statusBuy.key].availableU/5, buyLimit)
 	}
-	bidAmount = math.Min(bidAmount, buyLimit/priceBuy)
+	sellLimit := 0.0
+	if statusSell.isSpot && spotMarkets[statusSell.key] != nil && spotMarkets[statusSell.key].balances != nil &&
+		spotMarkets[statusSell.key].balances[statusSell.symbol] != nil {
+		sellLimit = spotMarkets[statusSell.key].balances[statusSell.symbol].AvailableWithBorrow
+	}
 	// todo binance 要求下单金额大于10u，gate要求大于1u
-	//openValueMin := setting.AmountLimit
+	bidAmount = math.Min(bidAmount, math.Min(buyLimit, sellLimit)/priceBuy)
 	amount = math.Min(bidAmount, askAmount)
-	//balanceBuy := getBalance(key, statusBuy.Market, coin)
-	//balanceSell := getBalance(key, statusSell.Market, coin)
-	//balanceUSD := getBalance(key, statusBuy.Market, `usd`)
-	//usdLowLine := 0.1 * balanceBuy
-	//// usd所剩太少且还要再买 || 反向持仓太多且还要再卖 || 下单太小
-	//if (statusBuy.Type == model.SymbolTypeSpot && stat) || statusBuy.ValueInUsd
-	////if statusBuy.RateInAll > 0.5 || statusBuy.ValueInUsd < statusBuy.lo|| statusSell.RateInAll (balance.UsdValue < 0 && coinRate > 0.5)) ||
-	//	math.Abs(amount)*priceBuy < openValueMin {
+
+	//if math.Abs(amount)*tickPerp.Bids[0].Price < valueLow {
 	//	amount = 0
 	//}
-	//amount = model.FormatAmountPair(setting.Market, setting.Symbol, setting.SymbolRelated, amount)
-	//if model.OKEX == setting.Market && amount > 0 {
-	//	amountInPerp := model.GetAmountInMarket(setting.Market, setting.Symbol, amount)
-	//	maxBuyPerp, maxSellPerp := getTradeMax(key, setting.Symbol)
-	//	maxBuyRelated, maxSellRelated := getTradeMax(key, setting.SymbolRelated)
-	//	maxBuyRelated += balance.Borrow
-	//	maxSellRelated = math.Max(maxSellRelated, balance.AvailableWithBorrow)
-	//	if sidePerp == model.OrderSideBuy && sideRelated == model.OrderSideSell {
-	//		amountInPerp = math.Min(amountInPerp, maxBuyPerp)
-	//		amount = math.Min(amount, maxSellRelated)
-	//	} else if sidePerp == model.OrderSideSell && sideRelated == model.OrderSideBuy {
-	//		amountInPerp = math.Min(amountInPerp, maxSellPerp)
-	//		amount = math.Min(amount, maxBuyRelated)
-	//	}
-	//	_, amountInReal := model.ParseRealAmount(setting.Market, setting.Symbol, amountInPerp)
-	//	amount = math.Min(amount, amountInReal)
-	//	amount = model.FormatAmountPair(setting.Market, setting.Symbol, setting.SymbolRelated, amount)
-	//} else if model.Ftx == setting.Market && amount > 90000000 {
-	//	amount = 90000000
-	//}
-	fmt.Sprintf(`%f`, priceSell)
 	return statusBuy, statusSell, amount, priceBuy, priceSell
 }
 

@@ -445,7 +445,7 @@ func GetPosition(market, symbol, address string) (success bool, position *model.
 	return false, nil
 }
 
-func GetPositions(key, secret, market string) (success bool, positions []*model.Position, availableUsd float64) {
+func GetPositions(key, secret, market string) (success bool, positions []*model.Position, accountValue float64) {
 	switch market {
 	case model.Kucoin:
 		return getPositionsKucoin(key, secret)
@@ -460,15 +460,15 @@ func GetPositions(key, secret, market string) (success bool, positions []*model.
 		success, balances, _ = getBalanceFtx(key, secret)
 		for _, balance := range balances {
 			if strings.EqualFold(balance.Coin, `usd`) {
-				availableUsd = balance.Amount
+				accountValue = balance.Amount
 			}
 		}
 		success, positions, _ = getPositionsFtx(key, secret)
-		return success, positions, availableUsd
+		return success, positions, accountValue
 	case model.OKEX:
 		_, _, _, collateral := getBalanceOKEX(key, secret)
 		success, positions = getPositionsOKEX(key, secret)
-		return success, positions, collateral.Available
+		return success, positions, collateral.Available + collateral.Occupied
 	case model.DFuture:
 		symbols := model.GetMarketSymbols(market)
 		positions = make([]*model.Position, 0)

@@ -44,6 +44,17 @@ type MarketInfo struct {
 	//"volumeUsd24h":19693372.9568
 }
 
+func GetMarketRealAmount(market, instrument string) (success bool, sizeInc, sizeMin float64) {
+	marketInfo := GetMarketInfo(market, instrument)
+	if marketInfo == nil {
+		return
+	}
+	if marketInfo.CTValue > 0 && marketInfo.CTCurrency == GetCoin(market, instrument) {
+		return success, marketInfo.SizeIncrement * marketInfo.CTValue, marketInfo.SizeMin * marketInfo.CTValue
+	}
+	return success, marketInfo.SizeIncrement, marketInfo.SizeMin
+}
+
 func GetMarketInfo(market, instrument string) (marketInfo *MarketInfo) {
 	defer marketInfoLock.Unlock()
 	marketInfoLock.Lock()
@@ -146,5 +157,54 @@ func FormatAmountPair(market, symbolPerp, symbolRelated string, amount float64) 
 	if formattedAmount < sizeMinPerp || formattedAmount < marketRelated.SizeMin {
 		return 0
 	}
+	return formattedAmount
+}
+
+// FormatCrossPair symbol 期货; related 现货
+func FormatCrossPair(marketBuy, marketSell, symbolBuy, symbolSell string, amount float64) (formattedAmount float64) {
+	successBuy, incBuy, minBuy := GetMarketRealAmount(marketBuy, symbolBuy)
+	successSell, incSell, minSell := GetMarketRealAmount(marketSell, symbolSell)
+	if !successBuy || !successSell {
+		return 0
+	}
+	sizeInc := math.Max(incBuy, incSell)
+	formattedAmount = math.Floor(amount/sizeInc) * sizeInc
+	if formattedAmount < minBuy || formattedAmount < minSell {
+		return 0
+	}
+
+	//if model.OKEX == setting.Market && amount > 0 {
+	//	amountInPerp := model.GetAmountInMarket(setting.Market, setting.Symbol, amount)
+	//	maxBuyPerp, maxSellPerp := getTradeMax(key, setting.Symbol)
+	//	maxBuyRelated, maxSellRelated := getTradeMax(key, setting.SymbolRelated)
+	//	maxBuyRelated += balance.Borrow
+	//	maxSellRelated = math.Max(maxSellRelated, balance.AvailableWithBorrow)
+	//	if sidePerp == model.OrderSideBuy && sideRelated == model.OrderSideSell {
+	//		amountInPerp = math.Min(amountInPerp, maxBuyPerp)
+	//		amount = math.Min(amount, maxSellRelated)
+	//	} else if sidePerp == model.OrderSideSell && sideRelated == model.OrderSideBuy {
+	//		amountInPerp = math.Min(amountInPerp, maxSellPerp)
+	//		amount = math.Min(amount, maxBuyRelated)
+	//	}
+	//	_, amountInReal := model.ParseRealAmount(setting.Market, setting.Symbol, amountInPerp)
+	//	amount = math.Min(amount, amountInReal)
+	//	amount = model.FormatAmountPair(setting.Market, setting.Symbol, setting.SymbolRelated, amount)
+	//} else if (Ftx == marketBuy || Ftx == marketSell ) && amount > 90000000 {
+	//	amount = 90000000
+	//} else if model.Gate == setting.Market && amount > 0 { //gate限制合约最大下单数量
+	//	marketPerp := model.GetMarketInfo(setting.Market, setting.Symbol)
+	//	_, amountInReal := model.ParseRealAmount(setting.Market, setting.Symbol, marketPerp.SizeMax)
+	//	amount = math.Min(amount, amountInReal)
+	//	if !model.AppConfig.GateSpot && (scoreClose < setClose || scoreOpen > setOpen) && sideRelated == model.OrderSideSell {
+	//		//开仓且卖现货时，最小单笔可借数量限制。有持仓的，需要卖出所有持仓数额再加上最小可借
+	//		marketRelated := model.GetMarketInfo(setting.Market, setting.SymbolRelated)
+	//		if balance.Amount > 0 && amount < balance.Amount+marketRelated.BorrowSizeMin {
+	//			amount = math.Min(amount, balance.Amount)
+	//		} else if balance.Amount < 0 {
+	//			amount = math.Max(amount, marketRelated.BorrowSizeMin)
+	//		}
+	//	}
+	//}
+
 	return formattedAmount
 }

@@ -475,7 +475,7 @@ type KucoinPositionModel struct {
 
 type PositionsModel []*KucoinPositionModel
 
-func getPositionsKucoin(key string, secret string) (success bool, positions []*model.Position, posBalance float64) {
+func getPositionsKucoin(key string, secret string) (success bool, positions []*model.Position, accountValue float64) {
 	params := make(map[string]string)
 	params["currency"] = "USDT"
 	accountResp, accountErr := kucoinFutureClient("", "", "").AccountOverview(params)
@@ -498,7 +498,7 @@ func getPositionsKucoin(key string, secret string) (success bool, positions []*m
 	}
 	accountRespJson, _ := json.Marshal(account)
 	util.SocketInfo(fmt.Sprintf(`get future account response: %s`, accountRespJson))
-	posBalance = account.AvailableBalance
+	accountValue = account.AccountEquity
 	contracts := &PositionsModel{}
 	contractRespError := contractResp.ReadData(contracts)
 	if contractRespError != nil {
@@ -520,7 +520,7 @@ func getPositionsKucoin(key string, secret string) (success bool, positions []*m
 		position.ProfitUnreal = contract.UnrealisedPnl
 		positions = append(positions, position)
 	}
-	return true, positions, posBalance
+	return true, positions, accountValue
 }
 
 func cancelOrdersKucoin(symbol string) (result bool) {
