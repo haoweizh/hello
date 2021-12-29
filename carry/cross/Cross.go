@@ -8,6 +8,7 @@ import (
 	"math"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -15,6 +16,12 @@ import (
 const loseRateMax = -0.005
 const winRateMin = 0.005
 const jump = 7.0
+const InsufficientCodeBinance = `-2010`
+
+var carryLock sync.Mutex
+var carryFail = make(map[string]int64) // key fail num
+var carryStop = make(map[string]bool)
+var InsufficientCodeOKEX = map[string]bool{`51008`: true, `51119`: true, `51120`: true, `51131`: true, `51502`: true, `58350`: true, `59108`: true, `59200`: true}
 
 //const openMaxInU = 10000.0
 
@@ -465,35 +472,80 @@ func placeStatus(status *CarryStatus, price float64, setting *model.Setting, amo
 }
 
 var postOrderCross = func(order *model.Order, setting *model.Setting) {
-	//if order == nil {
-	//	return
-	//}
-	//if order.HaveId() {
-	//	addLastCarry(order, setting)
-	//	addCarryResult(order.AmountType, order.Market, true)
-	//} else {
-	//	unknownFail := true
-	//	account := model.AppConfig.GetAccountFromKey(order.Market, order.AmountType)
-	//	if account != nil {
-	//		switch order.Market {
-	//		case model.OKEX:
-	//			if InsufficientCodeOKEX[order.ErrCode] {
-	//				util.Notice(`reset %s trade max with %s %s`, order.Market, order.ErrCode, order.AmountType)
-	//				resetTradeMax(account.Key, account.Secret, model.OKEX)
-	//				unknownFail = false
-	//			}
-	//		case model.Binance:
-	//			if strings.Contains(InsufficientCodeBinance, order.ErrCode) {
-	//				util.Notice(`reset binance trade max with %s %s`, order.ErrCode, order.AmountType)
-	//				clearCarry(account.Key, account.Secret, order.Market)
-	//				unknownFail = false
-	//			}
-	//		}
-	//	}
-	//	if unknownFail {
-	//		addCarryResult(order.AmountType, order.Market, false)
-	//	} else {
-	//		addCarryResult(order.AmountType, order.Market, true)
-	//	}
-	//}
+	if order == nil {
+		return
+	}
+	if order.HaveId() {
+		//addLastCarry(order, setting)
+		addCarryResult(order.AmountType, order.Market, true)
+	} else {
+		unknownFail := true
+		account := model.AppConfig.GetAccountFromKey(order.Market, order.AmountType)
+		if account != nil {
+			switch order.Market {
+			case model.OKEX:
+				if InsufficientCodeOKEX[order.ErrCode] {
+					util.Notice(`reset %s trade max with %s %s`, order.Market, order.ErrCode, order.AmountType)
+					status := getCarryStatus(setting.Coin, setting.Market, setting.Symbol, account.Key)
+					setOKTradeMaxResetTime(account.Key, setting.Symbol)
+					getMax, maxBuy, maxSell := api.GetMaxSize(account.Key, account.Secret, setting.Symbol)
+					if getMax {
+						status.LimitSell = maxSell
+						status.LimitBuy = maxBuy
+					}
+					unknownFail = false
+				}
+			case model.Binance:
+				if strings.Contains(InsufficientCodeBinance, order.ErrCode) {
+					util.Notice(`reset binance trade max with %s %s`, order.ErrCode, order.AmountType)
+					spotMarkets[order.AmountType] = nil
+					contractMarkets[order.AmountType] = nil
+					initStatus(account, setting)
+					unknownFail = false
+				}
+			}
+		}
+		if unknownFail {
+			addCarryResult(order.AmountType, order.Market, false)
+		} else {
+			addCarryResult(order.AmountType, order.Market, true)
+		}
+	}
+}
+
+func addCarryResult(key, market string, success bool) {
+	defer carryLock.Unlock()
+	carryLock.Lock()
+	if success {
+		if carryFail[key] > 0 {
+			carryFail[key] = carryFail[key] - 1
+		}
+	} else {
+		carryFail[key] += 2
+	}
+	if carryFail[key] > 0 {
+		util.Notice(`---------- fail size %s %d`, key, carryFail[key])
+	}
+	if carryFail[key] > 6 {
+		go pauseCarry(key)
+		//accounts := model.AppConfig.GetAccounts(market)
+		//account := model.AppConfig.GetAccountFromKey(market, key)
+		//if accounts[0].Key == account.Key {
+		//	mailAddr = model.AppConfig.Mail
+		//}
+		util.Notice(`----------stop carry %s %d`, key, carryFail[key])
+		carryFail[key] = 0
+		for _, address := range model.TeamMails {
+			_ = util.SendMail(model.AppConfig.FromMail, model.AppConfig.FromMailAuth, address,
+				`暂停下单`, `market: `+market+` stop `+key)
+		}
+	}
+}
+
+func pauseCarry(key string) {
+	util.Notice(`%s carrying pause %v`, key, true)
+	carryStop[key] = true
+	time.Sleep(time.Minute * 30)
+	util.Notice(`%s carrying pause %v`, key, false)
+	carryStop[key] = false
 }
