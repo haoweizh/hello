@@ -655,6 +655,8 @@ func GetWSSubscribes(market, subType string) []interface{} {
 
 func GetWSSubscribe(market, symbol, subType string) (subscribe interface{}) {
 	switch market {
+	case model.Mexc:
+		return GetWSSubscribeMexc(symbol, subType)
 	case model.Huobi: // xrpbtc: market.xrpbtc.mbp.refresh.
 		if subType == model.SubscribeTicker {
 			return "market." + symbol + ".bbo"
