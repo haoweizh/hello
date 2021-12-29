@@ -109,7 +109,7 @@ var postOrderCarry = func(order *model.Order, setting *model.Setting) {
 		return
 	}
 	if order.HaveId() {
-		maxBuy, maxSell := getTradeMax(order.AmountType, order.Symbol)
+		maxBuy, maxSell := model.GetTradeMax(order.AmountType, order.Symbol)
 		amount := model.GetAmountInMarket(order.Market, order.Instrument, order.Amount)
 		if order.OrderSide == model.OrderSideBuy {
 			maxBuy -= amount
@@ -118,7 +118,7 @@ var postOrderCarry = func(order *model.Order, setting *model.Setting) {
 			maxBuy += amount
 			maxSell -= amount
 		}
-		setTradeMax(order.AmountType, order.Instrument, maxBuy, maxSell)
+		model.SetTradeMax(order.AmountType, order.Instrument, maxBuy, maxSell)
 		addLastCarry(order, setting)
 		addCarryResult(order.AmountType, order.Market, true)
 	} else {
@@ -169,9 +169,9 @@ func resetTradeMax(key, secret string, market string) {
 			symbolPerp := coin + model.GetPerpTail(market)
 			symbolRelated := coin + model.GetSpotTail(market)
 			_, maxBuy, maxSell := api.GetMaxSize(key, secret, symbolPerp)
-			setTradeMax(key, symbolPerp, maxBuy, maxSell)
+			model.SetTradeMax(key, symbolPerp, maxBuy, maxSell)
 			_, maxBuy, maxSell = api.GetMaxSize(key, secret, symbolRelated)
-			setTradeMax(key, symbolRelated, maxBuy, maxSell)
+			model.SetTradeMax(key, symbolRelated, maxBuy, maxSell)
 			time.Sleep(time.Second / 5)
 		case model.Binance:
 			//_, maxLoan := api.GetMaxLoan(key, secret, market, coin)
@@ -731,8 +731,8 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	amount = model.FormatAmountPair(setting.Market, setting.Symbol, setting.SymbolRelated, amount)
 	if model.OKEX == setting.Market && amount > 0 {
 		amountInPerp := model.GetAmountInMarket(setting.Market, setting.Symbol, amount)
-		maxBuyPerp, maxSellPerp := getTradeMax(key, setting.Symbol)
-		maxBuyRelated, maxSellRelated := getTradeMax(key, setting.SymbolRelated)
+		maxBuyPerp, maxSellPerp := model.GetTradeMax(key, setting.Symbol)
+		maxBuyRelated, maxSellRelated := model.GetTradeMax(key, setting.SymbolRelated)
 		maxBuyRelated += balance.Borrow
 		maxSellRelated = math.Max(maxSellRelated, balance.AvailableWithBorrow)
 		if sidePerp == model.OrderSideBuy && sideRelated == model.OrderSideSell {

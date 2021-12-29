@@ -10,6 +10,7 @@ import (
 
 var marketInfos = make(map[string]map[string]*MarketInfo) // market - symbol - MarketInfo
 var marketInfoLock sync.Mutex
+var tradeMax = make(map[string]map[string][]float64) // key - instrument - [maxBuy合约张数/币币个数, maxSell]
 
 type MarketInfo struct {
 	Market, Name, CTCurrency                        string
@@ -20,29 +21,62 @@ type MarketInfo struct {
 	BorrowUsdtMax                                   float64 //最大借款usdt数额
 	SizeMax                                         float64 //最大下单数量
 	PriceMax                                        float64 //最大下单价格
-	//CanBorrow                                       bool
-	//"ask":2.2966,
-	//"baseCurrency":null,
-	//"bid":2.2943,
-	//"change1h":0.010924147652189235,
-	//"change24h":-0.08310027966440271,
-	//"changeBod":-0.01557071162012611,
-	//"enabled":true,
-	//"highLeverageFeeExempt":false,
-	//"last":2.295,
-	//"minProvideSize":1,
-	//"name":"1INCH-PERP",
-	//"postOnly":false,
-	//"price":2.295,
-	//"priceIncrement":0.0001,
-	//"quoteCurrency":null,
-	//"quoteVolume24h":19693372.9568,
-	//"restricted":false,
-	//"sizeIncrement":1,
-	//"type":"future",
-	//"underlying":"1INCH",
-	//"volumeUsd24h":19693372.9568
 }
+
+func GetTradeMax(key, instrument string) (maxBuy, maxSell float64) {
+	defer marketInfoLock.Unlock()
+	marketInfoLock.Lock()
+	if tradeMax[key] == nil || tradeMax[key][instrument] == nil || len(tradeMax[key][instrument]) != 2 {
+		return 0, 0
+	}
+	return tradeMax[key][instrument][0], tradeMax[key][instrument][1]
+}
+
+func SetTradeMax(key, instrument string, maxBuy, maxSell float64) {
+	defer marketInfoLock.Unlock()
+	marketInfoLock.Lock()
+	if tradeMax[key] == nil {
+		tradeMax[key] = make(map[string][]float64)
+	}
+	tradeMax[key][instrument] = []float64{maxBuy, maxSell}
+}
+
+//func GetAmountWithinLimit(market, symbol string, amount float64) (within float64) {
+//	switch market {
+//	case OKEX:
+//		amountInPerp := model.GetAmountInMarket(setting.Market, setting.Symbol, amount)
+//		maxBuyPerp, maxSellPerp := getTradeMax(key, setting.Symbol)
+//		maxBuyRelated, maxSellRelated := getTradeMax(key, setting.SymbolRelated)
+//		maxBuyRelated += balance.Borrow
+//		maxSellRelated = math.Max(maxSellRelated, balance.AvailableWithBorrow)
+//		if sidePerp == model.OrderSideBuy && sideRelated == model.OrderSideSell {
+//			amountInPerp = math.Min(amountInPerp, maxBuyPerp)
+//			amount = math.Min(amount, maxSellRelated)
+//		} else if sidePerp == model.OrderSideSell && sideRelated == model.OrderSideBuy {
+//			amountInPerp = math.Min(amountInPerp, maxSellPerp)
+//			amount = math.Min(amount, maxBuyRelated)
+//		}
+//		_, amountInReal := model.ParseRealAmount(setting.Market, setting.Symbol, amountInPerp)
+//		amount = math.Min(amount, amountInReal)
+//		amount = FormatAmountPair(setting.Market, setting.Symbol, setting.SymbolRelated, amount)
+//	case Gate:
+//		marketPerp := model.GetMarketInfo(setting.Market, setting.Symbol)
+//		_, amountInReal := model.ParseRealAmount(setting.Market, setting.Symbol, marketPerp.SizeMax)
+//		amount = math.Min(amount, amountInReal)
+//		if !model.AppConfig.GateSpot && (scoreClose < setClose || scoreOpen > setOpen) && sideRelated == model.OrderSideSell {
+//			//开仓且卖现货时，最小单笔可借数量限制。有持仓的，需要卖出所有持仓数额再加上最小可借
+//			marketRelated := model.GetMarketInfo(setting.Market, setting.SymbolRelated)
+//			if balance.Amount > 0 && amount < balance.Amount+marketRelated.BorrowSizeMin {
+//				amount = math.Min(amount, balance.Amount)
+//			} else if balance.Amount < 0 {
+//				amount = math.Max(amount, marketRelated.BorrowSizeMin)
+//			}
+//		}
+//	case Ftx:
+//		within = math.Min(amount, 90000000)
+//	}
+//	return within
+//}
 
 func GetMarketRealAmount(market, instrument string) (success bool, sizeInc, sizeMin float64) {
 	marketInfo := GetMarketInfo(market, instrument)
@@ -172,39 +206,5 @@ func FormatCrossPair(marketBuy, marketSell, symbolBuy, symbolSell string, amount
 	if formattedAmount < minBuy || formattedAmount < minSell {
 		return 0
 	}
-
-	//if model.OKEX == setting.Market && amount > 0 {
-	//	amountInPerp := model.GetAmountInMarket(setting.Market, setting.Symbol, amount)
-	//	maxBuyPerp, maxSellPerp := getTradeMax(key, setting.Symbol)
-	//	maxBuyRelated, maxSellRelated := getTradeMax(key, setting.SymbolRelated)
-	//	maxBuyRelated += balance.Borrow
-	//	maxSellRelated = math.Max(maxSellRelated, balance.AvailableWithBorrow)
-	//	if sidePerp == model.OrderSideBuy && sideRelated == model.OrderSideSell {
-	//		amountInPerp = math.Min(amountInPerp, maxBuyPerp)
-	//		amount = math.Min(amount, maxSellRelated)
-	//	} else if sidePerp == model.OrderSideSell && sideRelated == model.OrderSideBuy {
-	//		amountInPerp = math.Min(amountInPerp, maxSellPerp)
-	//		amount = math.Min(amount, maxBuyRelated)
-	//	}
-	//	_, amountInReal := model.ParseRealAmount(setting.Market, setting.Symbol, amountInPerp)
-	//	amount = math.Min(amount, amountInReal)
-	//	amount = model.FormatAmountPair(setting.Market, setting.Symbol, setting.SymbolRelated, amount)
-	//} else if (Ftx == marketBuy || Ftx == marketSell ) && amount > 90000000 {
-	//	amount = 90000000
-	//} else if model.Gate == setting.Market && amount > 0 { //gate限制合约最大下单数量
-	//	marketPerp := model.GetMarketInfo(setting.Market, setting.Symbol)
-	//	_, amountInReal := model.ParseRealAmount(setting.Market, setting.Symbol, marketPerp.SizeMax)
-	//	amount = math.Min(amount, amountInReal)
-	//	if !model.AppConfig.GateSpot && (scoreClose < setClose || scoreOpen > setOpen) && sideRelated == model.OrderSideSell {
-	//		//开仓且卖现货时，最小单笔可借数量限制。有持仓的，需要卖出所有持仓数额再加上最小可借
-	//		marketRelated := model.GetMarketInfo(setting.Market, setting.SymbolRelated)
-	//		if balance.Amount > 0 && amount < balance.Amount+marketRelated.BorrowSizeMin {
-	//			amount = math.Min(amount, balance.Amount)
-	//		} else if balance.Amount < 0 {
-	//			amount = math.Max(amount, marketRelated.BorrowSizeMin)
-	//		}
-	//	}
-	//}
-
 	return formattedAmount
 }

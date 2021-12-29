@@ -15,7 +15,6 @@ var usdRate = make(map[string]float64)                        // key - float64
 var balanceAll = make(map[string]float64)                     // key - balance value in all
 var carryBalance = make(map[string]map[string]*model.Balance) // key - coin - balance
 var posBal = make(map[string]float64)                         // key - coin - position balance
-var tradeMax = make(map[string]map[string][]float64)          // key - instrument - [maxBuy合约张数/币币个数, maxSell]
 var tradeMaxResetting = make(map[string]bool)                 // key - bool
 var recentSymbol = make(map[string]time.Time)                 // (market-symbol)-time
 
@@ -131,24 +130,6 @@ func setCollateral(key string, collateral *model.Collateral) {
 	defer carryLock.Unlock()
 	carryLock.Lock()
 	collaterals[key] = collateral
-}
-
-func getTradeMax(key, instrument string) (maxBuy, maxSell float64) {
-	defer carryLock.Unlock()
-	carryLock.Lock()
-	if tradeMax[key] == nil || tradeMax[key][instrument] == nil || len(tradeMax[key][instrument]) != 2 {
-		return 0, 0
-	}
-	return tradeMax[key][instrument][0], tradeMax[key][instrument][1]
-}
-
-func setTradeMax(key, instrument string, maxBuy, maxSell float64) {
-	defer carryLock.Unlock()
-	carryLock.Lock()
-	if tradeMax[key] == nil {
-		tradeMax[key] = make(map[string][]float64)
-	}
-	tradeMax[key][instrument] = []float64{maxBuy, maxSell}
 }
 
 func getUsdAvailable(key string) float64 {

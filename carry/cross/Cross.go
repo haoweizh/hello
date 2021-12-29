@@ -376,13 +376,9 @@ func calcAmount(carryStatus, carryStatusRelate *CarryStatus, tick,
 		spotMarkets[statusSell.key].balances[statusSell.symbol] != nil {
 		sellLimit = spotMarkets[statusSell.key].balances[statusSell.symbol].AvailableWithBorrow
 	}
-	// todo binance 要求下单金额大于10u，gate要求大于1u
 	bidAmount = math.Min(bidAmount, math.Min(buyLimit, sellLimit)/priceBuy)
 	amount = math.Min(bidAmount, askAmount)
-
-	//if math.Abs(amount)*tickPerp.Bids[0].Price < valueLow {
-	//	amount = 0
-	//}
+	amount = model.FormatCrossPair(statusBuy.market, statusSell.market, statusBuy.symbol, statusSell.symbol, amount)
 	return statusBuy, statusSell, amount, priceBuy, priceSell
 }
 

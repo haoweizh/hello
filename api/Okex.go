@@ -422,7 +422,7 @@ func handleBooksOKEX(instrument string, data map[string]interface{}) (bidAsk *mo
 			amountStr := value[1].(string)
 			price, _ := strconv.ParseFloat(priceStr, 64)
 			amount, _ := strconv.ParseFloat(amountStr, 64)
-			_, amount = model.ParseRealAmount(model.OKEX, instrument, amount)
+			//_, amount = model.ParseRealAmount(model.OKEX, instrument, amount)
 			bidAsk.Asks[i] = model.Tick{Price: price, Amount: amount, PriceStr: priceStr,
 				AmountStr: amountStr, Market: model.OKEX, Symbol: instrument, Side: model.OrderSideSell}
 		}
@@ -434,7 +434,7 @@ func handleBooksOKEX(instrument string, data map[string]interface{}) (bidAsk *mo
 			amountStr := value[1].(string)
 			price, _ := strconv.ParseFloat(priceStr, 64)
 			amount, _ := strconv.ParseFloat(amountStr, 64)
-			_, amount = model.ParseRealAmount(model.OKEX, instrument, amount)
+			//_, amount = model.ParseRealAmount(model.OKEX, instrument, amount)
 			bidAsk.Bids[i] = model.Tick{Price: price, Amount: amount, PriceStr: priceStr,
 				AmountStr: amountStr, Market: model.OKEX, Symbol: instrument, Side: model.OrderSideBuy}
 		}
@@ -646,6 +646,7 @@ func placeOrderOKEX(key, secret string, isWs bool, order *model.Order) {
 }
 
 // consider spot future size calc
+// 官方文档中对ctVal的描述有误，实际上ctVal在永续合约里是单张合约的交易币种的数量而非官方文档中描述的计价币种数量
 func getMarketsOKEX(key, secret string) (marketInfos map[string]*model.MarketInfo) {
 	marketInfos = make(map[string]*model.MarketInfo)
 	instTypes := []string{`SPOT`, `SWAP`}
