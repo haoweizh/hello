@@ -175,6 +175,9 @@ func handleMsgOKEX(channel chan *simplejson.Json, instrument string) {
 		if bidAsk == nil || !success {
 			continue
 		}
+		//将最佳买一卖一的数量转换为币种的真实数量
+		_, bidAsk.Bids[0].Amount = model.ParseRealAmount(model.OKEX, instrument, bidAsk.Bids[0].Amount)
+		_, bidAsk.Asks[0].Amount = model.ParseRealAmount(model.OKEX, instrument, bidAsk.Asks[0].Amount)
 		if model.AppMarkets.SetBidAsk(instrument, model.OKEX, bidAsk) {
 			for function, handler := range model.GetFunctions(model.OKEX, instrument) {
 				settings := model.GetSetting(function, model.OKEX, instrument)
