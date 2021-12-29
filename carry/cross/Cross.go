@@ -12,7 +12,6 @@ import (
 	"time"
 )
 
-// todo 1. postOrderCarry
 const loseRateMax = -0.005
 const winRateMin = 0.005
 const jump = 7.0
@@ -22,8 +21,6 @@ var carryLock sync.Mutex
 var carryFail = make(map[string]int64) // key fail num
 var carryStop = make(map[string]bool)
 var InsufficientCodeOKEX = map[string]bool{`51008`: true, `51119`: true, `51120`: true, `51131`: true, `51502`: true, `58350`: true, `59108`: true, `59200`: true}
-
-//const openMaxInU = 10000.0
 
 func checkSetCrossing(value bool) (before bool) {
 	crossLock.Lock()
@@ -316,7 +313,7 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 					setting.Coin, setting.Market, setting.Symbol, settingRelate.Market, settingRelate.Symbol, account.Key, accountRelate.Key)
 				continue
 			}
-			statusBuy, statusSell, amount, priceBuy, priceSell := calcAmount(status, statusRelate, tick, tickRelate)
+			statusBuy, statusSell, amount, priceBuy, priceSell := calcAmount(account.Key, status, statusRelate, tick, tickRelate)
 			if amount > 0 {
 				go placeCross(statusBuy, statusSell, priceBuy, priceSell, amount, setting, settingRelate)
 				return
@@ -325,7 +322,7 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 	}
 }
 
-func calcAmount(carryStatus, carryStatusRelate *CarryStatus, tick,
+func calcAmount(key string, carryStatus, carryStatusRelate *CarryStatus, tick,
 	tickRelate *model.BidAsk) (statusBuy, statusSell *CarryStatus, amount, priceBuy, priceSell float64) {
 	var bidAmount, askAmount float64
 	score := 1 - tickRelate.Asks[0].Price/tick.Bids[0].Price
@@ -385,7 +382,7 @@ func calcAmount(carryStatus, carryStatusRelate *CarryStatus, tick,
 	}
 	bidAmount = math.Min(bidAmount, math.Min(buyLimit, sellLimit)/priceBuy)
 	amount = math.Min(bidAmount, askAmount)
-	amount = model.FormatCrossPair(statusBuy.market, statusSell.market, statusBuy.symbol, statusSell.symbol, amount)
+	amount = model.FormatCrossPair(key, statusBuy.market, statusSell.market, statusBuy.symbol, statusSell.symbol, amount)
 	return statusBuy, statusSell, amount, priceBuy, priceSell
 }
 
@@ -396,7 +393,6 @@ func placeCross(statusBuy, statusSell *CarryStatus, priceBuy, priceSell, amount 
 		//util.Notice(fmt.Sprintf(`waiting for other ordering %s`, setting.Symbol))
 		return
 	}
-	//todo postCarry
 	placeSuccess := true
 	if statusBuy.market == model.OKEX && statusSell.market == model.OKEX {
 		var sidePerp, sideRelated string

@@ -13,14 +13,14 @@ var marketInfoLock sync.Mutex
 var tradeMax = make(map[string]map[string][]float64) // key - instrument - [maxBuy合约张数/币币个数, maxSell]
 
 type MarketInfo struct {
-	Market, Name, CTCurrency                        string
-	SizeMin, SizeIncrement, PriceIncrement, CTValue float64
-	PriceDecimal                                    int     // 价格精确到小数点后几位
-	UsdtMin                                         float64 //最小下单金额需达到的usdt值
-	BorrowSizeMin                                   float64 //最小借款数量
-	BorrowUsdtMax                                   float64 //最大借款usdt数额
-	SizeMax                                         float64 //最大下单数量
-	PriceMax                                        float64 //最大下单价格
+	Market, Name, CTCurrency               string
+	SizeIncrement, PriceIncrement, CTValue float64
+	PriceDecimal                           int     // 价格精确到小数点后几位
+	UsdtMin                                float64 //最小下单金额需达到的usdt值
+	BorrowSizeMin                          float64 //最小借款数量
+	BorrowUsdtMax                          float64 //最大借款usdt数额
+	SizeMax, SizeMin                       float64 //最大最小下单数量
+	PriceMax                               float64 //最大下单价格
 }
 
 func GetTradeMax(key, instrument string) (maxBuy, maxSell float64) {
@@ -41,52 +41,27 @@ func SetTradeMax(key, instrument string, maxBuy, maxSell float64) {
 	tradeMax[key][instrument] = []float64{maxBuy, maxSell}
 }
 
-//func GetAmountWithinLimit(market, symbol string, amount float64) (within float64) {
-//	switch market {
-//	case OKEX:
-//		amountInPerp := model.GetAmountInMarket(setting.Market, setting.Symbol, amount)
-//		maxBuyPerp, maxSellPerp := getTradeMax(key, setting.Symbol)
-//		maxBuyRelated, maxSellRelated := getTradeMax(key, setting.SymbolRelated)
-//		maxBuyRelated += balance.Borrow
-//		maxSellRelated = math.Max(maxSellRelated, balance.AvailableWithBorrow)
-//		if sidePerp == model.OrderSideBuy && sideRelated == model.OrderSideSell {
-//			amountInPerp = math.Min(amountInPerp, maxBuyPerp)
-//			amount = math.Min(amount, maxSellRelated)
-//		} else if sidePerp == model.OrderSideSell && sideRelated == model.OrderSideBuy {
-//			amountInPerp = math.Min(amountInPerp, maxSellPerp)
-//			amount = math.Min(amount, maxBuyRelated)
-//		}
-//		_, amountInReal := model.ParseRealAmount(setting.Market, setting.Symbol, amountInPerp)
-//		amount = math.Min(amount, amountInReal)
-//		amount = FormatAmountPair(setting.Market, setting.Symbol, setting.SymbolRelated, amount)
-//	case Gate:
-//		marketPerp := model.GetMarketInfo(setting.Market, setting.Symbol)
-//		_, amountInReal := model.ParseRealAmount(setting.Market, setting.Symbol, marketPerp.SizeMax)
-//		amount = math.Min(amount, amountInReal)
-//		if !model.AppConfig.GateSpot && (scoreClose < setClose || scoreOpen > setOpen) && sideRelated == model.OrderSideSell {
-//			//开仓且卖现货时，最小单笔可借数量限制。有持仓的，需要卖出所有持仓数额再加上最小可借
-//			marketRelated := model.GetMarketInfo(setting.Market, setting.SymbolRelated)
-//			if balance.Amount > 0 && amount < balance.Amount+marketRelated.BorrowSizeMin {
-//				amount = math.Min(amount, balance.Amount)
-//			} else if balance.Amount < 0 {
-//				amount = math.Max(amount, marketRelated.BorrowSizeMin)
-//			}
-//		}
-//	case Ftx:
-//		within = math.Min(amount, 90000000)
-//	}
-//	return within
-//}
-
-func GetMarketRealAmount(market, instrument string) (success bool, sizeInc, sizeMin float64) {
-	marketInfo := GetMarketInfo(market, instrument)
-	if marketInfo == nil {
-		return
+func GetAmountWithinLimit(key, market, symbol, orderSide string, amount float64) (within float64) {
+	within = amount
+	switch market {
+	case OKEX:
+		maxBuy, maxSell := GetTradeMax(key, symbol)
+		if orderSide == OrderSideBuy {
+			amount = math.Min(maxBuy, amount)
+		}
+		if orderSide == OrderSideSell {
+			amount = math.Min(maxSell, amount)
+		}
+	case Gate: // todo 暂不支持借币：开仓且卖现货时，最小单笔可借数量限制。有持仓的，需要卖出所有持仓数额再加上最小可借
+		marketInfo := GetMarketInfo(market, symbol)
+		if marketInfo.CTValue > 0 { // 判断marketInfo不是现货
+			_, amountInReal := ParseRealAmount(market, symbol, marketInfo.SizeMax)
+			amount = math.Min(amount, amountInReal)
+		}
+	case Ftx:
+		within = math.Min(amount, 90000000)
 	}
-	if marketInfo.CTValue > 0 && marketInfo.CTCurrency == GetCoin(market, instrument) {
-		return success, marketInfo.SizeIncrement * marketInfo.CTValue, marketInfo.SizeMin * marketInfo.CTValue
-	}
-	return success, marketInfo.SizeIncrement, marketInfo.SizeMin
+	return within
 }
 
 func GetMarketInfo(market, instrument string) (marketInfo *MarketInfo) {
@@ -195,15 +170,27 @@ func FormatAmountPair(market, symbolPerp, symbolRelated string, amount float64) 
 }
 
 // FormatCrossPair symbol 期货; related 现货
-func FormatCrossPair(marketBuy, marketSell, symbolBuy, symbolSell string, amount float64) (formattedAmount float64) {
-	successBuy, incBuy, minBuy := GetMarketRealAmount(marketBuy, symbolBuy)
-	successSell, incSell, minSell := GetMarketRealAmount(marketSell, symbolSell)
-	if !successBuy || !successSell {
-		return 0
+func FormatCrossPair(key, marketBuy, marketSell, symbolBuy, symbolSell string, amount float64) (formattedAmount float64) {
+	amount = math.Min(GetAmountWithinLimit(key, marketBuy, symbolBuy, OrderSideBuy, amount),
+		GetAmountWithinLimit(key, marketSell, symbolSell, OrderSideSell, amount))
+	marketInfoBuy := GetMarketInfo(marketBuy, symbolBuy)
+	marketInfoSell := GetMarketInfo(marketSell, symbolSell)
+	if marketInfoBuy == nil || marketInfoSell == nil {
+		return
+	}
+	incBuy := marketInfoBuy.SizeIncrement
+	incSell := marketInfoSell.SizeIncrement
+	minBuy := marketInfoBuy.SizeMin
+	minSell := marketInfoSell.SizeMin
+	if marketInfoBuy.CTValue > 0 && marketInfoBuy.CTCurrency == GetCoin(marketBuy, symbolBuy) {
+		incBuy, minBuy = incBuy*marketInfoBuy.CTValue, minBuy*marketInfoBuy.CTValue
+	}
+	if marketInfoSell.CTValue > 0 && marketInfoSell.CTCurrency == GetCoin(marketSell, symbolSell) {
+		incSell, minSell = incSell*marketInfoSell.CTValue, minSell*marketInfoSell.CTValue
 	}
 	sizeInc := math.Max(incBuy, incSell)
 	formattedAmount = math.Floor(amount/sizeInc) * sizeInc
-	if formattedAmount < minBuy || formattedAmount < minSell {
+	if formattedAmount < math.Max(minBuy, minSell) {
 		return 0
 	}
 	return formattedAmount
