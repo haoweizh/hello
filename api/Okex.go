@@ -389,7 +389,8 @@ func handleBooksUpdate(instrument string, data map[string]interface{}, bidAsk *m
 				checkStr += fmt.Sprintf(`%s:%s:`, newAsks[index].PriceStr, newAsks[index].AmountStr)
 			}
 		}
-		//checkStr = checkStr[0 : len(checkStr)-1]
+		// 以下语句并非无用，如果不加，会造成checksum计算错误
+		checkStr = checkStr[0 : len(checkStr)-1]
 		crcValue := int64(int32(crc32.ChecksumIEEE([]byte(checkStr))))
 		compare, _ := data[`checksum`].(json.Number).Int64()
 		bidAskUpdate.Bids = newBids
