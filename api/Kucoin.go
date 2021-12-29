@@ -685,7 +685,7 @@ func placeOrderKucoin(order *model.Order, orderSide, orderType, symbol string, p
 				order.OrderId = ``
 				return
 			} else {
-				util.SocketInfo(fmt.Sprintf(`create margin order response: %s`, marginOrderResp))
+				util.SocketInfo(fmt.Sprintf(`create margin order response: %v`, marginOrderResp))
 				orderResult := &kucoin.CreateOrderResultModel{}
 				respErr := marginOrderResp.ReadData(orderResult)
 				if respErr != nil {
