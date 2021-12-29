@@ -12,7 +12,6 @@ import (
 	"time"
 )
 
-const OrderPriceLimit = 0
 const revertDis = 0.005
 const openValueLimit = 10000.0
 const holdingLimitInU = 500000.0
@@ -509,35 +508,61 @@ func makeEqual(key, secret string, setting *model.Setting, balances []*model.Bal
 		orderSide = model.OrderSideSell
 		if tickPerp.Bids[0].Price < (1-revertDis)*tickRelated.Bids[0].Price && amount < balance.AvailableWithBorrow {
 			symbol = setting.SymbolRelated
-			price = tickRelated.Bids[0].Price * (1 - OrderPriceLimit)
+			price = tickRelated.Bids[0].Price
 		} else if tickPerp.Bids[0].Price > (1+revertDis)*tickRelated.Bids[0].Price {
 			symbol = setting.Symbol
-			price = tickPerp.Bids[0].Price * (1 - OrderPriceLimit)
+			price = tickPerp.Bids[0].Price
 		} else if math.Abs(amountPerp) < math.Abs(amountRelated) && amount < balance.AvailableWithBorrow {
 			symbol = setting.SymbolRelated
-			price = tickRelated.Bids[0].Price * (1 - OrderPriceLimit)
+			price = tickRelated.Bids[0].Price
 		} else {
 			symbol = setting.Symbol
-			price = tickPerp.Bids[0].Price * (1 - OrderPriceLimit)
+			price = tickPerp.Bids[0].Price
 		}
 	} else if amount < 0 {
 		orderSide = model.OrderSideBuy
 		if tickPerp.Asks[0].Price < (1-revertDis)*tickRelated.Asks[0].Price {
 			symbol = setting.Symbol
-			price = tickPerp.Asks[0].Price * (1 + OrderPriceLimit)
+			price = tickPerp.Asks[0].Price
 		} else if tickPerp.Asks[0].Price > (1+revertDis)*tickRelated.Asks[0].Price && amount < usdAvailable/tickRelated.Asks[0].Price {
 			symbol = setting.SymbolRelated
-			price = tickRelated.Asks[0].Price * (1 + OrderPriceLimit)
+			price = tickRelated.Asks[0].Price
 		} else if math.Abs(amountPerp) > math.Abs(amountRelated) {
 			symbol = setting.Symbol
-			price = tickPerp.Asks[0].Price * (1 + OrderPriceLimit)
+			price = tickPerp.Asks[0].Price
 		} else {
 			symbol = setting.SymbolRelated
-			price = tickRelated.Asks[0].Price * (1 + OrderPriceLimit)
+			price = tickRelated.Asks[0].Price
 		}
 		usdBalance := getCarryBalance(key, `USD`)
 		if symbol == setting.SymbolRelated && (usdBalance != nil && usdBalance.Borrow > 0) {
 			amount = 0
+		}
+	}
+	if setting.Market == model.OKEX {
+		if orderSide == model.OrderSideBuy {
+			maxBuy, _ := model.GetTradeMax(key, symbol)
+			if amount > maxBuy {
+				if symbol == setting.Symbol {
+					symbol = setting.SymbolRelated
+					price = tickRelated.Asks[0].Price
+				} else if symbol == setting.SymbolRelated {
+					symbol = setting.Symbol
+					price = tickPerp.Asks[0].Price
+				}
+			}
+		}
+		if orderSide == model.OrderSideSell {
+			_, maxSell := model.GetTradeMax(key, symbol)
+			if amount > maxSell {
+				if symbol == setting.Symbol {
+					symbol = setting.SymbolRelated
+					price = tickRelated.Bids[0].Price
+				} else if symbol == setting.SymbolRelated {
+					symbol = setting.Symbol
+					price = tickPerp.Bids[0].Price
+				}
+			}
 		}
 	}
 	amount = math.Min(math.Abs(amount), 20000/price)
@@ -556,7 +581,8 @@ func makeEqual(key, secret string, setting *model.Setting, balances []*model.Bal
 	}
 	if amount <= 0 {
 		return
-	} // 折算一下在真实市场中下单的数额用于判断是否大于零，实际传入api.PlaceOrder方法中不适用这个数量
+	}
+	// 折算一下在真实市场中下单的数额用于判断是否大于零，实际传入api.PlaceOrder方法中不适用这个数量
 	checkAmount := model.GetAmountInMarket(setting.Market, symbol, amount)
 	if checkAmount > 0 {
 		resultPerp := api.CancelOrders(key, secret, setting.Market, setting.Symbol)
