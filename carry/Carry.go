@@ -763,6 +763,10 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 			amount = math.Min(amount, math.Min(maxSellPerp, maxBuyRelated))
 		}
 		amount = model.FormatAmountPair(setting.Market, setting.Symbol, setting.SymbolRelated, amount)
+		if amount < 0 {
+			util.Notice(fmt.Sprintf(`%s %s max size %f %f %f %f limit, no order`,
+				setting.Market, setting.Symbol, maxBuyPerp, maxSellPerp, maxBuyRelated, maxSellRelated))
+		}
 	} else if model.Ftx == setting.Market && amount > 90000000 {
 		amount = 90000000
 	} else if model.Gate == setting.Market && amount > 0 { //gate限制合约最大下单数量
