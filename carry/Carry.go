@@ -110,13 +110,12 @@ var postOrderCarry = func(order *model.Order, setting *model.Setting) {
 	}
 	if order.HaveId() {
 		maxBuy, maxSell := model.GetTradeMax(order.AmountType, order.Symbol)
-		amount := model.GetAmountInMarket(order.Market, order.Instrument, order.Amount)
 		if order.OrderSide == model.OrderSideBuy {
-			maxBuy -= amount
-			maxSell += amount
+			maxBuy -= order.Amount
+			maxSell += order.Amount
 		} else if order.OrderSide == model.OrderSideSell {
-			maxBuy += amount
-			maxSell -= amount
+			maxBuy += order.Amount
+			maxSell -= order.Amount
 		}
 		model.SetTradeMax(order.AmountType, order.Instrument, maxBuy, maxSell)
 		addLastCarry(order, setting)
@@ -730,20 +729,13 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	}
 	amount = model.FormatAmountPair(setting.Market, setting.Symbol, setting.SymbolRelated, amount)
 	if model.OKEX == setting.Market && amount > 0 {
-		amountInPerp := model.GetAmountInMarket(setting.Market, setting.Symbol, amount)
 		maxBuyPerp, maxSellPerp := model.GetTradeMax(key, setting.Symbol)
 		maxBuyRelated, maxSellRelated := model.GetTradeMax(key, setting.SymbolRelated)
-		maxBuyRelated += balance.Borrow
-		maxSellRelated = math.Max(maxSellRelated, balance.AvailableWithBorrow)
 		if sidePerp == model.OrderSideBuy && sideRelated == model.OrderSideSell {
-			amountInPerp = math.Min(amountInPerp, maxBuyPerp)
-			amount = math.Min(amount, maxSellRelated)
+			amount = math.Min(amount, math.Min(maxSellRelated, maxBuyPerp))
 		} else if sidePerp == model.OrderSideSell && sideRelated == model.OrderSideBuy {
-			amountInPerp = math.Min(amountInPerp, maxSellPerp)
-			amount = math.Min(amount, maxBuyRelated)
+			amount = math.Min(amount, math.Min(maxSellPerp, maxBuyRelated))
 		}
-		_, amountInReal := model.ParseRealAmount(setting.Market, setting.Symbol, amountInPerp)
-		amount = math.Min(amount, amountInReal)
 		amount = model.FormatAmountPair(setting.Market, setting.Symbol, setting.SymbolRelated, amount)
 	} else if model.Ftx == setting.Market && amount > 90000000 {
 		amount = 90000000
