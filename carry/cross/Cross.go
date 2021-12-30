@@ -16,10 +16,13 @@ import (
 const loseRateMax = -0.005
 const winRateMin = 0.005
 const InsufficientCodeBinance = `-2010`
+const lastOrderLength = 8
 
 var carryLock sync.Mutex
 var carryFail = make(map[string]int64) // key fail num
 var carryStop = make(map[string]bool)
+var lastOrderIndex = make(map[string]map[string]int64)                       // market - symbol - index
+var lastOrders = make(map[string]map[string][]*model.Order, lastOrderLength) // market - symbol - []order
 var InsufficientCodeOKEX = map[string]bool{`51008`: true, `51119`: true, `51120`: true, `51131`: true, `51502`: true, `58350`: true, `59108`: true, `59200`: true}
 
 func checkSetCrossing(value bool) (before bool) {
@@ -517,7 +520,7 @@ var postOrderCross = func(order *model.Order, setting *model.Setting) {
 		return
 	}
 	if order.HaveId() {
-		//addLastCarry(order, setting)
+		addLastCarry(order, setting)
 		addCarryResult(order.AmountType, order.Market, true)
 	} else {
 		unknownFail := true
@@ -552,6 +555,64 @@ var postOrderCross = func(order *model.Order, setting *model.Setting) {
 			addCarryResult(order.AmountType, order.Market, true)
 		}
 	}
+}
+
+func addLastCarry(order *model.Order, setting *model.Setting) {
+	carryLock.Lock()
+	defer carryLock.Unlock()
+	if order == nil || setting == nil {
+		return
+	}
+	if lastOrders[setting.Market] == nil {
+		lastOrders[setting.Market] = make(map[string][]*model.Order)
+		lastOrderIndex[setting.Market] = make(map[string]int64)
+	}
+	if lastOrders[setting.Market][setting.Symbol] == nil {
+		lastOrders[setting.Market][setting.Symbol] = make([]*model.Order, lastOrderLength)
+		lastOrderIndex[setting.Market][setting.Symbol] = 0
+	}
+	lastOrders[setting.Market][setting.Symbol][lastOrderIndex[setting.Market][setting.Symbol]%lastOrderLength] = order
+	lastOrderIndex[setting.Market][setting.Symbol]++
+	noDealNum := 0
+	tenMin, _ := time.ParseDuration(`10m`)
+	second, _ := time.ParseDuration(`500ms`)
+	for i, lastOrder := range lastOrders[setting.Market][setting.Symbol] {
+		account := model.AppConfig.GetAccountFromKey(order.Market, order.AmountType)
+		now := time.Now()
+		if lastOrder == nil || order.OrderTime.Add(tenMin).Before(now) || order.OrderTime.Add(second).After(now) || account == nil {
+			continue
+		}
+		queryOrder := api.QueryOrderById(lastOrder.AmountType, account.Secret, lastOrder.Market, lastOrder.Symbol,
+			lastOrder.Instrument, lastOrder.OrderType, lastOrder.OrderId)
+		if queryOrder == nil {
+			continue
+		}
+		model.AppDB.Model(&queryOrder).Where(`order_id=?`, queryOrder.OrderId).Updates(
+			map[string]interface{}{`deal_amount`: queryOrder.DealAmount, `deal_price`: queryOrder.DealPrice, `status`: queryOrder.Status})
+		util.Notice(fmt.Sprintf(`query last %s %s %s %f index %d`,
+			queryOrder.Symbol, queryOrder.OrderId, queryOrder.Status, queryOrder.DealAmount, lastOrderIndex[setting.Market][setting.Symbol]))
+		if queryOrder.DealAmount == 0 && order.Status != model.CarryStatusFail {
+			noDealNum++
+			if noDealNum > 3 {
+				util.Notice(fmt.Sprintf(`no deal order %s %s %d %d stop at %d`,
+					setting.Market, setting.Symbol, len(lastOrders), noDealNum, lastOrderIndex[setting.Market][setting.Symbol]))
+				setting.Valid = false
+				setting.UpdatedAt = now
+				lastOrders[setting.Market][setting.Symbol] = make([]*model.Order, lastOrderLength)
+				lastOrderIndex[setting.Market][setting.Symbol] = 0
+				go setSettingStatus(setting, true)
+				break
+			}
+		} else {
+			lastOrders[setting.Market][setting.Symbol][i] = nil
+		}
+	}
+	util.Notice(`---- add done %s`, setting.Symbol)
+}
+
+func setSettingStatus(setting *model.Setting, status bool) {
+	time.Sleep(time.Minute * 20)
+	setting.Valid = status
 }
 
 func addCarryResult(key, market string, success bool) {
