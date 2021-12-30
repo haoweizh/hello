@@ -717,6 +717,7 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	//if len(keys) > 0 && keys[0] == key {
 	setClose = -1
 	//}
+	scoreValid := false
 	carryType = carryTypeOpen
 	if scoreClose < setClose || (balance.Amount > 0 && scoreClose <= -1*revertOpen) {
 		bidAmount = tickPerp.Asks[0].Amount
@@ -726,11 +727,13 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 		if scoreClose < setClose {
 			carryType = carryTypeClose
 		}
+		scoreValid = true
 	} else if scoreOpen > setOpen || (balance.Amount < 0 && scoreOpen >= revertClose) {
 		bidAmount = tickRelated.Asks[0].Amount
 		askAmount = tickPerp.Bids[0].Amount
 		sidePerp = model.OrderSideSell
 		sideRelated = model.OrderSideBuy
+		scoreValid = true
 	}
 	markPrice := tickPerp.Asks[0].Price
 	amount = math.Min(bidAmount, askAmount) * 0.9
@@ -795,8 +798,8 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 			revertOpen, revertClose, carryClose))
 	}
 	model.SetCarryInfo(key, table+setting.Symbol,
-		fmt.Sprintf("%s\n%f %f usdAva:%s usdRate:%s 计算%s %s %s %s 市场%s %s 资金费率:%s coinRate:%s 持仓:%s 可用:%s ",
-			setting.Symbol, setting.OpenShortMargin, setting.CloseShortMargin,
+		fmt.Sprintf("%s\n %v %f %f usdAva:%s usdRate:%s 计算%s %s %s %s 市场%s %s 资金费率:%s coinRate:%s 持仓:%s 可用:%s ",
+			setting.Symbol, scoreValid, setting.OpenShortMargin, setting.CloseShortMargin,
 			strconv.FormatFloat(localUsdAvailable, 'f', 0, 64),
 			strconv.FormatFloat(100*localUsdRate, 'f', 0, 64)+"%",
 			strconv.FormatFloat(setOpen, 'f', 4, 64),
