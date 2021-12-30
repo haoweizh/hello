@@ -25,6 +25,8 @@
             <td>{{index $value 5}}</td>
         </tr>
     {{end}}
+</table>
+<table>
     <th>市场</th>
     <th>日期</th>
     <th>方向</th>
@@ -43,6 +45,26 @@
             <td>{{index $value 6}}%</td>
         </tr>
     {{end}}
+</table>
+<table>
+    <th>对冲</th>
+    <th>要求%</th>
+    <th>要求%</th>
+    <th>实际%</th>
+    <th>limit</th>
+    <th>limit</th>
+    {{range $i, $value := $.cross}}
+        <tr>
+            <td>{{index $value 0}}</td>
+            <td>{{index $value 1}}</td>
+            <td>{{index $value 2}}</td>
+            <td>{{index $value 3}}</td>
+            <td>{{index $value 4}}</td>
+            <td>{{index $value 5}}</td>
+        </tr>
+    {{end}}
+</table>
+<table>
     <th>market</th>
     <th>symbol</th>
     <th>market</th>
@@ -61,6 +83,8 @@
             <td>{{index $value 6}}</td>
         </tr>
     {{end}}
+</table>
+<table>
     <th>market</th>
     <th>symbol</th>
     <th>in all</th>
@@ -77,6 +101,8 @@
             <td>{{index $value 5}}</td>
         </tr>
     {{end}}
+</table>
+<table>
     <th>market</th>
     <th>symbol</th>
     <th>time</th>

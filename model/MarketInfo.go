@@ -41,29 +41,6 @@ func SetTradeMax(key, instrument string, maxBuy, maxSell float64) {
 	tradeMax[key][instrument] = []float64{maxBuy, maxSell}
 }
 
-func GetAmountWithinLimit(key, market, symbol, orderSide string, amount float64) (within float64) {
-	within = amount
-	switch market {
-	case OKEX:
-		maxBuy, maxSell := GetTradeMax(key, symbol)
-		if orderSide == OrderSideBuy {
-			amount = math.Min(maxBuy, amount)
-		}
-		if orderSide == OrderSideSell {
-			amount = math.Min(maxSell, amount)
-		}
-	case Gate: // todo 暂不支持借币：开仓且卖现货时，最小单笔可借数量限制。有持仓的，需要卖出所有持仓数额再加上最小可借
-		marketInfo := GetMarketInfo(market, symbol)
-		if marketInfo.CTValue > 0 { // 判断marketInfo不是现货
-			_, amountInReal := ParseRealAmount(market, symbol, marketInfo.SizeMax)
-			amount = math.Min(amount, amountInReal)
-		}
-	case Ftx:
-		within = math.Min(amount, 90000000)
-	}
-	return within
-}
-
 func GetMarketInfo(market, instrument string) (marketInfo *MarketInfo) {
 	defer marketInfoLock.Unlock()
 	marketInfoLock.Lock()
@@ -104,7 +81,7 @@ func GetCarryCoins() (coins map[string]map[string]bool) { //  market - coin - bo
 // ParseRealAmount 返回以币为单位的数量
 func ParseRealAmount(market, symbol string, amount float64) (success bool, realAmount float64) {
 	marketInfo := GetMarketInfo(market, symbol)
-	if marketInfo == nil || marketInfo.SizeIncrement == 0 || marketInfo.CTCurrency != GetCoin(market, symbol) {
+	if marketInfo == nil || marketInfo.SizeIncrement == 0 {
 		return false, 0
 	}
 	if marketInfo.CTValue == 0 {
@@ -170,9 +147,7 @@ func FormatAmountPair(market, symbolPerp, symbolRelated string, amount float64) 
 }
 
 // FormatCrossPair symbol 期货; related 现货
-func FormatCrossPair(key, marketBuy, marketSell, symbolBuy, symbolSell string, amount float64) (formattedAmount float64) {
-	amount = math.Min(GetAmountWithinLimit(key, marketBuy, symbolBuy, OrderSideBuy, amount),
-		GetAmountWithinLimit(key, marketSell, symbolSell, OrderSideSell, amount))
+func FormatCrossPair(marketBuy, marketSell, symbolBuy, symbolSell string, amount float64) (formattedAmount float64) {
 	marketInfoBuy := GetMarketInfo(marketBuy, symbolBuy)
 	marketInfoSell := GetMarketInfo(marketSell, symbolSell)
 	if marketInfoBuy == nil || marketInfoSell == nil {

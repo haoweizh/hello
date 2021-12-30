@@ -293,9 +293,9 @@ func GetCrossCoin(market, symbol string) (coin string) {
 	case Ftx:
 		tails = []string{`/USD`, `-PERP`}
 	case OKEX:
-		tails = []string{`-USDT-SWAP`}
+		tails = []string{`-USDT`, `-USDT-SWAP`}
 	case Gate:
-		tails = []string{`_PERP`}
+		tails = []string{`_USDT`, `_PERP`}
 	case Binance:
 		tails = []string{`-PERP`}
 	}

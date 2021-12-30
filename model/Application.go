@@ -16,7 +16,8 @@ var HandlerMap = make(map[string]CarryHandler)
 var infoLock sync.Mutex
 var Currencies = []string{`btc`, `eth`, `usdt`, `pax`, `usdc`, `tusd`}
 var TeamMails = []string{`13581512402@139.com`, `haoweizh@qq.com`}
-var CarryInfo = make(map[string]map[string]string) // userKey - function - msg
+var CarryInfo = make(map[string]map[string]string)                // userKey - function - msg
+var monitorInfo = make(map[string]map[string]map[string][]string) // userKey - table - item - value array
 var AppMetric = &MetricManager{}
 
 const OKEXBTCContractFaceValue = 100.0
@@ -166,6 +167,37 @@ var orderStatusMap = map[string]map[string]string{ // market - market status - u
 		`cancelled`: CarryStatusFail,
 		`triggered`: CarryStatusSuccess,
 	},
+}
+
+func GetMonitorInfo(key, table string) (valueArray [][]string) {
+	infoLock.Lock()
+	defer infoLock.Unlock()
+	if monitorInfo == nil || monitorInfo[key] == nil || monitorInfo[key][table] == nil {
+		return nil
+	}
+	valueMap := monitorInfo[key][table]
+	valueArray = make([][]string, len(valueMap))
+	i := 0
+	for _, value := range valueMap {
+		valueArray[i] = value
+		i++
+	}
+	return valueArray
+}
+
+func SetMonitorInfo(key, table, item string, value []string) {
+	infoLock.Lock()
+	defer infoLock.Unlock()
+	if monitorInfo == nil {
+		monitorInfo = map[string]map[string]map[string][]string{}
+	}
+	if monitorInfo[key] == nil {
+		monitorInfo[key] = map[string]map[string][]string{}
+	}
+	if monitorInfo[key][table] == nil {
+		monitorInfo[key][table] = map[string][]string{}
+	}
+	monitorInfo[key][table][item] = value
 }
 
 func GetCarryInfo(userKey, functionName string) (info string) {

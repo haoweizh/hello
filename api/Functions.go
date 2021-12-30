@@ -258,9 +258,11 @@ func GetBalances(key, secret, market string) (
 	if market != model.Ftx && market != model.OKEX {
 		for _, balance := range balances {
 			symbol := balance.Coin + model.GetSpotTail(market)
-			getTick, tick := model.AppMarkets.GetBidAsk(symbol, market)
-			if getTick {
+			got, tick := model.AppMarkets.GetBidAsk(symbol, market)
+			if got {
 				totalInUsd += tick.Bids[0].Price * balance.Amount
+			} else if strings.EqualFold(balance.Coin, `USD`) || strings.EqualFold(balance.Coin, `USDT`) {
+				totalInUsd += balance.Amount
 			}
 		}
 	}
@@ -788,7 +790,8 @@ func filterCross(market, symbol string) bool {
 // InitCrossMarketInfos 用以初始化cross carry的各个币种市场，调用前需要truncate settings数据库表，本方法会从新插入
 func InitCrossMarketInfos() {
 	infoPool := make(map[string][]*model.MarketInfo) // coin - []marketInfos
-	markets := []string{model.Binance, model.Ftx, model.Gate, model.OKEX}
+	// model.Binance, model.Ftx, model.Gate,
+	markets := []string{model.OKEX}
 	for _, market := range markets {
 		marketInfo := GetMarketInfos(market)
 		for _, info := range marketInfo {

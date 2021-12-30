@@ -7,6 +7,7 @@ import (
 	"hello/util"
 	"math"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -14,7 +15,6 @@ import (
 
 const loseRateMax = -0.005
 const winRateMin = 0.005
-const jump = 7.0
 const InsufficientCodeBinance = `-2010`
 
 var carryLock sync.Mutex
@@ -80,16 +80,25 @@ func createFromPosition(key, secret string, setting *model.Setting, valueLimit f
 			spotMarkets[key] = createSpotMarket(key, secret, setting.Market)
 		}
 	}
-	if contractMarkets[key] == nil {
+	getTick, ticks := model.AppMarkets.GetBidAsk(setting.Symbol, setting.Market)
+	if contractMarkets[key] == nil || !getTick {
 		return nil, false
 	}
 	carryStatus = &CarryStatus{isSpot: false, market: setting.Market, symbol: setting.Symbol, key: key, secret: secret,
 		LimitSell: math.NaN(), LimitBuy: math.NaN(), TradeLineBuy: setting.OpenShortMargin, TradeLineSell: setting.CloseShortMargin,
 	}
+	if setting.Market == model.Gate {
+		marketInfo := model.GetMarketInfo(setting.Market, setting.Symbol)
+		if marketInfo != nil {
+			_, amount := model.ParseRealAmount(setting.Market, setting.Symbol, marketInfo.SizeMax)
+			carryStatus.LimitBuy = amount
+			carryStatus.LimitSell = amount
+		}
+	}
 	valueInUsd := 0.0
 	if contractMarkets[key].positions[setting.Symbol] != nil {
 		carryStatus.Holding = contractMarkets[key].positions[setting.Symbol].Free
-		valueInUsd = math.Abs(carryStatus.Holding)*contractMarkets[key].positions[setting.Symbol].EntryPrice +
+		valueInUsd = math.Abs(carryStatus.Holding)*ticks.Asks[0].Price +
 			contractMarkets[key].positions[setting.Symbol].ProfitUnreal
 		carryStatus.RateInAll = valueInUsd / contractMarkets[key].collateralsInU
 	}
@@ -106,7 +115,8 @@ func createFromBalance(key, secret string, setting *model.Setting, valueLimit fl
 	if spotMarkets[key] == nil {
 		spotMarkets[key] = createSpotMarket(key, secret, setting.Market)
 	}
-	if spotMarkets[key] == nil {
+	getTick, ticks := model.AppMarkets.GetBidAsk(setting.Symbol, setting.Market)
+	if spotMarkets[key] == nil || !getTick {
 		return
 	}
 	carryStatus = &CarryStatus{isSpot: true, market: setting.Market, symbol: setting.Symbol, key: key, secret: secret,
@@ -117,7 +127,7 @@ func createFromBalance(key, secret string, setting *model.Setting, valueLimit fl
 	}
 	if spotMarkets[key].balances[setting.Symbol] != nil {
 		carryStatus.Holding = spotMarkets[key].balances[setting.Symbol].Amount
-		carryStatus.RateInAll = math.Abs(spotMarkets[key].balances[setting.Symbol].UsdValue / spotMarkets[key].accountValueInU)
+		carryStatus.RateInAll = math.Abs(carryStatus.Holding * ticks.Asks[0].Price / spotMarkets[key].accountValueInU)
 		if spotMarkets[key].availableU/spotMarkets[key].accountValueInU < 0.2 ||
 			spotMarkets[key].accountValueInU <= 0 || carryStatus.RateInAll > 0.5 ||
 			math.Abs(spotMarkets[key].balances[setting.Symbol].UsdValue) > valueLimit ||
@@ -150,8 +160,12 @@ func initStatus(account *model.Account, setting *model.Setting) (status *CarrySt
 		_, fundingRate = api.GetFundingRate(account.Key, account.Secret, setting.Market, setting.Symbol, nil)
 		fundingRate *= 0.9
 	}
-	if carryStatus == nil {
+	if carryStatus == nil || status == nil {
 		return
+	}
+	if setting.Market == model.Ftx {
+		status.LimitBuy = 90000000
+		status.LimitSell = 90000000
 	}
 	setCarryStatus(setting.Coin, setting.Market, setting.Symbol, account.Key, status)
 	now := time.Now().Unix()
@@ -164,12 +178,16 @@ func initStatus(account *model.Account, setting *model.Setting) (status *CarrySt
 			status.LimitBuy = maxBuy
 		}
 	}
+	jump := 5.0
+	if status.isSpot {
+		jump = 10
+	}
 	if status.Holding > 0 {
 		status.TradeLineBuy = math.Max(setting.OpenShortMargin*(0.5+jump*status.RateInAll), winRateMin) + fundingRate
-		status.TradeLineSell = math.Max(setting.OpenShortMargin*(0.5-jump*status.RateInAll), loseRateMax) - fundingRate
+		status.TradeLineSell = math.Max(setting.CloseShortMargin*(0.5-jump*status.RateInAll), loseRateMax) - fundingRate
 	} else {
 		status.TradeLineBuy = math.Max(setting.OpenShortMargin*(0.5+jump*status.RateInAll), loseRateMax) + fundingRate
-		status.TradeLineSell = math.Max(setting.OpenShortMargin*(0.5-jump*status.RateInAll), winRateMin) - fundingRate
+		status.TradeLineSell = math.Max(setting.CloseShortMargin*(0.5-jump*status.RateInAll), winRateMin) - fundingRate
 	}
 	status.TradeLineBuy *= account.CarryRate
 	status.TradeLineSell *= account.CarryRate
@@ -196,16 +214,15 @@ func ClearCross() {
 		contractMarkets = make(map[string]*contractMarket)
 		coinSettings := model.GetCoinSettings(model.FunctionCross)
 		for i := 0; i < model.AppConfig.GetCrossLen(); i++ {
-			for _, settings := range coinSettings {
+			for coin, settings := range coinSettings {
 				equalStatuses := make([]*CarryStatus, len(settings))
 				for j, setting := range settings {
-					if setting == nil {
+					account := model.AppConfig.GetAccounts(setting.Market)[i]
+					if setting == nil || len(coin) == 0 || coin != setting.Symbol[0:len(coin)] || account == nil {
+						util.Notice(`can not equal`)
 						continue
 					}
-					account := model.AppConfig.GetAccounts(setting.Market)[i]
-					if account != nil {
-						equalStatuses[j] = initStatus(account, setting)
-					}
+					equalStatuses[j] = initStatus(account, setting)
 				}
 				makeEqual(equalStatuses)
 			}
@@ -225,6 +242,10 @@ func makeEqual(statuses []*CarryStatus) (success bool, msg string) {
 	bidStatus := make(map[string]*CarryStatus)
 	askStatus := make(map[string]*CarryStatus)
 	for _, status := range statuses {
+		if status == nil {
+			util.Notice(`warning: fail to get one status`)
+			return false, `fail to equal for one nil status`
+		}
 		holding += status.Holding
 		getTick, tick := model.AppMarkets.GetBidAsk(status.symbol, status.market)
 		if !getTick {
@@ -234,7 +255,7 @@ func makeEqual(statuses []*CarryStatus) (success bool, msg string) {
 		asks = append(asks, tick.Asks[0])
 		bidStatus[fmt.Sprintf(`%s_%s`, status.market, status.symbol)] = status
 		askStatus[fmt.Sprintf(`%s_%s`, status.market, status.symbol)] = status
-		holdingInU += holding * tick.Bids[0].Price
+		holdingInU += status.Holding * tick.Bids[0].Price
 	}
 	if holdingInU > 10 {
 		orderSide = model.OrderSideSell
@@ -252,7 +273,7 @@ func makeEqual(statuses []*CarryStatus) (success bool, msg string) {
 			go api.CancelOrders(status.key, status.secret, status.market, status.symbol)
 		}
 	}
-	if holding < -10 {
+	if holdingInU < -10 {
 		orderSide = model.OrderSideBuy
 		sort.Sort(asks)
 		for _, ask := range asks {
@@ -276,7 +297,6 @@ func makeEqual(statuses []*CarryStatus) (success bool, msg string) {
 	return
 }
 
-// ProcessCross todo 计算fundingRate后30s不下单
 var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 	if !doCross && model.AppConfig.Handle == `1` {
 		go ClearCross()
@@ -313,7 +333,7 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 					setting.Coin, setting.Market, setting.Symbol, settingRelate.Market, settingRelate.Symbol, account.Key, accountRelate.Key)
 				continue
 			}
-			statusBuy, statusSell, amount, priceBuy, priceSell := calcAmount(account.Key, status, statusRelate, tick, tickRelate)
+			statusBuy, statusSell, amount, priceBuy, priceSell := calcAmount(i, status, statusRelate, tick, tickRelate)
 			if amount > 0 {
 				go placeCross(statusBuy, statusSell, priceBuy, priceSell, amount, setting, settingRelate)
 				return
@@ -322,28 +342,54 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 	}
 }
 
-func calcAmount(key string, carryStatus, carryStatusRelate *CarryStatus, tick,
+func calcAmount(index int, carryStatus, carryStatusRelate *CarryStatus, tick,
 	tickRelate *model.BidAsk) (statusBuy, statusSell *CarryStatus, amount, priceBuy, priceSell float64) {
+	now := time.Now()
+	if now.Hour()%8 == 0 && now.Minute() == 0 && now.Second() < 30 {
+		return
+	}
 	var bidAmount, askAmount float64
 	score := 1 - tickRelate.Asks[0].Price/tick.Bids[0].Price
 	scoreRelate := tickRelate.Bids[0].Price/tick.Asks[0].Price - 1
 	if score > 0.1 || scoreRelate > 0.1 {
-		score = 0
-		scoreRelate = 0
 		msg := fmt.Sprintf(`different coin %s %s %s %s %f %f`, carryStatus.market, carryStatus.symbol,
 			carryStatusRelate.market, carryStatusRelate.symbol, score, scoreRelate)
-		for _, address := range model.TeamMails {
-			err := util.SendMail(model.AppConfig.FromMail, model.AppConfig.FromMailAuth, address,
-				`不同币种`, msg)
-			if err != nil {
-				util.Notice(`fail to send mail msg %s %s`, msg, err.Error())
+		minute := time.Now().Minute()
+		second := time.Now().Second()
+		if minute == 0 && second == 0 {
+			for _, address := range model.TeamMails {
+				err := util.SendMail(model.AppConfig.FromMail, model.AppConfig.FromMailAuth, address,
+					`不同币种`, msg)
+				if err != nil {
+					util.Notice(`fail to send mail msg %s %s`, msg, err.Error())
+				}
 			}
 		}
 		return nil, nil, 0, 0, 0
 	}
-	mark := fmt.Sprintf(`%s-%s|%s-%s`, carryStatus.market, carryStatus.symbol, carryStatusRelate.market, carryStatusRelate.symbol)
-	if score > 0.01 || -1*scoreRelate < -0.01 {
-		model.AppMetric.AddCarry(mark, score, -1*scoreRelate)
+	// 为了同一对交易对冲不出现两次，对前后进行排序
+	mark := fmt.Sprintf(`%s-%s`, carryStatus.market, carryStatus.symbol)
+	markRelate := fmt.Sprintf(`%s-%s`, carryStatusRelate.market, carryStatusRelate.symbol)
+	if mark < markRelate {
+		mark = fmt.Sprintf(`%s|%s`, mark, markRelate)
+		model.SetMonitorInfo(strconv.Itoa(index), `cross`, mark, []string{mark,
+			fmt.Sprintf(`%f.2:%f.2`, 100*carryStatus.TradeLineBuy, 100*carryStatus.TradeLineSell),
+			fmt.Sprintf(`%f.2:%f.2`, 100*carryStatusRelate.TradeLineBuy, 100*carryStatus.TradeLineSell),
+			fmt.Sprintf(`%f.2:%f.2`, 100*score, 100*scoreRelate),
+			fmt.Sprintf(`%f.2:%f.2`, carryStatus.LimitBuy, carryStatus.LimitSell),
+			fmt.Sprintf(`%f.2:%f.2`, carryStatusRelate.LimitBuy, carryStatusRelate.LimitSell)})
+	} else {
+		mark = fmt.Sprintf(`%s|%s`, markRelate, mark)
+		model.SetMonitorInfo(strconv.Itoa(index), `cross`, mark, []string{mark,
+			fmt.Sprintf(`%f.2:%f.2`, 100*carryStatusRelate.TradeLineBuy, 100*carryStatus.TradeLineSell),
+			fmt.Sprintf(`%f.2:%f.2`, 100*carryStatus.TradeLineBuy, 100*carryStatus.TradeLineSell),
+			fmt.Sprintf(`%f.2:%f.2`, 100*score, 100*scoreRelate),
+			fmt.Sprintf(`%f.2:%f.2`, carryStatusRelate.LimitBuy, carryStatusRelate.LimitSell),
+			fmt.Sprintf(`%f.2:%f.2`, carryStatus.LimitBuy, carryStatus.LimitSell)})
+	}
+	mark = fmt.Sprintf(`%s-%s|%s-%s`, carryStatus.market, carryStatus.symbol, carryStatusRelate.market, carryStatusRelate.symbol)
+	if score > 0.01 {
+		model.AppMetric.AddCarry(mark, score, 0)
 	}
 	if carryStatus.TradeLineSell < score && carryStatusRelate.TradeLineBuy < score {
 		statusSell = carryStatus
@@ -370,19 +416,17 @@ func calcAmount(key string, carryStatus, carryStatusRelate *CarryStatus, tick,
 	if !math.IsNaN(statusBuy.LimitBuy) {
 		bidAmount = math.Min(statusBuy.LimitBuy, bidAmount)
 	}
-	buyLimit := 0.0
+	amount = math.Min(bidAmount, askAmount)
 	if statusBuy.isSpot && spotMarkets[statusBuy.key] != nil {
-		buyLimit = math.Min(spotMarkets[statusBuy.key].accountValueInU/15, openValueLimit)
-		buyLimit = math.Min(spotMarkets[statusBuy.key].availableU/5, buyLimit)
+		amount = math.Min(amount,
+			math.Min(spotMarkets[statusBuy.key].availableU/5, spotMarkets[statusBuy.key].accountValueInU/15)) / priceBuy
 	}
-	sellLimit := 0.0
 	if statusSell.isSpot && spotMarkets[statusSell.key] != nil && spotMarkets[statusSell.key].balances != nil &&
 		spotMarkets[statusSell.key].balances[statusSell.symbol] != nil {
-		sellLimit = spotMarkets[statusSell.key].balances[statusSell.symbol].AvailableWithBorrow
+		amount = math.Min(amount,
+			spotMarkets[statusSell.key].balances[statusSell.symbol].AvailableWithBorrow)
 	}
-	bidAmount = math.Min(bidAmount, math.Min(buyLimit, sellLimit)/priceBuy)
-	amount = math.Min(bidAmount, askAmount)
-	amount = model.FormatCrossPair(key, statusBuy.market, statusSell.market, statusBuy.symbol, statusSell.symbol, amount)
+	amount = model.FormatCrossPair(statusBuy.market, statusSell.market, statusBuy.symbol, statusSell.symbol, amount)
 	return statusBuy, statusSell, amount, priceBuy, priceSell
 }
 

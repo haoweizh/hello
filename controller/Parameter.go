@@ -281,14 +281,9 @@ func crossPage(c *gin.Context) {
 		carryRows.Close()
 	}
 	priceDis, tickInfo, recentTickInfo := model.AppMetric.ToArray()
-	//for _, account := range accounts {
-	//	if account == nil {
-	//		continue
-	//	}
-	//	metrics += model.GetCarryInfo(account.Key, ``) + `\n`
-	//}
+	crossInfo := model.GetMonitorInfo(indexStr, `cross`)
 	c.HTML(http.StatusOK, `balance.gohtml`, gin.H{`marketValue`: marketValues, `trade`: tradeInfo,
-		`priceDis`: priceDis, `tickInfo`: tickInfo, `recentTickInfo`: recentTickInfo})
+		`priceDis`: priceDis, `tickInfo`: tickInfo, `recentTickInfo`: recentTickInfo, `cross`: crossInfo})
 }
 
 func GetCode(c *gin.Context) {
