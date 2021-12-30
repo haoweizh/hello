@@ -200,16 +200,15 @@ func initStatus(account *model.Account, setting *model.Setting) (status *CarrySt
 }
 
 func ClearCross() {
-	timer := time.NewTimer(time.Second)
-	for {
-		<-timer.C
+	for doCross {
 		for true {
 			if !checkSetCrossing(true) {
 				break
 			} else {
-				time.Sleep(time.Millisecond * 10)
+				time.Sleep(time.Millisecond * 200)
 			}
 		}
+		util.Notice(`...... enter clearing cross`)
 		spotMarkets = make(map[string]*spotMarket)
 		contractMarkets = make(map[string]*contractMarket)
 		coinSettings := model.GetCoinSettings(model.FunctionCross)
@@ -227,7 +226,9 @@ func ClearCross() {
 				makeEqual(equalStatuses)
 			}
 		}
-		timer.Reset(time.Second * 60)
+		util.Notice(`...... exit clearing cross`)
+		checkSetCrossing(false)
+		time.Sleep(time.Second * 60)
 	}
 }
 
@@ -373,19 +374,19 @@ func calcAmount(index int, carryStatus, carryStatusRelate *CarryStatus, tick,
 	if mark < markRelate {
 		mark = fmt.Sprintf(`%s|%s`, mark, markRelate)
 		model.SetMonitorInfo(strconv.Itoa(index), `cross`, mark, []string{mark,
-			fmt.Sprintf(`%f.2:%f.2`, 100*carryStatus.TradeLineBuy, 100*carryStatus.TradeLineSell),
-			fmt.Sprintf(`%f.2:%f.2`, 100*carryStatusRelate.TradeLineBuy, 100*carryStatus.TradeLineSell),
-			fmt.Sprintf(`%f.2:%f.2`, 100*score, 100*scoreRelate),
-			fmt.Sprintf(`%f.2:%f.2`, carryStatus.LimitBuy, carryStatus.LimitSell),
-			fmt.Sprintf(`%f.2:%f.2`, carryStatusRelate.LimitBuy, carryStatusRelate.LimitSell)})
+			fmt.Sprintf(`%.2f:%.2f`, 100*carryStatus.TradeLineBuy, 100*carryStatus.TradeLineSell),
+			fmt.Sprintf(`%.2f:%.2f`, 100*carryStatusRelate.TradeLineBuy, 100*carryStatus.TradeLineSell),
+			fmt.Sprintf(`%.2f:%.2f`, 100*score, 100*scoreRelate),
+			fmt.Sprintf(`%.2f:%.2f`, carryStatus.LimitBuy, carryStatus.LimitSell),
+			fmt.Sprintf(`%.2f:%.2f`, carryStatusRelate.LimitBuy, carryStatusRelate.LimitSell)})
 	} else {
 		mark = fmt.Sprintf(`%s|%s`, markRelate, mark)
 		model.SetMonitorInfo(strconv.Itoa(index), `cross`, mark, []string{mark,
-			fmt.Sprintf(`%f.2:%f.2`, 100*carryStatusRelate.TradeLineBuy, 100*carryStatus.TradeLineSell),
-			fmt.Sprintf(`%f.2:%f.2`, 100*carryStatus.TradeLineBuy, 100*carryStatus.TradeLineSell),
-			fmt.Sprintf(`%f.2:%f.2`, 100*score, 100*scoreRelate),
-			fmt.Sprintf(`%f.2:%f.2`, carryStatusRelate.LimitBuy, carryStatusRelate.LimitSell),
-			fmt.Sprintf(`%f.2:%f.2`, carryStatus.LimitBuy, carryStatus.LimitSell)})
+			fmt.Sprintf(`%.2f:%.2f`, 100*carryStatusRelate.TradeLineBuy, 100*carryStatus.TradeLineSell),
+			fmt.Sprintf(`%.2f:%.2f`, 100*carryStatus.TradeLineBuy, 100*carryStatus.TradeLineSell),
+			fmt.Sprintf(`%.2f:%.2f`, 100*score, 100*scoreRelate),
+			fmt.Sprintf(`%.2f:%.2f`, carryStatusRelate.LimitBuy, carryStatusRelate.LimitSell),
+			fmt.Sprintf(`%.2f:%.2f`, carryStatus.LimitBuy, carryStatus.LimitSell)})
 	}
 	mark = fmt.Sprintf(`%s-%s|%s-%s`, carryStatus.market, carryStatus.symbol, carryStatusRelate.market, carryStatusRelate.symbol)
 	if score > 0.01 {

@@ -126,6 +126,9 @@ func test(c *gin.Context) {
 
 func crossPage(c *gin.Context) {
 	indexStr := c.Query(`index`)
+	if len(indexStr) == 0 {
+		indexStr = `0`
+	}
 	index, err := strconv.ParseInt(indexStr, 10, 64)
 	if err != nil {
 		index = 0
