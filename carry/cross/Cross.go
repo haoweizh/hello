@@ -107,8 +107,8 @@ func createFromPosition(key, secret string, setting *model.Setting, valueLimit f
 	}
 	if contractMarkets[key].contractValueInU/contractMarkets[key].collateralsInU > 3 || valueInUsd > valueLimit ||
 		valueInUsd/contractMarkets[key].collateralsInU > 0.5 {
-		util.Notice(fmt.Sprintf(`杠杆较高，停止开仓 %s %f %f`,
-			key, contractMarkets[key].contractValueInU, contractMarkets[key].collateralsInU))
+		util.Notice(fmt.Sprintf(`杠杆较高，停止开仓 %s %f %f %f %f`,
+			key, contractMarkets[key].contractValueInU, contractMarkets[key].collateralsInU, valueInUsd, valueLimit))
 		doRevert = true
 	}
 	return carryStatus, doRevert
