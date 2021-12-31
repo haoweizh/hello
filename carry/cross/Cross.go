@@ -453,6 +453,8 @@ func placeCross(statusBuy, statusSell *CarryStatus, priceBuy, priceSell, amount 
 		return
 	}
 	placeSuccess := true
+	settingBuy := setting
+	settingSell := relateSetting
 	if statusBuy.market == model.OKEX && statusSell.market == model.OKEX {
 		var sidePerp, sideRelated string
 		var perpPrice, relatedPrice float64
@@ -470,25 +472,24 @@ func placeCross(statusBuy, statusSell *CarryStatus, priceBuy, priceSell, amount 
 		}
 		placeSuccess = api.PlacePairOKEX(statusBuy.key, coin, sidePerp, sideRelated, model.OrderTypeLimit, model.FunctionCross, perpPrice, relatedPrice, amount)
 	} else {
+		if statusBuy.symbol == setting.Symbol {
+			settingBuy = setting
+			settingSell = relateSetting
+		} else {
+			settingBuy = relateSetting
+			settingSell = setting
+		}
 		go api.PlaceOrder(statusBuy.key, statusBuy.secret, model.OrderSideBuy, model.OrderTypeLimit, statusBuy.market, statusBuy.symbol,
 			``, ``, model.FunctionCross, priceBuy, priceBuy,
-			amount, true, true, postOrderCross, nil)
+			amount, true, true, postOrderCross, settingBuy)
 		api.PlaceOrder(statusSell.key, statusSell.secret, model.OrderSideSell, model.OrderTypeLimit, statusSell.market, statusSell.symbol,
 			``, ``, model.FunctionCross, priceSell, priceSell,
-			amount, true, true, postOrderCross, nil)
+			amount, true, true, postOrderCross, settingSell)
 		time.Sleep(time.Second / 5)
 	}
 	if placeSuccess {
-		var settingBuy, settingSell model.Setting
-		if statusBuy.symbol == setting.Symbol {
-			settingBuy = *setting
-			settingSell = *relateSetting
-		} else {
-			settingBuy = *relateSetting
-			settingSell = *setting
-		}
-		placeStatus(statusBuy, priceBuy, &settingBuy, amount)
-		placeStatus(statusSell, priceSell, &settingSell, -1*amount)
+		placeStatus(statusBuy, priceBuy, settingBuy, amount)
+		placeStatus(statusSell, priceSell, settingSell, -1*amount)
 	}
 }
 
