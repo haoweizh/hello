@@ -1133,10 +1133,10 @@ func getPositionsOKEX(key, secret string) (success bool, positions []*model.Posi
 	return success, positions
 }
 
-// GetMaxSize
+// getMaxSizeOKEX
 // 实测现货maxBuy是对应的交易币的数量，现货maxSell是计价币的数量，故需除以价格；
 // 期货的maxBuy和maxSell都是币的数量，无需除以价格
-func GetMaxSize(key, secret, instrument string) (success bool, maxBuy, maxSell float64) {
+func getMaxSizeOKEX(key, secret, instrument string) (success bool, maxBuy, maxSell float64) {
 	response := sendSignRequestOKEX(key, secret, http.MethodGet,
 		fmt.Sprintf(`/api/v5/account/max-size?instId=%s&tdMode=cross`, instrument), nil)
 	responseJson, err := util.NewJSON(response)

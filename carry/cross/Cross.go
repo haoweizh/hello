@@ -171,14 +171,11 @@ func initStatus(account *model.Account, setting *model.Setting) (status *CarrySt
 		status.LimitSell = 90000000
 	}
 	setCarryStatus(setting.Coin, setting.Market, setting.Symbol, account.Key, status)
-	now := time.Now().Unix()
-	resetTime := getOKTradeMaxResetTime(account.Key, setting.Symbol) + 600
-	if setting.Market == model.OKEX && now > resetTime {
-		setOKTradeMaxResetTime(account.Key, setting.Symbol)
-		getMax, maxBuy, maxSell := api.GetMaxSize(account.Key, account.Secret, setting.Symbol)
-		if getMax {
-			status.LimitSell = maxSell
+	if setting.Market == model.OKEX {
+		success, maxBuy, maxSell := api.GetTradeMaxOKEX(account.Key, account.Secret, setting.Symbol, 600)
+		if success {
 			status.LimitBuy = maxBuy
+			status.LimitSell = maxSell
 		}
 	}
 	jump := 5.0
@@ -543,8 +540,7 @@ var postOrderCross = func(order *model.Order, setting *model.Setting) {
 				if InsufficientCodeOKEX[order.ErrCode] {
 					util.Notice(`reset %s trade max with %s %s`, order.Market, order.ErrCode, order.AmountType)
 					status := getCarryStatus(setting.Coin, setting.Market, setting.Symbol, account.Key)
-					setOKTradeMaxResetTime(account.Key, setting.Symbol)
-					getMax, maxBuy, maxSell := api.GetMaxSize(account.Key, account.Secret, setting.Symbol)
+					getMax, maxBuy, maxSell := api.GetTradeMaxOKEX(account.Key, account.Secret, setting.Symbol, 0)
 					if getMax {
 						status.LimitSell = maxSell
 						status.LimitBuy = maxBuy

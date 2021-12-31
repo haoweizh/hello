@@ -3,18 +3,15 @@ package cross
 import (
 	"hello/model"
 	"sync"
-	"time"
 )
 
 var carryStatus = make(map[string]map[string]map[string]map[string]*CarryStatus) // coin - market - symbol - key - CarryStatus
-var okTradeMaxResetTime = make(map[string]map[string]int64)                      // key - symbol - init time in second
 var contractMarkets = make(map[string]*contractMarket)                           // key - contractMarket
 var spotMarkets = make(map[string]*spotMarket)                                   // key - spotMarket
 var crossLock sync.Mutex
 var crossing bool
 var doCross = false
 
-const openValueLimit = 10000.0
 const holdingLimitInU = 500000.0
 
 type contractMarket struct {
@@ -83,22 +80,4 @@ func setCarryStatus(coin, market, symbol, key string, status *CarryStatus) {
 		carryStatus[coin][market][symbol] = make(map[string]*CarryStatus)
 	}
 	carryStatus[coin][market][symbol][key] = status
-}
-
-func getOKTradeMaxResetTime(key, symbol string) (resetTime int64) {
-	defer crossLock.Unlock()
-	crossLock.Lock()
-	if okTradeMaxResetTime[key] == nil {
-		return 0
-	}
-	return okTradeMaxResetTime[key][symbol]
-}
-
-func setOKTradeMaxResetTime(key, symbol string) {
-	defer crossLock.Unlock()
-	crossLock.Lock()
-	if okTradeMaxResetTime[key] == nil {
-		okTradeMaxResetTime[key] = make(map[string]int64)
-	}
-	okTradeMaxResetTime[key][symbol] = time.Now().Unix()
 }

@@ -10,7 +10,6 @@ import (
 
 var marketInfos = make(map[string]map[string]*MarketInfo) // market - symbol - MarketInfo
 var marketInfoLock sync.Mutex
-var tradeMax = make(map[string]map[string][]float64) // key - instrument - [maxBuy合约张数/币币个数, maxSell]
 
 type MarketInfo struct {
 	Market, Name, CTCurrency               string
@@ -21,24 +20,6 @@ type MarketInfo struct {
 	BorrowUsdtMax                          float64 //最大借款usdt数额
 	SizeMax, SizeMin                       float64 //最大最小下单数量
 	PriceMax                               float64 //最大下单价格
-}
-
-func GetTradeMax(key, instrument string) (maxBuy, maxSell float64) {
-	defer marketInfoLock.Unlock()
-	marketInfoLock.Lock()
-	if tradeMax[key] == nil || tradeMax[key][instrument] == nil || len(tradeMax[key][instrument]) != 2 {
-		return 0, 0
-	}
-	return tradeMax[key][instrument][0], tradeMax[key][instrument][1]
-}
-
-func SetTradeMax(key, instrument string, maxBuy, maxSell float64) {
-	defer marketInfoLock.Unlock()
-	marketInfoLock.Lock()
-	if tradeMax[key] == nil {
-		tradeMax[key] = make(map[string][]float64)
-	}
-	tradeMax[key][instrument] = []float64{maxBuy, maxSell}
 }
 
 func GetMarketInfo(market, instrument string) (marketInfo *MarketInfo) {

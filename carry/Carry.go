@@ -108,7 +108,7 @@ var postOrderCarry = func(order *model.Order, setting *model.Setting) {
 		return
 	}
 	if order.HaveId() {
-		maxBuy, maxSell := model.GetTradeMax(order.AmountType, order.Symbol)
+		_, maxBuy, maxSell := api.GetTradeMaxOKEX(order.AmountType, ``, order.Symbol, -1)
 		if order.OrderSide == model.OrderSideBuy {
 			maxBuy -= order.Amount
 			maxSell += order.Amount
@@ -116,7 +116,7 @@ var postOrderCarry = func(order *model.Order, setting *model.Setting) {
 			maxBuy += order.Amount
 			maxSell -= order.Amount
 		}
-		model.SetTradeMax(order.AmountType, order.Instrument, maxBuy, maxSell)
+		api.SetTradeMax(order.AmountType, order.Instrument, maxBuy, maxSell)
 		addLastCarry(order, setting)
 		addCarryResult(order.AmountType, order.Market, true)
 	} else {
@@ -166,10 +166,8 @@ func resetTradeMax(key, secret string, market string) {
 		case model.OKEX:
 			symbolPerp := coin + model.GetPerpTail(market)
 			symbolRelated := coin + model.GetSpotTail(market)
-			_, maxBuy, maxSell := api.GetMaxSize(key, secret, symbolPerp)
-			model.SetTradeMax(key, symbolPerp, maxBuy, maxSell)
-			_, maxBuy, maxSell = api.GetMaxSize(key, secret, symbolRelated)
-			model.SetTradeMax(key, symbolRelated, maxBuy, maxSell)
+			api.GetTradeMaxOKEX(key, secret, symbolPerp, 600)
+			api.GetTradeMaxOKEX(key, secret, symbolRelated, 600)
 			time.Sleep(time.Second / 5)
 		case model.Binance:
 			//_, maxLoan := api.GetMaxLoan(key, secret, market, coin)
@@ -541,8 +539,8 @@ func makeEqual(key, secret string, setting *model.Setting, balances []*model.Bal
 	}
 	if setting.Market == model.OKEX {
 		if orderSide == model.OrderSideBuy {
-			maxBuy, _ := model.GetTradeMax(key, symbol)
-			if amount > maxBuy {
+			success, maxBuy, _ := api.GetTradeMaxOKEX(key, secret, symbol, 600)
+			if success && amount > maxBuy {
 				if symbol == setting.Symbol {
 					symbol = setting.SymbolRelated
 					price = tickRelated.Asks[0].Price
@@ -553,8 +551,8 @@ func makeEqual(key, secret string, setting *model.Setting, balances []*model.Bal
 			}
 		}
 		if orderSide == model.OrderSideSell {
-			_, maxSell := model.GetTradeMax(key, symbol)
-			if amount > maxSell {
+			success, _, maxSell := api.GetTradeMaxOKEX(key, secret, symbol, 600)
+			if success && amount > maxSell {
 				if symbol == setting.Symbol {
 					symbol = setting.SymbolRelated
 					price = tickRelated.Bids[0].Price
@@ -758,8 +756,8 @@ func calcCarryOpen(setting *model.Setting, tickPerp, tickRelated *model.BidAsk, 
 	}
 	amount = model.FormatAmountPair(setting.Market, setting.Symbol, setting.SymbolRelated, amount)
 	if model.OKEX == setting.Market && amount > 0 {
-		maxBuyPerp, maxSellPerp := model.GetTradeMax(key, setting.Symbol)
-		maxBuyRelated, maxSellRelated := model.GetTradeMax(key, setting.SymbolRelated)
+		_, maxBuyPerp, maxSellPerp := api.GetTradeMaxOKEX(key, secret, setting.Symbol, -1)
+		_, maxBuyRelated, maxSellRelated := api.GetTradeMaxOKEX(key, secret, setting.SymbolRelated, -1)
 		if sidePerp == model.OrderSideBuy && sideRelated == model.OrderSideSell {
 			amount = math.Min(amount, math.Min(maxSellRelated, maxBuyPerp))
 		} else if sidePerp == model.OrderSideSell && sideRelated == model.OrderSideBuy {

@@ -14,6 +14,46 @@ var channelLock sync.Mutex
 var instruments = make(map[string]map[string]map[string]string) // market - symbol - (quarter;bi_quarter) - instrument
 var requireReset = make(map[string]bool)
 var instrumentLock sync.Mutex
+var tradeMax = make(map[string]map[string][]float64)        // key - instrument - [maxBuy合约张数/币币个数, maxSell]
+var okTradeMaxResetTime = make(map[string]map[string]int64) // key - symbol - init time in second
+
+func GetTradeMaxOKEX(key, secret, instrument string, expireSecond int64) (success bool, maxBuy, maxSell float64) {
+	defer instrumentLock.Unlock()
+	instrumentLock.Lock()
+	now := time.Now().Unix()
+	if expireSecond < 0 {
+		if tradeMax[key] != nil && tradeMax[key][instrument] != nil && len(tradeMax[key][instrument]) == 2 {
+			return true, tradeMax[key][instrument][0], tradeMax[key][instrument][1]
+		} else {
+			return false, 0, 0
+		}
+	}
+	if tradeMax[key] != nil && tradeMax[key][instrument] != nil && len(tradeMax[key][instrument]) == 2 &&
+		okTradeMaxResetTime[key] != nil && now-okTradeMaxResetTime[key][instrument] < expireSecond {
+		return true, tradeMax[key][instrument][0], tradeMax[key][instrument][1]
+	}
+	if tradeMax[key] == nil {
+		tradeMax[key] = make(map[string][]float64)
+	}
+	if okTradeMaxResetTime[key] == nil {
+		okTradeMaxResetTime[key] = make(map[string]int64)
+	}
+	success, maxBuy, maxSell = getMaxSizeOKEX(key, secret, instrument)
+	if success {
+		tradeMax[key][instrument] = []float64{maxBuy, maxSell}
+		okTradeMaxResetTime[key][instrument] = now
+	}
+	return
+}
+
+func SetTradeMax(key, instrument string, maxBuy, maxSell float64) {
+	defer instrumentLock.Unlock()
+	instrumentLock.Lock()
+	if tradeMax[key] == nil {
+		tradeMax[key] = make(map[string][]float64)
+	}
+	tradeMax[key][instrument] = []float64{maxBuy, maxSell}
+}
 
 func SetRequireReset(market string, reset bool) {
 	channelLock.Lock()
