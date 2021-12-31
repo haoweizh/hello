@@ -535,21 +535,21 @@ var postOrderCross = func(order *model.Order, setting *model.Setting) {
 		return
 	}
 	account := model.AppConfig.GetAccountFromKey(order.Market, order.AmountType)
-	if account != nil {
-		status := getCarryStatus(setting.Coin, setting.Market, setting.Symbol, account.Key)
-		maxBuy := status.LimitBuy
-		maxSell := status.LimitSell
-		if order.OrderSide == model.OrderSideBuy {
-			maxBuy -= order.Amount
-			maxSell += order.Amount
-		} else if order.OrderSide == model.OrderSideSell {
-			maxBuy += order.Amount
-			maxSell -= order.Amount
-		}
-		status.LimitSell = math.Min(status.LimitSell, maxSell)
-		status.LimitBuy = math.Min(status.LimitBuy, maxBuy)
-	}
 	if order.HaveId() {
+		if account != nil {
+			status := getCarryStatus(setting.Coin, setting.Market, setting.Symbol, account.Key)
+			maxBuy := status.LimitBuy
+			maxSell := status.LimitSell
+			if order.OrderSide == model.OrderSideBuy {
+				maxBuy -= order.Amount
+				maxSell += order.Amount
+			} else if order.OrderSide == model.OrderSideSell {
+				maxBuy += order.Amount
+				maxSell -= order.Amount
+			}
+			status.LimitSell = math.Min(status.LimitSell, maxSell)
+			status.LimitBuy = math.Min(status.LimitBuy, maxBuy)
+		}
 		addLastCarry(order, setting)
 		addCarryResult(order.AmountType, order.Market, true)
 	} else {
