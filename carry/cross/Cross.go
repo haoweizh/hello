@@ -87,21 +87,24 @@ func createFromPosition(key, secret string, setting *model.Setting, valueLimit f
 	if contractMarkets[key] == nil || !getTick {
 		return nil, false
 	}
+	price := ticks.Asks[0].Price
 	carryStatus = &CarryStatus{isSpot: false, market: setting.Market, symbol: setting.Symbol, key: key, secret: secret,
-		LimitSell: math.NaN(), LimitBuy: math.NaN(), TradeLineBuy: setting.OpenShortMargin, TradeLineSell: setting.CloseShortMargin,
+		LimitSell:    math.Min(contractMarkets[key].collateralsInU/5, openValueLimit) / price,
+		LimitBuy:     math.Min(contractMarkets[key].collateralsInU/5, openValueLimit) / price,
+		TradeLineBuy: setting.OpenShortMargin, TradeLineSell: setting.CloseShortMargin,
 	}
 	if setting.Market == model.Gate {
 		marketInfo := model.GetMarketInfo(setting.Market, setting.Symbol)
 		if marketInfo != nil {
 			_, amount := model.ParseRealAmount(setting.Market, setting.Symbol, marketInfo.SizeMax)
-			carryStatus.LimitBuy = amount
-			carryStatus.LimitSell = amount
+			carryStatus.LimitBuy = math.Min(carryStatus.LimitBuy, amount)
+			carryStatus.LimitSell = math.Min(carryStatus.LimitSell, amount)
 		}
 	}
 	valueInUsd := 0.0
 	if contractMarkets[key].positions[setting.Symbol] != nil {
 		carryStatus.Holding = contractMarkets[key].positions[setting.Symbol].Free
-		valueInUsd = math.Abs(carryStatus.Holding)*ticks.Asks[0].Price +
+		valueInUsd = math.Abs(carryStatus.Holding)*price +
 			contractMarkets[key].positions[setting.Symbol].ProfitUnreal
 		carryStatus.RateInAll = valueInUsd / contractMarkets[key].collateralsInU
 	}
@@ -122,22 +125,31 @@ func createFromBalance(key, secret string, setting *model.Setting, valueLimit fl
 	if spotMarkets[key] == nil || !getTick {
 		return
 	}
+	price := ticks.Asks[0].Price
 	carryStatus = &CarryStatus{isSpot: true, market: setting.Market, symbol: setting.Symbol, key: key, secret: secret,
-		LimitSell:     math.NaN(),
-		LimitBuy:      math.NaN(),
+		LimitSell:     0,
+		LimitBuy:      math.Min(openValueLimit, math.Min(spotMarkets[key].availableU/5, spotMarkets[key].accountValueInU/15)) / price,
 		TradeLineBuy:  setting.OpenShortMargin,
 		TradeLineSell: setting.CloseShortMargin,
 	}
 	if spotMarkets[key].balances[setting.Symbol] != nil {
-		carryStatus.Holding = spotMarkets[key].balances[setting.Symbol].Amount
+		balance := spotMarkets[key].balances[setting.Symbol]
+		carryStatus.Holding = balance.Amount
+		// 暂时不让借币
+		carryStatus.LimitSell = math.Min(balance.Amount, openValueLimit/price)
 		carryStatus.RateInAll = math.Abs(carryStatus.Holding * ticks.Asks[0].Price / spotMarkets[key].accountValueInU)
-		if spotMarkets[key].availableU/spotMarkets[key].accountValueInU < 0.2 ||
-			spotMarkets[key].accountValueInU <= 0 || carryStatus.RateInAll > 0.5 ||
-			math.Abs(spotMarkets[key].balances[setting.Symbol].UsdValue) > valueLimit ||
-			(spotMarkets[key].collateral != nil && (spotMarkets[key].collateral.Rate < 10 || spotMarkets[key].collateral.Available <= 0 ||
-				(spotMarkets[key].collateral.Available-spotMarkets[key].collateral.Occupied)/spotMarkets[key].collateral.Available < 0.1)) {
-			doRevert = true
-		}
+	}
+	if spotMarkets[key].availableU/spotMarkets[key].accountValueInU < 0.2 ||
+		spotMarkets[key].accountValueInU <= 0 || carryStatus.RateInAll > 0.5 {
+		doRevert = true
+	}
+	if spotMarkets[key].balances[setting.Symbol] != nil &&
+		math.Abs(spotMarkets[key].balances[setting.Symbol].UsdValue) > valueLimit {
+		doRevert = true
+	}
+	if spotMarkets[key].collateral != nil && (spotMarkets[key].collateral.Rate < 10 ||
+		(spotMarkets[key].collateral.Available-spotMarkets[key].collateral.Occupied)/spotMarkets[key].collateral.Available < 0.1) {
+		doRevert = true
 	}
 	return carryStatus, doRevert
 }
@@ -167,15 +179,15 @@ func initStatus(account *model.Account, setting *model.Setting) (status *CarrySt
 		return
 	}
 	if setting.Market == model.Ftx {
-		status.LimitBuy = 90000000
-		status.LimitSell = 90000000
+		status.LimitBuy = math.Min(status.LimitBuy, 90000000)
+		status.LimitSell = math.Min(status.LimitSell, 90000000)
 	}
 	setCarryStatus(setting.Coin, setting.Market, setting.Symbol, account.Key, status)
 	if setting.Market == model.OKEX {
 		success, maxBuy, maxSell := api.GetTradeMaxOKEX(account.Key, account.Secret, setting.Symbol, 600)
 		if success {
-			status.LimitBuy = maxBuy
-			status.LimitSell = maxSell
+			status.LimitBuy = math.Min(status.LimitBuy, maxBuy)
+			status.LimitSell = math.Min(status.LimitSell, maxSell)
 		}
 	}
 	jump := 5.0
@@ -423,22 +435,7 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarrySta
 	if statusBuy == nil || statusSell == nil {
 		return nil, nil, 0, 0, 0
 	}
-	if !math.IsNaN(statusSell.LimitSell) {
-		askAmount = math.Min(statusSell.LimitSell, askAmount)
-	}
-	if !math.IsNaN(statusBuy.LimitBuy) {
-		bidAmount = math.Min(statusBuy.LimitBuy, bidAmount)
-	}
-	amount = math.Min(bidAmount, askAmount)
-	if statusBuy.isSpot && spotMarkets[statusBuy.key] != nil {
-		amount = math.Min(amount,
-			math.Min(spotMarkets[statusBuy.key].availableU/5, spotMarkets[statusBuy.key].accountValueInU/15)) / priceBuy
-	}
-	if statusSell.isSpot && spotMarkets[statusSell.key] != nil && spotMarkets[statusSell.key].balances != nil &&
-		spotMarkets[statusSell.key].balances[statusSell.symbol] != nil {
-		amount = math.Min(amount,
-			spotMarkets[statusSell.key].balances[statusSell.symbol].AvailableWithBorrow)
-	}
+	amount = math.Min(math.Min(statusBuy.LimitBuy, bidAmount), math.Min(statusSell.LimitSell, askAmount))
 	amount = model.FormatCrossPair(statusBuy.market, statusSell.market, statusBuy.symbol, statusSell.symbol, amount)
 	return statusBuy, statusSell, amount, priceBuy, priceSell
 }
@@ -546,8 +543,8 @@ var postOrderCross = func(order *model.Order, setting *model.Setting) {
 					status := getCarryStatus(setting.Coin, setting.Market, setting.Symbol, account.Key)
 					getMax, maxBuy, maxSell := api.GetTradeMaxOKEX(account.Key, account.Secret, setting.Symbol, 0)
 					if getMax {
-						status.LimitSell = maxSell
-						status.LimitBuy = maxBuy
+						status.LimitSell = math.Min(status.LimitSell, maxSell)
+						status.LimitBuy = math.Min(status.LimitBuy, maxBuy)
 					}
 					unknownFail = false
 				}
