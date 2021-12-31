@@ -542,6 +542,9 @@ var postOrderCross = func(order *model.Order, setting *model.Setting) {
 	if order == nil {
 		return
 	}
+	if setting == nil {
+		setting = model.GetSetting(model.FunctionCross, order.Market, order.Symbol)[0]
+	}
 	account := model.AppConfig.GetAccountFromKey(order.Market, order.AmountType)
 	if order.HaveId() {
 		if account != nil {
