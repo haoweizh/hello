@@ -495,7 +495,7 @@ func placeStatus(status *CarryStatus, price float64, setting *model.Setting, amo
 		sMarket := spotMarkets[status.key]
 		balance := sMarket.balances[status.symbol]
 		if balance == nil {
-			balance = &model.Balance{Amount: amount, UsdValue: amount * price}
+			balance = &model.Balance{Amount: amount, UsdValue: amount * price, Market: status.market, Coin: setting.Coin}
 		} else {
 			balance.Amount += amount
 			balance.UsdValue = balance.Amount * price
@@ -513,7 +513,7 @@ func placeStatus(status *CarryStatus, price float64, setting *model.Setting, amo
 		position := pMarket.positions[status.symbol]
 		originFreeAbs := 0.0
 		if position == nil {
-			position = &model.Position{Free: amount, EntryPrice: price}
+			position = &model.Position{Free: amount, EntryPrice: price, Market: status.market, Currency: setting.Symbol}
 		} else {
 			originFreeAbs = math.Abs(position.Free)
 			position.Free += amount
