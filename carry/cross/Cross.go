@@ -323,7 +323,7 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 	}
 	settings := model.GetCoinSetting(setting.Function, setting.Coin)
 	if tick == nil || tick.Asks == nil || tick.Bids == nil || setting == nil || model.AppPause ||
-		(model.AppConfig.Env != `test` && model.AppConfig.Handle != `1`) ||
+		(model.AppConfig.Env != `test` && model.AppConfig.Handle != `1`) || setting.Valid == false ||
 		settings == nil || len(settings) == 0 || model.IsTickTimeout(setting.Market, delayTick) {
 		return
 	}
@@ -359,6 +359,11 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarrySta
 	tickRelate *model.BidAsk) (statusBuy, statusSell *CarryStatus, amount, priceBuy, priceSell float64) {
 	now := time.Now()
 	if now.Hour()%8 == 0 && now.Minute() == 0 && now.Second() < 30 {
+		return
+	}
+	if getCarryStop(carryStatus.key) || getCarryStop(carryStatusRelate.key) {
+		util.Debug(`stop carry for 10 times unknown carry %s or %s %s`,
+			carryStatus.key, carryStatusRelate.key, coin)
 		return
 	}
 	var bidAmount, askAmount float64
@@ -492,6 +497,8 @@ func placeStatus(status *CarryStatus, price float64, setting *model.Setting, amo
 		sMarket := spotMarkets[status.key]
 		balance := sMarket.balances[status.symbol]
 		if balance == nil {
+			util.Notice(fmt.Sprintf(`warning no balance %s %s %s`,
+				status.key, status.market, status.symbol))
 			balance = &model.Balance{Amount: amount, UsdValue: amount * price, Market: status.market, Coin: setting.Coin}
 		} else {
 			balance.Amount += amount
@@ -644,11 +651,6 @@ func addCarryResult(key, market string, success bool) {
 	}
 	if carryFail[key] > 6 {
 		go pauseCarry(key)
-		//accounts := model.AppConfig.GetAccounts(market)
-		//account := model.AppConfig.GetAccountFromKey(market, key)
-		//if accounts[0].Key == account.Key {
-		//	mailAddr = model.AppConfig.Mail
-		//}
 		util.Notice(`----------stop carry %s %d`, key, carryFail[key])
 		carryFail[key] = 0
 		for _, address := range model.TeamMails {

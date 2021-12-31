@@ -319,7 +319,7 @@ var ProcessCarry = func(setting *model.Setting, tick *model.BidAsk) {
 	exit := false
 	if tickPerp == nil || tickRelated == nil || tickPerp.Asks == nil || tickPerp.Bids == nil ||
 		tickRelated.Asks == nil || tickRelated.Bids == nil || setting == nil || model.AppPause ||
-		(model.AppConfig.Env != `test` && model.AppConfig.Handle != `1` || setting.Valid == false) {
+		(model.AppConfig.Env != `test` && model.AppConfig.Handle != `1`) || setting.Valid == false {
 		exit = true
 	}
 	switch setting.Market {

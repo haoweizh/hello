@@ -40,6 +40,12 @@ type CarryStatus struct {
 	RateInAll float64 // 现货：该币种占总权益的比例；永续：以开仓价算该币种持仓占保证金百分比
 }
 
+func getCarryStop(key string) (stop bool) {
+	defer carryLock.Unlock()
+	carryLock.Lock()
+	return carryStop[key]
+}
+
 func GetCrossMarketValue(key string) (market string, inAllSpot, collateral, holdingSpot, holdingFuture, unRealizedPnl float64) {
 	if spotMarkets[key] != nil {
 		market = spotMarkets[key].market
