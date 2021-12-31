@@ -18,7 +18,7 @@ import (
 	"github.com/gorilla/websocket"
 
 	"hello/model"
-	"hello/model/dtos"
+	"hello/api/dtos"
 	"hello/util"
 )
 
