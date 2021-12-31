@@ -368,7 +368,7 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarrySta
 		}
 		return nil, nil, 0, 0, 0
 	}
-	mark := fmt.Sprintf(`%s-%s|%s-%s`, carryStatus.market, carryStatus.symbol, carryStatusRelate.market, carryStatusRelate.symbol)
+	mark := fmt.Sprintf(`%s_%s|%s_%s`, carryStatus.market, carryStatus.symbol, carryStatusRelate.market, carryStatusRelate.symbol)
 	if score > 0.01 {
 		model.AppMetric.AddCarry(mark, score, 0)
 	}

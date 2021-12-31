@@ -845,7 +845,7 @@ func InitCrossMarketInfos() {
 		}
 	}
 	for coin, infos := range infoPool {
-		if len(infos) >= 4 {
+		if len(infos) >= 2 {
 			for _, info := range infos {
 				setting := &model.Setting{Valid: true, Function: model.FunctionCross, Market: info.Market,
 					Symbol: info.Name, Coin: coin, OpenShortMargin: 0.01, CloseShortMargin: 0.01}
