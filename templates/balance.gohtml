@@ -49,7 +49,10 @@
 </table>
 <h4>跨所状态值表</h4>
 <table border="1" cellspacing="0">
-    <th>对冲</th>
+    <th></th>
+    <th>symbol</th>
+    <th></th>
+    <th>symbol</th>
     <th>要求%</th>
     <th>要求%</th>
     <th>实际%</th>
@@ -57,12 +60,28 @@
     <th>limit</th>
     {{range $i, $value := $.cross}}
         <tr>
-            <td>{{index $value 0}}</td>
-            <td>{{index $value 1}}</td>
-            <td>{{index $value 2}}</td>
-            <td>{{index $value 3}}</td>
-            <td>{{index $value 4}}</td>
-            <td>{{index $value 5}}</td>
+            {{$valid := index $value 9}}
+            {{if eq $valid "true"}}
+                <td bgcolor="#00FF00">{{index $value 0}}</td>
+                <td bgcolor="#00FF00">{{index $value 1}}</td>
+                <td bgcolor="#00FF00">{{index $value 2}}</td>
+                <td bgcolor="#00FF00">{{index $value 3}}</td>
+                <td bgcolor="#00FF00">{{index $value 4}}</td>
+                <td bgcolor="#00FF00">{{index $value 5}}</td>
+                <td bgcolor="#00FF00">{{index $value 6}}</td>
+                <td bgcolor="#00FF00">{{index $value 7}}</td>
+                <td bgcolor="#00FF00">{{index $value 8}}</td>
+            {{else}}
+                <td>{{index $value 0}}</td>
+                <td>{{index $value 1}}</td>
+                <td>{{index $value 2}}</td>
+                <td>{{index $value 3}}</td>
+                <td>{{index $value 4}}</td>
+                <td>{{index $value 5}}</td>
+                <td>{{index $value 6}}</td>
+                <td>{{index $value 7}}</td>
+                <td>{{index $value 8}}</td>
+            {{end}}
         </tr>
     {{end}}
 </table>
@@ -92,7 +111,7 @@
     <th>market</th>
     <th>symbol</th>
     <th>in all</th>
-    <th>delay<100</th>
+    <th><100</th>
     <th>delay</th>
     <th>间隔</th>
     {{range $i, $value := $.tickInfo}}

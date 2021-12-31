@@ -791,7 +791,7 @@ func filterCross(market, symbol string) bool {
 func InitCrossMarketInfos() {
 	infoPool := make(map[string][]*model.MarketInfo) // coin - []marketInfos
 	// model.Binance, model.Ftx, model.Gate,
-	markets := []string{model.OKEX}
+	markets := []string{model.OKEX, model.Ftx}
 	for _, market := range markets {
 		marketInfo := GetMarketInfos(market)
 		for _, info := range marketInfo {
@@ -805,9 +805,10 @@ func InitCrossMarketInfos() {
 		}
 	}
 	for coin, infos := range infoPool {
-		if len(infos) > 1 {
+		if len(infos) >= 4 {
 			for _, info := range infos {
-				setting := &model.Setting{Valid: true, Function: model.FunctionCross, Market: info.Market, Symbol: info.Name, Coin: coin}
+				setting := &model.Setting{Valid: true, Function: model.FunctionCross, Market: info.Market,
+					Symbol: info.Name, Coin: coin, OpenShortMargin: 0.01, CloseShortMargin: 0.01}
 				if filterCross(setting.Market, setting.Symbol) {
 					continue
 				}

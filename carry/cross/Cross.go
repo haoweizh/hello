@@ -333,12 +333,12 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 			status := getCarryStatus(setting.Coin, setting.Market, setting.Symbol, account.Key)
 			statusRelate := getCarryStatus(settingRelate.Coin, settingRelate.Market, settingRelate.Symbol, accountRelate.Key)
 			if status == nil || statusRelate == nil {
-				util.Notice(`fail to get status  %s %s-%s %s-%s %s %s`,
-					setting.Coin, setting.Market, setting.Symbol, settingRelate.Market, settingRelate.Symbol, account.Key, accountRelate.Key)
 				continue
 			}
-			statusBuy, statusSell, amount, priceBuy, priceSell := calcAmount(i, status, statusRelate, tick, tickRelate)
+			statusBuy, statusSell, amount, priceBuy, priceSell := calcAmount(i, setting.Coin, status, statusRelate, tick, tickRelate)
 			if amount > 0 {
+				util.Notice(fmt.Sprintf(`place cross %s %s -> %s %s at %f %f amount %f`,
+					statusSell.market, statusSell.symbol, statusBuy.market, statusBuy.symbol, priceSell, priceBuy, amount))
 				go placeCross(statusBuy, statusSell, priceBuy, priceSell, amount, setting, settingRelate)
 				return
 			}
@@ -346,7 +346,7 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 	}
 }
 
-func calcAmount(index int, carryStatus, carryStatusRelate *CarryStatus, tick,
+func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarryStatus, tick,
 	tickRelate *model.BidAsk) (statusBuy, statusSell *CarryStatus, amount, priceBuy, priceSell float64) {
 	now := time.Now()
 	if now.Hour()%8 == 0 && now.Minute() == 0 && now.Second() < 30 {
@@ -371,27 +371,7 @@ func calcAmount(index int, carryStatus, carryStatusRelate *CarryStatus, tick,
 		}
 		return nil, nil, 0, 0, 0
 	}
-	// 为了同一对交易对冲不出现两次，对前后进行排序
-	mark := fmt.Sprintf(`%s-%s`, carryStatus.market, carryStatus.symbol)
-	markRelate := fmt.Sprintf(`%s-%s`, carryStatusRelate.market, carryStatusRelate.symbol)
-	if mark < markRelate {
-		mark = fmt.Sprintf(`%s|%s`, mark, markRelate)
-		model.SetMonitorInfo(strconv.Itoa(index), `cross`, mark, []string{mark,
-			fmt.Sprintf(`%.2f:%.2f`, 100*carryStatus.TradeLineBuy, 100*carryStatus.TradeLineSell),
-			fmt.Sprintf(`%.2f:%.2f`, 100*carryStatusRelate.TradeLineBuy, 100*carryStatus.TradeLineSell),
-			fmt.Sprintf(`%.2f:%.2f`, 100*score, 100*scoreRelate),
-			fmt.Sprintf(`%.2f:%.2f`, carryStatus.LimitBuy, carryStatus.LimitSell),
-			fmt.Sprintf(`%.2f:%.2f`, carryStatusRelate.LimitBuy, carryStatusRelate.LimitSell)})
-	} else {
-		mark = fmt.Sprintf(`%s|%s`, markRelate, mark)
-		model.SetMonitorInfo(strconv.Itoa(index), `cross`, mark, []string{mark,
-			fmt.Sprintf(`%.2f:%.2f`, 100*carryStatusRelate.TradeLineBuy, 100*carryStatus.TradeLineSell),
-			fmt.Sprintf(`%.2f:%.2f`, 100*carryStatus.TradeLineBuy, 100*carryStatus.TradeLineSell),
-			fmt.Sprintf(`%.2f:%.2f`, 100*score, 100*scoreRelate),
-			fmt.Sprintf(`%.2f:%.2f`, carryStatusRelate.LimitBuy, carryStatusRelate.LimitSell),
-			fmt.Sprintf(`%.2f:%.2f`, carryStatus.LimitBuy, carryStatus.LimitSell)})
-	}
-	mark = fmt.Sprintf(`%s-%s|%s-%s`, carryStatus.market, carryStatus.symbol, carryStatusRelate.market, carryStatusRelate.symbol)
+	mark := fmt.Sprintf(`%s-%s|%s-%s`, carryStatus.market, carryStatus.symbol, carryStatusRelate.market, carryStatusRelate.symbol)
 	if score > 0.01 {
 		model.AppMetric.AddCarry(mark, score, 0)
 	}
@@ -410,6 +390,38 @@ func calcAmount(index int, carryStatus, carryStatusRelate *CarryStatus, tick,
 		priceBuy = tick.Asks[0].Price
 		askAmount = tickRelate.Bids[0].Amount * 0.9
 		bidAmount = tick.Bids[0].Amount * 0.9
+	}
+	// 为了同一对交易对冲不出现两次，对前后进行排序
+	mark = fmt.Sprintf(`%s-%s`, carryStatus.market, carryStatus.symbol)
+	markRelate := fmt.Sprintf(`%s-%s`, carryStatusRelate.market, carryStatusRelate.symbol)
+	coinValue := coin
+	if !carryStatus.isSpot {
+		coinValue += `永`
+	}
+	coinValueRelate := coin
+	if !carryStatusRelate.isSpot {
+		coinValueRelate += `永`
+	}
+	if mark < markRelate {
+		mark = fmt.Sprintf(`%s|%s`, mark, markRelate)
+		model.SetMonitorInfo(strconv.Itoa(index), `cross`, mark, []string{
+			carryStatus.market, coinValue, carryStatusRelate.market, coinValueRelate,
+			fmt.Sprintf(`%.1f, %.1f`, 100*carryStatus.TradeLineBuy, 100*carryStatus.TradeLineSell),
+			fmt.Sprintf(`%.1f, %.1f`, 100*carryStatusRelate.TradeLineBuy, 100*carryStatus.TradeLineSell),
+			fmt.Sprintf(`%.1f, %.1f`, 100*score, 100*scoreRelate),
+			fmt.Sprintf(`%.0e, %.0e`, carryStatus.LimitBuy, carryStatus.LimitSell),
+			fmt.Sprintf(`%.0e, %.0e`, carryStatusRelate.LimitBuy, carryStatusRelate.LimitSell),
+			fmt.Sprintf(`%v`, statusBuy != nil && statusSell != nil)})
+	} else {
+		mark = fmt.Sprintf(`%s|%s`, markRelate, mark)
+		model.SetMonitorInfo(strconv.Itoa(index), `cross`, mark, []string{
+			carryStatusRelate.market, coinValueRelate, carryStatus.market, coinValue,
+			fmt.Sprintf(`%.1f, %.1f`, 100*carryStatusRelate.TradeLineBuy, 100*carryStatus.TradeLineSell),
+			fmt.Sprintf(`%.1f, %.1f`, 100*carryStatus.TradeLineBuy, 100*carryStatus.TradeLineSell),
+			fmt.Sprintf(`%.1f, %.1f`, 100*score, 100*scoreRelate),
+			fmt.Sprintf(`%.0e, %.0e`, carryStatusRelate.LimitBuy, carryStatusRelate.LimitSell),
+			fmt.Sprintf(`%.0e, %.0e`, carryStatus.LimitBuy, carryStatus.LimitSell),
+			fmt.Sprintf(`%v`, statusBuy != nil && statusSell != nil)})
 	}
 	if statusBuy == nil || statusSell == nil {
 		return nil, nil, 0, 0, 0

@@ -12,7 +12,6 @@ import (
 	"hello/util"
 	"net/http"
 	"net/url"
-	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -72,38 +71,6 @@ func send() {
 }
 
 var testChan = make(chan int, 1000)
-
-func Test_OKFormatAmount(t *testing.T) {
-	go send()
-	msg := 1
-	for msg = range testChan {
-		fmt.Println(fmt.Sprintf(`get %d length %d`, msg, len(testChan)))
-		time.Sleep(time.Second * 5)
-	}
-	price, _ := strconv.ParseFloat(`5077.13021003`, 64)
-	amount := util.CutTailZero(fmt.Sprintf(`%f`, price))
-	fmt.Println(amount)
-	strs := []string{`1`, `2`, `3`, `4`, `5`}
-	for _, str := range strs {
-		msgChan <- str
-	}
-	select {}
-	//a := math.Floor(0.1 / 0.000001)
-	//fmt.Println(a)
-	//a = a * 0.000001
-	//fmt.Println(a)
-	//model.NewConfig()
-	//_ = configor.Load(model.AppConfig, "./config.yml")
-	//model.AppDB, _ = gorm.Open("postgres", model.AppConfig.DBConnection)
-	//api.InitMarketInfos()
-	//getAmount(0.1)
-	//getAmount(0)
-	//getAmount(0.1)
-	//getAmount(4444)
-	//getAmount(9999)
-	//getAmount(19999)
-	//getAmount(2349999)
-}
 
 func Test_getCommonMarketInfos(t *testing.T) {
 	model.NewConfig()
