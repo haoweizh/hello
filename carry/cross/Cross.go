@@ -494,30 +494,34 @@ func placeStatus(status *CarryStatus, price float64, setting *model.Setting, amo
 	if status.isSpot {
 		sMarket := spotMarkets[status.key]
 		balance := sMarket.balances[status.symbol]
-		balance.Amount += amount
-		balance.UsdValue = balance.Amount * price
-		sMarket.availableU -= amount * price
-		if status.market == model.Ftx {
-			contractMarkets[status.key].collateralsInU -= amount * price
-		} else if status.market == model.OKEX {
-			sMarket.collateral.Available -= amount * price
-			sMarket.collateral.Occupied += amount * price
-			contractMarkets[status.key].collateralsInU -= amount * price
+		if balance != nil {
+			balance.Amount += amount
+			balance.UsdValue = balance.Amount * price
+			sMarket.availableU -= amount * price
+			if status.market == model.Ftx {
+				contractMarkets[status.key].collateralsInU -= amount * price
+			} else if status.market == model.OKEX {
+				sMarket.collateral.Available -= amount * price
+				sMarket.collateral.Occupied += amount * price
+				contractMarkets[status.key].collateralsInU -= amount * price
+			}
 		}
 	} else {
 		pMarket := contractMarkets[status.key]
 		position := pMarket.positions[status.symbol]
-		originFreeAbs := math.Abs(position.Free)
-		position.Free += amount
-		position.EntryPrice = price
-		changeU := (originFreeAbs - math.Abs(position.Free)) * price
-		pMarket.collateralsInU += changeU * 0.2
-		if status.market == model.Ftx {
-			spotMarkets[status.key].availableU += changeU * 0.2
-		} else if status.market == model.OKEX {
-			spotMarkets[status.key].collateral.Available += changeU * 0.1
-			spotMarkets[status.key].collateral.Occupied -= changeU * 0.1
-			spotMarkets[status.key].availableU += changeU * 0.1
+		if position != nil {
+			originFreeAbs := math.Abs(position.Free)
+			position.Free += amount
+			position.EntryPrice = price
+			changeU := (originFreeAbs - math.Abs(position.Free)) * price
+			pMarket.collateralsInU += changeU * 0.2
+			if status.market == model.Ftx {
+				spotMarkets[status.key].availableU += changeU * 0.2
+			} else if status.market == model.OKEX {
+				spotMarkets[status.key].collateral.Available += changeU * 0.1
+				spotMarkets[status.key].collateral.Occupied -= changeU * 0.1
+				spotMarkets[status.key].availableU += changeU * 0.1
+			}
 		}
 	}
 	account := model.AppConfig.GetAccountFromKey(status.market, status.key)
