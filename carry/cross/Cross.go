@@ -539,7 +539,6 @@ var postOrderCross = func(order *model.Order, setting *model.Setting) {
 		status := getCarryStatus(setting.Coin, setting.Market, setting.Symbol, account.Key)
 		maxBuy := status.LimitBuy
 		maxSell := status.LimitSell
-		//_, maxBuy, maxSell := api.GetTradeMaxOKEX(order.AmountType, ``, order.Symbol, -1)
 		if order.OrderSide == model.OrderSideBuy {
 			maxBuy -= order.Amount
 			maxSell += order.Amount
