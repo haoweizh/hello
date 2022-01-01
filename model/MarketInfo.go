@@ -5,7 +5,6 @@ import (
 	"hello/util"
 	"math"
 	"strconv"
-	"strings"
 	"sync"
 )
 
@@ -146,19 +145,17 @@ func FormatCrossPair(marketBuy, marketSell, symbolBuy, symbolSell string, amount
 		} else if marketInfoBuy.UsdtMin > 0 && amount*price < marketInfoBuy.UsdtMin {
 			amount = 0
 		}
-		if strings.Index(marketInfoBuy.Name, `_USDT`) == len(marketInfoBuy.Name)-5 {
-			util.Notice(fmt.Sprintf(`marketinfo ctvalue %s %s %f; %f * %f < %f`,
-				marketInfoBuy.Market, marketInfoBuy.Name, marketInfoBuy.CTValue, amount, price, marketInfoBuy.UsdtMin))
-		}
+		util.Notice(fmt.Sprintf(`marketinfo ctvalue %s %s %f; %f * %f < %f`,
+			marketInfoBuy.Market, marketInfoBuy.Name, marketInfoBuy.CTValue, amount, price, marketInfoBuy.UsdtMin))
 	}
 	if marketInfoSell.CTCurrency == GetCoin(marketSell, symbolSell) {
 		if marketInfoSell.CTValue > 0 {
 			incSell, minSell = incSell*marketInfoSell.CTValue, minSell*marketInfoSell.CTValue
 		} else if marketInfoSell.UsdtMin > 0 && amount*price < marketInfoSell.UsdtMin {
-			util.Notice(fmt.Sprintf(`marketinfo ctvalue %s %s %f; %f * %f < %f`,
-				marketInfoSell.Market, marketInfoSell.Name, marketInfoSell.CTValue, amount, price, marketInfoSell.UsdtMin))
 			amount = 0
 		}
+		util.Notice(fmt.Sprintf(`marketinfo ctvalue %s %s %f; %f * %f < %f`,
+			marketInfoSell.Market, marketInfoSell.Name, marketInfoSell.CTValue, amount, price, marketInfoSell.UsdtMin))
 	}
 	sizeInc := math.Max(incBuy, incSell)
 	formattedAmount = math.Floor(amount/sizeInc) * sizeInc
