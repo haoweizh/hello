@@ -60,8 +60,6 @@ func Test_ws(t *testing.T) {
 	}
 }
 
-var testChan = make(chan int, 1000)
-
 func Test_getCommonMarketInfos(t *testing.T) {
 	model.NewConfig()
 	_ = configor.Load(model.AppConfig, "./config.yml")

@@ -31,6 +31,7 @@ func ParameterServe() {
 	router.GET(`refresh`, RefreshParameters)
 	router.GET(`pw`, GetCode)
 	router.GET(`cross`, crossPage)
+	router.GET(`tick`, tickPage)
 	router.GET(`test`, test)
 	router.GET(`debug`, debug)
 	router.GET(`wss`, WsPage)
@@ -122,6 +123,12 @@ func test(c *gin.Context) {
 		carryBackMsg += userKey + "\n" + model.GetCarryInfo(userKey, ``)
 	}
 	c.String(http.StatusOK, carryBackMsg)
+}
+
+func tickPage(c *gin.Context) {
+	priceDis, tickInfo, recentTickInfo := model.AppMetric.ToArray()
+	c.HTML(http.StatusOK, `tick.gohtml`, gin.H{
+		`priceDis`: priceDis, `tickInfo`: tickInfo, `recentTickInfo`: recentTickInfo})
 }
 
 func crossPage(c *gin.Context) {
@@ -283,10 +290,8 @@ func crossPage(c *gin.Context) {
 		}
 		carryRows.Close()
 	}
-	priceDis, tickInfo, recentTickInfo := model.AppMetric.ToArray()
 	crossInfo := model.GetMonitorInfo(indexStr, `cross`)
-	c.HTML(http.StatusOK, `balance.gohtml`, gin.H{`marketValue`: marketValues, `trade`: tradeInfo,
-		`priceDis`: priceDis, `tickInfo`: tickInfo, `recentTickInfo`: recentTickInfo, `cross`: crossInfo})
+	c.HTML(http.StatusOK, `balance.gohtml`, gin.H{`marketValue`: marketValues, `trade`: tradeInfo, `cross`: crossInfo})
 }
 
 func GetCode(c *gin.Context) {

@@ -344,8 +344,6 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 			}
 			statusBuy, statusSell, amount, priceBuy, priceSell := calcAmount(i, setting.Coin, status, statusRelate, tick, tickRelate)
 			if amount > 0 {
-				util.Notice(fmt.Sprintf(`place cross %s %s -> %s %s at %f %f amount %f`,
-					statusSell.market, statusSell.symbol, statusBuy.market, statusBuy.symbol, priceSell, priceBuy, amount))
 				go placeCross(statusBuy, statusSell, priceBuy, priceSell, amount)
 				return
 			}
@@ -450,6 +448,8 @@ func placeCross(statusBuy, statusSell *CarryStatus, priceBuy, priceSell, amount 
 		//util.Notice(fmt.Sprintf(`waiting for other ordering %s`, setting.Symbol))
 		return
 	}
+	util.Notice(fmt.Sprintf(`place cross %s %s -> %s %s at %f %f amount %f`,
+		statusSell.market, statusSell.symbol, statusBuy.market, statusBuy.symbol, priceSell, priceBuy, amount)) ////：
 	placeSuccess := true
 	if statusBuy.market == model.OKEX && statusSell.market == model.OKEX {
 		var sidePerp, sideRelated string

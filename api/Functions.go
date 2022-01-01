@@ -829,6 +829,12 @@ func filterCross(market, symbol string) bool {
 		case `DEFI-PERP`, `PRIV-PERP`, `ALT-PERP`, `SHIT-PERP`, `MID-PERP`, `EXCH-PERP`, `DRGN-PERP`:
 			return true
 		}
+	case model.Gate:
+		switch symbol {
+		// BTT价格异常
+		case `BTT_USDT`, `BTT_PERP`:
+			return true
+		}
 	}
 	return false
 }
