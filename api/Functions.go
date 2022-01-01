@@ -817,6 +817,9 @@ func GetMarketInfos(market string) (marketInfo map[string]*model.MarketInfo) {
 }
 
 func filterCross(market, symbol string) bool {
+	if strings.Index(symbol, `REEF`) == 0 || strings.Index(symbol, `XCH`) == 0 {
+		return true
+	}
 	switch market {
 	case model.Ftx:
 		switch symbol {
