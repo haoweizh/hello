@@ -5,6 +5,7 @@ import (
 	"hello/util"
 	"math"
 	"strconv"
+	"strings"
 	"sync"
 )
 
@@ -143,9 +144,11 @@ func FormatCrossPair(marketBuy, marketSell, symbolBuy, symbolSell string, amount
 		if marketInfoBuy.CTValue > 0 {
 			incBuy, minBuy = incBuy*marketInfoBuy.CTValue, minBuy*marketInfoBuy.CTValue
 		} else if marketInfoBuy.UsdtMin > 0 && amount*price < marketInfoBuy.UsdtMin {
+			amount = 0
+		}
+		if strings.Index(marketInfoBuy.Name, `_USDT`) == len(marketInfoBuy.Name)-5 {
 			util.Notice(fmt.Sprintf(`marketinfo ctvalue %s %s %f; %f * %f < %f`,
 				marketInfoBuy.Market, marketInfoBuy.Name, marketInfoBuy.CTValue, amount, price, marketInfoBuy.UsdtMin))
-			amount = 0
 		}
 	}
 	if marketInfoSell.CTCurrency == GetCoin(marketSell, symbolSell) {
