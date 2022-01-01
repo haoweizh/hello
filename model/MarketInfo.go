@@ -18,7 +18,7 @@ type MarketInfo struct {
 	UsdtMin                                float64 //最小下单金额需达到的usdt值
 	BorrowSizeMin                          float64 //最小借款数量
 	BorrowUsdtMax                          float64 //最大借款usdt数额
-	SizeMax, SizeMin                       float64 //最大最小下单数量
+	SizeMax, SizeMin                       float64 //最大最小下单数量，当CTValue=0（现货）时为交易币种数量，CTValue>0(永续)为张数，在使用时乘以CTValue转换成币数
 	PriceMax                               float64 //最大下单价格
 }
 
@@ -127,8 +127,9 @@ func FormatAmountPair(market, symbolPerp, symbolRelated string, amount float64) 
 	return formattedAmount
 }
 
-// FormatCrossPair symbol 期货; related 现货
-func FormatCrossPair(marketBuy, marketSell, symbolBuy, symbolSell string, amount float64) (formattedAmount float64) {
+// FormatCrossPair 不支持以BTC或ETH计价的交易对，只支持USD类
+func FormatCrossPair(marketBuy, marketSell, symbolBuy, symbolSell string, amount, price float64) (
+	formattedAmount float64) {
 	marketInfoBuy := GetMarketInfo(marketBuy, symbolBuy)
 	marketInfoSell := GetMarketInfo(marketSell, symbolSell)
 	if marketInfoBuy == nil || marketInfoSell == nil {
@@ -138,11 +139,19 @@ func FormatCrossPair(marketBuy, marketSell, symbolBuy, symbolSell string, amount
 	incSell := marketInfoSell.SizeIncrement
 	minBuy := marketInfoBuy.SizeMin
 	minSell := marketInfoSell.SizeMin
-	if marketInfoBuy.CTValue > 0 && marketInfoBuy.CTCurrency == GetCoin(marketBuy, symbolBuy) {
-		incBuy, minBuy = incBuy*marketInfoBuy.CTValue, minBuy*marketInfoBuy.CTValue
+	if marketInfoBuy.CTCurrency == GetCoin(marketBuy, symbolBuy) {
+		if marketInfoBuy.CTValue > 0 {
+			incBuy, minBuy = incBuy*marketInfoBuy.CTValue, minBuy*marketInfoBuy.CTValue
+		} else if marketInfoBuy.UsdtMin > 0 && amount*price < marketInfoBuy.UsdtMin {
+			amount = 0
+		}
 	}
-	if marketInfoSell.CTValue > 0 && marketInfoSell.CTCurrency == GetCoin(marketSell, symbolSell) {
-		incSell, minSell = incSell*marketInfoSell.CTValue, minSell*marketInfoSell.CTValue
+	if marketInfoSell.CTCurrency == GetCoin(marketSell, symbolSell) {
+		if marketInfoSell.CTValue > 0 {
+			incSell, minSell = incSell*marketInfoSell.CTValue, minSell*marketInfoSell.CTValue
+		} else if marketInfoSell.UsdtMin > 0 && amount*price < marketInfoSell.UsdtMin {
+			amount = 0
+		}
 	}
 	sizeInc := math.Max(incBuy, incSell)
 	formattedAmount = math.Floor(amount/sizeInc) * sizeInc

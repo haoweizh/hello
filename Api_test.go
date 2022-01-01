@@ -60,22 +60,11 @@ func Test_ws(t *testing.T) {
 	}
 }
 
-func send() {
-	for true {
-		now := time.Now().Second()
-		testChan <- now
-		testChan <- now
-		testChan <- now
-		time.Sleep(time.Second)
-	}
-}
-
 var testChan = make(chan int, 1000)
 
 func Test_getCommonMarketInfos(t *testing.T) {
 	model.NewConfig()
 	_ = configor.Load(model.AppConfig, "./config.yml")
-	api.GetBalances(model.AppConfig.GateKey, model.AppConfig.GateSecret, model.Gate)
 	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
 	api.InitCrossMarketInfos()
 }

@@ -439,7 +439,7 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarrySta
 		return nil, nil, 0, 0, 0
 	}
 	amount = math.Min(math.Min(statusBuy.LimitBuy, bidAmount), math.Min(statusSell.LimitSell, askAmount))
-	amount = model.FormatCrossPair(statusBuy.market, statusSell.market, statusBuy.symbol, statusSell.symbol, amount)
+	amount = model.FormatCrossPair(statusBuy.market, statusSell.market, statusBuy.symbol, statusSell.symbol, amount, priceBuy)
 	return statusBuy, statusSell, amount, priceBuy, priceSell
 }
 

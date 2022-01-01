@@ -34,6 +34,7 @@ func getMarketsGate(key, secret string) (success bool, marketInfos map[string]*m
 	return true, marketInfos
 }
 
+// 市场minSize按照张数计算的
 func appendFutureMarketGate(key, secret string, marketInfos map[string]*model.MarketInfo) {
 	client, ctx := getClientGate(key, secret)
 	contracts, _, futureErr := client.FuturesApi.ListFuturesContracts(ctx, "usdt")
@@ -59,6 +60,7 @@ func appendFutureMarketGate(key, secret string, marketInfos map[string]*model.Ma
 	}
 }
 
+// 市场minSize未根据最小下单美元数进行计算
 func appendRelatedMarketsGate(key, secret string, marketInfos map[string]*model.MarketInfo) {
 	client, ctx := getClientGate(key, secret)
 	spotCurrencyPairs, _, spotErr := client.SpotApi.ListCurrencyPairs(ctx)

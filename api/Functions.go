@@ -817,8 +817,11 @@ func GetMarketInfos(market string) (marketInfo map[string]*model.MarketInfo) {
 }
 
 func filterCross(market, symbol string) bool {
-	if strings.Index(symbol, `REEF`) == 0 || strings.Index(symbol, `XCH`) == 0 {
-		return true
+	filterCoin := []string{`REEF`, `XCH`, `LINK`, `CUSDT`, `ETH`, `BRZ`, `FTT`, `BTC`, `USDT`, `TRYB`, `AMPL`, `IOTA`}
+	for _, coin := range filterCoin {
+		if strings.Index(symbol, coin) == 0 {
+			return true
+		}
 	}
 	switch market {
 	case model.Ftx:
@@ -834,7 +837,7 @@ func filterCross(market, symbol string) bool {
 func InitCrossMarketInfos() {
 	infoPool := make(map[string][]*model.MarketInfo) // coin - []marketInfos
 	// model.Binance, model.Ftx, model.Gate,
-	markets := []string{model.OKEX, model.Ftx}
+	markets := []string{model.OKEX, model.Ftx, model.Gate}
 	for _, market := range markets {
 		marketInfo := GetMarketInfos(market)
 		for _, info := range marketInfo {
