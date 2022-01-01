@@ -102,8 +102,7 @@ func createFromPosition(key, secret string, setting *model.Setting, valueLimit f
 	valueInUsd := 0.0
 	if contractMarkets[key].positions[setting.Symbol] != nil {
 		carryStatus.Holding = contractMarkets[key].positions[setting.Symbol].Free
-		valueInUsd = math.Abs(carryStatus.Holding)*price +
-			contractMarkets[key].positions[setting.Symbol].ProfitUnreal
+		valueInUsd = math.Abs(carryStatus.Holding) * price
 		carryStatus.RateInAll = valueInUsd / contractMarkets[key].collateralsInU
 	}
 	if contractMarkets[key].contractValueInU/contractMarkets[key].collateralsInU > 3 || valueInUsd > valueLimit ||

@@ -174,7 +174,7 @@ func crossPage(c *gin.Context) {
 				strconv.FormatFloat(collateral, 'f', 0, 64),
 				strconv.FormatFloat(holdingSpot, 'f', 0, 64),
 				strconv.FormatFloat(holdingFuture, 'f', 0, 64)})
-			inAll[0] += inAllSpot + unrealizedPnl
+			inAll[0] += inAllSpot
 			if market != model.Ftx && market != model.OKEX {
 				inAll[0] += collateral
 			}
