@@ -744,7 +744,8 @@ func cancelOrderOkex(key, secret, instrument string, orderId, orderType string) 
 			if value[`ordId`] != nil && value[`ordId`].(string) == orderId && value[`sCode`].(string) == `0` {
 				cancelResult = true
 				break
-			} else if value[`algoId`] != nil && value[`algoId`].(string) == orderId && value[`sCode`].(string) == `0` {
+			} else if value[`algoId`] != nil && value[`algoId`].(string) == orderId &&
+				(value[`sCode`].(string) == `0` || value[`sCode`].(string) == `51400`) {
 				cancelResult = true
 				break
 			}

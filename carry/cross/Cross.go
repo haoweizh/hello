@@ -154,7 +154,6 @@ func createFromBalance(key, secret string, setting *model.Setting, valueLimit fl
 	return carryStatus, doRevert
 }
 
-// todo 增加更新status在网页上的显示数据
 func initStatus(account *model.Account, setting *model.Setting) (status *CarryStatus) {
 	if setting == nil {
 		return
