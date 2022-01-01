@@ -87,6 +87,7 @@ func createFromPosition(key, secret string, setting *model.Setting, valueLimit f
 	}
 	price := ticks.Asks[0].Price
 	carryStatus = &CarryStatus{isSpot: false, market: setting.Market, symbol: setting.Symbol, key: key, secret: secret,
+		setting:      setting,
 		LimitSell:    math.Min(contractMarkets[key].collateralsInU/5, openValueLimit) / price,
 		LimitBuy:     math.Min(contractMarkets[key].collateralsInU/5, openValueLimit) / price,
 		TradeLineBuy: setting.OpenShortMargin, TradeLineSell: setting.CloseShortMargin,
@@ -124,6 +125,7 @@ func createFromBalance(key, secret string, setting *model.Setting, valueLimit fl
 	}
 	price := ticks.Asks[0].Price
 	carryStatus = &CarryStatus{isSpot: true, market: setting.Market, symbol: setting.Symbol, key: key, secret: secret,
+		setting:       setting,
 		LimitSell:     0,
 		LimitBuy:      math.Min(openValueLimit, math.Min(spotMarkets[key].availableU/5, spotMarkets[key].accountValueInU/15)) / price,
 		TradeLineBuy:  setting.OpenShortMargin,
@@ -252,7 +254,7 @@ func makeEqual(statuses []*CarryStatus) (success bool, msg string) {
 	askStatus := make(map[string]*CarryStatus)
 	for _, status := range statuses {
 		if status == nil {
-			util.Notice(`warning: fail to get one status`)
+			util.Notice(`warning: fail to get one status %s %s`, status.setting.Market, status.setting.Symbol)
 			return false, `fail to equal for one nil status`
 		}
 		holding += status.Holding
@@ -344,7 +346,7 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 			if amount > 0 {
 				util.Notice(fmt.Sprintf(`place cross %s %s -> %s %s at %f %f amount %f`,
 					statusSell.market, statusSell.symbol, statusBuy.market, statusBuy.symbol, priceSell, priceBuy, amount))
-				go placeCross(statusBuy, statusSell, priceBuy, priceSell, amount, setting, settingRelate)
+				go placeCross(statusBuy, statusSell, priceBuy, priceSell, amount)
 				return
 			}
 		}
@@ -441,7 +443,7 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarrySta
 	return statusBuy, statusSell, amount, priceBuy, priceSell
 }
 
-func placeCross(statusBuy, statusSell *CarryStatus, priceBuy, priceSell, amount float64, setting, relateSetting *model.Setting) {
+func placeCross(statusBuy, statusSell *CarryStatus, priceBuy, priceSell, amount float64) {
 	if !checkSetCrossing(true) {
 		defer checkSetCrossing(false)
 	} else {
@@ -449,8 +451,6 @@ func placeCross(statusBuy, statusSell *CarryStatus, priceBuy, priceSell, amount 
 		return
 	}
 	placeSuccess := true
-	settingBuy := setting
-	settingSell := relateSetting
 	if statusBuy.market == model.OKEX && statusSell.market == model.OKEX {
 		var sidePerp, sideRelated string
 		var perpPrice, relatedPrice float64
@@ -468,35 +468,28 @@ func placeCross(statusBuy, statusSell *CarryStatus, priceBuy, priceSell, amount 
 		}
 		placeSuccess = api.PlacePairOKEX(statusBuy.key, coin, sidePerp, sideRelated, model.OrderTypeLimit, model.FunctionCross, perpPrice, relatedPrice, amount)
 	} else {
-		if statusBuy.symbol == setting.Symbol {
-			settingBuy = setting
-			settingSell = relateSetting
-		} else {
-			settingBuy = relateSetting
-			settingSell = setting
-		}
 		go api.PlaceOrder(statusBuy.key, statusBuy.secret, model.OrderSideBuy, model.OrderTypeLimit, statusBuy.market, statusBuy.symbol,
 			``, ``, model.FunctionCross, priceBuy, priceBuy,
-			amount, true, true, PostOrderCross, settingBuy)
+			amount, true, true, PostOrderCross, statusBuy.setting)
 		api.PlaceOrder(statusSell.key, statusSell.secret, model.OrderSideSell, model.OrderTypeLimit, statusSell.market, statusSell.symbol,
 			``, ``, model.FunctionCross, priceSell, priceSell,
-			amount, true, true, PostOrderCross, settingSell)
+			amount, true, true, PostOrderCross, statusSell.setting)
 		time.Sleep(time.Second / 5)
 	}
 	if placeSuccess {
-		placeStatus(statusBuy, priceBuy, settingBuy, amount)
-		placeStatus(statusSell, priceSell, settingSell, -1*amount)
+		placeStatus(statusBuy, priceBuy, amount)
+		placeStatus(statusSell, priceSell, -1*amount)
 	}
 }
 
-func placeStatus(status *CarryStatus, price float64, setting *model.Setting, amount float64) {
+func placeStatus(status *CarryStatus, price float64, amount float64) {
 	if status.isSpot {
 		sMarket := spotMarkets[status.key]
 		balance := sMarket.balances[status.symbol]
 		if balance == nil {
 			util.Notice(fmt.Sprintf(`warning no balance %s %s %s`,
 				status.key, status.market, status.symbol))
-			balance = &model.Balance{Amount: amount, UsdValue: amount * price, Market: status.market, Coin: setting.Coin}
+			balance = &model.Balance{Amount: amount, UsdValue: amount * price, Market: status.market, Coin: status.setting.Coin}
 		} else {
 			balance.Amount += amount
 			balance.UsdValue = balance.Amount * price
@@ -514,7 +507,7 @@ func placeStatus(status *CarryStatus, price float64, setting *model.Setting, amo
 		position := pMarket.positions[status.symbol]
 		originFreeAbs := 0.0
 		if position == nil {
-			position = &model.Position{Free: amount, EntryPrice: price, Market: status.market, Currency: setting.Symbol}
+			position = &model.Position{Free: amount, EntryPrice: price, Market: status.market, Currency: status.setting.Symbol}
 		} else {
 			originFreeAbs = math.Abs(position.Free)
 			position.Free += amount
@@ -531,7 +524,7 @@ func placeStatus(status *CarryStatus, price float64, setting *model.Setting, amo
 		}
 	}
 	account := model.AppConfig.GetAccountFromKey(status.market, status.key)
-	initStatus(account, setting)
+	initStatus(account, status.setting)
 }
 
 var PostOrderCross = func(order *model.Order, setting *model.Setting) {
