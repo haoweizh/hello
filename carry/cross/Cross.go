@@ -233,7 +233,7 @@ func ClearCross() {
 					}
 					equalStatuses[j] = initStatus(account, setting)
 				}
-				makeEqual(equalStatuses)
+				makeEqual(coin, equalStatuses)
 			}
 		}
 		util.Notice(`...... exit clearing cross`)
@@ -244,7 +244,7 @@ func ClearCross() {
 
 // bybit 缺少按照symbol cancel all
 // settings []*model.Setting, coinStatus map[string]map[string]map[string]*CarryStatus
-func makeEqual(statuses []*CarryStatus) (success bool, msg string) {
+func makeEqual(coin string, statuses []*CarryStatus) (success bool, msg string) {
 	var holding, holdingInU, price float64
 	orderSide := ``
 	var equalStatus *CarryStatus
@@ -254,7 +254,7 @@ func makeEqual(statuses []*CarryStatus) (success bool, msg string) {
 	askStatus := make(map[string]*CarryStatus)
 	for _, status := range statuses {
 		if status == nil {
-			util.Notice(`warning: fail to get one status %s %s`, status.setting.Market, status.setting.Symbol)
+			util.Notice(`warning: fail to get one status %s`, coin)
 			return false, `fail to equal for one nil status`
 		}
 		holding += status.Holding
