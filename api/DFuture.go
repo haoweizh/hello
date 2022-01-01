@@ -85,8 +85,8 @@ func handleTickerDFuture(markets *model.Markets, response *simplejson.Json) {
 	if markets.SetBidAsk(symbol, model.DFuture, bidAsk) {
 		for function, handler := range model.GetFunctions(model.DFuture, symbol) {
 			if handler != nil {
-				settings := model.GetSetting(function, model.DFuture, symbol)
-				for _, setting := range settings {
+				setting := model.GetSetting(function, model.DFuture, symbol)
+				if setting != nil {
 					go handler(setting, bidAsk)
 				}
 			}

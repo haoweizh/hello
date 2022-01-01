@@ -28,9 +28,9 @@ type Setting struct {
 	UpdatedAt        time.Time
 }
 
-var marketSymbolSetting map[string]map[string]map[string][]*Setting // function - marketName - symbol - setting
-var handlers map[string]map[string]map[string]CarryHandler          // market - symbol - function- carryHandler
-var coinSettings map[string]map[string][]*Setting                   // function - coin - setting
+var marketSymbolSetting map[string]map[string]map[string]*Setting // function - marketName - symbol - setting
+var handlers map[string]map[string]map[string]CarryHandler        // market - symbol - function- carryHandler
+var coinSettings map[string]map[string][]*Setting                 // function - coin - setting
 
 func GetSettingCoins(function, market string) (coins map[string]bool) {
 	if handlers == nil {
@@ -43,18 +43,16 @@ func GetSettingCoins(function, market string) (coins map[string]bool) {
 		return nil
 	}
 	coins = make(map[string]bool)
-	for _, settings := range marketSymbolSetting[function][market] {
-		for _, setting := range settings {
-			if setting == nil {
-				continue
-			}
-			coins[GetCoin(setting.Market, setting.Symbol)] = true
+	for _, setting := range marketSymbolSetting[function][market] {
+		if setting == nil {
+			continue
 		}
+		coins[GetCoin(setting.Market, setting.Symbol)] = true
 	}
 	return
 }
 
-func GetSettings(function, market string) map[string][]*Setting {
+func GetSettings(function, market string) map[string]*Setting {
 	if handlers == nil {
 		LoadSettings()
 	}
@@ -64,7 +62,7 @@ func GetSettings(function, market string) map[string][]*Setting {
 	return marketSymbolSetting[function][market]
 }
 
-func GetSetting(function, market, symbol string) []*Setting {
+func GetSetting(function, market, symbol string) *Setting {
 	if handlers == nil {
 		LoadSettings()
 	}
@@ -80,10 +78,8 @@ func GetCurrentN(setting *Setting) (currentN int64) {
 		return 0
 	}
 	for _, value := range marketSymbolSetting[setting.Function][setting.Market] {
-		for _, item := range value {
-			if item != nil && item.Market == setting.Market && item.Function == setting.Function {
-				currentN += item.Chance
-			}
+		if value != nil && value.Market == setting.Market && value.Function == setting.Function {
+			currentN += value.Chance
 		}
 	}
 	return currentN
@@ -115,7 +111,7 @@ func LoadSettings() {
 	defer infoLock.Unlock()
 	AppSettings = []Setting{}
 	AppDB.Where(`valid = ?`, true).Find(&AppSettings)
-	marketSymbolSetting = make(map[string]map[string]map[string][]*Setting)
+	marketSymbolSetting = make(map[string]map[string]map[string]*Setting)
 	handlers = make(map[string]map[string]map[string]CarryHandler)
 	coinSettings = make(map[string]map[string][]*Setting)
 	for i := range AppSettings {
@@ -135,16 +131,12 @@ func LoadSettings() {
 		}
 		for _, symbol := range symbols {
 			if marketSymbolSetting[function] == nil {
-				marketSymbolSetting[function] = make(map[string]map[string][]*Setting)
+				marketSymbolSetting[function] = make(map[string]map[string]*Setting)
 			}
 			if marketSymbolSetting[function][market] == nil {
-				marketSymbolSetting[function][market] = make(map[string][]*Setting)
+				marketSymbolSetting[function][market] = make(map[string]*Setting)
 			}
-			if marketSymbolSetting[function][market][symbol] == nil {
-				marketSymbolSetting[function][market][symbol] = make([]*Setting, 0)
-			}
-			marketSymbolSetting[function][market][symbol] = append(marketSymbolSetting[function][market][symbol],
-				&AppSettings[i])
+			marketSymbolSetting[function][market][symbol] = &AppSettings[i]
 			if handlers[market] == nil {
 				handlers[market] = make(map[string]map[string]CarryHandler)
 			}

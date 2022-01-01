@@ -206,9 +206,9 @@ func handleOrderBookBybit(markets *model.Markets, symbol string, ts int64, respo
 		if markets.SetBidAsk(symbol, model.Bybit, bidAsk) {
 			for function, handler := range model.GetFunctions(model.Bybit, symbol) {
 				if handler != nil {
-					settings := model.GetSetting(function, model.Bybit, symbol)
-					for _, setting := range settings {
-						handler(setting, bidAsk)
+					setting := model.GetSetting(function, model.Bybit, symbol)
+					if setting != nil {
+						go handler(setting, bidAsk)
 					}
 				}
 			}

@@ -324,8 +324,8 @@ func handleKucoinWS(relatedMsg *kucoin.WebSocketDownstreamMessage, futureMsg *ku
 		if markets.SetBidAsk(symbol, model.Kucoin, &bidAsk) {
 			for function, handler := range model.GetFunctions(model.Kucoin, symbol) {
 				if handler != nil {
-					settings := model.GetSetting(function, model.Kucoin, symbol)
-					for _, setting := range settings {
+					setting := model.GetSetting(function, model.Kucoin, symbol)
+					if setting != nil {
 						go handler(setting, &bidAsk)
 					}
 				}
@@ -361,8 +361,8 @@ func handleKucoinWS(relatedMsg *kucoin.WebSocketDownstreamMessage, futureMsg *ku
 		if markets.SetBidAsk(symbol, model.Kucoin, &bidAsk) {
 			for function, handler := range model.GetFunctions(model.Kucoin, symbol) {
 				if handler != nil {
-					settings := model.GetSetting(function, model.Kucoin, symbol)
-					for _, setting := range settings {
+					setting := model.GetSetting(function, model.Kucoin, symbol)
+					if setting != nil {
 						go handler(setting, &bidAsk)
 					}
 				}

@@ -261,9 +261,9 @@ func handOrderBook10(markets *model.Markets, data []interface{}) {
 				continue
 			}
 			if handler != nil {
-				settings := model.GetSetting(function, model.Bitmex, symbol)
-				for _, setting := range settings {
-					handler(setting, bidAsk)
+				setting := model.GetSetting(function, model.Bitmex, symbol)
+				if setting != nil {
+					go handler(setting, bidAsk)
 				}
 			}
 		}
@@ -292,9 +292,9 @@ func handleQuote(markets *model.Markets, action string, data []interface{}) {
 		if markets.SetBidAsk(symbol, model.Bitmex, bidAsks) {
 			for function, handler := range model.GetFunctions(model.Bitmex, symbol) {
 				if handler != nil {
-					settings := model.GetSetting(function, model.Bitmex, symbol)
-					for _, setting := range settings {
-						handler(setting, bidAsks)
+					setting := model.GetSetting(function, model.Bitmex, symbol)
+					if setting != nil {
+						go handler(setting, bidAsks)
 					}
 				}
 			}
@@ -330,8 +330,8 @@ func handleOrder(markets *model.Markets, action string, data []interface{}) {
 			for function, handler := range model.GetFunctions(model.Bitmex, order.Symbol) {
 				if handler != nil && function == model.FunctionPostonlyHandler && model.AppConfig.Env != `test` {
 					markets.AddBMPendingOrder(order)
-					settings := model.GetSetting(function, model.Bitmex, order.Symbol)
-					for _, setting := range settings {
+					setting := model.GetSetting(function, model.Bitmex, order.Symbol)
+					if setting != nil {
 						go handler(setting, nil)
 					}
 				}
@@ -486,9 +486,9 @@ func handleOrderBook(markets *model.Markets, action string, data []interface{}) 
 			if markets.SetBidAsk(symbol, model.Bitmex, bidAsks) {
 				for function, handler := range model.GetFunctions(model.Bitmex, symbol) {
 					if handler != nil && model.AppConfig.Env != `test` {
-						settings := model.GetSetting(function, model.Bitmex, symbol)
-						for _, setting := range settings {
-							handler(setting, bidAsks)
+						setting := model.GetSetting(function, model.Bitmex, symbol)
+						if setting != nil {
+							go handler(setting, bidAsks)
 						}
 					}
 				}

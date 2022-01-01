@@ -17,8 +17,8 @@ import (
 
 	"github.com/gorilla/websocket"
 
-	"hello/model"
 	"hello/api/dtos"
+	"hello/model"
 	"hello/util"
 )
 
@@ -38,10 +38,10 @@ const (
 
 // spot rest api path
 const (
-	spot_place_order_path             = "/open/api/v2/order/place"             // 下单
-	spot_cancel_orders_by_symbol_path = "/open/api/v2/order/cancel_by_symbol"  // 按交易对撤销订单
-	spot_query_order_by_id_path       = "/open/api/v2/order/query"             // 查询订单
-	spot_get_all_market_symbols_path  = "/open/api/v2/market/symbols"          // 所有交易对信息
+	spot_place_order_path             = "/open/api/v2/order/place"            // 下单
+	spot_cancel_orders_by_symbol_path = "/open/api/v2/order/cancel_by_symbol" // 按交易对撤销订单
+	spot_query_order_by_id_path       = "/open/api/v2/order/query"            // 查询订单
+	spot_get_all_market_symbols_path  = "/open/api/v2/market/symbols"         // 所有交易对信息
 )
 
 // contract rest api path
@@ -436,7 +436,7 @@ func appendContractMarketMexc(key, secret string, marketInfos map[string]*model.
 		marketInfo.SizeMax = symbolInfo.MaxVol                    // 订单张数上限
 		marketInfo.SizeIncrement = float64(symbolInfo.VolUnit)    // 数量的最小步进单位
 		marketInfo.CTCurrency = symbolInfo.BaseCoin
-		marketInfo.CTValue = float64(symbolInfo.ContractSize)     // 一个合约等于多少个币
+		marketInfo.CTValue = float64(symbolInfo.ContractSize) // 一个合约等于多少个币
 		marketInfos[marketInfo.Name] = marketInfo
 	}
 
@@ -662,8 +662,8 @@ func contractDepthFullWsHandlerMexc(markets *model.Markets, resp *dtos.MexcContr
 	if markets.SetBidAsk(symbol, model.Mexc, bidAsk) {
 		for function, handler := range model.GetFunctions(model.Mexc, symbol) {
 			if handler != nil {
-				settings := model.GetSetting(function, model.Mexc, symbol)
-				for _, setting := range settings {
+				setting := model.GetSetting(function, model.Mexc, symbol)
+				if setting != nil {
 					go handler(setting, bidAsk)
 				}
 			}
@@ -862,8 +862,8 @@ func setMexcAskBid(markets *model.Markets, symbol string, bidAsk *model.BidAsk) 
 	if markets.SetBidAsk(symbol, model.Mexc, bidAsk) {
 		for function, handler := range model.GetFunctions(model.Mexc, symbol) {
 			if handler != nil {
-				settings := model.GetSetting(function, model.Mexc, symbol)
-				for _, setting := range settings {
+				setting := model.GetSetting(function, model.Mexc, symbol)
+				if setting != nil {
 					go handler(setting, bidAsk)
 				}
 			}

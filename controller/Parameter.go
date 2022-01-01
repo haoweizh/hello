@@ -333,20 +333,20 @@ func GetParameters(c *gin.Context) {
 		}
 		settingMap := model.GetSettings(model.FunctionTurtle, market)
 		msg += fmt.Sprintf("海龟币种：%s \n", market)
-		for symbol, settings := range settingMap {
-			if len(settings) == 0 {
+		for symbol, setting := range settingMap {
+			if setting == nil {
 				continue
 			}
 			msgTail := ``
-			if settings[0].OpenShortMargin == 0 {
+			if setting.OpenShortMargin == 0 {
 				msgTail = `(去除平仓中)`
 			}
 			msg += fmt.Sprintf("%s%s, ", symbol, msgTail)
 		}
 		msg += "\n"
 	}
-	settings := model.GetSetting(model.FunctionGrid, model.Ftx, `LINK-PERP`)
-	for _, setting := range settings {
+	setting := model.GetSetting(model.FunctionGrid, model.Ftx, `LINK-PERP`)
+	if setting != nil {
 		msg += fmt.Sprintf("%s %s %s %f\n", setting.Function, setting.Market, setting.Symbol, setting.GridAmount)
 	}
 	for _, setting := range model.AppSettings {

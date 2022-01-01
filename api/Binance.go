@@ -117,8 +117,8 @@ func handleTickerBinance(markets *model.Markets, json *simplejson.Json, symbol s
 		if markets.SetBidAsk(symbol, model.Binance, &bidAsk) {
 			for function, handler := range model.GetFunctions(model.Binance, symbol) {
 				if handler != nil {
-					settings := model.GetSetting(function, model.Binance, symbol)
-					for _, setting := range settings {
+					setting := model.GetSetting(function, model.Binance, symbol)
+					if setting != nil {
 						go handler(setting, &bidAsk)
 					}
 				}
@@ -193,8 +193,8 @@ func handleDepthBinance(markets *model.Markets, json *simplejson.Json, symbol st
 	if markets.SetBidAsk(symbol, model.Binance, &bidAsk) {
 		for function, handler := range model.GetFunctions(model.Binance, findSettingSymbol) {
 			if handler != nil {
-				settings := model.GetSetting(function, model.Binance, findSettingSymbol)
-				for _, setting := range settings {
+				setting := model.GetSetting(function, model.Binance, findSettingSymbol)
+				if setting != nil {
 					go handler(setting, &bidAsk)
 				}
 			}

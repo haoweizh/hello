@@ -543,7 +543,7 @@ var postOrderCross = func(order *model.Order, setting *model.Setting) {
 		return
 	}
 	if setting == nil {
-		setting = model.GetSetting(model.FunctionCross, order.Market, order.Symbol)[0]
+		setting = model.GetSetting(model.FunctionCross, order.Market, order.Symbol)
 	}
 	account := model.AppConfig.GetAccountFromKey(order.Market, order.AmountType)
 	if order.HaveId() {

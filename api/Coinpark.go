@@ -77,8 +77,8 @@ func WsDepthServeCoinpark(markets *model.Markets, orderHandler OrderHandler) ([]
 				sort.Sort(sort.Reverse(bidAsk.Bids))
 				if markets.SetBidAsk(symbol, model.Coinpark, &bidAsk) {
 					for function, handler := range model.GetFunctions(model.Coinpark, symbol) {
-						settings := model.GetSetting(function, model.Coinpark, symbol)
-						for _, setting := range settings {
+						setting := model.GetSetting(function, model.Coinpark, symbol)
+						if setting != nil {
 							go handler(setting, &bidAsk)
 						}
 					}

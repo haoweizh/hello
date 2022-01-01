@@ -180,8 +180,8 @@ func handleMsgOKEX(channel chan *simplejson.Json, instrument string) {
 		_, bidAsk.Asks[0].Amount = model.ParseRealAmount(model.OKEX, instrument, bidAsk.Asks[0].Amount)
 		if model.AppMarkets.SetBidAsk(instrument, model.OKEX, bidAsk) {
 			for function, handler := range model.GetFunctions(model.OKEX, instrument) {
-				settings := model.GetSetting(function, model.OKEX, instrument)
-				for _, setting := range settings {
+				setting := model.GetSetting(function, model.OKEX, instrument)
+				if setting != nil {
 					go handler(setting, bidAsk)
 				}
 			}

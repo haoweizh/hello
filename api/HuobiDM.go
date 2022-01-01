@@ -84,8 +84,8 @@ func WsDepthServeHuobiDM(markets *model.Markets, orderHandler OrderHandler) ([]c
 				if markets.SetBidAsk(symbol, model.HuobiDM, &bidAsk) {
 					for function, handler := range model.GetFunctions(model.HuobiDM, symbol) {
 						if handler != nil {
-							settings := model.GetSetting(function, model.HuobiDM, symbol)
-							for _, setting := range settings {
+							setting := model.GetSetting(function, model.HuobiDM, symbol)
+							if setting != nil {
 								go handler(setting, &bidAsk)
 							}
 						}

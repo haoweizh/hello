@@ -279,8 +279,8 @@ var tickerHandler = gateWs.NewCallBack(func(msg *gateWs.UpdateMsg) {
 	if markets.SetBidAsk(symbol, model.Gate, &bidAsk) {
 		for function, handler := range model.GetFunctions(model.Gate, symbol) {
 			if handler != nil {
-				settings := model.GetSetting(function, model.Gate, symbol)
-				for _, setting := range settings {
+				setting := model.GetSetting(function, model.Gate, symbol)
+				if setting != nil {
 					go handler(setting, &bidAsk)
 				}
 			}

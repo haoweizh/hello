@@ -254,7 +254,7 @@ func clearCarry(key, secret, market string) {
 		key, localUsdAvailable, balanceAllValue, usdRate[key], len(balances)))
 	equalSettings := make(map[string]*model.Setting)
 	for _, setting := range settings {
-		equalSettings[setting[0].Symbol] = setting[0]
+		equalSettings[setting.Symbol] = setting
 	}
 	for _, setting := range equalSettings {
 		makeEqual(key, secret, setting, balances, positions)
