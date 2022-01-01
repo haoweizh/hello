@@ -41,8 +41,8 @@ type CarryStatus struct {
 }
 
 func getCarryStop(key string) (stop bool) {
-	defer carryLock.Unlock()
-	carryLock.Lock()
+	defer crossLock.Unlock()
+	crossLock.Lock()
 	return carryStop[key]
 }
 
