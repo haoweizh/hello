@@ -145,10 +145,6 @@ func FormatCrossPair(marketBuy, marketSell, symbolBuy, symbolSell string, amount
 	if marketInfoBuy.UsdtMin > 0 && amount*price < marketInfoBuy.UsdtMin {
 		amount = 0
 	}
-	if marketInfoBuy.UsdtMin > 0 {
-		util.Notice(fmt.Sprintf(`marketinfo ctvalue %s %s %f; %f * %f < %f`,
-			marketInfoBuy.Market, marketInfoBuy.Name, marketInfoBuy.CTValue, amount, price, marketInfoBuy.UsdtMin))
-	}
 	if marketInfoSell.CTCurrency == GetCoin(marketSell, symbolSell) && marketInfoSell.CTValue > 0 {
 		incSell, minSell = incSell*marketInfoSell.CTValue, minSell*marketInfoSell.CTValue
 	}
