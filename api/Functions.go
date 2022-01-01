@@ -641,7 +641,7 @@ func PlaceOrder(key, secret, orderSide, orderType, market, symbol, instrument, o
 			order.RefreshType, order.Market, order.Symbol, order.OrderId, order.OrderSide, order.Amount)
 		go model.AppDB.Save(order)
 	}
-	if postOrder != nil {
+	if postOrder != nil && setting.Market != model.OKEX {
 		go postOrder(order, setting)
 	}
 	return

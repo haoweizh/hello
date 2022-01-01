@@ -9,7 +9,6 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 )
 
@@ -18,7 +17,6 @@ const winRateMin = 0.005
 const InsufficientCodeBinance = `-2010`
 const lastOrderLength = 8
 
-var carryLock sync.Mutex
 var carryFail = make(map[string]int64) // key fail num
 var carryStop = make(map[string]bool)
 var lastOrderIndex = make(map[string]map[string]int64)                       // market - symbol - index
@@ -480,10 +478,10 @@ func placeCross(statusBuy, statusSell *CarryStatus, priceBuy, priceSell, amount 
 		}
 		go api.PlaceOrder(statusBuy.key, statusBuy.secret, model.OrderSideBuy, model.OrderTypeLimit, statusBuy.market, statusBuy.symbol,
 			``, ``, model.FunctionCross, priceBuy, priceBuy,
-			amount, true, true, postOrderCross, settingBuy)
+			amount, true, true, PostOrderCross, settingBuy)
 		api.PlaceOrder(statusSell.key, statusSell.secret, model.OrderSideSell, model.OrderTypeLimit, statusSell.market, statusSell.symbol,
 			``, ``, model.FunctionCross, priceSell, priceSell,
-			amount, true, true, postOrderCross, settingSell)
+			amount, true, true, PostOrderCross, settingSell)
 		time.Sleep(time.Second / 5)
 	}
 	if placeSuccess {
@@ -537,7 +535,7 @@ func placeStatus(status *CarryStatus, price float64, setting *model.Setting, amo
 	initStatus(account, setting)
 }
 
-var postOrderCross = func(order *model.Order, setting *model.Setting) {
+var PostOrderCross = func(order *model.Order, setting *model.Setting) {
 	if order == nil {
 		return
 	}
@@ -596,8 +594,8 @@ var postOrderCross = func(order *model.Order, setting *model.Setting) {
 }
 
 func addLastCarry(order *model.Order, setting *model.Setting) {
-	carryLock.Lock()
-	defer carryLock.Unlock()
+	crossLock.Lock()
+	defer crossLock.Unlock()
 	if order == nil || setting == nil {
 		return
 	}
@@ -654,8 +652,8 @@ func setSettingStatus(setting *model.Setting, status bool) {
 }
 
 func addCarryResult(key, market string, success bool) {
-	defer carryLock.Unlock()
-	carryLock.Lock()
+	defer crossLock.Unlock()
+	crossLock.Lock()
 	if success {
 		if carryFail[key] > 0 {
 			carryFail[key] = carryFail[key] - 1

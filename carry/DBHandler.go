@@ -123,7 +123,7 @@ func ResetChannels(market string, channels []chan struct{}) {
 		channel <- struct{}{}
 		close(channel)
 	}
-	model.AppMarkets.PutDepthChan(market, api.CreateMarketDepthServer(model.AppMarkets, market, postOrderCarry))
+	model.AppMarkets.PutDepthChan(market, api.CreateMarketDepthServer(model.AppMarkets, market, cross.PostOrderCross))
 	model.AppPause = false
 	util.Notice(market + " reset depth channel done")
 }
@@ -136,7 +136,7 @@ func MaintainMarketChan() {
 	for _, market := range model.GetMarkets() {
 		channels := model.AppMarkets.GetDepthChan(market)
 		if channels == nil || len(channels) == 0 {
-			model.AppMarkets.PutDepthChan(market, api.CreateMarketDepthServer(model.AppMarkets, market, postOrderCarry))
+			model.AppMarkets.PutDepthChan(market, api.CreateMarketDepthServer(model.AppMarkets, market, cross.PostOrderCross))
 			util.Notice(fmt.Sprintf("%s create new depth channel ", market))
 		} else if api.RequireDepthChanReset(model.AppMarkets, market) {
 			util.Notice(fmt.Sprintf("%s require new depth channel ", market))
