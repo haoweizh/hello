@@ -51,7 +51,7 @@ func createSpotMarket(key, secret, market string) (sm *spotMarket) {
 		for _, balance := range balances {
 			sm.balances[balance.Coin+tail] = balance
 			if strings.EqualFold(balance.Coin, `usd`) || strings.EqualFold(balance.Coin, `usdt`) {
-				sm.availableU += balance.Amount
+				sm.availableU += math.Min(balance.Amount, balance.AvailableWithBorrow)
 			}
 			// 可用usd数量需要减去现有所有借币负债总额
 			if balance.UsdValue < 0 {
@@ -129,7 +129,7 @@ func createFromBalance(account *model.Account, setting *model.Setting, valueLimi
 		carryStatus.LimitSell = math.Min(math.Min(balance.Amount, balance.AvailableWithBorrow), openValueLimit/price)
 		carryStatus.RateInAll = math.Abs(carryStatus.Holding * ticks.Asks[0].Price / spotMarkets[key].accountValueInU)
 	}
-	if spotMarkets[key].availableU/spotMarkets[key].accountValueInU < 0.3 ||
+	if spotMarkets[key].availableU/spotMarkets[key].accountValueInU < 0.2 ||
 		spotMarkets[key].accountValueInU <= 0 || carryStatus.RateInAll > 0.5 {
 		doRevert = true
 	}
