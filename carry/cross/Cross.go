@@ -365,7 +365,7 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarrySta
 	var bidAmount, askAmount float64
 	score := 1 - tickRelate.Asks[0].Price/tick.Bids[0].Price
 	scoreRelate := tickRelate.Bids[0].Price/tick.Asks[0].Price - 1
-	if score > 0.1 || scoreRelate > 0.1 {
+	if (score > 0.1 || scoreRelate > 0.1) && coin != `EOSBEAR` {
 		msg := fmt.Sprintf(`different coin %s %s %s %s %f %f`, carryStatus.market, carryStatus.symbol,
 			carryStatusRelate.market, carryStatusRelate.symbol, score, scoreRelate)
 		minute := time.Now().Minute()
