@@ -454,17 +454,8 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarrySta
 
 func initLimitBuyAndSell(status *CarryStatus, setting *model.Setting, price float64) {
 	if status.isSpot {
-		if status.account == nil {
-			util.Notice(`no account`)
-		}
-		if spotMarkets == nil {
-			util.Notice(`no sm`)
-		}
-		if spotMarkets[status.account.Key] == nil {
-			util.Notice(`no market`)
-		}
-		status.LimitBuy = math.Min(openValueLimit, math.Min(spotMarkets[status.account.Key].availableU/5,
-			spotMarkets[status.account.Key].accountValueInU/15)) / price
+		sm := spotMarkets[status.account.Key]
+		status.LimitBuy = math.Min(openValueLimit, math.Min(sm.availableU/5, sm.accountValueInU/15)) / price
 		balance := spotMarkets[status.account.Key].balances[setting.Symbol]
 		if balance != nil {
 			status.LimitSell = math.Min(math.Min(balance.Amount, balance.AvailableWithBorrow), openValueLimit/price)
