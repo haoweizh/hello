@@ -210,7 +210,7 @@ func ClearCross() {
 				time.Sleep(time.Millisecond * 200)
 			}
 		}
-		if len(statusFresh) == 0 {
+		if statusFresh != nil && len(statusFresh) == 0 {
 			util.Notice(`...... no change pass make equal`)
 		} else {
 			util.Notice(`...... enter clearing cross`)

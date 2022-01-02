@@ -26,7 +26,7 @@ var lastOrders = make(map[string]map[string][]*model.Order, lastOrderLength)    
 var carryStatus = make(map[string]map[string]map[string]map[string]*CarryStatus) // coin/market/symbol/key/CarryStatus
 var contractMarkets = make(map[string]*contractMarket)                           // key - contractMarket
 var spotMarkets = make(map[string]*spotMarket)                                   // key - spotMarket
-var statusFresh = make(map[string]map[string]map[string]bool)                    // key/market/symbol/bool
+var statusFresh map[string]map[string]map[string]bool                            // key/market/symbol/bool
 var crossLock sync.Mutex
 var crossing bool
 var doCross = false
@@ -60,7 +60,7 @@ type CarryStatus struct {
 func isFresh(key, market, symbol string) bool {
 	defer crossLock.Unlock()
 	crossLock.Lock()
-	if statusFresh[key] == nil || statusFresh[key][market] == nil {
+	if statusFresh == nil || statusFresh[key] == nil || statusFresh[key][market] == nil {
 		return true
 	}
 	return statusFresh[key][market][symbol]
@@ -69,6 +69,9 @@ func isFresh(key, market, symbol string) bool {
 func setFresh(key, market, symbol string) {
 	defer crossLock.Unlock()
 	crossLock.Lock()
+	if statusFresh == nil {
+		statusFresh = make(map[string]map[string]map[string]bool)
+	}
 	if statusFresh[key] == nil {
 		statusFresh[key] = make(map[string]map[string]bool)
 	}
