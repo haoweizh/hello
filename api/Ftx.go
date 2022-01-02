@@ -112,6 +112,8 @@ func WsDepthServeFtx(markets *model.Markets, orderHandler OrderHandler) ([]chan 
 	//subType := model.SubscribeDepth
 	subType := model.SubscribeDepth + `,` + model.SubscribeTicker
 	subscribes := GetWSSubscribes(model.Ftx, subType)
+	subscribes = append(subscribes, GetWSSubscribe(model.Ftx, "USDT/USD", model.SubscribeDepth))
+	subscribes = append(subscribes, GetWSSubscribe(model.Ftx, "USDT/USD", model.SubscribeTicker))
 	ftxSymbolConnection = make(map[string]*websocket.Conn)
 	return WebSocketClient(model.Ftx, wsFtx, subscribes, subscribeHandlerFtx, wsHandler, orderHandler, wsStepFtx)
 }
@@ -142,6 +144,13 @@ func handleTickerFtx(markets *model.Markets, response *simplejson.Json) {
 			if handler != nil {
 				setting := model.GetSetting(function, model.Ftx, symbol)
 				if setting != nil {
+					if setting.Function == model.FunctionCross {
+						success, usdtBidAsk := markets.GetBidAsk("USDT/USD", model.Ftx)
+						if success {
+							bidAsk.Asks[0].Price /= usdtBidAsk.Asks[0].Price
+							bidAsk.Bids[0].Price /= usdtBidAsk.Asks[0].Price
+						}
+					}
 					go handler(setting, bidAsk)
 				}
 			}
@@ -217,6 +226,13 @@ func handleDepthFtx(markets *model.Markets, response *simplejson.Json) {
 				if handler != nil {
 					setting := model.GetSetting(function, model.Ftx, symbol)
 					if setting != nil {
+						if setting.Function == model.FunctionCross {
+							success, usdtBidAsk := markets.GetBidAsk("USDT/USD", model.Ftx)
+							if success {
+								bidAsk.Asks[0].Price /= usdtBidAsk.Asks[0].Price
+								bidAsk.Bids[0].Price /= usdtBidAsk.Asks[0].Price
+							}
+						}
 						go handler(setting, bidAsk)
 					}
 				}
