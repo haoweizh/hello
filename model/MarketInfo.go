@@ -143,8 +143,8 @@ func FormatCrossPair(marketBuy, marketSell, symbolBuy, symbolSell string, amount
 		incBuy, minBuy = incBuy*marketInfoBuy.CTValue, minBuy*marketInfoBuy.CTValue
 	}
 	if marketInfoBuy.UsdtMin > 0 && amount*price < marketInfoBuy.UsdtMin {
-		amount = 0
 		util.Notice(`%s %s %f * %f < %f works`, marketInfoBuy.Market, marketInfoBuy.Name, amount, price, marketInfoBuy.UsdtMin)
+		return 0
 	} else if marketInfoBuy.UsdtMin > 0 {
 		util.Notice(`%s %s valid %f * %f < %f`, marketInfoBuy.Market, marketInfoBuy.Name, amount, price, marketInfoBuy.UsdtMin)
 	}
@@ -153,7 +153,7 @@ func FormatCrossPair(marketBuy, marketSell, symbolBuy, symbolSell string, amount
 	}
 	if marketInfoSell.UsdtMin > 0 && amount*price < marketInfoSell.UsdtMin {
 		util.Notice(`%s %s %f * %f < %f works`, marketInfoSell.Market, marketInfoSell.Name, amount, price, marketInfoSell.UsdtMin)
-		amount = 0
+		return 0
 	} else if marketInfoSell.UsdtMin > 0 {
 		util.Notice(`%s %s valid %f * %f < %f`, marketInfoSell.Market, marketInfoSell.Name, amount, price, marketInfoSell.UsdtMin)
 	}
