@@ -1,19 +1,35 @@
 package cross
 
 import (
+	"fmt"
+	"hello/api"
 	"hello/model"
+	"hello/util"
 	"sync"
+	"time"
 )
 
-var carryStatus = make(map[string]map[string]map[string]map[string]*CarryStatus) // coin - market - symbol - key - CarryStatus
+const loseRateMax = -0.005
+const winRateMin = 0.005
+const lastOrderLength = 8
+const holdingLimitInU = 500000.0
+const openValueLimit = 10000.0
+const InsufficientCodeBinance = `-2010`
+
+var InsufficientCodeOKEX = map[string]bool{`51008`: true, `51119`: true, `51120`: true, `51131`: true, `51502`: true,
+	`58350`: true, `59108`: true, `59200`: true}
+
+var carryFail = make(map[string]int64) // key fail num
+var carryStop = make(map[string]bool)
+var lastOrderIndex = make(map[string]map[string]int64)                           // market - symbol - index
+var lastOrders = make(map[string]map[string][]*model.Order, lastOrderLength)     // market - symbol - []order
+var carryStatus = make(map[string]map[string]map[string]map[string]*CarryStatus) // coin/market/symbol/key/CarryStatus
 var contractMarkets = make(map[string]*contractMarket)                           // key - contractMarket
 var spotMarkets = make(map[string]*spotMarket)                                   // key - spotMarket
+var statusFresh = make(map[string]map[string]map[string]bool)                    // key/market/symbol/bool
 var crossLock sync.Mutex
 var crossing bool
 var doCross = false
-
-const holdingLimitInU = 500000.0
-const openValueLimit = 10000.0
 
 type contractMarket struct {
 	key, market      string
@@ -32,12 +48,34 @@ type spotMarket struct {
 
 type CarryStatus struct {
 	isSpot                      bool
-	market, symbol, key, secret string
+	market, symbol              string
 	setting                     *model.Setting
+	account                     *model.Account
 	LimitSell, LimitBuy         float64 // 最大可买卖币数
 	TradeLineBuy, TradeLineSell float64 // 买卖盈利线（可为负数）
 	Holding                     float64
 	RateInAll                   float64 // 现货：该币种占总权益的比例；永续：以开仓价算该币种持仓占保证金百分比
+}
+
+func isFresh(key, market, symbol string) bool {
+	defer crossLock.Unlock()
+	crossLock.Lock()
+	if statusFresh[key] == nil || statusFresh[key][market] == nil {
+		return true
+	}
+	return statusFresh[key][market][symbol]
+}
+
+func setFresh(key, market, symbol string) {
+	defer crossLock.Unlock()
+	crossLock.Lock()
+	if statusFresh[key] == nil {
+		statusFresh[key] = make(map[string]map[string]bool)
+	}
+	if statusFresh[key][market] == nil {
+		statusFresh[key][market] = make(map[string]bool)
+	}
+	statusFresh[key][market][symbol] = true
 }
 
 func getCarryStop(key string) (stop bool) {
@@ -87,4 +125,89 @@ func setCarryStatus(coin, market, symbol, key string, status *CarryStatus) {
 		carryStatus[coin][market][symbol] = make(map[string]*CarryStatus)
 	}
 	carryStatus[coin][market][symbol][key] = status
+}
+
+func pauseCarry(key string) {
+	util.Notice(`%s carrying pause %v`, key, true)
+	carryStop[key] = true
+	time.Sleep(time.Minute * 30)
+	util.Notice(`%s carrying pause %v`, key, false)
+	carryStop[key] = false
+}
+
+func addCarryResult(key, market string, success bool) {
+	defer crossLock.Unlock()
+	crossLock.Lock()
+	if success {
+		if carryFail[key] > 0 {
+			carryFail[key] = carryFail[key] - 1
+		}
+	} else {
+		carryFail[key] += 2
+	}
+	if carryFail[key] > 0 {
+		util.Notice(`---------- fail size %s %d`, key, carryFail[key])
+	}
+	if carryFail[key] > 6 {
+		go pauseCarry(key)
+		util.Notice(`----------stop carry %s %d`, key, carryFail[key])
+		carryFail[key] = 0
+		for _, address := range model.TeamMails {
+			_ = util.SendMail(model.AppConfig.FromMail, model.AppConfig.FromMailAuth, address,
+				`暂停下单`, `market: `+market+` stop `+key)
+		}
+	}
+}
+
+func addLastCarry(order *model.Order, setting *model.Setting) {
+	crossLock.Lock()
+	defer crossLock.Unlock()
+	if order == nil || setting == nil {
+		return
+	}
+	if lastOrders[setting.Market] == nil {
+		lastOrders[setting.Market] = make(map[string][]*model.Order)
+		lastOrderIndex[setting.Market] = make(map[string]int64)
+	}
+	if lastOrders[setting.Market][setting.Symbol] == nil {
+		lastOrders[setting.Market][setting.Symbol] = make([]*model.Order, lastOrderLength)
+		lastOrderIndex[setting.Market][setting.Symbol] = 0
+	}
+	lastOrders[setting.Market][setting.Symbol][lastOrderIndex[setting.Market][setting.Symbol]%lastOrderLength] = order
+	lastOrderIndex[setting.Market][setting.Symbol]++
+	noDealNum := 0
+	tenMin, _ := time.ParseDuration(`10m`)
+	second, _ := time.ParseDuration(`500ms`)
+	for i, lastOrder := range lastOrders[setting.Market][setting.Symbol] {
+		account := model.AppConfig.GetAccountFromKey(order.Market, order.AmountType)
+		now := time.Now()
+		if lastOrder == nil || order.OrderTime.Add(tenMin).Before(now) || order.OrderTime.Add(second).After(now) || account == nil {
+			continue
+		}
+		queryOrder := api.QueryOrderById(lastOrder.AmountType, account.Secret, lastOrder.Market, lastOrder.Symbol,
+			lastOrder.Instrument, lastOrder.OrderType, lastOrder.OrderId)
+		if queryOrder == nil {
+			continue
+		}
+		model.AppDB.Model(&queryOrder).Where(`order_id=?`, queryOrder.OrderId).Updates(
+			map[string]interface{}{`deal_amount`: queryOrder.DealAmount, `deal_price`: queryOrder.DealPrice, `status`: queryOrder.Status})
+		util.Notice(fmt.Sprintf(`query last %s %s %s %f index %d`,
+			queryOrder.Symbol, queryOrder.OrderId, queryOrder.Status, queryOrder.DealAmount, lastOrderIndex[setting.Market][setting.Symbol]))
+		if queryOrder.DealAmount == 0 && order.Status != model.CarryStatusFail {
+			noDealNum++
+			if noDealNum > 3 {
+				util.Notice(fmt.Sprintf(`no deal order %s %s %d %d stop at %d`,
+					setting.Market, setting.Symbol, len(lastOrders), noDealNum, lastOrderIndex[setting.Market][setting.Symbol]))
+				setting.Valid = false
+				setting.UpdatedAt = now
+				lastOrders[setting.Market][setting.Symbol] = make([]*model.Order, lastOrderLength)
+				lastOrderIndex[setting.Market][setting.Symbol] = 0
+				go setSettingStatus(setting, true)
+				break
+			}
+		} else {
+			lastOrders[setting.Market][setting.Symbol][i] = nil
+		}
+	}
+	util.Notice(`---- add done %s`, setting.Symbol)
 }
