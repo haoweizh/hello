@@ -440,16 +440,46 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarrySta
 		return nil, nil, 0, 0, 0
 	}
 	if !isFresh(statusBuy.account.Key, statusBuy.market, statusBuy.symbol) {
-		initStatus(statusBuy.account, statusBuy.setting)
+		initLimitBuyAndSell(statusBuy, statusBuy.setting, priceBuy)
 	}
 	if !isFresh(statusSell.account.Key, statusSell.market, statusSell.symbol) {
-		initStatus(statusBuy.account, statusBuy.setting)
+		initLimitBuyAndSell(statusSell, statusSell.setting, priceSell)
 	}
 	amount = math.Min(math.Min(statusBuy.LimitBuy, bidAmount), math.Min(statusSell.LimitSell, askAmount))
 	if amount > 0 {
 		amount = model.FormatCrossPair(statusBuy.market, statusSell.market, statusBuy.symbol, statusSell.symbol, amount, priceBuy)
 	}
 	return statusBuy, statusSell, amount, priceBuy, priceSell
+}
+
+func initLimitBuyAndSell(status *CarryStatus, setting *model.Setting, price float64) {
+	if status.isSpot {
+		status.LimitBuy = math.Min(openValueLimit, math.Min(spotMarkets[status.account.Key].availableU/5, spotMarkets[status.account.Key].accountValueInU/15)) / price
+		balance := spotMarkets[status.account.Key].balances[setting.Symbol]
+		status.LimitSell = math.Min(math.Min(balance.Amount, balance.AvailableWithBorrow), openValueLimit/price)
+	} else {
+		status.LimitSell = math.Min(contractMarkets[status.account.Key].collateralsInU/5, openValueLimit) / price
+		status.LimitBuy = math.Min(contractMarkets[status.account.Key].collateralsInU/5, openValueLimit) / price
+		if setting.Market == model.Gate {
+			marketInfo := model.GetMarketInfo(setting.Market, setting.Symbol)
+			if marketInfo != nil {
+				_, amount := model.ParseRealAmount(setting.Market, setting.Symbol, marketInfo.SizeMax)
+				status.LimitBuy = math.Min(status.LimitBuy, amount)
+				status.LimitSell = math.Min(status.LimitSell, amount)
+			}
+		}
+	}
+	if setting.Market == model.Ftx {
+		status.LimitBuy = math.Min(status.LimitBuy, 90000000)
+		status.LimitSell = math.Min(status.LimitSell, 90000000)
+	}
+	if setting.Market == model.OKEX {
+		success, maxBuy, maxSell := api.GetTradeMaxOKEX(status.account.Key, status.account.Secret, setting.Symbol, 600)
+		if success {
+			status.LimitBuy = math.Min(status.LimitBuy, maxBuy)
+			status.LimitSell = math.Min(status.LimitSell, maxSell)
+		}
+	}
 }
 
 func placeCross(statusBuy, statusSell *CarryStatus, priceBuy, priceSell, amount float64) {
