@@ -563,8 +563,8 @@ func getMarketsFtx(key, secret string) (marketInfos map[string]*model.MarketInfo
 				continue
 			}
 			if value[`baseCurrency`] != nil && value[`type`] != nil && value[`type`].(string) == `spot` &&
-				!canBorrows[value[`baseCurrency`].(string)] {
-				//marketInfo.CanBorrow = false
+				canBorrows[value[`baseCurrency`].(string)] {
+				marketInfo.CanBorrow = true
 			}
 			if value[`priceIncrement`] != nil {
 				marketInfo.PriceIncrement, _ = value[`priceIncrement`].(json.Number).Float64()
