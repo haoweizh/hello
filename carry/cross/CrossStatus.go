@@ -72,7 +72,7 @@ func isValidSymbol(market, symbol string) bool {
 func isFresh(key, market, symbol string) bool {
 	defer crossLock.Unlock()
 	crossLock.Lock()
-	if lastOrderSymbol == nil || lastOrderSymbol[key] == nil {
+	if lastOrderSymbol == nil || lastOrderSymbol[key] == nil || len(lastOrderSymbol) == 0 {
 		return true
 	}
 	if symbol == lastOrderSymbol[key][market] {
