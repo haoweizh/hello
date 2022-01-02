@@ -43,6 +43,11 @@ func createContractMarket(key, secret, market string) (cm *contractMarket) {
 func createSpotMarket(key, secret, market string) (sm *spotMarket) {
 	sm = &spotMarket{key: key, market: market}
 	success, balances, totalInUsd, collateral := api.GetBalances(key, secret, market)
+	for _, balance := range balances {
+		if balance.UsdValue == 0 && balance.Amount > 0 {
+			util.Notice(fmt.Sprintf(`usdvalue 0 %s %s %f`, market, balance.Coin, balance.Amount))
+		}
+	}
 	if success {
 		tail := model.GetSpotTail(market)
 		sm.balances = make(map[string]*model.Balance)

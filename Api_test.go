@@ -70,6 +70,14 @@ func Test_getCommonMarketInfos(t *testing.T) {
 func Test_initTurtleN(t *testing.T) {
 	model.NewConfig()
 	_ = configor.Load(model.AppConfig, "./config.yml")
+	_, balances, total, collateral := api.GetBalances(model.AppConfig.GateKey, model.AppConfig.GateSecret, model.Gate)
+	fmt.Println(collateral)
+	fmt.Println(total)
+	for _, balance := range balances {
+		if balance.Amount > 0 {
+			fmt.Println(fmt.Sprintf(`%s %f %f`, balance.Coin, balance.Amount, balance.UsdValue))
+		}
+	}
 	accounts := make([]*model.Account, 0)
 	account := model.AppConfig.GetAccounts(model.Binance)[0]
 	if account == nil {
