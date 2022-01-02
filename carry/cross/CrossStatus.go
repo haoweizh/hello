@@ -31,7 +31,7 @@ var lastOrders = make(map[string]map[string][]*model.Order, lastOrderLength)    
 var carryStatus = make(map[string]map[string]map[string]map[string]*CarryStatus) // coin/market/symbol/key/CarryStatus
 var contractMarkets = make(map[string]*contractMarket)                           // key - contractMarket
 var spotMarkets = make(map[string]*spotMarket)                                   // key - spotMarket
-var statusFresh map[string]map[string]map[string]bool                            // key/market/symbol/bool
+var lastOrderSymbol map[string]map[string]string                                 // key/market/symbol
 var crossLock sync.Mutex
 var crossing bool
 var doCross = false
@@ -72,25 +72,25 @@ func isValidSymbol(market, symbol string) bool {
 func isFresh(key, market, symbol string) bool {
 	defer crossLock.Unlock()
 	crossLock.Lock()
-	if statusFresh == nil || statusFresh[key] == nil || statusFresh[key][market] == nil {
+	if lastOrderSymbol == nil || lastOrderSymbol[key] == nil {
 		return true
 	}
-	return statusFresh[key][market][symbol]
+	if symbol == lastOrderSymbol[key][market] {
+		return true
+	}
+	return false
 }
 
 func setFresh(key, market, symbol string) {
 	defer crossLock.Unlock()
 	crossLock.Lock()
-	if statusFresh == nil {
-		statusFresh = make(map[string]map[string]map[string]bool)
+	if lastOrderSymbol == nil {
+		lastOrderSymbol = make(map[string]map[string]string)
 	}
-	if statusFresh[key] == nil {
-		statusFresh[key] = make(map[string]map[string]bool)
+	if lastOrderSymbol[key] == nil {
+		lastOrderSymbol[key] = make(map[string]string)
 	}
-	if statusFresh[key][market] == nil {
-		statusFresh[key][market] = make(map[string]bool)
-	}
-	statusFresh[key][market][symbol] = true
+	lastOrderSymbol[key][market] = symbol
 }
 
 func getCarryStop(key string) (stop bool) {

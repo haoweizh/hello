@@ -197,7 +197,6 @@ func initStatus(account *model.Account, setting *model.Setting) (status *CarrySt
 	} else if status.Holding < 0 && (doRevert || account.CarryClose) {
 		status.TradeLineSell = 1
 	}
-	setFresh(status.account.Key, status.market, status.symbol)
 	return
 }
 
@@ -210,10 +209,11 @@ func ClearCross() {
 				time.Sleep(time.Millisecond * 200)
 			}
 		}
-		if statusFresh != nil && len(statusFresh) == 0 {
+		if lastOrderSymbol != nil && len(lastOrderSymbol) == 0 {
 			util.Notice(`...... no change pass make equal`)
 		} else {
 			util.Notice(`...... enter clearing cross`)
+			clearSuccess := true
 			spotMarkets = make(map[string]*spotMarket)
 			contractMarkets = make(map[string]*contractMarket)
 			coinSettings := model.GetCoinSettings(model.FunctionCross)
@@ -224,6 +224,7 @@ func ClearCross() {
 						account := model.AppConfig.GetAccounts(setting.Market)[i]
 						if setting == nil || len(coin) == 0 || coin != setting.Symbol[0:len(coin)] || account == nil {
 							util.Notice(`can not equal`)
+							clearSuccess = false
 							continue
 						}
 						equalStatuses[j] = initStatus(account, setting)
@@ -231,7 +232,11 @@ func ClearCross() {
 					makeEqual(coin, equalStatuses)
 				}
 			}
-			statusFresh = make(map[string]map[string]map[string]bool)
+			if clearSuccess {
+				lastOrderSymbol = make(map[string]map[string]string)
+			} else {
+				lastOrderSymbol = nil
+			}
 			util.Notice(`...... exit clearing cross`)
 		}
 		checkSetCrossing(false)
@@ -436,11 +441,9 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarrySta
 	}
 	if !isFresh(statusBuy.account.Key, statusBuy.market, statusBuy.symbol) {
 		initStatus(statusBuy.account, statusBuy.setting)
-		return nil, nil, 0, 0, 0
 	}
 	if !isFresh(statusSell.account.Key, statusSell.market, statusSell.symbol) {
 		initStatus(statusBuy.account, statusBuy.setting)
-		return nil, nil, 0, 0, 0
 	}
 	amount = math.Min(math.Min(statusBuy.LimitBuy, bidAmount), math.Min(statusSell.LimitSell, askAmount))
 	if amount > 0 {
@@ -535,6 +538,7 @@ func placeStatus(status *CarryStatus, price float64, amount float64) {
 	}
 	account := model.AppConfig.GetAccountFromKey(status.market, status.account.Key)
 	initStatus(account, status.setting)
+	setFresh(account.Key, status.market, status.symbol)
 }
 
 var PostOrderCross = func(order *model.Order, setting *model.Setting) {
