@@ -19,6 +19,11 @@ const InsufficientCodeBinance = `-2010`
 var InsufficientCodeOKEX = map[string]bool{`51008`: true, `51119`: true, `51120`: true, `51131`: true, `51502`: true,
 	`58350`: true, `59108`: true, `59200`: true}
 
+// market/symbol/bool经过人工确认可以cross的币种
+var validSymbol = map[string]map[string]bool{
+					model.Gate: {`EOSBEAR_USDT`: true, `AE_USDT`: true},
+					model.OKEX: {`AE-USDT`: true},
+					model.Ftx:  {`EOSBEAR/USD`: true}}
 var carryFail = make(map[string]int64) // key fail num
 var carryStop = make(map[string]bool)
 var lastOrderIndex = make(map[string]map[string]int64)                           // market - symbol - index
@@ -55,6 +60,13 @@ type CarryStatus struct {
 	TradeLineBuy, TradeLineSell float64 // 买卖盈利线（可为负数）
 	Holding                     float64
 	RateInAll                   float64 // 现货：该币种占总权益的比例；永续：以开仓价算该币种持仓占保证金百分比
+}
+
+func isValidSymbol(market, symbol string) bool {
+	if validSymbol[market] == nil {
+		return false
+	}
+	return validSymbol[market][symbol]
 }
 
 func isFresh(key, market, symbol string) bool {

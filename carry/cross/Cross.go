@@ -126,10 +126,10 @@ func createFromBalance(account *model.Account, setting *model.Setting, valueLimi
 		balance := spotMarkets[key].balances[setting.Symbol]
 		carryStatus.Holding = balance.Amount
 		// 暂时不让借币
-		carryStatus.LimitSell = math.Min(balance.Amount, openValueLimit/price)
+		carryStatus.LimitSell = math.Min(math.Min(balance.Amount, balance.AvailableWithBorrow), openValueLimit/price)
 		carryStatus.RateInAll = math.Abs(carryStatus.Holding * ticks.Asks[0].Price / spotMarkets[key].accountValueInU)
 	}
-	if spotMarkets[key].availableU/spotMarkets[key].accountValueInU < 0.2 ||
+	if spotMarkets[key].availableU/spotMarkets[key].accountValueInU < 0.3 ||
 		spotMarkets[key].accountValueInU <= 0 || carryStatus.RateInAll > 0.5 {
 		doRevert = true
 	}
@@ -362,7 +362,8 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarrySta
 	var bidAmount, askAmount float64
 	score := 1 - tickRelate.Asks[0].Price/tick.Bids[0].Price
 	scoreRelate := tickRelate.Bids[0].Price/tick.Asks[0].Price - 1
-	if (score > 0.1 || scoreRelate > 0.1) && coin != `EOSBEAR` {
+	if (score > 0.1 || scoreRelate > 0.1) && (!isValidSymbol(carryStatus.market, carryStatus.symbol) ||
+		!isValidSymbol(carryStatusRelate.market, carryStatusRelate.symbol)) {
 		msg := fmt.Sprintf(`different coin %s %s %s %s %f %f`, carryStatus.market, carryStatus.symbol,
 			carryStatusRelate.market, carryStatusRelate.symbol, score, scoreRelate)
 		minute := time.Now().Minute()
