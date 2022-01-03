@@ -471,6 +471,9 @@ func initLimitBuyAndSell(status *CarryStatus, setting *model.Setting, price floa
 			status.LimitSell = 0
 		}
 	} else {
+		if contractMarkets[status.account.Key] == nil {
+			return
+		}
 		status.LimitSell = math.Min(
 			math.Min(contractMarkets[status.account.Key].collateralsInU/5, openValueLimit)/price, status.LimitSell)
 		status.LimitBuy = math.Min(
