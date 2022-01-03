@@ -81,10 +81,17 @@ func createFromPosition(account *model.Account, setting *model.Setting, valueLim
 		return nil, false
 	}
 	price := ticks.Asks[0].Price
+	availableU := math.Min(contractMarkets[key].collateralsInU/5, openValueLimit)
+	if setting.Market == model.OKEX || setting.Market == model.Ftx {
+		if spotMarkets[key] == nil {
+			availableU = 0
+		}
+		availableU = math.Min(availableU, spotMarkets[key].availableU)
+	}
 	carryStatus = &CarryStatus{isSpot: false, market: setting.Market, symbol: setting.Symbol, account: account,
 		setting:      setting,
-		LimitSell:    math.Min(contractMarkets[key].collateralsInU/5, openValueLimit) / price,
-		LimitBuy:     math.Min(contractMarkets[key].collateralsInU/5, openValueLimit) / price,
+		LimitSell:    availableU / price,
+		LimitBuy:     availableU / price,
 		TradeLineBuy: setting.OpenShortMargin, TradeLineSell: setting.CloseShortMargin,
 	}
 	if setting.Market == model.Gate {
