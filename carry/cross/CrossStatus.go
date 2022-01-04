@@ -128,7 +128,7 @@ func GetHoldings(accounts map[string]*model.Account) (holding [][]interface{}) {
 						holding = append(holding, []interface{}{position.Market, coin, position.Currency, position.Free, tick.Bids[0].Price * position.Free})
 						coinHold[coin] += position.Free * tick.Bids[0].Price
 					} else {
-						holding = append(holding, []interface{}{position.Market, coin, position.Currency, position.Free, 0})
+						holding = append(holding, []interface{}{position.Market, coin, position.Currency, position.Free, 0.0})
 					}
 				}
 			}
