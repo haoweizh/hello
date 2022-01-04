@@ -113,14 +113,15 @@ func GetHoldings(accounts map[string]*model.Account) (holding [][]interface{}) {
 			for _, balance := range spotMarkets[account.Key].balances {
 				if balance != nil && balance.Amount != 0 {
 					symbol := balance.Coin + model.GetSpotTail(balance.Market)
-					holding = append(holding, []interface{}{balance.Market, symbol, balance.Amount, balance.UsdValue})
+					holding = append(holding, []interface{}{balance.Market, balance.Coin, symbol, balance.Amount, balance.UsdValue})
 				}
 			}
 		}
 		if contractMarkets[account.Key] != nil && contractMarkets[account.Key].positions != nil {
 			for _, position := range contractMarkets[account.Key].positions {
 				if position != nil && position.Free != 0 {
-					holding = append(holding, []interface{}{position.Market, position.Currency, position.Free, position.EntryPrice * position.Free})
+					coin := model.GetCoin(position.Market, position.Currency)
+					holding = append(holding, []interface{}{position.Market, coin, position.Currency, position.Free, position.EntryPrice * position.Free})
 				}
 			}
 		}
