@@ -221,11 +221,11 @@ func ClearCross() {
 				time.Sleep(time.Millisecond * 200)
 			}
 		}
-		if lastOrderSymbol != nil && len(lastOrderSymbol) == 0 {
+		if lastOrderSymbol != nil && len(lastOrderSymbol) == 0 && time.Now().Minute()%5 != 0 {
 			util.Notice(`...... no change pass make equal`)
 		} else {
 			util.Notice(`...... enter clearing cross`)
-			clearSuccess := true
+			isEqual := true
 			spotMarkets = make(map[string]*spotMarket)
 			contractMarkets = make(map[string]*contractMarket)
 			coinSettings := model.GetCoinSettings(model.FunctionCross)
@@ -236,15 +236,15 @@ func ClearCross() {
 						account := model.AppConfig.GetAccounts(setting.Market)[i]
 						if setting == nil || len(coin) == 0 || coin != setting.Symbol[0:len(coin)] || account == nil {
 							util.Notice(`can not equal`)
-							clearSuccess = false
+							isEqual = false
 							continue
 						}
 						equalStatuses[j] = initStatus(account, setting)
 					}
-					makeEqual(coin, equalStatuses)
+					isEqual, _ = makeEqual(coin, equalStatuses)
 				}
 			}
-			if clearSuccess {
+			if isEqual {
 				lastOrderSymbol = make(map[string]map[string]string)
 			} else {
 				lastOrderSymbol = nil
@@ -258,7 +258,7 @@ func ClearCross() {
 
 // bybit 缺少按照symbol cancel all
 // settings []*model.Setting, coinStatus map[string]map[string]map[string]*CarryStatus
-func makeEqual(coin string, statuses []*CarryStatus) (success bool, msg string) {
+func makeEqual(coin string, statuses []*CarryStatus) (isEqual bool, msg string) {
 	var holding, holdingInU, price float64
 	orderSide := ``
 	var equalStatus *CarryStatus
@@ -282,6 +282,9 @@ func makeEqual(coin string, statuses []*CarryStatus) (success bool, msg string) 
 		askStatus[fmt.Sprintf(`%s_%s`, status.market, status.symbol)] = status
 		holdingInU += status.Holding * tick.Bids[0].Price
 	}
+	if math.Abs(holdingInU) < 10 {
+		isEqual = true
+	}
 	if holdingInU > 10 {
 		orderSide = model.OrderSideSell
 		sort.Sort(sort.Reverse(bids))
@@ -291,7 +294,7 @@ func makeEqual(coin string, statuses []*CarryStatus) (success bool, msg string) 
 				util.Notice(fmt.Sprintf(`no status when holding in U: %f`, holdingInU))
 				continue
 			}
-			if math.IsNaN(status.LimitSell) || status.LimitSell > holding {
+			if equalStatus == nil {
 				equalStatus = status
 				price = bid.Price
 			}
@@ -303,7 +306,7 @@ func makeEqual(coin string, statuses []*CarryStatus) (success bool, msg string) 
 		sort.Sort(asks)
 		for _, ask := range asks {
 			status := askStatus[fmt.Sprintf(`%s_%s`, ask.Market, ask.Symbol)]
-			if math.IsNaN(status.LimitBuy) || status.LimitBuy > math.Abs(holding) {
+			if equalStatus == nil {
 				equalStatus = status
 				price = ask.Price
 			}
