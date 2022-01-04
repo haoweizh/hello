@@ -32,8 +32,50 @@ type Account struct {
 }
 
 var crossLen int
-
+var AppAccounts []map[string]*Account // account index/map/account
 var marketAccounts = make(map[string][]*Account)
+
+func GetAccounts(index int) (accounts map[string]*Account) {
+	if AppAccounts != nil {
+		return AppAccounts[index]
+	}
+	size := AppConfig.GetCrossLen()
+	AppAccounts = make([]map[string]*Account, size)
+	for i := 0; i < size; i++ {
+		if AppAccounts[i] == nil {
+			AppAccounts[i] = make(map[string]*Account)
+		}
+	}
+	tempAccounts := AppConfig.GetAccounts(Ftx)
+	for i, account := range tempAccounts {
+		AppAccounts[i][Ftx] = account
+	}
+	tempAccounts = AppConfig.GetAccounts(OKEX)
+	for i, account := range tempAccounts {
+		AppAccounts[i][OKEX] = account
+	}
+	tempAccounts = AppConfig.GetAccounts(Binance)
+	for i, account := range tempAccounts {
+		AppAccounts[i][Binance] = account
+	}
+	tempAccounts = AppConfig.GetAccounts(Gate)
+	for i, account := range tempAccounts {
+		AppAccounts[i][Gate] = account
+	}
+	tempAccounts = AppConfig.GetAccounts(Bybit)
+	for i, account := range tempAccounts {
+		AppAccounts[i][Bybit] = account
+	}
+	tempAccounts = AppConfig.GetAccounts(Huobi)
+	for i, account := range tempAccounts {
+		AppAccounts[i][Huobi] = account
+	}
+	tempAccounts = AppConfig.GetAccounts(Kucoin)
+	for i, account := range tempAccounts {
+		AppAccounts[i][Kucoin] = account
+	}
+	return AppAccounts[index]
+}
 
 func (config *Config) GetCrossLen() int {
 	if crossLen > 0 {

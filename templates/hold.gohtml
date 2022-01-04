@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{{$.today}}</title>
+</head>
+<body>
+<h4>持仓表</h4>
+<table border="1" cellspacing="0">
+    <th>market</th>
+    <th>symbol</th>
+    <th>数量</th>
+    <th>价值U</th>
+    {{range $i, $value := $.holdings}}
+        <tr>
+            <td>{{index $value 0}}</td>
+            <td>{{index $value 1}}</td>
+            <td>{{index $value 2}}</td>
+            <td>{{index $value 3}}</td>
+        </tr>
+    {{end}}
+</table>
+</body>
+</html>

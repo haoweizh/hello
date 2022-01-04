@@ -5,6 +5,7 @@ import (
 	"hello/api"
 	"hello/model"
 	"hello/util"
+	"math"
 	"sync"
 	"time"
 )
@@ -97,6 +98,40 @@ func getCarryStop(key string) (stop bool) {
 	defer crossLock.Unlock()
 	crossLock.Lock()
 	return carryStop[key]
+}
+
+func GetHoldings(accounts map[string]*model.Account) (holding [][]interface{}) {
+	defer crossLock.Unlock()
+	crossLock.Lock()
+	holding = make([][]interface{}, 0)
+	for _, account := range accounts {
+		if account == nil {
+			continue
+		}
+		if spotMarkets[account.Key] != nil && spotMarkets[account.Key].balances != nil {
+			for _, balance := range spotMarkets[account.Key].balances {
+				if balance != nil && balance.Amount != 0 {
+					symbol := balance.Coin + model.GetSpotTail(balance.Market)
+					holding = append(holding, []interface{}{balance.Market, symbol, balance.Amount, balance.UsdValue})
+				}
+			}
+		}
+		if contractMarkets[account.Key] != nil && contractMarkets[account.Key].positions != nil {
+			for _, position := range contractMarkets[account.Key].positions {
+				if position != nil && position.Free != 0 {
+					holding = append(holding, []interface{}{position.Market, position.Currency, position.Free, position.EntryPrice * position.Free})
+				}
+			}
+		}
+	}
+	for i := len(holding) - 1; i >= 0; i-- {
+		for j := 0; j < i; j++ {
+			if math.Abs(holding[j][3].(float64)) < math.Abs(holding[j+1][3].(float64)) {
+				holding[j], holding[j+1] = holding[j+1], holding[j]
+			}
+		}
+	}
+	return
 }
 
 func GetCrossMarketValue(key string) (market string, inAllSpot, collateral, holdingSpot, holdingFuture, unRealizedPnl float64) {
