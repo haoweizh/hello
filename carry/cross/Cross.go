@@ -89,10 +89,12 @@ func createFromPosition(account *model.Account, setting *model.Setting, valueLim
 		availableU = math.Min(availableU, spotMarkets[key].availableU)
 	}
 	carryStatus = &CarryStatus{isSpot: false, market: setting.Market, symbol: setting.Symbol, account: account,
-		setting:      setting,
-		LimitSell:    availableU / price,
-		LimitBuy:     availableU / price,
-		TradeLineBuy: setting.OpenShortMargin, TradeLineSell: setting.CloseShortMargin,
+		setting:       setting,
+		LimitSell:     availableU / price,
+		LimitBuy:      availableU / price,
+		AvailableSell: 5 * availableU / price,
+		AvailableBuy:  5 * availableU / price,
+		TradeLineBuy:  setting.OpenShortMargin, TradeLineSell: setting.CloseShortMargin,
 	}
 	if setting.Market == model.Gate {
 		marketInfo := model.GetMarketInfo(setting.Market, setting.Symbol)
@@ -100,6 +102,8 @@ func createFromPosition(account *model.Account, setting *model.Setting, valueLim
 			_, amount := model.ParseRealAmount(setting.Market, setting.Symbol, marketInfo.SizeMax)
 			carryStatus.LimitBuy = math.Min(carryStatus.LimitBuy, amount)
 			carryStatus.LimitSell = math.Min(carryStatus.LimitSell, amount)
+			carryStatus.AvailableBuy = math.Min(carryStatus.AvailableBuy, amount)
+			carryStatus.AvailableSell = math.Min(carryStatus.AvailableSell, amount)
 		}
 	}
 	valueInUsd := 0.0
@@ -131,6 +135,8 @@ func createFromBalance(account *model.Account, setting *model.Setting, valueLimi
 		setting:       setting,
 		LimitSell:     0,
 		LimitBuy:      math.Min(openValueLimit, math.Min(spotMarkets[key].availableU/5, spotMarkets[key].accountValueInU/15)) / price,
+		AvailableSell: 0,
+		AvailableBuy:  spotMarkets[key].availableU / price,
 		TradeLineBuy:  setting.OpenShortMargin,
 		TradeLineSell: setting.CloseShortMargin,
 	}
@@ -139,7 +145,8 @@ func createFromBalance(account *model.Account, setting *model.Setting, valueLimi
 		carryStatus.Holding = balance.Amount
 		// 暂时不让借币
 		carryStatus.LimitSell = math.Min(math.Min(balance.Amount, balance.AvailableWithBorrow), openValueLimit/price)
-		carryStatus.RateInAll = math.Abs(carryStatus.Holding * ticks.Asks[0].Price / spotMarkets[key].accountValueInU)
+		carryStatus.RateInAll = math.Abs(carryStatus.Holding * price / spotMarkets[key].accountValueInU)
+		carryStatus.AvailableSell = balance.AvailableWithBorrow
 	}
 	if spotMarkets[key].availableU/spotMarkets[key].accountValueInU < 0.2 ||
 		spotMarkets[key].accountValueInU <= 0 || carryStatus.RateInAll > 0.5 {
@@ -182,12 +189,16 @@ func initStatus(account *model.Account, setting *model.Setting) (status *CarrySt
 	if setting.Market == model.Ftx {
 		status.LimitBuy = math.Min(status.LimitBuy, 90000000)
 		status.LimitSell = math.Min(status.LimitSell, 90000000)
+		status.AvailableSell = math.Min(status.AvailableSell, 90000000)
+		status.AvailableBuy = math.Min(status.AvailableBuy, 90000000)
 	}
 	if setting.Market == model.OKEX {
 		success, maxBuy, maxSell := api.GetTradeMaxOKEX(account.Key, account.Secret, setting.Symbol, 600)
 		if success {
 			status.LimitBuy = math.Min(status.LimitBuy, maxBuy)
 			status.LimitSell = math.Min(status.LimitSell, maxSell)
+			status.AvailableBuy = math.Min(status.AvailableBuy, maxBuy)
+			status.AvailableSell = math.Min(status.AvailableSell, maxSell)
 		}
 	}
 	setCarryStatus(setting.Coin, setting.Market, setting.Symbol, account.Key, status)
@@ -294,11 +305,21 @@ func makeEqual(coin string, statuses []*CarryStatus) (isEqual bool, msg string) 
 				util.Notice(fmt.Sprintf(`no status when holding in U: %f`, holdingInU))
 				continue
 			}
-			if equalStatus == nil {
+			go api.CancelOrders(status.account.Key, status.account.Secret, status.market, status.symbol)
+			if equalStatus != nil {
+				continue
+			}
+			if math.IsNaN(status.AvailableSell) || status.AvailableSell > holding {
 				equalStatus = status
 				price = bid.Price
+			} else if !math.IsNaN(status.AvailableSell) {
+				checkAmount := model.GetAmountInMarket(status.market, status.symbol, status.AvailableSell)
+				if checkAmount > 0 {
+					equalStatus = status
+					price = bid.Price
+					holding = status.AvailableSell
+				}
 			}
-			go api.CancelOrders(status.account.Key, status.account.Secret, status.market, status.symbol)
 		}
 	}
 	if holdingInU < -10 {
@@ -306,11 +327,25 @@ func makeEqual(coin string, statuses []*CarryStatus) (isEqual bool, msg string) 
 		sort.Sort(asks)
 		for _, ask := range asks {
 			status := askStatus[fmt.Sprintf(`%s_%s`, ask.Market, ask.Symbol)]
-			if equalStatus == nil {
-				equalStatus = status
-				price = ask.Price
+			if status == nil {
+				util.Notice(fmt.Sprintf(`no status when holding in U: %f`, holdingInU))
+				continue
 			}
 			go api.CancelOrders(status.account.Key, status.account.Secret, status.market, status.symbol)
+			if equalStatus != nil {
+				continue
+			}
+			if math.IsNaN(status.AvailableBuy) || status.AvailableBuy > math.Abs(holding) {
+				equalStatus = status
+				price = ask.Price
+			} else if !math.IsNaN(status.AvailableBuy) {
+				checkAmount := model.GetAmountInMarket(status.market, status.symbol, status.AvailableBuy)
+				if checkAmount > 0 {
+					equalStatus = status
+					price = ask.Price
+					holding = status.AvailableBuy
+				}
+			}
 		}
 	}
 	if equalStatus != nil {
@@ -544,6 +579,7 @@ func placeStatus(status *CarryStatus, price float64, amount float64) {
 		} else {
 			balance.Amount += amount
 			balance.UsdValue = balance.Amount * price
+			balance.AvailableWithBorrow += amount
 		}
 		sm.availableU -= amount * price
 		if status.market == model.Ftx {
@@ -589,20 +625,21 @@ var PostOrderCross = func(order *model.Order, setting *model.Setting) {
 	}
 	account := model.AppConfig.GetAccountFromKey(order.Market, order.AmountType)
 	if order.HaveId() {
-		if account != nil {
-			status := getCarryStatus(setting.Coin, setting.Market, setting.Symbol, account.Key)
-			maxBuy := status.LimitBuy
-			maxSell := status.LimitSell
-			if order.OrderSide == model.OrderSideBuy {
-				maxBuy -= order.Amount
-				maxSell += order.Amount
-			} else if order.OrderSide == model.OrderSideSell {
-				maxBuy += order.Amount
-				maxSell -= order.Amount
-			}
-			status.LimitSell = math.Min(status.LimitSell, maxSell)
-			status.LimitBuy = math.Min(status.LimitBuy, maxBuy)
-		}
+		//if account != nil {
+		//	status := getCarryStatus(setting.Coin, setting.Market, setting.Symbol, account.Key)
+		//	placeStatus(status, order.Price, order.Amount)
+		//maxBuy := status.LimitBuy
+		//maxSell := status.LimitSell
+		//if order.OrderSide == model.OrderSideBuy {
+		//	maxBuy -= order.Amount
+		//	maxSell += order.Amount
+		//} else if order.OrderSide == model.OrderSideSell {
+		//	maxBuy += order.Amount
+		//	maxSell -= order.Amount
+		//}
+		//status.LimitSell = math.Min(status.LimitSell, maxSell)
+		//status.LimitBuy = math.Min(status.LimitBuy, maxBuy)
+		//}
 		addLastCarry(order, setting)
 		addCarryResult(order.AmountType, order.Market, true)
 	} else {
