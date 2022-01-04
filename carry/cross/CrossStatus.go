@@ -142,7 +142,11 @@ func GetHoldings(accounts map[string]*model.Account) (holding [][]interface{}) {
 		}
 	}
 	for i := range holding {
-		holding[i] = append(holding[i], math.Floor(coinHold[holding[i][1].(string)]/10)*10)
+		money := math.Floor(coinHold[holding[i][1].(string)]/10) * 10
+		if money < 0 {
+			money = math.Ceil(coinHold[holding[i][1].(string)]/10) * 10
+		}
+		holding[i] = append(holding[i], money)
 	}
 	return
 }
