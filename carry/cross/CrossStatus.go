@@ -163,6 +163,9 @@ func GetCrossMarketValue(key string) (market string, inAllSpot, collateral, hold
 	if spotMarkets[key] != nil {
 		market = spotMarkets[key].market
 		inAllSpot = spotMarkets[key].accountValueInU
+		if market == model.Ftx && spotMarkets[key].balances != nil && spotMarkets[key].balances[`FTT`] != nil {
+			inAllSpot -= spotMarkets[key].balances[`FTT`].UsdValue
+		}
 		holdingSpot = spotMarkets[key].accountValueInU - spotMarkets[key].availableU
 	}
 	if contractMarkets[key] != nil {
