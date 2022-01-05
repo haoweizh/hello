@@ -354,7 +354,10 @@ func makeEqual(coin string, statuses []*CarryStatus) (isEqual bool, msg string) 
 		}
 	}
 	if equalStatus != nil {
-		amount := math.Min(90000000, math.Abs(holding))
+		amount := holding
+		if equalStatus.market == model.Ftx {
+			amount = math.Min(90000000, math.Abs(holding))
+		}
 		checkAmount := model.GetAmountInMarket(equalStatus.market, equalStatus.symbol, amount)
 		if checkAmount > 0 {
 			api.PlaceOrder(equalStatus.account.Key, equalStatus.account.Secret, orderSide, model.OrderTypeLimit,
