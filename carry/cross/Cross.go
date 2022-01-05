@@ -388,7 +388,7 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 			(model.AppConfig.Env != `test` && model.IsRelatedTickTimeout(settingRelate.Market, million-int64(tickRelate.Ts))) {
 			continue
 		}
-		for i := 0; i < model.AppConfig.GetCrossLen(); i++ {
+		for i := model.AppConfig.GetCrossLen() - 1; i >= 0; i-- {
 			account := model.AppConfig.GetAccounts(setting.Market)[i]
 			accountRelate := model.AppConfig.GetAccounts(settingRelate.Market)[i]
 			if account == nil || accountRelate == nil {
