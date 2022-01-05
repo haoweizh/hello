@@ -872,7 +872,7 @@ func InitCrossMarketInfos() {
 		if len(infos) >= 2 {
 			for _, info := range infos {
 				setting := &model.Setting{Valid: true, Function: model.FunctionCross, Market: info.Market,
-					Symbol: info.Name, Coin: coin, OpenShortMargin: 0.01, CloseShortMargin: 0.01}
+					Symbol: info.Name, Coin: coin, OpenShortMargin: 0.016, CloseShortMargin: 0.016}
 				if filterCross(setting.Market, setting.Symbol) {
 					continue
 				}
