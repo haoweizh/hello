@@ -207,11 +207,11 @@ func initStatus(account *model.Account, setting *model.Setting) (status *CarrySt
 		jump = 10
 	}
 	if status.Holding > 0 {
-		status.TradeLineBuy = math.Max(setting.OpenShortMargin*(0.5+jump*status.RateInAll), winRateMin) + fundingRate
-		status.TradeLineSell = math.Max(setting.CloseShortMargin*(0.5-jump*status.RateInAll), loseRateMax) - fundingRate
+		status.TradeLineBuy = math.Max(setting.OpenShortMargin*(0.5+jump*status.RateInAll), lowestScore) - fundingRate
+		status.TradeLineSell = math.Max(setting.CloseShortMargin*(0.5-jump*status.RateInAll), lowestScore) + fundingRate
 	} else {
-		status.TradeLineBuy = math.Max(setting.OpenShortMargin*(0.5+jump*status.RateInAll), loseRateMax) + fundingRate
-		status.TradeLineSell = math.Max(setting.CloseShortMargin*(0.5-jump*status.RateInAll), winRateMin) - fundingRate
+		status.TradeLineBuy = math.Max(setting.OpenShortMargin*(0.5+jump*status.RateInAll), lowestScore) - fundingRate
+		status.TradeLineSell = math.Max(setting.CloseShortMargin*(0.5-jump*status.RateInAll), lowestScore) + fundingRate
 	}
 	status.TradeLineBuy *= account.CarryRate
 	status.TradeLineSell *= account.CarryRate

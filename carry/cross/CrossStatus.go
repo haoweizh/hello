@@ -10,8 +10,7 @@ import (
 	"time"
 )
 
-const loseRateMax = -0.005
-const winRateMin = 0.005
+const lowestScore = -0.005
 const lastOrderLength = 8
 const holdingLimitInU = 500000.0
 const openValueLimit = 10000.0
