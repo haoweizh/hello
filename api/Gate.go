@@ -79,7 +79,7 @@ func appendRelatedMarketsGate(key, secret string, marketInfos map[string]*model.
 			marketInfo.SizeIncrement = 1 / math.Pow10(int(spot.AmountPrecision))
 			if spot.MinQuoteAmount != "" {
 				marketInfo.UsdtMin, _ = strconv.ParseFloat(spot.MinQuoteAmount, 64)
-				marketInfo.SizeMin = marketInfo.SizeIncrement
+				marketInfo.SizeMin = math.Max(marketInfo.SizeIncrement, 1)
 			}
 			if spot.MinBaseAmount != "" {
 				marketInfo.SizeMin, _ = strconv.ParseFloat(spot.MinBaseAmount, 64)
@@ -109,7 +109,7 @@ func appendRelatedMarketsGate(key, secret string, marketInfos map[string]*model.
 					marketInfo.SizeIncrement = 1 / math.Pow10(int(spot.AmountPrecision))
 					if spot.MinQuoteAmount != "" {
 						marketInfo.UsdtMin, _ = strconv.ParseFloat(spot.MinQuoteAmount, 64)
-						marketInfo.SizeMin = marketInfo.SizeIncrement
+						marketInfo.SizeMin = math.Max(marketInfo.SizeIncrement, 1)
 					}
 					if spot.MinBaseAmount != "" {
 						marketInfo.SizeMin, _ = strconv.ParseFloat(spot.MinBaseAmount, 64)
