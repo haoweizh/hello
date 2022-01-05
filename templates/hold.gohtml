@@ -5,6 +5,48 @@
     <title>{{$.today}}</title>
 </head>
 <body>
+<h4>市场价值表</h4>
+<table border="1" cellspacing="0">
+    <tr>
+        <th>市场</th>
+        <th>现货权益</th>
+        <th>期货权益</th>
+        <th>保证金</th>
+        <th>现货持仓</th>
+        <th>期货持仓</th>
+    </tr>
+    {{range $i, $value := $.marketValue}}
+        <tr>
+            <td>{{index $value 0}}</td>
+            <td>{{index $value 1}}</td>
+            <td>{{index $value 2}}</td>
+            <td>{{index $value 3}}</td>
+            <td>{{index $value 4}}</td>
+            <td>{{index $value 5}}</td>
+        </tr>
+    {{end}}
+</table>
+<h4>交易概览表</h4>
+<table border="1" cellspacing="0">
+    <th>市场</th>
+    <th>日期</th>
+    <th>方向</th>
+    <th>交易额/USD</th>
+    <th>类型</th>
+    <th>单数</th>
+    <th>失败率</th>
+    {{range $i, $value := $.trade}}
+        <tr>
+            <td>{{index $value 0}}</td>
+            <td>{{index $value 1}}</td>
+            <td>{{index $value 2}}</td>
+            <td>{{index $value 3}}</td>
+            <td>{{index $value 4}}</td>
+            <td>{{index $value 5}}</td>
+            <td>{{index $value 6}}%</td>
+        </tr>
+    {{end}}
+</table>
 <h4>持仓表</h4>
 <table border="1" cellspacing="0">
     <th>market</th>
