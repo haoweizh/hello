@@ -114,7 +114,7 @@ func GetHoldings(accounts map[string]*model.Account) (holding [][]interface{}) {
 				if balance != nil && balance.Amount != 0 {
 					symbol := balance.Coin + model.GetSpotTail(balance.Market)
 					holding = append(holding, []interface{}{balance.Market, balance.Coin, symbol, balance.Amount, balance.UsdValue})
-					coinHold[balance.Coin] += balance.UsdValue
+					coinHold[balance.Coin] += balance.Amount
 				}
 			}
 		}
@@ -125,7 +125,7 @@ func GetHoldings(accounts map[string]*model.Account) (holding [][]interface{}) {
 					coin := model.GetCoin(position.Market, position.Currency)
 					if tickGet {
 						holding = append(holding, []interface{}{position.Market, coin, position.Currency, position.Free, tick.Bids[0].Price * position.Free})
-						coinHold[coin] += position.Free * tick.Bids[0].Price
+						coinHold[coin] += position.Free
 					} else {
 						holding = append(holding, []interface{}{position.Market, coin, position.Currency, position.Free, 0.0})
 					}
