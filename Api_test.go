@@ -97,7 +97,7 @@ func Test_initTurtleN(t *testing.T) {
 	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
 	//api.GetFundingRate(model.Binance, `BTCUSDT`, nil)
 	api.InitMarketInfos()
-	out := util.CutTailZero(fmt.Sprintf(`%f`, model.GetAmountInMarket(model.Huobi, `rsr-usdt`, 200)))
+	out := util.CutTailZero(fmt.Sprintf(`%f`, model.GetAmountInMarket(model.Huobi, `rsr-usdt`, 20, 0)))
 	fmt.Println(out)
 	//fmt.Println(order.OrderId)
 	//api.PlaceOrder(model.AppConfig.DFutureKey, model.AppConfig.DFutureSecret, model.OrderSideBuy, ``,

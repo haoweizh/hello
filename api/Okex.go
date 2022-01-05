@@ -514,7 +514,7 @@ func PlacePairOKEX(key, coin, sidePerp, sideSpot, orderType, refreshType string,
 	if sidePerp != "" && pricePerp != 0 && amount != 0 {
 		pricePerp, decimalPerp := model.FormatPrice(model.OKEX, coin+tailPerp, sidePerp, pricePerp)
 		priceStrPerp := util.CutTailZero(strconv.FormatFloat(pricePerp, 'f', decimalPerp, 64))
-		formattedAmountPerp := model.GetAmountInMarket(model.OKEX, coin+tailPerp, amount)
+		formattedAmountPerp := model.GetAmountInMarket(model.OKEX, coin+tailPerp, amount, pricePerp)
 		amountStrPerp := util.CutTailZero(fmt.Sprintf(`%f`, formattedAmountPerp))
 		if orderType == model.OrderTypeMarket {
 			usdAmount, _ := strconv.ParseFloat(amountStrPerp, 64)
@@ -527,7 +527,7 @@ func PlacePairOKEX(key, coin, sidePerp, sideSpot, orderType, refreshType string,
 	if sideSpot != "" && priceSpot != 0 && amount != 0 {
 		priceSpot, decimalSpot := model.FormatPrice(model.OKEX, coin+tailSpot, sideSpot, priceSpot)
 		priceStrSpot := util.CutTailZero(strconv.FormatFloat(priceSpot, 'f', decimalSpot, 64))
-		formattedAmountSpot := model.GetAmountInMarket(model.OKEX, coin+tailSpot, amount)
+		formattedAmountSpot := model.GetAmountInMarket(model.OKEX, coin+tailSpot, amount, priceSpot)
 		amountStrSpot := util.CutTailZero(fmt.Sprintf(`%f`, formattedAmountSpot))
 		if orderType == model.OrderTypeMarket {
 			usdAmount, _ := strconv.ParseFloat(amountStrSpot, 64)
@@ -585,7 +585,7 @@ func placeOrderOKEX(key, secret string, isWs bool, order *model.Order) {
 	priceStr := util.CutTailZero(strconv.FormatFloat(price, 'f', decimal, 64))
 	priceTrigger, decimal := model.FormatPrice(model.OKEX, order.Instrument, order.OrderSide, order.TriggerPrice)
 	triggerPriceStr := util.CutTailZero(strconv.FormatFloat(priceTrigger, 'f', decimal, 64))
-	formattedAmount := model.GetAmountInMarket(model.OKEX, order.Instrument, order.Amount)
+	formattedAmount := model.GetAmountInMarket(model.OKEX, order.Instrument, order.Amount, price)
 	amount := util.CutTailZero(fmt.Sprintf(`%f`, formattedAmount))
 	if order.OrderType == model.OrderTypeMarket {
 		usdAmount, _ := strconv.ParseFloat(amount, 64)

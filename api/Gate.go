@@ -78,8 +78,8 @@ func appendRelatedMarketsGate(key, secret string, marketInfos map[string]*model.
 			marketInfo.PriceIncrement = 1 / math.Pow10(int(spot.Precision))
 			marketInfo.SizeIncrement = 1 / math.Pow10(int(spot.AmountPrecision))
 			if spot.MinQuoteAmount != "" {
-				marketInfo.UsdtMin, _ = strconv.ParseFloat(spot.MinQuoteAmount, 64)
-				marketInfo.SizeMin = math.Max(marketInfo.SizeIncrement, 1)
+				marketInfo.MoneyMin, _ = strconv.ParseFloat(spot.MinQuoteAmount, 64)
+				marketInfo.SizeMin = marketInfo.SizeIncrement
 			}
 			if spot.MinBaseAmount != "" {
 				marketInfo.SizeMin, _ = strconv.ParseFloat(spot.MinBaseAmount, 64)
@@ -108,8 +108,8 @@ func appendRelatedMarketsGate(key, secret string, marketInfos map[string]*model.
 					marketInfo.PriceIncrement = 1 / math.Pow10(int(spot.Precision))
 					marketInfo.SizeIncrement = 1 / math.Pow10(int(spot.AmountPrecision))
 					if spot.MinQuoteAmount != "" {
-						marketInfo.UsdtMin, _ = strconv.ParseFloat(spot.MinQuoteAmount, 64)
-						marketInfo.SizeMin = math.Max(marketInfo.SizeIncrement, 1)
+						marketInfo.MoneyMin, _ = strconv.ParseFloat(spot.MinQuoteAmount, 64)
+						marketInfo.SizeMin = marketInfo.SizeIncrement
 					}
 					if spot.MinBaseAmount != "" {
 						marketInfo.SizeMin, _ = strconv.ParseFloat(spot.MinBaseAmount, 64)
@@ -550,7 +550,7 @@ func placeOrderGate(key, secret string, order *model.Order, orderSide, orderType
 				relatedOrder.AutoBorrow = true
 			}
 		}
-		relatedOrder.Amount = util.CutTailZero(fmt.Sprintf(`%f`, model.GetAmountInMarket(model.Gate, symbol, amount)))
+		relatedOrder.Amount = util.CutTailZero(fmt.Sprintf(`%f`, model.GetAmountInMarket(model.Gate, symbol, amount, price)))
 		util.Notice(`create related order request: %v`, relatedOrder)
 		createOrder, _, err := client.SpotApi.CreateOrder(ctx, relatedOrder)
 		if err != nil {
@@ -582,7 +582,7 @@ func placeOrderGate(key, secret string, order *model.Order, orderSide, orderType
 		futuresOrder := gateApi.FuturesOrder{Price: orderPriceStr,
 			Contract: model.GetCoin(model.Gate, symbol) + model.GetSpotTail(model.Gate)}
 		futuresOrder.Size, _ = strconv.ParseInt(util.CutTailZero(
-			fmt.Sprintf(`%f`, model.GetAmountInMarket(model.Gate, symbol, amount))), 10, 64)
+			fmt.Sprintf(`%f`, model.GetAmountInMarket(model.Gate, symbol, amount, price))), 10, 64)
 		if orderSide == model.OrderSideSell {
 			futuresOrder.Size = -1 * futuresOrder.Size
 		}

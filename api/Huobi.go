@@ -336,7 +336,7 @@ func placeOrderHuobi(key, secret string, order *model.Order, orderSide, orderTyp
 			marketInfo.CTCurrency != model.GetCoin(model.Huobi, symbol) {
 			return
 		}
-		postData["volume"] = util.CutTailZero(fmt.Sprintf(`%f`, model.GetAmountInMarket(model.Huobi, symbol, amount)))
+		postData["volume"] = util.CutTailZero(fmt.Sprintf(`%f`, model.GetAmountInMarket(model.Huobi, symbol, amount, price)))
 		responseBody := SignedRequestHuobi(key, secret, `POST`, restHuobiFuture, "/linear-swap-api/v1/swap_cross_order", postData)
 		orderJson, err := util.NewJSON(responseBody)
 		if err == nil {
@@ -368,7 +368,7 @@ func placeOrderHuobi(key, secret string, order *model.Order, orderSide, orderTyp
 			_ = GetAccountIdsHuobi(key, secret)
 		}
 		postData["account-id"] = huobiAccountMap[key][spotAccount]
-		postData["amount"] = util.CutTailZero(fmt.Sprintf(`%f`, model.GetAmountInMarket(model.Huobi, symbol, amount)))
+		postData["amount"] = util.CutTailZero(fmt.Sprintf(`%f`, model.GetAmountInMarket(model.Huobi, symbol, amount, price)))
 		postData["symbol"] = symbol
 		if orderType == model.OrderTypeLimit {
 			priceSpot, decimalSpot := model.FormatPrice(model.Huobi, symbol, model.OrderSideBuy, price)

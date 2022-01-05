@@ -581,7 +581,7 @@ func makeEqual(key, secret string, setting *model.Setting, balances []*model.Bal
 		return
 	}
 	// 折算一下在真实市场中下单的数额用于判断是否大于零，实际传入api.PlaceOrder方法中不适用这个数量
-	checkAmount := model.GetAmountInMarket(setting.Market, symbol, amount)
+	checkAmount := model.GetAmountInMarket(setting.Market, symbol, amount, price)
 	if checkAmount > 0 {
 		resultPerp := api.CancelOrders(key, secret, setting.Market, setting.Symbol)
 		resultRelated := api.CancelOrders(key, secret, setting.Market, setting.SymbolRelated)

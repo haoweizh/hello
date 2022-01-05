@@ -599,7 +599,7 @@ func placeOrderKucoin(order *model.Order, orderSide, orderType, symbol string, p
 		params["leverage"] = "10"
 		priceFuture, decimalFuture := model.FormatPrice(model.Kucoin, symbol, orderSide, price)
 		params["price"] = util.CutTailZero(strconv.FormatFloat(priceFuture, 'f', decimalFuture, 64))
-		params["size"] = util.CutTailZero(fmt.Sprintf(`%f`, model.GetAmountInMarket(model.Kucoin, symbol, amount)))
+		params["size"] = util.CutTailZero(fmt.Sprintf(`%f`, model.GetAmountInMarket(model.Kucoin, symbol, amount, price)))
 		util.SocketInfo(fmt.Sprintf(`create future order request: %s`, params))
 		futureOrderResp, err := kucoinFutureClient("", "", "").CreateOrder(params)
 		if err != nil {
@@ -637,7 +637,7 @@ func placeOrderKucoin(order *model.Order, orderSide, orderType, symbol string, p
 			createOrder.Type = orderType
 			priceSpot, decimalSpot := model.FormatPrice(model.Kucoin, symbol, orderSide, price)
 			createOrder.Price = util.CutTailZero(strconv.FormatFloat(priceSpot, 'f', decimalSpot, 64))
-			createOrder.Size = util.CutTailZero(fmt.Sprintf(`%f`, model.GetAmountInMarket(model.Kucoin, symbol, amount)))
+			createOrder.Size = util.CutTailZero(fmt.Sprintf(`%f`, model.GetAmountInMarket(model.Kucoin, symbol, amount, price)))
 			util.SocketInfo(fmt.Sprintf(`create spot order request: %v`, createOrder))
 			spotOrderResponse, err := kucoinRelatedClient("", "", "").CreateOrder(createOrder)
 			if err != nil {
@@ -675,7 +675,7 @@ func placeOrderKucoin(order *model.Order, orderSide, orderType, symbol string, p
 			createOrder.AutoBorrow = true
 			priceSpot, decimalSpot := model.FormatPrice(model.Kucoin, symbol, orderSide, price)
 			createOrder.Price = util.CutTailZero(strconv.FormatFloat(priceSpot, 'f', decimalSpot, 64))
-			createOrder.Size = util.CutTailZero(fmt.Sprintf(`%f`, model.GetAmountInMarket(model.Kucoin, symbol, amount)))
+			createOrder.Size = util.CutTailZero(fmt.Sprintf(`%f`, model.GetAmountInMarket(model.Kucoin, symbol, amount, price)))
 			util.SocketInfo(fmt.Sprintf(`create margin order request: %v`, createOrder))
 			req := kucoin.NewRequest(http.MethodPost, "/api/v1/margin/order", createOrder)
 			marginOrderResp, err := kucoinRelatedClient("", "", "").Call(req)

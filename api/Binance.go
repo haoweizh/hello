@@ -342,7 +342,7 @@ func getMarketsBinance(key, secret string) (marketInfos map[string]*model.Market
 					continue
 				}
 				marketInfo := &model.MarketInfo{Market: model.Binance, Name: symbol,
-					CTCurrency: value[`baseAsset`].(string), UsdtMin: 10}
+					CTCurrency: value[`baseAsset`].(string), MoneyMin: 10}
 				setMarketInfoFilters(marketInfo, value[`filters`].([]interface{}))
 				marketInfos[marketInfo.Name] = marketInfo
 			}
@@ -358,7 +358,7 @@ func placeOrderBinance(key, secret string, order *model.Order, orderSide, orderT
 	postData := &url.Values{}
 	price, decimal := model.FormatPrice(model.Binance, symbol, orderSide, price)
 	priceStr := util.CutTailZero(strconv.FormatFloat(price, 'f', decimal, 64))
-	formattedAmount := model.GetAmountInMarket(model.Binance, symbol, amount)
+	formattedAmount := model.GetAmountInMarket(model.Binance, symbol, amount, price)
 	amountStr := util.CutTailZero(fmt.Sprintf(`%f`, formattedAmount))
 	postData.Set("quantity", amountStr)
 	var requestUrl string

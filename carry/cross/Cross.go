@@ -318,7 +318,7 @@ func makeEqual(coin string, statuses []*CarryStatus) (isEqual bool, msg string) 
 				equalStatus = status
 				price = bid.Price
 			} else if !math.IsNaN(status.AvailableSell) {
-				checkAmount := model.GetAmountInMarket(status.market, status.symbol, status.AvailableSell)
+				checkAmount := model.GetAmountInMarket(status.market, status.symbol, status.AvailableSell, bid.Price)
 				if checkAmount > 0 {
 					equalStatus = status
 					price = bid.Price
@@ -344,7 +344,7 @@ func makeEqual(coin string, statuses []*CarryStatus) (isEqual bool, msg string) 
 				equalStatus = status
 				price = ask.Price
 			} else if !math.IsNaN(status.AvailableBuy) {
-				checkAmount := model.GetAmountInMarket(status.market, status.symbol, status.AvailableBuy)
+				checkAmount := model.GetAmountInMarket(status.market, status.symbol, status.AvailableBuy, ask.Price)
 				if checkAmount > 0 {
 					equalStatus = status
 					price = ask.Price
@@ -358,7 +358,7 @@ func makeEqual(coin string, statuses []*CarryStatus) (isEqual bool, msg string) 
 		if equalStatus.market == model.Ftx {
 			amount = math.Min(90000000, math.Abs(holding))
 		}
-		checkAmount := model.GetAmountInMarket(equalStatus.market, equalStatus.symbol, amount)
+		checkAmount := model.GetAmountInMarket(equalStatus.market, equalStatus.symbol, amount, price)
 		if checkAmount > 0 {
 			api.PlaceOrder(equalStatus.account.Key, equalStatus.account.Secret, orderSide, model.OrderTypeLimit,
 				equalStatus.market, equalStatus.symbol, equalStatus.symbol, ``, model.FunctionComplement,

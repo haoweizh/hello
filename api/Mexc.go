@@ -332,7 +332,7 @@ func placeOrderMexc(key, secret string, order *model.Order, orderSide, orderType
 
 	price, decimal := model.FormatPrice(model.Mexc, symbol, orderSide, price)
 	priceStr := util.CutTailZero(strconv.FormatFloat(price, 'f', decimal, 64))
-	formattedAmount := model.GetAmountInMarket(model.Mexc, symbol, amount)
+	formattedAmount := model.GetAmountInMarket(model.Mexc, symbol, amount, price)
 	amountStr := util.CutTailZero(fmt.Sprintf(`%f`, formattedAmount))
 
 	if isMexcContractSymbol(symbol) {
