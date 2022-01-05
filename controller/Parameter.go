@@ -134,25 +134,6 @@ func holdPage(c *gin.Context) {
 	if err != nil {
 		index = 0
 	}
-	accounts := model.GetAccounts(index)
-	c.HTML(http.StatusOK, `hold.gohtml`, gin.H{`holdings`: cross.GetHoldings(accounts)})
-}
-
-func tickPage(c *gin.Context) {
-	priceDis, tickInfo, recentTickInfo := model.AppMetric.ToArray()
-	c.HTML(http.StatusOK, `tick.gohtml`, gin.H{
-		`priceDis`: priceDis, `tickInfo`: tickInfo, `recentTickInfo`: recentTickInfo})
-}
-
-func crossPage(c *gin.Context) {
-	indexStr := c.Query(`index`)
-	if len(indexStr) == 0 {
-		indexStr = `0`
-	}
-	index, err := strconv.Atoi(indexStr)
-	if err != nil {
-		index = 0
-	}
 	queryAccounts := model.GetAccounts(index)
 	marketValues := make([][]string, 0)
 	inAll := []float64{0, 0, 0, 0, 0, 0}
@@ -273,10 +254,25 @@ func crossPage(c *gin.Context) {
 				}
 				carryRows.Close()
 			}
-			crossInfo := model.GetMonitorInfo(indexStr, `cross`)
-			c.HTML(http.StatusOK, `balance.gohtml`, gin.H{`marketValue`: marketValues, `trade`: tradeInfo, `cross`: crossInfo})
 		}
 	}
+	c.HTML(http.StatusOK, `hold.gohtml`, gin.H{
+		`marketValue`: marketValues, `trade`: tradeInfo, `holdings`: cross.GetHoldings(queryAccounts)})
+}
+
+func tickPage(c *gin.Context) {
+	priceDis, tickInfo, recentTickInfo := model.AppMetric.ToArray()
+	c.HTML(http.StatusOK, `tick.gohtml`, gin.H{
+		`priceDis`: priceDis, `tickInfo`: tickInfo, `recentTickInfo`: recentTickInfo})
+}
+
+func crossPage(c *gin.Context) {
+	indexStr := c.Query(`index`)
+	if len(indexStr) == 0 {
+		indexStr = `0`
+	}
+	crossInfo := model.GetMonitorInfo(indexStr, `cross`)
+	c.HTML(http.StatusOK, `balance.gohtml`, gin.H{`cross`: crossInfo})
 }
 
 func GetCode(c *gin.Context) {
