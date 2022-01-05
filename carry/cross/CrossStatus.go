@@ -105,6 +105,7 @@ func GetHoldings(accounts map[string]*model.Account) (holding [][]interface{}) {
 	crossLock.Lock()
 	holding = make([][]interface{}, 0)
 	coinHold := make(map[string]float64)
+	coinPrice := make(map[string]float64)
 	for _, account := range accounts {
 		if account == nil {
 			continue
@@ -115,6 +116,12 @@ func GetHoldings(accounts map[string]*model.Account) (holding [][]interface{}) {
 					symbol := balance.Coin + model.GetSpotTail(balance.Market)
 					holding = append(holding, []interface{}{balance.Market, balance.Coin, symbol, balance.Amount, balance.UsdValue})
 					coinHold[balance.Coin] += balance.Amount
+					if coinPrice[balance.Coin] == 0 {
+						tickGet, tick := model.AppMarkets.GetBidAsk(symbol, balance.Market)
+						if tickGet {
+							coinPrice[balance.Coin] = tick.Bids[0].Price
+						}
+					}
 				}
 			}
 		}
@@ -126,6 +133,7 @@ func GetHoldings(accounts map[string]*model.Account) (holding [][]interface{}) {
 					if tickGet {
 						holding = append(holding, []interface{}{position.Market, coin, position.Currency, position.Free, tick.Bids[0].Price * position.Free})
 						coinHold[coin] += position.Free
+						coinPrice[coin] = tick.Bids[0].Price
 					} else {
 						holding = append(holding, []interface{}{position.Market, coin, position.Currency, position.Free, 0.0})
 					}
@@ -141,9 +149,10 @@ func GetHoldings(accounts map[string]*model.Account) (holding [][]interface{}) {
 		}
 	}
 	for i := range holding {
-		money := math.Floor(coinHold[holding[i][1].(string)]/10) * 10
+		coin := holding[i][1].(string)
+		money := math.Floor(coinHold[coin]*coinPrice[coin]/10) * 10
 		if money < 0 {
-			money = math.Ceil(coinHold[holding[i][1].(string)]/10) * 10
+			money = math.Ceil(coinHold[coin]*coinPrice[coin]/10) * 10
 		}
 		holding[i] = append(holding[i], money)
 	}
