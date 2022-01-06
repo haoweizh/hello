@@ -270,7 +270,7 @@ func ClearCross() {
 // bybit 缺少按照symbol cancel all
 // settings []*model.Setting, coinStatus map[string]map[string]map[string]*CarryStatus
 func makeEqual(coin string, statuses []*CarryStatus) (isEqual bool, msg string) {
-	var holding, holdingInU, price float64
+	var holding, price float64
 	orderSide := ``
 	var equalStatus *CarryStatus
 	bids := model.Ticks{}
@@ -291,8 +291,11 @@ func makeEqual(coin string, statuses []*CarryStatus) (isEqual bool, msg string) 
 		asks = append(asks, tick.Asks[0])
 		bidStatus[fmt.Sprintf(`%s_%s`, status.market, status.symbol)] = status
 		askStatus[fmt.Sprintf(`%s_%s`, status.market, status.symbol)] = status
-		holdingInU += status.Holding * tick.Bids[0].Price
+		if price == 0 {
+			price = bids[0].Price + asks[0].Price
+		}
 	}
+	holdingInU := holding * price
 	if math.Abs(holdingInU) < 10 {
 		isEqual = true
 		if time.Now().Minute()%5 == 0 {
