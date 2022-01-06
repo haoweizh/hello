@@ -99,8 +99,10 @@ func testSpeed(c *gin.Context) {
 				high[market] = duration
 			}
 			avg[market] += duration
+			time.Sleep(time.Millisecond * 200)
+			util.Info(fmt.Sprintf(`test break 200 ms %s %d`, market, duration))
 		}
-		util.Info(`%s %d %d %d`, low[market], high[market], avg[market])
+		util.Info(fmt.Sprintf(`%s %d %d %d`, market, low[market], high[market], avg[market]))
 	}
 }
 
