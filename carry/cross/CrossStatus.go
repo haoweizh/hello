@@ -38,16 +38,16 @@ var doCross = false
 
 type contractMarket struct {
 	key, market      string
-	collateralsInU   float64 // 可用抵押币种价值总和（目前只有U）
-	contractValueInU float64 // 当前价格下开仓总额，以U计算
-	positions        map[string]*model.Position
+	collateralsInU   float64                    // 可用抵押币种价值总和（目前只有U）
+	contractValueInU float64                    // 当前价格下开仓总额，以U计算
+	positions        map[string]*model.Position // symbol/position
 }
 
 type spotMarket struct {
 	key, market     string
 	availableU      float64
 	accountValueInU float64
-	balances        map[string]*model.Balance
+	balances        map[string]*model.Balance // symbol/balance
 	collateral      *model.Collateral
 }
 
@@ -163,8 +163,8 @@ func GetCrossMarketValue(key string) (market string, inAllSpot, collateral, hold
 	if spotMarkets[key] != nil {
 		market = spotMarkets[key].market
 		inAllSpot = spotMarkets[key].accountValueInU
-		if market == model.Ftx && spotMarkets[key].balances != nil && spotMarkets[key].balances[`FTT`] != nil {
-			inAllSpot -= spotMarkets[key].balances[`FTT`].UsdValue
+		if market == model.Ftx && spotMarkets[key].balances != nil && spotMarkets[key].balances[`FTT/USD`] != nil {
+			inAllSpot -= spotMarkets[key].balances[`FTT/USD`].UsdValue
 		}
 		holdingSpot = spotMarkets[key].accountValueInU - spotMarkets[key].availableU
 	}

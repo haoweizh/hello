@@ -10,7 +10,6 @@ import (
 	"hello/carry/cross"
 	"hello/model"
 	"hello/util"
-	"math"
 	"math/rand"
 	"net/http"
 	"os"
@@ -26,13 +25,11 @@ func ParameterServe() {
 	router := gin.Default()
 	router.LoadHTMLGlob("templates/*")
 	router.GET("/", GetParameters)
-	router.GET("set", SetParameters)
 	router.GET(`refresh`, RefreshParameters)
 	router.GET(`pw`, GetCode)
 	router.GET(`cross`, crossPage)
 	router.GET(`hold`, holdPage)
 	router.GET(`tick`, tickPage)
-	router.GET(`test`, test)
 	router.GET(`debug`, debug)
 	router.GET(`wss`, WsPage)
 	var err error
@@ -81,48 +78,6 @@ func debug(c *gin.Context) {
 		util.DoDebug = false
 	}
 	c.String(http.StatusOK, fmt.Sprintf(`set do debug 0-false, !0-true %s`, doDebug))
-}
-
-func test(c *gin.Context) {
-	carryRows, _ := model.AppDB.Model(&model.Order{}).Select(`market,amount_type,order_side,sum(price*amount),date(order_time),refresh_type`).
-		Group(`market,order_side,date(order_time),amount_type,refresh_type`).Order(`date(order_time) desc`).Rows()
-	carryBackMsg := "account info:\n"
-	markets := model.GetMarkets()
-	userKeys := make([]string, 0)
-	for _, market := range markets {
-		accounts := model.AppConfig.GetAccounts(market)
-		for i, account := range accounts {
-			if i > 0 {
-				userKeys = append(userKeys, account.Key)
-			}
-			failNum := carry.GetCarryResult(account.Key)
-			collateral := carry.GetCollateral(account.Key)
-			if collateral != nil {
-				carryBackMsg += fmt.Sprintf("fails %s 可用保证金: %f 占用保证金: %f 保证金率: rate: %f\n",
-					account.Key, collateral.Available, collateral.Occupied, collateral.Rate)
-			}
-			carryBackMsg += fmt.Sprintf("current fails: %s %d\n", account.Key, failNum)
-		}
-	}
-	if carryRows != nil {
-		for carryRows.Next() {
-			var market, side, date, amountType, refreshType string
-			var value float64
-			_ = carryRows.Scan(&market, &amountType, &side, &value, &date, &refreshType)
-			if !strings.Contains(amountType, model.AppConfig.GetAccounts(model.Ftx)[0].Key) &&
-				!strings.Contains(amountType, model.AppConfig.GetAccounts(model.OKEX)[0].Key) &&
-				!strings.Contains(amountType, model.AppConfig.GetAccounts(model.Binance)[0].Key) &&
-				!strings.Contains(amountType, model.AppConfig.GetAccounts(model.Huobi)[0].Key) {
-				carryBackMsg += fmt.Sprintf("%s %s交易额 in USD: %s %s %f 类型：%s\n",
-					market, amountType, date, side, value, refreshType)
-			}
-		}
-		carryRows.Close()
-	}
-	for _, userKey := range userKeys {
-		carryBackMsg += userKey + "\n" + model.GetCarryInfo(userKey, ``)
-	}
-	c.String(http.StatusOK, carryBackMsg)
 }
 
 func holdPage(c *gin.Context) {
@@ -401,10 +356,11 @@ func GetParameters(c *gin.Context) {
 			var value, orderNum, failRate float64
 			_ = carryRows.Scan(&marketName, &amountType, &side, &value, &date, &refreshType, &orderNum)
 			key := fmt.Sprintf(`%s-%s-%s-%s-%s`, marketName, amountType, side, date, refreshType)
-			if (marketName == model.OKEX && amountType == model.AppConfig.GetAccounts(model.OKEX)[0].Key) ||
-				(marketName == model.Binance && amountType == model.AppConfig.GetAccounts(model.Binance)[0].Key) ||
-				(marketName == model.Huobi && amountType == model.AppConfig.GetAccounts(model.Huobi)[0].Key) ||
-				(marketName == model.Kucoin && amountType == model.AppConfig.GetAccounts(model.Kucoin)[0].Key) {
+			if (refreshType != model.FunctionTurtle && refreshType != model.FunctionGrid) &&
+				((marketName == model.OKEX && amountType == model.AppConfig.GetAccounts(model.OKEX)[0].Key) ||
+					(marketName == model.Binance && amountType == model.AppConfig.GetAccounts(model.Binance)[0].Key) ||
+					(marketName == model.Huobi && amountType == model.AppConfig.GetAccounts(model.Huobi)[0].Key) ||
+					(marketName == model.Kucoin && amountType == model.AppConfig.GetAccounts(model.Kucoin)[0].Key)) {
 				if orderNum > 0 {
 					failRate = failData[key] / orderNum
 				}
@@ -450,66 +406,5 @@ func RefreshParameters(c *gin.Context) {
 		carry.ResetChannels(market, channels)
 	}
 	api.InitMarketInfos()
-	c.String(http.StatusOK, model.AppConfig.ToString())
-}
-
-func SetParameters(c *gin.Context) {
-	handle := c.Query("handle")
-	openShortMargin := c.Query(`open`)
-	disStr := c.Query(`dis`)
-	var setting model.Setting
-	if len(handle) > 0 {
-		pw := c.Query(`pw`)
-		if code == `` {
-			c.String(http.StatusOK, `请先获取验证码`)
-			return
-		}
-		if pw != code {
-			c.String(http.StatusOK, `验证码错误`)
-			return
-		}
-		waitTime := (util.GetNowUnixMillion() - codeGenTime) / 1000
-		if waitTime > 300 {
-			c.String(http.StatusOK, fmt.Sprintf(`验证码有效时间300秒，已超%d - %d > 300000`,
-				util.GetNowUnixMillion(), codeGenTime))
-			return
-		}
-		code = ``
-	}
-	if handle != `` {
-		model.AppConfig.Handle = handle
-	}
-	if disStr != `` {
-		gridPriceDistance, _ := strconv.ParseFloat(disStr, 64)
-		model.AppDB.Model(&setting).Where("market= ? and function= ?",
-			model.Ftx, model.FunctionCarry).Updates(map[string]interface{}{`grid_price_distance`: gridPriceDistance})
-	}
-	if openShortMargin != `` {
-		openValue, err := strconv.ParseFloat(openShortMargin, 64)
-		if err == nil {
-			openValue = math.Abs(openValue)
-			closeValue := -1 * openValue
-			model.AppDB.Model(&setting).Where(`market=? and function=? and close_short_margin>-1`,
-				model.Ftx, model.FunctionCarry).Updates(map[string]interface{}{
-				`open_short_margin`: openValue, `close_short_margin`: closeValue})
-			model.AppDB.Model(&setting).Where(`market=? and function=? and close_short_margin=-1`,
-				model.Ftx, model.FunctionCarry).Updates(map[string]interface{}{`open_short_margin`: openValue})
-
-		}
-	}
-	channelSlot := c.Query("channelslot")
-	if len(strings.TrimSpace(channelSlot)) > 0 {
-		value, _ := strconv.ParseFloat(channelSlot, 64)
-		if value > 0 {
-			model.AppConfig.ChannelSlot = value
-		}
-	}
-	delay := c.Query("delay")
-	if len(strings.TrimSpace(delay)) > 0 {
-		strDelay := strings.Replace(delay, " ", "", -1)
-		model.AppConfig.Delay, _ = strconv.ParseFloat(strDelay, 64)
-	}
-	model.LoadSettings()
-	carry.MaintainMarketChan()
 	c.String(http.StatusOK, model.AppConfig.ToString())
 }
