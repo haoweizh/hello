@@ -30,6 +30,7 @@ func ParameterServe() {
 	router.GET(`cross`, crossPage)
 	router.GET(`hold`, holdPage)
 	router.GET(`tick`, tickPage)
+	router.GET(`test`, testSpeed)
 	router.GET(`debug`, debug)
 	router.GET(`wss`, WsPage)
 	var err error
@@ -78,6 +79,29 @@ func debug(c *gin.Context) {
 		util.DoDebug = false
 	}
 	c.String(http.StatusOK, fmt.Sprintf(`set do debug 0-false, !0-true %s`, doDebug))
+}
+
+func testSpeed(c *gin.Context) {
+	param := c.Query(`markets`)
+	markets := strings.Split(param, `,`)
+	low := make(map[string]int64)
+	high := make(map[string]int64)
+	avg := make(map[string]int64)
+	for _, market := range markets {
+		for i := 0; i < 50; i++ {
+			before := util.GetNowUnixMillion()
+			api.GetMarketInfos(market)
+			duration := util.GetNowUnixMillion() - before
+			if low[market] == 0 || low[market] > duration {
+				low[market] = duration
+			}
+			if high[market] < duration {
+				high[market] = duration
+			}
+			avg[market] += duration
+		}
+		util.Info(`%s %d %d %d`, low[market], high[market], avg[market])
+	}
 }
 
 func holdPage(c *gin.Context) {
