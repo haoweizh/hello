@@ -144,13 +144,13 @@ func handleTickerFtx(markets *model.Markets, response *simplejson.Json) {
 			if handler != nil {
 				setting := model.GetSetting(function, model.Ftx, symbol)
 				if setting != nil {
-					if setting.Function == model.FunctionCross {
-						success, usdtBidAsk := markets.GetBidAsk("USDT/USD", model.Ftx)
-						if success {
-							bidAsk.Asks[0].Price /= usdtBidAsk.Asks[0].Price
-							bidAsk.Bids[0].Price /= usdtBidAsk.Asks[0].Price
-						}
-					}
+					//if setting.Function == model.FunctionCross {
+					//	success, usdtBidAsk := markets.GetBidAsk("USDT/USD", model.Ftx)
+					//	if success {
+					//		bidAsk.Asks[0].Price /= usdtBidAsk.Asks[0].Price
+					//		bidAsk.Bids[0].Price /= usdtBidAsk.Asks[0].Price
+					//	}
+					//}
 					go handler(setting, bidAsk)
 				}
 			}
@@ -226,13 +226,13 @@ func handleDepthFtx(markets *model.Markets, response *simplejson.Json) {
 				if handler != nil {
 					setting := model.GetSetting(function, model.Ftx, symbol)
 					if setting != nil {
-						if setting.Function == model.FunctionCross {
-							success, usdtBidAsk := markets.GetBidAsk("USDT/USD", model.Ftx)
-							if success {
-								bidAsk.Asks[0].Price /= usdtBidAsk.Asks[0].Price
-								bidAsk.Bids[0].Price /= usdtBidAsk.Asks[0].Price
-							}
-						}
+						//if setting.Function == model.FunctionCross {
+						//	success, usdtBidAsk := markets.GetBidAsk("USDT/USD", model.Ftx)
+						//	if success {
+						//		bidAsk.Asks[0].Price /= usdtBidAsk.Asks[0].Price
+						//		bidAsk.Bids[0].Price /= usdtBidAsk.Asks[0].Price
+						//	}
+						//}
 						go handler(setting, bidAsk)
 					}
 				}
