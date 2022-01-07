@@ -299,10 +299,13 @@ func makeEqual(coin string, statuses []*CarryStatus) (isEqual bool, msg string) 
 	if math.Abs(holdingInU) < 10 {
 		isEqual = true
 		if time.Now().Minute()%5 == 0 {
+			util.Notice(fmt.Sprintf(`clear holding every 5mins %s %f %f %f`, coin, holding, price, holdingInU))
 			for _, status := range statuses {
 				go api.CancelOrders(status.account.Key, status.account.Secret, status.market, status.symbol)
 			}
 		}
+	} else {
+		util.Notice(fmt.Sprintf(`holding %s %f price %f, in u: %f`, coin, holding, price, holdingInU))
 	}
 	if holdingInU > 10 {
 		orderSide = model.OrderSideSell
