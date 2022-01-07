@@ -26,7 +26,7 @@ func checkSetCrossing(value bool) (before bool) {
 
 func createContractMarket(key, secret, market string) (cm *contractMarket) {
 	cm = &contractMarket{key: key, market: market}
-	success, positions, usdInFuture := api.GetPositions(key, secret, market)
+	success, positions, accountValue, availableU := api.GetPositions(key, secret, market)
 	if success {
 		cm.positions = make(map[string]*model.Position)
 		for _, position := range positions {
@@ -34,7 +34,8 @@ func createContractMarket(key, secret, market string) (cm *contractMarket) {
 			// 只考虑USD(T)交易
 			cm.contractValueInU += position.EntryPrice * math.Abs(position.Free)
 		}
-		cm.collateralsInU = usdInFuture
+		cm.accountValueInU = accountValue
+		cm.collateralsAvailable = availableU
 	}
 	contractMarkets[key] = cm
 	return
@@ -81,19 +82,14 @@ func createFromPosition(account *model.Account, setting *model.Setting, valueLim
 		return nil, false
 	}
 	price := ticks.Asks[0].Price
-	availableU := math.Min(contractMarkets[key].collateralsInU/5, openValueLimit)
-	if setting.Market == model.OKEX || setting.Market == model.Ftx {
-		if spotMarkets[key] == nil {
-			availableU = 0
-		}
-		availableU = math.Min(availableU, spotMarkets[key].availableU)
-	}
+	limitAmount := math.Min(contractMarkets[key].accountValueInU/5, math.Min(contractMarkets[key].collateralsAvailable, openValueLimit)) / price
+	availableAmount := contractMarkets[key].collateralsAvailable / price
 	carryStatus = &CarryStatus{isSpot: false, market: setting.Market, symbol: setting.Symbol, account: account,
 		setting:       setting,
-		LimitSell:     availableU / price,
-		LimitBuy:      availableU / price,
-		AvailableSell: 5 * availableU / price,
-		AvailableBuy:  5 * availableU / price,
+		LimitSell:     limitAmount,
+		LimitBuy:      limitAmount,
+		AvailableSell: availableAmount,
+		AvailableBuy:  availableAmount,
 		TradeLineBuy:  setting.OpenShortMargin, TradeLineSell: setting.CloseShortMargin,
 	}
 	if setting.Market == model.Gate {
@@ -110,10 +106,10 @@ func createFromPosition(account *model.Account, setting *model.Setting, valueLim
 	if contractMarkets[key].positions[setting.Symbol] != nil {
 		carryStatus.Holding = contractMarkets[key].positions[setting.Symbol].Free
 		valueInUsd = math.Abs(carryStatus.Holding) * price
-		carryStatus.RateInAll = valueInUsd / contractMarkets[key].collateralsInU
+		carryStatus.RateInAll = valueInUsd / contractMarkets[key].accountValueInU
 	}
-	if contractMarkets[key].contractValueInU/contractMarkets[key].collateralsInU > 3 || valueInUsd > valueLimit ||
-		valueInUsd/contractMarkets[key].collateralsInU > 0.5 {
+	if contractMarkets[key].contractValueInU/contractMarkets[key].accountValueInU > 3 || valueInUsd > valueLimit ||
+		valueInUsd/contractMarkets[key].accountValueInU > 0.5 {
 		//util.Notice(fmt.Sprintf(`杠杆较高，停止开仓 %s %f %f %f %f`,
 		//	key, contractMarkets[key].contractValueInU, contractMarkets[key].collateralsInU, valueInUsd, valueLimit))
 		doRevert = true
@@ -533,10 +529,13 @@ func initLimitBuyAndSell(status *CarryStatus, setting *model.Setting, price floa
 		if contractMarkets[status.account.Key] == nil {
 			return
 		}
-		status.LimitSell = math.Min(
-			math.Min(contractMarkets[status.account.Key].collateralsInU/5, openValueLimit)/price, status.LimitSell)
-		status.LimitBuy = math.Min(
-			math.Min(contractMarkets[status.account.Key].collateralsInU/5, openValueLimit)/price, status.LimitBuy)
+		limitAmount := math.Min(contractMarkets[status.account.Key].accountValueInU/5,
+			math.Min(contractMarkets[status.account.Key].collateralsAvailable, openValueLimit)) / price
+		availableAmount := contractMarkets[status.account.Key].collateralsAvailable / price
+		status.LimitSell = limitAmount
+		status.LimitBuy = limitAmount
+		status.AvailableSell = availableAmount
+		status.AvailableBuy = availableAmount
 	}
 }
 
@@ -597,11 +596,11 @@ func placeStatus(status *CarryStatus, price float64, amount float64) {
 		}
 		sm.availableU -= amount * price
 		if status.market == model.Ftx {
-			contractMarkets[status.account.Key].collateralsInU -= amount * price
+			contractMarkets[status.account.Key].collateralsAvailable -= amount * price
 		} else if status.market == model.OKEX {
 			sm.collateral.Available -= amount * price
 			//sm.collateral.Occupied += amount * price
-			contractMarkets[status.account.Key].collateralsInU -= amount * price
+			contractMarkets[status.account.Key].collateralsAvailable -= amount * price
 		}
 	} else {
 		cm := contractMarkets[status.account.Key]
@@ -615,7 +614,7 @@ func placeStatus(status *CarryStatus, price float64, amount float64) {
 			position.EntryPrice = price
 		}
 		changeU := (originFreeAbs - math.Abs(position.Free)) * price
-		cm.collateralsInU += changeU * 0.2
+		cm.collateralsAvailable += changeU * 0.2
 		cm.contractValueInU += changeU
 		if status.market == model.Ftx {
 			spotMarkets[status.account.Key].availableU += changeU * 0.2

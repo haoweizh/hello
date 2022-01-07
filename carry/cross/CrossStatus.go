@@ -37,10 +37,11 @@ var crossing bool
 var doCross = false
 
 type contractMarket struct {
-	key, market      string
-	collateralsInU   float64                    // 可用抵押币种价值总和（目前只有U）
-	contractValueInU float64                    // 当前价格下开仓总额，以U计算
-	positions        map[string]*model.Position // symbol/position
+	key, market          string
+	collateralsAvailable float64                    // 可用保证金U数
+	contractValueInU     float64                    // 当前价格下开仓总额，以U计算
+	accountValueInU      float64                    // 期货权益InU
+	positions            map[string]*model.Position // symbol/position
 }
 
 type spotMarket struct {
@@ -159,7 +160,7 @@ func GetHoldings(accounts map[string]*model.Account) (holding [][]interface{}) {
 	return
 }
 
-func GetCrossMarketValue(key string) (market string, inAllSpot, collateral, holdingSpot, holdingFuture, unRealizedPnl float64) {
+func GetCrossMarketValue(key string) (market string, inAllSpot, contractAccountValue, holdingSpot, holdingFuture, unRealizedPnl float64) {
 	if spotMarkets[key] != nil {
 		market = spotMarkets[key].market
 		inAllSpot = spotMarkets[key].accountValueInU
@@ -172,7 +173,7 @@ func GetCrossMarketValue(key string) (market string, inAllSpot, collateral, hold
 		if market == `` {
 			market = contractMarkets[key].market
 		}
-		collateral = contractMarkets[key].collateralsInU
+		contractAccountValue = contractMarkets[key].accountValueInU
 		for _, position := range contractMarkets[key].positions {
 			unRealizedPnl += position.ProfitUnreal
 		}

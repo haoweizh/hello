@@ -521,17 +521,19 @@ func getBalanceBinance(key string, secret string) (success bool, balances []*mod
 //	return value
 //}
 
-func getPositionsBinance(key, secret string) (success bool, positions []*model.Position, accountValue float64) {
+func getPositionsBinance(key, secret string) (success bool, positions []*model.Position, accountValue, availableU float64) {
 	responseBody := signedRequestBinance(key, secret, http.MethodGet, restBinanceFuture+"/fapi/v2/account", true, nil)
 	positionJson, err := util.NewJSON(responseBody)
 	if err != nil || positionJson == nil {
-		return false, nil, 0
+		return false, nil, 0, 0
 	}
 	success = positionJson.Get("canTrade").MustBool()
 	if success {
 		positions = make([]*model.Position, 0)
-		marginJson := positionJson.Get(`totalMarginBalance`).MustString()
-		accountValue, _ = strconv.ParseFloat(marginJson, 64)
+		totalJson := positionJson.Get(`totalWalletBalance`).MustString()
+		availableJson := positionJson.Get(`availableBalance`).MustString()
+		accountValue, _ = strconv.ParseFloat(totalJson, 64)
+		availableU, _ = strconv.ParseFloat(availableJson, 64)
 		data := positionJson.Get("positions").MustArray()
 		for _, item := range data {
 			position := &model.Position{Market: model.Binance, Ts: util.GetNowUnixMillion()}
@@ -555,7 +557,7 @@ func getPositionsBinance(key, secret string) (success bool, positions []*model.P
 			positions = append(positions, position)
 		}
 	}
-	return success, positions, accountValue
+	return success, positions, accountValue, availableU
 }
 
 func getFundingRateBinance(key, secret, symbol string) (fundingRate *model.FundingRate) {

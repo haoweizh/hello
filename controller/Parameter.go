@@ -120,22 +120,22 @@ func holdPage(c *gin.Context) {
 	inAll := []float64{0, 0, 0, 0, 0, 0}
 	for _, account := range queryAccounts {
 		if account != nil {
-			market, inAllSpot, collateral, holdingSpot, holdingFuture, unrealizedPnl := cross.GetCrossMarketValue(account.Key)
+			market, inAllSpot, contractAccountValue, holdingSpot, holdingFuture, unrealizedPnl := cross.GetCrossMarketValue(account.Key)
 			marketValues = append(marketValues, []string{market,
 				strconv.FormatFloat(inAllSpot, 'f', 0, 64),
-				strconv.FormatFloat(collateral+unrealizedPnl, 'f', 0, 64),
-				strconv.FormatFloat(collateral, 'f', 0, 64),
+				strconv.FormatFloat(contractAccountValue, 'f', 0, 64),
 				strconv.FormatFloat(holdingSpot, 'f', 0, 64),
-				strconv.FormatFloat(holdingFuture, 'f', 0, 64)})
+				strconv.FormatFloat(holdingFuture, 'f', 0, 64),
+				strconv.FormatFloat(unrealizedPnl, 'f', 0, 64)})
 			inAll[0] += inAllSpot
 			if market != model.Ftx && market != model.OKEX {
-				inAll[0] += collateral
+				inAll[0] += contractAccountValue
 			}
 			inAll[1] += inAllSpot
-			inAll[2] += collateral + unrealizedPnl
-			inAll[3] += collateral
-			inAll[4] += holdingSpot
-			inAll[5] += holdingFuture
+			inAll[2] += contractAccountValue
+			inAll[3] += holdingSpot
+			inAll[4] += holdingFuture
+			inAll[5] += unrealizedPnl
 		}
 	}
 	marketValues = append(marketValues, []string{strconv.FormatFloat(inAll[0], 'f', 0, 64),

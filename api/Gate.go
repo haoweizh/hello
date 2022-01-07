@@ -442,7 +442,7 @@ func getBalanceGate(key string, secret string) (success bool, balances []*model.
 	return true, balances
 }
 
-func getPositionsGate(key string, secret string) (success bool, positions []*model.Position, accountValue float64) {
+func getPositionsGate(key string, secret string) (success bool, positions []*model.Position, accountValue, available float64) {
 	client, ctx := getClientGate(key, secret)
 	account, _, accountErr := client.FuturesApi.ListFuturesAccounts(ctx, "usdt")
 	positionList, _, positionsErr := client.FuturesApi.ListPositions(ctx, "usdt")
@@ -458,6 +458,7 @@ func getPositionsGate(key string, secret string) (success bool, positions []*mod
 		return getPositionsGate(key, secret)
 	}
 	accountValue, _ = strconv.ParseFloat(account.Total, 64)
+	available, _ = strconv.ParseFloat(account.Available, 64)
 	positions = make([]*model.Position, 0)
 	for _, item := range positionList {
 		currency := strings.Split(item.Contract, "_")[0] + model.GetPerpTail(model.Gate)
@@ -471,7 +472,7 @@ func getPositionsGate(key string, secret string) (success bool, positions []*mod
 		position.ProfitUnreal, _ = strconv.ParseFloat(item.UnrealisedPnl, 64)
 		positions = append(positions, position)
 	}
-	return true, positions, accountValue
+	return true, positions, accountValue, available
 }
 
 func cancelOrderGate(key, secret, symbol, orderId string) (result bool) {

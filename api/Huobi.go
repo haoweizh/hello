@@ -519,7 +519,7 @@ func transferHuobi(key string, secret string, transferType string, amount float6
 	SignedRequestHuobi(key, secret, http.MethodPost, restHuobi, "/v2/account/transfer", postData)
 }
 
-func getPositionsHuobi(key string, secret string) (success bool, positions []*model.Position, accountValue float64) {
+func getPositionsHuobi(key string, secret string) (success bool, positions []*model.Position, accountValue, availableU float64) {
 	postData := make(map[string]interface{})
 	postData["margin_account"] = "USDT"
 	response := SignedRequestHuobi(key, secret, http.MethodPost, restHuobiFuture, "/linear-swap-api/v1/swap_cross_account_position_info", postData)
@@ -532,6 +532,7 @@ func getPositionsHuobi(key string, secret string) (success bool, positions []*mo
 	positions = make([]*model.Position, 0)
 	contracts := responseJson.Get(`data`).Get(`positions`).MustArray()
 	accountValue = responseJson.Get(`data`).Get(`margin_balance`).MustFloat64()
+	availableU = responseJson.Get(`data`).Get(`margin_available`).MustFloat64()
 	positionMap := make(map[string]*model.Position)
 	for _, contract := range contracts {
 		item := contract.(map[string]interface{})
@@ -565,7 +566,7 @@ func getPositionsHuobi(key string, secret string) (success bool, positions []*mo
 		positions = append(positions, position)
 	}
 	huobiPositionMap = positionMap
-	return true, positions, accountValue
+	return true, positions, accountValue, availableU
 }
 
 // 资产账户 getBalanceHuobi
