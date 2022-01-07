@@ -201,7 +201,7 @@ func clearCarry(key, secret, market string) {
 	settingCoins := model.GetSettingCoins(model.FunctionCarry, market)
 	resultBalance, balances, _, collateral := api.GetBalances(key, secret, market)
 	setCollateral(key, collateral)
-	resultPosition, positions, usdInFuture := api.GetPositions(key, secret, market)
+	resultPosition, positions, usdInFuture, _ := api.GetPositions(key, secret, market)
 	setPosBal(key, usdInFuture)
 	if !resultBalance || !resultPosition {
 		util.Notice(`%s %s fatal error: can not get balance %v position %v`, key, market, resultBalance, resultPosition)
