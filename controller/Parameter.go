@@ -139,10 +139,9 @@ func holdPage(c *gin.Context) {
 		}
 	}
 	marketValues = append(marketValues, []string{strconv.FormatFloat(inAll[0], 'f', 0, 64),
-		strconv.FormatFloat(inAll[1], 'f', 0, 64), strconv.FormatFloat(inAll[1], 'f', 0, 64),
-		strconv.FormatFloat(inAll[2], 'f', 0, 64), strconv.FormatFloat(inAll[3], 'f', 0, 64),
-		strconv.FormatFloat(inAll[4], 'f', 0, 64), strconv.FormatFloat(inAll[5], 'f', 0, 64),
-	})
+		strconv.FormatFloat(inAll[1], 'f', 0, 64), strconv.FormatFloat(inAll[2], 'f', 0, 64),
+		strconv.FormatFloat(inAll[3], 'f', 0, 64), strconv.FormatFloat(inAll[4], 'f', 0, 64),
+		strconv.FormatFloat(inAll[5], 'f', 0, 64)})
 	tradeInfo := make([][]string, 0)
 	duration, _ := time.ParseDuration(`-96h`)
 	timeBegin := time.Now().Add(duration)
