@@ -414,7 +414,7 @@ func cancelOrdersFtx(key, secret, symbol string) (result bool) {
 	postData := make(map[string]interface{})
 	postData[`market`] = symbol
 	response := SignedRequestFtx(key, secret, http.MethodDelete, `/orders`, nil, postData)
-	util.Notice(fmt.Sprintf(`[api cancelOrdersFtx]%s %s`, symbol, string(response)))
+	util.SocketInfo(fmt.Sprintf(`[api cancelOrdersFtx]%s %s`, symbol, string(response)))
 	orderJson, err := util.NewJSON(response)
 	if err == nil {
 		return orderJson.Get(`success`).MustBool()
