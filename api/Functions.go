@@ -817,12 +817,12 @@ func GetMarketInfos(market string) (marketInfo map[string]*model.MarketInfo) {
 }
 
 func filterCross(market, symbol string) bool {
-	// 币种对不上 REAL, DFL, QI, WSB
+	// 币种对不上 REAL, DFL, QI, WSB, TRADE
 	// 同所搬砖过滤币种 `AMPL`, `IOTA`
 	// 法币 `TRYB``BRZ``CAD``EUR`
 	// ftx预测`TRUMP``BOLSONARO`
 	filterCoin := []string{`REAL`, `DFL`, `QI`, `LINK`, `CUSDT`, `ETH`, `BRZ`, `FTT`, `BTC`, `USDT`,
-		`TRYB`, `AMPL`, `IOTA`, `CAD`, `EUR`, `GBP`, `TRUMP`, `BOLSONARO`, `WSB`}
+		`TRYB`, `AMPL`, `IOTA`, `CAD`, `EUR`, `GBP`, `TRUMP`, `BOLSONARO`, `WSB`, `TRADE`}
 	for _, coin := range filterCoin {
 		if strings.Index(symbol, coin) == 0 {
 			return true
