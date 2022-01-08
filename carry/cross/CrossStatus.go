@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-const lowestScore = -0.08
+const lowestScore = -0.009
 const lastOrderLength = 8
 const holdingLimitInU = 500000.0
 const openValueLimit = 10000.0
