@@ -152,8 +152,6 @@ func createFromBalance(account *model.Account, setting *model.Setting, valueLimi
 		spotMarkets[key].accountValueInU <= 0 || carryStatus.RateInAll > 0.5 {
 		doRevert = true
 	}
-	util.Notice(fmt.Sprintf(`test revert %s available %f total %f rate in all %f`,
-		key, spotMarkets[key].availableU, spotMarkets[key].accountValueInU, carryStatus.RateInAll))
 	if spotMarkets[key].balances[setting.Symbol] != nil &&
 		math.Abs(spotMarkets[key].balances[setting.Symbol].UsdValue) > valueLimit {
 		doRevert = true
@@ -217,7 +215,7 @@ func initStatus(account *model.Account, setting *model.Setting) (status *CarrySt
 	}
 	status.TradeLineBuy *= account.CarryRate
 	status.TradeLineSell *= account.CarryRate
-	if status.Holding > 0 && (doRevert || account.CarryClose) {
+	if status.Holding >= 0 && (doRevert || account.CarryClose) {
 		status.TradeLineBuy = 1
 	} else if status.Holding < 0 && (doRevert || account.CarryClose) {
 		status.TradeLineSell = 1
