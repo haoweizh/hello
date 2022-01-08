@@ -38,7 +38,8 @@ func createContractMarket(key, secret, market string) (cm *contractMarket) {
 		cm.collateralsAvailable = availableU
 	}
 	contractMarkets[key] = cm
-	util.Notice(fmt.Sprintf(`refresh contract market %s %v`, key, contractMarkets[key]))
+	util.Notice(fmt.Sprintf(`refresh contract market %s inall %f available u %f`,
+		key, cm.accountValueInU, cm.collateralsAvailable))
 	return
 }
 
@@ -67,7 +68,8 @@ func createSpotMarket(key, secret, market string) (sm *spotMarket) {
 		}
 	}
 	spotMarkets[key] = sm
-	util.Notice(fmt.Sprintf(`refresh spot market %s %v`, key, spotMarkets[key]))
+	util.Notice(fmt.Sprintf(`refresh spot market %s total: %f available U: %f`,
+		key, sm.accountValueInU, sm.availableU))
 	return
 }
 
