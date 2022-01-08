@@ -152,6 +152,8 @@ func createFromBalance(account *model.Account, setting *model.Setting, valueLimi
 		spotMarkets[key].accountValueInU <= 0 || carryStatus.RateInAll > 0.5 {
 		doRevert = true
 	}
+	util.Notice(`test revert %s available %f total %f rate in all %f`,
+		spotMarkets[key].availableU, spotMarkets[key].accountValueInU, carryStatus.RateInAll)
 	if spotMarkets[key].balances[setting.Symbol] != nil &&
 		math.Abs(spotMarkets[key].balances[setting.Symbol].UsdValue) > valueLimit {
 		doRevert = true
