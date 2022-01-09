@@ -485,7 +485,7 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarrySta
 			carryStatus.market, coinValue, carryStatusRelate.market, coinValueRelate,
 			fmt.Sprintf(`%.1f, %.1f`, 100*carryStatus.TradeLineBuy, 100*carryStatus.TradeLineSell),
 			fmt.Sprintf(`%.1f, %.1f`, 100*carryStatusRelate.TradeLineBuy, 100*carryStatusRelate.TradeLineSell),
-			fmt.Sprintf(`%.1f, %.1f`, 100*score, 100*scoreRelate),
+			fmt.Sprintf(`%.1f, %.1f`, 100*scoreRelate, 100*score),
 			fmt.Sprintf(`%.0e, %.0e`, carryStatus.LimitBuy, carryStatus.LimitSell),
 			fmt.Sprintf(`%.0e, %.0e`, carryStatusRelate.LimitBuy, carryStatusRelate.LimitSell),
 			fmt.Sprintf(`%v`, statusBuy != nil && statusSell != nil)})
@@ -495,7 +495,7 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarrySta
 			carryStatusRelate.market, coinValueRelate, carryStatus.market, coinValue,
 			fmt.Sprintf(`%.1f, %.1f`, 100*carryStatusRelate.TradeLineBuy, 100*carryStatusRelate.TradeLineSell),
 			fmt.Sprintf(`%.1f, %.1f`, 100*carryStatus.TradeLineBuy, 100*carryStatus.TradeLineSell),
-			fmt.Sprintf(`%.1f, %.1f`, 100*score, 100*scoreRelate),
+			fmt.Sprintf(`%.1f, %.1f`, 100*scoreRelate, 100*score),
 			fmt.Sprintf(`%.0e, %.0e`, carryStatusRelate.LimitBuy, carryStatusRelate.LimitSell),
 			fmt.Sprintf(`%.0e, %.0e`, carryStatus.LimitBuy, carryStatus.LimitSell),
 			fmt.Sprintf(`%v`, statusBuy != nil && statusSell != nil)})
