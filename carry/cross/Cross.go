@@ -457,16 +457,16 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarrySta
 		statusBuy = carryStatusRelate
 		priceSell = tick.Bids[0].Price
 		priceBuy = tickRelate.Asks[0].Price
-		askAmount = tick.Bids[0].Amount * 0.5
-		bidAmount = tickRelate.Asks[0].Amount * 0.5
+		askAmount = tick.Bids[0].Amount * 0.9
+		bidAmount = tickRelate.Asks[0].Amount * 0.9
 	}
 	if carryStatus.TradeLineBuy < scoreRelate && carryStatusRelate.TradeLineSell < scoreRelate {
 		statusSell = carryStatusRelate
 		statusBuy = carryStatus
 		priceSell = tickRelate.Bids[0].Price
 		priceBuy = tick.Asks[0].Price
-		askAmount = tickRelate.Bids[0].Amount * 0.5
-		bidAmount = tick.Bids[0].Amount * 0.5
+		askAmount = tickRelate.Bids[0].Amount * 0.9
+		bidAmount = tick.Bids[0].Amount * 0.9
 	}
 	// 为了同一对交易对冲不出现两次，对前后进行排序
 	mark = fmt.Sprintf(`%s-%s`, carryStatus.market, carryStatus.symbol)
