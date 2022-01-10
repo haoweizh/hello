@@ -38,6 +38,8 @@ func createContractMarket(key, secret, market string) (cm *contractMarket) {
 		cm.collateralsAvailable = availableU
 	}
 	contractMarkets[key] = cm
+	util.Notice(fmt.Sprintf(`refresh contract market %s inall %f available u %f`,
+		key, cm.accountValueInU, cm.collateralsAvailable))
 	return
 }
 
@@ -66,6 +68,8 @@ func createSpotMarket(key, secret, market string) (sm *spotMarket) {
 		}
 	}
 	spotMarkets[key] = sm
+	util.Notice(fmt.Sprintf(`refresh spot market %s total: %f available U: %f`,
+		key, sm.accountValueInU, sm.availableU))
 	return
 }
 
@@ -206,12 +210,12 @@ func initStatus(account *model.Account, setting *model.Setting) (status *CarrySt
 		status.TradeLineBuy = math.Max(setting.OpenShortMargin*(0.5+jump*status.RateInAll), lowestScore) - fundingRate
 		status.TradeLineSell = math.Max(setting.CloseShortMargin*(0.5-jump*status.RateInAll), lowestScore) + fundingRate
 	} else {
-		status.TradeLineBuy = math.Max(setting.OpenShortMargin*(0.5+jump*status.RateInAll), lowestScore) - fundingRate
-		status.TradeLineSell = math.Max(setting.CloseShortMargin*(0.5-jump*status.RateInAll), lowestScore) + fundingRate
+		status.TradeLineBuy = math.Max(setting.OpenShortMargin*(0.5-jump*status.RateInAll), lowestScore) - fundingRate
+		status.TradeLineSell = math.Max(setting.CloseShortMargin*(0.5+jump*status.RateInAll), lowestScore) + fundingRate
 	}
 	status.TradeLineBuy *= account.CarryRate
 	status.TradeLineSell *= account.CarryRate
-	if status.Holding > 0 && (doRevert || account.CarryClose) {
+	if status.Holding >= 0 && (doRevert || account.CarryClose) {
 		status.TradeLineBuy = 1
 	} else if status.Holding < 0 && (doRevert || account.CarryClose) {
 		status.TradeLineSell = 1
@@ -453,16 +457,16 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarrySta
 		statusBuy = carryStatusRelate
 		priceSell = tick.Bids[0].Price
 		priceBuy = tickRelate.Asks[0].Price
-		askAmount = tick.Bids[0].Amount * 0.5
-		bidAmount = tickRelate.Asks[0].Amount * 0.5
+		askAmount = tick.Bids[0].Amount * 0.9
+		bidAmount = tickRelate.Asks[0].Amount * 0.9
 	}
 	if carryStatus.TradeLineBuy < scoreRelate && carryStatusRelate.TradeLineSell < scoreRelate {
 		statusSell = carryStatusRelate
 		statusBuy = carryStatus
 		priceSell = tickRelate.Bids[0].Price
 		priceBuy = tick.Asks[0].Price
-		askAmount = tickRelate.Bids[0].Amount * 0.5
-		bidAmount = tick.Bids[0].Amount * 0.5
+		askAmount = tickRelate.Bids[0].Amount * 0.9
+		bidAmount = tick.Bids[0].Amount * 0.9
 	}
 	// 为了同一对交易对冲不出现两次，对前后进行排序
 	mark = fmt.Sprintf(`%s-%s`, carryStatus.market, carryStatus.symbol)
@@ -481,7 +485,7 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarrySta
 			carryStatus.market, coinValue, carryStatusRelate.market, coinValueRelate,
 			fmt.Sprintf(`%.1f, %.1f`, 100*carryStatus.TradeLineBuy, 100*carryStatus.TradeLineSell),
 			fmt.Sprintf(`%.1f, %.1f`, 100*carryStatusRelate.TradeLineBuy, 100*carryStatusRelate.TradeLineSell),
-			fmt.Sprintf(`%.1f, %.1f`, 100*score, 100*scoreRelate),
+			fmt.Sprintf(`%.1f, %.1f`, 100*scoreRelate, 100*score),
 			fmt.Sprintf(`%.0e, %.0e`, carryStatus.LimitBuy, carryStatus.LimitSell),
 			fmt.Sprintf(`%.0e, %.0e`, carryStatusRelate.LimitBuy, carryStatusRelate.LimitSell),
 			fmt.Sprintf(`%v`, statusBuy != nil && statusSell != nil)})
@@ -491,7 +495,7 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarrySta
 			carryStatusRelate.market, coinValueRelate, carryStatus.market, coinValue,
 			fmt.Sprintf(`%.1f, %.1f`, 100*carryStatusRelate.TradeLineBuy, 100*carryStatusRelate.TradeLineSell),
 			fmt.Sprintf(`%.1f, %.1f`, 100*carryStatus.TradeLineBuy, 100*carryStatus.TradeLineSell),
-			fmt.Sprintf(`%.1f, %.1f`, 100*score, 100*scoreRelate),
+			fmt.Sprintf(`%.1f, %.1f`, 100*scoreRelate, 100*score),
 			fmt.Sprintf(`%.0e, %.0e`, carryStatusRelate.LimitBuy, carryStatusRelate.LimitSell),
 			fmt.Sprintf(`%.0e, %.0e`, carryStatus.LimitBuy, carryStatus.LimitSell),
 			fmt.Sprintf(`%v`, statusBuy != nil && statusSell != nil)})
