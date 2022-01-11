@@ -7,15 +7,15 @@
 <body>
 <h4>跨所状态值表</h4>
 <table border="1" cellspacing="0">
-    <th></th>
-    <th>symbol</th>
-    <th></th>
-    <th>symbol</th>
-    <th>要求%</th>
-    <th>要求%</th>
-    <th>实际%</th>
-    <th>limit</th>
-    <th>limit</th>
+    <th>所</th>
+    <th>对</th>
+    <th colspan="2">限价</th>
+    <th colspan="2">限量</th>
+    <th>所</th>
+    <th>对</th>
+    <th colspan="2">限价</th>
+    <th colspan="2">限量</th>
+    <th colspan="2">实际</th>
     {{range $i, $value := $.cross}}
         <tr>
             {{$valid := index $value 9}}
@@ -30,6 +30,11 @@
                 <td bgcolor="#00FF00">{{index $value 7}}</td>
                 <td bgcolor="#00FF00">{{index $value 8}}</td>
                 <td bgcolor="#00FF00">{{index $value 9}}</td>
+                <td bgcolor="#00FF00">{{index $value 10}}</td>
+                <td bgcolor="#00FF00">{{index $value 11}}</td>
+                <td bgcolor="#00FF00">{{index $value 12}}</td>
+                <td bgcolor="#00FF00">{{index $value 13}}</td>
+                <td bgcolor="#00FF00">{{index $value 14}}</td>
             {{else}}
                 <td>{{index $value 0}}</td>
                 <td>{{index $value 1}}</td>
@@ -41,6 +46,11 @@
                 <td>{{index $value 7}}</td>
                 <td>{{index $value 8}}</td>
                 <td>{{index $value 9}}</td>
+                <td>{{index $value 10}}</td>
+                <td>{{index $value 11}}</td>
+                <td>{{index $value 12}}</td>
+                <td>{{index $value 13}}</td>
+                <td>{{index $value 14}}</td>
             {{end}}
         </tr>
     {{end}}
