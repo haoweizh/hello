@@ -22,8 +22,8 @@ var InsufficientCodeOKEX = map[string]bool{`51008`: true, `51119`: true, `51120`
 // market/symbol/bool经过人工确认可以cross的币种
 var validSymbol = map[string]map[string]bool{
 					model.Gate: {`AE_USDT`: true, `HC_USDT`: true, `REEF_PERP`: true, `REEF_USDT`: true},
-					model.OKEX: {`AE-USDT`: true, `HC-USDT`: true},
-					model.Ftx:  {`REEF/USD`: true, `REEF-PERP`: true}}
+					model.OKEX: {`AE-USDT`: true, `HC-USDT`: true, `AE-USDT-SWAP`: true, `HC-USDT-SWAP`: true, `ORBS-USDT`: true, `ORBS-USDT-SWAP`: true},
+					model.Ftx:  {`REEF/USD`: true, `REEF-PERP`: true, `ORBS-PERP`: true, `ORBS/USD`: true}}
 var carryFail = make(map[string]int64) // key fail num
 var carryStop = make(map[string]bool)
 var lastOrderIndex = make(map[string]map[string]int64)                           // market - symbol - index

@@ -824,7 +824,8 @@ func filterCross(market, symbol string) bool {
 	// 同所搬砖过滤币种 `AMPL`, `IOTA`
 	// 法币 `TRYB``BRZ``CAD``EUR`
 	// ftx预测`TRUMP``BOLSONARO`
-	filterCoin := []string{`REAL`, `DFL`, `QI`, `LINK`, `CUSDT`, `ETH`, `BRZ`, `FTT`, `BTC`, `USDT`,
+	// 平台币 `GT` `FTT` `BNB` `OKB`
+	filterCoin := []string{`REAL`, `DFL`, `QI`, `LINK`, `CUSDT`, `ETH`, `BRZ`, `BTC`, `USDT`,
 		`TRYB`, `AMPL`, `IOTA`, `CAD`, `EUR`, `GBP`, `TRUMP`, `BOLSONARO`, `WSB`, `TRADE`}
 	for _, coin := range filterCoin {
 		if strings.Index(symbol, coin) == 0 {
@@ -841,13 +842,23 @@ func filterCross(market, symbol string) bool {
 	switch market {
 	case model.Ftx:
 		switch symbol {
-		case `DEFI-PERP`, `PRIV-PERP`, `ALT-PERP`, `SHIT-PERP`, `MID-PERP`, `EXCH-PERP`, `DRGN-PERP`:
+		case `DEFI-PERP`, `PRIV-PERP`, `ALT-PERP`, `SHIT-PERP`, `MID-PERP`, `EXCH-PERP`, `DRGN-PERP`, `FTT/USD`:
 			return true
 		}
 	case model.Gate:
 		switch symbol {
 		// BTT价格异常
-		case `BTT_USDT`, `BTT_PERP`:
+		case `BTT_USDT`, `BTT_PERP`, `GT_USDT`, `GT_USD`:
+			return true
+		}
+	case model.OKEX:
+		switch symbol {
+		case `OKB-USDT`, `OBK-USD`:
+			return true
+		}
+	case model.Binance:
+		switch symbol {
+		case `BNBUSD`, `BNBUSDT`:
 			return true
 		}
 	}
