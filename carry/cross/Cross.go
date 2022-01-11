@@ -202,9 +202,9 @@ func initStatus(account *model.Account, setting *model.Setting) (status *CarrySt
 		}
 	}
 	setCarryStatus(setting.Coin, setting.Market, setting.Symbol, account.Key, status)
-	jump := 5.0
+	jump := 7.0
 	if status.isSpot {
-		jump = 10
+		jump = 12
 	}
 	if status.Holding > 0 {
 		status.TradeLineBuy = math.Max(setting.OpenShortMargin*(0.5+jump*status.RateInAll), lowestScore) - fundingRate

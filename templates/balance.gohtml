@@ -18,7 +18,7 @@
     <th colspan="2">实际</th>
     {{range $i, $value := $.cross}}
         <tr>
-            {{$valid := index $value 9}}
+            {{$valid := index $value 14}}
             {{if eq $valid "true"}}
                 <td bgcolor="#00FF00">{{index $value 0}}</td>
                 <td bgcolor="#00FF00">{{index $value 1}}</td>
