@@ -160,55 +160,35 @@ func holdPage(c *gin.Context) {
 			date = date[0:strings.Index(date, `T`)]
 			key := fmt.Sprintf(`%s-%s-%s-%s-%s`, marketName, amountType, side, date, refreshType)
 			for _, account := range queryAccounts {
-				if account != nil && account.Key == amountType && (marketName == model.OKEX || marketName == model.Binance ||
-					marketName == model.Huobi || marketName == model.Kucoin) {
+				if account != nil && account.Key == amountType {
 					failData[key] = orderNum
 				}
 			}
 		}
-		failRows, _ = model.AppDB.Model(model.Order{}).Select(`market,amount_type,order_side,date(order_time-interval '8 hour'),refresh_type,count(*)`).
-			Where(`status=?`, `fail`).Group(`market,order_side,date(order_time-interval '8 hour'),amount_type,refresh_type`).
-			Order(`date(order_time-interval '8 hour') desc`).Rows()
-		if failRows != nil {
-			for failRows.Next() {
-				var marketName, side, date, amountType, refreshType string
-				var orderNum float64
-				_ = failRows.Scan(&marketName, &amountType, &side, &date, &refreshType, &orderNum)
-				dates := strings.Split(date, `-`)
-				date = fmt.Sprintf(`%s-%s`, dates[1], dates[2])
-				date = date[0:strings.Index(date, `T`)]
-				key := fmt.Sprintf(`%s-%s-%s-%s-%s`, marketName, amountType, side, date, refreshType)
-				for _, account := range queryAccounts {
-					if account != nil && account.Key == amountType && (marketName == model.Ftx || marketName == model.Gate) {
-						failData[key] = orderNum
-					}
+	}
+	carryRows, _ := model.AppDB.Model(model.Order{}).Select(`market,amount_type,order_side,sum(price*abs(amount)),date(order_time),refresh_type,count(*)`).
+		Group(`market,order_side,date(order_time),amount_type,refresh_type`).Order(`date(order_time) desc`).Rows()
+	if carryRows != nil {
+		for carryRows.Next() {
+			var marketName, side, date, amountType, refreshType string
+			var value, orderNum, failRate float64
+			_ = carryRows.Scan(&marketName, &amountType, &side, &value, &date, &refreshType, &orderNum)
+			dates := strings.Split(date, `-`)
+			date = fmt.Sprintf(`%s-%s`, dates[1], dates[2])
+			date = date[0:strings.Index(date, `T`)]
+			key := fmt.Sprintf(`%s-%s-%s-%s-%s`, marketName, amountType, side, date, refreshType)
+			account := model.AppConfig.GetAccountFromKey(marketName, amountType)
+			if account != nil && model.AppConfig.GetAccounts(marketName)[index].Key == account.Key {
+				if orderNum > 0 {
+					failRate = failData[key] / orderNum
 				}
-			}
-			carryRows, _ := model.AppDB.Model(model.Order{}).Select(`market,amount_type,order_side,sum(price*abs(amount)),date(order_time),refresh_type,count(*)`).
-				Group(`market,order_side,date(order_time),amount_type,refresh_type`).Order(`date(order_time) desc`).Rows()
-			if carryRows != nil {
-				for carryRows.Next() {
-					var marketName, side, date, amountType, refreshType string
-					var value, orderNum, failRate float64
-					_ = carryRows.Scan(&marketName, &amountType, &side, &value, &date, &refreshType, &orderNum)
-					dates := strings.Split(date, `-`)
-					date = fmt.Sprintf(`%s-%s`, dates[1], dates[2])
-					date = date[0:strings.Index(date, `T`)]
-					key := fmt.Sprintf(`%s-%s-%s-%s-%s`, marketName, amountType, side, date, refreshType)
-					account := model.AppConfig.GetAccountFromKey(marketName, amountType)
-					if account != nil && model.AppConfig.GetAccounts(marketName)[index].Key == account.Key {
-						if orderNum > 0 {
-							failRate = failData[key] / orderNum
-						}
-						tradeInfo = append(tradeInfo, []string{marketName, date, side,
-							strconv.FormatFloat(value, 'f', 0, 64), refreshType,
-							strconv.FormatFloat(orderNum, 'f', 0, 64),
-							strconv.FormatFloat(failRate, 'f', 2, 64)})
-					}
-				}
-				carryRows.Close()
+				tradeInfo = append(tradeInfo, []string{marketName, date, side,
+					strconv.FormatFloat(value, 'f', 0, 64), refreshType,
+					strconv.FormatFloat(orderNum, 'f', 0, 64),
+					strconv.FormatFloat(failRate, 'f', 2, 64)})
 			}
 		}
+		carryRows.Close()
 	}
 	c.HTML(http.StatusOK, `hold.gohtml`, gin.H{
 		`marketValue`: marketValues, `trade`: tradeInfo, `holdings`: cross.GetHoldings(queryAccounts)})
