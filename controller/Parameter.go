@@ -195,34 +195,8 @@ func holdPage(c *gin.Context) {
 					date = fmt.Sprintf(`%s-%s`, dates[1], dates[2])
 					date = date[0:strings.Index(date, `T`)]
 					key := fmt.Sprintf(`%s-%s-%s-%s-%s`, marketName, amountType, side, date, refreshType)
-					if (marketName == model.OKEX && amountType == model.AppConfig.GetAccounts(model.OKEX)[0].Key) ||
-						(marketName == model.Binance && amountType == model.AppConfig.GetAccounts(model.Binance)[0].Key) ||
-						(marketName == model.Huobi && amountType == model.AppConfig.GetAccounts(model.Huobi)[0].Key) ||
-						(marketName == model.Kucoin && amountType == model.AppConfig.GetAccounts(model.Kucoin)[0].Key) {
-						if orderNum > 0 {
-							failRate = failData[key] / orderNum
-						}
-						tradeInfo = append(tradeInfo, []string{marketName, date, side,
-							strconv.FormatFloat(value, 'f', 0, 64), refreshType,
-							strconv.FormatFloat(orderNum, 'f', 0, 64),
-							strconv.FormatFloat(failRate, 'f', 2, 64)})
-					}
-				}
-				carryRows.Close()
-			}
-			carryRows, _ = model.AppDB.Model(model.Order{}).Select(`market,amount_type,order_side,sum(price*abs(amount)),date(order_time-interval '8 hour'),refresh_type,count(*)`).
-				Group(`market,order_side,date(order_time-interval '8 hour'),amount_type,refresh_type`).Order(`date(order_time-interval '8 hour') desc`).Rows()
-			if carryRows != nil {
-				for carryRows.Next() {
-					var marketName, side, date, amountType, refreshType string
-					var value, orderNum, failRate float64
-					_ = carryRows.Scan(&marketName, &amountType, &side, &value, &date, &refreshType, &orderNum)
-					dates := strings.Split(date, `-`)
-					date = fmt.Sprintf(`%s-%s`, dates[1], dates[2])
-					date = date[0:strings.Index(date, `T`)]
-					key := fmt.Sprintf(`%s-%s-%s-%s-%s`, marketName, amountType, side, date, refreshType)
-					if (marketName == model.Ftx && amountType == model.AppConfig.GetAccounts(model.Ftx)[0].Key) ||
-						(marketName == model.Gate && amountType == model.AppConfig.GetAccounts(model.Gate)[0].Key) {
+					account := model.AppConfig.GetAccountFromKey(marketName, amountType)
+					if account != nil && model.AppConfig.GetAccounts(marketName)[index].Key == account.Key {
 						if orderNum > 0 {
 							failRate = failData[key] / orderNum
 						}

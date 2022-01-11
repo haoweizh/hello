@@ -122,6 +122,9 @@ func (config *Config) GetAccountFromKey(market, key string) (account *Account) {
 		return nil
 	}
 	for _, item := range marketAccounts[market] {
+		if item == nil {
+			return nil
+		}
 		if item.Key == key {
 			return item
 		}
