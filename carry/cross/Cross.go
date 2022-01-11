@@ -508,8 +508,8 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarrySta
 			fmt.Sprintf(`%.1f`, 100*carryStatus.TradeLineSell),
 			fmt.Sprintf(`%.0e`, carryStatus.LimitBuy),
 			fmt.Sprintf(`%.0e`, carryStatus.LimitSell),
-			fmt.Sprintf(`%.1f`, 100*scoreRelate),
 			fmt.Sprintf(`%.1f`, 100*score),
+			fmt.Sprintf(`%.1f`, 100*scoreRelate),
 			fmt.Sprintf(`%v`, statusBuy != nil && statusSell != nil)})
 	}
 	if statusBuy == nil || statusSell == nil {
