@@ -115,7 +115,13 @@ func GetHoldings(accounts map[string]*model.Account) (holding [][]interface{}) {
 			for _, balance := range spotMarkets[account.Key].balances {
 				if balance != nil && balance.Amount != 0 {
 					symbol := balance.Coin + model.GetSpotTail(balance.Market)
-					holding = append(holding, []interface{}{balance.Market, balance.Coin, symbol, balance.Amount, balance.UsdValue})
+					valid := false
+					setting := model.GetSetting(model.FunctionCross, balance.Market, symbol)
+					if setting != nil {
+						valid = setting.Valid
+					}
+					holding = append(holding, []interface{}{balance.Market, balance.Coin, symbol, balance.Amount,
+						balance.UsdValue, valid})
 					coinHold[balance.Coin] += balance.Amount
 					if coinPrice[balance.Coin] == 0 {
 						tickGet, tick := model.AppMarkets.GetBidAsk(symbol, balance.Market)
@@ -128,15 +134,22 @@ func GetHoldings(accounts map[string]*model.Account) (holding [][]interface{}) {
 		}
 		if contractMarkets[account.Key] != nil && contractMarkets[account.Key].positions != nil {
 			for _, position := range contractMarkets[account.Key].positions {
+				valid := false
+				setting := model.GetSetting(model.FunctionCross, position.Market, position.Currency)
+				if setting != nil {
+					valid = setting.Valid
+				}
 				tickGet, tick := model.AppMarkets.GetBidAsk(position.Currency, position.Market)
 				if position != nil && position.Free != 0 {
 					coin := model.GetCoin(position.Market, position.Currency)
 					if tickGet {
-						holding = append(holding, []interface{}{position.Market, coin, position.Currency, position.Free, tick.Bids[0].Price * position.Free})
+						holding = append(holding, []interface{}{position.Market, coin, position.Currency,
+							position.Free, tick.Bids[0].Price * position.Free, valid})
 						coinHold[coin] += position.Free
 						coinPrice[coin] = tick.Bids[0].Price
 					} else {
-						holding = append(holding, []interface{}{position.Market, coin, position.Currency, position.Free, 0.0})
+						holding = append(holding, []interface{}{position.Market, coin, position.Currency,
+							position.Free, 0.0, valid})
 					}
 				}
 			}
