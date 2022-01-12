@@ -887,15 +887,6 @@ func InitCrossMarketInfos() {
 			for _, info := range infos {
 				setting := &model.Setting{Valid: true, Function: model.FunctionCross, Market: info.Market,
 					Symbol: info.Name, Coin: coin, OpenShortMargin: 0.015, CloseShortMargin: 0.015}
-				var oldSetting *model.Setting
-				model.AppDB.Where(
-					`function=? and market=? and symbol=? and coin=?`,
-					setting.Function, setting.Market, setting.Symbol, setting.Coin).Find(oldSetting)
-				if oldSetting != nil {
-					util.Notice(fmt.Sprintf(`setting exist %s %s %s %s`,
-						setting.Function, setting.Market, setting.Symbol, setting.Coin))
-					continue
-				}
 				if filterCross(setting.Market, setting.Symbol) {
 					continue
 				}
