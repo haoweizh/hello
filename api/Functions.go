@@ -825,7 +825,7 @@ func filterCross(market, symbol string) bool {
 	// 法币 `TRYB``BRZ``CAD``EUR`
 	// ftx预测`TRUMP``BOLSONARO`
 	// 平台币 `GT` `FTT` `BNB` `OKB`
-	filterCoin := []string{`REAL`, `DFL`, `QI`, `LINK`, `CUSDT`, `ETH`, `BRZ`, `BTC`, `USDT`,
+	filterCoin := []string{`REEF`, `REAL`, `DFL`, `QI`, `LINK`, `CUSDT`, `ETH`, `BRZ`, `BTC`, `USDT`,
 		`TRYB`, `AMPL`, `IOTA`, `CAD`, `EUR`, `GBP`, `TRUMP`, `BOLSONARO`, `WSB`, `TRADE`}
 	for _, coin := range filterCoin {
 		if strings.Index(symbol, coin) == 0 {
@@ -887,6 +887,15 @@ func InitCrossMarketInfos() {
 			for _, info := range infos {
 				setting := &model.Setting{Valid: true, Function: model.FunctionCross, Market: info.Market,
 					Symbol: info.Name, Coin: coin, OpenShortMargin: 0.015, CloseShortMargin: 0.015}
+				var oldSetting *model.Setting
+				model.AppDB.Where(
+					`function=? and market=? and symbol=? and coin=?`,
+					setting.Function, setting.Market, setting.Symbol, setting.Coin).Find(oldSetting)
+				if oldSetting == nil {
+					util.Notice(fmt.Sprintf(`setting exist %s %s %s %s`,
+						setting.Function, setting.Market, setting.Symbol, setting.Coin))
+					continue
+				}
 				if filterCross(setting.Market, setting.Symbol) {
 					continue
 				}

@@ -30,6 +30,7 @@ func ParameterServe() {
 	router.GET(`cross`, crossPage)
 	router.GET(`hold`, holdPage)
 	router.GET(`tick`, tickPage)
+	router.GET(`cross_refresh`, crossRefresh)
 	router.GET(`test`, testSpeed)
 	router.GET(`debug`, debug)
 	router.GET(`wss`, WsPage)
@@ -192,6 +193,11 @@ func holdPage(c *gin.Context) {
 	}
 	c.HTML(http.StatusOK, `hold.gohtml`, gin.H{
 		`marketValue`: marketValues, `trade`: tradeInfo, `holdings`: cross.GetHoldings(queryAccounts)})
+}
+
+func crossRefresh(c *gin.Context) {
+	api.InitCrossMarketInfos()
+	c.String(http.StatusOK, `init cross markets done`)
 }
 
 func tickPage(c *gin.Context) {
