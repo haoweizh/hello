@@ -11,10 +11,10 @@ type CarryHandler func(setting *Setting, bidAsk *BidAsk)
 
 type Setting struct {
 	Valid            bool
-	Function         string `gorm:"unique_index:function_market_symbol"`
-	Market           string `gorm:"unique_index:function_market_symbol"`
+	Function         string `gorm:"index:function_market_symbol,unique"`
+	Market           string `gorm:"index:function_market_symbol,unique"`
 	MarketRelated    string
-	Symbol           string `gorm:"unique_index:function_market_symbol"`
+	Symbol           string `gorm:"index:function_market_symbol,unique"`
 	Coin             string
 	SymbolRelated    string
 	PriceX           float64
