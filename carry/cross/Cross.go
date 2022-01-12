@@ -217,7 +217,7 @@ func initStatus(account *model.Account, setting *model.Setting) (status *CarrySt
 	status.TradeLineSell *= account.CarryRate
 	if status.Holding >= 0 && (doRevert || account.CarryClose) {
 		status.TradeLineBuy = 1
-	} else if status.Holding < 0 && (doRevert || account.CarryClose) {
+	} else if status.Holding <= 0 && (doRevert || account.CarryClose) {
 		status.TradeLineSell = 1
 	}
 	return
