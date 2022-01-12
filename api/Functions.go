@@ -891,7 +891,7 @@ func InitCrossMarketInfos() {
 				model.AppDB.Where(
 					`function=? and market=? and symbol=? and coin=?`,
 					setting.Function, setting.Market, setting.Symbol, setting.Coin).Find(oldSetting)
-				if oldSetting == nil {
+				if oldSetting != nil {
 					util.Notice(fmt.Sprintf(`setting exist %s %s %s %s`,
 						setting.Function, setting.Market, setting.Symbol, setting.Coin))
 					continue
