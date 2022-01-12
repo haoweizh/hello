@@ -180,7 +180,7 @@ func holdPage(c *gin.Context) {
 			account := model.AppConfig.GetAccountFromKey(marketName, amountType)
 			if account != nil && model.AppConfig.GetAccounts(marketName)[index].Key == account.Key {
 				if orderNum > 0 {
-					failRate = failData[key] / orderNum
+					failRate = 100 * failData[key] / orderNum
 				}
 				tradeInfo = append(tradeInfo, []string{marketName, date, side,
 					strconv.FormatFloat(value, 'f', 0, 64), refreshType,

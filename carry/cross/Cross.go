@@ -481,8 +481,7 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarrySta
 	}
 	if mark < markRelate {
 		mark = fmt.Sprintf(`%s|%s`, mark, markRelate)
-		model.SetMonitorInfo(strconv.Itoa(index), `cross`, mark, []string{
-			carryStatus.market, coinValue,
+		model.SetMonitorInfo(strconv.Itoa(index), `cross`, mark, []string{coin, carryStatus.market, coinValue,
 			fmt.Sprintf(`%.1f`, 100*carryStatus.TradeLineBuy),
 			fmt.Sprintf(`%.1f`, 100*carryStatus.TradeLineSell),
 			fmt.Sprintf(`%.0e`, carryStatus.LimitBuy),
@@ -497,8 +496,7 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarrySta
 			fmt.Sprintf(`%v`, statusBuy != nil && statusSell != nil)})
 	} else {
 		mark = fmt.Sprintf(`%s|%s`, markRelate, mark)
-		model.SetMonitorInfo(strconv.Itoa(index), `cross`, mark, []string{
-			carryStatusRelate.market, coinValueRelate,
+		model.SetMonitorInfo(strconv.Itoa(index), `cross`, mark, []string{coin, carryStatusRelate.market, coinValueRelate,
 			fmt.Sprintf(`%.1f`, 100*carryStatusRelate.TradeLineBuy),
 			fmt.Sprintf(`%.1f`, 100*carryStatusRelate.TradeLineSell),
 			fmt.Sprintf(`%.0e`, carryStatusRelate.LimitBuy),
