@@ -172,7 +172,7 @@ func handleMsgOKEX(channel chan *simplejson.Json, instrument string) {
 			bidAsk = handleBooksOKEX(instrument, data)
 			success = true
 		}
-		if bidAsk == nil || !success {
+		if bidAsk == nil || bidAsk.Bids == nil || bidAsk.Asks == nil || bidAsk.Bids.Len() == 0 || bidAsk.Asks.Len() == 0 || !success {
 			continue
 		}
 		//将最佳买一卖一的数量转换为币种的真实数量
