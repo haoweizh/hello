@@ -255,7 +255,10 @@ func ClearCross() {
 						}
 						equalStatuses[j] = initStatus(account, setting)
 					}
-					isEqual, _ = makeEqual(coin, equalStatuses)
+					coinEqual, _ := makeEqual(coin, equalStatuses)
+					if coinEqual == false {
+						isEqual = false
+					}
 				}
 			}
 			if isEqual {
