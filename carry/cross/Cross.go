@@ -312,7 +312,7 @@ func makeEqual(coin string, statuses []*CarryStatus) (isEqual bool, msg string) 
 	}
 	if holdingInU > 10 {
 		orderSide = model.OrderSideSell
-		sort.Sort(bids)
+		sort.Sort(sort.Reverse(bids))
 		util.Notice(fmt.Sprintf(`check to make equal buy %v`, asks))
 		for i := 0; i < len(bids); i++ {
 			status := bidStatus[fmt.Sprintf(`%s_%s`, bids[i].Market, bids[i].Symbol)]
@@ -339,7 +339,7 @@ func makeEqual(coin string, statuses []*CarryStatus) (isEqual bool, msg string) 
 	}
 	if holdingInU < -10 {
 		orderSide = model.OrderSideBuy
-		sort.Sort(sort.Reverse(asks))
+		sort.Sort(asks)
 		util.Notice(fmt.Sprintf(`check to make equal buy %v`, asks))
 		for i := 0; i < len(asks); i++ {
 			status := askStatus[fmt.Sprintf(`%s_%s`, asks[i].Market, asks[i].Symbol)]
