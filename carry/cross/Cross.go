@@ -312,9 +312,10 @@ func makeEqual(coin string, statuses []*CarryStatus) (isEqual bool, msg string) 
 	}
 	if holdingInU > 10 {
 		orderSide = model.OrderSideSell
-		sort.Sort(sort.Reverse(bids))
-		for _, bid := range bids {
-			status := bidStatus[fmt.Sprintf(`%s_%s`, bid.Market, bid.Symbol)]
+		sort.Sort(bids)
+		util.Notice(fmt.Sprintf(`check to make equal buy %v`, asks))
+		for i := 0; i < len(bids); i++ {
+			status := bidStatus[fmt.Sprintf(`%s_%s`, bids[i].Market, bids[i].Symbol)]
 			if status == nil {
 				util.Notice(fmt.Sprintf(`no status when holding in U: %f`, holdingInU))
 				continue
@@ -325,12 +326,12 @@ func makeEqual(coin string, statuses []*CarryStatus) (isEqual bool, msg string) 
 			}
 			if math.IsNaN(status.AvailableSell) || status.AvailableSell > holding {
 				equalStatus = status
-				price = bid.Price
+				price = bids[i].Price
 			} else if !math.IsNaN(status.AvailableSell) {
-				checkAmount := model.GetAmountInMarket(status.market, status.symbol, status.AvailableSell, bid.Price)
+				checkAmount := model.GetAmountInMarket(status.market, status.symbol, status.AvailableSell, bids[i].Price)
 				if checkAmount > 0 {
 					equalStatus = status
-					price = bid.Price
+					price = bids[i].Price
 					holding = status.AvailableSell
 				}
 			}
@@ -338,9 +339,10 @@ func makeEqual(coin string, statuses []*CarryStatus) (isEqual bool, msg string) 
 	}
 	if holdingInU < -10 {
 		orderSide = model.OrderSideBuy
-		sort.Sort(asks)
-		for _, ask := range asks {
-			status := askStatus[fmt.Sprintf(`%s_%s`, ask.Market, ask.Symbol)]
+		sort.Sort(sort.Reverse(asks))
+		util.Notice(fmt.Sprintf(`check to make equal buy %v`, asks))
+		for i := 0; i < len(asks); i++ {
+			status := askStatus[fmt.Sprintf(`%s_%s`, asks[i].Market, asks[i].Symbol)]
 			if status == nil {
 				util.Notice(fmt.Sprintf(`no status when holding in U: %f`, holdingInU))
 				continue
@@ -351,12 +353,12 @@ func makeEqual(coin string, statuses []*CarryStatus) (isEqual bool, msg string) 
 			}
 			if math.IsNaN(status.AvailableBuy) || status.AvailableBuy > math.Abs(holding) {
 				equalStatus = status
-				price = ask.Price
+				price = asks[i].Price
 			} else if !math.IsNaN(status.AvailableBuy) {
-				checkAmount := model.GetAmountInMarket(status.market, status.symbol, status.AvailableBuy, ask.Price)
+				checkAmount := model.GetAmountInMarket(status.market, status.symbol, status.AvailableBuy, asks[i].Price)
 				if checkAmount > 0 {
 					equalStatus = status
-					price = ask.Price
+					price = asks[i].Price
 					holding = status.AvailableBuy
 				}
 			}
@@ -369,6 +371,8 @@ func makeEqual(coin string, statuses []*CarryStatus) (isEqual bool, msg string) 
 		}
 		checkAmount := model.GetAmountInMarket(equalStatus.market, equalStatus.symbol, amount, price)
 		if checkAmount > 0 {
+			util.Notice(fmt.Sprintf(`try to equal %s %s at %f amount %f`,
+				equalStatus.market, equalStatus.symbol, price, amount))
 			api.PlaceOrder(equalStatus.account.Key, equalStatus.account.Secret, orderSide, model.OrderTypeLimit,
 				equalStatus.market, equalStatus.symbol, equalStatus.symbol, ``, model.FunctionComplement,
 				price, price, amount, true, true, nil, nil)

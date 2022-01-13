@@ -201,9 +201,8 @@ func crossRefresh(c *gin.Context) {
 }
 
 func tickPage(c *gin.Context) {
-	priceDis, tickInfo, recentTickInfo := model.AppMetric.ToArray()
-	c.HTML(http.StatusOK, `tick.gohtml`, gin.H{
-		`priceDis`: priceDis, `tickInfo`: tickInfo, `recentTickInfo`: recentTickInfo})
+	tickInfo, recentTickInfo := model.AppMetric.ToArray()
+	c.HTML(http.StatusOK, `tick.gohtml`, gin.H{`tickInfo`: tickInfo, `recentTickInfo`: recentTickInfo})
 }
 
 func crossPage(c *gin.Context) {
