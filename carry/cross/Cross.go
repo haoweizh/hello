@@ -374,6 +374,7 @@ func makeEqual(coin string, statuses []*CarryStatus) (isEqual bool, msg string) 
 		}
 		checkAmount := model.GetAmountInMarket(equalStatus.market, equalStatus.symbol, amount, price)
 		if checkAmount > 0 {
+			time.Sleep(time.Second)
 			util.Notice(fmt.Sprintf(`try to equal %s %s at %f amount %f`,
 				equalStatus.market, equalStatus.symbol, price, amount))
 			api.PlaceOrder(equalStatus.account.Key, equalStatus.account.Secret, orderSide, model.OrderTypeLimit,
