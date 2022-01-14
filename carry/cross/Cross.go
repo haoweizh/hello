@@ -26,7 +26,7 @@ func checkSetCrossing(value bool) (before bool) {
 
 func createContractMarket(key, secret, market string) (cm *contractMarket) {
 	cm = &contractMarket{key: key, market: market}
-	success, positions, _, availableU := api.GetPositions(key, secret, market)
+	success, positions, accountValue, availableU := api.GetPositions(key, secret, market)
 	settings := model.GetSettings(model.FunctionCross, market)
 	if success {
 		cm.positions = make(map[string]*model.Position)
@@ -37,7 +37,7 @@ func createContractMarket(key, secret, market string) (cm *contractMarket) {
 				cm.contractValueInU += tick.Bids[0].Price * math.Abs(position.Free)
 			}
 		}
-		//cm.accountValueInU = accountValue
+		cm.accountValueInU = accountValue
 		cm.collateralsAvailable = availableU
 	}
 	contractMarkets[key] = cm
