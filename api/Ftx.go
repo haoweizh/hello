@@ -789,8 +789,9 @@ func SignedRequestFtx(key, secret, method, path string, param, body map[string]i
 	sign := hex.EncodeToString(hash.Sum(nil))
 	headers := map[string]string{`FTX-KEY`: key, `FTX-TS`: strconv.FormatInt(ts, 10), "FTX-SIGN": sign,
 		"Content-Type": "application/json"}
-	//if key == `aimxyPus258z84JrKahgt--6uWT8tcEeEbyIi8gF` {
-	//	headers[`FTX-SUBACCOUNT`] = `test`
+	if key == `aimxyPus258z84JrKahgt--6uWT8tcEeEbyIi8gF` {
+		headers[`FTX-SUBACCOUNT`] = `test`
+	}
 	//} else if key == `u7oa6J_2ZXq1Putf8swnAKE1MH2T86Zx6JBZoChe` {
 	//	headers[`FTX-SUBACCOUNT`] = `test2`
 	//}
