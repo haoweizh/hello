@@ -779,6 +779,8 @@ func SignedRequestFtx(key, secret, method, path string, param, body map[string]i
 		uri = fmt.Sprintf(`%s?%s`, u.Path, u.Query().Encode())
 	}
 	if method == http.MethodPost || method == http.MethodDelete {
+		toBeSign := fmt.Sprintf(`%d%s%s%s`, ts, method, uri, bodyStr)
+		util.Notice(`to be sign: %s`, toBeSign)
 		hash.Write([]byte(fmt.Sprintf(`%d%s%s%s`, ts, method, uri, bodyStr)))
 	} else {
 		hash.Write([]byte(fmt.Sprintf(`%d%s%s`, ts, method, uri)))
@@ -787,11 +789,11 @@ func SignedRequestFtx(key, secret, method, path string, param, body map[string]i
 	sign := hex.EncodeToString(hash.Sum(nil))
 	headers := map[string]string{`FTX-KEY`: key, `FTX-TS`: strconv.FormatInt(ts, 10), "FTX-SIGN": sign,
 		"Content-Type": "application/json"}
-	if key == `aimxyPus258z84JrKahgt--6uWT8tcEeEbyIi8gF` {
-		headers[`FTX-SUBACCOUNT`] = `test`
-	} else if key == `u7oa6J_2ZXq1Putf8swnAKE1MH2T86Zx6JBZoChe` {
-		headers[`FTX-SUBACCOUNT`] = `test2`
-	}
+	//if key == `aimxyPus258z84JrKahgt--6uWT8tcEeEbyIi8gF` {
+	//	headers[`FTX-SUBACCOUNT`] = `test`
+	//} else if key == `u7oa6J_2ZXq1Putf8swnAKE1MH2T86Zx6JBZoChe` {
+	//	headers[`FTX-SUBACCOUNT`] = `test2`
+	//}
 	responseBody, _ := util.HttpRequest(method, u.String(), bodyStr, headers, 60)
 	util.SocketInfo(fmt.Sprintf(`ftx key %s request %s %s body %s return %s`,
 		key, u.String(), method, bodyStr, string(responseBody)))
