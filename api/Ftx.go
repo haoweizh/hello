@@ -766,7 +766,7 @@ func SignedRequestFtx(key, secret, method, path string, param, body map[string]i
 	}
 	u, _ := url.ParseRequestURI(restFtx)
 	u.Path += path
-	ts := time.Now().UnixNano() / int64(time.Millisecond)
+	ts := fmt.Sprintf(`%d`, time.Now().UnixNano()/int64(time.Millisecond))
 	hash := hmac.New(sha256.New, []byte(secret))
 	bodyStr := string(util.JsonEncodeToByte(body))
 	q := u.Query()
@@ -780,16 +780,15 @@ func SignedRequestFtx(key, secret, method, path string, param, body map[string]i
 	}
 	var toBeSign string
 	if method == http.MethodPost || method == http.MethodDelete {
-		toBeSign = fmt.Sprintf(`%d%s%s%s`, ts, method, uri, bodyStr)
-		hash.Write([]byte(fmt.Sprintf(`%d%s%s%s`, ts, method, uri, bodyStr)))
+		toBeSign = fmt.Sprintf(`%s%s%s%s`, ts, method, uri, bodyStr)
+		hash.Write([]byte(fmt.Sprintf(`%s%s%s%s`, ts, method, uri, bodyStr)))
 	} else {
-		toBeSign = fmt.Sprintf(`%d%s%s`, ts, method, uri)
-		hash.Write([]byte(fmt.Sprintf(`%d%s%s`, ts, method, uri)))
+		toBeSign = fmt.Sprintf(`%s%s%s`, ts, method, uri)
+		hash.Write([]byte(fmt.Sprintf(`%s%s%s`, ts, method, uri)))
 		bodyStr = ``
 	}
 	sign := hex.EncodeToString(hash.Sum(nil))
-	headers := map[string]string{`FTX-KEY`: key, `FTX-TS`: strconv.FormatInt(ts, 10), "FTX-SIGN": sign,
-		"Content-Type": "application/json"}
+	headers := map[string]string{`FTX-KEY`: key, `FTX-TS`: ts, "FTX-SIGN": sign, "Content-Type": "application/json"}
 	if key == `aimxyPus258z84JrKahgt--6uWT8tcEeEbyIi8gF` {
 		headers[`FTX-SUBACCOUNT`] = `test`
 	}
@@ -797,7 +796,7 @@ func SignedRequestFtx(key, secret, method, path string, param, body map[string]i
 	//	headers[`FTX-SUBACCOUNT`] = `test2`
 	//}
 	responseBody, _ := util.HttpRequest(method, u.String(), bodyStr, headers, 60)
-	util.Notice(fmt.Sprintf(`ftx key %s to be sign %s request %s %s body %s return %s`,
-		key, toBeSign, u.String(), method, bodyStr, string(responseBody)))
+	util.Notice(fmt.Sprintf(`ftx key %s %s to be sign %s request %s %s body %s return %s`,
+		key, secret, toBeSign, u.String(), method, bodyStr, string(responseBody)))
 	return responseBody
 }
