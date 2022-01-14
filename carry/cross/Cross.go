@@ -34,7 +34,7 @@ func createContractMarket(key, secret, market string) (cm *contractMarket) {
 			cm.positions[position.Currency] = position
 			getTick, tick := model.AppMarkets.GetBidAsk(position.Currency, market)
 			if settings != nil && settings[position.Currency] != nil && getTick {
-				cm.accountValueInU += tick.Bids[0].Price * math.Abs(position.Free)
+				cm.contractValueInU += tick.Bids[0].Price * math.Abs(position.Free)
 			}
 		}
 		//cm.accountValueInU = accountValue
@@ -48,21 +48,19 @@ func createContractMarket(key, secret, market string) (cm *contractMarket) {
 
 func createSpotMarket(key, secret, market string) (sm *spotMarket) {
 	sm = &spotMarket{key: key, market: market}
-	success, balances, _, collateral := api.GetBalances(key, secret, market)
+	success, balances, totalInUsd, collateral := api.GetBalances(key, secret, market)
 	for _, balance := range balances {
 		if balance.UsdValue == 0 && balance.Amount > 0 {
 			util.Notice(fmt.Sprintf(`usdvalue 0 %s %s %f`, market, balance.Coin, balance.Amount))
 		}
 	}
-	settings := model.GetSettings(model.FunctionCross, market)
 	if success {
 		tail := model.GetSpotTail(market)
 		sm.balances = make(map[string]*model.Balance)
-		//sm.accountValueInU = totalInUsd
+		sm.accountValueInU = totalInUsd
 		sm.collateral = collateral
 		for _, balance := range balances {
-			symbol := balance.Coin + tail
-			sm.balances[symbol] = balance
+			sm.balances[balance.Coin+tail] = balance
 			if strings.EqualFold(balance.Coin, `usd`) || strings.EqualFold(balance.Coin, `usdt`) {
 				sm.availableU += math.Min(balance.Amount, balance.AvailableWithBorrow)
 			}
@@ -70,12 +68,8 @@ func createSpotMarket(key, secret, market string) (sm *spotMarket) {
 			if balance.UsdValue < 0 {
 				sm.availableU -= math.Abs(balance.UsdValue)
 			}
-			if settings != nil && settings[symbol] != nil {
-				sm.accountValueInU += math.Abs(balance.UsdValue)
-			}
 		}
 	}
-	sm.accountValueInU += sm.availableU
 	spotMarkets[key] = sm
 	util.Notice(fmt.Sprintf(`refresh spot market %s total: %f available U: %f`,
 		key, sm.accountValueInU, sm.availableU))

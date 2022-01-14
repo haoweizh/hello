@@ -180,10 +180,12 @@ func GetCrossMarketValue(key string) (market string, inAllSpot, contractAccountV
 	if spotMarkets[key] != nil {
 		market = spotMarkets[key].market
 		inAllSpot = spotMarkets[key].accountValueInU
-		//if market == model.Ftx && spotMarkets[key].balances != nil && spotMarkets[key].balances[`FTT/USD`] != nil {
-		//	inAllSpot -= spotMarkets[key].balances[`FTT/USD`].UsdValue
-		//}
-		holdingSpot = spotMarkets[key].accountValueInU - spotMarkets[key].availableU
+		settings := model.GetSettings(model.FunctionCross, market)
+		for _, setting := range settings {
+			if spotMarkets[key].balances != nil && spotMarkets[key].balances[setting.Coin] != nil {
+				holdingSpot += spotMarkets[key].balances[setting.Coin].UsdValue
+			}
+		}
 	}
 	if contractMarkets[key] != nil {
 		if market == `` {
