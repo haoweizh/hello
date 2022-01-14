@@ -797,7 +797,7 @@ func SignedRequestFtx(key, secret, method, path string, param, body map[string]i
 	//	headers[`FTX-SUBACCOUNT`] = `test2`
 	//}
 	responseBody, _ := util.HttpRequest(method, u.String(), bodyStr, headers, 60)
-	util.Notice(fmt.Sprintf(`ftx key %s to be sign &s request %s %s body %s return %s`,
+	util.Notice(fmt.Sprintf(`ftx key %s to be sign %s request %s %s body %s return %s`,
 		key, toBeSign, u.String(), method, bodyStr, string(responseBody)))
 	return responseBody
 }
