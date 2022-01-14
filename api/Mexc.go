@@ -922,7 +922,7 @@ var subscribeHandlerMexc = func(connection *websocket.Conn, subscribes []interfa
 	var err error
 	for _, subscribe := range subscribes {
 		subMsg := fmt.Sprintf(`%s`, subscribe)
-		if err = sendToConnection(connection, []byte(subMsg)); err != nil {
+		if err = sendToConnection(model.Mexc, connection, []byte(subMsg)); err != nil {
 			util.SocketInfo(" MEXC can not subscribe %s %s", subscribe, err.Error())
 		}
 		time.Sleep(time.Millisecond * 300) // Todo - 这里的限速怎么设定

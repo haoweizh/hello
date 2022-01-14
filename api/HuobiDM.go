@@ -28,7 +28,7 @@ var subscribeHandlerHuobiDM = func(connection *websocket.Conn, subscribes []inte
 		subscribeMap["id"] = strconv.Itoa(util.GetNow().Nanosecond())
 		subscribeMap["sub"] = v
 		subscribeMessage := util.JsonEncodeToByte(subscribeMap)
-		if err = sendToConnection(connection, subscribeMessage); err != nil {
+		if err = sendToConnection(model.HuobiDM, connection, subscribeMessage); err != nil {
 			util.SocketInfo("huobiDM can not subscribe " + err.Error())
 			return err
 		}
@@ -45,7 +45,7 @@ func WsDepthServeHuobiDM(markets *model.Markets, orderHandler OrderHandler) ([]c
 			pingMap := make(map[string]interface{})
 			pingMap["pong"] = responseJson.Get(`ping`).MustInt()
 			pingParams := util.JsonEncodeToByte(pingMap)
-			if err := sendToConnection(connection, pingParams); err != nil {
+			if err := sendToConnection(model.HuobiDM, connection, pingParams); err != nil {
 				util.SocketInfo("huobiDM server ping client error " + err.Error())
 			}
 		} else {

@@ -25,7 +25,7 @@ var AppWSManager = WSManager{
 	Clients:    make(map[*WSClient]bool),
 }
 
-func sendToConnection(connection *websocket.Conn, msg []byte) (err error) {
+func sendToConnection(market string, connection *websocket.Conn, msg []byte) (err error) {
 	defer wsLock.Unlock()
 	wsLock.Lock()
 	if connection == nil {
@@ -33,6 +33,7 @@ func sendToConnection(connection *websocket.Conn, msg []byte) (err error) {
 		return
 	}
 	if err := connection.WriteMessage(websocket.TextMessage, msg); err != nil {
+		SetRequireReset(market, true)
 		util.Notice(`fail to write to connection ` + string(msg) + err.Error())
 	}
 	return err

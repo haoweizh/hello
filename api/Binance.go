@@ -82,7 +82,7 @@ var subscribeHandlerBinance = func(connection *websocket.Conn, subscribes []inte
 	var err error = nil
 	for _, subscribe := range subscribes {
 		subMsg := fmt.Sprintf(`{"method": "SUBSCRIBE","params":["%s"],"id": %d}`, subscribe, int(rand.Float64()*10000))
-		if err = sendToConnection(connection, []byte(subMsg)); err != nil {
+		if err = sendToConnection(model.Binance, connection, []byte(subMsg)); err != nil {
 			util.SocketInfo(" binance can not subscribe %s %s", subscribe, err.Error())
 		}
 		time.Sleep(time.Millisecond * 300)

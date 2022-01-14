@@ -25,7 +25,7 @@ var subscribeHandlerDFuture = func(connection *websocket.Conn, subscribes []inte
 	var err error = nil
 	for _, subscribe := range subscribes {
 		subMsg := fmt.Sprintf(`{"id": "id1", "includeDfutureDay": "1", sub:"%s"}`, subscribe)
-		if err = sendToConnection(connection, []byte(subMsg)); err != nil {
+		if err = sendToConnection(model.DFuture, connection, []byte(subMsg)); err != nil {
 			util.SocketInfo("dfuture can not subscribe fill " + err.Error())
 		}
 	}

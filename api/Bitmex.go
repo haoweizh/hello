@@ -32,14 +32,14 @@ var subscribeHandlerBitmex = func(connection *websocket.Conn, subscribes []inter
 	hash.Write([]byte(toBeSign))
 	sign := hex.EncodeToString(hash.Sum(nil))
 	authCmd := fmt.Sprintf(`{"op": "authKeyExpires", "args": ["%s", %d, "%s"]}`, account.Key, expire, sign)
-	if err = sendToConnection(connection, []byte(authCmd)); err != nil {
+	if err = sendToConnection(model.Bitmex, connection, []byte(authCmd)); err != nil {
 		util.SocketInfo("bitmex can not auth " + err.Error())
 	}
 	subscribeMap := make(map[string]interface{})
 	subscribeMap[`op`] = `subscribe`
 	subscribeMap[`args`] = subscribes
 	subscribeMessage := util.JsonEncodeToByte(subscribeMap)
-	if err = sendToConnection(connection, subscribeMessage); err != nil {
+	if err = sendToConnection(model.Bitmex, connection, subscribeMessage); err != nil {
 		util.SocketInfo("bitmex can not subscribe " + err.Error())
 		return err
 	}

@@ -33,14 +33,14 @@ var subscribeHandlerBybit = func(connection *websocket.Conn, subscribes []interf
 	hash.Write([]byte(toBeSign))
 	sign := hex.EncodeToString(hash.Sum(nil))
 	authCmd := fmt.Sprintf(`{"op": "auth", "args": ["%s", %d, "%s"]}`, account.Key, expire, sign)
-	if err = sendToConnection(connection, []byte(authCmd)); err != nil {
+	if err = sendToConnection(model.Bybit, connection, []byte(authCmd)); err != nil {
 		util.SocketInfo("bybit can not auth " + err.Error())
 	}
 	subscribeMap := make(map[string]interface{})
 	subscribeMap[`op`] = `subscribe`
 	subscribeMap[`args`] = subscribes
 	subscribeMessage := util.JsonEncodeToByte(subscribeMap)
-	if err = sendToConnection(connection, subscribeMessage); err != nil {
+	if err = sendToConnection(model.Bybit, connection, subscribeMessage); err != nil {
 		util.SocketInfo("bybit can not subscribe " + err.Error())
 		return err
 	}
