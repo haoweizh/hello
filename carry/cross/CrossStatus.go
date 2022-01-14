@@ -183,7 +183,7 @@ func GetCrossMarketValue(key string) (market string, inAllSpot, contractAccountV
 		settings := model.GetSettings(model.FunctionCross, market)
 		for _, setting := range settings {
 			if spotMarkets[key].balances != nil && spotMarkets[key].balances[setting.Symbol] != nil {
-				holdingSpot += spotMarkets[key].balances[setting.Coin].UsdValue
+				holdingSpot += spotMarkets[key].balances[setting.Symbol].UsdValue
 			}
 		}
 	}
