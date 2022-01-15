@@ -778,12 +778,9 @@ func SignedRequestFtx(key, secret, method, path string, param, body map[string]i
 	if u.Query().Encode() != `` {
 		uri = fmt.Sprintf(`%s?%s`, u.Path, u.Query().Encode())
 	}
-	var toBeSign string
 	if method == http.MethodPost || method == http.MethodDelete {
-		toBeSign = fmt.Sprintf(`%s%s%s%s`, ts, method, uri, bodyStr)
 		hash.Write([]byte(fmt.Sprintf(`%s%s%s%s`, ts, method, uri, bodyStr)))
 	} else {
-		toBeSign = fmt.Sprintf(`%s%s%s`, ts, method, uri)
 		hash.Write([]byte(fmt.Sprintf(`%s%s%s`, ts, method, uri)))
 		bodyStr = ``
 	}
@@ -796,7 +793,7 @@ func SignedRequestFtx(key, secret, method, path string, param, body map[string]i
 	//	headers[`FTX-SUBACCOUNT`] = `test2`
 	//}
 	responseBody, _ := util.HttpRequest(method, u.String(), bodyStr, headers, 60)
-	util.Notice(fmt.Sprintf(`ftx key %s %s to be sign %s request %s %s body %s return %s`,
-		key, secret, toBeSign, u.String(), method, bodyStr, string(responseBody)))
+	util.SocketInfo(fmt.Sprintf(`ftx key %s request %s %s body %s return %s`,
+		key, u.String(), method, bodyStr, string(responseBody)))
 	return responseBody
 }
