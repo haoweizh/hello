@@ -294,7 +294,11 @@ func GetCrossCoin(market, symbol string) (coin string) {
 	for _, tail := range tails {
 		coinLen := len(symbol) - len(tail)
 		if strings.LastIndex(symbol, tail) == coinLen && coinLen > 0 {
-			return symbol[:len(symbol)-len(tail)]
+			coin = symbol[:len(symbol)-len(tail)]
+			//if market == Gate && coin == `MBABYDOGE` {
+			//	coin = `BABYDOGE`
+			//}
+			return coin
 		}
 	}
 	return

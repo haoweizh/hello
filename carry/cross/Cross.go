@@ -443,8 +443,16 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarrySta
 		return
 	}
 	var bidAmount, askAmount float64
-	score := 1 - tickRelate.Asks[0].Price/tick.Bids[0].Price
-	scoreRelate := tickRelate.Bids[0].Price/tick.Asks[0].Price - 1
+	priceAskRelate := tickRelate.Asks[0].Price
+	priceBidRelate := tickRelate.Bids[0].Price
+	priceAsk := tick.Asks[0].Price
+	priceBid := tick.Bids[0].Price
+	amountBidRelate := tickRelate.Bids[0].Amount
+	amountAskRelate := tickRelate.Asks[0].Amount
+	amountBid := tick.Bids[0].Amount
+	amountAsk := tick.Asks[0].Amount
+	score := 1 - priceAskRelate/priceBid
+	scoreRelate := priceBidRelate/priceAsk - 1
 	if (score > 0.1 || scoreRelate > 0.1) && (!isValidSymbol(carryStatus.market, carryStatus.symbol) ||
 		!isValidSymbol(carryStatusRelate.market, carryStatusRelate.symbol)) {
 		msg := fmt.Sprintf(`different coin %s %s %s %s %f %f`, carryStatus.market, carryStatus.symbol,
@@ -469,18 +477,18 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarrySta
 	if carryStatus.TradeLineSell < score && carryStatusRelate.TradeLineBuy < score {
 		statusSell = carryStatus
 		statusBuy = carryStatusRelate
-		priceSell = tick.Bids[0].Price
-		priceBuy = tickRelate.Asks[0].Price
-		askAmount = tick.Bids[0].Amount * 0.9
-		bidAmount = tickRelate.Asks[0].Amount * 0.9
+		priceSell = priceBid
+		priceBuy = priceAskRelate
+		askAmount = amountBid * 0.9
+		bidAmount = amountAskRelate * 0.9
 	}
 	if carryStatus.TradeLineBuy < scoreRelate && carryStatusRelate.TradeLineSell < scoreRelate {
 		statusSell = carryStatusRelate
 		statusBuy = carryStatus
-		priceSell = tickRelate.Bids[0].Price
-		priceBuy = tick.Asks[0].Price
-		askAmount = tickRelate.Bids[0].Amount * 0.9
-		bidAmount = tick.Bids[0].Amount * 0.9
+		priceSell = priceBidRelate
+		priceBuy = priceAsk
+		askAmount = amountBidRelate * 0.9
+		bidAmount = amountAsk * 0.9
 	}
 	// 为了同一对交易对冲不出现两次，对前后进行排序
 	mark = fmt.Sprintf(`%s-%s`, carryStatus.market, carryStatus.symbol)
