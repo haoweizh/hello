@@ -114,6 +114,40 @@ func parseTickBybit(item map[string]interface{}) (tick *model.Tick) {
 	return tick
 }
 
+//func getMarketsBybit(key, secret string) (marketInfos map[string]*model.MarketInfo) {
+//	response := SignedRequestBybit(key, secret, http.MethodGet, `/v2/public/symbols`, nil)
+//	marketInfos = make(map[string]*model.MarketInfo)
+//	marketJson, err := util.NewJSON(response)
+//	if err == nil && marketJson.Get(`ret_code`) != nil && marketJson.Get(`ret_code`).MustInt64() != 0 {
+//		items, _ := marketJson.Get(`result`).Array()
+//		for _, item := range items {
+//			value := item.(map[string]interface{})
+//			marketInfo := &model.MarketInfo{Market: model.Ftx}
+//			if value[`name`] != nil {
+//				marketInfo.Name = value[`name`].(string)
+//			} else {
+//				continue
+//			}
+//			if value[`baseCurrency`] != nil && value[`type`] != nil && value[`type`].(string) == `spot` &&
+//				canBorrows[value[`baseCurrency`].(string)] {
+//				marketInfo.CanBorrow = true
+//			}
+//			if value[`priceIncrement`] != nil {
+//				marketInfo.PriceIncrement, _ = value[`priceIncrement`].(json.Number).Float64()
+//			}
+//			if value[`sizeIncrement`] != nil {
+//				marketInfo.SizeIncrement, _ = value[`sizeIncrement`].(json.Number).Float64()
+//			}
+//			if value[`minProvideSize`] != nil {
+//				marketInfo.SizeMin, _ = value[`minProvideSize`].(json.Number).Float64()
+//				marketInfo.SizeMin = math.Max(marketInfo.SizeMin, marketInfo.SizeIncrement)
+//			}
+//			marketInfos[marketInfo.Name] = marketInfo
+//		}
+//	}
+//	return
+//}
+
 func handleOrderBookBybit(markets *model.Markets, symbol string, ts int64, response *simplejson.Json) {
 	if response == nil {
 		return
