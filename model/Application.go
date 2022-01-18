@@ -98,6 +98,14 @@ func GetDialectSymbol(market, symbol string) (dialectSymbol string) {
 	case Bitmex:
 		symbol = strings.Replace(symbol, `btc`, `xbt`, -1)
 		return strings.ToUpper(strings.Split(symbol, `_`)[0])
+	case BybitPerp:
+		if len(symbol) > 4 && symbol[len(symbol)-4:] == `USDT` {
+			return symbol[0:len(symbol)-4] + GetPerpTail(market)
+		}
+	case BybitSpot:
+		if len(symbol) > 4 && symbol[len(symbol)-4:] == `USDT` {
+			return symbol[0:len(symbol)-4] + GetSpotTail(market)
+		}
 	}
 	return ``
 }
@@ -107,6 +115,16 @@ func GetStandardSymbol(market, symbol string) (standardSymbol string) {
 	switch market {
 	case Bitmex:
 		return strings.Replace(symbol, `xbt`, `btc`, -1) + `_p`
+	case BybitPerp:
+		tail := GetPerpTail(market)
+		if len(symbol) > len(tail) && symbol[len(symbol)-len(tail):] == tail {
+			return symbol[0:len(symbol)-len(tail)] + `USDT`
+		}
+	case BybitSpot:
+		tail := GetSpotTail(market)
+		if len(symbol) > len(tail) && symbol[len(symbol)-len(tail):] == tail {
+			return symbol[0:len(symbol)-len(tail)] + `USDT`
+		}
 	}
 	return standardSymbol
 }
@@ -147,7 +165,7 @@ var orderStatusMap = map[string]map[string]string{ // market - market status - u
 		`5`: CarryStatusFail,    //完全撤销
 		`6`: CarryStatusWorking, //待撤销
 	},
-	Bybit: {
+	BybitPerp: {
 		`Created`:         CarryStatusWorking,
 		`New`:             CarryStatusWorking,
 		`PartiallyFilled`: CarryStatusWorking,

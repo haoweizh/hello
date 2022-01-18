@@ -25,7 +25,7 @@ var AppWSManager = WSManager{
 	Clients:    make(map[*WSClient]bool),
 }
 
-func sendToConnection(market string, connection *websocket.Conn, msg []byte) (err error) {
+func SendToConnection(market string, connection *websocket.Conn, msg []byte) (err error) {
 	defer wsLock.Unlock()
 	wsLock.Lock()
 	if connection == nil {
@@ -39,7 +39,7 @@ func sendToConnection(market string, connection *websocket.Conn, msg []byte) (er
 	return err
 }
 
-func sendToAllConnections(market string, msg []byte) (err error) {
+func SendToAllConnections(market string, msg []byte) (err error) {
 	defer wsLock.Unlock()
 	wsLock.Lock()
 	for i, connection := range model.AppMarkets.Connections[market] {

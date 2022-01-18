@@ -25,7 +25,7 @@ var subscribeHandlerDFuture = func(connection *websocket.Conn, subscribes []inte
 	var err error = nil
 	for _, subscribe := range subscribes {
 		subMsg := fmt.Sprintf(`{"id": "id1", "includeDfutureDay": "1", sub:"%s"}`, subscribe)
-		if err = sendToConnection(model.DFuture, connection, []byte(subMsg)); err != nil {
+		if err = SendToConnection(model.DFuture, connection, []byte(subMsg)); err != nil {
 			util.SocketInfo("dfuture can not subscribe fill " + err.Error())
 		}
 	}
@@ -50,7 +50,7 @@ func WsDepthServeDFuture(markets *model.Markets, orderHandler OrderHandler) ([]c
 			ts := time.Now().UnixNano() / int64(time.Second)
 			pingMsg := fmt.Sprintf(
 				`{"verify":1,"apiTime":%d,"deviceInfo":"326d7f7cfe5c0421cbfb50a1dc7e839f","token":"3f938b62ba748d891c48a6060bf8875b"}`, ts)
-			if err := sendToAllConnections(model.DFuture, []byte(pingMsg)); err != nil {
+			if err := SendToAllConnections(model.DFuture, []byte(pingMsg)); err != nil {
 				util.SocketInfo("dfuture server ping client error " + err.Error())
 			}
 		}

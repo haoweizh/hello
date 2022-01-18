@@ -42,7 +42,7 @@ func maintainChannelFtx(subscribes []interface{}) {
 					subCmd := fmt.Sprintf(`{"op": "subscribe", "channel": "%s", "market": "%s"}`,
 						subscribe[0], subscribe[1])
 					if ftxSymbolConnection[subscribe[1]] != nil {
-						if err := sendToConnection(model.Ftx, ftxSymbolConnection[subscribe[1]], []byte(subCmd)); err != nil {
+						if err := SendToConnection(model.Ftx, ftxSymbolConnection[subscribe[1]], []byte(subCmd)); err != nil {
 							util.SocketInfo("ftx can not resubscribe " + err.Error())
 						}
 					} else {
@@ -63,10 +63,10 @@ var subscribeHandlerFtx = func(connection *websocket.Conn, subscribes []interfac
 	hash.Write([]byte(toBeSign))
 	sign := hex.EncodeToString(hash.Sum(nil))
 	authCmd := fmt.Sprintf(`{"op":"login","args":{"key":"%s","sign":"%s","time":%d}}`, account.Key, sign, ts)
-	if err = sendToConnection(model.Ftx, connection, []byte(authCmd)); err != nil {
+	if err = SendToConnection(model.Ftx, connection, []byte(authCmd)); err != nil {
 		util.SocketInfo("ftx can not auth " + err.Error())
 	}
-	if err = sendToConnection(model.Ftx, connection, []byte(`{"op": "subscribe", "channel": "fills"}`)); err != nil {
+	if err = SendToConnection(model.Ftx, connection, []byte(`{"op": "subscribe", "channel": "fills"}`)); err != nil {
 		util.SocketInfo("ftx can not subscribe fill " + err.Error())
 	}
 	for i := 0; i < len(subscribes); i++ {
@@ -74,7 +74,7 @@ var subscribeHandlerFtx = func(connection *websocket.Conn, subscribes []interfac
 		ftxSymbolConnection[cmdSubscribe[1]] = connection
 		subCmd := fmt.Sprintf(`{"op": "subscribe", "channel": "%s", "market": "%s"}`,
 			cmdSubscribe[0], cmdSubscribe[1])
-		if err = sendToConnection(model.Ftx, connection, []byte(subCmd)); err != nil {
+		if err = SendToConnection(model.Ftx, connection, []byte(subCmd)); err != nil {
 			util.SocketInfo("ftx can not subscribe " + err.Error())
 			return err
 		}
@@ -98,7 +98,7 @@ func WsDepthServeFtx(markets *model.Markets, orderHandler OrderHandler) ([]chan 
 		if util.GetNowUnixMillion()-lastDepthPingFtx > 15000 {
 			lastDepthPingFtx = util.GetNowUnixMillion()
 			pingMsg := []byte(`{"op":"ping"}`)
-			if sendErr := sendToAllConnections(model.Ftx, pingMsg); sendErr != nil {
+			if sendErr := SendToAllConnections(model.Ftx, pingMsg); sendErr != nil {
 				util.SocketInfo("ftx server ping client error " + sendErr.Error())
 			}
 		}

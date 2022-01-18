@@ -76,7 +76,7 @@ func WsDepthServeHuobi(markets *model.Markets, orderHandler OrderHandler) (chann
 			pingMap := make(map[string]interface{})
 			pingMap["pong"] = responseJson.Get(`ping`).MustInt()
 			pingParams := util.JsonEncodeToByte(pingMap)
-			if err := sendToAllConnections(model.Huobi, pingParams); err != nil {
+			if err := SendToAllConnections(model.Huobi, pingParams); err != nil {
 				util.SocketInfo("huobi server ping client error " + err.Error())
 			}
 		} else {
@@ -126,7 +126,7 @@ func WsDepthServeHuobi(markets *model.Markets, orderHandler OrderHandler) (chann
 			pingMap := make(map[string]interface{})
 			pingMap["pong"] = responseJson.Get(`ping`).MustInt()
 			pingParams := util.JsonEncodeToByte(pingMap)
-			if wsErr := sendToAllConnections(model.Huobi, pingParams); wsErr != nil {
+			if wsErr := SendToAllConnections(model.Huobi, pingParams); wsErr != nil {
 				util.SocketInfo("HuobiFuture server ping client error " + wsErr.Error())
 			}
 		} else {

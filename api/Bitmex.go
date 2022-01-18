@@ -32,14 +32,14 @@ var subscribeHandlerBitmex = func(connection *websocket.Conn, subscribes []inter
 	hash.Write([]byte(toBeSign))
 	sign := hex.EncodeToString(hash.Sum(nil))
 	authCmd := fmt.Sprintf(`{"op": "authKeyExpires", "args": ["%s", %d, "%s"]}`, account.Key, expire, sign)
-	if err = sendToConnection(model.Bitmex, connection, []byte(authCmd)); err != nil {
+	if err = SendToConnection(model.Bitmex, connection, []byte(authCmd)); err != nil {
 		util.SocketInfo("bitmex can not auth " + err.Error())
 	}
 	subscribeMap := make(map[string]interface{})
 	subscribeMap[`op`] = `subscribe`
 	subscribeMap[`args`] = subscribes
 	subscribeMessage := util.JsonEncodeToByte(subscribeMap)
-	if err = sendToConnection(model.Bitmex, connection, subscribeMessage); err != nil {
+	if err = SendToConnection(model.Bitmex, connection, subscribeMessage); err != nil {
 		util.SocketInfo("bitmex can not subscribe " + err.Error())
 		return err
 	}
@@ -53,7 +53,7 @@ func WsDepthServeBitmex(markets *model.Markets, orderHandler OrderHandler) ([]ch
 		defer socketLockBitmex.Unlock()
 		if util.GetNow().Unix()-lastPingTime > 30 { // ping bitmex server every 5 seconds
 			lastPingTime = util.GetNow().Unix()
-			if err := sendToAllConnections(model.Bitmex, []byte(`ping`)); err != nil {
+			if err := SendToAllConnections(model.Bitmex, []byte(`ping`)); err != nil {
 				util.SocketInfo("bitmex server ping client error " + err.Error())
 			}
 		}

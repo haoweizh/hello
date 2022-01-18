@@ -275,7 +275,7 @@ func GetSpotTail(market string) string {
 		return "usdt"
 	case Ftx:
 		return `/USD`
-	case OKEX, Kucoin, Bybit:
+	case OKEX, Kucoin, BybitSpot:
 		return `-USDT`
 	case Binance:
 		return `USDT`
@@ -291,7 +291,7 @@ func GetPerpTail(market string) string {
 		return `-usdt`
 	case OKEX:
 		return `-USDT-SWAP`
-	case Binance, Kucoin, Ftx, Bybit:
+	case Binance, Kucoin, Ftx, BybitPerp:
 		return `-PERP`
 	case Gate:
 		return `_PERP`

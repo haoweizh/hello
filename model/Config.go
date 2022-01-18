@@ -62,9 +62,9 @@ func GetAccounts(index int) (accounts map[string]*Account) {
 	for i, account := range tempAccounts {
 		AppAccounts[i][Gate] = account
 	}
-	tempAccounts = AppConfig.GetAccounts(Bybit)
+	tempAccounts = AppConfig.GetAccounts(BybitPerp)
 	for i, account := range tempAccounts {
-		AppAccounts[i][Bybit] = account
+		AppAccounts[i][BybitPerp] = account
 	}
 	tempAccounts = AppConfig.GetAccounts(Huobi)
 	for i, account := range tempAccounts {
@@ -175,7 +175,7 @@ func (config *Config) GetAccounts(market string) []*Account {
 		secrets = strings.Split(config.BitmexSecret, `,`)
 		closeValues = strings.Split(config.BitmexCarryClose, `,`)
 		rateValues = strings.Split(config.BitmexCarryRate, `,`)
-	case Bybit:
+	case BybitPerp:
 		keys = strings.Split(config.BybitKey, `,`)
 		secrets = strings.Split(config.BybitSecret, `,`)
 		closeValues = strings.Split(config.BybitCarryClose, `,`)

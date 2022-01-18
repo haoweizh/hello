@@ -122,8 +122,8 @@ func CancelOrders(key, secret, market, symbol string) (result bool) {
 		return cancelOrdersBinance(key, secret, symbol)
 	case model.Ftx:
 		return cancelOrdersFtx(key, secret, symbol)
-	case model.Bybit:
-		return cancelOrdersBybit(key, secret, symbol)
+	case model.BybitPerp:
+		return cancelOrdersBybitPerp(key, secret, symbol)
 	case model.OKEX:
 		result, _, _ = cancelOrdersOKEX(key, secret, symbol)
 		return result
@@ -155,8 +155,8 @@ func CancelOrder(key, secret, market, symbol, instrument, orderType, orderId str
 		result, errCode, msg = cancelOrderCoinpark(key, secret, orderId)
 	case model.Bitmex:
 		result, errCode, msg = cancelOrderBitmex(key, secret, orderId)
-	case model.Bybit:
-		result, errCode, msg, order = cancelOrderBybit(key, secret, symbol, orderId)
+	case model.BybitPerp:
+		result, errCode, msg, order = cancelOrderBybitPerp(key, secret, symbol, orderId)
 	case model.Ftx:
 		result = cancelOrderFtx(key, secret, orderType, orderId)
 	case model.Gate:
@@ -355,8 +355,8 @@ func GetFundingRate(key, secret, market, symbol string, lock *sync.Mutex) (succe
 	case model.Bitmex:
 		rate, expireTime = getFundingRateBitmex(key, secret, symbol)
 		model.SetFundingRate(market, symbol, &model.FundingRate{Rate: rate, ExpireTime: expireTime, UpdateTime: now})
-	case model.Bybit:
-		rate, expireTime = getFundingRateBybit(key, secret, symbol)
+	case model.BybitPerp:
+		rate, expireTime = getFundingRateBybitPerp(key, secret, symbol)
 		model.SetFundingRate(market, symbol, &model.FundingRate{Rate: rate, ExpireTime: expireTime, UpdateTime: now})
 	case model.Ftx:
 		return true, 0
@@ -450,8 +450,8 @@ func QueryOrderById(key, secret, market, symbol, instrument, orderType, orderId 
 		//dealAmount, dealPrice, status = queryOrderBinance(key, secret, symbol, orderId)
 	case model.Coinpark:
 		order.DealAmount, order.DealPrice, order.Status = queryOrderCoinpark(key, secret, orderId)
-	case model.Bybit:
-		orders := queryOrderBybit(key, secret, symbol, orderId)
+	case model.BybitPerp:
+		orders := queryOrderBybitPerp(key, secret, symbol, orderId)
 		for _, value := range orders {
 			if value.OrderId == orderId {
 				return value
@@ -620,8 +620,8 @@ func PlaceOrder(key, secret, orderSide, orderType, market, symbol, instrument, o
 		}
 	case model.Bitmex:
 		placeOrderBitmex(order, key, secret, orderSide, orderType, orderParam, symbol, price, amount)
-	case model.Bybit:
-		placeOrderBybit(order, key, secret, orderSide, orderType, orderParam, symbol, price, amount)
+	case model.BybitPerp:
+		placeOrderBybitPerp(order, key, secret, orderSide, orderType, orderParam, symbol, price, amount)
 	case model.Ftx:
 		placeOrderFtx(order, key, secret, orderSide, orderType, orderParam, symbol, price, triggerPrice, amount)
 	}
@@ -695,7 +695,9 @@ func GetWSSubscribes(market, subType string) []interface{} {
 	case model.Ftx:
 		go maintainChannelFtx(subscribes)
 	case model.BybitPerp:
-
+		go maintainChannelBybitPerp(subscribes)
+	case model.BybitSpot:
+		go maintainChannelBybitSpot(subscribes)
 	}
 	return subscribes
 }
@@ -733,15 +735,8 @@ func GetWSSubscribe(market, symbol, subType string) (subscribe interface{}) {
 			return `orderBook10:` + model.GetDialectSymbol(model.Bitmex, symbol)
 		}
 		return ``
-	case model.Bybit:
-		subSymbol := strings.ToUpper(symbol[0:strings.Index(symbol, `_`)])
-		if subType == model.SubscribeDeal {
-			return `trade.` + subSymbol
-		} else if subType ==
-			model.SubscribeDepth {
-			//return `orderBook_200.100ms.` + subSymbol
-			return `orderBookL2_25.` + subSymbol
-		}
+	case model.BybitPerp, model.BybitSpot:
+		return model.GetDialectSymbol(market, symbol)
 	case model.Ftx:
 		if subType == model.SubscribeDepth {
 			return []string{`orderbook`, symbol}
@@ -817,8 +812,8 @@ func GetMarketInfos(market string) (marketInfo map[string]*model.MarketInfo) {
 		_, marketInfo = getMarketsKucoin(``)
 	case model.Huobi:
 		return getMarketsHuobi(accounts[0].Key, accounts[0].Secret)
-	case model.Bybit:
-		return getMarketsBybit(accounts[0].Key, accounts[0].Secret)
+	case model.BybitPerp:
+		return getMarketsBybitPerp(accounts[0].Key, accounts[0].Secret)
 	}
 	return
 }
@@ -942,8 +937,8 @@ func InitMarketInfos() (success bool) {
 			_, marketInfos := getMarketsKucoin("")
 			model.SetMarketInfos(market, marketInfos)
 			setFutureAutoDeposit()
-		case model.Bybit:
-			model.SetMarketInfos(market, getMarketsBybit(accounts[0].Key, accounts[0].Secret))
+		case model.BybitPerp:
+			model.SetMarketInfos(market, getMarketsBybitPerp(accounts[0].Key, accounts[0].Secret))
 		}
 	}
 	return success
@@ -982,8 +977,10 @@ func CreateMarketDepthServer(markets *model.Markets, market string, orderHandler
 		channels, err = WsDepthServeCoinpark(markets, nil)
 	case model.Bitmex:
 		channels, err = WsDepthServeBitmex(markets, nil)
-	case model.Bybit:
-		channels, err = WsDepthServeBybit(markets, nil)
+	case model.BybitPerp:
+		channels, err = WsDepthServeBybitPerp(markets, orderHandler)
+	case model.BybitSpot:
+		channels, err = WsDepthServeBybitSpot(markets, orderHandler)
 	case model.Ftx:
 		channels, err = WsDepthServeFtx(markets, nil)
 	case model.DFuture:
