@@ -122,6 +122,8 @@ func CancelOrders(key, secret, market, symbol string) (result bool) {
 		return cancelOrdersBinance(key, secret, symbol)
 	case model.Ftx:
 		return cancelOrdersFtx(key, secret, symbol)
+	case model.Bybit:
+		return cancelOrdersBybit(key, secret, symbol)
 	case model.OKEX:
 		result, _, _ = cancelOrdersOKEX(key, secret, symbol)
 		return result
@@ -681,10 +683,8 @@ func GetWSSubscribes(market, subType string) []interface{} {
 			}
 		}
 	}
-	if market == model.Bitmex || market == model.Bybit {
-		subscribes = append(subscribes, `position`)
-	}
 	if market == model.Bitmex {
+		subscribes = append(subscribes, `position`)
 		subscribes = append(subscribes, `order`)
 	}
 	switch market {
@@ -694,6 +694,8 @@ func GetWSSubscribes(market, subType string) []interface{} {
 		go maintainChannelBinance()
 	case model.Ftx:
 		go maintainChannelFtx(subscribes)
+	case model.BybitPerp:
+
 	}
 	return subscribes
 }
@@ -815,6 +817,8 @@ func GetMarketInfos(market string) (marketInfo map[string]*model.MarketInfo) {
 		_, marketInfo = getMarketsKucoin(``)
 	case model.Huobi:
 		return getMarketsHuobi(accounts[0].Key, accounts[0].Secret)
+	case model.Bybit:
+		return getMarketsBybit(accounts[0].Key, accounts[0].Secret)
 	}
 	return
 }
@@ -905,9 +909,9 @@ func InitMarketInfos() (success bool) {
 		accounts := model.AppConfig.GetAccounts(market)
 		switch market {
 		case model.Ftx:
-			model.SetMarketInfos(model.Ftx, getMarketsFtx(accounts[0].Key, accounts[0].Secret))
+			model.SetMarketInfos(market, getMarketsFtx(accounts[0].Key, accounts[0].Secret))
 		case model.OKEX:
-			model.SetMarketInfos(model.OKEX, getMarketsOKEX(accounts[0].Key, accounts[0].Secret))
+			model.SetMarketInfos(market, getMarketsOKEX(accounts[0].Key, accounts[0].Secret))
 			for _, account := range accounts {
 				accountMode := getAccountConfigOKEX(account.Key, account.Secret)
 				util.Notice(`okex config and set: ` + accountMode)
@@ -918,12 +922,12 @@ func InitMarketInfos() (success bool) {
 				}
 			}
 		case model.Binance:
-			model.SetMarketInfos(model.Binance, getMarketsBinance(accounts[0].Key, accounts[0].Secret))
+			model.SetMarketInfos(market, getMarketsBinance(accounts[0].Key, accounts[0].Secret))
 			for _, account := range accounts {
 				setPosSideBinance(account.Key, account.Secret)
 			}
 		case model.Huobi:
-			model.SetMarketInfos(model.Huobi, getMarketsHuobi(accounts[0].Key, accounts[0].Secret))
+			model.SetMarketInfos(market, getMarketsHuobi(accounts[0].Key, accounts[0].Secret))
 		case model.Gate:
 			for _, account := range accounts {
 				setPosSideGate(account.Key, account.Secret)
@@ -932,12 +936,14 @@ func InitMarketInfos() (success bool) {
 			var marketInfos map[string]*model.MarketInfo
 			success, marketInfos = getMarketsGate(accounts[0].Key, accounts[0].Secret)
 			if success {
-				model.SetMarketInfos(model.Gate, marketInfos)
+				model.SetMarketInfos(market, marketInfos)
 			}
 		case model.Kucoin:
 			_, marketInfos := getMarketsKucoin("")
-			model.SetMarketInfos(model.Kucoin, marketInfos)
+			model.SetMarketInfos(market, marketInfos)
 			setFutureAutoDeposit()
+		case model.Bybit:
+			model.SetMarketInfos(market, getMarketsBybit(accounts[0].Key, accounts[0].Secret))
 		}
 	}
 	return success

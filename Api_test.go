@@ -152,6 +152,8 @@ func Test_download(t *testing.T) {
 
 func Test_wallet(t *testing.T) {
 	model.NewConfig()
+	mi := api.GetMarketInfos(model.Bybit)
+	fmt.Println(len(mi))
 	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
 	api.InitMarketInfos()
 	orderQuery := api.QueryOrderById(model.AppConfig.GateKey, model.AppConfig.GateSecret, model.Gate, `CFX_PERP`, `CFX_USDT`, model.OrderTypeLimit, `79852794326`)

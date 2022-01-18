@@ -157,7 +157,7 @@ func appendFutureMarketKucoin(key string, marketInfos map[string]*model.MarketIn
 		marketInfo.SizeIncrement = marketInfo.SizeMin
 		marketInfo.CTCurrency = contract.BaseCurrency
 		marketInfo.SizeMax = contract.MaxOrderQty
-		marketInfo.PriceMax = contract.MaxPrice
+		//marketInfo.PriceMax = contract.MaxPrice
 		marketInfo.CTValue = contract.Multiplier
 		marketInfos[marketInfo.Name] = marketInfo
 	}

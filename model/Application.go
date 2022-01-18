@@ -26,7 +26,8 @@ const Kucoin = `kucoin`
 const Gate = `gate`
 const Mexc = `mexc`
 const DFuture = `dfuture`
-const Bybit = `bybit`
+const BybitSpot = `bybitspot`
+const BybitPerp = `bybitperp`
 const OKEX = "okex"
 const Huobi = "huobi"
 const HuobiDM = `huobiDM`
@@ -97,8 +98,6 @@ func GetDialectSymbol(market, symbol string) (dialectSymbol string) {
 	case Bitmex:
 		symbol = strings.Replace(symbol, `btc`, `xbt`, -1)
 		return strings.ToUpper(strings.Split(symbol, `_`)[0])
-	case Bybit:
-		return strings.ToUpper(strings.Split(symbol, `_`)[0])
 	}
 	return ``
 }
@@ -108,8 +107,6 @@ func GetStandardSymbol(market, symbol string) (standardSymbol string) {
 	switch market {
 	case Bitmex:
 		return strings.Replace(symbol, `xbt`, `btc`, -1) + `_p`
-	case Bybit:
-		return symbol + `_p`
 	}
 	return standardSymbol
 }

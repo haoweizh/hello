@@ -249,13 +249,33 @@ func GetCoin(market, symbol string) (coin string) {
 	return coin
 }
 
+func IsSpot(market, symbol string) (coin string, result bool) {
+	tail := GetSpotTail(market)
+	lastIndex := strings.LastIndex(symbol, tail)
+	if lastIndex > 0 && symbol[lastIndex:] == tail {
+		result = true
+		coin = symbol[0:lastIndex]
+	}
+	return
+}
+
+func IsPerp(market, symbol string) (coin string, result bool) {
+	tail := GetPerpTail(market)
+	lastIndex := strings.LastIndex(symbol, tail)
+	if lastIndex > 0 && symbol[lastIndex:] == tail {
+		result = true
+		coin = symbol[0:lastIndex]
+	}
+	return
+}
+
 func GetSpotTail(market string) string {
 	switch market {
 	case Huobi:
 		return "usdt"
 	case Ftx:
 		return `/USD`
-	case OKEX, Kucoin:
+	case OKEX, Kucoin, Bybit:
 		return `-USDT`
 	case Binance:
 		return `USDT`
@@ -271,7 +291,7 @@ func GetPerpTail(market string) string {
 		return `-usdt`
 	case OKEX:
 		return `-USDT-SWAP`
-	case Binance, Kucoin, Ftx:
+	case Binance, Kucoin, Ftx, Bybit:
 		return `-PERP`
 	case Gate:
 		return `_PERP`

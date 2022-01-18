@@ -20,7 +20,6 @@ type MarketInfo struct {
 	BorrowSizeMin                          float64 //最小借款数量
 	BorrowUsdtMax                          float64 //最大借款usdt数额
 	SizeMax, SizeMin                       float64 //最大最小下单数量，当CTValue=0（现货）时为交易币种数量，CTValue>0(永续)为张数，在使用时乘以CTValue转换成币数
-	PriceMax                               float64 //最大下单价格
 }
 
 func GetMarketInfo(market, instrument string) (marketInfo *MarketInfo) {

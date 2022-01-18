@@ -7,80 +7,15 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/bitly/go-simplejson"
-	"github.com/gorilla/websocket"
 	"hello/model"
 	"hello/util"
 	"math"
+	"net/http"
 	"sort"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 )
-
-const restBybit = `https://api.bybit.com`
-const wsBybit = `wss://stream.bybit.com/realtime`
-const wsStepBybit = 1
-
-var socketLockBybit sync.Mutex
-
-var subscribeHandlerBybit = func(connection *websocket.Conn, subscribes []interface{}) error {
-	var err error = nil
-	expire := util.GetNowUnixMillion() + 1000
-	toBeSign := fmt.Sprintf(`GET/realtime%d`, expire)
-	account := model.AppConfig.GetAccounts(model.Bybit)[0]
-	hash := hmac.New(sha256.New, []byte(account.Secret))
-	hash.Write([]byte(toBeSign))
-	sign := hex.EncodeToString(hash.Sum(nil))
-	authCmd := fmt.Sprintf(`{"op": "auth", "args": ["%s", %d, "%s"]}`, account.Key, expire, sign)
-	if err = sendToConnection(model.Bybit, connection, []byte(authCmd)); err != nil {
-		util.SocketInfo("bybit can not auth " + err.Error())
-	}
-	subscribeMap := make(map[string]interface{})
-	subscribeMap[`op`] = `subscribe`
-	subscribeMap[`args`] = subscribes
-	subscribeMessage := util.JsonEncodeToByte(subscribeMap)
-	if err = sendToConnection(model.Bybit, connection, subscribeMessage); err != nil {
-		util.SocketInfo("bybit can not subscribe " + err.Error())
-		return err
-	}
-	return err
-}
-
-func WsDepthServeBybit(markets *model.Markets, orderHandler OrderHandler) ([]chan struct{}, error) {
-	lastPingTime := util.GetNow().Unix()
-	wsHandler := func(connection *websocket.Conn, event []byte, orderHandler OrderHandler) {
-		socketLockBybit.Lock()
-		defer socketLockBybit.Unlock()
-		if util.GetNow().Unix()-lastPingTime > 30 { // ping ws server every 5 seconds
-			lastPingTime = util.GetNow().Unix()
-			if err := sendToAllConnections(model.Bybit, []byte(`{"op":"ping"}`)); err != nil {
-				util.SocketInfo("bybit server ping client error " + err.Error())
-			}
-		}
-		if len(event) == 0 {
-			return
-		}
-		depthJson, depthErr := util.NewJSON(event)
-		if depthJson == nil {
-			return
-		}
-		topic := depthJson.Get(`topic`).MustString()
-		ts := depthJson.Get(`timestamp_e6`).MustInt64()
-		if depthErr != nil {
-			util.SocketInfo(`bybit parse err` + string(event))
-			return
-		}
-		if strings.Contains(topic, `orderBookL2_25.`) {
-			//util.SocketInfo(string(event))
-			symbol := model.GetStandardSymbol(model.Bybit, topic[strings.LastIndex(topic, `.`)+1:])
-			handleOrderBookBybit(markets, symbol, ts, depthJson)
-		} else if topic == `position` {
-		}
-	}
-	subscribes := GetWSSubscribes(model.Bybit, model.SubscribeDepth)
-	return WebSocketClient(model.Bybit, wsBybit, subscribes, subscribeHandlerBybit, wsHandler, orderHandler, wsStepBybit)
-}
 
 func parseTickBybit(item map[string]interface{}) (tick *model.Tick) {
 	if item == nil {
@@ -114,39 +49,50 @@ func parseTickBybit(item map[string]interface{}) (tick *model.Tick) {
 	return tick
 }
 
-//func getMarketsBybit(key, secret string) (marketInfos map[string]*model.MarketInfo) {
-//	response := SignedRequestBybit(key, secret, http.MethodGet, `/v2/public/symbols`, nil)
-//	marketInfos = make(map[string]*model.MarketInfo)
-//	marketJson, err := util.NewJSON(response)
-//	if err == nil && marketJson.Get(`ret_code`) != nil && marketJson.Get(`ret_code`).MustInt64() != 0 {
-//		items, _ := marketJson.Get(`result`).Array()
-//		for _, item := range items {
-//			value := item.(map[string]interface{})
-//			marketInfo := &model.MarketInfo{Market: model.Ftx}
-//			if value[`name`] != nil {
-//				marketInfo.Name = value[`name`].(string)
-//			} else {
-//				continue
-//			}
-//			if value[`baseCurrency`] != nil && value[`type`] != nil && value[`type`].(string) == `spot` &&
-//				canBorrows[value[`baseCurrency`].(string)] {
-//				marketInfo.CanBorrow = true
-//			}
-//			if value[`priceIncrement`] != nil {
-//				marketInfo.PriceIncrement, _ = value[`priceIncrement`].(json.Number).Float64()
-//			}
-//			if value[`sizeIncrement`] != nil {
-//				marketInfo.SizeIncrement, _ = value[`sizeIncrement`].(json.Number).Float64()
-//			}
-//			if value[`minProvideSize`] != nil {
-//				marketInfo.SizeMin, _ = value[`minProvideSize`].(json.Number).Float64()
-//				marketInfo.SizeMin = math.Max(marketInfo.SizeMin, marketInfo.SizeIncrement)
-//			}
-//			marketInfos[marketInfo.Name] = marketInfo
-//		}
-//	}
-//	return
-//}
+func getMarketsBybit(key, secret string) (marketInfos map[string]*model.MarketInfo) {
+	response := SignedRequestBybit(key, secret, http.MethodGet, `/v2/public/symbols`, nil)
+	marketInfos = make(map[string]*model.MarketInfo)
+	marketJson, err := util.NewJSON(response)
+	if err == nil && marketJson.Get(`ret_code`) != nil && marketJson.Get(`ret_code`).MustInt64() == 0 {
+		items, _ := marketJson.Get(`result`).Array()
+		for _, item := range items {
+			value := item.(map[string]interface{})
+			if value[`status`] == nil || !strings.EqualFold(value[`status`].(string), `Trading`) || value[`quote_currency`] == nil ||
+				value[`quote_currency`].(string) != `USDT` {
+				continue
+			}
+			marketInfo := &model.MarketInfo{Market: model.Bybit}
+			if value[`base_currency`] != nil {
+				marketInfo.CTCurrency = value[`base_currency`].(string)
+				marketInfo.Name = marketInfo.CTCurrency + model.GetPerpTail(model.Bybit)
+				marketInfos[marketInfo.Name] = marketInfo
+			}
+			if value[`price_scale`] != nil {
+				decimal, _ := value[`price_scale`].(json.Number).Int64()
+				marketInfo.PriceDecimal = int(decimal)
+			}
+			if value[`price_filter`] != nil {
+				priceFilter := value[`price_filter`].(map[string]interface{})
+				if priceFilter != nil && priceFilter[`tick_size`] != nil {
+					marketInfo.PriceIncrement, _ = strconv.ParseFloat(priceFilter[`tick_size`].(string), 64)
+				}
+			}
+			if value[`lot_size_filter`] != nil {
+				sizeFilter := value[`lot_size_filter`].(map[string]interface{})
+				if sizeFilter != nil && sizeFilter[`max_trading_qty`] != nil {
+					marketInfo.SizeMax, _ = sizeFilter[`max_trading_qty`].(json.Number).Float64()
+				}
+				if sizeFilter != nil && sizeFilter[`min_trading_qty`] != nil {
+					marketInfo.SizeMin, _ = sizeFilter[`min_trading_qty`].(json.Number).Float64()
+				}
+				if sizeFilter != nil && sizeFilter[`qty_step`] != nil {
+					marketInfo.SizeIncrement, _ = sizeFilter[`qty_step`].(json.Number).Float64()
+				}
+			}
+		}
+	}
+	return
+}
 
 func handleOrderBookBybit(markets *model.Markets, symbol string, ts int64, response *simplejson.Json) {
 	if response == nil {
@@ -250,23 +196,6 @@ func handleOrderBookBybit(markets *model.Markets, symbol string, ts int64, respo
 	}
 }
 
-//func handleAccountBybit(dataJson *simplejson.Json) {
-//	if dataJson == nil {
-//		return
-//	}
-//	data, _ := dataJson.Array()
-//	for _, value := range data {
-//		account := &model.Position{Market: model.Bybit, Ts: util.GetNowUnixMillion()}
-//		if value != nil {
-//			item := value.(map[string]interface{})
-//			parseAccountBybit(account, item)
-//		}
-//		accountEvent, _ := dataJson.String()
-//		util.Info(`---- set bybit account from position socket` + accountEvent)
-//		model.AppAccounts.SetAccount(model.Bybit, account.Currency, account)
-//	}
-//}
-
 func SignedRequestBybit(key, secret, method, path string, body map[string]interface{}) []byte {
 	if body == nil {
 		body = make(map[string]interface{})
@@ -287,6 +216,33 @@ func SignedRequestBybit(key, secret, method, path string, body map[string]interf
 	}
 	responseBody, _ := util.HttpRequest(method, uri, string(util.JsonEncodeToByte(body)), headers, 60)
 	return responseBody
+}
+
+func cancelOrdersBybit(key, secret, symbol string) bool {
+	postData := make(map[string]interface{})
+	path := ``
+	method := ``
+	coinPerp, isPerp := model.IsPerp(model.Bybit, symbol)
+	coinSpot, isSpot := model.IsSpot(model.Bybit, symbol)
+	if isSpot {
+		path = `/spot/order/batch-cancel`
+		method = http.MethodDelete
+		postData[`symbol`] = coinSpot + `USDT`
+	} else if isPerp {
+		path = `/private/linear/order/cancel-all`
+		method = http.MethodPost
+		postData[`symbol`] = coinPerp + `USDT`
+	} else {
+		return false
+	}
+	response := SignedRequestBybit(key, secret, method, path, postData)
+	cancelJson, err := util.NewJSON(response)
+	if err == nil {
+		if cancelJson.Get(`ret_code`).MustInt() == 0 {
+			return true
+		}
+	}
+	return false
 }
 
 func cancelOrderBybit(key, secret, symbol, orderId string) (result bool, errCode, msg string, order *model.Order) {
@@ -340,27 +296,6 @@ func queryOrderBybit(key, secret, symbol, orderId string) (orders []*model.Order
 	}
 	return
 }
-
-//func getAccountBybit(key, secret, symbol string, accounts *model.Accounts) (success bool) {
-//	postData := make(map[string]interface{})
-//	postData[`symbol`] = model.GetDialectSymbol(model.Bybit, symbol)
-//	response := SignedRequestBybit(key, secret, `GET`, `/v2/private/position/list`, postData)
-//	util.SocketInfo(fmt.Sprintf(string(response)))
-//	positionJson, err := util.NewJSON(response)
-//	if err == nil || positionJson == nil || strings.ToLower(positionJson.Get(`ret_msg`).MustString()) != `ok` {
-//		util.SocketInfo(`fail to refresh accounts bybit`)
-//		time.Sleep(time.Second * 2)
-//		return getAccountBybit(key, secret, symbol, accounts)
-//	}
-//	positionJson = positionJson.Get(`result`)
-//	if positionJson != nil {
-//		account := &model.Account{Market: model.Bybit, Ts: util.GetNowUnixMillion(), Currency: symbol}
-//		item, _ := positionJson.Map()
-//		parseAccountBybit(account, item)
-//		accounts.SetAccount(model.Bybit, account.Currency, account)
-//	}
-//	return true
-//}
 
 // timeInForce 有效选项:GoodTillCancel, ImmediateOrCancel, FillOrKill,PostOnly
 func placeOrderBybit(order *model.Order, key, secret, orderSide, orderType, timeInForce, symbol string, price, amount float64) {
