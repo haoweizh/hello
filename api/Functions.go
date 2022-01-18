@@ -848,7 +848,7 @@ func filterCross(market, symbol string) bool {
 	case model.Gate:
 		switch symbol {
 		// BTT价格异常
-		case `BTT-USDT`, `BTT-PERP`, `GT-USDT`, `GT-USD`:
+		case `BTT_USDT`, `BTT_PERP`, `GT_USDT`, `GT_USD`:
 			return true
 		}
 	case model.OKEX:

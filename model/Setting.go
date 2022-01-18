@@ -255,10 +255,12 @@ func GetSpotTail(market string) string {
 		return "usdt"
 	case Ftx:
 		return `/USD`
-	case OKEX, Kucoin, Gate:
+	case OKEX, Kucoin:
 		return `-USDT`
 	case Binance:
 		return `USDT`
+	case Gate:
+		return `_USDT`
 	}
 	return ``
 }
@@ -269,8 +271,10 @@ func GetPerpTail(market string) string {
 		return `-usdt`
 	case OKEX:
 		return `-USDT-SWAP`
-	case Binance, Kucoin, Ftx, Gate:
+	case Binance, Kucoin, Ftx:
 		return `-PERP`
+	case Gate:
+		return `_PERP`
 	}
 	return ``
 }
@@ -283,7 +287,7 @@ func GetCrossCoin(market, symbol string) (coin string) {
 	case OKEX:
 		tails = []string{`-USDT`, `-USDT-SWAP`}
 	case Gate:
-		tails = []string{`-USDT`, `-PERP`}
+		tails = []string{`_USDT`, `_PERP`}
 	case Binance:
 		tails = []string{`-PERP`}
 	}

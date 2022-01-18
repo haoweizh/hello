@@ -88,7 +88,7 @@ func Test_initTurtleN(t *testing.T) {
 	accounts = append(accounts, account)
 	accounts = append(accounts, nil)
 	fmt.Println(len(accounts))
-	result, _, _, order := api.CancelOrder(model.AppConfig.GateKey, model.AppConfig.GateSecret, `gate`, `SUN-USDT`, ``,
+	result, _, _, order := api.CancelOrder(model.AppConfig.GateKey, model.AppConfig.GateSecret, `gate`, `SUN_USDT`, ``,
 		model.OrderTypeLimit, `86007650678`)
 	fmt.Println(result)
 	fmt.Println(fmt.Sprintf(`%v %s %f`, result, order.Status, order.DealAmount))
@@ -154,13 +154,13 @@ func Test_wallet(t *testing.T) {
 	model.NewConfig()
 	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
 	api.InitMarketInfos()
-	orderQuery := api.QueryOrderById(model.AppConfig.GateKey, model.AppConfig.GateSecret, model.Gate, `CFX-PERP`, `CFX-USDT`, model.OrderTypeLimit, `79852794326`)
+	orderQuery := api.QueryOrderById(model.AppConfig.GateKey, model.AppConfig.GateSecret, model.Gate, `CFX_PERP`, `CFX_USDT`, model.OrderTypeLimit, `79852794326`)
 	fmt.Println(orderQuery.OrderSide)
 	order := api.PlaceOrder(model.AppConfig.GateKey, model.AppConfig.GateSecret, model.OrderSideBuy, model.OrderTypeLimit,
-		model.Gate, `ETH-USDT`, ``, ``, `carry`,
+		model.Gate, `ETH_USDT`, ``, ``, `carry`,
 		2000, 2000, 0.1, true, false, nil, nil)
 	fmt.Println(order.OrderId)
-	api.CancelOrders(model.AppConfig.GateKey, model.AppConfig.GateSecret, model.Gate, `ETH-USDT`)
+	api.CancelOrders(model.AppConfig.GateKey, model.AppConfig.GateSecret, model.Gate, `ETH_USDT`)
 	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
 	api.InitMarketInfos()
 	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})

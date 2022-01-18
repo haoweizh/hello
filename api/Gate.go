@@ -642,7 +642,7 @@ func getFundingRateGate(key, secret, symbol string) (fundingRate *model.FundingR
 
 func setBidAskGate(key, secret, symbol string) {
 	client, ctx := getClientGate(key, secret)
-	contract := model.GetCoin(model.Gate, symbol) + `-USDT`
+	contract := model.GetCoin(model.Gate, symbol) + `_USDT`
 	orderBook, _, err := client.FuturesApi.ListFuturesOrderBook(ctx, `usdt`, contract,
 		&gateApi.ListFuturesOrderBookOpts{Limit: optional.NewInt32(1)})
 	if err != nil {
