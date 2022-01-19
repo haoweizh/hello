@@ -12,7 +12,7 @@ import (
 
 const lowestScore = -0.009
 const lastOrderLength = 8
-const holdingLimitInU = 100000.0
+const holdingLimitInU = 500000.0
 const openValueLimit = 10000.0
 const InsufficientCodeBinance = `-2010`
 

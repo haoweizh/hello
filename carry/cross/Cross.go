@@ -155,10 +155,10 @@ func createFromBalance(account *model.Account, setting *model.Setting, valueLimi
 		carryStatus.RateInAll = math.Abs(carryStatus.Holding * price / spotMarkets[key].accountValueInU)
 		carryStatus.AvailableSell = balance.AvailableWithBorrow
 	}
-	//if spotMarkets[key].availableU/spotMarkets[key].accountValueInU < 0.2 ||
-	//	spotMarkets[key].accountValueInU <= 0 || carryStatus.RateInAll > 0.8 {
-	//	doRevert = true
-	//}
+	usdLowLine := math.Min(100000, 0.1*spotMarkets[key].accountValueInU)
+	if spotMarkets[key].availableU < usdLowLine || carryStatus.RateInAll > 0.6 {
+		doRevert = true
+	}
 	if spotMarkets[key].balances[setting.Symbol] != nil &&
 		math.Abs(spotMarkets[key].balances[setting.Symbol].UsdValue) > valueLimit {
 		doRevert = true
@@ -178,15 +178,15 @@ func initStatus(account *model.Account, setting *model.Setting) (status *CarrySt
 	tailPerp := model.GetPerpTail(setting.Market)
 	fundingRate := 0.0
 	doRevert := false
-	holdLimit := holdingLimitInU
+	localLimit := holdingLimitInU
 	account0 := model.AppConfig.GetAccounts(setting.Market)[0]
 	if account0.Key != account.Key {
-		holdLimit /= 10
+		localLimit /= 10
 	}
 	if setting.Symbol[len(setting.Symbol)-len(tailSpot):] == tailSpot {
-		status, doRevert = createFromBalance(account, setting, holdLimit)
+		status, doRevert = createFromBalance(account, setting, localLimit)
 	} else if setting.Symbol[len(setting.Symbol)-len(tailPerp):] == tailPerp {
-		status, doRevert = createFromPosition(account, setting, holdLimit)
+		status, doRevert = createFromPosition(account, setting, localLimit)
 		_, fundingRate = api.GetFundingRate(account.Key, account.Secret, setting.Market, setting.Symbol, nil)
 		fundingRate *= 0.9
 	}
