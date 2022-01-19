@@ -35,7 +35,7 @@ var carryStatus = make(map[string]map[string]map[string]map[string]*CarryStatus)
 var contractMarkets = make(map[string]*contractMarket)                           // key - contractMarket
 var spotMarkets = make(map[string]*spotMarket)                                   // key - spotMarket
 var lastOrderSymbol map[string]map[string]string                                 // key/market/symbol
-var crossLock sync.Mutex
+var crossLock, crossMarketLock sync.Mutex
 var crossing bool
 var doCross = false
 
@@ -53,6 +53,49 @@ type spotMarket struct {
 	accountValueInU float64
 	balances        map[string]*model.Balance // symbol/balance
 	collateral      *model.Collateral
+}
+
+func getContractMarket(key string) *contractMarket {
+	defer crossMarketLock.Unlock()
+	crossMarketLock.Lock()
+	if contractMarkets == nil {
+		return nil
+	}
+	return contractMarkets[key]
+}
+
+func clearMarkets() {
+	defer crossMarketLock.Unlock()
+	crossMarketLock.Lock()
+	spotMarkets = make(map[string]*spotMarket)
+	contractMarkets = make(map[string]*contractMarket)
+}
+
+func setContractMarket(key string, cm *contractMarket) {
+	defer crossMarketLock.Unlock()
+	crossMarketLock.Lock()
+	if contractMarkets == nil {
+		contractMarkets = make(map[string]*contractMarket)
+	}
+	contractMarkets[key] = cm
+}
+
+func getSpotMarket(key string) *spotMarket {
+	defer crossMarketLock.Unlock()
+	crossMarketLock.Lock()
+	if spotMarkets == nil {
+		return nil
+	}
+	return spotMarkets[key]
+}
+
+func setSpotMarket(key string, sm *spotMarket) {
+	defer crossMarketLock.Unlock()
+	crossMarketLock.Lock()
+	if spotMarkets == nil {
+		spotMarkets = make(map[string]*spotMarket)
+	}
+	spotMarkets[key] = sm
 }
 
 type CarryStatus struct {
@@ -114,8 +157,9 @@ func GetHoldings(accounts map[string]*model.Account) (holding [][]interface{}) {
 		if account == nil {
 			continue
 		}
-		if spotMarkets[account.Key] != nil && spotMarkets[account.Key].balances != nil {
-			for _, balance := range spotMarkets[account.Key].balances {
+		sm := getSpotMarket(account.Key)
+		if sm != nil && sm.balances != nil {
+			for _, balance := range sm.balances {
 				if balance != nil && balance.Amount != 0 {
 					symbol := balance.Coin + model.GetSpotTail(balance.Market)
 					valid := false
@@ -135,8 +179,9 @@ func GetHoldings(accounts map[string]*model.Account) (holding [][]interface{}) {
 				}
 			}
 		}
-		if contractMarkets[account.Key] != nil && contractMarkets[account.Key].positions != nil {
-			for _, position := range contractMarkets[account.Key].positions {
+		cm := getContractMarket(account.Key)
+		if cm != nil && cm.positions != nil {
+			for _, position := range cm.positions {
 				valid := false
 				setting := model.GetSetting(model.FunctionCross, position.Market, position.Currency)
 				if setting != nil {
@@ -177,25 +222,27 @@ func GetHoldings(accounts map[string]*model.Account) (holding [][]interface{}) {
 }
 
 func GetCrossMarketValue(key string) (market string, inAllSpot, contractAccountValue, holdingSpot, holdingFuture, unRealizedPnl float64) {
-	if spotMarkets[key] != nil {
-		market = spotMarkets[key].market
-		inAllSpot = spotMarkets[key].accountValueInU
+	sm := getSpotMarket(key)
+	if sm != nil {
+		market = sm.market
+		inAllSpot = sm.accountValueInU
 		settings := model.GetSettings(model.FunctionCross, market)
 		for _, setting := range settings {
-			if spotMarkets[key].balances != nil && spotMarkets[key].balances[setting.Symbol] != nil {
-				holdingSpot += spotMarkets[key].balances[setting.Symbol].UsdValue
+			if sm.balances != nil && sm.balances[setting.Symbol] != nil {
+				holdingSpot += sm.balances[setting.Symbol].UsdValue
 			}
 		}
 	}
-	if contractMarkets[key] != nil {
+	cm := getContractMarket(key)
+	if cm != nil {
 		if market == `` {
-			market = contractMarkets[key].market
+			market = cm.market
 		}
-		contractAccountValue = contractMarkets[key].accountValueInU
-		for _, position := range contractMarkets[key].positions {
+		contractAccountValue = cm.accountValueInU
+		for _, position := range cm.positions {
 			unRealizedPnl += position.ProfitUnreal
 		}
-		holdingFuture = contractMarkets[key].contractValueInU
+		holdingFuture = cm.contractValueInU
 	}
 	return
 }
