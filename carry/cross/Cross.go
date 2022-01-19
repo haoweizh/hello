@@ -155,10 +155,10 @@ func createFromBalance(account *model.Account, setting *model.Setting, valueLimi
 		carryStatus.RateInAll = math.Abs(carryStatus.Holding * price / spotMarkets[key].accountValueInU)
 		carryStatus.AvailableSell = balance.AvailableWithBorrow
 	}
-	if spotMarkets[key].availableU/spotMarkets[key].accountValueInU < 0.2 ||
-		spotMarkets[key].accountValueInU <= 0 || carryStatus.RateInAll > 0.8 {
-		doRevert = true
-	}
+	//if spotMarkets[key].availableU/spotMarkets[key].accountValueInU < 0.2 ||
+	//	spotMarkets[key].accountValueInU <= 0 || carryStatus.RateInAll > 0.8 {
+	//	doRevert = true
+	//}
 	if spotMarkets[key].balances[setting.Symbol] != nil &&
 		math.Abs(spotMarkets[key].balances[setting.Symbol].UsdValue) > valueLimit {
 		doRevert = true
