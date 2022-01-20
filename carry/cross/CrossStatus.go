@@ -167,8 +167,8 @@ func GetHoldings(accounts map[string]*model.Account) (holding [][]interface{}) {
 					if setting != nil {
 						valid = setting.Valid
 					}
-					holding = append(holding, []interface{}{balance.Market, balance.Coin, symbol, balance.Amount,
-						math.Round(balance.UsdValue), valid})
+					holding = append(holding, []interface{}{balance.Market, balance.Coin, symbol,
+						math.Round(balance.Amount), math.Round(balance.UsdValue), valid})
 					coinHold[balance.Coin] += balance.Amount
 					if coinPrice[balance.Coin] == 0 {
 						tickGet, tick := model.AppMarkets.GetBidAsk(symbol, balance.Market)
@@ -192,7 +192,7 @@ func GetHoldings(accounts map[string]*model.Account) (holding [][]interface{}) {
 					coin := model.GetCoin(position.Market, position.Currency)
 					if tickGet {
 						holding = append(holding, []interface{}{position.Market, coin, position.Currency,
-							position.Free, math.Round(tick.Bids[0].Price * position.Free), valid})
+							math.Round(position.Free), math.Round(tick.Bids[0].Price * position.Free), valid})
 						coinHold[coin] += position.Free
 						coinPrice[coin] = tick.Bids[0].Price
 					} else {
