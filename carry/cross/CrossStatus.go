@@ -20,13 +20,10 @@ var InsufficientCodeOKEX = map[string]bool{`51008`: true, `51119`: true, `51120`
 	`58350`: true, `59108`: true, `59200`: true}
 
 // market/symbol/bool经过人工确认可以cross的币种
-var validSymbol = map[string]map[string]bool{
-	model.Gate: {`AE_USDT`: true, `HC_USDT`: true, `REEF_PERP`: true, `REEF_USDT`: true,
-		`ONE_PERP`: true, `ONE_USDT`: true, `LSK_USDT`: true},
-	model.OKEX: {`AE-USDT`: true, `HC-USDT`: true, `AE-USDT-SWAP`: true, `HC-USDT-SWAP`: true,
-		`ORBS-USDT`: true, `ORBS-USDT-SWAP`: true, `ONE-USDT`: true, `LSK-USDT`: true},
-	model.Ftx: {`REEF/USD`: true, `REEF-PERP`: true, `ORBS-PERP`: true, `ORBS/USD`: true,
-						`ONE-PERP`: true}}
+var validCrossCoin = map[string][]string{
+					model.Gate: {`AE`, `HC`, `REEF`, `ONE`, `LSK`, `GLMR`},
+					model.OKEX: {`AE`, `HC`, `ORBS`, `ONE`, `LSK`, `GLMR`},
+					model.Ftx:  {`REEF`, `ORBS`, `ONE`}}
 var carryFail = make(map[string]int64) // key fail num
 var carryStop = make(map[string]bool)
 var lastOrderIndex = make(map[string]map[string]int64)                           // market - symbol - index
@@ -111,10 +108,16 @@ type CarryStatus struct {
 }
 
 func isValidSymbol(market, symbol string) bool {
-	if validSymbol[market] == nil {
+	if validCrossCoin[market] == nil {
 		return false
 	}
-	return validSymbol[market][symbol]
+	coin := model.GetCoin(market, symbol)
+	for _, validCoid := range validCrossCoin[market] {
+		if validCoid == coin {
+			return true
+		}
+	}
+	return false
 }
 
 func isFresh(key, market, symbol string) bool {

@@ -328,6 +328,10 @@ func GetFundingRate(key, secret, market, symbol string, lock *sync.Mutex) (succe
 		defer lock.Unlock()
 		lock.Lock()
 	}
+	perpSymbol := model.GetCoin(market, symbol) + model.GetPerpTail(market)
+	if perpSymbol != symbol { //非永续合约的资金费率为0
+		return true, 0
+	}
 	fundingRate := model.GetFundingRate(market, symbol)
 	now := util.GetNow().Unix()
 	if market == model.OKEX { // 针对ok用新expireTime返回旧数据问题的特殊处理

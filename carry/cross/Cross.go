@@ -299,11 +299,14 @@ func makeEqual(coin string, statuses []*CarryStatus) (isEqual bool, msg string) 
 		}
 		holding += status.Holding
 		getTick, tick := model.AppMarkets.GetBidAsk(status.symbol, status.market)
-		if !getTick {
-			return false, fmt.Sprintf(`no tick when equal %s %s`, status.market, status.symbol)
+		getFunding, rate := api.GetFundingRate(status.account.Key, status.account.Secret, status.market, status.symbol, nil)
+		if !getTick || !getFunding {
+			return false, fmt.Sprintf(`no tick or funding rate when equal %s %s`, status.market, status.symbol)
 		}
-		bids = append(bids, tick.Bids[0])
-		asks = append(asks, tick.Asks[0])
+		bids = append(bids, model.Tick{Market: tick.Bids[0].Market, Symbol: tick.Bids[0].Symbol,
+			Amount: tick.Bids[0].Amount, Price: tick.Bids[0].Price * (1 + rate)})
+		asks = append(asks, model.Tick{Market: tick.Asks[0].Market, Symbol: tick.Asks[0].Symbol,
+			Amount: tick.Asks[0].Amount, Price: tick.Asks[0].Price * (1 + rate)})
 		bidStatus[fmt.Sprintf(`%s_%s`, status.market, status.symbol)] = status
 		askStatus[fmt.Sprintf(`%s_%s`, status.market, status.symbol)] = status
 		if price == 0 {
@@ -338,12 +341,10 @@ func makeEqual(coin string, statuses []*CarryStatus) (isEqual bool, msg string) 
 			}
 			if math.IsNaN(status.AvailableSell) || status.AvailableSell > holding {
 				equalStatus = status
-				price = bids[i].Price
 			} else if !math.IsNaN(status.AvailableSell) {
 				checkAmount := model.GetAmountInMarket(status.market, status.symbol, status.AvailableSell, bids[i].Price)
 				if checkAmount > 0 {
 					equalStatus = status
-					price = bids[i].Price
 					holding = status.AvailableSell
 				}
 			}
@@ -365,12 +366,10 @@ func makeEqual(coin string, statuses []*CarryStatus) (isEqual bool, msg string) 
 			}
 			if math.IsNaN(status.AvailableBuy) || status.AvailableBuy > math.Abs(holding) {
 				equalStatus = status
-				price = asks[i].Price
 			} else if !math.IsNaN(status.AvailableBuy) {
 				checkAmount := model.GetAmountInMarket(status.market, status.symbol, status.AvailableBuy, asks[i].Price)
 				if checkAmount > 0 {
 					equalStatus = status
-					price = asks[i].Price
 					holding = status.AvailableBuy
 				}
 			}
@@ -384,6 +383,15 @@ func makeEqual(coin string, statuses []*CarryStatus) (isEqual bool, msg string) 
 		checkAmount := model.GetAmountInMarket(equalStatus.market, equalStatus.symbol, amount, price)
 		if checkAmount > 0 {
 			time.Sleep(time.Second)
+			getTick, tick := model.AppMarkets.GetBidAsk(equalStatus.symbol, equalStatus.market)
+			if !getTick {
+				return
+			}
+			if orderSide == model.OrderSideBuy {
+				price = tick.Asks[0].Price
+			} else if orderSide == model.OrderSideSell {
+				price = tick.Bids[0].Price
+			}
 			util.Notice(fmt.Sprintf(`try to equal %s %s at %f amount %f`,
 				equalStatus.market, equalStatus.symbol, price, amount))
 			api.PlaceOrder(equalStatus.account.Key, equalStatus.account.Secret, orderSide, model.OrderTypeLimit,
@@ -459,16 +467,20 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarrySta
 	amountAsk := tick.Asks[0].Amount
 	score := 1 - priceAskRelate/priceBid
 	scoreRelate := priceBidRelate/priceAsk - 1
-	if (score > 0.1 || scoreRelate > 0.1) && (!isValidSymbol(carryStatus.market, carryStatus.symbol) ||
-		!isValidSymbol(carryStatusRelate.market, carryStatusRelate.symbol)) {
+	if (score > 0.15 || scoreRelate > 0.15) || ((score > 0.1 || scoreRelate > 0.1) &&
+		(!isValidSymbol(carryStatus.market, carryStatus.symbol) ||
+			!isValidSymbol(carryStatusRelate.market, carryStatusRelate.symbol))) {
+		title := `不同币种`
+		if score > 0.15 || scoreRelate > 0.15 {
+			title = `价差不可思议`
+		}
 		msg := fmt.Sprintf(`different coin %s %s %s %s %f %f`, carryStatus.market, carryStatus.symbol,
 			carryStatusRelate.market, carryStatusRelate.symbol, score, scoreRelate)
 		minute := time.Now().Minute()
 		second := time.Now().Second()
 		if minute == 0 && second == 0 {
 			for _, address := range model.TeamMails {
-				err := util.SendMail(model.AppConfig.FromMail, model.AppConfig.FromMailAuth, address,
-					`不同币种`, msg)
+				err := util.SendMail(model.AppConfig.FromMail, model.AppConfig.FromMailAuth, address, title, msg)
 				if err != nil {
 					util.Notice(`fail to send mail msg %s %s`, msg, err.Error())
 				}
