@@ -115,13 +115,11 @@ func (config *Config) GetCrossLen() int {
 //}
 
 func (config *Config) GetAccountFromKey(market, key string) (account *Account) {
-	if marketAccounts[market] == nil {
-		config.GetAccounts(market)
-	}
-	if marketAccounts[market] == nil {
+	accounts := config.GetAccounts(market)
+	if accounts == nil {
 		return nil
 	}
-	for _, item := range marketAccounts[market] {
+	for _, item := range accounts {
 		if item == nil {
 			return nil
 		}
@@ -133,6 +131,8 @@ func (config *Config) GetAccountFromKey(market, key string) (account *Account) {
 }
 
 func (config *Config) GetAccounts(market string) []*Account {
+	defer config.lock.Unlock()
+	config.lock.Lock()
 	if marketAccounts[market] != nil {
 		return marketAccounts[market]
 	}
