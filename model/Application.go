@@ -85,9 +85,7 @@ func IsRelatedTickTimeout(market string, delayRelated int64) (timeout bool) {
 		return delayRelated > 100
 	case OKEX, Ftx, Huobi:
 		return delayRelated > 300
-	case Gate:
-		return delayRelated > 30000
-	case Kucoin:
+	case Kucoin, Gate:
 		return delayRelated > 1000
 	}
 	return true

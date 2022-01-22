@@ -615,7 +615,7 @@ func placeCross(statusBuy, statusSell *CarryStatus, priceBuy, priceSell, amount 
 		api.PlaceOrder(statusSell.account.Key, statusSell.account.Secret, model.OrderSideSell, model.OrderTypeLimit,
 			statusSell.market, statusSell.symbol, ``, ``, model.FunctionCross, priceSell, priceSell,
 			amount, true, true, PostOrderCross, statusSell.setting)
-		time.Sleep(time.Second / 5)
+		time.Sleep(time.Second / 4)
 	}
 	if placeSuccess {
 		placeStatus(statusBuy, priceBuy, amount)
