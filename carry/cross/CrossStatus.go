@@ -21,8 +21,8 @@ var InsufficientCodeOKEX = map[string]bool{`51008`: true, `51119`: true, `51120`
 
 // market/symbol/bool经过人工确认可以cross的币种
 var validCrossCoin = map[string][]string{
-					model.Gate: {`AE`, `HC`, `REEF`, `ONE`, `LSK`, `GLMR`},
-					model.OKEX: {`AE`, `HC`, `ORBS`, `ONE`, `LSK`, `GLMR`},
+					model.Gate: {`AE`, `HC`, `REEF`, `ONE`, `LSK`, `GLMR`, `LEASH`},
+					model.OKEX: {`AE`, `HC`, `ORBS`, `ONE`, `LSK`, `GLMR`, `LEASH`},
 					model.Ftx:  {`REEF`, `ORBS`, `ONE`}}
 var carryFail = make(map[string]int64) // key fail num
 var carryStop = make(map[string]bool)
@@ -112,8 +112,8 @@ func isValidSymbol(market, symbol string) bool {
 		return false
 	}
 	coin := model.GetCoin(market, symbol)
-	for _, validCoid := range validCrossCoin[market] {
-		if validCoid == coin {
+	for _, validCoin := range validCrossCoin[market] {
+		if validCoin == coin {
 			return true
 		}
 	}
