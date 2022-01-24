@@ -1,17 +1,14 @@
 package api
 
 import (
-	"crypto/hmac"
-	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"github.com/gorilla/websocket"
 	"hello/model"
 	"hello/util"
 	"net/http"
+	"sort"
 	"strconv"
-	"strings"
 	"time"
 )
 
@@ -49,16 +46,16 @@ func maintainChannelBybitSpot(subscribes []interface{}) {
 
 var subscribeHandlerBybitSpot = func(connection *websocket.Conn, subscribes []interface{}) error {
 	var err error = nil
-	expire := util.GetNowUnixMillion() + 1000
-	toBeSign := fmt.Sprintf(`GET/realtime%d`, expire)
-	account := model.AppConfig.GetAccounts(model.BybitSpot)[0]
-	hash := hmac.New(sha256.New, []byte(account.Secret))
-	hash.Write([]byte(toBeSign))
-	sign := hex.EncodeToString(hash.Sum(nil))
-	authCmd := fmt.Sprintf(`{"op": "auth", "args": ["%s", %d, "%s"]}`, account.Key, expire, sign)
-	if err = SendToConnection(model.BybitSpot, connection, []byte(authCmd)); err != nil {
-		util.SocketInfo("bybitSpot can not auth " + err.Error())
-	}
+	//expire := util.GetNowUnixMillion() + 1000
+	//toBeSign := fmt.Sprintf(`GET/realtime%d`, expire)
+	//account := model.AppConfig.GetAccounts(model.BybitSpot)[0]
+	//hash := hmac.New(sha256.New, []byte(account.Secret))
+	//hash.Write([]byte(toBeSign))
+	//sign := hex.EncodeToString(hash.Sum(nil))
+	//authCmd := fmt.Sprintf(`{"op": "auth", "args": ["%s", %d, "%s"]}`, account.Key, expire, sign)
+	//if err = SendToConnection(model.BybitSpot, connection, []byte(authCmd)); err != nil {
+	//	util.SocketInfo("bybitSpot can not auth " + err.Error())
+	//}
 	for _, subscribe := range subscribes {
 		subscribeMessage := fmt.Sprintf(
 			`{"topic":"depth","event":"sub","params":{"symbol":"%s","binary":false}}`, subscribe)
@@ -86,27 +83,68 @@ func WsDepthServeBybitSpot(markets *model.Markets, orderHandler OrderHandler) ([
 			return
 		}
 		depthJson, depthErr := util.NewJSON(event)
-		if depthJson == nil {
+		if depthJson == nil || depthErr != nil {
 			return
 		}
-		topic := depthJson.Get(`topic`).MustString()
-		ts := depthJson.Get(`timestamp_e6`).MustInt64()
-		if depthErr != nil {
-			util.SocketInfo(`bybit parse err` + string(event))
-			return
-		}
-		if strings.Contains(topic, `orderBookL2_25.`) {
-			//util.SocketInfo(string(event))
-			symbol := model.GetStandardSymbol(model.BybitSpot, topic[strings.LastIndex(topic, `.`)+1:])
-			fmt.Sprintf(`%s %d`, symbol, ts)
-			//handleOrderBookBybit(markets, symbol, ts, depthJson)
-		} else if topic == `position` {
+		if depthJson.Get(`topic`).MustString() == `depth` {
+			data := depthJson.Get(`data`).MustMap()
+			symbol, bidAsk := parseTickBybitSpot(data)
+			if markets.SetBidAsk(symbol, model.BybitSpot, bidAsk) {
+				for function, handler := range model.GetFunctions(model.BybitSpot, symbol) {
+					if handler != nil {
+						setting := model.GetSetting(function, model.BybitPerp, symbol)
+						if setting != nil {
+							go handler(setting, bidAsk)
+						}
+					}
+				}
+			}
 		}
 	}
 	subscribes := GetWSSubscribes(model.BybitSpot, model.SubscribeDepth)
 	bybitSpotSubConnection = make(map[string]*websocket.Conn)
 	return WebSocketClient(model.BybitSpot, wsBybitSpot, subscribes, subscribeHandlerBybitSpot, wsHandler,
 		orderHandler, wsStepBybitSpot)
+}
+
+func parseTickBybitSpot(data map[string]interface{}) (symbol string, bidAsk *model.BidAsk) {
+	if data == nil {
+		return ``, nil
+	}
+	bidAsk = &model.BidAsk{TsReceived: int(util.GetNowUnixMillion()), Bids: model.Ticks{}, Asks: model.Ticks{}}
+	if data[`s`] != nil {
+		symbol = model.GetStandardSymbol(model.BybitSpot, data[`s`].(string))
+	}
+	if data[`t`] != nil {
+		bidAsk.UpdateId, _ = data[`t`].(json.Number).Int64()
+	}
+	if data[`b`] != nil {
+		items := data[`b`].([]interface{})
+		for _, item := range items {
+			if len(item.([]string)) != 2 {
+				continue
+			}
+			price, _ := strconv.ParseFloat(item.([]string)[0], 64)
+			amount, _ := strconv.ParseFloat(item.([]string)[1], 64)
+			bidAsk.Bids = append(bidAsk.Bids, model.Tick{
+				Side: model.OrderSideBuy, Market: model.BybitSpot, Symbol: symbol, Price: price, Amount: amount})
+		}
+		sort.Sort(sort.Reverse(bidAsk.Bids))
+	}
+	if data[`a`] != nil {
+		items := data[`a`].([]interface{})
+		for _, item := range items {
+			if len(item.([]string)) != 2 {
+				continue
+			}
+			price, _ := strconv.ParseFloat(item.([]string)[0], 64)
+			amount, _ := strconv.ParseFloat(item.([]string)[1], 64)
+			bidAsk.Asks = append(bidAsk.Asks, model.Tick{
+				Side: model.OrderSideSell, Market: model.BybitSpot, Symbol: symbol, Price: price, Amount: amount})
+		}
+		sort.Sort(bidAsk.Asks)
+	}
+	return
 }
 
 func getMarketsBybitSpot(key, secret string) (marketInfos map[string]*model.MarketInfo) {
