@@ -310,6 +310,10 @@ func GetCrossCoin(market, symbol string) (coin string) {
 		tails = []string{`_USDT`, `_PERP`}
 	case Binance:
 		tails = []string{`-PERP`}
+	case BybitPerp:
+		tails = []string{`-perp`}
+	case BybitSpot:
+		tails = []string{`-usdt`}
 	}
 	for _, tail := range tails {
 		coinLen := len(symbol) - len(tail)

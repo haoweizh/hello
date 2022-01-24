@@ -101,16 +101,6 @@ func createFromPosition(account *model.Account, setting *model.Setting, valueLim
 		AvailableBuy:  availableAmount,
 		TradeLineBuy:  setting.OpenShortMargin, TradeLineSell: setting.CloseShortMargin,
 	}
-	if setting.Market == model.Gate {
-		marketInfo := model.GetMarketInfo(setting.Market, setting.Symbol)
-		if marketInfo != nil {
-			_, amount := model.ParseRealAmount(setting.Market, setting.Symbol, marketInfo.SizeMax)
-			carryStatus.LimitBuy = math.Min(carryStatus.LimitBuy, amount)
-			carryStatus.LimitSell = math.Min(carryStatus.LimitSell, amount)
-			carryStatus.AvailableBuy = math.Min(carryStatus.AvailableBuy, amount)
-			carryStatus.AvailableSell = math.Min(carryStatus.AvailableSell, amount)
-		}
-	}
 	valueInUsd := 0.0
 	if cm.positions[setting.Symbol] != nil {
 		carryStatus.Holding = cm.positions[setting.Symbol].Free
@@ -195,11 +185,13 @@ func initStatus(account *model.Account, setting *model.Setting) (status *CarrySt
 	if carryStatus == nil || status == nil {
 		return
 	}
-	if setting.Market == model.Ftx {
-		status.LimitBuy = math.Min(status.LimitBuy, 90000000)
-		status.LimitSell = math.Min(status.LimitSell, 90000000)
-		status.AvailableSell = math.Min(status.AvailableSell, 90000000)
-		status.AvailableBuy = math.Min(status.AvailableBuy, 90000000)
+	marketInfo := model.GetMarketInfo(setting.Market, setting.Symbol)
+	if marketInfo != nil && marketInfo.SizeMax > 0 {
+		_, amount := model.ParseRealAmount(setting.Market, setting.Symbol, marketInfo.SizeMax)
+		status.LimitBuy = math.Min(status.LimitBuy, amount)
+		status.LimitSell = math.Min(status.LimitSell, amount)
+		status.AvailableBuy = math.Min(status.AvailableBuy, amount)
+		status.AvailableSell = math.Min(status.AvailableSell, amount)
 	}
 	if setting.Market == model.OKEX {
 		success, maxBuy, maxSell := api.GetTradeMaxOKEX(account.Key, account.Secret, setting.Symbol, 600)

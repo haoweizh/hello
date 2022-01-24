@@ -818,6 +818,8 @@ func GetMarketInfos(market string) (marketInfo map[string]*model.MarketInfo) {
 		return getMarketsHuobi(accounts[0].Key, accounts[0].Secret)
 	case model.BybitPerp:
 		return getMarketsBybitPerp(accounts[0].Key, accounts[0].Secret)
+	case model.BybitSpot:
+		return getMarketsBybitSpot(accounts[0].Key, accounts[0].Secret)
 	}
 	return
 }
@@ -943,6 +945,8 @@ func InitMarketInfos() (success bool) {
 			setFutureAutoDeposit()
 		case model.BybitPerp:
 			model.SetMarketInfos(market, getMarketsBybitPerp(accounts[0].Key, accounts[0].Secret))
+		case model.BybitSpot:
+			model.SetMarketInfos(market, getMarketsBybitSpot(accounts[0].Key, accounts[0].Secret))
 		}
 	}
 	return success

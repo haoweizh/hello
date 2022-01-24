@@ -584,7 +584,7 @@ func getMarketsFtx(key, secret string) (marketInfos map[string]*model.MarketInfo
 		}
 		for _, item := range items {
 			value := item.(map[string]interface{})
-			marketInfo := &model.MarketInfo{Market: model.Ftx}
+			marketInfo := &model.MarketInfo{Market: model.Ftx, SizeMax: 90000000}
 			if value[`name`] != nil {
 				marketInfo.Name = value[`name`].(string)
 			} else {
@@ -793,7 +793,9 @@ func SignedRequestFtx(key, secret, method, path string, param, body map[string]i
 	//	headers[`FTX-SUBACCOUNT`] = `test2`
 	//}
 	responseBody, _ := util.HttpRequest(method, u.String(), bodyStr, headers, 60)
-	util.SocketInfo(fmt.Sprintf(`ftx key %s request %s %s body %s return %s`,
-		key, u.String(), method, bodyStr, string(responseBody)))
+	if !strings.Contains(path, `balances`) && !strings.Contains(path, `positions`) {
+		util.SocketInfo(fmt.Sprintf(`ftx key %s request %s %s body %s return %s`,
+			key, u.String(), method, bodyStr, string(responseBody)))
+	}
 	return responseBody
 }

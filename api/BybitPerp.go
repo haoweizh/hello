@@ -52,16 +52,16 @@ func maintainChannelBybitPerp(subscribes []interface{}) {
 
 var subscribeHandlerBybitPerp = func(connection *websocket.Conn, subscribes []interface{}) error {
 	var err error = nil
-	expire := util.GetNowUnixMillion() + 1000
-	toBeSign := fmt.Sprintf(`GET/realtime%d`, expire)
-	account := model.AppConfig.GetAccounts(model.BybitPerp)[0]
-	hash := hmac.New(sha256.New, []byte(account.Secret))
-	hash.Write([]byte(toBeSign))
-	sign := hex.EncodeToString(hash.Sum(nil))
-	authCmd := fmt.Sprintf(`{"op": "auth", "args": ["%s", %d, "%s"]}`, account.Key, expire, sign)
-	if err = SendToConnection(model.BybitPerp, connection, []byte(authCmd)); err != nil {
-		util.SocketInfo("bybit can not auth " + err.Error())
-	}
+	//expire := util.GetNowUnixMillion() + 1000
+	//toBeSign := fmt.Sprintf(`GET/realtime%d`, expire)
+	//account := model.AppConfig.GetAccounts(model.BybitPerp)[0]
+	//hash := hmac.New(sha256.New, []byte(account.Secret))
+	//hash.Write([]byte(toBeSign))
+	//sign := hex.EncodeToString(hash.Sum(nil))
+	//authCmd := fmt.Sprintf(`{"op": "auth", "args": ["%s", %d, "%s"]}`, account.Key, expire, sign)
+	//if err = SendToConnection(model.BybitPerp, connection, []byte(authCmd)); err != nil {
+	//	util.SocketInfo("bybit can not auth " + err.Error())
+	//}
 	for _, subscribe := range subscribes {
 		subscribeMap := make(map[string]interface{})
 		subscribeMap[`op`] = `subscribe`
@@ -100,7 +100,7 @@ func WsDepthServeBybitPerp(markets *model.Markets, orderHandler OrderHandler) ([
 			return
 		}
 		if strings.Contains(topic, `orderBookL2_25.`) {
-			symbol := model.GetDialectSymbol(model.BybitPerp, topic[strings.LastIndex(topic, `.`)+1:])
+			symbol := model.GetStandardSymbol(model.BybitPerp, topic[strings.LastIndex(topic, `.`)+1:])
 			handleOrderBookBybitPerp(markets, symbol, ts, depthJson)
 		} else if topic == `position` {
 		}
@@ -119,10 +119,7 @@ func parseTickBybitPerp(item map[string]interface{}) (tick *model.Tick) {
 		tick.Symbol = model.GetStandardSymbol(model.BybitPerp, item[`symbol`].(string))
 	}
 	if item[`id`] != nil {
-		id, err := item[`id`].(json.Number).Int64()
-		if err == nil {
-			tick.Id = strconv.FormatInt(id, 10)
-		}
+		tick.Id = item[`id`].(string)
 	}
 	if item[`size`] != nil {
 		amount, err := item[`size`].(json.Number).Float64()
@@ -152,7 +149,7 @@ func handleOrderBookBybitPerp(markets *model.Markets, symbol string, ts int64, r
 		bidAsk = &model.BidAsk{}
 		bidAsk.Bids = make([]model.Tick, 0)
 		bidAsk.Asks = make([]model.Tick, 0)
-		data, err := response.Get(`data`).Array()
+		data, err := response.GetPath(`data`, `order_book`).Array()
 		if err != nil {
 			return
 		}

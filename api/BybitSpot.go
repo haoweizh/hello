@@ -4,10 +4,13 @@ import (
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"github.com/gorilla/websocket"
 	"hello/model"
 	"hello/util"
+	"net/http"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -24,18 +27,18 @@ func maintainChannelBybitSpot(subscribes []interface{}) {
 		for true {
 			time.Sleep(time.Minute)
 			for _, value := range subscribes {
-				_, bidAsk := model.AppMarkets.GetBidAsk(value.(string), model.BybitPerp)
+				_, bidAsk := model.AppMarkets.GetBidAsk(value.(string), model.BybitSpot)
 				now := time.Now().UnixNano() / int64(time.Millisecond)
 				if bidAsk == nil || now-int64(bidAsk.Ts) > 60000 {
 					subCmd := fmt.Sprintf(
 						`{"topic":"depth","event":"sub","params":{"symbol":"%s","binary":false}}`, value.(string))
-					if bybitPerpSubConnection[value.(string)] != nil {
+					if bybitSpotSubConnection[value.(string)] != nil {
 						if err := SendToConnection(model.BybitSpot, bybitSpotSubConnection[value.(string)],
 							[]byte(subCmd)); err != nil {
 							util.SocketInfo("bybitSpot can not resubscribe " + err.Error())
 						}
 					} else {
-						util.Notice(`bybitPerp can not get connection for %s`, value.(string))
+						util.Notice(`bybitSpot can not get connection for %s`, value.(string))
 					}
 					util.Notice(`send resubscribe %s`, subCmd)
 				}
@@ -48,12 +51,12 @@ var subscribeHandlerBybitSpot = func(connection *websocket.Conn, subscribes []in
 	var err error = nil
 	expire := util.GetNowUnixMillion() + 1000
 	toBeSign := fmt.Sprintf(`GET/realtime%d`, expire)
-	account := model.AppConfig.GetAccounts(model.BybitPerp)[0]
+	account := model.AppConfig.GetAccounts(model.BybitSpot)[0]
 	hash := hmac.New(sha256.New, []byte(account.Secret))
 	hash.Write([]byte(toBeSign))
 	sign := hex.EncodeToString(hash.Sum(nil))
 	authCmd := fmt.Sprintf(`{"op": "auth", "args": ["%s", %d, "%s"]}`, account.Key, expire, sign)
-	if err = SendToConnection(model.BybitPerp, connection, []byte(authCmd)); err != nil {
+	if err = SendToConnection(model.BybitSpot, connection, []byte(authCmd)); err != nil {
 		util.SocketInfo("bybitSpot can not auth " + err.Error())
 	}
 	for _, subscribe := range subscribes {
@@ -63,7 +66,7 @@ var subscribeHandlerBybitSpot = func(connection *websocket.Conn, subscribes []in
 			util.SocketInfo("bybitSpot can not subscribe " + err.Error())
 			return err
 		}
-		bybitPerpSubConnection[subscribe.(string)] = connection
+		bybitSpotSubConnection[subscribe.(string)] = connection
 	}
 	return err
 }
@@ -104,4 +107,40 @@ func WsDepthServeBybitSpot(markets *model.Markets, orderHandler OrderHandler) ([
 	bybitSpotSubConnection = make(map[string]*websocket.Conn)
 	return WebSocketClient(model.BybitSpot, wsBybitSpot, subscribes, subscribeHandlerBybitSpot, wsHandler,
 		orderHandler, wsStepBybitSpot)
+}
+
+func getMarketsBybitSpot(key, secret string) (marketInfos map[string]*model.MarketInfo) {
+	response := SignedRequestBybit(key, secret, http.MethodGet, `/spot/v1/symbols`, nil)
+	fmt.Println(string(response))
+	marketInfos = make(map[string]*model.MarketInfo)
+	marketJson, err := util.NewJSON(response)
+	if err == nil && marketJson.Get(`ret_code`) != nil && marketJson.Get(`ret_code`).MustInt64() == 0 {
+		items, _ := marketJson.Get(`result`).Array()
+		for _, item := range items {
+			value := item.(map[string]interface{})
+			if value[`quote_currency`] == nil || value[`quote_currency`].(string) != `USDT` {
+				continue
+			}
+			marketInfo := &model.MarketInfo{Market: model.BybitSpot}
+			if value[`base_currency`] != nil {
+				marketInfo.CTCurrency = value[`base_currency`].(string)
+				marketInfo.Name = marketInfo.CTCurrency + model.GetSpotTail(model.BybitSpot)
+				marketInfos[marketInfo.Name] = marketInfo
+			}
+			if value[`basePrecision`] != nil {
+				marketInfo.SizeIncrement, _ = value[`basePrecision`].(json.Number).Float64()
+			}
+			if value[`minPricePrecision`] != nil {
+				marketInfo.PriceIncrement, _ = strconv.ParseFloat(value[`minPricePrecision`].(string), 64)
+				marketInfo.PriceDecimal = util.NumDecPlaces(marketInfo.PriceIncrement)
+			}
+			if value[`minTradeQuantity`] != nil {
+				marketInfo.SizeMin, _ = strconv.ParseFloat(value[`minTradeQuantity`].(string), 64)
+			}
+			if value[`maxTradeQuantity`] != nil {
+				marketInfo.SizeMax, _ = strconv.ParseFloat(value[`maxTradeQuantity`].(string), 64)
+			}
+		}
+	}
+	return
 }

@@ -488,7 +488,7 @@ func sendSignRequestOKEX(key, secret, method, path string, body interface{}) (re
 		key, uri, toBeSign, string(responseBody))
 	if strings.Contains(uri, `/api/v5/trade/order`) && method == http.MethodPost {
 		util.Notice(logMsg)
-	} else {
+	} else if !strings.Contains(path, `balance`) && !strings.Contains(path, `positions`) {
 		util.SocketInfo(logMsg)
 	}
 	return responseBody
