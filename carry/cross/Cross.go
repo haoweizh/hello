@@ -144,7 +144,7 @@ func createFromBalance(account *model.Account, setting *model.Setting, valueLimi
 		balance := sm.balances[setting.Symbol]
 		carryStatus.Holding = balance.Amount
 		// 暂不支持借币
-		carryStatus.LimitSell = math.Min(math.Min(balance.Amount, balance.AvailableWithBorrow), openValueLimit/price)
+		carryStatus.LimitSell = math.Min(math.Min(math.Max(balance.Amount, 0), balance.AvailableWithBorrow), openValueLimit/price)
 		carryStatus.RateInAll = math.Abs(carryStatus.Holding * price / sm.accountValueInU)
 		carryStatus.AvailableSell = carryStatus.LimitSell
 	}
@@ -158,17 +158,6 @@ func createFromBalance(account *model.Account, setting *model.Setting, valueLimi
 	if sm.collateral != nil && (sm.collateral.Rate < 10 ||
 		(sm.collateral.Available-sm.collateral.Occupied)/sm.collateral.Available < 0.1) {
 		doRevert = true
-	}
-	if setting.Coin == `RVN` {
-		balance := sm.balances[setting.Symbol]
-		if balance == nil {
-			util.Notice(`nil balance %s %s`, key, setting.Symbol)
-		} else if carryStatus == nil {
-			util.Notice(`nil carry status %s %s`, key, setting.Symbol)
-		} else {
-			util.Notice(fmt.Sprintf(`check amount %s %s amount %f available %f limitSell status limitSell %f status limit available %f`,
-				key, setting.Symbol, balance.Amount, balance.AvailableWithBorrow, carryStatus.LimitSell, carryStatus.AvailableSell))
-		}
 	}
 	return carryStatus, doRevert
 }
@@ -342,9 +331,9 @@ func makeEqual(coin string, statuses []*CarryStatus) (isEqual bool, msg string) 
 			if equalStatus != nil {
 				continue
 			}
-			if math.IsNaN(status.AvailableSell) || status.AvailableSell > holding {
+			if status.AvailableSell > holding {
 				equalStatus = status
-			} else if !math.IsNaN(status.AvailableSell) {
+			} else {
 				checkAmount := model.GetAmountInMarket(status.market, status.symbol, status.AvailableSell, bids[i].Price)
 				if checkAmount > 0 {
 					equalStatus = status
@@ -578,7 +567,7 @@ func initLimitBuyAndSell(status *CarryStatus, setting *model.Setting, price floa
 		status.LimitBuy = math.Min(openValueLimit, math.Min(sm.availableU/5, sm.accountValueInU/15)) / price
 		balance := sm.balances[setting.Symbol]
 		if balance != nil {
-			status.LimitSell = math.Min(math.Min(balance.Amount, balance.AvailableWithBorrow), openValueLimit/price)
+			status.LimitSell = math.Min(math.Min(math.Max(balance.Amount, 0), balance.AvailableWithBorrow), openValueLimit/price)
 		} else {
 			status.LimitSell = 0
 		}
