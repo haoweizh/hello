@@ -458,6 +458,8 @@ func getPositionsGate(key string, secret string) (success bool, positions []*mod
 		return getPositionsGate(key, secret)
 	}
 	accountValue, _ = strconv.ParseFloat(account.Total, 64)
+	unrealizedPnl, _ := strconv.ParseFloat(account.UnrealisedPnl, 64)
+	accountValue += unrealizedPnl
 	available, _ = strconv.ParseFloat(account.Available, 64)
 	positions = make([]*model.Position, 0)
 	for _, item := range positionList {
