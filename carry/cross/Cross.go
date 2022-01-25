@@ -143,7 +143,6 @@ func createFromBalance(account *model.Account, setting *model.Setting, valueLimi
 	if sm.balances[setting.Symbol] != nil {
 		balance := sm.balances[setting.Symbol]
 		carryStatus.Holding = balance.Amount
-		// 暂时不让借币
 		carryStatus.LimitSell = math.Min(math.Min(balance.Amount, balance.AvailableWithBorrow), openValueLimit/price)
 		carryStatus.RateInAll = math.Abs(carryStatus.Holding * price / sm.accountValueInU)
 		carryStatus.AvailableSell = balance.AvailableWithBorrow
@@ -459,27 +458,6 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarrySta
 	amountAsk := tick.Asks[0].Amount
 	score := 1 - priceAskRelate/priceBid
 	scoreRelate := priceBidRelate/priceAsk - 1
-	if (score > 0.15 || scoreRelate > 0.15) || ((score > 0.1 || scoreRelate > 0.1) &&
-		(!isValidSymbol(carryStatus.market, carryStatus.symbol) ||
-			!isValidSymbol(carryStatusRelate.market, carryStatusRelate.symbol))) {
-		title := `不同币种`
-		if score > 0.15 || scoreRelate > 0.15 {
-			title = `价差不可思议`
-		}
-		msg := fmt.Sprintf(`different coin %s %s %s %s %f %f`, carryStatus.market, carryStatus.symbol,
-			carryStatusRelate.market, carryStatusRelate.symbol, score, scoreRelate)
-		minute := time.Now().Minute()
-		second := time.Now().Second()
-		if minute == 0 && second == 0 {
-			for _, address := range model.TeamMails {
-				err := util.SendMail(model.AppConfig.FromMail, model.AppConfig.FromMailAuth, address, title, msg)
-				if err != nil {
-					util.Notice(`fail to send mail msg %s %s`, msg, err.Error())
-				}
-			}
-		}
-		return nil, nil, 0, 0, 0
-	}
 	mark := fmt.Sprintf(`%s_%s|%s_%s`, carryStatus.market, carryStatus.symbol, carryStatusRelate.market, carryStatusRelate.symbol)
 	if score > 0.01 {
 		model.AppMetric.AddCarry(mark, score, 0)
@@ -543,6 +521,27 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarrySta
 			fmt.Sprintf(`%v`, statusBuy != nil && statusSell != nil)})
 	}
 	if statusBuy == nil || statusSell == nil {
+		return nil, nil, 0, 0, 0
+	}
+	if (score > 0.15 || scoreRelate > 0.15) || ((score > 0.1 || scoreRelate > 0.1) &&
+		(!isValidSymbol(carryStatus.market, carryStatus.symbol) ||
+			!isValidSymbol(carryStatusRelate.market, carryStatusRelate.symbol))) {
+		title := `不同币种`
+		if score > 0.15 || scoreRelate > 0.15 {
+			title = `价差不可思议`
+		}
+		msg := fmt.Sprintf(`different coin %s %s %s %s %f %f`, carryStatus.market, carryStatus.symbol,
+			carryStatusRelate.market, carryStatusRelate.symbol, score, scoreRelate)
+		minute := time.Now().Minute()
+		second := time.Now().Second()
+		if minute == 0 && second == 0 {
+			for _, address := range model.TeamMails {
+				err := util.SendMail(model.AppConfig.FromMail, model.AppConfig.FromMailAuth, address, title, msg)
+				if err != nil {
+					util.Notice(`fail to send mail msg %s %s`, msg, err.Error())
+				}
+			}
+		}
 		return nil, nil, 0, 0, 0
 	}
 	if !isFresh(statusBuy.account.Key, statusBuy.market, statusBuy.symbol) {
