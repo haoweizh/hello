@@ -121,11 +121,11 @@ func parseTickBybitSpot(data map[string]interface{}) (symbol string, bidAsk *mod
 	if data[`b`] != nil {
 		items := data[`b`].([]interface{})
 		for _, item := range items {
-			if len(item.([]string)) != 2 {
+			if len(item.([]interface{})) != 2 {
 				continue
 			}
-			price, _ := strconv.ParseFloat(item.([]string)[0], 64)
-			amount, _ := strconv.ParseFloat(item.([]string)[1], 64)
+			price, _ := strconv.ParseFloat(item.([]interface{})[0].(string), 64)
+			amount, _ := strconv.ParseFloat(item.([]interface{})[1].(string), 64)
 			bidAsk.Bids = append(bidAsk.Bids, model.Tick{
 				Side: model.OrderSideBuy, Market: model.BybitSpot, Symbol: symbol, Price: price, Amount: amount})
 		}
@@ -134,11 +134,11 @@ func parseTickBybitSpot(data map[string]interface{}) (symbol string, bidAsk *mod
 	if data[`a`] != nil {
 		items := data[`a`].([]interface{})
 		for _, item := range items {
-			if len(item.([]string)) != 2 {
+			if len(item.([]interface{})) != 2 {
 				continue
 			}
-			price, _ := strconv.ParseFloat(item.([]string)[0], 64)
-			amount, _ := strconv.ParseFloat(item.([]string)[1], 64)
+			price, _ := strconv.ParseFloat(item.([]interface{})[0].(string), 64)
+			amount, _ := strconv.ParseFloat(item.([]interface{})[1].(string), 64)
 			bidAsk.Asks = append(bidAsk.Asks, model.Tick{
 				Side: model.OrderSideSell, Market: model.BybitSpot, Symbol: symbol, Price: price, Amount: amount})
 		}
@@ -159,13 +159,13 @@ func getMarketsBybitSpot(key, secret string) (marketInfos map[string]*model.Mark
 				continue
 			}
 			marketInfo := &model.MarketInfo{Market: model.BybitSpot}
-			if value[`base_currency`] != nil {
-				marketInfo.CTCurrency = value[`base_currency`].(string)
+			if value[`baseCurrency`] != nil {
+				marketInfo.CTCurrency = value[`baseCurrency`].(string)
 				marketInfo.Name = marketInfo.CTCurrency + model.GetSpotTail(model.BybitSpot)
 				marketInfos[marketInfo.Name] = marketInfo
 			}
 			if value[`basePrecision`] != nil {
-				marketInfo.SizeIncrement, _ = value[`basePrecision`].(json.Number).Float64()
+				marketInfo.SizeIncrement, _ = strconv.ParseFloat(value[`basePrecision`].(string), 64)
 			}
 			if value[`minPricePrecision`] != nil {
 				marketInfo.PriceIncrement, _ = strconv.ParseFloat(value[`minPricePrecision`].(string), 64)
