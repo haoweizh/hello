@@ -143,9 +143,10 @@ func createFromBalance(account *model.Account, setting *model.Setting, valueLimi
 	if sm.balances[setting.Symbol] != nil {
 		balance := sm.balances[setting.Symbol]
 		carryStatus.Holding = balance.Amount
+		// 暂不支持借币
 		carryStatus.LimitSell = math.Min(math.Min(balance.Amount, balance.AvailableWithBorrow), openValueLimit/price)
 		carryStatus.RateInAll = math.Abs(carryStatus.Holding * price / sm.accountValueInU)
-		carryStatus.AvailableSell = balance.AvailableWithBorrow
+		carryStatus.AvailableSell = carryStatus.LimitSell
 	}
 	usdLowLine := math.Min(100000, 0.1*sm.accountValueInU)
 	if sm.availableU < usdLowLine || carryStatus.RateInAll > 0.6 {
@@ -157,6 +158,11 @@ func createFromBalance(account *model.Account, setting *model.Setting, valueLimi
 	if sm.collateral != nil && (sm.collateral.Rate < 10 ||
 		(sm.collateral.Available-sm.collateral.Occupied)/sm.collateral.Available < 0.1) {
 		doRevert = true
+	}
+	if setting.Coin == `RVN` {
+		balance := sm.balances[setting.Symbol]
+		util.Notice(fmt.Sprintf(`check amount %s %s amount %f available %f limitSell status limitSell %f status limit available %f`,
+			key, setting.Symbol, balance.Amount, balance.AvailableWithBorrow, carryStatus.LimitSell, carryStatus.AvailableSell))
 	}
 	return carryStatus, doRevert
 }

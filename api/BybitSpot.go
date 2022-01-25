@@ -149,14 +149,13 @@ func parseTickBybitSpot(data map[string]interface{}) (symbol string, bidAsk *mod
 
 func getMarketsBybitSpot(key, secret string) (marketInfos map[string]*model.MarketInfo) {
 	response := SignedRequestBybit(key, secret, http.MethodGet, `/spot/v1/symbols`, nil)
-	fmt.Println(string(response))
 	marketInfos = make(map[string]*model.MarketInfo)
 	marketJson, err := util.NewJSON(response)
 	if err == nil && marketJson.Get(`ret_code`) != nil && marketJson.Get(`ret_code`).MustInt64() == 0 {
 		items, _ := marketJson.Get(`result`).Array()
 		for _, item := range items {
 			value := item.(map[string]interface{})
-			if value[`quote_currency`] == nil || value[`quote_currency`].(string) != `USDT` {
+			if value[`quoteCurrency`] == nil || value[`quoteCurrency`].(string) != `USDT` {
 				continue
 			}
 			marketInfo := &model.MarketInfo{Market: model.BybitSpot}

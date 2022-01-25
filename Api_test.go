@@ -152,7 +152,7 @@ func Test_download(t *testing.T) {
 
 func Test_wallet(t *testing.T) {
 	model.NewConfig()
-	mi := api.GetMarketInfos(model.BybitPerp)
+	mi := api.GetMarketInfos(model.BybitSpot)
 	fmt.Println(len(mi))
 	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
 	api.InitMarketInfos()
