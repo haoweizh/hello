@@ -161,8 +161,14 @@ func createFromBalance(account *model.Account, setting *model.Setting, valueLimi
 	}
 	if setting.Coin == `RVN` {
 		balance := sm.balances[setting.Symbol]
-		util.Notice(fmt.Sprintf(`check amount %s %s amount %f available %f limitSell status limitSell %f status limit available %f`,
-			key, setting.Symbol, balance.Amount, balance.AvailableWithBorrow, carryStatus.LimitSell, carryStatus.AvailableSell))
+		if balance == nil {
+			util.Notice(`nil balance %s %s`, key, setting.Symbol)
+		} else if carryStatus == nil {
+			util.Notice(`nil carry status %s %s`, key, setting.Symbol)
+		} else {
+			util.Notice(fmt.Sprintf(`check amount %s %s amount %f available %f limitSell status limitSell %f status limit available %f`,
+				key, setting.Symbol, balance.Amount, balance.AvailableWithBorrow, carryStatus.LimitSell, carryStatus.AvailableSell))
+		}
 	}
 	return carryStatus, doRevert
 }
