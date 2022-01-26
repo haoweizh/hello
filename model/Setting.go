@@ -225,10 +225,17 @@ func GetCoin(market, symbol string) (coin string) {
 		if len(parts) == 2 {
 			coin = parts[0]
 		}
-	case Kucoin, BybitSpot, BybitPerp, OKEX, Huobi, HuobiDM:
+	case Kucoin, BybitSpot, BybitPerp, Huobi, HuobiDM:
 		parts := strings.Split(symbol, `-`)
 		if len(parts) == 2 {
 			coin = parts[0]
+		}
+	case OKEX:
+		tails := []string{`-USDT`, `-USDT-SWAP`}
+		for _, tail := range tails {
+			if strings.Contains(symbol, tail) {
+				coin = symbol[0:strings.Index(symbol, tail)]
+			}
 		}
 	}
 	return coin
