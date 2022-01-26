@@ -328,7 +328,7 @@ func makeEqual(coin string, statuses []*CarryStatus) (isEqual bool, msg string) 
 				continue
 			}
 			go api.CancelOrders(status.account.Key, status.account.Secret, status.market, status.symbol)
-			if equalStatus != nil {
+			if equalStatus != nil || strings.Contains(status.symbol, `-SWAP`) {
 				continue
 			}
 			if status.AvailableSell > holding {
@@ -353,7 +353,7 @@ func makeEqual(coin string, statuses []*CarryStatus) (isEqual bool, msg string) 
 				continue
 			}
 			go api.CancelOrders(status.account.Key, status.account.Secret, status.market, status.symbol)
-			if equalStatus != nil {
+			if equalStatus != nil || strings.Contains(status.symbol, `-SWAP`) {
 				continue
 			}
 			if math.IsNaN(status.AvailableBuy) || status.AvailableBuy > math.Abs(holding) {
@@ -368,7 +368,7 @@ func makeEqual(coin string, statuses []*CarryStatus) (isEqual bool, msg string) 
 		}
 	}
 	if equalStatus != nil {
-		amount := math.Min(math.Min(math.Abs(holding), openValueLimit/price), 1000000000)
+		amount := math.Min(math.Abs(holding), openValueLimit/price)
 		util.Notice(`equal amounts %f %f %f`, amount, equalStatus.AvailableBuy, equalStatus.AvailableSell)
 		if orderSide == model.OrderSideBuy {
 			amount = math.Min(amount, equalStatus.AvailableBuy)
@@ -449,7 +449,8 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarrySta
 	if now.Hour()%8 == 0 && now.Minute() == 0 && now.Second() < 30 {
 		return
 	}
-	if getCarryStop(carryStatus.account.Key) || getCarryStop(carryStatusRelate.account.Key) {
+	if getCarryStop(carryStatus.account.Key) || getCarryStop(carryStatusRelate.account.Key) ||
+		strings.Contains(carryStatus.symbol, `-SWAP`) || strings.Contains(carryStatusRelate.symbol, `-SWAP`) {
 		util.Debug(`stop carry for 10 times unknown carry %s or %s %s`,
 			carryStatus.account.Key, carryStatusRelate.account.Key, coin)
 		return
