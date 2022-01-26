@@ -181,3 +181,18 @@ func getMarketsBybitSpot(key, secret string) (marketInfos map[string]*model.Mark
 	}
 	return
 }
+
+func cancelOrdersBybitSpot(key, secret, symbol string) bool {
+	postData := make(map[string]interface{})
+	path := `/spot/order/batch-cancel`
+	method := http.MethodDelete
+	postData[`symbol`] = model.GetDialectSymbol(model.BybitSpot, symbol)
+	response := SignedRequestBybit(key, secret, method, path, postData)
+	cancelJson, err := util.NewJSON(response)
+	if err == nil {
+		if cancelJson.Get(`ret_code`).MustInt() == 0 {
+			return true
+		}
+	}
+	return false
+}

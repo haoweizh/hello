@@ -298,33 +298,21 @@ func SignedRequestBybit(key, secret, method, path string, body map[string]interf
 	sign := hex.EncodeToString(hash.Sum(nil))
 	body[`sign`] = sign
 	paramStr = util.ComposeParams(body)
-	//headers := map[string]string{"Content-Type": "application/json"}
 	headers := map[string]string{`api_key`: key, `sign`: sign, "Content-Type": "application/json"}
 	if method == `GET` {
 		uri = uri + `?` + paramStr
 	}
-	//responseBody, _ := util.HttpRequest(method, uri, string(util.JsonEncodeToByte(body)), headers, 60)
 	responseBody, _ := util.HttpRequest(method, uri, string(util.JsonEncodeToByte(body)), headers, 60)
+	util.SocketInfo(fmt.Sprintf(`bybit key %s request %s %s body %v return %s`,
+		key, uri, method, body, string(responseBody)))
 	return responseBody
 }
 
 func cancelOrdersBybitPerp(key, secret, symbol string) bool {
 	postData := make(map[string]interface{})
-	path := ``
-	method := ``
-	coinPerp, isPerp := model.IsPerp(model.BybitPerp, symbol)
-	coinSpot, isSpot := model.IsSpot(model.BybitSpot, symbol)
-	if isSpot {
-		path = `/spot/order/batch-cancel`
-		method = http.MethodDelete
-		postData[`symbol`] = coinSpot + `USDT`
-	} else if isPerp {
-		path = `/private/linear/order/cancel-all`
-		method = http.MethodPost
-		postData[`symbol`] = coinPerp + `USDT`
-	} else {
-		return false
-	}
+	path := `/private/linear/order/cancel-all`
+	method := http.MethodPost
+	postData[`symbol`] = model.GetDialectSymbol(model.BybitPerp, symbol)
 	response := SignedRequestBybit(key, secret, method, path, postData)
 	cancelJson, err := util.NewJSON(response)
 	if err == nil {
@@ -339,7 +327,7 @@ func cancelOrderBybitPerp(key, secret, symbol, orderId string) (result bool, err
 	postData := make(map[string]interface{})
 	postData[`order_id`] = orderId
 	postData[`symbol`] = model.GetDialectSymbol(model.BybitPerp, symbol)
-	response := SignedRequestBybit(key, secret, `POST`, `/v2/private/order/cancel`, postData)
+	response := SignedRequestBybit(key, secret, `POST`, `/private/linear/order/cancel`, postData)
 	orderJson, err := util.NewJSON(response)
 	result = false
 	if err == nil {
@@ -361,30 +349,26 @@ func cancelOrderBybitPerp(key, secret, symbol, orderId string) (result bool, err
 	return false, ``, ``, nil
 }
 
-func queryOrderBybitPerp(key, secret, symbol, orderId string) (orders []*model.Order) {
-	orders = make([]*model.Order, 0)
+func queryOrderBybitPerp(key, secret string, order *model.Order) (updatedOrder *model.Order) {
 	postData := make(map[string]interface{})
-	symbol = model.GetDialectSymbol(model.BybitPerp, symbol)
-	postData[`symbol`] = model.GetDialectSymbol(model.BybitPerp, symbol)
-	postData[`order_id`] = orderId
-	response := SignedRequestBybit(key, secret, `GET`, `/open-api/order/list`, postData)
-	util.SocketInfo(`query orders: ` + string(response))
+	postData[`symbol`] = model.GetDialectSymbol(model.BybitPerp, order.Symbol)
+	postData[`order_id`] = order.OrderId
+	response := SignedRequestBybit(key, secret, `GET`, `/private/linear/order/list`, postData)
 	orderJson, err := util.NewJSON(response)
 	if err == nil {
 		orderJson = orderJson.GetPath(`result`, `data`)
 		if orderJson == nil {
-			return
+			return order
 		}
 		orderArray, _ := orderJson.Array()
 		for _, data := range orderArray {
-			order := &model.Order{Market: model.BybitPerp}
 			parseOrderBybitPerp(order, data.(map[string]interface{}))
 			if order.OrderId != `` {
-				orders = append(orders, order)
+				return order
 			}
 		}
 	}
-	return
+	return nil
 }
 
 // timeInForce 有效选项:GoodTillCancel, ImmediateOrCancel, FillOrKill,PostOnly
@@ -394,10 +378,11 @@ func placeOrderBybitPerp(order *model.Order, key, secret, orderSide, orderType, 
 	postData["side"] = strings.ToUpper(orderSide[0:1]) + orderSide[1:]
 	postData["order_type"] = strings.ToUpper(orderType[0:1]) + orderType[1:]
 	if orderType != model.OrderTypeMarket && orderType != model.OrderTypeStop {
-		postData[`price`] = fmt.Sprintf(`%f`, price)
+		formattedPrice, decimal := model.FormatPrice(model.BybitPerp, order.Symbol, orderSide, price)
+		postData[`price`] = util.CutTailZero(strconv.FormatFloat(formattedPrice, 'f', decimal, 64))
 	}
 	if timeInForce == `` {
-		timeInForce = `GTC`
+		timeInForce = `GoodTillCancel`
 	}
 	postData[`reduce_only`] = false
 	postData[`close_on_trigger`] = false
@@ -405,7 +390,6 @@ func placeOrderBybitPerp(order *model.Order, key, secret, orderSide, orderType, 
 	postData["qty"] = fmt.Sprintf(`%f`, amount)
 	postData[`time_in_force`] = timeInForce
 	response := SignedRequestBybit(key, secret, `POST`, `/private/linear/order/create`, postData)
-	util.Notice(`place bybit` + string(response))
 	orderJson, err := util.NewJSON(response)
 	if err == nil {
 		orderJson = orderJson.Get(`result`)
@@ -470,11 +454,11 @@ func parseOrderBybitPerp(order *model.Order, item map[string]interface{}) {
 	if item[`cum_exec_fee`] != nil {
 		order.Fee, _ = item[`cum_exec_fee`].(json.Number).Float64()
 	}
-	if item[`created_at`] != nil {
-		order.OrderTime, _ = time.Parse(time.RFC3339, item[`created_at`].(string))
+	if item[`created_time`] != nil {
+		order.OrderTime, _ = time.Parse(time.RFC3339, item[`created_time`].(string))
 	}
-	if item[`updated_at`] != nil {
-		order.OrderUpdateTime, _ = time.Parse(time.RFC3339, item[`updated_at`].(string))
+	if item[`updated_time`] != nil {
+		order.OrderUpdateTime, _ = time.Parse(time.RFC3339, item[`updated_time`].(string))
 	}
 	if item[`order_status`] != nil {
 		order.Status = model.GetOrderStatus(model.BybitPerp, item[`order_status`].(string))

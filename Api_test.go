@@ -150,22 +150,24 @@ func Test_download(t *testing.T) {
 	//-H 'Connection: keep-alive' \
 }
 
-//func passInterface(v interface{}) []byte {
-//	_, value := v.(*[]byte)
-//	return value
-//}
-
 func Test_wallet(t *testing.T) {
-	//passInterface(false)
 	model.NewConfig()
-	orderBybit := api.PlaceOrder(`LWaglQgg6eiJDuTmwG`, `mOnuz8yeZmqGLUT2bNDqgA7kuhKT8QYOyUon`, model.OrderSideBuy, model.OrderTypeLimit,
-		model.BybitPerp, `ETH-PERP`, `ETH-PERP`, ``, ``, 2000.1234567, 2000.1234,
-		0.0001, false, false, nil, nil)
+	//mi := api.GetMarketInfos(model.BybitSpot)
+	//fmt.Println(len(mi))
+	key, secret := `LWaglQgg6eiJDuTmwG`, `mOnuz8yeZmqGLUT2bNDqgA7kuhKT8QYOyUon`
+	cancelResult := api.CancelOrders(key, secret, model.BybitSpot, `ETH-USDT`)
+	fmt.Println(cancelResult)
+	//api.CancelOrder(key, secret, model.BybitPerp, `ETH-PERP`, `ETH-PERP`, model.OrderTypeLimit, `bf928aac-c375-4d0d-9c00-c45584a91ac7`)
+	orderBybit := api.QueryOrderById(key, secret, model.BybitPerp, `ETH-PERP`, `ETH-PERP`,
+		model.OrderTypeLimit, `bf928aac-c375-4d0d-9c00-c45584a91ac7`)
+	//marketInfos := api.GetMarketInfos(model.BybitPerp)
+	//model.SetMarketInfos(model.BybitPerp, marketInfos)
+	//orderBybit := api.PlaceOrder(key, secret, model.OrderSideBuy, model.OrderTypeLimit,
+	//	model.BybitPerp, `ETH-PERP`, `ETH-PERP`, ``, ``, 2300.1234567, 2000.1234,
+	//	0.012345678, false, false, nil, nil)
 	fmt.Println(orderBybit.OrderId)
 	_, rate := api.GetFundingRate(`LWaglQgg6eiJDuTmwG`, `mOnuz8yeZmqGLUT2bNDqgA7kuhKT8QYOyUon`, model.BybitPerp, `BTC-PERP`, nil)
 	fmt.Println(fmt.Sprintf(`%f`, rate))
-	mi := api.GetMarketInfos(model.BybitSpot)
-	fmt.Println(len(mi))
 	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
 	api.InitMarketInfos()
 	orderQuery := api.QueryOrderById(model.AppConfig.GateKey, model.AppConfig.GateSecret, model.Gate, `CFX_PERP`, `CFX_USDT`, model.OrderTypeLimit, `79852794326`)

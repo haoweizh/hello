@@ -124,6 +124,8 @@ func CancelOrders(key, secret, market, symbol string) (result bool) {
 		return cancelOrdersFtx(key, secret, symbol)
 	case model.BybitPerp:
 		return cancelOrdersBybitPerp(key, secret, symbol)
+	case model.BybitSpot:
+		return cancelOrdersBybitSpot(key, secret, symbol)
 	case model.OKEX:
 		result, _, _ = cancelOrdersOKEX(key, secret, symbol)
 		return result
@@ -457,12 +459,7 @@ func QueryOrderById(key, secret, market, symbol, instrument, orderType, orderId 
 	case model.Coinpark:
 		order.DealAmount, order.DealPrice, order.Status = queryOrderCoinpark(key, secret, orderId)
 	case model.BybitPerp:
-		orders := queryOrderBybitPerp(key, secret, symbol, orderId)
-		for _, value := range orders {
-			if value.OrderId == orderId {
-				return value
-			}
-		}
+		queryOrderBybitPerp(key, secret, order)
 	case model.Ftx: // 查询是否是待成交状态，如果已成交或已取消，则ftx返回order not found信息，order为nil
 		if orderType == model.OrderTypeStop {
 			newOrderId := queryTriggerOrderId(key, secret, orderId)
