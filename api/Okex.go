@@ -606,6 +606,7 @@ func placeOrderOKEX(key, secret string, isWs bool, order *model.Order) {
 	} else {
 		postData[`px`] = priceStr
 	}
+	util.Notice(`okex try to place with param %v`, postData)
 	if isWs {
 		subscribeMap := make(map[string]interface{})
 		subscribeMap[`id`] = strconv.FormatInt(time.Now().UnixNano(), 10)

@@ -328,7 +328,7 @@ func makeEqual(coin string, statuses []*CarryStatus) (isEqual bool, msg string) 
 				continue
 			}
 			go api.CancelOrders(status.account.Key, status.account.Secret, status.market, status.symbol)
-			if equalStatus != nil || strings.Contains(status.symbol, `-SWAP`) {
+			if equalStatus != nil { //|| strings.Contains(status.symbol, `-SWAP`) {
 				continue
 			}
 			if status.AvailableSell > holding {
@@ -353,7 +353,7 @@ func makeEqual(coin string, statuses []*CarryStatus) (isEqual bool, msg string) 
 				continue
 			}
 			go api.CancelOrders(status.account.Key, status.account.Secret, status.market, status.symbol)
-			if equalStatus != nil || strings.Contains(status.symbol, `-SWAP`) {
+			if equalStatus != nil { //|| strings.Contains(status.symbol, `-SWAP`) {
 				continue
 			}
 			if math.IsNaN(status.AvailableBuy) || status.AvailableBuy > math.Abs(holding) {
@@ -449,8 +449,8 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarrySta
 	if now.Hour()%8 == 0 && now.Minute() == 0 && now.Second() < 30 {
 		return
 	}
-	if getCarryStop(carryStatus.account.Key) || getCarryStop(carryStatusRelate.account.Key) ||
-		strings.Contains(carryStatus.symbol, `-SWAP`) || strings.Contains(carryStatusRelate.symbol, `-SWAP`) {
+	if getCarryStop(carryStatus.account.Key) || getCarryStop(carryStatusRelate.account.Key) {
+		//||strings.Contains(carryStatus.symbol, `-SWAP`) || strings.Contains(carryStatusRelate.symbol, `-SWAP`) {
 		util.Debug(`stop carry for 10 times unknown carry %s or %s %s`,
 			carryStatus.account.Key, carryStatusRelate.account.Key, coin)
 		return
