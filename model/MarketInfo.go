@@ -81,6 +81,7 @@ func GetAmountInMarket(market string, symbol string, amount, price float64) (for
 	if marketInfo.CTValue > 0 && marketInfo.CTCurrency == GetCoin(market, symbol) {
 		amount = amount / marketInfo.CTValue
 	}
+	util.Notice(fmt.Sprintf(`%s %s check ctval %f %f`, market, symbol, amount, marketInfo.CTValue))
 	formattedAmount = marketInfo.SizeIncrement * math.Floor(amount/marketInfo.SizeIncrement)
 	decimal := util.NumDecPlaces(marketInfo.SizeIncrement)
 	format := `%.` + strconv.Itoa(decimal) + `f`
