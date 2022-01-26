@@ -384,8 +384,8 @@ func makeEqual(coin string, statuses []*CarryStatus) (isEqual bool, msg string) 
 			} else if orderSide == model.OrderSideSell {
 				price = tick.Bids[0].Price
 			}
-			util.Notice(fmt.Sprintf(`try to equal %s %s at %f amount %f`,
-				equalStatus.market, equalStatus.symbol, price, amount))
+			util.Notice(fmt.Sprintf(`try to equal %s %s at %f %f %f amount %f`,
+				equalStatus.market, equalStatus.symbol, price, tick.Asks[0].Price, tick.Bids[0].Price, amount))
 			api.PlaceOrder(equalStatus.account.Key, equalStatus.account.Secret, orderSide, model.OrderTypeLimit,
 				equalStatus.market, equalStatus.symbol, equalStatus.symbol, ``, model.FunctionComplement,
 				price, price, amount, true, true, nil, nil)
@@ -554,11 +554,11 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarrySta
 	amount = math.Min(math.Min(statusBuy.LimitBuy, bidAmount), math.Min(statusSell.LimitSell, askAmount))
 	if amount > 0 {
 		amount = model.FormatCrossPair(statusBuy.market, statusSell.market, statusBuy.symbol, statusSell.symbol, amount, priceBuy)
-		//if coin == `KISHU` {
-		//	util.Notice(fmt.Sprintf(`%s price %f %f %f %f %f %f amout %f %f %f %f`,
-		//		mark, tickRelate.Bids[0].Price, tickRelate.Asks[0].Price, tick.Bids[0].Price, tick.Asks[0].Price, priceBuy, priceAsk,
-		//		statusBuy.LimitBuy, bidAmount, statusSell.LimitSell, askAmount))
-		//}
+		if priceBuy == 0 || priceSell == 0 {
+			util.Notice(fmt.Sprintf(`wrong price %s %s price %f %f %f %f %f %f amount %f %f %f %f`,
+				coin, mark, tickRelate.Bids[0].Price, tickRelate.Asks[0].Price, tick.Bids[0].Price, tick.Asks[0].Price, priceBuy, priceAsk,
+				statusBuy.LimitBuy, bidAmount, statusSell.LimitSell, askAmount))
+		}
 	}
 	return statusBuy, statusSell, amount, priceBuy, priceSell
 }
