@@ -98,10 +98,13 @@ func FormatPrice(market, symbol, orderSide string, price float64) (formattedPric
 		return 0, 0
 	}
 	if orderSide == OrderSideBuy {
-		return marketInfo.PriceIncrement * math.Ceil(price/marketInfo.PriceIncrement), marketInfo.PriceDecimal
+		formattedPrice = marketInfo.PriceIncrement * math.Ceil(price/marketInfo.PriceIncrement)
 	} else {
-		return marketInfo.PriceIncrement * math.Floor(price/marketInfo.PriceIncrement), marketInfo.PriceDecimal
+		formattedPrice = marketInfo.PriceIncrement * math.Floor(price/marketInfo.PriceIncrement)
 	}
+	util.Notice(fmt.Sprintf(`format price %s %s priceInc: %f price:%f decimal: %d`,
+		market, symbol, marketInfo.PriceIncrement, formattedPrice, marketInfo.PriceDecimal))
+	return formattedPrice, marketInfo.PriceDecimal
 }
 
 // FormatAmountPair symbol 期货; related 现货
