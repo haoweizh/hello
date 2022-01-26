@@ -150,7 +150,13 @@ func Test_download(t *testing.T) {
 	//-H 'Connection: keep-alive' \
 }
 
+//func passInterface(v interface{}) []byte {
+//	_, value := v.(*[]byte)
+//	return value
+//}
+
 func Test_wallet(t *testing.T) {
+	//passInterface(false)
 	model.NewConfig()
 	orderBybit := api.PlaceOrder(`LWaglQgg6eiJDuTmwG`, `mOnuz8yeZmqGLUT2bNDqgA7kuhKT8QYOyUon`, model.OrderSideBuy, model.OrderTypeLimit,
 		model.BybitPerp, `ETH-PERP`, `ETH-PERP`, ``, ``, 2000.1234567, 2000.1234,
