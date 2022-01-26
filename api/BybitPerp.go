@@ -399,8 +399,8 @@ func placeOrderBybitPerp(order *model.Order, key, secret, orderSide, orderType, 
 	if timeInForce == `` {
 		timeInForce = `GTC`
 	}
-	postData[`reduce_only`] = `false`
-	postData[`close_on_trigger`] = `false`
+	postData[`reduce_only`] = false
+	postData[`close_on_trigger`] = false
 	postData["symbol"] = symbol
 	postData["qty"] = fmt.Sprintf(`%f`, amount)
 	postData[`time_in_force`] = timeInForce
