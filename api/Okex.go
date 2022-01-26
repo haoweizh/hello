@@ -521,7 +521,7 @@ func PlacePairOKEX(key, coin, sidePerp, sideSpot, orderType, refreshType string,
 			amountStrPerp = util.CutTailZero(fmt.Sprintf(`%f`, usdAmount*pricePerp))
 		}
 		perpArgs := map[string]interface{}{`instId`: coin + tailPerp, `tdMode`: `cross`, `side`: sidePerp, `sz`: amountStrPerp, `ordType`: orderType,
-			`px`: priceStrPerp, `tag`: strings.Split(key, `-`)[0]}
+			`px`: priceStrPerp, `tag`: key[:5]}
 		subscribeArgs = append(subscribeArgs, perpArgs)
 	}
 	if sideSpot != "" && priceSpot != 0 && amount != 0 {
@@ -534,7 +534,7 @@ func PlacePairOKEX(key, coin, sidePerp, sideSpot, orderType, refreshType string,
 			amountStrSpot = util.CutTailZero(fmt.Sprintf(`%f`, usdAmount*priceSpot))
 		}
 		spotArgs := map[string]interface{}{`instId`: coin + tailSpot, `tdMode`: `cross`, `side`: sideSpot, `sz`: amountStrSpot, `ordType`: orderType,
-			`px`: priceStrSpot, `tag`: strings.Split(key, `-`)[0]}
+			`px`: priceStrSpot, `tag`: key[:5]}
 		subscribeArgs = append(subscribeArgs, spotArgs)
 	}
 	if len(subscribeArgs) == 0 {
@@ -610,7 +610,7 @@ func placeOrderOKEX(key, secret string, isWs bool, order *model.Order) {
 		subscribeMap := make(map[string]interface{})
 		subscribeMap[`id`] = strconv.FormatInt(time.Now().UnixNano(), 10)
 		subscribeMap["op"] = "batch-orders"
-		postData[`tag`] = strings.Split(order.RefreshType, `-`)[0]
+		postData[`tag`] = order.AmountType[:5]
 		subscribeMap[`args`] = []map[string]interface{}{postData}
 		wsOrderMsg := util.JsonEncodeToByte(subscribeMap)
 		util.Info(`ws order ` + string(wsOrderMsg))

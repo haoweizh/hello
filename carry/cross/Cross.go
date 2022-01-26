@@ -394,7 +394,7 @@ func makeEqual(coin string, statuses []*CarryStatus) (isEqual bool, msg string) 
 				equalStatus.market, equalStatus.symbol, price, tick.Asks[0].Price, tick.Bids[0].Price, amount))
 			api.PlaceOrder(equalStatus.account.Key, equalStatus.account.Secret, orderSide, model.OrderTypeLimit,
 				equalStatus.market, equalStatus.symbol, equalStatus.symbol, ``, model.FunctionComplement,
-				price, price, amount, true, true, nil, nil)
+				price, price, amount, true, false, nil, nil)
 		}
 	}
 	return
