@@ -983,7 +983,7 @@ func parsePositionOKEX(value map[string]interface{}) (success bool, position *mo
 }
 
 func parseBalanceOKEX(value map[string]interface{}) (balance *model.Balance) {
-	if value == nil || value[`ccy`] == nil {
+	if value == nil || value[`ccy`] == nil || value[`ccy`] == `` {
 		return nil
 	}
 	balance = &model.Balance{Market: model.OKEX, Action: 0, Coin: value[`ccy`].(string),
