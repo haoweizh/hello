@@ -554,11 +554,11 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarrySta
 	amount = math.Min(math.Min(statusBuy.LimitBuy, bidAmount), math.Min(statusSell.LimitSell, askAmount))
 	if amount > 0 {
 		amount = model.FormatCrossPair(statusBuy.market, statusSell.market, statusBuy.symbol, statusSell.symbol, amount, priceBuy)
-		if coin == `KISHU` {
-			util.Notice(fmt.Sprintf(`%s price %f %f %f %f %f %f amout %f %f %f %f`,
-				mark, tickRelate.Bids[0].Price, tickRelate.Asks[0].Price, tick.Bids[0].Price, tick.Asks[0].Price, priceBuy, priceAsk,
-				statusBuy.LimitBuy, bidAmount, statusSell.LimitSell, askAmount))
-		}
+		//if coin == `KISHU` {
+		//	util.Notice(fmt.Sprintf(`%s price %f %f %f %f %f %f amout %f %f %f %f`,
+		//		mark, tickRelate.Bids[0].Price, tickRelate.Asks[0].Price, tick.Bids[0].Price, tick.Asks[0].Price, priceBuy, priceAsk,
+		//		statusBuy.LimitBuy, bidAmount, statusSell.LimitSell, askAmount))
+		//}
 	}
 	return statusBuy, statusSell, amount, priceBuy, priceSell
 }
