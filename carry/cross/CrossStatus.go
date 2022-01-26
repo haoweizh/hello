@@ -275,11 +275,15 @@ func setCarryStatus(coin, market, symbol, key string, status *CarryStatus) {
 }
 
 func pauseCarry(key string) {
+	crossLock.Lock()
 	util.Notice(`%s carrying pause %v`, key, true)
 	carryStop[key] = true
+	crossLock.Unlock()
 	time.Sleep(time.Minute * 30)
+	crossLock.Lock()
 	util.Notice(`%s carrying pause %v`, key, false)
 	carryStop[key] = false
+	crossLock.Unlock()
 }
 
 func addCarryResult(key, market string, success bool) {

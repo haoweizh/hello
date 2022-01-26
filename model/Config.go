@@ -66,6 +66,10 @@ func GetAccounts(index int) (accounts map[string]*Account) {
 	for i, account := range tempAccounts {
 		AppAccounts[i][BybitPerp] = account
 	}
+	tempAccounts = AppConfig.GetAccounts(BybitSpot)
+	for i, account := range tempAccounts {
+		AppAccounts[i][BybitSpot] = account
+	}
 	tempAccounts = AppConfig.GetAccounts(Huobi)
 	for i, account := range tempAccounts {
 		AppAccounts[i][Huobi] = account

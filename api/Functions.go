@@ -362,6 +362,8 @@ func GetFundingRate(key, secret, market, symbol string, lock *sync.Mutex) (succe
 	case model.BybitPerp:
 		rate, expireTime = getFundingRateBybitPerp(key, secret, symbol)
 		model.SetFundingRate(market, symbol, &model.FundingRate{Rate: rate, ExpireTime: expireTime, UpdateTime: now})
+	case model.BybitSpot:
+		return true, 0
 	case model.Ftx:
 		return true, 0
 		//rates := getFundingRatesFtx()

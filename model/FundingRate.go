@@ -4,7 +4,7 @@ var fundingRates = make(map[string]map[string]*FundingRate) // market - symbol -
 
 type FundingRate struct {
 	Rate, RateNext         float64
-	UpdateTime, ExpireTime int64
+	UpdateTime, ExpireTime int64 // 按秒计算的 unix time
 	Symbol                 string
 }
 

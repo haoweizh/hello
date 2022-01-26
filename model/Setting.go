@@ -220,27 +220,12 @@ func GetCoin(market, symbol string) (coin string) {
 				coin = symbol[0:strings.Index(symbol, tail)]
 			}
 		}
-	case HuobiDM: // btc_cq
-		parts := strings.Split(symbol, `_`)
-		if len(parts) == 2 {
-			coin = parts[0]
-		}
-	case Huobi: // btc-usdt
-		parts := strings.Split(symbol, `-`)
-		if len(parts) == 2 {
-			coin = parts[0]
-		}
-	case OKEX:
-		index := strings.Index(symbol, `-`)
-		if index > 0 {
-			coin = symbol[0:index]
-		}
 	case Gate:
 		parts := strings.Split(symbol, `_`)
 		if len(parts) == 2 {
 			coin = parts[0]
 		}
-	case Kucoin:
+	case Kucoin, BybitSpot, BybitPerp, OKEX, Huobi, HuobiDM:
 		parts := strings.Split(symbol, `-`)
 		if len(parts) == 2 {
 			coin = parts[0]

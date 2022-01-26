@@ -422,27 +422,18 @@ func getFundingRateBybitPerp(key, secret, symbol string) (fundingRate float64, e
 	symbol = model.GetDialectSymbol(model.BybitPerp, symbol)
 	postData[`symbol`] = symbol
 	response := SignedRequestBybit(key, secret, `GET`,
-		`/open-api/funding/prev-funding-rate`, postData)
+		`/private/linear/funding/predicted-funding`, postData)
 	instrumentJson, err := util.NewJSON(response)
 	if err == nil {
 		retCode := instrumentJson.Get(`ret_code`).MustFloat64()
 		if retCode != 0 {
 			return 0, 0
 		}
-		instrumentJson = instrumentJson.Get(`result`)
-		if instrumentJson != nil {
-			instrument, _ := instrumentJson.Map()
-			if instrument == nil {
-				return 0, 0
-			}
-			if instrument[`symbol`] != nil && instrument[`symbol`] == symbol &&
-				instrument[`funding_rate`] != nil && instrument[`funding_rate_timestamp`] != nil {
-				fundingRate, _ = strconv.ParseFloat(instrument[`funding_rate`].(string), 64)
-				expire, _ = instrument[`funding_rate_timestamp`].(json.Number).Int64()
-				expire += 28800
-			}
-		}
+		fundingRate = instrumentJson.GetPath(`result`, `predicted_funding_rate`).MustFloat64()
 	}
+	now := util.GetNow()
+	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+	expire = (today.Unix() + 86400 - now.Unix()) % 28800
 	return
 }
 

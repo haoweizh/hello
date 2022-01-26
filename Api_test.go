@@ -152,6 +152,9 @@ func Test_download(t *testing.T) {
 
 func Test_wallet(t *testing.T) {
 	model.NewConfig()
+	//account := model.GetAccounts(0)[model.BybitPerp]
+	_, rate := api.GetFundingRate(`LWaglQgg6eiJDuTmwG`, `mOnuz8yeZmqGLUT2bNDqgA7kuhKT8QYOyUon`, model.BybitPerp, `BTC-PERP`, nil)
+	fmt.Println(fmt.Sprintf(`%f`, rate))
 	mi := api.GetMarketInfos(model.BybitSpot)
 	fmt.Println(len(mi))
 	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
