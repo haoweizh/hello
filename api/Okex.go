@@ -1066,7 +1066,9 @@ func getBalanceOKEX(key, secret string) (success bool, balances []*model.Balance
 	}
 	for _, item := range data[`details`].([]interface{}) {
 		balance := parseBalanceOKEX(item.(map[string]interface{}))
-		balances = append(balances, balance)
+		if balance != nil {
+			balances = append(balances, balance)
+		}
 	}
 	return success, balances, totalInUsd, collateral
 }
