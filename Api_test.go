@@ -152,7 +152,10 @@ func Test_download(t *testing.T) {
 
 func Test_wallet(t *testing.T) {
 	model.NewConfig()
-	//account := model.GetAccounts(0)[model.BybitPerp]
+	orderBybit := api.PlaceOrder(`LWaglQgg6eiJDuTmwG`, `mOnuz8yeZmqGLUT2bNDqgA7kuhKT8QYOyUon`, model.OrderSideBuy, model.OrderTypeLimit,
+		model.BybitPerp, `ETH-PERP`, `ETH-PERP`, ``, ``, 2000.1234567, 2000.1234,
+		0.0001, false, false, nil, nil)
+	fmt.Println(orderBybit.OrderId)
 	_, rate := api.GetFundingRate(`LWaglQgg6eiJDuTmwG`, `mOnuz8yeZmqGLUT2bNDqgA7kuhKT8QYOyUon`, model.BybitPerp, `BTC-PERP`, nil)
 	fmt.Println(fmt.Sprintf(`%f`, rate))
 	mi := api.GetMarketInfos(model.BybitSpot)
@@ -175,8 +178,6 @@ func Test_wallet(t *testing.T) {
 	fmt.Println(order.Status)
 	//amount := api.GetAmountInMarket(model.OKEX, `DOGE-USDT-SWAP`, 4)
 	//fmt.Println(amount)
-	//api.PlaceOrder(model.AppConfig.DFutureKey, model.AppConfig.DFutureSecret, model.OrderSideBuy, ``,
-	//	model.DFuture, `ethusdt`, ``, `open`, model.FunctionDCarry, 2222, 2222, 0.1, true, false, nil)
 	//_, loan := api.GetMaxLoan(model.AppConfig.OkexKey, model.AppConfig.OkexSecret, model.OKEX, `XEM`)
 	//fmt.Println(loan)
 	//today := time.Now().In(time.UTC)

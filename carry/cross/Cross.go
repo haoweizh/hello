@@ -463,6 +463,10 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarrySta
 	if score > 0.01 {
 		model.AppMetric.AddCarry(mark, score, 0)
 	}
+	if coin == `KISHU` {
+		util.Notice(fmt.Sprintf(`%s %v`, mark, tick))
+		util.Notice(fmt.Sprintf(`%s %v`, mark, tickRelate))
+	}
 	if carryStatus.TradeLineSell < score && carryStatusRelate.TradeLineBuy < score {
 		statusSell = carryStatus
 		statusBuy = carryStatusRelate

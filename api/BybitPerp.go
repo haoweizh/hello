@@ -10,7 +10,6 @@ import (
 	"github.com/gorilla/websocket"
 	"hello/model"
 	"hello/util"
-	"math"
 	"net/http"
 	"sort"
 	"strconv"
@@ -304,6 +303,7 @@ func SignedRequestBybit(key, secret, method, path string, body map[string]interf
 	if method == `GET` {
 		uri = uri + `?` + paramStr
 	}
+	//responseBody, _ := util.HttpRequest(method, uri, string(util.JsonEncodeToByte(body)), headers, 60)
 	responseBody, _ := util.HttpRequest(method, uri, string(util.JsonEncodeToByte(body)), headers, 60)
 	return responseBody
 }
@@ -394,15 +394,17 @@ func placeOrderBybitPerp(order *model.Order, key, secret, orderSide, orderType, 
 	postData["side"] = strings.ToUpper(orderSide[0:1]) + orderSide[1:]
 	postData["order_type"] = strings.ToUpper(orderType[0:1]) + orderType[1:]
 	if orderType != model.OrderTypeMarket && orderType != model.OrderTypeStop {
-		postData[`price`] = price
+		postData[`price`] = fmt.Sprintf(`%f`, price)
 	}
 	if timeInForce == `` {
-		timeInForce = `GoodTillCancel`
+		timeInForce = `GTC`
 	}
+	postData[`reduce_only`] = `false`
+	postData[`close_on_trigger`] = `false`
 	postData["symbol"] = symbol
-	postData["qty"] = math.Round(amount * price)
+	postData["qty"] = fmt.Sprintf(`%f`, amount)
 	postData[`time_in_force`] = timeInForce
-	response := SignedRequestBybit(key, secret, `POST`, `/v2/private/order/create`, postData)
+	response := SignedRequestBybit(key, secret, `POST`, `/private/linear/order/create`, postData)
 	util.Notice(`place bybit` + string(response))
 	orderJson, err := util.NewJSON(response)
 	if err == nil {
