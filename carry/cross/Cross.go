@@ -328,7 +328,7 @@ func makeEqual(coin string, statuses []*CarryStatus) (isEqual bool, msg string) 
 				continue
 			}
 			go api.CancelOrders(status.account.Key, status.account.Secret, status.market, status.symbol)
-			if equalStatus != nil { //|| strings.Contains(status.symbol, `-SWAP`) {
+			if equalStatus != nil {
 				continue
 			}
 			if status.AvailableSell > holding {
@@ -353,7 +353,7 @@ func makeEqual(coin string, statuses []*CarryStatus) (isEqual bool, msg string) 
 				continue
 			}
 			go api.CancelOrders(status.account.Key, status.account.Secret, status.market, status.symbol)
-			if equalStatus != nil { //|| strings.Contains(status.symbol, `-SWAP`) {
+			if equalStatus != nil {
 				continue
 			}
 			if math.IsNaN(status.AvailableBuy) || status.AvailableBuy > math.Abs(holding) {
@@ -368,16 +368,10 @@ func makeEqual(coin string, statuses []*CarryStatus) (isEqual bool, msg string) 
 		}
 	}
 	if equalStatus != nil {
-		amount := math.Min(math.Abs(holding), openValueLimit/price)
-		util.Notice(`equal amounts %f %f %f`, amount, equalStatus.AvailableBuy, equalStatus.AvailableSell)
-		if orderSide == model.OrderSideBuy {
-			amount = math.Min(amount, equalStatus.AvailableBuy)
-		} else {
-			amount = math.Min(amount, equalStatus.AvailableSell)
+		amount := math.Abs(holding)
+		if equalStatus.market == model.Ftx {
+			amount = math.Min(90000000, math.Abs(holding))
 		}
-		//if equalStatus.market == model.Ftx {
-		//	amount = math.Min(90000000, math.Abs(holding))
-		//}
 		checkAmount := model.GetAmountInMarket(equalStatus.market, equalStatus.symbol, amount, price)
 		if checkAmount > 0 {
 			time.Sleep(time.Second)
@@ -394,7 +388,7 @@ func makeEqual(coin string, statuses []*CarryStatus) (isEqual bool, msg string) 
 				equalStatus.market, equalStatus.symbol, price, tick.Asks[0].Price, tick.Bids[0].Price, amount))
 			api.PlaceOrder(equalStatus.account.Key, equalStatus.account.Secret, orderSide, model.OrderTypeLimit,
 				equalStatus.market, equalStatus.symbol, equalStatus.symbol, ``, model.FunctionComplement,
-				price, price, amount, true, false, nil, nil)
+				price, price, amount, true, true, nil, nil)
 		}
 	}
 	return
@@ -450,7 +444,6 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarrySta
 		return
 	}
 	if getCarryStop(carryStatus.account.Key) || getCarryStop(carryStatusRelate.account.Key) {
-		//||strings.Contains(carryStatus.symbol, `-SWAP`) || strings.Contains(carryStatusRelate.symbol, `-SWAP`) {
 		util.Debug(`stop carry for 10 times unknown carry %s or %s %s`,
 			carryStatus.account.Key, carryStatusRelate.account.Key, coin)
 		return

@@ -606,7 +606,6 @@ func placeOrderOKEX(key, secret string, isWs bool, order *model.Order) {
 	} else {
 		postData[`px`] = priceStr
 	}
-	util.Notice(`okex try to place with param %v`, postData)
 	if isWs {
 		subscribeMap := make(map[string]interface{})
 		subscribeMap[`id`] = strconv.FormatInt(time.Now().UnixNano(), 10)
@@ -1166,7 +1165,6 @@ func getMaxSizeOKEX(key, secret, instrument string) (success bool, maxBuy, maxSe
 	}
 	_, maxBuy = model.ParseRealAmount(model.OKEX, instrument, maxBuy)
 	_, maxSell = model.ParseRealAmount(model.OKEX, instrument, maxSell)
-	util.SocketInfo(fmt.Sprintf(`getMaxSize %s %s %f %f`, key, instrument, maxBuy, maxSell))
 	return true, maxBuy, maxSell
 }
 

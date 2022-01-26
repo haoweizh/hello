@@ -81,7 +81,6 @@ func GetAmountInMarket(market string, symbol string, amount, price float64) (for
 	if marketInfo.CTValue > 0 && marketInfo.CTCurrency == GetCoin(market, symbol) {
 		amount = amount / marketInfo.CTValue
 	}
-	util.Notice(fmt.Sprintf(`%s %s check ctval %f %f`, market, symbol, amount, marketInfo.CTValue))
 	formattedAmount = marketInfo.SizeIncrement * math.Floor(amount/marketInfo.SizeIncrement)
 	decimal := util.NumDecPlaces(marketInfo.SizeIncrement)
 	format := `%.` + strconv.Itoa(decimal) + `f`
@@ -99,13 +98,10 @@ func FormatPrice(market, symbol, orderSide string, price float64) (formattedPric
 		return 0, 0
 	}
 	if orderSide == OrderSideBuy {
-		formattedPrice = marketInfo.PriceIncrement * math.Ceil(price/marketInfo.PriceIncrement)
+		return marketInfo.PriceIncrement * math.Ceil(price/marketInfo.PriceIncrement), marketInfo.PriceDecimal
 	} else {
-		formattedPrice = marketInfo.PriceIncrement * math.Floor(price/marketInfo.PriceIncrement)
+		return marketInfo.PriceIncrement * math.Floor(price/marketInfo.PriceIncrement), marketInfo.PriceDecimal
 	}
-	util.Notice(fmt.Sprintf(`format price %s %s priceInc: %f price:%f decimal: %d`,
-		market, symbol, marketInfo.PriceIncrement, formattedPrice, marketInfo.PriceDecimal))
-	return formattedPrice, marketInfo.PriceDecimal
 }
 
 // FormatAmountPair symbol 期货; related 现货
