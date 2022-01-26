@@ -369,9 +369,15 @@ func makeEqual(coin string, statuses []*CarryStatus) (isEqual bool, msg string) 
 	}
 	if equalStatus != nil {
 		amount := math.Abs(holding)
-		if equalStatus.market == model.Ftx {
-			amount = math.Min(90000000, math.Abs(holding))
+		util.Notice(`equal amounts %f %f %f`, amount, equalStatus.AvailableBuy, equalStatus.AvailableSell)
+		if orderSide == model.OrderSideBuy {
+			amount = math.Min(amount, equalStatus.AvailableBuy)
+		} else {
+			amount = math.Min(amount, equalStatus.AvailableSell)
 		}
+		//if equalStatus.market == model.Ftx {
+		//	amount = math.Min(90000000, math.Abs(holding))
+		//}
 		checkAmount := model.GetAmountInMarket(equalStatus.market, equalStatus.symbol, amount, price)
 		if checkAmount > 0 {
 			time.Sleep(time.Second)
@@ -554,11 +560,6 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarrySta
 	amount = math.Min(math.Min(statusBuy.LimitBuy, bidAmount), math.Min(statusSell.LimitSell, askAmount))
 	if amount > 0 {
 		amount = model.FormatCrossPair(statusBuy.market, statusSell.market, statusBuy.symbol, statusSell.symbol, amount, priceBuy)
-		if priceBuy == 0 || priceSell == 0 {
-			util.Notice(fmt.Sprintf(`wrong price %s %s price %f %f %f %f %f %f amount %f %f %f %f`,
-				coin, mark, tickRelate.Bids[0].Price, tickRelate.Asks[0].Price, tick.Bids[0].Price, tick.Asks[0].Price, priceBuy, priceAsk,
-				statusBuy.LimitBuy, bidAmount, statusSell.LimitSell, askAmount))
-		}
 	}
 	return statusBuy, statusSell, amount, priceBuy, priceSell
 }

@@ -228,7 +228,7 @@ func (markets *Markets) SetBidAsk(symbol, marketName string, bidAsk *BidAsk) boo
 		util.SocketInfo(marketName + `do not set nil or empty bid ask` + symbol)
 		return false
 	}
-	if bidAsk.Bids[0].Price >= bidAsk.Asks[0].Price || bidAsk.Bids[0].Price*bidAsk.Bids[0].Amount*bidAsk.Asks[0].Price*bidAsk.Asks[0].Amount == 0 {
+	if bidAsk.Bids[0].Price >= bidAsk.Asks[0].Price {
 		util.SocketInfo(fmt.Sprintf(`do not set mistake %s %s bid %f ask %f`,
 			marketName, symbol, bidAsk.Bids[0].Price, bidAsk.Asks[0].Price))
 		return false
