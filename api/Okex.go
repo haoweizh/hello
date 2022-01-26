@@ -1165,6 +1165,7 @@ func getMaxSizeOKEX(key, secret, instrument string) (success bool, maxBuy, maxSe
 	}
 	_, maxBuy = model.ParseRealAmount(model.OKEX, instrument, maxBuy)
 	_, maxSell = model.ParseRealAmount(model.OKEX, instrument, maxSell)
+	util.SocketInfo(fmt.Sprintf(`getMaxSize %s %s %f %f`, key, instrument, maxBuy, maxSell))
 	return true, maxBuy, maxSell
 }
 
