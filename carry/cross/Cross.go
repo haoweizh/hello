@@ -368,7 +368,7 @@ func makeEqual(coin string, statuses []*CarryStatus) (isEqual bool, msg string) 
 		}
 	}
 	if equalStatus != nil {
-		amount := math.Abs(holding)
+		amount := math.Min(math.Abs(holding), openValueLimit/price)
 		util.Notice(`equal amounts %f %f %f`, amount, equalStatus.AvailableBuy, equalStatus.AvailableSell)
 		if orderSide == model.OrderSideBuy {
 			amount = math.Min(amount, equalStatus.AvailableBuy)
