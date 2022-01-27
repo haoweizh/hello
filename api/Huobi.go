@@ -556,7 +556,7 @@ func getPositionsHuobi(key string, secret string) (success bool, positions []*mo
 			}
 			positionMap[currency].DirectionDetail[direction] = realAmount
 			positionMap[currency].Direction = direction
-			positionMap[currency].Free = positionMap[currency].Free + realAmount
+			positionMap[currency].Holding = positionMap[currency].Holding + realAmount
 		}
 		if item[`profit_unreal`] != nil {
 			positionMap[currency].ProfitUnreal, _ = item[`profit_unreal`].(json.Number).Float64()

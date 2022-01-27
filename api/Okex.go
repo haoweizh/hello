@@ -973,9 +973,9 @@ func parsePositionOKEX(value map[string]interface{}) (success bool, position *mo
 	if value[`pos`] != nil {
 		pos, _ := strconv.ParseFloat(value[`pos`].(string), 64)
 		if strings.Contains(position.Currency, `SWAP`) || len(strings.Split(position.Currency, `-`)) > 2 {
-			success, position.Free = model.ParseRealAmount(model.OKEX, position.Currency, pos)
+			success, position.Holding = model.ParseRealAmount(model.OKEX, position.Currency, pos)
 		} else {
-			position.Free = pos
+			position.Holding = pos
 		}
 	}
 	//pos 持仓数量

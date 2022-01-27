@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"hello/api"
 	"hello/carry/cross"
-	"hello/carry/refresh"
+	"hello/carry/dreprecated"
 	"hello/model"
 	"hello/util"
 	"time"
@@ -154,9 +154,8 @@ func Maintain() {
 	model.HandlerMap[model.FunctionTurtle] = ProcessTurtle
 	model.HandlerMap[model.FunctionCarry] = ProcessCarry
 	model.HandlerMap[model.FunctionCross] = cross.ProcessCross
-	model.HandlerMap[model.FunctionDCarry] = ProcessDCarry
-	model.HandlerMap[model.FunctionHang] = ProcessHang
-	model.HandlerMap[model.FunctionRefresh] = refresh.ProcessRefresh
+	model.HandlerMap[model.FunctionDCarry] = dreprecated.ProcessDCarry
+	model.HandlerMap[model.FunctionHang] = dreprecated.ProcessHang
 	_ = model.AppDB.AutoMigrate(&model.Setting{})
 	_ = model.AppDB.AutoMigrate(&model.Order{})
 	_ = model.AppDB.AutoMigrate(&model.Balance{})

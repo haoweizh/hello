@@ -513,7 +513,7 @@ func getPositionsKucoin(key string, secret string) (success bool, positions []*m
 		currency := strings.ReplaceAll(contract.Symbol, "USDTM", "") + model.GetPerpTail(model.Kucoin)
 		position := &model.Position{Market: model.Kucoin, Ts: util.GetNowUnixMillion(), Currency: currency}
 		_, realAmount := model.ParseRealAmount(model.Kucoin, currency, float64(contract.CurrentQty))
-		position.Free = realAmount
+		position.Holding = realAmount
 		position.LeverRate = int64(contract.RealLeverage)
 		position.EntryPrice = contract.AvgEntryPrice
 		position.Margin = contract.PosMargin

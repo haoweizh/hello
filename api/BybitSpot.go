@@ -1,6 +1,9 @@
 package api
 
 import (
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"github.com/gorilla/websocket"
@@ -9,6 +12,7 @@ import (
 	"net/http"
 	"sort"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -92,7 +96,7 @@ func WsDepthServeBybitSpot(markets *model.Markets, orderHandler OrderHandler) ([
 			if markets.SetBidAsk(symbol, model.BybitSpot, bidAsk) {
 				for function, handler := range model.GetFunctions(model.BybitSpot, symbol) {
 					if handler != nil {
-						setting := model.GetSetting(function, model.BybitPerp, symbol)
+						setting := model.GetSetting(function, model.BybitSpot, symbol)
 						if setting != nil {
 							go handler(setting, bidAsk)
 						}
@@ -105,6 +109,29 @@ func WsDepthServeBybitSpot(markets *model.Markets, orderHandler OrderHandler) ([
 	bybitSpotSubConnection = make(map[string]*websocket.Conn)
 	return WebSocketClient(model.BybitSpot, wsBybitSpot, subscribes, subscribeHandlerBybitSpot, wsHandler,
 		orderHandler, wsStepBybitSpot)
+}
+
+func SignedRequestBybitSpot(key, secret, method, path string, body map[string]interface{}) []byte {
+	if body == nil {
+		body = make(map[string]interface{})
+	}
+	body[`api_key`] = key
+	body[`timestamp`] = strconv.FormatInt(util.GetNowUnixMillion(), 10)
+	uri := restBybit + path
+	paramStr := util.ComposeParams(body)
+	hash := hmac.New(sha256.New, []byte(secret))
+	hash.Write([]byte(paramStr))
+	sign := hex.EncodeToString(hash.Sum(nil))
+	body[`sign`] = sign
+	paramStr = util.ComposeParams(body)
+	headers := map[string]string{`api_key`: key, `sign`: sign} //, "Content-Type": "application/json"}
+	//if method == http.MethodGet {
+	uri = uri + `?` + paramStr
+	//}
+	responseBody, _ := util.HttpRequest(method, uri, ``, headers, 60)
+	util.SocketInfo(fmt.Sprintf(`bybitSpot key %s request %s %s body %v return %s`,
+		key, uri, method, body, string(responseBody)))
+	return responseBody
 }
 
 func parseTickBybitSpot(data map[string]interface{}) (symbol string, bidAsk *model.BidAsk) {
@@ -148,7 +175,7 @@ func parseTickBybitSpot(data map[string]interface{}) (symbol string, bidAsk *mod
 }
 
 func getMarketsBybitSpot(key, secret string) (marketInfos map[string]*model.MarketInfo) {
-	response := SignedRequestBybit(key, secret, http.MethodGet, `/spot/v1/symbols`, nil)
+	response := SignedRequestBybitSpot(key, secret, http.MethodGet, `/spot/v1/symbols`, nil)
 	marketInfos = make(map[string]*model.MarketInfo)
 	marketJson, err := util.NewJSON(response)
 	if err == nil && marketJson.Get(`ret_code`) != nil && marketJson.Get(`ret_code`).MustInt64() == 0 {
@@ -182,12 +209,81 @@ func getMarketsBybitSpot(key, secret string) (marketInfos map[string]*model.Mark
 	return
 }
 
+func parseOrderBybitSpot(item map[string]interface{}) (order *model.Order) {
+	if item == nil {
+		return nil
+	}
+	order = &model.Order{Market: model.BybitSpot, Status: model.CarryStatusFail}
+	if item[`orderId`] != nil {
+		order.OrderId = item[`orderId`].(string)
+	}
+	if item[`symbolName`] != nil {
+		order.Symbol = model.GetStandardSymbol(model.BybitSpot, item[`symbolName`].(string))
+		order.Instrument = order.Symbol
+	}
+	if item[`side`] != nil {
+		order.OrderSide = strings.ToLower(item[`side`].(string))
+	}
+	if item[`type`] != nil {
+		order.OrderType = strings.ToLower(item[`type`].(string))
+	}
+	if item[`origQty`] != nil {
+		order.Amount, _ = strconv.ParseFloat(item[`origQty`].(string), 64)
+	}
+	if item[`price`] != nil {
+		order.Price, _ = strconv.ParseFloat(item[`price`].(string), 64)
+	}
+	if item[`executedQty`] != nil {
+		order.DealAmount, _ = strconv.ParseFloat(item[`executedQty`].(string), 64)
+	}
+	if item[`transactTime`] != nil {
+		order.OrderTime, _ = time.Parse(time.RFC3339, item[`transactTime`].(string))
+	}
+	if item[`status`] != nil {
+		order.Status = model.GetOrderStatus(model.BybitSpot, item[`status`].(string))
+	}
+	if order.Status != model.CarryStatusSuccess && order.Status != model.CarryStatusFail {
+		order.Status = model.CarryStatusWorking
+	}
+	if order.DealAmount > 0 && order.DealPrice == 0 {
+		order.DealPrice = order.Price
+	}
+	return
+}
+
+func placeOrdersBybitSpot(key, secret, orderSide, orderType, timeInForce, symbol string,
+	price, amount float64) (order *model.Order) {
+	postData := make(map[string]interface{})
+	path := `/spot/v1/order`
+	postData[`symbol`] = model.GetDialectSymbol(model.BybitSpot, symbol)
+	formattedAmount := model.GetAmountInMarket(model.BybitSpot, symbol, amount, price)
+	postData["qty"] = util.CutTailZero(fmt.Sprintf(`%f`, formattedAmount))
+	postData["side"] = strings.ToUpper(orderSide)
+	postData["type"] = strings.ToUpper(orderType)
+	if timeInForce == `` {
+		timeInForce = `GTC`
+	}
+	postData[`timeInForce`] = timeInForce
+	if orderType != model.OrderTypeMarket && orderType != model.OrderTypeStop {
+		formattedPrice, decimal := model.FormatPrice(model.BybitSpot, symbol, orderSide, price)
+		postData[`price`] = util.CutTailZero(strconv.FormatFloat(formattedPrice, 'f', decimal, 64))
+	}
+	response := SignedRequestBybitSpot(key, secret, http.MethodPost, path, postData)
+	orderJson, err := util.NewJSON(response)
+	if err == nil {
+		orderJson = orderJson.Get(`result`)
+		if orderJson != nil {
+			return parseOrderBybitSpot(orderJson.MustMap())
+		}
+	}
+	return order
+}
+
 func cancelOrdersBybitSpot(key, secret, symbol string) bool {
 	postData := make(map[string]interface{})
 	path := `/spot/order/batch-cancel`
-	method := http.MethodDelete
 	postData[`symbol`] = model.GetDialectSymbol(model.BybitSpot, symbol)
-	response := SignedRequestBybit(key, secret, method, path, postData)
+	response := SignedRequestBybitSpot(key, secret, http.MethodDelete, path, postData)
 	cancelJson, err := util.NewJSON(response)
 	if err == nil {
 		if cancelJson.Get(`ret_code`).MustInt() == 0 {
@@ -195,4 +291,86 @@ func cancelOrdersBybitSpot(key, secret, symbol string) bool {
 		}
 	}
 	return false
+}
+
+func cancelOrderBybitSpot(key, secret, symbol, orderId string) (result bool, errCode, msg string, order *model.Order) {
+	postData := make(map[string]interface{})
+	postData[`orderId`] = orderId
+	postData[`symbolId`] = model.GetDialectSymbol(model.BybitSpot, symbol)
+	response := SignedRequestBybitSpot(key, secret, http.MethodDelete, `/spot/v1/order/fast`, postData)
+	orderJson, err := util.NewJSON(response)
+	result = false
+	if err == nil {
+		retCode := orderJson.Get(`ret_code`).MustInt64()
+		if retCode == 0 {
+			result = true
+		}
+		errCode = strconv.FormatInt(retCode, 10)
+		msg = orderJson.Get(`ret_msg`).MustString()
+		if orderJson.Get(`result`) != nil {
+			item, _ := orderJson.Get(`result`).Map()
+			if item != nil {
+				order = parseOrderBybitSpot(item)
+			}
+		}
+		return
+	}
+	return false, ``, ``, nil
+}
+
+func queryOrderBybitSpot(key, secret, orderId string) (order *model.Order) {
+	postData := make(map[string]interface{})
+	postData[`orderId`] = orderId
+	response := SignedRequestBybitSpot(key, secret, http.MethodGet, `/spot/v1/order`, postData)
+	orderJson, err := util.NewJSON(response)
+	if err == nil {
+		orderJson = orderJson.GetPath(`result`)
+		if orderJson == nil {
+			return nil
+		}
+		return parseOrderBybitSpot(orderJson.MustMap())
+	}
+	return nil
+}
+
+func getBalanceBybitSpot(key, secret string) (success bool, balances []*model.Balance) {
+	response := SignedRequestBybitSpot(key, secret, http.MethodGet, `/spot/v1/account`, nil)
+	balanceJson, err := util.NewJSON(response)
+	if err != nil || balanceJson == nil {
+		util.SocketInfo(`fail to get bybitspot balance`)
+		time.Sleep(time.Second * 2)
+		return getBalanceBybitSpot(key, secret)
+	} else {
+		balancesArray := balanceJson.GetPath(`result`, `balances`).MustArray()
+		balances = []*model.Balance{}
+		for _, item := range balancesArray {
+			value := item.(map[string]interface{})
+			balance := &model.Balance{
+				Amount:       0,
+				FrozenAmount: 0,
+				Coin:         "",
+				Market:       model.BybitSpot,
+				UsdValue:     0,
+			}
+			if value[`coin`] != nil {
+				balance.Coin = value[`coin`].(string)
+			}
+			if value[`total`] != nil {
+				balance.Amount, _ = strconv.ParseFloat(value[`total`].(string), 64)
+			}
+			if value[`free`] != nil {
+				balance.AvailableWithBorrow, _ = strconv.ParseFloat(value[`free`].(string), 64)
+			}
+			if value[`locked`] != nil {
+				balance.FrozenAmount, _ = strconv.ParseFloat(value[`locked`].(string), 64)
+			}
+			priceGet, bidAsk := model.AppMarkets.GetBidAsk(balance.Coin+model.GetSpotTail(model.BybitSpot), model.BybitSpot)
+			if priceGet {
+				balance.Price = bidAsk.Bids[0].Price
+				balance.UsdValue = balance.Amount * bidAsk.Bids[0].Price
+			}
+			balances = append(balances, balance)
+		}
+	}
+	return success, balances
 }

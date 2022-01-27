@@ -159,6 +159,8 @@ func CancelOrder(key, secret, market, symbol, instrument, orderType, orderId str
 		result, errCode, msg = cancelOrderBitmex(key, secret, orderId)
 	case model.BybitPerp:
 		result, errCode, msg, order = cancelOrderBybitPerp(key, secret, symbol, orderId)
+	case model.BybitSpot:
+		result, errCode, msg, order = cancelOrderBybitSpot(key, secret, symbol, orderId)
 	case model.Ftx:
 		result = cancelOrderFtx(key, secret, orderType, orderId)
 	case model.Gate:
@@ -298,6 +300,8 @@ func GetBalances(key, secret, market string) (
 		success, balances = getBalanceHuobi(key, secret)
 	case model.Binance:
 		success, balances = getBalanceBinance(key, secret)
+	case model.BybitSpot:
+		success, balances = getBalanceBybitSpot(key, secret)
 	}
 	if market != model.Ftx && market != model.OKEX {
 		for _, balance := range balances {
@@ -459,7 +463,9 @@ func QueryOrderById(key, secret, market, symbol, instrument, orderType, orderId 
 	case model.Coinpark:
 		order.DealAmount, order.DealPrice, order.Status = queryOrderCoinpark(key, secret, orderId)
 	case model.BybitPerp:
-		queryOrderBybitPerp(key, secret, order)
+		order = queryOrderBybitPerp(key, secret, symbol, orderId)
+	case model.BybitSpot:
+		order = queryOrderBybitSpot(key, secret, orderId)
 	case model.Ftx: // 查询是否是待成交状态，如果已成交或已取消，则ftx返回order not found信息，order为nil
 		if orderType == model.OrderTypeStop {
 			newOrderId := queryTriggerOrderId(key, secret, orderId)
@@ -515,6 +521,8 @@ func GetPositions(key, secret, market string) (success bool, positions []*model.
 		}
 		success, positions, _ = getPositionsFtx(key, secret)
 		return success, positions, accountValue, availableU
+	case model.BybitPerp:
+		return getPositionsBybitPerp(key, secret)
 	case model.OKEX:
 		_, _, total, collateral := getBalanceOKEX(key, secret)
 		success, positions = getPositionsOKEX(key, secret)
@@ -624,7 +632,9 @@ func PlaceOrder(key, secret, orderSide, orderType, market, symbol, instrument, o
 	case model.Bitmex:
 		placeOrderBitmex(order, key, secret, orderSide, orderType, orderParam, symbol, price, amount)
 	case model.BybitPerp:
-		placeOrderBybitPerp(order, key, secret, orderSide, orderType, orderParam, symbol, price, amount)
+		order = placeOrderBybitPerp(key, secret, orderSide, orderType, orderParam, symbol, price, amount)
+	case model.BybitSpot:
+		order = placeOrdersBybitSpot(key, secret, orderSide, orderType, orderParam, symbol, price, amount)
 	case model.Ftx:
 		placeOrderFtx(order, key, secret, orderSide, orderType, orderParam, symbol, price, triggerPrice, amount)
 	}
@@ -877,7 +887,7 @@ func InitCrossMarketInfos() {
 	for _, market := range markets {
 		marketInfo := GetMarketInfos(market)
 		for _, info := range marketInfo {
-			coin := model.GetCrossCoin(market, info.Name)
+			coin := model.GetCoin(market, info.Name)
 			if coin != `` {
 				if infoPool[coin] == nil {
 					infoPool[coin] = make([]*model.MarketInfo, 0)
@@ -943,7 +953,13 @@ func InitMarketInfos() (success bool) {
 			model.SetMarketInfos(market, marketInfos)
 			setFutureAutoDeposit()
 		case model.BybitPerp:
-			model.SetMarketInfos(market, getMarketsBybitPerp(accounts[0].Key, accounts[0].Secret))
+			marketInfos := getMarketsBybitPerp(accounts[0].Key, accounts[0].Secret)
+			model.SetMarketInfos(market, marketInfos)
+			for _, account := range accounts {
+				for symbol := range marketInfos {
+					setSettingsBybitPerp(account.Key, account.Secret, symbol)
+				}
+			}
 		case model.BybitSpot:
 			model.SetMarketInfos(market, getMarketsBybitSpot(accounts[0].Key, accounts[0].Secret))
 		}

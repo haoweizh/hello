@@ -470,7 +470,7 @@ func getCarryAmounts(setting *model.Setting, balances []*model.Balance, position
 	tail := model.GetPerpTail(setting.Market)
 	for _, position := range positions {
 		if position != nil && position.Currency == setting.Symbol {
-			amountPerp = position.Free
+			amountPerp = position.Holding
 		}
 	}
 	for _, balance := range balances {

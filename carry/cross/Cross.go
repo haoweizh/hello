@@ -34,7 +34,7 @@ func createContractMarket(key, secret, market string) (cm *contractMarket) {
 			cm.positions[position.Currency] = position
 			getTick, tick := model.AppMarkets.GetBidAsk(position.Currency, market)
 			if settings != nil && settings[position.Currency] != nil && getTick {
-				cm.contractValueInU += tick.Bids[0].Price * math.Abs(position.Free)
+				cm.contractValueInU += tick.Bids[0].Price * math.Abs(position.Holding)
 			}
 		}
 		cm.accountValueInU = accountValue
@@ -103,7 +103,7 @@ func createFromPosition(account *model.Account, setting *model.Setting, valueLim
 	}
 	valueInUsd := 0.0
 	if cm.positions[setting.Symbol] != nil {
-		carryStatus.Holding = cm.positions[setting.Symbol].Free
+		carryStatus.Holding = cm.positions[setting.Symbol].Holding
 		valueInUsd = math.Abs(carryStatus.Holding) * price
 		carryStatus.RateInAll = valueInUsd / cm.accountValueInU
 	}
@@ -658,13 +658,13 @@ func placeStatus(status *CarryStatus, price float64, amount float64) {
 		position := cm.positions[status.symbol]
 		originFreeAbs := 0.0
 		if position == nil {
-			position = &model.Position{Free: amount, EntryPrice: price, Market: status.market, Currency: status.setting.Symbol}
+			position = &model.Position{Holding: amount, EntryPrice: price, Market: status.market, Currency: status.setting.Symbol}
 		} else {
-			originFreeAbs = math.Abs(position.Free)
-			position.Free += amount
+			originFreeAbs = math.Abs(position.Holding)
+			position.Holding += amount
 			position.EntryPrice = price
 		}
-		changeU := (originFreeAbs - math.Abs(position.Free)) * price
+		changeU := (originFreeAbs - math.Abs(position.Holding)) * price
 		cm.collateralsAvailable += changeU * 0.2
 		cm.contractValueInU += changeU
 		if status.market == model.Ftx {

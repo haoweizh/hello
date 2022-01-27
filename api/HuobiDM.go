@@ -190,7 +190,7 @@ func getHoldingHuobiDM(key, secret, symbolSide string) (position *model.Position
 			//	position.Holding, _ = holding[`volume`].(json.Number).Float64()
 			//}
 			if holding[`available`] != nil { // 可平仓数量
-				position.Free, _ = holding[`available`].(json.Number).Float64()
+				position.Holding, _ = holding[`available`].(json.Number).Float64()
 			}
 			if holding[`frozen`] != nil {
 				position.Frozen, _ = holding[`frozen`].(json.Number).Float64()
@@ -213,7 +213,7 @@ func getHoldingHuobiDM(key, secret, symbolSide string) (position *model.Position
 			if holding[`lever_rate`] != nil { // 杠杆倍数
 				position.LeverRate, _ = holding[`lever_rate`].(json.Number).Int64()
 			}
-			util.SocketInfo(fmt.Sprintf(`get huobiDB %s holding %f`, position.Direction, position.Free))
+			util.SocketInfo(fmt.Sprintf(`get huobiDB %s holding %f`, position.Direction, position.Holding))
 		}
 	}
 	return position
@@ -244,7 +244,7 @@ func placeOrderHuobiDM(key, secret string, order *model.Order,
 		offset = `close`
 		position := getHoldingHuobiDM(key, secret, symbol+model.OrderSideSell)
 		if position != nil {
-			holding := math.Abs(position.Free)
+			holding := math.Abs(position.Holding)
 			util.Notice(fmt.Sprintf(`holding huobiDM size %f to %f`, size, holding))
 			if holding < size {
 				size = holding
@@ -258,7 +258,7 @@ func placeOrderHuobiDM(key, secret string, order *model.Order,
 		offset = `close`
 		position := getHoldingHuobiDM(key, secret, symbol+model.OrderSideBuy)
 		if position != nil {
-			holding := math.Abs(position.Free)
+			holding := math.Abs(position.Holding)
 			util.Notice(fmt.Sprintf(`holding huobiDM size %f to %f`, size, holding))
 			if holding < size {
 				size = holding

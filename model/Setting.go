@@ -3,7 +3,6 @@ package model
 import (
 	"fmt"
 	"hello/util"
-	"strings"
 	"time"
 )
 
@@ -205,56 +204,29 @@ func GetMarkets() []string {
 }
 
 func GetCoin(market, symbol string) (coin string) {
+	var tails []string
 	switch market {
-	case Binance:
-		tails := []string{`-PERP`, `USDT`}
-		for _, tail := range tails {
-			if symbol[len(symbol)-len(tail):] == tail {
-				return symbol[0 : len(symbol)-len(tail)]
-			}
-		}
 	case Ftx:
-		tails := []string{`-PERP`, `/USD`}
-		for _, tail := range tails {
-			if strings.Contains(symbol, tail) {
-				coin = symbol[0:strings.Index(symbol, tail)]
-			}
-		}
+		tails = []string{`/USD`, `-PERP`}
 	case OKEX:
-		index := strings.Index(symbol, `-`)
-		if index > 0 {
-			coin = symbol[0:index]
-		}
-	case Gate, HuobiDM:
-		parts := strings.Split(symbol, `_`)
-		if len(parts) == 2 {
-			coin = parts[0]
-		}
-	case Kucoin, BybitSpot, BybitPerp, Huobi:
-		parts := strings.Split(symbol, `-`)
-		if len(parts) == 2 {
-			coin = parts[0]
-		}
+		tails = []string{`-USDT`, `-USDT-SWAP`}
+	case Gate:
+		tails = []string{`_USDT`, `_PERP`}
+	case Kucoin:
+		tails = []string{`-USDT`, `-PERP`}
+	case Binance:
+		tails = []string{`-PERP`}
+	case BybitPerp:
+		tails = []string{`-PERP`}
+	case BybitSpot:
+		tails = []string{`-PERP`}
+	case Huobi:
+		tails = []string{`usdt`, `-usdt`}
 	}
-	return coin
-}
-
-func IsSpot(market, symbol string) (coin string, result bool) {
-	tail := GetSpotTail(market)
-	lastIndex := strings.LastIndex(symbol, tail)
-	if lastIndex > 0 && symbol[lastIndex:] == tail {
-		result = true
-		coin = symbol[0:lastIndex]
-	}
-	return
-}
-
-func IsPerp(market, symbol string) (coin string, result bool) {
-	tail := GetPerpTail(market)
-	lastIndex := strings.LastIndex(symbol, tail)
-	if lastIndex > 0 && symbol[lastIndex:] == tail {
-		result = true
-		coin = symbol[0:lastIndex]
+	for _, tail := range tails {
+		if symbol[len(symbol)-len(tail):] == tail {
+			return symbol[0 : len(symbol)-len(tail)]
+		}
 	}
 	return
 }
@@ -287,55 +259,4 @@ func GetPerpTail(market string) string {
 		return `_PERP`
 	}
 	return ``
-}
-
-func GetCrossCoin(market, symbol string) (coin string) {
-	var tails []string
-	switch market {
-	case Ftx:
-		tails = []string{`/USD`, `-PERP`}
-	case OKEX:
-		tails = []string{`-USDT`, `-USDT-SWAP`}
-	case Gate:
-		tails = []string{`_USDT`, `_PERP`}
-	case Binance:
-		tails = []string{`-PERP`}
-	case BybitPerp:
-		tails = []string{`-perp`}
-	case BybitSpot:
-		tails = []string{`-usdt`}
-	}
-	for _, tail := range tails {
-		coinLen := len(symbol) - len(tail)
-		if strings.LastIndex(symbol, tail) == coinLen && coinLen > 0 {
-			coin = symbol[:len(symbol)-len(tail)]
-			//if market == Gate && coin == `MBABYDOGE` {
-			//	coin = `BABYDOGE`
-			//}
-			return coin
-		}
-	}
-	return
-}
-
-func GetSpotCoins(market, symbol string) []string {
-	switch market {
-	case Huobi:
-		if strings.LastIndex(symbol, `usdt`) == len(symbol)-4 {
-			return []string{symbol[0 : len(symbol)-4], `usdt`}
-		}
-		return nil
-	case Ftx:
-		return strings.Split(symbol, `/`)
-	case OKEX, Kucoin:
-		return strings.Split(symbol, `-`)
-	case Binance:
-		if strings.LastIndex(symbol, `USDT`) == len(symbol)-4 {
-			return []string{symbol[0 : len(symbol)-4], `USDT`}
-		}
-		return nil
-	case Gate:
-		return strings.Split(symbol, `_`)
-	}
-	return nil
 }

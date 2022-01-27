@@ -1,4 +1,4 @@
-package carry
+package dreprecated
 
 import (
 	"fmt"
@@ -78,14 +78,14 @@ var ProcessDCarry = func(setting *model.Setting, tickD *model.BidAsk) {
 		model.SetCarryInfo(account.Key, fmt.Sprintf(`dcarry price %s %s`, setting.Market, setting.Symbol),
 			fmt.Sprintf(`d: %f %s-%s %f rate: %f position: %f`,
 				tickDPrice, setting.MarketRelated, setting.SymbolRelated, tickRelatedPrice,
-				(tickDPrice-tickRelatedPrice)/tickRelatedPrice, position.Free))
+				(tickDPrice-tickRelatedPrice)/tickRelatedPrice, position.Holding))
 		amount := 0.0
 		orderSide := model.OrderSideBuy
 		line := setting.OpenShortMargin
-		if position.Free != 0 {
+		if position.Holding != 0 {
 			line = setting.CloseShortMargin
-			amount = math.Abs(position.Free)
-			if position.Free > 0 {
+			amount = math.Abs(position.Holding)
+			if position.Holding > 0 {
 				orderSide = model.OrderSideSell
 			}
 		}
@@ -127,7 +127,7 @@ var ProcessDCarry = func(setting *model.Setting, tickD *model.BidAsk) {
 				tickDPrice, tickRelatedPrice, price, amount))
 			_, pos := api.GetPosition(setting.Market, setting.Symbol, address)
 			setPosition(address, setting.Market, setting.Symbol, pos)
-			util.Notice(fmt.Sprintf(`set position %s %f`, pos.Currency, pos.Free))
+			util.Notice(fmt.Sprintf(`set position %s %f`, pos.Currency, pos.Holding))
 		}
 	}
 }

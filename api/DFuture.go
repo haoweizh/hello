@@ -197,7 +197,7 @@ func getPositionsDFuture(symbol, address string) (success bool, position *model.
 			if value[3].(string) == `-1` {
 				amount = -1 * amount
 			}
-			position = &model.Position{Market: model.DFuture, Currency: symbol, Free: amount}
+			position = &model.Position{Market: model.DFuture, Currency: symbol, Holding: amount}
 		}
 	}
 	util.SocketInfo(fmt.Sprintf(`dfuture query %s return %v`, path, success))

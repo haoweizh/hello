@@ -10,6 +10,7 @@ import (
 	"github.com/gorilla/websocket"
 	"hello/model"
 	"hello/util"
+	"math"
 	"net/http"
 	"sort"
 	"strconv"
@@ -241,7 +242,7 @@ func handleOrderBookBybitPerp(markets *model.Markets, symbol string, ts int64, r
 }
 
 func getMarketsBybitPerp(key, secret string) (marketInfos map[string]*model.MarketInfo) {
-	response := SignedRequestBybit(key, secret, http.MethodGet, `/v2/public/symbols`, nil)
+	response := SignedRequestBybitPerp(key, secret, http.MethodGet, `/v2/public/symbols`, nil)
 	marketInfos = make(map[string]*model.MarketInfo)
 	marketJson, err := util.NewJSON(response)
 	if err == nil && marketJson.Get(`ret_code`) != nil && marketJson.Get(`ret_code`).MustInt64() == 0 {
@@ -285,7 +286,7 @@ func getMarketsBybitPerp(key, secret string) (marketInfos map[string]*model.Mark
 	return
 }
 
-func SignedRequestBybit(key, secret, method, path string, body map[string]interface{}) []byte {
+func SignedRequestBybitPerp(key, secret, method, path string, body map[string]interface{}) []byte {
 	if body == nil {
 		body = make(map[string]interface{})
 	}
@@ -303,7 +304,7 @@ func SignedRequestBybit(key, secret, method, path string, body map[string]interf
 		uri = uri + `?` + paramStr
 	}
 	responseBody, _ := util.HttpRequest(method, uri, string(util.JsonEncodeToByte(body)), headers, 60)
-	util.SocketInfo(fmt.Sprintf(`bybit key %s request %s %s body %v return %s`,
+	util.SocketInfo(fmt.Sprintf(`bybitPerp key %s request %s %s body %v return %s`,
 		key, uri, method, body, string(responseBody)))
 	return responseBody
 }
@@ -313,7 +314,7 @@ func cancelOrdersBybitPerp(key, secret, symbol string) bool {
 	path := `/private/linear/order/cancel-all`
 	method := http.MethodPost
 	postData[`symbol`] = model.GetDialectSymbol(model.BybitPerp, symbol)
-	response := SignedRequestBybit(key, secret, method, path, postData)
+	response := SignedRequestBybitPerp(key, secret, method, path, postData)
 	cancelJson, err := util.NewJSON(response)
 	if err == nil {
 		if cancelJson.Get(`ret_code`).MustInt() == 0 {
@@ -327,7 +328,7 @@ func cancelOrderBybitPerp(key, secret, symbol, orderId string) (result bool, err
 	postData := make(map[string]interface{})
 	postData[`order_id`] = orderId
 	postData[`symbol`] = model.GetDialectSymbol(model.BybitPerp, symbol)
-	response := SignedRequestBybit(key, secret, `POST`, `/private/linear/order/cancel`, postData)
+	response := SignedRequestBybitPerp(key, secret, `POST`, `/private/linear/order/cancel`, postData)
 	orderJson, err := util.NewJSON(response)
 	result = false
 	if err == nil {
@@ -340,8 +341,7 @@ func cancelOrderBybitPerp(key, secret, symbol, orderId string) (result bool, err
 		if orderJson.Get(`result`) != nil {
 			item, _ := orderJson.Get(`result`).Map()
 			if item != nil {
-				order = &model.Order{}
-				parseOrderBybitPerp(order, item)
+				order = parseOrderBybitPerp(item)
 			}
 		}
 		return
@@ -349,54 +349,134 @@ func cancelOrderBybitPerp(key, secret, symbol, orderId string) (result bool, err
 	return false, ``, ``, nil
 }
 
-func queryOrderBybitPerp(key, secret string, order *model.Order) (updatedOrder *model.Order) {
+func queryOrderBybitPerp(key, secret, symbol, orderId string) (order *model.Order) {
 	postData := make(map[string]interface{})
-	postData[`symbol`] = model.GetDialectSymbol(model.BybitPerp, order.Symbol)
-	postData[`order_id`] = order.OrderId
-	response := SignedRequestBybit(key, secret, `GET`, `/private/linear/order/list`, postData)
+	postData[`symbol`] = model.GetDialectSymbol(model.BybitPerp, symbol)
+	postData[`order_id`] = orderId
+	response := SignedRequestBybitPerp(key, secret, `GET`, `/private/linear/order/list`, postData)
 	orderJson, err := util.NewJSON(response)
 	if err == nil {
 		orderJson = orderJson.GetPath(`result`, `data`)
 		if orderJson == nil {
-			return order
+			return nil
 		}
 		orderArray, _ := orderJson.Array()
 		for _, data := range orderArray {
-			parseOrderBybitPerp(order, data.(map[string]interface{}))
-			if order.OrderId != `` {
-				return order
-			}
+			return parseOrderBybitPerp(data.(map[string]interface{}))
 		}
 	}
 	return nil
 }
 
 // timeInForce 有效选项:GoodTillCancel, ImmediateOrCancel, FillOrKill,PostOnly
-func placeOrderBybitPerp(order *model.Order, key, secret, orderSide, orderType, timeInForce, symbol string, price, amount float64) {
+func placeOrderBybitPerp(key, secret, orderSide, orderType, timeInForce, symbol string, price, amount float64) (
+	order *model.Order) {
 	postData := make(map[string]interface{})
-	symbol = model.GetDialectSymbol(model.BybitPerp, symbol)
+	postData["symbol"] = model.GetDialectSymbol(model.BybitPerp, symbol)
 	postData["side"] = strings.ToUpper(orderSide[0:1]) + orderSide[1:]
 	postData["order_type"] = strings.ToUpper(orderType[0:1]) + orderType[1:]
+	postData[`position_idx`] = 0
 	if orderType != model.OrderTypeMarket && orderType != model.OrderTypeStop {
-		formattedPrice, decimal := model.FormatPrice(model.BybitPerp, order.Symbol, orderSide, price)
+		formattedPrice, decimal := model.FormatPrice(model.BybitPerp, symbol, orderSide, price)
 		postData[`price`] = util.CutTailZero(strconv.FormatFloat(formattedPrice, 'f', decimal, 64))
 	}
 	if timeInForce == `` {
 		timeInForce = `GoodTillCancel`
 	}
+	postData[`time_in_force`] = timeInForce
 	postData[`reduce_only`] = false
 	postData[`close_on_trigger`] = false
-	postData["symbol"] = symbol
 	postData["qty"] = fmt.Sprintf(`%f`, amount)
-	postData[`time_in_force`] = timeInForce
-	response := SignedRequestBybit(key, secret, `POST`, `/private/linear/order/create`, postData)
+	response := SignedRequestBybitPerp(key, secret, `POST`, `/private/linear/order/create`, postData)
 	orderJson, err := util.NewJSON(response)
 	if err == nil {
 		orderJson = orderJson.Get(`result`)
 		if orderJson != nil {
-			item, err := orderJson.Map()
-			if err == nil {
-				parseOrderBybitPerp(order, item)
+			return parseOrderBybitPerp(orderJson.MustMap())
+		}
+	}
+	return
+}
+
+func setSettingsBybitPerp(key, secret, symbol string) (singleMode, crossPos bool) {
+	dialectSymbol := model.GetDialectSymbol(model.BybitPerp, symbol)
+	postData := map[string]interface{}{`symbol`: dialectSymbol, `mode`: `MergedSingle`}
+	response := SignedRequestBybitPerp(key, secret, http.MethodPost, `/private/linear/position/switch-mode`, postData)
+	setJson, err := util.NewJSON(response)
+	if err == nil && setJson != nil && setJson.Get(`ret_code`).MustInt() == 0 {
+		singleMode = true
+	} else {
+		util.Notice(fmt.Sprintf(`fail to set bybitPerp %s pos mode to single`, symbol))
+	}
+	postData = map[string]interface{}{`symbol`: dialectSymbol, `is_isolated`: false}
+	response = SignedRequestBybitPerp(key, secret, http.MethodPost, `/private/linear/position/switch-isolated`, postData)
+	if err == nil && setJson != nil && setJson.Get(`ret_code`).MustInt() == 0 {
+		crossPos = true
+	} else {
+		util.Notice(fmt.Sprintf(`fail to set bybitPerp %s pos mode to cross`, symbol))
+	}
+	return
+}
+
+func getPositionsBybitPerp(key, secret string) (success bool, positions []*model.Position, accountValue, available float64) {
+	accountValue, available = getWalletBybitPerp(key, secret)
+	response := SignedRequestBybitPerp(key, secret, http.MethodGet, `/private/linear/position/list`, nil)
+	posJson, err := util.NewJSON(response)
+	if err != nil || posJson == nil {
+		util.SocketInfo(`fail to get bybitPerp positions`)
+		time.Sleep(time.Second * 2)
+		return getPositionsBybitPerp(key, secret)
+	} else {
+		items := posJson.Get(`result`).MustArray()
+		positions = make([]*model.Position, 0)
+		success = true
+		for _, item := range items {
+			value := item.(map[string]interface{})
+			if value[`is_valid`] == nil || value[`data`] == nil {
+				continue
+			} else if !value[`is_valid`].(bool) {
+				continue
+			}
+			value = value[`data`].(map[string]interface{})
+			position := &model.Position{Market: model.BybitPerp}
+			if value[`symbol`] != nil {
+				position.Currency = model.GetStandardSymbol(model.BybitPerp, value[`symbol`].(string))
+			}
+			if value[`side`] != nil {
+				position.Direction = strings.ToLower(value[`side`].(string))
+			}
+			if value[`entry_price`] != nil {
+				position.EntryPrice, _ = value[`entry_price`].(json.Number).Float64()
+			}
+			if value[`liq_price`] != nil {
+				position.LiquidationPrice, _ = value[`liq_price`].(json.Number).Float64()
+			}
+			if value[`leverage`] != nil {
+				position.LeverRate, _ = value[`leverage`].(json.Number).Int64()
+			}
+			if value[`position_margin`] != nil {
+				position.Margin, _ = value[`position_margin`].(json.Number).Float64()
+			}
+			if value[`bust_price`] != nil {
+				position.BankruptcyPrice, _ = value[`bust_price`].(json.Number).Float64()
+			}
+			if value[`cum_realised_pnl`] != nil {
+				position.ProfitReal, _ = value[`cum_realised_pnl`].(json.Number).Float64()
+			}
+			if value[`unrealised_pnl`] != nil {
+				position.ProfitUnreal, _ = value[`unrealised_pnl`].(json.Number).Float64()
+			}
+			if value[`position_value`] != nil {
+				position.Holding, _ = value[`position_value`].(json.Number).Float64()
+			}
+			if value[`size`] != nil {
+				position.Holding, _ = value[`size`].(json.Number).Float64()
+				if position.Direction == model.OrderSideSell {
+					position.Holding = -1 * math.Abs(position.Holding)
+				}
+			}
+			if position.Holding != 0 {
+				positions = append(positions, position)
 			}
 		}
 	}
@@ -407,7 +487,7 @@ func getFundingRateBybitPerp(key, secret, symbol string) (fundingRate float64, e
 	postData := make(map[string]interface{})
 	symbol = model.GetDialectSymbol(model.BybitPerp, symbol)
 	postData[`symbol`] = symbol
-	response := SignedRequestBybit(key, secret, `GET`,
+	response := SignedRequestBybitPerp(key, secret, http.MethodGet,
 		`/private/linear/funding/predicted-funding`, postData)
 	instrumentJson, err := util.NewJSON(response)
 	if err == nil {
@@ -423,15 +503,14 @@ func getFundingRateBybitPerp(key, secret, symbol string) (fundingRate float64, e
 	return
 }
 
-func parseOrderBybitPerp(order *model.Order, item map[string]interface{}) {
-	if order == nil {
-		return
-	}
+func parseOrderBybitPerp(item map[string]interface{}) (order *model.Order) {
+	order = &model.Order{Market: model.BybitPerp, Status: model.CarryStatusFail}
 	if item[`order_id`] != nil {
 		order.OrderId = item[`order_id`].(string)
 	}
 	if item[`symbol`] != nil {
 		order.Symbol = model.GetStandardSymbol(model.BybitPerp, item[`symbol`].(string))
+		order.Instrument = order.Symbol
 	}
 	if item[`side`] != nil {
 		order.OrderSide = strings.ToLower(item[`side`].(string))
@@ -472,29 +551,25 @@ func parseOrderBybitPerp(order *model.Order, item map[string]interface{}) {
 	return
 }
 
-// GetWalletBybitPerp
-func _(key, secret string) (balance float64, msg string) {
-	postData := make(map[string]interface{})
-	postData[`limit`] = `50`
-	response := SignedRequestBybit(key, secret, `GET`,
-		`/open-api/wallet/fund/records`, postData)
-	util.Notice(`bybit wallet: ` + string(response))
+// 只计算了USDT的价值,忽略了其他保证金币种
+func getWalletBybitPerp(key, secret string) (accountValueInU, availableU float64) {
+	response := SignedRequestBybitPerp(key, secret, http.MethodGet, `/v2/private/wallet/balance`, nil)
 	dataJson, err := util.NewJSON(response)
-	if err == nil {
-		data := dataJson.GetPath(`result`, `data`).MustArray()
-		for _, item := range data {
-			itemMap := item.(map[string]interface{})
-			itemType := itemMap[`type`]
-			if itemType == nil {
-				continue
-			}
-			if balance == 0 && itemMap[`wallet_balance`] != nil {
-				balance, _ = strconv.ParseFloat(itemMap[`wallet_balance`].(string), 64)
-			}
-			if itemType == `Withdraw` || itemType == `Deposit` {
-				amount, _ := strconv.ParseFloat(itemMap[`amount`].(string), 64)
-				msg += fmt.Sprintf("%s %s %f\n", itemMap[`exec_time`], itemType, amount)
-			}
+	if dataJson == nil || err != nil {
+		time.Sleep(time.Second * 2)
+		util.Notice(`fail to get bybitPerp wallet`)
+		return getWalletBybitPerp(key, secret)
+	} else {
+		assets := dataJson.GetPath(`result`).MustMap()
+		if assets == nil {
+			return
+		}
+		usdAsset := assets[`USDT`].(map[string]interface{})
+		if usdAsset[`equity`] != nil {
+			accountValueInU, _ = usdAsset[`equity`].(json.Number).Float64()
+		}
+		if usdAsset[`available_balance`] != nil {
+			availableU, _ = usdAsset[`available_balance`].(json.Number).Float64()
 		}
 	}
 	return

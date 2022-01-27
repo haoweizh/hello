@@ -466,7 +466,7 @@ func getPositionsGate(key string, secret string) (success bool, positions []*mod
 		currency := strings.Split(item.Contract, "_")[0] + model.GetPerpTail(model.Gate)
 		position := &model.Position{Market: model.Gate, Ts: util.GetNowUnixMillion(), Currency: currency}
 		_, realAmount := model.ParseRealAmount(model.Gate, currency, float64(item.Size))
-		position.Free = realAmount
+		position.Holding = realAmount
 		position.LeverRate, _ = strconv.ParseInt(item.Leverage, 10, 64)
 		position.EntryPrice, _ = strconv.ParseFloat(item.EntryPrice, 64)
 		position.Margin, _ = strconv.ParseFloat(item.Margin, 64)

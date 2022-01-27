@@ -638,7 +638,7 @@ func parsePositionFtx(position *model.Position, item map[string]interface{}) {
 		position.Currency = item[`future`].(string)
 	}
 	if item[`netSize`] != nil {
-		position.Free, _ = item[`netSize`].(json.Number).Float64()
+		position.Holding, _ = item[`netSize`].(json.Number).Float64()
 		//account.Free = account.Free * account.EntryPrice
 	}
 	if item[`realizedPnl`] != nil {

@@ -546,7 +546,7 @@ func getPositionsBinance(key, secret string) (success bool, positions []*model.P
 				position.Currency = symbol
 			}
 			if value[`positionAmt`] != nil {
-				position.Free, _ = strconv.ParseFloat(value[`positionAmt`].(string), 64)
+				position.Holding, _ = strconv.ParseFloat(value[`positionAmt`].(string), 64)
 			}
 			if value[`entryPrice`] != nil {
 				position.EntryPrice, _ = strconv.ParseFloat(value[`entryPrice`].(string), 64)
@@ -625,7 +625,7 @@ func transferBinance(key, secret, transferType string, amount float64) {
 //				continue
 //			}
 //			currency := strings.ToLower(asset["asset"].(string))
-//			account := &model.Account{Market: model.Binance, Currency: currency, Free: free, Frozen: frozen}
+//			account := &model.Account{Market: model.Binance, Currency: currency, Holding: free+frozen, Frozen: frozen}
 //			accounts.SetAccount(model.Binance, currency, account)
 //		}
 //		return true

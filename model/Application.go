@@ -53,7 +53,6 @@ const FunctionTurtle = `turtle`
 const FunctionGrid = `grid`
 const FunctionCarry = `carry`
 const FunctionCross = `cross`
-const FunctionRefresh = `refresh`
 
 const FunctionDCarry = `dcarry`
 const FunctionComplement = `comp`
@@ -153,16 +152,14 @@ var orderStatusMap = map[string]map[string]string{ // market - market status - u
 		"Stopped":         CarryStatusFail,
 		"Rejected":        CarryStatusFail,
 		"PendingNew":      CarryStatusWorking,
-		"Expired":         CarryStatusFail,
-	},
+		"Expired":         CarryStatusFail},
 	Coinpark: {
-		`1`: CarryStatusWorking, //待成交
-		`2`: CarryStatusSuccess, //部分成交
-		`3`: CarryStatusSuccess, //完全成交
-		`4`: CarryStatusSuccess, //部分撤销
-		`5`: CarryStatusFail,    //完全撤销
-		`6`: CarryStatusWorking, //待撤销
-	},
+		`1`: CarryStatusWorking,  //待成交
+		`2`: CarryStatusSuccess,  //部分成交
+		`3`: CarryStatusSuccess,  //完全成交
+		`4`: CarryStatusSuccess,  //部分撤销
+		`5`: CarryStatusFail,     //完全撤销
+		`6`: CarryStatusWorking}, //待撤销
 	BybitPerp: {
 		`Created`:         CarryStatusWorking,
 		`New`:             CarryStatusWorking,
@@ -170,16 +167,21 @@ var orderStatusMap = map[string]map[string]string{ // market - market status - u
 		`Filled`:          CarryStatusSuccess,
 		`Cancelled`:       CarryStatusFail,
 		`Rejected`:        CarryStatusFail,
-		`PendingCancel`:   CarryStatusWorking,
-		`Deactivated`:     CarryStatusFail,
-	},
+		`PendingCancel`:   CarryStatusWorking},
+	BybitSpot: {
+		`NEW`:              CarryStatusWorking,
+		`PARTIALLY_FILLED`: CarryStatusWorking,
+		`FILLED`:           CarryStatusSuccess,
+		`CANCELED`:         CarryStatusFail,
+		`PENDING_CANCEL`:   CarryStatusFail,
+		`PENDING_NEW`:      CarryStatusWorking,
+		`REJECTED`:         CarryStatusFail},
 	Ftx: {
 		`new`:       CarryStatusWorking,
 		`open`:      CarryStatusWorking,
 		`closed`:    CarryStatusSuccess,
 		`cancelled`: CarryStatusFail,
-		`triggered`: CarryStatusSuccess,
-	},
+		`triggered`: CarryStatusSuccess},
 }
 
 func GetMonitorInfo(key, table string) (valueArray [][]string) {

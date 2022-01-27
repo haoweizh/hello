@@ -150,22 +150,27 @@ func Test_download(t *testing.T) {
 	//-H 'Connection: keep-alive' \
 }
 
+//TODO bybit init cross markets
+//TODO check bybit delay set set tick available time
 func Test_wallet(t *testing.T) {
 	model.NewConfig()
-	//mi := api.GetMarketInfos(model.BybitSpot)
-	//fmt.Println(len(mi))
 	key, secret := `LWaglQgg6eiJDuTmwG`, `mOnuz8yeZmqGLUT2bNDqgA7kuhKT8QYOyUon`
-	cancelResult := api.CancelOrders(key, secret, model.BybitSpot, `ETH-USDT`)
-	fmt.Println(cancelResult)
-	//api.CancelOrder(key, secret, model.BybitPerp, `ETH-PERP`, `ETH-PERP`, model.OrderTypeLimit, `bf928aac-c375-4d0d-9c00-c45584a91ac7`)
-	orderBybit := api.QueryOrderById(key, secret, model.BybitPerp, `ETH-PERP`, `ETH-PERP`,
-		model.OrderTypeLimit, `bf928aac-c375-4d0d-9c00-c45584a91ac7`)
-	//marketInfos := api.GetMarketInfos(model.BybitPerp)
-	//model.SetMarketInfos(model.BybitPerp, marketInfos)
-	//orderBybit := api.PlaceOrder(key, secret, model.OrderSideBuy, model.OrderTypeLimit,
-	//	model.BybitPerp, `ETH-PERP`, `ETH-PERP`, ``, ``, 2300.1234567, 2000.1234,
-	//	0.012345678, false, false, nil, nil)
-	fmt.Println(orderBybit.OrderId)
+	marketInfos := api.GetMarketInfos(model.BybitPerp)
+	model.SetMarketInfos(model.BybitPerp, marketInfos)
+	api.PlaceOrder(key, secret, model.OrderSideBuy, model.OrderTypeLimit,
+		model.BybitPerp, `ETH-PERP`, `ETH-PERP`, ``, ``, 2440.1234567, 2400.12345,
+		0.012678, false, false, nil, nil)
+	//// 1078113554871236864
+	////cancelResult := api.CancelOrders(key, secret, model.BybitSpot, `ETH-USDT`)
+	////fmt.Println(cancelResult)
+	//orderBybit = api.QueryOrderById(key, secret, model.BybitPerp, `ETH-PERP`, `ETH-PERP`,
+	//	model.OrderTypeLimit, orderBybit.OrderId)
+	//fmt.Println(orderBybit.OrderId)
+	api.CancelOrder(key, secret, model.BybitPerp, `ETH-PERP`, `ETH-PERP`, model.OrderTypeLimit,
+		`d490a639-a5f7-499a-9248-142a93ddaf13`)
+	orderBybit1 := api.QueryOrderById(key, secret, model.BybitPerp, `ETH-PERP`, `ETH-PERP`,
+		model.OrderTypeLimit, `d490a639-a5f7-499a-9248-142a93ddaf13`)
+	fmt.Println(orderBybit1.OrderId)
 	_, rate := api.GetFundingRate(`LWaglQgg6eiJDuTmwG`, `mOnuz8yeZmqGLUT2bNDqgA7kuhKT8QYOyUon`, model.BybitPerp, `BTC-PERP`, nil)
 	fmt.Println(fmt.Sprintf(`%f`, rate))
 	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})

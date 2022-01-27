@@ -7,7 +7,7 @@ import (
 type Position struct {
 	Market                   string
 	Currency                 string
-	Free                     float64 // 可平仓数量
+	Holding                  float64 // 持仓数量
 	Frozen                   float64
 	LeverRate                int64 // 杠杆倍数
 	ProfitReal               float64
