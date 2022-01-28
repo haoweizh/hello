@@ -100,8 +100,10 @@ func WsDepthServeBybitPerp(markets *model.Markets, orderHandler OrderHandler) ([
 			return
 		}
 		if strings.Contains(topic, `orderBookL2_25.`) {
-			symbol := model.GetStandardPerp(model.BybitPerp, topic[strings.LastIndex(topic, `.`)+1:])
-			handleOrderBookBybitPerp(markets, symbol, ts, depthJson)
+			success, symbol := model.GetStandardFromDialect(model.MarketTypePerp, model.BybitPerp, topic[strings.LastIndex(topic, `.`)+1:])
+			if success {
+				handleOrderBookBybitPerp(markets, symbol, ts, depthJson)
+			}
 		} else if topic == `position` {
 		}
 	}
@@ -116,7 +118,7 @@ func parseTickBybitPerp(item map[string]interface{}) (tick *model.Tick) {
 	}
 	tick = &model.Tick{Market: model.BybitPerp}
 	if item[`symbol`] != nil {
-		tick.Symbol = model.GetStandardPerp(model.BybitPerp, item[`symbol`].(string))
+		_, tick.Symbol = model.GetStandardFromDialect(model.MarketTypePerp, model.BybitPerp, item[`symbol`].(string))
 	}
 	if item[`id`] != nil {
 		tick.Id = item[`id`].(string)
@@ -256,7 +258,7 @@ func getMarketsBybitPerp(key, secret string) (marketInfos map[string]*model.Mark
 			marketInfo := &model.MarketInfo{Market: model.BybitPerp}
 			if value[`base_currency`] != nil {
 				marketInfo.CTCurrency = value[`base_currency`].(string)
-				marketInfo.Name = marketInfo.CTCurrency + model.GetPerpTail(model.BybitPerp)
+				marketInfo.Name = marketInfo.CTCurrency + model.UniStandardTail[model.MarketTypePerp]
 				marketInfos[marketInfo.Name] = marketInfo
 			}
 			if value[`price_scale`] != nil {
@@ -313,7 +315,11 @@ func cancelOrdersBybitPerp(key, secret, symbol string) bool {
 	postData := make(map[string]interface{})
 	path := `/private/linear/order/cancel-all`
 	method := http.MethodPost
-	postData[`symbol`] = model.GetDialectPerp(model.BybitPerp, symbol)
+	success, diialectSymbol := model.GetDialectFromStandard(model.BybitPerp, symbol)
+	if !success {
+		return false
+	}
+	postData[`symbol`] = diialectSymbol
 	response := SignedRequestBybitPerp(key, secret, method, path, postData)
 	cancelJson, err := util.NewJSON(response)
 	if err == nil {
@@ -325,9 +331,11 @@ func cancelOrdersBybitPerp(key, secret, symbol string) bool {
 }
 
 func cancelOrderBybitPerp(key, secret, symbol, orderId string) (result bool, errCode, msg string, order *model.Order) {
-	postData := make(map[string]interface{})
-	postData[`order_id`] = orderId
-	postData[`symbol`] = model.GetDialectPerp(model.BybitPerp, symbol)
+	success, dialectSymbol := model.GetDialectFromStandard(model.BybitPerp, symbol)
+	if !success {
+		return false, ``, `fail to parse symbol`, nil
+	}
+	postData := map[string]interface{}{`order_id`: orderId, `symbol`: dialectSymbol}
 	response := SignedRequestBybitPerp(key, secret, `POST`, `/private/linear/order/cancel`, postData)
 	orderJson, err := util.NewJSON(response)
 	result = false
@@ -350,9 +358,11 @@ func cancelOrderBybitPerp(key, secret, symbol, orderId string) (result bool, err
 }
 
 func queryOrderBybitPerp(key, secret, symbol, orderId string) (order *model.Order) {
-	postData := make(map[string]interface{})
-	postData[`symbol`] = model.GetDialectPerp(model.BybitPerp, symbol)
-	postData[`order_id`] = orderId
+	success, dialectSymbol := model.GetDialectFromStandard(model.BybitPerp, symbol)
+	if !success {
+		return nil
+	}
+	postData := map[string]interface{}{`symbol`: dialectSymbol, `order_id`: orderId}
 	response := SignedRequestBybitPerp(key, secret, `GET`, `/private/linear/order/list`, postData)
 	orderJson, err := util.NewJSON(response)
 	if err == nil {
@@ -372,7 +382,11 @@ func queryOrderBybitPerp(key, secret, symbol, orderId string) (order *model.Orde
 func placeOrderBybitPerp(key, secret, orderSide, orderType, timeInForce, symbol string, price, amount float64) (
 	order *model.Order) {
 	postData := make(map[string]interface{})
-	postData["symbol"] = model.GetDialectPerp(model.BybitPerp, symbol)
+	success, dialectSymbol := model.GetDialectFromStandard(model.BybitPerp, symbol)
+	if !success {
+		return nil
+	}
+	postData["symbol"] = dialectSymbol
 	postData["side"] = strings.ToUpper(orderSide[0:1]) + orderSide[1:]
 	postData["order_type"] = strings.ToUpper(orderType[0:1]) + orderType[1:]
 	postData[`position_idx`] = 0
@@ -399,7 +413,10 @@ func placeOrderBybitPerp(key, secret, orderSide, orderType, timeInForce, symbol 
 }
 
 func setSettingsBybitPerp(key, secret, symbol string) (singleMode, crossPos bool) {
-	dialectSymbol := model.GetDialectPerp(model.BybitPerp, symbol)
+	success, dialectSymbol := model.GetDialectFromStandard(model.BybitPerp, symbol)
+	if !success {
+		return false, false
+	}
 	postData := map[string]interface{}{`symbol`: dialectSymbol, `mode`: `MergedSingle`}
 	response := SignedRequestBybitPerp(key, secret, http.MethodPost, `/private/linear/position/switch-mode`, postData)
 	setJson, err := util.NewJSON(response)
@@ -440,7 +457,7 @@ func getPositionsBybitPerp(key, secret string) (success bool, positions []*model
 			value = value[`data`].(map[string]interface{})
 			position := &model.Position{Market: model.BybitPerp}
 			if value[`symbol`] != nil {
-				position.Currency = model.GetStandardPerp(model.BybitPerp, value[`symbol`].(string))
+				_, position.Currency = model.GetDialectFromStandard(model.BybitPerp, value[`symbol`].(string))
 			}
 			if value[`side`] != nil {
 				position.Direction = strings.ToLower(value[`side`].(string))
@@ -485,17 +502,16 @@ func getPositionsBybitPerp(key, secret string) (success bool, positions []*model
 
 func getFundingRateBybitPerp(key, secret, symbol string) (fundingRate float64, expire int64) {
 	postData := make(map[string]interface{})
-	symbol = model.GetDialectPerp(model.BybitPerp, symbol)
-	postData[`symbol`] = symbol
+	_, postData[`symbol`] = model.GetDialectFromStandard(model.BybitPerp, symbol)
 	response := SignedRequestBybitPerp(key, secret, http.MethodGet,
 		`/private/linear/funding/predicted-funding`, postData)
-	instrumentJson, err := util.NewJSON(response)
+	newJson, err := util.NewJSON(response)
 	if err == nil {
-		retCode := instrumentJson.Get(`ret_code`).MustFloat64()
+		retCode := newJson.Get(`ret_code`).MustFloat64()
 		if retCode != 0 {
 			return 0, 0
 		}
-		fundingRate = instrumentJson.GetPath(`result`, `predicted_funding_rate`).MustFloat64()
+		fundingRate = newJson.GetPath(`result`, `predicted_funding_rate`).MustFloat64()
 	}
 	now := util.GetNow()
 	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
@@ -509,8 +525,7 @@ func parseOrderBybitPerp(item map[string]interface{}) (order *model.Order) {
 		order.OrderId = item[`order_id`].(string)
 	}
 	if item[`symbol`] != nil {
-		order.Symbol = model.GetStandardPerp(model.BybitPerp, item[`symbol`].(string))
-		order.Instrument = order.Symbol
+		_, order.Symbol = model.GetStandardFromDialect(model.MarketTypePerp, model.BybitPerp, item[`symbol`].(string))
 	}
 	if item[`side`] != nil {
 		order.OrderSide = strings.ToLower(item[`side`].(string))

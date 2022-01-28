@@ -3,7 +3,6 @@ package model
 import (
 	"fmt"
 	"hello/util"
-	"strings"
 	"time"
 )
 
@@ -47,7 +46,10 @@ func GetSettingCoins(function, market string) (coins map[string]bool) {
 		if setting == nil {
 			continue
 		}
-		coins[GetCoin(setting.Market, setting.Symbol)] = true
+		success, _, coin := GetCoinFromStandard(setting.Symbol)
+		if success {
+			coins[coin] = true
+		}
 	}
 	return
 }
@@ -202,122 +204,4 @@ func GetMarkets() []string {
 		i++
 	}
 	return markets
-}
-
-func GetCoin(market, symbol string) (coin string) {
-	var tails []string
-	switch market {
-	case Ftx:
-		tails = []string{`/USD`, `-PERP`}
-	case OKEX:
-		tails = []string{`-USDT`, `-USDT-SWAP`}
-	case Gate:
-		tails = []string{`_USDT`, `_PERP`}
-	case Kucoin:
-		tails = []string{`-USDT`, `-PERP`}
-	case Binance:
-		tails = []string{`-PERP`}
-	case BybitPerp:
-		tails = []string{`-PERP`}
-	case BybitSpot:
-		tails = []string{`-USDT`}
-	case Huobi:
-		tails = []string{`usdt`, `-usdt`}
-	}
-	for _, tail := range tails {
-		if symbol[len(symbol)-len(tail):] == tail {
-			return symbol[0 : len(symbol)-len(tail)]
-		}
-	}
-	return
-}
-
-func GetDialectPerp(market, symbol string) (dialectSymbol string) {
-	switch market {
-	case Bitmex:
-		symbol = strings.Replace(symbol, `btc`, `xbt`, -1)
-		return strings.ToUpper(strings.Split(symbol, `_`)[0])
-	case BybitPerp:
-		tail := GetPerpTail(market)
-		if len(symbol) > len(tail) && symbol[len(symbol)-len(tail):] == tail {
-			return symbol[0:len(symbol)-len(tail)] + `USDT`
-		}
-	case BybitSpot:
-		tail := GetSpotTail(market)
-		if len(symbol) > len(tail) && symbol[len(symbol)-len(tail):] == tail {
-			return symbol[0:len(symbol)-len(tail)] + `USDT`
-		}
-	}
-	return ``
-}
-
-func GetDialectSpot(market, symbol string) (dialectSymbol string) {
-	switch market {
-	case BybitSpot:
-		tail := GetSpotTail(market)
-		if len(symbol) > len(tail) && symbol[len(symbol)-len(tail):] == tail {
-			return symbol[0:len(symbol)-len(tail)] + `USDT`
-		}
-	}
-	return ``
-}
-
-// GetStandardPerp from dialect perp symbol
-func GetStandardPerp(market, symbol string) (standardSymbol string) {
-	symbol = strings.ToLower(symbol)
-	switch market {
-	case Bitmex:
-		return strings.Replace(symbol, `xbt`, `btc`, -1) + `_p`
-	case BybitPerp:
-		if len(symbol) > 4 && strings.EqualFold(symbol[len(symbol)-4:], `usdt`) {
-			return strings.ToUpper(symbol[0:len(symbol)-4] + GetPerpTail(market))
-		}
-	case BybitSpot:
-		if len(symbol) > 4 && strings.EqualFold(symbol[len(symbol)-4:], `usdt`) {
-			return strings.ToUpper(symbol[0:len(symbol)-4] + GetSpotTail(market))
-		}
-	}
-	return standardSymbol
-}
-
-// GetStandardSpot from dialect spot symbol
-func GetStandardSpot(market, symbol string) (standardSymbol string) {
-	symbol = strings.ToLower(symbol)
-	switch market {
-	case BybitSpot:
-		if len(symbol) > 4 && strings.EqualFold(symbol[len(symbol)-4:], `usdt`) {
-			return strings.ToUpper(symbol[0:len(symbol)-4] + GetSpotTail(market))
-		}
-	}
-	return standardSymbol
-}
-
-func GetSpotTail(market string) string {
-	switch market {
-	case Huobi:
-		return "usdt"
-	case Ftx:
-		return `/USD`
-	case OKEX, Kucoin, BybitSpot:
-		return `-USDT`
-	case Binance:
-		return `USDT`
-	case Gate:
-		return `_USDT`
-	}
-	return ``
-}
-
-func GetPerpTail(market string) string {
-	switch market {
-	case Huobi:
-		return `-usdt`
-	case OKEX:
-		return `-USDT-SWAP`
-	case Binance, Kucoin, Ftx, BybitPerp:
-		return `-PERP`
-	case Gate:
-		return `_PERP`
-	}
-	return ``
 }

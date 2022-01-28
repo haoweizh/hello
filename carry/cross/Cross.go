@@ -55,12 +55,11 @@ func createSpotMarket(key, secret, market string) (sm *spotMarket) {
 		}
 	}
 	if success {
-		tail := model.GetSpotTail(market)
 		sm.balances = make(map[string]*model.Balance)
 		sm.accountValueInU = totalInUsd
 		sm.collateral = collateral
 		for _, balance := range balances {
-			sm.balances[balance.Coin+tail] = balance
+			sm.balances[balance.Coin+model.UniStandardTail[model.MarketTypeSpot]] = balance
 			if strings.EqualFold(balance.Coin, `usd`) || strings.EqualFold(balance.Coin, `usdt`) {
 				sm.availableU += math.Min(balance.Amount, balance.AvailableWithBorrow)
 			}
@@ -88,6 +87,7 @@ func createFromPosition(account *model.Account, setting *model.Setting, valueLim
 	}
 	getTick, ticks := model.AppMarkets.GetBidAsk(setting.Symbol, setting.Market)
 	if cm == nil || !getTick {
+		util.Notice(fmt.Sprintf(`nil contract market or fail to get tick %s %s`, setting.Market, setting.Symbol))
 		return nil, false
 	}
 	price := ticks.Asks[0].Price
@@ -128,6 +128,7 @@ func createFromBalance(account *model.Account, setting *model.Setting, valueLimi
 	}
 	getTick, ticks := model.AppMarkets.GetBidAsk(setting.Symbol, setting.Market)
 	if sm == nil || !getTick {
+		util.Notice(fmt.Sprintf(`nil spot market or fail to get tick %s %s`, setting.Market, setting.Symbol))
 		return
 	}
 	price := ticks.Asks[0].Price
@@ -166,8 +167,7 @@ func initStatus(account *model.Account, setting *model.Setting) (status *CarrySt
 	if setting == nil {
 		return
 	}
-	tailSpot := model.GetSpotTail(setting.Market)
-	tailPerp := model.GetPerpTail(setting.Market)
+	_, marketType, _ := model.GetCoinFromStandard(setting.Symbol)
 	fundingRate := 0.0
 	doRevert := false
 	localLimit := holdingLimitInU
@@ -175,14 +175,14 @@ func initStatus(account *model.Account, setting *model.Setting) (status *CarrySt
 	if account0.Key != account.Key {
 		localLimit /= 10
 	}
-	if setting.Symbol[len(setting.Symbol)-len(tailSpot):] == tailSpot {
+	if marketType == model.MarketTypeSpot {
 		status, doRevert = createFromBalance(account, setting, localLimit)
-	} else if setting.Symbol[len(setting.Symbol)-len(tailPerp):] == tailPerp {
+	} else if marketType == model.MarketTypePerp {
 		status, doRevert = createFromPosition(account, setting, localLimit)
 		_, fundingRate = api.GetFundingRate(account.Key, account.Secret, setting.Market, setting.Symbol, nil)
 		fundingRate *= 0.9
 	}
-	if carryStatus == nil || status == nil {
+	if statuses == nil || status == nil {
 		return
 	}
 	marketInfo := model.GetMarketInfo(setting.Market, setting.Symbol)
@@ -387,8 +387,11 @@ func makeEqual(coin string, statuses []*CarryStatus) (isEqual bool, msg string) 
 			util.Notice(fmt.Sprintf(`try to equal %s %s at %f %f %f amount %f`,
 				equalStatus.market, equalStatus.symbol, price, tick.Asks[0].Price, tick.Bids[0].Price, amount))
 			api.PlaceOrder(equalStatus.account.Key, equalStatus.account.Secret, orderSide, model.OrderTypeLimit,
-				equalStatus.market, equalStatus.symbol, equalStatus.symbol, ``, model.FunctionComplement,
+				equalStatus.market, equalStatus.symbol, ``, model.FunctionComplement,
 				price, price, amount, true, true, nil, nil)
+			if equalStatus.market == model.Gate {
+				api.SetGateBidAsk(equalStatus.account.Key, equalStatus.account.Secret, equalStatus.symbol)
+			}
 		}
 	}
 	return
@@ -598,7 +601,7 @@ func placeCross(statusBuy, statusSell *CarryStatus, priceBuy, priceSell, amount 
 	if statusBuy.market == model.OKEX && statusSell.market == model.OKEX {
 		var sidePerp, sideRelated string
 		var perpPrice, relatedPrice float64
-		coin := model.GetCoin(statusBuy.market, statusBuy.symbol)
+		_, _, coin := model.GetCoinFromStandard(statusBuy.symbol)
 		if statusBuy.isSpot {
 			sideRelated = model.OrderSideBuy
 			relatedPrice = priceBuy
@@ -614,10 +617,10 @@ func placeCross(statusBuy, statusSell *CarryStatus, priceBuy, priceSell, amount 
 			model.FunctionCross, perpPrice, relatedPrice, amount)
 	} else {
 		go api.PlaceOrder(statusBuy.account.Key, statusBuy.account.Secret, model.OrderSideBuy, model.OrderTypeLimit,
-			statusBuy.market, statusBuy.symbol, ``, ``, model.FunctionCross, priceBuy, priceBuy,
+			statusBuy.market, statusBuy.symbol, ``, model.FunctionCross, priceBuy, priceBuy,
 			amount, true, true, PostOrderCross, statusBuy.setting)
 		api.PlaceOrder(statusSell.account.Key, statusSell.account.Secret, model.OrderSideSell, model.OrderTypeLimit,
-			statusSell.market, statusSell.symbol, ``, ``, model.FunctionCross, priceSell, priceSell,
+			statusSell.market, statusSell.symbol, ``, model.FunctionCross, priceSell, priceSell,
 			amount, true, true, PostOrderCross, statusSell.setting)
 		time.Sleep(time.Second / 4)
 	}

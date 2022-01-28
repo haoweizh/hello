@@ -62,13 +62,13 @@ func getWrongs() []string {
 	return array
 }
 
-func setWrong(instrument string, success bool) {
+func setWrong(symbol string, success bool) {
 	defer wrongLock.Unlock()
 	wrongLock.Lock()
 	if !success {
-		wrongs[instrument] = true
+		wrongs[symbol] = true
 	} else {
-		delete(wrongs, instrument)
+		delete(wrongs, symbol)
 	}
 }
 
@@ -77,17 +77,17 @@ func reSubscribe() {
 		return
 	}
 	wrongArray := getWrongs()
-	util.Notice(fmt.Sprintf(`>>>>>>>>wrong instrument %v %d`, wrongArray, len(wrongArray)))
+	util.Notice(fmt.Sprintf(`>>>>>>>>wrong symbol %v %d`, wrongArray, len(wrongArray)))
 	if len(wrongArray) > len(model.AppMarkets.Connections[model.OKEX])*5 {
 		SetRequireReset(model.OKEX, true)
-		util.Notice(fmt.Sprintf(`require reset all okex channel, wrong instrument %d`, len(wrongArray)))
+		util.Notice(fmt.Sprintf(`require reset all okex channel, wrong symbol %d`, len(wrongArray)))
 		return
 	}
 	subscribeMap := make(map[string]interface{})
 	subscribeMap["op"] = "unsubscribe"
 	subArray := make([]map[string]string, 0)
-	for _, instrument := range wrongArray {
-		subArray = append(subArray, map[string]string{`channel`: `books50-l2-tbt`, `instId`: instrument})
+	for _, symbol := range wrongArray {
+		subArray = append(subArray, map[string]string{`channel`: `books50-l2-tbt`, `instId`: symbol})
 	}
 	subscribeMap[`args`] = subArray
 	if err := SendToAllConnections(model.OKEX, util.JsonEncodeToByte(subscribeMap)); err != nil {
@@ -153,34 +153,34 @@ var subscribeHandlerOKEX = func(connection *websocket.Conn, subscribes []interfa
 	return err
 }
 
-func handleMsgOKEX(channel chan *simplejson.Json, instrument string) {
+func handleMsgOKEX(channel chan *simplejson.Json, symbol string) {
 	var responseJson *simplejson.Json
 	for responseJson = range channel {
 		if len(channel) > 20 && time.Now().Second() == 0 {
-			util.Notice(fmt.Sprintf(`%s current chan to be handle %d`, instrument, len(channel)))
+			util.Notice(fmt.Sprintf(`%s current chan to be handle %d`, symbol, len(channel)))
 		}
 		action := responseJson.Get(`action`).MustString()
 		data := responseJson.Get(`data`).MustArray()[0].(map[string]interface{})
-		_, bidAsk := model.AppMarkets.GetBidAsk(instrument, model.OKEX)
+		_, bidAsk := model.AppMarkets.GetBidAsk(symbol, model.OKEX)
 		success := false
 		if action == `update` && bidAsk != nil {
-			success, bidAsk = handleBooksUpdate(instrument, data, bidAsk)
+			success, bidAsk = handleBooksUpdate(symbol, data, bidAsk)
 		} else if action == `snapshot` || responseJson.GetPath(`arg`, `channel`).MustString() == `books5` {
 			//if action == `snapshot` {
-			//	util.Notice(fmt.Sprintf(`++++ %s initial ticker %v`, instrument, data))
+			//	util.Notice(fmt.Sprintf(`++++ %s initial ticker %v`, symbol, data))
 			//}
-			bidAsk = handleBooksOKEX(instrument, data)
+			bidAsk = handleBooksOKEX(symbol, data)
 			success = true
 		}
 		if bidAsk == nil || bidAsk.Bids == nil || bidAsk.Asks == nil || bidAsk.Bids.Len() == 0 || bidAsk.Asks.Len() == 0 || !success {
 			continue
 		}
 		//将最佳买一卖一的数量转换为币种的真实数量
-		_, bidAsk.Bids[0].Amount = model.ParseRealAmount(model.OKEX, instrument, bidAsk.Bids[0].Amount)
-		_, bidAsk.Asks[0].Amount = model.ParseRealAmount(model.OKEX, instrument, bidAsk.Asks[0].Amount)
-		if model.AppMarkets.SetBidAsk(instrument, model.OKEX, bidAsk) {
-			for function, handler := range model.GetFunctions(model.OKEX, instrument) {
-				setting := model.GetSetting(function, model.OKEX, instrument)
+		_, bidAsk.Bids[0].Amount = model.ParseRealAmount(model.OKEX, symbol, bidAsk.Bids[0].Amount)
+		_, bidAsk.Asks[0].Amount = model.ParseRealAmount(model.OKEX, symbol, bidAsk.Asks[0].Amount)
+		if model.AppMarkets.SetBidAsk(symbol, model.OKEX, bidAsk) {
+			for function, handler := range model.GetFunctions(model.OKEX, symbol) {
+				setting := model.GetSetting(function, model.OKEX, symbol)
 				if setting != nil {
 					go handler(setting, bidAsk)
 				}
@@ -207,8 +207,8 @@ var wsHandlerOKEX = func(connection *websocket.Conn, event []byte, orderHandler 
 		responseJson.GetPath(`arg`, `instId`) == nil {
 		return
 	}
-	instrument := responseJson.GetPath(`arg`, `instId`).MustString()
-	channel := msgChanOKEX[instrument]
+	symbol := responseJson.GetPath(`arg`, `instId`).MustString()
+	channel := msgChanOKEX[symbol]
 	if channel != nil {
 		channel <- responseJson
 	}
@@ -265,8 +265,8 @@ func handleWSOrderOKEX(value map[string]interface{}, orderHandler OrderHandler) 
 	orderHandler(order, nil)
 }
 
-func WsDepthServeOKEX(instruments map[string]bool, orderHandler OrderHandler) (channels []chan struct{}, err error) {
-	for s := range instruments {
+func WsDepthServeOKEX(symbols map[string]bool, orderHandler OrderHandler) (channels []chan struct{}, err error) {
+	for s := range symbols {
 		if msgChanOKEX[s] == nil {
 			msgChanOKEX[s] = make(chan *simplejson.Json, 1000)
 			go handleMsgOKEX(msgChanOKEX[s], s)
@@ -294,17 +294,15 @@ func WsDepthServeOKEX(instruments map[string]bool, orderHandler OrderHandler) (c
 	return channels, errPublic
 }
 
-func handleBooksUpdate(instrument string, data map[string]interface{}, bidAsk *model.BidAsk) (
+func handleBooksUpdate(symbol string, data map[string]interface{}, bidAsk *model.BidAsk) (
 	success bool, bidAskUpdate *model.BidAsk) {
-	bidAskUpdate = handleBooksOKEX(instrument, data)
+	bidAskUpdate = handleBooksOKEX(symbol, data)
 	if data[`ts`] != nil {
 		ts, _ := strconv.ParseInt(data[`ts`].(string), 10, 64)
 		bidAskUpdate.Ts = int(ts)
 	}
 	newAsks := make([]model.Tick, 0)
 	newBids := make([]model.Tick, 0)
-	//if bidAskUpdate.Asks.Len() == 0 || bidAskUpdate.Bids.Len() == 0 {
-	//	util.Notice(fmt.Sprintf(`empty bid/ask update %s`, instrument)) //}
 	i := 0
 	j := 0
 	for true {
@@ -400,16 +398,16 @@ func handleBooksUpdate(instrument string, data map[string]interface{}, bidAsk *m
 		} else {
 			success = false
 		}
-		setWrong(instrument, success)
+		setWrong(symbol, success)
 		if !success && time.Now().Minute() == 0 && time.Now().Second() == 0 {
 			util.Info(fmt.Sprintf("%v ts %d checksum %s wrong size: %d %s \n %v",
-				success, bidAskUpdate.Ts, instrument, len(wrongs), checkStr, data))
+				success, bidAskUpdate.Ts, symbol, len(wrongs), checkStr, data))
 		}
 	}
 	return success, bidAskUpdate
 }
 
-func handleBooksOKEX(instrument string, data map[string]interface{}) (bidAsk *model.BidAsk) {
+func handleBooksOKEX(symbol string, data map[string]interface{}) (bidAsk *model.BidAsk) {
 	bidAsk = &model.BidAsk{TsReceived: int(util.GetNowUnixMillion())}
 	if data[`ts`] != nil {
 		ts, _ := strconv.ParseInt(data[`ts`].(string), 10, 64)
@@ -426,9 +424,8 @@ func handleBooksOKEX(instrument string, data map[string]interface{}) (bidAsk *mo
 			amountStr := value[1].(string)
 			price, _ := strconv.ParseFloat(priceStr, 64)
 			amount, _ := strconv.ParseFloat(amountStr, 64)
-			//_, amount = model.ParseRealAmount(model.OKEX, instrument, amount)
 			bidAsk.Asks[i] = model.Tick{Price: price, Amount: amount, PriceStr: priceStr,
-				AmountStr: amountStr, Market: model.OKEX, Symbol: instrument, Side: model.OrderSideSell}
+				AmountStr: amountStr, Market: model.OKEX, Symbol: symbol, Side: model.OrderSideSell}
 		}
 	}
 	for i, bid := range bids {
@@ -438,9 +435,8 @@ func handleBooksOKEX(instrument string, data map[string]interface{}) (bidAsk *mo
 			amountStr := value[1].(string)
 			price, _ := strconv.ParseFloat(priceStr, 64)
 			amount, _ := strconv.ParseFloat(amountStr, 64)
-			//_, amount = model.ParseRealAmount(model.OKEX, instrument, amount)
 			bidAsk.Bids[i] = model.Tick{Price: price, Amount: amount, PriceStr: priceStr,
-				AmountStr: amountStr, Market: model.OKEX, Symbol: instrument, Side: model.OrderSideBuy}
+				AmountStr: amountStr, Market: model.OKEX, Symbol: symbol, Side: model.OrderSideBuy}
 		}
 	}
 	//if data[`checksum`] != nil {
@@ -459,10 +455,10 @@ func handleBooksOKEX(instrument string, data map[string]interface{}) (bidAsk *mo
 	//	crcValue := int64(int32(crc32.ChecksumIEEE([]byte(checkStr))))
 	//	compare, _ := data[`checksum`].(json.Number).Int64()
 	//	if compare == crcValue {
-	//		util.Notice(fmt.Sprintf(`right checksum snapshot %s %d`, instrument, bidAsk.Bids.Len()))
+	//		util.Notice(fmt.Sprintf(`right checksum snapshot %s %d`, symbol, bidAsk.Bids.Len()))
 	//	} else {
 	//		util.Notice(fmt.Sprintf("%v +++++++ checksum %s\n %s\n %v",
-	//			false, instrument, checkStr, data))
+	//			false, symbol, checkStr, data))
 	//	}
 	//}
 	return
@@ -508,8 +504,8 @@ func PlacePairOKEX(key, coin, sidePerp, sideSpot, orderType, refreshType string,
 	}
 	lastSameTime[coin] = now
 	lastCarryTime = now
-	tailPerp := model.GetPerpTail(model.OKEX)
-	tailSpot := model.GetSpotTail(model.OKEX)
+	tailPerp := model.UniStandardTail[model.MarketTypePerp]
+	tailSpot := model.UniStandardTail[model.MarketTypeSpot]
 	var subscribeArgs []map[string]interface{}
 	if sidePerp != "" && pricePerp != 0 && amount != 0 {
 		pricePerp, decimalPerp := model.FormatPrice(model.OKEX, coin+tailPerp, sidePerp, pricePerp)
@@ -560,14 +556,14 @@ func PlacePairOKEX(key, coin, sidePerp, sideSpot, orderType, refreshType string,
 	if sidePerp != "" && pricePerp != 0 && amount != 0 {
 		orderPerp := &model.Order{OrderSide: sidePerp, OrderType: orderType, Market: model.OKEX, Symbol: coin + tailPerp,
 			Price: pricePerp, Amount: amount, RefreshType: refreshType, OrderTime: util.GetNow(),
-			UnfilledQuantity: amount, Instrument: coin + tailPerp, AmountType: key, Status: model.CarryStatusSuccess,
+			UnfilledQuantity: amount, AmountType: key, Status: model.CarryStatusSuccess,
 			OrderId: strconv.FormatInt(now, 10) + `PERP`}
 		go model.AppDB.Save(orderPerp)
 	}
 	if sideSpot != "" && priceSpot != 0 && amount != 0 {
 		orderSpot := &model.Order{OrderSide: sideSpot, OrderType: orderType, Market: model.OKEX, Symbol: coin + tailSpot,
 			Price: priceSpot, Amount: amount, RefreshType: refreshType, OrderTime: util.GetNow(),
-			UnfilledQuantity: amount, Instrument: coin + tailSpot, AmountType: key, Status: model.CarryStatusSuccess,
+			UnfilledQuantity: amount, AmountType: key, Status: model.CarryStatusSuccess,
 			OrderId: strconv.FormatInt(now, 10) + `SPOT`}
 		go model.AppDB.Save(orderSpot)
 	}
@@ -581,11 +577,11 @@ func PlacePairOKEX(key, coin, sidePerp, sideSpot, orderType, refreshType string,
 //priceStr := strconv.FormatFloat(order.Price, 'f', -1, 64)
 //triggerPriceStr := strconv.FormatFloat(order.TriggerPrice, 'f', -1, 64)
 func placeOrderOKEX(key, secret string, isWs bool, order *model.Order) {
-	price, decimal := model.FormatPrice(model.OKEX, order.Instrument, order.OrderSide, order.Price)
+	price, decimal := model.FormatPrice(model.OKEX, order.Symbol, order.OrderSide, order.Price)
 	priceStr := util.CutTailZero(strconv.FormatFloat(price, 'f', decimal, 64))
-	priceTrigger, decimal := model.FormatPrice(model.OKEX, order.Instrument, order.OrderSide, order.TriggerPrice)
+	priceTrigger, decimal := model.FormatPrice(model.OKEX, order.Symbol, order.OrderSide, order.TriggerPrice)
 	triggerPriceStr := util.CutTailZero(strconv.FormatFloat(priceTrigger, 'f', decimal, 64))
-	formattedAmount := model.GetAmountInMarket(model.OKEX, order.Instrument, order.Amount, price)
+	formattedAmount := model.GetAmountInMarket(model.OKEX, order.Symbol, order.Amount, price)
 	amount := util.CutTailZero(fmt.Sprintf(`%f`, formattedAmount))
 	if order.OrderType == model.OrderTypeMarket {
 		usdAmount, _ := strconv.ParseFloat(amount, 64)
@@ -595,7 +591,7 @@ func placeOrderOKEX(key, secret string, isWs bool, order *model.Order) {
 		order.Status = model.CarryStatusFail
 		return
 	}
-	postData := map[string]interface{}{`instId`: order.Instrument, `tdMode`: `cross`, `side`: order.OrderSide,
+	postData := map[string]interface{}{`instId`: order.Symbol, `tdMode`: `cross`, `side`: order.OrderSide,
 		`sz`: amount, `ordType`: order.OrderType}
 	path := "/api/v5/trade/order"
 	if order.OrderType == model.OrderTypeStop {
@@ -618,7 +614,7 @@ func placeOrderOKEX(key, secret string, isWs bool, order *model.Order) {
 			util.Notice(fmt.Sprintf(`fail to get connection %s`, key))
 		} else {
 			if err := SendToConnection(model.OKEX, privateConnectionOKEX[key], wsOrderMsg); err != nil {
-				util.Notice(fmt.Sprintf(`fail to send order ws %s %s return %s`, key, order.Instrument, err.Error()))
+				util.Notice(fmt.Sprintf(`fail to send order ws %s %s return %s`, key, order.Symbol, err.Error()))
 			}
 		}
 	} else {
@@ -704,14 +700,14 @@ func getMarketsOKEX(key, secret string) (marketInfos map[string]*model.MarketInf
 }
 
 // 暂不支持策略订单
-func cancelOrdersOKEX(key, secret, instrument string) (result bool, code, msg string) {
-	orders := queryPendingOrdersOKEX(key, secret, instrument)
+func cancelOrdersOKEX(key, secret, symbol string) (result bool, code, msg string) {
+	orders := queryPendingOrdersOKEX(key, secret, symbol)
 	if len(orders) <= 0 {
 		return true, ``, ``
 	}
 	postData := make([]map[string]string, len(orders))
 	for i, order := range orders {
-		postData[i] = map[string]string{`instId`: instrument, `ordId`: order.OrderId}
+		postData[i] = map[string]string{`instId`: symbol, `ordId`: order.OrderId}
 	}
 	responseBody := sendSignRequestOKEX(key, secret, http.MethodPost, "/api/v5/trade/cancel-batch-orders", postData)
 	resultJson, err := util.NewJSON(responseBody)
@@ -724,8 +720,8 @@ func cancelOrdersOKEX(key, secret, instrument string) (result bool, code, msg st
 	return false, code, ``
 }
 
-func cancelOrderOkex(key, secret, instrument string, orderId, orderType string) (result bool, errCode, msg string) {
-	postData := map[string]interface{}{`instId`: instrument}
+func cancelOrderOkex(key, secret, symbol string, orderId, orderType string) (result bool, errCode, msg string) {
+	postData := map[string]interface{}{`instId`: symbol}
 	var responseBody []byte
 	if orderType == model.OrderTypeStop {
 		postData[`algoId`] = orderId
@@ -764,7 +760,6 @@ func parseOrderOKEX(value map[string]interface{}) (order *model.Order) {
 		order.DealPrice, _ = strconv.ParseFloat(value[`avgPx`].(string), 64)
 	}
 	if value[`instId`] != nil {
-		order.Instrument = value[`instId`].(string)
 		order.Symbol = value[`instId`].(string)
 	}
 	if value[`ordId`] != nil {
@@ -816,17 +811,17 @@ func parseOrderOKEX(value map[string]interface{}) (order *model.Order) {
 	if value[`sCode`] != nil {
 		order.ErrCode = value[`sCode`].(string)
 	}
-	if strings.Contains(order.Instrument, `SWAP`) || len(strings.Split(order.Instrument, `-`)) > 2 {
-		_, order.Amount = model.ParseRealAmount(model.OKEX, order.Instrument, order.Amount)
-		_, order.DealAmount = model.ParseRealAmount(model.OKEX, order.Instrument, order.DealAmount)
+	if strings.Contains(order.Symbol, `SWAP`) || len(strings.Split(order.Symbol, `-`)) > 2 {
+		_, order.Amount = model.ParseRealAmount(model.OKEX, order.Symbol, order.Amount)
+		_, order.DealAmount = model.ParseRealAmount(model.OKEX, order.Symbol, order.DealAmount)
 	}
 	return order
 }
 
 // 暂不支持策略订单
-func queryPendingOrdersOKEX(key, secret, instrument string) (orders []*model.Order) {
+func queryPendingOrdersOKEX(key, secret, symbol string) (orders []*model.Order) {
 	path := fmt.Sprintf("/api/v5/trade/orders-pending?%s",
-		util.ComposeParams(map[string]interface{}{`instId`: instrument}))
+		util.ComposeParams(map[string]interface{}{`instId`: symbol}))
 	responseBody := sendSignRequestOKEX(key, secret, http.MethodGet, path, nil)
 	orderJson, err := util.NewJSON(responseBody)
 	if err != nil || orderJson == nil || orderJson.Get(`data`) == nil {
@@ -862,9 +857,9 @@ func getAlgoOrderIdOKEX(key, secret, algoId string) (ordId string) {
 	return ``
 }
 
-func queryOrderOKEX(key, secret, instrument, orderId, orderType string) (order *model.Order) {
+func queryOrderOKEX(key, secret, symbol, orderId, orderType string) (order *model.Order) {
 	path := fmt.Sprintf(`/api/v5/trade/order?%s`,
-		util.ComposeParams(map[string]interface{}{"ordId": orderId, "instId": instrument}))
+		util.ComposeParams(map[string]interface{}{"ordId": orderId, "instId": symbol}))
 	if orderType == model.OrderTypeStop {
 		path = fmt.Sprintf(`/api/v5/trade/orders-algo-pending?algoId=%s&ordType=conditional`, orderId)
 	}
@@ -877,11 +872,11 @@ func queryOrderOKEX(key, secret, instrument, orderId, orderType string) (order *
 		if orderType == model.OrderTypeStop {
 			orderId = getAlgoOrderIdOKEX(key, secret, orderId)
 			if orderId != `` {
-				return queryOrderOKEX(key, secret, instrument, orderId, model.OrderTypeLimit)
+				return queryOrderOKEX(key, secret, symbol, orderId, model.OrderTypeLimit)
 			}
 		}
-		return &model.Order{Instrument: instrument, OrderId: orderId, OrderType: orderType,
-			Status: model.CarryStatusFail, Symbol: instrument}
+		return &model.Order{OrderId: orderId, OrderType: orderType,
+			Status: model.CarryStatusFail, Symbol: symbol}
 	}
 	orders := orderJson.Get("data").MustArray()
 	for _, item := range orders {
@@ -896,7 +891,7 @@ func queryOrderOKEX(key, secret, instrument, orderId, orderType string) (order *
 				ordId := strings.Trim(value[`ordId`].(string), ` `)
 				if ordId != `` && ordId != `0` {
 					orderType = model.OrderTypeLimit
-					return queryOrderOKEX(key, secret, instrument, ordId, orderType)
+					return queryOrderOKEX(key, secret, symbol, ordId, orderType)
 				}
 			}
 			if value[`algoId`] == orderId {
@@ -1094,8 +1089,8 @@ func setAccountModeOKEX(key, secret string) (success bool) {
 }
 
 // getLastPriceOKEX
-func _(key, secret, instrument string) (price float64) {
-	path := fmt.Sprintf(`/api/v5/market/ticker?instId=%s`, instrument)
+func _(key, secret, symbol string) (price float64) {
+	path := fmt.Sprintf(`/api/v5/market/ticker?instId=%s`, symbol)
 	response := sendSignRequestOKEX(key, secret, http.MethodGet, path, nil)
 	responseJson, err := util.NewJSON(response)
 	if responseJson == nil || err != nil || responseJson.Get(`data`) == nil ||
@@ -1139,39 +1134,40 @@ func getPositionsOKEX(key, secret string) (success bool, positions []*model.Posi
 // getMaxSizeOKEX
 // 实测现货maxBuy是对应的交易币的数量，现货maxSell是计价币的数量，故需除以价格；
 // 期货的maxBuy和maxSell都是币的数量，无需除以价格
-func getMaxSizeOKEX(key, secret, instrument string) (success bool, maxBuy, maxSell float64) {
+func getMaxSizeOKEX(key, secret, symbol string) (success bool, maxBuy, maxSell float64) {
 	response := sendSignRequestOKEX(key, secret, http.MethodGet,
-		fmt.Sprintf(`/api/v5/account/max-size?instId=%s&tdMode=cross`, instrument), nil)
+		fmt.Sprintf(`/api/v5/account/max-size?instId=%s&tdMode=cross`, symbol), nil)
 	responseJson, err := util.NewJSON(response)
 	if responseJson == nil || err != nil || responseJson.Get(`data`) == nil ||
 		responseJson.Get(`data`).MustArray() == nil || len(responseJson.Get(`data`).MustArray()) == 0 {
 		return false, 0, 0
 	}
 	data := responseJson.Get(`data`).MustArray()[0].(map[string]interface{})
-	if data[`instId`] != nil && data[`instId`].(string) == instrument {
+	if data[`instId`] != nil && data[`instId`].(string) == symbol {
 		if data[`maxBuy`] != nil {
 			maxBuy, _ = strconv.ParseFloat(data[`maxBuy`].(string), 64)
 		}
 		if data[`maxSell`] != nil {
 			maxSell, _ = strconv.ParseFloat(data[`maxSell`].(string), 64)
-			if strings.Index(instrument, `-USDT`)+5 == len(instrument) {
-				havePrice, price := model.AppMarkets.GetPrice(instrument)
+			_, marketType, _ := model.GetCoinFromStandard(symbol)
+			if marketType == model.MarketTypeSpot {
+				havePrice, price := model.AppMarkets.GetPrice(symbol)
 				if !havePrice {
-					util.Notice(`fail to get price from bidAsk %s`, instrument)
+					util.Notice(`fail to get price from bidAsk %s`, symbol)
 				} else {
 					maxSell = maxSell / price
-					util.Info(`get max sell %f after price %f %s`, maxSell, price, instrument)
+					util.Info(`get max sell %f after price %f %s`, maxSell, price, symbol)
 				}
 			}
 		}
 	}
-	_, maxBuy = model.ParseRealAmount(model.OKEX, instrument, maxBuy)
-	_, maxSell = model.ParseRealAmount(model.OKEX, instrument, maxSell)
+	_, maxBuy = model.ParseRealAmount(model.OKEX, symbol, maxBuy)
+	_, maxSell = model.ParseRealAmount(model.OKEX, symbol, maxSell)
 	return true, maxBuy, maxSell
 }
 
-func getFundingRateOKEX(key, secret, instrumentId string) (fundingRate *model.FundingRate) {
-	path := fmt.Sprintf(`/api/v5/public/funding-rate?instId=%s`, instrumentId)
+func getFundingRateOKEX(key, secret, symbol string) (fundingRate *model.FundingRate) {
+	path := fmt.Sprintf(`/api/v5/public/funding-rate?instId=%s`, symbol)
 	response := sendSignRequestOKEX(key, secret, http.MethodGet, path, nil)
 	fundingJson, _ := util.NewJSON(response)
 	if fundingJson == nil || fundingJson.Get(`data`) == nil || fundingJson.Get(`data`).MustArray() == nil ||
@@ -1179,7 +1175,7 @@ func getFundingRateOKEX(key, secret, instrumentId string) (fundingRate *model.Fu
 		return nil
 	}
 	data := fundingJson.Get(`data`).MustArray()[0].(map[string]interface{})
-	if data[`instId`] == instrumentId {
+	if data[`instId`] == symbol {
 		rate, _ := strconv.ParseFloat(data[`fundingRate`].(string), 64)
 		rateNext, _ := strconv.ParseFloat(data[`nextFundingRate`].(string), 64)
 		rateTime, _ := strconv.ParseInt(data[`fundingTime`].(string), 10, 64)
@@ -1189,7 +1185,7 @@ func getFundingRateOKEX(key, secret, instrumentId string) (fundingRate *model.Fu
 			RateNext:   rateNext,
 			UpdateTime: util.GetNow().Unix(),
 			ExpireTime: rateTime,
-			Symbol:     instrumentId,
+			Symbol:     symbol,
 		}
 	}
 	return nil

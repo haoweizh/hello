@@ -112,8 +112,8 @@ func WsDepthServeFtx(markets *model.Markets, orderHandler OrderHandler) ([]chan 
 	//subType := model.SubscribeDepth
 	subType := model.SubscribeDepth + `,` + model.SubscribeTicker
 	subscribes := GetWSSubscribes(model.Ftx, subType)
-	subscribes = append(subscribes, GetWSSubscribe(model.Ftx, "USDT/USD", model.SubscribeDepth))
-	subscribes = append(subscribes, GetWSSubscribe(model.Ftx, "USDT/USD", model.SubscribeTicker))
+	subscribes = append(subscribes, GetWSSubscribe(model.Ftx, `USDT/USD`, model.SubscribeDepth))
+	subscribes = append(subscribes, GetWSSubscribe(model.Ftx, `USDT/USD`, model.SubscribeTicker))
 	ftxSymbolConnection = make(map[string]*websocket.Conn)
 	return WebSocketClient(model.Ftx, wsFtx, subscribes, subscribeHandlerFtx, wsHandler, orderHandler, wsStepFtx)
 }
@@ -143,7 +143,7 @@ func handleTickerFtx(markets *model.Markets, response *simplejson.Json) {
 		if handler != nil {
 			setting := model.GetSetting(function, model.Ftx, symbol)
 			if setting != nil && setting.Function == model.FunctionCarry {
-				success, usdtBidAsk := markets.GetBidAsk("USDT/USD", model.Ftx)
+				success, usdtBidAsk := markets.GetBidAsk(`USDT/USD`, model.Ftx)
 				if success && bidAsk.Asks.Len() > 0 && bidAsk.Bids.Len() > 0 {
 					bidAsk.Asks[0].Price /= usdtBidAsk.Asks[0].Price
 					bidAsk.Bids[0].Price /= usdtBidAsk.Asks[0].Price
@@ -231,7 +231,7 @@ func handleDepthFtx(markets *model.Markets, response *simplejson.Json) {
 			if handler != nil {
 				setting := model.GetSetting(function, model.Ftx, symbol)
 				if setting != nil && setting.Function == model.FunctionCarry {
-					success, usdtBidAsk := markets.GetBidAsk("USDT/USD", model.Ftx)
+					success, usdtBidAsk := markets.GetBidAsk(`USDT/USD`, model.Ftx)
 					if success && bidAsk.Asks.Len() > 0 && bidAsk.Bids.Len() > 0 {
 						bidAsk.Asks[0].Price /= usdtBidAsk.Asks[0].Price
 						bidAsk.Bids[0].Price /= usdtBidAsk.Asks[0].Price
@@ -335,7 +335,7 @@ func parseTransactionFtx(key string, data map[string]interface{}, action float64
 		balance.Notes = data[`notes`].(string)
 	}
 	if data[`coin`] != nil {
-		balance.Coin = strings.ToLower(data[`coin`].(string))
+		balance.Coin = data[`coin`].(string)
 	}
 	if data[`fee`] != nil {
 		balance.Fee = data[`fee`].(json.Number).String()
@@ -610,7 +610,8 @@ func getMarketsFtx(key, secret string) (marketInfos map[string]*model.MarketInfo
 	return
 }
 
-func getFundingRatesFtx(key, secret string) (fundingRates []*model.FundingRate) {
+// getFundingRatesFtx
+func _(key, secret string) (fundingRates []*model.FundingRate) {
 	response := SignedRequestFtx(key, secret, `GET`,
 		`/funding_rates`, nil, nil)
 	rateJson, err := util.NewJSON(response)

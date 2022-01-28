@@ -22,41 +22,19 @@ type MarketInfo struct {
 	SizeMax, SizeMin                       float64 //最大最小下单数量，当CTValue=0（现货）时为交易币种数量，CTValue>0(永续)为张数，在使用时乘以CTValue转换成币数
 }
 
-func GetMarketInfo(market, instrument string) (marketInfo *MarketInfo) {
+func GetMarketInfo(market, symbol string) (marketInfo *MarketInfo) {
 	defer marketInfoLock.Unlock()
 	marketInfoLock.Lock()
 	if marketInfos == nil || marketInfos[market] == nil {
 		return nil
 	}
-	return marketInfos[market][instrument]
+	return marketInfos[market][symbol]
 }
 
 func SetMarketInfos(market string, value map[string]*MarketInfo) {
 	defer marketInfoLock.Unlock()
 	marketInfoLock.Lock()
 	marketInfos[market] = value
-}
-
-func GetMarketInfos(market string) (value map[string]*MarketInfo) {
-	defer marketInfoLock.Unlock()
-	marketInfoLock.Lock()
-	return marketInfos[market]
-}
-
-func GetCarryCoins() (coins map[string]map[string]bool) { //  market - coin - bool
-	markets := GetMarkets()
-	coins = make(map[string]map[string]bool)
-	for _, market := range markets {
-		coins[market] = make(map[string]bool)
-		if marketInfos != nil && GetSettings(FunctionCarry, market) != nil {
-			symbols := GetMarketSymbols(market)
-			for symbol := range symbols {
-				coin := GetCoin(market, symbol)
-				coins[market][coin] = true
-			}
-		}
-	}
-	return coins
 }
 
 // ParseRealAmount 返回以币为单位的数量
@@ -78,7 +56,8 @@ func GetAmountInMarket(market string, symbol string, amount, price float64) (for
 	if marketInfo == nil || marketInfo.SizeIncrement == 0 || marketInfo.SizeMin == 0 {
 		return 0
 	}
-	if marketInfo.CTValue > 0 && marketInfo.CTCurrency == GetCoin(market, symbol) {
+	success, _, coin := GetCoinFromStandard(symbol)
+	if success && marketInfo.CTValue > 0 && marketInfo.CTCurrency == coin {
 		amount = amount / marketInfo.CTValue
 	}
 	formattedAmount = marketInfo.SizeIncrement * math.Floor(amount/marketInfo.SizeIncrement)
@@ -104,30 +83,6 @@ func FormatPrice(market, symbol, orderSide string, price float64) (formattedPric
 	}
 }
 
-// FormatAmountPair symbol 期货; related 现货
-func FormatAmountPair(market, symbolPerp, symbolRelated string, amount float64) (formattedAmount float64) {
-	marketPerp := GetMarketInfo(market, symbolPerp)
-	marketRelated := GetMarketInfo(market, symbolRelated)
-	if marketPerp == nil || marketPerp.SizeIncrement == 0 || marketPerp.SizeMin == 0 ||
-		marketRelated == nil || marketRelated.SizeIncrement == 0 || marketRelated.SizeMin == 0 {
-		return 0
-	}
-	sizeInc := marketPerp.SizeIncrement
-	sizeMinPerp := marketPerp.SizeMin
-	if marketPerp.CTValue > 0 && marketPerp.CTCurrency == GetCoin(market, symbolPerp) {
-		sizeInc = sizeInc * marketPerp.CTValue
-		sizeMinPerp = sizeMinPerp * marketPerp.CTValue
-	}
-	if sizeInc < marketRelated.SizeIncrement {
-		sizeInc = marketRelated.SizeIncrement
-	}
-	formattedAmount = math.Floor(amount/sizeInc) * sizeInc
-	if formattedAmount < sizeMinPerp || formattedAmount < marketRelated.SizeMin {
-		return 0
-	}
-	return formattedAmount
-}
-
 // FormatCrossPair 不支持以BTC或ETH计价的交易对，只支持USD类
 func FormatCrossPair(marketBuy, marketSell, symbolBuy, symbolSell string, amount, price float64) (
 	formattedAmount float64) {
@@ -140,10 +95,12 @@ func FormatCrossPair(marketBuy, marketSell, symbolBuy, symbolSell string, amount
 	incSell := marketInfoSell.SizeIncrement
 	minBuy := marketInfoBuy.SizeMin
 	minSell := marketInfoSell.SizeMin
-	if marketInfoBuy.CTCurrency == GetCoin(marketBuy, symbolBuy) && marketInfoBuy.CTValue > 0 {
+	success, _, coin := GetCoinFromStandard(symbolBuy)
+	if success && marketInfoBuy.CTCurrency == coin && marketInfoBuy.CTValue > 0 {
 		incBuy, minBuy = incBuy*marketInfoBuy.CTValue, minBuy*marketInfoBuy.CTValue
 	}
-	if marketInfoSell.CTCurrency == GetCoin(marketSell, symbolSell) && marketInfoSell.CTValue > 0 {
+	success, _, coin = GetCoinFromStandard(symbolSell)
+	if success && marketInfoSell.CTCurrency == coin && marketInfoSell.CTValue > 0 {
 		incSell, minSell = incSell*marketInfoSell.CTValue, minSell*marketInfoSell.CTValue
 	}
 	sizeInc := math.Max(incBuy, incSell)

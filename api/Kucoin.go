@@ -48,7 +48,7 @@ func setFutureAutoDeposit() {
 	coins := model.GetSettingCoins(model.FunctionCarry, model.Kucoin)
 	for coin := range coins {
 		params := make(map[string]string)
-		params["symbol"] = coin + "USDTM"
+		params["symbol"] = coin + `USDTM`
 		params["status"] = "true"
 		resp, err := kucoinFutureClient("", "", "").AutoDepositStatus(params)
 		if err != nil || !resp.HttpSuccessful() || !resp.ApiSuccessful() {
@@ -78,7 +78,7 @@ func appendRelatedMarketsKucoin(key string, marketInfos map[string]*model.Market
 		return
 	}
 	for _, related := range symbols {
-		if !related.EnableTrading || related.QuoteCurrency != "USDT" {
+		if !related.EnableTrading || related.QuoteCurrency != `USDT` {
 			continue
 		}
 		if !model.AppConfig.KucoinSpot && !related.IsMarginEnabled {
@@ -146,11 +146,11 @@ func appendFutureMarketKucoin(key string, marketInfos map[string]*model.MarketIn
 		return
 	}
 	for _, contract := range contracts {
-		if contract.Status != "Open" || contract.QuoteCurrency != "USDT" {
+		if contract.Status != "Open" || contract.QuoteCurrency != `USDT` {
 			continue
 		}
 		marketInfo := &model.MarketInfo{Market: model.Kucoin}
-		marketInfo.Name = contract.BaseCurrency + model.GetPerpTail(model.Kucoin)
+		marketInfo.Name = contract.BaseCurrency + model.UniStandardTail[model.MarketTypePerp]
 		marketInfo.PriceIncrement = contract.TickSize
 		marketInfo.PriceDecimal = util.NumDecPlaces(contract.TickSize)
 		marketInfo.SizeMin = contract.LotSize
@@ -235,8 +235,9 @@ func WsDepthServeKucoin() (channels []chan struct{}, err error) {
 	symbols := model.GetMarketSymbols(model.Kucoin)
 	futureSubscribes := make([]*kumex.WebSocketSubscribeMessage, 0)
 	for symbol := range symbols {
-		if strings.Contains(symbol, model.GetPerpTail(model.Kucoin)) {
-			topic := "/contractMarket/tickerV2:" + strings.Split(symbol, "-")[0] + "USDTM"
+		success, marketType, _ := model.GetCoinFromStandard(symbol)
+		if success && marketType == model.MarketTypePerp {
+			topic := "/contractMarket/tickerV2:" + strings.Split(symbol, "-")[0] + `USDTM`
 			futureSubscribes = append(futureSubscribes, kumex.NewSubscribeMessage(topic, false))
 		}
 	}
@@ -306,7 +307,7 @@ func handleKucoinWS(relatedMsg *kucoin.WebSocketDownstreamMessage, futureMsg *ku
 		if ticker.Symbol == "" {
 			return
 		}
-		symbol := strings.ReplaceAll(ticker.Symbol, "USDTM", "") + model.GetPerpTail(model.Kucoin)
+		symbol := strings.ReplaceAll(ticker.Symbol, `USDTM`, ``) + model.UniStandardTail[model.MarketTypePerp]
 		now := int(time.Now().UnixNano() / int64(time.Millisecond))
 		ts := int(ticker.Ts / int64(time.Millisecond))
 		bidPrice, _ := strconv.ParseFloat(ticker.BestBidPrice, 64)
@@ -393,7 +394,7 @@ func getBalanceKucoin(key string, secret string) (success bool, balances []*mode
 			balance.FrozenAmount, _ = strconv.ParseFloat(account.Holds, 64)
 			balance.Amount, _ = strconv.ParseFloat(account.Balance, 64)
 			balance.AvailableWithBorrow, _ = strconv.ParseFloat(account.Available, 64)
-			priceGet, bidAsk := model.AppMarkets.GetBidAsk(balance.Coin+model.GetSpotTail(model.Kucoin), model.Kucoin)
+			priceGet, bidAsk := model.AppMarkets.GetBidAsk(balance.Coin+model.UniStandardTail[model.MarketTypeSpot], model.Kucoin)
 			if priceGet {
 				balance.UsdValue = balance.Amount * bidAsk.Bids[0].Price
 			}
@@ -424,7 +425,7 @@ func getBalanceKucoin(key string, secret string) (success bool, balances []*mode
 			balance.AvailableWithBorrow = available + canBorrow
 			balance.Amount, _ = account.TotalBalance.Float64()
 			balance.Amount = balance.Amount - balance.Borrow
-			priceGet, bidAsk := model.AppMarkets.GetBidAsk(balance.Coin+model.GetSpotTail(model.Kucoin), model.Kucoin)
+			priceGet, bidAsk := model.AppMarkets.GetBidAsk(balance.Coin+model.UniStandardTail[model.MarketTypeSpot], model.Kucoin)
 			if priceGet {
 				balance.UsdValue = balance.Amount * bidAsk.Bids[0].Price
 			}
@@ -477,7 +478,7 @@ type PositionsModel []*KucoinPositionModel
 
 func getPositionsKucoin(key string, secret string) (success bool, positions []*model.Position, accountValue, availableU float64) {
 	params := make(map[string]string)
-	params["currency"] = "USDT"
+	params["currency"] = `USDT`
 	accountResp, accountErr := kucoinFutureClient("", "", "").AccountOverview(params)
 	contractResp, err := kucoinFutureClient("", "", "").Positions()
 	if err != nil || accountErr != nil {
@@ -510,7 +511,7 @@ func getPositionsKucoin(key string, secret string) (success bool, positions []*m
 	util.SocketInfo(fmt.Sprintf(`get future position response: %s`, contractRespJson))
 	positions = make([]*model.Position, 0)
 	for _, contract := range *contracts {
-		currency := strings.ReplaceAll(contract.Symbol, "USDTM", "") + model.GetPerpTail(model.Kucoin)
+		currency := strings.ReplaceAll(contract.Symbol, `USDTM`, ``) + model.UniStandardTail[model.MarketTypePerp]
 		position := &model.Position{Market: model.Kucoin, Ts: util.GetNowUnixMillion(), Currency: currency}
 		_, realAmount := model.ParseRealAmount(model.Kucoin, currency, float64(contract.CurrentQty))
 		position.Holding = realAmount
@@ -525,8 +526,9 @@ func getPositionsKucoin(key string, secret string) (success bool, positions []*m
 }
 
 func cancelOrdersKucoin(symbol string) (result bool) {
-	if strings.Contains(symbol, model.GetPerpTail(model.Kucoin)) {
-		symbol = strings.Split(symbol, "-")[0] + "USDTM"
+	success, marketType, _ := model.GetCoinFromStandard(symbol)
+	if success && marketType == model.MarketTypePerp {
+		symbol = strings.Split(symbol, "-")[0] + `USDTM`
 		apiResponse, err := kucoinFutureClient("", "", "").CancelOrders(symbol)
 		if err != nil {
 			util.SocketInfo(fmt.Sprintf("function: %s fail to cancel future orders kucoin, err:%s", "cancelOrdersKucoin", err))
@@ -537,7 +539,7 @@ func cancelOrdersKucoin(symbol string) (result bool) {
 			util.SocketInfo(fmt.Sprintf("fail to get cancel future orders response kucoin, err:%s", cancelErr))
 			return false
 		}
-	} else {
+	} else if success && marketType == model.MarketTypeSpot {
 		param := map[string]string{}
 		if model.AppConfig.KucoinSpot {
 			param["tradeType"] = "TRADE"
@@ -590,8 +592,9 @@ type CreateMarginOrderModel struct {
 }
 
 func placeOrderKucoin(order *model.Order, orderSide, orderType, symbol string, price, amount float64) {
-	if strings.Contains(symbol, model.GetPerpTail(model.Kucoin)) {
-		futureSymbol := strings.Split(symbol, "-")[0] + "USDTM"
+	success, marketType, _ := model.GetCoinFromStandard(symbol)
+	if success && marketType == model.MarketTypePerp {
+		futureSymbol := strings.Split(symbol, "-")[0] + `USDTM`
 		params := make(map[string]string)
 		params["clientOid"] = "f" + strconv.FormatInt(time.Now().UnixNano(), 10)
 		params["side"] = orderSide
@@ -629,7 +632,7 @@ func placeOrderKucoin(order *model.Order, orderSide, orderType, symbol string, p
 			order.Status = model.CarryStatusWorking
 			return
 		}
-	} else {
+	} else if success && marketType == model.MarketTypeSpot {
 		if model.AppConfig.KucoinSpot {
 			createOrder := &kucoin.CreateOrderModel{}
 			createOrder.ClientOid = "r" + strconv.FormatInt(time.Now().UnixNano(), 10)
@@ -720,7 +723,7 @@ func transferKucoin(transferType string, amount float64) {
 		} else {
 			from = "margin"
 		}
-		apiResponse, err := kucoinRelatedClient("", "", "").InnerTransferV2(orderId, "USDT", from, to, amountStr)
+		apiResponse, err := kucoinRelatedClient("", "", "").InnerTransferV2(orderId, `USDT`, from, to, amountStr)
 		if err != nil {
 			util.SocketInfo(fmt.Sprintf("function: %s transfer related to future kucoin, err:%s", "transferKucoin", err))
 		}
@@ -735,7 +738,7 @@ func transferKucoin(transferType string, amount float64) {
 		} else {
 			to = "margin"
 		}
-		apiResponse, err := kucoinRelatedClient("", "", "").InnerTransferV2(orderId, "USDT", from, to, amountStr)
+		apiResponse, err := kucoinRelatedClient("", "", "").InnerTransferV2(orderId, `USDT`, from, to, amountStr)
 		if err != nil {
 			util.SocketInfo(fmt.Sprintf("function: %s transfer future to related kucoin, err:%s", "transferKucoin", err))
 		}

@@ -90,7 +90,7 @@ var subscribeHandlerBinance = func(connection *websocket.Conn, subscribes []inte
 	return err
 }
 
-func handleTickerBinance(markets *model.Markets, json *simplejson.Json, symbol string, updateId int64) {
+func handleTickerBinance(markets *model.Markets, json *simplejson.Json, dialectSymbol string, updateId int64) {
 	bidPrice, _ := strconv.ParseFloat(json.Get(`b`).MustString(), 64)
 	bidAmount, _ := strconv.ParseFloat(json.Get(`B`).MustString(), 64)
 	askPrice, _ := strconv.ParseFloat(json.Get(`a`).MustString(), 64)
@@ -101,23 +101,23 @@ func handleTickerBinance(markets *model.Markets, json *simplejson.Json, symbol s
 		ts = now
 	}
 	bookTicker := json.Get(`e`).MustString()
-	if symbol != `` && bidPrice > 0 && bidAmount > 0 && askPrice > 0 && askAmount > 0 {
-		bidAsk := model.BidAsk{Ts: ts, TsReceived: now, UpdateId: updateId,
-			Bids: []model.Tick{{Price: bidPrice, Amount: bidAmount, Market: model.Binance, Symbol: symbol, Side: model.OrderSideBuy}},
-			Asks: []model.Tick{{Price: askPrice, Amount: askAmount, Market: model.Binance, Symbol: symbol, Side: model.OrderSideSell}}}
+	if dialectSymbol != `` && bidPrice > 0 && bidAmount > 0 && askPrice > 0 && askAmount > 0 {
+		marketType := model.MarketTypeSpot
 		if bookTicker == `bookTicker` { //有e字段 表示是U合约推送，否则现货，此区分方式不稳定，暂用
-			if symbol[len(symbol)-4:] == `USDT` {
-				symbol = symbol[0:len(symbol)-4] + "-PERP"
-			}
+			marketType = model.MarketTypePerp
 		}
-		haveOld, old := markets.GetBidAsk(symbol, model.Binance)
+		_, standardSymbol := model.GetStandardFromDialect(marketType, model.Binance, dialectSymbol)
+		bidAsk := model.BidAsk{Ts: ts, TsReceived: now, UpdateId: updateId,
+			Bids: []model.Tick{{Price: bidPrice, Amount: bidAmount, Market: model.Binance, Symbol: standardSymbol, Side: model.OrderSideBuy}},
+			Asks: []model.Tick{{Price: askPrice, Amount: askAmount, Market: model.Binance, Symbol: standardSymbol, Side: model.OrderSideSell}}}
+		haveOld, old := markets.GetBidAsk(standardSymbol, model.Binance)
 		if haveOld && old.UpdateId > bidAsk.UpdateId {
 			return
 		}
-		if markets.SetBidAsk(symbol, model.Binance, &bidAsk) {
-			for function, handler := range model.GetFunctions(model.Binance, symbol) {
+		if markets.SetBidAsk(standardSymbol, model.Binance, &bidAsk) {
+			for function, handler := range model.GetFunctions(model.Binance, standardSymbol) {
 				if handler != nil {
-					setting := model.GetSetting(function, model.Binance, symbol)
+					setting := model.GetSetting(function, model.Binance, standardSymbol)
 					if setting != nil {
 						go handler(setting, &bidAsk)
 					}
@@ -127,15 +127,16 @@ func handleTickerBinance(markets *model.Markets, json *simplejson.Json, symbol s
 	}
 }
 
-func handleDepthBinance(markets *model.Markets, json *simplejson.Json, symbol string, updateId int64) {
-	var findSettingSymbol string
+func handleDepthBinance(markets *model.Markets, json *simplejson.Json, dialectSymbol string, updateId int64) {
+	var standardSymbol string
 	bidAsk := model.BidAsk{UpdateId: updateId}
 	var bids, asks []interface{}
 	tickId, _ := json.Get(`lastUpdateId`).Int64()
 	depthUpdate, _ := json.Get(`e`).String()
 	if tickId > 0 { //存在lastUpdateId字段 表示是现货深度推送，此区分方式不稳定，暂用
-		if tickId > getLastTickIdBinance(symbol) {
-			setLastTickIdBinance(symbol, tickId)
+		_, standardSymbol = model.GetStandardFromDialect(model.MarketTypeSpot, model.Binance, dialectSymbol)
+		if tickId > getLastTickIdBinance(standardSymbol) {
+			setLastTickIdBinance(standardSymbol, tickId)
 			bidAsk.Ts = int(util.GetNowUnixMillion())
 			bidAsk.TsReceived = int(util.GetNowUnixMillion())
 		} else {
@@ -145,26 +146,20 @@ func handleDepthBinance(markets *model.Markets, json *simplejson.Json, symbol st
 		bids = bidArray
 		askArray, _ := json.Get(`asks`).Array()
 		asks = askArray
-		if symbol[len(symbol)-4:] == `USDT` {
-			findSettingSymbol = symbol[0:len(symbol)-4] + "-PERP"
-		}
 	} else if depthUpdate == "depthUpdate" { //存在depthUpdate字段 表示是合约深度推送，此区分方式不稳定，暂用
+		_, standardSymbol = model.GetStandardFromDialect(model.MarketTypePerp, model.Binance, dialectSymbol)
 		nowTradeTime, _ := json.Get(`T`).Int64()
-		if nowTradeTime <= 0 || nowTradeTime < getLastTradeTimeBinance(symbol) {
+		if nowTradeTime <= 0 || nowTradeTime < getLastTradeTimeBinance(standardSymbol) {
 			return
 		}
-		setLastTradeTimeBinance(symbol, nowTradeTime)
+		setLastTradeTimeBinance(standardSymbol, nowTradeTime)
 		bidAsk.Ts = json.Get(`E`).MustInt()
 		bidAsk.TsReceived = int(util.GetNowUnixMillion())
 		bidArray, _ := json.Get(`b`).Array()
 		bids = bidArray
 		askArray, _ := json.Get(`a`).Array()
 		asks = askArray
-		symbol = json.Get(`s`).MustString()
-		if symbol[len(symbol)-4:] == `USDT` {
-			symbol = symbol[0:len(symbol)-4] + "-PERP"
-		}
-		findSettingSymbol = symbol
+		dialectSymbol = json.Get(`s`).MustString()
 	}
 	bidAsk.Bids = make([]model.Tick, len(bids))
 	for i, value := range bids {
@@ -173,7 +168,7 @@ func handleDepthBinance(markets *model.Markets, json *simplejson.Json, symbol st
 		}
 		price, _ := strconv.ParseFloat(value.([]interface{})[0].(string), 64)
 		amount, _ := strconv.ParseFloat(value.([]interface{})[1].(string), 64)
-		bidAsk.Bids[i] = model.Tick{Price: price, Amount: amount, Market: model.Binance, Symbol: symbol, Side: model.OrderSideBuy}
+		bidAsk.Bids[i] = model.Tick{Price: price, Amount: amount, Market: model.Binance, Symbol: standardSymbol, Side: model.OrderSideBuy}
 	}
 	bidAsk.Asks = make([]model.Tick, len(asks))
 	for i, value := range asks {
@@ -182,18 +177,18 @@ func handleDepthBinance(markets *model.Markets, json *simplejson.Json, symbol st
 		}
 		price, _ := strconv.ParseFloat(value.([]interface{})[0].(string), 64)
 		amount, _ := strconv.ParseFloat(value.([]interface{})[1].(string), 64)
-		bidAsk.Asks[i] = model.Tick{Price: price, Amount: amount, Market: model.Binance, Symbol: symbol, Side: model.OrderSideSell}
+		bidAsk.Asks[i] = model.Tick{Price: price, Amount: amount, Market: model.Binance, Symbol: standardSymbol, Side: model.OrderSideSell}
 	}
 	sort.Sort(bidAsk.Asks)
 	sort.Sort(sort.Reverse(bidAsk.Bids))
-	haveOld, old := markets.GetBidAsk(symbol, model.Binance)
+	haveOld, old := markets.GetBidAsk(standardSymbol, model.Binance)
 	if haveOld && old.UpdateId > bidAsk.UpdateId {
 		return
 	}
-	if markets.SetBidAsk(symbol, model.Binance, &bidAsk) {
-		for function, handler := range model.GetFunctions(model.Binance, findSettingSymbol) {
+	if markets.SetBidAsk(standardSymbol, model.Binance, &bidAsk) {
+		for function, handler := range model.GetFunctions(model.Binance, standardSymbol) {
 			if handler != nil {
-				setting := model.GetSetting(function, model.Binance, findSettingSymbol)
+				setting := model.GetSetting(function, model.Binance, standardSymbol)
 				if setting != nil {
 					go handler(setting, &bidAsk)
 				}
@@ -215,15 +210,15 @@ func WsDepthServeBinance(markets *model.Markets, orderHandler OrderHandler) (cha
 		if json == nil {
 			return
 		}
-		symbol := json.Get(`s`).MustString()
+		dialectSymbol := json.Get(`s`).MustString()
 		updateId := json.Get(`u`).MustInt64()
-		if symbol == `` {
+		if dialectSymbol == `` {
 			return
 		}
 		if strings.Contains(subscribe, `@depth`) {
-			handleDepthBinance(markets, json, symbol, updateId)
+			handleDepthBinance(markets, json, dialectSymbol, updateId)
 		} else if strings.Contains(subscribe, `@bookTicker`) {
-			handleTickerBinance(markets, json, symbol, updateId)
+			handleTickerBinance(markets, json, dialectSymbol, updateId)
 		}
 	}
 	channels = make([]chan struct{}, 0)
@@ -336,8 +331,9 @@ func getMarketsBinance(key, secret string) (marketInfos map[string]*model.Market
 						continue
 					}
 					symbol = value[`baseAsset`].(string) + value[`quoteAsset`].(string)
+					_, symbol = model.GetStandardFromDialect(model.MarketTypeSpot, model.Binance, symbol)
 				} else if value[`contractType`] != nil && value[`contractType`].(string) == `PERPETUAL` {
-					symbol = value[`baseAsset`].(string) + `-PERP`
+					symbol = value[`baseAsset`].(string) + model.UniStandardTail[model.MarketTypePerp]
 				} else {
 					continue
 				}
@@ -362,10 +358,11 @@ func placeOrderBinance(key, secret string, order *model.Order, orderSide, orderT
 	amountStr := util.CutTailZero(fmt.Sprintf(`%f`, formattedAmount))
 	postData.Set("quantity", amountStr)
 	var requestUrl string
-	if symbol[len(symbol)-5:] == `-PERP` {
+	success, marketType, _ := model.GetCoinFromStandard(symbol)
+	_, dialectSymbol := model.GetDialectFromStandard(model.Binance, symbol)
+	if success && marketType == model.MarketTypePerp {
 		requestUrl = restBinanceFuture + "/fapi/v1/order"
-		symbol = strings.ReplaceAll(symbol, "-PERP", "USDT")
-	} else {
+	} else if success && marketType == model.MarketTypeSpot {
 		requestUrl = restBinance + "/api/v3/order"
 		//requestUrl = restBinance + "/sapi/v1/margin/order"
 		//if orderSide == model.OrderSideSell {
@@ -386,7 +383,7 @@ func placeOrderBinance(key, secret string, order *model.Order, orderSide, orderT
 		postData.Set("price", priceStr)
 		postData.Set("timeInForce", "GTC")
 	}
-	postData.Set("symbol", symbol)
+	postData.Set("symbol", dialectSymbol)
 	responseBody := signedRequestBinance(key, secret, http.MethodPost, requestUrl, true, postData)
 	orderJson, err := util.NewJSON(responseBody)
 	if err == nil {
@@ -405,13 +402,14 @@ func placeOrderBinance(key, secret string, order *model.Order, orderSide, orderT
 func cancelOrdersBinance(key string, secret string, symbol string) bool {
 	postData := &url.Values{}
 	var requestUrl string
-	if symbol[len(symbol)-5:] == `-PERP` {
-		symbol = symbol[:len(symbol)-5] + "USDT"
+	success, marketType, _ := model.GetCoinFromStandard(symbol)
+	_, dialectSymbol := model.GetDialectFromStandard(model.Binance, symbol)
+	if success && marketType == model.MarketTypePerp {
 		requestUrl = restBinanceFuture + "/fapi/v1/allOpenOrders"
-	} else {
+	} else if success && marketType == model.MarketTypeSpot {
 		requestUrl = restBinance + "/api/v3/openOrders"
 	}
-	postData.Set("symbol", symbol)
+	postData.Set("symbol", dialectSymbol)
 	signedRequestBinance(key, secret, http.MethodDelete, requestUrl, true, postData)
 	return true
 }
@@ -430,7 +428,7 @@ func cancelOrdersBinance(key string, secret string, symbol string) bool {
 //
 //func queryOrderBinance(key, secret, symbol string, orderId string) (dealAmount, dealPrice float64, status string) {
 //	postData := url.Values{}
-//	postData.Set("symbol", strings.ReplaceAll(symbol, "-PERP", "USDT"))
+//	postData.Set("symbol", strings.ReplaceAll(symbol, "-PERP", `USDT`))
 //	postData.Set("orderId", orderId)
 //	signBinance(&postData, secret)
 //	headers := map[string]string{"X-MBX-APIKEY": key}
@@ -481,7 +479,7 @@ func getBalanceBinance(key string, secret string) (success bool, balances []*mod
 				balance.Amount = balance.AvailableWithBorrow + lockAmount
 			}
 			if balance.UsdValue == 0 && balance.Amount > 0 {
-				getTick, bidAsk := model.AppMarkets.GetBidAsk(balance.Coin+`USDT`, model.Binance)
+				getTick, bidAsk := model.AppMarkets.GetBidAsk(balance.Coin+model.UniStandardTail[model.MarketTypeSpot], model.Binance)
 				if getTick {
 					balance.UsdValue = balance.Amount * bidAsk.Bids[0].Price
 				}
@@ -539,11 +537,7 @@ func getPositionsBinance(key, secret string) (success bool, positions []*model.P
 			position := &model.Position{Market: model.Binance, Ts: util.GetNowUnixMillion()}
 			value := item.(map[string]interface{})
 			if value[`symbol`] != nil {
-				symbol := value[`symbol`].(string)
-				if symbol[len(symbol)-4:] == `USDT` {
-					symbol = symbol[0:len(symbol)-4] + "-PERP"
-				}
-				position.Currency = symbol
+				_, position.Currency = model.GetStandardFromDialect(model.MarketTypePerp, model.Binance, value[`symbol`].(string))
 			}
 			if value[`positionAmt`] != nil {
 				position.Holding, _ = strconv.ParseFloat(value[`positionAmt`].(string), 64)
@@ -562,11 +556,8 @@ func getPositionsBinance(key, secret string) (success bool, positions []*model.P
 
 func getFundingRateBinance(key, secret, symbol string) (fundingRate *model.FundingRate) {
 	postData := &url.Values{}
-	if symbol[len(symbol)-5:] != `-PERP` {
-		return nil
-	}
-	symbol = symbol[0:len(symbol)-5] + `USDT`
-	postData.Set(`symbol`, symbol)
+	_, dialectSymbol := model.GetDialectFromStandard(model.Binance, symbol)
+	postData.Set(`symbol`, dialectSymbol)
 	response := signedRequestBinance(key, secret, http.MethodGet, restBinanceFuture+`/fapi/v1/premiumIndex`, false, postData)
 	fundingJson, err := util.NewJSON(response)
 	if err != nil {

@@ -15,7 +15,6 @@ type Order struct {
 	FeeIncome    float64
 	Function     string
 	GridPos      int64
-	Instrument   string
 	Market       string
 	OrderId      string `gorm:"unique"`
 	OrderSide    string

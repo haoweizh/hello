@@ -88,19 +88,15 @@ func Test_initTurtleN(t *testing.T) {
 	accounts = append(accounts, account)
 	accounts = append(accounts, nil)
 	fmt.Println(len(accounts))
-	result, _, _, order := api.CancelOrder(model.AppConfig.GateKey, model.AppConfig.GateSecret, `gate`, `SUN_USDT`, ``,
+	result, _, _, order := api.CancelOrder(model.AppConfig.GateKey, model.AppConfig.GateSecret, `gate`, `SUN_USDT`,
 		model.OrderTypeLimit, `86007650678`)
 	fmt.Println(result)
 	fmt.Println(fmt.Sprintf(`%v %s %f`, result, order.Status, order.DealAmount))
-	testOrder := api.QueryOrderById(model.AppConfig.FtxKey, model.AppConfig.FtxSecret, model.Ftx, ``, ``, model.OrderTypeLimit, `82424115039`)
+	testOrder := api.QueryOrderById(model.AppConfig.FtxKey, model.AppConfig.FtxSecret, model.Ftx, ``, model.OrderTypeLimit, `82424115039`)
 	fmt.Println(testOrder.Market)
 	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
 	//api.GetFundingRate(model.Binance, `BTCUSDT`, nil)
 	api.InitMarketInfos()
-	out := util.CutTailZero(fmt.Sprintf(`%f`, model.GetAmountInMarket(model.Huobi, `rsr-usdt`, 20, 0)))
-	fmt.Println(out)
-	//fmt.Println(order.OrderId)
-	//api.PlaceOrder(model.AppConfig.DFutureKey, model.AppConfig.DFutureSecret, model.OrderSideBuy, ``,
 }
 
 func downList(workId, pageId int) (fileNum int) {
@@ -158,7 +154,7 @@ func Test_wallet(t *testing.T) {
 	marketInfos := api.GetMarketInfos(model.BybitPerp)
 	model.SetMarketInfos(model.BybitPerp, marketInfos)
 	api.PlaceOrder(key, secret, model.OrderSideBuy, model.OrderTypeLimit,
-		model.BybitPerp, `ETH-PERP`, `ETH-PERP`, ``, ``, 2440.1234567, 2400.12345,
+		model.BybitPerp, `ETH-PERP`, ``, ``, 2440.1234567, 2400.12345,
 		0.012678, false, false, nil, nil)
 	//// 1078113554871236864
 	////cancelResult := api.CancelOrders(key, secret, model.BybitSpot, `ETH-USDT`)
@@ -166,19 +162,19 @@ func Test_wallet(t *testing.T) {
 	//orderBybit = api.QueryOrderById(key, secret, model.BybitPerp, `ETH-PERP`, `ETH-PERP`,
 	//	model.OrderTypeLimit, orderBybit.OrderId)
 	//fmt.Println(orderBybit.OrderId)
-	api.CancelOrder(key, secret, model.BybitPerp, `ETH-PERP`, `ETH-PERP`, model.OrderTypeLimit,
+	api.CancelOrder(key, secret, model.BybitPerp, `ETH-PERP`, model.OrderTypeLimit,
 		`d490a639-a5f7-499a-9248-142a93ddaf13`)
-	orderBybit1 := api.QueryOrderById(key, secret, model.BybitPerp, `ETH-PERP`, `ETH-PERP`,
+	orderBybit1 := api.QueryOrderById(key, secret, model.BybitPerp, `ETH-PERP`,
 		model.OrderTypeLimit, `d490a639-a5f7-499a-9248-142a93ddaf13`)
 	fmt.Println(orderBybit1.OrderId)
 	_, rate := api.GetFundingRate(`LWaglQgg6eiJDuTmwG`, `mOnuz8yeZmqGLUT2bNDqgA7kuhKT8QYOyUon`, model.BybitPerp, `BTC-PERP`, nil)
 	fmt.Println(fmt.Sprintf(`%f`, rate))
 	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
 	api.InitMarketInfos()
-	orderQuery := api.QueryOrderById(model.AppConfig.GateKey, model.AppConfig.GateSecret, model.Gate, `CFX_PERP`, `CFX_USDT`, model.OrderTypeLimit, `79852794326`)
+	orderQuery := api.QueryOrderById(model.AppConfig.GateKey, model.AppConfig.GateSecret, model.Gate, `CFX_PERP`, model.OrderTypeLimit, `79852794326`)
 	fmt.Println(orderQuery.OrderSide)
 	order := api.PlaceOrder(model.AppConfig.GateKey, model.AppConfig.GateSecret, model.OrderSideBuy, model.OrderTypeLimit,
-		model.Gate, `ETH_USDT`, ``, ``, `carry`,
+		model.Gate, `ETH_USDT`, ``, `carry`,
 		2000, 2000, 0.1, true, false, nil, nil)
 	fmt.Println(order.OrderId)
 	api.CancelOrders(model.AppConfig.GateKey, model.AppConfig.GateSecret, model.Gate, `ETH_USDT`)
@@ -202,8 +198,6 @@ func Test_wallet(t *testing.T) {
 	//api.InitMarketInfos()
 	//fmt.Println(fmt.Sprintf(`%v %d`, suc, len(pos)))
 	//a := api.GetMarketInfo(model.Ftx, `SECO/USD`)
-	account := model.AppConfig.GetAccounts(model.Ftx)[0]
-	api.InitCarryFtx(account.Key, account.Secret, 1)
 	//carry.GetTurtleData(model.Ftx, `okbusd_p`)
 	//var err error
 	//api.GetDayCandle(model.AppConfig.FtxKey, model.AppConfig.FtxSecret, model.Ftx, `htusd_p`, today)

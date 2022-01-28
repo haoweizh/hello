@@ -70,10 +70,6 @@ func GetAccounts(index int) (accounts map[string]*Account) {
 	for i, account := range tempAccounts {
 		AppAccounts[i][BybitSpot] = account
 	}
-	tempAccounts = AppConfig.GetAccounts(Huobi)
-	for i, account := range tempAccounts {
-		AppAccounts[i][Huobi] = account
-	}
 	tempAccounts = AppConfig.GetAccounts(Kucoin)
 	for i, account := range tempAccounts {
 		AppAccounts[i][Kucoin] = account
@@ -154,11 +150,6 @@ func (config *Config) GetAccounts(market string) []*Account {
 		secrets = strings.Split(config.FtxSecret, `,`)
 		closeValues = strings.Split(config.FtxCarryClose, `,`)
 		rateValues = strings.Split(config.FtxCarryRate, `,`)
-	case Huobi, HuobiDM:
-		keys = strings.Split(config.HuobiKey, `,`)
-		secrets = strings.Split(config.HuobiSecret, `,`)
-		closeValues = strings.Split(config.HuobiCarryClose, `,`)
-		rateValues = strings.Split(config.HuobiCarryRate, `,`)
 	case OKEX:
 		keys = strings.Split(config.OkexKey, `,`)
 		secrets = strings.Split(config.OkexSecret, `,`)
@@ -169,11 +160,6 @@ func (config *Config) GetAccounts(market string) []*Account {
 		secrets = strings.Split(config.BinanceSecret, `,`)
 		closeValues = strings.Split(config.BinanceCarryClose, `,`)
 		rateValues = strings.Split(config.BinanceCarryRate, `,`)
-	case Coinpark:
-		keys = strings.Split(config.CoinparkKey, `,`)
-		secrets = strings.Split(config.CoinparkSecret, `,`)
-		closeValues = strings.Split(config.CoinparkCarryClose, `,`)
-		rateValues = strings.Split(config.CoinparkCarryRate, `,`)
 	case Bitmex:
 		keys = strings.Split(config.BitmexKey, `,`)
 		secrets = strings.Split(config.BitmexSecret, `,`)

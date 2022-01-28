@@ -81,8 +81,7 @@ func MaintainTransFee() {
 					util.Notice(`can not maintain order status for nil account %s %s`, value.Market, value.AmountType)
 					continue
 				}
-				order := api.QueryOrderById(account.Key, account.Secret, value.Market, value.Symbol, value.Instrument,
-					value.OrderType, value.OrderId)
+				order := api.QueryOrderById(account.Key, account.Secret, value.Market, value.Symbol, value.OrderType, value.OrderId)
 				if order == nil {
 					//if value.Market == model.Ftx && (strings.Contains(value.RefreshType, `carry`) ||
 					//	strings.Contains(value.RefreshType, `comp`)) {
@@ -151,13 +150,12 @@ func Maintain() {
 	util.Notice("start carrying")
 	model.HandlerMap[model.FunctionGrid] = ProcessSimpleGrid
 	model.HandlerMap[model.FunctionTurtle] = ProcessTurtle
-	model.HandlerMap[model.FunctionCarry] = ProcessCarry
 	model.HandlerMap[model.FunctionCross] = cross.ProcessCross
-	//model.HandlerMap[model.FunctionDCarry] = dreprecated2.ProcessDCarry
-	//model.HandlerMap[model.FunctionHang] = dreprecated2.ProcessHang
 	_ = model.AppDB.AutoMigrate(&model.Setting{})
 	_ = model.AppDB.AutoMigrate(&model.Order{})
 	_ = model.AppDB.AutoMigrate(&model.Balance{})
+	//model.HandlerMap[model.FunctionDCarry] = dreprecated2.ProcessDCarry
+	//model.HandlerMap[model.FunctionHang] = dreprecated2.ProcessHang
 	//api.CancelOrders(model.AppConfig.FtxKey, model.AppConfig.FtxSecret, model.Ftx, `LINK-PERP`)
 	//go CheckPastRefresh()
 	//go util.StartMidNightTimer(CancelAllOrders)

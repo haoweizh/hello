@@ -24,7 +24,7 @@ var code = ``
 func ParameterServe() {
 	router := gin.Default()
 	router.LoadHTMLGlob("templates/*")
-	router.GET("/", GetParameters)
+	router.GET("/", crossPage)
 	router.GET(`refresh`, RefreshParameters)
 	router.GET(`pw`, GetCode)
 	router.GET(`cross`, crossPage)
@@ -233,154 +233,151 @@ func GetCode(c *gin.Context) {
 		} else {
 			c.String(http.StatusOK, `邮件发送失败`+err.Error())
 		}
-		// iamp pjmyzgvrlifpcbci
 	}
 }
 
-func GetParameters(c *gin.Context) {
-	msg := ``
-	markets := model.GetMarkets()
-	userKeys := make([]string, 0)
-	for _, market := range markets {
-		account := model.AppConfig.GetAccounts(market)[0]
-		userKeys = append(userKeys, account.Key)
-		marketInfos := model.GetMarketInfos(market)
-		if marketInfos != nil && model.GetSettings(model.FunctionCarry, market) != nil {
-			symbols := model.GetMarketSymbols(market)
-			for symbol := range marketInfos {
-				coin := model.GetCoin(market, symbol)
-				symbolPerp := coin + model.GetPerpTail(market)
-				symbolRelated := coin + model.GetSpotTail(market)
-				if (marketInfos[symbolPerp] != nil && marketInfos[symbolRelated] != nil) && (symbols[symbolPerp] == false || symbols[symbolRelated] == false) && symbol == symbolPerp {
-					msg += fmt.Sprintf("新币 %s %s\n", market, symbolPerp)
-				}
-			}
-		}
-		settingMap := model.GetSettings(model.FunctionTurtle, market)
-		msg += fmt.Sprintf("海龟币种：%s \n", market)
-		for symbol, setting := range settingMap {
-			if setting == nil {
-				continue
-			}
-			msgTail := ``
-			if setting.OpenShortMargin == 0 {
-				msgTail = `(去除平仓中)`
-			}
-			msg += fmt.Sprintf("%s%s, ", symbol, msgTail)
-		}
-		msg += "\n"
-	}
-	setting := model.GetSetting(model.FunctionGrid, model.Ftx, `LINK-PERP`)
-	if setting != nil {
-		msg += fmt.Sprintf("%s %s %s %f\n", setting.Function, setting.Market, setting.Symbol, setting.GridAmount)
-	}
-	for _, setting := range model.AppSettings {
-		if setting.Valid == false {
-			msg += fmt.Sprintf("[pause carry] %s %s %s at %s \n",
-				setting.Function, setting.Market, setting.Symbol, setting.UpdatedAt.String())
-		}
-	}
-	var orders model.Order
-	turtleRows, _ := model.AppDB.Model(&orders).Select(`market,symbol,order_side,price,deal_price,deal_amount`).
-		Where(`deal_amount>? and refresh_type=?`, 0, model.FunctionTurtle).
-		Order(`order_time desc`).Limit(10).Rows()
-	if turtleRows != nil {
-		for turtleRows.Next() {
-			var market, symbol, orderSide, price, dealPrice, dealAmount string
-			_ = turtleRows.Scan(&market, &symbol, &orderSide, &price, &dealPrice, &dealAmount)
-			msg += fmt.Sprintf("[turtle订单]%s %s %s 下单价格:%s 成交价格:%s 成交数量:%s\n",
-				market, symbol, orderSide, price, dealPrice, dealAmount)
-		}
-		turtleRows.Close()
-	}
-	duration, _ := time.ParseDuration(`-96h`)
-	timeBegin := time.Now().Add(duration)
-	timeBegin = time.Date(timeBegin.Year(), timeBegin.Month(), timeBegin.Day(), 0, 0, 0, 0, timeBegin.Location())
-	//model.AppDB.Model(&orders).Delete(`order_time<? and refresh_type=？`, timeBegin.String()[0:10], `carry`)
-	//model.AppDB.Model(&orders).Delete(`order_time<? and refresh_type=？`, timeBegin.String()[0:10],  `comp`)
-	failRows, _ := model.AppDB.Model(&orders).Select(`market,amount_type,order_side,date(order_time),refresh_type,count(*)`).
-		Where(`status=?`, `fail`).Group(`market,order_side,date(order_time),amount_type,refresh_type`).
-		Order(`date(order_time) desc`).Rows()
-	failData := make(map[string]float64) // market - amount_type - side - date - fail count
-	if failRows != nil {
-		for failRows.Next() {
-			var marketName, side, date, amountType, refreshType string
-			var orderNum float64
-			_ = failRows.Scan(&marketName, &amountType, &side, &date, &refreshType, &orderNum)
-			key := fmt.Sprintf(`%s-%s-%s-%s-%s`, marketName, amountType, side, date, refreshType)
-			if (marketName == model.OKEX && amountType == model.AppConfig.GetAccounts(model.OKEX)[0].Key) ||
-				(marketName == model.Binance && amountType == model.AppConfig.GetAccounts(model.Binance)[0].Key) ||
-				(marketName == model.Huobi && amountType == model.AppConfig.GetAccounts(model.Huobi)[0].Key) ||
-				(marketName == model.Kucoin && amountType == model.AppConfig.GetAccounts(model.Kucoin)[0].Key) {
-				failData[key] = orderNum
-			}
-		}
-	}
-	failRows, _ = model.AppDB.Model(&orders).Select(`market,amount_type,order_side,date(order_time-interval '8 hour'),refresh_type,count(*)`).
-		Where(`status=?`, `fail`).Group(`market,order_side,date(order_time-interval '8 hour'),amount_type,refresh_type`).
-		Order(`date(order_time-interval '8 hour') desc`).Rows()
-	if failRows != nil {
-		for failRows.Next() {
-			var marketName, side, date, amountType, refreshType string
-			var orderNum float64
-			_ = failRows.Scan(&marketName, &amountType, &side, &date, &refreshType, &orderNum)
-			key := fmt.Sprintf(`%s-%s-%s-%s-%s`, marketName, amountType, side, date, refreshType)
-			if (marketName == model.Ftx && amountType == model.AppConfig.GetAccounts(model.Ftx)[0].Key) ||
-				(marketName == model.Gate && amountType == model.AppConfig.GetAccounts(model.Gate)[0].Key) {
-				failData[key] = orderNum
-			}
-		}
-	}
-	carryRows, _ := model.AppDB.Model(&orders).Select(`market,amount_type,order_side,sum(price*abs(amount)),date(order_time),refresh_type,count(*)`).
-		Group(`market,order_side,date(order_time),amount_type,refresh_type`).Order(`date(order_time) desc`).Rows()
-	carryFrontMsg := ``
-	if carryRows != nil {
-		for carryRows.Next() {
-			var marketName, side, date, amountType, refreshType string
-			var value, orderNum, failRate float64
-			_ = carryRows.Scan(&marketName, &amountType, &side, &value, &date, &refreshType, &orderNum)
-			key := fmt.Sprintf(`%s-%s-%s-%s-%s`, marketName, amountType, side, date, refreshType)
-			if (refreshType != model.FunctionTurtle && refreshType != model.FunctionGrid) &&
-				((marketName == model.OKEX && amountType == model.AppConfig.GetAccounts(model.OKEX)[0].Key) ||
-					(marketName == model.Binance && amountType == model.AppConfig.GetAccounts(model.Binance)[0].Key) ||
-					(marketName == model.Huobi && amountType == model.AppConfig.GetAccounts(model.Huobi)[0].Key) ||
-					(marketName == model.Kucoin && amountType == model.AppConfig.GetAccounts(model.Kucoin)[0].Key)) {
-				if orderNum > 0 {
-					failRate = failData[key] / orderNum
-				}
-				carryFrontMsg += fmt.Sprintf("%s交易额 in USD: %s %s %f 类型：%s 单数:%f 失败率: %f\n",
-					marketName, date, side, value, refreshType, orderNum, failRate)
-			}
-		}
-		carryRows.Close()
-	}
-	carryRows, _ = model.AppDB.Model(&orders).Select(`market,amount_type,order_side,sum(price*abs(amount)),date(order_time-interval '8 hour'),refresh_type,count(*)`).
-		Group(`market,order_side,date(order_time-interval '8 hour'),amount_type,refresh_type`).Order(`date(order_time-interval '8 hour') desc`).Rows()
-	if carryRows != nil {
-		for carryRows.Next() {
-			var marketName, side, date, amountType, refreshType string
-			var value, orderNum, failRate float64
-			_ = carryRows.Scan(&marketName, &amountType, &side, &value, &date, &refreshType, &orderNum)
-			key := fmt.Sprintf(`%s-%s-%s-%s-%s`, marketName, amountType, side, date, refreshType)
-			if (marketName == model.Ftx && amountType == model.AppConfig.GetAccounts(model.Ftx)[0].Key) ||
-				(marketName == model.Gate && amountType == model.AppConfig.GetAccounts(model.Gate)[0].Key) {
-				if orderNum > 0 {
-					failRate = failData[key] / orderNum
-				}
-				carryFrontMsg += fmt.Sprintf("%s交易额 in USD: %s %s %f 类型：%s 单数:%f 失败率: %f\n",
-					marketName, date, side, value, refreshType, orderNum, failRate)
-			}
-		}
-		carryRows.Close()
-	}
-	msg += carryFrontMsg
-	for _, userKey := range userKeys {
-		msg += model.GetCarryInfo(userKey, ``) + "\n"
-	}
-	msg += model.AppMetric.ToString() + "\n"
-	msg += model.AppConfig.ToString()
-	c.String(http.StatusOK, msg)
-}
+//func GetParameters(c *gin.Context) {
+//	msg := ``
+//	markets := model.GetMarkets()
+//	userKeys := make([]string, 0)
+//	for _, market := range markets {
+//		account := model.AppConfig.GetAccounts(market)[0]
+//		userKeys = append(userKeys, account.Key)
+//		marketInfos := model.GetMarketInfos(market)
+//		if marketInfos != nil && model.GetSettings(model.FunctionCarry, market) != nil {
+//			symbols := model.GetMarketSymbols(market)
+//			for symbol := range marketInfos {
+//				coin := model.GetCoin(market, symbol)
+//				symbolPerp := coin + model.GetPerpTail(market)
+//				symbolRelated := coin + model.GetSpotTail(market)
+//				if (marketInfos[symbolPerp] != nil && marketInfos[symbolRelated] != nil) && (symbols[symbolPerp] == false || symbols[symbolRelated] == false) && symbol == symbolPerp {
+//					msg += fmt.Sprintf("新币 %s %s\n", market, symbolPerp)
+//				}
+//			}
+//		}
+//		settingMap := model.GetSettings(model.FunctionTurtle, market)
+//		msg += fmt.Sprintf("海龟币种：%s \n", market)
+//		for symbol, setting := range settingMap {
+//			if setting == nil {
+//				continue
+//			}
+//			msgTail := ``
+//			if setting.OpenShortMargin == 0 {
+//				msgTail = `(去除平仓中)`
+//			}
+//			msg += fmt.Sprintf("%s%s, ", symbol, msgTail)
+//		}
+//		msg += "\n"
+//	}
+//	setting := model.GetSetting(model.FunctionGrid, model.Ftx, `LINK-PERP`)
+//	if setting != nil {
+//		msg += fmt.Sprintf("%s %s %s %f\n", setting.Function, setting.Market, setting.Symbol, setting.GridAmount)
+//	}
+//	for _, setting := range model.AppSettings {
+//		if setting.Valid == false {
+//			msg += fmt.Sprintf("[pause carry] %s %s %s at %s \n",
+//				setting.Function, setting.Market, setting.Symbol, setting.UpdatedAt.String())
+//		}
+//	}
+//	var orders model.Order
+//	turtleRows, _ := model.AppDB.Model(&orders).Select(`market,symbol,order_side,price,deal_price,deal_amount`).
+//		Where(`deal_amount>? and refresh_type=?`, 0, model.FunctionTurtle).
+//		Order(`order_time desc`).Limit(10).Rows()
+//	if turtleRows != nil {
+//		for turtleRows.Next() {
+//			var market, symbol, orderSide, price, dealPrice, dealAmount string
+//			_ = turtleRows.Scan(&market, &symbol, &orderSide, &price, &dealPrice, &dealAmount)
+//			msg += fmt.Sprintf("[turtle订单]%s %s %s 下单价格:%s 成交价格:%s 成交数量:%s\n",
+//				market, symbol, orderSide, price, dealPrice, dealAmount)
+//		}
+//		turtleRows.Close()
+//	}
+//	duration, _ := time.ParseDuration(`-96h`)
+//	timeBegin := time.Now().Add(duration)
+//	timeBegin = time.Date(timeBegin.Year(), timeBegin.Month(), timeBegin.Day(), 0, 0, 0, 0, timeBegin.Location())
+//	//model.AppDB.Model(&orders).Delete(`order_time<? and refresh_type=？`, timeBegin.String()[0:10], `carry`)
+//	//model.AppDB.Model(&orders).Delete(`order_time<? and refresh_type=？`, timeBegin.String()[0:10],  `comp`)
+//	failRows, _ := model.AppDB.Model(&orders).Select(`market,amount_type,order_side,date(order_time),refresh_type,count(*)`).
+//		Where(`status=?`, `fail`).Group(`market,order_side,date(order_time),amount_type,refresh_type`).
+//		Order(`date(order_time) desc`).Rows()
+//	failData := make(map[string]float64) // market - amount_type - side - date - fail count
+//	if failRows != nil {
+//		for failRows.Next() {
+//			var marketName, side, date, amountType, refreshType string
+//			var orderNum float64
+//			_ = failRows.Scan(&marketName, &amountType, &side, &date, &refreshType, &orderNum)
+//			key := fmt.Sprintf(`%s-%s-%s-%s-%s`, marketName, amountType, side, date, refreshType)
+//			if (marketName == model.OKEX && amountType == model.AppConfig.GetAccounts(model.OKEX)[0].Key) ||
+//				(marketName == model.Binance && amountType == model.AppConfig.GetAccounts(model.Binance)[0].Key) ||
+//				(marketName == model.Kucoin && amountType == model.AppConfig.GetAccounts(model.Kucoin)[0].Key) {
+//				failData[key] = orderNum
+//			}
+//		}
+//	}
+//	failRows, _ = model.AppDB.Model(&orders).Select(`market,amount_type,order_side,date(order_time-interval '8 hour'),refresh_type,count(*)`).
+//		Where(`status=?`, `fail`).Group(`market,order_side,date(order_time-interval '8 hour'),amount_type,refresh_type`).
+//		Order(`date(order_time-interval '8 hour') desc`).Rows()
+//	if failRows != nil {
+//		for failRows.Next() {
+//			var marketName, side, date, amountType, refreshType string
+//			var orderNum float64
+//			_ = failRows.Scan(&marketName, &amountType, &side, &date, &refreshType, &orderNum)
+//			key := fmt.Sprintf(`%s-%s-%s-%s-%s`, marketName, amountType, side, date, refreshType)
+//			if (marketName == model.Ftx && amountType == model.AppConfig.GetAccounts(model.Ftx)[0].Key) ||
+//				(marketName == model.Gate && amountType == model.AppConfig.GetAccounts(model.Gate)[0].Key) {
+//				failData[key] = orderNum
+//			}
+//		}
+//	}
+//	carryRows, _ := model.AppDB.Model(&orders).Select(`market,amount_type,order_side,sum(price*abs(amount)),date(order_time),refresh_type,count(*)`).
+//		Group(`market,order_side,date(order_time),amount_type,refresh_type`).Order(`date(order_time) desc`).Rows()
+//	carryFrontMsg := ``
+//	if carryRows != nil {
+//		for carryRows.Next() {
+//			var marketName, side, date, amountType, refreshType string
+//			var value, orderNum, failRate float64
+//			_ = carryRows.Scan(&marketName, &amountType, &side, &value, &date, &refreshType, &orderNum)
+//			key := fmt.Sprintf(`%s-%s-%s-%s-%s`, marketName, amountType, side, date, refreshType)
+//			if (refreshType != model.FunctionTurtle && refreshType != model.FunctionGrid) &&
+//				((marketName == model.OKEX && amountType == model.AppConfig.GetAccounts(model.OKEX)[0].Key) ||
+//					(marketName == model.Binance && amountType == model.AppConfig.GetAccounts(model.Binance)[0].Key) ||
+//					(marketName == model.Kucoin && amountType == model.AppConfig.GetAccounts(model.Kucoin)[0].Key)) {
+//				if orderNum > 0 {
+//					failRate = failData[key] / orderNum
+//				}
+//				carryFrontMsg += fmt.Sprintf("%s交易额 in USD: %s %s %f 类型：%s 单数:%f 失败率: %f\n",
+//					marketName, date, side, value, refreshType, orderNum, failRate)
+//			}
+//		}
+//		carryRows.Close()
+//	}
+//	carryRows, _ = model.AppDB.Model(&orders).Select(`market,amount_type,order_side,sum(price*abs(amount)),date(order_time-interval '8 hour'),refresh_type,count(*)`).
+//		Group(`market,order_side,date(order_time-interval '8 hour'),amount_type,refresh_type`).Order(`date(order_time-interval '8 hour') desc`).Rows()
+//	if carryRows != nil {
+//		for carryRows.Next() {
+//			var marketName, side, date, amountType, refreshType string
+//			var value, orderNum, failRate float64
+//			_ = carryRows.Scan(&marketName, &amountType, &side, &value, &date, &refreshType, &orderNum)
+//			key := fmt.Sprintf(`%s-%s-%s-%s-%s`, marketName, amountType, side, date, refreshType)
+//			if (marketName == model.Ftx && amountType == model.AppConfig.GetAccounts(model.Ftx)[0].Key) ||
+//				(marketName == model.Gate && amountType == model.AppConfig.GetAccounts(model.Gate)[0].Key) {
+//				if orderNum > 0 {
+//					failRate = failData[key] / orderNum
+//				}
+//				carryFrontMsg += fmt.Sprintf("%s交易额 in USD: %s %s %f 类型：%s 单数:%f 失败率: %f\n",
+//					marketName, date, side, value, refreshType, orderNum, failRate)
+//			}
+//		}
+//		carryRows.Close()
+//	}
+//	msg += carryFrontMsg
+//	for _, userKey := range userKeys {
+//		msg += model.GetCarryInfo(userKey, ``) + "\n"
+//	}
+//	msg += model.AppMetric.ToString() + "\n"
+//	msg += model.AppConfig.ToString()
+//	c.String(http.StatusOK, msg)
+//}
 
 func RefreshParameters(c *gin.Context) {
 	util.Notice(`controller refreshing`)

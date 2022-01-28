@@ -37,7 +37,7 @@ func getMarketsGate(key, secret string) (success bool, marketInfos map[string]*m
 // 市场minSize按照张数计算的
 func appendFutureMarketGate(key, secret string, marketInfos map[string]*model.MarketInfo) {
 	client, ctx := getClientGate(key, secret)
-	contracts, _, futureErr := client.FuturesApi.ListFuturesContracts(ctx, "usdt")
+	contracts, _, futureErr := client.FuturesApi.ListFuturesContracts(ctx, `usdt`)
 	if futureErr != nil {
 		panicGateError(key, "ListFuturesContracts", futureErr)
 	}
@@ -47,7 +47,7 @@ func appendFutureMarketGate(key, secret string, marketInfos map[string]*model.Ma
 		}
 		marketInfo := &model.MarketInfo{Market: model.Gate}
 		coin := strings.Split(contract.Name, `_`)[0]
-		marketInfo.Name = coin + model.GetPerpTail(model.Gate)
+		marketInfo.Name = coin + model.UniStandardTail[model.MarketTypePerp]
 		minPrice, _ := strconv.ParseFloat(contract.OrderPriceRound, 64)
 		marketInfo.PriceIncrement = minPrice
 		marketInfo.PriceDecimal = util.NumDecPlaces(minPrice)
@@ -92,9 +92,9 @@ func appendRelatedMarketsGate(key, secret string, marketInfos map[string]*model.
 			panicGateError(key, "ListCrossMarginCurrencies", marginErr)
 		}
 		for _, margin := range marginCurrencyPairs {
-			symbol := margin.Name + model.GetSpotTail(model.Gate)
+			dialectSymbol := margin.Name + model.DialectTail[model.MarketTypeSpot][model.Gate]
 			for _, spot := range spotCurrencyPairs {
-				if spot.Id == symbol {
+				if spot.Id == dialectSymbol {
 					if spot.TradeStatus != "tradable" {
 						break
 					}
@@ -103,7 +103,7 @@ func appendRelatedMarketsGate(key, secret string, marketInfos map[string]*model.
 					//util.Notice(fmt.Sprintf("现货交易对：%s", spotData))
 					//util.Notice(fmt.Sprintf("杠杆交易对：%s", marginData))
 					marketInfo := &model.MarketInfo{Market: model.Gate}
-					marketInfo.Name = symbol
+					marketInfo.Name = margin.Name + model.UniStandardTail[model.MarketTypeSpot]
 					marketInfo.PriceDecimal = int(spot.Precision)
 					marketInfo.PriceIncrement = 1 / math.Pow10(int(spot.Precision))
 					marketInfo.SizeIncrement = 1 / math.Pow10(int(spot.AmountPrecision))
@@ -116,7 +116,7 @@ func appendRelatedMarketsGate(key, secret string, marketInfos map[string]*model.
 					}
 					marketInfo.BorrowSizeMin, _ = strconv.ParseFloat(margin.MinBorrowAmount, 64)
 					marketInfo.BorrowUsdtMax, _ = strconv.ParseFloat(margin.UserMaxBorrowAmount, 64)
-					marketInfos[symbol] = marketInfo
+					marketInfos[marketInfo.Name] = marketInfo
 					break
 				}
 			}
@@ -126,7 +126,7 @@ func appendRelatedMarketsGate(key, secret string, marketInfos map[string]*model.
 
 func setPosSideGate(key, secret string) {
 	client, ctx := getClientGate(key, secret)
-	mode, _, err := client.FuturesApi.SetDualMode(ctx, "usdt", false)
+	mode, _, err := client.FuturesApi.SetDualMode(ctx, `usdt`, false)
 	if err != nil {
 		panicGateError(key, "setPosSideGate", err)
 	}
@@ -146,7 +146,7 @@ func setMarginSettingGate(key, secret string) {
 
 func transferGate(key string, secret string, transferType string, amount float64) {
 	client, ctx := getClientGate(key, secret)
-	param := gateApi.Transfer{Currency: "USDT", Amount: fmt.Sprintf("%.6f", amount), Settle: "usdt"}
+	param := gateApi.Transfer{Currency: `USDT`, Amount: fmt.Sprintf("%.6f", amount), Settle: `usdt`}
 	if transferType == "MAIN_UMFUTURE" {
 		if model.AppConfig.GateSpot {
 			param.From = "spot"
@@ -263,7 +263,7 @@ var tickerHandler = gateWs.NewCallBack(func(msg *gateWs.UpdateMsg) {
 		if update.Contract == "" {
 			return
 		}
-		symbol = strings.Split(update.Contract, "_")[0] + model.GetPerpTail(model.Gate)
+		symbol = strings.Split(update.Contract, "_")[0] + model.UniStandardTail[model.MarketTypePerp]
 		now := int(time.Now().UnixNano() / int64(time.Millisecond))
 		bidPrice, _ := strconv.ParseFloat(update.BestBidPrice, 64)
 		_, bidAmount := model.ParseRealAmount(model.Gate, symbol, float64(update.BestBidSize))
@@ -359,17 +359,17 @@ func WsDepthServeGate() (err error) {
 	futureSubs := make([]string, 0)
 	symbols := model.GetMarketSymbols(model.Gate)
 	for symbol := range symbols {
-		if strings.LastIndex(symbol, model.GetSpotTail(model.Gate)) == len(symbol)-len(model.GetSpotTail(model.Gate)) &&
-			len(symbol)-len(model.GetSpotTail(model.Gate)) > 0 {
-			spotSubs = append(spotSubs, symbol)
-			spotPayload := append(make([]string, 0), symbol, "5", "100ms")
+		_, dialectSymbol := model.GetDialectFromStandard(model.Gate, symbol)
+		if strings.LastIndex(symbol, model.UniStandardTail[model.MarketTypeSpot]) == len(symbol)-len(model.UniStandardTail[model.MarketTypeSpot]) &&
+			len(symbol)-len(model.UniStandardTail[model.MarketTypeSpot]) > 0 {
+			spotSubs = append(spotSubs, dialectSymbol)
+			spotPayload := append(make([]string, 0), dialectSymbol, "5", "100ms")
 			if spotBookSubErr := wsSpot.Subscribe(gateWs.ChannelSpotOrderBook, spotPayload); spotBookSubErr != nil {
 				util.Notice(fmt.Sprintf("spotBookWs Subscribe err:%s", spotBookSubErr.Error()))
 			}
-		}
-		if strings.LastIndex(symbol, model.GetPerpTail(model.Gate)) == len(symbol)-len(model.GetPerpTail(model.Gate)) &&
-			len(symbol)-len(model.GetPerpTail(model.Gate)) > 0 {
-			futureSubs = append(futureSubs, symbol[:len(symbol)-len(model.GetPerpTail(model.Gate))]+model.GetSpotTail(model.Gate))
+		} else if strings.LastIndex(symbol, model.UniStandardTail[model.MarketTypePerp]) == len(symbol)-len(model.UniStandardTail[model.MarketTypePerp]) &&
+			len(symbol)-len(model.UniStandardTail[model.MarketTypePerp]) > 0 {
+			futureSubs = append(futureSubs, dialectSymbol)
 		}
 	}
 	if len(spotSubs) > 0 {
@@ -406,7 +406,7 @@ func getBalanceGate(key string, secret string) (success bool, balances []*model.
 			// 此处未计算可以借入的金额
 			balance.AvailableWithBorrow, _ = strconv.ParseFloat(account.Available, 64)
 			balance.Amount = balance.AvailableWithBorrow + balance.FrozenAmount - balance.Borrow
-			priceGet, bidAsk := model.AppMarkets.GetBidAsk(balance.Coin+model.GetSpotTail(model.Gate), model.Gate)
+			priceGet, bidAsk := model.AppMarkets.GetBidAsk(balance.Coin+model.UniStandardTail[model.MarketTypeSpot], model.Gate)
 			if priceGet {
 				balance.UsdValue = balance.Amount * bidAsk.Bids[0].Price
 			}
@@ -432,7 +432,7 @@ func getBalanceGate(key string, secret string) (success bool, balances []*model.
 			// 此处未计算可以借入的金额
 			balance.AvailableWithBorrow, _ = strconv.ParseFloat(item.Available, 64)
 			balance.Amount = balance.AvailableWithBorrow + balance.FrozenAmount - balance.Borrow
-			priceGet, bidAsk := model.AppMarkets.GetBidAsk(balance.Coin+model.GetSpotTail(model.Gate), model.Gate)
+			priceGet, bidAsk := model.AppMarkets.GetBidAsk(balance.Coin+model.UniStandardTail[model.MarketTypeSpot], model.Gate)
 			if priceGet {
 				balance.UsdValue = balance.Amount * bidAsk.Bids[0].Price
 			}
@@ -444,14 +444,14 @@ func getBalanceGate(key string, secret string) (success bool, balances []*model.
 
 func getPositionsGate(key string, secret string) (success bool, positions []*model.Position, accountValue, available float64) {
 	client, ctx := getClientGate(key, secret)
-	account, _, accountErr := client.FuturesApi.ListFuturesAccounts(ctx, "usdt")
-	positionList, _, positionsErr := client.FuturesApi.ListPositions(ctx, "usdt")
+	account, _, accountErr := client.FuturesApi.ListFuturesAccounts(ctx, `usdt`)
+	positionList, _, positionsErr := client.FuturesApi.ListPositions(ctx, `usdt`)
 	if accountErr != nil || positionsErr != nil {
 		if accountErr != nil {
-			panicGateError(key, "getFuturesAccountsGate", accountErr)
+			panicGateError(key, `getFuturesAccountsGate`, accountErr)
 		}
 		if positionsErr != nil {
-			panicGateError(key, "getPositionsGate", positionsErr)
+			panicGateError(key, `getPositionsGate`, positionsErr)
 		}
 		time.Sleep(time.Second * 2)
 		util.SocketInfo(`fail to refresh future balance gate`)
@@ -463,7 +463,7 @@ func getPositionsGate(key string, secret string) (success bool, positions []*mod
 	available, _ = strconv.ParseFloat(account.Available, 64)
 	positions = make([]*model.Position, 0)
 	for _, item := range positionList {
-		currency := strings.Split(item.Contract, "_")[0] + model.GetPerpTail(model.Gate)
+		currency := strings.Split(item.Contract, "_")[0] + model.UniStandardTail[model.MarketTypePerp]
 		position := &model.Position{Market: model.Gate, Ts: util.GetNowUnixMillion(), Currency: currency}
 		_, realAmount := model.ParseRealAmount(model.Gate, currency, float64(item.Size))
 		position.Holding = realAmount
@@ -479,44 +479,49 @@ func getPositionsGate(key string, secret string) (success bool, positions []*mod
 
 func cancelOrderGate(key, secret, symbol, orderId string) (result bool) {
 	client, ctx := getClientGate(key, secret)
-	if strings.Contains(symbol, model.GetSpotTail(model.Gate)) {
+	success, marketType, _ := model.GetCoinFromStandard(symbol)
+	_, dialectSymbol := model.GetDialectFromStandard(model.Gate, symbol)
+	if success && marketType == model.MarketTypeSpot {
 		param := &gateApi.CancelOrderOpts{}
 		if model.AppConfig.GateSpot {
 			param.Account = optional.NewString("spot")
 		} else {
 			param.Account = optional.NewString("cross_margin")
 		}
-		order, _, err := client.SpotApi.CancelOrder(ctx, orderId, symbol, param)
+		order, _, err := client.SpotApi.CancelOrder(ctx, orderId, dialectSymbol, param)
 		if err != nil {
-			panicGateError(key, fmt.Sprintf("cancelSpotOrdersGate %s %s", symbol, orderId), err)
+			panicGateError(key, fmt.Sprintf("cancelSpotOrdersGate %s %s", dialectSymbol, orderId), err)
 			return false
 		}
 		marshal, _ := json.Marshal(order)
 		util.SocketInfo(`cancel related order response: %s`, marshal)
 		return true
-	} else {
-		symbol = model.GetCoin(model.Gate, symbol) + model.GetSpotTail(model.Gate)
-		order, _, err := client.FuturesApi.CancelFuturesOrder(ctx, "usdt", orderId)
+	} else if success && marketType == model.MarketTypePerp {
+		order, _, err := client.FuturesApi.CancelFuturesOrder(ctx, `usdt`, orderId)
 		if err != nil {
-			panicGateError(key, "cancelFutureOrderGate", err)
+			panicGateError(key, `cancelFutureOrderGate`, err)
 			return false
 		}
 		marshal, _ := json.Marshal(order)
 		util.SocketInfo(`cancel future order response: %s`, marshal)
 		return true
 	}
+	util.Notice(`cancel can not recognize gate symbol %s`, dialectSymbol)
+	return false
 }
 
 func cancelOrdersGate(key string, secret string, symbol string) (result bool) {
 	client, ctx := getClientGate(key, secret)
-	if strings.Contains(symbol, model.GetSpotTail(model.Gate)) {
+	success, marketType, _ := model.GetCoinFromStandard(symbol)
+	_, dialectSymbol := model.GetDialectFromStandard(model.Gate, symbol)
+	if success && marketType == model.MarketTypeSpot {
 		param := &gateApi.CancelOrdersOpts{}
 		if model.AppConfig.GateSpot {
 			param.Account = optional.NewString("spot")
 		} else {
 			param.Account = optional.NewString("cross_margin")
 		}
-		orders, _, err := client.SpotApi.CancelOrders(ctx, symbol, param)
+		orders, _, err := client.SpotApi.CancelOrders(ctx, dialectSymbol, param)
 		if err != nil {
 			panicGateError(key, "cancelSpotOrdersGate", err)
 			return false
@@ -524,9 +529,8 @@ func cancelOrdersGate(key string, secret string, symbol string) (result bool) {
 		marshal, _ := json.Marshal(orders)
 		util.SocketInfo(`cancel related orders response: %s`, marshal)
 		return true
-	} else {
-		symbol = model.GetCoin(model.Gate, symbol) + model.GetSpotTail(model.Gate)
-		orders, _, err := client.FuturesApi.CancelFuturesOrders(ctx, "usdt", symbol, nil)
+	} else if success && marketType == model.MarketTypePerp {
+		orders, _, err := client.FuturesApi.CancelFuturesOrders(ctx, `usdt`, dialectSymbol, nil)
 		if err != nil {
 			panicGateError(key, "cancelFutureOrdersGate", err)
 			return false
@@ -535,14 +539,19 @@ func cancelOrdersGate(key string, secret string, symbol string) (result bool) {
 		util.SocketInfo(`cancel future orders response: %s`, marshal)
 		return true
 	}
+	util.Notice(`cancel orders can not recognize gate symbol %s`, symbol)
+	return false
 }
 
 func placeOrderGate(key, secret string, order *model.Order, orderSide, orderType, symbol string, price, amount float64) {
 	client, ctx := getClientGate(key, secret)
 	orderPrice, decimal := model.FormatPrice(model.Gate, symbol, model.OrderSideBuy, price)
 	orderPriceStr := util.CutTailZero(strconv.FormatFloat(orderPrice, 'f', decimal, 64))
-	if strings.Contains(symbol, model.GetSpotTail(model.Gate)) {
-		relatedOrder := gateApi.Order{Price: orderPriceStr, Side: orderSide, CurrencyPair: symbol, Type: orderType}
+	success, marketType, _ := model.GetCoinFromStandard(symbol)
+	_, dialectSymbol := model.GetDialectFromStandard(model.Gate, symbol)
+	order.Symbol = symbol
+	if success && marketType == model.MarketTypeSpot {
+		relatedOrder := gateApi.Order{Price: orderPriceStr, Side: orderSide, CurrencyPair: dialectSymbol, Type: orderType}
 		if model.AppConfig.GateSpot {
 			relatedOrder.Account = "spot"
 		} else {
@@ -564,7 +573,7 @@ func placeOrderGate(key, secret string, order *model.Order, orderSide, orderType
 			orderResp, _ := json.Marshal(createOrder)
 			util.Notice(`create related order response: %s`, orderResp)
 			order.OrderId = createOrder.Id
-			order.Symbol = createOrder.CurrencyPair
+			//order.Symbol = createOrder.CurrencyPair
 			secondUnix, _ := strconv.ParseInt(createOrder.CreateTime, 10, 64)
 			order.OrderTime = time.Unix(secondUnix, 0)
 			if orderPriceStr != createOrder.Price {
@@ -581,16 +590,15 @@ func placeOrderGate(key, secret string, order *model.Order, orderSide, orderType
 			}
 			return
 		}
-	} else {
-		futuresOrder := gateApi.FuturesOrder{Price: orderPriceStr,
-			Contract: model.GetCoin(model.Gate, symbol) + model.GetSpotTail(model.Gate)}
+	} else if success && marketType == model.MarketTypePerp {
+		futuresOrder := gateApi.FuturesOrder{Price: orderPriceStr, Contract: dialectSymbol}
 		futuresOrder.Size, _ = strconv.ParseInt(util.CutTailZero(
 			fmt.Sprintf(`%f`, model.GetAmountInMarket(model.Gate, symbol, amount, price))), 10, 64)
 		if orderSide == model.OrderSideSell {
 			futuresOrder.Size = -1 * futuresOrder.Size
 		}
 		util.Notice(`create future order request: %v`, futuresOrder)
-		createFuturesOrder, _, err := client.FuturesApi.CreateFuturesOrder(ctx, "usdt", futuresOrder)
+		createFuturesOrder, _, err := client.FuturesApi.CreateFuturesOrder(ctx, `usdt`, futuresOrder)
 		if err != nil {
 			panicGateError(key, "placeFutureOrderGate", err)
 			order.Status = model.CarryStatusFail
@@ -602,7 +610,6 @@ func placeOrderGate(key, secret string, order *model.Order, orderSide, orderType
 				util.Notice(fmt.Sprintf("warning warning, blow up!!!"))
 			}
 			order.OrderId = strconv.FormatInt(createFuturesOrder.Id, 10)
-			order.Symbol = model.GetCoin(model.Gate, symbol) + model.GetPerpTail(model.Gate)
 			order.OrderTime = time.Unix(int64(createFuturesOrder.CreateTime), 0)
 			if orderPriceStr != createFuturesOrder.Price {
 				util.Notice(fmt.Sprintf(`diff future price req %s resp %s`, orderPriceStr, createFuturesOrder.Price))
@@ -616,7 +623,7 @@ func placeOrderGate(key, secret string, order *model.Order, orderSide, orderType
 }
 
 func getMaxLoanGate(coin string) (success bool, maxLoan float64) {
-	symbol := coin + model.GetSpotTail(model.Gate)
+	symbol := coin + model.UniStandardTail[model.MarketTypeSpot]
 	marketMargin := model.GetMarketInfo(model.Gate, symbol)
 	_, tickRelated := model.AppMarkets.GetBidAsk(symbol, model.Gate)
 	if tickRelated != nil && marketMargin != nil {
@@ -627,8 +634,8 @@ func getMaxLoanGate(coin string) (success bool, maxLoan float64) {
 
 func getFundingRateGate(key, secret, symbol string) (fundingRate *model.FundingRate) {
 	client, ctx := getClientGate(key, secret)
-	contract, _, err := client.FuturesApi.GetFuturesContract(
-		ctx, `usdt`, model.GetCoin(model.Gate, symbol)+model.GetSpotTail(model.Gate))
+	_, dialectSymbol := model.GetDialectFromStandard(model.Gate, symbol)
+	contract, _, err := client.FuturesApi.GetFuturesContract(ctx, `usdt`, dialectSymbol)
 	if err != nil {
 		panicGateError(key, "getFundingRateGate", err)
 		return nil
@@ -642,10 +649,11 @@ func getFundingRateGate(key, secret, symbol string) (fundingRate *model.FundingR
 	}
 }
 
-func setBidAskGate(key, secret, symbol string) {
+// SetGateBidAsk 用于处理永续合约买卖一不准确（现货无需，因为订阅方式不同）
+func SetGateBidAsk(key, secret, symbol string) {
 	client, ctx := getClientGate(key, secret)
-	contract := model.GetCoin(model.Gate, symbol) + `_USDT`
-	orderBook, _, err := client.FuturesApi.ListFuturesOrderBook(ctx, `usdt`, contract,
+	_, dialectSymbol := model.GetDialectFromStandard(model.Gate, symbol)
+	orderBook, _, err := client.FuturesApi.ListFuturesOrderBook(ctx, `usdt`, dialectSymbol,
 		&gateApi.ListFuturesOrderBookOpts{Limit: optional.NewInt32(1)})
 	if err != nil {
 		panicGateError(key, "setFutureTicker", err)
@@ -668,9 +676,8 @@ func setBidAskGate(key, secret, symbol string) {
 
 func queryOrderGate(key, secret string, order *model.Order) {
 	client, ctx := getClientGate(key, secret)
-	tailPerp := model.GetPerpTail(model.Gate)
-	tailSpot := model.GetSpotTail(model.Gate)
-	if tailPerp == order.Symbol[len(order.Symbol)-len(tailPerp):] {
+	success, marketType, _ := model.GetCoinFromStandard(order.Symbol)
+	if success && marketType == model.MarketTypePerp {
 		orderFuture, _, err := client.FuturesApi.GetFuturesOrder(ctx, `usdt`, order.OrderId)
 		if err != nil {
 			panicGateError(key, "GetFuturesOrder", err)
@@ -690,7 +697,7 @@ func queryOrderGate(key, secret string, order *model.Order) {
 		_, order.DealAmount = model.ParseRealAmount(order.Market, order.Symbol, float64(orderFuture.Size-orderFuture.Left))
 		util.SocketInfo(`%s %s %s query result:%s %f %v`,
 			order.Market, order.Symbol, order.OrderId, order.Status, order.DealAmount, orderFuture)
-	} else if tailSpot == order.Symbol[len(order.Symbol)-len(tailSpot):] {
+	} else if success && marketType == model.MarketTypeSpot {
 		orderSpot, _, err := client.SpotApi.GetOrder(ctx, order.OrderId, order.Symbol, nil)
 		if err != nil {
 			panicGateError(key, "GetSpotOrder", err)

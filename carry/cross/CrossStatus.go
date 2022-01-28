@@ -26,12 +26,12 @@ var validCrossCoin = map[string][]string{
 					model.Ftx:  {`REEF`, `ORBS`, `ONE`}}
 var carryFail = make(map[string]int64) // key fail num
 var carryStop = make(map[string]bool)
-var lastOrderIndex = make(map[string]map[string]int64)                           // market - symbol - index
-var lastOrders = make(map[string]map[string][]*model.Order, lastOrderLength)     // market - symbol - []order
-var carryStatus = make(map[string]map[string]map[string]map[string]*CarryStatus) // coin/market/symbol/key/CarryStatus
-var contractMarkets = make(map[string]*contractMarket)                           // key - contractMarket
-var spotMarkets = make(map[string]*spotMarket)                                   // key - spotMarket
-var lastOrderSymbol map[string]map[string]string                                 // key/market/symbol
+var lastOrderIndex = make(map[string]map[string]int64)                        // market - symbol - index
+var lastOrders = make(map[string]map[string][]*model.Order, lastOrderLength)  // market - symbol - []order
+var statuses = make(map[string]map[string]map[string]map[string]*CarryStatus) // coin/market/symbol/key/CarryStatus
+var contractMarkets = make(map[string]*contractMarket)                        // key - contractMarket
+var spotMarkets = make(map[string]*spotMarket)                                // key - spotMarket
+var lastOrderSymbol map[string]map[string]string                              // key/market/symbol
 var crossLock, crossMarketLock sync.Mutex
 var crossing bool
 var doCross = false
@@ -111,7 +111,7 @@ func isValidSymbol(market, symbol string) bool {
 	if validCrossCoin[market] == nil {
 		return false
 	}
-	coin := model.GetCoin(market, symbol)
+	_, _, coin := model.GetCoinFromStandard(symbol)
 	for _, validCoin := range validCrossCoin[market] {
 		if validCoin == coin {
 			return true
@@ -164,7 +164,7 @@ func GetHoldings(accounts map[string]*model.Account) (holding [][]interface{}) {
 		if sm != nil && sm.balances != nil {
 			for _, balance := range sm.balances {
 				if balance != nil && balance.Amount != 0 {
-					symbol := balance.Coin + model.GetSpotTail(balance.Market)
+					symbol := balance.Coin + model.UniStandardTail[model.MarketTypeSpot]
 					valid := false
 					setting := model.GetSetting(model.FunctionCross, balance.Market, symbol)
 					if setting != nil {
@@ -192,8 +192,8 @@ func GetHoldings(accounts map[string]*model.Account) (holding [][]interface{}) {
 				}
 				tickGet, tick := model.AppMarkets.GetBidAsk(position.Currency, position.Market)
 				if position != nil && position.Holding != 0 {
-					coin := model.GetCoin(position.Market, position.Currency)
-					if tickGet {
+					success, _, coin := model.GetCoinFromStandard(position.Currency)
+					if tickGet && success {
 						holding = append(holding, []interface{}{position.Market, coin, position.Currency,
 							math.Round(position.Holding), math.Round(tick.Bids[0].Price * position.Holding), valid})
 						coinHold[coin] += position.Holding
@@ -253,25 +253,25 @@ func GetCrossMarketValue(key string) (market string, inAllSpot, contractAccountV
 func getCarryStatus(coin, market, symbol, key string) *CarryStatus {
 	crossLock.Lock()
 	defer crossLock.Unlock()
-	if carryStatus[coin] == nil || carryStatus[coin][market] == nil || carryStatus[coin][market][symbol] == nil {
+	if statuses[coin] == nil || statuses[coin][market] == nil || statuses[coin][market][symbol] == nil {
 		return nil
 	}
-	return carryStatus[coin][market][symbol][key]
+	return statuses[coin][market][symbol][key]
 }
 
 func setCarryStatus(coin, market, symbol, key string, status *CarryStatus) {
 	crossLock.Lock()
 	defer crossLock.Unlock()
-	if carryStatus[coin] == nil {
-		carryStatus[coin] = make(map[string]map[string]map[string]*CarryStatus)
+	if statuses[coin] == nil {
+		statuses[coin] = make(map[string]map[string]map[string]*CarryStatus)
 	}
-	if carryStatus[coin][market] == nil {
-		carryStatus[coin][market] = make(map[string]map[string]*CarryStatus)
+	if statuses[coin][market] == nil {
+		statuses[coin][market] = make(map[string]map[string]*CarryStatus)
 	}
-	if carryStatus[coin][market][symbol] == nil {
-		carryStatus[coin][market][symbol] = make(map[string]*CarryStatus)
+	if statuses[coin][market][symbol] == nil {
+		statuses[coin][market][symbol] = make(map[string]*CarryStatus)
 	}
-	carryStatus[coin][market][symbol][key] = status
+	statuses[coin][market][symbol][key] = status
 }
 
 func pauseCarry(key string) {
@@ -335,8 +335,7 @@ func addLastCarry(order *model.Order, setting *model.Setting) {
 		if lastOrder == nil || order.OrderTime.Add(tenMin).Before(now) || order.OrderTime.Add(second).After(now) || account == nil {
 			continue
 		}
-		queryOrder := api.QueryOrderById(lastOrder.AmountType, account.Secret, lastOrder.Market, lastOrder.Symbol,
-			lastOrder.Instrument, lastOrder.OrderType, lastOrder.OrderId)
+		queryOrder := api.QueryOrderById(lastOrder.AmountType, account.Secret, lastOrder.Market, lastOrder.Symbol, lastOrder.OrderType, lastOrder.OrderId)
 		if queryOrder == nil {
 			continue
 		}
