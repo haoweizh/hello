@@ -58,14 +58,14 @@ var dataSet = make(map[string]map[string]map[string]*TurtleData) // market - sym
 
 func calcTurtleAmount(key, secret string, setting *model.Setting, price, n float64) (amount float64) {
 	switch setting.Market {
-	case model.Bitmex:
-		p := api.GetBtcBalanceBitmex(key, secret)
-		switch setting.Symbol {
-		case `btcusd_p`:
-			amount = 0.02 * p / n * price * price
-		case `ethusd_p`:
-			amount = 20000 * p / n
-		}
+	//case model.Bitmex:
+	//	p := deprecated.GetBtcBalanceBitmex(key, secret)
+	//	switch setting.Symbol {
+	//	case `btcusd_p`:
+	//		amount = 0.02 * p / n * price * price
+	//	case `ethusd_p`:
+	//		amount = 20000 * p / n
+	//	}
 	case model.Ftx, model.OKEX:
 		_, _, p, _ := api.GetBalances(key, secret, setting.Market)
 		amount = 0.01 * p / n

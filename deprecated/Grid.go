@@ -1,4 +1,4 @@
-package dreprecated
+package deprecated
 
 //var marketSymbolGrid = make(map[string]map[string]*grid)
 //var syncGrid = make(chan interface{}, 10)

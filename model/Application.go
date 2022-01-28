@@ -48,7 +48,6 @@ const OrderSideBuy = `buy`
 const OrderSideSell = `sell`
 const OrderSideLiquidateLong = `liquidateLong`
 const OrderSideLiquidateShort = `liquidateShort`
-const FunctionHang = `hang`
 const FunctionTurtle = `turtle`
 const FunctionGrid = `grid`
 const FunctionCarry = `carry`
@@ -56,8 +55,10 @@ const FunctionCross = `cross`
 
 const FunctionDCarry = `dcarry`
 const FunctionComplement = `comp`
-const FunctionPostonlyHandler = `postonly`
 const PostOnly = `ParticipateDoNotInitiate`
+
+//const FunctionHang = `hang`
+//const FunctionPostonlyHandler = `postonly`
 
 var AppDB *gorm.DB
 var AppSettings []Setting
@@ -88,42 +89,6 @@ func IsRelatedTickTimeout(market string, delayRelated int64) (timeout bool) {
 		return delayRelated > 1000
 	}
 	return true
-}
-
-func GetDialectSymbol(market, symbol string) (dialectSymbol string) {
-	switch market {
-	case Bitmex:
-		symbol = strings.Replace(symbol, `btc`, `xbt`, -1)
-		return strings.ToUpper(strings.Split(symbol, `_`)[0])
-	case BybitPerp:
-		tail := GetPerpTail(market)
-		if len(symbol) > len(tail) && symbol[len(symbol)-len(tail):] == tail {
-			return symbol[0:len(symbol)-len(tail)] + `USDT`
-		}
-	case BybitSpot:
-		tail := GetSpotTail(market)
-		if len(symbol) > len(tail) && symbol[len(symbol)-len(tail):] == tail {
-			return symbol[0:len(symbol)-len(tail)] + `USDT`
-		}
-	}
-	return ``
-}
-
-func GetStandardSymbol(market, symbol string) (standardSymbol string) {
-	symbol = strings.ToLower(symbol)
-	switch market {
-	case Bitmex:
-		return strings.Replace(symbol, `xbt`, `btc`, -1) + `_p`
-	case BybitPerp:
-		if len(symbol) > 4 && strings.EqualFold(symbol[len(symbol)-4:], `usdt`) {
-			return strings.ToUpper(symbol[0:len(symbol)-4] + GetPerpTail(market))
-		}
-	case BybitSpot:
-		if len(symbol) > 4 && strings.EqualFold(symbol[len(symbol)-4:], `usdt`) {
-			return strings.ToUpper(symbol[0:len(symbol)-4] + GetSpotTail(market))
-		}
-	}
-	return standardSymbol
 }
 
 var orderStatusMap = map[string]map[string]string{ // market - market status - united status

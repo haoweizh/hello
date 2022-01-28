@@ -3,6 +3,7 @@ package model
 import (
 	"fmt"
 	"hello/util"
+	"strings"
 	"time"
 )
 
@@ -219,7 +220,7 @@ func GetCoin(market, symbol string) (coin string) {
 	case BybitPerp:
 		tails = []string{`-PERP`}
 	case BybitSpot:
-		tails = []string{`-PERP`}
+		tails = []string{`-USDT`}
 	case Huobi:
 		tails = []string{`usdt`, `-usdt`}
 	}
@@ -229,6 +230,66 @@ func GetCoin(market, symbol string) (coin string) {
 		}
 	}
 	return
+}
+
+func GetDialectPerp(market, symbol string) (dialectSymbol string) {
+	switch market {
+	case Bitmex:
+		symbol = strings.Replace(symbol, `btc`, `xbt`, -1)
+		return strings.ToUpper(strings.Split(symbol, `_`)[0])
+	case BybitPerp:
+		tail := GetPerpTail(market)
+		if len(symbol) > len(tail) && symbol[len(symbol)-len(tail):] == tail {
+			return symbol[0:len(symbol)-len(tail)] + `USDT`
+		}
+	case BybitSpot:
+		tail := GetSpotTail(market)
+		if len(symbol) > len(tail) && symbol[len(symbol)-len(tail):] == tail {
+			return symbol[0:len(symbol)-len(tail)] + `USDT`
+		}
+	}
+	return ``
+}
+
+func GetDialectSpot(market, symbol string) (dialectSymbol string) {
+	switch market {
+	case BybitSpot:
+		tail := GetSpotTail(market)
+		if len(symbol) > len(tail) && symbol[len(symbol)-len(tail):] == tail {
+			return symbol[0:len(symbol)-len(tail)] + `USDT`
+		}
+	}
+	return ``
+}
+
+// GetStandardPerp from dialect perp symbol
+func GetStandardPerp(market, symbol string) (standardSymbol string) {
+	symbol = strings.ToLower(symbol)
+	switch market {
+	case Bitmex:
+		return strings.Replace(symbol, `xbt`, `btc`, -1) + `_p`
+	case BybitPerp:
+		if len(symbol) > 4 && strings.EqualFold(symbol[len(symbol)-4:], `usdt`) {
+			return strings.ToUpper(symbol[0:len(symbol)-4] + GetPerpTail(market))
+		}
+	case BybitSpot:
+		if len(symbol) > 4 && strings.EqualFold(symbol[len(symbol)-4:], `usdt`) {
+			return strings.ToUpper(symbol[0:len(symbol)-4] + GetSpotTail(market))
+		}
+	}
+	return standardSymbol
+}
+
+// GetStandardSpot from dialect spot symbol
+func GetStandardSpot(market, symbol string) (standardSymbol string) {
+	symbol = strings.ToLower(symbol)
+	switch market {
+	case BybitSpot:
+		if len(symbol) > 4 && strings.EqualFold(symbol[len(symbol)-4:], `usdt`) {
+			return strings.ToUpper(symbol[0:len(symbol)-4] + GetSpotTail(market))
+		}
+	}
+	return standardSymbol
 }
 
 func GetSpotTail(market string) string {

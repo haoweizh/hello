@@ -1,4 +1,4 @@
-package dreprecated
+package deprecated
 
 //import (
 //	"fmt"

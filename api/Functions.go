@@ -155,8 +155,8 @@ func CancelOrder(key, secret, market, symbol, instrument, orderType, orderId str
 		//result, errCode, msg = cancelOrderBinance(key, secret, symbol, orderId)
 	case model.Coinpark:
 		result, errCode, msg = cancelOrderCoinpark(key, secret, orderId)
-	case model.Bitmex:
-		result, errCode, msg = cancelOrderBitmex(key, secret, orderId)
+	//case model.Bitmex:
+	//	result, errCode, msg = deprecated.cancelOrderBitmex(key, secret, orderId)
 	case model.BybitPerp:
 		result, errCode, msg, order = cancelOrderBybitPerp(key, secret, symbol, orderId)
 	case model.BybitSpot:
@@ -223,8 +223,8 @@ func GetDayCandle(key, secret, market, symbol, instrument string, timeCandle tim
 	end := timeCandle.Add(dEnd)
 	var candles map[string]*model.Candle
 	switch market {
-	case model.Bitmex:
-		candles = getCandlesBitmex(key, secret, symbol, `1d`, begin, end, 20)
+	//case model.Bitmex:
+	//	candles = deprecated.getCandlesBitmex(key, secret, symbol, `1d`, begin, end, 20)
 	case model.Ftx:
 		candles = getCandlesFtx(key, secret, symbol, `1d`, begin, end, 40)
 	case model.OKEX:
@@ -362,9 +362,9 @@ func GetFundingRate(key, secret, market, symbol string, lock *sync.Mutex) (succe
 	}
 	var expireTime int64
 	switch market {
-	case model.Bitmex:
-		rate, expireTime = getFundingRateBitmex(key, secret, symbol)
-		model.SetFundingRate(market, symbol, &model.FundingRate{Rate: rate, ExpireTime: expireTime, UpdateTime: now})
+	//case model.Bitmex:
+	//	rate, expireTime = deprecated.getFundingRateBitmex(key, secret, symbol)
+	//	model.SetFundingRate(market, symbol, &model.FundingRate{Rate: rate, ExpireTime: expireTime, UpdateTime: now})
 	case model.BybitPerp:
 		rate, expireTime = getFundingRateBybitPerp(key, secret, symbol)
 		model.SetFundingRate(market, symbol, &model.FundingRate{Rate: rate, ExpireTime: expireTime, UpdateTime: now})
@@ -479,23 +479,6 @@ func QueryOrderById(key, secret, market, symbol, instrument, orderType, orderId 
 		}
 	}
 	return order
-}
-
-func GetPosition(market, symbol, address string) (success bool, position *model.Position) {
-	switch market {
-	case model.DFuture:
-		if symbol[len(symbol)-4:] == `usdt` {
-			symbol = symbol[0 : len(symbol)-4]
-		}
-		for true {
-			success, position = getPositionsDFuture(symbol, address)
-			if success {
-				return
-			}
-			time.Sleep(time.Second * 5)
-		}
-	}
-	return false, nil
 }
 
 // GetPositions
@@ -629,8 +612,8 @@ func PlaceOrder(key, secret, orderSide, orderType, market, symbol, instrument, o
 			util.Notice(`【发现4003错误】sleep 3 minutes`)
 			time.Sleep(time.Minute * 3)
 		}
-	case model.Bitmex:
-		placeOrderBitmex(order, key, secret, orderSide, orderType, orderParam, symbol, price, amount)
+	//case model.Bitmex:
+	//	deprecated.placeOrderBitmex(order, key, secret, orderSide, orderType, orderParam, symbol, price, amount)
 	case model.BybitPerp:
 		order = placeOrderBybitPerp(key, secret, orderSide, orderType, orderParam, symbol, price, amount)
 	case model.BybitSpot:
@@ -740,16 +723,18 @@ func GetWSSubscribe(market, symbol, subType string) (subscribe interface{}) {
 		return `bibox_sub_spot_` + strings.ToUpper(symbol) + `_depth`
 	case model.Bitmex:
 		if subType == model.SubscribeDeal {
-			return `trade:` + model.GetDialectSymbol(model.Bitmex, symbol)
+			return `trade:` + model.GetDialectPerp(model.Bitmex, symbol)
 		} else if subType == model.SubscribeDepth {
 			//return `quote:` + DialectSymbol[Bitmex][symbol]
 			//return `orderBookL2:` + DialectSymbol[Bitmex][symbol]
 			//return `orderBookL2_25:` + DialectSymbol[Bitmex][symbol]
-			return `orderBook10:` + model.GetDialectSymbol(model.Bitmex, symbol)
+			return `orderBook10:` + model.GetDialectPerp(model.Bitmex, symbol)
 		}
 		return ``
-	case model.BybitPerp, model.BybitSpot:
-		return model.GetDialectSymbol(market, symbol)
+	case model.BybitPerp:
+		return model.GetDialectPerp(market, symbol)
+	case model.BybitSpot:
+		return model.GetDialectSpot(market, symbol)
 	case model.Ftx:
 		if subType == model.SubscribeDepth {
 			return []string{`orderbook`, symbol}
@@ -883,7 +868,8 @@ func filterCross(market, symbol string) bool {
 func InitCrossMarketInfos() {
 	infoPool := make(map[string][]*model.MarketInfo) // coin - []marketInfos
 	// model.Binance, model.Ftx, model.Gate,
-	markets := []string{model.OKEX, model.Ftx, model.Gate}
+	//markets := []string{model.OKEX, model.Ftx, model.Gate}
+	markets := []string{model.BybitPerp, model.BybitSpot}
 	for _, market := range markets {
 		marketInfo := GetMarketInfos(market)
 		for _, info := range marketInfo {
@@ -998,8 +984,8 @@ func CreateMarketDepthServer(markets *model.Markets, market string, orderHandler
 		channels, err = WsDepthServeBinance(markets, nil)
 	case model.Coinpark:
 		channels, err = WsDepthServeCoinpark(markets, nil)
-	case model.Bitmex:
-		channels, err = WsDepthServeBitmex(markets, nil)
+	//case model.Bitmex:
+	//	channels, err = deprecated.WsDepthServeBitmex(markets, nil)
 	case model.BybitPerp:
 		channels, err = WsDepthServeBybitPerp(markets, orderHandler)
 	case model.BybitSpot:
