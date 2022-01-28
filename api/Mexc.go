@@ -263,7 +263,10 @@ func spotQueryOrderMexc(key, secret string, order *model.Order) {
 	}
 
 	if len(resp.Data) == 1 {
-		order.Symbol = resp.Data[0].Symbol
+		success, marketType, coin := model.GetCoinFromDialect(model.Mexc, resp.Data[0].Symbol)
+		if success { // TODO 需要确保Mexc永续和现货tail不同，否则marketType不可用
+			order.Symbol = coin + model.UniStandardTail[marketType]
+		}
 		order.Price = getFloat64OrDefault(resp.Data[0].Price)             // 挂单价格
 		order.FrozenQuantity = getFloat64OrDefault(resp.Data[0].Quantity) // 挂单数量
 		order.DealPrice = getFloat64OrDefault(resp.Data[0].DealAmount)    // 成交金额
@@ -299,8 +302,10 @@ func contractQueryOrderMexc(key, secret string, order *model.Order) {
 		util.Notice(logMsg)
 		return
 	}
-
-	order.Symbol = resp.Data.Symbol
+	success, marketType, coin := model.GetCoinFromDialect(model.Mexc, resp.Data.Symbol)
+	if success { // TODO 需要确保Mexc永续和现货tail不同，否则marketType不可用
+		order.Symbol = coin + model.UniStandardTail[marketType]
+	}
 	order.Price = resp.Data.Price            // 挂单价格
 	order.FrozenQuantity = resp.Data.Vol     // 挂单数量
 	order.DealPrice = resp.Data.DealAvgPrice // 成交金额
@@ -428,13 +433,18 @@ func appendContractMarketMexc(key, secret string, marketInfos map[string]*model.
 	}
 
 	for _, symbolInfo := range resp.Data {
+		success, marketType, coin := model.GetCoinFromDialect(model.Mexc, addMexcContractSymbolSuffix(symbolInfo.Symbol))
+		if !success {
+			continue
+		}
 		marketInfo := &model.MarketInfo{}
-		marketInfo.Name = addMexcContractSymbolSuffix(symbolInfo.Symbol)
-		marketInfo.PriceIncrement = float64(symbolInfo.PriceUnit) // 价格的最小步进单位
-		marketInfo.PriceDecimal = symbolInfo.PriceScale           // 价格精度
-		marketInfo.SizeMin = symbolInfo.MinVol                    // 订单张数下限
-		marketInfo.SizeMax = symbolInfo.MaxVol                    // 订单张数上限
-		marketInfo.SizeIncrement = float64(symbolInfo.VolUnit)    // 数量的最小步进单位
+		// TODO 此处需要确保Mexc的现货和期货的tail不同，否则marketTYpe不可用
+		marketInfo.Name = coin + model.UniStandardTail[marketType]
+		marketInfo.PriceIncrement = symbolInfo.PriceUnit       // 价格的最小步进单位
+		marketInfo.PriceDecimal = symbolInfo.PriceScale        // 价格精度
+		marketInfo.SizeMin = symbolInfo.MinVol                 // 订单张数下限
+		marketInfo.SizeMax = symbolInfo.MaxVol                 // 订单张数上限
+		marketInfo.SizeIncrement = float64(symbolInfo.VolUnit) // 数量的最小步进单位
 		marketInfo.CTCurrency = symbolInfo.BaseCoin
 		marketInfo.CTValue = float64(symbolInfo.ContractSize) // 一个合约等于多少个币
 		marketInfos[marketInfo.Name] = marketInfo
@@ -954,11 +964,14 @@ func addMexcContractSymbolSuffix(symbol string) string {
 	return symbol
 }
 
-func removeMexcContractSymbolSuffix(symbol string) string {
+func removeMexcContractSymbolSuffix(symbol string) (standardSymbol string) {
 	if strings.HasSuffix(symbol, mexcContractSymbolSuffix) {
-		return strings.TrimSuffix(symbol, mexcContractSymbolSuffix)
+		symbol = strings.TrimSuffix(symbol, mexcContractSymbolSuffix)
+		success, marketType, coin := model.GetCoinFromDialect(model.Mexc, symbol)
+		if success { // TODO 需要确保Mexc永续和现货tail不同，否则marketType不可用
+			return coin + model.UniStandardTail[marketType]
+		}
 	}
-
 	return symbol
 }
 

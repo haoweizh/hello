@@ -250,7 +250,7 @@ func GetFundingRate(key, secret, market, symbol string, lock *sync.Mutex) (succe
 		lock.Lock()
 	}
 	//非永续合约的资金费率为0
-	_, marketType, _ := model.GetCoinFromStandard(symbol)
+	_, marketType, _, _ := model.GetFromStandard(market, symbol)
 	if marketType != model.MarketTypePerp {
 		return true, 0
 	}
@@ -564,7 +564,7 @@ func GetWSSubscribe(market, symbol, subType string) (subscribe interface{}) {
 	case model.OKEX:
 		return symbol
 	case model.Binance: // XRPUSDT: XRPUSDT@depth5   XRP-PERP: XRPUSDT@depth5
-		_, dialectSymbol := model.GetDialectFromStandard(model.Binance, symbol)
+		_, _, _, dialectSymbol := model.GetFromStandard(model.Binance, symbol)
 		if subType == model.SubscribeDepth {
 			return strings.ToLower(dialectSymbol) + `@depth5@100ms`
 		}
@@ -580,10 +580,10 @@ func GetWSSubscribe(market, symbol, subType string) (subscribe interface{}) {
 	//	}
 	//	return ``
 	case model.BybitPerp:
-		_, dialectSymbol := model.GetDialectFromStandard(model.BybitPerp, symbol)
+		_, _, _, dialectSymbol := model.GetFromStandard(model.BybitPerp, symbol)
 		return dialectSymbol
 	case model.BybitSpot:
-		_, dialectSymbol := model.GetDialectFromStandard(model.BybitSpot, symbol)
+		_, _, _, dialectSymbol := model.GetFromStandard(model.BybitSpot, symbol)
 		return dialectSymbol
 	case model.Ftx:
 		if subType == model.SubscribeDepth {
@@ -649,7 +649,7 @@ func filterCross(market, symbol string) bool {
 			return true
 		}
 	}
-	_, _, coin := model.GetCoinFromStandard(symbol)
+	_, _, coin, _ := model.GetFromStandard(market, symbol)
 	switch market {
 	case model.Ftx:
 		switch coin {
@@ -680,12 +680,12 @@ func filterCross(market, symbol string) bool {
 func InitCrossMarketInfos() {
 	infoPool := make(map[string][]*model.MarketInfo) // coin - []marketInfos
 	// model.Binance, model.Ftx, model.Gate,
-	//markets := []string{model.OKEX, model.Ftx, model.Gate}
-	markets := []string{model.BybitPerp, model.BybitSpot}
+	markets := []string{model.OKEX, model.Ftx}
+	//markets := []string{model.BybitPerp, model.BybitSpot}
 	for _, market := range markets {
 		marketInfo := GetMarketInfos(market)
 		for _, info := range marketInfo {
-			success, _, coin := model.GetCoinFromStandard(info.Name)
+			success, _, coin, _ := model.GetFromStandard(market, info.Name)
 			if success && coin != `` {
 				if infoPool[coin] == nil {
 					infoPool[coin] = make([]*model.MarketInfo, 0)

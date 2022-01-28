@@ -122,7 +122,11 @@ func handleTickerFtx(markets *model.Markets, response *simplejson.Json) {
 	if response == nil {
 		return
 	}
-	symbol := response.Get("market").MustString()
+	success, marketType, coin := model.GetCoinFromDialect(model.Ftx, response.Get("market").MustString())
+	if !success {
+		return
+	}
+	symbol := coin + model.UniStandardTail[marketType]
 	dataType := response.Get(`type`).MustString()
 	data := response.Get(`data`)
 	if data == nil || data.Get(`bid`) == nil || data.Get(`ask`) == nil || data.Get(`bidSize`) == nil ||
@@ -168,7 +172,11 @@ func handleDepthFtx(markets *model.Markets, response *simplejson.Json) {
 	if response == nil {
 		return
 	}
-	symbol := response.Get("market").MustString()
+	success, marketType, coin := model.GetCoinFromDialect(model.Ftx, response.Get("market").MustString())
+	if !success {
+		return
+	}
+	symbol := coin + model.UniStandardTail[marketType]
 	dataType := response.Get(`type`).MustString()
 	data := response.Get(`data`)
 	if data.Interface() != nil && (dataType == `partial` || dataType == `update`) {
@@ -586,7 +594,8 @@ func getMarketsFtx(key, secret string) (marketInfos map[string]*model.MarketInfo
 			value := item.(map[string]interface{})
 			marketInfo := &model.MarketInfo{Market: model.Ftx, SizeMax: 90000000}
 			if value[`name`] != nil {
-				marketInfo.Name = value[`name`].(string)
+				_, marketType, coin := model.GetCoinFromDialect(model.Ftx, value[`name`].(string))
+				marketInfo.Name = coin + model.UniStandardTail[marketType]
 			} else {
 				continue
 			}
@@ -622,7 +631,7 @@ func _(key, secret string) (fundingRates []*model.FundingRate) {
 			value := item.(map[string]interface{})
 			//fundingTime, _ := time.Parse(time.RFC3339, value[`time`].(string))
 			rate, _ := value[`rate`].(json.Number).Float64()
-			fundingRates[i] = &model.FundingRate{Symbol: value[`future`].(string), Rate: rate}
+			fundingRates[i] = &model.FundingRate{Rate: rate}
 		}
 	}
 	return fundingRates
@@ -636,7 +645,8 @@ func parsePositionFtx(position *model.Position, item map[string]interface{}) {
 		position.LiquidationPrice, _ = item[`estimatedLiquidationPrice`].(json.Number).Float64()
 	}
 	if item[`future`] != nil {
-		position.Currency = item[`future`].(string)
+		_, _, coin := model.GetCoinFromDialect(model.Ftx, item[`future`].(string))
+		position.Currency = coin + model.UniStandardTail[model.MarketTypePerp]
 	}
 	if item[`netSize`] != nil {
 		position.Holding, _ = item[`netSize`].(json.Number).Float64()
@@ -680,7 +690,10 @@ func parseOrderFtx(order *model.Order, item map[string]interface{}) {
 		order.OrderId = item[`id`].(json.Number).String()
 	}
 	if item[`market`] != nil {
-		order.Symbol = item[`market`].(string)
+		success, marketType, coin := model.GetCoinFromDialect(model.Ftx, item[`market`].(string))
+		if success {
+			order.Symbol = coin + model.UniStandardTail[marketType]
+		}
 	}
 	if item[`price`] != nil {
 		order.Price, _ = item[`price`].(json.Number).Float64()

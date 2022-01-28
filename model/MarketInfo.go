@@ -56,7 +56,7 @@ func GetAmountInMarket(market string, symbol string, amount, price float64) (for
 	if marketInfo == nil || marketInfo.SizeIncrement == 0 || marketInfo.SizeMin == 0 {
 		return 0
 	}
-	success, _, coin := GetCoinFromStandard(symbol)
+	success, _, coin, _ := GetFromStandard(market, symbol)
 	if success && marketInfo.CTValue > 0 && marketInfo.CTCurrency == coin {
 		amount = amount / marketInfo.CTValue
 	}
@@ -95,11 +95,11 @@ func FormatCrossPair(marketBuy, marketSell, symbolBuy, symbolSell string, amount
 	incSell := marketInfoSell.SizeIncrement
 	minBuy := marketInfoBuy.SizeMin
 	minSell := marketInfoSell.SizeMin
-	success, _, coin := GetCoinFromStandard(symbolBuy)
+	success, _, coin, _ := GetFromStandard(marketBuy, symbolBuy)
 	if success && marketInfoBuy.CTCurrency == coin && marketInfoBuy.CTValue > 0 {
 		incBuy, minBuy = incBuy*marketInfoBuy.CTValue, minBuy*marketInfoBuy.CTValue
 	}
-	success, _, coin = GetCoinFromStandard(symbolSell)
+	success, _, coin, _ = GetFromStandard(marketSell, symbolSell)
 	if success && marketInfoSell.CTCurrency == coin && marketInfoSell.CTValue > 0 {
 		incSell, minSell = incSell*marketInfoSell.CTValue, minSell*marketInfoSell.CTValue
 	}

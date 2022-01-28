@@ -659,7 +659,9 @@ func getMarketsOKEX(key, secret string) (marketInfos map[string]*model.MarketInf
 			for _, info := range resultJson.Get(`data`).MustArray() {
 				value := info.(map[string]interface{})
 				if value[`instId`] != nil {
-					marketInfo := &model.MarketInfo{Market: model.OKEX, Name: value[`instId`].(string)}
+					marketInfo := &model.MarketInfo{Market: model.OKEX}
+					_, marketType, coin := model.GetCoinFromDialect(model.OKEX, value[`instId`].(string))
+					marketInfo.Name = coin + model.UniStandardTail[marketType]
 					if value[`lotSz`] != nil {
 						marketInfo.SizeIncrement, _ = strconv.ParseFloat(value[`lotSz`].(string), 64)
 					}
@@ -760,7 +762,10 @@ func parseOrderOKEX(value map[string]interface{}) (order *model.Order) {
 		order.DealPrice, _ = strconv.ParseFloat(value[`avgPx`].(string), 64)
 	}
 	if value[`instId`] != nil {
-		order.Symbol = value[`instId`].(string)
+		success, marketType, coin := model.GetCoinFromDialect(model.OKEX, value[`instId`].(string))
+		if success {
+			order.Symbol = coin + model.UniStandardTail[marketType]
+		}
 	}
 	if value[`ordId`] != nil {
 		order.OrderId = value[`ordId`].(string)
@@ -962,7 +967,11 @@ func parsePositionOKEX(value map[string]interface{}) (success bool, position *mo
 		position.Margin, _ = strconv.ParseFloat(value[`margin`].(string), 64)
 	}
 	if value[`instId`] != nil { // 	产品ID，如 BTC-USD-180216
-		position.Currency = value[`instId`].(string)
+		success, _, coin := model.GetCoinFromDialect(model.OKEX, value[`instId`].(string))
+		if !success {
+			return false, nil
+		}
+		position.Currency = coin + model.UniStandardTail[model.MarketTypePerp]
 	}
 	//posCcy 仓位资产币种，仅适用于币币杠杆仓位
 	if value[`pos`] != nil {
@@ -1149,7 +1158,7 @@ func getMaxSizeOKEX(key, secret, symbol string) (success bool, maxBuy, maxSell f
 		}
 		if data[`maxSell`] != nil {
 			maxSell, _ = strconv.ParseFloat(data[`maxSell`].(string), 64)
-			_, marketType, _ := model.GetCoinFromStandard(symbol)
+			_, marketType, _, _ := model.GetFromStandard(model.Kucoin, symbol)
 			if marketType == model.MarketTypeSpot {
 				havePrice, price := model.AppMarkets.GetPrice(symbol)
 				if !havePrice {
@@ -1184,9 +1193,7 @@ func getFundingRateOKEX(key, secret, symbol string) (fundingRate *model.FundingR
 			Rate:       rate,
 			RateNext:   rateNext,
 			UpdateTime: util.GetNow().Unix(),
-			ExpireTime: rateTime,
-			Symbol:     symbol,
-		}
+			ExpireTime: rateTime}
 	}
 	return nil
 }

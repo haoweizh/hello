@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"github.com/bitly/go-simplejson"
 	"io/ioutil"
-	"math"
 	"net/url"
 	"strconv"
 	"strings"
@@ -23,7 +22,16 @@ func CutTailZero(in string) (out string) {
 	return strings.Trim(out, `.`)
 }
 
-func UnGzip(byte []byte) []byte {
+func EndWith(full, part string) bool {
+	beginLen := len(full) - len(part)
+	if beginLen < 0 {
+		return false
+	}
+	return full[beginLen:] == part
+}
+
+// UnGzip
+func _(byte []byte) []byte {
 	r, err := gzip.NewReader(bytes.NewBuffer(byte))
 	if err != nil {
 		fmt.Println(err.Error())
@@ -77,21 +85,6 @@ func GetNowUnixMillion() int64 {
 	return time.Now().UnixNano() / int64(time.Millisecond)
 }
 
-func FormatNum(input float64, decimal float64) (num float64, str string) {
-	if decimal == 0.5 {
-		base := float64(int(math.Round(input*2))) / 2
-		return FormatNum(base, 1)
-	}
-	if decimal == 1.5 {
-		base := float64(int(math.Round(input*20))) / 20
-		return FormatNum(base, 2)
-	}
-	format := `%.` + strconv.Itoa(int(decimal)) + `f`
-	str = fmt.Sprintf(format, input)
-	num, _ = strconv.ParseFloat(str, 64)
-	return num, str
-}
-
 // NumDecPlaces 返回小数点后有效数字位数
 func NumDecPlaces(v float64) int {
 	s := strconv.FormatFloat(v, 'f', -1, 64)
@@ -115,3 +108,18 @@ func _(f func()) {
 		}
 	}()
 }
+
+//func FormatNum(input float64, decimal float64) (num float64, str string) {
+//	if decimal == 0.5 {
+//		base := float64(int(math.Round(input*2))) / 2
+//		return FormatNum(base, 1)
+//	}
+//	if decimal == 1.5 {
+//		base := float64(int(math.Round(input*20))) / 20
+//		return FormatNum(base, 2)
+//	}
+//	format := `%.` + strconv.Itoa(int(decimal)) + `f`
+//	str = fmt.Sprintf(format, input)
+//	num, _ = strconv.ParseFloat(str, 64)
+//	return num, str
+//}

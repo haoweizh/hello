@@ -69,11 +69,12 @@ func appendRelatedMarketsGate(key, secret string, marketInfos map[string]*model.
 	}
 	if model.AppConfig.GateSpot {
 		for _, spot := range spotCurrencyPairs {
-			if spot.TradeStatus != "tradable" {
+			success, _, coin := model.GetCoinFromDialect(model.Gate, spot.Id)
+			if spot.TradeStatus != "tradable" || !success {
 				continue
 			}
 			marketInfo := &model.MarketInfo{Market: model.Gate}
-			marketInfo.Name = spot.Id
+			marketInfo.Name = coin + model.UniStandardTail[model.MarketTypeSpot]
 			marketInfo.PriceDecimal = int(spot.Precision)
 			marketInfo.PriceIncrement = 1 / math.Pow10(int(spot.Precision))
 			marketInfo.SizeIncrement = 1 / math.Pow10(int(spot.AmountPrecision))
@@ -92,9 +93,9 @@ func appendRelatedMarketsGate(key, secret string, marketInfos map[string]*model.
 			panicGateError(key, "ListCrossMarginCurrencies", marginErr)
 		}
 		for _, margin := range marginCurrencyPairs {
-			dialectSymbol := margin.Name + model.DialectTail[model.MarketTypeSpot][model.Gate]
 			for _, spot := range spotCurrencyPairs {
-				if spot.Id == dialectSymbol {
+				_, _, coin := model.GetCoinFromDialect(model.Gate, spot.Id)
+				if coin == margin.Name {
 					if spot.TradeStatus != "tradable" {
 						break
 					}
@@ -359,7 +360,7 @@ func WsDepthServeGate() (err error) {
 	futureSubs := make([]string, 0)
 	symbols := model.GetMarketSymbols(model.Gate)
 	for symbol := range symbols {
-		_, dialectSymbol := model.GetDialectFromStandard(model.Gate, symbol)
+		_, _, _, dialectSymbol := model.GetFromStandard(model.Gate, symbol)
 		if strings.LastIndex(symbol, model.UniStandardTail[model.MarketTypeSpot]) == len(symbol)-len(model.UniStandardTail[model.MarketTypeSpot]) &&
 			len(symbol)-len(model.UniStandardTail[model.MarketTypeSpot]) > 0 {
 			spotSubs = append(spotSubs, dialectSymbol)
@@ -463,7 +464,8 @@ func getPositionsGate(key string, secret string) (success bool, positions []*mod
 	available, _ = strconv.ParseFloat(account.Available, 64)
 	positions = make([]*model.Position, 0)
 	for _, item := range positionList {
-		currency := strings.Split(item.Contract, "_")[0] + model.UniStandardTail[model.MarketTypePerp]
+		_, _, coin := model.GetCoinFromDialect(model.Gate, item.Contract)
+		currency := coin + model.UniStandardTail[model.MarketTypePerp]
 		position := &model.Position{Market: model.Gate, Ts: util.GetNowUnixMillion(), Currency: currency}
 		_, realAmount := model.ParseRealAmount(model.Gate, currency, float64(item.Size))
 		position.Holding = realAmount
@@ -479,8 +481,7 @@ func getPositionsGate(key string, secret string) (success bool, positions []*mod
 
 func cancelOrderGate(key, secret, symbol, orderId string) (result bool) {
 	client, ctx := getClientGate(key, secret)
-	success, marketType, _ := model.GetCoinFromStandard(symbol)
-	_, dialectSymbol := model.GetDialectFromStandard(model.Gate, symbol)
+	success, marketType, _, dialectSymbol := model.GetFromStandard(model.Gate, symbol)
 	if success && marketType == model.MarketTypeSpot {
 		param := &gateApi.CancelOrderOpts{}
 		if model.AppConfig.GateSpot {
@@ -512,8 +513,7 @@ func cancelOrderGate(key, secret, symbol, orderId string) (result bool) {
 
 func cancelOrdersGate(key string, secret string, symbol string) (result bool) {
 	client, ctx := getClientGate(key, secret)
-	success, marketType, _ := model.GetCoinFromStandard(symbol)
-	_, dialectSymbol := model.GetDialectFromStandard(model.Gate, symbol)
+	success, marketType, _, dialectSymbol := model.GetFromStandard(model.Gate, symbol)
 	if success && marketType == model.MarketTypeSpot {
 		param := &gateApi.CancelOrdersOpts{}
 		if model.AppConfig.GateSpot {
@@ -547,8 +547,7 @@ func placeOrderGate(key, secret string, order *model.Order, orderSide, orderType
 	client, ctx := getClientGate(key, secret)
 	orderPrice, decimal := model.FormatPrice(model.Gate, symbol, model.OrderSideBuy, price)
 	orderPriceStr := util.CutTailZero(strconv.FormatFloat(orderPrice, 'f', decimal, 64))
-	success, marketType, _ := model.GetCoinFromStandard(symbol)
-	_, dialectSymbol := model.GetDialectFromStandard(model.Gate, symbol)
+	success, marketType, _, dialectSymbol := model.GetFromStandard(model.Gate, symbol)
 	order.Symbol = symbol
 	if success && marketType == model.MarketTypeSpot {
 		relatedOrder := gateApi.Order{Price: orderPriceStr, Side: orderSide, CurrencyPair: dialectSymbol, Type: orderType}
@@ -634,7 +633,7 @@ func getMaxLoanGate(coin string) (success bool, maxLoan float64) {
 
 func getFundingRateGate(key, secret, symbol string) (fundingRate *model.FundingRate) {
 	client, ctx := getClientGate(key, secret)
-	_, dialectSymbol := model.GetDialectFromStandard(model.Gate, symbol)
+	_, _, _, dialectSymbol := model.GetFromStandard(model.Gate, symbol)
 	contract, _, err := client.FuturesApi.GetFuturesContract(ctx, `usdt`, dialectSymbol)
 	if err != nil {
 		panicGateError(key, "getFundingRateGate", err)
@@ -644,15 +643,13 @@ func getFundingRateGate(key, secret, symbol string) (fundingRate *model.FundingR
 	return &model.FundingRate{
 		Rate:       rate,
 		UpdateTime: time.Now().UnixNano(),
-		ExpireTime: int64(contract.FundingNextApply),
-		Symbol:     symbol,
-	}
+		ExpireTime: int64(contract.FundingNextApply)}
 }
 
 // SetGateBidAsk 用于处理永续合约买卖一不准确（现货无需，因为订阅方式不同）
 func SetGateBidAsk(key, secret, symbol string) {
 	client, ctx := getClientGate(key, secret)
-	_, dialectSymbol := model.GetDialectFromStandard(model.Gate, symbol)
+	_, _, _, dialectSymbol := model.GetFromStandard(model.Gate, symbol)
 	orderBook, _, err := client.FuturesApi.ListFuturesOrderBook(ctx, `usdt`, dialectSymbol,
 		&gateApi.ListFuturesOrderBookOpts{Limit: optional.NewInt32(1)})
 	if err != nil {
@@ -676,7 +673,7 @@ func SetGateBidAsk(key, secret, symbol string) {
 
 func queryOrderGate(key, secret string, order *model.Order) {
 	client, ctx := getClientGate(key, secret)
-	success, marketType, _ := model.GetCoinFromStandard(order.Symbol)
+	success, marketType, _, dialectSymbol := model.GetFromStandard(model.Gate, order.Symbol)
 	if success && marketType == model.MarketTypePerp {
 		orderFuture, _, err := client.FuturesApi.GetFuturesOrder(ctx, `usdt`, order.OrderId)
 		if err != nil {
@@ -698,7 +695,7 @@ func queryOrderGate(key, secret string, order *model.Order) {
 		util.SocketInfo(`%s %s %s query result:%s %f %v`,
 			order.Market, order.Symbol, order.OrderId, order.Status, order.DealAmount, orderFuture)
 	} else if success && marketType == model.MarketTypeSpot {
-		orderSpot, _, err := client.SpotApi.GetOrder(ctx, order.OrderId, order.Symbol, nil)
+		orderSpot, _, err := client.SpotApi.GetOrder(ctx, order.OrderId, dialectSymbol, nil)
 		if err != nil {
 			panicGateError(key, "GetSpotOrder", err)
 			return

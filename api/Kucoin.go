@@ -81,11 +81,13 @@ func appendRelatedMarketsKucoin(key string, marketInfos map[string]*model.Market
 		if !related.EnableTrading || related.QuoteCurrency != `USDT` {
 			continue
 		}
-		if !model.AppConfig.KucoinSpot && !related.IsMarginEnabled {
+		success, marketType, coin := model.GetCoinFromDialect(model.Kucoin, related.Symbol)
+		if !model.AppConfig.KucoinSpot && !related.IsMarginEnabled || !success {
 			continue
 		}
 		marketInfo := &model.MarketInfo{Market: model.Kucoin}
-		marketInfo.Name = related.Symbol
+		// TODO 此处需要确保kucoin的现货和期货的tail不同，否则marketTYpe不可用
+		marketInfo.Name = coin + model.UniStandardTail[marketType]
 		marketInfo.PriceIncrement, _ = strconv.ParseFloat(related.PriceIncrement, 64)
 		marketInfo.PriceDecimal = util.NumDecPlaces(marketInfo.PriceIncrement)
 		marketInfo.SizeMin, _ = strconv.ParseFloat(related.BaseMinSize, 64)
@@ -235,7 +237,7 @@ func WsDepthServeKucoin() (channels []chan struct{}, err error) {
 	symbols := model.GetMarketSymbols(model.Kucoin)
 	futureSubscribes := make([]*kumex.WebSocketSubscribeMessage, 0)
 	for symbol := range symbols {
-		success, marketType, _ := model.GetCoinFromStandard(symbol)
+		success, marketType, _, _ := model.GetFromStandard(model.Kucoin, symbol)
 		if success && marketType == model.MarketTypePerp {
 			topic := "/contractMarket/tickerV2:" + strings.Split(symbol, "-")[0] + `USDTM`
 			futureSubscribes = append(futureSubscribes, kumex.NewSubscribeMessage(topic, false))
@@ -343,7 +345,12 @@ func handleKucoinWS(relatedMsg *kucoin.WebSocketDownstreamMessage, futureMsg *ku
 		if relatedSettingMarkets[relatedMsg.Subject] == false {
 			return
 		}
-		symbol := relatedMsg.Subject
+		success, marketType, coin := model.GetCoinFromDialect(model.Kucoin, relatedMsg.Subject)
+		if !success {
+			return
+		}
+		// TODO 需要确保Kucoin的期货现货tail不同，否则marketType不可用
+		symbol := coin + model.UniStandardTail[marketType]
 		now := int(time.Now().UnixNano() / int64(time.Millisecond))
 		//util.Notice(fmt.Sprintf("币种：%s，当前ts：%d", symbol, now))
 		updateId, _ := strconv.ParseInt(ticker.Sequence, 10, 64)
@@ -526,7 +533,7 @@ func getPositionsKucoin(key string, secret string) (success bool, positions []*m
 }
 
 func cancelOrdersKucoin(symbol string) (result bool) {
-	success, marketType, _ := model.GetCoinFromStandard(symbol)
+	success, marketType, _, _ := model.GetFromStandard(model.Kucoin, symbol)
 	if success && marketType == model.MarketTypePerp {
 		symbol = strings.Split(symbol, "-")[0] + `USDTM`
 		apiResponse, err := kucoinFutureClient("", "", "").CancelOrders(symbol)
@@ -592,7 +599,7 @@ type CreateMarginOrderModel struct {
 }
 
 func placeOrderKucoin(order *model.Order, orderSide, orderType, symbol string, price, amount float64) {
-	success, marketType, _ := model.GetCoinFromStandard(symbol)
+	success, marketType, _, _ := model.GetFromStandard(model.Kucoin, symbol)
 	if success && marketType == model.MarketTypePerp {
 		futureSymbol := strings.Split(symbol, "-")[0] + `USDTM`
 		params := make(map[string]string)

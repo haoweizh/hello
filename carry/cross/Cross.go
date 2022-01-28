@@ -167,7 +167,7 @@ func initStatus(account *model.Account, setting *model.Setting) (status *CarrySt
 	if setting == nil {
 		return
 	}
-	_, marketType, _ := model.GetCoinFromStandard(setting.Symbol)
+	_, marketType, _, _ := model.GetFromStandard(setting.Market, setting.Symbol)
 	fundingRate := 0.0
 	doRevert := false
 	localLimit := holdingLimitInU
@@ -601,7 +601,7 @@ func placeCross(statusBuy, statusSell *CarryStatus, priceBuy, priceSell, amount 
 	if statusBuy.market == model.OKEX && statusSell.market == model.OKEX {
 		var sidePerp, sideRelated string
 		var perpPrice, relatedPrice float64
-		_, _, coin := model.GetCoinFromStandard(statusBuy.symbol)
+		_, _, coin, _ := model.GetFromStandard(statusBuy.market, statusBuy.symbol)
 		if statusBuy.isSpot {
 			sideRelated = model.OrderSideBuy
 			relatedPrice = priceBuy

@@ -46,7 +46,7 @@ func GetSettingCoins(function, market string) (coins map[string]bool) {
 		if setting == nil {
 			continue
 		}
-		success, _, coin := GetCoinFromStandard(setting.Symbol)
+		success, _, coin, _ := GetFromStandard(setting.Market, setting.Symbol)
 		if success {
 			coins[coin] = true
 		}

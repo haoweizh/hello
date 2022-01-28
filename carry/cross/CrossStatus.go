@@ -111,7 +111,7 @@ func isValidSymbol(market, symbol string) bool {
 	if validCrossCoin[market] == nil {
 		return false
 	}
-	_, _, coin := model.GetCoinFromStandard(symbol)
+	_, _, coin, _ := model.GetFromStandard(market, symbol)
 	for _, validCoin := range validCrossCoin[market] {
 		if validCoin == coin {
 			return true
@@ -192,7 +192,7 @@ func GetHoldings(accounts map[string]*model.Account) (holding [][]interface{}) {
 				}
 				tickGet, tick := model.AppMarkets.GetBidAsk(position.Currency, position.Market)
 				if position != nil && position.Holding != 0 {
-					success, _, coin := model.GetCoinFromStandard(position.Currency)
+					success, _, coin, _ := model.GetFromStandard(position.Market, position.Currency)
 					if tickGet && success {
 						holding = append(holding, []interface{}{position.Market, coin, position.Currency,
 							math.Round(position.Holding), math.Round(tick.Bids[0].Price * position.Holding), valid})

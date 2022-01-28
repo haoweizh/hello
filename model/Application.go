@@ -60,42 +60,33 @@ var AppSettings []Setting
 var AppConfig *Config
 var AppMarkets = NewMarkets()
 var AppPause = false
-var DialectTail = map[string]map[string]string{
+var dialectTail = map[string]map[string]string{
 	MarketTypeSpot: {Gate: `_USDT`, Ftx: `/USD`, OKEX: `-USDT`, BybitSpot: `USDT`, Binance: `USDT`},
 	MarketTypePerp: {Gate: `_USDT`, Ftx: `-PERP`, OKEX: `-USDT-SWAP`, BybitPerp: `USDT`, Binance: `USDT`}}
 var UniStandardTail = map[string]string{MarketTypeSpot: `_USDT`, MarketTypePerp: `_PERP`}
 
-// GetCoinFromStandard from uni-tail formatted symbol
-func GetCoinFromStandard(standardSymbol string) (success bool, marketType, coin string) {
+func GetFromStandard(market, standardSymbol string) (success bool, marketType, coin, dialectSymbol string) {
 	for mType, tail := range UniStandardTail {
-		coinLen := len(standardSymbol) - len(tail)
-		if coinLen > 0 && standardSymbol[coinLen:] == tail {
-			return true, mType, standardSymbol[0 : len(standardSymbol)-len(tail)]
+		if util.EndWith(standardSymbol, tail) {
+			coin := standardSymbol[0 : len(standardSymbol)-len(tail)]
+			return true, mType, coin, coin + dialectTail[mType][market]
 		}
 	}
 	util.Notice(`fail to parse standard symbol %s`, standardSymbol)
-	return false, ``, ``
+	return false, ``, ``, ``
 }
 
-func GetStandardFromDialect(marketType, market, dialectSymbol string) (success bool, coin string) {
-	if DialectTail[marketType] != nil && DialectTail[marketType][market] != `` {
-		dialectTail := DialectTail[marketType][market]
-		coinLen := len(dialectSymbol) - len(dialectTail)
-		if coinLen > 0 && dialectSymbol[coinLen:] == dialectTail {
-			return true, dialectSymbol[0:coinLen] + UniStandardTail[marketType] + UniStandardTail[marketType]
+// GetCoinFromDialect 注意如果交易所不同市场的symbol有相同的tail，此时marketType有可能匹配错误，慎用
+func GetCoinFromDialect(market, dialectSymbol string) (success bool, marketType, coin string) {
+	for mType, tails := range dialectTail {
+		if tails[market] == `` {
+			continue
+		}
+		if util.EndWith(dialectSymbol, tails[market]) {
+			return true, mType, dialectSymbol[0 : len(dialectSymbol)-len(tails[market])]
 		}
 	}
-	util.Notice(`fail to GetStandardSymbol %s %s %s`, marketType, market, dialectSymbol)
-	return false, ``
-}
-
-func GetDialectFromStandard(market, standardSymbol string) (success bool, dialect string) {
-	success, marketType, coin := GetCoinFromStandard(standardSymbol)
-	if success && DialectTail[marketType] != nil && DialectTail[marketType][market] != `` {
-		return true, coin + DialectTail[marketType][market]
-	}
-	util.Notice(`fail to GetDialect %s %s %s`, marketType, market, standardSymbol)
-	return false, ``
+	return false, ``, ``
 }
 
 func IsTickTimeout(market string, delay int64) (timeout bool) {
@@ -268,121 +259,3 @@ func (config *Config) ToString() string {
 	str += fmt.Sprintf("handle: %s\n", config.Handle)
 	return str
 }
-
-//func GetCoin(market, symbol string) (coin string) {
-//	var tails []string
-//	switch market {
-//	case Ftx:
-//		tails = []string{`/USD`, `-PERP`}
-//	case OKEX:
-//		tails = []string{`-USDT`, `-USDT-SWAP`}
-//	case Gate:
-//		tails = []string{`_USDT`, `_PERP`}
-//	case Kucoin:
-//		tails = []string{`-USDT`, `-PERP`}
-//	case Binance:
-//		tails = []string{`-PERP`}
-//	case BybitPerp:
-//		tails = []string{`-PERP`}
-//	case BybitSpot:
-//		tails = []string{`-USDT`}
-//	case Huobi:
-//		tails = []string{`usdt`, `-usdt`}
-//	}
-//	for _, tail := range tails {
-//		if symbol[len(symbol)-len(tail):] == tail {
-//			return symbol[0 : len(symbol)-len(tail)]
-//		}
-//	}
-//	return
-//}
-//
-//func GetDialectPerp(market, symbol string) (dialectSymbol string) {
-//	switch market {
-//	case Bitmex:
-//		symbol = strings.Replace(symbol, `btc`, `xbt`, -1)
-//		return strings.ToUpper(strings.Split(symbol, `_`)[0])
-//	case BybitPerp:
-//		tail := GetPerpTail(market)
-//		if len(symbol) > len(tail) && symbol[len(symbol)-len(tail):] == tail {
-//			return symbol[0:len(symbol)-len(tail)] + `USDT`
-//		}
-//	case BybitSpot:
-//		tail := GetSpotTail(market)
-//		if len(symbol) > len(tail) && symbol[len(symbol)-len(tail):] == tail {
-//			return symbol[0:len(symbol)-len(tail)] + `USDT`
-//		}
-//	}
-//	return ``
-//}
-//
-//func GetDialectSpot(market, symbol string) (dialectSymbol string) {
-//	switch market {
-//	case BybitSpot:
-//		tail := GetSpotTail(market)
-//		if len(symbol) > len(tail) && symbol[len(symbol)-len(tail):] == tail {
-//			return symbol[0:len(symbol)-len(tail)] + `USDT`
-//		}
-//	}
-//	return ``
-//}
-//
-//// GetStandardPerp from dialect perp symbol
-//func GetStandardPerp(market, symbol string) (standardSymbol string) {
-//	symbol = strings.ToLower(symbol)
-//	switch market {
-//	case Bitmex:
-//		return strings.Replace(symbol, `xbt`, `btc`, -1) + `_p`
-//	case BybitPerp:
-//		if len(symbol) > 4 && strings.EqualFold(symbol[len(symbol)-4:], `usdt`) {
-//			return strings.ToUpper(symbol[0:len(symbol)-4] + GetPerpTail(market))
-//		}
-//	case BybitSpot:
-//		if len(symbol) > 4 && strings.EqualFold(symbol[len(symbol)-4:], `usdt`) {
-//			return strings.ToUpper(symbol[0:len(symbol)-4] + GetSpotTail(market))
-//		}
-//	}
-//	return standardSymbol
-//}
-//
-//// GetStandardSpot from dialect spot symbol
-//func GetStandardSpot(market, symbol string) (standardSymbol string) {
-//	symbol = strings.ToLower(symbol)
-//	switch market {
-//	case BybitSpot:
-//		if len(symbol) > 4 && strings.EqualFold(symbol[len(symbol)-4:], `usdt`) {
-//			return strings.ToUpper(symbol[0:len(symbol)-4] + GetSpotTail(market))
-//		}
-//	}
-//	return standardSymbol
-//}
-//
-//func GetSpotTail(market string) string {
-//	switch market {
-//	case Huobi:
-//		return `usdt`
-//	case Ftx:
-//		return `/USD`
-//	case OKEX, Kucoin, BybitSpot:
-//		return `-USDT`
-//	case Binance:
-//		return `USDT`
-//	case Gate:
-//		return `_USDT`
-//	}
-//	return ``
-//}
-//
-//func GetPerpTail(market string) string {
-//	switch market {
-//	case Huobi:
-//		return `-usdt`
-//	case OKEX:
-//		return `-USDT-SWAP`
-//	case Binance, Kucoin, Ftx, BybitPerp:
-//		return `-PERP`
-//	case Gate:
-//		return `_PERP`
-//	}
-//	return ``
-//}
