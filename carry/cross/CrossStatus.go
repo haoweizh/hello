@@ -238,9 +238,7 @@ func GetCrossMarketValue(key string) (market string, inAllSpot, contractAccountV
 	}
 	cm := getContractMarket(key)
 	if cm != nil {
-		if market == `` {
-			market = cm.market
-		}
+		market = cm.market
 		contractAccountValue = cm.accountValueInU
 		for _, position := range cm.positions {
 			unRealizedPnl += position.ProfitUnreal

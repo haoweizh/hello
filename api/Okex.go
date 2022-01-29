@@ -1045,8 +1045,8 @@ func parsePositionOKEX(value map[string]interface{}) (success bool, position *mo
 		position.Margin, _ = strconv.ParseFloat(value[`margin`].(string), 64)
 	}
 	if value[`instId`] != nil { // 	产品ID，如 BTC-USD-180216
-		success, _, coin := model.GetCoinFromDialect(model.OKEX, value[`instId`].(string))
-		if !success {
+		getCoin, _, coin := model.GetCoinFromDialect(model.OKEX, value[`instId`].(string))
+		if !getCoin {
 			return false, nil
 		}
 		position.Currency = coin + model.UniStandardTail[model.MarketTypePerp]
@@ -1061,7 +1061,7 @@ func parsePositionOKEX(value map[string]interface{}) (success bool, position *mo
 		}
 	}
 	//pos 持仓数量
-	return
+	return true, position
 }
 
 func parseBalanceOKEX(value map[string]interface{}) (balance *model.Balance) {
@@ -1210,8 +1210,6 @@ func getPositionsOKEX(key, secret string) (success bool, positions []*model.Posi
 		result, position := parsePositionOKEX(item.(map[string]interface{}))
 		if result {
 			positions = append(positions, position)
-		} else {
-			success = false
 		}
 	}
 	return success, positions

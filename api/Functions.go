@@ -678,8 +678,9 @@ func filterCross(market, symbol string) bool {
 func InitCrossMarketInfos() {
 	infoPool := make(map[string][]*model.MarketInfo) // coin - []marketInfos
 	// model.Binance, model.Ftx,
-	//markets := []string{model.OKEX, model.Ftx, model.Gate}
-	markets := []string{model.BybitPerp, model.BybitSpot, model.OKEX, model.Ftx, model.Gate}
+	markets := []string{model.OKEX, model.Ftx, model.Gate}
+	//markets := []string{model.BybitPerp, model.BybitSpot, model.OKEX, model.Ftx, model.Gate}
+	//markets := model.GetMarkets()
 	for _, market := range markets {
 		marketInfo := GetMarketInfos(market)
 		for _, info := range marketInfo {

@@ -68,18 +68,18 @@ func Test_getCommonMarketInfos(t *testing.T) {
 
 func Test_BalAndPos(t *testing.T) {
 	model.NewConfig()
-	balMarkets := []string{model.OKEX, model.BybitSpot, model.Ftx, model.Gate}
+	//balMarkets := []string{model.OKEX, model.BybitSpot, model.Ftx, model.Gate}
+	//for _, market := range balMarkets {
+	//	account := model.AppConfig.GetAccounts(market)[0]
+	//	success, balances, total, collateral := api.GetBalances(account.Key, account.Secret, market)
+	//	fmt.Println(fmt.Sprintf(`%v %f %v %d`, success, total, collateral, len(balances)))
+	//	for _, balance := range balances {
+	//		if balance.Coin == `USDT` || balance.Coin == `USD` {
+	//			fmt.Println(fmt.Sprintf(`usd amount %s %f`, market, balance.Amount))
+	//		}
+	//	}
+	//}
 	posMarkets := []string{model.OKEX, model.BybitPerp, model.Ftx, model.Gate}
-	for _, market := range balMarkets {
-		account := model.AppConfig.GetAccounts(market)[0]
-		success, balances, total, collateral := api.GetBalances(account.Key, account.Secret, market)
-		fmt.Println(fmt.Sprintf(`%v %f %v %d`, success, total, collateral, len(balances)))
-		for _, balance := range balances {
-			if balance.Coin == `USDT` || balance.Coin == `USD` {
-				fmt.Println(fmt.Sprintf(`usd amount %s %f`, market, balance.Amount))
-			}
-		}
-	}
 	for _, market := range posMarkets {
 		account := model.AppConfig.GetAccounts(market)[0]
 		success, positions, total, available := api.GetPositions(account.Key, account.Secret, market)

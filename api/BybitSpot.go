@@ -348,6 +348,7 @@ func getBalanceBybitSpot(key, secret string) (success bool, balances []*model.Ba
 	} else {
 		balancesArray := balanceJson.GetPath(`result`, `balances`).MustArray()
 		balances = []*model.Balance{}
+		success = true
 		for _, item := range balancesArray {
 			value := item.(map[string]interface{})
 			balance := &model.Balance{
