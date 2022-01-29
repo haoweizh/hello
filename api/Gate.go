@@ -46,7 +46,10 @@ func appendFutureMarketGate(key, secret string, marketInfos map[string]*model.Ma
 			continue
 		}
 		marketInfo := &model.MarketInfo{Market: model.Gate}
-		coin := strings.Split(contract.Name, `_`)[0]
+		success, _, coin := model.GetCoinFromDialect(model.Gate, contract.Name)
+		if !success {
+			continue
+		}
 		marketInfo.Name = coin + model.UniStandardTail[model.MarketTypePerp]
 		minPrice, _ := strconv.ParseFloat(contract.OrderPriceRound, 64)
 		marketInfo.PriceIncrement = minPrice
@@ -621,8 +624,7 @@ func placeOrderGate(key, secret string, order *model.Order, orderSide, orderType
 	}
 }
 
-func getMaxLoanGate(coin string) (success bool, maxLoan float64) {
-	symbol := coin + model.UniStandardTail[model.MarketTypeSpot]
+func getMaxLoanGate(symbol string) (success bool, maxLoan float64) {
 	marketMargin := model.GetMarketInfo(model.Gate, symbol)
 	_, tickRelated := model.AppMarkets.GetBidAsk(symbol, model.Gate)
 	if tickRelated != nil && marketMargin != nil {

@@ -271,8 +271,9 @@ func getCandlesFtx(key, secret, symbol, binSize string, start, end time.Time, co
 	param[`limit`] = fmt.Sprintf(`%d`, count)
 	param[`start_time`] = fmt.Sprintf(`%d`, start.Unix())
 	param[`end_time`] = fmt.Sprintf(`%d`, end.Unix())
+	_, _, _, dialectSymbol := model.GetFromStandard(model.Ftx, symbol)
 	response := SignedRequestFtx(key, secret, `GET`,
-		fmt.Sprintf(`/markets/%s/candles`, symbol), param, nil)
+		fmt.Sprintf(`/markets/%s/candles`, dialectSymbol), param, nil)
 	candleJson, err := util.NewJSON(response)
 	if err == nil {
 		candleJsons := candleJson.Get(`result`).MustArray()
@@ -503,8 +504,7 @@ func queryOrderFtx(key, secret, orderId string) (order *model.Order) {
 }
 
 func getPositionsFtx(key, secret string) (success bool, positions []*model.Position, posBalance float64) {
-	postData := make(map[string]interface{})
-	response := SignedRequestFtx(key, secret, `GET`, `/positions`, nil, postData)
+	response := SignedRequestFtx(key, secret, `GET`, `/positions`, nil, nil)
 	positionJson, err := util.NewJSON(response)
 	if err != nil || positionJson == nil || positionJson.Get(`success`).MustBool() != true {
 		util.SocketInfo(`fail to refresh account ftx`)
@@ -594,7 +594,10 @@ func getMarketsFtx(key, secret string) (marketInfos map[string]*model.MarketInfo
 			value := item.(map[string]interface{})
 			marketInfo := &model.MarketInfo{Market: model.Ftx, SizeMax: 90000000}
 			if value[`name`] != nil {
-				_, marketType, coin := model.GetCoinFromDialect(model.Ftx, value[`name`].(string))
+				success, marketType, coin := model.GetCoinFromDialect(model.Ftx, value[`name`].(string))
+				if !success {
+					continue
+				}
 				marketInfo.Name = coin + model.UniStandardTail[marketType]
 			} else {
 				continue
@@ -778,6 +781,10 @@ func SignedRequestFtx(key, secret, method, path string, param, body map[string]i
 	if body == nil {
 		body = make(map[string]interface{})
 	}
+	if len(body[`market`].(string)) > 0 {
+		_, _, _, dialectSymbol := model.GetFromStandard(model.Ftx, body[`instId`].(string))
+		body[`market`] = dialectSymbol
+	}
 	u, _ := url.ParseRequestURI(restFtx)
 	u.Path += path
 	ts := fmt.Sprintf(`%d`, time.Now().UnixNano()/int64(time.Millisecond))
@@ -785,7 +792,11 @@ func SignedRequestFtx(key, secret, method, path string, param, body map[string]i
 	bodyStr := string(util.JsonEncodeToByte(body))
 	q := u.Query()
 	for k, v := range param {
-		q.Set(k, v.(string))
+		value := v.(string)
+		if k == `market` {
+			_, _, _, value = model.GetFromStandard(model.Ftx, value)
+		}
+		q.Set(k, value)
 	}
 	u.RawQuery = q.Encode()
 	uri := u.Path

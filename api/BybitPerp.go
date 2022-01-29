@@ -296,6 +296,10 @@ func SignedRequestBybitPerp(key, secret, method, path string, body map[string]in
 	}
 	body[`api_key`] = key
 	body[`timestamp`] = strconv.FormatInt(util.GetNowUnixMillion(), 10)
+	if len(body[`symbol`].(string)) > 0 {
+		_, _, _, dialectSymbol := model.GetFromStandard(model.BybitPerp, body[`symbol`].(string))
+		body[`symbol`] = dialectSymbol
+	}
 	uri := restBybit + path
 	paramStr := util.ComposeParams(body)
 	hash := hmac.New(sha256.New, []byte(secret))
@@ -317,11 +321,7 @@ func cancelOrdersBybitPerp(key, secret, symbol string) bool {
 	postData := make(map[string]interface{})
 	path := `/private/linear/order/cancel-all`
 	method := http.MethodPost
-	success, _, _, dialectSymbol := model.GetFromStandard(model.BybitPerp, symbol)
-	if !success {
-		return false
-	}
-	postData[`symbol`] = dialectSymbol
+	postData[`symbol`] = symbol
 	response := SignedRequestBybitPerp(key, secret, method, path, postData)
 	cancelJson, err := util.NewJSON(response)
 	if err == nil {
@@ -333,11 +333,7 @@ func cancelOrdersBybitPerp(key, secret, symbol string) bool {
 }
 
 func cancelOrderBybitPerp(key, secret, symbol, orderId string) (result bool, errCode, msg string, order *model.Order) {
-	success, _, _, dialectSymbol := model.GetFromStandard(model.BybitPerp, symbol)
-	if !success {
-		return false, ``, `fail to parse symbol`, nil
-	}
-	postData := map[string]interface{}{`order_id`: orderId, `symbol`: dialectSymbol}
+	postData := map[string]interface{}{`order_id`: orderId, `symbol`: symbol}
 	response := SignedRequestBybitPerp(key, secret, `POST`, `/private/linear/order/cancel`, postData)
 	orderJson, err := util.NewJSON(response)
 	result = false
@@ -360,11 +356,7 @@ func cancelOrderBybitPerp(key, secret, symbol, orderId string) (result bool, err
 }
 
 func queryOrderBybitPerp(key, secret, symbol, orderId string) (order *model.Order) {
-	success, _, _, dialectSymbol := model.GetFromStandard(model.BybitPerp, symbol)
-	if !success {
-		return nil
-	}
-	postData := map[string]interface{}{`symbol`: dialectSymbol, `order_id`: orderId}
+	postData := map[string]interface{}{`symbol`: symbol, `order_id`: orderId}
 	response := SignedRequestBybitPerp(key, secret, `GET`, `/private/linear/order/list`, postData)
 	orderJson, err := util.NewJSON(response)
 	if err == nil {
@@ -384,7 +376,7 @@ func queryOrderBybitPerp(key, secret, symbol, orderId string) (order *model.Orde
 func placeOrderBybitPerp(key, secret, orderSide, orderType, timeInForce, symbol string, price, amount float64) (
 	order *model.Order) {
 	postData := make(map[string]interface{})
-	_, _, _, postData["symbol"] = model.GetFromStandard(model.BybitPerp, symbol)
+	postData["symbol"] = symbol
 	postData["side"] = strings.ToUpper(orderSide[0:1]) + orderSide[1:]
 	postData["order_type"] = strings.ToUpper(orderType[0:1]) + orderType[1:]
 	postData[`position_idx`] = 0
@@ -411,11 +403,7 @@ func placeOrderBybitPerp(key, secret, orderSide, orderType, timeInForce, symbol 
 }
 
 func setSettingsBybitPerp(key, secret, symbol string) (singleMode, crossPos bool) {
-	success, _, _, dialectSymbol := model.GetFromStandard(model.BybitPerp, symbol)
-	if !success {
-		return false, false
-	}
-	postData := map[string]interface{}{`symbol`: dialectSymbol, `mode`: `MergedSingle`}
+	postData := map[string]interface{}{`symbol`: symbol, `mode`: `MergedSingle`}
 	response := SignedRequestBybitPerp(key, secret, http.MethodPost, `/private/linear/position/switch-mode`, postData)
 	setJson, err := util.NewJSON(response)
 	if err == nil && setJson != nil && setJson.Get(`ret_code`).MustInt() == 0 {
@@ -423,7 +411,7 @@ func setSettingsBybitPerp(key, secret, symbol string) (singleMode, crossPos bool
 	} else {
 		util.Notice(fmt.Sprintf(`fail to set bybitPerp %s pos mode to single`, symbol))
 	}
-	postData = map[string]interface{}{`symbol`: dialectSymbol, `is_isolated`: false}
+	postData = map[string]interface{}{`symbol`: symbol, `is_isolated`: false}
 	response = SignedRequestBybitPerp(key, secret, http.MethodPost, `/private/linear/position/switch-isolated`, postData)
 	if err == nil && setJson != nil && setJson.Get(`ret_code`).MustInt() == 0 {
 		crossPos = true
@@ -500,8 +488,7 @@ func getPositionsBybitPerp(key, secret string) (success bool, positions []*model
 }
 
 func getFundingRateBybitPerp(key, secret, symbol string) (fundingRate float64, expire int64) {
-	_, _, _, dialectSymbol := model.GetFromStandard(model.BybitPerp, symbol)
-	postData := map[string]interface{}{`symbol`: dialectSymbol}
+	postData := map[string]interface{}{`symbol`: symbol}
 	response := SignedRequestBybitPerp(key, secret, http.MethodGet,
 		`/private/linear/funding/predicted-funding`, postData)
 	newJson, err := util.NewJSON(response)

@@ -12,6 +12,7 @@ import (
 	"hello/model"
 	"hello/util"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 	"sync"
@@ -22,6 +23,7 @@ const restOKEX = `https://www.okex.com`
 const wsOKEX = `wss://ws.okex.com:8443/ws/v5/public`
 const wsPrivateOKEX = `wss://ws.okex.com:8443/ws/v5/private`
 const wsStepOKEX = 30
+const ParamArrayOkex = `OK_ARRAY`
 
 var msgChanOKEX = make(map[string]chan *simplejson.Json)
 var wrongs = make(map[string]bool)
@@ -87,7 +89,8 @@ func reSubscribe() {
 	subscribeMap["op"] = "unsubscribe"
 	subArray := make([]map[string]string, 0)
 	for _, symbol := range wrongArray {
-		subArray = append(subArray, map[string]string{`channel`: `books50-l2-tbt`, `instId`: symbol})
+		_, _, _, dialectSymbol := model.GetFromStandard(model.OKEX, symbol)
+		subArray = append(subArray, map[string]string{`channel`: `books50-l2-tbt`, `instId`: dialectSymbol})
 	}
 	subscribeMap[`args`] = subArray
 	if err := SendToAllConnections(model.OKEX, util.JsonEncodeToByte(subscribeMap)); err != nil {
@@ -207,8 +210,9 @@ var wsHandlerOKEX = func(connection *websocket.Conn, event []byte, orderHandler 
 		responseJson.GetPath(`arg`, `instId`) == nil {
 		return
 	}
-	symbol := responseJson.GetPath(`arg`, `instId`).MustString()
-	channel := msgChanOKEX[symbol]
+	dialectSymbol := responseJson.GetPath(`arg`, `instId`).MustString()
+	_, marketType, coin := model.GetCoinFromDialect(model.OKEX, dialectSymbol)
+	channel := msgChanOKEX[coin+model.UniStandardTail[marketType]]
 	if channel != nil {
 		channel <- responseJson
 	}
@@ -464,13 +468,37 @@ func handleBooksOKEX(symbol string, data map[string]interface{}) (bidAsk *model.
 	return
 }
 
-func sendSignRequestOKEX(key, secret, method, path string, body interface{}) (responseBody []byte) {
-	uri := restOKEX + path
+func sendSignRequestOKEX(key, secret, method, path string, param, body map[string]interface{}) (responseBody []byte) {
+	u, _ := url.ParseRequestURI(restOKEX)
+	u.Path += path
+	q := u.Query()
+	for k, v := range param {
+		value := v.(string)
+		if k == `instId` {
+			_, _, _, value = model.GetFromStandard(model.OKEX, value)
+		}
+		q.Set(k, value)
+	}
+	u.RawQuery = q.Encode()
 	current := time.Now().In(time.UTC).Format(time.RFC3339)
 	// , `x-simulated-trading`: `1`
 	headers := map[string]string{`OK-ACCESS-KEY`: key, `OK-ACCESS-PASSPHRASE`: model.AppConfig.Phase,
 		"OK-ACCESS-TIMESTAMP": current, "Content-Type": "application/json"}
 	postContent := ``
+	if body[ParamArrayOkex] == nil {
+		if len(body[`instId`].(string)) > 0 {
+			_, _, _, dialectSymbol := model.GetFromStandard(model.OKEX, body[`instId`].(string))
+			body[`instId`] = dialectSymbol
+		}
+	} else {
+		for _, data := range body[ParamArrayOkex].(map[string]interface{}) {
+			value := data.(map[string]interface{})
+			if len(value[`instId`].(string)) > 0 {
+				_, _, _, dialectSymbol := model.GetFromStandard(model.OKEX, value[`instId`].(string))
+				value[`instId`] = dialectSymbol
+			}
+		}
+	}
 	if method == http.MethodPost {
 		postContent = string(util.JsonEncodeToByte(body))
 	}
@@ -479,16 +507,52 @@ func sendSignRequestOKEX(key, secret, method, path string, body interface{}) (re
 	hash.Write([]byte(toBeSign))
 	sign := base64.StdEncoding.EncodeToString(hash.Sum(nil))
 	headers[`OK-ACCESS-SIGN`] = sign
-	responseBody, _ = util.HttpRequest(method, uri, postContent, headers, 60)
+	responseBody, _ = util.HttpRequest(method, u.String(), postContent, headers, 60)
 	logMsg := fmt.Sprintf(`okex key %s request %s body %s return %s`,
-		key, uri, toBeSign, string(responseBody))
-	if strings.Contains(uri, `/api/v5/trade/order`) && method == http.MethodPost {
+		key, u.String(), toBeSign, string(responseBody))
+	if strings.Contains(u.String(), `/api/v5/trade/order`) && method == http.MethodPost {
 		util.Notice(logMsg)
 	} else if !strings.Contains(path, `balance`) && !strings.Contains(path, `positions`) {
 		util.SocketInfo(logMsg)
 	}
 	return responseBody
 }
+
+//func sendSignRequestOKEX(key, secret, method, path string, param, body map[string]interface{}) (responseBody []byte) {
+//	uri := restOKEX + path
+//	current := time.Now().In(time.UTC).Format(time.RFC3339)
+//	// , `x-simulated-trading`: `1`
+//	headers := map[string]string{`OK-ACCESS-KEY`: key, `OK-ACCESS-PASSPHRASE`: model.AppConfig.Phase,
+//		"OK-ACCESS-TIMESTAMP": current, "Content-Type": "application/json"}
+//	postContent := ``
+//	if body[ParamArrayOkex] == nil {
+//		_, _, _, dialectSymbol := model.GetFromStandard(model.OKEX, body[`instId`].(string))
+//		body[`instId`] = dialectSymbol
+//	} else {
+//		for _, data := range body[ParamArrayOkex].(map[string]interface{}) {
+//			value := data.(map[string]interface{})
+//			_, _, _, dialectSymbol := model.GetFromStandard(model.OKEX, value[`instId`].(string))
+//			value[`instId`] = dialectSymbol
+//		}
+//	}
+//	if method == http.MethodPost {
+//		postContent = string(util.JsonEncodeToByte(body))
+//	}
+//	toBeSign := fmt.Sprintf(`%s%s%s%s`, current, method, path, postContent)
+//	hash := hmac.New(sha256.New, []byte(secret))
+//	hash.Write([]byte(toBeSign))
+//	sign := base64.StdEncoding.EncodeToString(hash.Sum(nil))
+//	headers[`OK-ACCESS-SIGN`] = sign
+//	responseBody, _ = util.HttpRequest(method, uri, postContent, headers, 60)
+//	logMsg := fmt.Sprintf(`okex key %s request %s body %s return %s`,
+//		key, uri, toBeSign, string(responseBody))
+//	if strings.Contains(uri, `/api/v5/trade/order`) && method == http.MethodPost {
+//		util.Notice(logMsg)
+//	} else if !strings.Contains(path, `balance`) && !strings.Contains(path, `positions`) {
+//		util.SocketInfo(logMsg)
+//	}
+//	return responseBody
+//}
 
 var lastSameTime = make(map[string]int64)
 var lastCarryTime = int64(0)
@@ -619,7 +683,7 @@ func placeOrderOKEX(key, secret string, isWs bool, order *model.Order) {
 		}
 	} else {
 		var responseBody []byte
-		responseBody = sendSignRequestOKEX(key, secret, http.MethodPost, path, postData)
+		responseBody = sendSignRequestOKEX(key, secret, http.MethodPost, path, nil, postData)
 		util.Notice(fmt.Sprintf(`place okex %s return %s`, path, string(responseBody)))
 		orderJson, err := util.NewJSON(responseBody)
 		if err == nil && orderJson != nil && orderJson.Get(`data`) != nil {
@@ -651,16 +715,18 @@ func getMarketsOKEX(key, secret string) (marketInfos map[string]*model.MarketInf
 	marketInfos = make(map[string]*model.MarketInfo)
 	instTypes := []string{`SPOT`, `SWAP`}
 	for _, instType := range instTypes {
-		path := fmt.Sprintf(`/api/v5/public/instruments?%s`,
-			util.ComposeParams(map[string]interface{}{`instType`: instType}))
-		responseBody := sendSignRequestOKEX(key, secret, http.MethodGet, path, nil)
+		param := map[string]interface{}{`instType`: instType}
+		responseBody := sendSignRequestOKEX(key, secret, http.MethodGet, `/api/v5/public/instruments`, param, nil)
 		resultJson, err := util.NewJSON(responseBody)
 		if err == nil && resultJson != nil && resultJson.Get(`data`) != nil {
 			for _, info := range resultJson.Get(`data`).MustArray() {
 				value := info.(map[string]interface{})
 				if value[`instId`] != nil {
 					marketInfo := &model.MarketInfo{Market: model.OKEX}
-					_, marketType, coin := model.GetCoinFromDialect(model.OKEX, value[`instId`].(string))
+					success, marketType, coin := model.GetCoinFromDialect(model.OKEX, value[`instId`].(string))
+					if !success {
+						continue
+					}
 					marketInfo.Name = coin + model.UniStandardTail[marketType]
 					if value[`lotSz`] != nil {
 						marketInfo.SizeIncrement, _ = strconv.ParseFloat(value[`lotSz`].(string), 64)
@@ -707,11 +773,12 @@ func cancelOrdersOKEX(key, secret, symbol string) (result bool, code, msg string
 	if len(orders) <= 0 {
 		return true, ``, ``
 	}
-	postData := make([]map[string]string, len(orders))
+	data := make([]map[string]string, len(orders))
 	for i, order := range orders {
-		postData[i] = map[string]string{`instId`: symbol, `ordId`: order.OrderId}
+		data[i] = map[string]string{`instId`: symbol, `ordId`: order.OrderId}
 	}
-	responseBody := sendSignRequestOKEX(key, secret, http.MethodPost, "/api/v5/trade/cancel-batch-orders", postData)
+	postArray := map[string]interface{}{ParamArrayOkex: data}
+	responseBody := sendSignRequestOKEX(key, secret, http.MethodPost, "/api/v5/trade/cancel-batch-orders", nil, postArray)
 	resultJson, err := util.NewJSON(responseBody)
 	if err == nil && resultJson != nil {
 		code = resultJson.Get(`code`).MustString()
@@ -728,10 +795,11 @@ func cancelOrderOkex(key, secret, symbol string, orderId, orderType string) (res
 	if orderType == model.OrderTypeStop {
 		postData[`algoId`] = orderId
 		data := []interface{}{postData}
-		responseBody = sendSignRequestOKEX(key, secret, http.MethodPost, `/api/v5/trade/cancel-algos`, data)
+		postArray := map[string]interface{}{ParamArrayOkex: data}
+		responseBody = sendSignRequestOKEX(key, secret, http.MethodPost, `/api/v5/trade/cancel-algos`, nil, postArray)
 	} else {
 		postData[`ordId`] = orderId
-		responseBody = sendSignRequestOKEX(key, secret, http.MethodPost, "/api/v5/trade/cancel-order", postData)
+		responseBody = sendSignRequestOKEX(key, secret, http.MethodPost, "/api/v5/trade/cancel-order", nil, postData)
 	}
 	orderJson, err := util.NewJSON(responseBody)
 	cancelResult := false
@@ -825,9 +893,8 @@ func parseOrderOKEX(value map[string]interface{}) (order *model.Order) {
 
 // 暂不支持策略订单
 func queryPendingOrdersOKEX(key, secret, symbol string) (orders []*model.Order) {
-	path := fmt.Sprintf("/api/v5/trade/orders-pending?%s",
-		util.ComposeParams(map[string]interface{}{`instId`: symbol}))
-	responseBody := sendSignRequestOKEX(key, secret, http.MethodGet, path, nil)
+	param := map[string]interface{}{`instId`: symbol}
+	responseBody := sendSignRequestOKEX(key, secret, http.MethodGet, `/api/v5/trade/orders-pending`, param, nil)
 	orderJson, err := util.NewJSON(responseBody)
 	if err != nil || orderJson == nil || orderJson.Get(`data`) == nil {
 		return
@@ -845,9 +912,8 @@ func queryPendingOrdersOKEX(key, secret, symbol string) (orders []*model.Order) 
 }
 
 func getAlgoOrderIdOKEX(key, secret, algoId string) (ordId string) {
-	path := fmt.Sprintf("/api/v5/trade/orders-algo-history?%s",
-		util.ComposeParams(map[string]interface{}{`algoId`: algoId, `ordType`: `conditional`}))
-	responseBody := sendSignRequestOKEX(key, secret, http.MethodGet, path, nil)
+	param := map[string]interface{}{`algoId`: algoId, `ordType`: `conditional`}
+	responseBody := sendSignRequestOKEX(key, secret, http.MethodGet, `/api/v5/trade/orders-algo-history`, param, nil)
 	orderJson, err := util.NewJSON(responseBody)
 	if err != nil || orderJson == nil || orderJson.Get(`data`) == nil || orderJson.Get(`code`).MustString() != `0` {
 		return ``
@@ -863,12 +929,13 @@ func getAlgoOrderIdOKEX(key, secret, algoId string) (ordId string) {
 }
 
 func queryOrderOKEX(key, secret, symbol, orderId, orderType string) (order *model.Order) {
-	path := fmt.Sprintf(`/api/v5/trade/order?%s`,
-		util.ComposeParams(map[string]interface{}{"ordId": orderId, "instId": symbol}))
+	path := `/api/v5/trade/order`
+	param := map[string]interface{}{"ordId": orderId, "instId": symbol}
 	if orderType == model.OrderTypeStop {
-		path = fmt.Sprintf(`/api/v5/trade/orders-algo-pending?algoId=%s&ordType=conditional`, orderId)
+		path = `/api/v5/trade/orders-algo-pending`
+		param = map[string]interface{}{`algoId`: orderId, `ordType`: `conditional`}
 	}
-	responseBody := sendSignRequestOKEX(key, secret, http.MethodGet, path, nil)
+	responseBody := sendSignRequestOKEX(key, secret, http.MethodGet, path, param, nil)
 	orderJson, err := util.NewJSON(responseBody)
 	if err != nil || orderJson == nil || orderJson.Get(`data`) == nil || orderJson.Get(`code`) == nil {
 		return nil
@@ -912,7 +979,7 @@ func queryOrderOKEX(key, secret, symbol, orderId, orderType string) (order *mode
 }
 
 func getTransferOKEX(key, secret string) (balances []*model.Balance) {
-	response := sendSignRequestOKEX(key, secret, http.MethodGet, `/api/v5/asset/deposit-history`, nil)
+	response := sendSignRequestOKEX(key, secret, http.MethodGet, `/api/v5/asset/deposit-history`, nil, nil)
 	responseJson, err := util.NewJSON(response)
 	balances = make([]*model.Balance, 0)
 	if err == nil && responseJson != nil && responseJson.Get(`data`) != nil {
@@ -924,7 +991,7 @@ func getTransferOKEX(key, secret string) (balances []*model.Balance) {
 			}
 		}
 	}
-	response = sendSignRequestOKEX(key, secret, http.MethodGet, `/api/v5/asset/withdrawal-history`, nil)
+	response = sendSignRequestOKEX(key, secret, http.MethodGet, `/api/v5/asset/withdrawal-history`, nil, nil)
 	responseJson, err = util.NewJSON(response)
 	if err == nil && responseJson != nil && responseJson.Get(`data`) != nil {
 		transfers := responseJson.Get(`data`).MustArray()
@@ -1040,7 +1107,7 @@ func parseBalanceOKEX(value map[string]interface{}) (balance *model.Balance) {
 
 // margin: 可用保证金
 func getBalanceOKEX(key, secret string) (success bool, balances []*model.Balance, totalInUsd float64, collateral *model.Collateral) {
-	response := sendSignRequestOKEX(key, secret, http.MethodGet, `/api/v5/account/balance`, nil)
+	response := sendSignRequestOKEX(key, secret, http.MethodGet, `/api/v5/account/balance`, nil, nil)
 	responseJson, err := util.NewJSON(response)
 	if err != nil || responseJson == nil || responseJson.GetPath(`data`) == nil ||
 		responseJson.Get(`data`).MustArray() == nil ||
@@ -1078,7 +1145,7 @@ func getBalanceOKEX(key, secret string) (success bool, balances []*model.Balance
 }
 
 func getAccountConfigOKEX(key, secret string) (mode string) {
-	response := sendSignRequestOKEX(key, secret, http.MethodGet, `/api/v5/account/config`, nil)
+	response := sendSignRequestOKEX(key, secret, http.MethodGet, `/api/v5/account/config`, nil, nil)
 	responseJson, err := util.NewJSON(response)
 	if err != nil || responseJson.Get(`data`) == nil || len(responseJson.Get(`data`).MustArray()) == 0 {
 		return ``
@@ -1088,7 +1155,7 @@ func getAccountConfigOKEX(key, secret string) (mode string) {
 }
 
 func setAccountModeOKEX(key, secret string) (success bool) {
-	response := sendSignRequestOKEX(key, secret, http.MethodPost, `/api/v5/account/set-position-mode`,
+	response := sendSignRequestOKEX(key, secret, http.MethodPost, `/api/v5/account/set-position-mode`, nil,
 		map[string]interface{}{`posMode`: `net_mode`})
 	responseJson, err := util.NewJSON(response)
 	if err != nil || responseJson.Get(`code`).MustString() != `0` {
@@ -1099,8 +1166,8 @@ func setAccountModeOKEX(key, secret string) (success bool) {
 
 // getLastPriceOKEX
 func _(key, secret, symbol string) (price float64) {
-	path := fmt.Sprintf(`/api/v5/market/ticker?instId=%s`, symbol)
-	response := sendSignRequestOKEX(key, secret, http.MethodGet, path, nil)
+	response := sendSignRequestOKEX(key, secret, http.MethodGet, `/api/v5/market/ticker`,
+		map[string]interface{}{`instId`: symbol}, nil)
 	responseJson, err := util.NewJSON(response)
 	if responseJson == nil || err != nil || responseJson.Get(`data`) == nil ||
 		len(responseJson.Get(`data`).MustArray()) == 0 {
@@ -1115,9 +1182,8 @@ func _(key, secret, symbol string) (price float64) {
 
 // 目前只支持永续 swap
 func getPositionsOKEX(key, secret string) (success bool, positions []*model.Position) {
-	path := fmt.Sprintf("/api/v5/account/positions?%s",
-		util.ComposeParams(map[string]interface{}{"instType": `SWAP`}))
-	responseBody := sendSignRequestOKEX(key, secret, http.MethodGet, path, nil)
+	param := map[string]interface{}{`instType`: `SWAP`}
+	responseBody := sendSignRequestOKEX(key, secret, http.MethodGet, `/api/v5/account/positions`, param, nil)
 	responseJson, err := util.NewJSON(responseBody)
 	if err != nil || responseJson == nil || responseJson.Get(`data`) == nil {
 		util.SocketInfo(`fail to get okex positions `)
@@ -1144,8 +1210,8 @@ func getPositionsOKEX(key, secret string) (success bool, positions []*model.Posi
 // 实测现货maxBuy是对应的交易币的数量，现货maxSell是计价币的数量，故需除以价格；
 // 期货的maxBuy和maxSell都是币的数量，无需除以价格
 func getMaxSizeOKEX(key, secret, symbol string) (success bool, maxBuy, maxSell float64) {
-	response := sendSignRequestOKEX(key, secret, http.MethodGet,
-		fmt.Sprintf(`/api/v5/account/max-size?instId=%s&tdMode=cross`, symbol), nil)
+	param := map[string]interface{}{`instId`: symbol, `tdMode`: `cross`}
+	response := sendSignRequestOKEX(key, secret, http.MethodGet, `/api/v5/account/max-size`, param, nil)
 	responseJson, err := util.NewJSON(response)
 	if responseJson == nil || err != nil || responseJson.Get(`data`) == nil ||
 		responseJson.Get(`data`).MustArray() == nil || len(responseJson.Get(`data`).MustArray()) == 0 {
@@ -1176,31 +1242,28 @@ func getMaxSizeOKEX(key, secret, symbol string) (success bool, maxBuy, maxSell f
 }
 
 func getFundingRateOKEX(key, secret, symbol string) (fundingRate *model.FundingRate) {
-	path := fmt.Sprintf(`/api/v5/public/funding-rate?instId=%s`, symbol)
-	response := sendSignRequestOKEX(key, secret, http.MethodGet, path, nil)
+	param := map[string]interface{}{`instId`: symbol}
+	response := sendSignRequestOKEX(key, secret, http.MethodGet, `/api/v5/public/funding-rate`, param, nil)
 	fundingJson, _ := util.NewJSON(response)
 	if fundingJson == nil || fundingJson.Get(`data`) == nil || fundingJson.Get(`data`).MustArray() == nil ||
 		len(fundingJson.Get(`data`).MustArray()) == 0 {
 		return nil
 	}
 	data := fundingJson.Get(`data`).MustArray()[0].(map[string]interface{})
-	if data[`instId`] == symbol {
-		rate, _ := strconv.ParseFloat(data[`fundingRate`].(string), 64)
-		rateNext, _ := strconv.ParseFloat(data[`nextFundingRate`].(string), 64)
-		rateTime, _ := strconv.ParseInt(data[`fundingTime`].(string), 10, 64)
-		rateTime /= 1000
-		return &model.FundingRate{
-			Rate:       rate,
-			RateNext:   rateNext,
-			UpdateTime: util.GetNow().Unix(),
-			ExpireTime: rateTime}
-	}
-	return nil
+	rate, _ := strconv.ParseFloat(data[`fundingRate`].(string), 64)
+	rateNext, _ := strconv.ParseFloat(data[`nextFundingRate`].(string), 64)
+	rateTime, _ := strconv.ParseInt(data[`fundingTime`].(string), 10, 64)
+	rateTime /= 1000
+	return &model.FundingRate{
+		Rate:       rate,
+		RateNext:   rateNext,
+		UpdateTime: util.GetNow().Unix(),
+		ExpireTime: rateTime}
 }
 
-func getMaxLoanOKEX(key, secret, coin string) (success bool, maxLoan float64) {
-	path := fmt.Sprintf(`/api/v5/account/max-loan?instId=%s-USDT&mgnMode=cross`, coin)
-	response := sendSignRequestOKEX(key, secret, http.MethodGet, path, nil)
+func getMaxLoanOKEX(key, secret, symbol string) (success bool, maxLoan float64) {
+	param := map[string]interface{}{`instId`: symbol, `mgnMode`: `cross`}
+	response := sendSignRequestOKEX(key, secret, http.MethodGet, `/api/v5/account/max-loan`, param, nil)
 	loanJson, err := util.NewJSON(response)
 	success = false
 	if loanJson == nil || err != nil || loanJson.Get(`data`) == nil {
@@ -1209,7 +1272,8 @@ func getMaxLoanOKEX(key, secret, coin string) (success bool, maxLoan float64) {
 	value := loanJson.Get(`data`).MustArray()
 	for _, item := range value {
 		data := item.(map[string]interface{})
-		if data[`maxLoan`] != nil && data[`ccy`] != nil && data[`ccy`].(string) == coin {
+		getCoin, _, coin, _ := model.GetFromStandard(model.OKEX, symbol)
+		if data[`maxLoan`] != nil && data[`ccy`] != nil && data[`ccy`].(string) == coin && getCoin {
 			maxLoan, _ = strconv.ParseFloat(data[`maxLoan`].(string), 64)
 			success = true
 		}
@@ -1221,9 +1285,9 @@ func getMaxLoanOKEX(key, secret, coin string) (success bool, maxLoan float64) {
 func getCandlesOKEX(key, secret, symbol, binSize string, before, after time.Time, count int) (
 	candles map[string]*model.Candle) {
 	candles = make(map[string]*model.Candle)
-	path := fmt.Sprintf(`/api/v5/market/candles?instId=%s&bar=%s&before=%d&after=%d&limit=%d`,
-		symbol, binSize, before.UnixNano()/int64(time.Millisecond), after.UnixNano()/int64(time.Millisecond), count)
-	response := sendSignRequestOKEX(key, secret, http.MethodGet, path, nil)
+	param := map[string]interface{}{`instId`: symbol, `bar`: binSize, `limit`: count,
+		`before`: before.UnixNano() / int64(time.Millisecond), `after`: after.UnixNano() / int64(time.Millisecond)}
+	response := sendSignRequestOKEX(key, secret, http.MethodGet, `/api/v5/market/candles`, param, nil)
 	candleJson, err := util.NewJSON(response)
 	if err != nil || candleJson == nil || candleJson.Get(`data`) == nil || len(candleJson.Get(`data`).MustArray()) == 0 {
 		return

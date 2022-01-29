@@ -323,12 +323,12 @@ func GetFundingRate(key, secret, market, symbol string, lock *sync.Mutex) (succe
 }
 
 // GetMaxLoan
-func _(key, secret, market, coin string) (success bool, maxLoan float64) {
+func _(key, secret, market, symbol string) (success bool, maxLoan float64) {
 	switch market {
 	case model.Gate:
-		return getMaxLoanGate(coin)
+		return getMaxLoanGate(symbol)
 	case model.OKEX:
-		return getMaxLoanOKEX(key, secret, coin)
+		return getMaxLoanOKEX(key, secret, symbol)
 	case model.Binance:
 		return true, 0
 		//return getMaxLoanBinance(key, secret, coin)
@@ -549,9 +549,10 @@ func GetWSSubscribes(market, subType string) []interface{} {
 }
 
 func GetWSSubscribe(market, symbol, subType string) (subscribe interface{}) {
+	_, _, _, dialectSymbol := model.GetFromStandard(market, symbol)
 	switch market {
 	case model.Mexc:
-		return GetWSSubscribeMexc(symbol, subType)
+		return GetWSSubscribeMexc(dialectSymbol, subType)
 	//case model.Huobi: // xrpbtc: market.xrpbtc.mbp.refresh.
 	//	if subType == model.SubscribeTicker {
 	//		return "market." + symbol + ".bbo"
@@ -562,9 +563,8 @@ func GetWSSubscribe(market, symbol, subType string) (subscribe interface{}) {
 	//	//return `bibox_sub_spot_` + strings.ToUpper(symbol) + `_ticker`
 	//	return `bibox_sub_spot_` + strings.ToUpper(symbol) + `_depth`
 	case model.OKEX:
-		return symbol
+		return dialectSymbol
 	case model.Binance: // XRPUSDT: XRPUSDT@depth5   XRP-PERP: XRPUSDT@depth5
-		_, _, _, dialectSymbol := model.GetFromStandard(model.Binance, symbol)
 		if subType == model.SubscribeDepth {
 			return strings.ToLower(dialectSymbol) + `@depth5@100ms`
 		}
@@ -580,19 +580,17 @@ func GetWSSubscribe(market, symbol, subType string) (subscribe interface{}) {
 	//	}
 	//	return ``
 	case model.BybitPerp:
-		_, _, _, dialectSymbol := model.GetFromStandard(model.BybitPerp, symbol)
 		return dialectSymbol
 	case model.BybitSpot:
-		_, _, _, dialectSymbol := model.GetFromStandard(model.BybitSpot, symbol)
 		return dialectSymbol
 	case model.Ftx:
 		if subType == model.SubscribeDepth {
-			return []string{`orderbook`, symbol}
+			return []string{`orderbook`, dialectSymbol}
 		} else if subType == model.SubscribeTicker {
-			return []string{`ticker`, symbol}
+			return []string{`ticker`, dialectSymbol}
 		}
 	case model.DFuture:
-		return `dfuture.market.` + symbol + `.kline.1min`
+		return `dfuture.market.` + dialectSymbol + `.kline.1min`
 	}
 	return ""
 }
@@ -657,18 +655,18 @@ func filterCross(market, symbol string) bool {
 			return true
 		}
 	case model.Gate:
-		switch symbol {
+		switch coin {
 		// BTT价格异常
 		case `BTT`, `GT`:
 			return true
 		}
 	case model.OKEX:
-		switch symbol {
+		switch coin {
 		case `OKB`:
 			return true
 		}
 	case model.Binance:
-		switch symbol {
+		switch coin {
 		case `BNB`:
 			return true
 		}
@@ -679,8 +677,8 @@ func filterCross(market, symbol string) bool {
 // InitCrossMarketInfos 用以初始化cross carry的各个币种市场，调用前需要truncate settings数据库表，本方法会从新插入
 func InitCrossMarketInfos() {
 	infoPool := make(map[string][]*model.MarketInfo) // coin - []marketInfos
-	// model.Binance, model.Ftx, model.Gate,
-	markets := []string{model.OKEX, model.Ftx}
+	// model.Binance, model.Ftx,
+	markets := []string{model.OKEX, model.Ftx, model.Gate}
 	//markets := []string{model.BybitPerp, model.BybitSpot}
 	for _, market := range markets {
 		marketInfo := GetMarketInfos(market)
@@ -690,7 +688,9 @@ func InitCrossMarketInfos() {
 				if infoPool[coin] == nil {
 					infoPool[coin] = make([]*model.MarketInfo, 0)
 				}
-				infoPool[coin] = append(infoPool[coin], info)
+				if !filterCross(info.Market, info.Name) {
+					infoPool[coin] = append(infoPool[coin], info)
+				}
 			}
 		}
 	}
@@ -699,9 +699,6 @@ func InitCrossMarketInfos() {
 			for _, info := range infos {
 				setting := &model.Setting{Valid: true, Function: model.FunctionCross, Market: info.Market,
 					Symbol: info.Name, Coin: coin, OpenShortMargin: 0.015, CloseShortMargin: 0.015}
-				if filterCross(setting.Market, setting.Symbol) {
-					continue
-				}
 				model.AppDB.Save(setting)
 				fmt.Println(fmt.Sprintf(`save setting %s %s %s %v`, info.Market, info.Name, coin, setting.Valid))
 			}

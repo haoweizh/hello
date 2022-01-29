@@ -115,6 +115,14 @@ func SignedRequestBybitSpot(key, secret, method, path string, body map[string]in
 	if body == nil {
 		body = make(map[string]interface{})
 	}
+	if len(body[`symbol`].(string)) > 0 {
+		_, _, _, dialectSymbol := model.GetFromStandard(model.BybitSpot, body[`symbol`].(string))
+		body[`symbol`] = dialectSymbol
+	}
+	if len(body[`symbolId`].(string)) > 0 {
+		_, _, _, dialectSymbol := model.GetFromStandard(model.BybitSpot, body[`symbolId`].(string))
+		body[`symbolId`] = dialectSymbol
+	}
 	body[`api_key`] = key
 	body[`timestamp`] = strconv.FormatInt(util.GetNowUnixMillion(), 10)
 	uri := restBybit + path
@@ -256,7 +264,7 @@ func placeOrdersBybitSpot(key, secret, orderSide, orderType, timeInForce, symbol
 	price, amount float64) (order *model.Order) {
 	postData := make(map[string]interface{})
 	path := `/spot/v1/order`
-	_, _, _, postData[`symbol`] = model.GetFromStandard(model.BybitSpot, symbol)
+	postData[`symbol`] = symbol
 	formattedAmount := model.GetAmountInMarket(model.BybitSpot, symbol, amount, price)
 	postData["qty"] = util.CutTailZero(fmt.Sprintf(`%f`, formattedAmount))
 	postData["side"] = strings.ToUpper(orderSide)
@@ -282,9 +290,7 @@ func placeOrdersBybitSpot(key, secret, orderSide, orderType, timeInForce, symbol
 
 func cancelOrdersBybitSpot(key, secret, symbol string) bool {
 	path := `/spot/order/batch-cancel`
-	_, _, _, dialectSymbol := model.GetFromStandard(model.BybitSpot, symbol)
-	postData := map[string]interface{}{`symbol`: dialectSymbol}
-	response := SignedRequestBybitSpot(key, secret, http.MethodDelete, path, postData)
+	response := SignedRequestBybitSpot(key, secret, http.MethodDelete, path, map[string]interface{}{`symbol`: symbol})
 	cancelJson, err := util.NewJSON(response)
 	if err == nil {
 		if cancelJson.Get(`ret_code`).MustInt() == 0 {
@@ -297,7 +303,7 @@ func cancelOrdersBybitSpot(key, secret, symbol string) bool {
 func cancelOrderBybitSpot(key, secret, symbol, orderId string) (result bool, errCode, msg string, order *model.Order) {
 	postData := make(map[string]interface{})
 	postData[`orderId`] = orderId
-	_, _, _, postData[`symbolId`] = model.GetFromStandard(model.BybitSpot, symbol)
+	postData[`symbolId`] = symbol
 	response := SignedRequestBybitSpot(key, secret, http.MethodDelete, `/spot/v1/order/fast`, postData)
 	orderJson, err := util.NewJSON(response)
 	result = false
@@ -320,9 +326,7 @@ func cancelOrderBybitSpot(key, secret, symbol, orderId string) (result bool, err
 }
 
 func queryOrderBybitSpot(key, secret, orderId string) (order *model.Order) {
-	postData := make(map[string]interface{})
-	postData[`orderId`] = orderId
-	response := SignedRequestBybitSpot(key, secret, http.MethodGet, `/spot/v1/order`, postData)
+	response := SignedRequestBybitSpot(key, secret, http.MethodGet, `/spot/v1/order`, map[string]interface{}{`orderId`: orderId})
 	orderJson, err := util.NewJSON(response)
 	if err == nil {
 		orderJson = orderJson.GetPath(`result`)

@@ -65,7 +65,7 @@ var dialectTail = map[string]map[string]string{
 	MarketTypePerp: {Gate: `_USDT`, Ftx: `-PERP`, OKEX: `-USDT-SWAP`, BybitPerp: `USDT`, Binance: `USDT`}}
 var UniStandardTail = map[string]string{MarketTypeSpot: `_USDT`, MarketTypePerp: `_PERP`}
 
-func GetFromStandard(market, standardSymbol string) (success bool, marketType, coin, dialectSymbol string) {
+func GetFromStandard(market, standardSymbol string) (success bool, marketType, coinValue, dialectSymbol string) {
 	for mType, tail := range UniStandardTail {
 		if util.EndWith(standardSymbol, tail) {
 			coin := standardSymbol[0 : len(standardSymbol)-len(tail)]
