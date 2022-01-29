@@ -62,9 +62,85 @@ func Test_ws(t *testing.T) {
 
 func Test_getCommonMarketInfos(t *testing.T) {
 	model.NewConfig()
-	_ = configor.Load(model.AppConfig, "./config.yml")
 	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
 	api.InitCrossMarketInfos()
+}
+
+func Test_BalAndPos(t *testing.T) {
+	model.NewConfig()
+	balMarkets := []string{model.OKEX, model.BybitSpot, model.Ftx, model.Gate}
+	posMarkets := []string{model.OKEX, model.BybitPerp, model.Ftx, model.Gate}
+	for _, market := range balMarkets {
+		account := model.AppConfig.GetAccounts(market)[0]
+		success, balances, total, collateral := api.GetBalances(account.Key, account.Secret, market)
+		fmt.Println(fmt.Sprintf(`%v %f %v %d`, success, total, collateral, len(balances)))
+		for _, balance := range balances {
+			if balance.Coin == `USDT` || balance.Coin == `USD` {
+				fmt.Println(fmt.Sprintf(`usd amount %s %f`, market, balance.Amount))
+			}
+		}
+	}
+	for _, market := range posMarkets {
+		account := model.AppConfig.GetAccounts(market)[0]
+		success, positions, total, available := api.GetPositions(account.Key, account.Secret, market)
+		fmt.Println(fmt.Sprintf(`%v %f %f %d`, success, total, available, len(positions)))
+	}
+}
+
+func Test_WsAndOrderApi(t *testing.T) {
+	market := model.Gate
+	coin := `1INCH`
+	orderType := model.OrderTypeLimit
+	orderSide := model.OrderSideBuy
+	symbols := []string{coin + model.UniStandardTail[model.MarketTypePerp], coin + model.UniStandardTail[model.MarketTypeSpot]}
+	model.NewConfig()
+	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
+	api.InitMarketInfos()
+	account := model.AppConfig.GetAccounts(market)[0]
+	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
+	api.CreateMarketDepthServer(model.AppMarkets, market, nil)
+	for _, symbol := range symbols {
+		api.CancelOrders(account.Key, account.Secret, market, symbol)
+		getTick := false
+		var tick *model.BidAsk
+		for !getTick {
+			time.Sleep(time.Second * 2)
+			getTick, tick = model.AppMarkets.GetBidAsk(symbol, market)
+		}
+		price := tick.Bids[len(tick.Bids)-1].Price
+		amount := 20 / price
+		order := api.PlaceOrder(account.Key, account.Secret, orderSide, orderType, market,
+			symbol, ``, ``, price, price, amount, false, true, nil, nil)
+		fmt.Println(fmt.Sprintf(`1. place order return %v`, order))
+		if order != nil && order.OrderId != `` {
+			queryOrder := api.QueryOrderById(account.Key, account.Secret, market, symbol, orderType, order.OrderId)
+			fmt.Println(fmt.Sprintf(`2. query order %s return %s %s %v`, order.OrderId, queryOrder.OrderId, queryOrder.Status, queryOrder))
+		} else {
+			fmt.Println(fmt.Sprintf(`1. fail to place order`))
+			continue
+		}
+		cancelResult, errCode, errMsg, cancelOrder := api.CancelOrder(account.Key, account.Secret, market, symbol,
+			orderType, order.OrderId)
+		fmt.Println(fmt.Sprintf(`3. cancel %s return %v %s %s %v`, order.OrderId, cancelResult, errCode, errMsg, cancelOrder))
+		queryOrder := api.QueryOrderById(account.Key, account.Secret, market, symbol, orderType, order.OrderId)
+		fmt.Println(fmt.Sprintf(`4. query order %s return %s %s %v`, order.OrderId, queryOrder.OrderId, queryOrder.Status, queryOrder))
+		order1 := api.PlaceOrder(account.Key, account.Secret, orderSide, orderType, market,
+			symbol, ``, ``, price, price, amount, false, true, nil, nil)
+		order2 := api.PlaceOrder(account.Key, account.Secret, orderSide, orderType, market,
+			symbol, ``, ``, price, price, amount, false, true, nil, nil)
+		fmt.Println(fmt.Sprintf(`5. place order return %v %v`, order1, order2))
+		api.CancelOrders(account.Key, account.Secret, market, symbol)
+		if order1 != nil {
+			time.Sleep(time.Second)
+			queryOrder = api.QueryOrderById(account.Key, account.Secret, market, symbol, orderType, order1.OrderId)
+			fmt.Println(fmt.Sprintf(`6. query order %s return %s %s %v`, order1.OrderId, queryOrder.OrderId, queryOrder.Status, queryOrder))
+		}
+		if order2 != nil {
+			queryOrder = api.QueryOrderById(account.Key, account.Secret, market, symbol, orderType, order2.OrderId)
+			fmt.Println(fmt.Sprintf(`6. query order %s return %s %s %v`, order2.OrderId, queryOrder.OrderId, queryOrder.Status, queryOrder))
+		}
+	}
+	select {}
 }
 
 func Test_initTurtleN(t *testing.T) {

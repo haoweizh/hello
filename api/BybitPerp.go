@@ -296,7 +296,7 @@ func SignedRequestBybitPerp(key, secret, method, path string, body map[string]in
 	}
 	body[`api_key`] = key
 	body[`timestamp`] = strconv.FormatInt(util.GetNowUnixMillion(), 10)
-	if len(body[`symbol`].(string)) > 0 {
+	if body[`symbol`] != nil && len(body[`symbol`].(string)) > 0 {
 		_, _, _, dialectSymbol := model.GetFromStandard(model.BybitPerp, body[`symbol`].(string))
 		body[`symbol`] = dialectSymbol
 	}

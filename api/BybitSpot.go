@@ -115,11 +115,11 @@ func SignedRequestBybitSpot(key, secret, method, path string, body map[string]in
 	if body == nil {
 		body = make(map[string]interface{})
 	}
-	if len(body[`symbol`].(string)) > 0 {
+	if body[`symbol`] != nil && len(body[`symbol`].(string)) > 0 {
 		_, _, _, dialectSymbol := model.GetFromStandard(model.BybitSpot, body[`symbol`].(string))
 		body[`symbol`] = dialectSymbol
 	}
-	if len(body[`symbolId`].(string)) > 0 {
+	if body[`symbolId`] != nil && len(body[`symbolId`].(string)) > 0 {
 		_, _, _, dialectSymbol := model.GetFromStandard(model.BybitSpot, body[`symbolId`].(string))
 		body[`symbolId`] = dialectSymbol
 	}

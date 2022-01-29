@@ -183,9 +183,11 @@ func handleMsgOKEX(channel chan *simplejson.Json, symbol string) {
 		_, bidAsk.Asks[0].Amount = model.ParseRealAmount(model.OKEX, symbol, bidAsk.Asks[0].Amount)
 		if model.AppMarkets.SetBidAsk(symbol, model.OKEX, bidAsk) {
 			for function, handler := range model.GetFunctions(model.OKEX, symbol) {
-				setting := model.GetSetting(function, model.OKEX, symbol)
-				if setting != nil {
-					go handler(setting, bidAsk)
+				if handler != nil {
+					setting := model.GetSetting(function, model.OKEX, symbol)
+					if setting != nil {
+						go handler(setting, bidAsk)
+					}
 				}
 			}
 		}
@@ -266,7 +268,9 @@ func handleWSOrderOKEX(value map[string]interface{}, orderHandler OrderHandler) 
 	//	util.Info(`db can not get orderId %s`, order.OrderId)
 	//}
 	//model.AppDB.Save(order)
-	orderHandler(order, nil)
+	if orderHandler != nil {
+		orderHandler(order, nil)
+	}
 }
 
 func WsDepthServeOKEX(symbols map[string]bool, orderHandler OrderHandler) (channels []chan struct{}, err error) {
@@ -486,21 +490,28 @@ func sendSignRequestOKEX(key, secret, method, path string, param, body map[strin
 		"OK-ACCESS-TIMESTAMP": current, "Content-Type": "application/json"}
 	postContent := ``
 	if body[ParamArrayOkex] == nil {
-		if len(body[`instId`].(string)) > 0 {
+		if body[`instId`] != nil && len(body[`instId`].(string)) > 0 {
 			_, _, _, dialectSymbol := model.GetFromStandard(model.OKEX, body[`instId`].(string))
 			body[`instId`] = dialectSymbol
 		}
+		if method == http.MethodPost {
+			postContent = string(util.JsonEncodeToByte(body))
+		}
 	} else {
-		for _, data := range body[ParamArrayOkex].(map[string]interface{}) {
-			value := data.(map[string]interface{})
-			if len(value[`instId`].(string)) > 0 {
+		for _, value := range body[ParamArrayOkex].([]map[string]interface{}) {
+			if value[`instId`] != nil && len(value[`instId`].(string)) > 0 {
 				_, _, _, dialectSymbol := model.GetFromStandard(model.OKEX, value[`instId`].(string))
 				value[`instId`] = dialectSymbol
 			}
 		}
+		if method == http.MethodPost {
+			postContent = string(util.JsonEncodeToByte(body[ParamArrayOkex]))
+		}
 	}
-	if method == http.MethodPost {
-		postContent = string(util.JsonEncodeToByte(body))
+	if len(u.RawQuery) > 0 {
+		path = fmt.Sprintf(`%s?%s`, u.Path, u.RawQuery)
+	} else {
+		path = u.Path
 	}
 	toBeSign := fmt.Sprintf(`%s%s%s%s`, current, method, path, postContent)
 	hash := hmac.New(sha256.New, []byte(secret))
@@ -512,7 +523,7 @@ func sendSignRequestOKEX(key, secret, method, path string, param, body map[strin
 		key, u.String(), toBeSign, string(responseBody))
 	if strings.Contains(u.String(), `/api/v5/trade/order`) && method == http.MethodPost {
 		util.Notice(logMsg)
-	} else if !strings.Contains(path, `balance`) && !strings.Contains(path, `positions`) {
+	} else if !strings.Contains(u.String(), `balance`) && !strings.Contains(path, `positions`) {
 		util.SocketInfo(logMsg)
 	}
 	return responseBody
@@ -580,8 +591,8 @@ func PlacePairOKEX(key, coin, sidePerp, sideSpot, orderType, refreshType string,
 			usdAmount, _ := strconv.ParseFloat(amountStrPerp, 64)
 			amountStrPerp = util.CutTailZero(fmt.Sprintf(`%f`, usdAmount*pricePerp))
 		}
-		perpArgs := map[string]interface{}{`instId`: coin + tailPerp, `tdMode`: `cross`, `side`: sidePerp, `sz`: amountStrPerp, `ordType`: orderType,
-			`px`: priceStrPerp, `tag`: key[:5]}
+		perpArgs := map[string]interface{}{`instId`: coin + tailPerp, `tdMode`: `cross`, `side`: sidePerp,
+			`sz`: amountStrPerp, `ordType`: orderType, `px`: priceStrPerp, `tag`: key[:5]}
 		subscribeArgs = append(subscribeArgs, perpArgs)
 	}
 	if sideSpot != "" && priceSpot != 0 && amount != 0 {
@@ -593,8 +604,8 @@ func PlacePairOKEX(key, coin, sidePerp, sideSpot, orderType, refreshType string,
 			usdAmount, _ := strconv.ParseFloat(amountStrSpot, 64)
 			amountStrSpot = util.CutTailZero(fmt.Sprintf(`%f`, usdAmount*priceSpot))
 		}
-		spotArgs := map[string]interface{}{`instId`: coin + tailSpot, `tdMode`: `cross`, `side`: sideSpot, `sz`: amountStrSpot, `ordType`: orderType,
-			`px`: priceStrSpot, `tag`: key[:5]}
+		spotArgs := map[string]interface{}{`instId`: coin + tailSpot, `tdMode`: `cross`, `side`: sideSpot,
+			`sz`: amountStrSpot, `ordType`: orderType, `px`: priceStrSpot, `tag`: key[:5]}
 		subscribeArgs = append(subscribeArgs, spotArgs)
 	}
 	if len(subscribeArgs) == 0 {
@@ -773,9 +784,9 @@ func cancelOrdersOKEX(key, secret, symbol string) (result bool, code, msg string
 	if len(orders) <= 0 {
 		return true, ``, ``
 	}
-	data := make([]map[string]string, len(orders))
+	data := make([]map[string]interface{}, len(orders))
 	for i, order := range orders {
-		data[i] = map[string]string{`instId`: symbol, `ordId`: order.OrderId}
+		data[i] = map[string]interface{}{`instId`: symbol, `ordId`: order.OrderId}
 	}
 	postArray := map[string]interface{}{ParamArrayOkex: data}
 	responseBody := sendSignRequestOKEX(key, secret, http.MethodPost, "/api/v5/trade/cancel-batch-orders", nil, postArray)

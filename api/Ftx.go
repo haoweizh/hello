@@ -781,8 +781,8 @@ func SignedRequestFtx(key, secret, method, path string, param, body map[string]i
 	if body == nil {
 		body = make(map[string]interface{})
 	}
-	if len(body[`market`].(string)) > 0 {
-		_, _, _, dialectSymbol := model.GetFromStandard(model.Ftx, body[`instId`].(string))
+	if body[`market`] != nil && len(body[`market`].(string)) > 0 {
+		_, _, _, dialectSymbol := model.GetFromStandard(model.Ftx, body[`market`].(string))
 		body[`market`] = dialectSymbol
 	}
 	u, _ := url.ParseRequestURI(restFtx)
