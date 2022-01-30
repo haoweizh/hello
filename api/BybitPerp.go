@@ -43,7 +43,7 @@ func maintainChannelBybitPerp(subscribes []interface{}) {
 							util.SocketInfo("bybitPerp can not resubscribe " + err.Error())
 						}
 					} else {
-						util.Notice(`bybitPerp can not get connection for %s`, value.(string))
+						util.Notice(`bybitPerp can not get connection for %s`, standardSymbol)
 					}
 					util.Notice(`send resubscribe %s %s`, model.BybitPerp, subCmd)
 				}
@@ -74,7 +74,9 @@ var subscribeHandlerBybitPerp = func(connection *websocket.Conn, subscribes []in
 			return err
 		}
 		_, _, coin := model.GetCoinFromDialect(model.BybitPerp, subscribe.(string))
-		bybitPerpSubConnection[coin+model.UniStandardTail[model.MarketTypePerp]] = connection
+		standardSymbol := coin + model.UniStandardTail[model.MarketTypePerp]
+		bybitPerpSubConnection[standardSymbol] = connection
+		util.Notice(`set bybitperp connection %s`, standardSymbol)
 	}
 	return err
 }
@@ -235,7 +237,6 @@ func handleOrderBookBybitPerp(markets *model.Markets, symbol string, ts int64, r
 		sort.Sort(bidAsk.Asks)
 		sort.Sort(sort.Reverse(bidAsk.Bids))
 		//util.SocketInfo(markets.ToStringBidAsk(bidAsk))
-		util.Notice(`try to set bidask %s`, symbol)
 		if markets.SetBidAsk(symbol, model.BybitPerp, bidAsk) {
 			for function, handler := range model.GetFunctions(model.BybitPerp, symbol) {
 				if handler != nil {
