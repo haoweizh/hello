@@ -599,22 +599,8 @@ func placeCross(statusBuy, statusSell *CarryStatus, priceBuy, priceSell, amount 
 		statusSell.market, statusSell.symbol, statusBuy.market, statusBuy.symbol, priceSell, priceBuy, amount))
 	placeSuccess := true
 	if statusBuy.market == model.OKEX && statusSell.market == model.OKEX {
-		var sidePerp, sideRelated string
-		var perpPrice, relatedPrice float64
-		_, _, coin, _ := model.GetFromStandard(statusBuy.market, statusBuy.symbol)
-		if statusBuy.isSpot {
-			sideRelated = model.OrderSideBuy
-			relatedPrice = priceBuy
-			sidePerp = model.OrderSideSell
-			perpPrice = priceSell
-		} else {
-			sideRelated = model.OrderSideSell
-			relatedPrice = priceSell
-			sidePerp = model.OrderSideBuy
-			perpPrice = priceBuy
-		}
-		placeSuccess = api.PlacePairOKEX(statusBuy.account.Key, coin, sidePerp, sideRelated, model.OrderTypeLimit,
-			model.FunctionCross, perpPrice, relatedPrice, amount)
+		placeSuccess = api.PlacePairOKEX(statusBuy.account.Key, statusBuy.symbol, statusSell.symbol, model.OrderTypeLimit,
+			model.FunctionCross, priceBuy, priceSell, amount)
 	} else {
 		go api.PlaceOrder(statusBuy.account.Key, statusBuy.account.Secret, model.OrderSideBuy, model.OrderTypeLimit,
 			statusBuy.market, statusBuy.symbol, ``, model.FunctionCross, priceBuy, priceBuy,
