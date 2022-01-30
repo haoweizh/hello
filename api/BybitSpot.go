@@ -35,7 +35,7 @@ func maintainChannelBybitSpot(subscribes []interface{}) {
 				if bidAsk == nil || now-int64(bidAsk.Ts) > 60000 {
 					subCmd := fmt.Sprintf(
 						`{"topic":"depth","event":"sub","params":{"symbol":"%s","binary":false}}`, value.(string))
-					if bybitSpotSubConnection[value.(string)] != nil {
+					if bybitSpotSubConnection[standardSymbol] != nil {
 						if err := SendToConnection(model.BybitSpot, bybitSpotSubConnection[standardSymbol],
 							[]byte(subCmd)); err != nil {
 							util.SocketInfo("bybitSpot can not resubscribe " + err.Error())
@@ -69,7 +69,8 @@ var subscribeHandlerBybitSpot = func(connection *websocket.Conn, subscribes []in
 			util.SocketInfo("bybitSpot can not subscribe " + err.Error())
 			return err
 		}
-		bybitSpotSubConnection[subscribe.(string)] = connection
+		_, _, coin := model.GetCoinFromDialect(model.BybitSpot, subscribe.(string))
+		bybitSpotSubConnection[coin+model.UniStandardTail[model.MarketTypeSpot]] = connection
 	}
 	return err
 }
