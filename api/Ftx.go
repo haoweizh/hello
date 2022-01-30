@@ -37,13 +37,14 @@ func maintainChannelFtx(subscribes []interface{}) {
 			for _, value := range subscribes {
 				subscribe := value.([]string)
 				_, marketType, coin := model.GetCoinFromDialect(model.Ftx, subscribe[1])
-				_, bidAsk := model.AppMarkets.GetBidAsk(coin+model.UniStandardTail[marketType], model.Ftx)
+				standardSymbol := coin + model.UniStandardTail[marketType]
+				_, bidAsk := model.AppMarkets.GetBidAsk(standardSymbol, model.Ftx)
 				now := time.Now().UnixNano() / int64(time.Millisecond)
 				if bidAsk == nil || now-int64(bidAsk.Ts) > 60000 {
 					subCmd := fmt.Sprintf(`{"op": "subscribe", "channel": "%s", "market": "%s"}`,
 						subscribe[0], subscribe[1])
-					if ftxSymbolConnection[subscribe[1]] != nil {
-						if err := SendToConnection(model.Ftx, ftxSymbolConnection[subscribe[1]], []byte(subCmd)); err != nil {
+					if ftxSymbolConnection[standardSymbol] != nil {
+						if err := SendToConnection(model.Ftx, ftxSymbolConnection[standardSymbol], []byte(subCmd)); err != nil {
 							util.SocketInfo("ftx can not resubscribe " + err.Error())
 						}
 					} else {
@@ -72,7 +73,8 @@ var subscribeHandlerFtx = func(connection *websocket.Conn, subscribes []interfac
 	}
 	for i := 0; i < len(subscribes); i++ {
 		cmdSubscribe := subscribes[i].([]string)
-		ftxSymbolConnection[cmdSubscribe[1]] = connection
+		_, marketType, coin := model.GetCoinFromDialect(model.Ftx, cmdSubscribe[1])
+		ftxSymbolConnection[coin+model.UniStandardTail[marketType]] = connection
 		subCmd := fmt.Sprintf(`{"op": "subscribe", "channel": "%s", "market": "%s"}`,
 			cmdSubscribe[0], cmdSubscribe[1])
 		if err = SendToConnection(model.Ftx, connection, []byte(subCmd)); err != nil {
@@ -127,7 +129,7 @@ func handleTickerFtx(markets *model.Markets, response *simplejson.Json) {
 	if !success {
 		return
 	}
-	symbol := coin + model.UniStandardTail[marketType]
+	standardSymbol := coin + model.UniStandardTail[marketType]
 	dataType := response.Get(`type`).MustString()
 	data := response.Get(`data`)
 	if data == nil || data.Get(`bid`) == nil || data.Get(`ask`) == nil || data.Get(`bidSize`) == nil ||
@@ -140,13 +142,13 @@ func handleTickerFtx(markets *model.Markets, response *simplejson.Json) {
 	bidAsk.TsReceived = int(util.GetNowUnixMillion())
 	if dataType == `update` {
 		bidAsk.Bids = []model.Tick{{Price: data.Get(`bid`).MustFloat64(), Amount: data.Get(`bidSize`).MustFloat64(),
-			Market: model.Ftx, Symbol: symbol, Side: model.OrderSideBuy}}
+			Market: model.Ftx, Symbol: standardSymbol, Side: model.OrderSideBuy}}
 		bidAsk.Asks = []model.Tick{{Price: data.Get(`ask`).MustFloat64(), Amount: data.Get(`askSize`).MustFloat64(),
-			Market: model.Ftx, Symbol: symbol, Side: model.OrderSideSell}}
+			Market: model.Ftx, Symbol: standardSymbol, Side: model.OrderSideSell}}
 	}
-	for function, handler := range model.GetFunctions(model.Ftx, symbol) {
+	for function, handler := range model.GetFunctions(model.Ftx, standardSymbol) {
 		if handler != nil {
-			setting := model.GetSetting(function, model.Ftx, symbol)
+			setting := model.GetSetting(function, model.Ftx, standardSymbol)
 			if setting != nil && setting.Function == model.FunctionCarry {
 				success, usdtBidAsk := markets.GetBidAsk(`USDT/USD`, model.Ftx)
 				if success && bidAsk.Asks.Len() > 0 && bidAsk.Bids.Len() > 0 {
@@ -157,10 +159,10 @@ func handleTickerFtx(markets *model.Markets, response *simplejson.Json) {
 			}
 		}
 	}
-	if markets.SetBidAsk(symbol, model.Ftx, bidAsk) {
-		for function, handler := range model.GetFunctions(model.Ftx, symbol) {
+	if markets.SetBidAsk(standardSymbol, model.Ftx, bidAsk) {
+		for function, handler := range model.GetFunctions(model.Ftx, standardSymbol) {
 			if handler != nil {
-				setting := model.GetSetting(function, model.Ftx, symbol)
+				setting := model.GetSetting(function, model.Ftx, standardSymbol)
 				if setting != nil {
 					go handler(setting, bidAsk)
 				}

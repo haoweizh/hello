@@ -94,8 +94,16 @@ func Test_BalAndPos(t *testing.T) {
 	}
 }
 
+func TestWs(t *testing.T) {
+	market := model.BybitPerp
+	model.NewConfig()
+	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
+	api.CreateMarketDepthServer(model.AppMarkets, market, nil)
+	select {}
+}
+
 func Test_WsAndOrderApi(t *testing.T) {
-	market := model.OKEX
+	market := model.Gate
 	coin := `1INCH`
 	orderType := model.OrderTypeLimit
 	orderSide := model.OrderSideSell

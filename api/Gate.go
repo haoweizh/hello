@@ -228,7 +228,8 @@ var tickerHandler = gateWs.NewCallBack(func(msg *gateWs.UpdateMsg) {
 		if update.CurrencyPair == "" {
 			return
 		}
-		symbol = update.CurrencyPair
+		_, _, coin := model.GetCoinFromDialect(model.Gate, update.CurrencyPair)
+		symbol = coin + model.UniStandardTail[model.MarketTypeSpot]
 		now := int(time.Now().UnixNano() / int64(time.Millisecond))
 		bidPrice, _ := strconv.ParseFloat(update.Bid, 64)
 		bidAmount, _ := strconv.ParseFloat(update.BidSize, 64)
@@ -246,7 +247,8 @@ var tickerHandler = gateWs.NewCallBack(func(msg *gateWs.UpdateMsg) {
 		if update.CurrencyPair == "" {
 			return
 		}
-		symbol = update.CurrencyPair
+		_, _, coin := model.GetCoinFromDialect(model.Gate, update.CurrencyPair)
+		symbol = coin + model.UniStandardTail[model.MarketTypeSpot]
 		now := int(time.Now().UnixNano() / int64(time.Millisecond))
 		bidAsk = model.BidAsk{Ts: int(update.TimeInMilli), TsReceived: now, UpdateId: update.LastUpdateId,
 			Bids: []model.Tick{}, Asks: []model.Tick{}}
@@ -267,7 +269,8 @@ var tickerHandler = gateWs.NewCallBack(func(msg *gateWs.UpdateMsg) {
 		if update.Contract == "" {
 			return
 		}
-		symbol = strings.Split(update.Contract, "_")[0] + model.UniStandardTail[model.MarketTypePerp]
+		_, _, coin := model.GetCoinFromDialect(model.Gate, update.Contract)
+		symbol = coin + model.UniStandardTail[model.MarketTypePerp]
 		now := int(time.Now().UnixNano() / int64(time.Millisecond))
 		bidPrice, _ := strconv.ParseFloat(update.BestBidPrice, 64)
 		_, bidAmount := model.ParseRealAmount(model.Gate, symbol, float64(update.BestBidSize))

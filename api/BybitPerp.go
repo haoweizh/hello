@@ -32,19 +32,23 @@ func maintainChannelBybitPerp(subscribes []interface{}) {
 			time.Sleep(time.Minute)
 			for _, value := range subscribes {
 				_, _, coin := model.GetCoinFromDialect(model.BybitPerp, value.(string))
-				_, bidAsk := model.AppMarkets.GetBidAsk(coin+model.UniStandardTail[model.MarketTypePerp], model.BybitPerp)
-				now := time.Now().UnixNano() / int64(time.Millisecond)
-				if bidAsk == nil || now-int64(bidAsk.Ts) > 60000 {
+				standardSymbol := coin + model.UniStandardTail[model.MarketTypePerp]
+				_, bidAsk := model.AppMarkets.GetBidAsk(standardSymbol, model.BybitPerp)
+				delay := time.Now().UnixMilli() - int64(bidAsk.Ts)
+				if bidAsk == nil || delay > 60000 {
 					subCmd := fmt.Sprintf(`{"op": "subscribe", "args": ["orderBookL2_25.%s"]}`, value.(string))
-					if bybitPerpSubConnection[value.(string)] != nil {
-						if err := SendToConnection(model.BybitPerp, bybitPerpSubConnection[value.(string)],
+					if bidAsk != nil {
+						util.Notice(`maintain bybitperp timeout %d`, delay)
+					}
+					if bybitPerpSubConnection[standardSymbol] != nil {
+						if err := SendToConnection(model.BybitPerp, bybitPerpSubConnection[standardSymbol],
 							[]byte(subCmd)); err != nil {
 							util.SocketInfo("bybitPerp can not resubscribe " + err.Error())
 						}
 					} else {
-						util.Notice(`bybitPerp can not get connection for %s`, value.(string))
+						util.Notice(`bybitPerp can not get connection for %s`, standardSymbol)
 					}
-					util.Notice(`send resubscribe %s`, subCmd)
+					util.Notice(`send resubscribe %s %s`, model.BybitPerp, subCmd)
 				}
 			}
 		}
@@ -72,7 +76,10 @@ var subscribeHandlerBybitPerp = func(connection *websocket.Conn, subscribes []in
 			util.SocketInfo("bybitPerp can not subscribe " + err.Error())
 			return err
 		}
-		bybitPerpSubConnection[subscribe.(string)] = connection
+		_, _, coin := model.GetCoinFromDialect(model.BybitPerp, subscribe.(string))
+		standardSymbol := coin + model.UniStandardTail[model.MarketTypePerp]
+		bybitPerpSubConnection[standardSymbol] = connection
+		util.Notice(`set bybitperp connection %s`, standardSymbol)
 	}
 	return err
 }
@@ -412,7 +419,7 @@ func setSettingsBybitPerp(key, secret, symbol string) (singleMode, crossPos bool
 	} else {
 		util.Notice(fmt.Sprintf(`fail to set bybitPerp %s pos mode to single`, symbol))
 	}
-	postData = map[string]interface{}{`symbol`: symbol, `is_isolated`: false}
+	postData = map[string]interface{}{`symbol`: symbol, `is_isolated`: false, `buy_leverage`: 5, `sell_leverage`: 5}
 	response = SignedRequestBybitPerp(key, secret, http.MethodPost, `/private/linear/position/switch-isolated`, postData)
 	if err == nil && setJson != nil && setJson.Get(`ret_code`).MustInt() == 0 {
 		crossPos = true
@@ -500,9 +507,7 @@ func getFundingRateBybitPerp(key, secret, symbol string) (fundingRate float64, e
 		}
 		fundingRate = newJson.GetPath(`result`, `predicted_funding_rate`).MustFloat64()
 	}
-	now := util.GetNow()
-	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
-	expire = (today.Unix() + 86400 - now.Unix()) % 28800
+	expire = ((util.GetNow().Unix() / 28800) + 1) * 28800
 	return
 }
 
