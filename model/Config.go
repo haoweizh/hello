@@ -36,7 +36,7 @@ var AppAccounts []map[string]*Account // account index/map/account
 var marketAccounts = make(map[string][]*Account)
 
 func GetAccounts(index int) (accounts map[string]*Account) {
-	if AppAccounts != nil {
+	if AppAccounts != nil && len(AppAccounts) > index {
 		return AppAccounts[index]
 	}
 	size := AppConfig.GetCrossLen()

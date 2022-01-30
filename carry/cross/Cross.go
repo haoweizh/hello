@@ -284,6 +284,7 @@ func makeEqual(coin string, statuses []*CarryStatus) (isEqual bool, msg string) 
 	asks := model.Ticks{}
 	bidStatus := make(map[string]*CarryStatus)
 	askStatus := make(map[string]*CarryStatus)
+	tickTimes := make(map[string]int) // market_symbol_ts
 	for _, status := range statuses {
 		if status == nil {
 			util.Notice(`warning: fail to get one status %s`, coin)
@@ -295,6 +296,7 @@ func makeEqual(coin string, statuses []*CarryStatus) (isEqual bool, msg string) 
 		if !getTick || !getFunding {
 			return false, fmt.Sprintf(`no tick or funding rate when equal %s %s`, status.market, status.symbol)
 		}
+		tickTimes[status.market+status.symbol] = tick.Ts
 		bids = append(bids, model.Tick{Market: tick.Bids[0].Market, Symbol: tick.Bids[0].Symbol,
 			Amount: tick.Bids[0].Amount, Price: tick.Bids[0].Price * (1 + rate)})
 		asks = append(asks, model.Tick{Market: tick.Asks[0].Market, Symbol: tick.Asks[0].Symbol,
@@ -317,6 +319,7 @@ func makeEqual(coin string, statuses []*CarryStatus) (isEqual bool, msg string) 
 	} else {
 		util.Notice(fmt.Sprintf(`holding %s %f price %f, in u: %f`, coin, holding, price, holdingInU))
 	}
+	now := util.GetNowUnixMillion()
 	if holdingInU > 10 {
 		orderSide = model.OrderSideSell
 		sort.Sort(sort.Reverse(bids))
@@ -328,7 +331,8 @@ func makeEqual(coin string, statuses []*CarryStatus) (isEqual bool, msg string) 
 				continue
 			}
 			go api.CancelOrders(status.account.Key, status.account.Secret, status.market, status.symbol)
-			if equalStatus != nil {
+			delay := now - int64(tickTimes[status.market+status.symbol])
+			if equalStatus != nil || model.IsRelatedTickTimeout(status.market, delay) {
 				continue
 			}
 			if status.AvailableSell > holding {
@@ -353,7 +357,8 @@ func makeEqual(coin string, statuses []*CarryStatus) (isEqual bool, msg string) 
 				continue
 			}
 			go api.CancelOrders(status.account.Key, status.account.Secret, status.market, status.symbol)
-			if equalStatus != nil {
+			delay := now - int64(tickTimes[status.market+status.symbol])
+			if equalStatus != nil || model.IsRelatedTickTimeout(status.market, delay) {
 				continue
 			}
 			if math.IsNaN(status.AvailableBuy) || status.AvailableBuy > math.Abs(holding) {

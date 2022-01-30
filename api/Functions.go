@@ -483,7 +483,7 @@ func PlaceOrder(key, secret, orderSide, orderType, market, symbol, orderParam, r
 	if saveDB {
 		if isWs && market == model.OKEX {
 			order.Status = model.CarryStatusSuccess
-			order.OrderId = strconv.FormatInt(time.Now().UnixNano(), 10)
+			order.OrderId = strconv.FormatInt(time.Now().UnixNano(), 10) + symbol
 		}
 		if order.OrderId == `` {
 			order.OrderId = fmt.Sprintf(`%s_error_%d`, order.ErrCode, time.Now().UnixNano())
