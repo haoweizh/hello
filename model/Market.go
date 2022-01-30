@@ -206,6 +206,9 @@ func (markets *Markets) CopyBidAsk(symbol, market string) (result bool, bidAsk *
 func (markets *Markets) GetBidAsk(symbol, market string) (result bool, bidAsk *BidAsk) {
 	markets.lock.Lock()
 	defer markets.lock.Unlock()
+	if market == BybitPerp || market == BybitSpot {
+		util.Notice(`get symbol %s`, symbol)
+	}
 	if markets.bidAsks == nil || markets.bidAsks[symbol] == nil || markets.bidAsks[symbol][market] == nil ||
 		markets.bidAsks[symbol][market].Asks == nil || markets.bidAsks[symbol][market].Bids == nil ||
 		markets.bidAsks[symbol][market].Asks.Len() == 0 || markets.bidAsks[symbol][market].Bids.Len() == 0 {
