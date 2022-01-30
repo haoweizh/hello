@@ -88,11 +88,12 @@ func Test_BalAndPos(t *testing.T) {
 }
 
 func Test_WsAndOrderApi(t *testing.T) {
-	market := model.Gate
+	market := model.OKEX
 	coin := `1INCH`
 	orderType := model.OrderTypeLimit
-	orderSide := model.OrderSideBuy
-	symbols := []string{coin + model.UniStandardTail[model.MarketTypePerp], coin + model.UniStandardTail[model.MarketTypeSpot]}
+	orderSide := model.OrderSideSell
+	symbols := []string{ //coin + model.UniStandardTail[model.MarketTypePerp],
+		coin + model.UniStandardTail[model.MarketTypeSpot]}
 	model.NewConfig()
 	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
 	api.InitMarketInfos()
@@ -107,38 +108,39 @@ func Test_WsAndOrderApi(t *testing.T) {
 			time.Sleep(time.Second * 2)
 			getTick, tick = model.AppMarkets.GetBidAsk(symbol, market)
 		}
-		price := tick.Bids[len(tick.Bids)-1].Price
+		price := tick.Bids[len(tick.Bids)-1].Price * 1.05
 		amount := 20 / price
 		order := api.PlaceOrder(account.Key, account.Secret, orderSide, orderType, market,
 			symbol, ``, ``, price, price, amount, false, true, nil, nil)
 		fmt.Println(fmt.Sprintf(`1. place order return %v`, order))
-		if order != nil && order.OrderId != `` {
-			queryOrder := api.QueryOrderById(account.Key, account.Secret, market, symbol, orderType, order.OrderId)
-			fmt.Println(fmt.Sprintf(`2. query order %s return %s %s %v`, order.OrderId, queryOrder.OrderId, queryOrder.Status, queryOrder))
-		} else {
-			fmt.Println(fmt.Sprintf(`1. fail to place order`))
-			continue
-		}
-		cancelResult, errCode, errMsg, cancelOrder := api.CancelOrder(account.Key, account.Secret, market, symbol,
-			orderType, order.OrderId)
-		fmt.Println(fmt.Sprintf(`3. cancel %s return %v %s %s %v`, order.OrderId, cancelResult, errCode, errMsg, cancelOrder))
-		queryOrder := api.QueryOrderById(account.Key, account.Secret, market, symbol, orderType, order.OrderId)
-		fmt.Println(fmt.Sprintf(`4. query order %s return %s %s %v`, order.OrderId, queryOrder.OrderId, queryOrder.Status, queryOrder))
-		order1 := api.PlaceOrder(account.Key, account.Secret, orderSide, orderType, market,
-			symbol, ``, ``, price, price, amount, false, true, nil, nil)
-		order2 := api.PlaceOrder(account.Key, account.Secret, orderSide, orderType, market,
-			symbol, ``, ``, price, price, amount, false, true, nil, nil)
-		fmt.Println(fmt.Sprintf(`5. place order return %v %v`, order1, order2))
+		//if order != nil && order.OrderId != `` {
+		//	queryOrder := api.QueryOrderById(account.Key, account.Secret, market, symbol, orderType, order.OrderId)
+		//	fmt.Println(fmt.Sprintf(`2. query order %s return %s %s %v`, order.OrderId, queryOrder.OrderId, queryOrder.Status, queryOrder))
+		//} else {
+		//	fmt.Println(fmt.Sprintf(`1. fail to place order`))
+		//	continue
+		//}
+		//cancelResult, errCode, errMsg, cancelOrder := api.CancelOrder(account.Key, account.Secret, market, symbol,
+		//	orderType, order.OrderId)
+		//fmt.Println(fmt.Sprintf(`3. cancel %s return %v %s %s %v`, order.OrderId, cancelResult, errCode, errMsg, cancelOrder))
+		//queryOrder := api.QueryOrderById(account.Key, account.Secret, market, symbol, orderType, order.OrderId)
+		//fmt.Println(fmt.Sprintf(`4. query order %s return %s %s %v`, order.OrderId, queryOrder.OrderId, queryOrder.Status, queryOrder))
+		//order1 := api.PlaceOrder(account.Key, account.Secret, orderSide, orderType, market,
+		//	symbol, ``, ``, price, price, amount, false, true, nil, nil)
+		//order2 := api.PlaceOrder(account.Key, account.Secret, orderSide, orderType, market,
+		//	symbol, ``, ``, price, price, amount, false, true, nil, nil)
+		//fmt.Println(fmt.Sprintf(`5. place order return %v %v`, order1, order2))
+		api.PlacePairOKEX(account.Key, symbol, symbol, model.OrderTypeLimit, ``, price*0.9, price*1.1, amount)
 		api.CancelOrders(account.Key, account.Secret, market, symbol)
-		if order1 != nil {
-			time.Sleep(time.Second)
-			queryOrder = api.QueryOrderById(account.Key, account.Secret, market, symbol, orderType, order1.OrderId)
-			fmt.Println(fmt.Sprintf(`6. query order %s return %s %s %v`, order1.OrderId, queryOrder.OrderId, queryOrder.Status, queryOrder))
-		}
-		if order2 != nil {
-			queryOrder = api.QueryOrderById(account.Key, account.Secret, market, symbol, orderType, order2.OrderId)
-			fmt.Println(fmt.Sprintf(`6. query order %s return %s %s %v`, order2.OrderId, queryOrder.OrderId, queryOrder.Status, queryOrder))
-		}
+		//if order1 != nil {
+		//	time.Sleep(time.Second)
+		//	queryOrder = api.QueryOrderById(account.Key, account.Secret, market, symbol, orderType, order1.OrderId)
+		//	fmt.Println(fmt.Sprintf(`6. query order %s return %s %s %v`, order1.OrderId, queryOrder.OrderId, queryOrder.Status, queryOrder))
+		//}
+		//if order2 != nil {
+		//	queryOrder = api.QueryOrderById(account.Key, account.Secret, market, symbol, orderType, order2.OrderId)
+		//	fmt.Println(fmt.Sprintf(`6. query order %s return %s %s %v`, order2.OrderId, queryOrder.OrderId, queryOrder.Status, queryOrder))
+		//}
 	}
 	select {}
 }

@@ -541,7 +541,7 @@ func getWSOrderArgOKEX(symbol, orderSide, orderType, tag string, price, amount f
 		amountStrPerp = util.CutTailZero(fmt.Sprintf(`%f`, usdAmount*price))
 	}
 	_, _, _, dialectSymbol := model.GetFromStandard(model.OKEX, symbol)
-	return map[string]interface{}{`instId`: dialectSymbol, `tdMode`: `cross`, `side`: model.OrderSideBuy,
+	return map[string]interface{}{`instId`: dialectSymbol, `tdMode`: `cross`, `side`: orderSide,
 		`sz`: amountStrPerp, `ordType`: orderType, `px`: priceStr, `tag`: tag}
 }
 
@@ -627,6 +627,7 @@ func placeOrderOKEX(key, secret string, isWs bool, order *model.Order) {
 		postData[`px`] = priceStr
 	}
 	if isWs {
+		order.OrderId = strconv.FormatInt(time.Now().UnixNano(), 10) + order.Symbol
 		// 通过ws的symbol需要处理成方言，通过rest的无需处理，已统一在发送的函数中处理
 		_, _, _, dialectSymbol := model.GetFromStandard(model.OKEX, order.Symbol)
 		postData[`instId`] = dialectSymbol
