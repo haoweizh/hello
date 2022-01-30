@@ -217,6 +217,9 @@ func (markets *Markets) GetBidAsk(symbol, market string) (result bool, bidAsk *B
 func (markets *Markets) SetBidAsk(symbol, marketName string, bidAsk *BidAsk) bool {
 	markets.lock.Lock()
 	defer markets.lock.Unlock()
+	if marketName == BybitPerp || marketName == BybitSpot {
+		util.Notice(`set symbol %s`, symbol)
+	}
 	if markets.bidAsks == nil {
 		markets.bidAsks = make(map[string]map[string]*BidAsk)
 	}
