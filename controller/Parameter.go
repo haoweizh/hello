@@ -196,7 +196,8 @@ func holdPage(c *gin.Context) {
 }
 
 func crossRefresh(c *gin.Context) {
-	api.InitCrossMarketInfos()
+	param := c.Query(`markets`)
+	api.InitCrossMarketInfos(strings.Split(param, `,`))
 	c.String(http.StatusOK, `init cross markets done`)
 }
 

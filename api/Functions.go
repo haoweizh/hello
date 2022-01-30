@@ -675,10 +675,9 @@ func filterCross(market, symbol string) bool {
 }
 
 // InitCrossMarketInfos 用以初始化cross carry的各个币种市场，调用前需要truncate settings数据库表，本方法会从新插入
-func InitCrossMarketInfos() {
+func InitCrossMarketInfos(markets []string) {
 	infoPool := make(map[string][]*model.MarketInfo) // coin - []marketInfos
 	// model.Binance, model.Ftx,
-	markets := []string{model.OKEX, model.Ftx, model.Gate}
 	//markets := []string{model.BybitPerp, model.BybitSpot, model.OKEX, model.Ftx, model.Gate}
 	//markets := model.GetMarkets()
 	for _, market := range markets {

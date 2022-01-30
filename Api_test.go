@@ -63,7 +63,7 @@ func Test_ws(t *testing.T) {
 func Test_getCommonMarketInfos(t *testing.T) {
 	model.NewConfig()
 	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
-	api.InitCrossMarketInfos()
+	api.InitCrossMarketInfos([]string{model.OKEX, model.Ftx, model.Gate})
 }
 
 func Test_BalAndPos(t *testing.T) {
