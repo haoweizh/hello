@@ -31,17 +31,20 @@ func maintainChannelBybitSpot(subscribes []interface{}) {
 				_, _, coin := model.GetCoinFromDialect(model.BybitSpot, value.(string))
 				standardSymbol := coin + model.UniStandardTail[model.MarketTypeSpot]
 				_, bidAsk := model.AppMarkets.GetBidAsk(standardSymbol, model.BybitSpot)
-				now := time.Now().UnixNano() / int64(time.Millisecond)
-				if bidAsk == nil || now-int64(bidAsk.Ts) > 60000 {
+				delay := time.Now().UnixMilli() - int64(bidAsk.Ts)
+				if bidAsk == nil || delay > 60000 {
 					subCmd := fmt.Sprintf(
 						`{"topic":"depth","event":"sub","params":{"symbol":"%s","binary":false}}`, value.(string))
+					if bidAsk != nil {
+						util.Notice(`maintain bybitspot timeout %d`, delay)
+					}
 					if bybitSpotSubConnection[standardSymbol] != nil {
 						if err := SendToConnection(model.BybitSpot, bybitSpotSubConnection[standardSymbol],
 							[]byte(subCmd)); err != nil {
 							util.SocketInfo("bybitSpot can not resubscribe " + err.Error())
 						}
 					} else {
-						util.Notice(`bybitSpot can not get connection for %s`, value.(string))
+						util.Notice(`bybitSpot can not get connection for %s`, standardSymbol)
 					}
 					util.Notice(`send resubscribe %s %s`, model.BybitSpot, subCmd)
 				}
@@ -70,7 +73,9 @@ var subscribeHandlerBybitSpot = func(connection *websocket.Conn, subscribes []in
 			return err
 		}
 		_, _, coin := model.GetCoinFromDialect(model.BybitSpot, subscribe.(string))
-		bybitSpotSubConnection[coin+model.UniStandardTail[model.MarketTypeSpot]] = connection
+		standardSymbol := coin + model.UniStandardTail[model.MarketTypeSpot]
+		bybitSpotSubConnection[standardSymbol] = connection
+		util.Notice(`set bybitspot connection %s`, standardSymbol)
 	}
 	return err
 }
