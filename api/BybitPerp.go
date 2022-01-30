@@ -233,6 +233,7 @@ func handleOrderBookBybitPerp(markets *model.Markets, symbol string, ts int64, r
 		sort.Sort(bidAsk.Asks)
 		sort.Sort(sort.Reverse(bidAsk.Bids))
 		//util.SocketInfo(markets.ToStringBidAsk(bidAsk))
+		util.Notice(`try to set bidask %s`, symbol)
 		if markets.SetBidAsk(symbol, model.BybitPerp, bidAsk) {
 			for function, handler := range model.GetFunctions(model.BybitPerp, symbol) {
 				if handler != nil {
