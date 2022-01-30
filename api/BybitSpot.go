@@ -159,7 +159,8 @@ func parseTickBybitSpot(data map[string]interface{}) (symbol string, bidAsk *mod
 		symbol = coin + model.UniStandardTail[model.MarketTypeSpot]
 	}
 	if data[`t`] != nil {
-		bidAsk.UpdateId, _ = data[`t`].(json.Number).Int64()
+		ts, _ := data[`t`].(json.Number).Int64()
+		bidAsk.Ts = int(ts)
 	}
 	if data[`b`] != nil {
 		items := data[`b`].([]interface{})

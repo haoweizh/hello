@@ -122,6 +122,16 @@ func holdPage(c *gin.Context) {
 	for _, account := range queryAccounts {
 		if account != nil {
 			market, inAllSpot, contractAccountValue, holdingSpot, holdingFuture, unrealizedPnl := cross.GetCrossMarketValue(account.Key)
+			duplicated := false
+			for _, value := range marketValues {
+				if value[0] == market {
+					duplicated = true
+					break
+				}
+			}
+			if duplicated {
+				continue
+			}
 			marketValues = append(marketValues, []string{market,
 				strconv.FormatFloat(inAllSpot, 'f', 0, 64),
 				strconv.FormatFloat(contractAccountValue, 'f', 0, 64),

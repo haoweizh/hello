@@ -234,7 +234,7 @@ func handleOrderBookBybitPerp(markets *model.Markets, symbol string, ts int64, r
 		bidAsk.Asks = askNew
 	}
 	if bidAsk != nil {
-		bidAsk.Ts = int(ts / 1000)
+		bidAsk.Ts = int(ts)
 		bidAsk.TsReceived = int(util.GetNowUnixMillion())
 		sort.Sort(bidAsk.Asks)
 		sort.Sort(sort.Reverse(bidAsk.Bids))
