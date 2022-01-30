@@ -127,7 +127,7 @@ func handleTickerFtx(markets *model.Markets, response *simplejson.Json) {
 	if !success {
 		return
 	}
-	symbol := coin + model.UniStandardTail[marketType]
+	standardSymbol := coin + model.UniStandardTail[marketType]
 	dataType := response.Get(`type`).MustString()
 	data := response.Get(`data`)
 	if data == nil || data.Get(`bid`) == nil || data.Get(`ask`) == nil || data.Get(`bidSize`) == nil ||
@@ -140,13 +140,13 @@ func handleTickerFtx(markets *model.Markets, response *simplejson.Json) {
 	bidAsk.TsReceived = int(util.GetNowUnixMillion())
 	if dataType == `update` {
 		bidAsk.Bids = []model.Tick{{Price: data.Get(`bid`).MustFloat64(), Amount: data.Get(`bidSize`).MustFloat64(),
-			Market: model.Ftx, Symbol: symbol, Side: model.OrderSideBuy}}
+			Market: model.Ftx, Symbol: standardSymbol, Side: model.OrderSideBuy}}
 		bidAsk.Asks = []model.Tick{{Price: data.Get(`ask`).MustFloat64(), Amount: data.Get(`askSize`).MustFloat64(),
-			Market: model.Ftx, Symbol: symbol, Side: model.OrderSideSell}}
+			Market: model.Ftx, Symbol: standardSymbol, Side: model.OrderSideSell}}
 	}
-	for function, handler := range model.GetFunctions(model.Ftx, symbol) {
+	for function, handler := range model.GetFunctions(model.Ftx, standardSymbol) {
 		if handler != nil {
-			setting := model.GetSetting(function, model.Ftx, symbol)
+			setting := model.GetSetting(function, model.Ftx, standardSymbol)
 			if setting != nil && setting.Function == model.FunctionCarry {
 				success, usdtBidAsk := markets.GetBidAsk(`USDT/USD`, model.Ftx)
 				if success && bidAsk.Asks.Len() > 0 && bidAsk.Bids.Len() > 0 {
@@ -157,10 +157,10 @@ func handleTickerFtx(markets *model.Markets, response *simplejson.Json) {
 			}
 		}
 	}
-	if markets.SetBidAsk(symbol, model.Ftx, bidAsk) {
-		for function, handler := range model.GetFunctions(model.Ftx, symbol) {
+	if markets.SetBidAsk(standardSymbol, model.Ftx, bidAsk) {
+		for function, handler := range model.GetFunctions(model.Ftx, standardSymbol) {
 			if handler != nil {
-				setting := model.GetSetting(function, model.Ftx, symbol)
+				setting := model.GetSetting(function, model.Ftx, standardSymbol)
 				if setting != nil {
 					go handler(setting, bidAsk)
 				}

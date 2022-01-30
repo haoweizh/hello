@@ -229,6 +229,7 @@ var tickerHandler = gateWs.NewCallBack(func(msg *gateWs.UpdateMsg) {
 			return
 		}
 		symbol = update.CurrencyPair
+		util.Notice(`get gate spot book ticker %s`, symbol)
 		now := int(time.Now().UnixNano() / int64(time.Millisecond))
 		bidPrice, _ := strconv.ParseFloat(update.Bid, 64)
 		bidAmount, _ := strconv.ParseFloat(update.BidSize, 64)
@@ -247,6 +248,7 @@ var tickerHandler = gateWs.NewCallBack(func(msg *gateWs.UpdateMsg) {
 			return
 		}
 		symbol = update.CurrencyPair
+		util.Notice(`get gate spot order book %s`, symbol)
 		now := int(time.Now().UnixNano() / int64(time.Millisecond))
 		bidAsk = model.BidAsk{Ts: int(update.TimeInMilli), TsReceived: now, UpdateId: update.LastUpdateId,
 			Bids: []model.Tick{}, Asks: []model.Tick{}}
