@@ -715,14 +715,6 @@ func getMarketsOKEX(key, secret string) (marketInfos map[string]*model.MarketInf
 						marketInfo.CTCurrency = value[`ctValCcy`].(string)
 					}
 					marketInfos[marketInfo.Name] = marketInfo
-					//if instType == `SWAP` && strings.Contains(marketInfo.Name, `-USDT-SWAP`) {
-					//	symbol := strings.Split(marketInfo.Name, `-`)[0] + `-USDT`
-					//	if marketInfos[symbol] != nil {
-					//		fmt.Println(marketInfo.Name)
-					//	} else {
-					//		fmt.Println(`do not have ` + marketInfo.Name)
-					//	}
-					//}
 				}
 			}
 		}
@@ -792,12 +784,6 @@ func parseOrderOKEX(value map[string]interface{}) (order *model.Order) {
 	if value[`avgPx`] != nil && value[`avgPx`] != `` {
 		order.DealPrice, _ = strconv.ParseFloat(value[`avgPx`].(string), 64)
 	}
-	if value[`instId`] != nil {
-		success, marketType, coin := model.GetCoinFromDialect(model.OKEX, value[`instId`].(string))
-		if success {
-			order.Symbol = coin + model.UniStandardTail[marketType]
-		}
-	}
 	if value[`ordId`] != nil {
 		order.OrderId = value[`ordId`].(string)
 	} else if value[`algoId`] != nil {
@@ -847,9 +833,17 @@ func parseOrderOKEX(value map[string]interface{}) (order *model.Order) {
 	if value[`sCode`] != nil {
 		order.ErrCode = value[`sCode`].(string)
 	}
-	if strings.Contains(order.Symbol, `SWAP`) || len(strings.Split(order.Symbol, `-`)) > 2 {
-		_, order.Amount = model.ParseRealAmount(model.OKEX, order.Symbol, order.Amount)
-		_, order.DealAmount = model.ParseRealAmount(model.OKEX, order.Symbol, order.DealAmount)
+	if value[`instId`] != nil {
+		success, marketType, coin := model.GetCoinFromDialect(model.OKEX, value[`instId`].(string))
+		if success {
+			order.Symbol = coin + model.UniStandardTail[marketType]
+		} else {
+			return nil
+		}
+		if marketType == model.MarketTypePerp {
+			_, order.Amount = model.ParseRealAmount(model.OKEX, order.Symbol, order.Amount)
+			_, order.DealAmount = model.ParseRealAmount(model.OKEX, order.Symbol, order.DealAmount)
+		}
 	}
 	return order
 }
@@ -997,19 +991,19 @@ func parsePositionOKEX(value map[string]interface{}) (success bool, position *mo
 		position.Margin, _ = strconv.ParseFloat(value[`margin`].(string), 64)
 	}
 	if value[`instId`] != nil { // 	产品ID，如 BTC-USD-180216
-		getCoin, _, coin := model.GetCoinFromDialect(model.OKEX, value[`instId`].(string))
+		getCoin, marketType, coin := model.GetCoinFromDialect(model.OKEX, value[`instId`].(string))
 		if !getCoin {
 			return false, nil
 		}
 		position.Currency = coin + model.UniStandardTail[model.MarketTypePerp]
-	}
-	//posCcy 仓位资产币种，仅适用于币币杠杆仓位
-	if value[`pos`] != nil {
-		pos, _ := strconv.ParseFloat(value[`pos`].(string), 64)
-		if strings.Contains(position.Currency, `SWAP`) || len(strings.Split(position.Currency, `-`)) > 2 {
-			success, position.Holding = model.ParseRealAmount(model.OKEX, position.Currency, pos)
-		} else {
-			position.Holding = pos
+		//posCcy 仓位资产币种，仅适用于币币杠杆仓位
+		if value[`pos`] != nil {
+			pos, _ := strconv.ParseFloat(value[`pos`].(string), 64)
+			if marketType == model.MarketTypePerp {
+				success, position.Holding = model.ParseRealAmount(model.OKEX, position.Currency, pos)
+			} else {
+				position.Holding = pos
+			}
 		}
 	}
 	//pos 持仓数量
@@ -1143,7 +1137,7 @@ func _(key, secret, symbol string) (price float64) {
 	return price
 }
 
-// 目前只支持永续 swap
+// 目前只支持永续
 func getPositionsOKEX(key, secret string) (success bool, positions []*model.Position) {
 	param := map[string]interface{}{`instType`: `SWAP`}
 	responseBody := sendSignRequestOKEX(key, secret, http.MethodGet, `/api/v5/account/positions`, param, nil)

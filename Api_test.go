@@ -68,6 +68,8 @@ func Test_getCommonMarketInfos(t *testing.T) {
 
 func Test_BalAndPos(t *testing.T) {
 	model.NewConfig()
+	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
+	api.InitMarketInfos()
 	//balMarkets := []string{model.OKEX, model.BybitSpot, model.Ftx, model.Gate}
 	//for _, market := range balMarkets {
 	//	account := model.AppConfig.GetAccounts(market)[0]
@@ -84,6 +86,11 @@ func Test_BalAndPos(t *testing.T) {
 		account := model.AppConfig.GetAccounts(market)[0]
 		success, positions, total, available := api.GetPositions(account.Key, account.Secret, market)
 		fmt.Println(fmt.Sprintf(`%v %f %f %d`, success, total, available, len(positions)))
+		for _, position := range positions {
+			if position.Currency == `TRB_PERP` {
+				fmt.Println(position.Holding)
+			}
+		}
 	}
 }
 
