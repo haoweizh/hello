@@ -44,7 +44,7 @@ func maintainChannelBybitPerp(subscribes []interface{}) {
 					} else {
 						util.Notice(`bybitPerp can not get connection for %s`, value.(string))
 					}
-					util.Notice(`send resubscribe %s`, subCmd)
+					util.Notice(`send resubscribe %s %s`, model.BybitPerp, subCmd)
 				}
 			}
 		}
@@ -500,9 +500,7 @@ func getFundingRateBybitPerp(key, secret, symbol string) (fundingRate float64, e
 		}
 		fundingRate = newJson.GetPath(`result`, `predicted_funding_rate`).MustFloat64()
 	}
-	now := util.GetNow()
-	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
-	expire = (today.Unix() + 86400 - now.Unix()) % 28800
+	expire = ((util.GetNow().Unix() / 28800) + 1) * 28800
 	return
 }
 

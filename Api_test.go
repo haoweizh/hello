@@ -95,6 +95,11 @@ func Test_BalAndPos(t *testing.T) {
 }
 
 func Test_WsAndOrderApi(t *testing.T) {
+	now := util.GetNow()
+	//today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+	expire := ((now.Unix() / 28800) + 1) * 28800
+	next := time.Unix(expire, 0)
+	fmt.Println(next.String())
 	market := model.OKEX
 	coin := `1INCH`
 	orderType := model.OrderTypeLimit

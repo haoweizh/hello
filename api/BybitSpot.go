@@ -42,7 +42,7 @@ func maintainChannelBybitSpot(subscribes []interface{}) {
 					} else {
 						util.Notice(`bybitSpot can not get connection for %s`, value.(string))
 					}
-					util.Notice(`send resubscribe %s`, subCmd)
+					util.Notice(`send resubscribe %s %s`, model.BybitSpot, subCmd)
 				}
 			}
 		}
