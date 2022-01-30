@@ -34,11 +34,10 @@ func maintainChannelBybitPerp(subscribes []interface{}) {
 				_, _, coin := model.GetCoinFromDialect(model.BybitPerp, value.(string))
 				standardSymbol := coin + model.UniStandardTail[model.MarketTypePerp]
 				_, bidAsk := model.AppMarkets.GetBidAsk(standardSymbol, model.BybitPerp)
-				delay := time.Now().UnixMilli() - int64(bidAsk.Ts)
-				if bidAsk == nil || delay > 60000 {
+				if bidAsk == nil || time.Now().UnixMilli()-int64(bidAsk.Ts) > 60000 {
 					subCmd := fmt.Sprintf(`{"op": "subscribe", "args": ["orderBookL2_25.%s"]}`, value.(string))
 					if bidAsk != nil {
-						util.Notice(`maintain bybitperp timeout %d`, delay)
+						util.Notice(`maintain bybitperp timeout %d`, time.Now().UnixMilli()-int64(bidAsk.Ts))
 					}
 					if bybitPerpSubConnection[standardSymbol] != nil {
 						if err := SendToConnection(model.BybitPerp, bybitPerpSubConnection[standardSymbol],

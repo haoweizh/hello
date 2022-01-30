@@ -31,12 +31,11 @@ func maintainChannelBybitSpot(subscribes []interface{}) {
 				_, _, coin := model.GetCoinFromDialect(model.BybitSpot, value.(string))
 				standardSymbol := coin + model.UniStandardTail[model.MarketTypeSpot]
 				_, bidAsk := model.AppMarkets.GetBidAsk(standardSymbol, model.BybitSpot)
-				delay := time.Now().UnixMilli() - int64(bidAsk.Ts)
-				if bidAsk == nil || delay > 60000 {
+				if bidAsk == nil || time.Now().UnixMilli()-int64(bidAsk.Ts) > 60000 {
 					subCmd := fmt.Sprintf(
 						`{"topic":"depth","event":"sub","params":{"symbol":"%s","binary":false}}`, value.(string))
 					if bidAsk != nil {
-						util.Notice(`maintain bybitspot timeout %d`, delay)
+						util.Notice(`maintain bybitspot timeout %d`, time.Now().UnixMilli()-int64(bidAsk.Ts))
 					}
 					if bybitSpotSubConnection[standardSymbol] != nil {
 						if err := SendToConnection(model.BybitSpot, bybitSpotSubConnection[standardSymbol],
