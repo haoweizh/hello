@@ -95,7 +95,7 @@ func Test_BalAndPos(t *testing.T) {
 }
 
 func TestWs(t *testing.T) {
-	market := model.Gate
+	market := model.BybitPerp
 	model.NewConfig()
 	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
 	api.CreateMarketDepthServer(model.AppMarkets, market, nil)

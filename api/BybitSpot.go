@@ -29,13 +29,14 @@ func maintainChannelBybitSpot(subscribes []interface{}) {
 			time.Sleep(time.Minute)
 			for _, value := range subscribes {
 				_, _, coin := model.GetCoinFromDialect(model.BybitSpot, value.(string))
-				_, bidAsk := model.AppMarkets.GetBidAsk(coin+model.UniStandardTail[model.MarketTypeSpot], model.BybitSpot)
+				standardSymbol := coin + model.UniStandardTail[model.MarketTypeSpot]
+				_, bidAsk := model.AppMarkets.GetBidAsk(standardSymbol, model.BybitSpot)
 				now := time.Now().UnixNano() / int64(time.Millisecond)
 				if bidAsk == nil || now-int64(bidAsk.Ts) > 60000 {
 					subCmd := fmt.Sprintf(
 						`{"topic":"depth","event":"sub","params":{"symbol":"%s","binary":false}}`, value.(string))
 					if bybitSpotSubConnection[value.(string)] != nil {
-						if err := SendToConnection(model.BybitSpot, bybitSpotSubConnection[value.(string)],
+						if err := SendToConnection(model.BybitSpot, bybitSpotSubConnection[standardSymbol],
 							[]byte(subCmd)); err != nil {
 							util.SocketInfo("bybitSpot can not resubscribe " + err.Error())
 						}

@@ -37,13 +37,14 @@ func maintainChannelFtx(subscribes []interface{}) {
 			for _, value := range subscribes {
 				subscribe := value.([]string)
 				_, marketType, coin := model.GetCoinFromDialect(model.Ftx, subscribe[1])
-				_, bidAsk := model.AppMarkets.GetBidAsk(coin+model.UniStandardTail[marketType], model.Ftx)
+				standardSymbol := coin + model.UniStandardTail[marketType]
+				_, bidAsk := model.AppMarkets.GetBidAsk(standardSymbol, model.Ftx)
 				now := time.Now().UnixNano() / int64(time.Millisecond)
 				if bidAsk == nil || now-int64(bidAsk.Ts) > 60000 {
 					subCmd := fmt.Sprintf(`{"op": "subscribe", "channel": "%s", "market": "%s"}`,
 						subscribe[0], subscribe[1])
 					if ftxSymbolConnection[subscribe[1]] != nil {
-						if err := SendToConnection(model.Ftx, ftxSymbolConnection[subscribe[1]], []byte(subCmd)); err != nil {
+						if err := SendToConnection(model.Ftx, ftxSymbolConnection[standardSymbol], []byte(subCmd)); err != nil {
 							util.SocketInfo("ftx can not resubscribe " + err.Error())
 						}
 					} else {

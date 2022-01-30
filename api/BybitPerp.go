@@ -32,12 +32,13 @@ func maintainChannelBybitPerp(subscribes []interface{}) {
 			time.Sleep(time.Minute)
 			for _, value := range subscribes {
 				_, _, coin := model.GetCoinFromDialect(model.BybitPerp, value.(string))
-				_, bidAsk := model.AppMarkets.GetBidAsk(coin+model.UniStandardTail[model.MarketTypePerp], model.BybitPerp)
+				standardSymbol := coin + model.UniStandardTail[model.MarketTypePerp]
+				_, bidAsk := model.AppMarkets.GetBidAsk(standardSymbol, model.BybitPerp)
 				now := time.Now().UnixNano() / int64(time.Millisecond)
 				if bidAsk == nil || now-int64(bidAsk.Ts) > 60000 {
 					subCmd := fmt.Sprintf(`{"op": "subscribe", "args": ["orderBookL2_25.%s"]}`, value.(string))
 					if bybitPerpSubConnection[value.(string)] != nil {
-						if err := SendToConnection(model.BybitPerp, bybitPerpSubConnection[value.(string)],
+						if err := SendToConnection(model.BybitPerp, bybitPerpSubConnection[standardSymbol],
 							[]byte(subCmd)); err != nil {
 							util.SocketInfo("bybitPerp can not resubscribe " + err.Error())
 						}
