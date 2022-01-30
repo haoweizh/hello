@@ -36,7 +36,8 @@ func maintainChannelFtx(subscribes []interface{}) {
 			time.Sleep(time.Minute)
 			for _, value := range subscribes {
 				subscribe := value.([]string)
-				_, bidAsk := model.AppMarkets.GetBidAsk(subscribe[1], model.Ftx)
+				_, marketType, coin := model.GetCoinFromDialect(model.Ftx, subscribe[1])
+				_, bidAsk := model.AppMarkets.GetBidAsk(coin+model.UniStandardTail[marketType], model.Ftx)
 				now := time.Now().UnixNano() / int64(time.Millisecond)
 				if bidAsk == nil || now-int64(bidAsk.Ts) > 60000 {
 					subCmd := fmt.Sprintf(`{"op": "subscribe", "channel": "%s", "market": "%s"}`,
@@ -48,7 +49,7 @@ func maintainChannelFtx(subscribes []interface{}) {
 					} else {
 						util.Notice(`ftx can not get connection for %s`, subscribe[1])
 					}
-					util.Notice(`send resubscribe %s`, subCmd)
+					util.Notice(`send resubscribe %s %s`, model.Ftx, subCmd)
 				}
 			}
 		}
@@ -176,7 +177,7 @@ func handleDepthFtx(markets *model.Markets, response *simplejson.Json) {
 	if !success {
 		return
 	}
-	symbol := coin + model.UniStandardTail[marketType]
+	standardSymbol := coin + model.UniStandardTail[marketType]
 	dataType := response.Get(`type`).MustString()
 	data := response.Get(`data`)
 	if data.Interface() != nil && (dataType == `partial` || dataType == `update`) {
@@ -189,38 +190,38 @@ func handleDepthFtx(markets *model.Markets, response *simplejson.Json) {
 			for _, item := range bids {
 				price, _ := item.([]interface{})[0].(json.Number).Float64()
 				size, _ := item.([]interface{})[1].(json.Number).Float64()
-				bidAsk.Bids = append(bidAsk.Bids, model.Tick{Price: price, Amount: size, Market: model.Ftx, Symbol: symbol, Side: model.OrderSideBuy})
+				bidAsk.Bids = append(bidAsk.Bids, model.Tick{Price: price, Amount: size, Market: model.Ftx, Symbol: standardSymbol, Side: model.OrderSideBuy})
 			}
 			for _, item := range asks {
 				price, _ := item.([]interface{})[0].(json.Number).Float64()
 				size, _ := item.([]interface{})[1].(json.Number).Float64()
-				bidAsk.Asks = append(bidAsk.Asks, model.Tick{Price: price, Amount: size, Market: model.Ftx, Symbol: symbol, Side: model.OrderSideSell})
+				bidAsk.Asks = append(bidAsk.Asks, model.Tick{Price: price, Amount: size, Market: model.Ftx, Symbol: standardSymbol, Side: model.OrderSideSell})
 			}
 		} else if dataType == `update` {
-			_, oldBidAsk := markets.GetBidAsk(symbol, model.Ftx)
+			_, oldBidAsk := markets.GetBidAsk(standardSymbol, model.Ftx)
 			if oldBidAsk == nil {
-				util.SocketInfo(fmt.Sprintf(`fatal: can not have old bidask %s %s`, model.Ftx, symbol))
+				util.SocketInfo(fmt.Sprintf(`fatal: can not have old bidask %s %s`, model.Ftx, standardSymbol))
 				oldBidAsk = &model.BidAsk{Ts: int(data.Get(`time`).MustFloat64() * 1000),
 					TsReceived: int(util.GetNowUnixMillion()), Bids: make([]model.Tick, 0), Asks: make([]model.Tick, 0)}
 			}
 			priceAmountBid := make(map[float64]*model.Tick)
 			priceAmountAsk := make(map[float64]*model.Tick)
 			for _, bid := range oldBidAsk.Bids {
-				priceAmountBid[bid.Price] = &model.Tick{Price: bid.Price, Amount: bid.Amount, Market: model.Ftx, Symbol: symbol, Side: model.OrderSideBuy}
+				priceAmountBid[bid.Price] = &model.Tick{Price: bid.Price, Amount: bid.Amount, Market: model.Ftx, Symbol: standardSymbol, Side: model.OrderSideBuy}
 			}
 			for _, item := range bids {
 				price, _ := item.([]interface{})[0].(json.Number).Float64()
 				size, _ := item.([]interface{})[1].(json.Number).Float64()
-				priceAmountBid[price] = &model.Tick{Price: price, Amount: size, Market: model.Ftx, Symbol: symbol, Side: model.OrderSideBuy}
+				priceAmountBid[price] = &model.Tick{Price: price, Amount: size, Market: model.Ftx, Symbol: standardSymbol, Side: model.OrderSideBuy}
 			}
 			for _, ask := range oldBidAsk.Asks {
 				//priceAmountAsk[ask.Price] = &ask
-				priceAmountAsk[ask.Price] = &model.Tick{Price: ask.Price, Amount: ask.Amount, Market: model.Ftx, Symbol: symbol, Side: model.OrderSideSell}
+				priceAmountAsk[ask.Price] = &model.Tick{Price: ask.Price, Amount: ask.Amount, Market: model.Ftx, Symbol: standardSymbol, Side: model.OrderSideSell}
 			}
 			for _, item := range asks {
 				price, _ := item.([]interface{})[0].(json.Number).Float64()
 				size, _ := item.([]interface{})[1].(json.Number).Float64()
-				priceAmountAsk[price] = &model.Tick{Price: price, Amount: size, Market: model.Ftx, Symbol: symbol, Side: model.OrderSideSell}
+				priceAmountAsk[price] = &model.Tick{Price: price, Amount: size, Market: model.Ftx, Symbol: standardSymbol, Side: model.OrderSideSell}
 			}
 			for _, tick := range priceAmountBid {
 				if tick.Amount > 0 {
@@ -235,9 +236,9 @@ func handleDepthFtx(markets *model.Markets, response *simplejson.Json) {
 		}
 		sort.Sort(bidAsk.Asks)
 		sort.Sort(sort.Reverse(bidAsk.Bids))
-		for function, handler := range model.GetFunctions(model.Ftx, symbol) {
+		for function, handler := range model.GetFunctions(model.Ftx, standardSymbol) {
 			if handler != nil {
-				setting := model.GetSetting(function, model.Ftx, symbol)
+				setting := model.GetSetting(function, model.Ftx, standardSymbol)
 				if setting != nil && setting.Function == model.FunctionCarry {
 					success, usdtBidAsk := markets.GetBidAsk(`USDT/USD`, model.Ftx)
 					if success && bidAsk.Asks.Len() > 0 && bidAsk.Bids.Len() > 0 {
@@ -248,10 +249,10 @@ func handleDepthFtx(markets *model.Markets, response *simplejson.Json) {
 				}
 			}
 		}
-		if markets.SetBidAsk(symbol, model.Ftx, bidAsk) {
-			for function, handler := range model.GetFunctions(model.Ftx, symbol) {
+		if markets.SetBidAsk(standardSymbol, model.Ftx, bidAsk) {
+			for function, handler := range model.GetFunctions(model.Ftx, standardSymbol) {
 				if handler != nil {
-					setting := model.GetSetting(function, model.Ftx, symbol)
+					setting := model.GetSetting(function, model.Ftx, standardSymbol)
 					if setting != nil {
 						go handler(setting, bidAsk)
 					}

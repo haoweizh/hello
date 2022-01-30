@@ -31,7 +31,8 @@ func maintainChannelBybitPerp(subscribes []interface{}) {
 		for true {
 			time.Sleep(time.Minute)
 			for _, value := range subscribes {
-				_, bidAsk := model.AppMarkets.GetBidAsk(value.(string), model.BybitPerp)
+				_, _, coin := model.GetCoinFromDialect(model.BybitPerp, value.(string))
+				_, bidAsk := model.AppMarkets.GetBidAsk(coin+model.UniStandardTail[model.MarketTypePerp], model.BybitPerp)
 				now := time.Now().UnixNano() / int64(time.Millisecond)
 				if bidAsk == nil || now-int64(bidAsk.Ts) > 60000 {
 					subCmd := fmt.Sprintf(`{"op": "subscribe", "args": ["orderBookL2_25.%s"]}`, value.(string))
