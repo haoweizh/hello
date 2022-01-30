@@ -285,6 +285,7 @@ func makeEqual(coin string, statuses []*CarryStatus) (isEqual bool, msg string) 
 	bidStatus := make(map[string]*CarryStatus)
 	askStatus := make(map[string]*CarryStatus)
 	tickTimes := make(map[string]int) // market_symbol_ts
+	isEqual = true
 	for _, status := range statuses {
 		if status == nil {
 			util.Notice(`warning: fail to get one status %s`, coin)
@@ -309,14 +310,14 @@ func makeEqual(coin string, statuses []*CarryStatus) (isEqual bool, msg string) 
 	}
 	holdingInU := holding * price
 	if math.Abs(holdingInU) < 10 {
-		isEqual = true
 		if time.Now().Minute()%50 == 0 {
-			util.Notice(fmt.Sprintf(`clear holding every 5mins %s %f %f %f`, coin, holding, price, holdingInU))
+			util.Notice(fmt.Sprintf(`clear holding every 50 mins %s %f %f %f`, coin, holding, price, holdingInU))
 			for _, status := range statuses {
 				go api.CancelOrders(status.account.Key, status.account.Secret, status.market, status.symbol)
 			}
 		}
 	} else {
+		isEqual = false
 		util.Notice(fmt.Sprintf(`holding %s %f price %f, in u: %f`, coin, holding, price, holdingInU))
 	}
 	now := util.GetNowUnixMillion()
