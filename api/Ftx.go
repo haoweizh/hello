@@ -43,7 +43,7 @@ func maintainChannelFtx(subscribes []interface{}) {
 				if bidAsk == nil || now-int64(bidAsk.Ts) > 60000 {
 					subCmd := fmt.Sprintf(`{"op": "subscribe", "channel": "%s", "market": "%s"}`,
 						subscribe[0], subscribe[1])
-					if ftxSymbolConnection[subscribe[1]] != nil {
+					if ftxSymbolConnection[standardSymbol] != nil {
 						if err := SendToConnection(model.Ftx, ftxSymbolConnection[standardSymbol], []byte(subCmd)); err != nil {
 							util.SocketInfo("ftx can not resubscribe " + err.Error())
 						}
@@ -73,7 +73,8 @@ var subscribeHandlerFtx = func(connection *websocket.Conn, subscribes []interfac
 	}
 	for i := 0; i < len(subscribes); i++ {
 		cmdSubscribe := subscribes[i].([]string)
-		ftxSymbolConnection[cmdSubscribe[1]] = connection
+		_, marketType, coin := model.GetCoinFromDialect(model.Ftx, cmdSubscribe[1])
+		ftxSymbolConnection[coin+model.UniStandardTail[marketType]] = connection
 		subCmd := fmt.Sprintf(`{"op": "subscribe", "channel": "%s", "market": "%s"}`,
 			cmdSubscribe[0], cmdSubscribe[1])
 		if err = SendToConnection(model.Ftx, connection, []byte(subCmd)); err != nil {
