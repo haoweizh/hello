@@ -37,7 +37,7 @@ func maintainChannelBybitPerp(subscribes []interface{}) {
 				if bidAsk == nil || time.Now().UnixMilli()-int64(bidAsk.Ts) > 60000 {
 					subCmd := fmt.Sprintf(`{"op": "subscribe", "args": ["orderBookL2_25.%s"]}`, value.(string))
 					if bidAsk != nil {
-						util.Notice(`maintain bybitperp timeout %d`, time.Now().UnixMilli()-int64(bidAsk.Ts))
+						util.Notice(`maintain bybitperp timeout %s %d`, standardSymbol, time.Now().UnixMilli()-int64(bidAsk.Ts))
 					}
 					if bybitPerpSubConnection[standardSymbol] != nil {
 						if err := SendToConnection(model.BybitPerp, bybitPerpSubConnection[standardSymbol],
@@ -48,6 +48,8 @@ func maintainChannelBybitPerp(subscribes []interface{}) {
 						util.Notice(`bybitPerp can not get connection for %s`, standardSymbol)
 					}
 					util.Notice(`send resubscribe %s %s`, model.BybitPerp, subCmd)
+				} else {
+					util.Notice(`valid bybitperp tick %s`, standardSymbol)
 				}
 			}
 		}
