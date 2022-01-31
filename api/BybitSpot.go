@@ -94,7 +94,7 @@ func WsDepthServeBybitSpot(markets *model.Markets, orderHandler OrderHandler) ([
 		if len(event) == 0 {
 			return
 		}
-		util.Notice(`get bybitspot tick %s`, string(event))
+		//util.Notice(`get bybitspot tick %s`, string(event))
 		depthJson, depthErr := util.NewJSON(event)
 		if depthJson == nil || depthErr != nil {
 			return
