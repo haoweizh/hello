@@ -74,20 +74,18 @@ func RequireDepthChanReset(markets *model.Markets, market string) bool {
 	return true
 }
 
-func MustCancel(key, secret, market, symbol, orderType, orderId string, mustCancel bool) (
-	res bool, order *model.Order) {
+func MustCancel(key, secret, market, symbol, orderType, orderId string, mustCancel bool) (res bool) {
 	sleepTime := 1
 	for i := 0; i < 20; i++ {
-		result, errCode, _, cancelOrder := CancelOrder(key, secret, market, symbol, orderType, orderId)
+		result, errCode, _ := CancelOrder(key, secret, market, symbol, orderType, orderId)
 		res = result
-		order = cancelOrder
 		util.Notice(fmt.Sprintf(`[cancel] %s %s %s %s for %d times, return %t `,
 			market, symbol, orderType, orderId, i, result))
 		if result || !mustCancel || errCode == `0` {
-			return result, cancelOrder
+			return result
 		}
 		if errCode == `3008` && i >= 3 {
-			return result, cancelOrder
+			return result
 		}
 		//if result || !mustCancel { //3008:"submit cancel invalid order state
 		//	break
@@ -97,7 +95,7 @@ func MustCancel(key, secret, market, symbol, orderType, orderId string, mustCanc
 		time.Sleep(time.Second * time.Duration(sleepTime))
 		sleepTime *= 2
 	}
-	return res, order
+	return res
 }
 
 func CancelOrders(key, secret, market, symbol string) (result bool) {
@@ -121,11 +119,9 @@ func CancelOrders(key, secret, market, symbol string) (result bool) {
 	return false
 }
 
-func CancelOrder(key, secret, market, symbol, orderType, orderId string) (
-	result bool, errCode, msg string, order *model.Order) {
+func CancelOrder(key, secret, market, symbol, orderType, orderId string) (result bool, errCode, msg string) {
 	if model.AppConfig.Env == `test` {
-		return true, ``, `test cancel`,
-			&model.Order{Market: market, Symbol: symbol, OrderId: orderId, Status: model.CarryStatusFail}
+		return true, ``, `test cancel`
 	}
 	errCode = `market-not-supported ` + market
 	msg = `market not supported ` + market
@@ -137,16 +133,16 @@ func CancelOrder(key, secret, market, symbol, orderType, orderId string) (
 	//case model.Bitmex:
 	//	result, errCode, msg = deprecated.cancelOrderBitmex(key, secret, orderId)
 	case model.BybitPerp:
-		result, errCode, msg, order = cancelOrderBybitPerp(key, secret, symbol, orderId)
+		result, errCode, msg = cancelOrderBybitPerp(key, secret, symbol, orderId)
 	case model.BybitSpot:
-		result, errCode, msg, order = cancelOrderBybitSpot(key, secret, symbol, orderId)
+		result, errCode, msg = cancelOrderBybitSpot(key, secret, symbol, orderId)
 	case model.Ftx:
 		result = cancelOrderFtx(key, secret, orderType, orderId)
 	case model.Gate:
 		result = cancelOrderGate(key, secret, symbol, orderId)
 	}
 	util.Notice(fmt.Sprintf(`[cancel %s %v %s %s]`, orderId, result, market, symbol))
-	return result, errCode, msg, order
+	return result, errCode, msg
 }
 
 func GetDayCandle(key, secret, market, symbol string, timeCandle time.Time) (candle *model.Candle) {
@@ -465,15 +461,11 @@ func PlaceOrder(key, secret, orderSide, orderType, market, symbol, orderParam, r
 	case model.Binance:
 		placeOrderBinance(key, secret, order, orderSide, orderType, symbol, price, amount)
 	case model.BybitPerp:
-		order = placeOrderBybitPerp(key, secret, orderSide, orderType, orderParam, symbol, price, amount)
+		placeOrderBybitPerp(order, key, secret, orderSide, orderType, orderParam, symbol, price, amount)
 	case model.BybitSpot:
-		order = placeOrdersBybitSpot(key, secret, orderSide, orderType, orderParam, symbol, price, amount)
+		placeOrdersBybitSpot(order, key, secret, orderSide, orderType, orderParam, symbol, price, amount)
 	case model.Ftx:
 		placeOrderFtx(order, key, secret, orderSide, orderType, orderParam, symbol, price, triggerPrice, amount)
-	}
-	if order == nil {
-		util.Notice(`fail to order`)
-		return order
 	}
 	if order.OrderId == "0" || strings.Trim(order.OrderId, ` `) == "" {
 		order.Status = model.CarryStatusFail

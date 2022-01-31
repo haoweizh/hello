@@ -228,11 +228,10 @@ func getMarketsBybitSpot(key, secret string) (marketInfos map[string]*model.Mark
 	return
 }
 
-func parseOrderBybitSpot(item map[string]interface{}) (order *model.Order) {
+func parseOrderBybitSpot(order *model.Order, item map[string]interface{}) {
 	if item == nil {
-		return nil
+		return
 	}
-	order = &model.Order{Market: model.BybitSpot, Status: model.CarryStatusFail}
 	if item[`orderId`] != nil {
 		order.OrderId = item[`orderId`].(string)
 	}
@@ -270,8 +269,8 @@ func parseOrderBybitSpot(item map[string]interface{}) (order *model.Order) {
 	return
 }
 
-func placeOrdersBybitSpot(key, secret, orderSide, orderType, timeInForce, symbol string,
-	price, amount float64) (order *model.Order) {
+func placeOrdersBybitSpot(order *model.Order, key, secret, orderSide, orderType, timeInForce, symbol string,
+	price, amount float64) {
 	postData := make(map[string]interface{})
 	path := `/spot/v1/order`
 	postData[`symbol`] = symbol
@@ -292,10 +291,9 @@ func placeOrdersBybitSpot(key, secret, orderSide, orderType, timeInForce, symbol
 	if err == nil {
 		orderJson = orderJson.Get(`result`)
 		if orderJson != nil {
-			return parseOrderBybitSpot(orderJson.MustMap())
+			parseOrderBybitSpot(order, orderJson.MustMap())
 		}
 	}
-	return order
 }
 
 func cancelOrdersBybitSpot(key, secret, symbol string) bool {
@@ -310,7 +308,7 @@ func cancelOrdersBybitSpot(key, secret, symbol string) bool {
 	return false
 }
 
-func cancelOrderBybitSpot(key, secret, symbol, orderId string) (result bool, errCode, msg string, order *model.Order) {
+func cancelOrderBybitSpot(key, secret, symbol, orderId string) (result bool, errCode, msg string) {
 	postData := make(map[string]interface{})
 	postData[`orderId`] = orderId
 	postData[`symbolId`] = symbol
@@ -324,15 +322,15 @@ func cancelOrderBybitSpot(key, secret, symbol, orderId string) (result bool, err
 		}
 		errCode = strconv.FormatInt(retCode, 10)
 		msg = orderJson.Get(`ret_msg`).MustString()
-		if orderJson.Get(`result`) != nil {
-			item, _ := orderJson.Get(`result`).Map()
-			if item != nil {
-				order = parseOrderBybitSpot(item)
-			}
-		}
+		//if orderJson.Get(`result`) != nil {
+		//	item, _ := orderJson.Get(`result`).Map()
+		//	if item != nil {
+		//		parseOrderBybitSpot(order, item)
+		//	}
+		//}
 		return
 	}
-	return false, ``, ``, nil
+	return false, ``, ``
 }
 
 func queryOrderBybitSpot(key, secret, orderId string) (order *model.Order) {
@@ -343,7 +341,8 @@ func queryOrderBybitSpot(key, secret, orderId string) (order *model.Order) {
 		if orderJson == nil {
 			return nil
 		}
-		return parseOrderBybitSpot(orderJson.MustMap())
+		order = &model.Order{Market: model.BybitPerp, Status: model.CarryStatusFail}
+		parseOrderBybitSpot(order, orderJson.MustMap())
 	}
 	return nil
 }

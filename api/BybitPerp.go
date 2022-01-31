@@ -340,7 +340,7 @@ func cancelOrdersBybitPerp(key, secret, symbol string) bool {
 	return false
 }
 
-func cancelOrderBybitPerp(key, secret, symbol, orderId string) (result bool, errCode, msg string, order *model.Order) {
+func cancelOrderBybitPerp(key, secret, symbol, orderId string) (result bool, errCode, msg string) {
 	postData := map[string]interface{}{`order_id`: orderId, `symbol`: symbol}
 	response := SignedRequestBybitPerp(key, secret, `POST`, `/private/linear/order/cancel`, postData)
 	orderJson, err := util.NewJSON(response)
@@ -352,15 +352,15 @@ func cancelOrderBybitPerp(key, secret, symbol, orderId string) (result bool, err
 		}
 		errCode = strconv.FormatInt(retCode, 10)
 		msg = orderJson.Get(`ret_msg`).MustString()
-		if orderJson.Get(`result`) != nil {
-			item, _ := orderJson.Get(`result`).Map()
-			if item != nil {
-				order = parseOrderBybitPerp(item)
-			}
-		}
+		//if orderJson.Get(`result`) != nil {
+		//	item, _ := orderJson.Get(`result`).Map()
+		//	if item != nil {
+		//		parseOrderBybitPerp(order, item)
+		//	}
+		//}
 		return
 	}
-	return false, ``, ``, nil
+	return false, ``, ``
 }
 
 func queryOrderBybitPerp(key, secret, symbol, orderId string) (order *model.Order) {
@@ -370,19 +370,22 @@ func queryOrderBybitPerp(key, secret, symbol, orderId string) (order *model.Orde
 	if err == nil {
 		orderJson = orderJson.GetPath(`result`, `data`)
 		if orderJson == nil {
-			return nil
+			return
 		}
 		orderArray, _ := orderJson.Array()
 		for _, data := range orderArray {
-			return parseOrderBybitPerp(data.(map[string]interface{}))
+			order = &model.Order{Market: model.BybitSpot, Status: model.CarryStatusFail}
+			parseOrderBybitPerp(order, data.(map[string]interface{}))
+			if order.OrderId == orderId {
+				return order
+			}
 		}
 	}
 	return nil
 }
 
 // timeInForce 有效选项:GoodTillCancel, ImmediateOrCancel, FillOrKill,PostOnly
-func placeOrderBybitPerp(key, secret, orderSide, orderType, timeInForce, symbol string, price, amount float64) (
-	order *model.Order) {
+func placeOrderBybitPerp(order *model.Order, key, secret, orderSide, orderType, timeInForce, symbol string, price, amount float64) {
 	postData := make(map[string]interface{})
 	postData["symbol"] = symbol
 	postData["side"] = strings.ToUpper(orderSide[0:1]) + orderSide[1:]
@@ -404,7 +407,7 @@ func placeOrderBybitPerp(key, secret, orderSide, orderType, timeInForce, symbol 
 	if err == nil {
 		orderJson = orderJson.Get(`result`)
 		if orderJson != nil {
-			return parseOrderBybitPerp(orderJson.MustMap())
+			parseOrderBybitPerp(order, orderJson.MustMap())
 		}
 	}
 	return
@@ -511,8 +514,7 @@ func getFundingRateBybitPerp(key, secret, symbol string) (fundingRate float64, e
 	return
 }
 
-func parseOrderBybitPerp(item map[string]interface{}) (order *model.Order) {
-	order = &model.Order{Market: model.BybitPerp, Status: model.CarryStatusFail}
+func parseOrderBybitPerp(order *model.Order, item map[string]interface{}) {
 	if item[`order_id`] != nil {
 		order.OrderId = item[`order_id`].(string)
 	}
