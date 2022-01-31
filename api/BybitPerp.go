@@ -37,7 +37,8 @@ func maintainChannelBybitPerp(subscribes []interface{}) {
 				if bidAsk == nil || time.Now().UnixMilli()-int64(bidAsk.Ts) > 60000 {
 					subCmd := fmt.Sprintf(`{"op": "subscribe", "args": ["orderBookL2_25.%s"]}`, value.(string))
 					if bidAsk != nil {
-						util.Notice(`maintain bybitperp timeout %s %d`, standardSymbol, time.Now().UnixMilli()-int64(bidAsk.Ts))
+						util.Notice(`maintain bybitperp timeout %s %s %d`,
+							standardSymbol, time.Now().UnixMilli()-int64(bidAsk.Ts), bidAsk.Ts)
 					}
 					if bybitPerpSubConnection[standardSymbol] != nil {
 						if err := SendToConnection(model.BybitPerp, bybitPerpSubConnection[standardSymbol],
@@ -107,6 +108,7 @@ func WsDepthServeBybitPerp(markets *model.Markets, orderHandler OrderHandler) ([
 			util.SocketInfo(`bybit parse err` + string(event))
 			return
 		}
+		util.Notice(`get bybitperp ts %d`, ts)
 		if strings.Contains(topic, `orderBookL2_25.`) {
 			success, _, coin := model.GetCoinFromDialect(model.BybitPerp, topic[strings.LastIndex(topic, `.`)+1:])
 			symbol := coin + model.UniStandardTail[model.MarketTypePerp]

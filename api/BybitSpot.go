@@ -35,7 +35,8 @@ func maintainChannelBybitSpot(subscribes []interface{}) {
 					subCmd := fmt.Sprintf(
 						`{"topic":"depth","event":"sub","params":{"symbol":"%s","binary":false}}`, value.(string))
 					if bidAsk != nil {
-						util.Notice(`maintain bybitspot timeout %d`, time.Now().UnixMilli()-int64(bidAsk.Ts))
+						util.Notice(`maintain bybitspot timeout %s %d %d`,
+							standardSymbol, time.Now().UnixMilli()-int64(bidAsk.Ts), bidAsk.Ts)
 					}
 					if bybitSpotSubConnection[standardSymbol] != nil {
 						if err := SendToConnection(model.BybitSpot, bybitSpotSubConnection[standardSymbol],
