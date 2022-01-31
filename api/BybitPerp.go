@@ -103,16 +103,17 @@ func WsDepthServeBybitPerp(markets *model.Markets, orderHandler OrderHandler) ([
 			return
 		}
 		topic := depthJson.Get(`topic`).MustString()
-		ts := depthJson.Get(`timestamp_e6`).MustInt64()
+		str := depthJson.Get(`timestamp_e6`).MustString()
 		if depthErr != nil {
 			util.SocketInfo(`bybit parse err` + string(event))
 			return
 		}
-		util.Notice(`get bybitperp ts %d %s`, ts, string(event))
+		util.Notice(`get bybitperp ts %d %s`, str, string(event))
 		if strings.Contains(topic, `orderBookL2_25.`) {
 			success, _, coin := model.GetCoinFromDialect(model.BybitPerp, topic[strings.LastIndex(topic, `.`)+1:])
 			symbol := coin + model.UniStandardTail[model.MarketTypePerp]
-			if success {
+			if success && str != `` {
+				ts, _ := strconv.ParseInt(str, 10, 64)
 				handleOrderBookBybitPerp(markets, symbol, ts, depthJson)
 			}
 		} else if topic == `position` {
