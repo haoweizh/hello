@@ -107,9 +107,9 @@ func IsRelatedTickTimeout(market string, delayRelated int64) (timeout bool) {
 	switch market {
 	case Binance:
 		return delayRelated > 100
-	case OKEX, Ftx, BybitSpot, BybitPerp:
+	case OKEX, Ftx, BybitPerp:
 		return delayRelated > 300
-	case Kucoin, Gate:
+	case Kucoin, Gate, BybitSpot:
 		return delayRelated > 1000
 	}
 	return true
