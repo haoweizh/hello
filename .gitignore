@@ -4,3 +4,4 @@ config.yml
 /vendor/
 #go.mod
 go.sum
+/go.mod

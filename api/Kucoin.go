@@ -24,9 +24,8 @@ func kucoinFutureClient(key, secret, passPhrase string) *kumex.ApiService {
 	client := kumex.NewApiService(
 		kumex.ApiKeyOption(key),
 		kumex.ApiSecretOption(secret),
-		kumex.ApiPassPhraseOption(passPhrase),
-		kumex.ApiKeyVersionOption("2"))
-
+		kumex.ApiPassPhraseOption(passPhrase))
+	//kumex.ApiKeyVersionOption("2"))
 	return client
 }
 
