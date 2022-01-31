@@ -97,7 +97,6 @@ func WsDepthServeBybitPerp(markets *model.Markets, orderHandler OrderHandler) ([
 		if len(event) == 0 {
 			return
 		}
-		util.Info(`log bybitperp ws %s`, string(event))
 		depthJson, depthErr := util.NewJSON(event)
 		if depthJson == nil {
 			return
