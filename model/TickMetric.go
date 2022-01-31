@@ -105,9 +105,6 @@ func (metricManager *MetricManager) AddTick(market, symbol string, current time.
 	between := 0
 	if lastBidAsk != nil {
 		between = bidAsk.Ts - lastBidAsk.Ts
-		if market == BybitPerp {
-			util.Notice(`check between %s %d %d = %d`, symbol, bidAsk.Ts, lastBidAsk.Ts, between)
-		}
 	}
 	tickMetric.betweenSum += between
 	if tickMetric.betweenLow == 0 || tickMetric.betweenLow > between {
@@ -117,7 +114,6 @@ func (metricManager *MetricManager) AddTick(market, symbol string, current time.
 		tickMetric.betweenHigh = between
 	}
 	delay := now - bidAsk.Ts
-	util.Notice(`check delay %s %d = %d`, symbol, bidAsk.Ts, delay)
 	if tickMetric.delayLow == 0 || tickMetric.delayLow > delay {
 		tickMetric.delayLow = delay
 	}

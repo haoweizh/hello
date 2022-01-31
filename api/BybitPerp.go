@@ -111,7 +111,7 @@ func WsDepthServeBybitPerp(markets *model.Markets, orderHandler OrderHandler) ([
 			symbol := coin + model.UniStandardTail[model.MarketTypePerp]
 			if success && str != `` {
 				ts, _ := strconv.ParseInt(str, 10, 64)
-				handleOrderBookBybitPerp(markets, symbol, ts, depthJson)
+				handleOrderBookBybitPerp(markets, symbol, ts/1000, depthJson)
 			}
 		} else if topic == `position` {
 		}
