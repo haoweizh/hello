@@ -103,12 +103,12 @@ func TestWs(t *testing.T) {
 }
 
 func Test_WsAndOrderApi(t *testing.T) {
-	market := model.Gate
+	market := model.BybitPerp
 	coin := `1INCH`
 	orderType := model.OrderTypeLimit
 	orderSide := model.OrderSideSell
-	symbols := []string{ //coin + model.UniStandardTail[model.MarketTypePerp],
-		coin + model.UniStandardTail[model.MarketTypeSpot]}
+	symbols := []string{coin + model.UniStandardTail[model.MarketTypePerp]}
+	//coin + model.UniStandardTail[model.MarketTypeSpot]}
 	model.NewConfig()
 	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
 	api.InitMarketInfos()
@@ -128,13 +128,13 @@ func Test_WsAndOrderApi(t *testing.T) {
 		order := api.PlaceOrder(account.Key, account.Secret, orderSide, orderType, market,
 			symbol, ``, ``, price, price, amount, false, true, nil, nil)
 		fmt.Println(fmt.Sprintf(`1. place order return %v`, order))
-		//if order != nil && order.OrderId != `` {
-		//	queryOrder := api.QueryOrderById(account.Key, account.Secret, market, symbol, orderType, order.OrderId)
-		//	fmt.Println(fmt.Sprintf(`2. query order %s return %s %s %v`, order.OrderId, queryOrder.OrderId, queryOrder.Status, queryOrder))
-		//} else {
-		//	fmt.Println(fmt.Sprintf(`1. fail to place order`))
-		//	continue
-		//}
+		if order != nil && order.OrderId != `` {
+			queryOrder := api.QueryOrderById(account.Key, account.Secret, market, symbol, orderType, order.OrderId)
+			fmt.Println(fmt.Sprintf(`2. query order %s return %s %s %v`, order.OrderId, queryOrder.OrderId, queryOrder.Status, queryOrder))
+		} else {
+			fmt.Println(fmt.Sprintf(`1. fail to place order`))
+			continue
+		}
 		//cancelResult, errCode, errMsg, cancelOrder := api.CancelOrder(account.Key, account.Secret, market, symbol,
 		//	orderType, order.OrderId)
 		//fmt.Println(fmt.Sprintf(`3. cancel %s return %v %s %s %v`, order.OrderId, cancelResult, errCode, errMsg, cancelOrder))
@@ -181,10 +181,9 @@ func Test_initTurtleN(t *testing.T) {
 	accounts = append(accounts, account)
 	accounts = append(accounts, nil)
 	fmt.Println(len(accounts))
-	result, _, _, order := api.CancelOrder(model.AppConfig.GateKey, model.AppConfig.GateSecret, `gate`, `SUN_USDT`,
+	result, _, _ := api.CancelOrder(model.AppConfig.GateKey, model.AppConfig.GateSecret, `gate`, `SUN_USDT`,
 		model.OrderTypeLimit, `86007650678`)
 	fmt.Println(result)
-	fmt.Println(fmt.Sprintf(`%v %s %f`, result, order.Status, order.DealAmount))
 	testOrder := api.QueryOrderById(model.AppConfig.FtxKey, model.AppConfig.FtxSecret, model.Ftx, ``, model.OrderTypeLimit, `82424115039`)
 	fmt.Println(testOrder.Market)
 	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
