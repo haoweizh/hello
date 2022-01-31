@@ -93,7 +93,7 @@ func GetCoinFromDialect(market, dialectSymbol string) (success bool, marketType,
 
 func IsTickTimeout(market string, delay int64) (timeout bool) {
 	switch market {
-	case OKEX, Gate, Ftx:
+	case OKEX, Gate, Ftx, BybitSpot, BybitPerp:
 		return delay > 40
 	case Binance:
 		return delay > 100
@@ -107,7 +107,7 @@ func IsRelatedTickTimeout(market string, delayRelated int64) (timeout bool) {
 	switch market {
 	case Binance:
 		return delayRelated > 100
-	case OKEX, Ftx:
+	case OKEX, Ftx, BybitSpot, BybitPerp:
 		return delayRelated > 300
 	case Kucoin, Gate:
 		return delayRelated > 1000
