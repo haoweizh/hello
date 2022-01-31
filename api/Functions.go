@@ -471,6 +471,10 @@ func PlaceOrder(key, secret, orderSide, orderType, market, symbol, orderParam, r
 	case model.Ftx:
 		placeOrderFtx(order, key, secret, orderSide, orderType, orderParam, symbol, price, triggerPrice, amount)
 	}
+	if order == nil {
+		util.Notice(`fail to order`)
+		return order
+	}
 	if order.OrderId == "0" || strings.Trim(order.OrderId, ` `) == "" {
 		order.Status = model.CarryStatusFail
 	} else if order.Status == `` {
