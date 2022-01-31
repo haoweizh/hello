@@ -111,7 +111,6 @@ func WsDepthServeBybitPerp(markets *model.Markets, orderHandler OrderHandler) ([
 			symbol := coin + model.UniStandardTail[model.MarketTypePerp]
 			if success && str != `` {
 				ts, _ := strconv.ParseInt(str, 10, 64)
-				util.Notice(`get bybitperp ts %d %s`, ts, string(event))
 				handleOrderBookBybitPerp(markets, symbol, ts, depthJson)
 			}
 		} else if topic == `position` {
