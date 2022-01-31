@@ -108,7 +108,7 @@ func WsDepthServeBybitPerp(markets *model.Markets, orderHandler OrderHandler) ([
 			util.SocketInfo(`bybit parse err` + string(event))
 			return
 		}
-		util.Notice(`get bybitperp ts %d`, ts)
+		util.Notice(`get bybitperp ts %d %s`, ts, string(event))
 		if strings.Contains(topic, `orderBookL2_25.`) {
 			success, _, coin := model.GetCoinFromDialect(model.BybitPerp, topic[strings.LastIndex(topic, `.`)+1:])
 			symbol := coin + model.UniStandardTail[model.MarketTypePerp]
