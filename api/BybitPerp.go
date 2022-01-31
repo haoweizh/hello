@@ -68,19 +68,18 @@ var subscribeHandlerBybitPerp = func(connection *websocket.Conn, subscribes []in
 	//if err = SendToConnection(model.BybitPerp, connection, []byte(authCmd)); err != nil {
 	//	util.SocketInfo("bybit can not auth " + err.Error())
 	//}
+	subscribeMap := make(map[string]interface{})
+	subscribeMap[`op`] = `subscribe`
+	subscribeMap[`args`] = subscribes
+	subscribeMessage := util.JsonEncodeToByte(subscribeMap)
+	if err = SendToConnection(model.BybitPerp, connection, subscribeMessage); err != nil {
+		util.SocketInfo("bybitPerp can not subscribe " + err.Error())
+		return err
+	}
 	for _, subscribe := range subscribes {
-		subscribeMap := make(map[string]interface{})
-		subscribeMap[`op`] = `subscribe`
-		subscribeMap[`args`] = subscribe
-		subscribeMessage := util.JsonEncodeToByte(subscribeMap)
-		if err = SendToConnection(model.BybitPerp, connection, subscribeMessage); err != nil {
-			util.SocketInfo("bybitPerp can not subscribe " + err.Error())
-			return err
-		}
 		_, _, coin := model.GetCoinFromDialect(model.BybitPerp, subscribe.(string))
 		standardSymbol := coin + model.UniStandardTail[model.MarketTypePerp]
 		bybitPerpSubConnection[standardSymbol] = connection
-		util.Notice(`set bybitperp connection %s`, standardSymbol)
 	}
 	return err
 }
