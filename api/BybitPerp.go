@@ -49,8 +49,6 @@ func maintainChannelBybitPerp(subscribes []interface{}) {
 						util.Notice(`bybitPerp can not get connection for %s`, standardSymbol)
 					}
 					util.Notice(`send resubscribe %s %s`, model.BybitPerp, subCmd)
-				} else {
-					util.Notice(`valid bybitperp tick %s`, standardSymbol)
 				}
 			}
 		}

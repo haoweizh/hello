@@ -212,7 +212,7 @@ var wsHandlerOKEX = func(connection *websocket.Conn, event []byte, orderHandler 
 	if err != nil || responseJson == nil || responseJson.Get(`data`) == nil ||
 		len(responseJson.Get(`data`).MustArray()) == 0 ||
 		responseJson.GetPath(`arg`, `instId`) == nil {
-		util.Notice(`get wrong okex ws msg%s`, string(event))
+		//util.Notice(`get wrong okex ws msg%s`, string(event))
 		return
 	}
 	dialectSymbol := responseJson.GetPath(`arg`, `instId`).MustString()
