@@ -2,10 +2,14 @@ package api
 
 import (
 	"context"
+	"fmt"
 	"github.com/adshao/go-binance/v2"
+	"github.com/gorilla/websocket"
 	"hello/model"
 	"hello/util"
 	"strconv"
+	"strings"
+	"time"
 )
 
 func getMarketsBinanceSpot(key, secret string) (marketInfos map[string]*model.MarketInfo) {
@@ -57,46 +61,53 @@ func getMarketsBinanceSpot(key, secret string) (marketInfos map[string]*model.Ma
 	return marketInfos
 }
 
-//func getMarketsBinance(key, secret string) (marketInfos map[string]*model.MarketInfo) {
-//	marketInfos = make(map[string]*model.MarketInfo)
-//	requestUrls := []string{restBinance + `/api/v3/exchangeInfo`, restBinanceFuture + `/fapi/v1/exchangeInfo`}
-//	for _, requestUrl := range requestUrls {
-//		responseBody := signedRequestBinance(key, secret, http.MethodGet, requestUrl, false, nil)
-//		resultJson, err := util.NewJSON(responseBody)
-//		if err == nil && resultJson.Get(`symbols`) != nil {
-//			data := resultJson.Get(`symbols`).MustArray()
-//			for _, item := range data {
-//				value := item.(map[string]interface{})
-//				if value[`quoteAsset`] == nil || value[`baseAsset`] == nil {
-//					continue
-//				}
-//				var symbol string
-//				if value[`contractType`] == nil {
-//					haveSpot := false
-//					if value[`permissions`] != nil {
-//						permissions := value[`permissions`].([]interface{})
-//						for _, permission := range permissions {
-//							if permission.(string) == `SPOT` {
-//								haveSpot = true
-//							}
-//						}
-//					}
-//					if !haveSpot {
-//						continue
-//					}
-//					//symbol = value[`baseAsset`].(string) + value[`quoteAsset`].(string)
-//					symbol = value[`baseAsset`].(string) + model.UniStandardTail[model.MarketTypeSpot]
-//				} else if value[`contractType`] != nil && value[`contractType`].(string) == `PERPETUAL` {
-//					symbol = value[`baseAsset`].(string) + model.UniStandardTail[model.MarketTypePerp]
-//				} else {
-//					continue
-//				}
-//				marketInfo := &model.MarketInfo{Market: model.Binance, Name: symbol,
-//					CTCurrency: value[`baseAsset`].(string), MoneyMin: 10}
-//				setMarketInfoFilters(marketInfo, value[`filters`].([]interface{}))
-//				marketInfos[marketInfo.Name] = marketInfo
-//			}
-//		}
-//	}
-//	return marketInfos
-//}
+func WsDepthServeBinanceSpot(markets *model.Markets, orderHandler OrderHandler) (channels []chan struct{}, err error) {
+	subType := model.SubscribeTicker
+	wsHandler := func(connection *websocket.Conn, event []byte, orderHandler OrderHandler) {
+		result, wsErr := util.NewJSON(event)
+		if wsErr != nil {
+			util.SocketInfo(`binance fail to unmarshal json ` + err.Error())
+			return
+		}
+		subscribe, _ := result.Get("stream").String()
+		result = result.Get(`data`)
+		//data := new(binance.WsBookTickerEvent)
+		//wsErr := json.Unmarshal(event, &data)
+		if result == nil {
+			return
+		}
+		dialectSymbol := result.Get(`s`).MustString()
+		updateId := result.Get(`u`).MustInt64()
+		if dialectSymbol == `` {
+			return
+		}
+		if strings.Contains(subscribe, `@depth`) {
+			handleDepthBinance(markets, result, dialectSymbol, updateId)
+		} else if strings.Contains(subscribe, `@bookTicker`) {
+			handleTickerBinance(markets, result, dialectSymbol, updateId)
+		}
+	}
+	channels = make([]chan struct{}, 0)
+	spotSubs := GetWSSubscribes(model.BinanceSpot, subType)
+	spotChans, spotErr := WebSocketClient(model.BinanceSpot, wsBinance, spotSubs,
+		subscribeHandlerBinance, wsHandler, orderHandler, wsStepBinance)
+	if spotErr != nil {
+		util.SocketInfo(`fail to create binance spot conn %s`, spotErr.Error())
+	}
+	return spotChans, err
+}
+
+func maintainChannelBinanceSpot() {
+	if !channelMaintainingBinance {
+		channelMaintainingBinance = true
+		for true {
+			time.Sleep(time.Minute * 5)
+			ts := time.Now().UnixNano() / int64(time.Millisecond)
+			pong := []byte(fmt.Sprintf(`{"method":"PONG","E":%d}`, ts))
+			err := SendToAllConnections(model.BinanceSpot, pong)
+			if err != nil {
+				util.SocketInfo("pong binance server error " + err.Error())
+			}
+		}
+	}
+}
