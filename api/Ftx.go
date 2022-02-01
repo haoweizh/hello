@@ -41,16 +41,22 @@ func maintainChannelFtx(subscribes []interface{}) {
 				_, bidAsk := model.AppMarkets.GetBidAsk(standardSymbol, model.Ftx)
 				now := time.Now().UnixNano() / int64(time.Millisecond)
 				if bidAsk == nil || now-int64(bidAsk.Ts) > 60000 {
-					subCmd := fmt.Sprintf(`{"op": "subscribe", "channel": "%s", "market": "%s"}`,
-						subscribe[0], subscribe[1])
 					if ftxSymbolConnection[standardSymbol] != nil {
-						if err := SendToConnection(model.Ftx, ftxSymbolConnection[standardSymbol], []byte(subCmd)); err != nil {
+						cmdUnsub := fmt.Sprintf(`{"op": "unsubscribe", "channel": "%s", "market": "%s"}`,
+							subscribe[0], subscribe[1])
+						if err := SendToConnection(model.Ftx, ftxSymbolConnection[standardSymbol], []byte(cmdUnsub)); err != nil {
 							util.SocketInfo("ftx can not resubscribe " + err.Error())
 						}
+						time.Sleep(time.Second * 3)
+						cmdSub := fmt.Sprintf(`{"op": "subscribe", "channel": "%s", "market": "%s"}`,
+							subscribe[0], subscribe[1])
+						if err := SendToConnection(model.Ftx, ftxSymbolConnection[standardSymbol], []byte(cmdSub)); err != nil {
+							util.SocketInfo("ftx can not resubscribe " + err.Error())
+						}
+						util.Notice(`send unsubscribe-subscribe %s %s %s`, model.Ftx, cmdUnsub, cmdSub)
 					} else {
 						util.Notice(`ftx can not get connection for %s`, subscribe[1])
 					}
-					util.Notice(`send resubscribe %s %s`, model.Ftx, subCmd)
 				}
 			}
 		}

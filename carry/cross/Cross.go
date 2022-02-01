@@ -324,7 +324,7 @@ func makeEqual(coin string, statuses []*CarryStatus) (isEqual bool, msg string) 
 	if holdingInU > 10 {
 		orderSide = model.OrderSideSell
 		sort.Sort(sort.Reverse(bids))
-		util.Notice(fmt.Sprintf(`check to make equal buy %v`, asks))
+		util.Notice(fmt.Sprintf(`check to make equal buy holding %f worth %f %v`, holding, holdingInU, bids))
 		for i := 0; i < len(bids); i++ {
 			status := bidStatus[fmt.Sprintf(`%s_%s`, bids[i].Market, bids[i].Symbol)]
 			if status == nil {
@@ -350,7 +350,7 @@ func makeEqual(coin string, statuses []*CarryStatus) (isEqual bool, msg string) 
 	if holdingInU < -10 {
 		orderSide = model.OrderSideBuy
 		sort.Sort(asks)
-		util.Notice(fmt.Sprintf(`check to make equal buy %v`, asks))
+		util.Notice(fmt.Sprintf(`check to make equal buy holding %f worth %f %v`, holding, holdingInU, asks))
 		for i := 0; i < len(asks); i++ {
 			status := askStatus[fmt.Sprintf(`%s_%s`, asks[i].Market, asks[i].Symbol)]
 			if status == nil {
@@ -533,6 +533,20 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarrySta
 	if statusBuy == nil || statusSell == nil {
 		return nil, nil, 0, 0, 0
 	}
+	if !isFresh(statusBuy.account.Key, statusBuy.market, statusBuy.symbol) {
+		initLimitBuyAndSell(statusBuy, statusBuy.setting, priceBuy)
+	}
+	if !isFresh(statusSell.account.Key, statusSell.market, statusSell.symbol) {
+		initLimitBuyAndSell(statusSell, statusSell.setting, priceSell)
+	}
+	amount = math.Min(math.Min(statusBuy.LimitBuy, bidAmount), math.Min(statusSell.LimitSell, askAmount))
+	if amount > 0 {
+		amount = model.FormatCrossPair(statusBuy.market, statusSell.market, statusBuy.symbol, statusSell.symbol, amount, priceBuy)
+		util.Notice(fmt.Sprintf(`cross chance status-relate %s %s buy-sell %s %s at %f %f amount %f %f = %f hold %f %f`,
+			carryStatus.market+carryStatus.symbol, carryStatusRelate.market+carryStatusRelate.symbol,
+			statusBuy.market+statusBuy.symbol, statusSell.market+statusSell.symbol, priceBuy, priceSell,
+			math.Min(statusBuy.LimitBuy, bidAmount), math.Min(statusSell.LimitSell, askAmount), amount, statusBuy.Holding, statusSell.Holding))
+	}
 	if (score > 0.15 || scoreRelate > 0.15) || ((score > 0.1 || scoreRelate > 0.1) &&
 		(!isValidSymbol(carryStatus.market, carryStatus.symbol) ||
 			!isValidSymbol(carryStatusRelate.market, carryStatusRelate.symbol))) {
@@ -553,16 +567,6 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarrySta
 			}
 		}
 		return nil, nil, 0, 0, 0
-	}
-	if !isFresh(statusBuy.account.Key, statusBuy.market, statusBuy.symbol) {
-		initLimitBuyAndSell(statusBuy, statusBuy.setting, priceBuy)
-	}
-	if !isFresh(statusSell.account.Key, statusSell.market, statusSell.symbol) {
-		initLimitBuyAndSell(statusSell, statusSell.setting, priceSell)
-	}
-	amount = math.Min(math.Min(statusBuy.LimitBuy, bidAmount), math.Min(statusSell.LimitSell, askAmount))
-	if amount > 0 {
-		amount = model.FormatCrossPair(statusBuy.market, statusSell.market, statusBuy.symbol, statusSell.symbol, amount, priceBuy)
 	}
 	return statusBuy, statusSell, amount, priceBuy, priceSell
 }

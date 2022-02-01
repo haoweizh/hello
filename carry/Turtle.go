@@ -277,8 +277,7 @@ var ProcessTurtle = func(setting *model.Setting, tick *model.BidAsk) {
 	} else if setting.Chance > 0 {
 		priceLong = math.Max(turtleData.highDays20, setting.PriceX+turtleData.n/2)
 		if turtleData.lowDays10 < setting.PriceX-2*turtleData.n {
-			if setting.PriceX-2*turtleData.n < tick.Asks[0].Price &&
-				setting.PriceX-2*turtleData.n < tick.Bids[0].Price {
+			if setting.PriceX-2*turtleData.n < tick.Bids[0].Price {
 				priceShort = setting.PriceX - 2*turtleData.n
 			} else {
 				priceShort = turtleData.lowDays10
@@ -286,7 +285,11 @@ var ProcessTurtle = func(setting *model.Setting, tick *model.BidAsk) {
 		} else if turtleData.lowDays10 < setting.PriceX {
 			priceShort = turtleData.lowDays10
 		} else if turtleData.lowDays10 > setting.PriceX {
-			priceShort = math.Max(turtleData.lowDays10, turtleData.highDays10-2*turtleData.n)
+			if turtleData.highDays10-2*turtleData.n < tick.Bids[0].Price {
+				priceShort = math.Max(turtleData.lowDays10, turtleData.highDays10-2*turtleData.n)
+			} else {
+				priceShort = turtleData.lowDays10
+			}
 		}
 		placeTurtleOrders(account.Key, account.Secret, turtleData, setting, currentN, priceShort, priceLong)
 		// 加仓一个单位
@@ -325,8 +328,7 @@ var ProcessTurtle = func(setting *model.Setting, tick *model.BidAsk) {
 	} else if setting.Chance < 0 {
 		priceShort = math.Min(turtleData.lowDays20, setting.PriceX-turtleData.n/2)
 		if turtleData.highDays10 > setting.PriceX+2*turtleData.n {
-			if setting.PriceX+2*turtleData.n > tick.Bids[0].Price &&
-				setting.PriceX+2*turtleData.n > tick.Asks[0].Price {
+			if setting.PriceX+2*turtleData.n > tick.Asks[0].Price {
 				priceLong = setting.PriceX + 2*turtleData.n
 			} else {
 				priceLong = turtleData.highDays10
@@ -334,7 +336,11 @@ var ProcessTurtle = func(setting *model.Setting, tick *model.BidAsk) {
 		} else if turtleData.highDays10 > setting.PriceX {
 			priceLong = turtleData.highDays10
 		} else if turtleData.highDays10 < setting.PriceX {
-			priceLong = math.Min(turtleData.highDays10, turtleData.lowDays10+2*turtleData.n)
+			if turtleData.lowDays10+2*turtleData.n > tick.Asks[0].Price {
+				priceLong = math.Min(turtleData.highDays10, turtleData.lowDays10+2*turtleData.n)
+			} else {
+				priceLong = turtleData.highDays10
+			}
 		}
 		placeTurtleOrders(account.Key, account.Secret, turtleData, setting, currentN, priceShort, priceLong)
 		// 加仓一个单位
