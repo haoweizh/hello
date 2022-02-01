@@ -81,7 +81,8 @@ func Test_BalAndPos(t *testing.T) {
 	//		}
 	//	}
 	//}
-	posMarkets := []string{model.OKEX, model.BybitPerp, model.Ftx, model.Gate}
+	//posMarkets := []string{model.Gate}
+	posMarkets := []string{model.OKEX, model.BybitPerp, model.Ftx}
 	for _, market := range posMarkets {
 		account := model.AppConfig.GetAccounts(market)[0]
 		success, positions, total, available := api.GetPositions(account.Key, account.Secret, market)

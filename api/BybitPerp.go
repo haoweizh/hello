@@ -490,9 +490,7 @@ func getPositionsBybitPerp(key, secret string) (success bool, positions []*model
 					position.Holding = -1 * math.Abs(position.Holding)
 				}
 			}
-			if position.Holding != 0 {
-				positions = append(positions, position)
-			}
+			positions = append(positions, position)
 		}
 	}
 	return

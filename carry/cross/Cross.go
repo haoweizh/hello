@@ -418,12 +418,6 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 		doCross = true
 		return
 	}
-	if !checkSetCrossing(true) {
-		defer checkSetCrossing(false)
-	} else {
-		//util.Notice(fmt.Sprintf(`waiting for other ordering %s`, setting.Symbol))
-		return
-	}
 	million := util.GetNowUnixMillion()
 	delayTick := int64(0)
 	if tick != nil {
@@ -433,6 +427,12 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 	if tick == nil || tick.Asks == nil || tick.Bids == nil || setting == nil || model.AppPause ||
 		(model.AppConfig.Env != `test` && model.AppConfig.Handle != `1`) || setting.Valid == false ||
 		settings == nil || len(settings) == 0 || model.IsTickTimeout(setting.Market, delayTick) {
+		return
+	}
+	if !checkSetCrossing(true) {
+		defer checkSetCrossing(false)
+	} else {
+		//util.Notice(fmt.Sprintf(`waiting for other ordering %s`, setting.Symbol))
 		return
 	}
 	for _, settingRelate := range settings {
@@ -454,7 +454,7 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 			}
 			statusBuy, statusSell, amount, priceBuy, priceSell := calcAmount(i, setting.Coin, status, statusRelate, tick, tickRelate)
 			if amount > 0 {
-				go placeCross(statusBuy, statusSell, priceBuy, priceSell, amount)
+				placeCross(statusBuy, statusSell, priceBuy, priceSell, amount)
 				return
 			}
 		}
