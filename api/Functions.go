@@ -644,7 +644,7 @@ func filterCross(market, symbol string) bool {
 	// ftx预测`TRUMP``BOLSONARO`
 	// 平台币 `GT` `FTT` `BNB` `OKB`
 	filterCoin := []string{`REEF`, `REAL`, `DFL`, `QI`, `LINK`, `CUSDT`, `ETH`, `BRZ`, `BTC`, `USDT`,
-		`TRYB`, `AMPL`, `IOTA`, `CAD`, `EUR`, `GBP`, `TRUMP`, `BOLSONARO`, `WSB`, `TRADE`}
+		`TRYB`, `AMPL`, `IOTA`, `CAD`, `EUR`, `GBP`, `TRUMP`, `BOLSONARO`, `WSB`, `TRADE`, `OKB`, `GT`, `FTT`}
 	for _, coin := range filterCoin {
 		if strings.Index(symbol, coin) == 0 {
 			return true
