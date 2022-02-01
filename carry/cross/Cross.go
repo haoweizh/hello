@@ -85,12 +85,21 @@ func createFromPosition(account *model.Account, setting *model.Setting, valueLim
 			setSpotMarket(key, createSpotMarket(key, account.Secret, setting.Market))
 		}
 	}
-	getTick, ticks := model.AppMarkets.GetBidAsk(setting.Symbol, setting.Market)
-	if cm == nil || !getTick {
-		util.Notice(fmt.Sprintf(`nil contract market or fail to get tick %s %s`, setting.Market, setting.Symbol))
+	if cm == nil {
+		util.Notice(fmt.Sprintf(`nil contract market %s %s`, setting.Market, setting.Symbol))
 		return nil, false
 	}
-	price := ticks.Asks[0].Price
+	getTick, ticks := model.AppMarkets.GetBidAsk(setting.Symbol, setting.Market)
+	price := 0.0
+	if getTick {
+		price = ticks.Asks[0].Price
+	} else if cm.positions[setting.Symbol] != nil {
+		price = cm.positions[setting.Symbol].EntryPrice
+		util.Notice(`no tick price, use position price %s %s %f`, setting.Market, setting.Symbol, price)
+	} else {
+		util.Notice(`no tick and not position %s %s`, setting.Market, setting.Symbol)
+		return nil, false
+	}
 	limitAmount := math.Min(cm.accountValueInU/5, math.Min(cm.collateralsAvailable, openValueLimit)) / price
 	availableAmount := cm.collateralsAvailable / price
 	carryStatus = &CarryStatus{isSpot: false, market: setting.Market, symbol: setting.Symbol, account: account,
