@@ -534,6 +534,10 @@ func GetWSSubscribes(market, subType string) []interface{} {
 		go maintainChannelOKEX()
 	case model.Binance:
 		go maintainChannelBinance()
+	case model.BinanceSpot:
+		go maintainChannelBinanceSpot()
+	case model.BinancePerp:
+		go maintainChannelBinancePerp()
 	case model.Ftx:
 		go maintainChannelFtx(subscribes)
 	case model.BybitPerp:
@@ -561,6 +565,12 @@ func GetWSSubscribe(market, symbol, subType string) (subscribe interface{}) {
 	case model.OKEX:
 		return dialectSymbol
 	case model.Binance: // XRPUSDT: XRPUSDT@depth5   XRP-PERP: XRPUSDT@depth5
+		if subType == model.SubscribeDepth {
+			return strings.ToLower(dialectSymbol) + `@depth5@100ms`
+		}
+		return strings.ToLower(dialectSymbol) + `@bookTicker`
+	case model.BinancePerp:
+	case model.BinanceSpot: // XRPUSDT: XRPUSDT@depth5   XRP-PERP: XRPUSDT@depth5
 		if subType == model.SubscribeDepth {
 			return strings.ToLower(dialectSymbol) + `@depth5@100ms`
 		}
@@ -611,6 +621,10 @@ func GetMarketInfos(market string) (marketInfo map[string]*model.MarketInfo) {
 		return getMarketsOKEX(accounts[0].Key, accounts[0].Secret)
 	case model.Binance:
 		return getMarketsBinance(accounts[0].Key, accounts[0].Secret)
+	case model.BinanceSpot:
+		return getMarketsBinanceSpot(accounts[0].Key, accounts[0].Secret)
+	case model.BinancePerp:
+		return getMarketsBinancePerp(accounts[0].Key, accounts[0].Secret)
 	case model.Gate:
 		_, marketInfo = getMarketsGate(accounts[0].Key, accounts[0].Secret)
 	case model.Kucoin:
@@ -771,6 +785,10 @@ func CreateMarketDepthServer(markets *model.Markets, market string, orderHandler
 		channels, err = WsDepthServeOKEX(model.GetMarketSymbols(model.OKEX), orderHandler)
 	case model.Binance:
 		channels, err = WsDepthServeBinance(markets, nil)
+	case model.BinanceSpot:
+		channels, err = WsDepthServeBinanceSpot(markets, nil)
+	case model.BinancePerp:
+		channels, err = WsDepthServeBinancePerp(markets, nil)
 	case model.BybitPerp:
 		channels, err = WsDepthServeBybitPerp(markets, orderHandler)
 	case model.BybitSpot:

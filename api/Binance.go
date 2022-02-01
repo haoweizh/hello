@@ -57,7 +57,7 @@ func setLastTradeTimeBinance(symbol string, tradeTime int64) {
 	lastTradeTimeBinance[symbol] = tradeTime
 }
 
-//var channelMaintainingBinance = false
+var channelMaintainingBinance = false
 
 func maintainChannelBinance() {
 	//if !channelMaintainingBinance {
