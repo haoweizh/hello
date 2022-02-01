@@ -479,6 +479,9 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarrySta
 		priceBuy = priceAskRelate
 		askAmount = amountBid * 0.9
 		bidAmount = amountAskRelate * 0.9
+		util.Notice(fmt.Sprintf(`init status %s -> %s at %f %f, line %f %f score %f`,
+			statusSell.market+statusSell.symbol, statusBuy.market+statusBuy.symbol, priceSell, priceBuy,
+			statusSell.TradeLineSell, statusBuy.TradeLineBuy, score))
 	}
 	if carryStatus.TradeLineBuy < scoreRelate && carryStatusRelate.TradeLineSell < scoreRelate {
 		statusSell = carryStatusRelate
@@ -487,6 +490,9 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarrySta
 		priceBuy = priceAsk
 		askAmount = amountBidRelate * 0.9
 		bidAmount = amountAsk * 0.9
+		util.Notice(fmt.Sprintf(`init status %s -> %s at %f %f, line %f %f score %f`,
+			statusSell.market+statusSell.symbol, statusBuy.market+statusBuy.symbol, priceSell, priceBuy,
+			statusSell.TradeLineSell, statusBuy.TradeLineBuy, scoreRelate))
 	}
 	// 为了同一对交易对冲不出现两次，对前后进行排序
 	mark = fmt.Sprintf(`%s-%s`, carryStatus.market, carryStatus.symbol)
