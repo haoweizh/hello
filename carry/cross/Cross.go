@@ -99,8 +99,8 @@ func createFromPosition(account *model.Account, setting *model.Setting, valueLim
 		LimitBuy:      limitAmount,
 		AvailableSell: availableAmount,
 		AvailableBuy:  availableAmount,
-		TradeLineBuy:  setting.OpenShortMargin, TradeLineSell: setting.CloseShortMargin,
-	}
+		TradeLineBuy:  setting.OpenShortMargin,
+		TradeLineSell: setting.CloseShortMargin}
 	valueInUsd := 0.0
 	if cm.positions[setting.Symbol] != nil {
 		carryStatus.Holding = cm.positions[setting.Symbol].Holding
@@ -203,8 +203,8 @@ func initStatus(account *model.Account, setting *model.Setting) (status *CarrySt
 		}
 	}
 	setCarryStatus(setting.Coin, setting.Market, setting.Symbol, account.Key, status)
-	jump := 9.0
-	revertJump := 13.0
+	jump := 8.0
+	revertJump := 12.0
 	if status.Holding > 0 {
 		status.TradeLineBuy = math.Max(setting.OpenShortMargin*(0.5+jump*status.RateInAll), lowestScore) + fundingRate
 		status.TradeLineSell = math.Max(setting.CloseShortMargin*(0.5-revertJump*status.RateInAll), lowestScore) - fundingRate
@@ -479,9 +479,9 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarrySta
 		priceBuy = priceAskRelate
 		askAmount = amountBid * 0.9
 		bidAmount = amountAskRelate * 0.9
-		util.Notice(fmt.Sprintf(`init status %s -> %s at %f %f, line %f %f score %f`,
-			statusSell.market+statusSell.symbol, statusBuy.market+statusBuy.symbol, priceSell, priceBuy,
-			statusSell.TradeLineSell, statusBuy.TradeLineBuy, score))
+		//util.Notice(fmt.Sprintf(`init status %s -> %s at %f %f, line %f %f score %f`,
+		//	statusSell.market+statusSell.symbol, statusBuy.market+statusBuy.symbol, priceSell, priceBuy,
+		//	statusSell.TradeLineSell, statusBuy.TradeLineBuy, score))
 	}
 	if carryStatus.TradeLineBuy < scoreRelate && carryStatusRelate.TradeLineSell < scoreRelate {
 		statusSell = carryStatusRelate
@@ -490,9 +490,9 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarrySta
 		priceBuy = priceAsk
 		askAmount = amountBidRelate * 0.9
 		bidAmount = amountAsk * 0.9
-		util.Notice(fmt.Sprintf(`init status %s -> %s at %f %f, line %f %f score %f`,
-			statusSell.market+statusSell.symbol, statusBuy.market+statusBuy.symbol, priceSell, priceBuy,
-			statusSell.TradeLineSell, statusBuy.TradeLineBuy, scoreRelate))
+		//util.Notice(fmt.Sprintf(`init status %s -> %s at %f %f, line %f %f score %f`,
+		//	statusSell.market+statusSell.symbol, statusBuy.market+statusBuy.symbol, priceSell, priceBuy,
+		//	statusSell.TradeLineSell, statusBuy.TradeLineBuy, scoreRelate))
 	}
 	// 为了同一对交易对冲不出现两次，对前后进行排序
 	mark = fmt.Sprintf(`%s-%s`, carryStatus.market, carryStatus.symbol)
