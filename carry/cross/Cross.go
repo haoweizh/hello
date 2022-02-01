@@ -409,6 +409,12 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 		doCross = true
 		return
 	}
+	if !checkSetCrossing(true) {
+		defer checkSetCrossing(false)
+	} else {
+		//util.Notice(fmt.Sprintf(`waiting for other ordering %s`, setting.Symbol))
+		return
+	}
 	million := util.GetNowUnixMillion()
 	delayTick := int64(0)
 	if tick != nil {
@@ -449,7 +455,8 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarryStatus, tick,
 	tickRelate *model.BidAsk) (statusBuy, statusSell *CarryStatus, amount, priceBuy, priceSell float64) {
 	now := time.Now()
-	if now.Hour()%8 == 0 && now.Minute() == 0 && now.Second() < 30 {
+	if (now.Hour()%8 == 0 && now.Minute() == 0 && now.Second() < 30) ||
+		(carryStatus.market == carryStatusRelate.market && carryStatus.symbol == carryStatusRelate.symbol) {
 		return
 	}
 	if getCarryStop(carryStatus.account.Key) || getCarryStop(carryStatusRelate.account.Key) {
@@ -605,12 +612,6 @@ func initLimitBuyAndSell(status *CarryStatus, setting *model.Setting, price floa
 }
 
 func placeCross(statusBuy, statusSell *CarryStatus, priceBuy, priceSell, amount float64) {
-	if !checkSetCrossing(true) {
-		defer checkSetCrossing(false)
-	} else {
-		//util.Notice(fmt.Sprintf(`waiting for other ordering %s`, setting.Symbol))
-		return
-	}
 	util.Notice(fmt.Sprintf(`place cross %s %s -> %s %s at %f %f amount %f`,
 		statusSell.market, statusSell.symbol, statusBuy.market, statusBuy.symbol, priceSell, priceBuy, amount))
 	placeSuccess := true

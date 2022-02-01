@@ -827,9 +827,9 @@ func SignedRequestFtx(key, secret, method, path string, param, body map[string]i
 	//	headers[`FTX-SUBACCOUNT`] = `test2`
 	//}
 	responseBody, _ := util.HttpRequest(method, u.String(), bodyStr, headers, 60)
-	if !strings.Contains(path, `balances`) && !strings.Contains(path, `positions`) {
-		util.SocketInfo(fmt.Sprintf(`ftx key %s request %s %s body %s return %s`,
-			key, u.String(), method, bodyStr, string(responseBody)))
-	}
+	//if !strings.Contains(path, `balances`) && !strings.Contains(path, `positions`) {
+	util.SocketInfo(fmt.Sprintf(`ftx key %s request %s %s body %s return %s`,
+		key, u.String(), method, bodyStr, string(responseBody)))
+	//}
 	return responseBody
 }

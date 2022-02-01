@@ -526,7 +526,7 @@ func sendSignRequestOKEX(key, secret, method, path string, param, body map[strin
 		key, u.String(), toBeSign, string(responseBody))
 	if strings.Contains(u.String(), `/api/v5/trade/order`) && method == http.MethodPost {
 		util.Notice(logMsg)
-	} else if !strings.Contains(u.String(), `balance`) && !strings.Contains(path, `positions`) {
+	} else { //if !strings.Contains(u.String(), `balance`) && !strings.Contains(path, `positions`) {
 		util.SocketInfo(logMsg)
 	}
 	return responseBody
