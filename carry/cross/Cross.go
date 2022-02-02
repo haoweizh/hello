@@ -449,7 +449,7 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 			}
 			status := getCarryStatus(setting.Coin, setting.Market, setting.Symbol, account.Key)
 			statusRelate := getCarryStatus(settingRelate.Coin, settingRelate.Market, settingRelate.Symbol, accountRelate.Key)
-			if status == nil || statusRelate == nil {
+			if status == nil || statusRelate == nil || status == statusRelate {
 				continue
 			}
 			statusBuy, statusSell, amount, priceBuy, priceSell := calcAmount(i, setting.Coin, status, statusRelate, tick, tickRelate)
@@ -464,9 +464,13 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarryStatus, tick,
 	tickRelate *model.BidAsk) (statusBuy, statusSell *CarryStatus, amount, priceBuy, priceSell float64) {
 	now := time.Now()
-	if (now.Hour()%8 == 0 && now.Minute() == 0 && now.Second() < 30) ||
-		(carryStatus.market == carryStatusRelate.market && carryStatus.symbol == carryStatusRelate.symbol) {
+	if now.Hour()%8 == 0 && now.Minute() == 0 && now.Second() < 30 {
 		return
+	}
+	if carryStatus.market == model.OKEX {
+		util.Notice(fmt.Sprintf(`calc amount %s %s %s %s %f %f %f %f`,
+			carryStatus.market, carryStatus.symbol, carryStatusRelate.market, carryStatusRelate.symbol,
+			carryStatus.LimitBuy, carryStatus.LimitSell, carryStatusRelate.LimitBuy, carryStatusRelate.LimitSell))
 	}
 	if getCarryStop(carryStatus.account.Key) || getCarryStop(carryStatusRelate.account.Key) {
 		util.Debug(`stop carry for 10 times unknown carry %s or %s %s`,
