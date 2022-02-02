@@ -419,14 +419,10 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 		return
 	}
 	million := util.GetNowUnixMillion()
-	delayTick := int64(0)
-	if tick != nil {
-		delayTick = million - int64(tick.Ts)
-	}
 	settings := model.GetCoinSetting(setting.Function, setting.Coin)
 	if tick == nil || tick.Asks == nil || tick.Bids == nil || setting == nil || model.AppPause ||
 		(model.AppConfig.Env != `test` && model.AppConfig.Handle != `1`) || setting.Valid == false ||
-		settings == nil || len(settings) == 0 || model.IsTickTimeout(setting.Market, delayTick) {
+		settings == nil || len(settings) == 0 || million-int64(tick.Ts) > 100 {
 		return
 	}
 	if !checkSetCrossing(true) {
@@ -438,7 +434,7 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 	for _, settingRelate := range settings {
 		tickGet, tickRelate := model.AppMarkets.GetBidAsk(settingRelate.Symbol, settingRelate.Market)
 		if !tickGet || setting.ID == settingRelate.ID ||
-			(model.AppConfig.Env != `test` && model.IsRelatedTickTimeout(settingRelate.Market, million-int64(tickRelate.Ts))) {
+			(model.AppConfig.Env != `test` && million-int64(tickRelate.Ts) > 300) {
 			continue
 		}
 		for i := model.AppConfig.GetCrossLen() - 1; i >= 0; i-- {
