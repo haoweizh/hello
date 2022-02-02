@@ -58,6 +58,9 @@ func maintainChannelFtx(subscribes []interface{}) {
 						util.Notice(`ftx can not get connection for %s`, subscribe[1])
 					}
 				}
+				if bidAsk != nil && now-int64(bidAsk.Ts) > 180000 {
+					SetRequireReset(model.Ftx, true)
+				}
 			}
 		}
 	}

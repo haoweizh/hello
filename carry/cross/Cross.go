@@ -352,7 +352,7 @@ func makeEqual(coin string, statuses []*CarryStatus) (isEqual bool, msg string) 
 					equalStatus = status
 					holding = status.AvailableSell
 				} else {
-					util.Notice(fmt.Sprintf(`check amount 0 %s %s %f %f`,
+					util.Notice(fmt.Sprintf(`check amount 0 sell %s %s %f %f`,
 						status.market, status.symbol, status.AvailableSell, bids[i].Price))
 				}
 			}
@@ -380,7 +380,7 @@ func makeEqual(coin string, statuses []*CarryStatus) (isEqual bool, msg string) 
 					equalStatus = status
 					holding = status.AvailableBuy
 				} else {
-					util.Notice(fmt.Sprintf(`check amount 0 %s %s %f %f`,
+					util.Notice(fmt.Sprintf(`check amount 0 buy %s %s %f %f`,
 						status.market, status.symbol, status.AvailableBuy, asks[i].Price))
 				}
 			}
