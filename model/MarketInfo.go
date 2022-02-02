@@ -89,6 +89,7 @@ func FormatCrossPair(marketBuy, marketSell, symbolBuy, symbolSell string, amount
 	marketInfoBuy := GetMarketInfo(marketBuy, symbolBuy)
 	marketInfoSell := GetMarketInfo(marketSell, symbolSell)
 	if marketInfoBuy == nil || marketInfoSell == nil {
+		util.Notice(`format %s %s %s %s %v %v`, marketBuy, marketSell, symbolBuy, symbolSell, marketInfoBuy, marketInfoSell)
 		return
 	}
 	incBuy := marketInfoBuy.SizeIncrement
