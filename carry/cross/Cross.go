@@ -49,11 +49,11 @@ func createContractMarket(key, secret, market string) (cm *contractMarket) {
 func createSpotMarket(key, secret, market string) (sm *spotMarket) {
 	sm = &spotMarket{key: key, market: market}
 	success, balances, totalInUsd, collateral := api.GetBalances(key, secret, market)
-	for _, balance := range balances {
-		if balance.UsdValue == 0 && balance.Amount > 0 {
-			util.Notice(fmt.Sprintf(`usdvalue 0 %s %s %f`, market, balance.Coin, balance.Amount))
-		}
-	}
+	//for _, balance := range balances {
+	//	if balance.UsdValue == 0 && balance.Amount > 0 {
+	//		util.Notice(fmt.Sprintf(`usdvalue 0 %s %s %f`, market, balance.Coin, balance.Amount))
+	//	}
+	//}
 	if success {
 		sm.balances = make(map[string]*model.Balance)
 		sm.accountValueInU = totalInUsd
@@ -320,7 +320,7 @@ func makeEqual(coin string, statuses []*CarryStatus) (isEqual bool, msg string) 
 	holdingInU := holding * price
 	if math.Abs(holdingInU) < 10 {
 		if time.Now().Minute()%50 == 0 {
-			util.Notice(fmt.Sprintf(`clear holding every 50 mins %s %f %f %f`, coin, holding, price, holdingInU))
+			//util.Notice(fmt.Sprintf(`clear holding every 50 mins %s %f %f %f`, coin, holding, price, holdingInU))
 			for _, status := range statuses {
 				go api.CancelOrders(status.account.Key, status.account.Secret, status.market, status.symbol)
 			}
