@@ -197,6 +197,7 @@ func initStatus(account *model.Account, setting *model.Setting) (status *CarrySt
 	marketInfo := model.GetMarketInfo(setting.Market, setting.Symbol)
 	if marketInfo != nil && marketInfo.SizeMax > 0 {
 		_, amount := model.ParseRealAmount(setting.Market, setting.Symbol, marketInfo.SizeMax)
+		util.Notice(`%s %s ok max from %f to %f`, setting.Market, setting.Symbol, marketInfo.SizeMax, amount)
 		status.LimitBuy = math.Min(status.LimitBuy, amount)
 		status.LimitSell = math.Min(status.LimitSell, amount)
 		status.AvailableBuy = math.Min(status.AvailableBuy, amount)
@@ -466,11 +467,6 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarrySta
 	now := time.Now()
 	if now.Hour()%8 == 0 && now.Minute() == 0 && now.Second() < 30 {
 		return
-	}
-	if carryStatus.market == model.OKEX {
-		util.Notice(fmt.Sprintf(`calc amount %s %s %s %s %f %f %f %f`,
-			carryStatus.market, carryStatus.symbol, carryStatusRelate.market, carryStatusRelate.symbol,
-			carryStatus.LimitBuy, carryStatus.LimitSell, carryStatusRelate.LimitBuy, carryStatusRelate.LimitSell))
 	}
 	if getCarryStop(carryStatus.account.Key) || getCarryStop(carryStatusRelate.account.Key) {
 		util.Debug(`stop carry for 10 times unknown carry %s or %s %s`,
