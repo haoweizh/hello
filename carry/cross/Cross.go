@@ -70,8 +70,6 @@ func createSpotMarket(key, secret, market string) (sm *spotMarket) {
 		}
 	}
 	setSpotMarket(key, sm)
-	util.Notice(fmt.Sprintf(`refresh spot market %s total: %f available U: %f`,
-		key, sm.accountValueInU, sm.availableU))
 	return
 }
 
@@ -210,7 +208,6 @@ func initStatus(account *model.Account, setting *model.Setting) (status *CarrySt
 			status.AvailableBuy = math.Min(status.AvailableBuy, maxBuy)
 			status.AvailableSell = math.Min(status.AvailableSell, maxSell)
 		}
-		util.Notice(`init status %f %f %f %f`, status.LimitBuy, status.LimitSell, maxBuy, maxSell)
 	}
 	setCarryStatus(setting.Coin, setting.Market, setting.Symbol, account.Key, status)
 	jump := 8.0
@@ -328,7 +325,6 @@ func makeEqual(coin string, statuses []*CarryStatus) (isEqual bool, msg string) 
 		}
 	} else {
 		isEqual = false
-		util.Notice(fmt.Sprintf(`holding %s %f price %f, in u: %f`, coin, holding, price, holdingInU))
 	}
 	now := util.GetNowUnixMillion()
 	if holdingInU > 10 {
@@ -433,7 +429,6 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 	if !checkSetCrossing(true) {
 		defer checkSetCrossing(false)
 	} else {
-		//util.Notice(fmt.Sprintf(`waiting for other ordering %s`, setting.Symbol))
 		return
 	}
 	for _, settingRelate := range settings {
@@ -495,9 +490,6 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarrySta
 		priceBuy = priceAskRelate
 		askAmount = amountBid * 0.9
 		bidAmount = amountAskRelate * 0.9
-		//util.Notice(fmt.Sprintf(`init status %s -> %s at %f %f, line %f %f score %f`,
-		//	statusSell.market+statusSell.symbol, statusBuy.market+statusBuy.symbol, priceSell, priceBuy,
-		//	statusSell.TradeLineSell, statusBuy.TradeLineBuy, score))
 	}
 	if carryStatus.TradeLineBuy < scoreRelate && carryStatusRelate.TradeLineSell < scoreRelate {
 		statusSell = carryStatusRelate
@@ -506,9 +498,6 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarrySta
 		priceBuy = priceAsk
 		askAmount = amountBidRelate * 0.9
 		bidAmount = amountAsk * 0.9
-		//util.Notice(fmt.Sprintf(`init status %s -> %s at %f %f, line %f %f score %f`,
-		//	statusSell.market+statusSell.symbol, statusBuy.market+statusBuy.symbol, priceSell, priceBuy,
-		//	statusSell.TradeLineSell, statusBuy.TradeLineBuy, scoreRelate))
 	}
 	// 为了同一对交易对冲不出现两次，对前后进行排序
 	mark = fmt.Sprintf(`%s-%s`, carryStatus.market, carryStatus.symbol)
@@ -563,14 +552,7 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarrySta
 	}
 	amount = math.Min(math.Min(statusBuy.LimitBuy, bidAmount), math.Min(statusSell.LimitSell, askAmount))
 	if amount > 0 {
-		amountBefore := amount
 		amount = model.FormatCrossPair(statusBuy.market, statusSell.market, statusBuy.symbol, statusSell.symbol, amount, priceBuy)
-		if statusBuy.market == model.OKEX || statusSell.market == model.OKEX {
-			util.Notice(fmt.Sprintf(`cross chance status-relate amount %f -> %f %s %s buy-sell %s %s at %f %f %f = %f hold %f %f`,
-				amountBefore, amount, carryStatus.market+carryStatus.symbol, carryStatusRelate.market+carryStatusRelate.symbol,
-				statusBuy.market+statusBuy.symbol, statusSell.market+statusSell.symbol, priceBuy, priceSell,
-				math.Min(statusBuy.LimitBuy, bidAmount), math.Min(statusSell.LimitSell, askAmount), statusBuy.Holding, statusSell.Holding))
-		}
 	}
 	if (score > 0.15 || scoreRelate > 0.15) || ((score > 0.1 || scoreRelate > 0.1) &&
 		(!isValidSymbol(carryStatus.market, carryStatus.symbol) ||
@@ -620,9 +602,6 @@ func initLimitBuyAndSell(status *CarryStatus, setting *model.Setting, price floa
 		status.LimitBuy = limitAmount
 		status.AvailableSell = availableAmount
 		status.AvailableBuy = availableAmount
-	}
-	if status.market == model.OKEX {
-		util.Notice(`init limit buy sell %f %f`, status.LimitBuy, status.LimitSell)
 	}
 }
 

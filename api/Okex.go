@@ -1174,21 +1174,19 @@ func getMaxSizeOKEX(key, secret, symbol string) (success bool, maxBuy, maxSell f
 		return false, 0, 0
 	}
 	data := responseJson.Get(`data`).MustArray()[0].(map[string]interface{})
-	if data[`instId`] != nil && data[`instId`].(string) == symbol {
-		if data[`maxBuy`] != nil {
-			maxBuy, _ = strconv.ParseFloat(data[`maxBuy`].(string), 64)
-		}
-		if data[`maxSell`] != nil {
-			maxSell, _ = strconv.ParseFloat(data[`maxSell`].(string), 64)
-			_, marketType, _, _ := model.GetFromStandard(model.Kucoin, symbol)
-			if marketType == model.MarketTypeSpot {
-				havePrice, price := model.AppMarkets.GetPrice(symbol)
-				if !havePrice {
-					util.Notice(`fail to get price from bidAsk %s`, symbol)
-				} else {
-					maxSell = maxSell / price
-					util.Info(`get max sell %f after price %f %s`, maxSell, price, symbol)
-				}
+	if data[`maxBuy`] != nil {
+		maxBuy, _ = strconv.ParseFloat(data[`maxBuy`].(string), 64)
+	}
+	if data[`maxSell`] != nil {
+		maxSell, _ = strconv.ParseFloat(data[`maxSell`].(string), 64)
+		_, marketType, _, _ := model.GetFromStandard(model.Kucoin, symbol)
+		if marketType == model.MarketTypeSpot {
+			havePrice, price := model.AppMarkets.GetPrice(symbol)
+			if !havePrice {
+				util.Notice(`fail to get price from bidAsk %s`, symbol)
+			} else {
+				maxSell = maxSell / price
+				util.Info(`get max sell %f after price %f %s`, maxSell, price, symbol)
 			}
 		}
 	}
