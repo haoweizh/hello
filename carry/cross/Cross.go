@@ -341,8 +341,7 @@ func makeEqual(coin string, statuses []*CarryStatus) (isEqual bool, msg string) 
 				continue
 			}
 			go api.CancelOrders(status.account.Key, status.account.Secret, status.market, status.symbol)
-			delay := now - int64(tickTimes[status.market+status.symbol])
-			if equalStatus != nil || model.IsRelatedTickTimeout(status.market, delay) {
+			if equalStatus != nil || now-int64(tickTimes[status.market+status.symbol]) > 300 {
 				continue
 			}
 			if status.AvailableSell > holding {
@@ -352,6 +351,9 @@ func makeEqual(coin string, statuses []*CarryStatus) (isEqual bool, msg string) 
 				if checkAmount > 0 {
 					equalStatus = status
 					holding = status.AvailableSell
+				} else {
+					util.Notice(fmt.Sprintf(`check amount 0 %s %s %f %f`,
+						status.market, status.symbol, status.AvailableSell, bids[i].Price))
 				}
 			}
 		}
@@ -367,8 +369,7 @@ func makeEqual(coin string, statuses []*CarryStatus) (isEqual bool, msg string) 
 				continue
 			}
 			go api.CancelOrders(status.account.Key, status.account.Secret, status.market, status.symbol)
-			delay := now - int64(tickTimes[status.market+status.symbol])
-			if equalStatus != nil || model.IsRelatedTickTimeout(status.market, delay) {
+			if equalStatus != nil || now-int64(tickTimes[status.market+status.symbol]) > 300 {
 				continue
 			}
 			if math.IsNaN(status.AvailableBuy) || status.AvailableBuy > math.Abs(holding) {
@@ -378,6 +379,9 @@ func makeEqual(coin string, statuses []*CarryStatus) (isEqual bool, msg string) 
 				if checkAmount > 0 {
 					equalStatus = status
 					holding = status.AvailableBuy
+				} else {
+					util.Notice(fmt.Sprintf(`check amount 0 %s %s %f %f`,
+						status.market, status.symbol, status.AvailableBuy, asks[i].Price))
 				}
 			}
 		}
@@ -560,10 +564,12 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarrySta
 	amount = math.Min(math.Min(statusBuy.LimitBuy, bidAmount), math.Min(statusSell.LimitSell, askAmount))
 	if amount > 0 {
 		amount = model.FormatCrossPair(statusBuy.market, statusSell.market, statusBuy.symbol, statusSell.symbol, amount, priceBuy)
-		//util.Notice(fmt.Sprintf(`cross chance status-relate %s %s buy-sell %s %s at %f %f amount %f %f = %f hold %f %f`,
-		//	carryStatus.market+carryStatus.symbol, carryStatusRelate.market+carryStatusRelate.symbol,
-		//	statusBuy.market+statusBuy.symbol, statusSell.market+statusSell.symbol, priceBuy, priceSell,
-		//	math.Min(statusBuy.LimitBuy, bidAmount), math.Min(statusSell.LimitSell, askAmount), amount, statusBuy.Holding, statusSell.Holding))
+	}
+	if statusBuy.market == model.OKEX || statusSell.market == model.OKEX {
+		util.Notice(fmt.Sprintf(`cross chance status-relate %s %s buy-sell %s %s at %f %f amount %f %f = %f hold %f %f`,
+			carryStatus.market+carryStatus.symbol, carryStatusRelate.market+carryStatusRelate.symbol,
+			statusBuy.market+statusBuy.symbol, statusSell.market+statusSell.symbol, priceBuy, priceSell,
+			math.Min(statusBuy.LimitBuy, bidAmount), math.Min(statusSell.LimitSell, askAmount), amount, statusBuy.Holding, statusSell.Holding))
 	}
 	if (score > 0.15 || scoreRelate > 0.15) || ((score > 0.1 || scoreRelate > 0.1) &&
 		(!isValidSymbol(carryStatus.market, carryStatus.symbol) ||
