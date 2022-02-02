@@ -197,7 +197,6 @@ func initStatus(account *model.Account, setting *model.Setting) (status *CarrySt
 	marketInfo := model.GetMarketInfo(setting.Market, setting.Symbol)
 	if marketInfo != nil && marketInfo.SizeMax > 0 {
 		_, amount := model.ParseRealAmount(setting.Market, setting.Symbol, marketInfo.SizeMax)
-		util.Notice(`%s %s ok max from %f to %f`, setting.Market, setting.Symbol, marketInfo.SizeMax, amount)
 		status.LimitBuy = math.Min(status.LimitBuy, amount)
 		status.LimitSell = math.Min(status.LimitSell, amount)
 		status.AvailableBuy = math.Min(status.AvailableBuy, amount)
@@ -211,6 +210,7 @@ func initStatus(account *model.Account, setting *model.Setting) (status *CarrySt
 			status.AvailableBuy = math.Min(status.AvailableBuy, maxBuy)
 			status.AvailableSell = math.Min(status.AvailableSell, maxSell)
 		}
+		util.Notice(`init status %f %f %f %f`, status.LimitBuy, status.LimitSell, maxBuy, maxSell)
 	}
 	setCarryStatus(setting.Coin, setting.Market, setting.Symbol, account.Key, status)
 	jump := 8.0
@@ -620,6 +620,9 @@ func initLimitBuyAndSell(status *CarryStatus, setting *model.Setting, price floa
 		status.LimitBuy = limitAmount
 		status.AvailableSell = availableAmount
 		status.AvailableBuy = availableAmount
+	}
+	if status.market == model.OKEX {
+		util.Notice(`init limit buy sell %f %f`, status.LimitBuy, status.LimitSell)
 	}
 }
 
