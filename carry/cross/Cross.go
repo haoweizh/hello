@@ -565,12 +565,6 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarrySta
 	if amount > 0 {
 		amount = model.FormatCrossPair(statusBuy.market, statusSell.market, statusBuy.symbol, statusSell.symbol, amount, priceBuy)
 	}
-	if statusBuy.market == model.OKEX || statusSell.market == model.OKEX {
-		util.Notice(fmt.Sprintf(`cross chance status-relate %s %s buy-sell %s %s at %f %f amount %f %f = %f hold %f %f`,
-			carryStatus.market+carryStatus.symbol, carryStatusRelate.market+carryStatusRelate.symbol,
-			statusBuy.market+statusBuy.symbol, statusSell.market+statusSell.symbol, priceBuy, priceSell,
-			math.Min(statusBuy.LimitBuy, bidAmount), math.Min(statusSell.LimitSell, askAmount), amount, statusBuy.Holding, statusSell.Holding))
-	}
 	if (score > 0.15 || scoreRelate > 0.15) || ((score > 0.1 || scoreRelate > 0.1) &&
 		(!isValidSymbol(carryStatus.market, carryStatus.symbol) ||
 			!isValidSymbol(carryStatusRelate.market, carryStatusRelate.symbol))) {

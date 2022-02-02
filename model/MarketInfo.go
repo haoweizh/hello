@@ -108,6 +108,13 @@ func FormatCrossPair(marketBuy, marketSell, symbolBuy, symbolSell string, amount
 	if formattedAmount < math.Max(minBuy, minSell) {
 		return 0
 	}
+	if marketInfoBuy.Market == OKEX {
+		util.Notice(fmt.Sprintf(`format cross pair %s %s %f %f from %f to %f`,
+			marketInfoBuy.Market, marketInfoBuy.Name, incBuy, minBuy, amount, formattedAmount))
+	} else if marketInfoSell.Market == OKEX {
+		util.Notice(fmt.Sprintf(`format cross pair %s %s %f %f from %f to %f`,
+			marketInfoSell.Market, marketInfoSell.Name, incSell, minSell, amount, formattedAmount))
+	}
 	if (marketInfoBuy.MoneyMin > 0 && formattedAmount*price < marketInfoBuy.MoneyMin) ||
 		(marketInfoSell.MoneyMin > 0 && formattedAmount*price < marketInfoSell.MoneyMin) {
 		return 0
