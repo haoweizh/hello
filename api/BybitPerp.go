@@ -481,16 +481,15 @@ func getPositionsBybitPerp(key, secret string) (success bool, positions []*model
 			if value[`unrealised_pnl`] != nil {
 				position.ProfitUnreal, _ = value[`unrealised_pnl`].(json.Number).Float64()
 			}
-			if value[`position_value`] != nil {
-				position.Holding, _ = value[`position_value`].(json.Number).Float64()
-			}
 			if value[`size`] != nil {
 				position.Holding, _ = value[`size`].(json.Number).Float64()
 				if position.Direction == model.OrderSideSell {
 					position.Holding = -1 * math.Abs(position.Holding)
 				}
 			}
-			positions = append(positions, position)
+			if position.Holding != 0 {
+				positions = append(positions, position)
+			}
 		}
 	}
 	return

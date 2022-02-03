@@ -1155,7 +1155,7 @@ func getPositionsOKEX(key, secret string) (success bool, positions []*model.Posi
 	positionArray := responseJson.Get(`data`).MustArray()
 	for _, item := range positionArray {
 		result, position := parsePositionOKEX(item.(map[string]interface{}))
-		if result {
+		if result && position.Holding != 0 {
 			positions = append(positions, position)
 		}
 	}

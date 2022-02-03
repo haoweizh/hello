@@ -19,31 +19,30 @@ var okTradeMaxResetTime = make(map[string]map[string]int64) // key - symbol - in
 func GetTradeMaxOKEX(key, secret, symbol string, expireSecond int64) (success bool, maxBuy, maxSell float64) {
 	defer symbolLock.Unlock()
 	symbolLock.Lock()
-	return true, 0, 0
-	//now := time.Now().Unix()
-	//if expireSecond < 0 {
-	//	if tradeMax[key] != nil && tradeMax[key][symbol] != nil && len(tradeMax[key][symbol]) == 2 {
-	//		return true, tradeMax[key][symbol][0], tradeMax[key][symbol][1]
-	//	} else {
-	//		return false, 0, 0
-	//	}
-	//}
-	//if tradeMax[key] != nil && tradeMax[key][symbol] != nil && len(tradeMax[key][symbol]) == 2 &&
-	//	okTradeMaxResetTime[key] != nil && now-okTradeMaxResetTime[key][symbol] < expireSecond {
-	//	return true, tradeMax[key][symbol][0], tradeMax[key][symbol][1]
-	//}
-	//if tradeMax[key] == nil {
-	//	tradeMax[key] = make(map[string][]float64)
-	//}
-	//if okTradeMaxResetTime[key] == nil {
-	//	okTradeMaxResetTime[key] = make(map[string]int64)
-	//}
-	//success, maxBuy, maxSell = getMaxSizeOKEX(key, secret, symbol)
-	//if success {
-	//	tradeMax[key][symbol] = []float64{maxBuy, maxSell}
-	//	okTradeMaxResetTime[key][symbol] = now
-	//}
-	//return
+	now := time.Now().Unix()
+	if expireSecond < 0 {
+		if tradeMax[key] != nil && tradeMax[key][symbol] != nil && len(tradeMax[key][symbol]) == 2 {
+			return true, tradeMax[key][symbol][0], tradeMax[key][symbol][1]
+		} else {
+			return false, 0, 0
+		}
+	}
+	if tradeMax[key] != nil && tradeMax[key][symbol] != nil && len(tradeMax[key][symbol]) == 2 &&
+		okTradeMaxResetTime[key] != nil && now-okTradeMaxResetTime[key][symbol] < expireSecond {
+		return true, tradeMax[key][symbol][0], tradeMax[key][symbol][1]
+	}
+	if tradeMax[key] == nil {
+		tradeMax[key] = make(map[string][]float64)
+	}
+	if okTradeMaxResetTime[key] == nil {
+		okTradeMaxResetTime[key] = make(map[string]int64)
+	}
+	success, maxBuy, maxSell = getMaxSizeOKEX(key, secret, symbol)
+	if success {
+		tradeMax[key][symbol] = []float64{maxBuy, maxSell}
+		okTradeMaxResetTime[key][symbol] = now
+	}
+	return
 }
 
 func SetRequireReset(market string, reset bool) {

@@ -531,7 +531,9 @@ func getPositionsFtx(key, secret string) (success bool, positions []*model.Posit
 		for _, item := range data {
 			position := &model.Position{Market: model.Ftx, Ts: util.GetNowUnixMillion()}
 			parsePositionFtx(position, item.(map[string]interface{}))
-			positions = append(positions, position)
+			if position.Holding != 0 {
+				positions = append(positions, position)
+			}
 		}
 	}
 	return success, positions, 0

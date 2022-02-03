@@ -293,12 +293,14 @@ func makeEqual(coin string, statuses []*CarryStatus) (isEqual bool, msg string) 
 	askStatus := make(map[string]*CarryStatus)
 	tickTimes := make(map[string]int) // market_symbol_ts
 	isEqual = true
+	holdStr := ``
 	for _, status := range statuses {
 		if status == nil {
 			util.Notice(`warning: fail to get one status %s`, coin)
 			return false, `fail to equal for one nil status`
 		}
 		holding += status.Holding
+		holdStr += fmt.Sprintf(`[%s %s %f]`, status.market, status.symbol, status.Holding)
 		getTick, tick := model.AppMarkets.GetBidAsk(status.symbol, status.market)
 		getFunding, rate := api.GetFundingRate(status.account.Key, status.account.Secret, status.market, status.symbol, nil)
 		if !getTick || !getFunding {
@@ -330,7 +332,8 @@ func makeEqual(coin string, statuses []*CarryStatus) (isEqual bool, msg string) 
 	if holdingInU > 10 {
 		orderSide = model.OrderSideSell
 		sort.Sort(sort.Reverse(bids))
-		util.Notice(fmt.Sprintf(`check to make equal buy holding %f worth %f %v`, holding, holdingInU, bids))
+		util.Notice(fmt.Sprintf(`check to make equal sell holding %f worth %f list %s %v`,
+			holding, holdingInU, holdStr, bids))
 		for i := 0; i < len(bids); i++ {
 			status := bidStatus[fmt.Sprintf(`%s_%s`, bids[i].Market, bids[i].Symbol)]
 			if status == nil {
@@ -358,7 +361,8 @@ func makeEqual(coin string, statuses []*CarryStatus) (isEqual bool, msg string) 
 	if holdingInU < -10 {
 		orderSide = model.OrderSideBuy
 		sort.Sort(asks)
-		util.Notice(fmt.Sprintf(`check to make equal buy holding %f worth %f %v`, holding, holdingInU, asks))
+		util.Notice(fmt.Sprintf(`check to make equal buy holding %f worth %f list %s %v`,
+			holding, holdingInU, holdStr, asks))
 		for i := 0; i < len(asks); i++ {
 			status := askStatus[fmt.Sprintf(`%s_%s`, asks[i].Market, asks[i].Symbol)]
 			if status == nil {

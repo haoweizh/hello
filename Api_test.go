@@ -81,14 +81,10 @@ func Test_BalAndPos(t *testing.T) {
 	//		}
 	//	}
 	//}
-	posMarkets := []string{model.OKEX}
+	posMarkets := []string{model.BybitPerp}
 	//posMarkets := []string{model.OKEX, model.BybitPerp, model.Ftx}
 	for _, market := range posMarkets {
 		account := model.AppConfig.GetAccounts(market)[0]
-		s, buy, sell := api.GetTradeMaxOKEX(account.Key, account.Secret, `YFI_USDT`, 0)
-		util.Notice(`%v %f %f`, s, buy, sell)
-		s, buy, sell = api.GetTradeMaxOKEX(account.Key, account.Secret, `YFI_PERP`, 0)
-		util.Notice(`%v %f %f`, s, buy, sell)
 		success, positions, total, available := api.GetPositions(account.Key, account.Secret, market)
 		fmt.Println(fmt.Sprintf(`%v %f %f %d`, success, total, available, len(positions)))
 		for _, position := range positions {

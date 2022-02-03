@@ -480,7 +480,9 @@ func getPositionsGate(key string, secret string) (success bool, positions []*mod
 		position.Margin, _ = strconv.ParseFloat(item.Margin, 64)
 		position.LiquidationPrice, _ = strconv.ParseFloat(item.LiqPrice, 64)
 		position.ProfitUnreal, _ = strconv.ParseFloat(item.UnrealisedPnl, 64)
-		positions = append(positions, position)
+		if position.Holding != 0 {
+			positions = append(positions, position)
+		}
 	}
 	return true, positions, accountValue, available
 }
