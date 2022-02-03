@@ -172,8 +172,8 @@ func (config *Config) GetAccounts(market string) []*Account {
 		rateValues = strings.Split(config.BybitCarryRate, `,`)
 	}
 	if len(keys) != len(secrets) || len(keys) != len(closeValues) || len(keys) != len(rateValues) {
-		fmt.Println(fmt.Sprintf(`wrong config format %s keys:%d secrets:%d close:%d rate:%d %s`,
-			market, len(keys), len(secrets), len(closeValues), len(rateValues), config.BybitCarryClose))
+		fmt.Println(fmt.Sprintf(`wrong config format %s keys:%d secrets:%d close:%d rate:%d`,
+			market, len(keys), len(secrets), len(closeValues), len(rateValues)))
 		os.Exit(1)
 	}
 	marketAccounts[market] = make([]*Account, len(keys))
