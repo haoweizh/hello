@@ -120,7 +120,7 @@ func isValidSymbol(market, symbol string) bool {
 	return false
 }
 
-func isFresh(key, market, symbol string) bool {
+func isLastCross(key, market, symbol string) bool {
 	defer crossLock.Unlock()
 	crossLock.Lock()
 	if lastOrderSymbol == nil || lastOrderSymbol[key] == nil || len(lastOrderSymbol) == 0 {
@@ -132,7 +132,7 @@ func isFresh(key, market, symbol string) bool {
 	return false
 }
 
-func setFresh(key, market, symbol string) {
+func setLastCross(key, market, symbol string) {
 	defer crossLock.Unlock()
 	crossLock.Lock()
 	if lastOrderSymbol == nil {

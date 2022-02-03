@@ -761,7 +761,7 @@ func placeOrderFtx(order *model.Order, key, secret, orderSide, orderType, orderP
 	postData[`type`] = orderType
 	postData[`ioc`] = false
 	postData[`reduceOnly`] = false
-	if orderType == `limit` || orderType == `market` {
+	if orderType == model.OrderTypeLimit || orderType == model.OrderTypeMarket {
 		postData[`price`] = orderPrice
 		if orderParam == model.PostOnly {
 			postData[`postOnly`] = true

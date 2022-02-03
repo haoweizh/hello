@@ -544,10 +544,10 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarrySta
 	if statusBuy == nil || statusSell == nil {
 		return nil, nil, 0, 0, 0
 	}
-	if !isFresh(statusBuy.account.Key, statusBuy.market, statusBuy.symbol) {
+	if !isLastCross(statusBuy.account.Key, statusBuy.market, statusBuy.symbol) {
 		initLimitBuyAndSell(statusBuy, statusBuy.setting, priceBuy)
 	}
-	if !isFresh(statusSell.account.Key, statusSell.market, statusSell.symbol) {
+	if !isLastCross(statusSell.account.Key, statusSell.market, statusSell.symbol) {
 		initLimitBuyAndSell(statusSell, statusSell.setting, priceSell)
 	}
 	amount = math.Min(math.Min(statusBuy.LimitBuy, bidAmount), math.Min(statusSell.LimitSell, askAmount))
@@ -628,8 +628,9 @@ func placeCross(statusBuy, statusSell *CarryStatus, priceBuy, priceSell, amount 
 }
 
 func placeStatus(status *CarryStatus, price float64, amount float64) {
+	sm := getSpotMarket(status.account.Key)
+	cm := getContractMarket(status.account.Key)
 	if status.isSpot {
-		sm := getSpotMarket(status.account.Key)
 		balance := sm.balances[status.symbol]
 		if balance == nil {
 			util.Notice(fmt.Sprintf(`warning no balance %s %s %s`,
@@ -642,19 +643,16 @@ func placeStatus(status *CarryStatus, price float64, amount float64) {
 		}
 		sm.availableU -= amount * price
 		if status.market == model.Ftx {
-			cm := getContractMarket(status.account.Key)
 			if cm != nil {
 				cm.collateralsAvailable -= amount * price
 			}
 		} else if status.market == model.OKEX {
 			sm.collateral.Available -= amount * price
-			cm := getContractMarket(status.account.Key)
 			if cm != nil {
 				cm.collateralsAvailable -= amount * price
 			}
 		}
 	} else {
-		cm := getContractMarket(status.account.Key)
 		position := cm.positions[status.symbol]
 		originFreeAbs := 0.0
 		if position == nil {
@@ -668,18 +666,22 @@ func placeStatus(status *CarryStatus, price float64, amount float64) {
 		cm.collateralsAvailable += changeU * 0.2
 		cm.contractValueInU += changeU
 		if status.market == model.Ftx {
-			sm := getSpotMarket(status.account.Key)
 			sm.availableU += changeU * 0.2
 		} else if status.market == model.OKEX {
-			sm := getSpotMarket(status.account.Key)
 			sm.collateral.Available += changeU * 0.1
 			sm.collateral.Occupied -= changeU * 0.1
 			sm.availableU += changeU * 0.1
 		}
 	}
+	if sm != nil && sm.availableU < 0 {
+		util.Notice(fmt.Sprintf(`carry status amount < 0 sm %s %s %f %f`, status.market, status.symbol, amount, sm.availableU))
+	}
+	if cm != nil && cm.collateralsAvailable < 0 {
+		util.Notice(fmt.Sprintf(`carry status amount < 0 cm %s %s %f %f`, status.market, status.symbol, amount, cm.collateralsAvailable))
+	}
 	account := model.AppConfig.GetAccountFromKey(status.market, status.account.Key)
 	initStatus(account, status.setting)
-	setFresh(account.Key, status.market, status.symbol)
+	setLastCross(account.Key, status.market, status.symbol)
 }
 
 var PostOrderCross = func(order *model.Order, setting *model.Setting) {
