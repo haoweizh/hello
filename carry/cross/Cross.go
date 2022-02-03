@@ -41,8 +41,8 @@ func createContractMarket(key, secret, market string) (cm *contractMarket) {
 		cm.collateralsAvailable = availableU
 	}
 	setContractMarket(key, cm)
-	util.Notice(fmt.Sprintf(`refresh contract market %s inall %f available u %f`,
-		key, cm.accountValueInU, cm.collateralsAvailable))
+	//util.Notice(fmt.Sprintf(`refresh contract market %s inall %f available u %f`,
+	//	key, cm.accountValueInU, cm.collateralsAvailable))
 	return
 }
 
@@ -207,6 +207,10 @@ func initStatus(account *model.Account, setting *model.Setting) (status *CarrySt
 			status.LimitSell = math.Min(status.LimitSell, maxSell)
 			status.AvailableBuy = math.Min(status.AvailableBuy, maxBuy)
 			status.AvailableSell = math.Min(status.AvailableSell, maxSell)
+		}
+		if status.LimitSell < 0 || status.LimitBuy < 0 {
+			util.Notice(`cross test init status %s %s %f %f`,
+				status.market, status.symbol, status.LimitBuy, status.LimitSell)
 		}
 	}
 	setCarryStatus(setting.Coin, setting.Market, setting.Symbol, account.Key, status)
@@ -551,10 +555,10 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarrySta
 		initLimitBuyAndSell(statusSell, statusSell.setting, priceSell)
 	}
 	if statusBuy.LimitBuy < 0 || statusBuy.LimitSell < 0 {
-		util.Notice(`wrong limit %s %s %f %f`, statusBuy.market, statusBuy.symbol, statusBuy.LimitBuy, statusBuy.LimitSell)
+		util.Notice(`cross test wrong limit %s %s %f %f`, statusBuy.market, statusBuy.symbol, statusBuy.LimitBuy, statusBuy.LimitSell)
 	}
 	if statusSell.LimitSell < 0 || statusSell.LimitBuy < 0 {
-		util.Notice(`wrong limit %s %s %f %f`, statusSell.market, statusSell.symbol, statusSell.LimitBuy, statusSell.LimitSell)
+		util.Notice(`cross test wrong limit %s %s %f %f`, statusSell.market, statusSell.symbol, statusSell.LimitBuy, statusSell.LimitSell)
 	}
 	amount = math.Min(math.Min(statusBuy.LimitBuy, bidAmount), math.Min(statusSell.LimitSell, askAmount))
 	if amount > 0 {
@@ -609,8 +613,8 @@ func initLimitBuyAndSell(status *CarryStatus, setting *model.Setting, price floa
 		status.AvailableSell = availableAmount
 		status.AvailableBuy = availableAmount
 	}
-	if status.market == model.OKEX {
-		util.Notice(`init buy sell %f %f %f`, status.symbol, status.LimitBuy, status.LimitSell)
+	if status.LimitBuy < 0 || status.LimitSell < 0 {
+		util.Notice(`cross test init buy sell %f %f %f`, status.symbol, status.LimitBuy, status.LimitSell)
 	}
 }
 
@@ -683,10 +687,10 @@ func placeStatus(status *CarryStatus, price float64, amount float64) {
 		}
 	}
 	if sm != nil && sm.availableU < 0 {
-		util.Notice(fmt.Sprintf(`carry status amount < 0 sm %s %s %f %f`, status.market, status.symbol, amount, sm.availableU))
+		util.Notice(fmt.Sprintf(`cross test status amount < 0 sm %s %s %f %f`, status.market, status.symbol, amount, sm.availableU))
 	}
 	if cm != nil && cm.collateralsAvailable < 0 {
-		util.Notice(fmt.Sprintf(`carry status amount < 0 cm %s %s %f %f`, status.market, status.symbol, amount, cm.collateralsAvailable))
+		util.Notice(fmt.Sprintf(`cross test status amount < 0 cm %s %s %f %f`, status.market, status.symbol, amount, cm.collateralsAvailable))
 	}
 	account := model.AppConfig.GetAccountFromKey(status.market, status.account.Key)
 	initStatus(account, status.setting)
