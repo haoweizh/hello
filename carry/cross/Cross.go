@@ -550,6 +550,12 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarrySta
 	if !isLastCross(statusSell.account.Key, statusSell.market, statusSell.symbol) {
 		initLimitBuyAndSell(statusSell, statusSell.setting, priceSell)
 	}
+	if statusBuy.LimitBuy < 0 || statusBuy.LimitSell < 0 {
+		util.Notice(`wrong limit %s %s %f %f`, statusBuy.market, statusBuy.symbol, statusBuy.LimitBuy, statusBuy.LimitSell)
+	}
+	if statusSell.LimitSell < 0 || statusSell.LimitBuy < 0 {
+		util.Notice(`wrong limit %s %s %f %f`, statusSell.market, statusSell.symbol, statusSell.LimitBuy, statusSell.LimitSell)
+	}
 	amount = math.Min(math.Min(statusBuy.LimitBuy, bidAmount), math.Min(statusSell.LimitSell, askAmount))
 	if amount > 0 {
 		amount = model.FormatCrossPair(statusBuy.market, statusSell.market, statusBuy.symbol, statusSell.symbol, amount, priceBuy)
