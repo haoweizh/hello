@@ -490,9 +490,6 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarrySta
 		priceBuy = priceAskRelate
 		askAmount = amountBid * 0.9
 		bidAmount = amountAskRelate * 0.9
-		util.Notice(fmt.Sprintf(`init status %s -> %s at %f %f, line %f %f score %f`,
-			statusSell.market+statusSell.symbol, statusBuy.market+statusBuy.symbol, priceSell, priceBuy,
-			statusSell.TradeLineSell, statusBuy.TradeLineBuy, score))
 	}
 	if carryStatus.TradeLineBuy < scoreRelate && carryStatusRelate.TradeLineSell < scoreRelate {
 		statusSell = carryStatusRelate
@@ -501,9 +498,6 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarrySta
 		priceBuy = priceAsk
 		askAmount = amountBidRelate * 0.9
 		bidAmount = amountAsk * 0.9
-		util.Notice(fmt.Sprintf(`init status %s -> %s at %f %f, line %f %f score %f`,
-			statusSell.market+statusSell.symbol, statusBuy.market+statusBuy.symbol, priceSell, priceBuy,
-			statusSell.TradeLineSell, statusBuy.TradeLineBuy, scoreRelate))
 	}
 	// 为了同一对交易对冲不出现两次，对前后进行排序
 	mark = fmt.Sprintf(`%s-%s`, carryStatus.market, carryStatus.symbol)
@@ -556,13 +550,11 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarrySta
 	if !isLastCross(statusSell.account.Key, statusSell.market, statusSell.symbol) {
 		initLimitBuyAndSell(statusSell, statusSell.setting, priceSell)
 	}
-	if statusBuy.market == model.OKEX {
-		util.Notice(`status buy %s %f`, statusBuy.symbol, statusBuy.LimitBuy)
-	}
-	if statusSell.market == model.OKEX {
-		util.Notice(`status sell %s %f`, statusSell.symbol, statusSell.LimitSell)
-	}
 	amount = math.Min(math.Min(statusBuy.LimitBuy, bidAmount), math.Min(statusSell.LimitSell, askAmount))
+	if amount <= 0 {
+		util.Notice(`status sell %s %f`, statusSell.market, statusSell.symbol, statusSell.LimitSell)
+		util.Notice(`status buy %s %f`, statusBuy.market, statusBuy.symbol, statusBuy.LimitBuy)
+	}
 	if amount > 0 {
 		amount = model.FormatCrossPair(statusBuy.market, statusSell.market, statusBuy.symbol, statusSell.symbol, amount, priceBuy)
 	}
