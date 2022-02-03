@@ -208,10 +208,6 @@ func initStatus(account *model.Account, setting *model.Setting) (status *CarrySt
 			status.AvailableBuy = math.Min(status.AvailableBuy, maxBuy)
 			status.AvailableSell = math.Min(status.AvailableSell, maxSell)
 		}
-		if status.LimitSell < 0 || status.LimitBuy < 0 {
-			util.Notice(`cross test init status %s %s %f %f`,
-				status.market, status.symbol, status.LimitBuy, status.LimitSell)
-		}
 	}
 	setCarryStatus(setting.Coin, setting.Market, setting.Symbol, account.Key, status)
 	jump := 8.0
@@ -554,12 +550,6 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarrySta
 	if !isLastCross(statusSell.account.Key, statusSell.market, statusSell.symbol) {
 		initLimitBuyAndSell(statusSell, statusSell.setting, priceSell)
 	}
-	if statusBuy.LimitBuy < 0 || statusBuy.LimitSell < 0 {
-		util.Notice(`cross test wrong limit %s %s %f %f`, statusBuy.market, statusBuy.symbol, statusBuy.LimitBuy, statusBuy.LimitSell)
-	}
-	if statusSell.LimitSell < 0 || statusSell.LimitBuy < 0 {
-		util.Notice(`cross test wrong limit %s %s %f %f`, statusSell.market, statusSell.symbol, statusSell.LimitBuy, statusSell.LimitSell)
-	}
 	amount = math.Min(math.Min(statusBuy.LimitBuy, bidAmount), math.Min(statusSell.LimitSell, askAmount))
 	if amount > 0 {
 		amount = model.FormatCrossPair(statusBuy.market, statusSell.market, statusBuy.symbol, statusSell.symbol, amount, priceBuy)
@@ -612,9 +602,6 @@ func initLimitBuyAndSell(status *CarryStatus, setting *model.Setting, price floa
 		status.LimitBuy = limitAmount
 		status.AvailableSell = availableAmount
 		status.AvailableBuy = availableAmount
-	}
-	if status.LimitBuy < 0 || status.LimitSell < 0 {
-		util.Notice(`cross test init buy sell %f %f %f`, status.symbol, status.LimitBuy, status.LimitSell)
 	}
 }
 
@@ -685,12 +672,6 @@ func placeStatus(status *CarryStatus, price float64, amount float64) {
 			sm.collateral.Occupied -= changeU * 0.1
 			sm.availableU += changeU * 0.1
 		}
-	}
-	if sm != nil && sm.availableU < 0 {
-		util.Notice(fmt.Sprintf(`cross test status amount < 0 sm %s %s %f %f`, status.market, status.symbol, amount, sm.availableU))
-	}
-	if cm != nil && cm.collateralsAvailable < 0 {
-		util.Notice(fmt.Sprintf(`cross test status amount < 0 cm %s %s %f %f`, status.market, status.symbol, amount, cm.collateralsAvailable))
 	}
 	account := model.AppConfig.GetAccountFromKey(status.market, status.account.Key)
 	initStatus(account, status.setting)
