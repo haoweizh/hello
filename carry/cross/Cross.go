@@ -551,7 +551,7 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarrySta
 		initLimitBuyAndSell(statusSell, statusSell.setting, priceSell)
 	}
 	amount = math.Min(math.Min(statusBuy.LimitBuy, bidAmount), math.Min(statusSell.LimitSell, askAmount))
-	if amount <= 0 && (statusSell.LimitSell <= 0 || statusBuy.LimitBuy <= 0) {
+	if amount <= 0 && (statusBuy.LimitBuy < 0) {
 		util.Notice(`status sell %s %s %f`, statusSell.market, statusSell.symbol, statusSell.LimitSell)
 		util.Notice(`status buy %s %s %f`, statusBuy.market, statusBuy.symbol, statusBuy.LimitBuy)
 	}
