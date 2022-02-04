@@ -350,7 +350,7 @@ func queryOrderBybitSpot(key, secret, orderId string) (order *model.Order) {
 func getBalanceBybitSpot(key, secret string) (success bool, balances []*model.Balance) {
 	response := SignedRequestBybitSpot(key, secret, http.MethodGet, `/spot/v1/account`, nil)
 	balanceJson, err := util.NewJSON(response)
-	if err != nil || balanceJson == nil {
+	if err != nil || balanceJson == nil || balanceJson.Get(`ret_code`).MustInt() != 0 {
 		util.SocketInfo(`fail to get bybitspot balance`)
 		time.Sleep(time.Second * 2)
 		return getBalanceBybitSpot(key, secret)

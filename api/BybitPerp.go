@@ -436,7 +436,7 @@ func getPositionsBybitPerp(key, secret string) (success bool, positions []*model
 	accountValue, available = getWalletBybitPerp(key, secret)
 	response := SignedRequestBybitPerp(key, secret, http.MethodGet, `/private/linear/position/list`, nil)
 	posJson, err := util.NewJSON(response)
-	if err != nil || posJson == nil {
+	if err != nil || posJson == nil || posJson.Get(`ret_code`).MustInt() != 0 {
 		util.SocketInfo(`fail to get bybitPerp positions`)
 		time.Sleep(time.Second * 2)
 		return getPositionsBybitPerp(key, secret)

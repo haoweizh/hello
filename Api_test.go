@@ -88,9 +88,13 @@ func Test_BalAndPos(t *testing.T) {
 		success, positions, total, available := api.GetPositions(account.Key, account.Secret, market)
 		fmt.Println(fmt.Sprintf(`%v %f %f %d`, success, total, available, len(positions)))
 		for _, position := range positions {
-			if position.Currency == `TRB_PERP` {
-				fmt.Println(position.Holding)
-			}
+			fmt.Println(fmt.Sprintf(`%s %f`, position.Currency, position.Holding))
+			api.CancelOrders(account.Key, account.Secret, market, position.Currency)
+		}
+		success, positions, total, available = api.GetPositions(account.Key, account.Secret, market)
+		for _, position := range positions {
+			fmt.Println(fmt.Sprintf(`%s %f`, position.Currency, position.Holding))
+			api.CancelOrders(account.Key, account.Secret, market, position.Currency)
 		}
 	}
 }
