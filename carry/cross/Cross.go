@@ -277,7 +277,7 @@ func ClearCross() {
 			util.Notice(`...... exit clearing cross`)
 		}
 		checkSetCrossing(false)
-		time.Sleep(time.Second * 60)
+		time.Sleep(time.Minute * 3)
 	}
 }
 
