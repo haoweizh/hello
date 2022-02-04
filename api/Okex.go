@@ -682,7 +682,10 @@ func getMarketsOKEX(key, secret string) (marketInfos map[string]*model.MarketInf
 		param := map[string]interface{}{`instType`: instType}
 		responseBody := sendSignRequestOKEX(key, secret, http.MethodGet, `/api/v5/public/instruments`, param, nil)
 		resultJson, err := util.NewJSON(responseBody)
-		if err == nil && resultJson != nil && resultJson.Get(`data`) != nil {
+		if err != nil || resultJson == nil || resultJson.Get(`code`).MustString() != `0` {
+			time.Sleep(time.Second * 2)
+			return getMarketsOKEX(key, secret)
+		} else {
 			for _, info := range resultJson.Get(`data`).MustArray() {
 				value := info.(map[string]interface{})
 				if value[`instId`] != nil {
@@ -1067,19 +1070,17 @@ func parseBalanceOKEX(value map[string]interface{}) (balance *model.Balance) {
 func getBalanceOKEX(key, secret string) (success bool, balances []*model.Balance, totalInUsd float64, collateral *model.Collateral) {
 	response := sendSignRequestOKEX(key, secret, http.MethodGet, `/api/v5/account/balance`, nil, nil)
 	responseJson, err := util.NewJSON(response)
-	if err != nil || responseJson == nil || responseJson.GetPath(`data`) == nil ||
-		responseJson.Get(`data`).MustArray() == nil ||
-		len(responseJson.Get(`data`).MustArray()) == 0 ||
-		responseJson.Get(`data`).MustArray()[0].(map[string]interface{})[`details`] == nil {
+	if err != nil || responseJson == nil || responseJson.GetPath(`data`) == nil || responseJson.Get(`code`).MustString() != `0` {
 		util.SocketInfo(`fail to get okex balance `)
 		time.Sleep(time.Second * 2)
 		return getBalanceOKEX(key, secret)
 	}
 	balances = make([]*model.Balance, 0)
-	if responseJson.Get(`code`).MustString() == `0` {
-		success = true
-	}
+	success = true
 	data := responseJson.Get(`data`).MustArray()[0].(map[string]interface{})
+	if data == nil {
+		return
+	}
 	if data[`totalEq`] != nil {
 		totalInUsd, _ = strconv.ParseFloat(data[`totalEq`].(string), 64)
 	}
@@ -1143,14 +1144,12 @@ func getPositionsOKEX(key, secret string) (success bool, positions []*model.Posi
 	param := map[string]interface{}{`instType`: `SWAP`}
 	responseBody := sendSignRequestOKEX(key, secret, http.MethodGet, `/api/v5/account/positions`, param, nil)
 	responseJson, err := util.NewJSON(responseBody)
-	if err != nil || responseJson == nil || responseJson.Get(`data`) == nil {
+	if err != nil || responseJson == nil || responseJson.Get(`code`).MustString() != `0` {
 		util.SocketInfo(`fail to get okex positions `)
 		time.Sleep(time.Second * 2)
 		return getPositionsOKEX(key, secret)
 	}
-	if responseJson.Get(`code`).MustString() == `0` {
-		success = true
-	}
+	success = true
 	positions = make([]*model.Position, 0)
 	positionArray := responseJson.Get(`data`).MustArray()
 	for _, item := range positionArray {

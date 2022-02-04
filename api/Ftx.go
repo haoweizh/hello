@@ -596,7 +596,11 @@ func getMarketsFtx(key, secret string) (marketInfos map[string]*model.MarketInfo
 	response = SignedRequestFtx(key, secret, `GET`,
 		`/spot_margin/borrow_rates`, nil, nil)
 	borrowJson, _ := util.NewJSON(response)
-	if err == nil && rateJson.Get(`result`) != nil && borrowJson.Get(`result`) != nil {
+	if err != nil || rateJson.Get(`result`) == nil || borrowJson.Get(`result`) == nil ||
+		rateJson.Get(`success`).MustBool() == false || borrowJson.Get(`success`).MustBool() == false {
+		time.Sleep(time.Second * 2)
+		return getMarketsFtx(key, secret)
+	} else {
 		items, _ := rateJson.Get(`result`).Array()
 		borrows, _ := borrowJson.Get(`result`).Array()
 		canBorrows := make(map[string]bool)

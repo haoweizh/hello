@@ -40,6 +40,9 @@ func appendFutureMarketGate(key, secret string, marketInfos map[string]*model.Ma
 	contracts, _, futureErr := client.FuturesApi.ListFuturesContracts(ctx, `usdt`)
 	if futureErr != nil {
 		panicGateError(key, "ListFuturesContracts", futureErr)
+		time.Sleep(time.Second * 2)
+		appendFutureMarketGate(key, secret, marketInfos)
+		return
 	}
 	for _, contract := range contracts {
 		if contract.InDelisting {
@@ -68,7 +71,10 @@ func appendRelatedMarketsGate(key, secret string, marketInfos map[string]*model.
 	client, ctx := getClientGate(key, secret)
 	spotCurrencyPairs, _, spotErr := client.SpotApi.ListCurrencyPairs(ctx)
 	if spotErr != nil {
+		time.Sleep(time.Second * 2)
 		panicGateError(key, "ListCurrencyPairs", spotErr)
+		appendRelatedMarketsGate(key, secret, marketInfos)
+		return
 	}
 	if model.AppConfig.GateSpot {
 		for _, spot := range spotCurrencyPairs {

@@ -257,7 +257,10 @@ func getMarketsBybitPerp(key, secret string) (marketInfos map[string]*model.Mark
 	response := SignedRequestBybitPerp(key, secret, http.MethodGet, `/v2/public/symbols`, nil)
 	marketInfos = make(map[string]*model.MarketInfo)
 	marketJson, err := util.NewJSON(response)
-	if err == nil && marketJson.Get(`ret_code`) != nil && marketJson.Get(`ret_code`).MustInt64() == 0 {
+	if err != nil || marketJson.Get(`ret_code`) == nil || marketJson.Get(`ret_code`).MustInt() != 0 {
+		time.Sleep(time.Second * 2)
+		getMarketsBybitPerp(key, secret)
+	} else {
 		items, _ := marketJson.Get(`result`).Array()
 		for _, item := range items {
 			value := item.(map[string]interface{})
