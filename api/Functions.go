@@ -106,6 +106,10 @@ func CancelOrders(key, secret, market, symbol string) (result bool) {
 		return cancelOrdersGate(key, secret, symbol)
 	case model.Binance:
 		return cancelOrdersBinance(key, secret, symbol)
+	case model.BinanceSpot:
+		return cancelOrdersBinanceSpot(key, secret, symbol)
+	case model.BinancePerp:
+		return cancelOrdersBinancePerp(key, secret, symbol)
 	case model.Ftx:
 		return cancelOrdersFtx(key, secret, symbol)
 	case model.BybitPerp:
@@ -214,6 +218,8 @@ func GetBalances(key, secret, market string) (
 		success, balances, totalInUsd, collateral = getBalanceOKEX(key, secret)
 	case model.Binance:
 		success, balances = getBalanceBinance(key, secret)
+	case model.BinanceSpot:
+		success, balances = getBalanceBinanceSpot(key, secret)
 	case model.BybitSpot:
 		success, balances = getBalanceBybitSpot(key, secret)
 	}
@@ -377,6 +383,8 @@ func GetPositions(key, secret, market string) (success bool, positions []*model.
 		return getPositionsGate(key, secret)
 	case model.Binance:
 		return getPositionsBinance(key, secret)
+	case model.BinancePerp:
+		return getPositionsBinancePerp(key, secret)
 	case model.Ftx:
 		var balances []*model.Balance
 		success, balances, accountValue = getBalanceFtx(key, secret)
@@ -460,6 +468,10 @@ func PlaceOrder(key, secret, orderSide, orderType, market, symbol, orderParam, r
 		placeOrderOKEX(key, secret, isWs, order)
 	case model.Binance:
 		placeOrderBinance(key, secret, order, orderSide, orderType, symbol, price, amount)
+	case model.BinanceSpot:
+		placeOrderBinanceSpot(key, secret, order, orderSide, orderType, symbol, price, amount)
+	case model.BinancePerp:
+		placeOrderBinancePerp(key, secret, order, orderSide, orderType, symbol, price, amount)
 	case model.BybitPerp:
 		placeOrderBybitPerp(order, key, secret, orderSide, orderType, orderParam, symbol, price, amount)
 	case model.BybitSpot:

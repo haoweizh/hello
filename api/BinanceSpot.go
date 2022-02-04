@@ -18,7 +18,8 @@ func getMarketsBinanceSpot(key, secret string) (marketInfos map[string]*model.Ma
 	exchangeInfo, err := client.NewExchangeInfoService().Do(context.Background())
 	if err != nil {
 		util.Notice("getMarketsBinanceSpot err: " + err.Error())
-		return marketInfos
+		time.Sleep(time.Second * 2)
+		return getMarketsBinanceSpot(key, secret)
 	}
 	for _, item := range exchangeInfo.Symbols {
 		if item.QuoteAsset == "" || item.BaseAsset == "" {
@@ -110,4 +111,98 @@ func maintainChannelBinanceSpot() {
 			}
 		}
 	}
+}
+
+func placeOrderBinanceSpot(key, secret string, order *model.Order, orderSide, orderType, symbol string, price, amount float64) {
+	price, decimal := model.FormatPrice(model.BinanceSpot, symbol, orderSide, price)
+	priceStr := util.CutTailZero(strconv.FormatFloat(price, 'f', decimal, 64))
+	formattedAmount := model.GetAmountInMarket(model.BinanceSpot, symbol, amount, price)
+	amountStr := util.CutTailZero(fmt.Sprintf(`%f`, formattedAmount))
+	success, _, _, dialectSymbol := model.GetFromStandard(model.BinanceSpot, symbol)
+	if success {
+		client := binance.NewClient(key, secret)
+		service := client.NewCreateOrderService().Symbol(dialectSymbol).Quantity(amountStr)
+		if orderSide == model.OrderSideBuy {
+			service.Side(binance.SideTypeBuy)
+		} else if orderSide == model.OrderSideSell {
+			service.Side(binance.SideTypeSell)
+		}
+		if orderType == model.OrderTypeMarket {
+			service.Type(binance.OrderTypeMarket)
+		} else if orderType == model.OrderTypeLimit {
+			service.Type(binance.OrderTypeLimit)
+			service.Price(priceStr)
+			service.TimeInForce(binance.TimeInForceTypeGTC)
+		}
+		orderResponse, err := service.Do(context.Background())
+		if err != nil {
+			util.Notice("placeOrderBinanceSpot err: " + err.Error())
+			order.OrderId = ``
+		} else {
+			order.OrderId = strconv.FormatInt(orderResponse.OrderID, 10)
+		}
+	}
+}
+
+func cancelOrdersBinanceSpot(key string, secret string, symbol string) bool {
+	success, _, _, dialectSymbol := model.GetFromStandard(model.BinanceSpot, symbol)
+	if success {
+		return false
+	}
+	client := binance.NewClient(key, secret)
+	_, err := client.NewCancelOpenOrdersService().Symbol(dialectSymbol).Do(context.Background())
+	if err != nil {
+		util.Notice("cancelOrdersBinanceSpot err: " + err.Error())
+		return false
+	}
+	return true
+}
+
+func getBalanceBinanceSpot(key string, secret string) (success bool, balances []*model.Balance) {
+	client := binance.NewClient(key, secret)
+	balanceResp, err := client.NewGetAccountService().Do(context.Background())
+	if err != nil {
+		util.SocketInfo(`fail to refresh binance balance `)
+		time.Sleep(time.Second * 2)
+		return getBalanceBinance(key, secret)
+	}
+	if !balanceResp.CanTrade {
+		util.SocketInfo(`binance balance can not trade`)
+		return false, balances
+	}
+
+	balances = make([]*model.Balance, 0)
+	for _, data := range balanceResp.Balances {
+		if data.Asset == "" {
+			continue
+		}
+		coin := data.Asset
+		balance := &model.Balance{
+			Market:      model.BinanceSpot,
+			Coin:        coin,
+			ID:          model.BinanceSpot + `_` + coin + `_` + util.GetNow().Format(time.RFC3339)[0:10],
+			BalanceTime: util.GetNow(),
+			AccountId:   key}
+		if data.Free != "" { // 持仓,此处按照不进行借币计算
+			balance.AvailableWithBorrow, _ = strconv.ParseFloat(data.Free, 64)
+		}
+		if data.Locked != "" {
+			lockAmount, _ := strconv.ParseFloat(data.Locked, 64)
+			balance.Amount = balance.AvailableWithBorrow + lockAmount
+		}
+		if balance.UsdValue == 0 && balance.Amount > 0 {
+			getTick, bidAsk := model.AppMarkets.GetBidAsk(balance.Coin+model.UniStandardTail[model.MarketTypeSpot], model.BinanceSpot)
+			if getTick {
+				balance.UsdValue = balance.Amount * bidAsk.Bids[0].Price
+			}
+		}
+		//if asset[`netAsset`] != nil {
+		//	balance.Amount, _ = strconv.ParseFloat(asset[`netAsset`].(string), 64)
+		//}
+		//if asset[`borrowed`] != nil { //已借数量
+		//	balance.Borrow, _ = strconv.ParseFloat(asset[`borrowed`].(string), 64)
+		//}
+		balances = append(balances, balance)
+	}
+	return true, balances
 }
