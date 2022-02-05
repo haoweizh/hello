@@ -211,3 +211,21 @@ func getPositionsBinancePerp(key, secret string) (success bool, positions []*mod
 	}
 	return success, positions, accountValue, availableU
 }
+
+func getFundingRateBinancePerp(key, secret, symbol string) (fundingRate *model.FundingRate) {
+	_, _, _, dialectSymbol := model.GetFromStandard(model.BinancePerp, symbol)
+	client := futures.NewClient(key, secret)
+	rateResp, err := client.NewPremiumIndexService().Symbol(dialectSymbol).Do(context.Background())
+	if err != nil {
+		util.Notice("getFundingRateBinancePerp err: " + err.Error())
+		return
+	}
+	rateStr := rateResp[0].LastFundingRate
+	rate, _ := strconv.ParseFloat(rateStr, 64)
+	nextFundingTime := rateResp[0].NextFundingTime
+	fundingRate = &model.FundingRate{
+		Rate:       rate,
+		UpdateTime: util.GetNow().Unix(),
+		ExpireTime: nextFundingTime / 1000}
+	return
+}

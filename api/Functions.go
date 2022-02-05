@@ -312,6 +312,11 @@ func GetFundingRate(key, secret, market, symbol string, lock *sync.Mutex) (succe
 	case model.Binance:
 		fundingRate = getFundingRateBinance(key, secret, symbol)
 		model.SetFundingRate(market, symbol, fundingRate)
+	case model.BinanceSpot:
+		return true, 0
+	case model.BinancePerp:
+		fundingRate = getFundingRateBinancePerp(key, secret, symbol)
+		model.SetFundingRate(market, symbol, fundingRate)
 	case model.Gate:
 		fundingRate = getFundingRateGate(key, secret, symbol)
 		model.SetFundingRate(market, symbol, fundingRate)

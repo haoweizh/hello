@@ -63,8 +63,8 @@ var AppConfig *Config
 var AppMarkets = NewMarkets()
 var AppPause = false
 var dialectTail = map[string]map[string]string{
-	MarketTypeSpot: {Gate: `_USDT`, Ftx: `/USD`, OKEX: `-USDT`, BybitSpot: `USDT`, Binance: `USDT`},
-	MarketTypePerp: {Gate: `_USDT`, Ftx: `-PERP`, OKEX: `-USDT-SWAP`, BybitPerp: `USDT`, Binance: `USDT`}}
+	MarketTypeSpot: {Gate: `_USDT`, Ftx: `/USD`, OKEX: `-USDT`, BybitSpot: `USDT`, Binance: `USDT`, BinanceSpot: `USDT`},
+	MarketTypePerp: {Gate: `_USDT`, Ftx: `-PERP`, OKEX: `-USDT-SWAP`, BybitPerp: `USDT`, Binance: `USDT`, BinancePerp: `USDT`}}
 var UniStandardTail = map[string]string{MarketTypeSpot: `_USDT`, MarketTypePerp: `_PERP`}
 
 func GetFromStandard(market, standardSymbol string) (success bool, marketType, coinValue, dialectSymbol string) {
