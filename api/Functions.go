@@ -697,6 +697,11 @@ func filterCross(market, symbol string) bool {
 		case `BNB`:
 			return true
 		}
+	case model.BybitSpot:
+		switch coin {
+		case `GAS`:
+			return true
+		}
 	}
 	return false
 }
