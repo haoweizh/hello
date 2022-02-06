@@ -1,15 +1,22 @@
-amountrate: 0.7
-between: 5
-binanceorderdis: 0.0009
-channels: 1
 channelslot: 60000 #按照毫秒计算的检查时间间隔
-dbconnection: host= port=5432 user= dbname=testDB password= sslmode=disable
-delay: 7000 #按照毫秒计算时间差
-env: test
+dbconnection: host=ip port=5432 user=usdername dbname=databasename password=123 sslmode=disable
+delay: 60000 #按照毫秒计算时间差
+env: product
 handle: 1
-hangrate: 0.2
-inchina: 0
-mail:
+mail: address_to@qq.com
+frommail: address_from@qq.com
+frommailauth: asldkfasklfja
 port: 80
-predealdis: 100
-refreshtimeslot: 60 #second
+phase: okexapikeyphase
+okexcarryclose: false,false,false
+okexcarryrate: 1,1,1
+ftxcarryclose: false,false,false
+ftxcarryrate: 1,1,1
+gatecarryclose: false,false,false
+gatecarryrate: 1,1,1
+ftxkey: ftxkey1,ftxkey2,ftxkey3
+ftxsecret: ftxsecret1,ftxsecret2,ftxsecret3
+okexkey: okexkey1,okexkey2,okexkey3
+okexsecret: okexsecret1,okexsecret2,okexsecret3
+gatekey: gatekey1,gatekey2,gatekey3
+gatesecret: gatesecret1,gatesecret2,gatesecret3
