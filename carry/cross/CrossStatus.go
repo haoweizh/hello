@@ -184,8 +184,8 @@ func GetHoldings(accounts map[string]*model.Account) (holding [][]interface{}) {
 		}
 		cm := getContractMarket(account.Key)
 		if cm != nil && cm.positions != nil {
-			for symbol, position := range cm.positions {
-				util.Notice(`see pos %s %s %s`, symbol, position.Market, position.Currency)
+			util.Notice(`hold %v`, cm.positions)
+			for _, position := range cm.positions {
 				valid := false
 				setting := model.GetSetting(model.FunctionCross, position.Market, position.Currency)
 				if setting != nil {

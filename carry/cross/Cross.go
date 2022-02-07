@@ -30,6 +30,7 @@ func createContractMarket(key, secret, market string) (cm *contractMarket) {
 	settings := model.GetSettings(model.FunctionCross, market)
 	if success {
 		cm.positions = make(map[string]*model.Position)
+		util.Notice(`create from contract %v`, positions)
 		for _, position := range positions {
 			cm.positions[position.Currency] = position
 			getTick, tick := model.AppMarkets.GetBidAsk(position.Currency, market)
