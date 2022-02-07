@@ -34,11 +34,11 @@ func maintainChannelBybitPerp(subscribes []interface{}) {
 				_, _, coin := model.GetCoinFromDialect(model.BybitPerp, value.(string))
 				standardSymbol := coin + model.UniStandardTail[model.MarketTypePerp]
 				_, bidAsk := model.AppMarkets.GetBidAsk(standardSymbol, model.BybitPerp)
-				delay := time.Now().UnixMilli() - int64(bidAsk.Ts)
-				if bidAsk == nil || delay > 120000 {
+				if bidAsk == nil || time.Now().UnixMilli()-int64(bidAsk.Ts) > 120000 {
 					subCmd := fmt.Sprintf(`{"op": "subscribe", "args": ["orderBookL2_25.%s"]}`, value.(string))
 					if bidAsk != nil {
-						util.Notice(`maintain bybitperp timeout %s %s %d`, standardSymbol, delay, bidAsk.Ts)
+						util.Notice(`maintain bybitperp timeout %s %s %d`,
+							standardSymbol, time.Now().UnixMilli()-int64(bidAsk.Ts), bidAsk.Ts)
 					}
 					if bybitPerpSubConnection[standardSymbol] != nil {
 						if err := SendToConnection(model.BybitPerp, bybitPerpSubConnection[standardSymbol],
@@ -50,7 +50,7 @@ func maintainChannelBybitPerp(subscribes []interface{}) {
 					}
 					util.Notice(`send resubscribe %s %s`, model.BybitPerp, subCmd)
 				}
-				if bidAsk == nil || delay > 180000 {
+				if bidAsk == nil || time.Now().UnixMilli()-int64(bidAsk.Ts) > 180000 {
 					SetRequireReset(model.BybitPerp, true)
 				}
 			}
