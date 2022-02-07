@@ -29,16 +29,16 @@ func maintainChannelBybitPerp(subscribes []interface{}) {
 	if !channelMaintainingBybitPerp {
 		channelMaintainingBybitPerp = true
 		for true {
-			time.Sleep(time.Minute)
+			time.Sleep(time.Minute * 5)
 			for _, value := range subscribes {
 				_, _, coin := model.GetCoinFromDialect(model.BybitPerp, value.(string))
 				standardSymbol := coin + model.UniStandardTail[model.MarketTypePerp]
 				_, bidAsk := model.AppMarkets.GetBidAsk(standardSymbol, model.BybitPerp)
-				if bidAsk == nil || time.Now().UnixMilli()-int64(bidAsk.Ts) > 60000 {
+				delay := time.Now().UnixMilli() - int64(bidAsk.Ts)
+				if bidAsk == nil || delay > 120000 {
 					subCmd := fmt.Sprintf(`{"op": "subscribe", "args": ["orderBookL2_25.%s"]}`, value.(string))
 					if bidAsk != nil {
-						util.Notice(`maintain bybitperp timeout %s %s %d`,
-							standardSymbol, time.Now().UnixMilli()-int64(bidAsk.Ts), bidAsk.Ts)
+						util.Notice(`maintain bybitperp timeout %s %s %d`, standardSymbol, delay, bidAsk.Ts)
 					}
 					if bybitPerpSubConnection[standardSymbol] != nil {
 						if err := SendToConnection(model.BybitPerp, bybitPerpSubConnection[standardSymbol],
@@ -49,6 +49,9 @@ func maintainChannelBybitPerp(subscribes []interface{}) {
 						util.Notice(`bybitPerp can not get connection for %s`, standardSymbol)
 					}
 					util.Notice(`send resubscribe %s %s`, model.BybitPerp, subCmd)
+				}
+				if bidAsk == nil || delay > 180000 {
+					SetRequireReset(model.BybitPerp, true)
 				}
 			}
 		}
@@ -67,16 +70,12 @@ var subscribeHandlerBybitPerp = func(connection *websocket.Conn, subscribes []in
 	//if err = SendToConnection(model.BybitPerp, connection, []byte(authCmd)); err != nil {
 	//	util.SocketInfo("bybit can not auth " + err.Error())
 	//}
-	subscribeMap := make(map[string]interface{})
-	subscribeMap[`op`] = `subscribe`
-	subscribeMap[`args`] = subscribes
-	subscribeMessage := util.JsonEncodeToByte(subscribeMap)
-	if err = SendToConnection(model.BybitPerp, connection, subscribeMessage); err != nil {
-		util.SocketInfo("bybitPerp can not subscribe " + err.Error())
-		return err
-	}
-	for _, subscribe := range subscribes {
-		_, _, coin := model.GetCoinFromDialect(model.BybitPerp, subscribe.(string))
+	for _, value := range subscribes {
+		subCmd := fmt.Sprintf(`{"op": "subscribe", "args": ["orderBookL2_25.%s"]}`, value.(string))
+		if err := SendToConnection(model.BybitPerp, connection, []byte(subCmd)); err != nil {
+			util.SocketInfo("bybitPerp can not subscribe " + err.Error())
+		}
+		_, _, coin := model.GetCoinFromDialect(model.BybitPerp, value.(string))
 		standardSymbol := coin + model.UniStandardTail[model.MarketTypePerp]
 		bybitPerpSubConnection[standardSymbol] = connection
 	}

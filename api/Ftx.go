@@ -33,17 +33,20 @@ func maintainChannelFtx(subscribes []interface{}) {
 	if !channelMaintainingFtx {
 		channelMaintainingFtx = true
 		for true {
-			time.Sleep(time.Minute)
+			time.Sleep(time.Minute * 5)
 			for _, value := range subscribes {
 				subscribe := value.([]string)
 				_, marketType, coin := model.GetCoinFromDialect(model.Ftx, subscribe[1])
 				standardSymbol := coin + model.UniStandardTail[marketType]
 				_, bidAsk := model.AppMarkets.GetBidAsk(standardSymbol, model.Ftx)
-				now := time.Now().UnixNano() / int64(time.Millisecond)
-				if bidAsk == nil || now-int64(bidAsk.Ts) > 60000 {
+				delay := time.Now().UnixMilli() - int64(bidAsk.Ts)
+				if bidAsk == nil || delay > 120000 {
 					if ftxSymbolConnection[standardSymbol] != nil {
 						cmdUnsub := fmt.Sprintf(`{"op": "unsubscribe", "channel": "%s", "market": "%s"}`,
 							subscribe[0], subscribe[1])
+						if bidAsk != nil {
+							util.Notice(`maintain ftx timeout %s %s %d`, standardSymbol, delay, bidAsk.Ts)
+						}
 						if err := SendToConnection(model.Ftx, ftxSymbolConnection[standardSymbol], []byte(cmdUnsub)); err != nil {
 							util.SocketInfo("ftx can not resubscribe " + err.Error())
 						}
@@ -57,8 +60,7 @@ func maintainChannelFtx(subscribes []interface{}) {
 					} else {
 						util.Notice(`ftx can not get connection for %s`, subscribe[1])
 					}
-				}
-				if bidAsk != nil && now-int64(bidAsk.Ts) > 180000 {
+				} else if bidAsk == nil || delay > 180000 {
 					SetRequireReset(model.Ftx, true)
 				}
 			}

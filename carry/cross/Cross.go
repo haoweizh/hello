@@ -94,12 +94,13 @@ func createFromPosition(account *model.Account, setting *model.Setting, valueLim
 	} else if cm.positions[setting.Symbol] != nil {
 		price = cm.positions[setting.Symbol].EntryPrice
 		util.Notice(`no tick price, use position price %s %s %f`, setting.Market, setting.Symbol, price)
-	} else {
-		util.Notice(`no tick and not position %s %s`, setting.Market, setting.Symbol)
-		return nil, false
 	}
-	limitAmount := math.Min(cm.accountValueInU/5, math.Min(cm.collateralsAvailable, openValueLimit)) / price
-	availableAmount := cm.collateralsAvailable / price
+	limitAmount := 0.0
+	availableAmount := 0.0
+	if price > 0 {
+		limitAmount = math.Min(cm.accountValueInU/5, math.Min(cm.collateralsAvailable, openValueLimit)) / price
+		availableAmount = cm.collateralsAvailable / price
+	}
 	carryStatus = &CarryStatus{isSpot: false, market: setting.Market, symbol: setting.Symbol, account: account,
 		setting:       setting,
 		LimitSell:     limitAmount,
@@ -133,26 +134,39 @@ func createFromBalance(account *model.Account, setting *model.Setting, valueLimi
 		sm = createSpotMarket(key, account.Secret, setting.Market)
 		setSpotMarket(key, sm)
 	}
-	getTick, ticks := model.AppMarkets.GetBidAsk(setting.Symbol, setting.Market)
-	if sm == nil || !getTick {
-		util.Notice(fmt.Sprintf(`nil spot market or fail to get tick %s %s`, setting.Market, setting.Symbol))
+	if sm == nil {
+		util.Notice(fmt.Sprintf(`nil spot market %s %s`, setting.Market, setting.Symbol))
 		return
 	}
-	price := ticks.Asks[0].Price
+	getTick, ticks := model.AppMarkets.GetBidAsk(setting.Symbol, setting.Market)
+	price := 0.0
+	if getTick {
+		price = ticks.Asks[0].Price
+	} else {
+		util.Notice(`fail to get ticket %s %s`, setting.Market, setting.Symbol)
+	}
+	limitBuy, limitSell, availableBuy := 0.0, 0.0, 0.0
+	if price > 0 {
+		limitBuy = math.Min(openValueLimit, math.Min(sm.availableU/5, sm.accountValueInU/15)) / price
+		availableBuy = sm.availableU / price
+	}
 	carryStatus = &CarryStatus{isSpot: true, market: setting.Market, symbol: setting.Symbol, account: account,
 		setting:       setting,
 		LimitSell:     0,
-		LimitBuy:      math.Min(openValueLimit, math.Min(sm.availableU/5, sm.accountValueInU/15)) / price,
+		LimitBuy:      limitBuy,
 		AvailableSell: 0,
-		AvailableBuy:  sm.availableU / price,
+		AvailableBuy:  availableBuy,
 		TradeLineBuy:  setting.OpenShortMargin,
 		TradeLineSell: setting.CloseShortMargin,
 	}
 	if sm.balances[setting.Symbol] != nil {
 		balance := sm.balances[setting.Symbol]
+		if price > 0 {
+			limitSell = math.Min(math.Min(math.Max(balance.Amount, 0), balance.AvailableWithBorrow), openValueLimit/price)
+		}
 		carryStatus.Holding = balance.Amount
 		// 暂不支持借币
-		carryStatus.LimitSell = math.Min(math.Min(math.Max(balance.Amount, 0), balance.AvailableWithBorrow), openValueLimit/price)
+		carryStatus.LimitSell = limitSell
 		carryStatus.RateInAll = math.Abs(carryStatus.Holding * price / sm.accountValueInU)
 		carryStatus.AvailableSell = carryStatus.LimitSell
 	}
@@ -332,8 +346,8 @@ func makeEqual(coin string, statuses []*CarryStatus) (isEqual bool, msg string) 
 	if holdingInU > 10 {
 		orderSide = model.OrderSideSell
 		sort.Sort(sort.Reverse(bids))
-		util.Notice(fmt.Sprintf(`check to make equal sell holding %f worth %f list %s %v`,
-			holding, holdingInU, holdStr, bids))
+		util.Notice(fmt.Sprintf(`need equal %s sell holding %f worth %f list %s %v`,
+			coin, holding, holdingInU, holdStr, bids))
 		for i := 0; i < len(bids); i++ {
 			status := bidStatus[fmt.Sprintf(`%s_%s`, bids[i].Market, bids[i].Symbol)]
 			if status == nil {
@@ -361,8 +375,8 @@ func makeEqual(coin string, statuses []*CarryStatus) (isEqual bool, msg string) 
 	if holdingInU < -10 {
 		orderSide = model.OrderSideBuy
 		sort.Sort(asks)
-		util.Notice(fmt.Sprintf(`check to make equal buy holding %f worth %f list %s %v`,
-			holding, holdingInU, holdStr, asks))
+		util.Notice(fmt.Sprintf(`need equal %s buy holding %f worth %f list %s %v`,
+			coin, holding, holdingInU, holdStr, asks))
 		for i := 0; i < len(asks); i++ {
 			status := askStatus[fmt.Sprintf(`%s_%s`, asks[i].Market, asks[i].Symbol)]
 			if status == nil {
@@ -404,8 +418,8 @@ func makeEqual(coin string, statuses []*CarryStatus) (isEqual bool, msg string) 
 			} else if orderSide == model.OrderSideSell {
 				price = tick.Bids[0].Price
 			}
-			util.Notice(fmt.Sprintf(`try to equal %s %s at %f %f %f amount %f`,
-				equalStatus.market, equalStatus.symbol, price, tick.Asks[0].Price, tick.Bids[0].Price, amount))
+			util.Notice(fmt.Sprintf(`do equal %s %s %s at %f %f %f amount %f`,
+				coin, equalStatus.market, equalStatus.symbol, price, tick.Asks[0].Price, tick.Bids[0].Price, amount))
 			api.PlaceOrder(equalStatus.account.Key, equalStatus.account.Secret, orderSide, model.OrderTypeLimit,
 				equalStatus.market, equalStatus.symbol, ``, model.FunctionComplement,
 				price, price, amount, true, true, nil, nil)
