@@ -4,9 +4,11 @@ import (
 	"context"
 	"fmt"
 	"github.com/adshao/go-binance/v2"
+	"github.com/bitly/go-simplejson"
 	"github.com/gorilla/websocket"
 	"hello/model"
 	"hello/util"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -83,9 +85,9 @@ func WsDepthServeBinanceSpot(markets *model.Markets, orderHandler OrderHandler) 
 			return
 		}
 		if strings.Contains(subscribe, `@depth`) {
-			handleDepthBinance(markets, result, dialectSymbol, updateId)
+			handleDepthBinanceSpot(markets, result, dialectSymbol, updateId)
 		} else if strings.Contains(subscribe, `@bookTicker`) {
-			handleTickerBinance(markets, result, dialectSymbol, updateId)
+			handleTickerBinanceSpot(markets, result, dialectSymbol, updateId)
 		}
 	}
 	channels = make([]chan struct{}, 0)
@@ -96,6 +98,94 @@ func WsDepthServeBinanceSpot(markets *model.Markets, orderHandler OrderHandler) 
 		util.SocketInfo(`fail to create binance spot conn %s`, spotErr.Error())
 	}
 	return spotChans, err
+}
+
+func handleTickerBinanceSpot(markets *model.Markets, json *simplejson.Json, dialectSymbol string, updateId int64) {
+	bidPrice, _ := strconv.ParseFloat(json.Get(`b`).MustString(), 64)
+	bidAmount, _ := strconv.ParseFloat(json.Get(`B`).MustString(), 64)
+	askPrice, _ := strconv.ParseFloat(json.Get(`a`).MustString(), 64)
+	askAmount, _ := strconv.ParseFloat(json.Get(`A`).MustString(), 64)
+	ts := json.Get(`E`).MustInt()
+	now := int(time.Now().UnixNano() / int64(time.Millisecond))
+	if ts == 0 {
+		ts = now
+	}
+	if dialectSymbol != `` && bidPrice > 0 && bidAmount > 0 && askPrice > 0 && askAmount > 0 {
+		marketType := model.MarketTypeSpot
+		_, _, coin := model.GetCoinFromDialect(model.BinanceSpot, dialectSymbol)
+		standardSymbol := coin + model.UniStandardTail[marketType]
+		bidAsk := model.BidAsk{Ts: ts, TsReceived: now, UpdateId: updateId,
+			Bids: []model.Tick{{Price: bidPrice, Amount: bidAmount, Market: model.BinanceSpot, Symbol: standardSymbol, Side: model.OrderSideBuy}},
+			Asks: []model.Tick{{Price: askPrice, Amount: askAmount, Market: model.BinanceSpot, Symbol: standardSymbol, Side: model.OrderSideSell}}}
+		haveOld, old := markets.GetBidAsk(standardSymbol, model.BinanceSpot)
+		if haveOld && old.UpdateId > bidAsk.UpdateId {
+			return
+		}
+		if markets.SetBidAsk(standardSymbol, model.BinanceSpot, &bidAsk) {
+			for function, handler := range model.GetFunctions(model.BinanceSpot, standardSymbol) {
+				if handler != nil {
+					setting := model.GetSetting(function, model.BinanceSpot, standardSymbol)
+					if setting != nil {
+						go handler(setting, &bidAsk)
+					}
+				}
+			}
+		}
+	}
+}
+
+func handleDepthBinanceSpot(markets *model.Markets, json *simplejson.Json, dialectSymbol string, updateId int64) {
+	var standardSymbol string
+	bidAsk := model.BidAsk{UpdateId: updateId}
+	var bids, asks []interface{}
+	tickId, _ := json.Get(`lastUpdateId`).Int64()
+	_, _, coin := model.GetCoinFromDialect(model.BinanceSpot, dialectSymbol)
+	standardSymbol = coin + model.UniStandardTail[model.MarketTypeSpot]
+	if tickId > getLastTickIdBinance(standardSymbol) {
+		setLastTickIdBinance(standardSymbol, tickId)
+		bidAsk.Ts = int(util.GetNowUnixMillion())
+		bidAsk.TsReceived = int(util.GetNowUnixMillion())
+	} else {
+		return
+	}
+	bidArray, _ := json.Get(`bids`).Array()
+	bids = bidArray
+	askArray, _ := json.Get(`asks`).Array()
+	asks = askArray
+	bidAsk.Bids = make([]model.Tick, len(bids))
+	for i, value := range bids {
+		if len(value.([]interface{})) < 2 {
+			return
+		}
+		price, _ := strconv.ParseFloat(value.([]interface{})[0].(string), 64)
+		amount, _ := strconv.ParseFloat(value.([]interface{})[1].(string), 64)
+		bidAsk.Bids[i] = model.Tick{Price: price, Amount: amount, Market: model.BinanceSpot, Symbol: standardSymbol, Side: model.OrderSideBuy}
+	}
+	bidAsk.Asks = make([]model.Tick, len(asks))
+	for i, value := range asks {
+		if len(value.([]interface{})) < 2 {
+			return
+		}
+		price, _ := strconv.ParseFloat(value.([]interface{})[0].(string), 64)
+		amount, _ := strconv.ParseFloat(value.([]interface{})[1].(string), 64)
+		bidAsk.Asks[i] = model.Tick{Price: price, Amount: amount, Market: model.BinanceSpot, Symbol: standardSymbol, Side: model.OrderSideSell}
+	}
+	sort.Sort(bidAsk.Asks)
+	sort.Sort(sort.Reverse(bidAsk.Bids))
+	haveOld, old := markets.GetBidAsk(standardSymbol, model.BinanceSpot)
+	if haveOld && old.UpdateId > bidAsk.UpdateId {
+		return
+	}
+	if markets.SetBidAsk(standardSymbol, model.BinanceSpot, &bidAsk) {
+		for function, handler := range model.GetFunctions(model.BinanceSpot, standardSymbol) {
+			if handler != nil {
+				setting := model.GetSetting(function, model.BinanceSpot, standardSymbol)
+				if setting != nil {
+					go handler(setting, &bidAsk)
+				}
+			}
+		}
+	}
 }
 
 func maintainChannelBinanceSpot() {

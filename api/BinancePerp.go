@@ -5,10 +5,12 @@ import (
 	"fmt"
 	"github.com/adshao/go-binance/v2"
 	"github.com/adshao/go-binance/v2/futures"
+	"github.com/bitly/go-simplejson"
 	"github.com/gorilla/websocket"
 	"hello/model"
 	"hello/util"
 	"net/http"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -30,7 +32,7 @@ func getMarketsBinancePerp(key, secret string) (marketInfos map[string]*model.Ma
 		}
 		if item.ContractType == `PERPETUAL` && item.Status == "TRADING" {
 			symbol := item.BaseAsset + model.UniStandardTail[model.MarketTypePerp]
-			marketInfo := &model.MarketInfo{Market: model.BinanceSpot, Name: symbol, MoneyMin: 10}
+			marketInfo := &model.MarketInfo{Market: model.BinancePerp, Name: symbol, MoneyMin: 10}
 			marketInfos[marketInfo.Name] = marketInfo
 			for _, data := range item.Filters {
 				filterType := data[`filterType`].(string)
@@ -76,9 +78,9 @@ func WsDepthServeBinancePerp(markets *model.Markets, orderHandler OrderHandler) 
 			return
 		}
 		if strings.Contains(subscribe, `@depth`) {
-			handleDepthBinance(markets, result, dialectSymbol, updateId)
+			handleDepthBinancePerp(markets, result, dialectSymbol, updateId)
 		} else if strings.Contains(subscribe, `@bookTicker`) {
-			handleTickerBinance(markets, result, dialectSymbol, updateId)
+			handleTickerBinancePerp(markets, result, dialectSymbol, updateId)
 		}
 	}
 	channels = make([]chan struct{}, 0)
@@ -89,6 +91,94 @@ func WsDepthServeBinancePerp(markets *model.Markets, orderHandler OrderHandler) 
 		util.SocketInfo(`fail to create binance perp conn %s`, perpErr.Error())
 	}
 	return perpChans, err
+}
+
+func handleTickerBinancePerp(markets *model.Markets, json *simplejson.Json, dialectSymbol string, updateId int64) {
+	bidPrice, _ := strconv.ParseFloat(json.Get(`b`).MustString(), 64)
+	bidAmount, _ := strconv.ParseFloat(json.Get(`B`).MustString(), 64)
+	askPrice, _ := strconv.ParseFloat(json.Get(`a`).MustString(), 64)
+	askAmount, _ := strconv.ParseFloat(json.Get(`A`).MustString(), 64)
+	ts := json.Get(`E`).MustInt()
+	now := int(time.Now().UnixNano() / int64(time.Millisecond))
+	if ts == 0 {
+		ts = now
+	}
+	if dialectSymbol != `` && bidPrice > 0 && bidAmount > 0 && askPrice > 0 && askAmount > 0 {
+		marketType := model.MarketTypePerp
+		_, _, coin := model.GetCoinFromDialect(model.BinancePerp, dialectSymbol)
+		standardSymbol := coin + model.UniStandardTail[marketType]
+		bidAsk := model.BidAsk{Ts: ts, TsReceived: now, UpdateId: updateId,
+			Bids: []model.Tick{{Price: bidPrice, Amount: bidAmount, Market: model.BinancePerp, Symbol: standardSymbol, Side: model.OrderSideBuy}},
+			Asks: []model.Tick{{Price: askPrice, Amount: askAmount, Market: model.BinancePerp, Symbol: standardSymbol, Side: model.OrderSideSell}}}
+		haveOld, old := markets.GetBidAsk(standardSymbol, model.BinancePerp)
+		if haveOld && old.UpdateId > bidAsk.UpdateId {
+			return
+		}
+		if markets.SetBidAsk(standardSymbol, model.BinancePerp, &bidAsk) {
+			for function, handler := range model.GetFunctions(model.BinancePerp, standardSymbol) {
+				if handler != nil {
+					setting := model.GetSetting(function, model.BinancePerp, standardSymbol)
+					if setting != nil {
+						go handler(setting, &bidAsk)
+					}
+				}
+			}
+		}
+	}
+}
+
+func handleDepthBinancePerp(markets *model.Markets, json *simplejson.Json, dialectSymbol string, updateId int64) {
+	var standardSymbol string
+	bidAsk := model.BidAsk{UpdateId: updateId}
+	var bids, asks []interface{}
+	_, _, coin := model.GetCoinFromDialect(model.BinancePerp, dialectSymbol)
+	standardSymbol = coin + model.UniStandardTail[model.MarketTypePerp]
+	nowTradeTime, _ := json.Get(`T`).Int64()
+	if nowTradeTime <= 0 || nowTradeTime < getLastTradeTimeBinance(standardSymbol) {
+		return
+	}
+	setLastTradeTimeBinance(standardSymbol, nowTradeTime)
+	bidAsk.Ts = json.Get(`E`).MustInt()
+	bidAsk.TsReceived = int(util.GetNowUnixMillion())
+	bidArray, _ := json.Get(`b`).Array()
+	bids = bidArray
+	askArray, _ := json.Get(`a`).Array()
+	asks = askArray
+	dialectSymbol = json.Get(`s`).MustString()
+	bidAsk.Bids = make([]model.Tick, len(bids))
+	for i, value := range bids {
+		if len(value.([]interface{})) < 2 {
+			return
+		}
+		price, _ := strconv.ParseFloat(value.([]interface{})[0].(string), 64)
+		amount, _ := strconv.ParseFloat(value.([]interface{})[1].(string), 64)
+		bidAsk.Bids[i] = model.Tick{Price: price, Amount: amount, Market: model.BinancePerp, Symbol: standardSymbol, Side: model.OrderSideBuy}
+	}
+	bidAsk.Asks = make([]model.Tick, len(asks))
+	for i, value := range asks {
+		if len(value.([]interface{})) < 2 {
+			return
+		}
+		price, _ := strconv.ParseFloat(value.([]interface{})[0].(string), 64)
+		amount, _ := strconv.ParseFloat(value.([]interface{})[1].(string), 64)
+		bidAsk.Asks[i] = model.Tick{Price: price, Amount: amount, Market: model.BinancePerp, Symbol: standardSymbol, Side: model.OrderSideSell}
+	}
+	sort.Sort(bidAsk.Asks)
+	sort.Sort(sort.Reverse(bidAsk.Bids))
+	haveOld, old := markets.GetBidAsk(standardSymbol, model.BinancePerp)
+	if haveOld && old.UpdateId > bidAsk.UpdateId {
+		return
+	}
+	if markets.SetBidAsk(standardSymbol, model.BinancePerp, &bidAsk) {
+		for function, handler := range model.GetFunctions(model.BinancePerp, standardSymbol) {
+			if handler != nil {
+				setting := model.GetSetting(function, model.BinancePerp, standardSymbol)
+				if setting != nil {
+					go handler(setting, &bidAsk)
+				}
+			}
+		}
+	}
 }
 
 func maintainChannelBinancePerp() {
