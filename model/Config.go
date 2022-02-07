@@ -58,6 +58,14 @@ func GetAccounts(index int) (accounts map[string]*Account) {
 	for i, account := range tempAccounts {
 		AppAccounts[i][Binance] = account
 	}
+	tempAccounts = AppConfig.GetAccounts(BinanceSpot)
+	for i, account := range tempAccounts {
+		AppAccounts[i][BinanceSpot] = account
+	}
+	tempAccounts = AppConfig.GetAccounts(BinancePerp)
+	for i, account := range tempAccounts {
+		AppAccounts[i][BinancePerp] = account
+	}
 	tempAccounts = AppConfig.GetAccounts(Gate)
 	for i, account := range tempAccounts {
 		AppAccounts[i][Gate] = account
@@ -155,7 +163,7 @@ func (config *Config) GetAccounts(market string) []*Account {
 		secrets = strings.Split(config.OkexSecret, `,`)
 		closeValues = strings.Split(config.OkexCarryClose, `,`)
 		rateValues = strings.Split(config.OkexCarryRate, `,`)
-	case Binance:
+	case Binance, BinanceSpot, BinancePerp:
 		keys = strings.Split(config.BinanceKey, `,`)
 		secrets = strings.Split(config.BinanceSecret, `,`)
 		closeValues = strings.Split(config.BinanceCarryClose, `,`)
