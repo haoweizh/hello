@@ -199,7 +199,7 @@ func GetHoldings(accounts map[string]*model.Account) (holding [][]interface{}) {
 							math.Round(position.Holding), math.Round(tick.Bids[0].Price * position.Holding), valid})
 						coinHold[coin] += position.Holding
 						coinPrice[coin] = tick.Bids[0].Price
-						util.Notice(`see pos %s %s %s %f`, symbol, position.Market, position.Currency, position.Holding)
+						util.Notice(`see pos %s %s %s %s %f`, symbol, position.Market, position.Currency, coin, position.Holding)
 					} else {
 						holding = append(holding, []interface{}{position.Market, coin, position.Currency,
 							position.Holding, 0.0, valid})
