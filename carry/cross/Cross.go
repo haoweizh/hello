@@ -332,8 +332,8 @@ func makeEqual(coin string, statuses []*CarryStatus) (isEqual bool, msg string) 
 	if holdingInU > 10 {
 		orderSide = model.OrderSideSell
 		sort.Sort(sort.Reverse(bids))
-		util.Notice(fmt.Sprintf(`check to make equal sell holding %f worth %f list %s %v`,
-			holding, holdingInU, holdStr, bids))
+		util.Notice(fmt.Sprintf(`need equal %s sell holding %f worth %f list %s %v`,
+			coin, holding, holdingInU, holdStr, bids))
 		for i := 0; i < len(bids); i++ {
 			status := bidStatus[fmt.Sprintf(`%s_%s`, bids[i].Market, bids[i].Symbol)]
 			if status == nil {
@@ -361,8 +361,8 @@ func makeEqual(coin string, statuses []*CarryStatus) (isEqual bool, msg string) 
 	if holdingInU < -10 {
 		orderSide = model.OrderSideBuy
 		sort.Sort(asks)
-		util.Notice(fmt.Sprintf(`check to make equal buy holding %f worth %f list %s %v`,
-			holding, holdingInU, holdStr, asks))
+		util.Notice(fmt.Sprintf(`need equal %s buy holding %f worth %f list %s %v`,
+			coin, holding, holdingInU, holdStr, asks))
 		for i := 0; i < len(asks); i++ {
 			status := askStatus[fmt.Sprintf(`%s_%s`, asks[i].Market, asks[i].Symbol)]
 			if status == nil {
@@ -404,8 +404,8 @@ func makeEqual(coin string, statuses []*CarryStatus) (isEqual bool, msg string) 
 			} else if orderSide == model.OrderSideSell {
 				price = tick.Bids[0].Price
 			}
-			util.Notice(fmt.Sprintf(`try to equal %s %s at %f %f %f amount %f`,
-				equalStatus.market, equalStatus.symbol, price, tick.Asks[0].Price, tick.Bids[0].Price, amount))
+			util.Notice(fmt.Sprintf(`do equal %s %s %s at %f %f %f amount %f`,
+				coin, equalStatus.market, equalStatus.symbol, price, tick.Asks[0].Price, tick.Bids[0].Price, amount))
 			api.PlaceOrder(equalStatus.account.Key, equalStatus.account.Secret, orderSide, model.OrderTypeLimit,
 				equalStatus.market, equalStatus.symbol, ``, model.FunctionComplement,
 				price, price, amount, true, true, nil, nil)
