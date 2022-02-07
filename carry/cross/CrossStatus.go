@@ -184,8 +184,9 @@ func GetHoldings(accounts map[string]*model.Account) (holding [][]interface{}) {
 		}
 		cm := getContractMarket(account.Key)
 		if cm != nil && cm.positions != nil {
-			util.Notice(`hold %v`, cm.positions)
-			for _, position := range cm.positions {
+			util.Notice(`before hold`)
+			for symbol, position := range cm.positions {
+				util.Notice(`see pos %s %s %s`, symbol, position.Market, position.Currency)
 				valid := false
 				setting := model.GetSetting(model.FunctionCross, position.Market, position.Currency)
 				if setting != nil {
@@ -205,6 +206,7 @@ func GetHoldings(accounts map[string]*model.Account) (holding [][]interface{}) {
 					}
 				}
 			}
+			util.Notice(`after hold`)
 		}
 	}
 	for i := len(holding) - 1; i >= 0; i-- {
