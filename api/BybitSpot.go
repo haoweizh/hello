@@ -26,27 +26,30 @@ func maintainChannelBybitSpot(subscribes []interface{}) {
 	if !channelMaintainingBybitSpot {
 		channelMaintainingBybitSpot = true
 		for true {
-			time.Sleep(time.Minute)
-			for _, value := range subscribes {
-				_, _, coin := model.GetCoinFromDialect(model.BybitSpot, value.(string))
+			time.Sleep(time.Minute * 5)
+			for _, subscribe := range subscribes {
+				_, _, coin := model.GetCoinFromDialect(model.BybitSpot, subscribe.(string))
 				standardSymbol := coin + model.UniStandardTail[model.MarketTypeSpot]
 				_, bidAsk := model.AppMarkets.GetBidAsk(standardSymbol, model.BybitSpot)
-				if bidAsk == nil || time.Now().UnixMilli()-int64(bidAsk.Ts) > 60000 {
-					subCmd := fmt.Sprintf(
-						`{"topic":"depth","event":"sub","params":{"symbol":"%s","binary":false}}`, value.(string))
+				delay := time.Now().UnixMilli() - int64(bidAsk.Ts)
+				if bidAsk == nil || delay > 120000 {
+					subscribeMessage := fmt.Sprintf(
+						`{"topic":"depth","event":"sub","params":{"symbol":"%s","binary":false}}`, subscribe)
 					if bidAsk != nil {
 						util.Notice(`maintain bybitspot timeout %s %d %d`,
-							standardSymbol, time.Now().UnixMilli()-int64(bidAsk.Ts), bidAsk.Ts)
+							standardSymbol, delay, bidAsk.Ts)
 					}
 					if bybitSpotSubConnection[standardSymbol] != nil {
 						if err := SendToConnection(model.BybitSpot, bybitSpotSubConnection[standardSymbol],
-							[]byte(subCmd)); err != nil {
+							[]byte(subscribeMessage)); err != nil {
 							util.SocketInfo("bybitSpot can not resubscribe " + err.Error())
 						}
 					} else {
 						util.Notice(`bybitSpot can not get connection for %s`, standardSymbol)
 					}
-					util.Notice(`send resubscribe %s %s`, model.BybitSpot, subCmd)
+					util.Notice(`send resubscribe %s %s`, model.BybitSpot, subscribeMessage)
+				} else if bidAsk == nil || delay > 180000 {
+					SetRequireReset(model.BybitSpot, true)
 				}
 			}
 		}

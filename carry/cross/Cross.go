@@ -94,12 +94,13 @@ func createFromPosition(account *model.Account, setting *model.Setting, valueLim
 	} else if cm.positions[setting.Symbol] != nil {
 		price = cm.positions[setting.Symbol].EntryPrice
 		util.Notice(`no tick price, use position price %s %s %f`, setting.Market, setting.Symbol, price)
-	} else {
-		util.Notice(`no tick and not position %s %s`, setting.Market, setting.Symbol)
-		return nil, false
 	}
-	limitAmount := math.Min(cm.accountValueInU/5, math.Min(cm.collateralsAvailable, openValueLimit)) / price
-	availableAmount := cm.collateralsAvailable / price
+	limitAmount := 0.0
+	availableAmount := 0.0
+	if price > 0 {
+		limitAmount = math.Min(cm.accountValueInU/5, math.Min(cm.collateralsAvailable, openValueLimit)) / price
+		availableAmount = cm.collateralsAvailable / price
+	}
 	carryStatus = &CarryStatus{isSpot: false, market: setting.Market, symbol: setting.Symbol, account: account,
 		setting:       setting,
 		LimitSell:     limitAmount,
@@ -133,26 +134,39 @@ func createFromBalance(account *model.Account, setting *model.Setting, valueLimi
 		sm = createSpotMarket(key, account.Secret, setting.Market)
 		setSpotMarket(key, sm)
 	}
-	getTick, ticks := model.AppMarkets.GetBidAsk(setting.Symbol, setting.Market)
-	if sm == nil || !getTick {
-		util.Notice(fmt.Sprintf(`nil spot market or fail to get tick %s %s`, setting.Market, setting.Symbol))
+	if sm == nil {
+		util.Notice(fmt.Sprintf(`nil spot market %s %s`, setting.Market, setting.Symbol))
 		return
 	}
-	price := ticks.Asks[0].Price
+	getTick, ticks := model.AppMarkets.GetBidAsk(setting.Symbol, setting.Market)
+	price := 0.0
+	if getTick {
+		price = ticks.Asks[0].Price
+	} else {
+		util.Notice(`fail to get ticket %s %s`, setting.Market, setting.Symbol)
+	}
+	limitBuy, limitSell, availableBuy := 0.0, 0.0, 0.0
+	if price > 0 {
+		limitBuy = math.Min(openValueLimit, math.Min(sm.availableU/5, sm.accountValueInU/15)) / price
+		availableBuy = sm.availableU / price
+	}
 	carryStatus = &CarryStatus{isSpot: true, market: setting.Market, symbol: setting.Symbol, account: account,
 		setting:       setting,
 		LimitSell:     0,
-		LimitBuy:      math.Min(openValueLimit, math.Min(sm.availableU/5, sm.accountValueInU/15)) / price,
+		LimitBuy:      limitBuy,
 		AvailableSell: 0,
-		AvailableBuy:  sm.availableU / price,
+		AvailableBuy:  availableBuy,
 		TradeLineBuy:  setting.OpenShortMargin,
 		TradeLineSell: setting.CloseShortMargin,
 	}
 	if sm.balances[setting.Symbol] != nil {
 		balance := sm.balances[setting.Symbol]
+		if price > 0 {
+			limitSell = math.Min(math.Min(math.Max(balance.Amount, 0), balance.AvailableWithBorrow), openValueLimit/price)
+		}
 		carryStatus.Holding = balance.Amount
 		// 暂不支持借币
-		carryStatus.LimitSell = math.Min(math.Min(math.Max(balance.Amount, 0), balance.AvailableWithBorrow), openValueLimit/price)
+		carryStatus.LimitSell = limitSell
 		carryStatus.RateInAll = math.Abs(carryStatus.Holding * price / sm.accountValueInU)
 		carryStatus.AvailableSell = carryStatus.LimitSell
 	}

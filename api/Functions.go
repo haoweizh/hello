@@ -780,12 +780,14 @@ func InitMarketInfos() (success bool) {
 		case model.BybitPerp:
 			marketInfos := getMarketsBybitPerp(accounts[0].Key, accounts[0].Secret)
 			model.SetMarketInfos(market, marketInfos)
-			for _, account := range accounts {
-				for symbol := range marketInfos {
-					setSettingsBybitPerp(account.Key, account.Secret, symbol)
-					time.Sleep(time.Millisecond * 500)
+			go func() {
+				for _, account := range accounts {
+					for symbol := range marketInfos {
+						setSettingsBybitPerp(account.Key, account.Secret, symbol)
+						time.Sleep(time.Millisecond * 500)
+					}
 				}
-			}
+			}()
 		case model.BybitSpot:
 			model.SetMarketInfos(market, getMarketsBybitSpot(accounts[0].Key, accounts[0].Secret))
 		}
