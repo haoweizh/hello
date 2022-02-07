@@ -186,7 +186,6 @@ func GetHoldings(accounts map[string]*model.Account) (holding [][]interface{}) {
 		if cm != nil && cm.positions != nil {
 			util.Notice(`before hold`)
 			for symbol, position := range cm.positions {
-				util.Notice(`see pos %s %s %s`, symbol, position.Market, position.Currency)
 				valid := false
 				setting := model.GetSetting(model.FunctionCross, position.Market, position.Currency)
 				if setting != nil {
@@ -200,6 +199,7 @@ func GetHoldings(accounts map[string]*model.Account) (holding [][]interface{}) {
 							math.Round(position.Holding), math.Round(tick.Bids[0].Price * position.Holding), valid})
 						coinHold[coin] += position.Holding
 						coinPrice[coin] = tick.Bids[0].Price
+						util.Notice(`see pos %s %s %s %f`, symbol, position.Market, position.Currency, position.Holding)
 					} else {
 						holding = append(holding, []interface{}{position.Market, coin, position.Currency,
 							position.Holding, 0.0, valid})
@@ -209,13 +209,13 @@ func GetHoldings(accounts map[string]*model.Account) (holding [][]interface{}) {
 			util.Notice(`after hold`)
 		}
 	}
-	for i := len(holding) - 1; i >= 0; i-- {
-		for j := 0; j < i; j++ {
-			if math.Abs(holding[j][4].(float64)) < math.Abs(holding[j+1][4].(float64)) {
-				holding[j], holding[j+1] = holding[j+1], holding[j]
-			}
-		}
-	}
+	//for i := len(holding) - 1; i >= 0; i-- {
+	//	for j := 0; j < i; j++ {
+	//		if math.Abs(holding[j][4].(float64)) < math.Abs(holding[j+1][4].(float64)) {
+	//			holding[j], holding[j+1] = holding[j+1], holding[j]
+	//		}
+	//	}
+	//}
 	for i := range holding {
 		coin := holding[i][1].(string)
 		money := math.Floor(coinHold[coin]*coinPrice[coin]/10) * 10
