@@ -169,22 +169,27 @@ func GetDayCandle(key, secret, market, symbol string, timeCandle time.Time) (can
 	}
 	keyedCandles := make(map[string]*model.Candle)
 	for _, value := range candles {
-		keyedCandles[market+symbol+value.Period+value.UTCDate] = value
+		candleKey := market + symbol + value.Period + value.UTCDate
+		keyedCandles[candleKey] = value
+		util.Notice(`set candle %s %v`, candleKey, value)
 	}
-	candle = keyedCandles[market+symbol+`1d`+timeCandle.Format(time.RFC3339)[0:10]]
+	candleKey := market + symbol + `1d` + timeCandle.Format(time.RFC3339)[0:10]
+	candle = keyedCandles[candleKey]
 	if candle == nil {
-		util.Notice(fmt.Sprintf(`error: can not get candle %s %s %s %s`,
-			market, symbol, `1d`, timeCandle.String()))
+		util.Notice(fmt.Sprintf(`error: can not get candle %s`, candleKey))
 		return
 	}
 	candle.N = (candle.PriceHigh - candle.PriceLow) / 20
 	for i := 1; i < 20; i++ {
 		d, _ := time.ParseDuration(fmt.Sprintf(`%dh`, -24*i))
 		index := timeCandle.Add(d)
-		candleCurrent := keyedCandles[market+symbol+`1d`+index.Format(time.RFC3339)[0:10]]
+		currentKey := market + symbol + `1d` + index.Format(time.RFC3339)[0:10]
+		candleCurrent := keyedCandles[currentKey]
 		if candleCurrent == nil {
-			util.Notice(fmt.Sprintf(`error: can not get candle %s %s`, `1d`, index.String()))
+			util.Notice(fmt.Sprintf(`error: can not get candle %s %s`, currentKey, index.String()))
 			continue
+		} else {
+			util.Notice(fmt.Sprintf(`get current candle %s %v`, currentKey, candleCurrent))
 		}
 		if candleCurrent.N > 0 {
 			if i == 1 {
