@@ -508,8 +508,9 @@ func getFundingRateBybitPerp(key, secret, symbol string) (fundingRate float64, e
 			return 0, 0
 		}
 		fundingRate = newJson.GetPath(`result`, `funding_rate`).MustFloat64()
+		expireTime, _ := time.Parse(time.RFC3339, newJson.GetPath(`result`, `funding_rate_timestamp`).MustString())
+		return fundingRate, expireTime.Unix()
 	}
-	expire = ((util.GetNow().Unix() / 3600) + 1) * 3600
 	return
 }
 

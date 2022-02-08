@@ -280,9 +280,11 @@ func ClearCross() {
 						}
 						equalStatuses[j] = initStatus(account, setting)
 					}
-					coinEqual, _ := makeEqual(coin, equalStatuses)
-					if coinEqual == false {
-						isEqual = false
+					if coin != `SLP` {
+						coinEqual, _ := makeEqual(coin, equalStatuses)
+						if coinEqual == false {
+							isEqual = false
+						}
 					}
 				}
 			}
