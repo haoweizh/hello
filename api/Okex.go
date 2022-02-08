@@ -753,7 +753,7 @@ func cancelOrderOkex(key, secret, symbol string, orderId, orderType string) (res
 	var responseBody []byte
 	if orderType == model.OrderTypeStop {
 		postData[`algoId`] = orderId
-		data := []interface{}{postData}
+		data := []map[string]interface{}{postData}
 		postArray := map[string]interface{}{ParamArrayOkex: data}
 		responseBody = sendSignRequestOKEX(key, secret, http.MethodPost, `/api/v5/trade/cancel-algos`, nil, postArray)
 	} else {
