@@ -42,7 +42,7 @@ var turtleLock sync.Mutex
 var turtleClosed = make(map[string]map[string]bool) // market - symbol - closed
 
 func (turtleData *TurtleData) ToString() (str string) {
-	return fmt.Sprintf(`%f~%f`, turtleData.lowDays20, turtleData.highDays20)
+	return fmt.Sprintf(`20日%f~%f n:%f`, turtleData.lowDays20, turtleData.highDays20, turtleData.n)
 }
 
 func getTurtling() (value bool) {
