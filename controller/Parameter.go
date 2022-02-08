@@ -263,11 +263,7 @@ func GetParameters(c *gin.Context) {
 			if setting == nil {
 				continue
 			}
-			msgTail := ``
-			if setting.OpenShortMargin == 0 {
-				msgTail = `(去除平仓中)`
-			}
-			msg += fmt.Sprintf("%s%s, ", symbol, msgTail)
+			msg += fmt.Sprintf("%s 仓数 %d price:%f\n", symbol, setting.Chance, setting.PriceX)
 		}
 		msg += "\n"
 	}
