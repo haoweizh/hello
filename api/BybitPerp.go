@@ -497,7 +497,7 @@ func getPositionsBybitPerp(key, secret string) (success bool, positions []*model
 	return
 }
 
-func getFundingRateBybitPerp(key, secret, symbol string) (fundingRate float64, expire int64) {
+func getFundingRateBybitPerp(key, secret, symbol string) (fundingRate *model.FundingRate) {
 	postData := map[string]interface{}{`symbol`: symbol}
 	response := SignedRequestBybitPerp(key, secret, http.MethodGet,
 		`/public/linear/funding/prev-funding-rate`, postData)
@@ -505,11 +505,16 @@ func getFundingRateBybitPerp(key, secret, symbol string) (fundingRate float64, e
 	if err == nil {
 		retCode := newJson.Get(`ret_code`).MustFloat64()
 		if retCode != 0 {
-			return 0, 0
+			return nil
 		}
-		fundingRate = newJson.GetPath(`result`, `funding_rate`).MustFloat64()
+		now := time.Now().Unix()
+		rate := newJson.GetPath(`result`, `funding_rate`).MustFloat64()
 		expireTime, _ := time.Parse(time.RFC3339, newJson.GetPath(`result`, `funding_rate_timestamp`).MustString())
-		return fundingRate, expireTime.Unix()
+		expire := expireTime.Unix() + 3600
+		if expire < now {
+			expire = expireTime.Unix() + 28800
+		}
+		return &model.FundingRate{Rate: rate, ExpireTime: expire, UpdateTime: now}
 	}
 	return
 }

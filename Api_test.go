@@ -248,6 +248,8 @@ func Test_download(t *testing.T) {
 func Test_wallet(t *testing.T) {
 	model.NewConfig()
 	key, secret := `LWaglQgg6eiJDuTmwG`, `mOnuz8yeZmqGLUT2bNDqgA7kuhKT8QYOyUon`
+	_, rate := api.GetFundingRate(key, secret, model.BybitPerp, `SLP_PERP`, nil)
+	_, rate = api.GetFundingRate(key, secret, model.BybitPerp, `SLP_PERP`, nil)
 	marketInfos := api.GetMarketInfos(model.BybitPerp)
 	model.SetMarketInfos(model.BybitPerp, marketInfos)
 	api.PlaceOrder(key, secret, model.OrderSideBuy, model.OrderTypeLimit,
@@ -264,7 +266,6 @@ func Test_wallet(t *testing.T) {
 	orderBybit1 := api.QueryOrderById(key, secret, model.BybitPerp, `ETH-PERP`,
 		model.OrderTypeLimit, `d490a639-a5f7-499a-9248-142a93ddaf13`)
 	fmt.Println(orderBybit1.OrderId)
-	_, rate := api.GetFundingRate(`LWaglQgg6eiJDuTmwG`, `mOnuz8yeZmqGLUT2bNDqgA7kuhKT8QYOyUon`, model.BybitPerp, `BTC-PERP`, nil)
 	fmt.Println(fmt.Sprintf(`%f`, rate))
 	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
 	api.InitMarketInfos()

@@ -278,18 +278,13 @@ func GetFundingRate(key, secret, market, symbol string, lock *sync.Mutex) (succe
 			return true, fundingRate.Rate
 		}
 	}
-	if fundingRate != nil {
-		util.Notice(fmt.Sprintf(`before update funding %s %s rate %f expire %d neext: %f update: %d`,
-			market, symbol, fundingRate.Rate, fundingRate.ExpireTime, fundingRate.RateNext, fundingRate.UpdateTime))
-	}
-	var expireTime int64
 	switch market {
 	//case model.Bitmex:
 	//	rate, expireTime = deprecated.getFundingRateBitmex(key, secret, symbol)
 	//	model.SetFundingRate(market, symbol, &model.FundingRate{Rate: rate, ExpireTime: expireTime, UpdateTime: now})
 	case model.BybitPerp:
-		rate, expireTime = getFundingRateBybitPerp(key, secret, symbol)
-		model.SetFundingRate(market, symbol, &model.FundingRate{Rate: rate, ExpireTime: expireTime, UpdateTime: now})
+		fundingRate = getFundingRateBybitPerp(key, secret, symbol)
+		model.SetFundingRate(market, symbol, fundingRate)
 	case model.BybitSpot:
 		return true, 0
 	case model.Ftx:
