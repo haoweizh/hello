@@ -243,8 +243,6 @@ func Test_download(t *testing.T) {
 	//-H 'Connection: keep-alive' \
 }
 
-//TODO bybit init cross markets
-//TODO check bybit delay set set tick available time
 func Test_wallet(t *testing.T) {
 	model.NewConfig()
 	key, secret := `LWaglQgg6eiJDuTmwG`, `mOnuz8yeZmqGLUT2bNDqgA7kuhKT8QYOyUon`
