@@ -236,6 +236,9 @@ func initStatus(account *model.Account, setting *model.Setting) (status *CarrySt
 		status.TradeLineBuy = math.Max(setting.OpenShortMargin*(0.5-revertJump*status.RateInAll), lowestScore) + fundingRate
 		status.TradeLineSell = math.Max(setting.CloseShortMargin*(0.5+jump*status.RateInAll), lowestScore) - fundingRate
 	}
+	if status.symbol == `SLP_PERP` {
+		util.Notice(`funding rate %s %f %f`, status.market, status.TradeLineBuy, fundingRate)
+	}
 	status.TradeLineBuy *= account.CarryRate
 	status.TradeLineSell *= account.CarryRate
 	if doRevert || account.CarryClose {
