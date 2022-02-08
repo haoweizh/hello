@@ -105,7 +105,10 @@ func handleTickerBinancePerp(markets *model.Markets, json *simplejson.Json, dial
 	}
 	if dialectSymbol != `` && bidPrice > 0 && bidAmount > 0 && askPrice > 0 && askAmount > 0 {
 		marketType := model.MarketTypePerp
-		_, _, coin := model.GetCoinFromDialect(model.BinancePerp, dialectSymbol)
+		success, _, coin := model.GetCoinFromDialect(model.BinancePerp, dialectSymbol)
+		if !success {
+			return
+		}
 		standardSymbol := coin + model.UniStandardTail[marketType]
 		bidAsk := model.BidAsk{Ts: ts, TsReceived: now, UpdateId: updateId,
 			Bids: []model.Tick{{Price: bidPrice, Amount: bidAmount, Market: model.BinancePerp, Symbol: standardSymbol, Side: model.OrderSideBuy}},
@@ -131,7 +134,10 @@ func handleDepthBinancePerp(markets *model.Markets, json *simplejson.Json, diale
 	var standardSymbol string
 	bidAsk := model.BidAsk{UpdateId: updateId}
 	var bids, asks []interface{}
-	_, _, coin := model.GetCoinFromDialect(model.BinancePerp, dialectSymbol)
+	success, _, coin := model.GetCoinFromDialect(model.BinancePerp, dialectSymbol)
+	if !success {
+		return
+	}
 	standardSymbol = coin + model.UniStandardTail[model.MarketTypePerp]
 	nowTradeTime, _ := json.Get(`T`).Int64()
 	if nowTradeTime <= 0 || nowTradeTime < getLastTradeTimeBinance(standardSymbol) {
@@ -229,7 +235,7 @@ func placeOrderBinancePerp(key, secret string, order *model.Order, orderSide, or
 
 func cancelOrdersBinancePerp(key string, secret string, symbol string) bool {
 	success, _, _, dialectSymbol := model.GetFromStandard(model.BinancePerp, symbol)
-	if success {
+	if !success {
 		return false
 	}
 	client := futures.NewClient(key, secret)
@@ -284,7 +290,10 @@ func getPositionsBinancePerp(key, secret string) (success bool, positions []*mod
 			position := &model.Position{Market: model.BinancePerp, Ts: util.GetNowUnixMillion()}
 			value := item.(map[string]interface{})
 			if value[`symbol`] != nil {
-				_, _, coin := model.GetCoinFromDialect(model.BinancePerp, value[`symbol`].(string))
+				isSuccess, _, coin := model.GetCoinFromDialect(model.BinancePerp, value[`symbol`].(string))
+				if !isSuccess {
+					continue
+				}
 				position.Currency = coin + model.UniStandardTail[model.MarketTypePerp]
 			}
 			if value[`positionAmt`] != nil {
@@ -317,5 +326,37 @@ func getFundingRateBinancePerp(key, secret, symbol string) (fundingRate *model.F
 		Rate:       rate,
 		UpdateTime: util.GetNow().Unix(),
 		ExpireTime: nextFundingTime / 1000}
+	return
+}
+
+func queryOrderBinancePerp(key, secret, symbol string, orderId string) (order *model.Order) {
+	success, _, _, dialectSymbol := model.GetFromStandard(model.BinancePerp, symbol)
+	if success {
+		orderIdInt, _ := strconv.ParseInt(orderId, 10, 64)
+		client := futures.NewClient(key, secret)
+		orderResp, err := client.NewGetOrderService().Symbol(dialectSymbol).OrderID(orderIdInt).Do(context.Background())
+		if err != nil {
+			util.Notice("queryOrderBinancePerp err: " + err.Error())
+			return
+		}
+		order = &model.Order{Market: model.BinancePerp, Status: model.CarryStatusFail}
+		if orderResp != nil {
+			order.OrderId = orderId
+			order.Symbol = symbol
+			order.OrderSide = strings.ToLower(string(orderResp.Side))
+			order.OrderType = strings.ToLower(string(orderResp.Type))
+			order.Amount, _ = strconv.ParseFloat(orderResp.OrigQuantity, 64)
+			order.Price, _ = strconv.ParseFloat(orderResp.Price, 64)
+			order.DealAmount, _ = strconv.ParseFloat(orderResp.ExecutedQuantity, 64)
+			order.OrderTime = time.Unix(orderResp.Time, 0)
+			order.Status = model.GetOrderStatus(model.BinancePerp, string(orderResp.Status))
+			if order.Status != model.CarryStatusSuccess && order.Status != model.CarryStatusFail {
+				order.Status = model.CarryStatusWorking
+			}
+			if order.DealAmount > 0 && order.DealPrice == 0 {
+				order.DealPrice = order.Price
+			}
+		}
+	}
 	return
 }

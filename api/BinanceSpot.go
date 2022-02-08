@@ -112,7 +112,10 @@ func handleTickerBinanceSpot(markets *model.Markets, json *simplejson.Json, dial
 	}
 	if dialectSymbol != `` && bidPrice > 0 && bidAmount > 0 && askPrice > 0 && askAmount > 0 {
 		marketType := model.MarketTypeSpot
-		_, _, coin := model.GetCoinFromDialect(model.BinanceSpot, dialectSymbol)
+		success, _, coin := model.GetCoinFromDialect(model.BinanceSpot, dialectSymbol)
+		if !success {
+			return
+		}
 		standardSymbol := coin + model.UniStandardTail[marketType]
 		bidAsk := model.BidAsk{Ts: ts, TsReceived: now, UpdateId: updateId,
 			Bids: []model.Tick{{Price: bidPrice, Amount: bidAmount, Market: model.BinanceSpot, Symbol: standardSymbol, Side: model.OrderSideBuy}},
@@ -139,7 +142,10 @@ func handleDepthBinanceSpot(markets *model.Markets, json *simplejson.Json, diale
 	bidAsk := model.BidAsk{UpdateId: updateId}
 	var bids, asks []interface{}
 	tickId, _ := json.Get(`lastUpdateId`).Int64()
-	_, _, coin := model.GetCoinFromDialect(model.BinanceSpot, dialectSymbol)
+	success, _, coin := model.GetCoinFromDialect(model.BinanceSpot, dialectSymbol)
+	if !success {
+		return
+	}
 	standardSymbol = coin + model.UniStandardTail[model.MarketTypeSpot]
 	if tickId > getLastTickIdBinance(standardSymbol) {
 		setLastTickIdBinance(standardSymbol, tickId)
@@ -236,7 +242,7 @@ func placeOrderBinanceSpot(key, secret string, order *model.Order, orderSide, or
 
 func cancelOrdersBinanceSpot(key string, secret string, symbol string) bool {
 	success, _, _, dialectSymbol := model.GetFromStandard(model.BinanceSpot, symbol)
-	if success {
+	if !success {
 		return false
 	}
 	client := binance.NewClient(key, secret)
@@ -295,4 +301,36 @@ func getBalanceBinanceSpot(key string, secret string) (success bool, balances []
 		balances = append(balances, balance)
 	}
 	return true, balances
+}
+
+func queryOrderBinanceSpot(key, secret, symbol string, orderId string) (order *model.Order) {
+	success, _, _, dialectSymbol := model.GetFromStandard(model.BinanceSpot, symbol)
+	if success {
+		orderIdInt, _ := strconv.ParseInt(orderId, 10, 64)
+		client := binance.NewClient(key, secret)
+		orderResp, err := client.NewGetOrderService().Symbol(dialectSymbol).OrderID(orderIdInt).Do(context.Background())
+		if err != nil {
+			util.Notice("queryOrderBinanceSpot err: " + err.Error())
+			return
+		}
+		order = &model.Order{Market: model.BinanceSpot, Status: model.CarryStatusFail}
+		if orderResp != nil {
+			order.OrderId = orderId
+			order.Symbol = symbol
+			order.OrderSide = strings.ToLower(string(orderResp.Side))
+			order.OrderType = strings.ToLower(string(orderResp.Type))
+			order.Amount, _ = strconv.ParseFloat(orderResp.OrigQuantity, 64)
+			order.Price, _ = strconv.ParseFloat(orderResp.Price, 64)
+			order.DealAmount, _ = strconv.ParseFloat(orderResp.ExecutedQuantity, 64)
+			order.OrderTime = time.Unix(orderResp.Time, 0)
+			order.Status = model.GetOrderStatus(model.BinanceSpot, string(orderResp.Status))
+			if order.Status != model.CarryStatusSuccess && order.Status != model.CarryStatusFail {
+				order.Status = model.CarryStatusWorking
+			}
+			if order.DealAmount > 0 && order.DealPrice == 0 {
+				order.DealPrice = order.Price
+			}
+		}
+	}
+	return
 }
