@@ -116,6 +116,24 @@ func IsRelatedTickTimeout(market string, delayRelated int64) (timeout bool) {
 }
 
 var orderStatusMap = map[string]map[string]string{ // market - market status - united status
+	BinancePerp: {
+		"NEW":              CarryStatusWorking,
+		"PARTIALLY_FILLED": CarryStatusWorking,
+		"PENDING_CANCEL":   CarryStatusWorking,
+		"FILLED":           CarryStatusSuccess,
+		"CANCELED":         CarryStatusFail,
+		"REJECTED":         CarryStatusFail,
+		"EXPIRED":          CarryStatusFail,
+	},
+	BinanceSpot: {
+		"NEW":              CarryStatusWorking,
+		"PARTIALLY_FILLED": CarryStatusWorking,
+		"PENDING_CANCEL":   CarryStatusWorking,
+		"FILLED":           CarryStatusSuccess,
+		"CANCELED":         CarryStatusFail,
+		"REJECTED":         CarryStatusFail,
+		"EXPIRED":          CarryStatusFail,
+	},
 	Binance: {
 		"NEW":              CarryStatusWorking,
 		"PARTIALLY_FILLED": CarryStatusWorking,

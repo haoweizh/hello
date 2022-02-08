@@ -355,6 +355,10 @@ func QueryOrderById(key, secret, market, symbol, orderType, orderId string) (ord
 			order.Symbol = symbol
 		}
 		return order
+	case model.BinanceSpot:
+		order = queryOrderBinanceSpot(key, secret, symbol, orderId)
+	case model.BinancePerp:
+		order = queryOrderBinancePerp(key, secret, symbol, orderId)
 	case model.Binance:
 		//dealAmount, dealPrice, status = queryOrderBinance(key, secret, symbol, orderId)
 	case model.BybitPerp:
