@@ -504,21 +504,25 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarrySta
 	if score > 0.01 {
 		model.AppMetric.AddCarry(mark, score, 0)
 	}
-	if carryStatus.TradeLineSell < score && carryStatusRelate.TradeLineBuy < score {
+	lineAll := carryStatus.TradeLineSell + carryStatusRelate.TradeLineBuy
+	if (carryStatus.TradeLineSell < score && carryStatusRelate.TradeLineBuy < score) ||
+		(lineAll > 0 && score > 1.2*lineAll) || (lineAll < 0 && score > 0.4*lineAll) {
 		statusSell = carryStatus
 		statusBuy = carryStatusRelate
 		priceSell = priceBid
 		priceBuy = priceAskRelate
-		askAmount = amountBid * 0.9
-		bidAmount = amountAskRelate * 0.9
+		askAmount = amountBid
+		bidAmount = amountAskRelate
 	}
-	if carryStatus.TradeLineBuy < scoreRelate && carryStatusRelate.TradeLineSell < scoreRelate {
+	lineAll = carryStatus.TradeLineBuy + carryStatusRelate.TradeLineSell
+	if (carryStatus.TradeLineBuy < scoreRelate && carryStatusRelate.TradeLineSell < scoreRelate) ||
+		(lineAll > 0 && scoreRelate > 1.2*lineAll) || (lineAll < 0 && scoreRelate > 0.4*lineAll) {
 		statusSell = carryStatusRelate
 		statusBuy = carryStatus
 		priceSell = priceBidRelate
 		priceBuy = priceAsk
-		askAmount = amountBidRelate * 0.9
-		bidAmount = amountAsk * 0.9
+		askAmount = amountBidRelate
+		bidAmount = amountAsk
 	}
 	// 为了同一对交易对冲不出现两次，对前后进行排序
 	mark = fmt.Sprintf(`%s-%s`, carryStatus.market, carryStatus.symbol)
