@@ -34,11 +34,11 @@ func maintainChannelBybitPerp(subscribes []interface{}) {
 				_, _, coin := model.GetCoinFromDialect(model.BybitPerp, value.(string))
 				standardSymbol := coin + model.UniStandardTail[model.MarketTypePerp]
 				_, bidAsk := model.AppMarkets.GetBidAsk(standardSymbol, model.BybitPerp)
-				delay := time.Now().UnixMilli() - int64(bidAsk.Ts)
-				if bidAsk == nil || delay > 120000 {
+				if bidAsk == nil || time.Now().UnixMilli()-int64(bidAsk.Ts) > 120000 {
 					subCmd := fmt.Sprintf(`{"op": "subscribe", "args": ["orderBookL2_25.%s"]}`, value.(string))
 					if bidAsk != nil {
-						util.Notice(`maintain bybitperp timeout %s %s %d`, standardSymbol, delay, bidAsk.Ts)
+						util.Notice(`maintain bybitperp timeout %s %s %d`,
+							standardSymbol, time.Now().UnixMilli()-int64(bidAsk.Ts), bidAsk.Ts)
 					}
 					if bybitPerpSubConnection[standardSymbol] != nil {
 						if err := SendToConnection(model.BybitPerp, bybitPerpSubConnection[standardSymbol],
@@ -50,7 +50,7 @@ func maintainChannelBybitPerp(subscribes []interface{}) {
 					}
 					util.Notice(`send resubscribe %s %s`, model.BybitPerp, subCmd)
 				}
-				if bidAsk == nil || delay > 180000 {
+				if bidAsk == nil || time.Now().UnixMilli()-int64(bidAsk.Ts) > 180000 {
 					SetRequireReset(model.BybitPerp, true)
 				}
 			}
@@ -497,19 +497,25 @@ func getPositionsBybitPerp(key, secret string) (success bool, positions []*model
 	return
 }
 
-func getFundingRateBybitPerp(key, secret, symbol string) (fundingRate float64, expire int64) {
+func getFundingRateBybitPerp(key, secret, symbol string) (fundingRate *model.FundingRate) {
 	postData := map[string]interface{}{`symbol`: symbol}
 	response := SignedRequestBybitPerp(key, secret, http.MethodGet,
-		`/private/linear/funding/predicted-funding`, postData)
+		`/public/linear/funding/prev-funding-rate`, postData)
 	newJson, err := util.NewJSON(response)
 	if err == nil {
 		retCode := newJson.Get(`ret_code`).MustFloat64()
 		if retCode != 0 {
-			return 0, 0
+			return nil
 		}
-		fundingRate = newJson.GetPath(`result`, `predicted_funding_rate`).MustFloat64()
+		now := time.Now().Unix()
+		rate := newJson.GetPath(`result`, `funding_rate`).MustFloat64()
+		expireTime, _ := time.Parse(time.RFC3339, newJson.GetPath(`result`, `funding_rate_timestamp`).MustString())
+		expire := expireTime.Unix() + 3600
+		if expire < now {
+			expire = expireTime.Unix() + 28800
+		}
+		return &model.FundingRate{Rate: rate, ExpireTime: expire, UpdateTime: now}
 	}
-	expire = ((util.GetNow().Unix() / 28800) + 1) * 28800
 	return
 }
 

@@ -156,7 +156,13 @@ func GetHoldings(accounts map[string]*model.Account) (holding [][]interface{}) {
 	holding = make([][]interface{}, 0)
 	coinHold := make(map[string]float64)
 	coinPrice := make(map[string]float64)
+	uniAccounts := make(map[string]*model.Account)
 	for _, account := range accounts {
+		if account != nil {
+			uniAccounts[account.Key] = account
+		}
+	}
+	for _, account := range uniAccounts {
 		if account == nil {
 			continue
 		}
