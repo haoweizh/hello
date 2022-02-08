@@ -263,7 +263,8 @@ func GetParameters(c *gin.Context) {
 			if setting == nil {
 				continue
 			}
-			msg += fmt.Sprintf("%s 仓数 %d price:%f\n", symbol, setting.Chance, setting.PriceX)
+			msg += fmt.Sprintf("%s 仓数:%d 持仓:%f price:%f\n",
+				symbol, setting.Chance, setting.GridAmount, setting.PriceX)
 		}
 		msg += "\n"
 	}
