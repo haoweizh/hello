@@ -271,6 +271,10 @@ func GetFundingRate(key, secret, market, symbol string, lock *sync.Mutex) (succe
 		}
 	} else {
 		if fundingRate != nil && now < fundingRate.ExpireTime {
+			if fundingRate.ExpireTime-now < 3600 {
+				// 临近1小时内，资金费率按8倍计算（此方法不够严谨）
+				return true, fundingRate.Rate * 8
+			}
 			return true, fundingRate.Rate
 		}
 	}
