@@ -509,7 +509,7 @@ func getFundingRateBybitPerp(key, secret, symbol string) (fundingRate float64, e
 		}
 		fundingRate = newJson.GetPath(`result`, `predicted_funding_rate`).MustFloat64()
 	}
-	expire = ((util.GetNow().Unix() / 28800) + 1) * 28800
+	expire = ((util.GetNow().Unix() / 3600) + 1) * 3600
 	return
 }
 
