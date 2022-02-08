@@ -41,6 +41,10 @@ var turtleLock sync.Mutex
 // 当天是否有平仓
 var turtleClosed = make(map[string]map[string]bool) // market - symbol - closed
 
+func (turtleData *TurtleData) ToString() (str string) {
+	return fmt.Sprintf(`%f~%f`, turtleData.lowDays20, turtleData.highDays20)
+}
+
 func getTurtling() (value bool) {
 	turtleLock.Lock()
 	defer turtleLock.Unlock()

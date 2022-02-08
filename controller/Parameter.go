@@ -263,8 +263,9 @@ func GetParameters(c *gin.Context) {
 			if setting == nil {
 				continue
 			}
-			msg += fmt.Sprintf("%s 仓数:%d 持仓:%f price:%f\n",
-				symbol, setting.Chance, setting.GridAmount, setting.PriceX)
+			turtleData := carry.GetTurtleData(account.Key, account.Secret, setting)
+			msg += fmt.Sprintf("%s 仓数:%d 持仓:%f 成交价:%f 20日：%s\n",
+				symbol, setting.Chance, setting.GridAmount, setting.PriceX, turtleData.ToString())
 		}
 		msg += "\n"
 	}
