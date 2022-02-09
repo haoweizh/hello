@@ -49,7 +49,7 @@ func _(key, secret string) {
 
 func RefreshMarketInfo() {
 	for true {
-		time.Sleep(time.Hour * 8)
+		time.Sleep(time.Hour * 24)
 		if !api.InitMarketInfos() {
 			util.Notice(`fatal error: can not set market mode!!`)
 		}

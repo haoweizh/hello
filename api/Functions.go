@@ -803,7 +803,7 @@ func InitMarketInfos() (success bool) {
 				for _, account := range accounts {
 					for symbol := range marketInfos {
 						setSettingsBybitPerp(account.Key, account.Secret, symbol)
-						time.Sleep(time.Millisecond * 500)
+						time.Sleep(time.Minute)
 					}
 				}
 			}()
