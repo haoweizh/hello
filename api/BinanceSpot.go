@@ -28,15 +28,19 @@ func getMarketsBinanceSpot(key, secret string) (marketInfos map[string]*model.Ma
 			continue
 		}
 		haveSpot := false
-		if item.Permissions != nil {
+		if item.Permissions != nil && item.IsSpotTradingAllowed &&
+			item.QuoteAsset == model.DialectTail[model.MarketTypeSpot][model.BinanceSpot] {
 			for _, permission := range item.Permissions {
-				if permission == `SPOT` && item.IsSpotTradingAllowed {
+				if permission == `SPOT` {
 					haveSpot = true
 				}
 			}
 		}
 		if !haveSpot {
 			continue
+		}
+		if item.BaseAsset == "ADA" {
+			util.Notice("")
 		}
 		symbol := item.BaseAsset + model.UniStandardTail[model.MarketTypeSpot]
 		marketInfo := &model.MarketInfo{Market: model.BinanceSpot, Name: symbol, MoneyMin: 10}
@@ -57,6 +61,8 @@ func getMarketsBinanceSpot(key, secret string) (marketInfos map[string]*model.Ma
 				if data[`stepSize`] != nil {
 					marketInfo.SizeIncrement, _ = strconv.ParseFloat(data[`stepSize`].(string), 64)
 				}
+			} else if filterType == `MIN_NOTIONAL` {
+				util.Notice("minNotional:" + data[`minNotional`].(string))
 			}
 		}
 		marketInfos[marketInfo.Name] = marketInfo
