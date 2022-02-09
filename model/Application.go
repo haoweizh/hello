@@ -62,7 +62,7 @@ var AppSettings []Setting
 var AppConfig *Config
 var AppMarkets = NewMarkets()
 var AppPause = false
-var dialectTail = map[string]map[string]string{
+var DialectTail = map[string]map[string]string{
 	MarketTypeSpot: {Gate: `_USDT`, Ftx: `/USD`, OKEX: `-USDT`, BybitSpot: `USDT`, Binance: `USDT`, BinanceSpot: `USDT`},
 	MarketTypePerp: {Gate: `_USDT`, Ftx: `-PERP`, OKEX: `-USDT-SWAP`, BybitPerp: `USDT`, Binance: `USDT`, BinancePerp: `USDT`}}
 var UniStandardTail = map[string]string{MarketTypeSpot: `_USDT`, MarketTypePerp: `_PERP`}
@@ -71,7 +71,7 @@ func GetFromStandard(market, standardSymbol string) (success bool, marketType, c
 	for mType, tail := range UniStandardTail {
 		if util.EndWith(standardSymbol, tail) {
 			coin := standardSymbol[0 : len(standardSymbol)-len(tail)]
-			return true, mType, coin, coin + dialectTail[mType][market]
+			return true, mType, coin, coin + DialectTail[mType][market]
 		}
 	}
 	util.Notice(`fail to parse standard symbol %s`, standardSymbol)
@@ -80,7 +80,7 @@ func GetFromStandard(market, standardSymbol string) (success bool, marketType, c
 
 // GetCoinFromDialect 注意如果交易所不同市场的symbol有相同的tail，此时marketType有可能匹配错误，慎用
 func GetCoinFromDialect(market, dialectSymbol string) (success bool, marketType, coin string) {
-	for mType, tails := range dialectTail {
+	for mType, tails := range DialectTail {
 		if tails[market] == `` {
 			continue
 		}

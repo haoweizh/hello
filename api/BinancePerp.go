@@ -3,7 +3,6 @@ package api
 import (
 	"context"
 	"fmt"
-	"github.com/adshao/go-binance/v2"
 	"github.com/adshao/go-binance/v2/futures"
 	"github.com/bitly/go-simplejson"
 	"github.com/gorilla/websocket"
@@ -18,7 +17,7 @@ import (
 
 func getMarketsBinancePerp(key, secret string) (marketInfos map[string]*model.MarketInfo) {
 	marketInfos = make(map[string]*model.MarketInfo)
-	client := binance.NewFuturesClient(key, secret)
+	client := futures.NewClient(key, secret)
 	exchangeInfo, err := client.NewExchangeInfoService().Do(context.Background())
 	if err != nil {
 		util.Notice("getMarketsBinancePerp err: " + err.Error())
@@ -30,9 +29,9 @@ func getMarketsBinancePerp(key, secret string) (marketInfos map[string]*model.Ma
 		if item.QuoteAsset == "" || item.BaseAsset == "" {
 			continue
 		}
-		if item.ContractType == `PERPETUAL` && item.Status == "TRADING" {
+		if item.ContractType == `PERPETUAL` && item.Status == "TRADING" && item.QuoteAsset == model.DialectTail[model.MarketTypePerp][model.BinancePerp] {
 			symbol := item.BaseAsset + model.UniStandardTail[model.MarketTypePerp]
-			marketInfo := &model.MarketInfo{Market: model.BinancePerp, Name: symbol, MoneyMin: 10}
+			marketInfo := &model.MarketInfo{Market: model.BinancePerp, Name: symbol, MoneyMin: 5}
 			marketInfos[marketInfo.Name] = marketInfo
 			for _, data := range item.Filters {
 				filterType := data[`filterType`].(string)
@@ -50,6 +49,10 @@ func getMarketsBinancePerp(key, secret string) (marketInfos map[string]*model.Ma
 					}
 					if data[`stepSize`] != nil {
 						marketInfo.SizeIncrement, _ = strconv.ParseFloat(data[`stepSize`].(string), 64)
+					}
+				} else if filterType == `MIN_NOTIONAL` {
+					if data[`notional`] != nil {
+						marketInfo.MoneyMin, _ = strconv.ParseFloat(data[`notional`].(string), 64)
 					}
 				}
 			}
@@ -209,7 +212,7 @@ func placeOrderBinancePerp(key, secret string, order *model.Order, orderSide, or
 	amountStr := util.CutTailZero(fmt.Sprintf(`%f`, formattedAmount))
 	success, _, _, dialectSymbol := model.GetFromStandard(model.BinancePerp, symbol)
 	if success {
-		client := binance.NewFuturesClient(key, secret)
+		client := futures.NewClient(key, secret)
 		service := client.NewCreateOrderService().Symbol(dialectSymbol).Quantity(amountStr)
 		if orderSide == model.OrderSideBuy {
 			service.Side(futures.SideTypeBuy)
@@ -359,4 +362,13 @@ func queryOrderBinancePerp(key, secret, symbol string, orderId string) (order *m
 		}
 	}
 	return
+}
+
+func setPosSideBinancePerp(key, secret string) {
+	client := futures.NewClient(key, secret)
+	err := client.NewChangePositionModeService().DualSide(false).Do(context.Background())
+	if err != nil {
+		util.Notice("setPosSideBinancePerp err: " + err.Error())
+		return
+	}
 }
