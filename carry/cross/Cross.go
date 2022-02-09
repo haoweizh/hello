@@ -69,6 +69,7 @@ func createSpotMarket(key, secret, market string) (sm *spotMarket) {
 			}
 		}
 	}
+	util.Notice(`create sm %s %v`, key, sm)
 	setSpotMarket(key, sm)
 	return
 }
@@ -124,6 +125,7 @@ func createFromPosition(account *model.Account, setting *model.Setting, valueLim
 		//	key, contractMarkets[key].contractValueInU, contractMarkets[key].collateralsInU, valueInUsd, valueLimit))
 		doRevert = true
 	}
+	util.Notice(`create cm %s %v`, key, cm)
 	return carryStatus, doRevert
 }
 
