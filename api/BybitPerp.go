@@ -510,9 +510,11 @@ func getFundingRateBybitPerp(key, secret, symbol string) (fundingRate *model.Fun
 		now := time.Now().Unix()
 		rate := newJson.GetPath(`result`, `funding_rate`).MustFloat64()
 		expireTime, _ := time.Parse(time.RFC3339, newJson.GetPath(`result`, `funding_rate_timestamp`).MustString())
-		expire := expireTime.Unix() + 3600
-		if expire < now {
+		expire := expireTime.Unix()
+		if expire%28800 == 0 {
 			expire = expireTime.Unix() + 28800
+		} else {
+			expire = expireTime.Unix() + 3600
 		}
 		return &model.FundingRate{Rate: rate, ExpireTime: expire, UpdateTime: now}
 	}

@@ -246,8 +246,8 @@ func Test_download(t *testing.T) {
 func Test_wallet(t *testing.T) {
 	model.NewConfig()
 	key, secret := `LWaglQgg6eiJDuTmwG`, `mOnuz8yeZmqGLUT2bNDqgA7kuhKT8QYOyUon`
-	_, rate := api.GetFundingRate(key, secret, model.BybitPerp, `SLP_PERP`, nil)
-	_, rate = api.GetFundingRate(key, secret, model.BybitPerp, `SLP_PERP`, nil)
+	_, rate := api.GetFundingRate(key, secret, model.BybitPerp, `LOOKS_PERP`, nil)
+	_, rate = api.GetFundingRate(key, secret, model.BybitPerp, `LOOKS_PERP`, nil)
 	marketInfos := api.GetMarketInfos(model.BybitPerp)
 	model.SetMarketInfos(model.BybitPerp, marketInfos)
 	api.PlaceOrder(key, secret, model.OrderSideBuy, model.OrderTypeLimit,
