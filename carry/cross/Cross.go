@@ -236,9 +236,6 @@ func initStatus(account *model.Account, setting *model.Setting) (status *CarrySt
 		status.TradeLineBuy = math.Max(setting.OpenShortMargin*(0.5-revertJump*status.RateInAll), lowestScore) + fundingRate
 		status.TradeLineSell = math.Max(setting.CloseShortMargin*(0.5+jump*status.RateInAll), lowestScore) - fundingRate
 	}
-	if status.symbol == `SLP_PERP` {
-		util.Notice(`funding rate %s %f %f`, status.market, status.TradeLineBuy, fundingRate)
-	}
 	status.TradeLineBuy *= account.CarryRate
 	status.TradeLineSell *= account.CarryRate
 	if doRevert || account.CarryClose {
@@ -261,46 +258,80 @@ func ClearCross() {
 				time.Sleep(time.Millisecond * 200)
 			}
 		}
-		if lastOrderSymbol != nil && len(lastOrderSymbol) == 0 && time.Now().Minute()%5 != 0 {
-			util.Notice(`...... no change pass make equal`)
-		} else {
-			util.Notice(`...... enter clearing cross`)
-			isEqual := true
-			clearMarkets()
-			coinSettings := model.GetCoinSettings(model.FunctionCross)
-			for i := 0; i < model.AppConfig.GetCrossLen(); i++ {
-				for coin, settings := range coinSettings {
-					equalStatuses := make([]*CarryStatus, len(settings))
-					for j, setting := range settings {
-						account := model.AppConfig.GetAccounts(setting.Market)[i]
-						if setting == nil || len(coin) == 0 || coin != setting.Symbol[0:len(coin)] || account == nil {
-							util.Notice(`can not equal`)
-							isEqual = false
-							continue
-						}
-						equalStatuses[j] = initStatus(account, setting)
-					}
-					coinEqual, _ := makeEqual(coin, equalStatuses)
-					if coinEqual == false {
-						isEqual = false
+		coinSettings := model.GetCoinSettings(model.FunctionCross)
+		waitEqual := make(map[int]bool)
+		equalChannel := make(chan int, 1)
+		for i := 0; i < model.AppConfig.GetCrossLen(); i++ {
+			accounts := model.GetAccounts(i)
+			needEqual := false
+			if lastCrosses == nil {
+				needEqual = true
+			} else {
+				for _, account := range accounts {
+					if getLastCrosses(account.Key) != nil {
+						needEqual = true
+						break
 					}
 				}
 			}
-			if isEqual {
-				lastOrderSymbol = make(map[string]map[string]string)
-			} else {
-				lastOrderSymbol = nil
+			if !needEqual {
+				util.Notice(`...... no change pass make equal`)
+				continue
 			}
-			util.Notice(`...... exit clearing cross`)
+			waitEqual[i] = true
+			go equalAccount(i, equalChannel, accounts, coinSettings)
+		}
+		for true {
+			index := <-equalChannel
+			waitEqual[index] = false
+			finish := true
+			for _, value := range waitEqual {
+				if value == true {
+					finish = false
+				}
+			}
+			if finish {
+				break
+			}
 		}
 		checkSetCrossing(false)
 		time.Sleep(time.Minute * 3)
 	}
 }
 
+func equalAccount(i int, equalChan chan int, accounts map[string]*model.Account, coinSettings map[string][]*model.Setting) {
+	util.Notice(`...... enter clearing cross`)
+	needEqual := false
+	for _, account := range accounts {
+		clearMarkets(account.Key)
+	}
+	for coin, settings := range coinSettings {
+		equalStatuses := make([]*CarryStatus, len(settings))
+		for j, setting := range settings {
+			account := accounts[setting.Market]
+			if setting == nil || len(coin) == 0 || coin != setting.Symbol[0:len(coin)] || account == nil {
+				util.Notice(`can not equal`)
+				continue
+			}
+			equalStatuses[j] = initStatus(account, setting)
+		}
+		coinEqual, _ := equalCoin(coin, equalStatuses)
+		if coinEqual == false {
+			needEqual = true
+		}
+	}
+	if !needEqual {
+		for _, account := range accounts {
+			setLastCrosses(account.Key, nil)
+		}
+	}
+	equalChan <- i
+	util.Notice(`...... exit clearing cross`)
+}
+
 // bybit 缺少按照symbol cancel all
 // settings []*model.Setting, coinStatus map[string]map[string]map[string]*CarryStatus
-func makeEqual(coin string, statuses []*CarryStatus) (isEqual bool, msg string) {
+func equalCoin(coin string, statuses []*CarryStatus) (isEqual bool, msg string) {
 	var holding, price float64
 	orderSide := ``
 	var equalStatus *CarryStatus

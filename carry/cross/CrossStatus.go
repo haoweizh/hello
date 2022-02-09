@@ -31,7 +31,7 @@ var lastOrders = make(map[string]map[string][]*model.Order, lastOrderLength)  //
 var statuses = make(map[string]map[string]map[string]map[string]*CarryStatus) // coin/market/symbol/key/CarryStatus
 var contractMarkets = make(map[string]*contractMarket)                        // key - contractMarket
 var spotMarkets = make(map[string]*spotMarket)                                // key - spotMarket
-var lastOrderSymbol map[string]map[string]string                              // key/market/symbol
+var lastCrosses map[string]map[string]string                                  // key/market/symbol
 var crossLock, crossMarketLock sync.Mutex
 var crossing bool
 var doCross = false
@@ -61,11 +61,13 @@ func getContractMarket(key string) *contractMarket {
 	return contractMarkets[key]
 }
 
-func clearMarkets() {
+func clearMarkets(key string) {
 	defer crossMarketLock.Unlock()
 	crossMarketLock.Lock()
-	spotMarkets = make(map[string]*spotMarket)
-	contractMarkets = make(map[string]*contractMarket)
+	//spotMarkets = make(map[string]*spotMarket)
+	//contractMarkets = make(map[string]*contractMarket)
+	spotMarkets[key] = nil
+	contractMarkets[key] = nil
 }
 
 func setContractMarket(key string, cm *contractMarket) {
@@ -123,10 +125,10 @@ func isValidSymbol(market, symbol string) bool {
 func isLastCross(key, market, symbol string) bool {
 	defer crossLock.Unlock()
 	crossLock.Lock()
-	if lastOrderSymbol == nil || lastOrderSymbol[key] == nil || len(lastOrderSymbol) == 0 {
+	if lastCrosses == nil || lastCrosses[key] == nil || len(lastCrosses) == 0 {
 		return true
 	}
-	if symbol == lastOrderSymbol[key][market] {
+	if symbol == lastCrosses[key][market] {
 		return true
 	}
 	return false
@@ -135,13 +137,31 @@ func isLastCross(key, market, symbol string) bool {
 func setLastCross(key, market, symbol string) {
 	defer crossLock.Unlock()
 	crossLock.Lock()
-	if lastOrderSymbol == nil {
-		lastOrderSymbol = make(map[string]map[string]string)
+	if lastCrosses == nil {
+		lastCrosses = make(map[string]map[string]string)
 	}
-	if lastOrderSymbol[key] == nil {
-		lastOrderSymbol[key] = make(map[string]string)
+	if lastCrosses[key] == nil {
+		lastCrosses[key] = make(map[string]string)
 	}
-	lastOrderSymbol[key][market] = symbol
+	lastCrosses[key][market] = symbol
+}
+
+func getLastCrosses(key string) (crosses map[string]string) {
+	defer crossLock.Unlock()
+	crossLock.Lock()
+	if lastCrosses == nil {
+		return nil
+	}
+	return lastCrosses[key]
+}
+
+func setLastCrosses(key string, crosses map[string]string) {
+	defer crossLock.Unlock()
+	crossLock.Lock()
+	if lastCrosses == nil {
+		lastCrosses = make(map[string]map[string]string)
+	}
+	lastCrosses[key] = crosses
 }
 
 func getCarryStop(key string) (stop bool) {
