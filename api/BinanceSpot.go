@@ -39,9 +39,6 @@ func getMarketsBinanceSpot(key, secret string) (marketInfos map[string]*model.Ma
 		if !haveSpot {
 			continue
 		}
-		if item.BaseAsset == "ADA" {
-			util.Notice("")
-		}
 		symbol := item.BaseAsset + model.UniStandardTail[model.MarketTypeSpot]
 		marketInfo := &model.MarketInfo{Market: model.BinanceSpot, Name: symbol, MoneyMin: 10}
 		for _, data := range item.Filters {
