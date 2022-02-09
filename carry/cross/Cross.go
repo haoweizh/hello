@@ -41,8 +41,7 @@ func createContractMarket(key, secret, market string) (cm *contractMarket) {
 		cm.collateralsAvailable = availableU
 	}
 	setContractMarket(key, cm)
-	//util.Notice(fmt.Sprintf(`refresh contract market %s inall %f available u %f`,
-	//	key, cm.accountValueInU, cm.collateralsAvailable))
+	util.Notice(`create cm %s`, key)
 	return
 }
 
@@ -69,7 +68,7 @@ func createSpotMarket(key, secret, market string) (sm *spotMarket) {
 			}
 		}
 	}
-	util.Notice(`create sm %s %v`, key, sm)
+	util.Notice(`create sm %s`, key)
 	setSpotMarket(key, sm)
 	return
 }
@@ -125,7 +124,6 @@ func createFromPosition(account *model.Account, setting *model.Setting, valueLim
 		//	key, contractMarkets[key].contractValueInU, contractMarkets[key].collateralsInU, valueInUsd, valueLimit))
 		doRevert = true
 	}
-	util.Notice(`create cm %s %v`, key, cm)
 	return carryStatus, doRevert
 }
 
@@ -309,11 +307,13 @@ func ClearCross() {
 }
 
 func equalAccount(i int, equalChan chan int, accounts map[string]*model.Account, coinSettings map[string][]*model.Setting) {
-	util.Notice(`...... enter clearing cross %d`, i)
 	needEqual := false
+	keys := ``
 	for _, account := range accounts {
 		clearMarkets(account.Key)
+		keys += account.Key + `,`
 	}
+	util.Notice(`...... enter clearing cross %d %s`, i, keys)
 	for coin, settings := range coinSettings {
 		equalStatuses := make([]*CarryStatus, len(settings))
 		for j, setting := range settings {
