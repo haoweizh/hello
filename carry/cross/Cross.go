@@ -258,6 +258,7 @@ func ClearCross() {
 				time.Sleep(time.Millisecond * 200)
 			}
 		}
+		util.Notice(`...... enter clearing cross all`)
 		coinSettings := model.GetCoinSettings(model.FunctionCross)
 		waitEqual := make(map[int]bool)
 		equalChannel := make(chan int, 1)
@@ -294,13 +295,14 @@ func ClearCross() {
 				break
 			}
 		}
+		util.Notice(`...... exit clearing cross all`)
 		checkSetCrossing(false)
-		time.Sleep(time.Minute * 3)
+		time.Sleep(time.Minute * 2)
 	}
 }
 
 func equalAccount(i int, equalChan chan int, accounts map[string]*model.Account, coinSettings map[string][]*model.Setting) {
-	util.Notice(`...... enter clearing cross`)
+	util.Notice(`...... enter clearing cross %d`, i)
 	needEqual := false
 	for _, account := range accounts {
 		clearMarkets(account.Key)
@@ -326,7 +328,7 @@ func equalAccount(i int, equalChan chan int, accounts map[string]*model.Account,
 		}
 	}
 	equalChan <- i
-	util.Notice(`...... exit clearing cross`)
+	util.Notice(`...... exit clearing cross %d`, i)
 }
 
 // bybit 缺少按照symbol cancel all
@@ -476,11 +478,6 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 	if tick == nil || tick.Asks == nil || tick.Bids == nil || setting == nil || model.AppPause ||
 		(model.AppConfig.Env != `test` && model.AppConfig.Handle != `1`) || setting.Valid == false ||
 		settings == nil || len(settings) == 0 || million-int64(tick.Ts) > 100 {
-		return
-	}
-	if !checkSetCrossing(true) {
-		defer checkSetCrossing(false)
-	} else {
 		return
 	}
 	for _, settingRelate := range settings {
@@ -662,6 +659,11 @@ func initLimitBuyAndSell(status *CarryStatus, setting *model.Setting, price floa
 }
 
 func placeCross(statusBuy, statusSell *CarryStatus, priceBuy, priceSell, amount float64) {
+	if !checkSetCrossing(true) {
+		defer checkSetCrossing(false)
+	} else {
+		return
+	}
 	util.Notice(fmt.Sprintf(`place cross %s %s -> %s %s at %f %f amount %f`,
 		statusSell.market, statusSell.symbol, statusBuy.market, statusBuy.symbol, priceSell, priceBuy, amount))
 	placeSuccess := true
@@ -672,7 +674,7 @@ func placeCross(statusBuy, statusSell *CarryStatus, priceBuy, priceSell, amount 
 		go api.PlaceOrder(statusBuy.account.Key, statusBuy.account.Secret, model.OrderSideBuy, model.OrderTypeLimit,
 			statusBuy.market, statusBuy.symbol, ``, model.FunctionCross, priceBuy, priceBuy,
 			amount, true, true, PostOrderCross, statusBuy.setting)
-		api.PlaceOrder(statusSell.account.Key, statusSell.account.Secret, model.OrderSideSell, model.OrderTypeLimit,
+		go api.PlaceOrder(statusSell.account.Key, statusSell.account.Secret, model.OrderSideSell, model.OrderTypeLimit,
 			statusSell.market, statusSell.symbol, ``, model.FunctionCross, priceSell, priceSell,
 			amount, true, true, PostOrderCross, statusSell.setting)
 		time.Sleep(time.Second / 4)
