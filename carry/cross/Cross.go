@@ -262,8 +262,13 @@ func ClearCross() {
 		coinSettings := model.GetCoinSettings(model.FunctionCross)
 		waitEqual := make(map[int]bool)
 		equalChannel := make(chan int, 1)
+		markets := model.GetMarkets()
+		accounts := make(map[string]*model.Account)
 		for i := 0; i < model.AppConfig.GetCrossLen(); i++ {
-			accounts := model.GetAccounts(i)
+			indexAccounts := model.GetAccounts(i)
+			for _, market := range markets {
+				accounts[market] = indexAccounts[market]
+			}
 			needEqual := false
 			if lastCrosses == nil {
 				needEqual = true
