@@ -31,7 +31,7 @@ func getMarketsBinancePerp(key, secret string) (marketInfos map[string]*model.Ma
 		}
 		if item.ContractType == `PERPETUAL` && item.Status == "TRADING" && item.QuoteAsset == model.DialectTail[model.MarketTypePerp][model.BinancePerp] {
 			symbol := item.BaseAsset + model.UniStandardTail[model.MarketTypePerp]
-			marketInfo := &model.MarketInfo{Market: model.BinancePerp, Name: symbol, MoneyMin: 10}
+			marketInfo := &model.MarketInfo{Market: model.BinancePerp, Name: symbol, MoneyMin: 5}
 			marketInfos[marketInfo.Name] = marketInfo
 			for _, data := range item.Filters {
 				filterType := data[`filterType`].(string)
@@ -49,6 +49,10 @@ func getMarketsBinancePerp(key, secret string) (marketInfos map[string]*model.Ma
 					}
 					if data[`stepSize`] != nil {
 						marketInfo.SizeIncrement, _ = strconv.ParseFloat(data[`stepSize`].(string), 64)
+					}
+				} else if filterType == `MIN_NOTIONAL` {
+					if data[`notional`] != nil {
+						marketInfo.MoneyMin, _ = strconv.ParseFloat(data[`notional`].(string), 64)
 					}
 				}
 			}

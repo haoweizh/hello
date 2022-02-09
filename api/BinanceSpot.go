@@ -59,7 +59,9 @@ func getMarketsBinanceSpot(key, secret string) (marketInfos map[string]*model.Ma
 					marketInfo.SizeIncrement, _ = strconv.ParseFloat(data[`stepSize`].(string), 64)
 				}
 			} else if filterType == `MIN_NOTIONAL` {
-				util.Notice("minNotional:" + data[`minNotional`].(string))
+				if data[`minNotional`] != nil {
+					marketInfo.MoneyMin, _ = strconv.ParseFloat(data[`minNotional`].(string), 64)
+				}
 			}
 		}
 		marketInfos[marketInfo.Name] = marketInfo
