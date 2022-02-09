@@ -280,7 +280,7 @@ func ClearCross() {
 					}
 				}
 			}
-			if !needEqual {
+			if !needEqual && time.Now().Minute()%10 != 0 {
 				util.Notice(`...... no change pass make equal`)
 				continue
 			}
