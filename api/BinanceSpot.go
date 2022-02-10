@@ -8,11 +8,32 @@ import (
 	"github.com/gorilla/websocket"
 	"hello/model"
 	"hello/util"
+	"math/rand"
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
+
+const wsBinanceSpot = "wss://stream.binance.com:9443/stream"
+const wsStepBinanceSpot = 20
+
+var channelMaintainingBinanceSpot = false
+var lockWSBinanceSpot sync.Mutex
+var lastTickIdBinanceSpot = make(map[string]int64) // symbol - int64
+
+func getLastTickIdBinanceSpot(symbol string) int64 {
+	defer lockWSBinanceSpot.Unlock()
+	lockWSBinanceSpot.Lock()
+	return lastTickIdBinanceSpot[symbol]
+}
+
+func setLastTickIdBinanceSpot(symbol string, tickId int64) {
+	defer lockWSBinanceSpot.Unlock()
+	lockWSBinanceSpot.Lock()
+	lastTickIdBinanceSpot[symbol] = tickId
+}
 
 func getMarketsBinanceSpot(key, secret string) (marketInfos map[string]*model.MarketInfo) {
 	marketInfos = make(map[string]*model.MarketInfo)
@@ -97,12 +118,24 @@ func WsDepthServeBinanceSpot(markets *model.Markets, orderHandler OrderHandler) 
 	}
 	channels = make([]chan struct{}, 0)
 	spotSubs := GetWSSubscribes(model.BinanceSpot, subType)
-	spotChans, spotErr := WebSocketClient(model.BinanceSpot, wsBinance, spotSubs,
-		subscribeHandlerBinance, wsHandler, orderHandler, wsStepBinance)
+	spotChans, spotErr := WebSocketClient(model.BinanceSpot, wsBinanceSpot, spotSubs,
+		subscribeHandlerBinanceSpot, wsHandler, orderHandler, wsStepBinanceSpot)
 	if spotErr != nil {
 		util.SocketInfo(`fail to create binance spot conn %s`, spotErr.Error())
 	}
 	return spotChans, err
+}
+
+var subscribeHandlerBinanceSpot = func(connection *websocket.Conn, subscribes []interface{}) error {
+	var err error = nil
+	for _, subscribe := range subscribes {
+		subMsg := fmt.Sprintf(`{"method": "SUBSCRIBE","params":["%s"],"id": %d}`, subscribe, int(rand.Float64()*10000))
+		if err = SendToConnection(model.BinanceSpot, connection, []byte(subMsg)); err != nil {
+			util.SocketInfo("binance spot can not subscribe %s %s", subscribe, err.Error())
+		}
+		time.Sleep(time.Millisecond * 300)
+	}
+	return err
 }
 
 func handleTickerBinanceSpot(markets *model.Markets, json *simplejson.Json, dialectSymbol string, updateId int64) {
@@ -152,8 +185,8 @@ func handleDepthBinanceSpot(markets *model.Markets, json *simplejson.Json, diale
 		return
 	}
 	standardSymbol = coin + model.UniStandardTail[model.MarketTypeSpot]
-	if tickId > getLastTickIdBinance(standardSymbol) {
-		setLastTickIdBinance(standardSymbol, tickId)
+	if tickId > getLastTickIdBinanceSpot(standardSymbol) {
+		setLastTickIdBinanceSpot(standardSymbol, tickId)
 		bidAsk.Ts = int(util.GetNowUnixMillion())
 		bidAsk.TsReceived = int(util.GetNowUnixMillion())
 	} else {
@@ -200,8 +233,8 @@ func handleDepthBinanceSpot(markets *model.Markets, json *simplejson.Json, diale
 }
 
 func maintainChannelBinanceSpot() {
-	if !channelMaintainingBinance {
-		channelMaintainingBinance = true
+	if !channelMaintainingBinanceSpot {
+		channelMaintainingBinanceSpot = true
 		for true {
 			time.Sleep(time.Minute * 5)
 			ts := time.Now().UnixNano() / int64(time.Millisecond)
@@ -265,7 +298,7 @@ func getBalanceBinanceSpot(key string, secret string) (success bool, balances []
 	if err != nil {
 		util.SocketInfo(`fail to refresh binance balance `)
 		time.Sleep(time.Second * 2)
-		return getBalanceBinance(key, secret)
+		return getBalanceBinanceSpot(key, secret)
 	}
 	if !balanceResp.CanTrade {
 		util.SocketInfo(`binance balance can not trade`)

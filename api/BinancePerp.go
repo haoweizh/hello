@@ -2,18 +2,44 @@ package api
 
 import (
 	"context"
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"github.com/adshao/go-binance/v2/futures"
 	"github.com/bitly/go-simplejson"
 	"github.com/gorilla/websocket"
 	"hello/model"
 	"hello/util"
+	"math/rand"
 	"net/http"
+	"net/url"
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
+
+const restBinancePerp = `https://fapi.binance.com`
+const wsBinancePerp = `wss://fstream.binance.com/stream`
+const wsStepBinancePerp = 20
+
+var channelMaintainingBinancePerp = false
+var lockWSBinancePerp sync.Mutex
+var lastTradeTimeBinancePerp = make(map[string]int64)
+
+func getLastTradeTimeBinancePerp(symbol string) int64 {
+	defer lockWSBinancePerp.Unlock()
+	lockWSBinancePerp.Lock()
+	return lastTradeTimeBinancePerp[symbol]
+}
+
+func setLastTradeTimeBinancePerp(symbol string, tradeTime int64) {
+	defer lockWSBinancePerp.Unlock()
+	lockWSBinancePerp.Lock()
+	lastTradeTimeBinancePerp[symbol] = tradeTime
+}
 
 func getMarketsBinancePerp(key, secret string) (marketInfos map[string]*model.MarketInfo) {
 	marketInfos = make(map[string]*model.MarketInfo)
@@ -88,12 +114,24 @@ func WsDepthServeBinancePerp(markets *model.Markets, orderHandler OrderHandler) 
 	}
 	channels = make([]chan struct{}, 0)
 	perpSubs := GetWSSubscribes(model.BinancePerp, subType)
-	perpChans, perpErr := WebSocketClient(model.BinancePerp, wsBinanceFuture, perpSubs,
-		subscribeHandlerBinance, wsHandler, orderHandler, wsStepBinance)
+	perpChans, perpErr := WebSocketClient(model.BinancePerp, wsBinancePerp, perpSubs,
+		subscribeHandlerBinancePerp, wsHandler, orderHandler, wsStepBinancePerp)
 	if perpErr != nil {
 		util.SocketInfo(`fail to create binance perp conn %s`, perpErr.Error())
 	}
 	return perpChans, err
+}
+
+var subscribeHandlerBinancePerp = func(connection *websocket.Conn, subscribes []interface{}) error {
+	var err error = nil
+	for _, subscribe := range subscribes {
+		subMsg := fmt.Sprintf(`{"method": "SUBSCRIBE","params":["%s"],"id": %d}`, subscribe, int(rand.Float64()*10000))
+		if err = SendToConnection(model.BinancePerp, connection, []byte(subMsg)); err != nil {
+			util.SocketInfo("binance perp can not subscribe %s %s", subscribe, err.Error())
+		}
+		time.Sleep(time.Millisecond * 300)
+	}
+	return err
 }
 
 func handleTickerBinancePerp(markets *model.Markets, json *simplejson.Json, dialectSymbol string, updateId int64) {
@@ -143,10 +181,10 @@ func handleDepthBinancePerp(markets *model.Markets, json *simplejson.Json, diale
 	}
 	standardSymbol = coin + model.UniStandardTail[model.MarketTypePerp]
 	nowTradeTime, _ := json.Get(`T`).Int64()
-	if nowTradeTime <= 0 || nowTradeTime < getLastTradeTimeBinance(standardSymbol) {
+	if nowTradeTime <= 0 || nowTradeTime < getLastTradeTimeBinancePerp(standardSymbol) {
 		return
 	}
-	setLastTradeTimeBinance(standardSymbol, nowTradeTime)
+	setLastTradeTimeBinancePerp(standardSymbol, nowTradeTime)
 	bidAsk.Ts = json.Get(`E`).MustInt()
 	bidAsk.TsReceived = int(util.GetNowUnixMillion())
 	bidArray, _ := json.Get(`b`).Array()
@@ -191,8 +229,8 @@ func handleDepthBinancePerp(markets *model.Markets, json *simplejson.Json, diale
 }
 
 func maintainChannelBinancePerp() {
-	if !channelMaintainingBinance {
-		channelMaintainingBinance = true
+	if !channelMaintainingBinancePerp {
+		channelMaintainingBinancePerp = true
 		for true {
 			time.Sleep(time.Minute * 5)
 			ts := time.Now().UnixNano() / int64(time.Millisecond)
@@ -271,7 +309,7 @@ func getPositionsBinancePerp(key, secret string) (success bool, positions []*mod
 	//}
 
 	//todo 验证accountValue
-	responseBody := signedRequestBinance(key, secret, http.MethodGet, restBinanceFuture+"/fapi/v2/account", true, nil)
+	responseBody := signedRequestBinance(key, secret, http.MethodGet, restBinancePerp+"/fapi/v2/account", true, nil)
 	positionJson, err := util.NewJSON(responseBody)
 	if err != nil || positionJson == nil {
 		util.SocketInfo(`fail to refresh binance position `)
@@ -312,6 +350,40 @@ func getPositionsBinancePerp(key, secret string) (success bool, positions []*mod
 		}
 	}
 	return success, positions, accountValue, availableU
+}
+
+func signedRequestBinance(key, secret, method, requestUrl string, withApiKey bool, param *url.Values) []byte {
+	if param == nil {
+		param = &url.Values{}
+	}
+	if withApiKey {
+		param.Set("recvWindow", "60000")
+		ts := strconv.FormatInt(util.GetNow().UnixNano(), 10)[0:13]
+		param.Set("timestamp", ts)
+		hash := hmac.New(sha256.New, []byte(secret))
+		hash.Write([]byte(param.Encode()))
+		param.Set("signature", hex.EncodeToString(hash.Sum(nil)))
+	}
+	headers := map[string]string{"X-MBX-APIKEY": key}
+	requestUrl = requestUrl + "?" + param.Encode()
+	responseBody, _ := util.HttpRequest(method, requestUrl, "", headers, 60)
+	logMsg := fmt.Sprintf(`binance key %s request %s body %v return %s`,
+		key, requestUrl, param, string(responseBody))
+	if strings.Contains(requestUrl, `/order`) {
+		util.Notice(logMsg)
+	} else if !strings.Contains(requestUrl, `exchangeInfo`) {
+		util.SocketInfo(logMsg)
+	}
+	responseJson, err := util.NewJSON(responseBody)
+	if err != nil || responseJson == nil {
+		util.Notice(`fail to parse json`)
+		return nil
+	}
+	code := responseJson.Get(`code`).MustInt()
+	if code != 0 && code != -3027 && code != 200 && code != -2011 {
+		util.Notice(`request err %d`, code)
+	}
+	return responseBody
 }
 
 func getFundingRateBinancePerp(key, secret, symbol string) (fundingRate *model.FundingRate) {

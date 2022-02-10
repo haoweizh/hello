@@ -104,8 +104,8 @@ func CancelOrders(key, secret, market, symbol string) (result bool) {
 		return cancelOrdersKucoin(symbol)
 	case model.Gate:
 		return cancelOrdersGate(key, secret, symbol)
-	case model.Binance:
-		return cancelOrdersBinance(key, secret, symbol)
+	//case model.Binance:
+	//	return cancelOrdersBinance(key, secret, symbol)
 	case model.BinanceSpot:
 		return cancelOrdersBinanceSpot(key, secret, symbol)
 	case model.BinancePerp:
@@ -221,8 +221,8 @@ func GetBalances(key, secret, market string) (
 		success, balances, totalInUsd = getBalanceFtx(key, secret)
 	case model.OKEX:
 		success, balances, totalInUsd, collateral = getBalanceOKEX(key, secret)
-	case model.Binance:
-		success, balances = getBalanceBinance(key, secret)
+	//case model.Binance:
+	//	success, balances = getBalanceBinance(key, secret)
 	case model.BinanceSpot:
 		success, balances = getBalanceBinanceSpot(key, secret)
 	case model.BybitSpot:
@@ -313,8 +313,8 @@ func GetFundingRate(key, secret, market, symbol string, lock *sync.Mutex) (succe
 	case model.OKEX:
 		fundingRate = getFundingRateOKEX(key, secret, symbol)
 		model.SetFundingRate(market, symbol, fundingRate)
-	case model.Binance:
-		fundingRate = getFundingRateBinance(key, secret, symbol)
+		//case model.Binance:
+		//	fundingRate = getFundingRateBinance(key, secret, symbol)
 		model.SetFundingRate(market, symbol, fundingRate)
 	case model.BinanceSpot:
 		return true, 0
@@ -394,8 +394,8 @@ func GetPositions(key, secret, market string) (success bool, positions []*model.
 		return getPositionsKucoin(key, secret)
 	case model.Gate:
 		return getPositionsGate(key, secret)
-	case model.Binance:
-		return getPositionsBinance(key, secret)
+	//case model.Binance:
+	//	return getPositionsBinance(key, secret)
 	case model.BinancePerp:
 		return getPositionsBinancePerp(key, secret)
 	case model.Ftx:
@@ -479,8 +479,8 @@ func PlaceOrder(key, secret, orderSide, orderType, market, symbol, orderParam, r
 		placeOrderGate(key, secret, order, orderSide, orderType, symbol, price, amount)
 	case model.OKEX:
 		placeOrderOKEX(key, secret, isWs, order)
-	case model.Binance:
-		placeOrderBinance(key, secret, order, orderSide, orderType, symbol, price, amount)
+	//case model.Binance:
+	//	placeOrderBinance(key, secret, order, orderSide, orderType, symbol, price, amount)
 	case model.BinanceSpot:
 		placeOrderBinanceSpot(key, secret, order, orderSide, orderType, symbol, price, amount)
 	case model.BinancePerp:
@@ -557,8 +557,8 @@ func GetWSSubscribes(market, subType string) []interface{} {
 	switch market {
 	case model.OKEX:
 		go maintainChannelOKEX()
-	case model.Binance:
-		go maintainChannelBinance()
+	//case model.Binance:
+	//	go maintainChannelBinance()
 	case model.BinanceSpot:
 		go maintainChannelBinanceSpot()
 	case model.BinancePerp:
@@ -633,7 +633,7 @@ func GetWSSubscribe(market, symbol, subType string) (subscribe interface{}) {
 // Transfer
 func _(key, secret, market, transferType string, amount float64) {
 	if market == model.Binance {
-		transferBinance(key, secret, transferType, amount)
+		//transferBinance(key, secret, transferType, amount)
 	} else if market == model.Gate {
 		transferGate(key, secret, transferType, amount)
 	} else if market == model.Kucoin {
@@ -648,8 +648,8 @@ func GetMarketInfos(market string) (marketInfo map[string]*model.MarketInfo) {
 		return getMarketsFtx(accounts[0].Key, accounts[0].Secret)
 	case model.OKEX:
 		return getMarketsOKEX(accounts[0].Key, accounts[0].Secret)
-	case model.Binance:
-		return getMarketsBinance(accounts[0].Key, accounts[0].Secret)
+	//case model.Binance:
+	//	return getMarketsBinance(accounts[0].Key, accounts[0].Secret)
 	case model.BinanceSpot:
 		return getMarketsBinanceSpot(accounts[0].Key, accounts[0].Secret)
 	case model.BinancePerp:
@@ -770,11 +770,11 @@ func InitMarketInfos() (success bool) {
 					}
 				}
 			}
-		case model.Binance:
-			model.SetMarketInfos(market, getMarketsBinance(accounts[0].Key, accounts[0].Secret))
-			for _, account := range accounts {
-				setPosSideBinance(account.Key, account.Secret)
-			}
+		//case model.Binance:
+		//	model.SetMarketInfos(market, getMarketsBinance(accounts[0].Key, accounts[0].Secret))
+		//	for _, account := range accounts {
+		//		setPosSideBinance(account.Key, account.Secret)
+		//	}
 		case model.BinanceSpot:
 			model.SetMarketInfos(market, getMarketsBinanceSpot(accounts[0].Key, accounts[0].Secret))
 		case model.BinancePerp:
@@ -826,8 +826,8 @@ func CreateMarketDepthServer(markets *model.Markets, market string, orderHandler
 		err = WsDepthServeGate()
 	case model.OKEX:
 		channels, err = WsDepthServeOKEX(model.GetMarketSymbols(model.OKEX), orderHandler)
-	case model.Binance:
-		channels, err = WsDepthServeBinance(markets, nil)
+	//case model.Binance:
+	//	channels, err = WsDepthServeBinance(markets, nil)
 	case model.BinanceSpot:
 		channels, err = WsDepthServeBinanceSpot(markets, nil)
 	case model.BinancePerp:
