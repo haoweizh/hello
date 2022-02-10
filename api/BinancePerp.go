@@ -237,7 +237,7 @@ func maintainChannelBinancePerp() {
 			pong := []byte(fmt.Sprintf(`{"method":"PONG","E":%d}`, ts))
 			err := SendToAllConnections(model.BinancePerp, pong)
 			if err != nil {
-				util.SocketInfo("pong binance server error " + err.Error())
+				util.SocketInfo("pong binance perp server error " + err.Error())
 			}
 		}
 	}

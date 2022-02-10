@@ -53,6 +53,21 @@ func SendToAllConnections(market string, msg []byte) (err error) {
 	return err
 }
 
+func SendToAllConnectionsInterval(market string, msg []byte, milliseconds int) (err error) {
+	defer wsLock.Unlock()
+	wsLock.Lock()
+	for i, connection := range model.AppMarkets.Connections[market] {
+		if connection == nil {
+			continue
+		}
+		if err = connection.WriteMessage(websocket.TextMessage, msg); err != nil {
+			util.Notice(fmt.Sprintf(`fail to write connection %d return: %s`, i, err.Error()))
+		}
+		time.Sleep(time.Millisecond * time.Duration(milliseconds))
+	}
+	return err
+}
+
 func newConnection(url string) (*websocket.Conn, error) {
 	var connErr error
 	var c *websocket.Conn

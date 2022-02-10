@@ -239,9 +239,9 @@ func maintainChannelBinanceSpot() {
 			time.Sleep(time.Minute * 5)
 			ts := time.Now().UnixNano() / int64(time.Millisecond)
 			pong := []byte(fmt.Sprintf(`{"method":"PONG","E":%d}`, ts))
-			err := SendToAllConnections(model.BinanceSpot, pong)
+			err := SendToAllConnectionsInterval(model.BinanceSpot, pong, 1000)
 			if err != nil {
-				util.SocketInfo("pong binance server error " + err.Error())
+				util.SocketInfo("pong binance spot server error " + err.Error())
 			}
 		}
 	}

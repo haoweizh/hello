@@ -61,22 +61,22 @@ package api
 //var channelMaintainingBinance = false
 //
 //func maintainChannelBinance() {
-//	//if !channelMaintainingBinance {
-//	//	channelMaintainingBinance = true
-//	//	for true {
-//	//		time.Sleep(time.Minute * 5)
-//	//		ts := time.Now().UnixNano() / int64(time.Millisecond)
-//	//		pong := []byte(fmt.Sprintf(`{"method":"PONG","E":%d}`, ts))
-//	//		err := sendToWs(binanceMargin, pong)
-//	//		if err != nil {
-//	//			util.SocketInfo("pong binance ws client error " + err.Error())
-//	//		}
-//	//		err = sendToWs(binancePerp, pong)
-//	//		if err != nil {
-//	//			util.SocketInfo("pong binance future ws client error " + err.Error())
-//	//		}
-//	//	}
-//	//}
+//	if !channelMaintainingBinance {
+//		channelMaintainingBinance = true
+//		for true {
+//			time.Sleep(time.Minute * 5)
+//			ts := time.Now().UnixNano() / int64(time.Millisecond)
+//			pong := []byte(fmt.Sprintf(`{"method":"PONG","E":%d}`, ts))
+//			err := sendToWs(binanceMargin, pong)
+//			if err != nil {
+//				util.SocketInfo("pong binance ws client error " + err.Error())
+//			}
+//			err = sendToWs(binancePerp, pong)
+//			if err != nil {
+//				util.SocketInfo("pong binance future ws client error " + err.Error())
+//			}
+//		}
+//	}
 //}
 //
 //var subscribeHandlerBinance = func(connection *websocket.Conn, subscribes []interface{}) error {
