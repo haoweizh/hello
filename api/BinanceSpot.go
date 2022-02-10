@@ -50,7 +50,7 @@ func getMarketsBinanceSpot(key, secret string) (marketInfos map[string]*model.Ma
 			continue
 		}
 		haveSpot := false
-		if item.Permissions != nil && item.IsSpotTradingAllowed &&
+		if item.Permissions != nil && item.Status == "TRADING" &&
 			item.QuoteAsset == model.DialectTail[model.MarketTypeSpot][model.BinanceSpot] {
 			for _, permission := range item.Permissions {
 				if permission == `SPOT` {
