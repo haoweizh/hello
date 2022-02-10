@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"github.com/adshao/go-binance/v2"
 	"github.com/bitly/go-simplejson"
@@ -128,13 +129,16 @@ func WsDepthServeBinanceSpot(markets *model.Markets, orderHandler OrderHandler) 
 
 var subscribeHandlerBinanceSpot = func(connection *websocket.Conn, subscribes []interface{}) error {
 	var err error = nil
-	for _, subscribe := range subscribes {
-		subMsg := fmt.Sprintf(`{"method": "SUBSCRIBE","params":["%s"],"id": %d}`, subscribe, int(rand.Float64()*10000))
-		if err = SendToConnection(model.BinanceSpot, connection, []byte(subMsg)); err != nil {
-			util.SocketInfo("binance spot can not subscribe %s %s", subscribe, err.Error())
-		}
-		time.Sleep(time.Millisecond * 300)
+	subParam := make(map[string]interface{})
+	subParam["method"] = "SUBSCRIBE"
+	subParam["params"] = subscribes
+	subParam["id"] = int(rand.Float64() * 10000)
+	subParamJson, _ := json.Marshal(subParam)
+	if err = SendToConnection(model.BinanceSpot, connection, subParamJson); err != nil {
+		util.SocketInfo("binance spot can not subscribe %s %s", subParamJson, err.Error())
 	}
+	util.Notice(`%s send subscribe: %s `, model.BinanceSpot, subParamJson)
+	time.Sleep(time.Millisecond * 500)
 	return err
 }
 
@@ -236,10 +240,8 @@ func maintainChannelBinanceSpot() {
 	if !channelMaintainingBinanceSpot {
 		channelMaintainingBinanceSpot = true
 		for true {
-			time.Sleep(time.Minute * 5)
-			ts := time.Now().UnixNano() / int64(time.Millisecond)
-			pong := []byte(fmt.Sprintf(`{"method":"PONG","E":%d}`, ts))
-			err := SendToAllConnectionsInterval(model.BinanceSpot, pong, 1000)
+			time.Sleep(time.Minute * 3)
+			err := PongAllConnectionsInterval(model.BinanceSpot, 500)
 			if err != nil {
 				util.SocketInfo("pong binance spot server error " + err.Error())
 			}

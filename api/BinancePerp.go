@@ -5,6 +5,7 @@ import (
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"github.com/adshao/go-binance/v2/futures"
 	"github.com/bitly/go-simplejson"
@@ -124,13 +125,16 @@ func WsDepthServeBinancePerp(markets *model.Markets, orderHandler OrderHandler) 
 
 var subscribeHandlerBinancePerp = func(connection *websocket.Conn, subscribes []interface{}) error {
 	var err error = nil
-	for _, subscribe := range subscribes {
-		subMsg := fmt.Sprintf(`{"method": "SUBSCRIBE","params":["%s"],"id": %d}`, subscribe, int(rand.Float64()*10000))
-		if err = SendToConnection(model.BinancePerp, connection, []byte(subMsg)); err != nil {
-			util.SocketInfo("binance perp can not subscribe %s %s", subscribe, err.Error())
-		}
-		time.Sleep(time.Millisecond * 300)
+	subParam := make(map[string]interface{})
+	subParam["method"] = "SUBSCRIBE"
+	subParam["params"] = subscribes
+	subParam["id"] = int(rand.Float64() * 10000)
+	subParamJson, _ := json.Marshal(subParam)
+	if err = SendToConnection(model.BinancePerp, connection, subParamJson); err != nil {
+		util.SocketInfo("binance perp can not subscribe %s %s", subParamJson, err.Error())
 	}
+	util.Notice(`%s send subscribe: %s `, model.BinancePerp, subParamJson)
+	time.Sleep(time.Millisecond * 500)
 	return err
 }
 
@@ -233,9 +237,7 @@ func maintainChannelBinancePerp() {
 		channelMaintainingBinancePerp = true
 		for true {
 			time.Sleep(time.Minute * 5)
-			ts := time.Now().UnixNano() / int64(time.Millisecond)
-			pong := []byte(fmt.Sprintf(`{"method":"PONG","E":%d}`, ts))
-			err := SendToAllConnections(model.BinancePerp, pong)
+			err := PongAllConnectionsInterval(model.BinancePerp, 500)
 			if err != nil {
 				util.SocketInfo("pong binance perp server error " + err.Error())
 			}
