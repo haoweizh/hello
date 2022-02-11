@@ -161,9 +161,9 @@ func handleTickerFtx(markets *model.Markets, response *simplejson.Json) {
 	for function, handler := range model.GetFunctions(model.Ftx, standardSymbol) {
 		if handler != nil {
 			setting := model.GetSetting(function, model.Ftx, standardSymbol)
-			if setting != nil && setting.Function == model.FunctionCarry {
-				success, usdtBidAsk := markets.GetBidAsk(`USDT/USD`, model.Ftx)
-				if success && bidAsk.Asks.Len() > 0 && bidAsk.Bids.Len() > 0 {
+			if setting != nil && setting.Function == model.FunctionCross {
+				getUsdTick, usdtBidAsk := markets.GetBidAsk(`USDT/USD`, model.Ftx)
+				if getUsdTick && bidAsk.Asks.Len() > 0 && bidAsk.Bids.Len() > 0 {
 					bidAsk.Asks[0].Price /= usdtBidAsk.Asks[0].Price
 					bidAsk.Bids[0].Price /= usdtBidAsk.Asks[0].Price
 					break
@@ -253,9 +253,9 @@ func handleDepthFtx(markets *model.Markets, response *simplejson.Json) {
 		for function, handler := range model.GetFunctions(model.Ftx, standardSymbol) {
 			if handler != nil {
 				setting := model.GetSetting(function, model.Ftx, standardSymbol)
-				if setting != nil && setting.Function == model.FunctionCarry {
-					success, usdtBidAsk := markets.GetBidAsk(`USDT/USD`, model.Ftx)
-					if success && bidAsk.Asks.Len() > 0 && bidAsk.Bids.Len() > 0 {
+				if setting != nil && setting.Function == model.FunctionCross {
+					getUsdTick, usdtBidAsk := markets.GetBidAsk(`USDT/USD`, model.Ftx)
+					if getUsdTick && bidAsk.Asks.Len() > 0 && bidAsk.Bids.Len() > 0 {
 						bidAsk.Asks[0].Price /= usdtBidAsk.Asks[0].Price
 						bidAsk.Bids[0].Price /= usdtBidAsk.Asks[0].Price
 						break
