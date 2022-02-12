@@ -13,7 +13,6 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 )
 
@@ -21,20 +20,6 @@ const wsBinanceSpot = "wss://stream.binance.com:9443/stream"
 const wsStepBinanceSpot = 20
 
 var channelMaintainingBinanceSpot = false
-var lockWSBinanceSpot sync.Mutex
-var lastTickIdBinanceSpot = make(map[string]int64) // symbol - int64
-
-func getLastTickIdBinanceSpot(symbol string) int64 {
-	defer lockWSBinanceSpot.Unlock()
-	lockWSBinanceSpot.Lock()
-	return lastTickIdBinanceSpot[symbol]
-}
-
-func setLastTickIdBinanceSpot(symbol string, tickId int64) {
-	defer lockWSBinanceSpot.Unlock()
-	lockWSBinanceSpot.Lock()
-	lastTickIdBinanceSpot[symbol] = tickId
-}
 
 func getMarketsBinanceSpot(key, secret string) (marketInfos map[string]*model.MarketInfo) {
 	marketInfos = make(map[string]*model.MarketInfo)
@@ -108,13 +93,22 @@ func WsDepthServeBinanceSpot(markets *model.Markets, orderHandler OrderHandler) 
 		}
 		dialectSymbol := result.Get(`s`).MustString()
 		updateId := result.Get(`u`).MustInt64()
-		if dialectSymbol == `` {
+		if strings.Contains(subscribe, `@depth`) {
+			updateId = result.Get(`lastUpdateId`).MustInt64()
+		}
+		success, _, coin := model.GetCoinFromDialect(model.BinanceSpot, dialectSymbol)
+		if !success {
+			return
+		}
+		standardSymbol := coin + model.UniStandardTail[model.MarketTypeSpot]
+		haveOld, old := markets.GetBidAsk(standardSymbol, model.BinanceSpot)
+		if haveOld && old.UpdateId > updateId {
 			return
 		}
 		if strings.Contains(subscribe, `@depth`) {
-			handleDepthBinanceSpot(markets, result, dialectSymbol, updateId)
+			handleDepthBinanceSpot(markets, result, standardSymbol, updateId)
 		} else if strings.Contains(subscribe, `@bookTicker`) {
-			handleTickerBinanceSpot(markets, result, dialectSymbol, updateId)
+			handleTickerBinanceSpot(markets, result, standardSymbol, updateId)
 		}
 	}
 	channels = make([]chan struct{}, 0)
@@ -142,7 +136,7 @@ var subscribeHandlerBinanceSpot = func(connection *websocket.Conn, subscribes []
 	return err
 }
 
-func handleTickerBinanceSpot(markets *model.Markets, json *simplejson.Json, dialectSymbol string, updateId int64) {
+func handleTickerBinanceSpot(markets *model.Markets, json *simplejson.Json, standardSymbol string, updateId int64) {
 	bidPrice, _ := strconv.ParseFloat(json.Get(`b`).MustString(), 64)
 	bidAmount, _ := strconv.ParseFloat(json.Get(`B`).MustString(), 64)
 	askPrice, _ := strconv.ParseFloat(json.Get(`a`).MustString(), 64)
@@ -152,13 +146,7 @@ func handleTickerBinanceSpot(markets *model.Markets, json *simplejson.Json, dial
 	if ts == 0 {
 		ts = now
 	}
-	if dialectSymbol != `` && bidPrice > 0 && bidAmount > 0 && askPrice > 0 && askAmount > 0 {
-		marketType := model.MarketTypeSpot
-		success, _, coin := model.GetCoinFromDialect(model.BinanceSpot, dialectSymbol)
-		if !success {
-			return
-		}
-		standardSymbol := coin + model.UniStandardTail[marketType]
+	if bidPrice > 0 && bidAmount > 0 && askPrice > 0 && askAmount > 0 {
 		bidAsk := model.BidAsk{Ts: ts, TsReceived: now, UpdateId: updateId,
 			Bids: []model.Tick{{Price: bidPrice, Amount: bidAmount, Market: model.BinanceSpot, Symbol: standardSymbol, Side: model.OrderSideBuy}},
 			Asks: []model.Tick{{Price: askPrice, Amount: askAmount, Market: model.BinanceSpot, Symbol: standardSymbol, Side: model.OrderSideSell}}}
@@ -179,23 +167,10 @@ func handleTickerBinanceSpot(markets *model.Markets, json *simplejson.Json, dial
 	}
 }
 
-func handleDepthBinanceSpot(markets *model.Markets, json *simplejson.Json, dialectSymbol string, updateId int64) {
-	var standardSymbol string
-	bidAsk := model.BidAsk{UpdateId: updateId}
+func handleDepthBinanceSpot(markets *model.Markets, json *simplejson.Json, standardSymbol string, updateId int64) {
+	now := int(util.GetNowUnixMillion())
+	bidAsk := model.BidAsk{UpdateId: updateId, Ts: now, TsReceived: now}
 	var bids, asks []interface{}
-	tickId, _ := json.Get(`lastUpdateId`).Int64()
-	success, _, coin := model.GetCoinFromDialect(model.BinanceSpot, dialectSymbol)
-	if !success {
-		return
-	}
-	standardSymbol = coin + model.UniStandardTail[model.MarketTypeSpot]
-	if tickId > getLastTickIdBinanceSpot(standardSymbol) {
-		setLastTickIdBinanceSpot(standardSymbol, tickId)
-		bidAsk.Ts = int(util.GetNowUnixMillion())
-		bidAsk.TsReceived = int(util.GetNowUnixMillion())
-	} else {
-		return
-	}
 	bidArray, _ := json.Get(`bids`).Array()
 	bids = bidArray
 	askArray, _ := json.Get(`asks`).Array()
@@ -220,10 +195,6 @@ func handleDepthBinanceSpot(markets *model.Markets, json *simplejson.Json, diale
 	}
 	sort.Sort(bidAsk.Asks)
 	sort.Sort(sort.Reverse(bidAsk.Bids))
-	haveOld, old := markets.GetBidAsk(standardSymbol, model.BinanceSpot)
-	if haveOld && old.UpdateId > bidAsk.UpdateId {
-		return
-	}
 	if markets.SetBidAsk(standardSymbol, model.BinanceSpot, &bidAsk) {
 		for function, handler := range model.GetFunctions(model.BinanceSpot, standardSymbol) {
 			if handler != nil {
