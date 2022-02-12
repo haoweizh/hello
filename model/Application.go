@@ -24,7 +24,6 @@ const DFuture = `dfuture`
 const BybitSpot = `bybitspot`
 const BybitPerp = `bybitperp`
 const OKEX = "okex"
-const Binance = "binance"
 const BinanceSpot = "binancespot"
 const BinancePerp = "binanceperp"
 const Ftx = `ftx`
@@ -63,8 +62,8 @@ var AppConfig *Config
 var AppMarkets = NewMarkets()
 var AppPause = false
 var DialectTail = map[string]map[string]string{
-	MarketTypeSpot: {Gate: `_USDT`, Ftx: `/USD`, OKEX: `-USDT`, BybitSpot: `USDT`, Binance: `USDT`, BinanceSpot: `USDT`},
-	MarketTypePerp: {Gate: `_USDT`, Ftx: `-PERP`, OKEX: `-USDT-SWAP`, BybitPerp: `USDT`, Binance: `USDT`, BinancePerp: `USDT`}}
+	MarketTypeSpot: {Gate: `_USDT`, Ftx: `/USD`, OKEX: `-USDT`, BybitSpot: `USDT`, BinanceSpot: `USDT`},
+	MarketTypePerp: {Gate: `_USDT`, Ftx: `-PERP`, OKEX: `-USDT-SWAP`, BybitPerp: `USDT`, BinancePerp: `USDT`}}
 var UniStandardTail = map[string]string{MarketTypeSpot: `_USDT`, MarketTypePerp: `_PERP`}
 
 func GetFromStandard(market, standardSymbol string) (success bool, marketType, coinValue, dialectSymbol string) {
@@ -91,30 +90,6 @@ func GetCoinFromDialect(market, dialectSymbol string) (success bool, marketType,
 	return false, ``, ``
 }
 
-func IsTickTimeout(market string, delay int64) (timeout bool) {
-	switch market {
-	case OKEX, Gate, Ftx, BybitSpot, BybitPerp:
-		return delay > 40
-	case Binance:
-		return delay > 100
-	case Kucoin:
-		return delay > 25
-	}
-	return true
-}
-
-func IsRelatedTickTimeout(market string, delayRelated int64) (timeout bool) {
-	switch market {
-	case Binance:
-		return delayRelated > 100
-	case OKEX, Ftx, BybitPerp:
-		return delayRelated > 300
-	case Kucoin, Gate, BybitSpot:
-		return delayRelated > 1000
-	}
-	return true
-}
-
 var orderStatusMap = map[string]map[string]string{ // market - market status - united status
 	BinancePerp: {
 		"NEW":              CarryStatusWorking,
@@ -134,14 +109,6 @@ var orderStatusMap = map[string]map[string]string{ // market - market status - u
 		"REJECTED":         CarryStatusFail,
 		"EXPIRED":          CarryStatusFail,
 	},
-	Binance: {
-		"NEW":              CarryStatusWorking,
-		"PARTIALLY_FILLED": CarryStatusWorking,
-		"PENDING_CANCEL":   CarryStatusWorking,
-		"FILLED":           CarryStatusSuccess,
-		"CANCELED":         CarryStatusFail,
-		"REJECTED":         CarryStatusFail,
-		"EXPIRED":          CarryStatusFail},
 	Bitmex: {
 		"New":             CarryStatusWorking,
 		"PartiallyFilled": CarryStatusWorking,

@@ -177,7 +177,7 @@ func Test_initTurtleN(t *testing.T) {
 		}
 	}
 	accounts := make([]*model.Account, 0)
-	account := model.AppConfig.GetAccounts(model.Binance)[0]
+	account := model.AppConfig.GetAccounts(model.BinancePerp)[0]
 	if account == nil {
 		fmt.Println(`right`)
 	} else {

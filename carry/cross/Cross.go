@@ -784,7 +784,7 @@ var PostOrderCross = func(order *model.Order, setting *model.Setting) {
 					}
 					unknownFail = false
 				}
-			case model.Binance:
+			case model.BinancePerp, model.BinanceSpot:
 				if strings.Contains(InsufficientCodeBinance, order.ErrCode) {
 					util.Notice(`reset binance trade max with %s %s`, order.ErrCode, order.AmountType)
 					setSpotMarket(order.AmountType, nil)

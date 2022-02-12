@@ -132,10 +132,6 @@ func CancelOrder(key, secret, market, symbol, orderType, orderId string) (result
 	switch market {
 	case model.OKEX:
 		result, errCode, msg = cancelOrderOkex(key, secret, symbol, orderId, orderType)
-	case model.Binance:
-		//result, errCode, msg = cancelOrderBinance(key, secret, symbol, orderId)
-	//case model.Bitmex:
-	//	result, errCode, msg = deprecated.cancelOrderBitmex(key, secret, orderId)
 	case model.BybitPerp:
 		result, errCode, msg = cancelOrderBybitPerp(key, secret, symbol, orderId)
 	case model.BybitSpot:
@@ -340,9 +336,6 @@ func _(key, secret, market, symbol string) (success bool, maxLoan float64) {
 		return getMaxLoanGate(symbol)
 	case model.OKEX:
 		return getMaxLoanOKEX(key, secret, symbol)
-	case model.Binance:
-		return true, 0
-		//return getMaxLoanBinance(key, secret, coin)
 	}
 	return false, 0
 }
@@ -364,8 +357,6 @@ func QueryOrderById(key, secret, market, symbol, orderType, orderId string) (ord
 		order = queryOrderBinanceSpot(key, secret, symbol, orderId)
 	case model.BinancePerp:
 		order = queryOrderBinancePerp(key, secret, symbol, orderId)
-	case model.Binance:
-		//dealAmount, dealPrice, status = queryOrderBinance(key, secret, symbol, orderId)
 	case model.BybitPerp:
 		order = queryOrderBybitPerp(key, secret, symbol, orderId)
 	case model.BybitSpot:
@@ -589,11 +580,6 @@ func GetWSSubscribe(market, symbol, subType string) (subscribe interface{}) {
 	//	return `bibox_sub_spot_` + strings.ToUpper(symbol) + `_depth`
 	case model.OKEX:
 		return dialectSymbol
-	case model.Binance: // XRPUSDT: XRPUSDT@depth5   XRP-PERP: XRPUSDT@depth5
-		if subType == model.SubscribeDepth {
-			return strings.ToLower(dialectSymbol) + `@depth5@100ms`
-		}
-		return strings.ToLower(dialectSymbol) + `@bookTicker`
 	case model.BinancePerp:
 		if subType == model.SubscribeDepth {
 			return strings.ToLower(dialectSymbol) + `@depth5@100ms`
@@ -632,9 +618,7 @@ func GetWSSubscribe(market, symbol, subType string) (subscribe interface{}) {
 
 // Transfer
 func _(key, secret, market, transferType string, amount float64) {
-	if market == model.Binance {
-		//transferBinance(key, secret, transferType, amount)
-	} else if market == model.Gate {
+	if market == model.Gate {
 		transferGate(key, secret, transferType, amount)
 	} else if market == model.Kucoin {
 		transferKucoin(transferType, amount)
@@ -704,7 +688,7 @@ func filterCross(market, symbol string) bool {
 		case `OKB`:
 			return true
 		}
-	case model.Binance:
+	case model.BinancePerp, model.BinanceSpot:
 		switch coin {
 		case `BNB`:
 			return true
