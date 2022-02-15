@@ -252,14 +252,14 @@ func placeOrderBinanceSpot(key, secret string, order *model.Order, orderSide, or
 }
 
 func cancelOrdersBinanceSpot(key string, secret string, symbol string) bool {
-	success, _, _, dialectSymbol := model.GetFromStandard(model.BinanceSpot, symbol)
+	success, marketType, coin, dialectSymbol := model.GetFromStandard(model.BinanceSpot, symbol)
 	if !success {
 		return false
 	}
 	client := binance.NewClient(key, secret)
 	_, err := client.NewCancelOpenOrdersService().Symbol(dialectSymbol).Do(context.Background())
 	if err != nil {
-		util.Notice("cancelOrdersBinanceSpot err: " + err.Error())
+		util.Notice("cancelOrdersBinanceSpot err: " + err.Error() + " symbol: " + symbol + " marketType: " + marketType + " coin: " + coin + " But dialectSymbol: " + dialectSymbol)
 		return false
 	}
 	return true
