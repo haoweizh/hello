@@ -358,11 +358,11 @@ func signedRequestBinance(key, secret, method, requestUrl string, withApiKey boo
 }
 
 func getFundingRateBinancePerp(key, secret, symbol string) (fundingRate *model.FundingRate) {
-	_, _, _, dialectSymbol := model.GetFromStandard(model.BinancePerp, symbol)
+	_, marketType, coin, dialectSymbol := model.GetFromStandard(model.BinancePerp, symbol)
 	client := futures.NewClient(key, secret)
 	rateResp, err := client.NewPremiumIndexService().Symbol(dialectSymbol).Do(context.Background())
 	if err != nil {
-		util.Notice("getFundingRateBinancePerp err: " + err.Error())
+		util.Notice("getFundingRateBinancePerp err: " + err.Error() + " symbol: " + symbol + " marketType: " + marketType + " coin: " + coin + " But dialectSymbol: " + dialectSymbol)
 		return
 	}
 	rateStr := rateResp[0].LastFundingRate
