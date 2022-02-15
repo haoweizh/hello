@@ -407,9 +407,17 @@ func placeOrderBybitPerp(order *model.Order, key, secret, orderSide, orderType, 
 	response := SignedRequestBybitPerp(key, secret, `POST`, `/private/linear/order/create`, postData)
 	orderJson, err := util.NewJSON(response)
 	if err == nil {
-		orderJson = orderJson.Get(`result`)
-		if orderJson != nil {
-			parseOrderBybitPerp(order, orderJson.MustMap())
+		if orderJson.Get(`ret_code`).MustInt() == 0 {
+			orderJson = orderJson.Get(`result`)
+			if orderJson != nil {
+				parseOrderBybitPerp(order, orderJson.MustMap())
+			}
+		} else {
+			msg := orderJson.Get(`ret_msg`).MustString()
+			if strings.Contains(msg, `idx`) {
+				util.Notice(`set bybitperp pos mode`)
+				go setSettingsBybitPerp(key, secret, symbol)
+			}
 		}
 	}
 	return
