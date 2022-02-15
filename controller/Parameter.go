@@ -162,7 +162,7 @@ func holdPage(c *gin.Context) {
 	timeBegin = time.Date(timeBegin.Year(), timeBegin.Month(), timeBegin.Day(), 0, 0, 0, 0, timeBegin.Location())
 	failRows, _ := model.AppDB.Model(model.Order{}).Select(`market,amount_type,order_side,date(order_time),refresh_type,count(*)`).
 		Where(`status=?`, `fail`).Group(`market,order_side,date(order_time),amount_type,refresh_type`).
-		Order(`date(order_time) desc`).Rows()
+		Order(`date(order_time) desc,market`).Rows()
 	failData := make(map[string]float64) // market - amount_type - side - date - fail count
 	if failRows != nil {
 		for failRows.Next() {
