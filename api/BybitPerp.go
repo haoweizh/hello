@@ -15,6 +15,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -23,7 +24,7 @@ const wsBybitPerp = `wss://stream.bybit.com/realtime_public`
 const wsStepBybitPerp = 20
 
 var channelMaintainingBybitPerp = false
-var bybitPerpSubConnection = make(map[string]*websocket.Conn)
+var bybitPerpSubConnection sync.Map
 
 func maintainChannelBybitPerp(subscribes []interface{}) {
 	if !channelMaintainingBybitPerp {
@@ -40,9 +41,9 @@ func maintainChannelBybitPerp(subscribes []interface{}) {
 						util.Notice(`maintain bybitperp timeout %s %s %d`,
 							standardSymbol, time.Now().UnixMilli()-int64(bidAsk.Ts), bidAsk.Ts)
 					}
-					if bybitPerpSubConnection[standardSymbol] != nil {
-						if err := SendToConnection(model.BybitPerp, bybitPerpSubConnection[standardSymbol],
-							[]byte(subCmd)); err != nil {
+					conn, ok := bybitPerpSubConnection.Load(standardSymbol)
+					if conn != nil && ok {
+						if err := SendToConnection(model.BybitPerp, conn.(*websocket.Conn), []byte(subCmd)); err != nil {
 							util.SocketInfo("bybitPerp can not resubscribe " + err.Error())
 						}
 					} else {
@@ -77,7 +78,7 @@ var subscribeHandlerBybitPerp = func(connection *websocket.Conn, subscribes []in
 		}
 		_, _, coin := model.GetCoinFromDialect(model.BybitPerp, value.(string))
 		standardSymbol := coin + model.UniStandardTail[model.MarketTypePerp]
-		bybitPerpSubConnection[standardSymbol] = connection
+		bybitPerpSubConnection.Store(standardSymbol, connection)
 	}
 	return err
 }
@@ -116,7 +117,6 @@ func WsDepthServeBybitPerp(markets *model.Markets, orderHandler OrderHandler) ([
 		}
 	}
 	subscribes := GetWSSubscribes(model.BybitPerp, model.SubscribeDepth)
-	bybitPerpSubConnection = make(map[string]*websocket.Conn)
 	return WebSocketClient(model.BybitPerp, wsBybitPerp, subscribes, subscribeHandlerBybitPerp, wsHandler, orderHandler, wsStepBybitPerp)
 }
 

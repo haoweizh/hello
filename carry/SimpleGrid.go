@@ -132,12 +132,12 @@ func getGridPos(key, secret string, setting *model.Setting) (gridPos *GridPos) {
 	}
 	setting.Chance = int64(gridPos.posMiddle)
 	model.AppDB.Save(setting)
-	liquidateAmount := setting.GridAmount
+	//liquidateAmount := setting.GridAmount
 	for i := gridPos.posMiddle + 1; i < len(gridPos.pos); i++ {
 		amount := gridPos.amount
-		if liquidateAmount > 0 {
-			amount = math.Min(2*gridPos.amount, gridPos.amount+liquidateAmount)
-			liquidateAmount = liquidateAmount + gridPos.amount - amount
+		if setting.GridAmount > 0 && i == gridPos.posMiddle+1 {
+			amount = math.Min(2*gridPos.amount, gridPos.amount+setting.GridAmount)
+			//liquidateAmount = liquidateAmount + gridPos.amount - amount
 		}
 		order := api.MustPlaceOrder(key, secret, model.OrderSideSell, model.OrderTypeLimit, setting.Market, setting.Symbol,
 			``, model.FunctionGrid, gridPos.pos[i], gridPos.pos[i], amount, false, false, setting)
@@ -149,9 +149,9 @@ func getGridPos(key, secret string, setting *model.Setting) (gridPos *GridPos) {
 	}
 	for i := gridPos.posMiddle - 1; i >= 0; i-- {
 		amount := gridPos.amount
-		if liquidateAmount < 0 {
-			amount = math.Min(2*gridPos.amount, gridPos.amount-liquidateAmount)
-			liquidateAmount = liquidateAmount + amount - gridPos.amount
+		if setting.GridAmount < 0 && i == gridPos.posMiddle-1 {
+			amount = math.Min(2*gridPos.amount, gridPos.amount-setting.GridAmount)
+			//liquidateAmount = liquidateAmount + amount - gridPos.amount
 		}
 		order := api.MustPlaceOrder(key, secret, model.OrderSideBuy, model.OrderTypeLimit, setting.Market, setting.Symbol,
 			``, model.FunctionGrid, gridPos.pos[i], gridPos.pos[i], amount, false, false, setting)
