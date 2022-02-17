@@ -656,7 +656,8 @@ func filterCross(market, symbol string) bool {
 	// 法币 `TRYB``BRZ``CAD``EUR`
 	// ftx预测`TRUMP``BOLSONARO`
 	// 平台币 `GT` `FTT` `BNB` `OKB`
-	filterCoin := []string{`REEF`, `REAL`, `DFL`, `QI`, `LINK`, `CUSDT`, `ETH`, `BRZ`, `BTC`, `USDT`,
+	// 指数 DEFI
+	filterCoin := []string{`REEF`, `REAL`, `DFL`, `QI`, `LINK`, `CUSDT`, `ETH`, `BRZ`, `BTC`, `USDT`, `DEFI`,
 		`TRYB`, `AMPL`, `IOTA`, `CAD`, `EUR`, `GBP`, `TRUMP`, `BOLSONARO`, `WSB`, `TRADE`, `OKB`, `GT`, `FTT`, `BNB`}
 	for _, coin := range filterCoin {
 		if strings.Index(symbol, coin) == 0 {
@@ -674,7 +675,7 @@ func filterCross(market, symbol string) bool {
 	switch market {
 	case model.Ftx:
 		switch coin {
-		case `DEFI`, `PRIV`, `ALT`, `SHIT`, `MID`, `EXCH`, `DRGN`, `FTT`:
+		case `PRIV`, `ALT`, `SHIT`, `MID`, `EXCH`, `DRGN`, `FTT`:
 			return true
 		}
 	case model.Gate:
