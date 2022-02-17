@@ -558,7 +558,7 @@ func contractDepthIncreWsHandlerMexc(markets *model.Markets, resp *dtos.MexcCont
 	}
 	symbol := addMexcContractSymbolSuffix(resp.Symbol)
 	lastTickId, _ := lastTickIdMexc.Load(symbol)
-	if lastTickId == 0 || lastTickId == (resp.Data.Version-1) {
+	if lastTickId != nil && (lastTickId == 0 || lastTickId == (resp.Data.Version-1)) {
 		lastTickIdMexc.Store(symbol, resp.Data.Version)
 	} else {
 		msg := fmt.Sprintf("Version did not increment by 1, lastTickId=%d, resp: %+v", lastTickId, resp)

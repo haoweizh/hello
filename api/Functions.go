@@ -46,7 +46,7 @@ func GetTradeMaxOKEX(key, secret, symbol string, expireSecond int64) (success bo
 
 func RequireDepthChanReset(markets *model.Markets, market string) bool {
 	needReset, ok := requireReset.Load(market)
-	if needReset.(bool) && ok {
+	if needReset != nil && needReset.(bool) && ok {
 		requireReset.Store(market, false)
 		return true
 	}
