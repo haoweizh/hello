@@ -135,8 +135,8 @@ func GetHoldings(accounts map[string]*model.Account) (holding [][]interface{}) {
 			continue
 		}
 		value, ok := spotMarkets.Load(account.Key)
-		sm := value.(*spotMarket)
-		if ok && sm != nil && sm.balances != nil {
+		if ok && value != nil {
+			sm := value.(*spotMarket)
 			for _, balance := range sm.balances {
 				if balance != nil && balance.Amount != 0 {
 					symbol := balance.Coin + model.UniStandardTail[model.MarketTypeSpot]
@@ -158,8 +158,8 @@ func GetHoldings(accounts map[string]*model.Account) (holding [][]interface{}) {
 			}
 		}
 		value, ok = contractMarkets.Load(account.Key)
-		cm := value.(*contractMarket)
-		if ok && cm != nil && cm.positions != nil {
+		if ok && value != nil {
+			cm := value.(*contractMarket)
 			for _, position := range cm.positions {
 				valid := false
 				setting := model.GetSetting(model.FunctionCross, position.Market, position.Currency)
