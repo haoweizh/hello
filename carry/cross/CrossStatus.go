@@ -21,18 +21,17 @@ var InsufficientCodeOKEX = map[string]bool{`51008`: true, `51119`: true, `51120`
 
 // market/symbol/bool经过人工确认可以cross的币种
 var validCrossCoin = map[string][]string{
-					model.Gate: {`AE`, `HC`, `REEF`, `ONE`, `LSK`, `GLMR`, `LEASH`},
-					model.OKEX: {`AE`, `HC`, `ORBS`, `ONE`, `LSK`, `GLMR`, `LEASH`, `KLAY`},
-					model.Ftx:  {`REEF`, `ORBS`, `ONE`}, model.BybitPerp: {`KLAY`}}
-var carryFail = make(map[string]int64) // key fail num
-var carryStop = make(map[string]bool)
+										model.Gate: {`AE`, `HC`, `REEF`, `ONE`, `LSK`, `GLMR`, `LEASH`},
+										model.OKEX: {`AE`, `HC`, `ORBS`, `ONE`, `LSK`, `GLMR`, `LEASH`},
+										model.Ftx:  {`REEF`, `ORBS`, `ONE`}}
 var lastOrderIndex = make(map[string]map[string]int64)                        // market - symbol - index
 var lastOrders = make(map[string]map[string][]*model.Order, lastOrderLength)  // market - symbol - []order
 var statuses = make(map[string]map[string]map[string]map[string]*CarryStatus) // coin/market/symbol/key/CarryStatus
-var contractMarkets = make(map[string]*contractMarket)                        // key - contractMarket
-var spotMarkets = make(map[string]*spotMarket)                                // key - spotMarket
 var lastCrosses map[string]map[string]string                                  // key/market/symbol
-var crossLock, crossMarketLock sync.Mutex
+var crossLock sync.Mutex
+var spotMarkets, contractMarkets sync.Map // key - spotMarket/contractMarket
+var carryFail sync.Map                    // key fail num
+var carryStop sync.Map                    // key bool
 var crossing bool
 var doCross = false
 
@@ -50,51 +49,6 @@ type spotMarket struct {
 	accountValueInU float64
 	balances        map[string]*model.Balance // symbol/balance
 	collateral      *model.Collateral
-}
-
-func getContractMarket(key string) *contractMarket {
-	defer crossMarketLock.Unlock()
-	crossMarketLock.Lock()
-	if contractMarkets == nil {
-		return nil
-	}
-	return contractMarkets[key]
-}
-
-func clearMarkets(key string) {
-	defer crossMarketLock.Unlock()
-	crossMarketLock.Lock()
-	//spotMarkets = make(map[string]*spotMarket)
-	//contractMarkets = make(map[string]*contractMarket)
-	spotMarkets[key] = nil
-	contractMarkets[key] = nil
-}
-
-func setContractMarket(key string, cm *contractMarket) {
-	defer crossMarketLock.Unlock()
-	crossMarketLock.Lock()
-	if contractMarkets == nil {
-		contractMarkets = make(map[string]*contractMarket)
-	}
-	contractMarkets[key] = cm
-}
-
-func getSpotMarket(key string) *spotMarket {
-	defer crossMarketLock.Unlock()
-	crossMarketLock.Lock()
-	if spotMarkets == nil {
-		return nil
-	}
-	return spotMarkets[key]
-}
-
-func setSpotMarket(key string, sm *spotMarket) {
-	defer crossMarketLock.Unlock()
-	crossMarketLock.Lock()
-	if spotMarkets == nil {
-		spotMarkets = make(map[string]*spotMarket)
-	}
-	spotMarkets[key] = sm
 }
 
 type CarryStatus struct {
@@ -164,12 +118,6 @@ func setLastCrosses(key string, crosses map[string]string) {
 	lastCrosses[key] = crosses
 }
 
-func getCarryStop(key string) (stop bool) {
-	defer crossLock.Unlock()
-	crossLock.Lock()
-	return carryStop[key]
-}
-
 func GetHoldings(accounts map[string]*model.Account) (holding [][]interface{}) {
 	defer crossLock.Unlock()
 	crossLock.Lock()
@@ -186,8 +134,9 @@ func GetHoldings(accounts map[string]*model.Account) (holding [][]interface{}) {
 		if account == nil {
 			continue
 		}
-		sm := getSpotMarket(account.Key)
-		if sm != nil && sm.balances != nil {
+		value, ok := spotMarkets.Load(account.Key)
+		if ok && value != nil {
+			sm := value.(*spotMarket)
 			for _, balance := range sm.balances {
 				if balance != nil && balance.Amount != 0 {
 					symbol := balance.Coin + model.UniStandardTail[model.MarketTypeSpot]
@@ -208,8 +157,9 @@ func GetHoldings(accounts map[string]*model.Account) (holding [][]interface{}) {
 				}
 			}
 		}
-		cm := getContractMarket(account.Key)
-		if cm != nil && cm.positions != nil {
+		value, ok = contractMarkets.Load(account.Key)
+		if ok && value != nil {
+			cm := value.(*contractMarket)
 			for _, position := range cm.positions {
 				valid := false
 				setting := model.GetSetting(model.FunctionCross, position.Market, position.Currency)
@@ -251,8 +201,9 @@ func GetHoldings(accounts map[string]*model.Account) (holding [][]interface{}) {
 }
 
 func GetCrossMarketValue(key string) (market string, inAllSpot, contractAccountValue, holdingSpot, holdingFuture, unRealizedPnl float64) {
-	sm := getSpotMarket(key)
-	if sm != nil {
+	value, ok := spotMarkets.Load(key)
+	if value != nil && ok {
+		sm := value.(*spotMarket)
 		market = sm.market
 		inAllSpot = sm.accountValueInU
 		settings := model.GetSettings(model.FunctionCross, market)
@@ -262,8 +213,9 @@ func GetCrossMarketValue(key string) (market string, inAllSpot, contractAccountV
 			}
 		}
 	}
-	cm := getContractMarket(key)
-	if cm != nil {
+	value, ok = contractMarkets.Load(key)
+	if value != nil && ok {
+		cm := value.(*contractMarket)
 		market = cm.market
 		contractAccountValue = cm.accountValueInU
 		for _, position := range cm.positions {
@@ -299,34 +251,33 @@ func setCarryStatus(coin, market, symbol, key string, status *CarryStatus) {
 }
 
 func pauseCarry(key string) {
-	crossLock.Lock()
 	util.Notice(`%s carrying pause %v`, key, true)
-	carryStop[key] = true
-	crossLock.Unlock()
+	carryStop.Store(key, true)
 	time.Sleep(time.Minute * 30)
-	crossLock.Lock()
 	util.Notice(`%s carrying pause %v`, key, false)
-	carryStop[key] = false
-	crossLock.Unlock()
+	carryStop.Store(key, false)
 }
 
 func addCarryResult(key, market string, success bool) {
-	defer crossLock.Unlock()
-	crossLock.Lock()
+	value, ok := carryFail.Load(key)
+	fails := 0
+	if ok {
+		fails = value.(int)
+	}
 	if success {
-		if carryFail[key] > 0 {
-			carryFail[key] = carryFail[key] - 1
+		if fails > 0 {
+			carryFail.Store(key, fails-1)
 		}
 	} else {
-		carryFail[key] += 2
+		carryFail.Store(key, fails+2)
 	}
-	if carryFail[key] > 0 {
-		util.Notice(`---------- fail size %s %d`, key, carryFail[key])
+	if fails > 0 {
+		util.Notice(`---------- fail size %s %d`, key, fails)
 	}
-	if carryFail[key] > 6 {
+	if fails > 6 {
 		go pauseCarry(key)
-		util.Notice(`----------stop carry %s %d`, key, carryFail[key])
-		carryFail[key] = 0
+		util.Notice(`----------stop carry %s %d`, key, fails)
+		carryFail.Store(key, 0)
 		for _, address := range model.TeamMails {
 			_ = util.SendMail(model.AppConfig.FromMail, model.AppConfig.FromMailAuth, address,
 				`暂停下单`, `market: `+market+` stop `+key)

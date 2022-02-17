@@ -33,7 +33,7 @@ func SendToConnection(market string, connection *websocket.Conn, msg []byte) (er
 		return
 	}
 	if err := connection.WriteMessage(websocket.TextMessage, msg); err != nil {
-		SetRequireReset(market, true)
+		requireReset.Store(market, true)
 		util.Notice(`fail to write to connection ` + string(msg) + err.Error())
 	}
 	return err

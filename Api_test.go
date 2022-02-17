@@ -10,8 +10,10 @@ import (
 	"hello/api"
 	"hello/model"
 	"hello/util"
+	"math"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -244,10 +246,43 @@ func Test_download(t *testing.T) {
 }
 
 func Test_wallet(t *testing.T) {
+	nums := strings.Split(`46.0,350.00,0,100.0,150.0,146.00,0`, `,`)
+	season := make([]float64, 4)
+	item := make([]float64, 3)
+	result := make([][]float64, 3)
+	for i := 0; i < 3; i++ {
+		item[i], _ = strconv.ParseFloat(nums[i], 64)
+	}
+	for i := 3; i < 7; i++ {
+		season[i-3], _ = strconv.ParseFloat(nums[i], 64)
+	}
+	for i := 0; i < len(item); i++ {
+		result[i] = make([]float64, len(season))
+		itemAll := 0.0
+		for j := 0; j < len(season); j++ {
+			result[i][j] = math.Min(math.Min(item[i]/float64(len(season)), season[j]), item[i]-itemAll)
+			season[j] -= result[i][j]
+			itemAll += result[i][j]
+		}
+		for j := 0; j < len(season); j++ {
+			if itemAll < item[i] {
+				amount := math.Min(item[i]-itemAll, season[j])
+				itemAll += amount
+				result[i][j] += amount
+				season[j] -= amount
+			}
+		}
+	}
+	for _, value := range result {
+		for j := 0; j < len(value); j++ {
+			fmt.Println(fmt.Sprintf(`%d季度： %.2f %.2f %.2f`, j+1, value[j]*0.3, value[j]*0.3, value[j]*0.4))
+		}
+		fmt.Println()
+	}
 	model.NewConfig()
 	key, secret := `LWaglQgg6eiJDuTmwG`, `mOnuz8yeZmqGLUT2bNDqgA7kuhKT8QYOyUon`
-	_, rate := api.GetFundingRate(key, secret, model.BybitPerp, `LOOKS_PERP`, nil)
-	_, rate = api.GetFundingRate(key, secret, model.BybitPerp, `LOOKS_PERP`, nil)
+	_, rate := api.GetFundingRate(key, secret, model.BybitPerp, `LOOKS_PERP`)
+	_, rate = api.GetFundingRate(key, secret, model.BybitPerp, `LOOKS_PERP`)
 	marketInfos := api.GetMarketInfos(model.BybitPerp)
 	model.SetMarketInfos(model.BybitPerp, marketInfos)
 	api.PlaceOrder(key, secret, model.OrderSideBuy, model.OrderTypeLimit,

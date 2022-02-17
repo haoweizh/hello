@@ -63,27 +63,10 @@ var (
 	useFullDepthSub = true
 )
 
-var lockWSMexc sync.Mutex
-var lastTickIdMexc = make(map[string]int64) // symbol - int64
+var lastTickIdMexc sync.Map
 
 func getTimeNowStr() string {
 	return time.Now().String()[:19]
-}
-
-func getLastTickId(symbol string) int64 {
-	defer lockWSMexc.Unlock()
-	lockWSMexc.Lock()
-	if val, ok := lastTickIdMexc[symbol]; ok {
-		return val
-	}
-
-	return 0
-}
-
-func setLastTickId(symbol string, tickId int64) {
-	defer lockWSMexc.Unlock()
-	lockWSMexc.Lock()
-	lastTickIdMexc[symbol] = tickId
 }
 
 func SignedRequestMexc(key, secret, method, restUrl, path string, paramsInQuery map[string]interface{}, body string) ([]byte, error) {
@@ -573,11 +556,10 @@ func contractDepthIncreWsHandlerMexc(markets *model.Markets, resp *dtos.MexcCont
 		fmt.Println(msg)
 		return
 	}
-
 	symbol := addMexcContractSymbolSuffix(resp.Symbol)
-	lastTickId := getLastTickId(symbol)
-	if lastTickId == 0 || lastTickId == (resp.Data.Version-1) {
-		setLastTickId(symbol, resp.Data.Version)
+	lastTickId, _ := lastTickIdMexc.Load(symbol)
+	if lastTickId != nil && (lastTickId == 0 || lastTickId == (resp.Data.Version-1)) {
+		lastTickIdMexc.Store(symbol, resp.Data.Version)
 	} else {
 		msg := fmt.Sprintf("Version did not increment by 1, lastTickId=%d, resp: %+v", lastTickId, resp)
 		util.Notice(msg)

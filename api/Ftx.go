@@ -25,9 +25,8 @@ const wsFtx = `wss://ftx.com/ws`
 const wsStepFtx = 50
 
 var lastDepthPingFtx = util.GetNowUnixMillion()
-var socketLockFtx sync.Mutex
 var channelMaintainingFtx = false
-var ftxSymbolConnection = make(map[string]*websocket.Conn)
+var ftxSymbolConnection sync.Map
 
 func maintainChannelFtx(subscribes []interface{}) {
 	if !channelMaintainingFtx {
@@ -40,20 +39,21 @@ func maintainChannelFtx(subscribes []interface{}) {
 				standardSymbol := coin + model.UniStandardTail[marketType]
 				_, bidAsk := model.AppMarkets.GetBidAsk(standardSymbol, model.Ftx)
 				if bidAsk == nil || time.Now().UnixMilli()-int64(bidAsk.Ts) > 120000 {
-					if ftxSymbolConnection[standardSymbol] != nil {
+					conn, success := ftxSymbolConnection.Load(standardSymbol)
+					if conn != nil && success {
 						cmdUnsub := fmt.Sprintf(`{"op": "unsubscribe", "channel": "%s", "market": "%s"}`,
 							subscribe[0], subscribe[1])
 						if bidAsk != nil {
 							util.Notice(`maintain ftx timeout %s %s %d`,
 								standardSymbol, time.Now().UnixMilli()-int64(bidAsk.Ts), bidAsk.Ts)
 						}
-						if err := SendToConnection(model.Ftx, ftxSymbolConnection[standardSymbol], []byte(cmdUnsub)); err != nil {
+						if err := SendToConnection(model.Ftx, conn.(*websocket.Conn), []byte(cmdUnsub)); err != nil {
 							util.SocketInfo("ftx can not resubscribe " + err.Error())
 						}
 						time.Sleep(time.Second * 3)
 						cmdSub := fmt.Sprintf(`{"op": "subscribe", "channel": "%s", "market": "%s"}`,
 							subscribe[0], subscribe[1])
-						if err := SendToConnection(model.Ftx, ftxSymbolConnection[standardSymbol], []byte(cmdSub)); err != nil {
+						if err := SendToConnection(model.Ftx, conn.(*websocket.Conn), []byte(cmdSub)); err != nil {
 							util.SocketInfo("ftx can not resubscribe " + err.Error())
 						}
 						util.Notice(`send unsubscribe-subscribe %s %s %s`, model.Ftx, cmdUnsub, cmdSub)
@@ -62,7 +62,7 @@ func maintainChannelFtx(subscribes []interface{}) {
 					}
 				}
 				if bidAsk == nil || time.Now().UnixMilli()-int64(bidAsk.Ts) > 180000 {
-					SetRequireReset(model.Ftx, true)
+					requireReset.Store(model.Ftx, true)
 				}
 			}
 		}
@@ -86,7 +86,7 @@ var subscribeHandlerFtx = func(connection *websocket.Conn, subscribes []interfac
 	for i := 0; i < len(subscribes); i++ {
 		cmdSubscribe := subscribes[i].([]string)
 		_, marketType, coin := model.GetCoinFromDialect(model.Ftx, cmdSubscribe[1])
-		ftxSymbolConnection[coin+model.UniStandardTail[marketType]] = connection
+		ftxSymbolConnection.Store(coin+model.UniStandardTail[marketType], connection)
 		subCmd := fmt.Sprintf(`{"op": "subscribe", "channel": "%s", "market": "%s"}`,
 			cmdSubscribe[0], cmdSubscribe[1])
 		if err = SendToConnection(model.Ftx, connection, []byte(subCmd)); err != nil {
@@ -100,8 +100,6 @@ var subscribeHandlerFtx = func(connection *websocket.Conn, subscribes []interfac
 
 func WsDepthServeFtx(markets *model.Markets, orderHandler OrderHandler) ([]chan struct{}, error) {
 	wsHandler := func(connection *websocket.Conn, event []byte, orderHandler OrderHandler) {
-		defer socketLockFtx.Unlock()
-		socketLockFtx.Lock()
 		responseJson, err := util.NewJSON(event)
 		if err != nil {
 			util.SocketInfo(`fail to unmarshal json ` + err.Error())
@@ -129,7 +127,6 @@ func WsDepthServeFtx(markets *model.Markets, orderHandler OrderHandler) ([]chan 
 	subscribes := GetWSSubscribes(model.Ftx, subType)
 	subscribes = append(subscribes, GetWSSubscribe(model.Ftx, `USDT/USD`, model.SubscribeDepth))
 	subscribes = append(subscribes, GetWSSubscribe(model.Ftx, `USDT/USD`, model.SubscribeTicker))
-	ftxSymbolConnection = make(map[string]*websocket.Conn)
 	return WebSocketClient(model.Ftx, wsFtx, subscribes, subscribeHandlerFtx, wsHandler, orderHandler, wsStepFtx)
 }
 
