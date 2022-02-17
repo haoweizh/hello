@@ -10,8 +10,7 @@ import (
 	"time"
 )
 
-var channelLock sync.Mutex
-var requireReset = make(map[string]bool)
+var requireReset sync.Map
 var symbolLock sync.Mutex
 var tradeMax = make(map[string]map[string][]float64)        // key - symbol - [maxBuy合约张数/币币个数, maxSell]
 var okTradeMaxResetTime = make(map[string]map[string]int64) // key - symbol - init time in second
@@ -45,17 +44,10 @@ func GetTradeMaxOKEX(key, secret, symbol string, expireSecond int64) (success bo
 	return
 }
 
-func SetRequireReset(market string, reset bool) {
-	channelLock.Lock()
-	defer channelLock.Unlock()
-	requireReset[market] = reset
-}
-
 func RequireDepthChanReset(markets *model.Markets, market string) bool {
-	channelLock.Lock()
-	defer channelLock.Unlock()
-	if requireReset[market] {
-		requireReset[market] = false
+	needReset, ok := requireReset.Load(market)
+	if needReset.(bool) && ok {
+		requireReset.Store(market, false)
 		return true
 	}
 	now := util.GetNowUnixMillion()
@@ -247,11 +239,7 @@ func GetTransfers(key, secret, market string) (balances []*model.Balance) {
 	return balances
 }
 
-func GetFundingRate(key, secret, market, symbol string, lock *sync.Mutex) (success bool, rate float64) {
-	if lock != nil {
-		defer lock.Unlock()
-		lock.Lock()
-	}
+func GetFundingRate(key, secret, market, symbol string) (success bool, rate float64) {
 	//非永续合约的资金费率为0
 	_, marketType, _, _ := model.GetFromStandard(market, symbol)
 	if marketType != model.MarketTypePerp {

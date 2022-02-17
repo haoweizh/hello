@@ -52,7 +52,7 @@ func maintainChannelBybitPerp(subscribes []interface{}) {
 					util.Notice(`send resubscribe %s %s`, model.BybitPerp, subCmd)
 				}
 				if bidAsk == nil || time.Now().UnixMilli()-int64(bidAsk.Ts) > 180000 {
-					SetRequireReset(model.BybitPerp, true)
+					requireReset.Store(model.BybitPerp, true)
 				}
 			}
 		}

@@ -83,7 +83,7 @@ func reSubscribe() {
 	wrongArray := getWrongs()
 	util.Notice(fmt.Sprintf(`>>>>>>>>wrong symbol %v %d`, wrongArray, len(wrongArray)))
 	if len(wrongArray) > len(model.AppMarkets.Connections[model.OKEX])*5 {
-		SetRequireReset(model.OKEX, true)
+		requireReset.Store(model.OKEX, true)
 		util.Notice(fmt.Sprintf(`require reset all okex channel, wrong symbol %d`, len(wrongArray)))
 		return
 	}

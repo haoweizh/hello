@@ -40,7 +40,7 @@ func createContractMarket(key, secret, market string) (cm *contractMarket) {
 		cm.accountValueInU = accountValue
 		cm.collateralsAvailable = availableU
 	}
-	setContractMarket(key, cm)
+	contractMarkets.Store(key, cm)
 	util.Notice(`create cm %s`, key)
 	return
 }
@@ -69,24 +69,26 @@ func createSpotMarket(key, secret, market string) (sm *spotMarket) {
 		}
 	}
 	util.Notice(`create sm %s`, key)
-	setSpotMarket(key, sm)
+	spotMarkets.Store(key, sm)
 	return
 }
 
 func createFromPosition(account *model.Account, setting *model.Setting, valueLimit float64) (carryStatus *CarryStatus, doRevert bool) {
 	key := account.Key
-	cm := getContractMarket(key)
-	if cm == nil {
-		cm = createContractMarket(key, account.Secret, setting.Market)
-		setContractMarket(key, cm)
-		if (setting.Market == model.OKEX || setting.Market == model.Ftx) && getSpotMarket(key) == nil {
-			setSpotMarket(key, createSpotMarket(key, account.Secret, setting.Market))
+	value, ok := contractMarkets.Load(key)
+	if value == nil || !ok {
+		contractMarkets.Store(key, createContractMarket(key, account.Secret, setting.Market))
+		value, _ = contractMarkets.Load(key)
+		spotValue, spotOk := spotMarkets.Load(key)
+		if (setting.Market == model.OKEX || setting.Market == model.Ftx) && (spotValue == nil || !spotOk) {
+			spotMarkets.Store(key, createSpotMarket(key, account.Secret, setting.Market))
 		}
 	}
-	if cm == nil {
+	if value == nil {
 		util.Notice(fmt.Sprintf(`nil contract market %s %s`, setting.Market, setting.Symbol))
 		return nil, false
 	}
+	cm := value.(*contractMarket)
 	getTick, ticks := model.AppMarkets.GetBidAsk(setting.Symbol, setting.Market)
 	price := 0.0
 	if getTick {
@@ -129,15 +131,16 @@ func createFromPosition(account *model.Account, setting *model.Setting, valueLim
 
 func createFromBalance(account *model.Account, setting *model.Setting, valueLimit float64) (carryStatus *CarryStatus, doRevert bool) {
 	key := account.Key
-	sm := getSpotMarket(key)
-	if sm == nil {
-		sm = createSpotMarket(key, account.Secret, setting.Market)
-		setSpotMarket(key, sm)
+	value, ok := spotMarkets.Load(key)
+	if value == nil || !ok {
+		spotMarkets.Store(key, createSpotMarket(key, account.Secret, setting.Market))
+		value, ok = spotMarkets.Load(key)
 	}
-	if sm == nil {
+	if value == nil {
 		util.Notice(fmt.Sprintf(`nil spot market %s %s`, setting.Market, setting.Symbol))
 		return
 	}
+	sm := value.(*spotMarket)
 	getTick, ticks := model.AppMarkets.GetBidAsk(setting.Symbol, setting.Market)
 	price := 0.0
 	if getTick {
@@ -200,7 +203,7 @@ func initStatus(account *model.Account, setting *model.Setting) (status *CarrySt
 		status, doRevert = createFromBalance(account, setting, localLimit)
 	} else if marketType == model.MarketTypePerp {
 		status, doRevert = createFromPosition(account, setting, localLimit)
-		_, fundingRate = api.GetFundingRate(account.Key, account.Secret, setting.Market, setting.Symbol, nil)
+		_, fundingRate = api.GetFundingRate(account.Key, account.Secret, setting.Market, setting.Symbol)
 		fundingRate *= 0.9
 	}
 	if statuses == nil || status == nil {
@@ -310,7 +313,8 @@ func equalAccount(i int, equalChan chan int, accounts map[string]*model.Account,
 	needEqual := false
 	keys := ``
 	for _, account := range accounts {
-		clearMarkets(account.Key)
+		spotMarkets.Delete(account.Key)
+		contractMarkets.Delete(account.Key)
 		keys += account.Key + `,`
 	}
 	util.Notice(`...... enter clearing cross %d %s`, i, keys)
@@ -359,7 +363,7 @@ func equalCoin(coin string, statuses []*CarryStatus) (isEqual bool, msg string) 
 		holding += status.Holding
 		holdStr += fmt.Sprintf(`[%s %s %f]`, status.market, status.symbol, status.Holding)
 		getTick, tick := model.AppMarkets.GetBidAsk(status.symbol, status.market)
-		getFunding, rate := api.GetFundingRate(status.account.Key, status.account.Secret, status.market, status.symbol, nil)
+		getFunding, rate := api.GetFundingRate(status.account.Key, status.account.Secret, status.market, status.symbol)
 		if !getTick || !getFunding {
 			return false, fmt.Sprintf(`no tick or funding rate when equal %s %s`, status.market, status.symbol)
 		}
@@ -519,7 +523,9 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarrySta
 	if now.Hour()%8 == 0 && now.Minute() == 0 && now.Second() < 30 {
 		return
 	}
-	if getCarryStop(carryStatus.account.Key) || getCarryStop(carryStatusRelate.account.Key) {
+	stopStatus, okStatus := carryStop.Load(carryStatus.account.Key)
+	stopRelate, okRelate := carryStop.Load(carryStatusRelate.account.Key)
+	if stopStatus == nil || stopStatus.(bool) || stopRelate == nil || stopRelate.(bool) || !okStatus || !okRelate {
 		util.Debug(`stop carry for 10 times unknown carry %s or %s %s`,
 			carryStatus.account.Key, carryStatusRelate.account.Key, coin)
 		return
@@ -640,10 +646,11 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarrySta
 
 func initLimitBuyAndSell(status *CarryStatus, setting *model.Setting, price float64) {
 	if status.isSpot {
-		sm := getSpotMarket(status.account.Key)
-		if sm == nil { // 此时正在进行每分钟的清理找平
+		value, ok := spotMarkets.Load(status.account.Key)
+		if !ok || value == nil { // 此时正在进行每分钟的清理找平
 			return
 		}
+		sm := value.(*spotMarket)
 		status.LimitBuy = math.Min(openValueLimit, math.Min(sm.availableU/5, sm.accountValueInU/15)) / price
 		balance := sm.balances[setting.Symbol]
 		if balance != nil {
@@ -652,10 +659,11 @@ func initLimitBuyAndSell(status *CarryStatus, setting *model.Setting, price floa
 			status.LimitSell = 0
 		}
 	} else {
-		cm := getContractMarket(status.account.Key)
-		if cm == nil {
+		value, ok := contractMarkets.Load(status.account.Key)
+		if value == nil || !ok {
 			return
 		}
+		cm := value.(*contractMarket)
 		limitAmount := math.Min(cm.accountValueInU/5, math.Min(cm.collateralsAvailable, openValueLimit)) / price
 		availableAmount := cm.collateralsAvailable / price
 		status.LimitSell = limitAmount
@@ -693,8 +701,13 @@ func placeCross(statusBuy, statusSell *CarryStatus, priceBuy, priceSell, amount 
 }
 
 func placeStatus(status *CarryStatus, price float64, amount float64) {
-	sm := getSpotMarket(status.account.Key)
-	cm := getContractMarket(status.account.Key)
+	valueSpot, okSpot := spotMarkets.Load(status.account.Key)
+	valueContract, okContract := contractMarkets.Load(status.account.Key)
+	if !okSpot || valueSpot == nil || !okContract || valueContract == nil {
+		return
+	}
+	sm := valueSpot.(*spotMarket)
+	cm := valueContract.(*contractMarket)
 	if status.isSpot {
 		balance := sm.balances[status.symbol]
 		if balance == nil {
@@ -787,8 +800,8 @@ var PostOrderCross = func(order *model.Order, setting *model.Setting) {
 			case model.BinancePerp, model.BinanceSpot:
 				if strings.Contains(InsufficientCodeBinance, order.ErrCode) {
 					util.Notice(`reset binance trade max with %s %s`, order.ErrCode, order.AmountType)
-					setSpotMarket(order.AmountType, nil)
-					setContractMarket(order.AmountType, nil)
+					spotMarkets.Delete(order.AmountType)
+					contractMarkets.Delete(order.AmountType)
 					initStatus(account, setting)
 					unknownFail = false
 				}

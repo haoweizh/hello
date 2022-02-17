@@ -25,7 +25,6 @@ const wsFtx = `wss://ftx.com/ws`
 const wsStepFtx = 50
 
 var lastDepthPingFtx = util.GetNowUnixMillion()
-var socketLockFtx sync.Mutex
 var channelMaintainingFtx = false
 var ftxSymbolConnection sync.Map
 
@@ -63,7 +62,7 @@ func maintainChannelFtx(subscribes []interface{}) {
 					}
 				}
 				if bidAsk == nil || time.Now().UnixMilli()-int64(bidAsk.Ts) > 180000 {
-					SetRequireReset(model.Ftx, true)
+					requireReset.Store(model.Ftx, true)
 				}
 			}
 		}
@@ -101,8 +100,6 @@ var subscribeHandlerFtx = func(connection *websocket.Conn, subscribes []interfac
 
 func WsDepthServeFtx(markets *model.Markets, orderHandler OrderHandler) ([]chan struct{}, error) {
 	wsHandler := func(connection *websocket.Conn, event []byte, orderHandler OrderHandler) {
-		defer socketLockFtx.Unlock()
-		socketLockFtx.Lock()
 		responseJson, err := util.NewJSON(event)
 		if err != nil {
 			util.SocketInfo(`fail to unmarshal json ` + err.Error())

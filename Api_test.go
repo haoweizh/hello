@@ -260,13 +260,14 @@ func Test_wallet(t *testing.T) {
 		result[i] = make([]float64, len(season))
 		itemAll := 0.0
 		for j := 0; j < len(season); j++ {
-			result[i][j] = math.Min(item[i]/float64(len(season)), season[j])
+			result[i][j] = math.Min(math.Min(item[i]/float64(len(season)), season[j]), item[i]-itemAll)
 			season[j] -= result[i][j]
 			itemAll += result[i][j]
 		}
 		for j := 0; j < len(season); j++ {
 			if itemAll < item[i] {
 				amount := math.Min(item[i]-itemAll, season[j])
+				itemAll += amount
 				result[i][j] += amount
 				season[j] -= amount
 			}
@@ -280,8 +281,8 @@ func Test_wallet(t *testing.T) {
 	}
 	model.NewConfig()
 	key, secret := `LWaglQgg6eiJDuTmwG`, `mOnuz8yeZmqGLUT2bNDqgA7kuhKT8QYOyUon`
-	_, rate := api.GetFundingRate(key, secret, model.BybitPerp, `LOOKS_PERP`, nil)
-	_, rate = api.GetFundingRate(key, secret, model.BybitPerp, `LOOKS_PERP`, nil)
+	_, rate := api.GetFundingRate(key, secret, model.BybitPerp, `LOOKS_PERP`)
+	_, rate = api.GetFundingRate(key, secret, model.BybitPerp, `LOOKS_PERP`)
 	marketInfos := api.GetMarketInfos(model.BybitPerp)
 	model.SetMarketInfos(model.BybitPerp, marketInfos)
 	api.PlaceOrder(key, secret, model.OrderSideBuy, model.OrderTypeLimit,
