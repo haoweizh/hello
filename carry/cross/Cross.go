@@ -523,9 +523,9 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarrySta
 	if now.Hour()%8 == 0 && now.Minute() == 0 && now.Second() < 30 {
 		return
 	}
-	stopStatus, _ := carryStop.Load(carryStatus.account.Key)
-	stopRelate, _ := carryStop.Load(carryStatusRelate.account.Key)
-	if (stopStatus != nil && stopStatus.(bool)) || (stopRelate != nil || stopRelate.(bool)) {
+	stopStatus, okStatus := carryStop.Load(carryStatus.account.Key)
+	stopRelate, okRelate := carryStop.Load(carryStatusRelate.account.Key)
+	if (okStatus && stopStatus.(bool)) || (okRelate && stopRelate.(bool)) {
 		util.Debug(`stop carry for 10 times unknown carry %s or %s %s`,
 			carryStatus.account.Key, carryStatusRelate.account.Key, coin)
 		return
