@@ -32,7 +32,7 @@ func SendToConnection(market string, connection *websocket.Conn, msg []byte) (er
 		util.Notice(`fail to write to nil connection`)
 		return
 	}
-	if err := connection.WriteMessage(websocket.TextMessage, msg); err != nil {
+	if err = connection.WriteMessage(websocket.TextMessage, msg); err != nil {
 		requireReset.Store(market, true)
 		util.Notice(`fail to write to connection ` + string(msg) + err.Error())
 	}
@@ -61,8 +61,12 @@ func PongAllConnectionsInterval(market string, milliseconds int) (err error) {
 			continue
 		}
 		deadline := time.Now().Add(5 * time.Second)
-		if err = connection.WriteControl(websocket.PongMessage, []byte{}, deadline); err != nil {
-			util.Notice(fmt.Sprintf(`fail to pong connection %d return: %s`, i, err.Error()))
+		if writeError := connection.WriteControl(websocket.PongMessage, []byte{}, deadline); writeError != nil {
+			util.Notice(fmt.Sprintf(`fail to pong connection %d return: %s`, i, writeError.Error()))
+			requireReset.Store(market, true)
+			if writeError != nil {
+				err = writeError
+			}
 		}
 		time.Sleep(time.Millisecond * time.Duration(milliseconds))
 	}
