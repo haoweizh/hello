@@ -41,7 +41,6 @@ func createContractMarket(key, secret, market string) (cm *contractMarket) {
 		cm.collateralsAvailable = availableU
 	}
 	contractMarkets.Store(key, cm)
-	util.Notice(`create cm %s`, key)
 	return
 }
 
@@ -68,7 +67,6 @@ func createSpotMarket(key, secret, market string) (sm *spotMarket) {
 			}
 		}
 	}
-	util.Notice(`create sm %s`, key)
 	spotMarkets.Store(key, sm)
 	return
 }

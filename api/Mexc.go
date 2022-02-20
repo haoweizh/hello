@@ -23,51 +23,41 @@ import (
 )
 
 const (
-	spotRestUrl       = "www.mexc.com"
-	contractRestUrl   = "contract.mexc.com"
-	mexcContractWSUrl = "wss://contract.mexc.com/ws"
-
+	spotRestUrl                   = "www.mexc.com"
+	contractRestUrl               = "contract.mexc.com"
+	mexcContractWSUrl             = "wss://contract.mexc.com/ws"
 	mexcContractDepthIncreSubType = "mexcContractDepthIncreSubType" // Contract深度增量订阅
 	mexcContractDepthFullSubType  = "mexcContractDepthFullSubType"  // Contract深度全量订阅（按档位）
 	mexcContractTickerSubType     = "mexcContractTickerSubType"
-
-	mexcContractSymbolSuffix = "_SWAP"
-
-	wsStepMexc = 20
+	wsStepMexc                    = 20
 )
 
 // spot rest api path
 const (
-	spot_place_order_path             = "/open/api/v2/order/place"            // 下单
-	spot_cancel_orders_by_symbol_path = "/open/api/v2/order/cancel_by_symbol" // 按交易对撤销订单
-	spot_query_order_by_id_path       = "/open/api/v2/order/query"            // 查询订单
-	spot_get_all_market_symbols_path  = "/open/api/v2/market/symbols"         // 所有交易对信息
+	spotPlaceOrderPath               = "/open/api/v2/order/place"            // 下单
+	spotCancelOrdersBySymbolPath     = "/open/api/v2/order/cancel_by_symbol" // 按交易对撤销订单
+	spotQueryOrderByIdPath           = "/open/api/v2/order/query"            // 查询订单
+	spot_get_all_market_symbols_path = "/open/api/v2/market/symbols"         // 所有交易对信息
 )
 
 // contract rest api path
 const (
-	contract_place_order_path                  = "/api/v1/private/order/submit"         // 下单
-	contract_cancel_orders_by_symbol_path      = "/api/v1/private/order/cancel_all"     // 撤销某个合约下的所有未完成订单
-	contract_query_order_by_id_path            = "api/v1/private/order/get"             // 根据订单号查询订单
-	contract_get_symbol_market_path            = "/api/v1/contract/detail"              // 获取合约信息
-	contract_get_symbol_depth_path_fmt         = "/api/v1/contract/depth/%s"            // 获取合约深度信息
-	contract_get_symbol_depth_commits_path_fmt = "/api/v1/contract/depth_commits/%s/%d" // 获取合约最近N条深度信息快照
+	contractPlaceOrderPath               = "/api/v1/private/order/submit"         // 下单
+	contractCancelOrdersBySymbolPath     = "/api/v1/private/order/cancel_all"     // 撤销某个合约下的所有未完成订单
+	contractQueryOrderByIdPath           = "api/v1/private/order/get"             // 根据订单号查询订单
+	contractGetSymbolMarketPath          = "/api/v1/contract/detail"              // 获取合约信息
+	contractGetSymbolDepthPathFmt        = "/api/v1/contract/depth/%s"            // 获取合约深度信息
+	contractGetSymbolDepthCommitsPathFmt = "/api/v1/contract/depth_commits/%s/%d" // 获取合约最近N条深度信息快照
 )
 
 var (
-	emptySymbolError        = errors.New("Symbol is empty")
-	zeroPriceError          = errors.New("Price is 0")
-	zeroAmountError         = errors.New("Amount is 0")
-	failedToPlaceOrderError = errors.New("Failed to place order")
-
-	useFullDepthSub = true
+	emptySymbolError        = errors.New("symbol is empty")
+	zeroPriceError          = errors.New("price is 0")
+	zeroAmountError         = errors.New("amount is 0")
+	failedToPlaceOrderError = errors.New("failed to place order")
 )
 
 var lastTickIdMexc sync.Map
-
-func getTimeNowStr() string {
-	return time.Now().String()[:19]
-}
 
 func SignedRequestMexc(key, secret, method, restUrl, path string, paramsInQuery map[string]interface{}, body string) ([]byte, error) {
 	var parameters string
@@ -85,7 +75,6 @@ func SignedRequestMexc(key, secret, method, restUrl, path string, paramsInQuery 
 	} else {
 		sign = genSign(key, secret, reqTime, parameters)
 	}
-
 	headers := map[string]string{
 		"Request-Time": reqTime,
 		"ApiKey":       key,
@@ -93,19 +82,15 @@ func SignedRequestMexc(key, secret, method, restUrl, path string, paramsInQuery 
 		"Content-Type": "application/json",
 		"Accept":       "application/json",
 	}
-
 	// util.ComposeParams(paramsInQuery)
 	requestUrl := fmt.Sprintf(`https://%s%s`, restUrl, path)
 	if len(parameters) > 0 {
 		requestUrl = requestUrl + "?" + parameters
 	}
-
 	responseBody, err := util.HttpRequest(method, requestUrl, body, headers, 60)
 	logMsg := fmt.Sprintf(`Mexc key %s, request %s, headers %v, parameters %s, body %s, return %s err %+v`,
 		key, requestUrl, headers, parameters, body, string(responseBody), err)
 	util.SocketInfo(logMsg)
-	fmt.Println(logMsg)
-
 	return responseBody, err
 }
 
@@ -125,31 +110,21 @@ func publicRequestMexc(method, restUrl, path string, paramsInQuery map[string]in
 		}
 		parameters = param.Encode()
 	}
-
-	headers := map[string]string{
-		"Content-Type": "application/json",
-		"Accept":       "application/json",
-	}
-
+	headers := map[string]string{"Content-Type": "application/json", "Accept": "application/json"}
 	// util.ComposeParams(paramsInQuery)
 	requestUrl := fmt.Sprintf(`https://%s%s`, restUrl, path)
 	if len(parameters) > 0 {
 		requestUrl = requestUrl + "?" + parameters
 	}
-
 	responseBody, err := util.HttpRequest(method, requestUrl, body, headers, 60)
 	logMsg := fmt.Sprintf(`Mexc request %s headers %v parameters %s return %s err %+v`, requestUrl, headers, parameters, string(responseBody), err)
 	util.SocketInfo(logMsg)
-	//fmt.Println(logMsg)
-
 	return responseBody, err
 }
 
 // region cancel orders
-
 func cancelOrdersMexc(key string, secret string, symbol string) (result bool) {
-	if isMexcContractSymbol(symbol) {
-		symbol = removeMexcContractSymbolSuffix(symbol)
+	if util.EndWith(symbol, model.UniStandardTail[model.MarketTypePerp]) {
 		return contractCancelOrdersMexc(key, secret, symbol)
 	} else {
 		return spotCancelOrdersMexc(key, secret, symbol)
@@ -158,7 +133,7 @@ func cancelOrdersMexc(key string, secret string, symbol string) (result bool) {
 
 func spotCancelOrdersMexc(key string, secret string, symbol string) bool {
 	paramsInQuery := map[string]interface{}{"symbol": symbol}
-	responseBytes, err := SignedRequestMexc(key, secret, http.MethodDelete, spotRestUrl, spot_cancel_orders_by_symbol_path, paramsInQuery, "")
+	responseBytes, err := SignedRequestMexc(key, secret, http.MethodDelete, spotRestUrl, spotCancelOrdersBySymbolPath, paramsInQuery, "")
 	if err != nil {
 		logMsg := fmt.Sprintf(`[spotCancelOrdersMexc] Failed to cancel orders by symbol %s err %+v`, symbol, err)
 		fmt.Println(logMsg)
@@ -173,7 +148,6 @@ func spotCancelOrdersMexc(key string, secret string, symbol string) bool {
 		util.Notice(logMsg)
 		return false
 	}
-
 	failedOrderIDs := response.GetFailedOrderIDsMexc()
 	if len(failedOrderIDs) > 0 {
 		logMsg := fmt.Sprintf(`[spotCancelOrdersMexc] Failed to cancel orders %+v by symbol %s`, failedOrderIDs, symbol)
@@ -187,7 +161,7 @@ func spotCancelOrdersMexc(key string, secret string, symbol string) bool {
 
 func contractCancelOrdersMexc(key string, secret string, symbol string) bool {
 	body := fmt.Sprintf(`{"symbol":"%s"}`, symbol)
-	responseBytes, err := SignedRequestMexc(key, secret, http.MethodPost, contractRestUrl, contract_cancel_orders_by_symbol_path, nil, body)
+	responseBytes, err := SignedRequestMexc(key, secret, http.MethodPost, contractRestUrl, contractCancelOrdersBySymbolPath, nil, body)
 	if err != nil {
 		logMsg := fmt.Sprintf(`[contractCancelOrdersMexc] Failed to cancel orders by symbol %s err %+v`, symbol, err)
 		fmt.Println(logMsg)
@@ -202,22 +176,15 @@ func contractCancelOrdersMexc(key string, secret string, symbol string) bool {
 		util.Notice(logMsg)
 		return false
 	}
-
 	return true
 }
 
 // endregion
-
-func getMaxLoanMexc(coin string) (success bool, maxLoan float64) {
-	return true, 0
-}
-
 func queryOrderMexc(key, secret string, order *model.Order) {
 	if order.Market != model.Mexc || order.OrderId == "" {
 		return
 	}
-	if isMexcContractSymbol(order.Symbol) {
-		order.Symbol = removeMexcContractSymbolSuffix(order.Symbol)
+	if util.EndWith(order.Symbol, model.MarketTypePerp) {
 		contractQueryOrderMexc(key, secret, order)
 	} else {
 		spotQueryOrderMexc(key, secret, order)
@@ -229,7 +196,7 @@ func spotQueryOrderMexc(key, secret string, order *model.Order) {
 		return
 	}
 	paramsInQuery := map[string]interface{}{"order_ids": order.OrderId}
-	respBytes, err := SignedRequestMexc(key, secret, http.MethodGet, spotRestUrl, spot_query_order_by_id_path, paramsInQuery, "")
+	respBytes, err := SignedRequestMexc(key, secret, http.MethodGet, spotRestUrl, spotQueryOrderByIdPath, paramsInQuery, "")
 	if err != nil {
 		logMsg := fmt.Sprintf(`[spotQueryOrderMexc] Failed to query orders by order_id %s err %+v`, order.OrderId, err)
 		fmt.Println(logMsg)
@@ -244,7 +211,6 @@ func spotQueryOrderMexc(key, secret string, order *model.Order) {
 		util.Notice(logMsg)
 		return
 	}
-
 	if len(resp.Data) == 1 {
 		success, marketType, coin := model.GetCoinFromDialect(model.Mexc, resp.Data[0].Symbol)
 		if success { // TODO 需要确保Mexc永续和现货tail不同，否则marketType不可用
@@ -259,9 +225,7 @@ func spotQueryOrderMexc(key, secret string, order *model.Order) {
 		order.OrderType = resp.Data[0].Type
 		return
 	}
-
 	logMsg := fmt.Sprintf(`[spotQueryOrderMexc] Get %d orders by order_id %s`, len(resp.Data), order.OrderId)
-	//fmt.Println(logMsg)
 	util.SocketInfo(logMsg)
 }
 
@@ -270,7 +234,7 @@ func contractQueryOrderMexc(key, secret string, order *model.Order) {
 		return
 	}
 	paramsInQuery := map[string]interface{}{"order_id": order.OrderId}
-	respBytes, err := SignedRequestMexc(key, secret, http.MethodGet, contractRestUrl, contract_query_order_by_id_path, paramsInQuery, "")
+	respBytes, err := SignedRequestMexc(key, secret, http.MethodGet, contractRestUrl, contractQueryOrderByIdPath, paramsInQuery, "")
 	if err != nil {
 		logMsg := fmt.Sprintf(`[contractQueryOrderMexc] Failed to query orders by order_id %s err %+v`, order.OrderId, err)
 		util.Notice(logMsg)
@@ -313,18 +277,14 @@ func placeOrderMexc(key, secret string, order *model.Order, orderSide, orderType
 	if amount == 0 {
 		return "", zeroAmountError
 	}
-
 	if orderType == model.OrderTypeLimit {
 		orderType = "LIMIT_ORDER"
 	}
-
 	price, decimal := model.FormatPrice(model.Mexc, symbol, orderSide, price)
 	priceStr := util.CutTailZero(strconv.FormatFloat(price, 'f', decimal, 64))
 	formattedAmount := model.GetAmountInMarket(model.Mexc, symbol, amount, price)
 	amountStr := util.CutTailZero(fmt.Sprintf(`%f`, formattedAmount))
-
-	if isMexcContractSymbol(symbol) {
-		symbol = removeMexcContractSymbolSuffix(symbol)
+	if util.EndWith(symbol, model.UniStandardTail[model.MarketTypePerp]) {
 		return contractPlaceOrderMex(key, secret, order, orderSide, orderType, symbol, getFloat64OrDefault(priceStr), getFloat64OrDefault(amountStr))
 	} else {
 		return spotPlaceOrderMex(key, secret, order, orderSide, orderType, symbol, getFloat64OrDefault(priceStr), getFloat64OrDefault(amountStr))
@@ -340,7 +300,7 @@ func spotPlaceOrderMex(key, secret string, order *model.Order, orderSide, orderT
 		util.Notice(logMsg)
 		return "", err
 	}
-	respBytes, err := SignedRequestMexc(key, secret, http.MethodPost, spotRestUrl, spot_place_order_path, nil, string(requestBody))
+	respBytes, err := SignedRequestMexc(key, secret, http.MethodPost, spotRestUrl, spotPlaceOrderPath, nil, string(requestBody))
 	if err != nil {
 		return "", err
 	}
@@ -353,7 +313,6 @@ func spotPlaceOrderMex(key, secret string, order *model.Order, orderSide, orderT
 		util.Notice(logMsg)
 		return "", failedToPlaceOrderError
 	}
-
 	return placeOrderResp.Data, nil
 }
 
@@ -366,7 +325,7 @@ func contractPlaceOrderMex(key, secret string, order *model.Order, orderSide, or
 		util.Notice(logMsg)
 		return "", err
 	}
-	respBytes, err := SignedRequestMexc(key, secret, http.MethodPost, contractRestUrl, contract_place_order_path, nil, string(requestBody))
+	respBytes, err := SignedRequestMexc(key, secret, http.MethodPost, contractRestUrl, contractPlaceOrderPath, nil, string(requestBody))
 	if err != nil {
 		logMsg := fmt.Sprintf(`[contractPlaceOrderMex] SignedRequestMexc failed %+v, err %s, resp: %s`, request, err.Error(), string(respBytes))
 		fmt.Println(logMsg)
@@ -382,13 +341,8 @@ func contractPlaceOrderMex(key, secret string, order *model.Order, orderSide, or
 		util.Notice(logMsg)
 		return "", failedToPlaceOrderError
 	}
-
 	return strconv.FormatInt(resp.Data, 10), nil
 }
-
-// endregion
-
-var channelMaintainingMexc = false
 
 func getMarketsMexc(key, secret string) (success bool, marketInfos map[string]*model.MarketInfo) {
 	marketInfos = make(map[string]*model.MarketInfo)
@@ -396,13 +350,12 @@ func getMarketsMexc(key, secret string) (success bool, marketInfos map[string]*m
 		util.Notice(fmt.Sprintf("appendContractMarketMexc failed: %v", err))
 		return false, marketInfos
 	}
-
 	return true, marketInfos
 }
 
 func appendContractMarketMexc(key, secret string, marketInfos map[string]*model.MarketInfo) error {
 	util.SocketInfo("[appendContractMarketMexc] Start to get contract market infos")
-	respBytes, err := SignedRequestMexc(key, secret, http.MethodGet, contractRestUrl, contract_get_symbol_market_path, nil, "")
+	respBytes, err := SignedRequestMexc(key, secret, http.MethodGet, contractRestUrl, contractGetSymbolMarketPath, nil, "")
 	if err != nil {
 		return err
 	}
@@ -414,9 +367,8 @@ func appendContractMarketMexc(key, secret string, marketInfos map[string]*model.
 		util.Notice(logMsg)
 		return err
 	}
-
 	for _, symbolInfo := range resp.Data {
-		success, marketType, coin := model.GetCoinFromDialect(model.Mexc, addMexcContractSymbolSuffix(symbolInfo.Symbol))
+		success, marketType, coin := model.GetCoinFromDialect(model.Mexc, symbolInfo.Symbol)
 		if !success {
 			continue
 		}
@@ -429,14 +381,13 @@ func appendContractMarketMexc(key, secret string, marketInfos map[string]*model.
 		marketInfo.SizeMax = symbolInfo.MaxVol                 // 订单张数上限
 		marketInfo.SizeIncrement = float64(symbolInfo.VolUnit) // 数量的最小步进单位
 		marketInfo.CTCurrency = symbolInfo.BaseCoin
-		marketInfo.CTValue = float64(symbolInfo.ContractSize) // 一个合约等于多少个币
+		marketInfo.CTValue = symbolInfo.ContractSize // 一个合约等于多少个币
 		marketInfos[marketInfo.Name] = marketInfo
 	}
-
 	return nil
 }
 
-/*
+/*WsDepthServeMexc 只支持永续合约
 如何维护增量深度信息:
 1. 通过接口 https://contract.mexc.com/api/v1/contract/depth/BTC_USDT获取全量深度信息，保存当前version
 2. 订阅ws深度信息，收到更新后，如果收到的数据version>当前version,同一个价位，后收到的更新覆盖前面的。
@@ -447,48 +398,31 @@ func appendContractMarketMexc(key, secret string, marketInfos map[string]*model.
 7. 每一个event中的挂单量代表这个价格目前的挂单量绝对值，而不是相对变化。
 8. 如果某个价格对应的挂单量为0，表示该价位的挂单已经撤单或者被吃，应该移除这个价位
 */
-
 func WsDepthServeMexc(markets *model.Markets, orderHandler OrderHandler, useFullDepthSub bool) (channels []chan struct{}, err error) {
 	symbols := model.GetMarketSymbols(model.Mexc)
-	var spotSymbols []string
-	var contractSymbols []string
-	for k, v := range symbols {
-		if v && !isMexcContractSymbol(k) {
-			spotSymbols = append(spotSymbols, k)
-		} else {
-			contractSymbols = append(contractSymbols, k)
-		}
-	}
-
 	if !useFullDepthSub {
-		msg := getTimeNowStr() + " initializing spot depth full."
+		msg := time.Now().String()[:19] + " initializing spot depth full."
 		util.Notice(msg)
 		fmt.Println(msg)
-
 		limiter := time.Tick(100 * time.Millisecond)
-
 		//  初始化contract深度全量信息, 10次每秒
-		for _, symbol := range contractSymbols {
+		for symbol := range symbols {
 			<-limiter
-			symbol := removeMexcContractSymbolSuffix(symbol)
-			initMexcContractDepth(markets, symbol)
-
+			_, _, _, dialectSymbol := model.GetFromStandard(model.Mexc, symbol)
+			initMexcContractDepth(markets, dialectSymbol)
 			<-limiter
-			syncMexcContractDepthCommits(markets, symbol)
+			syncMexcContractDepthCommits(markets, dialectSymbol)
 		}
-
-		msg = getTimeNowStr() + " finished initializing contract depth full."
+		msg = time.Now().String()[:19] + " finished initializing contract depth full."
 		util.Notice(msg)
 		fmt.Println(msg)
 	}
-
 	wsHandler := func(connection *websocket.Conn, event []byte, orderHandler OrderHandler) {
 		newJson, wsErr := util.NewJSON(event)
 		if wsErr != nil {
 			util.SocketInfo(`MEXC fail to unmarshal json ` + err.Error())
 			return
 		}
-
 		channel, _ := newJson.Get("channel").String()
 		ts, _ := newJson.Get("ts").Int64()
 		if ts != 0 { // contract类型的推送10档全量和增量的msg结构完全一样，所以只能解析之后通过bids/asks数量判断
@@ -549,14 +483,14 @@ func contractDepthIncreWsHandlerMexc(markets *model.Markets, resp *dtos.MexcCont
 	if resp == nil {
 		return
 	}
-
 	if !resp.IsValidChannel() {
 		msg := fmt.Sprintf("InvalidChannel in %+v", resp)
 		util.Notice(msg)
 		fmt.Println(msg)
 		return
 	}
-	symbol := addMexcContractSymbolSuffix(resp.Symbol)
+	_, marketType, coin := model.GetCoinFromDialect(model.Mexc, resp.Symbol)
+	symbol := coin + model.UniStandardTail[marketType]
 	lastTickId, _ := lastTickIdMexc.Load(symbol)
 	if lastTickId != nil && (lastTickId == 0 || lastTickId == (resp.Data.Version-1)) {
 		lastTickIdMexc.Store(symbol, resp.Data.Version)
@@ -566,9 +500,6 @@ func contractDepthIncreWsHandlerMexc(markets *model.Markets, resp *dtos.MexcCont
 		fmt.Println(msg)
 		syncMexcContractDepthCommits(markets, symbol)
 	}
-
-	//fmt.Printf("%s mexc contract depth sub result %+v \n", getTimeNowStr(), resp)
-
 	ts := resp.Ts
 	now := int(time.Now().UnixNano() / int64(time.Millisecond))
 	if ts == 0 {
@@ -588,7 +519,6 @@ func contractDepthIncreWsHandlerMexc(markets *model.Markets, resp *dtos.MexcCont
 			bids = append(bids, *tick)
 		}
 	}
-
 	bidAsk := &model.BidAsk{
 		Ts:         ts,
 		TsReceived: now,
@@ -596,22 +526,20 @@ func contractDepthIncreWsHandlerMexc(markets *model.Markets, resp *dtos.MexcCont
 		Bids:       bids,
 		Asks:       asks,
 	}
-	setMexcAskBid(markets, addMexcContractSymbolSuffix(resp.Symbol), bidAsk)
+	setMexcAskBid(markets, symbol, bidAsk)
 }
 
-// contract全量深度订阅hanlder
+// contract全量深度订阅handler
 func contractDepthFullWsHandlerMexc(markets *model.Markets, resp *dtos.MexcContractDepthWsResp, orderHandler OrderHandler) {
 	if resp == nil {
 		return
 	}
-
 	if !resp.IsValidChannel() {
 		msg := fmt.Sprintf("InvalidChannel in %+v", resp)
 		util.Notice(msg)
 		fmt.Println(msg)
 		return
 	}
-
 	ts := resp.Ts
 	now := int(time.Now().UnixNano() / int64(time.Millisecond))
 	if ts == 0 {
@@ -631,7 +559,6 @@ func contractDepthFullWsHandlerMexc(markets *model.Markets, resp *dtos.MexcContr
 			bids = append(bids, *tick)
 		}
 	}
-
 	bidAsk := &model.BidAsk{
 		Ts:         ts,
 		TsReceived: now,
@@ -639,9 +566,8 @@ func contractDepthFullWsHandlerMexc(markets *model.Markets, resp *dtos.MexcContr
 		Bids:       bids,
 		Asks:       asks,
 	}
-
-	symbol := addMexcContractSymbolSuffix(resp.Symbol)
-
+	_, marketType, coin := model.GetCoinFromDialect(model.Mexc, resp.Symbol)
+	symbol := coin + model.UniStandardTail[marketType]
 	haveOld, old := markets.GetBidAsk(symbol, model.Mexc)
 	if haveOld && old.UpdateId > bidAsk.UpdateId {
 		msg := fmt.Sprintf("[contractDepthFullWsHandlerMexc] Version too low, skip this bidAsk, cachedBidAsk: %v, newBidAsk: %v", old, bidAsk)
@@ -649,7 +575,6 @@ func contractDepthFullWsHandlerMexc(markets *model.Markets, resp *dtos.MexcContr
 		fmt.Println(msg)
 		return
 	}
-
 	// 直接覆盖
 	if markets.SetBidAsk(symbol, model.Mexc, bidAsk) {
 		for function, handler := range model.GetFunctions(model.Mexc, symbol) {
@@ -672,7 +597,6 @@ func contractTickerWsHandlerMexc(markets *model.Markets, msg []byte, orderHandle
 		fmt.Println(logMsg)
 		return
 	}
-
 	if !resp.IsValidChannel() {
 		return
 	}
@@ -681,14 +605,14 @@ func contractTickerWsHandlerMexc(markets *model.Markets, msg []byte, orderHandle
 	if ts == 0 {
 		ts = now
 	}
-
 	// Todo 没有version/UpdateId
 	bidAsk := model.BidAsk{Ts: ts, TsReceived: now,
 		Bids: []model.Tick{{Price: resp.Data.MaxBidPrice, Amount: resp.Data.Bid1}},
 		Asks: []model.Tick{{Price: resp.Data.MinAskPrice, Amount: resp.Data.Ask1}}}
-
-	setMexcAskBid(markets, addMexcContractSymbolSuffix(resp.Symbol), &bidAsk)
-
+	success, marketType, coin := model.GetCoinFromDialect(model.Mexc, resp.Symbol)
+	if success {
+		setMexcAskBid(markets, coin+model.UniStandardTail[marketType], &bidAsk)
+	}
 	logMsg := fmt.Sprintf("mexc contract ticker sub result %+v \n", resp)
 	util.SocketInfo(logMsg)
 }
@@ -697,13 +621,11 @@ func initMexcContractDepth(markets *model.Markets, symbol string) {
 	if markets == nil || symbol == "" {
 		return
 	}
-
 	// region 第1步 通过接口 https://contract.mexc.com/api/v1/contract/depth/BTC_USDT获取全量深度信息，保存当前version
 	depthResp, err := mexcGetContractSymbolDepth(symbol)
 	if err != nil || depthResp == nil {
 		return
 	}
-
 	ts := depthResp.Data.Timestamp
 	now := int(time.Now().UnixNano() / int64(time.Millisecond))
 	if ts == 0 {
@@ -723,7 +645,6 @@ func initMexcContractDepth(markets *model.Markets, symbol string) {
 			bids = append(bids, *tick)
 		}
 	}
-
 	bidAsk := &model.BidAsk{
 		Ts:         ts,
 		TsReceived: now,
@@ -731,7 +652,7 @@ func initMexcContractDepth(markets *model.Markets, symbol string) {
 		Bids:       bids,
 		Asks:       asks,
 	}
-	setMexcAskBid(markets, addMexcContractSymbolSuffix(symbol), bidAsk)
+	setMexcAskBid(markets, symbol, bidAsk)
 	// endregion
 }
 
@@ -741,7 +662,6 @@ func syncMexcContractDepthCommits(markets *model.Markets, symbol string) {
 	if err != nil || resp == nil {
 		return
 	}
-
 	now := int(time.Now().UnixNano() / int64(time.Millisecond))
 	ts := now
 	for _, data := range resp.Data {
@@ -766,9 +686,8 @@ func syncMexcContractDepthCommits(markets *model.Markets, symbol string) {
 			Bids:       bids,
 			Asks:       asks,
 		}
-		setMexcAskBid(markets, addMexcContractSymbolSuffix(symbol), bidAsk)
+		setMexcAskBid(markets, symbol, bidAsk)
 	}
-
 }
 
 func getTick(tickInfo []float64) *model.Tick {
@@ -778,13 +697,11 @@ func getTick(tickInfo []float64) *model.Tick {
 	if tickInfo[0] <= 0 {
 		return nil
 	}
-
 	//if tickInfo[2] != 1 {
 	//	msg := fmt.Sprintf("contract count is not 1, tickInfo[2] is not handled, %v", tickInfo)
 	//	util.Notice(msg)
 	//	fmt.Println(msg)
 	//}
-
 	// TODO: 验证这个数量 是不是 合约张数x订单数量
 	return &model.Tick{Price: tickInfo[0], Amount: tickInfo[1] * tickInfo[2]}
 }
@@ -794,16 +711,13 @@ func mergeTicks(oldTicks []model.Tick, incrementalTicks []model.Tick, ascending 
 	if oldTicks == nil || len(oldTicks) == 0 {
 		return incrementalTicks
 	}
-
 	if incrementalTicks == nil || len(incrementalTicks) == 0 {
 		return oldTicks
 	}
-
 	m := make(map[float64]model.Tick)
 	for _, tick := range oldTicks {
 		m[tick.Price] = tick
 	}
-
 	for _, tick := range incrementalTicks {
 		if tick.Amount == 0 {
 			delete(m, tick.Price)
@@ -811,23 +725,19 @@ func mergeTicks(oldTicks []model.Tick, incrementalTicks []model.Tick, ascending 
 			m[tick.Price] = tick
 		}
 	}
-
 	keys := make([]float64, 0, len(m))
 	for k := range m {
 		keys = append(keys, k)
 	}
-
 	if ascending {
 		sort.Float64s(keys)
 	} else {
 		sort.Sort(sort.Reverse(sort.Float64Slice(keys)))
 	}
-
 	newTicks := make([]model.Tick, 0, len(m))
 	for _, key := range keys {
 		newTicks = append(newTicks, m[key])
 	}
-
 	return newTicks
 }
 
@@ -835,7 +745,6 @@ func setMexcAskBid(markets *model.Markets, symbol string, bidAsk *model.BidAsk) 
 	if markets == nil || symbol == "" || bidAsk == nil {
 		return
 	}
-
 	haveOld, old := markets.GetBidAsk(symbol, model.Mexc)
 	// For contract the version might be always 0, in this case it will be lower version
 	// than version returned by full depth.
@@ -845,12 +754,10 @@ func setMexcAskBid(markets *model.Markets, symbol string, bidAsk *model.BidAsk) 
 		fmt.Println(msg)
 		return
 	}
-
 	if old != nil {
 		bidAsk.Bids = mergeTicks(old.Bids, bidAsk.Bids, false)
 		bidAsk.Asks = mergeTicks(old.Asks, bidAsk.Asks, true)
 	}
-
 	if markets.SetBidAsk(symbol, model.Mexc, bidAsk) {
 		for function, handler := range model.GetFunctions(model.Mexc, symbol) {
 			if handler != nil {
@@ -864,8 +771,7 @@ func setMexcAskBid(markets *model.Markets, symbol string, bidAsk *model.BidAsk) 
 }
 
 func mexcGetContractSymbolDepth(symbol string) (*dtos.MexcContractDepthHttpResp, error) {
-	symbol = removeMexcContractSymbolSuffix(symbol)
-	path := fmt.Sprintf(contract_get_symbol_depth_path_fmt, symbol)
+	path := fmt.Sprintf(contractGetSymbolDepthPathFmt, symbol)
 	respBytes, err := publicRequestMexc(http.MethodGet, contractRestUrl, path, nil, "")
 	if err != nil {
 		logMsg := fmt.Sprintf(`[mexcGetContractSymbolDepth] Failed to get depth info for symbol %s err %+v`, symbol, err)
@@ -881,14 +787,11 @@ func mexcGetContractSymbolDepth(symbol string) (*dtos.MexcContractDepthHttpResp,
 		util.Notice(logMsg)
 		return nil, err
 	}
-
 	return resp, nil
 }
 
 func mexcGetContractSymbolDepthCommits(symbol string) (*dtos.MexcContractDepthCommitsResp, error) {
-	symbol = removeMexcContractSymbolSuffix(symbol)
-
-	path := fmt.Sprintf(contract_get_symbol_depth_commits_path_fmt, symbol, 10)
+	path := fmt.Sprintf(contractGetSymbolDepthCommitsPathFmt, symbol, 10)
 	respBytes, err := publicRequestMexc(http.MethodGet, contractRestUrl, path, nil, "")
 	if err != nil {
 		logMsg := fmt.Sprintf(`[mexcGetContractSymbolDepthCommits] Failed to get depth info for symbol %s err %+v`, symbol, err)
@@ -904,12 +807,10 @@ func mexcGetContractSymbolDepthCommits(symbol string) (*dtos.MexcContractDepthCo
 		util.Notice(logMsg)
 		return nil, err
 	}
-
 	return resp, nil
 }
 
 // endregion
-
 var subscribeHandlerMexc = func(connection *websocket.Conn, subscribes []interface{}) error {
 	var err error
 	for _, subscribe := range subscribes {
@@ -930,37 +831,6 @@ func getFloat64OrDefault(val string) float64 {
 	return ret
 }
 
-func getInt64OrDefault(val string) int64 {
-	ret, err := strconv.ParseInt(val, 10, 64)
-	if err != nil {
-		ret = 0
-	}
-	return ret
-}
-
-func addMexcContractSymbolSuffix(symbol string) string {
-	if !strings.HasSuffix(symbol, mexcContractSymbolSuffix) {
-		return fmt.Sprintf("%s%s", symbol, mexcContractSymbolSuffix)
-	}
-
-	return symbol
-}
-
-func removeMexcContractSymbolSuffix(symbol string) (standardSymbol string) {
-	if strings.HasSuffix(symbol, mexcContractSymbolSuffix) {
-		symbol = strings.TrimSuffix(symbol, mexcContractSymbolSuffix)
-		success, marketType, coin := model.GetCoinFromDialect(model.Mexc, symbol)
-		if success { // TODO 需要确保Mexc永续和现货tail不同，否则marketType不可用
-			return coin + model.UniStandardTail[marketType]
-		}
-	}
-	return symbol
-}
-
-func isMexcContractSymbol(symbol string) bool {
-	return strings.Contains(symbol, mexcContractSymbolSuffix)
-}
-
 func genChannelKey(subType string, i int) string {
 	return fmt.Sprintf("%s-%d", subType, i)
 }
@@ -970,15 +840,10 @@ func getSubTypeFromChannelKey(chanKey string) string {
 	if len(ret) > 0 {
 		return ret[0]
 	}
-
 	return ""
 }
 
 func GetWSSubscribeMexc(symbol string, subType string) string {
-	if isMexcContractSymbol(symbol) {
-		symbol = strings.TrimSuffix(symbol, mexcContractSymbolSuffix)
-	}
-
 	switch subType {
 	case mexcContractDepthIncreSubType:
 		return fmt.Sprintf(`{
@@ -1004,6 +869,5 @@ func GetWSSubscribeMexc(symbol string, subType string) string {
 				}
 			}`, symbol)
 	}
-
 	return ""
 }
