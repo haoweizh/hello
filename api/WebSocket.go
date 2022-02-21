@@ -25,15 +25,13 @@ var AppWSManager = WSManager{
 	Clients:    make(map[*WSClient]bool),
 }
 
-func SendToConnection(market string, connection *websocket.Conn, msg []byte) (err error) {
-	defer wsLock.Unlock()
-	wsLock.Lock()
+func SendToConnection(connection *websocket.Conn, msg []byte) (err error) {
 	if connection == nil {
 		util.Notice(`fail to write to nil connection`)
 		return
 	}
 	if err = connection.WriteMessage(websocket.TextMessage, msg); err != nil {
-		requireReset.Store(market, true)
+		//requireReset.Store(, true) 停止connection后发送错误可能造成反复requireReset
 		util.Notice(`fail to write to connection ` + string(msg) + err.Error())
 	}
 	return err

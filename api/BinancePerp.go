@@ -121,7 +121,7 @@ var subscribeHandlerBinancePerp = func(connection *websocket.Conn, subscribes []
 	subParam["params"] = subscribes
 	subParam["id"] = int(rand.Float64() * 10000)
 	subParamJson, _ := json.Marshal(subParam)
-	if err = SendToConnection(model.BinancePerp, connection, subParamJson); err != nil {
+	if err = SendToConnection(connection, subParamJson); err != nil {
 		util.SocketInfo("binance perp can not subscribe %s %s", subParamJson, err.Error())
 	}
 	util.Notice(`%s send subscribe: %s `, model.BinancePerp, subParamJson)

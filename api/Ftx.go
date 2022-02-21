@@ -47,13 +47,13 @@ func maintainChannelFtx(subscribes []interface{}) {
 							util.Notice(`maintain ftx timeout %s %s %d`,
 								standardSymbol, time.Now().UnixMilli()-int64(bidAsk.Ts), bidAsk.Ts)
 						}
-						if err := SendToConnection(model.Ftx, conn.(*websocket.Conn), []byte(cmdUnsub)); err != nil {
+						if err := SendToConnection(conn.(*websocket.Conn), []byte(cmdUnsub)); err != nil {
 							util.SocketInfo("ftx can not resubscribe " + err.Error())
 						}
 						time.Sleep(time.Second * 3)
 						cmdSub := fmt.Sprintf(`{"op": "subscribe", "channel": "%s", "market": "%s"}`,
 							subscribe[0], subscribe[1])
-						if err := SendToConnection(model.Ftx, conn.(*websocket.Conn), []byte(cmdSub)); err != nil {
+						if err := SendToConnection(conn.(*websocket.Conn), []byte(cmdSub)); err != nil {
 							util.SocketInfo("ftx can not resubscribe " + err.Error())
 						}
 						util.Notice(`send unsubscribe-subscribe %s %s %s`, model.Ftx, cmdUnsub, cmdSub)
@@ -77,10 +77,10 @@ var subscribeHandlerFtx = func(connection *websocket.Conn, subscribes []interfac
 	hash.Write([]byte(toBeSign))
 	sign := hex.EncodeToString(hash.Sum(nil))
 	authCmd := fmt.Sprintf(`{"op":"login","args":{"key":"%s","sign":"%s","time":%d}}`, account.Key, sign, ts)
-	if err = SendToConnection(model.Ftx, connection, []byte(authCmd)); err != nil {
+	if err = SendToConnection(connection, []byte(authCmd)); err != nil {
 		util.SocketInfo("ftx can not auth " + err.Error())
 	}
-	if err = SendToConnection(model.Ftx, connection, []byte(`{"op": "subscribe", "channel": "fills"}`)); err != nil {
+	if err = SendToConnection(connection, []byte(`{"op": "subscribe", "channel": "fills"}`)); err != nil {
 		util.SocketInfo("ftx can not subscribe fill " + err.Error())
 	}
 	for i := 0; i < len(subscribes); i++ {
@@ -89,7 +89,7 @@ var subscribeHandlerFtx = func(connection *websocket.Conn, subscribes []interfac
 		ftxSymbolConnection.Store(coin+model.UniStandardTail[marketType], connection)
 		subCmd := fmt.Sprintf(`{"op": "subscribe", "channel": "%s", "market": "%s"}`,
 			cmdSubscribe[0], cmdSubscribe[1])
-		if err = SendToConnection(model.Ftx, connection, []byte(subCmd)); err != nil {
+		if err = SendToConnection(connection, []byte(subCmd)); err != nil {
 			util.SocketInfo("ftx can not subscribe " + err.Error())
 			return err
 		}

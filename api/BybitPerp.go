@@ -43,7 +43,7 @@ func maintainChannelBybitPerp(subscribes []interface{}) {
 					}
 					conn, ok := bybitPerpSubConnection.Load(standardSymbol)
 					if conn != nil && ok {
-						if err := SendToConnection(model.BybitPerp, conn.(*websocket.Conn), []byte(subCmd)); err != nil {
+						if err := SendToConnection(conn.(*websocket.Conn), []byte(subCmd)); err != nil {
 							util.SocketInfo("bybitPerp can not resubscribe " + err.Error())
 						}
 					} else {
@@ -73,7 +73,7 @@ var subscribeHandlerBybitPerp = func(connection *websocket.Conn, subscribes []in
 	//}
 	for _, value := range subscribes {
 		subCmd := fmt.Sprintf(`{"op": "subscribe", "args": ["orderBookL2_25.%s"]}`, value.(string))
-		if err := SendToConnection(model.BybitPerp, connection, []byte(subCmd)); err != nil {
+		if err := SendToConnection(connection, []byte(subCmd)); err != nil {
 			util.SocketInfo("bybitPerp can not subscribe " + err.Error())
 		}
 		_, _, coin := model.GetCoinFromDialect(model.BybitPerp, value.(string))

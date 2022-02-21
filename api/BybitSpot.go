@@ -41,7 +41,7 @@ func maintainChannelBybitSpot(subscribes []interface{}) {
 					}
 					conn, ok := bybitSpotSubConnection.Load(standardSymbol)
 					if conn != nil && ok {
-						if err := SendToConnection(model.BybitSpot, conn.(*websocket.Conn), []byte(subscribeMessage)); err != nil {
+						if err := SendToConnection(conn.(*websocket.Conn), []byte(subscribeMessage)); err != nil {
 							util.SocketInfo("bybitSpot can not resubscribe " + err.Error())
 						}
 					} else {
@@ -72,7 +72,7 @@ var subscribeHandlerBybitSpot = func(connection *websocket.Conn, subscribes []in
 	for _, subscribe := range subscribes {
 		subscribeMessage := fmt.Sprintf(
 			`{"topic":"depth","event":"sub","params":{"symbol":"%s","binary":false}}`, subscribe)
-		if err = SendToConnection(model.BybitSpot, connection, []byte(subscribeMessage)); err != nil {
+		if err = SendToConnection(connection, []byte(subscribeMessage)); err != nil {
 			util.SocketInfo("bybitSpot can not subscribe " + err.Error())
 			return err
 		}
