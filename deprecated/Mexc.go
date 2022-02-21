@@ -1,4 +1,4 @@
-package api
+package deprecated
 
 import (
 	"crypto/hmac"
@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"hello/api"
 	"net/http"
 	"net/url"
 	"sort"
@@ -45,6 +46,7 @@ const (
 	contractCancelOrdersBySymbolPath     = "/api/v1/private/order/cancel_all"     // 撤销某个合约下的所有未完成订单
 	contractQueryOrderByIdPath           = "api/v1/private/order/get"             // 根据订单号查询订单
 	contractGetSymbolMarketPath          = "/api/v1/contract/detail"              // 获取合约信息
+	contractGetSymbolDepthPathFmt        = "/api/v1/contract/depth/%s"            // 获取合约深度信息
 	contractGetSymbolDepthCommitsPathFmt = "/api/v1/contract/depth_commits/%s/%d" // 获取合约最近N条深度信息快照
 )
 
@@ -396,7 +398,7 @@ func appendContractMarketMexc(key, secret string, marketInfos map[string]*model.
 7. 每一个event中的挂单量代表这个价格目前的挂单量绝对值，而不是相对变化。
 8. 如果某个价格对应的挂单量为0，表示该价位的挂单已经撤单或者被吃，应该移除这个价位
 */
-func WsDepthServeMexc(markets *model.Markets, orderHandler OrderHandler, useFullDepthSub bool) (channels []chan struct{}, err error) {
+func WsDepthServeMexc(markets *model.Markets, orderHandler api.OrderHandler, useFullDepthSub bool) (channels []chan struct{}, err error) {
 	symbols := model.GetMarketSymbols(model.Mexc)
 	if !useFullDepthSub {
 		limiter := time.Tick(100 * time.Millisecond)
@@ -409,7 +411,7 @@ func WsDepthServeMexc(markets *model.Markets, orderHandler OrderHandler, useFull
 			syncMexcContractDepthCommits(markets, dialectSymbol)
 		}
 	}
-	wsHandler := func(connection *websocket.Conn, event []byte, orderHandler OrderHandler) {
+	wsHandler := func(connection *websocket.Conn, event []byte, orderHandler api.OrderHandler) {
 		newJson, wsErr := util.NewJSON(event)
 		if wsErr != nil {
 			util.SocketInfo(`MEXC fail to unmarshal json ` + err.Error())
@@ -422,12 +424,16 @@ func WsDepthServeMexc(markets *model.Markets, orderHandler OrderHandler, useFull
 				resp := &dtos.MexcContractDepthWsResp{}
 				err := json.Unmarshal(event, resp)
 				if err != nil {
+					logMsg := fmt.Sprintf(`[contractDepthFullWsHandlerMexc] Failed to unmarshal MEXC contract full depth push message %s err: %s`, string(event), err.Error())
+					util.Notice(logMsg)
+					fmt.Println(logMsg)
 					return
 				}
+
 				if len(resp.Data.Asks) > 1 { // 深度档位大于1表示是按档位全量订阅的推送
 					contractDepthFullWsHandlerMexc(markets, resp, orderHandler)
 				} else { // 否则认为是增量推送
-					contractDepthIncWsHandlerMexc(markets, resp, orderHandler)
+					contractDepthIncreWsHandlerMexc(markets, resp, orderHandler)
 				}
 			}
 		}
@@ -436,8 +442,8 @@ func WsDepthServeMexc(markets *model.Markets, orderHandler OrderHandler, useFull
 	if !useFullDepthSub {
 		// 订阅contract深度增量
 		//channels = append(channels, initChannel(mexcContractWSUrl, mexcContractDepthIncreSubType, wsHandler, orderHandler)...)
-		contractIncreSubs := GetWSSubscribes(model.Mexc, mexcContractDepthIncSubType)
-		contractIncreChans, err := WebSocketClient(model.Mexc, mexcContractWSUrl, contractIncreSubs,
+		contractIncreSubs := api.GetWSSubscribes(model.Mexc, mexcContractDepthIncSubType)
+		contractIncreChans, err := api.WebSocketClient(model.Mexc, mexcContractWSUrl, contractIncreSubs,
 			subscribeHandlerMexc, wsHandler, orderHandler, wsStepMexc)
 		if err != nil {
 			util.SocketInfo(`fail to create MEXC contract increment depth conn %s`, err.Error())
@@ -446,8 +452,8 @@ func WsDepthServeMexc(markets *model.Markets, orderHandler OrderHandler, useFull
 	} else {
 		// 订阅contract 10档深度全量
 		//channels = append(channels, initChannel(mexcContractWSUrl, mexcContractDepthFullSubType, wsHandler, orderHandler)...)
-		contractFullSubs := GetWSSubscribes(model.Mexc, mexcContractDepthFullSubType)
-		contractFullChans, err := WebSocketClient(model.Mexc, mexcContractWSUrl, contractFullSubs,
+		contractFullSubs := api.GetWSSubscribes(model.Mexc, mexcContractDepthFullSubType)
+		contractFullChans, err := api.WebSocketClient(model.Mexc, mexcContractWSUrl, contractFullSubs,
 			subscribeHandlerMexc, wsHandler, orderHandler, wsStepMexc)
 		if err != nil {
 			util.SocketInfo(`fail to create MEXC contract full depth conn %s`, err.Error())
@@ -462,14 +468,17 @@ func WsDepthServeMexc(markets *model.Markets, orderHandler OrderHandler, useFull
 	return channels, err
 }
 
+// region contract深度相关
+
 // contract增量深度订阅handler
-func contractDepthIncWsHandlerMexc(markets *model.Markets, resp *dtos.MexcContractDepthWsResp, orderHandler OrderHandler) {
+func contractDepthIncreWsHandlerMexc(markets *model.Markets, resp *dtos.MexcContractDepthWsResp, orderHandler api.OrderHandler) {
 	if resp == nil {
 		return
 	}
 	if !resp.IsValidChannel() {
 		msg := fmt.Sprintf("InvalidChannel in %+v", resp)
 		util.Notice(msg)
+		fmt.Println(msg)
 		return
 	}
 	_, marketType, coin := model.GetCoinFromDialect(model.Mexc, resp.Symbol)
@@ -483,8 +492,11 @@ func contractDepthIncWsHandlerMexc(markets *model.Markets, resp *dtos.MexcContra
 		fmt.Println(msg)
 		syncMexcContractDepthCommits(markets, symbol)
 	}
-	success, marketType, coin := model.GetCoinFromDialect(model.Mexc, resp.Symbol)
+	ts := resp.Ts
 	now := int(time.Now().UnixNano() / int64(time.Millisecond))
+	if ts == 0 {
+		ts = now
+	}
 	var asks []model.Tick
 	var bids []model.Tick
 	for _, ask := range resp.Data.Asks {
@@ -493,9 +505,11 @@ func contractDepthIncWsHandlerMexc(markets *model.Markets, resp *dtos.MexcContra
 			asks = append(asks, *tick)
 		}
 	}
-
 	for _, bid := range resp.Data.Bids {
-		bids = append(bids, model.Tick{Side: model.OrderSideBuy, Market: model.Mexc, Symbol:})
+		tick := getTick(bid)
+		if tick != nil {
+			bids = append(bids, *tick)
+		}
 	}
 	bidAsk := &model.BidAsk{
 		Ts:         ts,
@@ -508,7 +522,7 @@ func contractDepthIncWsHandlerMexc(markets *model.Markets, resp *dtos.MexcContra
 }
 
 // contract全量深度订阅handler
-func contractDepthFullWsHandlerMexc(markets *model.Markets, resp *dtos.MexcContractDepthWsResp, orderHandler OrderHandler) {
+func contractDepthFullWsHandlerMexc(markets *model.Markets, resp *dtos.MexcContractDepthWsResp, orderHandler api.OrderHandler) {
 	if resp == nil {
 		return
 	}
@@ -566,47 +580,72 @@ func contractDepthFullWsHandlerMexc(markets *model.Markets, resp *dtos.MexcContr
 	}
 }
 
-func initMexcContractDepth(markets *model.Markets, symbol string) {
-	_, _, _, dialectSymbol := model.GetFromStandard(model.Mexc, symbol)
-	path := fmt.Sprintf(`/api/v1/contract/depth/%s`, dialectSymbol)
-	respBytes, err := publicRequestMexc(http.MethodGet, contractRestUrl, path, nil, ``)
+func contractTickerWsHandlerMexc(markets *model.Markets, msg []byte, orderHandler api.OrderHandler) {
+	resp := &dtos.MexcContractTickerResp{}
+	err := json.Unmarshal(msg, resp)
 	if err != nil {
-		util.Notice(fmt.Sprintf(`[mexcGetContractSymbolDepth] Failed to get depth info for symbol %s err %+v`, symbol, err))
+		logMsg := fmt.Sprintf(`Failed to unmarshal MEXC contract ticker push message %s err: %s`, string(msg), err.Error())
+		util.Notice(logMsg)
+		fmt.Println(logMsg)
 		return
 	}
-	resp := &dtos.MexcContractDepthHttpResp{}
-	err = json.Unmarshal(respBytes, resp)
-	if err != nil || !resp.Success {
-		util.Notice(fmt.Sprintf(`[mexcGetContractSymbolDepth] Failed to get depth info %s for symbol %s success %t err %+v`, string(respBytes), symbol, resp.Success, err))
+	if !resp.IsValidChannel() {
 		return
 	}
-	var asks, bids []model.Tick
-	for _, ask := range resp.Data.Asks {
-		if len(ask) != 3 {
-			continue
-		}
-		ok, amount := model.ParseRealAmount(model.Mexc, symbol, ask[1])
-		if ok {
-			asks = append(asks, model.Tick{Side: model.OrderSideSell, Price: ask[0], Amount: amount})
+	ts := resp.Data.Timestamp
+	now := int(time.Now().UnixNano() / int64(time.Millisecond))
+	if ts == 0 {
+		ts = now
+	}
+	// Todo 没有version/UpdateId
+	bidAsk := model.BidAsk{Ts: ts, TsReceived: now,
+		Bids: []model.Tick{{Price: resp.Data.MaxBidPrice, Amount: resp.Data.Bid1}},
+		Asks: []model.Tick{{Price: resp.Data.MinAskPrice, Amount: resp.Data.Ask1}}}
+	success, marketType, coin := model.GetCoinFromDialect(model.Mexc, resp.Symbol)
+	if success {
+		setMexcAskBid(markets, coin+model.UniStandardTail[marketType], &bidAsk)
+	}
+	logMsg := fmt.Sprintf("mexc contract ticker sub result %+v \n", resp)
+	util.SocketInfo(logMsg)
+}
+
+func initMexcContractDepth(markets *model.Markets, symbol string) {
+	if markets == nil || symbol == "" {
+		return
+	}
+	// region 第1步 通过接口 https://contract.mexc.com/api/v1/contract/depth/BTC_USDT获取全量深度信息，保存当前version
+	depthResp, err := mexcGetContractSymbolDepth(symbol)
+	if err != nil || depthResp == nil {
+		return
+	}
+	ts := depthResp.Data.Timestamp
+	now := int(time.Now().UnixNano() / int64(time.Millisecond))
+	if ts == 0 {
+		ts = now
+	}
+	var asks []model.Tick
+	var bids []model.Tick
+	for _, ask := range depthResp.Data.Asks {
+		tick := getTick(ask)
+		if tick != nil {
+			asks = append(asks, *tick)
 		}
 	}
-	for _, bid := range resp.Data.Bids {
-		if len(bid) != 3 {
-			continue
-		}
-		ok, amount := model.ParseRealAmount(model.Mexc, symbol, bid[1])
-		if ok {
-			bids = append(bids, model.Tick{Side: model.OrderSideBuy, Price: bid[0], Amount: amount})
+	for _, bid := range depthResp.Data.Bids {
+		tick := getTick(bid)
+		if tick != nil {
+			bids = append(bids, *tick)
 		}
 	}
 	bidAsk := &model.BidAsk{
-		Ts:         resp.Data.Timestamp,
-		TsReceived: int(time.Now().UnixNano() / int64(time.Millisecond)),
-		UpdateId:   resp.Data.Version,
+		Ts:         ts,
+		TsReceived: now,
+		UpdateId:   depthResp.Data.Version,
 		Bids:       bids,
 		Asks:       asks,
 	}
 	setMexcAskBid(markets, symbol, bidAsk)
+	// endregion
 }
 
 func syncMexcContractDepthCommits(markets *model.Markets, symbol string) {
@@ -723,6 +762,26 @@ func setMexcAskBid(markets *model.Markets, symbol string, bidAsk *model.BidAsk) 
 	}
 }
 
+func mexcGetContractSymbolDepth(symbol string) (*dtos.MexcContractDepthHttpResp, error) {
+	path := fmt.Sprintf(contractGetSymbolDepthPathFmt, symbol)
+	respBytes, err := publicRequestMexc(http.MethodGet, contractRestUrl, path, nil, "")
+	if err != nil {
+		logMsg := fmt.Sprintf(`[mexcGetContractSymbolDepth] Failed to get depth info for symbol %s err %+v`, symbol, err)
+		util.Notice(logMsg)
+		fmt.Println(logMsg)
+		return nil, err
+	}
+	resp := &dtos.MexcContractDepthHttpResp{}
+	err = json.Unmarshal(respBytes, resp)
+	if err != nil || !resp.Success {
+		logMsg := fmt.Sprintf(`[mexcGetContractSymbolDepth] Failed to get depth info %s for symbol %s success %t err %+v`, string(respBytes), symbol, resp.Success, err)
+		fmt.Println(logMsg)
+		util.Notice(logMsg)
+		return nil, err
+	}
+	return resp, nil
+}
+
 func mexcGetContractSymbolDepthCommits(symbol string) (*dtos.MexcContractDepthCommitsResp, error) {
 	path := fmt.Sprintf(contractGetSymbolDepthCommitsPathFmt, symbol, 10)
 	respBytes, err := publicRequestMexc(http.MethodGet, contractRestUrl, path, nil, "")
@@ -748,7 +807,7 @@ var subscribeHandlerMexc = func(connection *websocket.Conn, subscribes []interfa
 	var err error
 	for _, subscribe := range subscribes {
 		subMsg := fmt.Sprintf(`%s`, subscribe)
-		if err = SendToConnection(connection, []byte(subMsg)); err != nil {
+		if err = api.SendToConnection(connection, []byte(subMsg)); err != nil {
 			util.SocketInfo(" MEXC can not subscribe %s %s", subscribe, err.Error())
 		}
 		time.Sleep(time.Millisecond * 300) // Todo - 这里的限速怎么设定
