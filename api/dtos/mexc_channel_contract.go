@@ -4,14 +4,14 @@ package dtos
 type MexcSubscriptionWsResp struct {
 	Channel string `json:"channel"`
 	Data    string `json:"data"`
-	Ts     int    `json:"ts"`
+	Ts      int    `json:"ts"`
 }
 
-// {"channel":"pong","data":1640381565996,"ts":1640381565996}
+// MexcPongWsResp {"channel":"pong","data":1640381565996,"ts":1640381565996}
 type MexcPongWsResp struct {
 	Channel string `json:"channel"`
-	Data    int `json:"data"`
-	Ts     int    `json:"ts"`
+	Data    int    `json:"data"`
+	Ts      int    `json:"ts"`
 }
 
 type MexcContractDepthWsResp struct {
@@ -23,10 +23,6 @@ type MexcContractDepthWsResp struct {
 	} `json:"data"`
 	Symbol string `json:"symbol"`
 	Ts     int    `json:"ts"`
-}
-
-func (entity *MexcContractDepthWsResp) IsValidChannel() bool {
-	return entity.Channel == "push.depth"
 }
 
 type MexcContractTickerResp struct {

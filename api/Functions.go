@@ -812,7 +812,7 @@ func CreateMarketDepthServer(markets *model.Markets, market string, orderHandler
 	case model.Ftx:
 		channels, err = WsDepthServeFtx(markets, nil)
 	case model.Mexc:
-		channels, err = WsDepthServeMexc(markets, nil)
+		channels, err = WsDepthServeMexc(markets, nil, false)
 	}
 	if err != nil {
 		util.Notice(market + ` can not create depth server ` + err.Error())

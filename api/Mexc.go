@@ -403,10 +403,9 @@ func WsDepthServeMexc(markets *model.Markets, orderHandler OrderHandler, useFull
 		//  初始化contract深度全量信息, 10次每秒
 		for symbol := range symbols {
 			<-limiter
-			_, _, _, dialectSymbol := model.GetFromStandard(model.Mexc, symbol)
-			initMexcContractDepth(markets, dialectSymbol)
+			initMexcContractDepth(markets, symbol)
 			<-limiter
-			syncMexcContractDepthCommits(markets, dialectSymbol)
+			syncMexcContractDepthCommits(markets, symbol)
 		}
 	}
 	wsHandler := func(connection *websocket.Conn, event []byte, orderHandler OrderHandler) {
@@ -420,56 +419,53 @@ func WsDepthServeMexc(markets *model.Markets, orderHandler OrderHandler, useFull
 		if ts != 0 { // contract类型的推送10档全量和增量的msg结构完全一样，所以只能解析之后通过bids/asks数量判断
 			if channel == "push.depth" {
 				resp := &dtos.MexcContractDepthWsResp{}
-				err := json.Unmarshal(event, resp)
-				if err != nil {
-					return
-				}
-				if len(resp.Data.Asks) > 1 { // 深度档位大于1表示是按档位全量订阅的推送
-					contractDepthFullWsHandlerMexc(markets, resp, orderHandler)
-				} else { // 否则认为是增量推送
-					contractDepthIncWsHandlerMexc(markets, resp, orderHandler)
+				//if len(resp.Data.Asks) > 1 { // 深度档位大于1表示是按档位全量订阅的推送
+				//	contractDepthFullWsHandlerMexc(markets, resp, orderHandler)
+				//} else { // 否则认为是增量推送
+				//	contractDepthIncWsHandlerMexc(markets, resp)
+				//}
+				if json.Unmarshal(event, resp) == nil {
+					contractDepthIncWsHandlerMexc(markets, resp)
 				}
 			}
 		}
 	}
-	channels = make([]chan struct{}, 0)
-	if !useFullDepthSub {
-		// 订阅contract深度增量
-		//channels = append(channels, initChannel(mexcContractWSUrl, mexcContractDepthIncreSubType, wsHandler, orderHandler)...)
-		contractIncreSubs := GetWSSubscribes(model.Mexc, mexcContractDepthIncSubType)
-		contractIncreChans, err := WebSocketClient(model.Mexc, mexcContractWSUrl, contractIncreSubs,
+	if !useFullDepthSub { // 订阅contract深度增量
+		return WebSocketClient(model.Mexc, mexcContractWSUrl,
+			GetWSSubscribes(model.Mexc, mexcContractDepthIncSubType), subscribeHandlerMexc, wsHandler, orderHandler, wsStepMexc)
+	} else { // 订阅contract 5档深度全量
+		return WebSocketClient(model.Mexc, mexcContractWSUrl, GetWSSubscribes(model.Mexc, mexcContractDepthFullSubType),
 			subscribeHandlerMexc, wsHandler, orderHandler, wsStepMexc)
-		if err != nil {
-			util.SocketInfo(`fail to create MEXC contract increment depth conn %s`, err.Error())
-		}
-		channels = append(channels, contractIncreChans...)
-	} else {
-		// 订阅contract 10档深度全量
-		//channels = append(channels, initChannel(mexcContractWSUrl, mexcContractDepthFullSubType, wsHandler, orderHandler)...)
-		contractFullSubs := GetWSSubscribes(model.Mexc, mexcContractDepthFullSubType)
-		contractFullChans, err := WebSocketClient(model.Mexc, mexcContractWSUrl, contractFullSubs,
-			subscribeHandlerMexc, wsHandler, orderHandler, wsStepMexc)
-		if err != nil {
-			util.SocketInfo(`fail to create MEXC contract full depth conn %s`, err.Error())
-		}
-		channels = append(channels, contractFullChans...)
 	}
+}
 
-	// 订阅contract Ticker
-	//channels = append(channels, initChannel(mexcContractWSUrl, mexcContractTickerSubType, wsHandler, orderHandler)...)
-
-	//go maintainChannelMexc(useFullDepthSub)
-	return channels, err
+func parseTicksMexc(symbol string, ts int, version int64, bidArray, asksArray [][]float64) *model.BidAsk {
+	var bids, asks []model.Tick
+	for _, tick := range asksArray {
+		if tick == nil || len(tick) != 3 {
+			continue
+		}
+		ok, amount := model.ParseRealAmount(model.Mexc, symbol, tick[1])
+		if ok {
+			asks = append(asks, model.Tick{Side: model.OrderSideSell, Market: model.Mexc, Symbol: symbol, Price: tick[0], Amount: amount})
+		}
+	}
+	for _, tick := range bidArray {
+		if tick == nil || len(tick) != 3 {
+			continue
+		}
+		ok, amount := model.ParseRealAmount(model.Mexc, symbol, tick[1])
+		if ok {
+			bids = append(bids, model.Tick{Side: model.OrderSideBuy, Market: model.Mexc, Symbol: symbol, Price: tick[0], Amount: amount})
+		}
+	}
+	return &model.BidAsk{Ts: ts, TsReceived: int(time.Now().UnixMilli()), UpdateId: version, Bids: bids, Asks: asks}
 }
 
 // contract增量深度订阅handler
-func contractDepthIncWsHandlerMexc(markets *model.Markets, resp *dtos.MexcContractDepthWsResp, orderHandler OrderHandler) {
-	if resp == nil {
-		return
-	}
-	if !resp.IsValidChannel() {
-		msg := fmt.Sprintf("InvalidChannel in %+v", resp)
-		util.Notice(msg)
+func contractDepthIncWsHandlerMexc(markets *model.Markets, resp *dtos.MexcContractDepthWsResp) {
+	if resp == nil || resp.Channel != `push.depth` {
+		util.Notice(fmt.Sprintf("InvalidChannel in %+v", resp))
 		return
 	}
 	_, marketType, coin := model.GetCoinFromDialect(model.Mexc, resp.Symbol)
@@ -478,83 +474,29 @@ func contractDepthIncWsHandlerMexc(markets *model.Markets, resp *dtos.MexcContra
 	if lastTickId != nil && (lastTickId == 0 || lastTickId == (resp.Data.Version-1)) {
 		lastTickIdMexc.Store(symbol, resp.Data.Version)
 	} else {
-		msg := fmt.Sprintf("Version did not increment by 1, lastTickId=%d, resp: %+v", lastTickId, resp)
-		util.Notice(msg)
-		fmt.Println(msg)
+		util.Notice(fmt.Sprintf("Version did not increment by 1, lastTickId=%d, resp: %+v", lastTickId, resp))
 		syncMexcContractDepthCommits(markets, symbol)
+		return
 	}
-	success, marketType, coin := model.GetCoinFromDialect(model.Mexc, resp.Symbol)
-	now := int(time.Now().UnixNano() / int64(time.Millisecond))
-	var asks []model.Tick
-	var bids []model.Tick
-	for _, ask := range resp.Data.Asks {
-		tick := getTick(ask)
-		if tick != nil {
-			asks = append(asks, *tick)
-		}
-	}
-
-	for _, bid := range resp.Data.Bids {
-		bids = append(bids, model.Tick{Side: model.OrderSideBuy, Market: model.Mexc, Symbol:})
-	}
-	bidAsk := &model.BidAsk{
-		Ts:         ts,
-		TsReceived: now,
-		UpdateId:   resp.Data.Version,
-		Bids:       bids,
-		Asks:       asks,
-	}
-	setMexcAskBid(markets, symbol, bidAsk)
+	setMexcAskBid(markets, symbol, parseTicksMexc(symbol, resp.Ts, resp.Data.Version, resp.Data.Bids, resp.Data.Asks))
 }
 
-// contract全量深度订阅handler
-func contractDepthFullWsHandlerMexc(markets *model.Markets, resp *dtos.MexcContractDepthWsResp, orderHandler OrderHandler) {
-	if resp == nil {
-		return
-	}
-	if !resp.IsValidChannel() {
+// contract全量深度订阅handler contractDepthFullWsHandlerMexc
+func _(markets *model.Markets, resp *dtos.MexcContractDepthWsResp) {
+	if resp == nil || resp.Channel != `push.depth` {
 		msg := fmt.Sprintf("InvalidChannel in %+v", resp)
 		util.Notice(msg)
-		fmt.Println(msg)
 		return
-	}
-	ts := resp.Ts
-	now := int(time.Now().UnixNano() / int64(time.Millisecond))
-	if ts == 0 {
-		ts = now
-	}
-	var asks []model.Tick
-	var bids []model.Tick
-	for _, ask := range resp.Data.Asks {
-		tick := getTick(ask)
-		if tick != nil {
-			asks = append(asks, *tick)
-		}
-	}
-	for _, bid := range resp.Data.Bids {
-		tick := getTick(bid)
-		if tick != nil {
-			bids = append(bids, *tick)
-		}
-	}
-	bidAsk := &model.BidAsk{
-		Ts:         ts,
-		TsReceived: now,
-		UpdateId:   resp.Data.Version,
-		Bids:       bids,
-		Asks:       asks,
 	}
 	_, marketType, coin := model.GetCoinFromDialect(model.Mexc, resp.Symbol)
 	symbol := coin + model.UniStandardTail[marketType]
+	bidAsk := parseTicksMexc(symbol, resp.Ts, resp.Data.Version, resp.Data.Bids, resp.Data.Asks)
 	haveOld, old := markets.GetBidAsk(symbol, model.Mexc)
 	if haveOld && old.UpdateId > bidAsk.UpdateId {
 		msg := fmt.Sprintf("[contractDepthFullWsHandlerMexc] Version too low, skip this bidAsk, cachedBidAsk: %v, newBidAsk: %v", old, bidAsk)
 		util.Notice(msg)
-		fmt.Println(msg)
 		return
-	}
-	// 直接覆盖
-	if markets.SetBidAsk(symbol, model.Mexc, bidAsk) {
+	} else if markets.SetBidAsk(symbol, model.Mexc, bidAsk) {
 		for function, handler := range model.GetFunctions(model.Mexc, symbol) {
 			if handler != nil {
 				setting := model.GetSetting(function, model.Mexc, symbol)
@@ -580,83 +522,19 @@ func initMexcContractDepth(markets *model.Markets, symbol string) {
 		util.Notice(fmt.Sprintf(`[mexcGetContractSymbolDepth] Failed to get depth info %s for symbol %s success %t err %+v`, string(respBytes), symbol, resp.Success, err))
 		return
 	}
-	var asks, bids []model.Tick
-	for _, ask := range resp.Data.Asks {
-		if len(ask) != 3 {
-			continue
-		}
-		ok, amount := model.ParseRealAmount(model.Mexc, symbol, ask[1])
-		if ok {
-			asks = append(asks, model.Tick{Side: model.OrderSideSell, Price: ask[0], Amount: amount})
-		}
-	}
-	for _, bid := range resp.Data.Bids {
-		if len(bid) != 3 {
-			continue
-		}
-		ok, amount := model.ParseRealAmount(model.Mexc, symbol, bid[1])
-		if ok {
-			bids = append(bids, model.Tick{Side: model.OrderSideBuy, Price: bid[0], Amount: amount})
-		}
-	}
-	bidAsk := &model.BidAsk{
-		Ts:         resp.Data.Timestamp,
-		TsReceived: int(time.Now().UnixNano() / int64(time.Millisecond)),
-		UpdateId:   resp.Data.Version,
-		Bids:       bids,
-		Asks:       asks,
-	}
-	setMexcAskBid(markets, symbol, bidAsk)
+	setMexcAskBid(markets, symbol, parseTicksMexc(symbol, resp.Data.Timestamp, resp.Data.Version, resp.Data.Bids, resp.Data.Asks))
 }
 
+// 通过接口 https://contract.mexc.com/api/v1/contract/depth_commits/BTC_USDT/1000获取最新1000条深度快照
 func syncMexcContractDepthCommits(markets *model.Markets, symbol string) {
-	// 通过接口 https://contract.mexc.com/api/v1/contract/depth_commits/BTC_USDT/1000获取最新1000条深度快照
-	resp, err := mexcGetContractSymbolDepthCommits(symbol)
+	_, _, _, dialectSymbol := model.GetFromStandard(model.Mexc, symbol)
+	resp, err := mexcGetContractSymbolDepthCommits(dialectSymbol)
 	if err != nil || resp == nil {
 		return
 	}
-	now := int(time.Now().UnixNano() / int64(time.Millisecond))
-	ts := now
 	for _, data := range resp.Data {
-		var asks []model.Tick
-		var bids []model.Tick
-		for _, ask := range data.Asks {
-			tick := getTick(ask)
-			if tick != nil {
-				asks = append(asks, *tick)
-			}
-		}
-		for _, bid := range data.Bids {
-			tick := getTick(bid)
-			if tick != nil {
-				bids = append(bids, *tick)
-			}
-		}
-		bidAsk := &model.BidAsk{
-			Ts:         ts,
-			TsReceived: now,
-			UpdateId:   data.Version,
-			Bids:       bids,
-			Asks:       asks,
-		}
-		setMexcAskBid(markets, symbol, bidAsk)
+		setMexcAskBid(markets, symbol, parseTicksMexc(symbol, int(time.Now().UnixMilli()), data.Version, data.Bids, data.Asks))
 	}
-}
-
-func getTick(tickInfo []float64) *model.Tick {
-	if len(tickInfo) != 3 { // 备注: [411.8, 10, 1] 411.8为价格，10为此价格的合约张数, 1为订单数量
-		return nil
-	}
-	if tickInfo[0] <= 0 {
-		return nil
-	}
-	//if tickInfo[2] != 1 {
-	//	msg := fmt.Sprintf("contract count is not 1, tickInfo[2] is not handled, %v", tickInfo)
-	//	util.Notice(msg)
-	//	fmt.Println(msg)
-	//}
-	// TODO: 验证这个数量 是不是 合约张数x订单数量
-	return &model.Tick{Price: tickInfo[0], Amount: tickInfo[1] * tickInfo[2]}
 }
 
 func mergeTicks(oldTicks []model.Tick, incrementalTicks []model.Tick, ascending bool) []model.Tick {
@@ -699,12 +577,9 @@ func setMexcAskBid(markets *model.Markets, symbol string, bidAsk *model.BidAsk) 
 		return
 	}
 	haveOld, old := markets.GetBidAsk(symbol, model.Mexc)
-	// For contract the version might be always 0, in this case it will be lower version
-	// than version returned by full depth.
+	// For contract the version might be always 0, in this case it will be lower than version returned by full depth.
 	if haveOld && old.UpdateId > bidAsk.UpdateId && bidAsk.UpdateId != 0 {
-		msg := fmt.Sprintf("[setMexcAskBid] Version too low, skip this bidAsk, cachedBidAsk: %v, newBidAsk: %v", old, bidAsk)
-		util.Notice(msg)
-		fmt.Println(msg)
+		util.Notice(fmt.Sprintf("[setMexcAskBid] Version too low, skip this bidAsk, cachedBidAsk: %v, newBidAsk: %v", old, bidAsk))
 		return
 	}
 	if old != nil {
@@ -779,7 +654,7 @@ func GetWSSubscribeMexc(symbol string, subType string) string {
 				"method":"sub.depth.full",
 				"param":{
 					"symbol":"%s",
-					"limit":10
+					"limit":5
 				}
 			}`, symbol)
 	case mexcContractTickerSubType:
