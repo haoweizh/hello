@@ -246,39 +246,6 @@ func Test_download(t *testing.T) {
 }
 
 func Test_wallet(t *testing.T) {
-	nums := strings.Split(`46.0,350.00,0,100.0,150.0,146.00,0`, `,`)
-	season := make([]float64, 4)
-	item := make([]float64, 3)
-	result := make([][]float64, 3)
-	for i := 0; i < 3; i++ {
-		item[i], _ = strconv.ParseFloat(nums[i], 64)
-	}
-	for i := 3; i < 7; i++ {
-		season[i-3], _ = strconv.ParseFloat(nums[i], 64)
-	}
-	for i := 0; i < len(item); i++ {
-		result[i] = make([]float64, len(season))
-		itemAll := 0.0
-		for j := 0; j < len(season); j++ {
-			result[i][j] = math.Min(math.Min(item[i]/float64(len(season)), season[j]), item[i]-itemAll)
-			season[j] -= result[i][j]
-			itemAll += result[i][j]
-		}
-		for j := 0; j < len(season); j++ {
-			if itemAll < item[i] {
-				amount := math.Min(item[i]-itemAll, season[j])
-				itemAll += amount
-				result[i][j] += amount
-				season[j] -= amount
-			}
-		}
-	}
-	for _, value := range result {
-		for j := 0; j < len(value); j++ {
-			fmt.Println(fmt.Sprintf(`%d季度： %.2f %.2f %.2f`, j+1, value[j]*0.3, value[j]*0.3, value[j]*0.4))
-		}
-		fmt.Println()
-	}
 	model.NewConfig()
 	key, secret := `LWaglQgg6eiJDuTmwG`, `mOnuz8yeZmqGLUT2bNDqgA7kuhKT8QYOyUon`
 	_, rate := api.GetFundingRate(key, secret, model.BybitPerp, `LOOKS_PERP`)
@@ -316,35 +283,40 @@ func Test_wallet(t *testing.T) {
 	fmt.Println(order.DealAmount)
 	fmt.Println(order.DealPrice)
 	fmt.Println(order.Status)
-	//amount := api.GetAmountInMarket(model.OKEX, `DOGE-USDT-SWAP`, 4)
-	//fmt.Println(amount)
-	//_, loan := api.GetMaxLoan(model.AppConfig.OkexKey, model.AppConfig.OkexSecret, model.OKEX, `XEM`)
-	//fmt.Println(loan)
-	//today := time.Now().In(time.UTC)
-	//today = time.Date(today.Year(), today.Month(), today.Day(), 0, 0, 0, 0, today.Location())
-	//duration, _ := time.ParseDuration(fmt.Sprintf(`%dh`, -24))
-	//today = today.Add(duration)
-	//fmt.Println(candle.N)
-	//model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
-	//api.InitMarketInfos()
-	//fmt.Println(fmt.Sprintf(`%v %d`, suc, len(pos)))
-	//a := api.GetMarketInfo(model.Ftx, `SECO/USD`)
-	//carry.GetTurtleData(model.Ftx, `okbusd_p`)
-	//var err error
-	//api.GetDayCandle(model.AppConfig.FtxKey, model.AppConfig.FtxSecret, model.Ftx, `htusd_p`, today)
-	//balanceUSD := api.GetWalletHistoryFtx(model.AppConfig.FtxKey, model.AppConfig.FtxSecret)
-	//balanceUSD := api.GetUSDBalance(model.AppConfig.FtxKey, model.AppConfig.FtxSecret, model.Ftx)
-	//order := api.QueryOrderById(model.AppConfig.FtxKey, model.AppConfig.FtxSecret, model.Ftx,
-	//	`btcusd_p`, model.OrderTypeStop, `903993`)
-	//fmt.Print(order.DealPrice)
-	//amount, transfer := api.GetWalletHistoryBitmex(model.AppConfig.BitmexKey, model.AppConfig.BitmexSecret)
-	//fmt.Println(fmt.Sprintf("%f \n%s", amount, transfer))
-	//fmt.Println(api.GetWalletBybit(model.AppConfig.BybitKey, model.AppConfig.BybitSecret))
-	//balance := api.GetWalletOKSwap(model.AppConfig.OkexKey, model.AppConfig.OkexSecret)
-	//for symbol, amount := range balance {
-	//	if amount > 0 {
-	//		info := api.GetWalletHistoryOKSwap(model.AppConfig.OkexKey, model.AppConfig.OkexSecret, symbol)
-	//		fmt.Println(fmt.Sprintf("%s %f\n %s", symbol, amount, info))
-	//	}
-	//}
+}
+
+func Test_accounting(t *testing.T) {
+	nums := strings.Split(`230.0,663.00,0,200.0,303.0,300.00,0`, `,`)
+	season := make([]float64, 4)
+	item := make([]float64, 3)
+	result := make([][]float64, 3)
+	for i := 0; i < 3; i++ {
+		item[i], _ = strconv.ParseFloat(nums[i], 64)
+	}
+	for i := 3; i < 7; i++ {
+		season[i-3], _ = strconv.ParseFloat(nums[i], 64)
+	}
+	for i := 0; i < len(item); i++ {
+		result[i] = make([]float64, len(season))
+		itemAll := 0.0
+		for j := 0; j < len(season); j++ {
+			result[i][j] = math.Min(math.Min(item[i]/float64(len(season)), season[j]), item[i]-itemAll)
+			season[j] -= result[i][j]
+			itemAll += result[i][j]
+		}
+		for j := 0; j < len(season); j++ {
+			if itemAll < item[i] {
+				amount := math.Min(item[i]-itemAll, season[j])
+				itemAll += amount
+				result[i][j] += amount
+				season[j] -= amount
+			}
+		}
+	}
+	for _, value := range result {
+		for j := 0; j < len(value); j++ {
+			fmt.Println(fmt.Sprintf(`%d季度： %.2f %.2f %.2f`, j+1, value[j]*0.2, value[j]*0.3, value[j]*0.5))
+		}
+		fmt.Println()
+	}
 }
