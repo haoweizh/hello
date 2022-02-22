@@ -93,7 +93,9 @@ func (markets *Markets) SetBidAsk(symbol, marketName string, bidAsk *BidAsk) boo
 		//	util.Info(fmt.Sprintf(`%s %s same as before`, marketName, symbol))
 		//}
 		oldBidAsk.Store(marketName, bidAsk)
-		go AppMetric.AddTick(marketName, symbol, util.GetNow(), last.(*BidAsk), bidAsk)
+		if last != nil {
+			go AppMetric.AddTick(marketName, symbol, util.GetNow(), last.(*BidAsk), bidAsk)
+		}
 		return true
 	}
 	return false
