@@ -8,8 +8,7 @@ import (
 	"sync"
 )
 
-var marketInfos = make(map[string]map[string]*MarketInfo) // market - symbol - MarketInfo
-var marketInfoLock sync.Mutex
+var marketInfos sync.Map // market - map[string]*MarketInfo //symbol - MarketInfo
 
 type MarketInfo struct {
 	Market, Name, CTCurrency               string
@@ -23,18 +22,15 @@ type MarketInfo struct {
 }
 
 func GetMarketInfo(market, symbol string) (marketInfo *MarketInfo) {
-	defer marketInfoLock.Unlock()
-	marketInfoLock.Lock()
-	if marketInfos == nil || marketInfos[market] == nil {
+	value, _ := marketInfos.Load(market)
+	if value == nil {
 		return nil
 	}
-	return marketInfos[market][symbol]
+	return value.(map[string]*MarketInfo)[symbol]
 }
 
 func SetMarketInfos(market string, value map[string]*MarketInfo) {
-	defer marketInfoLock.Unlock()
-	marketInfoLock.Lock()
-	marketInfos[market] = value
+	marketInfos.Store(market, value)
 }
 
 // ParseRealAmount 返回以币为单位的数量

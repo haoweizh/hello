@@ -9,7 +9,6 @@ import (
 )
 
 type Config struct {
-	lock                                                                                           sync.Mutex
 	ChannelSlot, Delay                                                                             float64
 	KucoinSpot, GateSpot                                                                           bool
 	KucoinRelatedKey, KucoinRelatedSecret, KucoinFutureKey, KucoinFutureSecret                     string
@@ -33,7 +32,7 @@ type Account struct {
 
 var crossLen int
 var AppAccounts []map[string]*Account // account index/map/account
-var marketAccounts = make(map[string][]*Account)
+var marketAccounts sync.Map           //market - []*Account
 
 func GetAccounts(index int) (accounts map[string]*Account) {
 	if AppAccounts != nil && len(AppAccounts) > index {
@@ -135,10 +134,9 @@ func (config *Config) GetAccountFromKey(market, key string) (account *Account) {
 }
 
 func (config *Config) GetAccounts(market string) []*Account {
-	defer config.lock.Unlock()
-	config.lock.Lock()
-	if marketAccounts[market] != nil {
-		return marketAccounts[market]
+	value, ok := marketAccounts.Load(market)
+	if ok && value != nil {
+		return value.([]*Account)
 	}
 	var rateValues, closeValues, keys, secrets []string
 	switch market {
@@ -180,16 +178,17 @@ func (config *Config) GetAccounts(market string) []*Account {
 			market, len(keys), len(secrets), len(closeValues), len(rateValues)))
 		os.Exit(1)
 	}
-	marketAccounts[market] = make([]*Account, len(keys))
+	accounts := make([]*Account, len(keys))
 	for i := 0; i < len(keys); i++ {
 		account := &Account{Key: keys[i], Secret: secrets[i]}
 		account.CarryClose, _ = strconv.ParseBool(closeValues[i])
 		account.CarryRate, _ = strconv.ParseFloat(rateValues[i], 64)
 		if len(strings.TrimSpace(account.Key)) > 0 {
-			marketAccounts[market][i] = account
+			accounts[i] = account
 		} else {
-			marketAccounts[market][i] = nil
+			accounts[i] = nil
 		}
 	}
-	return marketAccounts[market]
+	marketAccounts.Store(market, accounts)
+	return accounts
 }
