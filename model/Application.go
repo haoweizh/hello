@@ -59,7 +59,7 @@ const PostOnly = `ParticipateDoNotInitiate`
 var AppDB *gorm.DB
 var AppSettings []Setting
 var AppConfig *Config
-var AppMarkets = NewMarkets()
+var AppMarkets = &Markets{}
 var AppPause = false
 var DialectTail = map[string]map[string]string{
 	MarketTypeSpot: {Gate: `_USDT`, Ftx: `/USD`, OKEX: `-USDT`, BybitSpot: `USDT`, BinanceSpot: `USDT`},

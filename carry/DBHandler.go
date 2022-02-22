@@ -116,13 +116,13 @@ func ResetChannels(market string, channels []chan struct{}) {
 		return
 	}
 	model.AppPause = true
-	model.AppMarkets.PutDepthChan(market, nil)
+	model.AppMarkets.WsDepth.Delete(market)
 	for i, channel := range channels {
 		util.Notice(`send to stop connection %s %d`, market, i)
 		channel <- struct{}{}
 		close(channel)
 	}
-	model.AppMarkets.PutDepthChan(market, api.CreateMarketDepthServer(model.AppMarkets, market, cross.PostOrderCross))
+	model.AppMarkets.WsDepth.Store(market, api.CreateMarketDepthServer(model.AppMarkets, market, cross.PostOrderCross))
 	model.AppPause = false
 	util.Notice(market + " reset depth channel done")
 }
@@ -133,13 +133,13 @@ func MaintainMarketChan() {
 	}
 	socketMaintaining = true
 	for _, market := range model.GetMarkets() {
-		channels := model.AppMarkets.GetDepthChan(market)
-		if channels == nil || len(channels) == 0 {
-			model.AppMarkets.PutDepthChan(market, api.CreateMarketDepthServer(model.AppMarkets, market, cross.PostOrderCross))
+		channels, _ := model.AppMarkets.WsDepth.Load(market)
+		if channels == nil || len(channels.([]chan struct{})) == 0 {
+			model.AppMarkets.WsDepth.Store(market, api.CreateMarketDepthServer(model.AppMarkets, market, cross.PostOrderCross))
 			util.Notice(fmt.Sprintf("%s create new depth channel ", market))
 		} else if api.RequireDepthChanReset(model.AppMarkets, market) {
 			util.Notice(fmt.Sprintf("%s require new depth channel ", market))
-			ResetChannels(market, channels)
+			ResetChannels(market, channels.([]chan struct{}))
 			time.Sleep(time.Minute)
 		}
 	}

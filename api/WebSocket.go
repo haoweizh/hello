@@ -8,7 +8,6 @@ import (
 	"hello/util"
 	"net/http"
 	"strings"
-	"sync"
 	"time"
 )
 
@@ -16,8 +15,6 @@ type OrderHandler func(order *model.Order, setting *model.Setting)
 type MsgHandler func(connection *websocket.Conn, message []byte, orderHandler OrderHandler)
 type WSMsgHandler func(client *WSClient, message []byte)
 type SubscribeHandler func(connection *websocket.Conn, subscribes []interface{}) error
-
-var wsLock sync.Mutex
 
 var AppWSManager = WSManager{
 	Register:   make(chan *WSClient),
@@ -38,9 +35,12 @@ func SendToConnection(connection *websocket.Conn, msg []byte) (err error) {
 }
 
 func SendToAllConnections(market string, msg []byte) (err error) {
-	defer wsLock.Unlock()
-	wsLock.Lock()
-	for i, connection := range model.AppMarkets.Connections[market] {
+	value, _ := model.AppMarkets.Connections.Load(market)
+	if value == nil {
+		return
+	}
+	connections := value.([]*websocket.Conn)
+	for i, connection := range connections {
 		if connection == nil {
 			continue
 		}
@@ -52,9 +52,12 @@ func SendToAllConnections(market string, msg []byte) (err error) {
 }
 
 func PongAllConnectionsInterval(market string, milliseconds int) (err error) {
-	defer wsLock.Unlock()
-	wsLock.Lock()
-	for i, connection := range model.AppMarkets.Connections[market] {
+	value, _ := model.AppMarkets.Connections.Load(market)
+	if value == nil {
+		return
+	}
+	connections := value.([]*websocket.Conn)
+	for i, connection := range connections {
 		if connection == nil {
 			continue
 		}
@@ -148,7 +151,7 @@ func WebSocketClient(market, url string, subscribes []interface{}, subHandler Su
 		stopChans = append(stopChans, stopChan)
 		connections = append(connections, connection)
 	}
-	model.AppMarkets.SetConnections(market, connections)
+	model.AppMarkets.Connections.Store(market, connections)
 	return
 }
 

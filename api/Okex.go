@@ -82,7 +82,12 @@ func reSubscribe() {
 	}
 	wrongArray := getWrongs()
 	util.Notice(fmt.Sprintf(`>>>>>>>>wrong symbol %v %d`, wrongArray, len(wrongArray)))
-	if len(wrongArray) > len(model.AppMarkets.Connections[model.OKEX])*5 {
+	value, _ := model.AppMarkets.Connections.Load(model.OKEX)
+	if value == nil {
+		return
+	}
+	connections := value.([]*websocket.Conn)
+	if len(wrongArray) > len(connections)*5 {
 		requireReset.Store(model.OKEX, true)
 		util.Notice(fmt.Sprintf(`require reset all okex channel, wrong symbol %d`, len(wrongArray)))
 		return
@@ -99,15 +104,11 @@ func reSubscribe() {
 		util.SocketInfo("okex can not unsubscribe " + err.Error())
 	}
 	time.Sleep(time.Second * 3)
-	if model.AppMarkets.Connections == nil || model.AppMarkets.Connections[model.OKEX] == nil {
-		return
-	}
-	connNum := len(model.AppMarkets.Connections[model.OKEX])
-	if connNum == 0 {
+	if len(connections) == 0 {
 		return
 	}
 	for i, item := range subArray {
-		connection := model.AppMarkets.Connections[model.OKEX][i%connNum]
+		connection := connections[i%len(connections)]
 		if connection == nil {
 			continue
 		}
@@ -1180,12 +1181,12 @@ func getMaxSizeOKEX(key, secret, symbol string) (success bool, maxBuy, maxSell f
 		maxSell, _ = strconv.ParseFloat(data[`maxSell`].(string), 64)
 		_, marketType, _, _ := model.GetFromStandard(model.Kucoin, symbol)
 		if marketType == model.MarketTypeSpot {
-			havePrice, price := model.AppMarkets.GetPrice(symbol)
-			if !havePrice {
-				util.Notice(`fail to get price from bidAsk %s`, symbol)
+			ok, bidAsk := model.AppMarkets.GetBidAsk(symbol, model.OKEX)
+			if ok {
+				maxSell = maxSell / bidAsk.Asks[0].Price
+				util.Info(`get max sell %f after price %f %s`, maxSell, bidAsk.Asks[0].Price, symbol)
 			} else {
-				maxSell = maxSell / price
-				util.Info(`get max sell %f after price %f %s`, maxSell, price, symbol)
+				util.Notice(`fail to get price from bidAsk %s`, symbol)
 			}
 		}
 	}

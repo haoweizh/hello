@@ -173,9 +173,9 @@ func handleOrderBookBybitPerp(markets *model.Markets, symbol string, ts int64, r
 			}
 		}
 	} else if action == `delta` {
-		_, bidAsk = markets.CopyBidAsk(symbol, model.BybitPerp)
+		_, bidAsk = markets.GetBidAsk(symbol, model.BybitPerp)
 		data := response.Get(`data`)
-		if bidAsk == nil || data == nil {
+		if bidAsk == nil || bidAsk.Bids == nil || bidAsk.Asks == nil || data == nil {
 			return
 		}
 		arrayDelete, errDelete := data.Get(`delete`).Array()

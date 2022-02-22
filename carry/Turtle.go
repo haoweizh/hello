@@ -159,10 +159,12 @@ func GetTurtleData(key, secret string, setting *model.Setting) (turtleData *Turt
 				}
 			}
 		}()
-		channels := model.AppMarkets.GetDepthChan(setting.Market)
-		ResetChannels(setting.Market, channels)
-		util.Notice(fmt.Sprintf(`%s need to go cross %s to %s set chance 0`,
-			setting.Market, setting.Symbol, turtleData.symbol))
+		channels, _ := model.AppMarkets.WsDepth.Load(setting.Market)
+		if channels != nil {
+			ResetChannels(setting.Market, channels.([]chan struct{}))
+			util.Notice(fmt.Sprintf(`%s need to go cross %s to %s set chance 0`,
+				setting.Market, setting.Symbol, turtleData.symbol))
+		}
 	}
 	for i := 1; i < 21; i++ {
 		duration, _ := time.ParseDuration(fmt.Sprintf(`%dh`, -24*i))

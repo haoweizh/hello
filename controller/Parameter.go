@@ -294,8 +294,10 @@ func RefreshParameters(c *gin.Context) {
 	util.Notice(`controller refreshing`)
 	model.LoadSettings()
 	for _, market := range model.GetMarkets() {
-		channels := model.AppMarkets.GetDepthChan(market)
-		carry.ResetChannels(market, channels)
+		channels, _ := model.AppMarkets.WsDepth.Load(market)
+		if channels != nil {
+			carry.ResetChannels(market, channels.([]chan struct{}))
+		}
 	}
 	api.InitMarketInfos()
 	c.String(http.StatusOK, model.AppConfig.ToString())

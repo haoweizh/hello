@@ -46,17 +46,9 @@ func Test_getPositionsMexc(t *testing.T) {
 }
 
 func Test_WsDepthServeMexc(t *testing.T) {
-	WsDepthServeMexc(nil, nil, true)
-
-	t.Log("sub end")
-}
-
-func Test_mexcGetContractSymbolDepthCommits(t *testing.T) {
-	resp, err := mexcGetContractSymbolDepthCommits("BTC_USDT")
+	_, err := WsDepthServeMexc(nil, nil, true)
 	if err != nil {
-		t.Log(fmt.Sprintf("failed %v", err))
-		t.Fail()
 		return
 	}
-	fmt.Printf("%v", resp)
+	t.Log("sub end")
 }

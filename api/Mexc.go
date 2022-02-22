@@ -41,11 +41,10 @@ const (
 
 // contract rest api path
 const (
-	contractPlaceOrderPath               = "/api/v1/private/order/submit"         // 下单
-	contractCancelOrdersBySymbolPath     = "/api/v1/private/order/cancel_all"     // 撤销某个合约下的所有未完成订单
-	contractQueryOrderByIdPath           = "api/v1/private/order/get"             // 根据订单号查询订单
-	contractGetSymbolMarketPath          = "/api/v1/contract/detail"              // 获取合约信息
-	contractGetSymbolDepthCommitsPathFmt = "/api/v1/contract/depth_commits/%s/%d" // 获取合约最近N条深度信息快照
+	contractPlaceOrderPath           = "/api/v1/private/order/submit"     // 下单
+	contractCancelOrdersBySymbolPath = "/api/v1/private/order/cancel_all" // 撤销某个合约下的所有未完成订单
+	contractQueryOrderByIdPath       = "api/v1/private/order/get"         // 根据订单号查询订单
+	contractGetSymbolMarketPath      = "/api/v1/contract/detail"          // 获取合约信息
 )
 
 var (
@@ -519,7 +518,8 @@ func initMexcContractDepth(markets *model.Markets, symbol string) {
 	resp := &dtos.MexcContractDepthHttpResp{}
 	err = json.Unmarshal(respBytes, resp)
 	if err != nil || !resp.Success {
-		util.Notice(fmt.Sprintf(`[mexcGetContractSymbolDepth] Failed to get depth info %s for symbol %s success %t err %+v`, string(respBytes), symbol, resp.Success, err))
+		util.Notice(fmt.Sprintf(`[mexcGetContractSymbolDepth] Failed to get depth info %s for symbol %s success %t err %+v`,
+			string(respBytes), symbol, resp.Success, err))
 		return
 	}
 	setMexcAskBid(markets, symbol, parseTicksMexc(symbol, resp.Data.Timestamp, resp.Data.Version, resp.Data.Bids, resp.Data.Asks))
@@ -528,8 +528,17 @@ func initMexcContractDepth(markets *model.Markets, symbol string) {
 // 通过接口 https://contract.mexc.com/api/v1/contract/depth_commits/BTC_USDT/1000获取最新1000条深度快照
 func syncMexcContractDepthCommits(markets *model.Markets, symbol string) {
 	_, _, _, dialectSymbol := model.GetFromStandard(model.Mexc, symbol)
-	resp, err := mexcGetContractSymbolDepthCommits(dialectSymbol)
-	if err != nil || resp == nil {
+	respBytes, err := publicRequestMexc(http.MethodGet, contractRestUrl,
+		fmt.Sprintf("/api/v1/contract/depth_commits/%s/%d", dialectSymbol, 5), nil, "")
+	if err != nil {
+		util.Notice(fmt.Sprintf(`[mexcGetContractSymbolDepthCommits] Failed to get depth info for symbol %s err %+v`, symbol, err))
+		return
+	}
+	resp := &dtos.MexcContractDepthCommitsResp{}
+	err = json.Unmarshal(respBytes, resp)
+	if err != nil || !resp.Success {
+		util.Notice(fmt.Sprintf(`[mexcGetContractSymbolDepthCommits] Failed to get depth %s symbol %s success %t err %+v`,
+			string(respBytes), symbol, resp.Success, err))
 		return
 	}
 	for _, data := range resp.Data {
@@ -598,26 +607,6 @@ func setMexcAskBid(markets *model.Markets, symbol string, bidAsk *model.BidAsk) 
 	}
 }
 
-func mexcGetContractSymbolDepthCommits(symbol string) (*dtos.MexcContractDepthCommitsResp, error) {
-	path := fmt.Sprintf(contractGetSymbolDepthCommitsPathFmt, symbol, 10)
-	respBytes, err := publicRequestMexc(http.MethodGet, contractRestUrl, path, nil, "")
-	if err != nil {
-		logMsg := fmt.Sprintf(`[mexcGetContractSymbolDepthCommits] Failed to get depth info for symbol %s err %+v`, symbol, err)
-		util.Notice(logMsg)
-		fmt.Println(logMsg)
-		return nil, err
-	}
-	resp := &dtos.MexcContractDepthCommitsResp{}
-	err = json.Unmarshal(respBytes, resp)
-	if err != nil || !resp.Success {
-		logMsg := fmt.Sprintf(`[mexcGetContractSymbolDepthCommits] Failed to get depth info %s for symbol %s success %t err %+v`, string(respBytes), symbol, resp.Success, err)
-		fmt.Println(logMsg)
-		util.Notice(logMsg)
-		return nil, err
-	}
-	return resp, nil
-}
-
 // endregion
 var subscribeHandlerMexc = func(connection *websocket.Conn, subscribes []interface{}) error {
 	var err error
@@ -637,33 +626,4 @@ func getFloat64OrDefault(val string) float64 {
 		ret = 0
 	}
 	return ret
-}
-
-func GetWSSubscribeMexc(symbol string, subType string) string {
-	switch subType {
-	case mexcContractDepthIncSubType:
-		return fmt.Sprintf(`{
-				"method":"sub.depth",
-				"param":{
-					"symbol":"%s",
-					"compress":true
-				}
-			}`, symbol)
-	case mexcContractDepthFullSubType:
-		return fmt.Sprintf(`{
-				"method":"sub.depth.full",
-				"param":{
-					"symbol":"%s",
-					"limit":5
-				}
-			}`, symbol)
-	case mexcContractTickerSubType:
-		return fmt.Sprintf(`{
-				"method":"sub.ticker",
-				"param":{
-					"symbol":"%s"
-				}
-			}`, symbol)
-	}
-	return ""
 }
