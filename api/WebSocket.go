@@ -8,6 +8,7 @@ import (
 	"hello/util"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -16,6 +17,8 @@ type MsgHandler func(connection *websocket.Conn, message []byte, orderHandler Or
 type WSMsgHandler func(client *WSClient, message []byte)
 type SubscribeHandler func(connection *websocket.Conn, subscribes []interface{}) error
 
+var wsLock sync.Mutex
+
 var AppWSManager = WSManager{
 	Register:   make(chan *WSClient),
 	Unregister: make(chan *WSClient),
@@ -23,6 +26,8 @@ var AppWSManager = WSManager{
 }
 
 func SendToConnection(connection *websocket.Conn, msg []byte) (err error) {
+	defer wsLock.Unlock()
+	wsLock.Lock()
 	if connection == nil {
 		util.Notice(`fail to write to nil connection`)
 		return
@@ -35,6 +40,8 @@ func SendToConnection(connection *websocket.Conn, msg []byte) (err error) {
 }
 
 func SendToAllConnections(market string, msg []byte) (err error) {
+	defer wsLock.Unlock()
+	wsLock.Lock()
 	value, _ := model.AppMarkets.Connections.Load(market)
 	if value == nil {
 		return
