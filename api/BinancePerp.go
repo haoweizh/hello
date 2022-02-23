@@ -201,7 +201,7 @@ func handleDepthBinancePerp(markets *model.Markets, json *simplejson.Json, stand
 	}
 }
 
-func maintainChannelBinancePerp() {
+func maintainChannelBinancePerp(subscribes []interface{}) {
 	if !channelMaintainingBinancePerp {
 		channelMaintainingBinancePerp = true
 		for true {
@@ -209,6 +209,20 @@ func maintainChannelBinancePerp() {
 			err := PongAllConnectionsInterval(model.BinancePerp, 500)
 			if err != nil {
 				util.SocketInfo("pong binance perp server error " + err.Error())
+			}
+			needReset := false
+			for _, subscribe := range subscribes {
+				dialectSymbol := strings.ToUpper(subscribe.(string)[0:strings.Index(subscribe.(string), `@`)])
+				_, marketType, coin := model.GetCoinFromDialect(dialectSymbol, model.BinancePerp)
+				_, bidAsk := model.AppMarkets.GetBidAsk(coin+model.UniStandardTail[marketType], model.BinancePerp)
+				if bidAsk == nil || time.Now().UnixMilli()-int64(bidAsk.Ts) > 180000 {
+					requireReset.Store(model.Ftx, true)
+					needReset = true
+					break
+				}
+			}
+			if !needReset {
+				util.Notice(`no need reset %s`, model.BinancePerp)
 			}
 		}
 	}

@@ -33,6 +33,7 @@ func maintainChannelFtx(subscribes []interface{}) {
 		channelMaintainingFtx = true
 		for true {
 			time.Sleep(time.Minute * 5)
+			needReset := false
 			for _, value := range subscribes {
 				subscribe := value.([]string)
 				_, marketType, coin := model.GetCoinFromDialect(model.Ftx, subscribe[1])
@@ -44,8 +45,8 @@ func maintainChannelFtx(subscribes []interface{}) {
 						cmdUnsub := fmt.Sprintf(`{"op": "unsubscribe", "channel": "%s", "market": "%s"}`,
 							subscribe[0], subscribe[1])
 						if bidAsk != nil {
-							util.Notice(`maintain ftx timeout %s %s %d`,
-								standardSymbol, time.Now().UnixMilli()-int64(bidAsk.Ts), bidAsk.Ts)
+							util.Notice(fmt.Sprintf(`GetDialectFromStandard timeout %s %d %d`,
+								standardSymbol, time.Now().UnixMilli()-int64(bidAsk.Ts), bidAsk.Ts))
 						}
 						if err := SendToConnection(conn.(*websocket.Conn), []byte(cmdUnsub)); err != nil {
 							util.SocketInfo("ftx can not resubscribe " + err.Error())
@@ -63,7 +64,13 @@ func maintainChannelFtx(subscribes []interface{}) {
 				}
 				if bidAsk == nil || time.Now().UnixMilli()-int64(bidAsk.Ts) > 180000 {
 					requireReset.Store(model.Ftx, true)
+					needReset = true
+					util.Notice(`require reset ftx`)
+					break
 				}
+			}
+			if !needReset {
+				util.Notice(`no need reset %s`, model.Ftx)
 			}
 		}
 	}
@@ -125,8 +132,8 @@ func WsDepthServeFtx(markets *model.Markets, orderHandler OrderHandler) ([]chan 
 	//subType := model.SubscribeDepth
 	subType := model.SubscribeDepth + `,` + model.SubscribeTicker
 	subscribes := GetWSSubscribes(model.Ftx, subType)
-	subscribes = append(subscribes, GetWSSubscribe(model.Ftx, `USDT/USD`, model.SubscribeDepth))
-	subscribes = append(subscribes, GetWSSubscribe(model.Ftx, `USDT/USD`, model.SubscribeTicker))
+	subscribes = append(subscribes, GetWSSubscribe(model.Ftx, `USDT_USDT`, model.SubscribeDepth))
+	subscribes = append(subscribes, GetWSSubscribe(model.Ftx, `USDT_USDT`, model.SubscribeTicker))
 	return WebSocketClient(model.Ftx, wsFtx, subscribes, subscribeHandlerFtx, wsHandler, orderHandler, wsStepFtx)
 }
 
@@ -159,7 +166,7 @@ func handleTickerFtx(markets *model.Markets, response *simplejson.Json) {
 		if handler != nil {
 			setting := model.GetSetting(function, model.Ftx, standardSymbol)
 			if setting != nil && setting.Function == model.FunctionCross {
-				getUsdTick, usdtBidAsk := markets.GetBidAsk(`USDT/USD`, model.Ftx)
+				getUsdTick, usdtBidAsk := markets.GetBidAsk(`USDT_USDT`, model.Ftx)
 				if getUsdTick && bidAsk.Asks.Len() > 0 && bidAsk.Bids.Len() > 0 {
 					bidAsk.Asks[0].Price /= usdtBidAsk.Asks[0].Price
 					bidAsk.Bids[0].Price /= usdtBidAsk.Asks[0].Price
@@ -251,7 +258,7 @@ func handleDepthFtx(markets *model.Markets, response *simplejson.Json) {
 			if handler != nil {
 				setting := model.GetSetting(function, model.Ftx, standardSymbol)
 				if setting != nil && setting.Function == model.FunctionCross {
-					getUsdTick, usdtBidAsk := markets.GetBidAsk(`USDT/USD`, model.Ftx)
+					getUsdTick, usdtBidAsk := markets.GetBidAsk(`USDT_USDT`, model.Ftx)
 					if getUsdTick && bidAsk.Asks.Len() > 0 && bidAsk.Bids.Len() > 0 {
 						bidAsk.Asks[0].Price /= usdtBidAsk.Asks[0].Price
 						bidAsk.Bids[0].Price /= usdtBidAsk.Asks[0].Price

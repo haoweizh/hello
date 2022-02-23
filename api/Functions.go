@@ -536,12 +536,10 @@ func GetWSSubscribes(market, subType string) []interface{} {
 	switch market {
 	case model.OKEX:
 		go maintainChannelOKEX()
-	//case model.Binance:
-	//	go maintainChannelBinance()
 	case model.BinanceSpot:
-		go maintainChannelBinanceSpot()
+		go maintainChannelBinanceSpot(subscribes)
 	case model.BinancePerp:
-		go maintainChannelBinancePerp()
+		go maintainChannelBinancePerp(subscribes)
 	case model.Ftx:
 		go maintainChannelFtx(subscribes)
 	case model.BybitPerp:

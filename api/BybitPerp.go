@@ -31,6 +31,7 @@ func maintainChannelBybitPerp(subscribes []interface{}) {
 		channelMaintainingBybitPerp = true
 		for true {
 			time.Sleep(time.Minute * 5)
+			needReset := false
 			for _, value := range subscribes {
 				_, _, coin := model.GetCoinFromDialect(model.BybitPerp, value.(string))
 				standardSymbol := coin + model.UniStandardTail[model.MarketTypePerp]
@@ -53,7 +54,12 @@ func maintainChannelBybitPerp(subscribes []interface{}) {
 				}
 				if bidAsk == nil || time.Now().UnixMilli()-int64(bidAsk.Ts) > 180000 {
 					requireReset.Store(model.BybitPerp, true)
+					needReset = true
+					break
 				}
+			}
+			if !needReset {
+				util.Notice(`no need reset %s`, model.BybitPerp)
 			}
 		}
 	}
