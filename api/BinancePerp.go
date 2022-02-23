@@ -220,6 +220,8 @@ func maintainChannelBinancePerp(subscribes []interface{}) {
 					needReset = true
 					util.Notice(`require reset binance perp`)
 					break
+				} else {
+					util.Notice(`valid binance perp bid ask %s %d`, dialectSymbol, time.Now().UnixMilli()-int64(bidAsk.Ts))
 				}
 			}
 			if !needReset {
