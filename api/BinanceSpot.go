@@ -227,7 +227,7 @@ func maintainChannelBinanceSpot(subscribes []interface{}) {
 					util.Notice(`require reset binance spot`)
 					break
 				} else {
-					util.Notice(`valid binance perp bid ask %s %d`, dialectSymbol, time.Now().UnixMilli()-int64(bidAsk.Ts))
+					util.Notice(`valid binance spot bid ask %s %d`, dialectSymbol, time.Now().UnixMilli()-int64(bidAsk.Ts))
 				}
 			}
 			if !needReset {
