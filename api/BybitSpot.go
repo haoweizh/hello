@@ -53,6 +53,7 @@ func maintainChannelBybitSpot(subscribes []interface{}) {
 				if bidAsk == nil || time.Now().UnixMilli()-int64(bidAsk.Ts) > 180000 {
 					requireReset.Store(model.BybitSpot, true)
 					needReset = true
+					util.Notice(`require reset bybitSpot`)
 					break
 				}
 			}

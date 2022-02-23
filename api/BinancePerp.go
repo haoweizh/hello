@@ -216,8 +216,9 @@ func maintainChannelBinancePerp(subscribes []interface{}) {
 				_, marketType, coin := model.GetCoinFromDialect(dialectSymbol, model.BinancePerp)
 				_, bidAsk := model.AppMarkets.GetBidAsk(coin+model.UniStandardTail[marketType], model.BinancePerp)
 				if bidAsk == nil || time.Now().UnixMilli()-int64(bidAsk.Ts) > 180000 {
-					requireReset.Store(model.Ftx, true)
+					requireReset.Store(model.BinancePerp, true)
 					needReset = true
+					util.Notice(`require reset binance perp`)
 					break
 				}
 			}
