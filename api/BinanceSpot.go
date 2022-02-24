@@ -216,20 +216,21 @@ func maintainChannelBinanceSpot(subscribes []interface{}) {
 			if err != nil {
 				util.SocketInfo("pong binance spot server error " + err.Error())
 			}
-			needReset := false
+			timeoutNum := 0
 			for _, subscribe := range subscribes {
 				dialectSymbol := strings.ToUpper(subscribe.(string)[0:strings.Index(subscribe.(string), `@`)])
 				_, marketType, coin := model.GetCoinFromDialect(model.BinanceSpot, dialectSymbol)
 				symbol := coin + model.UniStandardTail[marketType]
 				_, bidAsk := model.AppMarkets.GetBidAsk(symbol, model.BinanceSpot)
-				if bidAsk == nil || time.Now().UnixMilli()-int64(bidAsk.Ts) > 600000 {
-					requireReset.Store(model.BinanceSpot, true)
-					needReset = true
-					util.Notice(`require reset binance spot %s`, symbol)
-					break
+				if bidAsk == nil || time.Now().UnixMilli()-int64(bidAsk.Ts) > 180000 {
+					timeoutNum++
+					util.Notice("binance spot subscribe timeout " + symbol)
 				}
 			}
-			if !needReset {
+			if len(subscribes) > 0 && timeoutNum*5 > len(subscribes) {
+				requireReset.Store(model.BinanceSpot, true)
+				util.Notice(`require reset binance spot %d in all %d`, timeoutNum, len(subscribes))
+			} else {
 				util.Notice(`no need reset %s`, model.BinanceSpot)
 			}
 		}
