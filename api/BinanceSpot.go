@@ -222,7 +222,7 @@ func maintainChannelBinanceSpot(subscribes []interface{}) {
 				_, marketType, coin := model.GetCoinFromDialect(model.BinanceSpot, dialectSymbol)
 				symbol := coin + model.UniStandardTail[marketType]
 				_, bidAsk := model.AppMarkets.GetBidAsk(symbol, model.BinanceSpot)
-				if bidAsk == nil || time.Now().UnixMilli()-int64(bidAsk.Ts) > 180000 {
+				if bidAsk == nil || time.Now().UnixMilli()-int64(bidAsk.Ts) > 600000 {
 					requireReset.Store(model.BinanceSpot, true)
 					needReset = true
 					util.Notice(`require reset binance spot %s`, symbol)
