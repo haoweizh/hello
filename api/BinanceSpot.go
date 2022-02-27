@@ -227,7 +227,7 @@ func maintainChannelBinanceSpot(subscribes []interface{}) {
 					util.Notice("binance spot subscribe timeout " + symbol)
 				}
 			}
-			if len(subscribes) > 0 && timeoutNum*5 > len(subscribes) {
+			if len(subscribes) > 0 && timeoutNum*10 > len(subscribes) {
 				requireReset.Store(model.BinanceSpot, true)
 				util.Notice(`require reset binance spot %d in all %d`, timeoutNum, len(subscribes))
 			} else {

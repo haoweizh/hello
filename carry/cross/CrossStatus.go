@@ -146,7 +146,7 @@ func GetHoldings(accounts map[string]*model.Account) (holding [][]interface{}) {
 						valid = setting.Valid
 					}
 					holding = append(holding, []interface{}{balance.Market, balance.Coin, symbol,
-						math.Round(balance.Amount), math.Round(balance.UsdValue), valid})
+						fmt.Sprintf(`%.2f`, balance.Amount), math.Round(balance.UsdValue), valid})
 					coinHold[balance.Coin] += balance.Amount
 					if coinPrice[balance.Coin] == 0 {
 						tickGet, tick := model.AppMarkets.GetBidAsk(symbol, balance.Market)
