@@ -3,8 +3,8 @@ package api
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/Kucoin/kucoin-futures-go-sdk"
 	"github.com/Kucoin/kucoin-go-sdk"
-	"github.com/Kucoin/kumex-go-sdk"
 	"hello/model"
 	"hello/util"
 	"net/http"
@@ -24,8 +24,8 @@ func kucoinFutureClient(key, secret, passPhrase string) *kumex.ApiService {
 	client := kumex.NewApiService(
 		kumex.ApiKeyOption(key),
 		kumex.ApiSecretOption(secret),
-		kumex.ApiPassPhraseOption(passPhrase))
-	//kumex.ApiKeyVersionOption("2"))
+		kumex.ApiPassPhraseOption(passPhrase),
+		kumex.ApiKeyVersionOption("2"))
 	return client
 }
 
