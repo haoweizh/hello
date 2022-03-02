@@ -34,9 +34,14 @@ var privateConnectionOKEX = make(map[string]*websocket.Conn) // key - connection
 func maintainChannelOKEX(subscribes []interface{}) {
 	if !channelMaintainingOKEX {
 		channelMaintainingOKEX = true
+		go func() {
+			for true {
+				time.Sleep(time.Minute * 5)
+				reSubscribe(subscribes)
+			}
+		}()
 		for true {
-			time.Sleep(time.Minute * 5)
-			reSubscribe(subscribes)
+			time.Sleep(time.Second * 25)
 			accounts := model.AppConfig.GetAccounts(model.OKEX)
 			for _, account := range accounts {
 				if privateConnectionOKEX[account.Key] == nil {
