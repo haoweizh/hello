@@ -169,7 +169,9 @@ func handleMsgOKEX(channel chan *simplejson.Json, symbol string) {
 		var bidAsk *model.BidAsk
 		if action == `update` {
 			_, bidAsk = model.AppMarkets.GetBidAsk(symbol, model.OKEX)
-			success, bidAsk = handleBooksUpdate(symbol, data, bidAsk)
+			if bidAsk != nil {
+				success, bidAsk = handleBooksUpdate(symbol, data, bidAsk)
+			}
 		} else if action == `snapshot` || responseJson.GetPath(`arg`, `channel`).MustString() == `books5` {
 			//if action == `snapshot` {
 			//	util.Notice(fmt.Sprintf(`++++ %s initial ticker %v`, symbol, data))
@@ -307,9 +309,6 @@ func WsDepthServeOKEX(symbols map[string]bool, orderHandler OrderHandler) (chann
 
 func handleBooksUpdate(symbol string, data map[string]interface{}, bidAsk *model.BidAsk) (
 	success bool, bidAskUpdate *model.BidAsk) {
-	if bidAsk == nil {
-		return false, nil
-	}
 	bidAskUpdate = handleBooksOKEX(symbol, data)
 	if data[`ts`] != nil {
 		ts, _ := strconv.ParseInt(data[`ts`].(string), 10, 64)
