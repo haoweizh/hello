@@ -42,6 +42,7 @@ type Rule struct {
 type Markets struct {
 	bidAsks     sync.Map // symbol - market - bidAsk
 	WsDepth     sync.Map // market - []chan struct{}
+	WsInitTime  sync.Map // market - time
 	Connections sync.Map // market - []*websocket.Conn
 }
 

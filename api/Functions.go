@@ -19,7 +19,16 @@ func setRequireReset(market string) {
 	maintaining, ok := model.ChannelMaintaining.Load(market)
 	if !ok || !maintaining.(bool) {
 		util.Notice(`require reset %s`, market)
-		requireReset.Store(market, true)
+		initTime, getTime := model.AppMarkets.WsInitTime.Load(market)
+		if getTime && initTime != nil {
+			duration, _ := time.ParseDuration(`600s`)
+			checkTime := initTime.(time.Time).Add(duration)
+			if util.GetNow().After(checkTime) {
+				requireReset.Store(market, true)
+			} else {
+				util.Notice(`just reset ws channel ignore %s reset after %v`, market, checkTime)
+			}
+		}
 	}
 }
 

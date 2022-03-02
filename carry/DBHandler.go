@@ -136,10 +136,12 @@ func MaintainMarketChan() {
 		channels, _ := model.AppMarkets.WsDepth.Load(market)
 		if channels == nil || len(channels.([]chan struct{})) == 0 {
 			model.AppMarkets.WsDepth.Store(market, api.CreateMarketDepthServer(model.AppMarkets, market, cross.PostOrderCross))
+			model.AppMarkets.WsInitTime.Store(market, util.GetNow())
 			util.Notice(fmt.Sprintf("%s create new depth channel ", market))
 		} else if api.RequireDepthChanReset(model.AppMarkets, market) {
 			util.Notice(fmt.Sprintf("%s require new depth channel ", market))
 			ResetChannels(market, channels.([]chan struct{}))
+			model.AppMarkets.WsInitTime.Store(market, util.GetNow())
 			time.Sleep(time.Minute)
 		}
 	}
