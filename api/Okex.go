@@ -98,8 +98,9 @@ func reSubscribe(subscribes []interface{}) {
 		_, marketType, coin := model.GetCoinFromDialect(model.OKEX, dialectSymbol)
 		symbol := coin + model.UniStandardTail[marketType]
 		success, bidAsk := model.AppMarkets.GetBidAsk(symbol, model.OKEX)
-		if !success || bidAsk == nil || time.Now().UnixMilli()-int64(bidAsk.Ts) > 180000 {
+		if !success || bidAsk == nil || time.Now().UnixMilli()-int64(bidAsk.Ts) > 600000 {
 			setRequireReset(model.OKEX)
+			return
 		} else if success && bidAsk != nil && time.Now().UnixMilli()-int64(bidAsk.Ts) > 120000 {
 			subArray = append(subArray, map[string]string{`channel`: `books50-l2-tbt`, `instId`: dialectSymbol})
 		}
