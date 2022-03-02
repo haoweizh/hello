@@ -64,15 +64,15 @@ func getWrongs() []string {
 	return array
 }
 
-//func setWrong(symbol string, success bool) {
-//	defer wrongLock.Unlock()
-//	wrongLock.Lock()
-//	if !success {
-//		wrongs[symbol] = true
-//	} else {
-//		delete(wrongs, symbol)
-//	}
-//}
+func setWrong(symbol string, success bool) {
+	defer wrongLock.Unlock()
+	wrongLock.Lock()
+	if !success {
+		wrongs[symbol] = true
+	} else {
+		delete(wrongs, symbol)
+	}
+}
 
 func reSubscribe() {
 	if len(wrongs) == 0 {
@@ -413,7 +413,7 @@ func handleBooksUpdate(symbol string, data map[string]interface{}, bidAsk *model
 		//} else {
 		//	success = false
 		//}
-		//setWrong(symbol, success)
+		setWrong(symbol, success)
 		//if !success && time.Now().Minute() == 0 && time.Now().Second() == 0 {
 		//	util.Info(fmt.Sprintf("%v ts %d checksum %s wrong size: %d %s \n %v",
 		//		success, bidAskUpdate.Ts, symbol, len(wrongs), checkStr, data))
