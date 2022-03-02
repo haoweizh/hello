@@ -196,7 +196,6 @@ func handleMsgOKEX(channel chan *simplejson.Json, symbol string) {
 		_, bidAsk.Bids[0].Amount = model.ParseRealAmount(model.OKEX, symbol, bidAsk.Bids[0].Amount)
 		_, bidAsk.Asks[0].Amount = model.ParseRealAmount(model.OKEX, symbol, bidAsk.Asks[0].Amount)
 		if model.AppMarkets.SetBidAsk(symbol, model.OKEX, bidAsk) {
-			util.Notice(`okex success set bid ask`)
 			for function, handler := range model.GetFunctions(model.OKEX, symbol) {
 				if handler != nil {
 					setting := model.GetSetting(function, model.OKEX, symbol)
