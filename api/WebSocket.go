@@ -25,7 +25,7 @@ var AppWSManager = WSManager{
 	Clients:    make(map[*WSClient]bool),
 }
 
-func SendToConnection(connection *websocket.Conn, msg []byte) (err error) {
+func SendToConnection(market string, connection *websocket.Conn, msg []byte) (err error) {
 	defer wsLock.Unlock()
 	wsLock.Lock()
 	if connection == nil {
@@ -33,8 +33,11 @@ func SendToConnection(connection *websocket.Conn, msg []byte) (err error) {
 		return
 	}
 	if err = connection.WriteMessage(websocket.TextMessage, msg); err != nil {
-		//requireReset.Store(, true) 停止connection后发送错误可能造成反复requireReset
-		util.Notice(`fail to write to connection ` + string(msg) + err.Error())
+		maintaining, _ := model.ChannelMaintaining.Load(market)
+		if !maintaining.(bool) {
+			requireReset.Store(market, true)
+		}
+		util.Notice(`fail to write to connection ` + market + string(msg) + err.Error())
 	}
 	return err
 }
@@ -52,6 +55,10 @@ func SendToAllConnections(market string, msg []byte) (err error) {
 			continue
 		}
 		if err = connection.WriteMessage(websocket.TextMessage, msg); err != nil {
+			maintaining, _ := model.ChannelMaintaining.Load(market)
+			if !maintaining.(bool) {
+				requireReset.Store(market, true)
+			}
 			util.Notice(fmt.Sprintf(`fail to write to all connection %s %d return: %s`, market, i, err.Error()))
 		}
 	}
@@ -71,7 +78,10 @@ func PongAllConnectionsInterval(market string, milliseconds int) (err error) {
 		deadline := time.Now().Add(5 * time.Second)
 		if writeError := connection.WriteControl(websocket.PongMessage, []byte{}, deadline); writeError != nil {
 			util.Notice(fmt.Sprintf(`fail to pong connection %d return: %s`, i, writeError.Error()))
-			requireReset.Store(market, true)
+			maintaining, _ := model.ChannelMaintaining.Load(market)
+			if !maintaining.(bool) {
+				requireReset.Store(market, true)
+			}
 			if writeError != nil {
 				err = writeError
 			}

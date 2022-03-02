@@ -216,13 +216,14 @@ func GetTurtleData(key, secret string, setting *model.Setting) (turtleData *Turt
 // setting.PriceX 上一次开仓的价格
 // setting.OpenShortMargin 该单币种最多开仓个数
 var ProcessTurtle = func(setting *model.Setting, tick *model.BidAsk) {
-	now := util.GetNowUnixMillion()
-	if tick == nil || tick.Asks == nil || tick.Bids == nil || model.AppConfig.Handle != `1` ||
-		model.AppPause || (model.AppConfig.Env != `test` && now-int64(tick.Ts) > 1000) ||
-		(time.Now().Hour() == 0 && time.Now().Minute() == 0) {
+	if setting == nil || getTurtling() {
 		return
 	}
-	if setting == nil || getTurtling() {
+	now := util.GetNowUnixMillion()
+	maintaining, _ := model.ChannelMaintaining.Load(setting.Market)
+	if tick == nil || tick.Asks == nil || tick.Bids == nil || model.AppConfig.Handle != `1` ||
+		maintaining.(bool) || (model.AppConfig.Env != `test` && now-int64(tick.Ts) > 1000) ||
+		(time.Now().Hour() == 0 && time.Now().Minute() == 0) {
 		return
 	}
 	if setting.Chance != 0 && setting.PriceX == 0 {

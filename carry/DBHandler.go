@@ -115,7 +115,7 @@ func ResetChannels(market string, channels []chan struct{}) {
 		util.Notice(`gate do not reset channel`)
 		return
 	}
-	model.AppPause = true
+	model.ChannelMaintaining.Store(market, true)
 	model.AppMarkets.WsDepth.Delete(market)
 	for i, channel := range channels {
 		util.Notice(`send to stop connection %s %d`, market, i)
@@ -123,7 +123,7 @@ func ResetChannels(market string, channels []chan struct{}) {
 		close(channel)
 	}
 	model.AppMarkets.WsDepth.Store(market, api.CreateMarketDepthServer(model.AppMarkets, market, cross.PostOrderCross))
-	model.AppPause = false
+	model.ChannelMaintaining.Store(market, false)
 	util.Notice(market + " reset depth channel done")
 }
 
