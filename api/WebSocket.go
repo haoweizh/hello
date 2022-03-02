@@ -33,8 +33,8 @@ func SendToConnection(market string, connection *websocket.Conn, msg []byte) (er
 		return
 	}
 	if err = connection.WriteMessage(websocket.TextMessage, msg); err != nil {
-		maintaining, _ := model.ChannelMaintaining.Load(market)
-		if !maintaining.(bool) {
+		maintaining, ok := model.ChannelMaintaining.Load(market)
+		if !ok || !maintaining.(bool) {
 			requireReset.Store(market, true)
 		}
 		util.Notice(`fail to write to connection ` + market + string(msg) + err.Error())
@@ -55,8 +55,8 @@ func SendToAllConnections(market string, msg []byte) (err error) {
 			continue
 		}
 		if err = connection.WriteMessage(websocket.TextMessage, msg); err != nil {
-			maintaining, _ := model.ChannelMaintaining.Load(market)
-			if !maintaining.(bool) {
+			maintaining, ok := model.ChannelMaintaining.Load(market)
+			if !ok || !maintaining.(bool) {
 				requireReset.Store(market, true)
 			}
 			util.Notice(fmt.Sprintf(`fail to write to all connection %s %d return: %s`, market, i, err.Error()))
@@ -78,8 +78,8 @@ func PongAllConnectionsInterval(market string, milliseconds int) (err error) {
 		deadline := time.Now().Add(5 * time.Second)
 		if writeError := connection.WriteControl(websocket.PongMessage, []byte{}, deadline); writeError != nil {
 			util.Notice(fmt.Sprintf(`fail to pong connection %d return: %s`, i, writeError.Error()))
-			maintaining, _ := model.ChannelMaintaining.Load(market)
-			if !maintaining.(bool) {
+			maintaining, ok := model.ChannelMaintaining.Load(market)
+			if !ok || !maintaining.(bool) {
 				requireReset.Store(market, true)
 			}
 			if writeError != nil {

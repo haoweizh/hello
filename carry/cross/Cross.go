@@ -484,8 +484,8 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 	}
 	million := util.GetNowUnixMillion()
 	settings := model.GetCoinSetting(setting.Function, setting.Coin)
-	maintaining, _ := model.ChannelMaintaining.Load(setting.Market)
-	if tick == nil || tick.Asks == nil || tick.Bids == nil || setting == nil || maintaining.(bool) ||
+	maintaining, ok := model.ChannelMaintaining.Load(setting.Market)
+	if tick == nil || tick.Asks == nil || tick.Bids == nil || setting == nil || (ok && maintaining.(bool)) ||
 		(model.AppConfig.Env != `test` && model.AppConfig.Handle != `1`) || setting.Valid == false ||
 		settings == nil || len(settings) == 0 || million-int64(tick.Ts) > 100 {
 		return

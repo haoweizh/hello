@@ -170,9 +170,9 @@ var ProcessSimpleGrid = func(setting *model.Setting, tick *model.BidAsk) {
 	if setting == nil || getSimpleGriding() {
 		return
 	}
-	maintaining, _ := model.ChannelMaintaining.Load(setting.Market)
+	maintaining, ok := model.ChannelMaintaining.Load(setting.Market)
 	if tick == nil || tick.Asks == nil || tick.Bids == nil || model.AppConfig.Handle != `1` ||
-		maintaining.(bool) || now-int64(tick.Ts) > 1000 {
+		(ok && maintaining.(bool)) || now-int64(tick.Ts) > 1000 {
 		return
 	}
 	setSimpleGriding(true)
