@@ -304,6 +304,7 @@ func WsDepthServeOKEX(symbols map[string]bool, orderHandler OrderHandler) (chann
 		if err != nil {
 			util.Notice("can not create web socket " + err.Error())
 		} else {
+			util.Notice(`okex private ws connected %s %v`, account.Key, privateConnectionOKEX[account.Key])
 			go chanHandler(model.OKEX, stopChan, privateConnectionOKEX[account.Key], wsHandlerPrivate, orderHandler)
 			_ = subscriberOKEXPrivate(privateConnectionOKEX[account.Key], account.Key, account.Secret)
 		}
