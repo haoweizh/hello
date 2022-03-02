@@ -4,11 +4,9 @@ import (
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/base64"
-	"encoding/json"
 	"fmt"
 	"github.com/bitly/go-simplejson"
 	"github.com/gorilla/websocket"
-	"hash/crc32"
 	"hello/model"
 	"hello/util"
 	"net/http"
@@ -66,15 +64,15 @@ func getWrongs() []string {
 	return array
 }
 
-func setWrong(symbol string, success bool) {
-	defer wrongLock.Unlock()
-	wrongLock.Lock()
-	if !success {
-		wrongs[symbol] = true
-	} else {
-		delete(wrongs, symbol)
-	}
-}
+//func setWrong(symbol string, success bool) {
+//	defer wrongLock.Unlock()
+//	wrongLock.Lock()
+//	if !success {
+//		wrongs[symbol] = true
+//	} else {
+//		delete(wrongs, symbol)
+//	}
+//}
 
 func reSubscribe() {
 	if len(wrongs) == 0 {
@@ -162,14 +160,15 @@ var subscribeHandlerOKEX = func(connection *websocket.Conn, subscribes []interfa
 func handleMsgOKEX(channel chan *simplejson.Json, symbol string) {
 	var responseJson *simplejson.Json
 	for responseJson = range channel {
-		if len(channel) > 20 && time.Now().Second() == 0 {
+		if len(channel) > 20 && time.Now().Second() == 0 && len(channel)%10 == 0 {
 			util.Notice(fmt.Sprintf(`%s current chan to be handle %d`, symbol, len(channel)))
 		}
 		action := responseJson.Get(`action`).MustString()
 		data := responseJson.Get(`data`).MustArray()[0].(map[string]interface{})
-		_, bidAsk := model.AppMarkets.GetBidAsk(symbol, model.OKEX)
 		success := false
-		if action == `update` && bidAsk != nil {
+		var bidAsk *model.BidAsk
+		if action == `update` {
+			_, bidAsk = model.AppMarkets.GetBidAsk(symbol, model.OKEX)
 			success, bidAsk = handleBooksUpdate(symbol, data, bidAsk)
 		} else if action == `snapshot` || responseJson.GetPath(`arg`, `channel`).MustString() == `books5` {
 			//if action == `snapshot` {
@@ -308,6 +307,9 @@ func WsDepthServeOKEX(symbols map[string]bool, orderHandler OrderHandler) (chann
 
 func handleBooksUpdate(symbol string, data map[string]interface{}, bidAsk *model.BidAsk) (
 	success bool, bidAskUpdate *model.BidAsk) {
+	if bidAsk == nil {
+		return false, nil
+	}
 	bidAskUpdate = handleBooksOKEX(symbol, data)
 	if data[`ts`] != nil {
 		ts, _ := strconv.ParseInt(data[`ts`].(string), 10, 64)
@@ -389,33 +391,34 @@ func handleBooksUpdate(symbol string, data map[string]interface{}, bidAsk *model
 			}
 		}
 	}
-	if data[`checksum`] != nil {
-		checkStr := ``
-		for index := 0; index < 25; index++ {
-			if index < len(newBids) {
-				checkStr += fmt.Sprintf(`%s:%s:`, newBids[index].PriceStr, newBids[index].AmountStr)
-			}
-			if index < len(newAsks) {
-				checkStr += fmt.Sprintf(`%s:%s:`, newAsks[index].PriceStr, newAsks[index].AmountStr)
-			}
-		}
-		// 以下语句并非无用，如果不加，会造成checksum计算错误
-		checkStr = checkStr[0 : len(checkStr)-1]
-		crcValue := int64(int32(crc32.ChecksumIEEE([]byte(checkStr))))
-		compare, _ := data[`checksum`].(json.Number).Int64()
-		bidAskUpdate.Bids = newBids
-		bidAskUpdate.Asks = newAsks
-		if compare == crcValue {
-			success = true
-		} else {
-			success = false
-		}
-		setWrong(symbol, success)
-		if !success && time.Now().Minute() == 0 && time.Now().Second() == 0 {
-			util.Info(fmt.Sprintf("%v ts %d checksum %s wrong size: %d %s \n %v",
-				success, bidAskUpdate.Ts, symbol, len(wrongs), checkStr, data))
-		}
-	}
+	// 由于处理压力大，暂时放弃计算checksum
+	//if data[`checksum`] != nil {
+	//	checkStr := ``
+	//	for index := 0; index < 25; index++ {
+	//		if index < len(newBids) {
+	//			checkStr += fmt.Sprintf(`%s:%s:`, newBids[index].PriceStr, newBids[index].AmountStr)
+	//		}
+	//		if index < len(newAsks) {
+	//			checkStr += fmt.Sprintf(`%s:%s:`, newAsks[index].PriceStr, newAsks[index].AmountStr)
+	//		}
+	//	}
+	//	// 以下语句并非无用，如果不加，会造成checksum计算错误
+	//	checkStr = checkStr[0 : len(checkStr)-1]
+	//	crcValue := int64(int32(crc32.ChecksumIEEE([]byte(checkStr))))
+	//	compare, _ := data[`checksum`].(json.Number).Int64()
+	//	bidAskUpdate.Bids = newBids
+	//	bidAskUpdate.Asks = newAsks
+	//	if compare == crcValue {
+	//		success = true
+	//	} else {
+	//		success = false
+	//	}
+	//	setWrong(symbol, success)
+	//	if !success && time.Now().Minute() == 0 && time.Now().Second() == 0 {
+	//		util.Info(fmt.Sprintf("%v ts %d checksum %s wrong size: %d %s \n %v",
+	//			success, bidAskUpdate.Ts, symbol, len(wrongs), checkStr, data))
+	//	}
+	//}
 	return success, bidAskUpdate
 }
 
