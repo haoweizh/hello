@@ -15,6 +15,13 @@ var symbolLock sync.Mutex
 var tradeMax = make(map[string]map[string][]float64)        // key - symbol - [maxBuy合约张数/币币个数, maxSell]
 var okTradeMaxResetTime = make(map[string]map[string]int64) // key - symbol - init time in second
 
+func setRequireReset(market string) {
+	maintaining, ok := model.ChannelMaintaining.Load(market)
+	if !ok || !maintaining.(bool) {
+		requireReset.Store(market, true)
+	}
+}
+
 func GetTradeMaxOKEX(key, secret, symbol string, expireSecond int64) (success bool, maxBuy, maxSell float64) {
 	defer symbolLock.Unlock()
 	symbolLock.Lock()
@@ -536,7 +543,7 @@ func GetWSSubscribes(market, subType string) []interface{} {
 	}
 	switch market {
 	case model.OKEX:
-		go maintainChannelOKEX()
+		go maintainChannelOKEX(subscribes)
 	case model.BinanceSpot:
 		go maintainChannelBinanceSpot(subscribes)
 	case model.BinancePerp:

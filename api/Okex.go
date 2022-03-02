@@ -13,7 +13,6 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 )
 
@@ -26,17 +25,18 @@ const ParamArrayOkex = `OK_ARRAY`
 var lastSameTime = make(map[string]int64)
 var lastCarryTime = int64(0)
 var msgChanOKEX = make(map[string]chan *simplejson.Json)
-var wrongs = make(map[string]bool)
-var wrongLock sync.Mutex
+
+//var wrongs = make(map[string]bool)
+//var wrongLock sync.Mutex
 var channelMaintainingOKEX = false
 var privateConnectionOKEX = make(map[string]*websocket.Conn) // key - connection
 
-func maintainChannelOKEX() {
+func maintainChannelOKEX(subscribes []interface{}) {
 	if !channelMaintainingOKEX {
 		channelMaintainingOKEX = true
 		for true {
-			time.Sleep(time.Second * 25)
-			reSubscribe()
+			time.Sleep(time.Minute * 5)
+			reSubscribe(subscribes)
 			accounts := model.AppConfig.GetAccounts(model.OKEX)
 			for _, account := range accounts {
 				if privateConnectionOKEX[account.Key] == nil {
@@ -54,48 +54,58 @@ func maintainChannelOKEX() {
 	}
 }
 
-func getWrongs() []string {
-	defer wrongLock.Unlock()
-	wrongLock.Lock()
-	array := make([]string, 0)
-	for s := range wrongs {
-		array = append(array, s)
-	}
-	return array
-}
+//func getWrongs() []string {
+//	defer wrongLock.Unlock()
+//	wrongLock.Lock()
+//	array := make([]string, 0)
+//	for s := range wrongs {
+//		array = append(array, s)
+//	}
+//	return array
+//}
 
-func setWrong(symbol string, success bool) {
-	defer wrongLock.Unlock()
-	wrongLock.Lock()
-	if !success {
-		wrongs[symbol] = true
-	} else {
-		delete(wrongs, symbol)
-	}
-}
+//func setWrong(symbol string, success bool) {
+//	defer wrongLock.Unlock()
+//	wrongLock.Lock()
+//	if !success {
+//		wrongs[symbol] = true
+//	} else {
+//		delete(wrongs, symbol)
+//	}
+//}
 
-func reSubscribe() {
-	if len(wrongs) == 0 {
-		return
-	}
-	wrongArray := getWrongs()
-	util.Notice(fmt.Sprintf(`>>>>>>>>wrong symbol %v %d`, wrongArray, len(wrongArray)))
+func reSubscribe(subscribes []interface{}) {
+	//if len(wrongs) == 0 {
+	//	return
+	//}
+	//wrongArray := getWrongs()
+	//util.Notice(fmt.Sprintf(`>>>>>>>>wrong symbol %v %d`, wrongArray, len(wrongArray)))
 	value, _ := model.AppMarkets.Connections.Load(model.OKEX)
 	if value == nil {
 		return
 	}
 	connections := value.([]*websocket.Conn)
-	if len(wrongArray) > len(connections)*5 {
-		requireReset.Store(model.OKEX, true)
-		util.Notice(fmt.Sprintf(`require reset all okex channel, wrong symbol %d`, len(wrongArray)))
-		return
-	}
+	//if len(wrongArray) > len(connections)*5 {
+	//	requireReset.Store(model.OKEX, true)
+	//	util.Notice(fmt.Sprintf(`require reset all okex channel, wrong symbol %d`, len(wrongArray)))
+	//	return
+	//}
 	subscribeMap := make(map[string]interface{})
 	subscribeMap["op"] = "unsubscribe"
 	subArray := make([]map[string]string, 0)
-	for _, symbol := range wrongArray {
-		_, _, _, dialectSymbol := model.GetFromStandard(model.OKEX, symbol)
-		subArray = append(subArray, map[string]string{`channel`: `books50-l2-tbt`, `instId`: dialectSymbol})
+	for _, item := range subscribes {
+		dialectSymbol := item.(string)
+		_, marketType, coin := model.GetCoinFromDialect(model.OKEX, dialectSymbol)
+		symbol := coin + model.UniStandardTail[marketType]
+		success, bidAsk := model.AppMarkets.GetBidAsk(symbol, model.OKEX)
+		if !success || bidAsk == nil || time.Now().UnixMilli()-int64(bidAsk.Ts) > 180000 {
+			setRequireReset(model.OKEX)
+		} else if success && bidAsk != nil && time.Now().UnixMilli()-int64(bidAsk.Ts) > 120000 {
+			subArray = append(subArray, map[string]string{`channel`: `books50-l2-tbt`, `instId`: dialectSymbol})
+		}
+	}
+	if len(subArray) == 0 {
+		return
 	}
 	subscribeMap[`args`] = subArray
 	if err := SendToAllConnections(model.OKEX, util.JsonEncodeToByte(subscribeMap)); err != nil {
@@ -412,7 +422,7 @@ func handleBooksUpdate(symbol string, data map[string]interface{}, bidAsk *model
 		//} else {
 		//	success = false
 		//}
-		setWrong(symbol, true)
+		//setWrong(symbol, true)
 		//if !success && time.Now().Minute() == 0 && time.Now().Second() == 0 {
 		//	util.Info(fmt.Sprintf("%v ts %d checksum %s wrong size: %d %s \n %v",
 		//		success, bidAskUpdate.Ts, symbol, len(wrongs), checkStr, data))

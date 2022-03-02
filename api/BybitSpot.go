@@ -51,7 +51,7 @@ func maintainChannelBybitSpot(subscribes []interface{}) {
 					util.Notice(`send resubscribe %s %s`, model.BybitSpot, subscribeMessage)
 				}
 				if bidAsk == nil || time.Now().UnixMilli()-int64(bidAsk.Ts) > 180000 {
-					requireReset.Store(model.BybitSpot, true)
+					setRequireReset(model.BybitSpot)
 					needReset = true
 					util.Notice(`require reset bybitSpot`)
 					break
