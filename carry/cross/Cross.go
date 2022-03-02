@@ -617,7 +617,7 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarrySta
 	}
 	amount = math.Min(math.Min(statusBuy.LimitBuy, bidAmount), math.Min(statusSell.LimitSell, askAmount))
 	if amount > 0 {
-		amount = model.FormatCrossPair(statusBuy.market, statusSell.market, statusBuy.symbol, statusSell.symbol, amount, priceBuy)
+		amount = FormatCrossPair(statusBuy.market, statusSell.market, statusBuy.symbol, statusSell.symbol, amount, priceBuy)
 	}
 	if (score > 0.15 || scoreRelate > 0.15) || ((score > 0.1 || scoreRelate > 0.1) &&
 		(!isValidSymbol(carryStatus.market, carryStatus.symbol) ||
@@ -817,4 +817,38 @@ var PostOrderCross = func(order *model.Order, setting *model.Setting) {
 func setSettingStatus(setting *model.Setting, status bool) {
 	time.Sleep(time.Minute * 20)
 	setting.Valid = status
+}
+
+// FormatCrossPair 不支持以BTC或ETH计价的交易对，只支持USD类
+func FormatCrossPair(marketBuy, marketSell, symbolBuy, symbolSell string, amount, price float64) (
+	formattedAmount float64) {
+	marketInfoBuy := model.GetMarketInfo(marketBuy, symbolBuy)
+	marketInfoSell := model.GetMarketInfo(marketSell, symbolSell)
+	if marketInfoBuy == nil || marketInfoSell == nil {
+		util.Notice(`format %s %s %s %s %v %v`, marketBuy, marketSell, symbolBuy, symbolSell, marketInfoBuy, marketInfoSell)
+		api.InitMarketInfos()
+		return
+	}
+	incBuy := marketInfoBuy.SizeIncrement
+	incSell := marketInfoSell.SizeIncrement
+	minBuy := marketInfoBuy.SizeMin
+	minSell := marketInfoSell.SizeMin
+	success, _, coin, _ := model.GetFromStandard(marketBuy, symbolBuy)
+	if success && marketInfoBuy.CTCurrency == coin && marketInfoBuy.CTValue > 0 {
+		incBuy, minBuy = incBuy*marketInfoBuy.CTValue, minBuy*marketInfoBuy.CTValue
+	}
+	success, _, coin, _ = model.GetFromStandard(marketSell, symbolSell)
+	if success && marketInfoSell.CTCurrency == coin && marketInfoSell.CTValue > 0 {
+		incSell, minSell = incSell*marketInfoSell.CTValue, minSell*marketInfoSell.CTValue
+	}
+	sizeInc := math.Max(incBuy, incSell)
+	formattedAmount = math.Floor(amount/sizeInc) * sizeInc
+	if formattedAmount < math.Max(minBuy, minSell) {
+		return 0
+	}
+	if (marketInfoBuy.MoneyMin > 0 && formattedAmount*price < marketInfoBuy.MoneyMin) ||
+		(marketInfoSell.MoneyMin > 0 && formattedAmount*price < marketInfoSell.MoneyMin) {
+		return 0
+	}
+	return formattedAmount
 }
