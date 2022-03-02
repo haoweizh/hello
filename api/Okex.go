@@ -180,14 +180,12 @@ func handleMsgOKEX(channel chan *simplejson.Json, symbol string) {
 		if action == `update` {
 			_, bidAsk = model.AppMarkets.GetBidAsk(symbol, model.OKEX)
 			if bidAsk != nil {
-				util.Notice(`okex get new update data`)
 				success, bidAsk = handleBooksUpdate(symbol, data, bidAsk)
 			}
 		} else if action == `snapshot` || responseJson.GetPath(`arg`, `channel`).MustString() == `books5` {
 			//if action == `snapshot` {
 			//	util.Notice(fmt.Sprintf(`++++ %s initial ticker %v`, symbol, data))
 			//}
-			util.Notice(`okex get new snapshot data`)
 			bidAsk = handleBooksOKEX(symbol, data)
 			success = true
 		}
@@ -431,7 +429,7 @@ func handleBooksUpdate(symbol string, data map[string]interface{}, bidAsk *model
 		//		success, bidAskUpdate.Ts, symbol, len(wrongs), checkStr, data))
 		//}
 	}
-	return success, bidAskUpdate
+	return true, bidAskUpdate
 }
 
 func handleBooksOKEX(symbol string, data map[string]interface{}) (bidAsk *model.BidAsk) {
