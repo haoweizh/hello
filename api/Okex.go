@@ -4,11 +4,9 @@ import (
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/base64"
-	"encoding/json"
 	"fmt"
 	"github.com/bitly/go-simplejson"
 	"github.com/gorilla/websocket"
-	"hash/crc32"
 	"hello/model"
 	"hello/util"
 	"net/http"
@@ -162,15 +160,18 @@ var subscribeHandlerOKEX = func(connection *websocket.Conn, subscribes []interfa
 func handleMsgOKEX(channel chan *simplejson.Json, symbol string) {
 	var responseJson *simplejson.Json
 	for responseJson = range channel {
-		if len(channel) > 20 && time.Now().Second() == 0 {
+		if len(channel) > 20 && time.Now().Second() == 0 && len(channel)%10 == 0 {
 			util.Notice(fmt.Sprintf(`%s current chan to be handle %d`, symbol, len(channel)))
 		}
 		action := responseJson.Get(`action`).MustString()
 		data := responseJson.Get(`data`).MustArray()[0].(map[string]interface{})
-		_, bidAsk := model.AppMarkets.GetBidAsk(symbol, model.OKEX)
 		success := false
-		if action == `update` && bidAsk != nil {
-			success, bidAsk = handleBooksUpdate(symbol, data, bidAsk)
+		var bidAsk *model.BidAsk
+		if action == `update` {
+			_, bidAsk = model.AppMarkets.GetBidAsk(symbol, model.OKEX)
+			if bidAsk != nil {
+				success, bidAsk = handleBooksUpdate(symbol, data, bidAsk)
+			}
 		} else if action == `snapshot` || responseJson.GetPath(`arg`, `channel`).MustString() == `books5` {
 			//if action == `snapshot` {
 			//	util.Notice(fmt.Sprintf(`++++ %s initial ticker %v`, symbol, data))
@@ -389,32 +390,33 @@ func handleBooksUpdate(symbol string, data map[string]interface{}, bidAsk *model
 			}
 		}
 	}
+	// 由于处理压力大，暂时放弃计算checksum
 	if data[`checksum`] != nil {
-		checkStr := ``
-		for index := 0; index < 25; index++ {
-			if index < len(newBids) {
-				checkStr += fmt.Sprintf(`%s:%s:`, newBids[index].PriceStr, newBids[index].AmountStr)
-			}
-			if index < len(newAsks) {
-				checkStr += fmt.Sprintf(`%s:%s:`, newAsks[index].PriceStr, newAsks[index].AmountStr)
-			}
-		}
-		// 以下语句并非无用，如果不加，会造成checksum计算错误
-		checkStr = checkStr[0 : len(checkStr)-1]
-		crcValue := int64(int32(crc32.ChecksumIEEE([]byte(checkStr))))
-		compare, _ := data[`checksum`].(json.Number).Int64()
+		//checkStr := ``
+		//for index := 0; index < 25; index++ {
+		//	if index < len(newBids) {
+		//		checkStr += fmt.Sprintf(`%s:%s:`, newBids[index].PriceStr, newBids[index].AmountStr)
+		//	}
+		//	if index < len(newAsks) {
+		//		checkStr += fmt.Sprintf(`%s:%s:`, newAsks[index].PriceStr, newAsks[index].AmountStr)
+		//	}
+		//}
+		//// 以下语句并非无用，如果不加，会造成checksum计算错误
+		//checkStr = checkStr[0 : len(checkStr)-1]
+		//crcValue := int64(int32(crc32.ChecksumIEEE([]byte(checkStr))))
+		//compare, _ := data[`checksum`].(json.Number).Int64()
 		bidAskUpdate.Bids = newBids
 		bidAskUpdate.Asks = newAsks
-		if compare == crcValue {
-			success = true
-		} else {
-			success = false
-		}
-		setWrong(symbol, success)
-		if !success && time.Now().Minute() == 0 && time.Now().Second() == 0 {
-			util.Info(fmt.Sprintf("%v ts %d checksum %s wrong size: %d %s \n %v",
-				success, bidAskUpdate.Ts, symbol, len(wrongs), checkStr, data))
-		}
+		//if compare == crcValue {
+		//	success = true
+		//} else {
+		//	success = false
+		//}
+		setWrong(symbol, true)
+		//if !success && time.Now().Minute() == 0 && time.Now().Second() == 0 {
+		//	util.Info(fmt.Sprintf("%v ts %d checksum %s wrong size: %d %s \n %v",
+		//		success, bidAskUpdate.Ts, symbol, len(wrongs), checkStr, data))
+		//}
 	}
 	return success, bidAskUpdate
 }
