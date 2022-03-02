@@ -18,6 +18,7 @@ var okTradeMaxResetTime = make(map[string]map[string]int64) // key - symbol - in
 func setRequireReset(market string) {
 	maintaining, ok := model.ChannelMaintaining.Load(market)
 	if !ok || !maintaining.(bool) {
+		util.Notice(`require reset %s`, market)
 		requireReset.Store(market, true)
 	}
 }

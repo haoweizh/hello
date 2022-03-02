@@ -65,7 +65,6 @@ func maintainChannelFtx(subscribes []interface{}) {
 				if bidAsk == nil || time.Now().UnixMilli()-int64(bidAsk.Ts) > 180000 {
 					setRequireReset(model.Ftx)
 					needReset = true
-					util.Notice(`require reset ftx`)
 					break
 				}
 			}
