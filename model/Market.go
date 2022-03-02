@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"hello/util"
 	"sync"
+	"time"
 )
 
 type KLinePoint struct {
@@ -76,7 +77,7 @@ func (markets *Markets) SetBidAsk(symbol, marketName string, bidAsk *BidAsk) boo
 		util.SocketInfo(marketName + `do not set nil or empty bid ask` + symbol)
 		return false
 	}
-	if bidAsk.Bids[0].Price >= bidAsk.Asks[0].Price {
+	if bidAsk.Bids[0].Price >= bidAsk.Asks[0].Price && time.Now().Second() == 0 {
 		util.SocketInfo(fmt.Sprintf(`do not set mistake %s %s bid %f ask %f`,
 			marketName, symbol, bidAsk.Bids[0].Price, bidAsk.Asks[0].Price))
 		return false
