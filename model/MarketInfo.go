@@ -2,6 +2,7 @@ package model
 
 import (
 	"fmt"
+	"hello/api"
 	"hello/util"
 	"math"
 	"strconv"
@@ -86,6 +87,7 @@ func FormatCrossPair(marketBuy, marketSell, symbolBuy, symbolSell string, amount
 	marketInfoSell := GetMarketInfo(marketSell, symbolSell)
 	if marketInfoBuy == nil || marketInfoSell == nil {
 		util.Notice(`format %s %s %s %s %v %v`, marketBuy, marketSell, symbolBuy, symbolSell, marketInfoBuy, marketInfoSell)
+		api.InitMarketInfos()
 		return
 	}
 	incBuy := marketInfoBuy.SizeIncrement
