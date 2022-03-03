@@ -252,59 +252,63 @@ func initStatus(account *model.Account, setting *model.Setting) (status *CarrySt
 
 func ClearCross() {
 	for doCross {
-		for true {
-			if !checkSetCrossing(true) {
-				break
-			} else {
-				time.Sleep(time.Millisecond * 200)
-			}
-		}
-		util.Notice(`...... enter clearing cross all`)
-		coinSettings := model.GetCoinSettings(model.FunctionCross)
-		waitEqual := make(map[int]bool)
-		equalChannel := make(chan int, 1)
-		markets := model.GetMarkets()
-		for i := 0; i < model.AppConfig.GetCrossLen(); i++ {
-			accounts := make(map[string]*model.Account)
-			indexAccounts := model.GetAccounts(i)
-			for _, market := range markets {
-				accounts[market] = indexAccounts[market]
-			}
-			needEqual := false
-			if lastCrosses == nil {
-				needEqual = true
-			} else {
-				for _, account := range accounts {
-					if getLastCrosses(account.Key) != nil {
-						needEqual = true
-						break
-					}
-				}
-			}
-			if !needEqual && time.Now().Minute()%10 != 0 {
-				util.Notice(`...... no change pass make equal`)
-				continue
-			}
-			waitEqual[i] = true
-			go equalAccount(i, equalChannel, accounts, coinSettings)
-		}
-		for true {
-			index := <-equalChannel
-			waitEqual[index] = false
-			finish := true
-			for _, value := range waitEqual {
-				if value == true {
-					finish = false
-				}
-			}
-			if finish {
-				break
-			}
-		}
-		util.Notice(`...... exit clearing cross all`)
-		checkSetCrossing(false)
+		equalAccounts()
 		time.Sleep(time.Minute * 2)
 	}
+}
+
+func equalAccounts() {
+	for true {
+		if !checkSetCrossing(true) {
+			break
+		} else {
+			time.Sleep(time.Millisecond * 200)
+		}
+	}
+	util.Notice(`...... enter clearing cross all`)
+	coinSettings := model.GetCoinSettings(model.FunctionCross)
+	waitEqual := make(map[int]bool)
+	equalChannel := make(chan int, 1)
+	markets := model.GetMarkets()
+	for i := 0; i < model.AppConfig.GetCrossLen(); i++ {
+		accounts := make(map[string]*model.Account)
+		indexAccounts := model.GetAccounts(i)
+		for _, market := range markets {
+			accounts[market] = indexAccounts[market]
+		}
+		needEqual := false
+		if lastCrosses == nil {
+			needEqual = true
+		} else {
+			for _, account := range accounts {
+				if getLastCrosses(account.Key) != nil {
+					needEqual = true
+					break
+				}
+			}
+		}
+		if !needEqual && time.Now().Minute()%10 != 0 {
+			util.Notice(`...... no change pass make equal`)
+			continue
+		}
+		waitEqual[i] = true
+		go equalAccount(i, equalChannel, accounts, coinSettings)
+	}
+	for true {
+		index := <-equalChannel
+		waitEqual[index] = false
+		finish := true
+		for _, value := range waitEqual {
+			if value == true {
+				finish = false
+			}
+		}
+		if finish {
+			break
+		}
+	}
+	checkSetCrossing(false)
+	util.Notice(`...... exit clearing cross all`)
 }
 
 func equalAccount(i int, equalChan chan int, accounts map[string]*model.Account, coinSettings map[string][]*model.Setting) {
@@ -696,6 +700,17 @@ func placeCross(statusBuy, statusSell *CarryStatus, priceBuy, priceSell, amount 
 	if placeSuccess {
 		placeStatus(statusBuy, priceBuy, amount)
 		placeStatus(statusSell, priceSell, -1*amount)
+		buyCount := getCrossCount(statusBuy.market, statusBuy.symbol)
+		sellCount := getCrossCount(statusSell.market, statusSell.symbol)
+		if buyCount > 10 || sellCount > 10 {
+			go equalAccounts()
+			clearCrossCount()
+			util.Notice(fmt.Sprintf(`cross count %s %s %d %s %s %d trigger equal all accounts`,
+				statusBuy.market, statusBuy.symbol, buyCount, statusSell.market, statusSell.symbol, sellCount))
+		} else {
+			setCrossCount(statusBuy.market, statusBuy.symbol, buyCount+1)
+			setCrossCount(statusSell.market, statusSell.symbol, sellCount+1)
+		}
 	}
 }
 

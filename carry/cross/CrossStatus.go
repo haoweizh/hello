@@ -26,6 +26,7 @@ var validCrossCoin = map[string][]string{
 										model.OKEX: {`AE`, `HC`, `ORBS`, `ONE`, `LSK`, `GLMR`, `LEASH`, `KLAY`, `KDA`, `BLOK`},
 										model.Ftx:  {`REEF`, `ORBS`, `ONE`}, model.BybitPerp: {`KLAY`}}
 var lastOrderIndex = make(map[string]map[string]int64)                        // market - symbol - index
+var crossCount = make(map[string]map[string]int)                              // market - symbol - count
 var lastOrders = make(map[string]map[string][]*model.Order, lastOrderLength)  // market - symbol - []order
 var statuses = make(map[string]map[string]map[string]map[string]*CarryStatus) // coin/market/symbol/key/CarryStatus
 var lastCrosses map[string]map[string]string                                  // key/market/symbol
@@ -62,6 +63,27 @@ type CarryStatus struct {
 	TradeLineBuy, TradeLineSell float64 // 买卖盈利线（可为负数）
 	Holding                     float64
 	RateInAll                   float64 // 现货：该币种占总权益的比例；永续：以开仓价算该币种持仓占保证金百分比
+}
+
+func clearCrossCount() {
+	crossCount = make(map[string]map[string]int)
+}
+
+func getCrossCount(market, symbol string) (count int) {
+	if crossCount == nil || crossCount[market] == nil {
+		return 0
+	}
+	return crossCount[market][symbol]
+}
+
+func setCrossCount(market, symbol string, count int) {
+	if crossCount == nil {
+		crossCount = make(map[string]map[string]int)
+	}
+	if crossCount[market] == nil {
+		crossCount[market] = make(map[string]int)
+	}
+	crossCount[market][symbol] = count
 }
 
 func isValidSymbol(market, symbol string) bool {
