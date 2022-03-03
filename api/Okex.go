@@ -4,9 +4,11 @@ import (
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"github.com/bitly/go-simplejson"
 	"github.com/gorilla/websocket"
+	"hash/crc32"
 	"hello/model"
 	"hello/util"
 	"net/http"
@@ -410,31 +412,34 @@ func handleBooksUpdate(symbol string, data map[string]interface{}, bidAsk *model
 	}
 	// 由于处理压力大，暂时放弃计算checksum
 	if data[`checksum`] != nil {
-		//checkStr := ``
-		//for index := 0; index < 25; index++ {
-		//	if index < len(newBids) {
-		//		checkStr += fmt.Sprintf(`%s:%s:`, newBids[index].PriceStr, newBids[index].AmountStr)
-		//	}
-		//	if index < len(newAsks) {
-		//		checkStr += fmt.Sprintf(`%s:%s:`, newAsks[index].PriceStr, newAsks[index].AmountStr)
-		//	}
-		//}
-		//// 以下语句并非无用，如果不加，会造成checksum计算错误
-		//checkStr = checkStr[0 : len(checkStr)-1]
-		//crcValue := int64(int32(crc32.ChecksumIEEE([]byte(checkStr))))
-		//compare, _ := data[`checksum`].(json.Number).Int64()
 		bidAskUpdate.Bids = newBids
 		bidAskUpdate.Asks = newAsks
-		//if compare == crcValue {
-		//	success = true
-		//} else {
-		//	success = false
-		//}
-		//setWrong(symbol, true)
-		//if !success && time.Now().Minute() == 0 && time.Now().Second() == 0 {
-		//	util.Info(fmt.Sprintf("%v ts %d checksum %s wrong size: %d %s \n %v",
-		//		success, bidAskUpdate.Ts, symbol, len(wrongs), checkStr, data))
-		//}
+		value, ok := okexCrossing.Load(symbol)
+		if ok && value.(bool) {
+			checkStr := ``
+			for index := 0; index < 25; index++ {
+				if index < len(newBids) {
+					checkStr += fmt.Sprintf(`%s:%s:`, newBids[index].PriceStr, newBids[index].AmountStr)
+				}
+				if index < len(newAsks) {
+					checkStr += fmt.Sprintf(`%s:%s:`, newAsks[index].PriceStr, newAsks[index].AmountStr)
+				}
+			}
+			// 以下语句并非无用，如果不加，会造成checksum计算错误
+			checkStr = checkStr[0 : len(checkStr)-1]
+			crcValue := int64(int32(crc32.ChecksumIEEE([]byte(checkStr))))
+			compare, _ := data[`checksum`].(json.Number).Int64()
+			if compare == crcValue {
+				success = true
+			} else {
+				success = false
+			}
+			//setWrong(symbol, true)
+			if !success && time.Now().Minute() == 0 && time.Now().Second() == 0 {
+				util.Info(fmt.Sprintf("%v ts %d checksum %s %s \n %v",
+					success, bidAskUpdate.Ts, symbol, checkStr, data))
+			}
+		}
 	}
 	return true, bidAskUpdate
 }

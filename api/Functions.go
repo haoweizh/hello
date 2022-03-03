@@ -14,6 +14,36 @@ var requireReset sync.Map
 var symbolLock sync.Mutex
 var tradeMax = make(map[string]map[string][]float64)        // key - symbol - [maxBuy合约张数/币币个数, maxSell]
 var okTradeMaxResetTime = make(map[string]map[string]int64) // key - symbol - init time in second
+var crossCount = make(map[string]map[string]map[string]int) // key - market - symbol - count
+var okexCrossing sync.Map                                   // symbol - bool
+
+func ClearCrossCount() {
+	crossCount = make(map[string]map[string]map[string]int)
+	okexCrossing = sync.Map{}
+}
+
+func GetCrossCount(key, market, symbol string) (count int) {
+	if crossCount == nil || crossCount[key] == nil || crossCount[key][market] == nil {
+		return 0
+	}
+	return crossCount[key][market][symbol]
+}
+
+func SetCrossCount(key, market, symbol string, count int) {
+	if crossCount == nil {
+		crossCount = make(map[string]map[string]map[string]int)
+	}
+	if crossCount[key] == nil {
+		crossCount[key] = make(map[string]map[string]int)
+	}
+	if crossCount[key][market] == nil {
+		crossCount[key][market] = make(map[string]int)
+	}
+	if market == model.OKEX {
+		okexCrossing.Store(symbol, true)
+	}
+	crossCount[key][market][symbol] = count
+}
 
 func setRequireReset(market string) {
 	maintaining, ok := model.ChannelMaintaining.Load(market)

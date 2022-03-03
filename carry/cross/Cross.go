@@ -700,16 +700,16 @@ func placeCross(statusBuy, statusSell *CarryStatus, priceBuy, priceSell, amount 
 	if placeSuccess {
 		placeStatus(statusBuy, priceBuy, amount)
 		placeStatus(statusSell, priceSell, -1*amount)
-		buyCount := getCrossCount(statusBuy.market, statusBuy.symbol)
-		sellCount := getCrossCount(statusSell.market, statusSell.symbol)
+		buyCount := api.GetCrossCount(statusBuy.account.Key, statusBuy.market, statusBuy.symbol)
+		sellCount := api.GetCrossCount(statusSell.account.Key, statusSell.market, statusSell.symbol)
 		if buyCount > 10 || sellCount > 10 {
 			go equalAccounts()
-			clearCrossCount()
-			util.Notice(fmt.Sprintf(`cross count %s %s %d %s %s %d trigger equal all accounts`,
-				statusBuy.market, statusBuy.symbol, buyCount, statusSell.market, statusSell.symbol, sellCount))
+			api.ClearCrossCount()
+			util.Notice(fmt.Sprintf(`cross count %s %s %s %d %s %s %d trigger equal all accounts`,
+				statusBuy.account.Key, statusBuy.market, statusBuy.symbol, buyCount, statusSell.market, statusSell.symbol, sellCount))
 		} else {
-			setCrossCount(statusBuy.market, statusBuy.symbol, buyCount+1)
-			setCrossCount(statusSell.market, statusSell.symbol, sellCount+1)
+			api.SetCrossCount(statusBuy.account.Key, statusBuy.market, statusBuy.symbol, buyCount+1)
+			api.SetCrossCount(statusSell.account.Key, statusSell.market, statusSell.symbol, sellCount+1)
 		}
 	}
 }
