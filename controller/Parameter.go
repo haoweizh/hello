@@ -76,11 +76,16 @@ func cancel(c *gin.Context) {
 	market := c.Query(`market`)
 	symbols := model.GetMarketSymbols(market)
 	accounts := model.AppConfig.GetAccounts(market)
-	for symbol := range symbols {
-		for _, account := range accounts {
-			api.CancelOrders(account.Key, account.Secret, market, symbol)
+	go func() {
+		for symbol := range symbols {
+			for _, account := range accounts {
+				api.CancelOrders(account.Key, account.Secret, market, symbol)
+			}
+			util.Notice(`cancel orders %s %s %s`, market, symbol)
+			time.Sleep(time.Millisecond * 100)
 		}
-	}
+		util.Notice(`cancel orders %s done`, market)
+	}()
 	c.JSON(http.StatusOK, gin.H{
 		"code": 0,
 		"msg":  fmt.Sprintf(`cancel %s orders accounts %d symbols %d`, market, len(accounts), len(symbols)),
