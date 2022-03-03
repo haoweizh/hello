@@ -780,7 +780,7 @@ var PostOrderCross = func(order *model.Order, setting *model.Setting) {
 		//status.LimitBuy = math.Min(status.LimitBuy, maxBuy)
 		//}
 		addLastCarry(order, setting)
-		addCarryResult(order.AmountType, order.Market, true)
+		addCarryResult(order.AmountType, order.Market, ``, true)
 	} else {
 		unknownFail := true
 		if account != nil {
@@ -807,9 +807,9 @@ var PostOrderCross = func(order *model.Order, setting *model.Setting) {
 			}
 		}
 		if unknownFail {
-			addCarryResult(order.AmountType, order.Market, false)
+			addCarryResult(order.AmountType, order.Market, order.ErrCode, false)
 		} else {
-			addCarryResult(order.AmountType, order.Market, true)
+			addCarryResult(order.AmountType, order.Market, ``, true)
 		}
 	}
 }

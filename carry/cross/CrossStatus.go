@@ -6,6 +6,7 @@ import (
 	"hello/model"
 	"hello/util"
 	"math"
+	"strings"
 	"sync"
 	"time"
 )
@@ -258,7 +259,7 @@ func pauseCarry(key string) {
 	carryStop.Store(key, false)
 }
 
-func addCarryResult(key, market string, success bool) {
+func addCarryResult(key, market, msg string, success bool) {
 	value, ok := carryFail.Load(key)
 	fails := 0
 	if ok {
@@ -269,18 +270,26 @@ func addCarryResult(key, market string, success bool) {
 			carryFail.Store(key, fails-1)
 		}
 	} else {
-		carryFail.Store(key, fails+2)
+		carryFail.Store(key, fails+1)
 	}
 	if fails > 0 {
 		util.Notice(`---------- fail size %s %d`, key, fails)
 	}
 	if fails > 6 {
-		go pauseCarry(key)
+		if strings.Trim(msg, " ") != "" {
+			go pauseCarry(key)
+		} else {
+			util.Notice(`key is nil pause all %s accounts`, market)
+			accounts := model.AppConfig.GetAccounts(market)
+			for _, account := range accounts {
+				go pauseCarry(account.Key)
+			}
+		}
 		util.Notice(`----------stop carry %s %d`, key, fails)
 		carryFail.Store(key, 0)
 		for _, address := range model.TeamMails {
 			_ = util.SendMail(model.AppConfig.FromMail, model.AppConfig.FromMailAuth, address,
-				`暂停下单`, `market: `+market+` stop `+key)
+				`暂停下单`, market+`msg: `+msg)
 		}
 	}
 }
