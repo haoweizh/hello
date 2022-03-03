@@ -415,6 +415,7 @@ func handleBooksUpdate(symbol string, data map[string]interface{}, bidAsk *model
 		bidAskUpdate.Bids = newBids
 		bidAskUpdate.Asks = newAsks
 		value, ok := okexCrossing.Load(symbol)
+		success = true
 		if ok && value.(bool) {
 			checkStr := ``
 			for index := 0; index < 25; index++ {
@@ -429,9 +430,7 @@ func handleBooksUpdate(symbol string, data map[string]interface{}, bidAsk *model
 			checkStr = checkStr[0 : len(checkStr)-1]
 			crcValue := int64(int32(crc32.ChecksumIEEE([]byte(checkStr))))
 			compare, _ := data[`checksum`].(json.Number).Int64()
-			if compare == crcValue {
-				success = true
-			} else {
+			if compare != crcValue {
 				success = false
 			}
 			//setWrong(symbol, true)
@@ -441,7 +440,7 @@ func handleBooksUpdate(symbol string, data map[string]interface{}, bidAsk *model
 			}
 		}
 	}
-	return true, bidAskUpdate
+	return success, bidAskUpdate
 }
 
 func handleBooksOKEX(symbol string, data map[string]interface{}) (bidAsk *model.BidAsk) {
