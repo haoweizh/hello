@@ -525,11 +525,11 @@ func initMexcContractDepth(markets *model.Markets, symbol string) {
 	setMexcAskBid(markets, symbol, parseTicksMexc(symbol, resp.Data.Timestamp, resp.Data.Version, resp.Data.Bids, resp.Data.Asks))
 }
 
-// 通过接口 https://contract.mexc.com/api/v1/contract/depth_commits/BTC_USDT/1000获取最新1000条深度快照
+// 通过接口 https://contract.mexc.com/api/v1/contract/depth_commits/BTC_USDT/10获取最新10条深度快照
 func syncMexcContractDepthCommits(markets *model.Markets, symbol string) {
 	_, _, _, dialectSymbol := model.GetFromStandard(model.Mexc, symbol)
 	respBytes, err := publicRequestMexc(http.MethodGet, contractRestUrl,
-		fmt.Sprintf("/api/v1/contract/depth_commits/%s/%d", dialectSymbol, 5), nil, "")
+		fmt.Sprintf("/api/v1/contract/depth_commits/%s/%d", dialectSymbol, 10), nil, "")
 	if err != nil {
 		util.Notice(fmt.Sprintf(`[mexcGetContractSymbolDepthCommits] Failed to get depth info for symbol %s err %+v`, symbol, err))
 		return

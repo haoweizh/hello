@@ -19,7 +19,7 @@ type Config struct {
 	BybitKey, BybitSecret, BybitCarryClose, BybitCarryRate                                         string
 	BinanceKey, BinanceSecret, BinanceCarryClose, BinanceCarryRate                                 string
 	CoinparkKey, CoinparkSecret, CoinparkCarryClose, CoinparkCarryRate                             string
-	DFutureKey, DFutureSecret                                                                      string
+	DFutureKey, DFutureSecret, MexcKey, MexcSecret, MexcCarryClose, MexcCarryRate                  string
 	BitmexKey, BitmexSecret, BitmexCarryClose, BitmexCarryRate                                     string
 	Phase, Handle, Mail, FromMail, FromMailAuth, Port, WalletKey, DBConnection, Env, FutureAddress string
 }
@@ -76,6 +76,10 @@ func GetAccounts(index int) (accounts map[string]*Account) {
 	tempAccounts = AppConfig.GetAccounts(Kucoin)
 	for i, account := range tempAccounts {
 		AppAccounts[i][Kucoin] = account
+	}
+	tempAccounts = AppConfig.GetAccounts(Mexc)
+	for i, account := range tempAccounts {
+		AppAccounts[i][Mexc] = account
 	}
 	return AppAccounts[index]
 }
@@ -172,6 +176,11 @@ func (config *Config) GetAccounts(market string) []*Account {
 		secrets = strings.Split(config.BybitSecret, `,`)
 		closeValues = strings.Split(config.BybitCarryClose, `,`)
 		rateValues = strings.Split(config.BybitCarryRate, `,`)
+	case Mexc:
+		keys = strings.Split(config.MexcKey, `,`)
+		secrets = strings.Split(config.MexcSecret, `,`)
+		closeValues = strings.Split(config.MexcCarryClose, `,`)
+		rateValues = strings.Split(config.MexcCarryRate, `,`)
 	}
 	if len(keys) != len(secrets) || len(keys) != len(closeValues) || len(keys) != len(rateValues) {
 		fmt.Println(fmt.Sprintf(`wrong config format %s keys:%d secrets:%d close:%d rate:%d`,

@@ -783,6 +783,11 @@ func InitMarketInfos() (success bool) {
 	for _, market := range markets {
 		accounts := model.AppConfig.GetAccounts(market)
 		switch market {
+		case model.Mexc:
+			ok, marketInfos := getMarketsMexc(accounts[0].Key, accounts[0].Secret)
+			if ok {
+				model.SetMarketInfos(market, marketInfos)
+			}
 		case model.Ftx:
 			model.SetMarketInfos(market, getMarketsFtx(accounts[0].Key, accounts[0].Secret))
 		case model.OKEX:
