@@ -594,6 +594,8 @@ func GetWSSubscribes(market, subType string) []interface{} {
 		go maintainChannelBybitPerp(subscribes)
 	case model.BybitSpot:
 		go maintainChannelBybitSpot(subscribes)
+	case model.Mexc:
+		go maintainChannelMexc(subscribes)
 	}
 	return subscribes
 }

@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -42,7 +43,6 @@ const (
 	contractPlaceOrderPath           = "/api/v1/private/order/submit"     // 下单
 	contractCancelOrdersBySymbolPath = "/api/v1/private/order/cancel_all" // 撤销某个合约下的所有未完成订单
 	contractQueryOrderByIdPath       = "api/v1/private/order/get"         // 根据订单号查询订单
-	contractGetSymbolMarketPath      = "/api/v1/contract/detail"          // 获取合约信息
 )
 
 var (
@@ -50,6 +50,8 @@ var (
 	zeroPriceError          = errors.New("price is 0")
 	zeroAmountError         = errors.New("amount is 0")
 	failedToPlaceOrderError = errors.New("failed to place order")
+	channelMaintainingMexc  = false
+	mexcSymbolConnection    sync.Map
 )
 
 func SignedRequestMexc(key, secret, method, restUrl, path string, paramsInQuery map[string]interface{}, body string) ([]byte, error) {
@@ -338,46 +340,91 @@ func contractPlaceOrderMex(key, secret string, order *model.Order, orderSide, or
 }
 
 func getMarketsMexc(key, secret string) (success bool, marketInfos map[string]*model.MarketInfo) {
+	respBytes, err := SignedRequestMexc(key, secret, http.MethodGet, contractRestUrl, `/api/v1/contract/detail`, nil, "")
+	if err != nil {
+		return false, nil
+	}
 	marketInfos = make(map[string]*model.MarketInfo)
-	if err := appendContractMarketMexc(key, secret, marketInfos); err != nil {
-		util.Notice(fmt.Sprintf("appendContractMarketMexc failed: %v", err))
-		return false, marketInfos
+	resp := &dtos.MexcContractGetMarketsResp{}
+	err = json.Unmarshal(respBytes, resp)
+	if err != nil {
+		util.Notice(fmt.Sprintf(`[appendContractMarketMexc] Failed to get contract market symbols, err %s`, err))
+		return false, nil
+	}
+	i := 0
+	for _, symbolInfo := range resp.Data {
+		ok, marketType, coin := model.GetCoinFromDialect(model.Mexc, symbolInfo.Symbol)
+		if !ok {
+			continue
+		}
+		i++
+		symbol := coin + model.UniStandardTail[marketType]
+		marketInfos[symbol] = &model.MarketInfo{Market: model.Mexc, Name: symbol, CTCurrency: symbolInfo.BaseCoin,
+			SizeIncrement:  symbolInfo.ContractSize,
+			PriceIncrement: symbolInfo.PriceUnit,
+			CTValue:        symbolInfo.ContractSize,
+			PriceDecimal:   symbolInfo.PriceScale,
+			SizeMax:        symbolInfo.MaxVol * symbolInfo.ContractSize,
+			SizeMin:        symbolInfo.MinVol * symbolInfo.ContractSize,
+		}
+		fmt.Println(fmt.Sprintf(`%d[appendContractMarketMexc] market %s, symbol %s, ctCurrency %s, sizeIncrement %f, priceIncrement %f, ctValue %f, priceDecimal %d, sizeMax %f, sizeMin %f`,
+			i, marketInfos[symbol].Market, marketInfos[symbol].Name, marketInfos[symbol].CTCurrency, marketInfos[symbol].SizeIncrement,
+			marketInfos[symbol].PriceIncrement, marketInfos[symbol].CTValue, marketInfos[symbol].PriceDecimal,
+			marketInfos[symbol].SizeMax, marketInfos[symbol].SizeMin))
 	}
 	return true, marketInfos
 }
 
 func appendContractMarketMexc(key, secret string, marketInfos map[string]*model.MarketInfo) error {
 	util.SocketInfo("[appendContractMarketMexc] Start to get contract market infos")
-	respBytes, err := SignedRequestMexc(key, secret, http.MethodGet, contractRestUrl, contractGetSymbolMarketPath, nil, "")
-	if err != nil {
-		return err
-	}
-	resp := &dtos.MexcContractGetMarketsResp{}
-	err = json.Unmarshal(respBytes, resp)
-	if err != nil {
-		logMsg := fmt.Sprintf(`[appendContractMarketMexc] Failed to get contract market symbols, err %s`, err)
-		fmt.Println(logMsg)
-		util.Notice(logMsg)
-		return err
-	}
-	for _, symbolInfo := range resp.Data {
-		success, marketType, coin := model.GetCoinFromDialect(model.Mexc, symbolInfo.Symbol)
-		if !success {
-			continue
-		}
-		marketInfo := &model.MarketInfo{}
-		// TODO 此处需要确保Mexc的现货和期货的tail不同，否则marketTYpe不可用
-		marketInfo.Name = coin + model.UniStandardTail[marketType]
-		marketInfo.PriceIncrement = symbolInfo.PriceUnit       // 价格的最小步进单位
-		marketInfo.PriceDecimal = symbolInfo.PriceScale        // 价格精度
-		marketInfo.SizeMin = symbolInfo.MinVol                 // 订单张数下限
-		marketInfo.SizeMax = symbolInfo.MaxVol                 // 订单张数上限
-		marketInfo.SizeIncrement = float64(symbolInfo.VolUnit) // 数量的最小步进单位
-		marketInfo.CTCurrency = symbolInfo.BaseCoin
-		marketInfo.CTValue = symbolInfo.ContractSize // 一个合约等于多少个币
-		marketInfos[marketInfo.Name] = marketInfo
-	}
+
 	return nil
+}
+
+func maintainChannelMexc(subscribes []interface{}) {
+	if !channelMaintainingMexc {
+		channelMaintainingMexc = true
+		go func() {
+			for true {
+				time.Sleep(time.Second * 10)
+				if err := SendToAllConnections(model.Mexc, []byte(`{"method": "ping"}`)); err != nil {
+					util.SocketInfo("mexc channel ping error " + err.Error())
+				}
+			}
+		}()
+		for true {
+			time.Sleep(time.Minute * 3)
+			needReset := false
+			for _, subscribe := range subscribes {
+				subJson, parseErr := util.NewJSON([]byte(subscribe.(string)))
+				if subJson == nil || parseErr != nil {
+					continue
+				}
+				dialectSymbol := subJson.GetPath(`param`, `symbol`).MustString()
+				ok, marketType, coin := model.GetCoinFromDialect(model.Mexc, dialectSymbol)
+				conn, connGet := mexcSymbolConnection.Load(subscribe)
+				if !ok || !connGet {
+					continue
+				}
+				symbol := coin + model.UniStandardTail[marketType]
+				_, bidAsk := model.AppMarkets.GetBidAsk(symbol, model.Mexc)
+				if bidAsk == nil || time.Now().UnixMilli()-int64(bidAsk.Ts) > 180000 {
+					needReset = true
+					break
+				} else if bidAsk != nil && time.Now().UnixMilli()-int64(bidAsk.Ts) > 120000 {
+					if err := SendToConnection(model.Mexc, conn.(*websocket.Conn), []byte(subscribe.(string))); err != nil {
+						util.SocketInfo(" mexc can not subscribe %s %s", subscribe, err.Error())
+					}
+				}
+				time.Sleep(time.Millisecond * 100)
+			}
+			if !needReset {
+				util.Notice(`no need reset %s`, model.Mexc)
+			} else {
+				setRequireReset(model.Mexc)
+			}
+		}
+	}
 }
 
 func WsDepthServeMexc(markets *model.Markets, orderHandler OrderHandler, useFullDepthSub bool) (channels []chan struct{}, err error) {
@@ -407,6 +454,7 @@ func WsDepthServeMexc(markets *model.Markets, orderHandler OrderHandler, useFull
 				_, marketType, coin := model.GetCoinFromDialect(model.Mexc, resp.Symbol)
 				symbol := coin + model.UniStandardTail[marketType]
 				bidAsk := parseTicksMexc(symbol, resp.Ts, resp.Data.Version, resp.Data.Bids, resp.Data.Asks)
+				fmt.Println(fmt.Sprintf(`%f %f ~ %f %f`, bidAsk.Bids[0].Price, bidAsk.Bids[0].Amount, bidAsk.Asks[0].Price, bidAsk.Asks[0].Amount))
 				if markets.SetBidAsk(symbol, model.Mexc, bidAsk) {
 					for function, handler := range model.GetFunctions(model.Mexc, symbol) {
 						setting := model.GetSetting(function, model.Mexc, symbol)
@@ -474,9 +522,10 @@ var subscribeHandlerMexc = func(connection *websocket.Conn, subscribes []interfa
 	for _, subscribe := range subscribes {
 		subMsg := fmt.Sprintf(`%s`, subscribe)
 		if err = SendToConnection(model.Mexc, connection, []byte(subMsg)); err != nil {
-			util.SocketInfo(" MEXC can not subscribe %s %s", subscribe, err.Error())
+			util.SocketInfo(" mexc can not subscribe %s %s", subscribe, err.Error())
 		}
-		time.Sleep(time.Millisecond * 300) // Todo - 这里的限速怎么设定
+		mexcSymbolConnection.Store(subscribe.(string), connection)
+		time.Sleep(time.Millisecond * 100)
 	}
 	return err
 }

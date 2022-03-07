@@ -24,13 +24,20 @@ const restFtx = `https://ftx.com/api`
 const wsFtx = `wss://ftx.com/ws`
 const wsStepFtx = 50
 
-var lastDepthPingFtx = util.GetNowUnixMillion()
 var channelMaintainingFtx = false
 var ftxSymbolConnection sync.Map
 
 func maintainChannelFtx(subscribes []interface{}) {
 	if !channelMaintainingFtx {
 		channelMaintainingFtx = true
+		go func() {
+			for true {
+				time.Sleep(time.Second * 10)
+				if sendErr := SendToAllConnections(model.Ftx, []byte(`{"op":"ping"}`)); sendErr != nil {
+					util.SocketInfo("ftx server ping client error " + sendErr.Error())
+				}
+			}
+		}()
 		for true {
 			time.Sleep(time.Minute * 5)
 			needReset := false
@@ -113,13 +120,6 @@ func WsDepthServeFtx(markets *model.Markets, orderHandler OrderHandler) ([]chan 
 		}
 		if responseJson == nil {
 			return
-		}
-		if util.GetNowUnixMillion()-lastDepthPingFtx > 15000 {
-			lastDepthPingFtx = util.GetNowUnixMillion()
-			pingMsg := []byte(`{"op":"ping"}`)
-			if sendErr := SendToAllConnections(model.Ftx, pingMsg); sendErr != nil {
-				util.SocketInfo("ftx server ping client error " + sendErr.Error())
-			}
 		}
 		msgType := responseJson.Get(`channel`).MustString()
 		if msgType == `orderbook` {

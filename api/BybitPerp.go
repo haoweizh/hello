@@ -29,6 +29,14 @@ var bybitPerpSubConnection sync.Map
 func maintainChannelBybitPerp(subscribes []interface{}) {
 	if !channelMaintainingBybitPerp {
 		channelMaintainingBybitPerp = true
+		go func() {
+			for true {
+				time.Sleep(time.Second * 10)
+				if err := SendToAllConnections(model.BybitPerp, []byte(`{"op":"ping"}`)); err != nil {
+					util.SocketInfo("bybit server ping client error " + err.Error())
+				}
+			}
+		}()
 		for true {
 			time.Sleep(time.Minute * 5)
 			needReset := false
@@ -90,15 +98,7 @@ var subscribeHandlerBybitPerp = func(connection *websocket.Conn, subscribes []in
 }
 
 func WsDepthServeBybitPerp(markets *model.Markets, orderHandler OrderHandler) ([]chan struct{}, error) {
-	lastPingTime := util.GetNow().Unix()
 	wsHandler := func(connection *websocket.Conn, event []byte, orderHandler OrderHandler) {
-		now := util.GetNow()
-		if now.Unix()-lastPingTime > 30 { // ping ws server every 5 seconds
-			lastPingTime = util.GetNow().Unix()
-			if err := SendToAllConnections(model.BybitPerp, []byte(`{"op":"ping"}`)); err != nil {
-				util.SocketInfo("bybit server ping client error " + err.Error())
-			}
-		}
 		if len(event) == 0 {
 			return
 		}
