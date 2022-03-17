@@ -385,6 +385,7 @@ func equalCoin(coin string, statuses []*CarryStatus) (isEqual bool, msg string) 
 		if time.Now().Minute()%50 == 0 {
 			//util.Notice(fmt.Sprintf(`clear holding every 50 mins %s %f %f %f`, coin, holding, price, holdingInU))
 			for _, status := range statuses {
+				time.Sleep(time.Millisecond * 100)
 				go api.CancelOrders(status.account.Key, status.account.Secret, status.market, status.symbol)
 			}
 		}
