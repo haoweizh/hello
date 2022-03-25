@@ -134,7 +134,7 @@ func Test_WsAndOrderApi(t *testing.T) {
 		price := tick.Bids[len(tick.Bids)-1].Price * 1.05
 		amount := 20 / price
 		order := api.PlaceOrder(account.Key, account.Secret, orderSide, orderType, market,
-			symbol, ``, ``, price, price, amount, false, true, nil, nil)
+			symbol, ``, price, price, amount, false, nil, nil)
 		fmt.Println(fmt.Sprintf(`1. place order return %v`, order))
 		if order != nil && order.OrderId != `` {
 			queryOrder := api.QueryOrderById(account.Key, account.Secret, market, symbol, orderType, order.OrderId)
@@ -153,7 +153,7 @@ func Test_WsAndOrderApi(t *testing.T) {
 		//order2 := api.PlaceOrder(account.Key, account.Secret, orderSide, orderType, market,
 		//	symbol, ``, ``, price, price, amount, false, true, nil, nil)
 		//fmt.Println(fmt.Sprintf(`5. place order return %v %v`, order1, order2))
-		api.PlacePairOKEX(account.Key, symbol, symbol, model.OrderTypeLimit, ``, price*0.9, price*1.1, amount)
+		api.PlacePairOKEX(account.Key, symbol, symbol, model.OrderTypeLimit, price*0.9, price*1.1, amount)
 		api.CancelOrders(account.Key, account.Secret, market, symbol)
 		//if order1 != nil {
 		//	time.Sleep(time.Second)
@@ -254,8 +254,8 @@ func Test_wallet(t *testing.T) {
 	marketInfos := api.GetMarketInfos(model.BybitPerp)
 	model.SetMarketInfos(model.BybitPerp, marketInfos)
 	api.PlaceOrder(key, secret, model.OrderSideBuy, model.OrderTypeLimit,
-		model.BybitPerp, `ETH-PERP`, ``, ``, 2440.1234567, 2400.12345,
-		0.012678, false, false, nil, nil)
+		model.BybitPerp, `ETH-PERP`, ``, 2440.1234567, 2400.12345,
+		0.012678, false, nil, nil)
 	//// 1078113554871236864
 	////cancelResult := api.CancelOrders(key, secret, model.BybitSpot, `ETH-USDT`)
 	////fmt.Println(cancelResult)
@@ -273,8 +273,8 @@ func Test_wallet(t *testing.T) {
 	orderQuery := api.QueryOrderById(model.AppConfig.GateKey, model.AppConfig.GateSecret, model.Gate, `CFX_PERP`, model.OrderTypeLimit, `79852794326`)
 	fmt.Println(orderQuery.OrderSide)
 	order := api.PlaceOrder(model.AppConfig.GateKey, model.AppConfig.GateSecret, model.OrderSideBuy, model.OrderTypeLimit,
-		model.Gate, `ETH_USDT`, ``, `carry`,
-		2000, 2000, 0.1, true, false, nil, nil)
+		model.Gate, `ETH_USDT`, ``,
+		2000, 2000, 0.1, false, nil, nil)
 	fmt.Println(order.OrderId)
 	api.CancelOrders(model.AppConfig.GateKey, model.AppConfig.GateSecret, model.Gate, `ETH_USDT`)
 	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})

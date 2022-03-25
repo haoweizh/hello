@@ -48,6 +48,8 @@ const MarketTypePerp = `perp`
 const MarketTypeSpot = `spot`
 const FunctionDCarry = `dcarry`
 const FunctionComplement = `comp`
+const FunctionCrossOpen = `open`
+const FunctionCrossClose = `close`
 const PostOnly = `ParticipateDoNotInitiate`
 
 //const SubscribeDeal = `subscribeDeal`

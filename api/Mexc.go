@@ -212,7 +212,6 @@ func spotQueryOrderMexc(key, secret string, order *model.Order) {
 			order.Symbol = coin + model.UniStandardTail[marketType]
 		}
 		order.Price = getFloat64OrDefault(resp.Data[0].Price)             // 挂单价格
-		order.FrozenQuantity = getFloat64OrDefault(resp.Data[0].Quantity) // 挂单数量
 		order.DealPrice = getFloat64OrDefault(resp.Data[0].DealAmount)    // 成交金额
 		order.DealAmount = getFloat64OrDefault(resp.Data[0].DealQuantity) // 成交数量
 		order.CreatedAt = time.Unix(resp.Data[0].CreateTime, 0)
@@ -249,7 +248,6 @@ func contractQueryOrderMexc(key, secret string, order *model.Order) {
 		order.Symbol = coin + model.UniStandardTail[marketType]
 	}
 	order.Price = resp.Data.Price            // 挂单价格
-	order.FrozenQuantity = resp.Data.Vol     // 挂单数量
 	order.DealPrice = resp.Data.DealAvgPrice // 成交金额
 	order.DealAmount = resp.Data.DealVol     // 成交数量
 	order.CreatedAt = time.Unix(resp.Data.CreateTime, 0)

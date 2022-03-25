@@ -450,8 +450,8 @@ func MustPlaceOrder(key, secret, orderSide, orderType, market, symbol, orderPara
 	retry := 10
 	for i := 0; i < retry; i++ {
 		order = PlaceOrder(key, secret, orderSide, orderType, market, symbol,
-			orderParam, refreshType, price, triggerPrice, amount, saveDB, isWs, nil, setting)
-		if order != nil && order.OrderId != `` {
+			orderParam, price, triggerPrice, amount, isWs, nil, setting)
+		if order != nil && order.OrderId != `` && order.Status != model.CarryStatusFail {
 			break
 		} else {
 			//if market == model.OKSwap && order != nil && order.ErrCode == `35010` {
@@ -462,14 +462,18 @@ func MustPlaceOrder(key, secret, orderSide, orderType, market, symbol, orderPara
 			util.Notice(fmt.Sprintf(`fail to place order %d time, re order`, i))
 		}
 	}
+	order.RefreshType = refreshType
+	if saveDB {
+		go model.AppDB.Save(order)
+	}
 	return order
 }
 
 // PlaceOrder orderSide: OrderSideBuy OrderSideSell OrderSideLiquidateLong OrderSideLiquidateShort
 // orderType: OrderTypeLimit OrderTypeMarket
 // amount:如果是限价单或市价卖单，amount是左侧币种的数量，如果是市价买单，amount是右测币种的数量
-func PlaceOrder(key, secret, orderSide, orderType, market, symbol, orderParam, refreshType string,
-	price, triggerPrice, amount float64, saveDB, isWs bool, postOrder model.PostOrder, setting *model.Setting) (order *model.Order) {
+func PlaceOrder(key, secret, orderSide, orderType, market, symbol, orderParam string, price, triggerPrice,
+	amount float64, isWs bool, postOrder model.PostOrder, setting *model.Setting) (order *model.Order) {
 	start := util.GetNowUnixMillion()
 	markSide := model.OrderSideBuy
 	switch orderSide {
@@ -481,22 +485,15 @@ func PlaceOrder(key, secret, orderSide, orderType, market, symbol, orderParam, r
 	if amount < 0.0001 {
 		util.Notice(`can not place order with amount 0`)
 		return &model.Order{OrderSide: markSide, OrderType: orderType, Market: market, Symbol: symbol,
-			Price: price, Amount: 0, OrderId: ``, ErrCode: ``, RefreshType: refreshType, TriggerPrice: triggerPrice,
+			Price: price, Amount: 0, OrderId: ``, ErrCode: ``, TriggerPrice: triggerPrice,
 			Status: model.CarryStatusFail, DealAmount: 0, DealPrice: price, OrderTime: util.GetNow()}
 	}
 	order = &model.Order{OrderSide: markSide, OrderType: orderType, Market: market, Symbol: symbol, Price: price,
-		Amount: amount, DealAmount: 0, DealPrice: price, RefreshType: refreshType, TriggerPrice: triggerPrice,
+		Amount: amount, DealAmount: 0, DealPrice: price, TriggerPrice: triggerPrice,
 		OrderTime: util.GetNow(), UnfilledQuantity: amount, AmountType: key}
 	util.Notice(fmt.Sprintf(`...%s %s %s before order %d amount: %f price:%f triggerPrice:%f`,
 		orderSide, market, symbol, start, amount, price, triggerPrice))
 	if model.AppConfig.Env == `test` {
-		order.Status = model.CarryStatusWorking
-		order.OrderId = fmt.Sprintf(`%s%s%d`, market, symbol, util.GetNow().UnixNano())
-		order.DealPrice = price
-		order.DealAmount = amount
-		if saveDB {
-			go model.AppDB.Save(order)
-		}
 		return
 	}
 	switch market {
@@ -506,8 +503,6 @@ func PlaceOrder(key, secret, orderSide, orderType, market, symbol, orderParam, r
 		placeOrderGate(key, secret, order, orderSide, orderType, symbol, price, amount)
 	case model.OKEX:
 		placeOrderOKEX(key, secret, isWs, order)
-	//case model.Binance:
-	//	placeOrderBinance(key, secret, order, orderSide, orderType, symbol, price, amount)
 	case model.BinanceSpot:
 		placeOrderBinanceSpot(key, secret, order, orderSide, orderType, symbol, price, amount)
 	case model.BinancePerp:
@@ -527,23 +522,17 @@ func PlaceOrder(key, secret, orderSide, orderType, market, symbol, orderParam, r
 	end := util.GetNowUnixMillion()
 	util.Notice(fmt.Sprintf(`...%s %s %s return order at %d distance %d %s %s price %f id %s`,
 		orderSide, market, symbol, end, end-start, order.Status, order.ErrCode, order.Price, order.OrderId))
-	order.RefreshType = refreshType
-	if saveDB {
-		if isWs && market == model.OKEX {
-			order.Status = model.CarryStatusSuccess
-			order.OrderId = strconv.FormatInt(time.Now().UnixNano(), 10) + symbol
-		}
-		if order.OrderId == `` {
-			order.OrderId = fmt.Sprintf(`%s_error_%d`, order.ErrCode, time.Now().UnixNano())
-		}
-		util.Notice(`save order %s %s %s %s %s %f`,
-			order.RefreshType, order.Market, order.Symbol, order.OrderId, order.OrderSide, order.Amount)
-		go model.AppDB.Save(order)
+	if isWs && market == model.OKEX {
+		order.Status = model.CarryStatusSuccess
+		order.OrderId = strconv.FormatInt(time.Now().UnixNano(), 10) + symbol
+	}
+	if order.OrderId == `` {
+		order.OrderId = fmt.Sprintf(`%s_error_%d`, order.ErrCode, time.Now().UnixNano())
 	}
 	if postOrder != nil && setting.Market != model.OKEX {
 		go postOrder(order, setting)
 	}
-	return
+	return order
 }
 
 func GetWSSubscribes(market, subType string) []interface{} {

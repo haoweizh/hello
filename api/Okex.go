@@ -571,7 +571,7 @@ func getWSOrderArgOKEX(symbol, orderSide, orderType, tag string, price, amount f
 		`sz`: amountStrPerp, `ordType`: orderType, `px`: priceStr, `tag`: tag}
 }
 
-func PlacePairOKEX(key, symbolBuy, symbolSell, orderType, refreshType string, priceBuy, priceSell, amount float64) (success bool) {
+func PlacePairOKEX(key, symbolBuy, symbolSell, orderType string, priceBuy, priceSell, amount float64) (success bool) {
 	if amount == 0 || priceBuy == 0 || priceSell == 0 {
 		util.Notice(fmt.Sprintf(`error: wrong PlacePairOKEX amount %f buy at %f sell at %f`, amount, priceBuy, priceSell))
 		return false
@@ -607,16 +607,6 @@ func PlacePairOKEX(key, symbolBuy, symbolSell, orderType, refreshType string, pr
 			return false
 		}
 	}
-	orderPerp := &model.Order{OrderSide: model.OrderSideBuy, OrderType: orderType, Market: model.OKEX,
-		Symbol: symbolBuy, Price: priceBuy, Amount: amount, RefreshType: refreshType, OrderTime: util.GetNow(),
-		UnfilledQuantity: amount, AmountType: key, Status: model.CarryStatusSuccess,
-		OrderId: strconv.FormatInt(now, 10) + symbolBuy}
-	go model.AppDB.Save(orderPerp)
-	orderSpot := &model.Order{OrderSide: model.OrderSideSell, OrderType: orderType, Market: model.OKEX,
-		Symbol: symbolSell, Price: priceSell, Amount: amount, RefreshType: refreshType, OrderTime: util.GetNow(),
-		UnfilledQuantity: amount, AmountType: key, Status: model.CarryStatusSuccess,
-		OrderId: strconv.FormatInt(now, 10) + symbolSell}
-	go model.AppDB.Save(orderSpot)
 	return true
 }
 

@@ -470,9 +470,19 @@ func equalCoin(coin string, statuses []*CarryStatus) (isEqual bool, msg string) 
 			}
 			util.Notice(fmt.Sprintf(`do equal %s %s %s at %f %f %f amount %f`,
 				coin, equalStatus.market, equalStatus.symbol, price, tick.Asks[0].Price, tick.Bids[0].Price, amount))
-			api.PlaceOrder(equalStatus.account.Key, equalStatus.account.Secret, orderSide, model.OrderTypeLimit,
-				equalStatus.market, equalStatus.symbol, ``, model.FunctionComplement,
-				price, price, amount, true, true, nil, nil)
+			order := api.PlaceOrder(equalStatus.account.Key, equalStatus.account.Secret, orderSide, model.OrderTypeLimit,
+				equalStatus.market, equalStatus.symbol, ``,
+				price, price, amount, true, nil, nil)
+			if order != nil {
+				order.LineBuy = equalStatus.TradeLineBuy
+				order.LineSell = equalStatus.TradeLineSell
+				order.Function = model.FunctionCrossClose
+				if (equalStatus.Holding >= 0 && orderSide == model.OrderSideBuy) || (equalStatus.Holding <= 0 && orderSide == model.OrderSideSell) {
+					order.Function = model.FunctionCrossOpen
+				}
+				order.RefreshType = model.FunctionComplement
+				go model.AppDB.Save(order)
+			}
 			if equalStatus.market == model.Gate {
 				api.SetGateBidAsk(equalStatus.account.Key, equalStatus.account.Secret, equalStatus.symbol)
 			}
@@ -551,7 +561,7 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarrySta
 	}
 	lineAll := carryStatus.TradeLineSell + carryStatusRelate.TradeLineBuy
 	if (carryStatus.TradeLineSell < score && carryStatusRelate.TradeLineBuy < score) ||
-		(lineAll > 0 && score > 1.2*lineAll) || (lineAll < 0 && score > 0.4*lineAll) {
+		(lineAll > 0 && score > 1.2*lineAll) || (lineAll < 0 && score > 0) {
 		statusSell = carryStatus
 		statusBuy = carryStatusRelate
 		priceSell = priceBid
@@ -561,7 +571,7 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarrySta
 	}
 	lineAll = carryStatus.TradeLineBuy + carryStatusRelate.TradeLineSell
 	if (carryStatus.TradeLineBuy < scoreRelate && carryStatusRelate.TradeLineSell < scoreRelate) ||
-		(lineAll > 0 && scoreRelate > 1.2*lineAll) || (lineAll < 0 && scoreRelate > 0.4*lineAll) {
+		(lineAll > 0 && scoreRelate > 1.2*lineAll) || (lineAll < 0 && scoreRelate > 0) {
 		statusSell = carryStatusRelate
 		statusBuy = carryStatus
 		priceSell = priceBidRelate
@@ -687,15 +697,47 @@ func placeCross(statusBuy, statusSell *CarryStatus, priceBuy, priceSell, amount 
 		statusSell.market, statusSell.symbol, statusBuy.market, statusBuy.symbol, priceSell, priceBuy, amount))
 	placeSuccess := true
 	if statusBuy.market == model.OKEX && statusSell.market == model.OKEX {
-		placeSuccess = api.PlacePairOKEX(statusBuy.account.Key, statusBuy.symbol, statusSell.symbol, model.OrderTypeLimit,
-			model.FunctionCross, priceBuy, priceSell, amount)
+		placeSuccess = api.PlacePairOKEX(statusBuy.account.Key, statusBuy.symbol, statusSell.symbol,
+			model.OrderTypeLimit, priceBuy, priceSell, amount)
+		now := time.Now().UnixNano()
+		model.AppDB.Save(&model.Order{OrderSide: model.OrderSideBuy, OrderType: model.OrderTypeLimit, Market: model.OKEX,
+			Symbol: statusBuy.symbol, Price: priceBuy, Amount: amount, RefreshType: model.OrderTypeLimit, OrderTime: util.GetNow(),
+			UnfilledQuantity: amount, AmountType: statusBuy.account.Key, Status: model.CarryStatusSuccess,
+			OrderId: strconv.FormatInt(now, 10) + statusBuy.symbol})
+		model.AppDB.Save(&model.Order{OrderSide: model.OrderSideSell, OrderType: model.OrderTypeLimit, Market: model.OKEX,
+			Symbol: statusSell.symbol, Price: priceSell, Amount: amount, RefreshType: model.OrderTypeLimit, OrderTime: util.GetNow(),
+			UnfilledQuantity: amount, AmountType: statusSell.account.Key, Status: model.CarryStatusSuccess,
+			OrderId: strconv.FormatInt(now, 10) + statusSell.symbol})
 	} else {
-		go api.PlaceOrder(statusBuy.account.Key, statusBuy.account.Secret, model.OrderSideBuy, model.OrderTypeLimit,
-			statusBuy.market, statusBuy.symbol, ``, model.FunctionCross, priceBuy, priceBuy,
-			amount, true, true, PostOrderCross, statusBuy.setting)
-		go api.PlaceOrder(statusSell.account.Key, statusSell.account.Secret, model.OrderSideSell, model.OrderTypeLimit,
-			statusSell.market, statusSell.symbol, ``, model.FunctionCross, priceSell, priceSell,
-			amount, true, true, PostOrderCross, statusSell.setting)
+		go func() {
+			order := api.PlaceOrder(statusBuy.account.Key, statusBuy.account.Secret, model.OrderSideBuy, model.OrderTypeLimit,
+				statusBuy.market, statusBuy.symbol, ``, priceBuy, priceBuy, amount, true, PostOrderCross, statusBuy.setting)
+			if order != nil {
+				order.LineBuy = statusBuy.TradeLineBuy
+				order.LineSell = statusBuy.TradeLineSell
+				order.Function = model.FunctionCrossClose
+				if statusBuy.Holding >= 0 {
+					order.Function = model.FunctionCrossOpen
+				}
+				order.RefreshType = model.FunctionCross
+				model.AppDB.Save(order)
+			}
+		}()
+		go func() {
+			order := api.PlaceOrder(statusSell.account.Key, statusSell.account.Secret, model.OrderSideSell, model.OrderTypeLimit,
+				statusSell.market, statusSell.symbol, ``, priceSell, priceSell,
+				amount, true, PostOrderCross, statusSell.setting)
+			if order != nil {
+				order.LineBuy = statusSell.TradeLineBuy
+				order.LineSell = statusSell.TradeLineSell
+				order.Function = model.FunctionCrossClose
+				if statusSell.Holding < 0 {
+					order.Function = model.FunctionCrossOpen
+				}
+				order.RefreshType = model.FunctionCross
+				model.AppDB.Save(order)
+			}
+		}()
 		time.Sleep(time.Second / 4)
 	}
 	if placeSuccess {
