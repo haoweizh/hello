@@ -224,7 +224,6 @@ func initStatus(account *model.Account, setting *model.Setting) (status *CarrySt
 			status.AvailableSell = math.Min(status.AvailableSell, maxSell)
 		}
 	}
-	setCarryStatus(setting.Coin, setting.Market, setting.Symbol, account.Key, status)
 	jump := 8.0
 	revertJump := 3.0
 	if status.Holding > 0 {
@@ -247,6 +246,7 @@ func initStatus(account *model.Account, setting *model.Setting) (status *CarrySt
 			status.TradeLineSell = 1
 		}
 	}
+	setCarryStatus(setting.Coin, setting.Market, setting.Symbol, account.Key, status)
 	return
 }
 
