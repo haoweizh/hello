@@ -115,11 +115,7 @@ func createFromPosition(account *model.Account, setting *model.Setting, valueLim
 		valueInUsd = math.Abs(carryStatus.Holding) * price
 		carryStatus.RateInAll = valueInUsd / cm.accountValueInU
 	}
-	lever := 2.0
-	if setting.Market == model.Ftx || setting.Market == model.OKEX {
-		lever = 1
-	}
-	if cm.contractValueInU/cm.accountValueInU > lever || valueInUsd > valueLimit || valueInUsd/cm.accountValueInU > 0.5 {
+	if cm.contractValueInU/cm.accountValueInU > 2 || valueInUsd > valueLimit || valueInUsd/cm.accountValueInU > 0.5 {
 		//util.Notice(fmt.Sprintf(`杠杆较高，停止开仓 %s %f %f %f %f`,
 		//	key, contractMarkets[key].contractValueInU, contractMarkets[key].collateralsInU, valueInUsd, valueLimit))
 		doRevert = true
