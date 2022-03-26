@@ -201,7 +201,7 @@ func GetHoldings(accounts map[string]*model.Account) (holding [][]interface{}) {
 	return
 }
 
-func GetCrossMarketValue(key string) (market string, inAllSpot, contractAccountValue, holdingSpot, holdingFuture, unRealizedPnl float64) {
+func GetCrossMarketValue(key string) (market string, inAllSpot, contractAccountValue, holdingSpot, holdingFuture, unRealizedPnl, fttInU float64) {
 	value, ok := spotMarkets.Load(key)
 	if value != nil && ok {
 		sm := value.(*spotMarket)
@@ -212,6 +212,9 @@ func GetCrossMarketValue(key string) (market string, inAllSpot, contractAccountV
 			if sm.balances != nil && sm.balances[setting.Symbol] != nil {
 				holdingSpot += sm.balances[setting.Symbol].UsdValue
 			}
+		}
+		if sm.balances != nil && sm.balances[`FTT_USDT`] != nil {
+			fttInU = sm.balances[`FTT_USDT`].UsdValue
 		}
 	}
 	value, ok = contractMarkets.Load(key)

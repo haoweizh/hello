@@ -691,19 +691,28 @@ func placeCross(statusBuy, statusSell *CarryStatus, priceBuy, priceSell, amount 
 	}
 	util.Notice(fmt.Sprintf(`place cross %s %s -> %s %s at %f %f amount %f`,
 		statusSell.market, statusSell.symbol, statusBuy.market, statusBuy.symbol, priceSell, priceBuy, amount))
-	placeSuccess := true
 	if statusBuy.market == model.OKEX && statusSell.market == model.OKEX {
-		placeSuccess = api.PlacePairOKEX(statusBuy.account.Key, statusBuy.symbol, statusSell.symbol,
-			model.OrderTypeLimit, priceBuy, priceSell, amount)
+		if !api.PlacePairOKEX(statusBuy.account.Key, statusBuy.symbol, statusSell.symbol,
+			model.OrderTypeLimit, priceBuy, priceSell, amount) {
+			return
+		}
 		now := time.Now().UnixNano()
-		model.AppDB.Save(&model.Order{OrderSide: model.OrderSideBuy, OrderType: model.OrderTypeLimit, Market: model.OKEX,
+		orderBuy := &model.Order{OrderSide: model.OrderSideBuy, OrderType: model.OrderTypeLimit, Market: model.OKEX,
 			Symbol: statusBuy.symbol, Price: priceBuy, Amount: amount, RefreshType: model.OrderTypeLimit, OrderTime: util.GetNow(),
-			UnfilledQuantity: amount, AmountType: statusBuy.account.Key, Status: model.CarryStatusSuccess,
-			OrderId: strconv.FormatInt(now, 10) + statusBuy.symbol})
-		model.AppDB.Save(&model.Order{OrderSide: model.OrderSideSell, OrderType: model.OrderTypeLimit, Market: model.OKEX,
+			UnfilledQuantity: amount, AmountType: statusBuy.account.Key, Status: model.CarryStatusSuccess, Function: model.FunctionCrossClose,
+			OrderId: strconv.FormatInt(now, 10) + statusBuy.symbol, LineBuy: statusBuy.TradeLineBuy, LineSell: statusSell.TradeLineSell}
+		orderSell := &model.Order{OrderSide: model.OrderSideSell, OrderType: model.OrderTypeLimit, Market: model.OKEX,
 			Symbol: statusSell.symbol, Price: priceSell, Amount: amount, RefreshType: model.OrderTypeLimit, OrderTime: util.GetNow(),
-			UnfilledQuantity: amount, AmountType: statusSell.account.Key, Status: model.CarryStatusSuccess,
-			OrderId: strconv.FormatInt(now, 10) + statusSell.symbol})
+			UnfilledQuantity: amount, AmountType: statusSell.account.Key, Status: model.CarryStatusSuccess, Function: model.FunctionCrossClose,
+			OrderId: strconv.FormatInt(now, 10) + statusSell.symbol, LineBuy: statusSell.TradeLineBuy, LineSell: statusSell.TradeLineSell}
+		if statusBuy.Holding >= 0 {
+			orderBuy.Function = model.FunctionCrossOpen
+		}
+		if statusSell.Holding >= 0 {
+			orderSell.Function = model.FunctionCrossOpen
+		}
+		model.AppDB.Save(orderBuy)
+		model.AppDB.Save(orderSell)
 	} else {
 		go func() {
 			order := api.PlaceOrder(statusBuy.account.Key, statusBuy.account.Secret, model.OrderSideBuy, model.OrderTypeLimit,
@@ -736,20 +745,18 @@ func placeCross(statusBuy, statusSell *CarryStatus, priceBuy, priceSell, amount 
 		}()
 		time.Sleep(time.Second / 4)
 	}
-	if placeSuccess {
-		placeStatus(statusBuy, priceBuy, amount)
-		placeStatus(statusSell, priceSell, -1*amount)
-		buyCount := api.GetCrossCount(statusBuy.account.Key, statusBuy.market, statusBuy.symbol)
-		sellCount := api.GetCrossCount(statusSell.account.Key, statusSell.market, statusSell.symbol)
-		if buyCount > 10 || sellCount > 10 {
-			go equalAccounts()
-			api.ClearCrossCount()
-			util.Notice(fmt.Sprintf(`cross count %s %s %s %d %s %s %d trigger equal all accounts`,
-				statusBuy.account.Key, statusBuy.market, statusBuy.symbol, buyCount, statusSell.market, statusSell.symbol, sellCount))
-		} else {
-			api.SetCrossCount(statusBuy.account.Key, statusBuy.market, statusBuy.symbol, buyCount+1)
-			api.SetCrossCount(statusSell.account.Key, statusSell.market, statusSell.symbol, sellCount+1)
-		}
+	placeStatus(statusBuy, priceBuy, amount)
+	placeStatus(statusSell, priceSell, -1*amount)
+	buyCount := api.GetCrossCount(statusBuy.account.Key, statusBuy.market, statusBuy.symbol)
+	sellCount := api.GetCrossCount(statusSell.account.Key, statusSell.market, statusSell.symbol)
+	if buyCount > 10 || sellCount > 10 {
+		go equalAccounts()
+		api.ClearCrossCount()
+		util.Notice(fmt.Sprintf(`cross count %s %s %s %d %s %s %d trigger equal all accounts`,
+			statusBuy.account.Key, statusBuy.market, statusBuy.symbol, buyCount, statusSell.market, statusSell.symbol, sellCount))
+	} else {
+		api.SetCrossCount(statusBuy.account.Key, statusBuy.market, statusBuy.symbol, buyCount+1)
+		api.SetCrossCount(statusSell.account.Key, statusSell.market, statusSell.symbol, sellCount+1)
 	}
 }
 

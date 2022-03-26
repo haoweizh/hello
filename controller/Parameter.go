@@ -121,7 +121,7 @@ func holdPage(c *gin.Context) {
 	inAll := []float64{0, 0, 0, 0, 0, 0}
 	for _, account := range queryAccounts {
 		if account != nil {
-			market, inAllSpot, contractAccountValue, holdingSpot, holdingFuture, unrealizedPnl := cross.GetCrossMarketValue(account.Key)
+			market, inAllSpot, contractAccountValue, holdingSpot, holdingFuture, unrealizedPnl, fttInU := cross.GetCrossMarketValue(account.Key)
 			if strings.Contains(market, `bybit`) {
 				market = `bybit`
 			}
@@ -142,6 +142,9 @@ func holdPage(c *gin.Context) {
 				strconv.FormatFloat(holdingFuture, 'f', 0, 64),
 				strconv.FormatFloat(unrealizedPnl, 'f', 0, 64)})
 			inAll[0] += inAllSpot
+			if index > 0 {
+				inAll[0] -= fttInU
+			}
 			if market != model.Ftx && market != model.OKEX {
 				inAll[0] += contractAccountValue
 			}
