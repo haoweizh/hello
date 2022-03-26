@@ -630,9 +630,9 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarrySta
 	if amount > 0 {
 		amount = FormatCrossPair(statusBuy.market, statusSell.market, statusBuy.symbol, statusSell.symbol, amount, priceBuy)
 	}
-	if (score > 0.15 || scoreRelate > 0.15) || ((score > 0.1 || scoreRelate > 0.1) &&
+	if amount > 0 && ((score > 0.15 || scoreRelate > 0.15) || ((score > 0.1 || scoreRelate > 0.1) &&
 		(!isValidSymbol(carryStatus.market, carryStatus.symbol) ||
-			!isValidSymbol(carryStatusRelate.market, carryStatusRelate.symbol))) {
+			!isValidSymbol(carryStatusRelate.market, carryStatusRelate.symbol)))) {
 		title := `不同币种`
 		if score > 0.15 || scoreRelate > 0.15 {
 			title = `价差不可思议`
