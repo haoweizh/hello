@@ -115,7 +115,7 @@ func createFromPosition(account *model.Account, setting *model.Setting, valueLim
 		valueInUsd = math.Abs(carryStatus.Holding) * price
 		carryStatus.RateInAll = valueInUsd / cm.accountValueInU
 	}
-	if cm.contractValueInU/cm.accountValueInU > 2 || valueInUsd > valueLimit || valueInUsd/cm.accountValueInU > 0.5 {
+	if cm.contractValueInU/cm.accountValueInU > 3 || valueInUsd > valueLimit || valueInUsd/cm.accountValueInU > 0.5 {
 		//util.Notice(fmt.Sprintf(`杠杆较高，停止开仓 %s %f %f %f %f`,
 		//	key, contractMarkets[key].contractValueInU, contractMarkets[key].collateralsInU, valueInUsd, valueLimit))
 		doRevert = true
@@ -174,8 +174,8 @@ func createFromBalance(account *model.Account, setting *model.Setting, valueLimi
 	if sm.balances[setting.Symbol] != nil && math.Abs(sm.balances[setting.Symbol].UsdValue) > valueLimit {
 		doRevert = true
 	}
-	if sm.collateral != nil && (sm.collateral.Rate < 10 ||
-		(sm.collateral.Available-sm.collateral.Occupied)/sm.collateral.Available < 0.1) {
+	if sm.collateral != nil && sm.collateral.Rate < 10 {
+		//(sm.collateral.Available-sm.collateral.Occupied)/sm.collateral.Available < 0.1) {
 		doRevert = true
 	}
 	return carryStatus, doRevert
