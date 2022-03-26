@@ -111,7 +111,6 @@ func reSubscribe(subscribes []interface{}) {
 		} else if success && bidAsk != nil && time.Now().UnixMilli()-int64(bidAsk.Ts) > 120000 {
 			subArray = append(subArray, map[string]string{`channel`: `books50-l2-tbt`, `instId`: dialectSymbol})
 		}
-		util.Notice(`test %d %d %d`, time.Now().UnixMilli(), bidAsk.Ts, time.Now().UnixMilli()-int64(bidAsk.Ts))
 	}
 	util.Notice(`no need reset %s`, model.OKEX)
 	if len(subArray) == 0 {
