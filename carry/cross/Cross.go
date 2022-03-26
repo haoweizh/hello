@@ -220,8 +220,8 @@ func initStatus(account *model.Account, setting *model.Setting) (status *CarrySt
 			status.AvailableSell = math.Min(status.AvailableSell, maxSell)
 		}
 	}
-	jump := 18.8
-	revertJump := 16.6
+	jump := 15.5
+	revertJump := 12.2
 	if status.Holding > 0 {
 		status.TradeLineBuy = math.Max(setting.OpenShortMargin*(0.5+jump*status.RateInAll), lowestScore) + fundingRate
 		status.TradeLineSell = math.Max(setting.CloseShortMargin*(0.5-revertJump*status.RateInAll), lowestScore) - fundingRate
@@ -698,11 +698,11 @@ func placeCross(statusBuy, statusSell *CarryStatus, priceBuy, priceSell, amount 
 		}
 		now := time.Now().UnixNano()
 		orderBuy := &model.Order{OrderSide: model.OrderSideBuy, OrderType: model.OrderTypeLimit, Market: model.OKEX,
-			Symbol: statusBuy.symbol, Price: priceBuy, Amount: amount, RefreshType: model.OrderTypeLimit, OrderTime: util.GetNow(),
+			Symbol: statusBuy.symbol, Price: priceBuy, Amount: amount, RefreshType: model.FunctionCross, OrderTime: util.GetNow(),
 			UnfilledQuantity: amount, AmountType: statusBuy.account.Key, Status: model.CarryStatusSuccess, Function: model.FunctionCrossClose,
 			OrderId: strconv.FormatInt(now, 10) + statusBuy.symbol, LineBuy: statusBuy.TradeLineBuy, LineSell: statusSell.TradeLineSell}
 		orderSell := &model.Order{OrderSide: model.OrderSideSell, OrderType: model.OrderTypeLimit, Market: model.OKEX,
-			Symbol: statusSell.symbol, Price: priceSell, Amount: amount, RefreshType: model.OrderTypeLimit, OrderTime: util.GetNow(),
+			Symbol: statusSell.symbol, Price: priceSell, Amount: amount, RefreshType: model.FunctionCross, OrderTime: util.GetNow(),
 			UnfilledQuantity: amount, AmountType: statusSell.account.Key, Status: model.CarryStatusSuccess, Function: model.FunctionCrossClose,
 			OrderId: strconv.FormatInt(now, 10) + statusSell.symbol, LineBuy: statusSell.TradeLineBuy, LineSell: statusSell.TradeLineSell}
 		if statusBuy.Holding >= 0 {
