@@ -207,7 +207,6 @@ func GetDayCandle(key, secret, market, symbol string, timeCandle time.Time) (can
 	for _, value := range candles {
 		candleKey := market + symbol + value.Period + value.UTCDate
 		keyedCandles[candleKey] = value
-		util.Notice(`set candle %s %v`, candleKey, value)
 	}
 	candleKey := market + symbol + `1d` + timeCandle.Format(time.RFC3339)[0:10]
 	candle = keyedCandles[candleKey]
@@ -224,8 +223,6 @@ func GetDayCandle(key, secret, market, symbol string, timeCandle time.Time) (can
 		if candleCurrent == nil {
 			util.Notice(fmt.Sprintf(`error: can not get candle %s %s`, currentKey, index.String()))
 			continue
-		} else {
-			util.Notice(fmt.Sprintf(`get current candle %s %v`, currentKey, candleCurrent))
 		}
 		if candleCurrent.N > 0 {
 			if i == 1 {
@@ -516,6 +513,7 @@ func PlaceOrder(key, secret, orderSide, orderType, market, symbol, orderParam st
 	}
 	if order.OrderId == "0" || strings.Trim(order.OrderId, ` `) == "" {
 		order.Status = model.CarryStatusFail
+		order.OrderId = fmt.Sprintf(`%s_error_%d`, order.ErrCode, time.Now().UnixNano())
 	} else if order.Status == `` {
 		order.Status = model.CarryStatusWorking
 	}
@@ -525,9 +523,6 @@ func PlaceOrder(key, secret, orderSide, orderType, market, symbol, orderParam st
 	if isWs && market == model.OKEX {
 		order.Status = model.CarryStatusSuccess
 		order.OrderId = strconv.FormatInt(time.Now().UnixNano(), 10) + symbol
-	}
-	if order.OrderId == `` {
-		order.OrderId = fmt.Sprintf(`%s_error_%d`, order.ErrCode, time.Now().UnixNano())
 	}
 	if postOrder != nil && setting.Market != model.OKEX {
 		go postOrder(order, setting)
