@@ -708,7 +708,7 @@ func placeCross(statusBuy, statusSell *CarryStatus, priceBuy, priceSell, amount 
 		if statusBuy.Holding >= 0 {
 			orderBuy.Function = model.FunctionCrossOpen
 		}
-		if statusSell.Holding >= 0 {
+		if statusSell.Holding <= 0 {
 			orderSell.Function = model.FunctionCrossOpen
 		}
 		model.AppDB.Save(orderBuy)
@@ -736,7 +736,7 @@ func placeCross(statusBuy, statusSell *CarryStatus, priceBuy, priceSell, amount 
 				order.LineBuy = statusSell.TradeLineBuy
 				order.LineSell = statusSell.TradeLineSell
 				order.Function = model.FunctionCrossClose
-				if statusSell.Holding < 0 {
+				if statusSell.Holding <= 0 {
 					order.Function = model.FunctionCrossOpen
 				}
 				order.RefreshType = model.FunctionCross
