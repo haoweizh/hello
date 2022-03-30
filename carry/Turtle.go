@@ -45,16 +45,14 @@ func (turtleData *TurtleData) ToString() (str string) {
 	return fmt.Sprintf(`20日%f~%f n:%f`, turtleData.lowDays20, turtleData.highDays20, turtleData.n)
 }
 
-func getTurtling() (value bool) {
+func checkSetTurtling(value bool) (before bool) {
 	turtleLock.Lock()
 	defer turtleLock.Unlock()
-	return turtling
-}
-
-func setTurtling(value bool) {
-	turtleLock.Lock()
-	defer turtleLock.Unlock()
-	turtling = value
+	before = turtling
+	if value == false || before == false {
+		turtling = value
+	}
+	return before
 }
 
 var dataSet = make(map[string]map[string]map[string]*TurtleData) // market - symbol - 2019-12-06 - *turtleData
@@ -216,12 +214,14 @@ func GetTurtleData(key, secret string, setting *model.Setting) (turtleData *Turt
 // setting.PriceX 上一次开仓的价格
 // setting.OpenShortMargin 该单币种最多开仓个数
 var ProcessTurtle = func(setting *model.Setting, tick *model.BidAsk) {
-	if setting == nil || getTurtling() {
+	if !checkSetTurtling(true) {
+		defer checkSetTurtling(false)
+	} else {
 		return
 	}
 	now := util.GetNowUnixMillion()
 	maintaining, ok := model.ChannelMaintaining.Load(setting.Market)
-	if tick == nil || tick.Asks == nil || tick.Bids == nil || model.AppConfig.Handle != `1` ||
+	if setting == nil || tick == nil || tick.Asks == nil || tick.Bids == nil || model.AppConfig.Handle != `1` ||
 		(ok && maintaining.(bool)) || (model.AppConfig.Env != `test` && now-int64(tick.Ts) > 1000) ||
 		(time.Now().Hour() == 0 && time.Now().Minute() == 0) {
 		return
@@ -231,8 +231,6 @@ var ProcessTurtle = func(setting *model.Setting, tick *model.BidAsk) {
 			setting.Market, setting.Symbol, setting.Chance, setting.PriceX))
 		return
 	}
-	setTurtling(true)
-	defer setTurtling(false)
 	account := model.AppConfig.GetAccounts(setting.Market)[0]
 	turtleData := GetTurtleData(account.Key, account.Secret, setting)
 	if turtleData == nil || turtleData.n == 0 || turtleData.amount == 0 {

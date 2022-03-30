@@ -373,6 +373,16 @@ func _(key, secret, market, symbol string) (success bool, maxLoan float64) {
 	return false, 0
 }
 
+func QueryOpenTriggerOrders(key, secret, market, symbol string) (orders []*model.Order) {
+	switch market {
+	//case model.OKEX:
+	//	return queryOrdersOKEX(key, secret, symbol)
+	case model.Ftx:
+		return queryOpenTriggerOrders(key, secret, symbol)
+	}
+	return nil
+}
+
 func QueryOrderById(key, secret, market, symbol, orderType, orderId string) (order *model.Order) {
 	order = &model.Order{
 		OrderId: orderId, Symbol: symbol, Market: market, OrderType: orderType, Status: model.CarryStatusFail}
@@ -400,7 +410,7 @@ func QueryOrderById(key, secret, market, symbol, orderType, orderId string) (ord
 			if newOrderId != `` {
 				return queryOrderFtx(key, secret, newOrderId)
 			} else {
-				order.Status = queryOpenTriggerOrders(key, secret, symbol, orderId)
+				order.Status = queryOpenTriggerOrder(key, secret, symbol, orderId)
 			}
 		} else {
 			return queryOrderFtx(key, secret, orderId)
@@ -455,7 +465,7 @@ func MustPlaceOrder(key, secret, orderSide, orderType, market, symbol, orderPara
 			//	amountType = model.AmountTypeNew
 			//	RefreshAccount(key, secret, model.OKSwap)
 			//}
-			time.Sleep(time.Second)
+			time.Sleep(time.Second * 10)
 			util.Notice(fmt.Sprintf(`fail to place order %d time, re order`, i))
 		}
 	}

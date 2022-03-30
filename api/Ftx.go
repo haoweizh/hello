@@ -485,29 +485,38 @@ func queryTriggerOrderId(key, secret, id string) (orderId string) {
 	return
 }
 
-func queryOpenTriggerOrders(key, secret, symbol, triggerId string) (status string) {
+func queryOpenTriggerOrders(key, secret, symbol string) (orders []*model.Order) {
 	param := make(map[string]interface{})
 	param[`market`] = symbol
 	response := SignedRequestFtx(key, secret, `GET`, `/conditional_orders`, param, nil)
 	orderJson, err := util.NewJSON(response)
-	status = model.CarryStatusWorking
 	if err == nil {
 		result := orderJson.Get(`result`)
 		if result != nil && orderJson.Get(`success`).MustBool() {
-			status = model.CarryStatusFail
-			orders := result.MustArray()
-			for _, order := range orders {
-				item := order.(map[string]interface{})
-				if item[`id`] != nil {
-					num, _ := item[`id`].(json.Number).Float64()
-					if fmt.Sprintf(`%d`, int(num)) == triggerId {
-						return model.CarryStatusWorking
-					}
-				}
+			orders = make([]*model.Order, 0)
+			orderArray := result.MustArray()
+			for _, value := range orderArray {
+				item := value.(map[string]interface{})
+				order := &model.Order{Market: model.Ftx}
+				parseOrderFtx(order, item)
+				orders = append(orders, order)
 			}
 		}
 	}
-	return status
+	return orders
+}
+
+func queryOpenTriggerOrder(key, secret, symbol, triggerId string) (status string) {
+	orders := queryOpenTriggerOrders(key, secret, symbol)
+	if orders == nil || len(orders) == 0 {
+		return model.CarryStatusFail
+	}
+	for _, order := range orders {
+		if order != nil && order.OrderId == triggerId {
+			return model.CarryStatusWorking
+		}
+	}
+	return model.CarryStatusFail
 }
 
 func queryOrderFtx(key, secret, orderId string) (order *model.Order) {

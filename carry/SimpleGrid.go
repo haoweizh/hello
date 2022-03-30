@@ -23,16 +23,14 @@ var simpleGriding = false
 var simpleGridLock sync.Mutex
 var gridCheckTime = util.GetNow()
 
-func setSimpleGriding(value bool) {
+func checkSetGriding(value bool) (before bool) {
 	simpleGridLock.Lock()
 	defer simpleGridLock.Unlock()
-	simpleGriding = value
-}
-
-func getSimpleGriding() (value bool) {
-	simpleGridLock.Lock()
-	defer simpleGridLock.Unlock()
-	return simpleGriding
+	before = simpleGriding
+	if value == false || before == false {
+		simpleGriding = value
+	}
+	return before
 }
 
 func calcGridAmount(key, secret, market, symbol string, price float64) (amount float64) {
@@ -166,17 +164,17 @@ func getGridPos(key, secret string, setting *model.Setting) (gridPos *GridPos) {
 
 // ProcessSimpleGrid setting: grid_amount持仓量, chance 当前position
 var ProcessSimpleGrid = func(setting *model.Setting, tick *model.BidAsk) {
-	now := util.GetNowUnixMillion()
-	if setting == nil || getSimpleGriding() {
+	if !checkSetGriding(true) {
+		defer checkSetGriding(false)
+	} else {
 		return
 	}
+	now := util.GetNowUnixMillion()
 	maintaining, ok := model.ChannelMaintaining.Load(setting.Market)
-	if tick == nil || tick.Asks == nil || tick.Bids == nil || model.AppConfig.Handle != `1` ||
+	if setting == nil || tick == nil || tick.Asks == nil || tick.Bids == nil || model.AppConfig.Handle != `1` ||
 		(ok && maintaining.(bool)) || now-int64(tick.Ts) > 1000 {
 		return
 	}
-	setSimpleGriding(true)
-	defer setSimpleGriding(false)
 	account := model.AppConfig.GetAccounts(setting.Market)[0]
 	gridPos := getGridPos(account.Key, account.Secret, setting)
 	if gridPos == nil {
