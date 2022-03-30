@@ -485,7 +485,8 @@ func queryTriggerOrderId(key, secret, id string) (orderId string) {
 	return
 }
 
-func queryOpenTriggerOrders(key, secret, symbol string) (orders []*model.Order) {
+// 查询未成交的触发单
+func queryTriggerOrdersFtx(key, secret, symbol string) (orders []*model.Order) {
 	param := make(map[string]interface{})
 	param[`market`] = symbol
 	response := SignedRequestFtx(key, secret, `GET`, `/conditional_orders`, param, nil)
@@ -506,8 +507,8 @@ func queryOpenTriggerOrders(key, secret, symbol string) (orders []*model.Order) 
 	return orders
 }
 
-func queryOpenTriggerOrder(key, secret, symbol, triggerId string) (status string) {
-	orders := queryOpenTriggerOrders(key, secret, symbol)
+func queryTriggerOrderFtx(key, secret, symbol, triggerId string) (status string) {
+	orders := queryTriggerOrdersFtx(key, secret, symbol)
 	if orders == nil || len(orders) == 0 {
 		return model.CarryStatusFail
 	}

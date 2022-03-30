@@ -742,9 +742,9 @@ func getMarketsOKEX(key, secret string) (marketInfos map[string]*model.MarketInf
 	return
 }
 
-// 暂不支持策略订单
+// cancelOrdersOKEX 暂不支持策略订单
 func cancelOrdersOKEX(key, secret, symbol string) (result bool, code, msg string) {
-	orders := queryPendingOrdersOKEX(key, secret, symbol)
+	orders := queryOpenOrdersOKEX(key, secret, symbol, false)
 	if len(orders) <= 0 {
 		return true, ``, ``
 	}
@@ -801,9 +801,6 @@ func parseOrderOKEX(value map[string]interface{}) (order *model.Order) {
 		return nil
 	}
 	order = &model.Order{Market: model.OKEX}
-	if value[`avgPx`] != nil && value[`avgPx`] != `` {
-		order.DealPrice, _ = strconv.ParseFloat(value[`avgPx`].(string), 64)
-	}
 	if value[`ordId`] != nil {
 		order.OrderId = value[`ordId`].(string)
 	} else if value[`algoId`] != nil {
@@ -868,10 +865,14 @@ func parseOrderOKEX(value map[string]interface{}) (order *model.Order) {
 	return order
 }
 
-// 暂不支持策略订单
-func queryPendingOrdersOKEX(key, secret, symbol string) (orders []*model.Order) {
+func queryOpenOrdersOKEX(key, secret, symbol string, isStop bool) (orders []*model.Order) {
 	param := map[string]interface{}{`instId`: symbol}
-	responseBody := sendSignRequestOKEX(key, secret, http.MethodGet, `/api/v5/trade/orders-pending`, param, nil)
+	path := `/api/v5/trade/orders-pending`
+	if isStop {
+		path = `/api/v5/trade/orders-algo-pending`
+		param[`ordType`] = `conditional`
+	}
+	responseBody := sendSignRequestOKEX(key, secret, http.MethodGet, path, param, nil)
 	orderJson, err := util.NewJSON(responseBody)
 	if err != nil || orderJson == nil || orderJson.Get(`data`) == nil {
 		return
@@ -880,6 +881,7 @@ func queryPendingOrdersOKEX(key, secret, symbol string) (orders []*model.Order) 
 	orders = make([]*model.Order, 0)
 	for _, item := range ordersJson {
 		value := item.(map[string]interface{})
+		//todo 针对策略订单未成交时是否有ordId以及文档里对state的定义不一致进行测试，尽量使用algoId因为cancel的时候用的是algoId
 		order := parseOrderOKEX(value)
 		if order.OrderId != `` {
 			orders = append(orders, order)

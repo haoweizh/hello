@@ -138,6 +138,7 @@ func MustCancel(key, secret, market, symbol, orderType, orderId string, mustCanc
 	return res
 }
 
+// CancelOrders 暂不支持策略订单
 func CancelOrders(key, secret, market, symbol string) (result bool) {
 	switch market {
 	case model.Kucoin:
@@ -163,6 +164,7 @@ func CancelOrders(key, secret, market, symbol string) (result bool) {
 	return false
 }
 
+// CancelOrder 支持普通订单、stop订单
 func CancelOrder(key, secret, market, symbol, orderType, orderId string) (result bool, errCode, msg string) {
 	if model.AppConfig.Env == `test` {
 		return true, ``, `test cancel`
@@ -378,7 +380,7 @@ func QueryOpenTriggerOrders(key, secret, market, symbol string) (orders []*model
 	//case model.OKEX:
 	//	return queryOrdersOKEX(key, secret, symbol)
 	case model.Ftx:
-		return queryOpenTriggerOrders(key, secret, symbol)
+		return queryTriggerOrdersFtx(key, secret, symbol)
 	}
 	return nil
 }
@@ -410,7 +412,7 @@ func QueryOrderById(key, secret, market, symbol, orderType, orderId string) (ord
 			if newOrderId != `` {
 				return queryOrderFtx(key, secret, newOrderId)
 			} else {
-				order.Status = queryOpenTriggerOrder(key, secret, symbol, orderId)
+				order.Status = queryTriggerOrderFtx(key, secret, symbol, orderId)
 			}
 		} else {
 			return queryOrderFtx(key, secret, orderId)
