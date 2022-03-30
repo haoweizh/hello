@@ -401,7 +401,7 @@ func equalCoin(coin string, statuses []*CarryStatus) (isEqual bool, msg string) 
 				continue
 			}
 			go api.CancelOrders(status.account.Key, status.account.Secret, status.market, status.symbol)
-			if equalStatus != nil || now-int64(tickTimes[status.market+status.symbol]) > 300 {
+			if equalStatus != nil || now-int64(tickTimes[status.market+status.symbol]) > 300 || status.TradeLineSell > 0.5 {
 				continue
 			}
 			if status.AvailableSell > holding {
@@ -430,7 +430,7 @@ func equalCoin(coin string, statuses []*CarryStatus) (isEqual bool, msg string) 
 				continue
 			}
 			go api.CancelOrders(status.account.Key, status.account.Secret, status.market, status.symbol)
-			if equalStatus != nil || now-int64(tickTimes[status.market+status.symbol]) > 300 {
+			if equalStatus != nil || now-int64(tickTimes[status.market+status.symbol]) > 300 || status.TradeLineBuy > 0.5 {
 				continue
 			}
 			if math.IsNaN(status.AvailableBuy) || status.AvailableBuy > math.Abs(holding) {
@@ -481,6 +481,17 @@ func equalCoin(coin string, statuses []*CarryStatus) (isEqual bool, msg string) 
 			}
 			if equalStatus.market == model.Gate {
 				api.SetGateBidAsk(equalStatus.account.Key, equalStatus.account.Secret, equalStatus.symbol)
+			}
+		}
+	} else if math.Abs(holdingInU) > 10 {
+		minute := time.Now().Minute()
+		second := time.Now().Second()
+		if minute == 0 && second == 0 {
+			msg := fmt.Sprintf(`can not get status for %s when holding %f`, coin, holdingInU)
+			err := util.SendMail(model.AppConfig.FromMail, model.AppConfig.FromMailAuth, model.AppConfig.Mail,
+				`equal error`, msg)
+			if err != nil {
+				util.Notice(`fail to send mail msg %s %s`, msg, err.Error())
 			}
 		}
 	}
