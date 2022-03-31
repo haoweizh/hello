@@ -37,6 +37,7 @@ const turtleTriggerDelta = 0.01
 
 var turtling = false
 var turtleLock sync.Mutex
+var checkTurtleOrderTime = make(map[string]time.Time) // market_symbol - time
 
 // 当天是否有平仓
 var turtleClosed = make(map[string]map[string]bool) // market - symbol - closed
@@ -208,6 +209,22 @@ func GetTurtleData(key, secret string, setting *model.Setting) (turtleData *Turt
 	return
 }
 
+func checkTurtleOrders(key, secret, market, symbol string, turtleData *TurtleData) {
+	orders := api.QueryOpenTriggerOrders(key, secret, market, symbol)
+	if orders == nil {
+		return
+	}
+	for _, order := range orders {
+		if (turtleData.orderLong != nil && turtleData.orderLong.OrderId == order.OrderId) ||
+			(turtleData.orderShort != nil && turtleData.orderShort.OrderId == order.OrderId) {
+			continue
+		}
+		result := api.MustCancel(key, secret, market, symbol, order.OrderType, order.OrderId, true)
+		util.Notice(`cancel extra turtle order %s %s %s %s return %v`,
+			market, symbol, order.OrderType, order.OrderId, result)
+	}
+}
+
 // ProcessTurtle
 // setting.GridAmount 当前已经持仓数量
 // setting.Chance 当前开仓的个数
@@ -234,6 +251,13 @@ var ProcessTurtle = func(setting *model.Setting, tick *model.BidAsk) {
 	account := model.AppConfig.GetAccounts(setting.Market)[0]
 	turtleData := GetTurtleData(account.Key, account.Secret, setting)
 	if turtleData == nil || turtleData.n == 0 || turtleData.amount == 0 {
+		return
+	}
+	duration, _ := time.ParseDuration(`120s`)
+	lastCheck := checkTurtleOrderTime[setting.Market+`_`+setting.Symbol]
+	if lastCheck.Add(duration).Before(time.Now()) {
+		checkTurtleOrderTime[setting.Market+`_`+setting.Symbol] = time.Now()
+		checkTurtleOrders(account.Key, account.Secret, setting.Market, setting.Symbol, turtleData)
 		return
 	}
 	currentN := model.GetCurrentN(setting)

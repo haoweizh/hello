@@ -63,6 +63,9 @@ func Test_ws(t *testing.T) {
 }
 
 func Test_getCommonMarketInfos(t *testing.T) {
+	timeMap := make(map[string]time.Time)
+	duration, _ := time.ParseDuration(`120s`)
+	fmt.Println(timeMap[`dd`].Add(duration))
 	model.NewConfig()
 	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
 	api.InitCrossMarketInfos([]string{model.OKEX, model.Ftx, model.Gate})
