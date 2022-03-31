@@ -248,14 +248,34 @@ func Test_download(t *testing.T) {
 
 func Test_wallet(t *testing.T) {
 	model.NewConfig()
-	key, secret := `LWaglQgg6eiJDuTmwG`, `mOnuz8yeZmqGLUT2bNDqgA7kuhKT8QYOyUon`
+	var key, secret string
+	market := model.OKEX
+	switch market {
+	case model.Ftx:
+		key = model.AppConfig.FtxKey
+		secret = model.AppConfig.FtxSecret
+	case model.OKEX:
+		marketInfos := api.GetMarketInfos(model.OKEX)
+		model.SetMarketInfos(model.OKEX, marketInfos)
+		key = model.AppConfig.OkexKey
+		secret = model.AppConfig.OkexSecret
+	}
+	symbol := `ETH_PERP`
+	order := api.PlaceOrder(key, secret, model.OrderSideBuy, model.OrderTypeStop,
+		market, symbol, ``, 4444, 4444, 0.1, false, nil, nil)
+	fmt.Println(order.OrderId)
+	orders := api.QueryOpenTriggerOrders(key, secret, market, symbol)
+	for _, m := range orders {
+		result, _, _ := api.CancelOrder(key, secret, market, symbol, m.OrderType, m.OrderId)
+		fmt.Println(result)
+		result, _, _ = api.CancelOrder(key, secret, market, symbol, `stop`, m.OrderId)
+		fmt.Println(result)
+	}
+	//key, secret := `LWaglQgg6eiJDuTmwG`, `mOnuz8yeZmqGLUT2bNDqgA7kuhKT8QYOyUon`
 	_, rate := api.GetFundingRate(key, secret, model.BybitPerp, `LOOKS_PERP`)
 	_, rate = api.GetFundingRate(key, secret, model.BybitPerp, `LOOKS_PERP`)
 	marketInfos := api.GetMarketInfos(model.BybitPerp)
 	model.SetMarketInfos(model.BybitPerp, marketInfos)
-	api.PlaceOrder(key, secret, model.OrderSideBuy, model.OrderTypeLimit,
-		model.BybitPerp, `ETH-PERP`, ``, 2440.1234567, 2400.12345,
-		0.012678, false, nil, nil)
 	//// 1078113554871236864
 	////cancelResult := api.CancelOrders(key, secret, model.BybitSpot, `ETH-USDT`)
 	////fmt.Println(cancelResult)
@@ -272,18 +292,18 @@ func Test_wallet(t *testing.T) {
 	api.InitMarketInfos()
 	orderQuery := api.QueryOrderById(model.AppConfig.GateKey, model.AppConfig.GateSecret, model.Gate, `CFX_PERP`, model.OrderTypeLimit, `79852794326`)
 	fmt.Println(orderQuery.OrderSide)
-	order := api.PlaceOrder(model.AppConfig.GateKey, model.AppConfig.GateSecret, model.OrderSideBuy, model.OrderTypeLimit,
+	order1 := api.PlaceOrder(model.AppConfig.GateKey, model.AppConfig.GateSecret, model.OrderSideBuy, model.OrderTypeLimit,
 		model.Gate, `ETH_USDT`, ``,
 		2000, 2000, 0.1, false, nil, nil)
-	fmt.Println(order.OrderId)
+	fmt.Println(order1.OrderId)
 	api.CancelOrders(model.AppConfig.GateKey, model.AppConfig.GateSecret, model.Gate, `ETH_USDT`)
 	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
 	api.InitMarketInfos()
 	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
 	api.InitMarketInfos()
-	fmt.Println(order.DealAmount)
-	fmt.Println(order.DealPrice)
-	fmt.Println(order.Status)
+	fmt.Println(order1.DealAmount)
+	fmt.Println(order1.DealPrice)
+	fmt.Println(order1.Status)
 }
 
 func Test_accounting(t *testing.T) {

@@ -801,7 +801,7 @@ func parseOrderOKEX(value map[string]interface{}) (order *model.Order) {
 		return nil
 	}
 	order = &model.Order{Market: model.OKEX}
-	if value[`ordId`] != nil {
+	if value[`ordId`] != nil && value[`ordId`].(string) != `0` {
 		order.OrderId = value[`ordId`].(string)
 	} else if value[`algoId`] != nil {
 		order.OrderId = value[`algoId`].(string)
@@ -809,9 +809,16 @@ func parseOrderOKEX(value map[string]interface{}) (order *model.Order) {
 	if value[`px`] != nil && value[`px`] != `` {
 		order.Price, _ = strconv.ParseFloat(value[`px`].(string), 64)
 	}
-	//if value[`ordType`] != nil { // market：市价单 limit：限价单 post_only：只做maker单 fok：全部成交或立即取消 ioc：立即成交并取消剩余
-	//	order.OrderType = value[`ordType`].(string)
-	//}
+	if value[`ordType`] != nil { // market：市价单 limit：限价单 post_only：只做maker单 fok：全部成交或立即取消 ioc：立即成交并取消剩余
+		switch value[`ordType`].(string) {
+		case `market`:
+			order.OrderType = model.OrderTypeMarket
+		case `limit`:
+			order.OrderType = model.OrderTypeLimit
+		case `conditional`:
+			order.OrderType = model.OrderTypeStop
+		}
+	}
 	if value[`side`] != nil {
 		order.OrderSide = value[`side`].(string)
 	}
@@ -881,7 +888,6 @@ func queryOpenOrdersOKEX(key, secret, symbol string, isStop bool) (orders []*mod
 	orders = make([]*model.Order, 0)
 	for _, item := range ordersJson {
 		value := item.(map[string]interface{})
-		//todo 针对策略订单未成交时是否有ordId以及文档里对state的定义不一致进行测试，尽量使用algoId因为cancel的时候用的是algoId
 		order := parseOrderOKEX(value)
 		if order.OrderId != `` {
 			orders = append(orders, order)

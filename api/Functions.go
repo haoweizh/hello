@@ -377,8 +377,8 @@ func _(key, secret, market, symbol string) (success bool, maxLoan float64) {
 
 func QueryOpenTriggerOrders(key, secret, market, symbol string) (orders []*model.Order) {
 	switch market {
-	//case model.OKEX:
-	//	return queryOrdersOKEX(key, secret, symbol)
+	case model.OKEX:
+		return queryOpenOrdersOKEX(key, secret, symbol, true)
 	case model.Ftx:
 		return queryTriggerOrdersFtx(key, secret, symbol)
 	}
