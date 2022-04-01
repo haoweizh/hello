@@ -71,7 +71,6 @@ func calcTurtleAmount(key, secret string, setting *model.Setting, n float64) (am
 	case model.Ftx, model.OKEX:
 		_, _, p, _ := api.GetBalances(key, secret, setting.Market)
 		amount = 0.02 * p / n
-		amount = 0.1
 		//case model.OKEX:
 		//	_, _, p, _ := api.GetBalances(setting.Market)
 		//	amount = 0.01 * p / n
@@ -215,7 +214,6 @@ func checkTurtleOrders(key, secret, market, symbol string, turtleData *TurtleDat
 	if orders == nil {
 		return
 	}
-	util.Notice(fmt.Sprintf(`check turtle orders %d`, len(orders)))
 	for _, order := range orders {
 		if (turtleData.orderLong != nil && turtleData.orderLong.OrderId == order.OrderId) ||
 			(turtleData.orderShort != nil && turtleData.orderShort.OrderId == order.OrderId) {
