@@ -467,7 +467,7 @@ func MustPlaceOrder(key, secret, orderSide, orderType, market, symbol, orderPara
 			//	amountType = model.AmountTypeNew
 			//	RefreshAccount(key, secret, model.OKSwap)
 			//}
-			time.Sleep(time.Second * 10)
+			time.Sleep(time.Second * 3)
 			util.Notice(fmt.Sprintf(`fail to place order %d time, re order`, i))
 		}
 	}
