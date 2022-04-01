@@ -215,6 +215,7 @@ func checkTurtleOrders(key, secret, market, symbol string, turtleData *TurtleDat
 	if orders == nil {
 		return
 	}
+	util.Notice(fmt.Sprintf(`check turtle orders %d`, len(orders)))
 	for _, order := range orders {
 		if (turtleData.orderLong != nil && turtleData.orderLong.OrderId == order.OrderId) ||
 			(turtleData.orderShort != nil && turtleData.orderShort.OrderId == order.OrderId) {
