@@ -71,7 +71,6 @@ func calcTurtleAmount(key, secret string, setting *model.Setting, n float64) (am
 	case model.Ftx, model.OKEX:
 		_, _, p, _ := api.GetBalances(key, secret, setting.Market)
 		amount = 0.02 * p / n
-		amount = 0.1
 		//case model.OKEX:
 		//	_, _, p, _ := api.GetBalances(setting.Market)
 		//	amount = 0.01 * p / n
