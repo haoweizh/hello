@@ -164,7 +164,7 @@ func createFromBalance(account *model.Account, setting *model.Setting, valueLimi
 		carryStatus.Holding = balance.Amount
 		// 暂不支持借币
 		carryStatus.LimitSell = limitSell
-		if setting.Symbol == `ELON_USDT` {
+		if setting.Symbol == `ELON_USDT` && key == `bdd6b333-7505-4c87-a39b-5119029eb454` {
 			util.Notice(`test elon1 %f`, limitSell)
 		}
 		carryStatus.RateInAll = math.Abs(carryStatus.Holding * price / sm.accountValueInU)
@@ -223,7 +223,7 @@ func initStatus(account *model.Account, setting *model.Setting) (status *CarrySt
 			status.AvailableSell = math.Min(status.AvailableSell, maxSell)
 		}
 	}
-	if setting.Symbol == `ELON_USDT` {
+	if setting.Symbol == `ELON_USDT` && account.Key == `bdd6b333-7505-4c87-a39b-5119029eb454` {
 		util.Notice(`test elon3 %f`, status.LimitBuy)
 	}
 	jump := 15.5
@@ -687,7 +687,7 @@ func initLimitBuyAndSell(status *CarryStatus, setting *model.Setting, price floa
 		} else {
 			status.LimitSell = 0
 		}
-		if setting.Symbol == `ELON_USDT` {
+		if setting.Symbol == `ELON_USDT` && status.account.Key == `bdd6b333-7505-4c87-a39b-5119029eb454` {
 			util.Notice(`test elon2 %f`, status.LimitSell)
 		}
 	} else {
