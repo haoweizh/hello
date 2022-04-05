@@ -1,9 +1,5 @@
 package model
 
-import (
-	"time"
-)
-
 type Position struct {
 	Market                   string
 	Currency                 string
@@ -20,8 +16,4 @@ type Position struct {
 	EntryPrice               float64            // 开仓均价，每次仓位增加或减少时，开仓均价都会调整
 	MinimumMaintenanceMargin float64            // 最小维持保证金，如果仓位保证金降低到此，将立刻触发强平
 	DirectionDetail          map[string]float64 //key-开仓方向sell/buy value-数量，带+-号
-	//Percentage  float64
-	ID        uint `gorm:"primary_key"`
-	CreatedAt time.Time
-	UpdatedAt time.Time
 }

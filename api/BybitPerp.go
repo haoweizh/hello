@@ -47,7 +47,7 @@ func maintainChannelBybitPerp(subscribes []interface{}) {
 				if bidAsk == nil || time.Now().UnixMilli()-int64(bidAsk.Ts) > 120000 {
 					subCmd := fmt.Sprintf(`{"op": "subscribe", "args": ["orderBookL2_25.%s"]}`, value.(string))
 					if bidAsk != nil {
-						util.Notice(`maintain bybitperp timeout %s %s %d`,
+						util.Notice(`maintain bybitperp timeout %s %d %d`,
 							standardSymbol, time.Now().UnixMilli()-int64(bidAsk.Ts), bidAsk.Ts)
 					}
 					conn, ok := bybitPerpSubConnection.Load(standardSymbol)
@@ -87,7 +87,7 @@ var subscribeHandlerBybitPerp = func(connection *websocket.Conn, subscribes []in
 	//}
 	for _, value := range subscribes {
 		subCmd := fmt.Sprintf(`{"op": "subscribe", "args": ["orderBookL2_25.%s"]}`, value.(string))
-		if err := SendToConnection(model.BinancePerp, connection, []byte(subCmd)); err != nil {
+		if err := SendToConnection(model.BybitPerp, connection, []byte(subCmd)); err != nil {
 			util.SocketInfo("bybitPerp can not subscribe " + err.Error())
 		}
 		_, _, coin := model.GetCoinFromDialect(model.BybitPerp, value.(string))

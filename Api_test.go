@@ -114,8 +114,8 @@ func TestWs(t *testing.T) {
 }
 
 func Test_WsAndOrderApi(t *testing.T) {
-	market := model.BybitPerp
-	coin := `1INCH`
+	market := model.Mexc
+	coin := `ETH`
 	orderType := model.OrderTypeLimit
 	orderSide := model.OrderSideSell
 	symbols := []string{coin + model.UniStandardTail[model.MarketTypePerp]}

@@ -1,0 +1,51 @@
+package main
+
+import (
+	"fmt"
+	"hello/api"
+	"hello/model"
+	"testing"
+)
+
+//func Test_cancelOrdersMexc(t *testing.T) {
+//	// t.Log(cancelOrdersMexc(key, secret, "ETH_USDT"))  // 取消现货订单
+//	t.Log(api.cancelOrdersMexc(key, secret, "APX_USDT_SWAP")) // 取消合约订单
+//}
+
+func Test_placeOrderMexc(t *testing.T) {
+	model.NewConfig()
+	marketInfos := api.GetMarketInfos(model.Mexc)
+	model.SetMarketInfos(model.Mexc, marketInfos)
+	//api.GetPositions(model.AppConfig.MexcKey, model.AppConfig.MexcSecret, model.Mexc)
+	//_, rate := api.GetFundingRate(model.AppConfig.MexcKey, model.AppConfig.MexcSecret, model.Mexc, `ETH_PERP`)
+	//t.Log(rate)
+	order := api.PlaceOrder(model.AppConfig.MexcKey, model.AppConfig.MexcSecret, model.OrderSideSell, model.OrderTypeLimit,
+		model.Mexc, "ZIL_PERP", ``, 0.15, 0.15, 10, false, nil, nil)
+	t.Log(order.OrderId)
+	api.QueryOrderById(model.AppConfig.MexcKey, model.AppConfig.MexcSecret, model.Mexc, `ZIL_PERP`, ``, order.OrderId)
+	res, code, msg := api.CancelOrder(model.AppConfig.MexcKey, model.AppConfig.MexcSecret, model.Mexc, `ZIL_PERP`, ``, order.OrderId)
+	t.Log(fmt.Sprintf(`%v %s %s`, res, code, msg))
+}
+
+//func Test_queryOrderMexc(t *testing.T) {
+//	order := &model.Order{
+//		OrderId: "123",
+//		Market:  model.Mexc,
+//		Symbol:  "BTC_USDT",
+//	}
+//	api.queryOrderMexc(key, secret, order)
+//	t.Log(order)
+//}
+//
+//func Test_getPositionsMexc(t *testing.T) {
+//	_, _, ret := api.getPositionsMexc(key, secret)
+//	t.Log(fmt.Sprintf("%+v", ret))
+//}
+//
+//func Test_WsDepthServeMexc(t *testing.T) {
+//	_, err := api.WsDepthServeMexc(nil, nil, true)
+//	if err != nil {
+//		return
+//	}
+//	t.Log("sub end")
+//}

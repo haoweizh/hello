@@ -145,8 +145,8 @@ func CancelOrders(key, secret, market, symbol string) (result bool) {
 		return cancelOrdersKucoin(symbol)
 	case model.Gate:
 		return cancelOrdersGate(key, secret, symbol)
-	//case model.Binance:
-	//	return cancelOrdersBinance(key, secret, symbol)
+	case model.Mexc:
+		return cancelOrdersMexc(key, secret, symbol)
 	case model.BinanceSpot:
 		return cancelOrdersBinanceSpot(key, secret, symbol)
 	case model.BinancePerp:
@@ -344,8 +344,8 @@ func GetFundingRate(key, secret, market, symbol string) (success bool, rate floa
 	case model.OKEX:
 		fundingRate = getFundingRateOKEX(key, secret, symbol)
 		model.SetFundingRate(market, symbol, fundingRate)
-		//case model.Binance:
-		//	fundingRate = getFundingRateBinance(key, secret, symbol)
+	case model.Mexc:
+		fundingRate = getFundingRateMexc(key, secret, symbol)
 		model.SetFundingRate(market, symbol, fundingRate)
 	case model.BinanceSpot:
 		return true, 0
@@ -417,6 +417,8 @@ func QueryOrderById(key, secret, market, symbol, orderType, orderId string) (ord
 		} else {
 			return queryOrderFtx(key, secret, orderId)
 		}
+	case model.Mexc:
+		order = queryOrderMexc(key, secret, symbol, orderId)
 	}
 	return order
 }
@@ -430,8 +432,8 @@ func GetPositions(key, secret, market string) (success bool, positions []*model.
 		return getPositionsKucoin(key, secret)
 	case model.Gate:
 		return getPositionsGate(key, secret)
-	//case model.Binance:
-	//	return getPositionsBinance(key, secret)
+	case model.Mexc:
+		return getPositionsMexc(key, secret)
 	case model.BinancePerp:
 		return getPositionsBinancePerp(key, secret)
 	case model.Ftx:
@@ -522,6 +524,8 @@ func PlaceOrder(key, secret, orderSide, orderType, market, symbol, orderParam st
 		placeOrdersBybitSpot(order, key, secret, orderSide, orderType, orderParam, symbol, price, amount)
 	case model.Ftx:
 		placeOrderFtx(order, key, secret, orderSide, orderType, orderParam, symbol, price, triggerPrice, amount)
+	case model.Mexc:
+		placeOrderMexc(key, secret, order, orderSide, orderType, symbol, price, amount)
 	}
 	if order.OrderId == "0" || strings.Trim(order.OrderId, ` `) == "" {
 		order.Status = model.CarryStatusFail
@@ -670,8 +674,8 @@ func GetMarketInfos(market string) (marketInfo map[string]*model.MarketInfo) {
 		return getMarketsFtx(accounts[0].Key, accounts[0].Secret)
 	case model.OKEX:
 		return getMarketsOKEX(accounts[0].Key, accounts[0].Secret)
-	//case model.Binance:
-	//	return getMarketsBinance(accounts[0].Key, accounts[0].Secret)
+	case model.Mexc:
+		return getMarketsMexc(accounts[0].Key, accounts[0].Secret)
 	case model.BinanceSpot:
 		return getMarketsBinanceSpot(accounts[0].Key, accounts[0].Secret)
 	case model.BinancePerp:
@@ -693,11 +697,11 @@ func filterCross(market, symbol string) bool {
 	// 同所搬砖过滤币种 `AMPL`, `IOTA`
 	// 法币 `TRYB``BRZ``CAD``EUR` `SUSD` `USDC` `TUSD`
 	// ftx预测`TRUMP``BOLSONARO`
-	// 平台币 `GT` `FTT` `BNB` `OKB`
+	// 平台币 `GT` `FTT` `BNB` `OKB` MX
 	// 指数 DEFI
 	filterCoin := []string{`REEF`, `REAL`, `DFL`, `QI`, `LINK`, `CUSDT`, `ETH`, `BRZ`, `BTC`, `USDT`, `DEFI`,
 		`TRYB`, `AMPL`, `IOTA`, `CAD`, `EUR`, `GBP`, `TRUMP`, `BOLSONARO`, `WSB`, `TRADE`, `OKB`, `GT`, `FTT`, `BNB`,
-		`SUSD`, `USDC`, `TUSD`}
+		`SUSD`, `USDC`, `TUSD`, `MX`}
 	for _, coin := range filterCoin {
 		if strings.Index(symbol, coin) == 0 {
 			return true
@@ -782,10 +786,8 @@ func InitMarketInfos() (success bool) {
 		accounts := model.AppConfig.GetAccounts(market)
 		switch market {
 		case model.Mexc:
-			ok, marketInfos := getMarketsMexc(accounts[0].Key, accounts[0].Secret)
-			if ok {
-				model.SetMarketInfos(market, marketInfos)
-			}
+			marketInfos := getMarketsMexc(accounts[0].Key, accounts[0].Secret)
+			model.SetMarketInfos(market, marketInfos)
 		case model.Ftx:
 			model.SetMarketInfos(market, getMarketsFtx(accounts[0].Key, accounts[0].Secret))
 		case model.OKEX:

@@ -1,6 +1,6 @@
 package dtos
 
-// {"channel":"rs.sub.depth","data":"success","ts":1640381555996}
+// MexcSubscriptionWsResp {"channel":"rs.sub.depth","data":"success","ts":1640381555996}
 type MexcSubscriptionWsResp struct {
 	Channel string `json:"channel"`
 	Data    string `json:"data"`
@@ -12,6 +12,18 @@ type MexcPongWsResp struct {
 	Channel string `json:"channel"`
 	Data    int    `json:"data"`
 	Ts      int    `json:"ts"`
+}
+
+// MexcContractDepthHttpResp 备注: [411.8, 10, 1] 411.8为价格，10为此价格的合约张数, 1为订单数量
+type MexcContractDepthHttpResp struct {
+	Success bool `json:"success"`
+	Code    int  `json:"code"`
+	Data    struct {
+		Asks      [][]float64 `json:"asks"`
+		Bids      [][]float64 `json:"bids"`
+		Version   int64       `json:"version"`
+		Timestamp int         `json:"timestamp"`
+	} `json:"data"`
 }
 
 type MexcContractDepthWsResp struct {
