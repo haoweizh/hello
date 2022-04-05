@@ -688,7 +688,7 @@ func initLimitBuyAndSell(status *CarryStatus, setting *model.Setting, price floa
 			status.LimitSell = 0
 		}
 		if setting.Symbol == `ELON_USDT` && status.account.Key == `bdd6b333-7505-4c87-a39b-5119029eb454` {
-			util.Notice(`test elon2 %f`, status.LimitSell)
+			util.Notice(`test elon2 %f %f %f %f`, status.LimitSell, balance.Amount, balance.AvailableWithBorrow, openValueLimit/price)
 		}
 	} else {
 		value, ok := contractMarkets.Load(status.account.Key)
