@@ -4,7 +4,7 @@ type MexcContractQueryOrderResp struct {
 	Success bool `json:"success"`
 	Code    int  `json:"code"`
 	Data    struct {
-		OrderID      int64   `json:"orderId"`
+		OrderID      string  `json:"orderId"`
 		Symbol       string  `json:"symbol"`
 		PositionID   int64   `json:"positionId"`
 		Price        float64 `json:"price"`

@@ -208,14 +208,14 @@ func placeOrderMexc(key, secret string, order *model.Order, orderSide, orderType
 	}
 	formattedAmount := fmt.Sprintf(`%f`, marketInfo.SizeIncrement*math.Floor(amount))
 	body := map[string]interface{}{
-		"symbol":           symbol,
-		"side":             side,
-		`leverage`:         5,
-		"type":             typeInReq,
-		"price":            priceStr,
-		`vol`:              formattedAmount,
-		`openType`:         2,
-		`positionOpenType`: 1,
+		"symbol":       symbol,
+		"side":         side,
+		`leverage`:     5,
+		"type":         typeInReq,
+		"price":        priceStr,
+		`vol`:          formattedAmount,
+		`openType`:     2,
+		`positionMode`: 2,
 	}
 	respBytes, err := SignedRequestMexc(key, secret, http.MethodPost, contractRestUrl, `/api/v1/private/order/submit`,
 		nil, body)
@@ -225,8 +225,9 @@ func placeOrderMexc(key, secret string, order *model.Order, orderSide, orderType
 	}
 	orderJson, _ := util.NewJSON(respBytes)
 	if orderJson != nil && orderJson.Get("success").MustBool() {
-		order.Status = model.CarryStatusSuccess
-		order.OrderId = orderJson.Get("data").MustString()
+		order.Status = model.CarryStatusWorking
+		data, _ := orderJson.Get("data").Int64()
+		order.OrderId = strconv.FormatInt(data, 10)
 	}
 	return
 }
