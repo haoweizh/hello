@@ -107,7 +107,7 @@ func WsDepthServeMexc(markets *model.Markets, orderHandler OrderHandler, useFull
 				_, marketType, coin := model.GetCoinFromDialect(model.Mexc, resp.Symbol)
 				symbol := coin + model.UniStandardTail[marketType]
 				bidAsk := parseTicksMexc(symbol, resp.Ts, resp.Data.Version, resp.Data.Bids, resp.Data.Asks)
-				fmt.Println(fmt.Sprintf(`%f %f ~ %f %f`, bidAsk.Bids[0].Price, bidAsk.Bids[0].Amount, bidAsk.Asks[0].Price, bidAsk.Asks[0].Amount))
+				//fmt.Println(fmt.Sprintf(`%f %f ~ %f %f`, bidAsk.Bids[0].Price, bidAsk.Bids[0].Amount, bidAsk.Asks[0].Price, bidAsk.Asks[0].Amount))
 				if markets.SetBidAsk(symbol, model.Mexc, bidAsk) {
 					for function, handler := range model.GetFunctions(model.Mexc, symbol) {
 						setting := model.GetSetting(function, model.Mexc, symbol)

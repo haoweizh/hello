@@ -187,7 +187,7 @@ func GetCoinSettings(function string) map[string][]*Setting {
 }
 
 func GetMarkets() []string {
-	if AppSettings == nil {
+	if AppSettings == nil || len(AppSettings) == 0 {
 		LoadSettings()
 	}
 	marketMap := make(map[string]bool)
