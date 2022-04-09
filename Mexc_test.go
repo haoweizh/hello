@@ -20,7 +20,7 @@ func Test_placeOrderMexc(t *testing.T) {
 	//_, rate := api.GetFundingRate(model.AppConfig.MexcKey, model.AppConfig.MexcSecret, model.Mexc, `ETH_PERP`)
 	//t.Log(rate)
 	order := api.PlaceOrder(model.AppConfig.MexcKey, model.AppConfig.MexcSecret, model.OrderSideSell, model.OrderTypeLimit,
-		model.Mexc, "ZIL_PERP", ``, 0.15, 0.15, 10, false, nil, nil)
+		model.Mexc, "KNC_PERP", ``, 3.605, 3.15, 51.400000000000006, false, nil, nil)
 	//t.Log(order.OrderId)
 	//orderId := `266320760518756864`
 	//order := api.QueryOrderById(model.AppConfig.MexcKey, model.AppConfig.MexcSecret, model.Mexc, `ZIL_PERP`, ``, orderId)

@@ -206,7 +206,7 @@ func placeOrderMexc(key, secret string, order *model.Order, orderSide, orderType
 		util.Notice(fmt.Sprintf(`[mexcPlaceOrder] market info is nil for symbol %s`, symbol))
 		return
 	}
-	formattedAmount := util.CutTailZero(fmt.Sprintf(`%f`, marketInfo.SizeIncrement*math.Floor(amount)))
+	formattedAmount := util.CutTailZero(fmt.Sprintf(`%f`, marketInfo.SizeIncrement*math.Floor(amount/marketInfo.SizeIncrement)))
 	body := map[string]interface{}{
 		"symbol":       symbol,
 		"side":         side,
