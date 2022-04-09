@@ -226,7 +226,7 @@ func placeOrderMexc(key, secret string, order *model.Order, orderSide, orderType
 	orderJson, _ := util.NewJSON(respBytes)
 	if orderJson != nil && orderJson.Get("success").MustBool() {
 		order.Status = model.CarryStatusWorking
-		data, _ := orderJson.Get("data").Int64()
+		data, _ := orderJson.GetPath("result", `id`).Int64()
 		order.OrderId = strconv.FormatInt(data, 10)
 	}
 	return

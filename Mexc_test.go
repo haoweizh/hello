@@ -19,11 +19,11 @@ func Test_placeOrderMexc(t *testing.T) {
 	//api.GetPositions(model.AppConfig.MexcKey, model.AppConfig.MexcSecret, model.Mexc)
 	//_, rate := api.GetFundingRate(model.AppConfig.MexcKey, model.AppConfig.MexcSecret, model.Mexc, `ETH_PERP`)
 	//t.Log(rate)
-	//order := api.PlaceOrder(model.AppConfig.MexcKey, model.AppConfig.MexcSecret, model.OrderSideSell, model.OrderTypeLimit,
-	//	model.Mexc, "ZIL_PERP", ``, 0.15, 0.15, 10, false, nil, nil)
+	order := api.PlaceOrder(model.AppConfig.MexcKey, model.AppConfig.MexcSecret, model.OrderSideSell, model.OrderTypeLimit,
+		model.Mexc, "ZIL_PERP", ``, 0.15, 0.15, 10, false, nil, nil)
 	//t.Log(order.OrderId)
-	orderId := `266320760518756864`
-	order := api.QueryOrderById(model.AppConfig.MexcKey, model.AppConfig.MexcSecret, model.Mexc, `ZIL_PERP`, ``, orderId)
+	//orderId := `266320760518756864`
+	//order := api.QueryOrderById(model.AppConfig.MexcKey, model.AppConfig.MexcSecret, model.Mexc, `ZIL_PERP`, ``, orderId)
 	t.Log(fmt.Sprintf(`%v %f %s`, order.Status, order.DealAmount, order.OrderSide))
 	api.CancelOrders(model.AppConfig.MexcKey, model.AppConfig.MexcSecret, model.Mexc, `ZIL_PERP`)
 }
