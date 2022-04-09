@@ -206,7 +206,7 @@ func placeOrderMexc(key, secret string, order *model.Order, orderSide, orderType
 		util.Notice(fmt.Sprintf(`[mexcPlaceOrder] market info is nil for symbol %s`, symbol))
 		return
 	}
-	formattedAmount := fmt.Sprintf(`%f`, marketInfo.SizeIncrement*math.Floor(amount))
+	formattedAmount := util.CutTailZero(fmt.Sprintf(`%f`, marketInfo.SizeIncrement*math.Floor(amount)))
 	body := map[string]interface{}{
 		"symbol":       symbol,
 		"side":         side,
@@ -226,7 +226,7 @@ func placeOrderMexc(key, secret string, order *model.Order, orderSide, orderType
 	orderJson, _ := util.NewJSON(respBytes)
 	if orderJson != nil && orderJson.Get("success").MustBool() {
 		order.Status = model.CarryStatusWorking
-		data, _ := orderJson.GetPath("result", `id`).Int64()
+		data, _ := orderJson.Get(`data`).Int64()
 		order.OrderId = strconv.FormatInt(data, 10)
 	}
 	return
