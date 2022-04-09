@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"math"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -205,7 +206,7 @@ func placeOrderMexc(key, secret string, order *model.Order, orderSide, orderType
 		util.Notice(fmt.Sprintf(`[mexcPlaceOrder] market info is nil for symbol %s`, symbol))
 		return
 	}
-	formattedAmount := strconv.FormatFloat(amount/marketInfo.SizeIncrement, 'f', util.NumDecPlaces(marketInfo.SizeIncrement), 64)
+	formattedAmount := strconv.Itoa(int(math.Floor(amount / marketInfo.SizeIncrement)))
 	body := map[string]interface{}{
 		"symbol":       symbol,
 		"side":         side,
