@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"hello/api"
 	"hello/model"
-	"hello/util"
 	"testing"
 )
 
@@ -15,19 +14,18 @@ import (
 
 func Test_placeOrderMexc(t *testing.T) {
 	model.NewConfig()
-	fmt.Println(util.NumDecPlaces(33.0))
 	marketInfos := api.GetMarketInfos(model.Mexc)
 	model.SetMarketInfos(model.Mexc, marketInfos)
 	//api.GetPositions(model.AppConfig.MexcKey, model.AppConfig.MexcSecret, model.Mexc)
 	//_, rate := api.GetFundingRate(model.AppConfig.MexcKey, model.AppConfig.MexcSecret, model.Mexc, `ETH_PERP`)
 	//t.Log(rate)
-	order := api.PlaceOrder(model.AppConfig.MexcKey, model.AppConfig.MexcSecret, model.OrderSideSell, model.OrderTypeLimit,
-		model.Mexc, "KNC_PERP", ``, 3.605, 3.15, 51.400000000000006, false, nil, nil)
+	order := api.PlaceOrder(model.AppConfig.MexcKey, model.AppConfig.MexcSecret, model.OrderSideBuy, model.OrderTypeLimit,
+		model.Mexc, "ZEC_PERP", ``, 169.48, 3.15, 2, false, nil, nil)
 	//t.Log(order.OrderId)
 	//orderId := `266320760518756864`
 	//order := api.QueryOrderById(model.AppConfig.MexcKey, model.AppConfig.MexcSecret, model.Mexc, `ZIL_PERP`, ``, orderId)
 	t.Log(fmt.Sprintf(`%v %f %s`, order.Status, order.DealAmount, order.OrderSide))
-	api.CancelOrders(model.AppConfig.MexcKey, model.AppConfig.MexcSecret, model.Mexc, `ZIL_PERP`)
+	api.CancelOrders(model.AppConfig.MexcKey, model.AppConfig.MexcSecret, model.Mexc, `ZEC_PERP`)
 }
 
 //func Test_queryOrderMexc(t *testing.T) {
