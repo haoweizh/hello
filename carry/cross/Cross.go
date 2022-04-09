@@ -33,8 +33,12 @@ func createContractMarket(key, secret, market string) (cm *contractMarket) {
 		for _, position := range positions {
 			cm.positions[position.Currency] = position
 			getTick, tick := model.AppMarkets.GetBidAsk(position.Currency, market)
-			if settings != nil && settings[position.Currency] != nil && getTick {
-				cm.contractValueInU += tick.Bids[0].Price * math.Abs(position.Holding)
+			if settings != nil && settings[position.Currency] != nil {
+				if getTick {
+					cm.contractValueInU += tick.Bids[0].Price * math.Abs(position.Holding)
+				} else {
+					cm.contractValueInU += position.EntryPrice * math.Abs(position.Holding)
+				}
 			}
 		}
 		cm.accountValueInU = accountValue
@@ -922,6 +926,9 @@ func FormatCrossPair(marketBuy, marketSell, symbolBuy, symbolSell string, amount
 	}
 	if (marketInfoBuy.MoneyMin > 0 && formattedAmount*price < marketInfoBuy.MoneyMin) ||
 		(marketInfoSell.MoneyMin > 0 && formattedAmount*price < marketInfoSell.MoneyMin) {
+		return 0
+	}
+	if formattedAmount*price < 6 && (marketInfoSell.Market == model.Mexc || marketInfoBuy.Market == model.Mexc) {
 		return 0
 	}
 	return formattedAmount

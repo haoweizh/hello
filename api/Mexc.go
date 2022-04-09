@@ -227,6 +227,8 @@ func placeOrderMexc(key, secret string, order *model.Order, orderSide, orderType
 		order.Status = model.CarryStatusWorking
 		data, _ := orderJson.Get(`data`).Int64()
 		order.OrderId = strconv.FormatInt(data, 10)
+	} else if orderJson != nil {
+		order.ErrCode = strconv.Itoa(orderJson.Get(`code`).MustInt()) + orderJson.Get(`message`).MustString()
 	}
 	return
 }
