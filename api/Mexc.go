@@ -6,7 +6,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"math"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -107,7 +106,7 @@ func WsDepthServeMexc(markets *model.Markets, orderHandler OrderHandler, useFull
 				_, marketType, coin := model.GetCoinFromDialect(model.Mexc, resp.Symbol)
 				symbol := coin + model.UniStandardTail[marketType]
 				bidAsk := parseTicksMexc(symbol, resp.Ts, resp.Data.Version, resp.Data.Bids, resp.Data.Asks)
-				//fmt.Println(fmt.Sprintf(`%f %f ~ %f %f`, bidAsk.Bids[0].Price, bidAsk.Bids[0].Amount, bidAsk.Asks[0].Price, bidAsk.Asks[0].Amount))
+				//fmt.Println(fmt.Sprintf(`%s %f %f ~ %f %f`, symbol, bidAsk.Bids[0].Price, bidAsk.Bids[0].Amount, bidAsk.Asks[0].Price, bidAsk.Asks[0].Amount))
 				if markets.SetBidAsk(symbol, model.Mexc, bidAsk) {
 					for function, handler := range model.GetFunctions(model.Mexc, symbol) {
 						setting := model.GetSetting(function, model.Mexc, symbol)
@@ -206,7 +205,8 @@ func placeOrderMexc(key, secret string, order *model.Order, orderSide, orderType
 		util.Notice(fmt.Sprintf(`[mexcPlaceOrder] market info is nil for symbol %s`, symbol))
 		return
 	}
-	formattedAmount := util.CutTailZero(fmt.Sprintf(`%f`, marketInfo.SizeIncrement*math.Floor(amount/marketInfo.SizeIncrement)))
+	amountDecimal := util.NumDecPlaces(marketInfo.SizeIncrement)
+	formattedAmount := util.CutTailZero(strconv.FormatFloat(amount, 'f', amountDecimal, 64))
 	body := map[string]interface{}{
 		"symbol":       symbol,
 		"side":         side,

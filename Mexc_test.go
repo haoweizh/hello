@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"hello/api"
 	"hello/model"
+	"hello/util"
 	"testing"
 )
 
@@ -14,6 +15,7 @@ import (
 
 func Test_placeOrderMexc(t *testing.T) {
 	model.NewConfig()
+	fmt.Println(util.NumDecPlaces(33.0))
 	marketInfos := api.GetMarketInfos(model.Mexc)
 	model.SetMarketInfos(model.Mexc, marketInfos)
 	//api.GetPositions(model.AppConfig.MexcKey, model.AppConfig.MexcSecret, model.Mexc)
