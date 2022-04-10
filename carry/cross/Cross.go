@@ -930,6 +930,12 @@ func FormatCrossPair(marketBuy, marketSell, symbolBuy, symbolSell string, amount
 		(marketInfoSell.MoneyMin > 0 && formattedAmount*price < marketInfoSell.MoneyMin) {
 		return 0
 	}
+	if marketInfoSell.Market == model.Mexc {
+		formattedAmount = math.Min(formattedAmount, marketInfoSell.SizeIncrement*1000)
+	}
+	if marketInfoBuy.Market == model.Mexc {
+		formattedAmount = math.Min(formattedAmount, marketInfoBuy.SizeIncrement*1000)
+	}
 	if formattedAmount*price < 6 && (marketInfoSell.Market == model.Mexc || marketInfoBuy.Market == model.Mexc) {
 		return 0
 	}
