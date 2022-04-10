@@ -210,20 +210,22 @@ func initStatus(account *model.Account, setting *model.Setting) (status *CarrySt
 	marketInfo := model.GetMarketInfo(setting.Market, setting.Symbol)
 	if marketInfo != nil && marketInfo.SizeMax > 0 {
 		_, amount := model.ParseRealAmount(setting.Market, setting.Symbol, marketInfo.SizeMax)
-		status.LimitBuy = math.Min(status.LimitBuy, amount)
-		status.LimitSell = math.Min(status.LimitSell, amount)
 		status.AvailableBuy = math.Min(status.AvailableBuy, amount)
 		status.AvailableSell = math.Min(status.AvailableSell, amount)
+		if status.market == model.Mexc { // mexc要求持仓不能超过1500张合约
+			status.AvailableBuy = math.Min(status.AvailableBuy, 1400*marketInfo.SizeIncrement-status.Holding)
+			status.AvailableSell = math.Min(status.AvailableSell, 1400*marketInfo.SizeIncrement+status.Holding)
+		}
 	}
 	if setting.Market == model.OKEX {
 		success, maxBuy, maxSell := api.GetTradeMaxOKEX(account.Key, account.Secret, setting.Symbol, 600)
 		if success {
-			status.LimitBuy = math.Min(status.LimitBuy, maxBuy)
-			status.LimitSell = math.Min(status.LimitSell, maxSell)
 			status.AvailableBuy = math.Min(status.AvailableBuy, maxBuy)
 			status.AvailableSell = math.Min(status.AvailableSell, maxSell)
 		}
 	}
+	status.LimitBuy = math.Min(status.LimitBuy, status.AvailableBuy)
+	status.LimitSell = math.Min(status.LimitSell, status.AvailableSell)
 	jump := 15.5
 	revertJump := 12.2
 	if status.Holding > 0 {
