@@ -742,6 +742,11 @@ func filterCross(market, symbol string) bool {
 		case `GAS`:
 			return true
 		}
+	case model.Mexc: //不支持主流币种期货下单
+		switch coin {
+		case `BTC`, `ETH`, `LTC`:
+			return true
+		}
 	}
 	return false
 }
