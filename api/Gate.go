@@ -582,6 +582,7 @@ func placeOrderGate(key, secret string, order *model.Order, orderSide, orderType
 			panicGateError(key, "placeSpotOrderGate", err)
 			order.Status = model.CarryStatusFail
 			order.OrderId = ``
+			order.ErrCode = err.Error()
 		} else {
 			orderResp, _ := json.Marshal(createOrder)
 			util.Notice(`create spot order response: %s`, orderResp)
@@ -616,6 +617,7 @@ func placeOrderGate(key, secret string, order *model.Order, orderSide, orderType
 			panicGateError(key, "placeFutureOrderGate", err)
 			order.Status = model.CarryStatusFail
 			order.OrderId = ``
+			order.ErrCode = err.Error()
 		} else {
 			orderResp, _ := json.Marshal(createFuturesOrder)
 			util.Notice(`create future order response: %s`, orderResp)

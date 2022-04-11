@@ -253,6 +253,7 @@ func placeOrderBinancePerp(key, secret string, order *model.Order, orderSide, or
 		if err != nil {
 			util.Notice("placeOrderBinancePerp err: " + err.Error())
 			order.OrderId = ``
+			order.ErrCode = err.Error()
 		} else {
 			order.OrderId = strconv.FormatInt(orderResponse.OrderID, 10)
 		}
