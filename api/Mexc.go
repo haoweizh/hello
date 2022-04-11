@@ -221,6 +221,7 @@ func placeOrderMexc(key, secret string, order *model.Order, orderSide, orderType
 		nil, body)
 	order.Status = model.CarryStatusFail
 	if err != nil {
+		order.ErrCode = err.Error()
 		return
 	}
 	orderJson, _ := util.NewJSON(respBytes)

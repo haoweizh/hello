@@ -261,6 +261,7 @@ func placeOrderBinanceSpot(key, secret string, order *model.Order, orderSide, or
 		orderResponse, err := service.Do(context.Background())
 		if err != nil {
 			util.Notice(fmt.Sprintf(`placeOrderBinanceSpot err: %s amount %s`, err.Error(), amountStr))
+			order.ErrCode = err.Error()
 			order.OrderId = ``
 		} else {
 			order.OrderId = strconv.FormatInt(orderResponse.OrderID, 10)

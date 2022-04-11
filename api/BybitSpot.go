@@ -128,7 +128,7 @@ func WsDepthServeBybitSpot(markets *model.Markets, orderHandler OrderHandler) ([
 		orderHandler, wsStepBybitSpot)
 }
 
-func SignedRequestBybitSpot(key, secret, method, path string, body map[string]interface{}) []byte {
+func SignedRequestBybitSpot(key, secret, method, path string, body map[string]interface{}) (response []byte, err error) {
 	if body == nil {
 		body = make(map[string]interface{})
 	}
@@ -153,10 +153,10 @@ func SignedRequestBybitSpot(key, secret, method, path string, body map[string]in
 	//if method == http.MethodGet {
 	uri = uri + `?` + paramStr
 	//}
-	responseBody, _ := util.HttpRequest(method, uri, ``, headers, 60)
+	responseBody, httpErr := util.HttpRequest(method, uri, ``, headers, 60)
 	util.SocketInfo(fmt.Sprintf(`bybitSpot key %s request %s %s body %v return %s`,
 		key, uri, method, body, string(responseBody)))
-	return responseBody
+	return responseBody, httpErr
 }
 
 func parseTickBybitSpot(data map[string]interface{}) (symbol string, bidAsk *model.BidAsk) {
@@ -202,7 +202,7 @@ func parseTickBybitSpot(data map[string]interface{}) (symbol string, bidAsk *mod
 }
 
 func getMarketsBybitSpot(key, secret string) (marketInfos map[string]*model.MarketInfo) {
-	response := SignedRequestBybitSpot(key, secret, http.MethodGet, `/spot/v1/symbols`, nil)
+	response, _ := SignedRequestBybitSpot(key, secret, http.MethodGet, `/spot/v1/symbols`, nil)
 	marketInfos = make(map[string]*model.MarketInfo)
 	marketJson, err := util.NewJSON(response)
 	if err != nil || marketJson.Get(`ret_code`) == nil || marketJson.Get(`ret_code`).MustInt() != 0 {
@@ -297,7 +297,11 @@ func placeOrdersBybitSpot(order *model.Order, key, secret, orderSide, orderType,
 		formattedPrice, decimal := model.FormatPrice(model.BybitSpot, symbol, orderSide, price)
 		postData[`price`] = util.CutTailZero(strconv.FormatFloat(formattedPrice, 'f', decimal, 64))
 	}
-	response := SignedRequestBybitSpot(key, secret, http.MethodPost, path, postData)
+	response, httpErr := SignedRequestBybitSpot(key, secret, http.MethodPost, path, postData)
+	if httpErr != nil {
+		order.ErrCode = httpErr.Error()
+		return
+	}
 	orderJson, err := util.NewJSON(response)
 	if err == nil {
 		orderJson = orderJson.Get(`result`)
@@ -309,7 +313,7 @@ func placeOrdersBybitSpot(order *model.Order, key, secret, orderSide, orderType,
 
 func cancelOrdersBybitSpot(key, secret, symbol string) bool {
 	path := `/spot/order/batch-cancel`
-	response := SignedRequestBybitSpot(key, secret, http.MethodDelete, path, map[string]interface{}{`symbol`: symbol})
+	response, _ := SignedRequestBybitSpot(key, secret, http.MethodDelete, path, map[string]interface{}{`symbol`: symbol})
 	cancelJson, err := util.NewJSON(response)
 	if err == nil {
 		if cancelJson.Get(`ret_code`).MustInt() == 0 {
@@ -323,7 +327,7 @@ func cancelOrderBybitSpot(key, secret, symbol, orderId string) (result bool, err
 	postData := make(map[string]interface{})
 	postData[`orderId`] = orderId
 	postData[`symbolId`] = symbol
-	response := SignedRequestBybitSpot(key, secret, http.MethodDelete, `/spot/v1/order/fast`, postData)
+	response, _ := SignedRequestBybitSpot(key, secret, http.MethodDelete, `/spot/v1/order/fast`, postData)
 	orderJson, err := util.NewJSON(response)
 	result = false
 	if err == nil {
@@ -345,7 +349,7 @@ func cancelOrderBybitSpot(key, secret, symbol, orderId string) (result bool, err
 }
 
 func queryOrderBybitSpot(key, secret, orderId string) (order *model.Order) {
-	response := SignedRequestBybitSpot(key, secret, http.MethodGet, `/spot/v1/order`, map[string]interface{}{`orderId`: orderId})
+	response, _ := SignedRequestBybitSpot(key, secret, http.MethodGet, `/spot/v1/order`, map[string]interface{}{`orderId`: orderId})
 	orderJson, err := util.NewJSON(response)
 	if err == nil {
 		orderJson = orderJson.GetPath(`result`)
@@ -359,7 +363,7 @@ func queryOrderBybitSpot(key, secret, orderId string) (order *model.Order) {
 }
 
 func getBalanceBybitSpot(key, secret string) (success bool, balances []*model.Balance) {
-	response := SignedRequestBybitSpot(key, secret, http.MethodGet, `/spot/v1/account`, nil)
+	response, _ := SignedRequestBybitSpot(key, secret, http.MethodGet, `/spot/v1/account`, nil)
 	balanceJson, err := util.NewJSON(response)
 	if err != nil || balanceJson == nil || balanceJson.Get(`ret_code`).MustInt() != 0 {
 		util.SocketInfo(`fail to get bybitspot balance`)
