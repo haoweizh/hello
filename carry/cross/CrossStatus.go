@@ -254,10 +254,10 @@ func setCarryStatus(coin, market, symbol, key string, status *CarryStatus) {
 	statuses[coin][market][symbol][key] = status
 }
 
-func pauseCarry(key string) {
+func pauseCarry(key string, seconds int) {
 	util.Notice(`%s carrying pause %v`, key, true)
 	carryStop.Store(key, true)
-	time.Sleep(time.Minute * 30)
+	time.Sleep(time.Second * time.Duration(seconds))
 	util.Notice(`%s carrying pause %v`, key, false)
 	carryStop.Store(key, false)
 }
@@ -275,17 +275,14 @@ func addCarryResult(key, market, msg string, success bool) {
 	} else {
 		carryFail.Store(key, fails+1)
 	}
-	if fails > 0 {
-		util.Notice(`---------- fail size %s %d`, key, fails)
-	}
 	if fails > 6 {
 		if strings.Trim(msg, " ") != "" {
-			go pauseCarry(key)
+			go pauseCarry(key, 1800)
 		} else {
 			util.Notice(`key is nil pause all %s accounts`, market)
 			accounts := model.AppConfig.GetAccounts(market)
 			for _, account := range accounts {
-				go pauseCarry(account.Key)
+				go pauseCarry(account.Key, 1800)
 			}
 		}
 		util.Notice(`----------stop carry %s %d`, key, fails)
@@ -294,6 +291,11 @@ func addCarryResult(key, market, msg string, success bool) {
 			_ = util.SendMail(model.AppConfig.FromMail, model.AppConfig.FromMailAuth, address,
 				`暂停下单`, market+`msg: `+msg)
 		}
+	} else if fails > 0 {
+		if strings.Trim(msg, ` `) != "" {
+			go pauseCarry(key, 300)
+		}
+		util.Notice(`---------- fail size %s %d`, key, fails)
 	}
 }
 
