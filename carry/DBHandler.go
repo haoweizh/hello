@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"hello/api"
 	"hello/carry/cross"
+	"hello/carry/hang"
 	"hello/model"
 	"hello/util"
 	"time"
@@ -153,6 +154,7 @@ func Maintain() {
 	model.HandlerMap[model.FunctionGrid] = ProcessSimpleGrid
 	model.HandlerMap[model.FunctionTurtle] = ProcessTurtle
 	model.HandlerMap[model.FunctionCross] = cross.ProcessCross
+	model.HandlerMap[model.FunctionHang] = hang.ProcessHang
 	_ = model.AppDB.AutoMigrate(&model.Setting{})
 	_ = model.AppDB.AutoMigrate(&model.Order{})
 	_ = model.AppDB.AutoMigrate(&model.Balance{})

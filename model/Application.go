@@ -50,6 +50,7 @@ const FunctionDCarry = `dcarry`
 const FunctionComplement = `comp`
 const FunctionCrossOpen = `open`
 const FunctionCrossClose = `close`
+const FunctionHang = `hang`
 const PostOnly = `ParticipateDoNotInitiate`
 
 //const SubscribeDeal = `subscribeDeal`
