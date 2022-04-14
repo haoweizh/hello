@@ -716,7 +716,10 @@ func queryOrderGate(key, secret string, order *model.Order) {
 			return
 		}
 		order.DealAmount, _ = strconv.ParseFloat(orderSpot.FilledTotal, 64)
-		order.DealPrice, _ = strconv.ParseFloat(orderSpot.FillPrice, 64)
+		order.DealPrice, _ = strconv.ParseFloat(orderSpot.Price, 64)
+		if order.DealPrice > 0 {
+			order.DealAmount = order.DealAmount / order.DealPrice // FilledTotal是成交钱数，需要除以价格
+		}
 		switch orderSpot.Status {
 		case `open`:
 			order.Status = model.CarryStatusWorking

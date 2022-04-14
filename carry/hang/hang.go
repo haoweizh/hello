@@ -16,7 +16,8 @@ var doHang = false
 var hanging = false
 var placeTime sync.Map // market_symbol/timeInMilli
 var hangSide sync.Map  // market_symbol/orderSide
-var dealInU sync.Map   // market_symbol_timeStr/deal_in_u
+//var hangPrice sync.Map // market_symbol/bid1Price-ask1Price
+var dealInU sync.Map // market_symbol_timeStr/deal_in_u
 var hangLock sync.Mutex
 
 func checkSetHanging(value bool) (before bool) {
@@ -39,24 +40,34 @@ var ProcessHang = func(setting *model.Setting, tick *model.BidAsk) {
 		return
 	}
 	if tick == nil || tick.Asks == nil || tick.Bids == nil || setting == nil || setting.Valid == false ||
-		(model.AppConfig.Env != `test` && model.AppConfig.Handle != `1`) ||
-		time.Now().UnixMilli()-int64(tick.Ts) > 100 {
+		(model.AppConfig.Env != `test` && (model.AppConfig.Handle != `1` || time.Now().UnixMilli()-int64(tick.Ts) > 100)) {
 		return
 	}
 	marketSymbol := fmt.Sprintf(`%s_%s`, setting.Market, setting.Symbol)
-	orderTime, ok := placeTime.Load(marketSymbol)
+	orderTime, okPlace := placeTime.Load(marketSymbol)
 	now := time.Now().UnixMilli()
 	accounts := model.GetAccounts(0)
 	if accounts == nil || len(accounts) == 0 || accounts[setting.Market] == nil {
 		return
 	}
 	account := accounts[setting.Market]
-	if !ok {
+	if !okPlace {
 		placeHang(account, setting, tick)
-		placeTime.Store(marketSymbol, now)
-	} else if now-orderTime.(int64) > setting.Chance {
-		if api.CancelOrders(account.Key, account.Secret, setting.Market, setting.Symbol) {
-			placeTime.Delete(marketSymbol)
+	} else {
+		//placeTick, okPrice := hangPrice.Load(marketSymbol)
+		//bidPrice, decimal := model.FormatPrice(setting.Market, setting.Symbol, model.OrderSideBuy, tick.Bids[0].Price)
+		//bidStr := util.CutTailZero(strconv.FormatFloat(bidPrice, 'f', decimal, 64))
+		//askPrice, _ := model.FormatPrice(setting.Market, setting.Symbol, model.OrderSideSell, tick.Asks[0].Price)
+		//askStr := util.CutTailZero(strconv.FormatFloat(askPrice, 'f', decimal, 64))
+		//nowTick := fmt.Sprintf(`%s-%s`, bidStr, askStr)
+		//if (okPrice && placeTick.(string) != nowTick) ||
+		if now-orderTime.(int64) > setting.Chance {
+			//util.Notice(fmt.Sprintf(`cancel %s `, marketSymbol))
+			if api.CancelOrders(account.Key, account.Secret, setting.Market, setting.Symbol) {
+				placeTime.Delete(marketSymbol)
+				model.AppDB.Where(`market=? and symbol=? and status=? and function=?`,
+					setting.Market, setting.Symbol, model.CarryStatusFail, model.FunctionHang).Delete(&model.Order{})
+			}
 		}
 	}
 }
@@ -72,41 +83,53 @@ func placeHang(account *model.Account, setting *model.Setting, tick *model.BidAs
 		api.InitMarketInfos()
 		return
 	}
-	side, okHang := hangSide.Load(setting.Market + `_` + setting.Symbol)
+	utcTime := time.Now().In(time.UTC)
+	year, month, day := utcTime.Date()
+	marketSymbolDate := fmt.Sprintf(`%s_%s_%d-%d-%d 08:00:00`, setting.Market, setting.Symbol, year, month, day)
+	marketSymbol := setting.Market + `_` + setting.Symbol
+	side, okHang := hangSide.Load(marketSymbol)
 	if !okHang || side == `` {
 		return
 	}
-	dealAmount, okDeal := dealInU.Load(setting.Market + `_` + setting.Symbol)
+	dealAmount, okDeal := dealInU.Load(marketSymbolDate)
 	if !okDeal {
 		dealAmount = 0.0
 	} else if dealAmount.(float64) > setting.GridAmount {
 		return
 	}
-	utcTime := time.Now().In(time.UTC)
-	year, month, day := utcTime.Date()
-	keyStr := fmt.Sprintf(`%s_%s_%d-%d-%d 08:00:00`, setting.Market, setting.Symbol, year, month, day)
-	steps := (tick.Asks[0].Price-tick.Bids[0].Price)/marketInfo.PriceIncrement - 1
+	steps := (tick.Asks[0].Price-tick.Bids[0].Price)/marketInfo.PriceIncrement - 2
 	steps = math.Ceil(steps * (setting.GridAmount - dealAmount.(float64)) / setting.GridAmount)
 	inc := 1.0
 	beginPrice := 0.0
+	//priceMark := ``
 	if side.(string) == model.OrderSideBuy {
 		beginPrice = tick.Bids[0].Price
 		inc = 1.0
+		//bidPrice, decimal := model.FormatPrice(setting.Market, setting.Symbol, model.OrderSideBuy, tick.Bids[0].Price+marketInfo.PriceIncrement*steps)
+		//bidStr := util.CutTailZero(strconv.FormatFloat(bidPrice, 'f', decimal, 64))
+		//priceMark = fmt.Sprintf(`%s-%s`, bidStr, util.CutTailZero(strconv.FormatFloat(tick.Asks[0].Price, 'f', decimal, 64)))
 	} else if side.(string) == model.OrderSideSell {
 		beginPrice = tick.Asks[0].Price
 		inc = -1.0
+		//askPrice, decimal := model.FormatPrice(setting.Market, setting.Symbol, model.OrderSideSell, tick.Asks[0].Price-marketInfo.PriceIncrement*steps)
+		//askStr := util.CutTailZero(strconv.FormatFloat(askPrice, 'f', decimal, 64))
+		//priceMark = fmt.Sprintf(`%s-%s`, util.CutTailZero(strconv.FormatFloat(tick.Bids[0].Price, 'f', decimal, 64)), askStr)
 	}
-	for i := int(steps); i > 0; i-- {
+	jump := int(math.Ceil(steps / 5))
+	for i := int(steps); i > 0; i = i - jump {
 		price := beginPrice + inc*marketInfo.PriceIncrement*float64(i)
-		amount := marketInfo.SizeMin + marketInfo.SizeIncrement*(steps+1-float64(i))*math.Round(rand.Float64()*5)
+		amount := marketInfo.MoneyMin/price + marketInfo.SizeIncrement*(steps+1-float64(i))*math.Ceil(rand.Float64()*5)
 		order := api.PlaceOrder(account.Key, account.Secret, side.(string), model.OrderTypeLimit, setting.Market,
 			setting.Symbol, ``, price, price, amount, false, nil, setting)
 		if order != nil {
+			order.Function = model.FunctionHang
 			model.AppDB.Save(order)
 		}
 		time.Sleep(time.Millisecond * 500)
 	}
-	placeTime.Store(keyStr, time.Now().UnixMilli())
+	//util.Notice(fmt.Sprintf(`hang prices %s %s`, setting.Market, setting.Symbol))
+	//hangPrice.Store(marketSymbol, priceMark)
+	placeTime.Store(marketSymbol, time.Now().UnixMilli())
 }
 
 func refreshDeal() {
@@ -125,6 +148,7 @@ func refreshDeal() {
 		for _, settings := range coinSettings {
 			for _, setting := range settings {
 				var deal, usd, usdCoin float64
+				side := ``
 				model.AppDB.Table(`orders`).Select(`sum(deal_amount*deal_price)`).Where(
 					"market= ? and symbol= ? and refresh_type= ? and status=? and order_time>?",
 					setting.Market, setting.Symbol, model.FunctionHang, model.CarryStatusSuccess, dateStr).First(&deal)
@@ -146,14 +170,15 @@ func refreshDeal() {
 							}
 						}
 						if usd > usdCoin {
-							hangSide.Store(setting.Market+`_`+setting.Symbol, model.OrderSideBuy)
+							side = model.OrderSideBuy
 						} else {
-							hangSide.Store(setting.Market+`_`+setting.Symbol, model.OrderSideSell)
+							side = model.OrderSideSell
 						}
+						hangSide.Store(setting.Market+`_`+setting.Symbol, side)
 					}
 				}
-				util.Notice(fmt.Sprintf(`refreshDeal %s %s %s deal %fu account %fu %fcoin in u`,
-					setting.Market, setting.Symbol, dateStr, deal, usd, usdCoin))
+				util.Notice(fmt.Sprintf(`refreshDeal %s %s %s deal %fu account %fu %fcoin in u side %s`,
+					setting.Market, setting.Symbol, dateStr, deal, usd, usdCoin, side))
 			}
 		}
 		checkSetHanging(false)
