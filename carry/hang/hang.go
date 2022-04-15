@@ -97,7 +97,7 @@ func placeHang(account *model.Account, setting *model.Setting, tick *model.BidAs
 	} else if dealAmount.(float64) > setting.GridAmount {
 		return
 	}
-	steps := (tick.Asks[0].Price-tick.Bids[0].Price)/marketInfo.PriceIncrement - 2
+	steps := (tick.Asks[0].Price-tick.Bids[0].Price)/marketInfo.PriceIncrement - 1
 	steps = math.Ceil(steps * (setting.GridAmount - dealAmount.(float64)) / setting.GridAmount)
 	inc := 1.0
 	beginPrice := 0.0
