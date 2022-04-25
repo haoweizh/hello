@@ -2,6 +2,8 @@ package model
 
 import (
 	"fmt"
+	"hello/util"
+	"math"
 	"os"
 	"strconv"
 	"strings"
@@ -38,14 +40,14 @@ func GetAccounts(index int) (accounts map[string]*Account) {
 	if AppAccounts != nil && len(AppAccounts) > index {
 		return AppAccounts[index]
 	}
-	size := AppConfig.GetCrossLen()
+	tempAccounts := AppConfig.GetAccounts(Ftx)
+	size := int(math.Max(float64(AppConfig.GetCrossLen()), float64(len(tempAccounts))))
 	AppAccounts = make([]map[string]*Account, size)
 	for i := 0; i < size; i++ {
 		if AppAccounts[i] == nil {
 			AppAccounts[i] = make(map[string]*Account)
 		}
 	}
-	tempAccounts := AppConfig.GetAccounts(Ftx)
 	for i, account := range tempAccounts {
 		AppAccounts[i][Ftx] = account
 	}
@@ -94,7 +96,7 @@ func (config *Config) GetCrossLen() int {
 		if crossLen == 0 {
 			crossLen = len(accounts)
 		} else if len(accounts) != crossLen {
-			fmt.Println(fmt.Sprintf(`wrong cross config %s accounts:%d`, market, len(accounts)))
+			util.Notice(fmt.Sprintf(`wrong cross config %s accounts:%d`, market, len(accounts)))
 			os.Exit(2)
 		}
 	}

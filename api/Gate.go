@@ -582,6 +582,7 @@ func placeOrderGate(key, secret string, order *model.Order, orderSide, orderType
 			panicGateError(key, "placeSpotOrderGate", err)
 			order.Status = model.CarryStatusFail
 			order.OrderId = ``
+			order.ErrCode = err.Error()
 		} else {
 			orderResp, _ := json.Marshal(createOrder)
 			util.Notice(`create spot order response: %s`, orderResp)
@@ -616,6 +617,7 @@ func placeOrderGate(key, secret string, order *model.Order, orderSide, orderType
 			panicGateError(key, "placeFutureOrderGate", err)
 			order.Status = model.CarryStatusFail
 			order.OrderId = ``
+			order.ErrCode = err.Error()
 		} else {
 			orderResp, _ := json.Marshal(createFuturesOrder)
 			util.Notice(`create future order response: %s`, orderResp)
@@ -714,7 +716,10 @@ func queryOrderGate(key, secret string, order *model.Order) {
 			return
 		}
 		order.DealAmount, _ = strconv.ParseFloat(orderSpot.FilledTotal, 64)
-		order.DealPrice, _ = strconv.ParseFloat(orderSpot.FillPrice, 64)
+		order.DealPrice, _ = strconv.ParseFloat(orderSpot.Price, 64)
+		if order.DealPrice > 0 {
+			order.DealAmount = order.DealAmount / order.DealPrice // FilledTotal是成交钱数，需要除以价格
+		}
 		switch orderSpot.Status {
 		case `open`:
 			order.Status = model.CarryStatusWorking

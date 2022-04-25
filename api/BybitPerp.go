@@ -259,7 +259,7 @@ func handleOrderBookBybitPerp(markets *model.Markets, symbol string, ts int64, r
 }
 
 func getMarketsBybitPerp(key, secret string) (marketInfos map[string]*model.MarketInfo) {
-	response := SignedRequestBybitPerp(key, secret, http.MethodGet, `/v2/public/symbols`, nil)
+	response, _ := SignedRequestBybitPerp(key, secret, http.MethodGet, `/v2/public/symbols`, nil)
 	marketInfos = make(map[string]*model.MarketInfo)
 	marketJson, err := util.NewJSON(response)
 	if err != nil || marketJson.Get(`ret_code`) == nil || marketJson.Get(`ret_code`).MustInt() != 0 {
@@ -306,7 +306,7 @@ func getMarketsBybitPerp(key, secret string) (marketInfos map[string]*model.Mark
 	return
 }
 
-func SignedRequestBybitPerp(key, secret, method, path string, body map[string]interface{}) []byte {
+func SignedRequestBybitPerp(key, secret, method, path string, body map[string]interface{}) (response []byte, err error) {
 	if body == nil {
 		body = make(map[string]interface{})
 	}
@@ -327,10 +327,10 @@ func SignedRequestBybitPerp(key, secret, method, path string, body map[string]in
 	if method == `GET` {
 		uri = uri + `?` + paramStr
 	}
-	responseBody, _ := util.HttpRequest(method, uri, string(util.JsonEncodeToByte(body)), headers, 60)
+	responseBody, httpErr := util.HttpRequest(method, uri, string(util.JsonEncodeToByte(body)), headers, 60)
 	util.SocketInfo(fmt.Sprintf(`bybitPerp key %s request %s %s body %v return %s`,
 		key, uri, method, body, string(responseBody)))
-	return responseBody
+	return responseBody, httpErr
 }
 
 func cancelOrdersBybitPerp(key, secret, symbol string) bool {
@@ -338,7 +338,7 @@ func cancelOrdersBybitPerp(key, secret, symbol string) bool {
 	path := `/private/linear/order/cancel-all`
 	method := http.MethodPost
 	postData[`symbol`] = symbol
-	response := SignedRequestBybitPerp(key, secret, method, path, postData)
+	response, _ := SignedRequestBybitPerp(key, secret, method, path, postData)
 	cancelJson, err := util.NewJSON(response)
 	if err == nil {
 		if cancelJson.Get(`ret_code`).MustInt() == 0 {
@@ -350,7 +350,7 @@ func cancelOrdersBybitPerp(key, secret, symbol string) bool {
 
 func cancelOrderBybitPerp(key, secret, symbol, orderId string) (result bool, errCode, msg string) {
 	postData := map[string]interface{}{`order_id`: orderId, `symbol`: symbol}
-	response := SignedRequestBybitPerp(key, secret, `POST`, `/private/linear/order/cancel`, postData)
+	response, _ := SignedRequestBybitPerp(key, secret, `POST`, `/private/linear/order/cancel`, postData)
 	orderJson, err := util.NewJSON(response)
 	result = false
 	if err == nil {
@@ -373,7 +373,7 @@ func cancelOrderBybitPerp(key, secret, symbol, orderId string) (result bool, err
 
 func queryOrderBybitPerp(key, secret, symbol, orderId string) (order *model.Order) {
 	postData := map[string]interface{}{`symbol`: symbol, `order_id`: orderId}
-	response := SignedRequestBybitPerp(key, secret, `GET`, `/private/linear/order/list`, postData)
+	response, _ := SignedRequestBybitPerp(key, secret, `GET`, `/private/linear/order/list`, postData)
 	orderJson, err := util.NewJSON(response)
 	if err == nil {
 		orderJson = orderJson.GetPath(`result`, `data`)
@@ -410,7 +410,10 @@ func placeOrderBybitPerp(order *model.Order, key, secret, orderSide, orderType, 
 	postData[`reduce_only`] = false
 	postData[`close_on_trigger`] = false
 	postData["qty"] = fmt.Sprintf(`%f`, amount)
-	response := SignedRequestBybitPerp(key, secret, `POST`, `/private/linear/order/create`, postData)
+	response, httpErr := SignedRequestBybitPerp(key, secret, `POST`, `/private/linear/order/create`, postData)
+	if httpErr != nil {
+		order.ErrCode = httpErr.Error()
+	}
 	orderJson, err := util.NewJSON(response)
 	if err == nil {
 		if orderJson.Get(`ret_code`).MustInt() == 0 {
@@ -431,7 +434,7 @@ func placeOrderBybitPerp(order *model.Order, key, secret, orderSide, orderType, 
 
 func setSettingsBybitPerp(key, secret, symbol string) (singleMode, crossPos bool) {
 	postData := map[string]interface{}{`symbol`: symbol, `mode`: `MergedSingle`}
-	response := SignedRequestBybitPerp(key, secret, http.MethodPost, `/private/linear/position/switch-mode`, postData)
+	response, _ := SignedRequestBybitPerp(key, secret, http.MethodPost, `/private/linear/position/switch-mode`, postData)
 	setJson, err := util.NewJSON(response)
 	if err == nil && setJson != nil && setJson.Get(`ret_code`).MustInt() == 0 {
 		singleMode = true
@@ -439,7 +442,7 @@ func setSettingsBybitPerp(key, secret, symbol string) (singleMode, crossPos bool
 		util.Notice(fmt.Sprintf(`fail to set bybitPerp %s pos mode to single`, symbol))
 	}
 	postData = map[string]interface{}{`symbol`: symbol, `is_isolated`: false, `buy_leverage`: 5, `sell_leverage`: 5}
-	response = SignedRequestBybitPerp(key, secret, http.MethodPost, `/private/linear/position/switch-isolated`, postData)
+	response, _ = SignedRequestBybitPerp(key, secret, http.MethodPost, `/private/linear/position/switch-isolated`, postData)
 	if err == nil && setJson != nil && setJson.Get(`ret_code`).MustInt() == 0 {
 		crossPos = true
 	} else {
@@ -450,7 +453,7 @@ func setSettingsBybitPerp(key, secret, symbol string) (singleMode, crossPos bool
 
 func getPositionsBybitPerp(key, secret string) (success bool, positions []*model.Position, accountValue, available float64) {
 	accountValue, available = getWalletBybitPerp(key, secret)
-	response := SignedRequestBybitPerp(key, secret, http.MethodGet, `/private/linear/position/list`, nil)
+	response, _ := SignedRequestBybitPerp(key, secret, http.MethodGet, `/private/linear/position/list`, nil)
 	posJson, err := util.NewJSON(response)
 	if err != nil || posJson == nil || posJson.Get(`ret_code`).MustInt() != 0 {
 		util.SocketInfo(`fail to get bybitPerp positions`)
@@ -513,7 +516,7 @@ func getPositionsBybitPerp(key, secret string) (success bool, positions []*model
 
 func getFundingRateBybitPerp(key, secret, symbol string) (fundingRate *model.FundingRate) {
 	postData := map[string]interface{}{`symbol`: symbol}
-	response := SignedRequestBybitPerp(key, secret, http.MethodGet,
+	response, _ := SignedRequestBybitPerp(key, secret, http.MethodGet,
 		`/public/linear/funding/prev-funding-rate`, postData)
 	newJson, err := util.NewJSON(response)
 	if err == nil {
@@ -584,7 +587,7 @@ func parseOrderBybitPerp(order *model.Order, item map[string]interface{}) {
 
 // 只计算了USDT的价值,忽略了其他保证金币种
 func getWalletBybitPerp(key, secret string) (accountValueInU, availableU float64) {
-	response := SignedRequestBybitPerp(key, secret, http.MethodGet, `/v2/private/wallet/balance`, nil)
+	response, _ := SignedRequestBybitPerp(key, secret, http.MethodGet, `/v2/private/wallet/balance`, nil)
 	dataJson, err := util.NewJSON(response)
 	if dataJson == nil || err != nil {
 		time.Sleep(time.Second * 2)

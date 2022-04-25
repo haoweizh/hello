@@ -33,8 +33,12 @@ func createContractMarket(key, secret, market string) (cm *contractMarket) {
 		for _, position := range positions {
 			cm.positions[position.Currency] = position
 			getTick, tick := model.AppMarkets.GetBidAsk(position.Currency, market)
-			if settings != nil && settings[position.Currency] != nil && getTick {
-				cm.contractValueInU += tick.Bids[0].Price * math.Abs(position.Holding)
+			if settings != nil && settings[position.Currency] != nil {
+				if getTick {
+					cm.contractValueInU += tick.Bids[0].Price * math.Abs(position.Holding)
+				} else {
+					cm.contractValueInU += position.EntryPrice * math.Abs(position.Holding)
+				}
 			}
 		}
 		cm.accountValueInU = accountValue
@@ -206,20 +210,22 @@ func initStatus(account *model.Account, setting *model.Setting) (status *CarrySt
 	marketInfo := model.GetMarketInfo(setting.Market, setting.Symbol)
 	if marketInfo != nil && marketInfo.SizeMax > 0 {
 		_, amount := model.ParseRealAmount(setting.Market, setting.Symbol, marketInfo.SizeMax)
-		status.LimitBuy = math.Min(status.LimitBuy, amount)
-		status.LimitSell = math.Min(status.LimitSell, amount)
 		status.AvailableBuy = math.Min(status.AvailableBuy, amount)
 		status.AvailableSell = math.Min(status.AvailableSell, amount)
+		if status.market == model.Mexc { // mexc要求持仓不能超过1500张合约
+			status.AvailableBuy = math.Min(status.AvailableBuy, 1400*marketInfo.SizeIncrement-status.Holding)
+			status.AvailableSell = math.Min(status.AvailableSell, 1400*marketInfo.SizeIncrement+status.Holding)
+		}
 	}
 	if setting.Market == model.OKEX {
 		success, maxBuy, maxSell := api.GetTradeMaxOKEX(account.Key, account.Secret, setting.Symbol, 600)
 		if success {
-			status.LimitBuy = math.Min(status.LimitBuy, maxBuy)
-			status.LimitSell = math.Min(status.LimitSell, maxSell)
 			status.AvailableBuy = math.Min(status.AvailableBuy, maxBuy)
 			status.AvailableSell = math.Min(status.AvailableSell, maxSell)
 		}
 	}
+	status.LimitBuy = math.Min(status.LimitBuy, status.AvailableBuy)
+	status.LimitSell = math.Min(status.LimitSell, status.AvailableSell)
 	jump := 15.5
 	revertJump := 12.2
 	if status.Holding > 0 {
@@ -238,10 +244,12 @@ func initStatus(account *model.Account, setting *model.Setting) (status *CarrySt
 		if status.Holding > 0 {
 			status.TradeLineBuy = 1
 			status.TradeLineSell = math.Min(status.TradeLineSell, 0.0004)
-		}
-		if status.Holding < 0 {
+		} else if status.Holding < 0 {
 			status.TradeLineSell = 1
 			status.TradeLineBuy = math.Min(status.TradeLineBuy, 0.0004)
+		} else if status.Holding == 0 {
+			status.TradeLineBuy = 1
+			status.TradeLineSell = 1
 		}
 	}
 	setCarryStatus(setting.Coin, setting.Market, setting.Symbol, account.Key, status)
@@ -922,6 +930,15 @@ func FormatCrossPair(marketBuy, marketSell, symbolBuy, symbolSell string, amount
 	}
 	if (marketInfoBuy.MoneyMin > 0 && formattedAmount*price < marketInfoBuy.MoneyMin) ||
 		(marketInfoSell.MoneyMin > 0 && formattedAmount*price < marketInfoSell.MoneyMin) {
+		return 0
+	}
+	if marketInfoSell.Market == model.Mexc {
+		formattedAmount = math.Min(formattedAmount, marketInfoSell.SizeIncrement*1000)
+	}
+	if marketInfoBuy.Market == model.Mexc {
+		formattedAmount = math.Min(formattedAmount, marketInfoBuy.SizeIncrement*1000)
+	}
+	if formattedAmount*price < 6 && (marketInfoSell.Market == model.Mexc || marketInfoBuy.Market == model.Mexc) {
 		return 0
 	}
 	return formattedAmount

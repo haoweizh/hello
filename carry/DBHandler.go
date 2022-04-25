@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"hello/api"
 	"hello/carry/cross"
+	"hello/carry/hang"
 	"hello/model"
 	"hello/util"
 	"time"
@@ -65,9 +66,9 @@ func MaintainTransFee() {
 			now := util.GetNow()
 			lastDays2 := now.Add(d)
 			lastMin10 := now.Add(dMin10)
-			model.AppDB.Limit(100).Offset(feeIndex).Where(
-				`created_at>? and created_at<? and status=? and refresh_type!=? and refresh_type!=? and refresh_type!=? and refresh_type!=?`,
-				lastDays2, lastMin10, model.CarryStatusWorking, model.FunctionDCarry, model.FunctionCarry, model.FunctionCross, model.FunctionComplement).
+			model.AppDB.Limit(500).Offset(feeIndex).Where(
+				`created_at>? and created_at<? and status=? and refresh_type!=? and refresh_type!=? and refresh_type!=?`,
+				lastDays2, lastMin10, model.CarryStatusWorking, model.FunctionDCarry, model.FunctionCross, model.FunctionComplement).
 				Find(&orders)
 			util.Info(fmt.Sprintf(`--- get working orders %d %v %v`, len(orders), lastDays2, lastMin10))
 			if len(orders) == 0 {
@@ -153,6 +154,7 @@ func Maintain() {
 	model.HandlerMap[model.FunctionGrid] = ProcessSimpleGrid
 	model.HandlerMap[model.FunctionTurtle] = ProcessTurtle
 	model.HandlerMap[model.FunctionCross] = cross.ProcessCross
+	model.HandlerMap[model.FunctionHang] = hang.ProcessHang
 	_ = model.AppDB.AutoMigrate(&model.Setting{})
 	_ = model.AppDB.AutoMigrate(&model.Order{})
 	_ = model.AppDB.AutoMigrate(&model.Balance{})

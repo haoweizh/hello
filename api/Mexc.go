@@ -107,7 +107,7 @@ func WsDepthServeMexc(markets *model.Markets, orderHandler OrderHandler, useFull
 				_, marketType, coin := model.GetCoinFromDialect(model.Mexc, resp.Symbol)
 				symbol := coin + model.UniStandardTail[marketType]
 				bidAsk := parseTicksMexc(symbol, resp.Ts, resp.Data.Version, resp.Data.Bids, resp.Data.Asks)
-				fmt.Println(fmt.Sprintf(`%f %f ~ %f %f`, bidAsk.Bids[0].Price, bidAsk.Bids[0].Amount, bidAsk.Asks[0].Price, bidAsk.Asks[0].Amount))
+				//fmt.Println(fmt.Sprintf(`%s %f %f ~ %f %f`, symbol, bidAsk.Bids[0].Price, bidAsk.Bids[0].Amount, bidAsk.Asks[0].Price, bidAsk.Asks[0].Amount))
 				if markets.SetBidAsk(symbol, model.Mexc, bidAsk) {
 					for function, handler := range model.GetFunctions(model.Mexc, symbol) {
 						setting := model.GetSetting(function, model.Mexc, symbol)
@@ -206,7 +206,7 @@ func placeOrderMexc(key, secret string, order *model.Order, orderSide, orderType
 		util.Notice(fmt.Sprintf(`[mexcPlaceOrder] market info is nil for symbol %s`, symbol))
 		return
 	}
-	formattedAmount := fmt.Sprintf(`%f`, marketInfo.SizeIncrement*math.Floor(amount))
+	formattedAmount := strconv.Itoa(int(math.Floor(amount / marketInfo.SizeIncrement)))
 	body := map[string]interface{}{
 		"symbol":       symbol,
 		"side":         side,
@@ -221,13 +221,16 @@ func placeOrderMexc(key, secret string, order *model.Order, orderSide, orderType
 		nil, body)
 	order.Status = model.CarryStatusFail
 	if err != nil {
+		order.ErrCode = err.Error()
 		return
 	}
 	orderJson, _ := util.NewJSON(respBytes)
 	if orderJson != nil && orderJson.Get("success").MustBool() {
 		order.Status = model.CarryStatusWorking
-		data, _ := orderJson.Get("data").Int64()
+		data, _ := orderJson.Get(`data`).Int64()
 		order.OrderId = strconv.FormatInt(data, 10)
+	} else if orderJson != nil {
+		order.ErrCode = strconv.Itoa(orderJson.Get(`code`).MustInt()) + orderJson.Get(`message`).MustString()
 	}
 	return
 }

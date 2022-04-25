@@ -128,9 +128,6 @@ func LoadSettings() {
 		coinSettings[function][AppSettings[i].Coin] =
 			append(coinSettings[function][AppSettings[i].Coin], &AppSettings[i])
 		symbols := []string{AppSettings[i].Symbol}
-		if function == FunctionCarry {
-			symbols = append(symbols, AppSettings[i].SymbolRelated)
-		}
 		for _, symbol := range symbols {
 			if marketSymbolSetting[function] == nil {
 				marketSymbolSetting[function] = make(map[string]map[string]*Setting)
@@ -187,7 +184,7 @@ func GetCoinSettings(function string) map[string][]*Setting {
 }
 
 func GetMarkets() []string {
-	if AppSettings == nil {
+	if AppSettings == nil || len(AppSettings) == 0 {
 		LoadSettings()
 	}
 	marketMap := make(map[string]bool)

@@ -290,7 +290,7 @@ func getCandlesFtx(key, secret, symbol, binSize string, start, end time.Time, co
 	param[`start_time`] = fmt.Sprintf(`%d`, start.Unix())
 	param[`end_time`] = fmt.Sprintf(`%d`, end.Unix())
 	_, _, _, dialectSymbol := model.GetFromStandard(model.Ftx, symbol)
-	response := SignedRequestFtx(key, secret, `GET`,
+	response, _ := SignedRequestFtx(key, secret, `GET`,
 		fmt.Sprintf(`/markets/%s/candles`, dialectSymbol), param, nil)
 	candleJson, err := util.NewJSON(response)
 	if err == nil {
@@ -394,7 +394,7 @@ func parseTransactionFtx(key string, data map[string]interface{}, action float64
 
 func getTransferFtx(key, secret string) (balances []*model.Balance) {
 	balances = make([]*model.Balance, 0)
-	response := SignedRequestFtx(key, secret, `GET`, `/wallet/deposits`, nil, nil)
+	response, _ := SignedRequestFtx(key, secret, `GET`, `/wallet/deposits`, nil, nil)
 	deposit, err := util.NewJSON(response)
 	if err == nil && deposit != nil {
 		for _, item := range deposit.Get(`result`).MustArray() {
@@ -404,7 +404,7 @@ func getTransferFtx(key, secret string) (balances []*model.Balance) {
 			}
 		}
 	}
-	response = SignedRequestFtx(key, secret, `GET`, `/wallet/withdrawals`, nil, nil)
+	response, _ = SignedRequestFtx(key, secret, `GET`, `/wallet/withdrawals`, nil, nil)
 	withdraw, err := util.NewJSON(response)
 	if err == nil && withdraw != nil {
 		for _, item := range withdraw.Get(`result`).MustArray() {
@@ -419,7 +419,7 @@ func getTransferFtx(key, secret string) (balances []*model.Balance) {
 
 func getBalanceFtx(key, secret string) (success bool, balances []*model.Balance, totalInUsd float64) {
 	balances = make([]*model.Balance, 0)
-	response := SignedRequestFtx(key, secret, `GET`, `/wallet/balances`, nil, nil)
+	response, _ := SignedRequestFtx(key, secret, `GET`, `/wallet/balances`, nil, nil)
 	balanceJson, err := util.NewJSON(response)
 	if err != nil || balanceJson == nil || balanceJson.Get(`success`).MustBool() != true {
 		util.SocketInfo(`fail to get ftx balance`)
@@ -440,7 +440,7 @@ func getBalanceFtx(key, secret string) (success bool, balances []*model.Balance,
 func cancelOrdersFtx(key, secret, symbol string) (result bool) {
 	postData := make(map[string]interface{})
 	postData[`market`] = symbol
-	response := SignedRequestFtx(key, secret, http.MethodDelete, `/orders`, nil, postData)
+	response, _ := SignedRequestFtx(key, secret, http.MethodDelete, `/orders`, nil, postData)
 	util.SocketInfo(fmt.Sprintf(`[api cancelOrdersFtx]%s %s`, symbol, string(response)))
 	orderJson, err := util.NewJSON(response)
 	if err == nil {
@@ -456,7 +456,7 @@ func cancelOrderFtx(key, secret, orderType, orderId string) (result bool) {
 	if orderType == model.OrderTypeStop {
 		path = `/conditional_orders/%s`
 	}
-	response := SignedRequestFtx(key, secret, `DELETE`, fmt.Sprintf(path, orderId), nil, nil)
+	response, _ := SignedRequestFtx(key, secret, `DELETE`, fmt.Sprintf(path, orderId), nil, nil)
 	util.Notice(fmt.Sprintf(`cancel ftx %s %s: %s`, orderType, orderId, string(response)))
 	orderJson, err := util.NewJSON(response)
 	if err == nil {
@@ -469,7 +469,7 @@ func cancelOrderFtx(key, secret, orderType, orderId string) (result bool) {
 }
 
 func queryTriggerOrderId(key, secret, id string) (orderId string) {
-	response := SignedRequestFtx(key, secret, `GET`,
+	response, _ := SignedRequestFtx(key, secret, `GET`,
 		fmt.Sprintf(`/conditional_orders/%s/triggers`, id), nil, nil)
 	orderJson, err := util.NewJSON(response)
 	if err == nil && orderJson.Get(`success`).MustBool() {
@@ -489,7 +489,7 @@ func queryTriggerOrderId(key, secret, id string) (orderId string) {
 func queryTriggerOrdersFtx(key, secret, symbol string) (orders []*model.Order) {
 	param := make(map[string]interface{})
 	param[`market`] = symbol
-	response := SignedRequestFtx(key, secret, `GET`, `/conditional_orders`, param, nil)
+	response, _ := SignedRequestFtx(key, secret, `GET`, `/conditional_orders`, param, nil)
 	orderJson, err := util.NewJSON(response)
 	if err == nil {
 		result := orderJson.Get(`result`)
@@ -521,7 +521,7 @@ func queryTriggerOrderFtx(key, secret, symbol, triggerId string) (status string)
 }
 
 func queryOrderFtx(key, secret, orderId string) (order *model.Order) {
-	response := SignedRequestFtx(key, secret, `GET`, fmt.Sprintf(`/orders/%s`, orderId), nil, nil)
+	response, _ := SignedRequestFtx(key, secret, `GET`, fmt.Sprintf(`/orders/%s`, orderId), nil, nil)
 	orderJson, err := util.NewJSON(response)
 	if err == nil && orderJson.Get(`success`).MustBool() {
 		data, _ := orderJson.Get(`result`).Map()
@@ -532,7 +532,7 @@ func queryOrderFtx(key, secret, orderId string) (order *model.Order) {
 }
 
 func getPositionsFtx(key, secret string) (success bool, positions []*model.Position, posBalance float64) {
-	response := SignedRequestFtx(key, secret, `GET`, `/positions`, nil, nil)
+	response, _ := SignedRequestFtx(key, secret, `GET`, `/positions`, nil, nil)
 	positionJson, err := util.NewJSON(response)
 	if err != nil || positionJson == nil || positionJson.Get(`success`).MustBool() != true {
 		util.SocketInfo(`fail to refresh account ftx`)
@@ -583,7 +583,7 @@ func _(key, secret, symbol string) (borrowAble float64) {
 	}
 	coin := strings.Split(symbol, `/`)[0]
 	param := map[string]interface{}{`market`: symbol}
-	response := SignedRequestFtx(key, secret, http.MethodGet, `/spot_margin/market_info`, param, nil)
+	response, _ := SignedRequestFtx(key, secret, http.MethodGet, `/spot_margin/market_info`, param, nil)
 	borrowJson, err := util.NewJSON(response)
 	if err == nil {
 		results := borrowJson.Get(`result`).MustArray()
@@ -605,11 +605,11 @@ func _(key, secret, symbol string) (borrowAble float64) {
 }
 
 func getMarketsFtx(key, secret string) (marketInfos map[string]*model.MarketInfo) {
-	response := SignedRequestFtx(key, secret, `GET`,
+	response, _ := SignedRequestFtx(key, secret, `GET`,
 		`/markets`, nil, nil)
 	marketInfos = make(map[string]*model.MarketInfo)
 	rateJson, err := util.NewJSON(response)
-	response = SignedRequestFtx(key, secret, `GET`,
+	response, _ = SignedRequestFtx(key, secret, `GET`,
 		`/spot_margin/borrow_rates`, nil, nil)
 	borrowJson, _ := util.NewJSON(response)
 	if err != nil || rateJson.Get(`result`) == nil || borrowJson.Get(`result`) == nil ||
@@ -658,7 +658,7 @@ func getMarketsFtx(key, secret string) (marketInfos map[string]*model.MarketInfo
 
 // getFundingRatesFtx
 func _(key, secret string) (fundingRates []*model.FundingRate) {
-	response := SignedRequestFtx(key, secret, `GET`,
+	response, _ := SignedRequestFtx(key, secret, `GET`,
 		`/funding_rates`, nil, nil)
 	rateJson, err := util.NewJSON(response)
 	if err == nil && rateJson.Get(`result`) != nil {
@@ -795,7 +795,11 @@ func placeOrderFtx(order *model.Order, key, secret, orderSide, orderType, orderP
 			postData[`orderPrice`] = orderPrice
 		}
 	}
-	response := SignedRequestFtx(key, secret, `POST`, uri, param, postData)
+	response, httpErr := SignedRequestFtx(key, secret, `POST`, uri, param, postData)
+	if httpErr != nil {
+		order.ErrCode = httpErr.Error()
+		return
+	}
 	orderJson, err := util.NewJSON(response)
 	if err == nil {
 		success := orderJson.Get(`success`).MustBool()
@@ -811,7 +815,7 @@ func placeOrderFtx(order *model.Order, key, secret, orderSide, orderType, orderP
 	return
 }
 
-func SignedRequestFtx(key, secret, method, path string, param, body map[string]interface{}) []byte {
+func SignedRequestFtx(key, secret, method, path string, param, body map[string]interface{}) ([]byte, error) {
 	if body == nil {
 		body = make(map[string]interface{})
 	}
@@ -845,16 +849,16 @@ func SignedRequestFtx(key, secret, method, path string, param, body map[string]i
 	}
 	sign := hex.EncodeToString(hash.Sum(nil))
 	headers := map[string]string{`FTX-KEY`: key, `FTX-TS`: ts, "FTX-SIGN": sign, "Content-Type": "application/json"}
-	if key == `aimxyPus258z84JrKahgt--6uWT8tcEeEbyIi8gF` {
+	if key == `9jGKmfYmbfbrHRAF8iYD06QY2JyAvWK7qwPyVY3D` {
 		headers[`FTX-SUBACCOUNT`] = `test`
 	}
 	//} else if key == `u7oa6J_2ZXq1Putf8swnAKE1MH2T86Zx6JBZoChe` {
 	//	headers[`FTX-SUBACCOUNT`] = `test2`
 	//}
-	responseBody, _ := util.HttpRequest(method, u.String(), bodyStr, headers, 60)
+	responseBody, httpErr := util.HttpRequest(method, u.String(), bodyStr, headers, 60)
 	//if !strings.Contains(path, `balances`) && !strings.Contains(path, `positions`) {
 	util.SocketInfo(fmt.Sprintf(`ftx key %s request %s %s body %s return %s`,
 		key, u.String(), method, bodyStr, string(responseBody)))
 	//}
-	return responseBody
+	return responseBody, httpErr
 }
