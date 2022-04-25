@@ -406,11 +406,11 @@ var ProcessTurtle = func(setting *model.Setting, tick *model.BidAsk) {
 }
 
 func checkTurtleBreak(key, secret string, setting *model.Setting, turtleData *TurtleData, tick *model.BidAsk) (checked bool) {
-	duration, _ := time.ParseDuration(`-300s`)
+	duration, _ := time.ParseDuration(`-3s`)
 	now := util.GetNow().Add(duration)
 	if now.After(turtleData.checkTime) {
 		turtleData.checkTime = util.GetNow()
-		if turtleData.orderLong != nil {
+		if turtleData.orderLong != nil && turtleData.orderLong.TriggerPrice <= tick.Bids[0].Price {
 			util.Debug(fmt.Sprintf(`-----chance %s %s %d bid-ask %f %f short %f`,
 				setting.Market, setting.Symbol, setting.Chance, tick.Bids[0].Price, tick.Asks[0].Price, turtleData.orderLong.Price))
 			order := api.QueryOrderById(key, secret, setting.Market, setting.Symbol, turtleData.orderLong.OrderType, turtleData.orderLong.OrderId)
@@ -421,7 +421,7 @@ func checkTurtleBreak(key, secret string, setting *model.Setting, turtleData *Tu
 					turtleData.orderLong.Price, turtleData.breakLong, turtleData.waitBreakLong))
 			}
 		}
-		if turtleData.orderShort != nil {
+		if turtleData.orderShort != nil && turtleData.orderShort.TriggerPrice >= tick.Asks[0].Price {
 			util.Debug(fmt.Sprintf(`-----chance %s %s %d bid-ask %f %f long %f`,
 				setting.Market, setting.Symbol, setting.Chance, tick.Bids[0].Price, tick.Asks[0].Price, turtleData.orderShort.Price))
 			order := api.QueryOrderById(key, secret, setting.Market, setting.Symbol, turtleData.orderShort.OrderType, turtleData.orderShort.OrderId)
