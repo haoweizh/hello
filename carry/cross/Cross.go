@@ -651,28 +651,43 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarrySta
 	if amount > 0 {
 		amount = FormatCrossPair(statusBuy.market, statusSell.market, statusBuy.symbol, statusSell.symbol, amount, priceBuy)
 	}
+	if checkScoreLimit(carryStatus.market, carryStatus.symbol, carryStatusRelate.market, carryStatusRelate.symbol, amount, score, scoreRelate) {
+		return nil, nil, 0, 0, 0
+	}
+	return statusBuy, statusSell, amount, priceBuy, priceSell
+}
+
+func checkScoreLimit(market, symbol, marketRelate, symbolRelate string, amount, score, scoreRelate float64) (invalid bool) {
+	doSend := false
+	minute := time.Now().Minute()
+	second := time.Now().Second()
+	if minute == 0 && second == 0 {
+		doSend = true
+	}
 	if amount > 0 && ((score > 0.15 || scoreRelate > 0.15) || ((score > 0.1 || scoreRelate > 0.1) &&
-		(!isValidSymbol(carryStatus.market, carryStatus.symbol) ||
-			!isValidSymbol(carryStatusRelate.market, carryStatusRelate.symbol)))) {
-		title := `不同币种`
+		(!isValidSymbol(market, symbol) || !isValidSymbol(marketRelate, symbolRelate)))) {
+		invalid = true
+	}
+	if doSend {
+		title := `币种价差大`
 		if score > 0.15 || scoreRelate > 0.15 {
 			title = `价差不可思议`
 		}
-		msg := fmt.Sprintf(`different coin %s %s %s %s %f %f`, carryStatus.market, carryStatus.symbol,
-			carryStatusRelate.market, carryStatusRelate.symbol, score, scoreRelate)
-		minute := time.Now().Minute()
-		second := time.Now().Second()
-		if minute == 0 && second == 0 {
+		msg := fmt.Sprintf(`价差提醒 %s %s %s %s %f %f`,
+			market, symbol, marketRelate, symbolRelate, score, scoreRelate)
+		if invalid {
 			for _, address := range model.TeamMails {
 				err := util.SendMail(model.AppConfig.FromMail, model.AppConfig.FromMailAuth, address, title, msg)
 				if err != nil {
 					util.Notice(`fail to send mail msg %s %s`, msg, err.Error())
 				}
 			}
+		} else if score > 0.05 || scoreRelate > 0.05 {
+			_ = util.SendMail(model.AppConfig.FromMail, model.AppConfig.FromMailAuth,
+				`13581512402@139.com`, title, msg)
 		}
-		return nil, nil, 0, 0, 0
 	}
-	return statusBuy, statusSell, amount, priceBuy, priceSell
+	return
 }
 
 func initLimitBuyAndSell(status *CarryStatus, setting *model.Setting, price float64) {
