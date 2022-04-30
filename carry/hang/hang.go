@@ -33,6 +33,7 @@ func checkSetHanging(value bool) (before bool) {
 // ProcessHang
 // setting.chance 下单后多少million seconds cancel
 // setting.gridAmount 当日下单上限 in usd
+// setting.amountLimit 每次最多下单的个数
 // setting.priceX 做市时摆单价差，默认为0，值越大，摆单后买卖1之间价差越大
 var ProcessHang = func(setting *model.Setting, tick *model.BidAsk) {
 	if !doHang && model.AppConfig.Handle == `1` {
@@ -99,7 +100,7 @@ func placeHang(account *model.Account, setting *model.Setting, tick *model.BidAs
 		return
 	}
 	steps := (tick.Asks[0].Price-tick.Bids[0].Price-setting.PriceX)/marketInfo.PriceIncrement - 1
-	steps = math.Ceil(steps * (setting.GridAmount - dealAmount.(float64)) / setting.GridAmount)
+	steps = math.Min(math.Ceil(steps*(setting.GridAmount-dealAmount.(float64))/setting.GridAmount), setting.AmountLimit)
 	inc := 1.0
 	beginPrice := 0.0
 	//priceMark := ``
