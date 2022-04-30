@@ -5,3 +5,4 @@ config.yml
 #go.mod
 go.sum
 /go.mod
+/pkg/mod/cache/lock

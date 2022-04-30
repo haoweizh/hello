@@ -33,7 +33,7 @@ func checkSetHanging(value bool) (before bool) {
 // ProcessHang
 // setting.chance 下单后多少million seconds cancel
 // setting.gridAmount 当日下单上限 in usd
-// setting.amountLimit 每次最多下单的个数
+// setting.amountLimit 每次下单价差jump距离
 // setting.priceX 做市时摆单价差，默认为0，值越大，摆单后买卖1之间价差越大
 var ProcessHang = func(setting *model.Setting, tick *model.BidAsk) {
 	if !doHang && model.AppConfig.Handle == `1` {
@@ -100,7 +100,7 @@ func placeHang(account *model.Account, setting *model.Setting, tick *model.BidAs
 		return
 	}
 	steps := (tick.Asks[0].Price-tick.Bids[0].Price-setting.PriceX)/marketInfo.PriceIncrement - 1
-	steps = math.Min(math.Ceil(steps*(setting.GridAmount-dealAmount.(float64))/setting.GridAmount), setting.AmountLimit)
+	steps = math.Ceil(steps * (setting.GridAmount - dealAmount.(float64)) / setting.GridAmount)
 	inc := 1.0
 	beginPrice := 0.0
 	//priceMark := ``
@@ -117,7 +117,7 @@ func placeHang(account *model.Account, setting *model.Setting, tick *model.BidAs
 		//askStr := util.CutTailZero(strconv.FormatFloat(askPrice, 'f', decimal, 64))
 		//priceMark = fmt.Sprintf(`%s-%s`, util.CutTailZero(strconv.FormatFloat(tick.Bids[0].Price, 'f', decimal, 64)), askStr)
 	}
-	jump := int(math.Ceil(steps / 5))
+	jump := int(math.Ceil(steps / setting.AmountLimit))
 	for i := int(steps); i > 0; i = i - jump {
 		price := beginPrice + inc*marketInfo.PriceIncrement*float64(i)
 		amount := marketInfo.MoneyMin/price + marketInfo.SizeIncrement*(steps+1-float64(i))*math.Ceil(rand.Float64()*5)
