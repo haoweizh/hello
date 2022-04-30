@@ -576,7 +576,7 @@ func placeOrderGate(key, secret string, order *model.Order, orderSide, orderType
 			}
 		}
 		relatedOrder.Amount = util.CutTailZero(fmt.Sprintf(`%f`, model.GetAmountInMarket(model.Gate, symbol, amount, price)))
-		util.Notice(`create spot order request: %v`, relatedOrder)
+		util.SocketInfo(`create spot order request: %v`, relatedOrder)
 		createOrder, _, err := client.SpotApi.CreateOrder(ctx, relatedOrder)
 		if err != nil {
 			panicGateError(key, "placeSpotOrderGate", err)
@@ -611,7 +611,7 @@ func placeOrderGate(key, secret string, order *model.Order, orderSide, orderType
 		if orderSide == model.OrderSideSell {
 			futuresOrder.Size = -1 * futuresOrder.Size
 		}
-		util.Notice(`create future order request: %v`, futuresOrder)
+		util.SocketInfo(`create future order request: %v`, futuresOrder)
 		createFuturesOrder, _, err := client.FuturesApi.CreateFuturesOrder(ctx, `usdt`, futuresOrder)
 		if err != nil {
 			panicGateError(key, "placeFutureOrderGate", err)

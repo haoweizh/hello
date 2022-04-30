@@ -121,6 +121,8 @@ func placeHang(account *model.Account, setting *model.Setting, tick *model.BidAs
 	for i := int(steps); i > 0; i = i - jump {
 		price := beginPrice + inc*marketInfo.PriceIncrement*float64(i)
 		amount := marketInfo.MoneyMin/price + marketInfo.SizeIncrement*(steps+1-float64(i))*math.Ceil(rand.Float64()*5)
+		util.Notice(fmt.Sprintf(`hang %s %s steps: %f [%f-%f] %f %f`,
+			setting.Market, setting.Symbol, steps, tick.Bids[0].Price, tick.Asks[0].Price, price, amount))
 		order := api.PlaceOrder(account.Key, account.Secret, side.(string), model.OrderTypeLimit, setting.Market,
 			setting.Symbol, ``, price, price, amount, false, nil, setting)
 		if order != nil {

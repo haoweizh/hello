@@ -502,8 +502,8 @@ func PlaceOrder(key, secret, orderSide, orderType, market, symbol, orderParam st
 	order = &model.Order{OrderSide: markSide, OrderType: orderType, Market: market, Symbol: symbol, Price: price,
 		Amount: amount, DealAmount: 0, DealPrice: price, TriggerPrice: triggerPrice,
 		OrderTime: util.GetNow(), UnfilledQuantity: amount, AmountType: key}
-	util.Notice(fmt.Sprintf(`...%s %s %s before order %d amount: %f price:%f triggerPrice:%f`,
-		orderSide, market, symbol, start, amount, price, triggerPrice))
+	//util.Notice(fmt.Sprintf(`...%s %s %s before order %d amount: %f price:%f triggerPrice:%f`,
+	//	orderSide, market, symbol, start, amount, price, triggerPrice))
 	if model.AppConfig.Env == `test` {
 		return
 	}
