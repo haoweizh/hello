@@ -673,19 +673,24 @@ func checkScoreLimit(market, symbol, marketRelate, symbolRelate string, amount, 
 		msg := fmt.Sprintf(`价差提醒 %s %s %s %s %f %f`,
 			market, symbol, marketRelate, symbolRelate, score, scoreRelate)
 		if invalid {
+			notifyTime.Store(checkKey, time.Now())
+			notifyTime.Store(checkKeyRelate, time.Now())
 			for _, address := range model.TeamMails {
 				err := util.SendMail(model.AppConfig.FromMail, model.AppConfig.FromMailAuth, address, title, msg)
 				if err != nil {
 					util.Notice(`fail to send mail msg %s %s`, msg, err.Error())
 				}
 			}
-			notifyTime.Store(checkKey, time.Now())
-			notifyTime.Store(checkKeyRelate, time.Now())
 		} else if score > 0.05 || scoreRelate > 0.05 {
-			_ = util.SendMail(model.AppConfig.FromMail, model.AppConfig.FromMailAuth,
-				`13581512402@139.com`, title, msg)
 			notifyTime.Store(checkKey, time.Now())
 			notifyTime.Store(checkKeyRelate, time.Now())
+			go func() {
+				err := util.SendMail(model.AppConfig.FromMail, model.AppConfig.FromMailAuth,
+					`13581512402@139.com`, title, msg)
+				if err != nil {
+					util.Notice(`fail to send mail msg %s %s`, msg, err.Error())
+				}
+			}()
 		}
 	}
 	return
