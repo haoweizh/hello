@@ -33,6 +33,7 @@ var crossLock sync.Mutex
 var spotMarkets, contractMarkets sync.Map // key - spotMarket/contractMarket
 var carryFail sync.Map                    // key fail num
 var carryStop sync.Map                    // key bool
+var notifyTime sync.Map                   // market_symbol_market_symbol/time
 var crossing bool
 var doCross = false
 

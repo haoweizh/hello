@@ -658,18 +658,15 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarrySta
 }
 
 func checkScoreLimit(market, symbol, marketRelate, symbolRelate string, amount, score, scoreRelate float64) (invalid bool) {
-	doSend := false
-	minute := time.Now().Minute()
-	second := time.Now().Second()
-	if minute == 0 && second == 0 {
-		doSend = true
-	}
 	if amount > 0 && ((score > 0.15 || scoreRelate > 0.15) || ((score > 0.1 || scoreRelate > 0.1) &&
 		(!isValidSymbol(market, symbol) || !isValidSymbol(marketRelate, symbolRelate)))) {
 		invalid = true
 	}
-	if doSend {
+	checkKey := fmt.Sprintf(`%s_%s_%s_%s`, market, symbol, marketRelate, symbolRelate)
+	lastTime, ok := notifyTime.Load(checkKey)
+	if !(ok && lastTime.(time.Time).Add(time.Minute*5).After(time.Now())) {
 		title := `币种价差大`
+		checkKeyRelate := fmt.Sprintf(`%s_%s_%s_%s`, marketRelate, symbolRelate, market, symbol)
 		if score > 0.15 || scoreRelate > 0.15 {
 			title = `价差不可思议`
 		}
@@ -682,9 +679,13 @@ func checkScoreLimit(market, symbol, marketRelate, symbolRelate string, amount, 
 					util.Notice(`fail to send mail msg %s %s`, msg, err.Error())
 				}
 			}
+			notifyTime.Store(checkKey, time.Now())
+			notifyTime.Store(checkKeyRelate, time.Now())
 		} else if score > 0.05 || scoreRelate > 0.05 {
 			_ = util.SendMail(model.AppConfig.FromMail, model.AppConfig.FromMailAuth,
 				`13581512402@139.com`, title, msg)
+			notifyTime.Store(checkKey, time.Now())
+			notifyTime.Store(checkKeyRelate, time.Now())
 		}
 	}
 	return
