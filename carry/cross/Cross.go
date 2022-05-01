@@ -664,7 +664,7 @@ func checkScoreLimit(market, symbol, marketRelate, symbolRelate string, amount, 
 	}
 	checkKey := fmt.Sprintf(`%s_%s_%s_%s`, market, symbol, marketRelate, symbolRelate)
 	lastTime, ok := notifyTime.Load(checkKey)
-	if !(ok && lastTime.(time.Time).Add(time.Minute*5).After(time.Now())) {
+	if !(ok && lastTime.(time.Time).Add(time.Minute*60).After(time.Now())) {
 		title := `币种价差大`
 		checkKeyRelate := fmt.Sprintf(`%s_%s_%s_%s`, marketRelate, symbolRelate, market, symbol)
 		if score > 0.15 || scoreRelate > 0.15 {
