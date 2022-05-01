@@ -686,7 +686,7 @@ func checkScoreLimit(market, symbol, marketRelate, symbolRelate string, amount, 
 			notifyTime.Store(checkKeyRelate, time.Now())
 			go func() {
 				err := util.SendMail(model.AppConfig.FromMail, model.AppConfig.FromMailAuth,
-					`13581512402@139.com`, title, msg)
+					`gqchen888@gmail.com`, title, msg)
 				if err != nil {
 					util.Notice(`fail to send mail msg %s %s`, msg, err.Error())
 				}
