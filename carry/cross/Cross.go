@@ -684,13 +684,15 @@ func checkScoreLimit(market, symbol, marketRelate, symbolRelate string, amount, 
 		} else if score > 0.05 || scoreRelate > 0.05 {
 			notifyTime.Store(checkKey, time.Now())
 			notifyTime.Store(checkKeyRelate, time.Now())
-			go func() {
-				err := util.SendMail(model.AppConfig.FromMail, model.AppConfig.FromMailAuth,
-					`gqchen888@gmail.com`, title, msg)
-				if err != nil {
-					util.Notice(`fail to send mail msg %s %s`, msg, err.Error())
-				}
-			}()
+			if !util.EndWith(symbol, `_PERP`) && !util.EndWith(symbolRelate, `_PERP`) {
+				go func() {
+					err := util.SendMail(model.AppConfig.FromMail, model.AppConfig.FromMailAuth,
+						`gqchen888@gmail.com`, title, msg)
+					if err != nil {
+						util.Notice(`fail to send mail msg %s %s`, msg, err.Error())
+					}
+				}()
+			}
 		}
 	}
 	return
