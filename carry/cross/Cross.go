@@ -202,7 +202,7 @@ func initStatus(account *model.Account, setting *model.Setting) (status *CarrySt
 	} else if marketType == model.MarketTypePerp {
 		status, doRevert = createFromPosition(account, setting, localLimit)
 		_, fundingRate = api.GetFundingRate(account.Key, account.Secret, setting.Market, setting.Symbol)
-		fundingRate *= 0.9
+		fundingRate *= 3.9
 	}
 	if statuses == nil || status == nil {
 		return
