@@ -578,7 +578,7 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarrySta
 	}
 	lineAll := carryStatus.TradeLineSell + carryStatusRelate.TradeLineBuy
 	if (carryStatus.TradeLineSell < score && carryStatusRelate.TradeLineBuy < score) ||
-		(lineAll > 0 && score > 0.6*lineAll) || (lineAll < 0 && score > 0.4*lineAll) {
+		(lineAll > 0 && score > 0.6*lineAll) || (lineAll < 0 && score > 0.4*lineAll) || (lineAll < 0 && score > lineAll && coin == `BABYDOGE`) {
 		statusSell = carryStatus
 		statusBuy = carryStatusRelate
 		priceSell = priceBid
@@ -588,7 +588,7 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarrySta
 	}
 	lineAll = carryStatus.TradeLineBuy + carryStatusRelate.TradeLineSell
 	if (carryStatus.TradeLineBuy < scoreRelate && carryStatusRelate.TradeLineSell < scoreRelate) ||
-		(lineAll > 0 && scoreRelate > 0.6*lineAll) || (lineAll < 0 && scoreRelate > 0.4*lineAll) {
+		(lineAll > 0 && scoreRelate > 0.6*lineAll) || (lineAll < 0 && scoreRelate > 0.4*lineAll) || (lineAll < 0 && scoreRelate > lineAll && coin == `BABYDOGE`) {
 		statusSell = carryStatusRelate
 		statusBuy = carryStatus
 		priceSell = priceBidRelate
