@@ -202,7 +202,9 @@ func initStatus(account *model.Account, setting *model.Setting) (status *CarrySt
 	} else if marketType == model.MarketTypePerp {
 		status, doRevert = createFromPosition(account, setting, localLimit)
 		_, fundingRate = api.GetFundingRate(account.Key, account.Secret, setting.Market, setting.Symbol)
-		fundingRate *= 6.9
+		if fundingRate > 0.005 { // 资金费率大于千分之五的，按照乘以资金费率是千分之几就乘以几
+			fundingRate = 1000 * fundingRate * fundingRate
+		}
 	}
 	if statuses == nil || status == nil {
 		return
