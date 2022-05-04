@@ -580,17 +580,17 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarrySta
 	if score > 0.01 {
 		model.AppMetric.AddCarry(mark, score, 0)
 	}
-	// 根据负资金费率进行权重调整,小于负万五的，负万分之几，就再乘以几
+	// 根据负资金费率进行权重调整,小于负万五的，负千分之几，就再乘以几
 	tradeLineSell := carryStatus.TradeLineSell
 	tradeLineBuy := carryStatus.TradeLineBuy
 	tradeLineSellRelate := carryStatusRelate.TradeLineSell
 	tradeLineBuyRelate := carryStatusRelate.TradeLineBuy
 	if carryStatus.isSpot && !carryStatusRelate.isSpot && carryStatusRelate.FoundingRate < -0.0005 {
-		tradeLineBuyRelate += carryStatusRelate.FoundingRate * 10000 * math.Abs(carryStatusRelate.FoundingRate)
-		tradeLineSellRelate -= carryStatusRelate.FoundingRate * 10000 * math.Abs(carryStatusRelate.FoundingRate)
+		tradeLineBuyRelate += carryStatusRelate.FoundingRate * 1000 * math.Abs(carryStatusRelate.FoundingRate)
+		tradeLineSellRelate -= carryStatusRelate.FoundingRate * 1000 * math.Abs(carryStatusRelate.FoundingRate)
 	} else if !carryStatus.isSpot && carryStatusRelate.isSpot && carryStatus.FoundingRate < -0.0005 {
-		tradeLineBuy += carryStatus.FoundingRate * 10000 * math.Abs(carryStatus.FoundingRate)
-		tradeLineSell -= carryStatus.FoundingRate * 10000 * math.Abs(carryStatus.FoundingRate)
+		tradeLineBuy += carryStatus.FoundingRate * 1000 * math.Abs(carryStatus.FoundingRate)
+		tradeLineSell -= carryStatus.FoundingRate * 1000 * math.Abs(carryStatus.FoundingRate)
 	}
 	lineAll := tradeLineSell + tradeLineBuyRelate
 	if (tradeLineSell < score && tradeLineBuyRelate < score) ||
