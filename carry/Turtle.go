@@ -149,15 +149,7 @@ func GetTurtleData(key, secret string, setting *model.Setting) (turtleData *Turt
 		setting.Chance = 0
 		model.AppDB.Model(setting).Where("market= ? and symbol= ? and function= ?",
 			setting.Market, setting.Symbol, model.FunctionTurtle).Updates(map[string]interface{}{`chance`: 0})
-		go func() {
-			for _, address := range model.TeamMails {
-				err := util.SendMail(model.AppConfig.FromMail, model.AppConfig.FromMailAuth, address, `跨期交割`,
-					setting.Market+turtleData.symbol)
-				if err != nil {
-					util.Notice(`fail to send mail %s`, err.Error())
-				}
-			}
-		}()
+		go api.SendMails(`跨期交割`, setting.Market+turtleData.symbol)
 		channels, _ := model.AppMarkets.WsDepth.Load(setting.Market)
 		if channels != nil {
 			ResetChannels(setting.Market, channels.([]chan struct{}))
@@ -331,15 +323,8 @@ var ProcessTurtle = func(setting *model.Setting, tick *model.BidAsk) {
 		} // 平多
 		if turtleData.breakShort && turtleData.waitBreakShort {
 			handleBreak(account.Key, account.Secret, setting, turtleData, model.OrderSideSell)
-			go func() {
-				for _, address := range model.TeamMails {
-					err := util.SendMail(model.AppConfig.FromMail, model.AppConfig.FromMailAuth, address, `平多`+setting.Market+setting.Symbol,
-						fmt.Sprintf(`止盈止损at%f 仓位%d 数量 %f`, priceShort, setting.Chance, setting.GridAmount))
-					if err != nil {
-						util.Notice(`fail to send mail %s`, err.Error())
-					}
-				}
-			}()
+			go api.SendMails(`平多`+setting.Market+setting.Symbol,
+				fmt.Sprintf(`止盈止损at%f 仓位%d 数量 %f`, priceShort, setting.Chance, setting.GridAmount))
 			turtleClosed[setting.Market][setting.Symbol] = true
 			setting.Chance = 0
 			setting.GridAmount = 0
@@ -382,16 +367,9 @@ var ProcessTurtle = func(setting *model.Setting, tick *model.BidAsk) {
 		} // liquidate short
 		if turtleData.breakLong && turtleData.waitBreakLong {
 			handleBreak(account.Key, account.Secret, setting, turtleData, model.OrderSideBuy)
-			go func() {
-				for _, address := range model.TeamMails {
-					err := util.SendMail(model.AppConfig.FromMail, model.AppConfig.FromMailAuth, address,
-						`平空`+setting.Market+setting.Symbol, fmt.Sprintf(`止盈止损at%f 仓位%d 数量 %f`,
-							priceLong, setting.Chance, setting.GridAmount))
-					if err != nil {
-						util.Notice(`fail to send mail %s`, err.Error())
-					}
-				}
-			}()
+			go api.SendMails(`平空`+setting.Market+setting.Symbol,
+				fmt.Sprintf(`止盈止损at%f 仓位%d 数量 %f`,
+					priceLong, setting.Chance, setting.GridAmount))
 			setting.Chance = 0
 			setting.GridAmount = 0
 			turtleClosed[setting.Market][setting.Symbol] = true

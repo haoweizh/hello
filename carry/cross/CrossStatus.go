@@ -33,7 +33,7 @@ var crossLock sync.Mutex
 var spotMarkets, contractMarkets sync.Map // key - spotMarket/contractMarket
 var carryFail sync.Map                    // key fail num
 var carryStop sync.Map                    // key bool
-var notifyTime sync.Map                   // market_symbol_market_symbol/time
+var notifyTime sync.Map                   // 1. market_symbol_market_symbol/time 2. funding_market_symbol/time
 var crossing bool
 var doCross = false
 
@@ -58,6 +58,7 @@ type CarryStatus struct {
 	market, symbol              string
 	setting                     *model.Setting
 	account                     *model.Account
+	FoundingRate                float64
 	LimitSell, LimitBuy         float64 // 最大可开仓买卖数（有机会），用于cross
 	AvailableSell, AvailableBuy float64 // 最大可买卖数（不管有无机会，能下的数量),用于comp
 	TradeLineBuy, TradeLineSell float64 // 买卖盈利线（可为负数）
@@ -288,10 +289,7 @@ func addCarryResult(key, market, msg string, success bool) {
 		}
 		util.Notice(`----------stop carry %s %d`, key, fails)
 		carryFail.Store(key, 0)
-		for _, address := range model.TeamMails {
-			_ = util.SendMail(model.AppConfig.FromMail, model.AppConfig.FromMailAuth, address,
-				`暂停下单`, market+`msg: `+msg)
-		}
+		go api.SendMails(`暂停下单`, market+`msg: `+msg)
 	} else if fails > 0 {
 		if strings.Trim(msg, ` `) != "" {
 			go pauseCarry(key, 300)

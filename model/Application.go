@@ -12,7 +12,6 @@ import (
 type PostOrder func(order *Order, setting *Setting) // 处理下单后的函数
 var HandlerMap = make(map[string]CarryHandler)
 var infoLock sync.Mutex
-var TeamMails = []string{`13581512402@139.com`, `haoweizh@qq.com`}
 var CarryInfo = make(map[string]map[string]string)                // userKey - function - msg
 var monitorInfo = make(map[string]map[string]map[string][]string) // userKey - table - item - value array
 var AppMetric = &MetricManager{}

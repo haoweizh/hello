@@ -883,6 +883,19 @@ func CreateMarketDepthServer(markets *model.Markets, market string, orderHandler
 	return channels
 }
 
+func SendMails(title, msg string) {
+	toMails := strings.Split(model.AppConfig.Mail, `,`)
+	for _, mail := range toMails {
+		if len(strings.TrimSpace(mail)) == 0 {
+			continue
+		}
+		err := util.SendMail(model.AppConfig.FromMail, model.AppConfig.FromMailAuth, mail, title, msg)
+		if err != nil {
+			util.Notice(`fail to send mail title %s msg %s to %s err %s`, title, msg, mail, err.Error())
+		}
+	}
+}
+
 //func InitCoinBalance(key, secret, function, market string) {
 //	InitMarketInfos()
 //	settings := model.GetSettings(function, market)

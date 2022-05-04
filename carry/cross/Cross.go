@@ -202,13 +202,17 @@ func initStatus(account *model.Account, setting *model.Setting) (status *CarrySt
 	} else if marketType == model.MarketTypePerp {
 		status, doRevert = createFromPosition(account, setting, localLimit)
 		_, fundingRate = api.GetFundingRate(account.Key, account.Secret, setting.Market, setting.Symbol)
-		if fundingRate > 0.005 { // 资金费率大于千分之五的，按照乘以资金费率是千分之几就乘以几
-			fundingRate = 1000 * fundingRate * fundingRate
+		fundingKey := fmt.Sprintf(`funding_%s_%s`, setting.Market, setting.Symbol)
+		fundingTime, ok := notifyTime.Load(fundingKey)
+		if !(ok && fundingTime.(time.Time).Add(time.Minute*60).After(time.Now())) && math.Abs(fundingRate) > 0.001 {
+			notifyTime.Store(fundingKey, time.Now())
+			go api.SendMails(fmt.Sprintf(`%s %f`, fundingKey, fundingRate), ``)
 		}
 	}
 	if statuses == nil || status == nil {
 		return
 	}
+	status.FoundingRate = fundingRate
 	marketInfo := model.GetMarketInfo(setting.Market, setting.Symbol)
 	if marketInfo != nil && marketInfo.SizeMax > 0 {
 		_, amount := model.ParseRealAmount(setting.Market, setting.Symbol, marketInfo.SizeMax)
@@ -499,12 +503,7 @@ func equalCoin(coin string, statuses []*CarryStatus) (isEqual bool, msg string) 
 		minute := time.Now().Minute()
 		second := time.Now().Second()
 		if minute == 0 && second == 0 {
-			msg := fmt.Sprintf(`can not get status for %s when holding %f`, coin, holdingInU)
-			err := util.SendMail(model.AppConfig.FromMail, model.AppConfig.FromMailAuth, model.AppConfig.Mail,
-				`equal error`, msg)
-			if err != nil {
-				util.Notice(`fail to send mail msg %s %s`, msg, err.Error())
-			}
+			go api.SendMails(`equal error`, fmt.Sprintf(`can not get status for %s when holding %f`, coin, holdingInU))
 		}
 	}
 	return
@@ -578,9 +577,21 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarrySta
 	if score > 0.01 {
 		model.AppMetric.AddCarry(mark, score, 0)
 	}
-	lineAll := carryStatus.TradeLineSell + carryStatusRelate.TradeLineBuy
-	if (carryStatus.TradeLineSell < score && carryStatusRelate.TradeLineBuy < score) ||
-		(lineAll > 0 && score > 0.6*lineAll) || (lineAll < 0 && score > 0.4*lineAll) { //|| (lineAll < 0 && score > lineAll && coin == `BABYDOGE`) {
+	// 根据负资金费率进行权重调整,小于负万五的，负万分之几，就再乘以几
+	tradeLineSell := carryStatus.TradeLineSell
+	tradeLineBuy := carryStatus.TradeLineBuy
+	tradeLineSellRelate := carryStatusRelate.TradeLineSell
+	tradeLineBuyRelate := carryStatusRelate.TradeLineBuy
+	if carryStatus.isSpot && !carryStatusRelate.isSpot && carryStatusRelate.FoundingRate < -0.0005 {
+		tradeLineBuyRelate += carryStatusRelate.FoundingRate * 10000 * math.Abs(carryStatusRelate.FoundingRate)
+		tradeLineSellRelate -= carryStatusRelate.FoundingRate * 10000 * math.Abs(carryStatusRelate.FoundingRate)
+	} else if !carryStatus.isSpot && carryStatusRelate.isSpot && carryStatus.FoundingRate < -0.0005 {
+		tradeLineBuy += carryStatus.FoundingRate * 10000 * math.Abs(carryStatus.FoundingRate)
+		tradeLineSell -= carryStatus.FoundingRate * 10000 * math.Abs(carryStatus.FoundingRate)
+	}
+	lineAll := tradeLineSell + tradeLineBuyRelate
+	if (tradeLineSell < score && tradeLineBuyRelate < score) ||
+		(lineAll > 0 && score > 0.6*lineAll) || (lineAll < 0 && score > 0.4*lineAll) {
 		statusSell = carryStatus
 		statusBuy = carryStatusRelate
 		priceSell = priceBid
@@ -588,9 +599,9 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarrySta
 		askAmount = amountBid
 		bidAmount = amountAskRelate
 	}
-	lineAll = carryStatus.TradeLineBuy + carryStatusRelate.TradeLineSell
-	if (carryStatus.TradeLineBuy < scoreRelate && carryStatusRelate.TradeLineSell < scoreRelate) ||
-		(lineAll > 0 && scoreRelate > 0.6*lineAll) || (lineAll < 0 && scoreRelate > 0.4*lineAll) { //|| (lineAll < 0 && scoreRelate > lineAll && coin == `BABYDOGE`) {
+	lineAll = tradeLineBuy + tradeLineSellRelate
+	if (tradeLineBuy < scoreRelate && tradeLineSellRelate < scoreRelate) ||
+		(lineAll > 0 && scoreRelate > 0.6*lineAll) || (lineAll < 0 && scoreRelate > 0.4*lineAll) {
 		statusSell = carryStatusRelate
 		statusBuy = carryStatus
 		priceSell = priceBidRelate
@@ -677,12 +688,7 @@ func checkScoreLimit(market, symbol, marketRelate, symbolRelate string, amount, 
 		if invalid {
 			notifyTime.Store(checkKey, time.Now())
 			notifyTime.Store(checkKeyRelate, time.Now())
-			for _, address := range model.TeamMails {
-				err := util.SendMail(model.AppConfig.FromMail, model.AppConfig.FromMailAuth, address, title, msg)
-				if err != nil {
-					util.Notice(`fail to send mail msg %s %s`, msg, err.Error())
-				}
-			}
+			go api.SendMails(title, msg)
 		} else if score > 0.05 || scoreRelate > 0.05 {
 			notifyTime.Store(checkKey, time.Now())
 			notifyTime.Store(checkKeyRelate, time.Now())
