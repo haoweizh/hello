@@ -324,8 +324,9 @@ func GetFundingRate(key, secret, market, symbol string) (success bool, rate floa
 	case model.BybitSpot:
 		return true, 0
 	case model.Ftx:
-		fundingRate = GetFundingRatesFtx(key, secret, symbol)
-		model.SetFundingRate(market, symbol, fundingRate)
+		return true, 0
+		//fundingRate = GetFundingRatesFtx(key, secret, symbol)
+		//model.SetFundingRate(market, symbol, fundingRate)
 	case model.OKEX:
 		fundingRate = getFundingRateOKEX(key, secret, symbol)
 		model.SetFundingRate(market, symbol, fundingRate)
