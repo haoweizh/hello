@@ -203,7 +203,7 @@ func initStatus(account *model.Account, setting *model.Setting) (status *CarrySt
 		status, doRevert = createFromPosition(account, setting, localLimit)
 		_, fundingRate = api.GetFundingRate(account.Key, account.Secret, setting.Market, setting.Symbol)
 		fundingKey := fmt.Sprintf(`funding_%s_%s`, setting.Market, setting.Symbol)
-		if math.Abs(fundingRate) > 0.002 {
+		if math.Abs(fundingRate) > 0.002 || setting.Market == model.Ftx {
 			util.Notice(`get funding rate %s %s %f`, setting.Market, setting.Symbol, fundingRate)
 		}
 		fundingTime, ok := notifyTime.Load(fundingKey)

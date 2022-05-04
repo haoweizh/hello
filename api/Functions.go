@@ -324,23 +324,8 @@ func GetFundingRate(key, secret, market, symbol string) (success bool, rate floa
 	case model.BybitSpot:
 		return true, 0
 	case model.Ftx:
-		return true, 0
-		//rates := getFundingRatesFtx()
-		//symbolRates := make(map[string][]*model.FundingRate)
-		//for _, rate := range rates {
-		//	if symbolRates[rate.Symbol] == nil {
-		//		symbolRates[rate.Symbol] = make([]*model.FundingRate, 0)
-		//	}
-		//	symbolRates[rate.Symbol] = append(symbolRates[rate.Symbol], rate)
-		//}
-		//duration, _ := time.ParseDuration(`3600s`)
-		//nextHour := now.Add(duration)
-		//nextHour = time.Date(nextHour.Year(), nextHour.Month(), nextHour.Day(),
-		//	nextHour.Hour(), 0, 0, 0, now.Location())
-		//for symbol, value := range symbolRates {
-		//	model.SetFundingRate(market, symbol, value, nextHour.Unix())
-		//}
-		//fundingRate, expireTime = model.GetFundingRate(market, symbol)
+		fundingRate = GetFundingRatesFtx(key, secret, symbol)
+		model.SetFundingRate(market, symbol, fundingRate)
 	case model.OKEX:
 		fundingRate = getFundingRateOKEX(key, secret, symbol)
 		model.SetFundingRate(market, symbol, fundingRate)

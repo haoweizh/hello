@@ -656,22 +656,20 @@ func getMarketsFtx(key, secret string) (marketInfos map[string]*model.MarketInfo
 	return
 }
 
-// getFundingRatesFtx
-func _(key, secret string) (fundingRates []*model.FundingRate) {
+func GetFundingRatesFtx(key, secret, symbol string) (fundingRate *model.FundingRate) {
+	_, _, _, dialectSymbol := model.GetFromStandard(model.Ftx, symbol)
 	response, _ := SignedRequestFtx(key, secret, `GET`,
-		`/funding_rates`, nil, nil)
+		fmt.Sprintf(`/futures/%s/stats`, dialectSymbol), nil, nil)
 	rateJson, err := util.NewJSON(response)
 	if err == nil && rateJson.Get(`result`) != nil {
-		items, _ := rateJson.Get(`result`).Array()
-		fundingRates = make([]*model.FundingRate, len(items))
-		for i, item := range items {
-			value := item.(map[string]interface{})
-			//fundingTime, _ := time.Parse(time.RFC3339, value[`time`].(string))
-			rate, _ := value[`rate`].(json.Number).Float64()
-			fundingRates[i] = &model.FundingRate{Rate: rate}
+		fundingRate = &model.FundingRate{
+			Rate:       rateJson.GetPath(`result`, `nextFundingRate`).MustFloat64(),
+			UpdateTime: time.Now().Unix(),
 		}
+		expireTime, _ := time.ParseInLocation(time.RFC3339, rateJson.GetPath(`result`, `nextFundingTime`).MustString(), time.UTC)
+		fundingRate.ExpireTime = expireTime.Unix()
 	}
-	return fundingRates
+	return fundingRate
 }
 
 func parsePositionFtx(position *model.Position, item map[string]interface{}) {
@@ -830,7 +828,7 @@ func SignedRequestFtx(key, secret, method, path string, param, body map[string]i
 	bodyStr := string(util.JsonEncodeToByte(body))
 	q := u.Query()
 	for k, v := range param {
-		value := v.(string)
+		value := fmt.Sprintf(`%v`, v)
 		if k == `market` {
 			_, _, _, value = model.GetFromStandard(model.Ftx, value)
 		}
