@@ -203,11 +203,8 @@ func initStatus(account *model.Account, setting *model.Setting) (status *CarrySt
 		status, doRevert = createFromPosition(account, setting, localLimit)
 		_, fundingRate = api.GetFundingRate(account.Key, account.Secret, setting.Market, setting.Symbol)
 		fundingKey := fmt.Sprintf(`funding_%s_%s`, setting.Market, setting.Symbol)
-		if math.Abs(fundingRate) > 0.002 {
-			util.Notice(`get funding rate %s %s %f`, setting.Market, setting.Symbol, fundingRate)
-		}
 		fundingTime, ok := notifyTime.Load(fundingKey)
-		if !(ok && fundingTime.(time.Time).Add(time.Minute*60).After(time.Now())) && math.Abs(fundingRate) > 0.002 {
+		if !(ok && fundingTime.(time.Time).Add(time.Minute*60).After(time.Now())) && math.Abs(fundingRate) > 0.005 {
 			notifyTime.Store(fundingKey, time.Now())
 			go api.SendMails(fmt.Sprintf(`%s %f`, fundingKey, fundingRate), ``)
 		}
