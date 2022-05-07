@@ -109,7 +109,7 @@ func reSubscribe(subscribes []interface{}) {
 			setRequireReset(model.OKEX)
 			return
 		} else if success && bidAsk != nil && time.Now().UnixMilli()-int64(bidAsk.Ts) > 30000000 {
-			subArray = append(subArray, map[string]string{`channel`: `books5`, `instId`: dialectSymbol})
+			subArray = append(subArray, map[string]string{`channel`: `bbo-tbt`, `instId`: dialectSymbol})
 			//subArray = append(subArray, map[string]string{`channel`: `books50-l2-tbt`, `instId`: dialectSymbol})
 		}
 	}
@@ -168,7 +168,7 @@ var subscribeHandlerOKEX = func(connection *websocket.Conn, subscribes []interfa
 	subscribeMap["op"] = "subscribe"
 	subArray := make([]map[string]string, 0)
 	for _, subscribe := range subscribes {
-		subArray = append(subArray, map[string]string{`channel`: `books5`, `instId`: subscribe.(string)})
+		subArray = append(subArray, map[string]string{`channel`: `bbo-tbt`, `instId`: subscribe.(string)})
 		//subArray = append(subArray, map[string]string{`channel`: `books50-l2-tbt`, `instId`: subscribe.(string)})
 	}
 	subscribeMap[`args`] = subArray
@@ -195,7 +195,7 @@ func handleMsgOKEX(channel chan *simplejson.Json, symbol string) {
 			if bidAsk != nil {
 				success, bidAsk = handleBooksUpdate(symbol, data, bidAsk)
 			}
-		} else if action == `snapshot` || responseJson.GetPath(`arg`, `channel`).MustString() == `books5` {
+		} else if action == `snapshot` || responseJson.GetPath(`arg`, `channel`).MustString() == `bbo-tbt` {
 			//if action == `snapshot` {
 			//	util.Notice(fmt.Sprintf(`++++ %s initial ticker %v`, symbol, data))
 			//}
