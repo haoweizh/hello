@@ -747,6 +747,9 @@ func InitCrossMarketInfos(markets []string) {
 		marketInfo := GetMarketInfos(market)
 		for _, info := range marketInfo {
 			success, _, coin, _ := model.GetFromStandard(market, info.Name)
+			if coin == `TONCOIN` {
+				util.Notice(fmt.Sprintf("toncoin %s %s", market, info.Name))
+			}
 			if success && coin != `` {
 				if infoPool[coin] == nil {
 					infoPool[coin] = make([]*model.MarketInfo, 0)
@@ -763,7 +766,7 @@ func InitCrossMarketInfos(markets []string) {
 				setting := &model.Setting{Valid: true, Function: model.FunctionCross, Market: info.Market,
 					Symbol: info.Name, Coin: coin, OpenShortMargin: 0.025, CloseShortMargin: 0.025}
 				model.AppDB.Save(setting)
-				fmt.Println(fmt.Sprintf(`save setting %s %s %s %v`, info.Market, info.Name, coin, setting.Valid))
+				util.Notice(fmt.Sprintf(`save setting %s %s %s %v`, info.Market, info.Name, coin, setting.Valid))
 			}
 		}
 	}
