@@ -678,29 +678,28 @@ func GetMarketInfos(market string) (marketInfo map[string]*model.MarketInfo) {
 	return
 }
 
+// 搬砖过滤币种 `AMPL`, `IOTA` REEF
+// 某些主流币 BTC ETH LINK
+// 币种对不上 REAL, DFL, QI, WSB, TRADE,FAME,BIFI,TON,BOX,PAY
+// 法币 GBP CUSDT `TRYB``BRZ``CAD``EUR` `SUSD` `USDC` `TUSD`USDT
+// 平台币 `GT` `FTT` `BNB` `OKB` MX
+// ftx预测`TRUMP``BOLSONARO`
 func filterCross(market, symbol string) bool {
-	// 币种对不上 REAL, DFL, QI, WSB, TRADE,FAME,BIFI,TON,BOX,PAY
-	// 同所搬砖过滤币种 `AMPL`, `IOTA`
-	// 法币 `TRYB``BRZ``CAD``EUR` `SUSD` `USDC` `TUSD`
-	// ftx预测`TRUMP``BOLSONARO`
-	// 平台币 `GT` `FTT` `BNB` `OKB` MX
-	// 指数 DEFI
-	filterCoin := []string{`REEF`, `REAL`, `DFL`, `QI`, `LINK`, `CUSDT`, `ETH`, `BRZ`, `BTC`, `USDT`, `DEFI`,
-		`TRYB`, `AMPL`, `IOTA`, `CAD`, `EUR`, `GBP`, `TRUMP`, `BOLSONARO`, `WSB`, `TRADE`, `OKB`, `GT`, `FTT`, `BNB`,
-		`SUSD`, `USDC`, `TUSD`, `MX`, `FAME`, `BIFI`, `TON`, `BOX`, `PAY`}
-	for _, coin := range filterCoin {
-		if strings.Index(symbol, coin) == 0 {
-			return true
-		}
+	filterCoins := map[string]bool{`AMPL`: true, `IOTA`: true, `REEF`: true, `BTC`: true, `ETH`: true, `LINK`: true,
+		`REAL`: true, `DFL`: true, `QI`: true, `WSB`: true, `TRADE`: true, `FAME`: true, `BIFI`: true, `TON`: true, `BOX`: true, `PAY`: true,
+		`GBP`: true, `CUSDT`: true, `TRYB`: true, `BRZ`: true, `CAD`: true, `EUR`: true, `SUSD`: true, `USDC`: true, `TUSD`: true, `USDT`: true,
+		`GT`: true, `FTT`: true, `BNB`: true, `OKB`: true, `MX`: true, `TRUMP`: true, `BOLSONARO`: true, `DEFI`: true}
+	_, _, coin, _ := model.GetFromStandard(market, symbol)
+	if filterCoins[coin] {
+		return true
 	}
 	// ftx波动率产品
-	filterWord := []string{`IBVOL`, `BVOL`, `MOVE`, `BEAR`, `BULL`, `HEDGE`, `HALF`}
+	filterWord := []string{`IBVOL`, `BVOL`, `MOVE`, `BEAR`, `BULL`, `HEDGE`, `HALF`, `EDFIBULL`, `DEFIHEDGE`, `DEIFHALF`, `DEFIBEAR`}
 	for _, word := range filterWord {
 		if strings.Contains(symbol, word) {
 			return true
 		}
 	}
-	_, _, coin, _ := model.GetFromStandard(market, symbol)
 	switch market {
 	case model.Ftx:
 		switch coin {
@@ -747,9 +746,6 @@ func InitCrossMarketInfos(markets []string) {
 		marketInfo := GetMarketInfos(market)
 		for _, info := range marketInfo {
 			success, _, coin, _ := model.GetFromStandard(market, info.Name)
-			if coin == `TONCOIN` {
-				util.Notice(fmt.Sprintf("toncoin %s %s", market, info.Name))
-			}
 			if success && coin != `` {
 				if infoPool[coin] == nil {
 					infoPool[coin] = make([]*model.MarketInfo, 0)
