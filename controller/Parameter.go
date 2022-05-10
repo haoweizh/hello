@@ -23,6 +23,7 @@ var code = ``
 
 func ParameterServe() {
 	router := gin.Default()
+	_ = router.SetTrustedProxies(nil)
 	router.LoadHTMLGlob("templates/*")
 	router.GET("/", GetParameters)
 	router.GET(`refresh`, RefreshParameters)
