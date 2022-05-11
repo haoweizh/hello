@@ -557,7 +557,7 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarryStatus, tick,
 	tickRelate *model.BidAsk) (statusBuy, statusSell *CarryStatus, amount, priceBuy, priceSell float64) {
 	now := time.Now()
-	if now.Hour()%8 == 0 && now.Minute() == 0 && now.Second() < 30 {
+	if now.Minute() <= 2 {
 		return
 	}
 	stopStatus, okStatus := carryStop.Load(carryStatus.account.Key)
