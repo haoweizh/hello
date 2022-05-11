@@ -212,7 +212,7 @@ func initStatus(account *model.Account, setting *model.Setting) (status *CarrySt
 			go api.SendMails(fmt.Sprintf(`%s %f`, fundingKey, fundingRate), ``)
 		}
 	}
-	if statuses == nil || status == nil {
+	if status == nil {
 		return
 	}
 	status.FoundingRate = fundingRate
@@ -261,7 +261,7 @@ func initStatus(account *model.Account, setting *model.Setting) (status *CarrySt
 			status.TradeLineSell = 1
 		}
 	}
-	setCarryStatus(setting.Coin, setting.Market, setting.Symbol, account.Key, status)
+	carryStatusMap.Store(fmt.Sprintf(`%s*%s*%s*%s`, setting.Coin, setting.Market, setting.Symbol, account.Key), status)
 	return
 }
 
@@ -540,12 +540,15 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 			if account == nil || accountRelate == nil {
 				continue
 			}
-			status := getCarryStatus(setting.Coin, setting.Market, setting.Symbol, account.Key)
-			statusRelate := getCarryStatus(settingRelate.Coin, settingRelate.Market, settingRelate.Symbol, accountRelate.Key)
-			if status == nil || statusRelate == nil || status == statusRelate {
+			status, okStatus := carryStatusMap.Load(fmt.Sprintf(`%s*%s*%s*%s`, setting.Coin, setting.Market, setting.Symbol, account.Key))
+			//status := getCarryStatus(setting.Coin, setting.Market, setting.Symbol, account.Key)
+			statusRelate, okRelate := carryStatusMap.Load(fmt.Sprintf(`%s*%s*%s*%s`, settingRelate.Coin, settingRelate.Market, settingRelate.Symbol, accountRelate.Key))
+			//statusRelate := getCarryStatus(settingRelate.Coin, settingRelate.Market, settingRelate.Symbol, accountRelate.Key)
+			if status == nil || statusRelate == nil || status == statusRelate || !okStatus || !okRelate {
 				continue
 			}
-			statusBuy, statusSell, amount, priceBuy, priceSell := calcAmount(i, setting.Coin, status, statusRelate, tick, tickRelate)
+			statusBuy, statusSell, amount, priceBuy, priceSell := calcAmount(i, setting.Coin, status.(*CarryStatus),
+				statusRelate.(*CarryStatus), tick, tickRelate)
 			if amount > 0 {
 				placeCross(statusBuy, statusSell, priceBuy, priceSell, amount)
 				return
@@ -911,11 +914,11 @@ var PostOrderCross = func(order *model.Order, setting *model.Setting) {
 			case model.OKEX:
 				if InsufficientCodeOKEX[order.ErrCode] {
 					util.Notice(`reset %s trade max with %s %s`, order.Market, order.ErrCode, order.AmountType)
-					status := getCarryStatus(setting.Coin, setting.Market, setting.Symbol, account.Key)
+					status, ok := carryStatusMap.Load(fmt.Sprintf(`%s*%s*%s*%s`, setting.Coin, setting.Market, setting.Symbol, account.Key))
 					getMax, maxBuy, maxSell := api.GetTradeMaxOKEX(account.Key, account.Secret, setting.Symbol, 0)
-					if getMax {
-						status.LimitSell = math.Min(status.LimitSell, maxSell)
-						status.LimitBuy = math.Min(status.LimitBuy, maxBuy)
+					if getMax && ok {
+						status.(*CarryStatus).LimitSell = math.Min(status.(*CarryStatus).LimitSell, maxSell)
+						status.(*CarryStatus).LimitBuy = math.Min(status.(*CarryStatus).LimitBuy, maxBuy)
 					}
 					unknownFail = false
 				}

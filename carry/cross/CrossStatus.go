@@ -25,12 +25,13 @@ var validCrossCoin = map[string][]string{model.BinanceSpot: {`TORN`},
 										model.Gate: {`AE`, `HC`, `REEF`, `ONE`, `LSK`, `GLMR`, `LEASH`, `KDA`, `BLOK`},
 										model.OKEX: {`AE`, `HC`, `ORBS`, `ONE`, `LSK`, `GLMR`, `LEASH`, `KLAY`, `KDA`, `BLOK`, `TORN`},
 										model.Ftx:  {`REEF`, `ORBS`, `ONE`}, model.BybitPerp: {`KLAY`}}
-var lastOrderIndex = make(map[string]map[string]int64)                        // market - symbol - index
-var lastOrders = make(map[string]map[string][]*model.Order, lastOrderLength)  // market - symbol - []order
-var statuses = make(map[string]map[string]map[string]map[string]*CarryStatus) // coin/market/symbol/key/CarryStatus
-var lastCrosses map[string]map[string]string                                  // key/market/symbol
-var lockCrossing, lockLastCarry, lockCarryStatus, lockHoldings, lockLastCross sync.Mutex
+var lastOrderIndex = make(map[string]map[string]int64)                       // market - symbol - index
+var lastOrders = make(map[string]map[string][]*model.Order, lastOrderLength) // market - symbol - []order
+//var statuses = make(map[string]map[string]map[string]map[string]*CarryStatus) // coin/market/symbol/key/CarryStatus
+var lastCrosses map[string]map[string]string // key/market/symbol
+var lockCrossing, lockLastCarry, lockHoldings, lockLastCross sync.Mutex
 var spotMarkets, contractMarkets sync.Map // key - spotMarket/contractMarket
+var carryStatusMap sync.Map               // coin*market*symbol*key / CarryStatus
 var carryFail sync.Map                    // key fail num
 var carryStop sync.Map                    // key bool
 var notifyTime sync.Map                   // 1. market_symbol_market_symbol/time 2. funding_market_symbol/time
@@ -230,30 +231,6 @@ func GetCrossMarketValue(key string) (market string, inAllSpot, contractAccountV
 		holdingFuture = cm.contractValueInU
 	}
 	return
-}
-
-func getCarryStatus(coin, market, symbol, key string) *CarryStatus {
-	lockCarryStatus.Lock()
-	defer lockCarryStatus.Unlock()
-	if statuses[coin] == nil || statuses[coin][market] == nil || statuses[coin][market][symbol] == nil {
-		return nil
-	}
-	return statuses[coin][market][symbol][key]
-}
-
-func setCarryStatus(coin, market, symbol, key string, status *CarryStatus) {
-	lockCarryStatus.Lock()
-	defer lockCarryStatus.Unlock()
-	if statuses[coin] == nil {
-		statuses[coin] = make(map[string]map[string]map[string]*CarryStatus)
-	}
-	if statuses[coin][market] == nil {
-		statuses[coin][market] = make(map[string]map[string]*CarryStatus)
-	}
-	if statuses[coin][market][symbol] == nil {
-		statuses[coin][market][symbol] = make(map[string]*CarryStatus)
-	}
-	statuses[coin][market][symbol][key] = status
 }
 
 func pauseCarry(key string, seconds int) {
