@@ -379,7 +379,9 @@ func equalCoin(coin string, statuses []*CarryStatus) (isEqual bool, msg string) 
 		getTick, tick := model.AppMarkets.GetBidAsk(status.symbol, status.market)
 		getFunding, rate := api.GetFundingRate(status.account.Key, status.account.Secret, status.market, status.symbol)
 		if !getTick || !getFunding {
-			return false, fmt.Sprintf(`no tick or funding rate when equal %s %s`, status.market, status.symbol)
+			errMsg := fmt.Sprintf(`no tick or funding rate when equal %s %s`, status.market, status.symbol)
+			util.Notice(errMsg)
+			return false, errMsg
 		}
 		tickTimes[status.market+status.symbol] = tick.Ts
 		bids = append(bids, model.Tick{Market: tick.Bids[0].Market, Symbol: tick.Bids[0].Symbol,
