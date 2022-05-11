@@ -381,8 +381,6 @@ func equalCoin(coin string, statuses []*CarryStatus) (isEqual bool, msg string) 
 		getFunding, rate := api.GetFundingRate(status.account.Key, status.account.Secret, status.market, status.symbol)
 		if !getTick || !getFunding {
 			noTicks += coin + status.market
-			errMsg := fmt.Sprintf(`no tick or funding rate when equal %s %s`, status.market, status.symbol)
-			util.Notice(errMsg)
 			continue
 		}
 		tickTimes[status.market+status.symbol] = tick.Ts
@@ -696,15 +694,15 @@ func checkScoreLimit(market, symbol, marketRelate, symbolRelate string, amount, 
 		} else if score > 0.05 || scoreRelate > 0.05 {
 			notifyTime.Store(checkKey, time.Now())
 			notifyTime.Store(checkKeyRelate, time.Now())
-			if !util.EndWith(symbol, `_PERP`) && !util.EndWith(symbolRelate, `_PERP`) {
-				go func() {
-					err := util.SendMail(model.AppConfig.FromMail, model.AppConfig.FromMailAuth,
-						`gqchen888@gmail.com`, title, msg)
-					if err != nil {
-						util.Notice(`fail to send mail msg %s %s`, msg, err.Error())
-					}
-				}()
-			}
+			//if !util.EndWith(symbol, `_PERP`) && !util.EndWith(symbolRelate, `_PERP`) {
+			//	go func() {
+			//		err := util.SendMail(model.AppConfig.FromMail, model.AppConfig.FromMailAuth,
+			//			`gqchen888@gmail.com`, title, msg)
+			//		if err != nil {
+			//			util.Notice(`fail to send mail msg %s %s`, msg, err.Error())
+			//		}
+			//	}()
+			//}
 		}
 	}
 	return
