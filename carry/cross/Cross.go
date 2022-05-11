@@ -267,19 +267,20 @@ func initStatus(account *model.Account, setting *model.Setting) (status *CarrySt
 
 func ClearCross() {
 	for doCross {
+		for true {
+			if !checkSetCrossing(true) {
+				break
+			} else {
+				time.Sleep(time.Millisecond * 200)
+			}
+		}
 		equalAccounts()
+		checkSetCrossing(false)
 		time.Sleep(time.Minute * 2)
 	}
 }
 
 func equalAccounts() {
-	for true {
-		if !checkSetCrossing(true) {
-			break
-		} else {
-			time.Sleep(time.Millisecond * 200)
-		}
-	}
 	util.Notice(`...... enter clearing cross all`)
 	coinSettings := model.GetCoinSettings(model.FunctionCross)
 	waitEqual := make(map[int]bool)
@@ -322,7 +323,6 @@ func equalAccounts() {
 			break
 		}
 	}
-	checkSetCrossing(false)
 	util.Notice(`...... exit clearing cross all`)
 }
 
@@ -807,7 +807,12 @@ func placeCross(statusBuy, statusSell *CarryStatus, priceBuy, priceSell, amount 
 	buyCount := api.GetCrossCount(statusBuy.account.Key, statusBuy.market, statusBuy.symbol)
 	sellCount := api.GetCrossCount(statusSell.account.Key, statusSell.market, statusSell.symbol)
 	if buyCount > 10 || sellCount > 10 {
-		equalAccounts()
+		if !checkSetCrossing(true) {
+			go equalAccounts()
+			checkSetCrossing(false)
+		} else {
+			time.Sleep(time.Millisecond * 200)
+		}
 		api.ClearCrossCount()
 		util.Notice(fmt.Sprintf(`cross count %s %s %s %d %s %s %d trigger equal all accounts`,
 			statusBuy.account.Key, statusBuy.market, statusBuy.symbol, buyCount, statusSell.market, statusSell.symbol, sellCount))
