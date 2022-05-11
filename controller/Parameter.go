@@ -26,7 +26,7 @@ func ParameterServe() {
 	router := gin.Default()
 	_ = router.SetTrustedProxies(nil)
 	router.LoadHTMLGlob("templates/*")
-	router.GET("/", GetParameters)
+	//router.GET("/", GetParameters)
 	router.GET(`refresh`, RefreshParameters)
 	router.GET(`pw`, GetCode)
 	router.GET(`cross`, crossPage)
@@ -250,7 +250,8 @@ func GetCode(c *gin.Context) {
 	}
 }
 
-func GetParameters(c *gin.Context) {
+// GetParameters
+func _(c *gin.Context) {
 	msg := ``
 	markets := model.GetMarkets()
 	userKeys := make([]string, 0)
