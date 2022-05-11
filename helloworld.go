@@ -8,14 +8,16 @@ import (
 	"hello/controller"
 	"hello/model"
 	"hello/util"
-	"log"
 	"net/http"
 	_ "net/http/pprof"
 )
 
 func main() {
 	go func() {
-		log.Println(http.ListenAndServe("localhost:8081", nil))
+		err := http.ListenAndServe("0.0.0.0:8081", nil)
+		if err != nil {
+			return
+		}
 	}()
 	model.NewConfig()
 	var err error
