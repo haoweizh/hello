@@ -260,7 +260,7 @@ func GetParameters(c *gin.Context) {
 		settingMap := model.GetSettings(model.FunctionTurtle, market)
 		msg += fmt.Sprintf("海龟币种：%s \n", market)
 		for symbol, setting := range settingMap {
-			if setting == nil {
+			if setting == nil || setting.Function != model.FunctionTurtle {
 				continue
 			}
 			turtleData := carry.GetTurtleData(account.Key, account.Secret, setting)
