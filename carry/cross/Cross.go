@@ -807,7 +807,7 @@ func placeCross(statusBuy, statusSell *CarryStatus, priceBuy, priceSell, amount 
 	buyCount := api.GetCrossCount(statusBuy.account.Key, statusBuy.market, statusBuy.symbol)
 	sellCount := api.GetCrossCount(statusSell.account.Key, statusSell.market, statusSell.symbol)
 	if buyCount > 10 || sellCount > 10 {
-		go equalAccounts()
+		equalAccounts()
 		api.ClearCrossCount()
 		util.Notice(fmt.Sprintf(`cross count %s %s %s %d %s %s %d trigger equal all accounts`,
 			statusBuy.account.Key, statusBuy.market, statusBuy.symbol, buyCount, statusSell.market, statusSell.symbol, sellCount))
