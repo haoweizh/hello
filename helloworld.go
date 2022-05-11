@@ -8,16 +8,17 @@ import (
 	"hello/controller"
 	"hello/model"
 	"hello/util"
-	//_ "net/http/pprof"
+	"net/http"
+	_ "net/http/pprof"
 )
 
 func main() {
-	//go func() {
-	//	err := http.ListenAndServe("0.0.0.0:8081", nil)
-	//	if err != nil {
-	//		return
-	//	}
-	//}()
+	go func() {
+		err := http.ListenAndServe("0.0.0.0:8081", nil)
+		if err != nil {
+			return
+		}
+	}()
 	model.NewConfig()
 	var err error
 	model.AppDB, err = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
