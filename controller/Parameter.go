@@ -22,8 +22,8 @@ var codeGenTime int64
 var code = ``
 
 func ParameterServe() {
-	router := gin.Default()
 	gin.SetMode(gin.ReleaseMode)
+	router := gin.Default()
 	_ = router.SetTrustedProxies(nil)
 	router.LoadHTMLGlob("templates/*")
 	router.GET("/", GetParameters)
