@@ -287,7 +287,7 @@ func GetParameters(c *gin.Context) {
 		}
 		turtleRows.Close()
 	}
-	msg += model.AppMetric.ToString()
+	msg += model.AppMetric.ToString()[:1024]
 	util.Notice(`finish web ` + msg)
 	c.String(http.StatusOK, msg)
 }
