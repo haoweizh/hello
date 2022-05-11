@@ -372,7 +372,7 @@ func equalCoin(coin string, statuses []*CarryStatus) (isEqual bool, msg string) 
 	for _, status := range statuses {
 		if status == nil {
 			util.Notice(`warning: fail to get one status %s`, coin)
-			return false, `fail to equal for one nil status`
+			continue
 		}
 		holding += status.Holding
 		holdStr += fmt.Sprintf(`[%s %s %f]`, status.market, status.symbol, status.Holding)
