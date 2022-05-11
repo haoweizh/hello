@@ -269,6 +269,7 @@ func GetParameters(c *gin.Context) {
 		}
 		msg += "\n"
 	}
+	util.Notice(`finish print turtle settings`)
 	setting := model.GetSetting(model.FunctionGrid, model.Ftx, `LINK-PERP`)
 	if setting != nil {
 		msg += fmt.Sprintf("%s %s %s %f\n", setting.Function, setting.Market, setting.Symbol, setting.GridAmount)
@@ -287,6 +288,7 @@ func GetParameters(c *gin.Context) {
 		turtleRows.Close()
 	}
 	msg += model.AppMetric.ToString()
+	util.Notice(`finish web ` + msg)
 	c.String(http.StatusOK, msg)
 }
 
