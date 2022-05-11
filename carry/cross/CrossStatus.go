@@ -29,7 +29,7 @@ var lastOrderIndex = make(map[string]map[string]int64)                        //
 var lastOrders = make(map[string]map[string][]*model.Order, lastOrderLength)  // market - symbol - []order
 var statuses = make(map[string]map[string]map[string]map[string]*CarryStatus) // coin/market/symbol/key/CarryStatus
 var lastCrosses map[string]map[string]string                                  // key/market/symbol
-var crossLock sync.Mutex
+var lockCrossing, lockLastCarry, lockCarryStatus, lockHoldings, lockLastCross sync.Mutex
 var spotMarkets, contractMarkets sync.Map // key - spotMarket/contractMarket
 var carryFail sync.Map                    // key fail num
 var carryStop sync.Map                    // key bool
@@ -80,8 +80,8 @@ func isValidSymbol(market, symbol string) bool {
 }
 
 func isLastCross(key, market, symbol string) bool {
-	defer crossLock.Unlock()
-	crossLock.Lock()
+	defer lockLastCross.Unlock()
+	lockLastCross.Lock()
 	if lastCrosses == nil || lastCrosses[key] == nil || len(lastCrosses) == 0 {
 		return true
 	}
@@ -92,8 +92,8 @@ func isLastCross(key, market, symbol string) bool {
 }
 
 func setLastCross(key, market, symbol string) {
-	defer crossLock.Unlock()
-	crossLock.Lock()
+	defer lockLastCross.Unlock()
+	lockLastCross.Lock()
 	if lastCrosses == nil {
 		lastCrosses = make(map[string]map[string]string)
 	}
@@ -104,8 +104,8 @@ func setLastCross(key, market, symbol string) {
 }
 
 func getLastCrosses(key string) (crosses map[string]string) {
-	defer crossLock.Unlock()
-	crossLock.Lock()
+	defer lockLastCross.Unlock()
+	lockLastCross.Lock()
 	if lastCrosses == nil {
 		return nil
 	}
@@ -113,8 +113,8 @@ func getLastCrosses(key string) (crosses map[string]string) {
 }
 
 func setLastCrosses(key string, crosses map[string]string) {
-	defer crossLock.Unlock()
-	crossLock.Lock()
+	defer lockLastCross.Unlock()
+	lockLastCross.Lock()
 	if lastCrosses == nil {
 		lastCrosses = make(map[string]map[string]string)
 	}
@@ -122,8 +122,8 @@ func setLastCrosses(key string, crosses map[string]string) {
 }
 
 func GetHoldings(accounts map[string]*model.Account) (holding [][]interface{}) {
-	defer crossLock.Unlock()
-	crossLock.Lock()
+	defer lockHoldings.Unlock()
+	lockHoldings.Lock()
 	holding = make([][]interface{}, 0)
 	coinHold := make(map[string]float64)
 	coinPrice := make(map[string]float64)
@@ -233,8 +233,8 @@ func GetCrossMarketValue(key string) (market string, inAllSpot, contractAccountV
 }
 
 func getCarryStatus(coin, market, symbol, key string) *CarryStatus {
-	crossLock.Lock()
-	defer crossLock.Unlock()
+	lockCarryStatus.Lock()
+	defer lockCarryStatus.Unlock()
 	if statuses[coin] == nil || statuses[coin][market] == nil || statuses[coin][market][symbol] == nil {
 		return nil
 	}
@@ -242,8 +242,8 @@ func getCarryStatus(coin, market, symbol, key string) *CarryStatus {
 }
 
 func setCarryStatus(coin, market, symbol, key string, status *CarryStatus) {
-	crossLock.Lock()
-	defer crossLock.Unlock()
+	lockCarryStatus.Lock()
+	defer lockCarryStatus.Unlock()
 	if statuses[coin] == nil {
 		statuses[coin] = make(map[string]map[string]map[string]*CarryStatus)
 	}
@@ -299,8 +299,8 @@ func addCarryResult(key, market, msg string, success bool) {
 }
 
 func addLastCarry(order *model.Order, setting *model.Setting) {
-	crossLock.Lock()
-	defer crossLock.Unlock()
+	lockLastCarry.Lock()
+	defer lockLastCarry.Unlock()
 	if order == nil || setting == nil {
 		return
 	}

@@ -13,8 +13,8 @@ import (
 )
 
 func checkSetCrossing(value bool) (before bool) {
-	crossLock.Lock()
-	defer crossLock.Unlock()
+	lockCrossing.Lock()
+	defer lockCrossing.Unlock()
 	if value && crossing {
 		return crossing
 	} else {
