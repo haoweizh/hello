@@ -202,9 +202,6 @@ func initStatus(account *model.Account, setting *model.Setting) (status *CarrySt
 	} else if marketType == model.MarketTypePerp {
 		status, doRevert = createFromPosition(account, setting, localLimit)
 		_, fundingRate = api.GetFundingRate(account.Key, account.Secret, setting.Market, setting.Symbol)
-		if setting.Market == model.Ftx {
-			fundingRate *= 5
-		}
 		fundingKey := fmt.Sprintf(`funding_%s_%s`, setting.Market, setting.Symbol)
 		fundingTime, ok := notifyTime.Load(fundingKey)
 		if !(ok && fundingTime.(time.Time).Add(time.Minute*60).After(time.Now())) && math.Abs(fundingRate) > 0.005 {
