@@ -26,8 +26,7 @@ func ParameterServe() {
 	router := gin.Default()
 	_ = router.SetTrustedProxies(nil)
 	router.LoadHTMLGlob("templates/*")
-	router.GET(`/`, empty)
-	router.GET(`turtle`, GetParameters)
+	router.GET("/", GetParameters)
 	router.GET(`refresh`, RefreshParameters)
 	router.GET(`pw`, GetCode)
 	router.GET(`cross`, crossPage)
@@ -47,10 +46,6 @@ func ParameterServe() {
 		fmt.Println(`port occupied, exit ` + err.Error())
 		os.Exit(1)
 	}
-}
-
-func empty(c *gin.Context) {
-	c.String(http.StatusOK, fmt.Sprintf(`success`))
 }
 
 func WsPage(c *gin.Context) {
