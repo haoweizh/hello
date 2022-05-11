@@ -202,6 +202,9 @@ func initStatus(account *model.Account, setting *model.Setting) (status *CarrySt
 	} else if marketType == model.MarketTypePerp {
 		status, doRevert = createFromPosition(account, setting, localLimit)
 		_, fundingRate = api.GetFundingRate(account.Key, account.Secret, setting.Market, setting.Symbol)
+		if setting.Market == model.Ftx {
+			fundingRate *= 5
+		}
 		fundingKey := fmt.Sprintf(`funding_%s_%s`, setting.Market, setting.Symbol)
 		fundingTime, ok := notifyTime.Load(fundingKey)
 		if !(ok && fundingTime.(time.Time).Add(time.Minute*60).After(time.Now())) && math.Abs(fundingRate) > 0.005 {
@@ -584,10 +587,10 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarrySta
 	tradeLineBuy := carryStatus.TradeLineBuy
 	tradeLineSellRelate := carryStatusRelate.TradeLineSell
 	tradeLineBuyRelate := carryStatusRelate.TradeLineBuy
-	if carryStatus.isSpot && !carryStatusRelate.isSpot && carryStatusRelate.FoundingRate < -0.0005 {
+	if carryStatus.isSpot && !carryStatusRelate.isSpot && carryStatusRelate.market != model.Ftx && carryStatusRelate.FoundingRate < -0.0005 {
 		tradeLineBuyRelate += carryStatusRelate.FoundingRate * 1000 * math.Abs(carryStatusRelate.FoundingRate)
 		tradeLineSellRelate -= carryStatusRelate.FoundingRate * 1000 * math.Abs(carryStatusRelate.FoundingRate)
-	} else if !carryStatus.isSpot && carryStatusRelate.isSpot && carryStatus.FoundingRate < -0.0005 {
+	} else if !carryStatus.isSpot && carryStatus.market != model.Ftx && carryStatusRelate.isSpot && carryStatus.FoundingRate < -0.0005 {
 		tradeLineBuy += carryStatus.FoundingRate * 1000 * math.Abs(carryStatus.FoundingRate)
 		tradeLineSell -= carryStatus.FoundingRate * 1000 * math.Abs(carryStatus.FoundingRate)
 	}
