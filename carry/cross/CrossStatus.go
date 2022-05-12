@@ -30,6 +30,7 @@ var lastOrders = make(map[string]map[string][]*model.Order, lastOrderLength) // 
 //var statuses = make(map[string]map[string]map[string]map[string]*CarryStatus) // coin/market/symbol/key/CarryStatus
 var lastCrosses map[string]map[string]string // key/market/symbol
 var lockCrossing, lockLastCarry, lockHoldings, lockLastCross sync.Mutex
+var crossCount sync.Map                   // coin*账户索引 / 搬砖count
 var spotMarkets, contractMarkets sync.Map // key - spotMarket/contractMarket
 var carryStatusMap sync.Map               // coin*market*symbol*key / CarryStatus
 var carryFail sync.Map                    // key fail num

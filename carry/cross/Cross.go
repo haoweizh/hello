@@ -327,6 +327,9 @@ func equalAccount(i int, equalChan chan int, accounts map[string]*model.Account,
 	needEqual := false
 	keys := ``
 	for _, account := range accounts {
+		if account.Index != i {
+			continue
+		}
 		spotMarkets.Delete(account.Key)
 		contractMarkets.Delete(account.Key)
 		keys += account.Key + `,`
@@ -804,22 +807,24 @@ func placeCross(statusBuy, statusSell *CarryStatus, priceBuy, priceSell, amount 
 	}
 	placeStatus(statusBuy, priceBuy, amount)
 	placeStatus(statusSell, priceSell, -1*amount)
-	buyCount := api.GetCrossCount(statusBuy.account.Key, statusBuy.market, statusBuy.symbol)
-	sellCount := api.GetCrossCount(statusSell.account.Key, statusSell.market, statusSell.symbol)
-	if buyCount > 10 || sellCount > 10 {
-		if !checkSetCrossing(true) {
-			go equalAccounts()
-			checkSetCrossing(false)
-		} else {
-			time.Sleep(time.Millisecond * 200)
-		}
-		api.ClearCrossCount()
-		util.Notice(fmt.Sprintf(`cross count %s %s %s %d %s %s %d trigger equal all accounts`,
-			statusBuy.account.Key, statusBuy.market, statusBuy.symbol, buyCount, statusSell.market, statusSell.symbol, sellCount))
-	} else {
-		api.SetCrossCount(statusBuy.account.Key, statusBuy.market, statusBuy.symbol, buyCount+1)
-		api.SetCrossCount(statusSell.account.Key, statusSell.market, statusSell.symbol, sellCount+1)
-	}
+	//_, _, coin, _ := model.GetFromStandard(statusBuy.market, statusBuy.symbol)
+	//value, ok := crossCount.Load(fmt.Sprintf(`%s*%d`, coin, statusBuy.account.Index))
+	//buyCount := api.GetCrossCount(statusBuy.account.Key, statusBuy.market, statusBuy.symbol)
+	//sellCount := api.GetCrossCount(statusSell.account.Key, statusSell.market, statusSell.symbol)
+	//if buyCount > 10 || sellCount > 10 {
+	//	if !checkSetCrossing(true) {
+	//		go equalAccounts()
+	//		checkSetCrossing(false)
+	//	} else {
+	//		time.Sleep(time.Millisecond * 200)
+	//	}
+	//	api.ClearCrossCount()
+	//	util.Notice(fmt.Sprintf(`cross count %s %s %s %d %s %s %d trigger equal all accounts`,
+	//		statusBuy.account.Key, statusBuy.market, statusBuy.symbol, buyCount, statusSell.market, statusSell.symbol, sellCount))
+	//} else {
+	//	api.SetCrossCount(statusBuy.account.Key, statusBuy.market, statusBuy.symbol, buyCount+1)
+	//	api.SetCrossCount(statusSell.account.Key, statusSell.market, statusSell.symbol, sellCount+1)
+	//}
 }
 
 func placeStatus(status *CarryStatus, price float64, amount float64) {
