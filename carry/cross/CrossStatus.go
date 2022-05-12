@@ -152,11 +152,6 @@ func GetHoldings(accounts map[string]*model.Account) (holding [][]interface{}) {
 					setting := model.GetSetting(model.FunctionCross, balance.Market, symbol)
 					if setting != nil {
 						valid = setting.Valid
-						if !valid {
-							util.Notice(`invalid setting %s %s`, balance.Market, symbol)
-						}
-					} else {
-						util.Notice(`no setting from db %s %s`, balance.Market, symbol)
 					}
 					holding = append(holding, []interface{}{balance.Market, balance.Coin, symbol,
 						fmt.Sprintf(`%.2f`, balance.Amount), math.Round(balance.UsdValue), valid})
@@ -178,11 +173,6 @@ func GetHoldings(accounts map[string]*model.Account) (holding [][]interface{}) {
 				setting := model.GetSetting(model.FunctionCross, position.Market, position.Currency)
 				if setting != nil {
 					valid = setting.Valid
-					if !valid {
-						util.Notice(`invalid setting %s %s`, position.Market, position.Currency)
-					}
-				} else {
-					util.Notice(`no setting from db %s %s`, position.Market, position.Currency)
 				}
 				tickGet, tick := model.AppMarkets.GetBidAsk(position.Currency, position.Market)
 				if position != nil && position.Holding != 0 {
