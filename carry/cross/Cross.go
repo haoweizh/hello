@@ -586,6 +586,11 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarrySta
 	amountAsk := tick.Asks[0].Amount
 	score := 1 - priceAskRelate/priceBid
 	scoreRelate := priceBidRelate/priceAsk - 1
+	if math.Abs(score) > 1 || math.Abs(scoreRelate) > 1 {
+		util.Notice(fmt.Sprintf(`%s %s %s %s %f %f %f %f`,
+			carryStatus.market, carryStatus.symbol, carryStatusRelate.market, carryStatusRelate.symbol,
+			priceAskRelate, priceBid, priceBidRelate, priceBuy))
+	}
 	mark := fmt.Sprintf(`%s_%s|%s_%s`, carryStatus.market, carryStatus.symbol, carryStatusRelate.market, carryStatusRelate.symbol)
 	if score > 0.01 {
 		model.AppMetric.AddCarry(mark, score, 0)
