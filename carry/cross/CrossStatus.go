@@ -15,6 +15,8 @@ const lowestScore = -0.03
 const lastOrderLength = 8
 const holdingLimitInU = 500000.0
 const openValueLimit = 10000.0
+const compLimitInU = 50000.0
+const crossLimitInU = 10000.0
 const InsufficientCodeBinance = `-2010`
 
 var InsufficientCodeOKEX = map[string]bool{`51008`: true, `51119`: true, `51120`: true, `51131`: true, `51502`: true,
@@ -30,7 +32,8 @@ var lastOrders = make(map[string]map[string][]*model.Order, lastOrderLength) // 
 //var statuses = make(map[string]map[string]map[string]map[string]*CarryStatus) // coin/market/symbol/key/CarryStatus
 var lastCrosses map[string]map[string]string // key/market/symbol
 var lockCrossing, lockLastCarry, lockHoldings, lockLastCross sync.Mutex
-var crossCount sync.Map                   // coin*账户索引 / 搬砖count
+
+//var crossCount sync.Map                   // coin*账户索引 / 搬砖count
 var spotMarkets, contractMarkets sync.Map // key - spotMarket/contractMarket
 var carryStatusMap sync.Map               // coin*market*symbol*key / CarryStatus
 var carryFail sync.Map                    // key fail num

@@ -471,6 +471,7 @@ func equalCoin(coin string, statuses []*CarryStatus) (isEqual bool, msg string) 
 	}
 	if equalStatus != nil {
 		amount := math.Abs(holding)
+		amount = math.Min(amount, compLimitInU/price)
 		if equalStatus.market == model.Ftx {
 			amount = math.Min(90000000, math.Abs(holding))
 		}
@@ -671,6 +672,7 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarrySta
 	}
 	amount = math.Min(math.Min(statusBuy.LimitBuy, bidAmount), math.Min(statusSell.LimitSell, askAmount))
 	if amount > 0 {
+		amount = math.Min(amount, crossLimitInU/priceSell)
 		amount = FormatCrossPair(statusBuy.market, statusSell.market, statusBuy.symbol, statusSell.symbol, amount, priceBuy)
 	}
 	if checkScoreLimit(carryStatus.market, carryStatus.symbol, carryStatusRelate.market, carryStatusRelate.symbol, amount, score, scoreRelate) {
