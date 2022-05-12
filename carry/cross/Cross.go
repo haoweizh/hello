@@ -587,9 +587,9 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarrySta
 	score := 1 - priceAskRelate/priceBid
 	scoreRelate := priceBidRelate/priceAsk - 1
 	if math.Abs(score) > 1 || math.Abs(scoreRelate) > 1 {
-		util.Notice(fmt.Sprintf(`wrong score %s %s %s %s %f %f %f %f`,
+		util.Notice(fmt.Sprintf(`wrong score %s %s %s %s %f = 1 - %f/%f, %f = %f/%f - 1`,
 			carryStatus.market, carryStatus.symbol, carryStatusRelate.market, carryStatusRelate.symbol,
-			priceAskRelate, priceBid, priceBidRelate, priceAsk))
+			score, priceAskRelate, priceBid, scoreRelate, priceBidRelate, priceAsk))
 	}
 	mark := fmt.Sprintf(`%s_%s|%s_%s`, carryStatus.market, carryStatus.symbol, carryStatusRelate.market, carryStatusRelate.symbol)
 	if score > 0.01 {
