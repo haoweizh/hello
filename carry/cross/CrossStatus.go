@@ -23,10 +23,11 @@ var InsufficientCodeOKEX = map[string]bool{`51008`: true, `51119`: true, `51120`
 	`58350`: true, `59108`: true, `59200`: true}
 
 // market/symbol/bool经过人工确认可以cross的币种
-var validCrossCoin = map[string][]string{model.BinanceSpot: {`TORN`},
-										model.Gate: {`AE`, `HC`, `REEF`, `ONE`, `LSK`, `GLMR`, `LEASH`, `KDA`, `BLOK`},
-										model.OKEX: {`AE`, `HC`, `ORBS`, `ONE`, `LSK`, `GLMR`, `LEASH`, `KLAY`, `KDA`, `BLOK`, `TORN`},
-										model.Ftx:  {`REEF`, `ORBS`, `ONE`}, model.BybitPerp: {`KLAY`}}
+var validCrossCoin = map[string][]string{model.BinanceSpot: {`TORN`, `LUNA`, `UST`},
+										model.BinancePerp: {`TORN`, `LUNA`, `UST`},
+										model.Gate:        {`AE`, `HC`, `REEF`, `ONE`, `LSK`, `GLMR`, `LEASH`, `KDA`, `BLOK`, `LUNA`, `UST`},
+										model.OKEX:        {`AE`, `HC`, `ORBS`, `ONE`, `LSK`, `GLMR`, `LEASH`, `KLAY`, `KDA`, `BLOK`, `TORN`, `LUNA`, `UST`},
+										model.Ftx:         {`REEF`, `ORBS`, `ONE`, `LUNA`, `UST`}, model.BybitPerp: {`KLAY`, `LUNA`, `UST`}}
 var lastOrderIndex = make(map[string]map[string]int64)                       // market - symbol - index
 var lastOrders = make(map[string]map[string][]*model.Order, lastOrderLength) // market - symbol - []order
 //var statuses = make(map[string]map[string]map[string]map[string]*CarryStatus) // coin/market/symbol/key/CarryStatus

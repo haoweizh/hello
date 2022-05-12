@@ -565,6 +565,9 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarrySta
 	if now.Hour()%8 == 0 && now.Minute() == 0 && now.Second() < 30 {
 		return
 	}
+	if now.Minute() <= 1 && (carryStatus.market == model.Ftx || carryStatusRelate.market == model.Ftx) {
+		return
+	}
 	stopStatus, okStatus := carryStop.Load(carryStatus.account.Key)
 	stopRelate, okRelate := carryStop.Load(carryStatusRelate.account.Key)
 	if (okStatus && stopStatus.(bool)) || (okRelate && stopRelate.(bool)) {
