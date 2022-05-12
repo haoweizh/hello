@@ -325,7 +325,7 @@ func GetFundingRate(key, secret, market, symbol string) (success bool, rate floa
 		return true, 0
 	case model.Ftx:
 		fundingRate = GetFundingRatesFtx(key, secret, symbol)
-		fundingRate.Rate *= 5
+		fundingRate.Rate *= 4
 		model.SetFundingRate(market, symbol, fundingRate)
 	case model.OKEX:
 		fundingRate = getFundingRateOKEX(key, secret, symbol)
