@@ -220,8 +220,9 @@ func crossRefresh(c *gin.Context) {
 }
 
 func tickPage(c *gin.Context) {
-	tickInfo, recentTickInfo := model.AppMetric.ToArray()
-	c.HTML(http.StatusOK, `tick.gohtml`, gin.H{`tickInfo`: tickInfo, `recentTickInfo`: recentTickInfo})
+	//tickInfo, recentTickInfo := model.AppMetric.ToArray()
+	//c.HTML(http.StatusOK, `tick.gohtml`, gin.H{`tickInfo`: tickInfo, `recentTickInfo`: recentTickInfo})
+	c.HTML(http.StatusOK, `tick.gohtml`, gin.H{`tickInfo`: model.AppMetric.ToString()})
 }
 
 func crossPage(c *gin.Context) {
@@ -287,7 +288,7 @@ func GetParameters(c *gin.Context) {
 		}
 		turtleRows.Close()
 	}
-	msg += model.AppMetric.ToString()[:1024]
+	msg += model.AppMetric.ToString()
 	util.Notice(`finish web ` + msg)
 	c.String(http.StatusOK, msg)
 }
