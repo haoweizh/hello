@@ -330,6 +330,7 @@ func equalAccount(i int, equalChan chan int, accounts map[string]*model.Account,
 		if account.Index != i {
 			continue
 		}
+		util.Notice(`...... enter equal account:%s %d`, account.Key, account.Index)
 		spotMarkets.Delete(account.Key)
 		contractMarkets.Delete(account.Key)
 		keys += account.Key + `,`
