@@ -346,8 +346,7 @@ func equalAccount(i int, equalChan chan int, accounts map[string]*model.Account,
 			}
 			equalStatuses[j] = initStatus(account, setting)
 		}
-		for index := 0; index <= 30; index++ {
-			util.Notice(fmt.Sprintf(`...... enter equal coin %s %d`, coin, index))
+		for index := 0; index <= 10; index++ {
 			coinEqual, leftHoldingInU, _ := equalCoin(coin, equalStatuses)
 			if coinEqual == false {
 				needEqual = true
@@ -355,6 +354,7 @@ func equalAccount(i int, equalChan chan int, accounts map[string]*model.Account,
 			if math.Abs(leftHoldingInU) < 10 {
 				break
 			}
+			util.Notice(fmt.Sprintf(`...... enter equal coin %s %d`, coin, index))
 			if index == 10 {
 				api.SendMails(fmt.Sprintf(`fail equal after 10 time %s`, coin),
 					fmt.Sprintf(`%s holding %f`, coin, leftHoldingInU))
@@ -447,6 +447,7 @@ func equalCoin(coin string, statuses []*CarryStatus) (isEqual bool, holdingInU f
 				} else {
 					util.Notice(fmt.Sprintf(`check amount 0 sell %s %s %f %f`,
 						status.market, status.symbol, status.AvailableSell, bids[i].Price))
+					continue
 				}
 			}
 		}
@@ -476,6 +477,7 @@ func equalCoin(coin string, statuses []*CarryStatus) (isEqual bool, holdingInU f
 				} else {
 					util.Notice(fmt.Sprintf(`check amount 0 buy %s %s %f %f`,
 						status.market, status.symbol, status.AvailableBuy, asks[i].Price))
+					continue
 				}
 			}
 		}
