@@ -437,10 +437,14 @@ func equalCoin(coin string, statuses []*CarryStatus) (isEqual bool, holdingInU f
 			if equalStatus != nil || now-int64(tickTimes[status.market+status.symbol]) > 1000 || status.TradeLineSell > 0.5 {
 				continue
 			}
+			checkAmount := model.GetAmountInMarket(status.market, status.symbol, math.Abs(holding), price)
+			if checkAmount <= 0 {
+				continue
+			}
 			if status.AvailableSell > holding {
 				equalStatus = status
 			} else {
-				checkAmount := model.GetAmountInMarket(status.market, status.symbol, status.AvailableSell/2, price)
+				checkAmount = model.GetAmountInMarket(status.market, status.symbol, status.AvailableSell/2, price)
 				if checkAmount > 0 {
 					equalStatus = status
 					holding = status.AvailableSell
@@ -467,10 +471,14 @@ func equalCoin(coin string, statuses []*CarryStatus) (isEqual bool, holdingInU f
 			if equalStatus != nil || now-int64(tickTimes[status.market+status.symbol]) > 1000 || status.TradeLineBuy > 0.5 {
 				continue
 			}
+			checkAmount := model.GetAmountInMarket(status.market, status.symbol, math.Abs(holding), price)
+			if checkAmount <= 0 {
+				continue
+			}
 			if math.IsNaN(status.AvailableBuy) || status.AvailableBuy > math.Abs(holding) {
 				equalStatus = status
 			} else if !math.IsNaN(status.AvailableBuy) {
-				checkAmount := model.GetAmountInMarket(status.market, status.symbol, status.AvailableBuy/2, price)
+				checkAmount = model.GetAmountInMarket(status.market, status.symbol, status.AvailableBuy/2, price)
 				if checkAmount > 0 {
 					equalStatus = status
 					holding = status.AvailableBuy
