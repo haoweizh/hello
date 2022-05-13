@@ -346,9 +346,20 @@ func equalAccount(i int, equalChan chan int, accounts map[string]*model.Account,
 			}
 			equalStatuses[j] = initStatus(account, setting)
 		}
-		coinEqual, _ := equalCoin(coin, equalStatuses)
-		if coinEqual == false {
-			needEqual = true
+		for index := 0; index <= 30; index++ {
+			util.Notice(fmt.Sprintf(`...... enter equal coin %s %d`, coin, index))
+			coinEqual, leftHoldingInU, _ := equalCoin(coin, equalStatuses)
+			if coinEqual == false {
+				needEqual = true
+			}
+			if math.Abs(leftHoldingInU) < 10 {
+				break
+			}
+			if index == 10 {
+				api.SendMails(fmt.Sprintf(`fail equal after 10 time %s`, coin),
+					fmt.Sprintf(`%s holding %f`, coin, leftHoldingInU))
+				util.Notice(`...... exit equal coin:%s %d`, coin, index)
+			}
 		}
 	}
 	if !needEqual {
@@ -362,7 +373,7 @@ func equalAccount(i int, equalChan chan int, accounts map[string]*model.Account,
 
 // bybit 缺少按照symbol cancel all
 // settings []*model.Setting, coinStatus map[string]map[string]map[string]*CarryStatus
-func equalCoin(coin string, statuses []*CarryStatus) (isEqual bool, msg string) {
+func equalCoin(coin string, statuses []*CarryStatus) (isEqual bool, holdingInU float64, msg string) {
 	var holding, price float64
 	orderSide := ``
 	var equalStatus *CarryStatus
@@ -377,7 +388,7 @@ func equalCoin(coin string, statuses []*CarryStatus) (isEqual bool, msg string) 
 	for _, status := range statuses {
 		if status == nil {
 			util.Notice(`warning: fail to get one status %s`, coin)
-			return false, `fail to equal for one nil status`
+			return false, 0, `fail to equal for one nil status`
 		}
 		holding += status.Holding
 		holdStr += fmt.Sprintf(`[%s %s %f]`, status.market, status.symbol, status.Holding)
@@ -398,7 +409,7 @@ func equalCoin(coin string, statuses []*CarryStatus) (isEqual bool, msg string) 
 			price = bids[0].Price + asks[0].Price
 		}
 	}
-	holdingInU := holding * price
+	holdingInU = holding * price
 	if math.Abs(holdingInU) < 10 {
 		if time.Now().Minute()%50 == 0 {
 			//util.Notice(fmt.Sprintf(`clear holding every 50 mins %s %f %f %f`, coin, holding, price, holdingInU))
@@ -423,7 +434,7 @@ func equalCoin(coin string, statuses []*CarryStatus) (isEqual bool, msg string) 
 				continue
 			}
 			go api.CancelOrders(status.account.Key, status.account.Secret, status.market, status.symbol)
-			if equalStatus != nil || now-int64(tickTimes[status.market+status.symbol]) > 300 || status.TradeLineSell > 0.5 {
+			if equalStatus != nil || now-int64(tickTimes[status.market+status.symbol]) > 1000 || status.TradeLineSell > 0.5 {
 				continue
 			}
 			if status.AvailableSell > holding {
@@ -452,7 +463,7 @@ func equalCoin(coin string, statuses []*CarryStatus) (isEqual bool, msg string) 
 				continue
 			}
 			go api.CancelOrders(status.account.Key, status.account.Secret, status.market, status.symbol)
-			if equalStatus != nil || now-int64(tickTimes[status.market+status.symbol]) > 300 || status.TradeLineBuy > 0.5 {
+			if equalStatus != nil || now-int64(tickTimes[status.market+status.symbol]) > 1000 || status.TradeLineBuy > 0.5 {
 				continue
 			}
 			if math.IsNaN(status.AvailableBuy) || status.AvailableBuy > math.Abs(holding) {
@@ -470,8 +481,8 @@ func equalCoin(coin string, statuses []*CarryStatus) (isEqual bool, msg string) 
 		}
 	}
 	if equalStatus != nil {
-		util.Notice(`try to equal %s %s holding %f in u %f`,
-			equalStatus.market, equalStatus.symbol, holding, holdingInU)
+		util.Notice(`try to equal %s %s holding %f at %f in u %f`,
+			equalStatus.market, equalStatus.symbol, holding, price, holdingInU)
 		amount := math.Abs(holding)
 		amount = math.Min(amount, compLimitInU/price)
 		if equalStatus.market == model.Ftx {
@@ -495,6 +506,13 @@ func equalCoin(coin string, statuses []*CarryStatus) (isEqual bool, msg string) 
 				equalStatus.market, equalStatus.symbol, ``,
 				price, price, amount, false, nil, nil)
 			if order != nil {
+				if orderSide == model.OrderSideBuy {
+					equalStatus.Holding += amount
+					holdingInU += amount * price
+				} else {
+					equalStatus.Holding -= amount
+					holdingInU -= amount * price
+				}
 				order.Coin = coin
 				order.LineBuy = equalStatus.TradeLineBuy
 				order.LineSell = equalStatus.TradeLineSell
@@ -516,7 +534,7 @@ func equalCoin(coin string, statuses []*CarryStatus) (isEqual bool, msg string) 
 			go api.SendMails(`equal error`, fmt.Sprintf(`can not get status for %s when holding %f`, coin, holdingInU))
 		}
 	}
-	return
+	return isEqual, holdingInU, ``
 }
 
 var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
