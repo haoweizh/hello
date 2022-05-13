@@ -15,6 +15,7 @@ var symbolLock sync.Mutex
 var tradeMax = make(map[string]map[string][]float64)        // key - symbol - [maxBuy合约张数/币币个数, maxSell]
 var okTradeMaxResetTime = make(map[string]map[string]int64) // key - symbol - init time in second
 var okexCrossing sync.Map                                   // symbol - bool
+var USDs = map[string]bool{`USD`: true, `usd`: true, `USDT`: true, `usdt`: true, `USDC`: true, `usdc`: true, `BUSD`: true, `busd`: true}
 
 //var crossCount = make(map[string]map[string]map[string]int) // key - market - symbol - count
 //func ClearCrossCount() {
@@ -268,8 +269,10 @@ func GetBalances(key, secret, market string) (
 			got, tick := model.AppMarkets.GetBidAsk(balance.Coin+model.UniStandardTail[model.MarketTypeSpot], market)
 			if got {
 				totalInUsd += tick.Bids[0].Price * balance.Amount
-			} else if strings.EqualFold(balance.Coin, `USD`) || strings.EqualFold(balance.Coin, `USDT`) {
-				totalInUsd += balance.Amount
+			} else {
+				if USDs[balance.Coin] {
+					totalInUsd += balance.Amount
+				}
 			}
 		}
 	}
