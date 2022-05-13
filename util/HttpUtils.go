@@ -150,7 +150,7 @@ func HttpRequest(method string, reqUrl string, body string, requestHeaders map[s
 }
 
 func SendMail(fromAddress, mailAuth, toAddress, subject, body string) (err error) {
-	fmt.Println(fmt.Sprintf(`pretend to send %s %s %s %s %s`, fromAddress, mailAuth, toAddress, subject, body))
+	Notice(fmt.Sprintf(`pretend to send %s %s %s %s %s`, fromAddress, mailAuth, toAddress, subject, body))
 	return nil
 	//from := mail.Address{Address: fromAddress}
 	//to := mail.Address{Address: toAddress}
