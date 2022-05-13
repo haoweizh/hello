@@ -678,14 +678,14 @@ func GetMarketInfos(market string) (marketInfo map[string]*model.MarketInfo) {
 	return
 }
 
-// 搬砖过滤币种 `AMPL`, `IOTA` REEF
+// 搬砖过滤币种 `AMPL`, `IOTA` REEF LUNA
 // 某些主流币 BTC ETH LINK
 // 币种对不上 REAL, DFL, QI, WSB, TRADE,FAME,BIFI,TON,BOX,PAY
 // 法币 GBP CUSDT `TRYB``BRZ``CAD``EUR` `SUSD` `USDC` `TUSD`USDT EURT
 // 平台币 `GT` `FTT` `BNB` `OKB` MX
 // ftx预测`TRUMP``BOLSONARO`
 func filterCross(market, symbol string) bool {
-	filterCoins := map[string]bool{`AMPL`: true, `IOTA`: true, `REEF`: true, `BTC`: true, `ETH`: true, `LINK`: true,
+	filterCoins := map[string]bool{`AMPL`: true, `IOTA`: true, `REEF`: true, `LUNA`: true, `BTC`: true, `ETH`: true, `LINK`: true,
 		`REAL`: true, `DFL`: true, `QI`: true, `WSB`: true, `TRADE`: true, `FAME`: true, `BIFI`: true, `TON`: true,
 		`BOX`: true, `PAY`: true, `GTC`: true,
 		`GBP`: true, `CUSDT`: true, `TRYB`: true, `BRZ`: true, `CAD`: true, `EUR`: true, `SUSD`: true, `USDC`: true,
