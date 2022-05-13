@@ -493,6 +493,7 @@ func equalCoin(coin string, statuses []*CarryStatus) (isEqual bool, msg string) 
 				equalStatus.market, equalStatus.symbol, ``,
 				price, price, amount, true, nil, nil)
 			if order != nil {
+				order.Coin = coin
 				order.LineBuy = equalStatus.TradeLineBuy
 				order.LineSell = equalStatus.TradeLineSell
 				order.Function = model.FunctionCrossClose

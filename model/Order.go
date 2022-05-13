@@ -8,6 +8,7 @@ import (
 type Order struct {
 	Amount            float64
 	AmountType        string
+	Coin              string
 	DealAmount        float64
 	DealPrice         float64
 	ErrCode           string
