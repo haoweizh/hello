@@ -778,6 +778,8 @@ func placeCross(statusBuy, statusSell *CarryStatus, priceBuy, priceSell, amount 
 		if statusSell.Holding <= 0 {
 			orderSell.Function = model.FunctionCrossOpen
 		}
+		orderBuy.Coin = statusBuy.setting.Coin
+		orderSell.Coin = statusSell.setting.Coin
 		model.AppDB.Save(orderBuy)
 		model.AppDB.Save(orderSell)
 	} else {
@@ -785,6 +787,7 @@ func placeCross(statusBuy, statusSell *CarryStatus, priceBuy, priceSell, amount 
 			order := api.PlaceOrder(statusBuy.account.Key, statusBuy.account.Secret, model.OrderSideBuy, model.OrderTypeLimit,
 				statusBuy.market, statusBuy.symbol, ``, priceBuy, priceBuy, amount, true, PostOrderCross, statusBuy.setting)
 			if order != nil {
+				order.Coin = statusBuy.setting.Coin
 				order.LineBuy = statusBuy.TradeLineBuy
 				order.LineSell = statusBuy.TradeLineSell
 				order.Function = model.FunctionCrossClose
@@ -800,6 +803,7 @@ func placeCross(statusBuy, statusSell *CarryStatus, priceBuy, priceSell, amount 
 				statusSell.market, statusSell.symbol, ``, priceSell, priceSell,
 				amount, true, PostOrderCross, statusSell.setting)
 			if order != nil {
+				order.Coin = statusSell.setting.Coin
 				order.LineBuy = statusSell.TradeLineBuy
 				order.LineSell = statusSell.TradeLineSell
 				order.Function = model.FunctionCrossClose
