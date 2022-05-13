@@ -538,6 +538,7 @@ func equalCoin(coin string, statuses []*CarryStatus) (isEqual bool, holdingInU f
 			}
 		}
 	} else if math.Abs(holdingInU) > 10 {
+		isEqual = true // 可能由于头寸太小，不满足所有市场的下单要求，而holdingU刚好大于10u，此时认为已平
 		minute := time.Now().Minute()
 		second := time.Now().Second()
 		if minute == 0 && second == 0 {
