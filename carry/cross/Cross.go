@@ -351,7 +351,7 @@ func equalAccount(i int, equalChan chan int, accounts map[string]*model.Account,
 			if coinEqual == false {
 				needEqual = true
 			}
-			if math.Abs(leftHoldingInU) < 10 {
+			if math.Abs(leftHoldingInU) < 10 || coinEqual {
 				break
 			}
 			util.Notice(fmt.Sprintf(`...... enter equal coin %s %d`, coin, index))
