@@ -627,12 +627,14 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarrySta
 	tradeLineBuy := carryStatus.TradeLineBuy
 	tradeLineSellRelate := carryStatusRelate.TradeLineSell
 	tradeLineBuyRelate := carryStatusRelate.TradeLineBuy
-	if carryStatus.isSpot && !carryStatusRelate.isSpot && carryStatusRelate.market != model.Ftx && carryStatusRelate.FoundingRate < -0.0005 {
-		tradeLineBuyRelate += carryStatusRelate.FoundingRate * 1000 * math.Abs(carryStatusRelate.FoundingRate)
-		tradeLineSellRelate -= carryStatusRelate.FoundingRate * 1000 * math.Abs(carryStatusRelate.FoundingRate)
-	} else if !carryStatus.isSpot && carryStatus.market != model.Ftx && carryStatusRelate.isSpot && carryStatus.FoundingRate < -0.0005 {
-		tradeLineBuy += carryStatus.FoundingRate * 1000 * math.Abs(carryStatus.FoundingRate)
-		tradeLineSell -= carryStatus.FoundingRate * 1000 * math.Abs(carryStatus.FoundingRate)
+	if carryStatus.isSpot && !carryStatusRelate.isSpot && carryStatusRelate.market != model.Ftx && carryStatusRelate.FoundingRate < -0.005 {
+		temp := math.Min(7.5, 1000*math.Abs(carryStatusRelate.FoundingRate))
+		tradeLineBuyRelate += carryStatusRelate.FoundingRate * temp
+		tradeLineSellRelate -= carryStatusRelate.FoundingRate * temp
+	} else if !carryStatus.isSpot && carryStatus.market != model.Ftx && carryStatusRelate.isSpot && carryStatus.FoundingRate < -0.005 {
+		temp := math.Min(7.5, 1000*math.Abs(carryStatus.FoundingRate))
+		tradeLineBuy += carryStatus.FoundingRate * temp
+		tradeLineSell -= carryStatus.FoundingRate * temp
 	}
 	lineAll := tradeLineSell + tradeLineBuyRelate
 	if (tradeLineSell < score && tradeLineBuyRelate < score) ||
