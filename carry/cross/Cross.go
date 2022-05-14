@@ -9,6 +9,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -232,16 +233,16 @@ func initStatus(account *model.Account, setting *model.Setting) (status *CarrySt
 	}
 	status.LimitBuy = math.Min(status.LimitBuy, status.AvailableBuy)
 	status.LimitSell = math.Min(status.LimitSell, status.AvailableSell)
-	jump := 15.5
-	revertJump := 12.2
+	jump := 10.0
+	jumpRevert := 5.0
 	if status.Holding > 0 {
 		status.TradeLineBuy = math.Max(setting.OpenShortMargin*(0.5+jump*status.RateInAll), lowestScore) + fundingRate
-		status.TradeLineSell = math.Max(setting.CloseShortMargin*(0.5-revertJump*status.RateInAll), lowestScore) - fundingRate
+		status.TradeLineSell = math.Max(setting.CloseShortMargin*(0.5-jumpRevert*status.RateInAll), lowestScore) - fundingRate
 	} else if status.Holding == 0 {
 		status.TradeLineBuy = math.Max(setting.OpenShortMargin*(0.5-jump*status.RateInAll), lowestScore) + fundingRate
 		status.TradeLineSell = math.Max(setting.CloseShortMargin*(0.5+jump*status.RateInAll), lowestScore) - fundingRate
 	} else if status.Holding < 0 {
-		status.TradeLineBuy = math.Max(setting.OpenShortMargin*(0.5-revertJump*status.RateInAll), lowestScore) + fundingRate
+		status.TradeLineBuy = math.Max(setting.OpenShortMargin*(0.5-jumpRevert*status.RateInAll), lowestScore) + fundingRate
 		status.TradeLineSell = math.Max(setting.CloseShortMargin*(0.5+jump*status.RateInAll), lowestScore) - fundingRate
 	}
 	status.TradeLineBuy *= account.CarryRate
@@ -290,15 +291,14 @@ func equalAccounts() {
 			accounts[market] = indexAccounts[market]
 		}
 		needEqual := false
-		if lastCrosses == nil {
+		if firstComp == false {
+			firstComp = true
 			needEqual = true
 		} else {
-			for _, account := range accounts {
-				if getLastCrosses(account.Key) != nil {
-					needEqual = true
-					break
-				}
-			}
+			lastCrosses.Range(func(key, value interface{}) bool {
+				needEqual = true
+				return true
+			})
 		}
 		if !needEqual && time.Now().Minute()%10 != 0 {
 			util.Notice(`...... no change pass make equal`)
@@ -363,9 +363,7 @@ func equalAccount(i int, equalChan chan int, accounts map[string]*model.Account,
 		}
 	}
 	if !needEqual {
-		for _, account := range accounts {
-			setLastCrosses(account.Key, nil)
-		}
+		lastCrosses = sync.Map{}
 	}
 	equalChan <- i
 	util.Notice(`...... exit clearing cross %d`, i)
@@ -702,10 +700,14 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarrySta
 		return nil, nil, 0, 0, 0
 	}
 	// 如果上一次交易不是本交易对，但上一次交易很可能影响了资金状况，需要对本carryStatus的可买卖数量进行调整
-	if !isLastCross(statusBuy.account.Key, statusBuy.market, statusBuy.symbol) {
+	lastSymbol, ok := util.LoadSyncMap(&lastCrosses, statusBuy.account.Key, statusBuy.market, statusBuy.symbol)
+	if !(ok && lastSymbol != nil && lastSymbol.(string) == statusBuy.symbol) {
 		initLimitBuyAndSell(statusBuy, statusBuy.setting, priceBuy)
+	} else {
+		util.Notice(`same as last %s %s`, statusBuy.symbol)
 	}
-	if !isLastCross(statusSell.account.Key, statusSell.market, statusSell.symbol) {
+	lastSymbol, ok = util.LoadSyncMap(&lastCrosses, statusSell.account.Key, statusSell.market, statusSell.symbol)
+	if !(ok && lastSymbol != nil && lastSymbol.(string) == statusSell.symbol) {
 		initLimitBuyAndSell(statusSell, statusSell.setting, priceSell)
 	}
 	amount = math.Min(math.Min(statusBuy.LimitBuy, bidAmount), math.Min(statusSell.LimitSell, askAmount))
@@ -925,7 +927,7 @@ func placeStatus(status *CarryStatus, price float64, amount float64) {
 	}
 	account := model.AppConfig.GetAccountFromKey(status.market, status.account.Key)
 	initStatus(account, status.setting)
-	setLastCross(account.Key, status.market, status.symbol)
+	util.StoreSyncMap(&lastCrosses, account.Key, status.market, status.symbol)
 }
 
 var PostOrderCross = func(order *model.Order, setting *model.Setting) {

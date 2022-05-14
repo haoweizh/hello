@@ -24,18 +24,17 @@ var InsufficientCodeOKEX = map[string]bool{`51008`: true, `51119`: true, `51120`
 
 // market/symbol/bool经过人工确认可以cross的币种
 var validCrossCoin = map[string][]string{model.BinanceSpot: {`TORN`, `ANC`, `UST`},
-										model.BinancePerp: {`TORN`, `ANC`, `UST`},
-										model.Gate:        {`AE`, `HC`, `REEF`, `ONE`, `LSK`, `GLMR`, `LEASH`, `KDA`, `BLOK`, `ANC`, `UST`},
-										model.OKEX:        {`AE`, `HC`, `ORBS`, `ONE`, `LSK`, `GLMR`, `LEASH`, `KLAY`, `KDA`, `BLOK`, `TORN`, `ANC`, `UST`},
-										model.Ftx:         {`REEF`, `ORBS`, `ONE`, `LUNA`, `UST`},
-										model.BybitPerp:   {`KLAY`, `ANC`, `UST`}}
-var lastOrderIndex = make(map[string]map[string]int64)                       // market - symbol - index
-var lastOrders = make(map[string]map[string][]*model.Order, lastOrderLength) // market - symbol - []order
-//var statuses = make(map[string]map[string]map[string]map[string]*CarryStatus) // coin/market/symbol/key/CarryStatus
-var lastCrosses map[string]map[string]string // key/market/symbol
-var lockCrossing, lockLastCarry, lockLastCross sync.Mutex
+							model.BinancePerp: {`TORN`, `ANC`, `UST`},
+							model.Gate:        {`AE`, `HC`, `REEF`, `ONE`, `LSK`, `GLMR`, `LEASH`, `KDA`, `BLOK`, `ANC`, `UST`},
+							model.OKEX:        {`AE`, `HC`, `ORBS`, `ONE`, `LSK`, `GLMR`, `LEASH`, `KLAY`, `KDA`, `BLOK`, `TORN`, `ANC`, `UST`},
+							model.Ftx:         {`REEF`, `ORBS`, `ONE`, `LUNA`, `UST`},
+							model.BybitPerp:   {`KLAY`, `ANC`, `UST`}}
+var lastOrderIndex = make(map[string]map[string]int64) // market - symbol - index
 
-//var crossCount sync.Map                   // coin*账户索引 / 搬砖count
+var lockCrossing, lockLastCarry sync.Mutex
+var lastOrders = make(map[string]map[string][]*model.Order, lastOrderLength) // market - symbol - []order
+//var lastCrosses map[string]map[string]string //
+var lastCrosses sync.Map                  // key*market:symbol
 var spotMarkets, contractMarkets sync.Map // key - spotMarket/contractMarket
 var carryStatusMap sync.Map               // coin*market*symbol*key / CarryStatus
 var carryFail sync.Map                    // key fail num
@@ -43,6 +42,7 @@ var carryStop sync.Map                    // key bool
 var notifyTime sync.Map                   // 1. market_symbol_market_symbol/time 2. funding_market_symbol/time
 var crossing bool
 var doCross = false
+var firstComp = false
 
 type contractMarket struct {
 	key, market          string
@@ -84,48 +84,6 @@ func isValidSymbol(market, symbol string) bool {
 		}
 	}
 	return false
-}
-
-func isLastCross(key, market, symbol string) bool {
-	defer lockLastCross.Unlock()
-	lockLastCross.Lock()
-	if lastCrosses == nil || lastCrosses[key] == nil || len(lastCrosses) == 0 {
-		return true
-	}
-	if symbol == lastCrosses[key][market] {
-		return true
-	}
-	return false
-}
-
-func setLastCross(key, market, symbol string) {
-	defer lockLastCross.Unlock()
-	lockLastCross.Lock()
-	if lastCrosses == nil {
-		lastCrosses = make(map[string]map[string]string)
-	}
-	if lastCrosses[key] == nil {
-		lastCrosses[key] = make(map[string]string)
-	}
-	lastCrosses[key][market] = symbol
-}
-
-func getLastCrosses(key string) (crosses map[string]string) {
-	defer lockLastCross.Unlock()
-	lockLastCross.Lock()
-	if lastCrosses == nil {
-		return nil
-	}
-	return lastCrosses[key]
-}
-
-func setLastCrosses(key string, crosses map[string]string) {
-	defer lockLastCross.Unlock()
-	lockLastCross.Lock()
-	if lastCrosses == nil {
-		lastCrosses = make(map[string]map[string]string)
-	}
-	lastCrosses[key] = crosses
 }
 
 func GetHoldings(accounts map[string]*model.Account) (holding [][]interface{}) {
