@@ -599,7 +599,7 @@ func checkTradeLine(statusBuy, statusSell *CarryStatus, score float64) (valid bo
 	if statusBuy.Holding >= 0 && statusSell.Holding <= 0 {
 		return score > statusBuy.TradeLineBuy && score > statusSell.TradeLineSell
 	} else {
-		return score > (statusBuy.TradeLineSell+statusSell.TradeLineSell)/2
+		return score > (statusBuy.TradeLineBuy+statusSell.TradeLineSell)/2
 	}
 }
 
