@@ -713,10 +713,11 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarrySta
 	}
 	// 如果上一次交易不是本交易对，但上一次交易很可能影响了资金状况，需要对本carryStatus的可买卖数量进行调整
 	lastSymbol, ok := util.LoadSyncMap(&lastCrosses, statusBuy.account.Key, statusBuy.market, statusBuy.symbol)
+	util.Info(fmt.Sprintf(`same or not %v %v`, lastSymbol, ok))
 	if !(ok && lastSymbol != nil && lastSymbol.(string) == statusBuy.symbol) {
 		initLimitBuyAndSell(statusBuy, statusBuy.setting, priceBuy)
 	} else {
-		util.Notice(`same as last %s %s`, statusBuy.symbol)
+		util.Notice(fmt.Sprintf(`same as last %s %s`, statusBuy.market, statusBuy.symbol))
 	}
 	lastSymbol, ok = util.LoadSyncMap(&lastCrosses, statusSell.account.Key, statusSell.market, statusSell.symbol)
 	if !(ok && lastSymbol != nil && lastSymbol.(string) == statusSell.symbol) {
