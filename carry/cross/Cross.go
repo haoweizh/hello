@@ -245,9 +245,9 @@ func initStatus(account *model.Account, setting *model.Setting) (status *CarrySt
 	status.TradeLineBuy = math.Max(setting.OpenShortMargin*(0.5+jumpBuy*status.RateInAll), lowestScore) + fundingRate
 	status.TradeLineSell = math.Max(setting.CloseShortMargin*(0.5+jumpSell*status.RateInAll), lowestScore) - fundingRate
 	if status.setting.Coin == `XEM` {
-		util.Info(fmt.Sprintf(`%s %s bline %f = max(0.015*(0.5+%f*rate %f)+funding %f hold %f`,
+		util.Info(fmt.Sprintf(`%s %s bline %f = max(0.025*(0.5+%f*rate %f)+funding %f hold %f`,
 			status.setting.Market, status.setting.Symbol, status.TradeLineBuy, jumpBuy, status.RateInAll, fundingRate, status.Holding))
-		util.Info(fmt.Sprintf(`%s %s sline %f = max(0.015*(0.5+%f*rate %f)-funding %f hold %f`,
+		util.Info(fmt.Sprintf(`%s %s sline %f = max(0.025*(0.5+%f*rate %f)-funding %f hold %f`,
 			status.setting.Market, status.setting.Symbol, status.TradeLineSell, jumpSell, status.RateInAll, fundingRate, status.Holding))
 	}
 	status.TradeLineBuy *= account.CarryRate
@@ -304,9 +304,6 @@ func equalAccounts() {
 				needEqual = true
 				return true
 			})
-		}
-		for i2, b := range waitEqual {
-			util.Notice(fmt.Sprintf(`...... waitEqual %d %v`, i2, b))
 		}
 		if !needEqual && time.Now().Minute()%10 != 0 {
 			util.Notice(`...... no change pass make equal`)
@@ -452,13 +449,12 @@ func equalCoin(coin string, statuses []*CarryStatus) (isEqual bool, holdingInU f
 				equalStatus = status
 			} else {
 				checkAmount = model.GetAmountInMarket(status.market, status.symbol, status.AvailableSell/2, price)
-				if checkAmount > 0 {
+				if checkAmount > 0 && status.AvailableSell*price > 100 {
 					equalStatus = status
 					holding = status.AvailableSell
 				} else {
 					util.Notice(fmt.Sprintf(`check amount 0 sell %s %s %f %f`,
 						status.market, status.symbol, status.AvailableSell, bids[i].Price))
-					continue
 				}
 			}
 		}
@@ -486,13 +482,12 @@ func equalCoin(coin string, statuses []*CarryStatus) (isEqual bool, holdingInU f
 				equalStatus = status
 			} else if !math.IsNaN(status.AvailableBuy) {
 				checkAmount = model.GetAmountInMarket(status.market, status.symbol, status.AvailableBuy/2, price)
-				if checkAmount > 0 {
+				if checkAmount > 0 && status.AvailableBuy*price > 100 {
 					equalStatus = status
 					holding = status.AvailableBuy
 				} else {
 					util.Notice(fmt.Sprintf(`check amount 0 buy %s %s %f %f`,
 						status.market, status.symbol, status.AvailableBuy, asks[i].Price))
-					continue
 				}
 			}
 		}
