@@ -12,7 +12,7 @@ import (
 	"time"
 )
 
-var doHang = false
+var doWork = false
 var hanging = false
 var placeTime sync.Map // market_symbol/timeInMilli
 var hangSide sync.Map  // market_symbol/orderSide
@@ -31,14 +31,15 @@ func checkSetHanging(value bool) (before bool) {
 }
 
 // ProcessHang
-// setting.chance 下单后多少million seconds cancel
+// setting.chance 下单后多少million seconds cancel并进行后续下单
 // setting.gridAmount 当日下单上限 in usd
 // setting.amountLimit 每次下单价差jump距离
 // setting.priceX 大于等于0时做市摆单价差，默认为0，值越大，摆单后买卖1之间价差越大；小于0是进入吃单模式
+// setting.OpenShortMargin 处于吃单模式时，可吃单的上限
 var ProcessHang = func(setting *model.Setting, tick *model.BidAsk) {
-	if !doHang && model.AppConfig.Handle == `1` {
+	if !doWork && model.AppConfig.Handle == `1` {
 		go refreshDeal()
-		doHang = true
+		doWork = true
 		return
 	}
 	if tick == nil || tick.Asks == nil || tick.Bids == nil || setting == nil || setting.Valid == false ||
@@ -54,13 +55,7 @@ var ProcessHang = func(setting *model.Setting, tick *model.BidAsk) {
 	}
 	account := accounts[setting.Market]
 	if !okPlace {
-		if setting.PriceX > 0 { // 做市时摆单
-			placeHang(account, setting, tick)
-		} else { // 吃单拉价格模式
-			if tick.Asks[0].Amount < 5000 {
-
-			}
-		}
+		handle(account, setting, tick)
 	} else {
 		if now-orderTime.(int64) > setting.Chance {
 			//util.Notice(fmt.Sprintf(`cancel %s `, marketSymbol))
@@ -73,7 +68,49 @@ var ProcessHang = func(setting *model.Setting, tick *model.BidAsk) {
 	}
 }
 
-func placeHang(account *model.Account, setting *model.Setting, tick *model.BidAsk) {
+func placeHang(account *model.Account, setting *model.Setting, marketInfo *model.MarketInfo,
+	marketSymbolDate, side string, tick *model.BidAsk) {
+	dealAmount, okDeal := dealInU.Load(marketSymbolDate)
+	if !okDeal {
+		dealAmount = 0.0
+	} else if dealAmount.(float64) > setting.GridAmount {
+		return
+	}
+	steps := (tick.Asks[0].Price-tick.Bids[0].Price-setting.PriceX)/marketInfo.PriceIncrement - 1
+	steps = math.Ceil(steps * (setting.GridAmount - dealAmount.(float64)) / setting.GridAmount)
+	inc := 1.0
+	beginPrice := 0.0
+	//priceMark := ``
+	if side == model.OrderSideBuy {
+		beginPrice = tick.Bids[0].Price
+		inc = 1.0
+		//bidPrice, decimal := model.FormatPrice(setting.Market, setting.Symbol, model.OrderSideBuy, tick.Bids[0].Price+marketInfo.PriceIncrement*steps)
+		//bidStr := util.CutTailZero(strconv.FormatFloat(bidPrice, 'f', decimal, 64))
+		//priceMark = fmt.Sprintf(`%s-%s`, bidStr, util.CutTailZero(strconv.FormatFloat(tick.Asks[0].Price, 'f', decimal, 64)))
+	} else if side == model.OrderSideSell {
+		beginPrice = tick.Asks[0].Price
+		inc = -1.0
+		//askPrice, decimal := model.FormatPrice(setting.Market, setting.Symbol, model.OrderSideSell, tick.Asks[0].Price-marketInfo.PriceIncrement*steps)
+		//askStr := util.CutTailZero(strconv.FormatFloat(askPrice, 'f', decimal, 64))
+		//priceMark = fmt.Sprintf(`%s-%s`, util.CutTailZero(strconv.FormatFloat(tick.Bids[0].Price, 'f', decimal, 64)), askStr)
+	}
+	jump := int(math.Ceil(steps / setting.AmountLimit))
+	for i := int(steps); i > 0; i = i - jump {
+		price := beginPrice + inc*marketInfo.PriceIncrement*float64(i)
+		amount := marketInfo.MoneyMin/price + marketInfo.SizeIncrement*(steps+1-float64(i))*math.Ceil(rand.Float64()*5)
+		util.Notice(fmt.Sprintf(`hang %s %s steps: %f [%f-%f] %f %f`,
+			setting.Market, setting.Symbol, steps, tick.Bids[0].Price, tick.Asks[0].Price, price, amount))
+		order := api.PlaceOrder(account.Key, account.Secret, side, model.OrderTypeLimit, setting.Market,
+			setting.Symbol, ``, price, price, amount, false, nil, setting)
+		if order != nil {
+			order.Function = model.FunctionHang
+			model.AppDB.Save(order)
+		}
+		time.Sleep(time.Millisecond * 500)
+	}
+}
+
+func handle(account *model.Account, setting *model.Setting, tick *model.BidAsk) {
 	if !checkSetHanging(true) {
 		defer checkSetHanging(false)
 	} else {
@@ -88,47 +125,17 @@ func placeHang(account *model.Account, setting *model.Setting, tick *model.BidAs
 	year, month, day := utcTime.Date()
 	marketSymbolDate := fmt.Sprintf(`%s_%s_%d-%d-%d 08:00:00`, setting.Market, setting.Symbol, year, month, day)
 	marketSymbol := setting.Market + `_` + setting.Symbol
-	side, okHang := hangSide.Load(marketSymbol)
-	if !okHang || side == `` {
+	value, okHang := hangSide.Load(marketSymbol)
+	if !okHang || value == nil {
 		return
 	}
-	dealAmount, okDeal := dealInU.Load(marketSymbolDate)
-	if !okDeal {
-		dealAmount = 0.0
-	} else if dealAmount.(float64) > setting.GridAmount {
-		return
-	}
-	steps := (tick.Asks[0].Price-tick.Bids[0].Price-setting.PriceX)/marketInfo.PriceIncrement - 1
-	steps = math.Ceil(steps * (setting.GridAmount - dealAmount.(float64)) / setting.GridAmount)
-	inc := 1.0
-	beginPrice := 0.0
-	//priceMark := ``
-	if side.(string) == model.OrderSideBuy {
-		beginPrice = tick.Bids[0].Price
-		inc = 1.0
-		//bidPrice, decimal := model.FormatPrice(setting.Market, setting.Symbol, model.OrderSideBuy, tick.Bids[0].Price+marketInfo.PriceIncrement*steps)
-		//bidStr := util.CutTailZero(strconv.FormatFloat(bidPrice, 'f', decimal, 64))
-		//priceMark = fmt.Sprintf(`%s-%s`, bidStr, util.CutTailZero(strconv.FormatFloat(tick.Asks[0].Price, 'f', decimal, 64)))
-	} else if side.(string) == model.OrderSideSell {
-		beginPrice = tick.Asks[0].Price
-		inc = -1.0
-		//askPrice, decimal := model.FormatPrice(setting.Market, setting.Symbol, model.OrderSideSell, tick.Asks[0].Price-marketInfo.PriceIncrement*steps)
-		//askStr := util.CutTailZero(strconv.FormatFloat(askPrice, 'f', decimal, 64))
-		//priceMark = fmt.Sprintf(`%s-%s`, util.CutTailZero(strconv.FormatFloat(tick.Bids[0].Price, 'f', decimal, 64)), askStr)
-	}
-	jump := int(math.Ceil(steps / setting.AmountLimit))
-	for i := int(steps); i > 0; i = i - jump {
-		price := beginPrice + inc*marketInfo.PriceIncrement*float64(i)
-		amount := marketInfo.MoneyMin/price + marketInfo.SizeIncrement*(steps+1-float64(i))*math.Ceil(rand.Float64()*5)
-		util.Notice(fmt.Sprintf(`hang %s %s steps: %f [%f-%f] %f %f`,
-			setting.Market, setting.Symbol, steps, tick.Bids[0].Price, tick.Asks[0].Price, price, amount))
-		order := api.PlaceOrder(account.Key, account.Secret, side.(string), model.OrderTypeLimit, setting.Market,
-			setting.Symbol, ``, price, price, amount, false, nil, setting)
-		if order != nil {
-			order.Function = model.FunctionHang
-			model.AppDB.Save(order)
-		}
-		time.Sleep(time.Millisecond * 500)
+	side := value.(string)
+	if setting.PriceX > 0 { // 做市时摆单
+		placeHang(account, setting, marketInfo, marketSymbolDate, side, tick)
+	} else if tick.Asks[0].Amount < 5000 && tick.Asks[0].Amount < setting.OpenShortMargin &&
+		side == model.OrderSideBuy && tick.Asks[0].Price < 0.1 { // 吃单拉价格模式
+		api.PlaceOrder(account.Key, account.Secret, side, model.OrderTypeLimit, setting.Market, setting.Symbol,
+			``, tick.Asks[0].Price, tick.Asks[0].Price, tick.Asks[0].Amount, false, nil, setting)
 	}
 	//util.Notice(fmt.Sprintf(`hang prices %s %s`, setting.Market, setting.Symbol))
 	//hangPrice.Store(marketSymbol, priceMark)
@@ -136,7 +143,7 @@ func placeHang(account *model.Account, setting *model.Setting, tick *model.BidAs
 }
 
 func refreshDeal() {
-	for doHang {
+	for doWork {
 		for true {
 			if !checkSetHanging(true) {
 				break
