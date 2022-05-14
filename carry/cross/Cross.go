@@ -244,11 +244,13 @@ func initStatus(account *model.Account, setting *model.Setting) (status *CarrySt
 	}
 	status.TradeLineBuy = math.Max(setting.OpenShortMargin*(0.5+jumpBuy*status.RateInAll), lowestScore) + fundingRate
 	status.TradeLineSell = math.Max(setting.CloseShortMargin*(0.5+jumpSell*status.RateInAll), lowestScore) - fundingRate
-	if status.setting.Coin == `AXS` && account.Index == 0 {
-		util.Info(fmt.Sprintf(`%s %s bline %f = max(0.025*(0.5+%f*rate %f)+funding %f hold %f`,
-			status.setting.Market, status.setting.Symbol, status.TradeLineBuy, jumpBuy, status.RateInAll, fundingRate, status.Holding))
-		util.Info(fmt.Sprintf(`%s %s sline %f = max(0.025*(0.5+%f*rate %f)-funding %f hold %f`,
-			status.setting.Market, status.setting.Symbol, status.TradeLineSell, jumpSell, status.RateInAll, fundingRate, status.Holding))
+	if status.setting.Coin == `ANC` && account.Index == 0 {
+		util.Info(fmt.Sprintf(`%s %s bline %f = max(%f*(0.5+%f*rate %f)+funding %f hold %f`,
+			status.setting.Market, status.setting.Symbol, status.TradeLineBuy, setting.OpenShortMargin, jumpBuy,
+			status.RateInAll, fundingRate, status.Holding))
+		util.Info(fmt.Sprintf(`%s %s sline %f = max(%f*(0.5+%f*rate %f)-funding %f hold %f`,
+			status.setting.Market, status.setting.Symbol, status.TradeLineSell, setting.CloseShortMargin, jumpSell,
+			status.RateInAll, fundingRate, status.Holding))
 	}
 	status.TradeLineBuy *= account.CarryRate
 	status.TradeLineSell *= account.CarryRate
