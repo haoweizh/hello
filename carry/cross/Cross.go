@@ -514,7 +514,7 @@ func equalCoin(coin string, statuses []*CarryStatus) (isEqual bool, holdingInU f
 				coin, equalStatus.market, equalStatus.symbol, price, tick.Asks[0].Price, tick.Bids[0].Price, amount))
 			order := api.PlaceOrder(equalStatus.account.Key, equalStatus.account.Secret, orderSide, model.OrderTypeLimit,
 				equalStatus.market, equalStatus.symbol, ``,
-				price, price, amount, false, nil, nil)
+				price, price, amount, true, nil, nil)
 			if order != nil {
 				if orderSide == model.OrderSideBuy {
 					equalStatus.Holding += amount
@@ -701,6 +701,7 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarrySta
 	if statusBuy == nil || statusSell == nil {
 		return nil, nil, 0, 0, 0
 	}
+	// 如果上一次交易不是本交易对，但上一次交易很可能影响了资金状况，需要对本carryStatus的可买卖数量进行调整
 	if !isLastCross(statusBuy.account.Key, statusBuy.market, statusBuy.symbol) {
 		initLimitBuyAndSell(statusBuy, statusBuy.setting, priceBuy)
 	}
@@ -984,11 +985,6 @@ var PostOrderCross = func(order *model.Order, setting *model.Setting) {
 			addCarryResult(order.AmountType, order.Market, ``, true)
 		}
 	}
-}
-
-func setSettingStatus(setting *model.Setting, status bool) {
-	time.Sleep(time.Minute * 20)
-	setting.Valid = status
 }
 
 // FormatCrossPair 不支持以BTC或ETH计价的交易对，只支持USD类

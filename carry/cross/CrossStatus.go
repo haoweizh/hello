@@ -33,7 +33,7 @@ var lastOrderIndex = make(map[string]map[string]int64)                       // 
 var lastOrders = make(map[string]map[string][]*model.Order, lastOrderLength) // market - symbol - []order
 //var statuses = make(map[string]map[string]map[string]map[string]*CarryStatus) // coin/market/symbol/key/CarryStatus
 var lastCrosses map[string]map[string]string // key/market/symbol
-var lockCrossing, lockLastCarry, lockHoldings, lockLastCross sync.Mutex
+var lockCrossing, lockLastCarry, lockLastCross sync.Mutex
 
 //var crossCount sync.Map                   // coin*账户索引 / 搬砖count
 var spotMarkets, contractMarkets sync.Map // key - spotMarket/contractMarket
@@ -129,8 +129,6 @@ func setLastCrosses(key string, crosses map[string]string) {
 }
 
 func GetHoldings(accounts map[string]*model.Account) (holding [][]interface{}) {
-	defer lockHoldings.Unlock()
-	lockHoldings.Lock()
 	holding = make([][]interface{}, 0)
 	coinHold := make(map[string]float64)
 	coinPrice := make(map[string]float64)
@@ -281,6 +279,7 @@ func addCarryResult(key, market, msg string, success bool) {
 	}
 }
 
+// 某个交易对过去8次交易不成交次数达到3，暂停下单
 func addLastCarry(order *model.Order, setting *model.Setting) {
 	lockLastCarry.Lock()
 	defer lockLastCarry.Unlock()
@@ -323,7 +322,10 @@ func addLastCarry(order *model.Order, setting *model.Setting) {
 				setting.UpdatedAt = now
 				lastOrders[setting.Market][setting.Symbol] = make([]*model.Order, lastOrderLength)
 				lastOrderIndex[setting.Market][setting.Symbol] = 0
-				go setSettingStatus(setting, true)
+				go func() {
+					time.Sleep(time.Minute * 20)
+					setting.Valid = true
+				}()
 				break
 			}
 		} else {

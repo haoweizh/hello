@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -109,17 +110,18 @@ func _(f func()) {
 	}()
 }
 
-//func FormatNum(input float64, decimal float64) (num float64, str string) {
-//	if decimal == 0.5 {
-//		base := float64(int(math.Round(input*2))) / 2
-//		return FormatNum(base, 1)
-//	}
-//	if decimal == 1.5 {
-//		base := float64(int(math.Round(input*20))) / 20
-//		return FormatNum(base, 2)
-//	}
-//	format := `%.` + strconv.Itoa(int(decimal)) + `f`
-//	str = fmt.Sprintf(format, input)
-//	num, _ = strconv.ParseFloat(str, 64)
-//	return num, str
-//}
+func LoadSyncMap(syncMap *sync.Map, keys ...string) (interface{}, bool) {
+	key := ``
+	for i := 0; i < len(keys); i++ {
+		key += keys[i] + `*`
+	}
+	return syncMap.Load(key)
+}
+
+func StoreSyncMap(syncMap *sync.Map, value interface{}, keys ...string) {
+	key := ``
+	for i := 0; i < len(keys); i++ {
+		key += keys[i] + `*`
+	}
+	syncMap.Store(key, value)
+}
