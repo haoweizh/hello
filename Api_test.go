@@ -15,6 +15,7 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 )
@@ -308,6 +309,37 @@ func Test_wallet(t *testing.T) {
 	fmt.Println(order1.Status)
 }
 
+func Test_SyncMap(t *testing.T) {
+
+	var m sync.Map
+	util.StoreSyncMap(&m, `a`, `1`)
+	util.StoreSyncMap(&m, `b`, `2`)
+	value, ok := util.LoadSyncMap(&m, `1`)
+	if ok {
+		fmt.Println(value)
+	}
+	m.Range(func(key, value interface{}) bool {
+		fmt.Println(key, value)
+		return true
+	})
+	m = sync.Map{}
+
+	m.Range(func(key, value interface{}) bool {
+		fmt.Println(key, value)
+		return true
+	})
+	value, ok = util.LoadSyncMap(&m, `1`)
+	if ok {
+		fmt.Println(value)
+	} else {
+		fmt.Println(`not ok`)
+	}
+	util.StoreSyncMap(&m, `b`, `1`, `2`, `3`)
+	value, ok = util.LoadSyncMap(&m, `1`, `2`, `4`)
+	if ok {
+		fmt.Println(value)
+	}
+}
 func Test_accounting(t *testing.T) {
 	nums := strings.Split(`230.0,663.00,0,200.0,303.0,300.00,0`, `,`)
 	season := make([]float64, 4)
