@@ -317,9 +317,8 @@ func GetFundingRate(key, secret, market, symbol string) (success bool, rate floa
 	//	rate, expireTime = deprecated.getFundingRateBitmex(key, secret, symbol)
 	//	model.SetFundingRate(market, symbol, &model.FundingRate{Rate: rate, ExpireTime: expireTime, UpdateTime: now})
 	case model.BybitPerp:
-		//fundingRate = getFundingRateBybitPerp(key, secret, symbol)
-		//model.SetFundingRate(market, symbol, fundingRate)
-		return true, 0
+		fundingRate = getFundingRateBybitPerp(key, secret, symbol)
+		model.SetFundingRate(market, symbol, fundingRate)
 	case model.BybitSpot:
 		return true, 0
 	case model.Ftx:
