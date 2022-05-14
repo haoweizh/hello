@@ -309,7 +309,6 @@ func GetFundingRate(key, secret, market, symbol string) (success bool, rate floa
 			}
 		}
 	} else if market == model.Gate && fundingRate != nil && now < fundingRate.ExpireTime {
-		util.Notice(`gate funding expire at %d`, fundingRate.ExpireTime)
 		return true, fundingRate.Rate
 	} // 其他交易所的资金费率都会实时变动
 	switch market {
@@ -760,7 +759,7 @@ func InitCrossMarketInfos(markets []string) {
 		if len(infos) >= 2 {
 			for _, info := range infos {
 				setting := &model.Setting{Valid: true, Function: model.FunctionCross, Market: info.Market,
-					Symbol: info.Name, Coin: coin, OpenShortMargin: 0.015, CloseShortMargin: 0.015}
+					Symbol: info.Name, Coin: coin, OpenShortMargin: 0.02, CloseShortMargin: 0.02}
 				model.AppDB.Save(setting)
 				util.Notice(fmt.Sprintf(`save setting %s %s %s %v`, info.Market, info.Name, coin, setting.Valid))
 			}
