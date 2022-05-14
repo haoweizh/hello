@@ -234,7 +234,7 @@ func initStatus(account *model.Account, setting *model.Setting) (status *CarrySt
 	status.LimitBuy = math.Min(status.LimitBuy, status.AvailableBuy)
 	status.LimitSell = math.Min(status.LimitSell, status.AvailableSell)
 	jump := 10.0
-	jumpRevert := 5.0
+	jumpRevert := 7.0
 	if status.Holding > 0 {
 		status.TradeLineBuy = math.Max(setting.OpenShortMargin*(0.5+jump*status.RateInAll), lowestScore) + fundingRate
 		status.TradeLineSell = math.Max(setting.CloseShortMargin*(0.5-jumpRevert*status.RateInAll), lowestScore) - fundingRate
@@ -589,6 +589,14 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 	}
 }
 
+func checkTradeLine(statusBuy, statusSell *CarryStatus, score float64) (valid bool) {
+	if statusBuy.Holding >= 0 && statusSell.Holding <= 0 {
+		return score > statusBuy.TradeLineBuy && score > statusSell.TradeLineSell
+	} else {
+		return score > (statusBuy.TradeLineSell+statusSell.TradeLineSell)/2
+	}
+}
+
 func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarryStatus, tick,
 	tickRelate *model.BidAsk) (statusBuy, statusSell *CarryStatus, amount, priceBuy, priceSell float64) {
 	now := time.Now()
@@ -634,9 +642,7 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarrySta
 		tradeLineBuy += carryStatus.FoundingRate * temp
 		tradeLineSell -= carryStatus.FoundingRate * temp
 	}
-	lineAll := tradeLineSell + tradeLineBuyRelate
-	if (tradeLineSell < score && tradeLineBuyRelate < score) ||
-		(lineAll > 0 && score > 0.6*lineAll) || (lineAll < 0 && score > 0.4*lineAll) {
+	if checkTradeLine(carryStatusRelate, carryStatus, score) {
 		statusSell = carryStatus
 		statusBuy = carryStatusRelate
 		priceSell = priceBid
@@ -644,9 +650,7 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarrySta
 		askAmount = amountBid
 		bidAmount = amountAskRelate
 	}
-	lineAll = tradeLineBuy + tradeLineSellRelate
-	if (tradeLineBuy < scoreRelate && tradeLineSellRelate < scoreRelate) ||
-		(lineAll > 0 && scoreRelate > 0.6*lineAll) || (lineAll < 0 && scoreRelate > 0.4*lineAll) {
+	if checkTradeLine(carryStatus, carryStatusRelate, scoreRelate) {
 		statusSell = carryStatusRelate
 		statusBuy = carryStatus
 		priceSell = priceBidRelate
@@ -654,6 +658,14 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarrySta
 		askAmount = amountBidRelate
 		bidAmount = amountAsk
 	}
+	//lineAll := tradeLineSell + tradeLineBuyRelate
+	//if (tradeLineSell < score && tradeLineBuyRelate < score) ||
+	//	(lineAll > 0 && score > 0.6*lineAll) || (lineAll < 0 && score > 0.4*lineAll) {
+	//}
+	//lineAll = tradeLineBuy + tradeLineSellRelate
+	//if (tradeLineBuy < scoreRelate && tradeLineSellRelate < scoreRelate) ||
+	//	(lineAll > 0 && scoreRelate > 0.6*lineAll) || (lineAll < 0 && scoreRelate > 0.4*lineAll) {
+	//}
 	// 为了同一对交易对冲不出现两次，对前后进行排序
 	mark = fmt.Sprintf(`%s-%s`, carryStatus.market, carryStatus.symbol)
 	markRelate := fmt.Sprintf(`%s-%s`, carryStatusRelate.market, carryStatusRelate.symbol)
