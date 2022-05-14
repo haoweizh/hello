@@ -34,7 +34,7 @@ func checkSetHanging(value bool) (before bool) {
 // setting.chance 下单后多少million seconds cancel
 // setting.gridAmount 当日下单上限 in usd
 // setting.amountLimit 每次下单价差jump距离
-// setting.priceX 做市时摆单价差，默认为0，值越大，摆单后买卖1之间价差越大
+// setting.priceX 大于等于0时做市摆单价差，默认为0，值越大，摆单后买卖1之间价差越大；小于0是进入吃单模式
 var ProcessHang = func(setting *model.Setting, tick *model.BidAsk) {
 	if !doHang && model.AppConfig.Handle == `1` {
 		go refreshDeal()
@@ -54,15 +54,14 @@ var ProcessHang = func(setting *model.Setting, tick *model.BidAsk) {
 	}
 	account := accounts[setting.Market]
 	if !okPlace {
-		placeHang(account, setting, tick)
+		if setting.PriceX > 0 { // 做市时摆单
+			placeHang(account, setting, tick)
+		} else { // 吃单拉价格模式
+			if tick.Asks[0].Amount < 5000 {
+
+			}
+		}
 	} else {
-		//placeTick, okPrice := hangPrice.Load(marketSymbol)
-		//bidPrice, decimal := model.FormatPrice(setting.Market, setting.Symbol, model.OrderSideBuy, tick.Bids[0].Price)
-		//bidStr := util.CutTailZero(strconv.FormatFloat(bidPrice, 'f', decimal, 64))
-		//askPrice, _ := model.FormatPrice(setting.Market, setting.Symbol, model.OrderSideSell, tick.Asks[0].Price)
-		//askStr := util.CutTailZero(strconv.FormatFloat(askPrice, 'f', decimal, 64))
-		//nowTick := fmt.Sprintf(`%s-%s`, bidStr, askStr)
-		//if (okPrice && placeTick.(string) != nowTick) ||
 		if now-orderTime.(int64) > setting.Chance {
 			//util.Notice(fmt.Sprintf(`cancel %s `, marketSymbol))
 			if api.CancelOrders(account.Key, account.Secret, setting.Market, setting.Symbol) {
