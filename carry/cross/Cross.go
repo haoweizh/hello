@@ -233,17 +233,22 @@ func initStatus(account *model.Account, setting *model.Setting) (status *CarrySt
 	}
 	status.LimitBuy = math.Min(status.LimitBuy, status.AvailableBuy)
 	status.LimitSell = math.Min(status.LimitSell, status.AvailableSell)
-	jump := 10.0
-	jumpRevert := 7.0
-	if status.Holding > 0 {
-		status.TradeLineBuy = math.Max(setting.OpenShortMargin*(0.5+jump*status.RateInAll), lowestScore) + fundingRate
-		status.TradeLineSell = math.Max(setting.CloseShortMargin*(0.5-jumpRevert*status.RateInAll), lowestScore) - fundingRate
+	jumpBuy := 10.0
+	jumpSell := -7.0
+	if status.Holding < 0 {
+		jumpBuy = -7
+		jumpSell = 10
 	} else if status.Holding == 0 {
-		status.TradeLineBuy = math.Max(setting.OpenShortMargin*(0.5-jump*status.RateInAll), lowestScore) + fundingRate
-		status.TradeLineSell = math.Max(setting.CloseShortMargin*(0.5+jump*status.RateInAll), lowestScore) - fundingRate
-	} else if status.Holding < 0 {
-		status.TradeLineBuy = math.Max(setting.OpenShortMargin*(0.5-jumpRevert*status.RateInAll), lowestScore) + fundingRate
-		status.TradeLineSell = math.Max(setting.CloseShortMargin*(0.5+jump*status.RateInAll), lowestScore) - fundingRate
+		jumpBuy = 10
+		jumpSell = 10
+	}
+	status.TradeLineBuy = math.Max(setting.OpenShortMargin*(0.5+jumpBuy*status.RateInAll), lowestScore) + fundingRate
+	status.TradeLineSell = math.Max(setting.CloseShortMargin*(0.5+jumpSell*status.RateInAll), lowestScore) - fundingRate
+	if status.setting.Coin == `XEM` {
+		util.Info(fmt.Sprintf(`%s %s bline %f = max(0.015*(0.5+%f*rate %f)+funding %f hold %f`,
+			status.setting.Market, status.setting.Symbol, status.TradeLineBuy, jumpBuy, status.RateInAll, fundingRate, status.Holding))
+		util.Info(fmt.Sprintf(`%s %s sline %f = max(0.015*(0.5+%f*rate %f)-funding %f hold %f`,
+			status.setting.Market, status.setting.Symbol, status.TradeLineSell, jumpSell, status.RateInAll, fundingRate, status.Holding))
 	}
 	status.TradeLineBuy *= account.CarryRate
 	status.TradeLineSell *= account.CarryRate
@@ -300,8 +305,12 @@ func equalAccounts() {
 				return true
 			})
 		}
+		for i2, b := range waitEqual {
+			util.Notice(fmt.Sprintf(`...... waitEqual %d %v`, i2, b))
+		}
 		if !needEqual && time.Now().Minute()%10 != 0 {
 			util.Notice(`...... no change pass make equal`)
+			waitEqual[i] = false
 			continue
 		}
 		waitEqual[i] = true
