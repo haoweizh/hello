@@ -73,9 +73,10 @@ func Test_getCommonMarketInfos(t *testing.T) {
 func Test_BalAndPos(t *testing.T) {
 	model.NewConfig()
 	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
-	rate := api.GetFundingRatesFtx(``, ``, `XEM_PERP`)
-	fmt.Println(rate.Rate)
-	fmt.Println(rate.RateNext)
+	ok, rate := api.GetFundingRate(``, ``, model.BybitPerp, `XEM_PERP`)
+	//api.GetFundingRatesFtx(``, ``, `XEM_PERP`)
+	fmt.Println(rate)
+	fmt.Println(ok)
 
 	order := api.QueryOrderById(model.AppConfig.GateKey, model.AppConfig.GateSecret, `gate`, `MGA_USDT`,
 		model.OrderTypeLimit, `144149811503`)
@@ -313,7 +314,6 @@ func Test_wallet(t *testing.T) {
 }
 
 func Test_SyncMap(t *testing.T) {
-
 	var m sync.Map
 	util.StoreSyncMap(&m, `a`, `1`)
 	util.StoreSyncMap(&m, `b`, `2`)
