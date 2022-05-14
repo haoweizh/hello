@@ -715,8 +715,6 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarrySta
 	lastSymbol, ok := util.LoadSyncMap(&lastCrosses, statusBuy.account.Key, statusBuy.market)
 	if !(ok && lastSymbol != nil && lastSymbol.(string) == statusBuy.symbol) {
 		initLimitBuyAndSell(statusBuy, statusBuy.setting, priceBuy)
-	} else {
-		util.Info(fmt.Sprintf(`same as last %s %s`, statusBuy.market, statusBuy.symbol))
 	}
 	lastSymbol, ok = util.LoadSyncMap(&lastCrosses, statusSell.account.Key, statusSell.market)
 	if !(ok && lastSymbol != nil && lastSymbol.(string) == statusSell.symbol) {
