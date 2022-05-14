@@ -23,12 +23,12 @@ var InsufficientCodeOKEX = map[string]bool{`51008`: true, `51119`: true, `51120`
 	`58350`: true, `59108`: true, `59200`: true}
 
 // market/symbol/bool经过人工确认可以cross的币种
-//var validCrossCoin = map[string][]string{model.BinanceSpot: {`TORN`, `ANC`, `UST`},
-//										model.BinancePerp: {`TORN`, `ANC`, `UST`},
-//										model.Gate:        {`AE`, `HC`, `REEF`, `ONE`, `LSK`, `GLMR`, `LEASH`, `KDA`, `BLOK`, `ANC`, `UST`},
-//										model.OKEX:        {`AE`, `HC`, `ORBS`, `ONE`, `LSK`, `GLMR`, `LEASH`, `KLAY`, `KDA`, `BLOK`, `TORN`, `ANC`, `UST`},
-//										model.Ftx:         {`REEF`, `ORBS`, `ONE`, `LUNA`, `UST`},
-//										model.BybitPerp:   {`KLAY`, `ANC`, `UST`}}
+var validCrossCoin = map[string][]string{model.BinanceSpot: {`TORN`, `ANC`, `UST`},
+										model.BinancePerp: {`TORN`, `ANC`, `UST`},
+										model.Gate:        {`AE`, `HC`, `REEF`, `ONE`, `LSK`, `GLMR`, `LEASH`, `KDA`, `BLOK`, `ANC`, `UST`},
+										model.OKEX:        {`AE`, `HC`, `ORBS`, `ONE`, `LSK`, `GLMR`, `LEASH`, `KLAY`, `KDA`, `BLOK`, `TORN`, `ANC`, `UST`},
+										model.Ftx:         {`REEF`, `ORBS`, `ONE`, `LUNA`, `UST`},
+										model.BybitPerp:   {`KLAY`, `ANC`, `UST`}}
 var lastOrderIndex = make(map[string]map[string]int64)                       // market - symbol - index
 var lastOrders = make(map[string]map[string][]*model.Order, lastOrderLength) // market - symbol - []order
 //var statuses = make(map[string]map[string]map[string]map[string]*CarryStatus) // coin/market/symbol/key/CarryStatus
@@ -73,18 +73,18 @@ type CarryStatus struct {
 	RateInAll                   float64 // 现货：该币种占总权益的比例；永续：以开仓价算该币种持仓占保证金百分比
 }
 
-//func isValidSymbol(market, symbol string) bool {
-//	if validCrossCoin[market] == nil {
-//		return false
-//	}
-//	_, _, coin, _ := model.GetFromStandard(market, symbol)
-//	for _, validCoin := range validCrossCoin[market] {
-//		if validCoin == coin {
-//			return true
-//		}
-//	}
-//	return false
-//}
+func isValidSymbol(market, symbol string) bool {
+	if validCrossCoin[market] == nil {
+		return false
+	}
+	_, _, coin, _ := model.GetFromStandard(market, symbol)
+	for _, validCoin := range validCrossCoin[market] {
+		if validCoin == coin {
+			return true
+		}
+	}
+	return false
+}
 
 func isLastCross(key, market, symbol string) bool {
 	defer lockLastCross.Unlock()
