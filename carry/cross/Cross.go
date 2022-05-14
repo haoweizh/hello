@@ -121,8 +121,8 @@ func createFromPosition(account *model.Account, setting *model.Setting, valueLim
 		carryStatus.RateInAll = valueInUsd / cm.accountValueInU
 	}
 	if cm.contractValueInU/cm.accountValueInU > 1.8 || valueInUsd > valueLimit || valueInUsd/cm.accountValueInU > 0.3 {
-		util.Notice(fmt.Sprintf(`low position balance %s %s %f %f %f %f`,
-			key, setting.Symbol, cm.contractValueInU, cm.accountValueInU, valueInUsd, valueLimit))
+		//util.Notice(fmt.Sprintf(`low position balance %s %s %f %f %f %f`,
+		//	key, setting.Symbol, cm.contractValueInU, cm.accountValueInU, valueInUsd, valueLimit))
 		doRevert = true
 	}
 	return carryStatus, doRevert
