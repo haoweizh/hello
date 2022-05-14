@@ -308,22 +308,18 @@ func GetFundingRate(key, secret, market, symbol string) (success bool, rate floa
 				return true, fundingRate.RateNext
 			}
 		}
-	} else {
-		if fundingRate != nil && now < fundingRate.ExpireTime {
-			if fundingRate.ExpireTime-now < 3600 && fundingRate.ExpireTime%28800 != 0 {
-				// 临近1小时内，资金费率按8倍计算（此方法不够严谨）
-				return true, fundingRate.Rate * 8
-			}
-			return true, fundingRate.Rate
-		}
-	}
+	} else if market == model.Gate && fundingRate != nil && now < fundingRate.ExpireTime {
+		util.Notice(`gate funding expire at %d`, fundingRate.ExpireTime)
+		return true, fundingRate.Rate
+	} // 其他交易所的资金费率都会实时变动
 	switch market {
 	//case model.Bitmex:
 	//	rate, expireTime = deprecated.getFundingRateBitmex(key, secret, symbol)
 	//	model.SetFundingRate(market, symbol, &model.FundingRate{Rate: rate, ExpireTime: expireTime, UpdateTime: now})
 	case model.BybitPerp:
-		fundingRate = getFundingRateBybitPerp(key, secret, symbol)
-		model.SetFundingRate(market, symbol, fundingRate)
+		//fundingRate = getFundingRateBybitPerp(key, secret, symbol)
+		//model.SetFundingRate(market, symbol, fundingRate)
+		return true, 0
 	case model.BybitSpot:
 		return true, 0
 	case model.Ftx:
