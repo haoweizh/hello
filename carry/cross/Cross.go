@@ -808,8 +808,10 @@ func placeCross(statusBuy, statusSell *CarryStatus, priceBuy, priceSell, amount 
 	} else {
 		return
 	}
-	util.Notice(fmt.Sprintf(`place cross %s %s -> %s %s at %f %f amount %f`,
-		statusSell.market, statusSell.symbol, statusBuy.market, statusBuy.symbol, priceSell, priceBuy, amount))
+	score := (priceSell - priceBuy) / math.Max(priceBuy, priceSell)
+	util.Notice(fmt.Sprintf(`place cross %s %s -> %s %s at %f %f amount %f score %f buyLine %f sellLine %f`,
+		statusSell.market, statusSell.symbol, statusBuy.market, statusBuy.symbol, priceSell, priceBuy, amount,
+		score, statusBuy.TradeLineBuy, statusSell.TradeLineSell))
 	if statusBuy.market == model.OKEX && statusSell.market == model.OKEX && wsPlace {
 		if !api.PlacePairOKEX(statusBuy.account.Key, statusBuy.symbol, statusSell.symbol,
 			model.OrderTypeLimit, priceBuy, priceSell, amount) {
