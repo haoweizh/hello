@@ -518,7 +518,7 @@ func equalCoin(coin string, statuses []*CarryStatus) (isEqual bool, holdingInU f
 				coin, equalStatus.market, equalStatus.symbol, price, tick.Asks[0].Price, tick.Bids[0].Price, amount))
 			order := api.PlaceOrder(equalStatus.account.Key, equalStatus.account.Secret, orderSide, model.OrderTypeLimit,
 				equalStatus.market, equalStatus.symbol, ``,
-				price, price, amount, true, nil, nil)
+				price, price, amount, false, nil, nil)
 			if order != nil {
 				if orderSide == model.OrderSideBuy {
 					equalStatus.Holding += amount
