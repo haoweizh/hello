@@ -269,15 +269,20 @@ func getMarketsBybitPerp(key, secret string) (marketInfos map[string]*model.Mark
 		items, _ := marketJson.Get(`result`).Array()
 		for _, item := range items {
 			value := item.(map[string]interface{})
-			if value[`status`] == nil || !strings.EqualFold(value[`status`].(string), `Trading`) || value[`quote_currency`] == nil ||
-				value[`quote_currency`].(string) != `USDT` {
+			if value[`status`] == nil || !strings.EqualFold(value[`status`].(string), `Trading`) ||
+				value[`quote_currency`] == nil || value[`quote_currency`].(string) != `USDT` || value[`funding_interval`] == nil {
 				continue
 			}
 			marketInfo := &model.MarketInfo{Market: model.BybitPerp}
 			if value[`base_currency`] != nil {
 				marketInfo.CTCurrency = value[`base_currency`].(string)
 				marketInfo.Name = marketInfo.CTCurrency + model.UniStandardTail[model.MarketTypePerp]
-				marketInfos[marketInfo.Name] = marketInfo
+				fundingInterval, _ := value[`funding_interval`].(json.Number).Float64()
+				if fundingInterval == 480 {
+					marketInfos[marketInfo.Name] = marketInfo
+				} else {
+					util.Notice(fmt.Sprintf(`get markets bybitperp ignore %s interval %f `, marketInfo.Name, fundingInterval))
+				}
 			}
 			if value[`price_scale`] != nil {
 				decimal, _ := value[`price_scale`].(json.Number).Int64()

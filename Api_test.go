@@ -73,11 +73,7 @@ func Test_getCommonMarketInfos(t *testing.T) {
 func Test_BalAndPos(t *testing.T) {
 	model.NewConfig()
 	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
-	ok, rate := api.GetFundingRate(model.AppConfig.BybitKey, model.AppConfig.BybitSecret, model.BybitPerp, `AXS_PERP`)
-	//api.GetFundingRatesFtx(``, ``, `XEM_PERP`)
-	fmt.Println(rate)
-	fmt.Println(ok)
-
+	api.GetMarketInfos(model.BybitPerp)
 	order := api.QueryOrderById(model.AppConfig.GateKey, model.AppConfig.GateSecret, `gate`, `MGA_USDT`,
 		model.OrderTypeLimit, `144149811503`)
 	fmt.Println(order)

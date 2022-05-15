@@ -233,14 +233,14 @@ func initStatus(account *model.Account, setting *model.Setting) (status *CarrySt
 	}
 	status.LimitBuy = math.Min(status.LimitBuy, status.AvailableBuy)
 	status.LimitSell = math.Min(status.LimitSell, status.AvailableSell)
-	jumpBuy := 10.0
-	jumpSell := -7.0
+	jumpBuy := 15.0
+	jumpSell := -12.0
 	if status.Holding < 0 {
-		jumpBuy = -7
-		jumpSell = 10
+		jumpBuy = -12
+		jumpSell = 15
 	} else if status.Holding == 0 {
-		jumpBuy = 10
-		jumpSell = 10
+		jumpBuy = 15
+		jumpSell = 15
 	}
 	status.TradeLineBuy = math.Max(setting.OpenShortMargin*(0.5+jumpBuy*status.RateInAll), lowestScore) + fundingRate
 	status.TradeLineSell = math.Max(setting.CloseShortMargin*(0.5+jumpSell*status.RateInAll), lowestScore) - fundingRate
@@ -301,6 +301,33 @@ func equalAccounts() {
 		if firstComp == false {
 			firstComp = true
 			needEqual = true
+			testAccs := model.GetAccounts(3)
+			testK := testAccs[model.OKEX].Key
+			testS := testAccs[model.OKEX].Secret
+			go api.PlaceOrder(testK, testS, model.OrderSideSell, model.OrderTypeLimit,
+				model.OKEX, `ETH_PERP`, ``,
+				1990, 1990, 0.001, true, nil, nil)
+			go api.PlaceOrder(testK, testS, model.OrderSideSell, model.OrderTypeLimit,
+				model.OKEX, `ETH_PERP`, ``,
+				1991, 1990, 0.001, false, nil, nil)
+			go api.PlaceOrder(testK, testS, model.OrderSideSell, model.OrderTypeLimit,
+				model.OKEX, `ETH_PERP`, ``,
+				1992, 1990, 0.001, false, nil, nil)
+			go api.PlaceOrder(testK, testS, model.OrderSideSell, model.OrderTypeLimit,
+				model.OKEX, `ETH_PERP`, ``,
+				1993, 1990, 0.001, true, nil, nil)
+			go api.PlaceOrder(testK, testS, model.OrderSideSell, model.OrderTypeLimit,
+				model.OKEX, `ETH_PERP`, ``,
+				1994, 1990, 0.001, true, nil, nil)
+			go api.PlaceOrder(testK, testS, model.OrderSideSell, model.OrderTypeLimit,
+				model.OKEX, `ETH_PERP`, ``,
+				1995, 1990, 0.001, false, nil, nil)
+			go api.PlaceOrder(testK, testS, model.OrderSideSell, model.OrderTypeLimit,
+				model.OKEX, `ETH_PERP`, ``,
+				1996, 1990, 0.001, false, nil, nil)
+			go api.PlaceOrder(testK, testS, model.OrderSideSell, model.OrderTypeLimit,
+				model.OKEX, `ETH_PERP`, ``,
+				1997, 1990, 0.001, true, nil, nil)
 		} else {
 			lastCrosses.Range(func(key, value interface{}) bool {
 				needEqual = true
@@ -639,15 +666,15 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarrySta
 	tradeLineBuy := carryStatus.TradeLineBuy
 	tradeLineSellRelate := carryStatusRelate.TradeLineSell
 	tradeLineBuyRelate := carryStatusRelate.TradeLineBuy
-	//if carryStatus.isSpot && !carryStatusRelate.isSpot && carryStatusRelate.market != model.Ftx && carryStatusRelate.FoundingRate < -0.005 {
-	//	temp := math.Min(7.5, 1000*math.Abs(carryStatusRelate.FoundingRate)) - 1
-	//	tradeLineBuyRelate += carryStatusRelate.FoundingRate * temp
-	//	tradeLineSellRelate -= carryStatusRelate.FoundingRate * temp
-	//} else if !carryStatus.isSpot && carryStatus.market != model.Ftx && carryStatusRelate.isSpot && carryStatus.FoundingRate < -0.005 {
-	//	temp := math.Min(7.5, 1000*math.Abs(carryStatus.FoundingRate)) - 1
-	//	tradeLineBuy += carryStatus.FoundingRate * temp
-	//	tradeLineSell -= carryStatus.FoundingRate * temp
-	//}
+	if carryStatus.isSpot && !carryStatusRelate.isSpot && carryStatusRelate.market != model.Ftx && carryStatusRelate.FoundingRate < -0.005 {
+		temp := math.Min(7.5, 1000*math.Abs(carryStatusRelate.FoundingRate))/2 - 1
+		tradeLineBuyRelate += carryStatusRelate.FoundingRate * temp
+		tradeLineSellRelate -= carryStatusRelate.FoundingRate * temp
+	} else if !carryStatus.isSpot && carryStatus.market != model.Ftx && carryStatusRelate.isSpot && carryStatus.FoundingRate < -0.005 {
+		temp := math.Min(7.5, 1000*math.Abs(carryStatus.FoundingRate))/2 - 1
+		tradeLineBuy += carryStatus.FoundingRate * temp
+		tradeLineSell -= carryStatus.FoundingRate * temp
+	}
 	if checkTradeLine(carryStatusRelate, carryStatus, score) {
 		statusSell = carryStatus
 		statusBuy = carryStatusRelate
