@@ -185,7 +185,34 @@ func holdPage(c *gin.Context) {
 			}
 		}
 	}
-	carryRows, _ := model.AppDB.Model(model.Order{}).Select(`market,amount_type,order_side,sum(price*abs(amount)),date(order_time),refresh_type,count(*)`).
+	carryRows, _ := model.AppDB.Model(model.Order{}).Select(`amount_type,order_side,sum(price*abs(amount)),date(order_time),count(*)`).
+		Where(`refresh_type=?`, model.FunctionCross).Group(`order_side,date(order_time),amount_type`).Order(`date(order_time) desc`).Rows()
+	if carryRows != nil {
+		crossInU := map[string]map[string]float64{model.OrderSideBuy: {}, model.OrderSideSell: {}}
+		crossCount := map[string]map[string]float64{model.OrderSideBuy: {}, model.OrderSideSell: {}}
+		for carryRows.Next() {
+			var side, date, amountType string
+			var value, orderNum float64
+			_ = carryRows.Scan(&amountType, &side, &value, &date, &orderNum)
+			dates := strings.Split(date, `-`)
+			date = fmt.Sprintf(`%s-%s`, dates[1], dates[2])
+			date = date[0:strings.Index(date, `T`)]
+			i := model.AppConfig.GetIndexFromKey(amountType)
+			if i == index {
+				crossInU[side][date] += value
+				crossCount[side][date] += orderNum
+			}
+		}
+		for side, m := range crossInU {
+			for date, crossU := range m {
+				tradeInfo = append(tradeInfo, []string{`ALL`, date, side,
+					strconv.FormatFloat(crossU, 'f', 0, 64), model.FunctionCross,
+					strconv.FormatFloat(crossCount[side][date], 'f', 0, 64), ``})
+			}
+		}
+		carryRows.Close()
+	}
+	carryRows, _ = model.AppDB.Model(model.Order{}).Select(`market,amount_type,order_side,sum(price*abs(amount)),date(order_time),refresh_type,count(*)`).
 		Group(`market,order_side,date(order_time),amount_type,refresh_type`).Order(`date(order_time) desc, market`).Rows()
 	if carryRows != nil {
 		for carryRows.Next() {

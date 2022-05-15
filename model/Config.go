@@ -124,6 +124,17 @@ func (config *Config) GetCrossLen() int {
 //	return
 //}
 
+func (config *Config) GetIndexFromKey(key string) (index int) {
+	for _, accounts := range AppAccounts {
+		for _, account := range accounts {
+			if account.Key == key {
+				return account.Index
+			}
+		}
+	}
+	return -1
+}
+
 func (config *Config) GetAccountFromKey(market, key string) (account *Account) {
 	accounts := config.GetAccounts(market)
 	if accounts == nil {
