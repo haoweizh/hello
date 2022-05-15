@@ -488,7 +488,8 @@ func placeTurtleOrders(key, secret string, turtleData *TurtleData, setting *mode
 			orderSide, turtleData.end1, turtleData.highDays20, turtleData.highDays10, turtleData.highDays5,
 			turtleData.lowDays20, turtleData.lowDays10, turtleData.lowDays5, setting.OpenShortMargin))
 		order := api.MustPlaceOrder(key, secret, orderSide, typeLong, setting.Market, setting.Symbol, ``, model.FunctionTurtle,
-			priceLong*(1+turtleTriggerDelta), priceLong, amount, true, false, setting)
+			priceLong*(1+turtleTriggerDelta), priceLong, amount, setting)
+		go model.AppDB.Save(order)
 		if order != nil && order.OrderId != `` && order.Status != model.CarryStatusFail {
 			turtleData.orderLong = order
 			turtleData.longs = append(turtleData.longs, order)
@@ -524,7 +525,8 @@ func placeTurtleOrders(key, secret string, turtleData *TurtleData, setting *mode
 			orderSide, turtleData.end1, turtleData.highDays20, turtleData.highDays10, turtleData.highDays5,
 			turtleData.lowDays20, turtleData.lowDays10, turtleData.lowDays5, setting.OpenShortMargin))
 		order := api.MustPlaceOrder(key, secret, orderSide, typeShort, setting.Market, setting.Symbol, ``,
-			model.FunctionTurtle, priceShort*(1-turtleTriggerDelta), priceShort, amount, true, false, setting)
+			model.FunctionTurtle, priceShort*(1-turtleTriggerDelta), priceShort, amount, setting)
+		go model.AppDB.Save(order)
 		if order != nil && order.OrderId != `` && order.Status != model.CarryStatusFail {
 			turtleData.orderShort = order
 			turtleData.shorts = append(turtleData.shorts, order)

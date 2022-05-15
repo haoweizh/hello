@@ -439,11 +439,11 @@ func GetPositions(key, secret, market string) (success bool, positions []*model.
 }
 
 func MustPlaceOrder(key, secret, orderSide, orderType, market, symbol, orderParam,
-	refreshType string, price, triggerPrice, amount float64, saveDB, isWs bool, setting *model.Setting) (order *model.Order) {
+	refreshType string, price, triggerPrice, amount float64, setting *model.Setting) (order *model.Order) {
 	retry := 10
 	for i := 0; i < retry; i++ {
 		order = PlaceOrder(key, secret, orderSide, orderType, market, symbol,
-			orderParam, price, triggerPrice, amount, isWs, nil, setting)
+			orderParam, price, triggerPrice, amount, false, nil, setting)
 		if order != nil && order.OrderId != `` && order.Status != model.CarryStatusFail {
 			break
 		} else {
@@ -456,9 +456,6 @@ func MustPlaceOrder(key, secret, orderSide, orderType, market, symbol, orderPara
 		}
 	}
 	order.RefreshType = refreshType
-	if saveDB {
-		go model.AppDB.Save(order)
-	}
 	return order
 }
 
