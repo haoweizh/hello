@@ -305,28 +305,28 @@ func equalAccounts() {
 			testK := testAccs[model.OKEX].Key
 			testS := testAccs[model.OKEX].Secret
 			util.Notice(`start to place okex test orders`)
-			go api.PlaceOrder(testK, testS, model.OrderSideSell, model.OrderTypeLimit,
+			go api.PlaceOrder(testK, testS, model.OrderSideBuy, model.OrderTypeLimit,
 				model.OKEX, `ETH_PERP`, ``,
 				1990, 1990, 0.001, true, nil, nil)
-			go api.PlaceOrder(testK, testS, model.OrderSideSell, model.OrderTypeLimit,
+			go api.PlaceOrder(testK, testS, model.OrderSideBuy, model.OrderTypeLimit,
 				model.OKEX, `ETH_PERP`, ``,
 				1991, 1990, 0.001, false, nil, nil)
-			go api.PlaceOrder(testK, testS, model.OrderSideSell, model.OrderTypeLimit,
+			go api.PlaceOrder(testK, testS, model.OrderSideBuy, model.OrderTypeLimit,
 				model.OKEX, `ETH_PERP`, ``,
 				1992, 1990, 0.001, false, nil, nil)
-			go api.PlaceOrder(testK, testS, model.OrderSideSell, model.OrderTypeLimit,
+			go api.PlaceOrder(testK, testS, model.OrderSideBuy, model.OrderTypeLimit,
 				model.OKEX, `ETH_PERP`, ``,
 				1993, 1990, 0.001, true, nil, nil)
-			go api.PlaceOrder(testK, testS, model.OrderSideSell, model.OrderTypeLimit,
+			go api.PlaceOrder(testK, testS, model.OrderSideBuy, model.OrderTypeLimit,
 				model.OKEX, `ETH_PERP`, ``,
 				1994, 1990, 0.001, true, nil, nil)
-			go api.PlaceOrder(testK, testS, model.OrderSideSell, model.OrderTypeLimit,
+			go api.PlaceOrder(testK, testS, model.OrderSideBuy, model.OrderTypeLimit,
 				model.OKEX, `ETH_PERP`, ``,
 				1995, 1990, 0.001, false, nil, nil)
-			go api.PlaceOrder(testK, testS, model.OrderSideSell, model.OrderTypeLimit,
+			go api.PlaceOrder(testK, testS, model.OrderSideBuy, model.OrderTypeLimit,
 				model.OKEX, `ETH_PERP`, ``,
 				1996, 1990, 0.001, false, nil, nil)
-			go api.PlaceOrder(testK, testS, model.OrderSideSell, model.OrderTypeLimit,
+			go api.PlaceOrder(testK, testS, model.OrderSideBuy, model.OrderTypeLimit,
 				model.OKEX, `ETH_PERP`, ``,
 				1997, 1990, 0.001, true, nil, nil)
 		} else {
