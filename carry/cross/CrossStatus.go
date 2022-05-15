@@ -43,6 +43,7 @@ var notifyTime sync.Map                   // 1. market_symbol_market_symbol/time
 var crossing bool
 var doCross = false
 var firstComp = false
+var wsCross = true
 
 type contractMarket struct {
 	key, market          string
@@ -215,6 +216,14 @@ func addCarryResult(key, market, msg string, success bool) {
 		}
 	} else {
 		carryFail.Store(key, fails+1)
+		if market == model.OKEX && wsCross {
+			go func() {
+				wsCross = false
+				util.Notice(fmt.Sprintf(`fail to order okex by ws, change ok ws cross for 10 mins`))
+				time.Sleep(time.Minute * 10)
+				wsCross = true
+			}()
+		}
 	}
 	if fails > 6 {
 		if strings.Trim(msg, " ") != "" {

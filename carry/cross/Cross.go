@@ -518,7 +518,7 @@ func equalCoin(coin string, statuses []*CarryStatus) (isEqual bool, holdingInU f
 				coin, equalStatus.market, equalStatus.symbol, price, tick.Asks[0].Price, tick.Bids[0].Price, amount))
 			order := api.PlaceOrder(equalStatus.account.Key, equalStatus.account.Secret, orderSide, model.OrderTypeLimit,
 				equalStatus.market, equalStatus.symbol, ``,
-				price, price, amount, false, nil, nil)
+				price, price, amount, wsCross, nil, nil)
 			if order != nil {
 				if orderSide == model.OrderSideBuy {
 					equalStatus.Holding += amount
@@ -588,7 +588,7 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 			statusBuy, statusSell, amount, priceBuy, priceSell := calcAmount(i, setting.Coin, status.(*CarryStatus),
 				statusRelate.(*CarryStatus), tick, tickRelate)
 			if amount > 0 {
-				placeCross(statusBuy, statusSell, priceBuy, priceSell, amount, false)
+				placeCross(statusBuy, statusSell, priceBuy, priceSell, amount)
 				return
 			}
 		}
@@ -802,7 +802,7 @@ func initLimitBuyAndSell(status *CarryStatus, setting *model.Setting, price floa
 	}
 }
 
-func placeCross(statusBuy, statusSell *CarryStatus, priceBuy, priceSell, amount float64, wsPlace bool) {
+func placeCross(statusBuy, statusSell *CarryStatus, priceBuy, priceSell, amount float64) {
 	if !checkSetCrossing(true) {
 		defer checkSetCrossing(false)
 	} else {
@@ -812,7 +812,7 @@ func placeCross(statusBuy, statusSell *CarryStatus, priceBuy, priceSell, amount 
 	util.Notice(fmt.Sprintf(`place cross %s %s -> %s %s at %f %f amount %f score %f hold %f buy %f hold %f sell %f`,
 		statusSell.market, statusSell.symbol, statusBuy.market, statusBuy.symbol, priceSell, priceBuy, amount,
 		score, statusBuy.Holding, statusBuy.TradeLineBuy, statusSell.Holding, statusSell.TradeLineSell))
-	if statusBuy.market == model.OKEX && statusSell.market == model.OKEX && wsPlace {
+	if statusBuy.market == model.OKEX && statusSell.market == model.OKEX && wsCross {
 		now := time.Now().UnixNano()
 		orderBuy := &model.Order{OrderSide: model.OrderSideBuy, OrderType: model.OrderTypeLimit, Market: model.OKEX,
 			Symbol: statusBuy.symbol, Price: priceBuy, Amount: amount, RefreshType: model.FunctionCross, OrderTime: util.GetNow(),
@@ -839,7 +839,7 @@ func placeCross(statusBuy, statusSell *CarryStatus, priceBuy, priceSell, amount 
 	} else {
 		go func() {
 			order := api.PlaceOrder(statusBuy.account.Key, statusBuy.account.Secret, model.OrderSideBuy, model.OrderTypeLimit,
-				statusBuy.market, statusBuy.symbol, ``, priceBuy, priceBuy, amount, wsPlace, PostOrderCross, statusBuy.setting)
+				statusBuy.market, statusBuy.symbol, ``, priceBuy, priceBuy, amount, wsCross, PostOrderCross, statusBuy.setting)
 			if order != nil {
 				order.Coin = statusBuy.setting.Coin
 				order.LineBuy = statusBuy.TradeLineBuy
@@ -855,7 +855,7 @@ func placeCross(statusBuy, statusSell *CarryStatus, priceBuy, priceSell, amount 
 		go func() {
 			order := api.PlaceOrder(statusSell.account.Key, statusSell.account.Secret, model.OrderSideSell, model.OrderTypeLimit,
 				statusSell.market, statusSell.symbol, ``, priceSell, priceSell,
-				amount, wsPlace, PostOrderCross, statusSell.setting)
+				amount, wsCross, PostOrderCross, statusSell.setting)
 			if order != nil {
 				order.Coin = statusSell.setting.Coin
 				order.LineBuy = statusSell.TradeLineBuy

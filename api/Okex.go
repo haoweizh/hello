@@ -286,7 +286,7 @@ var wsHandlerPrivate = func(connection *websocket.Conn, event []byte, orderHandl
 
 func handleWSOrderOKEX(value map[string]interface{}, orderHandler OrderHandler) {
 	order := parseOrderOKEX(value)
-	util.Notice(`get order %v`, value)
+	util.Notice(`get order sCode %s %s %v`, order.ErrCode, order.Status, value)
 	//dbOrder := model.Order{}
 	//model.AppDB.Where(`order_id=?`, order.OrderId).First(&dbOrder)
 	//if dbOrder.OrderId != `` {
@@ -296,7 +296,8 @@ func handleWSOrderOKEX(value map[string]interface{}, orderHandler OrderHandler) 
 	//	util.Info(`db can not get orderId %s`, order.OrderId)
 	//}
 	//model.AppDB.Save(order)
-	if orderHandler != nil {
+	// 当前只针对错误订单进行处理
+	if orderHandler != nil && order.Status == model.CarryStatusFail {
 		orderHandler(order, nil)
 	}
 }
@@ -864,6 +865,9 @@ func parseOrderOKEX(value map[string]interface{}) (order *model.Order) {
 	}
 	if value[`sCode`] != nil {
 		order.ErrCode = value[`sCode`].(string)
+		if order.ErrCode != `0` && strings.Trim(order.ErrCode, ` `) != `` {
+			order.Status = model.CarryStatusFail
+		}
 	}
 	if value[`instId`] != nil {
 		success, marketType, coin := model.GetCoinFromDialect(model.OKEX, value[`instId`].(string))
