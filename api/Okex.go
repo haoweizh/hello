@@ -656,11 +656,14 @@ func placeOrderOKEX(key, secret string, isWs bool, order *model.Order) {
 		subscribeMap[`args`] = []map[string]interface{}{postData}
 		wsOrderMsg := util.JsonEncodeToByte(subscribeMap)
 		util.SocketInfo(`ws order ` + string(wsOrderMsg))
+		order.Status = model.CarryStatusWorking
 		if privateConnectionOKEX == nil || privateConnectionOKEX[key] == nil {
 			util.Notice(fmt.Sprintf(`fail to get connection %s`, key))
+			order.Status = model.CarryStatusFail
 		} else {
 			if err := SendToConnection(model.OKEX, privateConnectionOKEX[key], wsOrderMsg); err != nil {
 				util.Notice(fmt.Sprintf(`fail to send order ws %s %s return %s`, key, order.Symbol, err.Error()))
+				order.Status = model.CarryStatusFail
 			}
 		}
 	} else {

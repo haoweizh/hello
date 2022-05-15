@@ -493,6 +493,9 @@ func PlaceOrder(key, secret, orderSide, orderType, market, symbol, orderParam st
 		placeOrderGate(key, secret, order, orderSide, orderType, symbol, price, amount)
 	case model.OKEX:
 		placeOrderOKEX(key, secret, isWs, order)
+		if isWs {
+			order.OrderId = strconv.FormatInt(time.Now().UnixNano(), 10) + symbol
+		}
 	case model.BinanceSpot:
 		placeOrderBinanceSpot(key, secret, order, orderSide, orderType, symbol, price, amount)
 	case model.BinancePerp:
@@ -515,11 +518,7 @@ func PlaceOrder(key, secret, orderSide, orderType, market, symbol, orderParam st
 	end := util.GetNowUnixMillion()
 	util.Notice(fmt.Sprintf(`...%s %s %s return order at %d distance %d %s %s price %f id %s`,
 		orderSide, market, symbol, end, end-start, order.Status, order.ErrCode, order.Price, order.OrderId))
-	if isWs && market == model.OKEX {
-		order.Status = model.CarryStatusSuccess
-		order.OrderId = strconv.FormatInt(time.Now().UnixNano(), 10) + symbol
-	}
-	if postOrder != nil && setting.Market != model.OKEX {
+	if postOrder != nil {
 		go postOrder(order, setting)
 	}
 	return order
