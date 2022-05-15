@@ -301,35 +301,6 @@ func equalAccounts() {
 		if firstComp == false {
 			firstComp = true
 			needEqual = true
-			testAccs := model.GetAccounts(3)
-			testK := testAccs[model.OKEX].Key
-			testS := testAccs[model.OKEX].Secret
-			time.Sleep(time.Minute * 2)
-			util.Notice(`start to place okex test orders %s`, testK)
-			go api.PlaceOrder(testK, testS, model.OrderSideBuy, model.OrderTypeLimit,
-				model.OKEX, `ETH_USDT`, ``,
-				1990, 1990, 0.001, true, nil, nil)
-			go api.PlaceOrder(testK, testS, model.OrderSideBuy, model.OrderTypeLimit,
-				model.OKEX, `ETH_USDT`, ``,
-				1991, 1991, 0.001, false, nil, nil)
-			go api.PlaceOrder(testK, testS, model.OrderSideBuy, model.OrderTypeLimit,
-				model.OKEX, `ETH_USDT`, ``,
-				1992, 1992, 0.001, false, nil, nil)
-			go api.PlaceOrder(testK, testS, model.OrderSideBuy, model.OrderTypeLimit,
-				model.OKEX, `ETH_USDT`, ``,
-				1993, 1993, 0.001, true, nil, nil)
-			go api.PlaceOrder(testK, testS, model.OrderSideBuy, model.OrderTypeLimit,
-				model.OKEX, `ETH_USDT`, ``,
-				1994, 1994, 0.001, true, nil, nil)
-			go api.PlaceOrder(testK, testS, model.OrderSideBuy, model.OrderTypeLimit,
-				model.OKEX, `ETH_USDT`, ``,
-				1995, 1995, 0.001, false, nil, nil)
-			go api.PlaceOrder(testK, testS, model.OrderSideBuy, model.OrderTypeLimit,
-				model.OKEX, `ETH_USDT`, ``,
-				1996, 1996, 0.001, false, nil, nil)
-			go api.PlaceOrder(testK, testS, model.OrderSideBuy, model.OrderTypeLimit,
-				model.OKEX, `ETH_USDT`, ``,
-				1997, 1997, 0.001, true, nil, nil)
 		} else {
 			lastCrosses.Range(func(key, value interface{}) bool {
 				needEqual = true
