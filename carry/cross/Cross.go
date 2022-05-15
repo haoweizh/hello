@@ -304,6 +304,7 @@ func equalAccounts() {
 			testAccs := model.GetAccounts(3)
 			testK := testAccs[model.OKEX].Key
 			testS := testAccs[model.OKEX].Secret
+			time.Sleep(time.Minute * 2)
 			util.Notice(`start to place okex test orders %s`, testK)
 			go api.PlaceOrder(testK, testS, model.OrderSideBuy, model.OrderTypeLimit,
 				model.OKEX, `ETH_USDT`, ``,
