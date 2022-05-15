@@ -244,14 +244,14 @@ func initStatus(account *model.Account, setting *model.Setting) (status *CarrySt
 	}
 	status.TradeLineBuy = math.Max(setting.OpenShortMargin*(0.5+jumpBuy*status.RateInAll), lowestScore) + fundingRate
 	status.TradeLineSell = math.Max(setting.CloseShortMargin*(0.5+jumpSell*status.RateInAll), lowestScore) - fundingRate
-	if status.setting.Coin == `ANC` && account.Index == 0 {
-		util.Info(fmt.Sprintf(`%s %s bline %f = max(%f*(0.5+%f*rate %f)+funding %f hold %f`,
-			status.setting.Market, status.setting.Symbol, status.TradeLineBuy, setting.OpenShortMargin, jumpBuy,
-			status.RateInAll, fundingRate, status.Holding))
-		util.Info(fmt.Sprintf(`%s %s sline %f = max(%f*(0.5+%f*rate %f)-funding %f hold %f`,
-			status.setting.Market, status.setting.Symbol, status.TradeLineSell, setting.CloseShortMargin, jumpSell,
-			status.RateInAll, fundingRate, status.Holding))
-	}
+	//if status.setting.Coin == `ANC` && account.Index == 0 {
+	//	util.Info(fmt.Sprintf(`%s %s bline %f = max(%f*(0.5+%f*rate %f)+funding %f hold %f`,
+	//		status.setting.Market, status.setting.Symbol, status.TradeLineBuy, setting.OpenShortMargin, jumpBuy,
+	//		status.RateInAll, fundingRate, status.Holding))
+	//	util.Info(fmt.Sprintf(`%s %s sline %f = max(%f*(0.5+%f*rate %f)-funding %f hold %f`,
+	//		status.setting.Market, status.setting.Symbol, status.TradeLineSell, setting.CloseShortMargin, jumpSell,
+	//		status.RateInAll, fundingRate, status.Holding))
+	//}
 	status.TradeLineBuy *= account.CarryRate
 	status.TradeLineSell *= account.CarryRate
 	if doRevert || account.CarryClose {
@@ -304,6 +304,7 @@ func equalAccounts() {
 			testAccs := model.GetAccounts(3)
 			testK := testAccs[model.OKEX].Key
 			testS := testAccs[model.OKEX].Secret
+			util.Notice(`start to place okex test orders`)
 			go api.PlaceOrder(testK, testS, model.OrderSideSell, model.OrderTypeLimit,
 				model.OKEX, `ETH_PERP`, ``,
 				1990, 1990, 0.001, true, nil, nil)
