@@ -186,11 +186,11 @@ func holdPage(c *gin.Context) {
 		}
 	}
 	carryRows, _ := model.AppDB.Model(model.Order{}).Select(`amount_type,order_side,sum(price*abs(amount)),date(order_time),count(*)`).
-		Where(`refresh_type=? and status!=?`, model.FunctionCross, model.CarryStatusFail).
+		Where(`refresh_type=?`, model.FunctionCross).
 		Group(`order_side,date(order_time),amount_type`).Order(`date(order_time) desc`).Rows()
 	if carryRows != nil {
-		crossInU := map[string]map[string]float64{model.OrderSideBuy: {}, model.OrderSideSell: {}}
-		crossCount := map[string]map[string]float64{model.OrderSideBuy: {}, model.OrderSideSell: {}}
+		crossInU := map[string]map[string]float64{}
+		crossCount := map[string]map[string]float64{}
 		for carryRows.Next() {
 			var side, date, amountType string
 			var value, orderNum float64
@@ -200,8 +200,12 @@ func holdPage(c *gin.Context) {
 			date = date[0:strings.Index(date, `T`)]
 			i := model.AppConfig.GetIndexFromKey(amountType)
 			if i == index {
-				crossInU[side][date] += value
-				crossCount[side][date] += orderNum
+				if crossInU[date] == nil || crossCount[date] == nil {
+					crossInU[date] = map[string]float64{}
+					crossCount[date] = map[string]float64{}
+				}
+				crossInU[date][side] += value
+				crossCount[date][side] += orderNum
 			}
 		}
 		for side, m := range crossInU {
