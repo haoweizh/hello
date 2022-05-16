@@ -2,12 +2,15 @@ package util
 
 import (
 	"context"
+	"crypto/tls"
 	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"net"
 	"net/http"
+	"net/mail"
+	"net/smtp"
 	"sort"
 	"strings"
 	"time"
@@ -150,60 +153,60 @@ func HttpRequest(method string, reqUrl string, body string, requestHeaders map[s
 }
 
 func SendMail(fromAddress, mailAuth, toAddress, subject, body string) (err error) {
-	Notice(fmt.Sprintf(`pretend to send %s %s %s %s %s`, fromAddress, mailAuth, toAddress, subject, body))
-	return nil
-	//from := mail.Address{Address: fromAddress}
-	//to := mail.Address{Address: toAddress}
-	//headers := make(map[string]string)
-	//headers["From"] = from.String()
-	//headers["To"] = to.String()
-	//headers["Subject"] = subject
-	//message := ""
-	//for k, v := range headers {
-	//	message += fmt.Sprintf("%s: %s\r\n", k, v)
-	//}
-	//message += "\r\n" + body
-	//servername := "smtp.qq.com:465"
-	//host, _, _ := net.SplitHostPort(servername)
-	//auth := smtp.PlainAuth("", fromAddress, mailAuth, host)
-	//tlsconfig := &tls.Config{
-	//	InsecureSkipVerify: true,
-	//	ServerName:         host,
-	//}
-	//conn, err := tls.Dial("tcp", servername, tlsconfig)
-	//if err != nil {
-	//	return err
-	//}
-	//c, err := smtp.NewClient(conn, host)
-	//if err != nil {
-	//	return err
-	//}
-	//// Auth
-	//if err = c.Auth(auth); err != nil {
-	//	return err
-	//}
-	//// To && From
-	//if err = c.Mail(from.Address); err != nil {
-	//	return err
-	//}
-	//if err = c.Rcpt(to.Address); err != nil {
-	//	return err
-	//}
-	//// Data
-	//w, err := c.Data()
-	//if err != nil {
-	//	return err
-	//}
-	//_, err = w.Write([]byte(message))
-	//if err != nil {
-	//	return err
-	//}
-	//err = w.Close()
-	//if err != nil {
-	//	return err
-	//}
-	//_ = c.Quit()
-	//SocketInfo(fmt.Sprintf(`%s to %s %s %s`,
-	//	from.String(), to.String(), subject, message))
-	//return err
+	//Notice(fmt.Sprintf(`pretend to send %s %s %s %s %s`, fromAddress, mailAuth, toAddress, subject, body))
+	//return nil
+	from := mail.Address{Address: fromAddress}
+	to := mail.Address{Address: toAddress}
+	headers := make(map[string]string)
+	headers["From"] = from.String()
+	headers["To"] = to.String()
+	headers["Subject"] = subject
+	message := ""
+	for k, v := range headers {
+		message += fmt.Sprintf("%s: %s\r\n", k, v)
+	}
+	message += "\r\n" + body
+	servername := "smtp.qq.com:465"
+	host, _, _ := net.SplitHostPort(servername)
+	auth := smtp.PlainAuth("", fromAddress, mailAuth, host)
+	tlsConfig := &tls.Config{
+		InsecureSkipVerify: true,
+		ServerName:         host,
+	}
+	conn, err := tls.Dial("tcp", servername, tlsConfig)
+	if err != nil {
+		return err
+	}
+	c, err := smtp.NewClient(conn, host)
+	if err != nil {
+		return err
+	}
+	// Auth
+	if err = c.Auth(auth); err != nil {
+		return err
+	}
+	// To && From
+	if err = c.Mail(from.Address); err != nil {
+		return err
+	}
+	if err = c.Rcpt(to.Address); err != nil {
+		return err
+	}
+	// Data
+	w, err := c.Data()
+	if err != nil {
+		return err
+	}
+	_, err = w.Write([]byte(message))
+	if err != nil {
+		return err
+	}
+	err = w.Close()
+	if err != nil {
+		return err
+	}
+	_ = c.Quit()
+	SocketInfo(fmt.Sprintf(`%s to %s %s %s`,
+		from.String(), to.String(), subject, message))
+	return err
 }
