@@ -291,31 +291,34 @@ func equalAccounts() {
 	waitEqual := make(map[int]bool)
 	equalChannel := make(chan int, 1)
 	markets := model.GetMarkets()
+	needWaitEqual := false // 是否需要进入等待环节
 	for i := 0; i < model.AppConfig.GetCrossLen(); i++ {
 		accounts := make(map[string]*model.Account)
 		indexAccounts := model.GetAccounts(i)
 		for _, market := range markets {
 			accounts[market] = indexAccounts[market]
 		}
-		needEqual := false
+		needEqualOne := false
 		if firstComp == false {
 			firstComp = true
-			needEqual = true
+			needEqualOne = true
 		} else {
 			lastCrosses.Range(func(key, value interface{}) bool {
-				needEqual = true
+				needEqualOne = true
 				return true
 			})
 		}
-		if !needEqual && time.Now().Minute()%10 != 0 {
+		if !needEqualOne && time.Now().Minute()%10 != 0 {
 			util.Notice(`...... no change pass make equal`)
 			waitEqual[i] = false
 			continue
+		} else {
+			needWaitEqual = true
 		}
 		waitEqual[i] = true
 		go equalAccount(i, equalChannel, accounts, coinSettings)
 	}
-	for true {
+	for needWaitEqual {
 		index := <-equalChannel
 		waitEqual[index] = false
 		finish := true

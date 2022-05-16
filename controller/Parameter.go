@@ -186,7 +186,8 @@ func holdPage(c *gin.Context) {
 		}
 	}
 	carryRows, _ := model.AppDB.Model(model.Order{}).Select(`amount_type,order_side,sum(price*abs(amount)),date(order_time),count(*)`).
-		Where(`refresh_type=?`, model.FunctionCross).Group(`order_side,date(order_time),amount_type`).Order(`date(order_time) desc`).Rows()
+		Where(`refresh_type=? and status!=?`, model.FunctionCross, model.CarryStatusFail).
+		Group(`order_side,date(order_time),amount_type`).Order(`date(order_time) desc`).Rows()
 	if carryRows != nil {
 		crossInU := map[string]map[string]float64{model.OrderSideBuy: {}, model.OrderSideSell: {}}
 		crossCount := map[string]map[string]float64{model.OrderSideBuy: {}, model.OrderSideSell: {}}
