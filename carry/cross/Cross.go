@@ -234,9 +234,9 @@ func initStatus(account *model.Account, setting *model.Setting) (status *CarrySt
 	status.LimitBuy = math.Min(status.LimitBuy, status.AvailableBuy)
 	status.LimitSell = math.Min(status.LimitSell, status.AvailableSell)
 	jumpBuy := 15.0
-	jumpSell := -12.0
+	jumpSell := -10.0
 	if status.Holding < 0 {
-		jumpBuy = -12
+		jumpBuy = -10
 		jumpSell = 15
 	} else if status.Holding == 0 {
 		jumpBuy = 15
