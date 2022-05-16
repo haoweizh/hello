@@ -90,6 +90,7 @@ func isValidSymbol(market, symbol string) bool {
 func GetHoldings(accounts map[string]*model.Account) (holding [][]interface{}) {
 	holding = make([][]interface{}, 0)
 	coinHold := make(map[string]float64)
+	coinValue := make(map[string]float64)
 	coinPrice := make(map[string]float64)
 	uniAccounts := make(map[string]*model.Account)
 	for _, account := range accounts {
@@ -115,6 +116,7 @@ func GetHoldings(accounts map[string]*model.Account) (holding [][]interface{}) {
 					holding = append(holding, []interface{}{balance.Market, balance.Coin, symbol,
 						fmt.Sprintf(`%.2f`, balance.Amount), math.Round(balance.UsdValue), valid})
 					coinHold[balance.Coin] += balance.Amount
+					coinHold[balance.Coin] += math.Round(balance.UsdValue)
 					if coinPrice[balance.Coin] == 0 {
 						tickGet, tick := model.AppMarkets.GetBidAsk(symbol, balance.Market)
 						if tickGet {
@@ -141,6 +143,7 @@ func GetHoldings(accounts map[string]*model.Account) (holding [][]interface{}) {
 							math.Round(position.Holding), math.Round(tick.Bids[0].Price * position.Holding), valid})
 						coinHold[coin] += position.Holding
 						coinPrice[coin] = tick.Bids[0].Price
+						coinValue[coin] += math.Round(tick.Bids[0].Price * position.Holding)
 					} else {
 						holding = append(holding, []interface{}{position.Market, coin, position.Currency,
 							position.Holding, 0.0, valid})
@@ -163,6 +166,7 @@ func GetHoldings(accounts map[string]*model.Account) (holding [][]interface{}) {
 			money = math.Ceil(coinHold[coin]*coinPrice[coin]/10) * 10
 		}
 		holding[i] = append(holding[i], money)
+		holding[i] = append(holding[i], coinValue[coin])
 	}
 	return
 }

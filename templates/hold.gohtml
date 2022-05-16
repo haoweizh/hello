@@ -54,6 +54,7 @@
     <th>symbol</th>
     <th>数量</th>
     <th>价值U</th>
+    <th>总值U</th>
     <th>valid</th>
     <th>equal</th>
     {{range $i, $value := $.holdings}}
@@ -63,6 +64,7 @@
             <td>{{index $value 2}}</td>
             <td>{{index $value 3}}</td>
             <td>{{index $value 4}}</td>
+            <td>{{index $value 7}}</td>
             <td>{{index $value 5}}</td>
             <td>{{index $value 6}}</td>
         </tr>
