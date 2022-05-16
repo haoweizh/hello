@@ -116,7 +116,7 @@ func GetHoldings(accounts map[string]*model.Account) (holding [][]interface{}) {
 					holding = append(holding, []interface{}{balance.Market, balance.Coin, symbol,
 						fmt.Sprintf(`%.2f`, balance.Amount), math.Round(balance.UsdValue), valid})
 					coinHold[balance.Coin] += balance.Amount
-					coinHold[balance.Coin] += math.Round(balance.UsdValue)
+					coinValue[balance.Coin] += math.Round(balance.UsdValue)
 					if coinPrice[balance.Coin] == 0 {
 						tickGet, tick := model.AppMarkets.GetBidAsk(symbol, balance.Market)
 						if tickGet {
@@ -166,6 +166,10 @@ func GetHoldings(accounts map[string]*model.Account) (holding [][]interface{}) {
 			money = math.Ceil(coinHold[coin]*coinPrice[coin]/10) * 10
 		}
 		holding[i] = append(holding[i], money)
+		money = math.Floor(coinValue[coin]/10) * 10
+		if money < 0 {
+			money = math.Ceil(coinValue[coin]/10) * 10
+		}
 		holding[i] = append(holding[i], coinValue[coin])
 	}
 	return
