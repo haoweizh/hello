@@ -71,6 +71,8 @@ func Test_getCommonMarketInfos(t *testing.T) {
 }
 
 func Test_BalAndPos(t *testing.T) {
+	a := -3.0
+	fmt.Println(math.Ceil(a/10) * 10)
 	model.NewConfig()
 	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
 	api.GetMarketInfos(model.BybitPerp)
