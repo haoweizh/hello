@@ -233,14 +233,14 @@ func initStatus(account *model.Account, setting *model.Setting) (status *CarrySt
 	}
 	status.LimitBuy = math.Min(status.LimitBuy, status.AvailableBuy)
 	status.LimitSell = math.Min(status.LimitSell, status.AvailableSell)
-	jumpBuy := 15.0
-	jumpSell := -10.0
+	jumpBuy := 14.0
+	jumpSell := -8.0
 	if status.Holding < 0 {
-		jumpBuy = -10
-		jumpSell = 15
+		jumpBuy = -8
+		jumpSell = 14
 	} else if status.Holding == 0 {
-		jumpBuy = 15
-		jumpSell = 15
+		jumpBuy = 14
+		jumpSell = 14
 	}
 	status.TradeLineBuy = math.Max(setting.OpenShortMargin*(0.5+jumpBuy*status.RateInAll), lowestScore) + fundingRate
 	status.TradeLineSell = math.Max(setting.CloseShortMargin*(0.5+jumpSell*status.RateInAll), lowestScore) - fundingRate
