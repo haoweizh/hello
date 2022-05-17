@@ -755,7 +755,7 @@ func InitCrossMarketInfos(markets []string) {
 		if len(infos) >= 2 {
 			for _, info := range infos {
 				setting := &model.Setting{Valid: true, Function: model.FunctionCross, Market: info.Market,
-					Symbol: info.Name, Coin: coin, OpenShortMargin: 0.02, CloseShortMargin: 0.02}
+					Symbol: info.Name, Coin: coin}
 				model.AppDB.Save(setting)
 				util.Notice(fmt.Sprintf(`save setting %s %s %s %v`, info.Market, info.Name, coin, setting.Valid))
 			}

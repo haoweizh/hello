@@ -11,7 +11,9 @@ import (
 	"time"
 )
 
-const lowestScore = -0.01
+const lowestScore = -0.02
+const standardScoreOpen = 0.02  // 开仓标准利润
+const standardScoreClose = 0.01 // 平仓标准利润
 const lastOrderLength = 8
 const holdingLimitInU = 500000.0
 const openValueLimit = 10000.0

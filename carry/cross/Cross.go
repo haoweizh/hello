@@ -112,8 +112,8 @@ func createFromPosition(account *model.Account, setting *model.Setting, valueLim
 		LimitBuy:      limitAmount,
 		AvailableSell: availableAmount,
 		AvailableBuy:  availableAmount,
-		TradeLineBuy:  setting.OpenShortMargin,
-		TradeLineSell: setting.CloseShortMargin}
+		TradeLineBuy:  standardScoreOpen,
+		TradeLineSell: standardScoreOpen}
 	valueInUsd := 0.0
 	if cm.positions[setting.Symbol] != nil {
 		carryStatus.Holding = cm.positions[setting.Symbol].Holding
@@ -158,8 +158,8 @@ func createFromBalance(account *model.Account, setting *model.Setting, valueLimi
 		LimitBuy:      limitBuy,
 		AvailableSell: 0,
 		AvailableBuy:  availableBuy,
-		TradeLineBuy:  setting.OpenShortMargin,
-		TradeLineSell: setting.CloseShortMargin,
+		TradeLineBuy:  standardScoreOpen,
+		TradeLineSell: standardScoreOpen,
 	}
 	if sm.balances[setting.Symbol] != nil {
 		balance := sm.balances[setting.Symbol]
@@ -235,32 +235,30 @@ func initStatus(account *model.Account, setting *model.Setting) (status *CarrySt
 	status.LimitSell = math.Min(status.LimitSell, status.AvailableSell)
 	jumpBuy := 14.0
 	jumpSell := -8.0
+	standardScoreBuy := standardScoreOpen
+	standardScoreSell := standardScoreClose
 	if status.Holding < 0 {
 		jumpBuy = -8
 		jumpSell = 14
+		standardScoreBuy = standardScoreClose
+		standardScoreSell = standardScoreOpen
 	} else if status.Holding == 0 {
 		jumpBuy = 14
 		jumpSell = 14
+		standardScoreBuy = standardScoreOpen
+		standardScoreSell = standardScoreOpen
 	}
-	status.TradeLineBuy = math.Max(setting.OpenShortMargin*(0.5+jumpBuy*status.RateInAll), lowestScore) + fundingRate
-	status.TradeLineSell = math.Max(setting.CloseShortMargin*(0.5+jumpSell*status.RateInAll), lowestScore) - fundingRate
-	//if status.setting.Coin == `ANC` && account.Index == 0 {
-	//	util.Info(fmt.Sprintf(`%s %s bline %f = max(%f*(0.5+%f*rate %f)+funding %f hold %f`,
-	//		status.setting.Market, status.setting.Symbol, status.TradeLineBuy, setting.OpenShortMargin, jumpBuy,
-	//		status.RateInAll, fundingRate, status.Holding))
-	//	util.Info(fmt.Sprintf(`%s %s sline %f = max(%f*(0.5+%f*rate %f)-funding %f hold %f`,
-	//		status.setting.Market, status.setting.Symbol, status.TradeLineSell, setting.CloseShortMargin, jumpSell,
-	//		status.RateInAll, fundingRate, status.Holding))
-	//}
+	status.TradeLineBuy = math.Max(standardScoreBuy*(0.5+jumpBuy*status.RateInAll), lowestScore) + fundingRate
+	status.TradeLineSell = math.Max(standardScoreSell*(0.5+jumpSell*status.RateInAll), lowestScore) - fundingRate
 	status.TradeLineBuy *= account.CarryRate
 	status.TradeLineSell *= account.CarryRate
 	if doRevert || account.CarryClose {
 		if status.Holding > 0 {
 			status.TradeLineBuy = 1
-			status.TradeLineSell = math.Min(status.TradeLineSell, 0.0004)
+			//status.TradeLineSell = math.Min(status.TradeLineSell, 0.0004)
 		} else if status.Holding < 0 {
 			status.TradeLineSell = 1
-			status.TradeLineBuy = math.Min(status.TradeLineBuy, 0.0004)
+			//status.TradeLineBuy = math.Min(status.TradeLineBuy, 0.0004)
 		} else if status.Holding == 0 {
 			status.TradeLineBuy = 1
 			status.TradeLineSell = 1
