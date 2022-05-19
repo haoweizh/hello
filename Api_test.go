@@ -71,11 +71,9 @@ func Test_getCommonMarketInfos(t *testing.T) {
 }
 
 func Test_BalAndPos(t *testing.T) {
-	a := -3.0
-	fmt.Println(math.Ceil(a/10) * 10)
 	model.NewConfig()
 	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
-	api.GetMarketInfos(model.BybitPerp)
+	api.GetMarketInfos(model.BinancePerp)
 	order := api.QueryOrderById(model.AppConfig.GateKey, model.AppConfig.GateSecret, `gate`, `MGA_USDT`,
 		model.OrderTypeLimit, `144149811503`)
 	fmt.Println(order)

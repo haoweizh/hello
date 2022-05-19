@@ -205,7 +205,7 @@ func initStatus(account *model.Account, setting *model.Setting) (status *CarrySt
 		_, fundingRate = api.GetFundingRate(account.Key, account.Secret, setting.Market, setting.Symbol)
 		fundingKey := fmt.Sprintf(`funding_%s_%s`, setting.Market, setting.Symbol)
 		fundingTime, ok := notifyTime.Load(fundingKey)
-		if !(ok && fundingTime.(time.Time).Add(time.Minute*60).After(time.Now())) && math.Abs(fundingRate) > 0.005 {
+		if !(ok && fundingTime.(time.Time).Add(time.Minute*60).After(time.Now())) && math.Abs(fundingRate) > 0.01 {
 			notifyTime.Store(fundingKey, time.Now())
 			go api.SendMails(fmt.Sprintf(`%s %f`, fundingKey, fundingRate), ``)
 		}

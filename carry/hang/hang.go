@@ -34,8 +34,9 @@ func checkSetHanging(value bool) (before bool) {
 // setting.chance 下单后多少million seconds cancel并进行后续下单
 // setting.gridAmount 当日下单上限 in usd
 // setting.amountLimit 每次下单价差jump距离
-// setting.priceX 大于等于0时做市摆单价差，默认为0，值越大，摆单后买卖1之间价差越大；小于0是进入吃单模式
+// setting.priceX 做市摆单价差，默认为0，值越大，摆单后买卖1之间价差越大
 // setting.OpenShortMargin 处于吃单模式时，可吃单的上限
+// setting.CloseShortMargin 大于0时同时进行吃单
 var ProcessHang = func(setting *model.Setting, tick *model.BidAsk) {
 	if !doWork && model.AppConfig.Handle == `1` {
 		go refreshDeal()
@@ -69,11 +70,16 @@ var ProcessHang = func(setting *model.Setting, tick *model.BidAsk) {
 }
 
 func placeHang(account *model.Account, setting *model.Setting, marketInfo *model.MarketInfo,
-	marketSymbolDate, side string, tick *model.BidAsk) {
+	side string, tick *model.BidAsk) {
+	utcTime := time.Now().In(time.UTC)
+	year, month, day := utcTime.Date()
+	marketSymbolDate := fmt.Sprintf(`%s_%s_%d-%d-%d`, setting.Market, setting.Symbol, year, month, day)
 	dealAmount, okDeal := dealInU.Load(marketSymbolDate)
 	if !okDeal {
 		dealAmount = 0.0
 	} else if dealAmount.(float64) > setting.GridAmount {
+		util.Notice(fmt.Sprintf(`exceed amount limit %s %f > %f`,
+			marketSymbolDate, dealAmount.(float64), setting.GridAmount))
 		return
 	}
 	steps := (tick.Asks[0].Price-tick.Bids[0].Price-setting.PriceX)/marketInfo.PriceIncrement - 1
@@ -121,21 +127,23 @@ func handle(account *model.Account, setting *model.Setting, tick *model.BidAsk) 
 		api.InitMarketInfos()
 		return
 	}
-	utcTime := time.Now().In(time.UTC)
-	year, month, day := utcTime.Date()
-	marketSymbolDate := fmt.Sprintf(`%s_%s_%d-%d-%d 08:00:00`, setting.Market, setting.Symbol, year, month, day)
 	marketSymbol := setting.Market + `_` + setting.Symbol
 	value, okHang := hangSide.Load(marketSymbol)
 	if !okHang || value == nil {
 		return
 	}
 	side := value.(string)
-	if setting.PriceX > 0 { // 做市时摆单
-		placeHang(account, setting, marketInfo, marketSymbolDate, side, tick)
-	} else if tick.Asks[0].Amount < 5000 && tick.Asks[0].Amount < setting.OpenShortMargin &&
+	//util.Notice(fmt.Sprintf(`status %s %s %s priceX %f market bid %f`,
+	//	setting.Market, setting.Symbol, side, setting.PriceX, tick.Asks[0].Amount))
+	placeHang(account, setting, marketInfo, side, tick)
+	if setting.CloseShortMargin > 0 && tick.Asks[0].Amount < 5000 && tick.Asks[0].Amount < setting.OpenShortMargin &&
 		side == model.OrderSideBuy && tick.Asks[0].Price < 0.1 { // 吃单拉价格模式
-		api.PlaceOrder(account.Key, account.Secret, side, model.OrderTypeLimit, setting.Market, setting.Symbol,
+		order := api.PlaceOrder(account.Key, account.Secret, side, model.OrderTypeLimit, setting.Market, setting.Symbol,
 			``, tick.Asks[0].Price, tick.Asks[0].Price, tick.Asks[0].Amount, false, nil, setting)
+		if order != nil {
+			order.Function = model.FunctionHang
+			model.AppDB.Save(order)
+		}
 	}
 	//util.Notice(fmt.Sprintf(`hang prices %s %s`, setting.Market, setting.Symbol))
 	//hangPrice.Store(marketSymbol, priceMark)
@@ -153,7 +161,7 @@ func refreshDeal() {
 		}
 		utcTime := time.Now().In(time.UTC)
 		year, month, day := utcTime.Date()
-		dateStr := fmt.Sprintf(`%d-%d-%d 08:00:00`, year, month, day)
+		dateStr := fmt.Sprintf(`%d-%d-%d`, year, month, day)
 		coinSettings := model.GetCoinSettings(model.FunctionHang)
 		for _, settings := range coinSettings {
 			for _, setting := range settings {
