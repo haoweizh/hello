@@ -286,7 +286,7 @@ var wsHandlerPrivate = func(connection *websocket.Conn, event []byte, orderHandl
 
 func handleWSOrderOKEX(value map[string]interface{}, orderHandler OrderHandler) {
 	order := parseOrderOKEX(value)
-	util.Notice(`get order sCode %s %s %v`, order.ErrCode, order.Status, value)
+	util.Notice(`get order sCode %s %s %v`, order.Status, order.ErrCode, value)
 	//dbOrder := model.Order{}
 	//model.AppDB.Where(`order_id=?`, order.OrderId).First(&dbOrder)
 	//if dbOrder.OrderId != `` {
@@ -297,7 +297,7 @@ func handleWSOrderOKEX(value map[string]interface{}, orderHandler OrderHandler) 
 	//}
 	//model.AppDB.Save(order)
 	// 当前只针对错误订单进行处理
-	if orderHandler != nil && order.Status == model.CarryStatusFail {
+	if orderHandler != nil && strings.Trim(order.ErrCode, ` `) != `0` && !order.HaveId() {
 		orderHandler(order, nil)
 	}
 }
