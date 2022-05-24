@@ -234,19 +234,28 @@ func initStatus(account *model.Account, setting *model.Setting) (status *CarrySt
 	status.LimitBuy = math.Min(status.LimitBuy, status.AvailableBuy)
 	status.LimitSell = math.Min(status.LimitSell, status.AvailableSell)
 	jumpBuy := 12.0
-	jumpSell := -8.0
+	jumpSell := 12.0
 	standardScoreBuy := standardScoreOpen
-	standardScoreSell := standardScoreClose
-	if status.Holding < 0 {
+	standardScoreSell := standardScoreOpen
+	getTick, ticks := model.AppMarkets.GetBidAsk(setting.Symbol, setting.Market)
+	price := 0.0
+	if getTick {
+		price = ticks.Asks[0].Price
+	} else {
+		util.Notice(`fail to get ticket %s %s`, setting.Market, setting.Symbol)
+	}
+	if status.Holding*price < -100 {
 		jumpBuy = -8
 		jumpSell = 12
 		standardScoreBuy = standardScoreClose
 		standardScoreSell = standardScoreOpen
-	} else if status.Holding == 0 {
-		jumpBuy = 12
-		jumpSell = 12
+		status.LimitBuy = math.Abs(status.Holding)
+	} else if status.Holding*price > 100 {
+		jumpBuy = 12.0
+		jumpSell = -8.0
 		standardScoreBuy = standardScoreOpen
-		standardScoreSell = standardScoreOpen
+		standardScoreSell = standardScoreClose
+		status.LimitSell = status.Holding
 	}
 	status.TradeLineBuy = math.Max(standardScoreBuy*(0.5+jumpBuy*status.RateInAll), lowestScore) + fundingRate
 	status.TradeLineSell = math.Max(standardScoreSell*(0.5+jumpSell*status.RateInAll), lowestScore) - fundingRate
