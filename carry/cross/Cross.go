@@ -606,12 +606,14 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 }
 
 func checkTradeLine(statusBuy, statusSell *CarryStatus, score float64) (valid bool) {
+	tradeLineBuy := statusBuy.TradeLineBuy - statusSell.FoundingRate
+	tradeLineSell := statusSell.TradeLineSell + statusBuy.FoundingRate
 	if statusBuy.Holding >= 0 && statusSell.Holding <= 0 {
-		return score > statusBuy.TradeLineBuy && score > statusSell.TradeLineSell
+		return score > tradeLineBuy && score > tradeLineSell
 	} else if statusBuy.Holding < 0 && statusSell.Holding > 0 {
-		return score > statusBuy.TradeLineBuy || score > statusSell.TradeLineSell
+		return score > tradeLineBuy || score > tradeLineSell
 	} else {
-		return score > (statusBuy.TradeLineBuy+statusSell.TradeLineSell)/2
+		return score > (tradeLineBuy+tradeLineSell)/2
 	}
 }
 
