@@ -605,9 +605,7 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 	}
 }
 
-func checkTradeLine(statusBuy, statusSell *CarryStatus, score float64) (valid bool) {
-	tradeLineBuy := statusBuy.TradeLineBuy - statusSell.FoundingRate
-	tradeLineSell := statusSell.TradeLineSell + statusBuy.FoundingRate
+func checkTradeLine(statusBuy, statusSell *CarryStatus, tradeLineBuy, tradeLineSell, score float64) (valid bool) {
 	if statusBuy.Holding >= 0 && statusSell.Holding <= 0 {
 		return score > tradeLineBuy && score > tradeLineSell
 	} else if statusBuy.Holding < 0 && statusSell.Holding > 0 {
@@ -649,10 +647,10 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarrySta
 		model.AppMetric.AddCarry(mark, score, 0)
 	}
 	// 根据负资金费率进行权重调整,小于负万五的，负千分之几，就再乘以几
-	tradeLineSell := carryStatus.TradeLineSell
-	tradeLineBuy := carryStatus.TradeLineBuy
-	tradeLineSellRelate := carryStatusRelate.TradeLineSell
-	tradeLineBuyRelate := carryStatusRelate.TradeLineBuy
+	tradeLineSell := carryStatus.TradeLineSell + carryStatusRelate.FoundingRate
+	tradeLineBuy := carryStatus.TradeLineBuy - carryStatusRelate.FoundingRate
+	tradeLineSellRelate := carryStatusRelate.TradeLineSell + carryStatus.FoundingRate
+	tradeLineBuyRelate := carryStatusRelate.TradeLineBuy - carryStatus.FoundingRate
 	if carryStatus.isSpot && !carryStatusRelate.isSpot && carryStatusRelate.market != model.Ftx && carryStatusRelate.FoundingRate < -0.005 {
 		temp := math.Min(7.5, 1000*math.Abs(carryStatusRelate.FoundingRate))/2 - 1
 		tradeLineBuyRelate += carryStatusRelate.FoundingRate * temp
@@ -662,7 +660,7 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarrySta
 		tradeLineBuy += carryStatus.FoundingRate * temp
 		tradeLineSell -= carryStatus.FoundingRate * temp
 	}
-	if checkTradeLine(carryStatusRelate, carryStatus, score) {
+	if checkTradeLine(carryStatusRelate, carryStatus, tradeLineBuyRelate, tradeLineSell, score) {
 		statusSell = carryStatus
 		statusBuy = carryStatusRelate
 		priceSell = priceBid
@@ -670,7 +668,7 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarrySta
 		askAmount = amountBid
 		bidAmount = amountAskRelate
 	}
-	if checkTradeLine(carryStatus, carryStatusRelate, scoreRelate) {
+	if checkTradeLine(carryStatus, carryStatusRelate, tradeLineBuy, tradeLineSellRelate, scoreRelate) {
 		statusSell = carryStatusRelate
 		statusBuy = carryStatus
 		priceSell = priceBidRelate
