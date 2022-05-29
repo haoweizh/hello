@@ -44,7 +44,8 @@ var carryStop sync.Map                    // key bool
 var notifyTime sync.Map                   // 1. market_symbol_market_symbol/time 2. funding_market_symbol/time
 var crossing bool
 var doCross = false
-var firstComp = false
+
+//var firstComp = false
 var wsCross = true
 
 type contractMarket struct {
