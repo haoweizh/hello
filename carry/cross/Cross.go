@@ -339,7 +339,6 @@ func equalAccounts() {
 }
 
 func equalAccount(i int, equalChan chan int, accounts map[string]*model.Account, coinSettings map[string][]*model.Setting) {
-	needEqual := false
 	keys := ``
 	for _, account := range accounts {
 		if account.Index != i {
@@ -363,9 +362,6 @@ func equalAccount(i int, equalChan chan int, accounts map[string]*model.Account,
 		}
 		for index := 0; index <= 10; index++ {
 			coinEqual, leftHoldingInU, _ := equalCoin(coin, equalStatuses)
-			if coinEqual == false {
-				needEqual = true
-			}
 			if math.Abs(leftHoldingInU) < 10 || coinEqual {
 				break
 			}
@@ -377,9 +373,7 @@ func equalAccount(i int, equalChan chan int, accounts map[string]*model.Account,
 			}
 		}
 	}
-	if !needEqual {
-		lastCrosses = sync.Map{}
-	}
+	lastCrosses = sync.Map{}
 	equalChan <- i
 	util.Notice(`...... exit clearing cross %d`, i)
 }

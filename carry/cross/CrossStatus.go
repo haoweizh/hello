@@ -35,13 +35,12 @@ var lastOrderIndex = make(map[string]map[string]int64) // market - symbol - inde
 
 var lockCrossing, lockLastCarry sync.Mutex
 var lastOrders = make(map[string]map[string][]*model.Order, lastOrderLength) // market - symbol - []order
-//var lastCrosses map[string]map[string]string //
-var lastCrosses sync.Map                  // key*market:symbol
-var spotMarkets, contractMarkets sync.Map // key - spotMarket/contractMarket
-var carryStatusMap sync.Map               // coin*market*symbol*key / CarryStatus
-var carryFail sync.Map                    // key fail num
-var carryStop sync.Map                    // key bool
-var notifyTime sync.Map                   // 1. market_symbol_market_symbol/time 2. funding_market_symbol/time
+var lastCrosses sync.Map                                                     // key*market:symbol
+var spotMarkets, contractMarkets sync.Map                                    // key - spotMarket/contractMarket
+var carryStatusMap sync.Map                                                  // coin*market*symbol*key / CarryStatus
+var carryFail sync.Map                                                       // key fail num
+var carryStop sync.Map                                                       // key bool
+var notifyTime sync.Map                                                      // 1. market_symbol_market_symbol/time 2. funding_market_symbol/time
 var crossing bool
 var doCross = false
 
