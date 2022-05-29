@@ -508,7 +508,8 @@ func equalCoin(coin string, statuses []*CarryStatus) (isEqual bool, holdingInU f
 			time.Sleep(time.Second)
 			getTick, tick := model.AppMarkets.GetBidAsk(equalStatus.symbol, equalStatus.market)
 			if !getTick {
-				return
+				equalStatus.AvailableBuy, equalStatus.AvailableSell = 0, 0
+				return isEqual, holdingInU, ``
 			}
 			if orderSide == model.OrderSideBuy {
 				price = tick.Asks[0].Price
