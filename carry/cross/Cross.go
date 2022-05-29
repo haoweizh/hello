@@ -93,7 +93,7 @@ func createFromPosition(account *model.Account, setting *model.Setting, valueLim
 	}
 	cm := value.(*contractMarket)
 	getPrice, price := model.AppMarkets.GetPriceForce(setting.Symbol, setting.Market)
-	if !getPrice && cm.positions[setting.Symbol] == nil {
+	if !getPrice && cm.positions[setting.Symbol] != nil {
 		price = cm.positions[setting.Symbol].EntryPrice
 		util.Notice(`no tick price, use position price %s %s %f`, setting.Market, setting.Symbol, price)
 	}
