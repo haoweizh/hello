@@ -337,12 +337,10 @@ func equalAccount(i int, equalChan chan int, accounts map[string]*model.Account,
 		if account.Index != i {
 			continue
 		}
-		util.Notice(`...... enter equal account:%s %d`, account.Key, account.Index)
 		spotMarkets.Delete(account.Key)
 		contractMarkets.Delete(account.Key)
 		keys += account.Key + `,`
 	}
-	util.Notice(`...... enter clearing cross %d %s`, i, keys)
 	for coin, settings := range coinSettings {
 		equalStatuses := make([]*CarryStatus, len(settings))
 		for j, setting := range settings {
@@ -358,11 +356,9 @@ func equalAccount(i int, equalChan chan int, accounts map[string]*model.Account,
 			if math.Abs(leftHoldingInU) < 10 || coinEqual {
 				break
 			}
-			util.Notice(fmt.Sprintf(`...... enter equal coin %s %d`, coin, index))
 			if index == 10 {
 				api.SendMails(fmt.Sprintf(`fail equal after 10 time %s`, coin),
 					fmt.Sprintf(`%s holding %f`, coin, leftHoldingInU))
-				util.Notice(`...... exit equal coin:%s %d`, coin, index)
 			}
 		}
 	}
