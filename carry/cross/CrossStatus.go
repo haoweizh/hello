@@ -119,12 +119,6 @@ func GetHoldings(accounts map[string]*model.Account) (holding [][]interface{}) {
 						fmt.Sprintf(`%.2f`, balance.Amount), math.Round(balance.UsdValue), valid})
 					coinHold[balance.Coin] += balance.Amount
 					coinValue[balance.Coin] += math.Round(balance.UsdValue)
-					if coinPrice[balance.Coin] == 0 {
-						tickGet, tick := model.AppMarkets.GetBidAsk(symbol, balance.Market)
-						if tickGet {
-							coinPrice[balance.Coin] = tick.Bids[0].Price
-						}
-					}
 				}
 			}
 		}
@@ -137,18 +131,18 @@ func GetHoldings(accounts map[string]*model.Account) (holding [][]interface{}) {
 				if setting != nil {
 					valid = setting.Valid
 				}
-				tickGet, tick := model.AppMarkets.GetBidAsk(position.Currency, position.Market)
 				if position != nil && position.Holding != 0 {
 					success, _, coin, _ := model.GetFromStandard(position.Market, position.Currency)
-					if tickGet && success {
-						holding = append(holding, []interface{}{position.Market, coin, position.Currency,
-							math.Round(position.Holding), math.Round(tick.Bids[0].Price * position.Holding), valid})
+					if success {
 						coinHold[coin] += position.Holding
-						coinPrice[coin] = tick.Bids[0].Price
-						coinValue[coin] += math.Round(tick.Bids[0].Price * position.Holding)
-					} else {
-						holding = append(holding, []interface{}{position.Market, coin, position.Currency,
-							position.Holding, 0.0, valid})
+						_, price := model.AppMarkets.GetPriceForce(position.Currency, position.Market)
+						holdingLine := []interface{}{position.Market, coin, position.Currency,
+							position.Holding, math.Round(price * position.Holding), valid}
+						coinValue[coin] += math.Round(price * position.Holding)
+						if price > 0 {
+							coinPrice[coin] = price
+						}
+						holding = append(holding, holdingLine)
 					}
 				}
 			}
@@ -163,6 +157,9 @@ func GetHoldings(accounts map[string]*model.Account) (holding [][]interface{}) {
 	}
 	for i := range holding {
 		coin := holding[i][1].(string)
+		if coinPrice[coin] == 0 {
+			_, coinPrice[coin] = model.AppMarkets.GetPriceForce(coin+model.UniStandardTail[model.MarketTypeSpot], ``)
+		}
 		money := math.Floor(coinHold[coin]*coinPrice[coin]/10) * 10
 		if money < 0 {
 			money = math.Ceil(coinHold[coin]*coinPrice[coin]/10) * 10

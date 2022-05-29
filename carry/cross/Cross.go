@@ -33,10 +33,10 @@ func createContractMarket(key, secret, market string) (cm *contractMarket) {
 		cm.positions = make(map[string]*model.Position)
 		for _, position := range positions {
 			cm.positions[position.Currency] = position
-			getTick, tick := model.AppMarkets.GetBidAsk(position.Currency, market)
 			if settings != nil && settings[position.Currency] != nil {
-				if getTick {
-					cm.contractValueInU += tick.Bids[0].Price * math.Abs(position.Holding)
+				_, price := model.AppMarkets.GetPriceForce(position.Currency, market)
+				if price > 0 {
+					cm.contractValueInU += price * math.Abs(position.Holding)
 				} else {
 					cm.contractValueInU += position.EntryPrice * math.Abs(position.Holding)
 				}
@@ -92,11 +92,8 @@ func createFromPosition(account *model.Account, setting *model.Setting, valueLim
 		return nil, false
 	}
 	cm := value.(*contractMarket)
-	getTick, ticks := model.AppMarkets.GetBidAsk(setting.Symbol, setting.Market)
-	price := 0.0
-	if getTick {
-		price = ticks.Asks[0].Price
-	} else if cm.positions[setting.Symbol] != nil {
+	getPrice, price := model.AppMarkets.GetPriceForce(setting.Symbol, setting.Market)
+	if !getPrice {
 		price = cm.positions[setting.Symbol].EntryPrice
 		util.Notice(`no tick price, use position price %s %s %f`, setting.Market, setting.Symbol, price)
 	}
@@ -140,13 +137,7 @@ func createFromBalance(account *model.Account, setting *model.Setting, valueLimi
 		return
 	}
 	sm := value.(*spotMarket)
-	getTick, ticks := model.AppMarkets.GetBidAsk(setting.Symbol, setting.Market)
-	price := 0.0
-	if getTick {
-		price = ticks.Asks[0].Price
-	} else {
-		util.Notice(`fail to get ticket %s %s`, setting.Market, setting.Symbol)
-	}
+	_, price := model.AppMarkets.GetPriceForce(setting.Symbol, setting.Market)
 	limitBuy, limitSell, availableBuy := 0.0, 0.0, 0.0
 	if price > 0 {
 		limitBuy = math.Min(openValueLimit, math.Min(sm.availableU/5, sm.accountValueInU/15)) / price

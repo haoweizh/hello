@@ -419,10 +419,8 @@ func getBalanceGate(key string, secret string) (success bool, balances []*model.
 			// 此处未计算可以借入的金额
 			balance.AvailableWithBorrow, _ = strconv.ParseFloat(account.Available, 64)
 			balance.Amount = balance.AvailableWithBorrow + balance.FrozenAmount - balance.Borrow
-			priceGet, bidAsk := model.AppMarkets.GetBidAsk(balance.Coin+model.UniStandardTail[model.MarketTypeSpot], model.Gate)
-			if priceGet {
-				balance.UsdValue = balance.Amount * bidAsk.Bids[0].Price
-			}
+			_, price := model.AppMarkets.GetPriceForce(balance.Coin+model.UniStandardTail[model.MarketTypeSpot], model.Gate)
+			balance.UsdValue = balance.Amount * price
 			balances = append(balances, balance)
 		}
 	} else {
@@ -445,10 +443,8 @@ func getBalanceGate(key string, secret string) (success bool, balances []*model.
 			// 此处未计算可以借入的金额
 			balance.AvailableWithBorrow, _ = strconv.ParseFloat(item.Available, 64)
 			balance.Amount = balance.AvailableWithBorrow + balance.FrozenAmount - balance.Borrow
-			priceGet, bidAsk := model.AppMarkets.GetBidAsk(balance.Coin+model.UniStandardTail[model.MarketTypeSpot], model.Gate)
-			if priceGet {
-				balance.UsdValue = balance.Amount * bidAsk.Bids[0].Price
-			}
+			_, price := model.AppMarkets.GetPriceForce(balance.Coin+model.UniStandardTail[model.MarketTypeSpot], model.Gate)
+			balance.UsdValue = balance.Amount * price
 			balances = append(balances, balance)
 		}
 	}

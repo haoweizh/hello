@@ -316,10 +316,9 @@ func getBalanceBinanceSpot(key string, secret string) (success bool, balances []
 			balance.Amount = balance.AvailableWithBorrow + lockAmount
 		}
 		if balance.UsdValue == 0 && balance.Amount > 0 {
-			getTick, bidAsk := model.AppMarkets.GetBidAsk(balance.Coin+model.UniStandardTail[model.MarketTypeSpot], model.BinanceSpot)
-			if getTick {
-				balance.UsdValue = balance.Amount * bidAsk.Bids[0].Price
-			}
+			symbolStandard := balance.Coin + model.UniStandardTail[model.MarketTypeSpot]
+			_, price := model.AppMarkets.GetPriceForce(symbolStandard, model.BinanceSpot)
+			balance.UsdValue = balance.Amount * price
 		}
 		//if asset[`netAsset`] != nil {
 		//	balance.Amount, _ = strconv.ParseFloat(asset[`netAsset`].(string), 64)

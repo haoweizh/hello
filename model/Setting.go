@@ -12,7 +12,6 @@ type Setting struct {
 	Valid            bool
 	Function         string `gorm:"index:function_market_symbol,unique"`
 	Market           string `gorm:"index:function_market_symbol,unique"`
-	MarketRelated    string
 	Symbol           string `gorm:"index:function_market_symbol,unique"`
 	Coin             string
 	SymbolRelated    string
@@ -190,9 +189,6 @@ func GetMarkets() []string {
 	marketMap := make(map[string]bool)
 	for _, value := range AppSettings {
 		marketMap[value.Market] = true
-		if value.MarketRelated != "" {
-			marketMap[value.MarketRelated] = true
-		}
 	}
 	markets := make([]string, len(marketMap))
 	i := 0

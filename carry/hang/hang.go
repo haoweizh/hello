@@ -181,10 +181,8 @@ func refreshDeal() {
 							if strings.EqualFold(balance.Coin, `usd`) || strings.EqualFold(balance.Coin, `usdt`) {
 								usd += balance.Amount
 							} else if balance.Coin == coin {
-								tickGet, tick := model.AppMarkets.GetBidAsk(setting.Symbol, setting.Market)
-								if tickGet && tick != nil {
-									usdCoin = balance.Amount * tick.Bids[0].Price
-								}
+								_, price := model.AppMarkets.GetPriceForce(setting.Symbol, setting.Market)
+								usdCoin = balance.Amount * price
 							}
 						}
 						if usd > usdCoin {

@@ -266,13 +266,12 @@ func GetBalances(key, secret, market string) (
 	}
 	if market != model.Ftx && market != model.OKEX {
 		for _, balance := range balances {
-			got, tick := model.AppMarkets.GetBidAsk(balance.Coin+model.UniStandardTail[model.MarketTypeSpot], market)
-			if got {
-				totalInUsd += tick.Bids[0].Price * balance.Amount
+			if USDs[balance.Coin] {
+				totalInUsd += balance.Amount
 			} else {
-				if USDs[balance.Coin] {
-					totalInUsd += balance.Amount
-				}
+				symbolStandard := balance.Coin + model.UniStandardTail[model.MarketTypeSpot]
+				_, price := model.AppMarkets.GetPriceForce(symbolStandard, market)
+				totalInUsd += price * balance.Amount
 			}
 		}
 	}

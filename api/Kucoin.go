@@ -400,10 +400,8 @@ func getBalanceKucoin(key string, secret string) (success bool, balances []*mode
 			balance.FrozenAmount, _ = strconv.ParseFloat(account.Holds, 64)
 			balance.Amount, _ = strconv.ParseFloat(account.Balance, 64)
 			balance.AvailableWithBorrow, _ = strconv.ParseFloat(account.Available, 64)
-			priceGet, bidAsk := model.AppMarkets.GetBidAsk(balance.Coin+model.UniStandardTail[model.MarketTypeSpot], model.Kucoin)
-			if priceGet {
-				balance.UsdValue = balance.Amount * bidAsk.Bids[0].Price
-			}
+			_, price := model.AppMarkets.GetPriceForce(balance.Coin+model.UniStandardTail[model.MarketTypeSpot], model.Kucoin)
+			balance.UsdValue = balance.Amount * price
 			balances = append(balances, balance)
 		}
 	} else {
@@ -431,10 +429,8 @@ func getBalanceKucoin(key string, secret string) (success bool, balances []*mode
 			balance.AvailableWithBorrow = available + canBorrow
 			balance.Amount, _ = account.TotalBalance.Float64()
 			balance.Amount = balance.Amount - balance.Borrow
-			priceGet, bidAsk := model.AppMarkets.GetBidAsk(balance.Coin+model.UniStandardTail[model.MarketTypeSpot], model.Kucoin)
-			if priceGet {
-				balance.UsdValue = balance.Amount * bidAsk.Bids[0].Price
-			}
+			_, price := model.AppMarkets.GetPriceForce(balance.Coin+model.UniStandardTail[model.MarketTypeSpot], model.Kucoin)
+			balance.UsdValue = balance.Amount * price
 			balances = append(balances, balance)
 		}
 	}
