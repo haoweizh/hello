@@ -297,7 +297,7 @@ func ClearCross() {
 			if !checkSetCrossing(true) {
 				break
 			} else {
-				time.Sleep(time.Millisecond * 200)
+				time.Sleep(time.Millisecond * 10)
 			}
 		}
 		equalAccounts()
