@@ -519,8 +519,8 @@ func equalCoin(coin string, statuses []*CarryStatus) (isEqual bool, holdingInU f
 				coin, equalStatus.market, equalStatus.symbol, price, tick.Asks[0].Price, tick.Bids[0].Price, amount))
 			order := api.PlaceOrder(equalStatus.account.Key, equalStatus.account.Secret, orderSide, model.OrderTypeLimit,
 				equalStatus.market, equalStatus.symbol, ``,
-				price, price, amount, wsCross, nil, nil)
-			if order != nil {
+				price, price, amount, false, nil, nil)
+			if order != nil && order.Status != model.CarryStatusFail {
 				if orderSide == model.OrderSideBuy {
 					equalStatus.Holding += amount
 					holdingInU += amount * price
@@ -537,9 +537,15 @@ func equalCoin(coin string, statuses []*CarryStatus) (isEqual bool, holdingInU f
 				}
 				order.RefreshType = model.FunctionComplement
 				go model.AppDB.Save(order)
-			}
-			if equalStatus.market == model.Gate {
-				api.SetGateBidAsk(equalStatus.account.Key, equalStatus.account.Secret, equalStatus.symbol)
+				if equalStatus.market == model.Gate {
+					api.SetGateBidAsk(equalStatus.account.Key, equalStatus.account.Secret, equalStatus.symbol)
+				}
+			} else {
+				if orderSide == model.OrderSideBuy {
+					equalStatus.AvailableBuy = 0
+				} else if orderSide == model.OrderSideSell {
+					equalStatus.AvailableSell = 0
+				}
 			}
 		}
 	} else if math.Abs(holdingInU) > 10 {
