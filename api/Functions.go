@@ -288,6 +288,8 @@ func GetTransfers(key, secret, market string) (balances []*model.Balance) {
 	return balances
 }
 
+var fundingUpdateTime sync.Map
+
 func GetFundingRate(key, secret, market, symbol string) (success bool, rate float64) {
 	//非永续合约的资金费率为0
 	_, marketType, _, _ := model.GetFromStandard(market, symbol)
@@ -307,8 +309,11 @@ func GetFundingRate(key, secret, market, symbol string) (success bool, rate floa
 				return true, fundingRate.RateNext
 			}
 		}
-	} else if market == model.Gate && fundingRate != nil && now < fundingRate.ExpireTime {
-		return true, fundingRate.Rate
+	} else if fundingRate != nil && now < fundingRate.ExpireTime {
+		value, ok := fundingUpdateTime.Load(fmt.Sprintf(`%s*%s`, market, symbol))
+		if market == model.Gate || (ok && value.(time.Time).Add(time.Minute*10).After(time.Now())) {
+			return true, fundingRate.Rate
+		}
 	} // 其他交易所的资金费率都会实时变动
 	switch market {
 	//case model.Bitmex:
@@ -340,6 +345,7 @@ func GetFundingRate(key, secret, market, symbol string) (success bool, rate floa
 		return true, 0
 	}
 	if fundingRate != nil && now < fundingRate.ExpireTime {
+		fundingUpdateTime.Store(fmt.Sprintf(`%s*%s`, market, symbol), time.Now())
 		return true, fundingRate.Rate
 	}
 	return false, 0
