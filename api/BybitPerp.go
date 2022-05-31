@@ -437,7 +437,15 @@ func placeOrderBybitPerp(order *model.Order, key, secret, orderSide, orderType, 
 	return
 }
 
+// 每个程序运行只执行换一次
+var settingBybit sync.Map
+
 func setSettingsBybitPerp(key, secret, symbol string) (singleMode, crossPos bool) {
+	value, ok := settingBybit.Load(key + symbol)
+	if ok && value != nil {
+		return true, true
+	}
+	settingBybit.Store(key+symbol, true)
 	postData := map[string]interface{}{`symbol`: symbol, `mode`: `MergedSingle`}
 	response, _ := SignedRequestBybitPerp(key, secret, http.MethodPost, `/private/linear/position/switch-mode`, postData)
 	setJson, err := util.NewJSON(response)

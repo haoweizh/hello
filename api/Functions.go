@@ -762,8 +762,17 @@ func InitCrossMarketInfos(markets []string) {
 	}
 }
 
+var marketInfoInitializing = false
+
 // InitMarketInfos 只支持现货SPOT和永续PERP SWAP
 func InitMarketInfos() (success bool) {
+	if marketInfoInitializing {
+		return
+	}
+	marketInfoInitializing = true
+	defer func() {
+		marketInfoInitializing = false
+	}()
 	success = true
 	markets := model.GetMarkets()
 	for _, market := range markets {
