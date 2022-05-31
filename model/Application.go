@@ -49,6 +49,7 @@ const FunctionDCarry = `dcarry`
 const FunctionComplement = `comp`
 const FunctionCrossOpen = `open`
 const FunctionCrossClose = `close`
+const FunctionRevert = `revert`
 const FunctionHang = `hang`
 const PostOnly = `ParticipateDoNotInitiate`
 
