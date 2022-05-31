@@ -779,10 +779,10 @@ func initLimitBuyAndSell(status *CarryStatus, setting *model.Setting, price floa
 			return
 		}
 		sm := value.(*spotMarket)
-		status.LimitBuy = math.Min(openValueLimit, math.Min(sm.availableU/5, sm.accountValueInU/15)) / price
+		status.LimitBuy = math.Min(status.LimitBuy, math.Min(openValueLimit, math.Min(sm.availableU/5, sm.accountValueInU/15))/price)
 		balance := sm.balances[setting.Symbol]
 		if balance != nil {
-			status.LimitSell = math.Min(math.Min(math.Max(balance.Amount, 0), balance.AvailableWithBorrow), openValueLimit/price)
+			status.LimitSell = math.Min(status.LimitSell, math.Min(math.Min(math.Max(balance.Amount, 0), balance.AvailableWithBorrow), openValueLimit/price))
 		} else {
 			status.LimitSell = 0
 		}
@@ -794,8 +794,8 @@ func initLimitBuyAndSell(status *CarryStatus, setting *model.Setting, price floa
 		cm := value.(*contractMarket)
 		limitAmount := math.Min(cm.accountValueInU/5, math.Min(cm.collateralsAvailable, openValueLimit)) / price
 		availableAmount := cm.collateralsAvailable / price
-		status.LimitSell = limitAmount
-		status.LimitBuy = limitAmount
+		status.LimitSell = math.Min(status.LimitSell, limitAmount)
+		status.LimitBuy = math.Min(status.LimitBuy, limitAmount)
 		status.AvailableSell = availableAmount
 		status.AvailableBuy = availableAmount
 	}
