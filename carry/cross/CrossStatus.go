@@ -41,6 +41,7 @@ var carryStatusMap sync.Map                                                  // 
 var carryFail sync.Map                                                       // key fail num
 var carryStop sync.Map                                                       // key bool
 var notifyTime sync.Map                                                      // 1. market_symbol_market_symbol/time 2. funding_market_symbol/time
+var getMarketInfoMail sync.Map                                               // FormatCrossPair执行无法获取marketInfo时发送邮件，key为FormatCrossPair，value是当时时间
 var crossing bool
 var doCross = false
 

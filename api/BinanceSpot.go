@@ -10,7 +10,6 @@ import (
 	"hello/model"
 	"hello/util"
 	"math/rand"
-	"os"
 	"sort"
 	"strconv"
 	"strings"
@@ -30,7 +29,6 @@ func getMarketsBinanceSpot(key, secret string) (marketInfos map[string]*model.Ma
 		util.Notice("getMarketsBinanceSpot err: " + err.Error())
 		if exchangeInfo != nil {
 			util.Notice("getMarketsBinanceSpot err: %v", exchangeInfo)
-			os.Exit(0)
 		}
 		time.Sleep(time.Second * 5)
 		return getMarketsBinanceSpot(key, secret)
