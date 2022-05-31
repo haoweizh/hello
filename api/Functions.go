@@ -794,9 +794,12 @@ func InitMarketInfos() (success bool) {
 			model.SetMarketInfos(market, getMarketsBinanceSpot(accounts[0].Key, accounts[0].Secret))
 		case model.BinancePerp:
 			model.SetMarketInfos(market, getMarketsBinancePerp(accounts[0].Key, accounts[0].Secret))
-			for _, account := range accounts {
-				setPosSideBinancePerp(account.Key, account.Secret)
-			}
+			go func() {
+				for _, account := range accounts {
+					setPosSideBinancePerp(account.Key, account.Secret)
+				}
+				time.Sleep(time.Minute)
+			}()
 		case model.Gate:
 			for _, account := range accounts {
 				setPosSideGate(account.Key, account.Secret)

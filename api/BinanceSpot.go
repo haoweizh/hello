@@ -27,7 +27,7 @@ func getMarketsBinanceSpot(key, secret string) (marketInfos map[string]*model.Ma
 	exchangeInfo, err := client.NewExchangeInfoService().Do(context.Background())
 	if err != nil {
 		util.Notice("getMarketsBinanceSpot err: " + err.Error())
-		time.Sleep(time.Second * 2)
+		time.Sleep(time.Second * 5)
 		return getMarketsBinanceSpot(key, secret)
 	}
 	for _, item := range exchangeInfo.Symbols {
