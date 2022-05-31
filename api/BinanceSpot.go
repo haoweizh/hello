@@ -287,7 +287,7 @@ func getBalanceBinanceSpot(key string, secret string) (success bool, balances []
 	client := binance.NewClient(key, secret)
 	balanceResp, err := client.NewGetAccountService().Do(context.Background())
 	if err != nil {
-		util.SocketInfo(`fail to refresh binance balance `)
+		util.SocketInfo(`fail to refresh binance balance ` + err.Error())
 		time.Sleep(time.Second * 2)
 		return getBalanceBinanceSpot(key, secret)
 	}
