@@ -823,17 +823,9 @@ func placeCross(statusBuy, statusSell *CarryStatus, priceBuy, priceSell, amount 
 			OrderId: strconv.FormatInt(now, 10) + statusSell.symbol, LineBuy: statusSell.TradeLineBuy, LineSell: statusSell.TradeLineSell}
 		if statusBuy.Holding*-1 >= amount {
 			orderBuy.Function = model.FunctionCrossClose
-		} else if statusBuy.Holding < 0 {
-			orderBuy.Function = model.FunctionRevert
-			util.Notice(fmt.Sprintf(`revert buy %s %s amount %f hold %f`,
-				orderBuy.Market, orderBuy.Symbol, orderBuy.Amount, statusBuy.Holding))
 		}
 		if statusSell.Holding >= amount {
 			orderSell.Function = model.FunctionCrossClose
-		} else if statusSell.Holding > 0 {
-			orderSell.Function = model.FunctionRevert
-			util.Notice(fmt.Sprintf(`revert sell %s %s amount %f hold %f`,
-				orderSell.Market, orderSell.Symbol, orderSell.Amount, statusSell.Holding))
 		}
 		orderBuy.Coin = statusBuy.setting.Coin
 		orderSell.Coin = statusSell.setting.Coin
@@ -854,10 +846,6 @@ func placeCross(statusBuy, statusSell *CarryStatus, priceBuy, priceSell, amount 
 				order.Function = model.FunctionCrossOpen
 				if statusBuy.Holding*-1 >= amount {
 					order.Function = model.FunctionCrossClose
-				} else if statusBuy.Holding < 0 {
-					order.Function = model.FunctionRevert
-					util.Notice(fmt.Sprintf(`revert buy %s %s amount %f hold %f`,
-						order.Market, order.Symbol, order.Amount, statusBuy.Holding))
 				}
 				order.RefreshType = model.FunctionCross
 				model.AppDB.Save(order)
@@ -874,10 +862,6 @@ func placeCross(statusBuy, statusSell *CarryStatus, priceBuy, priceSell, amount 
 				order.Function = model.FunctionCrossOpen
 				if statusSell.Holding >= amount {
 					order.Function = model.FunctionCrossClose
-				} else if statusSell.Holding > 0 {
-					order.Function = model.FunctionRevert
-					util.Notice(fmt.Sprintf(`revert sell %s %s amount %f hold %f`,
-						order.Market, order.Symbol, order.Amount, statusSell.Holding))
 				}
 				order.RefreshType = model.FunctionCross
 				model.AppDB.Save(order)
