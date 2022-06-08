@@ -269,7 +269,7 @@ var wsHandlerPrivate = func(connection *websocket.Conn, event []byte, orderHandl
 			}
 		}
 	}
-	util.Info(fmt.Sprintf(`channel msg %s`, string(event)))
+	//util.Info(fmt.Sprintf(`channel msg %s`, string(event)))
 	if responseJson.Get(`data`) == nil || len(responseJson.Get(`data`).MustArray()) == 0 {
 		return
 	}
@@ -1220,7 +1220,7 @@ func getMaxSizeOKEX(key, secret, symbol string) (success bool, maxBuy, maxSell f
 			ok, bidAsk := model.AppMarkets.GetBidAsk(symbol, model.OKEX)
 			if ok {
 				maxSell = maxSell / bidAsk.Asks[0].Price
-				util.Info(`get max sell %f after price %f %s`, maxSell, bidAsk.Asks[0].Price, symbol)
+				//util.Info(`get max sell %f after price %f %s`, maxSell, bidAsk.Asks[0].Price, symbol)
 			} else {
 				util.Notice(`fail to get price from bidAsk %s`, symbol)
 			}
