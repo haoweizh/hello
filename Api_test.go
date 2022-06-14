@@ -108,7 +108,7 @@ func Test_BalAndPos(t *testing.T) {
 }
 
 func TestWs(t *testing.T) {
-	market := model.OKEX
+	market := model.Ftx
 	model.NewConfig()
 	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
 	//api.InitMarketInfos()

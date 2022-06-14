@@ -352,7 +352,7 @@ func equalAccount(i int, equalChan chan int, accounts map[string]*model.Account,
 			equalStatuses[j] = initStatus(account, setting)
 		}
 		for index := 0; index <= 10; index++ {
-			coinEqual, leftHoldingInU, _ := equalCoin(coin, equalStatuses)
+			coinEqual, leftHoldingInU, _ := equalCoin(coin, equalStatuses, settings)
 			if math.Abs(leftHoldingInU) < 10 || coinEqual {
 				break
 			}
@@ -369,7 +369,7 @@ func equalAccount(i int, equalChan chan int, accounts map[string]*model.Account,
 
 // bybit 缺少按照symbol cancel all
 // settings []*model.Setting, coinStatus map[string]map[string]map[string]*CarryStatus
-func equalCoin(coin string, statuses []*CarryStatus) (isEqual bool, holdingInU float64, msg string) {
+func equalCoin(coin string, statuses []*CarryStatus, settings []*model.Setting) (isEqual bool, holdingInU float64, msg string) {
 	var holding, price float64
 	orderSide := ``
 	var equalStatus *CarryStatus
@@ -416,6 +416,12 @@ func equalCoin(coin string, statuses []*CarryStatus) (isEqual bool, holdingInU f
 		}
 	} else {
 		isEqual = false
+		if math.Abs(holdingInU) > compTooBig {
+			for _, setting := range settings {
+				setting.Valid = false
+			}
+			api.SendMails(`too big equal`, fmt.Sprintf(`%s holding in u %f`, coin, holdingInU))
+		}
 	}
 	now := util.GetNowUnixMillion()
 	if holdingInU > 10 {
@@ -505,8 +511,8 @@ func equalCoin(coin string, statuses []*CarryStatus) (isEqual bool, holdingInU f
 			} else if orderSide == model.OrderSideSell {
 				price = tick.Bids[0].Price
 			}
-			util.Notice(fmt.Sprintf(`do equal %s %s %s at %f %f %f amount %f`,
-				coin, equalStatus.market, equalStatus.symbol, price, tick.Asks[0].Price, tick.Bids[0].Price, amount))
+			util.Notice(fmt.Sprintf(`do equal %s %s %s at %f %f %f %d amount %f`,
+				coin, equalStatus.market, equalStatus.symbol, price, tick.Asks[0].Price, tick.Bids[0].Price, tick.Ts, amount))
 			order := api.PlaceOrder(equalStatus.account.Key, equalStatus.account.Secret, orderSide, model.OrderTypeLimit,
 				equalStatus.market, equalStatus.symbol, ``,
 				price, price, amount, false, nil, nil)
