@@ -486,10 +486,10 @@ func equalCoin(coin string, statuses []*CarryStatus) (isEqual bool, holdingInU f
 	}
 	if equalStatus != nil {
 		amount := math.Abs(holding)
-		amount = math.Min(amount, compLimitInU/price)
 		if equalStatus.market == model.Ftx {
 			amount = math.Min(90000000, math.Abs(holding))
 		}
+		amount = math.Min(amount, compLimitInU/price)
 		checkAmount := model.GetAmountInMarket(equalStatus.market, equalStatus.symbol, amount, price)
 		util.Notice(`try to equal %s %s holding %f at %f in u %f checked %f`,
 			equalStatus.market, equalStatus.symbol, holding, price, holdingInU, checkAmount)
