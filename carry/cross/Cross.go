@@ -443,7 +443,7 @@ func equalCoin(coin string, statuses []*CarryStatus) (isEqual bool, holdingInU f
 				continue
 			}
 			go api.CancelOrders(status.account.Key, status.account.Secret, status.market, status.symbol)
-			if now-int64(tickTimes[status.market+status.symbol]) > 1000 || status.TradeLineSell > 0.5 {
+			if now-int64(tickTimes[status.market+status.symbol]) > 5000 || status.TradeLineSell > 0.5 {
 				errMsg += fmt.Sprintf(`delay too long or trade line sell %d %f`,
 					now-int64(tickTimes[status.market+status.symbol]), status.TradeLineSell)
 				continue
@@ -479,7 +479,7 @@ func equalCoin(coin string, statuses []*CarryStatus) (isEqual bool, holdingInU f
 				continue
 			}
 			go api.CancelOrders(status.account.Key, status.account.Secret, status.market, status.symbol)
-			if equalStatus != nil || now-int64(tickTimes[status.market+status.symbol]) > 1000 || status.TradeLineBuy > 0.5 {
+			if equalStatus != nil || now-int64(tickTimes[status.market+status.symbol]) > 5000 || status.TradeLineBuy > 0.5 {
 				errMsg += fmt.Sprintf(`delay too long or trade line buy %d %f`,
 					now-int64(tickTimes[status.market+status.symbol]), status.TradeLineBuy)
 				continue
