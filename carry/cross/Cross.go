@@ -443,9 +443,9 @@ func equalCoin(coin string, statuses []*CarryStatus) (isEqual bool, holdingInU f
 				continue
 			}
 			go api.CancelOrders(status.account.Key, status.account.Secret, status.market, status.symbol)
-			if now-int64(tickTimes[status.market+status.symbol]) > 5000 || status.TradeLineSell > 0.5 {
-				errMsg += fmt.Sprintf(`delay too long or trade line sell %d %f`,
-					now-int64(tickTimes[status.market+status.symbol]), status.TradeLineSell)
+			if now-int64(tickTimes[status.market+status.symbol]) > 10000 || status.TradeLineSell > 0.5 {
+				errMsg += fmt.Sprintf(`%s %s delay too long or trade line sell %d %f`,
+					status.market, status.symbol, now-int64(tickTimes[status.market+status.symbol]), status.TradeLineSell)
 				continue
 			}
 			checkAmount := model.GetAmountInMarket(status.market, status.symbol, math.Abs(holding), price)
@@ -479,9 +479,9 @@ func equalCoin(coin string, statuses []*CarryStatus) (isEqual bool, holdingInU f
 				continue
 			}
 			go api.CancelOrders(status.account.Key, status.account.Secret, status.market, status.symbol)
-			if equalStatus != nil || now-int64(tickTimes[status.market+status.symbol]) > 5000 || status.TradeLineBuy > 0.5 {
-				errMsg += fmt.Sprintf(`delay too long or trade line buy %d %f`,
-					now-int64(tickTimes[status.market+status.symbol]), status.TradeLineBuy)
+			if equalStatus != nil || now-int64(tickTimes[status.market+status.symbol]) > 10000 || status.TradeLineBuy > 0.5 {
+				errMsg += fmt.Sprintf(`%s %s delay too long or trade line buy %d %f`,
+					status.market, status.symbol, now-int64(tickTimes[status.market+status.symbol]), status.TradeLineBuy)
 				continue
 			}
 			checkAmount := model.GetAmountInMarket(status.market, status.symbol, math.Abs(holding), price)
@@ -580,13 +580,13 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 	maintaining, ok := model.ChannelMaintaining.Load(setting.Market)
 	if tick == nil || tick.Asks == nil || tick.Bids == nil || setting == nil || (ok && maintaining.(bool)) ||
 		(model.AppConfig.Env != `test` && model.AppConfig.Handle != `1`) || setting.Valid == false ||
-		settings == nil || len(settings) == 0 || million-int64(tick.Ts) > 100 {
+		settings == nil || len(settings) == 0 || million-int64(tick.Ts) > 200 {
 		return
 	}
 	for _, settingRelate := range settings {
 		tickGet, tickRelate := model.AppMarkets.GetBidAsk(settingRelate.Symbol, settingRelate.Market)
 		if !tickGet || setting.ID == settingRelate.ID ||
-			(model.AppConfig.Env != `test` && million-int64(tickRelate.Ts) > 500) {
+			(model.AppConfig.Env != `test` && million-int64(tickRelate.Ts) > 800) {
 			continue
 		}
 		for i := model.AppConfig.GetCrossLen() - 1; i >= 0; i-- {
