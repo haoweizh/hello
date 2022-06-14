@@ -667,6 +667,8 @@ func GetMarketInfos(market string) (marketInfo map[string]*model.MarketInfo) {
 		_, marketInfo = getMarketsGate(accounts[0].Key, accounts[0].Secret)
 	case model.Kucoin:
 		_, marketInfo = getMarketsKucoin(``)
+	case model.KucoinSpot:
+		return getMarketsKucoinSpot(accounts[0].Key, accounts[0].Secret)
 	case model.BybitPerp:
 		return getMarketsBybitPerp(accounts[0].Key, accounts[0].Secret)
 	case model.BybitSpot:

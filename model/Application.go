@@ -17,6 +17,8 @@ var monitorInfo = make(map[string]map[string]map[string][]string) // userKey - t
 var AppMetric = &MetricManager{}
 
 const Kucoin = `kucoin`
+const KucoinSpot = `kucoinspot`
+const KucoinPerp = `kucoinperp`
 const Gate = `gate`
 const Mexc = `mexc`
 const DFuture = `dfuture`
