@@ -425,15 +425,11 @@ func equalCoin(coin string, statuses []*CarryStatus) (isEqual bool, holdingInU f
 				setting.Valid = false
 				util.Notice(fmt.Sprintf(`too big comp %s %s %f %f %s`,
 					setting.Market, setting.Symbol, holdingInU, holding, holdStr))
-				temp := model.GetSetting(model.FunctionCross, setting.Market, setting.Symbol)
-				if temp != nil && temp.Valid {
-					util.Notice(fmt.Sprintf(`fail to set valid false %s %s %s %s`,
-						setting.Market, setting.Symbol, temp.Market, temp.Symbol))
-				}
 			}
 			api.SendMails(`too big equal`, fmt.Sprintf(`%s holding in u %f`, coin, holdingInU))
 		}
 	}
+	errMsg := ``
 	now := util.GetNowUnixMillion()
 	if holdingInU > 10 {
 		orderSide = model.OrderSideSell
@@ -447,11 +443,13 @@ func equalCoin(coin string, statuses []*CarryStatus) (isEqual bool, holdingInU f
 				continue
 			}
 			go api.CancelOrders(status.account.Key, status.account.Secret, status.market, status.symbol)
-			if equalStatus != nil || now-int64(tickTimes[status.market+status.symbol]) > 1000 || status.TradeLineSell > 0.5 {
+			if now-int64(tickTimes[status.market+status.symbol]) > 1000 || status.TradeLineSell > 0.5 {
+				errMsg += fmt.Sprintf(`delay too long or trade line sell %f`, status.TradeLineSell)
 				continue
 			}
 			checkAmount := model.GetAmountInMarket(status.market, status.symbol, math.Abs(holding), price)
 			if checkAmount <= 0 {
+				errMsg += fmt.Sprintf(`check amount %s %s %f < 0`, status.market, status.symbol, checkAmount)
 				continue
 			}
 			if status.AvailableSell > holding {
@@ -462,8 +460,8 @@ func equalCoin(coin string, statuses []*CarryStatus) (isEqual bool, holdingInU f
 					equalStatus = status
 					holding = status.AvailableSell
 				} else {
-					util.Notice(fmt.Sprintf(`check amount 0 sell %s %s %f %f`,
-						status.market, status.symbol, status.AvailableSell, bids[i].Price))
+					errMsg += fmt.Sprintf(`check amount 0 sell %s %s %f %f`,
+						status.market, status.symbol, status.AvailableSell, bids[i].Price)
 				}
 			}
 		}
@@ -481,10 +479,12 @@ func equalCoin(coin string, statuses []*CarryStatus) (isEqual bool, holdingInU f
 			}
 			go api.CancelOrders(status.account.Key, status.account.Secret, status.market, status.symbol)
 			if equalStatus != nil || now-int64(tickTimes[status.market+status.symbol]) > 1000 || status.TradeLineBuy > 0.5 {
+				errMsg += fmt.Sprintf(`delay too long or trade line buy %f`, status.TradeLineBuy)
 				continue
 			}
 			checkAmount := model.GetAmountInMarket(status.market, status.symbol, math.Abs(holding), price)
 			if checkAmount <= 0 {
+				errMsg += fmt.Sprintf(`check amount %s %s %f < 0`, status.market, status.symbol, checkAmount)
 				continue
 			}
 			if math.IsNaN(status.AvailableBuy) || status.AvailableBuy > math.Abs(holding) {
@@ -495,8 +495,8 @@ func equalCoin(coin string, statuses []*CarryStatus) (isEqual bool, holdingInU f
 					equalStatus = status
 					holding = status.AvailableBuy
 				} else {
-					util.Notice(fmt.Sprintf(`check amount 0 buy %s %s %f %f`,
-						status.market, status.symbol, status.AvailableBuy, asks[i].Price))
+					errMsg += fmt.Sprintf(`check amount 0 buy %s %s %f %f`,
+						status.market, status.symbol, status.AvailableBuy, asks[i].Price)
 				}
 			}
 		}
@@ -559,6 +559,7 @@ func equalCoin(coin string, statuses []*CarryStatus) (isEqual bool, holdingInU f
 		isEqual = true // 可能由于头寸太小，不满足所有市场的下单要求，而holdingU刚好大于10u，此时认为已平
 		minute := time.Now().Minute()
 		second := time.Now().Second()
+		util.Notice(fmt.Sprintf(`can not get status %s %f err msg %s`, coin, holdingInU, errMsg))
 		if minute == 0 && second == 0 {
 			go api.SendMails(`equal error`, fmt.Sprintf(`can not get status for %s when holding %f`, coin, holdingInU))
 		}
