@@ -26,10 +26,10 @@ func checkSetCrossing(value bool) (before bool) {
 }
 
 func createContractMarket(key, secret, market string) (cm *contractMarket) {
-	cm = &contractMarket{key: key, market: market}
 	success, positions, accountValue, availableU := api.GetPositions(key, secret, market)
 	settings := model.GetSettings(model.FunctionCross, market)
 	if success {
+		cm = &contractMarket{key: key, market: market}
 		cm.positions = make(map[string]*model.Position)
 		for _, position := range positions {
 			cm.positions[position.Currency] = position
@@ -44,13 +44,14 @@ func createContractMarket(key, secret, market string) (cm *contractMarket) {
 		}
 		cm.accountValueInU = accountValue
 		cm.collateralsAvailable = availableU
+		contractMarkets.Store(key, cm)
+	} else {
+		contractMarkets.Delete(key)
 	}
-	contractMarkets.Store(key, cm)
 	return
 }
 
 func createSpotMarket(key, secret, market string) (sm *spotMarket) {
-	sm = &spotMarket{key: key, market: market}
 	success, balances, totalInUsd, collateral := api.GetBalances(key, secret, market)
 	//for _, balance := range balances {
 	//	if balance.UsdValue == 0 && balance.Amount > 0 {
@@ -58,6 +59,7 @@ func createSpotMarket(key, secret, market string) (sm *spotMarket) {
 	//	}
 	//}
 	if success {
+		sm = &spotMarket{key: key, market: market}
 		sm.balances = make(map[string]*model.Balance)
 		sm.accountValueInU = totalInUsd
 		sm.collateral = collateral
@@ -71,8 +73,9 @@ func createSpotMarket(key, secret, market string) (sm *spotMarket) {
 				sm.availableU -= math.Abs(balance.UsdValue)
 			}
 		}
+		spotMarkets.Store(key, sm)
 	}
-	spotMarkets.Store(key, sm)
+	spotMarkets.Delete(key)
 	return
 }
 
@@ -352,7 +355,7 @@ func equalAccount(i int, equalChan chan int, accounts map[string]*model.Account,
 			equalStatuses[j] = initStatus(account, setting)
 		}
 		for index := 0; index <= 10; index++ {
-			coinEqual, leftHoldingInU, _ := equalCoin(coin, equalStatuses, settings)
+			coinEqual, leftHoldingInU, _ := equalCoin(coin, equalStatuses)
 			if math.Abs(leftHoldingInU) < 10 || coinEqual {
 				break
 			}
@@ -369,7 +372,7 @@ func equalAccount(i int, equalChan chan int, accounts map[string]*model.Account,
 
 // bybit 缺少按照symbol cancel all
 // settings []*model.Setting, coinStatus map[string]map[string]map[string]*CarryStatus
-func equalCoin(coin string, statuses []*CarryStatus, settings []*model.Setting) (isEqual bool, holdingInU float64, msg string) {
+func equalCoin(coin string, statuses []*CarryStatus) (isEqual bool, holdingInU float64, msg string) {
 	var holding, price float64
 	orderSide := ``
 	var equalStatus *CarryStatus
@@ -417,8 +420,16 @@ func equalCoin(coin string, statuses []*CarryStatus, settings []*model.Setting) 
 	} else {
 		isEqual = false
 		if math.Abs(holdingInU) > compTooBig {
+			settings := model.GetCoinSetting(model.FunctionCross, coin)
 			for _, setting := range settings {
 				setting.Valid = false
+				util.Notice(fmt.Sprintf(`too big comp %s %s %f %f %s`,
+					setting.Market, setting.Symbol, holdingInU, holding, holdStr))
+				temp := model.GetSetting(model.FunctionCross, setting.Market, setting.Symbol)
+				if temp != nil && temp.Valid {
+					util.Notice(fmt.Sprintf(`fail to set valid false %s %s %s %s`,
+						setting.Market, setting.Symbol, temp.Market, temp.Symbol))
+				}
 			}
 			api.SendMails(`too big equal`, fmt.Sprintf(`%s holding in u %f`, coin, holdingInU))
 		}
