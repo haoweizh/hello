@@ -356,6 +356,7 @@ func equalAccount(i int, equalChan chan int, accounts map[string]*model.Account,
 		}
 		for index := 0; index <= 10; index++ {
 			coinEqual, leftHoldingInU, _ := equalCoin(coin, equalStatuses)
+			util.Info(`equal coin %s account %d equal %v left hold u %f`, coin, i, coinEqual, leftHoldingInU)
 			if math.Abs(leftHoldingInU) < 10 || coinEqual {
 				break
 			}
