@@ -120,7 +120,7 @@ func createFromPosition(account *model.Account, setting *model.Setting, valueLim
 		valueInUsd = math.Abs(carryStatus.Holding) * price
 		carryStatus.RateInAll = valueInUsd / cm.accountValueInU
 	}
-	if cm.contractValueInU/cm.accountValueInU > 1.8 || valueInUsd > valueLimit || valueInUsd/cm.accountValueInU > 0.3 {
+	if cm.contractValueInU/cm.accountValueInU > 1.8 || valueInUsd > valueLimit || valueInUsd/cm.accountValueInU > 0.15 {
 		//util.Notice(fmt.Sprintf(`low position balance %s %s %f %f %f %f`,
 		//	key, setting.Symbol, cm.contractValueInU, cm.accountValueInU, valueInUsd, valueLimit))
 		doRevert = true
@@ -167,7 +167,7 @@ func createFromBalance(account *model.Account, setting *model.Setting, valueLimi
 		carryStatus.AvailableSell = carryStatus.LimitSell
 	}
 	usdLowLine := math.Min(100000, 0.1*sm.accountValueInU)
-	if sm.availableU < usdLowLine || carryStatus.RateInAll > 0.6 {
+	if sm.availableU < usdLowLine || carryStatus.RateInAll > 0.15 {
 		doRevert = true
 	}
 	if sm.balances[setting.Symbol] != nil && math.Abs(sm.balances[setting.Symbol].UsdValue) > valueLimit {
@@ -435,7 +435,7 @@ func equalCoin(coin string, statuses []*CarryStatus) (isEqual bool, holdingInU f
 		orderSide = model.OrderSideSell
 		sort.Sort(sort.Reverse(bids))
 		util.Notice(fmt.Sprintf(`need equal no tick %s, %s sell holding %f worth %f  list %s %v`,
-			noTicks, coin, holding, holdingInU, holdStr, bids))
+			coin, noTicks, holding, holdingInU, holdStr, bids))
 		for i := 0; i < len(bids); i++ {
 			status := bidStatus[fmt.Sprintf(`%s_%s`, bids[i].Market, bids[i].Symbol)]
 			if status == nil {
@@ -471,7 +471,7 @@ func equalCoin(coin string, statuses []*CarryStatus) (isEqual bool, holdingInU f
 		orderSide = model.OrderSideBuy
 		sort.Sort(asks)
 		util.Notice(fmt.Sprintf(`need equal no tick %s, %s buy holding %f worth %f list %s %v`,
-			noTicks, coin, holding, holdingInU, holdStr, asks))
+			coin, noTicks, holding, holdingInU, holdStr, asks))
 		for i := 0; i < len(asks); i++ {
 			status := askStatus[fmt.Sprintf(`%s_%s`, asks[i].Market, asks[i].Symbol)]
 			if status == nil {
@@ -510,13 +510,14 @@ func equalCoin(coin string, statuses []*CarryStatus) (isEqual bool, holdingInU f
 		}
 		amount = math.Min(amount, compLimitInU/price)
 		checkAmount := model.GetAmountInMarket(equalStatus.market, equalStatus.symbol, amount, price)
-		util.Notice(`try to equal %s %s holding %f at %f in u %f checked %f`,
-			equalStatus.market, equalStatus.symbol, holding, price, holdingInU, checkAmount)
+		util.Notice(`try to equal %s %s %s holding %f at %f in u %f checked %f`,
+			coin, equalStatus.market, equalStatus.symbol, holding, price, holdingInU, checkAmount)
 		if checkAmount > 0 {
 			time.Sleep(time.Second)
 			getTick, tick := model.AppMarkets.GetBidAsk(equalStatus.symbol, equalStatus.market)
 			if !getTick {
 				equalStatus.AvailableBuy, equalStatus.AvailableSell = 0, 0
+				util.Notice(`no tick when equal return %s %s %s`, coin, equalStatus.symbol, equalStatus.market)
 				return isEqual, holdingInU, ``
 			}
 			if orderSide == model.OrderSideBuy {
