@@ -14,7 +14,7 @@ import (
 
 func Test_placeOrderMexc(t *testing.T) {
 	model.NewConfig()
-	marketInfos := api.GetMarketInfos(model.Mexc)
+	marketInfos := api.GetMarketInfos(model.Ftx)
 	model.SetMarketInfos(model.Mexc, marketInfos)
 	//api.GetPositions(model.AppConfig.MexcKey, model.AppConfig.MexcSecret, model.Mexc)
 	//_, rate := api.GetFundingRate(model.AppConfig.MexcKey, model.AppConfig.MexcSecret, model.Mexc, `ETH_PERP`)

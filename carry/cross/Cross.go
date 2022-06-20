@@ -249,13 +249,13 @@ func initStatus(account *model.Account, setting *model.Setting) (status *CarrySt
 		jumpSell = jumpOpen
 		standardScoreBuy = standardScoreClose
 		standardScoreSell = standardScoreOpen
-		status.LimitBuy = math.Abs(status.Holding)
+		status.LimitBuy = math.Min(status.LimitBuy, math.Abs(status.Holding))
 	} else if status.Holding*price > 100 {
 		jumpBuy = jumpOpen
 		jumpSell = jumpClose
 		standardScoreBuy = standardScoreOpen
 		standardScoreSell = standardScoreClose
-		status.LimitSell = status.Holding
+		status.LimitSell = math.Min(status.LimitSell, status.Holding)
 	}
 	status.TradeLineBuy = math.Max(standardScoreBuy*(0.5+jumpBuy*status.RateInAll), lowestScore) + fundingRate
 	status.TradeLineSell = math.Max(standardScoreSell*(0.5+jumpSell*status.RateInAll), lowestScore) - fundingRate
@@ -819,8 +819,8 @@ func initLimitBuyAndSell(status *CarryStatus, setting *model.Setting, price floa
 		availableAmount := cm.collateralsAvailable / price
 		status.LimitSell = math.Min(status.LimitSell, limitAmount)
 		status.LimitBuy = math.Min(status.LimitBuy, limitAmount)
-		status.AvailableSell = availableAmount
-		status.AvailableBuy = availableAmount
+		status.AvailableSell = math.Min(status.AvailableSell, availableAmount)
+		status.AvailableBuy = math.Min(status.AvailableBuy, availableAmount)
 	}
 }
 
