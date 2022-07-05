@@ -116,17 +116,18 @@ func LoadSettings() {
 	handlers = make(map[string]map[string]map[string]CarryHandler)
 	coinSettings = make(map[string]map[string][]*Setting)
 	for i := range AppSettings {
-		market := AppSettings[i].Market
-		function := AppSettings[i].Function
+		setting := &AppSettings[i]
+		market := setting.Market
+		function := setting.Function
+		coin := setting.Coin
 		if coinSettings[function] == nil {
 			coinSettings[function] = make(map[string][]*Setting)
 		}
-		if coinSettings[function][AppSettings[i].Coin] == nil {
-			coinSettings[function][AppSettings[i].Coin] = make([]*Setting, 0)
+		if coinSettings[function][coin] == nil {
+			coinSettings[function][coin] = make([]*Setting, 0)
 		}
-		coinSettings[function][AppSettings[i].Coin] =
-			append(coinSettings[function][AppSettings[i].Coin], &AppSettings[i])
-		symbols := []string{AppSettings[i].Symbol}
+		coinSettings[function][coin] = append(coinSettings[function][coin], setting)
+		symbols := []string{setting.Symbol}
 		for _, symbol := range symbols {
 			if marketSymbolSetting[function] == nil {
 				marketSymbolSetting[function] = make(map[string]map[string]*Setting)
@@ -134,7 +135,7 @@ func LoadSettings() {
 			if marketSymbolSetting[function][market] == nil {
 				marketSymbolSetting[function][market] = make(map[string]*Setting)
 			}
-			marketSymbolSetting[function][market][symbol] = &AppSettings[i]
+			marketSymbolSetting[function][market][symbol] = setting
 			if handlers[market] == nil {
 				handlers[market] = make(map[string]map[string]CarryHandler)
 			}

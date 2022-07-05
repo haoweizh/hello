@@ -18,6 +18,7 @@ const lastOrderLength = 8
 const holdingLimitInU = 500000.0
 const openValueLimit = 10000.0
 const compLimitInU = 30000.0
+const compTooBig = 70000.0
 const crossLimitInU = 10000.0
 const InsufficientCodeBinance = `-2010`
 
