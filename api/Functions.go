@@ -142,8 +142,10 @@ func MustCancel(key, secret, market, symbol, orderType, orderId string, mustCanc
 // CancelOrders 暂不支持策略订单
 func CancelOrders(key, secret, market, symbol string) (result bool) {
 	switch market {
-	case model.Kucoin:
-		return cancelOrdersKucoin(symbol)
+	case model.KucoinSpot:
+		return cancelOrdersKucoinSpot(symbol)
+	case model.KucoinPerp:
+		return cancelOrdersKucoinPerp(symbol)
 	case model.Gate:
 		return cancelOrdersGate(key, secret, symbol)
 	case model.Mexc:
@@ -249,8 +251,8 @@ func GetBalances(key, secret, market string) (
 	//	return true, balances, totalInUsd, collateral
 	//}
 	switch market {
-	case model.Kucoin:
-		success, balances = getBalanceKucoin(key, secret)
+	case model.KucoinSpot:
+		success, balances = getBalanceKucoinSpot(key, secret)
 	case model.Gate:
 		success, balances = getBalanceGate(key, secret)
 	case model.Ftx:
@@ -415,8 +417,8 @@ func QueryOrderById(key, secret, market, symbol, orderType, orderId string) (ord
 // availableU: 可用usd
 func GetPositions(key, secret, market string) (success bool, positions []*model.Position, accountValue, availableU float64) {
 	switch market {
-	case model.Kucoin:
-		return getPositionsKucoin(key, secret)
+	case model.KucoinPerp:
+		return getPositionsKucoinPerp(key, secret)
 	case model.Gate:
 		return getPositionsGate(key, secret)
 	case model.Mexc:
@@ -492,8 +494,10 @@ func PlaceOrder(key, secret, orderSide, orderType, market, symbol, orderParam st
 		return
 	}
 	switch market {
-	case model.Kucoin:
-		placeOrderKucoin(order, orderSide, orderType, symbol, price, amount)
+	case model.KucoinSpot:
+		placeOrderKucoinSpot(order, orderSide, orderType, symbol, price, amount)
+	case model.KucoinPerp:
+		placeOrderKucoinPerp(order, orderSide, orderType, symbol, price, amount)
 	case model.Gate:
 		placeOrderGate(key, secret, order, orderSide, orderType, symbol, price, amount)
 	case model.OKEX:
@@ -646,7 +650,7 @@ func _(key, secret, market, transferType string, amount float64) {
 	if market == model.Gate {
 		transferGate(key, secret, transferType, amount)
 	} else if market == model.Kucoin {
-		transferKucoin(transferType, amount)
+		//transferKucoin(transferType, amount)
 	}
 }
 
@@ -665,10 +669,10 @@ func GetMarketInfos(market string) (marketInfo map[string]*model.MarketInfo) {
 		return getMarketsBinancePerp(accounts[0].Key, accounts[0].Secret)
 	case model.Gate:
 		_, marketInfo = getMarketsGate(accounts[0].Key, accounts[0].Secret)
-	case model.Kucoin:
-		_, marketInfo = getMarketsKucoin(``)
 	case model.KucoinSpot:
 		return getMarketsKucoinSpot(accounts[0].Key, accounts[0].Secret)
+	case model.KucoinPerp:
+		return getMarketsKucoinPerp(accounts[0].Key, accounts[0].Secret)
 	case model.BybitPerp:
 		return getMarketsBybitPerp(accounts[0].Key, accounts[0].Secret)
 	case model.BybitSpot:
@@ -827,8 +831,11 @@ func InitMarketInfos() (success bool) {
 			if success {
 				model.SetMarketInfos(market, marketInfos)
 			}
-		case model.Kucoin:
-			_, marketInfos := getMarketsKucoin("")
+		case model.KucoinSpot:
+			marketInfos := getMarketsKucoinSpot(accounts[0].Key, accounts[0].Secret)
+			model.SetMarketInfos(market, marketInfos)
+		case model.KucoinPerp:
+			marketInfos := getMarketsKucoinPerp(accounts[0].Key, accounts[0].Secret)
 			model.SetMarketInfos(market, marketInfos)
 			setFutureAutoDeposit()
 		case model.BybitPerp:
@@ -855,8 +862,10 @@ func CreateMarketDepthServer(markets *model.Markets, market string, orderHandler
 	channels = make([]chan struct{}, 1)
 	var err error
 	switch market {
-	case model.Kucoin:
-		channels, err = WsDepthServeKucoin()
+	case model.KucoinSpot:
+		channels, err = WsDepthServeKucoinSpot()
+	case model.KucoinPerp:
+		channels, err = WsDepthServeKucoinPerp()
 	case model.Gate:
 		err = WsDepthServeGate()
 	case model.OKEX:

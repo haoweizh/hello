@@ -11,19 +11,19 @@ import (
 )
 
 type Config struct {
-	ChannelSlot, Delay                                                                             float64
-	KucoinSpot, GateSpot                                                                           bool
-	KucoinRelatedKey, KucoinRelatedSecret, KucoinFutureKey, KucoinFutureSecret                     string
-	GateKey, GateSecret, GateCarryClose, GateCarryRate                                             string
-	HuobiKey, HuobiSecret, HuobiCarryClose, HuobiCarryRate                                         string
-	OkexKey, OkexSecret, OkexCarryClose, OkexCarryRate                                             string
-	FtxKey, FtxSecret, FtxCarryClose, FtxCarryRate                                                 string
-	BybitKey, BybitSecret, BybitCarryClose, BybitCarryRate                                         string
-	BinanceKey, BinanceSecret, BinanceCarryClose, BinanceCarryRate                                 string
-	CoinparkKey, CoinparkSecret, CoinparkCarryClose, CoinparkCarryRate                             string
-	DFutureKey, DFutureSecret, MexcKey, MexcSecret, MexcCarryClose, MexcCarryRate                  string
-	BitmexKey, BitmexSecret, BitmexCarryClose, BitmexCarryRate                                     string
-	Phase, Handle, Mail, FromMail, FromMailAuth, Port, WalletKey, DBConnection, Env, FutureAddress string
+	ChannelSlot, Delay                                                                                            float64
+	KucoinSpot, GateSpot                                                                                          bool
+	KucoinRelatedKey, KucoinRelatedSecret, KucoinFutureKey, KucoinFutureSecret, KucoinCarryClose, KucoinCarryRate string
+	GateKey, GateSecret, GateCarryClose, GateCarryRate                                                            string
+	HuobiKey, HuobiSecret, HuobiCarryClose, HuobiCarryRate                                                        string
+	OkexKey, OkexSecret, OkexCarryClose, OkexCarryRate                                                            string
+	FtxKey, FtxSecret, FtxCarryClose, FtxCarryRate                                                                string
+	BybitKey, BybitSecret, BybitCarryClose, BybitCarryRate                                                        string
+	BinanceKey, BinanceSecret, BinanceCarryClose, BinanceCarryRate                                                string
+	CoinparkKey, CoinparkSecret, CoinparkCarryClose, CoinparkCarryRate                                            string
+	DFutureKey, DFutureSecret, MexcKey, MexcSecret, MexcCarryClose, MexcCarryRate                                 string
+	BitmexKey, BitmexSecret, BitmexCarryClose, BitmexCarryRate                                                    string
+	Phase, Handle, Mail, FromMail, FromMailAuth, Port, WalletKey, DBConnection, Env, FutureAddress                string
 }
 
 type Account struct {
@@ -76,9 +76,13 @@ func GetAccounts(index int) (accounts map[string]*Account) {
 	for i, account := range tempAccounts {
 		AppAccounts[i][BybitSpot] = account
 	}
-	tempAccounts = AppConfig.GetAccounts(Kucoin)
+	tempAccounts = AppConfig.GetAccounts(KucoinSpot)
 	for i, account := range tempAccounts {
-		AppAccounts[i][Kucoin] = account
+		AppAccounts[i][KucoinSpot] = account
+	}
+	tempAccounts = AppConfig.GetAccounts(KucoinPerp)
+	for i, account := range tempAccounts {
+		AppAccounts[i][KucoinPerp] = account
 	}
 	tempAccounts = AppConfig.GetAccounts(Mexc)
 	for i, account := range tempAccounts {
@@ -160,6 +164,16 @@ func (config *Config) GetAccounts(market string) []*Account {
 	switch market {
 	//case Kucoin, DFuture:
 	//	return false, 1
+	case KucoinSpot:
+		keys = strings.Split(config.KucoinRelatedKey, `,`)
+		secrets = strings.Split(config.KucoinRelatedSecret, `,`)
+		closeValues = strings.Split(config.KucoinCarryClose, `,`)
+		rateValues = strings.Split(config.KucoinCarryRate, `,`)
+	case KucoinPerp:
+		keys = strings.Split(config.KucoinFutureKey, `,`)
+		secrets = strings.Split(config.KucoinFutureSecret, `,`)
+		closeValues = strings.Split(config.KucoinCarryClose, `,`)
+		rateValues = strings.Split(config.KucoinCarryRate, `,`)
 	case Gate:
 		keys = strings.Split(config.GateKey, `,`)
 		secrets = strings.Split(config.GateSecret, `,`)
