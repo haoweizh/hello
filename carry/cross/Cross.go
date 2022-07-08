@@ -27,14 +27,14 @@ func checkSetCrossing(value bool) (before bool) {
 
 func createContractMarket(key, secret, market string) (cm *contractMarket) {
 	success, positions, accountValue, availableU := api.GetPositions(key, secret, market)
-	settings := model.GetSettings(model.FunctionCross, market)
+	settings := api.GetSettings(model.FunctionCross, market)
 	if success {
 		cm = &contractMarket{key: key, market: market}
 		cm.positions = make(map[string]*model.Position)
 		for _, position := range positions {
 			cm.positions[position.Currency] = position
 			if settings != nil && settings[position.Currency] != nil {
-				_, price := model.AppMarkets.GetPriceForce(position.Currency, market)
+				_, price := model.AppMarkets.GetPriceForce(position.Currency, market, api.GetMarkets())
 				if price > 0 {
 					cm.contractValueInU += price * math.Abs(position.Holding)
 				} else {
@@ -95,7 +95,7 @@ func createFromPosition(account *model.Account, setting *model.Setting, valueLim
 		return nil, false
 	}
 	cm := value.(*contractMarket)
-	getPrice, price := model.AppMarkets.GetPriceForce(setting.Symbol, setting.Market)
+	getPrice, price := model.AppMarkets.GetPriceForce(setting.Symbol, setting.Market, api.GetMarkets())
 	if !getPrice && cm.positions[setting.Symbol] != nil {
 		price = cm.positions[setting.Symbol].EntryPrice
 		util.Notice(`no tick price, use position price %s %s %f`, setting.Market, setting.Symbol, price)
@@ -140,7 +140,7 @@ func createFromBalance(account *model.Account, setting *model.Setting, valueLimi
 		return
 	}
 	sm := value.(*spotMarket)
-	_, price := model.AppMarkets.GetPriceForce(setting.Symbol, setting.Market)
+	_, price := model.AppMarkets.GetPriceForce(setting.Symbol, setting.Market, api.GetMarkets())
 	limitBuy, limitSell, availableBuy := 0.0, 0.0, 0.0
 	if price > 0 {
 		limitBuy = math.Min(openValueLimit, math.Min(sm.availableU/5, sm.accountValueInU/15)) / price
@@ -304,14 +304,14 @@ func ClearCross() {
 
 func equalAccounts() {
 	util.Notice(`...... enter clearing cross all`)
-	coinSettings := model.GetCoinSettings(model.FunctionCross)
+	coinSettings := api.GetCoinSettings(model.FunctionCross)
 	waitEqual := make(map[int]bool)
 	equalChannel := make(chan int, 1)
-	markets := model.GetMarkets()
+	markets := api.GetMarkets()
 	//needWaitEqual := false // 是否需要进入等待环节
-	for i := 0; i < model.AppConfig.GetCrossLen(); i++ {
+	for i := 0; i < api.GetCrossLen(); i++ {
 		accounts := make(map[string]*model.Account)
-		indexAccounts := model.GetAccounts(i)
+		indexAccounts := api.GetAccounts(i)
 		for _, market := range markets {
 			accounts[market] = indexAccounts[market]
 		}
@@ -423,11 +423,14 @@ func equalCoin(coin string, statuses []*CarryStatus) (isEqual bool, holdingInU f
 	} else {
 		isEqual = false
 		if math.Abs(holdingInU) > compTooBig {
-			settings := model.GetCoinSetting(model.FunctionCross, coin)
-			for _, setting := range settings {
-				setting.Valid = false
-				util.Notice(fmt.Sprintf(`too big comp %s %s %f %f %s`,
-					setting.Market, setting.Symbol, holdingInU, holding, holdStr))
+			coinSettings := api.GetCoinSettings(model.FunctionCross)
+			if coinSettings != nil {
+				settings := coinSettings[coin]
+				for _, setting := range settings {
+					setting.Valid = false
+					util.Notice(fmt.Sprintf(`too big comp %s %s %f %f %s`,
+						setting.Market, setting.Symbol, holdingInU, holding, holdStr))
+				}
 			}
 			api.SendMails(`too big equal`, fmt.Sprintf(`%s holding in u %f`, coin, holdingInU))
 		}
@@ -580,7 +583,13 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 		return
 	}
 	million := util.GetNowUnixMillion()
-	settings := model.GetCoinSetting(setting.Function, setting.Coin)
+	coinSettings := api.GetCoinSettings(setting.Function)
+	var settings []*model.Setting
+	if coinSettings == nil {
+		settings = nil
+	} else {
+		settings = coinSettings[setting.Coin]
+	}
 	maintaining, ok := model.ChannelMaintaining.Load(setting.Market)
 	if tick == nil || tick.Asks == nil || tick.Bids == nil || setting == nil || (ok && maintaining.(bool)) ||
 		(model.AppConfig.Env != `test` && model.AppConfig.Handle != `1`) || setting.Valid == false ||
@@ -593,7 +602,7 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 			(model.AppConfig.Env != `test` && million-int64(tickRelate.Ts) > 800) {
 			continue
 		}
-		for i := model.AppConfig.GetCrossLen() - 1; i >= 0; i-- {
+		for i := api.GetCrossLen() - 1; i >= 0; i-- {
 			account := model.AppConfig.GetAccounts(setting.Market)[i]
 			accountRelate := model.AppConfig.GetAccounts(settingRelate.Market)[i]
 			if account == nil || accountRelate == nil {
@@ -977,7 +986,7 @@ var PostOrderCross = func(order *model.Order, setting *model.Setting) {
 		return
 	}
 	if setting == nil {
-		setting = model.GetSetting(model.FunctionCross, order.Market, order.Symbol)
+		setting = api.GetSetting(model.FunctionCross, order.Market, order.Symbol)
 	}
 	account := model.AppConfig.GetAccountFromKey(order.Market, order.AmountType)
 	if order.HaveId() && order.Status != model.CarryStatusFail {

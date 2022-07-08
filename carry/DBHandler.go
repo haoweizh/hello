@@ -16,7 +16,7 @@ var balanceMaintainDay = util.GetNow()
 //MaintainBalance
 func _(key, secret string) {
 	for true {
-		markets := model.GetMarkets()
+		markets := api.GetMarkets()
 		balances := make([]*model.Balance, 0)
 		balanceTime := util.GetNow()
 		duration, _ := time.ParseDuration(`-24h`)
@@ -133,7 +133,7 @@ func MaintainMarketChan() {
 		return
 	}
 	socketMaintaining = true
-	for _, market := range model.GetMarkets() {
+	for _, market := range api.GetMarkets() {
 		channels, _ := model.AppMarkets.WsDepth.Load(market)
 		if channels == nil || len(channels.([]chan struct{})) == 0 {
 			model.AppMarkets.WsDepth.Store(market, api.CreateMarketDepthServer(model.AppMarkets, market, cross.PostOrderCross))

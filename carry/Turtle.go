@@ -252,7 +252,7 @@ var ProcessTurtle = func(setting *model.Setting, tick *model.BidAsk) {
 		checkTurtleOrders(account.Key, account.Secret, setting.Market, setting.Symbol, turtleData)
 		return
 	}
-	currentN := model.GetCurrentN(setting)
+	currentN := api.GetCurrentN(setting)
 	showMsg := fmt.Sprintf("%s_%s_%s", model.FunctionTurtle, setting.Market, setting.Symbol)
 	model.SetCarryInfo(account.Key, showMsg, fmt.Sprintf("[海龟参数]%s %s 次数限制:%f 当前已经持仓数量:%f 上一次开仓的价格:%f"+
 		"20日:%f-%f 10日:%f-%f n:%f 数量:%f %s 持仓数/限制:%d/%f 总持仓数%d bid-ask %f %f 当日有平仓：%v",

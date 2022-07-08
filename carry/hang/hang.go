@@ -50,7 +50,7 @@ var ProcessHang = func(setting *model.Setting, tick *model.BidAsk) {
 	marketSymbol := fmt.Sprintf(`%s_%s`, setting.Market, setting.Symbol)
 	orderTime, okPlace := placeTime.Load(marketSymbol)
 	now := time.Now().UnixMilli()
-	accounts := model.GetAccounts(0)
+	accounts := api.GetAccounts(0)
 	if accounts == nil || len(accounts) == 0 || accounts[setting.Market] == nil {
 		return
 	}
@@ -162,7 +162,7 @@ func refreshDeal() {
 		utcTime := time.Now().In(time.UTC)
 		year, month, day := utcTime.Date()
 		dateStr := fmt.Sprintf(`%d-%d-%d`, year, month, day)
-		coinSettings := model.GetCoinSettings(model.FunctionHang)
+		coinSettings := api.GetCoinSettings(model.FunctionHang)
 		for _, settings := range coinSettings {
 			for _, setting := range settings {
 				var deal, usd, usdCoin float64
@@ -171,7 +171,7 @@ func refreshDeal() {
 					"market= ? and symbol= ? and refresh_type= ? and status=? and order_time>?",
 					setting.Market, setting.Symbol, model.FunctionHang, model.CarryStatusSuccess, dateStr).First(&deal)
 				dealInU.Store(setting.Market+`_`+setting.Symbol+`_`+dateStr, deal)
-				accounts := model.GetAccounts(0)
+				accounts := api.GetAccounts(0)
 				if accounts != nil && len(accounts) > 0 && accounts[setting.Market] != nil {
 					account := accounts[setting.Market]
 					success, balances, _, _ := api.GetBalances(account.Key, account.Secret, setting.Market)
@@ -181,7 +181,7 @@ func refreshDeal() {
 							if strings.EqualFold(balance.Coin, `usd`) || strings.EqualFold(balance.Coin, `usdt`) {
 								usd += balance.Amount
 							} else if balance.Coin == coin {
-								_, price := model.AppMarkets.GetPriceForce(setting.Symbol, setting.Market)
+								_, price := model.AppMarkets.GetPriceForce(setting.Symbol, setting.Market, api.GetMarkets())
 								usdCoin = balance.Amount * price
 							}
 						}

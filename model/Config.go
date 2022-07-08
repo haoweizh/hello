@@ -2,8 +2,6 @@ package model
 
 import (
 	"fmt"
-	"hello/util"
-	"math"
 	"os"
 	"strconv"
 	"strings"
@@ -33,76 +31,8 @@ type Account struct {
 	CarryRate   float64
 }
 
-var crossLen int
 var AppAccounts []map[string]*Account // account index/map/account
 var marketAccounts sync.Map           //market - []*Account
-
-func GetAccounts(index int) (accounts map[string]*Account) {
-	if AppAccounts != nil && len(AppAccounts) > index {
-		return AppAccounts[index]
-	}
-	tempAccounts := AppConfig.GetAccounts(Ftx)
-	size := int(math.Max(float64(AppConfig.GetCrossLen()), float64(len(tempAccounts))))
-	AppAccounts = make([]map[string]*Account, size)
-	for i := 0; i < size; i++ {
-		if AppAccounts[i] == nil {
-			AppAccounts[i] = make(map[string]*Account)
-		}
-	}
-	for i, account := range tempAccounts {
-		AppAccounts[i][Ftx] = account
-	}
-	tempAccounts = AppConfig.GetAccounts(OKEX)
-	for i, account := range tempAccounts {
-		AppAccounts[i][OKEX] = account
-	}
-	tempAccounts = AppConfig.GetAccounts(BinanceSpot)
-	for i, account := range tempAccounts {
-		AppAccounts[i][BinanceSpot] = account
-	}
-	tempAccounts = AppConfig.GetAccounts(BinancePerp)
-	for i, account := range tempAccounts {
-		AppAccounts[i][BinancePerp] = account
-	}
-	tempAccounts = AppConfig.GetAccounts(Gate)
-	for i, account := range tempAccounts {
-		AppAccounts[i][Gate] = account
-	}
-	tempAccounts = AppConfig.GetAccounts(BybitPerp)
-	for i, account := range tempAccounts {
-		AppAccounts[i][BybitPerp] = account
-	}
-	tempAccounts = AppConfig.GetAccounts(BybitSpot)
-	for i, account := range tempAccounts {
-		AppAccounts[i][BybitSpot] = account
-	}
-	tempAccounts = AppConfig.GetAccounts(Kucoin)
-	for i, account := range tempAccounts {
-		AppAccounts[i][Kucoin] = account
-	}
-	tempAccounts = AppConfig.GetAccounts(Mexc)
-	for i, account := range tempAccounts {
-		AppAccounts[i][Mexc] = account
-	}
-	return AppAccounts[index]
-}
-
-func (config *Config) GetCrossLen() int {
-	if crossLen > 0 {
-		return crossLen
-	}
-	markets := GetMarkets()
-	for _, market := range markets {
-		accounts := config.GetAccounts(market)
-		if crossLen == 0 {
-			crossLen = len(accounts)
-		} else if len(accounts) != crossLen {
-			util.Notice(fmt.Sprintf(`wrong cross config %s accounts:%d`, market, len(accounts)))
-			os.Exit(2)
-		}
-	}
-	return crossLen
-}
 
 //// GetCrossAccounts markets: market - bool
 //func (config *Config) GetCrossAccounts(markets map[string]bool) (crossAccounts []map[string]*Account) {

@@ -113,7 +113,7 @@ func GetHoldings(accounts map[string]*model.Account) (holding [][]interface{}) {
 				if balance != nil && balance.Amount != 0 {
 					symbol := balance.Coin + model.UniStandardTail[model.MarketTypeSpot]
 					valid := false
-					setting := model.GetSetting(model.FunctionCross, balance.Market, symbol)
+					setting := api.GetSetting(model.FunctionCross, balance.Market, symbol)
 					if setting != nil {
 						valid = setting.Valid
 					}
@@ -129,7 +129,7 @@ func GetHoldings(accounts map[string]*model.Account) (holding [][]interface{}) {
 			cm := value.(*contractMarket)
 			for _, position := range cm.positions {
 				valid := false
-				setting := model.GetSetting(model.FunctionCross, position.Market, position.Currency)
+				setting := api.GetSetting(model.FunctionCross, position.Market, position.Currency)
 				if setting != nil {
 					valid = setting.Valid
 				}
@@ -137,7 +137,7 @@ func GetHoldings(accounts map[string]*model.Account) (holding [][]interface{}) {
 					success, _, coin, _ := model.GetFromStandard(position.Market, position.Currency)
 					if success {
 						coinHold[coin] += position.Holding
-						_, price := model.AppMarkets.GetPriceForce(position.Currency, position.Market)
+						_, price := model.AppMarkets.GetPriceForce(position.Currency, position.Market, api.GetMarkets())
 						holdingLine := []interface{}{position.Market, coin, position.Currency,
 							position.Holding, math.Round(price * position.Holding), valid}
 						coinValue[coin] += math.Round(price * position.Holding)
@@ -160,7 +160,7 @@ func GetHoldings(accounts map[string]*model.Account) (holding [][]interface{}) {
 	for i := range holding {
 		coin := holding[i][1].(string)
 		if coinPrice[coin] == 0 {
-			_, coinPrice[coin] = model.AppMarkets.GetPriceForce(coin+model.UniStandardTail[model.MarketTypeSpot], ``)
+			_, coinPrice[coin] = model.AppMarkets.GetPriceForce(coin+model.UniStandardTail[model.MarketTypeSpot], ``, api.GetMarkets())
 		}
 		money := math.Floor(coinHold[coin]*coinPrice[coin]/10) * 10
 		if money < 0 {
@@ -178,7 +178,7 @@ func GetCrossMarketValue(key string) (market string, inAllSpot, contractAccountV
 		sm := value.(*spotMarket)
 		market = sm.market
 		inAllSpot = sm.accountValueInU
-		settings := model.GetSettings(model.FunctionCross, market)
+		settings := api.GetSettings(model.FunctionCross, market)
 		for _, setting := range settings {
 			if sm.balances != nil && sm.balances[setting.Symbol] != nil {
 				holdingSpot += sm.balances[setting.Symbol].UsdValue

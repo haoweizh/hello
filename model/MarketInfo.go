@@ -15,10 +15,25 @@ type MarketInfo struct {
 	CanBorrow                              bool
 	SizeIncrement, PriceIncrement, CTValue float64
 	PriceDecimal                           int     // 价格精确到小数点后几位
+	TradeAmount                            float64 // 过去24小时以usd记交易额
 	MoneyMin                               float64 //最小下单金额需达到的计费货币数值
 	BorrowSizeMin                          float64 //最小借款数量
 	BorrowUsdtMax                          float64 //最大借款usdt数额
 	SizeMax, SizeMin                       float64 //最大最小下单数量，当CTValue=0（现货）时为交易币种数量，CTValue>0(永续)为张数，在使用时乘以CTValue转换成币数
+}
+
+type MarketInfoArray []MarketInfo
+
+func (marketInfoArray MarketInfoArray) Len() int {
+	return len(marketInfoArray)
+}
+
+func (marketInfoArray MarketInfoArray) Swap(i, j int) {
+	marketInfoArray[i], marketInfoArray[j] = marketInfoArray[j], marketInfoArray[i]
+}
+
+func (marketInfoArray MarketInfoArray) Less(i, j int) bool {
+	return marketInfoArray[i].TradeAmount < marketInfoArray[j].TradeAmount
 }
 
 func GetMarketInfo(market, symbol string) (marketInfo *MarketInfo) {

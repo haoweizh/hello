@@ -270,7 +270,7 @@ func GetBalances(key, secret, market string) (
 				totalInUsd += balance.Amount
 			} else {
 				symbolStandard := balance.Coin + model.UniStandardTail[model.MarketTypeSpot]
-				_, price := model.AppMarkets.GetPriceForce(symbolStandard, market)
+				_, price := model.AppMarkets.GetPriceForce(symbolStandard, market, GetMarkets())
 				totalInUsd += price * balance.Amount
 			}
 		}
@@ -530,7 +530,7 @@ func PlaceOrder(key, secret, orderSide, orderType, market, symbol, orderParam st
 }
 
 func GetWSSubscribes(market, subType string) []interface{} {
-	symbols := model.GetMarketSymbols(market)
+	symbols := GetMarketSymbols(market)
 	subscribes := make([]interface{}, 0)
 	for symbol := range symbols {
 		subTypes := strings.Split(subType, `,`)
@@ -780,7 +780,7 @@ func InitMarketInfos() (success bool) {
 		marketInfoInitializing = false
 	}()
 	success = true
-	markets := model.GetMarkets()
+	markets := GetMarkets()
 	for _, market := range markets {
 		accounts := model.AppConfig.GetAccounts(market)
 		switch market {
@@ -858,7 +858,7 @@ func CreateMarketDepthServer(markets *model.Markets, market string, orderHandler
 	case model.Gate:
 		err = WsDepthServeGate()
 	case model.OKEX:
-		channels, err = WsDepthServeOKEX(model.GetMarketSymbols(model.OKEX), orderHandler)
+		channels, err = WsDepthServeOKEX(GetMarketSymbols(model.OKEX), orderHandler)
 	//case model.Binance:
 	//	channels, err = WsDepthServeBinance(markets, nil)
 	case model.BinanceSpot:

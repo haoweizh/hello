@@ -118,7 +118,7 @@ func holdPage(c *gin.Context) {
 	if err != nil {
 		index = 0
 	}
-	queryAccounts := model.GetAccounts(index)
+	queryAccounts := api.GetAccounts(index)
 	marketValues := make([][]string, 0)
 	inAll := []float64{0, 0, 0, 0, 0, 0}
 	for _, account := range queryAccounts {
@@ -285,12 +285,12 @@ func GetCode(c *gin.Context) {
 
 func GetParameters(c *gin.Context) {
 	msg := ``
-	markets := model.GetMarkets()
+	markets := api.GetMarkets()
 	userKeys := make([]string, 0)
 	for _, market := range markets {
 		account := model.AppConfig.GetAccounts(market)[0]
 		userKeys = append(userKeys, account.Key)
-		settingMap := model.GetSettings(model.FunctionTurtle, market)
+		settingMap := api.GetSettings(model.FunctionTurtle, market)
 		msg += fmt.Sprintf("海龟币种：%s \n", market)
 		for symbol, setting := range settingMap {
 			if setting == nil || setting.Function != model.FunctionTurtle {
@@ -303,7 +303,7 @@ func GetParameters(c *gin.Context) {
 		msg += "\n"
 	}
 	util.Notice(`finish print turtle settings`)
-	setting := model.GetSetting(model.FunctionGrid, model.Ftx, `LINK-PERP`)
+	setting := api.GetSetting(model.FunctionGrid, model.Ftx, `LINK-PERP`)
 	if setting != nil {
 		msg += fmt.Sprintf("%s %s %s %f\n", setting.Function, setting.Market, setting.Symbol, setting.GridAmount)
 	}
@@ -326,8 +326,8 @@ func GetParameters(c *gin.Context) {
 
 func RefreshParameters(c *gin.Context) {
 	util.Notice(`controller refreshing`)
-	model.LoadSettings()
-	for _, market := range model.GetMarkets() {
+	api.LoadSettings()
+	for _, market := range api.GetMarkets() {
 		channels, _ := model.AppMarkets.WsDepth.Load(market)
 		if channels != nil {
 			carry.ResetChannels(market, channels.([]chan struct{}))

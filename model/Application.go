@@ -59,7 +59,6 @@ const PostOnly = `ParticipateDoNotInitiate`
 //const OKEXOtherContractFaceValue = 10.0
 
 var AppDB *gorm.DB
-var AppSettings []Setting
 var AppConfig *Config
 var AppMarkets = &Markets{}
 var ChannelMaintaining sync.Map // market - bool

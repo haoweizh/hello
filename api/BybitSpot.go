@@ -112,9 +112,9 @@ func WsDepthServeBybitSpot(markets *model.Markets, orderHandler OrderHandler) ([
 			data := depthJson.Get(`data`).MustMap()
 			symbol, bidAsk := parseTickBybitSpot(data)
 			if markets.SetBidAsk(symbol, model.BybitSpot, bidAsk) {
-				for function, handler := range model.GetFunctions(model.BybitSpot, symbol) {
+				for function, handler := range GetFunctions(model.BybitSpot, symbol) {
 					if handler != nil {
-						setting := model.GetSetting(function, model.BybitSpot, symbol)
+						setting := GetSetting(function, model.BybitSpot, symbol)
 						if setting != nil {
 							go handler(setting, bidAsk)
 						}
@@ -395,7 +395,7 @@ func getBalanceBybitSpot(key, secret string) (success bool, balances []*model.Ba
 				balance.FrozenAmount, _ = strconv.ParseFloat(value[`locked`].(string), 64)
 			}
 			symbolStandard := balance.Coin + model.UniStandardTail[model.MarketTypeSpot]
-			_, price := model.AppMarkets.GetPriceForce(symbolStandard, model.BybitSpot)
+			_, price := model.AppMarkets.GetPriceForce(symbolStandard, model.BybitSpot, GetMarkets())
 			balance.UsdValue = balance.Amount * price
 			balances = append(balances, balance)
 		}

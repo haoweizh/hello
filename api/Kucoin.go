@@ -44,7 +44,7 @@ func kucoinRelatedClient(key, secret, passPhrase string) *kucoin.ApiService {
 }
 
 func setFutureAutoDeposit() {
-	coins := model.GetSettingCoins(model.FunctionCarry, model.Kucoin)
+	coins := GetSettingCoins(model.FunctionCarry, model.Kucoin)
 	for coin := range coins {
 		params := make(map[string]string)
 		params["symbol"] = coin + `USDTM`
@@ -94,7 +94,7 @@ func appendRelatedMarketsKucoin(key string, marketInfos map[string]*model.Market
 		marketInfo.SizeIncrement, _ = strconv.ParseFloat(related.BaseIncrement, 64)
 		marketInfos[marketInfo.Name] = marketInfo
 	}
-	relatedSettingMarkets = model.GetMarketSymbols(model.Kucoin)
+	relatedSettingMarkets = GetMarketSymbols(model.Kucoin)
 }
 
 type KucoinContractModel struct {
@@ -233,7 +233,7 @@ func WsDepthServeKucoin() (channels []chan struct{}, err error) {
 			return channels, futureConnectErr
 		}
 	}
-	symbols := model.GetMarketSymbols(model.Kucoin)
+	symbols := GetMarketSymbols(model.Kucoin)
 	futureSubscribes := make([]*kumex.WebSocketSubscribeMessage, 0)
 	for symbol := range symbols {
 		success, marketType, _, _ := model.GetFromStandard(model.Kucoin, symbol)
@@ -324,9 +324,9 @@ func handleKucoinWS(relatedMsg *kucoin.WebSocketDownstreamMessage, futureMsg *ku
 			return
 		}
 		if markets.SetBidAsk(symbol, model.Kucoin, &bidAsk) {
-			for function, handler := range model.GetFunctions(model.Kucoin, symbol) {
+			for function, handler := range GetFunctions(model.Kucoin, symbol) {
 				if handler != nil {
-					setting := model.GetSetting(function, model.Kucoin, symbol)
+					setting := GetSetting(function, model.Kucoin, symbol)
 					if setting != nil {
 						go handler(setting, &bidAsk)
 					}
@@ -366,9 +366,9 @@ func handleKucoinWS(relatedMsg *kucoin.WebSocketDownstreamMessage, futureMsg *ku
 			return
 		}
 		if markets.SetBidAsk(symbol, model.Kucoin, &bidAsk) {
-			for function, handler := range model.GetFunctions(model.Kucoin, symbol) {
+			for function, handler := range GetFunctions(model.Kucoin, symbol) {
 				if handler != nil {
-					setting := model.GetSetting(function, model.Kucoin, symbol)
+					setting := GetSetting(function, model.Kucoin, symbol)
 					if setting != nil {
 						go handler(setting, &bidAsk)
 					}
@@ -400,7 +400,7 @@ func getBalanceKucoin(key string, secret string) (success bool, balances []*mode
 			balance.FrozenAmount, _ = strconv.ParseFloat(account.Holds, 64)
 			balance.Amount, _ = strconv.ParseFloat(account.Balance, 64)
 			balance.AvailableWithBorrow, _ = strconv.ParseFloat(account.Available, 64)
-			_, price := model.AppMarkets.GetPriceForce(balance.Coin+model.UniStandardTail[model.MarketTypeSpot], model.Kucoin)
+			_, price := model.AppMarkets.GetPriceForce(balance.Coin+model.UniStandardTail[model.MarketTypeSpot], model.Kucoin, GetMarkets())
 			balance.UsdValue = balance.Amount * price
 			balances = append(balances, balance)
 		}
@@ -429,7 +429,7 @@ func getBalanceKucoin(key string, secret string) (success bool, balances []*mode
 			balance.AvailableWithBorrow = available + canBorrow
 			balance.Amount, _ = account.TotalBalance.Float64()
 			balance.Amount = balance.Amount - balance.Borrow
-			_, price := model.AppMarkets.GetPriceForce(balance.Coin+model.UniStandardTail[model.MarketTypeSpot], model.Kucoin)
+			_, price := model.AppMarkets.GetPriceForce(balance.Coin+model.UniStandardTail[model.MarketTypeSpot], model.Kucoin, GetMarkets())
 			balance.UsdValue = balance.Amount * price
 			balances = append(balances, balance)
 		}

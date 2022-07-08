@@ -292,9 +292,9 @@ var tickerHandler = gateWs.NewCallBack(func(msg *gateWs.UpdateMsg) {
 		return
 	}
 	if markets.SetBidAsk(symbol, model.Gate, &bidAsk) {
-		for function, handler := range model.GetFunctions(model.Gate, symbol) {
+		for function, handler := range GetFunctions(model.Gate, symbol) {
 			if handler != nil {
-				setting := model.GetSetting(function, model.Gate, symbol)
+				setting := GetSetting(function, model.Gate, symbol)
 				if setting != nil {
 					go handler(setting, &bidAsk)
 				}
@@ -370,7 +370,7 @@ func WsDepthServeGate() (err error) {
 	}
 	spotSubs := make([]string, 0)
 	futureSubs := make([]string, 0)
-	symbols := model.GetMarketSymbols(model.Gate)
+	symbols := GetMarketSymbols(model.Gate)
 	for symbol := range symbols {
 		_, _, _, dialectSymbol := model.GetFromStandard(model.Gate, symbol)
 		if strings.LastIndex(symbol, model.UniStandardTail[model.MarketTypeSpot]) == len(symbol)-len(model.UniStandardTail[model.MarketTypeSpot]) &&
@@ -419,7 +419,7 @@ func getBalanceGate(key string, secret string) (success bool, balances []*model.
 			// 此处未计算可以借入的金额
 			balance.AvailableWithBorrow, _ = strconv.ParseFloat(account.Available, 64)
 			balance.Amount = balance.AvailableWithBorrow + balance.FrozenAmount - balance.Borrow
-			_, price := model.AppMarkets.GetPriceForce(balance.Coin+model.UniStandardTail[model.MarketTypeSpot], model.Gate)
+			_, price := model.AppMarkets.GetPriceForce(balance.Coin+model.UniStandardTail[model.MarketTypeSpot], model.Gate, GetMarkets())
 			balance.UsdValue = balance.Amount * price
 			balances = append(balances, balance)
 		}
@@ -443,7 +443,7 @@ func getBalanceGate(key string, secret string) (success bool, balances []*model.
 			// 此处未计算可以借入的金额
 			balance.AvailableWithBorrow, _ = strconv.ParseFloat(item.Available, 64)
 			balance.Amount = balance.AvailableWithBorrow + balance.FrozenAmount - balance.Borrow
-			_, price := model.AppMarkets.GetPriceForce(balance.Coin+model.UniStandardTail[model.MarketTypeSpot], model.Gate)
+			_, price := model.AppMarkets.GetPriceForce(balance.Coin+model.UniStandardTail[model.MarketTypeSpot], model.Gate, GetMarkets())
 			balance.UsdValue = balance.Amount * price
 			balances = append(balances, balance)
 		}

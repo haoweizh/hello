@@ -81,7 +81,7 @@ func maintainChannelMexc(subscribes []interface{}) {
 }
 
 func WsDepthServeMexc(markets *model.Markets, orderHandler OrderHandler, useFullDepthSub bool) (channels []chan struct{}, err error) {
-	symbols := model.GetMarketSymbols(model.Mexc)
+	symbols := GetMarketSymbols(model.Mexc)
 	if !useFullDepthSub {
 		limiter := time.Tick(time.Millisecond * 100)
 		for symbol := range symbols {
@@ -109,8 +109,8 @@ func WsDepthServeMexc(markets *model.Markets, orderHandler OrderHandler, useFull
 				bidAsk := parseTicksMexc(symbol, resp.Ts, resp.Data.Version, resp.Data.Bids, resp.Data.Asks)
 				//fmt.Println(fmt.Sprintf(`%s %f %f ~ %f %f`, symbol, bidAsk.Bids[0].Price, bidAsk.Bids[0].Amount, bidAsk.Asks[0].Price, bidAsk.Asks[0].Amount))
 				if markets.SetBidAsk(symbol, model.Mexc, bidAsk) {
-					for function, handler := range model.GetFunctions(model.Mexc, symbol) {
-						setting := model.GetSetting(function, model.Mexc, symbol)
+					for function, handler := range GetFunctions(model.Mexc, symbol) {
+						setting := GetSetting(function, model.Mexc, symbol)
 						if handler != nil && setting != nil {
 							go handler(setting, bidAsk)
 						}

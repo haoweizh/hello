@@ -148,9 +148,9 @@ func handleTickerBinancePerp(markets *model.Markets, json *simplejson.Json, stan
 			return
 		}
 		if markets.SetBidAsk(standardSymbol, model.BinancePerp, &bidAsk) {
-			for function, handler := range model.GetFunctions(model.BinancePerp, standardSymbol) {
+			for function, handler := range GetFunctions(model.BinancePerp, standardSymbol) {
 				if handler != nil {
-					setting := model.GetSetting(function, model.BinancePerp, standardSymbol)
+					setting := GetSetting(function, model.BinancePerp, standardSymbol)
 					if setting != nil {
 						go handler(setting, &bidAsk)
 					}
@@ -190,9 +190,9 @@ func handleDepthBinancePerp(markets *model.Markets, json *simplejson.Json, stand
 	sort.Sort(bidAsk.Asks)
 	sort.Sort(sort.Reverse(bidAsk.Bids))
 	if markets.SetBidAsk(standardSymbol, model.BinancePerp, &bidAsk) {
-		for function, handler := range model.GetFunctions(model.BinancePerp, standardSymbol) {
+		for function, handler := range GetFunctions(model.BinancePerp, standardSymbol) {
 			if handler != nil {
-				setting := model.GetSetting(function, model.BinancePerp, standardSymbol)
+				setting := GetSetting(function, model.BinancePerp, standardSymbol)
 				if setting != nil {
 					go handler(setting, &bidAsk)
 				}

@@ -175,9 +175,9 @@ func handleTickerFtx(markets *model.Markets, response *simplejson.Json) {
 	//	}
 	//}
 	if markets.SetBidAsk(standardSymbol, model.Ftx, bidAsk) {
-		for function, handler := range model.GetFunctions(model.Ftx, standardSymbol) {
+		for function, handler := range GetFunctions(model.Ftx, standardSymbol) {
 			if handler != nil {
-				setting := model.GetSetting(function, model.Ftx, standardSymbol)
+				setting := GetSetting(function, model.Ftx, standardSymbol)
 				if setting != nil {
 					go handler(setting, bidAsk)
 				}
@@ -267,9 +267,9 @@ func handleDepthFtx(markets *model.Markets, response *simplejson.Json) {
 		//	}
 		//}
 		if markets.SetBidAsk(standardSymbol, model.Ftx, bidAsk) {
-			for function, handler := range model.GetFunctions(model.Ftx, standardSymbol) {
+			for function, handler := range GetFunctions(model.Ftx, standardSymbol) {
 				if handler != nil {
-					setting := model.GetSetting(function, model.Ftx, standardSymbol)
+					setting := GetSetting(function, model.Ftx, standardSymbol)
 					if setting != nil {
 						go handler(setting, bidAsk)
 					}
@@ -649,6 +649,9 @@ func getMarketsFtx(key, secret string) (marketInfos map[string]*model.MarketInfo
 			if value[`minProvideSize`] != nil {
 				marketInfo.SizeMin, _ = value[`minProvideSize`].(json.Number).Float64()
 				marketInfo.SizeMin = math.Max(marketInfo.SizeMin, marketInfo.SizeIncrement)
+			}
+			if value[`volumeUsd24h`] != nil {
+				marketInfo.TradeAmount, _ = value[`volumeUsd24h`].(json.Number).Float64()
 			}
 			marketInfos[marketInfo.Name] = marketInfo
 		}

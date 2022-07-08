@@ -158,9 +158,9 @@ func handleTickerBinanceSpot(markets *model.Markets, json *simplejson.Json, stan
 			return
 		}
 		if markets.SetBidAsk(standardSymbol, model.BinanceSpot, &bidAsk) {
-			for function, handler := range model.GetFunctions(model.BinanceSpot, standardSymbol) {
+			for function, handler := range GetFunctions(model.BinanceSpot, standardSymbol) {
 				if handler != nil {
-					setting := model.GetSetting(function, model.BinanceSpot, standardSymbol)
+					setting := GetSetting(function, model.BinanceSpot, standardSymbol)
 					if setting != nil {
 						go handler(setting, &bidAsk)
 					}
@@ -199,9 +199,9 @@ func handleDepthBinanceSpot(markets *model.Markets, json *simplejson.Json, stand
 	sort.Sort(bidAsk.Asks)
 	sort.Sort(sort.Reverse(bidAsk.Bids))
 	if markets.SetBidAsk(standardSymbol, model.BinanceSpot, &bidAsk) {
-		for function, handler := range model.GetFunctions(model.BinanceSpot, standardSymbol) {
+		for function, handler := range GetFunctions(model.BinanceSpot, standardSymbol) {
 			if handler != nil {
-				setting := model.GetSetting(function, model.BinanceSpot, standardSymbol)
+				setting := GetSetting(function, model.BinanceSpot, standardSymbol)
 				if setting != nil {
 					go handler(setting, &bidAsk)
 				}
@@ -320,7 +320,7 @@ func getBalanceBinanceSpot(key string, secret string) (success bool, balances []
 		}
 		if balance.UsdValue == 0 && balance.Amount > 0 {
 			symbolStandard := balance.Coin + model.UniStandardTail[model.MarketTypeSpot]
-			_, price := model.AppMarkets.GetPriceForce(symbolStandard, model.BinanceSpot)
+			_, price := model.AppMarkets.GetPriceForce(symbolStandard, model.BinanceSpot, GetMarkets())
 			balance.UsdValue = balance.Amount * price
 		}
 		//if asset[`netAsset`] != nil {
