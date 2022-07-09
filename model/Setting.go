@@ -4,6 +4,8 @@ import (
 	"time"
 )
 
+const SettingTurtleRemoved = `SettingTurtleRemoved`
+
 type CarryHandler func(setting *Setting, bidAsk *BidAsk)
 
 type Setting struct {

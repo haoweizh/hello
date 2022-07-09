@@ -6,6 +6,8 @@ import (
 	"hello/util"
 	"math"
 	"os"
+	"sort"
+	"strings"
 	"sync"
 )
 
@@ -94,14 +96,16 @@ func GetFunctions(market, symbol string) map[string]model.CarryHandler {
 	return nil
 }
 
-func LoadSettings() {
+const topMarketInfoLen = 15
+
+func prepareSettings() {
 	symbolSettings = &sync.Map{}
 	handlers = &sync.Map{}
 	coinSettings = &sync.Map{}
 	appSettings = []model.Setting{}
 	marketMap := make(map[string]bool)
 	model.AppDB.Where(`valid = ?`, true).Find(&appSettings)
-	for _, setting := range appSettings {
+	for i, setting := range appSettings {
 		market := setting.Market
 		marketMap[market] = true
 		function := setting.Function
@@ -126,7 +130,7 @@ func LoadSettings() {
 		if settings[coin] == nil {
 			settings[coin] = make([]*model.Setting, 0)
 		}
-		settings[coin] = append(settings[coin], &setting)
+		settings[coin] = append(settings[coin], &appSettings[i])
 		coinSettings.Store(function, settings)
 
 		var functionMarketSettings map[string]*model.Setting
@@ -136,7 +140,7 @@ func LoadSettings() {
 		} else {
 			functionMarketSettings = make(map[string]*model.Setting)
 		}
-		functionMarketSettings[setting.Symbol] = &setting
+		functionMarketSettings[setting.Symbol] = &appSettings[i]
 		util.StoreSyncMap(symbolSettings, functionMarketSettings, function, market)
 
 		util.Notice(fmt.Sprintf(`load setting %s %s %s %v`,
@@ -148,6 +152,68 @@ func LoadSettings() {
 		appMarkets[i] = key
 		i++
 	}
+}
+
+func handleSettings() (handled bool) {
+	for _, market := range appMarkets {
+		_, ok := util.LoadSyncMap(symbolSettings, model.FunctionDynamicTurtle, market)
+		if !ok {
+			continue
+		}
+		handled = true
+		topMarketInfos := make(map[string]*model.MarketInfo)
+		marketInfos := GetMarketInfos(market)
+		marketInfoArray := model.MarketInfoArray{}
+		for _, info := range marketInfos {
+			marketInfoArray = append(marketInfoArray, info)
+		}
+		sort.Sort(sort.Reverse(marketInfoArray))
+		for i := 0; i < marketInfoArray.Len() && len(topMarketInfos) < topMarketInfoLen; i++ {
+			_, marketType, coinValue, _ := model.GetFromStandard(market, marketInfoArray[i].Name)
+			if strings.EqualFold(marketType, model.MarketTypePerp) && !model.CommonCoins[strings.ToLower(coinValue)] {
+				topMarketInfos[marketInfoArray[i].Name] = marketInfoArray[i]
+			}
+		}
+		var settings map[string]*model.Setting
+		value, ok := util.LoadSyncMap(symbolSettings, model.FunctionTurtle, market)
+		if ok {
+			settings = value.(map[string]*model.Setting)
+		} else {
+			settings = make(map[string]*model.Setting)
+		}
+		for _, info := range topMarketInfos {
+			if settings[info.Name] == nil {
+				setting := &model.Setting{
+					Valid:           true,
+					Function:        model.FunctionTurtle,
+					Market:          market,
+					Symbol:          info.Name,
+					Chance:          0,
+					GridAmount:      0,
+					OpenShortMargin: 3,
+					AmountLimit:     12,
+				}
+				model.AppDB.Save(setting)
+			}
+		}
+		for symbol, setting := range settings {
+			_, _, coinValue, _ := model.GetFromStandard(market, symbol)
+			if topMarketInfos[symbol] == nil && !model.CommonCoins[strings.ToLower(coinValue)] {
+				setting.SymbolRelated = model.SettingTurtleRemoved
+				model.AppDB.Save(setting)
+			}
+		}
+	}
+	return
+}
+
+func LoadSettings() {
+	util.Notice(`start to load settings`)
+	prepareSettings()
+	if handleSettings() {
+		prepareSettings()
+	}
+	util.Notice(`finish load settings`)
 }
 
 func GetMarketSymbols(market string) map[string]bool {

@@ -20,7 +20,7 @@ type Config struct {
 	BinanceKey, BinanceSecret, BinanceCarryClose, BinanceCarryRate                                 string
 	CoinparkKey, CoinparkSecret, CoinparkCarryClose, CoinparkCarryRate                             string
 	DFutureKey, DFutureSecret, MexcKey, MexcSecret, MexcCarryClose, MexcCarryRate                  string
-	BitmexKey, BitmexSecret, BitmexCarryClose, BitmexCarryRate                                     string
+	BitmexKey, BitmexSecret, BitmexCarryClose, BitmexCarryRate, FtxSubAccount                      string
 	Phase, Handle, Mail, FromMail, FromMailAuth, Port, WalletKey, DBConnection, Env, FutureAddress string
 }
 

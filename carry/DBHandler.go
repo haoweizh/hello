@@ -57,6 +57,13 @@ func RefreshMarketInfo() {
 	}
 }
 
+func ReloadSettings() {
+	for true {
+		time.Sleep(time.Hour)
+		api.LoadSettings()
+	}
+}
+
 func MaintainTransFee() {
 	for true {
 		var orders []model.Order
@@ -171,6 +178,7 @@ func Maintain() {
 	//}
 	api.InitMarketInfos()
 	go RefreshMarketInfo()
+	go ReloadSettings()
 	for true {
 		go MaintainMarketChan()
 		time.Sleep(time.Duration(model.AppConfig.ChannelSlot) * time.Millisecond)

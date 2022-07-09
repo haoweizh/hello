@@ -6,6 +6,7 @@ import (
 	"hello/model"
 	"hello/util"
 	"math"
+	"strings"
 	"sync"
 	"time"
 )
@@ -71,6 +72,10 @@ func calcTurtleAmount(key, secret string, setting *model.Setting, n float64) (am
 	case model.Ftx, model.OKEX:
 		_, _, p, _ := api.GetBalances(key, secret, setting.Market)
 		amount = 0.02 * p / n
+		_, _, coin, _ := model.GetFromStandard(setting.Market, setting.Symbol)
+		if !model.CommonCoins[strings.ToLower(coin)] {
+			amount /= 2
+		}
 		//case model.OKEX:
 		//	_, _, p, _ := api.GetBalances(setting.Market)
 		//	amount = 0.01 * p / n
@@ -482,19 +487,21 @@ func placeTurtleOrders(key, secret string, turtleData *TurtleData, setting *mode
 			//	orderSide = model.OrderSideLiquidateShort
 			//}
 		}
-		util.Notice(fmt.Sprintf(`%s %s place多单 chance:%d amount:%f price:%f currentN-limit:%d %f
+		if setting.SymbolRelated != model.SettingTurtleRemoved || setting.Chance < 0 {
+			util.Notice(fmt.Sprintf(`%s %s place多单 chance:%d amount:%f price:%f currentN-limit:%d %f
 			orderSide:%s end1:%f h20:%f h10:%f h5:%f l20:%f l10:%f l5%f coin limit:%f`,
-			setting.Market, setting.Symbol, setting.Chance, amount, setting.PriceX, currentN, setting.AmountLimit,
-			orderSide, turtleData.end1, turtleData.highDays20, turtleData.highDays10, turtleData.highDays5,
-			turtleData.lowDays20, turtleData.lowDays10, turtleData.lowDays5, setting.OpenShortMargin))
-		order := api.MustPlaceOrder(key, secret, orderSide, typeLong, setting.Market, setting.Symbol, ``, model.FunctionTurtle,
-			priceLong*(1+turtleTriggerDelta), priceLong, amount, setting)
-		go model.AppDB.Save(order)
-		if order != nil && order.OrderId != `` && order.Status != model.CarryStatusFail {
-			turtleData.orderLong = order
-			turtleData.longs = append(turtleData.longs, order)
-			turtleData.waitBreakLong = true
-			turtleData.breakLong = false
+				setting.Market, setting.Symbol, setting.Chance, amount, setting.PriceX, currentN, setting.AmountLimit,
+				orderSide, turtleData.end1, turtleData.highDays20, turtleData.highDays10, turtleData.highDays5,
+				turtleData.lowDays20, turtleData.lowDays10, turtleData.lowDays5, setting.OpenShortMargin))
+			order := api.MustPlaceOrder(key, secret, orderSide, typeLong, setting.Market, setting.Symbol, ``, model.FunctionTurtle,
+				priceLong*(1+turtleTriggerDelta), priceLong, amount, setting)
+			go model.AppDB.Save(order)
+			if order != nil && order.OrderId != `` && order.Status != model.CarryStatusFail {
+				turtleData.orderLong = order
+				turtleData.longs = append(turtleData.longs, order)
+				turtleData.waitBreakLong = true
+				turtleData.breakLong = false
+			}
 		}
 	} else if turtleData.orderLong != nil && (currentN >= amountLimit || setting.Chance >= coinLimit) {
 		go api.MustCancel(key, secret, setting.Market, setting.Symbol, turtleData.orderLong.OrderType, turtleData.orderLong.OrderId, true)
@@ -514,24 +521,21 @@ func placeTurtleOrders(key, secret string, turtleData *TurtleData, setting *mode
 			//	orderSide = model.OrderSideLiquidateLong
 			//}
 		}
-		//if priceShort > tick.Bids[0].Price {
-		//	util.Notice(fmt.Sprintf(`fatal issue: (stop short price)%f > %f(market price)`,
-		//		priceShort, tick.Bids[0].Price))
-		//	typeShort = model.OrderTypeLimit
-		//}
-		util.Notice(fmt.Sprintf(`%s %s place空单 chance:%d amount:%f price:%f currentN-limit:%d %f 
+		if setting.SymbolRelated != model.SettingTurtleRemoved || setting.Chance > 0 {
+			util.Notice(fmt.Sprintf(`%s %s place空单 chance:%d amount:%f price:%f currentN-limit:%d %f 
 			orderSide:%s end1:%f h20:%f h10:%f h5:%f l20:%f l10:%f l5%f coin limit:%f`,
-			setting.Market, setting.Symbol, setting.Chance, amount, setting.PriceX, currentN, setting.AmountLimit,
-			orderSide, turtleData.end1, turtleData.highDays20, turtleData.highDays10, turtleData.highDays5,
-			turtleData.lowDays20, turtleData.lowDays10, turtleData.lowDays5, setting.OpenShortMargin))
-		order := api.MustPlaceOrder(key, secret, orderSide, typeShort, setting.Market, setting.Symbol, ``,
-			model.FunctionTurtle, priceShort*(1-turtleTriggerDelta), priceShort, amount, setting)
-		go model.AppDB.Save(order)
-		if order != nil && order.OrderId != `` && order.Status != model.CarryStatusFail {
-			turtleData.orderShort = order
-			turtleData.shorts = append(turtleData.shorts, order)
-			turtleData.waitBreakShort = true
-			turtleData.breakShort = false
+				setting.Market, setting.Symbol, setting.Chance, amount, setting.PriceX, currentN, setting.AmountLimit,
+				orderSide, turtleData.end1, turtleData.highDays20, turtleData.highDays10, turtleData.highDays5,
+				turtleData.lowDays20, turtleData.lowDays10, turtleData.lowDays5, setting.OpenShortMargin))
+			order := api.MustPlaceOrder(key, secret, orderSide, typeShort, setting.Market, setting.Symbol, ``,
+				model.FunctionTurtle, priceShort*(1-turtleTriggerDelta), priceShort, amount, setting)
+			go model.AppDB.Save(order)
+			if order != nil && order.OrderId != `` && order.Status != model.CarryStatusFail {
+				turtleData.orderShort = order
+				turtleData.shorts = append(turtleData.shorts, order)
+				turtleData.waitBreakShort = true
+				turtleData.breakShort = false
+			}
 		}
 	} else if turtleData.orderShort != nil && (currentN <= -1*amountLimit || setting.Chance <= -1*coinLimit) {
 		go api.MustCancel(key, secret, setting.Market, setting.Symbol, turtleData.orderShort.OrderType, turtleData.orderShort.OrderId, true)

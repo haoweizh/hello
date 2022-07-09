@@ -850,12 +850,9 @@ func SignedRequestFtx(key, secret, method, path string, param, body map[string]i
 	}
 	sign := hex.EncodeToString(hash.Sum(nil))
 	headers := map[string]string{`FTX-KEY`: key, `FTX-TS`: ts, "FTX-SIGN": sign, "Content-Type": "application/json"}
-	if key == `9jGKmfYmbfbrHRAF8iYD06QY2JyAvWK7qwPyVY3D` {
-		headers[`FTX-SUBACCOUNT`] = `test`
+	if len(model.AppConfig.FtxSubAccount) > 0 {
+		headers[`FTX-SUBACCOUNT`] = model.AppConfig.FtxSubAccount
 	}
-	//} else if key == `u7oa6J_2ZXq1Putf8swnAKE1MH2T86Zx6JBZoChe` {
-	//	headers[`FTX-SUBACCOUNT`] = `test2`
-	//}
 	responseBody, httpErr := util.HttpRequest(method, u.String(), bodyStr, headers, 60)
 	//if !strings.Contains(path, `balances`) && !strings.Contains(path, `positions`) {
 	util.SocketInfo(fmt.Sprintf(`ftx key %s request %s %s body %s return %s`,

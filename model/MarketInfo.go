@@ -10,6 +10,8 @@ import (
 
 var marketInfos sync.Map // market - map[string]*MarketInfo //symbol - MarketInfo
 
+var CommonCoins = map[string]bool{`btc`: true, `eth`: true, `ltc`: true, `bch`: true, `eos`: true, `xrp`: true, `usdt`: true}
+
 type MarketInfo struct {
 	Market, Name, CTCurrency               string
 	CanBorrow                              bool
@@ -22,7 +24,7 @@ type MarketInfo struct {
 	SizeMax, SizeMin                       float64 //最大最小下单数量，当CTValue=0（现货）时为交易币种数量，CTValue>0(永续)为张数，在使用时乘以CTValue转换成币数
 }
 
-type MarketInfoArray []MarketInfo
+type MarketInfoArray []*MarketInfo
 
 func (marketInfoArray MarketInfoArray) Len() int {
 	return len(marketInfoArray)
