@@ -305,7 +305,7 @@ func GetParameters(c *gin.Context) {
 				symbol, setting.Chance, setting.GridAmount, setting.PriceX, isTop, turtleData.ToString())
 			if setting.Function == model.FunctionTurtle {
 				showMsg := fmt.Sprintf("%s_%s_%s", model.FunctionTurtle, setting.Market, setting.Symbol)
-				msg += model.GetCarryInfo(account.Key, showMsg)
+				msg += model.GetCarryInfo(account.Key, showMsg) + "\n"
 			}
 		}
 		msg += "\n"
