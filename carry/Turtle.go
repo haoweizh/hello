@@ -401,13 +401,11 @@ func setTurtleOrderStatus(function, market, symbol, orderId, status string) {
 		return
 	}
 	turtleData := GetTurtleData(account.Key, account.Secret, setting)
-	if turtleData != nil {
-		if turtleData.orderLong.OrderId == orderId {
-			turtleData.orderLong.Status = status
-		}
-		if turtleData.orderShort.OrderId == orderId {
-			turtleData.orderShort.Status = status
-		}
+	if turtleData != nil && turtleData.orderLong != nil && turtleData.orderLong.OrderId == orderId {
+		turtleData.orderLong.Status = status
+	}
+	if turtleData != nil && turtleData.orderShort != nil && turtleData.orderShort.OrderId == orderId {
+		turtleData.orderShort.Status = status
 	}
 }
 
