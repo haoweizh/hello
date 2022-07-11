@@ -466,9 +466,9 @@ func handleBreak(key, secret string, setting *model.Setting, turtleData *TurtleD
 
 func placeTurtleOrders(key, secret string, turtleData *TurtleData, setting *model.Setting,
 	currentN int64, priceShort, priceLong float64) {
-	util.Notice(`try to place %s %f`, setting.Symbol, turtleData.amount)
 	amountLimit := int64(setting.AmountLimit)
 	coinLimit := int64(setting.OpenShortMargin)
+	util.Notice(`try to place %s %f %v curN: %d limit %d chance %d coinLimit %d`, setting.Symbol, turtleData.amount, turtleData.orderLong, currentN, amountLimit, setting.Chance, coinLimit)
 	//if setting.Chance > 0 && turtleData.end1/turtleData.highDays20 < 0.87 &&
 	//	(currentN >= amountLimit || setting.Chance >= amountLimit) {
 	//	priceShort = math.Max(turtleData.lowDays5, setting.PriceX-2*turtleData.n)
