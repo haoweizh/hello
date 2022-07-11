@@ -47,7 +47,7 @@ func (turtleData *TurtleData) ToString() (str string) {
 	if turtleData == nil {
 		return `turtle data is nil`
 	}
-	return fmt.Sprintf(`20日%f~%f n:%f`, turtleData.lowDays20, turtleData.highDays20, turtleData.n)
+	return fmt.Sprintf(`20日%f~%f n:%f amount:%f`, turtleData.lowDays20, turtleData.highDays20, turtleData.n, turtleData.amount)
 }
 
 func checkSetTurtling(value bool) (before bool) {

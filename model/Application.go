@@ -184,6 +184,15 @@ func SetMonitorInfo(key, table, item string, value []string) {
 	monitorInfo[key][table][item] = value
 }
 
+func GetCarryInfo(userKey, key string) string {
+	infoLock.Lock()
+	defer infoLock.Unlock()
+	if CarryInfo[userKey] == nil {
+		return ``
+	}
+	return CarryInfo[userKey][key]
+}
+
 // SetCarryInfo userKey[0] vs slaves
 func SetCarryInfo(userKey, key, value string) {
 	infoLock.Lock()

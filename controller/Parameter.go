@@ -297,8 +297,16 @@ func GetParameters(c *gin.Context) {
 				continue
 			}
 			turtleData := carry.GetTurtleData(account.Key, account.Secret, setting)
-			msg += fmt.Sprintf("%s 仓数:%d 持仓:%f 成交价:%f %s\n",
-				symbol, setting.Chance, setting.GridAmount, setting.PriceX, turtleData.ToString())
+			isTop := true
+			if setting.SymbolRelated == model.SettingTurtleRemoved {
+				isTop = false
+			}
+			msg += fmt.Sprintf("%s 仓数:%d 持仓:%f 成交价:%f top:%v %s\n",
+				symbol, setting.Chance, setting.GridAmount, setting.PriceX, isTop, turtleData.ToString())
+			if setting.Function == model.FunctionTurtle {
+				showMsg := fmt.Sprintf("%s_%s_%s", model.FunctionTurtle, setting.Market, setting.Symbol)
+				msg += model.GetCarryInfo(account.Key, showMsg)
+			}
 		}
 		msg += "\n"
 	}
