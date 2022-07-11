@@ -44,6 +44,9 @@ var checkTurtleOrderTime = make(map[string]time.Time) // market_symbol - time
 var turtleClosed = make(map[string]map[string]bool) // market - symbol - closed
 
 func (turtleData *TurtleData) ToString() (str string) {
+	if turtleData == nil {
+		return `turtle data is nil`
+	}
 	return fmt.Sprintf(`20日%f~%f n:%f`, turtleData.lowDays20, turtleData.highDays20, turtleData.n)
 }
 
