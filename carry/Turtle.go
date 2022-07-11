@@ -391,13 +391,33 @@ var ProcessTurtle = func(setting *model.Setting, tick *model.BidAsk) {
 	}
 }
 
+func setTurtleOrderStatus(function, market, symbol, orderId, status string) {
+	setting := api.GetSetting(function, market, symbol)
+	if setting == nil {
+		return
+	}
+	account := model.AppConfig.GetAccounts(setting.Market)[0]
+	if account == nil {
+		return
+	}
+	turtleData := GetTurtleData(account.Key, account.Secret, setting)
+	if turtleData != nil {
+		if turtleData.orderLong.OrderId == orderId {
+			turtleData.orderLong.Status = status
+		}
+		if turtleData.orderShort.OrderId == orderId {
+			turtleData.orderShort.Status = status
+		}
+	}
+}
+
 func checkTurtleBreak(key, secret string, setting *model.Setting, turtleData *TurtleData, tick *model.BidAsk) (checked bool) {
 	duration, _ := time.ParseDuration(`-3s`)
 	now := util.GetNow().Add(duration)
 	checked = false
 	if now.After(turtleData.checkTime) {
 		turtleData.checkTime = util.GetNow()
-		if turtleData.orderLong != nil && turtleData.orderLong.TriggerPrice <= tick.Bids[0].Price {
+		if turtleData.orderLong != nil && (turtleData.orderLong.Status == model.CarryStatusSuccess || turtleData.orderLong.TriggerPrice <= tick.Bids[0].Price) {
 			util.Debug(fmt.Sprintf(`-----chance %s %s %d bid-ask %f %f short %f`,
 				setting.Market, setting.Symbol, setting.Chance, tick.Bids[0].Price, tick.Asks[0].Price, turtleData.orderLong.Price))
 			order := api.QueryOrderById(key, secret, setting.Market, setting.Symbol, turtleData.orderLong.OrderType, turtleData.orderLong.OrderId)
@@ -409,7 +429,7 @@ func checkTurtleBreak(key, secret string, setting *model.Setting, turtleData *Tu
 			}
 			checked = true
 		}
-		if turtleData.orderShort != nil && turtleData.orderShort.TriggerPrice >= tick.Asks[0].Price {
+		if turtleData.orderShort != nil && (turtleData.orderShort.Status == model.CarryStatusSuccess || turtleData.orderShort.TriggerPrice >= tick.Asks[0].Price) {
 			util.Debug(fmt.Sprintf(`-----chance %s %s %d bid-ask %f %f long %f`,
 				setting.Market, setting.Symbol, setting.Chance, tick.Bids[0].Price, tick.Asks[0].Price, turtleData.orderShort.Price))
 			order := api.QueryOrderById(key, secret, setting.Market, setting.Symbol, turtleData.orderShort.OrderType, turtleData.orderShort.OrderId)
