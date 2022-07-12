@@ -99,7 +99,7 @@ func appendFutureMarketKucoin(key string, marketInfos map[string]*model.MarketIn
 }
 
 func setFutureAutoDeposit() {
-	coins := model.GetSettingCoins(model.FunctionCarry, model.KucoinPerp)
+	coins := GetSettingCoins(model.FunctionCarry, model.KucoinPerp)
 	for coin := range coins {
 		params := make(map[string]string)
 		params["symbol"] = coin + model.DialectTail[model.MarketTypePerp][model.KucoinPerp]
@@ -112,7 +112,7 @@ func setFutureAutoDeposit() {
 }
 
 func WsDepthServeKucoinPerp() (channels []chan struct{}, err error) {
-	symbols := model.GetMarketSymbols(model.KucoinPerp)
+	symbols := GetMarketSymbols(model.KucoinPerp)
 	futureSubscribes := make([]*kumex.WebSocketSubscribeMessage, 0)
 	for symbol := range symbols {
 		if strings.LastIndex(symbol, model.UniStandardTail[model.MarketTypePerp]) == len(symbol)-len(model.UniStandardTail[model.MarketTypePerp]) &&
@@ -234,9 +234,9 @@ func handleKucoinPerpWS(futureMsg *kumex.WebSocketDownstreamMessage) {
 			return
 		}
 		if markets.SetBidAsk(symbol, model.KucoinPerp, &bidAsk) {
-			for function, handler := range model.GetFunctions(model.KucoinPerp, symbol) {
+			for function, handler := range GetFunctions(model.KucoinPerp, symbol) {
 				if handler != nil {
-					setting := model.GetSetting(function, model.KucoinPerp, symbol)
+					setting := GetSetting(function, model.KucoinPerp, symbol)
 					if setting != nil {
 						go handler(setting, &bidAsk)
 					}

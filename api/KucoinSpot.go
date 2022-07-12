@@ -63,7 +63,7 @@ func appendRelatedMarketsKucoin(key string, marketInfos map[string]*model.Market
 		marketInfo.SizeIncrement, _ = strconv.ParseFloat(related.BaseIncrement, 64)
 		marketInfos[marketInfo.Name] = marketInfo
 	}
-	relatedSettingMarkets = model.GetMarketSymbols(model.KucoinSpot)
+	relatedSettingMarkets = GetMarketSymbols(model.KucoinSpot)
 }
 
 func WsDepthServeKucoinSpot() (channels []chan struct{}, err error) {
@@ -164,9 +164,9 @@ func handleKucoinSpotWS(relatedMsg *kucoin.WebSocketDownstreamMessage) {
 		return
 	}
 	if markets.SetBidAsk(symbol, model.KucoinSpot, &bidAsk) {
-		for function, handler := range model.GetFunctions(model.KucoinSpot, symbol) {
+		for function, handler := range GetFunctions(model.KucoinSpot, symbol) {
 			if handler != nil {
-				setting := model.GetSetting(function, model.KucoinSpot, symbol)
+				setting := GetSetting(function, model.KucoinSpot, symbol)
 				if setting != nil {
 					go handler(setting, &bidAsk)
 				}
@@ -197,7 +197,7 @@ func getBalanceKucoinSpot(key string, secret string) (success bool, balances []*
 			balance.FrozenAmount, _ = strconv.ParseFloat(account.Holds, 64)
 			balance.Amount, _ = strconv.ParseFloat(account.Balance, 64)
 			balance.AvailableWithBorrow, _ = strconv.ParseFloat(account.Available, 64)
-			_, price := model.AppMarkets.GetPriceForce(balance.Coin+model.UniStandardTail[model.MarketTypeSpot], model.KucoinSpot)
+			_, price := model.AppMarkets.GetPriceForce(balance.Coin+model.UniStandardTail[model.MarketTypeSpot], model.KucoinSpot, GetMarkets())
 			balance.UsdValue = balance.Amount * price
 			balances = append(balances, balance)
 		}
@@ -226,7 +226,7 @@ func getBalanceKucoinSpot(key string, secret string) (success bool, balances []*
 			balance.AvailableWithBorrow = available + canBorrow
 			balance.Amount, _ = account.TotalBalance.Float64()
 			balance.Amount = balance.Amount - balance.Borrow
-			_, price := model.AppMarkets.GetPriceForce(balance.Coin+model.UniStandardTail[model.MarketTypeSpot], model.KucoinSpot)
+			_, price := model.AppMarkets.GetPriceForce(balance.Coin+model.UniStandardTail[model.MarketTypeSpot], model.KucoinSpot, GetMarkets())
 			balance.UsdValue = balance.Amount * price
 			balances = append(balances, balance)
 		}
