@@ -105,46 +105,47 @@ func prepareSettings() {
 	appSettings = []model.Setting{}
 	marketMap := make(map[string]bool)
 	model.AppDB.Where(`valid = ?`, true).Find(&appSettings)
-	for i, setting := range appSettings {
-		market := setting.Market
-		marketMap[market] = true
-		function := setting.Function
-		coin := setting.Coin
-		value, ok := util.LoadSyncMap(handlers, market, setting.Symbol)
+	util.Notice(`start to load settings %d`, len(appSettings))
+	for i := 0; i < len(appSettings); i++ {
+		setting := &appSettings[i]
+		util.Notice(fmt.Sprintf(`load setting %s %s %s %v`,
+			setting.Market, setting.Symbol, setting.Function, setting.Valid))
+		marketMap[setting.Market] = true
+		value, ok := util.LoadSyncMap(handlers, setting.Market, setting.Symbol)
 		var functions map[string]model.CarryHandler
 		if ok {
 			functions = value.(map[string]model.CarryHandler)
-		} else {
+		}
+		if functions == nil {
 			functions = make(map[string]model.CarryHandler)
 		}
-		functions[function] = model.HandlerMap[function]
-		util.StoreSyncMap(handlers, functions, market, setting.Symbol)
+		functions[setting.Function] = model.HandlerMap[setting.Function]
+		util.StoreSyncMap(handlers, functions, setting.Market, setting.Symbol)
 
 		var settings map[string][]*model.Setting
-		value, ok = coinSettings.Load(function)
+		value, ok = coinSettings.Load(setting.Function)
 		if ok {
 			settings = value.(map[string][]*model.Setting)
-		} else {
+		}
+		if settings == nil {
 			settings = make(map[string][]*model.Setting)
 		}
-		if settings[coin] == nil {
-			settings[coin] = make([]*model.Setting, 0)
+		if settings[setting.Coin] == nil {
+			settings[setting.Coin] = make([]*model.Setting, 0)
 		}
-		settings[coin] = append(settings[coin], &appSettings[i])
-		coinSettings.Store(function, settings)
+		settings[setting.Coin] = append(settings[setting.Coin], setting)
+		coinSettings.Store(setting.Function, settings)
 
 		var functionMarketSettings map[string]*model.Setting
-		value, ok = util.LoadSyncMap(symbolSettings, function, market)
+		value, ok = util.LoadSyncMap(symbolSettings, setting.Function, setting.Market)
 		if ok {
 			functionMarketSettings = value.(map[string]*model.Setting)
-		} else {
+		}
+		if functionMarketSettings == nil {
 			functionMarketSettings = make(map[string]*model.Setting)
 		}
-		functionMarketSettings[setting.Symbol] = &appSettings[i]
-		util.StoreSyncMap(symbolSettings, functionMarketSettings, function, market)
-
-		util.Notice(fmt.Sprintf(`load setting %s %s %s %v`,
-			setting.Market, setting.Symbol, setting.Function, setting.Valid))
+		functionMarketSettings[setting.Symbol] = setting
+		util.StoreSyncMap(symbolSettings, functionMarketSettings, setting.Function, setting.Market)
 	}
 	appMarkets = make([]string, len(marketMap))
 	i := 0
@@ -208,7 +209,6 @@ func handleSettings() (handled bool) {
 }
 
 func LoadSettings() {
-	util.Notice(`start to load settings`)
 	prepareSettings()
 	if handleSettings() {
 		prepareSettings()
