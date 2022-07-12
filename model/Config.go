@@ -12,6 +12,7 @@ type Config struct {
 	ChannelSlot, Delay                                                                             float64
 	KucoinSpot, GateSpot                                                                           bool
 	KucoinRelatedKey, KucoinRelatedSecret, KucoinFutureKey, KucoinFutureSecret                     string
+	KucoinCarryClose, KucoinCarryRate                                                              string
 	GateKey, GateSecret, GateCarryClose, GateCarryRate                                             string
 	HuobiKey, HuobiSecret, HuobiCarryClose, HuobiCarryRate                                         string
 	OkexKey, OkexSecret, OkexCarryClose, OkexCarryRate                                             string
@@ -90,6 +91,16 @@ func (config *Config) GetAccounts(market string) []*Account {
 	switch market {
 	//case Kucoin, DFuture:
 	//	return false, 1
+	case KucoinSpot:
+		keys = strings.Split(config.KucoinRelatedKey, `,`)
+		secrets = strings.Split(config.KucoinRelatedSecret, `,`)
+		closeValues = strings.Split(config.KucoinCarryClose, `,`)
+		rateValues = strings.Split(config.KucoinCarryRate, `,`)
+	case KucoinPerp:
+		keys = strings.Split(config.KucoinFutureKey, `,`)
+		secrets = strings.Split(config.KucoinFutureSecret, `,`)
+		closeValues = strings.Split(config.KucoinCarryClose, `,`)
+		rateValues = strings.Split(config.KucoinCarryRate, `,`)
 	case Gate:
 		keys = strings.Split(config.GateKey, `,`)
 		secrets = strings.Split(config.GateSecret, `,`)
