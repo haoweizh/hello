@@ -73,7 +73,7 @@ func GetCurrentN(setting *model.Setting) (currentN int64) {
 		return 0
 	}
 	for _, value := range settings {
-		if value != nil && value.Market == setting.Market && value.Function == setting.Function {
+		if value != nil && value.Market == setting.Market && value.Function == setting.Function && value.SymbolRelated != model.SettingTurtleRemoved {
 			currentN += value.Chance
 		}
 	}
