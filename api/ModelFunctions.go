@@ -195,6 +195,11 @@ func handleSettings() (handled bool) {
 					AmountLimit:     12,
 				}
 				model.AppDB.Save(setting)
+				util.Notice(`add setting %v`, setting.Symbol)
+			} else if settings[info.Name].SymbolRelated == model.SettingTurtleRemoved {
+				settings[info.Name].SymbolRelated = ``
+				model.AppDB.Save(settings[info.Name])
+				util.Notice(`add setting back %s`, info.Name)
 			}
 		}
 		for symbol, setting := range settings {
@@ -202,6 +207,7 @@ func handleSettings() (handled bool) {
 			if topMarketInfos[symbol] == nil && !model.CommonCoins[strings.ToLower(coinValue)] {
 				setting.SymbolRelated = model.SettingTurtleRemoved
 				model.AppDB.Save(setting)
+				util.Notice(`add setting remove %s`, setting.Symbol)
 			}
 		}
 	}

@@ -253,7 +253,7 @@ var ProcessTurtle = func(setting *model.Setting, tick *model.BidAsk) {
 	if turtleData == nil || turtleData.n == 0 || turtleData.amount == 0 {
 		return
 	}
-	duration, _ := time.ParseDuration(`120s`)
+	duration, _ := time.ParseDuration(`600s`)
 	lastCheck := checkTurtleOrderTime[setting.Market+`_`+setting.Symbol]
 	if lastCheck.Add(duration).Before(time.Now()) {
 		checkTurtleOrderTime[setting.Market+`_`+setting.Symbol] = time.Now()
