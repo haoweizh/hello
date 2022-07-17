@@ -209,13 +209,15 @@ func handleMsgOKEX(channel chan *simplejson.Json, symbol string) {
 		_, bidAsk.Bids[0].Amount = model.ParseRealAmount(model.OKEX, symbol, bidAsk.Bids[0].Amount)
 		_, bidAsk.Asks[0].Amount = model.ParseRealAmount(model.OKEX, symbol, bidAsk.Asks[0].Amount)
 		if model.AppMarkets.SetBidAsk(symbol, model.OKEX, bidAsk) {
-			for function, handler := range GetFunctions(model.OKEX, symbol) {
-				if handler != nil {
-					setting := GetSetting(function, model.OKEX, symbol)
+			funcHandlers := GetFunctions(model.OKEX, symbol)
+			if funcHandlers != nil {
+				funcHandlers.Range(func(function, value any) bool {
+					setting := GetSetting(function.(string), model.OKEX, symbol)
 					if setting != nil {
-						go handler(setting, bidAsk)
+						go value.(model.CarryHandler)(setting, bidAsk)
 					}
-				}
+					return true
+				})
 			}
 		}
 	}

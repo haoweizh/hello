@@ -164,13 +164,15 @@ func handleKucoinSpotWS(relatedMsg *kucoin.WebSocketDownstreamMessage) {
 		return
 	}
 	if markets.SetBidAsk(symbol, model.KucoinSpot, &bidAsk) {
-		for function, handler := range GetFunctions(model.KucoinSpot, symbol) {
-			if handler != nil {
-				setting := GetSetting(function, model.KucoinSpot, symbol)
+		funcHandlers := GetFunctions(model.KucoinSpot, symbol)
+		if funcHandlers != nil {
+			funcHandlers.Range(func(function, value any) bool {
+				setting := GetSetting(function.(string), model.KucoinSpot, symbol)
 				if setting != nil {
-					go handler(setting, &bidAsk)
+					go value.(model.CarryHandler)(setting, &bidAsk)
 				}
-			}
+				return true
+			})
 		}
 	}
 }

@@ -112,13 +112,15 @@ func WsDepthServeBybitSpot(markets *model.Markets, orderHandler OrderHandler) ([
 			data := depthJson.Get(`data`).MustMap()
 			symbol, bidAsk := parseTickBybitSpot(data)
 			if markets.SetBidAsk(symbol, model.BybitSpot, bidAsk) {
-				for function, handler := range GetFunctions(model.BybitSpot, symbol) {
-					if handler != nil {
-						setting := GetSetting(function, model.BybitSpot, symbol)
+				funcHandlers := GetFunctions(model.BybitSpot, symbol)
+				if funcHandlers != nil {
+					funcHandlers.Range(func(function, value any) bool {
+						setting := GetSetting(function.(string), model.BybitSpot, symbol)
 						if setting != nil {
-							go handler(setting, bidAsk)
+							go value.(model.CarryHandler)(setting, bidAsk)
 						}
-					}
+						return true
+					})
 				}
 			}
 		}

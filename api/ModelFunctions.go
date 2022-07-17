@@ -12,8 +12,8 @@ import (
 )
 
 var symbolSettings *sync.Map // function*market - map[symbol]*setting
-var handlers *sync.Map       //market*symbol / map[function]carryHandler
-var coinSettings *sync.Map   // function / map[coin][]*model.Setting
+var handlers *sync.Map       //market*symbol / *sync.Map:map[function]carryHandler
+var coinSettings *sync.Map   // function / *sync.Map:map[coin][]*model.Setting
 var appSettings []model.Setting
 var appMarkets []string
 var crossLen int
@@ -80,7 +80,7 @@ func GetCurrentN(setting *model.Setting) (currentN int64) {
 	return currentN
 }
 
-func GetFunctions(market, symbol string) map[string]model.CarryHandler {
+func GetFunctions(market, symbol string) *sync.Map {
 	handlerInitialized := false
 	handlers.Range(func(key, value interface{}) bool {
 		handlerInitialized = true
@@ -91,7 +91,7 @@ func GetFunctions(market, symbol string) map[string]model.CarryHandler {
 	}
 	value, ok := util.LoadSyncMap(handlers, market, symbol)
 	if ok {
-		return value.(map[string]model.CarryHandler)
+		return value.(*sync.Map)
 	}
 	return nil
 }
@@ -112,14 +112,14 @@ func prepareSettings() {
 			setting.Market, setting.Symbol, setting.Function, setting.Valid))
 		marketMap[setting.Market] = true
 		value, ok := util.LoadSyncMap(handlers, setting.Market, setting.Symbol)
-		var functions map[string]model.CarryHandler
+		var functions *sync.Map
 		if ok {
-			functions = value.(map[string]model.CarryHandler)
+			functions = value.(*sync.Map)
 		}
 		if functions == nil {
-			functions = make(map[string]model.CarryHandler)
+			functions = &sync.Map{}
 		}
-		functions[setting.Function] = model.HandlerMap[setting.Function]
+		functions.Store(setting.Function, model.HandlerMap[setting.Function])
 		util.StoreSyncMap(handlers, functions, setting.Market, setting.Symbol)
 
 		var settings map[string][]*model.Setting

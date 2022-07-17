@@ -109,11 +109,15 @@ func WsDepthServeMexc(markets *model.Markets, orderHandler OrderHandler, useFull
 				bidAsk := parseTicksMexc(symbol, resp.Ts, resp.Data.Version, resp.Data.Bids, resp.Data.Asks)
 				//fmt.Println(fmt.Sprintf(`%s %f %f ~ %f %f`, symbol, bidAsk.Bids[0].Price, bidAsk.Bids[0].Amount, bidAsk.Asks[0].Price, bidAsk.Asks[0].Amount))
 				if markets.SetBidAsk(symbol, model.Mexc, bidAsk) {
-					for function, handler := range GetFunctions(model.Mexc, symbol) {
-						setting := GetSetting(function, model.Mexc, symbol)
-						if handler != nil && setting != nil {
-							go handler(setting, bidAsk)
-						}
+					funcHandlers := GetFunctions(model.Mexc, symbol)
+					if funcHandlers != nil {
+						funcHandlers.Range(func(function, value any) bool {
+							setting := GetSetting(function.(string), model.Mexc, symbol)
+							if setting != nil {
+								go value.(model.CarryHandler)(setting, bidAsk)
+							}
+							return true
+						})
 					}
 				}
 			}

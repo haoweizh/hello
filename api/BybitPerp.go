@@ -246,13 +246,15 @@ func handleOrderBookBybitPerp(markets *model.Markets, symbol string, ts int64, r
 		sort.Sort(sort.Reverse(bidAsk.Bids))
 		//util.SocketInfo(markets.ToStringBidAsk(bidAsk))
 		if markets.SetBidAsk(symbol, model.BybitPerp, bidAsk) {
-			for function, handler := range GetFunctions(model.BybitPerp, symbol) {
-				if handler != nil {
-					setting := GetSetting(function, model.BybitPerp, symbol)
+			funcHandlers := GetFunctions(model.BybitPerp, symbol)
+			if funcHandlers != nil {
+				funcHandlers.Range(func(function, value any) bool {
+					setting := GetSetting(function.(string), model.BybitPerp, symbol)
 					if setting != nil {
-						go handler(setting, bidAsk)
+						go value.(model.CarryHandler)(setting, bidAsk)
 					}
-				}
+					return true
+				})
 			}
 		}
 	}
