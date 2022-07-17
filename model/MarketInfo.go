@@ -10,7 +10,8 @@ import (
 
 var marketInfos sync.Map // market - map[string]*MarketInfo //symbol - MarketInfo
 
-var CommonCoins = map[string]bool{`btc`: true, `eth`: true, `ltc`: true, `bch`: true, `eos`: true, `xrp`: true, `usdt`: true}
+var CommonCoins = map[string]bool{`btc`: true, `eth`: true, `ltc`: true, `bch`: true, `eos`: true, `xrp`: true,
+	`usdt`: true, `etc`: true}
 
 type MarketInfo struct {
 	Market, Name, CTCurrency               string

@@ -525,10 +525,11 @@ func placeTurtleOrders(key, secret string, turtleData *TurtleData, setting *mode
 				turtleData.breakLong = false
 			}
 		}
-	} else if turtleData.orderLong != nil && (currentN >= amountLimit || setting.Chance >= coinLimit) {
-		go api.MustCancel(key, secret, setting.Market, setting.Symbol, turtleData.orderLong.OrderType, turtleData.orderLong.OrderId, true)
-		turtleData.orderLong = nil
 	}
+	//else if turtleData.orderLong != nil && (currentN >= amountLimit || setting.Chance >= coinLimit) {
+	//	go api.MustCancel(key, secret, setting.Market, setting.Symbol, turtleData.orderLong.OrderType, turtleData.orderLong.OrderId, true)
+	//	turtleData.orderLong = nil
+	//}
 	if turtleData.orderShort == nil && ((currentN > -1*amountLimit && setting.Chance > -1*coinLimit) || setting.Chance > 0) {
 		orderSide := model.OrderSideSell
 		typeShort := model.OrderTypeStop
@@ -559,8 +560,9 @@ func placeTurtleOrders(key, secret string, turtleData *TurtleData, setting *mode
 				turtleData.breakShort = false
 			}
 		}
-	} else if turtleData.orderShort != nil && (currentN <= -1*amountLimit || setting.Chance <= -1*coinLimit) {
-		go api.MustCancel(key, secret, setting.Market, setting.Symbol, turtleData.orderShort.OrderType, turtleData.orderShort.OrderId, true)
-		turtleData.orderShort = nil
 	}
+	//else if turtleData.orderShort != nil && (currentN <= -1*amountLimit || setting.Chance <= -1*coinLimit) {
+	//	go api.MustCancel(key, secret, setting.Market, setting.Symbol, turtleData.orderShort.OrderType, turtleData.orderShort.OrderId, true)
+	//	turtleData.orderShort = nil
+	//}
 }
