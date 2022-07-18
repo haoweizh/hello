@@ -26,7 +26,10 @@ func GetSettingCoins(function, market string) (coins map[string]bool) {
 		return true
 	})
 	if !handlerInitialized {
-		LoadSettings()
+		util.Notice(`load setting GetSettingCoins %s %s`, function, market)
+		if !LoadSettings() {
+			return nil
+		}
 	}
 	value, ok := util.LoadSyncMap(symbolSettings, function, market)
 	if ok {
@@ -52,7 +55,10 @@ func GetSettings(function, market string) *sync.Map {
 		return true
 	})
 	if !handlerInitialized {
-		LoadSettings()
+		util.Notice(`load setting GetSettings %s %s`, function, market)
+		if !LoadSettings() {
+			return nil
+		}
 	}
 	value, ok := util.LoadSyncMap(symbolSettings, function, market)
 	if ok {
@@ -94,7 +100,10 @@ func GetFunctions(market, symbol string) *sync.Map {
 		return true
 	})
 	if !handlerInitialized {
-		LoadSettings()
+		util.Notice(`load setting GetFunctions %s %s`, market, symbol)
+		if !LoadSettings() {
+			return nil
+		}
 	}
 	value, ok := util.LoadSyncMap(handlers, market, symbol)
 	if ok {
@@ -234,9 +243,9 @@ func handleSettings() (handled bool) {
 	return
 }
 
-func LoadSettings() {
+func LoadSettings() bool {
 	if settingLoading {
-		return
+		return false
 	}
 	prepareSettings()
 	if handleSettings() {
@@ -244,11 +253,15 @@ func LoadSettings() {
 	}
 	settingLoading = false
 	util.Notice(`finish load settings`)
+	return true
 }
 
 func GetMarketSymbols(market string) map[string]bool {
 	if appSettings == nil {
-		LoadSettings()
+		util.Notice(`load setting GetMarketSymbols %s`, market)
+		if !LoadSettings() {
+			return nil
+		}
 	}
 	symbols := make(map[string]bool)
 	for _, value := range appSettings {
@@ -265,7 +278,10 @@ func GetMarketSymbols(market string) map[string]bool {
 
 func GetCoinSettings(function string) *sync.Map {
 	if appSettings == nil {
-		LoadSettings()
+		util.Notice(`load setting GetCoinSettings %s`, function)
+		if !LoadSettings() {
+			return nil
+		}
 	}
 	value, ok := coinSettings.Load(function)
 	if ok {
@@ -276,7 +292,10 @@ func GetCoinSettings(function string) *sync.Map {
 
 func GetMarkets() []string {
 	if appSettings == nil || len(appSettings) == 0 {
-		LoadSettings()
+		util.Notice(`load setting GetMarkets`)
+		if !LoadSettings() {
+			return nil
+		}
 	}
 	return appMarkets
 }
