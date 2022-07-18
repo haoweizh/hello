@@ -82,7 +82,8 @@ func createSpotMarket(key, secret, market string) (sm *spotMarket) {
 	return
 }
 
-func createFromPosition(account *model.Account, setting *model.Setting, valueLimit float64) (carryStatus *CarryStatus, doRevert bool) {
+// absentRevert: 当cm或sm中没有这个symbol时，是否设置成revert模式
+func createFromPosition(account *model.Account, setting *model.Setting, valueLimit float64, absentRevert bool) (carryStatus *CarryStatus, doRevert bool) {
 	key := account.Key
 	value, ok := contractMarkets.Load(key)
 	if value == nil || !ok {
@@ -125,8 +126,11 @@ func createFromPosition(account *model.Account, setting *model.Setting, valueLim
 		if setting.Symbol == `MATIC_PERP` {
 			util.Notice(`test matic set rate rate %f = %f * %f / %f`, carryStatus.RateInAll, cm.positions[setting.Symbol].Holding, price, cm.accountValueInU)
 		}
-	} else if setting.Symbol == `MATIC_PERP` {
-		util.Notice(`test matic fail to get matic cm`)
+	} else if absentRevert {
+		doRevert = true
+		if setting.Symbol == `MATIC_PERP` {
+			util.Notice(`test matic fail to get matic cm %s %v`, setting.Market, cm.positions)
+		}
 	}
 	if cm.contractValueInU/cm.accountValueInU > 1.8 || valueInUsd > valueLimit || valueInUsd/cm.accountValueInU > 0.15 {
 		//util.Notice(fmt.Sprintf(`low position balance %s %s %f %f %f %f`,
@@ -136,7 +140,8 @@ func createFromPosition(account *model.Account, setting *model.Setting, valueLim
 	return carryStatus, doRevert
 }
 
-func createFromBalance(account *model.Account, setting *model.Setting, valueLimit float64) (carryStatus *CarryStatus, doRevert bool) {
+// absentRevert: 当cm或sm中没有这个symbol时，是否设置成revert模式
+func createFromBalance(account *model.Account, setting *model.Setting, valueLimit float64, absentRevert bool) (carryStatus *CarryStatus, doRevert bool) {
 	key := account.Key
 	value, ok := spotMarkets.Load(key)
 	if value == nil || !ok {
@@ -173,6 +178,8 @@ func createFromBalance(account *model.Account, setting *model.Setting, valueLimi
 		carryStatus.LimitSell = limitSell
 		carryStatus.RateInAll = math.Abs(carryStatus.Holding * price / sm.accountValueInU)
 		carryStatus.AvailableSell = carryStatus.LimitSell
+	} else if absentRevert {
+		doRevert = true
 	}
 	usdLowLine := math.Min(100000, 0.1*sm.accountValueInU)
 	if sm.availableU < usdLowLine || carryStatus.RateInAll > 0.15 {
@@ -188,7 +195,8 @@ func createFromBalance(account *model.Account, setting *model.Setting, valueLimi
 	return carryStatus, doRevert
 }
 
-func initStatus(account *model.Account, setting *model.Setting) (status *CarryStatus) {
+// absentRevert: 当cm或sm中没有这个symbol时，是否设置成revert模式
+func initStatus(account *model.Account, setting *model.Setting, absentRevert bool) (status *CarryStatus) {
 	if setting == nil {
 		return
 	}
@@ -201,9 +209,9 @@ func initStatus(account *model.Account, setting *model.Setting) (status *CarrySt
 		localLimit /= 10
 	}
 	if marketType == model.MarketTypeSpot {
-		status, doRevert = createFromBalance(account, setting, localLimit)
+		status, doRevert = createFromBalance(account, setting, localLimit, absentRevert)
 	} else if marketType == model.MarketTypePerp {
-		status, doRevert = createFromPosition(account, setting, localLimit)
+		status, doRevert = createFromPosition(account, setting, localLimit, absentRevert)
 		_, fundingRate = api.GetFundingRate(account.Key, account.Secret, setting.Market, setting.Symbol)
 		fundingKey := fmt.Sprintf(`funding_%s_%s`, setting.Market, setting.Symbol)
 		fundingTime, ok := notifyTime.Load(fundingKey)
@@ -365,7 +373,7 @@ func equalAccount(i int, equalChan chan int, accounts map[string]*model.Account)
 					util.Notice(`can not equal`)
 					continue
 				}
-				equalStatuses[j] = initStatus(account, setting)
+				equalStatuses[j] = initStatus(account, setting, false)
 			}
 			for index := 0; index <= 10; index++ {
 				coinEqual, leftHoldingInU, _ := equalCoin(coin.(string), equalStatuses)
@@ -1000,7 +1008,7 @@ func placeStatus(status *CarryStatus, price float64, amount float64) {
 		}
 	}
 	account := model.AppConfig.GetAccountFromKey(status.market, status.account.Key)
-	initStatus(account, status.setting)
+	initStatus(account, status.setting, true)
 	util.StoreSyncMap(&lastCrosses, status.symbol, account.Key, status.market)
 }
 
@@ -1050,7 +1058,7 @@ var PostOrderCross = func(order *model.Order, setting *model.Setting) {
 					util.Notice(`reset binance trade max with %s %s`, order.ErrCode, order.AmountType)
 					spotMarkets.Delete(order.AmountType)
 					contractMarkets.Delete(order.AmountType)
-					initStatus(account, setting)
+					initStatus(account, setting, true)
 					unknownFail = false
 				}
 			}
