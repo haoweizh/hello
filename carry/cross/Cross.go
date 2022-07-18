@@ -123,15 +123,8 @@ func createFromPosition(account *model.Account, setting *model.Setting, valueLim
 		carryStatus.Holding = cm.positions[setting.Symbol].Holding
 		valueInUsd = math.Abs(carryStatus.Holding) * price
 		carryStatus.RateInAll = valueInUsd / cm.accountValueInU
-		if setting.Symbol == `MATIC_PERP` {
-			util.Notice(`test matic set rate rate %s %f = %f * %f / %f`,
-				setting.Market, carryStatus.RateInAll, cm.positions[setting.Symbol].Holding, price, cm.accountValueInU)
-		}
 	} else if absentRevert {
 		doRevert = true
-		if setting.Symbol == `MATIC_PERP` {
-			util.Notice(`test matic fail to get matic cm %s %v`, setting.Market, cm.positions)
-		}
 	}
 	if cm.contractValueInU/cm.accountValueInU > 1.8 || valueInUsd > valueLimit || valueInUsd/cm.accountValueInU > 0.15 {
 		//util.Notice(fmt.Sprintf(`low position balance %s %s %f %f %f %f`,
@@ -957,7 +950,6 @@ func placeCross(statusBuy, statusSell *CarryStatus, priceBuy, priceSell, amount 
 func placeStatus(status *CarryStatus, price float64, amount float64) {
 	valueSpot, _ := spotMarkets.Load(status.account.Key)
 	valueContract, _ := contractMarkets.Load(status.account.Key)
-	util.Notice(`test matic status %s %v`, status.market, status)
 	if status.isSpot && valueSpot != nil {
 		balance := valueSpot.(*spotMarket).balances[status.symbol]
 		if balance == nil {
@@ -989,9 +981,6 @@ func placeStatus(status *CarryStatus, price float64, amount float64) {
 			originFreeAbs = math.Abs(position.Holding)
 			position.Holding += amount
 			position.EntryPrice = price
-		}
-		if status.symbol == `MATIC_PERP` {
-			util.Notice(`test matic position change %s %f %f`, status.market, position.Holding, amount)
 		}
 		changeU := (originFreeAbs - math.Abs(position.Holding)) * price
 		valueContract.(*contractMarket).collateralsAvailable += changeU * 0.2
