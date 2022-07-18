@@ -122,6 +122,11 @@ func createFromPosition(account *model.Account, setting *model.Setting, valueLim
 		carryStatus.Holding = cm.positions[setting.Symbol].Holding
 		valueInUsd = math.Abs(carryStatus.Holding) * price
 		carryStatus.RateInAll = valueInUsd / cm.accountValueInU
+		if setting.Symbol == `MATIC_PERP` {
+			util.Notice(`test matic set rate rate %f = %f * %f / %f`, carryStatus.RateInAll, cm.positions[setting.Symbol].Holding, price, cm.accountValueInU)
+		}
+	} else if setting.Symbol == `MATIC_PERP` {
+		util.Notice(`test matic fail to get matic cm`)
 	}
 	if cm.contractValueInU/cm.accountValueInU > 1.8 || valueInUsd > valueLimit || valueInUsd/cm.accountValueInU > 0.15 {
 		//util.Notice(fmt.Sprintf(`low position balance %s %s %f %f %f %f`,
@@ -264,14 +269,14 @@ func initStatus(account *model.Account, setting *model.Setting) (status *CarrySt
 	status.TradeLineSell = math.Max(standardScoreSell*(0.5+jumpSell*status.RateInAll), lowestScore) - fundingRate
 	if status.setting.Coin == `MATIC` {
 		if account.Index == 0 {
-			util.Info(fmt.Sprintf(`%s %s bline %f = max(%f*(0.5+%f*rate %f)+funding %f hold %f`,
+			util.Notice(fmt.Sprintf(`%s %s bline %f = max(%f*(0.5+%f*rate %f)+funding %f hold %f`,
 				status.setting.Market, status.setting.Symbol, status.TradeLineBuy, standardScoreBuy, jumpBuy,
 				status.RateInAll, fundingRate, status.Holding))
-			util.Info(fmt.Sprintf(`%s %s sline %f = max(%f*(0.5+%f*rate %f)-funding %f hold %f`,
+			util.Notice(fmt.Sprintf(`%s %s sline %f = max(%f*(0.5+%f*rate %f)-funding %f hold %f`,
 				status.setting.Market, status.setting.Symbol, status.TradeLineSell, standardScoreSell, jumpSell,
 				status.RateInAll, fundingRate, status.Holding))
-			status.TradeLineBuy = 1
-			status.TradeLineSell = 1
+			//status.TradeLineBuy = 1
+			//status.TradeLineSell = 1
 		}
 	}
 	status.TradeLineBuy *= account.CarryRate
@@ -979,6 +984,9 @@ func placeStatus(status *CarryStatus, price float64, amount float64) {
 			originFreeAbs = math.Abs(position.Holding)
 			position.Holding += amount
 			position.EntryPrice = price
+		}
+		if status.symbol == `MATIC_PERP` {
+			util.Notice(`test matic position change %f %f`, position.Holding, amount)
 		}
 		changeU := (originFreeAbs - math.Abs(position.Holding)) * price
 		cm.collateralsAvailable += changeU * 0.2
