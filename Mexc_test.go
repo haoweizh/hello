@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"hello/api"
 	"hello/model"
+	"sync"
 	"testing"
 )
 
@@ -14,6 +15,13 @@ import (
 
 func Test_placeOrderMexc(t *testing.T) {
 	model.NewConfig()
+	testMap := sync.Map{}
+	testMap.Store(`test`, model.AppConfig)
+	item, _ := testMap.Load(`test`)
+	fmt.Println(item.(*model.Config).BinanceKey)
+	item.(*model.Config).BinanceKey = `new key`
+	item, _ = testMap.Load(`test`)
+	fmt.Println(item.(*model.Config).BinanceKey)
 	marketInfos := api.GetMarketInfos(model.Ftx)
 	model.SetMarketInfos(model.Mexc, marketInfos)
 	//api.GetPositions(model.AppConfig.MexcKey, model.AppConfig.MexcSecret, model.Mexc)

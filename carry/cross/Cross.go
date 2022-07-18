@@ -955,16 +955,11 @@ func placeCross(statusBuy, statusSell *CarryStatus, priceBuy, priceSell, amount 
 }
 
 func placeStatus(status *CarryStatus, price float64, amount float64) {
-	valueSpot, okSpot := spotMarkets.Load(status.account.Key)
-	valueContract, okContract := contractMarkets.Load(status.account.Key)
-	if !okSpot || valueSpot == nil || !okContract || valueContract == nil {
-		return
-	}
-	sm := valueSpot.(*spotMarket)
-	cm := valueContract.(*contractMarket)
-	util.Notice(`test matic status %v`, status)
-	if status.isSpot {
-		balance := sm.balances[status.symbol]
+	valueSpot, _ := spotMarkets.Load(status.account.Key)
+	valueContract, _ := contractMarkets.Load(status.account.Key)
+	util.Notice(`test matic status %s %v`, status.market, status)
+	if status.isSpot && valueSpot != nil {
+		balance := valueSpot.(*spotMarket).balances[status.symbol]
 		if balance == nil {
 			util.Notice(fmt.Sprintf(`warning no balance %s %s %s`,
 				status.account.Key, status.market, status.symbol))
@@ -974,19 +969,19 @@ func placeStatus(status *CarryStatus, price float64, amount float64) {
 			balance.UsdValue = balance.Amount * price
 			balance.AvailableWithBorrow += amount
 		}
-		sm.availableU -= amount * price
+		valueSpot.(*spotMarket).availableU -= amount * price
 		if status.market == model.Ftx {
-			if cm != nil {
-				cm.collateralsAvailable -= amount * price
+			if valueContract != nil {
+				valueContract.(*contractMarket).collateralsAvailable -= amount * price
 			}
 		} else if status.market == model.OKEX {
-			sm.collateral.Available -= amount * price
-			if cm != nil {
-				cm.collateralsAvailable -= amount * price
+			valueSpot.(*spotMarket).collateral.Available -= amount * price
+			if valueContract.(*contractMarket) != nil {
+				valueContract.(*contractMarket).collateralsAvailable -= amount * price
 			}
 		}
-	} else {
-		position := cm.positions[status.symbol]
+	} else if valueContract != nil {
+		position := valueContract.(*contractMarket).positions[status.symbol]
 		originFreeAbs := 0.0
 		if position == nil {
 			position = &model.Position{Holding: amount, EntryPrice: price, Market: status.market, Currency: status.setting.Symbol}
@@ -999,14 +994,16 @@ func placeStatus(status *CarryStatus, price float64, amount float64) {
 			util.Notice(`test matic position change %s %f %f`, status.market, position.Holding, amount)
 		}
 		changeU := (originFreeAbs - math.Abs(position.Holding)) * price
-		cm.collateralsAvailable += changeU * 0.2
-		cm.contractValueInU += changeU
-		if status.market == model.Ftx {
-			sm.availableU += changeU * 0.2
-		} else if status.market == model.OKEX {
-			sm.collateral.Available += changeU * 0.1
-			sm.collateral.Occupied -= changeU * 0.1
-			sm.availableU += changeU * 0.1
+		valueContract.(*contractMarket).collateralsAvailable += changeU * 0.2
+		valueContract.(*contractMarket).contractValueInU += changeU
+		if valueSpot != nil {
+			if status.market == model.Ftx {
+				valueSpot.(*spotMarket).availableU += changeU * 0.2
+			} else if status.market == model.OKEX {
+				valueSpot.(*spotMarket).collateral.Available += changeU * 0.1
+				valueSpot.(*spotMarket).collateral.Occupied -= changeU * 0.1
+				valueSpot.(*spotMarket).availableU += changeU * 0.1
+			}
 		}
 	}
 	account := model.AppConfig.GetAccountFromKey(status.market, status.account.Key)
