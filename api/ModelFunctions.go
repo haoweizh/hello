@@ -17,6 +17,7 @@ var coinSettings *sync.Map   // function / *sync.Map:map[coin][]*model.Setting
 var appSettings []model.Setting
 var appMarkets []string
 var crossLen int
+var loadLock sync.Mutex
 
 func GetSettingCoins(function, market string) (coins map[string]bool) {
 	handlerInitialized := false
@@ -140,7 +141,15 @@ func prepareSettings() {
 		if settingArray == nil {
 			settingArray = make([]*model.Setting, 0)
 		}
-		settingArray = append(settingArray.([]*model.Setting), setting)
+		exist := false
+		for _, item := range settingArray.([]*model.Setting) {
+			if item.Market == setting.Market && item.Symbol == setting.Symbol && item.Function == setting.Function {
+				exist = true
+			}
+		}
+		if !exist {
+			settingArray = append(settingArray.([]*model.Setting), setting)
+		}
 		util.Notice(fmt.Sprintf(`add setting array %s %s %d`, setting.Market, setting.Symbol, len(settingArray.([]*model.Setting))))
 		settings.Store(setting.Coin, settingArray)
 		coinSettings.Store(setting.Function, settings)
@@ -226,6 +235,8 @@ func handleSettings() (handled bool) {
 }
 
 func LoadSettings() {
+	loadLock.Lock()
+	defer loadLock.Unlock()
 	prepareSettings()
 	if handleSettings() {
 		prepareSettings()
