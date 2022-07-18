@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"hello/api"
 	"hello/model"
+	"sync"
 	"testing"
 )
 
@@ -13,6 +14,16 @@ import (
 //}
 
 func Test_placeOrderMexc(t *testing.T) {
+	testSync := sync.Map{}
+	testSync.Store(`test`, make([]int, 0))
+	array, _ := testSync.Load(`test`)
+	array = append(array.([]int), 1)
+	array = append(array.([]int), 2)
+	array = append(array.([]int), 3)
+	array = append(array.([]int), 4)
+	array2, _ := testSync.Load(`test`)
+	fmt.Println(fmt.Sprintf(`%v`, array2))
+	fmt.Println(fmt.Sprintf(`%v`, array))
 	model.NewConfig()
 	marketInfos := api.GetMarketInfos(model.Ftx)
 	model.SetMarketInfos(model.Mexc, marketInfos)

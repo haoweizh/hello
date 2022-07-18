@@ -114,7 +114,7 @@ func WsDepthServeBybitSpot(markets *model.Markets, orderHandler OrderHandler) ([
 			if markets.SetBidAsk(symbol, model.BybitSpot, bidAsk) {
 				funcHandlers := GetFunctions(model.BybitSpot, symbol)
 				if funcHandlers != nil {
-					funcHandlers.Range(func(function, value any) bool {
+					funcHandlers.Range(func(function, value interface{}) bool {
 						setting := GetSetting(function.(string), model.BybitSpot, symbol)
 						if setting != nil {
 							go value.(model.CarryHandler)(setting, bidAsk)

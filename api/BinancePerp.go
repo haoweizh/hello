@@ -150,7 +150,7 @@ func handleTickerBinancePerp(markets *model.Markets, json *simplejson.Json, stan
 		if markets.SetBidAsk(standardSymbol, model.BinancePerp, &bidAsk) {
 			funcHandlers := GetFunctions(model.BinancePerp, standardSymbol)
 			if funcHandlers != nil {
-				funcHandlers.Range(func(function, value any) bool {
+				funcHandlers.Range(func(function, value interface{}) bool {
 					setting := GetSetting(function.(string), model.BinancePerp, standardSymbol)
 					if setting != nil {
 						go value.(model.CarryHandler)(setting, &bidAsk)
@@ -194,7 +194,7 @@ func handleDepthBinancePerp(markets *model.Markets, json *simplejson.Json, stand
 	if markets.SetBidAsk(standardSymbol, model.BinancePerp, &bidAsk) {
 		funcHandlers := GetFunctions(model.BinancePerp, standardSymbol)
 		if funcHandlers != nil {
-			funcHandlers.Range(func(function, value any) bool {
+			funcHandlers.Range(func(function, value interface{}) bool {
 				setting := GetSetting(function.(string), model.BinancePerp, standardSymbol)
 				if setting != nil {
 					go value.(model.CarryHandler)(setting, &bidAsk)

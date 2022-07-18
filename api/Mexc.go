@@ -111,7 +111,7 @@ func WsDepthServeMexc(markets *model.Markets, orderHandler OrderHandler, useFull
 				if markets.SetBidAsk(symbol, model.Mexc, bidAsk) {
 					funcHandlers := GetFunctions(model.Mexc, symbol)
 					if funcHandlers != nil {
-						funcHandlers.Range(func(function, value any) bool {
+						funcHandlers.Range(func(function, value interface{}) bool {
 							setting := GetSetting(function.(string), model.Mexc, symbol)
 							if setting != nil {
 								go value.(model.CarryHandler)(setting, bidAsk)

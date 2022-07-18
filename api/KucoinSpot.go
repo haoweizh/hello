@@ -166,7 +166,7 @@ func handleKucoinSpotWS(relatedMsg *kucoin.WebSocketDownstreamMessage) {
 	if markets.SetBidAsk(symbol, model.KucoinSpot, &bidAsk) {
 		funcHandlers := GetFunctions(model.KucoinSpot, symbol)
 		if funcHandlers != nil {
-			funcHandlers.Range(func(function, value any) bool {
+			funcHandlers.Range(func(function, value interface{}) bool {
 				setting := GetSetting(function.(string), model.KucoinSpot, symbol)
 				if setting != nil {
 					go value.(model.CarryHandler)(setting, &bidAsk)

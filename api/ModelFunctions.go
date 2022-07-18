@@ -30,20 +30,21 @@ func GetSettingCoins(function, market string) (coins map[string]bool) {
 	value, ok := util.LoadSyncMap(symbolSettings, function, market)
 	if ok {
 		coins = make(map[string]bool)
-		for _, setting := range value.(map[string]*model.Setting) {
+		value.(*sync.Map).Range(func(key, setting interface{}) bool {
 			if setting == nil {
-				continue
+				return true
 			}
-			success, _, coin, _ := model.GetFromStandard(setting.Market, setting.Symbol)
+			success, _, coin, _ := model.GetFromStandard(setting.(*model.Setting).Market, setting.(*model.Setting).Symbol)
 			if success {
 				coins[coin] = true
 			}
-		}
+			return true
+		})
 	}
 	return
 }
 
-func GetSettings(function, market string) map[string]*model.Setting {
+func GetSettings(function, market string) *sync.Map {
 	handlerInitialized := false
 	handlers.Range(func(key, value interface{}) bool {
 		handlerInitialized = true
@@ -54,7 +55,7 @@ func GetSettings(function, market string) map[string]*model.Setting {
 	}
 	value, ok := util.LoadSyncMap(symbolSettings, function, market)
 	if ok {
-		return value.(map[string]*model.Setting)
+		return value.(*sync.Map)
 	}
 	return nil
 }
@@ -62,7 +63,10 @@ func GetSettings(function, market string) map[string]*model.Setting {
 func GetSetting(function, market, symbol string) *model.Setting {
 	settings := GetSettings(function, market)
 	if settings != nil {
-		return settings[symbol]
+		value, _ := settings.Load(symbol)
+		if value != nil {
+			return value.(*model.Setting)
+		}
 	}
 	return nil
 }
@@ -72,11 +76,13 @@ func GetCurrentN(setting *model.Setting) (currentN int64) {
 	if settings == nil {
 		return 0
 	}
-	for _, value := range settings {
-		if value != nil && value.Market == setting.Market && value.Function == setting.Function && value.SymbolRelated != model.SettingTurtleRemoved {
-			currentN += value.Chance
+	settings.Range(func(key, value interface{}) bool {
+		valueSetting := value.(*model.Setting)
+		if value != nil && valueSetting.Market == setting.Market && valueSetting.Function == setting.Function && valueSetting.SymbolRelated != model.SettingTurtleRemoved {
+			currentN += valueSetting.Chance
 		}
-	}
+		return true
+	})
 	return currentN
 }
 
@@ -122,29 +128,31 @@ func prepareSettings() {
 		functions.Store(setting.Function, model.HandlerMap[setting.Function])
 		util.StoreSyncMap(handlers, functions, setting.Market, setting.Symbol)
 
-		var settings map[string][]*model.Setting
+		var settings *sync.Map
 		value, ok = coinSettings.Load(setting.Function)
 		if ok {
-			settings = value.(map[string][]*model.Setting)
+			settings = value.(*sync.Map)
 		}
 		if settings == nil {
-			settings = make(map[string][]*model.Setting)
+			settings = &sync.Map{}
 		}
-		if settings[setting.Coin] == nil {
-			settings[setting.Coin] = make([]*model.Setting, 0)
+		settingArray, _ := settings.Load(setting.Coin)
+		if settingArray == nil {
+			settingArray = make([]*model.Setting, 0)
 		}
-		settings[setting.Coin] = append(settings[setting.Coin], setting)
+		settingArray = append(settingArray.([]*model.Setting), setting)
+		settings.Store(setting.Coin, settingArray)
 		coinSettings.Store(setting.Function, settings)
 
-		var functionMarketSettings map[string]*model.Setting
+		var functionMarketSettings *sync.Map
 		value, ok = util.LoadSyncMap(symbolSettings, setting.Function, setting.Market)
 		if ok {
-			functionMarketSettings = value.(map[string]*model.Setting)
+			functionMarketSettings = value.(*sync.Map)
 		}
 		if functionMarketSettings == nil {
-			functionMarketSettings = make(map[string]*model.Setting)
+			functionMarketSettings = &sync.Map{}
 		}
-		functionMarketSettings[setting.Symbol] = setting
+		functionMarketSettings.Store(setting.Symbol, setting)
 		util.StoreSyncMap(symbolSettings, functionMarketSettings, setting.Function, setting.Market)
 	}
 	appMarkets = make([]string, len(marketMap))
@@ -157,8 +165,8 @@ func prepareSettings() {
 
 func handleSettings() (handled bool) {
 	for _, market := range appMarkets {
-		_, ok := util.LoadSyncMap(symbolSettings, model.FunctionDynamicTurtle, market)
-		if !ok {
+		_, hava := util.LoadSyncMap(symbolSettings, model.FunctionDynamicTurtle, market)
+		if !hava {
 			continue
 		}
 		handled = true
@@ -175,15 +183,16 @@ func handleSettings() (handled bool) {
 				topMarketInfos[marketInfoArray[i].Name] = marketInfoArray[i]
 			}
 		}
-		var settings map[string]*model.Setting
+		var settings *sync.Map
 		value, ok := util.LoadSyncMap(symbolSettings, model.FunctionTurtle, market)
 		if ok {
-			settings = value.(map[string]*model.Setting)
+			settings = value.(*sync.Map)
 		} else {
-			settings = make(map[string]*model.Setting)
+			settings = &sync.Map{}
 		}
 		for _, info := range topMarketInfos {
-			if settings[info.Name] == nil {
+			value, ok = settings.Load(info.Name)
+			if value == nil {
 				setting := &model.Setting{
 					Valid:           true,
 					Function:        model.FunctionTurtle,
@@ -196,20 +205,21 @@ func handleSettings() (handled bool) {
 				}
 				model.AppDB.Save(setting)
 				util.Notice(`add setting %v`, setting.Symbol)
-			} else if settings[info.Name].SymbolRelated == model.SettingTurtleRemoved {
-				settings[info.Name].SymbolRelated = ``
-				model.AppDB.Save(settings[info.Name])
+			} else if value.(*model.Setting).SymbolRelated == model.SettingTurtleRemoved {
+				value.(*model.Setting).SymbolRelated = ``
+				model.AppDB.Save(value.(*model.Setting))
 				util.Notice(`add setting back %s`, info.Name)
 			}
 		}
-		for symbol, setting := range settings {
-			_, _, coinValue, _ := model.GetFromStandard(market, symbol)
-			if topMarketInfos[symbol] == nil && !model.CommonCoins[strings.ToLower(coinValue)] {
-				setting.SymbolRelated = model.SettingTurtleRemoved
+		settings.Range(func(symbol, setting interface{}) bool {
+			_, _, coinValue, _ := model.GetFromStandard(market, symbol.(string))
+			if topMarketInfos[symbol.(string)] == nil && !model.CommonCoins[strings.ToLower(coinValue)] {
+				setting.(*model.Setting).SymbolRelated = model.SettingTurtleRemoved
 				model.AppDB.Save(setting)
-				util.Notice(`add setting remove %s`, setting.Symbol)
+				util.Notice(`add setting remove %s`, setting.(*model.Setting).Symbol)
 			}
-		}
+			return true
+		})
 	}
 	return
 }
@@ -239,13 +249,13 @@ func GetMarketSymbols(market string) map[string]bool {
 	return symbols
 }
 
-func GetCoinSettings(function string) map[string][]*model.Setting {
+func GetCoinSettings(function string) *sync.Map {
 	if appSettings == nil {
 		LoadSettings()
 	}
 	value, ok := coinSettings.Load(function)
 	if ok {
-		return value.(map[string][]*model.Setting)
+		return value.(*sync.Map)
 	}
 	return nil
 }

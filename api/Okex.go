@@ -211,7 +211,7 @@ func handleMsgOKEX(channel chan *simplejson.Json, symbol string) {
 		if model.AppMarkets.SetBidAsk(symbol, model.OKEX, bidAsk) {
 			funcHandlers := GetFunctions(model.OKEX, symbol)
 			if funcHandlers != nil {
-				funcHandlers.Range(func(function, value any) bool {
+				funcHandlers.Range(func(function, value interface{}) bool {
 					setting := GetSetting(function.(string), model.OKEX, symbol)
 					if setting != nil {
 						go value.(model.CarryHandler)(setting, bidAsk)

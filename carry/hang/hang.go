@@ -163,39 +163,42 @@ func refreshDeal() {
 		year, month, day := utcTime.Date()
 		dateStr := fmt.Sprintf(`%d-%d-%d`, year, month, day)
 		coinSettings := api.GetCoinSettings(model.FunctionHang)
-		for _, settings := range coinSettings {
-			for _, setting := range settings {
-				var deal, usd, usdCoin float64
-				side := ``
-				model.AppDB.Table(`orders`).Select(`sum(deal_amount*deal_price)`).Where(
-					"market= ? and symbol= ? and refresh_type= ? and status=? and order_time>?",
-					setting.Market, setting.Symbol, model.FunctionHang, model.CarryStatusSuccess, dateStr).First(&deal)
-				dealInU.Store(setting.Market+`_`+setting.Symbol+`_`+dateStr, deal)
-				accounts := api.GetAccounts(0)
-				if accounts != nil && len(accounts) > 0 && accounts[setting.Market] != nil {
-					account := accounts[setting.Market]
-					success, balances, _, _ := api.GetBalances(account.Key, account.Secret, setting.Market)
-					if success && balances != nil {
-						_, _, coin, _ := model.GetFromStandard(setting.Market, setting.Symbol)
-						for _, balance := range balances {
-							if strings.EqualFold(balance.Coin, `usd`) || strings.EqualFold(balance.Coin, `usdt`) {
-								usd += balance.Amount
-							} else if balance.Coin == coin {
-								_, price := model.AppMarkets.GetPriceForce(setting.Symbol, setting.Market, api.GetMarkets())
-								usdCoin = balance.Amount * price
+		if coinSettings != nil {
+			coinSettings.Range(func(key, value interface{}) bool {
+				for _, setting := range value.([]*model.Setting) {
+					var deal, usd, usdCoin float64
+					side := ``
+					model.AppDB.Table(`orders`).Select(`sum(deal_amount*deal_price)`).Where(
+						"market= ? and symbol= ? and refresh_type= ? and status=? and order_time>?",
+						setting.Market, setting.Symbol, model.FunctionHang, model.CarryStatusSuccess, dateStr).First(&deal)
+					dealInU.Store(setting.Market+`_`+setting.Symbol+`_`+dateStr, deal)
+					accounts := api.GetAccounts(0)
+					if accounts != nil && len(accounts) > 0 && accounts[setting.Market] != nil {
+						account := accounts[setting.Market]
+						success, balances, _, _ := api.GetBalances(account.Key, account.Secret, setting.Market)
+						if success && balances != nil {
+							_, _, coin, _ := model.GetFromStandard(setting.Market, setting.Symbol)
+							for _, balance := range balances {
+								if strings.EqualFold(balance.Coin, `usd`) || strings.EqualFold(balance.Coin, `usdt`) {
+									usd += balance.Amount
+								} else if balance.Coin == coin {
+									_, price := model.AppMarkets.GetPriceForce(setting.Symbol, setting.Market, api.GetMarkets())
+									usdCoin = balance.Amount * price
+								}
 							}
+							if usd > usdCoin {
+								side = model.OrderSideBuy
+							} else {
+								side = model.OrderSideSell
+							}
+							hangSide.Store(setting.Market+`_`+setting.Symbol, side)
 						}
-						if usd > usdCoin {
-							side = model.OrderSideBuy
-						} else {
-							side = model.OrderSideSell
-						}
-						hangSide.Store(setting.Market+`_`+setting.Symbol, side)
 					}
+					util.Notice(fmt.Sprintf(`refreshDeal %s %s %s deal %fu account %fu %fcoin in u side %s`,
+						setting.Market, setting.Symbol, dateStr, deal, usd, usdCoin, side))
 				}
-				util.Notice(fmt.Sprintf(`refreshDeal %s %s %s deal %fu account %fu %fcoin in u side %s`,
-					setting.Market, setting.Symbol, dateStr, deal, usd, usdCoin, side))
-			}
+				return true
+			})
 		}
 		checkSetHanging(false)
 		time.Sleep(time.Minute * 10)

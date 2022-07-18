@@ -237,7 +237,7 @@ func handleKucoinPerpWS(futureMsg *kumex.WebSocketDownstreamMessage) {
 
 			funcHandlers := GetFunctions(model.KucoinPerp, symbol)
 			if funcHandlers != nil {
-				funcHandlers.Range(func(function, value any) bool {
+				funcHandlers.Range(func(function, value interface{}) bool {
 					setting := GetSetting(function.(string), model.KucoinPerp, symbol)
 					if setting != nil {
 						go value.(model.CarryHandler)(setting, &bidAsk)

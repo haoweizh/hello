@@ -33,12 +33,15 @@ func createContractMarket(key, secret, market string) (cm *contractMarket) {
 		cm.positions = make(map[string]*model.Position)
 		for _, position := range positions {
 			cm.positions[position.Currency] = position
-			if settings != nil && settings[position.Currency] != nil {
-				_, price := model.AppMarkets.GetPriceForce(position.Currency, market, api.GetMarkets())
-				if price > 0 {
-					cm.contractValueInU += price * math.Abs(position.Holding)
-				} else {
-					cm.contractValueInU += position.EntryPrice * math.Abs(position.Holding)
+			if settings != nil {
+				value, ok := settings.Load(position.Currency)
+				if ok && value != nil {
+					_, price := model.AppMarkets.GetPriceForce(position.Currency, market, api.GetMarkets())
+					if price > 0 {
+						cm.contractValueInU += price * math.Abs(position.Holding)
+					} else {
+						cm.contractValueInU += position.EntryPrice * math.Abs(position.Holding)
+					}
 				}
 			}
 		}
@@ -304,7 +307,6 @@ func ClearCross() {
 
 func equalAccounts() {
 	util.Notice(`...... enter clearing cross all`)
-	coinSettings := api.GetCoinSettings(model.FunctionCross)
 	waitEqual := make(map[int]bool)
 	equalChannel := make(chan int, 1)
 	markets := api.GetMarkets()
@@ -316,7 +318,7 @@ func equalAccounts() {
 			accounts[market] = indexAccounts[market]
 		}
 		waitEqual[i] = true
-		go equalAccount(i, equalChannel, accounts, coinSettings)
+		go equalAccount(i, equalChannel, accounts)
 	}
 	for true {
 		index := <-equalChannel
@@ -334,7 +336,7 @@ func equalAccounts() {
 	util.Notice(`...... exit clearing cross all`)
 }
 
-func equalAccount(i int, equalChan chan int, accounts map[string]*model.Account, coinSettings map[string][]*model.Setting) {
+func equalAccount(i int, equalChan chan int, accounts map[string]*model.Account) {
 	keys := ``
 	for _, account := range accounts {
 		if account.Index != i {
@@ -344,29 +346,33 @@ func equalAccount(i int, equalChan chan int, accounts map[string]*model.Account,
 		contractMarkets.Delete(account.Key)
 		keys += account.Key + `,`
 	}
-	for coin, settings := range coinSettings {
-		equalStatuses := make([]*CarryStatus, len(settings))
-		for j, setting := range settings {
-			account := accounts[setting.Market]
-			if setting == nil || len(coin) == 0 || coin != setting.Symbol[0:len(coin)] || account == nil {
-				util.Notice(`can not equal`)
-				continue
+	value := api.GetCoinSettings(model.FunctionCross)
+	if value != nil {
+		value.Range(func(coin, settings interface{}) bool {
+			equalStatuses := make([]*CarryStatus, len(settings.([]*model.Setting)))
+			for j, setting := range settings.([]*model.Setting) {
+				account := accounts[setting.Market]
+				if setting == nil || len(coin.(string)) == 0 || coin != setting.Symbol[0:len(coin.(string))] || account == nil {
+					util.Notice(`can not equal`)
+					continue
+				}
+				equalStatuses[j] = initStatus(account, setting)
 			}
-			equalStatuses[j] = initStatus(account, setting)
-		}
-		for index := 0; index <= 10; index++ {
-			coinEqual, leftHoldingInU, _ := equalCoin(coin, equalStatuses)
-			if index > 0 {
-				util.Info(`equal coin %s account %d equal %v left hold u %f`, coin, i, coinEqual, leftHoldingInU)
+			for index := 0; index <= 10; index++ {
+				coinEqual, leftHoldingInU, _ := equalCoin(coin.(string), equalStatuses)
+				if index > 0 {
+					util.Info(`equal coin %s account %d equal %v left hold u %f`, coin, i, coinEqual, leftHoldingInU)
+				}
+				if math.Abs(leftHoldingInU) < 10 || coinEqual {
+					break
+				}
+				if index == 10 {
+					api.SendMails(fmt.Sprintf(`fail equal after 10 time %s`, coin),
+						fmt.Sprintf(`%s holding %f`, coin, leftHoldingInU))
+				}
 			}
-			if math.Abs(leftHoldingInU) < 10 || coinEqual {
-				break
-			}
-			if index == 10 {
-				api.SendMails(fmt.Sprintf(`fail equal after 10 time %s`, coin),
-					fmt.Sprintf(`%s holding %f`, coin, leftHoldingInU))
-			}
-		}
+			return true
+		})
 	}
 	lastCrosses = sync.Map{}
 	equalChan <- i
@@ -425,11 +431,13 @@ func equalCoin(coin string, statuses []*CarryStatus) (isEqual bool, holdingInU f
 		if math.Abs(holdingInU) > compTooBig {
 			coinSettings := api.GetCoinSettings(model.FunctionCross)
 			if coinSettings != nil {
-				settings := coinSettings[coin]
-				for _, setting := range settings {
-					setting.Valid = false
-					util.Notice(fmt.Sprintf(`too big comp %s %s %f %f %s`,
-						setting.Market, setting.Symbol, holdingInU, holding, holdStr))
+				value, _ := coinSettings.Load(coin)
+				if value != nil {
+					for _, setting := range value.([]*model.Setting) {
+						setting.Valid = false
+						util.Notice(fmt.Sprintf(`too big comp %s %s %f %f %s`,
+							setting.Market, setting.Symbol, holdingInU, holding, holdStr))
+					}
 				}
 			}
 			api.SendMails(`too big equal`, fmt.Sprintf(`%s holding in u %f`, coin, holdingInU))
@@ -588,7 +596,10 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 	if coinSettings == nil {
 		settings = nil
 	} else {
-		settings = coinSettings[setting.Coin]
+		value, _ := coinSettings.Load(setting.Coin)
+		if value != nil {
+			settings = value.([]*model.Setting)
+		}
 	}
 	maintaining, ok := model.ChannelMaintaining.Load(setting.Market)
 	if tick == nil || tick.Asks == nil || tick.Bids == nil || setting == nil || (ok && maintaining.(bool)) ||
