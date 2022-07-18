@@ -27,7 +27,7 @@ func ParameterServe() {
 	_ = router.SetTrustedProxies(nil)
 	router.LoadHTMLGlob("templates/*")
 	router.GET("/", GetParameters)
-	router.GET(`refresh`, RefreshParameters)
+	//router.GET(`refresh`, RefreshParameters)
 	router.GET(`pw`, GetCode)
 	router.GET(`cross`, crossPage)
 	router.GET(`hold`, holdPage)
@@ -333,15 +333,15 @@ func GetParameters(c *gin.Context) {
 	c.String(http.StatusOK, msg)
 }
 
-func RefreshParameters(c *gin.Context) {
-	util.Notice(`controller refreshing`)
-	api.LoadSettings()
-	for _, market := range api.GetMarkets() {
-		channels, _ := model.AppMarkets.WsDepth.Load(market)
-		if channels != nil {
-			carry.ResetChannels(market, channels.([]chan struct{}))
-		}
-	}
-	api.InitMarketInfos()
-	c.String(http.StatusOK, model.AppConfig.ToString())
-}
+//func RefreshParameters(c *gin.Context) {
+//	util.Notice(`controller refreshing`)
+//	api.LoadSettings()
+//	for _, market := range api.GetMarkets() {
+//		channels, _ := model.AppMarkets.WsDepth.Load(market)
+//		if channels != nil {
+//			carry.ResetChannels(market, channels.([]chan struct{}))
+//		}
+//	}
+//	api.InitMarketInfos()
+//	c.String(http.StatusOK, model.AppConfig.ToString())
+//}
