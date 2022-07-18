@@ -956,6 +956,7 @@ func placeStatus(status *CarryStatus, price float64, amount float64) {
 			util.Notice(fmt.Sprintf(`warning no balance %s %s %s`,
 				status.account.Key, status.market, status.symbol))
 			balance = &model.Balance{Amount: amount, UsdValue: amount * price, Market: status.market, Coin: status.setting.Coin}
+			valueSpot.(*spotMarket).balances[status.symbol] = balance
 		} else {
 			balance.Amount += amount
 			balance.UsdValue = balance.Amount * price
@@ -977,6 +978,7 @@ func placeStatus(status *CarryStatus, price float64, amount float64) {
 		originFreeAbs := 0.0
 		if position == nil {
 			position = &model.Position{Holding: amount, EntryPrice: price, Market: status.market, Currency: status.setting.Symbol}
+			valueContract.(*contractMarket).positions[status.symbol] = position
 		} else {
 			originFreeAbs = math.Abs(position.Holding)
 			position.Holding += amount
