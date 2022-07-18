@@ -141,6 +141,7 @@ func prepareSettings() {
 			settingArray = make([]*model.Setting, 0)
 		}
 		settingArray = append(settingArray.([]*model.Setting), setting)
+		util.Notice(fmt.Sprintf(`add setting array %s %s %d`, setting.Market, setting.Symbol, len(settingArray.([]*model.Setting))))
 		settings.Store(setting.Coin, settingArray)
 		coinSettings.Store(setting.Function, settings)
 
