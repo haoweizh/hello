@@ -17,7 +17,7 @@ var coinSettings *sync.Map   // function / *sync.Map:map[coin][]*model.Setting
 var appSettings []model.Setting
 var appMarkets []string
 var crossLen int
-var loadLock sync.Mutex
+var settingLoading bool
 
 func GetSettingCoins(function, market string) (coins map[string]bool) {
 	handlerInitialized := false
@@ -235,12 +235,14 @@ func handleSettings() (handled bool) {
 }
 
 func LoadSettings() {
-	loadLock.Lock()
-	defer loadLock.Unlock()
+	if settingLoading {
+		return
+	}
 	prepareSettings()
 	if handleSettings() {
 		prepareSettings()
 	}
+	settingLoading = false
 	util.Notice(`finish load settings`)
 }
 
