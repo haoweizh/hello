@@ -962,6 +962,7 @@ func placeStatus(status *CarryStatus, price float64, amount float64) {
 	}
 	sm := valueSpot.(*spotMarket)
 	cm := valueContract.(*contractMarket)
+	util.Notice(`test matic status %v`, status)
 	if status.isSpot {
 		balance := sm.balances[status.symbol]
 		if balance == nil {
