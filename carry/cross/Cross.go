@@ -124,7 +124,8 @@ func createFromPosition(account *model.Account, setting *model.Setting, valueLim
 		valueInUsd = math.Abs(carryStatus.Holding) * price
 		carryStatus.RateInAll = valueInUsd / cm.accountValueInU
 		if setting.Symbol == `MATIC_PERP` {
-			util.Notice(`test matic set rate rate %f = %f * %f / %f`, carryStatus.RateInAll, cm.positions[setting.Symbol].Holding, price, cm.accountValueInU)
+			util.Notice(`test matic set rate rate %s %f = %f * %f / %f`,
+				setting.Market, carryStatus.RateInAll, cm.positions[setting.Symbol].Holding, price, cm.accountValueInU)
 		}
 	} else if absentRevert {
 		doRevert = true
@@ -994,7 +995,7 @@ func placeStatus(status *CarryStatus, price float64, amount float64) {
 			position.EntryPrice = price
 		}
 		if status.symbol == `MATIC_PERP` {
-			util.Notice(`test matic position change %f %f`, position.Holding, amount)
+			util.Notice(`test matic position change %s %f %f`, status.market, position.Holding, amount)
 		}
 		changeU := (originFreeAbs - math.Abs(position.Holding)) * price
 		cm.collateralsAvailable += changeU * 0.2
