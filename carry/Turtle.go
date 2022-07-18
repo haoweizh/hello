@@ -274,6 +274,8 @@ var ProcessTurtle = func(setting *model.Setting, tick *model.BidAsk) {
 		return
 	}
 	if setting.Chance == 0 && !turtleClosed[setting.Market][setting.Symbol] { // 开初始仓
+		priceLong = math.Max(priceLong, tick.Asks[0].Price*1.01)
+		priceShort = math.Min(priceShort, tick.Bids[0].Price*0.99)
 		placeTurtleOrders(account.Key, account.Secret, turtleData, setting, currentN, priceShort, priceLong)
 		if turtleData.breakLong && turtleData.waitBreakLong {
 			handleBreak(account.Key, account.Secret, setting, turtleData, model.OrderSideBuy)
@@ -316,6 +318,8 @@ var ProcessTurtle = func(setting *model.Setting, tick *model.BidAsk) {
 				priceShort = turtleData.lowDays10
 			}
 		}
+		priceLong = math.Max(priceLong, tick.Asks[0].Price*1.01)
+		priceShort = math.Min(priceShort, tick.Bids[0].Price*0.99)
 		placeTurtleOrders(account.Key, account.Secret, turtleData, setting, currentN, priceShort, priceLong)
 		// 加仓一个单位
 		if turtleData.breakLong && turtleData.waitBreakLong {
@@ -360,6 +364,8 @@ var ProcessTurtle = func(setting *model.Setting, tick *model.BidAsk) {
 				priceLong = turtleData.highDays10
 			}
 		}
+		priceLong = math.Max(priceLong, tick.Asks[0].Price*1.01)
+		priceShort = math.Min(priceShort, tick.Bids[0].Price*0.99)
 		placeTurtleOrders(account.Key, account.Secret, turtleData, setting, currentN, priceShort, priceLong)
 		// 加仓一个单位
 		if turtleData.breakShort && turtleData.waitBreakShort {

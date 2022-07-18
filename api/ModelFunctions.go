@@ -114,8 +114,8 @@ func prepareSettings() {
 	util.Notice(`start to load settings %d`, len(appSettings))
 	for i := 0; i < len(appSettings); i++ {
 		setting := &appSettings[i]
-		util.Notice(fmt.Sprintf(`load setting %s %s %s %v`,
-			setting.Market, setting.Symbol, setting.Function, setting.Valid))
+		//util.Notice(fmt.Sprintf(`load setting %s %s %s %v`,
+		//	setting.Market, setting.Symbol, setting.Function, setting.Valid))
 		marketMap[setting.Market] = true
 		value, ok := util.LoadSyncMap(handlers, setting.Market, setting.Symbol)
 		var functions *sync.Map
