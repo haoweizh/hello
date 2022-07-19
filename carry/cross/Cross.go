@@ -269,18 +269,18 @@ func initStatus(account *model.Account, setting *model.Setting, absentRevert boo
 	}
 	status.TradeLineBuy = math.Max(standardScoreBuy*(0.5+jumpBuy*status.RateInAll), lowestScore) + fundingRate
 	status.TradeLineSell = math.Max(standardScoreSell*(0.5+jumpSell*status.RateInAll), lowestScore) - fundingRate
-	if status.setting.Coin == `MATIC` {
-		if account.Index == 0 {
-			util.Notice(fmt.Sprintf(`%s %s bline %f = max(%f*(0.5+%f*rate %f)+funding %f hold %f`,
-				status.setting.Market, status.setting.Symbol, status.TradeLineBuy, standardScoreBuy, jumpBuy,
-				status.RateInAll, fundingRate, status.Holding))
-			util.Notice(fmt.Sprintf(`%s %s sline %f = max(%f*(0.5+%f*rate %f)-funding %f hold %f`,
-				status.setting.Market, status.setting.Symbol, status.TradeLineSell, standardScoreSell, jumpSell,
-				status.RateInAll, fundingRate, status.Holding))
-			//status.TradeLineBuy = 1
-			//status.TradeLineSell = 1
-		}
-	}
+	//if status.setting.Coin == `MATIC` {
+	//	if account.Index == 0 {
+	//		util.Notice(fmt.Sprintf(`%s %s bline %f = max(%f*(0.5+%f*rate %f)+funding %f hold %f`,
+	//			status.setting.Market, status.setting.Symbol, status.TradeLineBuy, standardScoreBuy, jumpBuy,
+	//			status.RateInAll, fundingRate, status.Holding))
+	//		util.Notice(fmt.Sprintf(`%s %s sline %f = max(%f*(0.5+%f*rate %f)-funding %f hold %f`,
+	//			status.setting.Market, status.setting.Symbol, status.TradeLineSell, standardScoreSell, jumpSell,
+	//			status.RateInAll, fundingRate, status.Holding))
+	//		//status.TradeLineBuy = 1
+	//		//status.TradeLineSell = 1
+	//	}
+	//}
 	status.TradeLineBuy *= account.CarryRate
 	status.TradeLineSell *= account.CarryRate
 	if doRevert || account.CarryClose {
