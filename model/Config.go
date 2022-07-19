@@ -58,7 +58,7 @@ var marketAccounts sync.Map           //market - []*Account
 func (config *Config) GetIndexFromKey(key string) (index int) {
 	for _, accounts := range AppAccounts {
 		for _, account := range accounts {
-			if account.Key == key {
+			if account != nil && account.Key == key {
 				return account.Index
 			}
 		}
