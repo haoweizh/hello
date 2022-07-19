@@ -66,7 +66,7 @@ var AppConfig *Config
 var AppMarkets = &Markets{}
 var ChannelMaintaining sync.Map // market - bool
 var DialectTail = map[string]map[string]string{
-	MarketTypeSpot: {Gate: `_USDT`, Ftx: `/USD`, OKEX: `-USDT`, BybitSpot: `USDT`, BinanceSpot: `USDT`, KucoinSpot: `USDT`},
+	MarketTypeSpot: {Gate: `_USDT`, Ftx: `/USD`, OKEX: `-USDT`, BybitSpot: `USDT`, BinanceSpot: `USDT`, KucoinSpot: `-USDT`},
 	MarketTypePerp: {Gate: `_USDT`, Ftx: `-PERP`, OKEX: `-USDT-SWAP`, BybitPerp: `USDT`, BinancePerp: `USDT`, Mexc: `_USDT`, KucoinPerp: `USDTM`}}
 var UniStandardTail = map[string]string{MarketTypeSpot: `_USDT`, MarketTypePerp: `_PERP`}
 

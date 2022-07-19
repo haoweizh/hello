@@ -117,7 +117,7 @@ func WsDepthServeKucoinPerp() (channels []chan struct{}, err error) {
 	for symbol := range symbols {
 		if strings.LastIndex(symbol, model.UniStandardTail[model.MarketTypePerp]) == len(symbol)-len(model.UniStandardTail[model.MarketTypePerp]) &&
 			len(symbol)-len(model.UniStandardTail[model.MarketTypePerp]) > 0 {
-			topic := "/contractMarket/tickerV2:" + strings.Split(symbol, "-")[0] + model.DialectTail[model.MarketTypePerp][model.KucoinPerp]
+			topic := "/contractMarket/tickerV2:" + strings.Split(symbol, "_")[0] + model.DialectTail[model.MarketTypePerp][model.KucoinPerp]
 			futureSubscribes = append(futureSubscribes, kumex.NewSubscribeMessage(topic, false))
 		}
 		//if strings.Contains(symbol, model.GetPerpTail(model.KucoinPerp)) {
@@ -144,7 +144,7 @@ func WsDepthServeKucoinPerp() (channels []chan struct{}, err error) {
 		futureStopC := make(chan struct{}, 10)
 		go handlerKucoinFutureWS(futureChannelError, futureMsg, channel, futureStopC)
 		channels = append(channels, futureStopC)
-		//time.Sleep(15*time.Second)
+		time.Sleep(1 * time.Second)
 	}
 	return channels, err
 }

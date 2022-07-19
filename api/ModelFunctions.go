@@ -343,6 +343,14 @@ func GetAccounts(index int) (accounts map[string]*model.Account) {
 	for i, account := range tempAccounts {
 		model.AppAccounts[i][model.Kucoin] = account
 	}
+	tempAccounts = model.AppConfig.GetAccounts(model.KucoinSpot)
+	for i, account := range tempAccounts {
+		model.AppAccounts[i][model.KucoinSpot] = account
+	}
+	tempAccounts = model.AppConfig.GetAccounts(model.KucoinPerp)
+	for i, account := range tempAccounts {
+		model.AppAccounts[i][model.KucoinPerp] = account
+	}
 	tempAccounts = model.AppConfig.GetAccounts(model.Mexc)
 	for i, account := range tempAccounts {
 		model.AppAccounts[i][model.Mexc] = account
