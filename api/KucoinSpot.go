@@ -8,6 +8,7 @@ import (
 	"hello/util"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -36,8 +37,8 @@ func getMarketsKucoinSpot(key, secret string) (marketInfos map[string]*model.Mar
 func appendRelatedMarketsKucoin(key string, marketInfos map[string]*model.MarketInfo) {
 	client := kucoinRelatedClient("", "", "")
 	resp, err := client.Symbols("")
-	if err != nil {
-		util.SocketInfo(fmt.Sprintf("key %s function: %s kucoin API error", key, "appendRelatedMarketsKucoin"))
+	if err != nil || resp.Code != "200000" {
+		util.SocketInfo(fmt.Sprintf("key %s function: %s kucoin API error, response:%v", key, "appendRelatedMarketsKucoin", resp))
 		return
 	}
 	symbols := kucoin.SymbolsModel{}
@@ -180,8 +181,8 @@ func handleKucoinSpotWS(relatedMsg *kucoin.WebSocketDownstreamMessage) {
 func getBalanceKucoinSpot(key string, secret string) (success bool, balances []*model.Balance) {
 	if model.AppConfig.KucoinSpot {
 		accountResp, err := kucoinRelatedClient("", "", "").Accounts("", "trade")
-		if err != nil {
-			util.SocketInfo(fmt.Sprintf("fail to refresh spot balance kucoin, err:%s", err))
+		if err != nil || accountResp.Code != "200000" {
+			util.SocketInfo(fmt.Sprintf("fail to refresh spot balance kucoin, err:%s, response:%v", err, accountResp))
 			time.Sleep(time.Second * 2)
 			return getBalanceKucoinSpot(key, secret)
 		}
@@ -205,8 +206,8 @@ func getBalanceKucoinSpot(key string, secret string) (success bool, balances []*
 		}
 	} else {
 		accountResp, err := kucoinRelatedClient("", "", "").MarginAccount()
-		if err != nil {
-			util.SocketInfo(fmt.Sprintf("fail to refresh margin balance kucoin, err:%s", err))
+		if err != nil || accountResp.Code != "200000" {
+			util.SocketInfo(fmt.Sprintf("fail to refresh margin balance kucoin, err:%s, response:%v", err, accountResp))
 			time.Sleep(time.Second * 2)
 			return getBalanceKucoinSpot(key, secret)
 		}
@@ -237,7 +238,7 @@ func getBalanceKucoinSpot(key string, secret string) (success bool, balances []*
 }
 
 func cancelOrdersKucoinSpot(symbol string) (result bool) {
-	success, marketType, _, _ := model.GetFromStandard(model.KucoinSpot, symbol)
+	success, marketType, _, dialectSymbol := model.GetFromStandard(model.KucoinSpot, symbol)
 	if success && marketType == model.MarketTypeSpot {
 		param := map[string]string{}
 		if model.AppConfig.KucoinSpot {
@@ -245,11 +246,10 @@ func cancelOrdersKucoinSpot(symbol string) (result bool) {
 		} else {
 			param["tradeType"] = "MARGIN_TRADE"
 		}
-		param["symbol"] = symbol
-		req := kucoin.NewRequest(http.MethodDelete, "/api/v1/orders", param)
-		apiResponse, err := kucoinRelatedClient("", "", "").Call(req)
-		if err != nil {
-			util.SocketInfo(fmt.Sprintf("function: %s fail to cancel related orders kucoin, err:%s", "cancelOrdersKucoin", err))
+		param["symbol"] = dialectSymbol
+		apiResponse, err := kucoinRelatedClient("", "", "").CancelOrders(param)
+		if err != nil || apiResponse.Code != "200000" {
+			util.SocketInfo(fmt.Sprintf("function: %s fail to cancel related orders kucoin, err:%s, response:%v", "cancelOrdersKucoin", err, apiResponse))
 			return false
 		}
 		orders := &kucoin.CancelOrderResultModel{}
@@ -291,21 +291,21 @@ type CreateMarginOrderModel struct {
 }
 
 func placeOrderKucoinSpot(order *model.Order, orderSide, orderType, symbol string, price, amount float64) {
-	success, marketType, _, _ := model.GetFromStandard(model.KucoinSpot, symbol)
+	success, marketType, _, dialectSymbol := model.GetFromStandard(model.KucoinSpot, symbol)
 	if success && marketType == model.MarketTypeSpot {
 		if model.AppConfig.KucoinSpot {
 			createOrder := &kucoin.CreateOrderModel{}
 			createOrder.ClientOid = "r" + strconv.FormatInt(time.Now().UnixNano(), 10)
-			createOrder.Symbol = symbol
+			createOrder.Symbol = dialectSymbol
 			createOrder.Side = orderSide
 			createOrder.Type = orderType
 			priceSpot, decimalSpot := model.FormatPrice(model.KucoinSpot, symbol, orderSide, price)
 			createOrder.Price = util.CutTailZero(strconv.FormatFloat(priceSpot, 'f', decimalSpot, 64))
-			createOrder.Size = util.CutTailZero(fmt.Sprintf(`%f`, model.GetAmountInMarket(model.Kucoin, symbol, amount, price)))
+			createOrder.Size = util.CutTailZero(fmt.Sprintf(`%f`, model.GetAmountInMarket(model.KucoinSpot, symbol, amount, price)))
 			util.SocketInfo(fmt.Sprintf(`create spot order request: %v`, createOrder))
 			spotOrderResponse, err := kucoinRelatedClient("", "", "").CreateOrder(createOrder)
-			if err != nil {
-				util.SocketInfo(fmt.Sprintf("function: %s fail to create spot order kucoin, err:%s", "placeOrderKucoin", err))
+			if err != nil || spotOrderResponse.Code != "200000" {
+				util.SocketInfo(fmt.Sprintf("function: %s fail to create spot order kucoin, err:%s, response:%v", "placeOrderKucoin", err, spotOrderResponse))
 				order.Status = model.CarryStatusFail
 				order.OrderId = ``
 				return
@@ -332,7 +332,7 @@ func placeOrderKucoinSpot(order *model.Order, orderSide, orderType, symbol strin
 		} else {
 			createOrder := &CreateMarginOrderModel{}
 			createOrder.ClientOid = "r" + strconv.FormatInt(time.Now().UnixNano(), 10)
-			createOrder.Symbol = symbol
+			createOrder.Symbol = dialectSymbol
 			createOrder.Side = orderSide
 			createOrder.Type = orderType
 			createOrder.MarginMode = "cross"
@@ -342,9 +342,10 @@ func placeOrderKucoinSpot(order *model.Order, orderSide, orderType, symbol strin
 			createOrder.Size = util.CutTailZero(fmt.Sprintf(`%f`, model.GetAmountInMarket(model.Kucoin, symbol, amount, price)))
 			util.SocketInfo(fmt.Sprintf(`create margin order request: %v`, createOrder))
 			req := kucoin.NewRequest(http.MethodPost, "/api/v1/margin/order", createOrder)
+			//todo CreateMarginOrder
 			marginOrderResp, err := kucoinRelatedClient("", "", "").Call(req)
-			if err != nil {
-				util.SocketInfo(fmt.Sprintf("function: %s fail to create margin order kucoin, err:%s", "placeOrderKucoin", err))
+			if err != nil || marginOrderResp.Code != "200000" {
+				util.SocketInfo(fmt.Sprintf("function: %s fail to create margin order kucoin, err:%s, response:%v", "placeOrderKucoin", err, marginOrderResp))
 				order.Status = model.CarryStatusFail
 				order.OrderId = ``
 				return
@@ -370,4 +371,42 @@ func placeOrderKucoinSpot(order *model.Order, orderSide, orderType, symbol strin
 			}
 		}
 	}
+}
+
+func queryOrderKucoinSpot(key, secret, symbol string, orderId string) (order *model.Order) {
+	orderResponse, respErr := kucoinRelatedClient("", "", "").Order(orderId)
+	if respErr != nil || orderResponse.Code != "200000" {
+		util.SocketInfo(fmt.Sprintf("function: %s fail to query kucoin spot order , err:%s, response:%v", "queryOrderKucoinSpot", respErr, orderResponse))
+		return
+	}
+	orderResult := &kucoin.OrderModel{}
+	readErr := orderResponse.ReadData(orderResult)
+	if readErr != nil {
+		util.SocketInfo(fmt.Sprintf("function: %s fail to parse query kucoin spot order response , err:%s", "queryOrderKucoinSpot", readErr))
+		return
+	}
+	order = &model.Order{Market: model.KucoinSpot, Status: model.CarryStatusFail}
+	if orderResult != nil {
+		order.OrderId = orderId
+		order.Symbol = symbol
+		order.OrderSide = strings.ToLower(orderResult.Side)
+		order.OrderType = strings.ToLower(orderResult.Type)
+		order.Amount, _ = strconv.ParseFloat(orderResult.Size, 64)
+		order.Price, _ = strconv.ParseFloat(orderResult.Price, 64)
+		order.DealAmount, _ = strconv.ParseFloat(orderResult.DealSize, 64)
+		order.OrderTime = time.Unix(orderResult.CreatedAt, 0)
+		if orderResult.IsActive {
+			order.Status = model.CarryStatusWorking
+		} else {
+			if order.DealAmount > 0 {
+				order.Status = model.CarryStatusSuccess
+			} else {
+				order.Status = model.CarryStatusFail
+			}
+		}
+		if order.DealAmount > 0 && order.DealPrice == 0 {
+			order.DealPrice = order.Price
+		}
+	}
+	return
 }

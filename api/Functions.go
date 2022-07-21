@@ -378,6 +378,10 @@ func QueryOrderById(key, secret, market, symbol, orderType, orderId string) (ord
 	order = &model.Order{
 		OrderId: orderId, Symbol: symbol, Market: market, OrderType: orderType, Status: model.CarryStatusFail}
 	switch market {
+	case model.KucoinSpot:
+		order = queryOrderKucoinSpot(key, secret, symbol, orderId)
+	case model.KucoinPerp:
+		order = queryOrderKucoinPerp(key, secret, symbol, orderId)
 	case model.Gate:
 		queryOrderGate(key, secret, order)
 	case model.OKEX:
