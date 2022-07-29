@@ -217,7 +217,7 @@ func GetDayCandle(key, secret, market, symbol string, timeCandle time.Time) (can
 	candle = keyedCandles[candleKey]
 	if candle == nil {
 		if time.Now().Second() == 0 {
-			util.Notice(fmt.Sprintf(`error: can not get candle %s size %d %v`, candleKey, len(keyedCandles), keyedCandles))
+			util.Notice(fmt.Sprintf(`candle error: can not get candle %s size %d %v`, candleKey, len(keyedCandles), keyedCandles))
 		}
 		return
 	}
