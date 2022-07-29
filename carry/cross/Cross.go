@@ -1033,7 +1033,7 @@ var PostOrderCross = func(order *model.Order, setting *model.Setting) {
 		if account != nil {
 			switch order.Market {
 			case model.OKEX:
-				if InsufficientCodeOKEX[order.ErrCode] {
+				if InsufficientCodeOKEX[order.ErrCode] && setting != nil {
 					util.Notice(`reset %s trade max with %s %s`, order.Market, order.ErrCode, order.AmountType)
 					status, ok := carryStatusMap.Load(fmt.Sprintf(`%s*%s*%s*%s`, setting.Coin, setting.Market, setting.Symbol, account.Key))
 					getMax, maxBuy, maxSell := api.GetTradeMaxOKEX(account.Key, account.Secret, setting.Symbol, 0)

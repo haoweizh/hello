@@ -56,9 +56,10 @@ func GetSettings(function, market string) *sync.Map {
 	})
 	if !handlerInitialized {
 		util.Notice(`load setting GetSettings %s %s`, function, market)
-		if !LoadSettings() {
-			return nil
-		}
+		//if !LoadSettings() {
+		//return nil
+		//}
+		LoadSettings()
 	}
 	value, ok := util.LoadSyncMap(symbolSettings, function, market)
 	if ok {
@@ -115,9 +116,9 @@ func GetFunctions(market, symbol string) *sync.Map {
 const topMarketInfoLen = 15
 
 func prepareSettings() {
-	symbolSettings = &sync.Map{}
-	handlers = &sync.Map{}
-	coinSettings = &sync.Map{}
+	localSymbolSettings := &sync.Map{}
+	localHandlers := &sync.Map{}
+	localCoinSettings := &sync.Map{}
 	appSettings = []model.Setting{}
 	marketMap := make(map[string]bool)
 	model.AppDB.Where(`valid = ?`, true).Find(&appSettings)
@@ -127,7 +128,7 @@ func prepareSettings() {
 		//util.Notice(fmt.Sprintf(`load setting %s %s %s %v`,
 		//	setting.Market, setting.Symbol, setting.Function, setting.Valid))
 		marketMap[setting.Market] = true
-		value, ok := util.LoadSyncMap(handlers, setting.Market, setting.Symbol)
+		value, ok := util.LoadSyncMap(localHandlers, setting.Market, setting.Symbol)
 		var functions *sync.Map
 		if ok {
 			functions = value.(*sync.Map)
@@ -136,10 +137,10 @@ func prepareSettings() {
 			functions = &sync.Map{}
 		}
 		functions.Store(setting.Function, model.HandlerMap[setting.Function])
-		util.StoreSyncMap(handlers, functions, setting.Market, setting.Symbol)
+		util.StoreSyncMap(localHandlers, functions, setting.Market, setting.Symbol)
 
 		var settings *sync.Map
-		value, ok = coinSettings.Load(setting.Function)
+		value, ok = localCoinSettings.Load(setting.Function)
 		if ok {
 			settings = value.(*sync.Map)
 		}
@@ -161,10 +162,10 @@ func prepareSettings() {
 		}
 		//util.Notice(fmt.Sprintf(`add setting array %s %s %d`, setting.Market, setting.Symbol, len(settingArray.([]*model.Setting))))
 		settings.Store(setting.Coin, settingArray)
-		coinSettings.Store(setting.Function, settings)
+		localCoinSettings.Store(setting.Function, settings)
 
 		var functionMarketSettings *sync.Map
-		value, ok = util.LoadSyncMap(symbolSettings, setting.Function, setting.Market)
+		value, ok = util.LoadSyncMap(localSymbolSettings, setting.Function, setting.Market)
 		if ok {
 			functionMarketSettings = value.(*sync.Map)
 		}
@@ -172,14 +173,18 @@ func prepareSettings() {
 			functionMarketSettings = &sync.Map{}
 		}
 		functionMarketSettings.Store(setting.Symbol, setting)
-		util.StoreSyncMap(symbolSettings, functionMarketSettings, setting.Function, setting.Market)
+		util.StoreSyncMap(localSymbolSettings, functionMarketSettings, setting.Function, setting.Market)
 	}
-	appMarkets = make([]string, len(marketMap))
+	localAppMarkets := make([]string, len(marketMap))
 	i := 0
 	for key := range marketMap {
-		appMarkets[i] = key
+		localAppMarkets[i] = key
 		i++
 	}
+	appMarkets = localAppMarkets
+	coinSettings = localCoinSettings
+	handlers = localHandlers
+	symbolSettings = localSymbolSettings
 }
 
 func handleSettings() (handled bool) {
