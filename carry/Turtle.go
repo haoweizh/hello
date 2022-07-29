@@ -253,6 +253,7 @@ var ProcessTurtle = func(setting *model.Setting, tick *model.BidAsk) {
 	account := model.AppConfig.GetAccounts(setting.Market)[0]
 	turtleData := GetTurtleData(account.Key, account.Secret, setting)
 	if turtleData == nil || turtleData.n == 0 || turtleData.amount == 0 {
+		time.Sleep(time.Second * 30)
 		return
 	}
 	duration, _ := time.ParseDuration(`600s`)
