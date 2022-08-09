@@ -117,7 +117,7 @@ func (markets *Markets) SetBidAsk(symbol, marketName string, bidAsk *BidAsk) boo
 		//}
 		oldBidAsk.Store(marketName, bidAsk)
 		if marketName == Ftx && time.Now().Second() == 0 && symbol == `SOS_PERP` {
-			util.Notice(`test sos tick %v`, bidAsk)
+			util.Notice(`test sos tick %f`, bidAsk.Bids[0].Price)
 		}
 		if last != nil {
 			go AppMetric.AddTick(marketName, symbol, util.GetNow(), last.(*BidAsk), bidAsk)

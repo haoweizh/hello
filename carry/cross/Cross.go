@@ -442,7 +442,7 @@ func equalCoin(coin string, statuses []*CarryStatus) (isEqual bool, holdingInU f
 		asks = append(asks, model.Tick{Market: tick.Asks[0].Market, Symbol: tick.Asks[0].Symbol,
 			Amount: tick.Asks[0].Amount, Price: tick.Asks[0].Price * (1 + rate)})
 		if coin == `SOS` {
-			util.Notice(`test price and rate %s %s %f %f`, tick.Bids[0].Market, tick.Bids[0].Symbol, tick.Bids[0].Price, rate)
+			util.Notice(`test price and rate %s %s %f %v`, tick.Bids[0].Market, tick.Bids[0].Symbol, tick.Bids[0].Price, tick)
 		}
 		bidStatus[fmt.Sprintf(`%s_%s`, status.market, status.symbol)] = status
 		askStatus[fmt.Sprintf(`%s_%s`, status.market, status.symbol)] = status
