@@ -214,6 +214,9 @@ func initStatus(account *model.Account, setting *model.Setting, absentRevert boo
 			go api.SendMails(fmt.Sprintf(`%s %f`, fundingKey, fundingRate), ``)
 		}
 	}
+	if setting.Chance < 0 {
+		doRevert = true
+	}
 	if status == nil {
 		return
 	}
