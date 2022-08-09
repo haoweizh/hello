@@ -242,6 +242,10 @@ func initStatus(account *model.Account, setting *model.Setting, absentRevert boo
 	status.LimitSell = math.Min(status.LimitSell, status.AvailableSell)
 	standardScoreBuy := standardScoreOpen
 	standardScoreSell := standardScoreOpen
+	if setting.OpenShortMargin != 0 {
+		standardScoreBuy = setting.OpenShortMargin
+		standardScoreSell = setting.OpenShortMargin
+	}
 	getTick, ticks := model.AppMarkets.GetBidAsk(setting.Symbol, setting.Market)
 	price := 0.0
 	if getTick {
@@ -261,13 +265,25 @@ func initStatus(account *model.Account, setting *model.Setting, absentRevert boo
 		jumpBuy = jumpClose
 		jumpSell = jumpOpen
 		standardScoreBuy = standardScoreClose
+		if setting.CloseShortMargin != 0 {
+			standardScoreBuy = setting.CloseShortMargin
+		}
 		standardScoreSell = standardScoreOpen
+		if setting.OpenShortMargin != 0 {
+			standardScoreSell = setting.OpenShortMargin
+		}
 		status.LimitBuy = math.Min(status.LimitBuy, math.Abs(status.Holding))
 	} else if status.Holding*price > 100 {
 		jumpBuy = jumpOpen
 		jumpSell = jumpClose
 		standardScoreBuy = standardScoreOpen
 		standardScoreSell = standardScoreClose
+		if setting.OpenShortMargin != 0 {
+			standardScoreBuy = setting.OpenShortMargin
+		}
+		if setting.CloseShortMargin != 0 {
+			standardScoreSell = setting.CloseShortMargin
+		}
 		status.LimitSell = math.Min(status.LimitSell, status.Holding)
 	}
 	status.TradeLineBuy = math.Max(standardScoreBuy*(0.5+jumpBuy*status.RateInAll), lowestScore) + fundingRate
@@ -598,6 +614,8 @@ func equalCoin(coin string, statuses []*CarryStatus) (isEqual bool, holdingInU f
 	return isEqual, holdingInU, ``
 }
 
+// ProcessCross setting.Chance<0时该币种只关仓
+// setting.OpenShortMargin CloseShortMargin不等于0时作为开关舱标准价格，否则使用通用价格
 var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 	if !doCross && model.AppConfig.Handle == `1` {
 		go ClearCross()
