@@ -441,9 +441,6 @@ func equalCoin(coin string, statuses []*CarryStatus) (isEqual bool, holdingInU f
 			Amount: tick.Bids[0].Amount, Price: tick.Bids[0].Price * (1 + rate)})
 		asks = append(asks, model.Tick{Market: tick.Asks[0].Market, Symbol: tick.Asks[0].Symbol,
 			Amount: tick.Asks[0].Amount, Price: tick.Asks[0].Price * (1 + rate)})
-		if coin == `SOS` {
-			util.Notice(`test price and rate %s %s %f %v`, tick.Bids[0].Market, tick.Bids[0].Symbol, tick.Bids[0].Price, tick)
-		}
 		bidStatus[fmt.Sprintf(`%s_%s`, status.market, status.symbol)] = status
 		askStatus[fmt.Sprintf(`%s_%s`, status.market, status.symbol)] = status
 		if price == 0 {
@@ -504,7 +501,7 @@ func equalCoin(coin string, statuses []*CarryStatus) (isEqual bool, holdingInU f
 				equalStatus = status
 			} else {
 				checkAmount = model.GetAmountInMarket(status.market, status.symbol, status.AvailableSell/2, price)
-				if checkAmount > 0 && status.AvailableSell*price > 100 {
+				if checkAmount > 0 && status.AvailableSell*price > 10 {
 					equalStatus = status
 					holding = status.AvailableSell
 				} else {
@@ -540,7 +537,7 @@ func equalCoin(coin string, statuses []*CarryStatus) (isEqual bool, holdingInU f
 				equalStatus = status
 			} else if !math.IsNaN(status.AvailableBuy) {
 				checkAmount = model.GetAmountInMarket(status.market, status.symbol, status.AvailableBuy/2, price)
-				if checkAmount > 0 && status.AvailableBuy*price > 100 {
+				if checkAmount > 0 && status.AvailableBuy*price > 10 {
 					equalStatus = status
 					holding = status.AvailableBuy
 				} else {
