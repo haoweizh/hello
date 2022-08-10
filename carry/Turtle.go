@@ -211,19 +211,19 @@ func GetTurtleData(key, secret string, setting *model.Setting) (turtleData *Turt
 	return
 }
 
-func checkTurtleOrders(key, secret, market, symbol string, turtleData *TurtleData) {
-	orders := api.QueryOpenTriggerOrders(key, secret, market, symbol)
+func checkTurtleOrders(key, secret string, setting *model.Setting, currentN float64, turtleData *TurtleData) {
+	orders := api.QueryOpenTriggerOrders(key, secret, setting.Market, setting.Symbol)
 	if orders == nil {
 		return
 	}
 	for _, order := range orders {
-		if (turtleData.orderLong != nil && turtleData.orderLong.OrderId == order.OrderId) ||
-			(turtleData.orderShort != nil && turtleData.orderShort.OrderId == order.OrderId) {
+		if (turtleData.orderLong != nil && turtleData.orderLong.OrderId == order.OrderId && currentN < setting.AmountLimit) ||
+			(turtleData.orderShort != nil && turtleData.orderShort.OrderId == order.OrderId && currentN > -1*setting.AmountLimit) {
 			continue
 		}
-		result := api.MustCancel(key, secret, market, symbol, order.OrderType, order.OrderId, true)
+		result := api.MustCancel(key, secret, setting.Market, setting.Symbol, order.OrderType, order.OrderId, true)
 		util.Notice(`cancel extra turtle order %s %s %s %s return %v`,
-			market, symbol, order.OrderType, order.OrderId, result)
+			setting.Market, setting.Symbol, order.OrderType, order.OrderId, result)
 	}
 }
 
@@ -258,12 +258,12 @@ var ProcessTurtle = func(setting *model.Setting, tick *model.BidAsk) {
 	}
 	duration, _ := time.ParseDuration(`600s`)
 	lastCheck := checkTurtleOrderTime[setting.Market+`_`+setting.Symbol]
+	currentN := api.GetCurrentN(setting)
 	if lastCheck.Add(duration).Before(time.Now()) {
 		checkTurtleOrderTime[setting.Market+`_`+setting.Symbol] = time.Now()
-		checkTurtleOrders(account.Key, account.Secret, setting.Market, setting.Symbol, turtleData)
+		checkTurtleOrders(account.Key, account.Secret, setting, float64(currentN), turtleData)
 		return
 	}
-	currentN := api.GetCurrentN(setting)
 	showMsg := fmt.Sprintf("%s_%s_%s", model.FunctionTurtle, setting.Market, setting.Symbol)
 	model.SetCarryInfo(account.Key, showMsg, fmt.Sprintf("[海龟参数]%s %s 次数限制:%f 当前已经持仓数量:%f 上一次开仓的价格:%f "+
 		"20日:%f-%f 10日:%f-%f n:%f 数量:%f %s 持仓数/限制:%d/%f 总持仓数%d bid-ask %f %f 当日有平仓：%v",
