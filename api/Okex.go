@@ -707,13 +707,16 @@ func getMarketsOKEX(key, secret string) (marketInfos map[string]*model.MarketInf
 	instTypes := []string{`SPOT`, `SWAP`}
 	for _, instType := range instTypes {
 		param := map[string]interface{}{`instType`: instType}
-		responseBody, _ := sendSignRequestOKEX(key, secret, http.MethodGet, `/api/v5/public/instruments`, param, nil)
-		resultJson, err := util.NewJSON(responseBody)
-		if err != nil || resultJson == nil || resultJson.Get(`code`).MustString() != `0` {
+		basicBody, _ := sendSignRequestOKEX(key, secret, http.MethodGet, `/api/v5/public/instruments`, param, nil)
+		basicJson, err := util.NewJSON(basicBody)
+		marketBody, _ := sendSignRequestOKEX(key, secret, http.MethodGet, `/api/v5/market/tickers`, param, nil)
+		marketJson, errMarket := util.NewJSON(marketBody)
+		if err != nil || errMarket != nil || basicJson == nil || marketJson == nil ||
+			basicJson.Get(`code`).MustString() != `0` || marketJson.Get(`code`).MustString() != `0` {
 			time.Sleep(time.Second * 2)
 			return getMarketsOKEX(key, secret)
 		} else {
-			for _, info := range resultJson.Get(`data`).MustArray() {
+			for _, info := range basicJson.Get(`data`).MustArray() {
 				value := info.(map[string]interface{})
 				if value[`instId`] != nil {
 					marketInfo := &model.MarketInfo{Market: model.OKEX}
@@ -746,6 +749,28 @@ func getMarketsOKEX(key, secret string) (marketInfos map[string]*model.MarketInf
 						marketInfo.CTCurrency = value[`ctValCcy`].(string)
 					}
 					marketInfos[marketInfo.Name] = marketInfo
+				}
+			}
+			for _, info := range marketJson.Get(`data`).MustArray() {
+				value := info.(map[string]interface{})
+				if value[`instId`] != nil {
+					success, marketType, coin := model.GetCoinFromDialect(model.OKEX, value[`instId`].(string))
+					if !success {
+						continue
+					}
+					name := coin + model.UniStandardTail[marketType]
+					if marketInfos[name] == nil {
+						continue
+					}
+					if value[`volCcy24h`] != nil && value[`last`] != nil {
+						if marketType == model.MarketTypeSpot {
+							marketInfos[name].TradeAmount, _ = strconv.ParseFloat(value[`volCcy24h`].(string), 64)
+						} else if marketType == model.MarketTypePerp {
+							vol, _ := strconv.ParseFloat(value[`volCcy24h`].(string), 64)
+							lastPrice, _ := strconv.ParseFloat(value[`last`].(string), 64)
+							marketInfos[name].TradeAmount = vol * lastPrice
+						}
+					}
 				}
 			}
 		}
