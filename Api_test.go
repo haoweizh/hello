@@ -13,6 +13,7 @@ import (
 	"math"
 	"net/http"
 	"net/url"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -177,14 +178,18 @@ func Test_WsAndOrderApi(t *testing.T) {
 func Test_initTurtleN(t *testing.T) {
 	model.NewConfig()
 	_ = configor.Load(model.AppConfig, "./config.yml")
-	//topMarketInfos := make(map[string]*model.MarketInfo)
-	//marketInfos := api.GetMarketInfos(model.OKEX)
-	//marketInfoArray := model.MarketInfoArray{}
-	//for _, info := range marketInfos {
-	//	marketInfoArray = append(marketInfoArray, info)
-	//}
-	//sort.Sort(sort.Reverse(marketInfoArray))
-	//fmt.Println(topMarketInfos)
+	marketInfos := api.GetMarketInfos(model.BinancePerp)
+	marketInfoArray := model.MarketInfoArray{}
+	for _, info := range marketInfos {
+		marketInfoArray = append(marketInfoArray, info)
+	}
+	sort.Sort(sort.Reverse(marketInfoArray))
+	for _, info := range marketInfoArray {
+		_, _, coin, _ := model.GetFromStandard(model.BinancePerp, info.Name)
+		if !model.CommonCoins[strings.ToLower(coin)] {
+			fmt.Println(fmt.Sprintf(`%s %f`, coin, info.TradeAmount))
+		}
+	}
 	_, balances, total, collateral := api.GetBalances(model.AppConfig.GateKey, model.AppConfig.GateSecret, model.Gate)
 	fmt.Println(collateral)
 	fmt.Println(total)

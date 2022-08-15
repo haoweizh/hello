@@ -31,7 +31,8 @@ func getMarketsBinancePerp(key, secret string) (marketInfos map[string]*model.Ma
 	marketInfos = make(map[string]*model.MarketInfo)
 	client := futures.NewClient(key, secret)
 	exchangeInfo, err := client.NewExchangeInfoService().Do(context.Background())
-	if err != nil {
+	stats, errTicker := client.NewListPriceChangeStatsService().Do(context.Background())
+	if err != nil || errTicker != nil {
 		util.Notice("getMarketsBinancePerp err: " + err.Error())
 		time.Sleep(time.Second * 2)
 		getMarketsBinancePerp(key, secret)
@@ -69,6 +70,16 @@ func getMarketsBinancePerp(key, secret string) (marketInfos map[string]*model.Ma
 				}
 			}
 			marketInfos[marketInfo.Name] = marketInfo
+		}
+	}
+	for _, stat := range stats {
+		if stat == nil {
+			continue
+		}
+		_, marketType, coin := model.GetCoinFromDialect(model.BinancePerp, stat.Symbol)
+		name := coin + model.UniStandardTail[marketType]
+		if marketInfos[name] != nil {
+			marketInfos[name].TradeAmount, _ = strconv.ParseFloat(stat.QuoteVolume, 64)
 		}
 	}
 	return marketInfos

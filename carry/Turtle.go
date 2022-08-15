@@ -63,43 +63,19 @@ func checkSetTurtling(value bool) (before bool) {
 var dataSet = make(map[string]map[string]map[string]*TurtleData) // market - symbol - 2019-12-06 - *turtleData
 
 func calcTurtleAmount(key, secret string, setting *model.Setting, n float64) (amount float64) {
+	var accountValue float64
 	switch setting.Market {
-	//case model.Bitmex:
-	//	p := deprecated.GetBtcBalanceBitmex(key, secret)
-	//	switch setting.Symbol {
-	//	case `btcusd_p`:
-	//		amount = 0.02 * p / n * price * price
-	//	case `ethusd_p`:
-	//		amount = 20000 * p / n
-	//	}
+	case model.BinancePerp:
+		_, _, accountValue, _ = api.GetPositions(key, secret, setting.Market)
+
 	case model.Ftx, model.OKEX:
-		_, _, p, _ := api.GetBalances(key, secret, setting.Market)
-		amount = 0.02 * p / n
-		_, _, coin, _ := model.GetFromStandard(setting.Market, setting.Symbol)
-		if !model.CommonCoins[strings.ToLower(coin)] {
-			amount /= 2
-		}
-		//case model.OKEX:
-		//	_, _, p, _ := api.GetBalances(setting.Market)
-		//	amount = 0.01 * p / n
-		//	symbol := strings.ToUpper(setting.Symbol)
-		//	if symbol != `ETH-USDT-SWAP` && symbol != `BTC-USDT-SWAP` {
-		//		amount /= 2
-		//	}
-		//case model.HuobiDM:
-		//	coin := model.GetCoin(setting.Market, setting.Symbol)
-		//	balance := api.GetBalance(key, secret, setting.Market, coin)
-		//	if balance != nil {
-		//		p := balance.Amount * price
-		//		if strings.Contains(strings.ToLower(setting.Symbol), `btc`) {
-		//			amount = 0.02 * p * price / n / model.OKEXBTCContractFaceValue
-		//		} else {
-		//			amount = 0.02 * p * price / n / model.OKEXOtherContractFaceValue
-		//		}
-		//		util.Notice(fmt.Sprintf(`%s get %f`, coin, balance.Amount))
-		//	} else {
-		//		util.Notice(fmt.Sprintf(`%s can not get balance`, coin))
-		//	}
+		_, _, accountValue, _ = api.GetBalances(key, secret, setting.Market)
+
+	}
+	amount = 0.02 * accountValue / n
+	_, _, coin, _ := model.GetFromStandard(setting.Market, setting.Symbol)
+	if !model.CommonCoins[strings.ToLower(coin)] {
+		amount /= 2
 	}
 	return amount
 }
