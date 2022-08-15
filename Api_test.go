@@ -181,9 +181,10 @@ func Test_initTurtleN(t *testing.T) {
 	model.SetMarketInfos(model.BinancePerp, marketInfos)
 	_ = configor.Load(model.AppConfig, "./config.yml")
 	order := api.PlaceOrder(model.AppConfig.BinanceKey, model.AppConfig.BinanceSecret, model.OrderSideSell,
-		model.OrderTypeStop, model.BinancePerp, `ETH_PERP`, ``, 2999, 3000, 0.1,
+		model.OrderTypeStop, model.BinancePerp, `ETH_PERP`, ``, 1222, 1255, 0.1,
 		false, nil, nil)
 	fmt.Println(order.OrderId)
+	api.CancelOrder(model.AppConfig.BinanceKey, model.AppConfig.BinanceSecret, model.BinancePerp, `ETH_PERP`, ``, order.OrderId)
 	today, _ := model.GetMarketToday(model.BinancePerp)
 	duration, _ := time.ParseDuration(fmt.Sprintf(`%dh`, -24))
 	day := today.Add(duration)

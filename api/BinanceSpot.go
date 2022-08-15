@@ -272,6 +272,7 @@ func placeOrderBinanceSpot(key, secret string, order *model.Order, orderSide, or
 			order.OrderId = ``
 		} else {
 			order.OrderId = strconv.FormatInt(orderResponse.OrderID, 10)
+			order.Amount, _ = strconv.ParseFloat(orderResponse.OrigQuantity, 64)
 		}
 	}
 }
