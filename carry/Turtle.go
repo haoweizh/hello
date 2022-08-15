@@ -67,7 +67,6 @@ func calcTurtleAmount(key, secret string, setting *model.Setting, n float64) (am
 	switch setting.Market {
 	case model.BinancePerp:
 		_, _, accountValue, _ = api.GetPositions(key, secret, setting.Market)
-
 	case model.Ftx, model.OKEX:
 		_, _, accountValue, _ = api.GetBalances(key, secret, setting.Market)
 
@@ -77,6 +76,7 @@ func calcTurtleAmount(key, secret string, setting *model.Setting, n float64) (am
 	if !model.CommonCoins[strings.ToLower(coin)] {
 		amount /= 2
 	}
+	util.Notice(`calcTurtleAmount %s %s %f`, setting.Market, setting.Symbol, amount)
 	return amount
 }
 

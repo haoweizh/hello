@@ -178,6 +178,8 @@ func Test_WsAndOrderApi(t *testing.T) {
 func Test_initTurtleN(t *testing.T) {
 	model.NewConfig()
 	_ = configor.Load(model.AppConfig, "./config.yml")
+	_, _, p, _ := api.GetPositions(model.AppConfig.BinanceKey, model.AppConfig.BinanceSecret, model.BinancePerp)
+	fmt.Println(p)
 	marketInfos := api.GetMarketInfos(model.BinancePerp)
 	marketInfoArray := model.MarketInfoArray{}
 	for _, info := range marketInfos {
