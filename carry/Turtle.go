@@ -474,10 +474,12 @@ func placeTurtleOrders(key, secret string, turtleData *TurtleData, setting *mode
 	//	priceLong = math.Min(turtleData.highDays5, setting.PriceX+2*turtleData.n)
 	//}
 	if turtleData.orderLong == nil && ((currentN < amountLimit && setting.Chance < coinLimit) || setting.Chance < 0) {
+		liquation := false
 		orderSide := model.OrderSideBuy
 		typeLong := model.OrderTypeStop
 		amount := turtleData.amount
 		if setting.Chance < 0 {
+			liquation = true
 			amount = setting.GridAmount
 			util.Notice(fmt.Sprintf(
 				`平空 %s %s chance:%d amount:%f currentN:%d short-long:%f %f px:%f n:%f`,
@@ -505,6 +507,9 @@ func placeTurtleOrders(key, secret string, turtleData *TurtleData, setting *mode
 			}
 			go model.AppDB.Save(order)
 			if order != nil && order.OrderId != `` && order.Status != model.CarryStatusFail {
+				if !liquation {
+					turtleData.amount = order.Amount
+				}
 				turtleData.orderLong = order
 				turtleData.longs = append(turtleData.longs, order)
 				turtleData.waitBreakLong = true
@@ -516,10 +521,12 @@ func placeTurtleOrders(key, secret string, turtleData *TurtleData, setting *mode
 		}
 	}
 	if turtleData.orderShort == nil && ((currentN > -1*amountLimit && setting.Chance > -1*coinLimit) || setting.Chance > 0) {
+		liquation := false
 		orderSide := model.OrderSideSell
 		typeShort := model.OrderTypeStop
 		amount := turtleData.amount
 		if setting.Chance > 0 {
+			liquation = true
 			amount = setting.GridAmount
 			util.Notice(fmt.Sprintf(
 				`平多 %s %s chance:%d amount:%f currentN:%d short-long:%f %f px:%f n:%f`,
@@ -548,6 +555,9 @@ func placeTurtleOrders(key, secret string, turtleData *TurtleData, setting *mode
 			}
 			go model.AppDB.Save(order)
 			if order != nil && order.OrderId != `` && order.Status != model.CarryStatusFail {
+				if !liquation {
+					turtleData.amount = order.Amount
+				}
 				turtleData.orderShort = order
 				turtleData.shorts = append(turtleData.shorts, order)
 				turtleData.waitBreakShort = true
