@@ -185,6 +185,8 @@ func CancelOrder(key, secret, market, symbol, orderType, orderId string) (result
 		result = cancelOrderFtx(key, secret, orderType, orderId)
 	case model.Gate:
 		result = cancelOrderGate(key, secret, symbol, orderId)
+	case model.BinancePerp:
+		result = cancelOrderBinancePerp(key, secret, orderId)
 	}
 	util.Notice(fmt.Sprintf(`[cancel %s %v %s %s]`, orderId, result, market, symbol))
 	return result, errCode, msg

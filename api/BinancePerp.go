@@ -282,7 +282,20 @@ func placeOrderBinancePerp(key, secret string, order *model.Order, orderSide, or
 	}
 }
 
-func cancelOrdersBinancePerp(key string, secret string, symbol string) bool {
+func cancelOrderBinancePerp(key, secret, orderId string) bool {
+	client := futures.NewClient(key, secret)
+	orderNum, _ := strconv.ParseInt(orderId, 10, 64)
+	res, err := client.NewCancelOrderService().OrderID(orderNum).Do(context.Background())
+	if err != nil {
+		util.Notice("cancelOrderBinancePerp err: " + err.Error())
+		return false
+	} else if res.Status == `CANCELED` {
+		return true
+	}
+	return false
+}
+
+func cancelOrdersBinancePerp(key, secret string, symbol string) bool {
 	success, _, _, dialectSymbol := model.GetFromStandard(model.BinancePerp, symbol)
 	if !success {
 		return false
