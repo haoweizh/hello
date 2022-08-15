@@ -208,7 +208,7 @@ func GetDayCandle(key, secret, market, symbol string, timeCandle time.Time) (can
 	case model.OKEX:
 		candles = getCandlesOKEX(key, secret, symbol, `1D`, begin, end, 40)
 	case model.BinancePerp:
-		candles = getCandlesBinancePerp(key, secret, symbol, `1d`, begin, end, 40)
+		candles = getCandlesBinancePerp(key, secret, symbol, `1d`, begin, end, 45)
 	}
 	keyedCandles := make(map[string]*model.Candle)
 	for _, value := range candles {

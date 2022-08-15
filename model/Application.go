@@ -245,7 +245,7 @@ func GetMarketYesterday(market string) (yesterday time.Time, strYesterday string
 
 func GetMarketToday(market string) (today time.Time, strToday string) {
 	today = time.Now().In(time.UTC)
-	if market == OKEX {
+	if market == OKEX || market == BinancePerp || market == BinanceSpot {
 		today = util.GetNow()
 	}
 	today = time.Date(today.Year(), today.Month(), today.Day(), 0, 0, 0, 0, today.Location())

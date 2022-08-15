@@ -179,7 +179,10 @@ func Test_initTurtleN(t *testing.T) {
 	model.NewConfig()
 	_ = configor.Load(model.AppConfig, "./config.yml")
 	today, _ := model.GetMarketToday(model.BinancePerp)
-	api.GetDayCandle(model.AppConfig.BinanceKey, model.AppConfig.BinanceSecret, model.BinancePerp, `BTC_PERP`, today)
+	duration, _ := time.ParseDuration(fmt.Sprintf(`%dh`, -24))
+	day := today.Add(duration)
+	candle := api.GetDayCandle(model.AppConfig.BinanceKey, model.AppConfig.BinanceSecret, model.BinancePerp, `BTC_PERP`, day)
+	fmt.Println(candle.UTCDate)
 	marketInfos := api.GetMarketInfos(model.BinancePerp)
 	marketInfoArray := model.MarketInfoArray{}
 	for _, info := range marketInfos {
