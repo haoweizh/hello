@@ -353,6 +353,29 @@ func getPositionsBinancePerp(key, secret string) (success bool, positions []*mod
 	return success, positions, accountValue, availableU
 }
 
+func getCandlesBinancePerp(key, secret, symbol, interval string, begin, end time.Time, limit int) (candles map[string]*model.Candle) {
+	_, _, _, dialectSymbol := model.GetFromStandard(model.BinancePerp, symbol)
+	client := futures.NewClient(key, secret)
+	resp, err := client.NewKlinesService().Symbol(dialectSymbol).StartTime(begin.UnixMilli()).
+		EndTime(end.UnixMilli()).Interval(interval).Limit(limit).Do(context.Background())
+	if err != nil {
+		util.Notice("getCandlesBinancePerp err: " + err.Error() + " symbol: " + dialectSymbol)
+		return
+	}
+	candles = make(map[string]*model.Candle)
+	for _, item := range resp {
+		candle := &model.Candle{Market: model.BinancePerp, Symbol: symbol, Period: interval}
+		candle.PriceOpen, _ = strconv.ParseFloat(item.Open, 64)
+		candle.PriceClose, _ = strconv.ParseFloat(item.Close, 64)
+		candle.PriceHigh, _ = strconv.ParseFloat(item.High, 64)
+		candle.PriceLow, _ = strconv.ParseFloat(item.Low, 64)
+		timeStart := time.Unix(item.OpenTime/1000, 0)
+		candle.UTCDate = timeStart.Format(time.RFC3339)[0:10]
+		candles[candle.UTCDate] = candle
+	}
+	return candles
+}
+
 func signedRequestBinance(key, secret, method, requestUrl string, withApiKey bool, param *url.Values) []byte {
 	if param == nil {
 		param = &url.Values{}

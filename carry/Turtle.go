@@ -69,7 +69,6 @@ func calcTurtleAmount(key, secret string, setting *model.Setting, n float64) (am
 		_, _, accountValue, _ = api.GetPositions(key, secret, setting.Market)
 	case model.Ftx, model.OKEX:
 		_, _, accountValue, _ = api.GetBalances(key, secret, setting.Market)
-
 	}
 	amount = 0.02 * accountValue / n
 	_, _, coin, _ := model.GetFromStandard(setting.Market, setting.Symbol)
