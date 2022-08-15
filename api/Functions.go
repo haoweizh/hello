@@ -518,7 +518,7 @@ func PlaceOrder(key, secret, orderSide, orderType, market, symbol, orderParam st
 	case model.BinanceSpot:
 		placeOrderBinanceSpot(key, secret, order, orderSide, orderType, symbol, price, amount)
 	case model.BinancePerp:
-		placeOrderBinancePerp(key, secret, order, orderSide, orderType, symbol, price, amount)
+		placeOrderBinancePerp(key, secret, order, orderSide, orderType, symbol, price, triggerPrice, amount)
 	case model.BybitPerp:
 		placeOrderBybitPerp(order, key, secret, orderSide, orderType, orderParam, symbol, price, amount)
 	case model.BybitSpot:

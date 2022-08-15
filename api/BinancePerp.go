@@ -243,7 +243,7 @@ func maintainChannelBinancePerp(subscribes []interface{}) {
 	}
 }
 
-func placeOrderBinancePerp(key, secret string, order *model.Order, orderSide, orderType, symbol string, price, amount float64) {
+func placeOrderBinancePerp(key, secret string, order *model.Order, orderSide, orderType, symbol string, price, triggerPrice, amount float64) {
 	price, decimal := model.FormatPrice(model.BinancePerp, symbol, orderSide, price)
 	priceStr := util.CutTailZero(strconv.FormatFloat(price, 'f', decimal, 64))
 	formattedAmount := model.GetAmountInMarket(model.BinancePerp, symbol, amount, price)
@@ -263,6 +263,13 @@ func placeOrderBinancePerp(key, secret string, order *model.Order, orderSide, or
 			service.Type(futures.OrderTypeLimit)
 			service.Price(priceStr)
 			service.TimeInForce(futures.TimeInForceTypeGTC)
+		} else if orderType == model.OrderTypeStop {
+			stopPrice, stopDecimal := model.FormatPrice(model.BinancePerp, symbol, orderSide, triggerPrice)
+			stopPriceStr := util.CutTailZero(strconv.FormatFloat(stopPrice, 'f', stopDecimal, 64))
+			service.Type(futures.OrderTypeStop)
+			service.Price(priceStr)
+			service.StopPrice(stopPriceStr)
+			service.PriceProtect(true)
 		}
 		orderResponse, err := service.Do(context.Background())
 		if err != nil {
