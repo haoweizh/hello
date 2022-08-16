@@ -277,7 +277,8 @@ func placeOrderBinancePerp(key, secret string, order *model.Order, orderSide, or
 			order.OrderId = ``
 			order.ErrCode = err.Error()
 		} else {
-			order.Amount, _ = strconv.ParseFloat(orderResponse.OrigQuantity, 64)
+			orderedAmount, _ := strconv.ParseFloat(orderResponse.OrigQuantity, 64)
+			model.ParseRealAmount(model.BinancePerp, symbol, orderedAmount)
 			order.OrderId = strconv.FormatInt(orderResponse.OrderID, 10)
 		}
 	}
