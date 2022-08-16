@@ -211,6 +211,8 @@ func placeOrderMexc(key, secret string, order *model.Order, orderSide, orderType
 		return
 	}
 	formattedAmount := strconv.Itoa(int(math.Floor(amount / marketInfo.SizeIncrement)))
+	orderAmountReal, _ := strconv.ParseFloat(formattedAmount, 64)
+	order.Amount = orderAmountReal * marketInfo.SizeIncrement
 	body := map[string]interface{}{
 		"symbol":       symbol,
 		"side":         side,
