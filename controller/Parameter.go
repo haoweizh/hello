@@ -305,7 +305,7 @@ func GetParameters(c *gin.Context) {
 				msg += fmt.Sprintf("%s 仓数:%d 持仓:%f 成交价:%f top:%v %s\n",
 					symbol, setting.(*model.Setting).Chance, setting.(*model.Setting).GridAmount, setting.(*model.Setting).PriceX, isTop, turtleData.ToString())
 				if setting.(*model.Setting).Function == model.FunctionTurtle {
-					showMsg := fmt.Sprintf("%s_%s_%s", model.FunctionTurtle, setting.(*model.Setting).Market, setting.(*model.Setting).Symbol)
+					showMsg := fmt.Sprintf("%s_%s_%s", model.FunctionTurtle, market, symbol)
 					msg += model.GetCarryInfo(account.Key, showMsg) + "\n"
 				}
 				return true
