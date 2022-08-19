@@ -378,7 +378,7 @@ func QueryOpenTriggerOrders(key, secret, market, symbol string) (orders []*model
 		return queryOpenOrdersOKEX(key, secret, symbol, true)
 	case model.Ftx:
 		return queryTriggerOrdersFtx(key, secret, symbol)
-	case model.BybitPerp:
+	case model.BinancePerp:
 		return queryOpenOrdersBinancePerp(key, secret, symbol)
 	}
 	return nil
