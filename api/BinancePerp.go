@@ -482,7 +482,7 @@ func parseOrderBinancePerp(res *futures.Order, order *model.Order) {
 		order.DealAmount, _ = strconv.ParseFloat(res.ExecutedQuantity, 64)
 		order.OrderTime = time.Unix(res.Time, 0)
 		order.Status = model.GetOrderStatus(model.BinancePerp, string(res.Status))
-		order.OrderId = strconv.FormatInt(res.OrderID, 64)
+		order.OrderId = strconv.FormatInt(res.OrderID, 10)
 		if order.Status != model.CarryStatusSuccess && order.Status != model.CarryStatusFail {
 			order.Status = model.CarryStatusWorking
 		}
