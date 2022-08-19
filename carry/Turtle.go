@@ -38,7 +38,8 @@ const turtleTriggerDelta = 0.01
 
 var turtling = false
 var turtleLock sync.Mutex
-var checkTurtleOrderTime = make(map[string]time.Time) // market_symbol - time
+var checkTurtleOrderTime sync.Map // market_symbol - time
+//var checkTurtleOrderTime = make(map[string]time.Time) // market_symbol - time
 
 // 当天是否有平仓
 var turtleClosed = make(map[string]map[string]bool) // market - symbol - closed
@@ -200,6 +201,7 @@ func checkTurtleOrders(key, secret string, setting *model.Setting, currentN floa
 		util.Notice(`cancel extra turtle order %s %s %s %s return %v`,
 			setting.Market, setting.Symbol, order.OrderType, order.OrderId, result)
 	}
+	time.Sleep(time.Second)
 }
 
 // ProcessTurtle
@@ -231,11 +233,11 @@ var ProcessTurtle = func(setting *model.Setting, tick *model.BidAsk) {
 		time.Sleep(time.Second * 30)
 		return
 	}
-	duration, _ := time.ParseDuration(`600s`)
-	lastCheck := checkTurtleOrderTime[setting.Market+`_`+setting.Symbol]
+	duration, _ := time.ParseDuration(`60s`)
+	lastCheck, ok := checkTurtleOrderTime.Load(setting.Market + `_` + setting.Symbol)
 	currentN := api.GetCurrentN(setting)
-	if lastCheck.Add(duration).Before(time.Now()) {
-		checkTurtleOrderTime[setting.Market+`_`+setting.Symbol] = time.Now()
+	if !ok || (ok && lastCheck.(time.Time).Add(duration).Before(time.Now())) {
+		checkTurtleOrderTime.Store(setting.Market+`_`+setting.Symbol, time.Now())
 		checkTurtleOrders(account.Key, account.Secret, setting, float64(currentN), turtleData)
 		return
 	}

@@ -454,6 +454,45 @@ func getFundingRateBinancePerp(key, secret, symbol string) (fundingRate *model.F
 	return
 }
 
+func queryOpenOrdersBinancePerp(key, secret, symbol string) (orders []*model.Order) {
+	success, _, _, dialectSymbol := model.GetFromStandard(model.BinancePerp, symbol)
+	if success {
+		orders = make([]*model.Order, 0)
+		client := futures.NewClient(key, secret)
+		resArray, err := client.NewListOpenOrdersService().Symbol(dialectSymbol).Do(context.Background())
+		if err != nil {
+			util.Notice(`queryOpenOrdersBinancePerp err ` + err.Error())
+		}
+		for _, res := range resArray {
+			order := &model.Order{Market: model.BinancePerp, Status: model.CarryStatusFail, Symbol: symbol}
+			parseOrderBinancePerp(res, order)
+			orders = append(orders, order)
+		}
+	}
+	return
+}
+
+func parseOrderBinancePerp(res *futures.Order, order *model.Order) {
+	if res != nil {
+		order.OrderSide = strings.ToLower(string(res.Side))
+		order.OrderType = strings.ToLower(string(res.Type))
+		order.Amount, _ = strconv.ParseFloat(res.OrigQuantity, 64)
+		order.Price, _ = strconv.ParseFloat(res.Price, 64)
+		order.DealPrice, _ = strconv.ParseFloat(res.AvgPrice, 64)
+		order.DealAmount, _ = strconv.ParseFloat(res.ExecutedQuantity, 64)
+		order.OrderTime = time.Unix(res.Time, 0)
+		order.Status = model.GetOrderStatus(model.BinancePerp, string(res.Status))
+		order.OrderId = strconv.FormatInt(res.OrderID, 64)
+		if order.Status != model.CarryStatusSuccess && order.Status != model.CarryStatusFail {
+			order.Status = model.CarryStatusWorking
+		}
+		if order.DealAmount > 0 && order.DealPrice == 0 {
+			order.DealPrice = order.Price
+		}
+	}
+	return
+}
+
 func queryOrderBinancePerp(key, secret, symbol string, orderId string) (order *model.Order) {
 	success, _, _, dialectSymbol := model.GetFromStandard(model.BinancePerp, symbol)
 	if success {
@@ -464,24 +503,8 @@ func queryOrderBinancePerp(key, secret, symbol string, orderId string) (order *m
 			util.Notice("queryOrderBinancePerp err: " + err.Error())
 			return
 		}
-		order = &model.Order{Market: model.BinancePerp, Status: model.CarryStatusFail}
-		if orderResp != nil {
-			order.OrderId = orderId
-			order.Symbol = symbol
-			order.OrderSide = strings.ToLower(string(orderResp.Side))
-			order.OrderType = strings.ToLower(string(orderResp.Type))
-			order.Amount, _ = strconv.ParseFloat(orderResp.OrigQuantity, 64)
-			order.Price, _ = strconv.ParseFloat(orderResp.Price, 64)
-			order.DealAmount, _ = strconv.ParseFloat(orderResp.ExecutedQuantity, 64)
-			order.OrderTime = time.Unix(orderResp.Time, 0)
-			order.Status = model.GetOrderStatus(model.BinancePerp, string(orderResp.Status))
-			if order.Status != model.CarryStatusSuccess && order.Status != model.CarryStatusFail {
-				order.Status = model.CarryStatusWorking
-			}
-			if order.DealAmount > 0 && order.DealPrice == 0 {
-				order.DealPrice = order.Price
-			}
-		}
+		order = &model.Order{Market: model.BinancePerp, Status: model.CarryStatusFail, OrderId: orderId, Symbol: symbol}
+		parseOrderBinancePerp(orderResp, order)
 	}
 	return
 }
