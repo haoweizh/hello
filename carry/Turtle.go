@@ -193,8 +193,10 @@ func checkTurtleOrders(key, secret string, setting *model.Setting, currentN floa
 		return
 	}
 	for _, order := range orders {
-		if (turtleData.orderLong != nil && turtleData.orderLong.OrderId == order.OrderId && currentN < setting.AmountLimit) ||
-			(turtleData.orderShort != nil && turtleData.orderShort.OrderId == order.OrderId && currentN > -1*setting.AmountLimit) {
+		if (turtleData.orderLong != nil && turtleData.orderLong.OrderId == order.OrderId &&
+			(currentN < setting.AmountLimit || setting.Chance < 0)) ||
+			(turtleData.orderShort != nil && turtleData.orderShort.OrderId == order.OrderId &&
+				(currentN > -1*setting.AmountLimit || setting.Chance > 0)) {
 			continue
 		}
 		result := api.MustCancel(key, secret, setting.Market, setting.Symbol, order.OrderType, order.OrderId, true)

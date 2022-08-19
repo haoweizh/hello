@@ -280,7 +280,7 @@ func Test_download(t *testing.T) {
 func Test_wallet(t *testing.T) {
 	model.NewConfig()
 	var key, secret string
-	market := model.OKEX
+	market := model.BinancePerp
 	switch market {
 	case model.Ftx:
 		key = model.AppConfig.FtxKey
@@ -290,8 +290,11 @@ func Test_wallet(t *testing.T) {
 		model.SetMarketInfos(model.OKEX, marketInfos)
 		key = model.AppConfig.OkexKey
 		secret = model.AppConfig.OkexSecret
+	case model.BinancePerp:
+		key = model.AppConfig.BinanceKey
+		secret = model.AppConfig.BinanceSecret
 	}
-	symbol := `ETH_PERP`
+	symbol := `BTC_PERP`
 	//order := api.PlaceOrder(key, secret, model.OrderSideBuy, model.OrderTypeStop,
 	//	market, symbol, ``, 4444, 4444, 0.1, false, nil, nil)
 	//fmt.Println(order.OrderId)
