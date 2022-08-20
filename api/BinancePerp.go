@@ -293,6 +293,9 @@ func cancelOrderBinancePerp(key, secret, symbol, orderId string) bool {
 	orderNum, _ := strconv.ParseInt(orderId, 10, 64)
 	res, err := client.NewCancelOrderService().Symbol(dialectSymbol).OrderID(orderNum).Do(context.Background())
 	if err != nil {
+		if strings.Contains(err.Error(), `code=-2011`) {
+			return true
+		}
 		util.Notice("cancelOrderBinancePerp err: " + err.Error())
 		return false
 	} else if res.Status == `CANCELED` {
@@ -309,6 +312,9 @@ func cancelOrdersBinancePerp(key, secret string, symbol string) bool {
 	client := futures.NewClient(key, secret)
 	err := client.NewCancelAllOpenOrdersService().Symbol(dialectSymbol).Do(context.Background())
 	if err != nil {
+		if strings.Contains(err.Error(), `code=-2011`) {
+			return true
+		}
 		util.Notice("cancelOrdersBinancePerp err: " + err.Error())
 		return false
 	}
