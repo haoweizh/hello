@@ -368,9 +368,9 @@ func checkTurtleBreak(key, secret string, setting *model.Setting, turtleData *Tu
 	checked = false
 	if now.After(turtleData.checkTimeBreak) {
 		turtleData.checkTimeBreak = util.GetNow()
-		if turtleData.orderLong != nil && (turtleData.orderLong.Status == model.CarryStatusSuccess || turtleData.orderLong.TriggerPrice >= tick.Bids[0].Price) {
+		if turtleData.orderLong != nil && (turtleData.orderLong.Status == model.CarryStatusSuccess || turtleData.orderLong.TriggerPrice <= tick.Bids[0].Price) {
 			util.Notice(fmt.Sprintf(`-----chance %s %s %d bid-ask %f %f short %f`,
-				setting.Market, setting.Symbol, setting.Chance, tick.Bids[0].Price, tick.Asks[0].Price, turtleData.orderLong.Price))
+				setting.Market, setting.Symbol, setting.Chance, tick.Bids[0].Price, tick.Asks[0].Price, turtleData.orderLong.TriggerPrice))
 			order := api.QueryOrderById(key, secret, setting.Market, setting.Symbol, turtleData.orderLong.OrderType, turtleData.orderLong.OrderId)
 			if order != nil && order.Status == model.CarryStatusSuccess {
 				turtleData.breakLong = true
@@ -380,9 +380,9 @@ func checkTurtleBreak(key, secret string, setting *model.Setting, turtleData *Tu
 			}
 			checked = true
 		}
-		if turtleData.orderShort != nil && (turtleData.orderShort.Status == model.CarryStatusSuccess || turtleData.orderShort.TriggerPrice <= tick.Asks[0].Price) {
+		if turtleData.orderShort != nil && (turtleData.orderShort.Status == model.CarryStatusSuccess || turtleData.orderShort.TriggerPrice >= tick.Asks[0].Price) {
 			util.Notice(fmt.Sprintf(`-----chance %s %s %d bid-ask %f %f long %f`,
-				setting.Market, setting.Symbol, setting.Chance, tick.Bids[0].Price, tick.Asks[0].Price, turtleData.orderShort.Price))
+				setting.Market, setting.Symbol, setting.Chance, tick.Bids[0].Price, tick.Asks[0].Price, turtleData.orderShort.TriggerPrice))
 			order := api.QueryOrderById(key, secret, setting.Market, setting.Symbol, turtleData.orderShort.OrderType, turtleData.orderShort.OrderId)
 			if order != nil && order.Status == model.CarryStatusSuccess {
 				turtleData.breakShort = true
