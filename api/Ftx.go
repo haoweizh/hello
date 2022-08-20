@@ -43,7 +43,10 @@ func maintainChannelFtx(subscribes []interface{}) {
 			needReset := false
 			for _, value := range subscribes {
 				subscribe := value.([]string)
-				_, marketType, coin := model.GetCoinFromDialect(model.Ftx, subscribe[1])
+				success, marketType, coin := model.GetCoinFromDialect(model.Ftx, subscribe[1])
+				if !success {
+					continue
+				}
 				standardSymbol := coin + model.UniStandardTail[marketType]
 				_, bidAsk := model.AppMarkets.GetBidAsk(standardSymbol, model.Ftx)
 				if bidAsk == nil || time.Now().UnixMilli()-int64(bidAsk.Ts) > 120000 {
@@ -70,6 +73,7 @@ func maintainChannelFtx(subscribes []interface{}) {
 					}
 				}
 				if bidAsk == nil || time.Now().UnixMilli()-int64(bidAsk.Ts) > 180000 {
+					util.Notice(fmt.Sprintf(`fail to get bidask ftx %s`, subscribe[1]))
 					setRequireReset(model.Ftx)
 					needReset = true
 					break
