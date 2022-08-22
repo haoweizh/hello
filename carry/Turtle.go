@@ -362,6 +362,24 @@ var ProcessTurtle = func(setting *model.Setting, tick *model.BidAsk) {
 	}
 }
 
+func setTurtleOrderStatus(function, market, symbol, orderId, status string) {
+	setting := api.GetSetting(function, market, symbol)
+	if setting == nil {
+		return
+	}
+	account := model.AppConfig.GetAccounts(setting.Market)[0]
+	if account == nil {
+		return
+	}
+	turtleData := GetTurtleData(account.Key, account.Secret, setting)
+	if turtleData != nil && turtleData.orderLong != nil && turtleData.orderLong.OrderId == orderId {
+		turtleData.orderLong.Status = status
+	}
+	if turtleData != nil && turtleData.orderShort != nil && turtleData.orderShort.OrderId == orderId {
+		turtleData.orderShort.Status = status
+	}
+}
+
 func checkTurtleBreak(key, secret string, setting *model.Setting, turtleData *TurtleData, tick *model.BidAsk) (checked bool) {
 	duration, _ := time.ParseDuration(`-5s`)
 	now := util.GetNow().Add(duration)

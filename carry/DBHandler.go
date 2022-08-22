@@ -104,6 +104,9 @@ func MaintainTransFee() {
 				if order.Status != `` {
 					value.Status = order.Status
 				}
+				if order.Status == model.CarryStatusSuccess {
+					setTurtleOrderStatus(value.RefreshType, value.Market, value.Symbol, value.OrderId, order.Status)
+				}
 				value.DealPrice = order.DealPrice
 				model.AppDB.Save(&value)
 				util.Info(fmt.Sprintf(`save order %s %s %s %s %s`,
