@@ -111,7 +111,7 @@ func RequireDepthChanReset(markets *model.Markets, market string) bool {
 			return false
 		}
 	}
-	util.Notice(fmt.Sprintf(`need reset %d %s %f`, now, market, model.AppConfig.Delay))
+	util.Notice(fmt.Sprintf(`need reset%s %d  %f`, market, now, model.AppConfig.Delay))
 	return true
 }
 

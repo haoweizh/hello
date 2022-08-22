@@ -38,16 +38,15 @@ func maintainChannelBybitSpot(subscribes []interface{}) {
 			time.Sleep(time.Minute * 5)
 			needReset := false
 			for _, subscribe := range subscribes {
-				_, _, coin := model.GetCoinFromDialect(model.BybitSpot, subscribe.(string))
+				success, _, coin := model.GetCoinFromDialect(model.BybitSpot, subscribe.(string))
+				if !success {
+					continue
+				}
 				standardSymbol := coin + model.UniStandardTail[model.MarketTypeSpot]
 				_, bidAsk := model.AppMarkets.GetBidAsk(standardSymbol, model.BybitSpot)
 				if bidAsk == nil || time.Now().UnixMilli()-int64(bidAsk.Ts) > 120000 {
 					subscribeMessage := fmt.Sprintf(
 						`{"topic":"depth","event":"sub","params":{"symbol":"%s","binary":false}}`, subscribe)
-					if bidAsk != nil {
-						util.Notice(`maintain bybitspot timeout %s %d %d`,
-							standardSymbol, time.Now().UnixMilli()-int64(bidAsk.Ts), bidAsk.Ts)
-					}
 					conn, ok := bybitSpotSubConnection.Load(standardSymbol)
 					if conn != nil && ok {
 						if err := SendToConnection(model.BybitSpot, conn.(*websocket.Conn), []byte(subscribeMessage)); err != nil {
@@ -59,6 +58,7 @@ func maintainChannelBybitSpot(subscribes []interface{}) {
 					util.Notice(`send resubscribe %s %s`, model.BybitSpot, subscribeMessage)
 				}
 				if bidAsk == nil || time.Now().UnixMilli()-int64(bidAsk.Ts) > 180000 {
+					util.Notice(fmt.Sprintf(`fail to get bidask bybit spot %s`, subscribe.(string)))
 					setRequireReset(model.BybitSpot)
 					needReset = true
 					break

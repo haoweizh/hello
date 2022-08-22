@@ -41,15 +41,14 @@ func maintainChannelBybitPerp(subscribes []interface{}) {
 			time.Sleep(time.Minute * 5)
 			needReset := false
 			for _, value := range subscribes {
-				_, _, coin := model.GetCoinFromDialect(model.BybitPerp, value.(string))
+				success, _, coin := model.GetCoinFromDialect(model.BybitPerp, value.(string))
+				if !success {
+					continue
+				}
 				standardSymbol := coin + model.UniStandardTail[model.MarketTypePerp]
 				_, bidAsk := model.AppMarkets.GetBidAsk(standardSymbol, model.BybitPerp)
 				if bidAsk == nil || time.Now().UnixMilli()-int64(bidAsk.Ts) > 120000 {
 					subCmd := fmt.Sprintf(`{"op": "subscribe", "args": ["orderBookL2_25.%s"]}`, value.(string))
-					if bidAsk != nil {
-						util.Notice(`maintain bybitperp timeout %s %d %d`,
-							standardSymbol, time.Now().UnixMilli()-int64(bidAsk.Ts), bidAsk.Ts)
-					}
 					conn, ok := bybitPerpSubConnection.Load(standardSymbol)
 					if conn != nil && ok {
 						if err := SendToConnection(model.BybitPerp, conn.(*websocket.Conn), []byte(subCmd)); err != nil {
@@ -61,6 +60,7 @@ func maintainChannelBybitPerp(subscribes []interface{}) {
 					util.Notice(`send resubscribe %s %s`, model.BybitPerp, subCmd)
 				}
 				if bidAsk == nil || time.Now().UnixMilli()-int64(bidAsk.Ts) > 180000 {
+					util.Notice(fmt.Sprintf(`fail to get bidask bybitperp %s`, value.(string)))
 					setRequireReset(model.BybitPerp)
 					needReset = true
 					break

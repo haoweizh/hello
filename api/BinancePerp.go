@@ -228,9 +228,13 @@ func maintainChannelBinancePerp(subscribes []interface{}) {
 			needReset := false
 			for _, subscribe := range subscribes {
 				dialectSymbol := strings.ToUpper(subscribe.(string)[0:strings.Index(subscribe.(string), `@`)])
-				_, marketType, coin := model.GetCoinFromDialect(model.BinancePerp, dialectSymbol)
+				success, marketType, coin := model.GetCoinFromDialect(model.BinancePerp, dialectSymbol)
+				if !success {
+					continue
+				}
 				_, bidAsk := model.AppMarkets.GetBidAsk(coin+model.UniStandardTail[marketType], model.BinancePerp)
 				if bidAsk == nil || time.Now().UnixMilli()-int64(bidAsk.Ts) > 180000 {
+					util.Notice(fmt.Sprintf(`fail to get bidask binanceperp %s`, dialectSymbol))
 					setRequireReset(model.BinancePerp)
 					needReset = true
 					break
@@ -293,6 +297,9 @@ func cancelOrderBinancePerp(key, secret, symbol, orderId string) bool {
 	orderNum, _ := strconv.ParseInt(orderId, 10, 64)
 	res, err := client.NewCancelOrderService().Symbol(dialectSymbol).OrderID(orderNum).Do(context.Background())
 	if err != nil {
+		if strings.Contains(err.Error(), `code=-2011`) {
+			return true
+		}
 		util.Notice("cancelOrderBinancePerp err: " + err.Error())
 		return false
 	} else if res.Status == `CANCELED` {
@@ -309,6 +316,9 @@ func cancelOrdersBinancePerp(key, secret string, symbol string) bool {
 	client := futures.NewClient(key, secret)
 	err := client.NewCancelAllOpenOrdersService().Symbol(dialectSymbol).Do(context.Background())
 	if err != nil {
+		if strings.Contains(err.Error(), `code=-2011`) {
+			return true
+		}
 		util.Notice("cancelOrdersBinancePerp err: " + err.Error())
 		return false
 	}
