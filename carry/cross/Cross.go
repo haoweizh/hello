@@ -127,7 +127,7 @@ func createFromPosition(account *model.Account, setting *model.Setting, valueLim
 		util.Notice(fmt.Sprintf(`symbol absent revert %s %s`, setting.Market, setting.Symbol))
 		doRevert = true
 	}
-	if cm.contractValueInU/cm.accountValueInU > 1.8 || valueInUsd > valueLimit || valueInUsd/cm.accountValueInU > 0.15 {
+	if cm.contractValueInU/cm.accountValueInU > 1.8 || valueInUsd > valueLimit || valueInUsd/cm.accountValueInU > 0.2 {
 		//util.Notice(fmt.Sprintf(`low position balance %s %s %f %f %f %f`,
 		//	key, setting.Symbol, cm.contractValueInU, cm.accountValueInU, valueInUsd, valueLimit))
 		doRevert = true
@@ -177,8 +177,8 @@ func createFromBalance(account *model.Account, setting *model.Setting, valueLimi
 		util.Notice(fmt.Sprintf(`symbol absent revert %s %s`, setting.Market, setting.Symbol))
 		doRevert = true
 	}
-	usdLowLine := math.Min(100000, 0.1*sm.accountValueInU)
-	if sm.availableU < usdLowLine || carryStatus.RateInAll > 0.15 {
+	usdLowLine := math.Min(100000, 0.2*sm.accountValueInU)
+	if sm.availableU < usdLowLine || carryStatus.RateInAll > 0.2 {
 		doRevert = true
 	}
 	if sm.balances[setting.Symbol] != nil && math.Abs(sm.balances[setting.Symbol].UsdValue) > valueLimit {
