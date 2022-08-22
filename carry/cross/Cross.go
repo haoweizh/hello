@@ -174,6 +174,7 @@ func createFromBalance(account *model.Account, setting *model.Setting, valueLimi
 		carryStatus.RateInAll = math.Abs(carryStatus.Holding * price / sm.accountValueInU)
 		carryStatus.AvailableSell = carryStatus.LimitSell
 	} else if absentRevert {
+		util.Notice(fmt.Sprintf(`symbol absent revert %s %s`, setting.Market, setting.Symbol))
 		doRevert = true
 	}
 	usdLowLine := math.Min(100000, 0.1*sm.accountValueInU)
