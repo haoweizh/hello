@@ -90,7 +90,10 @@ var subscribeHandlerBybitPerp = func(connection *websocket.Conn, subscribes []in
 		if err := SendToConnection(model.BybitPerp, connection, []byte(subCmd)); err != nil {
 			util.SocketInfo("bybitPerp can not subscribe " + err.Error())
 		}
-		_, _, coin := model.GetCoinFromDialect(model.BybitPerp, value.(string))
+		success, _, coin := model.GetCoinFromDialect(model.BybitPerp, value.(string))
+		if !success {
+			continue
+		}
 		standardSymbol := coin + model.UniStandardTail[model.MarketTypePerp]
 		bybitPerpSubConnection.Store(standardSymbol, connection)
 	}

@@ -104,7 +104,10 @@ func WsDepthServeMexc(markets *model.Markets, orderHandler OrderHandler, useFull
 					util.Notice(fmt.Sprintf("InvalidChannel in %+v", resp))
 					return
 				}
-				_, marketType, coin := model.GetCoinFromDialect(model.Mexc, resp.Symbol)
+				success, marketType, coin := model.GetCoinFromDialect(model.Mexc, resp.Symbol)
+				if !success {
+					return
+				}
 				symbol := coin + model.UniStandardTail[marketType]
 				bidAsk := parseTicksMexc(symbol, resp.Ts, resp.Data.Version, resp.Data.Bids, resp.Data.Asks)
 				//fmt.Println(fmt.Sprintf(`%s %f %f ~ %f %f`, symbol, bidAsk.Bids[0].Price, bidAsk.Bids[0].Amount, bidAsk.Asks[0].Price, bidAsk.Asks[0].Amount))

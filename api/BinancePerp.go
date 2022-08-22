@@ -76,7 +76,10 @@ func getMarketsBinancePerp(key, secret string) (marketInfos map[string]*model.Ma
 		if stat == nil {
 			continue
 		}
-		_, marketType, coin := model.GetCoinFromDialect(model.BinancePerp, stat.Symbol)
+		success, marketType, coin := model.GetCoinFromDialect(model.BinancePerp, stat.Symbol)
+		if !success {
+			continue
+		}
 		name := coin + model.UniStandardTail[marketType]
 		if marketInfos[name] != nil {
 			marketInfos[name].TradeAmount, _ = strconv.ParseFloat(stat.QuoteVolume, 64)

@@ -90,7 +90,10 @@ var subscribeHandlerBybitSpot = func(connection *websocket.Conn, subscribes []in
 			util.SocketInfo("bybitSpot can not subscribe " + err.Error())
 			return err
 		}
-		_, _, coin := model.GetCoinFromDialect(model.BybitSpot, subscribe.(string))
+		success, _, coin := model.GetCoinFromDialect(model.BybitSpot, subscribe.(string))
+		if !success {
+			continue
+		}
 		standardSymbol := coin + model.UniStandardTail[model.MarketTypeSpot]
 		bybitSpotSubConnection.Store(standardSymbol, connection)
 		util.Notice(`set bybitspot connection %s`, standardSymbol)

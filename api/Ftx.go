@@ -102,7 +102,10 @@ var subscribeHandlerFtx = func(connection *websocket.Conn, subscribes []interfac
 	}
 	for i := 0; i < len(subscribes); i++ {
 		cmdSubscribe := subscribes[i].([]string)
-		_, marketType, coin := model.GetCoinFromDialect(model.Ftx, cmdSubscribe[1])
+		success, marketType, coin := model.GetCoinFromDialect(model.Ftx, cmdSubscribe[1])
+		if !success {
+			continue
+		}
 		ftxSymbolConnection.Store(coin+model.UniStandardTail[marketType], connection)
 		subCmd := fmt.Sprintf(`{"op": "subscribe", "channel": "%s", "market": "%s"}`,
 			cmdSubscribe[0], cmdSubscribe[1])

@@ -246,9 +246,9 @@ var wsHandlerOKEX = func(connection *websocket.Conn, event []byte, orderHandler 
 		return
 	}
 	dialectSymbol := responseJson.GetPath(`arg`, `instId`).MustString()
-	_, marketType, coin := model.GetCoinFromDialect(model.OKEX, dialectSymbol)
+	success, marketType, coin := model.GetCoinFromDialect(model.OKEX, dialectSymbol)
 	channel := msgChanOKEX[coin+model.UniStandardTail[marketType]]
-	if channel != nil {
+	if success && channel != nil {
 		channel <- responseJson
 	}
 }

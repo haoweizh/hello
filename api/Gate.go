@@ -231,10 +231,10 @@ var tickerHandler = gateWs.NewCallBack(func(msg *gateWs.UpdateMsg) {
 		if err := json.Unmarshal(msg.Result, &update); err != nil {
 			util.Notice(fmt.Sprintf("spot book ticker Unmarshal err:%s", err.Error()))
 		}
-		if update.CurrencyPair == "" {
+		success, _, coin := model.GetCoinFromDialect(model.Gate, update.CurrencyPair)
+		if !success {
 			return
 		}
-		_, _, coin := model.GetCoinFromDialect(model.Gate, update.CurrencyPair)
 		symbol = coin + model.UniStandardTail[model.MarketTypeSpot]
 		now := int(time.Now().UnixNano() / int64(time.Millisecond))
 		bidPrice, _ := strconv.ParseFloat(update.Bid, 64)
@@ -250,10 +250,10 @@ var tickerHandler = gateWs.NewCallBack(func(msg *gateWs.UpdateMsg) {
 		if err := json.Unmarshal(msg.Result, &update); err != nil {
 			util.Notice(fmt.Sprintf("spot book ticker Unmarshal err:%s", err.Error()))
 		}
-		if update.CurrencyPair == "" {
+		success, _, coin := model.GetCoinFromDialect(model.Gate, update.CurrencyPair)
+		if !success {
 			return
 		}
-		_, _, coin := model.GetCoinFromDialect(model.Gate, update.CurrencyPair)
 		symbol = coin + model.UniStandardTail[model.MarketTypeSpot]
 		now := int(time.Now().UnixNano() / int64(time.Millisecond))
 		bidAsk = model.BidAsk{Ts: int(update.TimeInMilli), TsReceived: now, UpdateId: update.LastUpdateId,
@@ -272,10 +272,10 @@ var tickerHandler = gateWs.NewCallBack(func(msg *gateWs.UpdateMsg) {
 		if err := json.Unmarshal(msg.Result, &update); err != nil {
 			util.Notice(fmt.Sprintf("future book ticker Unmarshal err:%s", err.Error()))
 		}
-		if update.Contract == "" {
+		success, _, coin := model.GetCoinFromDialect(model.Gate, update.Contract)
+		if !success {
 			return
 		}
-		_, _, coin := model.GetCoinFromDialect(model.Gate, update.Contract)
 		symbol = coin + model.UniStandardTail[model.MarketTypePerp]
 		now := int(time.Now().UnixNano() / int64(time.Millisecond))
 		bidPrice, _ := strconv.ParseFloat(update.BestBidPrice, 64)
@@ -474,7 +474,10 @@ func getPositionsGate(key string, secret string) (success bool, positions []*mod
 	available, _ = strconv.ParseFloat(account.Available, 64)
 	positions = make([]*model.Position, 0)
 	for _, item := range positionList {
-		_, _, coin := model.GetCoinFromDialect(model.Gate, item.Contract)
+		getCoin, _, coin := model.GetCoinFromDialect(model.Gate, item.Contract)
+		if !getCoin {
+			continue
+		}
 		currency := coin + model.UniStandardTail[model.MarketTypePerp]
 		position := &model.Position{Market: model.Gate, Ts: util.GetNowUnixMillion(), Currency: currency}
 		_, realAmount := model.ParseRealAmount(model.Gate, currency, float64(item.Size))
