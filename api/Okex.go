@@ -102,7 +102,10 @@ func reSubscribe(subscribes []interface{}) {
 	subArray := make([]map[string]string, 0)
 	for _, item := range subscribes {
 		dialectSymbol := item.(string)
-		_, marketType, coin := model.GetCoinFromDialect(model.OKEX, dialectSymbol)
+		getCoin, marketType, coin := model.GetCoinFromDialect(model.OKEX, dialectSymbol)
+		if !getCoin {
+			continue
+		}
 		symbol := coin + model.UniStandardTail[marketType]
 		success, bidAsk := model.AppMarkets.GetBidAsk(symbol, model.OKEX)
 		if !success || bidAsk == nil || time.Now().UnixMilli()-int64(bidAsk.Ts) > 60000000 {
