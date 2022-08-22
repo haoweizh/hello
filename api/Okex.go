@@ -109,6 +109,11 @@ func reSubscribe(subscribes []interface{}) {
 		symbol := coin + model.UniStandardTail[marketType]
 		success, bidAsk := model.AppMarkets.GetBidAsk(symbol, model.OKEX)
 		if !success || bidAsk == nil || time.Now().UnixMilli()-int64(bidAsk.Ts) > 60000000 {
+			if bidAsk == nil {
+				util.Notice(`bid ask nil okex ` + symbol)
+			} else {
+				util.Notice(fmt.Sprintf(`bid ask too late okex %s %d %d`, symbol, time.Now().UnixMilli(), bidAsk.Ts))
+			}
 			setRequireReset(model.OKEX)
 			return
 		} else if success && bidAsk != nil && time.Now().UnixMilli()-int64(bidAsk.Ts) > 30000000 {
