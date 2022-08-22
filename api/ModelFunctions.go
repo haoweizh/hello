@@ -237,7 +237,8 @@ func handleSettings() (handled bool) {
 		}
 		settings.Range(func(symbol, setting interface{}) bool {
 			_, _, coinValue, _ := model.GetFromStandard(market, symbol.(string))
-			if topMarketInfos[symbol.(string)] == nil && !model.CommonCoins[strings.ToLower(coinValue)] {
+			if topMarketInfos[symbol.(string)] == nil && !model.CommonCoins[strings.ToLower(coinValue)] &&
+				setting.(*model.Setting).Chance == 0 {
 				setting.(*model.Setting).SymbolRelated = model.SettingTurtleRemoved
 				model.AppDB.Save(setting)
 				util.Notice(`add setting remove %s`, setting.(*model.Setting).Symbol)

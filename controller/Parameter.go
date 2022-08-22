@@ -294,7 +294,7 @@ func GetParameters(c *gin.Context) {
 		msg += fmt.Sprintf("海龟币种：%s \n", market)
 		if settingMap != nil {
 			settingMap.Range(func(symbol, setting interface{}) bool {
-				if setting == nil || setting.(*model.Setting).Function != model.FunctionTurtle || setting.(*model.Setting).SymbolRelated == model.SettingTurtleRemoved {
+				if setting == nil || setting.(*model.Setting).Function != model.FunctionTurtle {
 					return true
 				}
 				turtleData := carry.GetTurtleData(account.Key, account.Secret, setting.(*model.Setting))
