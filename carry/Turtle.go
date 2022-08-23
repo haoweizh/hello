@@ -172,18 +172,15 @@ func checkTurtleOrders(key, secret string, setting *model.Setting, currentN floa
 	if now.After(turtleData.checkTimeOpen) {
 		checked = true
 		turtleData.checkTimeOpen = util.GetNow()
-		util.Notice(fmt.Sprintf(`cancel extra query %s %s`, setting.Market, setting.Symbol))
 		orders := api.QueryOpenTriggerOrders(key, secret, setting.Market, setting.Symbol)
 		if orders == nil {
 			return
 		}
 		for _, order := range orders {
-			util.Notice(fmt.Sprintf(`get orders %s %s %d %s limit currentN %f %f chance %d %s`,
-				order.Market, order.Symbol, len(orders), order.OrderId, currentN, setting.AmountLimit, setting.Chance, order.OrderSide))
 			if (turtleData.orderLong != nil && turtleData.orderLong.OrderId == order.OrderId &&
 				(currentN < setting.AmountLimit || setting.Chance < 0)) ||
 				(turtleData.orderShort != nil && turtleData.orderShort.OrderId == order.OrderId &&
-					currentN > -1*setting.AmountLimit || setting.Chance > 0) {
+					(currentN > -1*setting.AmountLimit || setting.Chance > 0)) {
 				util.Notice(fmt.Sprintf(`cancel extra ignore %s %s %s`, order.Market, order.Symbol, order.OrderId))
 				continue
 			}
