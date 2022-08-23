@@ -172,6 +172,7 @@ func checkTurtleOrders(key, secret string, setting *model.Setting, currentN floa
 	if now.After(turtleData.checkTimeOpen) {
 		checked = true
 		turtleData.checkTimeOpen = util.GetNow()
+		util.Notice(fmt.Sprintf(`cancel extra query %s %s`, setting.Market, setting.Symbol))
 		orders := api.QueryOpenTriggerOrders(key, secret, setting.Market, setting.Symbol)
 		if orders == nil {
 			return
