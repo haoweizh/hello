@@ -138,7 +138,6 @@ func prepareSettings() {
 		}
 		functions.Store(setting.Function, model.HandlerMap[setting.Function])
 		util.StoreSyncMap(localHandlers, functions, setting.Market, setting.Symbol)
-
 		var settings *sync.Map
 		value, ok = localCoinSettings.Load(setting.Function)
 		if ok {
@@ -163,7 +162,6 @@ func prepareSettings() {
 		//util.Notice(fmt.Sprintf(`add setting array %s %s %d`, setting.Market, setting.Symbol, len(settingArray.([]*model.Setting))))
 		settings.Store(setting.Coin, settingArray)
 		localCoinSettings.Store(setting.Function, settings)
-
 		var functionMarketSettings *sync.Map
 		value, ok = util.LoadSyncMap(localSymbolSettings, setting.Function, setting.Market)
 		if ok {
@@ -242,6 +240,14 @@ func handleSettings() (handled bool) {
 				setting.(*model.Setting).SymbolRelated = model.SettingTurtleRemoved
 				model.AppDB.Save(setting)
 				util.Notice(`add setting remove %s`, setting.(*model.Setting).Symbol)
+			} else if market == model.BinancePerp {
+				accounts := model.AppConfig.GetAccounts(model.BinancePerp)
+				for _, account := range accounts {
+					success := SetLeverageBinancePerp(account.Key, account.Secret, symbol.(string), 5)
+					if !success {
+						util.Notice(fmt.Sprintf(`fail to set leverage binanceperp %s`, symbol.(string)))
+					}
+				}
 			}
 			return true
 		})

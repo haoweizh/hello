@@ -530,3 +530,17 @@ func setPosSideBinancePerp(key, secret string) {
 		return
 	}
 }
+
+func SetLeverageBinancePerp(key, secret, symbol string, leverage int) (success bool) {
+	ok, _, _, dialectSymbol := model.GetFromStandard(model.BinancePerp, symbol)
+	if !ok {
+		return false
+	}
+	client := futures.NewClient(key, secret)
+	res, err := client.NewChangeLeverageService().Symbol(dialectSymbol).Leverage(leverage).Do(context.Background())
+	if err != nil {
+		util.Notice(fmt.Sprintf(`fail to set binanceperp leverage %s %d %s`, res.Symbol, res.Leverage, err.Error()))
+		return false
+	}
+	return true
+}
