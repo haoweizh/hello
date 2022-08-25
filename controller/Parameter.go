@@ -186,7 +186,7 @@ func holdPage(c *gin.Context) {
 		}
 	}
 	carryRows, _ := model.AppDB.Model(model.Order{}).Select(`amount_type,order_side,sum(price*abs(amount)),date(order_time),count(*),refresh_type`).
-		Where(`refresh_type=?`, model.FunctionCross).
+		//Where(`refresh_type=?`, model.FunctionCross).
 		Group(`order_side,date(order_time),amount_type,refresh_type`).Order(`date(order_time) desc`).Rows()
 	if carryRows != nil {
 		crossInU := map[string]map[string]float64{}
@@ -211,10 +211,10 @@ func holdPage(c *gin.Context) {
 		for date, m := range crossInU {
 			for key, crossU := range m {
 				refreshType := key[0:strings.Index(key, `_`)]
-				side := key[strings.Index(key, `_`):]
+				side := key[strings.Index(key, `_`)+1:]
 				tradeInfo = append(tradeInfo, []string{`ALL`, date, refreshType,
 					strconv.FormatFloat(crossU, 'f', 0, 64), side,
-					strconv.FormatFloat(crossCount[date][side], 'f', 0, 64), ``})
+					strconv.FormatFloat(crossCount[date][key], 'f', 0, 64), ``})
 			}
 		}
 		carryRows.Close()
