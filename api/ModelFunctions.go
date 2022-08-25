@@ -240,12 +240,15 @@ func handleSettings() (handled bool) {
 				setting.(*model.Setting).SymbolRelated = model.SettingTurtleRemoved
 				model.AppDB.Save(setting)
 				util.Notice(`add setting remove %s`, setting.(*model.Setting).Symbol)
-			} else if market == model.BinancePerp {
+			}
+			if market == model.BinancePerp {
 				accounts := model.AppConfig.GetAccounts(model.BinancePerp)
 				for _, account := range accounts {
 					success := SetLeverageBinancePerp(account.Key, account.Secret, symbol.(string), 5)
 					if !success {
 						util.Notice(fmt.Sprintf(`fail to set leverage binanceperp %s`, symbol.(string)))
+					} else {
+						util.Notice(fmt.Sprintf(`set leverage binanceperp %s`, symbol.(string)))
 					}
 				}
 			}
