@@ -185,16 +185,16 @@ func holdPage(c *gin.Context) {
 			}
 		}
 	}
-	carryRows, _ := model.AppDB.Model(model.Order{}).Select(`amount_type,order_side,sum(price*abs(amount)),date(order_time),count(*)`).
+	carryRows, _ := model.AppDB.Model(model.Order{}).Select(`amount_type,order_side,sum(price*abs(amount)),date(order_time),count(*),refresh_type`).
 		Where(`refresh_type=?`, model.FunctionCross).
-		Group(`order_side,date(order_time),amount_type`).Order(`date(order_time) desc`).Rows()
+		Group(`order_side,date(order_time),amount_type,refresh_type`).Order(`date(order_time) desc`).Rows()
 	if carryRows != nil {
 		crossInU := map[string]map[string]float64{}
 		crossCount := map[string]map[string]float64{}
 		for carryRows.Next() {
-			var side, date, amountType string
+			var side, date, amountType, refreshType string
 			var value, orderNum float64
-			_ = carryRows.Scan(&amountType, &side, &value, &date, &orderNum)
+			_ = carryRows.Scan(&amountType, &side, &value, &date, &orderNum, &refreshType)
 			dates := strings.Split(date, `-`)
 			date = fmt.Sprintf(`%s-%s`, dates[1], dates[2])
 			date = date[0:strings.Index(date, `T`)]
@@ -204,15 +204,17 @@ func holdPage(c *gin.Context) {
 					crossInU[date] = map[string]float64{}
 					crossCount[date] = map[string]float64{}
 				}
-				crossInU[date][side] += value
-				crossCount[date][side] += orderNum
+				crossInU[date][refreshType+`_`+side] += value
+				crossCount[date][refreshType+`_`+side] += orderNum
 			}
 		}
-		for side, m := range crossInU {
-			for date, crossU := range m {
-				tradeInfo = append(tradeInfo, []string{`ALL`, date, side,
-					strconv.FormatFloat(crossU, 'f', 0, 64), model.FunctionCross,
-					strconv.FormatFloat(crossCount[side][date], 'f', 0, 64), ``})
+		for date, m := range crossInU {
+			for key, crossU := range m {
+				refreshType := key[0:strings.Index(key, `_`)]
+				side := key[strings.Index(key, `_`):]
+				tradeInfo = append(tradeInfo, []string{`ALL`, date, refreshType,
+					strconv.FormatFloat(crossU, 'f', 0, 64), side,
+					strconv.FormatFloat(crossCount[date][side], 'f', 0, 64), ``})
 			}
 		}
 		carryRows.Close()
