@@ -100,9 +100,10 @@ func createFromPosition(account *model.Account, setting *model.Setting, valueLim
 	}
 	cm := value.(*contractMarket)
 	getPrice, price := model.AppMarkets.GetPriceForce(setting.Symbol, setting.Market, api.GetMarkets())
-	if !getPrice && cm.positions[setting.Symbol] != nil {
-		price = cm.positions[setting.Symbol].EntryPrice
-		util.Notice(`no tick price, use position price %s %s %f`, setting.Market, setting.Symbol, price)
+	if !getPrice {
+		//price = cm.positions[setting.Symbol].EntryPrice
+		//util.Notice(`no tick price, use position price %s %s %f`, setting.Market, setting.Symbol, price)
+		return nil, false
 	}
 	limitAmount := 0.0
 	availableAmount := 0.0
@@ -143,12 +144,12 @@ func createFromBalance(account *model.Account, setting *model.Setting, valueLimi
 		spotMarkets.Store(key, createSpotMarket(key, account.Secret, setting.Market))
 		value, ok = spotMarkets.Load(key)
 	}
-	if value == nil {
-		util.Notice(fmt.Sprintf(`nil spot market %s %s`, setting.Market, setting.Symbol))
+	success, price := model.AppMarkets.GetPriceForce(setting.Symbol, setting.Market, api.GetMarkets())
+	if value == nil || !success || price == 0 {
+		util.Notice(fmt.Sprintf(`nil spot market %s %s getPrice %v %f`, setting.Market, setting.Symbol, success, price))
 		return
 	}
 	sm := value.(*spotMarket)
-	_, price := model.AppMarkets.GetPriceForce(setting.Symbol, setting.Market, api.GetMarkets())
 	limitBuy, limitSell, availableBuy := 0.0, 0.0, 0.0
 	if price > 0 {
 		limitBuy = math.Min(openValueLimit, math.Min(sm.availableU/5, sm.accountValueInU/15)) / price

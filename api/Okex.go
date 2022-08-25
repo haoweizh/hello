@@ -1150,7 +1150,6 @@ func getBalanceOKEX(key, secret string) (success bool, balances []*model.Balance
 		return getBalanceOKEX(key, secret)
 	}
 	balances = make([]*model.Balance, 0)
-	success = true
 	data := responseJson.Get(`data`).MustArray()[0].(map[string]interface{})
 	if data == nil {
 		return
@@ -1174,7 +1173,7 @@ func getBalanceOKEX(key, secret string) (success bool, balances []*model.Balance
 			balances = append(balances, balance)
 		}
 	}
-	return success, balances, totalInUsd, collateral
+	return true, balances, totalInUsd, collateral
 }
 
 func getAccountConfigOKEX(key, secret string) (mode string) {
@@ -1223,7 +1222,6 @@ func getPositionsOKEX(key, secret string) (success bool, positions []*model.Posi
 		time.Sleep(time.Second * 2)
 		return getPositionsOKEX(key, secret)
 	}
-	success = true
 	positions = make([]*model.Position, 0)
 	positionArray := responseJson.Get(`data`).MustArray()
 	for _, item := range positionArray {
@@ -1232,7 +1230,7 @@ func getPositionsOKEX(key, secret string) (success bool, positions []*model.Posi
 			positions = append(positions, position)
 		}
 	}
-	return success, positions
+	return true, positions
 }
 
 // getMaxSizeOKEX

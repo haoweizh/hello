@@ -306,7 +306,6 @@ func getBalanceBinanceSpot(key string, secret string) (success bool, balances []
 		util.SocketInfo(`binance balance can not trade`)
 		return false, balances
 	}
-
 	balances = make([]*model.Balance, 0)
 	for _, data := range balanceResp.Balances {
 		if data.Asset == "" {
