@@ -639,13 +639,13 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 	maintaining, ok := model.ChannelMaintaining.Load(setting.Market)
 	if tick == nil || tick.Asks == nil || tick.Bids == nil || setting == nil || (ok && maintaining.(bool)) ||
 		(model.AppConfig.Env != `test` && model.AppConfig.Handle != `1`) || setting.Valid == false ||
-		settings == nil || len(settings) == 0 || million-int64(tick.Ts) > 200 {
+		settings == nil || len(settings) == 0 || million-int64(tick.Ts) > 100 {
 		return
 	}
 	for _, settingRelate := range settings {
 		tickGet, tickRelate := model.AppMarkets.GetBidAsk(settingRelate.Symbol, settingRelate.Market)
 		if !tickGet || setting.ID == settingRelate.ID ||
-			(model.AppConfig.Env != `test` && million-int64(tickRelate.Ts) > 800) {
+			(model.AppConfig.Env != `test` && million-int64(tickRelate.Ts) > 200) {
 			continue
 		}
 		for i := api.GetCrossLen() - 1; i >= 0; i-- {
