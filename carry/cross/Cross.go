@@ -709,7 +709,7 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarrySta
 	score := (priceBid - priceAskRelate) / math.Max(priceBid, priceAskRelate)
 	scoreRelate := (priceBidRelate - priceAsk) / math.Max(priceAsk, priceBidRelate)
 	mark := fmt.Sprintf(`%s_%s|%s_%s`, carryStatus.market, carryStatus.symbol, carryStatusRelate.market, carryStatusRelate.symbol)
-	if score > 0.01 {
+	if score > 0.01 && util.DoDebug {
 		model.AppMetric.AddCarry(mark, score, 0)
 	}
 	// 根据负资金费率进行权重调整,小于负万五的，负千分之几，就再乘以几
