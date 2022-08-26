@@ -303,6 +303,7 @@ func addLastCarry(order *model.Order, setting *model.Setting) {
 				setting.UpdatedAt = now
 				lastOrders[setting.Market][setting.Symbol] = make([]*model.Order, lastOrderLength)
 				lastOrderIndex[setting.Market][setting.Symbol] = 0
+				api.SendMails(`连续交易失败3次`, fmt.Sprintf(`%s %s交易失败%d次`, setting.Market, setting.Symbol, noDealNum))
 				go func() {
 					time.Sleep(time.Minute * 20)
 					setting.Valid = true

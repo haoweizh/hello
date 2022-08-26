@@ -59,7 +59,7 @@ func RefreshMarketInfo() {
 
 func ReloadSettings() {
 	for true {
-		time.Sleep(time.Hour * 24)
+		time.Sleep(time.Hour * 1)
 		api.LoadSettings()
 	}
 }
