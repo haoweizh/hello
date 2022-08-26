@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"hello/util"
 	"math"
+	"strings"
 	"sync"
 	"time"
 )
@@ -79,7 +80,8 @@ func (metricManager *MetricManager) AddCarry(mark string, carryOpen, carryClose 
 }
 
 func (metricManager *MetricManager) AddTick(market, symbol string, current time.Time, lastBidAsk, bidAsk *BidAsk) {
-	key := fmt.Sprintf(`%s*%s%d/%d_%d`, market, symbol, current.Month(), current.Day(), current.Hour())
+	//key := fmt.Sprintf(`%s*%s%d/%d_%d`, market, symbol, current.Month(), current.Day(), current.Hour())
+	key := fmt.Sprintf(`%s %s %d %d`, market, symbol, current.Day(), current.Hour())
 	value, ok := metricManager.tickHour.Load(key)
 	var tickMetric *TickMetric
 	if !ok {
@@ -207,66 +209,78 @@ func (metricManager *MetricManager) AddTick(market, symbol string, current time.
 //	return [][]map[string]interface{}{tablePriceDis, tableTick, tableTickRecent}
 //}
 
-//func (metricManager *MetricManager) ToArray() (tickInfo, recentTickInfo [][]string) {
-//	now := util.GetNow()
-//	timeMap := make(map[string]bool, 12)
-//	for i := 0; i < 12; i++ {
-//		duration, _ := time.ParseDuration(fmt.Sprintf(`-%dh`, i))
-//		then := now.Add(duration)
-//		timeMap[fmt.Sprintf(`%d/%d_%d`, then.Month(), then.Day(), then.Hour())] = true
-//	}
-//	tickInfo = make([][]string, 0)
-//	// tick状况
-//	for marketSymbol, timeMetric := range metricManager.tickHour {
-//		market := marketSymbol[0:strings.Index(marketSymbol, `_`)]
-//		symbol := marketSymbol[strings.Index(marketSymbol, `_`)+1:]
-//		for str, metric := range timeMetric {
-//			if timeMap[str] {
-//				tickInfo = append(tickInfo, []string{market, symbol, str,
-//					strconv.FormatInt(int64(metric.countAll), 10),
-//					strconv.FormatInt(int64(metric.countValid), 10),
-//					fmt.Sprintf(`%d~%d:%.0f`, metric.delayLow, metric.delayHigh, metric.delayAvg),
-//					fmt.Sprintf(`%d~%d:%.0f`, metric.betweenLow, metric.betweenHigh, metric.betweenAvg)})
-//			}
-//		}
-//	}
-//	recentTickInfo = make([][]string, 0)
-//	for marketSymbol, metrics := range metricManager.metricTicks {
-//		market := marketSymbol[0:strings.Index(marketSymbol, `_`)]
-//		symbol := marketSymbol[strings.Index(marketSymbol, `_`)+1:]
-//		index := metricManager.index[marketSymbol]
-//		pre := (metricManager.index[marketSymbol] - 1 + recentTickLength) % recentTickLength
-//		if metrics[index] == nil {
-//			index = 0
-//		}
-//		tickMetric := TickMetric{start: metrics[index].receiveTime, end: metrics[pre].receiveTime}
-//		for _, tick := range metrics {
-//			if tick == nil {
-//				continue
-//			}
-//			if tick.delay > tickMetric.delayHigh {
-//				tickMetric.delayHigh = tick.delay
-//			}
-//			if tick.delay < tickMetric.delayLow || tickMetric.delayLow == 0 {
-//				tickMetric.delayLow = tick.delay
-//			}
-//			tickMetric.delaySum += tick.delay
-//			tickMetric.countAll++
-//			if tick.delay < 100 {
-//				tickMetric.countValid++
-//			}
-//		}
-//		tickMetric.delayAvg = float64(tickMetric.delaySum) / float64(tickMetric.countAll)
-//		// 最近tick
-//		recentTickInfo = append(recentTickInfo, []string{market, symbol,
-//			fmt.Sprintf(`%d:%d-%d:%d`, tickMetric.start.Hour(), tickMetric.start.Minute(),
-//				tickMetric.end.Hour(), tickMetric.end.Minute()),
-//			strconv.FormatInt(int64(tickMetric.countAll), 10),
-//			strconv.FormatInt(int64(tickMetric.countValid), 10),
-//			fmt.Sprintf(`%d~%d:%.0f`, tickMetric.delayLow, tickMetric.delayHigh, tickMetric.delayAvg)})
-//	}
-//	return
-//}
+func (metricManager *MetricManager) ToArray() (tickInfo [][]string) {
+	//now := util.GetNow()
+	//timeMap := make(map[string]bool, 12)
+	//for i := 0; i < 12; i++ {
+	//	duration, _ := time.ParseDuration(fmt.Sprintf(`-%dh`, i))
+	//	then := now.Add(duration)
+	//	timeMap[fmt.Sprintf(`%d/%d_%d`, then.Month(), then.Day(), then.Hour())] = true
+	//}
+	tickInfo = make([][]string, 0)
+	// tick状况
+	metricManager.tickHour.Range(func(key, value interface{}) bool {
+		metric := value.(*TickMetric)
+		tickInfo = append(tickInfo, []string{key.(string),
+			fmt.Sprintf(`%d/%d`, metric.countValid, metric.countAll),
+			fmt.Sprintf(`%d:%d=%.1f`, metric.betweenLow, metric.betweenHigh, metric.betweenAvg),
+			fmt.Sprintf(`%d:%d=%.1f`, metric.delayLow, metric.delayHigh, metric.delayAvg),
+			fmt.Sprintf(`%f:%f`, metric.priceLow, metric.priceHigh)})
+		if strings.Contains(key.(string), BybitPerp) {
+			util.Info(fmt.Sprintf(`range tick %s %d %d`, key.(string), metric.countValid, metric.countAll))
+		}
+		return true
+	})
+	//for marketSymbol, timeMetric := range metricManager.tickHour {
+	//	market := marketSymbol[0:strings.Index(marketSymbol, `_`)]
+	//	symbol := marketSymbol[strings.Index(marketSymbol, `_`)+1:]
+	//	for str, metric := range timeMetric {
+	//		if timeMap[str] {
+	//			tickInfo = append(tickInfo, []string{market, symbol, str,
+	//				strconv.FormatInt(int64(metric.countAll), 10),
+	//				strconv.FormatInt(int64(metric.countValid), 10),
+	//				fmt.Sprintf(`%d~%d:%.0f`, metric.delayLow, metric.delayHigh, metric.delayAvg),
+	//				fmt.Sprintf(`%d~%d:%.0f`, metric.betweenLow, metric.betweenHigh, metric.betweenAvg)})
+	//		}
+	//	}
+	//}
+	//recentTickInfo = make([][]string, 0)
+	//for marketSymbol, metrics := range metricManager.metricTicks {
+	//	market := marketSymbol[0:strings.Index(marketSymbol, `_`)]
+	//	symbol := marketSymbol[strings.Index(marketSymbol, `_`)+1:]
+	//	index := metricManager.index[marketSymbol]
+	//	pre := (metricManager.index[marketSymbol] - 1 + recentTickLength) % recentTickLength
+	//	if metrics[index] == nil {
+	//		index = 0
+	//	}
+	//	tickMetric := TickMetric{start: metrics[index].receiveTime, end: metrics[pre].receiveTime}
+	//	for _, tick := range metrics {
+	//		if tick == nil {
+	//			continue
+	//		}
+	//		if tick.delay > tickMetric.delayHigh {
+	//			tickMetric.delayHigh = tick.delay
+	//		}
+	//		if tick.delay < tickMetric.delayLow || tickMetric.delayLow == 0 {
+	//			tickMetric.delayLow = tick.delay
+	//		}
+	//		tickMetric.delaySum += tick.delay
+	//		tickMetric.countAll++
+	//		if tick.delay < 100 {
+	//			tickMetric.countValid++
+	//		}
+	//	}
+	//	tickMetric.delayAvg = float64(tickMetric.delaySum) / float64(tickMetric.countAll)
+	//	// 最近tick
+	//	recentTickInfo = append(recentTickInfo, []string{market, symbol,
+	//		fmt.Sprintf(`%d:%d-%d:%d`, tickMetric.start.Hour(), tickMetric.start.Minute(),
+	//			tickMetric.end.Hour(), tickMetric.end.Minute()),
+	//		strconv.FormatInt(int64(tickMetric.countAll), 10),
+	//		strconv.FormatInt(int64(tickMetric.countValid), 10),
+	//		fmt.Sprintf(`%d~%d:%.0f`, tickMetric.delayLow, tickMetric.delayHigh, tickMetric.delayAvg)})
+	//}
+	return
+}
 
 func (metricManager *MetricManager) ToString() (metricStr string) {
 	metricStr = ``
