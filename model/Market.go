@@ -115,10 +115,13 @@ func (markets *Markets) SetBidAsk(symbol, marketName string, bidAsk *BidAsk) boo
 		//	last.Asks[0].Price == bidAsk.Asks[0].Price && last.Asks[0].Amount == bidAsk.Asks[0].Amount && symbol == `DMG/USD` {
 		//	util.Info(fmt.Sprintf(`%s %s same as before`, marketName, symbol))
 		//}
+		if marketName == BybitPerp {
+			util.Info(fmt.Sprintf(`before get bybitperp at %s %d`, symbol, bidAsk.Ts))
+		}
 		oldBidAsk.Store(marketName, bidAsk)
 		if last != nil {
 			if marketName == BybitPerp {
-				util.Info(fmt.Sprintf(`get bybitperp at %s %d`, symbol, bidAsk.Ts))
+				util.Info(fmt.Sprintf(`after get bybitperp at %s %d`, symbol, bidAsk.Ts))
 			}
 			go AppMetric.AddTick(marketName, symbol, util.GetNow(), last.(*BidAsk), bidAsk)
 		}
