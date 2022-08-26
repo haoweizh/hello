@@ -117,6 +117,9 @@ func (markets *Markets) SetBidAsk(symbol, marketName string, bidAsk *BidAsk) boo
 		//}
 		oldBidAsk.Store(marketName, bidAsk)
 		if last != nil {
+			if marketName == BybitPerp {
+				util.Info(fmt.Sprintf(`get bybitperp at %s %d`, symbol, bidAsk.Ts))
+			}
 			go AppMetric.AddTick(marketName, symbol, util.GetNow(), last.(*BidAsk), bidAsk)
 		}
 		return true
