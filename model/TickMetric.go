@@ -80,7 +80,7 @@ func (metricManager *MetricManager) AddCarry(mark string, carryOpen, carryClose 
 
 func (metricManager *MetricManager) AddTick(market, symbol string, current time.Time, lastBidAsk, bidAsk *BidAsk) {
 	//key := fmt.Sprintf(`%s*%s%d/%d_%d`, market, symbol, current.Month(), current.Day(), current.Hour())
-	key := fmt.Sprintf(`%s*%s%d日%d`, market, symbol, current.Day(), current.Hour())
+	key := fmt.Sprintf(`%s %s %d %d`, market, symbol, current.Day(), current.Hour())
 	value, ok := metricManager.tickHour.Load(key)
 	var tickMetric *TickMetric
 	if !ok {
@@ -222,9 +222,10 @@ func (metricManager *MetricManager) ToArray() (tickInfo [][]string) {
 		metric := value.(*TickMetric)
 		tickInfo = append(tickInfo, []string{key.(string),
 			fmt.Sprintf(`%d/%d`, metric.countValid, metric.countAll),
-			fmt.Sprintf(`%d:%d=%f.1`, metric.betweenLow, metric.betweenHigh, metric.betweenAvg),
-			fmt.Sprintf(`%d:%d=%f.1`, metric.delayLow, metric.delayHigh, metric.delayAvg),
+			fmt.Sprintf(`%d:%d=%.1f`, metric.betweenLow, metric.betweenHigh, metric.betweenAvg),
+			fmt.Sprintf(`%d:%d=%.1f`, metric.delayLow, metric.delayHigh, metric.delayAvg),
 			fmt.Sprintf(`%f:%f`, metric.priceLow, metric.priceHigh)})
+		util.Info(fmt.Sprintf(`add tick %s %d`, key.(string), len(tickInfo)))
 		return true
 	})
 	//for marketSymbol, timeMetric := range metricManager.tickHour {
