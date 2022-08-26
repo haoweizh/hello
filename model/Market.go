@@ -98,7 +98,7 @@ func (markets *Markets) SetBidAsk(symbol, marketName string, bidAsk *BidAsk) boo
 	if bidAsk.Bids[0].Price >= bidAsk.Asks[0].Price || bidAsk.Bids[0].Price == 0 || bidAsk.Bids[0].Amount == 0 ||
 		bidAsk.Asks[0].Price == 0 || bidAsk.Asks[0].Amount == 0 {
 		if time.Now().Second() == 0 {
-			util.Info(fmt.Sprintf(`do not set mistake %s %s bid %f ask %f`,
+			util.SocketInfo(fmt.Sprintf(`do not set mistake %s %s bid %f ask %f`,
 				marketName, symbol, bidAsk.Bids[0].Price, bidAsk.Asks[0].Price))
 		}
 		return false
@@ -110,24 +110,16 @@ func (markets *Markets) SetBidAsk(symbol, marketName string, bidAsk *BidAsk) boo
 	}
 	oldBidAsk := value.(*sync.Map)
 	last, _ := oldBidAsk.Load(marketName)
-	if last == nil || last.(*BidAsk).Ts < bidAsk.Ts {
+	if last == nil || last.(*BidAsk).Ts <= bidAsk.Ts {
 		//if last != nil && last.Bids[0].Price == bidAsk.Bids[0].Price && last.Bids[0].Amount == bidAsk.Bids[0].Amount &&
 		//	last.Asks[0].Price == bidAsk.Asks[0].Price && last.Asks[0].Amount == bidAsk.Asks[0].Amount && symbol == `DMG/USD` {
 		//	util.Info(fmt.Sprintf(`%s %s same as before`, marketName, symbol))
 		//}
-		if marketName == BybitPerp {
-			util.Info(fmt.Sprintf(`before get bybitperp at %s %d`, symbol, bidAsk.Ts))
-		}
 		oldBidAsk.Store(marketName, bidAsk)
 		if last != nil {
-			if marketName == BybitPerp {
-				util.Info(fmt.Sprintf(`after get bybitperp at %s %d`, symbol, bidAsk.Ts))
-			}
 			go AppMetric.AddTick(marketName, symbol, util.GetNow(), last.(*BidAsk), bidAsk)
 		}
 		return true
-	} else {
-		util.Info(fmt.Sprintf(`time late %s %s %d > %d`, marketName, symbol, last.(*BidAsk).Ts, bidAsk.Ts))
 	}
 	return false
 }

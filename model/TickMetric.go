@@ -130,9 +130,6 @@ func (metricManager *MetricManager) AddTick(market, symbol string, current time.
 	//tickDelay := &TickDelay{receiveTime: current, delay: delay}
 	//metricManager.metricTicks.Store(fmt.Sprintf(`%s*%d`, marketSymbol, index), tickDelay)
 	//metricManager.index.Store(marketSymbol, (index+1)%recentTickLength)
-	if strings.Contains(key, BybitPerp) {
-		util.Info(fmt.Sprintf(`add bybitperp at %s %d`, symbol, bidAsk.Ts))
-	}
 	metricManager.tickHour.Store(key, tickMetric)
 }
 
