@@ -128,7 +128,13 @@ func createFromPosition(account *model.Account, setting *model.Setting, valueLim
 		util.Notice(fmt.Sprintf(`symbol absent revert %s %s`, setting.Market, setting.Symbol))
 		doRevert = true
 	}
-	if cm.contractValueInU/cm.accountValueInU > 1.8 || valueInUsd > valueLimit || valueInUsd/cm.accountValueInU > 0.2 {
+	rateLimitPosition := 1.8
+	rateLimitHolding := 0.2
+	if setting.Market == model.BybitPerp {
+		rateLimitPosition = 1.5
+		rateLimitHolding = 0.3
+	}
+	if cm.contractValueInU/cm.accountValueInU > rateLimitPosition || valueInUsd > valueLimit || valueInUsd/cm.accountValueInU > rateLimitHolding {
 		//util.Notice(fmt.Sprintf(`low position balance %s %s %f %f %f %f`,
 		//	key, setting.Symbol, cm.contractValueInU, cm.accountValueInU, valueInUsd, valueLimit))
 		doRevert = true
