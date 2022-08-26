@@ -219,13 +219,10 @@ var ProcessTurtle = func(setting *model.Setting, tick *model.BidAsk) {
 	turtleData := GetTurtleData(account.Key, account.Secret, setting)
 	if turtleData == nil || turtleData.n == 0 || turtleData.amount == 0 {
 		util.Notice(fmt.Sprintf(`fail to get turtle %s %s`, setting.Market, setting.Symbol))
-		time.Sleep(time.Second * 30)
+		time.Sleep(time.Second * 2)
 		return
 	}
 	currentN := api.GetCurrentN(setting)
-	if checkTurtleOrders(account.Key, account.Secret, setting, float64(currentN), turtleData) {
-		return
-	}
 	showMsg := fmt.Sprintf("%s_%s_%s", model.FunctionTurtle, setting.Market, setting.Symbol)
 	model.SetCarryInfo(account.Key, showMsg, fmt.Sprintf("[海龟参数]%s %s 次数限制:%f 当前已经持仓数量:%f 上一次开仓的价格:%f "+
 		"20日:%f-%f 10日:%f-%f n:%f 数量:%f %s 持仓数/限制:%d/%f 总持仓数%d bid-ask %f %f 当日有平仓：%v",
@@ -235,7 +232,8 @@ var ProcessTurtle = func(setting *model.Setting, tick *model.BidAsk) {
 		tick.Asks[0].Price, turtleClosed[setting.Market][setting.Symbol]))
 	priceLong := turtleData.highDays20
 	priceShort := turtleData.lowDays20
-	if checkTurtleBreak(account.Key, account.Secret, setting, turtleData, tick) {
+	if checkTurtleOrders(account.Key, account.Secret, setting, float64(currentN), turtleData) ||
+		checkTurtleBreak(account.Key, account.Secret, setting, turtleData, tick) {
 		return
 	}
 	if setting.Chance == 0 && !turtleClosed[setting.Market][setting.Symbol] { // 开初始仓
@@ -375,7 +373,7 @@ func setTurtleOrderStatus(function, market, symbol, orderId, status string) {
 }
 
 func checkTurtleBreak(key, secret string, setting *model.Setting, turtleData *TurtleData, tick *model.BidAsk) (checked bool) {
-	duration, _ := time.ParseDuration(`-5s`)
+	duration, _ := time.ParseDuration(`-60s`)
 	now := util.GetNow().Add(duration)
 	checked = false
 	if now.After(turtleData.checkTimeBreak) {
