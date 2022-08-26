@@ -247,7 +247,7 @@ func handleOrderBookBybitPerp(markets *model.Markets, symbol string, ts int64, r
 		bidAsk.TsReceived = int(util.GetNowUnixMillion())
 		sort.Sort(bidAsk.Asks)
 		sort.Sort(sort.Reverse(bidAsk.Bids))
-		//util.SocketInfo(markets.ToStringBidAsk(bidAsk))
+		util.Info(`notify tick ` + model.BybitPerp + markets.ToStringBidAsk(bidAsk))
 		if markets.SetBidAsk(symbol, model.BybitPerp, bidAsk) {
 			funcHandlers := GetFunctions(model.BybitPerp, symbol)
 			if funcHandlers != nil {
