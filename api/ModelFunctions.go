@@ -9,6 +9,7 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"time"
 )
 
 var symbolSettings *sync.Map // function*market - map[symbol]*setting
@@ -123,6 +124,22 @@ func prepareSettings() {
 	marketMap := make(map[string]bool)
 	model.AppDB.Where(`valid = ?`, true).Find(&appSettings)
 	util.Notice(`start to load settings %d`, len(appSettings))
+	go func() {
+		for _, setting := range appSettings {
+			if setting.Market == model.BinancePerp {
+				accounts := model.AppConfig.GetAccounts(model.BinancePerp)
+				for _, account := range accounts {
+					success := SetLeverageBinancePerp(account.Key, account.Secret, setting.Symbol, 5)
+					if success {
+						util.Notice(fmt.Sprintf(`set leverage binanceperp %s`, setting.Symbol))
+					} else {
+						util.Notice(fmt.Sprintf(`fail to set leverage binanceperp %s`, setting.Symbol))
+					}
+				}
+				time.Sleep(time.Second)
+			}
+		}
+	}()
 	for i := 0; i < len(appSettings); i++ {
 		setting := &appSettings[i]
 		//util.Notice(fmt.Sprintf(`load setting %s %s %s %v`,
@@ -240,17 +257,6 @@ func handleSettings() (handled bool) {
 				setting.(*model.Setting).SymbolRelated = model.SettingTurtleRemoved
 				model.AppDB.Save(setting)
 				util.Notice(`add setting remove %s`, setting.(*model.Setting).Symbol)
-			}
-			if market == model.BinancePerp {
-				accounts := model.AppConfig.GetAccounts(model.BinancePerp)
-				for _, account := range accounts {
-					success := SetLeverageBinancePerp(account.Key, account.Secret, symbol.(string), 5)
-					if !success {
-						util.Notice(fmt.Sprintf(`fail to set leverage binanceperp %s`, symbol.(string)))
-					} else {
-						util.Notice(fmt.Sprintf(`set leverage binanceperp %s`, symbol.(string)))
-					}
-				}
 			}
 			return true
 		})
