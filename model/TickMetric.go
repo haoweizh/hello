@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"hello/util"
 	"math"
+	"strings"
 	"sync"
 	"time"
 )
@@ -225,6 +226,9 @@ func (metricManager *MetricManager) ToArray() (tickInfo [][]string) {
 			fmt.Sprintf(`%d:%d=%.1f`, metric.betweenLow, metric.betweenHigh, metric.betweenAvg),
 			fmt.Sprintf(`%d:%d=%.1f`, metric.delayLow, metric.delayHigh, metric.delayAvg),
 			fmt.Sprintf(`%f:%f`, metric.priceLow, metric.priceHigh)})
+		if strings.Contains(key.(string), BybitPerp) {
+			util.Info(fmt.Sprintf(`range tick %s %d %d`, key.(string), metric.countValid, metric.countAll))
+		}
 		return true
 	})
 	//for marketSymbol, timeMetric := range metricManager.tickHour {
