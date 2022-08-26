@@ -225,7 +225,6 @@ func (metricManager *MetricManager) ToArray() (tickInfo [][]string) {
 			fmt.Sprintf(`%d:%d=%.1f`, metric.betweenLow, metric.betweenHigh, metric.betweenAvg),
 			fmt.Sprintf(`%d:%d=%.1f`, metric.delayLow, metric.delayHigh, metric.delayAvg),
 			fmt.Sprintf(`%f:%f`, metric.priceLow, metric.priceHigh)})
-		util.Info(fmt.Sprintf(`add tick %s %d`, key.(string), len(tickInfo)))
 		return true
 	})
 	//for marketSymbol, timeMetric := range metricManager.tickHour {
