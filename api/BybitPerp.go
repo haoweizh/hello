@@ -534,17 +534,15 @@ func getPositionsBybitPerp(key, secret string) (success bool, positions []*model
 func getFundingRateBybitPerp(key, secret, symbol string) (fundingRate *model.FundingRate) {
 	postData := map[string]interface{}{`symbol`: symbol}
 	response, _ := SignedRequestBybitPerp(key, secret, http.MethodGet,
-		`/public/linear/funding/prev-funding-rate`, postData)
+		//`/public/linear/funding/prev-funding-rate`, postData)
+		`/private/linear/funding/predicted-funding`, postData)
 	newJson, err := util.NewJSON(response)
 	if err == nil {
 		retCode := newJson.Get(`ret_code`).MustFloat64()
 		if retCode != 0 {
 			return nil
 		}
-		rate := newJson.GetPath(`result`, `funding_rate`).MustFloat64()
-		if symbol == `HNT_PERP` {
-			util.Notice(`bybit get hnt funding rate %f`, rate)
-		}
+		rate := newJson.GetPath(`result`, `predicted_funding_rate`).MustFloat64()
 		return &model.FundingRate{Rate: rate, ExpireTime: time.Now().Unix() + 300, UpdateTime: time.Now().Unix()}
 	}
 	return

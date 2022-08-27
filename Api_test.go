@@ -280,7 +280,7 @@ func Test_download(t *testing.T) {
 func Test_wallet(t *testing.T) {
 	model.NewConfig()
 	var key, secret string
-	market := model.BinancePerp
+	market := model.BybitPerp
 	switch market {
 	case model.Ftx:
 		key = model.AppConfig.FtxKey
@@ -293,17 +293,20 @@ func Test_wallet(t *testing.T) {
 	case model.BinancePerp:
 		key = model.AppConfig.BinanceKey
 		secret = model.AppConfig.BinanceSecret
+	case model.BybitPerp:
+		key = model.AppConfig.BybitKey
+		secret = model.AppConfig.BybitSecret
 	}
-	symbol := `BTC_PERP`
+	symbol := `HNT_PERP`
 	//order := api.PlaceOrder(key, secret, model.OrderSideBuy, model.OrderTypeStop,
 	//	market, symbol, ``, 4444, 4444, 0.1, false, nil, nil)
 	//fmt.Println(order.OrderId)
-	orders := api.QueryOpenTriggerOrders(key, secret, market, symbol)
-	for _, m := range orders {
-		result, _, _ := api.CancelOrder(key, secret, market, symbol, m.OrderType, m.OrderId)
-		fmt.Println(result)
-	}
-	_, rate := api.GetFundingRate(key, secret, model.BybitPerp, `LOOKS_PERP`)
+	//orders := api.QueryOpenTriggerOrders(key, secret, market, symbol)
+	//for _, m := range orders {
+	//	result, _, _ := api.CancelOrder(key, secret, market, symbol, m.OrderType, m.OrderId)
+	//	fmt.Println(result)
+	//}
+	_, rate := api.GetFundingRate(key, secret, model.BybitPerp, symbol)
 	_, rate = api.GetFundingRate(key, secret, model.BybitPerp, `LOOKS_PERP`)
 	marketInfos := api.GetMarketInfos(model.BybitPerp)
 	model.SetMarketInfos(model.BybitPerp, marketInfos)
