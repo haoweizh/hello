@@ -766,13 +766,13 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarrySta
 	if mark < markRelate {
 		mark = fmt.Sprintf(`%s|%s`, mark, markRelate)
 		model.SetMonitorInfo(strconv.Itoa(index), `cross`, mark, []string{coin, carryStatus.market, coinValue,
-			fmt.Sprintf(`%.5f`, carryStatus.FoundingRate),
+			fmt.Sprintf(`%.5f`, 100*carryStatus.FoundingRate),
 			fmt.Sprintf(`%.1f`, 100*tradeLineBuy),
 			fmt.Sprintf(`%.1f`, 100*tradeLineSell),
 			fmt.Sprintf(`%.0e`, carryStatus.LimitBuy),
 			fmt.Sprintf(`%.0e`, carryStatus.LimitSell),
 			carryStatusRelate.market, coinValueRelate,
-			fmt.Sprintf(`%.5f`, carryStatusRelate.FoundingRate),
+			fmt.Sprintf(`%.5f`, 100*carryStatusRelate.FoundingRate),
 			fmt.Sprintf(`%.1f`, 100*tradeLineBuyRelate),
 			fmt.Sprintf(`%.1f`, 100*tradeLineSellRelate),
 			fmt.Sprintf(`%.0e`, carryStatusRelate.LimitBuy),
@@ -783,13 +783,13 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarrySta
 	} else {
 		mark = fmt.Sprintf(`%s|%s`, markRelate, mark)
 		model.SetMonitorInfo(strconv.Itoa(index), `cross`, mark, []string{coin, carryStatusRelate.market, coinValueRelate,
-			fmt.Sprintf(`%.5f`, carryStatusRelate.FoundingRate),
+			fmt.Sprintf(`%.5f`, 100*carryStatusRelate.FoundingRate),
 			fmt.Sprintf(`%.1f`, 100*tradeLineBuyRelate),
 			fmt.Sprintf(`%.1f`, 100*tradeLineSellRelate),
 			fmt.Sprintf(`%.0e`, carryStatusRelate.LimitBuy),
 			fmt.Sprintf(`%.0e`, carryStatusRelate.LimitSell),
 			carryStatus.market, coinValue,
-			fmt.Sprintf(`%.5f`, carryStatus.FoundingRate),
+			fmt.Sprintf(`%.5f`, 100*carryStatus.FoundingRate),
 			fmt.Sprintf(`%.1f`, 100*tradeLineBuy),
 			fmt.Sprintf(`%.1f`, 100*tradeLineSell),
 			fmt.Sprintf(`%.0e`, carryStatus.LimitBuy),
@@ -915,9 +915,10 @@ func placeCross(statusBuy, statusSell *CarryStatus, priceBuy, priceSell, amount 
 		}
 		orderBuy.Coin = statusBuy.setting.Coin
 		orderSell.Coin = statusSell.setting.Coin
-		if !api.PlacePairOKEX(statusBuy.account.Key, statusBuy.symbol, statusSell.symbol, model.OrderTypeLimit, priceBuy, priceSell, amount) {
-			orderBuy.Status = model.CarryStatusFail
-			orderSell.Status = model.CarryStatusFail
+		success, msg := api.PlacePairOKEX(statusBuy.account.Key, statusBuy.symbol, statusSell.symbol, model.OrderTypeLimit, priceBuy, priceSell, amount)
+		if !success {
+			orderBuy.Status, orderSell.Status = model.CarryStatusFail, model.CarryStatusFail
+			orderBuy.ErrCode, orderSell.ErrCode = msg, msg
 		}
 		model.AppDB.Save(orderBuy)
 		model.AppDB.Save(orderSell)

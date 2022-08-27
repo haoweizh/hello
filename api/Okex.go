@@ -585,18 +585,21 @@ func getWSOrderArgOKEX(symbol, orderSide, orderType, tag string, price, amount f
 		`sz`: amountStrPerp, `ordType`: orderType, `px`: priceStr, `tag`: tag}
 }
 
-func PlacePairOKEX(key, symbolBuy, symbolSell, orderType string, priceBuy, priceSell, amount float64) (success bool) {
+func PlacePairOKEX(key, symbolBuy, symbolSell, orderType string, priceBuy, priceSell, amount float64) (success bool, errMsg string) {
 	if amount == 0 || priceBuy == 0 || priceSell == 0 {
-		util.Notice(fmt.Sprintf(`error: wrong PlacePairOKEX amount %f buy at %f sell at %f`, amount, priceBuy, priceSell))
-		return false
+		errMsg = fmt.Sprintf(`error: wrong PlacePairOKEX amount %f buy at %f sell at %f`, amount, priceBuy, priceSell)
+		util.Notice(errMsg)
+		return false, errMsg
 	}
 	now := time.Now().UnixNano()
 	if time.Duration(now-lastCarryTime)/time.Millisecond < 50 {
-		util.Notice(symbolBuy + ` ignore carry for last time < 50ms`)
-		return false
+		errMsg = symbolBuy + ` ignore carry for last time < 50ms`
+		util.Notice(errMsg)
+		return false, errMsg
 	} else if time.Duration(now-lastSameTime[symbolBuy])/time.Millisecond < 200 {
-		util.Notice(symbolBuy + ` ignore carry for same pair last time < 200ms`)
-		return false
+		errMsg = symbolBuy + ` ignore carry for same pair last time < 200ms`
+		util.Notice(errMsg)
+		return false, errMsg
 	}
 	lastSameTime[symbolBuy] = now
 	lastSameTime[symbolSell] = now
@@ -610,18 +613,20 @@ func PlacePairOKEX(key, symbolBuy, symbolSell, orderType string, priceBuy, price
 	subscribeMap["op"] = "batch-orders"
 	msg := util.JsonEncodeToByte(subscribeMap)
 	if privateConnectionOKEX == nil || privateConnectionOKEX[key] == nil {
-		util.Notice(fmt.Sprintf(`fail to get connection %s`, key))
-		return false
+		errMsg = fmt.Sprintf(`fail to get connection %s`, key)
+		util.Notice(errMsg)
+		return false, errMsg
 	}
 	util.Notice(`place pair %s`, msg)
 	if model.AppConfig.Env != `test` {
 		err := SendToConnection(model.OKEX, privateConnectionOKEX[key], msg)
 		if err != nil {
-			util.Notice(fmt.Sprintf(`fail to send order ws %s return %s`, key, err.Error()))
-			return false
+			errMsg = fmt.Sprintf(`fail to send order ws %s return %s`, key, err.Error())
+			util.Notice(errMsg)
+			return false, errMsg
 		}
 	}
-	return true
+	return true, ``
 }
 
 // amount、price
