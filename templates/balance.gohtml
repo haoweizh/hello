@@ -21,8 +21,9 @@
     <th colspan="2">实际</th>
     {{range $i, $value := $.cross}}
         <tr>
-            {{$valid := index $value 14}}
-            {{if eq $valid "true"}}
+            {{$funding1 := index $value 3}}
+            {{$funding2 := index $value 8}}
+            {{if and .le $funding1 0.1 .le $funding2 0.1}}
                 <td bgcolor="#00FF00">{{index $value 0}}</td>
                 <td bgcolor="#00FF00">{{index $value 1}}</td>
                 <td bgcolor="#00FF00">{{index $value 2}}</td>
