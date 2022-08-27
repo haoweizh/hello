@@ -542,6 +542,9 @@ func getFundingRateBybitPerp(key, secret, symbol string) (fundingRate *model.Fun
 			return nil
 		}
 		rate := newJson.GetPath(`result`, `funding_rate`).MustFloat64()
+		if symbol == `HNT_PERP` {
+			util.Notice(`bybit get hnt funding rate %f`, rate)
+		}
 		return &model.FundingRate{Rate: rate, ExpireTime: time.Now().Unix() + 300, UpdateTime: time.Now().Unix()}
 	}
 	return

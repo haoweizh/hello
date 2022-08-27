@@ -783,13 +783,13 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarrySta
 	} else {
 		mark = fmt.Sprintf(`%s|%s`, markRelate, mark)
 		model.SetMonitorInfo(strconv.Itoa(index), `cross`, mark, []string{coin, carryStatusRelate.market, coinValueRelate,
-			fmt.Sprintf(`%.5f`, carryStatus.FoundingRate),
+			fmt.Sprintf(`%.5f`, carryStatusRelate.FoundingRate),
 			fmt.Sprintf(`%.1f`, 100*tradeLineBuyRelate),
 			fmt.Sprintf(`%.1f`, 100*tradeLineSellRelate),
 			fmt.Sprintf(`%.0e`, carryStatusRelate.LimitBuy),
 			fmt.Sprintf(`%.0e`, carryStatusRelate.LimitSell),
 			carryStatus.market, coinValue,
-			fmt.Sprintf(`%.5f`, carryStatusRelate.FoundingRate),
+			fmt.Sprintf(`%.5f`, carryStatus.FoundingRate),
 			fmt.Sprintf(`%.1f`, 100*tradeLineBuy),
 			fmt.Sprintf(`%.1f`, 100*tradeLineSell),
 			fmt.Sprintf(`%.0e`, carryStatus.LimitBuy),
