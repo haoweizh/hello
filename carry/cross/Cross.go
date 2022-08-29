@@ -271,38 +271,44 @@ func initStatus(account *model.Account, setting *model.Setting, absentRevert boo
 		jumpSell = jumpOpen
 		standardScoreBuy = standardScoreClose
 		standardScoreSell = standardScoreOpen
-		if setting.CloseShortMargin != 0 {
-			standardScoreBuy = setting.CloseShortMargin
-		}
-		if setting.OpenShortMargin != 0 {
-			standardScoreSell = setting.OpenShortMargin
-		}
+		//if setting.CloseShortMargin != 0 {
+		//	standardScoreBuy = setting.CloseShortMargin
+		//}
+		//if setting.OpenShortMargin != 0 {
+		//	standardScoreSell = setting.OpenShortMargin
+		//}
 		status.LimitBuy = math.Min(status.LimitBuy, math.Abs(status.Holding))
 	} else if status.Holding*price > 100 {
 		jumpBuy = jumpOpen
 		jumpSell = jumpClose
 		standardScoreBuy = standardScoreOpen
 		standardScoreSell = standardScoreClose
-		if setting.OpenShortMargin != 0 {
-			standardScoreBuy = setting.OpenShortMargin
-		}
-		if setting.CloseShortMargin != 0 {
-			standardScoreSell = setting.CloseShortMargin
-		}
+		//if setting.OpenShortMargin != 0 {
+		//	standardScoreBuy = setting.OpenShortMargin
+		//}
+		//if setting.CloseShortMargin != 0 {
+		//	standardScoreSell = setting.CloseShortMargin
+		//}
 		status.LimitSell = math.Min(status.LimitSell, status.Holding)
 	}
 	status.TradeLineBuy = math.Max(standardScoreBuy*(0.5+jumpBuy*status.RateInAll), lowestScore) + fundingRate
 	status.TradeLineSell = math.Max(standardScoreSell*(0.5+jumpSell*status.RateInAll), lowestScore) - fundingRate
-	if status.setting.Coin == `1000XEC` && status.setting.Market == model.BybitPerp && account.Index == 0 {
-		util.Notice(fmt.Sprintf(`%s %s bline %f = max(%f*(0.5+%f*rate %f)+funding %f hold %f`,
-			status.setting.Market, status.setting.Symbol, status.TradeLineBuy, standardScoreBuy, jumpBuy,
-			status.RateInAll, fundingRate, status.Holding))
-		//util.Notice(fmt.Sprintf(`%s %s sline %f = max(%f*(0.5+%f*rate %f)-funding %f hold %f`,
-		//	status.setting.Market, status.setting.Symbol, status.TradeLineSell, standardScoreSell, jumpSell,
-		//	status.RateInAll, fundingRate, status.Holding))
-		//status.TradeLineBuy = 1
-		//status.TradeLineSell = 1
+	if status.Holding > 0 {
+		status.TradeLineSell -= 0.02
 	}
+	if status.Holding < 0 {
+		status.TradeLineBuy -= 0.02
+	}
+	//if status.setting.Coin == `1000XEC` && status.setting.Market == model.BybitPerp && account.Index == 0 {
+	//	util.Notice(fmt.Sprintf(`%s %s bline %f = max(%f*(0.5+%f*rate %f)+funding %f hold %f`,
+	//		status.setting.Market, status.setting.Symbol, status.TradeLineBuy, standardScoreBuy, jumpBuy,
+	//		status.RateInAll, fundingRate, status.Holding))
+	//	util.Notice(fmt.Sprintf(`%s %s sline %f = max(%f*(0.5+%f*rate %f)-funding %f hold %f`,
+	//		status.setting.Market, status.setting.Symbol, status.TradeLineSell, standardScoreSell, jumpSell,
+	//		status.RateInAll, fundingRate, status.Holding))
+	//	status.TradeLineBuy = 1
+	//	status.TradeLineSell = 1
+	//}
 	status.TradeLineBuy *= account.CarryRate
 	status.TradeLineSell *= account.CarryRate
 	if doRevert || account.CarryClose {

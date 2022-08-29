@@ -781,9 +781,6 @@ func InitCrossMarketInfos(markets []string) {
 			for _, info := range infos {
 				setting := &model.Setting{Valid: true, Function: model.FunctionCross, Market: info.Market,
 					Symbol: info.Name, Coin: coin}
-				if setting.Market == model.BybitPerp {
-					setting.CloseShortMargin = -0.01
-				}
 				model.AppDB.Save(setting)
 				util.Notice(fmt.Sprintf(`save setting %s %s %s %v`, info.Market, info.Name, coin, setting.Valid))
 			}
