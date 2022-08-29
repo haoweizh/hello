@@ -767,6 +767,10 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarrySta
 	if !carryStatusRelate.isSpot {
 		coinValueRelate += `永`
 	}
+	green := false
+	if math.Abs(carryStatusRelate.FoundingRate) > 0.001 || math.Abs(carryStatus.FoundingRate) > 0.001 {
+		green = true
+	}
 	if mark < markRelate {
 		mark = fmt.Sprintf(`%s|%s`, mark, markRelate)
 		model.SetMonitorInfo(strconv.Itoa(index), `cross`, mark, []string{coin, carryStatus.market, coinValue,
@@ -783,8 +787,7 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarrySta
 			fmt.Sprintf(`%.0e`, carryStatusRelate.LimitSell),
 			fmt.Sprintf(`%.1f`, 100*scoreRelate),
 			fmt.Sprintf(`%.1f`, 100*score),
-			fmt.Sprintf(`%v`, statusBuy == nil || statusSell == nil ||
-				math.Abs(carryStatusRelate.FoundingRate) > 0.001 || math.Abs(carryStatus.FoundingRate) > 0.001)})
+			fmt.Sprintf(`%v`, green)})
 	} else {
 		mark = fmt.Sprintf(`%s|%s`, markRelate, mark)
 		model.SetMonitorInfo(strconv.Itoa(index), `cross`, mark, []string{coin, carryStatusRelate.market, coinValueRelate,
@@ -801,8 +804,7 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarrySta
 			fmt.Sprintf(`%.0e`, carryStatus.LimitSell),
 			fmt.Sprintf(`%.1f`, 100*score),
 			fmt.Sprintf(`%.1f`, 100*scoreRelate),
-			fmt.Sprintf(`%v`, statusBuy == nil || statusSell == nil ||
-				math.Abs(carryStatusRelate.FoundingRate) > 0.001 || math.Abs(carryStatus.FoundingRate) > 0.001)})
+			fmt.Sprintf(`%v`, green)})
 	}
 	if statusBuy == nil || statusSell == nil {
 		return nil, nil, 0, 0, 0
