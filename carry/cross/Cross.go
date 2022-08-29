@@ -293,11 +293,13 @@ func initStatus(account *model.Account, setting *model.Setting, absentRevert boo
 	}
 	status.TradeLineBuy = math.Max(standardScoreBuy*(0.5+jumpBuy*status.RateInAll), lowestScore) + fundingRate
 	status.TradeLineSell = math.Max(standardScoreSell*(0.5+jumpSell*status.RateInAll), lowestScore) - fundingRate
-	if status.Holding > 0 {
-		status.TradeLineSell -= 0.02
-	}
-	if status.Holding < 0 {
-		status.TradeLineBuy -= 0.02
+	if status.market == model.BybitPerp {
+		if status.Holding*price > 100 {
+			status.TradeLineSell -= 0.02
+		}
+		if status.Holding*price < 0 {
+			status.TradeLineBuy -= 0.02
+		}
 	}
 	//if status.setting.Coin == `1000XEC` && status.setting.Market == model.BybitPerp && account.Index == 0 {
 	//	util.Notice(fmt.Sprintf(`%s %s bline %f = max(%f*(0.5+%f*rate %f)+funding %f hold %f`,
