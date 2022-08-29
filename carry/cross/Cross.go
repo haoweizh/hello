@@ -270,10 +270,10 @@ func initStatus(account *model.Account, setting *model.Setting, absentRevert boo
 		jumpBuy = jumpClose
 		jumpSell = jumpOpen
 		standardScoreBuy = standardScoreClose
+		standardScoreSell = standardScoreOpen
 		if setting.CloseShortMargin != 0 {
 			standardScoreBuy = setting.CloseShortMargin
 		}
-		standardScoreSell = standardScoreOpen
 		if setting.OpenShortMargin != 0 {
 			standardScoreSell = setting.OpenShortMargin
 		}
