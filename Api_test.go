@@ -306,8 +306,8 @@ func Test_wallet(t *testing.T) {
 	//	result, _, _ := api.CancelOrder(key, secret, market, symbol, m.OrderType, m.OrderId)
 	//	fmt.Println(result)
 	//}
-	_, rate := api.GetFundingRate(key, secret, model.BybitPerp, symbol)
-	_, rate = api.GetFundingRate(key, secret, model.BybitPerp, `LOOKS_PERP`)
+	_, rate, _ := api.GetFundingRate(key, secret, model.BybitPerp, symbol)
+	_, rate, _ = api.GetFundingRate(key, secret, model.BybitPerp, `LOOKS_PERP`)
 	marketInfos := api.GetMarketInfos(model.BybitPerp)
 	model.SetMarketInfos(model.BybitPerp, marketInfos)
 	//// 1078113554871236864

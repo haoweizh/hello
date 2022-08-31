@@ -76,6 +76,7 @@ type CarryStatus struct {
 	TradeLineBuy, TradeLineSell float64 // 买卖盈利线（可为负数）
 	Holding                     float64
 	RateInAll                   float64 // 现货：该币种占总权益的比例；永续：以开仓价算该币种持仓占保证金百分比
+	FundingRateUpdateTime       time.Time
 }
 
 func isValidSymbol(market, symbol string) bool {

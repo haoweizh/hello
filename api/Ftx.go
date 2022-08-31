@@ -678,7 +678,7 @@ func GetFundingRatesFtx(key, secret, symbol string) (fundingRate *model.FundingR
 	if err == nil && rateJson.Get(`result`) != nil {
 		fundingRate = &model.FundingRate{
 			Rate:       rateJson.GetPath(`result`, `nextFundingRate`).MustFloat64() * 5,
-			UpdateTime: time.Now().Unix(),
+			UpdateTime: util.GetNow(),
 		}
 		expireTime, _ := time.ParseInLocation(time.RFC3339, rateJson.GetPath(`result`, `nextFundingTime`).MustString(), time.UTC)
 		fundingRate.ExpireTime = expireTime.Unix()

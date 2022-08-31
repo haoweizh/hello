@@ -658,7 +658,7 @@ func getFundingRateGate(key, secret, symbol string) (fundingRate *model.FundingR
 	rate, _ := strconv.ParseFloat(contract.FundingRate, 64)
 	return &model.FundingRate{
 		Rate:       rate,
-		UpdateTime: time.Now().UnixNano(),
+		UpdateTime: time.Now(),
 		ExpireTime: int64(contract.FundingNextApply)}
 }
 
