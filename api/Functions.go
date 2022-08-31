@@ -317,7 +317,7 @@ func GetFundingRate(key, secret, market, symbol string) (success bool, rate floa
 				return true, fundingRate.RateNext, util.GetNow()
 			}
 		}
-	} else if fundingRate != nil && now < fundingRate.ExpireTime && fundingRate.UpdateTime.Add(time.Minute*10).After(time.Now()) {
+	} else if fundingRate != nil && now < fundingRate.ExpireTime && fundingRate.UpdateTime.Add(time.Minute*5).After(time.Now()) {
 		return true, fundingRate.Rate, fundingRate.UpdateTime
 	} // 其他交易所的资金费率都会实时变动
 	switch market {

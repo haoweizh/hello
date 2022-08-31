@@ -200,7 +200,6 @@ func initStatus(account *model.Account, setting *model.Setting, absentRevert boo
 		return
 	}
 	_, marketType, _, _ := model.GetFromStandard(setting.Market, setting.Symbol)
-	fundingRate := 0.0
 	doRevert := false
 	localLimit := holdingLimitInU
 	account0 := model.AppConfig.GetAccounts(setting.Market)[0]
@@ -211,13 +210,6 @@ func initStatus(account *model.Account, setting *model.Setting, absentRevert boo
 		status, doRevert = createFromBalance(account, setting, localLimit, absentRevert)
 	} else if marketType == model.MarketTypePerp {
 		status, doRevert = createFromPosition(account, setting, localLimit, absentRevert)
-		_, fundingRate, status.FundingRateUpdateTime = api.GetFundingRate(account.Key, account.Secret, setting.Market, setting.Symbol)
-		fundingKey := fmt.Sprintf(`funding_%s_%s`, setting.Market, setting.Symbol)
-		fundingTime, ok := notifyTime.Load(fundingKey)
-		if !(ok && fundingTime.(time.Time).Add(time.Minute*60).After(time.Now())) && math.Abs(fundingRate) > 0.01 {
-			notifyTime.Store(fundingKey, time.Now())
-			go api.SendMails(fmt.Sprintf(`%s %f`, fundingKey, fundingRate), ``)
-		}
 	}
 	if setting.Chance < 0 {
 		doRevert = true
@@ -225,7 +217,13 @@ func initStatus(account *model.Account, setting *model.Setting, absentRevert boo
 	if status == nil {
 		return
 	}
-	status.FoundingRate = fundingRate
+	_, status.FoundingRate, status.FundingRateUpdateTime = api.GetFundingRate(account.Key, account.Secret, setting.Market, setting.Symbol)
+	fundingKey := fmt.Sprintf(`funding_%s_%s`, setting.Market, setting.Symbol)
+	fundingTime, ok := notifyTime.Load(fundingKey)
+	if !(ok && fundingTime.(time.Time).Add(time.Minute*60).After(time.Now())) && math.Abs(status.FoundingRate) > 0.01 {
+		notifyTime.Store(fundingKey, time.Now())
+		go api.SendMails(fmt.Sprintf(`%s %f`, fundingKey, status.FoundingRate), ``)
+	}
 	marketInfo := model.GetMarketInfo(setting.Market, setting.Symbol)
 	if marketInfo != nil && marketInfo.SizeMax > 0 {
 		_, amount := model.ParseRealAmount(setting.Market, setting.Symbol, marketInfo.SizeMax)
@@ -291,8 +289,8 @@ func initStatus(account *model.Account, setting *model.Setting, absentRevert boo
 		//}
 		status.LimitSell = math.Min(status.LimitSell, status.Holding)
 	}
-	status.TradeLineBuy = math.Max(standardScoreBuy*(0.5+jumpBuy*status.RateInAll), lowestScore) + fundingRate
-	status.TradeLineSell = math.Max(standardScoreSell*(0.5+jumpSell*status.RateInAll), lowestScore) - fundingRate
+	status.TradeLineBuy = math.Max(standardScoreBuy*(0.5+jumpBuy*status.RateInAll), lowestScore) + status.FoundingRate
+	status.TradeLineSell = math.Max(standardScoreSell*(0.5+jumpSell*status.RateInAll), lowestScore) - status.FoundingRate
 	if status.market == model.BybitPerp {
 		if status.Holding*price > 100 {
 			status.TradeLineSell -= 0.02
