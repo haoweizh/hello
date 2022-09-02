@@ -298,32 +298,27 @@ func GetTransfers(key, secret, market string) (balances []*model.Balance) {
 	return balances
 }
 
-var fundingUpdateTime sync.Map
-
-func GetFundingRate(key, secret, market, symbol string) (success bool, rate float64) {
+func GetFundingRate(key, secret, market, symbol string) (success bool, rate float64, updateTime time.Time) {
 	//非永续合约的资金费率为0
 	_, marketType, _, _ := model.GetFromStandard(market, symbol)
 	if marketType != model.MarketTypePerp {
-		return true, 0
+		return true, 0, util.GetNow()
 	}
 	fundingRate := model.GetFundingRate(market, symbol)
 	now := util.GetNow().Unix()
 	if market == model.OKEX { // 针对ok用新expireTime返回旧数据问题的特殊处理
 		if fundingRate != nil && now < fundingRate.ExpireTime-60 {
-			return true, fundingRate.Rate
+			return true, fundingRate.Rate, util.GetNow()
 		} else if fundingRate != nil && now > fundingRate.ExpireTime-60 && now < fundingRate.ExpireTime+240 &&
-			fundingRate.UpdateTime > fundingRate.ExpireTime-60 {
+			fundingRate.UpdateTime.Unix() > fundingRate.ExpireTime-60 {
 			if now < fundingRate.ExpireTime {
-				return true, fundingRate.Rate
+				return true, fundingRate.Rate, util.GetNow()
 			} else {
-				return true, fundingRate.RateNext
+				return true, fundingRate.RateNext, util.GetNow()
 			}
 		}
-	} else if fundingRate != nil && now < fundingRate.ExpireTime {
-		value, ok := fundingUpdateTime.Load(fmt.Sprintf(`%s*%s`, market, symbol))
-		if market == model.Gate || (ok && value.(time.Time).Add(time.Minute*10).After(time.Now())) {
-			return true, fundingRate.Rate
-		}
+	} else if fundingRate != nil && now < fundingRate.ExpireTime && fundingRate.UpdateTime.Add(time.Minute*5).After(time.Now()) {
+		return true, fundingRate.Rate, fundingRate.UpdateTime
 	} // 其他交易所的资金费率都会实时变动
 	switch market {
 	//case model.Bitmex:
@@ -332,8 +327,6 @@ func GetFundingRate(key, secret, market, symbol string) (success bool, rate floa
 	case model.BybitPerp:
 		fundingRate = getFundingRateBybitPerp(key, secret, symbol)
 		model.SetFundingRate(market, symbol, fundingRate)
-	case model.BybitSpot:
-		return true, 0
 	case model.Ftx:
 		fundingRate = GetFundingRatesFtx(key, secret, symbol)
 		model.SetFundingRate(market, symbol, fundingRate)
@@ -343,8 +336,6 @@ func GetFundingRate(key, secret, market, symbol string) (success bool, rate floa
 	case model.Mexc:
 		fundingRate = getFundingRateMexc(key, secret, symbol)
 		model.SetFundingRate(market, symbol, fundingRate)
-	case model.BinanceSpot:
-		return true, 0
 	case model.BinancePerp:
 		fundingRate = getFundingRateBinancePerp(key, secret, symbol)
 		model.SetFundingRate(market, symbol, fundingRate)
@@ -352,13 +343,12 @@ func GetFundingRate(key, secret, market, symbol string) (success bool, rate floa
 		fundingRate = getFundingRateGate(key, secret, symbol)
 		model.SetFundingRate(market, symbol, fundingRate)
 	case model.Kucoin:
-		return true, 0
+		return true, 0, util.GetNow()
 	}
 	if fundingRate != nil && now < fundingRate.ExpireTime {
-		fundingUpdateTime.Store(fmt.Sprintf(`%s*%s`, market, symbol), time.Now())
-		return true, fundingRate.Rate
+		return true, fundingRate.Rate, fundingRate.UpdateTime
 	}
-	return false, 0
+	return false, 0, util.GetNow()
 }
 
 // GetMaxLoan

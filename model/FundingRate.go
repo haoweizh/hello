@@ -1,10 +1,13 @@
 package model
 
+import "time"
+
 var fundingRates = make(map[string]map[string]*FundingRate) // market - symbol - funding rate
 
 type FundingRate struct {
-	Rate, RateNext         float64
-	UpdateTime, ExpireTime int64 // 按秒计算的 unix time
+	Rate, RateNext float64
+	UpdateTime     time.Time // api访问时间
+	ExpireTime     int64     // 按秒计算的 unix time
 }
 
 func GetFundingRate(market, symbol string) (rate *FundingRate) {

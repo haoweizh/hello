@@ -1287,7 +1287,7 @@ func getFundingRateOKEX(key, secret, symbol string) (fundingRate *model.FundingR
 	return &model.FundingRate{
 		Rate:       rate,
 		RateNext:   rateNext,
-		UpdateTime: util.GetNow().Unix(),
+		UpdateTime: util.GetNow(),
 		ExpireTime: rateTime}
 }
 

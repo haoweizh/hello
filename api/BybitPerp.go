@@ -543,7 +543,7 @@ func getFundingRateBybitPerp(key, secret, symbol string) (fundingRate *model.Fun
 			return nil
 		}
 		rate := newJson.GetPath(`result`, `predicted_funding_rate`).MustFloat64()
-		return &model.FundingRate{Rate: rate, ExpireTime: time.Now().Unix() + 300, UpdateTime: time.Now().Unix()}
+		return &model.FundingRate{Rate: rate, ExpireTime: time.Now().Unix() + 300, UpdateTime: util.GetNow()}
 	}
 	return
 }

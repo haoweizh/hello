@@ -462,7 +462,7 @@ func getFundingRateBinancePerp(key, secret, symbol string) (fundingRate *model.F
 	nextFundingTime := rateResp[0].NextFundingTime
 	fundingRate = &model.FundingRate{
 		Rate:       rate,
-		UpdateTime: util.GetNow().Unix(),
+		UpdateTime: util.GetNow(),
 		ExpireTime: nextFundingTime / 1000}
 	return
 }

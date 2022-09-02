@@ -308,7 +308,7 @@ func getFundingRateMexc(key, secret, symbol string) (fundingRate *model.FundingR
 	if fundingRateJson != nil && fundingRateJson.Get(`success`).MustBool() {
 		fundingRate = &model.FundingRate{
 			Rate:       fundingRateJson.Get(`data`).Get(`fundingRate`).MustFloat64(),
-			UpdateTime: fundingRateJson.Get(`data`).Get(`timestamp`).MustInt64() / 1000,
+			UpdateTime: time.UnixMilli(fundingRateJson.Get(`data`).Get(`timestamp`).MustInt64()),
 			ExpireTime: fundingRateJson.Get(`data`).Get(`nextSettleTime`).MustInt64() / 1000,
 		}
 	}
