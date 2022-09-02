@@ -539,7 +539,8 @@ func SetLeverageBinancePerp(key, secret, symbol string, leverage int) (success b
 	client := futures.NewClient(key, secret)
 	_, err := client.NewChangeLeverageService().Symbol(dialectSymbol).Leverage(leverage).Do(context.Background())
 	if err != nil {
-		util.Notice(fmt.Sprintf(`fail to set binanceperp leverage %s %d %s`, symbol, leverage, err.Error()))
+		util.Notice(fmt.Sprintf(`fail to set binanceperp leverage %s %s %d %s`,
+			key, symbol, leverage, err.Error()))
 		return false
 	}
 	return true
