@@ -269,6 +269,9 @@ func LoadSettings() bool {
 		return false
 	}
 	prepareSettings()
+	for _, market := range appMarkets {
+		setRequireReset(market)
+	}
 	if handleSettings() {
 		prepareSettings()
 	}
