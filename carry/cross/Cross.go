@@ -651,7 +651,7 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 	for _, settingRelate := range settings {
 		tickGet, tickRelate := model.AppMarkets.GetBidAsk(settingRelate.Symbol, settingRelate.Market)
 		if !tickGet || setting.ID == settingRelate.ID ||
-			(model.AppConfig.Env != `test` && million-int64(tickRelate.Ts) > 200) {
+			(model.AppConfig.Env != `test` && million-int64(tickRelate.Ts) > 1000) {
 			continue
 		}
 		for i := api.GetCrossLen() - 1; i >= 0; i-- {

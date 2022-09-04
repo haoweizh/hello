@@ -308,13 +308,13 @@ func GetFundingRate(key, secret, market, symbol string) (success bool, rate floa
 	now := util.GetNow().Unix()
 	if market == model.OKEX { // 针对ok用新expireTime返回旧数据问题的特殊处理
 		if fundingRate != nil && now < fundingRate.ExpireTime-60 {
-			return true, fundingRate.Rate, util.GetNow()
+			return true, fundingRate.Rate, fundingRate.UpdateTime
 		} else if fundingRate != nil && now > fundingRate.ExpireTime-60 && now < fundingRate.ExpireTime+240 &&
 			fundingRate.UpdateTime.Unix() > fundingRate.ExpireTime-60 {
 			if now < fundingRate.ExpireTime {
-				return true, fundingRate.Rate, util.GetNow()
+				return true, fundingRate.Rate, fundingRate.UpdateTime
 			} else {
-				return true, fundingRate.RateNext, util.GetNow()
+				return true, fundingRate.RateNext, fundingRate.UpdateTime
 			}
 		}
 	} else if fundingRate != nil && now < fundingRate.ExpireTime && fundingRate.UpdateTime.Add(time.Minute*5).After(time.Now()) {
