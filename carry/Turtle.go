@@ -195,8 +195,9 @@ var ProcessTurtle = func(setting *model.Setting, tick *model.BidAsk) {
 	account := model.AppConfig.GetAccounts(setting.Market)[0]
 	turtleData := GetTurtleData(account.Key, account.Secret, setting)
 	if turtleData == nil || turtleData.n == 0 || turtleData.amount == 0 {
-		util.Notice(fmt.Sprintf(`fail to get turtle %s %s`, setting.Market, setting.Symbol))
-		time.Sleep(time.Second * 2)
+		if time.Now().Minute() == 0 && time.Now().Second() == 0 {
+			util.Notice(fmt.Sprintf(`fail to get turtle %s %s`, setting.Market, setting.Symbol))
+		}
 		return
 	}
 	currentN := api.GetCurrentN(setting)
