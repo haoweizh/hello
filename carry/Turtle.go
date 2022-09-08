@@ -92,41 +92,16 @@ func GetTurtleData(key, secret string, setting *model.Setting) (turtleData *Turt
 	duration, _ := time.ParseDuration(`-120s`)
 	turtleData = &TurtleData{turtleTime: today, symbol: setting.Symbol, checkTimeBreak: util.GetNow(),
 		checkTimeOpen: util.GetNow().Add(duration), waitBreakLong: false, waitBreakShort: false, breakLong: false, breakShort: false}
-	//var longs, shorts []*model.Order
-	//model.AppDB.Where("market= ? and symbol= ? and refresh_type= ? and amount>deal_amount and status=? and order_side=?",
-	//	setting.Market, setting.Symbol, model.FunctionTurtle, model.CarryStatusWorking, model.OrderSideBuy).
-	//	Order(`order_time desc`).Limit(int(setting.AmountLimit)).Find(&longs)
-	//model.AppDB.Where("market= ? and symbol= ? and refresh_type= ? and amount>deal_amount and status=? and order_side=?",
-	//	setting.Market, setting.Symbol, model.FunctionTurtle, model.CarryStatusWorking, model.OrderSideSell).
-	//	Order(`order_time desc`).Limit(int(setting.AmountLimit)).Find(&shorts)
-	//util.Notice(fmt.Sprintf(`load db turtle orders longs %d shorts %d`, len(longs), len(shorts)))
-	//for _, order := range longs {
-	//	if turtleData.orderLong == nil {
-	//		turtleData.orderLong = order
-	//	} else if order != nil && order.OrderId != `` && order.OrderTime.After(turtleData.orderLong.OrderTime) {
-	//
-	//	}
-	//	if turtleData.orderLong == nil || (order != nil && order.OrderId != `` &&
-	//		order.OrderTime.After(turtleData.orderLong.OrderTime)) {
-	//		turtleData.orderLong = order
-	//	}
+	daysNear := 10
+	daysFar := 20
+	//success, _, coin, _ := model.GetFromStandard(setting.Market, setting.Symbol)
+	//if !success {
+	//	return nil
 	//}
-	//for _, order := range shorts {
-	//	if turtleData.orderShort == nil || (order != nil && order.OrderId != `` &&
-	//		order.OrderTime.After(turtleData.orderShort.OrderTime)) {
-	//		turtleData.orderShort = order
-	//	}
+	//if model.CommonCoins[strings.ToLower(coin)] {
+	//	daysNear = 10
+	//	daysFar = 20
 	//}
-	daysNear := 7
-	daysFar := 14
-	success, _, coin, _ := model.GetFromStandard(setting.Market, setting.Symbol)
-	if !success {
-		return nil
-	}
-	if model.CommonCoins[strings.ToLower(coin)] {
-		daysNear = 10
-		daysFar = 20
-	}
 	for i := 1; i < 21; i++ {
 		duration, _ = time.ParseDuration(fmt.Sprintf(`%dh`, -24*i))
 		day := today.Add(duration)
