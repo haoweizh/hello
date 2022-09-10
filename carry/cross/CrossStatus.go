@@ -178,10 +178,13 @@ func GetCrossMarketValue(key, secret, market string, force bool) (inAllSpot, con
 	holdingFuture, unRealizedPnl, keepInU float64) {
 	value, ok := spotMarkets.Load(key)
 	if (!ok || value == nil) && force {
-		if market == model.OKEX || market == model.Ftx || market == model.Gate {
+		switch market {
+		case model.BybitPerp:
+			value = createSpotMarket(key, secret, model.BybitSpot)
+		case model.BinancePerp:
+			value = createSpotMarket(key, secret, model.BinanceSpot)
+		default:
 			value = createSpotMarket(key, secret, market)
-		} else {
-			value = createSpotMarket(key, secret, market+`spot`)
 		}
 	}
 	if value != nil {
@@ -209,10 +212,11 @@ func GetCrossMarketValue(key, secret, market string, force bool) (inAllSpot, con
 	}
 	value, ok = contractMarkets.Load(key)
 	if (!ok || value == nil) && force {
-		if market == model.OKEX || market == model.Ftx || market == model.Gate {
-			value = createContractMarket(key, secret, market)
-		} else {
-			value = createContractMarket(key, secret, market+`perp`)
+		switch market {
+		case model.BinanceSpot:
+			value = createContractMarket(key, secret, model.BinancePerp)
+		case model.BybitSpot:
+			value = createContractMarket(key, secret, model.BybitPerp)
 		}
 	}
 	if value != nil {
