@@ -1026,6 +1026,7 @@ func getTransferOKEX(key, secret string) (balances []*model.Balance) {
 		for _, transfer := range transfers {
 			balance := parseBalanceOKEX(transfer.(map[string]interface{}))
 			if balance != nil {
+				balance.Action = 1
 				balances = append(balances, balance)
 			}
 		}
@@ -1037,6 +1038,7 @@ func getTransferOKEX(key, secret string) (balances []*model.Balance) {
 		for _, transfer := range transfers {
 			balance := parseBalanceOKEX(transfer.(map[string]interface{}))
 			if balance != nil {
+				balance.Action = -1
 				balances = append(balances, balance)
 			}
 		}

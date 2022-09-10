@@ -278,13 +278,13 @@ func GetCode(c *gin.Context) {
 		index, _ := strconv.ParseInt(indexStr, 64, 10)
 		accountFtx := model.AppConfig.GetAccounts(model.Ftx)[index]
 		balances := api.GetTransfers(accountFtx.Key, accountFtx.Secret, model.Ftx)
-		for i, balance := range balances {
-			util.Info(fmt.Sprintf(`transfers ftx %d %d %v`, index, i, balance))
+		for _, balance := range balances {
+			model.AppDB.Save(balance)
 		}
 		accountOk := model.AppConfig.GetAccounts(model.OKEX)[index]
 		balances = api.GetTransfers(accountOk.Key, accountOk.Secret, model.OKEX)
-		for i, balance := range balances {
-			util.Info(fmt.Sprintf(`transfers okex %d %d %v`, index, i, balance))
+		for _, balance := range balances {
+			model.AppDB.Save(balance)
 		}
 	} else {
 		codeGenTime = util.GetNowUnixMillion()
