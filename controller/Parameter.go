@@ -114,6 +114,7 @@ func holdPage(c *gin.Context) {
 	if len(indexStr) == 0 {
 		indexStr = `0`
 	}
+	force := c.Query(`force`)
 	index, err := strconv.Atoi(indexStr)
 	if err != nil {
 		index = 0
@@ -124,7 +125,7 @@ func holdPage(c *gin.Context) {
 	for _, account := range queryAccounts {
 		if account != nil {
 			inAllSpot, contractAccountValue, holdingSpot, holdingFuture, unrealizedPnl, keepInU :=
-				cross.GetCrossMarketValue(account.Key, account.Secret, account.Market)
+				cross.GetCrossMarketValue(account.Key, account.Secret, account.Market, force == `true`)
 			if strings.Contains(account.Market, `bybit`) {
 				account.Market = `bybit`
 			}
