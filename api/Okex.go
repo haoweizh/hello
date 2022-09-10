@@ -1026,7 +1026,6 @@ func getTransferOKEX(key, secret string) (balances []*model.Balance) {
 		for _, transfer := range transfers {
 			balance := parseBalanceOKEX(transfer.(map[string]interface{}))
 			if balance != nil {
-				balance.Action = 1
 				balances = append(balances, balance)
 			}
 		}
@@ -1038,7 +1037,6 @@ func getTransferOKEX(key, secret string) (balances []*model.Balance) {
 		for _, transfer := range transfers {
 			balance := parseBalanceOKEX(transfer.(map[string]interface{}))
 			if balance != nil {
-				balance.Action = -1
 				balances = append(balances, balance)
 			}
 		}
@@ -1095,7 +1093,7 @@ func parsePositionOKEX(value map[string]interface{}) (success bool, position *mo
 }
 
 func parseBalanceOKEX(value map[string]interface{}) (balance *model.Balance) {
-	if value == nil || value[`ccy`] == nil || value[`ccy`] == `` {
+	if value == nil || value[`ccy`] == nil {
 		return nil
 	}
 	balance = &model.Balance{Market: model.OKEX, Action: 0, Coin: value[`ccy`].(string),
@@ -1107,10 +1105,17 @@ func parseBalanceOKEX(value map[string]interface{}) (balance *model.Balance) {
 	if value[`from`] != nil && value[`to`] != nil {
 		balance.Address = fmt.Sprintf(`%s : %s`, value[`from`].(string), value[`to`].(string))
 	}
-	//if value[`ts`] != nil && value[`ts`] != `` {
-	//	ts, _ := strconv.ParseInt(value[`ts`].(string), 10, 64)
-	//	balance.BalanceTime = time.Unix(ts/1000, 0)
-	//}
+	if value[`wdId`] != nil {
+		balance.ID = value[`wdId`].(string)
+		balance.Action = -1
+	} else if value[`depId`] != nil {
+		balance.ID = value[`depId`].(string)
+		balance.Action = 1
+		if value[`ts`] != nil && value[`ts`] != `` {
+			ts, _ := strconv.ParseInt(value[`ts`].(string), 10, 64)
+			balance.BalanceTime = time.Unix(ts/1000, 0)
+		}
+	}
 	if value[`txId`] != nil {
 		balance.TransactionId = value[`txId`].(string)
 	}
