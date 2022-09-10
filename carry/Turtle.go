@@ -71,7 +71,7 @@ func calcTurtleAmount(key, secret string, setting *model.Setting, n float64) (am
 	if !model.CommonCoins[strings.ToLower(coin)] {
 		amount /= 2
 	}
-	util.Notice(`calcTurtleAmount %s %s %f`, setting.Market, setting.Symbol, amount)
+	//util.Notice(`calcTurtleAmount %s %s %f`, setting.Market, setting.Symbol, amount)
 	return amount
 }
 
@@ -87,7 +87,7 @@ func GetTurtleData(key, secret string, setting *model.Setting) (turtleData *Turt
 	if dataSet[setting.Market][setting.Symbol][todayStr] != nil {
 		return dataSet[setting.Market][setting.Symbol][todayStr]
 	}
-	util.Notice(`need to create turtle ` + setting.Market + setting.Symbol)
+	//util.Notice(`need to create turtle ` + setting.Market + setting.Symbol)
 	turtleClosed[setting.Market][setting.Symbol] = false
 	duration, _ := time.ParseDuration(`-120s`)
 	turtleData = &TurtleData{turtleTime: today, symbol: setting.Symbol, checkTimeBreak: util.GetNow(),
