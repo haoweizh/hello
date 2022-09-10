@@ -186,22 +186,24 @@ func GetCrossMarketValue(key, secret, market string, force bool) (inAllSpot, con
 	}
 	if value != nil {
 		sm := value.(*spotMarket)
-		inAllSpot = sm.accountValueInU
-		settings := api.GetSettings(model.FunctionCross, market)
-		if settings != nil {
-			settings.Range(func(symbol, value interface{}) bool {
-				if sm.balances != nil && sm.balances[symbol.(string)] != nil {
-					holdingSpot += sm.balances[symbol.(string)].UsdValue
-				}
-				return true
-			})
-		}
-		if sm.balances != nil {
-			if sm.balances[`FTT_USDT`] != nil {
-				keepInU += sm.balances[`FTT_USDT`].UsdValue
+		if sm != nil {
+			inAllSpot = sm.accountValueInU
+			settings := api.GetSettings(model.FunctionCross, market)
+			if settings != nil {
+				settings.Range(func(symbol, value interface{}) bool {
+					if sm.balances != nil && sm.balances[symbol.(string)] != nil {
+						holdingSpot += sm.balances[symbol.(string)].UsdValue
+					}
+					return true
+				})
 			}
-			if sm.balances[`BTC_USDT`] != nil {
-				keepInU += sm.balances[`BTC_USDT`].UsdValue
+			if sm.balances != nil {
+				if sm.balances[`FTT_USDT`] != nil {
+					keepInU += sm.balances[`FTT_USDT`].UsdValue
+				}
+				if sm.balances[`BTC_USDT`] != nil {
+					keepInU += sm.balances[`BTC_USDT`].UsdValue
+				}
 			}
 		}
 	}
@@ -215,11 +217,13 @@ func GetCrossMarketValue(key, secret, market string, force bool) (inAllSpot, con
 	}
 	if value != nil {
 		cm := value.(*contractMarket)
-		contractAccountValue = cm.accountValueInU
-		for _, position := range cm.positions {
-			unRealizedPnl += position.ProfitUnreal
+		if cm != nil {
+			contractAccountValue = cm.accountValueInU
+			for _, position := range cm.positions {
+				unRealizedPnl += position.ProfitUnreal
+			}
+			holdingFuture = cm.contractValueInU
 		}
-		holdingFuture = cm.contractValueInU
 	}
 	return
 }
