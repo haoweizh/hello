@@ -47,6 +47,8 @@ func createContractMarket(key, secret, market string) (cm *contractMarket) {
 		}
 		cm.accountValueInU = accountValue
 		cm.collateralsAvailable = availableU
+	} else {
+		util.Notice(`fail to createContractMarket %s $s`, market, key)
 	}
 	return
 }
@@ -73,6 +75,8 @@ func createSpotMarket(key, secret, market string) (sm *spotMarket) {
 				sm.availableU -= math.Abs(balance.UsdValue)
 			}
 		}
+	} else {
+		util.Notice(`fail to createSpotMarket %s %s`, market, key)
 	}
 	return
 }
