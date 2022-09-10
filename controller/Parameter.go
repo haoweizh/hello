@@ -126,6 +126,8 @@ func holdPage(c *gin.Context) {
 		if account != nil {
 			inAllSpot, contractAccountValue, holdingSpot, holdingFuture, unrealizedPnl, keepInU :=
 				cross.GetCrossMarketValue(account.Key, account.Secret, account.Market, force == `true`)
+			util.Notice(fmt.Sprintf(`get market value %s %s %f %f %f %f %f %f`, account.Market, account.Key,
+				inAllSpot, contractAccountValue, holdingSpot, holdingFuture, unrealizedPnl, keepInU))
 			if strings.Contains(account.Market, `bybit`) {
 				account.Market = `bybit`
 			}
