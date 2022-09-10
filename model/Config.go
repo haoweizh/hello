@@ -26,10 +26,10 @@ type Config struct {
 }
 
 type Account struct {
-	Index       int // 账户索引
-	Key, Secret string
-	CarryClose  bool
-	CarryRate   float64
+	Index               int // 账户索引
+	Market, Key, Secret string
+	CarryClose          bool
+	CarryRate           float64
 }
 
 var AppAccounts []map[string]*Account // account index/map/account
@@ -144,7 +144,7 @@ func (config *Config) GetAccounts(market string) []*Account {
 	}
 	accounts := make([]*Account, len(keys))
 	for i := 0; i < len(keys); i++ {
-		account := &Account{Key: keys[i], Secret: secrets[i], Index: i}
+		account := &Account{Key: keys[i], Secret: secrets[i], Index: i, Market: market}
 		account.CarryClose, _ = strconv.ParseBool(closeValues[i])
 		account.CarryRate, _ = strconv.ParseFloat(rateValues[i], 64)
 		if len(strings.TrimSpace(account.Key)) > 0 {

@@ -123,13 +123,14 @@ func holdPage(c *gin.Context) {
 	inAll := []float64{0, 0, 0, 0, 0, 0}
 	for _, account := range queryAccounts {
 		if account != nil {
-			market, inAllSpot, contractAccountValue, holdingSpot, holdingFuture, unrealizedPnl, keepInU := cross.GetCrossMarketValue(account.Key)
-			if strings.Contains(market, `bybit`) {
-				market = `bybit`
+			inAllSpot, contractAccountValue, holdingSpot, holdingFuture, unrealizedPnl, keepInU :=
+				cross.GetCrossMarketValue(account.Key, account.Secret, account.Market)
+			if strings.Contains(account.Market, `bybit`) {
+				account.Market = `bybit`
 			}
 			duplicated := false
 			for _, value := range marketValues {
-				if value[0] == market {
+				if value[0] == account.Market {
 					duplicated = true
 					break
 				}
@@ -137,7 +138,7 @@ func holdPage(c *gin.Context) {
 			if duplicated {
 				continue
 			}
-			marketValues = append(marketValues, []string{market,
+			marketValues = append(marketValues, []string{account.Market,
 				strconv.FormatFloat(inAllSpot, 'f', 0, 64),
 				strconv.FormatFloat(contractAccountValue, 'f', 0, 64),
 				strconv.FormatFloat(holdingSpot, 'f', 0, 64),
@@ -147,7 +148,7 @@ func holdPage(c *gin.Context) {
 			if index > 0 {
 				inAll[0] -= keepInU
 			}
-			if market != model.Ftx && market != model.OKEX {
+			if account.Market != model.Ftx && account.Market != model.OKEX {
 				inAll[0] += contractAccountValue
 			}
 			inAll[1] += inAllSpot

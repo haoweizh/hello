@@ -174,11 +174,18 @@ func GetHoldings(accounts map[string]*model.Account) (holding [][]interface{}) {
 }
 
 // GetCrossMarketValue keepInU: 不计入总价值的保留不交易币种
-func GetCrossMarketValue(key string) (market string, inAllSpot, contractAccountValue, holdingSpot, holdingFuture, unRealizedPnl, keepInU float64) {
+func GetCrossMarketValue(key, secret, market string) (inAllSpot, contractAccountValue, holdingSpot,
+	holdingFuture, unRealizedPnl, keepInU float64) {
 	value, ok := spotMarkets.Load(key)
-	if value != nil && ok {
+	if !ok || value == nil {
+		if market == model.OKEX || market == model.Ftx || market == model.Gate {
+			value = createSpotMarket(key, secret, market)
+		} else {
+			value = createSpotMarket(key, secret, market+`spot`)
+		}
+	}
+	if value != nil {
 		sm := value.(*spotMarket)
-		market = sm.market
 		inAllSpot = sm.accountValueInU
 		settings := api.GetSettings(model.FunctionCross, market)
 		if settings != nil {
@@ -199,9 +206,15 @@ func GetCrossMarketValue(key string) (market string, inAllSpot, contractAccountV
 		}
 	}
 	value, ok = contractMarkets.Load(key)
-	if value != nil && ok {
+	if !ok || value == nil {
+		if market == model.OKEX || market == model.Ftx || market == model.Gate {
+			value = createContractMarket(key, secret, market)
+		} else {
+			value = createContractMarket(key, secret, market+`perp`)
+		}
+	}
+	if value != nil {
 		cm := value.(*contractMarket)
-		market = cm.market
 		contractAccountValue = cm.accountValueInU
 		for _, position := range cm.positions {
 			unRealizedPnl += position.ProfitUnreal
