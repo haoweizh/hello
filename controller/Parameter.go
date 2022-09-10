@@ -270,9 +270,22 @@ func crossPage(c *gin.Context) {
 
 func GetCode(c *gin.Context) {
 	waitTime := (util.GetNowUnixMillion() - codeGenTime) / 1000
+	indexStr := c.Query(`index`)
 	if waitTime < 30 {
 		waitTime = 30 - waitTime
 		c.String(http.StatusOK, fmt.Sprintf(`还要等待 %d 秒才能再次发送`, waitTime))
+	} else if len(indexStr) > 0 {
+		index, _ := strconv.ParseInt(indexStr, 64, 10)
+		accountFtx := model.AppConfig.GetAccounts(model.Ftx)[index]
+		balances := api.GetTransfers(accountFtx.Key, accountFtx.Secret, model.Ftx)
+		for i, balance := range balances {
+			util.Info(fmt.Sprintf(`transfers ftx %d %d %v`, index, i, balance))
+		}
+		accountOk := model.AppConfig.GetAccounts(model.OKEX)[index]
+		balances = api.GetTransfers(accountOk.Key, accountOk.Secret, model.OKEX)
+		for i, balance := range balances {
+			util.Info(fmt.Sprintf(`transfers okex %d %d %v`, index, i, balance))
+		}
 	} else {
 		codeGenTime = util.GetNowUnixMillion()
 		rnd := rand.New(rand.NewSource(time.Now().UnixNano()))
