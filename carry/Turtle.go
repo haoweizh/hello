@@ -74,15 +74,12 @@ func GetTurtleData(key, secret string, setting *model.Setting) (turtleData *Turt
 	if dataSet[setting.Market][setting.Symbol] == nil {
 		dataSet[setting.Market][setting.Symbol] = make(map[string]*TurtleData)
 	}
-	if dataSet[setting.Market][setting.Symbol][todayStr] != nil {
-		return dataSet[setting.Market][setting.Symbol][todayStr]
-	}
 	//util.Notice(`need to create turtle ` + setting.Market + setting.Symbol)
 	turtleClosed[setting.Market][setting.Symbol] = false
 	duration, _ := time.ParseDuration(`-120s`)
 	value, ok := turtleTime.Load(fmt.Sprintf(`%s_%s_%s`, setting.Market, setting.Symbol, todayStr))
-	if !ok || value == nil || time.Now().Add(duration).Before(value.(time.Time)) {
-		return nil
+	if (dataSet[setting.Market][setting.Symbol][todayStr] != nil) || (ok && value != nil && time.Now().Add(duration).After(value.(time.Time))) {
+		return dataSet[setting.Market][setting.Symbol][todayStr]
 	}
 	turtleTime.Store(fmt.Sprintf(`%s_%s_%s`, setting.Market, setting.Symbol, todayStr), time.Now())
 	turtleData = &TurtleData{turtleTime: today, symbol: setting.Symbol, checkTimeBreak: util.GetNow(),
