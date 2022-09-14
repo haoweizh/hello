@@ -24,6 +24,7 @@ const turtleTriggerDelta = 0.01
 
 var turtling = false
 var turtleLock sync.Mutex
+var turtleTime sync.Map // market_symbol_day time
 
 // 当天是否有平仓
 var turtleClosed = make(map[string]map[string]bool) // market - symbol - closed
@@ -79,6 +80,11 @@ func GetTurtleData(key, secret string, setting *model.Setting) (turtleData *Turt
 	//util.Notice(`need to create turtle ` + setting.Market + setting.Symbol)
 	turtleClosed[setting.Market][setting.Symbol] = false
 	duration, _ := time.ParseDuration(`-120s`)
+	value, ok := turtleTime.Load(fmt.Sprintf(`%s_%s_%s`, setting.Market, setting.Symbol, todayStr))
+	if !ok || value == nil || time.Now().Add(duration).Before(value.(time.Time)) {
+		return nil
+	}
+	turtleTime.Store(fmt.Sprintf(`%s_%s_%s`, setting.Market, setting.Symbol, todayStr), time.Now())
 	turtleData = &TurtleData{turtleTime: today, symbol: setting.Symbol, checkTimeBreak: util.GetNow(),
 		checkTimeOpen: util.GetNow().Add(duration), waitBreakLong: false, waitBreakShort: false, breakLong: false, breakShort: false}
 	//success, _, coin, _ := model.GetFromStandard(setting.Market, setting.Symbol)
