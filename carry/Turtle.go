@@ -14,7 +14,7 @@ import (
 type TurtleData struct {
 	turtleTime, checkTimeBreak, checkTimeOpen                         time.Time
 	waitBreakLong, waitBreakShort, breakLong, breakShort              bool
-	highDays10, lowDays10, highDays20, lowDays20, highDays5, lowDays5 float64
+	highDays10, lowDays10, highDays20, lowDays20, highDays3, lowDays3 float64
 	n, amount                                                         float64
 	symbol                                                            string
 	orderLong, orderShort                                             *model.Order
@@ -115,11 +115,11 @@ func GetTurtleData(key, secret string, setting *model.Setting) (turtleData *Turt
 		if (turtleData.lowDays10 == 0 || turtleData.lowDays10 > candle.PriceLow) && i <= 10 {
 			turtleData.lowDays10 = candle.PriceLow
 		}
-		if candle.PriceHigh > turtleData.highDays5 && i <= 5 {
-			turtleData.highDays5 = candle.PriceHigh
+		if candle.PriceHigh > turtleData.highDays3 && i <= 3 {
+			turtleData.highDays3 = candle.PriceHigh
 		}
-		if (turtleData.lowDays5 == 0 || turtleData.lowDays5 > candle.PriceLow) && i <= 5 {
-			turtleData.lowDays5 = candle.PriceLow
+		if (turtleData.lowDays3 == 0 || turtleData.lowDays3 > candle.PriceLow) && i <= 3 {
+			turtleData.lowDays3 = candle.PriceLow
 		}
 		if i == 1 {
 			turtleData.n = candle.N
@@ -235,7 +235,7 @@ var ProcessTurtle = func(setting *model.Setting, tick *model.BidAsk) {
 		}
 	} else if setting.Chance > 0 {
 		priceLong = math.Max(turtleData.highDays20, setting.PriceX+turtleData.n/2)
-		if turtleData.lowDays5 < setting.PriceX {
+		if turtleData.lowDays3 < setting.PriceX {
 			priceShort = math.Max(setting.PriceX-2*turtleData.n, turtleData.lowDays10)
 		} else {
 			priceShort = math.Max(turtleData.highDays20-2*turtleData.n, turtleData.lowDays10)
@@ -269,7 +269,7 @@ var ProcessTurtle = func(setting *model.Setting, tick *model.BidAsk) {
 		}
 	} else if setting.Chance < 0 {
 		priceShort = math.Min(turtleData.lowDays20, setting.PriceX-turtleData.n/2)
-		if turtleData.highDays5 > setting.PriceX {
+		if turtleData.highDays3 > setting.PriceX {
 			priceLong = math.Min(setting.PriceX+2*turtleData.n, turtleData.highDays10)
 		} else {
 			priceLong = math.Min(turtleData.lowDays20+2*turtleData.n, turtleData.highDays10)
