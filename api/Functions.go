@@ -369,7 +369,14 @@ func QueryOpenTriggerOrders(key, secret, market, symbol string) (orders []*model
 	case model.Ftx:
 		return queryTriggerOrdersFtx(key, secret, symbol)
 	case model.BinancePerp:
-		return queryOpenOrdersBinancePerp(key, secret, symbol)
+		orders = make([]*model.Order, 0)
+		temp := queryOpenOrdersBinancePerp(key, secret, symbol)
+		for _, order := range temp {
+			if order.OrderType == model.OrderTypeStop {
+				orders = append(orders, order)
+			}
+		}
+		return orders
 	}
 	return nil
 }

@@ -496,6 +496,9 @@ func parseOrderBinancePerp(res *futures.Order, order *model.Order) {
 		order.OrderTime = time.Unix(res.Time, 0)
 		order.Status = model.GetOrderStatus(model.BinancePerp, string(res.Status))
 		order.OrderId = strconv.FormatInt(res.OrderID, 10)
+		if strings.Contains(string(res.Type), `STOP`) {
+			order.OrderType = model.OrderTypeStop
+		}
 		if order.Status != model.CarryStatusSuccess && order.Status != model.CarryStatusFail {
 			order.Status = model.CarryStatusWorking
 		}
