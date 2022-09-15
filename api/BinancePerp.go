@@ -33,7 +33,12 @@ func getMarketsBinancePerp(key, secret string) (marketInfos map[string]*model.Ma
 	exchangeInfo, err := client.NewExchangeInfoService().Do(context.Background())
 	stats, errTicker := client.NewListPriceChangeStatsService().Do(context.Background())
 	if err != nil || errTicker != nil {
-		util.Notice("getMarketsBinancePerp err: " + err.Error())
+		if err != nil {
+			util.Notice("getMarketsBinancePerp err: " + err.Error())
+		}
+		if errTicker != nil {
+			util.Notice("getMarketsBinancePerp price err: " + errTicker.Error())
+		}
 		time.Sleep(time.Second * 2)
 		getMarketsBinancePerp(key, secret)
 		return marketInfos
