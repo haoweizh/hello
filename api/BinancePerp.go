@@ -39,7 +39,7 @@ func getMarketsBinancePerp(key, secret string) (marketInfos map[string]*model.Ma
 		if errTicker != nil {
 			util.Notice("getMarketsBinancePerp price err: " + errTicker.Error())
 		}
-		time.Sleep(time.Second * 2)
+		time.Sleep(time.Minute * 5)
 		getMarketsBinancePerp(key, secret)
 		return marketInfos
 	}
@@ -335,30 +335,11 @@ func cancelOrdersBinancePerp(key, secret string, symbol string) bool {
 
 //sdk暂不支持该接口
 func getPositionsBinancePerp(key, secret string) (success bool, positions []*model.Position, accountValue, availableU float64) {
-	//client := futures.NewClient(key, secret)
-	//positionResp, err := client.NewGetAccountService().Do(context.Background())
-	//if err != nil {
-	//	util.SocketInfo(`fail to refresh binance position `)
-	//	time.Sleep(time.Second * 2)
-	//	return getPositionsBinancePerp(key, secret)
-	//}
-	//if !positionResp.CanTrade {
-	//	util.SocketInfo(`binance position can not trade`)
-	//	return false, nil, 0, 0
-	//}
-	//accountValue, _ = strconv.ParseFloat(positionResp.TotalWalletBalance, 64)
-	//availableU, _ = strconv.ParseFloat(positionResp., 64)
-	//positions = make([]*model.Position, 0)
-	//for _, data := range positionResp.Positions {
-	//
-	//}
-
-	//todo 验证accountValue
 	responseBody := signedRequestBinance(key, secret, http.MethodGet, restBinancePerp+"/fapi/v2/account", true, nil)
 	positionJson, err := util.NewJSON(responseBody)
 	if err != nil || positionJson == nil {
 		util.SocketInfo(`fail to refresh binance position `)
-		time.Sleep(time.Second * 2)
+		time.Sleep(time.Minute * 5)
 		return getPositionsBinancePerp(key, secret)
 	}
 	success = positionJson.Get("canTrade").MustBool()

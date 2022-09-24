@@ -211,7 +211,7 @@ func getMarketsBybitSpot(key, secret string) (marketInfos map[string]*model.Mark
 	marketInfos = make(map[string]*model.MarketInfo)
 	marketJson, err := util.NewJSON(response)
 	if err != nil || marketJson.Get(`ret_code`) == nil || marketJson.Get(`ret_code`).MustInt() != 0 {
-		time.Sleep(time.Second * 2)
+		time.Sleep(time.Minute * 5)
 		return getMarketsBybitSpot(key, secret)
 	} else {
 		items, _ := marketJson.Get(`result`).Array()
@@ -372,7 +372,7 @@ func getBalanceBybitSpot(key, secret string) (success bool, balances []*model.Ba
 	balanceJson, err := util.NewJSON(response)
 	if err != nil || balanceJson == nil || balanceJson.Get(`ret_code`).MustInt() != 0 {
 		util.SocketInfo(`fail to get bybitspot balance`)
-		time.Sleep(time.Second * 2)
+		time.Sleep(time.Minute * 5)
 		return getBalanceBybitSpot(key, secret)
 	} else {
 		balancesArray := balanceJson.GetPath(`result`, `balances`).MustArray()

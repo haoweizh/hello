@@ -267,7 +267,7 @@ func getMarketsBybitPerp(key, secret string) (marketInfos map[string]*model.Mark
 	marketInfos = make(map[string]*model.MarketInfo)
 	marketJson, err := util.NewJSON(response)
 	if err != nil || marketJson.Get(`ret_code`) == nil || marketJson.Get(`ret_code`).MustInt() != 0 {
-		time.Sleep(time.Second * 2)
+		time.Sleep(time.Minute * 5)
 		getMarketsBybitPerp(key, secret)
 	} else {
 		items, _ := marketJson.Get(`result`).Array()
@@ -474,7 +474,7 @@ func getPositionsBybitPerp(key, secret string) (success bool, positions []*model
 	posJson, err := util.NewJSON(response)
 	if err != nil || posJson == nil || posJson.Get(`ret_code`).MustInt() != 0 {
 		util.SocketInfo(`fail to get bybitPerp positions`)
-		time.Sleep(time.Second * 2)
+		time.Sleep(time.Minute * 5)
 		return getPositionsBybitPerp(key, secret)
 	} else {
 		items := posJson.Get(`result`).MustArray()
@@ -600,7 +600,7 @@ func getWalletBybitPerp(key, secret string) (accountValueInU, availableU float64
 	response, _ := SignedRequestBybitPerp(key, secret, http.MethodGet, `/v2/private/wallet/balance`, nil)
 	dataJson, err := util.NewJSON(response)
 	if dataJson == nil || err != nil {
-		time.Sleep(time.Second * 2)
+		time.Sleep(time.Minute * 5)
 		util.Notice(`fail to get bybitPerp wallet`)
 		return getWalletBybitPerp(key, secret)
 	} else {

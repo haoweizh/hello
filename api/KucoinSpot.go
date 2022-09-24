@@ -90,7 +90,7 @@ func WsDepthServeKucoinSpot() (channels []chan struct{}, err error) {
 			relatedMsg, relatedChannelError, relatedConnectErr = relatedChannel.Connect()
 			if relatedConnectErr != nil {
 				util.SocketInfo(fmt.Sprintf("function: %s kucoin related websocket connect retry：%d error:%s", "WsDepthServeKucoin", i, relatedConnectErr))
-				time.Sleep(time.Second * 2)
+				time.Sleep(time.Minute * 5)
 				continue
 			} else {
 				retrySuccess = true
@@ -183,7 +183,7 @@ func getBalanceKucoinSpot(key string, secret string) (success bool, balances []*
 		accountResp, err := kucoinRelatedClient("", "", "").Accounts("", "trade")
 		if err != nil || accountResp.Code != "200000" {
 			util.SocketInfo(fmt.Sprintf("fail to refresh spot balance kucoin, err:%s, response:%v", err, accountResp))
-			time.Sleep(time.Second * 2)
+			time.Sleep(time.Minute * 5)
 			return getBalanceKucoinSpot(key, secret)
 		}
 		marshal, _ := json.Marshal(accountResp)
@@ -208,7 +208,7 @@ func getBalanceKucoinSpot(key string, secret string) (success bool, balances []*
 		accountResp, err := kucoinRelatedClient("", "", "").MarginAccount()
 		if err != nil || accountResp.Code != "200000" {
 			util.SocketInfo(fmt.Sprintf("fail to refresh margin balance kucoin, err:%s, response:%v", err, accountResp))
-			time.Sleep(time.Second * 2)
+			time.Sleep(time.Minute * 5)
 			return getBalanceKucoinSpot(key, secret)
 		}
 		marshal, _ := json.Marshal(accountResp)

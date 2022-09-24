@@ -434,7 +434,7 @@ func getBalanceFtx(key, secret string) (success bool, balances []*model.Balance,
 	balanceJson, err := util.NewJSON(response)
 	if err != nil || balanceJson == nil || balanceJson.Get(`success`).MustBool() != true {
 		util.SocketInfo(`fail to get ftx balance`)
-		time.Sleep(time.Second * 2)
+		time.Sleep(time.Minute * 5)
 		return getBalanceFtx(key, secret)
 	}
 	success = balanceJson.Get(`success`).MustBool()
@@ -547,7 +547,7 @@ func getPositionsFtx(key, secret string) (success bool, positions []*model.Posit
 	positionJson, err := util.NewJSON(response)
 	if err != nil || positionJson == nil || positionJson.Get(`success`).MustBool() != true {
 		util.SocketInfo(`fail to refresh account ftx`)
-		time.Sleep(time.Second * 2)
+		time.Sleep(time.Minute * 5)
 		return getPositionsFtx(key, secret)
 	}
 	success = positionJson.Get(`success`).MustBool()
@@ -572,7 +572,7 @@ func getPositionsFtx(key, secret string) (success bool, positions []*model.Posit
 //	positionJson, err := util.NewJSON(response)
 //	if err != nil || positionJson == nil || positionJson.Get(`success`).MustBool() != true {
 //		util.SocketInfo(`fail to refresh account ftx`)
-//		time.Sleep(time.Second * 2)
+//		time.Sleep(time.Minute * 5)
 //		return getAccountFtx(key, secret, accounts)
 //	}
 //	positionJson = positionJson.Get(`result`)
@@ -625,7 +625,7 @@ func getMarketsFtx(key, secret string) (marketInfos map[string]*model.MarketInfo
 	borrowJson, _ := util.NewJSON(response)
 	if err != nil || rateJson.Get(`result`) == nil || borrowJson.Get(`result`) == nil ||
 		rateJson.Get(`success`).MustBool() == false || borrowJson.Get(`success`).MustBool() == false {
-		time.Sleep(time.Second * 2)
+		time.Sleep(time.Minute * 5)
 		return getMarketsFtx(key, secret)
 	} else {
 		items, _ := rateJson.Get(`result`).Array()

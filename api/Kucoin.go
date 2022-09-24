@@ -185,7 +185,7 @@ package api
 //			relatedMsg, relatedChannelError, relatedConnectErr = relatedChannel.Connect()
 //			if relatedConnectErr != nil {
 //				util.SocketInfo(fmt.Sprintf("function: %s kucoin related websocket connect retry：%d error:%s", "WsDepthServeKucoin", i, relatedConnectErr))
-//				time.Sleep(time.Second * 2)
+//				time.Sleep(time.Minute * 5)
 //				continue
 //			} else {
 //				retrySuccess = true
@@ -208,7 +208,7 @@ package api
 //			futureMsg, futureChannelError, futureConnectErr = futureChannel.Connect()
 //			if futureConnectErr != nil {
 //				util.SocketInfo(fmt.Sprintf("function: %s kucoin future websocket connect retry：%d error:%s", "WsDepthServeKucoin", i, futureConnectErr))
-//				time.Sleep(time.Second * 2)
+//				time.Sleep(time.Minute * 5)
 //				continue
 //			} else {
 //				retrySuccess = true
@@ -370,7 +370,7 @@ package api
 //		accountResp, err := kucoinRelatedClient("", "", "").Accounts("", "trade")
 //		if err != nil {
 //			util.SocketInfo(fmt.Sprintf("fail to refresh spot balance kucoin, err:%s", err))
-//			time.Sleep(time.Second * 2)
+//			time.Sleep(time.Minute * 5)
 //			return getBalanceKucoin(key, secret)
 //		}
 //		marshal, _ := json.Marshal(accountResp)
@@ -395,7 +395,7 @@ package api
 //		accountResp, err := kucoinRelatedClient("", "", "").MarginAccount()
 //		if err != nil {
 //			util.SocketInfo(fmt.Sprintf("fail to refresh margin balance kucoin, err:%s", err))
-//			time.Sleep(time.Second * 2)
+//			time.Sleep(time.Minute * 5)
 //			return getBalanceKucoin(key, secret)
 //		}
 //		marshal, _ := json.Marshal(accountResp)
@@ -477,7 +477,7 @@ package api
 //		if err != nil {
 //			util.SocketInfo(fmt.Sprintf("fail to refresh future position kucoin, err:%s", err))
 //		}
-//		time.Sleep(time.Second * 2)
+//		time.Sleep(time.Minute * 5)
 //		return getPositionsKucoin(key, secret)
 //	}
 //	account := &kumex.AccountModel{}

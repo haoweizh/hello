@@ -299,7 +299,7 @@ func getBalanceBinanceSpot(key string, secret string) (success bool, balances []
 	balanceResp, err := client.NewGetAccountService().Do(context.Background())
 	if err != nil {
 		util.SocketInfo(`fail to refresh binance balance ` + err.Error())
-		time.Sleep(time.Second * 2)
+		time.Sleep(time.Minute * 5)
 		return getBalanceBinanceSpot(key, secret)
 	}
 	if !balanceResp.CanTrade {

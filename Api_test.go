@@ -36,7 +36,7 @@ func handleMsg() {
 
 func timeWriter(conn *websocket.Conn) {
 	for {
-		time.Sleep(time.Second * 2)
+		time.Sleep(time.Minute * 5)
 		_ = conn.WriteMessage(websocket.TextMessage, []byte(time.Now().Format("2006-01-02 15:04:05")+`ping`))
 	}
 }
@@ -135,7 +135,7 @@ func Test_WsAndOrderApi(t *testing.T) {
 		getTick := false
 		var tick *model.BidAsk
 		for !getTick {
-			time.Sleep(time.Second * 2)
+			time.Sleep(time.Minute * 5)
 			getTick, tick = model.AppMarkets.GetBidAsk(symbol, market)
 		}
 		price := tick.Bids[len(tick.Bids)-1].Price * 1.05

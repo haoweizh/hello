@@ -40,7 +40,7 @@ func appendFutureMarketGate(key, secret string, marketInfos map[string]*model.Ma
 	contracts, _, futureErr := client.FuturesApi.ListFuturesContracts(ctx, `usdt`)
 	if futureErr != nil {
 		panicGateError(key, "ListFuturesContracts", futureErr)
-		time.Sleep(time.Second * 2)
+		time.Sleep(time.Minute * 5)
 		appendFutureMarketGate(key, secret, marketInfos)
 		return
 	}
@@ -71,7 +71,7 @@ func appendRelatedMarketsGate(key, secret string, marketInfos map[string]*model.
 	client, ctx := getClientGate(key, secret)
 	spotCurrencyPairs, _, spotErr := client.SpotApi.ListCurrencyPairs(ctx)
 	if spotErr != nil {
-		time.Sleep(time.Second * 2)
+		time.Sleep(time.Minute * 5)
 		panicGateError(key, "ListCurrencyPairs", spotErr)
 		appendRelatedMarketsGate(key, secret, marketInfos)
 		return
@@ -411,7 +411,7 @@ func getBalanceGate(key string, secret string) (success bool, balances []*model.
 		accounts, _, err := client.SpotApi.ListSpotAccounts(ctx, nil)
 		if err != nil {
 			panicGateError(key, "getBalanceGate", err)
-			time.Sleep(time.Second * 2)
+			time.Sleep(time.Minute * 5)
 			util.SocketInfo(`fail to refresh spot balance gate`)
 			return getBalanceGate(key, secret)
 		}
@@ -429,7 +429,7 @@ func getBalanceGate(key string, secret string) (success bool, balances []*model.
 		account, _, err := client.MarginApi.GetCrossMarginAccount(ctx)
 		if err != nil {
 			panicGateError(key, "getBalanceGate", err)
-			time.Sleep(time.Second * 2)
+			time.Sleep(time.Minute * 5)
 			util.SocketInfo(`fail to refresh margin balance gate`)
 			return getBalanceGate(key, secret)
 		}
@@ -464,7 +464,7 @@ func getPositionsGate(key string, secret string) (success bool, positions []*mod
 		if positionsErr != nil {
 			panicGateError(key, `getPositionsGate`, positionsErr)
 		}
-		time.Sleep(time.Second * 2)
+		time.Sleep(time.Minute * 5)
 		util.SocketInfo(`fail to refresh future balance gate`)
 		return getPositionsGate(key, secret)
 	}

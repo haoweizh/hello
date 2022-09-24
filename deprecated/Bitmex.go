@@ -712,7 +712,7 @@ package deprecated
 //	response := SignedRequestBitmex(key, secret, `GET`, `/user/margin`, postData)
 //	balanceJson, err := util.NewJSON(response)
 //	if err != nil || balanceJson == nil || balanceJson.Get(`marginBalance`) == nil {
-//		time.Sleep(time.Second * 2)
+//		time.Sleep(time.Minute * 5)
 //		util.SocketInfo(`fail to get btc balance binance`)
 //		return GetBtcBalanceBitmex(key, secret)
 //	}

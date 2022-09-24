@@ -646,14 +646,14 @@ package deprecated
 //	if index > refreshOrders.amountIndex {
 //		util.Notice(fmt.Sprintf(`index %d -> %d`, index, refreshOrders.amountIndex))
 //		util.Notice(`[before 10min canceling]`)
-//		time.Sleep(time.Second * 2)
+//		time.Sleep(time.Minute * 5)
 //		refreshOrders.amountIndex = index
 //		symbols := model.GetMarketSymbols(setting.Market)
 //		for key := range symbols {
 //			CancelRefreshHang(setting.Market, setting.Symbol, RefreshTypeGrid)
 //			refreshOrders.setInRefresh(key, true)
 //		}
-//		time.Sleep(time.Second * 2)
+//		time.Sleep(time.Minute * 5)
 //		api.RefreshAccount(model.KeyDefault, model.SecretDefault, setting.Market)
 //		util.Notice(`[after 10min canceling]`)
 //		return

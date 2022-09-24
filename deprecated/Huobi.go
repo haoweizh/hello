@@ -527,7 +527,7 @@ package deprecated
 //	response := SignedRequestHuobi(key, secret, http.MethodPost, restHuobiFuture, "/linear-swap-api/v1/swap_cross_account_position_info", postData)
 //	responseJson, err := util.NewJSON(response)
 //	if err != nil || responseJson == nil || strings.ToLower(responseJson.Get(`status`).MustString()) != `ok` {
-//		time.Sleep(time.Second * 2)
+//		time.Sleep(time.Minute * 5)
 //		util.SocketInfo(`fail to get HuobiFuture balance`)
 //		return getPositionsHuobi(key, secret)
 //	}
@@ -616,7 +616,7 @@ package deprecated
 //			balances = append(balances, balance)
 //		}
 //	} else {
-//		time.Sleep(time.Second * 2)
+//		time.Sleep(time.Minute * 5)
 //		util.SocketInfo(`fail to refresh balance huobi`)
 //		return getBalanceHuobi(key, secret)
 //	}

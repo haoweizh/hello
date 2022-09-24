@@ -728,7 +728,7 @@ func getMarketsOKEX(key, secret string) (marketInfos map[string]*model.MarketInf
 		marketJson, errMarket := util.NewJSON(marketBody)
 		if err != nil || errMarket != nil || basicJson == nil || marketJson == nil ||
 			basicJson.Get(`code`).MustString() != `0` || marketJson.Get(`code`).MustString() != `0` {
-			time.Sleep(time.Second * 2)
+			time.Sleep(time.Minute * 5)
 			return getMarketsOKEX(key, secret)
 		} else {
 			for _, info := range basicJson.Get(`data`).MustArray() {
@@ -1158,7 +1158,7 @@ func getBalanceOKEX(key, secret string) (success bool, balances []*model.Balance
 	responseJson, err := util.NewJSON(response)
 	if err != nil || responseJson == nil || responseJson.GetPath(`data`) == nil || responseJson.Get(`code`).MustString() != `0` {
 		util.SocketInfo(`fail to get okex balance `)
-		time.Sleep(time.Second * 2)
+		time.Sleep(time.Minute * 5)
 		return getBalanceOKEX(key, secret)
 	}
 	balances = make([]*model.Balance, 0)
@@ -1231,7 +1231,7 @@ func getPositionsOKEX(key, secret string) (success bool, positions []*model.Posi
 	responseJson, err := util.NewJSON(responseBody)
 	if err != nil || responseJson == nil || responseJson.Get(`code`).MustString() != `0` {
 		util.SocketInfo(`fail to get okex positions `)
-		time.Sleep(time.Second * 2)
+		time.Sleep(time.Minute * 5)
 		return getPositionsOKEX(key, secret)
 	}
 	positions = make([]*model.Position, 0)

@@ -179,7 +179,7 @@ func kucoinFutureChannelConnect(futureClient *kumex.ApiService, futureToken *kum
 			futureMsg, futureChannelError, futureConnectErr = futureChannel.Connect()
 			if futureConnectErr != nil {
 				util.SocketInfo(fmt.Sprintf("function: %s kucoin future websocket connect retry：%d error:%s", "WsDepthServeKucoin", i, futureConnectErr))
-				time.Sleep(time.Second * 2)
+				time.Sleep(time.Minute * 5)
 				continue
 			} else {
 				retrySuccess = true
@@ -305,7 +305,7 @@ func getPositionsKucoinPerp(key string, secret string) (success bool, positions 
 		if err != nil {
 			util.SocketInfo(fmt.Sprintf("fail to refresh future position kucoin, err:%s, response:%v", err, contractResp))
 		}
-		time.Sleep(time.Second * 2)
+		time.Sleep(time.Minute * 5)
 		return getPositionsKucoinPerp(key, secret)
 	}
 	account := &kumex.AccountModel{}

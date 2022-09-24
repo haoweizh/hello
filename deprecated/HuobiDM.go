@@ -138,7 +138,7 @@ package deprecated
 //	util.SocketInfo(`get huobiDM balance: ` + string(responseBody))
 //	accountJson, err := util.NewJSON(responseBody)
 //	if err != nil || accountJson == nil || strings.ToLower(accountJson.Get(`status`).MustString()) != `ok` {
-//		time.Sleep(time.Second * 2)
+//		time.Sleep(time.Minute * 5)
 //		util.SocketInfo(`fail to get huobiDM balance`)
 //		return getBalanceHuobiDM(key, secret)
 //	}
@@ -160,7 +160,7 @@ package deprecated
 //	accountJson, err := util.NewJSON(responseBody)
 //	if err != nil || accountJson == nil || strings.ToLower(accountJson.Get(`status`).MustString()) != `ok` {
 //		util.Notice(`fail to refresh account huobiDM holding `)
-//		time.Sleep(time.Second * 2)
+//		time.Sleep(time.Minute * 5)
 //		return getHoldingHuobiDM(key, secret, symbolSide)
 //	}
 //	util.SocketInfo(fmt.Sprintf(`huobiDM get holding return: %s`, string(responseBody)))

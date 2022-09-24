@@ -322,7 +322,7 @@ func getPositionsMexc(key, secret string) (success bool, positions []*model.Posi
 		`/api/v1/private/position/open_positions`, nil, nil)
 	if valueErr != nil || posErr != nil {
 		util.Notice(fmt.Sprintf(`[contractGetPositionsMexc] Failed to get positions by key %s err %+v %+v`, key, valueErr, posErr))
-		time.Sleep(time.Second * 2)
+		time.Sleep(time.Minute * 5)
 		return getPositionsMexc(key, secret)
 	}
 	valueJson, _ := util.NewJSON(valueResponse)
