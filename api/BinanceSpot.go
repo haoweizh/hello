@@ -287,7 +287,7 @@ func cancelOrdersBinanceSpot(key string, secret string, symbol string) bool {
 	}
 	client := binance.NewClient(key, secret)
 	_, err := client.NewCancelOpenOrdersService().Symbol(dialectSymbol).Do(context.Background())
-	if err != nil {
+	if err != nil && !strings.Contains(err.Error(), `-2010`) {
 		util.Notice("cancelOrdersBinanceSpot err: " + err.Error() + " symbol: " + symbol + " marketType: " + marketType + " coin: " + coin + " But dialectSymbol: " + dialectSymbol)
 		return false
 	}
