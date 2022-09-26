@@ -677,10 +677,12 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 				placeSellValue := fmt.Sprintf(`%f_%f`, tickSell.Bids[0].Price, tickSell.Bids[0].Amount)
 				value, ok := placeTick.Load(placeBuyStr)
 				if ok && value != nil && value.(string) == placeBuyValue {
+					util.Notice(fmt.Sprintf(`tick static %s`, placeBuyValue))
 					return
 				}
 				value, ok = placeTick.Load(placeSellStr)
 				if ok && value != nil && value.(string) == placeSellValue {
+					util.Notice(fmt.Sprintf(`tick static %s`, placeSellValue))
 					return
 				}
 				placeCross(statusBuy, statusSell, priceBuy, priceSell, amount)
