@@ -114,7 +114,7 @@ func GetFunctions(market, symbol string) *sync.Map {
 	return nil
 }
 
-const topMarketInfoLen = 15
+const topMarketInfoLen = 10
 
 func prepareSettings() {
 	localSymbolSettings := &sync.Map{}
@@ -240,7 +240,7 @@ func handleSettings() (handled bool) {
 					Chance:          0,
 					GridAmount:      0,
 					OpenShortMargin: 3,
-					AmountLimit:     12,
+					AmountLimit:     10,
 				}
 				model.AppDB.Save(setting)
 				util.Notice(`add setting %v`, setting.Symbol)
