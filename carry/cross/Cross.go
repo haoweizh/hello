@@ -668,10 +668,24 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 			if status == nil || statusRelate == nil || status == statusRelate || !okStatus || !okRelate {
 				continue
 			}
-			statusBuy, statusSell, amount, priceBuy, priceSell := calcAmount(i, setting.Coin, status.(*CarryStatus),
-				statusRelate.(*CarryStatus), tick, tickRelate)
+			statusBuy, statusSell, amount, priceBuy, priceSell, tickBuy, tickSell :=
+				calcAmount(i, setting.Coin, status.(*CarryStatus), statusRelate.(*CarryStatus), tick, tickRelate)
 			if amount > 0 {
+				placeBuyStr := fmt.Sprintf(`%s_%s_%s`, statusBuy.market, statusBuy.symbol, model.OrderSideBuy)
+				placeSellStr := fmt.Sprintf(`%s_%s_%s`, statusSell.market, statusSell.symbol, model.OrderSideSell)
+				placeBuyValue := fmt.Sprintf(`%f_%f`, tickBuy.Asks[0].Price, tickBuy.Asks[0].Amount)
+				placeSellValue := fmt.Sprintf(`%f_%f`, tickSell.Bids[0].Price, tickSell.Bids[0].Amount)
+				value, ok := placeTick.Load(placeBuyStr)
+				if ok && value != nil && value.(string) == placeBuyValue {
+					return
+				}
+				value, ok = placeTick.Load(placeSellStr)
+				if ok && value != nil && value.(string) == placeSellValue {
+					return
+				}
 				placeCross(statusBuy, statusSell, priceBuy, priceSell, amount)
+				placeTick.Store(placeBuyStr, placeBuyValue)
+				placeTick.Store(placeSellStr, placeSellValue)
 				return
 			}
 		}
@@ -688,8 +702,8 @@ func checkTradeLine(statusBuy, statusSell *CarryStatus, tradeLineBuy, tradeLineS
 	}
 }
 
-func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarryStatus, tick,
-	tickRelate *model.BidAsk) (statusBuy, statusSell *CarryStatus, amount, priceBuy, priceSell float64) {
+func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarryStatus, tick, tickRelate *model.BidAsk) (
+	statusBuy, statusSell *CarryStatus, amount, priceBuy, priceSell float64, tickBuy, tickSell *model.BidAsk) {
 	now := time.Now()
 	if now.Hour()%8 == 0 && now.Minute() == 0 && now.Second() < 30 {
 		return
@@ -736,14 +750,17 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarrySta
 	if checkTradeLine(carryStatusRelate, carryStatus, tradeLineBuyRelate, tradeLineSell, score) {
 		statusSell = carryStatus
 		statusBuy = carryStatusRelate
+		tickSell = tick
+		tickBuy = tickRelate
 		priceSell = priceBid
 		priceBuy = priceAskRelate
 		askAmount = amountBid
 		bidAmount = amountAskRelate
-	}
-	if checkTradeLine(carryStatus, carryStatusRelate, tradeLineBuy, tradeLineSellRelate, scoreRelate) {
+	} else if checkTradeLine(carryStatus, carryStatusRelate, tradeLineBuy, tradeLineSellRelate, scoreRelate) {
 		statusSell = carryStatusRelate
 		statusBuy = carryStatus
+		tickSell = tickRelate
+		tickBuy = tick
 		priceSell = priceBidRelate
 		priceBuy = priceAsk
 		askAmount = amountBidRelate
@@ -815,7 +832,7 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarrySta
 				fmt.Sprintf(`%v`, green)})
 	}
 	if statusBuy == nil || statusSell == nil {
-		return nil, nil, 0, 0, 0
+		return nil, nil, 0, 0, 0, nil, nil
 	}
 	// 如果上一次交易不是本交易对，但上一次交易很可能影响了资金状况，需要对本carryStatus的可买卖数量进行调整
 	lastSymbol, ok := util.LoadSyncMap(&lastCrosses, statusBuy.account.Key, statusBuy.market)
@@ -832,9 +849,9 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarrySta
 		amount = FormatCrossPair(statusBuy.market, statusSell.market, statusBuy.symbol, statusSell.symbol, amount, priceBuy)
 	}
 	if checkScoreLimit(carryStatus.market, carryStatus.symbol, carryStatusRelate.market, carryStatusRelate.symbol, amount, score, scoreRelate) {
-		return nil, nil, 0, 0, 0
+		return nil, nil, 0, 0, 0, nil, nil
 	}
-	return statusBuy, statusSell, amount, priceBuy, priceSell
+	return statusBuy, statusSell, amount, priceBuy, priceSell, tickBuy, tickSell
 }
 
 func checkScoreLimit(market, symbol, marketRelate, symbolRelate string, amount, score, scoreRelate float64) (invalid bool) {
