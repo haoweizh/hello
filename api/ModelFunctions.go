@@ -212,7 +212,7 @@ func handleSettings() (handled bool) {
 		_, marketPos, _, _ := GetPositions(accounts[0].Key, accounts[0].Secret, market)
 		posMap := make(map[string]*model.Position)
 		for _, pos := range marketPos {
-			posMap[pos.Currency+model.UniStandardTail[model.MarketTypePerp]] = pos
+			posMap[strings.ToUpper(pos.Currency+model.UniStandardTail[model.MarketTypePerp])] = pos
 		}
 		handled = true
 		topMarketInfos := make(map[string]*model.MarketInfo)
