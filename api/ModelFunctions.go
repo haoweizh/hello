@@ -250,7 +250,7 @@ func handleSettings() (handled bool) {
 					AmountLimit:     10,
 				}
 				util.Notice(`add setting %v`, setting.Symbol)
-			} else if value.(*model.Setting).SymbolRelated == model.SettingTurtleRemoved {
+			} else {
 				setting = value.(*model.Setting)
 				setting.SymbolRelated = ``
 				util.Notice(`add setting back %s`, info.Name)
@@ -266,9 +266,13 @@ func handleSettings() (handled bool) {
 		}
 		settings.Range(func(symbol, setting interface{}) bool {
 			_, _, coinValue, _ := model.GetFromStandard(market, symbol.(string))
-			if topMarketInfos[symbol.(string)] == nil && !model.CommonCoins[strings.ToLower(coinValue)] &&
-				setting.(*model.Setting).Chance == 0 {
-				setting.(*model.Setting).SymbolRelated = model.SettingTurtleRemoved
+			if topMarketInfos[symbol.(string)] == nil && !model.CommonCoins[strings.ToLower(coinValue)] {
+				if setting.(*model.Setting).Chance == 0 {
+					setting.(*model.Setting).SymbolRelated = model.SettingTurtleRemoved
+				}
+				if posMap[setting.(*model.Setting).Symbol] != nil {
+					setting.(*model.Setting).GridAmount = posMap[setting.(*model.Setting).Symbol].Holding
+				}
 				model.AppDB.Save(setting)
 				util.Notice(`add setting remove %s`, setting.(*model.Setting).Symbol)
 			}
