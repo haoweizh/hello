@@ -205,8 +205,14 @@ func prepareSettings() {
 func handleSettings() (handled bool) {
 	for _, market := range appMarkets {
 		_, hava := util.LoadSyncMap(symbolSettings, model.FunctionDynamicTurtle, market)
-		if !hava {
+		accounts := model.AppConfig.GetAccounts(market)
+		if !hava || accounts == nil || len(accounts) == 0 {
 			continue
+		}
+		_, marketPos, _, _ := GetPositions(accounts[0].Key, accounts[0].Secret, market)
+		posMap := make(map[string]*model.Position)
+		for _, pos := range marketPos {
+			posMap[pos.Currency+model.UniStandardTail[model.MarketTypePerp]] = pos
 		}
 		handled = true
 		topMarketInfos := make(map[string]*model.MarketInfo)
@@ -231,8 +237,9 @@ func handleSettings() (handled bool) {
 		}
 		for _, info := range topMarketInfos {
 			value, ok = settings.Load(info.Name)
+			var setting *model.Setting
 			if value == nil {
-				setting := &model.Setting{
+				setting = &model.Setting{
 					Valid:           true,
 					Function:        model.FunctionTurtle,
 					Market:          market,
@@ -242,13 +249,20 @@ func handleSettings() (handled bool) {
 					OpenShortMargin: 3,
 					AmountLimit:     10,
 				}
-				model.AppDB.Save(setting)
 				util.Notice(`add setting %v`, setting.Symbol)
 			} else if value.(*model.Setting).SymbolRelated == model.SettingTurtleRemoved {
-				value.(*model.Setting).SymbolRelated = ``
-				model.AppDB.Save(value.(*model.Setting))
+				setting = value.(*model.Setting)
+				setting.SymbolRelated = ``
 				util.Notice(`add setting back %s`, info.Name)
 			}
+			if posMap[setting.Symbol] != nil {
+				if setting.GridAmount != posMap[setting.Symbol].Holding {
+					util.Notice(`update turtle grid amount %s %s %f to %f`,
+						setting.Market, setting.Symbol, setting.GridAmount, posMap[setting.Symbol].Holding)
+				}
+				setting.GridAmount = posMap[setting.Symbol].Holding
+			}
+			model.AppDB.Save(setting)
 		}
 		settings.Range(func(symbol, setting interface{}) bool {
 			_, _, coinValue, _ := model.GetFromStandard(market, symbol.(string))
