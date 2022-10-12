@@ -127,7 +127,7 @@ func createFromPosition(account *model.Account, setting *model.Setting, valueLim
 		carryStatus.RateInAll = valueInUsd / cm.accountValueInU
 	} else if absentRevert {
 		util.Notice(fmt.Sprintf(`symbol absent revert %s %s`, setting.Market, setting.Symbol))
-		doRevert = true
+		//doRevert = true
 	}
 	rateLimitPosition := 1.8
 	rateLimitHolding := 0.2
@@ -179,7 +179,7 @@ func createFromBalance(account *model.Account, setting *model.Setting, valueLimi
 		carryStatus.AvailableSell = carryStatus.LimitSell
 	} else if absentRevert {
 		util.Notice(fmt.Sprintf(`symbol absent revert %s %s`, setting.Market, setting.Symbol))
-		doRevert = true
+		//doRevert = true
 	}
 	usdLowLine := math.Min(100000, 0.2*sm.accountValueInU)
 	if sm.availableU < usdLowLine || carryStatus.RateInAll > 0.2 {

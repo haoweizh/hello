@@ -494,10 +494,14 @@ func queryTriggerOrderId(key, secret, id string) (orderId string) {
 }
 
 // 查询未成交的触发单
-func queryTriggerOrdersFtx(key, secret, symbol string) (orders []*model.Order) {
+func queryOrdersFtx(key, secret, symbol string, isTrigger bool) (orders []*model.Order) {
 	param := make(map[string]interface{})
 	param[`market`] = symbol
-	response, _ := SignedRequestFtx(key, secret, `GET`, `/conditional_orders`, param, nil)
+	path := `/orders`
+	if isTrigger {
+		path = `/conditional_orders`
+	}
+	response, _ := SignedRequestFtx(key, secret, `GET`, path, param, nil)
 	orderJson, err := util.NewJSON(response)
 	if err == nil {
 		result := orderJson.Get(`result`)
@@ -516,7 +520,7 @@ func queryTriggerOrdersFtx(key, secret, symbol string) (orders []*model.Order) {
 }
 
 func queryTriggerOrderFtx(key, secret, symbol, triggerId string) (status string) {
-	orders := queryTriggerOrdersFtx(key, secret, symbol)
+	orders := queryOrdersFtx(key, secret, symbol, true)
 	if orders == nil || len(orders) == 0 {
 		return model.CarryStatusFail
 	}
@@ -755,6 +759,13 @@ func parseOrderFtx(order *model.Order, item map[string]interface{}) {
 	}
 	if item[`type`] != nil {
 		order.OrderType = strings.ToLower(item[`type`].(string))
+		if order.OrderType == `limit` {
+			order.OrderType = model.OrderTypeLimit
+		} else if order.OrderType == `stop` {
+			order.OrderType = model.OrderTypeStop
+		} else if order.OrderType == `market` {
+			order.OrderType = model.OrderTypeMarket
+		}
 	}
 	if item[`status`] != nil {
 		order.Status = model.GetOrderStatus(model.Ftx, item[`status`].(string))

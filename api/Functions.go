@@ -354,17 +354,20 @@ func _(key, secret, market, symbol string) (success bool, maxLoan float64) {
 	return false, 0
 }
 
-func QueryOpenTriggerOrders(key, secret, market, symbol string) (orders []*model.Order) {
+func QueryOpenOrders(key, secret, market, symbol string, isStop bool) (orders []*model.Order) {
 	switch market {
 	case model.OKEX:
-		return queryOpenOrdersOKEX(key, secret, symbol, true)
+		return queryOpenOrdersOKEX(key, secret, symbol, isStop)
 	case model.Ftx:
-		return queryTriggerOrdersFtx(key, secret, symbol)
+		return queryOrdersFtx(key, secret, symbol, isStop)
 	case model.BinancePerp:
 		orders = make([]*model.Order, 0)
 		temp := queryOpenOrdersBinancePerp(key, secret, symbol)
 		for _, order := range temp {
-			if order.OrderType == model.OrderTypeStop {
+			if isStop && order.OrderType == model.OrderTypeStop {
+				orders = append(orders, order)
+			}
+			if !isStop && order.OrderType == model.OrderTypeLimit {
 				orders = append(orders, order)
 			}
 		}

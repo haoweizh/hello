@@ -183,6 +183,8 @@ func Test_initTurtleN(t *testing.T) {
 	setting := &model.Setting{Market: model.Ftx, Symbol: `BTC_PERP`, AmountLimit: 1}
 	key := model.AppConfig.GetAccounts(model.Ftx)[0].Key
 	secret := model.AppConfig.GetAccounts(model.Ftx)[0].Secret
+	orders := api.QueryOpenOrders(key, secret, model.Ftx, `BTC_PERP`, false)
+	fmt.Println(len(orders))
 	candle1 := api.GetTurtleCandle(key, secret, setting.Market, setting.Symbol, 86400, start)
 	fmt.Println(candle1)
 	regret.ProcessCandles(setting.Market, setting.Symbol, start, time.Now().UTC(), setting)
