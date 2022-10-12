@@ -407,7 +407,7 @@ func getCandlesBinancePerp(key, secret, symbol string, begin, end time.Time, lim
 		candle.PriceClose, _ = strconv.ParseFloat(item.Close, 64)
 		candle.PriceHigh, _ = strconv.ParseFloat(item.High, 64)
 		candle.PriceLow, _ = strconv.ParseFloat(item.Low, 64)
-		candle.Begin = time.Unix(item.OpenTime/1000, 0)
+		candle.Begin = time.Unix(item.OpenTime/1000, 0).In(begin.Location())
 		candles[fmt.Sprintf(`%s_%s_%d_%s`, model.BinancePerp, symbol, slotSeconds, candle.Begin.Format(time.RFC3339))] = candle
 	}
 	return candles
