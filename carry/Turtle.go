@@ -81,10 +81,10 @@ func adjustPosHolding(key, secret string, setting *model.Setting) {
 				setting.Market, setting.Symbol, setting.Chance, posMap[setting.Symbol].Holding, setting.GridAmount)
 			setting.GridAmount = 0
 			setting.Chance = 0
-		} else if setting.GridAmount != posMap[setting.Symbol].Holding {
+		} else if setting.GridAmount != math.Abs(posMap[setting.Symbol].Holding) {
 			util.Notice(`update turtle grid amount %s %s %f to %f`,
 				setting.Market, setting.Symbol, setting.GridAmount, posMap[setting.Symbol].Holding)
-			setting.GridAmount = posMap[setting.Symbol].Holding
+			setting.GridAmount = math.Abs(posMap[setting.Symbol].Holding)
 		}
 	} else {
 		setting.GridAmount = 0
