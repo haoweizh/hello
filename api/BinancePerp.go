@@ -378,9 +378,22 @@ func getPositionsBinancePerp(key, secret string) (success bool, positions []*mod
 	return success, positions, accountValue, availableU
 }
 
-func getCandlesBinancePerp(key, secret, symbol, interval string, begin, end time.Time, limit int) (candles map[string]*model.Candle) {
+// 1m 3m 5m 15m 30m 1h 2h 4h 6h 8h 12h 1d 3d 1w 1M
+func getCandlesBinancePerp(key, secret, symbol string, begin, end time.Time, limit, slotSeconds int) (
+	candles map[string]*model.Candle) {
 	_, _, _, dialectSymbol := model.GetFromStandard(model.BinancePerp, symbol)
 	client := futures.NewClient(key, secret)
+	interval := `1D`
+	switch slotSeconds {
+	case 60:
+		interval = `1m`
+	case 1800:
+		interval = `30m`
+	case 3600:
+		interval = `1h`
+	case 86400:
+		interval = `1d`
+	}
 	resp, err := client.NewKlinesService().Symbol(dialectSymbol).StartTime(begin.UnixMilli()).
 		EndTime(end.UnixMilli()).Interval(interval).Limit(limit).Do(context.Background())
 	if err != nil {
@@ -389,14 +402,13 @@ func getCandlesBinancePerp(key, secret, symbol, interval string, begin, end time
 	}
 	candles = make(map[string]*model.Candle)
 	for _, item := range resp {
-		candle := &model.Candle{Market: model.BinancePerp, Symbol: symbol, Period: interval}
+		candle := &model.Candle{Market: model.BinancePerp, Symbol: symbol, Seconds: slotSeconds}
 		candle.PriceOpen, _ = strconv.ParseFloat(item.Open, 64)
 		candle.PriceClose, _ = strconv.ParseFloat(item.Close, 64)
 		candle.PriceHigh, _ = strconv.ParseFloat(item.High, 64)
 		candle.PriceLow, _ = strconv.ParseFloat(item.Low, 64)
-		timeStart := time.Unix(item.OpenTime/1000, 0)
-		candle.UTCDate = timeStart.Format(time.RFC3339)[0:10]
-		candles[candle.UTCDate] = candle
+		candle.Begin = time.Unix(item.OpenTime/1000, 0)
+		candles[fmt.Sprintf(`%s_%s_%d_%s`, model.BinancePerp, symbol, slotSeconds, candle.Begin.Format(time.RFC3339))] = candle
 	}
 	return candles
 }

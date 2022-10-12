@@ -290,14 +290,12 @@ func handleDepthFtx(markets *model.Markets, response *simplejson.Json) {
 	}
 }
 
-func getCandlesFtx(key, secret, symbol, binSize string, start, end time.Time, count int) (
+func getCandlesFtx(key, secret, symbol string, start, end time.Time, slotSeconds int) (
 	candles map[string]*model.Candle) {
 	candles = make(map[string]*model.Candle)
 	param := make(map[string]interface{})
-	if binSize == `1d` {
-		param[`resolution`] = `86400`
-	}
-	param[`limit`] = fmt.Sprintf(`%d`, count)
+	param[`resolution`] = fmt.Sprintf(`%d`, slotSeconds)
+	//param[`limit`] = fmt.Sprintf(`%d`, count)
 	param[`start_time`] = fmt.Sprintf(`%d`, start.Unix())
 	param[`end_time`] = fmt.Sprintf(`%d`, end.Unix())
 	_, _, _, dialectSymbol := model.GetFromStandard(model.Ftx, symbol)
@@ -308,7 +306,7 @@ func getCandlesFtx(key, secret, symbol, binSize string, start, end time.Time, co
 		candleJsons := candleJson.Get(`result`).MustArray()
 		for _, value := range candleJsons {
 			item := value.(map[string]interface{})
-			candle := &model.Candle{Market: model.Ftx, Symbol: symbol, Period: binSize}
+			candle := &model.Candle{Market: model.Ftx, Symbol: symbol, Seconds: slotSeconds}
 			if item[`open`] != nil {
 				candle.PriceOpen, _ = item[`open`].(json.Number).Float64()
 			}
@@ -322,9 +320,8 @@ func getCandlesFtx(key, secret, symbol, binSize string, start, end time.Time, co
 				candle.PriceLow, _ = item[`low`].(json.Number).Float64()
 			}
 			if item[`startTime`] != nil {
-				startTime, _ := time.Parse(time.RFC3339, item[`startTime`].(string))
-				candle.UTCDate = startTime.Format(time.RFC3339)[0:10]
-				candles[candle.UTCDate] = candle
+				candle.Begin, _ = time.Parse(time.RFC3339, item[`startTime`].(string))
+				candles[fmt.Sprintf(`%s_%s_%d_%s`, model.Ftx, symbol, slotSeconds, candle.Begin.Format(time.RFC3339))] = candle
 			}
 		}
 	}

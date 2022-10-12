@@ -1319,10 +1319,21 @@ func getMaxLoanOKEX(key, secret, symbol string) (success bool, maxLoan float64) 
 }
 
 // getCandlesOKEX bar 1m/3m/5m/15m/30m/1H/2H/4H/6H/12H/1D/1W/1M/3M/6M/1Y
-func getCandlesOKEX(key, secret, symbol, binSize string, before, after time.Time, count int) (
+func getCandlesOKEX(key, secret, symbol string, before, after time.Time, count, slotSeconds int) (
 	candles map[string]*model.Candle) {
 	candles = make(map[string]*model.Candle)
-	param := map[string]interface{}{`instId`: symbol, `bar`: binSize, `limit`: count,
+	bar := `1D`
+	switch slotSeconds {
+	case 60:
+		bar = `1m`
+	case 1800:
+		bar = `30m`
+	case 3600:
+		bar = `1H`
+	case 86400:
+		bar = `1D`
+	}
+	param := map[string]interface{}{`instId`: symbol, `bar`: bar, `limit`: count,
 		`before`: before.UnixNano() / int64(time.Millisecond), `after`: after.UnixNano() / int64(time.Millisecond)}
 	response, _ := sendSignRequestOKEX(key, secret, http.MethodGet, `/api/v5/market/candles`, param, nil)
 	candleJson, err := util.NewJSON(response)
@@ -1330,20 +1341,19 @@ func getCandlesOKEX(key, secret, symbol, binSize string, before, after time.Time
 		return
 	}
 	candleJsons := candleJson.Get(`data`).MustArray()
-	location, _ := time.LoadLocation("Asia/Shanghai")
 	for _, value := range candleJsons {
 		item := value.([]interface{})
 		if len(item) < 7 {
 			continue
 		}
-		candle := &model.Candle{Market: model.OKEX, Symbol: symbol, Period: strings.ToLower(binSize)}
+		candle := &model.Candle{Market: model.OKEX, Symbol: symbol, Seconds: slotSeconds}
 		ts, _ := strconv.ParseInt(item[0].(string), 10, 64)
-		candle.UTCDate = time.Unix(ts/1000, 0).In(location).Format(time.RFC3339)[:10]
+		candle.Begin = time.Unix(ts/1000, 0).In(before.Location())
 		candle.PriceOpen, _ = strconv.ParseFloat(item[1].(string), 64)
 		candle.PriceHigh, _ = strconv.ParseFloat(item[2].(string), 64)
 		candle.PriceLow, _ = strconv.ParseFloat(item[3].(string), 64)
 		candle.PriceClose, _ = strconv.ParseFloat(item[4].(string), 64)
-		candles[candle.UTCDate] = candle
+		candles[fmt.Sprintf(`%s_%s_%d_%s`, model.OKEX, symbol, slotSeconds, candle.Begin.Format(time.RFC3339))] = candle
 	}
 	return
 }

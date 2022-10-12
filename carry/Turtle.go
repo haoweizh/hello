@@ -94,7 +94,7 @@ func GetTurtleData(key, secret string, setting *model.Setting) (turtleData *Turt
 	for i := 1; i < 21; i++ {
 		duration, _ = time.ParseDuration(fmt.Sprintf(`%dh`, -24*i))
 		day := today.Add(duration)
-		candle := api.GetDayCandle(key, secret, setting.Market, setting.Symbol, day)
+		candle := api.GetTurtleCandle(key, secret, setting.Market, setting.Symbol, 86400, day)
 		if candle == nil {
 			if time.Now().Second() == 0 {
 				util.Notice(`can not calc turtleDate as nil candle %s %s %s %s`,

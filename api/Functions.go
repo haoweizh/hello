@@ -15,36 +15,8 @@ var symbolLock sync.Mutex
 var tradeMax = make(map[string]map[string][]float64)        // key - symbol - [maxBuy合约张数/币币个数, maxSell]
 var okTradeMaxResetTime = make(map[string]map[string]int64) // key - symbol - init time in second
 var okexCrossing sync.Map                                   // symbol - bool
+var candleMap sync.Map                                      // market_symbol_slotSeconds_YYYY-MM-DDTHH:MM:SS
 var USDs = map[string]bool{`USD`: true, `usd`: true, `USDT`: true, `usdt`: true, `USDC`: true, `usdc`: true, `BUSD`: true, `busd`: true}
-
-//var crossCount = make(map[string]map[string]map[string]int) // key - market - symbol - count
-//func ClearCrossCount() {
-//	crossCount = make(map[string]map[string]map[string]int)
-//	okexCrossing = sync.Map{}
-//}
-//
-//func GetCrossCount(key, market, symbol string) (count int) {
-//	if crossCount == nil || crossCount[key] == nil || crossCount[key][market] == nil {
-//		return 0
-//	}
-//	return crossCount[key][market][symbol]
-//}
-//
-//func SetCrossCount(key, market, symbol string, count int) {
-//	if crossCount == nil {
-//		crossCount = make(map[string]map[string]map[string]int)
-//	}
-//	if crossCount[key] == nil {
-//		crossCount[key] = make(map[string]map[string]int)
-//	}
-//	if crossCount[key][market] == nil {
-//		crossCount[key][market] = make(map[string]int)
-//	}
-//	if market == model.OKEX {
-//		okexCrossing.Store(symbol, true)
-//	}
-//	crossCount[key][market][symbol] = count
-//}
 
 func setRequireReset(market string) {
 	maintaining, ok := model.ChannelMaintaining.Load(market)
@@ -192,44 +164,63 @@ func CancelOrder(key, secret, market, symbol, orderType, orderId string) (result
 	return result, errCode, msg
 }
 
-func GetDayCandle(key, secret, market, symbol string, timeCandle time.Time) (candle *model.Candle) {
-	//candle = model.GetCandle(market, symbol, `1d`, timeCandle.Format(time.RFC3339)[0:10])
-	//if candle != nil && candle.N > 0 {
-	//	return
-	//}
-	dBegin, _ := time.ParseDuration(`-960h`)
-	dEnd, _ := time.ParseDuration(`24h`)
+// GetCandle seconds: candle的以秒计算宽度
+func GetCandle(key, secret, market, symbol string, slotSeconds int, begin, end time.Time) (candles map[string]*model.Candle) {
+	count := (end.Unix() - begin.Unix()) / int64(slotSeconds)
+	if count > 100 {
+		duration, _ := time.ParseDuration(fmt.Sprintf(`%ds`, 100*slotSeconds))
+		candles = GetCandle(key, secret, market, symbol, slotSeconds, begin, begin.Add(duration))
+		subCandles := GetCandle(key, secret, market, symbol, slotSeconds, begin.Add(duration), end)
+		for _, item := range subCandles {
+			candleKey := fmt.Sprintf(`%s_%s_%d_%s`, market, symbol, slotSeconds, item.Begin.Format(time.RFC3339))
+			candles[candleKey] = item
+		}
+	} else {
+		candles = make(map[string]*model.Candle)
+		switch market {
+		case model.Ftx:
+			candles = getCandlesFtx(key, secret, symbol, begin, end, slotSeconds)
+		case model.OKEX:
+			candles = getCandlesOKEX(key, secret, symbol, begin, end, int(count), slotSeconds)
+		case model.BinancePerp:
+			candles = getCandlesBinancePerp(key, secret, symbol, begin, end, int(count), slotSeconds)
+		}
+		util.Info(fmt.Sprintf(`get candles %s %s %d seconds %s`,
+			market, symbol, slotSeconds, begin.Format(time.RFC3339)))
+		time.Sleep(time.Millisecond * 100)
+	}
+	return
+}
+
+func GetTurtleCandle(key, secret, market, symbol string, slotSeconds int, timeCandle time.Time) (candle *model.Candle) {
+	value, ok := candleMap.Load(fmt.Sprintf(`%s_%s_%d_%s`, market, symbol, slotSeconds, timeCandle.Format(time.RFC3339)))
+	if ok && value != nil {
+		return value.(*model.Candle)
+	}
+	dBegin, _ := time.ParseDuration(fmt.Sprintf(`%ds`, -40*slotSeconds))
+	dEnd, _ := time.ParseDuration(fmt.Sprintf(`%ds`, slotSeconds))
 	begin := timeCandle.Add(dBegin)
 	end := timeCandle.Add(dEnd)
-	var candles map[string]*model.Candle
-	switch market {
-	//case model.Bitmex:
-	//	candles = deprecated.getCandlesBitmex(key, secret, symbol, `1d`, begin, end, 20)
-	case model.Ftx:
-		candles = getCandlesFtx(key, secret, symbol, `1d`, begin, end, 40)
-	case model.OKEX:
-		candles = getCandlesOKEX(key, secret, symbol, `1D`, begin, end, 40)
-	case model.BinancePerp:
-		candles = getCandlesBinancePerp(key, secret, symbol, `1d`, begin, end, 45)
-	}
+	candles := GetCandle(key, secret, market, symbol, slotSeconds, begin, end)
 	keyedCandles := make(map[string]*model.Candle)
-	for _, value := range candles {
-		candleKey := market + symbol + value.Period + value.UTCDate
-		keyedCandles[candleKey] = value
+	for _, item := range candles {
+		candleKey := fmt.Sprintf(`%s_%s_%d_%s`, market, symbol, item.Seconds, item.Begin.Format(time.RFC3339))
+		keyedCandles[candleKey] = item
 	}
-	candleKey := market + symbol + `1d` + timeCandle.Format(time.RFC3339)[0:10]
+	candleKey := fmt.Sprintf(`%s_%s_%d_%s`, market, symbol, slotSeconds, timeCandle.Format(time.RFC3339))
 	candle = keyedCandles[candleKey]
 	if candle == nil {
 		if time.Now().Second() == 0 {
-			util.Notice(fmt.Sprintf(`candle error: can not get candle %s size %d %v`, candleKey, len(keyedCandles), keyedCandles))
+			util.Notice(fmt.Sprintf(`candle error: can not get candle %s size %d %v`,
+				candleKey, len(keyedCandles), keyedCandles))
 		}
 		return
 	}
 	candle.N = (candle.PriceHigh - candle.PriceLow) / 20
 	for i := 1; i < 20; i++ {
-		d, _ := time.ParseDuration(fmt.Sprintf(`%dh`, -24*i))
+		d, _ := time.ParseDuration(fmt.Sprintf(`%ds`, -i*slotSeconds))
 		index := timeCandle.Add(d)
-		currentKey := market + symbol + `1d` + index.Format(time.RFC3339)[0:10]
+		currentKey := fmt.Sprintf(`%s_%s_%d_%s`, market, symbol, slotSeconds, index.Format(time.RFC3339))
 		candleCurrent := keyedCandles[currentKey]
 		if candleCurrent == nil {
 			if time.Now().Minute() == 0 && time.Now().Second() == 0 {
@@ -247,6 +238,7 @@ func GetDayCandle(key, secret, market, symbol string, timeCandle time.Time) (can
 			candle.N += (candleCurrent.PriceHigh - candleCurrent.PriceLow) / 20
 		}
 	}
+	candleMap.Store(fmt.Sprintf(`%s_%s_%d_%s`, market, symbol, slotSeconds, timeCandle.Format(time.RFC3339)), candle)
 	return candle
 }
 

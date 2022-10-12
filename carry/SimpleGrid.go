@@ -56,7 +56,7 @@ func getGridPos(key, secret string, setting *model.Setting) (gridPos *GridPos) {
 		dayGridPos[yesterdayStr][setting.Market][setting.Symbol] != nil {
 		return dayGridPos[yesterdayStr][setting.Market][setting.Symbol]
 	}
-	candle := api.GetDayCandle(key, secret, setting.Market, setting.Symbol, yesterday)
+	candle := api.GetTurtleCandle(key, secret, setting.Market, setting.Symbol, 86400, yesterday)
 	if candle == nil {
 		return
 	}

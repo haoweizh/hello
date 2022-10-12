@@ -9,6 +9,7 @@ import (
 	"gorm.io/gorm"
 	"hello/api"
 	"hello/model"
+	"hello/regret"
 	"hello/util"
 	"math"
 	"net/http"
@@ -177,9 +178,16 @@ func Test_WsAndOrderApi(t *testing.T) {
 
 func Test_initTurtleN(t *testing.T) {
 	model.NewConfig()
+	_ = configor.Load(model.AppConfig, "./config.yml")
+	start, _ := time.Parse(time.RFC3339, `2022-10-01T00:00:00+00:00`)
+	setting := &model.Setting{Market: model.Ftx, Symbol: `BTC_PERP`, AmountLimit: 1}
+	key := model.AppConfig.GetAccounts(model.Ftx)[0].Key
+	secret := model.AppConfig.GetAccounts(model.Ftx)[0].Secret
+	candle1 := api.GetTurtleCandle(key, secret, setting.Market, setting.Symbol, 86400, start)
+	fmt.Println(candle1)
+	regret.ProcessCandles(setting.Market, setting.Symbol, start, time.Now().UTC(), setting)
 	marketInfos := api.GetMarketInfos(model.BinancePerp)
 	model.SetMarketInfos(model.BinancePerp, marketInfos)
-	_ = configor.Load(model.AppConfig, "./config.yml")
 	order := api.PlaceOrder(model.AppConfig.BinanceKey, model.AppConfig.BinanceSecret, model.OrderSideSell,
 		model.OrderTypeStop, model.BinancePerp, `ETH_PERP`, ``, 1222, 1255, 0.1,
 		false, nil, nil)
@@ -188,8 +196,9 @@ func Test_initTurtleN(t *testing.T) {
 	today, _ := model.GetMarketToday(model.BinancePerp)
 	duration, _ := time.ParseDuration(fmt.Sprintf(`%dh`, -24))
 	day := today.Add(duration)
-	candle := api.GetDayCandle(model.AppConfig.BinanceKey, model.AppConfig.BinanceSecret, model.BinancePerp, `BTC_PERP`, day)
-	fmt.Println(candle.UTCDate)
+	candle := api.GetTurtleCandle(model.AppConfig.BinanceKey, model.AppConfig.BinanceSecret, model.BinancePerp,
+		`BTC_PERP`, 86400, day)
+	fmt.Println(candle.Begin)
 	marketInfos = api.GetMarketInfos(model.BinancePerp)
 	marketInfoArray := model.MarketInfoArray{}
 	for _, info := range marketInfos {
