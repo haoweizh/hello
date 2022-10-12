@@ -76,7 +76,8 @@ func adjustPosHolding(key, secret string, setting *model.Setting) {
 		posMap[strings.ToUpper(pos.Currency+model.UniStandardTail[model.MarketTypePerp])] = pos
 	}
 	if posMap[setting.Symbol] != nil {
-		if float64(setting.Chance)*posMap[setting.Symbol].Holding <= 0 || float64(setting.Chance)*setting.GridAmount <= 0 {
+		if float64(setting.Chance)*posMap[setting.Symbol].Holding <= 0 ||
+			setting.GridAmount*posMap[setting.Symbol].Holding <= 0 {
 			setting.GridAmount = 0
 			setting.Chance = 0
 			util.Notice(`update turtle grid amount 0 0 %s %s`, setting.Market, setting.Symbol)
@@ -90,12 +91,13 @@ func adjustPosHolding(key, secret string, setting *model.Setting) {
 		setting.Chance = 0
 		util.Notice(`update turtle when absent %s %s`, setting.Market, setting.Symbol)
 	}
+	model.AppDB.Save(setting)
 	orders := api.QueryOpenOrders(key, secret, setting.Market, setting.Symbol, false)
 	for _, order := range orders {
 		if order != nil {
 			util.Notice(`cancel pending turtle limit order %s %s %s`,
 				setting.Market, setting.Symbol, order.OrderId)
-			api.CancelOrder(key, secret, setting.Market, setting.Symbol, model.OrderTypeLimit, order.OrderId)
+			api.MustCancel(key, secret, setting.Market, setting.Symbol, model.OrderTypeLimit, order.OrderId, true)
 		}
 	}
 }
