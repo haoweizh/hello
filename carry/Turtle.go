@@ -80,7 +80,6 @@ func adjustPosHolding(key, secret string, setting *model.Setting) {
 			setting.GridAmount*posMap[setting.Symbol].Holding <= 0 {
 			setting.GridAmount = 0
 			setting.Chance = 0
-			util.Notice(`update turtle grid amount 0 0 %s %s`, setting.Market, setting.Symbol)
 		} else if setting.GridAmount != posMap[setting.Symbol].Holding {
 			setting.GridAmount = posMap[setting.Symbol].Holding
 			util.Notice(`update turtle grid amount %s %s %f to %f`,
@@ -89,7 +88,10 @@ func adjustPosHolding(key, secret string, setting *model.Setting) {
 	} else {
 		setting.GridAmount = 0
 		setting.Chance = 0
-		util.Notice(`update turtle when absent %s %s`, setting.Market, setting.Symbol)
+		util.Notice(`update turtle when absent %s %s %d`, setting.Market, setting.Symbol, len(posMap))
+		for s, position := range posMap {
+			util.Notice(`present %s %s %f`, s, position.Currency, position.Holding)
+		}
 	}
 	model.AppDB.Save(setting)
 	orders := api.QueryOpenOrders(key, secret, setting.Market, setting.Symbol, false)
