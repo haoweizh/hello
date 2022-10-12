@@ -73,7 +73,7 @@ func adjustPosHolding(key, secret string, setting *model.Setting) {
 	}
 	posMap := make(map[string]*model.Position)
 	for _, pos := range marketPos {
-		posMap[strings.ToUpper(pos.Currency+model.UniStandardTail[model.MarketTypePerp])] = pos
+		posMap[strings.ToUpper(pos.Currency)] = pos
 	}
 	if posMap[setting.Symbol] != nil {
 		if float64(setting.Chance)*posMap[setting.Symbol].Holding <= 0 ||
@@ -116,7 +116,10 @@ func GetTurtleData(key, secret string, setting *model.Setting) (turtleData *Turt
 	if (dataSet[setting.Market][setting.Symbol][todayStr] != nil) || (ok && value != nil && time.Now().Add(duration).Before(value.(time.Time))) {
 		return dataSet[setting.Market][setting.Symbol][todayStr]
 	}
-	adjustPosHolding(key, secret, setting)
+	_, _, coin, _ := model.GetFromStandard(setting.Market, setting.Symbol)
+	if !model.CommonCoins[strings.ToLower(coin)] {
+		adjustPosHolding(key, secret, setting)
+	}
 	turtleClosed.Store(fmt.Sprintf(`%s_%s`, setting.Market, setting.Symbol), false)
 	turtleTime.Store(fmt.Sprintf(`%s_%s_%s`, setting.Market, setting.Symbol, todayStr), time.Now())
 	turtleData = &TurtleData{turtleTime: today, symbol: setting.Symbol, checkTimeBreak: util.GetNow(),
