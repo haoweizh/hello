@@ -76,8 +76,7 @@ func adjustPosHolding(key, secret string, setting *model.Setting) {
 		posMap[strings.ToUpper(pos.Currency)] = pos
 	}
 	if posMap[setting.Symbol] != nil {
-		if float64(setting.Chance)*posMap[setting.Symbol].Holding <= 0 ||
-			setting.GridAmount*posMap[setting.Symbol].Holding <= 0 {
+		if float64(setting.Chance)*posMap[setting.Symbol].Holding <= 0 {
 			util.Notice(`update turtle side %s %s %f %f %f`,
 				setting.Market, setting.Symbol, setting.Chance, posMap[setting.Symbol].Holding, setting.GridAmount)
 			setting.GridAmount = 0
