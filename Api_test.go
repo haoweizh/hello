@@ -17,7 +17,6 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	"sync"
 	"testing"
 	"time"
 )
@@ -178,21 +177,15 @@ func Test_WsAndOrderApi(t *testing.T) {
 
 func Test_initTurtleN(t *testing.T) {
 	model.NewConfig()
+	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
+	_ = model.AppDB.AutoMigrate(&model.Setting{})
+	_ = model.AppDB.AutoMigrate(&model.Order{})
+	_ = model.AppDB.AutoMigrate(&model.Balance{})
 	_ = configor.Load(model.AppConfig, "./config.yml")
 	start, _ := time.Parse(time.RFC3339, `2022-10-01T00:00:00+00:00`)
-	setting := &model.Setting{Market: model.Ftx, Symbol: `BTC_PERP`, AmountLimit: 1}
-	key := model.AppConfig.GetAccounts(model.Ftx)[0].Key
-	secret := model.AppConfig.GetAccounts(model.Ftx)[0].Secret
-	_, poss, _, _ := api.GetPositions(key, secret, setting.Market)
-	for _, pos := range poss {
-		key := strings.ToUpper(pos.Currency)
-		fmt.Println(key)
-	}
-	orders := api.QueryOpenOrders(key, secret, model.Ftx, `BTC_PERP`, false)
-	fmt.Println(len(orders))
-	candle1 := api.GetTurtleCandle(key, secret, setting.Market, setting.Symbol, 86400, start)
-	fmt.Println(candle1)
-	regret.ProcessCandles(setting.Market, setting.Symbol, start, time.Now().UTC(), setting)
+	end, _ := time.Parse(time.RFC3339, `2022-10-13T00:00:00+00:00`)
+	setting := &model.Setting{Market: model.Ftx, Symbol: `RVN_PERP`, AmountLimit: 1}
+	regret.ProcessCandles(setting.Market, setting.Symbol, start, end, setting)
 	marketInfos := api.GetMarketInfos(model.BinancePerp)
 	model.SetMarketInfos(model.BinancePerp, marketInfos)
 	order := api.PlaceOrder(model.AppConfig.BinanceKey, model.AppConfig.BinanceSecret, model.OrderSideSell,
@@ -356,36 +349,6 @@ func Test_wallet(t *testing.T) {
 	fmt.Println(order1.Status)
 }
 
-func Test_SyncMap(t *testing.T) {
-	var m sync.Map
-	util.StoreSyncMap(&m, `a`, `1`)
-	util.StoreSyncMap(&m, `b`, `2`)
-	value, ok := util.LoadSyncMap(&m, `1`)
-	if ok {
-		fmt.Println(value)
-	}
-	m.Range(func(key, value interface{}) bool {
-		fmt.Println(key, value)
-		return true
-	})
-	m = sync.Map{}
-
-	m.Range(func(key, value interface{}) bool {
-		fmt.Println(key, value)
-		return true
-	})
-	value, ok = util.LoadSyncMap(&m, `1`)
-	if ok {
-		fmt.Println(value)
-	} else {
-		fmt.Println(`not ok`)
-	}
-	util.StoreSyncMap(&m, `b`, `1`, `2`, `3`)
-	value, ok = util.LoadSyncMap(&m, `1`, `2`, `4`)
-	if ok {
-		fmt.Println(value)
-	}
-}
 func Test_accounting(t *testing.T) {
 	nums := strings.Split(`230.0,663.00,0,200.0,303.0,300.00,0`, `,`)
 	season := make([]float64, 4)

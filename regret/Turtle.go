@@ -12,6 +12,7 @@ import (
 type TurtleData struct {
 	high10, low10, high20, low20, high3, low3, n float64
 	orderLong, orderShort                        *model.Order
+	liquidated                                   bool
 }
 
 var turtleDataMap sync.Map // market_symbol_slotSeconds_2019-12-06THH:MM:SS  *turtleData
@@ -23,7 +24,7 @@ func GetTurtleData(key, secret, market, symbol string, turtleTime time.Time, slo
 	if value != nil {
 		return value.(*TurtleData)
 	}
-	turtleData = &TurtleData{}
+	turtleData = &TurtleData{liquidated: false}
 	for i := 1; i < 21; i++ {
 		duration, _ := time.ParseDuration(fmt.Sprintf(`%ds`, -i*slotSeconds))
 		candleTime := turtleTime.Add(duration)
@@ -63,7 +64,14 @@ func GetTurtleData(key, secret, market, symbol string, turtleTime time.Time, slo
 	return
 }
 
+func createTurtleOrders(turtleData *TurtleData) {
+
+}
+
 func handlePrice(turtleData *TurtleData, candle *model.Candle) {
+	if turtleData.orderLong == nil && turtleData.orderShort == nil {
+
+	}
 	if turtleData.orderLong != nil && candle.PriceHigh >= turtleData.orderLong.Price {
 		turtleData.orderLong.Status = model.CarryStatusSuccess
 		model.AppDB.Save(turtleData.orderLong)
