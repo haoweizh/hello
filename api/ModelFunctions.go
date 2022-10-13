@@ -142,10 +142,17 @@ func prepareSettings() {
 	}()
 	for i := 0; i < len(appSettings); i++ {
 		setting := &appSettings[i]
+		value, ok := util.LoadSyncMap(symbolSettings, setting.Function, setting.Market)
+		if ok && value != nil {
+			oldSetting, oldOk := value.(*sync.Map).Load(setting.Symbol)
+			if oldOk && oldSetting != nil {
+				setting = oldSetting.(*model.Setting)
+			}
+		}
 		//util.Notice(fmt.Sprintf(`load setting %s %s %s %v`,
 		//	setting.Market, setting.Symbol, setting.Function, setting.Valid))
 		marketMap[setting.Market] = true
-		value, ok := util.LoadSyncMap(localHandlers, setting.Market, setting.Symbol)
+		value, ok = util.LoadSyncMap(localHandlers, setting.Market, setting.Symbol)
 		var functions *sync.Map
 		if ok {
 			functions = value.(*sync.Map)

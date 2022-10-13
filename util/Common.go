@@ -111,6 +111,9 @@ func _(f func()) {
 }
 
 func LoadSyncMap(syncMap *sync.Map, keys ...string) (interface{}, bool) {
+	if syncMap == nil {
+		return nil, false
+	}
 	key := ``
 	for i := 0; i < len(keys); i++ {
 		key += keys[i] + `*`
