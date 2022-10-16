@@ -5,6 +5,8 @@ import (
 	"hello/api"
 	"hello/model"
 	"hello/util"
+	"math"
+	"sort"
 	"sync"
 	"time"
 )
@@ -64,36 +66,115 @@ func GetTurtleData(key, secret, market, symbol string, turtleTime time.Time, slo
 	return
 }
 
-func createTurtleOrders(turtleData *TurtleData) {
-
+func createTurtleOrders(setting *model.Setting, turtleData *TurtleData) {
+	priceLong := turtleData.high20
+	priceShort := turtleData.low20
+	amountShot := 0.0
+	amountLong := 0.0
+	if setting.Chance == 0 && !turtleData.liquidated { // 开初始仓
+		amountShot = setting.GridAmount
+		amountLong = setting.GridAmount
+	} else if setting.Chance > 0 {
+		priceLong = math.Max(turtleData.high20, setting.PriceX+turtleData.n/2)
+		if turtleData.low3 < setting.PriceX {
+			priceShort = math.Max(setting.PriceX-2*turtleData.n, turtleData.low10)
+		} else {
+			priceShort = math.Max(turtleData.high20-2*turtleData.n, turtleData.low10)
+		}
+		amountShot = float64(setting.Chance) * setting.GridAmount
+		if float64(setting.Chance) < setting.AmountLimit {
+			amountLong = setting.GridAmount
+		}
+	} else if setting.Chance < 0 {
+		priceShort = math.Min(turtleData.low20, setting.PriceX-turtleData.n/2)
+		if turtleData.high3 > setting.PriceX {
+			priceLong = math.Min(setting.PriceX+2*turtleData.n, turtleData.high10)
+		} else {
+			priceLong = math.Min(turtleData.low20+2*turtleData.n, turtleData.high10)
+		}
+		amountLong = math.Abs(float64(setting.Chance)) * setting.GridAmount
+		if math.Abs(float64(setting.Chance)) < setting.AmountLimit {
+			amountShot = setting.GridAmount
+		}
+	}
+	if amountShot > 0 {
+		turtleData.orderShort = &model.Order{
+			Amount:      amountShot,
+			Market:      setting.Market,
+			OrderSide:   model.OrderSideSell,
+			Price:       priceShort,
+			RefreshType: model.FunctionSimulation,
+			Status:      model.CarryStatusWorking,
+			Symbol:      setting.Symbol,
+		}
+	}
+	if amountLong > 0 {
+		turtleData.orderLong = &model.Order{
+			Amount:      amountLong,
+			Market:      setting.Market,
+			OrderSide:   model.OrderSideBuy,
+			Price:       priceLong,
+			RefreshType: model.FunctionSimulation,
+			Status:      model.CarryStatusWorking,
+			Symbol:      setting.Symbol,
+		}
+	}
 }
 
-func handlePrice(turtleData *TurtleData, candle *model.Candle) {
+func handlePrice(turtleData *TurtleData, candle *model.Candle, setting *model.Setting) {
 	if turtleData.orderLong == nil && turtleData.orderShort == nil {
-
+		createTurtleOrders(setting, turtleData)
 	}
 	if turtleData.orderLong != nil && candle.PriceHigh >= turtleData.orderLong.Price {
+		if setting.Chance >= 0 {
+			setting.Chance += 1
+		} else {
+			setting.Chance = 0
+			turtleData.liquidated = true
+		}
+		setting.PriceX = turtleData.orderLong.Price
 		turtleData.orderLong.Status = model.CarryStatusSuccess
+		turtleData.orderLong.OrderTime = candle.Begin
+		turtleData.orderLong.OrderId = fmt.Sprintf(`%dlong`, candle.Begin.Unix())
 		model.AppDB.Save(turtleData.orderLong)
 		turtleData.orderLong = nil
 		turtleData.orderShort = nil
 	}
 	if turtleData.orderShort != nil && candle.PriceLow <= turtleData.orderShort.Price {
+		if setting.Chance <= 0 {
+			setting.Chance -= 1
+		} else {
+			setting.Chance = 0
+			turtleData.liquidated = true
+		}
+		setting.PriceX = turtleData.orderShort.Price
 		turtleData.orderShort.Status = model.CarryStatusSuccess
+		turtleData.orderShort.OrderTime = candle.Begin
+		turtleData.orderShort.OrderId = fmt.Sprintf(`%dshort`, candle.Begin.Unix())
 		model.AppDB.Save(turtleData.orderShort)
 		turtleData.orderLong = nil
 		turtleData.orderShort = nil
 	}
 }
 
+// ProcessCandles
+// setting.AmountLimit 开仓数上限
+// setting.GridAmount 标准一仓的数量
 func ProcessCandles(market, symbol string, start, end time.Time, setting *model.Setting) {
 	key := model.AppConfig.GetAccounts(market)[0].Key
 	secret := model.AppConfig.GetAccounts(market)[0].Secret
 	candles := api.GetCandle(key, secret, market, symbol, 15, start, end)
+	sortedCandles := &model.SortedCandle{Value: make([]*model.Candle, len(candles))}
+	i := 0
 	for _, candle := range candles {
+		sortedCandles.Value[i] = candle
+		i++
+	}
+	sort.Sort(sortedCandles)
+	for _, candle := range sortedCandles.Value {
 		turtleTime := time.Date(candle.Begin.Year(), candle.Begin.Month(), candle.Begin.Day(), candle.Begin.Hour(),
 			0, 0, 0, candle.Begin.Location())
 		turtleData := GetTurtleData(key, secret, market, symbol, turtleTime, 3600, setting)
-		handlePrice(turtleData, candle)
+		handlePrice(turtleData, candle, setting)
 	}
 }

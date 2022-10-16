@@ -41,6 +41,7 @@ const OrderSideBuy = `buy`
 const OrderSideSell = `sell`
 const OrderSideLiquidateLong = `liquidateLong`
 const OrderSideLiquidateShort = `liquidateShort`
+const FunctionSimulation = `simulation`
 const FunctionTurtle = `turtle`
 const FunctionDynamicTurtle = `dynamic_turtle`
 const FunctionGrid = `grid`

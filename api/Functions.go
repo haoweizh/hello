@@ -318,25 +318,20 @@ func GetFundingRate(key, secret, market, symbol string) (success bool, rate floa
 	//	model.SetFundingRate(market, symbol, &model.FundingRate{Rate: rate, ExpireTime: expireTime, UpdateTime: now})
 	case model.BybitPerp:
 		fundingRate = getFundingRateBybitPerp(key, secret, symbol)
-		model.SetFundingRate(market, symbol, fundingRate)
 	case model.Ftx:
 		fundingRate = GetFundingRatesFtx(key, secret, symbol)
-		model.SetFundingRate(market, symbol, fundingRate)
 	case model.OKEX:
 		fundingRate = getFundingRateOKEX(key, secret, symbol)
-		model.SetFundingRate(market, symbol, fundingRate)
 	case model.Mexc:
 		fundingRate = getFundingRateMexc(key, secret, symbol)
-		model.SetFundingRate(market, symbol, fundingRate)
 	case model.BinancePerp:
 		fundingRate = getFundingRateBinancePerp(key, secret, symbol)
-		model.SetFundingRate(market, symbol, fundingRate)
 	case model.Gate:
 		fundingRate = getFundingRateGate(key, secret, symbol)
-		model.SetFundingRate(market, symbol, fundingRate)
 	case model.Kucoin:
-		return true, 0, util.GetNow()
+		fundingRate = &model.FundingRate{Rate: 0, RateNext: 0, UpdateTime: util.GetNow()}
 	}
+	model.SetFundingRate(market, symbol, fundingRate)
 	if fundingRate != nil && now < fundingRate.ExpireTime {
 		return true, fundingRate.Rate, fundingRate.UpdateTime
 	}

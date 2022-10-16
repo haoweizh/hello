@@ -183,8 +183,8 @@ func Test_initTurtleN(t *testing.T) {
 	_ = model.AppDB.AutoMigrate(&model.Balance{})
 	_ = configor.Load(model.AppConfig, "./config.yml")
 	start, _ := time.Parse(time.RFC3339, `2022-10-01T00:00:00+00:00`)
-	end, _ := time.Parse(time.RFC3339, `2022-10-13T00:00:00+00:00`)
-	setting := &model.Setting{Market: model.Ftx, Symbol: `RVN_PERP`, AmountLimit: 1}
+	end, _ := time.Parse(time.RFC3339, `2022-10-02T00:00:00+00:00`)
+	setting := &model.Setting{Market: model.Ftx, Symbol: `RVN_PERP`, AmountLimit: 3, GridAmount: 10000}
 	regret.ProcessCandles(setting.Market, setting.Symbol, start, end, setting)
 	marketInfos := api.GetMarketInfos(model.BinancePerp)
 	model.SetMarketInfos(model.BinancePerp, marketInfos)

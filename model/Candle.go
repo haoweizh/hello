@@ -1,6 +1,8 @@
 package model
 
-import "time"
+import (
+	"time"
+)
 
 type Candle struct {
 	Market     string
@@ -15,4 +17,20 @@ type Candle struct {
 	ID         uint    `gorm:"primary_key"`
 	CreatedAt  time.Time
 	UpdatedAt  time.Time
+}
+
+type SortedCandle struct {
+	Value []*Candle
+}
+
+func (sortedCandle *SortedCandle) Len() int {
+	return len(sortedCandle.Value)
+}
+
+func (sortedCandle *SortedCandle) Swap(i, j int) {
+	sortedCandle.Value[i], sortedCandle.Value[j] = sortedCandle.Value[j], sortedCandle.Value[i]
+}
+
+func (sortedCandle *SortedCandle) Less(i, j int) bool {
+	return sortedCandle.Value[i].Begin.Before(sortedCandle.Value[j].Begin)
 }

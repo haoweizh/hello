@@ -12,7 +12,7 @@ type Config struct {
 	ChannelSlot, Delay                                                                             float64
 	KucoinSpot, GateSpot                                                                           bool
 	KucoinRelatedKey, KucoinRelatedSecret, KucoinFutureKey, KucoinFutureSecret                     string
-	KucoinCarryClose, KucoinCarryRate                                                              string
+	KucoinCarryClose, KucoinCarryRate, Simulation                                                  string
 	GateKey, GateSecret, GateCarryClose, GateCarryRate                                             string
 	HuobiKey, HuobiSecret, HuobiCarryClose, HuobiCarryRate                                         string
 	OkexKey, OkexSecret, OkexCarryClose, OkexCarryRate                                             string

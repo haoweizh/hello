@@ -73,6 +73,16 @@ func WsPage(c *gin.Context) {
 	go wsClient.Write()
 }
 
+//func simulate(c *gin.Context) {
+//	if model.AppConfig.Simulation != `on` {
+//		return c.HTML(http.StatusOK, `do not support s`)
+//	}
+//	strBegin := c.Query(`begin`)
+//	strEnd := c.Query(`end`)
+//	strDo := c.Query(`do`)
+//
+//}
+
 func debug(c *gin.Context) {
 	doDebug := c.Query(`count`)
 	if doDebug != `0` {
