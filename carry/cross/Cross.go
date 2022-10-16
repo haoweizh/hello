@@ -696,13 +696,13 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 	}
 }
 
-func checkTradeLine(statusBuy, statusSell *CarryStatus, tradeLineBuy, tradeLineSell, score float64) (valid bool) {
+func checkTradeLine(statusBuy, statusSell *CarryStatus, score float64) (valid bool) {
 	if statusBuy.Holding >= 0 && statusSell.Holding <= 0 {
-		return score > tradeLineBuy && score > tradeLineSell
+		return score > statusBuy.TradeLineBuy && score > statusSell.TradeLineSell
 	} else if statusBuy.Holding < 0 && statusSell.Holding > 0 {
-		return score > tradeLineBuy || score > tradeLineSell
+		return score > statusBuy.TradeLineBuy || score > statusSell.TradeLineSell
 	} else {
-		return score > (tradeLineBuy+tradeLineSell)/2
+		return score > (statusBuy.TradeLineBuy+statusSell.TradeLineSell)/2
 	}
 }
 
@@ -738,20 +738,20 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarrySta
 		model.AppMetric.AddCarry(mark, score, 0)
 	}
 	// 根据负资金费率进行权重调整,小于负万五的，负千分之几，就再乘以几
-	tradeLineSell := carryStatus.TradeLineSell + carryStatusRelate.FoundingRate
-	tradeLineBuy := carryStatus.TradeLineBuy - carryStatusRelate.FoundingRate
-	tradeLineSellRelate := carryStatusRelate.TradeLineSell + carryStatus.FoundingRate
-	tradeLineBuyRelate := carryStatusRelate.TradeLineBuy - carryStatus.FoundingRate
-	if carryStatus.isSpot && !carryStatusRelate.isSpot && carryStatusRelate.market != model.Ftx && carryStatusRelate.FoundingRate < -0.005 {
-		temp := math.Min(7.5, 1000*math.Abs(carryStatusRelate.FoundingRate))/2 - 1
-		tradeLineBuyRelate += carryStatusRelate.FoundingRate * temp
-		tradeLineSellRelate -= carryStatusRelate.FoundingRate * temp
-	} else if !carryStatus.isSpot && carryStatus.market != model.Ftx && carryStatusRelate.isSpot && carryStatus.FoundingRate < -0.005 {
-		temp := math.Min(7.5, 1000*math.Abs(carryStatus.FoundingRate))/2 - 1
-		tradeLineBuy += carryStatus.FoundingRate * temp
-		tradeLineSell -= carryStatus.FoundingRate * temp
-	}
-	if checkTradeLine(carryStatusRelate, carryStatus, tradeLineBuyRelate, tradeLineSell, score) {
+	//tradeLineSell := carryStatus.TradeLineSell + carryStatusRelate.FoundingRate
+	//tradeLineBuy := carryStatus.TradeLineBuy - carryStatusRelate.FoundingRate
+	//tradeLineSellRelate := carryStatusRelate.TradeLineSell + carryStatus.FoundingRate
+	//tradeLineBuyRelate := carryStatusRelate.TradeLineBuy - carryStatus.FoundingRate
+	//if carryStatus.isSpot && !carryStatusRelate.isSpot && carryStatusRelate.market != model.Ftx && carryStatusRelate.FoundingRate < -0.005 {
+	//	temp := math.Min(7.5, 1000*math.Abs(carryStatusRelate.FoundingRate))/2 - 1
+	//	tradeLineBuyRelate += carryStatusRelate.FoundingRate * temp
+	//	tradeLineSellRelate -= carryStatusRelate.FoundingRate * temp
+	//} else if !carryStatus.isSpot && carryStatus.market != model.Ftx && carryStatusRelate.isSpot && carryStatus.FoundingRate < -0.005 {
+	//	temp := math.Min(7.5, 1000*math.Abs(carryStatus.FoundingRate))/2 - 1
+	//	tradeLineBuy += carryStatus.FoundingRate * temp
+	//	tradeLineSell -= carryStatus.FoundingRate * temp
+	//}
+	if checkTradeLine(carryStatusRelate, carryStatus, score) {
 		statusSell = carryStatus
 		statusBuy = carryStatusRelate
 		tickSell = tick
@@ -760,7 +760,7 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarrySta
 		priceBuy = priceAskRelate
 		askAmount = amountBid
 		bidAmount = amountAskRelate
-	} else if checkTradeLine(carryStatus, carryStatusRelate, tradeLineBuy, tradeLineSellRelate, scoreRelate) {
+	} else if checkTradeLine(carryStatus, carryStatusRelate, scoreRelate) {
 		statusSell = carryStatusRelate
 		statusBuy = carryStatus
 		tickSell = tickRelate
@@ -770,14 +770,6 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarrySta
 		askAmount = amountBidRelate
 		bidAmount = amountAsk
 	}
-	//lineAll := tradeLineSell + tradeLineBuyRelate
-	//if (tradeLineSell < score && tradeLineBuyRelate < score) ||
-	//	(lineAll > 0 && score > 0.6*lineAll) || (lineAll < 0 && score > 0.4*lineAll) {
-	//}
-	//lineAll = tradeLineBuy + tradeLineSellRelate
-	//if (tradeLineBuy < scoreRelate && tradeLineSellRelate < scoreRelate) ||
-	//	(lineAll > 0 && scoreRelate > 0.6*lineAll) || (lineAll < 0 && scoreRelate > 0.4*lineAll) {
-	//}
 	// 为了同一对交易对冲不出现两次，对前后进行排序
 	mark = fmt.Sprintf(`%s-%s`, carryStatus.market, carryStatus.symbol)
 	markRelate := fmt.Sprintf(`%s-%s`, carryStatusRelate.market, carryStatusRelate.symbol)
@@ -806,13 +798,13 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarrySta
 		mark = fmt.Sprintf(`%s|%s`, mark, markRelate)
 		model.SetMonitorInfo(
 			strconv.Itoa(index), `cross`, mark, []string{coin, carryStatus.market, coinValue, fundingStr,
-				fmt.Sprintf(`%.1f`, 100*tradeLineBuy),
-				fmt.Sprintf(`%.1f`, 100*tradeLineSell),
+				fmt.Sprintf(`%.1f`, 100*carryStatus.TradeLineBuy),
+				fmt.Sprintf(`%.1f`, 100*carryStatus.TradeLineSell),
 				fmt.Sprintf(`%.0e`, carryStatus.LimitBuy),
 				fmt.Sprintf(`%.0e`, carryStatus.LimitSell),
 				carryStatusRelate.market, coinValueRelate, fundingStrRelate,
-				fmt.Sprintf(`%.1f`, 100*tradeLineBuyRelate),
-				fmt.Sprintf(`%.1f`, 100*tradeLineSellRelate),
+				fmt.Sprintf(`%.1f`, 100*carryStatusRelate.TradeLineBuy),
+				fmt.Sprintf(`%.1f`, 100*carryStatusRelate.TradeLineSell),
 				fmt.Sprintf(`%.0e`, carryStatusRelate.LimitBuy),
 				fmt.Sprintf(`%.0e`, carryStatusRelate.LimitSell),
 				fmt.Sprintf(`%.1f`, 100*scoreRelate),
@@ -822,13 +814,13 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarrySta
 		mark = fmt.Sprintf(`%s|%s`, markRelate, mark)
 		model.SetMonitorInfo(
 			strconv.Itoa(index), `cross`, mark, []string{coin, carryStatusRelate.market, coinValueRelate, fundingStrRelate,
-				fmt.Sprintf(`%.1f`, 100*tradeLineBuyRelate),
-				fmt.Sprintf(`%.1f`, 100*tradeLineSellRelate),
+				fmt.Sprintf(`%.1f`, 100*carryStatusRelate.TradeLineBuy),
+				fmt.Sprintf(`%.1f`, 100*carryStatusRelate.TradeLineSell),
 				fmt.Sprintf(`%.0e`, carryStatusRelate.LimitBuy),
 				fmt.Sprintf(`%.0e`, carryStatusRelate.LimitSell),
 				carryStatus.market, coinValue, fundingStr,
-				fmt.Sprintf(`%.1f`, 100*tradeLineBuy),
-				fmt.Sprintf(`%.1f`, 100*tradeLineSell),
+				fmt.Sprintf(`%.1f`, 100*carryStatus.TradeLineBuy),
+				fmt.Sprintf(`%.1f`, 100*carryStatus.TradeLineSell),
 				fmt.Sprintf(`%.0e`, carryStatus.LimitBuy),
 				fmt.Sprintf(`%.0e`, carryStatus.LimitSell),
 				fmt.Sprintf(`%.1f`, 100*score),

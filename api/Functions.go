@@ -329,13 +329,27 @@ func GetFundingRate(key, secret, market, symbol string) (success bool, rate floa
 	case model.Gate:
 		fundingRate = getFundingRateGate(key, secret, symbol)
 	case model.Kucoin:
-		fundingRate = &model.FundingRate{Rate: 0, RateNext: 0, UpdateTime: util.GetNow()}
+		fundingRate = &model.FundingRate{Rate: 0, RateNext: 0, UpdateTime: util.GetNow(), ExpireTime: now + 300}
+	}
+	if fundingRate == nil || now > fundingRate.ExpireTime {
+		return false, 0, util.GetNow()
+	}
+	fRate := fundingRate.Rate * 100
+	fRateNext := fundingRate.RateNext * 100
+	if fRate >= 0 {
+		fundingRate.Rate = fRate * (1 + fRate) / 100
+	} else {
+		fRate = -1 * fRate
+		fundingRate.Rate = -1 * fRate * (1 + fRate) / 100
+	}
+	if fRateNext > 0 {
+		fundingRate.RateNext = fRateNext * (1 + fRateNext) / 100
+	} else {
+		fRateNext = -1 * fRateNext
+		fundingRate.RateNext = -1 * fRateNext * (1 + fRateNext) / 100
 	}
 	model.SetFundingRate(market, symbol, fundingRate)
-	if fundingRate != nil && now < fundingRate.ExpireTime {
-		return true, fundingRate.Rate, fundingRate.UpdateTime
-	}
-	return false, 0, util.GetNow()
+	return true, fundingRate.Rate, fundingRate.UpdateTime
 }
 
 // GetMaxLoan
