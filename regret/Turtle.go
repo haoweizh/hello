@@ -172,6 +172,7 @@ func ProcessCandles(market, symbol string, start, end time.Time, setting *model.
 		i++
 	}
 	sort.Sort(sortedCandles)
+	turtleDataMap = sync.Map{}
 	for _, candle := range sortedCandles.Value {
 		turtleTime := time.Date(candle.Begin.Year(), candle.Begin.Month(), candle.Begin.Day(), candle.Begin.Hour(),
 			0, 0, 0, candle.Begin.Location())
