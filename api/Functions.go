@@ -168,7 +168,7 @@ func CancelOrder(key, secret, market, symbol, orderType, orderId string) (result
 func GetCandle(key, secret, market, symbol string, slotSeconds int, begin, end time.Time) (candles []*model.Candle) {
 	count := (end.Unix() - begin.Unix()) / int64(slotSeconds)
 	limit := 100
-	if int(count) > limit {
+	if int(count) >= limit {
 		duration, _ := time.ParseDuration(fmt.Sprintf(`%ds`, limit*slotSeconds))
 		candles = GetCandle(key, secret, market, symbol, slotSeconds, begin, begin.Add(duration))
 		candlesRight := GetCandle(key, secret, market, symbol, slotSeconds, begin.Add(duration), end)
