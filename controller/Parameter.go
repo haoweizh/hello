@@ -242,7 +242,7 @@ func holdPage(c *gin.Context) {
 		}
 	}
 	carryRows, _ := model.AppDB.Model(model.Order{}).Select(`amount_type,order_side,sum(price*abs(amount)),date(order_time),count(*),refresh_type`).
-		//Where(`refresh_type=?`, model.FunctionCross).
+		Where(`refresh_type!=?`, model.FunctionSimulation).
 		Group(`order_side,date(order_time),amount_type,refresh_type`).Order(`date(order_time) desc`).Rows()
 	if carryRows != nil {
 		crossInU := map[string]map[string]float64{}
@@ -276,7 +276,7 @@ func holdPage(c *gin.Context) {
 		carryRows.Close()
 	}
 	carryRows, _ = model.AppDB.Model(model.Order{}).Select(`market,amount_type,order_side,sum(price*abs(amount)),date(order_time),refresh_type,count(*)`).
-		Group(`market,order_side,date(order_time),amount_type,refresh_type`).Order(`date(order_time) desc, market`).Rows()
+		Where(`refresh_type!=?`, model.FunctionSimulation).Group(`market,order_side,date(order_time),amount_type,refresh_type`).Order(`date(order_time) desc, market`).Rows()
 	if carryRows != nil {
 		for carryRows.Next() {
 			var marketName, side, date, amountType, refreshType string
