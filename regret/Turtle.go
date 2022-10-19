@@ -6,7 +6,6 @@ import (
 	"hello/model"
 	"hello/util"
 	"math"
-	"sort"
 	"sync"
 	"time"
 )
@@ -164,16 +163,16 @@ func ProcessCandles(market, symbol string, start, end time.Time, setting *model.
 	key := model.AppConfig.GetAccounts(market)[0].Key
 	secret := model.AppConfig.GetAccounts(market)[0].Secret
 	util.StoreSyncMap(&model.CarryInfo, nil, `GetCandle`)
-	candles := api.GetCandle(key, secret, market, symbol, 15, start, end)
-	sortedCandles := &model.SortedCandle{Value: make([]*model.Candle, len(candles))}
-	i := 0
-	for _, candle := range candles {
-		sortedCandles.Value[i] = candle
-		i++
-	}
-	sort.Sort(sortedCandles)
+	sortedCandles := api.GetCandle(key, secret, market, symbol, 15, start, end)
+	//sortedCandles := &model.SortedCandle{Value: make([]*model.Candle, len(candles))}
+	//i := 0
+	//for _, candle := range candles {
+	//	sortedCandles.Value[i] = candle
+	//	i++
+	//}
+	//sort.Sort(sortedCandles)
 	turtleDataMap = sync.Map{}
-	for _, candle := range sortedCandles.Value {
+	for _, candle := range sortedCandles {
 		turtleTime := time.Date(candle.Begin.Year(), candle.Begin.Month(), candle.Begin.Day(), candle.Begin.Hour(),
 			0, 0, 0, candle.Begin.Location())
 		turtleData := GetTurtleData(key, secret, market, symbol, turtleTime, 3600, setting)

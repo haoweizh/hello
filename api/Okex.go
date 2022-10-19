@@ -1320,8 +1320,8 @@ func getMaxLoanOKEX(key, secret, symbol string) (success bool, maxLoan float64) 
 
 // getCandlesOKEX bar 1m/3m/5m/15m/30m/1H/2H/4H/6H/12H/1D/1W/1M/3M/6M/1Y
 func getCandlesOKEX(key, secret, symbol string, before, after time.Time, count, slotSeconds int) (
-	candles map[string]*model.Candle) {
-	candles = make(map[string]*model.Candle)
+	candles []*model.Candle) {
+	candles = make([]*model.Candle, 0)
 	bar := `1D`
 	switch slotSeconds {
 	case 60:
@@ -1353,7 +1353,7 @@ func getCandlesOKEX(key, secret, symbol string, before, after time.Time, count, 
 		candle.PriceHigh, _ = strconv.ParseFloat(item[2].(string), 64)
 		candle.PriceLow, _ = strconv.ParseFloat(item[3].(string), 64)
 		candle.PriceClose, _ = strconv.ParseFloat(item[4].(string), 64)
-		candles[fmt.Sprintf(`%s_%s_%d_%s`, model.OKEX, symbol, slotSeconds, candle.Begin.Format(time.RFC3339))] = candle
+		candles = append(candles, candle)
 	}
 	return
 }

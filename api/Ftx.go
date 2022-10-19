@@ -291,8 +291,8 @@ func handleDepthFtx(markets *model.Markets, response *simplejson.Json) {
 }
 
 func getCandlesFtx(key, secret, symbol string, start, end time.Time, slotSeconds int) (
-	candles map[string]*model.Candle) {
-	candles = make(map[string]*model.Candle)
+	candles []*model.Candle) {
+	candles = make([]*model.Candle, 0)
 	param := make(map[string]interface{})
 	param[`resolution`] = fmt.Sprintf(`%d`, slotSeconds)
 	//param[`limit`] = fmt.Sprintf(`%d`, count)
@@ -321,7 +321,7 @@ func getCandlesFtx(key, secret, symbol string, start, end time.Time, slotSeconds
 			}
 			if item[`startTime`] != nil {
 				candle.Begin, _ = time.Parse(time.RFC3339, item[`startTime`].(string))
-				candles[fmt.Sprintf(`%s_%s_%d_%s`, model.Ftx, symbol, slotSeconds, candle.Begin.Format(time.RFC3339))] = candle
+				candles = append(candles, candle)
 			}
 		}
 	}

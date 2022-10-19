@@ -82,7 +82,7 @@ func WsPage(c *gin.Context) {
 
 func simulate(c *gin.Context) {
 	if model.AppConfig.Simulation != `on` {
-		c.String(http.StatusOK, `do not support s`)
+		c.String(http.StatusOK, `do not support simulate`)
 		return
 	}
 	if simulating {
@@ -92,6 +92,7 @@ func simulate(c *gin.Context) {
 		} else {
 			c.String(http.StatusBadRequest, `simulating can not be started`)
 		}
+		util.StoreSyncMap(&model.CarryInfo, nil, `GetCandle`)
 		return
 	} else {
 		defer setSimulating(false)

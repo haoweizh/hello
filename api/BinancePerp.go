@@ -380,7 +380,7 @@ func getPositionsBinancePerp(key, secret string) (success bool, positions []*mod
 
 // 1m 3m 5m 15m 30m 1h 2h 4h 6h 8h 12h 1d 3d 1w 1M
 func getCandlesBinancePerp(key, secret, symbol string, begin, end time.Time, limit, slotSeconds int) (
-	candles map[string]*model.Candle) {
+	candles []*model.Candle) {
 	_, _, _, dialectSymbol := model.GetFromStandard(model.BinancePerp, symbol)
 	client := futures.NewClient(key, secret)
 	interval := `1D`
@@ -400,7 +400,7 @@ func getCandlesBinancePerp(key, secret, symbol string, begin, end time.Time, lim
 		util.Notice("getCandlesBinancePerp err: " + err.Error() + " symbol: " + dialectSymbol)
 		return
 	}
-	candles = make(map[string]*model.Candle)
+	candles = make([]*model.Candle, 0)
 	for _, item := range resp {
 		candle := &model.Candle{Market: model.BinancePerp, Symbol: symbol, Seconds: slotSeconds}
 		candle.PriceOpen, _ = strconv.ParseFloat(item.Open, 64)
@@ -408,7 +408,7 @@ func getCandlesBinancePerp(key, secret, symbol string, begin, end time.Time, lim
 		candle.PriceHigh, _ = strconv.ParseFloat(item.High, 64)
 		candle.PriceLow, _ = strconv.ParseFloat(item.Low, 64)
 		candle.Begin = time.Unix(item.OpenTime/1000, 0).In(begin.Location())
-		candles[fmt.Sprintf(`%s_%s_%d_%s`, model.BinancePerp, symbol, slotSeconds, candle.Begin.Format(time.RFC3339))] = candle
+		candles = append(candles, candle)
 	}
 	return candles
 }

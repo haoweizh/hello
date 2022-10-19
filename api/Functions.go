@@ -165,18 +165,17 @@ func CancelOrder(key, secret, market, symbol, orderType, orderId string) (result
 }
 
 // GetCandle seconds: candle的以秒计算宽度
-func GetCandle(key, secret, market, symbol string, slotSeconds int, begin, end time.Time) (candles map[string]*model.Candle) {
+func GetCandle(key, secret, market, symbol string, slotSeconds int, begin, end time.Time) (candles []*model.Candle) {
 	count := (end.Unix() - begin.Unix()) / int64(slotSeconds)
-	if count > 100 {
-		duration, _ := time.ParseDuration(fmt.Sprintf(`%ds`, 100*slotSeconds))
+	limit := 100
+	if int(count) > limit {
+		duration, _ := time.ParseDuration(fmt.Sprintf(`%ds`, limit*slotSeconds))
 		candles = GetCandle(key, secret, market, symbol, slotSeconds, begin, begin.Add(duration))
-		subCandles := GetCandle(key, secret, market, symbol, slotSeconds, begin.Add(duration), end)
-		for _, item := range subCandles {
-			candleKey := fmt.Sprintf(`%s_%s_%d_%s`, market, symbol, slotSeconds, item.Begin.Format(time.RFC3339))
-			candles[candleKey] = item
+		candlesRight := GetCandle(key, secret, market, symbol, slotSeconds, begin.Add(duration), end)
+		for _, candle := range candlesRight {
+			candles = append(candles, candle)
 		}
 	} else {
-		candles = make(map[string]*model.Candle)
 		switch market {
 		case model.Ftx:
 			candles = getCandlesFtx(key, secret, symbol, begin, end, slotSeconds)
