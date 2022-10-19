@@ -163,6 +163,7 @@ func handlePrice(turtleData *TurtleData, candle *model.Candle, setting *model.Se
 func ProcessCandles(market, symbol string, start, end time.Time, setting *model.Setting) {
 	key := model.AppConfig.GetAccounts(market)[0].Key
 	secret := model.AppConfig.GetAccounts(market)[0].Secret
+	util.StoreSyncMap(&model.CarryInfo, nil, `GetCandle`)
 	candles := api.GetCandle(key, secret, market, symbol, 15, start, end)
 	sortedCandles := &model.SortedCandle{Value: make([]*model.Candle, len(candles))}
 	i := 0
@@ -177,4 +178,40 @@ func ProcessCandles(market, symbol string, start, end time.Time, setting *model.
 		turtleData := GetTurtleData(key, secret, market, symbol, turtleTime, 3600, setting)
 		handlePrice(turtleData, candle, setting)
 	}
+}
+
+func GetDBOrders(market, symbol string, begin, end time.Time) (orders []*model.Order) {
+	orders = []*model.Order{}
+	model.AppDB.Where(`market=? and symbol=? and order_time>? and order_time<? and refresh_type=?`,
+		market, symbol, begin, end, model.FunctionSimulation).Find(&orders)
+	return orders
+}
+
+func ToString(orders []*model.Order) (str string) {
+	str = ``
+	var amountBuy, amountSell, priceBuy, priceSell, uBuy, uSell, singleOrderU, earnRate float64
+	for i, order := range orders {
+		if i == 0 {
+			singleOrderU = order.Price * order.Amount
+		}
+		if order.OrderSide == model.OrderSideBuy {
+			amountBuy += order.Amount
+			uBuy += order.Amount * order.Price
+		} else if order.OrderSide == model.OrderSideSell {
+			amountSell += order.Amount
+			uSell += order.Amount * order.Price
+		}
+		str += fmt.Sprintf("%s %s %s %s %f at %f\n",
+			order.OrderTime.String(), order.Market, order.Symbol, order.OrderSide, order.Amount, order.Price)
+	}
+	if amountBuy > 0 {
+		priceBuy = uBuy / amountBuy
+	}
+	if amountSell > 0 {
+		priceSell = uSell / amountSell
+	}
+	earnRate = (priceSell - priceBuy) * math.Min(amountBuy, amountSell) / singleOrderU
+	str += fmt.Sprintf("\nInAll: buy %f avgPrice %f cost %f sell %f avgPrice %f income %f earnRate 百分之%.2f",
+		amountBuy, priceBuy, uBuy, amountSell, priceSell, uSell, earnRate*100)
+	return str
 }

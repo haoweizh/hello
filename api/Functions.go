@@ -185,8 +185,18 @@ func GetCandle(key, secret, market, symbol string, slotSeconds int, begin, end t
 		case model.BinancePerp:
 			candles = getCandlesBinancePerp(key, secret, symbol, begin, end, int(count), slotSeconds)
 		}
-		util.Info(fmt.Sprintf(`get candles %s %s %d seconds %s`,
-			market, symbol, slotSeconds, begin.Format(time.RFC3339)))
+		msg := fmt.Sprintf(`get candles %s %s %d seconds %s %d`,
+			market, symbol, slotSeconds, begin.Format(time.RFC3339), len(candles))
+		util.Info(msg)
+		oldMsg, ok := util.LoadSyncMap(&model.CarryInfo, `GetCandle`)
+		if ok && oldMsg != nil {
+			msg = oldMsg.(string) + msg
+		}
+		if len(msg) < 100000 {
+			util.StoreSyncMap(&model.CarryInfo, msg, `GetCandle`)
+		} else {
+			util.StoreSyncMap(&model.CarryInfo, nil, `GetCandle`)
+		}
 		time.Sleep(time.Millisecond * 100)
 	}
 	return

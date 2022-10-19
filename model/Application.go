@@ -12,7 +12,7 @@ import (
 type PostOrder func(order *Order, setting *Setting) // 处理下单后的函数
 var HandlerMap = make(map[string]CarryHandler)
 var infoLock sync.Mutex
-var CarryInfo = make(map[string]map[string]string)                // userKey - function - msg
+var CarryInfo sync.Map                                            // userKey - function - msg
 var monitorInfo = make(map[string]map[string]map[string][]string) // userKey - table - item - value array
 var AppMetric = &MetricManager{}
 
@@ -55,12 +55,6 @@ const FunctionCrossOpen = `open`
 const FunctionCrossClose = `close`
 const FunctionHang = `hang`
 const PostOnly = `ParticipateDoNotInitiate`
-
-//const SubscribeDeal = `subscribeDeal`
-//const FunctionHang = `hang`
-//const FunctionPostonlyHandler = `postonly`
-//const OKEXBTCContractFaceValue = 100.0
-//const OKEXOtherContractFaceValue = 10.0
 
 var AppDB *gorm.DB
 var AppConfig *Config
@@ -186,33 +180,6 @@ func SetMonitorInfo(key, table, item string, value []string) {
 	}
 	monitorInfo[key][table][item] = value
 }
-
-func GetCarryInfo(userKey, key string) string {
-	infoLock.Lock()
-	defer infoLock.Unlock()
-	if CarryInfo[userKey] == nil {
-		return ``
-	}
-	return CarryInfo[userKey][key]
-}
-
-// SetCarryInfo userKey[0] vs slaves
-func SetCarryInfo(userKey, key, value string) {
-	infoLock.Lock()
-	defer infoLock.Unlock()
-	if CarryInfo[userKey] == nil {
-		CarryInfo[userKey] = make(map[string]string)
-	}
-	CarryInfo[userKey][key] = value
-}
-
-//func RemoveCarryInfo(userKey, key string) {
-//	infoLock.Lock()
-//	defer infoLock.Unlock()
-//	if CarryInfo[userKey] != nil {
-//		delete(CarryInfo[userKey], key)
-//	}
-//}
 
 func GetOrderStatus(market, marketStatus string) (status string) {
 	if orderStatusMap[market] == nil {

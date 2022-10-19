@@ -9,6 +9,7 @@ import (
 	"hello/carry"
 	"hello/carry/cross"
 	"hello/model"
+	"hello/regret"
 	"hello/util"
 	"math/rand"
 	"net/http"
@@ -20,6 +21,7 @@ import (
 
 var codeGenTime int64
 var code = ``
+var simulating = false
 
 func ParameterServe() {
 	gin.SetMode(gin.ReleaseMode)
@@ -29,6 +31,7 @@ func ParameterServe() {
 	router.GET("/", GetParameters)
 	//router.GET(`refresh`, RefreshParameters)
 	router.GET(`pw`, GetCode)
+	router.GET(`simulate`, simulate)
 	router.GET(`cross`, crossPage)
 	router.GET(`hold`, holdPage)
 	router.GET(`tick`, tickPage)
@@ -46,6 +49,10 @@ func ParameterServe() {
 		fmt.Println(`port occupied, exit ` + err.Error())
 		os.Exit(1)
 	}
+}
+
+func setSimulating(value bool) {
+	simulating = value
 }
 
 func WsPage(c *gin.Context) {
@@ -73,15 +80,54 @@ func WsPage(c *gin.Context) {
 	go wsClient.Write()
 }
 
-//func simulate(c *gin.Context) {
-//	if model.AppConfig.Simulation != `on` {
-//		return c.HTML(http.StatusOK, `do not support s`)
-//	}
-//	strBegin := c.Query(`begin`)
-//	strEnd := c.Query(`end`)
-//	strDo := c.Query(`do`)
-//
-//}
+func simulate(c *gin.Context) {
+	if model.AppConfig.Simulation != `on` {
+		c.String(http.StatusOK, `do not support s`)
+		return
+	}
+	if simulating {
+		msg, ok := util.LoadSyncMap(&model.CarryInfo, `GetCandle`)
+		if ok && msg != nil {
+			c.String(http.StatusOK, "simulating...\n"+msg.(string))
+		} else {
+			c.String(http.StatusBadRequest, `simulating can not be started`)
+		}
+		return
+	} else {
+		defer setSimulating(false)
+		setSimulating(true)
+	}
+	market := c.Query(`market`)
+	if strings.Trim(market, ` `) == `` {
+		market = model.Ftx
+	}
+	coin := c.Query(`coin`)
+	symbol := strings.ToUpper(coin) + model.UniStandardTail[model.MarketTypePerp]
+	strBegin := c.Query(`begin`) + `T00:00:00+00:00`
+	strEnd := c.Query(`end`) + `T00:00:00+00:00`
+	strNew := c.Query(`new`)
+	strLimit := c.Query(`limit`)
+	begin, errBegin := time.Parse(time.RFC3339, strBegin)
+	end, errEnd := time.Parse(time.RFC3339, strEnd)
+	limit, limitErr := strconv.ParseInt(strLimit, 10, 64)
+	if limitErr != nil {
+		limit = 3
+	}
+	if errBegin != nil || errEnd != nil {
+		simulateGuide := "limit:仓数上限，可选，默认为3 new:true为生成新的仿真否则为查看同参数历史仿真\n" +
+			"参数样例：\ncoin=xrp&begin=2022-10-01&end=2022-10-10&limit=3&new=true\n"
+		c.String(http.StatusMethodNotAllowed,
+			fmt.Sprintf(`time parameter error %s %s \n%s`, strBegin, strEnd, simulateGuide))
+		return
+	}
+	if strNew == `true` {
+		setting := &model.Setting{Market: market, Symbol: symbol, AmountLimit: float64(limit), GridAmount: 10000}
+		model.AppDB.Where(`market=? and symbol=? and refresh_type=? and order_time>? and order_time<?`,
+			market, symbol, model.FunctionSimulation, begin, end).Delete(&model.Order{})
+		regret.ProcessCandles(market, symbol, begin, end, setting)
+	}
+	c.String(http.StatusOK, regret.ToString(regret.GetDBOrders(market, symbol, begin, end)))
+}
 
 func debug(c *gin.Context) {
 	doDebug := c.Query(`count`)
@@ -285,7 +331,7 @@ func GetCode(c *gin.Context) {
 		waitTime = 30 - waitTime
 		c.String(http.StatusOK, fmt.Sprintf(`还要等待 %d 秒才能再次发送`, waitTime))
 	} else if len(indexStr) > 0 {
-		index, _ := strconv.ParseInt(indexStr, 64, 10)
+		index, _ := strconv.ParseInt(indexStr, 10, 64)
 		accountFtx := model.AppConfig.GetAccounts(model.Ftx)[index]
 		balances := api.GetTransfers(accountFtx.Key, accountFtx.Secret, model.Ftx)
 		for _, balance := range balances {
@@ -331,7 +377,10 @@ func GetParameters(c *gin.Context) {
 					symbol, setting.(*model.Setting).Chance, setting.(*model.Setting).GridAmount, setting.(*model.Setting).PriceX, isTop, turtleData.ToString())
 				if setting.(*model.Setting).Function == model.FunctionTurtle {
 					showMsg := fmt.Sprintf("%s_%s_%s", model.FunctionTurtle, market, symbol)
-					msg += model.GetCarryInfo(account.Key, showMsg) + "\n"
+					msgValue, ok := util.LoadSyncMap(&model.CarryInfo, account.Key, showMsg)
+					if ok && msgValue != nil {
+						msg += msgValue.(string) + "\n"
+					}
 				}
 				return true
 			})
