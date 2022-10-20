@@ -232,11 +232,11 @@ func ToString(orders []*model.Order, setting *model.Setting) (str string) {
 		amountBuy, priceBuy, uBuy, amountSell, priceSell, uSell, earnRate*100, costRate)
 	avgWinRate := 0.0
 	if len(wins) > 0 {
-		avgWinRate /= float64(len(wins))
+		avgWinRate = rateInAllWin / float64(len(wins))
 	}
 	avgLoseRate := 0.0
 	if len(loses) > 0 {
-		avgLoseRate /= float64(len(loses))
+		avgLoseRate = rateInAllLose / float64(len(loses))
 	}
 	str += fmt.Sprintf("\n盈利%d次平均百分之%f 亏损%d次平均百分之%f", len(wins), avgWinRate, len(loses), avgLoseRate)
 	return str
