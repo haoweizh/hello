@@ -93,6 +93,8 @@ func createTurtleOrders(setting *model.Setting, turtleData *TurtleData) {
 			GridPos:     setting.Chance,
 			AmountType:  setting.SymbolRelated,
 		}
+		util.Info(fmt.Sprintf(`create order short %s %s %s %s %d`, turtleData.orderShort.Market,
+			turtleData.orderShort.Symbol, turtleData.orderShort.AmountType, turtleData.orderShort.OrderSide, turtleData.orderShort.GridPos))
 	}
 	if amountLong > 0 {
 		turtleData.orderLong = &model.Order{
@@ -107,6 +109,8 @@ func createTurtleOrders(setting *model.Setting, turtleData *TurtleData) {
 			GridPos:     setting.Chance,
 			AmountType:  setting.SymbolRelated,
 		}
+		util.Info(fmt.Sprintf(`create order long %s %s %s %s %d`, turtleData.orderLong.Market,
+			turtleData.orderLong.Symbol, turtleData.orderLong.AmountType, turtleData.orderLong.OrderSide, turtleData.orderLong.GridPos))
 	}
 }
 
@@ -120,7 +124,8 @@ func handlePrice(turtleData *TurtleData, candle *model.Candle, setting *model.Se
 		} else {
 			setting.Chance = 0
 			turtleData.liquidated = true
-			util.Info(`long liquidate %d to %d`, turtleData.orderLong.GridPos, setting.Chance)
+			util.Info(`liquidate long %d to %d %`,
+				turtleData.orderLong.GridPos, setting.Chance, turtleData.orderLong.OrderTime.String())
 		}
 		setting.PriceX = turtleData.orderLong.Price
 		turtleData.orderLong.Status = model.CarryStatusSuccess
@@ -136,7 +141,8 @@ func handlePrice(turtleData *TurtleData, candle *model.Candle, setting *model.Se
 		} else {
 			setting.Chance = 0
 			turtleData.liquidated = true
-			util.Info(`short liquidate %d to %d`, turtleData.orderShort.GridPos, setting.Chance)
+			util.Info(`liquidate short %d to %d %s`,
+				turtleData.orderShort.GridPos, setting.Chance, turtleData.orderShort.OrderTime.String())
 		}
 		setting.PriceX = turtleData.orderShort.Price
 		turtleData.orderShort.Status = model.CarryStatusSuccess
