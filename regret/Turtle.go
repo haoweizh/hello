@@ -10,6 +10,8 @@ import (
 	"time"
 )
 
+const tradeCost = 0.004
+
 type TurtleData struct {
 	high10, low10, high20, low20, high3, low3, n float64
 	orderLong, orderShort                        *model.Order
@@ -84,6 +86,7 @@ func createTurtleOrders(setting *model.Setting, turtleData *TurtleData) {
 			Market:      setting.Market,
 			OrderSide:   model.OrderSideSell,
 			Price:       priceShort,
+			DealPrice:   priceShort * (1 - tradeCost),
 			RefreshType: model.FunctionSimulation,
 			Status:      model.CarryStatusWorking,
 			Symbol:      setting.Symbol,
@@ -97,6 +100,7 @@ func createTurtleOrders(setting *model.Setting, turtleData *TurtleData) {
 			Market:      setting.Market,
 			OrderSide:   model.OrderSideBuy,
 			Price:       priceLong,
+			DealPrice:   priceLong * (1 + tradeCost),
 			RefreshType: model.FunctionSimulation,
 			Status:      model.CarryStatusWorking,
 			Symbol:      setting.Symbol,
@@ -184,11 +188,11 @@ func ToString(orders []*model.Order, setting *model.Setting) (str string) {
 		}
 		if order.OrderSide == model.OrderSideBuy {
 			amountBuy += order.Amount
-			uBuy += order.Amount * order.Price
+			uBuy += order.Amount * order.DealPrice
 			if int64(setting.AmountLimit) > order.GridPos {
-				groupUBuy += order.Amount * order.Price
+				groupUBuy += order.Amount * order.DealPrice
 			} else {
-				rate := (groupUSell/setting.AmountLimit/setting.GridAmount - order.Price) / order.Price
+				rate := (groupUSell/setting.AmountLimit/setting.GridAmount - order.DealPrice) / order.DealPrice
 				if rate > 0 {
 					wins = append(wins, rate)
 					rateInAllWin += rate
@@ -201,11 +205,11 @@ func ToString(orders []*model.Order, setting *model.Setting) (str string) {
 			}
 		} else if order.OrderSide == model.OrderSideSell {
 			amountSell += order.Amount
-			uSell += order.Amount * order.Price
+			uSell += order.Amount * order.DealPrice
 			if int64(setting.AmountLimit) > order.GridPos {
-				groupUSell += order.Amount * order.Price
+				groupUSell += order.Amount * order.DealPrice
 			} else {
-				rate := (order.Price - groupUBuy/setting.AmountLimit/setting.GridAmount) / order.Price
+				rate := (order.DealPrice - groupUBuy/setting.AmountLimit/setting.GridAmount) / order.DealPrice
 				if rate > 0 {
 					wins = append(wins, rate)
 					rateInAllWin += rate
@@ -217,8 +221,8 @@ func ToString(orders []*model.Order, setting *model.Setting) (str string) {
 				groupUSell = 0
 			}
 		}
-		str += fmt.Sprintf("%s %s %s %s %f at %f chance %d\n",
-			order.OrderTime.String(), order.Market, order.Symbol, order.OrderSide, order.Amount, order.Price, order.GridPos)
+		str += fmt.Sprintf("%s %s %s %s %f at %f %f chance %d\n",
+			order.OrderTime.String(), order.Market, order.Symbol, order.OrderSide, order.Amount, order.Price, order.DealPrice, order.GridPos)
 	}
 	if amountBuy > 0 {
 		priceBuy = uBuy / amountBuy
@@ -226,10 +230,9 @@ func ToString(orders []*model.Order, setting *model.Setting) (str string) {
 	if amountSell > 0 {
 		priceSell = uSell / amountSell
 	}
-	costRate := 0.04
-	earnRate = (priceSell*(1-costRate) - priceBuy*(1+costRate)) * math.Min(amountBuy, amountSell) / singleOrderU
-	str += fmt.Sprintf("\nInAll: buy %f avgPrice %f cost %f sell %f avgPrice %f income %f earnRate 百分之%.2f 滑点%f",
-		amountBuy, priceBuy, uBuy, amountSell, priceSell, uSell, earnRate*100, costRate)
+	earnRate = (priceSell - priceBuy) * math.Min(amountBuy, amountSell) / singleOrderU
+	str += fmt.Sprintf("\n%sbuy %f avgPrice %f cost %f sell %f avgPrice %f income %f earnRate 百分之%.2f 滑点%f",
+		time.Now().String(), amountBuy, priceBuy, uBuy, amountSell, priceSell, uSell, earnRate*100, tradeCost)
 	avgWinRate := 0.0
 	if len(wins) > 0 {
 		avgWinRate = rateInAllWin / float64(len(wins))
