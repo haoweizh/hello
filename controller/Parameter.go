@@ -140,7 +140,7 @@ func simulate(c *gin.Context) {
 			market, symbol, model.FunctionSimulation, begin, end, simType).Delete(&model.Order{})
 		regret.ProcessCandles(market, symbol, begin, end, setting)
 	}
-	c.String(http.StatusOK, regret.ToString(regret.GetDBOrders(market, symbol, begin, end)))
+	c.String(http.StatusOK, regret.ToString(regret.GetDBOrders(market, symbol, simType, begin, end)))
 }
 
 func debug(c *gin.Context) {
