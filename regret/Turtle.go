@@ -120,7 +120,7 @@ func handlePrice(turtleData *TurtleData, candle *model.Candle, setting *model.Se
 		setting.PriceX = turtleData.orderLong.Price
 		turtleData.orderLong.Status = model.CarryStatusSuccess
 		turtleData.orderLong.OrderTime = candle.Begin
-		turtleData.orderLong.OrderId = fmt.Sprintf(`%dlong`, candle.Begin.Unix())
+		turtleData.orderLong.OrderId = fmt.Sprintf(`%d%slong`, candle.Begin.Unix(), setting.SymbolRelated)
 		model.AppDB.Save(turtleData.orderLong)
 		turtleData.orderLong = nil
 		turtleData.orderShort = nil
@@ -135,7 +135,7 @@ func handlePrice(turtleData *TurtleData, candle *model.Candle, setting *model.Se
 		setting.PriceX = turtleData.orderShort.Price
 		turtleData.orderShort.Status = model.CarryStatusSuccess
 		turtleData.orderShort.OrderTime = candle.Begin
-		turtleData.orderShort.OrderId = fmt.Sprintf(`%dshort`, candle.Begin.Unix())
+		turtleData.orderShort.OrderId = fmt.Sprintf(`%d%sshort`, candle.Begin.Unix(), setting.SymbolRelated)
 		model.AppDB.Save(turtleData.orderShort)
 		turtleData.orderLong = nil
 		turtleData.orderShort = nil

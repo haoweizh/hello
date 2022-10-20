@@ -125,7 +125,7 @@ func simulate(c *gin.Context) {
 	if errBegin != nil || errEnd != nil || simTypeErr != nil || simTypeSeconds <= 0 ||
 		(simTypeSeconds != 1800 && simTypeSeconds != 14400 && (simTypeSeconds/86400)%86400 != 0) {
 		simulateGuide := "limit:仓数上限，可选，默认为3 new:true为生成新的仿真否则为查看同参数历史仿真 " +
-			"type:以秒计算单周期长度，取值范围：600、14400或86400的倍数\n" +
+			"type:以秒计算单周期长度，取值范围：3600、14400或86400的倍数\n" +
 			"参数样例：\ncoin=xrp&begin=2022-10-01&end=2022-10-10&limit=3&type=3600&new=true\n"
 		c.String(http.StatusMethodNotAllowed,
 			fmt.Sprintf(`time parameter error %s %s %s\n%s`, strBegin, strEnd, simType, simulateGuide))
