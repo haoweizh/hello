@@ -88,6 +88,7 @@ func createTurtleOrders(setting *model.Setting, turtleData *TurtleData) {
 			Status:      model.CarryStatusWorking,
 			Symbol:      setting.Symbol,
 			GridPos:     setting.Chance,
+			AmountType:  setting.SymbolRelated,
 		}
 	}
 	if amountLong > 0 {
@@ -100,6 +101,7 @@ func createTurtleOrders(setting *model.Setting, turtleData *TurtleData) {
 			Status:      model.CarryStatusWorking,
 			Symbol:      setting.Symbol,
 			GridPos:     setting.Chance,
+			AmountType:  setting.SymbolRelated,
 		}
 	}
 }
@@ -158,7 +160,9 @@ func ProcessCandles(market, symbol string, start, end time.Time, setting *model.
 			0, 0, 0, candle.Begin.Location())
 		turtleKey := fmt.Sprintf(`%s_%s_%s_%s`, setting.Market, setting.Symbol, setting.SymbolRelated,
 			turtleTime.Format(time.RFC3339))
-		handlePrice(turtleDataMap[turtleKey], candle, setting)
+		if turtleDataMap[turtleKey] != nil {
+			handlePrice(turtleDataMap[turtleKey], candle, setting)
+		}
 	}
 }
 
