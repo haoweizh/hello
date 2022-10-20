@@ -161,7 +161,7 @@ func ProcessCandles(market, symbol string, start, end time.Time, setting *model.
 	api.GetTurtleCandles(turtleCandles)
 	turtleDataMap := GetTurtleData(turtleCandles)
 	for _, candle := range sortedCandles {
-		turtleTime := time.Unix(candle.Begin.Unix()-candle.Begin.Unix()%int64(turtleSeconds), 0)
+		turtleTime := time.Unix(candle.Begin.Unix()-candle.Begin.Unix()%int64(turtleSeconds), 0).In(time.UTC)
 		turtleKey := fmt.Sprintf(`%s_%s_%s_%s`, setting.Market, setting.Symbol, setting.SymbolRelated,
 			turtleTime.Format(time.RFC3339))
 		if turtleDataMap[turtleKey] != nil {
