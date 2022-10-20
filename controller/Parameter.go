@@ -136,13 +136,14 @@ func simulate(c *gin.Context) {
 		c.String(http.StatusMethodNotAllowed, fmt.Sprintf(`模拟时间跨度%s~%s大于200天`, begin.String(), end.String()))
 		return
 	}
+	setting := &model.Setting{Market: market, Symbol: symbol, AmountLimit: float64(limit), GridAmount: 1000,
+		SymbolRelated: simType, Chance: 0}
 	if strNew == `true` {
-		setting := &model.Setting{Market: market, Symbol: symbol, AmountLimit: float64(limit), GridAmount: 1000, SymbolRelated: simType}
 		model.AppDB.Where(`market=? and symbol=? and refresh_type=? and order_time>? and order_time<? and amount_type=?`,
 			market, symbol, model.FunctionSimulation, begin, end, simType).Delete(&model.Order{})
 		regret.ProcessCandles(market, symbol, begin, end, setting)
 	}
-	c.String(http.StatusOK, regret.ToString(regret.GetDBOrders(market, symbol, simType, begin, end)))
+	c.String(http.StatusOK, regret.ToString(regret.GetDBOrders(market, symbol, simType, begin, end), setting))
 }
 
 func debug(c *gin.Context) {
