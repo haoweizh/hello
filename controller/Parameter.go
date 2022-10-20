@@ -131,9 +131,9 @@ func simulate(c *gin.Context) {
 			fmt.Sprintf(`time parameter error %s %s %s\n%s`, strBegin, strEnd, simType, simulateGuide))
 		return
 	}
-	duration, _ := time.ParseDuration(`4800h`)
+	duration, _ := time.ParseDuration(`10000h`)
 	if begin.Add(duration).Before(end) {
-		c.String(http.StatusMethodNotAllowed, fmt.Sprintf(`模拟时间跨度%s~%s大于200天`, begin.String(), end.String()))
+		c.String(http.StatusMethodNotAllowed, fmt.Sprintf(`模拟时间跨度%s~%s大于380天`, begin.String(), end.String()))
 		return
 	}
 	setting := &model.Setting{Market: market, Symbol: symbol, AmountLimit: float64(limit), GridAmount: 1000,
