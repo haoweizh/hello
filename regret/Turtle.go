@@ -157,15 +157,17 @@ func ProcessCandles(market, symbol string, start, end time.Time, setting *model.
 	turtleSeconds, _ := strconv.Atoi(setting.SymbolRelated)
 	duration, _ := time.ParseDuration(fmt.Sprintf(`-%ds`, turtleSeconds*50))
 	turtleCandles := api.GetCandle(key, secret, market, symbol, turtleSeconds, start.Add(duration), end)
+	util.Info(`get turtle candle %s %s %d`, market, symbol, len(turtleCandles))
 	api.GetTurtleCandles(turtleCandles)
 	turtleDataMap := GetTurtleData(turtleCandles)
 	for _, candle := range sortedCandles {
-		turtleTime := time.Date(candle.Begin.Year(), candle.Begin.Month(), candle.Begin.Day(), candle.Begin.Hour(),
-			0, 0, 0, candle.Begin.Location())
+		turtleTime := time.Unix(candle.Begin.Unix()-candle.Begin.Unix()%int64(turtleSeconds), 0)
 		turtleKey := fmt.Sprintf(`%s_%s_%s_%s`, setting.Market, setting.Symbol, setting.SymbolRelated,
 			turtleTime.Format(time.RFC3339))
 		if turtleDataMap[turtleKey] != nil {
 			handlePrice(turtleDataMap[turtleKey], candle, setting)
+		} else {
+			util.Info(`fail to parse time from %s to %s %s`, candle.Begin.String(), turtleTime.String(), turtleKey)
 		}
 	}
 }
