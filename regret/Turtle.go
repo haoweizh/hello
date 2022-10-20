@@ -190,7 +190,7 @@ func ToString(orders []*model.Order, setting *model.Setting) (str string) {
 		if order.OrderSide == model.OrderSideBuy {
 			amountBuy += order.Amount
 			uBuy += order.Amount * order.DealPrice
-			if int64(setting.AmountLimit) > order.GridPos {
+			if order.GridPos >= 0 {
 				groupUBuy += order.Amount * order.DealPrice
 				groupAmountBuy += order.Amount
 			} else {
@@ -210,7 +210,7 @@ func ToString(orders []*model.Order, setting *model.Setting) (str string) {
 		} else if order.OrderSide == model.OrderSideSell {
 			amountSell += order.Amount
 			uSell += order.Amount * order.DealPrice
-			if int64(setting.AmountLimit) > order.GridPos {
+			if order.GridPos <= 0 {
 				groupUSell += order.Amount * order.DealPrice
 				groupAmountSell += order.Amount
 			} else {
@@ -238,8 +238,8 @@ func ToString(orders []*model.Order, setting *model.Setting) (str string) {
 		priceSell = uSell / amountSell
 	}
 	earnRate = (priceSell - priceBuy) * math.Min(amountBuy, amountSell) / singleOrderU
-	str += fmt.Sprintf("\n%sbuy %f avgPrice %f cost %f sell %f avgPrice %f income %f earnRate %.2f‰ 滑点%f",
-		time.Now().String(), amountBuy, priceBuy, uBuy, amountSell, priceSell, uSell, earnRate*1000, tradeCost)
+	str += fmt.Sprintf("\n%sbuy %f avgPrice %f cost %f sell %f avgPrice %f income %f earnRate %.2f‰ 滑点%f type%s",
+		time.Now().String(), amountBuy, priceBuy, uBuy, amountSell, priceSell, uSell, earnRate*1000, tradeCost, setting.SymbolRelated)
 	avgWinRate := 0.0
 	if len(wins) > 0 {
 		avgWinRate = 1000 * rateInAllWin / float64(len(wins))
