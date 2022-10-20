@@ -80,6 +80,12 @@ func WsPage(c *gin.Context) {
 	go wsClient.Write()
 }
 
+// simulate
+// limit:仓数上限，可选，默认为3
+// new:true为生成新的仿真否则为查看同参数历史仿真
+// coin:币种
+// begin:开始时间，格式2022-10-01 end：结束时间
+// type:以秒计算单周期长度，例如3600 14400
 func simulate(c *gin.Context) {
 	if model.AppConfig.Simulation != `on` {
 		c.String(http.StatusOK, `do not support simulate`)
@@ -102,6 +108,8 @@ func simulate(c *gin.Context) {
 	if strings.Trim(market, ` `) == `` {
 		market = model.Ftx
 	}
+	simType := c.Query(`type`)
+	simTypeSeconds, simTypeErr := strconv.ParseInt(simType, 10, 64)
 	coin := c.Query(`coin`)
 	symbol := strings.ToUpper(coin) + model.UniStandardTail[model.MarketTypePerp]
 	strBegin := c.Query(`begin`) + `T00:00:00+00:00`
@@ -114,17 +122,22 @@ func simulate(c *gin.Context) {
 	if limitErr != nil {
 		limit = 3
 	}
-	if errBegin != nil || errEnd != nil {
-		simulateGuide := "limit:仓数上限，可选，默认为3 new:true为生成新的仿真否则为查看同参数历史仿真\n" +
-			"参数样例：\ncoin=xrp&begin=2022-10-01&end=2022-10-10&limit=3&new=true\n"
+	if errBegin != nil || errEnd != nil || simTypeErr != nil || simTypeSeconds <= 0 {
+		simulateGuide := "limit:仓数上限，可选，默认为3 new:true为生成新的仿真否则为查看同参数历史仿真 type:以秒计算单周期长度，例如3600 14400\n" +
+			"参数样例：\ncoin=xrp&begin=2022-10-01&end=2022-10-10&limit=3&type=3600&new=true\n"
 		c.String(http.StatusMethodNotAllowed,
-			fmt.Sprintf(`time parameter error %s %s \n%s`, strBegin, strEnd, simulateGuide))
+			fmt.Sprintf(`time parameter error %s %s %s\n%s`, strBegin, strEnd, simType, simulateGuide))
+		return
+	}
+	duration, _ := time.ParseDuration(`4800h`)
+	if begin.Add(duration).Before(end) {
+		c.String(http.StatusMethodNotAllowed, fmt.Sprintf(`模拟时间跨度%s~%s大于200天`, begin.String(), end.String()))
 		return
 	}
 	if strNew == `true` {
-		setting := &model.Setting{Market: market, Symbol: symbol, AmountLimit: float64(limit), GridAmount: 10000}
-		model.AppDB.Where(`market=? and symbol=? and refresh_type=? and order_time>? and order_time<?`,
-			market, symbol, model.FunctionSimulation, begin, end).Delete(&model.Order{})
+		setting := &model.Setting{Market: market, Symbol: symbol, AmountLimit: float64(limit), GridAmount: 1000, SymbolRelated: simType}
+		model.AppDB.Where(`market=? and symbol=? and refresh_type=? and order_time>? and order_time<? and amount_type=?`,
+			market, symbol, model.FunctionSimulation, begin, end, simType).Delete(&model.Order{})
 		regret.ProcessCandles(market, symbol, begin, end, setting)
 	}
 	c.String(http.StatusOK, regret.ToString(regret.GetDBOrders(market, symbol, begin, end)))

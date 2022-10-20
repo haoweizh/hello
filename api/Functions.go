@@ -167,7 +167,7 @@ func CancelOrder(key, secret, market, symbol, orderType, orderId string) (result
 // GetCandle seconds: candle的以秒计算宽度
 func GetCandle(key, secret, market, symbol string, slotSeconds int, begin, end time.Time) (candles []*model.Candle) {
 	count := (end.Unix() - begin.Unix()) / int64(slotSeconds)
-	limit := 100
+	limit := 1000
 	if int(count) > limit {
 		duration, _ := time.ParseDuration(fmt.Sprintf(`%ds`, limit*slotSeconds))
 		candles = GetCandle(key, secret, market, symbol, slotSeconds, begin, begin.Add(duration))
@@ -199,6 +199,16 @@ func GetCandle(key, secret, market, symbol string, slotSeconds int, begin, end t
 		time.Sleep(time.Millisecond * 100)
 	}
 	return
+}
+
+func GetTurtleCandles(candles []*model.Candle) {
+	for i, candle := range candles {
+		if i == 0 {
+			candle.N = candle.PriceHigh - candle.PriceLow
+		} else {
+			candle.N = (candle.PriceHigh-candle.PriceLow)/20 + candles[i-1].N*0.95
+		}
+	}
 }
 
 func GetTurtleCandle(key, secret, market, symbol string, slotSeconds int, timeCandle time.Time) (candle *model.Candle) {
