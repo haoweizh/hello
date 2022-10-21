@@ -136,13 +136,15 @@ func simulate(c *gin.Context) {
 		return
 	}
 	msg := ``
-	for i := 0; i < len(coins) && strNew == `true`; i++ {
+	for i := 0; i < len(coins); i++ {
 		symbol := strings.ToUpper(coins[i]) + model.UniStandardTail[model.MarketTypePerp]
 		setting := &model.Setting{Market: market, Symbol: symbol, AmountLimit: float64(limit), GridAmount: 1000,
 			SymbolRelated: simType, Chance: 0}
-		model.AppDB.Where(`market=? and symbol=? and refresh_type=? and order_time>? and order_time<? and amount_type=?`,
-			market, symbol, model.FunctionSimulation, begin, end, simType).Delete(&model.Order{})
-		regret.ProcessCandles(market, symbol, begin, end, setting)
+		if strNew == `true` {
+			model.AppDB.Where(`market=? and symbol=? and refresh_type=? and order_time>? and order_time<? and amount_type=?`,
+				market, symbol, model.FunctionSimulation, begin, end, simType).Delete(&model.Order{})
+			regret.ProcessCandles(market, symbol, begin, end, setting)
+		}
 		msg += regret.ToString(regret.GetDBOrders(market, symbol, simType, begin, end), setting) + "\n"
 	}
 	c.String(http.StatusOK, msg)
