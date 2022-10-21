@@ -2,6 +2,8 @@ package controller
 
 import (
 	"fmt"
+	"github.com/gin-contrib/sessions"
+	"github.com/gin-contrib/sessions/cookie"
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 	"github.com/satori/go.uuid"
@@ -26,6 +28,8 @@ var simulating = false
 func ParameterServe() {
 	gin.SetMode(gin.ReleaseMode)
 	router := gin.Default()
+	store := cookie.NewStore([]byte("secretKey&^%&^$&^%)*()9878687"))
+	router.Use(sessions.Sessions("mysession", store))
 	_ = router.SetTrustedProxies(nil)
 	router.LoadHTMLGlob("templates/*")
 	router.GET("/", GetParameters)
@@ -104,11 +108,6 @@ func simulate(c *gin.Context) {
 		defer setSimulating(false)
 		setSimulating(true)
 	}
-	value := c.Query(`code`)
-	if value != code {
-		c.String(http.StatusForbidden, `请先获取code`)
-		return
-	}
 	market := c.Query(`market`)
 	if strings.Trim(market, ` `) == `` {
 		market = model.Ftx
@@ -125,6 +124,16 @@ func simulate(c *gin.Context) {
 	limit, limitErr := strconv.ParseInt(strLimit, 10, 64)
 	if limitErr != nil {
 		limit = 3
+	}
+	session := sessions.Default(c)
+	value := c.Query(`code`)
+	if value == code {
+		session.Set(`code`, value)
+		_ = session.Save()
+	}
+	sessionValue := session.Get(`code`)
+	if sessionValue == nil || sessionValue.(string) != code {
+		strNew = `false`
 	}
 	if errBegin != nil || errEnd != nil || simTypeErr != nil || simTypeSeconds <= 0 ||
 		(simTypeSeconds != 1800 && simTypeSeconds != 14400 && simTypeSeconds%86400 != 0) {
