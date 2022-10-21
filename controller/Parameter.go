@@ -104,6 +104,11 @@ func simulate(c *gin.Context) {
 		defer setSimulating(false)
 		setSimulating(true)
 	}
+	value := c.Query(`code`)
+	if value != code {
+		c.String(http.StatusForbidden, `请先获取code`)
+		return
+	}
 	market := c.Query(`market`)
 	if strings.Trim(market, ` `) == `` {
 		market = model.Ftx
