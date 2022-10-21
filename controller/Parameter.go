@@ -110,8 +110,7 @@ func simulate(c *gin.Context) {
 	}
 	simType := c.Query(`type`)
 	simTypeSeconds, simTypeErr := strconv.ParseInt(simType, 10, 64)
-	coin := c.Query(`coin`)
-	symbol := strings.ToUpper(coin) + model.UniStandardTail[model.MarketTypePerp]
+	coins := strings.Split(c.Query(`coin`), `,`)
 	strBegin := c.Query(`begin`) + `T00:00:00+00:00`
 	strEnd := c.Query(`end`) + `T00:00:00+00:00`
 	strNew := c.Query(`new`)
@@ -136,14 +135,17 @@ func simulate(c *gin.Context) {
 		c.String(http.StatusMethodNotAllowed, fmt.Sprintf(`模拟时间跨度%s~%s大于380天`, begin.String(), end.String()))
 		return
 	}
-	setting := &model.Setting{Market: market, Symbol: symbol, AmountLimit: float64(limit), GridAmount: 1000,
-		SymbolRelated: simType, Chance: 0}
-	if strNew == `true` {
+	msg := ``
+	for i := 0; i < len(coins) && strNew == `true`; i++ {
+		symbol := strings.ToUpper(coins[i]) + model.UniStandardTail[model.MarketTypePerp]
+		setting := &model.Setting{Market: market, Symbol: symbol, AmountLimit: float64(limit), GridAmount: 1000,
+			SymbolRelated: simType, Chance: 0}
 		model.AppDB.Where(`market=? and symbol=? and refresh_type=? and order_time>? and order_time<? and amount_type=?`,
 			market, symbol, model.FunctionSimulation, begin, end, simType).Delete(&model.Order{})
 		regret.ProcessCandles(market, symbol, begin, end, setting)
+		msg += regret.ToString(regret.GetDBOrders(market, symbol, simType, begin, end), setting) + "\n"
 	}
-	c.String(http.StatusOK, regret.ToString(regret.GetDBOrders(market, symbol, simType, begin, end), setting))
+	c.String(http.StatusOK, msg)
 }
 
 func debug(c *gin.Context) {
