@@ -93,8 +93,6 @@ func createTurtleOrders(setting *model.Setting, turtleData *TurtleData) {
 			GridPos:     setting.Chance,
 			AmountType:  setting.SymbolRelated,
 		}
-		util.Info(fmt.Sprintf(`create order short %s %s %s %s %d`, turtleData.orderShort.Market,
-			turtleData.orderShort.Symbol, turtleData.orderShort.AmountType, turtleData.orderShort.OrderSide, turtleData.orderShort.GridPos))
 	}
 	if amountLong > 0 {
 		turtleData.orderLong = &model.Order{
@@ -109,8 +107,6 @@ func createTurtleOrders(setting *model.Setting, turtleData *TurtleData) {
 			GridPos:     setting.Chance,
 			AmountType:  setting.SymbolRelated,
 		}
-		util.Info(fmt.Sprintf(`create order long %s %s %s %s %d`, turtleData.orderLong.Market,
-			turtleData.orderLong.Symbol, turtleData.orderLong.AmountType, turtleData.orderLong.OrderSide, turtleData.orderLong.GridPos))
 	}
 }
 
@@ -130,7 +126,8 @@ func handlePrice(turtleData *TurtleData, candle *model.Candle, setting *model.Se
 		setting.PriceX = turtleData.orderLong.Price
 		turtleData.orderLong.Status = model.CarryStatusSuccess
 		turtleData.orderLong.OrderTime = candle.Begin
-		turtleData.orderLong.OrderId = fmt.Sprintf(`%d%slong`, candle.Begin.Unix(), setting.SymbolRelated)
+		turtleData.orderLong.OrderId = fmt.Sprintf(`%s%s%s%s%d`, setting.Market,
+			setting.Symbol, setting.SymbolRelated, turtleData.orderLong.OrderSide, candle.Begin.Unix())
 		model.AppDB.Save(turtleData.orderLong)
 		turtleData.orderLong = nil
 		turtleData.orderShort = nil
@@ -147,7 +144,8 @@ func handlePrice(turtleData *TurtleData, candle *model.Candle, setting *model.Se
 		setting.PriceX = turtleData.orderShort.Price
 		turtleData.orderShort.Status = model.CarryStatusSuccess
 		turtleData.orderShort.OrderTime = candle.Begin
-		turtleData.orderShort.OrderId = fmt.Sprintf(`%d%sshort`, candle.Begin.Unix(), setting.SymbolRelated)
+		turtleData.orderShort.OrderId = fmt.Sprintf(`%s%s%s%s%d`, setting.Market,
+			setting.Symbol, setting.SymbolRelated, turtleData.orderShort.OrderSide, candle.Begin.Unix())
 		model.AppDB.Save(turtleData.orderShort)
 		turtleData.orderLong = nil
 		turtleData.orderShort = nil
