@@ -114,10 +114,12 @@ func GetHoldings(accounts map[string]*model.Account) (holding [][]interface{}) {
 			for _, balance := range sm.balances {
 				if balance != nil && balance.Amount != 0 {
 					symbol := balance.Coin + model.UniStandardTail[model.MarketTypeSpot]
-					valid := false
+					valid := `false`
 					setting := api.GetSetting(model.FunctionCross, balance.Market, symbol)
-					if setting != nil {
-						valid = setting.Valid
+					if setting != nil && setting.Valid {
+						valid = `true`
+					} else if api.FilterCross(balance.Market, symbol) {
+						valid = `filter`
 					}
 					holding = append(holding, []interface{}{balance.Market, balance.Coin, symbol,
 						fmt.Sprintf(`%.2f`, balance.Amount), math.Round(balance.UsdValue), valid})
@@ -130,10 +132,12 @@ func GetHoldings(accounts map[string]*model.Account) (holding [][]interface{}) {
 		if ok && value != nil {
 			cm := value.(*contractMarket)
 			for _, position := range cm.positions {
-				valid := false
+				valid := `false`
 				setting := api.GetSetting(model.FunctionCross, position.Market, position.Currency)
-				if setting != nil {
-					valid = setting.Valid
+				if setting != nil && setting.Valid {
+					valid = `true`
+				} else if api.FilterCross(position.Market, position.Currency) {
+					valid = `filter`
 				}
 				if position != nil && position.Holding != 0 {
 					success, _, coin, _ := model.GetFromStandard(position.Market, position.Currency)

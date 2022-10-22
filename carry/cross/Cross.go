@@ -411,52 +411,6 @@ func equalAccounts() {
 	util.Notice(`...... exit clearing cross all`)
 }
 
-func CheckSettingAbsent(accounts map[string]*model.Account) (absents map[string]map[string]float64) {
-	absents = make(map[string]map[string]float64)
-	for _, account := range accounts {
-		var sm *spotMarket
-		var cm *contractMarket
-		if model.AppConfig.Handle == `1` {
-			value, ok := spotMarkets.Load(account.Key)
-			if ok && value != nil {
-				sm = value.(*spotMarket)
-			}
-			value, ok = contractMarkets.Load(account.Key)
-			if ok && value != nil {
-				cm = value.(*contractMarket)
-			}
-		} else {
-			sm = createSpotMarket(account.Key, account.Secret, account.Market)
-			cm = createContractMarket(account.Key, account.Secret, account.Market)
-		}
-		if sm != nil {
-			market := sm.market
-			for symbol := range sm.balances {
-				util.Notice(fmt.Sprintf(`check absent %s %s %f`, market, symbol, sm.balances[symbol].Amount))
-				if !api.FilterCross(market, symbol) && api.GetSetting(model.FunctionCross, market, symbol) == nil && sm.balances[symbol].Amount > 0 {
-					if absents[market] == nil {
-						absents[market] = make(map[string]float64)
-					}
-					absents[market][symbol] = sm.balances[symbol].Amount
-				}
-			}
-		}
-		if cm != nil {
-			market := cm.market
-			for symbol := range cm.positions {
-				util.Notice(fmt.Sprintf(`check absent %s %s %f`, market, symbol, cm.positions[symbol].Holding))
-				if !api.FilterCross(market, symbol) && api.GetSetting(model.FunctionCross, market, symbol) == nil {
-					if absents[market] == nil {
-						absents[market] = make(map[string]float64)
-					}
-					absents[market][symbol] = cm.positions[symbol].Holding
-				}
-			}
-		}
-	}
-	return
-}
-
 func equalAccount(i int, equalChan chan int, accounts map[string]*model.Account) {
 	keys := ``
 	for _, account := range accounts {

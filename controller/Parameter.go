@@ -43,7 +43,6 @@ func ParameterServe() {
 	router.GET(`test`, testSpeed)
 	router.GET(`debug`, debug)
 	router.GET(`wss`, WsPage)
-	router.GET(`absent`, checkCrossAbsent)
 	var err error
 	if model.AppConfig.Port == `443` {
 		err = router.RunTLS(":"+model.AppConfig.Port, `./server.pem`, `./server.key`)
@@ -83,32 +82,6 @@ func WsPage(c *gin.Context) {
 	wsClient.Manager.Register <- wsClient
 	go wsClient.Read(wsHandler)
 	go wsClient.Write()
-}
-
-func checkCrossAbsent(c *gin.Context) {
-	indexStr := c.Query(`index`)
-	if len(indexStr) == 0 {
-		indexStr = `0`
-	}
-	index, _ := strconv.Atoi(indexStr)
-	settingAbsent := "有持仓而缺失的币种范围:\n"
-	//for i := 0; i < api.GetCrossLen(); i++ {
-	accounts := make(map[string]*model.Account)
-	indexAccounts := api.GetAccounts(index)
-	markets := api.GetMarkets()
-	for _, market := range markets {
-		accounts[market] = indexAccounts[market]
-	}
-	absents := cross.CheckSettingAbsent(accounts)
-	if len(absents) > 0 {
-		for market, value := range absents {
-			for symbol, item := range value {
-				settingAbsent += fmt.Sprintf("%s %s持仓 %f\n", market, symbol, item)
-			}
-		}
-	}
-	//}
-	c.String(http.StatusOK, settingAbsent)
 }
 
 // simulate
