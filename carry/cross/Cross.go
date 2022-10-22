@@ -377,6 +377,7 @@ func equalAccounts() {
 	waitEqual := make(map[int]bool)
 	equalChannel := make(chan int, 1)
 	markets := api.GetMarkets()
+	settingAbsent := ``
 	//needWaitEqual := false // 是否需要进入等待环节
 	for i := 0; i < api.GetCrossLen(); i++ {
 		accounts := make(map[string]*model.Account)
@@ -386,6 +387,13 @@ func equalAccounts() {
 		}
 		waitEqual[i] = true
 		go equalAccount(i, equalChannel, accounts)
+		str := CheckSettingAbsent(accounts)
+		if len(str) > 0 {
+			settingAbsent += str + "\n"
+		}
+	}
+	if util.GetNow().Minute() == 30 && len(settingAbsent) > 0 {
+		api.SendMails(`setting absent`, settingAbsent)
 	}
 	for true {
 		index := <-equalChannel
@@ -401,6 +409,30 @@ func equalAccounts() {
 		}
 	}
 	util.Notice(`...... exit clearing cross all`)
+}
+
+func CheckSettingAbsent(accounts map[string]*model.Account) (msg string) {
+	for _, account := range accounts {
+		sm, _ := spotMarkets.Load(account.Key)
+		if sm != nil {
+			market := sm.(*spotMarket).market
+			for symbol := range sm.(*spotMarket).balances {
+				if !api.FilterCross(market, symbol) && api.GetSetting(model.FunctionCross, market, symbol) == nil {
+					msg += fmt.Sprintf(` %s %s`, market, symbol)
+				}
+			}
+		}
+		cm, _ := contractMarkets.Load(account.Key)
+		if cm != nil {
+			market := cm.(*contractMarket).market
+			for symbol := range cm.(*contractMarket).positions {
+				if !api.FilterCross(market, symbol) && api.GetSetting(model.FunctionCross, market, symbol) == nil {
+					msg += fmt.Sprintf(` %s %s`, market, symbol)
+				}
+			}
+		}
+	}
+	return
 }
 
 func equalAccount(i int, equalChan chan int, accounts map[string]*model.Account) {

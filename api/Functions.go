@@ -715,13 +715,14 @@ func GetMarketInfos(market string) (marketInfo map[string]*model.MarketInfo) {
 	return
 }
 
+// FilterCross
 // 搬砖过滤币种 AMPL IOTA REEF MIR SOS
 // 某些主流币 BTC ETH LINK
 // 币种对不上 REAL, DFL, QI, WSB, TRADE,FAME,BIFI,TON,BOX,PAY
 // 法币 GBP CUSDT TRYB``BRZ``CAD``EUR` `SUSD` `USDC` `TUSD`USDT EURT
 // 平台币 `GT` `FTT` `BNB` `OKB` MX
 // ftx预测`TRUMP``BOLSONARO`
-func filterCross(market, symbol string) bool {
+func FilterCross(market, symbol string) bool {
 	filterCoins := map[string]bool{`AMPL`: true, `IOTA`: true, `REEF`: true, `MIR`: true, `LUNA`: true, // `UST`: true,
 		`BTC`: true, `ETH`: true, `LINK`: true, `SOS`: true,
 		`REAL`: true, `DFL`: true, `QI`: true, `WSB`: true, `TRADE`: true, `FAME`: true, `BIFI`: true, `TON`: true,
@@ -790,7 +791,7 @@ func InitCrossMarketInfos(markets []string) {
 				if infoPool[coin] == nil {
 					infoPool[coin] = make([]*model.MarketInfo, 0)
 				}
-				if !filterCross(info.Market, info.Name) {
+				if !FilterCross(info.Market, info.Name) {
 					infoPool[coin] = append(infoPool[coin], info)
 				}
 			}
