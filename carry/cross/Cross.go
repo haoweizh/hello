@@ -417,7 +417,7 @@ func CheckSettingAbsent(accounts map[string]*model.Account) (msg string) {
 	for _, account := range accounts {
 		var sm *spotMarket
 		var cm *contractMarket
-		if model.AppConfig.Handle != `1` {
+		if model.AppConfig.Handle == `1` {
 			value, ok := spotMarkets.Load(account.Key)
 			if ok && value != nil {
 				sm = value.(*spotMarket)
