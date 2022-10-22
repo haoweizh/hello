@@ -652,6 +652,9 @@ func equalCoin(coin string, statuses []*CarryStatus) (isEqual bool, holdingInU f
 // ProcessCross setting.Chance<0时该币种只关仓
 // setting.OpenShortMargin CloseShortMargin不等于0时作为开关舱标准价格，否则使用通用价格
 var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
+	if model.AppConfig.Handle == `2` {
+		go ClearCross()
+	}
 	if !doCross && model.AppConfig.Handle == `1` {
 		go ClearCross()
 		doCross = true
