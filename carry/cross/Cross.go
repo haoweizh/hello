@@ -225,7 +225,13 @@ func initStatus(account *model.Account, setting *model.Setting, absentRevert boo
 	fundingTime, ok := notifyTime.Load(fundingKey)
 	if !(ok && fundingTime.(time.Time).Add(time.Minute*60).After(time.Now())) && math.Abs(status.FoundingRate) > 0.01 {
 		notifyTime.Store(fundingKey, time.Now())
-		go api.SendMails(fmt.Sprintf(`%s %f`, fundingKey, status.FoundingRate), ``)
+		go func() {
+			msg := fmt.Sprintf(`%s %f`, fundingKey, status.FoundingRate)
+			err := util.SendMail(model.AppConfig.FromMail, model.AppConfig.FromMailAuth, `haoweizh@qq.com`, msg, msg)
+			if err != nil {
+				util.Notice(`fail to send mail msg %s %s`, msg, err.Error())
+			}
+		}()
 	}
 	marketInfo := model.GetMarketInfo(setting.Market, setting.Symbol)
 	if marketInfo != nil && marketInfo.SizeMax > 0 {
@@ -944,19 +950,16 @@ func checkScoreLimit(market, symbol, marketRelate, symbolRelate string, amount, 
 		if invalid {
 			notifyTime.Store(checkKey, time.Now())
 			notifyTime.Store(checkKeyRelate, time.Now())
-			go api.SendMails(title, msg)
+			go func() {
+				err := util.SendMail(model.AppConfig.FromMail, model.AppConfig.FromMailAuth,
+					`haoweizh@qq.com`, title, msg)
+				if err != nil {
+					util.Notice(`fail to send mail msg %s %s`, msg, err.Error())
+				}
+			}()
 		} else if score > 0.05 || scoreRelate > 0.05 {
 			notifyTime.Store(checkKey, time.Now())
 			notifyTime.Store(checkKeyRelate, time.Now())
-			//if !util.EndWith(symbol, `_PERP`) && !util.EndWith(symbolRelate, `_PERP`) {
-			//	go func() {
-			//		err := util.SendMail(model.AppConfig.FromMail, model.AppConfig.FromMailAuth,
-			//			`gqchen888@gmail.com`, title, msg)
-			//		if err != nil {
-			//			util.Notice(`fail to send mail msg %s %s`, msg, err.Error())
-			//		}
-			//	}()
-			//}
 		}
 	}
 	return
