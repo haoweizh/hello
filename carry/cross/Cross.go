@@ -337,7 +337,9 @@ func ClearCross() {
 				time.Sleep(time.Millisecond * 10)
 			}
 		}
-		equalAccounts()
+		if model.AppConfig.Handle == `1` {
+			equalAccounts()
+		}
 		checkSetCrossing(false)
 		util.Notice(`before sleep 0`)
 		time.Sleep(time.Minute * 1)
