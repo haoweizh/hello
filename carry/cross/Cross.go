@@ -337,8 +337,31 @@ func ClearCross() {
 				time.Sleep(time.Millisecond * 10)
 			}
 		}
+		carryRows, _ := model.AppDB.Model(model.Order{}).Select(`sum(price*abs(amount)),refresh_type`).
+			Where(`order_time>?`, util.GetNow()).Group(`refresh_type`).Rows()
+		var compInU, crossInU float64
+		for carryRows.Next() {
+			var amountInU float64
+			var refreshType string
+			_ = carryRows.Scan(&amountInU, &refreshType)
+			if refreshType == model.FunctionComplement {
+				compInU = amountInU
+			} else if refreshType == model.FunctionCross {
+				crossInU = amountInU
+			}
+		}
+		carryRows.Close()
+		msg := fmt.Sprintf(`comp %f cross %f`, compInU, crossInU)
+		util.Notice(msg)
 		if model.AppConfig.Handle == `1` {
-			equalAccounts()
+			if compInU > 55000 && compInU/(compInU+crossInU) > 0.33 {
+				model.AppConfig.Handle = `0`
+				title := `comp too much set handle 0`
+				util.Notice(title)
+				api.SendMails(title, msg)
+			} else {
+				equalAccounts()
+			}
 		}
 		checkSetCrossing(false)
 		util.Notice(`before sleep 0`)

@@ -67,7 +67,11 @@ func Test_ws(t *testing.T) {
 func Test_getCommonMarketInfos(t *testing.T) {
 	model.NewConfig()
 	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
-	api.InitCrossMarketInfos([]string{model.Ftx})
+	markets := api.GetMarketInfos(model.Gate)
+	for s, info := range markets {
+		fmt.Println(fmt.Sprintf(`%s %s %s`, s, info.Name, info.Market))
+	}
+	api.InitCrossMarketInfos([]string{model.Gate})
 	//api.InitCrossMarketInfos([]string{model.OKEX, model.Ftx, model.Gate})
 }
 
