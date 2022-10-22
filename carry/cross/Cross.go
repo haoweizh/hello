@@ -51,6 +51,7 @@ func createContractMarket(key, secret, market string) (cm *contractMarket) {
 		cm.collateralsAvailable = availableU
 	} else {
 		util.Notice(`fail to createContractMarket %s $s`, market, key)
+		return nil
 	}
 	return
 }
@@ -79,6 +80,7 @@ func createSpotMarket(key, secret, market string) (sm *spotMarket) {
 		}
 	} else {
 		util.Notice(`fail to createSpotMarket %s %s`, market, key)
+		return nil
 	}
 	return
 }
