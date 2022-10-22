@@ -480,24 +480,39 @@ func GetPositions(key, secret, market string) (success bool, positions []*model.
 }
 
 func MustPlaceOrder(key, secret, orderSide, orderType, market, symbol, orderParam,
-	refreshType string, price, triggerPrice, amount float64, setting *model.Setting) (order *model.Order) {
+	refreshType string, price, triggerPrice, amount float64, setting *model.Setting) (orders []*model.Order) {
 	retry := 10
 	for i := 0; i < retry; i++ {
-		order = PlaceOrder(key, secret, orderSide, orderType, market, symbol,
-			orderParam, price, triggerPrice, amount, false, nil, setting)
-		if order != nil && order.OrderId != `` && order.Status != model.CarryStatusFail {
-			break
+		marketInfo := model.GetMarketInfo(market, symbol)
+		if marketInfo == nil {
+			util.Notice(`fail to get market info when must place %s %s`, market, symbol)
+			continue
+		}
+		if marketInfo.SizeMax > 0 && amount > marketInfo.SizeMax {
+			ordersLeft := MustPlaceOrder(key, secret, orderSide, orderType, market, symbol, orderParam, refreshType, price, triggerPrice, amount/2, setting)
+			orders = MustPlaceOrder(key, secret, orderSide, orderType, market, symbol, orderParam, refreshType, price, triggerPrice, amount/2, setting)
+			if ordersLeft == nil || len(ordersLeft) == 0 {
+				return orders
+			} else if orders == nil || len(orders) == 0 {
+				return ordersLeft
+			}
+			for _, order := range ordersLeft {
+				orders = append(orders, order)
+			}
+			return orders
 		} else {
-			//if market == model.OKSwap && order != nil && order.ErrCode == `35010` {
-			//	amountType = model.AmountTypeNew
-			//	RefreshAccount(key, secret, model.OKSwap)
-			//}
-			time.Sleep(time.Second * 3)
-			util.Notice(fmt.Sprintf(`fail to place order %d time, re order`, i))
+			order := PlaceOrder(key, secret, orderSide, orderType, market, symbol,
+				orderParam, price, triggerPrice, amount, false, nil, setting)
+			if order != nil && order.OrderId != `` && order.Status != model.CarryStatusFail {
+				order.RefreshType = refreshType
+				return []*model.Order{order}
+			} else {
+				time.Sleep(time.Second * 3)
+				util.Notice(fmt.Sprintf(`fail to place order %d time, re order`, i))
+			}
 		}
 	}
-	order.RefreshType = refreshType
-	return order
+	return orders
 }
 
 // PlaceOrder orderSide: OrderSideBuy OrderSideSell OrderSideLiquidateLong OrderSideLiquidateShort

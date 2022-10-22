@@ -17,7 +17,7 @@ type TurtleData struct {
 	highDays10, lowDays10, highDays20, lowDays20, highDays3, lowDays3 float64
 	n, amount                                                         float64
 	symbol                                                            string
-	orderLong, orderShort                                             *model.Order
+	orderLong, orderShort                                             []*model.Order
 }
 
 const turtleTriggerDelta = 0.01
@@ -72,7 +72,7 @@ func adjustPosHolding(key, secret string, setting *model.Setting) {
 	for _, pos := range marketPos {
 		posMap[strings.ToUpper(pos.Currency)] = pos
 	}
-	if posMap[setting.Symbol] != nil {
+	if posMap[setting.Symbol] != nil { //setting.Chance和pos.Holding相乘小于零代表方向相反，此时设置为0
 		if float64(setting.Chance)*posMap[setting.Symbol].Holding <= 0 {
 			util.Notice(`update turtle side %s %s %d %f %f`,
 				setting.Market, setting.Symbol, setting.Chance, posMap[setting.Symbol].Holding, setting.GridAmount)
@@ -179,16 +179,27 @@ func checkTurtleOrders(key, secret string, setting *model.Setting, currentN floa
 			return
 		}
 		for _, order := range orders {
-			if (turtleData.orderLong != nil && turtleData.orderLong.OrderId == order.OrderId &&
-				(currentN < setting.AmountLimit || setting.Chance < 0)) ||
-				(turtleData.orderShort != nil && turtleData.orderShort.OrderId == order.OrderId &&
-					(currentN > -1*setting.AmountLimit || setting.Chance > 0)) {
-				continue
+			needCancel := true
+			if turtleData.orderLong != nil {
+				for _, long := range turtleData.orderLong {
+					if order.OrderId == long.OrderId && (currentN < setting.AmountLimit || setting.Chance < 0) {
+						needCancel = false
+					}
+				}
 			}
-			result := api.MustCancel(key, secret, setting.Market, setting.Symbol, order.OrderType, order.OrderId, true)
-			util.Notice(`cancel extra turtle order %s %s %s %s return %v`,
-				setting.Market, setting.Symbol, order.OrderType, order.OrderId, result)
-			time.Sleep(time.Second)
+			if turtleData.orderShort != nil {
+				for _, short := range turtleData.orderShort {
+					if order.OrderId == short.OrderId && (currentN > -1*setting.AmountLimit || setting.Chance > 0) {
+						needCancel = false
+					}
+				}
+			}
+			if needCancel {
+				result := api.MustCancel(key, secret, setting.Market, setting.Symbol, order.OrderType, order.OrderId, true)
+				util.Notice(`cancel extra turtle order %s %s %s %s return %v`,
+					setting.Market, setting.Symbol, order.OrderType, order.OrderId, result)
+				time.Sleep(time.Second)
+			}
 		}
 	}
 	return
@@ -348,11 +359,19 @@ func setTurtleOrderStatus(function, market, symbol, orderId, status string) {
 		return
 	}
 	turtleData := GetTurtleData(account.Key, account.Secret, setting)
-	if turtleData != nil && turtleData.orderLong != nil && turtleData.orderLong.OrderId == orderId {
-		turtleData.orderLong.Status = status
+	if turtleData != nil && turtleData.orderLong != nil {
+		for _, order := range turtleData.orderLong {
+			if order.OrderId == orderId {
+				order.Status = status
+			}
+		}
 	}
-	if turtleData != nil && turtleData.orderShort != nil && turtleData.orderShort.OrderId == orderId {
-		turtleData.orderShort.Status = status
+	if turtleData != nil && turtleData.orderShort != nil {
+		for _, order := range turtleData.orderShort {
+			if order.OrderId == orderId {
+				order.Status = status
+			}
+		}
 	}
 }
 
@@ -362,29 +381,36 @@ func checkTurtleBreak(key, secret string, setting *model.Setting, turtleData *Tu
 	checked = false
 	if now.After(turtleData.checkTimeBreak) {
 		turtleData.checkTimeBreak = util.GetNow()
-		if turtleData.orderLong != nil && (turtleData.orderLong.Status == model.CarryStatusSuccess ||
-			(turtleData.orderLong.TriggerPrice > 0 && turtleData.orderLong.TriggerPrice <= tick.Bids[0].Price)) {
+		var orderLong, orderShort *model.Order
+		if turtleData.orderLong != nil && len(turtleData.orderLong) > 0 {
+			orderLong = turtleData.orderLong[0]
+		}
+		if turtleData.orderShort != nil && len(turtleData.orderShort) > 0 {
+			orderShort = turtleData.orderShort[0]
+		}
+		if turtleData.orderLong != nil && (orderLong.Status == model.CarryStatusSuccess ||
+			(orderLong.TriggerPrice > 0 && orderLong.TriggerPrice <= tick.Bids[0].Price)) {
 			util.Notice(fmt.Sprintf(`-----chance %s %s %d bid-ask %f %f short %f`,
-				setting.Market, setting.Symbol, setting.Chance, tick.Bids[0].Price, tick.Asks[0].Price, turtleData.orderLong.TriggerPrice))
-			order := api.QueryOrderById(key, secret, setting.Market, setting.Symbol, turtleData.orderLong.OrderType, turtleData.orderLong.OrderId)
+				setting.Market, setting.Symbol, setting.Chance, tick.Bids[0].Price, tick.Asks[0].Price, orderLong.TriggerPrice))
+			order := api.QueryOrderById(key, secret, setting.Market, setting.Symbol, orderLong.OrderType, orderLong.OrderId)
 			if order != nil && order.Status == model.CarryStatusSuccess {
 				turtleData.breakLong = true
 				util.Notice(fmt.Sprintf(`-----order break long %s %s %d bid-ask %f %f short %f %v %v`,
 					setting.Market, setting.Symbol, setting.Chance, tick.Bids[0].Price, tick.Asks[0].Price,
-					turtleData.orderLong.Price, turtleData.breakLong, turtleData.waitBreakLong))
+					orderLong.Price, turtleData.breakLong, turtleData.waitBreakLong))
 			}
 			checked = true
 		}
-		if turtleData.orderShort != nil && (turtleData.orderShort.Status == model.CarryStatusSuccess ||
-			(turtleData.orderShort.TriggerPrice > 0 && turtleData.orderShort.TriggerPrice >= tick.Asks[0].Price)) {
+		if turtleData.orderShort != nil && (orderShort.Status == model.CarryStatusSuccess ||
+			(orderShort.TriggerPrice > 0 && orderShort.TriggerPrice >= tick.Asks[0].Price)) {
 			util.Notice(fmt.Sprintf(`-----chance %s %s %d bid-ask %f %f long %f`,
-				setting.Market, setting.Symbol, setting.Chance, tick.Bids[0].Price, tick.Asks[0].Price, turtleData.orderShort.TriggerPrice))
-			order := api.QueryOrderById(key, secret, setting.Market, setting.Symbol, turtleData.orderShort.OrderType, turtleData.orderShort.OrderId)
+				setting.Market, setting.Symbol, setting.Chance, tick.Bids[0].Price, tick.Asks[0].Price, orderShort.TriggerPrice))
+			order := api.QueryOrderById(key, secret, setting.Market, setting.Symbol, orderShort.OrderType, orderShort.OrderId)
 			if order != nil && order.Status == model.CarryStatusSuccess {
 				turtleData.breakShort = true
 				util.Notice(fmt.Sprintf(`-----order break short %s %s %d bid-ask %f %f long %f %v %v`,
 					setting.Market, setting.Symbol, setting.Chance, tick.Bids[0].Price, tick.Asks[0].Price,
-					turtleData.orderShort.Price, turtleData.breakShort, turtleData.waitBreakShort))
+					orderShort.Price, turtleData.breakShort, turtleData.waitBreakShort))
 			}
 			checked = true
 		}
@@ -400,36 +426,27 @@ func handleBreak(key, secret string, setting *model.Setting, turtleData *TurtleD
 	turtleData.waitBreakLong = false
 	turtleData.waitBreakShort = false
 	orderQuery := turtleData.orderShort
+	orderCancel := turtleData.orderLong
 	if orderSide == model.OrderSideBuy {
 		orderQuery = turtleData.orderLong
+		orderCancel = turtleData.orderShort
 	}
-	if orderQuery != nil {
+	if orderQuery != nil && len(orderQuery) > 0 {
 		time.Sleep(time.Second * 3)
-		util.Notice(fmt.Sprintf(`query turtle break %s %s`, orderSide, orderQuery.OrderId))
-		setting.PriceX = orderQuery.TriggerPrice
+		util.Notice(fmt.Sprintf(`query turtle break %s %s %s %d`,
+			setting.Market, setting.Symbol, orderSide, len(orderQuery)))
+		setting.PriceX = orderQuery[0].TriggerPrice
 		turtleData.orderLong = nil
 		turtleData.orderShort = nil
-		if orderSide == model.OrderSideBuy {
-			if turtleData.orderShort != nil {
-				temp := api.QueryOrderById(key, secret, setting.Market, setting.Symbol, turtleData.orderShort.
-					OrderType, turtleData.orderShort.OrderId)
+		if orderCancel != nil {
+			for _, order := range orderCancel {
+				temp := api.QueryOrderById(key, secret, setting.Market, setting.Symbol, order.OrderType, order.OrderId)
 				if temp != nil && temp.Status == model.CarryStatusWorking {
-					go api.MustCancel(key, secret, turtleData.orderShort.Market, turtleData.orderShort.Symbol,
-						turtleData.orderShort.OrderType, turtleData.orderShort.OrderId, true)
+					go api.MustCancel(key, secret, order.Market, order.Symbol, order.OrderType, order.OrderId, true)
 				}
 			}
-			util.Notice(fmt.Sprintf(`clear %s %s shorts %v`, setting.Market, setting.Symbol, turtleData.orderShort))
-		} else {
-			if turtleData.orderLong != nil {
-				temp := api.QueryOrderById(key, secret, setting.Market, setting.Symbol, turtleData.orderLong.OrderType,
-					turtleData.orderLong.OrderId)
-				if temp != nil && temp.Status == model.CarryStatusWorking {
-					go api.MustCancel(key, secret, turtleData.orderLong.Market, turtleData.orderLong.Symbol,
-						turtleData.orderLong.OrderType, turtleData.orderLong.OrderId, true)
-				}
-			}
-			util.Notice(fmt.Sprintf(`clear %s %s long %v`, setting.Market, setting.Symbol, turtleData.orderLong))
 		}
+		util.Notice(fmt.Sprintf(`clear %s %s opp-%s %v`, setting.Market, setting.Symbol, orderSide, orderCancel))
 	}
 }
 
@@ -456,26 +473,29 @@ func placeTurtleOrders(key, secret string, turtleData *TurtleData, setting *mode
 				setting.Market, setting.Symbol, setting.Chance, amount, setting.PriceX, currentN, setting.AmountLimit,
 				orderSide, turtleData.highDays20, turtleData.highDays10, turtleData.lowDays20,
 				turtleData.lowDays10, setting.OpenShortMargin))
-			var order *model.Order
 			priceOut := false
 			if priceLong <= tick.Asks[0].Price {
-				order = api.MustPlaceOrder(key, secret, orderSide, model.OrderTypeLimit, setting.Market, setting.Symbol, ``,
+				turtleData.orderLong = api.MustPlaceOrder(key, secret, orderSide, model.OrderTypeLimit, setting.Market, setting.Symbol, ``,
 					model.FunctionTurtle, priceLong*(1+turtleTriggerDelta), priceLong, amount, setting)
 				priceOut = true
 			} else {
-				order = api.MustPlaceOrder(key, secret, orderSide, typeLong, setting.Market, setting.Symbol, ``, model.FunctionTurtle,
+				turtleData.orderLong = api.MustPlaceOrder(key, secret, orderSide, typeLong, setting.Market, setting.Symbol, ``, model.FunctionTurtle,
 					priceLong*(1+turtleTriggerDelta), priceLong, amount, setting)
 			}
-			go model.AppDB.Save(order)
-			if order != nil && order.OrderId != `` && order.Status != model.CarryStatusFail {
-				if !liquidation {
-					turtleData.amount = order.Amount
-				}
-				turtleData.orderLong = order
+			if turtleData.orderLong != nil {
+				turtleData.amount = 0
 				turtleData.waitBreakLong = true
 				turtleData.breakLong = false
 				if priceOut {
 					turtleData.breakLong = true
+				}
+				for _, order := range turtleData.orderLong {
+					go model.AppDB.Save(order)
+					if order.OrderId != `` && order.Status != model.CarryStatusFail {
+						if !liquidation {
+							turtleData.amount += order.Amount
+						}
+					}
 				}
 			}
 		}
@@ -499,26 +519,29 @@ func placeTurtleOrders(key, secret string, turtleData *TurtleData, setting *mode
 				setting.Market, setting.Symbol, setting.Chance, amount, setting.PriceX, currentN, setting.AmountLimit,
 				orderSide, turtleData.highDays20, turtleData.highDays10, turtleData.lowDays20,
 				turtleData.lowDays10, setting.OpenShortMargin))
-			var order *model.Order
 			priceOut := false
 			if priceShort >= tick.Bids[0].Price {
-				order = api.MustPlaceOrder(key, secret, orderSide, model.OrderTypeLimit, setting.Market, setting.Symbol, ``,
+				turtleData.orderShort = api.MustPlaceOrder(key, secret, orderSide, model.OrderTypeLimit, setting.Market, setting.Symbol, ``,
 					model.FunctionTurtle, priceShort*(1-turtleTriggerDelta), priceShort, amount, setting)
 				priceOut = true
 			} else {
-				order = api.MustPlaceOrder(key, secret, orderSide, typeShort, setting.Market, setting.Symbol, ``,
+				turtleData.orderShort = api.MustPlaceOrder(key, secret, orderSide, typeShort, setting.Market, setting.Symbol, ``,
 					model.FunctionTurtle, priceShort*(1-turtleTriggerDelta), priceShort, amount, setting)
 			}
-			go model.AppDB.Save(order)
-			if order != nil && order.OrderId != `` && order.Status != model.CarryStatusFail {
-				if !liquidation {
-					turtleData.amount = order.Amount
-				}
-				turtleData.orderShort = order
+			if turtleData.orderShort != nil {
+				turtleData.amount = 0
 				turtleData.waitBreakShort = true
 				turtleData.breakShort = false
 				if priceOut {
 					turtleData.breakShort = true
+				}
+				for _, order := range turtleData.orderShort {
+					go model.AppDB.Save(order)
+					if order.OrderId != `` && order.Status != model.CarryStatusFail {
+						if !liquidation {
+							turtleData.amount += order.Amount
+						}
+					}
 				}
 			}
 		}

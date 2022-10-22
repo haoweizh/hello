@@ -137,8 +137,9 @@ func getGridPos(key, secret string, setting *model.Setting) (gridPos *GridPos) {
 			amount = math.Min(2*gridPos.amount, gridPos.amount+setting.GridAmount)
 			//liquidateAmount = liquidateAmount + gridPos.amount - amount
 		}
-		order := api.MustPlaceOrder(key, secret, model.OrderSideSell, model.OrderTypeLimit, setting.Market, setting.Symbol,
+		orders = api.MustPlaceOrder(key, secret, model.OrderSideSell, model.OrderTypeLimit, setting.Market, setting.Symbol,
 			``, model.FunctionGrid, gridPos.pos[i], gridPos.pos[i], amount, setting)
+		order := orders[0]
 		order.GridPos = int64(i)
 		dayGridPos[yesterdayStr][setting.Market][setting.Symbol].orders[i] = order
 		model.AppDB.Save(order)
@@ -151,8 +152,9 @@ func getGridPos(key, secret string, setting *model.Setting) (gridPos *GridPos) {
 			amount = math.Min(2*gridPos.amount, gridPos.amount-setting.GridAmount)
 			//liquidateAmount = liquidateAmount + amount - gridPos.amount
 		}
-		order := api.MustPlaceOrder(key, secret, model.OrderSideBuy, model.OrderTypeLimit, setting.Market, setting.Symbol,
+		orders = api.MustPlaceOrder(key, secret, model.OrderSideBuy, model.OrderTypeLimit, setting.Market, setting.Symbol,
 			``, model.FunctionGrid, gridPos.pos[i], gridPos.pos[i], amount, setting)
+		order := orders[0]
 		order.GridPos = int64(i)
 		dayGridPos[yesterdayStr][setting.Market][setting.Symbol].orders[i] = order
 		model.AppDB.Save(order)
@@ -203,8 +205,8 @@ var ProcessSimpleGrid = func(setting *model.Setting, tick *model.BidAsk) {
 			orderR := api.MustPlaceOrder(account.Key, account.Secret, model.OrderSideSell, model.OrderTypeLimit,
 				setting.Market, setting.Symbol, ``, model.FunctionGrid,
 				gridPos.pos[setting.Chance], gridPos.pos[setting.Chance], gridPos.amount, setting)
-			orderR.GridPos = setting.Chance
-			gridPos.orders[setting.Chance] = orderR
+			orderR[0].GridPos = setting.Chance
+			gridPos.orders[setting.Chance] = orderR[0]
 			setting.Chance = i
 			setting.PriceX = gridPos.orders[i].Price
 			setting.GridAmount += order.Amount
@@ -217,7 +219,7 @@ var ProcessSimpleGrid = func(setting *model.Setting, tick *model.BidAsk) {
 			gridPos.orders[i] = nil
 			util.Notice(fmt.Sprintf(`order success %s %s %s %s %s at %d %f with %f, new order %s %s at %d %f`,
 				order.Status, order.Market, order.Symbol, order.OrderSide, order.OrderId, i, order.Price, order.Amount,
-				orderR.OrderSide, orderR.OrderId, orderR.GridPos, orderR.Amount))
+				orderR[0].OrderSide, orderR[0].OrderId, orderR[0].GridPos, orderR[0].Amount))
 		}
 	}
 	if setting.Chance+1 < int64(len(gridPos.pos)) {
@@ -237,8 +239,8 @@ var ProcessSimpleGrid = func(setting *model.Setting, tick *model.BidAsk) {
 			orderS := api.MustPlaceOrder(account.Key, account.Secret, model.OrderSideBuy, model.OrderTypeLimit,
 				setting.Market, setting.Symbol, ``, model.FunctionGrid, gridPos.pos[setting.Chance],
 				gridPos.pos[setting.Chance], gridPos.amount, setting)
-			orderS.GridPos = setting.Chance
-			gridPos.orders[setting.Chance] = orderS
+			orderS[0].GridPos = setting.Chance
+			gridPos.orders[setting.Chance] = orderS[0]
 			setting.Chance = i
 			setting.PriceX = gridPos.orders[i].Price
 			setting.GridAmount -= order.Amount
@@ -251,7 +253,7 @@ var ProcessSimpleGrid = func(setting *model.Setting, tick *model.BidAsk) {
 			gridPos.orders[i] = nil
 			util.Notice(fmt.Sprintf(`order success %s %s %s %s %s at %d %f with %f, new order %s %s at %d %f`,
 				order.Status, order.Market, order.Symbol, order.OrderSide, order.OrderId, i, order.Price, order.Amount,
-				orderS.OrderSide, orderS.OrderId, orderS.GridPos, orderS.Amount))
+				orderS[0].OrderSide, orderS[0].OrderId, orderS[0].GridPos, orderS[0].Amount))
 		}
 	}
 	if gridPos.orderLiquidate != nil {
