@@ -88,6 +88,9 @@ func (metricManager *MetricManager) AddTick(market, symbol string, current time.
 		tickMetric = &TickMetric{priceLow: 0, priceHigh: 0}
 	} else if value != nil {
 		tickMetric = value.(*TickMetric)
+		if tickMetric.countAll > 10000 {
+			tickMetric = &TickMetric{priceLow: 0, priceHigh: 0}
+		}
 	}
 	now := int(current.UnixNano() / int64(time.Millisecond))
 	between := 0

@@ -111,12 +111,8 @@ func (markets *Markets) SetBidAsk(symbol, marketName string, bidAsk *BidAsk) boo
 	oldBidAsk := value.(*sync.Map)
 	last, _ := oldBidAsk.Load(marketName)
 	if last == nil || last.(*BidAsk).Ts <= bidAsk.Ts {
-		//if last != nil && last.Bids[0].Price == bidAsk.Bids[0].Price && last.Bids[0].Amount == bidAsk.Bids[0].Amount &&
-		//	last.Asks[0].Price == bidAsk.Asks[0].Price && last.Asks[0].Amount == bidAsk.Asks[0].Amount && symbol == `DMG/USD` {
-		//	util.Info(fmt.Sprintf(`%s %s same as before`, marketName, symbol))
-		//}
 		oldBidAsk.Store(marketName, bidAsk)
-		if last != nil {
+		if last != nil && time.Now().Minute() > 55 {
 			go AppMetric.AddTick(marketName, symbol, util.GetNow(), last.(*BidAsk), bidAsk)
 		}
 		return true
