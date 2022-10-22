@@ -716,19 +716,20 @@ func GetMarketInfos(market string) (marketInfo map[string]*model.MarketInfo) {
 }
 
 // FilterCross
+// 由于gate下线暂时不平仓的币 BCD OXY CRU
 // 搬砖过滤币种 AMPL IOTA REEF MIR SOS
 // 某些主流币 BTC ETH LINK
 // 币种对不上 REAL, DFL, QI, WSB, TRADE,FAME,BIFI,TON,BOX,PAY
-// 法币 GBP CUSDT TRYB``BRZ``CAD``EUR` `SUSD` `USDC` `TUSD`USDT EURT USD BUSD
+// 法币 GBP CUSDT TRYB``BRZ``CAD``EUR` `SUSD` `USDC` `TUSD`USDT EURT USD BUSD LDBUSD LDUSDT
 // 平台币 `GT` `FTT` `BNB` `OKB` MX
 // ftx预测`TRUMP``BOLSONARO`
 func FilterCross(market, symbol string) bool {
 	filterCoins := map[string]bool{`AMPL`: true, `IOTA`: true, `REEF`: true, `MIR`: true, `LUNA`: true, // `UST`: true,
 		`BTC`: true, `ETH`: true, `LINK`: true, `SOS`: true,
 		`REAL`: true, `DFL`: true, `QI`: true, `WSB`: true, `TRADE`: true, `FAME`: true, `BIFI`: true, `TON`: true,
-		`BOX`: true, `PAY`: true, `GTC`: true,
+		`BOX`: true, `PAY`: true, `GTC`: true, `OXY`: true, `CRU`: true, `BCD`: true,
 		`GBP`: true, `CUSDT`: true, `TRYB`: true, `BRZ`: true, `CAD`: true, `EUR`: true, `SUSD`: true, `USDC`: true,
-		`TUSD`: true, `USDT`: true, `EURT`: true, `USD`: true, `BUSD`: true,
+		`TUSD`: true, `USDT`: true, `EURT`: true, `USD`: true, `BUSD`: true, `LDUSDT`: true, `LDBUSD`: true,
 		`GT`: true, `FTT`: true, `BNB`: true, `OKB`: true, `MX`: true, `TRUMP`: true, `BOLSONARO`: true, `DEFI`: true}
 	_, _, coin, _ := model.GetFromStandard(market, symbol)
 	if filterCoins[coin] {
