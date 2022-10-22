@@ -379,7 +379,6 @@ func equalAccounts() {
 	waitEqual := make(map[int]bool)
 	equalChannel := make(chan int, 1)
 	markets := api.GetMarkets()
-	settingAbsent := ``
 	//needWaitEqual := false // 是否需要进入等待环节
 	for i := 0; i < api.GetCrossLen(); i++ {
 		accounts := make(map[string]*model.Account)
@@ -389,13 +388,6 @@ func equalAccounts() {
 		}
 		waitEqual[i] = true
 		go equalAccount(i, equalChannel, accounts)
-		str := CheckSettingAbsent(accounts)
-		if len(str) > 0 {
-			settingAbsent += str + "\n"
-		}
-	}
-	if util.GetNow().Minute() == 30 && len(settingAbsent) > 0 {
-		api.SendMails(`setting absent`, settingAbsent)
 	}
 	for true {
 		index := <-equalChannel
@@ -413,7 +405,8 @@ func equalAccounts() {
 	util.Notice(`...... exit clearing cross all`)
 }
 
-func CheckSettingAbsent(accounts map[string]*model.Account) (msg string) {
+func CheckSettingAbsent(accounts map[string]*model.Account) (absents map[string]map[string]float64) {
+	absents = make(map[string]map[string]float64)
 	for _, account := range accounts {
 		var sm *spotMarket
 		var cm *contractMarket
@@ -429,14 +422,16 @@ func CheckSettingAbsent(accounts map[string]*model.Account) (msg string) {
 		} else {
 			sm = createSpotMarket(account.Key, account.Secret, account.Market)
 			cm = createContractMarket(account.Key, account.Secret, account.Market)
-			util.Notice(`check absent create %s %s`, account.Key, account.Market)
 		}
 		if sm != nil {
 			market := sm.market
 			for symbol := range sm.balances {
 				util.Notice(fmt.Sprintf(`check absent %s %s %f`, market, symbol, sm.balances[symbol].Amount))
 				if !api.FilterCross(market, symbol) && api.GetSetting(model.FunctionCross, market, symbol) == nil && sm.balances[symbol].Amount > 0 {
-					msg += fmt.Sprintf(` %s %s`, market, symbol)
+					if absents[market] == nil {
+						absents[market] = make(map[string]float64)
+					}
+					absents[market][symbol] = sm.balances[symbol].Amount
 				}
 			}
 		}
@@ -445,7 +440,7 @@ func CheckSettingAbsent(accounts map[string]*model.Account) (msg string) {
 			for symbol := range cm.positions {
 				util.Notice(fmt.Sprintf(`check absent %s %s %f`, market, symbol, cm.positions[symbol].Holding))
 				if !api.FilterCross(market, symbol) && api.GetSetting(model.FunctionCross, market, symbol) == nil {
-					msg += fmt.Sprintf(` %s %s`, market, symbol)
+					absents[market][symbol] = cm.positions[symbol].Holding
 				}
 			}
 		}

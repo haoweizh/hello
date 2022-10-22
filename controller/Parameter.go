@@ -86,19 +86,28 @@ func WsPage(c *gin.Context) {
 }
 
 func checkCrossAbsent(c *gin.Context) {
+	indexStr := c.Query(`index`)
+	if len(indexStr) == 0 {
+		indexStr = `0`
+	}
+	index, _ := strconv.Atoi(indexStr)
 	settingAbsent := "有持仓而缺失的币种范围:\n"
-	for i := 0; i < api.GetCrossLen(); i++ {
-		accounts := make(map[string]*model.Account)
-		indexAccounts := api.GetAccounts(i)
-		markets := api.GetMarkets()
-		for _, market := range markets {
-			accounts[market] = indexAccounts[market]
-		}
-		str := cross.CheckSettingAbsent(accounts)
-		if len(str) > 0 {
-			settingAbsent += str + "\n"
+	//for i := 0; i < api.GetCrossLen(); i++ {
+	accounts := make(map[string]*model.Account)
+	indexAccounts := api.GetAccounts(index)
+	markets := api.GetMarkets()
+	for _, market := range markets {
+		accounts[market] = indexAccounts[market]
+	}
+	absents := cross.CheckSettingAbsent(accounts)
+	if len(absents) > 0 {
+		for market, value := range absents {
+			for symbol, item := range value {
+				settingAbsent += fmt.Sprintf("%s %s持仓 %f\n", market, symbol, item)
+			}
 		}
 	}
+	//}
 	c.String(http.StatusOK, settingAbsent)
 }
 
