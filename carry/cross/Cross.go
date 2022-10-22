@@ -429,6 +429,7 @@ func CheckSettingAbsent(accounts map[string]*model.Account) (msg string) {
 		} else {
 			sm = createSpotMarket(account.Key, account.Secret, account.Market)
 			cm = createContractMarket(account.Key, account.Secret, account.Market)
+			util.Notice(`check absent create %s %s`, account.Key, account.Market)
 		}
 		if sm != nil {
 			market := sm.market
