@@ -415,25 +415,32 @@ func equalAccounts() {
 
 func CheckSettingAbsent(accounts map[string]*model.Account) (msg string) {
 	for _, account := range accounts {
-		sm, _ := spotMarkets.Load(account.Key)
-		if sm == nil && model.AppConfig.Handle != `1` {
+		var sm *spotMarket
+		var cm *contractMarket
+		if model.AppConfig.Handle != `1` {
+			value, ok := spotMarkets.Load(account.Key)
+			if ok && value != nil {
+				sm = value.(*spotMarket)
+			}
+			value, ok = contractMarkets.Load(account.Key)
+			if ok && value != nil {
+				cm = value.(*contractMarket)
+			}
+		} else {
 			sm = createSpotMarket(account.Key, account.Secret, account.Market)
+			cm = createContractMarket(account.Key, account.Secret, account.Market)
 		}
 		if sm != nil {
-			market := sm.(*spotMarket).market
-			for symbol := range sm.(*spotMarket).balances {
+			market := sm.market
+			for symbol := range sm.balances {
 				if !api.FilterCross(market, symbol) && api.GetSetting(model.FunctionCross, market, symbol) == nil {
 					msg += fmt.Sprintf(` %s %s`, market, symbol)
 				}
 			}
 		}
-		cm, _ := contractMarkets.Load(account.Key)
-		if cm == nil && model.AppConfig.Handle != `1` {
-			cm = createContractMarket(account.Key, account.Secret, account.Market)
-		}
 		if cm != nil {
-			market := cm.(*contractMarket).market
-			for symbol := range cm.(*contractMarket).positions {
+			market := cm.market
+			for symbol := range cm.positions {
 				if !api.FilterCross(market, symbol) && api.GetSetting(model.FunctionCross, market, symbol) == nil {
 					msg += fmt.Sprintf(` %s %s`, market, symbol)
 				}
