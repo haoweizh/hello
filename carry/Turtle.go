@@ -455,12 +455,10 @@ func placeTurtleOrders(key, secret string, turtleData *TurtleData, setting *mode
 	amountLimit := int64(setting.AmountLimit)
 	coinLimit := int64(setting.OpenShortMargin)
 	if turtleData.orderLong == nil && ((currentN < amountLimit && setting.Chance < coinLimit) || setting.Chance < 0) {
-		liquidation := false
 		orderSide := model.OrderSideBuy
 		typeLong := model.OrderTypeStop
 		amount := turtleData.amount
 		if setting.Chance < 0 {
-			liquidation = true
 			amount = setting.GridAmount
 			util.Notice(fmt.Sprintf(
 				`平空 %s %s chance:%d amount:%f currentN:%d short-long:%f %f px:%f n:%f`,
@@ -483,7 +481,6 @@ func placeTurtleOrders(key, secret string, turtleData *TurtleData, setting *mode
 					priceLong*(1+turtleTriggerDelta), priceLong, amount, setting)
 			}
 			if turtleData.orderLong != nil {
-				turtleData.amount = 0
 				turtleData.waitBreakLong = true
 				turtleData.breakLong = false
 				if priceOut {
@@ -491,22 +488,15 @@ func placeTurtleOrders(key, secret string, turtleData *TurtleData, setting *mode
 				}
 				for _, order := range turtleData.orderLong {
 					go model.AppDB.Save(order)
-					if order.OrderId != `` && order.Status != model.CarryStatusFail {
-						if !liquidation {
-							turtleData.amount += order.Amount
-						}
-					}
 				}
 			}
 		}
 	}
 	if turtleData.orderShort == nil && ((currentN > -1*amountLimit && setting.Chance > -1*coinLimit) || setting.Chance > 0) {
-		liquidation := false
 		orderSide := model.OrderSideSell
 		typeShort := model.OrderTypeStop
 		amount := turtleData.amount
 		if setting.Chance > 0 {
-			liquidation = true
 			amount = setting.GridAmount
 			util.Notice(fmt.Sprintf(
 				`平多 %s %s chance:%d amount:%f currentN:%d short-long:%f %f px:%f n:%f`,
@@ -529,7 +519,6 @@ func placeTurtleOrders(key, secret string, turtleData *TurtleData, setting *mode
 					model.FunctionTurtle, priceShort*(1-turtleTriggerDelta), priceShort, amount, setting)
 			}
 			if turtleData.orderShort != nil {
-				turtleData.amount = 0
 				turtleData.waitBreakShort = true
 				turtleData.breakShort = false
 				if priceOut {
@@ -537,11 +526,6 @@ func placeTurtleOrders(key, secret string, turtleData *TurtleData, setting *mode
 				}
 				for _, order := range turtleData.orderShort {
 					go model.AppDB.Save(order)
-					if order.OrderId != `` && order.Status != model.CarryStatusFail {
-						if !liquidation {
-							turtleData.amount += order.Amount
-						}
-					}
 				}
 			}
 		}
