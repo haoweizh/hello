@@ -440,6 +440,9 @@ func CheckSettingAbsent(accounts map[string]*model.Account) (absents map[string]
 			for symbol := range cm.positions {
 				util.Notice(fmt.Sprintf(`check absent %s %s %f`, market, symbol, cm.positions[symbol].Holding))
 				if !api.FilterCross(market, symbol) && api.GetSetting(model.FunctionCross, market, symbol) == nil {
+					if absents[market] == nil {
+						absents[market] = make(map[string]float64)
+					}
 					absents[market][symbol] = cm.positions[symbol].Holding
 				}
 			}
