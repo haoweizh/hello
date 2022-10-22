@@ -337,8 +337,10 @@ func ClearCross() {
 				time.Sleep(time.Millisecond * 10)
 			}
 		}
+		today := util.GetNow()
+		today = time.Date(today.Year(), today.Month(), today.Day(), 0, 0, 0, 0, today.Location())
 		carryRows, _ := model.AppDB.Model(model.Order{}).Select(`sum(price*abs(amount)),refresh_type`).
-			Where(`order_time>?`, util.GetNow()).Group(`refresh_type`).Rows()
+			Where(`order_time>?`, today).Group(`refresh_type`).Rows()
 		var compInU, crossInU float64
 		for carryRows.Next() {
 			var amountInU float64
@@ -652,7 +654,7 @@ func equalCoin(coin string, statuses []*CarryStatus) (isEqual bool, holdingInU f
 // ProcessCross setting.Chance<0时该币种只关仓
 // setting.OpenShortMargin CloseShortMargin不等于0时作为开关舱标准价格，否则使用通用价格
 var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
-	if model.AppConfig.Handle == `2` {
+	if !doCross && model.AppConfig.Handle == `2` {
 		go ClearCross()
 		doCross = true
 	}
