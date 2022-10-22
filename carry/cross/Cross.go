@@ -433,7 +433,8 @@ func CheckSettingAbsent(accounts map[string]*model.Account) (msg string) {
 		if sm != nil {
 			market := sm.market
 			for symbol := range sm.balances {
-				if !api.FilterCross(market, symbol) && api.GetSetting(model.FunctionCross, market, symbol) == nil {
+				util.Notice(fmt.Sprintf(`check absent %s %s %f`, market, symbol, sm.balances[symbol].Amount))
+				if !api.FilterCross(market, symbol) && api.GetSetting(model.FunctionCross, market, symbol) == nil && sm.balances[symbol].Amount > 0 {
 					msg += fmt.Sprintf(` %s %s`, market, symbol)
 				}
 			}
@@ -441,6 +442,7 @@ func CheckSettingAbsent(accounts map[string]*model.Account) (msg string) {
 		if cm != nil {
 			market := cm.market
 			for symbol := range cm.positions {
+				util.Notice(fmt.Sprintf(`check absent %s %s %f`, market, symbol, cm.positions[symbol].Holding))
 				if !api.FilterCross(market, symbol) && api.GetSetting(model.FunctionCross, market, symbol) == nil {
 					msg += fmt.Sprintf(` %s %s`, market, symbol)
 				}
