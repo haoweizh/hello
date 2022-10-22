@@ -926,7 +926,7 @@ func CreateMarketDepthServer(markets *model.Markets, market string, orderHandler
 }
 
 func SendMails(title, msg string) {
-	fmt.Println(fmt.Sprintf(title, msg))
+	util.Notice(fmt.Sprintf(`try to send mails %s %s`, title, msg))
 	toMails := strings.Split(model.AppConfig.Mail, `,`)
 	for _, mail := range toMails {
 		if len(strings.TrimSpace(mail)) == 0 {
