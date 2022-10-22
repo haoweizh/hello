@@ -654,6 +654,7 @@ func equalCoin(coin string, statuses []*CarryStatus) (isEqual bool, holdingInU f
 var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 	if model.AppConfig.Handle == `2` {
 		go ClearCross()
+		doCross = true
 	}
 	if !doCross && model.AppConfig.Handle == `1` {
 		go ClearCross()
