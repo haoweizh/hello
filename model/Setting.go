@@ -9,7 +9,7 @@ const SettingTurtleRemoved = `SettingTurtleRemoved`
 type CarryHandler func(setting *Setting, bidAsk *BidAsk)
 
 type Setting struct {
-	Valid            bool   `gorm:"index:function_market_symbol,unique"`
+	Valid            bool
 	Function         string `gorm:"index:function_market_symbol,unique"`
 	Market           string `gorm:"index:function_market_symbol,unique"`
 	Symbol           string `gorm:"index:function_market_symbol,unique"`

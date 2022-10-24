@@ -223,7 +223,7 @@ func initStatus(account *model.Account, setting *model.Setting, absentRevert boo
 	_, status.FoundingRate, status.FundingRateUpdateTime = api.GetFundingRate(account.Key, account.Secret, setting.Market, setting.Symbol)
 	fundingKey := fmt.Sprintf(`funding_%s_%s`, setting.Market, setting.Symbol)
 	fundingTime, ok := notifyTime.Load(fundingKey)
-	if !(ok && fundingTime.(time.Time).Add(time.Minute*60).After(time.Now())) && math.Abs(status.FoundingRate) > 0.01 {
+	if !(ok && fundingTime.(time.Time).Add(time.Minute*60).After(time.Now())) && math.Abs(status.FoundingRate) > 0.03 {
 		notifyTime.Store(fundingKey, time.Now())
 		go func() {
 			msg := fmt.Sprintf(`%s %f`, fundingKey, status.FoundingRate)

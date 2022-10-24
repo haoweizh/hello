@@ -813,13 +813,26 @@ func InitCrossMarketInfos(markets []string) {
 			}
 		}
 	}
+	settingsDb := []*model.Setting{}
+	model.AppDB.Find(&settingsDb)
+	settingsDbMap := make(map[string]*model.Setting)
+	for _, setting := range settingsDb {
+		settingsDbMap[fmt.Sprintf(`%s_%s_%s`, setting.Function, setting.Market, setting.Symbol)] = setting
+	}
+	model.AppDB.Model(&settingsDb).Updates(map[string]interface{}{`valid`: false})
 	for coin, infos := range infoPool {
 		if len(infos) >= 2 {
 			for _, info := range infos {
-				setting := &model.Setting{Valid: true, Function: model.FunctionCross, Market: info.Market,
-					Symbol: info.Name, Coin: coin}
-				model.AppDB.Save(setting)
-				util.Notice(fmt.Sprintf(`save setting %s %s %s %v`, info.Market, info.Name, coin, setting.Valid))
+				if settingsDbMap[fmt.Sprintf(`%s_%s_%s`, model.FunctionCross, info.Market, info.Name)] == nil {
+					setting := &model.Setting{Valid: true, Function: model.FunctionCross, Market: info.Market,
+						Symbol: info.Name, Coin: coin}
+					util.Notice(fmt.Sprintf(`save setting %s %s %s %v`, info.Market, info.Name, coin, setting.Valid))
+					model.AppDB.Save(setting)
+				} else {
+					model.AppDB.Model(&settingsDb).Where("market= ? and symbol= ? and function= ?",
+						info.Market, info.Name, model.FunctionTurtle).Updates(map[string]interface{}{
+						`valid`: true})
+				}
 			}
 		}
 	}
