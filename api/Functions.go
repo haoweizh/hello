@@ -830,7 +830,7 @@ func InitCrossMarketInfos(markets []string) {
 					model.AppDB.Save(setting)
 				} else {
 					model.AppDB.Model(&settingsDb).Where("market= ? and symbol= ? and function= ?",
-						info.Market, info.Name, model.FunctionTurtle).Updates(map[string]interface{}{
+						info.Market, info.Name, model.FunctionCross).Updates(map[string]interface{}{
 						`valid`: true})
 				}
 			}
