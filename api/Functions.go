@@ -813,13 +813,13 @@ func InitCrossMarketInfos(markets []string) {
 			}
 		}
 	}
-	settingsDb := []*model.Setting{}
+	var settingsDb []*model.Setting
 	model.AppDB.Find(&settingsDb)
 	settingsDbMap := make(map[string]*model.Setting)
 	for _, setting := range settingsDb {
 		settingsDbMap[fmt.Sprintf(`%s_%s_%s`, setting.Function, setting.Market, setting.Symbol)] = setting
 	}
-	model.AppDB.Model(&settingsDb).Updates(map[string]interface{}{`valid`: false})
+	model.AppDB.Model(&settingsDb).Where(`function=?`, model.FunctionCross).Updates(map[string]interface{}{`valid`: false})
 	for coin, infos := range infoPool {
 		if len(infos) >= 2 {
 			for _, info := range infos {
