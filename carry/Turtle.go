@@ -78,12 +78,19 @@ func adjustPosHolding(key, secret string, setting *model.Setting, turtleData *Tu
 				setting.Market, setting.Symbol, setting.Chance, posMap[setting.Symbol].Holding, setting.GridAmount)
 			setting.GridAmount = 0
 			setting.Chance = 0
+			var orders []*model.Order
 			if posMap[setting.Symbol].Holding > 0 {
-				api.MustPlaceOrder(key, secret, model.OrderSideSell, model.OrderTypeStop, setting.Market, setting.Symbol, ``,
+				orders = api.MustPlaceOrder(key, secret, model.OrderSideSell, model.OrderTypeStop, setting.Market, setting.Symbol, ``,
 					model.FunctionTurtle, turtleData.lowDays10, turtleData.lowDays10, posMap[setting.Symbol].Holding, setting)
 			} else if posMap[setting.Symbol].Holding < 0 {
-				api.MustPlaceOrder(key, secret, model.OrderSideBuy, model.OrderTypeStop, setting.Market, setting.Symbol, ``,
+				orders = api.MustPlaceOrder(key, secret, model.OrderSideBuy, model.OrderTypeStop, setting.Market, setting.Symbol, ``,
 					model.FunctionTurtle, turtleData.highDays10, turtleData.highDays10, -1*posMap[setting.Symbol].Holding, setting)
+			}
+			for _, order := range orders {
+				if order != nil {
+					order.RefreshType = model.FunctionTurtleAdjust
+					model.AppDB.Save(order)
+				}
 			}
 		} else if setting.GridAmount != math.Abs(posMap[setting.Symbol].Holding) {
 			util.Notice(`update turtle grid amount %s %s %f to %f`,
@@ -99,12 +106,20 @@ func adjustPosHolding(key, secret string, setting *model.Setting, turtleData *Tu
 		}
 	}
 	model.AppDB.Save(setting)
-	orders := api.QueryOpenOrders(key, secret, setting.Market, setting.Symbol, false)
-	for _, order := range orders {
+	ordersLimit := api.QueryOpenOrders(key, secret, setting.Market, setting.Symbol, false)
+	ordersStop := api.QueryOpenOrders(key, secret, setting.Market, setting.Symbol, true)
+	for _, order := range ordersLimit {
 		if order != nil {
 			util.Notice(`cancel pending turtle limit order %s %s %s`,
 				setting.Market, setting.Symbol, order.OrderId)
 			api.MustCancel(key, secret, setting.Market, setting.Symbol, model.OrderTypeLimit, order.OrderId, true)
+		}
+	}
+	for _, order := range ordersStop {
+		if order != nil {
+			util.Notice(`cancel pending turtle stop order %s %s %s`,
+				setting.Market, setting.Symbol, order.OrderId)
+			api.MustCancel(key, secret, setting.Market, setting.Symbol, model.OrderTypeStop, order.OrderId, true)
 		}
 	}
 }

@@ -43,6 +43,7 @@ const OrderSideLiquidateLong = `liquidateLong`
 const OrderSideLiquidateShort = `liquidateShort`
 const FunctionSimulation = `simulation`
 const FunctionTurtle = `turtle`
+const FunctionTurtleAdjust = `turtle_adjust`
 const FunctionDynamicTurtle = `dynamic_turtle`
 const FunctionGrid = `grid`
 const FunctionCarry = `carry`
