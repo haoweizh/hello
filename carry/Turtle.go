@@ -62,7 +62,7 @@ func calcTurtleAmount(key, secret string, setting *model.Setting, n float64) (am
 	return amount
 }
 
-func adjustPosHolding(key, secret string, setting *model.Setting) {
+func adjustPosHolding(key, secret string, setting *model.Setting, turtleData *TurtleData) {
 	success, marketPos, _, _ := api.GetPositions(key, secret, setting.Market)
 	if !success {
 		util.Notice(fmt.Sprintf(`fail to adjust position holdings %s %s`, setting.Market, setting.Symbol))
@@ -78,6 +78,13 @@ func adjustPosHolding(key, secret string, setting *model.Setting) {
 				setting.Market, setting.Symbol, setting.Chance, posMap[setting.Symbol].Holding, setting.GridAmount)
 			setting.GridAmount = 0
 			setting.Chance = 0
+			if posMap[setting.Symbol].Holding > 0 {
+				api.MustPlaceOrder(key, secret, model.OrderSideSell, model.OrderTypeStop, setting.Market, setting.Symbol, ``,
+					model.FunctionTurtle, turtleData.lowDays10, turtleData.lowDays10, posMap[setting.Symbol].Holding, setting)
+			} else if posMap[setting.Symbol].Holding < 0 {
+				api.MustPlaceOrder(key, secret, model.OrderSideBuy, model.OrderTypeStop, setting.Market, setting.Symbol, ``,
+					model.FunctionTurtle, turtleData.highDays10, turtleData.highDays10, -1*posMap[setting.Symbol].Holding, setting)
+			}
 		} else if setting.GridAmount != math.Abs(posMap[setting.Symbol].Holding) {
 			util.Notice(`update turtle grid amount %s %s %f to %f`,
 				setting.Market, setting.Symbol, setting.GridAmount, posMap[setting.Symbol].Holding)
@@ -115,10 +122,6 @@ func GetTurtleData(key, secret string, setting *model.Setting) (turtleData *Turt
 	value, ok := turtleTime.Load(fmt.Sprintf(`%s_%s_%s`, setting.Market, setting.Symbol, todayStr))
 	if (dataSet[setting.Market][setting.Symbol][todayStr] != nil) || (ok && value != nil && time.Now().Add(duration).Before(value.(time.Time))) {
 		return dataSet[setting.Market][setting.Symbol][todayStr]
-	}
-	_, _, coin, _ := model.GetFromStandard(setting.Market, setting.Symbol)
-	if !model.CommonCoins[strings.ToLower(coin)] {
-		adjustPosHolding(key, secret, setting)
 	}
 	turtleTime.Store(fmt.Sprintf(`%s_%s_%s`, setting.Market, setting.Symbol, todayStr), time.Now())
 	turtleData = &TurtleData{turtleTime: today, symbol: setting.Symbol, checkTimeBreak: util.GetNow(),
@@ -160,6 +163,10 @@ func GetTurtleData(key, secret string, setting *model.Setting) (turtleData *Turt
 	}
 	if turtleData.amount > 0 && turtleData.n > 0 {
 		dataSet[setting.Market][setting.Symbol][todayStr] = turtleData
+		_, _, coin, _ := model.GetFromStandard(setting.Market, setting.Symbol)
+		if !model.CommonCoins[strings.ToLower(coin)] {
+			adjustPosHolding(key, secret, setting, turtleData)
+		}
 		util.Notice(fmt.Sprintf(`%s %s set turtle data: amount:%f n:%f 20:%f %f 10:%f %f`,
 			setting.Market, setting.Symbol, turtleData.amount, turtleData.n, turtleData.lowDays20,
 			turtleData.highDays20, turtleData.lowDays10, turtleData.highDays10))
