@@ -17,7 +17,7 @@ type TurtleData struct {
 	highDays10, lowDays10, highDays20, lowDays20, highDays3, lowDays3 float64
 	n, amount                                                         float64
 	symbol                                                            string
-	orderLong, orderShort                                             []*model.Order
+	orderLong, orderShort, orderAdjust                                []*model.Order
 }
 
 const turtleTriggerDelta = 0.01
@@ -97,15 +97,14 @@ func adjustPosHolding(key, secret string, setting *model.Setting, turtleData *Tu
 				setting.Market, setting.Symbol, setting.Chance, posMap[setting.Symbol].Holding, setting.GridAmount)
 			setting.GridAmount = 0
 			setting.Chance = 0
-			var orders []*model.Order
 			if posMap[setting.Symbol].Holding > 0 {
-				orders = api.MustPlaceOrder(key, secret, model.OrderSideSell, model.OrderTypeStop, setting.Market, setting.Symbol, ``,
+				turtleData.orderAdjust = api.MustPlaceOrder(key, secret, model.OrderSideSell, model.OrderTypeStop, setting.Market, setting.Symbol, ``,
 					model.FunctionTurtle, turtleData.lowDays10, turtleData.lowDays10, posMap[setting.Symbol].Holding, setting)
 			} else if posMap[setting.Symbol].Holding < 0 {
-				orders = api.MustPlaceOrder(key, secret, model.OrderSideBuy, model.OrderTypeStop, setting.Market, setting.Symbol, ``,
+				turtleData.orderAdjust = api.MustPlaceOrder(key, secret, model.OrderSideBuy, model.OrderTypeStop, setting.Market, setting.Symbol, ``,
 					model.FunctionTurtle, turtleData.highDays10, turtleData.highDays10, -1*posMap[setting.Symbol].Holding, setting)
 			}
-			for _, order := range orders {
+			for _, order := range turtleData.orderAdjust {
 				if order != nil {
 					order.RefreshType = model.FunctionTurtleAdjust
 					model.AppDB.Save(order)
@@ -216,6 +215,13 @@ func checkTurtleOrders(key, secret string, setting *model.Setting, currentN floa
 			if turtleData.orderShort != nil {
 				for _, short := range turtleData.orderShort {
 					if order.OrderId == short.OrderId && (currentN > -1*setting.AmountLimit || setting.Chance > 0) {
+						needCancel = false
+					}
+				}
+			}
+			if turtleData.orderAdjust != nil {
+				for _, adjust := range turtleData.orderAdjust {
+					if adjust != nil && order.OrderId == adjust.OrderId {
 						needCancel = false
 					}
 				}
