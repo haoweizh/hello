@@ -99,10 +99,10 @@ func adjustPosHolding(key, secret string, setting *model.Setting, turtleData *Tu
 			setting.Chance = 0
 			if posMap[setting.Symbol].Holding > 0 {
 				turtleData.orderAdjust = api.MustPlaceOrder(key, secret, model.OrderSideSell, model.OrderTypeStop, setting.Market, setting.Symbol, ``,
-					model.FunctionTurtle, turtleData.lowDays10, turtleData.lowDays10, posMap[setting.Symbol].Holding, setting)
+					model.FunctionTurtle, turtleData.lowDays10*(1-turtleTriggerDelta), turtleData.lowDays10, posMap[setting.Symbol].Holding, setting)
 			} else if posMap[setting.Symbol].Holding < 0 {
 				turtleData.orderAdjust = api.MustPlaceOrder(key, secret, model.OrderSideBuy, model.OrderTypeStop, setting.Market, setting.Symbol, ``,
-					model.FunctionTurtle, turtleData.highDays10, turtleData.highDays10, -1*posMap[setting.Symbol].Holding, setting)
+					model.FunctionTurtle, turtleData.highDays10*(1+turtleTriggerDelta), turtleData.highDays10, -1*posMap[setting.Symbol].Holding, setting)
 			}
 			for _, order := range turtleData.orderAdjust {
 				if order != nil {
