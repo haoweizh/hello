@@ -492,7 +492,7 @@ func placeTurtleOrders(key, secret string, turtleData *TurtleData, setting *mode
 	currentN int64, priceShort, priceLong float64, tick *model.BidAsk) {
 	amountLimit := int64(setting.AmountLimit)
 	coinLimit := int64(setting.OpenShortMargin)
-	if turtleData.orderLong == nil && ((currentN < amountLimit && setting.Chance < coinLimit) || setting.Chance < 0) {
+	if turtleData.orderLong == nil && ((currentN <= amountLimit && setting.Chance < coinLimit) || setting.Chance < 0) {
 		orderSide := model.OrderSideBuy
 		typeLong := model.OrderTypeStop
 		amount := turtleData.amount
@@ -530,7 +530,7 @@ func placeTurtleOrders(key, secret string, turtleData *TurtleData, setting *mode
 			}
 		}
 	}
-	if turtleData.orderShort == nil && ((currentN > -1*amountLimit && setting.Chance > -1*coinLimit) || setting.Chance > 0) {
+	if turtleData.orderShort == nil && ((currentN >= -1*amountLimit && setting.Chance > -1*coinLimit) || setting.Chance > 0) {
 		orderSide := model.OrderSideSell
 		typeShort := model.OrderTypeStop
 		amount := turtleData.amount
