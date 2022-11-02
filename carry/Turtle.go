@@ -12,12 +12,12 @@ import (
 )
 
 type TurtleData struct {
-	turtleTime, checkTimeBreak, checkTimeOpen                         time.Time
-	waitBreakLong, waitBreakShort, breakLong, breakShort, liquidated  bool
-	highDays10, lowDays10, highDays20, lowDays20, highDays3, lowDays3 float64
-	n, amount                                                         float64
-	symbol                                                            string
-	orderLong, orderShort, orderAdjust                                []*model.Order
+	turtleTime, checkTimeBreak, checkTimeOpen                                              time.Time
+	waitBreakLong, waitBreakShort, breakLong, breakShort, liquidated                       bool
+	highDays10, lowDays10, highDays20, lowDays20, highDays3, lowDays3, highDays5, lowDays5 float64
+	n, amount                                                                              float64
+	symbol                                                                                 string
+	orderLong, orderShort, orderAdjust                                                     []*model.Order
 }
 
 const turtleTriggerDelta = 0.01
@@ -99,10 +99,10 @@ func adjustPosHolding(key, secret string, setting *model.Setting, turtleData *Tu
 			setting.Chance = 0
 			if posMap[setting.Symbol].Holding > 0 {
 				turtleData.orderAdjust = api.MustPlaceOrder(key, secret, model.OrderSideSell, model.OrderTypeStop, setting.Market, setting.Symbol, ``,
-					model.FunctionTurtle, turtleData.lowDays10*(1-turtleTriggerDelta), turtleData.lowDays10, posMap[setting.Symbol].Holding, setting)
+					model.FunctionTurtle, turtleData.lowDays5*(1-turtleTriggerDelta), turtleData.lowDays5, posMap[setting.Symbol].Holding, setting)
 			} else if posMap[setting.Symbol].Holding < 0 {
 				turtleData.orderAdjust = api.MustPlaceOrder(key, secret, model.OrderSideBuy, model.OrderTypeStop, setting.Market, setting.Symbol, ``,
-					model.FunctionTurtle, turtleData.highDays10*(1+turtleTriggerDelta), turtleData.highDays10, -1*posMap[setting.Symbol].Holding, setting)
+					model.FunctionTurtle, turtleData.highDays5*(1+turtleTriggerDelta), turtleData.highDays5, -1*posMap[setting.Symbol].Holding, setting)
 			}
 			for _, order := range turtleData.orderAdjust {
 				if order != nil {
@@ -173,6 +173,12 @@ func GetTurtleData(key, secret string, setting *model.Setting) (turtleData *Turt
 		}
 		if (turtleData.lowDays3 == 0 || turtleData.lowDays3 > candle.PriceLow) && i <= 3 {
 			turtleData.lowDays3 = candle.PriceLow
+		}
+		if candle.PriceHigh > turtleData.highDays5 && i <= 5 {
+			turtleData.highDays5 = candle.PriceHigh
+		}
+		if (turtleData.lowDays5 == 0 || turtleData.lowDays5 > candle.PriceLow) && i <= 5 {
+			turtleData.lowDays5 = candle.PriceLow
 		}
 		if i == 1 {
 			turtleData.n = candle.N
