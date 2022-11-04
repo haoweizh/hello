@@ -59,22 +59,14 @@ func createTurtleOrders(setting *model.Setting, turtleData *TurtleData) {
 		amountLong = setting.GridAmount
 	} else if setting.Chance > 0 {
 		priceLong = math.Max(turtleData.high20, setting.PriceX+turtleData.n/2)
-		if turtleData.low3 < setting.PriceX {
-			priceShort = math.Max(setting.PriceX-2*turtleData.n, turtleData.low10)
-		} else {
-			priceShort = math.Max(turtleData.high20-2*turtleData.n, turtleData.low10)
-		}
+		priceShort = math.Max(setting.PriceX-2*turtleData.n, turtleData.low10)
 		amountShot = float64(setting.Chance) * setting.GridAmount
 		if float64(setting.Chance) < setting.AmountLimit {
 			amountLong = setting.GridAmount
 		}
 	} else if setting.Chance < 0 {
 		priceShort = math.Min(turtleData.low20, setting.PriceX-turtleData.n/2)
-		if turtleData.high3 > setting.PriceX {
-			priceLong = math.Min(setting.PriceX+2*turtleData.n, turtleData.high10)
-		} else {
-			priceLong = math.Min(turtleData.low20+2*turtleData.n, turtleData.high10)
-		}
+		priceLong = math.Min(setting.PriceX+2*turtleData.n, turtleData.high10)
 		amountLong = math.Abs(float64(setting.Chance)) * setting.GridAmount
 		if math.Abs(float64(setting.Chance)) < setting.AmountLimit {
 			amountShot = setting.GridAmount
