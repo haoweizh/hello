@@ -132,7 +132,7 @@ func simulate(c *gin.Context) {
 		_ = session.Save()
 	}
 	sessionValue := session.Get(`code`)
-	if sessionValue == nil || sessionValue.(string) != code {
+	if sessionValue == nil || sessionValue.(string) != code || code == `` {
 		strNew = `false`
 	}
 	if errBegin != nil || errEnd != nil || simTypeErr != nil || simTypeSeconds <= 0 ||
