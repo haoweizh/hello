@@ -113,7 +113,7 @@ func (config *Config) GetAccounts(market string) []*Account {
 		closeValues = strings.Split(config.FtxCarryClose, `,`)
 		rateValues = strings.Split(config.FtxCarryRate, `,`)
 		ftxSubAccounts = strings.Split(config.ftxSubAccount, `,`)
-		util.Notice(`accounts %d %v`, config.ftxSubAccount, ftxSubAccounts)
+		util.Notice(`accounts %s %v`, config.ftxSubAccount, ftxSubAccounts)
 	case OKEX:
 		keys = strings.Split(config.OkexKey, `,`)
 		secrets = strings.Split(config.OkexSecret, `,`)
