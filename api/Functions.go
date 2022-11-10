@@ -754,7 +754,7 @@ func FilterCross(market, symbol string) bool {
 		`BOX`: true, `PAY`: true, `GTC`: true, `OXY`: true, `CRU`: true, `BCD`: true,
 		`GBP`: true, `CUSDT`: true, `TRYB`: true, `BRZ`: true, `CAD`: true, `EUR`: true, `SUSD`: true, `USDC`: true,
 		`TUSD`: true, `USDT`: true, `EURT`: true, `USD`: true, `BUSD`: true, `LDUSDT`: true, `LDBUSD`: true,
-		`GT`: true, `FTT`: true, `BNB`: true, `OKB`: true, `MX`: true, `TRUMP`: true, `BOLSONARO`: true, `DEFI`: true}
+		`GT`: true, `BNB`: true, `OKB`: true, `MX`: true, `TRUMP`: true, `BOLSONARO`: true, `DEFI`: true}
 	_, _, coin, _ := model.GetFromStandard(market, symbol)
 	if filterCoins[coin] {
 		return true
@@ -769,27 +769,27 @@ func FilterCross(market, symbol string) bool {
 	switch market {
 	case model.Ftx:
 		switch coin {
-		case `PRIV`, `ALT`, `SHIT`, `MID`, `EXCH`, `DRGN`, `FTT`:
+		case `PRIV`, `ALT`, `SHIT`, `MID`, `EXCH`, `DRGN`:
 			return true
 		}
 	case model.OKEX:
 		switch coin {
-		case `OKB`:
+		case `OKB`, `FTT`:
 			return true
 		}
 	case model.BinancePerp, model.BinanceSpot:
 		switch coin {
-		case `BNB`:
+		case `BNB`, `FTT`:
 			return true
 		}
 	case model.BybitSpot:
 		switch coin {
-		case `GAS`:
+		case `GAS`, `FTT`:
 			return true
 		}
 	case model.Mexc: //不支持主流币种期货下单
 		switch coin {
-		case `BTC`, `ETH`, `LTC`:
+		case `BTC`, `ETH`, `LTC`, `FTT`:
 			return true
 		}
 	}
