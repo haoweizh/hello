@@ -803,9 +803,7 @@ func InitCrossMarketInfos(markets []string) {
 	//markets := []string{model.BybitPerp, model.BybitSpot, model.OKEX, model.Ftx, model.Gate}
 	//markets := model.GetMarkets()
 	for _, market := range markets {
-		util.Notice(`start to init cross markets %s`, market)
 		marketInfo := GetMarketInfos(market)
-		util.Notice(`start to init cross markets %s %d %v`, market, len(marketInfo), marketInfo)
 		for _, info := range marketInfo {
 			success, _, coin, _ := model.GetFromStandard(market, info.Name)
 			if success && coin != `` {
@@ -824,25 +822,19 @@ func InitCrossMarketInfos(markets []string) {
 	for _, setting := range settingsDb {
 		settingsDbMap[fmt.Sprintf(`%s_%s_%s`, setting.Function, setting.Market, setting.Symbol)] = setting
 	}
-	util.Notice(`query db setting %d`, len(settingsDbMap))
 	model.AppDB.Model(&settingsDb).Where(`function=?`, model.FunctionCross).Updates(map[string]interface{}{`valid`: false})
 	for coin, infos := range infoPool {
 		util.Notice(`handle coin %s %d`, coin, len(infos))
 		if len(infos) >= 2 {
 			for _, info := range infos {
-				chance := int64(0)
-				if info.Market == model.Ftx {
-					chance = -1
-				}
 				if settingsDbMap[fmt.Sprintf(`%s_%s_%s`, model.FunctionCross, info.Market, info.Name)] == nil {
 					setting := &model.Setting{Valid: true, Function: model.FunctionCross, Market: info.Market,
-						Symbol: info.Name, Coin: coin, Chance: chance}
+						Symbol: info.Name, Coin: coin}
 					util.Notice(fmt.Sprintf(`save setting %s %s %s %v`, info.Market, info.Name, coin, setting.Valid))
 					model.AppDB.Save(setting)
 				} else {
 					model.AppDB.Model(&settingsDb).Where("market= ? and symbol= ? and function= ?",
-						info.Market, info.Name, model.FunctionCross).Updates(map[string]interface{}{
-						`valid`: true, `chance`: chance})
+						info.Market, info.Name, model.FunctionCross).Updates(map[string]interface{}{`valid`: true})
 				}
 			}
 		}
