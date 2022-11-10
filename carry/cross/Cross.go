@@ -721,11 +721,11 @@ func checkTradeLine(statusBuy, statusSell *CarryStatus, score float64) (valid, h
 			return true, false, 0
 		}
 		if statusBuy.account.CarryClose && statusBuy.market == model.Ftx && statusBuy.Holding < 0 {
-			marketDis -= 0.05
+			marketDis -= 0.08
 			limit = math.Abs(statusBuy.Holding)
 		}
 		if statusSell.account.CarryClose && statusSell.market == model.Ftx && statusSell.Holding > 0 {
-			marketDis -= 0.05
+			marketDis -= 0.08
 			limit = statusSell.Holding
 		}
 		return score > marketDis, true, limit
