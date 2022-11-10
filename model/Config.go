@@ -145,7 +145,10 @@ func (config *Config) GetAccounts(market string) []*Account {
 	}
 	accounts := make([]*Account, len(keys))
 	for i := 0; i < len(keys); i++ {
-		account := &Account{Key: keys[i], Secret: secrets[i], Index: i, Market: market, FtxSubAccount: ftxSubAccounts[i]}
+		account := &Account{Key: keys[i], Secret: secrets[i], Index: i, Market: market}
+		if market == Ftx {
+			account.FtxSubAccount = ftxSubAccounts[i]
+		}
 		account.CarryClose, _ = strconv.ParseBool(closeValues[i])
 		account.CarryRate, _ = strconv.ParseFloat(rateValues[i], 64)
 		if len(strings.TrimSpace(account.Key)) > 0 {
