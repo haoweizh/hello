@@ -802,7 +802,6 @@ func InitCrossMarketInfos(markets []string) {
 	// model.Binance, model.Ftx,
 	//markets := []string{model.BybitPerp, model.BybitSpot, model.OKEX, model.Ftx, model.Gate}
 	//markets := model.GetMarkets()
-	util.Notice(`start to init cross markets %v`, markets)
 	for _, market := range markets {
 		marketInfo := GetMarketInfos(market)
 		for _, info := range marketInfo {
@@ -817,12 +816,14 @@ func InitCrossMarketInfos(markets []string) {
 			}
 		}
 	}
+	util.Notice(`start to init cross markets %v %d %v`, markets, len(infoPool), infoPool)
 	var settingsDb []*model.Setting
 	model.AppDB.Find(&settingsDb)
 	settingsDbMap := make(map[string]*model.Setting)
 	for _, setting := range settingsDb {
 		settingsDbMap[fmt.Sprintf(`%s_%s_%s`, setting.Function, setting.Market, setting.Symbol)] = setting
 	}
+	util.Notice(`query db setting %d`, len(settingsDbMap))
 	model.AppDB.Model(&settingsDb).Where(`function=?`, model.FunctionCross).Updates(map[string]interface{}{`valid`: false})
 	for coin, infos := range infoPool {
 		util.Notice(`handle coin %s %d`, coin, len(infos))
