@@ -802,6 +802,7 @@ func InitCrossMarketInfos(markets []string) {
 	// model.Binance, model.Ftx,
 	//markets := []string{model.BybitPerp, model.BybitSpot, model.OKEX, model.Ftx, model.Gate}
 	//markets := model.GetMarkets()
+	util.Notice(`start to init cross markets %v`, markets)
 	for _, market := range markets {
 		marketInfo := GetMarketInfos(market)
 		for _, info := range marketInfo {
@@ -824,6 +825,7 @@ func InitCrossMarketInfos(markets []string) {
 	}
 	model.AppDB.Model(&settingsDb).Where(`function=?`, model.FunctionCross).Updates(map[string]interface{}{`valid`: false})
 	for coin, infos := range infoPool {
+		util.Notice(`handle coin %s %d`, coin, len(infos))
 		if len(infos) >= 2 {
 			for _, info := range infos {
 				chance := int64(0)
