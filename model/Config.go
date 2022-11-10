@@ -21,15 +21,15 @@ type Config struct {
 	BinanceKey, BinanceSecret, BinanceCarryClose, BinanceCarryRate                                 string
 	CoinparkKey, CoinparkSecret, CoinparkCarryClose, CoinparkCarryRate                             string
 	DFutureKey, DFutureSecret, MexcKey, MexcSecret, MexcCarryClose, MexcCarryRate                  string
-	BitmexKey, BitmexSecret, BitmexCarryClose, BitmexCarryRate, FtxSubAccount                      string
+	BitmexKey, BitmexSecret, BitmexCarryClose, BitmexCarryRate, ftxSubAccount                      string
 	Phase, Handle, Mail, FromMail, FromMailAuth, Port, WalletKey, DBConnection, Env, FutureAddress string
 }
 
 type Account struct {
-	Index               int // 账户索引
-	Market, Key, Secret string
-	CarryClose          bool
-	CarryRate           float64
+	Index                              int // 账户索引
+	Market, Key, Secret, FtxSubAccount string
+	CarryClose                         bool
+	CarryRate                          float64
 }
 
 var AppAccounts []map[string]*Account // account index/map/account
@@ -87,7 +87,7 @@ func (config *Config) GetAccounts(market string) []*Account {
 	if ok && value != nil {
 		return value.([]*Account)
 	}
-	var rateValues, closeValues, keys, secrets []string
+	var rateValues, closeValues, keys, secrets, ftxSubAccounts []string
 	switch market {
 	//case Kucoin, DFuture:
 	//	return false, 1
@@ -111,6 +111,7 @@ func (config *Config) GetAccounts(market string) []*Account {
 		secrets = strings.Split(config.FtxSecret, `,`)
 		closeValues = strings.Split(config.FtxCarryClose, `,`)
 		rateValues = strings.Split(config.FtxCarryRate, `,`)
+		ftxSubAccounts = strings.Split(config.ftxSubAccount, `,`)
 	case OKEX:
 		keys = strings.Split(config.OkexKey, `,`)
 		secrets = strings.Split(config.OkexSecret, `,`)
@@ -144,7 +145,7 @@ func (config *Config) GetAccounts(market string) []*Account {
 	}
 	accounts := make([]*Account, len(keys))
 	for i := 0; i < len(keys); i++ {
-		account := &Account{Key: keys[i], Secret: secrets[i], Index: i, Market: market}
+		account := &Account{Key: keys[i], Secret: secrets[i], Index: i, Market: market, FtxSubAccount: ftxSubAccounts[i]}
 		account.CarryClose, _ = strconv.ParseBool(closeValues[i])
 		account.CarryRate, _ = strconv.ParseFloat(rateValues[i], 64)
 		if len(strings.TrimSpace(account.Key)) > 0 {

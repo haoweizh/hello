@@ -869,8 +869,9 @@ func SignedRequestFtx(key, secret, method, path string, param, body map[string]i
 	}
 	sign := hex.EncodeToString(hash.Sum(nil))
 	headers := map[string]string{`FTX-KEY`: key, `FTX-TS`: ts, "FTX-SIGN": sign, "Content-Type": "application/json"}
-	if len(model.AppConfig.FtxSubAccount) > 0 {
-		headers[`FTX-SUBACCOUNT`] = model.AppConfig.FtxSubAccount
+	account := model.AppConfig.GetAccountFromKey(model.Ftx, key)
+	if account != nil && len(account.FtxSubAccount) > 0 {
+		headers[`FTX-SUBACCOUNT`] = account.FtxSubAccount
 	}
 	responseBody, httpErr := util.HttpRequest(method, u.String(), bodyStr, headers, 60)
 	//if !strings.Contains(path, `balances`) && !strings.Contains(path, `positions`) {
