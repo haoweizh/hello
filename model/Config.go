@@ -2,7 +2,6 @@ package model
 
 import (
 	"fmt"
-	"hello/util"
 	"os"
 	"strconv"
 	"strings"
@@ -22,7 +21,7 @@ type Config struct {
 	BinanceKey, BinanceSecret, BinanceCarryClose, BinanceCarryRate                                 string
 	CoinparkKey, CoinparkSecret, CoinparkCarryClose, CoinparkCarryRate                             string
 	DFutureKey, DFutureSecret, MexcKey, MexcSecret, MexcCarryClose, MexcCarryRate                  string
-	BitmexKey, BitmexSecret, BitmexCarryClose, BitmexCarryRate, ftxSubAccount                      string
+	BitmexKey, BitmexSecret, BitmexCarryClose, BitmexCarryRate, FtxSubAccount                      string
 	Phase, Handle, Mail, FromMail, FromMailAuth, Port, WalletKey, DBConnection, Env, FutureAddress string
 }
 
@@ -112,8 +111,7 @@ func (config *Config) GetAccounts(market string) []*Account {
 		secrets = strings.Split(config.FtxSecret, `,`)
 		closeValues = strings.Split(config.FtxCarryClose, `,`)
 		rateValues = strings.Split(config.FtxCarryRate, `,`)
-		ftxSubAccounts = strings.Split(config.ftxSubAccount, `,`)
-		util.Notice(`accounts %s %v`, config.ftxSubAccount, ftxSubAccounts)
+		ftxSubAccounts = strings.Split(config.FtxSubAccount, `,`)
 	case OKEX:
 		keys = strings.Split(config.OkexKey, `,`)
 		secrets = strings.Split(config.OkexSecret, `,`)
