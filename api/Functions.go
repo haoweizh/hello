@@ -803,6 +803,7 @@ func InitCrossMarketInfos(markets []string) {
 	//markets := []string{model.BybitPerp, model.BybitSpot, model.OKEX, model.Ftx, model.Gate}
 	//markets := model.GetMarkets()
 	for _, market := range markets {
+		util.Notice(`start to init cross markets %s`, market)
 		marketInfo := GetMarketInfos(market)
 		util.Notice(`start to init cross markets %s %d %v`, market, len(marketInfo), marketInfo)
 		for _, info := range marketInfo {
