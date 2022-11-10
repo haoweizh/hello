@@ -119,9 +119,7 @@ func createFromPosition(account *model.Account, setting *model.Setting, valueLim
 		LimitSell:     limitAmount,
 		LimitBuy:      limitAmount,
 		AvailableSell: availableAmount,
-		AvailableBuy:  availableAmount,
-		TradeLineBuy:  standardScoreOpen,
-		TradeLineSell: standardScoreOpen}
+		AvailableBuy:  availableAmount}
 	valueInUsd := 0.0
 	if cm.positions[setting.Symbol] != nil {
 		carryStatus.Holding = cm.positions[setting.Symbol].Holding
@@ -165,10 +163,7 @@ func createFromBalance(account *model.Account, setting *model.Setting, valueLimi
 		LimitSell:     0,
 		LimitBuy:      limitBuy,
 		AvailableSell: 0,
-		AvailableBuy:  availableBuy,
-		TradeLineBuy:  standardScoreOpen,
-		TradeLineSell: standardScoreOpen,
-	}
+		AvailableBuy:  availableBuy}
 	if sm.balances[setting.Symbol] != nil {
 		balance := sm.balances[setting.Symbol]
 		if price > 0 {
@@ -252,12 +247,8 @@ func initStatus(account *model.Account, setting *model.Setting, absentRevert boo
 	}
 	status.LimitBuy = math.Min(status.LimitBuy, status.AvailableBuy)
 	status.LimitSell = math.Min(status.LimitSell, status.AvailableSell)
-	standardScoreBuy := standardScoreOpen
-	standardScoreSell := standardScoreOpen
-	if setting.OpenShortMargin != 0 {
-		standardScoreBuy = setting.OpenShortMargin
-		standardScoreSell = setting.OpenShortMargin
-	}
+	standardScoreBuy := math.Max(standardScoreOpen, setting.OpenShortMargin)
+	standardScoreSell := math.Max(standardScoreOpen, setting.OpenShortMargin)
 	getTick, ticks := model.AppMarkets.GetBidAsk(setting.Symbol, setting.Market)
 	price := 0.0
 	if getTick {
@@ -277,25 +268,11 @@ func initStatus(account *model.Account, setting *model.Setting, absentRevert boo
 		jumpBuy = jumpClose
 		jumpSell = jumpOpen
 		standardScoreBuy = standardScoreClose
-		standardScoreSell = standardScoreOpen
-		//if setting.CloseShortMargin != 0 {
-		//	standardScoreBuy = setting.CloseShortMargin
-		//}
-		//if setting.OpenShortMargin != 0 {
-		//	standardScoreSell = setting.OpenShortMargin
-		//}
 		status.LimitBuy = math.Min(status.LimitBuy, math.Abs(status.Holding))
 	} else if status.Holding*price > 100 {
 		jumpBuy = jumpOpen
 		jumpSell = jumpClose
-		standardScoreBuy = standardScoreOpen
 		standardScoreSell = standardScoreClose
-		//if setting.OpenShortMargin != 0 {
-		//	standardScoreBuy = setting.OpenShortMargin
-		//}
-		//if setting.CloseShortMargin != 0 {
-		//	standardScoreSell = setting.CloseShortMargin
-		//}
 		status.LimitSell = math.Min(status.LimitSell, status.Holding)
 	}
 	status.TradeLineBuy = math.Max(standardScoreBuy*(0.5+jumpBuy*status.RateInAll), lowestScore) + status.FoundingRate
@@ -743,11 +720,11 @@ func checkTradeLine(statusBuy, statusSell *CarryStatus, score float64) (valid, h
 		if score > marketDis {
 			return true, false, 0
 		}
-		if statusBuy.market == model.Ftx && statusBuy.Holding < 0 {
+		if statusBuy.account.CarryClose && statusBuy.market == model.Ftx && statusBuy.Holding < 0 {
 			marketDis -= 0.05
 			limit = math.Abs(statusBuy.Holding)
 		}
-		if statusSell.market == model.Ftx && statusSell.Holding > 0 {
+		if statusSell.account.CarryClose && statusSell.market == model.Ftx && statusSell.Holding > 0 {
 			marketDis -= 0.05
 			limit = statusSell.Holding
 		}
