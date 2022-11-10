@@ -829,7 +829,7 @@ func InitCrossMarketInfos(markets []string) {
 		if len(infos) >= 2 {
 			for _, info := range infos {
 				if info.Market == model.Ftx {
-					score = 0.2
+					score = 0.05
 				}
 				if settingsDbMap[fmt.Sprintf(`%s_%s_%s`, model.FunctionCross, info.Market, info.Name)] == nil {
 					setting := &model.Setting{Valid: true, Function: model.FunctionCross, Market: info.Market,

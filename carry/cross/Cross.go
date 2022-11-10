@@ -268,11 +268,17 @@ func initStatus(account *model.Account, setting *model.Setting, absentRevert boo
 		jumpBuy = jumpClose
 		jumpSell = jumpOpen
 		standardScoreBuy = standardScoreClose
+		if setting.Market == model.Ftx {
+			standardScoreBuy = 0
+		}
 		status.LimitBuy = math.Min(status.LimitBuy, math.Abs(status.Holding))
 	} else if status.Holding*price > 100 {
 		jumpBuy = jumpOpen
 		jumpSell = jumpClose
 		standardScoreSell = standardScoreClose
+		if setting.Market == model.Ftx {
+			standardScoreSell = 0
+		}
 		status.LimitSell = math.Min(status.LimitSell, status.Holding)
 	}
 	status.TradeLineBuy = math.Max(standardScoreBuy*(0.5+jumpBuy*status.RateInAll), lowestScore) + status.FoundingRate
@@ -721,11 +727,11 @@ func checkTradeLine(statusBuy, statusSell *CarryStatus, score float64) (valid, h
 			return true, false, 0
 		}
 		if statusBuy.account.CarryClose && statusBuy.market == model.Ftx && statusBuy.Holding < 0 {
-			marketDis -= 0.08
+			marketDis -= 0.05
 			limit = math.Abs(statusBuy.Holding)
 		}
 		if statusSell.account.CarryClose && statusSell.market == model.Ftx && statusSell.Holding > 0 {
-			marketDis -= 0.08
+			marketDis -= 0.05
 			limit = statusSell.Holding
 		}
 		return score > marketDis, true, limit
