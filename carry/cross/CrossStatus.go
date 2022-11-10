@@ -30,7 +30,7 @@ var validCrossCoin = map[string][]string{model.BinanceSpot: {`TORN`, `ANC`, `UST
 							model.BinancePerp: {`TORN`, `ANC`, `UST`},
 							model.Gate:        {`AE`, `HC`, `REEF`, `ONE`, `LSK`, `GLMR`, `LEASH`, `KDA`, `BLOK`, `ANC`, `UST`},
 							model.OKEX:        {`AE`, `HC`, `ORBS`, `ONE`, `LSK`, `GLMR`, `LEASH`, `KLAY`, `KDA`, `BLOK`, `TORN`, `ANC`, `UST`},
-							model.Ftx:         {`REEF`, `ORBS`, `ONE`, `LUNA`, `UST`},
+							model.Ftx:         {`REEF`, `ORBS`, `ONE`, `LUNA`, `UST`, `HT`, `TRX`, `ASD`, `FTT`, `BTT`, `JST`, `SUN`},
 							model.BybitPerp:   {`KLAY`, `ANC`, `UST`}}
 var lastOrderIndex = make(map[string]map[string]int64) // market - symbol - index
 
