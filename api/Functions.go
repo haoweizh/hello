@@ -804,6 +804,7 @@ func InitCrossMarketInfos(markets []string) {
 	//markets := model.GetMarkets()
 	for _, market := range markets {
 		marketInfo := GetMarketInfos(market)
+		util.Notice(`start to init cross markets %s %d %v`, market, len(marketInfo), marketInfo)
 		for _, info := range marketInfo {
 			success, _, coin, _ := model.GetFromStandard(market, info.Name)
 			if success && coin != `` {
@@ -816,7 +817,6 @@ func InitCrossMarketInfos(markets []string) {
 			}
 		}
 	}
-	util.Notice(`start to init cross markets %v %d %v`, markets, len(infoPool), infoPool)
 	var settingsDb []*model.Setting
 	model.AppDB.Find(&settingsDb)
 	settingsDbMap := make(map[string]*model.Setting)
