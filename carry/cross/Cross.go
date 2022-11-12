@@ -277,8 +277,12 @@ func initStatus(account *model.Account, setting *model.Setting, absentRevert boo
 		//standardScoreSell = standardScoreClose
 		status.LimitSell = math.Min(status.LimitSell, status.Holding)
 	}
-	status.TradeLineBuy = math.Max(standardScoreBuy*(0.5+jumpBuy*status.RateInAll), lowestScore) + status.FoundingRate
-	status.TradeLineSell = math.Max(standardScoreSell*(0.5+jumpSell*status.RateInAll), lowestScore) - status.FoundingRate
+	lowLimit := lowestScore
+	if status.market == model.Ftx {
+		lowLimit = -0.05
+	}
+	status.TradeLineBuy = math.Max(standardScoreBuy*(0.5+jumpBuy*status.RateInAll), lowLimit) + status.FoundingRate
+	status.TradeLineSell = math.Max(standardScoreSell*(0.5+jumpSell*status.RateInAll), lowLimit) - status.FoundingRate
 	if status.market == model.BybitPerp {
 		if status.Holding*price > 100 {
 			status.TradeLineSell -= 0.02
