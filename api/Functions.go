@@ -825,20 +825,19 @@ func InitCrossMarketInfos(markets []string) {
 	model.AppDB.Model(&settingsDb).Where(`function=?`, model.FunctionCross).Updates(map[string]interface{}{`valid`: false})
 	for coin, infos := range infoPool {
 		util.Notice(`handle coin %s %d`, coin, len(infos))
-		score := 0.0
+		scoreOpen := 0.02
+		scoreClose := 0.01
 		if len(infos) >= 2 {
 			for _, info := range infos {
-				if info.Market == model.Ftx {
-					score = 0.05
-				}
 				if settingsDbMap[fmt.Sprintf(`%s_%s_%s`, model.FunctionCross, info.Market, info.Name)] == nil {
 					setting := &model.Setting{Valid: true, Function: model.FunctionCross, Market: info.Market,
-						Symbol: info.Name, Coin: coin, OpenShortMargin: score}
+						Symbol: info.Name, Coin: coin, OpenShortMargin: scoreOpen, CloseShortMargin: scoreClose}
 					util.Notice(fmt.Sprintf(`save setting %s %s %s %v`, info.Market, info.Name, coin, setting.Valid))
 					model.AppDB.Save(setting)
 				} else {
 					model.AppDB.Model(&settingsDb).Where("market= ? and symbol= ? and function= ?",
-						info.Market, info.Name, model.FunctionCross).Updates(map[string]interface{}{`valid`: true, `open_short_margin`: score})
+						info.Market, info.Name, model.FunctionCross).Updates(map[string]interface{}{
+						`valid`: true, `open_short_margin`: scoreOpen, `close_short_margin`: scoreClose})
 				}
 			}
 		}
