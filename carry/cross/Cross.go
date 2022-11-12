@@ -492,7 +492,9 @@ func equalCoin(coin string, statuses []*CarryStatus) (isEqual bool, holdingInU f
 				value, _ := coinSettings.Load(coin)
 				if value != nil {
 					for _, setting := range value.([]*model.Setting) {
-						setting.Valid = false
+						if model.AppConfig.Equal != `true` {
+							setting.Valid = false
+						}
 						util.Notice(fmt.Sprintf(`too big comp %s %s %f %f %s`,
 							setting.Market, setting.Symbol, holdingInU, holding, holdStr))
 					}
