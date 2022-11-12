@@ -347,8 +347,8 @@ func ClearCross() {
 		msg := fmt.Sprintf(`comp %f cross %f`, compInU, crossInU)
 		util.Notice(msg)
 		if model.AppConfig.Handle == `1` {
-			if compInU > 55000 && compInU/(compInU+crossInU) > 0.33 {
-				//model.AppConfig.Handle = `0`
+			if (compInU > 55000 && compInU/(compInU+crossInU) > 0.33) && model.AppConfig.Equal != `true` {
+				model.AppConfig.Handle = `0`
 				title := `comp too much set handle 0`
 				util.Notice(title)
 				api.SendMails(title, msg)
