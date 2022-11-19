@@ -306,13 +306,21 @@ func initStatus(account *model.Account, setting *model.Setting, absentRevert boo
 	if doRevert || account.CarryClose {
 		if status.Holding > 0 {
 			status.TradeLineBuy = 1
+			status.LimitBuy = 0
+			status.AvailableBuy = 0
 			//status.TradeLineSell = math.Min(status.TradeLineSell, 0.0004)
 		} else if status.Holding < 0 {
 			status.TradeLineSell = 1
+			status.LimitSell = 0
+			status.AvailableSell = 0
 			//status.TradeLineBuy = math.Min(status.TradeLineBuy, 0.0004)
 		} else if status.Holding == 0 {
 			status.TradeLineBuy = 1
 			status.TradeLineSell = 1
+			status.LimitBuy = 0
+			status.LimitSell = 0
+			status.AvailableBuy = 0
+			status.AvailableSell = 0
 		}
 	}
 	carryStatusMap.Store(fmt.Sprintf(`%s*%s*%s*%s`, setting.Coin, setting.Market, setting.Symbol, account.Key), status)
