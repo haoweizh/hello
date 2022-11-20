@@ -131,6 +131,10 @@ func createFromPosition(account *model.Account, setting *model.Setting, valueLim
 	}
 	rateLimitPosition := 1.8
 	rateLimitHolding := 0.2
+	if setting.Market == model.Gate {
+		rateLimitPosition = 5.8
+		rateLimitHolding = 0.88
+	}
 	if cm.contractValueInU/cm.accountValueInU > rateLimitPosition || valueInUsd > valueLimit || valueInUsd/cm.accountValueInU > rateLimitHolding {
 		//util.Notice(fmt.Sprintf(`low position balance %s %s %f %f %f %f`,
 		//	key, setting.Symbol, cm.contractValueInU, cm.accountValueInU, valueInUsd, valueLimit))
