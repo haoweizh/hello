@@ -129,8 +129,8 @@ func createFromPosition(account *model.Account, setting *model.Setting, valueLim
 		util.Notice(fmt.Sprintf(`symbol absent revert %s %s`, setting.Market, setting.Symbol))
 		//doRevert = true
 	}
-	rateLimitPosition := 1.8
-	rateLimitHolding := 0.2
+	rateLimitPosition := 2.8
+	rateLimitHolding := 0.25
 	if setting.Market == model.Gate {
 		rateLimitPosition = 5.8
 		rateLimitHolding = 0.88
