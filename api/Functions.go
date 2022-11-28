@@ -136,6 +136,8 @@ func CancelOrders(key, secret, market, symbol string) (result bool) {
 	case model.OKEX:
 		result, _, _ = cancelOrdersOKEX(key, secret, symbol)
 		return result
+	case model.HuobiSpot:
+		return cancelOrdersHuobiSpot(key, secret, symbol)
 	}
 	return false
 }
@@ -285,6 +287,8 @@ func GetBalances(key, secret, market string) (
 		success, balances = getBalanceBinanceSpot(key, secret)
 	case model.BybitSpot:
 		success, balances = getBalanceBybitSpot(key, secret)
+	case model.HuobiSpot:
+		success, balances = getBalanceHuobiSpot(key, secret)
 	}
 	if market != model.Ftx && market != model.OKEX {
 		for _, balance := range balances {
@@ -436,8 +440,12 @@ func QueryOrderById(key, secret, market, symbol, orderType, orderId string) (ord
 		order = queryOrderBinancePerp(key, secret, symbol, orderId)
 	case model.BybitPerp:
 		order = queryOrderBybitPerp(key, secret, symbol, orderId)
+	case model.HuobiPerp:
+		order = queryOrderHuobiPerp(key, secret, symbol, orderId)
 	case model.BybitSpot:
 		order = queryOrderBybitSpot(key, secret, orderId)
+	case model.HuobiSpot:
+		order = queryOrderHuobiSpot(key, secret, orderId)
 	case model.Ftx: // 查询是否是待成交状态，如果已成交或已取消，则ftx返回order not found信息，order为nil
 		if orderType == model.OrderTypeStop {
 			newOrderId := queryTriggerOrderId(key, secret, orderId)
@@ -480,6 +488,8 @@ func GetPositions(key, secret, market string) (success bool, positions []*model.
 		return success, positions, accountValue, availableU
 	case model.BybitPerp:
 		return getPositionsBybitPerp(key, secret)
+	case model.HuobiPerp:
+		return getPositionsHuobiPerp(key, secret)
 	case model.OKEX:
 		_, _, total, collateral := getBalanceOKEX(key, secret)
 		success, positions = getPositionsOKEX(key, secret)
@@ -571,6 +581,10 @@ func PlaceOrder(key, secret, orderSide, orderType, market, symbol, orderParam st
 		placeOrderBybitPerp(order, key, secret, orderSide, orderType, orderParam, symbol, price, amount)
 	case model.BybitSpot:
 		placeOrdersBybitSpot(order, key, secret, orderSide, orderType, orderParam, symbol, price, amount)
+	case model.HuobiSpot:
+		placeOrderHuobiSpot(key, secret, order, orderSide, orderType, symbol, price, amount)
+	case model.HuobiPerp:
+		placeOrderHuobiPerp(key, secret, order, orderSide, orderType, ``, symbol, price, price, amount)
 	case model.Ftx:
 		placeOrderFtx(order, key, secret, orderSide, orderType, orderParam, symbol, price, triggerPrice, amount)
 	case model.Mexc:
@@ -735,6 +749,8 @@ func GetMarketInfos(market string) (marketInfo map[string]*model.MarketInfo) {
 		return getMarketsBybitPerp(accounts[0].Key, accounts[0].Secret)
 	case model.BybitSpot:
 		return getMarketsBybitSpot(accounts[0].Key, accounts[0].Secret)
+	case model.HuobiSpot:
+		return getMarketsHuobiSpot(accounts[0].Key, accounts[0].Secret)
 	}
 	return
 }
@@ -876,11 +892,8 @@ func InitMarketInfos() (success bool) {
 					}
 				}
 			}
-		//case model.Binance:
-		//	model.SetMarketInfos(market, getMarketsBinance(accounts[0].Key, accounts[0].Secret))
-		//	for _, account := range accounts {
-		//		setPosSideBinance(account.Key, account.Secret)
-		//	}
+		case model.HuobiSpot:
+			model.SetMarketInfos(market, getMarketsHuobiSpot(accounts[0].Key, accounts[0].Secret))
 		case model.BinanceSpot:
 			model.SetMarketInfos(market, getMarketsBinanceSpot(accounts[0].Key, accounts[0].Secret))
 		case model.BinancePerp:
@@ -948,8 +961,12 @@ func CreateMarketDepthServer(markets *model.Markets, market string, orderHandler
 		channels, err = WsDepthServeBinancePerp(markets, nil)
 	case model.BybitPerp:
 		channels, err = WsDepthServeBybitPerp(markets, orderHandler)
+	case model.HuobiPerp:
+		channels, err = WsDepthServeHuobiPerp(markets, orderHandler)
 	case model.BybitSpot:
 		channels, err = WsDepthServeBybitSpot(markets, orderHandler)
+	case model.HuobiSpot:
+		channels, err = WsDepthServeHuobiSpot(markets, orderHandler)
 	case model.Ftx:
 		channels, err = WsDepthServeFtx(markets, nil)
 	case model.Mexc:

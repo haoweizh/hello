@@ -7,12 +7,26 @@ import (
 	"fmt"
 	"github.com/bitly/go-simplejson"
 	"io/ioutil"
+	"math"
 	"net/url"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
 )
+
+func UnGzip(byte []byte) []byte {
+	r, err := gzip.NewReader(bytes.NewBuffer(byte))
+	if err != nil {
+		fmt.Println(err.Error())
+		return nil
+	}
+	undatas, _ := ioutil.ReadAll(r)
+	if r != nil {
+		r.Close()
+	}
+	return undatas
+}
 
 func CutTailZero(in string) (out string) {
 	out = strings.Trim(in, ` `)
@@ -84,6 +98,21 @@ func GetNow() time.Time {
 
 func GetNowUnixMillion() int64 {
 	return time.Now().UnixNano() / int64(time.Millisecond)
+}
+
+func FormatNum(input float64, decimal float64) (num float64, str string) {
+	if decimal == 0.5 {
+		base := float64(int(math.Round(input*2))) / 2
+		return FormatNum(base, 1)
+	}
+	if decimal == 1.5 {
+		base := float64(int(math.Round(input*20))) / 20
+		return FormatNum(base, 2)
+	}
+	format := `%.` + strconv.Itoa(int(decimal)) + `f`
+	str = fmt.Sprintf(format, input)
+	num, _ = strconv.ParseFloat(str, 64)
+	return num, str
 }
 
 // NumDecPlaces 返回小数点后有效数字位数
