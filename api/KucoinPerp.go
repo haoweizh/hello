@@ -84,6 +84,12 @@ func appendFutureMarketKucoin(key string, marketInfos map[string]*model.MarketIn
 		if contract.Status != "Open" || contract.QuoteCurrency != `USDT` {
 			continue
 		}
+
+		if contract.MaxLeverage < 5 {
+			util.Info(fmt.Sprintf(contract.BaseCurrency+model.UniStandardTail[model.MarketTypePerp]+"杠杆倍数：%d", contract.MaxLeverage))
+			continue
+		}
+
 		marketInfo := &model.MarketInfo{Market: model.KucoinPerp}
 		marketInfo.Name = contract.BaseCurrency + model.UniStandardTail[model.MarketTypePerp]
 		marketInfo.PriceIncrement = contract.TickSize

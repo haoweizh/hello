@@ -34,6 +34,28 @@ func getMarketsKucoinSpot(key, secret string) (marketInfos map[string]*model.Mar
 	return marketInfos
 }
 
+type KucoinSymbolModel struct {
+	Symbol          string `json:"symbol"`
+	Name            string `json:"name"`
+	BaseCurrency    string `json:"baseCurrency"`
+	QuoteCurrency   string `json:"quoteCurrency"`
+	Market          string `json:"market"`
+	BaseMinSize     string `json:"baseMinSize"`
+	QuoteMinSize    string `json:"quoteMinSize"`
+	BaseMaxSize     string `json:"baseMaxSize"`
+	QuoteMaxSize    string `json:"quoteMaxSize"`
+	BaseIncrement   string `json:"baseIncrement"`
+	QuoteIncrement  string `json:"quoteIncrement"`
+	PriceIncrement  string `json:"priceIncrement"`
+	FeeCurrency     string `json:"feeCurrency"`
+	EnableTrading   bool   `json:"enableTrading"`
+	IsMarginEnabled bool   `json:"isMarginEnabled"`
+	PriceLimitRate  string `json:"priceLimitRate"`
+	MinFunds        string `json:"minFunds"`
+}
+
+type KucoinSymbolsModel []*KucoinSymbolModel
+
 func appendRelatedMarketsKucoin(key string, marketInfos map[string]*model.MarketInfo) {
 	client := kucoinRelatedClient("", "", "")
 	resp, err := client.Symbols("")
@@ -41,7 +63,7 @@ func appendRelatedMarketsKucoin(key string, marketInfos map[string]*model.Market
 		util.SocketInfo(fmt.Sprintf("key %s function: %s kucoin API error, response:%v", key, "appendRelatedMarketsKucoin", resp))
 		return
 	}
-	symbols := kucoin.SymbolsModel{}
+	symbols := KucoinSymbolsModel{}
 	if err := resp.ReadData(&symbols); err != nil {
 		util.SocketInfo(fmt.Sprintf("key %s function: %s kucoin API read data error", key, "appendRelatedMarketsKucoin"))
 		return
@@ -62,6 +84,7 @@ func appendRelatedMarketsKucoin(key string, marketInfos map[string]*model.Market
 		marketInfo.SizeMin, _ = strconv.ParseFloat(related.BaseMinSize, 64)
 		marketInfo.SizeMax, _ = strconv.ParseFloat(related.BaseMaxSize, 64)
 		marketInfo.SizeIncrement, _ = strconv.ParseFloat(related.BaseIncrement, 64)
+		marketInfo.MoneyMin, _ = strconv.ParseFloat(related.MinFunds, 64)
 		marketInfos[marketInfo.Name] = marketInfo
 	}
 	relatedSettingMarkets = GetMarketSymbols(model.KucoinSpot)
