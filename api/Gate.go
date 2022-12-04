@@ -417,7 +417,7 @@ func getPositionsGate(key string, secret string) (success bool, positions []*mod
 		successBal, balances := getBalanceGate(key, secret)
 		if successBal {
 			for _, balance := range balances {
-				if strings.EqualFold(balance.Coin, `usd`) {
+				if USDs[balance.Coin] {
 					accountValue += balance.Amount
 				} else {
 					accountValue += balance.UsdValue
