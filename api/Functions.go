@@ -716,13 +716,13 @@ func GetWSSubscribe(market, symbol, subType string) (subscribe interface{}) {
 }
 
 // Transfer
-func _(key, secret, market, transferType string, amount float64) {
-	if market == model.Gate {
-		transferGate(key, secret, transferType, amount)
-	} else if market == model.Kucoin {
-		//transferKucoin(transferType, amount)
-	}
-}
+//func _(key, secret, market, transferType string, amount float64) {
+//	if market == model.Gate {
+//		transferGate(key, secret, transferType, amount)
+//	} else if market == model.Kucoin {
+//		//transferKucoin(transferType, amount)
+//	}
+//}
 
 func GetMarketInfos(market string) (marketInfo map[string]*model.MarketInfo) {
 	accounts := model.AppConfig.GetAccounts(market)
