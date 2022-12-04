@@ -474,6 +474,18 @@ func getPositionsGate(key string, secret string) (success bool, positions []*mod
 		return getPositionsGate(key, secret)
 	}
 	accountValue, _ = strconv.ParseFloat(account.Total, 64)
+	if accountValue == 0 {
+		successBal, balances := getBalanceGate(key, secret)
+		if successBal {
+			for _, balance := range balances {
+				if strings.EqualFold(balance.Coin, `usd`) {
+					accountValue += balance.Amount
+				} else {
+					accountValue += balance.UsdValue
+				}
+			}
+		}
+	}
 	unrealizedPnl, _ := strconv.ParseFloat(account.UnrealisedPnl, 64)
 	accountValue += unrealizedPnl
 	available, _ = strconv.ParseFloat(account.Available, 64)

@@ -93,7 +93,7 @@ func createFromPosition(account *model.Account, setting *model.Setting, valueLim
 		contractMarkets.Store(key, createContractMarket(key, account.Secret, setting.Market))
 		value, _ = contractMarkets.Load(key)
 		spotValue, spotOk := spotMarkets.Load(key)
-		if (setting.Market != model.BinancePerp) && (spotValue == nil || !spotOk) {
+		if (setting.Market == model.OKEX || setting.Market == model.Ftx || setting.Market == model.Gate) && (spotValue == nil || !spotOk) {
 			spotMarkets.Store(key, createSpotMarket(key, account.Secret, setting.Market))
 		}
 	}
