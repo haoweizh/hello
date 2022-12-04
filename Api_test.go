@@ -67,6 +67,8 @@ func Test_ws(t *testing.T) {
 func Test_getCommonMarketInfos(t *testing.T) {
 	model.NewConfig()
 	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
+	success, pos, value, u := api.GetPositions(model.AppConfig.GateKey, model.AppConfig.GateSecret, model.Gate)
+	fmt.Println(fmt.Sprintf(`%v %v %v %v`, success, pos, value, u))
 	markets := api.GetMarketInfos(model.Gate)
 	for s, info := range markets {
 		fmt.Println(fmt.Sprintf(`%s %s %s`, s, info.Name, info.Market))

@@ -161,38 +161,43 @@ func transferGate(key string, secret string, transferType string, amount float64
 		if model.AppConfig.GateSpot {
 			param.From = "spot"
 			param.To = "futures"
-			_, endErr := client.WalletApi.Transfer(ctx, param)
+			_, res, endErr := client.WalletApi.Transfer(ctx, param)
 			if endErr != nil {
 				panicGateError(key, "transferGate", endErr)
+				util.Notice(fmt.Sprintf(`fail to transfer status %s`, res.Status))
 			}
 		} else {
 			param.From = "cross_margin"
 			param.To = "spot"
-			_, err := client.WalletApi.Transfer(ctx, param)
+			_, res, err := client.WalletApi.Transfer(ctx, param)
 			if err != nil {
 				panicGateError(key, "transferGate", err)
+				util.Notice(fmt.Sprintf(`fail to transfer status %s`, res.Status))
 			} else {
 				param.From = "spot"
 				param.To = "futures"
-				_, endErr := client.WalletApi.Transfer(ctx, param)
+				_, res, endErr := client.WalletApi.Transfer(ctx, param)
 				if endErr != nil {
 					panicGateError(key, "transferGate", endErr)
+					util.Notice(fmt.Sprintf(`fail to transfer status %s`, res.Status))
 				}
 			}
 		}
 	} else if transferType == "UMFUTURE_MAIN" {
 		param.From = "futures"
 		param.To = "spot"
-		_, err := client.WalletApi.Transfer(ctx, param)
+		_, res, err := client.WalletApi.Transfer(ctx, param)
 		if err != nil {
 			panicGateError(key, "transferGate", err)
+			util.Notice(fmt.Sprintf(`fail to transfer status %s`, res.Status))
 		} else {
 			if !model.AppConfig.GateSpot {
 				param.From = "spot"
 				param.To = "cross_margin"
-				_, endErr := client.WalletApi.Transfer(ctx, param)
+				_, res, endErr := client.WalletApi.Transfer(ctx, param)
 				if endErr != nil {
 					panicGateError(key, "transferGate", endErr)
+					util.Notice(fmt.Sprintf(`fail to transfer status %s`, res.Status))
 				}
 			}
 		}
