@@ -74,6 +74,7 @@ func RequireDepthChanReset(markets *model.Markets, market string) bool {
 	}
 	now := util.GetNowUnixMillion()
 	symbols := markets.GetSymbols()
+	validChannels := 0
 	for symbol := range symbols {
 		_, bidAsk := markets.GetBidAsk(symbol, market)
 		if bidAsk == nil {
@@ -81,11 +82,12 @@ func RequireDepthChanReset(markets *model.Markets, market string) bool {
 		}
 		delay := float64(now - int64(bidAsk.Ts))
 		if delay < model.AppConfig.Delay {
-			return false
+			validChannels++
 		}
 	}
-	util.Notice(fmt.Sprintf(`need reset%s %d  %f`, market, now, model.AppConfig.Delay))
-	return true
+	util.Notice(fmt.Sprintf(`RequireDepthChanReset %s %d  %f valid %d in %d`,
+		market, now, model.AppConfig.Delay, validChannels, len(symbols)))
+	return validChannels*2 >= len(symbols)
 }
 
 func MustCancel(key, secret, market, symbol, orderType, orderId string, mustCancel bool) (res bool) {
@@ -740,9 +742,9 @@ func GetMarketInfos(market string) (marketInfo map[string]*model.MarketInfo) {
 // 搬砖过滤币种 AMPL IOTA REEF MIR SOS
 // 某些主流币 BTC ETH LINK
 // 币种对不上 REAL, DFL, QI, WSB, TRADE,FAME,BIFI,TON,BOX,PAY,BTT
-// 法币 GBP CUSDT TRYB``BRZ``CAD``EUR` `SUSD` `USDC` `TUSD`USDT EURT USD BUSD LDBUSD LDUSDT
+// 法币 GBP CUSDT TRYB“BRZ“CAD“EUR` `SUSD` `USDC` `TUSD`USDT EURT USD BUSD LDBUSD LDUSDT
 // 平台币 `GT` `FTT` `BNB` `OKB` MX
-// ftx预测`TRUMP``BOLSONARO`
+// ftx预测`TRUMP“BOLSONARO`
 func FilterCross(market, symbol string) bool {
 	filterCoins := map[string]bool{`AMPL`: true, `IOTA`: true, `REEF`: true, `MIR`: true, `LUNA`: true, // `UST`: true,
 		`BTC`: true, `ETH`: true, `LINK`: true, `SOS`: true, // `BTT`: true,
