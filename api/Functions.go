@@ -683,24 +683,6 @@ func GetWSSubscribe(market, symbol, subType string) (subscribe interface{}) {
 			return strings.ToLower(dialectSymbol) + `@depth5@100ms`
 		}
 		return strings.ToLower(dialectSymbol) + `@bookTicker`
-	//case model.Bitmex:
-	//	if subType == model.SubscribeDeal {
-	//		return `trade:` + model.GetDialectPerp(model.Bitmex, symbol)
-	//	} else if subType == model.SubscribeDepth {
-	//		//return `quote:` + DialectSymbol[Bitmex][symbol]
-	//		//return `orderBookL2:` + DialectSymbol[Bitmex][symbol]
-	//		//return `orderBookL2_25:` + DialectSymbol[Bitmex][symbol]
-	//		return `orderBook10:` + model.GetDialectPerp(model.Bitmex, symbol)
-	//	}
-	//case model.Huobi: // xrpbtc: market.xrpbtc.mbp.refresh.
-	//	if subType == model.SubscribeTicker {
-	//		return "market." + symbol + ".bbo"
-	//	}
-	//case model.HuobiDM:
-	//	return fmt.Sprintf(`market.%s.depth.step6`, symbol)
-	//case model.Coinpark: //BTC_USDT bibox_sub_spot_BTC_USDT_ticker
-	//	//return `bibox_sub_spot_` + strings.ToUpper(symbol) + `_ticker`
-	//	return `bibox_sub_spot_` + strings.ToUpper(symbol) + `_depth`
 	case model.BybitPerp:
 		return dialectSymbol
 	case model.BybitSpot:
