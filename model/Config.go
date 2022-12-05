@@ -10,7 +10,7 @@ import (
 
 type Config struct {
 	ChannelSlot, Delay                                                                             float64
-	KucoinSpot                                                                                     bool
+	KucoinSpot, GateSpot                                                                           bool
 	KucoinRelatedKey, KucoinRelatedSecret, KucoinFutureKey, KucoinFutureSecret                     string
 	KucoinCarryClose, KucoinCarryRate, Simulation, Equal                                           string
 	GateKey, GateSecret, GateCarryClose, GateCarryRate                                             string

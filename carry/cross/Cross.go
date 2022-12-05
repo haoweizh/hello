@@ -93,7 +93,7 @@ func createFromPosition(account *model.Account, setting *model.Setting, valueLim
 		contractMarkets.Store(key, createContractMarket(key, account.Secret, setting.Market))
 		value, _ = contractMarkets.Load(key)
 		spotValue, spotOk := spotMarkets.Load(key)
-		if (setting.Market == model.OKEX || setting.Market == model.Ftx || setting.Market == model.Gate) && (spotValue == nil || !spotOk) {
+		if (setting.Market == model.OKEX || setting.Market == model.Ftx) && (spotValue == nil || !spotOk) {
 			spotMarkets.Store(key, createSpotMarket(key, account.Secret, setting.Market))
 		}
 	}
@@ -729,11 +729,9 @@ func checkTradeLine(statusBuy, statusSell *CarryStatus, score float64) (valid, h
 			return true, false, 0
 		}
 		if statusBuy.account.CarryClose && statusBuy.Holding < 0 {
-			marketDis -= 0.05
 			limit = math.Abs(statusBuy.Holding)
 		}
 		if statusSell.account.CarryClose && statusSell.Holding > 0 {
-			marketDis -= 0.05
 			limit = statusSell.Holding
 		}
 		return score > marketDis, true, limit
@@ -1061,7 +1059,7 @@ func placeStatus(status *CarryStatus, price float64, amount float64) {
 			balance.AvailableWithBorrow += amount
 		}
 		valueSpot.(*spotMarket).availableU -= amount * price
-		if status.market == model.Ftx || status.market == model.OKEX || status.market == model.Gate {
+		if status.market == model.Ftx || status.market == model.OKEX {
 			if valueContract != nil {
 				valueContract.(*contractMarket).collateralsAvailable -= amount * price
 			}
@@ -1084,7 +1082,7 @@ func placeStatus(status *CarryStatus, price float64, amount float64) {
 		valueContract.(*contractMarket).collateralsAvailable += changeU * 0.2
 		valueContract.(*contractMarket).contractValueInU += changeU
 		if valueSpot != nil {
-			if status.market == model.Ftx || status.market == model.Gate {
+			if status.market == model.Ftx {
 				valueSpot.(*spotMarket).availableU += changeU * 0.2
 			} else if status.market == model.OKEX {
 				valueSpot.(*spotMarket).collateral.Available += changeU * 0.1
