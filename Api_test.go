@@ -67,6 +67,8 @@ func Test_ws(t *testing.T) {
 func Test_getCommonMarketInfos(t *testing.T) {
 	model.NewConfig()
 	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
+	success, pos, value, u := api.GetPositions(model.AppConfig.GateKey, model.AppConfig.GateSecret, model.Gate)
+	fmt.Println(fmt.Sprintf(`%v %v %v %v`, success, pos, value, u))
 	markets := api.GetMarketInfos(model.Gate)
 	for s, info := range markets {
 		fmt.Println(fmt.Sprintf(`%s %s %s`, s, info.Name, info.Market))
@@ -78,7 +80,7 @@ func Test_getCommonMarketInfos(t *testing.T) {
 func Test_BalAndPos(t *testing.T) {
 	model.NewConfig()
 	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
-	api.GetMarketInfos(model.Ftx)
+	api.GetMarketInfos(model.Gate)
 	order := api.QueryOrderById(model.AppConfig.GateKey, model.AppConfig.GateSecret, `gate`, `MGA_USDT`,
 		model.OrderTypeLimit, `144149811503`)
 	fmt.Println(order)

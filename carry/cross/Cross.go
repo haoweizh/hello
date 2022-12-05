@@ -93,7 +93,7 @@ func createFromPosition(account *model.Account, setting *model.Setting, valueLim
 		contractMarkets.Store(key, createContractMarket(key, account.Secret, setting.Market))
 		value, _ = contractMarkets.Load(key)
 		spotValue, spotOk := spotMarkets.Load(key)
-		if (setting.Market == model.OKEX || setting.Market == model.Ftx) && (spotValue == nil || !spotOk) {
+		if (setting.Market == model.OKEX || setting.Market == model.Ftx || setting.Market == model.Gate) && (spotValue == nil || !spotOk) {
 			spotMarkets.Store(key, createSpotMarket(key, account.Secret, setting.Market))
 		}
 	}
@@ -258,29 +258,20 @@ func initStatus(account *model.Account, setting *model.Setting, absentRevert boo
 	}
 	jumpOpen := 7.5
 	jumpClose := -5.0
-	if account.Index == 0 && (setting.Market == model.Ftx || setting.Market == model.OKEX || status.isSpot) {
-		jumpOpen = 12.0
-		jumpClose = -8.0
-	}
 	jumpBuy := jumpOpen
 	jumpSell := jumpOpen
 	if status.Holding*price < -100 {
 		jumpBuy = jumpClose
 		jumpSell = jumpOpen
 		standardScoreBuy = setting.CloseShortMargin
-		//standardScoreBuy = standardScoreClose
 		status.LimitBuy = math.Min(status.LimitBuy, math.Abs(status.Holding))
 	} else if status.Holding*price > 100 {
 		jumpBuy = jumpOpen
 		jumpSell = jumpClose
 		standardScoreSell = setting.CloseShortMargin
-		//standardScoreSell = standardScoreClose
 		status.LimitSell = math.Min(status.LimitSell, status.Holding)
 	}
 	lowLimit := lowestScore
-	if status.market == model.Ftx {
-		lowLimit = -0.05
-	}
 	status.TradeLineBuy = math.Max(standardScoreBuy*(0.5+jumpBuy*status.RateInAll), lowLimit) + status.FoundingRate
 	status.TradeLineSell = math.Max(standardScoreSell*(0.5+jumpSell*status.RateInAll), lowLimit) - status.FoundingRate
 	if status.market == model.BybitPerp {
@@ -737,11 +728,11 @@ func checkTradeLine(statusBuy, statusSell *CarryStatus, score float64) (valid, h
 		if score > marketDis {
 			return true, false, 0
 		}
-		if statusBuy.account.CarryClose && statusBuy.market == model.Ftx && statusBuy.Holding < 0 {
+		if statusBuy.account.CarryClose && statusBuy.Holding < 0 {
 			marketDis -= 0.05
 			limit = math.Abs(statusBuy.Holding)
 		}
-		if statusSell.account.CarryClose && statusSell.market == model.Ftx && statusSell.Holding > 0 {
+		if statusSell.account.CarryClose && statusSell.Holding > 0 {
 			marketDis -= 0.05
 			limit = statusSell.Holding
 		}
@@ -901,9 +892,6 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarrySta
 }
 
 func checkScoreLimit(market, symbol, marketRelate, symbolRelate string, amount, score, scoreRelate float64) (invalid bool) {
-	if market == model.Ftx && marketRelate == model.Ftx {
-		return false
-	}
 	if amount > 0 && ((score > 0.3 || scoreRelate > 0.3) ||
 		((score > 0.07 || scoreRelate > 0.07) && (market == model.Gate || marketRelate == model.Gate)) ||
 		((score > 0.1 || scoreRelate > 0.1) && (!isValidSymbol(market, symbol) || !isValidSymbol(marketRelate, symbolRelate)))) {
@@ -1073,15 +1061,13 @@ func placeStatus(status *CarryStatus, price float64, amount float64) {
 			balance.AvailableWithBorrow += amount
 		}
 		valueSpot.(*spotMarket).availableU -= amount * price
-		if status.market == model.Ftx {
+		if status.market == model.Ftx || status.market == model.OKEX || status.market == model.Gate {
 			if valueContract != nil {
 				valueContract.(*contractMarket).collateralsAvailable -= amount * price
 			}
-		} else if status.market == model.OKEX {
+		}
+		if status.market == model.OKEX {
 			valueSpot.(*spotMarket).collateral.Available -= amount * price
-			if valueContract.(*contractMarket) != nil {
-				valueContract.(*contractMarket).collateralsAvailable -= amount * price
-			}
 		}
 	} else if valueContract != nil {
 		position := valueContract.(*contractMarket).positions[status.symbol]
@@ -1098,7 +1084,7 @@ func placeStatus(status *CarryStatus, price float64, amount float64) {
 		valueContract.(*contractMarket).collateralsAvailable += changeU * 0.2
 		valueContract.(*contractMarket).contractValueInU += changeU
 		if valueSpot != nil {
-			if status.market == model.Ftx {
+			if status.market == model.Ftx || status.market == model.Gate {
 				valueSpot.(*spotMarket).availableU += changeU * 0.2
 			} else if status.market == model.OKEX {
 				valueSpot.(*spotMarket).collateral.Available += changeU * 0.1

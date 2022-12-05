@@ -281,8 +281,6 @@ func GetBalances(key, secret, market string) (
 		success, balances, totalInUsd = getBalanceFtx(key, secret)
 	case model.OKEX:
 		success, balances, totalInUsd, collateral = getBalanceOKEX(key, secret)
-	//case model.Binance:
-	//	success, balances = getBalanceBinance(key, secret)
 	case model.BinanceSpot:
 		success, balances = getBalanceBinanceSpot(key, secret)
 	case model.BybitSpot:
@@ -470,18 +468,18 @@ func GetPositions(key, secret, market string) (success bool, positions []*model.
 	switch market {
 	case model.KucoinPerp:
 		return getPositionsKucoinPerp(key, secret)
-	case model.Gate:
-		return getPositionsGate(key, secret)
 	case model.Mexc:
 		return getPositionsMexc(key, secret)
 	case model.BinancePerp:
 		return getPositionsBinancePerp(key, secret)
+	case model.Gate:
+		return getPositionsGate(key, secret)
 	case model.Ftx:
 		var balances []*model.Balance
 		success, balances, accountValue = getBalanceFtx(key, secret)
 		for _, balance := range balances {
 			if strings.EqualFold(balance.Coin, `usd`) {
-				availableU = balance.Amount
+				availableU += balance.Amount
 			}
 		}
 		success, positions, _ = getPositionsFtx(key, secret)
@@ -700,13 +698,13 @@ func GetWSSubscribe(market, symbol, subType string) (subscribe interface{}) {
 }
 
 // Transfer
-func _(key, secret, market, transferType string, amount float64) {
-	if market == model.Gate {
-		transferGate(key, secret, transferType, amount)
-	} else if market == model.Kucoin {
-		//transferKucoin(transferType, amount)
-	}
-}
+//func _(key, secret, market, transferType string, amount float64) {
+//	if market == model.Gate {
+//		transferGate(key, secret, transferType, amount)
+//	} else if market == model.Kucoin {
+//		//transferKucoin(transferType, amount)
+//	}
+//}
 
 func GetMarketInfos(market string) (marketInfo map[string]*model.MarketInfo) {
 	accounts := model.AppConfig.GetAccounts(market)
@@ -935,8 +933,6 @@ func CreateMarketDepthServer(markets *model.Markets, market string, orderHandler
 		err = WsDepthServeGate()
 	case model.OKEX:
 		channels, err = WsDepthServeOKEX(GetMarketSymbols(model.OKEX), orderHandler)
-	//case model.Binance:
-	//	channels, err = WsDepthServeBinance(markets, nil)
 	case model.BinanceSpot:
 		channels, err = WsDepthServeBinanceSpot(markets, nil)
 	case model.BinancePerp:

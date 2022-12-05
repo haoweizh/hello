@@ -29,7 +29,7 @@ func getClientGate(key, secret string) (apiClient *gateApi.APIClient, ctx contex
 
 func getMarketsGate(key, secret string) (success bool, marketInfos map[string]*model.MarketInfo) {
 	marketInfos = make(map[string]*model.MarketInfo)
-	appendRelatedMarketsGate(key, secret, marketInfos)
+	appendSpotMarketsGate(key, secret, marketInfos)
 	appendFutureMarketGate(key, secret, marketInfos)
 	return true, marketInfos
 }
@@ -67,70 +67,33 @@ func appendFutureMarketGate(key, secret string, marketInfos map[string]*model.Ma
 }
 
 // 市场minSize未根据最小下单美元数进行计算
-func appendRelatedMarketsGate(key, secret string, marketInfos map[string]*model.MarketInfo) {
+func appendSpotMarketsGate(key, secret string, marketInfos map[string]*model.MarketInfo) {
 	client, ctx := getClientGate(key, secret)
 	spotCurrencyPairs, _, spotErr := client.SpotApi.ListCurrencyPairs(ctx)
 	if spotErr != nil {
 		time.Sleep(time.Minute * 5)
 		panicGateError(key, "ListCurrencyPairs", spotErr)
-		appendRelatedMarketsGate(key, secret, marketInfos)
+		appendSpotMarketsGate(key, secret, marketInfos)
 		return
 	}
-	if model.AppConfig.GateSpot {
-		for _, spot := range spotCurrencyPairs {
-			success, _, coin := model.GetCoinFromDialect(model.Gate, spot.Id)
-			if spot.TradeStatus != "tradable" || !success {
-				continue
-			}
-			marketInfo := &model.MarketInfo{Market: model.Gate}
-			marketInfo.Name = coin + model.UniStandardTail[model.MarketTypeSpot]
-			marketInfo.PriceDecimal = int(spot.Precision)
-			marketInfo.PriceIncrement = 1 / math.Pow10(int(spot.Precision))
-			marketInfo.SizeIncrement = 1 / math.Pow10(int(spot.AmountPrecision))
-			if spot.MinQuoteAmount != "" {
-				marketInfo.MoneyMin, _ = strconv.ParseFloat(spot.MinQuoteAmount, 64)
-				marketInfo.SizeMin = marketInfo.SizeIncrement
-			}
-			if spot.MinBaseAmount != "" {
-				marketInfo.SizeMin, _ = strconv.ParseFloat(spot.MinBaseAmount, 64)
-			}
-			marketInfos[spot.Id] = marketInfo
+	for _, spot := range spotCurrencyPairs {
+		success, _, coin := model.GetCoinFromDialect(model.Gate, spot.Id)
+		if spot.TradeStatus != "tradable" || !success {
+			continue
 		}
-	} else {
-		marginCurrencyPairs, _, marginErr := client.MarginApi.ListCrossMarginCurrencies(ctx)
-		if marginErr != nil {
-			panicGateError(key, "ListCrossMarginCurrencies", marginErr)
+		marketInfo := &model.MarketInfo{Market: model.Gate}
+		marketInfo.Name = coin + model.UniStandardTail[model.MarketTypeSpot]
+		marketInfo.PriceDecimal = int(spot.Precision)
+		marketInfo.PriceIncrement = 1 / math.Pow10(int(spot.Precision))
+		marketInfo.SizeIncrement = 1 / math.Pow10(int(spot.AmountPrecision))
+		if spot.MinQuoteAmount != "" {
+			marketInfo.MoneyMin, _ = strconv.ParseFloat(spot.MinQuoteAmount, 64)
+			marketInfo.SizeMin = marketInfo.SizeIncrement
 		}
-		for _, margin := range marginCurrencyPairs {
-			for _, spot := range spotCurrencyPairs {
-				_, _, coin := model.GetCoinFromDialect(model.Gate, spot.Id)
-				if coin == margin.Name {
-					if spot.TradeStatus != "tradable" {
-						break
-					}
-					//spotData, _ := json.Marshal(spot)
-					//marginData, _ := json.Marshal(margin)
-					//util.Notice(fmt.Sprintf("现货交易对：%s", spotData))
-					//util.Notice(fmt.Sprintf("杠杆交易对：%s", marginData))
-					marketInfo := &model.MarketInfo{Market: model.Gate}
-					marketInfo.Name = margin.Name + model.UniStandardTail[model.MarketTypeSpot]
-					marketInfo.PriceDecimal = int(spot.Precision)
-					marketInfo.PriceIncrement = 1 / math.Pow10(int(spot.Precision))
-					marketInfo.SizeIncrement = 1 / math.Pow10(int(spot.AmountPrecision))
-					if spot.MinQuoteAmount != "" {
-						marketInfo.MoneyMin, _ = strconv.ParseFloat(spot.MinQuoteAmount, 64)
-						marketInfo.SizeMin = marketInfo.SizeIncrement
-					}
-					if spot.MinBaseAmount != "" {
-						marketInfo.SizeMin, _ = strconv.ParseFloat(spot.MinBaseAmount, 64)
-					}
-					marketInfo.BorrowSizeMin, _ = strconv.ParseFloat(margin.MinBorrowAmount, 64)
-					marketInfo.BorrowUsdtMax, _ = strconv.ParseFloat(margin.UserMaxBorrowAmount, 64)
-					marketInfos[marketInfo.Name] = marketInfo
-					break
-				}
-			}
+		if spot.MinBaseAmount != "" {
+			marketInfo.SizeMin, _ = strconv.ParseFloat(spot.MinBaseAmount, 64)
 		}
+		marketInfos[spot.Id] = marketInfo
 	}
 }
 
@@ -154,50 +117,55 @@ func setMarginSettingGate(key, secret string) {
 	util.Notice(fmt.Sprintf("set gate margin auto repay success,response: %s", marshal))
 }
 
-func transferGate(key string, secret string, transferType string, amount float64) {
-	client, ctx := getClientGate(key, secret)
-	param := gateApi.Transfer{Currency: `USDT`, Amount: fmt.Sprintf("%.6f", amount), Settle: `usdt`}
-	if transferType == "MAIN_UMFUTURE" {
-		if model.AppConfig.GateSpot {
-			param.From = "spot"
-			param.To = "futures"
-			_, endErr := client.WalletApi.Transfer(ctx, param)
-			if endErr != nil {
-				panicGateError(key, "transferGate", endErr)
-			}
-		} else {
-			param.From = "cross_margin"
-			param.To = "spot"
-			_, err := client.WalletApi.Transfer(ctx, param)
-			if err != nil {
-				panicGateError(key, "transferGate", err)
-			} else {
-				param.From = "spot"
-				param.To = "futures"
-				_, endErr := client.WalletApi.Transfer(ctx, param)
-				if endErr != nil {
-					panicGateError(key, "transferGate", endErr)
-				}
-			}
-		}
-	} else if transferType == "UMFUTURE_MAIN" {
-		param.From = "futures"
-		param.To = "spot"
-		_, err := client.WalletApi.Transfer(ctx, param)
-		if err != nil {
-			panicGateError(key, "transferGate", err)
-		} else {
-			if !model.AppConfig.GateSpot {
-				param.From = "spot"
-				param.To = "cross_margin"
-				_, endErr := client.WalletApi.Transfer(ctx, param)
-				if endErr != nil {
-					panicGateError(key, "transferGate", endErr)
-				}
-			}
-		}
-	}
-}
+//func transferGate(key string, secret string, transferType string, amount float64) {
+//	client, ctx := getClientGate(key, secret)
+//	param := gateApi.Transfer{Currency: `USDT`, Amount: fmt.Sprintf("%.6f", amount), Settle: `usdt`}
+//	if transferType == "MAIN_UMFUTURE" {
+//		if model.AppConfig.GateSpot {
+//			param.From = "spot"
+//			param.To = "futures"
+//			_, res, endErr := client.WalletApi.Transfer(ctx, param)
+//			if endErr != nil {
+//				panicGateError(key, "transferGate", endErr)
+//				util.Notice(fmt.Sprintf(`fail to transfer status %s`, res.Status))
+//			}
+//		} else {
+//			param.From = "cross_margin"
+//			param.To = "spot"
+//			_, res, err := client.WalletApi.Transfer(ctx, param)
+//			if err != nil {
+//				panicGateError(key, "transferGate", err)
+//				util.Notice(fmt.Sprintf(`fail to transfer status %s`, res.Status))
+//			} else {
+//				param.From = "spot"
+//				param.To = "futures"
+//				_, res, endErr := client.WalletApi.Transfer(ctx, param)
+//				if endErr != nil {
+//					panicGateError(key, "transferGate", endErr)
+//					util.Notice(fmt.Sprintf(`fail to transfer status %s`, res.Status))
+//				}
+//			}
+//		}
+//	} else if transferType == "UMFUTURE_MAIN" {
+//		param.From = "futures"
+//		param.To = "spot"
+//		_, res, err := client.WalletApi.Transfer(ctx, param)
+//		if err != nil {
+//			panicGateError(key, "transferGate", err)
+//			util.Notice(fmt.Sprintf(`fail to transfer status %s`, res.Status))
+//		} else {
+//			if !model.AppConfig.GateSpot {
+//				param.From = "spot"
+//				param.To = "cross_margin"
+//				_, res, endErr := client.WalletApi.Transfer(ctx, param)
+//				if endErr != nil {
+//					panicGateError(key, "transferGate", endErr)
+//					util.Notice(fmt.Sprintf(`fail to transfer status %s`, res.Status))
+//				}
+//			}
+//		}
+//	}
+//}
 
 func panicGateError(key, function string, err error) {
 	if e, ok := err.(gateApi.GateAPIError); ok {
@@ -407,48 +375,22 @@ func WsDepthServeGate() (err error) {
 
 func getBalanceGate(key string, secret string) (success bool, balances []*model.Balance) {
 	client, ctx := getClientGate(key, secret)
-	if model.AppConfig.GateSpot {
-		accounts, _, err := client.SpotApi.ListSpotAccounts(ctx, nil)
-		if err != nil {
-			panicGateError(key, "getBalanceGate", err)
-			time.Sleep(time.Minute * 5)
-			util.SocketInfo(`fail to refresh spot balance gate`)
-			return getBalanceGate(key, secret)
-		}
-		for _, account := range accounts {
-			balance := &model.Balance{AccountId: key, BalanceTime: util.GetNow(), Market: model.Gate, Coin: account.Currency}
-			balance.FrozenAmount, _ = strconv.ParseFloat(account.Locked, 64)
-			// 此处未计算可以借入的金额
-			balance.AvailableWithBorrow, _ = strconv.ParseFloat(account.Available, 64)
-			balance.Amount = balance.AvailableWithBorrow + balance.FrozenAmount - balance.Borrow
-			_, price := model.AppMarkets.GetPriceForce(balance.Coin+model.UniStandardTail[model.MarketTypeSpot], model.Gate, GetMarkets())
-			balance.UsdValue = balance.Amount * price
-			balances = append(balances, balance)
-		}
-	} else {
-		account, _, err := client.MarginApi.GetCrossMarginAccount(ctx)
-		if err != nil {
-			panicGateError(key, "getBalanceGate", err)
-			time.Sleep(time.Minute * 5)
-			util.SocketInfo(`fail to refresh margin balance gate`)
-			return getBalanceGate(key, secret)
-		}
-		if account.Locked {
-			util.Notice(fmt.Sprintf("margin account is locked"))
-			return false, balances
-		}
-		balances = make([]*model.Balance, 0)
-		for index, item := range account.Balances {
-			balance := &model.Balance{AccountId: key, BalanceTime: util.GetNow(), Market: model.Gate, Coin: index}
-			balance.FrozenAmount, _ = strconv.ParseFloat(item.Freeze, 64)
-			balance.Borrow, _ = strconv.ParseFloat(item.Borrowed, 64)
-			// 此处未计算可以借入的金额
-			balance.AvailableWithBorrow, _ = strconv.ParseFloat(item.Available, 64)
-			balance.Amount = balance.AvailableWithBorrow + balance.FrozenAmount - balance.Borrow
-			_, price := model.AppMarkets.GetPriceForce(balance.Coin+model.UniStandardTail[model.MarketTypeSpot], model.Gate, GetMarkets())
-			balance.UsdValue = balance.Amount * price
-			balances = append(balances, balance)
-		}
+	accounts, _, err := client.SpotApi.ListSpotAccounts(ctx, nil)
+	if err != nil {
+		panicGateError(key, "getBalanceGate", err)
+		time.Sleep(time.Minute * 5)
+		util.SocketInfo(`fail to refresh spot balance gate`)
+		return getBalanceGate(key, secret)
+	}
+	for _, account := range accounts {
+		balance := &model.Balance{AccountId: key, BalanceTime: util.GetNow(), Market: model.Gate, Coin: account.Currency}
+		balance.FrozenAmount, _ = strconv.ParseFloat(account.Locked, 64)
+		// 此处未计算可以借入的金额
+		balance.AvailableWithBorrow, _ = strconv.ParseFloat(account.Available, 64)
+		balance.Amount = balance.AvailableWithBorrow + balance.FrozenAmount - balance.Borrow
+		_, price := model.AppMarkets.GetPriceForce(balance.Coin+model.UniStandardTail[model.MarketTypeSpot], model.Gate, GetMarkets())
+		balance.UsdValue = balance.Amount * price
+		balances = append(balances, balance)
 	}
 	return true, balances
 }
@@ -468,7 +410,21 @@ func getPositionsGate(key string, secret string) (success bool, positions []*mod
 		util.SocketInfo(`fail to refresh future balance gate`)
 		return getPositionsGate(key, secret)
 	}
-	accountValue, _ = strconv.ParseFloat(account.Total, 64)
+	keyAccount := model.AppConfig.GetAccountFromKey(model.Gate, key)
+	if keyAccount.CarryClose {
+		accountValue, _ = strconv.ParseFloat(account.Total, 64)
+	} else {
+		successBal, balances := getBalanceGate(key, secret)
+		if successBal {
+			for _, balance := range balances {
+				if USDs[balance.Coin] {
+					accountValue += balance.Amount
+				} else {
+					accountValue += balance.UsdValue
+				}
+			}
+		}
+	}
 	unrealizedPnl, _ := strconv.ParseFloat(account.UnrealisedPnl, 64)
 	accountValue += unrealizedPnl
 	available, _ = strconv.ParseFloat(account.Available, 64)
@@ -499,7 +455,8 @@ func cancelOrderGate(key, secret, symbol, orderId string) (result bool) {
 	success, marketType, _, dialectSymbol := model.GetFromStandard(model.Gate, symbol)
 	if success && marketType == model.MarketTypeSpot {
 		param := &gateApi.CancelOrderOpts{}
-		if model.AppConfig.GateSpot {
+		account := model.AppConfig.GetAccountFromKey(model.Gate, key)
+		if account.CarryClose {
 			param.Account = optional.NewString("spot")
 		} else {
 			param.Account = optional.NewString("cross_margin")
@@ -531,7 +488,8 @@ func cancelOrdersGate(key string, secret string, symbol string) (result bool) {
 	success, marketType, _, dialectSymbol := model.GetFromStandard(model.Gate, symbol)
 	if success && marketType == model.MarketTypeSpot {
 		param := &gateApi.CancelOrdersOpts{}
-		if model.AppConfig.GateSpot {
+		account := model.AppConfig.GetAccountFromKey(model.Gate, key)
+		if account.CarryClose {
 			param.Account = optional.NewString("spot")
 		} else {
 			param.Account = optional.NewString("cross_margin")
@@ -566,15 +524,17 @@ func placeOrderGate(key, secret string, order *model.Order, orderSide, orderType
 	order.Symbol = symbol
 	if success && marketType == model.MarketTypeSpot {
 		relatedOrder := gateApi.Order{Price: orderPriceStr, Side: orderSide, CurrencyPair: dialectSymbol, Type: orderType}
-		if model.AppConfig.GateSpot {
+		account := model.AppConfig.GetAccountFromKey(model.Gate, key)
+		if account.CarryClose {
 			relatedOrder.Account = "spot"
 		} else {
 			relatedOrder.Account = "cross_margin"
-			if orderSide == model.OrderSideBuy {
-				relatedOrder.AutoRepay = true
-			} else {
-				relatedOrder.AutoBorrow = true
-			}
+			//if orderSide == model.OrderSideBuy {
+			//	relatedOrder.AutoRepay = true
+			//} else {
+			//	relatedOrder.AutoBorrow = false
+			//}
+			relatedOrder.AutoRepay = true
 		}
 		relatedOrder.Amount = util.CutTailZero(fmt.Sprintf(`%f`, model.GetAmountInMarket(model.Gate, symbol, amount, price)))
 		util.SocketInfo(`create spot order request: %v`, relatedOrder)
@@ -711,7 +671,12 @@ func queryOrderGate(key, secret string, order *model.Order) {
 		util.SocketInfo(`%s %s %s query result:%s %f %v`,
 			order.Market, order.Symbol, order.OrderId, order.Status, order.DealAmount, orderFuture)
 	} else if success && marketType == model.MarketTypeSpot {
-		orderSpot, _, err := client.SpotApi.GetOrder(ctx, order.OrderId, dialectSymbol, nil)
+		opts := &gateApi.GetOrderOpts{}
+		account := model.AppConfig.GetAccountFromKey(model.Gate, key)
+		if !account.CarryClose {
+			opts.Account = optional.NewString(`cross_margin`)
+		}
+		orderSpot, _, err := client.SpotApi.GetOrder(ctx, order.OrderId, dialectSymbol, opts)
 		if err != nil {
 			panicGateError(key, "GetSpotOrder", err)
 			return
