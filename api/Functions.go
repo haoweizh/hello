@@ -322,11 +322,11 @@ func GetFundingRate(key, secret, market, symbol string) (success bool, rate floa
 	}
 	fundingRate := model.GetFundingRate(market, symbol)
 	now := util.GetNow().Unix()
-	if market == model.OKEX { // 针对ok用新expireTime返回旧数据问题的特殊处理
-		if fundingRate != nil && now < fundingRate.ExpireTime-60 {
+	// 针对ok用新expireTime返回旧数据问题的特殊处理; 其他交易所的资金费率都会实时变动
+	if fundingRate != nil && market == model.OKEX {
+		if now < fundingRate.ExpireTime-60 && fundingRate.UpdateTime.Add(time.Minute*55).After(time.Now()) {
 			return true, fundingRate.Rate, fundingRate.UpdateTime
-		} else if fundingRate != nil && now > fundingRate.ExpireTime-60 && now < fundingRate.ExpireTime+240 &&
-			fundingRate.UpdateTime.Unix() > fundingRate.ExpireTime-60 {
+		} else if now > fundingRate.ExpireTime-60 && now < fundingRate.ExpireTime+240 {
 			if now < fundingRate.ExpireTime {
 				return true, fundingRate.Rate, fundingRate.UpdateTime
 			} else {
@@ -335,7 +335,7 @@ func GetFundingRate(key, secret, market, symbol string) (success bool, rate floa
 		}
 	} else if fundingRate != nil && now < fundingRate.ExpireTime && fundingRate.UpdateTime.Add(time.Minute*5).After(time.Now()) {
 		return true, fundingRate.Rate, fundingRate.UpdateTime
-	} // 其他交易所的资金费率都会实时变动
+	}
 	switch market {
 	//case model.Bitmex:
 	//	rate, expireTime = deprecated.getFundingRateBitmex(key, secret, symbol)
