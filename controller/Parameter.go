@@ -110,7 +110,7 @@ func simulate(c *gin.Context) {
 	}
 	market := c.Query(`market`)
 	if strings.Trim(market, ` `) == `` {
-		market = model.Ftx
+		market = model.OKEX
 	}
 	simType := c.Query(`type`)
 	simTypeSeconds, simTypeErr := strconv.ParseInt(simType, 10, 64)
@@ -147,9 +147,9 @@ func simulate(c *gin.Context) {
 		simulateGuide := "limit:仓数上限，可选，默认为3 \nnew:true为生成新的仿真否则为查看同参数历史仿真\n" +
 			"type:海龟的计算周期，默认86400秒，即一天，取值范围：3600、14400或86400的倍数\nmarket:模拟市场\n" +
 			"near:海龟近计算周期数，far:海龟远计算周期数\n" +
-			"参数样例：\ncoin=xrp&begin=2022-10-01&end=2022-10-10&limit=3&type=3600&new=true\n"
+			"参数样例：\ncoin=xrp&begin=2022-10-01&end=2022-10-10&limit=3&type=86400&market=okex&near=10&far=20new=true\n"
 		c.String(http.StatusMethodNotAllowed,
-			fmt.Sprintf("time parameter error %s %s %s\n%s", strBegin, strEnd, simType, simulateGuide))
+			fmt.Sprintf("参数错误，请参考:\n%s", simulateGuide))
 		return
 	}
 	duration, _ := time.ParseDuration(`10000h`)
