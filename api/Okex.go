@@ -28,8 +28,8 @@ var lastSameTime = make(map[string]int64)
 var lastCarryTime = int64(0)
 var msgChanOKEX = make(map[string]chan *simplejson.Json)
 
-//var wrongs = make(map[string]bool)
-//var wrongLock sync.Mutex
+// var wrongs = make(map[string]bool)
+// var wrongLock sync.Mutex
 var channelMaintainingOKEX = false
 var privateConnectionOKEX = make(map[string]*websocket.Conn) // key - connection
 
@@ -231,7 +231,7 @@ func handleMsgOKEX(channel chan *simplejson.Json, symbol string) {
 	}
 }
 
-//lastPingTime := util.GetNow().Unix()
+// lastPingTime := util.GetNow().Unix()
 var wsHandlerOKEX = func(connection *websocket.Conn, event []byte, orderHandler OrderHandler) {
 	//now := util.GetNow().Unix()
 	//if now-lastPingTime > 25 { // ping okex server every 30 seconds
@@ -633,8 +633,8 @@ func PlacePairOKEX(key, symbolBuy, symbolSell, orderType string, priceBuy, price
 // 不能使用 fmt %v 因为有e+5 的情况；
 // 不能使用 fmt %f 因为有000后缀；
 // 不能使用 strconv.FormatFloat 因为有 2.00000001问题
-//priceStr := strconv.FormatFloat(order.Price, 'f', -1, 64)
-//triggerPriceStr := strconv.FormatFloat(order.TriggerPrice, 'f', -1, 64)
+// priceStr := strconv.FormatFloat(order.Price, 'f', -1, 64)
+// triggerPriceStr := strconv.FormatFloat(order.TriggerPrice, 'f', -1, 64)
 func placeOrderOKEX(key, secret string, isWs bool, order *model.Order) {
 	price, decimal := model.FormatPrice(model.OKEX, order.Symbol, order.OrderSide, order.Price)
 	priceStr := util.CutTailZero(strconv.FormatFloat(price, 'f', decimal, 64))
@@ -1333,9 +1333,11 @@ func getCandlesOKEX(key, secret, symbol string, before, after time.Time, count, 
 	case 86400:
 		bar = `1D`
 	}
+	//path := `/api/v5/market/candles`
+	path := `/api/v5/market/history-candles`
 	param := map[string]interface{}{`instId`: symbol, `bar`: bar, `limit`: count,
 		`before`: before.UnixNano() / int64(time.Millisecond), `after`: after.UnixNano() / int64(time.Millisecond)}
-	response, _ := sendSignRequestOKEX(key, secret, http.MethodGet, `/api/v5/market/candles`, param, nil)
+	response, _ := sendSignRequestOKEX(key, secret, http.MethodGet, path, param, nil)
 	candleJson, err := util.NewJSON(response)
 	if err != nil || candleJson == nil || candleJson.Get(`data`) == nil || len(candleJson.Get(`data`).MustArray()) == 0 {
 		return
