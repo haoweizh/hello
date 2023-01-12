@@ -67,13 +67,18 @@ func Test_ws(t *testing.T) {
 func Test_getCommonMarketInfos(t *testing.T) {
 	model.NewConfig()
 	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
+	//api.InitCrossMarketInfos([]string{model.Gate})
+	api.InitMarketInfos()
+	order1 := api.PlaceOrder(model.AppConfig.GateKey, model.AppConfig.GateSecret, model.OrderSideBuy, model.OrderTypeLimit,
+		model.Gate, `KISHU_USDT`, ``,
+		0.00000000038, 0.00000000038, 12000000000, false, nil, nil)
+	fmt.Println(order1.OrderId)
 	success, pos, value, u := api.GetPositions(model.AppConfig.GateKey, model.AppConfig.GateSecret, model.Gate)
 	fmt.Println(fmt.Sprintf(`%v %v %v %v`, success, pos, value, u))
 	markets := api.GetMarketInfos(model.Gate)
 	for s, info := range markets {
 		fmt.Println(fmt.Sprintf(`%s %s %s`, s, info.Name, info.Market))
 	}
-	api.InitCrossMarketInfos([]string{model.Gate})
 	//api.InitCrossMarketInfos([]string{model.OKEX, model.Ftx, model.Gate})
 }
 

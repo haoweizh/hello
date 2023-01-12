@@ -15,7 +15,7 @@ type TurtleData struct {
 	turtleTime, checkTimeBreak, checkTimeOpen                                              time.Time
 	waitBreakLong, waitBreakShort, breakLong, breakShort, liquidated                       bool
 	highDays10, lowDays10, highDays20, lowDays20, highDays3, lowDays3, highDays5, lowDays5 float64
-	n, amount                                                                              float64
+	highDays14, lowDays14, highDays7, lowDays7, n, amount                                  float64
 	symbol                                                                                 string
 	orderLong, orderShort, orderAdjust                                                     []*model.Order
 }
@@ -162,11 +162,23 @@ func GetTurtleData(key, secret string, setting *model.Setting) (turtleData *Turt
 		if (turtleData.lowDays20 == 0 || turtleData.lowDays20 > candle.PriceLow) && i <= 20 {
 			turtleData.lowDays20 = candle.PriceLow
 		}
+		if candle.PriceHigh > turtleData.highDays14 && i <= 14 {
+			turtleData.highDays14 = candle.PriceHigh
+		}
+		if (turtleData.lowDays14 == 0 || turtleData.lowDays14 > candle.PriceLow) && i <= 14 {
+			turtleData.lowDays14 = candle.PriceLow
+		}
 		if candle.PriceHigh > turtleData.highDays10 && i <= 10 {
 			turtleData.highDays10 = candle.PriceHigh
 		}
 		if (turtleData.lowDays10 == 0 || turtleData.lowDays10 > candle.PriceLow) && i <= 10 {
 			turtleData.lowDays10 = candle.PriceLow
+		}
+		if candle.PriceHigh > turtleData.highDays7 && i <= 7 {
+			turtleData.highDays7 = candle.PriceHigh
+		}
+		if (turtleData.lowDays7 == 0 || turtleData.lowDays7 > candle.PriceLow) && i <= 7 {
+			turtleData.lowDays7 = candle.PriceLow
 		}
 		if candle.PriceHigh > turtleData.highDays3 && i <= 3 {
 			turtleData.highDays3 = candle.PriceHigh
@@ -191,9 +203,10 @@ func GetTurtleData(key, secret string, setting *model.Setting) (turtleData *Turt
 		if !model.CommonCoins[strings.ToLower(coin)] {
 			adjustPosHolding(key, secret, setting, turtleData)
 		}
-		util.Notice(fmt.Sprintf(`%s %s set turtle data: amount:%f n:%f 20:%f %f 10:%f %f`,
+		util.Notice(fmt.Sprintf(`%s %s set turtle data: amount:%f n:%f 20:%f %f 14: %f %f 10:%f %f 7: %f %f`,
 			setting.Market, setting.Symbol, turtleData.amount, turtleData.n, turtleData.lowDays20,
-			turtleData.highDays20, turtleData.lowDays10, turtleData.highDays10))
+			turtleData.highDays20, turtleData.lowDays14, turtleData.highDays14, turtleData.lowDays10,
+			turtleData.highDays10, turtleData.lowDays7, turtleData.highDays7))
 	}
 	return
 }
@@ -277,14 +290,20 @@ var ProcessTurtle = func(setting *model.Setting, tick *model.BidAsk) {
 	currentN := api.GetCurrentN(setting)
 	msgKey := fmt.Sprintf("%s_%s_%s", model.FunctionTurtle, setting.Market, setting.Symbol)
 	msg := fmt.Sprintf("[海龟参数]%s %s 次数限制:%f 当前已经持仓数量:%f 上一次开仓的价格:%f "+
-		"20日:%f-%f 10日:%f-%f n:%f 数量:%f %s 持仓数/限制:%d/%f 总持仓数%d bid-ask %f %f 当日有平仓：%v",
+		"20日:%f-%f 10日:%f-%f 14日：%f-%f 7日：%f-%f n:%f 数量:%f %s 持仓数/限制:%d/%f 总持仓数%d bid-ask %f %f 当日有平仓：%v",
 		turtleData.turtleTime.String()[0:10], msgKey, setting.AmountLimit, setting.GridAmount, setting.PriceX,
-		turtleData.lowDays20, turtleData.highDays20, turtleData.lowDays10, turtleData.highDays10, turtleData.n,
+		turtleData.lowDays20, turtleData.highDays20, turtleData.lowDays10, turtleData.highDays10, turtleData.lowDays14,
+		turtleData.highDays14, turtleData.lowDays7, turtleData.highDays7, turtleData.n,
 		turtleData.amount, setting.Symbol, setting.Chance, setting.OpenShortMargin, currentN, tick.Bids[0].Price,
 		tick.Asks[0].Price, turtleData.liquidated)
 	util.StoreSyncMap(&model.CarryInfo, msg, account.Key, msgKey)
 	priceLong := turtleData.highDays20
 	priceShort := turtleData.lowDays20
+	_, _, coin, _ := model.GetFromStandard(setting.Market, setting.Symbol)
+	if !model.CommonCoins[strings.ToLower(coin)] {
+		priceLong = turtleData.highDays14
+		priceShort = turtleData.lowDays14
+	}
 	if checkTurtleOrders(account.Key, account.Secret, setting, float64(currentN), turtleData) ||
 		checkTurtleBreak(account.Key, account.Secret, setting, turtleData, tick) {
 		return
@@ -316,13 +335,16 @@ var ProcessTurtle = func(setting *model.Setting, tick *model.BidAsk) {
 				priceLong, setting.PriceX, turtleData.n))
 		}
 	} else if setting.Chance > 0 {
-		priceLong = math.Max(turtleData.highDays20, setting.PriceX+turtleData.n/2)
+		priceLong = math.Max(priceLong, setting.PriceX+turtleData.n/2)
 		//if turtleData.lowDays3 < setting.PriceX {
 		//	priceShort = math.Max(setting.PriceX-2*turtleData.n, turtleData.lowDays10)
 		//} else {
 		//	priceShort = math.Max(turtleData.highDays20-2*turtleData.n, turtleData.lowDays10)
 		//}
 		priceShort = math.Max(setting.PriceX-2*turtleData.n, turtleData.lowDays10)
+		if !model.CommonCoins[strings.ToLower(coin)] {
+			priceShort = math.Max(setting.PriceX-2*turtleData.n, turtleData.lowDays7)
+		}
 		placeTurtleOrders(account.Key, account.Secret, turtleData, setting, currentN, priceShort, priceLong, tick)
 		// 加仓一个单位
 		if turtleData.breakLong && turtleData.waitBreakLong {
@@ -351,13 +373,16 @@ var ProcessTurtle = func(setting *model.Setting, tick *model.BidAsk) {
 				setting.PriceX, turtleData.n))
 		}
 	} else if setting.Chance < 0 {
-		priceShort = math.Min(turtleData.lowDays20, setting.PriceX-turtleData.n/2)
+		priceShort = math.Min(priceShort, setting.PriceX-turtleData.n/2)
 		//if turtleData.highDays3 > setting.PriceX {
 		//	priceLong = math.Min(setting.PriceX+2*turtleData.n, turtleData.highDays10)
 		//} else {
 		//	priceLong = math.Min(turtleData.lowDays20+2*turtleData.n, turtleData.highDays10)
 		//}
 		priceLong = math.Min(setting.PriceX+2*turtleData.n, turtleData.highDays10)
+		if !model.CommonCoins[strings.ToLower(coin)] {
+			priceLong = math.Min(setting.PriceX+2*turtleData.n, turtleData.highDays7)
+		}
 		placeTurtleOrders(account.Key, account.Secret, turtleData, setting, currentN, priceShort, priceLong, tick)
 		// 加仓一个单位
 		if turtleData.breakShort && turtleData.waitBreakShort {
@@ -507,10 +532,11 @@ func placeTurtleOrders(key, secret string, turtleData *TurtleData, setting *mode
 		}
 		if setting.SymbolRelated != model.SettingTurtleRemoved || setting.Chance < 0 {
 			util.Notice(fmt.Sprintf(`%s %s place多单 chance:%d amount:%f priceX:%f currentN-limit:%d %f
-			orderSide:%s h20:%f h10:%f l20:%f l10:%f coin limit:%f`,
+			orderSide:%s h20:%f h10:%f h14:%f h7:%f l20:%f l10:%f l14:%f l7:%f coin limit:%f`,
 				setting.Market, setting.Symbol, setting.Chance, amount, setting.PriceX, currentN, setting.AmountLimit,
-				orderSide, turtleData.highDays20, turtleData.highDays10, turtleData.lowDays20,
-				turtleData.lowDays10, setting.OpenShortMargin))
+				orderSide, turtleData.highDays20, turtleData.highDays10, turtleData.highDays14,
+				turtleData.highDays7, turtleData.lowDays20, turtleData.lowDays10, turtleData.lowDays14, turtleData.lowDays7,
+				setting.OpenShortMargin))
 			priceOut := false
 			if priceLong <= tick.Asks[0].Price {
 				turtleData.orderLong = api.MustPlaceOrder(key, secret, orderSide, model.OrderTypeLimit, setting.Market, setting.Symbol, ``,
@@ -545,10 +571,10 @@ func placeTurtleOrders(key, secret string, turtleData *TurtleData, setting *mode
 		}
 		if setting.SymbolRelated != model.SettingTurtleRemoved || setting.Chance > 0 {
 			util.Notice(fmt.Sprintf(`%s %s place空单 chance:%d amount:%f priceX:%f currentN-limit:%d %f 
-			orderSide:%s h20:%f h10:%f l20:%f l10:%f coin limit:%f`,
+			orderSide:%s h20:%f h10:%f h14:%f h7:%f l20:%f l10:%f l14:%f l7:%f coin limit:%f`,
 				setting.Market, setting.Symbol, setting.Chance, amount, setting.PriceX, currentN, setting.AmountLimit,
-				orderSide, turtleData.highDays20, turtleData.highDays10, turtleData.lowDays20,
-				turtleData.lowDays10, setting.OpenShortMargin))
+				orderSide, turtleData.highDays20, turtleData.highDays10, turtleData.highDays14, turtleData.highDays7,
+				turtleData.lowDays20, turtleData.lowDays10, turtleData.lowDays14, turtleData.lowDays7, setting.OpenShortMargin))
 			priceOut := false
 			if priceShort >= tick.Bids[0].Price {
 				turtleData.orderShort = api.MustPlaceOrder(key, secret, orderSide, model.OrderTypeLimit, setting.Market, setting.Symbol, ``,
