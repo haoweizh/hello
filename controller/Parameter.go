@@ -153,9 +153,9 @@ func simulate(c *gin.Context) {
 			fmt.Sprintf("参数错误，请参考:\n%s", simulateGuide))
 		return
 	}
-	duration, _ := time.ParseDuration(`10000h`)
+	duration, _ := time.ParseDuration(`100000h`)
 	if begin.Add(duration).Before(end) {
-		c.String(http.StatusMethodNotAllowed, fmt.Sprintf(`模拟时间跨度%s~%s大于380天`, begin.String(), end.String()))
+		c.String(http.StatusMethodNotAllowed, fmt.Sprintf(`模拟时间跨度%s~%s大于3800天`, begin.String(), end.String()))
 		return
 	}
 	msg := ``
