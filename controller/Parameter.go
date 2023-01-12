@@ -22,7 +22,7 @@ import (
 )
 
 var codeGenTime int64
-var code = ``
+var codes = make(map[string]bool)
 var simulating = false
 
 func ParameterServe() {
@@ -135,12 +135,12 @@ func simulate(c *gin.Context) {
 	}
 	session := sessions.Default(c)
 	value := c.Query(`code`)
-	if value == code {
+	if codes[value] {
 		session.Set(`code`, value)
 		_ = session.Save()
 	}
 	sessionValue := session.Get(`code`)
-	if sessionValue == nil || sessionValue.(string) != code || code == `` {
+	if sessionValue == nil || !codes[sessionValue.(string)] {
 		strNew = `false`
 	}
 	if errBegin != nil || errEnd != nil || simTypeSeconds <= 0 || nearErr != nil || farErr != nil ||
@@ -167,6 +167,8 @@ func simulate(c *gin.Context) {
 			go model.AppDB.Where(`market=? and symbol=? and refresh_type=? and order_time>? and order_time<? and amount_type=?`,
 				market, symbol, model.FunctionSimulation, begin, end, simType).Delete(&model.Order{})
 			regret.ProcessCandles(market, symbol, begin, end, int(near), int(far), setting)
+		} else {
+			util.Notice(`no need process simulate new %s`, strNew)
 		}
 		msg += regret.ToString(regret.GetDBOrders(market, symbol, simType, begin, end), setting) + "\n"
 	}
@@ -390,7 +392,12 @@ func GetCode(c *gin.Context) {
 		codeGenTime = util.GetNowUnixMillion()
 		rnd := rand.New(rand.NewSource(time.Now().UnixNano()))
 		rnd = rand.New(rand.NewSource(rnd.Int63()))
-		code = fmt.Sprintf("%06v", rnd.Int31n(1000000))
+		code := fmt.Sprintf("%06v", rnd.Int31n(1000000))
+		if len(codes) < 1000 {
+			codes[code] = true
+		} else {
+			codes = make(map[string]bool)
+		}
 		//ip, _ := util.ExternalIP()
 		//verifyUrl := fmt.Sprintf(`http://%s:8080/set?pw=%s`, ip, code)
 		go api.SendMails(`启动验证码`, `验证码是 `+code)
