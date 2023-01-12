@@ -169,10 +169,10 @@ func CancelOrder(key, secret, market, symbol, orderType, orderId string) (result
 	return result, errCode, msg
 }
 
-// GetCandle seconds: candle的以秒计算宽度
+// GetCandle slotSeconds: candle的以秒计算宽度
 func GetCandle(key, secret, market, symbol string, slotSeconds int, begin, end time.Time) (candles []*model.Candle) {
 	count := (end.Unix() - begin.Unix()) / int64(slotSeconds)
-	limit := 1000
+	limit := 300
 	if int(count) > limit {
 		duration, _ := time.ParseDuration(fmt.Sprintf(`%ds`, limit*slotSeconds))
 		candles = GetCandle(key, secret, market, symbol, slotSeconds, begin, begin.Add(duration))
