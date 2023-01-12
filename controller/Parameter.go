@@ -110,7 +110,7 @@ func simulate(c *gin.Context) {
 	}
 	market := c.Query(`market`)
 	if strings.Trim(market, ` `) == `` {
-		market = model.OKEX
+		market = model.BinancePerp
 	}
 	simType := c.Query(`type`)
 	simTypeSeconds, simTypeErr := strconv.ParseInt(simType, 10, 64)
