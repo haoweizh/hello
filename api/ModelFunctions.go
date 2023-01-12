@@ -134,6 +134,7 @@ func prepareSettings() {
 						util.Notice(fmt.Sprintf(`set leverage binanceperp %s`, setting.Symbol))
 					} else {
 						util.Notice(fmt.Sprintf(`fail to set leverage binanceperp %s`, setting.Symbol))
+						time.Sleep(time.Minute)
 					}
 				}
 				time.Sleep(time.Second)

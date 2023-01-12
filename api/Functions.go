@@ -174,7 +174,7 @@ func GetCandle(key, secret, market, symbol string, slotSeconds int, begin, end t
 	count := (end.Unix() - begin.Unix()) / int64(slotSeconds)
 	limit := 100
 	if market == model.BinancePerp {
-		limit = 1500
+		limit = 499
 	}
 	if int(count) > limit {
 		duration, _ := time.ParseDuration(fmt.Sprintf(`%ds`, limit*slotSeconds))
@@ -204,7 +204,7 @@ func GetCandle(key, secret, market, symbol string, slotSeconds int, begin, end t
 		} else {
 			util.StoreSyncMap(&model.CarryInfo, nil, `GetCandle`)
 		}
-		time.Sleep(time.Millisecond * 100)
+		time.Sleep(time.Millisecond * 300)
 	}
 	return
 }
