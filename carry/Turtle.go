@@ -12,12 +12,12 @@ import (
 )
 
 type TurtleData struct {
-	turtleTime, checkTimeBreak, checkTimeOpen                                              time.Time
-	waitBreakLong, waitBreakShort, breakLong, breakShort, liquidated                       bool
-	highDays10, lowDays10, highDays20, lowDays20, highDays3, lowDays3, highDays5, lowDays5 float64
-	highDays14, lowDays14, highDays7, lowDays7, n, amount                                  float64
-	symbol                                                                                 string
-	orderLong, orderShort, orderAdjust                                                     []*model.Order
+	turtleTime, checkTimeBreak, checkTimeOpen                        time.Time
+	waitBreakLong, waitBreakShort, breakLong, breakShort, liquidated bool
+	highDaysNear, lowDaysNear, highDaysFar, lowDaysFar, n, amount    float64
+	near, far                                                        int
+	symbol                                                           string
+	orderLong, orderShort, orderAdjust                               []*model.Order
 }
 
 const turtleTriggerDelta = 0.01
@@ -30,7 +30,7 @@ func (turtleData *TurtleData) ToString() (str string) {
 	if turtleData == nil {
 		return `turtle data is nil`
 	}
-	return fmt.Sprintf(`20日%f~%f n:%f amount:%f`, turtleData.lowDays20, turtleData.highDays20, turtleData.n, turtleData.amount)
+	return fmt.Sprintf(`20日%f~%f n:%f amount:%f`, turtleData.lowDaysFar, turtleData.highDaysFar, turtleData.n, turtleData.amount)
 }
 
 func checkSetTurtling(value bool) (before bool) {
@@ -99,10 +99,10 @@ func adjustPosHolding(key, secret string, setting *model.Setting, turtleData *Tu
 			setting.Chance = 0
 			if posMap[setting.Symbol].Holding > 0 {
 				turtleData.orderAdjust = api.MustPlaceOrder(key, secret, model.OrderSideSell, model.OrderTypeStop, setting.Market, setting.Symbol, ``,
-					model.FunctionTurtle, turtleData.lowDays5*(1-turtleTriggerDelta), turtleData.lowDays5, posMap[setting.Symbol].Holding, setting)
+					model.FunctionTurtle, turtleData.lowDaysNear*(1-turtleTriggerDelta), turtleData.lowDaysNear, posMap[setting.Symbol].Holding, setting)
 			} else if posMap[setting.Symbol].Holding < 0 {
 				turtleData.orderAdjust = api.MustPlaceOrder(key, secret, model.OrderSideBuy, model.OrderTypeStop, setting.Market, setting.Symbol, ``,
-					model.FunctionTurtle, turtleData.highDays5*(1+turtleTriggerDelta), turtleData.highDays5, -1*posMap[setting.Symbol].Holding, setting)
+					model.FunctionTurtle, turtleData.highDaysNear*(1+turtleTriggerDelta), turtleData.highDaysNear, -1*posMap[setting.Symbol].Holding, setting)
 			}
 			for _, order := range turtleData.orderAdjust {
 				if order != nil {
@@ -142,9 +142,16 @@ func GetTurtleData(key, secret string, setting *model.Setting) (turtleData *Turt
 	}
 	clearOrders(key, secret, setting)
 	turtleTime.Store(fmt.Sprintf(`%s_%s_%s`, setting.Market, setting.Symbol, todayStr), time.Now())
+	_, _, coin, _ := model.GetFromStandard(setting.Market, setting.Symbol)
+	far := 20
+	near := 10
+	if !model.CommonCoins[strings.ToLower(coin)] {
+		far = 14
+		near = 7
+	}
 	turtleData = &TurtleData{turtleTime: today, symbol: setting.Symbol, checkTimeBreak: util.GetNow(),
 		checkTimeOpen: util.GetNow().Add(duration), waitBreakLong: false, waitBreakShort: false, breakLong: false,
-		breakShort: false, liquidated: false}
+		breakShort: false, liquidated: false, far: far, near: near}
 	for i := 1; i < 21; i++ {
 		duration, _ = time.ParseDuration(fmt.Sprintf(`%dh`, -24*i))
 		day := today.Add(duration)
@@ -156,41 +163,17 @@ func GetTurtleData(key, secret string, setting *model.Setting) (turtleData *Turt
 			}
 			return nil
 		}
-		if candle.PriceHigh > turtleData.highDays20 && i <= 20 {
-			turtleData.highDays20 = candle.PriceHigh
+		if candle.PriceHigh > turtleData.highDaysFar && i <= far {
+			turtleData.highDaysFar = candle.PriceHigh
 		}
-		if (turtleData.lowDays20 == 0 || turtleData.lowDays20 > candle.PriceLow) && i <= 20 {
-			turtleData.lowDays20 = candle.PriceLow
+		if (turtleData.lowDaysFar == 0 || turtleData.lowDaysFar > candle.PriceLow) && i <= far {
+			turtleData.lowDaysFar = candle.PriceLow
 		}
-		if candle.PriceHigh > turtleData.highDays14 && i <= 14 {
-			turtleData.highDays14 = candle.PriceHigh
+		if candle.PriceHigh > turtleData.highDaysNear && i <= near {
+			turtleData.highDaysNear = candle.PriceHigh
 		}
-		if (turtleData.lowDays14 == 0 || turtleData.lowDays14 > candle.PriceLow) && i <= 14 {
-			turtleData.lowDays14 = candle.PriceLow
-		}
-		if candle.PriceHigh > turtleData.highDays10 && i <= 10 {
-			turtleData.highDays10 = candle.PriceHigh
-		}
-		if (turtleData.lowDays10 == 0 || turtleData.lowDays10 > candle.PriceLow) && i <= 10 {
-			turtleData.lowDays10 = candle.PriceLow
-		}
-		if candle.PriceHigh > turtleData.highDays7 && i <= 7 {
-			turtleData.highDays7 = candle.PriceHigh
-		}
-		if (turtleData.lowDays7 == 0 || turtleData.lowDays7 > candle.PriceLow) && i <= 7 {
-			turtleData.lowDays7 = candle.PriceLow
-		}
-		if candle.PriceHigh > turtleData.highDays3 && i <= 3 {
-			turtleData.highDays3 = candle.PriceHigh
-		}
-		if (turtleData.lowDays3 == 0 || turtleData.lowDays3 > candle.PriceLow) && i <= 3 {
-			turtleData.lowDays3 = candle.PriceLow
-		}
-		if candle.PriceHigh > turtleData.highDays5 && i <= 5 {
-			turtleData.highDays5 = candle.PriceHigh
-		}
-		if (turtleData.lowDays5 == 0 || turtleData.lowDays5 > candle.PriceLow) && i <= 5 {
-			turtleData.lowDays5 = candle.PriceLow
+		if (turtleData.lowDaysNear == 0 || turtleData.lowDaysNear > candle.PriceLow) && i <= near {
+			turtleData.lowDaysNear = candle.PriceLow
 		}
 		if i == 1 {
 			turtleData.n = candle.N
@@ -203,10 +186,9 @@ func GetTurtleData(key, secret string, setting *model.Setting) (turtleData *Turt
 		if !model.CommonCoins[strings.ToLower(coin)] {
 			adjustPosHolding(key, secret, setting, turtleData)
 		}
-		util.Notice(fmt.Sprintf(`%s %s set turtle data: amount:%f n:%f 20:%f %f 14: %f %f 10:%f %f 7: %f %f`,
-			setting.Market, setting.Symbol, turtleData.amount, turtleData.n, turtleData.lowDays20,
-			turtleData.highDays20, turtleData.lowDays14, turtleData.highDays14, turtleData.lowDays10,
-			turtleData.highDays10, turtleData.lowDays7, turtleData.highDays7))
+		util.Notice(fmt.Sprintf(`%s %s set turtle data: amount:%f n:%f %d:%f-%f %d:%f-%f`,
+			setting.Market, setting.Symbol, turtleData.amount, turtleData.n, turtleData.near, turtleData.lowDaysNear,
+			turtleData.highDaysNear, turtleData.far, turtleData.lowDaysFar, turtleData.highDaysFar))
 	}
 	return
 }
@@ -290,20 +272,14 @@ var ProcessTurtle = func(setting *model.Setting, tick *model.BidAsk) {
 	currentN := api.GetCurrentN(setting)
 	msgKey := fmt.Sprintf("%s_%s_%s", model.FunctionTurtle, setting.Market, setting.Symbol)
 	msg := fmt.Sprintf("[海龟参数]%s %s 次数限制:%f 当前已经持仓数量:%f 上一次开仓的价格:%f "+
-		"20日:%f-%f 10日:%f-%f 14日：%f-%f 7日：%f-%f n:%f 数量:%f %s 持仓数/限制:%d/%f 总持仓数%d bid-ask %f %f 当日有平仓：%v",
+		"%d日:%f-%f %d日:%f-%f n:%f 数量:%f %s 持仓数/限制:%d/%f 总持仓数%d bid-ask %f %f 当日有平仓：%v",
 		turtleData.turtleTime.String()[0:10], msgKey, setting.AmountLimit, setting.GridAmount, setting.PriceX,
-		turtleData.lowDays20, turtleData.highDays20, turtleData.lowDays10, turtleData.highDays10, turtleData.lowDays14,
-		turtleData.highDays14, turtleData.lowDays7, turtleData.highDays7, turtleData.n,
-		turtleData.amount, setting.Symbol, setting.Chance, setting.OpenShortMargin, currentN, tick.Bids[0].Price,
-		tick.Asks[0].Price, turtleData.liquidated)
+		turtleData.far, turtleData.lowDaysFar, turtleData.highDaysFar, turtleData.near, turtleData.lowDaysNear,
+		turtleData.highDaysNear, turtleData.n, turtleData.amount, setting.Symbol, setting.Chance,
+		setting.OpenShortMargin, currentN, tick.Bids[0].Price, tick.Asks[0].Price, turtleData.liquidated)
 	util.StoreSyncMap(&model.CarryInfo, msg, account.Key, msgKey)
-	priceLong := turtleData.highDays20
-	priceShort := turtleData.lowDays20
-	_, _, coin, _ := model.GetFromStandard(setting.Market, setting.Symbol)
-	if !model.CommonCoins[strings.ToLower(coin)] {
-		priceLong = turtleData.highDays14
-		priceShort = turtleData.lowDays14
-	}
+	priceLong := turtleData.highDaysFar
+	priceShort := turtleData.lowDaysFar
 	if checkTurtleOrders(account.Key, account.Secret, setting, float64(currentN), turtleData) ||
 		checkTurtleBreak(account.Key, account.Secret, setting, turtleData, tick) {
 		return
@@ -336,15 +312,7 @@ var ProcessTurtle = func(setting *model.Setting, tick *model.BidAsk) {
 		}
 	} else if setting.Chance > 0 {
 		priceLong = math.Max(priceLong, setting.PriceX+turtleData.n/2)
-		//if turtleData.lowDays3 < setting.PriceX {
-		//	priceShort = math.Max(setting.PriceX-2*turtleData.n, turtleData.lowDays10)
-		//} else {
-		//	priceShort = math.Max(turtleData.highDays20-2*turtleData.n, turtleData.lowDays10)
-		//}
-		priceShort = math.Max(setting.PriceX-2*turtleData.n, turtleData.lowDays10)
-		if !model.CommonCoins[strings.ToLower(coin)] {
-			priceShort = math.Max(setting.PriceX-2*turtleData.n, turtleData.lowDays7)
-		}
+		priceShort = math.Max(setting.PriceX-2*turtleData.n, turtleData.lowDaysNear)
 		placeTurtleOrders(account.Key, account.Secret, turtleData, setting, currentN, priceShort, priceLong, tick)
 		// 加仓一个单位
 		if turtleData.breakLong && turtleData.waitBreakLong {
@@ -374,15 +342,7 @@ var ProcessTurtle = func(setting *model.Setting, tick *model.BidAsk) {
 		}
 	} else if setting.Chance < 0 {
 		priceShort = math.Min(priceShort, setting.PriceX-turtleData.n/2)
-		//if turtleData.highDays3 > setting.PriceX {
-		//	priceLong = math.Min(setting.PriceX+2*turtleData.n, turtleData.highDays10)
-		//} else {
-		//	priceLong = math.Min(turtleData.lowDays20+2*turtleData.n, turtleData.highDays10)
-		//}
-		priceLong = math.Min(setting.PriceX+2*turtleData.n, turtleData.highDays10)
-		if !model.CommonCoins[strings.ToLower(coin)] {
-			priceLong = math.Min(setting.PriceX+2*turtleData.n, turtleData.highDays7)
-		}
+		priceLong = math.Min(setting.PriceX+2*turtleData.n, turtleData.highDaysNear)
 		placeTurtleOrders(account.Key, account.Secret, turtleData, setting, currentN, priceShort, priceLong, tick)
 		// 加仓一个单位
 		if turtleData.breakShort && turtleData.waitBreakShort {
@@ -532,11 +492,10 @@ func placeTurtleOrders(key, secret string, turtleData *TurtleData, setting *mode
 		}
 		if setting.SymbolRelated != model.SettingTurtleRemoved || setting.Chance < 0 {
 			util.Notice(fmt.Sprintf(`%s %s place多单 chance:%d amount:%f priceX:%f currentN-limit:%d %f
-			orderSide:%s h20:%f h10:%f h14:%f h7:%f l20:%f l10:%f l14:%f l7:%f coin limit:%f`,
+			orderSide:%s h%d:%f h%d:%f l%d:%f h%d:%f coin limit:%f`,
 				setting.Market, setting.Symbol, setting.Chance, amount, setting.PriceX, currentN, setting.AmountLimit,
-				orderSide, turtleData.highDays20, turtleData.highDays10, turtleData.highDays14,
-				turtleData.highDays7, turtleData.lowDays20, turtleData.lowDays10, turtleData.lowDays14, turtleData.lowDays7,
-				setting.OpenShortMargin))
+				orderSide, turtleData.far, turtleData.highDaysFar, turtleData.near, turtleData.highDaysNear,
+				turtleData.far, turtleData.lowDaysFar, turtleData.near, turtleData.lowDaysNear, setting.OpenShortMargin))
 			priceOut := false
 			if priceLong <= tick.Asks[0].Price {
 				turtleData.orderLong = api.MustPlaceOrder(key, secret, orderSide, model.OrderTypeLimit, setting.Market, setting.Symbol, ``,
@@ -571,10 +530,10 @@ func placeTurtleOrders(key, secret string, turtleData *TurtleData, setting *mode
 		}
 		if setting.SymbolRelated != model.SettingTurtleRemoved || setting.Chance > 0 {
 			util.Notice(fmt.Sprintf(`%s %s place空单 chance:%d amount:%f priceX:%f currentN-limit:%d %f 
-			orderSide:%s h20:%f h10:%f h14:%f h7:%f l20:%f l10:%f l14:%f l7:%f coin limit:%f`,
+			orderSide:%s h%d:%f h%d:%f l%d:%f l%d:%f coin limit:%f`,
 				setting.Market, setting.Symbol, setting.Chance, amount, setting.PriceX, currentN, setting.AmountLimit,
-				orderSide, turtleData.highDays20, turtleData.highDays10, turtleData.highDays14, turtleData.highDays7,
-				turtleData.lowDays20, turtleData.lowDays10, turtleData.lowDays14, turtleData.lowDays7, setting.OpenShortMargin))
+				orderSide, turtleData.far, turtleData.highDaysFar, turtleData.near, turtleData.highDaysNear,
+				turtleData.far, turtleData.lowDaysFar, turtleData.near, turtleData.lowDaysNear, setting.OpenShortMargin))
 			priceOut := false
 			if priceShort >= tick.Bids[0].Price {
 				turtleData.orderShort = api.MustPlaceOrder(key, secret, orderSide, model.OrderTypeLimit, setting.Market, setting.Symbol, ``,
