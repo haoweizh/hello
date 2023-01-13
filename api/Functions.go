@@ -169,10 +169,6 @@ func CancelOrder(key, secret, market, symbol, orderType, orderId string) (result
 	return result, errCode, msg
 }
 
-func GetPriceHighLow(market string) (low, high float64) {
-	return
-}
-
 // GetCandle slotSeconds: candle的以秒计算宽度
 func GetCandle(key, secret, market, symbol string, slotSeconds int, begin, end time.Time) (candles []*model.Candle) {
 	count := (end.Unix() - begin.Unix()) / int64(slotSeconds)

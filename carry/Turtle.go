@@ -208,11 +208,21 @@ func checkTurtleOrders(key, secret string, setting *model.Setting, currentN floa
 	if now.After(turtleData.checkTimeOpen) {
 		today, _ := model.GetMarketToday(setting.Market)
 		dayTime, _ := time.ParseDuration(`86400s`)
-		candles := api.GetCandle(key, secret, setting.Market, setting.Symbol, 86400, today, today.Add(dayTime))
-		if len(candles) > 0 {
-			turtleData.highToday = candles[0].PriceHigh
-			turtleData.lowToday = candles[0].PriceLow
-			util.Notice(fmt.Sprintf(`get today len %s %s %d %f %f`,
+		var candles []*model.Candle
+		// okex不返回尚未结束的当日candle，转成半小时的slot
+		if setting.Market == model.OKEX {
+			candles = api.GetCandle(key, secret, setting.Market, setting.Symbol, 1800, today, util.GetMarketNow(setting.Market))
+		} else {
+			candles = api.GetCandle(key, secret, setting.Market, setting.Symbol, 86400, today, today.Add(dayTime))
+		}
+		for i := 0; candles != nil && i < len(candles); i++ {
+			if turtleData.highToday < candles[i].PriceHigh {
+				turtleData.highToday = candles[i].PriceHigh
+			}
+			if turtleData.lowToday == 0 || turtleData.lowToday > candles[i].PriceLow {
+				turtleData.lowToday = candles[i].PriceLow
+			}
+			util.Info(fmt.Sprintf(`get today len %s %s %d %f %f`,
 				setting.Market, setting.Symbol, len(candles), candles[0].PriceLow, candles[0].PriceHigh))
 		}
 		checked = true
