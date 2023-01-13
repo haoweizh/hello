@@ -9,7 +9,6 @@ import (
 	"gorm.io/gorm"
 	"hello/api"
 	"hello/model"
-	"hello/regret"
 	"hello/util"
 	"math"
 	"net/http"
@@ -188,15 +187,18 @@ func Test_WsAndOrderApi(t *testing.T) {
 
 func Test_initTurtleN(t *testing.T) {
 	model.NewConfig()
+	today, _ := model.GetMarketToday(model.OKEX)
+	candles := api.GetCandle(model.AppConfig.OkexKey, model.AppConfig.OkexSecret, model.OKEX, `ALPHA_PERP`, 1800, today, util.GetNow())
+	fmt.Println(candles)
 	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
 	_ = model.AppDB.AutoMigrate(&model.Setting{})
 	_ = model.AppDB.AutoMigrate(&model.Order{})
 	_ = model.AppDB.AutoMigrate(&model.Balance{})
 	_ = configor.Load(model.AppConfig, "./config.yml")
-	start, _ := time.Parse(time.RFC3339, `2022-10-01T00:00:00+00:00`)
-	end, _ := time.Parse(time.RFC3339, `2022-10-02T00:00:00+00:00`)
-	setting := &model.Setting{Market: model.Ftx, Symbol: `RVN_PERP`, AmountLimit: 3, GridAmount: 10000}
-	regret.ProcessCandles(setting.Market, setting.Symbol, start, end, setting)
+	//start, _ := time.Parse(time.RFC3339, `2022-10-01T00:00:00+00:00`)
+	//end, _ := time.Parse(time.RFC3339, `2022-10-02T00:00:00+00:00`)
+	//setting := &model.Setting{Market: model.Ftx, Symbol: `RVN_PERP`, AmountLimit: 3, GridAmount: 10000}
+	//regret.ProcessCandles(setting.Market, setting.Symbol, start, end, setting)
 	marketInfos := api.GetMarketInfos(model.BinancePerp)
 	model.SetMarketInfos(model.BinancePerp, marketInfos)
 	order := api.PlaceOrder(model.AppConfig.BinanceKey, model.AppConfig.BinanceSecret, model.OrderSideSell,
@@ -204,7 +206,7 @@ func Test_initTurtleN(t *testing.T) {
 		false, nil, nil)
 	fmt.Println(order.OrderId)
 	api.CancelOrder(model.AppConfig.BinanceKey, model.AppConfig.BinanceSecret, model.BinancePerp, `ETH_PERP`, ``, order.OrderId)
-	today, _ := model.GetMarketToday(model.BinancePerp)
+	//today, _ := model.GetMarketToday(model.BinancePerp)
 	duration, _ := time.ParseDuration(fmt.Sprintf(`%dh`, -24))
 	day := today.Add(duration)
 	candle := api.GetTurtleCandle(model.AppConfig.BinanceKey, model.AppConfig.BinanceSecret, model.BinancePerp,

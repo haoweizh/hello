@@ -260,6 +260,7 @@ func checkTurtleOrders(key, secret string, setting *model.Setting, currentN floa
 // setting.Chance 当前开仓的个数
 // setting.PriceX 上一次开仓的价格
 // setting.OpenShortMargin 该单币种最多开仓个数
+// setting.AmountLimit 总开仓上限
 var ProcessTurtle = func(setting *model.Setting, tick *model.BidAsk) {
 	if !checkSetTurtling(true) {
 		defer checkSetTurtling(false)

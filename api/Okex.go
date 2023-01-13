@@ -1333,8 +1333,8 @@ func getCandlesOKEX(key, secret, symbol string, before, after time.Time, count, 
 	case 86400:
 		bar = `1D`
 	}
-	//path := `/api/v5/market/candles`
-	path := `/api/v5/market/history-candles`
+	path := `/api/v5/market/candles`
+	//path := `/api/v5/market/history-candles`
 	param := map[string]interface{}{`instId`: symbol, `bar`: bar, `limit`: count,
 		`before`: before.UnixNano() / int64(time.Millisecond), `after`: after.UnixNano() / int64(time.Millisecond)}
 	response, _ := sendSignRequestOKEX(key, secret, http.MethodGet, path, param, nil)

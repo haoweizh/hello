@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/bitly/go-simplejson"
+	"hello/model"
 	"io/ioutil"
 	"math"
 	"net/url"
@@ -88,6 +89,18 @@ func JsonEncodeToByte(stringMap interface{}) []byte {
 	return jsonBytes
 }
 
+func GetMarketNow(market string) time.Time {
+	switch market {
+	case model.OKEX:
+		location, err := time.LoadLocation("Asia/Shanghai")
+		if err == nil {
+			return time.Now().In(location)
+		}
+		return time.Now()
+	}
+	return time.Now().In(time.UTC)
+}
+
 func GetNow() time.Time {
 	location, err := time.LoadLocation("Asia/Shanghai")
 	if err == nil {
@@ -125,7 +138,7 @@ func NumDecPlaces(v float64) int {
 	return 0
 }
 
-//StartMidNightTimer
+// StartMidNightTimer
 func _(f func()) {
 	go func() {
 		for {

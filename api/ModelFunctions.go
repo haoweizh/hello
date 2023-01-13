@@ -250,7 +250,7 @@ func handleSettings() (handled bool) {
 					Chance:          0,
 					GridAmount:      0,
 					OpenShortMargin: 3,
-					AmountLimit:     10,
+					AmountLimit:     12,
 				}
 				util.Notice(`add setting %v`, setting.Symbol)
 			} else {
