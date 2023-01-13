@@ -211,7 +211,7 @@ func checkTurtleOrders(key, secret string, setting *model.Setting, currentN floa
 		var candles []*model.Candle
 		// okex不返回尚未结束的当日candle，转成半小时的slot
 		if setting.Market == model.OKEX {
-			candles = api.GetCandle(key, secret, setting.Market, setting.Symbol, 1800, today, util.GetMarketNow(setting.Market))
+			candles = api.GetCandle(key, secret, setting.Market, setting.Symbol, 1800, today, model.GetMarketNow(setting.Market))
 		} else {
 			candles = api.GetCandle(key, secret, setting.Market, setting.Symbol, 86400, today, today.Add(dayTime))
 		}

@@ -223,6 +223,18 @@ func GetMarketToday(market string) (today time.Time, strToday string) {
 	return today, today.String()[0:10]
 }
 
+func GetMarketNow(market string) time.Time {
+	switch market {
+	case OKEX:
+		location, err := time.LoadLocation("Asia/Shanghai")
+		if err == nil {
+			return time.Now().In(location)
+		}
+		return time.Now()
+	}
+	return time.Now().In(time.UTC)
+}
+
 func (config *Config) ToString() string {
 	str := "markets-carry cost:\n"
 	str += fmt.Sprintf("delay: %f\n", config.Delay)
