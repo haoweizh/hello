@@ -117,6 +117,7 @@ func simulate(c *gin.Context) {
 	if simTypeErr != nil {
 		simTypeSeconds = 86400
 		simType = `86400`
+		simTypeErr = nil
 	}
 	nearStr := c.Query(`near`)
 	near, nearErr := strconv.ParseInt(nearStr, 10, 64)
