@@ -49,6 +49,7 @@ func createTurtleOrders(setting *model.Setting, turtleData *TurtleData) {
 	priceShort := turtleData.lowFar
 	amountShot := 0.0
 	amountLong := 0.0
+	amountLimit := strconv.FormatFloat(setting.AmountLimit, 'f', 0, 64)
 	if setting.Chance == 0 && !turtleData.liquidated { // 开初始仓
 		amountShot = setting.GridAmount
 		amountLong = setting.GridAmount
@@ -87,6 +88,7 @@ func createTurtleOrders(setting *model.Setting, turtleData *TurtleData) {
 			Symbol:      setting.Symbol,
 			GridPos:     setting.Chance,
 			AmountType:  setting.SymbolRelated,
+			Function:    amountLimit,
 		}
 	}
 	if amountLong > 0 {
@@ -101,6 +103,7 @@ func createTurtleOrders(setting *model.Setting, turtleData *TurtleData) {
 			Symbol:      setting.Symbol,
 			GridPos:     setting.Chance,
 			AmountType:  setting.SymbolRelated,
+			Function:    amountLimit,
 		}
 	}
 }
@@ -197,23 +200,20 @@ func ProcessCandles(market, symbol string, start, end time.Time, near, far int, 
 	}
 }
 
-func GetDBOrders(market, symbol, amountType string, begin, end time.Time, limit float64) (orders []*model.Order) {
+func GetDBOrders(market, symbol, amountType, limit string, begin, end time.Time) (orders []*model.Order) {
 	orders = []*model.Order{}
-	model.AppDB.Where(`market=? and symbol=? and order_time>? and order_time<? and refresh_type=? and amount_type=? and amount_limit`,
+	model.AppDB.Where(`market=? and symbol=? and order_time>? and order_time<? and refresh_type=? and amount_type=? and function=?`,
 		market, symbol, begin, end, model.FunctionSimulation, amountType, limit).Order(`order_time asc`).Find(&orders)
 	return orders
 }
 
 func ToString(orders []*model.Order, setting *model.Setting, begin, end time.Time) (str string) {
 	str = ``
-	var amountBuy, amountSell, priceBuy, priceSell, uBuy, uSell, singleOrderU, earnRate,
+	var amountBuy, amountSell, priceBuy, priceSell, uBuy, uSell, earnRate, countBuy, countSell,
 		groupUBuy, groupUSell, groupAmountBuy, groupAmountSell, rateInAllWin, rateInAllLose float64
 	wins := make([]float64, 0)
 	loses := make([]float64, 0)
-	for i, order := range orders {
-		if i == 0 {
-			singleOrderU = order.Price * order.Amount
-		}
+	for _, order := range orders {
 		if order.OrderSide == model.OrderSideBuy {
 			amountBuy += order.Amount
 			uBuy += order.Amount * order.DealPrice
@@ -259,24 +259,25 @@ func ToString(orders []*model.Order, setting *model.Setting, begin, end time.Tim
 			order.OrderTime.String(), order.Market, order.Symbol, order.OrderSide, order.Amount, order.Price, order.DealPrice, order.GridPos)
 	}
 	if amountBuy > 0 {
+		countBuy++
 		priceBuy = uBuy / amountBuy
 	}
 	if amountSell > 0 {
+		countSell++
 		priceSell = uSell / amountSell
 	}
-	earnRate = (priceSell - priceBuy) * math.Min(amountBuy, amountSell) / singleOrderU
-	str += fmt.Sprintf("\n%sbuy %f avgPrice %f cost %f\n"+"sell %f avgPrice %f income %f \n"+
-		"%s %s %s %s 平均价差:%f earnRate %.2f‰ 滑点%f type%s 仓位限制:%f",
-		time.Now().String(), amountBuy, priceBuy, uBuy, amountSell, priceSell, uSell, setting.Market, setting.Symbol,
-		begin.String(), end.String(), (priceSell-priceBuy)/priceBuy,
-		earnRate*1000, tradeCost, setting.SymbolRelated, setting.AmountLimit)
+	earnRate = (priceSell - priceBuy) / priceBuy * math.Min(amountBuy, amountSell)
+	str += fmt.Sprintf("%s %s %s %s 下单%d次平均价差:%f earnRate %.2f‰ 滑点%f type%s 仓位限制:%f"+
+		"\nbuy%f次 avgPrice %f\n"+"sell%f次 avgPrice %f\n",
+		setting.Market, setting.Symbol, begin.String(), end.String(), len(orders), (priceSell-priceBuy)/priceBuy,
+		earnRate, tradeCost, setting.SymbolRelated, setting.AmountLimit, countBuy, priceBuy, countSell, priceSell)
 	avgWinRate := 0.0
 	if len(wins) > 0 {
-		avgWinRate = 1000 * rateInAllWin / float64(len(wins))
+		avgWinRate = setting.GridAmount * rateInAllWin / float64(len(wins))
 	}
 	avgLoseRate := 0.0
 	if len(loses) > 0 {
-		avgLoseRate = 1000 * rateInAllLose / float64(len(loses))
+		avgLoseRate = setting.GridAmount * rateInAllLose / float64(len(loses))
 	}
 	str += fmt.Sprintf("\n盈利%d次平均%f‰ 亏损%d次平均%f‰", len(wins), avgWinRate, len(loses), avgLoseRate)
 	return str

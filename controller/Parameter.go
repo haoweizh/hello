@@ -168,13 +168,13 @@ func simulate(c *gin.Context) {
 		setting := &model.Setting{Market: market, Symbol: symbol, AmountLimit: float64(limit), GridAmount: 1000,
 			SymbolRelated: simType, Chance: 0}
 		if strNew == `true` {
-			go model.AppDB.Where(`market=? and symbol=? and refresh_type=? and order_time>? and order_time<? and amount_type=? and amount_limit=?`,
-				market, symbol, model.FunctionSimulation, begin, end, simType, float64(limit)).Delete(&model.Order{})
+			go model.AppDB.Where(`market=? and symbol=? and refresh_type=? and order_time>? and order_time<? and amount_type=? and function=?`,
+				market, symbol, model.FunctionSimulation, begin, end, simType, strLimit).Delete(&model.Order{})
 			regret.ProcessCandles(market, symbol, begin, end, int(near), int(far), useNear, setting)
 		} else {
 			util.Notice(`no need process simulate new %s`, strNew)
 		}
-		msg += regret.ToString(regret.GetDBOrders(market, symbol, simType, begin, end, float64(limit)), setting, begin, end) + "\n"
+		msg += regret.ToString(regret.GetDBOrders(market, symbol, simType, strLimit, begin, end), setting, begin, end) + "\n"
 	}
 	c.String(http.StatusOK, msg)
 }
