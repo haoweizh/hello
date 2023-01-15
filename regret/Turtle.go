@@ -140,8 +140,8 @@ func handlePrice(turtleData *TurtleData, candle *model.Candle, setting *model.Se
 		setting.PriceX = turtleData.orderLong.Price
 		turtleData.orderLong.Status = model.CarryStatusSuccess
 		turtleData.orderLong.OrderTime = candle.Begin
-		turtleData.orderLong.OrderId = fmt.Sprintf(`%s%s%s%s%d`, setting.Market,
-			setting.Symbol, setting.SymbolRelated, turtleData.orderLong.OrderSide, candle.Begin.Unix())
+		turtleData.orderLong.OrderId = fmt.Sprintf(`%s%s%s%s%d%f`, setting.Market,
+			setting.Symbol, setting.SymbolRelated, turtleData.orderLong.OrderSide, candle.Begin.Unix(), setting.AmountLimit)
 		util.Info(`deal long chance %d save order %s at %s`,
 			setting.Chance, turtleData.orderLong.OrderId, turtleData.orderLong.OrderTime.String())
 		model.AppDB.Save(turtleData.orderLong)
@@ -158,8 +158,8 @@ func handlePrice(turtleData *TurtleData, candle *model.Candle, setting *model.Se
 		setting.PriceX = turtleData.orderShort.Price
 		turtleData.orderShort.Status = model.CarryStatusSuccess
 		turtleData.orderShort.OrderTime = candle.Begin
-		turtleData.orderShort.OrderId = fmt.Sprintf(`%s%s%s%s%d`, setting.Market,
-			setting.Symbol, setting.SymbolRelated, turtleData.orderShort.OrderSide, candle.Begin.Unix())
+		turtleData.orderShort.OrderId = fmt.Sprintf(`%s%s%s%s%d%f`, setting.Market,
+			setting.Symbol, setting.SymbolRelated, turtleData.orderShort.OrderSide, candle.Begin.Unix(), setting.AmountLimit)
 		util.Info(`deal short chance %d save order %s at %s`,
 			setting.Chance, turtleData.orderShort.OrderId, turtleData.orderShort.OrderTime.String())
 		model.AppDB.Save(turtleData.orderShort)
