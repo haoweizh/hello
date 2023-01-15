@@ -174,7 +174,7 @@ func simulate(c *gin.Context) {
 		} else {
 			util.Notice(`no need process simulate new %s`, strNew)
 		}
-		msg += regret.ToString(regret.GetDBOrders(market, symbol, simType, begin, end, float64(limit)), setting) + "\n"
+		msg += regret.ToString(regret.GetDBOrders(market, symbol, simType, begin, end, float64(limit)), setting, begin, end) + "\n"
 	}
 	c.String(http.StatusOK, msg)
 }

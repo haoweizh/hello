@@ -204,7 +204,7 @@ func GetDBOrders(market, symbol, amountType string, begin, end time.Time, limit 
 	return orders
 }
 
-func ToString(orders []*model.Order, setting *model.Setting) (str string) {
+func ToString(orders []*model.Order, setting *model.Setting, begin, end time.Time) (str string) {
 	str = ``
 	var amountBuy, amountSell, priceBuy, priceSell, uBuy, uSell, singleOrderU, earnRate,
 		groupUBuy, groupUSell, groupAmountBuy, groupAmountSell, rateInAllWin, rateInAllLose float64
@@ -265,8 +265,11 @@ func ToString(orders []*model.Order, setting *model.Setting) (str string) {
 		priceSell = uSell / amountSell
 	}
 	earnRate = (priceSell - priceBuy) * math.Min(amountBuy, amountSell) / singleOrderU
-	str += fmt.Sprintf("\n%sbuy %f avgPrice %f cost %f sell %f avgPrice %f income %f earnRate %.2f‰ 滑点%f type%s",
-		time.Now().String(), amountBuy, priceBuy, uBuy, amountSell, priceSell, uSell, earnRate*1000, tradeCost, setting.SymbolRelated)
+	str += fmt.Sprintf("\n%sbuy %f avgPrice %f cost %f\n"+"sell %f avgPrice %f income %f \n"+
+		"%s %s %s %s 平均价差:%f earnRate %.2f‰ 滑点%f type%s 仓位限制:%f",
+		time.Now().String(), amountBuy, priceBuy, uBuy, amountSell, priceSell, uSell, setting.Market, setting.Symbol,
+		begin.String(), end.String(), (priceSell-priceBuy)/priceBuy,
+		earnRate*1000, tradeCost, setting.SymbolRelated, setting.AmountLimit)
 	avgWinRate := 0.0
 	if len(wins) > 0 {
 		avgWinRate = 1000 * rateInAllWin / float64(len(wins))
