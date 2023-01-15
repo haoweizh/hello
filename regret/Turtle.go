@@ -44,7 +44,7 @@ func GetTurtleData(candles []*model.Candle, near, far int, useNear bool) (turtle
 	return turtleDataMap
 }
 
-func createTurtleOrders(setting *model.Setting, turtleData *TurtleData) {
+func createTurtleOrders(setting *model.Setting, turtleData *TurtleData, candle *model.Candle) {
 	priceLong := turtleData.highFar
 	priceShort := turtleData.lowFar
 	amountShot := 0.0
@@ -89,7 +89,9 @@ func createTurtleOrders(setting *model.Setting, turtleData *TurtleData) {
 			GridPos:     setting.Chance,
 			AmountType:  setting.SymbolRelated,
 			Function:    amountLimit,
+			OrderTime:   candle.Begin,
 		}
+		util.Info(fmt.Sprintf(`create turtle long at %s %d`, candle.Begin.String(), setting.Chance))
 	}
 	if amountLong > 0 {
 		turtleData.orderLong = &model.Order{
@@ -104,7 +106,9 @@ func createTurtleOrders(setting *model.Setting, turtleData *TurtleData) {
 			GridPos:     setting.Chance,
 			AmountType:  setting.SymbolRelated,
 			Function:    amountLimit,
+			OrderTime:   candle.Begin,
 		}
+		util.Info(fmt.Sprintf(`create turtle short at %s %d`, candle.Begin.String(), setting.Chance))
 	}
 }
 
@@ -124,11 +128,13 @@ func handlePrice(turtleData *TurtleData, candle *model.Candle, setting *model.Se
 		}
 	}
 	if turtleData.orderLong == nil && turtleData.orderShort == nil {
-		createTurtleOrders(setting, turtleData)
+		createTurtleOrders(setting, turtleData, candle)
 	}
 	if turtleData.orderLong != nil && candle.PriceHigh >= turtleData.orderLong.Price {
 		if setting.Chance >= 0 {
 			setting.Chance += 1
+			util.Info(fmt.Sprintf(`order add 1 %d to %d %s`,
+				turtleData.orderLong.GridPos, setting.Chance, candle.Begin.String()))
 		} else {
 			setting.Chance = 0
 			turtleData.liquidated = true
@@ -147,6 +153,8 @@ func handlePrice(turtleData *TurtleData, candle *model.Candle, setting *model.Se
 	if turtleData.orderShort != nil && candle.PriceLow <= turtleData.orderShort.Price {
 		if setting.Chance <= 0 {
 			setting.Chance -= 1
+			util.Info(fmt.Sprintf(`order add -1 %d to %d %s`,
+				turtleData.orderLong.GridPos, setting.Chance, candle.Begin.String()))
 		} else {
 			setting.Chance = 0
 			turtleData.liquidated = true
@@ -185,7 +193,7 @@ func ProcessCandles(market, symbol string, start, end time.Time, near, far int, 
 	turtleSeconds, _ := strconv.Atoi(setting.SymbolRelated)
 	duration, _ := time.ParseDuration(fmt.Sprintf(`-%ds`, turtleSeconds*30))
 	turtleCandles := api.GetCandle(key, secret, market, symbol, turtleSeconds, start.Add(duration), end)
-	util.Info(`get turtle candle %s %s %d`, market, symbol, len(turtleCandles))
+	util.Info(`get turtle candle %s %s %d setting chance %d`, market, symbol, len(turtleCandles), setting.Chance)
 	getTurtleCandles(turtleCandles)
 	turtleDataMap := GetTurtleData(turtleCandles, near, far, useNear)
 	for _, candle := range sortedCandles {

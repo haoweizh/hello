@@ -168,7 +168,7 @@ func simulate(c *gin.Context) {
 		setting := &model.Setting{Market: market, Symbol: symbol, AmountLimit: float64(limit), GridAmount: 1000,
 			SymbolRelated: simType, Chance: 0}
 		if strNew == `true` {
-			go model.AppDB.Where(`market=? and symbol=? and refresh_type=? and order_time>? and order_time<? and amount_type=? and function=?`,
+			model.AppDB.Where(`market=? and symbol=? and refresh_type=? and order_time>? and order_time<? and amount_type=? and function=?`,
 				market, symbol, model.FunctionSimulation, begin, end, simType, strLimit).Delete(&model.Order{})
 			regret.ProcessCandles(market, symbol, begin, end, int(near), int(far), useNear, setting)
 		} else {
