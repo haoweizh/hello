@@ -209,16 +209,6 @@ func GetCandle(key, secret, market, symbol string, slotSeconds int, begin, end t
 	return
 }
 
-func GetTurtleCandles(candles []*model.Candle) {
-	for i, candle := range candles {
-		if i == 0 {
-			candle.N = candle.PriceHigh - candle.PriceLow
-		} else {
-			candle.N = (candle.PriceHigh-candle.PriceLow)/20 + candles[i-1].N*0.95
-		}
-	}
-}
-
 func GetTurtleCandle(key, secret, market, symbol string, slotSeconds int, timeCandle time.Time) (candle *model.Candle) {
 	value, ok := candleMap.Load(fmt.Sprintf(`%s_%s_%d_%s`, market, symbol, slotSeconds, timeCandle.Format(time.RFC3339)))
 	if ok && value != nil {

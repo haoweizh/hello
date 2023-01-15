@@ -128,6 +128,8 @@ func simulate(c *gin.Context) {
 	strEnd := c.Query(`end`) + `T00:00:00+00:00`
 	strNew := c.Query(`new`)
 	strLimit := c.Query(`limit`)
+	strUseNear := c.Query(`useNear`)
+	useNear, useNearErr := strconv.ParseBool(strUseNear)
 	begin, errBegin := time.Parse(time.RFC3339, strBegin)
 	end, errEnd := time.Parse(time.RFC3339, strEnd)
 	limit, limitErr := strconv.ParseInt(strLimit, 10, 64)
@@ -145,11 +147,12 @@ func simulate(c *gin.Context) {
 		strNew = `false`
 	}
 	if errBegin != nil || errEnd != nil || simTypeSeconds <= 0 || nearErr != nil || farErr != nil ||
-		(simTypeSeconds != 1800 && simTypeSeconds != 14400 && simTypeSeconds%86400 != 0) {
+		useNearErr != nil || (simTypeSeconds != 1800 && simTypeSeconds != 14400 && simTypeSeconds%86400 != 0) {
 		simulateGuide := "limit:仓数上限，可选，默认为3 \nnew:true为生成新的仿真否则为查看同参数历史仿真\n" +
 			"type:海龟的计算周期，默认86400秒，即一天，取值范围：3600、14400或86400的倍数\nmarket:模拟市场\n" +
 			"near:海龟近计算周期数，far:海龟远计算周期数\n" +
-			"参数样例：\ncoin=xrp&begin=2022-10-01&end=2022-10-10&limit=3&type=86400&market=okex&near=10&far=20new=true\n"
+			"useNear:是否采用近几天高低点作为平仓条件\n" +
+			"参数样例：\ncoin=xrp&begin=2022-10-01&end=2022-10-10&limit=3&type=86400&market=okex&near=10&far=20new=true&useNear=false\n"
 		c.String(http.StatusMethodNotAllowed,
 			fmt.Sprintf("参数错误，请参考:\n%s", simulateGuide))
 		return
@@ -167,7 +170,7 @@ func simulate(c *gin.Context) {
 		if strNew == `true` {
 			go model.AppDB.Where(`market=? and symbol=? and refresh_type=? and order_time>? and order_time<? and amount_type=?`,
 				market, symbol, model.FunctionSimulation, begin, end, simType).Delete(&model.Order{})
-			regret.ProcessCandles(market, symbol, begin, end, int(near), int(far), setting)
+			regret.ProcessCandles(market, symbol, begin, end, int(near), int(far), useNear, setting)
 		} else {
 			util.Notice(`no need process simulate new %s`, strNew)
 		}
