@@ -166,10 +166,10 @@ func simulate(c *gin.Context) {
 	for i := 0; i < len(coins); i++ {
 		symbol := strings.ToUpper(coins[i]) + model.UniStandardTail[model.MarketTypePerp]
 		setting := &model.Setting{Market: market, Symbol: symbol, AmountLimit: float64(limit), GridAmount: 1000,
-			SymbolRelated: simType, Chance: 0}
+			SymbolRelated: simType, Chance: 0, Coin: strUseNear}
 		if strNew == `true` {
-			model.AppDB.Where(`market=? and symbol=? and refresh_type=? and order_time>? and order_time<? and amount_type=? and function=?`,
-				market, symbol, model.FunctionSimulation, begin, end, simType, strLimit).Delete(&model.Order{})
+			model.AppDB.Where(`market=? and symbol=? and refresh_type=? and order_time>? and order_time<? and amount_type=? and function=? and order_type=?`,
+				market, symbol, model.FunctionSimulation, begin, end, simType, strLimit, strUseNear).Delete(&model.Order{})
 			regret.ProcessCandles(market, symbol, begin, end, int(near), int(far), useNear, setting)
 		} else {
 			util.Notice(`no need process simulate new %s`, strNew)

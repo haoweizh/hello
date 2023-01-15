@@ -90,6 +90,7 @@ func createTurtleOrders(setting *model.Setting, turtleData *TurtleData, candle *
 			AmountType:  setting.SymbolRelated,
 			Function:    amountLimit,
 			CreatedAt:   candle.Begin,
+			OrderType:   strconv.FormatBool(turtleData.useNear),
 		}
 		util.Info(fmt.Sprintf(`create turtle long at %s %d`, candle.Begin.String(), setting.Chance))
 	}
@@ -107,6 +108,7 @@ func createTurtleOrders(setting *model.Setting, turtleData *TurtleData, candle *
 			AmountType:  setting.SymbolRelated,
 			Function:    amountLimit,
 			CreatedAt:   candle.Begin,
+			OrderType:   strconv.FormatBool(turtleData.useNear),
 		}
 		util.Info(fmt.Sprintf(`create turtle short at %s %d`, candle.Begin.String(), setting.Chance))
 	}
@@ -140,8 +142,8 @@ func handlePrice(turtleData *TurtleData, candle *model.Candle, setting *model.Se
 		setting.PriceX = turtleData.orderLong.Price
 		turtleData.orderLong.Status = model.CarryStatusSuccess
 		turtleData.orderLong.OrderTime = candle.Begin
-		turtleData.orderLong.OrderId = fmt.Sprintf(`%s%s%s%s%d%f`, setting.Market,
-			setting.Symbol, setting.SymbolRelated, turtleData.orderLong.OrderSide, candle.Begin.Unix(), setting.AmountLimit)
+		turtleData.orderLong.OrderId = fmt.Sprintf(`%s%s%s%s%d%f%s`, setting.Market, setting.Symbol, setting.SymbolRelated,
+			turtleData.orderLong.OrderSide, candle.Begin.Unix(), setting.AmountLimit, turtleData.orderLong.OrderType)
 		util.Info(`deal long chance %d save order %s at %s`,
 			setting.Chance, turtleData.orderLong.OrderId, turtleData.orderLong.OrderTime.String())
 		model.AppDB.Save(turtleData.orderLong)
@@ -158,8 +160,8 @@ func handlePrice(turtleData *TurtleData, candle *model.Candle, setting *model.Se
 		setting.PriceX = turtleData.orderShort.Price
 		turtleData.orderShort.Status = model.CarryStatusSuccess
 		turtleData.orderShort.OrderTime = candle.Begin
-		turtleData.orderShort.OrderId = fmt.Sprintf(`%s%s%s%s%d%f`, setting.Market,
-			setting.Symbol, setting.SymbolRelated, turtleData.orderShort.OrderSide, candle.Begin.Unix(), setting.AmountLimit)
+		turtleData.orderShort.OrderId = fmt.Sprintf(`%s%s%s%s%d%f%s`, setting.Market, setting.Symbol, setting.SymbolRelated,
+			turtleData.orderShort.OrderSide, candle.Begin.Unix(), setting.AmountLimit, turtleData.orderShort.OrderType)
 		util.Info(`deal short chance %d save order %s at %s`,
 			setting.Chance, turtleData.orderShort.OrderId, turtleData.orderShort.OrderTime.String())
 		model.AppDB.Save(turtleData.orderShort)
@@ -213,7 +215,7 @@ func GetDBOrders(market, symbol, amountType, limit string, begin, end time.Time)
 
 func ToString(orders []*model.Order, setting *model.Setting, begin, end time.Time) (str string) {
 	str = ``
-	var amountBuy, amountSell, priceBuy, priceSell, uBuy, uSell, earnRate, countBuy, countSell,
+	var amountBuy, amountSell, priceBuy, priceSell, uBuy, uSell, earnRate,
 		groupUBuy, groupUSell, groupAmountBuy, groupAmountSell, rateInAllWin, rateInAllLose float64
 	wins := make([]float64, 0)
 	loses := make([]float64, 0)
@@ -263,18 +265,16 @@ func ToString(orders []*model.Order, setting *model.Setting, begin, end time.Tim
 			order.OrderTime.String(), order.Market, order.Symbol, order.OrderSide, order.Amount, order.Price, order.DealPrice, order.GridPos)
 	}
 	if amountBuy > 0 {
-		countBuy++
 		priceBuy = uBuy / amountBuy
 	}
 	if amountSell > 0 {
-		countSell++
 		priceSell = uSell / amountSell
 	}
 	earnRate = (priceSell - priceBuy) / priceBuy * math.Min(amountBuy, amountSell)
 	str += fmt.Sprintf("%s %s %s %s 下单%d次平均价差:%f earnRate %.2f‰ 滑点%f type%s 仓位限制:%f"+
 		"\nbuy%f次 avgPrice %f\n"+"sell%f次 avgPrice %f\n",
 		setting.Market, setting.Symbol, begin.String(), end.String(), len(orders), (priceSell-priceBuy)/priceBuy,
-		earnRate, tradeCost, setting.SymbolRelated, setting.AmountLimit, countBuy, priceBuy, countSell, priceSell)
+		earnRate, tradeCost, setting.SymbolRelated, setting.AmountLimit, uBuy/setting.GridAmount, priceBuy, uSell/setting.GridAmount, priceSell)
 	avgWinRate := 0.0
 	if len(wins) > 0 {
 		avgWinRate = setting.GridAmount * rateInAllWin / float64(len(wins))
@@ -283,6 +283,6 @@ func ToString(orders []*model.Order, setting *model.Setting, begin, end time.Tim
 	if len(loses) > 0 {
 		avgLoseRate = setting.GridAmount * rateInAllLose / float64(len(loses))
 	}
-	str += fmt.Sprintf("\n盈利%d次平均%f‰ 亏损%d次平均%f‰", len(wins), avgWinRate, len(loses), avgLoseRate)
+	str += fmt.Sprintf("盈利%d次平均%f‰ 亏损%d次平均%f‰", len(wins), avgWinRate, len(loses), avgLoseRate)
 	return str
 }
