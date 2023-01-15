@@ -206,10 +206,10 @@ func ProcessCandles(market, symbol string, start, end time.Time, near, far int, 
 	}
 }
 
-func GetDBOrders(market, symbol, amountType, limit string, begin, end time.Time) (orders []*model.Order) {
+func GetDBOrders(market, symbol, amountType, limit, orderType string, begin, end time.Time) (orders []*model.Order) {
 	orders = []*model.Order{}
-	model.AppDB.Where(`market=? and symbol=? and order_time>? and order_time<? and refresh_type=? and amount_type=? and function=?`,
-		market, symbol, begin, end, model.FunctionSimulation, amountType, limit).Order(`order_time asc`).Find(&orders)
+	model.AppDB.Where(`market=? and symbol=? and order_time>? and order_time<? and refresh_type=? and amount_type=? and function=? and order_type=?`,
+		market, symbol, begin, end, model.FunctionSimulation, amountType, limit, orderType).Order(`order_time asc`).Find(&orders)
 	return orders
 }
 
