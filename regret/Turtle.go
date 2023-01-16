@@ -153,6 +153,11 @@ func handlePrice(turtleData *TurtleData, candle *model.Candle, settings map[stri
 	if turtleData.orderLong == nil && turtleData.orderShort == nil {
 		createTurtleOrders(setting, turtleData, candle, currentChances, int64(allLimit))
 	}
+	if currentChances >= int64(allLimit) {
+		turtleData.orderLong = nil
+	} else if currentChances <= -1*int64(allLimit) {
+		turtleData.orderShort = nil
+	}
 	if turtleData.orderLong != nil && candle.PriceHigh >= turtleData.orderLong.Price {
 		if setting.Chance >= 0 {
 			setting.Chance += 1
