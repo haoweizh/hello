@@ -128,6 +128,7 @@ func simulate(c *gin.Context) {
 	strEnd := c.Query(`end`) + `T00:00:00+00:00`
 	strNew := c.Query(`new`)
 	strLimit := c.Query(`limit`)
+	strAllLimit := c.Query(`allLimit`)
 	strUseNear := c.Query(`useNear`)
 	useNear, useNearErr := strconv.ParseBool(strUseNear)
 	begin, errBegin := time.Parse(time.RFC3339, strBegin)
@@ -135,6 +136,10 @@ func simulate(c *gin.Context) {
 	limit, limitErr := strconv.ParseInt(strLimit, 10, 64)
 	if limitErr != nil {
 		limit = 3
+	}
+	allLimit, allLimitErr := strconv.ParseInt(strAllLimit, 10, 64)
+	if allLimitErr != nil {
+		allLimit = limit
 	}
 	session := sessions.Default(c)
 	value := c.Query(`code`)
@@ -163,17 +168,21 @@ func simulate(c *gin.Context) {
 		return
 	}
 	msg := ``
+	settings := make(map[string]*model.Setting)
 	for i := 0; i < len(coins); i++ {
 		symbol := strings.ToUpper(coins[i]) + model.UniStandardTail[model.MarketTypePerp]
 		setting := &model.Setting{Market: market, Symbol: symbol, AmountLimit: float64(limit), GridAmount: 1000,
 			SymbolRelated: simType, Chance: 0, Coin: strUseNear}
 		if strNew == `true` {
-			model.AppDB.Where(`market=? and symbol=? and refresh_type=? and order_time>? and order_time<? and amount_type=? and function=? and order_type=?`,
+			settings[setting.Symbol] = setting
+			go model.AppDB.Where(`market=? and symbol=? and refresh_type=? and order_time>? and order_time<? and amount_type=? and function=? and order_type=?`,
 				market, symbol, model.FunctionSimulation, begin, end, simType, strLimit, strUseNear).Delete(&model.Order{})
-			regret.ProcessCandles(market, symbol, begin, end, int(near), int(far), useNear, setting)
 		} else {
 			util.Notice(`no need process simulate new %s`, strNew)
 		}
+	}
+	regret.ProcessCandles(begin, end, int(near), int(far), int(simTypeSeconds), int(allLimit), useNear, market, settings)
+	for symbol, setting := range settings {
 		msg += regret.ToString(regret.GetDBOrders(market, symbol, simType, strLimit, strUseNear, begin, end), setting, begin, end) + "\n"
 	}
 	c.String(http.StatusOK, msg)

@@ -5,6 +5,7 @@ import (
 	"hello/model"
 	"hello/util"
 	"math"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -169,19 +170,64 @@ func CancelOrder(key, secret, market, symbol, orderType, orderId string) (result
 	return result, errCode, msg
 }
 
+func GetMultiCandle(key, secret, market string, slotSeconds int, begin, end time.Time, settings map[string]*model.Setting) (candles model.Candles) {
+	count := (end.Unix() - begin.Unix()) / int64(slotSeconds)
+	limit := 100
+	if market == model.BinancePerp {
+		limit = 498
+	}
+	if int(count) > limit {
+		duration, _ := time.ParseDuration(fmt.Sprintf(`%ds`, limit*slotSeconds))
+		candles = GetMultiCandle(key, secret, market, slotSeconds, begin, begin.Add(duration), settings)
+		candlesRight := GetMultiCandle(key, secret, market, slotSeconds, begin.Add(duration), end, settings)
+		for i := 0; i < len(candlesRight); i++ {
+			candles = append(candles, candlesRight[i])
+		}
+	} else {
+		candles = make([]*model.Candle, 0)
+		for symbol := range settings {
+			var temp model.Candles
+			switch market {
+			case model.Ftx:
+				temp = getCandlesFtx(key, secret, symbol, begin, end, slotSeconds)
+			case model.OKEX:
+				temp = getCandlesOKEX(key, secret, symbol, begin, end, int(count), slotSeconds)
+			case model.BinancePerp:
+				temp = getCandlesBinancePerp(key, secret, symbol, begin, end, int(count), slotSeconds)
+			}
+			candles = append(candles, temp...)
+			sort.Sort(candles)
+			msg := fmt.Sprintf(`get candles %s %s %d seconds %s %d`,
+				market, symbol, slotSeconds, begin.Format(time.RFC3339), len(candles))
+			util.Info(msg)
+			oldMsg, ok := util.LoadSyncMap(&model.CarryInfo, `GetCandle`)
+			if ok && oldMsg != nil {
+				msg = oldMsg.(string) + msg
+			}
+			if len(msg) < 100000 {
+				util.StoreSyncMap(&model.CarryInfo, msg, `GetCandle`)
+			} else {
+				util.StoreSyncMap(&model.CarryInfo, nil, `GetCandle`)
+			}
+			time.Sleep(time.Millisecond * 300)
+		}
+	}
+	return
+}
+
 // GetCandle slotSeconds: candle的以秒计算宽度
 func GetCandle(key, secret, market, symbol string, slotSeconds int, begin, end time.Time) (candles []*model.Candle) {
 	count := (end.Unix() - begin.Unix()) / int64(slotSeconds)
 	limit := 100
 	if market == model.BinancePerp {
-		limit = 499
+		limit = 498
 	}
 	if int(count) > limit {
 		duration, _ := time.ParseDuration(fmt.Sprintf(`%ds`, limit*slotSeconds))
 		candles = GetCandle(key, secret, market, symbol, slotSeconds, begin, begin.Add(duration))
 		candlesRight := GetCandle(key, secret, market, symbol, slotSeconds, begin.Add(duration), end)
-		for _, candle := range candlesRight {
-			candles = append(candles, candle)
+		for i := 0; i < len(candlesRight); i++ {
+			candles = append(candles, candlesRight[i])
 		}
 	} else {
 		switch market {

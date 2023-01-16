@@ -186,6 +186,10 @@ func Test_WsAndOrderApi(t *testing.T) {
 }
 
 func Test_initTurtleN(t *testing.T) {
+	array1 := []int{1, 2, 3, 4, 5}
+	array2 := []int{6, 7}
+	array2 = append(array1, array2...)
+	fmt.Println(array2)
 	model.NewConfig()
 	today, _ := model.GetMarketToday(model.OKEX)
 	candles := api.GetCandle(model.AppConfig.OkexKey, model.AppConfig.OkexSecret, model.OKEX, `ALPHA_PERP`, 1800, today, util.GetNow())
