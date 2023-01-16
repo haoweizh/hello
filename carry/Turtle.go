@@ -148,15 +148,13 @@ func GetTurtleData(key, secret string, setting *model.Setting) (turtleData *Turt
 	_, _, coin, _ := model.GetFromStandard(setting.Market, setting.Symbol)
 	far := 20
 	near := 10
-	useNear := true
 	if !model.CommonCoins[strings.ToLower(coin)] {
 		far = 14
 		near = 7
-		useNear = false
 	}
 	turtleData = &TurtleData{turtleTime: today, symbol: setting.Symbol, checkTimeBreak: util.GetNow(),
 		checkTimeOpen: util.GetNow().Add(duration), waitBreakLong: false, waitBreakShort: false, breakLong: false,
-		breakShort: false, liquidated: false, daysFar: far, daysNear: near, daysAdjust: 5, useNear: useNear}
+		breakShort: false, liquidated: false, daysFar: far, daysNear: near, daysAdjust: 5, useNear: false}
 	for i := 1; i < 21; i++ {
 		duration, _ = time.ParseDuration(fmt.Sprintf(`%dh`, -24*i))
 		day := today.Add(duration)
