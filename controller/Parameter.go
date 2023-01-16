@@ -25,6 +25,8 @@ var codeGenTime int64
 var codes = make(map[string]bool)
 var simulating = false
 
+const RegretTurtleGridAmount = 1000
+
 func ParameterServe() {
 	gin.SetMode(gin.ReleaseMode)
 	router := gin.Default()
@@ -171,20 +173,21 @@ func simulate(c *gin.Context) {
 	settings := make(map[string]*model.Setting)
 	for i := 0; i < len(coins); i++ {
 		symbol := strings.ToUpper(coins[i]) + model.UniStandardTail[model.MarketTypePerp]
-		setting := &model.Setting{Market: market, Symbol: symbol, AmountLimit: float64(limit), GridAmount: 1000,
+		setting := &model.Setting{Market: market, Symbol: symbol, AmountLimit: float64(limit), GridAmount: RegretTurtleGridAmount,
 			SymbolRelated: simType, Chance: 0, Coin: strUseNear}
+		settings[setting.Symbol] = setting
 		if strNew == `true` {
-			settings[setting.Symbol] = setting
 			go model.AppDB.Where(`market=? and symbol=? and refresh_type=? and order_time>? and order_time<? and amount_type=? and function=? and order_type=?`,
 				market, symbol, model.FunctionSimulation, begin, end, simType, strLimit, strUseNear).Delete(&model.Order{})
 		} else {
 			util.Notice(`no need process simulate new %s`, strNew)
 		}
 	}
-	regret.ProcessCandles(begin, end, int(near), int(far), int(simTypeSeconds), int(allLimit), useNear, market, settings)
-	for symbol, setting := range settings {
-		msg += regret.ToString(regret.GetDBOrders(market, symbol, simType, strLimit, strUseNear, begin, end), setting, begin, end) + "\n"
+	if strNew == `true` {
+		regret.ProcessCandles(begin, end, int(near), int(far), int(simTypeSeconds), int(allLimit), useNear, market, settings)
 	}
+	msg += regret.ToString(regret.GetDBOrders(market, simType, strLimit, strUseNear, begin, end, settings),
+		market, simType, strLimit, RegretTurtleGridAmount, begin, end) + "\n"
 	c.String(http.StatusOK, msg)
 }
 

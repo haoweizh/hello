@@ -151,7 +151,7 @@ func handlePrice(turtleData *TurtleData, candle *model.Candle, settings map[stri
 	}
 	currentChances := getCurrentChances(settings)
 	if turtleData.orderLong == nil && turtleData.orderShort == nil {
-		createTurtleOrders(setting, turtleData, candle, int64(allLimit), currentChances)
+		createTurtleOrders(setting, turtleData, candle, currentChances, int64(allLimit))
 	}
 	if turtleData.orderLong != nil && candle.PriceHigh >= turtleData.orderLong.Price {
 		if setting.Chance >= 0 {
@@ -165,6 +165,7 @@ func handlePrice(turtleData *TurtleData, candle *model.Candle, settings map[stri
 		turtleData.orderLong.OrderTime = candle.Begin
 		turtleData.orderLong.OrderId = fmt.Sprintf(`%s%s%s%s%d%f%s`, setting.Market, setting.Symbol, setting.SymbolRelated,
 			turtleData.orderLong.OrderSide, candle.Begin.Unix(), setting.AmountLimit, turtleData.orderLong.OrderType)
+		turtleData.orderLong.UnfilledQuantity = float64(currentChances)
 		util.Info(`deal long chance %d 总仓 %d save order %s at %s`,
 			setting.Chance, currentChances, turtleData.orderLong.OrderId, turtleData.orderLong.OrderTime.String())
 		model.AppDB.Save(turtleData.orderLong)
@@ -183,6 +184,7 @@ func handlePrice(turtleData *TurtleData, candle *model.Candle, settings map[stri
 		turtleData.orderShort.OrderTime = candle.Begin
 		turtleData.orderShort.OrderId = fmt.Sprintf(`%s%s%s%s%d%f%s`, setting.Market, setting.Symbol, setting.SymbolRelated,
 			turtleData.orderShort.OrderSide, candle.Begin.Unix(), setting.AmountLimit, turtleData.orderShort.OrderType)
+		turtleData.orderShort.UnfilledQuantity = float64(currentChances)
 		util.Info(`deal short chance %d 总仓 %d save order %s at %s`,
 			setting.Chance, currentChances, turtleData.orderShort.OrderId, turtleData.orderShort.OrderTime.String())
 		model.AppDB.Save(turtleData.orderShort)
@@ -236,83 +238,96 @@ func ProcessCandles(start, end time.Time, near, far, turtleSeconds, allLimit int
 	}
 }
 
-func GetDBOrders(market, symbol, amountType, limit, orderType string, begin, end time.Time) (orders []*model.Order) {
-	orders = []*model.Order{}
-	model.AppDB.Where(`market=? and symbol=? and order_time>? and order_time<? and refresh_type=? and amount_type=? and function=? and order_type=?`,
-		market, symbol, begin, end, model.FunctionSimulation, amountType, limit, orderType).Order(`order_time asc`).Find(&orders)
+func GetDBOrders(market, amountType, limit, orderType string, begin, end time.Time, settings map[string]*model.Setting) (orders []*model.Order) {
+	symbols := make([]string, 0)
+	for symbol := range settings {
+		symbols = append(symbols, symbol)
+	}
+	orders = make([]*model.Order, 0)
+	model.AppDB.Where(`market=? and order_time>? and order_time<? and refresh_type=? and amount_type=? and function=? and order_type=? and symbol IN ?`,
+		market, begin, end, model.FunctionSimulation, amountType, limit, orderType, symbols).Order(`order_time asc`).Find(&orders)
 	return orders
 }
 
-func ToString(orders []*model.Order, setting *model.Setting, begin, end time.Time) (str string) {
+type Statistic struct {
+	amountBuy, amountSell, priceBuy, priceSell, uBuy, uSell, earnRate,
+	groupUBuy, groupUSell, groupAmountBuy, groupAmountSell, rateInAllWin, rateInAllLose float64
+	loses, wins []float64
+}
+
+func ToString(orders []*model.Order, market, simType, singleLimit string, gridAmount float64, begin, end time.Time) (str string) {
 	str = ``
-	var amountBuy, amountSell, priceBuy, priceSell, uBuy, uSell, earnRate,
-		groupUBuy, groupUSell, groupAmountBuy, groupAmountSell, rateInAllWin, rateInAllLose float64
-	wins := make([]float64, 0)
-	loses := make([]float64, 0)
+	statistics := make(map[string]*Statistic)
 	for _, order := range orders {
+		if statistics[order.Symbol] == nil {
+			statistics[order.Symbol] = &Statistic{}
+		}
+		sta := statistics[order.Symbol]
 		if order.OrderSide == model.OrderSideBuy {
-			amountBuy += order.Amount
-			uBuy += order.Amount * order.DealPrice
+			sta.amountBuy += order.Amount
+			sta.uBuy += order.Amount * order.DealPrice
 			if order.GridPos >= 0 {
-				groupUBuy += order.Amount * order.DealPrice
-				groupAmountBuy += order.Amount
+				sta.groupUBuy += order.Amount * order.DealPrice
+				sta.groupAmountBuy += order.Amount
 			} else {
-				rate := (groupUSell/groupAmountSell - order.DealPrice) / order.DealPrice
+				rate := (sta.groupUSell/sta.groupAmountSell - order.DealPrice) / order.DealPrice
 				if rate > 0 {
-					wins = append(wins, rate)
-					rateInAllWin += rate
+					sta.wins = append(sta.wins, rate)
+					sta.rateInAllWin += rate
 				} else {
-					loses = append(loses, rate)
-					rateInAllLose += rate
+					sta.loses = append(sta.loses, rate)
+					sta.rateInAllLose += rate
 				}
-				groupUBuy = 0
-				groupUSell = 0
-				groupAmountBuy = 0
-				groupAmountSell = 0
+				sta.groupUBuy = 0
+				sta.groupUSell = 0
+				sta.groupAmountBuy = 0
+				sta.groupAmountSell = 0
 			}
 		} else if order.OrderSide == model.OrderSideSell {
-			amountSell += order.Amount
-			uSell += order.Amount * order.DealPrice
+			sta.amountSell += order.Amount
+			sta.uSell += order.Amount * order.DealPrice
 			if order.GridPos <= 0 {
-				groupUSell += order.Amount * order.DealPrice
-				groupAmountSell += order.Amount
+				sta.groupUSell += order.Amount * order.DealPrice
+				sta.groupAmountSell += order.Amount
 			} else {
-				rate := (order.DealPrice - groupUBuy/groupAmountBuy) / order.DealPrice
+				rate := (order.DealPrice - sta.groupUBuy/sta.groupAmountBuy) / order.DealPrice
 				if rate > 0 {
-					wins = append(wins, rate)
-					rateInAllWin += rate
+					sta.wins = append(sta.wins, rate)
+					sta.rateInAllWin += rate
 				} else {
-					loses = append(loses, rate)
-					rateInAllLose += rate
+					sta.loses = append(sta.loses, rate)
+					sta.rateInAllLose += rate
 				}
-				groupUBuy = 0
-				groupUSell = 0
-				groupAmountBuy = 0
-				groupAmountSell = 0
+				sta.groupUBuy = 0
+				sta.groupUSell = 0
+				sta.groupAmountBuy = 0
+				sta.groupAmountSell = 0
 			}
 		}
-		str += fmt.Sprintf("%s %s %s %s %f at %f %f chance %d\n",
-			order.OrderTime.String(), order.Market, order.Symbol, order.OrderSide, order.Amount, order.Price, order.DealPrice, order.GridPos)
+		str += fmt.Sprintf("%s %s %s %s %f at %f %f 仓位%d 总仓%.0f\n",
+			order.OrderTime.String(), order.Market, order.Symbol, order.OrderSide, order.Amount, order.Price, order.DealPrice, order.GridPos, order.UnfilledQuantity)
 	}
-	if amountBuy > 0 {
-		priceBuy = uBuy / amountBuy
+	for symbol, statistic := range statistics {
+		if statistic.amountBuy > 0 {
+			statistic.priceBuy = statistic.uBuy / statistic.amountBuy
+		}
+		if statistic.amountSell > 0 {
+			statistic.priceSell = statistic.uSell / statistic.amountSell
+		}
+		statistic.earnRate = (statistic.priceSell - statistic.priceBuy) / statistic.priceBuy * math.Min(statistic.amountBuy, statistic.amountSell)
+		str += fmt.Sprintf("%s %s %s %s 平均价差:%f‰ earnRate %.2f‰ 滑点%f type%s 仓位限制:%s"+
+			"\nbuy%.0f次 avgPrice %f\n"+"sell%.0f次 avgPrice %f\n",
+			market, symbol, begin.String(), end.String(), 1000*(statistic.priceSell-statistic.priceBuy)/statistic.priceBuy,
+			statistic.earnRate, tradeCost, simType, singleLimit, statistic.amountBuy/gridAmount, statistic.priceBuy, statistic.amountSell/gridAmount, statistic.priceSell)
+		avgWinRate := 0.0
+		if len(statistic.wins) > 0 {
+			avgWinRate = gridAmount * statistic.rateInAllWin / float64(len(statistic.wins))
+		}
+		avgLoseRate := 0.0
+		if len(statistic.loses) > 0 {
+			avgLoseRate = gridAmount * statistic.rateInAllLose / float64(len(statistic.loses))
+		}
+		str += fmt.Sprintf("平仓盈利%d次平均%f‰ 平仓亏损%d次平均%f‰\n", len(statistic.wins), avgWinRate, len(statistic.loses), avgLoseRate)
 	}
-	if amountSell > 0 {
-		priceSell = uSell / amountSell
-	}
-	earnRate = (priceSell - priceBuy) / priceBuy * math.Min(amountBuy, amountSell)
-	str += fmt.Sprintf("%s %s %s %s 下单%d次平均价差:%f earnRate %.2f‰ 滑点%f type%s 仓位限制:%f"+
-		"\nbuy%f次 avgPrice %f\n"+"sell%f次 avgPrice %f\n",
-		setting.Market, setting.Symbol, begin.String(), end.String(), len(orders), (priceSell-priceBuy)/priceBuy,
-		earnRate, tradeCost, setting.SymbolRelated, setting.AmountLimit, uBuy/setting.GridAmount, priceBuy, uSell/setting.GridAmount, priceSell)
-	avgWinRate := 0.0
-	if len(wins) > 0 {
-		avgWinRate = setting.GridAmount * rateInAllWin / float64(len(wins))
-	}
-	avgLoseRate := 0.0
-	if len(loses) > 0 {
-		avgLoseRate = setting.GridAmount * rateInAllLose / float64(len(loses))
-	}
-	str += fmt.Sprintf("盈利%d次平均%f‰ 亏损%d次平均%f‰", len(wins), avgWinRate, len(loses), avgLoseRate)
 	return str
 }
