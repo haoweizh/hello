@@ -16,7 +16,7 @@ type Config struct {
 	GateKey, GateSecret, GateCarryClose, GateCarryRate                                             string
 	HuobiKey, HuobiSecret, HuobiCarryClose, HuobiCarryRate                                         string
 	OkexKey, OkexSecret, OkexCarryClose, OkexCarryRate                                             string
-	FtxKey, FtxSecret, FtxCarryClose, FtxCarryRate                                                 string
+	FtxKey, FtxSecret, FtxCarryClose, FtxCarryRate, RedisAddr, RedisPassword                       string
 	BybitKey, BybitSecret, BybitCarryClose, BybitCarryRate                                         string
 	BinanceKey, BinanceSecret, BinanceCarryClose, BinanceCarryRate                                 string
 	CoinparkKey, CoinparkSecret, CoinparkCarryClose, CoinparkCarryRate                             string

@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"github.com/go-redis/redis/v8"
 	"github.com/gorilla/websocket"
 	"github.com/jinzhu/configor"
 	"gorm.io/driver/postgres"
@@ -40,20 +41,6 @@ func timeWriter(conn *websocket.Conn) {
 	}
 }
 
-//
-//func Test_redis(t *testing.T) {
-//	client := redis.NewClient(&redis.Options{
-//		Addr:     "47.74.31.113:8079",
-//		Password: "*p$JeMdKdn3wa9zS",
-//		DB:       0,
-//	})
-//	client.Set(`test`, []int{1, 2, 3}, 0)
-//	client.
-//	value, _ := client.Get(`test`).Result()
-//	array := []int(value)
-//	fmt.Printf(`%v`, array)
-//}
-
 func Test_ws(t *testing.T) {
 	var addr = flag.String("addr", "ec2-18-179-17-108.ap-northeast-1.compute.amazonaws.com:443", "http service address")
 	//var addr = flag.String("addr", "localhost:443", "http service address")
@@ -78,7 +65,6 @@ func Test_ws(t *testing.T) {
 }
 
 func Test_getCommonMarketInfos(t *testing.T) {
-	model.NewConfig()
 	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
 	//api.InitCrossMarketInfos([]string{model.Gate})
 	api.InitMarketInfos()
@@ -201,8 +187,17 @@ func Test_WsAndOrderApi(t *testing.T) {
 
 func Test_initTurtleN(t *testing.T) {
 	model.NewConfig()
+	model.AppRedis = redis.NewClient(&redis.Options{
+		Addr:     model.AppConfig.RedisAddr,
+		Password: model.AppConfig.RedisPassword,
+		DB:       0,
+	})
+	//model.AppRedis.Set(context.Background(), `binanceperp_BTC_PERP_30m_1673913600000_1673962933185_27`, `1test`, 0)
+	//res, err := model.AppRedis.Get(context.Background(), `binanceperp_BTC_PERP_30m_1673913600000_1673962933185_27`).Result()
+	//fmt.Println(fmt.Sprintf(`%s %s`, res, err.Error()))
 	today, _ := model.GetMarketToday(model.BinancePerp)
-	candles := api.GetCandle(model.AppConfig.BinanceKey, model.AppConfig.BinanceSecret, model.BinancePerp, `BTC_PERP`, 1800, today, util.GetNow())
+	duration1, _ := time.ParseDuration(`7200`)
+	candles := api.GetCandle(model.AppConfig.BinanceKey, model.AppConfig.BinanceSecret, model.BinancePerp, `BTC_PERP`, 1800, today, today.Add(duration1))
 	fmt.Println(candles)
 	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
 	_ = model.AppDB.AutoMigrate(&model.Setting{})

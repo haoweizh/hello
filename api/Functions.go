@@ -187,13 +187,14 @@ func GetMultiCandle(key, secret, market string, slotSeconds int, begin, end time
 		candles = make([]*model.Candle, 0)
 		for symbol := range settings {
 			var temp model.Candles
+			var isCache bool
 			switch market {
 			case model.Ftx:
 				temp = getCandlesFtx(key, secret, symbol, begin, end, slotSeconds)
 			case model.OKEX:
 				temp = getCandlesOKEX(key, secret, symbol, begin, end, int(count), slotSeconds)
 			case model.BinancePerp:
-				temp = getCandlesBinancePerp(key, secret, symbol, begin, end, int(count), slotSeconds)
+				temp, isCache = getCandlesBinancePerp(key, secret, symbol, begin, end, int(count), slotSeconds)
 			}
 			candles = append(candles, temp...)
 			sort.Sort(candles)
@@ -209,7 +210,9 @@ func GetMultiCandle(key, secret, market string, slotSeconds int, begin, end time
 			} else {
 				util.StoreSyncMap(&model.CarryInfo, nil, `GetCandle`)
 			}
-			time.Sleep(time.Millisecond * 300)
+			if !isCache {
+				time.Sleep(time.Millisecond * 300)
+			}
 		}
 	}
 	return
@@ -230,13 +233,14 @@ func GetCandle(key, secret, market, symbol string, slotSeconds int, begin, end t
 			candles = append(candles, candlesRight[i])
 		}
 	} else {
+		isCache := false
 		switch market {
 		case model.Ftx:
 			candles = getCandlesFtx(key, secret, symbol, begin, end, slotSeconds)
 		case model.OKEX:
 			candles = getCandlesOKEX(key, secret, symbol, begin, end, int(count), slotSeconds)
 		case model.BinancePerp:
-			candles = getCandlesBinancePerp(key, secret, symbol, begin, end, int(count), slotSeconds)
+			candles, isCache = getCandlesBinancePerp(key, secret, symbol, begin, end, int(count), slotSeconds)
 		}
 		msg := fmt.Sprintf(`get candles %s %s %d seconds %s %d`,
 			market, symbol, slotSeconds, begin.Format(time.RFC3339), len(candles))
@@ -250,7 +254,9 @@ func GetCandle(key, secret, market, symbol string, slotSeconds int, begin, end t
 		} else {
 			util.StoreSyncMap(&model.CarryInfo, nil, `GetCandle`)
 		}
-		time.Sleep(time.Millisecond * 300)
+		if !isCache {
+			time.Sleep(time.Millisecond * 300)
+		}
 	}
 	return
 }

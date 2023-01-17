@@ -2,6 +2,7 @@ package model
 
 import (
 	"fmt"
+	"github.com/go-redis/redis/v8"
 	"github.com/jinzhu/configor"
 	"gorm.io/gorm"
 	"hello/util"
@@ -60,6 +61,7 @@ const FunctionHang = `hang`
 const PostOnly = `ParticipateDoNotInitiate`
 
 var AppDB *gorm.DB
+var AppRedis *redis.Client
 var AppConfig *Config
 var AppMarkets = &Markets{}
 var ChannelMaintaining sync.Map // market - bool

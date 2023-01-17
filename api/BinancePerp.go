@@ -380,7 +380,7 @@ func getPositionsBinancePerp(key, secret string) (success bool, positions []*mod
 
 // 1m 3m 5m 15m 30m 1h 2h 4h 6h 8h 12h 1d 3d 1w 1M
 func getCandlesBinancePerp(key, secret, symbol string, begin, end time.Time, limit, slotSeconds int) (
-	candles []*model.Candle) {
+	candles []*model.Candle, isCache bool) {
 	interval := `1D`
 	switch slotSeconds {
 	case 60:
@@ -393,10 +393,27 @@ func getCandlesBinancePerp(key, secret, symbol string, begin, end time.Time, lim
 		interval = `1d`
 	}
 	param := map[string]interface{}{`symbol`: symbol, `interval`: interval, `startTime`: begin.UnixMilli(), `endTime`: end.UnixMilli(), `limit`: limit}
-	responseBody := signedRequestBinance(key, secret, http.MethodGet, restBinancePerp+"/fapi/v1/klines", true, param)
+	redisKey := fmt.Sprintf(`%s_%s_%s_%d_%d_%d`, model.BinancePerp, symbol, interval, begin.UnixMilli(), end.UnixMilli(), limit)
+	var responseBody []byte
+	if model.AppRedis != nil {
+		temp, redisErr := model.AppRedis.Get(context.Background(), redisKey).Result()
+		if redisErr == nil {
+			responseBody = []byte(temp)
+			isCache = true
+		}
+	}
+	if responseBody == nil {
+		responseBody = signedRequestBinance(key, secret, http.MethodGet, restBinancePerp+"/fapi/v1/klines", true, param)
+		if model.AppRedis != nil {
+			model.AppRedis.Set(context.Background(), redisKey, string(responseBody), 0)
+		}
+	}
 	klineJson, err := util.NewJSON(responseBody)
 	items, itemErr := klineJson.Array()
 	if err != nil || klineJson == nil || itemErr != nil {
+		if model.AppRedis != nil {
+			model.AppRedis.Del(context.Background(), redisKey)
+		}
 		util.SocketInfo(`fail to get binance kline %s %s %s %d %s`, symbol, begin.String(), end.String(), slotSeconds, err.Error())
 		return
 	}
@@ -412,7 +429,7 @@ func getCandlesBinancePerp(key, secret, symbol string, begin, end time.Time, lim
 		candle.Begin = time.Unix(beginMilli/1000, 0).In(begin.Location())
 		candles = append(candles, candle)
 	}
-	return candles
+	return
 }
 
 func signedRequestBinance(key, secret, method, requestUrl string, withApiKey bool, value map[string]interface{}) []byte {
