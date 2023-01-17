@@ -40,6 +40,20 @@ func timeWriter(conn *websocket.Conn) {
 	}
 }
 
+//
+//func Test_redis(t *testing.T) {
+//	client := redis.NewClient(&redis.Options{
+//		Addr:     "47.74.31.113:8079",
+//		Password: "*p$JeMdKdn3wa9zS",
+//		DB:       0,
+//	})
+//	client.Set(`test`, []int{1, 2, 3}, 0)
+//	client.
+//	value, _ := client.Get(`test`).Result()
+//	array := []int(value)
+//	fmt.Printf(`%v`, array)
+//}
+
 func Test_ws(t *testing.T) {
 	var addr = flag.String("addr", "ec2-18-179-17-108.ap-northeast-1.compute.amazonaws.com:443", "http service address")
 	//var addr = flag.String("addr", "localhost:443", "http service address")
@@ -186,13 +200,9 @@ func Test_WsAndOrderApi(t *testing.T) {
 }
 
 func Test_initTurtleN(t *testing.T) {
-	array1 := []int{1, 2, 3, 4, 5}
-	array2 := []int{6, 7}
-	array2 = append(array1, array2...)
-	fmt.Println(array2)
 	model.NewConfig()
-	today, _ := model.GetMarketToday(model.OKEX)
-	candles := api.GetCandle(model.AppConfig.OkexKey, model.AppConfig.OkexSecret, model.OKEX, `ALPHA_PERP`, 1800, today, util.GetNow())
+	today, _ := model.GetMarketToday(model.BinancePerp)
+	candles := api.GetCandle(model.AppConfig.BinanceKey, model.AppConfig.BinanceSecret, model.BinancePerp, `BTC_PERP`, 1800, today, util.GetNow())
 	fmt.Println(candles)
 	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
 	_ = model.AppDB.AutoMigrate(&model.Setting{})

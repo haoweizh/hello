@@ -333,7 +333,7 @@ func cancelOrdersBinancePerp(key, secret string, symbol string) bool {
 	return true
 }
 
-//sdk暂不支持该接口
+// sdk暂不支持该接口
 func getPositionsBinancePerp(key, secret string) (success bool, positions []*model.Position, accountValue, availableU float64) {
 	responseBody := signedRequestBinance(key, secret, http.MethodGet, restBinancePerp+"/fapi/v2/account", true, nil)
 	positionJson, err := util.NewJSON(responseBody)
@@ -381,8 +381,6 @@ func getPositionsBinancePerp(key, secret string) (success bool, positions []*mod
 // 1m 3m 5m 15m 30m 1h 2h 4h 6h 8h 12h 1d 3d 1w 1M
 func getCandlesBinancePerp(key, secret, symbol string, begin, end time.Time, limit, slotSeconds int) (
 	candles []*model.Candle) {
-	_, _, _, dialectSymbol := model.GetFromStandard(model.BinancePerp, symbol)
-	client := futures.NewClient(key, secret)
 	interval := `1D`
 	switch slotSeconds {
 	case 60:
@@ -394,28 +392,38 @@ func getCandlesBinancePerp(key, secret, symbol string, begin, end time.Time, lim
 	case 86400:
 		interval = `1d`
 	}
-	resp, err := client.NewKlinesService().Symbol(dialectSymbol).StartTime(begin.UnixMilli()).
-		EndTime(end.UnixMilli()).Interval(interval).Limit(limit).Do(context.Background())
-	if err != nil {
-		util.Notice("getCandlesBinancePerp err: " + err.Error() + " symbol: " + dialectSymbol)
+	param := map[string]interface{}{`symbol`: symbol, `interval`: interval, `startTime`: begin.UnixMilli(), `endTime`: end.UnixMilli(), `limit`: limit}
+	responseBody := signedRequestBinance(key, secret, http.MethodGet, restBinancePerp+"/fapi/v1/klines", true, param)
+	klineJson, err := util.NewJSON(responseBody)
+	items, itemErr := klineJson.Array()
+	if err != nil || klineJson == nil || itemErr != nil {
+		util.SocketInfo(`fail to get binance kline %s %s %s %d %s`, symbol, begin.String(), end.String(), slotSeconds, err.Error())
 		return
 	}
 	candles = make([]*model.Candle, 0)
-	for _, item := range resp {
+	for i := 0; i < len(items); i++ {
 		candle := &model.Candle{Market: model.BinancePerp, Symbol: symbol, Seconds: slotSeconds}
-		candle.PriceOpen, _ = strconv.ParseFloat(item.Open, 64)
-		candle.PriceClose, _ = strconv.ParseFloat(item.Close, 64)
-		candle.PriceHigh, _ = strconv.ParseFloat(item.High, 64)
-		candle.PriceLow, _ = strconv.ParseFloat(item.Low, 64)
-		candle.Begin = time.Unix(item.OpenTime/1000, 0).In(begin.Location())
+		value := items[i].([]interface{})
+		candle.PriceOpen, _ = strconv.ParseFloat(value[1].(string), 64)
+		candle.PriceClose, _ = strconv.ParseFloat(value[4].(string), 64)
+		candle.PriceHigh, _ = strconv.ParseFloat(value[2].(string), 64)
+		candle.PriceLow, _ = strconv.ParseFloat(value[3].(string), 64)
+		beginMilli, _ := value[0].(json.Number).Int64()
+		candle.Begin = time.Unix(beginMilli/1000, 0).In(begin.Location())
 		candles = append(candles, candle)
 	}
 	return candles
 }
 
-func signedRequestBinance(key, secret, method, requestUrl string, withApiKey bool, param *url.Values) []byte {
-	if param == nil {
-		param = &url.Values{}
+func signedRequestBinance(key, secret, method, requestUrl string, withApiKey bool, value map[string]interface{}) []byte {
+	param := &url.Values{}
+	if value != nil {
+		for itemKey, itemValue := range value {
+			if itemKey == `symbol` {
+				_, _, _, itemValue = model.GetFromStandard(model.BinancePerp, itemValue.(string))
+			}
+			param.Set(itemKey, fmt.Sprintf(`%v`, itemValue))
+		}
 	}
 	if withApiKey {
 		param.Set("recvWindow", "60000")
