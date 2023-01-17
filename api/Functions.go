@@ -174,7 +174,7 @@ func GetMultiCandle(key, secret, market string, slotSeconds int, begin, end time
 	count := (end.Unix() - begin.Unix()) / int64(slotSeconds)
 	limit := 100
 	if market == model.BinancePerp {
-		limit = 498
+		limit = 480
 	}
 	if int(count) > limit {
 		duration, _ := time.ParseDuration(fmt.Sprintf(`%ds`, limit*slotSeconds))
@@ -223,7 +223,7 @@ func GetCandle(key, secret, market, symbol string, slotSeconds int, begin, end t
 	count := (end.Unix() - begin.Unix()) / int64(slotSeconds)
 	limit := 100
 	if market == model.BinancePerp {
-		limit = 498
+		limit = 480
 	}
 	if int(count) > limit {
 		duration, _ := time.ParseDuration(fmt.Sprintf(`%ds`, limit*slotSeconds))
