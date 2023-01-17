@@ -58,7 +58,9 @@ func calcTurtleAmount(key, secret string, setting *model.Setting, n float64) (am
 	}
 	amount = 0.02 * accountValue / n
 	_, _, coin, _ := model.GetFromStandard(setting.Market, setting.Symbol)
-	if !model.CommonCoins[strings.ToLower(coin)] {
+	if model.CommonCoins[strings.ToLower(coin)] {
+		amount = amount * 0.75
+	} else {
 		amount /= 4
 	}
 	//util.Notice(`calcTurtleAmount %s %s %f`, setting.Market, setting.Symbol, amount)
