@@ -33,7 +33,8 @@ func (turtleData *TurtleData) ToString() (str string) {
 	if turtleData == nil {
 		return `turtle data is nil`
 	}
-	return fmt.Sprintf(`20日%f~%f n:%f amount:%f`, turtleData.lowDaysFar, turtleData.highDaysFar, turtleData.n, turtleData.amount)
+	return fmt.Sprintf(`%d日%f~%f n:%f amount:%f`,
+		turtleData.daysFar, turtleData.lowDaysFar, turtleData.highDaysFar, turtleData.n, turtleData.amount)
 }
 
 func checkSetTurtling(value bool) (before bool) {
@@ -344,9 +345,6 @@ var ProcessTurtle = func(setting *model.Setting, tick *model.BidAsk) {
 			priceShort = math.Max(setting.PriceX-2*turtleData.n, turtleData.lowDaysNear)
 		} else {
 			if turtleData.highDaysFar < turtleData.highToday {
-				util.Notice(fmt.Sprintf(`update days far high %s %s %f %f`,
-					setting.Market, setting.Symbol, turtleData.highDaysFar, turtleData.highToday))
-				turtleData.highDaysFar = turtleData.highToday
 				if turtleData.orderShort != nil {
 					for _, order := range turtleData.orderShort {
 						go api.MustCancel(account.Key, account.Secret, setting.Market, setting.Symbol, order.OrderType, order.OrderId, true)
@@ -354,7 +352,7 @@ var ProcessTurtle = func(setting *model.Setting, tick *model.BidAsk) {
 				}
 				turtleData.orderShort = nil
 			}
-			priceShort = turtleData.highDaysFar - 2*turtleData.n
+			priceShort = math.Max(turtleData.highDaysFar, turtleData.highToday) - 2*turtleData.n
 		}
 		placeTurtleOrders(account.Key, account.Secret, turtleData, setting, currentN, priceShort, priceLong, tick)
 		// 加仓一个单位
@@ -390,9 +388,6 @@ var ProcessTurtle = func(setting *model.Setting, tick *model.BidAsk) {
 			priceLong = math.Min(setting.PriceX+2*turtleData.n, turtleData.highDaysNear)
 		} else {
 			if turtleData.lowToday > 0 && turtleData.lowToday < turtleData.lowDaysFar {
-				util.Notice(fmt.Sprintf(`update days far low %s %s %f %f`,
-					setting.Market, setting.Symbol, turtleData.lowDaysFar, turtleData.lowToday))
-				turtleData.lowDaysFar = turtleData.lowToday
 				if turtleData.orderLong != nil {
 					for _, order := range turtleData.orderLong {
 						go api.MustCancel(account.Key, account.Secret, setting.Market, setting.Symbol, order.OrderType, order.OrderId, true)
@@ -400,7 +395,11 @@ var ProcessTurtle = func(setting *model.Setting, tick *model.BidAsk) {
 				}
 				turtleData.orderLong = nil
 			}
-			priceLong = turtleData.lowDaysFar + 2*turtleData.n
+			if turtleData.lowToday > 0 {
+				priceLong = math.Min(turtleData.lowDaysFar, turtleData.lowToday) + 2*turtleData.n
+			} else {
+				priceLong = turtleData.lowDaysFar + 2*turtleData.n
+			}
 		}
 		placeTurtleOrders(account.Key, account.Secret, turtleData, setting, currentN, priceShort, priceLong, tick)
 		// 加仓一个单位
