@@ -157,7 +157,8 @@ func GetTurtleData(key, secret string, setting *model.Setting) (turtleData *Turt
 			checkTimeOpen: util.GetNow().Add(duration), waitBreakLong: false, waitBreakShort: false, breakLong: false,
 			breakShort: false, liquidated: false, daysFar: 18, daysNear: 9, daysAdjust: 5, useNear: true}
 	}
-	for i := 1; i < 21; i++ {
+	indexMax := math.Max(21.0, float64(turtleData.daysFar))
+	for i := 1; i < int(indexMax); i++ {
 		duration, _ = time.ParseDuration(fmt.Sprintf(`%dh`, -24*i))
 		day := today.Add(duration)
 		candle := api.GetTurtleCandle(key, secret, setting.Market, setting.Symbol, 86400, day)
