@@ -147,13 +147,13 @@ func GetTurtleData(key, secret string, setting *model.Setting) (turtleData *Turt
 	}
 	clearOrders(key, secret, setting)
 	turtleTime.Store(fmt.Sprintf(`%s_%s_%s`, setting.Market, setting.Symbol, todayStr), time.Now())
-	//_, _, coin, _ := model.GetFromStandard(setting.Market, setting.Symbol)
+	_, _, coin, _ := model.GetFromStandard(setting.Market, setting.Symbol)
 	far := 20
 	near := 10
-	//if !model.CommonCoins[strings.ToLower(coin)] {
-	//	far = 14
-	//	near = 7
-	//}
+	if !model.CommonCoins[strings.ToLower(coin)] {
+		far = 18
+		near = 9
+	}
 	turtleData = &TurtleData{turtleTime: today, symbol: setting.Symbol, checkTimeBreak: util.GetNow(),
 		checkTimeOpen: util.GetNow().Add(duration), waitBreakLong: false, waitBreakShort: false, breakLong: false,
 		breakShort: false, liquidated: false, daysFar: far, daysNear: near, daysAdjust: 5, useNear: false}
@@ -561,8 +561,8 @@ func placeTurtleOrders(key, secret string, turtleData *TurtleData, setting *mode
 					model.FunctionTurtle, priceLong*(1+turtleTriggerDelta), priceLong, amount, setting)
 				priceOut = true
 			} else {
-				turtleData.orderLong = api.MustPlaceOrder(key, secret, orderSide, typeLong, setting.Market, setting.Symbol, ``, model.FunctionTurtle,
-					priceLong*(1+turtleTriggerDelta), priceLong, amount, setting)
+				turtleData.orderLong = api.MustPlaceOrder(key, secret, orderSide, typeLong, setting.Market, setting.Symbol, ``,
+					model.FunctionTurtle, priceLong*(1+turtleTriggerDelta), priceLong, amount, setting)
 			}
 			if turtleData.orderLong != nil {
 				turtleData.waitBreakLong = true
@@ -571,6 +571,7 @@ func placeTurtleOrders(key, secret string, turtleData *TurtleData, setting *mode
 					turtleData.breakLong = true
 				}
 				for _, order := range turtleData.orderLong {
+					order.LineBuy = turtleData.n
 					go model.AppDB.Save(order)
 				}
 			}
@@ -609,6 +610,7 @@ func placeTurtleOrders(key, secret string, turtleData *TurtleData, setting *mode
 					turtleData.breakShort = true
 				}
 				for _, order := range turtleData.orderShort {
+					order.LineBuy = turtleData.n
 					go model.AppDB.Save(order)
 				}
 			}

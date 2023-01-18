@@ -3,7 +3,6 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/go-redis/redis/v8"
 	"github.com/gorilla/websocket"
 	"github.com/jinzhu/configor"
 	"gorm.io/driver/postgres"
@@ -187,11 +186,6 @@ func Test_WsAndOrderApi(t *testing.T) {
 
 func Test_initTurtleN(t *testing.T) {
 	model.NewConfig()
-	model.AppRedis = redis.NewClient(&redis.Options{
-		Addr:     model.AppConfig.RedisAddr,
-		Password: model.AppConfig.RedisPassword,
-		DB:       0,
-	})
 	//model.AppRedis.Set(context.Background(), `binanceperp_BTC_PERP_30m_1673913600000_1673962933185_27`, `1test`, 0)
 	//res, err := model.AppRedis.Get(context.Background(), `binanceperp_BTC_PERP_30m_1673913600000_1673962933185_27`).Result()
 	//fmt.Println(fmt.Sprintf(`%s %s`, res, err.Error()))

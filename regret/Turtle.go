@@ -208,6 +208,11 @@ func getTurtleCandles(candles []*model.Candle) {
 	}
 }
 
+//func getOrderSign(setting *model.Setting) (sign string) {
+//	sign = fmt.Sprintf(`%s%s%d%f%s`, setting.SymbolRelated,
+//		turtleData.orderLong.OrderSide, candle.Begin.Unix(), setting.AmountLimit, turtleData.orderLong.OrderType)
+//}
+
 // ProcessCandles
 // setting.AmountLimit 开仓数上限
 // setting.GridAmount 标准一仓的数量
