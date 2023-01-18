@@ -262,6 +262,7 @@ type Statistic struct {
 
 func ToString(orders []*model.Order, market, simType, singleLimit string, gridAmount float64, begin, end time.Time) (str string) {
 	str = ``
+	earnRateAll := 0.0
 	statistics := make(map[string]*Statistic)
 	for _, order := range orders {
 		if statistics[order.Symbol] == nil {
@@ -320,6 +321,7 @@ func ToString(orders []*model.Order, market, simType, singleLimit string, gridAm
 			statistic.priceSell = statistic.uSell / statistic.amountSell
 		}
 		statistic.earnRate = (statistic.priceSell - statistic.priceBuy) / statistic.priceBuy * math.Min(statistic.amountBuy, statistic.amountSell)
+		earnRateAll += statistic.earnRate
 		str += fmt.Sprintf("%s %s %s %s 平均价差:%f‰ earnRate %.2f‰ 滑点%f type%s 仓位限制:%s"+
 			"\nbuy%.0f次 avgPrice %f\n"+"sell%.0f次 avgPrice %f\n",
 			market, symbol, begin.String(), end.String(), 1000*(statistic.priceSell-statistic.priceBuy)/statistic.priceBuy,
@@ -334,5 +336,6 @@ func ToString(orders []*model.Order, market, simType, singleLimit string, gridAm
 		}
 		str += fmt.Sprintf("平仓盈利%d次平均%f‰ 平仓亏损%d次平均%f‰\n", len(statistic.wins), avgWinRate, len(statistic.loses), avgLoseRate)
 	}
+	str += fmt.Sprintf(`earnRateAll: %f`, earnRateAll)
 	return str
 }
