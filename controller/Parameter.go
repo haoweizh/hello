@@ -186,8 +186,9 @@ func simulate(c *gin.Context) {
 	if strNew == `true` {
 		regret.ProcessCandles(begin, end, int(near), int(far), int(simTypeSeconds), int(allLimit), useNear, market, settings)
 	}
-	msg += regret.ToString(regret.GetDBOrders(market, simType, strLimit, strUseNear, begin, end, settings),
-		market, simType, strLimit, RegretTurtleGridAmount, begin, end) + "\n"
+	orders := regret.GetDBOrders(market, simType, strLimit, strUseNear, begin, end, settings)
+	msg += fmt.Sprintf(`Get %d orders %s %s %v %s %s from %d settings`, len(orders), simType, strLimit, strUseNear, begin.String(), end.String(), len(settings))
+	msg += regret.ToString(orders, market, simType, strLimit, RegretTurtleGridAmount, begin, end) + "\n"
 	c.String(http.StatusOK, msg)
 }
 
