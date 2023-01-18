@@ -6,7 +6,6 @@ import (
 	"hello/model"
 	"hello/util"
 	"math"
-	"strconv"
 	"time"
 )
 
@@ -49,7 +48,6 @@ func createTurtleOrders(setting *model.Setting, turtleData *TurtleData, candle *
 	priceShort := turtleData.lowFar
 	amountShot := 0.0
 	amountLong := 0.0
-	amountLimit := strconv.FormatFloat(setting.AmountLimit, 'f', 0, 64)
 	if setting.Chance == 0 && !turtleData.liquidated { // 开初始仓
 		amountLong = setting.GridAmount
 		amountShot = setting.GridAmount
@@ -93,7 +91,6 @@ func createTurtleOrders(setting *model.Setting, turtleData *TurtleData, candle *
 			Status:      model.CarryStatusWorking,
 			Symbol:      setting.Symbol,
 			GridPos:     setting.Chance,
-			Function:    amountLimit,
 			CreatedAt:   candle.Begin,
 		}
 		util.Info(fmt.Sprintf(`create turtle long at %s %d`, candle.Begin.String(), setting.Chance))
@@ -109,7 +106,6 @@ func createTurtleOrders(setting *model.Setting, turtleData *TurtleData, candle *
 			Status:      model.CarryStatusWorking,
 			Symbol:      setting.Symbol,
 			GridPos:     setting.Chance,
-			Function:    amountLimit,
 			CreatedAt:   candle.Begin,
 		}
 		util.Info(fmt.Sprintf(`create turtle short at %s %d`, candle.Begin.String(), setting.Chance))
@@ -167,6 +163,7 @@ func handlePrice(turtleData *TurtleData, candle *model.Candle, settings map[stri
 		turtleData.orderLong.OrderId = fmt.Sprintf(`%s%s%s%s%d`,
 			setting.Market, setting.Symbol, sign, turtleData.orderLong.OrderSide, candle.Begin.Unix())
 		turtleData.orderLong.UnfilledQuantity = float64(currentChances)
+		turtleData.orderLong.Function = sign
 		util.Info(`deal long chance %d 总仓 %d save order %s at %s`,
 			setting.Chance, currentChances, turtleData.orderLong.OrderId, turtleData.orderLong.OrderTime.String())
 		model.AppDB.Save(turtleData.orderLong)
@@ -186,6 +183,7 @@ func handlePrice(turtleData *TurtleData, candle *model.Candle, settings map[stri
 		turtleData.orderShort.OrderId = fmt.Sprintf(`%s%s%s%s%d`,
 			setting.Market, setting.Symbol, sign, turtleData.orderShort.OrderSide, candle.Begin.Unix())
 		turtleData.orderShort.UnfilledQuantity = float64(currentChances)
+		turtleData.orderShort.Function = sign
 		util.Info(`deal short chance %d 总仓 %d save order %s at %s`,
 			setting.Chance, currentChances, turtleData.orderShort.OrderId, turtleData.orderShort.OrderTime.String())
 		model.AppDB.Save(turtleData.orderShort)
