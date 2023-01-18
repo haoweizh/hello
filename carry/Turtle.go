@@ -226,6 +226,24 @@ func checkTurtleOrders(key, secret string, setting *model.Setting, currentN floa
 			util.Info(fmt.Sprintf(`get today len %s %s %d %f %f`,
 				setting.Market, setting.Symbol, len(candles), candles[0].PriceLow, candles[0].PriceHigh))
 		}
+		if !turtleData.useNear && turtleData.orderShort != nil && len(turtleData.orderShort) > 0 &&
+			turtleData.orderShort[0].TriggerPrice*(1+turtleTriggerDelta) < math.Max(turtleData.highToday, turtleData.highDaysFar)-2*turtleData.n {
+			util.Notice(fmt.Sprintf(`today higher than far trigger%f<max(today%f,far%f)-2*%f`,
+				turtleData.orderShort[0].TriggerPrice, turtleData.highToday, turtleData.highDaysFar, turtleData.n))
+			for _, order := range turtleData.orderShort {
+				go api.MustCancel(key, secret, setting.Market, setting.Symbol, order.OrderType, order.OrderId, true)
+			}
+			turtleData.orderShort = nil
+		}
+		if !turtleData.useNear && turtleData.orderLong != nil && len(turtleData.orderLong) > 0 && turtleData.lowToday > 0 &&
+			turtleData.orderLong[0].TriggerPrice*(1-turtleTriggerDelta) > math.Min(turtleData.lowToday, turtleData.lowDaysFar)+2*turtleData.n {
+			util.Notice(fmt.Sprintf(`today lower than far trigger%f>min(today%f,far%f)+2*%f`,
+				turtleData.orderLong[0].TriggerPrice, turtleData.lowToday, turtleData.lowDaysFar, turtleData.n))
+			for _, order := range turtleData.orderLong {
+				go api.MustCancel(key, secret, setting.Market, setting.Symbol, order.OrderType, order.OrderId, true)
+			}
+			turtleData.orderLong = nil
+		}
 		checked = true
 		turtleData.checkTimeOpen = util.GetNow()
 		orders := api.QueryOpenOrders(key, secret, setting.Market, setting.Symbol, true)
@@ -344,14 +362,6 @@ var ProcessTurtle = func(setting *model.Setting, tick *model.BidAsk) {
 		if turtleData.useNear {
 			priceShort = math.Max(setting.PriceX-2*turtleData.n, turtleData.lowDaysNear)
 		} else {
-			if turtleData.highDaysFar < turtleData.highToday {
-				if turtleData.orderShort != nil {
-					for _, order := range turtleData.orderShort {
-						go api.MustCancel(account.Key, account.Secret, setting.Market, setting.Symbol, order.OrderType, order.OrderId, true)
-					}
-				}
-				turtleData.orderShort = nil
-			}
 			priceShort = math.Max(turtleData.highDaysFar, turtleData.highToday) - 2*turtleData.n
 		}
 		placeTurtleOrders(account.Key, account.Secret, turtleData, setting, currentN, priceShort, priceLong, tick)
@@ -387,14 +397,6 @@ var ProcessTurtle = func(setting *model.Setting, tick *model.BidAsk) {
 		if turtleData.useNear {
 			priceLong = math.Min(setting.PriceX+2*turtleData.n, turtleData.highDaysNear)
 		} else {
-			if turtleData.lowToday > 0 && turtleData.lowToday < turtleData.lowDaysFar {
-				if turtleData.orderLong != nil {
-					for _, order := range turtleData.orderLong {
-						go api.MustCancel(account.Key, account.Secret, setting.Market, setting.Symbol, order.OrderType, order.OrderId, true)
-					}
-				}
-				turtleData.orderLong = nil
-			}
 			if turtleData.lowToday > 0 {
 				priceLong = math.Min(turtleData.lowDaysFar, turtleData.lowToday) + 2*turtleData.n
 			} else {
