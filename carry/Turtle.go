@@ -149,15 +149,14 @@ func GetTurtleData(key, secret string, setting *model.Setting) (turtleData *Turt
 	clearOrders(key, secret, setting)
 	turtleTime.Store(fmt.Sprintf(`%s_%s_%s`, setting.Market, setting.Symbol, todayStr), time.Now())
 	_, _, coin, _ := model.GetFromStandard(setting.Market, setting.Symbol)
-	far := 20
-	near := 10
-	if !model.CommonCoins[strings.ToLower(coin)] {
-		far = 18
-		near = 9
-	}
 	turtleData = &TurtleData{turtleTime: today, symbol: setting.Symbol, checkTimeBreak: util.GetNow(),
 		checkTimeOpen: util.GetNow().Add(duration), waitBreakLong: false, waitBreakShort: false, breakLong: false,
-		breakShort: false, liquidated: false, daysFar: far, daysNear: near, daysAdjust: 5, useNear: false}
+		breakShort: false, liquidated: false, daysFar: 20, daysNear: 10, daysAdjust: 5, useNear: false}
+	if !model.CommonCoins[strings.ToLower(coin)] {
+		turtleData = &TurtleData{turtleTime: today, symbol: setting.Symbol, checkTimeBreak: util.GetNow(),
+			checkTimeOpen: util.GetNow().Add(duration), waitBreakLong: false, waitBreakShort: false, breakLong: false,
+			breakShort: false, liquidated: false, daysFar: 18, daysNear: 9, daysAdjust: 5, useNear: true}
+	}
 	for i := 1; i < 21; i++ {
 		duration, _ = time.ParseDuration(fmt.Sprintf(`%dh`, -24*i))
 		day := today.Add(duration)
@@ -169,16 +168,16 @@ func GetTurtleData(key, secret string, setting *model.Setting) (turtleData *Turt
 			}
 			return nil
 		}
-		if candle.PriceHigh > turtleData.highDaysFar && i <= far {
+		if candle.PriceHigh > turtleData.highDaysFar && i <= turtleData.daysFar {
 			turtleData.highDaysFar = candle.PriceHigh
 		}
-		if (turtleData.lowDaysFar == 0 || turtleData.lowDaysFar > candle.PriceLow) && i <= far {
+		if (turtleData.lowDaysFar == 0 || turtleData.lowDaysFar > candle.PriceLow) && i <= turtleData.daysFar {
 			turtleData.lowDaysFar = candle.PriceLow
 		}
-		if candle.PriceHigh > turtleData.highDaysNear && i <= near {
+		if candle.PriceHigh > turtleData.highDaysNear && i <= turtleData.daysNear {
 			turtleData.highDaysNear = candle.PriceHigh
 		}
-		if (turtleData.lowDaysNear == 0 || turtleData.lowDaysNear > candle.PriceLow) && i <= near {
+		if (turtleData.lowDaysNear == 0 || turtleData.lowDaysNear > candle.PriceLow) && i <= turtleData.daysNear {
 			turtleData.lowDaysNear = candle.PriceLow
 		}
 		if candle.PriceHigh > turtleData.highAdjust && i <= turtleData.daysAdjust {
