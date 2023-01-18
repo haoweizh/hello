@@ -93,10 +93,8 @@ func createTurtleOrders(setting *model.Setting, turtleData *TurtleData, candle *
 			Status:      model.CarryStatusWorking,
 			Symbol:      setting.Symbol,
 			GridPos:     setting.Chance,
-			AmountType:  setting.SymbolRelated,
 			Function:    amountLimit,
 			CreatedAt:   candle.Begin,
-			OrderType:   strconv.FormatBool(turtleData.useNear),
 		}
 		util.Info(fmt.Sprintf(`create turtle long at %s %d`, candle.Begin.String(), setting.Chance))
 	}
@@ -111,10 +109,8 @@ func createTurtleOrders(setting *model.Setting, turtleData *TurtleData, candle *
 			Status:      model.CarryStatusWorking,
 			Symbol:      setting.Symbol,
 			GridPos:     setting.Chance,
-			AmountType:  setting.SymbolRelated,
 			Function:    amountLimit,
 			CreatedAt:   candle.Begin,
-			OrderType:   strconv.FormatBool(turtleData.useNear),
 		}
 		util.Info(fmt.Sprintf(`create turtle short at %s %d`, candle.Begin.String(), setting.Chance))
 	}
@@ -127,7 +123,7 @@ func getCurrentChances(settings map[string]*model.Setting) (chances int64) {
 	return chances
 }
 
-func handlePrice(turtleData *TurtleData, candle *model.Candle, settings map[string]*model.Setting, allLimit int) {
+func handlePrice(turtleData *TurtleData, candle *model.Candle, settings map[string]*model.Setting, allLimit int, sign string) {
 	var setting *model.Setting
 	if settings != nil && candle != nil && settings[candle.Symbol] != nil {
 		setting = settings[candle.Symbol]
@@ -168,8 +164,8 @@ func handlePrice(turtleData *TurtleData, candle *model.Candle, settings map[stri
 		setting.PriceX = turtleData.orderLong.Price
 		turtleData.orderLong.Status = model.CarryStatusSuccess
 		turtleData.orderLong.OrderTime = candle.Begin
-		turtleData.orderLong.OrderId = fmt.Sprintf(`%s%s%s%s%d%f%s`, setting.Market, setting.Symbol, setting.SymbolRelated,
-			turtleData.orderLong.OrderSide, candle.Begin.Unix(), setting.AmountLimit, turtleData.orderLong.OrderType)
+		turtleData.orderLong.OrderId = fmt.Sprintf(`%s%s%s%s%d`,
+			setting.Market, setting.Symbol, sign, turtleData.orderLong.OrderSide, candle.Begin.Unix())
 		turtleData.orderLong.UnfilledQuantity = float64(currentChances)
 		util.Info(`deal long chance %d 总仓 %d save order %s at %s`,
 			setting.Chance, currentChances, turtleData.orderLong.OrderId, turtleData.orderLong.OrderTime.String())
@@ -187,8 +183,8 @@ func handlePrice(turtleData *TurtleData, candle *model.Candle, settings map[stri
 		setting.PriceX = turtleData.orderShort.Price
 		turtleData.orderShort.Status = model.CarryStatusSuccess
 		turtleData.orderShort.OrderTime = candle.Begin
-		turtleData.orderShort.OrderId = fmt.Sprintf(`%s%s%s%s%d%f%s`, setting.Market, setting.Symbol, setting.SymbolRelated,
-			turtleData.orderShort.OrderSide, candle.Begin.Unix(), setting.AmountLimit, turtleData.orderShort.OrderType)
+		turtleData.orderShort.OrderId = fmt.Sprintf(`%s%s%s%s%d`,
+			setting.Market, setting.Symbol, sign, turtleData.orderShort.OrderSide, candle.Begin.Unix())
 		turtleData.orderShort.UnfilledQuantity = float64(currentChances)
 		util.Info(`deal short chance %d 总仓 %d save order %s at %s`,
 			setting.Chance, currentChances, turtleData.orderShort.OrderId, turtleData.orderShort.OrderTime.String())
@@ -208,15 +204,10 @@ func getTurtleCandles(candles []*model.Candle) {
 	}
 }
 
-//func getOrderSign(setting *model.Setting) (sign string) {
-//	sign = fmt.Sprintf(`%s%s%d%f%s`, setting.SymbolRelated,
-//		turtleData.orderLong.OrderSide, candle.Begin.Unix(), setting.AmountLimit, turtleData.orderLong.OrderType)
-//}
-
 // ProcessCandles
 // setting.AmountLimit 开仓数上限
 // setting.GridAmount 标准一仓的数量
-func ProcessCandles(start, end time.Time, near, far, turtleSeconds, allLimit int, useNear bool, market string, settings map[string]*model.Setting) {
+func ProcessCandles(start, end time.Time, near, far, turtleSeconds, allLimit int, useNear bool, market, sign string, settings map[string]*model.Setting) {
 	if settings == nil || len(settings) == 0 {
 		return
 	}
@@ -241,22 +232,11 @@ func ProcessCandles(start, end time.Time, near, far, turtleSeconds, allLimit int
 		turtleTime := time.Unix(sortedCandles[i].Begin.Unix()-sortedCandles[i].Begin.Unix()%int64(turtleSeconds), 0).In(time.UTC)
 		turtleKey := fmt.Sprintf(`%s_%s_%d_%s`, market, sortedCandles[i].Symbol, turtleSeconds, turtleTime.Format(time.RFC3339))
 		if turtleDataMap[turtleKey] != nil {
-			handlePrice(turtleDataMap[turtleKey], sortedCandles[i], settings, allLimit)
+			handlePrice(turtleDataMap[turtleKey], sortedCandles[i], settings, allLimit, sign)
 		} else {
 			util.Info(`fail to parse time from %s to %s %s`, sortedCandles[i].Begin.String(), turtleTime.String(), turtleKey)
 		}
 	}
-}
-
-func GetDBOrders(market, amountType, limit, orderType string, begin, end time.Time, settings map[string]*model.Setting) (orders []*model.Order) {
-	symbols := make([]string, 0)
-	for symbol := range settings {
-		symbols = append(symbols, symbol)
-	}
-	orders = make([]*model.Order, 0)
-	model.AppDB.Where(`market=? and order_time>? and order_time<? and refresh_type=? and amount_type=? and function=? and order_type=? and symbol IN ?`,
-		market, begin, end, model.FunctionSimulation, amountType, limit, orderType, symbols).Order(`order_time asc`).Find(&orders)
-	return orders
 }
 
 type Statistic struct {

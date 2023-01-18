@@ -114,12 +114,12 @@ func simulate(c *gin.Context) {
 	if strings.Trim(market, ` `) == `` {
 		market = model.BinancePerp
 	}
-	simType := c.Query(`type`)
-	simTypeSeconds, simTypeErr := strconv.ParseInt(simType, 10, 64)
-	if simTypeErr != nil {
-		simTypeSeconds = 86400
-		simType = `86400`
-		simTypeErr = nil
+	strTurtleSeconds := c.Query(`seconds`)
+	turtleSeconds, errTurtleSeconds := strconv.ParseInt(strTurtleSeconds, 10, 64)
+	if errTurtleSeconds != nil {
+		turtleSeconds = 86400
+		strTurtleSeconds = `86400`
+		errTurtleSeconds = nil
 	}
 	nearStr := c.Query(`near`)
 	near, nearErr := strconv.ParseInt(nearStr, 10, 64)
@@ -135,6 +135,8 @@ func simulate(c *gin.Context) {
 	useNear, useNearErr := strconv.ParseBool(strUseNear)
 	begin, errBegin := time.Parse(time.RFC3339, strBegin)
 	end, errEnd := time.Parse(time.RFC3339, strEnd)
+	sign := fmt.Sprintf(`market%s,seconds%s,%s~%s,near%s,far%s,limit%s,allLimit%s,useNear%s`,
+		market, strTurtleSeconds, strBegin, strEnd, nearStr, farStr, strLimit, strAllLimit, strUseNear)
 	limit, limitErr := strconv.ParseInt(strLimit, 10, 64)
 	if limitErr != nil {
 		limit = 3
@@ -153,8 +155,8 @@ func simulate(c *gin.Context) {
 	if sessionValue == nil || !codes[sessionValue.(string)] {
 		strNew = `false`
 	}
-	if errBegin != nil || errEnd != nil || simTypeSeconds <= 0 || nearErr != nil || farErr != nil ||
-		useNearErr != nil || (simTypeSeconds != 1800 && simTypeSeconds != 14400 && simTypeSeconds%86400 != 0) {
+	if errBegin != nil || errEnd != nil || turtleSeconds <= 0 || nearErr != nil || farErr != nil ||
+		useNearErr != nil || (turtleSeconds != 1800 && turtleSeconds != 14400 && turtleSeconds%86400 != 0) {
 		simulateGuide := "limit:仓数上限，可选，默认为3 \nnew:true为生成新的仿真否则为查看同参数历史仿真\n" +
 			"type:海龟的计算周期，默认86400秒，即一天，取值范围：3600、14400或86400的倍数\nmarket:模拟市场\n" +
 			"near:海龟近计算周期数，far:海龟远计算周期数\n" +
@@ -173,22 +175,19 @@ func simulate(c *gin.Context) {
 	settings := make(map[string]*model.Setting)
 	for i := 0; i < len(coins); i++ {
 		symbol := strings.ToUpper(coins[i]) + model.UniStandardTail[model.MarketTypePerp]
-		setting := &model.Setting{Market: market, Symbol: symbol, AmountLimit: float64(limit), GridAmount: RegretTurtleGridAmount,
-			SymbolRelated: simType, Chance: 0, Coin: strUseNear}
-		settings[setting.Symbol] = setting
-		if strNew == `true` {
-			go model.AppDB.Where(`market=? and symbol=? and refresh_type=? and order_time>? and order_time<? and amount_type=? and function=? and order_type=?`,
-				market, symbol, model.FunctionSimulation, begin, end, simType, strLimit, strUseNear).Delete(&model.Order{})
-		} else {
-			util.Notice(`no need process simulate new %s`, strNew)
-		}
+		settings[symbol] = &model.Setting{Market: market, Symbol: symbol, AmountLimit: float64(limit), GridAmount: RegretTurtleGridAmount}
 	}
 	if strNew == `true` {
-		regret.ProcessCandles(begin, end, int(near), int(far), int(simTypeSeconds), int(allLimit), useNear, market, settings)
+		go model.AppDB.Where(`function=?`, sign).Delete(&model.Order{})
+		regret.ProcessCandles(begin, end, int(near), int(far), int(turtleSeconds), int(allLimit), useNear, market, sign, settings)
+	} else {
+		util.Notice(`no need process simulate new %s`, strNew)
 	}
-	orders := regret.GetDBOrders(market, simType, strLimit, strUseNear, begin, end, settings)
-	msg += fmt.Sprintf(`Get %d orders %s %s %v %s %s from %d settings`, len(orders), simType, strLimit, strUseNear, begin.String(), end.String(), len(settings))
-	msg += regret.ToString(orders, market, simType, strLimit, RegretTurtleGridAmount, begin, end) + "\n"
+	orders := make([]*model.Order, 0)
+	model.AppDB.Where(`function=?`, sign).Order(`order_time asc`).Find(&orders)
+	msg += fmt.Sprintf(`Get %d orders %s %s %v %s %s from %d settings`,
+		len(orders), strTurtleSeconds, strLimit, strUseNear, begin.String(), end.String(), len(settings))
+	msg += regret.ToString(orders, market, strTurtleSeconds, strLimit, RegretTurtleGridAmount, begin, end) + "\n"
 	c.String(http.StatusOK, msg)
 }
 
