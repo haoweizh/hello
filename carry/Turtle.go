@@ -228,8 +228,8 @@ func checkTurtleOrders(key, secret string, setting *model.Setting, currentN floa
 	}
 	if !turtleData.useNear && turtleData.orderShort != nil && len(turtleData.orderShort) > 0 && setting.Chance > 0 &&
 		turtleData.orderShort[0].TriggerPrice*(1+turtleTriggerDelta) < math.Max(turtleData.highToday, turtleData.highDaysFar)-2*turtleData.n {
-		util.Notice(fmt.Sprintf(`today higher than far trigger%f<max(today%f,far%f)-2*%f`,
-			turtleData.orderShort[0].TriggerPrice, turtleData.highToday, turtleData.highDaysFar, turtleData.n))
+		util.Notice(fmt.Sprintf(`today higher than far trigger%f<max(today%f,far%f)-2*%f chance%d`,
+			turtleData.orderShort[0].TriggerPrice, turtleData.highToday, turtleData.highDaysFar, turtleData.n, setting.Chance))
 		for _, order := range turtleData.orderShort {
 			go api.MustCancel(key, secret, setting.Market, setting.Symbol, order.OrderType, order.OrderId, true)
 		}
@@ -237,8 +237,8 @@ func checkTurtleOrders(key, secret string, setting *model.Setting, currentN floa
 	}
 	if !turtleData.useNear && turtleData.orderLong != nil && len(turtleData.orderLong) > 0 && turtleData.lowToday > 0 && setting.Chance < 0 &&
 		turtleData.orderLong[0].TriggerPrice*(1-turtleTriggerDelta) > math.Min(turtleData.lowToday, turtleData.lowDaysFar)+2*turtleData.n {
-		util.Notice(fmt.Sprintf(`today lower than far trigger%f>min(today%f,far%f)+2*%f`,
-			turtleData.orderLong[0].TriggerPrice, turtleData.lowToday, turtleData.lowDaysFar, turtleData.n))
+		util.Notice(fmt.Sprintf(`today lower than far trigger%f>min(today%f,far%f)+2*%f chance%f`,
+			turtleData.orderLong[0].TriggerPrice, turtleData.lowToday, turtleData.lowDaysFar, turtleData.n, setting.Chance))
 		for _, order := range turtleData.orderLong {
 			go api.MustCancel(key, secret, setting.Market, setting.Symbol, order.OrderType, order.OrderId, true)
 		}
