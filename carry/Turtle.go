@@ -203,82 +203,81 @@ func GetTurtleData(key, secret string, setting *model.Setting) (turtleData *Turt
 }
 
 func checkTurtleOrders(key, secret string, setting *model.Setting, currentN float64, turtleData *TurtleData) (checked bool) {
-	duration, _ := time.ParseDuration(`-1200s`)
-	now := util.GetNow().Add(duration)
 	checked = false
-	if now.After(turtleData.checkTimeOpen) {
-		today, _ := model.GetMarketToday(setting.Market)
-		dayTime, _ := time.ParseDuration(`86400s`)
-		var candles []*model.Candle
-		// okex不返回尚未结束的当日candle，转成半小时的slot
-		if setting.Market == model.OKEX {
-			candles = api.GetCandle(key, secret, setting.Market, setting.Symbol, 1800, today, model.GetMarketNow(setting.Market))
-		} else {
-			candles = api.GetCandle(key, secret, setting.Market, setting.Symbol, 86400, today, today.Add(dayTime))
+	if turtleData.checkTimeOpen.Add(time.Minute * 20).After(util.GetNow()) {
+		return false
+	}
+	today, _ := model.GetMarketToday(setting.Market)
+	dayTime, _ := time.ParseDuration(`86400s`)
+	var candles []*model.Candle
+	// okex不返回尚未结束的当日candle，转成半小时的slot
+	if setting.Market == model.OKEX {
+		candles = api.GetCandle(key, secret, setting.Market, setting.Symbol, 1800, today, model.GetMarketNow(setting.Market))
+	} else {
+		candles = api.GetCandle(key, secret, setting.Market, setting.Symbol, 86400, today, today.Add(dayTime))
+	}
+	for i := 0; candles != nil && i < len(candles); i++ {
+		if turtleData.highToday < candles[i].PriceHigh {
+			turtleData.highToday = candles[i].PriceHigh
 		}
-		for i := 0; candles != nil && i < len(candles); i++ {
-			if turtleData.highToday < candles[i].PriceHigh {
-				turtleData.highToday = candles[i].PriceHigh
-			}
-			if turtleData.lowToday == 0 || turtleData.lowToday > candles[i].PriceLow {
-				turtleData.lowToday = candles[i].PriceLow
-			}
-			util.Info(fmt.Sprintf(`get today len %s %s %d %f %f`,
-				setting.Market, setting.Symbol, len(candles), candles[0].PriceLow, candles[0].PriceHigh))
+		if turtleData.lowToday == 0 || turtleData.lowToday > candles[i].PriceLow {
+			turtleData.lowToday = candles[i].PriceLow
 		}
-		if !turtleData.useNear && turtleData.orderShort != nil && len(turtleData.orderShort) > 0 &&
-			turtleData.orderShort[0].TriggerPrice*(1+turtleTriggerDelta) < math.Max(turtleData.highToday, turtleData.highDaysFar)-2*turtleData.n {
-			util.Notice(fmt.Sprintf(`today higher than far trigger%f<max(today%f,far%f)-2*%f`,
-				turtleData.orderShort[0].TriggerPrice, turtleData.highToday, turtleData.highDaysFar, turtleData.n))
-			for _, order := range turtleData.orderShort {
-				go api.MustCancel(key, secret, setting.Market, setting.Symbol, order.OrderType, order.OrderId, true)
-			}
-			turtleData.orderShort = nil
+		util.Info(fmt.Sprintf(`get today len %s %s %d %f %f`,
+			setting.Market, setting.Symbol, len(candles), candles[0].PriceLow, candles[0].PriceHigh))
+	}
+	if !turtleData.useNear && turtleData.orderShort != nil && len(turtleData.orderShort) > 0 &&
+		turtleData.orderShort[0].TriggerPrice*(1+turtleTriggerDelta) < math.Max(turtleData.highToday, turtleData.highDaysFar)-2*turtleData.n {
+		util.Notice(fmt.Sprintf(`today higher than far trigger%f<max(today%f,far%f)-2*%f`,
+			turtleData.orderShort[0].TriggerPrice, turtleData.highToday, turtleData.highDaysFar, turtleData.n))
+		for _, order := range turtleData.orderShort {
+			go api.MustCancel(key, secret, setting.Market, setting.Symbol, order.OrderType, order.OrderId, true)
 		}
-		if !turtleData.useNear && turtleData.orderLong != nil && len(turtleData.orderLong) > 0 && turtleData.lowToday > 0 &&
-			turtleData.orderLong[0].TriggerPrice*(1-turtleTriggerDelta) > math.Min(turtleData.lowToday, turtleData.lowDaysFar)+2*turtleData.n {
-			util.Notice(fmt.Sprintf(`today lower than far trigger%f>min(today%f,far%f)+2*%f`,
-				turtleData.orderLong[0].TriggerPrice, turtleData.lowToday, turtleData.lowDaysFar, turtleData.n))
-			for _, order := range turtleData.orderLong {
-				go api.MustCancel(key, secret, setting.Market, setting.Symbol, order.OrderType, order.OrderId, true)
-			}
-			turtleData.orderLong = nil
+		turtleData.orderShort = nil
+	}
+	if !turtleData.useNear && turtleData.orderLong != nil && len(turtleData.orderLong) > 0 && turtleData.lowToday > 0 &&
+		turtleData.orderLong[0].TriggerPrice*(1-turtleTriggerDelta) > math.Min(turtleData.lowToday, turtleData.lowDaysFar)+2*turtleData.n {
+		util.Notice(fmt.Sprintf(`today lower than far trigger%f>min(today%f,far%f)+2*%f`,
+			turtleData.orderLong[0].TriggerPrice, turtleData.lowToday, turtleData.lowDaysFar, turtleData.n))
+		for _, order := range turtleData.orderLong {
+			go api.MustCancel(key, secret, setting.Market, setting.Symbol, order.OrderType, order.OrderId, true)
 		}
-		checked = true
-		turtleData.checkTimeOpen = util.GetNow()
-		orders := api.QueryOpenOrders(key, secret, setting.Market, setting.Symbol, true)
-		if orders == nil {
-			return
-		}
-		for _, order := range orders {
-			needCancel := true
-			if turtleData.orderLong != nil {
-				for _, long := range turtleData.orderLong {
-					if order.OrderId == long.OrderId && (currentN < setting.AmountLimit || setting.Chance < 0) {
-						needCancel = false
-					}
+		turtleData.orderLong = nil
+	}
+	checked = true
+	turtleData.checkTimeOpen = util.GetNow()
+	orders := api.QueryOpenOrders(key, secret, setting.Market, setting.Symbol, true)
+	if orders == nil {
+		return
+	}
+	for _, order := range orders {
+		needCancel := true
+		if turtleData.orderLong != nil {
+			for _, long := range turtleData.orderLong {
+				if order.OrderId == long.OrderId && (currentN < setting.AmountLimit || setting.Chance < 0) {
+					needCancel = false
 				}
 			}
-			if turtleData.orderShort != nil {
-				for _, short := range turtleData.orderShort {
-					if order.OrderId == short.OrderId && (currentN > -1*setting.AmountLimit || setting.Chance > 0) {
-						needCancel = false
-					}
+		}
+		if turtleData.orderShort != nil {
+			for _, short := range turtleData.orderShort {
+				if order.OrderId == short.OrderId && (currentN > -1*setting.AmountLimit || setting.Chance > 0) {
+					needCancel = false
 				}
 			}
-			if turtleData.orderAdjust != nil {
-				for _, adjust := range turtleData.orderAdjust {
-					if adjust != nil && order.OrderId == adjust.OrderId {
-						needCancel = false
-					}
+		}
+		if turtleData.orderAdjust != nil {
+			for _, adjust := range turtleData.orderAdjust {
+				if adjust != nil && order.OrderId == adjust.OrderId {
+					needCancel = false
 				}
 			}
-			if needCancel {
-				result := api.MustCancel(key, secret, setting.Market, setting.Symbol, order.OrderType, order.OrderId, true)
-				util.Notice(`cancel extra turtle order %s %s %s %s return %v`,
-					setting.Market, setting.Symbol, order.OrderType, order.OrderId, result)
-				time.Sleep(time.Second)
-			}
+		}
+		if needCancel {
+			result := api.MustCancel(key, secret, setting.Market, setting.Symbol, order.OrderType, order.OrderId, true)
+			util.Notice(`cancel extra turtle order %s %s %s %s return %v`,
+				setting.Market, setting.Symbol, order.OrderType, order.OrderId, result)
+			time.Sleep(time.Second)
 		}
 	}
 	return
