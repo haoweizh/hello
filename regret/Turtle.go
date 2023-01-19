@@ -57,7 +57,7 @@ func createTurtleOrders(setting *model.Setting, turtleData *TurtleData, candle *
 		} else {
 			util.Info(fmt.Sprintf(`no new open buy as %s liquated`, turtleData.begin.String()))
 		}
-		if !slotLiquidated[fmt.Sprintf(`%s_%s_%s_%s`, setting.Market, model.OrderSideSell, turtleData.begin.String())] {
+		if !slotLiquidated[fmt.Sprintf(`%s_%s_%s`, setting.Market, model.OrderSideSell, turtleData.begin.String())] {
 			amountShot = setting.GridAmount
 		} else {
 			util.Info(fmt.Sprintf(`no new open sell as %s liquated`, turtleData.begin.String()))
