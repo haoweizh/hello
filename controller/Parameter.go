@@ -92,6 +92,8 @@ func autoSimulate(begin, end time.Time, strBegin, strEnd, useNear string, near, 
 		`ETH_PERP`: {Market: model.BinancePerp, Symbol: `ETH_PERP`, AmountLimit: float64(limit), GridAmount: RegretTurtleGridAmount}}
 	sign := fmt.Sprintf(`market%s,seconds86400,%s~%s,near%d,far%d,limit%d,allLimit%d,useNear%s`,
 		model.BinancePerp, strBegin, strEnd, near, far, limit, allLimit, useNear)
+	delNum := model.AppDB.Where(`function=?`, sign).Delete(&model.Order{}).RowsAffected
+	util.Info(`del %s %d rows affedted`, sign, delNum)
 	regret.ProcessCandles(begin, end, near, far, 86400, allLimit, true, model.BinancePerp, sign, settings)
 	util.StoreSyncMap(&model.CarryInfo, fmt.Sprintf("done %s %s 使用回撤%s %d~%d 限制%d 总限制%d",
 		strBegin, strEnd, useNear, near, far, limit, allLimit), `auto`)
