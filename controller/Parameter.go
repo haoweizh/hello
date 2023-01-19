@@ -86,6 +86,16 @@ func WsPage(c *gin.Context) {
 	go wsClient.Write()
 }
 
+func autoSimulate(begin, end time.Time, strBegin, strEnd, useNear string, near, far, limit, allLimit int) (msg string) {
+	settings := map[string]*model.Setting{
+		`BTC_PERP`: {Market: model.BinancePerp, Symbol: `BTC_PERP`, AmountLimit: float64(limit), GridAmount: RegretTurtleGridAmount},
+		`ETH_PERP`: {Market: model.BinancePerp, Symbol: `ETH_PERP`, AmountLimit: float64(limit), GridAmount: RegretTurtleGridAmount}}
+	sign := fmt.Sprintf(`market%s,seconds86400,%s~%s,near%d,far%d,limit%d,allLimit%d,useNear%s`,
+		model.BinancePerp, strBegin, strEnd, near, far, limit, allLimit, useNear)
+	regret.ProcessCandles(begin, end, near, far, 86400, allLimit, true, model.BinancePerp, sign, settings)
+	return fmt.Sprintf("done %s %s 使用回撤%s %d~%d 限制%d 总限制%d", strBegin, strEnd, useNear, near, far, limit, allLimit)
+}
+
 // simulate
 // limit:仓数上限，可选，默认为3
 // new:true为生成新的仿真否则为查看同参数历史仿真
@@ -110,6 +120,7 @@ func simulate(c *gin.Context) {
 		defer setSimulating(false)
 		setSimulating(true)
 	}
+	auto := c.Query(`auto`)
 	market := c.Query(`market`)
 	if strings.Trim(market, ` `) == `` {
 		market = model.BinancePerp
@@ -154,6 +165,16 @@ func simulate(c *gin.Context) {
 	sessionValue := session.Get(`code`)
 	if sessionValue == nil || !codes[sessionValue.(string)] {
 		strNew = `false`
+	} else if auto == `true` {
+		msg := `start to auto simulate`
+		for i := 7; i <= 15; i++ {
+			msg += autoSimulate(begin, end, strBegin, strEnd, `true`, i, 2*i, 3, 3)
+			msg += autoSimulate(begin, end, strBegin, strEnd, `false`, i, 2*i, 3, 3)
+			msg += autoSimulate(begin, end, strBegin, strEnd, `true`, i, 2*i, 4, 4)
+			msg += autoSimulate(begin, end, strBegin, strEnd, `false`, i, 2*i, 4, 4)
+		}
+		c.String(http.StatusOK, msg)
+		return
 	}
 	if errBegin != nil || errEnd != nil || turtleSeconds <= 0 || nearErr != nil || farErr != nil ||
 		useNearErr != nil || (turtleSeconds != 1800 && turtleSeconds != 14400 && turtleSeconds%86400 != 0) {

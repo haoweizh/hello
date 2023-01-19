@@ -16,12 +16,15 @@ type TurtleData struct {
 	Near, Far                             int
 	orderLong, orderShort                 *model.Order
 	liquidated, useNear                   bool
+	begin                                 time.Time
 }
+
+var slotLiquidated map[string]bool // market_orderSide_beginTimeString
 
 func GetTurtleData(candles []*model.Candle, near, far int, useNear bool) (turtleDataMap map[string]*TurtleData) {
 	turtleDataMap = make(map[string]*TurtleData)
 	for i := 20; i < len(candles); i++ {
-		turtleData := &TurtleData{liquidated: false, n: candles[i-1].N, Near: near, Far: far, useNear: useNear}
+		turtleData := &TurtleData{liquidated: false, n: candles[i-1].N, Near: near, Far: far, useNear: useNear, begin: candles[i].Begin}
 		for j := 1; j < 21; j++ {
 			if candles[i-j].PriceHigh > turtleData.highFar && j <= turtleData.Far {
 				turtleData.highFar = candles[i-j].PriceHigh
@@ -49,8 +52,16 @@ func createTurtleOrders(setting *model.Setting, turtleData *TurtleData, candle *
 	amountShot := 0.0
 	amountLong := 0.0
 	if setting.Chance == 0 && !turtleData.liquidated { // 开初始仓
-		amountLong = setting.GridAmount
-		amountShot = setting.GridAmount
+		if !slotLiquidated[fmt.Sprintf(`%s_%s_%s`, setting.Market, model.OrderSideBuy, turtleData.begin.String())] {
+			amountLong = setting.GridAmount
+		} else {
+			util.Info(fmt.Sprintf(`no new open buy as %s liquated`, turtleData.begin.String()))
+		}
+		if !slotLiquidated[fmt.Sprintf(`%s_%s_%s_%s`, setting.Market, model.OrderSideSell, turtleData.begin.String())] {
+			amountShot = setting.GridAmount
+		} else {
+			util.Info(fmt.Sprintf(`no new open sell as %s liquated`, turtleData.begin.String()))
+		}
 	} else if setting.Chance > 0 {
 		priceLong = math.Max(turtleData.highFar, setting.PriceX+turtleData.n/2)
 		if turtleData.useNear {
@@ -156,6 +167,8 @@ func handlePrice(turtleData *TurtleData, candle *model.Candle, settings map[stri
 		} else {
 			setting.Chance = 0
 			turtleData.liquidated = true
+			slotLiquidated[fmt.Sprintf(`%s_%s_%s`, candle.Market, model.OrderSideBuy, turtleData.begin.String())] = true
+			util.Info(fmt.Sprintf(`no new open after liquated buy %s %s`, candle.Symbol, turtleData.begin.String()))
 		}
 		setting.PriceX = turtleData.orderLong.Price
 		turtleData.orderLong.Status = model.CarryStatusSuccess
@@ -176,6 +189,8 @@ func handlePrice(turtleData *TurtleData, candle *model.Candle, settings map[stri
 		} else {
 			setting.Chance = 0
 			turtleData.liquidated = true
+			slotLiquidated[fmt.Sprintf(`%s_%s_%s_%s`, candle.Market, candle.Symbol, model.OrderSideSell, turtleData.begin.String())] = true
+			util.Info(fmt.Sprintf(`no new open after liquated sell %s %s`, candle.Symbol, turtleData.begin.String()))
 		}
 		setting.PriceX = turtleData.orderShort.Price
 		turtleData.orderShort.Status = model.CarryStatusSuccess
@@ -216,6 +231,7 @@ func ProcessCandles(start, end time.Time, near, far, turtleSeconds, allLimit int
 	duration, _ := time.ParseDuration(fmt.Sprintf(`-%ds`, turtleSeconds*30))
 	turtleCandles := make(model.Candles, 0)
 	turtleDataMap := make(map[string]*TurtleData)
+	slotLiquidated = make(map[string]bool)
 	for _, setting := range settings {
 		temp := api.GetCandle(key, secret, market, setting.Symbol, turtleSeconds, start.Add(duration), end)
 		util.Info(`get turtle candle %s %s %d setting chance %d`, market, setting.Symbol, len(turtleCandles), setting.Chance)
