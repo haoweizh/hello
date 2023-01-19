@@ -23,9 +23,9 @@ var slotLiquidated map[string]bool // market_orderSide_beginTimeString
 
 func GetTurtleData(candles []*model.Candle, near, far int, useNear bool) (turtleDataMap map[string]*TurtleData) {
 	turtleDataMap = make(map[string]*TurtleData)
-	for i := 20; i < len(candles); i++ {
+	for i := far; i < len(candles); i++ {
 		turtleData := &TurtleData{liquidated: false, n: candles[i-1].N, Near: near, Far: far, useNear: useNear, begin: candles[i].Begin}
-		for j := 1; j < 21; j++ {
+		for j := 1; j <= far; j++ {
 			if candles[i-j].PriceHigh > turtleData.highFar && j <= turtleData.Far {
 				turtleData.highFar = candles[i-j].PriceHigh
 			}
@@ -228,7 +228,8 @@ func ProcessCandles(start, end time.Time, near, far, turtleSeconds, allLimit int
 	key := model.AppConfig.GetAccounts(market)[0].Key
 	secret := model.AppConfig.GetAccounts(market)[0].Secret
 	sortedCandles := api.GetMultiCandle(key, secret, market, 60, start, end, settings)
-	duration, _ := time.ParseDuration(fmt.Sprintf(`-%ds`, turtleSeconds*30))
+	ago := int(math.Max(30, float64(far)))
+	duration, _ := time.ParseDuration(fmt.Sprintf(`-%ds`, turtleSeconds*ago))
 	turtleCandles := make(model.Candles, 0)
 	turtleDataMap := make(map[string]*TurtleData)
 	slotLiquidated = make(map[string]bool)

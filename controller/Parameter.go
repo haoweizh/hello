@@ -86,14 +86,15 @@ func WsPage(c *gin.Context) {
 	go wsClient.Write()
 }
 
-func autoSimulate(begin, end time.Time, strBegin, strEnd, useNear string, near, far, limit, allLimit int) (msg string) {
+func autoSimulate(begin, end time.Time, strBegin, strEnd, useNear string, near, far, limit, allLimit int) {
 	settings := map[string]*model.Setting{
 		`BTC_PERP`: {Market: model.BinancePerp, Symbol: `BTC_PERP`, AmountLimit: float64(limit), GridAmount: RegretTurtleGridAmount},
 		`ETH_PERP`: {Market: model.BinancePerp, Symbol: `ETH_PERP`, AmountLimit: float64(limit), GridAmount: RegretTurtleGridAmount}}
 	sign := fmt.Sprintf(`market%s,seconds86400,%s~%s,near%d,far%d,limit%d,allLimit%d,useNear%s`,
 		model.BinancePerp, strBegin, strEnd, near, far, limit, allLimit, useNear)
 	regret.ProcessCandles(begin, end, near, far, 86400, allLimit, true, model.BinancePerp, sign, settings)
-	return fmt.Sprintf("done %s %s 使用回撤%s %d~%d 限制%d 总限制%d", strBegin, strEnd, useNear, near, far, limit, allLimit)
+	util.StoreSyncMap(&model.CarryInfo, fmt.Sprintf("done %s %s 使用回撤%s %d~%d 限制%d 总限制%d",
+		strBegin, strEnd, useNear, near, far, limit, allLimit), `auto`)
 }
 
 // simulate
@@ -109,10 +110,19 @@ func simulate(c *gin.Context) {
 	}
 	if simulating {
 		msg, ok := util.LoadSyncMap(&model.CarryInfo, `GetCandle`)
+		autoMsg, _ := util.LoadSyncMap(&model.CarryInfo, `auto`)
 		if ok && msg != nil {
-			c.String(http.StatusOK, "simulating...\n"+msg.(string))
+			if autoMsg != nil {
+				c.String(http.StatusOK, fmt.Sprintf("simulating...\nanto："+msg.(string), autoMsg.(string)))
+			} else {
+				c.String(http.StatusOK, "simulating...\n"+msg.(string))
+			}
 		} else {
-			c.String(http.StatusBadRequest, `simulating can not be started`)
+			if autoMsg != nil {
+				c.String(http.StatusOK, "simulating...auto"+autoMsg.(string))
+			} else {
+				c.String(http.StatusBadRequest, `simulating can not be started`)
+			}
 		}
 		util.StoreSyncMap(&model.CarryInfo, nil, `GetCandle`)
 		return
@@ -165,15 +175,15 @@ func simulate(c *gin.Context) {
 	sessionValue := session.Get(`code`)
 	if sessionValue == nil || !codes[sessionValue.(string)] {
 		strNew = `false`
-	} else if auto == `true` {
-		msg := `start to auto simulate`
-		for i := 7; i <= 15; i++ {
-			msg += autoSimulate(begin, end, strBegin, strEnd, `true`, i, 2*i, 3, 3)
-			msg += autoSimulate(begin, end, strBegin, strEnd, `false`, i, 2*i, 3, 3)
-			msg += autoSimulate(begin, end, strBegin, strEnd, `true`, i, 2*i, 4, 4)
-			msg += autoSimulate(begin, end, strBegin, strEnd, `false`, i, 2*i, 4, 4)
+	} else if auto == `true` && strNew == `true` {
+		for i := 7; i <= 25; i++ {
+			autoSimulate(begin, end, strBegin, strEnd, `true`, i, 2*i, 3, 3)
+			autoSimulate(begin, end, strBegin, strEnd, `false`, i, 2*i, 3, 3)
+			autoSimulate(begin, end, strBegin, strEnd, `true`, i, 2*i, 4, 4)
+			autoSimulate(begin, end, strBegin, strEnd, `false`, i, 2*i, 4, 4)
 		}
-		c.String(http.StatusOK, msg)
+		util.StoreSyncMap(&model.CarryInfo, nil, `auto`)
+		c.String(http.StatusOK, `auto done`)
 		return
 	}
 	if errBegin != nil || errEnd != nil || turtleSeconds <= 0 || nearErr != nil || farErr != nil ||
