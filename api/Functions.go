@@ -5,7 +5,6 @@ import (
 	"hello/model"
 	"hello/util"
 	"math"
-	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -178,13 +177,13 @@ func GetMultiCandle(key, secret, market string, slotSeconds int, begin, end time
 	}
 	if int(count) > limit {
 		duration, _ := time.ParseDuration(fmt.Sprintf(`%ds`, limit*slotSeconds))
-		candles = GetMultiCandle(key, secret, market, slotSeconds, begin, begin.Add(duration), settings)
-		candlesRight := GetMultiCandle(key, secret, market, slotSeconds, begin.Add(duration), end, settings)
-		for i := 0; i < len(candlesRight); i++ {
-			candles = append(candles, candlesRight[i])
-		}
+		candles = append(GetMultiCandle(key, secret, market, slotSeconds, begin, begin.Add(duration), settings),
+			GetMultiCandle(key, secret, market, slotSeconds, begin.Add(duration), end, settings)...)
 	} else {
-		candles = make([]*model.Candle, 0)
+		candles = make([]*model.Candle, count*int64(len(settings)))
+		util.StoreSyncMap(&model.CarryInfo, fmt.Sprintf(`get multi candles slot%d count%d %s %s`,
+			slotSeconds, count, begin.String(), end.String()), `GetCandle`)
+		i := 0
 		for symbol := range settings {
 			var temp model.Candles
 			var isCache bool
@@ -196,20 +195,10 @@ func GetMultiCandle(key, secret, market string, slotSeconds int, begin, end time
 			case model.BinancePerp:
 				temp, isCache = getCandlesBinancePerp(key, secret, symbol, begin, end, int(count), slotSeconds)
 			}
-			candles = append(candles, temp...)
-			sort.Sort(candles)
-			msg := fmt.Sprintf(`get candles %s %s %d seconds %s %d`,
-				market, symbol, slotSeconds, begin.Format(time.RFC3339), len(candles))
-			util.Info(msg)
-			oldMsg, ok := util.LoadSyncMap(&model.CarryInfo, `GetCandle`)
-			if ok && oldMsg != nil {
-				msg = oldMsg.(string) + msg
+			for j := 0; j < temp.Len(); j++ {
+				candles[j*len(settings)+i] = temp[j]
 			}
-			if len(msg) < 100000 {
-				util.StoreSyncMap(&model.CarryInfo, msg, `GetCandle`)
-			} else {
-				util.StoreSyncMap(&model.CarryInfo, nil, `GetCandle`)
-			}
+			i++
 			if !isCache {
 				time.Sleep(time.Millisecond * 300)
 			}
@@ -227,11 +216,8 @@ func GetCandle(key, secret, market, symbol string, slotSeconds int, begin, end t
 	}
 	if int(count) > limit {
 		duration, _ := time.ParseDuration(fmt.Sprintf(`%ds`, limit*slotSeconds))
-		candles = GetCandle(key, secret, market, symbol, slotSeconds, begin, begin.Add(duration))
-		candlesRight := GetCandle(key, secret, market, symbol, slotSeconds, begin.Add(duration), end)
-		for i := 0; i < len(candlesRight); i++ {
-			candles = append(candles, candlesRight[i])
-		}
+		candles = append(GetCandle(key, secret, market, symbol, slotSeconds, begin, begin.Add(duration)),
+			GetCandle(key, secret, market, symbol, slotSeconds, begin.Add(duration), end)...)
 	} else {
 		isCache := false
 		switch market {

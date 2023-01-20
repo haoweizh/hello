@@ -244,6 +244,9 @@ func ProcessCandles(start, end time.Time, near, far, turtleSeconds, allLimit int
 		}
 	}
 	for i := 0; i < len(sortedCandles); i++ {
+		if sortedCandles[i] == nil {
+			util.Info(`error nil sorted candle`)
+		}
 		turtleTime := time.Unix(sortedCandles[i].Begin.Unix()-sortedCandles[i].Begin.Unix()%int64(turtleSeconds), 0).In(time.UTC)
 		turtleKey := fmt.Sprintf(`%s_%s_%d_%s`, market, sortedCandles[i].Symbol, turtleSeconds, turtleTime.Format(time.RFC3339))
 		if turtleDataMap[turtleKey] != nil {

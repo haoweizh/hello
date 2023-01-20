@@ -190,9 +190,10 @@ func Test_initTurtleN(t *testing.T) {
 	//res, err := model.AppRedis.Get(context.Background(), `binanceperp_BTC_PERP_30m_1673913600000_1673962933185_27`).Result()
 	//fmt.Println(fmt.Sprintf(`%s %s`, res, err.Error()))
 	today, _ := model.GetMarketToday(model.BinancePerp)
-	duration1, _ := time.ParseDuration(`7200`)
-	candles := api.GetCandle(model.AppConfig.BinanceKey, model.AppConfig.BinanceSecret, model.BinancePerp, `BTC_PERP`, 1800, today, today.Add(duration1))
-	fmt.Println(candles)
+	settings := map[string]*model.Setting{`BTC_PERP`: nil, `ETH_PERP`: nil}
+	sortedCandles := api.GetMultiCandle(model.AppConfig.BinanceKey, model.AppConfig.BinanceSecret, model.BinancePerp, 60,
+		today.Add(time.Minute*-490), today, settings)
+	fmt.Println(len(sortedCandles))
 	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
 	_ = model.AppDB.AutoMigrate(&model.Setting{})
 	_ = model.AppDB.AutoMigrate(&model.Order{})
