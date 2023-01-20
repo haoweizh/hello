@@ -104,7 +104,7 @@ func createTurtleOrders(setting *model.Setting, turtleData *TurtleData, candle *
 			GridPos:     setting.Chance,
 			CreatedAt:   candle.Begin,
 		}
-		util.Info(fmt.Sprintf(`create turtle long at %s %d`, candle.Begin.String(), setting.Chance))
+		util.Info(fmt.Sprintf(`create turtle long at %s %s %d`, candle.Begin.String(), candle.Symbol, setting.Chance))
 	}
 	if amountLong > 0 {
 		turtleData.orderLong = &model.Order{
@@ -119,7 +119,7 @@ func createTurtleOrders(setting *model.Setting, turtleData *TurtleData, candle *
 			GridPos:     setting.Chance,
 			CreatedAt:   candle.Begin,
 		}
-		util.Info(fmt.Sprintf(`create turtle short at %s %d`, candle.Begin.String(), setting.Chance))
+		util.Info(fmt.Sprintf(`create turtle short at %s %s %d`, candle.Begin.String(), candle.Symbol, setting.Chance))
 	}
 }
 
@@ -233,6 +233,11 @@ func ProcessCandles(start, end time.Time, near, far, turtleSeconds, allLimit int
 	turtleCandles := make(model.Candles, 0)
 	turtleDataMap := make(map[string]*TurtleData)
 	slotLiquidated = make(map[string]bool)
+	if sortedCandles != nil && sortedCandles.Len() > 0 && sortedCandles[0] != nil && sortedCandles[len(sortedCandles)-1] != nil {
+		util.Info(fmt.Sprintf(`get sorted candles from %s %s to %s %s`,
+			sortedCandles[0].Begin.String(), sortedCandles[0].Symbol,
+			sortedCandles[sortedCandles.Len()-1].Begin.String(), sortedCandles[sortedCandles.Len()-1].Symbol))
+	}
 	for _, setting := range settings {
 		temp := api.GetCandle(key, secret, market, setting.Symbol, turtleSeconds, start.Add(duration), end)
 		util.Info(`get turtle candle %s %s %d setting chance %d`, market, setting.Symbol, len(turtleCandles), setting.Chance)
@@ -246,6 +251,7 @@ func ProcessCandles(start, end time.Time, near, far, turtleSeconds, allLimit int
 	for i := 0; i < len(sortedCandles); i++ {
 		if sortedCandles[i] == nil {
 			util.Info(`error nil sorted candle`)
+			continue
 		}
 		turtleTime := time.Unix(sortedCandles[i].Begin.Unix()-sortedCandles[i].Begin.Unix()%int64(turtleSeconds), 0).In(time.UTC)
 		turtleKey := fmt.Sprintf(`%s_%s_%d_%s`, market, sortedCandles[i].Symbol, turtleSeconds, turtleTime.Format(time.RFC3339))
