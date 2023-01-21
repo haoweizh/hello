@@ -51,6 +51,8 @@ func createTurtleOrders(setting *model.Setting, turtleData *TurtleData, candle *
 	priceShort := turtleData.lowFar
 	amountShot := 0.0
 	amountLong := 0.0
+	orderSideBuy := model.OrderSideBuy
+	orderSideSell := model.OrderSideSell
 	if setting.Chance == 0 && !turtleData.liquidated { // 开初始仓
 		if !slotLiquidated[fmt.Sprintf(`%s_%s_%s`, setting.Market, model.OrderSideBuy, turtleData.begin.String())] {
 			amountLong = setting.GridAmount
@@ -70,6 +72,7 @@ func createTurtleOrders(setting *model.Setting, turtleData *TurtleData, candle *
 			priceShort = turtleData.highFar - 2*turtleData.n
 		}
 		amountShot = float64(setting.Chance) * setting.GridAmount
+		orderSideSell = model.OrderSideLiquidateLong
 		if float64(setting.Chance) < setting.AmountLimit {
 			amountLong = setting.GridAmount
 		}
@@ -80,6 +83,7 @@ func createTurtleOrders(setting *model.Setting, turtleData *TurtleData, candle *
 		} else {
 			priceLong = turtleData.lowFar + 2*turtleData.n
 		}
+		orderSideBuy = model.OrderSideLiquidateShort
 		amountLong = math.Abs(float64(setting.Chance)) * setting.GridAmount
 		if math.Abs(float64(setting.Chance)) < setting.AmountLimit {
 			amountShot = setting.GridAmount
@@ -95,7 +99,7 @@ func createTurtleOrders(setting *model.Setting, turtleData *TurtleData, candle *
 		turtleData.orderShort = &model.Order{
 			Amount:      amountShot,
 			Market:      setting.Market,
-			OrderSide:   model.OrderSideSell,
+			OrderSide:   orderSideSell,
 			Price:       priceShort,
 			DealPrice:   priceShort * (1 - tradeCost),
 			RefreshType: model.FunctionSimulation,
@@ -110,7 +114,7 @@ func createTurtleOrders(setting *model.Setting, turtleData *TurtleData, candle *
 		turtleData.orderLong = &model.Order{
 			Amount:      amountLong,
 			Market:      setting.Market,
-			OrderSide:   model.OrderSideBuy,
+			OrderSide:   orderSideBuy,
 			Price:       priceLong,
 			DealPrice:   priceLong * (1 + tradeCost),
 			RefreshType: model.FunctionSimulation,

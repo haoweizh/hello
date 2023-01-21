@@ -93,8 +93,8 @@ func autoSimulate(coins string, begin, end time.Time, strBegin, strEnd string, u
 		symbol := strings.ToUpper(coin) + model.UniStandardTail[model.MarketTypePerp]
 		settings[symbol] = &model.Setting{Market: model.BinancePerp, Symbol: symbol, AmountLimit: float64(limit), GridAmount: RegretTurtleGridAmount}
 	}
-	sign := fmt.Sprintf(`market%s,coins%s,seconds86400,%s~%s,near%d,far%d,limit%d,allLimit%d,useNear%v`,
-		model.BinancePerp, coins, strBegin, strEnd, near, far, limit, allLimit, useNear)
+	sign := fmt.Sprintf(`market%s,coins%s,seconds86400,%s~%s,far%d,near%d,limit%d,allLimit%d,useNear%v`,
+		model.BinancePerp, coins, strBegin, strEnd, far, near, limit, allLimit, useNear)
 	delNum := model.AppDB.Where(`function=?`, sign).Delete(&model.Order{}).RowsAffected
 	util.Info(`del %s %d rows affected`, sign, delNum)
 	regret.ProcessCandles(begin, end, near, far, 86400, allLimit, useNear, model.BinancePerp, sign, settings)
@@ -162,8 +162,8 @@ func simulate(c *gin.Context) {
 	useNear, useNearErr := strconv.ParseBool(strUseNear)
 	begin, errBegin := time.Parse(time.RFC3339, strBegin)
 	end, errEnd := time.Parse(time.RFC3339, strEnd)
-	sign := fmt.Sprintf(`market%s,coins%s,seconds%s,%s~%s,near%s,far%s,limit%s,allLimit%s,useNear%s`,
-		market, coins, strTurtleSeconds, strBegin, strEnd, nearStr, farStr, strLimit, strAllLimit, strUseNear)
+	sign := fmt.Sprintf(`market%s,coins%s,seconds%s,%s~%s,far%s,near%s,limit%s,allLimit%s,useNear%s`,
+		market, coins, strTurtleSeconds, strBegin, strEnd, farStr, nearStr, strLimit, strAllLimit, strUseNear)
 	limit, limitErr := strconv.ParseInt(strLimit, 10, 64)
 	if limitErr != nil {
 		limit = 3
@@ -229,7 +229,7 @@ func simulate(c *gin.Context) {
 	}
 	orders := make([]*model.Order, 0)
 	model.AppDB.Where(`function=?`, sign).Order(`order_time asc`).Find(&orders)
-	msg += fmt.Sprintf(`Get %d orders %s %s %v %s %s from %d settings`,
+	msg += fmt.Sprintf("Get %d orders %s %s %v %s %s from %d settings\n",
 		len(orders), strTurtleSeconds, strLimit, strUseNear, begin.String(), end.String(), len(settings))
 	msg += regret.ToString(orders, market, strTurtleSeconds, strLimit, RegretTurtleGridAmount, begin, end) + "\n"
 	c.String(http.StatusOK, msg)
