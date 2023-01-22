@@ -9,6 +9,7 @@ import (
 	"gorm.io/gorm"
 	"hello/api"
 	"hello/model"
+	"hello/regret"
 	"hello/util"
 	"math"
 	"net/http"
@@ -83,6 +84,8 @@ func Test_getCommonMarketInfos(t *testing.T) {
 func Test_BalAndPos(t *testing.T) {
 	model.NewConfig()
 	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
+	coins := `doge,sol,matic,chz,link,ada,bnb,fil,sushi,axs,atom,waves`
+	regret.CreateReport(coins)
 	api.GetMarketInfos(model.Gate)
 	order := api.QueryOrderById(model.AppConfig.GateKey, model.AppConfig.GateSecret, `gate`, `MGA_USDT`,
 		model.OrderTypeLimit, `144149811503`)
@@ -182,6 +185,20 @@ func Test_WsAndOrderApi(t *testing.T) {
 		//}
 	}
 	select {}
+}
+
+func Test_CutTail(t *testing.T) {
+	model.NewConfig()
+	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
+	for i := 7; i <= 25; i++ {
+		coins := `doge,sol,matic,chz,link,ada,bnb,fil,sushi,axs,atom,waves`
+		sign := fmt.Sprintf(`market%s,coins%s,seconds86400,%s~%s,far%d,near%d,limit%d,allLimit%d,useNear%v`,
+			model.BinancePerp, coins, `2021-01-01T00:00:00+00:00`, `2023-01-02T00:00:00+00:00`, i*2, i, 3, 12, true)
+		regret.CutTail(coins, sign)
+		sign = fmt.Sprintf(`market%s,coins%s,seconds86400,%s~%s,far%d,near%d,limit%d,allLimit%d,useNear%v`,
+			model.BinancePerp, coins, `2021-01-01T00:00:00+00:00`, `2023-01-02T00:00:00+00:00`, i*2, i, 3, 12, false)
+		regret.CutTail(coins, sign)
+	}
 }
 
 func Test_initTurtleN(t *testing.T) {
