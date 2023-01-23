@@ -60,7 +60,7 @@ func calcTurtleAmount(key, secret string, setting *model.Setting, n float64) (am
 	amount = 0.02 * accountValue / n
 	_, _, coin, _ := model.GetFromStandard(setting.Market, setting.Symbol)
 	if model.CommonCoins[strings.ToLower(coin)] {
-		amount = amount * 0.75
+		amount = amount / 2
 	} else {
 		amount /= 4
 	}
@@ -149,14 +149,13 @@ func GetTurtleData(key, secret string, setting *model.Setting) (turtleData *Turt
 	clearOrders(key, secret, setting)
 	turtleTime.Store(fmt.Sprintf(`%s_%s_%s`, setting.Market, setting.Symbol, todayStr), time.Now())
 	_, _, coin, _ := model.GetFromStandard(setting.Market, setting.Symbol)
+	far := 18
+	if strings.ToUpper(coin) == `BTC` {
+		far = 50
+	}
 	turtleData = &TurtleData{turtleTime: today, symbol: setting.Symbol, checkTimeBreak: util.GetNow(),
 		checkTimeOpen: util.GetNow().Add(duration), waitBreakLong: false, waitBreakShort: false, breakLong: false,
-		breakShort: false, liquidated: false, daysFar: 28, daysNear: 14, daysAdjust: 5, useNear: false}
-	if !model.CommonCoins[strings.ToLower(coin)] {
-		turtleData = &TurtleData{turtleTime: today, symbol: setting.Symbol, checkTimeBreak: util.GetNow(),
-			checkTimeOpen: util.GetNow().Add(duration), waitBreakLong: false, waitBreakShort: false, breakLong: false,
-			breakShort: false, liquidated: false, daysFar: 18, daysNear: 9, daysAdjust: 5, useNear: true}
-	}
+		breakShort: false, liquidated: false, daysFar: far, daysNear: far / 2, daysAdjust: 5, useNear: true}
 	indexMax := math.Max(21.0, float64(turtleData.daysFar))
 	for i := 1; i < int(indexMax); i++ {
 		duration, _ = time.ParseDuration(fmt.Sprintf(`%dh`, -24*i))
