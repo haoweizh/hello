@@ -57,12 +57,12 @@ func createTurtleOrders(setting *model.Setting, turtleData *TurtleData, candle *
 		if !slotLiquidated[fmt.Sprintf(`%s_%s_%s`, setting.Market, model.OrderSideBuy, turtleData.begin.String())] {
 			amountLong = setting.GridAmount
 		} else {
-			util.InfoSync(fmt.Sprintf(`no new open buy as %s liquated`, turtleData.begin.String()))
+			util.Info(fmt.Sprintf(`no new open buy as %s liquated`, turtleData.begin.String()))
 		}
 		if !slotLiquidated[fmt.Sprintf(`%s_%s_%s`, setting.Market, model.OrderSideSell, turtleData.begin.String())] {
 			amountShot = setting.GridAmount
 		} else {
-			util.InfoSync(fmt.Sprintf(`no new open sell as %s liquated`, turtleData.begin.String()))
+			util.Info(fmt.Sprintf(`no new open sell as %s liquated`, turtleData.begin.String()))
 		}
 	} else if setting.Chance > 0 {
 		priceLong = math.Max(turtleData.highFar, setting.PriceX+turtleData.n/2)
@@ -111,7 +111,7 @@ func createTurtleOrders(setting *model.Setting, turtleData *TurtleData, candle *
 		if liquidateLong {
 			turtleData.orderShort.OrderType = model.OrderSideLiquidateLong
 		}
-		util.InfoSync(fmt.Sprintf(`create turtle long at %s %s %d`, candle.Begin.String(), candle.Symbol, setting.Chance))
+		util.Info(fmt.Sprintf(`create turtle long at %s %s %d`, candle.Begin.String(), candle.Symbol, setting.Chance))
 	}
 	if amountLong > 0 {
 		turtleData.orderLong = &model.Order{
@@ -129,7 +129,7 @@ func createTurtleOrders(setting *model.Setting, turtleData *TurtleData, candle *
 		if liquidateShort {
 			turtleData.orderLong.OrderType = model.OrderSideLiquidateShort
 		}
-		util.InfoSync(fmt.Sprintf(`create turtle short at %s %s %d`, candle.Begin.String(), candle.Symbol, setting.Chance))
+		util.Info(fmt.Sprintf(`create turtle short at %s %s %d`, candle.Begin.String(), candle.Symbol, setting.Chance))
 	}
 }
 
@@ -145,7 +145,7 @@ func handlePrice(turtleData *TurtleData, candle *model.Candle, settings map[stri
 	if settings != nil && candle != nil && settings[candle.Symbol] != nil {
 		setting = settings[candle.Symbol]
 	} else {
-		util.InfoSync(`fail to process handle price`)
+		util.Info(`fail to process handle price`)
 		return
 	}
 	if !turtleData.useNear && candle.PriceHigh > turtleData.highFar {
@@ -178,7 +178,7 @@ func handlePrice(turtleData *TurtleData, candle *model.Candle, settings map[stri
 			setting.Chance = 0
 			turtleData.liquidated = true
 			slotLiquidated[fmt.Sprintf(`%s_%s_%s`, candle.Market, model.OrderSideBuy, turtleData.begin.String())] = true
-			util.InfoSync(fmt.Sprintf(`no new open after liquated buy %s %s`, candle.Symbol, turtleData.begin.String()))
+			util.Info(fmt.Sprintf(`no new open after liquated buy %s %s`, candle.Symbol, turtleData.begin.String()))
 		}
 		setting.PriceX = turtleData.orderLong.Price
 		turtleData.orderLong.Status = model.CarryStatusSuccess
@@ -187,7 +187,7 @@ func handlePrice(turtleData *TurtleData, candle *model.Candle, settings map[stri
 			setting.Market, setting.Symbol, sign, turtleData.orderLong.OrderSide, candle.Begin.Unix())
 		turtleData.orderLong.UnfilledQuantity = float64(currentChances)
 		turtleData.orderLong.Function = sign
-		util.InfoSync(fmt.Sprintf(`deal long chance %d 总仓 %d save order %s at %s`,
+		util.Info(fmt.Sprintf(`deal long chance %d 总仓 %d save order %s at %s`,
 			setting.Chance, currentChances, turtleData.orderLong.OrderId, turtleData.orderLong.OrderTime.String()))
 		model.AppDB.Save(turtleData.orderLong)
 		turtleData.orderLong = nil
@@ -200,7 +200,7 @@ func handlePrice(turtleData *TurtleData, candle *model.Candle, settings map[stri
 			setting.Chance = 0
 			turtleData.liquidated = true
 			slotLiquidated[fmt.Sprintf(`%s_%s_%s_%s`, candle.Market, candle.Symbol, model.OrderSideSell, turtleData.begin.String())] = true
-			util.InfoSync(fmt.Sprintf(`no new open after liquated sell %s %s`, candle.Symbol, turtleData.begin.String()))
+			util.Info(fmt.Sprintf(`no new open after liquated sell %s %s`, candle.Symbol, turtleData.begin.String()))
 		}
 		setting.PriceX = turtleData.orderShort.Price
 		turtleData.orderShort.Status = model.CarryStatusSuccess
@@ -209,7 +209,7 @@ func handlePrice(turtleData *TurtleData, candle *model.Candle, settings map[stri
 			setting.Market, setting.Symbol, sign, turtleData.orderShort.OrderSide, candle.Begin.Unix())
 		turtleData.orderShort.UnfilledQuantity = float64(currentChances)
 		turtleData.orderShort.Function = sign
-		util.InfoSync(fmt.Sprintf(`deal short chance %d 总仓 %d save order %s at %s`,
+		util.Info(fmt.Sprintf(`deal short chance %d 总仓 %d save order %s at %s`,
 			setting.Chance, currentChances, turtleData.orderShort.OrderId, turtleData.orderShort.OrderTime.String()))
 		model.AppDB.Save(turtleData.orderShort)
 		turtleData.orderLong = nil
@@ -244,13 +244,13 @@ func ProcessCandles(start, end time.Time, near, far, turtleSeconds, allLimit int
 	turtleDataMap := make(map[string]*TurtleData)
 	slotLiquidated = make(map[string]bool)
 	if sortedCandles != nil && sortedCandles.Len() > 0 && sortedCandles[0] != nil && sortedCandles[len(sortedCandles)-1] != nil {
-		util.InfoSync(fmt.Sprintf(`get sorted candles from %s %s to %s %s`,
+		util.Info(fmt.Sprintf(`get sorted candles from %s %s to %s %s`,
 			sortedCandles[0].Begin.String(), sortedCandles[0].Symbol,
 			sortedCandles[sortedCandles.Len()-1].Begin.String(), sortedCandles[sortedCandles.Len()-1].Symbol))
 	}
 	for _, setting := range settings {
 		temp := api.GetCandle(key, secret, market, setting.Symbol, turtleSeconds, start.Add(duration), end)
-		util.InfoSync(fmt.Sprintf(`get turtle candle %s %s %d setting chance %d`,
+		util.Info(fmt.Sprintf(`get turtle candle %s %s %d setting chance %d`,
 			market, setting.Symbol, len(turtleCandles), setting.Chance))
 		getTurtleCandles(temp)
 		tempTurtle := GetTurtleData(temp, near, far, useNear)
@@ -261,7 +261,7 @@ func ProcessCandles(start, end time.Time, near, far, turtleSeconds, allLimit int
 	}
 	for i := 0; i < len(sortedCandles); i++ {
 		if sortedCandles[i] == nil {
-			util.InfoSync(`error nil sorted candle`)
+			util.Info(`error nil sorted candle`)
 			continue
 		}
 		turtleTime := time.Unix(sortedCandles[i].Begin.Unix()-sortedCandles[i].Begin.Unix()%int64(turtleSeconds), 0).In(time.UTC)
@@ -269,7 +269,7 @@ func ProcessCandles(start, end time.Time, near, far, turtleSeconds, allLimit int
 		if turtleDataMap[turtleKey] != nil {
 			handlePrice(turtleDataMap[turtleKey], sortedCandles[i], settings, allLimit, sign)
 		} else {
-			util.InfoSync(fmt.Sprintf(`fail to parse time from %s to %s %s`,
+			util.Info(fmt.Sprintf(`fail to parse time from %s to %s %s`,
 				sortedCandles[i].Begin.String(), turtleTime.String(), turtleKey))
 		}
 	}
