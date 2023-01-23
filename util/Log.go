@@ -110,6 +110,15 @@ func Debug(format string, a ...interface{}) {
 		logChan <- msg
 	}
 }
+func InfoSync(msg string) {
+	if infoCount%10000 == 0 {
+		if infoFile != nil {
+			_ = infoFile.Close()
+		}
+		info, infoFile, _ = initLog(getPath("info"))
+	}
+	info.Println(msg)
+}
 
 func Info(format string, a ...interface{}) {
 	if infoCount%10000 == 0 {

@@ -81,45 +81,6 @@ func Test_getCommonMarketInfos(t *testing.T) {
 	//api.InitCrossMarketInfos([]string{model.OKEX, model.Ftx, model.Gate})
 }
 
-func Test_BalAndPos(t *testing.T) {
-	model.NewConfig()
-	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
-	coins := `doge,sol,matic,chz,link,ada,bnb,fil,sushi,axs,atom,waves`
-	regret.CreateReport(coins)
-	api.GetMarketInfos(model.Gate)
-	order := api.QueryOrderById(model.AppConfig.GateKey, model.AppConfig.GateSecret, `gate`, `MGA_USDT`,
-		model.OrderTypeLimit, `144149811503`)
-	fmt.Println(order)
-	api.InitMarketInfos()
-	//balMarkets := []string{model.OKEX, model.BybitSpot, model.Ftx, model.Gate}
-	//for _, market := range balMarkets {
-	//	account := model.AppConfig.GetAccounts(market)[0]
-	//	success, balances, total, collateral := api.GetBalances(account.Key, account.Secret, market)
-	//	fmt.Println(fmt.Sprintf(`%v %f %v %d`, success, total, collateral, len(balances)))
-	//	for _, balance := range balances {
-	//		if balance.Coin == `USDT` || balance.Coin == `USD` {
-	//			fmt.Println(fmt.Sprintf(`usd amount %s %f`, market, balance.Amount))
-	//		}
-	//	}
-	//}
-	posMarkets := []string{model.BybitPerp}
-	//posMarkets := []string{model.OKEX, model.BybitPerp, model.Ftx}
-	for _, market := range posMarkets {
-		account := model.AppConfig.GetAccounts(market)[0]
-		success, positions, total, available := api.GetPositions(account.Key, account.Secret, market)
-		fmt.Println(fmt.Sprintf(`%v %f %f %d`, success, total, available, len(positions)))
-		for _, position := range positions {
-			fmt.Println(fmt.Sprintf(`%s %f`, position.Currency, position.Holding))
-			api.CancelOrders(account.Key, account.Secret, market, position.Currency)
-		}
-		success, positions, total, available = api.GetPositions(account.Key, account.Secret, market)
-		for _, position := range positions {
-			fmt.Println(fmt.Sprintf(`%s %f`, position.Currency, position.Holding))
-			api.CancelOrders(account.Key, account.Secret, market, position.Currency)
-		}
-	}
-}
-
 func TestWs(t *testing.T) {
 	market := model.Ftx
 	model.NewConfig()
@@ -187,16 +148,72 @@ func Test_WsAndOrderApi(t *testing.T) {
 	select {}
 }
 
+func Test_BalAndPos(t *testing.T) {
+	model.NewConfig()
+	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
+	api.GetMarketInfos(model.Gate)
+	order := api.QueryOrderById(model.AppConfig.GateKey, model.AppConfig.GateSecret, `gate`, `MGA_USDT`,
+		model.OrderTypeLimit, `144149811503`)
+	fmt.Println(order)
+	api.InitMarketInfos()
+	//balMarkets := []string{model.OKEX, model.BybitSpot, model.Ftx, model.Gate}
+	//for _, market := range balMarkets {
+	//	account := model.AppConfig.GetAccounts(market)[0]
+	//	success, balances, total, collateral := api.GetBalances(account.Key, account.Secret, market)
+	//	fmt.Println(fmt.Sprintf(`%v %f %v %d`, success, total, collateral, len(balances)))
+	//	for _, balance := range balances {
+	//		if balance.Coin == `USDT` || balance.Coin == `USD` {
+	//			fmt.Println(fmt.Sprintf(`usd amount %s %f`, market, balance.Amount))
+	//		}
+	//	}
+	//}
+	posMarkets := []string{model.BybitPerp}
+	//posMarkets := []string{model.OKEX, model.BybitPerp, model.Ftx}
+	for _, market := range posMarkets {
+		account := model.AppConfig.GetAccounts(market)[0]
+		success, positions, total, available := api.GetPositions(account.Key, account.Secret, market)
+		fmt.Println(fmt.Sprintf(`%v %f %f %d`, success, total, available, len(positions)))
+		for _, position := range positions {
+			fmt.Println(fmt.Sprintf(`%s %f`, position.Currency, position.Holding))
+			api.CancelOrders(account.Key, account.Secret, market, position.Currency)
+		}
+		success, positions, total, available = api.GetPositions(account.Key, account.Secret, market)
+		for _, position := range positions {
+			fmt.Println(fmt.Sprintf(`%s %f`, position.Currency, position.Holding))
+			api.CancelOrders(account.Key, account.Secret, market, position.Currency)
+		}
+	}
+}
+
+func Test_CreateReport(t *testing.T) {
+	model.NewConfig()
+	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
+	//coins := `doge,sol,matic,chz,link,ada,bnb,fil,sushi,axs,atom,waves`
+	timeRage := `2021-01-01T00:00:00+00:00~2023-01-02T00:00:00+00:00`
+	coins := `btc`
+	regret.CreateReport(coins, timeRage)
+	//coins := `btc,eth`
+}
+
 func Test_CutTail(t *testing.T) {
 	model.NewConfig()
 	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
+	//coins := `doge,sol,matic,chz,link,ada,bnb,fil,sushi,axs,atom,waves`
+	//allLimit := 12
+	coins := `btc`
+	//allLimit = 3
 	for i := 7; i <= 25; i++ {
-		coins := `doge,sol,matic,chz,link,ada,bnb,fil,sushi,axs,atom,waves`
 		sign := fmt.Sprintf(`market%s,coins%s,seconds86400,%s~%s,far%d,near%d,limit%d,allLimit%d,useNear%v`,
-			model.BinancePerp, coins, `2021-01-01T00:00:00+00:00`, `2023-01-02T00:00:00+00:00`, i*2, i, 3, 12, true)
+			model.BinancePerp, coins, `2021-01-01T00:00:00+00:00`, `2023-01-02T00:00:00+00:00`, i*2, i, 3, 3, true)
 		regret.CutTail(coins, sign)
 		sign = fmt.Sprintf(`market%s,coins%s,seconds86400,%s~%s,far%d,near%d,limit%d,allLimit%d,useNear%v`,
-			model.BinancePerp, coins, `2021-01-01T00:00:00+00:00`, `2023-01-02T00:00:00+00:00`, i*2, i, 3, 12, false)
+			model.BinancePerp, coins, `2021-01-01T00:00:00+00:00`, `2023-01-02T00:00:00+00:00`, i*2, i, 3, 3, false)
+		regret.CutTail(coins, sign)
+		sign = fmt.Sprintf(`market%s,coins%s,seconds86400,%s~%s,far%d,near%d,limit%d,allLimit%d,useNear%v`,
+			model.BinancePerp, coins, `2021-01-01T00:00:00+00:00`, `2023-01-02T00:00:00+00:00`, i*2, i, 4, 4, true)
+		regret.CutTail(coins, sign)
+		sign = fmt.Sprintf(`market%s,coins%s,seconds86400,%s~%s,far%d,near%d,limit%d,allLimit%d,useNear%v`,
+			model.BinancePerp, coins, `2021-01-01T00:00:00+00:00`, `2023-01-02T00:00:00+00:00`, i*2, i, 4, 4, false)
 		regret.CutTail(coins, sign)
 	}
 }

@@ -186,13 +186,9 @@ func simulate(c *gin.Context) {
 			if allLimit == 12 {
 				autoSimulate(coins, begin, end, strBegin, strEnd, true, i, 2*i, 3, 12)
 				autoSimulate(coins, begin, end, strBegin, strEnd, false, i, 2*i, 3, 12)
-				autoSimulate(coins, begin, end, strBegin, strEnd, true, i, 2*i, 4, 12)
-				autoSimulate(coins, begin, end, strBegin, strEnd, false, i, 2*i, 4, 12)
 			} else {
 				autoSimulate(coins, begin, end, strBegin, strEnd, true, i, 2*i, 3, 3)
 				autoSimulate(coins, begin, end, strBegin, strEnd, false, i, 2*i, 3, 3)
-				autoSimulate(coins, begin, end, strBegin, strEnd, true, i, 2*i, 4, 4)
-				autoSimulate(coins, begin, end, strBegin, strEnd, false, i, 2*i, 4, 4)
 			}
 		}
 		util.StoreSyncMap(&model.CarryInfo, nil, `auto`)
