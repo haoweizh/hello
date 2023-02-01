@@ -114,7 +114,7 @@ func GetFunctions(market, symbol string) *sync.Map {
 	return nil
 }
 
-const topMarketInfoLen = 15
+const topMarketInfoLen = 20
 
 func prepareSettings() {
 	localSymbolSettings := &sync.Map{}
