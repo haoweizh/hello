@@ -99,8 +99,8 @@ func adjustPosHolding(key, secret string, setting *model.Setting, turtleData *Tu
 	}
 	if posMap[setting.Symbol] != nil { //setting.Chance和pos.Holding相乘小于零代表方向相反，此时设置为0
 		if float64(setting.Chance)*posMap[setting.Symbol].Holding <= 0 {
-			util.Notice(`update turtle side %s %s %d %f %f`,
-				setting.Market, setting.Symbol, setting.Chance, posMap[setting.Symbol].Holding, setting.GridAmount)
+			util.Notice(`update turtle side %s %s %d %f %f from %d`,
+				setting.Market, setting.Symbol, setting.Chance, posMap[setting.Symbol].Holding, setting.GridAmount, setting.Chance)
 			setting.GridAmount = 0
 			setting.Chance = 0
 			if posMap[setting.Symbol].Holding > 0 {
