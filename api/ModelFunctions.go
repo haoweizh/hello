@@ -150,8 +150,8 @@ func prepareSettings() {
 				setting = oldSetting.(*model.Setting)
 			}
 		}
-		//util.Notice(fmt.Sprintf(`load setting %s %s %s %v`,
-		//	setting.Market, setting.Symbol, setting.Function, setting.Valid))
+		util.Notice(fmt.Sprintf(`load setting %s %s %s %v %d`,
+			setting.Market, setting.Symbol, setting.Function, setting.Valid, setting.Chance))
 		marketMap[setting.Market] = true
 		value, ok = util.LoadSyncMap(localHandlers, setting.Market, setting.Symbol)
 		var functions *sync.Map

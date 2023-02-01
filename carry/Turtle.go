@@ -482,6 +482,9 @@ func checkTurtleBreak(key, secret string, setting *model.Setting, turtleData *Tu
 					setting.Market, setting.Symbol, setting.Chance, tick.Bids[0].Price, tick.Asks[0].Price,
 					orderLong.Price, turtleData.breakLong, turtleData.waitBreakLong))
 			}
+			if order != nil && order.Status == model.CarryStatusFail {
+				turtleData.orderLong = nil
+			}
 			checked = true
 		}
 		if turtleData.orderShort != nil && (orderShort.Status == model.CarryStatusSuccess ||
@@ -494,6 +497,9 @@ func checkTurtleBreak(key, secret string, setting *model.Setting, turtleData *Tu
 				util.Notice(fmt.Sprintf(`-----order break short %s %s %d bid-ask %f %f long %f %v %v`,
 					setting.Market, setting.Symbol, setting.Chance, tick.Bids[0].Price, tick.Asks[0].Price,
 					orderShort.Price, turtleData.breakShort, turtleData.waitBreakShort))
+			}
+			if order != nil && order.Status == model.CarryStatusFail {
+				turtleData.orderShort = nil
 			}
 			checked = true
 		}

@@ -189,8 +189,8 @@ func Test_CreateReport(t *testing.T) {
 	model.NewConfig()
 	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
 	//coins := `doge,sol,matic,chz,link,ada,bnb,fil,sushi,axs,atom,waves`
-	timeRage := `2021-01-01T00:00:00+00:00~2023-01-02T00:00:00+00:00`
-	coins := `btc`
+	timeRage := `2020-01-01T00:00:00+00:00~2023-01-02T00:00:00+00:00`
+	coins := `eth`
 	regret.CreateReport(coins, timeRage)
 	//coins := `btc,eth`
 }
@@ -200,20 +200,14 @@ func Test_CutTail(t *testing.T) {
 	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
 	//coins := `doge,sol,matic,chz,link,ada,bnb,fil,sushi,axs,atom,waves`
 	//allLimit := 12
-	coins := `btc`
+	coins := `eth`
 	//allLimit = 3
 	for i := 7; i <= 25; i++ {
 		sign := fmt.Sprintf(`market%s,coins%s,seconds86400,%s~%s,far%d,near%d,limit%d,allLimit%d,useNear%v`,
-			model.BinancePerp, coins, `2021-01-01T00:00:00+00:00`, `2023-01-02T00:00:00+00:00`, i*2, i, 3, 3, true)
+			model.BinancePerp, coins, `2020-01-01T00:00:00+00:00`, `2023-01-02T00:00:00+00:00`, i*2, i, 3, 3, true)
 		regret.CutTail(coins, sign)
 		sign = fmt.Sprintf(`market%s,coins%s,seconds86400,%s~%s,far%d,near%d,limit%d,allLimit%d,useNear%v`,
-			model.BinancePerp, coins, `2021-01-01T00:00:00+00:00`, `2023-01-02T00:00:00+00:00`, i*2, i, 3, 3, false)
-		regret.CutTail(coins, sign)
-		sign = fmt.Sprintf(`market%s,coins%s,seconds86400,%s~%s,far%d,near%d,limit%d,allLimit%d,useNear%v`,
-			model.BinancePerp, coins, `2021-01-01T00:00:00+00:00`, `2023-01-02T00:00:00+00:00`, i*2, i, 4, 4, true)
-		regret.CutTail(coins, sign)
-		sign = fmt.Sprintf(`market%s,coins%s,seconds86400,%s~%s,far%d,near%d,limit%d,allLimit%d,useNear%v`,
-			model.BinancePerp, coins, `2021-01-01T00:00:00+00:00`, `2023-01-02T00:00:00+00:00`, i*2, i, 4, 4, false)
+			model.BinancePerp, coins, `2020-01-01T00:00:00+00:00`, `2023-01-02T00:00:00+00:00`, i*2, i, 3, 3, false)
 		regret.CutTail(coins, sign)
 	}
 }
@@ -225,6 +219,8 @@ func Test_initTurtleN(t *testing.T) {
 	//fmt.Println(fmt.Sprintf(`%s %s`, res, err.Error()))
 	today, _ := model.GetMarketToday(model.BinancePerp)
 	settings := map[string]*model.Setting{`BTC_PERP`: nil, `ETH_PERP`: nil}
+	api.GetCandle(model.AppConfig.BinanceKey, model.AppConfig.BinanceSecret, model.BinancePerp, `BTC_PERP`,
+		60, time.Now().Add(time.Minute*-1839600), today)
 	sortedCandles := api.GetMultiCandle(model.AppConfig.BinanceKey, model.AppConfig.BinanceSecret, model.BinancePerp, 60,
 		today.Add(time.Minute*-490), today, settings)
 	fmt.Println(len(sortedCandles))
