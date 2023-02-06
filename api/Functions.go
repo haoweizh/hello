@@ -87,7 +87,7 @@ func RequireDepthChanReset(markets *model.Markets, market string) bool {
 	}
 	util.Notice(fmt.Sprintf(`RequireDepthChanReset %s %d  %f valid %d in %d`,
 		market, now, model.AppConfig.Delay, validChannels, len(symbols)))
-	return validChannels*2 < len(symbols)
+	return validChannels*2 < len(symbols) || len(symbols)-validChannels > 30
 }
 
 func MustCancel(key, secret, market, symbol, orderType, orderId string, mustCancel bool) (res bool) {
