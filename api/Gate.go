@@ -234,7 +234,8 @@ var tickerHandler = gateWs.NewCallBack(func(msg *gateWs.UpdateMsg) {
 	case gateWs.ChannelSpotBookTicker:
 		var update gateWs.SpotBookTickerMsg
 		if err := json.Unmarshal(msg.Result, &update); err != nil {
-			util.Notice(fmt.Sprintf("spot book ticker Unmarshal err:%s", err.Error()))
+			util.Notice(fmt.Sprintf("spot book ticker Unmarshal err:%s %s", model.Gate, err.Error()))
+			return
 		}
 		success, _, coin := model.GetCoinFromDialect(model.Gate, update.CurrencyPair)
 		if !success {
@@ -253,7 +254,8 @@ var tickerHandler = gateWs.NewCallBack(func(msg *gateWs.UpdateMsg) {
 	case gateWs.ChannelSpotOrderBook:
 		var update gateWs.SpotUpdateAllDepthMsg
 		if err := json.Unmarshal(msg.Result, &update); err != nil {
-			util.Notice(fmt.Sprintf("spot book ticker Unmarshal err:%s", err.Error()))
+			util.Notice(fmt.Sprintf("spot book ticker Unmarshal err:%s %s", model.Gate, err.Error()))
+			return
 		}
 		success, _, coin := model.GetCoinFromDialect(model.Gate, update.CurrencyPair)
 		if !success {
@@ -275,7 +277,8 @@ var tickerHandler = gateWs.NewCallBack(func(msg *gateWs.UpdateMsg) {
 	case gateWs.ChannelFutureBookTicker:
 		var update FuturesBookTickerModel
 		if err := json.Unmarshal(msg.Result, &update); err != nil {
-			util.Notice(fmt.Sprintf("future book ticker Unmarshal err:%s", err.Error()))
+			util.Notice(fmt.Sprintf("future book ticker Unmarshal err:%s %s", model.Gate, err.Error()))
+			return
 		}
 		success, _, coin := model.GetCoinFromDialect(model.Gate, update.Contract)
 		if !success {
@@ -366,6 +369,7 @@ func WsDepthServeGate() (err error) {
 		URL: gateWs.BaseUrl, Key: account.Key, Secret: account.Secret, MaxRetryConn: 10}))
 	if spotBookErr != nil {
 		util.Notice(fmt.Sprintf("new spot book wsService err:%s", spotBookErr))
+		return spotBookErr
 	}
 	if spotErr != nil {
 		util.Notice(fmt.Sprintf("new spot wsService err:%s", spotErr))
