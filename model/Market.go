@@ -119,12 +119,3 @@ func (markets *Markets) SetBidAsk(symbol, marketName string, bidAsk *BidAsk) boo
 	}
 	return false
 }
-
-func (markets *Markets) GetSymbols() (symbols map[string]bool) {
-	symbols = make(map[string]bool)
-	markets.bidAsks.Range(func(key, value interface{}) bool {
-		symbols[key.(string)] = true
-		return true
-	})
-	return
-}

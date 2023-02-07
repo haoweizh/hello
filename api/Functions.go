@@ -73,8 +73,8 @@ func RequireDepthChanReset(markets *model.Markets, market string) bool {
 		return true
 	}
 	now := util.GetNowUnixMillion()
-	symbols := markets.GetSymbols()
-	validChannels := 0
+	validSymbols := 0
+	symbols := GetMarketSymbols(market)
 	for symbol := range symbols {
 		_, bidAsk := markets.GetBidAsk(symbol, market)
 		if bidAsk == nil {
@@ -82,12 +82,12 @@ func RequireDepthChanReset(markets *model.Markets, market string) bool {
 		}
 		delay := float64(now - int64(bidAsk.Ts))
 		if delay < model.AppConfig.Delay {
-			validChannels++
+			validSymbols++
 		}
 	}
 	util.Notice(fmt.Sprintf(`RequireDepthChanReset %s %d  %f valid %d in %d`,
-		market, now, model.AppConfig.Delay, validChannels, len(symbols)))
-	return validChannels*2 < len(symbols) || len(symbols)-validChannels > 30
+		market, now, model.AppConfig.Delay, validSymbols, len(symbols)))
+	return validSymbols*2 < len(symbols) || len(symbols)-validSymbols > 30
 }
 
 func MustCancel(key, secret, market, symbol, orderType, orderId string, mustCancel bool) (res bool) {
