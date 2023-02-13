@@ -405,16 +405,16 @@ func getCandlesBinancePerp(key, secret, symbol string, begin, end time.Time, lim
 	if responseBody == nil {
 		responseBody = signedRequestBinance(key, secret, http.MethodGet, restBinancePerp+"/fapi/v1/klines", true, param)
 	}
-	klineJson, err := util.NewJSON(responseBody)
+	candleJson, err := util.NewJSON(responseBody)
 	errMsg := ``
-	if err != nil || klineJson == nil {
+	if err != nil || candleJson == nil {
 		if err != nil {
 			errMsg = err.Error()
 		}
 		util.SocketInfo(`fail to get binance kline %s %s %s %d %s`, symbol, begin.String(), end.String(), slotSeconds, errMsg)
 		return
 	}
-	items, itemErr := klineJson.Array()
+	items, itemErr := candleJson.Array()
 	if itemErr != nil || len(items) == 0 {
 		if model.AppRedis != nil {
 			model.AppRedis.Del(context.Background(), redisKey)
