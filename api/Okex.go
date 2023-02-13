@@ -926,6 +926,19 @@ func parseOrderOKEX(value map[string]interface{}) (order *model.Order) {
 	return order
 }
 
+func getPriceOKEX(key, secret, symbol string) (success bool, price float64) {
+	param := map[string]interface{}{`instId`: symbol}
+	path := `/api/v5/market/ticker`
+	responseBody, _ := sendSignRequestOKEX(key, secret, http.MethodGet, path, param, nil)
+	tickerJson, err := util.NewJSON(responseBody)
+	if err != nil || tickerJson == nil || tickerJson.Get(`data`) == nil || len(tickerJson.Get(`data`).MustArray()) <= 0 {
+		return false, 0
+	}
+	tickerMap := tickerJson.Get(`data`).MustArray()[0].(map[string]interface{})
+	price, err = strconv.ParseFloat(tickerMap[`last`].(string), 64)
+	return err == nil, price
+}
+
 func queryOpenOrdersOKEX(key, secret, symbol string, isStop bool) (orders []*model.Order) {
 	param := map[string]interface{}{`instId`: symbol}
 	path := `/api/v5/trade/orders-pending`

@@ -12,8 +12,8 @@ import (
 )
 
 const lowestScore = -0.02
-const standardScoreOpen = 0.02  // 开仓标准利润,不得小于0
-const standardScoreClose = 0.01 // 平仓标准利润,不得小于0
+const standardScoreOpen = 0.02 // 开仓标准利润,不得小于0
+// const standardScoreClose = 0.01 // 平仓标准利润,不得小于0
 const lastOrderLength = 8
 const holdingLimitInU = 500000.0
 const openValueLimit = 10000.0
@@ -47,7 +47,7 @@ var placeTick sync.Map                                                       // 
 var crossing bool
 var doCross = false
 
-//var firstComp = false
+// var firstComp = false
 var wsCross = true
 
 type contractMarket struct {
@@ -104,10 +104,13 @@ func GetHoldings(accounts map[string]*model.Account) (holding [][]interface{}) {
 			uniAccounts[account.Key] = account
 		}
 	}
+	var defaultKey, defaultSecret string
 	for _, account := range uniAccounts {
 		if account == nil {
 			continue
 		}
+		defaultKey = account.Key
+		defaultSecret = account.Secret
 		value, ok := spotMarkets.Load(account.Key)
 		if ok && value != nil {
 			sm := value.(*spotMarket)
@@ -143,7 +146,7 @@ func GetHoldings(accounts map[string]*model.Account) (holding [][]interface{}) {
 					success, _, coin, _ := model.GetFromStandard(position.Market, position.Currency)
 					if success {
 						coinHold[coin] += position.Holding
-						_, price := model.AppMarkets.GetPriceForce(position.Currency, position.Market, api.GetMarkets())
+						_, price := api.GetPriceForce(account.Key, account.Secret, position.Currency, position.Market)
 						holdingLine := []interface{}{position.Market, coin, position.Currency,
 							position.Holding, math.Round(price * position.Holding), valid}
 						coinValue[coin] += math.Round(price * position.Holding)
@@ -165,8 +168,9 @@ func GetHoldings(accounts map[string]*model.Account) (holding [][]interface{}) {
 	}
 	for i := range holding {
 		coin := holding[i][1].(string)
+		market := holding[i][0].(string)
 		if coinPrice[coin] == 0 {
-			_, coinPrice[coin] = model.AppMarkets.GetPriceForce(coin+model.UniStandardTail[model.MarketTypeSpot], ``, api.GetMarkets())
+			_, coinPrice[coin] = api.GetPriceForce(defaultKey, defaultSecret, coin+model.UniStandardTail[model.MarketTypeSpot], market)
 		}
 		money := math.Floor(coinHold[coin]*coinPrice[coin]/10) * 10
 		if money < 0 {

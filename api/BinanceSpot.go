@@ -327,7 +327,7 @@ func getBalanceBinanceSpot(key string, secret string) (success bool, balances []
 		}
 		if balance.UsdValue == 0 && balance.Amount > 0 {
 			symbolStandard := balance.Coin + model.UniStandardTail[model.MarketTypeSpot]
-			_, price := model.AppMarkets.GetPriceForce(symbolStandard, model.BinanceSpot, GetMarkets())
+			_, price := GetPriceForce(key, secret, symbolStandard, model.BinanceSpot)
 			balance.UsdValue = balance.Amount * price
 		}
 		//if asset[`netAsset`] != nil {
@@ -339,6 +339,24 @@ func getBalanceBinanceSpot(key string, secret string) (success bool, balances []
 		balances = append(balances, balance)
 	}
 	return true, balances
+}
+
+func getPriceBinanceSpot(key, secret, symbol string) (success bool, price float64) {
+	success, _, _, dialectSymbol := model.GetFromStandard(model.BinanceSpot, symbol)
+	if !success {
+		return false, 0
+	}
+	client := binance.NewClient(key, secret)
+	resPrice, err := client.NewListPricesService().Symbol(dialectSymbol).Do(context.Background())
+	if err != nil && !strings.Contains(err.Error(), `-2010`) {
+		util.Notice("getPriceBinanceSpot err: " + err.Error() + " symbol: " + symbol)
+		return false, 0
+	}
+	if len(resPrice) > 0 {
+		price, err = strconv.ParseFloat(resPrice[0].Price, 64)
+		return err == nil, price
+	}
+	return true, 0
 }
 
 func queryOrderBinanceSpot(key, secret, symbol string, orderId string) (order *model.Order) {

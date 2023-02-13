@@ -400,7 +400,7 @@ func getBalanceBybitSpot(key, secret string) (success bool, balances []*model.Ba
 				balance.FrozenAmount, _ = strconv.ParseFloat(value[`locked`].(string), 64)
 			}
 			symbolStandard := balance.Coin + model.UniStandardTail[model.MarketTypeSpot]
-			_, price := model.AppMarkets.GetPriceForce(symbolStandard, model.BybitSpot, GetMarkets())
+			_, price := GetPriceForce(key, secret, symbolStandard, model.BybitSpot)
 			balance.UsdValue = balance.Amount * price
 			balances = append(balances, balance)
 		}

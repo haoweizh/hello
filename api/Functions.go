@@ -12,6 +12,8 @@ import (
 )
 
 var requireReset sync.Map
+var lastPrice sync.Map     // market_symbol, price
+var lastPriceTime sync.Map // market_symbol, Time
 var symbolLock sync.Mutex
 var tradeMax = make(map[string]map[string][]float64)        // key - symbol - [maxBuy合约张数/币币个数, maxSell]
 var okTradeMaxResetTime = make(map[string]map[string]int64) // key - symbol - init time in second
@@ -247,6 +249,34 @@ func GetCandle(key, secret, market, symbol string, slotSeconds int, begin, end t
 	return
 }
 
+// GetPriceForce 返回tick价格
+func GetPriceForce(key, secret, symbol, market string) (result bool, price float64) {
+	getBidAsk, bidAsk := model.AppMarkets.GetBidAsk(symbol, market)
+	if getBidAsk && bidAsk != nil {
+		return true, bidAsk.Bids[0].Price
+	}
+	value, okPrice := lastPrice.Load(market + `_` + symbol)
+	priceTime, okTime := lastPriceTime.Load(market + `_` + symbol)
+	if okPrice && okTime && value != nil && priceTime.(time.Time).Add(time.Minute*10).After(time.Now()) {
+		return true, value.(float64)
+	}
+	switch market {
+	case model.Gate:
+		result, price = getPriceGate(key, secret, symbol)
+	case model.OKEX:
+		result, price = getPriceOKEX(key, secret, symbol)
+	case model.BinancePerp:
+		result, price = getPriceBinancePerp(key, secret, symbol)
+	case model.BinanceSpot:
+		result, price = getPriceBinanceSpot(key, secret, symbol)
+	}
+	if result {
+		lastPriceTime.Store(market+`_`+symbol, time.Now())
+		lastPrice.Store(market+`_`+symbol, price)
+	}
+	return result, price
+}
+
 func GetTurtleCandle(key, secret, market, symbol string, slotSeconds int, timeCandle time.Time) (candle *model.Candle) {
 	value, ok := candleMap.Load(fmt.Sprintf(`%s_%s_%d_%s`, market, symbol, slotSeconds, timeCandle.Format(time.RFC3339)))
 	if ok && value != nil {
@@ -327,7 +357,7 @@ func GetBalances(key, secret, market string) (
 				totalInUsd += balance.Amount
 			} else {
 				symbolStandard := balance.Coin + model.UniStandardTail[model.MarketTypeSpot]
-				_, price := model.AppMarkets.GetPriceForce(symbolStandard, market, GetMarkets())
+				_, price := GetPriceForce(key, secret, symbolStandard, market)
 				totalInUsd += price * balance.Amount
 			}
 		}

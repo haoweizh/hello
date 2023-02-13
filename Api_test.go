@@ -336,7 +336,7 @@ func Test_download(t *testing.T) {
 func Test_wallet(t *testing.T) {
 	model.NewConfig()
 	var key, secret string
-	market := model.BybitPerp
+	market := model.BinanceSpot
 	switch market {
 	case model.Ftx:
 		key = model.AppConfig.FtxKey
@@ -352,7 +352,13 @@ func Test_wallet(t *testing.T) {
 	case model.BybitPerp:
 		key = model.AppConfig.BybitKey
 		secret = model.AppConfig.BybitSecret
+	case model.Gate:
+		key = model.AppConfig.GateKey
+		secret = model.AppConfig.GateSecret
 	}
+	success, price := api.GetPriceForce(key, secret, `BTC_USDT`, market)
+	success, price = api.GetPriceForce(key, secret, `BTC_USDT`, market)
+	fmt.Println(fmt.Sprintf(`%v %f`, success, price))
 	symbol := `HNT_PERP`
 	//order := api.PlaceOrder(key, secret, model.OrderSideBuy, model.OrderTypeStop,
 	//	market, symbol, ``, 4444, 4444, 0.1, false, nil, nil)

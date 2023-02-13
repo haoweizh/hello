@@ -573,6 +573,24 @@ func setPosSideBinancePerp(key, secret string) {
 	}
 }
 
+func getPriceBinancePerp(key, secret, symbol string) (success bool, price float64) {
+	success, _, _, dialectSymbol := model.GetFromStandard(model.BinancePerp, symbol)
+	if !success {
+		return false, 0
+	}
+	client := futures.NewClient(key, secret)
+	resPrice, err := client.NewListPricesService().Symbol(dialectSymbol).Do(context.Background())
+	if err != nil && !strings.Contains(err.Error(), `-2010`) {
+		util.Notice("getPriceBinanceSpot err: " + err.Error() + " symbol: " + symbol)
+		return false, 0
+	}
+	if len(resPrice) > 0 {
+		price, err = strconv.ParseFloat(resPrice[0].Price, 64)
+		return err == nil, price
+	}
+	return true, 0
+}
+
 func SetLeverageBinancePerp(key, secret, symbol string, leverage int) (success bool) {
 	ok, _, _, dialectSymbol := model.GetFromStandard(model.BinancePerp, symbol)
 	if !ok {

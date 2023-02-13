@@ -430,7 +430,7 @@ func getBalanceGate(key string, secret string) (success bool, balances []*model.
 			// 此处未计算可以借入的金额
 			balance.AvailableWithBorrow, _ = strconv.ParseFloat(account.Available, 64)
 			balance.Amount = balance.AvailableWithBorrow + balance.FrozenAmount - balance.Borrow
-			_, price := model.AppMarkets.GetPriceForce(balance.Coin+model.UniStandardTail[model.MarketTypeSpot], model.Gate, GetMarkets())
+			_, price := GetPriceForce(key, secret, balance.Coin+model.UniStandardTail[model.MarketTypeSpot], model.Gate)
 			balance.UsdValue = balance.Amount * price
 			balances = append(balances, balance)
 		}
@@ -454,7 +454,7 @@ func getBalanceGate(key string, secret string) (success bool, balances []*model.
 			// 此处未计算可以借入的金额
 			balance.AvailableWithBorrow, _ = strconv.ParseFloat(item.Available, 64)
 			balance.Amount = balance.AvailableWithBorrow + balance.FrozenAmount - balance.Borrow
-			_, price := model.AppMarkets.GetPriceForce(balance.Coin+model.UniStandardTail[model.MarketTypeSpot], model.Gate, GetMarkets())
+			_, price := GetPriceForce(key, secret, balance.Coin+model.UniStandardTail[model.MarketTypeSpot], model.Gate)
 			balance.UsdValue = balance.Amount * price
 			balances = append(balances, balance)
 		}
@@ -501,6 +501,30 @@ func getPositionsGate(key string, secret string) (success bool, positions []*mod
 		}
 	}
 	return true, positions, accountValue, available
+}
+
+func getPriceGate(key, secret, symbol string) (success bool, price float64) {
+	client, ctx := getClientGate(key, secret)
+	_, marketType, _, dialectSymbol := model.GetFromStandard(model.Gate, symbol)
+	if marketType == model.MarketTypeSpot {
+		param := &gateApi.ListTickersOpts{CurrencyPair: optional.NewString(dialectSymbol)}
+		tickers, _, _ := client.SpotApi.ListTickers(ctx, param)
+		if tickers != nil && len(tickers) > 0 {
+			tickerBytes, err := json.Marshal(tickers[0].Last)
+			if err == nil {
+				str := strings.Replace(string(tickerBytes), `"`, ``, -1)
+				price, err = strconv.ParseFloat(str, 64)
+				return err == nil, price
+			}
+		}
+	} else if marketType == model.MarketTypePerp {
+		contract, _, err := client.FuturesApi.GetFuturesContract(ctx, `usdt`, dialectSymbol)
+		if err == nil {
+			price, err = strconv.ParseFloat(contract.LastPrice, 64)
+			return err == nil, price
+		}
+	}
+	return false, 0
 }
 
 func cancelOrderGate(key, secret, symbol, orderId string) (result bool) {

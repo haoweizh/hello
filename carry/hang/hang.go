@@ -16,7 +16,7 @@ var doWork = false
 var hanging = false
 var placeTime sync.Map // market_symbol/timeInMilli
 var hangSide sync.Map  // market_symbol/orderSide
-//var hangPrice sync.Map // market_symbol/bid1Price-ask1Price
+// var hangPrice sync.Map // market_symbol/bid1Price-ask1Price
 var dealInU sync.Map // market_symbol_timeStr/deal_in_u
 var hangLock sync.Mutex
 
@@ -182,7 +182,7 @@ func refreshDeal() {
 								if strings.EqualFold(balance.Coin, `usd`) || strings.EqualFold(balance.Coin, `usdt`) {
 									usd += balance.Amount
 								} else if balance.Coin == coin {
-									_, price := model.AppMarkets.GetPriceForce(setting.Symbol, setting.Market, api.GetMarkets())
+									_, price := api.GetPriceForce(account.Key, account.Secret, setting.Symbol, setting.Market)
 									usdCoin = balance.Amount * price
 								}
 							}

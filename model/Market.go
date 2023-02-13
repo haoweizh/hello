@@ -61,24 +61,6 @@ func (markets *Markets) ToStringBidAsk(bidAsk *BidAsk) (result string) {
 	return
 }
 
-// GetPriceForce 返回tick价格，如果没有tick，从其他setting对应的market中返回价格
-func (markets *Markets) GetPriceForce(symbol, market string, settingMarkets []string) (result bool, price float64) {
-	value, _ := markets.bidAsks.Load(symbol)
-	if value != nil {
-		item, _ := value.(*sync.Map).Load(market)
-		if item != nil {
-			return true, item.(*BidAsk).Bids[0].Price
-		}
-		for _, settingMarket := range settingMarkets {
-			item, _ = value.(*sync.Map).Load(settingMarket)
-			if item != nil {
-				return true, item.(*BidAsk).Bids[0].Price
-			}
-		}
-	}
-	return false, 0
-}
-
 func (markets *Markets) GetBidAsk(symbol, market string) (result bool, bidAsk *BidAsk) {
 	value, _ := markets.bidAsks.Load(symbol)
 	if value != nil {
