@@ -27,6 +27,7 @@ const Mexc = `mexc`
 const DFuture = `dfuture`
 const BybitSpot = `bybitspot`
 const BybitPerp = `bybitperp`
+const GXZQ = `GXZQ`
 const OKEX = "okex"
 const BinanceSpot = "binancespot"
 const BinancePerp = "binanceperp"
