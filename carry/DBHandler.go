@@ -13,7 +13,7 @@ import (
 var feeIndex int
 var balanceMaintainDay = util.GetNow()
 
-//MaintainBalance
+// MaintainBalance
 func _(key, secret string) {
 	for true {
 		markets := api.GetMarkets()
@@ -168,6 +168,7 @@ func Maintain() {
 	_ = model.AppDB.AutoMigrate(&model.Setting{})
 	_ = model.AppDB.AutoMigrate(&model.Order{})
 	_ = model.AppDB.AutoMigrate(&model.Balance{})
+	_ = model.AppDB.AutoMigrate(&model.Candle{})
 	//model.HandlerMap[model.FunctionDCarry] = dreprecated2.ProcessDCarry
 	//model.HandlerMap[model.FunctionHang] = dreprecated2.ProcessHang
 	//api.CancelOrders(model.AppConfig.FtxKey, model.AppConfig.FtxSecret, model.Ftx, `LINK-PERP`)
