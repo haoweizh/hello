@@ -196,6 +196,8 @@ func GetMultiCandle(key, secret, market string, slotSeconds int, begin, end time
 				temp = getCandlesOKEX(key, secret, symbol, begin, end, int(count), slotSeconds)
 			case model.BinancePerp:
 				temp, isCache = getCandlesBinancePerp(key, secret, symbol, begin, end, int(count), slotSeconds)
+			case model.GXZQ:
+				temp, isCache = getCandlesGXZQDB(symbol, begin, end, slotSeconds)
 			}
 			for j := 0; j < temp.Len(); j++ {
 				candles[j*len(settings)+i] = temp[j]
@@ -229,6 +231,8 @@ func GetCandle(key, secret, market, symbol string, slotSeconds int, begin, end t
 			candles = getCandlesOKEX(key, secret, symbol, begin, end, int(count), slotSeconds)
 		case model.BinancePerp:
 			candles, isCache = getCandlesBinancePerp(key, secret, symbol, begin, end, int(count), slotSeconds)
+		case model.GXZQ:
+			candles, isCache = getCandlesGXZQDB(symbol, begin, end, slotSeconds)
 		}
 		msg := fmt.Sprintf(`get candles %s %s %d seconds %s %d`,
 			market, symbol, slotSeconds, begin.Format(time.RFC3339), len(candles))

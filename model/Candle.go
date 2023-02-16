@@ -5,10 +5,10 @@ import (
 )
 
 type Candle struct {
-	Market     string
-	Symbol     string
-	Begin      time.Time
-	Seconds    int // period of seconds
+	Market     string    `gorm:"index:market_symbol_begin_seconds,unique"`
+	Symbol     string    `gorm:"index:market_symbol_begin_seconds,unique"`
+	Begin      time.Time `gorm:"index:market_symbol_begin_seconds,unique"`
+	Seconds    int       `gorm:"index:market_symbol_begin_seconds,unique"` // period of seconds
 	PriceOpen  float64
 	PriceClose float64
 	PriceHigh  float64

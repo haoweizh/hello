@@ -188,6 +188,9 @@ func Test_BalAndPos(t *testing.T) {
 func Test_CreateReport(t *testing.T) {
 	model.NewConfig()
 	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
+	begin, _ := time.Parse(time.RFC3339, `2018-01-02T00:00:00+08:00`)
+	end, _ := time.Parse(time.RFC3339, `2018-01-06T00:00:00+08:00`)
+	api.GetCandle(``, ``, model.GXZQ, `SHFE.rb`, 86400, begin, end)
 	//coins := `doge,sol,matic,chz,link,ada,bnb,fil,sushi,axs,atom,waves`
 	timeRage := `2020-01-01T00:00:00+00:00~2023-01-02T00:00:00+00:00`
 	coins := `eth`
