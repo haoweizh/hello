@@ -54,6 +54,7 @@ const FunctionCarry = `carry`
 const FunctionCross = `cross`
 const MarketTypePerp = `perp`
 const MarketTypeSpot = `spot`
+const MarketTypeFuture = `future`
 const FunctionDCarry = `dcarry`
 const FunctionComplement = `comp`
 const FunctionCrossOpen = `open`
@@ -67,9 +68,11 @@ var AppConfig *Config
 var AppMarkets = &Markets{}
 var ChannelMaintaining sync.Map // market - bool
 var DialectTail = map[string]map[string]string{
-	MarketTypeSpot: {Gate: `_USDT`, Ftx: `/USD`, OKEX: `-USDT`, BybitSpot: `USDT`, BinanceSpot: `USDT`, KucoinSpot: `-USDT`},
-	MarketTypePerp: {Gate: `_USDT`, Ftx: `-PERP`, OKEX: `-USDT-SWAP`, BybitPerp: `USDT`, BinancePerp: `USDT`, Mexc: `_USDT`, KucoinPerp: `USDTM`}}
-var UniStandardTail = map[string]string{MarketTypeSpot: `_USDT`, MarketTypePerp: `_PERP`}
+	MarketTypeSpot:   {Gate: `_USDT`, Ftx: `/USD`, OKEX: `-USDT`, BybitSpot: `USDT`, BinanceSpot: `USDT`, KucoinSpot: `-USDT`},
+	MarketTypePerp:   {Gate: `_USDT`, Ftx: `-PERP`, OKEX: `-USDT-SWAP`, BybitPerp: `USDT`, BinancePerp: `USDT`, Mexc: `_USDT`, KucoinPerp: `USDTM`},
+	MarketTypeFuture: {GXZQ: ``},
+}
+var UniStandardTail = map[string]string{MarketTypeSpot: `_USDT`, MarketTypePerp: `_PERP`, MarketTypeFuture: `_FUTURE`}
 
 func GetFromStandard(market, standardSymbol string) (success bool, marketType, coinValue, dialectSymbol string) {
 	for mType, tail := range UniStandardTail {

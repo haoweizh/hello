@@ -89,6 +89,11 @@ func (config *Config) GetAccounts(market string) []*Account {
 	}
 	var rateValues, closeValues, keys, secrets, ftxSubAccounts []string
 	switch market {
+	case GXZQ:
+		keys = []string{``}
+		secrets = []string{``}
+		closeValues = []string{`false`}
+		rateValues = []string{`1`}
 	//case Kucoin, DFuture:
 	//	return false, 1
 	case KucoinSpot:
@@ -151,7 +156,7 @@ func (config *Config) GetAccounts(market string) []*Account {
 		}
 		account.CarryClose, _ = strconv.ParseBool(closeValues[i])
 		account.CarryRate, _ = strconv.ParseFloat(rateValues[i], 64)
-		if len(strings.TrimSpace(account.Key)) > 0 {
+		if len(strings.TrimSpace(account.Key)) > 0 || market == GXZQ {
 			accounts[i] = account
 		} else {
 			accounts[i] = nil
