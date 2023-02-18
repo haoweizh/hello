@@ -45,6 +45,7 @@ func ParameterServe() {
 	router.GET(`test`, testSpeed)
 	router.GET(`debug`, debug)
 	router.GET(`wss`, WsPage)
+	router.GET(`gxzq`, simulateGXZQ)
 	var err error
 	if model.AppConfig.Port == `443` {
 		err = router.RunTLS(":"+model.AppConfig.Port, `./server.pem`, `./server.key`)
@@ -104,6 +105,25 @@ func autoSimulate(market, coins string, begin, end time.Time, strBegin, strEnd s
 	regret.ProcessCandles(begin, end, near, far, 86400, allLimit, useNear, market, sign, settings)
 	util.StoreSyncMap(&model.CarryInfo, fmt.Sprintf("done %s %s 使用回撤%v %d~%d 限制%d 总限制%d",
 		strBegin, strEnd, useNear, near, far, limit, allLimit), `auto`)
+}
+
+func simulateGXZQ(c *gin.Context) {
+	strBegin := `2018-01-01T00:00:00`
+	strEnd := `2023-01-03T00:00:00`
+	begin, _ := time.Parse(time.RFC3339, strBegin)
+	end, _ := time.Parse(time.RFC3339, strEnd)
+	coinNames := strings.Split(`CZCE.TA,SHFE.rb,CZCE.MA,DCE.m,CZCE.FG,DCE.c,DCE.i,CZCE.SA,DCE.v,SHFE.hc`, `,`)
+	for i := 7; i <= 25; i++ {
+		for _, coinName := range coinNames {
+			util.Info(fmt.Sprintf(`simulate start %s i %d`, coinName, i))
+			autoSimulate(model.GXZQ, coinName, begin, end, strBegin, strEnd, true, i, 2*i, 3, 3)
+			autoSimulate(model.GXZQ, coinName, begin, end, strBegin, strEnd, false, i, 2*i, 3, 3)
+			autoSimulate(model.GXZQ, coinName, begin, end, strBegin, strEnd, true, i, 2*i, 4, 4)
+			autoSimulate(model.GXZQ, coinName, begin, end, strBegin, strEnd, false, i, 2*i, 4, 4)
+			util.Info(fmt.Sprintf(`simulate done %s i %d`, coinName, i))
+		}
+	}
+	c.String(http.StatusOK, `done`)
 }
 
 // simulate
