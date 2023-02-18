@@ -91,13 +91,13 @@ func autoSimulate(coins string, begin, end time.Time, strBegin, strEnd string, u
 	settings := make(map[string]*model.Setting)
 	for _, coin := range coinArray {
 		symbol := strings.ToUpper(coin) + model.UniStandardTail[model.MarketTypePerp]
-		settings[symbol] = &model.Setting{Market: model.BinancePerp, Symbol: symbol, AmountLimit: float64(limit), GridAmount: RegretTurtleGridAmount}
+		settings[symbol] = &model.Setting{Market: model.GXZQ, Symbol: symbol, AmountLimit: float64(limit), GridAmount: RegretTurtleGridAmount}
 	}
 	sign := fmt.Sprintf(`market%s,coins%s,seconds86400,%s~%s,far%d,near%d,limit%d,allLimit%d,useNear%v`,
-		model.BinancePerp, coins, strBegin, strEnd, far, near, limit, allLimit, useNear)
+		model.GXZQ, coins, strBegin, strEnd, far, near, limit, allLimit, useNear)
 	delNum := model.AppDB.Where(`function=?`, sign).Delete(&model.Order{}).RowsAffected
 	util.Info(`del %s %d rows affected`, sign, delNum)
-	regret.ProcessCandles(begin, end, near, far, 86400, allLimit, useNear, model.BinancePerp, sign, settings)
+	regret.ProcessCandles(begin, end, near, far, 86400, allLimit, useNear, model.GXZQ, sign, settings)
 	util.StoreSyncMap(&model.CarryInfo, fmt.Sprintf("done %s %s 使用回撤%v %d~%d 限制%d 总限制%d",
 		strBegin, strEnd, useNear, near, far, limit, allLimit), `auto`)
 }
@@ -184,11 +184,13 @@ func simulate(c *gin.Context) {
 	} else if auto == `true` && strNew == `true` {
 		for i := 7; i <= 25; i++ {
 			if allLimit == 12 {
-				autoSimulate(coins, begin, end, strBegin, strEnd, true, i, 2*i, 3, 12)
-				autoSimulate(coins, begin, end, strBegin, strEnd, false, i, 2*i, 3, 12)
+				autoSimulate(coins, begin, end, strBegin, strEnd, true, i, 2*i, 3, int(allLimit))
+				autoSimulate(coins, begin, end, strBegin, strEnd, false, i, 2*i, 3, int(allLimit))
 			} else {
-				autoSimulate(coins, begin, end, strBegin, strEnd, true, i, 2*i, 3, 3)
-				autoSimulate(coins, begin, end, strBegin, strEnd, false, i, 2*i, 3, 3)
+				autoSimulate(coins, begin, end, strBegin, strEnd, true, i, 2*i, 3, int(allLimit))
+				autoSimulate(coins, begin, end, strBegin, strEnd, false, i, 2*i, 3, int(allLimit))
+				autoSimulate(coins, begin, end, strBegin, strEnd, true, i, 2*i, 4, int(allLimit))
+				autoSimulate(coins, begin, end, strBegin, strEnd, false, i, 2*i, 4, int(allLimit))
 			}
 		}
 		util.StoreSyncMap(&model.CarryInfo, nil, `auto`)
