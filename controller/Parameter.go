@@ -89,8 +89,12 @@ func WsPage(c *gin.Context) {
 func autoSimulate(market, coins string, begin, end time.Time, strBegin, strEnd string, useNear bool, near, far, limit, allLimit int) {
 	coinArray := strings.Split(coins, `,`)
 	settings := make(map[string]*model.Setting)
+	marketType := model.MarketTypePerp
+	if market == model.GXZQ {
+		marketType = model.MarketTypeFuture
+	}
 	for _, coin := range coinArray {
-		symbol := strings.ToUpper(coin) + model.UniStandardTail[model.MarketTypePerp]
+		symbol := strings.ToUpper(coin) + model.UniStandardTail[marketType]
 		settings[symbol] = &model.Setting{Market: market, Symbol: symbol, AmountLimit: float64(limit), GridAmount: RegretTurtleGridAmount}
 	}
 	sign := fmt.Sprintf(`market%s,coins%s,seconds86400,%s~%s,far%d,near%d,limit%d,allLimit%d,useNear%v`,
