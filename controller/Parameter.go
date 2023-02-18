@@ -86,18 +86,18 @@ func WsPage(c *gin.Context) {
 	go wsClient.Write()
 }
 
-func autoSimulate(coins string, begin, end time.Time, strBegin, strEnd string, useNear bool, near, far, limit, allLimit int) {
+func autoSimulate(market, coins string, begin, end time.Time, strBegin, strEnd string, useNear bool, near, far, limit, allLimit int) {
 	coinArray := strings.Split(coins, `,`)
 	settings := make(map[string]*model.Setting)
 	for _, coin := range coinArray {
 		symbol := strings.ToUpper(coin) + model.UniStandardTail[model.MarketTypePerp]
-		settings[symbol] = &model.Setting{Market: model.GXZQ, Symbol: symbol, AmountLimit: float64(limit), GridAmount: RegretTurtleGridAmount}
+		settings[symbol] = &model.Setting{Market: market, Symbol: symbol, AmountLimit: float64(limit), GridAmount: RegretTurtleGridAmount}
 	}
 	sign := fmt.Sprintf(`market%s,coins%s,seconds86400,%s~%s,far%d,near%d,limit%d,allLimit%d,useNear%v`,
-		model.GXZQ, coins, strBegin, strEnd, far, near, limit, allLimit, useNear)
+		market, coins, strBegin, strEnd, far, near, limit, allLimit, useNear)
 	delNum := model.AppDB.Where(`function=?`, sign).Delete(&model.Order{}).RowsAffected
 	util.Info(`del %s %d rows affected`, sign, delNum)
-	regret.ProcessCandles(begin, end, near, far, 86400, allLimit, useNear, model.GXZQ, sign, settings)
+	regret.ProcessCandles(begin, end, near, far, 86400, allLimit, useNear, market, sign, settings)
 	util.StoreSyncMap(&model.CarryInfo, fmt.Sprintf("done %s %s 使用回撤%v %d~%d 限制%d 总限制%d",
 		strBegin, strEnd, useNear, near, far, limit, allLimit), `auto`)
 }
@@ -184,13 +184,23 @@ func simulate(c *gin.Context) {
 	} else if auto == `true` && strNew == `true` {
 		for i := 7; i <= 25; i++ {
 			if allLimit == 12 {
-				autoSimulate(coins, begin, end, strBegin, strEnd, true, i, 2*i, 3, int(allLimit))
-				autoSimulate(coins, begin, end, strBegin, strEnd, false, i, 2*i, 3, int(allLimit))
+				autoSimulate(market, coins, begin, end, strBegin, strEnd, true, i, 2*i, 3, int(allLimit))
+				autoSimulate(market, coins, begin, end, strBegin, strEnd, false, i, 2*i, 3, int(allLimit))
 			} else {
-				autoSimulate(coins, begin, end, strBegin, strEnd, true, i, 2*i, 3, int(allLimit))
-				autoSimulate(coins, begin, end, strBegin, strEnd, false, i, 2*i, 3, int(allLimit))
-				autoSimulate(coins, begin, end, strBegin, strEnd, true, i, 2*i, 4, int(allLimit))
-				autoSimulate(coins, begin, end, strBegin, strEnd, false, i, 2*i, 4, int(allLimit))
+				if market != model.GXZQ {
+					autoSimulate(market, coins, begin, end, strBegin, strEnd, true, i, 2*i, 3, 3)
+					autoSimulate(market, coins, begin, end, strBegin, strEnd, false, i, 2*i, 3, 3)
+					autoSimulate(market, coins, begin, end, strBegin, strEnd, true, i, 2*i, 4, 4)
+					autoSimulate(market, coins, begin, end, strBegin, strEnd, false, i, 2*i, 4, 4)
+				} else {
+					coinNames := strings.Split(coins, `,`)
+					for _, coinName := range coinNames {
+						autoSimulate(market, coinName, begin, end, strBegin, strEnd, true, i, 2*i, 3, 3)
+						autoSimulate(market, coinName, begin, end, strBegin, strEnd, false, i, 2*i, 3, 3)
+						autoSimulate(market, coinName, begin, end, strBegin, strEnd, true, i, 2*i, 4, 4)
+						autoSimulate(market, coinName, begin, end, strBegin, strEnd, false, i, 2*i, 4, 4)
+					}
+				}
 			}
 		}
 		util.StoreSyncMap(&model.CarryInfo, nil, `auto`)
@@ -216,7 +226,11 @@ func simulate(c *gin.Context) {
 	msg := ``
 	settings := make(map[string]*model.Setting)
 	for i := 0; i < len(coinArray); i++ {
-		symbol := strings.ToUpper(coinArray[i]) + model.UniStandardTail[model.MarketTypePerp]
+		tail := model.UniStandardTail[model.MarketTypePerp]
+		if market == model.GXZQ {
+			tail = model.UniStandardTail[model.MarketTypeFuture]
+		}
+		symbol := strings.ToUpper(coinArray[i]) + tail
 		settings[symbol] = &model.Setting{Market: market, Symbol: symbol, AmountLimit: float64(limit), GridAmount: RegretTurtleGridAmount}
 	}
 	if strNew == `true` {

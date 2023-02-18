@@ -39,8 +39,8 @@ func GetTurtleData(candles []*model.Candle, near, far int, useNear bool) (turtle
 			if (turtleData.lowNear == 0 || turtleData.lowNear > candles[i-j].PriceLow) && j <= turtleData.Near {
 				turtleData.lowNear = candles[i-j].PriceLow
 			}
-			turtleKey := fmt.Sprintf(`%s_%s_%d_%s`, candles[i].Market, candles[i].Symbol, candles[i].Seconds,
-				candles[i].Begin.Format(time.RFC3339))
+			turtleKey := fmt.Sprintf(`%s_%s_%d_%d-%d-%d`, candles[i].Market, candles[i].Symbol, candles[i].Seconds,
+				candles[i].Begin.Year(), candles[i].Begin.Month(), candles[i].Begin.Day())
 			turtleDataMap[turtleKey] = turtleData
 		}
 	}
@@ -240,7 +240,6 @@ func ProcessCandles(start, end time.Time, near, far, turtleSeconds, allLimit int
 	sortedCandles := api.GetMultiCandle(key, secret, market, 60, start, end, settings)
 	ago := int(math.Max(30, float64(far)))
 	duration, _ := time.ParseDuration(fmt.Sprintf(`-%ds`, turtleSeconds*ago))
-	turtleCandles := make(model.Candles, 0)
 	turtleDataMap := make(map[string]*TurtleData)
 	slotLiquidated = make(map[string]bool)
 	if sortedCandles != nil && sortedCandles.Len() > 0 && sortedCandles[0] != nil && sortedCandles[len(sortedCandles)-1] != nil {
@@ -251,10 +250,9 @@ func ProcessCandles(start, end time.Time, near, far, turtleSeconds, allLimit int
 	for _, setting := range settings {
 		temp := api.GetCandle(key, secret, market, setting.Symbol, turtleSeconds, start.Add(duration), end)
 		util.Info(fmt.Sprintf(`get turtle candle %s %s %d setting chance %d`,
-			market, setting.Symbol, len(turtleCandles), setting.Chance))
+			market, setting.Symbol, len(temp), setting.Chance))
 		getTurtleCandles(temp)
 		tempTurtle := GetTurtleData(temp, near, far, useNear)
-		turtleCandles = append(turtleCandles, temp...)
 		for s, data := range tempTurtle {
 			turtleDataMap[s] = data
 		}
@@ -264,13 +262,13 @@ func ProcessCandles(start, end time.Time, near, far, turtleSeconds, allLimit int
 			util.Info(`error nil sorted candle`)
 			continue
 		}
-		turtleTime := time.Unix(sortedCandles[i].Begin.Unix()-sortedCandles[i].Begin.Unix()%int64(turtleSeconds), 0).In(time.UTC)
-		turtleKey := fmt.Sprintf(`%s_%s_%d_%s`, market, sortedCandles[i].Symbol, turtleSeconds, turtleTime.Format(time.RFC3339))
+		turtleKey := fmt.Sprintf(`%s_%s_%d_%d-%d-%d`, market, sortedCandles[i].Symbol, turtleSeconds,
+			sortedCandles[i].Begin.Year(), sortedCandles[i].Begin.Month(), sortedCandles[i].Begin.Day())
 		if turtleDataMap[turtleKey] != nil {
 			handlePrice(turtleDataMap[turtleKey], sortedCandles[i], settings, allLimit, sign)
 		} else {
-			util.Info(fmt.Sprintf(`fail to parse time from %s to %s %s`,
-				sortedCandles[i].Begin.String(), turtleTime.String(), turtleKey))
+			util.Info(fmt.Sprintf(`fail to parse time from %s to %s`,
+				sortedCandles[i].Begin.String(), turtleKey))
 		}
 	}
 }
