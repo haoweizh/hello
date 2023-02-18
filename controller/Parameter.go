@@ -124,9 +124,10 @@ func simulateGXZQ(c *gin.Context) {
 			autoSimulate(model.GXZQ, coinName, begin, end, strBegin, strEnd, false, i, 2*i, 3, 3)
 			autoSimulate(model.GXZQ, coinName, begin, end, strBegin, strEnd, true, i, 2*i, 4, 4)
 			autoSimulate(model.GXZQ, coinName, begin, end, strBegin, strEnd, false, i, 2*i, 4, 4)
-			util.Info(fmt.Sprintf(`simulate done %s i %d`, coinName, i))
+			util.Notice(fmt.Sprintf(`simulate done %s i %d`, coinName, i))
 		}
 	}
+	util.Notice(`simulate all done`)
 	c.String(http.StatusOK, `done`)
 }
 
