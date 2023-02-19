@@ -204,8 +204,8 @@ func Test_CutTail(t *testing.T) {
 	//coins := `doge,sol,matic,chz,link,ada,bnb,fil,sushi,axs,atom,waves`
 	//allLimit := 12
 	market := model.GXZQ
-	strBegin := `2018-01-01T00:00:00+08:00`
-	strEnd := `2023-01-03T00:00:00+08:00`
+	strBegin := `2019-01-01T00:00:00+08:00`
+	strEnd := `2023-01-01T00:00:00+08:00`
 	coinNames := strings.Split(`CZCE.TA,SHFE.rb,CZCE.MA,DCE.m,CZCE.FG,DCE.c,DCE.i,CZCE.SA,DCE.v,SHFE.hc`, `,`)
 	for _, coin := range coinNames {
 		for i := 7; i <= 25; i++ {

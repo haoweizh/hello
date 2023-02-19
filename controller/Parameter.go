@@ -112,8 +112,8 @@ func simulateGXZQ(c *gin.Context) {
 		c.String(http.StatusOK, `can not without env=simulate`)
 		return
 	}
-	strBegin := `2018-02-01T00:00:00+08:00`
-	strEnd := `2023-02-01T00:00:00+08:00`
+	strBegin := `2019-01-01T00:00:00+08:00`
+	strEnd := `2023-01-01T00:00:00+08:00`
 	begin, _ := time.Parse(time.RFC3339, strBegin)
 	end, _ := time.Parse(time.RFC3339, strEnd)
 	coinNames := strings.Split(`CZCE.TA,SHFE.rb,CZCE.MA,DCE.m,CZCE.FG,DCE.c,DCE.i,CZCE.SA,DCE.v,SHFE.hc`, `,`)
