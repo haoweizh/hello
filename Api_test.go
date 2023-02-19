@@ -188,13 +188,15 @@ func Test_BalAndPos(t *testing.T) {
 func Test_CreateReport(t *testing.T) {
 	model.NewConfig()
 	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
-	begin, _ := time.Parse(time.RFC3339, `2018-01-02T00:00:00+08:00`)
-	end, _ := time.Parse(time.RFC3339, `2018-01-06T00:00:00+08:00`)
-	api.GetCandle(``, ``, model.GXZQ, `SHFE.rb`, 86400, begin, end)
+	//begin, _ := time.Parse(time.RFC3339, `2019-01-01T00:00:00+08:00`)
+	//end, _ := time.Parse(time.RFC3339, `2023-01-01T00:00:00+08:00`)
+	market := model.GXZQ
 	//coins := `doge,sol,matic,chz,link,ada,bnb,fil,sushi,axs,atom,waves`
-	timeRage := `2020-01-01T00:00:00+00:00~2023-01-02T00:00:00+00:00`
-	coins := `eth`
-	regret.CreateReport(coins, timeRage)
+	timeRage := `2019-01-01T00:00:00+08:00~2023-01-01T00:00:00+08:00`
+	coinNames := strings.Split(`CZCE.TA,SHFE.rb,CZCE.MA,DCE.m,CZCE.FG,DCE.c,DCE.i,CZCE.SA,DCE.v,SHFE.hc`, `,`)
+	for _, coins := range coinNames {
+		regret.CreateReport(market, coins, timeRage)
+	}
 	//coins := `btc,eth`
 }
 
@@ -216,7 +218,7 @@ func Test_CutTail(t *testing.T) {
 				market, coin, strBegin, strEnd, i*2, i, 3, 3, false)
 			regret.CutTail(market, coin, sign)
 			sign = fmt.Sprintf(`market%s,coins%s,seconds86400,%s~%s,far%d,near%d,limit%d,allLimit%d,useNear%v`,
-				market, coin, strBegin, strEnd, i*2, i, 4, 4, false)
+				market, coin, strBegin, strEnd, i*2, i, 4, 4, true)
 			regret.CutTail(market, coin, sign)
 			sign = fmt.Sprintf(`market%s,coins%s,seconds86400,%s~%s,far%d,near%d,limit%d,allLimit%d,useNear%v`,
 				market, coin, strBegin, strEnd, i*2, i, 4, 4, false)

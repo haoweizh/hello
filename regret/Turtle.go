@@ -364,7 +364,7 @@ func CutTail(market, coins, sign string) {
 	for _, coin := range coinArray {
 		symbol := strings.ToUpper(coin) + model.UniStandardTail[model.MarketTypePerp]
 		if market == model.GXZQ {
-			symbol = strings.ToUpper(coin) + model.UniStandardTail[model.MarketTypeFuture]
+			symbol = coin + model.UniStandardTail[model.MarketTypeFuture]
 		}
 		orders := make([]*model.Order, 0)
 		model.AppDB.Where(`refresh_type=? and function=? and symbol=? and (order_type=? or order_type=?)`,
@@ -385,7 +385,7 @@ func CutTail(market, coins, sign string) {
 
 }
 
-func CreateReport(coins, timeRange string) {
+func CreateReport(market, coins, timeRange string) {
 	rows, _ := model.AppDB.Model(model.Order{}).Select(`function,symbol,order_side,sum(orders.deal_price*amount)/sum(amount),sum(amount)/1000`).
 		Where(`function like ? and function like ?`, `%coins`+coins+`,seconds%`, `%`+timeRange+`%`).
 		Group(`function,symbol,order_side`).Order(`function`).Rows()
@@ -410,6 +410,9 @@ func CreateReport(coins, timeRange string) {
 		line := function
 		for _, coin := range coinArray {
 			symbol = strings.ToUpper(coin) + model.UniStandardTail[model.MarketTypePerp]
+			if market == model.GXZQ {
+				symbol = coin + model.UniStandardTail[model.MarketTypeFuture]
+			}
 			line += fmt.Sprintf(`,%s,%s`, result[function][symbol+`_buy`], result[function][symbol+`_sell`])
 		}
 		util.InfoSync(line)

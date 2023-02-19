@@ -116,16 +116,14 @@ func simulateGXZQ(c *gin.Context) {
 	strEnd := `2023-01-01T00:00:00+08:00`
 	begin, _ := time.Parse(time.RFC3339, strBegin)
 	end, _ := time.Parse(time.RFC3339, strEnd)
-	coinNames := strings.Split(`CZCE.TA,SHFE.rb,CZCE.MA,DCE.m,CZCE.FG,DCE.c,DCE.i,CZCE.SA,DCE.v,SHFE.hc`, `,`)
+	coinNames := `CZCE.TA,SHFE.rb,CZCE.MA,DCE.m,CZCE.FG,DCE.c,DCE.i,CZCE.SA,DCE.v,SHFE.hc`
 	for i := 7; i <= 25; i++ {
-		for _, coinName := range coinNames {
-			util.Notice(fmt.Sprintf(`simulate start %s i %d`, coinName, i))
-			autoSimulate(model.GXZQ, coinName, begin, end, strBegin, strEnd, true, i, 2*i, 3, 3)
-			autoSimulate(model.GXZQ, coinName, begin, end, strBegin, strEnd, false, i, 2*i, 3, 3)
-			autoSimulate(model.GXZQ, coinName, begin, end, strBegin, strEnd, true, i, 2*i, 4, 4)
-			autoSimulate(model.GXZQ, coinName, begin, end, strBegin, strEnd, false, i, 2*i, 4, 4)
-			util.Notice(fmt.Sprintf(`simulate done %s i %d`, coinName, i))
-		}
+		util.Notice(fmt.Sprintf(`simulate start %s i %d`, coinNames, i))
+		autoSimulate(model.GXZQ, coinNames, begin, end, strBegin, strEnd, true, i, 2*i, 3, 12)
+		autoSimulate(model.GXZQ, coinNames, begin, end, strBegin, strEnd, false, i, 2*i, 3, 12)
+		autoSimulate(model.GXZQ, coinNames, begin, end, strBegin, strEnd, true, i, 2*i, 4, 12)
+		autoSimulate(model.GXZQ, coinNames, begin, end, strBegin, strEnd, false, i, 2*i, 4, 12)
+		util.Notice(fmt.Sprintf(`simulate done %s i %d`, coinNames, i))
 	}
 	util.Notice(`simulate all done`)
 	c.String(http.StatusOK, `done`)
