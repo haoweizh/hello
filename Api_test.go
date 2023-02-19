@@ -203,16 +203,27 @@ func Test_CutTail(t *testing.T) {
 	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
 	//coins := `doge,sol,matic,chz,link,ada,bnb,fil,sushi,axs,atom,waves`
 	//allLimit := 12
-	coins := `eth`
-	//allLimit = 3
-	for i := 7; i <= 25; i++ {
-		sign := fmt.Sprintf(`market%s,coins%s,seconds86400,%s~%s,far%d,near%d,limit%d,allLimit%d,useNear%v`,
-			model.BinancePerp, coins, `2020-01-01T00:00:00+00:00`, `2023-01-02T00:00:00+00:00`, i*2, i, 3, 3, true)
-		regret.CutTail(coins, sign)
-		sign = fmt.Sprintf(`market%s,coins%s,seconds86400,%s~%s,far%d,near%d,limit%d,allLimit%d,useNear%v`,
-			model.BinancePerp, coins, `2020-01-01T00:00:00+00:00`, `2023-01-02T00:00:00+00:00`, i*2, i, 3, 3, false)
-		regret.CutTail(coins, sign)
+	market := model.GXZQ
+	strBegin := `2018-01-01T00:00:00+08:00`
+	strEnd := `2023-01-03T00:00:00+08:00`
+	coinNames := strings.Split(`CZCE.TA,SHFE.rb,CZCE.MA,DCE.m,CZCE.FG,DCE.c,DCE.i,CZCE.SA,DCE.v,SHFE.hc`, `,`)
+	for _, coin := range coinNames {
+		for i := 7; i <= 25; i++ {
+			sign := fmt.Sprintf(`market%s,coins%s,seconds86400,%s~%s,far%d,near%d,limit%d,allLimit%d,useNear%v`,
+				market, coin, strBegin, strEnd, i*2, i, 3, 3, true)
+			regret.CutTail(market, coin, sign)
+			sign = fmt.Sprintf(`market%s,coins%s,seconds86400,%s~%s,far%d,near%d,limit%d,allLimit%d,useNear%v`,
+				market, coin, strBegin, strEnd, i*2, i, 3, 3, false)
+			regret.CutTail(market, coin, sign)
+			sign = fmt.Sprintf(`market%s,coins%s,seconds86400,%s~%s,far%d,near%d,limit%d,allLimit%d,useNear%v`,
+				market, coin, strBegin, strEnd, i*2, i, 4, 4, false)
+			regret.CutTail(market, coin, sign)
+			sign = fmt.Sprintf(`market%s,coins%s,seconds86400,%s~%s,far%d,near%d,limit%d,allLimit%d,useNear%v`,
+				market, coin, strBegin, strEnd, i*2, i, 4, 4, false)
+			regret.CutTail(market, coin, sign)
+		}
 	}
+	fmt.Println(`done`)
 }
 
 func Test_initTurtleN(t *testing.T) {

@@ -95,7 +95,7 @@ func autoSimulate(market, coins string, begin, end time.Time, strBegin, strEnd s
 		marketType = model.MarketTypeFuture
 	}
 	for _, coin := range coinArray {
-		symbol := strings.ToUpper(coin) + model.UniStandardTail[marketType]
+		symbol := coin + model.UniStandardTail[marketType]
 		settings[symbol] = &model.Setting{Market: market, Symbol: symbol, AmountLimit: float64(limit), GridAmount: RegretTurtleGridAmount}
 	}
 	sign := fmt.Sprintf(`market%s,coins%s,seconds86400,%s~%s,far%d,near%d,limit%d,allLimit%d,useNear%v`,
@@ -112,14 +112,14 @@ func simulateGXZQ(c *gin.Context) {
 		c.String(http.StatusOK, `can not without env=simulate`)
 		return
 	}
-	strBegin := `2018-01-01T00:00:00+08:00`
-	strEnd := `2023-01-03T00:00:00+08:00`
+	strBegin := `2018-02-01T00:00:00+08:00`
+	strEnd := `2023-02-01T00:00:00+08:00`
 	begin, _ := time.Parse(time.RFC3339, strBegin)
 	end, _ := time.Parse(time.RFC3339, strEnd)
 	coinNames := strings.Split(`CZCE.TA,SHFE.rb,CZCE.MA,DCE.m,CZCE.FG,DCE.c,DCE.i,CZCE.SA,DCE.v,SHFE.hc`, `,`)
 	for i := 7; i <= 25; i++ {
 		for _, coinName := range coinNames {
-			util.Info(fmt.Sprintf(`simulate start %s i %d`, coinName, i))
+			util.Notice(fmt.Sprintf(`simulate start %s i %d`, coinName, i))
 			autoSimulate(model.GXZQ, coinName, begin, end, strBegin, strEnd, true, i, 2*i, 3, 3)
 			autoSimulate(model.GXZQ, coinName, begin, end, strBegin, strEnd, false, i, 2*i, 3, 3)
 			autoSimulate(model.GXZQ, coinName, begin, end, strBegin, strEnd, true, i, 2*i, 4, 4)
@@ -259,7 +259,7 @@ func simulate(c *gin.Context) {
 		if market == model.GXZQ {
 			tail = model.UniStandardTail[model.MarketTypeFuture]
 		}
-		symbol := strings.ToUpper(coinArray[i]) + tail
+		symbol := coinArray[i] + tail
 		settings[symbol] = &model.Setting{Market: market, Symbol: symbol, AmountLimit: float64(limit), GridAmount: RegretTurtleGridAmount}
 	}
 	if strNew == `true` {
