@@ -259,7 +259,7 @@ func ProcessCandles(start, end time.Time, near, far, turtleSeconds, allLimit int
 	}
 	for i := 0; i < len(sortedCandles); i++ {
 		if sortedCandles[i] == nil {
-			util.Info(`error nil sorted candle`)
+			//util.Info(`error nil sorted candle`)
 			continue
 		}
 		turtleKey := fmt.Sprintf(`%s_%s_%d_%d-%d-%d`, market, sortedCandles[i].Symbol, turtleSeconds,
@@ -267,7 +267,7 @@ func ProcessCandles(start, end time.Time, near, far, turtleSeconds, allLimit int
 		if turtleDataMap[turtleKey] != nil {
 			handlePrice(turtleDataMap[turtleKey], sortedCandles[i], settings, allLimit, sign)
 		} else {
-			util.Info(fmt.Sprintf(`fail to parse time from %s to %s`,
+			util.Info(fmt.Sprintf(`fail to get turtle data parse time from %s to %s`,
 				sortedCandles[i].Begin.String(), turtleKey))
 		}
 	}
