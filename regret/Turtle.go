@@ -262,8 +262,14 @@ func ProcessCandles(start, end time.Time, near, far, turtleSeconds, allLimit int
 			//util.Info(`error nil sorted candle`)
 			continue
 		}
+		turtleDate := sortedCandles[i].Begin
+		if market == model.GXZQ { // 因为有夜盘的存在，所以算作前一天的
+			if turtleDate.Hour() < 5 {
+				turtleDate = turtleDate.Add(time.Second * -1 * 86400)
+			}
+		}
 		turtleKey := fmt.Sprintf(`%s_%s_%d_%d-%d-%d`, market, sortedCandles[i].Symbol, turtleSeconds,
-			sortedCandles[i].Begin.Year(), sortedCandles[i].Begin.Month(), sortedCandles[i].Begin.Day())
+			turtleDate.Year(), turtleDate.Month(), turtleDate.Day())
 		if turtleDataMap[turtleKey] != nil {
 			handlePrice(turtleDataMap[turtleKey], sortedCandles[i], settings, allLimit, sign)
 		} else {
