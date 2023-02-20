@@ -206,20 +206,22 @@ func Test_CutTail(t *testing.T) {
 	market := model.GXZQ
 	strBegin := `2019-01-01T00:00:00+08:00`
 	strEnd := `2023-01-01T00:00:00+08:00`
-	coins := `CZCE.TA,SHFE.rb,CZCE.MA,DCE.m,CZCE.FG,DCE.c,DCE.i,CZCE.SA,DCE.v,SHFE.hc`
+	coinNames := strings.Split(`CZCE.CY,CZCE.RM,CZCE.OI,CZCE.SR,CZCE.ZC,CZCE.SM,CZCE.SF,CZCE.UR,CZCE.PF,CZCE.SA,DCE.p,DCE.l,DCE.y,DCE.pp,DCE.j,DCE.jm,DCE.eg,DCE.eb,SHFE.cu,SHFE.al,SHFE.zn,SHFE.pb,SHFE.nl,SHFE.sn,SHFE.bu,SHFE.fu,SHFE.ru`, `,`)
 	for i := 7; i <= 25; i++ {
-		sign := fmt.Sprintf(`market%s,coins%s,seconds86400,%s~%s,far%d,near%d,limit%d,allLimit%d,useNear%v`,
-			market, coins, strBegin, strEnd, i*2, i, 3, 3, true)
-		regret.CutTail(market, coins, sign)
-		sign = fmt.Sprintf(`market%s,coins%s,seconds86400,%s~%s,far%d,near%d,limit%d,allLimit%d,useNear%v`,
-			market, coins, strBegin, strEnd, i*2, i, 3, 3, false)
-		regret.CutTail(market, coins, sign)
-		sign = fmt.Sprintf(`market%s,coins%s,seconds86400,%s~%s,far%d,near%d,limit%d,allLimit%d,useNear%v`,
-			market, coins, strBegin, strEnd, i*2, i, 4, 4, true)
-		regret.CutTail(market, coins, sign)
-		sign = fmt.Sprintf(`market%s,coins%s,seconds86400,%s~%s,far%d,near%d,limit%d,allLimit%d,useNear%v`,
-			market, coins, strBegin, strEnd, i*2, i, 4, 4, false)
-		regret.CutTail(market, coins, sign)
+		for _, coins := range coinNames {
+			sign := fmt.Sprintf(`market%s,coins%s,seconds86400,%s~%s,far%d,near%d,limit%d,allLimit%d,useNear%v`,
+				market, coins, strBegin, strEnd, i*2, i, 3, 12, true)
+			regret.CutTail(market, coins, sign)
+			sign = fmt.Sprintf(`market%s,coins%s,seconds86400,%s~%s,far%d,near%d,limit%d,allLimit%d,useNear%v`,
+				market, coins, strBegin, strEnd, i*2, i, 3, 12, false)
+			regret.CutTail(market, coins, sign)
+			sign = fmt.Sprintf(`market%s,coins%s,seconds86400,%s~%s,far%d,near%d,limit%d,allLimit%d,useNear%v`,
+				market, coins, strBegin, strEnd, i*2, i, 4, 12, true)
+			regret.CutTail(market, coins, sign)
+			sign = fmt.Sprintf(`market%s,coins%s,seconds86400,%s~%s,far%d,near%d,limit%d,allLimit%d,useNear%v`,
+				market, coins, strBegin, strEnd, i*2, i, 4, 12, false)
+			regret.CutTail(market, coins, sign)
+		}
 	}
 	fmt.Println(`done`)
 }
