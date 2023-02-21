@@ -7,10 +7,13 @@ import (
 	"hello/util"
 	"math"
 	"strings"
+	"sync"
 	"time"
 )
 
 const tradeCost = 0.004
+
+var absentTurtles sync.Map // symbol_date bool
 
 type TurtleData struct {
 	highNear, lowNear, highFar, lowFar, n float64
@@ -268,13 +271,17 @@ func ProcessCandles(start, end time.Time, near, far, turtleSeconds, allLimit int
 				turtleDate = turtleDate.Add(time.Second * -1 * 86400)
 			}
 		}
-		turtleKey := fmt.Sprintf(`%s_%s_%d_%d-%d-%d`, market, sortedCandles[i].Symbol, turtleSeconds,
-			turtleDate.Year(), turtleDate.Month(), turtleDate.Day())
+		strDate := fmt.Sprintf(`%d-%d-%d`, turtleDate.Year(), turtleDate.Month(), turtleDate.Day())
+		turtleKey := fmt.Sprintf(`%s_%s_%d_%s`, market, sortedCandles[i].Symbol, turtleSeconds, strDate)
 		if turtleDataMap[turtleKey] != nil {
 			handlePrice(turtleDataMap[turtleKey], sortedCandles[i], settings, allLimit, sign)
 		} else {
-			util.SocketInfo(fmt.Sprintf(`fail to get turtle data parse time from %s to %s`,
-				sortedCandles[i].Begin.String(), turtleKey))
+			value, ok := absentTurtles.Load(sortedCandles[i].Symbol + strDate)
+			if !ok || value == nil || !value.(bool) {
+				absentTurtles.Store(sortedCandles[i].Symbol+strDate, true)
+				util.SocketInfo(fmt.Sprintf(`fail to get turtle data parse time from %s to %s %s %s %s`,
+					sortedCandles[i].Begin.String(), turtleKey, sortedCandles[i].Symbol, strDate))
+			}
 		}
 	}
 }
