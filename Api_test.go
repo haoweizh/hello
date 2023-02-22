@@ -370,7 +370,7 @@ func Test_wallet(t *testing.T) {
 		key = model.AppConfig.GateKey
 		secret = model.AppConfig.GateSecret
 	}
-	success, price := api.GetPriceForce(key, secret, `BTC_USDT`, market)
+	success, price := api.GetPriceForce(key, secret, `LDBNB_USDT`, market)
 	success, price = api.GetPriceForce(key, secret, `BTC_USDT`, market)
 	fmt.Println(fmt.Sprintf(`%v %f`, success, price))
 	symbol := `HNT_PERP`

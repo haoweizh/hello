@@ -266,6 +266,10 @@ func GetPriceForce(key, secret, symbol, market string) (result bool, price float
 	if okPrice && okTime && value != nil && priceTime.(time.Time).Add(time.Minute*10).After(time.Now()) {
 		return true, value.(float64)
 	}
+	coins := strings.Split(symbol, `_`)
+	if len(coins) == 2 && coins[0] == coins[1] {
+		return true, 1
+	}
 	switch market {
 	case model.Gate:
 		result, price = getPriceGate(key, secret, symbol)
@@ -278,6 +282,9 @@ func GetPriceForce(key, secret, symbol, market string) (result bool, price float
 	}
 	if result {
 		lastPriceTime.Store(market+`_`+symbol, time.Now())
+		lastPrice.Store(market+`_`+symbol, price)
+	} else { // 针对查询失败的币种，以0处理，并且4小时内不再重新查询
+		lastPriceTime.Store(market+`_`+symbol, time.Now().Add(time.Second*14400))
 		lastPrice.Store(market+`_`+symbol, price)
 	}
 	return result, price
