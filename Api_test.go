@@ -204,22 +204,22 @@ func Test_CutTail(t *testing.T) {
 	//coins := `doge,sol,matic,chz,link,ada,bnb,fil,sushi,axs,atom,waves`
 	//allLimit := 12
 	market := model.GXZQ
-	strBegin := `2019-01-01T00:00:00+08:00`
-	strEnd := `2023-01-01T00:00:00+08:00`
-	coinNames := strings.Split(`CZCE.CY,CZCE.RM,CZCE.OI,CZCE.SR,CZCE.ZC,CZCE.SM,CZCE.SF,CZCE.UR,CZCE.PF,CZCE.SA,DCE.p,DCE.l,DCE.y,DCE.pp,DCE.j,DCE.jm,DCE.eg,DCE.eb,SHFE.cu,SHFE.al,SHFE.zn,SHFE.pb,SHFE.nl,SHFE.sn,SHFE.bu,SHFE.fu,SHFE.ru`, `,`)
+	strBegin := `2019-01-01T00:00:00+00:00`
+	strEnd := `2023-01-01T00:00:00+00:00`
+	coinNames := strings.Split(`CZCE.CY,CZCE.FG,CZCE.MA,CZCE.OI,CZCE.PF,CZCE.RM,CZCE.SA,CZCE.SF,CZCE.SM,CZCE.SR,CZCE.TA,CZCE.UR,CZCE.ZC,DCE.c,DCE.eb,DCE.eg,DCE.i,DCE.j,DCE.jm,DCE.l,DCE.m,DCE.p,DCE.pp,DCE.v,DCE.y,SHFE.bu,SHFE.cu,SHFE.fu,SHFE.hc,SHFE.pb,SHFE.rb,SHFE.ru`, `,`)
 	for i := 7; i <= 25; i++ {
 		for _, coins := range coinNames {
 			sign := fmt.Sprintf(`market%s,coins%s,seconds86400,%s~%s,far%d,near%d,limit%d,allLimit%d,useNear%v`,
-				market, coins, strBegin, strEnd, i*2, i, 3, 12, true)
+				market, coins, strBegin, strEnd, i*2, i, 3, 3, true)
 			regret.CutTail(market, coins, sign)
 			sign = fmt.Sprintf(`market%s,coins%s,seconds86400,%s~%s,far%d,near%d,limit%d,allLimit%d,useNear%v`,
-				market, coins, strBegin, strEnd, i*2, i, 3, 12, false)
+				market, coins, strBegin, strEnd, i*2, i, 3, 3, false)
 			regret.CutTail(market, coins, sign)
 			sign = fmt.Sprintf(`market%s,coins%s,seconds86400,%s~%s,far%d,near%d,limit%d,allLimit%d,useNear%v`,
-				market, coins, strBegin, strEnd, i*2, i, 4, 12, true)
+				market, coins, strBegin, strEnd, i*2, i, 4, 4, true)
 			regret.CutTail(market, coins, sign)
 			sign = fmt.Sprintf(`market%s,coins%s,seconds86400,%s~%s,far%d,near%d,limit%d,allLimit%d,useNear%v`,
-				market, coins, strBegin, strEnd, i*2, i, 4, 12, false)
+				market, coins, strBegin, strEnd, i*2, i, 4, 4, false)
 			regret.CutTail(market, coins, sign)
 		}
 	}
