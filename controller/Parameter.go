@@ -108,8 +108,15 @@ func autoSimulate(market, coins string, begin, end time.Time, strBegin, strEnd s
 }
 
 func simulateGXZQ(c *gin.Context) {
-	if model.AppConfig.Env != `simulate` {
-		c.String(http.StatusOK, `can not without env=simulate`)
+	session := sessions.Default(c)
+	value := c.Query(`code`)
+	if codes[value] {
+		session.Set(`code`, value)
+		_ = session.Save()
+	}
+	sessionValue := session.Get(`code`)
+	if sessionValue == nil || !codes[sessionValue.(string)] {
+		c.String(http.StatusForbidden, `no right`)
 		return
 	}
 	market := model.GXZQ
