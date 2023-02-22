@@ -392,7 +392,7 @@ func CutTail(market, coins, sign string) {
 				}
 			}()
 		} else {
-			fmt.Println(`can not get orders from ` + sign)
+			util.Notice(fmt.Sprintf(`can not get orders from %s`, sign))
 		}
 	}
 

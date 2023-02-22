@@ -112,20 +112,31 @@ func simulateGXZQ(c *gin.Context) {
 		c.String(http.StatusOK, `can not without env=simulate`)
 		return
 	}
-	strBegin := `2019-01-01T00:00:00+08:00`
-	strEnd := `2023-01-01T00:00:00+08:00`
-	begin, _ := time.Parse(time.RFC3339, strBegin)
-	end, _ := time.Parse(time.RFC3339, strEnd)
-	coinNames := `CZCE.TA,SHFE.rb,CZCE.MA,DCE.m,CZCE.FG,DCE.c,DCE.i,CZCE.SA,DCE.v,SHFE.hc`
+	market := model.GXZQ
+	strBegin := `2019-01-01T00:00:00+00:00`
+	strEnd := `2023-01-01T00:00:00+00:00`
+	coins := `CZCE.CY,CZCE.FG,CZCE.MA,CZCE.OI,CZCE.PF,CZCE.RM,CZCE.SA,CZCE.SF,CZCE.SM,CZCE.SR,CZCE.TA,CZCE.UR,CZCE.ZC,DCE.c,DCE.eb,DCE.eg,DCE.i,DCE.j,DCE.jm,DCE.l,DCE.m,DCE.p,DCE.pp,DCE.v,DCE.y,SHFE.bu,SHFE.cu,SHFE.fu,SHFE.hc,SHFE.pb,SHFE.rb,SHFE.ru`
+	coinNames := strings.Split(coins, `,`)
 	for i := 7; i <= 25; i++ {
-		util.Notice(fmt.Sprintf(`simulate start %s i %d`, coinNames, i))
-		autoSimulate(model.GXZQ, coinNames, begin, end, strBegin, strEnd, true, i, 2*i, 3, 12)
-		autoSimulate(model.GXZQ, coinNames, begin, end, strBegin, strEnd, false, i, 2*i, 3, 12)
-		autoSimulate(model.GXZQ, coinNames, begin, end, strBegin, strEnd, true, i, 2*i, 4, 12)
-		autoSimulate(model.GXZQ, coinNames, begin, end, strBegin, strEnd, false, i, 2*i, 4, 12)
-		util.Notice(fmt.Sprintf(`simulate done %s i %d`, coinNames, i))
+		for _, coins := range coinNames {
+			sign := fmt.Sprintf(`market%s,coins%s,seconds86400,%s~%s,far%d,near%d,limit%d,allLimit%d,useNear%v`,
+				market, coins, strBegin, strEnd, i*2, i, 3, 3, true)
+			regret.CutTail(market, coins, sign)
+			sign = fmt.Sprintf(`market%s,coins%s,seconds86400,%s~%s,far%d,near%d,limit%d,allLimit%d,useNear%v`,
+				market, coins, strBegin, strEnd, i*2, i, 3, 3, false)
+			regret.CutTail(market, coins, sign)
+			sign = fmt.Sprintf(`market%s,coins%s,seconds86400,%s~%s,far%d,near%d,limit%d,allLimit%d,useNear%v`,
+				market, coins, strBegin, strEnd, i*2, i, 4, 4, true)
+			regret.CutTail(market, coins, sign)
+			sign = fmt.Sprintf(`market%s,coins%s,seconds86400,%s~%s,far%d,near%d,limit%d,allLimit%d,useNear%v`,
+				market, coins, strBegin, strEnd, i*2, i, 4, 4, false)
+			regret.CutTail(market, coins, sign)
+		}
 	}
-	util.Notice(`simulate all done`)
+	util.Notice(`done cut tail`)
+	timeRage := fmt.Sprintf(`%s~%s`, strBegin, strEnd)
+	regret.CreateReport(market, coins, timeRage)
+	util.Notice(`done create report`)
 	c.String(http.StatusOK, `done`)
 }
 
