@@ -279,7 +279,7 @@ func ProcessCandles(start, end time.Time, near, far, turtleSeconds, allLimit int
 			value, ok := absentTurtles.Load(sortedCandles[i].Symbol + strDate)
 			if !ok || value == nil || !value.(bool) {
 				absentTurtles.Store(sortedCandles[i].Symbol+strDate, true)
-				util.SocketInfo(fmt.Sprintf(`fail to get turtle data parse time from %s to %s %s %s %s`,
+				util.SocketInfo(fmt.Sprintf(`fail to get turtle data parse time from %s to %s %s %s`,
 					sortedCandles[i].Begin.String(), turtleKey, sortedCandles[i].Symbol, strDate))
 			}
 		}

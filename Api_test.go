@@ -193,10 +193,10 @@ func Test_CreateReport(t *testing.T) {
 	market := model.GXZQ
 	//coins := `doge,sol,matic,chz,link,ada,bnb,fil,sushi,axs,atom,waves`
 	timeRage := `2019-01-01T00:00:00+00:00~2023-01-01T00:00:00+00:00`
-	coins := `CZCE.CY,CZCE.FG,CZCE.MA,CZCE.OI,CZCE.PF,CZCE.RM,CZCE.SA,CZCE.SF,CZCE.SM,CZCE.SR,CZCE.TA,CZCE.UR,CZCE.ZC,DCE.c,DCE.eb,DCE.eg,DCE.i,DCE.j,DCE.jm,DCE.l,DCE.m,DCE.p,DCE.pp,DCE.v,DCE.y,SHFE.bu,SHFE.cu,SHFE.fu,SHFE.hc,SHFE.pb,SHFE.rb,SHFE.ru`
-	for _, s := range strings.Split(coins, `,`) {
-		regret.CreateReport(market, s, timeRage)
-	}
+	coins := `CZCE.FG,DCE.jm,DCE.eb,CZCE.TA,SHFE.fu,DCE.p,CZCE.SF,SHFE.hc,DCE.v,DCE.y`
+	//for _, s := range strings.Split(coins, `,`) {
+	regret.CreateReport(market, coins, timeRage)
+	//}
 	//coins := `btc,eth`
 }
 
@@ -208,22 +208,23 @@ func Test_CutTail(t *testing.T) {
 	market := model.GXZQ
 	strBegin := `2019-01-01T00:00:00+00:00`
 	strEnd := `2023-01-01T00:00:00+00:00`
-	coinNames := strings.Split(`CZCE.CY,CZCE.FG,CZCE.MA,CZCE.OI,CZCE.PF,CZCE.RM,CZCE.SA,CZCE.SF,CZCE.SM,CZCE.SR,CZCE.TA,CZCE.UR,CZCE.ZC,DCE.c,DCE.eb,DCE.eg,DCE.i,DCE.j,DCE.jm,DCE.l,DCE.m,DCE.p,DCE.pp,DCE.v,DCE.y,SHFE.bu,SHFE.cu,SHFE.fu,SHFE.hc,SHFE.pb,SHFE.rb,SHFE.ru`, `,`)
-	for i := 7; i <= 25; i++ {
-		for _, coins := range coinNames {
-			sign := fmt.Sprintf(`market%s,coins%s,seconds86400,%s~%s,far%d,near%d,limit%d,allLimit%d,useNear%v`,
-				market, coins, strBegin, strEnd, i*2, i, 3, 3, true)
-			regret.CutTail(market, coins, sign)
-			sign = fmt.Sprintf(`market%s,coins%s,seconds86400,%s~%s,far%d,near%d,limit%d,allLimit%d,useNear%v`,
-				market, coins, strBegin, strEnd, i*2, i, 3, 3, false)
-			regret.CutTail(market, coins, sign)
-			sign = fmt.Sprintf(`market%s,coins%s,seconds86400,%s~%s,far%d,near%d,limit%d,allLimit%d,useNear%v`,
-				market, coins, strBegin, strEnd, i*2, i, 4, 4, true)
-			regret.CutTail(market, coins, sign)
-			sign = fmt.Sprintf(`market%s,coins%s,seconds86400,%s~%s,far%d,near%d,limit%d,allLimit%d,useNear%v`,
-				market, coins, strBegin, strEnd, i*2, i, 4, 4, false)
-			regret.CutTail(market, coins, sign)
-		}
+	coins := `CZCE.FG,DCE.jm,DCE.eb,CZCE.TA,SHFE.fu,DCE.p,CZCE.SF,SHFE.hc,DCE.v,DCE.y`
+	//coinNames := strings.Split(`CZCE.CY,CZCE.FG,CZCE.MA,CZCE.OI,CZCE.PF,CZCE.RM,CZCE.SA,CZCE.SF,CZCE.SM,CZCE.SR,CZCE.TA,CZCE.UR,CZCE.ZC,DCE.c,DCE.eb,DCE.eg,DCE.i,DCE.j,DCE.jm,DCE.l,DCE.m,DCE.p,DCE.pp,DCE.v,DCE.y,SHFE.bu,SHFE.cu,SHFE.fu,SHFE.hc,SHFE.pb,SHFE.rb,SHFE.ru`, `,`)
+	for i := 7; i <= 21; i++ {
+		//for _, coins := range coinNames {
+		sign := fmt.Sprintf(`market%s,coins%s,seconds86400,%s~%s,far%d,near%d,limit%d,allLimit%d,useNear%v`,
+			market, coins, strBegin, strEnd, i*2, i, 3, 12, true)
+		regret.CutTail(market, coins, sign)
+		sign = fmt.Sprintf(`market%s,coins%s,seconds86400,%s~%s,far%d,near%d,limit%d,allLimit%d,useNear%v`,
+			market, coins, strBegin, strEnd, i*2, i, 3, 12, false)
+		regret.CutTail(market, coins, sign)
+		//sign = fmt.Sprintf(`market%s,coins%s,seconds86400,%s~%s,far%d,near%d,limit%d,allLimit%d,useNear%v`,
+		//	market, coins, strBegin, strEnd, i*2, i, 4, 4, true)
+		//regret.CutTail(market, coins, sign)
+		//sign = fmt.Sprintf(`market%s,coins%s,seconds86400,%s~%s,far%d,near%d,limit%d,allLimit%d,useNear%v`,
+		//	market, coins, strBegin, strEnd, i*2, i, 4, 4, false)
+		//regret.CutTail(market, coins, sign)
+		//}
 	}
 	fmt.Println(`done`)
 }

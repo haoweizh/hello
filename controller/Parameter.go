@@ -125,10 +125,10 @@ func simulateGXZQ(c *gin.Context) {
 	coins := `CZCE.FG,DCE.jm,DCE.eb,CZCE.TA,SHFE.fu,DCE.p,CZCE.SF,SHFE.hc,DCE.v,DCE.y`
 	for i := 7; i <= 21; i++ {
 		sign := fmt.Sprintf(`market%s,coins%s,seconds86400,%s~%s,far%d,near%d,limit%d,allLimit%d,useNear%v`,
-			market, coins, strBegin, strEnd, i*2, i, 3, 3, true)
+			market, coins, strBegin, strEnd, i*2, i, 3, 12, true)
 		regret.CutTail(market, coins, sign)
 		sign = fmt.Sprintf(`market%s,coins%s,seconds86400,%s~%s,far%d,near%d,limit%d,allLimit%d,useNear%v`,
-			market, coins, strBegin, strEnd, i*2, i, 3, 3, false)
+			market, coins, strBegin, strEnd, i*2, i, 3, 12, false)
 		regret.CutTail(market, coins, sign)
 	}
 	util.Notice(`done cut tail`)
@@ -171,7 +171,7 @@ func simulate(c *gin.Context) {
 	auto := c.Query(`auto`)
 	market := c.Query(`market`)
 	if strings.Trim(market, ` `) == `` {
-		market = model.BinancePerp
+		market = model.GXZQ
 	}
 	strTurtleSeconds := c.Query(`seconds`)
 	turtleSeconds, errTurtleSeconds := strconv.ParseInt(strTurtleSeconds, 10, 64)
