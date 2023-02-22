@@ -122,28 +122,16 @@ func simulateGXZQ(c *gin.Context) {
 	market := model.GXZQ
 	strBegin := `2019-01-01T00:00:00+00:00`
 	strEnd := `2023-01-01T00:00:00+00:00`
-	coins := `CZCE.CY,CZCE.FG,CZCE.MA,CZCE.OI,CZCE.PF,CZCE.RM,CZCE.SA,CZCE.SF,CZCE.SM,CZCE.SR,CZCE.TA,CZCE.UR,CZCE.ZC,DCE.c,DCE.eb,DCE.eg,DCE.i,DCE.j,DCE.jm,DCE.l,DCE.m,DCE.p,DCE.pp,DCE.v,DCE.y,SHFE.bu,SHFE.cu,SHFE.fu,SHFE.hc,SHFE.pb,SHFE.rb,SHFE.ru`
-	coinNames := strings.Split(coins, `,`)
-	for i := 7; i <= 25; i++ {
-		for _, coins := range coinNames {
-			sign := fmt.Sprintf(`market%s,coins%s,seconds86400,%s~%s,far%d,near%d,limit%d,allLimit%d,useNear%v`,
-				market, coins, strBegin, strEnd, i*2, i, 3, 3, true)
-			regret.CutTail(market, coins, sign)
-			sign = fmt.Sprintf(`market%s,coins%s,seconds86400,%s~%s,far%d,near%d,limit%d,allLimit%d,useNear%v`,
-				market, coins, strBegin, strEnd, i*2, i, 3, 3, false)
-			regret.CutTail(market, coins, sign)
-			sign = fmt.Sprintf(`market%s,coins%s,seconds86400,%s~%s,far%d,near%d,limit%d,allLimit%d,useNear%v`,
-				market, coins, strBegin, strEnd, i*2, i, 4, 4, true)
-			regret.CutTail(market, coins, sign)
-			sign = fmt.Sprintf(`market%s,coins%s,seconds86400,%s~%s,far%d,near%d,limit%d,allLimit%d,useNear%v`,
-				market, coins, strBegin, strEnd, i*2, i, 4, 4, false)
-			regret.CutTail(market, coins, sign)
-		}
+	coins := `CZCE.FG,DCE.jm,DCE.eb,CZCE.TA,SHFE.fu,DCE.p,CZCE.SF,SHFE.hc,DCE.v,DCE.y`
+	for i := 7; i <= 21; i++ {
+		sign := fmt.Sprintf(`market%s,coins%s,seconds86400,%s~%s,far%d,near%d,limit%d,allLimit%d,useNear%v`,
+			market, coins, strBegin, strEnd, i*2, i, 3, 3, true)
+		regret.CutTail(market, coins, sign)
+		sign = fmt.Sprintf(`market%s,coins%s,seconds86400,%s~%s,far%d,near%d,limit%d,allLimit%d,useNear%v`,
+			market, coins, strBegin, strEnd, i*2, i, 3, 3, false)
+		regret.CutTail(market, coins, sign)
 	}
 	util.Notice(`done cut tail`)
-	timeRage := fmt.Sprintf(`%s~%s`, strBegin, strEnd)
-	regret.CreateReport(market, coins, timeRage)
-	util.Notice(`done create report`)
 	c.String(http.StatusOK, `done`)
 }
 
@@ -227,7 +215,7 @@ func simulate(c *gin.Context) {
 	if sessionValue == nil || !codes[sessionValue.(string)] {
 		strNew = `false`
 	} else if auto == `true` && strNew == `true` {
-		for i := 7; i <= 25; i++ {
+		for i := 7; i <= 21; i++ {
 			if allLimit == 12 {
 				autoSimulate(market, coins, begin, end, strBegin, strEnd, true, i, 2*i, 3, int(allLimit))
 				autoSimulate(market, coins, begin, end, strBegin, strEnd, false, i, 2*i, 3, int(allLimit))
@@ -235,8 +223,6 @@ func simulate(c *gin.Context) {
 				if market != model.GXZQ {
 					autoSimulate(market, coins, begin, end, strBegin, strEnd, true, i, 2*i, 3, 3)
 					autoSimulate(market, coins, begin, end, strBegin, strEnd, false, i, 2*i, 3, 3)
-					autoSimulate(market, coins, begin, end, strBegin, strEnd, true, i, 2*i, 4, 4)
-					autoSimulate(market, coins, begin, end, strBegin, strEnd, false, i, 2*i, 4, 4)
 				} else {
 					coinNames := strings.Split(coins, `,`)
 					for _, coinName := range coinNames {

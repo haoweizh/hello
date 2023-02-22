@@ -192,9 +192,11 @@ func Test_CreateReport(t *testing.T) {
 	//end, _ := time.Parse(time.RFC3339, `2023-01-01T00:00:00+08:00`)
 	market := model.GXZQ
 	//coins := `doge,sol,matic,chz,link,ada,bnb,fil,sushi,axs,atom,waves`
-	timeRage := `2019-01-01T00:00:00+08:00~2023-01-01T00:00:00+08:00`
-	coins := `CZCE.TA,SHFE.rb,CZCE.MA,DCE.m,CZCE.FG,DCE.c,DCE.i,CZCE.SA,DCE.v,SHFE.hc`
-	regret.CreateReport(market, coins, timeRage)
+	timeRage := `2019-01-01T00:00:00+00:00~2023-01-01T00:00:00+00:00`
+	coins := `CZCE.CY,CZCE.FG,CZCE.MA,CZCE.OI,CZCE.PF,CZCE.RM,CZCE.SA,CZCE.SF,CZCE.SM,CZCE.SR,CZCE.TA,CZCE.UR,CZCE.ZC,DCE.c,DCE.eb,DCE.eg,DCE.i,DCE.j,DCE.jm,DCE.l,DCE.m,DCE.p,DCE.pp,DCE.v,DCE.y,SHFE.bu,SHFE.cu,SHFE.fu,SHFE.hc,SHFE.pb,SHFE.rb,SHFE.ru`
+	for _, s := range strings.Split(coins, `,`) {
+		regret.CreateReport(market, s, timeRage)
+	}
 	//coins := `btc,eth`
 }
 
