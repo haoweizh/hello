@@ -252,6 +252,18 @@ func handleSettings() (handled bool) {
 					OpenShortMargin: 3,
 					AmountLimit:     12,
 				}
+				if setting.Market == model.BinancePerp {
+					for _, account := range accounts {
+						success := SetLeverageBinancePerp(account.Key, account.Secret, setting.Symbol, 5)
+						if success {
+							util.Notice(fmt.Sprintf(`set leverage binanceperp %s`, setting.Symbol))
+						} else {
+							util.Notice(fmt.Sprintf(`fail to set leverage binanceperp %s`, setting.Symbol))
+							time.Sleep(time.Minute)
+						}
+					}
+					time.Sleep(time.Second)
+				}
 				util.Notice(`add setting %v`, setting.Symbol)
 			} else {
 				setting = value.(*model.Setting)

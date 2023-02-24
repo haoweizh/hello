@@ -235,7 +235,10 @@ func Test_initTurtleN(t *testing.T) {
 	//res, err := model.AppRedis.Get(context.Background(), `binanceperp_BTC_PERP_30m_1673913600000_1673962933185_27`).Result()
 	//fmt.Println(fmt.Sprintf(`%s %s`, res, err.Error()))
 	today, _ := model.GetMarketToday(model.BinancePerp)
-	settings := map[string]*model.Setting{`BTC_PERP`: nil, `ETH_PERP`: nil}
+	settings := map[string]*model.Setting{`BNX_PERP`: nil, `ETH_PERP`: nil}
+	day := today.Add(time.Hour * -24)
+	candles := api.GetTurtleCandle(model.AppConfig.BinanceKey, model.AppConfig.BinanceSecret, model.BinancePerp, `BNX_PERP`, 86400, day)
+	fmt.Println(candles)
 	api.GetCandle(model.AppConfig.BinanceKey, model.AppConfig.BinanceSecret, model.BinancePerp, `BTC_PERP`,
 		60, time.Now().Add(time.Minute*-1839600), today)
 	sortedCandles := api.GetMultiCandle(model.AppConfig.BinanceKey, model.AppConfig.BinanceSecret, model.BinancePerp, 60,
@@ -258,11 +261,8 @@ func Test_initTurtleN(t *testing.T) {
 	fmt.Println(order.OrderId)
 	api.CancelOrder(model.AppConfig.BinanceKey, model.AppConfig.BinanceSecret, model.BinancePerp, `ETH_PERP`, ``, order.OrderId)
 	//today, _ := model.GetMarketToday(model.BinancePerp)
-	duration, _ := time.ParseDuration(fmt.Sprintf(`%dh`, -24))
-	day := today.Add(duration)
-	candle := api.GetTurtleCandle(model.AppConfig.BinanceKey, model.AppConfig.BinanceSecret, model.BinancePerp,
-		`BTC_PERP`, 86400, day)
-	fmt.Println(candle.Begin)
+	//candle := api.GetTurtleCandle(model.AppConfig.BinanceKey, model.AppConfig.BinanceSecret, model.BinancePerp,
+	//	`BTC_PERP`, 86400, day)
 	marketInfos = api.GetMarketInfos(model.BinancePerp)
 	marketInfoArray := model.MarketInfoArray{}
 	for _, info := range marketInfos {

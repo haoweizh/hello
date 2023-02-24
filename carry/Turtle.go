@@ -161,12 +161,15 @@ func GetTurtleData(key, secret string, setting *model.Setting) (turtleData *Turt
 		duration, _ = time.ParseDuration(fmt.Sprintf(`%dh`, -24*i))
 		day := today.Add(duration)
 		candle := api.GetTurtleCandle(key, secret, setting.Market, setting.Symbol, 86400, day)
-		if candle == nil {
+		if candle == nil || candle.PriceHigh == 0 || candle.PriceLow == 0 {
 			if time.Now().Second() == 0 {
 				util.Notice(`can not calc turtleDate as nil candle %s %s %s %s`,
 					setting.Market, setting.Symbol, turtleData.symbol, day.String())
 			}
 			return nil
+		} else {
+			util.Notice(fmt.Sprintf(`get candle for turtle data %s %s %s price %f - %f`,
+				setting.Market, setting.Symbol, day.String(), candle.PriceLow, candle.PriceHigh))
 		}
 		if candle.PriceHigh > turtleData.highDaysFar && i <= turtleData.daysFar {
 			turtleData.highDaysFar = candle.PriceHigh
