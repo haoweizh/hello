@@ -122,7 +122,8 @@ func simulateGXZQ(c *gin.Context) {
 	market := model.GXZQ
 	strBegin := `2019-01-01T00:00:00+00:00`
 	strEnd := `2023-01-01T00:00:00+00:00`
-	coins := `CZCE.FG,DCE.jm,DCE.eb,CZCE.TA,SHFE.fu,DCE.p,CZCE.SF,SHFE.hc,DCE.v,DCE.y`
+	//coins := `CZCE.FG,DCE.jm,DCE.eb,CZCE.TA,SHFE.fu,DCE.p,CZCE.SF,SHFE.hc,DCE.v,DCE.y`
+	coins := `DOGE,SOL,MATIC,CHZ,LINK,ADA,BNB,FIL,SUSHI,AXS,ATOM,WAVES`
 	for i := 3; i <= 21; i++ {
 		sign := fmt.Sprintf(`market%s,coins%s,seconds86400,%s~%s,far%d,near%d,limit%d,allLimit%d,useNear%v`,
 			market, coins, strBegin, strEnd, i*2, i, 3, 912, true)

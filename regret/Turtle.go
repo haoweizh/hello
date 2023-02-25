@@ -56,6 +56,9 @@ func createTurtleOrder(setting *model.Setting, candle *model.Candle, orderSide s
 		(orderSide == model.OrderSideBuy && currentChances >= allLimit)) {
 		return
 	}
+	if amount == 0 {
+		return
+	}
 	order = &model.Order{
 		Amount:      amount,
 		Market:      setting.Market,
