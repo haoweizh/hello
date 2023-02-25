@@ -50,6 +50,18 @@ func GetTurtleData(candles []*model.Candle, near, far int, useNear bool) (turtle
 	return turtleDataMap
 }
 
+//
+//func createTurtleOrdersRe(setting *model.Setting, turtleData *TurtleData, candle *model.Candle, currentChances, allLimit int64) {
+//	priceLong := turtleData.highFar
+//	priceShort := turtleData.lowFar
+//	amountShot := 0.0
+//	amountLong := 0.0
+//	var liquidateLong, liquidateShort bool
+//	if setting.ChanceRe == 0 && !turtleData.liquidated {
+//
+//	}
+//}
+
 func createTurtleOrders(setting *model.Setting, turtleData *TurtleData, candle *model.Candle, currentChances, allLimit int64) {
 	priceLong := turtleData.highFar
 	priceShort := turtleData.lowFar
@@ -57,12 +69,12 @@ func createTurtleOrders(setting *model.Setting, turtleData *TurtleData, candle *
 	amountLong := 0.0
 	var liquidateLong, liquidateShort bool
 	if setting.Chance == 0 && !turtleData.liquidated { // 开初始仓
-		if !slotLiquidated[fmt.Sprintf(`%s_%s_%s`, setting.Market, model.OrderSideBuy, turtleData.begin.String())] {
+		if !slotLiquidated[fmt.Sprintf(`%s_%s_%s_%s`, setting.Market, setting.Symbol, model.OrderSideBuy, turtleData.begin.String())] {
 			amountLong = setting.GridAmount
 		} else {
 			util.Info(fmt.Sprintf(`no new open buy as %s liquated`, turtleData.begin.String()))
 		}
-		if !slotLiquidated[fmt.Sprintf(`%s_%s_%s`, setting.Market, model.OrderSideSell, turtleData.begin.String())] {
+		if !slotLiquidated[fmt.Sprintf(`%s_%s_%s_%s`, setting.Market, setting.Symbol, model.OrderSideSell, turtleData.begin.String())] {
 			amountShot = setting.GridAmount
 		} else {
 			util.Info(fmt.Sprintf(`no new open sell as %s liquated`, turtleData.begin.String()))
@@ -257,7 +269,7 @@ func handlePrice(turtleData *TurtleData, candle *model.Candle, settings map[stri
 		} else {
 			setting.Chance = 0
 			turtleData.liquidated = true
-			slotLiquidated[fmt.Sprintf(`%s_%s_%s`, candle.Market, model.OrderSideBuy, turtleData.begin.String())] = true
+			slotLiquidated[fmt.Sprintf(`%s_%s_%s_%s`, candle.Market, candle.Symbol, model.OrderSideBuy, turtleData.begin.String())] = true
 			util.Info(fmt.Sprintf(`no new open after liquated buy %s %s`, candle.Symbol, turtleData.begin.String()))
 		}
 		setting.PriceX = turtleData.orderLong.Price
