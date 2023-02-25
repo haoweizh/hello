@@ -50,24 +50,77 @@ func GetTurtleData(candles []*model.Candle, near, far int, useNear bool) (turtle
 	return turtleDataMap
 }
 
-//
-//func createTurtleOrdersRe(setting *model.Setting, turtleData *TurtleData, candle *model.Candle, currentChances, allLimit int64) {
-//	priceLong := turtleData.highFar
-//	priceShort := turtleData.lowFar
-//	amountShot := 0.0
-//	amountLong := 0.0
-//	var liquidateLong, liquidateShort bool
-//	if setting.ChanceRe == 0 && !turtleData.liquidated {
-//
-//	}
-//}
+func createTurtleOrder(setting *model.Setting, candle *model.Candle, orderSide string,
+	price, amount float64, liquidate bool, currentChances, allLimit int) (order *model.Order) {
+	if allLimit > 0 && ((orderSide == model.OrderSideSell && currentChances <= -1*allLimit) ||
+		(orderSide == model.OrderSideBuy && currentChances >= allLimit)) {
+		return
+	}
+	order = &model.Order{
+		Amount:      amount,
+		Market:      setting.Market,
+		OrderSide:   orderSide,
+		Price:       price,
+		RefreshType: model.FunctionSimulation,
+		Status:      model.CarryStatusWorking,
+		Symbol:      setting.Symbol,
+		GridPos:     setting.Chance,
+		CreatedAt:   candle.Begin,
+	}
+	if orderSide == model.OrderSideBuy {
+		order.DealPrice = price * (1 + tradeCost)
+		if liquidate {
+			order.OrderType = model.OrderSideLiquidateShort
+		}
+	} else if orderSide == model.OrderSideSell {
+		order.DealPrice = price * (1 - tradeCost)
+		if liquidate {
+			order.OrderType = model.OrderSideLiquidateLong
+		}
+	}
+	util.Info(fmt.Sprintf(`create turtle %s at %s %s %d`, orderSide, candle.Begin.String(), candle.Symbol, setting.Chance))
+	return
+}
 
-func createTurtleOrders(setting *model.Setting, turtleData *TurtleData, candle *model.Candle, currentChances, allLimit int64) {
-	priceLong := turtleData.highFar
-	priceShort := turtleData.lowFar
-	amountShot := 0.0
-	amountLong := 0.0
-	var liquidateLong, liquidateShort bool
+func calcTurtleOrdersRe(setting *model.Setting, turtleData *TurtleData) (priceShort, priceLong, amountShort, amountLong float64, liquidateShort, liquidateLong bool) {
+	priceShort = turtleData.highFar
+	priceLong = turtleData.lowFar
+	if setting.ChanceRe == 0 && !turtleData.liquidated {
+		if !slotLiquidated[fmt.Sprintf(`%s_%s_%s_%s_RE`, setting.Market, setting.Symbol, model.OrderSideBuy, turtleData.begin.String())] {
+			amountLong = setting.GridAmount
+		} else {
+			util.Info(fmt.Sprintf(`no new open buy as %s liquated`, turtleData.begin.String()))
+		}
+		if !slotLiquidated[fmt.Sprintf(`%s_%s_%s_%s_RE`, setting.Market, setting.Symbol, model.OrderSideSell, turtleData.begin.String())] {
+			amountShort = setting.GridAmount
+		} else {
+			util.Info(fmt.Sprintf(`no new open sell as %s liquated`, turtleData.begin.String()))
+		}
+	} else if setting.ChanceRe > 0 {
+		priceLong = math.Min(turtleData.lowFar, setting.PriceXRe-turtleData.n/2)
+		priceShort = turtleData.lowFar + 2*turtleData.n
+		liquidateLong = true
+		amountShort = math.Abs(float64(setting.ChanceRe)) * setting.GridAmount
+		if math.Abs(float64(setting.ChanceRe)) < setting.AmountLimit {
+			amountLong = setting.GridAmount
+		}
+	} else if setting.ChanceRe < 0 {
+		priceShort = math.Max(turtleData.highFar, setting.PriceXRe+turtleData.n/2)
+		priceLong = turtleData.highFar - 2*turtleData.n
+		liquidateShort = true
+		amountLong = math.Abs(float64(setting.ChanceRe)) * setting.GridAmount
+		if math.Abs(float64(setting.ChanceRe)) < setting.AmountLimit {
+			amountShort = setting.GridAmount
+		}
+	}
+	return
+}
+
+// allLimit 小于0代表没有总仓位限制
+func calcTurtleOrders(setting *model.Setting, turtleData *TurtleData) (
+	priceShort, priceLong, amountShort, amountLong float64, liquidateShort, liquidateLong bool) {
+	priceShort = turtleData.lowFar
+	priceLong = turtleData.highFar
 	if setting.Chance == 0 && !turtleData.liquidated { // 开初始仓
 		if !slotLiquidated[fmt.Sprintf(`%s_%s_%s_%s`, setting.Market, setting.Symbol, model.OrderSideBuy, turtleData.begin.String())] {
 			amountLong = setting.GridAmount
@@ -75,7 +128,7 @@ func createTurtleOrders(setting *model.Setting, turtleData *TurtleData, candle *
 			util.Info(fmt.Sprintf(`no new open buy as %s liquated`, turtleData.begin.String()))
 		}
 		if !slotLiquidated[fmt.Sprintf(`%s_%s_%s_%s`, setting.Market, setting.Symbol, model.OrderSideSell, turtleData.begin.String())] {
-			amountShot = setting.GridAmount
+			amountShort = setting.GridAmount
 		} else {
 			util.Info(fmt.Sprintf(`no new open sell as %s liquated`, turtleData.begin.String()))
 		}
@@ -86,7 +139,7 @@ func createTurtleOrders(setting *model.Setting, turtleData *TurtleData, candle *
 		} else {
 			priceShort = turtleData.highFar - 2*turtleData.n
 		}
-		amountShot = float64(setting.Chance) * setting.GridAmount
+		amountShort = float64(setting.Chance) * setting.GridAmount
 		liquidateLong = true
 		if float64(setting.Chance) < setting.AmountLimit {
 			amountLong = setting.GridAmount
@@ -101,51 +154,10 @@ func createTurtleOrders(setting *model.Setting, turtleData *TurtleData, candle *
 		liquidateShort = true
 		amountLong = math.Abs(float64(setting.Chance)) * setting.GridAmount
 		if math.Abs(float64(setting.Chance)) < setting.AmountLimit {
-			amountShot = setting.GridAmount
+			amountShort = setting.GridAmount
 		}
 	}
-	if currentChances >= allLimit {
-		amountLong = 0
-	}
-	if currentChances <= -1*allLimit {
-		amountShot = 0
-	}
-	if amountShot > 0 {
-		turtleData.orderShort = &model.Order{
-			Amount:      amountShot,
-			Market:      setting.Market,
-			OrderSide:   model.OrderSideSell,
-			Price:       priceShort,
-			DealPrice:   priceShort * (1 - tradeCost),
-			RefreshType: model.FunctionSimulation,
-			Status:      model.CarryStatusWorking,
-			Symbol:      setting.Symbol,
-			GridPos:     setting.Chance,
-			CreatedAt:   candle.Begin,
-		}
-		if liquidateLong {
-			turtleData.orderShort.OrderType = model.OrderSideLiquidateLong
-		}
-		util.Info(fmt.Sprintf(`create turtle long at %s %s %d`, candle.Begin.String(), candle.Symbol, setting.Chance))
-	}
-	if amountLong > 0 {
-		turtleData.orderLong = &model.Order{
-			Amount:      amountLong,
-			Market:      setting.Market,
-			OrderSide:   model.OrderSideBuy,
-			Price:       priceLong,
-			DealPrice:   priceLong * (1 + tradeCost),
-			RefreshType: model.FunctionSimulation,
-			Status:      model.CarryStatusWorking,
-			Symbol:      setting.Symbol,
-			GridPos:     setting.Chance,
-			CreatedAt:   candle.Begin,
-		}
-		if liquidateShort {
-			turtleData.orderLong.OrderType = model.OrderSideLiquidateShort
-		}
-		util.Info(fmt.Sprintf(`create turtle short at %s %s %d`, candle.Begin.String(), candle.Symbol, setting.Chance))
-	}
+	return
 }
 
 func getCurrentChances(settings map[string]*model.Setting) (chances int64) {
@@ -256,11 +268,13 @@ func handlePrice(turtleData *TurtleData, candle *model.Candle, settings map[stri
 	}
 	currentChances := getCurrentChances(settings)
 	if turtleData.orderLong == nil && turtleData.orderShort == nil {
-		createTurtleOrders(setting, turtleData, candle, currentChances, int64(allLimit))
+		priceShort, priceLong, amountShort, amountLong, liquidateShort, liquidateLong := calcTurtleOrders(setting, turtleData)
+		turtleData.orderLong = createTurtleOrder(setting, candle, model.OrderSideSell, priceShort, amountShort, liquidateShort, int(currentChances), allLimit)
+		turtleData.orderShort = createTurtleOrder(setting, candle, model.OrderSideBuy, priceLong, amountLong, liquidateLong, int(currentChances), allLimit)
 	}
-	if currentChances >= int64(allLimit) {
+	if currentChances >= int64(allLimit) && allLimit > 0 {
 		turtleData.orderLong = nil
-	} else if currentChances <= -1*int64(allLimit) {
+	} else if currentChances <= -1*int64(allLimit) && allLimit > 0 {
 		turtleData.orderShort = nil
 	}
 	if turtleData.orderLong != nil && candle.PriceHigh >= turtleData.orderLong.Price {
@@ -322,6 +336,7 @@ func getTurtleCandles(candles []*model.Candle) {
 // ProcessCandles
 // setting.AmountLimit 开仓数上限
 // setting.GridAmount 标准一仓的数量
+// allLimit 小于0时代表没有限制
 func ProcessCandles(start, end time.Time, near, far, turtleSeconds, allLimit int, useNear bool, market, sign string, settings map[string]*model.Setting) {
 	if settings == nil || len(settings) == 0 {
 		return
