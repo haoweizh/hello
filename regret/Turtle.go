@@ -51,7 +51,7 @@ func GetTurtleData(candles []*model.Candle, near, far int, useNear bool) (turtle
 }
 
 func createTurtleOrder(setting *model.Setting, candle *model.Candle, orderSide string,
-	price, amount float64, liquidate bool, currentChances, allLimit int) (order *model.Order) {
+	price, amount float64, currentChances, allLimit int) (order *model.Order) {
 	if allLimit > 0 && ((orderSide == model.OrderSideSell && currentChances <= -1*allLimit) ||
 		(orderSide == model.OrderSideBuy && currentChances >= allLimit)) {
 		return nil
@@ -75,12 +75,12 @@ func createTurtleOrder(setting *model.Setting, candle *model.Candle, orderSide s
 	}
 	if orderSide == model.OrderSideBuy {
 		order.DealPrice = price * (1 + tradeCost)
-		if liquidate {
+		if setting.Chance < 0 {
 			order.OrderType = model.OrderSideLiquidateShort
 		}
 	} else if orderSide == model.OrderSideSell {
 		order.DealPrice = price * (1 - tradeCost)
-		if liquidate {
+		if setting.Chance > 0 {
 			order.OrderType = model.OrderSideLiquidateLong
 		}
 	}
@@ -125,7 +125,7 @@ func _(setting *model.Setting, turtleData *TurtleData) (priceShort, priceLong, a
 
 // allLimit 小于0代表没有总仓位限制
 func calcTurtleOrders(setting *model.Setting, turtleData *TurtleData) (
-	priceShort, priceLong, amountShort, amountLong float64, liquidateShort, liquidateLong bool) {
+	priceShort, priceLong, amountShort, amountLong float64) {
 	priceShort = turtleData.lowFar
 	priceLong = turtleData.highFar
 	if setting.Chance == 0 && !turtleData.liquidated { // 开初始仓
@@ -147,7 +147,6 @@ func calcTurtleOrders(setting *model.Setting, turtleData *TurtleData) (
 			priceShort = turtleData.highFar - 2*turtleData.n
 		}
 		amountShort = float64(setting.Chance) * setting.GridAmount
-		liquidateLong = true
 		amountLong = setting.GridAmount
 	} else if setting.Chance < 0 {
 		priceShort = math.Min(turtleData.lowFar, setting.PriceX-turtleData.n/2)
@@ -156,7 +155,6 @@ func calcTurtleOrders(setting *model.Setting, turtleData *TurtleData) (
 		} else {
 			priceLong = turtleData.lowFar + 2*turtleData.n
 		}
-		liquidateShort = true
 		amountLong = math.Abs(float64(setting.Chance)) * setting.GridAmount
 		amountShort = setting.GridAmount
 	}
@@ -194,9 +192,9 @@ func handlePrice(turtleData *TurtleData, candle *model.Candle, settings map[stri
 	}
 	currentChances := getCurrentChances(settings)
 	if turtleData.orderLong == nil && turtleData.orderShort == nil {
-		priceShort, priceLong, amountShort, amountLong, liquidateShort, liquidateLong := calcTurtleOrders(setting, turtleData)
-		turtleData.orderLong = createTurtleOrder(setting, candle, model.OrderSideSell, priceShort, amountShort, liquidateShort, int(currentChances), allLimit)
-		turtleData.orderShort = createTurtleOrder(setting, candle, model.OrderSideBuy, priceLong, amountLong, liquidateLong, int(currentChances), allLimit)
+		priceShort, priceLong, amountShort, amountLong := calcTurtleOrders(setting, turtleData)
+		turtleData.orderShort = createTurtleOrder(setting, candle, model.OrderSideSell, priceShort, amountShort, int(currentChances), allLimit)
+		turtleData.orderLong = createTurtleOrder(setting, candle, model.OrderSideBuy, priceLong, amountLong, int(currentChances), allLimit)
 	}
 	if turtleData.orderLong != nil && candle.PriceHigh >= turtleData.orderLong.Price {
 		if setting.Chance >= 0 {
