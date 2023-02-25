@@ -54,10 +54,13 @@ func createTurtleOrder(setting *model.Setting, candle *model.Candle, orderSide s
 	price, amount float64, liquidate bool, currentChances, allLimit int) (order *model.Order) {
 	if allLimit > 0 && ((orderSide == model.OrderSideSell && currentChances <= -1*allLimit) ||
 		(orderSide == model.OrderSideBuy && currentChances >= allLimit)) {
-		return
+		return nil
+	}
+	if (orderSide == model.OrderSideSell && float64(setting.Chance) <= -1*setting.AmountLimit) || (orderSide == model.OrderSideBuy && float64(setting.Chance) >= setting.AmountLimit) {
+		return nil
 	}
 	if amount == 0 {
-		return
+		return nil
 	}
 	order = &model.Order{
 		Amount:      amount,
@@ -145,9 +148,7 @@ func calcTurtleOrders(setting *model.Setting, turtleData *TurtleData) (
 		}
 		amountShort = float64(setting.Chance) * setting.GridAmount
 		liquidateLong = true
-		if float64(setting.Chance) < setting.AmountLimit {
-			amountLong = setting.GridAmount
-		}
+		amountLong = setting.GridAmount
 	} else if setting.Chance < 0 {
 		priceShort = math.Min(turtleData.lowFar, setting.PriceX-turtleData.n/2)
 		if turtleData.useNear {
@@ -157,9 +158,7 @@ func calcTurtleOrders(setting *model.Setting, turtleData *TurtleData) (
 		}
 		liquidateShort = true
 		amountLong = math.Abs(float64(setting.Chance)) * setting.GridAmount
-		if math.Abs(float64(setting.Chance)) < setting.AmountLimit {
-			amountShort = setting.GridAmount
-		}
+		amountShort = setting.GridAmount
 	}
 	return
 }
@@ -198,11 +197,6 @@ func handlePrice(turtleData *TurtleData, candle *model.Candle, settings map[stri
 		priceShort, priceLong, amountShort, amountLong, liquidateShort, liquidateLong := calcTurtleOrders(setting, turtleData)
 		turtleData.orderLong = createTurtleOrder(setting, candle, model.OrderSideSell, priceShort, amountShort, liquidateShort, int(currentChances), allLimit)
 		turtleData.orderShort = createTurtleOrder(setting, candle, model.OrderSideBuy, priceLong, amountLong, liquidateLong, int(currentChances), allLimit)
-	}
-	if currentChances >= int64(allLimit) && allLimit > 0 {
-		turtleData.orderLong = nil
-	} else if currentChances <= -1*int64(allLimit) && allLimit > 0 {
-		turtleData.orderShort = nil
 	}
 	if turtleData.orderLong != nil && candle.PriceHigh >= turtleData.orderLong.Price {
 		if setting.Chance >= 0 {
