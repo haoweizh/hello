@@ -215,24 +215,9 @@ func simulate(c *gin.Context) {
 	if sessionValue == nil || !codes[sessionValue.(string)] {
 		strNew = `false`
 	} else if auto == `true` && strNew == `true` {
-		for i := 7; i <= 21; i++ {
-			if allLimit == 12 {
-				autoSimulate(market, coins, begin, end, strBegin, strEnd, true, i, 2*i, 3, int(allLimit))
-				autoSimulate(market, coins, begin, end, strBegin, strEnd, false, i, 2*i, 3, int(allLimit))
-			} else {
-				if market != model.GXZQ {
-					autoSimulate(market, coins, begin, end, strBegin, strEnd, true, i, 2*i, 3, 3)
-					autoSimulate(market, coins, begin, end, strBegin, strEnd, false, i, 2*i, 3, 3)
-				} else {
-					coinNames := strings.Split(coins, `,`)
-					for _, coinName := range coinNames {
-						autoSimulate(market, coinName, begin, end, strBegin, strEnd, true, i, 2*i, 3, 3)
-						autoSimulate(market, coinName, begin, end, strBegin, strEnd, false, i, 2*i, 3, 3)
-						autoSimulate(market, coinName, begin, end, strBegin, strEnd, true, i, 2*i, 4, 4)
-						autoSimulate(market, coinName, begin, end, strBegin, strEnd, false, i, 2*i, 4, 4)
-					}
-				}
-			}
+		for i := 3; i <= 21; i++ {
+			autoSimulate(market, coins, begin, end, strBegin, strEnd, true, i, 2*i, 3, int(allLimit))
+			autoSimulate(market, coins, begin, end, strBegin, strEnd, false, i, 2*i, 3, int(allLimit))
 		}
 		util.StoreSyncMap(&model.CarryInfo, nil, `auto`)
 		c.String(http.StatusOK, `auto done`)

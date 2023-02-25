@@ -143,49 +143,82 @@ func getCurrentChances(settings map[string]*model.Setting) (chances int64) {
 	return chances
 }
 
-func handlePriceCombine(turtleData *TurtleData, candle *model.Candle, settings map[string]*model.Setting, allLimit int, sign string) {
-	var setting *model.Setting
-	if settings != nil && candle != nil && settings[candle.Symbol] != nil {
-		setting = settings[candle.Symbol]
-	} else {
-		util.Info(`fail to process handle price`)
-		return
-	}
-	if !turtleData.useNear && candle.PriceHigh > turtleData.highFar {
-		turtleData.highFar = candle.PriceHigh
-		if turtleData.orderShort != nil && setting.Chance > 0 {
-			turtleData.orderShort = nil
-			turtleData.orderLong = nil
-		}
-	}
-	if !turtleData.useNear && candle.PriceLow < turtleData.lowFar {
-		turtleData.lowFar = candle.PriceLow
-		if turtleData.orderLong != nil && setting.Chance < 0 {
-			turtleData.orderShort = nil
-			turtleData.orderLong = nil
-		}
-	}
-
-	if setting.Chance == 0 && setting.ChanceRe == 0 {
-
-	} else if setting.Chance == 0 && setting.ChanceRe > 0 {
-
-	} else if setting.Chance == 0 && setting.ChanceRe < 0 {
-
-	} else if setting.Chance > 0 && setting.ChanceRe > 0 {
-
-	} else if setting.Chance > 0 && setting.ChanceRe == 0 {
-
-	} else if setting.Chance > 0 && setting.ChanceRe < 0 {
-
-	} else if setting.Chance < 0 && setting.ChanceRe > 0 {
-
-	} else if setting.Chance < 0 && setting.ChanceRe == 0 {
-
-	} else if setting.Chance < 0 && setting.ChanceRe < 0 {
-
-	}
-}
+//func handlePriceCombine(turtleData *TurtleData, candle *model.Candle, settings map[string]*model.Setting, allLimit int, sign string) {
+//	var setting *model.Setting
+//	if settings != nil && candle != nil && settings[candle.Symbol] != nil {
+//		setting = settings[candle.Symbol]
+//	} else {
+//		util.Info(`fail to process handle price`)
+//		return
+//	}
+//	if !turtleData.useNear && candle.PriceHigh > turtleData.highFar {
+//		turtleData.highFar = candle.PriceHigh
+//		if turtleData.orderShort != nil && setting.Chance > 0 {
+//			turtleData.orderShort = nil
+//			turtleData.orderLong = nil
+//		}
+//	}
+//	if !turtleData.useNear && candle.PriceLow < turtleData.lowFar {
+//		turtleData.lowFar = candle.PriceLow
+//		if turtleData.orderLong != nil && setting.Chance < 0 {
+//			turtleData.orderShort = nil
+//			turtleData.orderLong = nil
+//		}
+//	}
+//
+//	if setting.Chance == 0 && setting.ChanceRe == 0 {
+//		if candle.PriceHigh > turtleData.highFar {
+//			setting.Chance++
+//			setting.ChanceRe--
+//		} else if candle.PriceLow < turtleData.lowFar {
+//			setting.Chance--
+//			setting.ChanceRe++
+//		}
+//	} else if setting.Chance == 0 && setting.ChanceRe > 0 {
+//		if candle.PriceHigh > turtleData.highFar {
+//			setting.Chance++
+//		} else if candle.PriceLow < turtleData.lowFar {
+//			setting.Chance--
+//		}
+//		if candle.PriceLow < math.Min(turtleData.lowFar, setting.PriceXRe-turtleData.n/2) {
+//			setting.ChanceRe++
+//		}
+//		if candle.PriceHigh > turtleData.lowFar+2*turtleData.n {
+//			setting.ChanceRe = 0
+//		}
+//	} else if setting.Chance == 0 && setting.ChanceRe < 0 {
+//
+//		priceLong = math.Max(priceLong, setting.PriceX+turtleData.n/2)
+//		if turtleData.useNear {
+//			priceShort = math.Max(setting.PriceX-2*turtleData.n, turtleData.lowDaysNear)
+//		} else {
+//			priceShort = math.Max(turtleData.highDaysFar, turtleData.highToday) - 2*turtleData.n
+//		}
+//
+//		priceShort = math.Min(priceShort, setting.PriceX-turtleData.n/2)
+//		if turtleData.useNear {
+//			priceLong = math.Min(setting.PriceX+2*turtleData.n, turtleData.highDaysNear)
+//		} else {
+//			if turtleData.lowToday > 0 {
+//				priceLong = math.Min(turtleData.lowDaysFar, turtleData.lowToday) + 2*turtleData.n
+//			} else {
+//				priceLong = turtleData.lowDaysFar + 2*turtleData.n
+//			}
+//		}
+//	} else if setting.Chance > 0 && setting.ChanceRe > 0 {
+//
+//	} else if setting.Chance > 0 && setting.ChanceRe == 0 {
+//
+//	} else if setting.Chance > 0 && setting.ChanceRe < 0 {
+//
+//	} else if setting.Chance < 0 && setting.ChanceRe > 0 {
+//
+//	} else if setting.Chance < 0 && setting.ChanceRe == 0 {
+//
+//	} else if setting.Chance < 0 && setting.ChanceRe < 0 {
+//
+//	}
+//}
 
 func handlePrice(turtleData *TurtleData, candle *model.Candle, settings map[string]*model.Setting, allLimit int, sign string) {
 	var setting *model.Setting
