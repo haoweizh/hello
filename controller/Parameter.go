@@ -529,7 +529,7 @@ func GetParameters(c *gin.Context) {
 				msgKey := fmt.Sprintf("%s_%s_%s", model.FunctionTurtle, market, symbol)
 				msgValue, ok := util.LoadSyncMap(&model.CarryInfo, account.Key, msgKey)
 				if ok && msgValue != nil {
-					line += msgValue.(string)
+					line += msgValue.(string) + "\n"
 				}
 				sortable := &model.Sortable{Key: symbol.(string), Value: line}
 				lines = append(lines, sortable)
