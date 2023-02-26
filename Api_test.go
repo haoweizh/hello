@@ -193,7 +193,8 @@ func Test_CreateReport(t *testing.T) {
 	market := model.GXZQ
 	//coins := `doge,sol,matic,chz,link,ada,bnb,fil,sushi,axs,atom,waves`
 	timeRage := `2019-01-01T00:00:00+00:00~2023-01-01T00:00:00+00:00`
-	coins := `CZCE.FG,DCE.jm,DCE.eb,CZCE.TA,SHFE.fu,DCE.p,CZCE.SF,SHFE.hc,DCE.v,DCE.y`
+	//coins := `CZCE.FG,DCE.jm,DCE.eb,CZCE.TA,SHFE.fu,DCE.p,CZCE.SF,SHFE.hc,DCE.v,DCE.y`
+	coins := `DOGE,SOL,MATIC,CHZ,LINK,ADA,BNB,FIL,SUSHI,AXS,ATOM,WAVES`
 	//for _, s := range strings.Split(coins, `,`) {
 	regret.CreateReport(market, coins, timeRage)
 	//}
@@ -208,7 +209,8 @@ func Test_CutTail(t *testing.T) {
 	market := model.GXZQ
 	strBegin := `2019-01-01T00:00:00+00:00`
 	strEnd := `2023-01-01T00:00:00+00:00`
-	coins := `CZCE.FG,DCE.jm,DCE.eb,CZCE.TA,SHFE.fu,DCE.p,CZCE.SF,SHFE.hc,DCE.v,DCE.y`
+	//coins := `CZCE.FG,DCE.jm,DCE.eb,CZCE.TA,SHFE.fu,DCE.p,CZCE.SF,SHFE.hc,DCE.v,DCE.y`
+	coins := `DOGE,SOL,MATIC,CHZ,LINK,ADA,BNB,FIL,SUSHI,AXS,ATOM,WAVES`
 	//coinNames := strings.Split(`CZCE.CY,CZCE.FG,CZCE.MA,CZCE.OI,CZCE.PF,CZCE.RM,CZCE.SA,CZCE.SF,CZCE.SM,CZCE.SR,CZCE.TA,CZCE.UR,CZCE.ZC,DCE.c,DCE.eb,DCE.eg,DCE.i,DCE.j,DCE.jm,DCE.l,DCE.m,DCE.p,DCE.pp,DCE.v,DCE.y,SHFE.bu,SHFE.cu,SHFE.fu,SHFE.hc,SHFE.pb,SHFE.rb,SHFE.ru`, `,`)
 	for i := 3; i <= 21; i++ {
 		//for _, coins := range coinNames {

@@ -120,7 +120,7 @@ func simulateGXZQ(c *gin.Context) {
 		return
 	}
 	market := model.GXZQ
-	strBegin := `2019-01-01T00:00:00+00:00`
+	strBegin := `2021-01-01T00:00:00+00:00`
 	strEnd := `2023-01-01T00:00:00+00:00`
 	//coins := `CZCE.FG,DCE.jm,DCE.eb,CZCE.TA,SHFE.fu,DCE.p,CZCE.SF,SHFE.hc,DCE.v,DCE.y`
 	coins := `DOGE,SOL,MATIC,CHZ,LINK,ADA,BNB,FIL,SUSHI,AXS,ATOM,WAVES`
