@@ -131,11 +131,13 @@ func simulateGXZQ(c *gin.Context) {
 		sign := fmt.Sprintf(`market%s,coins%s,seconds86400,%s~%s,far%d,near%d,limit%d,allLimit%d,useNear%v`,
 			market, coins, strBegin, strEnd, i*2, i, 3, 912, true)
 		regret.CutTail(market, coins, sign)
+		util.Notice(`done cut tail %s %s %s`, market, coins, sign)
 		sign = fmt.Sprintf(`market%s,coins%s,seconds86400,%s~%s,far%d,near%d,limit%d,allLimit%d,useNear%v`,
 			market, coins, strBegin, strEnd, i*2, i, 3, 912, false)
 		regret.CutTail(market, coins, sign)
+		util.Notice(`done cut tail %s %s %s`, market, coins, sign)
 	}
-	util.Notice(`done cut tail`)
+	util.Notice(`done cut tail all`)
 	c.String(http.StatusOK, `done`)
 }
 
