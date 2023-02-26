@@ -538,7 +538,7 @@ func GetParameters(c *gin.Context) {
 			sortedLines := &model.SortableArray{Array: lines}
 			sort.Sort(sortedLines)
 			for _, line := range sortedLines.Array {
-				msg = line.Value.(string)
+				msg += line.Value.(string)
 			}
 		}
 		msg += "\n"
