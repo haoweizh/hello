@@ -191,8 +191,9 @@ func Test_CreateReport(t *testing.T) {
 	//begin, _ := time.Parse(time.RFC3339, `2019-01-01T00:00:00+08:00`)
 	//end, _ := time.Parse(time.RFC3339, `2023-01-01T00:00:00+08:00`)
 	market := model.GXZQ
+	market = model.BinancePerp
 	//coins := `doge,sol,matic,chz,link,ada,bnb,fil,sushi,axs,atom,waves`
-	timeRage := `2019-01-01T00:00:00+00:00~2023-01-01T00:00:00+00:00`
+	timeRage := `2021-01-01T00:00:00+00:00~2023-01-01T00:00:00+00:00`
 	//coins := `CZCE.FG,DCE.jm,DCE.eb,CZCE.TA,SHFE.fu,DCE.p,CZCE.SF,SHFE.hc,DCE.v,DCE.y`
 	coins := `DOGE,SOL,MATIC,CHZ,LINK,ADA,BNB,FIL,SUSHI,AXS,ATOM,WAVES`
 	//for _, s := range strings.Split(coins, `,`) {
@@ -207,7 +208,7 @@ func Test_CutTail(t *testing.T) {
 	//coins := `doge,sol,matic,chz,link,ada,bnb,fil,sushi,axs,atom,waves`
 	//allLimit := 12
 	market := model.GXZQ
-	strBegin := `2019-01-01T00:00:00+00:00`
+	strBegin := `2021-01-01T00:00:00+00:00`
 	strEnd := `2023-01-01T00:00:00+00:00`
 	//coins := `CZCE.FG,DCE.jm,DCE.eb,CZCE.TA,SHFE.fu,DCE.p,CZCE.SF,SHFE.hc,DCE.v,DCE.y`
 	coins := `DOGE,SOL,MATIC,CHZ,LINK,ADA,BNB,FIL,SUSHI,AXS,ATOM,WAVES`
