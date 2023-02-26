@@ -16,6 +16,7 @@ import (
 	"math/rand"
 	"net/http"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -509,6 +510,7 @@ func GetParameters(c *gin.Context) {
 		settingMap := api.GetSettings(model.FunctionTurtle, market)
 		msg += fmt.Sprintf("海龟币种：%s \n", market)
 		if settingMap != nil {
+			lines := make([]*model.Sortable, 0)
 			settingMap.Range(func(symbol, value interface{}) bool {
 				if value == nil || value.(*model.Setting).Function != model.FunctionTurtle {
 					return true
@@ -516,20 +518,28 @@ func GetParameters(c *gin.Context) {
 				setting := value.(*model.Setting)
 				turtleData := carry.GetTurtleData(account.Key, account.Secret, setting.Market, setting.Symbol, setting)
 				isTop := true
-				if value.(*model.Setting).SymbolRelated == model.SettingTurtleRemoved {
+				if setting.SymbolRelated == model.SettingTurtleRemoved {
 					isTop = false
-				}
-				msg += fmt.Sprintf("%s 仓数:%d 持仓:%f 成交价:%f top:%v %s\n",
-					symbol, value.(*model.Setting).Chance, value.(*model.Setting).GridAmount, value.(*model.Setting).PriceX, isTop, turtleData.ToString())
-				if value.(*model.Setting).Function == model.FunctionTurtle {
-					showMsg := fmt.Sprintf("%s_%s_%s", model.FunctionTurtle, market, symbol)
-					msgValue, ok := util.LoadSyncMap(&model.CarryInfo, account.Key, showMsg)
-					if ok && msgValue != nil {
-						msg += msgValue.(string) + "\n"
+					if setting.Chance == 0 {
+						return true
 					}
 				}
+				line := fmt.Sprintf("\n%s 仓数:%d 持仓:%f 成交价:%f top:%v %s\n",
+					symbol, setting.Chance, setting.GridAmount, setting.PriceX, isTop, turtleData.ToString())
+				msgKey := fmt.Sprintf("%s_%s_%s", model.FunctionTurtle, market, symbol)
+				msgValue, ok := util.LoadSyncMap(&model.CarryInfo, account.Key, msgKey)
+				if ok && msgValue != nil {
+					line += msgValue.(string)
+				}
+				sortable := &model.Sortable{Key: symbol.(string), Value: line}
+				lines = append(lines, sortable)
 				return true
 			})
+			sortedLines := &model.SortableArray{Array: lines}
+			sort.Sort(sortedLines)
+			for _, line := range sortedLines.Array {
+				msg = line.Value.(string)
+			}
 		}
 		msg += "\n"
 	}
