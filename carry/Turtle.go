@@ -49,16 +49,16 @@ func checkSetTurtling(value bool) (before bool) {
 
 var dataSet = make(map[string]map[string]map[string]*TurtleData) // market - symbol - 2019-12-06 - *turtleData
 
-func calcTurtleAmount(key, secret string, setting *model.Setting, n float64) (amount float64) {
+func calcTurtleAmount(key, secret, market, symbol string, n float64) (amount float64) {
 	var accountValue float64
-	switch setting.Market {
+	switch market {
 	case model.BinancePerp:
-		_, _, accountValue, _ = api.GetPositions(key, secret, setting.Market)
+		_, _, accountValue, _ = api.GetPositions(key, secret, market)
 	case model.Ftx, model.OKEX:
-		_, _, accountValue, _ = api.GetBalances(key, secret, setting.Market)
+		_, _, accountValue, _ = api.GetBalances(key, secret, market)
 	}
 	amount = 0.02 * accountValue / n
-	_, _, coin, _ := model.GetFromStandard(setting.Market, setting.Symbol)
+	_, _, coin, _ := model.GetFromStandard(market, symbol)
 	if model.CommonCoins[strings.ToLower(coin)] {
 		amount = amount / 2
 	} else {
@@ -68,21 +68,19 @@ func calcTurtleAmount(key, secret string, setting *model.Setting, n float64) (am
 	return amount
 }
 
-func clearOrders(key, secret string, setting *model.Setting) {
-	ordersLimit := api.QueryOpenOrders(key, secret, setting.Market, setting.Symbol, false)
-	ordersStop := api.QueryOpenOrders(key, secret, setting.Market, setting.Symbol, true)
+func clearOrders(key, secret, market, symbol string) {
+	ordersLimit := api.QueryOpenOrders(key, secret, market, symbol, false)
+	ordersStop := api.QueryOpenOrders(key, secret, market, symbol, true)
 	for _, order := range ordersLimit {
 		if order != nil {
-			util.Notice(`cancel pending turtle limit order %s %s %s`,
-				setting.Market, setting.Symbol, order.OrderId)
-			api.MustCancel(key, secret, setting.Market, setting.Symbol, model.OrderTypeLimit, order.OrderId, true)
+			util.Notice(`cancel pending turtle limit order %s %s %s`, market, symbol, order.OrderId)
+			api.MustCancel(key, secret, market, symbol, model.OrderTypeLimit, order.OrderId, true)
 		}
 	}
 	for _, order := range ordersStop {
 		if order != nil {
-			util.Notice(`cancel pending turtle stop order %s %s %s`,
-				setting.Market, setting.Symbol, order.OrderId)
-			api.MustCancel(key, secret, setting.Market, setting.Symbol, model.OrderTypeStop, order.OrderId, true)
+			util.Notice(`cancel pending turtle stop order %s %s %s`, market, symbol, order.OrderId)
+			api.MustCancel(key, secret, market, symbol, model.OrderTypeStop, order.OrderId, true)
 		}
 	}
 }
@@ -132,44 +130,44 @@ func adjustPosHolding(key, secret string, setting *model.Setting, turtleData *Tu
 	model.AppDB.Save(setting)
 }
 
-func GetTurtleData(key, secret string, setting *model.Setting) (turtleData *TurtleData) {
-	today, todayStr := model.GetMarketToday(setting.Market)
-	if dataSet[setting.Market] == nil {
-		dataSet[setting.Market] = make(map[string]map[string]*TurtleData)
+func GetTurtleData(key, secret, market, symbol string, setting *model.Setting) (turtleData *TurtleData) {
+	today, todayStr := model.GetMarketToday(market)
+	if dataSet[market] == nil {
+		dataSet[market] = make(map[string]map[string]*TurtleData)
 	}
-	if dataSet[setting.Market][setting.Symbol] == nil {
-		dataSet[setting.Market][setting.Symbol] = make(map[string]*TurtleData)
+	if dataSet[market][symbol] == nil {
+		dataSet[market][symbol] = make(map[string]*TurtleData)
 	}
 	//util.Notice(`need to create turtle ` + setting.Market + setting.Symbol)
 	duration, _ := time.ParseDuration(`-120s`)
-	value, ok := turtleTime.Load(fmt.Sprintf(`%s_%s_%s`, setting.Market, setting.Symbol, todayStr))
-	if (dataSet[setting.Market][setting.Symbol][todayStr] != nil) || (ok && value != nil && time.Now().Add(duration).Before(value.(time.Time))) {
-		return dataSet[setting.Market][setting.Symbol][todayStr]
+	value, ok := turtleTime.Load(fmt.Sprintf(`%s_%s_%s`, market, symbol, todayStr))
+	if (dataSet[market][symbol][todayStr] != nil) || (ok && value != nil && time.Now().Add(duration).Before(value.(time.Time))) {
+		return dataSet[market][symbol][todayStr]
 	}
-	clearOrders(key, secret, setting)
-	turtleTime.Store(fmt.Sprintf(`%s_%s_%s`, setting.Market, setting.Symbol, todayStr), time.Now())
-	_, _, coin, _ := model.GetFromStandard(setting.Market, setting.Symbol)
+	clearOrders(key, secret, market, symbol)
+	turtleTime.Store(fmt.Sprintf(`%s_%s_%s`, market, symbol, todayStr), time.Now())
+	_, _, coin, _ := model.GetFromStandard(market, symbol)
 	far := 18
 	if strings.ToUpper(coin) == `BTC` {
 		far = 50
 	}
-	turtleData = &TurtleData{turtleTime: today, symbol: setting.Symbol, checkTimeBreak: util.GetNow(),
+	turtleData = &TurtleData{turtleTime: today, symbol: symbol, checkTimeBreak: util.GetNow(),
 		checkTimeOpen: util.GetNow().Add(duration), waitBreakLong: false, waitBreakShort: false, breakLong: false,
 		breakShort: false, liquidated: false, daysFar: far, daysNear: far / 2, daysAdjust: 5, useNear: true}
 	indexMax := math.Max(21.0, float64(turtleData.daysFar))
 	for i := 1; i < int(indexMax); i++ {
 		duration, _ = time.ParseDuration(fmt.Sprintf(`%dh`, -24*i))
 		day := today.Add(duration)
-		candle := api.GetTurtleCandle(key, secret, setting.Market, setting.Symbol, 86400, day)
+		candle := api.GetTurtleCandle(key, secret, market, symbol, 86400, day)
 		if candle == nil || candle.PriceHigh == 0 || candle.PriceLow == 0 {
 			if time.Now().Second() == 0 {
 				util.Notice(`can not calc turtleDate as nil candle %s %s %s %s`,
-					setting.Market, setting.Symbol, turtleData.symbol, day.String())
+					market, symbol, turtleData.symbol, day.String())
 			}
 			return nil
 		} else {
 			util.Notice(fmt.Sprintf(`get candle for turtle data %s %s %s price %f - %f`,
-				setting.Market, setting.Symbol, day.String(), candle.PriceLow, candle.PriceHigh))
+				market, symbol, day.String(), candle.PriceLow, candle.PriceHigh))
 		}
 		if candle.PriceHigh > turtleData.highDaysFar && i <= turtleData.daysFar {
 			turtleData.highDaysFar = candle.PriceHigh
@@ -191,14 +189,14 @@ func GetTurtleData(key, secret string, setting *model.Setting) (turtleData *Turt
 		}
 		if i == 1 {
 			turtleData.n = candle.N
-			turtleData.amount = calcTurtleAmount(key, secret, setting, turtleData.n)
+			turtleData.amount = calcTurtleAmount(key, secret, market, symbol, turtleData.n)
 		}
 	}
 	if turtleData.amount > 0 && turtleData.n > 0 {
-		dataSet[setting.Market][setting.Symbol][todayStr] = turtleData
+		dataSet[market][symbol][todayStr] = turtleData
 		adjustPosHolding(key, secret, setting, turtleData)
 		util.Notice(fmt.Sprintf(`%s %s set turtle data: amount:%f n:%f %d:%f-%f %d:%f-%f`,
-			setting.Market, setting.Symbol, turtleData.amount, turtleData.n, turtleData.daysNear, turtleData.lowDaysNear,
+			market, symbol, turtleData.amount, turtleData.n, turtleData.daysNear, turtleData.lowDaysNear,
 			turtleData.highDaysNear, turtleData.daysFar, turtleData.lowDaysFar, turtleData.highDaysFar))
 	}
 	return
@@ -310,7 +308,7 @@ var ProcessTurtle = func(setting *model.Setting, tick *model.BidAsk) {
 		return
 	}
 	account := model.AppConfig.GetAccounts(setting.Market)[0]
-	turtleData := GetTurtleData(account.Key, account.Secret, setting)
+	turtleData := GetTurtleData(account.Key, account.Secret, setting.Market, setting.Symbol, setting)
 	if turtleData == nil || turtleData.n == 0 || turtleData.amount == 0 {
 		if time.Now().Minute() == 0 && time.Now().Second() == 0 {
 			util.Notice(fmt.Sprintf(`fail to get turtle %s %s`, setting.Market, setting.Symbol))
@@ -444,7 +442,7 @@ func setTurtleOrderStatus(function, market, symbol, orderId, status string) {
 	if account == nil {
 		return
 	}
-	turtleData := GetTurtleData(account.Key, account.Secret, setting)
+	turtleData := GetTurtleData(account.Key, account.Secret, market, symbol, setting)
 	if turtleData != nil && turtleData.orderLong != nil {
 		for _, order := range turtleData.orderLong {
 			if order.OrderId == orderId {

@@ -509,18 +509,19 @@ func GetParameters(c *gin.Context) {
 		settingMap := api.GetSettings(model.FunctionTurtle, market)
 		msg += fmt.Sprintf("海龟币种：%s \n", market)
 		if settingMap != nil {
-			settingMap.Range(func(symbol, setting interface{}) bool {
-				if setting == nil || setting.(*model.Setting).Function != model.FunctionTurtle {
+			settingMap.Range(func(symbol, value interface{}) bool {
+				if value == nil || value.(*model.Setting).Function != model.FunctionTurtle {
 					return true
 				}
-				turtleData := carry.GetTurtleData(account.Key, account.Secret, setting.(*model.Setting))
+				setting := value.(*model.Setting)
+				turtleData := carry.GetTurtleData(account.Key, account.Secret, setting.Market, setting.Symbol, setting)
 				isTop := true
-				if setting.(*model.Setting).SymbolRelated == model.SettingTurtleRemoved {
+				if value.(*model.Setting).SymbolRelated == model.SettingTurtleRemoved {
 					isTop = false
 				}
 				msg += fmt.Sprintf("%s 仓数:%d 持仓:%f 成交价:%f top:%v %s\n",
-					symbol, setting.(*model.Setting).Chance, setting.(*model.Setting).GridAmount, setting.(*model.Setting).PriceX, isTop, turtleData.ToString())
-				if setting.(*model.Setting).Function == model.FunctionTurtle {
+					symbol, value.(*model.Setting).Chance, value.(*model.Setting).GridAmount, value.(*model.Setting).PriceX, isTop, turtleData.ToString())
+				if value.(*model.Setting).Function == model.FunctionTurtle {
 					showMsg := fmt.Sprintf("%s_%s_%s", model.FunctionTurtle, market, symbol)
 					msgValue, ok := util.LoadSyncMap(&model.CarryInfo, account.Key, showMsg)
 					if ok && msgValue != nil {
