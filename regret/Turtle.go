@@ -88,41 +88,6 @@ func createTurtleOrder(setting *model.Setting, candle *model.Candle, orderSide s
 	return
 }
 
-// calcTurtleOrdersRe
-func _(setting *model.Setting, turtleData *TurtleData) (priceShort, priceLong, amountShort, amountLong float64, liquidateShort, liquidateLong bool) {
-	priceShort = turtleData.highFar
-	priceLong = turtleData.lowFar
-	if setting.ChanceRe == 0 && !turtleData.liquidated {
-		if !slotLiquidated[fmt.Sprintf(`%s_%s_%s_%s_RE`, setting.Market, setting.Symbol, model.OrderSideBuy, turtleData.begin.String())] {
-			amountLong = setting.GridAmount
-		} else {
-			util.Info(fmt.Sprintf(`no new open buy as %s liquated`, turtleData.begin.String()))
-		}
-		if !slotLiquidated[fmt.Sprintf(`%s_%s_%s_%s_RE`, setting.Market, setting.Symbol, model.OrderSideSell, turtleData.begin.String())] {
-			amountShort = setting.GridAmount
-		} else {
-			util.Info(fmt.Sprintf(`no new open sell as %s liquated`, turtleData.begin.String()))
-		}
-	} else if setting.ChanceRe > 0 {
-		priceLong = math.Min(turtleData.lowFar, setting.PriceXRe-turtleData.n/2)
-		priceShort = turtleData.lowFar + 2*turtleData.n
-		liquidateLong = true
-		amountShort = math.Abs(float64(setting.ChanceRe)) * setting.GridAmount
-		if math.Abs(float64(setting.ChanceRe)) < setting.AmountLimit {
-			amountLong = setting.GridAmount
-		}
-	} else if setting.ChanceRe < 0 {
-		priceShort = math.Max(turtleData.highFar, setting.PriceXRe+turtleData.n/2)
-		priceLong = turtleData.highFar - 2*turtleData.n
-		liquidateShort = true
-		amountLong = math.Abs(float64(setting.ChanceRe)) * setting.GridAmount
-		if math.Abs(float64(setting.ChanceRe)) < setting.AmountLimit {
-			amountShort = setting.GridAmount
-		}
-	}
-	return
-}
-
 // allLimit 小于0代表没有总仓位限制
 func calcTurtleOrders(setting *model.Setting, turtleData *TurtleData) (
 	priceShort, priceLong, amountShort, amountLong float64) {

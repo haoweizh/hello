@@ -516,7 +516,7 @@ func GetParameters(c *gin.Context) {
 					return true
 				}
 				setting := value.(*model.Setting)
-				turtleData := carry.GetTurtleData(account.Key, account.Secret, setting.Market, setting.Symbol, setting)
+				turtleData := carry.GetTurtleData(account.Key, account.Secret, setting.Function, setting.Market, setting.Symbol)
 				isTop := true
 				if setting.SymbolRelated == model.SettingTurtleRemoved {
 					isTop = false

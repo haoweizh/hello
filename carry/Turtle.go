@@ -27,7 +27,7 @@ const turtleTriggerDelta = 0.01
 
 var turtling = false
 var turtleLock sync.Mutex
-var turtleTime sync.Map // market_symbol_day time
+var turtleDataSet *sync.Map // function_market_symbol_2019-12-06 *turtleData
 
 func (turtleData *TurtleData) ToString() (str string) {
 	if turtleData == nil {
@@ -46,8 +46,6 @@ func checkSetTurtling(value bool) (before bool) {
 	}
 	return before
 }
-
-var dataSet = make(map[string]map[string]map[string]*TurtleData) // market - symbol - 2019-12-06 - *turtleData
 
 func calcTurtleAmount(key, secret, market, symbol string, n float64) (amount float64) {
 	var accountValue float64
@@ -130,33 +128,25 @@ func adjustPosHolding(key, secret string, setting *model.Setting, turtleData *Tu
 	model.AppDB.Save(setting)
 }
 
-func GetTurtleData(key, secret, market, symbol string, setting *model.Setting) (turtleData *TurtleData) {
+func GetTurtleData(key, secret, function, market, symbol string) (turtleData *TurtleData) {
 	today, todayStr := model.GetMarketToday(market)
-	if dataSet[market] == nil {
-		dataSet[market] = make(map[string]map[string]*TurtleData)
-	}
-	if dataSet[market][symbol] == nil {
-		dataSet[market][symbol] = make(map[string]*TurtleData)
-	}
 	//util.Notice(`need to create turtle ` + setting.Market + setting.Symbol)
-	duration, _ := time.ParseDuration(`-120s`)
-	value, ok := turtleTime.Load(fmt.Sprintf(`%s_%s_%s`, market, symbol, todayStr))
-	if (dataSet[market][symbol][todayStr] != nil) || (ok && value != nil && time.Now().Add(duration).Before(value.(time.Time))) {
-		return dataSet[market][symbol][todayStr]
+	value, ok := util.LoadSyncMap(turtleDataSet, function, market, symbol, todayStr)
+	if ok && value != nil {
+		return value.(*TurtleData)
 	}
 	clearOrders(key, secret, market, symbol)
-	turtleTime.Store(fmt.Sprintf(`%s_%s_%s`, market, symbol, todayStr), time.Now())
 	_, _, coin, _ := model.GetFromStandard(market, symbol)
 	far := 18
 	if strings.ToUpper(coin) == `BTC` {
 		far = 50
 	}
 	turtleData = &TurtleData{turtleTime: today, symbol: symbol, checkTimeBreak: util.GetNow(),
-		checkTimeOpen: util.GetNow().Add(duration), waitBreakLong: false, waitBreakShort: false, breakLong: false,
+		checkTimeOpen: util.GetNow(), waitBreakLong: false, waitBreakShort: false, breakLong: false,
 		breakShort: false, liquidated: false, daysFar: far, daysNear: far / 2, daysAdjust: 5, useNear: true}
 	indexMax := math.Max(21.0, float64(turtleData.daysFar))
 	for i := 1; i < int(indexMax); i++ {
-		duration, _ = time.ParseDuration(fmt.Sprintf(`%dh`, -24*i))
+		duration, _ := time.ParseDuration(fmt.Sprintf(`%dh`, -24*i))
 		day := today.Add(duration)
 		candle := api.GetTurtleCandle(key, secret, market, symbol, 86400, day)
 		if candle == nil || candle.PriceHigh == 0 || candle.PriceLow == 0 {
@@ -193,8 +183,7 @@ func GetTurtleData(key, secret, market, symbol string, setting *model.Setting) (
 		}
 	}
 	if turtleData.amount > 0 && turtleData.n > 0 {
-		dataSet[market][symbol][todayStr] = turtleData
-		adjustPosHolding(key, secret, setting, turtleData)
+		util.StoreSyncMap(turtleDataSet, turtleData, function, market, symbol)
 		util.Notice(fmt.Sprintf(`%s %s set turtle data: amount:%f n:%f %d:%f-%f %d:%f-%f`,
 			market, symbol, turtleData.amount, turtleData.n, turtleData.daysNear, turtleData.lowDaysNear,
 			turtleData.highDaysNear, turtleData.daysFar, turtleData.lowDaysFar, turtleData.highDaysFar))
@@ -207,6 +196,7 @@ func checkTurtleOrders(key, secret string, setting *model.Setting, currentN floa
 	if turtleData.checkTimeOpen.Add(time.Minute * 20).After(util.GetNow()) {
 		return false
 	}
+	adjustPosHolding(key, secret, setting, turtleData)
 	today, _ := model.GetMarketToday(setting.Market)
 	dayTime, _ := time.ParseDuration(`86400s`)
 	var candles []*model.Candle
@@ -308,30 +298,30 @@ var ProcessTurtle = func(setting *model.Setting, tick *model.BidAsk) {
 		return
 	}
 	account := model.AppConfig.GetAccounts(setting.Market)[0]
-	turtleData := GetTurtleData(account.Key, account.Secret, setting.Market, setting.Symbol, setting)
+	turtleData := GetTurtleData(account.Key, account.Secret, setting.Function, setting.Market, setting.Symbol)
 	if turtleData == nil || turtleData.n == 0 || turtleData.amount == 0 {
 		if time.Now().Minute() == 0 && time.Now().Second() == 0 {
 			util.Notice(fmt.Sprintf(`fail to get turtle %s %s`, setting.Market, setting.Symbol))
 		}
 		return
 	}
-	currentN := api.GetCurrentN(setting)
+	chanceInAll := api.GetChanceInAll(setting)
 	msgKey := fmt.Sprintf("%s_%s_%s", model.FunctionTurtle, setting.Market, setting.Symbol)
 	msg := fmt.Sprintf("[海龟参数]%s %s 次数限制:%f 当前已经持仓数量:%f 上一次开仓的价格:%f "+
 		"%d日:%f-%f %d日:%f-%f n:%f 数量:%f %s 持仓数/限制:%d/%f 总持仓数%d bid-ask %f %f 当日有平仓：%v",
 		turtleData.turtleTime.String()[0:10], msgKey, setting.AmountLimit, setting.GridAmount, setting.PriceX,
 		turtleData.daysFar, turtleData.lowDaysFar, turtleData.highDaysFar, turtleData.daysNear, turtleData.lowDaysNear,
 		turtleData.highDaysNear, turtleData.n, turtleData.amount, setting.Symbol, setting.Chance,
-		setting.OpenShortMargin, currentN, tick.Bids[0].Price, tick.Asks[0].Price, turtleData.liquidated)
+		setting.OpenShortMargin, chanceInAll, tick.Bids[0].Price, tick.Asks[0].Price, turtleData.liquidated)
 	util.StoreSyncMap(&model.CarryInfo, msg, account.Key, msgKey)
 	priceLong := turtleData.highDaysFar
 	priceShort := turtleData.lowDaysFar
-	if checkTurtleOrders(account.Key, account.Secret, setting, float64(currentN), turtleData) ||
+	if checkTurtleOrders(account.Key, account.Secret, setting, float64(chanceInAll), turtleData) ||
 		checkTurtleBreak(account.Key, account.Secret, setting, turtleData, tick) {
 		return
 	}
 	if setting.Chance == 0 && !turtleData.liquidated { // 开初始仓
-		placeTurtleOrders(account.Key, account.Secret, turtleData, setting, currentN, priceShort, priceLong, tick)
+		placeTurtleOrders(account.Key, account.Secret, turtleData, setting, chanceInAll, priceShort, priceLong, tick)
 		if turtleData.breakLong && turtleData.waitBreakLong {
 			handleBreak(account.Key, account.Secret, setting, turtleData, model.OrderSideBuy)
 			setting.Chance = 1
@@ -340,8 +330,8 @@ var ProcessTurtle = func(setting *model.Setting, tick *model.BidAsk) {
 				setting.Market, setting.Symbol, model.FunctionTurtle).Updates(map[string]interface{}{
 				`price_x`: setting.PriceX, `chance`: setting.Chance, `grid_amount`: setting.GridAmount})
 			util.Notice(fmt.Sprintf(
-				`破%d日高点 %s %s chance:%d amount:%f currentN:%d short-long:%f %f px:%f n:%f`,
-				turtleData.daysFar, setting.Market, setting.Symbol, setting.Chance, setting.GridAmount, currentN,
+				`破%d日高点 %s %s chance:%d amount:%f chanceInAll:%d short-long:%f %f px:%f n:%f`,
+				turtleData.daysFar, setting.Market, setting.Symbol, setting.Chance, setting.GridAmount, chanceInAll,
 				priceShort, priceLong, setting.PriceX, turtleData.n))
 		}
 		if turtleData.breakShort && turtleData.waitBreakShort {
@@ -352,8 +342,8 @@ var ProcessTurtle = func(setting *model.Setting, tick *model.BidAsk) {
 				setting.Market, setting.Symbol, model.FunctionTurtle).Updates(map[string]interface{}{
 				`price_x`: setting.PriceX, `chance`: setting.Chance, `grid_amount`: setting.GridAmount})
 			util.Notice(fmt.Sprintf(
-				`破%d日低点 %s %s chance:%d amount:%f currentN:%d short-long:%f %f px:%f n:%f`,
-				turtleData.daysNear, setting.Market, setting.Symbol, setting.Chance, setting.GridAmount, currentN,
+				`破%d日低点 %s %s chance:%d amount:%f chanceInAll:%d short-long:%f %f px:%f n:%f`,
+				turtleData.daysNear, setting.Market, setting.Symbol, setting.Chance, setting.GridAmount, chanceInAll,
 				priceShort, priceLong, setting.PriceX, turtleData.n))
 		}
 	} else if setting.Chance > 0 {
@@ -363,7 +353,7 @@ var ProcessTurtle = func(setting *model.Setting, tick *model.BidAsk) {
 		} else {
 			priceShort = math.Max(turtleData.highDaysFar, turtleData.highToday) - 2*turtleData.n
 		}
-		placeTurtleOrders(account.Key, account.Secret, turtleData, setting, currentN, priceShort, priceLong, tick)
+		placeTurtleOrders(account.Key, account.Secret, turtleData, setting, chanceInAll, priceShort, priceLong, tick)
 		// 加仓一个单位
 		if turtleData.breakLong && turtleData.waitBreakLong {
 			handleBreak(account.Key, account.Secret, setting, turtleData, model.OrderSideBuy)
@@ -372,8 +362,8 @@ var ProcessTurtle = func(setting *model.Setting, tick *model.BidAsk) {
 			model.AppDB.Model(setting).Where("market= ? and symbol= ? and function= ?",
 				setting.Market, setting.Symbol, model.FunctionTurtle).Updates(map[string]interface{}{
 				`price_x`: setting.PriceX, `chance`: setting.Chance, `grid_amount`: setting.GridAmount})
-			util.Notice(fmt.Sprintf(`加多 %s %s chance:%d amount:%f currentN:%d short-long:%f %f px:%f n:%f`,
-				setting.Market, setting.Symbol, setting.Chance, setting.GridAmount, currentN, priceShort, priceLong,
+			util.Notice(fmt.Sprintf(`加多 %s %s chance:%d amount:%f chanceInAll:%d short-long:%f %f px:%f n:%f`,
+				setting.Market, setting.Symbol, setting.Chance, setting.GridAmount, chanceInAll, priceShort, priceLong,
 				setting.PriceX, turtleData.n))
 		}
 		// 平多
@@ -387,8 +377,8 @@ var ProcessTurtle = func(setting *model.Setting, tick *model.BidAsk) {
 			model.AppDB.Model(setting).Where("market= ? and symbol= ? and function= ?",
 				setting.Market, setting.Symbol, model.FunctionTurtle).Updates(map[string]interface{}{
 				`price_x`: setting.PriceX, `chance`: setting.Chance, `grid_amount`: setting.GridAmount})
-			util.Notice(fmt.Sprintf(`liquidate long %s %s chance:%d amount:%f currentN:%d short-long:%f %f px:%f n:%f`,
-				setting.Market, setting.Symbol, setting.Chance, setting.GridAmount, currentN, priceShort, priceLong,
+			util.Notice(fmt.Sprintf(`liquidate long %s %s chance:%d amount:%f chanceInAll:%d short-long:%f %f px:%f n:%f`,
+				setting.Market, setting.Symbol, setting.Chance, setting.GridAmount, chanceInAll, priceShort, priceLong,
 				setting.PriceX, turtleData.n))
 		}
 	} else if setting.Chance < 0 {
@@ -402,7 +392,7 @@ var ProcessTurtle = func(setting *model.Setting, tick *model.BidAsk) {
 				priceLong = turtleData.lowDaysFar + 2*turtleData.n
 			}
 		}
-		placeTurtleOrders(account.Key, account.Secret, turtleData, setting, currentN, priceShort, priceLong, tick)
+		placeTurtleOrders(account.Key, account.Secret, turtleData, setting, chanceInAll, priceShort, priceLong, tick)
 		// 加仓一个单位
 		if turtleData.breakShort && turtleData.waitBreakShort {
 			handleBreak(account.Key, account.Secret, setting, turtleData, model.OrderSideSell)
@@ -411,8 +401,8 @@ var ProcessTurtle = func(setting *model.Setting, tick *model.BidAsk) {
 			model.AppDB.Model(setting).Where("market= ? and symbol= ? and function= ?",
 				setting.Market, setting.Symbol, model.FunctionTurtle).Updates(map[string]interface{}{
 				`price_x`: setting.PriceX, `chance`: setting.Chance, `grid_amount`: setting.GridAmount})
-			util.Notice(fmt.Sprintf(`加空 %s %s chance:%d amount:%f currentN:%d short-long:%f %f px:%f n:%f`,
-				setting.Market, setting.Symbol, setting.Chance, setting.GridAmount, currentN, priceShort, priceLong,
+			util.Notice(fmt.Sprintf(`加空 %s %s chance:%d amount:%f chanceInAll:%d short-long:%f %f px:%f n:%f`,
+				setting.Market, setting.Symbol, setting.Chance, setting.GridAmount, chanceInAll, priceShort, priceLong,
 				setting.PriceX, turtleData.n))
 		} // liquidate short
 		if turtleData.breakLong && turtleData.waitBreakLong {
@@ -426,8 +416,8 @@ var ProcessTurtle = func(setting *model.Setting, tick *model.BidAsk) {
 			model.AppDB.Model(setting).Where("market= ? and symbol= ? and function= ?",
 				setting.Market, setting.Symbol, model.FunctionTurtle).Updates(map[string]interface{}{
 				`price_x`: setting.PriceX, `chance`: setting.Chance, `grid_amount`: setting.GridAmount})
-			util.Notice(fmt.Sprintf(`liquidate short result: %s %s chance:%d amount:%f currentN:%d short-long:%f %f px:%f n:%f`,
-				setting.Market, setting.Symbol, setting.Chance, setting.GridAmount, currentN, priceShort, priceLong,
+			util.Notice(fmt.Sprintf(`liquidate short result: %s %s chance:%d amount:%f chanceInAll:%d short-long:%f %f px:%f n:%f`,
+				setting.Market, setting.Symbol, setting.Chance, setting.GridAmount, chanceInAll, priceShort, priceLong,
 				setting.PriceX, turtleData.n))
 		}
 	}
@@ -442,7 +432,7 @@ func setTurtleOrderStatus(function, market, symbol, orderId, status string) {
 	if account == nil {
 		return
 	}
-	turtleData := GetTurtleData(account.Key, account.Secret, market, symbol, setting)
+	turtleData := GetTurtleData(account.Key, account.Secret, setting.Function, market, symbol)
 	if turtleData != nil && turtleData.orderLong != nil {
 		for _, order := range turtleData.orderLong {
 			if order.OrderId == orderId {

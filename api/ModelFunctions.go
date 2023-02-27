@@ -19,6 +19,7 @@ var appSettings []model.Setting
 var appMarkets []string
 var crossLen int
 var settingLoading bool
+var antiTurtles *sync.Map //function*market*symbol *setting
 
 func GetSettingCoins(function, market string) (coins map[string]bool) {
 	handlerInitialized := false
@@ -69,6 +70,22 @@ func GetSettings(function, market string) *sync.Map {
 	return nil
 }
 
+// GetAntiTurtle
+// 允许返回valid=false的setting
+func GetAntiTurtle(function, market, symbol string) *model.Setting {
+	value, ok := util.LoadSyncMap(antiTurtles, function, market, symbol)
+	if ok && value != nil {
+		return value.(*model.Setting)
+	}
+	appSettings = []model.Setting{}
+	model.AppDB.Where(`function=? and market=? and symbol=?`, function, market, symbol).Find(&appSettings)
+	if len(appSettings) == 1 {
+		util.StoreSyncMap(antiTurtles, &appSettings[0], function, market, symbol)
+		return &appSettings[0]
+	}
+	return nil
+}
+
 func GetSetting(function, market, symbol string) *model.Setting {
 	settings := GetSettings(function, market)
 	if settings != nil {
@@ -80,7 +97,25 @@ func GetSetting(function, market, symbol string) *model.Setting {
 	return nil
 }
 
-func GetCurrentN(setting *model.Setting) (currentN int64) {
+func GetTurtleSettingNum(function, market string) (turtleCoinNum int64) {
+	settings := GetSettings(function, market)
+	if settings == nil {
+		return 0
+	}
+	settings.Range(func(key, value any) bool {
+		valueSetting := value.(*model.Setting)
+		if value != nil && valueSetting.Market == market && valueSetting.Function == function {
+			settingAnti := GetAntiTurtle(valueSetting.Function, valueSetting.Market, valueSetting.Symbol)
+			if settingAnti != nil && (settingAnti.Chance != 0 || valueSetting.Chance != 0) {
+				turtleCoinNum++
+			}
+		}
+		return true
+	})
+	return turtleCoinNum
+}
+
+func GetChanceInAll(setting *model.Setting) (chanceInAll int64) {
 	settings := GetSettings(setting.Function, setting.Market)
 	if settings == nil {
 		return 0
@@ -88,11 +123,11 @@ func GetCurrentN(setting *model.Setting) (currentN int64) {
 	settings.Range(func(key, value interface{}) bool {
 		valueSetting := value.(*model.Setting)
 		if value != nil && valueSetting.Market == setting.Market && valueSetting.Function == setting.Function {
-			currentN += valueSetting.Chance
+			chanceInAll += valueSetting.Chance
 		}
 		return true
 	})
-	return currentN
+	return chanceInAll
 }
 
 func GetFunctions(market, symbol string) *sync.Map {

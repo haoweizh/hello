@@ -105,7 +105,7 @@ func appendFutureMarketKucoin(key string, marketInfos map[string]*model.MarketIn
 }
 
 func setFutureAutoDeposit() {
-	coins := GetSettingCoins(model.FunctionCarry, model.KucoinPerp)
+	coins := GetSettingCoins(model.FunctionCross, model.KucoinPerp)
 	for coin := range coins {
 		params := make(map[string]string)
 		params["symbol"] = coin + model.DialectTail[model.MarketTypePerp][model.KucoinPerp]
