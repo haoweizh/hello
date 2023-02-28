@@ -28,37 +28,41 @@ var ProcessCombineTurtle = func(setting *model.Setting, tick *model.BidAsk) {
 		(time.Now().Hour() == 0 && time.Now().Minute() == 0) {
 		return
 	}
-	settingAnti := api.GetAntiTurtle(model.FunctionTurtle, setting.Market, setting.Symbol)
-	if settingAnti == nil || settingAnti.Valid { // 使用valid为false的turtle作为对应turtle
+	settingInvalid := api.GetInvalidTurtle(setting.Market, setting.Symbol)
+	if settingInvalid == nil || settingInvalid.Valid { // 使用valid为false的turtle作为对应turtle,否则该算法不运行
 		return
 	}
-	if (setting.Chance != 0 && setting.PriceX == 0) || (settingAnti.Chance != 0 && settingAnti.PriceX == 0) {
+	if (setting.Chance != 0 && setting.PriceX == 0) || (settingInvalid.Chance != 0 && settingInvalid.PriceX == 0) {
 		util.Notice(fmt.Sprintf(`no last priceX %s %s %d %f %d %f`,
-			setting.Market, setting.Symbol, setting.Chance, setting.PriceX, settingAnti.Chance, settingAnti.PriceX))
+			setting.Market, setting.Symbol, setting.Chance, setting.PriceX, settingInvalid.Chance, settingInvalid.PriceX))
 		return
 	}
 	account := model.AppConfig.GetAccounts(setting.Market)[0]
-	turtleData := GetTurtleData(account.Key, account.Secret, setting.Function, setting.Market, setting.Symbol)
-	turtleDataAnti := GetTurtleData(account.Key, account.Secret, model.FunctionTurtle, setting.Market, setting.Symbol)
-	if turtleData == nil || turtleData.n == 0 || turtleData.amount == 0 || turtleDataAnti == nil || turtleDataAnti.n == 0 || turtleDataAnti.amount == 0 {
+	turtleData := GetTurtleData(account.Key, account.Secret, setting.Function, setting.Market, setting.Symbol, false)
+	turtleDataInvalid := GetTurtleData(account.Key, account.Secret, model.FunctionTurtle, setting.Market, setting.Symbol, true)
+	if turtleData == nil || turtleData.n == 0 || turtleData.amount == 0 ||
+		turtleDataInvalid == nil || turtleDataInvalid.n == 0 || turtleDataInvalid.amount == 0 {
 		if time.Now().Minute() == 0 && time.Now().Second() == 0 {
-			util.Notice(fmt.Sprintf(`fail to get turtle combine & anti %s %s`, setting.Market, setting.Symbol))
+			util.Notice(fmt.Sprintf(`fail to get turtle combine & turtle %s %s`, setting.Market, setting.Symbol))
 		}
 		return
 	}
 	turtleCoins := api.GetTurtleSettingNum(setting.Function, setting.Market)
-	msgKey := fmt.Sprintf("%s_%s_%s", model.FunctionTurtle, setting.Market, setting.Symbol)
-	msg := fmt.Sprintf("[海龟参数]%s %s 币种数:%d/%f %d日:%f-%f %d日:%f-%f n:%f 数量:%f"+
-		"持仓量:%f,%f 开仓价:%f,%f 仓数:%d/%f %d/%f bid-ask %f %f 当日有平仓：%v",
+	msgKey := fmt.Sprintf("%s_%s_%s", model.FunctionCombineTurtle, setting.Market, setting.Symbol)
+	msg := fmt.Sprintf("[海龟参数]%s %s 币种数:%d/%f %d日:%f-%f %d日:%f-%f n:%f 仓数限制：%f 单仓数量:%f bid-ask %f %f \n"+
+		"海龟:仓数/持仓量/开仓价/今日平仓 %d/%f/%f/%v\n 反向:仓数/持仓量/开仓价/今日平仓 %d/%f/%f/%v",
 		turtleData.turtleTime.String()[0:10], msgKey, turtleCoins, setting.AmountLimit, turtleData.daysFar, turtleData.lowDaysFar,
-		turtleData.highDaysFar, turtleData.daysNear, turtleData.lowDaysNear, turtleData.highDaysNear, turtleData.n, turtleData.amount,
-		setting.GridAmount, settingAnti.GridAmount, setting.PriceX, settingAnti.PriceX, setting.Chance, setting.OpenShortMargin,
-		settingAnti.Chance, settingAnti.OpenShortMargin, tick.Bids[0].Price, tick.Asks[0].Price, turtleData.liquidated)
+		turtleData.highDaysFar, turtleData.daysNear, turtleData.lowDaysNear, turtleData.highDaysNear, turtleData.n, setting.OpenShortMargin,
+		turtleData.amount, tick.Bids[0].Price, tick.Asks[0].Price,
+		settingInvalid.Chance, settingInvalid.GridAmount, settingInvalid.PriceX, turtleDataInvalid.liquidated,
+		setting.Chance, setting.GridAmount, setting.PriceX, turtleData.liquidated)
 	util.StoreSyncMap(&model.CarryInfo, msg, account.Key, msgKey)
 	priceLong := turtleData.highDaysFar
 	priceShort := turtleData.lowDaysFar
 	if checkTurtleOrders(account.Key, account.Secret, setting, float64(turtleCoins), turtleData) ||
-		checkTurtleBreak(account.Key, account.Secret, setting, turtleData, tick) {
+		checkTurtleOrders(account.Key, account.Secret, settingInvalid, float64(turtleCoins), turtleDataInvalid) ||
+		checkTurtleBreak(account.Key, account.Secret, setting, turtleData, tick) ||
+		checkTurtleBreak(account.Key, account.Secret, settingInvalid, turtleDataInvalid, tick) {
 		return
 	}
 	if setting.Chance == 0 && !turtleData.liquidated { // 开初始仓

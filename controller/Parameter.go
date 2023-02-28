@@ -8,7 +8,6 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/satori/go.uuid"
 	"hello/api"
-	"hello/carry"
 	"hello/carry/cross"
 	"hello/model"
 	"hello/regret"
@@ -500,6 +499,35 @@ func GetCode(c *gin.Context) {
 	}
 }
 
+func createTurtleLines(function, market, key string) (msg string) {
+	settingMap := api.GetSettings(function, market)
+	lines := make([]*model.Sortable, 0)
+	if settingMap != nil {
+		settingMap.Range(func(symbol, value any) bool {
+			if value == nil {
+				return false
+			}
+			setting := value.(*model.Setting)
+			if setting.SymbolRelated == model.SettingTurtleRemoved && setting.Chance == 0 {
+				return false
+			}
+			msgKey := fmt.Sprintf("%s_%s_%s", function, market, setting.Symbol)
+			msgValue, _ := util.LoadSyncMap(&model.CarryInfo, key, msgKey)
+			if msgValue != nil {
+				sortable := &model.Sortable{Key: setting.Symbol, Value: msgValue.(string) + "\n"}
+				lines = append(lines, sortable)
+			}
+			return true
+		})
+	}
+	sortedLines := &model.SortableArray{Array: lines}
+	sort.Sort(sortedLines)
+	for _, line := range sortedLines.Array {
+		msg += line.Value.(string)
+	}
+	return
+}
+
 func GetParameters(c *gin.Context) {
 	msg := ``
 	markets := api.GetMarkets()
@@ -507,41 +535,9 @@ func GetParameters(c *gin.Context) {
 	for _, market := range markets {
 		account := model.AppConfig.GetAccounts(market)[0]
 		userKeys = append(userKeys, account.Key)
-		settingMap := api.GetSettings(model.FunctionTurtle, market)
-		msg += fmt.Sprintf("海龟币种：%s \n", market)
-		if settingMap != nil {
-			lines := make([]*model.Sortable, 0)
-			settingMap.Range(func(symbol, value interface{}) bool {
-				if value == nil || value.(*model.Setting).Function != model.FunctionTurtle {
-					return true
-				}
-				setting := value.(*model.Setting)
-				turtleData := carry.GetTurtleData(account.Key, account.Secret, setting.Function, setting.Market, setting.Symbol)
-				isTop := true
-				if setting.SymbolRelated == model.SettingTurtleRemoved {
-					isTop = false
-					if setting.Chance == 0 {
-						return true
-					}
-				}
-				line := fmt.Sprintf("\n%s 仓数:%d 持仓:%f 成交价:%f top:%v %s\n",
-					symbol, setting.Chance, setting.GridAmount, setting.PriceX, isTop, turtleData.ToString())
-				msgKey := fmt.Sprintf("%s_%s_%s", model.FunctionTurtle, market, symbol)
-				msgValue, ok := util.LoadSyncMap(&model.CarryInfo, account.Key, msgKey)
-				if ok && msgValue != nil {
-					line += msgValue.(string) + "\n"
-				}
-				sortable := &model.Sortable{Key: symbol.(string), Value: line}
-				lines = append(lines, sortable)
-				return true
-			})
-			sortedLines := &model.SortableArray{Array: lines}
-			sort.Sort(sortedLines)
-			for _, line := range sortedLines.Array {
-				msg += line.Value.(string)
-			}
-		}
-		msg += "\n"
+		msg += fmt.Sprintf("海龟%s\n %s %s\n", market,
+			createTurtleLines(model.FunctionCombineTurtle, market, account.Key),
+			createTurtleLines(model.FunctionTurtle, market, account.Key))
 	}
 	util.Notice(`finish print turtle settings`)
 	setting := api.GetSetting(model.FunctionGrid, model.Ftx, `LINK-PERP`)

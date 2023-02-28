@@ -19,7 +19,7 @@ var appSettings []model.Setting
 var appMarkets []string
 var crossLen int
 var settingLoading bool
-var antiTurtles *sync.Map //function*market*symbol *setting
+var invalidTurtles *sync.Map //function*market*symbol *setting
 
 func GetSettingCoins(function, market string) (coins map[string]bool) {
 	handlerInitialized := false
@@ -70,17 +70,18 @@ func GetSettings(function, market string) *sync.Map {
 	return nil
 }
 
-// GetAntiTurtle
+// GetInvalidTurtle
 // 允许返回valid=false的setting
-func GetAntiTurtle(function, market, symbol string) *model.Setting {
-	value, ok := util.LoadSyncMap(antiTurtles, function, market, symbol)
+// antiTurtle的function为model.FunctionTurtle
+func GetInvalidTurtle(market, symbol string) *model.Setting {
+	value, ok := util.LoadSyncMap(invalidTurtles, model.FunctionTurtle, market, symbol)
 	if ok && value != nil {
 		return value.(*model.Setting)
 	}
 	appSettings = []model.Setting{}
-	model.AppDB.Where(`function=? and market=? and symbol=?`, function, market, symbol).Find(&appSettings)
+	model.AppDB.Where(`function=? and market=? and symbol=?`, model.FunctionTurtle, market, symbol).Find(&appSettings)
 	if len(appSettings) == 1 {
-		util.StoreSyncMap(antiTurtles, &appSettings[0], function, market, symbol)
+		util.StoreSyncMap(invalidTurtles, &appSettings[0], model.FunctionTurtle, market, symbol)
 		return &appSettings[0]
 	}
 	return nil
@@ -97,16 +98,21 @@ func GetSetting(function, market, symbol string) *model.Setting {
 	return nil
 }
 
+// GetTurtleSettingNum
+// 找到所有有仓位的setting个数
 func GetTurtleSettingNum(function, market string) (turtleCoinNum int64) {
 	settings := GetSettings(function, market)
 	if settings == nil {
 		return 0
 	}
 	settings.Range(func(key, value any) bool {
+		if value == nil {
+			return false
+		}
 		valueSetting := value.(*model.Setting)
-		if value != nil && valueSetting.Market == market && valueSetting.Function == function {
-			settingAnti := GetAntiTurtle(valueSetting.Function, valueSetting.Market, valueSetting.Symbol)
-			if settingAnti != nil && (settingAnti.Chance != 0 || valueSetting.Chance != 0) {
+		if valueSetting.Market == market && valueSetting.Function == function {
+			settingInvalid := GetInvalidTurtle(valueSetting.Market, valueSetting.Symbol)
+			if settingInvalid != nil && (settingInvalid.Chance != 0 || valueSetting.Chance != 0) {
 				turtleCoinNum++
 			}
 		}
