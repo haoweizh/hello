@@ -15,6 +15,7 @@ import (
 // setting.PriceX 上一次开仓的价格
 // setting.OpenShortMargin 该单币种最多开仓个数
 // setting.AmountLimit 总开仓上限
+// combine turtle 负责反向下限价单，invalid turtle负责正常下turtle单
 var ProcessCombineTurtle = func(setting *model.Setting, tick *model.BidAsk) {
 	if !checkSetTurtling(true) {
 		defer checkSetTurtling(false)
@@ -164,6 +165,120 @@ var ProcessCombineTurtle = func(setting *model.Setting, tick *model.BidAsk) {
 			util.Notice(fmt.Sprintf(`liquidate short result: %s %s chance:%d amount:%f currentN:%d short-long:%f %f px:%f n:%f`,
 				setting.Market, setting.Symbol, setting.Chance, setting.GridAmount, turtleCoins, priceShort, priceLong,
 				setting.PriceX, turtleData.n))
+		}
+	}
+}
+
+func initCombineAmount(turtleData *TurtleData, setting *model.Setting, currentNum int64, priceShort, priceLong,
+	priceShortAnti, priceLongAnti float64) (amountBuy, amountSell float64) {
+	amountLimit := int64(setting.AmountLimit)
+	coinLimit := int64(setting.OpenShortMargin)
+	if turtleData.orderLong == nil && (setting.Chance < 0 || (currentNum < amountLimit && setting.Chance < coinLimit &&
+		setting.SymbolRelated != model.SettingTurtleRemoved)) {
+		if setting.Chance < 0 {
+			amountBuy = setting.GridAmount
+		} else {
+			amountBuy = turtleData.amount
+		}
+	}
+	if turtleData.orderShort == nil && (setting.Chance > 0 || (currentNum > -1*amountLimit && setting.Chance > -1*coinLimit &&
+		setting.SymbolRelated != model.SettingTurtleRemoved)) {
+		if setting.Chance > 0 {
+			amountSell = setting.GridAmount
+		} else {
+			amountSell = turtleData.amount
+		}
+	}
+	minSize := 0.0
+	marketInfo := model.GetMarketInfo(setting.Market, setting.Symbol)
+	if marketInfo == nil {
+		util.Notice(`fail to get marketInfo %s %s`, setting.Market, setting.Symbol)
+	} else {
+		if marketInfo.CTValue == 0 {
+			minSize = marketInfo.SizeMin
+		} else {
+			minSize = marketInfo.SizeMin * marketInfo.CTValue
+		}
+	}
+	if amountBuy > 0 && math.Abs(priceShortAnti-priceLong)/priceLong < turtleTriggerDelta {
+		amountBuy = minSize
+	}
+	if amountSell > 0 && math.Abs(priceLongAnti-priceShort)/priceShort < turtleTriggerDelta {
+		amountSell = minSize
+	}
+	return
+}
+
+func placeCombineOrders(key, secret string, turtleData, turtleDataInvalid *TurtleData, setting, settingInvalid *model.Setting,
+	priceShort, priceLong, priceShortInvalid, priceLongInvalid float64, currentNum int64, tick *model.BidAsk) {
+	amountBuy, amountSell := initCombineAmount(turtleData, setting, currentNum, priceShort, priceLong, priceShortInvalid, priceLongInvalid)
+	amountBuyInvalid, amountSellInvalid := initCombineAmount(turtleDataInvalid, settingInvalid, currentNum, priceShortInvalid, priceLongInvalid, priceShort, priceLong)
+	market := setting.Market
+	symbol := setting.Symbol
+	if amountSell > 0 {
+		turtleData.orderShort = api.MustPlaceOrder(key, secret, model.OrderSideSell, model.OrderTypeLimit, market, symbol, ``,
+			model.FunctionTurtle, priceShort, priceShort, amountSell, nil)
+		updateTurtleData(turtleData, turtleData.orderShort, priceShort < tick.Asks[0].Price)
+	}
+	if amountBuy > 0 {
+		turtleData.orderLong = api.MustPlaceOrder(key, secret, model.OrderSideBuy, model.OrderTypeLimit, market, symbol, ``,
+			model.FunctionTurtle, priceLong, priceLong, amountBuy, nil)
+		updateTurtleData(turtleData, turtleData.orderLong, priceLong > tick.Bids[0].Price)
+	}
+	if amountSellInvalid > 0 {
+		priceOut := false
+		price := priceShortInvalid
+		amount := amountSellInvalid
+		if price >= tick.Bids[0].Price {
+			turtleDataInvalid.orderShort = api.MustPlaceOrder(key, secret, model.OrderSideSell, model.OrderTypeLimit, market,
+				symbol, ``, model.FunctionTurtle, price*(1-turtleTriggerDelta/2), price, amount, nil)
+			priceOut = true
+		} else {
+			turtleDataInvalid.orderShort = api.MustPlaceOrder(key, secret, model.OrderSideSell, model.OrderTypeStop, market,
+				symbol, ``, model.FunctionTurtle, price*(1-turtleTriggerDelta), price, amount, nil)
+		}
+		updateTurtleData(turtleDataInvalid, turtleDataInvalid.orderShort, priceOut)
+	}
+	if amountBuyInvalid > 0 {
+		priceOut := false
+		price := priceLongInvalid
+		amount := amountBuyInvalid
+		if price <= tick.Asks[0].Price {
+			turtleDataInvalid.orderLong = api.MustPlaceOrder(key, secret, model.OrderSideBuy, model.OrderTypeLimit, market,
+				symbol, ``, model.FunctionTurtle, price*(1+turtleTriggerDelta/2), price, amount, nil)
+			priceOut = true
+		} else {
+			turtleDataInvalid.orderLong = api.MustPlaceOrder(key, secret, model.OrderSideBuy, model.OrderTypeStop, market,
+				symbol, ``, model.FunctionTurtle, priceLong*(1+turtleTriggerDelta), price, amount, nil)
+		}
+		updateTurtleData(turtleDataInvalid, turtleDataInvalid.orderLong, priceOut)
+	}
+}
+
+func updateTurtleData(turtleData *TurtleData, orders []*model.Order, priceOut bool) {
+	if orders == nil || len(orders) == 0 {
+		return
+	}
+	if orders[0].OrderSide == model.OrderSideSell {
+		turtleData.waitBreakShort = true
+		turtleData.breakShort = false
+		if priceOut {
+			turtleData.breakShort = true
+		}
+		for _, value := range turtleData.orderShort {
+			value.LineBuy = turtleData.n
+			go model.AppDB.Save(value)
+		}
+	}
+	if orders[0].OrderSide == model.OrderSideBuy {
+		turtleData.waitBreakLong = true
+		turtleData.breakLong = false
+		if priceOut {
+			turtleData.breakLong = true
+		}
+		for _, order := range turtleData.orderLong {
+			order.LineBuy = turtleData.n
+			go model.AppDB.Save(order)
 		}
 	}
 }
