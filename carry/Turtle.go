@@ -13,12 +13,12 @@ import (
 
 type TurtleData struct {
 	// useNear是否在海龟交易时使用lowDaysNear和highDaysNear和priceX作为触发条件
-	useNear, waitBreakLong, waitBreakShort, breakLong, breakShort, liquidated bool
-	turtleTime, checkTimeBreak, checkTimeOpen                                 time.Time
-	highDaysNear, lowDaysNear, highDaysFar, lowDaysFar, lowAdjust, highAdjust float64
-	highToday, lowToday, n, amount                                            float64
-	daysNear, daysFar, daysAdjust                                             int
-	symbol                                                                    string
+	useNear, waitBreakLong, waitBreakShort, breakLong, breakShort, liquidated, adjustChecked bool
+	turtleTime, checkTimeBreak, checkTimeOpen                                                time.Time
+	highDaysNear, lowDaysNear, highDaysFar, lowDaysFar, lowAdjust, highAdjust                float64
+	highToday, lowToday, n, amount                                                           float64
+	daysNear, daysFar, daysAdjust                                                            int
+	symbol                                                                                   string
 	// 适应某些交易所单笔订单不能过大，大笔订单会拆分后下成多个
 	orderLong, orderShort, orderAdjust []*model.Order
 }
@@ -84,6 +84,7 @@ func clearOrders(key, secret, market, symbol string) {
 }
 
 func adjustPosHolding(key, secret string, setting *model.Setting, turtleData *TurtleData) {
+	turtleData.adjustChecked = true
 	success, marketPos, _, _ := api.GetPositions(key, secret, setting.Market)
 	if !success {
 		util.Notice(fmt.Sprintf(`fail to adjust position holdings %s %s`, setting.Market, setting.Symbol))
@@ -195,7 +196,9 @@ func checkTurtleOrders(key, secret string, setting *model.Setting, currentNum fl
 	if turtleData.checkTimeOpen.Add(time.Minute * 20).After(util.GetNow()) {
 		return false
 	}
-	adjustPosHolding(key, secret, setting, turtleData)
+	if !turtleData.adjustChecked {
+		adjustPosHolding(key, secret, setting, turtleData)
+	}
 	today, _ := model.GetMarketToday(setting.Market)
 	dayTime, _ := time.ParseDuration(`86400s`)
 	var candles []*model.Candle

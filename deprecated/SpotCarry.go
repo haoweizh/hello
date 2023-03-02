@@ -12,7 +12,49 @@ package deprecated
 //	"sync"
 //	"time"
 //)
+
+//func initCombineAmount(turtleData *TurtleData, setting *model.Setting, currentNum int64) (amountBuy, amountSell float64) {
+//	amountLimit := int64(setting.AmountLimit)
+//	coinLimit := int64(setting.OpenShortMargin)
+//	if turtleData.orderLong == nil && (setting.Chance < 0 || (currentNum < amountLimit && setting.Chance < coinLimit &&
+//		setting.SymbolRelated != model.SettingTurtleRemoved)) {
+//		if setting.Chance < 0 {
+//			amountBuy = setting.GridAmount
+//		} else {
+//			amountBuy = turtleData.amount
+//		}
+//	}
+//	if turtleData.orderShort == nil && (setting.Chance > 0 || (currentNum > -1*amountLimit && setting.Chance > -1*coinLimit &&
+//		setting.SymbolRelated != model.SettingTurtleRemoved)) {
+//		if setting.Chance > 0 {
+//			amountSell = setting.GridAmount
+//		} else {
+//			amountSell = turtleData.amount
+//		}
+//	}
+//	return
+//}
 //
+//// filterCombineAmount
+//// price,priceOpposite,amount,amountOpposite本方、另外的海龟相反方向的下单价格、数量
+//func filterCombineAmount(market, symbol string, price, priceOpposite, amount, amountOpposite float64) (
+//	amountFiltered, amountOppositeFiltered float64) {
+//	minSize := 0.0
+//	marketInfo := model.GetMarketInfo(market, symbol)
+//	if marketInfo == nil {
+//		util.Notice(`fail to get marketInfo %s %s`, market, symbol)
+//	} else {
+//		if marketInfo.CTValue == 0 {
+//			minSize = marketInfo.SizeMin
+//		} else {
+//			minSize = marketInfo.SizeMin * marketInfo.CTValue
+//		}
+//	}
+//	if amount > 0 && price == priceOpposite && amount == amountOpposite {
+//		return minSize, minSize
+//	}
+//	return amount, amountOpposite
+//}
 //func clearCarryBalance() {
 //	for doCarry {
 //		for true {

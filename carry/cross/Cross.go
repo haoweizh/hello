@@ -476,8 +476,8 @@ func equalCoin(coin string, statuses []*CarryStatus) (isEqual bool, holdingInU f
 	}
 	holdingInU = holding * price
 	if math.Abs(holdingInU) < 10 {
-		if time.Now().Minute()%50 == 0 {
-			//util.Notice(fmt.Sprintf(`clear holding every 50 mins %s %f %f %f`, coin, holding, price, holdingInU))
+		if time.Now().Hour() == 10 && time.Now().Minute()%50 == 0 {
+			//util.Notice(fmt.Sprintf(`clear holding every 10:50 %s %f %f %f`, coin, holding, price, holdingInU))
 			for _, status := range statuses {
 				time.Sleep(time.Millisecond * 100)
 				go api.CancelOrders(status.account.Key, status.account.Secret, status.market, status.symbol)
@@ -614,9 +614,9 @@ func equalCoin(coin string, statuses []*CarryStatus) (isEqual bool, holdingInU f
 				order.Coin = coin
 				order.LineBuy = equalStatus.TradeLineBuy
 				order.LineSell = equalStatus.TradeLineSell
-				order.Function = model.FunctionCrossClose
+				order.Function = model.Close
 				if (equalStatus.Holding >= 0 && orderSide == model.OrderSideBuy) || (equalStatus.Holding <= 0 && orderSide == model.OrderSideSell) {
-					order.Function = model.FunctionCrossOpen
+					order.Function = model.Open
 				}
 				order.RefreshType = model.FunctionComplement
 				go model.AppDB.Save(order)
@@ -966,17 +966,17 @@ func placeCross(statusBuy, statusSell *CarryStatus, priceBuy, priceSell, amount 
 		now := time.Now().UnixNano()
 		orderBuy := &model.Order{OrderSide: model.OrderSideBuy, OrderType: model.OrderTypeLimit, Market: model.OKEX,
 			Symbol: statusBuy.symbol, Price: priceBuy, Amount: amount, RefreshType: model.FunctionCross, OrderTime: util.GetNow(),
-			UnfilledQuantity: amount, AmountType: statusBuy.account.Key, Status: model.CarryStatusWorking, Function: model.FunctionCrossOpen,
+			UnfilledQuantity: amount, AmountType: statusBuy.account.Key, Status: model.CarryStatusWorking, Function: model.Open,
 			OrderId: strconv.FormatInt(now, 10) + statusBuy.symbol, LineBuy: statusBuy.TradeLineBuy, LineSell: statusSell.TradeLineSell}
 		orderSell := &model.Order{OrderSide: model.OrderSideSell, OrderType: model.OrderTypeLimit, Market: model.OKEX,
 			Symbol: statusSell.symbol, Price: priceSell, Amount: amount, RefreshType: model.FunctionCross, OrderTime: util.GetNow(),
-			UnfilledQuantity: amount, AmountType: statusSell.account.Key, Status: model.CarryStatusWorking, Function: model.FunctionCrossOpen,
+			UnfilledQuantity: amount, AmountType: statusSell.account.Key, Status: model.CarryStatusWorking, Function: model.Open,
 			OrderId: strconv.FormatInt(now, 10) + statusSell.symbol, LineBuy: statusSell.TradeLineBuy, LineSell: statusSell.TradeLineSell}
 		if statusBuy.Holding*-1 >= amount {
-			orderBuy.Function = model.FunctionCrossClose
+			orderBuy.Function = model.Close
 		}
 		if statusSell.Holding >= amount {
-			orderSell.Function = model.FunctionCrossClose
+			orderSell.Function = model.Close
 		}
 		orderBuy.Coin = statusBuy.setting.Coin
 		orderSell.Coin = statusSell.setting.Coin
@@ -995,9 +995,9 @@ func placeCross(statusBuy, statusSell *CarryStatus, priceBuy, priceSell, amount 
 				order.Coin = statusBuy.setting.Coin
 				order.LineBuy = statusBuy.TradeLineBuy
 				order.LineSell = statusBuy.TradeLineSell
-				order.Function = model.FunctionCrossOpen
+				order.Function = model.Open
 				if statusBuy.Holding*-1 >= amount {
-					order.Function = model.FunctionCrossClose
+					order.Function = model.Close
 				}
 				order.RefreshType = model.FunctionCross
 				model.AppDB.Save(order)
@@ -1011,9 +1011,9 @@ func placeCross(statusBuy, statusSell *CarryStatus, priceBuy, priceSell, amount 
 				order.Coin = statusSell.setting.Coin
 				order.LineBuy = statusSell.TradeLineBuy
 				order.LineSell = statusSell.TradeLineSell
-				order.Function = model.FunctionCrossOpen
+				order.Function = model.Open
 				if statusSell.Holding >= amount {
-					order.Function = model.FunctionCrossClose
+					order.Function = model.Close
 				}
 				order.RefreshType = model.FunctionCross
 				model.AppDB.Save(order)

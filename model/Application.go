@@ -57,8 +57,8 @@ const MarketTypeSpot = `spot`
 const MarketTypeFuture = `future`
 const FunctionDCarry = `dcarry`
 const FunctionComplement = `comp`
-const FunctionCrossOpen = `open`
-const FunctionCrossClose = `close`
+const Open = `open`
+const Close = `close`
 const FunctionHang = `hang`
 const PostOnly = `ParticipateDoNotInitiate`
 
