@@ -321,7 +321,7 @@ var ProcessTurtle = func(setting *model.Setting, tick *model.BidAsk) {
 	priceLong := turtleData.highDaysFar
 	priceShort := turtleData.lowDaysFar
 	if checkTurtleOrders(account.Key, account.Secret, setting, float64(chanceInAll), turtleData) ||
-		checkTurtleBreak(account.Key, account.Secret, setting, turtleData, tick) {
+		checkTurtleBreak(account.Key, account.Secret, setting.Market, setting.Symbol, setting, turtleData, tick) {
 		return
 	}
 	if setting.Chance == 0 && !turtleData.liquidated { // 开初始仓
@@ -457,7 +457,7 @@ func setTurtleOrderStatus(function, market, symbol, orderId, status string) {
 	}
 }
 
-func checkTurtleBreak(key, secret string, setting *model.Setting, turtleData *TurtleData, tick *model.BidAsk) (checked bool) {
+func checkTurtleBreak(key, secret, market, symbol string, setting *model.Setting, turtleData *TurtleData, tick *model.BidAsk) (checked bool) {
 	duration, _ := time.ParseDuration(`-60s`)
 	now := util.GetNow().Add(duration)
 	checked = false
@@ -474,13 +474,13 @@ func checkTurtleBreak(key, secret string, setting *model.Setting, turtleData *Tu
 			(orderLong.OrderType == model.OrderTypeStop && orderLong.TriggerPrice <= tick.Bids[0].Price) ||
 			(orderLong.OrderType == model.OrderTypeLimit && orderLong.Price > tick.Bids[0].Price))) {
 			util.Notice(fmt.Sprintf(`-----chance type: %s %s %s %d bid-ask %f %f short %f %f`,
-				setting.Market, setting.Symbol, orderLong.OrderType, setting.Chance, tick.Bids[0].Price,
+				market, symbol, orderLong.OrderType, setting.Chance, tick.Bids[0].Price,
 				tick.Asks[0].Price, orderLong.TriggerPrice, orderLong.Price))
-			order := api.QueryOrderById(key, secret, setting.Market, setting.Symbol, orderLong.OrderType, orderLong.OrderId)
+			order := api.QueryOrderById(key, secret, market, symbol, orderLong.OrderType, orderLong.OrderId)
 			if order != nil && order.Status == model.CarryStatusSuccess {
 				turtleData.breakLong = true
 				util.Notice(fmt.Sprintf(`-----order break long %s %s %d bid-ask %f %f short %f %v %v`,
-					setting.Market, setting.Symbol, setting.Chance, tick.Bids[0].Price, tick.Asks[0].Price,
+					market, symbol, setting.Chance, tick.Bids[0].Price, tick.Asks[0].Price,
 					orderLong.Price, turtleData.breakLong, turtleData.waitBreakLong))
 			}
 			if order != nil && order.Status == model.CarryStatusFail {
@@ -492,13 +492,13 @@ func checkTurtleBreak(key, secret string, setting *model.Setting, turtleData *Tu
 			(orderShort.OrderType == model.OrderTypeStop && orderShort.TriggerPrice >= tick.Asks[0].Price)) ||
 			(orderShort.OrderType == model.OrderTypeLimit && orderShort.Price < tick.Asks[0].Price)) {
 			util.Notice(fmt.Sprintf(`-----chance type: %s %s %s %d bid-ask %f %f long %f %f`,
-				setting.Market, setting.Symbol, orderShort.OrderType, setting.Chance, tick.Bids[0].Price,
+				market, symbol, orderShort.OrderType, setting.Chance, tick.Bids[0].Price,
 				tick.Asks[0].Price, orderShort.TriggerPrice, orderShort.Price))
-			order := api.QueryOrderById(key, secret, setting.Market, setting.Symbol, orderShort.OrderType, orderShort.OrderId)
+			order := api.QueryOrderById(key, secret, market, symbol, orderShort.OrderType, orderShort.OrderId)
 			if order != nil && order.Status == model.CarryStatusSuccess {
 				turtleData.breakShort = true
 				util.Notice(fmt.Sprintf(`-----order break short %s %s %d bid-ask %f %f long %f %v %v`,
-					setting.Market, setting.Symbol, setting.Chance, tick.Bids[0].Price, tick.Asks[0].Price,
+					market, symbol, setting.Chance, tick.Bids[0].Price, tick.Asks[0].Price,
 					orderShort.Price, turtleData.breakShort, turtleData.waitBreakShort))
 			}
 			if order != nil && order.Status == model.CarryStatusFail {
