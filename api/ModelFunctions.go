@@ -51,20 +51,17 @@ func GetSettingCoins(function, market string) (coins map[string]bool) {
 }
 
 func GetSettings(function, market string) *sync.Map {
-	handlerInitialized := false
-	if handlers != nil {
-		handlers.Range(func(key, value interface{}) bool {
-			handlerInitialized = true
-			return true
-		})
-	}
-	if !handlerInitialized {
-		util.Notice(`load setting GetSettings %s %s`, function, market)
-		//if !LoadSettings() {
-		//return nil
-		//}
-		LoadSettings()
-	}
+	//handlerInitialized := false
+	//if handlers != nil {
+	//	handlers.Range(func(key, value interface{}) bool {
+	//		handlerInitialized = true
+	//		return true
+	//	})
+	//}
+	//if !handlerInitialized {
+	//	util.Notice(`load setting GetSettings %s %s`, function, market)
+	//	LoadSettings()
+	//}
 	value, ok := util.LoadSyncMap(symbolSettings, function, market)
 	if ok {
 		return value.(*sync.Map)
