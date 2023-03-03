@@ -27,7 +27,7 @@ const turtleTriggerDelta = 0.01
 
 var turtling = false
 var turtleLock sync.Mutex
-var turtleDataSet = &sync.Map{} // function_market_symbol_2019-12-06 *turtleData
+var turtleDataSet = sync.Map{} // function_market_symbol_2019-12-06 *turtleData
 
 func (turtleData *Data) ToString() (str string) {
 	if turtleData == nil {
@@ -229,10 +229,11 @@ func handleTraceOrders(key, secret, market, symbol string, settings []*model.Set
 
 func GetTurtleData(key, secret, function, market, symbol string, useNear bool) (data *Data) {
 	today, todayStr := model.GetMarketToday(market)
-	//util.Notice(`need to create turtle ` + setting.Market + setting.Symbol)
-	value, ok := util.LoadSyncMap(turtleDataSet, function, market, symbol, todayStr)
+	value, ok := util.LoadSyncMap(&turtleDataSet, function, market, symbol, todayStr)
 	if ok && value != nil {
 		return value.(*Data)
+	} else {
+		util.Notice(fmt.Sprintf(`need to create turtle data %s %s %s %s`, function, market, symbol, todayStr))
 	}
 	clearOrders(key, secret, market, symbol)
 	_, _, coin, _ := model.GetFromStandard(market, symbol)
@@ -282,9 +283,9 @@ func GetTurtleData(key, secret, function, market, symbol string, useNear bool) (
 		}
 	}
 	if data.amount > 0 && data.n > 0 {
-		util.StoreSyncMap(turtleDataSet, data, function, market, symbol, todayStr)
-		util.Notice(fmt.Sprintf(`%s %s set turtle data: amount:%f n:%f %d:%f-%f %d:%f-%f`,
-			market, symbol, data.amount, data.n, data.daysNear, data.lowDaysNear,
+		util.StoreSyncMap(&turtleDataSet, data, function, market, symbol, todayStr)
+		util.Notice(fmt.Sprintf(`%s %s %s %s set turtle data: amount:%f n:%f %d:%f-%f %d:%f-%f`,
+			function, market, symbol, todayStr, data.amount, data.n, data.daysNear, data.lowDaysNear,
 			data.highDaysNear, data.daysFar, data.lowDaysFar, data.highDaysFar))
 	}
 	return
@@ -300,7 +301,7 @@ func SetTurtleOrderStatus(function, market, symbol, orderId, status string) {
 		return
 	}
 	_, todayStr := model.GetMarketToday(market)
-	value, ok := util.LoadSyncMap(turtleDataSet, function, market, symbol, todayStr)
+	value, ok := util.LoadSyncMap(&turtleDataSet, function, market, symbol, todayStr)
 	if ok && value != nil {
 		turtleData := value.(*Data)
 		if turtleData.orderLong != nil {
