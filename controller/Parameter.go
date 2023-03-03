@@ -504,6 +504,7 @@ func createTurtleLines(function, market, key string) (msg string) {
 	lines := make([]*model.Sortable, 0)
 	if settingMap != nil {
 		settingMap.Range(func(symbol, value any) bool {
+			util.Notice(fmt.Sprintf(`try to get param before %s %s`, key, symbol))
 			if value == nil {
 				return false
 			}
@@ -540,7 +541,6 @@ func GetParameters(c *gin.Context) {
 			createTurtleLines(model.FunctionCombineTurtle, market, account.Key),
 			createTurtleLines(model.FunctionTurtle, market, account.Key))
 	}
-	util.Notice(`finish print turtle settings`)
 	setting := api.GetSetting(model.FunctionGrid, model.Ftx, `LINK-PERP`)
 	if setting != nil {
 		msg += fmt.Sprintf("%s %s %s %f\n", setting.Function, setting.Market, setting.Symbol, setting.GridAmount)
