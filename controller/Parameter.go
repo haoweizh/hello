@@ -506,7 +506,6 @@ func createTurtleLines(function, market, key string) (msg string) {
 	if settingMap != nil {
 		settingMap.Range(func(symbol, value any) bool {
 			size++
-			util.Notice(fmt.Sprintf(`try to get param before %s %s`, key, symbol))
 			if value == nil {
 				return false
 			}
@@ -516,7 +515,6 @@ func createTurtleLines(function, market, key string) (msg string) {
 			}
 			msgKey := fmt.Sprintf("%s_%s_%s", function, market, setting.Symbol)
 			msgValue, _ := util.LoadSyncMap(&model.CarryInfo, key, msgKey)
-			util.Notice(fmt.Sprintf(`try to get param after %s %s %v`, key, msgKey, msgValue))
 			if msgValue != nil {
 				sortable := &model.Sortable{Key: setting.Symbol, Value: msgValue.(string) + "\n"}
 				lines = append(lines, sortable)
