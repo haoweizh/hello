@@ -64,8 +64,8 @@ var ProcessCombineTurtle = func(settingLimit *model.Setting, tick *model.BidAsk)
 		settingStop.Chance, settingStop.GridAmount, settingStop.PriceX, turtleDataStop.liquidated,
 		settingLimit.Chance, settingLimit.GridAmount, settingLimit.PriceX, turtleDataLimit.liquidated)
 	util.StoreSyncMap(&model.CarryInfo, msg, account.Key, msgKey)
-	if checkCombineTurtle(account.Key, account.Secret, market, symbol, settings, turtleData, float64(turtleCoins)) ||
-		checkCombineBreak(account.Key, account.Secret, market, symbol, settings, turtleData, tick) {
+	if handleTraceOrders(account.Key, account.Secret, market, symbol, settings, turtleData, float64(turtleCoins)) ||
+		checkBreak(account.Key, account.Secret, market, symbol, settings, turtleData, tick) {
 		return
 	}
 	big := false
@@ -101,64 +101,6 @@ var ProcessCombineTurtle = func(settingLimit *model.Setting, tick *model.BidAsk)
 	if needCheck {
 		clearExtraOrders(account.Key, account.Secret, market, symbol, float64(turtleCoins), settings, turtleData)
 	}
-}
-
-func checkCombineBreak(key, secret, market, symbol string, settings []*model.Setting, turtleData []*Data,
-	tick *model.BidAsk) (checked bool) {
-	checked = false
-	if len(settings) != 2 || len(turtleData) != 2 {
-		util.Notice(`wrong combine turtle parameter`)
-		return true
-	}
-	if turtleData[0].checkTimeBreak.Add(time.Minute).After(util.GetNow()) {
-		return false
-	}
-	for i, setting := range settings {
-		data := turtleData[i]
-		data.checkTimeBreak = util.GetNow()
-		var orderLong, orderShort *model.Order
-		if data.orderLong != nil && len(data.orderLong) > 0 {
-			orderLong = data.orderLong[0]
-		}
-		if data.orderShort != nil && len(data.orderShort) > 0 {
-			orderShort = data.orderShort[0]
-		}
-		if orderLong != nil && (orderLong.Status == model.CarryStatusSuccess || (orderLong.TriggerPrice > 0 &&
-			(orderLong.OrderType == model.OrderTypeStop && orderLong.TriggerPrice <= tick.Bids[0].Price) ||
-			(orderLong.OrderType == model.OrderTypeLimit && orderLong.Price > tick.Bids[0].Price))) {
-			util.Notice(fmt.Sprintf(`-----chance type: %s %s %s %d bid-ask %f %f short %f %f`,
-				market, symbol, orderLong.OrderType, setting.Chance, tick.Bids[0].Price,
-				tick.Asks[0].Price, orderLong.TriggerPrice, orderLong.Price))
-			order := api.QueryOrderById(key, secret, market, symbol, orderLong.OrderType, orderLong.OrderId)
-			if order != nil && order.Status == model.CarryStatusSuccess {
-				data.breakLong = true
-				util.Notice(fmt.Sprintf(`-----order break long %s %s %d bid-ask %f %f short %f %v %v`,
-					market, symbol, setting.Chance, tick.Bids[0].Price, tick.Asks[0].Price,
-					orderLong.Price, data.breakLong, data.waitBreakLong))
-			}
-			if order != nil && order.Status == model.CarryStatusFail {
-				data.orderLong = nil
-			}
-		}
-		if orderShort != nil && (orderShort.Status == model.CarryStatusSuccess || (orderShort.TriggerPrice > 0 &&
-			(orderShort.OrderType == model.OrderTypeStop && orderShort.TriggerPrice >= tick.Asks[0].Price)) ||
-			(orderShort.OrderType == model.OrderTypeLimit && orderShort.Price < tick.Asks[0].Price)) {
-			util.Notice(fmt.Sprintf(`-----chance type: %s %s %s %d bid-ask %f %f long %f %f`,
-				market, symbol, orderShort.OrderType, setting.Chance, tick.Bids[0].Price,
-				tick.Asks[0].Price, orderShort.TriggerPrice, orderShort.Price))
-			order := api.QueryOrderById(key, secret, market, symbol, orderShort.OrderType, orderShort.OrderId)
-			if order != nil && order.Status == model.CarryStatusSuccess {
-				data.breakShort = true
-				util.Notice(fmt.Sprintf(`-----order break short %s %s %d bid-ask %f %f long %f %v %v`,
-					market, symbol, setting.Chance, tick.Bids[0].Price, tick.Asks[0].Price,
-					orderShort.Price, data.breakShort, data.waitBreakShort))
-			}
-			if order != nil && order.Status == model.CarryStatusFail {
-				data.orderShort = nil
-			}
-		}
-	}
-	return true
 }
 
 func handleBreakLong(setting, settingOpposite *model.Setting, data, dataOpposite *Data,
@@ -246,59 +188,6 @@ func removeOpenOrder(data *Data) {
 	if data != nil && data.orderShort != nil && len(data.orderShort) > 0 && data.orderShort[0].Function == model.Open {
 		data.orderShort = nil
 	}
-}
-
-func checkCombineTurtle(key, secret, market, symbol string, settings []*model.Setting, turtleData []*Data,
-	currentNum float64) (checked bool) {
-	if (len(settings) != 2 && len(settings) != 1) || len(settings) != len(turtleData) {
-		util.Notice(`wrong combine turtle parameter`)
-		return true
-	}
-	if turtleData[0].checkTimeOpen.Add(time.Minute * 20).After(util.GetNow()) {
-		return false
-	}
-	if settings[0].Chance == 0 && !turtleData[1].adjustChecked {
-		adjustPosHolding(key, secret, settings[1], turtleData[1])
-	} else if settings[1].Chance == 0 && !turtleData[0].adjustChecked {
-		adjustPosHolding(key, secret, settings[0], turtleData[0])
-	}
-	today, _ := model.GetMarketToday(market)
-	dayTime, _ := time.ParseDuration(`86400s`)
-	var candles []*model.Candle
-	// okex不返回尚未结束的当日candle，转成半小时的slot
-	if market == model.OKEX {
-		candles = api.GetCandle(key, secret, market, symbol, 1800, today, model.GetMarketNow(market))
-	} else {
-		candles = api.GetCandle(key, secret, market, symbol, 86400, today, today.Add(dayTime))
-	}
-	for i, setting := range settings {
-		data := turtleData[i]
-		for i := 0; candles != nil && i < len(candles); i++ {
-			if data.highToday < candles[i].PriceHigh {
-				data.highToday = candles[i].PriceHigh
-				util.Info(fmt.Sprintf(`get today len new high %s %s %d %f`, market, symbol, len(candles), candles[i].PriceHigh))
-			}
-			if data.lowToday == 0 || data.lowToday > candles[i].PriceLow {
-				data.lowToday = candles[i].PriceLow
-				util.Info(fmt.Sprintf(`get today len new low %s %s %d %f`, market, symbol, len(candles), candles[i].PriceLow))
-			}
-		}
-		if !data.useNear && setting.Chance > 0 && data.lowToday > 0 && ((data.orderShort[0].OrderType == model.OrderTypeLimit && data.orderShort[0].Price > math.Min(data.lowToday, data.lowDaysFar)+2*data.n) ||
-			(data.orderShort[0].OrderType == model.OrderTypeStop && data.orderShort[0].Price < math.Max(data.highDaysFar, data.highToday)-2*data.n)) {
-			util.Notice(fmt.Sprintf(`today higher than far price%f<max(today%f,far%f)-2*%f chance%d`,
-				data.orderShort[0].TriggerPrice, data.highToday, data.highDaysFar, data.n, setting.Chance))
-			data.orderShort = nil
-		}
-		if !data.useNear && data.lowToday > 0 && setting.Chance < 0 && ((data.orderLong[0].OrderType == model.OrderTypeLimit && data.orderLong[0].Price < math.Max(data.highDaysFar, data.highToday)-2*data.n) ||
-			(data.orderLong[0].OrderType == model.OrderTypeStop && data.orderLong[0].Price > math.Min(data.lowDaysFar, data.lowToday)+2*data.n)) {
-			util.Notice(fmt.Sprintf(`today lower than far price%f>min(today%f,far%f)+2*%f chance%d`,
-				data.orderLong[0].TriggerPrice, data.lowToday, data.lowDaysFar, data.n, setting.Chance))
-			data.orderLong = nil
-		}
-		data.checkTimeOpen = util.GetNow()
-	}
-	clearExtraOrders(key, secret, market, symbol, currentNum, settings, turtleData)
-	return true
 }
 
 func placeTurtleLong(key, secret, orderType string, data *Data, setting *model.Setting,
