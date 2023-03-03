@@ -124,6 +124,9 @@ func clearExtraOrders(key, secret, market, symbol string, currentNum float64, se
 }
 
 func adjustPosHolding(key, secret string, setting *model.Setting, data *Data) {
+	if data.adjustChecked {
+		return
+	}
 	data.adjustChecked = true
 	success, marketPos, _, _ := api.GetPositions(key, secret, setting.Market)
 	if !success {
@@ -178,12 +181,12 @@ func handleTraceOrders(key, secret, market, symbol string, settings []*model.Set
 	if turtleData[0].checkTimeOpen.Add(time.Minute * 10).After(util.GetNow()) {
 		return false
 	}
-	if len(settings) == 1 && !turtleData[0].adjustChecked {
+	if len(settings) == 1 {
 		adjustPosHolding(key, secret, settings[0], turtleData[0])
 	} else if len(settings) == 2 {
-		if settings[0].Chance == 0 && !turtleData[1].adjustChecked {
+		if settings[0].Chance == 0 {
 			adjustPosHolding(key, secret, settings[1], turtleData[1])
-		} else if settings[1].Chance == 0 && !turtleData[0].adjustChecked {
+		} else if settings[1].Chance == 0 {
 			adjustPosHolding(key, secret, settings[0], turtleData[0])
 		}
 		turtleData[0].adjustChecked = true
@@ -253,8 +256,7 @@ func GetTurtleData(key, secret, function, market, symbol string, useNear bool) (
 	if strings.ToUpper(coin) == `BTC` {
 		far = 50
 	}
-	data = &Data{turtleTime: today, symbol: symbol, checkTimeBreak: util.GetNow(),
-		checkTimeOpen: util.GetNow(), waitBreakLong: false, waitBreakShort: false, breakLong: false,
+	data = &Data{turtleTime: today, symbol: symbol, waitBreakLong: false, waitBreakShort: false, breakLong: false,
 		breakShort: false, liquidated: false, daysFar: far, daysNear: far / 2, daysAdjust: 5, useNear: useNear}
 	indexMax := math.Max(21.0, float64(data.daysFar))
 	duration, _ := time.ParseDuration(fmt.Sprintf(`%dh`, -24*int(indexMax)))

@@ -245,9 +245,6 @@ func placeTurtleOrders(key, secret string, turtleData *Data, setting *model.Sett
 				}
 			}
 		}
-	} else {
-		util.Notice(fmt.Sprintf(`can not place long chance %d currentNum %d coinLimit %d amountLimit%d %v`,
-			setting.Chance, currentNum, coinLimit, amountLimit, turtleData.orderLong))
 	}
 	if turtleData.orderShort == nil && ((currentNum > -1*amountLimit && setting.Chance > -1*coinLimit) || setting.Chance > 0) {
 		orderSide := model.OrderSideSell
@@ -291,8 +288,5 @@ func placeTurtleOrders(key, secret string, turtleData *Data, setting *model.Sett
 				}
 			}
 		}
-	} else {
-		util.Notice(fmt.Sprintf(`can not place short chance %d currentNum %d coinLimit %d amountLimit%d %v`,
-			setting.Chance, currentNum, coinLimit, amountLimit, turtleData.orderShort))
 	}
 }
