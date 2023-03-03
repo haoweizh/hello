@@ -103,7 +103,7 @@ func clearExtraOrders(key, secret, market, symbol string, currentNum float64, se
 	}
 	ordersStop := api.QueryOpenOrders(key, secret, market, symbol, true)
 	for _, order := range ordersStop {
-		if !keepOrders[order.OrderSide] {
+		if !keepOrders[order.OrderId] {
 			result := api.MustCancel(key, secret, market, symbol, order.OrderType, order.OrderId, true)
 			util.Notice(`cancel extra turtle order %s %s %s %s return %v`, market, symbol, order.OrderType, order.OrderId, result)
 			time.Sleep(time.Second)
@@ -111,7 +111,7 @@ func clearExtraOrders(key, secret, market, symbol string, currentNum float64, se
 	}
 	ordersLimit := api.QueryOpenOrders(key, secret, market, symbol, false)
 	for _, order := range ordersLimit {
-		if !keepOrders[order.OrderSide] {
+		if !keepOrders[order.OrderId] {
 			result := api.MustCancel(key, secret, market, symbol, order.OrderType, order.OrderId, true)
 			util.Notice(`cancel extra turtle order %s %s %s %s return %v`, market, symbol, order.OrderType, order.OrderId, result)
 			time.Sleep(time.Second)
@@ -233,8 +233,6 @@ func GetTurtleData(key, secret, function, market, symbol string, useNear bool) (
 	value, ok := util.LoadSyncMap(&turtleDataSet, function, market, symbol, todayStr)
 	if ok && value != nil {
 		return value.(*Data)
-	} else {
-		util.Notice(fmt.Sprintf(`need to create turtle data %s %s %s %s`, function, market, symbol, todayStr))
 	}
 	value, ok = util.LoadSyncMap(queryDataTime, function, market, symbol, todayStr)
 	if ok && value != nil {
@@ -242,6 +240,7 @@ func GetTurtleData(key, secret, function, market, symbol string, useNear bool) (
 			return nil
 		}
 	}
+	util.Notice(fmt.Sprintf(`need to create turtle data %s %s %s %s`, function, market, symbol, todayStr))
 	util.StoreSyncMap(queryDataTime, util.GetNow(), function, market, symbol, todayStr)
 	_, _, coin, _ := model.GetFromStandard(market, symbol)
 	far := 18
