@@ -44,25 +44,30 @@ var ProcessCombineTurtle = func(settingLimit *model.Setting, tick *model.BidAsk)
 		return
 	}
 	account := model.AppConfig.GetAccounts(market)[0]
-	turtleDataLimit := GetTurtleData(account.Key, account.Secret, settingLimit.Function, market, symbol, false)
-	turtleDataStop := GetTurtleData(account.Key, account.Secret, model.FunctionTurtle, market, symbol, true)
-	if turtleDataLimit == nil || turtleDataLimit.n == 0 || turtleDataLimit.amount == 0 ||
-		turtleDataStop == nil || turtleDataStop.n == 0 || turtleDataStop.amount == 0 {
+	dataLimit := GetTurtleData(account.Key, account.Secret, settingLimit.Function, market, symbol, false)
+	dataStop := GetTurtleData(account.Key, account.Secret, model.FunctionTurtle, market, symbol, true)
+	if dataLimit == nil || dataLimit.n == 0 || dataLimit.amount == 0 ||
+		dataStop == nil || dataStop.n == 0 || dataStop.amount == 0 {
 		if time.Now().Minute() == 0 && time.Now().Second() == 0 {
 			util.Notice(fmt.Sprintf(`fail to get turtle combine & turtle %s %s`, market, symbol))
 		}
 		return
 	}
-	turtleData := []*Data{turtleDataLimit, turtleDataStop}
+	if !dataLimit.orderCleared {
+		clearOrders(account.Key, account.Secret, market, symbol)
+		dataLimit.orderCleared = true
+		return
+	}
+	turtleData := []*Data{dataLimit, dataStop}
 	turtleCoins := api.GetTurtleSettingNum(settingLimit.Function, market)
 	msgKey := fmt.Sprintf("%s_%s_%s", model.FunctionCombineTurtle, market, symbol)
 	msg := fmt.Sprintf("[海龟参数]%s %s 币种数:%d/%f %d日:%f-%f %d日:%f-%f n:%f 仓数限制：%f 单仓数量:%f bid-ask %f %f \n"+
 		"海龟:仓数/持仓量/开仓价/今日平仓 %d/%f/%f/%v\n 反向:仓数/持仓量/开仓价/今日平仓 %d/%f/%f/%v",
-		turtleDataLimit.turtleTime.String()[0:10], msgKey, turtleCoins, settingLimit.AmountLimit, turtleDataLimit.daysFar, turtleDataLimit.lowDaysFar,
-		turtleDataLimit.highDaysFar, turtleDataLimit.daysNear, turtleDataLimit.lowDaysNear, turtleDataLimit.highDaysNear, turtleDataLimit.n, settingLimit.OpenShortMargin,
-		turtleDataLimit.amount, tick.Bids[0].Price, tick.Asks[0].Price,
-		settingStop.Chance, settingStop.GridAmount, settingStop.PriceX, turtleDataStop.liquidated,
-		settingLimit.Chance, settingLimit.GridAmount, settingLimit.PriceX, turtleDataLimit.liquidated)
+		dataLimit.turtleTime.String()[0:10], msgKey, turtleCoins, settingLimit.AmountLimit, dataLimit.daysFar, dataLimit.lowDaysFar,
+		dataLimit.highDaysFar, dataLimit.daysNear, dataLimit.lowDaysNear, dataLimit.highDaysNear, dataLimit.n, settingLimit.OpenShortMargin,
+		dataLimit.amount, tick.Bids[0].Price, tick.Asks[0].Price,
+		settingStop.Chance, settingStop.GridAmount, settingStop.PriceX, dataStop.liquidated,
+		settingLimit.Chance, settingLimit.GridAmount, settingLimit.PriceX, dataLimit.liquidated)
 	util.StoreSyncMap(&model.CarryInfo, msg, account.Key, msgKey)
 	if handleTraceOrders(account.Key, account.Secret, market, symbol, settings, turtleData, float64(turtleCoins)) ||
 		checkBreak(account.Key, account.Secret, market, symbol, settings, turtleData, tick) {
@@ -84,18 +89,18 @@ var ProcessCombineTurtle = func(settingLimit *model.Setting, tick *model.BidAsk)
 			minSize = marketInfo.SizeMin * marketInfo.CTValue
 		}
 	}
-	placeTurtleLong(account.Key, account.Secret, model.OrderTypeStop, turtleDataStop, settingStop, minSize, turtleCoins, tick, big)
-	placeTurtleShort(account.Key, account.Secret, model.OrderTypeStop, turtleDataStop, settingStop, minSize, turtleCoins, tick, big)
-	placeTurtleLong(account.Key, account.Secret, model.OrderTypeLimit, turtleDataLimit, settingLimit, minSize, turtleCoins, tick, big)
-	placeTurtleShort(account.Key, account.Secret, model.OrderTypeLimit, turtleDataLimit, settingLimit, minSize, turtleCoins, tick, big)
-	needCheck := handleBreakLong(settingLimit, settingStop, turtleDataLimit, turtleDataStop, turtleCoins, big)
-	if handleBreakShort(settingLimit, settingStop, turtleDataLimit, turtleDataStop, turtleCoins, big) {
+	placeTurtleLong(account.Key, account.Secret, model.OrderTypeStop, dataStop, settingStop, minSize, turtleCoins, tick, big)
+	placeTurtleShort(account.Key, account.Secret, model.OrderTypeStop, dataStop, settingStop, minSize, turtleCoins, tick, big)
+	placeTurtleLong(account.Key, account.Secret, model.OrderTypeLimit, dataLimit, settingLimit, minSize, turtleCoins, tick, big)
+	placeTurtleShort(account.Key, account.Secret, model.OrderTypeLimit, dataLimit, settingLimit, minSize, turtleCoins, tick, big)
+	needCheck := handleBreakLong(settingLimit, settingStop, dataLimit, dataStop, turtleCoins, big)
+	if handleBreakShort(settingLimit, settingStop, dataLimit, dataStop, turtleCoins, big) {
 		needCheck = true
 	}
-	if handleBreakLong(settingStop, settingLimit, turtleDataStop, turtleDataLimit, turtleCoins, big) {
+	if handleBreakLong(settingStop, settingLimit, dataStop, dataLimit, turtleCoins, big) {
 		needCheck = true
 	}
-	if handleBreakShort(settingStop, settingLimit, turtleDataStop, turtleDataLimit, turtleCoins, big) {
+	if handleBreakShort(settingStop, settingLimit, dataStop, dataLimit, turtleCoins, big) {
 		needCheck = true
 	}
 	if needCheck {

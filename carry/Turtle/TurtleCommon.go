@@ -13,12 +13,12 @@ import (
 
 type Data struct {
 	// useNear是否在海龟交易时使用lowDaysNear和highDaysNear和priceX作为触发条件
-	useNear, waitBreakLong, waitBreakShort, breakLong, breakShort, liquidated, adjustChecked bool
-	turtleTime, checkTimeBreak, checkTimeOpen                                                time.Time
-	highDaysNear, lowDaysNear, highDaysFar, lowDaysFar, lowAdjust, highAdjust                float64
-	highToday, lowToday, n, amount                                                           float64
-	daysNear, daysFar, daysAdjust                                                            int
-	symbol                                                                                   string
+	useNear, waitBreakLong, waitBreakShort, breakLong, breakShort, liquidated, adjustChecked, orderCleared bool
+	turtleTime, checkTimeBreak, checkTimeOpen                                                              time.Time
+	highDaysNear, lowDaysNear, highDaysFar, lowDaysFar, lowAdjust, highAdjust                              float64
+	highToday, lowToday, n, amount                                                                         float64
+	daysNear, daysFar, daysAdjust                                                                          int
+	symbol                                                                                                 string
 	// 适应某些交易所单笔订单不能过大，大笔订单会拆分后下成多个
 	orderLong, orderShort, orderAdjust []*model.Order
 }
@@ -27,7 +27,8 @@ const turtleTriggerDelta = 0.01
 
 var turtling = false
 var turtleLock sync.Mutex
-var turtleDataSet = sync.Map{} // function_market_symbol_2019-12-06 *turtleData
+var turtleDataSet = sync.Map{}  // function_market_symbol_2019-12-06 *Data
+var queryDataTime = &sync.Map{} // function_market_symbol_2019-12-06 time
 
 func (turtleData *Data) ToString() (str string) {
 	if turtleData == nil {
@@ -235,7 +236,13 @@ func GetTurtleData(key, secret, function, market, symbol string, useNear bool) (
 	} else {
 		util.Notice(fmt.Sprintf(`need to create turtle data %s %s %s %s`, function, market, symbol, todayStr))
 	}
-	clearOrders(key, secret, market, symbol)
+	value, ok = util.LoadSyncMap(queryDataTime, function, market, symbol, todayStr)
+	if ok && value != nil {
+		if value.(time.Time).Add(time.Minute * 30).After(util.GetNow()) {
+			return nil
+		}
+	}
+	util.StoreSyncMap(queryDataTime, util.GetNow(), function, market, symbol, todayStr)
 	_, _, coin, _ := model.GetFromStandard(market, symbol)
 	far := 18
 	if strings.ToUpper(coin) == `BTC` {
@@ -255,9 +262,6 @@ func GetTurtleData(key, secret, function, market, symbol string, useNear bool) (
 					market, symbol, data.symbol, day.String())
 			}
 			return nil
-		} else {
-			util.Notice(fmt.Sprintf(`get candle for turtle data %s %s %s price %f - %f`,
-				market, symbol, day.String(), candle.PriceLow, candle.PriceHigh))
 		}
 		if candle.PriceHigh > data.highDaysFar && i <= data.daysFar {
 			data.highDaysFar = candle.PriceHigh
