@@ -46,7 +46,7 @@ var ProcessTurtle = func(setting *model.Setting, tick *model.BidAsk) {
 		data.orderCleared = true
 		return
 	}
-	chanceInAll := api.GetChanceInAll(setting)
+	chanceInAll := api.GetChanceInAll(setting.Function, setting.Market, setting.Symbol)
 	msgKey := fmt.Sprintf("%s_%s_%s", model.FunctionTurtle, setting.Market, setting.Symbol)
 	msg := fmt.Sprintf("[海龟参数]%s %s 次数限制:%f 当前已经持仓数量:%f 上一次开仓的价格:%f "+
 		"%d日:%f-%f %d日:%f-%f n:%f 数量:%f %s 持仓数/限制:%d/%f 总持仓数%d bid-ask %f %f 当日有平仓：%v",
