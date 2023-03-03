@@ -27,7 +27,7 @@ const turtleTriggerDelta = 0.01
 
 var turtling = false
 var turtleLock sync.Mutex
-var turtleDataSet *sync.Map // function_market_symbol_2019-12-06 *turtleData
+var turtleDataSet = &sync.Map{} // function_market_symbol_2019-12-06 *turtleData
 
 func (turtleData *Data) ToString() (str string) {
 	if turtleData == nil {
