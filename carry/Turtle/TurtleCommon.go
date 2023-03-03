@@ -282,7 +282,7 @@ func GetTurtleData(key, secret, function, market, symbol string, useNear bool) (
 		}
 	}
 	if data.amount > 0 && data.n > 0 {
-		util.StoreSyncMap(turtleDataSet, data, function, market, symbol)
+		util.StoreSyncMap(turtleDataSet, data, function, market, symbol, todayStr)
 		util.Notice(fmt.Sprintf(`%s %s set turtle data: amount:%f n:%f %d:%f-%f %d:%f-%f`,
 			market, symbol, data.amount, data.n, data.daysNear, data.lowDaysNear,
 			data.highDaysNear, data.daysFar, data.lowDaysFar, data.highDaysFar))
