@@ -502,8 +502,10 @@ func GetCode(c *gin.Context) {
 func createTurtleLines(function, market, key string) (msg string) {
 	settingMap := api.GetSettings(function, market)
 	lines := make([]*model.Sortable, 0)
+	size := 0
 	if settingMap != nil {
 		settingMap.Range(func(symbol, value any) bool {
+			size++
 			util.Notice(fmt.Sprintf(`try to get param before %s %s`, key, symbol))
 			if value == nil {
 				return false
@@ -514,7 +516,7 @@ func createTurtleLines(function, market, key string) (msg string) {
 			}
 			msgKey := fmt.Sprintf("%s_%s_%s", function, market, setting.Symbol)
 			msgValue, _ := util.LoadSyncMap(&model.CarryInfo, key, msgKey)
-			util.Notice(fmt.Sprintf(`try to get param %s %s %v`, key, msgKey, msgValue))
+			util.Notice(fmt.Sprintf(`try to get param after %s %s %v`, key, msgKey, msgValue))
 			if msgValue != nil {
 				sortable := &model.Sortable{Key: setting.Symbol, Value: msgValue.(string) + "\n"}
 				lines = append(lines, sortable)
@@ -522,6 +524,7 @@ func createTurtleLines(function, market, key string) (msg string) {
 			return true
 		})
 	}
+	util.Notice(fmt.Sprintf(`param for %s %s %d`, function, market, size))
 	sortedLines := &model.SortableArray{Array: lines}
 	sort.Sort(sortedLines)
 	for _, line := range sortedLines.Array {

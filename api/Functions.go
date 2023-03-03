@@ -290,22 +290,16 @@ func GetPriceForce(key, secret, symbol, market string) (result bool, price float
 	return result, price
 }
 
-func GetTurtleCandle(key, secret, market, symbol string, slotSeconds int, timeCandle time.Time) (candle *model.Candle) {
+func GetTurtleCandle(market, symbol string, slotSeconds int, timeCandle time.Time,
+	keyedCandles map[string]*model.Candle) (candle *model.Candle) {
 	value, ok := candleMap.Load(fmt.Sprintf(`%s_%s_%d_%s`, market, symbol, slotSeconds, timeCandle.Format(time.RFC3339)))
 	if ok && value != nil {
 		return value.(*model.Candle)
 	}
-	dBegin, _ := time.ParseDuration(fmt.Sprintf(`%ds`, -40*slotSeconds))
-	dEnd, _ := time.ParseDuration(fmt.Sprintf(`%ds`, slotSeconds))
-	begin := timeCandle.Add(dBegin)
-	end := timeCandle.Add(dEnd)
-	candles := GetCandle(key, secret, market, symbol, slotSeconds, begin, end)
-	keyedCandles := make(map[string]*model.Candle)
-	for _, item := range candles {
-		candleKey := fmt.Sprintf(`%s_%s_%d_%s`, market, symbol, item.Seconds, item.Begin.Format(time.RFC3339))
-		keyedCandles[candleKey] = item
-	}
 	candleKey := fmt.Sprintf(`%s_%s_%d_%s`, market, symbol, slotSeconds, timeCandle.Format(time.RFC3339))
+	if keyedCandles == nil {
+		return
+	}
 	candle = keyedCandles[candleKey]
 	if candle == nil {
 		if time.Now().Second() == 0 {

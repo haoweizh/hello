@@ -56,7 +56,13 @@ func getGridPos(key, secret string, setting *model.Setting) (gridPos *GridPos) {
 		dayGridPos[yesterdayStr][setting.Market][setting.Symbol] != nil {
 		return dayGridPos[yesterdayStr][setting.Market][setting.Symbol]
 	}
-	candle := api.GetTurtleCandle(key, secret, setting.Market, setting.Symbol, 86400, yesterday)
+	candles := api.GetCandle(key, secret, setting.Market, setting.Symbol, 86400, yesterday, today)
+	keyedCandles := make(map[string]*model.Candle)
+	for _, item := range candles {
+		candleKey := fmt.Sprintf(`%s_%s_%d_%s`, setting.Market, setting.Symbol, item.Seconds, item.Begin.Format(time.RFC3339))
+		keyedCandles[candleKey] = item
+	}
+	candle := api.GetTurtleCandle(setting.Market, setting.Symbol, 86400, yesterday, keyedCandles)
 	if candle == nil {
 		return
 	}
