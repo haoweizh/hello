@@ -13,13 +13,14 @@ import (
 
 type Data struct {
 	// useNear是否在海龟交易时使用lowDaysNear和highDaysNear和priceX作为触发条件
+	// adjustChecked在设置为true前，不允许使用本Data进行交易
 	useNear, waitBreakLong, waitBreakShort, breakLong, breakShort, liquidated, adjustChecked, orderCleared bool
 	turtleTime, checkTimeBreak, checkTimeOpen                                                              time.Time
 	highDaysNear, lowDaysNear, highDaysFar, lowDaysFar, lowAdjust, highAdjust                              float64
 	highToday, lowToday, n, amount                                                                         float64
 	daysNear, daysFar, daysAdjust                                                                          int
 	symbol                                                                                                 string
-	// 适应某些交易所单笔订单不能过大，大笔订单会拆分后下成多个
+	// 适应某些交易所单笔订单不能过大，大笔订单会拆分后下成多个，因价格超出无法下成的单为了不被取消，也归入orderAdjust
 	orderLong, orderShort, orderAdjust []*model.Order
 }
 
@@ -34,7 +35,7 @@ func (turtleData *Data) ToString() (str string) {
 	if turtleData == nil {
 		return `turtle data is nil`
 	}
-	return fmt.Sprintf(`%d日%f~%f n:%f amount:%f`,
+	return fmt.Sprintf(`%d日%f~%f n:%e amount:%f`,
 		turtleData.daysFar, turtleData.lowDaysFar, turtleData.highDaysFar, turtleData.n, turtleData.amount)
 }
 
@@ -99,6 +100,9 @@ func clearExtraOrders(key, secret, market, symbol string, currentNum float64, se
 			for _, order := range data[i].orderShort {
 				keepOrders[order.OrderId] = true
 			}
+		}
+		for _, order := range data[i].orderAdjust {
+			keepOrders[order.OrderId] = true
 		}
 	}
 	ordersStop := api.QueryOpenOrders(key, secret, market, symbol, true)
@@ -171,7 +175,7 @@ func handleTraceOrders(key, secret, market, symbol string, settings []*model.Set
 		util.Notice(`wrong combine turtle parameter`)
 		return true
 	}
-	if turtleData[0].checkTimeOpen.Add(time.Minute * 20).After(util.GetNow()) {
+	if turtleData[0].checkTimeOpen.Add(time.Minute * 10).After(util.GetNow()) {
 		return false
 	}
 	if len(settings) == 1 && !turtleData[0].adjustChecked {
@@ -181,6 +185,9 @@ func handleTraceOrders(key, secret, market, symbol string, settings []*model.Set
 			adjustPosHolding(key, secret, settings[1], turtleData[1])
 		} else if settings[1].Chance == 0 && !turtleData[0].adjustChecked {
 			adjustPosHolding(key, secret, settings[0], turtleData[0])
+		} else {
+			turtleData[0].adjustChecked = true
+			turtleData[1].adjustChecked = true
 		}
 	}
 	today, _ := model.GetMarketToday(market)
@@ -294,7 +301,7 @@ func GetTurtleData(key, secret, function, market, symbol string, useNear bool) (
 	}
 	if data.amount > 0 && data.n > 0 {
 		util.StoreSyncMap(&turtleDataSet, data, function, market, symbol, todayStr)
-		util.Notice(fmt.Sprintf(`%s %s %s %s set turtle data: amount:%f n:%f %d:%f-%f %d:%f-%f`,
+		util.Notice(fmt.Sprintf(`%s %s %s %s set turtle data: amount:%f n:%e %d:%f-%f %d:%f-%f`,
 			function, market, symbol, todayStr, data.amount, data.n, data.daysNear, data.lowDaysNear,
 			data.highDaysNear, data.daysFar, data.lowDaysFar, data.highDaysFar))
 	}
