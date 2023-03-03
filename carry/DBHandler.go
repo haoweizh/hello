@@ -3,6 +3,7 @@ package carry
 import (
 	"fmt"
 	"hello/api"
+	"hello/carry/Turtle"
 	"hello/carry/cross"
 	"hello/carry/hang"
 	"hello/model"
@@ -105,7 +106,7 @@ func MaintainTransFee() {
 					value.Status = order.Status
 				}
 				if order.Status == model.CarryStatusSuccess {
-					setTurtleOrderStatus(value.RefreshType, value.Market, value.Symbol, value.OrderId, order.Status)
+					Turtle.SetTurtleOrderStatus(value.RefreshType, value.Market, value.Symbol, value.OrderId, order.Status)
 				}
 				value.DealPrice = order.DealPrice
 				model.AppDB.Save(&value)
@@ -162,7 +163,7 @@ func MaintainMarketChan() {
 func Maintain() {
 	util.Notice("start carrying")
 	model.HandlerMap[model.FunctionGrid] = ProcessSimpleGrid
-	model.HandlerMap[model.FunctionTurtle] = ProcessTurtle
+	model.HandlerMap[model.FunctionTurtle] = Turtle.ProcessTurtle
 	model.HandlerMap[model.FunctionCross] = cross.ProcessCross
 	model.HandlerMap[model.FunctionHang] = hang.ProcessHang
 	_ = model.AppDB.AutoMigrate(&model.Setting{})
