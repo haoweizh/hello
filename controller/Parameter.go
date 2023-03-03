@@ -513,7 +513,6 @@ func createTurtleLines(function, market, key string) (msg string) {
 			}
 			msgKey := fmt.Sprintf("%s_%s_%s", function, market, setting.Symbol)
 			msgValue, _ := util.LoadSyncMap(&model.CarryInfo, key, msgKey)
-			util.Notice(fmt.Sprintf(`try to get param %s %s %v`, key, msgKey, msgValue))
 			if msgValue != nil {
 				sortable := &model.Sortable{Key: setting.Symbol, Value: msgValue.(string) + "\n"}
 				lines = append(lines, sortable)
