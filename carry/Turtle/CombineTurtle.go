@@ -47,7 +47,7 @@ var ProcessCombineTurtle = func(settingLimit *model.Setting, tick *model.BidAsk)
 	dataLimit := GetTurtleData(account.Key, account.Secret, settingLimit.Function, market, symbol, false)
 	dataStop := GetTurtleData(account.Key, account.Secret, model.FunctionTurtle, market, symbol, true)
 	if dataLimit == nil || dataLimit.n == 0 || dataLimit.amount == 0 ||
-		dataStop == nil || dataStop.n == 0 || dataStop.amount == 0 || (!dataLimit.adjustChecked && !dataStop.adjustChecked) {
+		dataStop == nil || dataStop.n == 0 || dataStop.amount == 0 {
 		if time.Now().Minute() == 0 && time.Now().Second() == 0 {
 			util.Notice(fmt.Sprintf(`fail to get turtle combine & turtle %s %s`, market, symbol))
 		}
@@ -71,6 +71,9 @@ var ProcessCombineTurtle = func(settingLimit *model.Setting, tick *model.BidAsk)
 	util.StoreSyncMap(&model.CarryInfo, msg, account.Key, msgKey)
 	if handleTraceOrders(account.Key, account.Secret, market, symbol, settings, turtleData, float64(turtleCoins)) ||
 		checkBreak(account.Key, account.Secret, market, symbol, settings, turtleData, tick) {
+		return
+	}
+	if !dataLimit.adjustChecked && !dataStop.adjustChecked {
 		return
 	}
 	big := false

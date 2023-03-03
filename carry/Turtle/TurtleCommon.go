@@ -185,10 +185,9 @@ func handleTraceOrders(key, secret, market, symbol string, settings []*model.Set
 			adjustPosHolding(key, secret, settings[1], turtleData[1])
 		} else if settings[1].Chance == 0 && !turtleData[0].adjustChecked {
 			adjustPosHolding(key, secret, settings[0], turtleData[0])
-		} else {
-			turtleData[0].adjustChecked = true
-			turtleData[1].adjustChecked = true
 		}
+		turtleData[0].adjustChecked = true
+		turtleData[1].adjustChecked = true
 	}
 	today, _ := model.GetMarketToday(market)
 	dayTime, _ := time.ParseDuration(`86400s`)

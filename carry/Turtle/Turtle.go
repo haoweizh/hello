@@ -35,7 +35,7 @@ var ProcessTurtle = func(setting *model.Setting, tick *model.BidAsk) {
 	}
 	account := model.AppConfig.GetAccounts(setting.Market)[0]
 	data := GetTurtleData(account.Key, account.Secret, setting.Function, setting.Market, setting.Symbol, true)
-	if data == nil || data.n == 0 || data.amount == 0 || !data.adjustChecked {
+	if data == nil || data.n == 0 || data.amount == 0 {
 		if time.Now().Minute() == 0 && time.Now().Second() == 0 {
 			util.Notice(fmt.Sprintf(`fail to get turtle %s %s`, setting.Market, setting.Symbol))
 		}
@@ -59,6 +59,9 @@ var ProcessTurtle = func(setting *model.Setting, tick *model.BidAsk) {
 	priceShort := data.lowDaysFar
 	if handleTraceOrders(account.Key, account.Secret, setting.Market, setting.Symbol, []*model.Setting{setting}, []*Data{data}, float64(chanceInAll)) ||
 		checkBreak(account.Key, account.Secret, setting.Market, setting.Symbol, []*model.Setting{setting}, []*Data{data}, tick) {
+		return
+	}
+	if !data.adjustChecked {
 		return
 	}
 	if setting.Chance == 0 && !data.liquidated { // 开初始仓
