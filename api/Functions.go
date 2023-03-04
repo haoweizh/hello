@@ -12,13 +12,13 @@ import (
 )
 
 var requireReset sync.Map
-var lastPrice sync.Map     // market_symbol, price
-var lastPriceTime sync.Map // market_symbol, Time
+var lastPrice = sync.Map{}     // market_symbol, price
+var lastPriceTime = sync.Map{} // market_symbol, Time
 var symbolLock sync.Mutex
 var tradeMax = make(map[string]map[string][]float64)        // key - symbol - [maxBuy合约张数/币币个数, maxSell]
 var okTradeMaxResetTime = make(map[string]map[string]int64) // key - symbol - init time in second
-var okexCrossing sync.Map                                   // symbol - bool
-var candleMap sync.Map                                      // market_symbol_slotSeconds_YYYY-MM-DDTHH:MM:SS
+var okexCrossing = sync.Map{}                               // symbol - bool
+var CandleMap = &sync.Map{}                                 // market,symbol,seconds,RFC3339 *Candle
 var USDs = map[string]bool{`USD`: true, `usd`: true, `USDT`: true, `usdt`: true, `USDC`: true, `usdc`: true, `BUSD`: true, `busd`: true}
 
 func setRequireReset(market string) {
@@ -290,36 +290,30 @@ func GetPriceForce(key, secret, symbol, market string) (result bool, price float
 	return result, price
 }
 
-func GetTurtleCandle(market, symbol string, slotSeconds int, timeCandle time.Time,
-	keyedCandles map[string]*model.Candle) (candle *model.Candle) {
-	value, ok := candleMap.Load(fmt.Sprintf(`%s_%s_%d_%s`, market, symbol, slotSeconds, timeCandle.Format(time.RFC3339)))
+func CalcCandleN(market, symbol string, slotSeconds int, timeCandle time.Time) (candle *model.Candle) {
+	value, ok := util.LoadSyncMap(CandleMap, market, symbol, strconv.Itoa(slotSeconds), timeCandle.Format(time.RFC3339))
 	if ok && value != nil {
-		return value.(*model.Candle)
-	}
-	candleKey := fmt.Sprintf(`%s_%s_%d_%s`, market, symbol, slotSeconds, timeCandle.Format(time.RFC3339))
-	if keyedCandles == nil {
-		return
-	}
-	candle = keyedCandles[candleKey]
-	if candle == nil {
+		candle = value.(*model.Candle)
+	} else {
 		if time.Now().Second() == 0 {
-			util.Notice(fmt.Sprintf(`candle error: can not get candle %s size %d %v`,
-				candleKey, len(keyedCandles), keyedCandles))
+			util.Notice(fmt.Sprintf(`candle error: can not get candle %s %s %d %s`,
+				market, symbol, slotSeconds, timeCandle.Format(time.RFC3339)))
 		}
-		return
+		return nil
 	}
 	candle.N = (candle.PriceHigh - candle.PriceLow) / 20
 	for i := 1; i < 20; i++ {
 		d, _ := time.ParseDuration(fmt.Sprintf(`%ds`, -i*slotSeconds))
 		index := timeCandle.Add(d)
-		currentKey := fmt.Sprintf(`%s_%s_%d_%s`, market, symbol, slotSeconds, index.Format(time.RFC3339))
-		candleCurrent := keyedCandles[currentKey]
-		if candleCurrent == nil {
+		temp, _ := util.LoadSyncMap(CandleMap, market, symbol, strconv.Itoa(slotSeconds), index.Format(time.RFC3339))
+		if temp == nil {
 			if time.Now().Minute() == 0 && time.Now().Second() == 0 {
-				util.Notice(fmt.Sprintf(`candle error: can not get candle %s %s`, currentKey, index.String()))
+				util.Notice(fmt.Sprintf(`candle error: can not get candle %s %s %d %s`,
+					market, symbol, slotSeconds, index.String()))
 			}
 			continue
 		}
+		candleCurrent := temp.(*model.Candle)
 		if candleCurrent.N > 0 {
 			if i == 1 {
 				candle.N += candleCurrent.N * 19 / 20
@@ -330,7 +324,7 @@ func GetTurtleCandle(market, symbol string, slotSeconds int, timeCandle time.Tim
 			candle.N += (candleCurrent.PriceHigh - candleCurrent.PriceLow) / 20
 		}
 	}
-	candleMap.Store(fmt.Sprintf(`%s_%s_%d_%s`, market, symbol, slotSeconds, timeCandle.Format(time.RFC3339)), candle)
+	//util.StoreSyncMap(CandleMap, candle, market, symbol, strconv.Itoa(slotSeconds), timeCandle.Format(time.RFC3339))
 	return candle
 }
 

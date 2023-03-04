@@ -17,6 +17,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 )
@@ -65,8 +66,11 @@ func Test_ws(t *testing.T) {
 }
 
 func Test_getCommonMarketInfos(t *testing.T) {
-	a := 5.0000
-	fmt.Println(fmt.Sprintf(`%e`, a))
+	var a sync.Map
+	a.Store(`test`, `value`)
+	v, b := a.Load(`test`)
+	fmt.Println(v)
+	fmt.Println(b)
 	model.NewConfig()
 	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
 	//api.InitCrossMarketInfos([]string{model.Gate})
@@ -243,7 +247,7 @@ func Test_initTurtleN(t *testing.T) {
 	today, _ := model.GetMarketToday(model.BinancePerp)
 	settings := map[string]*model.Setting{`BNX_PERP`: nil, `ETH_PERP`: nil}
 	//day := today.Add(time.Hour * -24)
-	//candles := api.GetTurtleCandle(model.AppConfig.BinanceKey, model.AppConfig.BinanceSecret, model.BinancePerp, `BNX_PERP`, 86400, day)
+	//candles := api.CalcCandleN(model.AppConfig.BinanceKey, model.AppConfig.BinanceSecret, model.BinancePerp, `BNX_PERP`, 86400, day)
 	//fmt.Println(candles)
 	api.GetCandle(model.AppConfig.BinanceKey, model.AppConfig.BinanceSecret, model.BinancePerp, `BTC_PERP`,
 		60, time.Now().Add(time.Minute*-1839600), today)
@@ -267,7 +271,7 @@ func Test_initTurtleN(t *testing.T) {
 	fmt.Println(order.OrderId)
 	api.CancelOrder(model.AppConfig.BinanceKey, model.AppConfig.BinanceSecret, model.BinancePerp, `ETH_PERP`, ``, order.OrderId)
 	//today, _ := model.GetMarketToday(model.BinancePerp)
-	//candle := api.GetTurtleCandle(model.AppConfig.BinanceKey, model.AppConfig.BinanceSecret, model.BinancePerp,
+	//candle := api.CalcCandleN(model.AppConfig.BinanceKey, model.AppConfig.BinanceSecret, model.BinancePerp,
 	//	`BTC_PERP`, 86400, day)
 	marketInfos = api.GetMarketInfos(model.BinancePerp)
 	marketInfoArray := model.MarketInfoArray{}

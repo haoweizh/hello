@@ -62,6 +62,9 @@ const Close = `close`
 const FunctionHang = `hang`
 const PostOnly = `ParticipateDoNotInitiate`
 
+const TurtleFar = 18
+const TurtleFarBTC = 50
+
 var AppDB *gorm.DB
 var AppRedis *redis.Client
 var AppConfig *Config

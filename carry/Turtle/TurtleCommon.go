@@ -6,6 +6,7 @@ import (
 	"hello/model"
 	"hello/util"
 	"math"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -28,8 +29,7 @@ const turtleTriggerDelta = 0.01
 
 var turtling = false
 var turtleLock sync.Mutex
-var turtleDataSet = sync.Map{}  // function_market_symbol_2019-12-06 *Data
-var queryDataTime = &sync.Map{} // function_market_symbol_2019-12-06 time
+var turtleDataSet = sync.Map{} // function_market_symbol_2019-12-06 *Data
 
 func (turtleData *Data) ToString() (str string) {
 	if turtleData == nil {
@@ -243,33 +243,30 @@ func GetTurtleData(key, secret, function, market, symbol string, useNear bool) (
 	if ok && value != nil {
 		return value.(*Data)
 	}
-	value, ok = util.LoadSyncMap(queryDataTime, function, market, symbol, todayStr)
-	if ok && value != nil {
-		if value.(time.Time).Add(time.Minute * 30).After(util.GetNow()) {
-			return nil
-		}
-	}
 	util.Notice(fmt.Sprintf(`need to create turtle data %s %s %s %s`, function, market, symbol, todayStr))
-	util.StoreSyncMap(queryDataTime, util.GetNow(), function, market, symbol, todayStr)
 	_, _, coin, _ := model.GetFromStandard(market, symbol)
-	far := 18
+	far := model.TurtleFar
 	if strings.ToUpper(coin) == `BTC` {
-		far = 50
+		far = model.TurtleFarBTC
 	}
 	data = &Data{turtleTime: today, symbol: symbol, waitBreakLong: false, waitBreakShort: false, breakLong: false,
 		breakShort: false, liquidated: false, daysFar: far, daysNear: far / 2, daysAdjust: 5, useNear: useNear}
 	indexMax := math.Max(21.0, float64(data.daysFar))
 	duration, _ := time.ParseDuration(fmt.Sprintf(`%dh`, -24*int(indexMax)))
 	candles := api.GetCandle(key, secret, market, symbol, 86400, today.Add(duration), today)
-	keyedCandles := make(map[string]*model.Candle)
 	for _, item := range candles {
-		candleKey := fmt.Sprintf(`%s_%s_%d_%s`, market, symbol, item.Seconds, item.Begin.Format(time.RFC3339))
-		keyedCandles[candleKey] = item
+		if item == nil {
+			continue
+		}
+		value, ok = util.LoadSyncMap(api.CandleMap, market, symbol, strconv.Itoa(item.Seconds), item.Begin.Format(time.RFC3339))
+		if value == nil {
+			util.StoreSyncMap(api.CandleMap, item, market, symbol, strconv.Itoa(item.Seconds), item.Begin.Format(time.RFC3339))
+		}
 	}
 	for i := 1; i < int(indexMax); i++ {
 		duration, _ = time.ParseDuration(fmt.Sprintf(`%dh`, -24*i))
 		day := today.Add(duration)
-		candle := api.GetTurtleCandle(market, symbol, 86400, day, keyedCandles)
+		candle := api.CalcCandleN(market, symbol, 86400, day)
 		if candle == nil || candle.PriceHigh == 0 || candle.PriceLow == 0 {
 			if time.Now().Second() == 0 {
 				util.Notice(`can not calc turtleDate as nil candle %s %s %s %s`,
