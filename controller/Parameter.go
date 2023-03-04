@@ -500,20 +500,20 @@ func GetCode(c *gin.Context) {
 }
 
 func createTurtleLines(function, market, key string) (msg string) {
-	settingMap := api.GetSettings(function, market)
+	settingMap, symbols := api.GetSettings(function, market)
 	lines := make([]*model.Sortable, 0)
 	size := 0
 	logMsg := ``
 	if settingMap != nil {
-		settingMap.Range(func(symbol, value any) bool {
-			util.Notice(fmt.Sprintf(symbol.(string)))
-			if value == nil {
-				return false
+		for _, symbol := range symbols {
+			value, ok := settingMap.Load(symbol)
+			if value == nil || !ok {
+				continue
 			}
 			size++
 			setting := value.(*model.Setting)
 			if setting.SymbolRelated == model.SettingTurtleRemoved && setting.Chance == 0 {
-				return false
+				continue
 			}
 			msgKey := fmt.Sprintf("%s_%s_%s", function, market, setting.Symbol)
 			msgValue, _ := util.LoadSyncMap(&model.CarryInfo, key, msgKey)
@@ -522,8 +522,7 @@ func createTurtleLines(function, market, key string) (msg string) {
 				sortable := &model.Sortable{Key: setting.Symbol, Value: msgValue.(string) + "\n"}
 				lines = append(lines, sortable)
 			}
-			return true
-		})
+		}
 	}
 	util.Notice(fmt.Sprintf(`param for %s %s %d %s`, function, market, size, logMsg))
 	sortedLines := &model.SortableArray{Array: lines}
