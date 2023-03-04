@@ -49,11 +49,11 @@ var ProcessTurtle = func(setting *model.Setting, tick *model.BidAsk) {
 	chanceValid, chanceInAll := checkChance(setting)
 	msgKey := fmt.Sprintf("%s_%s_%s", model.FunctionTurtle, setting.Market, setting.Symbol)
 	msg := fmt.Sprintf("[海龟参数]%s %s 次数限制:%d 当前已经持仓数量:%e 上一次开仓的价格:%e "+
-		"%d日:%e-%e %d日:%e-%e n:%e 数量:%e %s 持仓数/限制:%d/%e 总持仓数%e bid-ask %e %e 当日有平仓：%v",
+		"%d日:%e-%e %d日:%e-%e n:%e 数量:%e %s 持仓数/限制:%d/%d 总持仓数%d bid-ask %e %e 当日有平仓：%v",
 		data.turtleTime.String()[0:10], msgKey, int(setting.AmountLimit), setting.GridAmount, setting.PriceX,
 		data.daysFar, data.lowDaysFar, data.highDaysFar, data.daysNear, data.lowDaysNear,
 		data.highDaysNear, data.n, data.amount, setting.Symbol, setting.Chance,
-		setting.OpenShortMargin, chanceInAll, tick.Bids[0].Price, tick.Asks[0].Price, data.liquidated)
+		int(setting.OpenShortMargin), int(chanceInAll), tick.Bids[0].Price, tick.Asks[0].Price, data.liquidated)
 	util.StoreSyncMap(&model.CarryInfo, msg, account.Key, msgKey)
 	priceLong := data.highDaysFar
 	priceShort := data.lowDaysFar
