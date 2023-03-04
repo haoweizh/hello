@@ -63,12 +63,14 @@ func GetSettings(function, market string) *sync.Map {
 	//	LoadSettings()
 	//}
 	value, ok := util.LoadSyncMap(symbolSettings, function, market)
-	util.Notice(fmt.Sprintf(`get symbol settings from %s %s`, function, market))
 	if ok {
+		size := 0
 		value.(*sync.Map).Range(func(symbol, value any) bool {
-			util.Notice(`get symbol %s`, symbol)
+			//util.Notice(`get symbol %s`, symbol)
+			size++
 			return true
 		})
+		util.Notice(fmt.Sprintf(`get symbol settings from %s %s %d`, function, market, size))
 		return value.(*sync.Map)
 	}
 	return nil

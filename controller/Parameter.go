@@ -18,7 +18,6 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 )
 
@@ -499,8 +498,6 @@ func GetCode(c *gin.Context) {
 		c.String(http.StatusOK, `调用成功，请查收邮箱，如果没有，检查日志`)
 	}
 }
-
-var webLock sync.Mutex
 
 func createTurtleLines(function, market, key string) (msg string) {
 	settingMap := api.GetSettings(function, market)
