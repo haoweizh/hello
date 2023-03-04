@@ -21,11 +21,11 @@ func UnGzip(byte []byte) []byte {
 		fmt.Println(err.Error())
 		return nil
 	}
-	undatas, _ := ioutil.ReadAll(r)
+	data, _ := ioutil.ReadAll(r)
 	if r != nil {
 		r.Close()
 	}
-	return undatas
+	return data
 }
 
 func CutTailZero(in string) (out string) {

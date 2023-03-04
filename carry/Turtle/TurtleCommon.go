@@ -365,14 +365,11 @@ func checkBreak(key, secret, market, symbol string, settings []*model.Setting, t
 				market, symbol, orderLong.OrderType, setting.Chance, tick.Bids[0].Price,
 				tick.Asks[0].Price, orderLong.TriggerPrice, orderLong.Price))
 			order := api.QueryOrderById(key, secret, market, symbol, orderLong.OrderType, orderLong.OrderId)
-			if order != nil && order.Status == model.CarryStatusSuccess {
+			if order != nil && order.Status != model.CarryStatusWorking {
 				data.breakLong = true
-				util.Notice(fmt.Sprintf(`-----order break long %s %s %d bid-ask %f %f short %f %v %v`,
-					market, symbol, setting.Chance, tick.Bids[0].Price, tick.Asks[0].Price,
+				util.Notice(fmt.Sprintf(`-----order break long %s %s %s %d bid-ask %f %f short %f %v %v`,
+					market, symbol, setting.Chance, order.Status, tick.Bids[0].Price, tick.Asks[0].Price,
 					orderLong.Price, data.breakLong, data.waitBreakLong))
-			}
-			if order != nil && order.Status == model.CarryStatusFail {
-				data.orderLong = nil
 			}
 		}
 		if orderShort != nil && (orderShort.Status == model.CarryStatusSuccess || (orderShort.TriggerPrice > 0 &&
@@ -382,14 +379,11 @@ func checkBreak(key, secret, market, symbol string, settings []*model.Setting, t
 				market, symbol, orderShort.OrderType, setting.Chance, tick.Bids[0].Price,
 				tick.Asks[0].Price, orderShort.TriggerPrice, orderShort.Price))
 			order := api.QueryOrderById(key, secret, market, symbol, orderShort.OrderType, orderShort.OrderId)
-			if order != nil && order.Status == model.CarryStatusSuccess {
+			if order != nil && order.Status != model.CarryStatusWorking {
 				data.breakShort = true
-				util.Notice(fmt.Sprintf(`-----order break short %s %s %d bid-ask %f %f long %f %v %v`,
-					market, symbol, setting.Chance, tick.Bids[0].Price, tick.Asks[0].Price,
+				util.Notice(fmt.Sprintf(`-----order break short %s %s %s %d bid-ask %f %f long %f %v %v`,
+					market, symbol, order.Status, setting.Chance, tick.Bids[0].Price, tick.Asks[0].Price,
 					orderShort.Price, data.breakShort, data.waitBreakShort))
-			}
-			if order != nil && order.Status == model.CarryStatusFail {
-				data.orderShort = nil
 			}
 		}
 	}
