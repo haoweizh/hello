@@ -213,9 +213,9 @@ func placeTurtleOrders(key, secret string, turtleData *Data, setting *model.Sett
 				setting.Market, setting.Symbol, setting.Chance, amount, chanceInAll, priceShort,
 				priceLong, setting.PriceX, turtleData.n))
 		}
-		util.Notice(fmt.Sprintf(`%s %s place多单 chance:%d amount:%f priceX:%f chanceInAll-limit:%f %f
-			orderSide:%s h%d:%f h%d:%f l%d:%f h%d:%f coin limit:%d`,
-			setting.Market, setting.Symbol, setting.Chance, amount, setting.PriceX, chanceInAll, setting.AmountLimit,
+		util.Notice(fmt.Sprintf(`%s %s place多单 at %f chance:%d amount:%f priceX:%f chanceInAll-limit:%f %f
+			orderSide:%s h%d:%f h%d:%f l%d:%f l%d:%f coin limit:%d`,
+			setting.Market, setting.Symbol, priceLong, setting.Chance, amount, setting.PriceX, chanceInAll, setting.AmountLimit,
 			orderSide, turtleData.daysFar, turtleData.highDaysFar, turtleData.daysNear, turtleData.highDaysNear,
 			turtleData.daysFar, turtleData.lowDaysFar, turtleData.daysNear, turtleData.lowDaysNear, coinLimit))
 		priceOut := false
@@ -253,9 +253,9 @@ func placeTurtleOrders(key, secret string, turtleData *Data, setting *model.Sett
 				`平多 %s %s chance:%d amount:%f currentNum:%f short-long:%f %f px:%f n:%e`,
 				setting.Market, setting.Symbol, setting.Chance, amount, chanceInAll, priceShort, priceLong, setting.PriceX, turtleData.n))
 		}
-		util.Notice(fmt.Sprintf(`%s %s place空单 chance:%d amount:%f priceX:%f currentNum-limit:%f %f 
+		util.Notice(fmt.Sprintf(`%s %s place空单 at %f chance:%d amount:%f priceX:%f currentNum-limit:%f %f 
 				orderSide:%s h%d:%f h%d:%f l%d:%f l%d:%f coin limit:%d`,
-			setting.Market, setting.Symbol, setting.Chance, amount, setting.PriceX, chanceInAll, setting.AmountLimit,
+			setting.Market, setting.Symbol, priceShort, setting.Chance, amount, setting.PriceX, chanceInAll, setting.AmountLimit,
 			orderSide, turtleData.daysFar, turtleData.highDaysFar, turtleData.daysNear, turtleData.highDaysNear,
 			turtleData.daysFar, turtleData.lowDaysFar, turtleData.daysNear, turtleData.lowDaysNear, coinLimit))
 		priceOut := false
