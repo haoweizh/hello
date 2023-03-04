@@ -438,6 +438,7 @@ func checkChance(setting *model.Setting) (valid bool, chanceInAll float64) {
 			return true
 		})
 	}
-	return setting.SymbolRelated != model.SettingTurtleRemoved && (math.Abs(inAll) < setting.AmountLimit || setting.AmountLimit < 0) &&
+	return (setting.SymbolRelated != model.SettingTurtleRemoved || setting.Chance != 0) &&
+		(math.Abs(inAll) < setting.AmountLimit || setting.AmountLimit < 0) &&
 		(math.Abs(float64(setting.Chance)) < setting.OpenShortMargin || setting.OpenShortMargin < 0), inAll
 }
