@@ -35,7 +35,7 @@ func (turtleData *Data) ToString() (str string) {
 	if turtleData == nil {
 		return `turtle data is nil`
 	}
-	return fmt.Sprintf(`%d日%f~%f n:%e amount:%f`,
+	return fmt.Sprintf(`%d日%e~%e n:%e amount:%e`,
 		turtleData.daysFar, turtleData.lowDaysFar, turtleData.highDaysFar, turtleData.n, turtleData.amount)
 }
 
@@ -64,7 +64,7 @@ func calcTurtleAmount(key, secret, market, symbol string, n float64) (amount flo
 	} else {
 		amount /= 4
 	}
-	//util.Notice(`calcTurtleAmount %s %s %f`, setting.Market, setting.Symbol, amount)
+	//util.Notice(`calcTurtleAmount %s %s %e`, setting.Market, setting.Symbol, amount)
 	return amount
 }
 
@@ -139,7 +139,7 @@ func adjustPosHolding(key, secret string, setting *model.Setting, data *Data) {
 	}
 	if posMap[setting.Symbol] != nil { //setting.Chance和pos.Holding相乘小于零代表方向相反，此时设置为0
 		if float64(setting.Chance)*posMap[setting.Symbol].Holding <= 0 {
-			util.Notice(`update turtle side %s %s %d %f %f from %d`,
+			util.Notice(`update turtle side %s %s %d %e %e from %d`,
 				setting.Market, setting.Symbol, setting.Chance, posMap[setting.Symbol].Holding, setting.GridAmount, setting.Chance)
 			setting.GridAmount = 0
 			setting.Chance = 0
@@ -157,7 +157,7 @@ func adjustPosHolding(key, secret string, setting *model.Setting, data *Data) {
 				}
 			}
 		} else if setting.GridAmount != math.Abs(posMap[setting.Symbol].Holding) {
-			util.Notice(`update turtle grid amount %s %s %f to %f`,
+			util.Notice(`update turtle grid amount %s %s %e to %e`,
 				setting.Market, setting.Symbol, setting.GridAmount, posMap[setting.Symbol].Holding)
 			setting.GridAmount = math.Abs(posMap[setting.Symbol].Holding)
 		}
@@ -166,7 +166,7 @@ func adjustPosHolding(key, secret string, setting *model.Setting, data *Data) {
 		setting.Chance = 0
 		util.Notice(`update turtle when absent %s %s %d`, setting.Market, setting.Symbol, len(posMap))
 		for s, position := range posMap {
-			util.Notice(`present %s %s %f`, s, position.Currency, position.Holding)
+			util.Notice(`present %s %s %e`, s, position.Currency, position.Holding)
 		}
 	}
 	model.AppDB.Save(setting)
@@ -206,11 +206,11 @@ func handleTraceOrders(key, secret, market, symbol string, settings []*model.Set
 		for j := 0; candles != nil && j < len(candles); j++ {
 			if data.highToday < candles[j].PriceHigh {
 				data.highToday = candles[j].PriceHigh
-				util.Info(fmt.Sprintf(`get today len new high %s %s %d %f`, market, symbol, len(candles), candles[j].PriceHigh))
+				util.Info(fmt.Sprintf(`get today len new high %s %s %d %e`, market, symbol, len(candles), candles[j].PriceHigh))
 			}
 			if data.lowToday == 0 || data.lowToday > candles[j].PriceLow {
 				data.lowToday = candles[j].PriceLow
-				util.Info(fmt.Sprintf(`get today len new low %s %s %d %f`, market, symbol, len(candles), candles[j].PriceLow))
+				util.Info(fmt.Sprintf(`get today len new low %s %s %d %e`, market, symbol, len(candles), candles[j].PriceLow))
 			}
 		}
 		if data.orderShort == nil || len(data.orderShort) == 0 {
@@ -218,7 +218,7 @@ func handleTraceOrders(key, secret, market, symbol string, settings []*model.Set
 		} else if !data.useNear && setting.Chance > 0 && data.lowToday > 0 &&
 			((data.orderShort[0].OrderType == model.OrderTypeLimit && data.orderShort[0].Price > math.Min(data.lowToday, data.lowDaysFar)+2*data.n) ||
 				(data.orderShort[0].OrderType == model.OrderTypeStop && data.orderShort[0].TriggerPrice < math.Max(data.highDaysFar, data.highToday)-2*data.n)) {
-			util.Notice(fmt.Sprintf(`today higher than far price%f<max(today%f,far%f)-2*%f chance%d`,
+			util.Notice(fmt.Sprintf(`today higher than far price%e<max(today%e,far%e)-2*%e chance%d`,
 				data.orderShort[0].TriggerPrice, data.highToday, data.highDaysFar, data.n, setting.Chance))
 			data.orderShort = nil
 		}
@@ -227,7 +227,7 @@ func handleTraceOrders(key, secret, market, symbol string, settings []*model.Set
 		} else if !data.useNear && setting.Chance < 0 && data.lowToday > 0 &&
 			((data.orderLong[0].OrderType == model.OrderTypeLimit && data.orderLong[0].Price < math.Max(data.highDaysFar, data.highToday)-2*data.n) ||
 				(data.orderLong[0].OrderType == model.OrderTypeStop && data.orderLong[0].TriggerPrice > math.Min(data.lowDaysFar, data.lowToday)+2*data.n)) {
-			util.Notice(fmt.Sprintf(`today lower than far price%f>min(today%f,far%f)+2*%f chance%d`,
+			util.Notice(fmt.Sprintf(`today lower than far price%e>min(today%e,far%e)+2*%e chance%d`,
 				data.orderLong[0].TriggerPrice, data.lowToday, data.lowDaysFar, data.n, setting.Chance))
 			data.orderLong = nil
 		}
@@ -302,7 +302,7 @@ func GetTurtleData(key, secret, function, market, symbol string, useNear bool) (
 	}
 	if data.amount > 0 && data.n > 0 {
 		util.StoreSyncMap(&turtleDataSet, data, function, market, symbol, todayStr)
-		util.Notice(fmt.Sprintf(`%s %s %s %s set turtle data: amount:%f n:%e %d:%f-%f %d:%f-%f`,
+		util.Notice(fmt.Sprintf(`%s %s %s %s set turtle data: amount:%e n:%e %d:%e-%e %d:%e-%e`,
 			function, market, symbol, todayStr, data.amount, data.n, data.daysNear, data.lowDaysNear,
 			data.highDaysNear, data.daysFar, data.lowDaysFar, data.highDaysFar))
 	}
@@ -361,13 +361,13 @@ func checkBreak(key, secret, market, symbol string, settings []*model.Setting, t
 		if orderLong != nil && (orderLong.Status == model.CarryStatusSuccess || (orderLong.TriggerPrice > 0 &&
 			(orderLong.OrderType == model.OrderTypeStop && orderLong.TriggerPrice <= tick.Bids[0].Price) ||
 			(orderLong.OrderType == model.OrderTypeLimit && orderLong.Price > tick.Bids[0].Price))) {
-			util.Notice(fmt.Sprintf(`-----chance type: %s %s %s %d bid-ask %f %f short %f %f`,
+			util.Notice(fmt.Sprintf(`-----chance type: %s %s %s %d bid-ask %e %e short %e %e`,
 				market, symbol, orderLong.OrderType, setting.Chance, tick.Bids[0].Price,
 				tick.Asks[0].Price, orderLong.TriggerPrice, orderLong.Price))
 			order := api.QueryOrderById(key, secret, market, symbol, orderLong.OrderType, orderLong.OrderId)
 			if order != nil && order.Status != model.CarryStatusWorking {
 				data.breakLong = true
-				util.Notice(fmt.Sprintf(`-----order break long %s %s %s %d bid-ask %f %f short %f %v %v`,
+				util.Notice(fmt.Sprintf(`-----order break long %s %s %d %s bid-ask %e %e short %e %v %v`,
 					market, symbol, setting.Chance, order.Status, tick.Bids[0].Price, tick.Asks[0].Price,
 					orderLong.Price, data.breakLong, data.waitBreakLong))
 			}
@@ -375,13 +375,13 @@ func checkBreak(key, secret, market, symbol string, settings []*model.Setting, t
 		if orderShort != nil && (orderShort.Status == model.CarryStatusSuccess || (orderShort.TriggerPrice > 0 &&
 			(orderShort.OrderType == model.OrderTypeStop && orderShort.TriggerPrice >= tick.Asks[0].Price)) ||
 			(orderShort.OrderType == model.OrderTypeLimit && orderShort.Price < tick.Asks[0].Price)) {
-			util.Notice(fmt.Sprintf(`-----chance type: %s %s %s %d bid-ask %f %f long %f %f`,
+			util.Notice(fmt.Sprintf(`-----chance type: %s %s %s %d bid-ask %e %e long %e %e`,
 				market, symbol, orderShort.OrderType, setting.Chance, tick.Bids[0].Price,
 				tick.Asks[0].Price, orderShort.TriggerPrice, orderShort.Price))
 			order := api.QueryOrderById(key, secret, market, symbol, orderShort.OrderType, orderShort.OrderId)
 			if order != nil && order.Status != model.CarryStatusWorking {
 				data.breakShort = true
-				util.Notice(fmt.Sprintf(`-----order break short %s %s %s %d bid-ask %f %f long %f %v %v`,
+				util.Notice(fmt.Sprintf(`-----order break short %s %s %s %d bid-ask %e %e long %e %v %v`,
 					market, symbol, order.Status, setting.Chance, tick.Bids[0].Price, tick.Asks[0].Price,
 					orderShort.Price, data.breakShort, data.waitBreakShort))
 			}

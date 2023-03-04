@@ -29,7 +29,7 @@ var ProcessTurtle = func(setting *model.Setting, tick *model.BidAsk) {
 		return
 	}
 	if setting.Chance != 0 && setting.PriceX == 0 {
-		util.Notice(fmt.Sprintf(`no last priceX %s %s %d %f`,
+		util.Notice(fmt.Sprintf(`no last priceX %s %s %d %e`,
 			setting.Market, setting.Symbol, setting.Chance, setting.PriceX))
 		return
 	}
@@ -48,9 +48,9 @@ var ProcessTurtle = func(setting *model.Setting, tick *model.BidAsk) {
 	}
 	chanceValid, chanceInAll := checkChance(setting)
 	msgKey := fmt.Sprintf("%s_%s_%s", model.FunctionTurtle, setting.Market, setting.Symbol)
-	msg := fmt.Sprintf("[海龟参数]%s %s 次数限制:%f 当前已经持仓数量:%f 上一次开仓的价格:%f "+
-		"%d日:%f-%f %d日:%f-%f n:%e 数量:%f %s 持仓数/限制:%d/%f 总持仓数%f bid-ask %f %f 当日有平仓：%v",
-		data.turtleTime.String()[0:10], msgKey, setting.AmountLimit, setting.GridAmount, setting.PriceX,
+	msg := fmt.Sprintf("[海龟参数]%s %s 次数限制:%d 当前已经持仓数量:%e 上一次开仓的价格:%e "+
+		"%d日:%e-%e %d日:%e-%e n:%e 数量:%e %s 持仓数/限制:%d/%e 总持仓数%e bid-ask %e %e 当日有平仓：%v",
+		data.turtleTime.String()[0:10], msgKey, int(setting.AmountLimit), setting.GridAmount, setting.PriceX,
 		data.daysFar, data.lowDaysFar, data.highDaysFar, data.daysNear, data.lowDaysNear,
 		data.highDaysNear, data.n, data.amount, setting.Symbol, setting.Chance,
 		setting.OpenShortMargin, chanceInAll, tick.Bids[0].Price, tick.Asks[0].Price, data.liquidated)
@@ -74,7 +74,7 @@ var ProcessTurtle = func(setting *model.Setting, tick *model.BidAsk) {
 				setting.Market, setting.Symbol, model.FunctionTurtle).Updates(map[string]interface{}{
 				`price_x`: setting.PriceX, `chance`: setting.Chance, `grid_amount`: setting.GridAmount})
 			util.Notice(fmt.Sprintf(
-				`破%d日高点 %s %s chance:%d amount:%f chanceInAll:%f short-long:%f %f px:%f n:%e`,
+				`破%d日高点 %s %s chance:%d amount:%e chanceInAll:%e short-long:%e %e px:%e n:%e`,
 				data.daysFar, setting.Market, setting.Symbol, setting.Chance, setting.GridAmount, chanceInAll,
 				priceShort, priceLong, setting.PriceX, data.n))
 		}
@@ -86,8 +86,8 @@ var ProcessTurtle = func(setting *model.Setting, tick *model.BidAsk) {
 				setting.Market, setting.Symbol, model.FunctionTurtle).Updates(map[string]interface{}{
 				`price_x`: setting.PriceX, `chance`: setting.Chance, `grid_amount`: setting.GridAmount})
 			util.Notice(fmt.Sprintf(
-				`破%d日低点 %s %s chance:%d amount:%f chanceInAll:%f short-long:%f %f px:%f n:%e`,
-				data.daysNear, setting.Market, setting.Symbol, setting.Chance, setting.GridAmount, chanceInAll,
+				`破%d日低点 %s %s chance:%d amount:%e chanceInAll:%d short-long:%e %e px:%e n:%e`,
+				data.daysNear, setting.Market, setting.Symbol, setting.Chance, setting.GridAmount, int(chanceInAll),
 				priceShort, priceLong, setting.PriceX, data.n))
 		}
 	} else if setting.Chance > 0 {
@@ -106,7 +106,7 @@ var ProcessTurtle = func(setting *model.Setting, tick *model.BidAsk) {
 			model.AppDB.Model(setting).Where("market= ? and symbol= ? and function= ?",
 				setting.Market, setting.Symbol, model.FunctionTurtle).Updates(map[string]interface{}{
 				`price_x`: setting.PriceX, `chance`: setting.Chance, `grid_amount`: setting.GridAmount})
-			util.Notice(fmt.Sprintf(`加多 %s %s chance:%d amount:%f chanceInAll:%f short-long:%f %f px:%f n:%e`,
+			util.Notice(fmt.Sprintf(`加多 %s %s chance:%d amount:%e chanceInAll:%e short-long:%e %e px:%e n:%e`,
 				setting.Market, setting.Symbol, setting.Chance, setting.GridAmount, chanceInAll, priceShort, priceLong,
 				setting.PriceX, data.n))
 		}
@@ -114,15 +114,15 @@ var ProcessTurtle = func(setting *model.Setting, tick *model.BidAsk) {
 		if data.breakShort && data.waitBreakShort {
 			handleBreak(account.Key, account.Secret, setting, data, model.OrderSideSell)
 			go api.SendMails(`平多`+setting.Market+setting.Symbol,
-				fmt.Sprintf(`止盈止损at%f 仓位%d 数量 %f`, priceShort, setting.Chance, setting.GridAmount))
+				fmt.Sprintf(`止盈止损at%e 仓位%d 数量 %e`, priceShort, setting.Chance, setting.GridAmount))
 			data.liquidated = true
 			setting.Chance = 0
 			setting.GridAmount = 0
 			model.AppDB.Model(setting).Where("market= ? and symbol= ? and function= ?",
 				setting.Market, setting.Symbol, model.FunctionTurtle).Updates(map[string]interface{}{
 				`price_x`: setting.PriceX, `chance`: setting.Chance, `grid_amount`: setting.GridAmount})
-			util.Notice(fmt.Sprintf(`liquidate long %s %s chance:%d amount:%f chanceInAll:%f short-long:%f %f px:%f n:%e`,
-				setting.Market, setting.Symbol, setting.Chance, setting.GridAmount, chanceInAll, priceShort, priceLong,
+			util.Notice(fmt.Sprintf(`liquidate long %s %s chance:%d amount:%e chanceInAll:%d short-long:%e %e px:%e n:%e`,
+				setting.Market, setting.Symbol, setting.Chance, setting.GridAmount, int(chanceInAll), priceShort, priceLong,
 				setting.PriceX, data.n))
 		}
 	} else if setting.Chance < 0 {
@@ -145,14 +145,14 @@ var ProcessTurtle = func(setting *model.Setting, tick *model.BidAsk) {
 			model.AppDB.Model(setting).Where("market= ? and symbol= ? and function= ?",
 				setting.Market, setting.Symbol, model.FunctionTurtle).Updates(map[string]interface{}{
 				`price_x`: setting.PriceX, `chance`: setting.Chance, `grid_amount`: setting.GridAmount})
-			util.Notice(fmt.Sprintf(`加空 %s %s chance:%d amount:%f chanceInAll:%f short-long:%f %f px:%f n:%e`,
-				setting.Market, setting.Symbol, setting.Chance, setting.GridAmount, chanceInAll, priceShort, priceLong,
+			util.Notice(fmt.Sprintf(`加空 %s %s chance:%d amount:%e chanceInAll:%d short-long:%e %e px:%e n:%e`,
+				setting.Market, setting.Symbol, setting.Chance, setting.GridAmount, int(chanceInAll), priceShort, priceLong,
 				setting.PriceX, data.n))
 		} // liquidate short
 		if data.breakLong && data.waitBreakLong {
 			handleBreak(account.Key, account.Secret, setting, data, model.OrderSideBuy)
 			go api.SendMails(`平空`+setting.Market+setting.Symbol,
-				fmt.Sprintf(`止盈止损at%f 仓位%d 数量 %f`,
+				fmt.Sprintf(`止盈止损at%e 仓位%d 数量 %e`,
 					priceLong, setting.Chance, setting.GridAmount))
 			setting.Chance = 0
 			setting.GridAmount = 0
@@ -160,8 +160,8 @@ var ProcessTurtle = func(setting *model.Setting, tick *model.BidAsk) {
 			model.AppDB.Model(setting).Where("market= ? and symbol= ? and function= ?",
 				setting.Market, setting.Symbol, model.FunctionTurtle).Updates(map[string]interface{}{
 				`price_x`: setting.PriceX, `chance`: setting.Chance, `grid_amount`: setting.GridAmount})
-			util.Notice(fmt.Sprintf(`liquidate short result: %s %s chance:%d amount:%f chanceInAll:%f short-long:%f %f px:%f n:%e`,
-				setting.Market, setting.Symbol, setting.Chance, setting.GridAmount, chanceInAll, priceShort, priceLong,
+			util.Notice(fmt.Sprintf(`liquidate short result: %s %s chance:%d amount:%e chanceInAll:%d short-long:%e %e px:%e n:%e`,
+				setting.Market, setting.Symbol, int(setting.Chance), setting.GridAmount, chanceInAll, priceShort, priceLong,
 				setting.PriceX, data.n))
 		}
 	}
@@ -209,13 +209,13 @@ func placeTurtleOrders(key, secret string, turtleData *Data, setting *model.Sett
 		if setting.Chance < 0 {
 			amount = setting.GridAmount
 			util.Notice(fmt.Sprintf(
-				`平空 %s %s chance:%d amount:%f chanceInAll:%f short-long:%f %f px:%f n:%e`,
-				setting.Market, setting.Symbol, setting.Chance, amount, chanceInAll, priceShort,
+				`平空 %s %s chance:%d amount:%e chanceInAll:%d short-long:%e %e px:%e n:%e`,
+				setting.Market, setting.Symbol, setting.Chance, amount, int(chanceInAll), priceShort,
 				priceLong, setting.PriceX, turtleData.n))
 		}
-		util.Notice(fmt.Sprintf(`%s %s place多单 at %f chance:%d amount:%f priceX:%f chanceInAll-limit:%f %f
-			orderSide:%s h%d:%f h%d:%f l%d:%f l%d:%f coin limit:%d`,
-			setting.Market, setting.Symbol, priceLong, setting.Chance, amount, setting.PriceX, chanceInAll, setting.AmountLimit,
+		util.Notice(fmt.Sprintf(`%s %s place多单 at %e chance:%d amount:%e priceX:%e chanceInAll-limit:%d %d
+			orderSide:%s h%d:%e h%d:%e l%d:%e l%d:%e coin limit:%d`,
+			setting.Market, setting.Symbol, priceLong, setting.Chance, amount, setting.PriceX, int(chanceInAll), int(setting.AmountLimit),
 			orderSide, turtleData.daysFar, turtleData.highDaysFar, turtleData.daysNear, turtleData.highDaysNear,
 			turtleData.daysFar, turtleData.lowDaysFar, turtleData.daysNear, turtleData.lowDaysNear, coinLimit))
 		priceOut := false
@@ -250,12 +250,12 @@ func placeTurtleOrders(key, secret string, turtleData *Data, setting *model.Sett
 		if setting.Chance > 0 {
 			amount = setting.GridAmount
 			util.Notice(fmt.Sprintf(
-				`平多 %s %s chance:%d amount:%f currentNum:%f short-long:%f %f px:%f n:%e`,
-				setting.Market, setting.Symbol, setting.Chance, amount, chanceInAll, priceShort, priceLong, setting.PriceX, turtleData.n))
+				`平多 %s %s chance:%d amount:%e currentNum:%d short-long:%e %e px:%e n:%e`,
+				setting.Market, setting.Symbol, setting.Chance, amount, int(chanceInAll), priceShort, priceLong, setting.PriceX, turtleData.n))
 		}
-		util.Notice(fmt.Sprintf(`%s %s place空单 at %f chance:%d amount:%f priceX:%f currentNum-limit:%f %f 
-				orderSide:%s h%d:%f h%d:%f l%d:%f l%d:%f coin limit:%d`,
-			setting.Market, setting.Symbol, priceShort, setting.Chance, amount, setting.PriceX, chanceInAll, setting.AmountLimit,
+		util.Notice(fmt.Sprintf(`%s %s place空单 at %e chance:%d amount:%e priceX:%e currentNum-limit:%d %d 
+				orderSide:%s h%d:%e h%d:%e l%d:%e l%d:%e coin limit:%d`,
+			setting.Market, setting.Symbol, priceShort, setting.Chance, amount, setting.PriceX, int(chanceInAll), int(setting.AmountLimit),
 			orderSide, turtleData.daysFar, turtleData.highDaysFar, turtleData.daysNear, turtleData.highDaysNear,
 			turtleData.daysFar, turtleData.lowDaysFar, turtleData.daysNear, turtleData.lowDaysNear, coinLimit))
 		priceOut := false

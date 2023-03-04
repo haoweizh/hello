@@ -39,7 +39,7 @@ var ProcessCombineTurtle = func(settingLimit *model.Setting, tick *model.BidAsk)
 	}
 	settings := []*model.Setting{settingLimit, settingStop}
 	if (settingLimit.Chance != 0 && settingLimit.PriceX == 0) || (settingStop.Chance != 0 && settingStop.PriceX == 0) {
-		util.Notice(fmt.Sprintf(`no last priceX %s %s %d %f %d %f`,
+		util.Notice(fmt.Sprintf(`no last priceX %s %s %d %e %d %e`,
 			market, symbol, settingLimit.Chance, settingLimit.PriceX, settingStop.Chance, settingStop.PriceX))
 		return
 	}
@@ -61,10 +61,10 @@ var ProcessCombineTurtle = func(settingLimit *model.Setting, tick *model.BidAsk)
 	turtleData := []*Data{dataLimit, dataStop}
 	chanceValid, turtleCoins := checkChance(settingLimit)
 	msgKey := fmt.Sprintf("%s_%s_%s", model.FunctionCombineTurtle, market, symbol)
-	msg := fmt.Sprintf("[海龟参数]%s %s 币种数:%f/%f %d日:%f-%f %d日:%f-%f n:%e 仓数限制：%f 单仓数量:%f bid-ask %f %f \n"+
-		"海龟:仓数/持仓量/开仓价/今日平仓 %d/%f/%f/%v\n 反向:仓数/持仓量/开仓价/今日平仓 %d/%f/%f/%v",
-		dataLimit.turtleTime.String()[0:10], msgKey, turtleCoins, settingLimit.AmountLimit, dataLimit.daysFar, dataLimit.lowDaysFar,
-		dataLimit.highDaysFar, dataLimit.daysNear, dataLimit.lowDaysNear, dataLimit.highDaysNear, dataLimit.n, settingLimit.OpenShortMargin,
+	msg := fmt.Sprintf("[海龟参数]%s %s 币种数:%d/%d %d日:%e-%e %d日:%e-%e n:%e 仓数限制：%d 单仓数量:%e bid-ask %e %e \n"+
+		"海龟:仓数/持仓量/开仓价/今日平仓 %d/%e/%e/%v\n 反向:仓数/持仓量/开仓价/今日平仓 %d/%e/%e/%v",
+		dataLimit.turtleTime.String()[0:10], msgKey, int(turtleCoins), int(settingLimit.AmountLimit), dataLimit.daysFar, dataLimit.lowDaysFar,
+		dataLimit.highDaysFar, dataLimit.daysNear, dataLimit.lowDaysNear, dataLimit.highDaysNear, dataLimit.n, int(settingLimit.OpenShortMargin),
 		dataLimit.amount, tick.Bids[0].Price, tick.Asks[0].Price,
 		settingStop.Chance, settingStop.GridAmount, settingStop.PriceX, dataStop.liquidated,
 		settingLimit.Chance, settingLimit.GridAmount, settingLimit.PriceX, dataLimit.liquidated)
@@ -120,8 +120,8 @@ func handleBreakLong(setting, settingOpposite *model.Setting, data, dataOpposite
 	setting.PriceX = data.orderLong[0].TriggerPrice
 	util.Notice(fmt.Sprintf(`query turtle break buy %s %s %d`, setting.Market, setting.Symbol, len(data.orderLong)))
 	if data.orderLong[0].Function == model.Close {
-		msg := fmt.Sprintf(`liquidate long %s %s chance:%d amount:%f currentN:%f px:%f n:%e`,
-			setting.Market, setting.Symbol, setting.Chance, setting.GridAmount, turtleCoins, setting.PriceX, data.n)
+		msg := fmt.Sprintf(`liquidate long %s %s chance:%d amount:%e currentN:%d px:%e n:%e`,
+			setting.Market, setting.Symbol, setting.Chance, setting.GridAmount, int(turtleCoins), setting.PriceX, data.n)
 		go api.SendMails(`平多`+setting.Market+setting.Symbol, msg)
 		setting.Chance = 0
 		setting.GridAmount = 0
@@ -134,8 +134,8 @@ func handleBreakLong(setting, settingOpposite *model.Setting, data, dataOpposite
 			removeOpenOrder(dataOpposite)
 		}
 	} else if data.orderLong[0].Function == model.Open {
-		util.Notice(fmt.Sprintf(`加多 %s %s chance:%d amount:%f currentN:%f px:%f n:%e`,
-			setting.Market, setting.Symbol, setting.Chance, setting.GridAmount, turtleCoins, setting.PriceX, data.n))
+		util.Notice(fmt.Sprintf(`加多 %s %s chance:%d amount:%e currentN:%d px:%e n:%e`,
+			setting.Market, setting.Symbol, setting.Chance, setting.GridAmount, int(turtleCoins), setting.PriceX, data.n))
 		setting.Chance++
 		setting.GridAmount += data.amount
 	}
@@ -158,8 +158,8 @@ func handleBreakShort(setting, settingOpposite *model.Setting, data, dataOpposit
 	setting.PriceX = data.orderShort[0].TriggerPrice
 	util.Notice(fmt.Sprintf(`query turtle break sell %s %s %d`, setting.Market, setting.Symbol, len(data.orderShort)))
 	if data.orderShort[0].Function == model.Close {
-		msg := fmt.Sprintf(`liquidate short result: %s %s chance:%d amount:%f currentN:%f px:%f n:%e`,
-			setting.Market, setting.Symbol, setting.Chance, setting.GridAmount, turtleCoins, setting.PriceX, data.n)
+		msg := fmt.Sprintf(`liquidate short result: %s %s chance:%d amount:%e currentN:%d px:%e n:%e`,
+			setting.Market, setting.Symbol, setting.Chance, setting.GridAmount, int(turtleCoins), setting.PriceX, data.n)
 		go api.SendMails(`平空`+setting.Market+setting.Symbol, msg)
 		setting.Chance = 0
 		setting.GridAmount = 0
@@ -172,8 +172,8 @@ func handleBreakShort(setting, settingOpposite *model.Setting, data, dataOpposit
 			removeOpenOrder(dataOpposite)
 		}
 	} else {
-		util.Notice(fmt.Sprintf(`加空 %s %s chance:%d amount:%f currentN:%f px:%f n:%e`,
-			setting.Market, setting.Symbol, setting.Chance, setting.GridAmount, turtleCoins, setting.PriceX, data.n))
+		util.Notice(fmt.Sprintf(`加空 %s %s chance:%d amount:%e currentN:%d px:%e n:%e`,
+			setting.Market, setting.Symbol, setting.Chance, setting.GridAmount, int(turtleCoins), setting.PriceX, data.n))
 		setting.Chance--
 		setting.GridAmount += data.amount
 	}
