@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-var bigOrder *sync.Map
+var bigOrder = &sync.Map{}
 
 // ProcessCombineTurtle
 // setting.GridAmount 当前已经持仓数量

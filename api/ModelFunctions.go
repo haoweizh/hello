@@ -12,14 +12,14 @@ import (
 	"time"
 )
 
-var symbolSettings *sync.Map // function*market - map[symbol]*setting
-var handlers *sync.Map       //market*symbol / *sync.Map:map[function]carryHandler
-var coinSettings *sync.Map   // function / *sync.Map:map[coin][]*model.Setting
+var symbolSettings = &sync.Map{} // function*market - map[symbol]*setting
+var handlers = &sync.Map{}       //market*symbol / *sync.Map:map[function]carryHandler
+var coinSettings = &sync.Map{}   // function / *sync.Map:map[coin][]*model.Setting
 var appSettings []model.Setting
 var appMarkets []string
 var crossLen int
 var settingLoading bool
-var invalidTurtles *sync.Map //function*market*symbol *setting
+var invalidTurtles = &sync.Map{} //function*market*symbol *setting
 
 func GetSettingCoins(function, market string) (coins map[string]bool) {
 	handlerInitialized := false
