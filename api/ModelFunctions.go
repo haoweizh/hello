@@ -50,7 +50,7 @@ func GetSettingCoins(function, market string) (coins map[string]bool) {
 	return
 }
 
-func GetSettings(function, market string) *sync.Map {
+func GetSettings(function, market string) (settingMap *sync.Map, symbols []string) {
 	//handlerInitialized := false
 	//if handlers != nil {
 	//	handlers.Range(func(key, value interface{}) bool {
@@ -62,18 +62,17 @@ func GetSettings(function, market string) *sync.Map {
 	//	util.Notice(`load setting GetSettings %s %s`, function, market)
 	//	LoadSettings()
 	//}
+	symbols = make([]string, 0)
 	value, ok := util.LoadSyncMap(symbolSettings, function, market)
 	if ok {
-		size := 0
 		value.(*sync.Map).Range(func(symbol, value any) bool {
 			//util.Notice(`get symbol %s`, symbol)
-			size++
+			symbols = append(symbols, symbol.(string))
 			return true
 		})
-		util.Notice(fmt.Sprintf(`get symbol settings from %s %s %d`, function, market, size))
-		return value.(*sync.Map)
+		return value.(*sync.Map), symbols
 	}
-	return nil
+	return nil, nil
 }
 
 // GetInvalidTurtle
@@ -94,7 +93,7 @@ func GetInvalidTurtle(market, symbol string) *model.Setting {
 }
 
 func GetSetting(function, market, symbol string) *model.Setting {
-	settings := GetSettings(function, market)
+	settings, _ := GetSettings(function, market)
 	if settings != nil {
 		value, _ := settings.Load(symbol)
 		if value != nil {

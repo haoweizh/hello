@@ -29,7 +29,7 @@ func createContractMarket(key, secret, market string) (cm *contractMarket) {
 	success, positions, accountValue, availableU := api.GetPositions(key, secret, market)
 	util.Notice(fmt.Sprintf(`get positions %s %s %v account value %f available u %f`,
 		market, key, success, accountValue, availableU))
-	settings := api.GetSettings(model.FunctionCross, market)
+	settings, _ := api.GetSettings(model.FunctionCross, market)
 	if success {
 		cm = &contractMarket{key: key, market: market}
 		cm.positions = make(map[string]*model.Position)

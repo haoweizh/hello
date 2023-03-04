@@ -398,39 +398,37 @@ func checkChance(setting *model.Setting) (valid bool, chanceInAll float64) {
 	if !success {
 		return false, -1
 	}
-	settings := api.GetSettings(setting.Function, setting.Market)
+	settings, symbols := api.GetSettings(setting.Function, setting.Market)
 	inAll := 0.0
 	// 主流币检查仓位总数
 	if model.CommonCoins[strings.ToLower(coin)] {
-		settings.Range(func(key, value interface{}) bool {
-			if value == nil {
-				return false
-			}
-			valueSetting := value.(*model.Setting)
-			_, _, valueCoin, _ := model.GetFromStandard(valueSetting.Market, valueSetting.Symbol)
-			if valueSetting.Market == setting.Market && valueSetting.Function == setting.Function && model.CommonCoins[strings.ToLower(valueCoin)] {
-				inAll += float64(valueSetting.Chance)
-			}
-			return true
-		})
-	} else { // 非主流币检查开仓了的币种个数
-		settings.Range(func(key, value any) bool {
-			if value == nil {
-				return false
-			}
-			valueSetting := value.(*model.Setting)
-			_, _, valueCoin, _ := model.GetFromStandard(valueSetting.Market, valueSetting.Symbol)
-			var settingInvalid *model.Setting
-			if valueSetting.Function == model.FunctionCombineTurtle {
-				settingInvalid = api.GetInvalidTurtle(valueSetting.Market, valueSetting.Symbol)
-			}
-			if valueSetting.Market == setting.Market && valueSetting.Function == setting.Function && !model.CommonCoins[strings.ToLower(valueCoin)] {
-				if (settingInvalid != nil && settingInvalid.Chance != 0) || valueSetting.Chance != 0 {
-					inAll++
+		for _, symbol := range symbols {
+			value, ok := settings.Load(symbol)
+			if ok && value != nil {
+				valueSetting := value.(*model.Setting)
+				_, _, valueCoin, _ := model.GetFromStandard(valueSetting.Market, valueSetting.Symbol)
+				if valueSetting.Market == setting.Market && valueSetting.Function == setting.Function && model.CommonCoins[strings.ToLower(valueCoin)] {
+					inAll += float64(valueSetting.Chance)
 				}
 			}
-			return true
-		})
+		}
+	} else { // 非主流币检查开仓了的币种个数
+		for _, symbol := range symbols {
+			value, ok := settings.Load(symbol)
+			if ok && value != nil {
+				valueSetting := value.(*model.Setting)
+				_, _, valueCoin, _ := model.GetFromStandard(valueSetting.Market, valueSetting.Symbol)
+				var settingInvalid *model.Setting
+				if valueSetting.Function == model.FunctionCombineTurtle {
+					settingInvalid = api.GetInvalidTurtle(valueSetting.Market, valueSetting.Symbol)
+				}
+				if valueSetting.Market == setting.Market && valueSetting.Function == setting.Function && !model.CommonCoins[strings.ToLower(valueCoin)] {
+					if (settingInvalid != nil && settingInvalid.Chance != 0) || valueSetting.Chance != 0 {
+						inAll++
+					}
+				}
+			}
+		}
 	}
 	return (setting.SymbolRelated != model.SettingTurtleRemoved || setting.Chance != 0) &&
 		(math.Abs(inAll) < setting.AmountLimit || setting.AmountLimit < 0) &&
