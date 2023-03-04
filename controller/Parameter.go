@@ -511,17 +511,18 @@ func createTurtleLines(function, market, key string) (msg string) {
 	logMsg := ``
 	if settingMap != nil {
 		settingMap.Range(func(symbol, value any) bool {
+			util.Notice(fmt.Sprintf(symbol.(string)))
 			if value == nil {
 				return false
 			}
+			size++
 			setting := value.(*model.Setting)
 			if setting.SymbolRelated == model.SettingTurtleRemoved && setting.Chance == 0 {
 				return false
 			}
 			msgKey := fmt.Sprintf("%s_%s_%s", function, market, setting.Symbol)
 			msgValue, _ := util.LoadSyncMap(&model.CarryInfo, key, msgKey)
-			size++
-			logMsg += "\n" + msgKey + ` `
+			logMsg += "\n" + msgKey
 			if msgValue != nil {
 				sortable := &model.Sortable{Key: setting.Symbol, Value: msgValue.(string) + "\n"}
 				lines = append(lines, sortable)
