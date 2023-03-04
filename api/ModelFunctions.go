@@ -97,51 +97,51 @@ func GetSetting(function, market, symbol string) *model.Setting {
 	return nil
 }
 
-// GetChanceInAll
-// setting是主流币种：返回function market下所有主流币种仓数sum
-// setting是非主流币种：返回function market下有仓位的币种个数
-func GetChanceInAll(function, market, symbol string) (inALL int64) {
-	success, _, coin, _ := model.GetFromStandard(market, symbol)
-	if !success {
-		return 0
-	}
-	settings := GetSettings(function, market)
-	if settings == nil {
-		return 0
-	}
-	if model.CommonCoins[strings.ToLower(coin)] {
-		settings.Range(func(key, value interface{}) bool {
-			if value == nil {
-				return false
-			}
-			valueSetting := value.(*model.Setting)
-			_, _, valueCoin, _ := model.GetFromStandard(valueSetting.Market, valueSetting.Symbol)
-			if valueSetting.Market == market && valueSetting.Function == function && model.CommonCoins[strings.ToLower(valueCoin)] {
-				inALL += valueSetting.Chance
-			}
-			return true
-		})
-	} else {
-		settings.Range(func(key, value any) bool {
-			if value == nil {
-				return false
-			}
-			valueSetting := value.(*model.Setting)
-			_, _, valueCoin, _ := model.GetFromStandard(valueSetting.Market, valueSetting.Symbol)
-			var settingInvalid *model.Setting
-			if valueSetting.Function == model.FunctionCombineTurtle {
-				settingInvalid = GetInvalidTurtle(valueSetting.Market, valueSetting.Symbol)
-			}
-			if valueSetting.Market == market && valueSetting.Function == function && !model.CommonCoins[strings.ToLower(valueCoin)] {
-				if (settingInvalid != nil && settingInvalid.Chance != 0) || valueSetting.Chance != 0 {
-					inALL++
-				}
-			}
-			return true
-		})
-	}
-	return inALL
-}
+//// GetChanceInAll
+//// setting是主流币种：返回function market下所有主流币种仓数sum
+//// setting是非主流币种：返回function market下有仓位的币种个数
+//func GetChanceInAll(function, market, symbol string) (inALL int64) {
+//	success, _, coin, _ := model.GetFromStandard(market, symbol)
+//	if !success {
+//		return 0
+//	}
+//	settings := GetSettings(function, market)
+//	if settings == nil {
+//		return 0
+//	}
+//	if model.CommonCoins[strings.ToLower(coin)] {
+//		settings.Range(func(key, value interface{}) bool {
+//			if value == nil {
+//				return false
+//			}
+//			valueSetting := value.(*model.Setting)
+//			_, _, valueCoin, _ := model.GetFromStandard(valueSetting.Market, valueSetting.Symbol)
+//			if valueSetting.Market == market && valueSetting.Function == function && model.CommonCoins[strings.ToLower(valueCoin)] {
+//				inALL += valueSetting.Chance
+//			}
+//			return true
+//		})
+//	} else {
+//		settings.Range(func(key, value any) bool {
+//			if value == nil {
+//				return false
+//			}
+//			valueSetting := value.(*model.Setting)
+//			_, _, valueCoin, _ := model.GetFromStandard(valueSetting.Market, valueSetting.Symbol)
+//			var settingInvalid *model.Setting
+//			if valueSetting.Function == model.FunctionCombineTurtle {
+//				settingInvalid = GetInvalidTurtle(valueSetting.Market, valueSetting.Symbol)
+//			}
+//			if valueSetting.Market == market && valueSetting.Function == function && !model.CommonCoins[strings.ToLower(valueCoin)] {
+//				if (settingInvalid != nil && settingInvalid.Chance != 0) || valueSetting.Chance != 0 {
+//					inALL++
+//				}
+//			}
+//			return true
+//		})
+//	}
+//	return inALL
+//}
 
 func GetFunctions(market, symbol string) *sync.Map {
 	handlerInitialized := false
