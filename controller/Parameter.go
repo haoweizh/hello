@@ -503,9 +503,9 @@ func createTurtleLines(function, market, key string) (msg string) {
 	settingMap := api.GetSettings(function, market)
 	lines := make([]*model.Sortable, 0)
 	size := 0
+	logMsg := ``
 	if settingMap != nil {
 		settingMap.Range(func(symbol, value any) bool {
-			size++
 			if value == nil {
 				return false
 			}
@@ -515,14 +515,17 @@ func createTurtleLines(function, market, key string) (msg string) {
 			}
 			msgKey := fmt.Sprintf("%s_%s_%s", function, market, setting.Symbol)
 			msgValue, _ := util.LoadSyncMap(&model.CarryInfo, key, msgKey)
+			size++
+			logMsg += "\n" + msgKey + ` `
 			if msgValue != nil {
 				sortable := &model.Sortable{Key: setting.Symbol, Value: msgValue.(string) + "\n"}
 				lines = append(lines, sortable)
+				logMsg += msgValue.(string)
 			}
 			return true
 		})
 	}
-	util.Notice(fmt.Sprintf(`param for %s %s %d`, function, market, size))
+	util.Notice(fmt.Sprintf(`param for %s %s %d %s`, function, market, size, logMsg))
 	sortedLines := &model.SortableArray{Array: lines}
 	sort.Sort(sortedLines)
 	for _, line := range sortedLines.Array {
