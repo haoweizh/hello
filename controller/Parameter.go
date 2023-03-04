@@ -18,6 +18,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -499,7 +500,11 @@ func GetCode(c *gin.Context) {
 	}
 }
 
+var webLock sync.Mutex
+
 func createTurtleLines(function, market, key string) (msg string) {
+	defer webLock.Unlock()
+	webLock.Lock()
 	settingMap := api.GetSettings(function, market)
 	lines := make([]*model.Sortable, 0)
 	size := 0
@@ -520,7 +525,6 @@ func createTurtleLines(function, market, key string) (msg string) {
 			if msgValue != nil {
 				sortable := &model.Sortable{Key: setting.Symbol, Value: msgValue.(string) + "\n"}
 				lines = append(lines, sortable)
-				logMsg += msgValue.(string)
 			}
 			return true
 		})
