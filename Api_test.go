@@ -17,7 +17,6 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	"sync"
 	"testing"
 	"time"
 )
@@ -66,11 +65,6 @@ func Test_ws(t *testing.T) {
 }
 
 func Test_getCommonMarketInfos(t *testing.T) {
-	var a sync.Map
-	a.Store(`test`, `value`)
-	v, b := a.Load(`test`)
-	fmt.Println(v)
-	fmt.Println(b)
 	model.NewConfig()
 	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
 	//api.InitCrossMarketInfos([]string{model.Gate})

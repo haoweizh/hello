@@ -283,7 +283,10 @@ func handleSettings() (handled bool) {
 		for i := 0; i < marketInfoArray.Len() && len(topMarketInfos) < topMarketInfoLen; i++ {
 			_, marketType, coinValue, _ := model.GetFromStandard(market, marketInfoArray[i].Name)
 			if strings.EqualFold(marketType, model.MarketTypePerp) && !model.CommonCoins[strings.ToLower(coinValue)] {
-				topMarketInfos[marketInfoArray[i].Name] = marketInfoArray[i]
+				turtleData := GetTurtleData(accounts[0].Key, accounts[0].Secret, model.FunctionTurtle, market, marketInfoArray[i].Name)
+				if turtleData != nil {
+					topMarketInfos[marketInfoArray[i].Name] = marketInfoArray[i]
+				}
 			}
 		}
 		var settings *sync.Map

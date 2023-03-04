@@ -106,7 +106,7 @@ func MaintainTransFee() {
 					value.Status = order.Status
 				}
 				if order.Status == model.CarryStatusSuccess {
-					Turtle.SetTurtleOrderStatus(value.RefreshType, value.Market, value.Symbol, value.OrderId, order.Status)
+					api.SetTurtleOrderStatus(value.RefreshType, value.Market, value.Symbol, value.OrderId, order.Status)
 				}
 				value.DealPrice = order.DealPrice
 				model.AppDB.Save(&value)
