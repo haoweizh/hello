@@ -466,10 +466,6 @@ func CanOpenTurtle(setting *model.Setting, data *TurtleData) (canOpen bool, chan
 			data.OrderLong = nil
 			data.OrderShort = nil
 		}
-		if setting.Symbol == `APT_PERP` && setting.Function == model.FunctionTurtle && setting.Market == model.BinancePerp {
-			util.Notice(fmt.Sprintf(`test %f<%f %v %v`, math.Abs(float64(setting.Chance)),
-				setting.OpenShortMargin, math.Abs(float64(setting.Chance)) < setting.OpenShortMargin, canOpen))
-		}
 		return canOpen, inAll
 	}
 }

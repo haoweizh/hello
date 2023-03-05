@@ -58,15 +58,16 @@ var ProcessCombineTurtle = func(settingLimit *model.Setting, tick *model.BidAsk)
 		return
 	}
 	turtleData := []*api.TurtleData{dataLimit, dataStop}
-	canOpenTurtle, turtleCoins := api.CanOpenTurtle(settingLimit, dataLimit)
+	canOpenStop, turtleCoins := api.CanOpenTurtle(settingStop, dataStop)
+	canOpenLimit, _ := api.CanOpenTurtle(settingLimit, dataLimit)
 	msgKey := fmt.Sprintf("%s_%s_%s", model.FunctionCombineTurtle, market, symbol)
 	msg := fmt.Sprintf("[%s]%s 币种数:%d/%d %d日:%e-%e %d日:%e-%e N:%e 单币仓数：%d 单仓数量:%e bid-ask %e %e \n"+
-		"海龟:仓数/持仓量/开仓价/今日平仓 %d/%e/%e/%v\n 龟汤:仓数/持仓量/开仓价/今日平仓 %d/%e/%e/%v",
-		dataLimit.TurtleTime.String()[0:10], msgKey, int(turtleCoins), int(settingLimit.AmountLimit), dataLimit.DaysFar, dataLimit.LowDaysFar,
-		dataLimit.HighDaysFar, dataLimit.DaysNear, dataLimit.LowDaysNear, dataLimit.HighDaysNear, dataLimit.N, int(settingLimit.OpenShortMargin),
-		dataLimit.Amount, tick.Bids[0].Price, tick.Asks[0].Price,
-		settingStop.Chance, settingStop.GridAmount, settingStop.PriceX, dataStop.Liquidated,
-		settingLimit.Chance, settingLimit.GridAmount, settingLimit.PriceX, dataLimit.Liquidated)
+		"海龟可开%v:仓数/持仓量/开仓价/今日平仓 %d/%e/%e/%v\n 龟汤可开%v:仓数/持仓量/开仓价/今日平仓 %d/%e/%e/%v",
+		dataLimit.TurtleTime.String()[0:10], msgKey, int(turtleCoins), int(settingLimit.AmountLimit),
+		dataLimit.DaysFar, dataLimit.LowDaysFar, dataLimit.HighDaysFar, dataLimit.DaysNear, dataLimit.LowDaysNear,
+		dataLimit.HighDaysNear, dataLimit.N, int(settingLimit.OpenShortMargin), dataLimit.Amount, tick.Bids[0].Price,
+		tick.Asks[0].Price, canOpenStop, settingStop.Chance, settingStop.GridAmount, settingStop.PriceX, dataStop.Liquidated,
+		canOpenLimit, settingLimit.Chance, settingLimit.GridAmount, settingLimit.PriceX, dataLimit.Liquidated)
 	util.StoreSyncMap(&model.CarryInfo, msg, account.Key, msgKey)
 	if api.HandleTraceOrders(account.Key, account.Secret, market, symbol, settings, turtleData, turtleCoins) ||
 		api.CheckBreak(account.Key, account.Secret, market, symbol, settings, turtleData, tick) {
@@ -93,10 +94,10 @@ var ProcessCombineTurtle = func(settingLimit *model.Setting, tick *model.BidAsk)
 	if settingLimit.Chance+settingStop.Chance == 0 && settingLimit.PriceX-settingStop.PriceX <= marketInfo.PriceIncrement {
 		big = false
 	}
-	placeTurtleLong(account.Key, account.Secret, model.OrderTypeStop, dataStop, settingStop, minSize, tick, big, canOpenTurtle)
-	placeTurtleShort(account.Key, account.Secret, model.OrderTypeStop, dataStop, settingStop, minSize, tick, big, canOpenTurtle)
-	placeTurtleLong(account.Key, account.Secret, model.OrderTypeLimit, dataLimit, settingLimit, minSize, tick, big, canOpenTurtle)
-	placeTurtleShort(account.Key, account.Secret, model.OrderTypeLimit, dataLimit, settingLimit, minSize, tick, big, canOpenTurtle)
+	placeTurtleLong(account.Key, account.Secret, model.OrderTypeStop, dataStop, settingStop, minSize, tick, big, canOpenStop)
+	placeTurtleShort(account.Key, account.Secret, model.OrderTypeStop, dataStop, settingStop, minSize, tick, big, canOpenStop)
+	placeTurtleLong(account.Key, account.Secret, model.OrderTypeLimit, dataLimit, settingLimit, minSize, tick, big, canOpenLimit)
+	placeTurtleShort(account.Key, account.Secret, model.OrderTypeLimit, dataLimit, settingLimit, minSize, tick, big, canOpenLimit)
 	needCheck := handleBreakLong(settingLimit, settingStop, dataLimit, dataStop, turtleCoins, big)
 	if handleBreakShort(settingLimit, settingStop, dataLimit, dataStop, turtleCoins, big) {
 		needCheck = true
