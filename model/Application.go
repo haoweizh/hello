@@ -6,6 +6,7 @@ import (
 	"github.com/jinzhu/configor"
 	"gorm.io/gorm"
 	"hello/util"
+	"strings"
 	"sync"
 	"time"
 )
@@ -75,6 +76,9 @@ var DialectTail = map[string]map[string]string{
 var UniStandardTail = map[string]string{MarketTypeSpot: `_USDT`, MarketTypePerp: `_PERP`, MarketTypeFuture: `_FUTURE`}
 
 func GetFromStandard(market, standardSymbol string) (success bool, marketType, coinValue, dialectSymbol string) {
+	if len(strings.Trim(standardSymbol, ` `)) == 0 {
+		return
+	}
 	for mType, tail := range UniStandardTail {
 		if util.EndWith(standardSymbol, tail) {
 			coin := standardSymbol[0 : len(standardSymbol)-len(tail)]

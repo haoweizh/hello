@@ -6,6 +6,7 @@ import (
 	"hello/model"
 	"hello/util"
 	"math"
+	"strings"
 	"time"
 )
 
@@ -27,7 +28,7 @@ var ProcessCombineTurtle = func(settingLimit *model.Setting, tick *model.BidAsk)
 	maintaining, ok := model.ChannelMaintaining.Load(market)
 	if settingLimit == nil || tick == nil || tick.Asks == nil || tick.Bids == nil || model.AppConfig.Handle != `1` ||
 		(ok && maintaining.(bool)) || (model.AppConfig.Env != `test` && now-int64(tick.Ts) > 1000) ||
-		(time.Now().Hour() == 0 && time.Now().Minute() == 0) {
+		(time.Now().Hour() == 0 && time.Now().Minute() == 0) || len(strings.Trim(symbol, ` `)) == 0 {
 		return
 	}
 	settingStop := api.GetInvalidTurtle(market, symbol)
