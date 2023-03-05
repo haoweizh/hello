@@ -411,6 +411,7 @@ func placeOrderBybitPerp(order *model.Order, key, secret, orderSide, orderType, 
 	if orderType != model.OrderTypeMarket && orderType != model.OrderTypeStop {
 		formattedPrice, decimal := model.FormatPrice(model.BybitPerp, symbol, orderSide, price)
 		postData[`price`] = util.CutTailZero(strconv.FormatFloat(formattedPrice, 'f', decimal, 64))
+		order.Price = formattedPrice
 	}
 	if timeInForce == `` {
 		timeInForce = `GoodTillCancel`

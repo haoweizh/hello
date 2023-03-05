@@ -6,11 +6,8 @@ import (
 	"hello/model"
 	"hello/util"
 	"math"
-	"sync"
 	"time"
 )
-
-var bigOrder = &sync.Map{}
 
 // ProcessCombineTurtle
 // setting.GridAmount 当前已经持仓数量
@@ -76,11 +73,6 @@ var ProcessCombineTurtle = func(settingLimit *model.Setting, tick *model.BidAsk)
 	if !dataLimit.AdjustChecked && !dataStop.AdjustChecked {
 		return
 	}
-	big := false
-	value, getBig := util.LoadSyncMap(bigOrder, market, symbol)
-	if getBig && value != nil {
-		big = value.(bool)
-	}
 	minSize := 0.0
 	marketInfo := model.GetMarketInfo(market, symbol)
 	if marketInfo == nil {
@@ -91,6 +83,12 @@ var ProcessCombineTurtle = func(settingLimit *model.Setting, tick *model.BidAsk)
 		} else {
 			minSize = marketInfo.SizeMin * marketInfo.CTValue
 		}
+	}
+	//价格不一样：big=true
+	//价格一样：仓数相加=0时big=false；仓数相加≠0时big=true
+	big := true
+	if settingLimit.Chance+settingStop.Chance == 0 && settingLimit.PriceX-settingStop.PriceX <= marketInfo.PriceIncrement {
+		big = false
 	}
 	placeTurtleLong(account.Key, account.Secret, model.OrderTypeStop, dataStop, settingStop, minSize, tick, big, canOpenTurtle)
 	placeTurtleShort(account.Key, account.Secret, model.OrderTypeStop, dataStop, settingStop, minSize, tick, big, canOpenTurtle)
@@ -125,13 +123,13 @@ func handleBreakLong(setting, settingOpposite *model.Setting, data, dataOpposite
 		go api.SendMails(`平多`+setting.Market+setting.Symbol, msg)
 		setting.Chance = 0
 		setting.GridAmount = 0
+		setting.PriceX = 0
 		bigNew := false
 		if settingOpposite.Chance != 0 {
 			bigNew = true
 		}
 		if big != bigNew {
-			util.StoreSyncMap(bigOrder, bigNew, setting.Market, setting.Symbol)
-			removeOpenOrder(dataOpposite)
+			removeOrders(dataOpposite)
 		}
 	} else if data.OrderLong[0].Function == model.Open {
 		util.Notice(fmt.Sprintf(`加多 %s %s chance:%d Amount:%e currentN:%d px:%e N:%e`,
@@ -163,13 +161,13 @@ func handleBreakShort(setting, settingOpposite *model.Setting, data, dataOpposit
 		go api.SendMails(`平空`+setting.Market+setting.Symbol, msg)
 		setting.Chance = 0
 		setting.GridAmount = 0
+		setting.PriceX = 0
 		bigNew := false
 		if settingOpposite.Chance != 0 {
 			bigNew = true
 		}
 		if bigNew != big {
-			util.StoreSyncMap(bigOrder, bigNew, setting.Market, setting.Symbol)
-			removeOpenOrder(dataOpposite)
+			removeOrders(dataOpposite)
 		}
 	} else {
 		util.Notice(fmt.Sprintf(`加空 %s %s chance:%d Amount:%e currentN:%d px:%e N:%e`,
@@ -187,7 +185,7 @@ func handleBreakShort(setting, settingOpposite *model.Setting, data, dataOpposit
 	return true
 }
 
-func removeOpenOrder(data *api.TurtleData) {
+func removeOrders(data *api.TurtleData) {
 	if data != nil && data.OrderLong != nil && len(data.OrderLong) > 0 && data.OrderLong[0].Function == model.Open {
 		data.OrderLong = nil
 	}
@@ -315,7 +313,7 @@ func placeTurtleShort(key, secret, orderType string, data *api.TurtleData, setti
 				orderType = model.OrderTypeLimit
 				priceDeal = price * (1 - api.TurtleTriggerDelta/2)
 			} else {
-				priceDeal = price * price * (1 - api.TurtleTriggerDelta)
+				priceDeal = price * (1 - api.TurtleTriggerDelta)
 			}
 		} else if orderType == model.OrderTypeLimit && price <= tick.Bids[0].Price {
 			data.BreakShort = true

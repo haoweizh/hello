@@ -300,6 +300,7 @@ func placeOrdersBybitSpot(order *model.Order, key, secret, orderSide, orderType,
 	postData[`timeInForce`] = timeInForce
 	if orderType != model.OrderTypeMarket && orderType != model.OrderTypeStop {
 		formattedPrice, decimal := model.FormatPrice(model.BybitSpot, symbol, orderSide, price)
+		order.Price = formattedPrice
 		postData[`price`] = util.CutTailZero(strconv.FormatFloat(formattedPrice, 'f', decimal, 64))
 	}
 	response, httpErr := SignedRequestBybitSpot(key, secret, http.MethodPost, path, postData)

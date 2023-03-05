@@ -209,6 +209,7 @@ func placeOrderMexc(key, secret string, order *model.Order, orderSide, orderType
 	price, decimal := model.FormatPrice(model.Mexc, symbol, orderSide, price)
 	priceStr := util.CutTailZero(strconv.FormatFloat(price, 'f', decimal, 64))
 	marketInfo := model.GetMarketInfo(model.Mexc, symbol)
+	order.Price = price
 	if marketInfo == nil {
 		util.Notice(fmt.Sprintf(`[mexcPlaceOrder] market info is nil for symbol %s`, symbol))
 		return

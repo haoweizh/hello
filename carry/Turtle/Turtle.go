@@ -119,6 +119,7 @@ var ProcessTurtle = func(setting *model.Setting, tick *model.BidAsk) {
 			data.Liquidated = true
 			setting.Chance = 0
 			setting.GridAmount = 0
+			setting.PriceX = 0
 			model.AppDB.Model(setting).Where("market= ? and Symbol= ? and function= ?",
 				setting.Market, setting.Symbol, model.FunctionTurtle).Updates(map[string]interface{}{
 				`price_x`: setting.PriceX, `chance`: setting.Chance, `grid_amount`: setting.GridAmount})
@@ -157,6 +158,7 @@ var ProcessTurtle = func(setting *model.Setting, tick *model.BidAsk) {
 					priceLong, setting.Chance, setting.GridAmount))
 			setting.Chance = 0
 			setting.GridAmount = 0
+			setting.PriceX = 0
 			data.Liquidated = true
 			model.AppDB.Model(setting).Where("market= ? and Symbol= ? and function= ?",
 				setting.Market, setting.Symbol, model.FunctionTurtle).Updates(map[string]interface{}{

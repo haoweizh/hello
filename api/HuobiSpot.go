@@ -331,6 +331,7 @@ func placeOrderHuobiSpot(key, secret string, order *model.Order, orderSide, orde
 		postData["offset"] = offset
 		if orderType == model.OrderTypeLimit {
 			priceFuture, decimalFuture := model.FormatPrice(model.HuobiSpot, symbol, model.OrderSideBuy, price)
+			order.Price = priceFuture
 			priceStrFuture := util.CutTailZero(strconv.FormatFloat(priceFuture, 'f', decimalFuture, 64))
 			postData["price"] = priceStrFuture
 			postData["order_price_type"] = "limit"
@@ -379,6 +380,7 @@ func placeOrderHuobiSpot(key, secret string, order *model.Order, orderSide, orde
 		if orderType == model.OrderTypeLimit {
 			priceSpot, decimalSpot := model.FormatPrice(model.HuobiSpot, symbol, model.OrderSideBuy, price)
 			postData["price"] = util.CutTailZero(strconv.FormatFloat(priceSpot, 'f', decimalSpot, 64))
+			order.Price = priceSpot
 		}
 		responseBody := SignedRequestHuobi(key, secret, `POST`, restHuobi, "/v1/order/orders/place", postData)
 		orderJson, err := util.NewJSON(responseBody)

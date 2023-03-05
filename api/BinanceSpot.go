@@ -253,6 +253,7 @@ func placeOrderBinanceSpot(key, secret string, order *model.Order, orderSide, or
 	formattedAmount := model.GetAmountInMarket(model.BinanceSpot, symbol, amount, price)
 	amountStr := util.CutTailZero(fmt.Sprintf(`%f`, formattedAmount))
 	success, _, _, dialectSymbol := model.GetFromStandard(model.BinanceSpot, symbol)
+	order.Price = price
 	if success {
 		client := binance.NewClient(key, secret)
 		service := client.NewCreateOrderService().Symbol(dialectSymbol).Quantity(amountStr)

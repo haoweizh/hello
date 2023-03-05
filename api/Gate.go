@@ -597,6 +597,7 @@ func placeOrderGate(key, secret string, order *model.Order, orderSide, orderType
 	orderPriceStr := util.CutTailZero(strconv.FormatFloat(orderPrice, 'f', decimal, 64))
 	success, marketType, _, dialectSymbol := model.GetFromStandard(model.Gate, symbol)
 	order.Symbol = symbol
+	order.Price = orderPrice
 	if success && marketType == model.MarketTypeSpot {
 		relatedOrder := gateApi.Order{Price: orderPriceStr, Side: orderSide, CurrencyPair: dialectSymbol, Type: orderType}
 		if model.AppConfig.GateSpot {

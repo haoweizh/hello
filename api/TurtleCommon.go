@@ -147,6 +147,7 @@ func AdjustPosHolding(key, secret string, setting *model.Setting, data *TurtleDa
 				setting.Market, setting.Symbol, setting.Chance, posMap[setting.Symbol].Holding, setting.GridAmount, setting.Chance)
 			setting.GridAmount = 0
 			setting.Chance = 0
+			setting.PriceX = 0
 			if posMap[setting.Symbol].Holding > 0 {
 				data.OrderAdjust = MustPlaceOrder(key, secret, model.OrderSideSell, model.OrderTypeStop, setting.Market, setting.Symbol, ``,
 					model.FunctionTurtleAdjust, data.LowAdjust*(1-TurtleTriggerDelta), data.LowAdjust, posMap[setting.Symbol].Holding, setting)
@@ -168,6 +169,7 @@ func AdjustPosHolding(key, secret string, setting *model.Setting, data *TurtleDa
 	} else {
 		setting.GridAmount = 0
 		setting.Chance = 0
+		setting.PriceX = 0
 		util.Notice(`update turtle when absent %s %s %d`, setting.Market, setting.Symbol, len(posMap))
 		for s, position := range posMap {
 			util.Notice(`present %s %s %e`, s, position.Currency, position.Holding)
