@@ -255,7 +255,6 @@ func GetTurtleData(key, secret, function, market, symbol string) (data *TurtleDa
 			return nil
 		}
 	}
-	util.Notice(fmt.Sprintf(`need to create turtle data %s %s %s %s`, function, market, symbol, todayStr))
 	util.StoreSyncMap(queryDataTime, util.GetNow(), function, market, symbol, todayStr)
 	util.Notice(fmt.Sprintf(`need to create turtle data %s %s %s %s`, function, market, symbol, todayStr))
 	useNear := false

@@ -61,6 +61,9 @@ var ProcessCombineTurtle = func(settingLimit *model.Setting, tick *model.BidAsk)
 	canOpenLimit, turtleCoins := api.CanOpenTurtle(settingLimit, dataLimit)
 	canOpenStop, _ := api.CanOpenTurtle(settingStop, dataStop)
 	canOpen := canOpenStop || canOpenLimit
+	if canOpen {
+		settingLimit.SymbolRelated = ``
+	}
 	msgKey := fmt.Sprintf("%s_%s_%s", model.FunctionCombineTurtle, market, symbol)
 	msg := fmt.Sprintf("[%s]%s可开%v 币种数:%d/%d %d日:%e-%e %d日:%e-%e N:%e 单币仓数：%d 单仓数量:%e bid-ask %e %e \n"+
 		"海龟:仓数/持仓量/开仓价/今日平仓 %d/%e/%e/%v\n 龟汤:仓数/持仓量/开仓价/今日平仓 %d/%e/%e/%v",
