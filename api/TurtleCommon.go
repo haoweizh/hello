@@ -51,13 +51,26 @@ func CheckSetTurtling(value bool) (before bool) {
 	return before
 }
 
+var accountValues = &sync.Map{}    // market value
+var accountValueTime = &sync.Map{} // market *time.Time
 func CalcTurtleAmount(key, secret, market, symbol string, n float64) (amount float64) {
 	var accountValue float64
-	switch market {
-	case model.BinancePerp:
-		_, _, accountValue, _ = GetPositions(key, secret, market)
-	case model.Ftx, model.OKEX:
-		_, _, accountValue, _ = GetBalances(key, secret, market)
+	valueTime, _ := util.LoadSyncMap(accountValueTime, market)
+	if valueTime != nil && valueTime.(*time.Time).Add(time.Hour).After(time.Now()) {
+		value, _ := util.LoadSyncMap(accountValues, market)
+		if value != nil {
+			accountValue = value.(float64)
+		}
+	}
+	if accountValue == 0 {
+		switch market {
+		case model.BinancePerp:
+			_, _, accountValue, _ = GetPositions(key, secret, market)
+		case model.Ftx, model.OKEX:
+			_, _, accountValue, _ = GetBalances(key, secret, market)
+		}
+		util.StoreSyncMap(accountValues, accountValue, market)
+		util.StoreSyncMap(accountValueTime, time.Now(), market)
 	}
 	amount = 0.02 * accountValue / n
 	_, _, coin, _ := model.GetFromStandard(market, symbol)

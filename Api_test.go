@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"github.com/go-redis/redis/v8"
 	"github.com/gorilla/websocket"
 	"github.com/jinzhu/configor"
 	"gorm.io/driver/postgres"
@@ -158,6 +159,12 @@ func Test_WsAndOrderApi(t *testing.T) {
 func Test_BalAndPos(t *testing.T) {
 	model.NewConfig()
 	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
+	model.AppRedis = redis.NewClient(&redis.Options{
+		Addr:     model.AppConfig.RedisAddr,
+		Password: model.AppConfig.RedisPassword,
+		DB:       0,
+	})
+	api.GetTurtleData(model.AppConfig.OkexKey, model.AppConfig.OkexSecret, model.FunctionTurtle, model.OKEX, `MATIC_PERP`)
 	api.GetMarketInfos(model.Gate)
 	order := api.QueryOrderById(model.AppConfig.GateKey, model.AppConfig.GateSecret, `gate`, `MGA_USDT`,
 		model.OrderTypeLimit, `144149811503`)

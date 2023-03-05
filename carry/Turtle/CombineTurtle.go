@@ -102,7 +102,10 @@ var ProcessCombineTurtle = func(settingLimit *model.Setting, tick *model.BidAsk)
 	placeTurtleShort(account.Key, account.Secret, model.OrderTypeStop, dataStop, settingStop, minSize, tick, big, canOpen)
 	placeTurtleLong(account.Key, account.Secret, model.OrderTypeLimit, dataLimit, settingLimit, minSize, tick, big, canOpen)
 	placeTurtleShort(account.Key, account.Secret, model.OrderTypeLimit, dataLimit, settingLimit, minSize, tick, big, canOpen)
-	needCheck := handleBreakLong(settingLimit, settingStop, dataLimit, dataStop, turtleCoins, big)
+	needCheck := false
+	if handleBreakLong(settingLimit, settingStop, dataLimit, dataStop, turtleCoins, big) {
+		needCheck = true
+	}
 	if handleBreakShort(settingLimit, settingStop, dataLimit, dataStop, turtleCoins, big) {
 		needCheck = true
 	}
@@ -158,6 +161,7 @@ func handleBreakLong(setting, settingOpposite *model.Setting, data, dataOpposite
 func handleBreakShort(setting, settingOpposite *model.Setting, data, dataOpposite *api.TurtleData,
 	turtleCoins float64, big bool) (work bool) {
 	if data == nil || data.OrderShort == nil || len(data.OrderShort) == 0 || !data.WaitBreakShort || !data.BreakShort {
+		util.Info(fmt.Sprintf(`handleBreakShort %v %v %v`, len(data.OrderShort) == 0, !data.WaitBreakShort, !data.BreakShort))
 		return false
 	}
 	data.WaitBreakShort = false
