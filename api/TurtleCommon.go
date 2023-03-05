@@ -52,11 +52,11 @@ func CheckSetTurtling(value bool) (before bool) {
 }
 
 var accountValues = &sync.Map{}    // market value
-var accountValueTime = &sync.Map{} // market *time.Time
+var accountValueTime = &sync.Map{} // market time.Time
 func CalcTurtleAmount(key, secret, market, symbol string, n float64) (amount float64) {
 	var accountValue float64
 	valueTime, _ := util.LoadSyncMap(accountValueTime, market)
-	if valueTime != nil && valueTime.(*time.Time).Add(time.Hour).After(time.Now()) {
+	if valueTime != nil && valueTime.(time.Time).Add(time.Hour).After(time.Now()) {
 		value, _ := util.LoadSyncMap(accountValues, market)
 		if value != nil {
 			accountValue = value.(float64)
