@@ -161,7 +161,8 @@ func handleBreakLong(setting, settingOpposite *model.Setting, data, dataOpposite
 func handleBreakShort(setting, settingOpposite *model.Setting, data, dataOpposite *api.TurtleData,
 	turtleCoins float64, big bool) (work bool) {
 	if data == nil || data.OrderShort == nil || len(data.OrderShort) == 0 || !data.WaitBreakShort || !data.BreakShort {
-		util.Info(fmt.Sprintf(`handleBreakShort %v %v %v`, len(data.OrderShort) == 0, !data.WaitBreakShort, !data.BreakShort))
+		util.Notice(fmt.Sprintf(`handleBreakShort %s %s %s%v %v %v`,
+			setting.Market, setting.Symbol, setting.Function, len(data.OrderShort) == 0, !data.WaitBreakShort, !data.BreakShort))
 		return false
 	}
 	data.WaitBreakShort = false
@@ -273,6 +274,7 @@ func placeTurtleLong(key, secret, orderType string, data *api.TurtleData, settin
 			order.Function = function
 			go model.AppDB.Save(order)
 			if data.BreakLong {
+				util.Notice(`already break long move to adjust %v`, order)
 				data.OrderAdjust = append(data.OrderAdjust, order)
 			}
 		}
@@ -346,6 +348,7 @@ func placeTurtleShort(key, secret, orderType string, data *api.TurtleData, setti
 			order.Function = function
 			go model.AppDB.Save(order)
 			if data.BreakShort {
+				util.Notice(`already break short move to adjust %v`, order)
 				data.OrderAdjust = append(data.OrderAdjust, order)
 			}
 		}
