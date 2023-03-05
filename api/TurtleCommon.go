@@ -260,7 +260,6 @@ func GetTurtleData(key, secret, function, market, symbol string) (data *TurtleDa
 	today, todayStr := model.GetMarketToday(market)
 	value, ok := util.LoadSyncMap(&TurtleDataSet, function, market, symbol, todayStr)
 	if ok && value != nil {
-		util.Notice(fmt.Sprintf(`get turtle data %s %s %s %s %v`, function, market, symbol, todayStr, value))
 		return value.(*TurtleData)
 	}
 	value, ok = util.LoadSyncMap(queryDataTime, function, market, symbol, todayStr)

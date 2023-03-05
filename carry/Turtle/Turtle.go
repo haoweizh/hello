@@ -224,11 +224,10 @@ func placeTurtleOrders(key, secret string, turtleData *api.TurtleData, setting *
 			turtleData.DaysFar, turtleData.LowDaysFar, turtleData.DaysNear, turtleData.LowDaysNear, coinLimit))
 		priceOut := false
 		if priceLong <= tick.Asks[0].Price {
-			adjusts := turtleData.OrderAdjust
-			turtleData.OrderAdjust = api.MustPlaceOrder(key, secret, orderSide, model.OrderTypeLimit, setting.Market, setting.Symbol, ``,
+			turtleData.OrderLong = api.MustPlaceOrder(key, secret, orderSide, model.OrderTypeLimit, setting.Market, setting.Symbol, ``,
 				model.FunctionTurtle, priceLong*(1+api.TurtleTriggerDelta/2), priceLong, amount, setting)
-			for _, adjust := range adjusts {
-				turtleData.OrderAdjust = append(turtleData.OrderAdjust, adjust)
+			for _, order := range turtleData.OrderLong {
+				turtleData.OrderAdjust = append(turtleData.OrderAdjust, order)
 			}
 			priceOut = true
 		} else {
@@ -264,11 +263,10 @@ func placeTurtleOrders(key, secret string, turtleData *api.TurtleData, setting *
 			turtleData.DaysFar, turtleData.LowDaysFar, turtleData.DaysNear, turtleData.LowDaysNear, coinLimit))
 		priceOut := false
 		if priceShort >= tick.Bids[0].Price {
-			adjusts := turtleData.OrderAdjust
-			turtleData.OrderAdjust = api.MustPlaceOrder(key, secret, orderSide, model.OrderTypeLimit, setting.Market, setting.Symbol, ``,
+			turtleData.OrderShort = api.MustPlaceOrder(key, secret, orderSide, model.OrderTypeLimit, setting.Market, setting.Symbol, ``,
 				model.FunctionTurtle, priceShort*(1-api.TurtleTriggerDelta/2), priceShort, amount, setting)
-			for _, adjust := range adjusts {
-				turtleData.OrderAdjust = append(turtleData.OrderAdjust, adjust)
+			for _, order := range turtleData.OrderShort {
+				turtleData.OrderAdjust = append(turtleData.OrderAdjust, order)
 			}
 			priceOut = true
 		} else {
