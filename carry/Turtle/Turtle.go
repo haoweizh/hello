@@ -205,6 +205,7 @@ func handleBreak(key, secret string, setting *model.Setting, turtleData *api.Tur
 func placeTurtleOrders(key, secret string, turtleData *api.TurtleData, setting *model.Setting, canOpen bool, chanceInAll float64,
 	priceShort, priceLong float64, tick *model.BidAsk) {
 	coinLimit := int64(setting.OpenShortMargin)
+	canOpen = canOpen && math.Abs(float64(setting.Chance)) < setting.OpenShortMargin
 	if turtleData.OrderLong == nil && (canOpen || setting.Chance < 0) {
 		orderSide := model.OrderSideBuy
 		typeLong := model.OrderTypeStop

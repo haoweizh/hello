@@ -431,7 +431,7 @@ func CanOpenTurtle(setting *model.Setting, data *TurtleData) (canOpen bool, chan
 		}
 		//return (math.Abs(inAll) < setting.AmountLimit || setting.AmountLimit < 0) &&
 		//	(math.Abs(float64(setting.Chance)) < setting.OpenShortMargin || setting.OpenShortMargin < 0), inAll
-		canOpen = math.Abs(inAll) < setting.AmountLimit && math.Abs(float64(setting.Chance)) < setting.OpenShortMargin
+		canOpen = math.Abs(inAll) < setting.AmountLimit
 		// 仓数达到限额了，未成交的订单撤单
 		if inAll >= setting.AmountLimit {
 			data.OrderLong = nil
@@ -459,9 +459,8 @@ func CanOpenTurtle(setting *model.Setting, data *TurtleData) (canOpen bool, chan
 		//return (setting.Chance != 0 || (setting.SymbolRelated != model.SettingTurtleRemoved &&
 		//	(math.Abs(inAll) < setting.AmountLimit || setting.AmountLimit < 0))) &&
 		//	(math.Abs(float64(setting.Chance)) < setting.OpenShortMargin || setting.OpenShortMargin < 0), inAll
+		canOpen = setting.Chance != 0 || (setting.SymbolRelated != model.SettingTurtleRemoved && math.Abs(inAll) < setting.AmountLimit)
 		// 币种数量达到限额了，已经开仓了的币种正常开仓、平仓，未开仓或已平仓的撤开仓单
-		canOpen = (setting.Chance != 0 || (setting.SymbolRelated != model.SettingTurtleRemoved &&
-			math.Abs(inAll) < setting.AmountLimit)) && math.Abs(float64(setting.Chance)) < setting.OpenShortMargin
 		if inAll >= setting.AmountLimit && setting.Chance == 0 {
 			data.OrderLong = nil
 			data.OrderShort = nil
