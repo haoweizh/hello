@@ -47,7 +47,7 @@ var ProcessTurtle = func(setting *model.Setting, tick *model.BidAsk) {
 		data.OrderCleared = true
 		return
 	}
-	canOpenTurtle, chanceInAll := api.CanOpenTurtle(setting, data)
+	canOpenTurtle, chanceInAll := api.CheckCanOpen([]*model.Setting{setting}, []*api.TurtleData{data})
 	msgKey := fmt.Sprintf("%s_%s_%s", model.FunctionTurtle, setting.Market, setting.Symbol)
 	msg := fmt.Sprintf("[%s] %s 当前已经持仓数量:%e 持仓数/限制:%d/%d 总仓数币数/仓数币数限制:%d %d 上一次开仓的价格:%e "+
 		"%d日:%e-%e %d日:%e-%e N:%e 单次数量:%e bid-ask %e %e 当日有平仓：%v",

@@ -58,9 +58,7 @@ var ProcessCombineTurtle = func(settingLimit *model.Setting, tick *model.BidAsk)
 		return
 	}
 	turtleData := []*api.TurtleData{dataLimit, dataStop}
-	canOpenLimit, turtleCoins := api.CanOpenTurtle(settingLimit, dataLimit)
-	canOpenStop, _ := api.CanOpenTurtle(settingStop, dataStop)
-	canOpen := canOpenStop || canOpenLimit
+	canOpen, turtleCoins := api.CheckCanOpen(settings, turtleData)
 	if canOpen {
 		settingLimit.SymbolRelated = ``
 	}
@@ -123,8 +121,6 @@ var ProcessCombineTurtle = func(settingLimit *model.Setting, tick *model.BidAsk)
 func handleBreakLong(setting, settingOpposite *model.Setting, data, dataOpposite *api.TurtleData,
 	turtleCoins float64, big bool) (work bool) {
 	if data == nil || data.OrderLong == nil || len(data.OrderLong) == 0 || !data.WaitBreakLong || !data.BreakLong {
-		util.Notice(fmt.Sprintf(`handleBreakLong%s %s %s  %v %d %v %v %v`,
-			setting.Market, setting.Symbol, setting.Function, data, len(data.OrderShort), len(data.OrderShort) == 0, !data.WaitBreakShort, !data.BreakShort))
 		return false
 	}
 	data.WaitBreakLong = false
@@ -163,8 +159,6 @@ func handleBreakLong(setting, settingOpposite *model.Setting, data, dataOpposite
 func handleBreakShort(setting, settingOpposite *model.Setting, data, dataOpposite *api.TurtleData,
 	turtleCoins float64, big bool) (work bool) {
 	if data == nil || data.OrderShort == nil || len(data.OrderShort) == 0 || !data.WaitBreakShort || !data.BreakShort {
-		util.Notice(fmt.Sprintf(`handleBreakShort %s %s %s %d %v %v %v`,
-			setting.Market, setting.Symbol, setting.Function, len(data.OrderShort), len(data.OrderShort) == 0, !data.WaitBreakShort, !data.BreakShort))
 		return false
 	}
 	data.WaitBreakShort = false

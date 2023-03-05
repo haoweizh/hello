@@ -31,7 +31,7 @@ const TurtleFarBTC = 50
 var Turtling = false
 var TurtleLock sync.Mutex
 var TurtleDataSet = sync.Map{} // function_market_symbol_2019-12-06 *TurtleData
-//var queryDataTime = &sync.Map{}
+var queryDataTime = &sync.Map{}
 
 func (turtleData *TurtleData) ToString() (str string) {
 	if turtleData == nil {
@@ -263,13 +263,13 @@ func GetTurtleData(key, secret, function, market, symbol string) (data *TurtleDa
 		util.Notice(fmt.Sprintf(`get turtle data %s %s %s %s %v`, function, market, symbol, todayStr, value))
 		return value.(*TurtleData)
 	}
-	//value, ok = util.LoadSyncMap(queryDataTime, function, market, symbol, todayStr)
-	//if ok && value != nil {
-	//	if value.(time.Time).Add(time.Minute * 60).After(util.GetNow()) {
-	//		return nil
-	//	}
-	//}
-	//util.StoreSyncMap(queryDataTime, util.GetNow(), function, market, symbol, todayStr)
+	value, ok = util.LoadSyncMap(queryDataTime, function, market, symbol, todayStr)
+	if ok && value != nil {
+		if value.(time.Time).Add(time.Minute * 60).After(util.GetNow()) {
+			return nil
+		}
+	}
+	util.StoreSyncMap(queryDataTime, util.GetNow(), function, market, symbol, todayStr)
 	util.Notice(fmt.Sprintf(`need to create turtle data %s %s %s %s`, function, market, symbol, todayStr))
 	useNear := false
 	if function == model.FunctionTurtle {
@@ -420,17 +420,44 @@ func CheckBreak(key, secret, market, symbol string, settings []*model.Setting, t
 	return true
 }
 
-// CanOpenTurtle
-// 当setting.OpenShortMargin小于0时不限制本币种仓位，等于0时不许开仓
-// 当setting.AmountLimit小于0时不限制总仓位或开仓币数，等于0时不许开仓
-func CanOpenTurtle(setting *model.Setting, data *TurtleData) (canOpen bool, chanceInAll float64) {
+func CheckCanOpen(settings []*model.Setting, data []*TurtleData) (canOpen bool, inAll float64) {
+	var isChance bool
+	if len(settings) == 1 && len(data) == 1 {
+		canOpen, isChance, inAll = canOpenTurtle(settings[0])
+	} else if len(settings) == 2 && len(data) == 2 {
+		canOpen, isChance, inAll = canOpenTurtle(settings[0])
+		canOpen1, _, _ := canOpenTurtle(settings[1])
+		canOpen = canOpen || canOpen1
+	}
+	for i, setting := range settings {
+		dataCurrent := data[i]
+		if !canOpen && isChance {
+			if inAll > 0 && setting.Chance >= 0 {
+				dataCurrent.OrderLong = nil
+			}
+			if inAll < 0 && setting.Chance <= 0 {
+				dataCurrent.OrderShort = nil
+			}
+		} else if !canOpen {
+			dataCurrent.OrderLong = nil
+			dataCurrent.OrderShort = nil
+		}
+	}
+	return canOpen, inAll
+}
+
+// CanOpenTurtle  主流币检查仓位总数;非主流检查交易币种个数
+// isChance true: 按照仓数计算
+// isChance false: 按照开仓币种数计算
+// 当setting.OpenShortMargin小于0时不限制本币种仓位，等于0时不许开仓（未实现）
+// 当setting.AmountLimit小于0时不限制总仓位或开仓币数，等于0时不许开仓（未实现）
+func canOpenTurtle(setting *model.Setting) (canOpen, isChance bool, chanceInAll float64) {
 	success, _, coin, _ := model.GetFromStandard(setting.Market, setting.Symbol)
 	if !success {
-		return false, -1
+		return false, false, -1
 	}
 	settings, symbols := GetSettings(setting.Function, setting.Market)
 	inAll := 0.0
-	// 主流币检查仓位总数
 	if model.CommonCoins[strings.ToLower(coin)] {
 		for _, symbol := range symbols {
 			value, ok := settings.Load(symbol)
@@ -442,16 +469,8 @@ func CanOpenTurtle(setting *model.Setting, data *TurtleData) (canOpen bool, chan
 				}
 			}
 		}
-		//return (math.Abs(inAll) < setting.AmountLimit || setting.AmountLimit < 0) &&
-		//	(math.Abs(float64(setting.Chance)) < setting.OpenShortMargin || setting.OpenShortMargin < 0), inAll
 		canOpen = math.Abs(inAll) < setting.AmountLimit
-		// 仓数达到限额了，未成交的订单撤单
-		if inAll >= setting.AmountLimit {
-			data.OrderLong = nil
-		} else if inAll <= -1*math.Abs(setting.AmountLimit) {
-			data.OrderShort = nil
-		}
-		return canOpen, inAll
+		return canOpen, true, inAll
 	} else { // 非主流币检查开仓了的币种个数
 		for _, symbol := range symbols {
 			value, ok := settings.Load(symbol)
@@ -469,15 +488,7 @@ func CanOpenTurtle(setting *model.Setting, data *TurtleData) (canOpen bool, chan
 				}
 			}
 		}
-		//return (setting.Chance != 0 || (setting.SymbolRelated != model.SettingTurtleRemoved &&
-		//	(math.Abs(inAll) < setting.AmountLimit || setting.AmountLimit < 0))) &&
-		//	(math.Abs(float64(setting.Chance)) < setting.OpenShortMargin || setting.OpenShortMargin < 0), inAll
 		canOpen = setting.Chance != 0 || (setting.SymbolRelated != model.SettingTurtleRemoved && math.Abs(inAll) < setting.AmountLimit)
-		// 币种数量达到限额了，已经开仓了的币种正常开仓、平仓，未开仓或已平仓的撤开仓单
-		if inAll >= setting.AmountLimit && setting.Chance == 0 {
-			data.OrderLong = nil
-			data.OrderShort = nil
-		}
-		return canOpen, inAll
+		return canOpen, false, inAll
 	}
 }
