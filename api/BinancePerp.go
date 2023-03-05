@@ -405,6 +405,7 @@ func getCandlesBinancePerp(key, secret, symbol string, begin, end time.Time, lim
 		}
 	}
 	if responseBody == nil {
+		isCache = false
 		responseBody = signedRequestBinance(key, secret, http.MethodGet, restBinancePerp+"/fapi/v1/klines", true, param)
 	}
 	candleJson, err := util.NewJSON(responseBody)

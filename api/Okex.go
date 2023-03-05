@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/base64"
@@ -1335,7 +1336,7 @@ func getMaxLoanOKEX(key, secret, symbol string) (success bool, maxLoan float64) 
 
 // getCandlesOKEX bar 1m/3m/5m/15m/30m/1H/2H/4H/6H/12H/1D/1W/1M/3M/6M/1Y
 func getCandlesOKEX(key, secret, symbol string, before, after time.Time, count, slotSeconds int) (
-	candles []*model.Candle) {
+	candles []*model.Candle, isCache bool) {
 	candles = make([]*model.Candle, 0)
 	bar := `1D`
 	switch slotSeconds {
@@ -1352,10 +1353,27 @@ func getCandlesOKEX(key, secret, symbol string, before, after time.Time, count, 
 	//path := `/api/v5/market/history-candles`
 	param := map[string]interface{}{`instId`: symbol, `bar`: bar, `limit`: count,
 		`before`: before.UnixNano() / int64(time.Millisecond), `after`: after.UnixNano() / int64(time.Millisecond)}
-	response, _ := sendSignRequestOKEX(key, secret, http.MethodGet, path, param, nil)
-	candleJson, err := util.NewJSON(response)
+	redisKey := fmt.Sprintf(`%s_%s_%s_%d_%d_%d`, model.OKEX, symbol, bar, before.UnixMilli(), after.UnixMilli(), count)
+	var responseBody []byte
+	if model.AppRedis != nil {
+		temp, redisErr := model.AppRedis.Get(context.Background(), redisKey).Result()
+		if redisErr == nil {
+			responseBody = []byte(temp)
+			isCache = true
+		}
+	}
+	if responseBody == nil {
+		isCache = false
+		responseBody, _ = sendSignRequestOKEX(key, secret, http.MethodGet, path, param, nil)
+	}
+	candleJson, err := util.NewJSON(responseBody)
 	if err != nil || candleJson == nil || candleJson.Get(`data`) == nil || len(candleJson.Get(`data`).MustArray()) == 0 {
+		if model.AppRedis != nil {
+			model.AppRedis.Del(context.Background(), redisKey)
+		}
 		return
+	} else if !isCache && model.AppRedis != nil {
+		model.AppRedis.Set(context.Background(), redisKey, string(responseBody), 0)
 	}
 	candleJsons := candleJson.Get(`data`).MustArray()
 	for _, value := range candleJsons {
