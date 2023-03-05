@@ -14,12 +14,12 @@ import (
 type TurtleData struct {
 	// useNear是否在海龟交易时使用lowDaysNear和highDaysNear和priceX作为触发条件
 	// adjustChecked在设置为true前，不允许使用本Data进行交易
-	UseNear, WaitBreakLong, WaitBreakShort, BreakLong, BreakShort, Liquidated, AdjustChecked, OrderCleared bool
-	TurtleTime, CheckTimeBreak, CheckTimeOpen                                                              time.Time
-	HighDaysNear, LowDaysNear, HighDaysFar, LowDaysFar, LowAdjust, HighAdjust                              float64
-	HighToday, LowToday, N, Amount                                                                         float64
-	DaysNear, DaysFar, DaysAdjust                                                                          int
-	Symbol                                                                                                 string
+	UseNear, BreakLong, BreakShort, Liquidated, AdjustChecked, OrderCleared   bool
+	TurtleTime, CheckTimeBreak, CheckTimeOpen                                 time.Time
+	HighDaysNear, LowDaysNear, HighDaysFar, LowDaysFar, LowAdjust, HighAdjust float64
+	HighToday, LowToday, N, Amount                                            float64
+	DaysNear, DaysFar, DaysAdjust                                             int
+	Symbol                                                                    string
 	// 适应某些交易所单笔订单不能过大，大笔订单会拆分后下成多个，因价格超出无法下成的单为了不被取消，也归入orderAdjust
 	OrderLong, OrderShort, OrderAdjust []*model.Order
 }
@@ -281,8 +281,8 @@ func GetTurtleData(key, secret, function, market, symbol string) (data *TurtleDa
 	if strings.ToUpper(coin) == `BTC` {
 		far = TurtleFarBTC
 	}
-	data = &TurtleData{TurtleTime: today, Symbol: symbol, WaitBreakLong: false, WaitBreakShort: false, BreakLong: false,
-		BreakShort: false, Liquidated: false, DaysFar: far, DaysNear: far / 2, DaysAdjust: 5, UseNear: useNear}
+	data = &TurtleData{TurtleTime: today, Symbol: symbol, BreakLong: false, BreakShort: false, Liquidated: false,
+		DaysFar: far, DaysNear: far / 2, DaysAdjust: 5, UseNear: useNear}
 	indexMax := math.Max(21.0, float64(data.DaysFar))
 	duration, _ := time.ParseDuration(fmt.Sprintf(`%dh`, -24*int(indexMax)))
 	candles := GetCandle(key, secret, market, symbol, 86400, today.Add(duration), today)
@@ -390,29 +390,29 @@ func CheckBreak(key, secret, market, symbol string, settings []*model.Setting, t
 		if orderLong != nil && (orderLong.Status == model.CarryStatusSuccess || (orderLong.TriggerPrice > 0 &&
 			(orderLong.OrderType == model.OrderTypeStop && orderLong.TriggerPrice <= tick.Bids[0].Price) ||
 			(orderLong.OrderType == model.OrderTypeLimit && orderLong.Price > tick.Bids[0].Price))) {
-			util.Notice(fmt.Sprintf(`-----chance type: %s %s %s %d bid-ask %e %e short %e %e`,
+			util.Notice(fmt.Sprintf(`-----chance type: %s %s %s %d bid-ask %e %e %e %e`,
 				market, symbol, orderLong.OrderType, setting.Chance, tick.Bids[0].Price,
 				tick.Asks[0].Price, orderLong.TriggerPrice, orderLong.Price))
 			order := QueryOrderById(key, secret, market, symbol, orderLong.OrderType, orderLong.OrderId)
 			if order != nil && order.Status != model.CarryStatusWorking {
 				data.BreakLong = true
-				util.Notice(fmt.Sprintf(`-----order break long %s %s %d %s bid-ask %e %e short %e %v %v`,
+				util.Notice(fmt.Sprintf(`-----order break long %s %s %d %s bid-ask %e %e %e %v order id %s`,
 					market, symbol, setting.Chance, order.Status, tick.Bids[0].Price, tick.Asks[0].Price,
-					orderLong.Price, data.BreakLong, data.WaitBreakLong))
+					orderLong.Price, data.BreakLong, order.OrderId))
 			}
 		}
 		if orderShort != nil && (orderShort.Status == model.CarryStatusSuccess || (orderShort.TriggerPrice > 0 &&
 			(orderShort.OrderType == model.OrderTypeStop && orderShort.TriggerPrice >= tick.Asks[0].Price)) ||
 			(orderShort.OrderType == model.OrderTypeLimit && orderShort.Price < tick.Asks[0].Price)) {
-			util.Notice(fmt.Sprintf(`-----chance type: %s %s %s %d bid-ask %e %e long %e %e`,
+			util.Notice(fmt.Sprintf(`-----chance type: %s %s %s %d bid-ask %e %e %e %e`,
 				market, symbol, orderShort.OrderType, setting.Chance, tick.Bids[0].Price,
 				tick.Asks[0].Price, orderShort.TriggerPrice, orderShort.Price))
 			order := QueryOrderById(key, secret, market, symbol, orderShort.OrderType, orderShort.OrderId)
 			if order != nil && order.Status != model.CarryStatusWorking {
 				data.BreakShort = true
-				util.Notice(fmt.Sprintf(`-----order break short %s %s %s %d bid-ask %e %e long %e %v %v`,
+				util.Notice(fmt.Sprintf(`-----order break short %s %s %s %d bid-ask %e %e %e %v order id %s`,
 					market, symbol, order.Status, setting.Chance, tick.Bids[0].Price, tick.Asks[0].Price,
-					orderShort.Price, data.BreakShort, data.WaitBreakShort))
+					orderShort.Price, data.BreakShort, order.OrderId))
 			}
 		}
 	}

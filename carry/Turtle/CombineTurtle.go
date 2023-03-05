@@ -120,12 +120,12 @@ var ProcessCombineTurtle = func(settingLimit *model.Setting, tick *model.BidAsk)
 
 func handleBreakLong(setting, settingOpposite *model.Setting, data, dataOpposite *api.TurtleData,
 	turtleCoins float64, big bool) (work bool) {
-	if data == nil || data.OrderLong == nil || len(data.OrderLong) == 0 || !data.WaitBreakLong || !data.BreakLong {
+	if data == nil || data.OrderLong == nil || len(data.OrderLong) == 0 || !data.BreakLong {
 		return false
 	}
-	data.WaitBreakLong = false
 	setting.PriceX = data.OrderLong[0].TriggerPrice
-	util.Notice(fmt.Sprintf(`query turtle break buy %s %s %d`, setting.Market, setting.Symbol, len(data.OrderLong)))
+	util.Notice(fmt.Sprintf(`query turtle break buy %s %s %d %s %s`,
+		setting.Market, setting.Symbol, len(data.OrderLong), data.OrderLong[0].OrderId, data.OrderLong[0].Function))
 	if data.OrderLong[0].Function == model.Close {
 		msg := fmt.Sprintf(`liquidate long %s %s chance:%d Amount:%e currentN:%d px:%e N:%e`,
 			setting.Market, setting.Symbol, setting.Chance, setting.GridAmount, int(turtleCoins), setting.PriceX, data.N)
@@ -158,12 +158,12 @@ func handleBreakLong(setting, settingOpposite *model.Setting, data, dataOpposite
 
 func handleBreakShort(setting, settingOpposite *model.Setting, data, dataOpposite *api.TurtleData,
 	turtleCoins float64, big bool) (work bool) {
-	if data == nil || data.OrderShort == nil || len(data.OrderShort) == 0 || !data.WaitBreakShort || !data.BreakShort {
+	if data == nil || data.OrderShort == nil || len(data.OrderShort) == 0 || !data.BreakShort {
 		return false
 	}
-	data.WaitBreakShort = false
 	setting.PriceX = data.OrderShort[0].TriggerPrice
-	util.Notice(fmt.Sprintf(`query turtle break sell %s %s %d`, setting.Market, setting.Symbol, len(data.OrderShort)))
+	util.Notice(fmt.Sprintf(`query turtle break sell %s %s %d %s %s`,
+		setting.Market, setting.Symbol, len(data.OrderShort), data.OrderShort[0].OrderId, data.OrderShort[0].Function))
 	if data.OrderShort[0].Function == model.Close {
 		msg := fmt.Sprintf(`liquidate short result: %s %s chance:%d Amount:%e currentN:%d px:%e N:%e`,
 			setting.Market, setting.Symbol, setting.Chance, setting.GridAmount, int(turtleCoins), setting.PriceX, data.N)
@@ -243,7 +243,6 @@ func placeTurtleLong(key, secret, orderType string, data *api.TurtleData, settin
 	market := setting.Market
 	symbol := setting.Symbol
 	data.BreakLong = false
-	data.WaitBreakLong = true
 	priceDeal := price
 	canOpen = canOpen && math.Abs(float64(setting.Chance)) < setting.OpenShortMargin
 	if data.OrderLong == nil && (setting.Chance < 0 || canOpen) {
@@ -271,7 +270,7 @@ func placeTurtleLong(key, secret, orderType string, data *api.TurtleData, settin
 			order.Function = function
 			go model.AppDB.Save(order)
 			if data.BreakLong {
-				util.Notice(`already break long move to adjust %v`, order)
+				util.Notice(`already break long move to adjust %s %v`, order.OrderId, order)
 				data.OrderAdjust = append(data.OrderAdjust, order)
 			}
 		}
@@ -318,7 +317,6 @@ func placeTurtleShort(key, secret, orderType string, data *api.TurtleData, setti
 	market := setting.Market
 	symbol := setting.Symbol
 	data.BreakShort = false
-	data.WaitBreakShort = true
 	priceDeal := price
 	canOpen = canOpen && math.Abs(float64(setting.Chance)) < setting.OpenShortMargin
 	if data.OrderShort == nil && (setting.Chance > 0 || canOpen) {
@@ -345,7 +343,7 @@ func placeTurtleShort(key, secret, orderType string, data *api.TurtleData, setti
 			order.Function = function
 			go model.AppDB.Save(order)
 			if data.BreakShort {
-				util.Notice(`already break short move to adjust %v`, order)
+				util.Notice(`already break short move to adjust %v`, order.OrderId, order)
 				data.OrderAdjust = append(data.OrderAdjust, order)
 			}
 		}
