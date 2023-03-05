@@ -123,6 +123,8 @@ var ProcessCombineTurtle = func(settingLimit *model.Setting, tick *model.BidAsk)
 func handleBreakLong(setting, settingOpposite *model.Setting, data, dataOpposite *api.TurtleData,
 	turtleCoins float64, big bool) (work bool) {
 	if data == nil || data.OrderLong == nil || len(data.OrderLong) == 0 || !data.WaitBreakLong || !data.BreakLong {
+		util.Notice(fmt.Sprintf(`handleBreakLong %s %s %s %d %v %v %v`,
+			setting.Market, setting.Symbol, setting.Function, len(data.OrderShort), len(data.OrderShort) == 0, !data.WaitBreakShort, !data.BreakShort))
 		return false
 	}
 	data.WaitBreakLong = false
@@ -161,8 +163,8 @@ func handleBreakLong(setting, settingOpposite *model.Setting, data, dataOpposite
 func handleBreakShort(setting, settingOpposite *model.Setting, data, dataOpposite *api.TurtleData,
 	turtleCoins float64, big bool) (work bool) {
 	if data == nil || data.OrderShort == nil || len(data.OrderShort) == 0 || !data.WaitBreakShort || !data.BreakShort {
-		util.Notice(fmt.Sprintf(`handleBreakShort %s %s %s%v %v %v`,
-			setting.Market, setting.Symbol, setting.Function, len(data.OrderShort) == 0, !data.WaitBreakShort, !data.BreakShort))
+		util.Notice(fmt.Sprintf(`handleBreakShort %s %s %s %d %v %v %v`,
+			setting.Market, setting.Symbol, setting.Function, len(data.OrderShort), len(data.OrderShort) == 0, !data.WaitBreakShort, !data.BreakShort))
 		return false
 	}
 	data.WaitBreakShort = false
@@ -262,13 +264,13 @@ func placeTurtleLong(key, secret, orderType string, data *api.TurtleData, settin
 		} else if orderType == model.OrderTypeLimit && price >= tick.Asks[0].Price {
 			data.BreakLong = true
 		}
-		util.Notice(fmt.Sprintf(`place long %s %s %s %s %d %v at %e %e amt %e`,
-			orderType, setting.Function, market, symbol, setting.Chance, canOpen, priceDeal, price, amount))
 		data.OrderLong = api.MustPlaceOrder(key, secret, model.OrderSideBuy, orderType, market, symbol, ``,
 			setting.Function, priceDeal, price, amount, nil)
 		if data.OrderAdjust == nil {
 			data.OrderAdjust = make([]*model.Order, 0)
 		}
+		util.Notice(fmt.Sprintf(`place long %s %s %s %s %d %v at %e %e amt %e %d %v`,
+			orderType, setting.Function, market, symbol, setting.Chance, canOpen, priceDeal, price, amount, len(data.OrderLong), data.OrderLong))
 		for _, order := range data.OrderLong {
 			order.LineBuy = data.N
 			order.Function = function
