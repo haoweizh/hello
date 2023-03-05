@@ -249,7 +249,7 @@ func Test_initTurtleN(t *testing.T) {
 	//day := today.Add(time.Hour * -24)
 	//candles := api.CalcCandleN(model.AppConfig.BinanceKey, model.AppConfig.BinanceSecret, model.BinancePerp, `BNX_PERP`, 86400, day)
 	//fmt.Println(candles)
-	api.GetCandle(model.AppConfig.BinanceKey, model.AppConfig.BinanceSecret, model.BinancePerp, `BTC_PERP`,
+	api.GetCandle(model.AppConfig.OkexKey, model.AppConfig.OkexSecret, model.OKEX, `BTC_PERP`,
 		60, time.Now().Add(time.Minute*-1839600), today)
 	sortedCandles := api.GetMultiCandle(model.AppConfig.BinanceKey, model.AppConfig.BinanceSecret, model.BinancePerp, 60,
 		today.Add(time.Minute*-490), today, settings)
