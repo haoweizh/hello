@@ -383,8 +383,9 @@ func LoadSettings() bool {
 	if handleSettings() {
 		prepareSettings()
 	}
-	settingLoading = false
 	util.Notice(`finish load settings`)
+	time.Sleep(time.Second * 5)
+	settingLoading = false
 	return true
 }
 
