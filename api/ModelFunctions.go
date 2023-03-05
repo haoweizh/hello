@@ -183,6 +183,9 @@ func prepareSettings() {
 			if setting.Market == model.BinancePerp {
 				accounts := model.AppConfig.GetAccounts(model.BinancePerp)
 				for _, account := range accounts {
+					if len(strings.Trim(setting.Symbol, ` `)) == 0 {
+						continue
+					}
 					success := SetLeverageBinancePerp(account.Key, account.Secret, setting.Symbol, 5)
 					if success {
 						util.Notice(fmt.Sprintf(`set leverage binanceperp %s`, setting.Symbol))

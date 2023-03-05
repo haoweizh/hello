@@ -65,6 +65,12 @@ func Test_ws(t *testing.T) {
 }
 
 func Test_getCommonMarketInfos(t *testing.T) {
+	var f float64
+	var i int64
+	f = 3.0
+	i = -3
+	v := math.Abs(float64(i)) < f
+	fmt.Println(v)
 	model.NewConfig()
 	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
 	//api.InitCrossMarketInfos([]string{model.Gate})

@@ -78,6 +78,9 @@ func RequireDepthChanReset(markets *model.Markets, market string) bool {
 	validSymbols := 0
 	symbols := GetMarketSymbols(market)
 	for symbol := range symbols {
+		if len(strings.Trim(symbol, ` `)) == 0 {
+			validSymbols++
+		}
 		_, bidAsk := markets.GetBidAsk(symbol, market)
 		if bidAsk == nil {
 			continue
@@ -87,9 +90,10 @@ func RequireDepthChanReset(markets *model.Markets, market string) bool {
 			validSymbols++
 		}
 	}
-	util.Notice(fmt.Sprintf(`RequireDepthChanReset %s %d  %f valid %d in %d`,
-		market, now, model.AppConfig.Delay, validSymbols, len(symbols)))
-	return validSymbols*2 < len(symbols) || len(symbols)-validSymbols > 30
+	needReset = validSymbols*2 < len(symbols) || len(symbols)-validSymbols > 30
+	util.Notice(fmt.Sprintf(`RequireDepthChanReset %s %d  %f valid %d in %d needReset %v`,
+		market, now, model.AppConfig.Delay, validSymbols, len(symbols), needReset))
+	return needReset.(bool)
 }
 
 func MustCancel(key, secret, market, symbol, orderType, orderId string, mustCancel bool) (res bool) {
@@ -672,6 +676,9 @@ func GetWSSubscribes(market, subType string) []interface{} {
 	symbols := GetMarketSymbols(market)
 	subscribes := make([]interface{}, 0)
 	for symbol := range symbols {
+		if len(strings.Trim(symbol, ` `)) == 0 {
+			continue
+		}
 		subTypes := strings.Split(subType, `,`)
 		for _, value := range subTypes {
 			subscribe := GetWSSubscribe(market, symbol, value)
