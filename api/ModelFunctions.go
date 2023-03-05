@@ -324,17 +324,17 @@ func handleSettings() (handled bool) {
 			}
 			if haveCombine {
 				settingTurtle.Valid = false
+				value, ok = mapCombine.Load(info.Name)
+				settingCombine := &model.Setting{Valid: true, Function: model.FunctionCombineTurtle, Market: market, Symbol: info.Name,
+					OpenShortMargin: 3, AmountLimit: 10}
+				if value != nil {
+					settingCombine = value.(*model.Setting)
+					settingCombine.SymbolRelated = ``
+					util.Notice(`add settingCombine back %s`, info.Name)
+				}
+				model.AppDB.Save(settingCombine)
 			}
 			model.AppDB.Save(settingTurtle)
-			value, ok = mapCombine.Load(info.Name)
-			settingCombine := &model.Setting{Valid: true, Function: model.FunctionCombineTurtle, Market: market, Symbol: info.Name,
-				OpenShortMargin: 3, AmountLimit: 10}
-			if value != nil {
-				settingCombine = value.(*model.Setting)
-				settingCombine.SymbolRelated = ``
-				util.Notice(`add settingCombine back %s`, info.Name)
-			}
-			model.AppDB.Save(settingCombine)
 		}
 		handleRemove := func(symbol, setting interface{}) bool {
 			_, _, coinValue, _ := model.GetFromStandard(market, symbol.(string))
