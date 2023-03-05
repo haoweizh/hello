@@ -70,8 +70,8 @@ func Test_getCommonMarketInfos(t *testing.T) {
 	//api.InitCrossMarketInfos([]string{model.Gate})
 	api.InitMarketInfos()
 	order1 := api.PlaceOrder(model.AppConfig.BinanceKey, model.AppConfig.BinanceSecret, model.OrderSideBuy, model.OrderTypeStop,
-		model.BinancePerp, `YFI_PERP`, ``,
-		12000, 12000, 0.001, false, nil, nil)
+		model.BinancePerp, `OP_PERP`, ``,
+		3.3115, 3.2787, 0.1, false, nil, nil)
 	fmt.Println(order1.OrderId)
 	success, pos, value, u := api.GetPositions(model.AppConfig.GateKey, model.AppConfig.GateSecret, model.Gate)
 	fmt.Println(fmt.Sprintf(`%v %v %v %v`, success, pos, value, u))

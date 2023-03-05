@@ -83,6 +83,7 @@ var ProcessCombineTurtle = func(settingLimit *model.Setting, tick *model.BidAsk)
 		} else {
 			minSize = marketInfo.SizeMin * marketInfo.CTValue
 		}
+		minSize = math.Max(minSize, 2*marketInfo.MoneyMin/dataLimit.LowDaysFar)
 	}
 	//价格不一样：big=true
 	//价格一样：仓数相加=0时big=false；仓数相加≠0时big=true
