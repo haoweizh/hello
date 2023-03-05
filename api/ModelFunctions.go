@@ -267,7 +267,7 @@ func prepareSettings() {
 func handleSettings() (handled bool) {
 	for _, market := range appMarkets {
 		_, haveDynamic := util.LoadSyncMap(symbolSettings, model.FunctionDynamicTurtle, market)
-		_, haveCombine := util.LoadSyncMap(symbolSettings, model.FunctionCombineTurtle, market)
+		_, haveCombine := util.LoadSyncMap(symbolSettings, model.FunctionDynamicCombine, market)
 		accounts := model.AppConfig.GetAccounts(market)
 		if (!haveDynamic && !haveCombine) || accounts == nil || len(accounts) == 0 {
 			continue
