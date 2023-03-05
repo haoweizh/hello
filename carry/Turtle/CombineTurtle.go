@@ -264,13 +264,14 @@ func placeTurtleLong(key, secret, orderType string, data *api.TurtleData, settin
 		} else if orderType == model.OrderTypeLimit && price >= tick.Asks[0].Price {
 			data.BreakLong = true
 		}
+		util.Notice(fmt.Sprintf(`before place %s %s %s %v`, orderType, setting.Function, symbol, data.OrderLong))
 		data.OrderLong = api.MustPlaceOrder(key, secret, model.OrderSideBuy, orderType, market, symbol, ``,
 			setting.Function, priceDeal, price, amount, nil)
 		if data.OrderAdjust == nil {
 			data.OrderAdjust = make([]*model.Order, 0)
 		}
-		util.Notice(fmt.Sprintf(`place long %s %s %s %s %d %v at %e %e amt %e %d %v`,
-			orderType, setting.Function, market, symbol, setting.Chance, canOpen, priceDeal, price, amount, len(data.OrderLong), data.OrderLong))
+		util.Notice(fmt.Sprintf(`place long %s %s %s %v %d %v at %e %e amt %e %d`,
+			orderType, setting.Function, symbol, data.OrderLong, setting.Chance, canOpen, priceDeal, price, amount, len(data.OrderLong)))
 		for _, order := range data.OrderLong {
 			order.LineBuy = data.N
 			order.Function = function

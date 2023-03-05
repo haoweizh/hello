@@ -31,7 +31,7 @@ const TurtleFarBTC = 50
 var Turtling = false
 var TurtleLock sync.Mutex
 var TurtleDataSet = sync.Map{} // function_market_symbol_2019-12-06 *TurtleData
-var queryDataTime = &sync.Map{}
+//var queryDataTime = &sync.Map{}
 
 func (turtleData *TurtleData) ToString() (str string) {
 	if turtleData == nil {
@@ -260,15 +260,16 @@ func GetTurtleData(key, secret, function, market, symbol string) (data *TurtleDa
 	today, todayStr := model.GetMarketToday(market)
 	value, ok := util.LoadSyncMap(&TurtleDataSet, function, market, symbol, todayStr)
 	if ok && value != nil {
+		util.Notice(fmt.Sprintf(`get turtle data %s %s %s %s %v`, function, market, symbol, todayStr, value))
 		return value.(*TurtleData)
 	}
-	value, ok = util.LoadSyncMap(queryDataTime, function, market, symbol, todayStr)
-	if ok && value != nil {
-		if value.(time.Time).Add(time.Minute * 60).After(util.GetNow()) {
-			return nil
-		}
-	}
-	util.StoreSyncMap(queryDataTime, util.GetNow(), function, market, symbol, todayStr)
+	//value, ok = util.LoadSyncMap(queryDataTime, function, market, symbol, todayStr)
+	//if ok && value != nil {
+	//	if value.(time.Time).Add(time.Minute * 60).After(util.GetNow()) {
+	//		return nil
+	//	}
+	//}
+	//util.StoreSyncMap(queryDataTime, util.GetNow(), function, market, symbol, todayStr)
 	util.Notice(fmt.Sprintf(`need to create turtle data %s %s %s %s`, function, market, symbol, todayStr))
 	useNear := false
 	if function == model.FunctionTurtle {
@@ -331,8 +332,8 @@ func GetTurtleData(key, secret, function, market, symbol string) (data *TurtleDa
 	}
 	if data.Amount > 0 && data.N > 0 {
 		util.StoreSyncMap(&TurtleDataSet, data, function, market, symbol, todayStr)
-		util.Notice(fmt.Sprintf(`%s %s %s %s set turtle data: Amount:%e N:%e %d:%e-%e %d:%e-%e`,
-			function, market, symbol, todayStr, data.Amount, data.N, data.DaysNear, data.LowDaysNear,
+		util.Notice(fmt.Sprintf(`set turtle data %v %s %s %s %s  Amount:%e N:%e %d:%e-%e %d:%e-%e`,
+			data, function, market, symbol, todayStr, data.Amount, data.N, data.DaysNear, data.LowDaysNear,
 			data.HighDaysNear, data.DaysFar, data.LowDaysFar, data.HighDaysFar))
 	}
 	return
