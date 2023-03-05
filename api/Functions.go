@@ -211,6 +211,9 @@ func GetMultiCandle(key, secret, market string, slotSeconds int, begin, end time
 			i++
 			if !isCache {
 				time.Sleep(time.Millisecond * 300)
+			} else {
+				util.Notice(fmt.Sprintf(`get candles from cache %s %s %v %v %d %d`,
+					market, symbol, begin, end, count, slotSeconds))
 			}
 		}
 	}
@@ -254,6 +257,9 @@ func GetCandle(key, secret, market, symbol string, slotSeconds int, begin, end t
 		}
 		if !isCache {
 			time.Sleep(time.Millisecond * 300)
+		} else {
+			util.Notice(fmt.Sprintf(`get candles from cache %s %s %v %v %d %d`,
+				market, symbol, begin, end, count, slotSeconds))
 		}
 	}
 	return
