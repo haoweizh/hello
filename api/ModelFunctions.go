@@ -344,6 +344,15 @@ func handleSettings() (handled bool) {
 			if topMarketInfos[symbol.(string)] == nil && !model.CommonCoins[strings.ToLower(coinValue)] {
 				if setting.(*model.Setting).Chance == 0 {
 					setting.(*model.Setting).SymbolRelated = model.SettingTurtleRemoved
+				} else if haveCombine && setting.(*model.Setting).Function == model.FunctionTurtle {
+					valueCombine, _ := util.LoadSyncMap(mapCombine, setting.(*model.Setting).Symbol)
+					settingCombine := &model.Setting{Valid: true, Function: model.FunctionCombineTurtle, Market: market,
+						Symbol: setting.(*model.Setting).Symbol, OpenShortMargin: 3, AmountLimit: 10}
+					if valueCombine != nil {
+						settingCombine = valueCombine.(*model.Setting)
+					}
+					settingCombine.SymbolRelated = ``
+					model.AppDB.Save(settingCombine)
 				}
 				model.AppDB.Save(setting)
 				util.Notice(`add setting remove %s`, setting.(*model.Setting).Symbol)

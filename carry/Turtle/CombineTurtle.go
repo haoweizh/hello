@@ -51,6 +51,7 @@ var ProcessCombineTurtle = func(settingLimit *model.Setting, tick *model.BidAsk)
 		}
 		return
 	}
+	dataStop.Amount = dataLimit.Amount
 	if !dataLimit.OrderCleared {
 		api.ClearOrders(account.Key, account.Secret, market, symbol)
 		dataLimit.OrderCleared = true
@@ -60,7 +61,7 @@ var ProcessCombineTurtle = func(settingLimit *model.Setting, tick *model.BidAsk)
 	canOpenTurtle, turtleCoins := api.CanOpenTurtle(settingLimit, dataLimit)
 	msgKey := fmt.Sprintf("%s_%s_%s", model.FunctionCombineTurtle, market, symbol)
 	msg := fmt.Sprintf("[%s]%s 币种数:%d/%d %d日:%e-%e %d日:%e-%e N:%e 单币仓数：%d 单仓数量:%e bid-ask %e %e \n"+
-		"海龟:仓数/持仓量/开仓价/今日平仓 %d/%e/%e/%v\n 反向:仓数/持仓量/开仓价/今日平仓 %d/%e/%e/%v",
+		"海龟:仓数/持仓量/开仓价/今日平仓 %d/%e/%e/%v\n 龟汤:仓数/持仓量/开仓价/今日平仓 %d/%e/%e/%v",
 		dataLimit.TurtleTime.String()[0:10], msgKey, int(turtleCoins), int(settingLimit.AmountLimit), dataLimit.DaysFar, dataLimit.LowDaysFar,
 		dataLimit.HighDaysFar, dataLimit.DaysNear, dataLimit.LowDaysNear, dataLimit.HighDaysNear, dataLimit.N, int(settingLimit.OpenShortMargin),
 		dataLimit.Amount, tick.Bids[0].Price, tick.Asks[0].Price,
@@ -250,6 +251,8 @@ func placeTurtleLong(key, secret, orderType string, data *api.TurtleData, settin
 		} else if orderType == model.OrderTypeLimit && price >= tick.Asks[0].Price {
 			data.BreakLong = true
 		}
+		util.Notice(fmt.Sprintf(`place long %s %s %s %s %d %v at %e %e amt %e`,
+			orderType, setting.Function, market, symbol, setting.Chance, canOpen, priceDeal, price, amount))
 		data.OrderLong = api.MustPlaceOrder(key, secret, model.OrderSideBuy, orderType, market, symbol, ``,
 			setting.Function, priceDeal, price, amount, nil)
 		if data.OrderAdjust == nil {
@@ -320,6 +323,8 @@ func placeTurtleShort(key, secret, orderType string, data *api.TurtleData, setti
 		} else if orderType == model.OrderTypeLimit && price <= tick.Bids[0].Price {
 			data.BreakShort = true
 		}
+		util.Notice(fmt.Sprintf(`place short %s %s %s %s %d %v at %e %e amt %e`,
+			orderType, setting.Function, market, symbol, setting.Chance, canOpen, priceDeal, price, amount))
 		data.OrderShort = api.MustPlaceOrder(key, secret, model.OrderSideSell, orderType, market, symbol, ``,
 			setting.Function, priceDeal, price, amount, nil)
 		if data.OrderAdjust == nil {
