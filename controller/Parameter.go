@@ -499,32 +499,28 @@ func GetCode(c *gin.Context) {
 	}
 }
 
-func createTurtleLines(function, market, key string) (msg string) {
+func createTurtleLines(function, market, key string) (msg string, size int) {
 	settingMap, symbols := api.GetSettings(function, market)
 	lines := make([]*model.Sortable, 0)
-	size := 0
-	logMsg := ``
 	if settingMap != nil {
 		for _, symbol := range symbols {
 			value, ok := settingMap.Load(symbol)
 			if value == nil || !ok {
 				continue
 			}
-			size++
 			setting := value.(*model.Setting)
 			if setting.SymbolRelated == model.SettingTurtleRemoved && setting.Chance == 0 {
 				continue
 			}
 			msgKey := fmt.Sprintf("%s_%s_%s", function, market, setting.Symbol)
 			msgValue, _ := util.LoadSyncMap(&model.CarryInfo, key, msgKey)
-			logMsg += "\n" + msgKey
 			if msgValue != nil {
+				size++
 				sortable := &model.Sortable{Key: setting.Symbol, Value: msgValue.(string) + "\n"}
 				lines = append(lines, sortable)
 			}
 		}
 	}
-	util.Notice(fmt.Sprintf(`param for %s %s %d %s`, function, market, size, logMsg))
 	sortedLines := &model.SortableArray{Array: lines}
 	sort.Sort(sortedLines)
 	for _, line := range sortedLines.Array {
@@ -540,9 +536,10 @@ func GetParameters(c *gin.Context) {
 	for _, market := range markets {
 		account := model.AppConfig.GetAccounts(market)[0]
 		userKeys = append(userKeys, account.Key)
-		msg += fmt.Sprintf("海龟%s\n %s %s\n", market,
-			createTurtleLines(model.FunctionCombineTurtle, market, account.Key),
-			createTurtleLines(model.FunctionTurtle, market, account.Key))
+		msgTurtle, sizeTurtle := createTurtleLines(model.FunctionTurtle, market, account.Key)
+		msgCombine, sizeCombine := createTurtleLines(model.FunctionCombineTurtle, market, account.Key)
+		msg += fmt.Sprintf("单一海龟%s 个数%d\n %s\n", market, sizeTurtle, msgTurtle)
+		msg += fmt.Sprintf("组合海龟%s 个数%d\n %s\n", market, sizeCombine, msgCombine)
 	}
 	setting := api.GetSetting(model.FunctionGrid, model.Ftx, `LINK-PERP`)
 	if setting != nil {

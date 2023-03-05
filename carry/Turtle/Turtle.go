@@ -49,7 +49,7 @@ var ProcessTurtle = func(setting *model.Setting, tick *model.BidAsk) {
 	}
 	canOpenTurtle, chanceInAll := api.CanOpenTurtle(setting, data)
 	msgKey := fmt.Sprintf("%s_%s_%s", model.FunctionTurtle, setting.Market, setting.Symbol)
-	msg := fmt.Sprintf("[海龟参数]%s %s 当前已经持仓数量:%e 持仓数/限制:%d/%d 总仓数币数/仓数币数限制:%d %d 上一次开仓的价格:%e "+
+	msg := fmt.Sprintf("[%s] %s 当前已经持仓数量:%e 持仓数/限制:%d/%d 总仓数币数/仓数币数限制:%d %d 上一次开仓的价格:%e "+
 		"%d日:%e-%e %d日:%e-%e N:%e 单次数量:%e bid-ask %e %e 当日有平仓：%v",
 		data.TurtleTime.String()[0:10], msgKey, setting.GridAmount, setting.Chance, int(setting.OpenShortMargin), int(chanceInAll),
 		int(setting.AmountLimit), setting.PriceX, data.DaysFar, data.LowDaysFar, data.HighDaysFar, data.DaysNear, data.LowDaysNear,
