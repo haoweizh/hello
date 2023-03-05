@@ -289,49 +289,58 @@ func handleSettings() (handled bool) {
 				}
 			}
 		}
-		var settings *sync.Map
+		mapTurtle := &sync.Map{}
+		mapCombine := &sync.Map{}
 		value, ok := util.LoadSyncMap(symbolSettings, model.FunctionTurtle, market)
-		if ok {
-			settings = value.(*sync.Map)
-		} else {
-			settings = &sync.Map{}
+		if ok && value != nil {
+			mapTurtle = value.(*sync.Map)
+		}
+		value, ok = util.LoadSyncMap(symbolSettings, model.FunctionCombineTurtle, market)
+		if ok && value != nil {
+			mapCombine = value.(*sync.Map)
 		}
 		for _, info := range topMarketInfos {
-			value, ok = settings.Load(info.Name)
-			var setting *model.Setting
+			value, ok = mapTurtle.Load(info.Name)
+			settingTurtle := &model.Setting{Valid: true, Function: model.FunctionTurtle, Market: market, Symbol: info.Name,
+				OpenShortMargin: 3, AmountLimit: 10}
 			if value == nil {
-				setting = &model.Setting{
-					Valid:           true,
-					Function:        model.FunctionTurtle,
-					Market:          market,
-					Symbol:          info.Name,
-					Chance:          0,
-					GridAmount:      0,
-					OpenShortMargin: 3,
-					AmountLimit:     10,
-				}
-				if setting.Market == model.BinancePerp {
+				if settingTurtle.Market == model.BinancePerp {
 					for _, account := range accounts {
-						success := SetLeverageBinancePerp(account.Key, account.Secret, setting.Symbol, 5)
+						success := SetLeverageBinancePerp(account.Key, account.Secret, settingTurtle.Symbol, 5)
 						if success {
-							util.Notice(fmt.Sprintf(`set leverage binanceperp %s`, setting.Symbol))
+							util.Notice(fmt.Sprintf(`set leverage binanceperp %s`, settingTurtle.Symbol))
 						} else {
-							util.Notice(fmt.Sprintf(`fail to set leverage binanceperp %s`, setting.Symbol))
+							util.Notice(fmt.Sprintf(`fail to set leverage binanceperp %s`, settingTurtle.Symbol))
 							time.Sleep(time.Minute)
 						}
 					}
 					time.Sleep(time.Second)
 				}
-				util.Notice(`add setting %v`, setting.Symbol)
+				util.Notice(`add settingTurtle %v`, settingTurtle.Symbol)
 			} else {
-				setting = value.(*model.Setting)
-				setting.SymbolRelated = ``
-				util.Notice(`add setting back %s`, info.Name)
+				settingTurtle = value.(*model.Setting)
+				settingTurtle.SymbolRelated = ``
+				util.Notice(`add settingTurtle back %s`, info.Name)
 			}
-			model.AppDB.Save(setting)
+			if haveCombine {
+				settingTurtle.Valid = false
+			}
+			model.AppDB.Save(settingTurtle)
+			value, ok = mapCombine.Load(info.Name)
+			settingCombine := &model.Setting{Valid: true, Function: model.FunctionCombineTurtle, Market: market, Symbol: info.Name,
+				OpenShortMargin: 3, AmountLimit: 10}
+			if value != nil {
+				settingCombine = value.(*model.Setting)
+				settingCombine.SymbolRelated = ``
+				util.Notice(`add settingCombine back %s`, info.Name)
+			}
+			model.AppDB.Save(settingCombine)
 		}
-		settings.Range(func(symbol, setting interface{}) bool {
+		handleRemove := func(symbol, setting interface{}) bool {
 			_, _, coinValue, _ := model.GetFromStandard(market, symbol.(string))
+			if setting == nil {
+				return true
+			}
 			if topMarketInfos[symbol.(string)] == nil && !model.CommonCoins[strings.ToLower(coinValue)] {
 				if setting.(*model.Setting).Chance == 0 {
 					setting.(*model.Setting).SymbolRelated = model.SettingTurtleRemoved
@@ -340,7 +349,9 @@ func handleSettings() (handled bool) {
 				util.Notice(`add setting remove %s`, setting.(*model.Setting).Symbol)
 			}
 			return true
-		})
+		}
+		mapTurtle.Range(handleRemove)
+		mapCombine.Range(handleRemove)
 	}
 	return
 }

@@ -47,7 +47,7 @@ var ProcessTurtle = func(setting *model.Setting, tick *model.BidAsk) {
 		data.OrderCleared = true
 		return
 	}
-	chanceValid, chanceInAll := api.CheckChance(setting)
+	canOpenTurtle, chanceInAll := api.CanOpenTurtle(setting, data)
 	msgKey := fmt.Sprintf("%s_%s_%s", model.FunctionTurtle, setting.Market, setting.Symbol)
 	msg := fmt.Sprintf("[海龟参数]%s %s 当前已经持仓数量:%e 持仓数/限制:%d/%d 总仓数币数/仓数币数限制:%d %d 上一次开仓的价格:%e "+
 		"%d日:%e-%e %d日:%e-%e N:%e 单次数量:%e bid-ask %e %e 当日有平仓：%v",
@@ -66,7 +66,7 @@ var ProcessTurtle = func(setting *model.Setting, tick *model.BidAsk) {
 	}
 	_, _, coin, _ := model.GetFromStandard(setting.Market, setting.Symbol)
 	if setting.Chance == 0 && (!data.Liquidated || !model.CommonCoins[strings.ToLower(coin)]) { // 开初始仓
-		placeTurtleOrders(account.Key, account.Secret, data, setting, chanceValid, chanceInAll, priceShort, priceLong, tick)
+		placeTurtleOrders(account.Key, account.Secret, data, setting, canOpenTurtle, chanceInAll, priceShort, priceLong, tick)
 		if data.BreakLong && data.WaitBreakLong {
 			handleBreak(account.Key, account.Secret, setting, data, model.OrderSideBuy)
 			setting.Chance = 1
@@ -98,7 +98,7 @@ var ProcessTurtle = func(setting *model.Setting, tick *model.BidAsk) {
 		} else {
 			priceShort = math.Max(data.HighDaysFar, data.HighToday) - 2*data.N
 		}
-		placeTurtleOrders(account.Key, account.Secret, data, setting, chanceValid, chanceInAll, priceShort, priceLong, tick)
+		placeTurtleOrders(account.Key, account.Secret, data, setting, canOpenTurtle, chanceInAll, priceShort, priceLong, tick)
 		// 加仓一个单位
 		if data.BreakLong && data.WaitBreakLong {
 			handleBreak(account.Key, account.Secret, setting, data, model.OrderSideBuy)
@@ -137,7 +137,7 @@ var ProcessTurtle = func(setting *model.Setting, tick *model.BidAsk) {
 				priceLong = data.LowDaysFar + 2*data.N
 			}
 		}
-		placeTurtleOrders(account.Key, account.Secret, data, setting, chanceValid, chanceInAll, priceShort, priceLong, tick)
+		placeTurtleOrders(account.Key, account.Secret, data, setting, canOpenTurtle, chanceInAll, priceShort, priceLong, tick)
 		// 加仓一个单位
 		if data.BreakShort && data.WaitBreakShort {
 			handleBreak(account.Key, account.Secret, setting, data, model.OrderSideSell)
@@ -200,10 +200,10 @@ func handleBreak(key, secret string, setting *model.Setting, turtleData *api.Tur
 	}
 }
 
-func placeTurtleOrders(key, secret string, turtleData *api.TurtleData, setting *model.Setting, chanceValid bool, chanceInAll float64,
+func placeTurtleOrders(key, secret string, turtleData *api.TurtleData, setting *model.Setting, canOpen bool, chanceInAll float64,
 	priceShort, priceLong float64, tick *model.BidAsk) {
 	coinLimit := int64(setting.OpenShortMargin)
-	if turtleData.OrderLong == nil && (chanceValid || setting.Chance < 0) {
+	if turtleData.OrderLong == nil && (canOpen || setting.Chance < 0) {
 		orderSide := model.OrderSideBuy
 		typeLong := model.OrderTypeStop
 		amount := turtleData.Amount
@@ -244,7 +244,7 @@ func placeTurtleOrders(key, secret string, turtleData *api.TurtleData, setting *
 			}
 		}
 	}
-	if turtleData.OrderShort == nil && (chanceValid || setting.Chance > 0) {
+	if turtleData.OrderShort == nil && (canOpen || setting.Chance > 0) {
 		orderSide := model.OrderSideSell
 		typeShort := model.OrderTypeStop
 		amount := turtleData.Amount

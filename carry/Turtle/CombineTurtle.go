@@ -59,7 +59,7 @@ var ProcessCombineTurtle = func(settingLimit *model.Setting, tick *model.BidAsk)
 		return
 	}
 	turtleData := []*api.TurtleData{dataLimit, dataStop}
-	chanceValid, turtleCoins := api.CheckChance(settingLimit)
+	canOpenTurtle, turtleCoins := api.CanOpenTurtle(settingLimit, dataLimit)
 	msgKey := fmt.Sprintf("%s_%s_%s", model.FunctionCombineTurtle, market, symbol)
 	msg := fmt.Sprintf("[海龟参数]%s %s 币种数:%d/%d %d日:%e-%e %d日:%e-%e N:%e 单币仓数：%d 单仓数量:%e bid-ask %e %e \n"+
 		"海龟:仓数/持仓量/开仓价/今日平仓 %d/%e/%e/%v\n 反向:仓数/持仓量/开仓价/今日平仓 %d/%e/%e/%v",
@@ -92,10 +92,10 @@ var ProcessCombineTurtle = func(settingLimit *model.Setting, tick *model.BidAsk)
 			minSize = marketInfo.SizeMin * marketInfo.CTValue
 		}
 	}
-	placeTurtleLong(account.Key, account.Secret, model.OrderTypeStop, dataStop, settingStop, minSize, tick, big, chanceValid)
-	placeTurtleShort(account.Key, account.Secret, model.OrderTypeStop, dataStop, settingStop, minSize, tick, big, chanceValid)
-	placeTurtleLong(account.Key, account.Secret, model.OrderTypeLimit, dataLimit, settingLimit, minSize, tick, big, chanceValid)
-	placeTurtleShort(account.Key, account.Secret, model.OrderTypeLimit, dataLimit, settingLimit, minSize, tick, big, chanceValid)
+	placeTurtleLong(account.Key, account.Secret, model.OrderTypeStop, dataStop, settingStop, minSize, tick, big, canOpenTurtle)
+	placeTurtleShort(account.Key, account.Secret, model.OrderTypeStop, dataStop, settingStop, minSize, tick, big, canOpenTurtle)
+	placeTurtleLong(account.Key, account.Secret, model.OrderTypeLimit, dataLimit, settingLimit, minSize, tick, big, canOpenTurtle)
+	placeTurtleShort(account.Key, account.Secret, model.OrderTypeLimit, dataLimit, settingLimit, minSize, tick, big, canOpenTurtle)
 	needCheck := handleBreakLong(settingLimit, settingStop, dataLimit, dataStop, turtleCoins, big)
 	if handleBreakShort(settingLimit, settingStop, dataLimit, dataStop, turtleCoins, big) {
 		needCheck = true
@@ -197,7 +197,7 @@ func removeOpenOrder(data *api.TurtleData) {
 }
 
 func placeTurtleLong(key, secret, orderType string, data *api.TurtleData, setting *model.Setting,
-	minSize float64, tick *model.BidAsk, big, chanceValid bool) {
+	minSize float64, tick *model.BidAsk, big, canOpen bool) {
 	amount := data.Amount
 	function := model.Open
 	if setting.Chance < 0 {
@@ -238,7 +238,7 @@ func placeTurtleLong(key, secret, orderType string, data *api.TurtleData, settin
 	data.BreakLong = false
 	data.WaitBreakLong = true
 	priceDeal := price
-	if data.OrderLong == nil && (setting.Chance < 0 || chanceValid) {
+	if data.OrderLong == nil && (setting.Chance < 0 || canOpen) {
 		if orderType == model.OrderTypeStop {
 			if price <= tick.Asks[0].Price {
 				data.BreakLong = true
@@ -267,7 +267,7 @@ func placeTurtleLong(key, secret, orderType string, data *api.TurtleData, settin
 }
 
 func placeTurtleShort(key, secret, orderType string, data *api.TurtleData, setting *model.Setting,
-	minSize float64, tick *model.BidAsk, big, chanceValid bool) {
+	minSize float64, tick *model.BidAsk, big, canOpen bool) {
 	amount := data.Amount
 	function := model.Open
 	if setting.Chance > 0 {
@@ -308,7 +308,7 @@ func placeTurtleShort(key, secret, orderType string, data *api.TurtleData, setti
 	data.BreakShort = false
 	data.WaitBreakShort = true
 	priceDeal := price
-	if data.OrderShort == nil && (setting.Chance > 0 || chanceValid) {
+	if data.OrderShort == nil && (setting.Chance > 0 || canOpen) {
 		if orderType == model.OrderTypeStop {
 			if price >= tick.Bids[0].Price {
 				data.BreakShort = true

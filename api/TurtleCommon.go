@@ -405,10 +405,10 @@ func CheckBreak(key, secret, market, symbol string, settings []*model.Setting, t
 	return true
 }
 
-// CheckChance
+// CanOpenTurtle
 // 当setting.OpenShortMargin小于0时不限制本币种仓位，等于0时不许开仓
 // 当setting.AmountLimit小于0时不限制总仓位或开仓币数，等于0时不许开仓
-func CheckChance(setting *model.Setting) (valid bool, chanceInAll float64) {
+func CanOpenTurtle(setting *model.Setting, data *TurtleData) (canOpen bool, chanceInAll float64) {
 	success, _, coin, _ := model.GetFromStandard(setting.Market, setting.Symbol)
 	if !success {
 		return false, -1
@@ -427,6 +427,16 @@ func CheckChance(setting *model.Setting) (valid bool, chanceInAll float64) {
 				}
 			}
 		}
+		//return (math.Abs(inAll) < setting.AmountLimit || setting.AmountLimit < 0) &&
+		//	(math.Abs(float64(setting.Chance)) < setting.OpenShortMargin || setting.OpenShortMargin < 0), inAll
+		canOpen = math.Abs(inAll) < setting.AmountLimit && math.Abs(float64(setting.Chance)) < setting.OpenShortMargin
+		// 仓数达到限额了，未成交的订单撤单
+		if inAll >= setting.AmountLimit {
+			data.OrderLong = nil
+		} else if inAll <= -1*math.Abs(setting.AmountLimit) {
+			data.OrderShort = nil
+		}
+		return canOpen, inAll
 	} else { // 非主流币检查开仓了的币种个数
 		for _, symbol := range symbols {
 			value, ok := settings.Load(symbol)
@@ -444,8 +454,16 @@ func CheckChance(setting *model.Setting) (valid bool, chanceInAll float64) {
 				}
 			}
 		}
+		//return (setting.Chance != 0 || (setting.SymbolRelated != model.SettingTurtleRemoved &&
+		//	(math.Abs(inAll) < setting.AmountLimit || setting.AmountLimit < 0))) &&
+		//	(math.Abs(float64(setting.Chance)) < setting.OpenShortMargin || setting.OpenShortMargin < 0), inAll
+		// 币种数量达到限额了，已经开仓了的币种正常开仓、平仓，未开仓或已平仓的撤开仓单
+		canOpen = (setting.Chance != 0 || (setting.SymbolRelated != model.SettingTurtleRemoved &&
+			math.Abs(inAll) < setting.AmountLimit)) && math.Abs(float64(setting.Chance)) < setting.OpenShortMargin
+		if inAll >= setting.AmountLimit && setting.Chance == 0 {
+			data.OrderLong = nil
+			data.OrderShort = nil
+		}
+		return canOpen, inAll
 	}
-	return (setting.SymbolRelated != model.SettingTurtleRemoved || setting.Chance != 0) &&
-		(math.Abs(inAll) < setting.AmountLimit || setting.AmountLimit < 0) &&
-		(math.Abs(float64(setting.Chance)) < setting.OpenShortMargin || setting.OpenShortMargin < 0), inAll
 }
