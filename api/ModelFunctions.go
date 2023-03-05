@@ -345,6 +345,7 @@ func handleSettings() (handled bool) {
 				if setting.(*model.Setting).Chance == 0 {
 					setting.(*model.Setting).SymbolRelated = model.SettingTurtleRemoved
 				} else if haveCombine && setting.(*model.Setting).Function == model.FunctionTurtle {
+					setting.(*model.Setting).Valid = false
 					valueCombine, _ := util.LoadSyncMap(mapCombine, setting.(*model.Setting).Symbol)
 					settingCombine := &model.Setting{Valid: true, Function: model.FunctionCombineTurtle, Market: market,
 						Symbol: setting.(*model.Setting).Symbol, OpenShortMargin: 3, AmountLimit: 10}
