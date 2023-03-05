@@ -1373,6 +1373,7 @@ func getCandlesOKEX(key, secret, symbol string, before, after time.Time, count, 
 		}
 		return
 	} else if !isCache && model.AppRedis != nil {
+		util.Notice(fmt.Sprintf(`set candles to cache %s len %d`, redisKey, len(string(responseBody))))
 		model.AppRedis.Set(context.Background(), redisKey, string(responseBody), 0)
 	}
 	candleJsons := candleJson.Get(`data`).MustArray()

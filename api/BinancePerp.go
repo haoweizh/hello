@@ -428,6 +428,7 @@ func getCandlesBinancePerp(key, secret, symbol string, begin, end time.Time, lim
 		util.SocketInfo(`fail to get binance kline %s %s %s %d %s`, symbol, begin.String(), end.String(), slotSeconds, errMsg)
 		return
 	} else if !isCache && model.AppRedis != nil {
+		util.Notice(fmt.Sprintf(`set candles to cache %s len %d`, redisKey, len(string(responseBody))))
 		model.AppRedis.Set(context.Background(), redisKey, string(responseBody), 0)
 	}
 	candles = make([]*model.Candle, 0)
