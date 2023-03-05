@@ -110,7 +110,7 @@ func MaintainTransFee() {
 				}
 				value.DealPrice = order.DealPrice
 				model.AppDB.Save(&value)
-				util.Info(fmt.Sprintf(`save order %s %s %s %s %s`,
+				util.Info(fmt.Sprintf(`save order %s %s %s %s status:%s`,
 					value.OrderId, value.Symbol, value.OrderSide, value.OrderTime.String(), value.Status))
 				time.Sleep(time.Second)
 			}

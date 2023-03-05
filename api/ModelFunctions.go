@@ -289,8 +289,9 @@ func handleSettings() (handled bool) {
 				turtleData := GetTurtleData(accounts[0].Key, accounts[0].Secret, model.FunctionTurtle, market, marketInfoArray[i].Name)
 				if turtleData != nil {
 					topMarketInfos[marketInfoArray[i].Name] = marketInfoArray[i]
+					util.Notice(fmt.Sprintf(`get top turtle done %s %s`, market, marketInfoArray[i].Name))
 				} else {
-					util.Notice(fmt.Sprintf(`fail to get top turtle data %s %s`, market, marketInfoArray[i].Name))
+					util.Notice(fmt.Sprintf(`get top turtle data fail %s %s`, market, marketInfoArray[i].Name))
 				}
 			}
 		}
