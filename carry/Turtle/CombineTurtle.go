@@ -51,6 +51,8 @@ var ProcessCombineTurtle = func(settingLimit *model.Setting, tick *model.BidAsk)
 			util.Notice(fmt.Sprintf(`fail to get turtle combine & turtle %s %s`, market, symbol))
 		}
 		return
+	} else if settingLimit.Symbol == `MKR_PERP` {
+		util.Notice(fmt.Sprintf(`get n %f %f`, dataLimit.N, dataStop.N))
 	}
 	dataStop.Amount = dataLimit.Amount
 	if !dataLimit.OrderCleared {
@@ -286,6 +288,7 @@ func placeTurtleLong(key, secret, orderType string, data *api.TurtleData, settin
 			orderType, setting.Function, symbol, data.OrderLong, setting.Chance, canOpen, priceDeal, price, amount, len(data.OrderLong)))
 		for _, order := range data.OrderLong {
 			order.LineBuy = data.N
+			order.LineSell = data.N
 			order.Function = function
 			go model.AppDB.Save(order)
 			if data.BreakLong && order.Status != model.CarryStatusSuccess {
@@ -377,6 +380,7 @@ func placeTurtleShort(key, secret, orderType string, data *api.TurtleData, setti
 		}
 		for _, order := range data.OrderShort {
 			order.LineBuy = data.N
+			order.LineSell = data.N
 			order.Function = function
 			go model.AppDB.Save(order)
 			if data.BreakShort && order.Status != model.CarryStatusSuccess {
