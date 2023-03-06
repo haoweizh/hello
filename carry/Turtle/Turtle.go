@@ -71,7 +71,7 @@ var ProcessTurtle = func(setting *model.Setting, tick *model.BidAsk) {
 	util.StoreSyncMap(&model.CarryInfo, msg, account.Key, msgKey)
 	priceLong := data.HighDaysFar
 	priceShort := data.LowDaysFar
-	if api.HandleTraceOrders(account.Key, account.Secret, setting.Market, setting.Symbol, []*model.Setting{setting}, []*api.TurtleData{data}, chanceInAll) ||
+	if api.HandleOrders(account.Key, account.Secret, setting.Market, setting.Symbol, []*model.Setting{setting}, []*api.TurtleData{data}) ||
 		api.CheckBreak(account.Key, account.Secret, setting.Market, setting.Symbol, []*model.Setting{setting}, []*api.TurtleData{data}, tick) {
 		return
 	}

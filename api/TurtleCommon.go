@@ -92,21 +92,16 @@ func ClearOrders(key, secret, market, symbol string) {
 
 // ClearExtraOrders
 // 取消market交易所中symbol交易对中没有被纳入管理或已经超出仓数限制的订单
-func ClearExtraOrders(key, secret, market, symbol string, currentNum float64, settings []*model.Setting,
-	data []*TurtleData) {
+func ClearExtraOrders(key, secret, market, symbol string, dataArray []*TurtleData) {
 	keepOrders := make(map[string]bool)
-	for i, setting := range settings {
-		if currentNum < setting.AmountLimit || setting.Chance < 0 {
-			for _, order := range data[i].OrderLong {
-				keepOrders[order.OrderId] = true
-			}
+	for _, data := range dataArray {
+		for _, order := range data.OrderLong {
+			keepOrders[order.OrderId] = true
 		}
-		if currentNum > -1*setting.AmountLimit || setting.Chance > 0 {
-			for _, order := range data[i].OrderShort {
-				keepOrders[order.OrderId] = true
-			}
+		for _, order := range data.OrderShort {
+			keepOrders[order.OrderId] = true
 		}
-		for _, order := range data[i].OrderAdjust {
+		for _, order := range data.OrderAdjust {
 			keepOrders[order.OrderId] = true
 		}
 	}
@@ -114,7 +109,7 @@ func ClearExtraOrders(key, secret, market, symbol string, currentNum float64, se
 	for _, order := range ordersStop {
 		if !keepOrders[order.OrderId] {
 			result := MustCancel(key, secret, market, symbol, order.OrderType, order.OrderId, true)
-			util.Notice(`cancel extra turtle order %s %s %s %s return %v`, market, symbol, order.OrderType, order.OrderId, result)
+			util.Notice(`cancel extra stop order %s %s %s %s return %v`, market, symbol, order.OrderType, order.OrderId, result)
 			time.Sleep(time.Second)
 		}
 	}
@@ -122,7 +117,7 @@ func ClearExtraOrders(key, secret, market, symbol string, currentNum float64, se
 	for _, order := range ordersLimit {
 		if !keepOrders[order.OrderId] {
 			result := MustCancel(key, secret, market, symbol, order.OrderType, order.OrderId, true)
-			util.Notice(`cancel extra turtle order %s %s %s %s return %v`, market, symbol, order.OrderType, order.OrderId, result)
+			util.Notice(`cancel extra limit order %s %s %s %s return %v`, market, symbol, order.OrderType, order.OrderId, result)
 			time.Sleep(time.Second)
 		}
 	}
@@ -179,26 +174,9 @@ func AdjustPosHolding(key, secret string, setting *model.Setting, data *TurtleDa
 	model.AppDB.Save(setting)
 }
 
-func HandleTraceOrders(key, secret, market, symbol string, settings []*model.Setting, turtleData []*TurtleData,
-	currentNum float64) (checked bool) {
-	if (len(settings) != 2 && len(settings) != 1) || len(settings) != len(turtleData) {
-		util.Notice(`wrong combine turtle parameter`)
-		return true
-	}
-	if turtleData[0].CheckTimeOpen.Add(time.Minute * 10).After(util.GetNow()) {
-		return false
-	}
-	if len(settings) == 1 {
-		AdjustPosHolding(key, secret, settings[0], turtleData[0])
-	} else if len(settings) == 2 {
-		if settings[0].Chance == 0 {
-			AdjustPosHolding(key, secret, settings[1], turtleData[1])
-		} else if settings[1].Chance == 0 {
-			AdjustPosHolding(key, secret, settings[0], turtleData[0])
-		}
-		turtleData[0].AdjustChecked = true
-		turtleData[1].AdjustChecked = true
-	}
+//handleTraceOrders
+func _(key, secret, market, symbol string, settings []*model.Setting, turtleData []*TurtleData) {
+
 	today, _ := model.GetMarketToday(market)
 	dayTime, _ := time.ParseDuration(`86400s`)
 	var candles []*model.Candle
@@ -238,9 +216,30 @@ func HandleTraceOrders(key, secret, market, symbol string, settings []*model.Set
 				data.OrderLong[0].TriggerPrice, data.LowToday, data.LowDaysFar, data.N, setting.Chance))
 			data.OrderLong = nil
 		}
-		data.CheckTimeOpen = util.GetNow()
 	}
-	ClearExtraOrders(key, secret, market, symbol, currentNum, settings, turtleData)
+}
+
+func HandleOrders(key, secret, market, symbol string, settings []*model.Setting, turtleData []*TurtleData) (checked bool) {
+	if (len(settings) != 2 && len(settings) != 1) || len(settings) != len(turtleData) {
+		util.Notice(`wrong combine turtle parameter`)
+		return true
+	}
+	if turtleData[0].CheckTimeOpen.Add(time.Minute * 10).After(util.GetNow()) {
+		return false
+	}
+	if len(settings) == 1 {
+		AdjustPosHolding(key, secret, settings[0], turtleData[0])
+	} else if len(settings) == 2 {
+		if settings[0].Chance == 0 {
+			AdjustPosHolding(key, secret, settings[1], turtleData[1])
+		} else if settings[1].Chance == 0 {
+			AdjustPosHolding(key, secret, settings[0], turtleData[0])
+		}
+		turtleData[0].AdjustChecked = true
+		turtleData[1].AdjustChecked = true
+	}
+	turtleData[0].CheckTimeOpen = util.GetNow()
+	ClearExtraOrders(key, secret, market, symbol, turtleData)
 	return true
 }
 

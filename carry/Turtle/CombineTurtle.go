@@ -86,7 +86,7 @@ var ProcessCombineTurtle = func(settingLimit *model.Setting, tick *model.BidAsk)
 		tick.Asks[0].Price, settingStop.Chance, settingStop.GridAmount, settingStop.PriceX, dataStop.Liquidated,
 		settingLimit.Chance, settingLimit.GridAmount, settingLimit.PriceX, dataLimit.Liquidated)
 	util.StoreSyncMap(&model.CarryInfo, msg, account.Key, msgKey)
-	if api.HandleTraceOrders(account.Key, account.Secret, market, symbol, settings, turtleData, turtleCoins) ||
+	if api.HandleOrders(account.Key, account.Secret, market, symbol, settings, turtleData) ||
 		api.CheckBreak(account.Key, account.Secret, market, symbol, settings, turtleData, tick) {
 		return
 	}
@@ -129,7 +129,7 @@ var ProcessCombineTurtle = func(settingLimit *model.Setting, tick *model.BidAsk)
 		needCheck = true
 	}
 	if needCheck {
-		api.ClearExtraOrders(account.Key, account.Secret, market, symbol, turtleCoins, settings, turtleData)
+		api.ClearExtraOrders(account.Key, account.Secret, market, symbol, turtleData)
 	}
 }
 
@@ -237,7 +237,8 @@ func placeTurtleLong(key, secret, orderType string, data *api.TurtleData, settin
 			if data.UseNear {
 				price = math.Max(setting.PriceX-2*data.N, data.LowDaysNear)
 			} else {
-				price = math.Max(data.HighDaysFar, data.HighToday) - 2*data.N
+				//price = math.Max(data.HighDaysFar, data.HighToday) - 2*data.N
+				price = math.Max(data.HighDaysFar, setting.PriceX) - 2*data.N
 			}
 		}
 	} else if orderType == model.OrderTypeStop {
@@ -329,8 +330,13 @@ func placeTurtleShort(key, secret, orderType string, data *api.TurtleData, setti
 			if data.UseNear {
 				price = math.Min(setting.PriceX+2*data.N, data.HighDaysNear)
 			} else {
-				if data.LowToday > 0 {
-					price = math.Min(data.LowDaysFar, data.LowToday) + 2*data.N
+				//if data.LowToday > 0 {
+				//	price = math.Min(data.LowDaysFar, data.LowToday) + 2*data.N
+				//} else {
+				//	price = data.LowDaysFar + 2*data.N
+				//}
+				if setting.PriceX > 0 {
+					price = math.Min(data.LowDaysFar, setting.PriceX) + 2*data.N
 				} else {
 					price = data.LowDaysFar + 2*data.N
 				}
