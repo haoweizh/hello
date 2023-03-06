@@ -266,6 +266,7 @@ func placeTurtleLong(key, secret, orderType string, data *api.TurtleData, settin
 				data.BreakLong = true
 				orderType = model.OrderTypeLimit
 				priceDeal = price * (1 + api.TurtleTriggerDelta/2)
+				data.BreakLong = true
 			} else {
 				priceDeal = price * (1 + api.TurtleTriggerDelta)
 			}
@@ -359,6 +360,7 @@ func placeTurtleShort(key, secret, orderType string, data *api.TurtleData, setti
 				data.BreakShort = true
 				orderType = model.OrderTypeLimit
 				priceDeal = price * (1 - api.TurtleTriggerDelta/2)
+				data.BreakShort = true
 			} else {
 				priceDeal = price * (1 - api.TurtleTriggerDelta)
 			}
