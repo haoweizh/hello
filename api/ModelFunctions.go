@@ -74,8 +74,8 @@ func GetSettings(function, market string) (settingMap *sync.Map) {
 func GetSetting(function, market, symbol string) *model.Setting {
 	settings := GetSettings(function, market)
 	if settings != nil {
-		value, _ := settings.Load(symbol)
-		if value != nil {
+		value, ok := settings.Load(symbol)
+		if ok && value != nil {
 			return value.(*model.Setting)
 		}
 	}
@@ -95,7 +95,7 @@ func GetFunctions(market, symbol string) *sync.Map {
 		}
 	}
 	value, ok := util.LoadSyncMap(handlers, market, symbol)
-	if ok {
+	if ok && value != nil {
 		return value.(*sync.Map)
 	}
 	return nil

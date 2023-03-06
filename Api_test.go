@@ -18,6 +18,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 )
@@ -157,6 +158,16 @@ func Test_WsAndOrderApi(t *testing.T) {
 }
 
 func Test_BalAndPos(t *testing.T) {
+	sy := sync.Map{}
+	testMap := make(map[string]interface{})
+	sy.Store(`test`, testMap[`d`])
+	value, ok := sy.Load(`test`)
+	if ok {
+		fmt.Println(value)
+		if value == nil {
+			fmt.Println(`not nil`)
+		}
+	}
 	model.NewConfig()
 	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
 	model.AppRedis = redis.NewClient(&redis.Options{
