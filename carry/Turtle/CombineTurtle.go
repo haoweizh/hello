@@ -7,8 +7,22 @@ import (
 	"hello/util"
 	"math"
 	"strings"
+	"sync"
 	"time"
 )
+
+var combineLock sync.Mutex
+var combining = false
+
+func checkSetCombining(value bool) (before bool) {
+	combineLock.Lock()
+	defer combineLock.Unlock()
+	before = combining
+	if value == false || before == false {
+		combining = value
+	}
+	return before
+}
 
 // ProcessCombineTurtle
 // setting.GridAmount 当前已经持仓数量
@@ -17,8 +31,8 @@ import (
 // setting.OpenShortMargin 该单币种最多开仓个数
 // setting.AmountLimit 总开仓上限
 var ProcessCombineTurtle = func(settingLimit *model.Setting, tick *model.BidAsk) {
-	if !api.CheckSetTurtling(true) {
-		defer api.CheckSetTurtling(false)
+	if !checkSetCombining(true) {
+		defer checkSetCombining(false)
 	} else {
 		return
 	}

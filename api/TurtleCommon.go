@@ -28,8 +28,6 @@ const TurtleTriggerDelta = 0.01
 const TurtleFar = 18
 const TurtleFarBTC = 50
 
-var Turtling = false
-var TurtleLock sync.Mutex
 var TurtleDataSet = sync.Map{} // function_market_symbol_2019-12-06 *TurtleData
 var queryDataTime = &sync.Map{}
 
@@ -39,16 +37,6 @@ func (turtleData *TurtleData) ToString() (str string) {
 	}
 	return fmt.Sprintf(`%d日%e~%e N:%e Amount:%e`,
 		turtleData.DaysFar, turtleData.LowDaysFar, turtleData.HighDaysFar, turtleData.N, turtleData.Amount)
-}
-
-func CheckSetTurtling(value bool) (before bool) {
-	TurtleLock.Lock()
-	defer TurtleLock.Unlock()
-	before = Turtling
-	if value == false || before == false {
-		Turtling = value
-	}
-	return before
 }
 
 var accountValues = &sync.Map{}    // market value

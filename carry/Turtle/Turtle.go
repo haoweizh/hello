@@ -7,8 +7,22 @@ import (
 	"hello/util"
 	"math"
 	"strings"
+	"sync"
 	"time"
 )
+
+var turtling = false
+var turtleLock sync.Mutex
+
+func checkSetTurtling(value bool) (before bool) {
+	turtleLock.Lock()
+	defer turtleLock.Unlock()
+	before = turtling
+	if value == false || before == false {
+		turtling = value
+	}
+	return before
+}
 
 // ProcessTurtle
 // setting.GridAmount 当前已经持仓数量
@@ -17,8 +31,8 @@ import (
 // setting.OpenShortMargin 该单币种最多开仓个数
 // setting.AmountLimit 总开仓上限
 var ProcessTurtle = func(setting *model.Setting, tick *model.BidAsk) {
-	if !api.CheckSetTurtling(true) {
-		defer api.CheckSetTurtling(false)
+	if !checkSetTurtling(true) {
+		defer checkSetTurtling(false)
 	} else {
 		return
 	}
