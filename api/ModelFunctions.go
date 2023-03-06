@@ -77,11 +77,11 @@ func GetInvalidTurtle(market, symbol string) *model.Setting {
 	if ok && value != nil {
 		return value.(*model.Setting)
 	}
-	appSettings = []model.Setting{}
-	model.AppDB.Where(`function=? and market=? and symbol=?`, model.FunctionTurtle, market, symbol).Find(&appSettings)
-	if len(appSettings) == 1 {
-		util.StoreSyncMap(invalidTurtles, &appSettings[0], model.FunctionTurtle, market, symbol)
-		return &appSettings[0]
+	var tempSettings []model.Setting
+	model.AppDB.Where(`function=? and market=? and symbol=?`, model.FunctionTurtle, market, symbol).Find(&tempSettings)
+	if len(tempSettings) == 1 {
+		util.StoreSyncMap(invalidTurtles, &tempSettings[0], model.FunctionTurtle, market, symbol)
+		return &tempSettings[0]
 	}
 	return nil
 }
