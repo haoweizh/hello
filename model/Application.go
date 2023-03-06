@@ -17,6 +17,7 @@ var infoLock sync.Mutex
 var CarryInfo sync.Map                                            // userKey - function - msg
 var monitorInfo = make(map[string]map[string]map[string][]string) // userKey - table - item - value array
 var AppMetric = &MetricManager{}
+var IgnoreFunctions = map[string]bool{FunctionDynamicTurtle: true, FunctionTurtleNormal: true, FunctionDynamicCombine: true}
 
 const Kucoin = `kucoin`
 const KucoinSpot = `kucoinspot`

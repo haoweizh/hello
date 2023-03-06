@@ -9,6 +9,7 @@ import (
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"hello/api"
+	"hello/carry/Turtle"
 	"hello/model"
 	"hello/regret"
 	"hello/util"
@@ -158,9 +159,10 @@ func Test_WsAndOrderApi(t *testing.T) {
 }
 
 func Test_BalAndPos(t *testing.T) {
+	model.HandlerMap[model.FunctionCombineTurtle] = Turtle.ProcessCombineTurtle
+	model.HandlerMap[model.FunctionTurtleNormal] = nil
 	sy := sync.Map{}
-	testMap := make(map[string]int)
-	sy.Store(`test`, testMap[`d`])
+	sy.Store(`test`, model.HandlerMap[model.FunctionTurtleNormal])
 	value, ok := sy.Load(`test`)
 	if ok {
 		fmt.Println(value)

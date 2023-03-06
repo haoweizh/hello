@@ -161,6 +161,9 @@ func handleTickerBinanceSpot(markets *model.Markets, json *simplejson.Json, stan
 			funcHandlers := GetFunctions(model.BinanceSpot, standardSymbol)
 			if funcHandlers != nil {
 				funcHandlers.Range(func(function, value interface{}) bool {
+					if model.IgnoreFunctions[function.(string)] {
+						return true
+					}
 					setting := GetSetting(function.(string), model.BinanceSpot, standardSymbol)
 					if setting != nil && value != nil {
 						go value.(model.CarryHandler)(setting, &bidAsk)
@@ -204,6 +207,9 @@ func handleDepthBinanceSpot(markets *model.Markets, json *simplejson.Json, stand
 		funcHandlers := GetFunctions(model.BinanceSpot, standardSymbol)
 		if funcHandlers != nil {
 			funcHandlers.Range(func(function, value interface{}) bool {
+				if model.IgnoreFunctions[function.(string)] {
+					return true
+				}
 				setting := GetSetting(function.(string), model.BinanceSpot, standardSymbol)
 				if setting != nil && value != nil {
 					go value.(model.CarryHandler)(setting, &bidAsk)
