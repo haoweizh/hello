@@ -110,7 +110,7 @@ func WsDepthServeHuobiSpot(markets *model.Markets, orderHandler OrderHandler) (c
 					if funcHandlers != nil {
 						funcHandlers.Range(func(function, value interface{}) bool {
 							setting := GetSetting(function.(string), model.HuobiSpot, symbol)
-							if setting != nil {
+							if setting != nil && value != nil {
 								go value.(model.CarryHandler)(setting, &bidAsk)
 							}
 							return true
@@ -175,7 +175,7 @@ func WsDepthServeHuobiSpot(markets *model.Markets, orderHandler OrderHandler) (c
 				if funcHandlers != nil {
 					funcHandlers.Range(func(function, value interface{}) bool {
 						setting := GetSetting(function.(string), model.HuobiPerp, symbol)
-						if setting != nil {
+						if setting != nil && value != nil {
 							go value.(model.CarryHandler)(setting, &bidAsk)
 						}
 						return true

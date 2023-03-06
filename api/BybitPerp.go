@@ -252,7 +252,7 @@ func handleOrderBookBybitPerp(markets *model.Markets, symbol string, ts int64, r
 			if funcHandlers != nil {
 				funcHandlers.Range(func(function, value interface{}) bool {
 					setting := GetSetting(function.(string), model.BybitPerp, symbol)
-					if setting != nil {
+					if setting != nil && value != nil {
 						go value.(model.CarryHandler)(setting, bidAsk)
 					}
 					return true

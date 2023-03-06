@@ -119,7 +119,7 @@ func WsDepthServeBybitSpot(markets *model.Markets, orderHandler OrderHandler) ([
 				if funcHandlers != nil {
 					funcHandlers.Range(func(function, value interface{}) bool {
 						setting := GetSetting(function.(string), model.BybitSpot, symbol)
-						if setting != nil {
+						if setting != nil && value != nil {
 							go value.(model.CarryHandler)(setting, bidAsk)
 						}
 						return true
