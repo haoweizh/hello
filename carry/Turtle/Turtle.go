@@ -31,7 +31,6 @@ func checkSetTurtling(value bool) (before bool) {
 // setting.OpenShortMargin 该单币种最多开仓个数
 // setting.AmountLimit 总开仓上限
 var ProcessTurtle = func(setting *model.Setting, tick *model.BidAsk) {
-	util.Info(fmt.Sprintf(`get okex tick %s`, setting.Symbol))
 	if !checkSetTurtling(true) {
 		defer checkSetTurtling(false)
 	} else {
