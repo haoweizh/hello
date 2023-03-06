@@ -286,6 +286,7 @@ func testSpeed(c *gin.Context) {
 	low := make(map[string]int64)
 	high := make(map[string]int64)
 	avg := make(map[string]int64)
+	util.Info(fmt.Sprintf(`begin to test %s %d`, markets, len(markets)))
 	for _, market := range markets {
 		for i := 0; i < 50; i++ {
 			before := util.GetNowUnixMillion()

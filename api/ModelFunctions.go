@@ -211,12 +211,9 @@ func prepareSettings() {
 			setting.Market, setting.Symbol, setting.Function, setting.Valid, setting.Chance))
 		marketMap[setting.Market] = true
 		value, ok = util.LoadSyncMap(localHandlers, setting.Market, setting.Symbol)
-		var functions *sync.Map
-		if ok {
+		functions := &sync.Map{}
+		if ok && value != nil {
 			functions = value.(*sync.Map)
-		}
-		if functions == nil {
-			functions = &sync.Map{}
 		}
 		functions.Store(setting.Function, model.HandlerMap[setting.Function])
 		util.StoreSyncMap(localHandlers, functions, setting.Market, setting.Symbol)
