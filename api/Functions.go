@@ -22,8 +22,8 @@ var CandleMap = &sync.Map{}                                 // market,symbol,sec
 var USDs = map[string]bool{`USD`: true, `usd`: true, `USDT`: true, `usdt`: true, `USDC`: true, `usdc`: true, `BUSD`: true, `busd`: true}
 
 func setRequireReset(market string) {
-	maintaining, ok := model.ChannelMaintaining.Load(market)
-	if !ok || !maintaining.(bool) {
+	maintaining, _ := model.ChannelMaintaining.Load(market)
+	if maintaining == nil || !maintaining.(bool) {
 		util.Notice(`require reset %s`, market)
 		initTime, getTime := model.AppMarkets.WsInitTime.Load(market)
 		if getTime && initTime != nil {

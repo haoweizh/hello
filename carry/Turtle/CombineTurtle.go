@@ -31,21 +31,22 @@ func checkSetCombining(value bool) (before bool) {
 // setting.OpenShortMargin 该单币种最多开仓个数
 // setting.AmountLimit 总开仓上限
 var ProcessCombineTurtle = func(settingLimit *model.Setting, tick *model.BidAsk) {
-	util.Notice(`000 inside %s`, settingLimit.Symbol)
 	if !checkSetCombining(true) {
 		defer checkSetCombining(false)
 	} else {
 		return
 	}
+	util.Notice(`111 inside %s`, settingLimit.Symbol)
 	market := settingLimit.Market
 	symbol := settingLimit.Symbol
 	now := util.GetNowUnixMillion()
-	maintaining, ok := model.ChannelMaintaining.Load(market)
+	maintaining, _ := model.ChannelMaintaining.Load(market)
 	if settingLimit == nil || tick == nil || tick.Asks == nil || tick.Bids == nil || model.AppConfig.Handle != `1` ||
-		(ok && maintaining.(bool)) || (model.AppConfig.Env != `test` && now-int64(tick.Ts) > 1000) ||
+		(maintaining != nil && maintaining.(bool)) || (model.AppConfig.Env != `test` && now-int64(tick.Ts) > 1000) ||
 		(time.Now().Hour() == 0 && time.Now().Minute() == 0) || len(strings.Trim(symbol, ` `)) == 0 {
 		return
 	}
+	util.Notice(`333 inside %s`, settingLimit.Symbol)
 	settingStop := api.GetSetting(model.FunctionTurtleNormal, market, symbol)
 	if settingStop == nil || settingStop.Valid { // 使用valid为false的turtle作为对应turtle,否则该算法不运行
 		return
@@ -56,7 +57,7 @@ var ProcessCombineTurtle = func(settingLimit *model.Setting, tick *model.BidAsk)
 			market, symbol, settingLimit.Chance, settingLimit.PriceX, settingStop.Chance, settingStop.PriceX))
 		return
 	}
-	util.Notice(`111 inside %s`, settingLimit.Symbol)
+	util.Notice(`222 inside %s`, settingLimit.Symbol)
 	account := model.AppConfig.GetAccounts(market)[0]
 	dataLimit := api.GetTurtleData(account.Key, account.Secret, settingLimit.Function, market, symbol)
 	dataStop := api.GetTurtleData(account.Key, account.Secret, model.FunctionTurtleNormal, market, symbol)
@@ -68,7 +69,6 @@ var ProcessCombineTurtle = func(settingLimit *model.Setting, tick *model.BidAsk)
 		}
 		return
 	}
-	util.Notice(`222 inside %s`, settingLimit.Symbol)
 	dataStop.Amount = dataLimit.Amount
 	if !dataLimit.OrderCleared {
 		api.ClearOrders(account.Key, account.Secret, market, symbol)

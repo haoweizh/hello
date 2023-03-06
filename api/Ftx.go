@@ -50,8 +50,8 @@ func maintainChannelFtx(subscribes []interface{}) {
 				standardSymbol := coin + model.UniStandardTail[marketType]
 				_, bidAsk := model.AppMarkets.GetBidAsk(standardSymbol, model.Ftx)
 				if bidAsk == nil || time.Now().UnixMilli()-int64(bidAsk.Ts) > 120000 {
-					conn, success := ftxSymbolConnection.Load(standardSymbol)
-					if conn != nil && success {
+					conn, ok := ftxSymbolConnection.Load(standardSymbol)
+					if conn != nil && ok {
 						cmdUnsub := fmt.Sprintf(`{"op": "unsubscribe", "channel": "%s", "market": "%s"}`,
 							subscribe[0], subscribe[1])
 						if bidAsk != nil {
