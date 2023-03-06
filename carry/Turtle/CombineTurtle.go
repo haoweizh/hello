@@ -51,8 +51,6 @@ var ProcessCombineTurtle = func(settingLimit *model.Setting, tick *model.BidAsk)
 			util.Notice(fmt.Sprintf(`fail to get turtle combine & turtle %s %s`, market, symbol))
 		}
 		return
-	} else if settingLimit.Symbol == `MKR_PERP` {
-		util.Notice(fmt.Sprintf(`get n %f %f`, dataLimit.N, dataStop.N))
 	}
 	dataStop.Amount = dataLimit.Amount
 	if !dataLimit.OrderCleared {
