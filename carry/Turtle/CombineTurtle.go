@@ -31,7 +31,7 @@ func checkSetCombining(value bool) (before bool) {
 // setting.OpenShortMargin 该单币种最多开仓个数
 // setting.AmountLimit 总开仓上限
 var ProcessCombineTurtle = func(settingLimit *model.Setting, tick *model.BidAsk) {
-	util.Info(`inside %s`, settingLimit.Symbol)
+	util.Notice(`000 inside %s`, settingLimit.Symbol)
 	if !checkSetCombining(true) {
 		defer checkSetCombining(false)
 	} else {
@@ -56,6 +56,7 @@ var ProcessCombineTurtle = func(settingLimit *model.Setting, tick *model.BidAsk)
 			market, symbol, settingLimit.Chance, settingLimit.PriceX, settingStop.Chance, settingStop.PriceX))
 		return
 	}
+	util.Notice(`111 inside %s`, settingLimit.Symbol)
 	account := model.AppConfig.GetAccounts(market)[0]
 	dataLimit := api.GetTurtleData(account.Key, account.Secret, settingLimit.Function, market, symbol)
 	dataStop := api.GetTurtleData(account.Key, account.Secret, model.FunctionTurtleNormal, market, symbol)
@@ -67,12 +68,14 @@ var ProcessCombineTurtle = func(settingLimit *model.Setting, tick *model.BidAsk)
 		}
 		return
 	}
+	util.Notice(`222 inside %s`, settingLimit.Symbol)
 	dataStop.Amount = dataLimit.Amount
 	if !dataLimit.OrderCleared {
 		api.ClearOrders(account.Key, account.Secret, market, symbol)
 		dataLimit.OrderCleared = true
 		return
 	}
+	util.Notice(`333 inside %s`, settingLimit.Symbol)
 	turtleData := []*api.TurtleData{dataLimit, dataStop}
 	canOpen, turtleCoins := api.CanOpenCombine(settingLimit, dataLimit)
 	if canOpen {

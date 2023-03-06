@@ -151,7 +151,9 @@ func prepareSettings() {
 		if functions == nil {
 			functions = &sync.Map{}
 		}
-		functions.Store(setting.Function, model.HandlerMap[setting.Function])
+		if !model.IgnoreFunctions[setting.Function] {
+			functions.Store(setting.Function, model.HandlerMap[setting.Function])
+		}
 		util.StoreSyncMap(localHandlers, functions, setting.Market, setting.Symbol)
 		var settings *sync.Map
 		value, ok = localCoinSettings.Load(setting.Function)
