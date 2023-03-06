@@ -31,6 +31,7 @@ func checkSetCombining(value bool) (before bool) {
 // setting.OpenShortMargin 该单币种最多开仓个数
 // setting.AmountLimit 总开仓上限
 var ProcessCombineTurtle = func(settingLimit *model.Setting, tick *model.BidAsk) {
+	util.Info(`inside %s`, settingLimit.Symbol)
 	if !checkSetCombining(true) {
 		defer checkSetCombining(false)
 	} else {
