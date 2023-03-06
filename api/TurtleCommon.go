@@ -433,6 +433,9 @@ func CheckCanOpen(settings []*model.Setting, data []*TurtleData) (canOpen bool, 
 			if setting.Chance == 0 {
 				dataCurrent.OrderLong = nil
 				dataCurrent.OrderShort = nil
+				if setting.Symbol == `YFI_PERP` {
+					util.Notice(fmt.Sprintf(`yfi can open set nil %s %s %v %d`, setting.Function, setting.SymbolRelated, canOpen, setting.Chance))
+				}
 			}
 		}
 		if setting.Symbol == `YFI_PERP` {
@@ -490,6 +493,9 @@ func canOpenTurtle(setting *model.Setting) (canOpen, isChance bool, chanceInAll 
 			return true
 		})
 		canOpen = setting.Chance != 0 || (setting.SymbolRelated != model.SettingTurtleRemoved && math.Abs(inAll) < setting.AmountLimit)
+		if setting.Symbol == `YFI_PERP` {
+			util.Notice(fmt.Sprintf(`yfi can open single %s %s %v %d`, setting.Function, setting.SymbolRelated, canOpen, setting.Chance))
+		}
 		return canOpen, false, inAll
 	}
 }
