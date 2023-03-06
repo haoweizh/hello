@@ -390,29 +390,33 @@ func CheckBreak(key, secret, market, symbol string, settings []*model.Setting, t
 		if orderLong != nil && (orderLong.Status == model.CarryStatusSuccess || (orderLong.TriggerPrice > 0 &&
 			(orderLong.OrderType == model.OrderTypeStop && orderLong.TriggerPrice <= tick.Bids[0].Price) ||
 			(orderLong.OrderType == model.OrderTypeLimit && orderLong.Price > tick.Bids[0].Price))) {
-			util.Notice(fmt.Sprintf(`-----chance type: %s %s %s %d bid-ask %e %e %e %e`,
+			util.Notice(fmt.Sprintf(`chance type: %s %s %s %d bid-ask %e %e %e %e`,
 				market, symbol, orderLong.OrderType, setting.Chance, tick.Bids[0].Price,
 				tick.Asks[0].Price, orderLong.TriggerPrice, orderLong.Price))
-			order := QueryOrderById(key, secret, market, symbol, orderLong.OrderType, orderLong.OrderId)
-			if order != nil && order.Status != model.CarryStatusWorking {
+			if orderLong.Status == model.CarryStatusWorking {
+				time.Sleep(time.Second * 3)
+				orderLong = QueryOrderById(key, secret, market, symbol, orderLong.OrderType, orderLong.OrderId)
+			}
+			if orderLong != nil && orderLong.Status != model.CarryStatusWorking {
 				data.BreakLong = true
-				util.Notice(fmt.Sprintf(`-----order break long %s %s %d %s bid-ask %e %e %e %v order id %s`,
-					market, symbol, setting.Chance, order.Status, tick.Bids[0].Price, tick.Asks[0].Price,
-					orderLong.Price, data.BreakLong, order.OrderId))
+				util.Notice(fmt.Sprintf(`order break long %s %s %d %s %e %v order id %s`,
+					market, symbol, setting.Chance, orderLong.Status, orderLong.Price, data.BreakLong, orderLong.OrderId))
 			}
 		}
 		if orderShort != nil && (orderShort.Status == model.CarryStatusSuccess || (orderShort.TriggerPrice > 0 &&
 			(orderShort.OrderType == model.OrderTypeStop && orderShort.TriggerPrice >= tick.Asks[0].Price)) ||
 			(orderShort.OrderType == model.OrderTypeLimit && orderShort.Price < tick.Asks[0].Price)) {
-			util.Notice(fmt.Sprintf(`-----chance type: %s %s %s %d bid-ask %e %e %e %e`,
+			util.Notice(fmt.Sprintf(`chance type: %s %s %s %d bid-ask %e %e %e %e`,
 				market, symbol, orderShort.OrderType, setting.Chance, tick.Bids[0].Price,
 				tick.Asks[0].Price, orderShort.TriggerPrice, orderShort.Price))
-			order := QueryOrderById(key, secret, market, symbol, orderShort.OrderType, orderShort.OrderId)
-			if order != nil && order.Status != model.CarryStatusWorking {
+			if orderShort.Status == model.CarryStatusWorking {
+				time.Sleep(time.Second * 3)
+				orderShort = QueryOrderById(key, secret, market, symbol, orderShort.OrderType, orderShort.OrderId)
+			}
+			if orderShort != nil && orderShort.Status != model.CarryStatusWorking {
 				data.BreakShort = true
-				util.Notice(fmt.Sprintf(`-----order break short %s %s %s %d bid-ask %e %e %e %v order id %s`,
-					market, symbol, order.Status, setting.Chance, tick.Bids[0].Price, tick.Asks[0].Price,
-					orderShort.Price, data.BreakShort, order.OrderId))
+				util.Notice(fmt.Sprintf(`order break short %s %s %s %d %e %v order id %s`,
+					market, symbol, orderShort.Status, setting.Chance, orderShort.Price, data.BreakShort, orderShort.OrderId))
 			}
 		}
 	}

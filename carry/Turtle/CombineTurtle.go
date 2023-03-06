@@ -44,6 +44,7 @@ var ProcessCombineTurtle = func(settingLimit *model.Setting, tick *model.BidAsk)
 	account := model.AppConfig.GetAccounts(market)[0]
 	dataLimit := api.GetTurtleData(account.Key, account.Secret, settingLimit.Function, market, symbol)
 	dataStop := api.GetTurtleData(account.Key, account.Secret, model.FunctionTurtle, market, symbol)
+	dataStop.N = dataLimit.N
 	if dataLimit == nil || dataLimit.N == 0 || dataLimit.Amount == 0 ||
 		dataStop == nil || dataStop.N == 0 || dataStop.Amount == 0 {
 		if time.Now().Minute() == 0 && time.Now().Second() == 0 {
@@ -257,9 +258,27 @@ func placeTurtleLong(key, secret, orderType string, data *api.TurtleData, settin
 		} else if orderType == model.OrderTypeLimit && price >= tick.Asks[0].Price {
 			data.BreakLong = true
 		}
-		util.Notice(fmt.Sprintf(`before place %s %s %s %v`, orderType, setting.Function, symbol, data.OrderLong))
-		data.OrderLong = api.MustPlaceOrder(key, secret, model.OrderSideBuy, orderType, market, symbol, ``,
-			setting.Function, priceDeal, price, amount, nil)
+		if data.BreakLong && !big {
+			util.Notice(fmt.Sprintf(`already break place fake long %s %s %s`, orderType, setting.Function, symbol))
+			data.OrderLong = []*model.Order{{
+				Amount:       amount,
+				DealAmount:   amount,
+				DealPrice:    priceDeal,
+				LineBuy:      data.N,
+				LineSell:     data.N,
+				Price:        priceDeal,
+				TriggerPrice: price,
+				AmountType:   key,
+				Market:       market,
+				OrderSide:    model.OrderSideBuy,
+				OrderType:    orderType,
+				RefreshType:  setting.Function,
+				Status:       model.CarryStatusSuccess,
+				Symbol:       symbol}}
+		} else {
+			data.OrderLong = api.MustPlaceOrder(key, secret, model.OrderSideBuy, orderType, market, symbol, ``,
+				setting.Function, priceDeal, price, amount, nil)
+		}
 		if data.OrderAdjust == nil {
 			data.OrderAdjust = make([]*model.Order, 0)
 		}
@@ -269,7 +288,7 @@ func placeTurtleLong(key, secret, orderType string, data *api.TurtleData, settin
 			order.LineBuy = data.N
 			order.Function = function
 			go model.AppDB.Save(order)
-			if data.BreakLong {
+			if data.BreakLong && order.Status != model.CarryStatusSuccess {
 				util.Notice(`already break long move to adjust %s %v`, order.OrderId, order)
 				data.OrderAdjust = append(data.OrderAdjust, order)
 			}
@@ -333,6 +352,24 @@ func placeTurtleShort(key, secret, orderType string, data *api.TurtleData, setti
 		}
 		util.Notice(fmt.Sprintf(`place short %s %s %s %s %d %v at %e %e amt %e`,
 			orderType, setting.Function, market, symbol, setting.Chance, canOpen, priceDeal, price, amount))
+		if data.BreakShort && !big {
+			util.Notice(fmt.Sprintf(`already break place fake short %s %s %s`, orderType, setting.Function, symbol))
+			data.OrderShort = []*model.Order{{
+				Amount:       amount,
+				DealAmount:   amount,
+				DealPrice:    priceDeal,
+				LineBuy:      data.N,
+				LineSell:     data.N,
+				Price:        priceDeal,
+				TriggerPrice: price,
+				AmountType:   key,
+				Market:       market,
+				OrderSide:    model.OrderSideSell,
+				OrderType:    orderType,
+				RefreshType:  setting.Function,
+				Status:       model.CarryStatusSuccess,
+				Symbol:       symbol}}
+		}
 		data.OrderShort = api.MustPlaceOrder(key, secret, model.OrderSideSell, orderType, market, symbol, ``,
 			setting.Function, priceDeal, price, amount, nil)
 		if data.OrderAdjust == nil {
@@ -342,7 +379,7 @@ func placeTurtleShort(key, secret, orderType string, data *api.TurtleData, setti
 			order.LineBuy = data.N
 			order.Function = function
 			go model.AppDB.Save(order)
-			if data.BreakShort {
+			if data.BreakShort && order.Status != model.CarryStatusSuccess {
 				util.Notice(`already break short move to adjust %v`, order.OrderId, order)
 				data.OrderAdjust = append(data.OrderAdjust, order)
 			}
