@@ -20,6 +20,9 @@ var appMarkets []string
 var crossLen int
 var settingLoading bool
 
+const dynamicSingleLimit = 3
+const dynamicInAllLimit = 10
+
 func GetSettingCoins(function, market string) (coins map[string]bool) {
 	handlerInitialized := false
 	handlers.Range(func(key, value interface{}) bool {
@@ -78,52 +81,6 @@ func GetSetting(function, market, symbol string) *model.Setting {
 	}
 	return nil
 }
-
-//// GetChanceInAll
-//// setting是主流币种：返回function market下所有主流币种仓数sum
-//// setting是非主流币种：返回function market下有仓位的币种个数
-//func GetChanceInAll(function, market, symbol string) (inALL int64) {
-//	success, _, coin, _ := model.GetFromStandard(market, symbol)
-//	if !success {
-//		return 0
-//	}
-//	settings := GetSettings(function, market)
-//	if settings == nil {
-//		return 0
-//	}
-//	if model.CommonCoins[strings.ToLower(coin)] {
-//		settings.Range(func(key, value interface{}) bool {
-//			if value == nil {
-//				return false
-//			}
-//			valueSetting := value.(*model.Setting)
-//			_, _, valueCoin, _ := model.GetFromStandard(valueSetting.Market, valueSetting.Symbol)
-//			if valueSetting.Market == market && valueSetting.Function == function && model.CommonCoins[strings.ToLower(valueCoin)] {
-//				inALL += valueSetting.Chance
-//			}
-//			return true
-//		})
-//	} else {
-//		settings.Range(func(key, value any) bool {
-//			if value == nil {
-//				return false
-//			}
-//			valueSetting := value.(*model.Setting)
-//			_, _, valueCoin, _ := model.GetFromStandard(valueSetting.Market, valueSetting.Symbol)
-//			var settingInvalid *model.Setting
-//			if valueSetting.Function == model.FunctionCombineTurtle {
-//				settingInvalid = GetInvalidTurtle(valueSetting.Market, valueSetting.Symbol)
-//			}
-//			if valueSetting.Market == market && valueSetting.Function == function && !model.CommonCoins[strings.ToLower(valueCoin)] {
-//				if (settingInvalid != nil && settingInvalid.Chance != 0) || valueSetting.Chance != 0 {
-//					inALL++
-//				}
-//			}
-//			return true
-//		})
-//	}
-//	return inALL
-//}
 
 func GetFunctions(market, symbol string) *sync.Map {
 	handlerInitialized := false
@@ -255,9 +212,9 @@ func handleCombineSettings(market string, accounts []*model.Account, topMarketIn
 		valueCombine, _ := combineMap.Load(info.Name)
 		valueNormal, _ := normalMap.Load(info.Name)
 		settingCombine := &model.Setting{Valid: true, Function: model.FunctionCombineTurtle, Market: market, Symbol: info.Name,
-			OpenShortMargin: 3, AmountLimit: 10}
+			OpenShortMargin: dynamicSingleLimit, AmountLimit: dynamicInAllLimit}
 		settingNormal := &model.Setting{Valid: true, Function: model.FunctionTurtleNormal, Market: market, Symbol: info.Name,
-			OpenShortMargin: 3, AmountLimit: 10}
+			OpenShortMargin: dynamicSingleLimit, AmountLimit: dynamicInAllLimit}
 		if valueCombine == nil {
 			if market == model.BinancePerp {
 				for _, account := range accounts {
@@ -291,12 +248,16 @@ func handleCombineSettings(market string, accounts []*model.Account, topMarketIn
 		}
 		var normalSetting *model.Setting
 		normalValue, _ := normalMap.Load(symbol)
-		if normalValue != nil {
+		if normalValue == nil {
+			normalSetting = &model.Setting{Valid: true, Function: model.FunctionTurtleNormal, Market: market,
+				Symbol: symbol.(string), OpenShortMargin: dynamicSingleLimit, AmountLimit: dynamicInAllLimit}
+			model.AppDB.Save(normalSetting)
+		} else {
 			normalSetting = normalValue.(*model.Setting)
 		}
 		_, _, coinValue, _ := model.GetFromStandard(market, symbol.(string))
 		if topMarketInfos[symbol.(string)] == nil && !model.CommonCoins[strings.ToLower(coinValue)] {
-			if setting.(*model.Setting).Chance == 0 && (normalSetting == nil || normalSetting.Chance == 0) {
+			if setting.(*model.Setting).Chance == 0 && normalSetting.Chance == 0 {
 				setting.(*model.Setting).SymbolRelated = model.SettingTurtleRemoved
 			}
 			model.AppDB.Save(setting)
@@ -310,12 +271,16 @@ func handleCombineSettings(market string, accounts []*model.Account, topMarketIn
 		}
 		var combineSetting *model.Setting
 		combineValue, _ := combineMap.Load(symbol)
-		if combineValue != nil {
+		if combineValue == nil {
+			combineSetting = &model.Setting{Valid: true, Function: model.FunctionCombineTurtle, Market: market,
+				Symbol: symbol.(string), OpenShortMargin: dynamicSingleLimit, AmountLimit: dynamicInAllLimit}
+			model.AppDB.Save(combineSetting)
+		} else {
 			combineSetting = combineValue.(*model.Setting)
 		}
 		_, _, coinValue, _ := model.GetFromStandard(market, symbol.(string))
 		if topMarketInfos[symbol.(string)] == nil && !model.CommonCoins[strings.ToLower(coinValue)] {
-			if setting.(*model.Setting).Chance == 0 && (combineSetting == nil || combineSetting.Chance == 0) {
+			if setting.(*model.Setting).Chance == 0 && combineSetting.Chance == 0 {
 				setting.(*model.Setting).SymbolRelated = model.SettingTurtleRemoved
 			}
 			model.AppDB.Save(setting)
@@ -334,7 +299,7 @@ func handleTurtleSettings(function, market string, accounts []*model.Account, to
 	for _, info := range topMarketInfos {
 		value, _ = settingMap.Load(info.Name)
 		settingTurtle := &model.Setting{Valid: true, Function: function, Market: market, Symbol: info.Name,
-			OpenShortMargin: 3, AmountLimit: 10}
+			OpenShortMargin: dynamicSingleLimit, AmountLimit: dynamicInAllLimit}
 		if value == nil {
 			if settingTurtle.Market == model.BinancePerp {
 				for _, account := range accounts {
