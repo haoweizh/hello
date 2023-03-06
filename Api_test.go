@@ -159,7 +159,7 @@ func Test_WsAndOrderApi(t *testing.T) {
 
 func Test_BalAndPos(t *testing.T) {
 	sy := sync.Map{}
-	testMap := make(map[string]interface{})
+	testMap := make(map[string]int)
 	sy.Store(`test`, testMap[`d`])
 	value, ok := sy.Load(`test`)
 	if ok {
