@@ -36,7 +36,6 @@ var ProcessCombineTurtle = func(settingLimit *model.Setting, tick *model.BidAsk)
 	} else {
 		return
 	}
-	util.Notice(`111 inside %s`, settingLimit.Symbol)
 	market := settingLimit.Market
 	symbol := settingLimit.Symbol
 	now := util.GetNowUnixMillion()
@@ -46,18 +45,16 @@ var ProcessCombineTurtle = func(settingLimit *model.Setting, tick *model.BidAsk)
 		(time.Now().Hour() == 0 && time.Now().Minute() == 0) || len(strings.Trim(symbol, ` `)) == 0 {
 		return
 	}
-	util.Notice(`333 inside %s`, settingLimit.Symbol)
 	settingStop := api.GetSetting(model.FunctionTurtleNormal, market, symbol)
-	if settingStop == nil || settingStop.Valid { // 使用valid为false的turtle作为对应turtle,否则该算法不运行
+	if settingStop == nil {
 		return
 	}
-	settings := []*model.Setting{settingLimit, settingStop}
 	if (settingLimit.Chance != 0 && settingLimit.PriceX == 0) || (settingStop.Chance != 0 && settingStop.PriceX == 0) {
 		util.Notice(fmt.Sprintf(`no last priceX %s %s %d %e %d %e`,
 			market, symbol, settingLimit.Chance, settingLimit.PriceX, settingStop.Chance, settingStop.PriceX))
 		return
 	}
-	util.Notice(`222 inside %s`, settingLimit.Symbol)
+	settings := []*model.Setting{settingLimit, settingStop}
 	account := model.AppConfig.GetAccounts(market)[0]
 	dataLimit := api.GetTurtleData(account.Key, account.Secret, settingLimit.Function, market, symbol)
 	dataStop := api.GetTurtleData(account.Key, account.Secret, model.FunctionTurtleNormal, market, symbol)
@@ -75,7 +72,6 @@ var ProcessCombineTurtle = func(settingLimit *model.Setting, tick *model.BidAsk)
 		dataLimit.OrderCleared = true
 		return
 	}
-	util.Notice(`333 inside %s`, settingLimit.Symbol)
 	turtleData := []*api.TurtleData{dataLimit, dataStop}
 	canOpen, turtleCoins := api.CanOpenCombine(settingLimit, dataLimit)
 	if canOpen {
