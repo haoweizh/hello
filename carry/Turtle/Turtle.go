@@ -31,13 +31,11 @@ func checkSetTurtling(value bool) (before bool) {
 // setting.OpenShortMargin 该单币种最多开仓个数
 // setting.AmountLimit 总开仓上限
 var ProcessTurtle = func(setting *model.Setting, tick *model.BidAsk) {
-	util.Notice(fmt.Sprintf(`--1 %s %s %s`, setting.Market, setting.Symbol, setting.Function))
 	if !checkSetTurtling(true) {
 		defer checkSetTurtling(false)
 	} else {
 		return
 	}
-	util.Notice(fmt.Sprintf(`--2 %s %s %s`, setting.Market, setting.Symbol, setting.Function))
 	now := util.GetNowUnixMillion()
 	maintaining, ok := model.ChannelMaintaining.Load(setting.Market)
 	if setting == nil || tick == nil || tick.Asks == nil || tick.Bids == nil || model.AppConfig.Handle != `1` ||
@@ -58,13 +56,11 @@ var ProcessTurtle = func(setting *model.Setting, tick *model.BidAsk) {
 		}
 		return
 	}
-	util.Notice(fmt.Sprintf(`--3 %s %s %s`, setting.Market, setting.Symbol, setting.Function))
 	if !data.OrderCleared {
 		api.ClearOrders(account.Key, account.Secret, setting.Market, setting.Symbol)
 		data.OrderCleared = true
 		return
 	}
-	util.Notice(fmt.Sprintf(`--4 %s %s %s`, setting.Market, setting.Symbol, setting.Function))
 	canOpenTurtle, chanceInAll := api.CheckCanOpen([]*model.Setting{setting}, []*api.TurtleData{data})
 	msgKey := fmt.Sprintf("%s_%s_%s", model.FunctionTurtle, setting.Market, setting.Symbol)
 	msg := fmt.Sprintf("[%s] %s 当前已经持仓数量:%e 持仓数/限制:%d/%d 总仓数币数/仓数币数限制:%d %d 上一次开仓的价格:%e "+
