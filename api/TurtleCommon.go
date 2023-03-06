@@ -447,38 +447,43 @@ func canOpenTurtle(setting *model.Setting) (canOpen, isChance bool, chanceInAll 
 	if !success {
 		return false, false, -1
 	}
-	settings, symbols := GetSettings(setting.Function, setting.Market)
+	settings := GetSettings(setting.Function, setting.Market)
 	inAll := 0.0
+	if settings == nil {
+		return false, false, 0
+	}
 	if model.CommonCoins[strings.ToLower(coin)] {
-		for _, symbol := range symbols {
-			value, ok := settings.Load(symbol)
-			if ok && value != nil {
+		settings.Range(func(symbol, value any) bool {
+			if value != nil {
 				valueSetting := value.(*model.Setting)
 				_, _, valueCoin, _ := model.GetFromStandard(valueSetting.Market, valueSetting.Symbol)
-				if valueSetting.Market == setting.Market && valueSetting.Function == setting.Function && model.CommonCoins[strings.ToLower(valueCoin)] {
+				if valueSetting.Market == setting.Market && valueSetting.Function == setting.Function &&
+					model.CommonCoins[strings.ToLower(valueCoin)] {
 					inAll += float64(valueSetting.Chance)
 				}
 			}
-		}
+			return true
+		})
 		canOpen = math.Abs(inAll) < setting.AmountLimit
 		return canOpen, true, inAll
 	} else { // 非主流币检查开仓了的币种个数
-		for _, symbol := range symbols {
-			value, ok := settings.Load(symbol)
-			if ok && value != nil {
+		settings.Range(func(symbol, value any) bool {
+			if value != nil {
 				valueSetting := value.(*model.Setting)
 				_, _, valueCoin, _ := model.GetFromStandard(valueSetting.Market, valueSetting.Symbol)
 				var settingInvalid *model.Setting
 				if valueSetting.Function == model.FunctionCombineTurtle {
 					settingInvalid = GetInvalidTurtle(valueSetting.Market, valueSetting.Symbol)
 				}
-				if valueSetting.Market == setting.Market && valueSetting.Function == setting.Function && !model.CommonCoins[strings.ToLower(valueCoin)] {
+				if valueSetting.Market == setting.Market && valueSetting.Function == setting.Function &&
+					!model.CommonCoins[strings.ToLower(valueCoin)] {
 					if (settingInvalid != nil && settingInvalid.Chance != 0) || valueSetting.Chance != 0 {
 						inAll++
 					}
 				}
 			}
-		}
+			return true
+		})
 		canOpen = setting.Chance != 0 || (setting.SymbolRelated != model.SettingTurtleRemoved && math.Abs(inAll) < setting.AmountLimit)
 		return canOpen, false, inAll
 	}

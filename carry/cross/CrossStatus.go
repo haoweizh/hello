@@ -200,11 +200,14 @@ func GetCrossMarketValue(key, secret, market string, force bool) (inAllSpot, con
 		sm := value.(*spotMarket)
 		if sm != nil {
 			inAllSpot = sm.accountValueInU
-			_, symbols := api.GetSettings(model.FunctionCross, market)
-			for _, symbol := range symbols {
-				if sm.balances != nil && sm.balances[symbol] != nil {
-					holdingSpot += sm.balances[symbol].UsdValue
-				}
+			settings := api.GetSettings(model.FunctionCross, market)
+			if settings != nil {
+				settings.Range(func(symbol, value interface{}) bool {
+					if sm.balances != nil && sm.balances[symbol.(string)] != nil {
+						holdingSpot += sm.balances[symbol.(string)].UsdValue
+					}
+					return true
+				})
 			}
 			if sm.balances != nil {
 				if sm.balances[`FTT_USDT`] != nil {

@@ -223,9 +223,12 @@ func handleMsgOKEX(channel chan *simplejson.Json, symbol string) {
 				funcHandlers.Range(func(function, value interface{}) bool {
 					setting := GetSetting(function.(string), model.OKEX, symbol)
 					if setting != nil {
-						util.Info(fmt.Sprintf(`get setting %s %s %v`, function.(string), symbol, setting))
+						util.Info(fmt.Sprintf(`get okex setting %s %s %v`, function.(string), symbol, setting))
 						go value.(model.CarryHandler)(setting, bidAsk)
+					} else {
+						util.Info(`fail to get okex setting %s %s`, function.(string), symbol)
 					}
+					util.Info(`get okex function %s`, function.(string))
 					return true
 				})
 			} else {
