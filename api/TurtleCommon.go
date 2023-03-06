@@ -418,8 +418,6 @@ func CanOpenCombine(setting *model.Setting, data *TurtleData) (canOpen bool, inA
 	}
 	settings := GetSettings(setting.Function, setting.Market)
 	settingsNormal := GetSettings(model.FunctionTurtleNormal, setting.Market)
-	util.Notice(fmt.Sprintf(`%v normal `, settingsNormal))
-	util.Notice(fmt.Sprintf(`%v combine `, settings))
 	if settings == nil || settingsNormal == nil {
 		return false, 0
 	}
@@ -442,6 +440,7 @@ func CanOpenCombine(setting *model.Setting, data *TurtleData) (canOpen bool, inA
 			if valueSetting.Market == setting.Market && valueSetting.Function == setting.Function &&
 				!model.CommonCoins[strings.ToLower(valueCoin)] {
 				if valueSetting.Chance != 0 {
+					util.Notice(fmt.Sprintf("add trading %s", valueSetting.Symbol))
 					tradingSymbols[valueSetting.Symbol] = true
 				}
 			}
@@ -459,8 +458,10 @@ func CanOpenCombine(setting *model.Setting, data *TurtleData) (canOpen bool, inA
 			data.OrderShort = nil
 		}
 	} else {
-		settings.Range(addTrading)
+		util.Notice(`result in all normal %d %v`, len(tradingSymbols), tradingSymbols)
 		settingsNormal.Range(addTrading)
+		util.Notice(`result in all combine %d %v`, len(tradingSymbols), tradingSymbols)
+		settings.Range(addTrading)
 		util.Notice(`result in all %d %v`, len(tradingSymbols), tradingSymbols)
 		inAll = float64(len(tradingSymbols))
 		canOpen = setting.Chance != 0 || (setting.SymbolRelated != model.SettingTurtleRemoved && math.Abs(inAll) < setting.AmountLimit)
