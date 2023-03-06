@@ -52,6 +52,7 @@ const FunctionTurtleAdjust = `turtle_adjust`
 const FunctionDynamicTurtle = `dynamic_turtle`
 const FunctionDynamicCombine = `dynamic_combine`
 const FunctionCombineTurtle = `combine_turtle`
+const FunctionTurtleNormal = `turtle_normal`
 const FunctionGrid = `grid`
 const FunctionCross = `cross`
 const MarketTypePerp = `perp`

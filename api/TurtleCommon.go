@@ -259,7 +259,7 @@ func GetTurtleData(key, secret, function, market, symbol string) (data *TurtleDa
 	util.StoreSyncMap(queryDataTime, util.GetNow(), function, market, symbol, todayStr)
 	util.Notice(fmt.Sprintf(`need to create turtle data %s %s %s %s`, function, market, symbol, todayStr))
 	useNear := false
-	if function == model.FunctionTurtle {
+	if function == model.FunctionTurtle || function == model.FunctionTurtleNormal {
 		useNear = true
 	} else if function == model.FunctionCombineTurtle {
 		useNear = false
@@ -411,54 +411,77 @@ func CheckBreak(key, secret, market, symbol string, settings []*model.Setting, t
 	return true
 }
 
-func CheckCanOpen(settings []*model.Setting, data []*TurtleData) (canOpen bool, inAll float64) {
-	var isChance bool
-	if len(settings) == 1 && len(data) == 1 {
-		canOpen, isChance, inAll = canOpenTurtle(settings[0])
-	} else if len(settings) == 2 && len(data) == 2 {
-		canOpen, isChance, inAll = canOpenTurtle(settings[0])
-		canOpen1, _, _ := canOpenTurtle(settings[1])
-		canOpen = canOpen || canOpen1
+func CanOpenCombine(setting *model.Setting, data *TurtleData) (canOpen bool, inAll float64) {
+	success, _, coin, _ := model.GetFromStandard(setting.Market, setting.Symbol)
+	if !success {
+		return false, 0
 	}
-	for i, setting := range settings {
-		dataCurrent := data[i]
-		if !canOpen && isChance {
-			if inAll > 0 && setting.Chance >= 0 {
-				dataCurrent.OrderLong = nil
+	settings := GetSettings(setting.Function, setting.Market)
+	settingsNormal := GetSettings(model.FunctionTurtleNormal, setting.Market)
+	if settings == nil || settingsNormal == nil {
+		return false, 0
+	}
+	tradingSymbols := make(map[string]bool)
+	addChance := func(symbol, value any) bool {
+		if value != nil {
+			valueSetting := value.(*model.Setting)
+			_, _, valueCoin, _ := model.GetFromStandard(valueSetting.Market, valueSetting.Symbol)
+			if valueSetting.Market == setting.Market && valueSetting.Function == setting.Function &&
+				model.CommonCoins[strings.ToLower(valueCoin)] {
+				inAll += float64(valueSetting.Chance)
 			}
-			if inAll < 0 && setting.Chance <= 0 {
-				dataCurrent.OrderShort = nil
-			}
-		} else if !canOpen {
-			if setting.Chance == 0 {
-				dataCurrent.OrderLong = nil
-				dataCurrent.OrderShort = nil
-				if setting.Symbol == `YFI_PERP` {
-					util.Notice(fmt.Sprintf(`yfi can open set nil %s %s %v %d`, setting.Function, setting.SymbolRelated, canOpen, setting.Chance))
+		}
+		return true
+	}
+	addTrading := func(symbol, value any) bool {
+		if value != nil {
+			valueSetting := value.(*model.Setting)
+			_, _, valueCoin, _ := model.GetFromStandard(valueSetting.Market, valueSetting.Symbol)
+			if valueSetting.Market == setting.Market && valueSetting.Function == setting.Function &&
+				!model.CommonCoins[strings.ToLower(valueCoin)] {
+				if valueSetting.Chance != 0 {
+					tradingSymbols[valueSetting.Symbol] = true
 				}
 			}
 		}
-		if setting.Symbol == `YFI_PERP` {
-			util.Notice(fmt.Sprintf(`yfi can open %s %s %v is chance %v %d`, setting.Function, setting.SymbolRelated, canOpen, isChance, setting.Chance))
+		return true
+	}
+	if model.CommonCoins[strings.ToLower(coin)] {
+		settings.Range(addChance)
+		settingsNormal.Range(addChance)
+		canOpen = math.Abs(inAll) < setting.AmountLimit
+		if !canOpen && inAll > 0 && setting.Chance >= 0 {
+			data.OrderLong = nil
+		}
+		if !canOpen && inAll < 0 && setting.Chance <= 0 {
+			data.OrderShort = nil
+		}
+	} else {
+		settings.Range(addTrading)
+		settingsNormal.Range(addTrading)
+		inAll = float64(len(tradingSymbols))
+		canOpen = setting.Chance != 0 || (setting.SymbolRelated != model.SettingTurtleRemoved && math.Abs(inAll) < setting.AmountLimit)
+		if setting.Chance == 0 && !canOpen {
+			data.OrderLong = nil
+			data.OrderShort = nil
 		}
 	}
 	return canOpen, inAll
 }
 
-// CanOpenTurtle  主流币检查仓位总数;非主流检查交易币种个数
+// CanOpenTurtle CanOpenTurtle  主流币检查仓位总数;非主流检查交易币种个数
 // isChance true: 按照仓数计算
 // isChance false: 按照开仓币种数计算
 // 当setting.OpenShortMargin小于0时不限制本币种仓位，等于0时不许开仓（未实现）
 // 当setting.AmountLimit小于0时不限制总仓位或开仓币数，等于0时不许开仓（未实现）
-func canOpenTurtle(setting *model.Setting) (canOpen, isChance bool, chanceInAll float64) {
+func CanOpenTurtle(setting *model.Setting, data *TurtleData) (canOpen bool, inAll float64) {
 	success, _, coin, _ := model.GetFromStandard(setting.Market, setting.Symbol)
 	if !success {
-		return false, false, -1
+		return false, 0
 	}
 	settings := GetSettings(setting.Function, setting.Market)
-	inAll := 0.0
 	if settings == nil {
-		return false, false, 0
+		return false, 0
 	}
 	if model.CommonCoins[strings.ToLower(coin)] {
 		settings.Range(func(symbol, value any) bool {
@@ -473,19 +496,21 @@ func canOpenTurtle(setting *model.Setting) (canOpen, isChance bool, chanceInAll 
 			return true
 		})
 		canOpen = math.Abs(inAll) < setting.AmountLimit
-		return canOpen, true, inAll
+		if !canOpen && inAll > 0 && setting.Chance >= 0 {
+			data.OrderLong = nil
+		}
+		if !canOpen && inAll < 0 && setting.Chance <= 0 {
+			data.OrderShort = nil
+		}
+		return canOpen, inAll
 	} else { // 非主流币检查开仓了的币种个数
 		settings.Range(func(symbol, value any) bool {
 			if value != nil {
 				valueSetting := value.(*model.Setting)
 				_, _, valueCoin, _ := model.GetFromStandard(valueSetting.Market, valueSetting.Symbol)
-				var settingInvalid *model.Setting
-				if valueSetting.Function == model.FunctionCombineTurtle {
-					settingInvalid = GetInvalidTurtle(valueSetting.Market, valueSetting.Symbol)
-				}
 				if valueSetting.Market == setting.Market && valueSetting.Function == setting.Function &&
 					!model.CommonCoins[strings.ToLower(valueCoin)] {
-					if (settingInvalid != nil && settingInvalid.Chance != 0) || valueSetting.Chance != 0 {
+					if valueSetting.Chance != 0 {
 						inAll++
 					}
 				}
@@ -493,9 +518,10 @@ func canOpenTurtle(setting *model.Setting) (canOpen, isChance bool, chanceInAll 
 			return true
 		})
 		canOpen = setting.Chance != 0 || (setting.SymbolRelated != model.SettingTurtleRemoved && math.Abs(inAll) < setting.AmountLimit)
-		if setting.Symbol == `YFI_PERP` {
-			util.Notice(fmt.Sprintf(`yfi can open single %s %s %v %d`, setting.Function, setting.SymbolRelated, canOpen, setting.Chance))
+		if setting.Chance == 0 && !canOpen {
+			data.OrderLong = nil
+			data.OrderShort = nil
 		}
-		return canOpen, false, inAll
+		return canOpen, inAll
 	}
 }

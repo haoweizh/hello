@@ -550,7 +550,7 @@ func GetParameters(c *gin.Context) {
 	}
 	var orders model.Order
 	turtleRows, _ := model.AppDB.Model(&orders).Select(`market,symbol,order_side,price,deal_price,deal_amount`).
-		Where(`deal_amount>? and refresh_type=?`, 0, model.FunctionTurtle).
+		Where(`deal_amount>? and refresh_type!=?`, 0, model.FunctionCross).
 		Order(`order_time desc`).Limit(10).Rows()
 	if turtleRows != nil {
 		for turtleRows.Next() {

@@ -45,7 +45,7 @@ var ProcessCombineTurtle = func(settingLimit *model.Setting, tick *model.BidAsk)
 		(time.Now().Hour() == 0 && time.Now().Minute() == 0) || len(strings.Trim(symbol, ` `)) == 0 {
 		return
 	}
-	settingStop := api.GetInvalidTurtle(market, symbol)
+	settingStop := api.GetSetting(model.FunctionTurtleNormal, market, symbol)
 	if settingStop == nil || settingStop.Valid { // 使用valid为false的turtle作为对应turtle,否则该算法不运行
 		return
 	}
@@ -57,7 +57,7 @@ var ProcessCombineTurtle = func(settingLimit *model.Setting, tick *model.BidAsk)
 	}
 	account := model.AppConfig.GetAccounts(market)[0]
 	dataLimit := api.GetTurtleData(account.Key, account.Secret, settingLimit.Function, market, symbol)
-	dataStop := api.GetTurtleData(account.Key, account.Secret, model.FunctionTurtle, market, symbol)
+	dataStop := api.GetTurtleData(account.Key, account.Secret, model.FunctionTurtleNormal, market, symbol)
 	dataStop.N = dataLimit.N
 	if dataLimit == nil || dataLimit.N == 0 || dataLimit.Amount == 0 ||
 		dataStop == nil || dataStop.N == 0 || dataStop.Amount == 0 {
@@ -73,7 +73,7 @@ var ProcessCombineTurtle = func(settingLimit *model.Setting, tick *model.BidAsk)
 		return
 	}
 	turtleData := []*api.TurtleData{dataLimit, dataStop}
-	canOpen, turtleCoins := api.CheckCanOpen(settings, turtleData)
+	canOpen, turtleCoins := api.CanOpenCombine(settingLimit, dataLimit)
 	if canOpen {
 		settingLimit.SymbolRelated = ``
 	}
