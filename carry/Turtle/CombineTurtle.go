@@ -73,7 +73,7 @@ var ProcessCombineTurtle = func(settingLimit *model.Setting, tick *model.BidAsk)
 		return
 	}
 	turtleData := []*api.TurtleData{dataLimit, dataStop}
-	canOpen, turtleCoins := api.CanOpenCombine(settingLimit, dataLimit)
+	canOpen, turtleCoins := api.CanOpenCombine(settingLimit, settingStop, dataLimit, dataStop)
 	if canOpen {
 		settingLimit.SymbolRelated = ``
 	}

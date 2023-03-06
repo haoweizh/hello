@@ -411,7 +411,7 @@ func CheckBreak(key, secret, market, symbol string, settings []*model.Setting, t
 	return true
 }
 
-func CanOpenCombine(setting *model.Setting, data *TurtleData) (canOpen bool, inAll float64) {
+func CanOpenCombine(setting, settingNormal *model.Setting, data, dataNormal *TurtleData) (canOpen bool, inAll float64) {
 	success, _, coin, _ := model.GetFromStandard(setting.Market, setting.Symbol)
 	if !success {
 		return false, 0
@@ -426,8 +426,7 @@ func CanOpenCombine(setting *model.Setting, data *TurtleData) (canOpen bool, inA
 		if value != nil {
 			valueSetting := value.(*model.Setting)
 			_, _, valueCoin, _ := model.GetFromStandard(valueSetting.Market, valueSetting.Symbol)
-			if valueSetting.Market == setting.Market && valueSetting.Function == setting.Function &&
-				model.CommonCoins[strings.ToLower(valueCoin)] {
+			if model.CommonCoins[strings.ToLower(valueCoin)] {
 				inAll += float64(valueSetting.Chance)
 			}
 		}
@@ -437,10 +436,8 @@ func CanOpenCombine(setting *model.Setting, data *TurtleData) (canOpen bool, inA
 		if value != nil {
 			valueSetting := value.(*model.Setting)
 			_, _, valueCoin, _ := model.GetFromStandard(valueSetting.Market, valueSetting.Symbol)
-			if valueSetting.Market == setting.Market && valueSetting.Function == setting.Function &&
-				!model.CommonCoins[strings.ToLower(valueCoin)] {
+			if !model.CommonCoins[strings.ToLower(valueCoin)] {
 				if valueSetting.Chance != 0 {
-					util.Notice(fmt.Sprintf("add trading %s", valueSetting.Symbol))
 					tradingSymbols[valueSetting.Symbol] = true
 				}
 			}
@@ -457,17 +454,25 @@ func CanOpenCombine(setting *model.Setting, data *TurtleData) (canOpen bool, inA
 		if !canOpen && inAll < 0 && setting.Chance <= 0 {
 			data.OrderShort = nil
 		}
+		if !canOpen && inAll > 0 && settingNormal.Chance >= 0 {
+			dataNormal.OrderLong = nil
+		}
+		if !canOpen && inAll < 0 && settingNormal.Chance <= 0 {
+			dataNormal.OrderShort = nil
+		}
 	} else {
-		util.Notice(`result in all normal %d %v`, len(tradingSymbols), tradingSymbols)
 		settingsNormal.Range(addTrading)
-		util.Notice(`result in all combine %d %v`, len(tradingSymbols), tradingSymbols)
 		settings.Range(addTrading)
-		util.Notice(`result in all %d %v`, len(tradingSymbols), tradingSymbols)
 		inAll = float64(len(tradingSymbols))
-		canOpen = setting.Chance != 0 || (setting.SymbolRelated != model.SettingTurtleRemoved && math.Abs(inAll) < setting.AmountLimit)
+		canOpen = setting.Chance != 0 || settingNormal.Chance != 0 || (math.Abs(inAll) < setting.AmountLimit &&
+			setting.SymbolRelated != model.SettingTurtleRemoved && settingNormal.SymbolRelated != model.SettingTurtleRemoved)
 		if setting.Chance == 0 && !canOpen {
 			data.OrderLong = nil
 			data.OrderShort = nil
+		}
+		if settingNormal.Chance == 0 && !canOpen {
+			dataNormal.OrderLong = nil
+			dataNormal.OrderShort = nil
 		}
 	}
 	return canOpen, inAll
