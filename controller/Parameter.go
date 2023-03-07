@@ -551,12 +551,12 @@ func GetParameters(c *gin.Context) {
 	var orders model.Order
 	turtleRows, _ := model.AppDB.Model(&orders).Select(`market,symbol,order_side,price,deal_price,deal_amount`).
 		Where(`deal_amount>? and refresh_type!=?`, 0, model.FunctionCross).
-		Order(`order_time desc`).Limit(10).Rows()
+		Order(`order_time desc`).Limit(100).Rows()
 	if turtleRows != nil {
 		for turtleRows.Next() {
 			var market, symbol, orderSide, price, dealPrice, dealAmount string
 			_ = turtleRows.Scan(&market, &symbol, &orderSide, &price, &dealPrice, &dealAmount)
-			msg += fmt.Sprintf("[turtle订单]%s %s %s 下单价格:%s 成交价格:%s 成交数量:%s\n",
+			msg += fmt.Sprintf("[成交订单]%s %s %s 下单价格:%s 成交价格:%s 成交数量:%s\n",
 				market, symbol, orderSide, price, dealPrice, dealAmount)
 		}
 		turtleRows.Close()
