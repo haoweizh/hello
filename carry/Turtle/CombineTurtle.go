@@ -136,8 +136,8 @@ var ProcessCombineTurtle = func(settingLimit *model.Setting, tick *model.BidAsk)
 func handleBreakLong(setting, settingOpposite *model.Setting, data, dataOpposite *api.TurtleData,
 	turtleCoins float64, big bool) (work bool) {
 	if data == nil || data.OrderLong == nil || len(data.OrderLong) == 0 || !data.BreakLong {
-		if setting.Symbol == `DYDX_PERP` || setting.Symbol == `MKR_PERP` {
-			util.Notice(fmt.Sprintf("handle break sell %s %v %d\n %v\n %v",
+		if data.BreakLong {
+			util.Notice(fmt.Sprintf("handle break buy %s %v %d\n %v\n %v",
 				setting.Symbol, data.BreakLong, len(data.OrderLong), data.OrderLong, data))
 		}
 		return false
@@ -178,7 +178,7 @@ func handleBreakLong(setting, settingOpposite *model.Setting, data, dataOpposite
 func handleBreakShort(setting, settingOpposite *model.Setting, data, dataOpposite *api.TurtleData,
 	turtleCoins float64, big bool) (work bool) {
 	if data == nil || data.OrderShort == nil || len(data.OrderShort) == 0 || !data.BreakShort {
-		if setting.Symbol == `DYDX_PERP` || setting.Symbol == `MKR_PERP` {
+		if data.BreakShort {
 			util.Notice(fmt.Sprintf("handle break sell %s %v %d\n %v\n %v",
 				setting.Symbol, data.BreakShort, len(data.OrderShort), data.OrderShort, data))
 		}
@@ -266,10 +266,10 @@ func placeTurtleLong(key, secret, orderType string, data *api.TurtleData, settin
 	}
 	market := setting.Market
 	symbol := setting.Symbol
-	data.BreakLong = false
 	priceDeal := price
 	canOpen = canOpen && math.Abs(float64(setting.Chance)) < setting.OpenShortMargin
 	if data.OrderLong == nil && (setting.Chance < 0 || canOpen) {
+		data.BreakLong = false
 		if orderType == model.OrderTypeStop {
 			if price <= tick.Asks[0].Price {
 				data.BreakLong = true
@@ -365,10 +365,10 @@ func placeTurtleShort(key, secret, orderType string, data *api.TurtleData, setti
 	}
 	market := setting.Market
 	symbol := setting.Symbol
-	data.BreakShort = false
 	priceDeal := price
 	canOpen = canOpen && math.Abs(float64(setting.Chance)) < setting.OpenShortMargin
 	if data.OrderShort == nil && (setting.Chance > 0 || canOpen) {
+		data.BreakShort = false
 		if orderType == model.OrderTypeStop {
 			if price >= tick.Bids[0].Price {
 				data.BreakShort = true
@@ -400,9 +400,10 @@ func placeTurtleShort(key, secret, orderType string, data *api.TurtleData, setti
 				RefreshType:  setting.Function,
 				Status:       model.CarryStatusSuccess,
 				Symbol:       symbol}}
+		} else {
+			data.OrderShort = api.MustPlaceOrder(key, secret, model.OrderSideSell, orderType, market, symbol, ``,
+				setting.Function, priceDeal, price, amount, nil)
 		}
-		data.OrderShort = api.MustPlaceOrder(key, secret, model.OrderSideSell, orderType, market, symbol, ``,
-			setting.Function, priceDeal, price, amount, nil)
 		if data.OrderAdjust == nil {
 			data.OrderAdjust = make([]*model.Order, 0)
 		}
