@@ -121,7 +121,7 @@ func prepareSettings() {
 					}
 					success := SetLeverageBinancePerp(account.Key, account.Secret, setting.Symbol, 5)
 					if success {
-						util.Notice(fmt.Sprintf(`set leverage binanceperp %s`, setting.Symbol))
+						//util.Notice(fmt.Sprintf(`set leverage binanceperp %s`, setting.Symbol))
 					} else {
 						util.Notice(fmt.Sprintf(`fail to set leverage binanceperp %s`, setting.Symbol))
 						time.Sleep(time.Minute)
@@ -140,8 +140,8 @@ func prepareSettings() {
 				setting = oldSetting.(*model.Setting)
 			}
 		}
-		util.Notice(fmt.Sprintf(`load setting %s %s %s %v %d`,
-			setting.Market, setting.Symbol, setting.Function, setting.Valid, setting.Chance))
+		//util.Notice(fmt.Sprintf(`load setting %s %s %s %v %d`,
+		//	setting.Market, setting.Symbol, setting.Function, setting.Valid, setting.Chance))
 		marketMap[setting.Market] = true
 		value, ok = util.LoadSyncMap(localHandlers, setting.Market, setting.Symbol)
 		var functions *sync.Map
@@ -225,7 +225,7 @@ func handleCombineSettings(market string, accounts []*model.Account, topMarketIn
 				for _, account := range accounts {
 					success := SetLeverageBinancePerp(account.Key, account.Secret, info.Name, 5)
 					if success {
-						util.Notice(fmt.Sprintf(`set leverage binanceperp %s`, info.Name))
+						//util.Notice(fmt.Sprintf(`set leverage binanceperp %s`, info.Name))
 					} else {
 						util.Notice(fmt.Sprintf(`fail to set leverage binanceperp %s`, info.Name))
 						time.Sleep(time.Minute)
@@ -310,7 +310,7 @@ func handleTurtleSettings(function, market string, accounts []*model.Account, to
 				for _, account := range accounts {
 					success := SetLeverageBinancePerp(account.Key, account.Secret, settingTurtle.Symbol, 5)
 					if success {
-						util.Notice(fmt.Sprintf(`set leverage binanceperp %s`, settingTurtle.Symbol))
+						//util.Notice(fmt.Sprintf(`set leverage binanceperp %s`, settingTurtle.Symbol))
 					} else {
 						util.Notice(fmt.Sprintf(`fail to set leverage binanceperp %s`, settingTurtle.Symbol))
 						time.Sleep(time.Minute)
