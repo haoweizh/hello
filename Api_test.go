@@ -68,19 +68,16 @@ func Test_ws(t *testing.T) {
 }
 
 func Test_getCommonMarketInfos(t *testing.T) {
-	var f float64
-	var i int64
-	f = 3.0
-	i = -3
-	v := math.Abs(float64(i)) < f
-	fmt.Println(v)
 	model.NewConfig()
 	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
 	//api.InitCrossMarketInfos([]string{model.Gate})
 	api.InitMarketInfos()
-	order1 := api.PlaceOrder(model.AppConfig.BinanceKey, model.AppConfig.BinanceSecret, model.OrderSideBuy, model.OrderTypeStop,
-		model.BinancePerp, `OP_PERP`, ``,
-		3.3115, 3.2787, 0.1, false, nil, nil)
+	price, decimal := model.FormatPrice(model.BinancePerp, `SOL_PERP`, 19.407125)
+	priceStr := util.CutTailZero(strconv.FormatFloat(price, 'f', decimal, 64))
+	fmt.Println(priceStr)
+	order1 := api.PlaceOrder(model.AppConfig.BinanceKey, model.AppConfig.BinanceSecret, model.OrderSideBuy, model.OrderTypeLimit,
+		model.BinancePerp, `SOL_PERP`, ``,
+		19.407125, 19.407125, 100, false, nil, nil)
 	fmt.Println(order1.OrderId)
 	success, pos, value, u := api.GetPositions(model.AppConfig.GateKey, model.AppConfig.GateSecret, model.Gate)
 	fmt.Println(fmt.Sprintf(`%v %v %v %v`, success, pos, value, u))
