@@ -412,7 +412,7 @@ func placeOrderBybitPerp(order *model.Order, key, secret, orderSide, orderType, 
 	postData["order_type"] = strings.ToUpper(orderType[0:1]) + orderType[1:]
 	postData[`position_idx`] = 0
 	if orderType != model.OrderTypeMarket && orderType != model.OrderTypeStop {
-		formattedPrice, decimal := model.FormatPrice(model.BybitPerp, symbol, orderSide, price)
+		formattedPrice, decimal := model.FormatPrice(model.BybitPerp, symbol, price)
 		postData[`price`] = util.CutTailZero(strconv.FormatFloat(formattedPrice, 'f', decimal, 64))
 		order.Price = formattedPrice
 	}

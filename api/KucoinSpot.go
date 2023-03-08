@@ -325,7 +325,7 @@ func placeOrderKucoinSpot(order *model.Order, orderSide, orderType, symbol strin
 			createOrder.Symbol = dialectSymbol
 			createOrder.Side = orderSide
 			createOrder.Type = orderType
-			priceSpot, decimalSpot := model.FormatPrice(model.KucoinSpot, symbol, orderSide, price)
+			priceSpot, decimalSpot := model.FormatPrice(model.KucoinSpot, symbol, price)
 			order.Price = priceSpot
 			createOrder.Price = util.CutTailZero(strconv.FormatFloat(priceSpot, 'f', decimalSpot, 64))
 			createOrder.Size = util.CutTailZero(fmt.Sprintf(`%f`, model.GetAmountInMarket(model.KucoinSpot, symbol, amount, price)))
@@ -364,7 +364,7 @@ func placeOrderKucoinSpot(order *model.Order, orderSide, orderType, symbol strin
 			createOrder.Type = orderType
 			createOrder.MarginMode = "cross"
 			createOrder.AutoBorrow = true
-			priceSpot, decimalSpot := model.FormatPrice(model.KucoinSpot, symbol, orderSide, price)
+			priceSpot, decimalSpot := model.FormatPrice(model.KucoinSpot, symbol, price)
 			createOrder.Price = util.CutTailZero(strconv.FormatFloat(priceSpot, 'f', decimalSpot, 64))
 			createOrder.Size = util.CutTailZero(fmt.Sprintf(`%f`, model.GetAmountInMarket(model.Kucoin, symbol, amount, price)))
 			util.SocketInfo(fmt.Sprintf(`create margin order request: %v`, createOrder))

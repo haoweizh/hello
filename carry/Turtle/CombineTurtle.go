@@ -30,67 +30,58 @@ func checkSetCombining(value bool) (before bool) {
 // setting.PriceX 上一次开仓的价格
 // setting.OpenShortMargin 该单币种最多开仓个数
 // setting.AmountLimit 总开仓上限
-var ProcessCombineTurtle = func(settingLimit *model.Setting, tick *model.BidAsk) {
+var ProcessCombineTurtle = func(settingCombine *model.Setting, tick *model.BidAsk) {
 	if !checkSetCombining(true) {
 		defer checkSetCombining(false)
 	} else {
 		return
 	}
-	market := settingLimit.Market
-	symbol := settingLimit.Symbol
+	market := settingCombine.Market
+	symbol := settingCombine.Symbol
 	now := util.GetNowUnixMillion()
 	maintaining, _ := model.ChannelMaintaining.Load(market)
-	if settingLimit == nil || tick == nil || tick.Asks == nil || tick.Bids == nil || model.AppConfig.Handle != `1` ||
+	if settingCombine == nil || tick == nil || tick.Asks == nil || tick.Bids == nil || model.AppConfig.Handle != `1` ||
 		(maintaining != nil && maintaining.(bool)) || (model.AppConfig.Env != `test` && now-int64(tick.Ts) > 1000) ||
 		(time.Now().Hour() == 0 && time.Now().Minute() == 0) || len(strings.Trim(symbol, ` `)) == 0 {
 		return
 	}
-	settingStop := api.GetSetting(model.FunctionTurtleNormal, market, symbol)
-	if settingStop == nil {
+	settingNormal := api.GetSetting(model.FunctionTurtleNormal, market, symbol)
+	if settingNormal == nil {
 		return
 	}
-	if (settingLimit.Chance != 0 && settingLimit.PriceX == 0) || (settingStop.Chance != 0 && settingStop.PriceX == 0) {
+	if (settingCombine.Chance != 0 && settingCombine.PriceX == 0) || (settingNormal.Chance != 0 && settingNormal.PriceX == 0) {
 		util.Notice(fmt.Sprintf(`no last priceX %s %s %d %e %d %e`,
-			market, symbol, settingLimit.Chance, settingLimit.PriceX, settingStop.Chance, settingStop.PriceX))
+			market, symbol, settingCombine.Chance, settingCombine.PriceX, settingNormal.Chance, settingNormal.PriceX))
 		return
 	}
-	settings := []*model.Setting{settingLimit, settingStop}
+	settings := []*model.Setting{settingCombine, settingNormal}
 	account := model.AppConfig.GetAccounts(market)[0]
-	dataLimit := api.GetTurtleData(account.Key, account.Secret, settingLimit.Function, market, symbol)
-	dataStop := api.GetTurtleData(account.Key, account.Secret, model.FunctionTurtleNormal, market, symbol)
-	dataStop.N = dataLimit.N
-	if dataLimit == nil || dataLimit.N == 0 || dataLimit.Amount == 0 ||
-		dataStop == nil || dataStop.N == 0 || dataStop.Amount == 0 {
+	dataCombine := api.GetTurtleData(account.Key, account.Secret, settingCombine.Function, market, symbol)
+	dataNormal := api.GetTurtleData(account.Key, account.Secret, model.FunctionTurtleNormal, market, symbol)
+	if dataCombine == nil || dataCombine.N == 0 || dataCombine.Amount == 0 ||
+		dataNormal == nil || dataNormal.N == 0 || dataNormal.Amount == 0 {
 		if time.Now().Minute() == 0 && time.Now().Second() == 0 {
 			util.Notice(fmt.Sprintf(`fail to get turtle combine & turtle %s %s`, market, symbol))
 		}
 		return
 	}
-	dataStop.Amount = dataLimit.Amount
-	if !dataLimit.OrderCleared {
+	dataNormal.N = dataCombine.N
+	dataNormal.Amount = dataCombine.Amount
+	if !dataCombine.OrderCleared {
 		api.ClearOrders(account.Key, account.Secret, market, symbol)
-		dataLimit.OrderCleared = true
+		dataCombine.OrderCleared = true
 		return
 	}
-	turtleData := []*api.TurtleData{dataLimit, dataStop}
-	canOpen, turtleCoins := api.CanOpenCombine(settingLimit, settingStop, dataLimit, dataStop)
+	turtleData := []*api.TurtleData{dataCombine, dataNormal}
+	canOpen, turtleCoins := api.CanOpenCombine(settingCombine, settingNormal, dataCombine, dataNormal)
 	if canOpen {
-		settingLimit.SymbolRelated = ``
+		settingCombine.SymbolRelated = ``
 	}
-	msgKey := fmt.Sprintf("%s_%s_%s", model.FunctionCombineTurtle, market, symbol)
-	msg := fmt.Sprintf("[%s]%s可开%v 币种数:%d/%d %d日:%e-%e %d日:%e-%e N:%e 单币仓数：%d 单仓数量:%e bid-ask %e %e \n"+
-		"海龟:仓数/持仓量/开仓价/今日平仓 %d/%e/%e/%v\n 龟汤:仓数/持仓量/开仓价/今日平仓 %d/%e/%e/%v",
-		dataLimit.TurtleTime.String()[0:10], msgKey, canOpen, int(turtleCoins), int(settingLimit.AmountLimit),
-		dataLimit.DaysFar, dataLimit.LowDaysFar, dataLimit.HighDaysFar, dataLimit.DaysNear, dataLimit.LowDaysNear,
-		dataLimit.HighDaysNear, dataLimit.N, int(settingLimit.OpenShortMargin), dataLimit.Amount, tick.Bids[0].Price,
-		tick.Asks[0].Price, settingStop.Chance, settingStop.GridAmount, settingStop.PriceX, dataStop.Liquidated,
-		settingLimit.Chance, settingLimit.GridAmount, settingLimit.PriceX, dataLimit.Liquidated)
-	util.StoreSyncMap(&model.CarryInfo, msg, account.Key, msgKey)
 	if api.HandleOrders(account.Key, account.Secret, market, symbol, settings, turtleData) ||
 		api.CheckBreak(account.Key, account.Secret, market, symbol, settings, turtleData, tick) {
 		return
 	}
-	if !dataLimit.AdjustChecked && !dataStop.AdjustChecked {
+	if !dataCombine.AdjustChecked && !dataNormal.AdjustChecked {
 		return
 	}
 	minSize := 0.0
@@ -103,29 +94,35 @@ var ProcessCombineTurtle = func(settingLimit *model.Setting, tick *model.BidAsk)
 		} else {
 			minSize = marketInfo.SizeMin * marketInfo.CTValue
 		}
-		minSize = math.Max(minSize, 2*marketInfo.MoneyMin/dataLimit.LowDaysFar)
+		minSize = math.Max(minSize, 2*marketInfo.MoneyMin/dataCombine.LowDaysFar)
 	}
 	//价格不一样：big=true
 	//价格一样：仓数相加=0时big=false；仓数相加≠0时big=true
-	big := true
-	if settingLimit.Chance+settingStop.Chance == 0 && settingLimit.PriceX-settingStop.PriceX <= marketInfo.PriceIncrement {
-		big = false
-	}
-	placeTurtleLong(account.Key, account.Secret, model.OrderTypeStop, dataStop, settingStop, minSize, tick, big, canOpen)
-	placeTurtleShort(account.Key, account.Secret, model.OrderTypeStop, dataStop, settingStop, minSize, tick, big, canOpen)
-	placeTurtleLong(account.Key, account.Secret, model.OrderTypeLimit, dataLimit, settingLimit, minSize, tick, big, canOpen)
-	placeTurtleShort(account.Key, account.Secret, model.OrderTypeLimit, dataLimit, settingLimit, minSize, tick, big, canOpen)
+	isBig := dataCombine.IsBig(settingCombine, settingNormal, marketInfo)
+	msgKey := fmt.Sprintf("%s_%s_%s", model.FunctionCombineTurtle, market, symbol)
+	msg := fmt.Sprintf("[%s]%s可开%vbig:%d 币种数:%d/%d %d日:%e-%e %d日:%e-%e N:%e 仓数上限%d 单仓数量:%e bid-ask %e %e \n"+
+		"海龟:仓数/持仓量/开仓价/今日平仓 %d/%e/%e/%v\n 龟汤:仓数/持仓量/开仓价/今日平仓 %d/%e/%e/%v",
+		dataCombine.TurtleTime.String()[0:10], msgKey, canOpen, isBig, int(turtleCoins), int(settingCombine.AmountLimit),
+		dataCombine.DaysFar, dataCombine.LowDaysFar, dataCombine.HighDaysFar, dataCombine.DaysNear, dataCombine.LowDaysNear,
+		dataCombine.HighDaysNear, dataCombine.N, int(settingCombine.OpenShortMargin), dataCombine.Amount, tick.Bids[0].Price,
+		tick.Asks[0].Price, settingNormal.Chance, settingNormal.GridAmount, settingNormal.PriceX, dataNormal.Liquidated,
+		settingCombine.Chance, settingCombine.GridAmount, settingCombine.PriceX, dataCombine.Liquidated)
+	util.StoreSyncMap(&model.CarryInfo, msg, account.Key, msgKey)
+	placeTurtleLong(account.Key, account.Secret, model.OrderTypeStop, dataNormal, settingNormal, minSize, tick, isBig, canOpen)
+	placeTurtleShort(account.Key, account.Secret, model.OrderTypeStop, dataNormal, settingNormal, minSize, tick, isBig, canOpen)
+	placeTurtleLong(account.Key, account.Secret, model.OrderTypeLimit, dataCombine, settingCombine, minSize, tick, isBig, canOpen)
+	placeTurtleShort(account.Key, account.Secret, model.OrderTypeLimit, dataCombine, settingCombine, minSize, tick, isBig, canOpen)
 	needCheck := false
-	if handleBreakLong(settingLimit, settingStop, dataLimit, dataStop, turtleCoins, big) {
+	if handleBreakLong(settingCombine, settingNormal, dataCombine, dataNormal, turtleCoins, isBig) {
 		needCheck = true
 	}
-	if handleBreakShort(settingLimit, settingStop, dataLimit, dataStop, turtleCoins, big) {
+	if handleBreakShort(settingCombine, settingNormal, dataCombine, dataNormal, turtleCoins, isBig) {
 		needCheck = true
 	}
-	if handleBreakLong(settingStop, settingLimit, dataStop, dataLimit, turtleCoins, big) {
+	if handleBreakLong(settingNormal, settingCombine, dataNormal, dataCombine, turtleCoins, isBig) {
 		needCheck = true
 	}
-	if handleBreakShort(settingStop, settingLimit, dataStop, dataLimit, turtleCoins, big) {
+	if handleBreakShort(settingNormal, settingCombine, dataNormal, dataCombine, turtleCoins, isBig) {
 		needCheck = true
 	}
 	if needCheck {
@@ -134,7 +131,7 @@ var ProcessCombineTurtle = func(settingLimit *model.Setting, tick *model.BidAsk)
 }
 
 func handleBreakLong(setting, settingOpposite *model.Setting, data, dataOpposite *api.TurtleData,
-	turtleCoins float64, big bool) (work bool) {
+	turtleCoins float64, big int) (work bool) {
 	if data == nil || data.OrderLong == nil || len(data.OrderLong) == 0 || !data.BreakLong {
 		if data.BreakLong {
 			util.Notice(fmt.Sprintf("handle break buy %s %v %d\n %v\n %v",
@@ -152,12 +149,14 @@ func handleBreakLong(setting, settingOpposite *model.Setting, data, dataOpposite
 		setting.Chance = 0
 		setting.GridAmount = 0
 		setting.PriceX = 0
-		bigNew := false
+		bigNew := -1
 		if settingOpposite.Chance != 0 {
-			bigNew = true
+			bigNew = 1
 		}
 		if big != bigNew {
-			removeOrders(dataOpposite)
+			data.SetBig(bigNew)
+			dataOpposite.SetBig(bigNew)
+			removeOpenOrders(dataOpposite)
 		}
 	} else if data.OrderLong[0].Function == model.Open {
 		util.Notice(fmt.Sprintf(`加多 %s %s chance:%d Amount:%e currentN:%d px:%e N:%e`,
@@ -176,7 +175,7 @@ func handleBreakLong(setting, settingOpposite *model.Setting, data, dataOpposite
 }
 
 func handleBreakShort(setting, settingOpposite *model.Setting, data, dataOpposite *api.TurtleData,
-	turtleCoins float64, big bool) (work bool) {
+	turtleCoins float64, big int) (work bool) {
 	if data == nil || data.OrderShort == nil || len(data.OrderShort) == 0 || !data.BreakShort {
 		if data.BreakShort {
 			util.Notice(fmt.Sprintf("handle break sell %s %v %d\n %v\n %v",
@@ -194,12 +193,14 @@ func handleBreakShort(setting, settingOpposite *model.Setting, data, dataOpposit
 		setting.Chance = 0
 		setting.GridAmount = 0
 		setting.PriceX = 0
-		bigNew := false
+		bigNew := -1
 		if settingOpposite.Chance != 0 {
-			bigNew = true
+			bigNew = 1
 		}
 		if bigNew != big {
-			removeOrders(dataOpposite)
+			data.SetBig(bigNew)
+			dataOpposite.SetBig(bigNew)
+			removeOpenOrders(dataOpposite)
 		}
 	} else {
 		util.Notice(fmt.Sprintf(`加空 %s %s chance:%d Amount:%e currentN:%d px:%e N:%e`,
@@ -217,7 +218,7 @@ func handleBreakShort(setting, settingOpposite *model.Setting, data, dataOpposit
 	return true
 }
 
-func removeOrders(data *api.TurtleData) {
+func removeOpenOrders(data *api.TurtleData) {
 	if data != nil && data.OrderLong != nil && len(data.OrderLong) > 0 && data.OrderLong[0].Function == model.Open {
 		data.OrderLong = nil
 	}
@@ -227,13 +228,13 @@ func removeOrders(data *api.TurtleData) {
 }
 
 func placeTurtleLong(key, secret, orderType string, data *api.TurtleData, setting *model.Setting,
-	minSize float64, tick *model.BidAsk, big, canOpen bool) {
+	minSize float64, tick *model.BidAsk, big int, canOpen bool) {
 	amount := data.Amount
 	function := model.Open
 	if setting.Chance < 0 {
 		function = model.Close
 		amount = setting.GridAmount
-	} else if !big {
+	} else if big == -1 {
 		amount = minSize
 	}
 	price := data.HighDaysFar
@@ -282,7 +283,7 @@ func placeTurtleLong(key, secret, orderType string, data *api.TurtleData, settin
 		} else if orderType == model.OrderTypeLimit && price >= tick.Asks[0].Price {
 			data.BreakLong = true
 		}
-		if data.BreakLong && !big {
+		if data.BreakLong && big == -1 {
 			util.Notice(fmt.Sprintf(`already break place fake long %s %s %s`, orderType, setting.Function, symbol))
 			data.OrderLong = []*model.Order{{
 				Amount:       amount,
@@ -322,13 +323,13 @@ func placeTurtleLong(key, secret, orderType string, data *api.TurtleData, settin
 }
 
 func placeTurtleShort(key, secret, orderType string, data *api.TurtleData, setting *model.Setting,
-	minSize float64, tick *model.BidAsk, big, canOpen bool) {
+	minSize float64, tick *model.BidAsk, big int, canOpen bool) {
 	amount := data.Amount
 	function := model.Open
 	if setting.Chance > 0 {
 		amount = setting.GridAmount
 		function = model.Close
-	} else if !big {
+	} else if big == -1 {
 		amount = minSize
 	}
 	price := data.LowDaysFar
@@ -383,7 +384,7 @@ func placeTurtleShort(key, secret, orderType string, data *api.TurtleData, setti
 		}
 		util.Notice(fmt.Sprintf(`place short %s %s %s %s %d %v at %e %e amt %e`,
 			orderType, setting.Function, market, symbol, setting.Chance, canOpen, priceDeal, price, amount))
-		if data.BreakShort && !big {
+		if data.BreakShort && big == -1 {
 			util.Notice(fmt.Sprintf(`already break place fake short %s %s %s`, orderType, setting.Function, symbol))
 			data.OrderShort = []*model.Order{{
 				Amount:       amount,

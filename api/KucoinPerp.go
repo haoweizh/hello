@@ -379,7 +379,7 @@ func placeOrderKucoinPerp(order *model.Order, orderSide, orderType, symbol strin
 		params["symbol"] = dialectSymbol
 		params["type"] = orderType
 		params["leverage"] = "5"
-		priceFuture, decimalFuture := model.FormatPrice(model.KucoinPerp, symbol, orderSide, price)
+		priceFuture, decimalFuture := model.FormatPrice(model.KucoinPerp, symbol, price)
 		order.Price = priceFuture
 		params["price"] = util.CutTailZero(strconv.FormatFloat(priceFuture, 'f', decimalFuture, 64))
 		params["size"] = util.CutTailZero(fmt.Sprintf(`%f`, model.GetAmountInMarket(model.KucoinPerp, symbol, amount, price)))

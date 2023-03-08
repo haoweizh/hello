@@ -573,7 +573,7 @@ func sendSignRequestOKEX(key, secret, method, path string, param, body map[strin
 }
 
 func getWSOrderArgOKEX(symbol, orderSide, orderType, tag string, price, amount float64) (args map[string]interface{}) {
-	price, decimal := model.FormatPrice(model.OKEX, symbol, orderSide, price)
+	price, decimal := model.FormatPrice(model.OKEX, symbol, price)
 	priceStr := util.CutTailZero(strconv.FormatFloat(price, 'f', decimal, 64))
 	formattedAmount := model.GetAmountInMarket(model.OKEX, symbol, amount, price)
 	amountStrPerp := util.CutTailZero(fmt.Sprintf(`%f`, formattedAmount))
@@ -637,9 +637,9 @@ func PlacePairOKEX(key, symbolBuy, symbolSell, orderType string, priceBuy, price
 // priceStr := strconv.FormatFloat(order.Price, 'f', -1, 64)
 // triggerPriceStr := strconv.FormatFloat(order.TriggerPrice, 'f', -1, 64)
 func placeOrderOKEX(key, secret string, isWs bool, order *model.Order) {
-	price, decimal := model.FormatPrice(model.OKEX, order.Symbol, order.OrderSide, order.Price)
+	price, decimal := model.FormatPrice(model.OKEX, order.Symbol, order.Price)
 	priceStr := util.CutTailZero(strconv.FormatFloat(price, 'f', decimal, 64))
-	priceTrigger, decimal := model.FormatPrice(model.OKEX, order.Symbol, order.OrderSide, order.TriggerPrice)
+	priceTrigger, decimal := model.FormatPrice(model.OKEX, order.Symbol, order.TriggerPrice)
 	triggerPriceStr := util.CutTailZero(strconv.FormatFloat(priceTrigger, 'f', decimal, 64))
 	formattedAmount := model.GetAmountInMarket(model.OKEX, order.Symbol, order.Amount, price)
 	amount := util.CutTailZero(fmt.Sprintf(`%f`, formattedAmount))

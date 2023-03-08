@@ -254,7 +254,7 @@ func maintainChannelBinanceSpot(subscribes []interface{}) {
 }
 
 func placeOrderBinanceSpot(key, secret string, order *model.Order, orderSide, orderType, symbol string, price, amount float64) {
-	price, decimal := model.FormatPrice(model.BinanceSpot, symbol, orderSide, price)
+	price, decimal := model.FormatPrice(model.BinanceSpot, symbol, price)
 	priceStr := util.CutTailZero(strconv.FormatFloat(price, 'f', decimal, 64))
 	formattedAmount := model.GetAmountInMarket(model.BinanceSpot, symbol, amount, price)
 	amountStr := util.CutTailZero(fmt.Sprintf(`%f`, formattedAmount))

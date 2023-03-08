@@ -336,7 +336,7 @@ func placeOrderHuobiSpot(key, secret string, order *model.Order, orderSide, orde
 		postData["direction"] = orderSide
 		postData["offset"] = offset
 		if orderType == model.OrderTypeLimit {
-			priceFuture, decimalFuture := model.FormatPrice(model.HuobiSpot, symbol, model.OrderSideBuy, price)
+			priceFuture, decimalFuture := model.FormatPrice(model.HuobiSpot, symbol, price)
 			order.Price = priceFuture
 			priceStrFuture := util.CutTailZero(strconv.FormatFloat(priceFuture, 'f', decimalFuture, 64))
 			postData["price"] = priceStrFuture
@@ -384,7 +384,7 @@ func placeOrderHuobiSpot(key, secret string, order *model.Order, orderSide, orde
 		postData["amount"] = util.CutTailZero(fmt.Sprintf(`%f`, model.GetAmountInMarket(model.HuobiSpot, symbol, amount, price)))
 		postData["symbol"] = symbol
 		if orderType == model.OrderTypeLimit {
-			priceSpot, decimalSpot := model.FormatPrice(model.HuobiSpot, symbol, model.OrderSideBuy, price)
+			priceSpot, decimalSpot := model.FormatPrice(model.HuobiSpot, symbol, price)
 			postData["price"] = util.CutTailZero(strconv.FormatFloat(priceSpot, 'f', decimalSpot, 64))
 			order.Price = priceSpot
 		}

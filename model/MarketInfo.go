@@ -85,14 +85,15 @@ func GetAmountInMarket(market string, symbol string, amount, price float64) (for
 	return formattedAmount
 }
 
-func FormatPrice(market, symbol, orderSide string, price float64) (formattedPrice float64, decimal int) {
+func FormatPrice(market, symbol string, price float64) (formattedPrice float64, decimal int) {
 	marketInfo := GetMarketInfo(market, symbol)
 	if marketInfo == nil || marketInfo.SizeIncrement == 0 {
 		return 0, 0
 	}
-	if orderSide == OrderSideBuy {
-		return marketInfo.PriceIncrement * math.Ceil(price/marketInfo.PriceIncrement), marketInfo.PriceDecimal
-	} else {
-		return marketInfo.PriceIncrement * math.Floor(price/marketInfo.PriceIncrement), marketInfo.PriceDecimal
-	}
+	return marketInfo.PriceIncrement * math.Round(price/marketInfo.PriceIncrement), marketInfo.PriceDecimal
+	//if orderSide == OrderSideBuy {
+	//	return marketInfo.PriceIncrement * math.Ceil(price/marketInfo.PriceIncrement), marketInfo.PriceDecimal
+	//} else {
+	//	return marketInfo.PriceIncrement * math.Floor(price/marketInfo.PriceIncrement), marketInfo.PriceDecimal
+	//}
 }

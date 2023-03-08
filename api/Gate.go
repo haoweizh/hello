@@ -596,7 +596,7 @@ func cancelOrdersGate(key string, secret string, symbol string) (result bool) {
 
 func placeOrderGate(key, secret string, order *model.Order, orderSide, orderType, symbol string, price, amount float64) {
 	client, ctx := getClientGate(key, secret)
-	orderPrice, decimal := model.FormatPrice(model.Gate, symbol, model.OrderSideBuy, price)
+	orderPrice, decimal := model.FormatPrice(model.Gate, symbol, price)
 	orderPriceStr := util.CutTailZero(strconv.FormatFloat(orderPrice, 'f', decimal, 64))
 	success, marketType, _, dialectSymbol := model.GetFromStandard(model.Gate, symbol)
 	order.Symbol = symbol

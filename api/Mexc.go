@@ -209,7 +209,7 @@ func placeOrderMexc(key, secret string, order *model.Order, orderSide, orderType
 	} else {
 		side = 3
 	}
-	price, decimal := model.FormatPrice(model.Mexc, symbol, orderSide, price)
+	price, decimal := model.FormatPrice(model.Mexc, symbol, price)
 	priceStr := util.CutTailZero(strconv.FormatFloat(price, 'f', decimal, 64))
 	marketInfo := model.GetMarketInfo(model.Mexc, symbol)
 	order.Price = price
