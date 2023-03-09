@@ -133,10 +133,6 @@ var ProcessCombineTurtle = func(settingCombine *model.Setting, tick *model.BidAs
 func handleBreakLong(setting, settingOpposite *model.Setting, data, dataOpposite *api.TurtleData,
 	turtleCoins float64, big int) (work bool) {
 	if data == nil || data.OrderLong == nil || len(data.OrderLong) == 0 || !data.BreakLong {
-		if data.BreakLong {
-			util.Notice(fmt.Sprintf("handle break buy %s %v %d\n %v\n %v",
-				setting.Symbol, data.BreakLong, len(data.OrderLong), data.OrderLong, data))
-		}
 		return false
 	}
 	setting.PriceX = data.OrderLong[0].TriggerPrice
@@ -177,10 +173,6 @@ func handleBreakLong(setting, settingOpposite *model.Setting, data, dataOpposite
 func handleBreakShort(setting, settingOpposite *model.Setting, data, dataOpposite *api.TurtleData,
 	turtleCoins float64, big int) (work bool) {
 	if data == nil || data.OrderShort == nil || len(data.OrderShort) == 0 || !data.BreakShort {
-		if data.BreakShort {
-			util.Notice(fmt.Sprintf("handle break sell %s %v %d\n %v\n %v",
-				setting.Symbol, data.BreakShort, len(data.OrderShort), data.OrderShort, data))
-		}
 		return false
 	}
 	setting.PriceX = data.OrderShort[0].TriggerPrice

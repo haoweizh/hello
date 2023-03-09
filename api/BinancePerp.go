@@ -268,9 +268,6 @@ func placeOrderBinancePerp(key, secret string, order *model.Order, orderSide, or
 	amountStr := util.CutTailZero(fmt.Sprintf(`%f`, formattedAmount))
 	success, _, _, dialectSymbol := model.GetFromStandard(model.BinancePerp, symbol)
 	order.Price = price
-	if symbol == `SOL_PERP` && orderSide == model.OrderSideBuy {
-		util.Notice(fmt.Sprintf(`set bin price from %f to %f str %s`, price, order.Price, priceStr))
-	}
 	if success {
 		client := futures.NewClient(key, secret)
 		service := client.NewCreateOrderService().Symbol(dialectSymbol).Quantity(amountStr)
