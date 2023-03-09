@@ -135,7 +135,11 @@ func handleBreakLong(setting, settingOpposite *model.Setting, data, dataOpposite
 	if data == nil || data.OrderLong == nil || len(data.OrderLong) == 0 || !data.BreakLong {
 		return false
 	}
-	setting.PriceX = data.OrderLong[0].TriggerPrice
+	if data.OrderLong[0].OrderType == model.OrderTypeLimit {
+		setting.PriceX = data.OrderLong[0].Price
+	} else {
+		setting.PriceX = data.OrderLong[0].TriggerPrice
+	}
 	util.Notice(fmt.Sprintf(`query turtle break buy %s %s %d %s %s`,
 		setting.Market, setting.Symbol, len(data.OrderLong), data.OrderLong[0].OrderId, data.OrderLong[0].Function))
 	if data.OrderLong[0].Function == model.Close {
@@ -175,7 +179,11 @@ func handleBreakShort(setting, settingOpposite *model.Setting, data, dataOpposit
 	if data == nil || data.OrderShort == nil || len(data.OrderShort) == 0 || !data.BreakShort {
 		return false
 	}
-	setting.PriceX = data.OrderShort[0].TriggerPrice
+	if data.OrderShort[0].OrderType == model.OrderTypeLimit {
+		setting.PriceX = data.OrderShort[0].Price
+	} else {
+		setting.PriceX = data.OrderShort[0].TriggerPrice
+	}
 	util.Notice(fmt.Sprintf(`query turtle break sell %s %s %d %s %s`,
 		setting.Market, setting.Symbol, len(data.OrderShort), data.OrderShort[0].OrderId, data.OrderShort[0].Function))
 	if data.OrderShort[0].Function == model.Close {
