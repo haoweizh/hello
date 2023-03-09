@@ -79,7 +79,8 @@ var ProcessTurtle = func(setting *model.Setting, tick *model.BidAsk) {
 		return
 	}
 	_, _, coin, _ := model.GetFromStandard(setting.Market, setting.Symbol)
-	if setting.Chance == 0 && (!data.Liquidated || !model.CommonCoins[strings.ToLower(coin)]) { // 开初始仓
+	// !data.Liquidated ||
+	if setting.Chance == 0 && !model.CommonCoins[strings.ToLower(coin)] { // 开初始仓
 		placeTurtleOrders(account.Key, account.Secret, data, setting, canOpenTurtle, chanceInAll, priceShort, priceLong, tick)
 		if data.BreakLong && data.OrderLong != nil {
 			handleBreak(account.Key, account.Secret, setting, data, model.OrderSideBuy)
