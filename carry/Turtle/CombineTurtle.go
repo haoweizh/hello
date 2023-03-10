@@ -135,10 +135,10 @@ func handleBreakLong(setting, settingOpposite *model.Setting, data, dataOpposite
 	if data == nil || data.OrderLong == nil || len(data.OrderLong) == 0 || !data.BreakLong {
 		return false
 	}
-	if data.OrderLong[0].OrderType == model.OrderTypeLimit {
-		setting.PriceX = data.OrderLong[0].Price
-	} else {
+	if data.OrderLong[0].TriggerPrice > 0 {
 		setting.PriceX = data.OrderLong[0].TriggerPrice
+	} else {
+		setting.PriceX = data.OrderLong[0].Price
 	}
 	util.Notice(fmt.Sprintf(`query turtle break buy %s %s %d %s %s`,
 		setting.Market, setting.Symbol, len(data.OrderLong), data.OrderLong[0].OrderId, data.OrderLong[0].Function))
@@ -179,10 +179,10 @@ func handleBreakShort(setting, settingOpposite *model.Setting, data, dataOpposit
 	if data == nil || data.OrderShort == nil || len(data.OrderShort) == 0 || !data.BreakShort {
 		return false
 	}
-	if data.OrderShort[0].OrderType == model.OrderTypeLimit {
-		setting.PriceX = data.OrderShort[0].Price
-	} else {
+	if data.OrderShort[0].TriggerPrice > 0 {
 		setting.PriceX = data.OrderShort[0].TriggerPrice
+	} else {
+		setting.PriceX = data.OrderShort[0].Price
 	}
 	util.Notice(fmt.Sprintf(`query turtle break sell %s %s %d %s %s`,
 		setting.Market, setting.Symbol, len(data.OrderShort), data.OrderShort[0].OrderId, data.OrderShort[0].Function))
@@ -289,9 +289,10 @@ func placeTurtleLong(key, secret, orderType string, data *api.TurtleData, settin
 				Amount:       amount,
 				DealAmount:   amount,
 				DealPrice:    priceDeal,
+				OrderId:      fmt.Sprintf(`fake%d`, time.Now().UnixNano()),
 				LineBuy:      data.N,
 				LineSell:     data.N,
-				Price:        priceDeal,
+				Price:        price,
 				TriggerPrice: price,
 				AmountType:   key,
 				Market:       market,
@@ -390,9 +391,10 @@ func placeTurtleShort(key, secret, orderType string, data *api.TurtleData, setti
 				Amount:       amount,
 				DealAmount:   amount,
 				DealPrice:    priceDeal,
+				OrderId:      fmt.Sprintf(`fake%d`, time.Now().UnixNano()),
 				LineBuy:      data.N,
 				LineSell:     data.N,
-				Price:        priceDeal,
+				Price:        price,
 				TriggerPrice: price,
 				AmountType:   key,
 				Market:       market,
