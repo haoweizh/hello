@@ -49,6 +49,9 @@ var ProcessCombineTurtle = func(settingCombine *model.Setting, tick *model.BidAs
 	if settingNormal == nil {
 		return
 	}
+	if settingCombine.Market == model.OKEX {
+		util.Notice(`okex test 1`)
+	}
 	if (settingCombine.Chance != 0 && settingCombine.PriceX == 0) || (settingNormal.Chance != 0 && settingNormal.PriceX == 0) {
 		util.Notice(fmt.Sprintf(`no last priceX %s %s %d %e %d %e`,
 			market, symbol, settingCombine.Chance, settingCombine.PriceX, settingNormal.Chance, settingNormal.PriceX))
@@ -65,6 +68,9 @@ var ProcessCombineTurtle = func(settingCombine *model.Setting, tick *model.BidAs
 		}
 		return
 	}
+	if settingCombine.Market == model.OKEX {
+		util.Notice(`okex test 2`)
+	}
 	dataNormal.N = dataCombine.N
 	dataNormal.Amount = dataCombine.Amount
 	if !dataCombine.OrderCleared {
@@ -80,6 +86,9 @@ var ProcessCombineTurtle = func(settingCombine *model.Setting, tick *model.BidAs
 	if api.HandleOrders(account.Key, account.Secret, market, symbol, settings, turtleData) ||
 		api.CheckBreak(account.Key, account.Secret, market, symbol, settings, turtleData, tick) {
 		return
+	}
+	if settingCombine.Market == model.OKEX {
+		util.Notice(`okex test 3`)
 	}
 	if !dataCombine.AdjustChecked && !dataNormal.AdjustChecked {
 		return
