@@ -297,7 +297,7 @@ func GetTurtleData(key, secret, function, market, symbol string) (data *TurtleDa
 			util.StoreSyncMap(CandleMap, item, market, symbol, strconv.Itoa(item.Seconds), item.Begin.Format(time.RFC3339))
 		}
 	}
-	for i := 1; i < int(indexMax); i++ {
+	for i := 1; i <= int(indexMax); i++ {
 		duration, _ = time.ParseDuration(fmt.Sprintf(`%dh`, -24*i))
 		day := today.Add(duration)
 		candle := CalcCandleN(market, symbol, 86400, day)

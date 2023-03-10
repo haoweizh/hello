@@ -258,16 +258,18 @@ func Test_CutTail(t *testing.T) {
 
 func Test_initTurtleN(t *testing.T) {
 	model.NewConfig()
-	//model.AppRedis.Set(context.Background(), `binanceperp_BTC_PERP_30m_1673913600000_1673962933185_27`, `1test`, 0)
-	//res, err := model.AppRedis.Get(context.Background(), `binanceperp_BTC_PERP_30m_1673913600000_1673962933185_27`).Result()
-	//fmt.Println(fmt.Sprintf(`%s %s`, res, err.Error()))
-	today, _ := model.GetMarketToday(model.BinancePerp)
+	model.AppRedis = redis.NewClient(&redis.Options{
+		Addr:     model.AppConfig.RedisAddr,
+		Password: model.AppConfig.RedisPassword,
+		DB:       0,
+	})
+	today, _ := model.GetMarketToday(model.OKEX)
+	api.GetCandle(model.AppConfig.OkexKey, model.AppConfig.OkexSecret, model.OKEX, `BTC_PERP`,
+		86400, today.Add(time.Hour*-24), today)
 	settings := map[string]*model.Setting{`BNX_PERP`: nil, `ETH_PERP`: nil}
 	//day := today.Add(time.Hour * -24)
 	//candles := api.CalcCandleN(model.AppConfig.BinanceKey, model.AppConfig.BinanceSecret, model.BinancePerp, `BNX_PERP`, 86400, day)
 	//fmt.Println(candles)
-	api.GetCandle(model.AppConfig.OkexKey, model.AppConfig.OkexSecret, model.OKEX, `BTC_PERP`,
-		60, time.Now().Add(time.Minute*-1839600), today)
 	sortedCandles := api.GetMultiCandle(model.AppConfig.BinanceKey, model.AppConfig.BinanceSecret, model.BinancePerp, 60,
 		today.Add(time.Minute*-490), today, settings)
 	fmt.Println(len(sortedCandles))

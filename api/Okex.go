@@ -1334,6 +1334,7 @@ func getMaxLoanOKEX(key, secret, symbol string) (success bool, maxLoan float64) 
 	return success, maxLoan
 }
 
+// 参数before代表返回的candle是该事件之后的，且不好该时间，所以参数传入的时候需要减去一个slotSeconds
 // getCandlesOKEX bar 1m/3m/5m/15m/30m/1H/2H/4H/6H/12H/1D/1W/1M/3M/6M/1Y
 func getCandlesOKEX(key, secret, symbol string, before, after time.Time, count, slotSeconds int) (
 	candles []*model.Candle, isCache bool) {
@@ -1351,8 +1352,9 @@ func getCandlesOKEX(key, secret, symbol string, before, after time.Time, count, 
 	}
 	path := `/api/v5/market/candles`
 	//path := `/api/v5/market/history-candles`
+	diffDuration, _ := time.ParseDuration(fmt.Sprintf(`-%ds`, slotSeconds))
 	param := map[string]interface{}{`instId`: symbol, `bar`: bar, `limit`: count,
-		`before`: before.UnixNano() / int64(time.Millisecond), `after`: after.UnixNano() / int64(time.Millisecond)}
+		`before`: before.Add(diffDuration).UnixNano() / int64(time.Millisecond), `after`: after.UnixNano() / int64(time.Millisecond)}
 	redisKey := fmt.Sprintf(`%s_%s_%s_%d_%d_%d`, model.OKEX, symbol, bar, before.UnixMilli(), after.UnixMilli(), count)
 	var responseBody []byte
 	if model.AppRedis != nil {
@@ -1377,6 +1379,14 @@ func getCandlesOKEX(key, secret, symbol string, before, after time.Time, count, 
 		model.AppRedis.Set(context.Background(), redisKey, string(responseBody), 0)
 	}
 	candleJsons := candleJson.Get(`data`).MustArray()
+	if len(candleJsons) < count && isCache {
+		responseBody, _ = sendSignRequestOKEX(key, secret, http.MethodGet, path, param, nil)
+		model.AppRedis.Set(context.Background(), redisKey, string(responseBody), 0)
+		candleJson, err = util.NewJSON(responseBody)
+		if candleJson != nil {
+			candleJsons = candleJson.Get(`data`).MustArray()
+		}
+	}
 	for _, value := range candleJsons {
 		item := value.([]interface{})
 		if len(item) < 7 {
@@ -1390,6 +1400,9 @@ func getCandlesOKEX(key, secret, symbol string, before, after time.Time, count, 
 		candle.PriceLow, _ = strconv.ParseFloat(item[3].(string), 64)
 		candle.PriceClose, _ = strconv.ParseFloat(item[4].(string), 64)
 		candles = append(candles, candle)
+		if symbol == `BTC_PERP` {
+			util.Notice(`get okex candle %v`, candle)
+		}
 	}
 	return
 }
