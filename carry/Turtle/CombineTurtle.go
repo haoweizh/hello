@@ -66,9 +66,11 @@ var ProcessCombineTurtle = func(settingCombine *model.Setting, tick *model.BidAs
 		if time.Now().Minute() == 0 && time.Now().Second() == 0 {
 			util.Notice(fmt.Sprintf(`fail to get turtle combine & turtle %s %s`, market, symbol))
 		}
-		if settingCombine.Market == model.OKEX {
-			util.Notice(fmt.Sprintf(`okex test 3 %f %f %f %f`,
-				dataCombine.N, dataCombine.Amount, dataNormal.N, dataNormal.Amount))
+		if settingCombine.Market == model.OKEX && dataCombine != nil {
+			util.Notice(fmt.Sprintf(`okex test 3 combi %f %f`, dataCombine.N, dataCombine.Amount))
+		}
+		if settingCombine.Market == model.OKEX && dataNormal != nil {
+			util.Notice(fmt.Sprintf(`okex test 3 combi %f %f`, dataNormal.N, dataNormal.Amount))
 		}
 		return
 	}
