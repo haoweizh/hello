@@ -219,6 +219,8 @@ func placeTurtleOrders(key, secret string, turtleData *api.TurtleData, setting *
 	priceShort, priceLong float64, tick *model.BidAsk) {
 	coinLimit := int64(setting.OpenShortMargin)
 	canOpen = canOpen && math.Abs(float64(setting.Chance)) < setting.OpenShortMargin
+	util.Notice(fmt.Sprintf(`place turtles %v %d %d %v`, canOpen, setting.Chance, len(turtleData.OrderLong), turtleData.OrderLong))
+	util.Notice(fmt.Sprintf(`place turtles %v %d %d %v`, canOpen, setting.Chance, len(turtleData.OrderShort), turtleData.OrderShort))
 	if turtleData.OrderLong == nil && (canOpen || setting.Chance < 0) {
 		orderSide := model.OrderSideBuy
 		typeLong := model.OrderTypeStop
