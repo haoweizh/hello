@@ -154,7 +154,7 @@ func MaintainMarketChan() {
 			util.Notice(fmt.Sprintf("%s require new depth channel ", market))
 			ResetChannels(market, channels.([]chan struct{}))
 			model.AppMarkets.WsInitTime.Store(market, util.GetNow())
-			time.Sleep(time.Minute)
+			//time.Sleep(time.Minute)
 		}
 	}
 	socketMaintaining = false
@@ -187,6 +187,6 @@ func Maintain() {
 	go ReloadSettings()
 	for true {
 		go MaintainMarketChan()
-		time.Sleep(time.Duration(model.AppConfig.ChannelSlot) * time.Millisecond)
+		time.Sleep(time.Minute)
 	}
 }

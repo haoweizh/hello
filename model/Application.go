@@ -251,7 +251,6 @@ func GetMarketNow(market string) time.Time {
 func (config *Config) ToString() string {
 	str := "markets-carry cost:\n"
 	str += fmt.Sprintf("delay: %f\n", config.Delay)
-	str += fmt.Sprintf("channelslot: %f\n", config.ChannelSlot)
 	str += fmt.Sprintf("handle: %s\n", config.Handle)
 	return str
 }
