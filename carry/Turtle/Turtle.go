@@ -6,7 +6,6 @@ import (
 	"hello/model"
 	"hello/util"
 	"math"
-	"strings"
 	"sync"
 	"time"
 )
@@ -78,9 +77,7 @@ var ProcessTurtle = func(setting *model.Setting, tick *model.BidAsk) {
 	if !data.AdjustChecked {
 		return
 	}
-	_, _, coin, _ := model.GetFromStandard(setting.Market, setting.Symbol)
-	// !data.Liquidated ||
-	if setting.Chance == 0 && !model.CommonCoins[strings.ToLower(coin)] { // 开初始仓
+	if setting.Chance == 0 { // 开初始仓
 		placeTurtleOrders(account.Key, account.Secret, data, setting, canOpenTurtle, chanceInAll, priceShort, priceLong, tick)
 		if data.BreakLong && data.OrderLong != nil {
 			handleBreak(account.Key, account.Secret, setting, data, model.OrderSideBuy)
@@ -219,8 +216,6 @@ func placeTurtleOrders(key, secret string, turtleData *api.TurtleData, setting *
 	priceShort, priceLong float64, tick *model.BidAsk) {
 	coinLimit := int64(setting.OpenShortMargin)
 	canOpen = canOpen && math.Abs(float64(setting.Chance)) < setting.OpenShortMargin
-	util.Notice(fmt.Sprintf(`place turtles %v %d %d %v`, canOpen, setting.Chance, len(turtleData.OrderLong), turtleData.OrderLong))
-	util.Notice(fmt.Sprintf(`place turtles %v %d %d %v`, canOpen, setting.Chance, len(turtleData.OrderShort), turtleData.OrderShort))
 	if turtleData.OrderLong == nil && (canOpen || setting.Chance < 0) {
 		orderSide := model.OrderSideBuy
 		typeLong := model.OrderTypeStop

@@ -525,7 +525,6 @@ func CanOpenTurtle(setting *model.Setting, data *TurtleData) (canOpen bool, inAl
 		if !canOpen && inAll < 0 && setting.Chance <= 0 {
 			data.OrderShort = nil
 		}
-		return canOpen, inAll
 	} else { // 非主流币检查开仓了的币种个数
 		settings.Range(func(symbol, value any) bool {
 			if value != nil {
@@ -545,6 +544,7 @@ func CanOpenTurtle(setting *model.Setting, data *TurtleData) (canOpen bool, inAl
 			data.OrderLong = nil
 			data.OrderShort = nil
 		}
-		return canOpen, inAll
 	}
+	canOpen = canOpen && math.Abs(float64(setting.Chance)) < setting.OpenShortMargin
+	return canOpen, inAll
 }
