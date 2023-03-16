@@ -115,14 +115,11 @@ var ProcessCombineTurtle = func(settingCombine *model.Setting, tick *model.BidAs
 	needCheck := false
 	if handleBreakLong(settingCombine, settingNormal, dataCombine, dataNormal, turtleCoins, isBig) {
 		needCheck = true
-	}
-	if handleBreakShort(settingCombine, settingNormal, dataCombine, dataNormal, turtleCoins, isBig) {
+	} else if handleBreakShort(settingCombine, settingNormal, dataCombine, dataNormal, turtleCoins, isBig) {
 		needCheck = true
-	}
-	if handleBreakLong(settingNormal, settingCombine, dataNormal, dataCombine, turtleCoins, isBig) {
+	} else if handleBreakLong(settingNormal, settingCombine, dataNormal, dataCombine, turtleCoins, isBig) {
 		needCheck = true
-	}
-	if handleBreakShort(settingNormal, settingCombine, dataNormal, dataCombine, turtleCoins, isBig) {
+	} else if handleBreakShort(settingNormal, settingCombine, dataNormal, dataCombine, turtleCoins, isBig) {
 		needCheck = true
 	}
 	if needCheck {
@@ -140,8 +137,9 @@ func handleBreakLong(setting, settingOpposite *model.Setting, data, dataOpposite
 	} else {
 		setting.PriceX = data.OrderLong[0].Price
 	}
-	util.Notice(fmt.Sprintf(`query turtle break buy %s %s %d %s %s`,
-		setting.Market, setting.Symbol, len(data.OrderLong), data.OrderLong[0].OrderId, data.OrderLong[0].Function))
+	util.Notice(fmt.Sprintf(`query %s break buy %s %s %d %s %s chances %d %d`,
+		setting.Function, setting.Market, setting.Symbol, len(data.OrderLong), data.OrderLong[0].OrderId,
+		data.OrderLong[0].Function, setting.Chance, settingOpposite.Chance))
 	if data.OrderLong[0].Function == model.Close {
 		msg := fmt.Sprintf(`liquidate long %s %s chance:%d Amount:%e currentN:%d px:%e N:%e`,
 			setting.Market, setting.Symbol, setting.Chance, setting.GridAmount, int(turtleCoins), setting.PriceX, data.N)
@@ -153,9 +151,9 @@ func handleBreakLong(setting, settingOpposite *model.Setting, data, dataOpposite
 		if settingOpposite.Chance != 0 {
 			bigNew = 1
 		}
+		data.SetBig(bigNew)
+		dataOpposite.SetBig(bigNew)
 		if big != bigNew {
-			data.SetBig(bigNew)
-			dataOpposite.SetBig(bigNew)
 			removeOpenOrders(dataOpposite)
 		}
 	} else if data.OrderLong[0].Function == model.Open {
@@ -184,10 +182,11 @@ func handleBreakShort(setting, settingOpposite *model.Setting, data, dataOpposit
 	} else {
 		setting.PriceX = data.OrderShort[0].Price
 	}
-	util.Notice(fmt.Sprintf(`query turtle break sell %s %s %d %s %s`,
-		setting.Market, setting.Symbol, len(data.OrderShort), data.OrderShort[0].OrderId, data.OrderShort[0].Function))
+	util.Notice(fmt.Sprintf(`query %s break sell %s %s %d %s %s chances %d %d`,
+		setting.Function, setting.Market, setting.Symbol, len(data.OrderShort), data.OrderShort[0].OrderId,
+		data.OrderShort[0].Function, setting.Chance, settingOpposite.Chance))
 	if data.OrderShort[0].Function == model.Close {
-		msg := fmt.Sprintf(`liquidate short result: %s %s chance:%d Amount:%e currentN:%d px:%e N:%e`,
+		msg := fmt.Sprintf(`liquidate short: %s %s chance:%d Amount:%e currentN:%d px:%e N:%e`,
 			setting.Market, setting.Symbol, setting.Chance, setting.GridAmount, int(turtleCoins), setting.PriceX, data.N)
 		go api.SendMails(`平空`+setting.Market+setting.Symbol, msg)
 		setting.Chance = 0
@@ -197,9 +196,9 @@ func handleBreakShort(setting, settingOpposite *model.Setting, data, dataOpposit
 		if settingOpposite.Chance != 0 {
 			bigNew = 1
 		}
+		data.SetBig(bigNew)
+		dataOpposite.SetBig(bigNew)
 		if bigNew != big {
-			data.SetBig(bigNew)
-			dataOpposite.SetBig(bigNew)
 			removeOpenOrders(dataOpposite)
 		}
 	} else {
@@ -219,6 +218,7 @@ func handleBreakShort(setting, settingOpposite *model.Setting, data, dataOpposit
 }
 
 func removeOpenOrders(data *api.TurtleData) {
+	util.Notice(fmt.Sprintf(`remove open orders %s`, data.Symbol))
 	if data != nil && data.OrderLong != nil && len(data.OrderLong) > 0 && data.OrderLong[0].Function == model.Open {
 		data.OrderLong = nil
 	}
