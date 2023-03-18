@@ -224,9 +224,13 @@ func simulate(c *gin.Context) {
 		i := 25
 		autoSimulate(market, `BTC`, begin, end, strBegin, strEnd, true, i, 2*i, 3, int(allLimit))
 		autoSimulate(market, `BTC`, begin, end, strBegin, strEnd, false, i, 2*i, 3, int(allLimit))
+		autoSimulate(market, `BTC`, begin, end, strBegin, strEnd, true, i, 2*i, 1, int(allLimit))
+		autoSimulate(market, `BTC`, begin, end, strBegin, strEnd, false, i, 2*i, 1, int(allLimit))
 		i = 9
 		autoSimulate(market, `ETH`, begin, end, strBegin, strEnd, true, i, 2*i, 1, int(allLimit))
 		autoSimulate(market, `ETH`, begin, end, strBegin, strEnd, false, i, 2*i, 1, int(allLimit))
+		autoSimulate(market, `ETH`, begin, end, strBegin, strEnd, true, i, 2*i, 3, int(allLimit))
+		autoSimulate(market, `ETH`, begin, end, strBegin, strEnd, false, i, 2*i, 3, int(allLimit))
 		util.StoreSyncMap(&model.CarryInfo, nil, `auto`)
 		c.String(http.StatusOK, `auto done`)
 		return
