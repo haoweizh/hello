@@ -47,6 +47,7 @@ var ProcessCombineTurtle = func(settingCombine *model.Setting, tick *model.BidAs
 	}
 	settingNormal := api.GetSetting(model.FunctionTurtleNormal, market, symbol)
 	if settingNormal == nil {
+		util.Notice(fmt.Sprintf(`fail to get normal setting from %s %s`, settingCombine.Market, settingCombine.Symbol))
 		return
 	}
 	if (settingCombine.Chance != 0 && settingCombine.PriceX == 0) || (settingNormal.Chance != 0 && settingNormal.PriceX == 0) {
