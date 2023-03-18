@@ -60,7 +60,7 @@ func RefreshMarketInfo() {
 
 func ReloadSettings() {
 	for true {
-		time.Sleep(time.Minute * 10)
+		time.Sleep(time.Minute * 60)
 		api.LoadSettings()
 	}
 }

@@ -24,6 +24,18 @@ type TurtleData struct {
 	OrderLong, OrderShort, OrderAdjust []*model.Order
 }
 
+func (turtleData *TurtleData) GetIds() (ids string) {
+	ids = `long:`
+	if turtleData.OrderLong != nil && len(turtleData.OrderLong) > 0 {
+		ids += turtleData.OrderLong[0].OrderId
+	}
+	ids += `short:`
+	if turtleData.OrderShort != nil && len(turtleData.OrderShort) > 0 {
+		ids += turtleData.OrderShort[0].OrderId
+	}
+	return
+}
+
 func (turtleData *TurtleData) SetBig(isBig int) {
 	turtleData.combineBig = isBig
 }

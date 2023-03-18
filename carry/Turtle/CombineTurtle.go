@@ -101,12 +101,12 @@ var ProcessCombineTurtle = func(settingCombine *model.Setting, tick *model.BidAs
 	isBig := dataCombine.IsBig(settingCombine, settingNormal, marketInfo)
 	msgKey := fmt.Sprintf("%s_%s_%s", model.FunctionCombineTurtle, market, symbol)
 	msg := fmt.Sprintf("[%s %s]%s可开%vbig:%d 币种数:%d/%d %d日:%e-%e %d日:%e-%e N:%e 仓数上限%d 单仓数量:%e bid-ask %e %e \n"+
-		"海龟:仓数/持仓量/开仓价/今日平仓 %d/%e/%e/%v\n龟汤:仓数/持仓量/开仓价/今日平仓 %d/%e/%e/%v",
+		"海龟:仓数/持仓量/开仓价/今日平仓 %d/%e/%e/%v %s\n龟汤:仓数/持仓量/开仓价/今日平仓 %d/%e/%e/%v %s",
 		dataCombine.TurtleTime.String()[0:10], time.Now().String(), msgKey, canOpen, isBig, int(turtleCoins), int(settingCombine.AmountLimit),
 		dataCombine.DaysFar, dataCombine.LowDaysFar, dataCombine.HighDaysFar, dataCombine.DaysNear, dataCombine.LowDaysNear,
 		dataCombine.HighDaysNear, dataCombine.N, int(settingCombine.OpenShortMargin), dataCombine.Amount, tick.Bids[0].Price,
-		tick.Asks[0].Price, settingNormal.Chance, settingNormal.GridAmount, settingNormal.PriceX, dataNormal.Liquidated,
-		settingCombine.Chance, settingCombine.GridAmount, settingCombine.PriceX, dataCombine.Liquidated)
+		tick.Asks[0].Price, settingNormal.Chance, settingNormal.GridAmount, settingNormal.PriceX, dataNormal.Liquidated, dataNormal.GetIds(),
+		settingCombine.Chance, settingCombine.GridAmount, settingCombine.PriceX, dataCombine.Liquidated, dataCombine.GetIds())
 	util.StoreSyncMap(&model.CarryInfo, msg, account.Key, msgKey)
 	placeTurtleLong(account.Key, account.Secret, model.OrderTypeStop, dataNormal, settingNormal, minSize, tick, isBig, canOpen)
 	placeTurtleShort(account.Key, account.Secret, model.OrderTypeStop, dataNormal, settingNormal, minSize, tick, isBig, canOpen)
@@ -116,11 +116,17 @@ var ProcessCombineTurtle = func(settingCombine *model.Setting, tick *model.BidAs
 	// 每次只检查一个，如果同时检查多个，会导致一个里面更新的isBig在另一个里面没有更新
 	if handleBreakLong(settingCombine, settingNormal, dataCombine, dataNormal, turtleCoins, isBig) {
 		needCheck = true
-	} else if handleBreakShort(settingCombine, settingNormal, dataCombine, dataNormal, turtleCoins, isBig) {
+		isBig = dataCombine.IsBig(settingCombine, settingNormal, marketInfo)
+	}
+	if handleBreakShort(settingCombine, settingNormal, dataCombine, dataNormal, turtleCoins, isBig) {
 		needCheck = true
-	} else if handleBreakLong(settingNormal, settingCombine, dataNormal, dataCombine, turtleCoins, isBig) {
+		isBig = dataCombine.IsBig(settingCombine, settingNormal, marketInfo)
+	}
+	if handleBreakLong(settingNormal, settingCombine, dataNormal, dataCombine, turtleCoins, isBig) {
 		needCheck = true
-	} else if handleBreakShort(settingNormal, settingCombine, dataNormal, dataCombine, turtleCoins, isBig) {
+		isBig = dataCombine.IsBig(settingCombine, settingNormal, marketInfo)
+	}
+	if handleBreakShort(settingNormal, settingCombine, dataNormal, dataCombine, turtleCoins, isBig) {
 		needCheck = true
 	}
 	if needCheck {
