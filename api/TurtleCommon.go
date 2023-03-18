@@ -30,7 +30,7 @@ func (turtleData *TurtleData) SetBig(isBig int) {
 
 func (turtleData *TurtleData) IsBig(settingCombine, settingNormal *model.Setting, marketInfo *model.MarketInfo) (isBig int) {
 	if turtleData.combineBig == 0 {
-		if settingCombine.Chance+settingNormal.Chance == 0 && settingCombine.PriceX-settingNormal.PriceX < marketInfo.PriceIncrement {
+		if settingCombine.Chance+settingNormal.Chance == 0 && math.Abs(settingCombine.PriceX-settingNormal.PriceX) < marketInfo.PriceIncrement {
 			turtleData.combineBig = -1
 		} else {
 			turtleData.combineBig = 1

@@ -41,7 +41,7 @@ var ProcessCombineTurtle = func(settingCombine *model.Setting, tick *model.BidAs
 	now := util.GetNowUnixMillion()
 	maintaining, _ := model.ChannelMaintaining.Load(market)
 	if settingCombine == nil || tick == nil || tick.Asks == nil || tick.Bids == nil || model.AppConfig.Handle != `1` ||
-		(maintaining != nil && maintaining.(bool)) || (model.AppConfig.Env != `test` && now-int64(tick.Ts) > 1000) ||
+		(maintaining != nil && maintaining.(bool)) || (model.AppConfig.Env != `test` && now-int64(tick.Ts) > 10000) ||
 		(time.Now().Hour() == 0 && time.Now().Minute() == 0) || len(strings.Trim(symbol, ` `)) == 0 {
 		return
 	}
@@ -100,9 +100,9 @@ var ProcessCombineTurtle = func(settingCombine *model.Setting, tick *model.BidAs
 	//价格一样：仓数相加=0时big=false；仓数相加≠0时big=true
 	isBig := dataCombine.IsBig(settingCombine, settingNormal, marketInfo)
 	msgKey := fmt.Sprintf("%s_%s_%s", model.FunctionCombineTurtle, market, symbol)
-	msg := fmt.Sprintf("[%s]%s可开%vbig:%d 币种数:%d/%d %d日:%e-%e %d日:%e-%e N:%e 仓数上限%d 单仓数量:%e bid-ask %e %e \n"+
-		"海龟:仓数/持仓量/开仓价/今日平仓 %d/%e/%e/%v\n 龟汤:仓数/持仓量/开仓价/今日平仓 %d/%e/%e/%v",
-		dataCombine.TurtleTime.String()[0:10], msgKey, canOpen, isBig, int(turtleCoins), int(settingCombine.AmountLimit),
+	msg := fmt.Sprintf("[%s %s]%s可开%vbig:%d 币种数:%d/%d %d日:%e-%e %d日:%e-%e N:%e 仓数上限%d 单仓数量:%e bid-ask %e %e \n"+
+		"海龟:仓数/持仓量/开仓价/今日平仓 %d/%e/%e/%v\n龟汤:仓数/持仓量/开仓价/今日平仓 %d/%e/%e/%v",
+		dataCombine.TurtleTime.String()[0:10], time.Now().String(), msgKey, canOpen, isBig, int(turtleCoins), int(settingCombine.AmountLimit),
 		dataCombine.DaysFar, dataCombine.LowDaysFar, dataCombine.HighDaysFar, dataCombine.DaysNear, dataCombine.LowDaysNear,
 		dataCombine.HighDaysNear, dataCombine.N, int(settingCombine.OpenShortMargin), dataCombine.Amount, tick.Bids[0].Price,
 		tick.Asks[0].Price, settingNormal.Chance, settingNormal.GridAmount, settingNormal.PriceX, dataNormal.Liquidated,
@@ -113,6 +113,7 @@ var ProcessCombineTurtle = func(settingCombine *model.Setting, tick *model.BidAs
 	placeTurtleLong(account.Key, account.Secret, model.OrderTypeLimit, dataCombine, settingCombine, minSize, tick, isBig, canOpen)
 	placeTurtleShort(account.Key, account.Secret, model.OrderTypeLimit, dataCombine, settingCombine, minSize, tick, isBig, canOpen)
 	needCheck := false
+	// 每次只检查一个，如果同时检查多个，会导致一个里面更新的isBig在另一个里面没有更新
 	if handleBreakLong(settingCombine, settingNormal, dataCombine, dataNormal, turtleCoins, isBig) {
 		needCheck = true
 	} else if handleBreakShort(settingCombine, settingNormal, dataCombine, dataNormal, turtleCoins, isBig) {
