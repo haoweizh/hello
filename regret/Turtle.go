@@ -372,13 +372,11 @@ func CutTail(market, coins, sign string) {
 			model.FunctionSimulation, sign, symbol, model.OrderSideLiquidateShort, model.OrderSideLiquidateLong).
 			Order(`order_time desc`).Limit(1).Find(&orders)
 		if len(orders) > 0 {
-			go func() {
-				delNum := model.AppDB.Where(`refresh_type=? and function=? and symbol=? and order_time>?`,
-					model.FunctionSimulation, sign, symbol, orders[0].OrderTime).Delete(&model.Order{}).RowsAffected
-				if delNum > 0 {
-					fmt.Println(fmt.Sprintf(`cut %s tail num %d`, symbol, delNum))
-				}
-			}()
+			delNum := model.AppDB.Where(`refresh_type=? and function=? and symbol=? and order_time>?`,
+				model.FunctionSimulation, sign, symbol, orders[0].OrderTime).Delete(&model.Order{}).RowsAffected
+			if delNum > 0 {
+				fmt.Println(fmt.Sprintf(`cut %s tail num %d`, symbol, delNum))
+			}
 		} else {
 			util.Notice(fmt.Sprintf(`can not get orders from %s`, sign))
 		}

@@ -221,10 +221,12 @@ func simulate(c *gin.Context) {
 	if sessionValue == nil || !codes[sessionValue.(string)] {
 		strNew = `false`
 	} else if auto == `true` && strNew == `true` {
-		for i := 3; i <= 21; i++ {
-			autoSimulate(market, coins, begin, end, strBegin, strEnd, true, i, 2*i, 3, int(allLimit))
-			autoSimulate(market, coins, begin, end, strBegin, strEnd, false, i, 2*i, 3, int(allLimit))
-		}
+		i := 25
+		autoSimulate(market, `BTC`, begin, end, strBegin, strEnd, true, i, 2*i, 3, int(allLimit))
+		autoSimulate(market, `BTC`, begin, end, strBegin, strEnd, false, i, 2*i, 3, int(allLimit))
+		i = 9
+		autoSimulate(market, `ETH`, begin, end, strBegin, strEnd, true, i, 2*i, 1, int(allLimit))
+		autoSimulate(market, `ETH`, begin, end, strBegin, strEnd, false, i, 2*i, 1, int(allLimit))
 		util.StoreSyncMap(&model.CarryInfo, nil, `auto`)
 		c.String(http.StatusOK, `auto done`)
 		return
