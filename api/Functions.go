@@ -88,6 +88,8 @@ func RequireDepthChanReset(markets *model.Markets, market string) bool {
 		delay := float64(now - int64(bidAsk.Ts))
 		if delay < model.AppConfig.Delay {
 			validSymbols++
+			util.Notice(fmt.Sprintf(`RequireDepthChanReset valid %d %s %s %f<%f`,
+				validSymbols, market, symbol, delay, model.AppConfig.Delay))
 		}
 	}
 	needReset = validSymbols*2 < len(symbols) || len(symbols)-validSymbols > 30
