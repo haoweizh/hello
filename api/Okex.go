@@ -177,8 +177,10 @@ var subscribeHandlerOKEX = func(connection *websocket.Conn, subscribes []interfa
 	subscribeMap["op"] = "subscribe"
 	subArray := make([]map[string]string, 0)
 	for _, subscribe := range subscribes {
-		subArray = append(subArray, map[string]string{`channel`: `bbo-tbt`, `instId`: subscribe.(string)})
-		//subArray = append(subArray, map[string]string{`channel`: `books50-l2-tbt`, `instId`: subscribe.(string)})
+		// books5首次推5档快照数据，以后定量推送，每100毫秒当5档快照数据有变化推送一次5档数据
+		// bbo-tbt 首次推1档快照数据，以后定量推送，每10毫秒当1档快照数据有变化推送一次1档数据
+		//subArray = append(subArray, map[string]string{`channel`: `bbo-tbt`, `instId`: subscribe.(string)})
+		subArray = append(subArray, map[string]string{`channel`: `books5`, `instId`: subscribe.(string)})
 	}
 	subscribeMap[`args`] = subArray
 	subscribeMessage := util.JsonEncodeToByte(subscribeMap)

@@ -94,7 +94,8 @@ func getMarketsBinancePerp(key, secret string) (marketInfos map[string]*model.Ma
 }
 
 func WsDepthServeBinancePerp(markets *model.Markets, orderHandler OrderHandler) (channels []chan struct{}, err error) {
-	subType := model.SubscribeTicker
+	//subType := model.SubscribeTicker
+	subType := model.SubscribeDepth
 	wsHandler := func(connection *websocket.Conn, event []byte, orderHandler OrderHandler) {
 		result, wsErr := util.NewJSON(event)
 		if wsErr != nil {
