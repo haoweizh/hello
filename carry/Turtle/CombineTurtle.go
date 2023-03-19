@@ -12,14 +12,18 @@ import (
 )
 
 var combineLock sync.Mutex
-var combining = false
+var combining = &sync.Map{}
 
-func checkSetCombining(value bool) (before bool) {
+func checkSetCombining(market, symbol string, value bool) (before bool) {
 	combineLock.Lock()
 	defer combineLock.Unlock()
-	before = combining
+	key := fmt.Sprintf(`%s*%s`, market, symbol)
+	v, ok := combining.Load(key)
+	if ok && v != nil {
+		before = v.(bool)
+	}
 	if value == false || before == false {
-		combining = value
+		combining.Store(key, value)
 	}
 	return before
 }
@@ -31,13 +35,13 @@ func checkSetCombining(value bool) (before bool) {
 // setting.OpenShortMargin 该单币种最多开仓个数
 // setting.AmountLimit 总开仓上限
 var ProcessCombineTurtle = func(settingCombine *model.Setting, tick *model.BidAsk) {
-	if !checkSetCombining(true) {
-		defer checkSetCombining(false)
+	market := settingCombine.Market
+	symbol := settingCombine.Symbol
+	if !checkSetCombining(market, symbol, true) {
+		defer checkSetCombining(market, symbol, false)
 	} else {
 		return
 	}
-	market := settingCombine.Market
-	symbol := settingCombine.Symbol
 	now := util.GetNowUnixMillion()
 	maintaining, _ := model.ChannelMaintaining.Load(market)
 	if settingCombine == nil || tick == nil || tick.Asks == nil || tick.Bids == nil || model.AppConfig.Handle != `1` ||
@@ -47,11 +51,11 @@ var ProcessCombineTurtle = func(settingCombine *model.Setting, tick *model.BidAs
 	}
 	settingNormal := api.GetSetting(model.FunctionTurtleNormal, market, symbol)
 	if settingNormal == nil {
-		util.Notice(fmt.Sprintf(`fail to get normal setting from %s %s`, settingCombine.Market, settingCombine.Symbol))
+		util.Notice(fmt.Sprintf(`combine return no normal setting from %s %s`, market, symbol))
 		return
 	}
 	if (settingCombine.Chance != 0 && settingCombine.PriceX == 0) || (settingNormal.Chance != 0 && settingNormal.PriceX == 0) {
-		util.Notice(fmt.Sprintf(`no last priceX %s %s %d %e %d %e`,
+		util.Notice(fmt.Sprintf(`combine return no last priceX %s %s %d %e %d %e`,
 			market, symbol, settingCombine.Chance, settingCombine.PriceX, settingNormal.Chance, settingNormal.PriceX))
 		return
 	}
@@ -62,7 +66,7 @@ var ProcessCombineTurtle = func(settingCombine *model.Setting, tick *model.BidAs
 	if dataCombine == nil || dataCombine.N == 0 || dataCombine.Amount == 0 ||
 		dataNormal == nil || dataNormal.N == 0 || dataNormal.Amount == 0 {
 		if time.Now().Minute() == 0 && time.Now().Second() == 0 {
-			util.Notice(fmt.Sprintf(`fail to get turtle combine & turtle %s %s`, market, symbol))
+			util.Notice(fmt.Sprintf(`combine return no turtle combine & turtle %s %s`, market, symbol))
 		}
 		return
 	}
@@ -71,6 +75,7 @@ var ProcessCombineTurtle = func(settingCombine *model.Setting, tick *model.BidAs
 	if !dataCombine.OrderCleared {
 		api.ClearOrders(account.Key, account.Secret, market, symbol)
 		dataCombine.OrderCleared = true
+		util.Notice(fmt.Sprintf(`combine return not cleared %s %s %v`, market, symbol, dataCombine.OrderCleared))
 		return
 	}
 	turtleData := []*api.TurtleData{dataCombine, dataNormal}
@@ -78,11 +83,8 @@ var ProcessCombineTurtle = func(settingCombine *model.Setting, tick *model.BidAs
 	if canOpen {
 		settingCombine.SymbolRelated = ``
 	}
-	if api.HandleOrders(account.Key, account.Secret, market, symbol, settings, turtleData) ||
-		api.CheckBreak(account.Key, account.Secret, market, symbol, settings, turtleData, tick) {
-		return
-	}
 	if !dataCombine.AdjustChecked && !dataNormal.AdjustChecked {
+		util.Notice(fmt.Sprintf(`combine return not adjusted %s %s`, market, symbol))
 		return
 	}
 	minSize := 0.0
@@ -96,6 +98,11 @@ var ProcessCombineTurtle = func(settingCombine *model.Setting, tick *model.BidAs
 			minSize = marketInfo.SizeMin * marketInfo.CTValue
 		}
 		minSize = math.Max(minSize, 2*marketInfo.MoneyMin/dataCombine.LowDaysFar)
+	}
+	if api.HandleOrders(account.Key, account.Secret, market, symbol, settings, turtleData) ||
+		api.CheckBreak(account.Key, account.Secret, market, symbol, settings, turtleData, tick) {
+		util.Notice(fmt.Sprintf(`combine return handle or break %s %s`, market, symbol))
+		return
 	}
 	//价格不一样：big=true
 	//价格一样：仓数相加=0时big=false；仓数相加≠0时big=true

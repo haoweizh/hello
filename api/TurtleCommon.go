@@ -249,7 +249,7 @@ func _(key, secret, market, symbol string, settings []*model.Setting, turtleData
 func HandleOrders(key, secret, market, symbol string, settings []*model.Setting, turtleData []*TurtleData) (checked bool) {
 	if (len(settings) != 2 && len(settings) != 1) || len(settings) != len(turtleData) {
 		util.Notice(`wrong combine turtle parameter`)
-		return true
+		return false
 	}
 	if turtleData[0].CheckTimeOpen.Add(time.Minute * 10).After(util.GetNow()) {
 		return false
@@ -386,9 +386,9 @@ func CheckBreak(key, secret, market, symbol string, settings []*model.Setting, t
 	tick *model.BidAsk) (checked bool) {
 	if (len(settings) != 2 && len(settings) != 1) || len(settings) != len(turtleData) {
 		util.Notice(`wrong combine turtle parameter`)
-		return true
+		return false
 	}
-	if turtleData[0].CheckTimeBreak.Add(time.Minute).After(util.GetNow()) {
+	if turtleData[0].CheckTimeBreak.Add(time.Minute * 5).After(util.GetNow()) {
 		return false
 	}
 	for i, setting := range settings {
