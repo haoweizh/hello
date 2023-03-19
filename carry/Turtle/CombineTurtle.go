@@ -7,26 +7,8 @@ import (
 	"hello/util"
 	"math"
 	"strings"
-	"sync"
 	"time"
 )
-
-var combineLock sync.Mutex
-var combining = &sync.Map{}
-
-func checkSetCombining(market, symbol string, value bool) (before bool) {
-	combineLock.Lock()
-	defer combineLock.Unlock()
-	key := fmt.Sprintf(`%s*%s`, market, symbol)
-	v, ok := combining.Load(key)
-	if ok && v != nil {
-		before = v.(bool)
-	}
-	if value == false || before == false {
-		combining.Store(key, value)
-	}
-	return before
-}
 
 // ProcessCombineTurtle
 // setting.GridAmount 当前已经持仓数量
@@ -37,8 +19,8 @@ func checkSetCombining(market, symbol string, value bool) (before bool) {
 var ProcessCombineTurtle = func(settingCombine *model.Setting, tick *model.BidAsk) {
 	market := settingCombine.Market
 	symbol := settingCombine.Symbol
-	if !checkSetCombining(market, symbol, true) {
-		defer checkSetCombining(market, symbol, false)
+	if !api.CheckSetProcessing(settingCombine.Function, market, symbol, true) {
+		defer api.CheckSetProcessing(settingCombine.Function, market, symbol, false)
 	} else {
 		return
 	}

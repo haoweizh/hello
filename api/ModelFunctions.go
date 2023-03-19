@@ -23,6 +23,22 @@ var settingLoading bool
 const dynamicSingleLimit = 3
 const dynamicInAllLimit = 10
 
+var processLock sync.Mutex
+var processing = &sync.Map{}
+
+func CheckSetProcessing(function, market, symbol string, value bool) (before bool) {
+	processLock.Lock()
+	defer processLock.Unlock()
+	v, ok := util.LoadSyncMap(processing, function, market, symbol)
+	if ok && v != nil {
+		before = v.(bool)
+	}
+	if value == false || before == false {
+		util.StoreSyncMap(processing, value, function, market, symbol)
+	}
+	return before
+}
+
 func GetSettingCoins(function, market string) (coins map[string]bool) {
 	handlerInitialized := false
 	handlers.Range(func(key, value interface{}) bool {
