@@ -187,6 +187,6 @@ func Maintain() {
 	go ReloadSettings()
 	for true {
 		go MaintainMarketChan()
-		time.Sleep(time.Minute)
+		time.Sleep(time.Minute * 10)
 	}
 }

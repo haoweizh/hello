@@ -81,7 +81,7 @@ func (metricManager *MetricManager) AddCarry(mark string, carryOpen, carryClose 
 
 func (metricManager *MetricManager) AddTick(market, symbol string, current time.Time, lastBidAsk, bidAsk *BidAsk) {
 	//key := fmt.Sprintf(`%s*%s%d/%d_%d`, market, symbol, current.Month(), current.Day(), current.Hour())
-	key := fmt.Sprintf(`%s %s %d时`, market, symbol, current.Hour())
+	key := fmt.Sprintf(`%s %s %d-%d %d`, market, symbol, current.Month(), current.Day(), current.Hour())
 	value, ok := metricManager.tickHour.Load(key)
 	var tickMetric *TickMetric
 	if !ok {
