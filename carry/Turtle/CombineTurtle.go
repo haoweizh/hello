@@ -83,6 +83,11 @@ var ProcessCombineTurtle = func(settingCombine *model.Setting, tick *model.BidAs
 	if canOpen {
 		settingCombine.SymbolRelated = ``
 	}
+	if api.HandleOrders(account.Key, account.Secret, market, symbol, settings, turtleData) ||
+		api.CheckBreak(account.Key, account.Secret, market, symbol, settings, turtleData, tick) {
+		util.Notice(fmt.Sprintf(`combine return handle or break %s %s`, market, symbol))
+		return
+	}
 	if !dataCombine.AdjustChecked && !dataNormal.AdjustChecked {
 		util.Notice(fmt.Sprintf(`combine return not adjusted %s %s`, market, symbol))
 		return
@@ -98,11 +103,6 @@ var ProcessCombineTurtle = func(settingCombine *model.Setting, tick *model.BidAs
 			minSize = marketInfo.SizeMin * marketInfo.CTValue
 		}
 		minSize = math.Max(minSize, 2*marketInfo.MoneyMin/dataCombine.LowDaysFar)
-	}
-	if api.HandleOrders(account.Key, account.Secret, market, symbol, settings, turtleData) ||
-		api.CheckBreak(account.Key, account.Secret, market, symbol, settings, turtleData, tick) {
-		util.Notice(fmt.Sprintf(`combine return handle or break %s %s`, market, symbol))
-		return
 	}
 	//价格不一样：big=true
 	//价格一样：仓数相加=0时big=false；仓数相加≠0时big=true
