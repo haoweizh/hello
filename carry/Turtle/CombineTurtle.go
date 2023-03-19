@@ -101,9 +101,9 @@ var ProcessCombineTurtle = func(settingCombine *model.Setting, tick *model.BidAs
 	//价格一样：仓数相加=0时big=false；仓数相加≠0时big=true
 	isBig := dataCombine.IsBig(settingCombine, settingNormal, marketInfo)
 	msgKey := fmt.Sprintf("%s_%s_%s", model.FunctionCombineTurtle, market, symbol)
-	msg := fmt.Sprintf("[%s %d:%d]%s可开%vbig:%d 币种数:%d/%d %d日:%e-%e %d日:%e-%e N:%e 仓数上限%d 单仓数量:%e bid-ask %e %e \n"+
+	msg := fmt.Sprintf("[%d-%d %d:%d]%s可开%vbig:%d 币种数:%d/%d %d日:%e-%e %d日:%e-%e N:%e 仓数上限%d 单仓数量:%e bid-ask %e %e \n"+
 		"海龟:仓数/持仓量/开仓价/今日平仓 %d/%e/%e/%v %s\n龟汤:仓数/持仓量/开仓价/今日平仓 %d/%e/%e/%v %s",
-		dataCombine.TurtleTime.String()[0:10], time.Now().Hour(), time.Now().Minute(), msgKey, canOpen, isBig,
+		dataCombine.TurtleTime.Month(), dataCombine.TurtleTime.Day(), time.Now().Hour(), time.Now().Minute(), msgKey, canOpen, isBig,
 		int(turtleCoins), int(settingCombine.AmountLimit), dataCombine.DaysFar, dataCombine.LowDaysFar, dataCombine.HighDaysFar,
 		dataCombine.DaysNear, dataCombine.LowDaysNear, dataCombine.HighDaysNear, dataCombine.N, int(settingCombine.OpenShortMargin),
 		dataCombine.Amount, tick.Bids[0].Price, tick.Asks[0].Price, settingNormal.Chance, settingNormal.GridAmount,
