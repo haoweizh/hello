@@ -24,7 +24,7 @@ const wsOKEX = `wss://ws.okex.com:8443/ws/v5/public`
 const wsPrivateOKEX = `wss://ws.okex.com:8443/ws/v5/private`
 const wsStepOKEX = 30
 const ParamArrayOkex = `OK_ARRAY`
-
+const chanelOKEX = `books5` // `bbo-tbt`
 var lastSameTime = make(map[string]int64)
 var lastCarryTime = int64(0)
 var msgChanOKEX = make(map[string]chan *simplejson.Json)
@@ -118,8 +118,7 @@ func reSubscribe(subscribes []interface{}) {
 			setRequireReset(model.OKEX)
 			return
 		} else if success && bidAsk != nil && time.Now().UnixMilli()-int64(bidAsk.Ts) > 30000000 {
-			subArray = append(subArray, map[string]string{`channel`: `bbo-tbt`, `instId`: dialectSymbol})
-			//subArray = append(subArray, map[string]string{`channel`: `books50-l2-tbt`, `instId`: dialectSymbol})
+			subArray = append(subArray, map[string]string{`channel`: chanelOKEX, `instId`: dialectSymbol})
 		}
 	}
 	util.Notice(`no need reset %s`, model.OKEX)
@@ -179,8 +178,7 @@ var subscribeHandlerOKEX = func(connection *websocket.Conn, subscribes []interfa
 	for _, subscribe := range subscribes {
 		// books5首次推5档快照数据，以后定量推送，每100毫秒当5档快照数据有变化推送一次5档数据
 		// bbo-tbt 首次推1档快照数据，以后定量推送，每10毫秒当1档快照数据有变化推送一次1档数据
-		//subArray = append(subArray, map[string]string{`channel`: `bbo-tbt`, `instId`: subscribe.(string)})
-		subArray = append(subArray, map[string]string{`channel`: `books5`, `instId`: subscribe.(string)})
+		subArray = append(subArray, map[string]string{`channel`: chanelOKEX, `instId`: subscribe.(string)})
 	}
 	subscribeMap[`args`] = subArray
 	subscribeMessage := util.JsonEncodeToByte(subscribeMap)
@@ -206,7 +204,7 @@ func handleMsgOKEX(channel chan *simplejson.Json, symbol string) {
 			if bidAsk != nil {
 				success, bidAsk = handleBooksUpdate(symbol, data, bidAsk)
 			}
-		} else if action == `snapshot` || responseJson.GetPath(`arg`, `channel`).MustString() == `bbo-tbt` {
+		} else if action == `snapshot` || responseJson.GetPath(`arg`, `channel`).MustString() == chanelOKEX {
 			//if action == `snapshot` {
 			//	util.Notice(fmt.Sprintf(`++++ %s initial ticker %v`, symbol, data))
 			//}
