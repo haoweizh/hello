@@ -123,12 +123,13 @@ func MaintainTransFee() {
 var socketMaintaining = false
 
 func ResetChannels(market string, channels []chan struct{}) {
-	if market == model.Gate {
-		util.Notice(`gate do not reset channel`)
-		return
-	}
+	//if market == model.Gate {
+	//	util.Notice(`gate do not reset channel`)
+	//	return
+	//}
 	model.ChannelMaintaining.Store(market, true)
 	model.AppMarkets.WsDepth.Delete(market)
+	model.AppMarkets.Connections.Store(market, nil)
 	for i, channel := range channels {
 		util.Notice(`send to stop connection %s %d`, market, i)
 		channel <- struct{}{}

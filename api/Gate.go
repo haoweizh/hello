@@ -7,6 +7,7 @@ import (
 	"github.com/antihax/optional"
 	gateApi "github.com/gateio/gateapi-go/v6"
 	gateWs "github.com/gateio/gatews/go"
+	"github.com/gorilla/websocket"
 	"hello/model"
 	"hello/util"
 	"math"
@@ -17,6 +18,7 @@ import (
 
 var apiClientsGate = make(map[string]*gateApi.APIClient)
 var apiCtxGate = make(map[string]context.Context)
+var channelMaintainingGate = false
 
 func getClientGate(key, secret string) (apiClient *gateApi.APIClient, ctx context.Context) {
 	if apiClientsGate[key] == nil {
@@ -224,8 +226,9 @@ type FuturesBookTickerModel struct {
 }
 
 var tickerHandler = gateWs.NewCallBack(func(msg *gateWs.UpdateMsg) {
-	if msg.Error != nil {
+	if msg.Error != nil && (!strings.Contains(msg.Error.Message, "futures.ping") && !strings.Contains(msg.Error.Message, "spot.ping")) {
 		util.Notice(fmt.Sprintf("callback error: %s %s", msg.Channel, msg.Error.Error()))
+		return
 	}
 	var bidAsk model.BidAsk
 	var symbol string
@@ -275,7 +278,7 @@ var tickerHandler = gateWs.NewCallBack(func(msg *gateWs.UpdateMsg) {
 		}
 	// Push best bid and ask in real-time.
 	case gateWs.ChannelFutureBookTicker:
-		var update FuturesBookTickerModel
+		var update gateWs.FuturesBookTicker
 		if err := json.Unmarshal(msg.Result, &update); err != nil {
 			util.Notice(fmt.Sprintf("future book ticker Unmarshal err:%s %s", model.Gate, err.Error()))
 			return
@@ -290,7 +293,7 @@ var tickerHandler = gateWs.NewCallBack(func(msg *gateWs.UpdateMsg) {
 		_, bidAmount := model.ParseRealAmount(model.Gate, symbol, float64(update.BestBidSize))
 		askPrice, _ := strconv.ParseFloat(update.BestAskPrice, 64)
 		_, askAmount := model.ParseRealAmount(model.Gate, symbol, float64(update.BestAskSize))
-		bidAsk = model.BidAsk{Ts: int(update.TimeMillis), TsReceived: now, UpdateId: update.LastId,
+		bidAsk = model.BidAsk{Ts: int(update.TimeMillis), TsReceived: now, UpdateId: update.UpdateId,
 			Bids: []model.Tick{{Price: bidPrice, Amount: bidAmount, Market: model.Gate, Symbol: symbol, Side: model.OrderSideBuy}},
 			Asks: []model.Tick{{Price: askPrice, Amount: askAmount, Market: model.Gate, Symbol: symbol, Side: model.OrderSideSell}}}
 	}
@@ -415,6 +418,131 @@ func WsDepthServeGate() (err error) {
 		}
 	}
 	return err
+}
+
+func WsDepthServeGateNew(markets *model.Markets, orderHandler OrderHandler) (channels []chan struct{}, err error) {
+	var spotSubs, spotOrderBookSubs, futureSubs []interface{}
+	channels = make([]chan struct{}, 0)
+	symbols := GetMarketSymbols(model.Gate)
+	for symbol := range symbols {
+		_, _, _, dialectSymbol := model.GetFromStandard(model.Gate, symbol)
+		if strings.LastIndex(symbol, model.UniStandardTail[model.MarketTypeSpot]) == len(symbol)-len(model.UniStandardTail[model.MarketTypeSpot]) &&
+			len(symbol)-len(model.UniStandardTail[model.MarketTypeSpot]) > 0 {
+			spotSubs = append(spotSubs, dialectSymbol)
+			spotOrderBookSubs = append(spotOrderBookSubs, make([]string, 0), dialectSymbol, "5", "100ms")
+		} else if strings.LastIndex(symbol, model.UniStandardTail[model.MarketTypePerp]) == len(symbol)-len(model.UniStandardTail[model.MarketTypePerp]) &&
+			len(symbol)-len(model.UniStandardTail[model.MarketTypePerp]) > 0 {
+			futureSubs = append(futureSubs, symbol) //合约还是用标准的后缀
+		}
+	}
+	spotOrderBookChannels, spotOrderBookErr := WebSocketClient(model.Gate, gateWs.BaseUrl, spotOrderBookSubs, subscribeHandler, wsHandler, orderHandler, 100)
+	if spotOrderBookErr == nil {
+		util.Notice(`finish connect public gate spot order book ws `)
+		channels = append(channels, spotOrderBookChannels...)
+	}
+	time.Sleep(time.Second * 1)
+
+	spotBookTickerChannels, spotBookTickerErr := WebSocketClient(model.Gate, gateWs.BaseUrl, spotSubs, subscribeHandler, wsHandler, orderHandler, 30)
+	if spotBookTickerErr == nil {
+		util.Notice(`finish connect public gate spot book ticker ws `)
+		channels = append(channels, spotBookTickerChannels...)
+	}
+	time.Sleep(time.Second * 1)
+
+	perpBookTickerChannels, perpBookTickerErr := WebSocketClient(model.Gate, gateWs.FuturesUsdtUrl, futureSubs, subscribeHandler, wsHandler, orderHandler, 30)
+	if perpBookTickerErr == nil {
+		util.Notice(`finish connect public gate perp book ticker ws `)
+		channels = append(channels, perpBookTickerChannels...)
+	}
+	go maintainChannelGate()
+	return channels, err
+}
+
+var wsHandler = func(connection *websocket.Conn, event []byte, orderHandler OrderHandler) {
+	//fmt.Println(fmt.Sprintf("ws resp：%s", event))
+	msg := &gateWs.UpdateMsg{}
+	if err := json.Unmarshal(event, msg); err != nil {
+		util.Notice(fmt.Sprintf("gate ws message Unmarshal err:%s", err.Error()))
+		return
+	}
+	tickerHandler(msg)
+}
+
+var subscribeHandler = func(connection *websocket.Conn, subscribes []interface{}) error {
+	var err error = nil
+	if len(subscribes) > 0 && strings.Contains(subscribes[0].(string), "100ms") { //现货orderBook订阅
+		for _, subscribe := range subscribes {
+			subscribeMap := map[string]interface{}{
+				"time":    time.Now().Unix(),
+				"channel": "spot.order_book",
+				"event":   "subscribe",
+				"payload": subscribe,
+			}
+			subscribeMessage := util.JsonEncodeToByte(subscribeMap)
+			if err = SendToConnection(model.Gate, connection, subscribeMessage); err != nil {
+				util.SocketInfo(" gate can not subscribe spot order book symbol %s %s", subscribeMessage, err.Error())
+			}
+			time.Sleep(10 * time.Millisecond)
+		}
+	} else { //ticker订阅
+		if strings.LastIndex(subscribes[0].(string), model.UniStandardTail[model.MarketTypePerp]) ==
+			len(subscribes[0].(string))-len(model.UniStandardTail[model.MarketTypePerp]) &&
+			len(subscribes[0].(string))-len(model.UniStandardTail[model.MarketTypePerp]) > 0 { //合约ticker订阅
+			var symbols []string
+			for _, subscribe := range subscribes {
+				_, _, _, dialectSymbol := model.GetFromStandard(model.Gate, subscribe.(string))
+				symbols = append(symbols, dialectSymbol)
+			}
+			subscribeMap := map[string]interface{}{
+				"time":    time.Now().Unix(),
+				"channel": "futures.book_ticker",
+				"event":   "subscribe",
+				"payload": symbols,
+			}
+			subscribeMessage := util.JsonEncodeToByte(subscribeMap)
+			if err = SendToConnection(model.Gate, connection, subscribeMessage); err != nil {
+				util.SocketInfo(" gate can not subscribe perp symbols %s %s", subscribeMessage, err.Error())
+			}
+			util.Notice(`gate subscribed ` + string(subscribeMessage))
+			time.Sleep(500 * time.Millisecond)
+		} else { //现货ticker订阅
+			var symbols []string
+			for _, subscribe := range subscribes {
+				symbols = append(symbols, subscribe.(string))
+			}
+			subscribeMap := map[string]interface{}{
+				"time":    time.Now().Unix(),
+				"channel": "spot.book_ticker",
+				"event":   "subscribe",
+				"payload": symbols,
+			}
+			subscribeMessage := util.JsonEncodeToByte(subscribeMap)
+			if err = SendToConnection(model.Gate, connection, subscribeMessage); err != nil {
+				util.SocketInfo(" gate can not subscribe spot symbols %s %s", subscribeMessage, err.Error())
+			}
+			util.Notice(`gate subscribed ` + string(subscribeMessage))
+			time.Sleep(500 * time.Millisecond)
+		}
+	}
+	return err
+}
+
+func maintainChannelGate() {
+	if !channelMaintainingGate {
+		channelMaintainingGate = true
+		go func() {
+			for true {
+				time.Sleep(time.Second * 10)
+				if err := SendToAllConnections(model.Gate, util.JsonEncodeToByte(map[string]interface{}{"time": time.Now().Unix(), "channel": "spot.ping"})); err != nil {
+					util.SocketInfo("gate channel ping error " + err.Error())
+				}
+				time.Sleep(time.Second * 1)
+				if err := SendToAllConnections(model.Gate, util.JsonEncodeToByte(map[string]interface{}{"time": time.Now().Unix(), "channel": "futures.ping"})); err != nil {
+					util.SocketInfo("gate channel ping error " + err.Error())
+				}
+			}
+		}()
+	}
 }
 
 func getBalanceGate(key string, secret string) (success bool, balances []*model.Balance) {
