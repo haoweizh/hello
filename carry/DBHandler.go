@@ -129,7 +129,7 @@ func ResetChannels(market string, channels []chan struct{}) {
 	//}
 	model.ChannelMaintaining.Store(market, true)
 	model.AppMarkets.WsDepth.Delete(market)
-	model.AppMarkets.Connections.Store(market, nil)
+	model.AppMarkets.Connections.Delete(market)
 	for i, channel := range channels {
 		util.Notice(`send to stop connection %s %d`, market, i)
 		channel <- struct{}{}
