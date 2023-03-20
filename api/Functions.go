@@ -1010,8 +1010,7 @@ func CreateMarketDepthServer(markets *model.Markets, market string, orderHandler
 	case model.KucoinPerp:
 		channels, err = WsDepthServeKucoinPerp()
 	case model.Gate:
-		//err = WsDepthServeGate()
-		channels, err = WsDepthServeGateNew(markets, orderHandler)
+		channels, err = WsDepthServeGateNew(orderHandler)
 	case model.OKEX:
 		channels, err = WsDepthServeOKEX(GetMarketSymbols(model.OKEX), orderHandler)
 	case model.BinanceSpot:
