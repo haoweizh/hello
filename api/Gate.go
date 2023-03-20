@@ -344,17 +344,19 @@ var tickerHandler = gateWs.NewCallBack(func(msg *gateWs.UpdateMsg) {
 //		Bids: []model.Tick{{Price: bidPrice, Amount: bidAmount}},
 //		Asks: []model.Tick{{Price: askPrice, Amount: askAmount}}}
 
-//futureBookWs, futureBookErr := gateWs.NewWsService(nil, nil, gateWs.NewConnConfFromOption(&gateWs.ConfOptions{
-//	URL:          gateWs.FuturesUsdtUrl,
-//	Key:          keys[0],
-//	Secret:       secrets[0],
-//	MaxRetryConn: 10,
-//}))
-//if futureBookErr != nil {
-//	util.Notice(fmt.Sprintf("new future book wsService err:%s", futureBookErr))
-//}
-
-func WsDepthServeGate() (err error) {
+//	futureBookWs, futureBookErr := gateWs.NewWsService(nil, nil, gateWs.NewConnConfFromOption(&gateWs.ConfOptions{
+//		URL:          gateWs.FuturesUsdtUrl,
+//		Key:          keys[0],
+//		Secret:       secrets[0],
+//		MaxRetryConn: 10,
+//	}))
+//
+//	if futureBookErr != nil {
+//		util.Notice(fmt.Sprintf("new future book wsService err:%s", futureBookErr))
+//	}
+//
+// WsDepthServeGate
+func _() (err error) {
 	account := model.AppConfig.GetAccounts(model.Gate)[0]
 	wsSpotUpdate, spotErr := gateWs.NewWsService(nil, nil, gateWs.NewConnConfFromOption(&gateWs.ConfOptions{
 		URL: gateWs.BaseUrl, Key: account.Key, Secret: account.Secret, MaxRetryConn: 10}))
@@ -409,12 +411,11 @@ func WsDepthServeGate() (err error) {
 	return err
 }
 
-func WsDepthServeGateNew(markets *model.Markets, orderHandler OrderHandler) (channels []chan struct{}, err error) {
+func WsDepthServeGateNew(orderHandler OrderHandler) (channels []chan struct{}, err error) {
 	var spotSubs, spotOrderBookSubs, futureSubs []interface{}
 	channels = make([]chan struct{}, 0)
 	symbols := GetMarketSymbols(model.Gate)
 	for symbol := range symbols {
-		//_, _, _, dialectSymbol := model.GetFromStandard(model.Gate, symbol)
 		if strings.LastIndex(symbol, model.UniStandardTail[model.MarketTypeSpot]) == len(symbol)-len(model.UniStandardTail[model.MarketTypeSpot]) &&
 			len(symbol)-len(model.UniStandardTail[model.MarketTypeSpot]) > 0 {
 			spotSubs = append(spotSubs, symbol)
@@ -430,14 +431,12 @@ func WsDepthServeGateNew(markets *model.Markets, orderHandler OrderHandler) (cha
 		channels = append(channels, spotOrderBookChannels...)
 	}
 	time.Sleep(time.Second * 1)
-
 	spotBookTickerChannels, spotBookTickerErr := WebSocketClient(model.Gate, gateWs.BaseUrl, spotSubs, subscribeHandler, wsHandler, orderHandler, 30)
 	if spotBookTickerErr == nil {
 		util.Notice(`finish connect public gate spot book ticker ws `)
 		channels = append(channels, spotBookTickerChannels...)
 	}
 	time.Sleep(time.Second * 1)
-
 	perpBookTickerChannels, perpBookTickerErr := WebSocketClient(model.Gate, gateWs.FuturesUsdtUrl, futureSubs, subscribeHandler, wsHandler, orderHandler, 30)
 	if perpBookTickerErr == nil {
 		util.Notice(`finish connect public gate perp book ticker ws `)
