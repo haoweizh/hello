@@ -214,17 +214,6 @@ func panicGateError(key, function string, err error) {
 	util.Notice(function + err.Error())
 }
 
-type FuturesBookTickerModel struct {
-	TimeMillis   int64  `json:"t"`
-	Contract     string `json:"s"`
-	FirstId      int64  `json:"U"`
-	LastId       int64  `json:"u"`
-	BestBidPrice string `json:"b"`
-	BestBidSize  int64  `json:"B"`
-	BestAskPrice string `json:"a"`
-	BestAskSize  int64  `json:"A"`
-}
-
 var tickerHandler = gateWs.NewCallBack(func(msg *gateWs.UpdateMsg) {
 	if msg.Error != nil && (!strings.Contains(msg.Error.Message, "futures.ping") && !strings.Contains(msg.Error.Message, "spot.ping")) {
 		util.Notice(fmt.Sprintf("callback error: %s %s", msg.Channel, msg.Error.Error()))
@@ -429,7 +418,7 @@ func WsDepthServeGateNew(markets *model.Markets, orderHandler OrderHandler) (cha
 		if strings.LastIndex(symbol, model.UniStandardTail[model.MarketTypeSpot]) == len(symbol)-len(model.UniStandardTail[model.MarketTypeSpot]) &&
 			len(symbol)-len(model.UniStandardTail[model.MarketTypeSpot]) > 0 {
 			spotSubs = append(spotSubs, dialectSymbol)
-			spotOrderBookSubs = append(spotOrderBookSubs, make([]string, 0), dialectSymbol, "5", "100ms")
+			spotOrderBookSubs = append(spotOrderBookSubs, []string{dialectSymbol, "5", "100ms"})
 		} else if strings.LastIndex(symbol, model.UniStandardTail[model.MarketTypePerp]) == len(symbol)-len(model.UniStandardTail[model.MarketTypePerp]) &&
 			len(symbol)-len(model.UniStandardTail[model.MarketTypePerp]) > 0 {
 			futureSubs = append(futureSubs, symbol) //合约还是用标准的后缀
@@ -470,21 +459,8 @@ var wsHandler = func(connection *websocket.Conn, event []byte, orderHandler Orde
 
 var subscribeHandler = func(connection *websocket.Conn, subscribes []interface{}) error {
 	var err error = nil
-	if len(subscribes) > 0 && strings.Contains(subscribes[0].(string), "100ms") { //现货orderBook订阅
-		for _, subscribe := range subscribes {
-			subscribeMap := map[string]interface{}{
-				"time":    time.Now().Unix(),
-				"channel": "spot.order_book",
-				"event":   "subscribe",
-				"payload": subscribe,
-			}
-			subscribeMessage := util.JsonEncodeToByte(subscribeMap)
-			if err = SendToConnection(model.Gate, connection, subscribeMessage); err != nil {
-				util.SocketInfo(" gate can not subscribe spot order book symbol %s %s", subscribeMessage, err.Error())
-			}
-			time.Sleep(10 * time.Millisecond)
-		}
-	} else { //ticker订阅
+	switch subscribes[0].(type) {
+	case string: //ticker订阅
 		if strings.LastIndex(subscribes[0].(string), model.UniStandardTail[model.MarketTypePerp]) ==
 			len(subscribes[0].(string))-len(model.UniStandardTail[model.MarketTypePerp]) &&
 			len(subscribes[0].(string))-len(model.UniStandardTail[model.MarketTypePerp]) > 0 { //合约ticker订阅
@@ -522,6 +498,20 @@ var subscribeHandler = func(connection *websocket.Conn, subscribes []interface{}
 			}
 			util.Notice(`gate subscribed ` + string(subscribeMessage))
 			time.Sleep(500 * time.Millisecond)
+		}
+	case []string: //orderbook订阅
+		for _, subscribe := range subscribes {
+			subscribeMap := map[string]interface{}{
+				"time":    time.Now().Unix(),
+				"channel": "spot.order_book",
+				"event":   "subscribe",
+				"payload": subscribe,
+			}
+			subscribeMessage := util.JsonEncodeToByte(subscribeMap)
+			if err = SendToConnection(model.Gate, connection, subscribeMessage); err != nil {
+				util.SocketInfo(" gate can not subscribe spot order book symbol %s %s", subscribeMessage, err.Error())
+			}
+			time.Sleep(10 * time.Millisecond)
 		}
 	}
 	return err
