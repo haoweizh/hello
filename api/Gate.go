@@ -414,14 +414,14 @@ func WsDepthServeGateNew(markets *model.Markets, orderHandler OrderHandler) (cha
 	channels = make([]chan struct{}, 0)
 	symbols := GetMarketSymbols(model.Gate)
 	for symbol := range symbols {
-		_, _, _, dialectSymbol := model.GetFromStandard(model.Gate, symbol)
+		//_, _, _, dialectSymbol := model.GetFromStandard(model.Gate, symbol)
 		if strings.LastIndex(symbol, model.UniStandardTail[model.MarketTypeSpot]) == len(symbol)-len(model.UniStandardTail[model.MarketTypeSpot]) &&
 			len(symbol)-len(model.UniStandardTail[model.MarketTypeSpot]) > 0 {
-			spotSubs = append(spotSubs, dialectSymbol)
-			spotOrderBookSubs = append(spotOrderBookSubs, []string{dialectSymbol, "5", "100ms"})
+			spotSubs = append(spotSubs, symbol)
+			spotOrderBookSubs = append(spotOrderBookSubs, []string{symbol, "5", "100ms"})
 		} else if strings.LastIndex(symbol, model.UniStandardTail[model.MarketTypePerp]) == len(symbol)-len(model.UniStandardTail[model.MarketTypePerp]) &&
 			len(symbol)-len(model.UniStandardTail[model.MarketTypePerp]) > 0 {
-			futureSubs = append(futureSubs, symbol) //合约还是用标准的后缀
+			futureSubs = append(futureSubs, symbol)
 		}
 	}
 	spotOrderBookChannels, spotOrderBookErr := WebSocketClient(model.Gate, gateWs.BaseUrl, spotOrderBookSubs, subscribeHandler, wsHandler, orderHandler, 100)
@@ -484,7 +484,8 @@ var subscribeHandler = func(connection *websocket.Conn, subscribes []interface{}
 		} else { //现货ticker订阅
 			var symbols []string
 			for _, subscribe := range subscribes {
-				symbols = append(symbols, subscribe.(string))
+				_, _, _, dialectSymbol := model.GetFromStandard(model.Gate, subscribe.(string))
+				symbols = append(symbols, dialectSymbol)
 			}
 			subscribeMap := map[string]interface{}{
 				"time":    time.Now().Unix(),
@@ -501,6 +502,8 @@ var subscribeHandler = func(connection *websocket.Conn, subscribes []interface{}
 		}
 	case []string: //orderbook订阅
 		for _, subscribe := range subscribes {
+			_, _, _, dialectSymbol := model.GetFromStandard(model.Gate, subscribe.([]string)[0])
+			subscribe.([]string)[0] = dialectSymbol
 			subscribeMap := map[string]interface{}{
 				"time":    time.Now().Unix(),
 				"channel": "spot.order_book",
