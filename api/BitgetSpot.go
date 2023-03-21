@@ -241,3 +241,7 @@ func cancelOrdersBitgetSpot(key, secret, symbol string) (result bool) {
 	}
 	return true
 }
+
+func queryOrderBitgetSpot(key, secret, symbol string, orderId string) (order *model.Order) {
+	return order
+}

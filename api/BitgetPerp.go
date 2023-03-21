@@ -359,3 +359,7 @@ func cancelOrdersBitgetPerp(key, secret, symbol string) (result bool) {
 
 	return true
 }
+
+func queryOrderBitgetPerp(key, secret, symbol string, orderId string) (order *model.Order) {
+	return order
+}
