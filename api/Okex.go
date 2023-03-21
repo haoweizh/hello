@@ -794,8 +794,8 @@ func getMarketsOKEX(key, secret string) (marketInfos map[string]*model.MarketInf
 							marketInfos[name].TradeAmount, _ = strconv.ParseFloat(value[`volCcy24h`].(string), 64)
 						} else if marketType == model.MarketTypePerp {
 							vol, _ := strconv.ParseFloat(value[`volCcy24h`].(string), 64)
-							lastPrice, _ := strconv.ParseFloat(value[`last`].(string), 64)
-							marketInfos[name].TradeAmount = vol * lastPrice
+							lastPriceOKx, _ := strconv.ParseFloat(value[`last`].(string), 64)
+							marketInfos[name].TradeAmount = vol * lastPriceOKx
 						}
 					}
 				}
