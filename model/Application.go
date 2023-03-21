@@ -13,9 +13,8 @@ import (
 
 type PostOrder func(order *Order, setting *Setting) // 处理下单后的函数
 var HandlerMap = make(map[string]CarryHandler)
-var infoLock sync.Mutex
-var CarryInfo sync.Map                                            // userKey - function - msg
-var monitorInfo = make(map[string]map[string]map[string][]string) // userKey - table - item - value array
+var CarryInfo sync.Map        // userKey - function - msg
+var monitorInfo = &sync.Map{} // userIndex - table - syncMap[string -array[]string]
 var AppMetric = &MetricManager{}
 var IgnoreFunctions = map[string]bool{FunctionDynamicTurtle: true, FunctionTurtleNormal: true, FunctionDynamicCombine: true}
 
@@ -161,20 +160,20 @@ var orderStatusMap = map[string]map[string]string{ // market - market status - u
 		`triggered`: CarryStatusSuccess},
 }
 
-func GetMonitorInfo(key, table string) (valueArray [][]string) {
-	infoLock.Lock()
-	defer infoLock.Unlock()
-	if monitorInfo == nil || monitorInfo[key] == nil || monitorInfo[key][table] == nil {
-		return nil
+func GetMonitorInfo(index, table string) (valueArray [][]string) {
+	v, ok := util.LoadSyncMap(monitorInfo, index, table)
+	if !ok || v == nil {
+		return
 	}
-	valueMap := monitorInfo[key][table]
-	valueArray = make([][]string, len(valueMap))
-	i := 0
-	for _, value := range valueMap {
-		valueArray[i] = value
-		i++
-	}
-	for i = len(valueArray) - 1; i > 0; i-- {
+	valueArray = make([][]string, 0)
+	v.(*sync.Map).Range(func(key, value any) bool {
+		if value == nil {
+			return true
+		}
+		valueArray = append(valueArray, value.([]string))
+		return true
+	})
+	for i := len(valueArray) - 1; i > 0; i-- {
 		for j := 0; j < i; j++ {
 			if valueArray[j][0] > valueArray[i][0] {
 				valueArray[j], valueArray[i] = valueArray[i], valueArray[j]
@@ -184,19 +183,15 @@ func GetMonitorInfo(key, table string) (valueArray [][]string) {
 	return valueArray
 }
 
-func SetMonitorInfo(key, table, item string, value []string) {
-	infoLock.Lock()
-	defer infoLock.Unlock()
-	if monitorInfo == nil {
-		monitorInfo = map[string]map[string]map[string][]string{}
+func SetMonitorInfo(index, table, item string, value []string) {
+	var infoMap *sync.Map
+	v, ok := util.LoadSyncMap(monitorInfo, index, table)
+	if ok && v != nil {
+		infoMap = v.(*sync.Map)
+	} else {
+		infoMap = &sync.Map{}
 	}
-	if monitorInfo[key] == nil {
-		monitorInfo[key] = map[string]map[string][]string{}
-	}
-	if monitorInfo[key][table] == nil {
-		monitorInfo[key][table] = map[string][]string{}
-	}
-	monitorInfo[key][table][item] = value
+	infoMap.Store(item, value)
 }
 
 func GetOrderStatus(market, marketStatus string) (status string) {

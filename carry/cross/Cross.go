@@ -864,39 +864,39 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarrySta
 		fundingStrRelate = fmt.Sprintf(`%.5f %d:%d`, 100*carryStatusRelate.FoundingRate,
 			carryStatusRelate.FundingRateUpdateTime.Hour(), carryStatusRelate.FundingRateUpdateTime.Minute())
 	}
+	var infoValue []string
 	if mark < markRelate {
 		mark = fmt.Sprintf(`%s|%s`, mark, markRelate)
-		model.SetMonitorInfo(
-			strconv.Itoa(index), `cross`, mark, []string{coin, carryStatus.market, coinValue, fundingStr,
-				fmt.Sprintf(`%.1f`, 100*carryStatus.TradeLineBuy),
-				fmt.Sprintf(`%.1f`, 100*carryStatus.TradeLineSell),
-				fmt.Sprintf(`%.0e`, carryStatus.LimitBuy),
-				fmt.Sprintf(`%.0e`, carryStatus.LimitSell),
-				carryStatusRelate.market, coinValueRelate, fundingStrRelate,
-				fmt.Sprintf(`%.1f`, 100*carryStatusRelate.TradeLineBuy),
-				fmt.Sprintf(`%.1f`, 100*carryStatusRelate.TradeLineSell),
-				fmt.Sprintf(`%.0e`, carryStatusRelate.LimitBuy),
-				fmt.Sprintf(`%.0e`, carryStatusRelate.LimitSell),
-				fmt.Sprintf(`%.1f`, 100*scoreRelate),
-				fmt.Sprintf(`%.1f`, 100*score),
-				fmt.Sprintf(`%v`, green)})
+		infoValue = []string{coin, carryStatus.market, coinValue, fundingStr,
+			fmt.Sprintf(`%.1f`, 100*carryStatus.TradeLineBuy),
+			fmt.Sprintf(`%.1f`, 100*carryStatus.TradeLineSell),
+			fmt.Sprintf(`%.0e`, carryStatus.LimitBuy),
+			fmt.Sprintf(`%.0e`, carryStatus.LimitSell),
+			carryStatusRelate.market, coinValueRelate, fundingStrRelate,
+			fmt.Sprintf(`%.1f`, 100*carryStatusRelate.TradeLineBuy),
+			fmt.Sprintf(`%.1f`, 100*carryStatusRelate.TradeLineSell),
+			fmt.Sprintf(`%.0e`, carryStatusRelate.LimitBuy),
+			fmt.Sprintf(`%.0e`, carryStatusRelate.LimitSell),
+			fmt.Sprintf(`%.1f`, 100*scoreRelate),
+			fmt.Sprintf(`%.1f`, 100*score),
+			fmt.Sprintf(`%v`, green)}
 	} else {
 		mark = fmt.Sprintf(`%s|%s`, markRelate, mark)
-		model.SetMonitorInfo(
-			strconv.Itoa(index), `cross`, mark, []string{coin, carryStatusRelate.market, coinValueRelate, fundingStrRelate,
-				fmt.Sprintf(`%.1f`, 100*carryStatusRelate.TradeLineBuy),
-				fmt.Sprintf(`%.1f`, 100*carryStatusRelate.TradeLineSell),
-				fmt.Sprintf(`%.0e`, carryStatusRelate.LimitBuy),
-				fmt.Sprintf(`%.0e`, carryStatusRelate.LimitSell),
-				carryStatus.market, coinValue, fundingStr,
-				fmt.Sprintf(`%.1f`, 100*carryStatus.TradeLineBuy),
-				fmt.Sprintf(`%.1f`, 100*carryStatus.TradeLineSell),
-				fmt.Sprintf(`%.0e`, carryStatus.LimitBuy),
-				fmt.Sprintf(`%.0e`, carryStatus.LimitSell),
-				fmt.Sprintf(`%.1f`, 100*score),
-				fmt.Sprintf(`%.1f`, 100*scoreRelate),
-				fmt.Sprintf(`%v`, green)})
+		infoValue = []string{coin, carryStatusRelate.market, coinValueRelate, fundingStrRelate,
+			fmt.Sprintf(`%.1f`, 100*carryStatusRelate.TradeLineBuy),
+			fmt.Sprintf(`%.1f`, 100*carryStatusRelate.TradeLineSell),
+			fmt.Sprintf(`%.0e`, carryStatusRelate.LimitBuy),
+			fmt.Sprintf(`%.0e`, carryStatusRelate.LimitSell),
+			carryStatus.market, coinValue, fundingStr,
+			fmt.Sprintf(`%.1f`, 100*carryStatus.TradeLineBuy),
+			fmt.Sprintf(`%.1f`, 100*carryStatus.TradeLineSell),
+			fmt.Sprintf(`%.0e`, carryStatus.LimitBuy),
+			fmt.Sprintf(`%.0e`, carryStatus.LimitSell),
+			fmt.Sprintf(`%.1f`, 100*score),
+			fmt.Sprintf(`%.1f`, 100*scoreRelate),
+			fmt.Sprintf(`%v`, green)}
 	}
+	model.SetMonitorInfo(strconv.Itoa(index), `cross`, mark, infoValue)
 	if statusBuy == nil || statusSell == nil {
 		return nil, nil, 0, 0, 0, nil, nil
 	}

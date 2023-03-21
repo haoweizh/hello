@@ -53,12 +53,13 @@ func getMarketsBinancePerp(key, secret string) (marketInfos map[string]*model.Ma
 			marketInfos[marketInfo.Name] = marketInfo
 			for _, data := range item.Filters {
 				filterType := data[`filterType`].(string)
-				if filterType == `PRICE_FILTER` {
+				switch filterType {
+				case `PRICE_FILTER`:
 					if data[`tickSize`] != nil {
 						marketInfo.PriceIncrement, _ = strconv.ParseFloat(data[`tickSize`].(string), 64)
 					}
 					marketInfo.PriceDecimal = util.NumDecPlaces(marketInfo.PriceIncrement)
-				} else if filterType == `LOT_SIZE` {
+				case `LOT_SIZE`:
 					if data[`minQty`] != nil {
 						marketInfo.SizeMin, _ = strconv.ParseFloat(data[`minQty`].(string), 64)
 					}
@@ -68,9 +69,18 @@ func getMarketsBinancePerp(key, secret string) (marketInfos map[string]*model.Ma
 					if data[`stepSize`] != nil {
 						marketInfo.SizeIncrement, _ = strconv.ParseFloat(data[`stepSize`].(string), 64)
 					}
-				} else if filterType == `MIN_NOTIONAL` {
+				case `MIN_NOTIONAL`:
 					if data[`notional`] != nil {
 						marketInfo.MoneyMin, _ = strconv.ParseFloat(data[`notional`].(string), 64)
+					}
+				case `PERCENT_PRICE`:
+					if data[`multiplierUp`] != nil {
+						rate, _ := strconv.ParseFloat(data[`multiplierUp`].(string), 64)
+						marketInfo.SellLimitPriceRatio = rate - 1
+					}
+					if data[`multiplierDown`] != nil {
+						rate, _ := strconv.ParseFloat(data[`multiplierDown`].(string), 64)
+						marketInfo.BuyLimitPriceRatio = 1 - rate
 					}
 				}
 			}
@@ -96,7 +106,7 @@ func getMarketsBinancePerp(key, secret string) (marketInfos map[string]*model.Ma
 func WsDepthServeBinancePerp(markets *model.Markets, orderHandler OrderHandler) (channels []chan struct{}, err error) {
 	subType := model.SubscribeTicker
 	//subType := model.SubscribeDepth
-	wsHandler := func(connection *websocket.Conn, event []byte, orderHandler OrderHandler) {
+	wsHandlerBinancePerp := func(connection *websocket.Conn, event []byte, orderHandler OrderHandler) {
 		result, wsErr := util.NewJSON(event)
 		if wsErr != nil {
 			util.SocketInfo(`binance fail to unmarshal json ` + err.Error())
@@ -122,12 +132,14 @@ func WsDepthServeBinancePerp(markets *model.Markets, orderHandler OrderHandler) 
 			handleDepthBinancePerp(markets, result, standardSymbol, updateId)
 		} else if strings.Contains(subscribe, `@bookTicker`) {
 			handleTickerBinancePerp(markets, result, standardSymbol, updateId)
+		} else if strings.Contains(subscribe, `@markPrice`) {
+			handleMarkPriceBinancePerp(markets, result, standardSymbol)
 		}
 	}
 	channels = make([]chan struct{}, 0)
 	perpSubs := GetWSSubscribes(model.BinancePerp, subType)
 	perpChans, perpErr := WebSocketClient(model.BinancePerp, wsBinancePerp, perpSubs,
-		subscribeHandlerBinancePerp, wsHandler, orderHandler, wsStepBinancePerp)
+		subscribeHandlerBinancePerp, wsHandlerBinancePerp, orderHandler, wsStepBinancePerp)
 	if perpErr != nil {
 		util.SocketInfo(`fail to create binance perp conn %s`, perpErr.Error())
 	}
@@ -183,6 +195,12 @@ func handleTickerBinancePerp(markets *model.Markets, json *simplejson.Json, stan
 			}
 		}
 	}
+}
+
+func handleMarkPriceBinancePerp(markets *model.Markets, json *simplejson.Json, standardSymbol string) {
+	markPrice, _ := strconv.ParseFloat(json.Get(`p`).MustString(), 64)
+	markets.SetMarkPriceInfo(standardSymbol, model.BinancePerp, &model.MarkPriceInfo{MarkPrice: markPrice, Ts: json.Get(`E`).MustInt()})
+
 }
 
 func handleDepthBinancePerp(markets *model.Markets, json *simplejson.Json, standardSymbol string, updateId int64) {

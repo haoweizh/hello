@@ -9,7 +9,6 @@ import (
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"hello/api"
-	"hello/carry/Turtle"
 	"hello/model"
 	"hello/regret"
 	"hello/util"
@@ -19,7 +18,6 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	"sync"
 	"testing"
 	"time"
 )
@@ -140,7 +138,7 @@ func Test_WsAndOrderApi(t *testing.T) {
 		//order2 := api.PlaceOrder(account.Key, account.Secret, orderSide, orderType, market,
 		//	symbol, ``, ``, price, price, amount, false, true, nil, nil)
 		//fmt.Println(fmt.Sprintf(`5. place order return %v %v`, order1, order2))
-		api.PlacePairOKEX(account.Key, symbol, symbol, model.OrderTypeLimit, price*0.9, price*1.1, amount)
+		api.PlacePairOKEX(account, symbol, symbol, model.OrderTypeLimit, price*0.9, price*1.1, amount)
 		api.CancelOrders(account.Key, account.Secret, market, symbol)
 		//if order1 != nil {
 		//	time.Sleep(time.Second)
@@ -156,18 +154,8 @@ func Test_WsAndOrderApi(t *testing.T) {
 }
 
 func Test_BalAndPos(t *testing.T) {
-	model.HandlerMap[model.FunctionCombineTurtle] = Turtle.ProcessCombineTurtle
-	model.HandlerMap[model.FunctionTurtleNormal] = nil
-	sy := sync.Map{}
-	sy.Store(`test`, model.HandlerMap[model.FunctionTurtleNormal])
-	value, ok := sy.Load(`test`)
-	if ok {
-		fmt.Println(value)
-		if value == nil {
-			fmt.Println(`not nil`)
-		}
-	}
 	model.NewConfig()
+	api.GetMarketInfos(model.BinancePerp)
 	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
 	model.AppRedis = redis.NewClient(&redis.Options{
 		Addr:     model.AppConfig.RedisAddr,
@@ -175,7 +163,6 @@ func Test_BalAndPos(t *testing.T) {
 		DB:       0,
 	})
 	api.GetTurtleData(model.AppConfig.OkexKey, model.AppConfig.OkexSecret, model.FunctionTurtle, model.OKEX, `MATIC_PERP`)
-	api.GetMarketInfos(model.Gate)
 	order := api.QueryOrderById(model.AppConfig.GateKey, model.AppConfig.GateSecret, `gate`, `MGA_USDT`,
 		model.OrderTypeLimit, `144149811503`)
 	fmt.Println(order)
@@ -256,12 +243,12 @@ func Test_CutTail(t *testing.T) {
 
 func Test_initTurtleN(t *testing.T) {
 	model.NewConfig()
-	model.AppRedis = redis.NewClient(&redis.Options{
-		Addr:     model.AppConfig.RedisAddr,
-		Password: model.AppConfig.RedisPassword,
-		DB:       0,
-	})
-	today, _ := model.GetMarketToday(model.OKEX)
+	//model.AppRedis = redis.NewClient(&redis.Options{
+	//	Addr:     model.AppConfig.RedisAddr,
+	//	Password: model.AppConfig.RedisPassword,
+	//	DB:       0,
+	//})
+	today, _ := model.GetMarketToday(model.BinancePerp)
 	api.GetCandle(model.AppConfig.OkexKey, model.AppConfig.OkexSecret, model.OKEX, `BTC_PERP`,
 		86400, today.Add(time.Hour*-24), today)
 	settings := map[string]*model.Setting{`BNX_PERP`: nil, `ETH_PERP`: nil}

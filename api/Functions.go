@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"hello/model"
 	"hello/util"
-	"math"
 	"strconv"
 	"strings"
 	"sync"
@@ -400,7 +399,11 @@ func GetFundingRate(key, secret, market, symbol string) (success bool, rate floa
 	if marketType != model.MarketTypePerp {
 		return true, 0, util.GetNow()
 	}
-	fundingRate := model.GetFundingRate(market, symbol)
+	value, ok := util.LoadSyncMap(model.FundingRates, market, symbol)
+	var fundingRate *model.FundingRate
+	if ok && value != nil {
+		fundingRate = value.(*model.FundingRate)
+	}
 	now := util.GetNow().Unix()
 	// 针对ok用新expireTime返回旧数据问题的特殊处理; 其他交易所的资金费率都会实时变动
 	if fundingRate != nil && market == model.OKEX {
@@ -440,30 +443,12 @@ func GetFundingRate(key, secret, market, symbol string) (success bool, rate floa
 	if fundingRate == nil || now > fundingRate.ExpireTime {
 		return false, 0, util.GetNow()
 	}
-	if math.Abs(fundingRate.Rate) > 0.02 {
-		fundingRate.Rate = 3 * fundingRate.Rate
-	} else {
-		fRate := fundingRate.Rate * 100
-		if fRate >= 0 {
-			fundingRate.Rate = fRate * (1 + fRate) / 100
-		} else {
-			fRate = -1 * fRate
-			fundingRate.Rate = -1 * fRate * (1 + fRate) / 100
-		}
-	}
-	if math.Abs(fundingRate.RateNext) > 0.02 {
-		fundingRate.RateNext = 3 * fundingRate.RateNext
-	} else {
-		fRateNext := fundingRate.RateNext * 100
-		if fRateNext > 0 {
-			fundingRate.RateNext = fRateNext * (1 + fRateNext) / 100
-		} else {
-			fRateNext = -1 * fRateNext
-			fundingRate.RateNext = -1 * fRateNext * (1 + fRateNext) / 100
-		}
-	}
 	model.SetFundingRate(market, symbol, fundingRate)
-	return true, fundingRate.Rate, fundingRate.UpdateTime
+	value, _ = util.LoadSyncMap(model.FundingRates, market, symbol)
+	if value != nil {
+		return true, value.(*model.FundingRate).Rate, value.(*model.FundingRate).UpdateTime
+	}
+	return false, 0, util.GetNow()
 }
 
 // GetMaxLoan

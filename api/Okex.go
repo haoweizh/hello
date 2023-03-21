@@ -1416,9 +1416,6 @@ func getCandlesOKEX(key, secret, symbol string, before, after time.Time, count, 
 		candle.PriceLow, _ = strconv.ParseFloat(item[3].(string), 64)
 		candle.PriceClose, _ = strconv.ParseFloat(item[4].(string), 64)
 		candles = append(candles, candle)
-		if symbol == `BTC_PERP` {
-			util.Notice(`get okex candle %v`, candle)
-		}
 	}
 	return
 }

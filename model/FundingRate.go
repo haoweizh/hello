@@ -1,8 +1,13 @@
 package model
 
-import "time"
+import (
+	"hello/util"
+	"math"
+	"sync"
+	"time"
+)
 
-var fundingRates = make(map[string]map[string]*FundingRate) // market - symbol - funding rate
+var FundingRates = &sync.Map{} // market - symbol - *FundingRate
 
 type FundingRate struct {
 	Rate, RateNext float64
@@ -10,20 +15,28 @@ type FundingRate struct {
 	ExpireTime     int64     // 按秒计算的 unix time
 }
 
-func GetFundingRate(market, symbol string) (rate *FundingRate) {
-	infoLock.Lock()
-	defer infoLock.Unlock()
-	if fundingRates == nil || fundingRates[market] == nil {
-		return nil
-	}
-	return fundingRates[market][symbol]
-}
-
 func SetFundingRate(market, symbol string, fundingRate *FundingRate) {
-	infoLock.Lock()
-	defer infoLock.Unlock()
-	if fundingRates[market] == nil {
-		fundingRates[market] = make(map[string]*FundingRate)
+	if math.Abs(fundingRate.Rate) > 0.02 {
+		fundingRate.Rate = 3 * fundingRate.Rate
+	} else {
+		fRate := fundingRate.Rate * 100
+		if fRate >= 0 {
+			fundingRate.Rate = fRate * (1 + fRate) / 100
+		} else {
+			fRate = -1 * fRate
+			fundingRate.Rate = -1 * fRate * (1 + fRate) / 100
+		}
 	}
-	fundingRates[market][symbol] = fundingRate
+	if math.Abs(fundingRate.RateNext) > 0.02 {
+		fundingRate.RateNext = 3 * fundingRate.RateNext
+	} else {
+		fRateNext := fundingRate.RateNext * 100
+		if fRateNext > 0 {
+			fundingRate.RateNext = fRateNext * (1 + fRateNext) / 100
+		} else {
+			fRateNext = -1 * fRateNext
+			fundingRate.RateNext = -1 * fRateNext * (1 + fRateNext) / 100
+		}
+	}
+	util.StoreSyncMap(FundingRates, fundingRate, market, symbol)
 }
