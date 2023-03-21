@@ -29,7 +29,7 @@ func getMarketsBitgetSpot(key, secret string) (marketInfos map[string]*model.Mar
 	}
 	marketInfos = make(map[string]*model.MarketInfo)
 	for _, symbolInfo := range spotResp.Data {
-		if symbolInfo.Status != "online" && symbolInfo.QuoteCoin != "USDT" {
+		if symbolInfo.Status != "online" || symbolInfo.QuoteCoin != "USDT" {
 			continue
 		}
 		symbol := symbolInfo.BaseCoin + model.UniStandardTail[model.MarketTypeSpot]
