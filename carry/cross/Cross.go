@@ -669,7 +669,7 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 		settings == nil || len(settings) == 0 || million-int64(tick.Ts) > 100 {
 		return
 	}
-	if checkPriceLimit(setting, tick) {
+	if breakMarkPrice(setting, tick) {
 		return
 	}
 	for _, settingRelate := range settings {
@@ -678,7 +678,7 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 			(model.AppConfig.Env != `test` && million-int64(tickRelate.Ts) > 1000) {
 			continue
 		}
-		if checkPriceLimit(settingRelate, tickRelate) {
+		if breakMarkPrice(settingRelate, tickRelate) {
 			continue
 		}
 		for i := api.GetCrossLen() - 1; i >= 0; i-- {
@@ -722,7 +722,7 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 	}
 }
 
-func checkPriceLimit(setting *model.Setting, tick *model.BidAsk) bool {
+func breakMarkPrice(setting *model.Setting, tick *model.BidAsk) bool {
 	marketInfo := model.GetMarketInfo(setting.Market, setting.Symbol)
 	if marketInfo != nil && ((marketInfo.BuyLimitPriceRatio > 0 && marketInfo.BuyLimitPriceRatio < 0.1) ||
 		(marketInfo.SellLimitPriceRatio > 0 && marketInfo.SellLimitPriceRatio < 0.1)) {
@@ -731,7 +731,7 @@ func checkPriceLimit(setting *model.Setting, tick *model.BidAsk) bool {
 		ticker := model.AppMarkets.GetTicker(setting.Symbol, setting.Market)
 		if ticker == nil {
 			util.Notice(fmt.Sprintf("币种：%s 市场 %s 有限价条件，但是没有标记价格", setting.Symbol, setting.Market))
-			return false
+			return true
 		}
 		if marketInfo.BuyLimitPriceRatio > 0 && marketInfo.BuyLimitPriceRatio < 0.1 {
 			bidMaxPrice := ticker.MarkPrice * (1 + marketInfo.BuyLimitPriceRatio)
@@ -740,7 +740,7 @@ func checkPriceLimit(setting *model.Setting, tick *model.BidAsk) bool {
 				util.Info(fmt.Sprintf("币种：%s 被限买价，买上浮：%f，标记价：%f，限最高买价：%f，限最低买价：%f，当前最佳买价：%f",
 					setting.Symbol, marketInfo.BuyLimitPriceRatio, ticker.MarkPrice, bidMaxPrice, bidMinPrice, perpBidPrice))
 				//perpBidPrice = bidMaxPrice
-				return false
+				return true
 			}
 		}
 		if marketInfo.SellLimitPriceRatio > 0 && marketInfo.SellLimitPriceRatio < 0.1 {
@@ -750,11 +750,11 @@ func checkPriceLimit(setting *model.Setting, tick *model.BidAsk) bool {
 				util.Info(fmt.Sprintf("币种：%s 被限卖价，卖下浮：%f，标记价：%f，限最高卖价：%f，限最低卖价：%f，当前最佳卖价：%f",
 					setting.Symbol, marketInfo.SellLimitPriceRatio, ticker.MarkPrice, askMaxPrice, askMinPrice, perpAskPrice))
 				//perpAskPrice = askMinPrice
-				return false
+				return true
 			}
 		}
 	}
-	return true
+	return false
 }
 
 func checkTradeLine(statusBuy, statusSell *CarryStatus, score float64) (valid, haveLimit bool, limit float64) {

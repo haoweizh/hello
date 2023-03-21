@@ -41,23 +41,23 @@ type Rule struct {
 }
 
 type Markets struct {
-	tickers     sync.Map // symbol - market - ticker 行情包含标记价格
-	bidAsks     sync.Map // symbol - market - bidAsk
-	WsDepth     sync.Map // market - []chan struct{}
-	WsInitTime  sync.Map // market - time
-	Connections sync.Map // market - []*websocket.Conn
+	markPriceInfos sync.Map // symbol - market - ticker 行情包含标记价格
+	bidAsks        sync.Map // symbol - market - bidAsk
+	WsDepth        sync.Map // market - []chan struct{}
+	WsInitTime     sync.Map // market - time
+	Connections    sync.Map // market - []*websocket.Conn
 }
 
-type Ticker struct {
+type MarkPriceInfo struct {
 	MarkPrice float64
 	Ts        int
 }
 
-func (markets *Markets) SetTicker(symbol, marketName string, ticker *Ticker) {
-	value, _ := markets.tickers.Load(symbol)
+func (markets *Markets) SetTicker(symbol, marketName string, ticker *MarkPriceInfo) {
+	value, _ := markets.markPriceInfos.Load(symbol)
 	if value == nil {
 		value = &sync.Map{}
-		markets.tickers.Store(symbol, value)
+		markets.markPriceInfos.Store(symbol, value)
 	}
 	oldTicker := value.(*sync.Map)
 	last, _ := oldTicker.Load(marketName)
@@ -66,12 +66,12 @@ func (markets *Markets) SetTicker(symbol, marketName string, ticker *Ticker) {
 	}
 }
 
-func (markets *Markets) GetTicker(symbol, marketName string) *Ticker {
-	value, _ := markets.tickers.Load(symbol)
+func (markets *Markets) GetTicker(symbol, marketName string) *MarkPriceInfo {
+	value, _ := markets.markPriceInfos.Load(symbol)
 	if value != nil {
 		item, _ := value.(*sync.Map).Load(marketName)
 		if item != nil {
-			return item.(*Ticker)
+			return item.(*MarkPriceInfo)
 		}
 	}
 	return nil

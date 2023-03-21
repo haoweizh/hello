@@ -131,7 +131,7 @@ func WsDepthServeBitgetPerp(markets *model.Markets, orderHandler OrderHandler) (
 			for _, tickerData := range tickerWsResp.Data {
 				symbol := tickerData.SymbolId[0:len(tickerData.SymbolId)-4] + model.UniStandardTail[model.MarketTypePerp]
 				price, _ := strconv.ParseFloat(tickerData.MarkPrice, 64)
-				ticker := &model.Ticker{MarkPrice: price, Ts: int(tickerData.SystemTime)}
+				ticker := &model.MarkPriceInfo{MarkPrice: price, Ts: int(tickerData.SystemTime)}
 				markets.SetTicker(symbol, model.BitgetPerp, ticker)
 				//rate, _ := strconv.ParseFloat(tickerData.CapitalRate, 64)
 				//fundingRate := &model.FundingRate{
@@ -140,6 +140,10 @@ func WsDepthServeBitgetPerp(markets *model.Markets, orderHandler OrderHandler) (
 				//	ExpireTime: tickerData.NextSettleTime,
 				//}
 				//model.SetFundingRate(model.BitgetPerp, symbol, fundingRate)
+				fundingRate := model.GetFundingRate(model.BitgetPerp, symbol)
+				if fundingRate != nil && fundingRate.Rate != 0 {
+					fundingRate.ExpireTime = tickerData.NextSettleTime / 1000
+				}
 			}
 		}
 	}
@@ -290,11 +294,17 @@ func getFundingRateBitgetPerp(key, secret, symbol string) (fundingRate *model.Fu
 		return
 	}
 	rate, _ := strconv.ParseFloat(bitgetFundingResp.Data.FundingRate, 64)
-	fundingRate = &model.FundingRate{
-		Rate:       rate,
-		UpdateTime: util.GetNow(),
-		ExpireTime: util.GetNow().Unix() + 3600000/1000,
-	} //没有过期时间
+	fundingRate = model.GetFundingRate(model.BitgetPerp, symbol)
+	if fundingRate != nil && fundingRate.Rate != 0 {
+		fundingRate.Rate = rate
+		fundingRate.UpdateTime = util.GetNow()
+	} else {
+		fundingRate = &model.FundingRate{
+			Rate:       rate,
+			UpdateTime: util.GetNow(),
+			ExpireTime: (util.GetNow().Unix() + 3600000) / 1000,
+		} //没有过期时间
+	}
 	return fundingRate
 }
 
