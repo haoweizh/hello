@@ -14,9 +14,9 @@ import (
 	"time"
 )
 
-const bitgetRestUrl = "https://api.bitget.com"
-const bitgetSpotWsUrl = "wss://ws.bitget.com/spot/v1/stream"
-const bitgetPerpWsUrl = "wss://ws.bitget.com/mix/v1/stream"
+//const bitgetRestUrl = "https://api.bitget.com"
+//const bitgetSpotWsUrl = "wss://ws.bitget.com/spot/v1/stream"
+//const bitgetPerpWsUrl = "wss://ws.bitget.com/mix/v1/stream"
 
 //func getMarketsBitget(key, secret string) (marketInfos map[string]*model.MarketInfo) {
 //	marketInfos = make(map[string]*model.MarketInfo)
@@ -77,166 +77,166 @@ const bitgetPerpWsUrl = "wss://ws.bitget.com/mix/v1/stream"
 //	}
 //}
 
-func maintainChannelBitget() {
-	if !channelMaintainingXT {
-		channelMaintainingXT = true
-		go func() {
-			for true {
-				time.Sleep(time.Second * 20)
-				if err := sendToAllConnections(model.Bitget, []byte(`ping`)); err != nil {
-					util.SocketInfo("xt channel ping error " + err.Error())
-				}
-			}
-		}()
-	}
-}
+//func maintainChannelBitget() {
+//	if !channelMaintainingXT {
+//		channelMaintainingXT = true
+//		go func() {
+//			for true {
+//				time.Sleep(time.Second * 20)
+//				if err := sendToAllConnections(model.Bitget, []byte(`ping`)); err != nil {
+//					util.SocketInfo("xt channel ping error " + err.Error())
+//				}
+//			}
+//		}()
+//	}
+//}
 
-var subscribeHandlerBitget = func(connection *websocket.Conn, subscribes []interface{}, keyChannel string) error {
-	var err error = nil
-	var params []map[string]string
-	for _, subscribe := range subscribes {
-		symbol := strings.Split(subscribe.(string), "_")[0]
-		if strings.Contains(subscribe.(string), model.GetPerpTail(model.Bitget)) {
-			if keyChannel == model.SubscribeMarkPrice {
-				params = append(params, map[string]string{"instType": "MC", "channel": "ticker", "instId": symbol})
-			} else {
-				params = append(params, map[string]string{"instType": "mc", "channel": "books1", "instId": symbol})
-			}
-		} else {
-			params = append(params, map[string]string{"instType": "sp", "channel": "books5", "instId": symbol})
-		}
-	}
-	subscribeMap := make(map[string]interface{})
-	subscribeMap["op"] = "subscribe"
-	subscribeMap["args"] = params
-	subscribeMessage := util.JsonEncodeToByte(subscribeMap)
-	if err = sendToConnection(connection, subscribeMessage); err != nil {
-		util.SocketInfo(" bitget can not subscribe %s %s", subscribeMessage, err.Error())
-	}
-	util.Notice(`bitget subscribed ` + string(subscribeMessage))
-	time.Sleep(1200 * time.Millisecond)
-	return err
-}
+//var subscribeHandlerBitget = func(connection *websocket.Conn, subscribes []interface{}, keyChannel string) error {
+//	var err error = nil
+//	var params []map[string]string
+//	for _, subscribe := range subscribes {
+//		symbol := strings.Split(subscribe.(string), "_")[0]
+//		if strings.Contains(subscribe.(string), model.GetPerpTail(model.Bitget)) {
+//			if keyChannel == model.SubscribeMarkPrice {
+//				params = append(params, map[string]string{"instType": "MC", "channel": "ticker", "instId": symbol})
+//			} else {
+//				params = append(params, map[string]string{"instType": "mc", "channel": "books1", "instId": symbol})
+//			}
+//		} else {
+//			params = append(params, map[string]string{"instType": "sp", "channel": "books5", "instId": symbol})
+//		}
+//	}
+//	subscribeMap := make(map[string]interface{})
+//	subscribeMap["op"] = "subscribe"
+//	subscribeMap["args"] = params
+//	subscribeMessage := util.JsonEncodeToByte(subscribeMap)
+//	if err = sendToConnection(connection, subscribeMessage); err != nil {
+//		util.SocketInfo(" bitget can not subscribe %s %s", subscribeMessage, err.Error())
+//	}
+//	util.Notice(`bitget subscribed ` + string(subscribeMessage))
+//	time.Sleep(1200 * time.Millisecond)
+//	return err
+//}
 
-func WsDepthServeBitget(markets *model.Markets, orderHandler OrderHandler) (channels []chan struct{}, err error) {
-	markPriceWsHandler := func(connection *websocket.Conn, event []byte, orderHandler OrderHandler) {
-		//util.Notice(fmt.Sprintf("ws data: %s", event))
-		if len(event) == 4 {
-			return
-		}
-		tickerWsResp := &dtos.BitgetTickerWsResp{}
-		jsonErr := json.Unmarshal(event, tickerWsResp)
-		if jsonErr != nil {
-			util.SocketInfo(`bitget fail to unmarshal ticker ws data json ` + jsonErr.Error())
-			return
-		}
-		if tickerWsResp.Arg.InstType == "mc" && tickerWsResp.Action == "snapshot" {
-			for _, ticker := range tickerWsResp.Data {
-				symbol := ticker.SymbolId
-				price, _ := strconv.ParseFloat(ticker.MarkPrice, 64)
-				ts := int(ticker.SystemTime)
-				oldMarkPrice := markets.GetMarkPrice(symbol, model.Bitget)
-				if oldMarkPrice != nil && oldMarkPrice.Ts > ts {
-					return
-				}
-				markPrice := &model.MarkPrice{MarkPrice: price, Ts: ts}
-				markets.SetMarkPrice(symbol, model.Bitget, markPrice)
-			}
-		}
-	}
-	bookWsHandler := func(connection *websocket.Conn, event []byte, orderHandler OrderHandler) {
-		//util.Notice(fmt.Sprintf("ws data: %s", event))
-		if len(event) == 4 {
-			return
-		}
-		bookWsResp := &dtos.BitgetBoosWsResp{}
-		jsonErr := json.Unmarshal(event, bookWsResp)
-		if jsonErr != nil {
-			util.SocketInfo(`bitget fail to unmarshal book ws data json ` + jsonErr.Error())
-			return
-		}
-		if (bookWsResp.Arg.InstType == "sp" || bookWsResp.Arg.InstType == "mc") && bookWsResp.Action == "snapshot" {
-			if bookWsResp.Arg.InstId == "" || bookWsResp.Data == nil {
-				return
-			}
-			var symbol string
-			if bookWsResp.Arg.InstType == "sp" {
-				symbol = bookWsResp.Arg.InstId[0:len(bookWsResp.Arg.InstId)-4] + model.GetSpotTail(model.Bitget)
-			} else {
-				symbol = bookWsResp.Arg.InstId[0:len(bookWsResp.Arg.InstId)-4] + model.GetPerpTail(model.Bitget)
-			}
-
-			bidAsk := model.BidAsk{TsReceived: int(time.Now().UnixNano() / int64(time.Millisecond))}
-			if len(bookWsResp.Data) > 1 {
-				return
-			}
-			bidPrice, _ := strconv.ParseFloat(bookWsResp.Data[0].Bids[0][0], 64)
-			bidAmount, _ := strconv.ParseFloat(bookWsResp.Data[0].Bids[0][1], 64)
-			bids := make([]model.Tick, 0)
-			bids = append(bids, model.Tick{Price: bidPrice, Amount: bidAmount})
-			bidAsk.Bids = bids
-
-			askPrice, _ := strconv.ParseFloat(bookWsResp.Data[0].Asks[0][0], 64)
-			askAmount, _ := strconv.ParseFloat(bookWsResp.Data[0].Asks[0][1], 64)
-			asks := make([]model.Tick, 0)
-			asks = append(asks, model.Tick{Price: askPrice, Amount: askAmount})
-			bidAsk.Asks = asks
-
-			bidAsk.Ts, _ = strconv.Atoi(bookWsResp.Data[0].Ts)
-			bidAsk.UpdateId, _ = strconv.ParseInt(bookWsResp.Data[0].Ts, 10, 64)
-			haveOld, old := markets.GetBidAsk(symbol, model.Bitget)
-			if haveOld && old.UpdateId > bidAsk.UpdateId {
-				return
-			}
-			if markets.SetBidAsk(symbol, model.Bitget, &bidAsk) {
-				//util.Info(fmt.Sprintf("perp symbol: %s now bidAsk: %v", symbol, bidAsk))
-				for function, handler := range model.GetFunctions(model.Bitget, symbol) {
-					if handler != nil {
-						settings := model.GetSetting(function, model.Bitget, symbol)
-						for _, setting := range settings {
-							go handler(setting, &bidAsk)
-						}
-					}
-				}
-			}
-		}
-	}
-	channels = make([]chan struct{}, 0)
-	symbols := model.GetMarketSymbols(model.Bitget)
-	spotSubscribes := make([]interface{}, 0)
-	futureSubscribes := make([]interface{}, 0)
-	for symbol := range symbols {
-		if strings.Contains(symbol, model.GetPerpTail(model.Bitget)) {
-			futureSubscribes = append(futureSubscribes, symbol)
-		} else {
-			spotSubscribes = append(spotSubscribes, symbol)
-		}
-	}
-	GetWSSubscribes(model.Bitget, model.SubscribeDepth)
-	spotBookChannels, spotBookErr := WebSocketClient(model.Bitget, bitgetSpotWsUrl, model.SubscribeDepth,
-		spotSubscribes, subscribeHandlerBitget, bookWsHandler, orderHandler, 30)
-	if spotBookErr == nil {
-		util.Notice(`finish connect public Bitget spot book wss `)
-		channels = append(channels, spotBookChannels...)
-	}
-	time.Sleep(time.Second * 1)
-
-	perpBookChannels, perpBookErr := WebSocketClient(model.Bitget, bitgetPerpWsUrl, model.SubscribeDepth,
-		futureSubscribes, subscribeHandlerBitget, bookWsHandler, orderHandler, 30)
-	if perpBookErr == nil {
-		util.Notice(`finish connect public Bitget perp book wss `)
-		channels = append(channels, perpBookChannels...)
-	}
-	time.Sleep(time.Second * 1)
-
-	markPriceChannels, markPriceErr := WebSocketClient(model.Bitget, bitgetPerpWsUrl, model.SubscribeMarkPrice,
-		futureSubscribes, subscribeHandlerBitget, markPriceWsHandler, nil, 30)
-	if markPriceErr == nil {
-		util.Notice(`finish connect public xt Bitget mark price wss `)
-		channels = append(channels, markPriceChannels...)
-	}
-	return channels, nil
-}
+//func WsDepthServeBitget(markets *model.Markets, orderHandler OrderHandler) (channels []chan struct{}, err error) {
+//	markPriceWsHandler := func(connection *websocket.Conn, event []byte, orderHandler OrderHandler) {
+//		//util.Notice(fmt.Sprintf("ws data: %s", event))
+//		if len(event) == 4 {
+//			return
+//		}
+//		tickerWsResp := &dtos.BitgetTickerWsResp{}
+//		jsonErr := json.Unmarshal(event, tickerWsResp)
+//		if jsonErr != nil {
+//			util.SocketInfo(`bitget fail to unmarshal ticker ws data json ` + jsonErr.Error())
+//			return
+//		}
+//		if tickerWsResp.Arg.InstType == "mc" && tickerWsResp.Action == "snapshot" {
+//			for _, ticker := range tickerWsResp.Data {
+//				symbol := ticker.SymbolId
+//				price, _ := strconv.ParseFloat(ticker.MarkPrice, 64)
+//				ts := int(ticker.SystemTime)
+//				oldMarkPrice := markets.GetMarkPrice(symbol, model.Bitget)
+//				if oldMarkPrice != nil && oldMarkPrice.Ts > ts {
+//					return
+//				}
+//				markPrice := &model.MarkPrice{MarkPrice: price, Ts: ts}
+//				markets.SetMarkPrice(symbol, model.Bitget, markPrice)
+//			}
+//		}
+//	}
+//	bookWsHandler := func(connection *websocket.Conn, event []byte, orderHandler OrderHandler) {
+//		//util.Notice(fmt.Sprintf("ws data: %s", event))
+//		if len(event) == 4 {
+//			return
+//		}
+//		bookWsResp := &dtos.BitgetBoosWsResp{}
+//		jsonErr := json.Unmarshal(event, bookWsResp)
+//		if jsonErr != nil {
+//			util.SocketInfo(`bitget fail to unmarshal book ws data json ` + jsonErr.Error())
+//			return
+//		}
+//		if (bookWsResp.Arg.InstType == "sp" || bookWsResp.Arg.InstType == "mc") && bookWsResp.Action == "snapshot" {
+//			if bookWsResp.Arg.InstId == "" || bookWsResp.Data == nil {
+//				return
+//			}
+//			var symbol string
+//			if bookWsResp.Arg.InstType == "sp" {
+//				symbol = bookWsResp.Arg.InstId[0:len(bookWsResp.Arg.InstId)-4] + model.GetSpotTail(model.Bitget)
+//			} else {
+//				symbol = bookWsResp.Arg.InstId[0:len(bookWsResp.Arg.InstId)-4] + model.GetPerpTail(model.Bitget)
+//			}
+//
+//			bidAsk := model.BidAsk{TsReceived: int(time.Now().UnixNano() / int64(time.Millisecond))}
+//			if len(bookWsResp.Data) > 1 {
+//				return
+//			}
+//			bidPrice, _ := strconv.ParseFloat(bookWsResp.Data[0].Bids[0][0], 64)
+//			bidAmount, _ := strconv.ParseFloat(bookWsResp.Data[0].Bids[0][1], 64)
+//			bids := make([]model.Tick, 0)
+//			bids = append(bids, model.Tick{Price: bidPrice, Amount: bidAmount})
+//			bidAsk.Bids = bids
+//
+//			askPrice, _ := strconv.ParseFloat(bookWsResp.Data[0].Asks[0][0], 64)
+//			askAmount, _ := strconv.ParseFloat(bookWsResp.Data[0].Asks[0][1], 64)
+//			asks := make([]model.Tick, 0)
+//			asks = append(asks, model.Tick{Price: askPrice, Amount: askAmount})
+//			bidAsk.Asks = asks
+//
+//			bidAsk.Ts, _ = strconv.Atoi(bookWsResp.Data[0].Ts)
+//			bidAsk.UpdateId, _ = strconv.ParseInt(bookWsResp.Data[0].Ts, 10, 64)
+//			haveOld, old := markets.GetBidAsk(symbol, model.Bitget)
+//			if haveOld && old.UpdateId > bidAsk.UpdateId {
+//				return
+//			}
+//			if markets.SetBidAsk(symbol, model.Bitget, &bidAsk) {
+//				//util.Info(fmt.Sprintf("perp symbol: %s now bidAsk: %v", symbol, bidAsk))
+//				for function, handler := range model.GetFunctions(model.Bitget, symbol) {
+//					if handler != nil {
+//						settings := model.GetSetting(function, model.Bitget, symbol)
+//						for _, setting := range settings {
+//							go handler(setting, &bidAsk)
+//						}
+//					}
+//				}
+//			}
+//		}
+//	}
+//	channels = make([]chan struct{}, 0)
+//	symbols := model.GetMarketSymbols(model.Bitget)
+//	spotSubscribes := make([]interface{}, 0)
+//	futureSubscribes := make([]interface{}, 0)
+//	for symbol := range symbols {
+//		if strings.Contains(symbol, model.GetPerpTail(model.Bitget)) {
+//			futureSubscribes = append(futureSubscribes, symbol)
+//		} else {
+//			spotSubscribes = append(spotSubscribes, symbol)
+//		}
+//	}
+//	GetWSSubscribes(model.Bitget, model.SubscribeDepth)
+//	spotBookChannels, spotBookErr := WebSocketClient(model.Bitget, bitgetSpotWsUrl, model.SubscribeDepth,
+//		spotSubscribes, subscribeHandlerBitget, bookWsHandler, orderHandler, 30)
+//	if spotBookErr == nil {
+//		util.Notice(`finish connect public Bitget spot book wss `)
+//		channels = append(channels, spotBookChannels...)
+//	}
+//	time.Sleep(time.Second * 1)
+//
+//	perpBookChannels, perpBookErr := WebSocketClient(model.Bitget, bitgetPerpWsUrl, model.SubscribeDepth,
+//		futureSubscribes, subscribeHandlerBitget, bookWsHandler, orderHandler, 30)
+//	if perpBookErr == nil {
+//		util.Notice(`finish connect public Bitget perp book wss `)
+//		channels = append(channels, perpBookChannels...)
+//	}
+//	time.Sleep(time.Second * 1)
+//
+//	markPriceChannels, markPriceErr := WebSocketClient(model.Bitget, bitgetPerpWsUrl, model.SubscribeMarkPrice,
+//		futureSubscribes, subscribeHandlerBitget, markPriceWsHandler, nil, 30)
+//	if markPriceErr == nil {
+//		util.Notice(`finish connect public xt Bitget mark price wss `)
+//		channels = append(channels, markPriceChannels...)
+//	}
+//	return channels, nil
+//}
 
 func getBalanceBitget(key string, secret string) (success bool, balances []*model.Balance) {
 	client := dtos.BitgetRestClient{BaseUrl: bitgetRestUrl}

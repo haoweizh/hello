@@ -17,6 +17,8 @@ import (
 const bitgetRestUrl = "https://api.bitget.com"
 const bitgetSpotWsUrl = "wss://ws.bitget.com/spot/v1/stream"
 
+var channelMaintainingBitgetSpot = false
+
 func getMarketsBitgetSpot(key, secret string) (marketInfos map[string]*model.MarketInfo) {
 	httpResp, httpErr := util.HttpRequest(http.MethodGet, bitgetRestUrl+"/api/spot/v1/public/products", "", map[string]string{}, 30)
 	spotResp := &dtos.BitgetSpotMarketResp{}
@@ -103,12 +105,52 @@ func WsDepthServeBitgetSpot(markets *model.Markets, orderHandler OrderHandler) (
 	}
 	channels = make([]chan struct{}, 0)
 	spotSubscribes := make([]interface{}, 0)
-	GetWSSubscribes(model.BitgetSpot, model.SubscribeDepth)
+	symbols := GetMarketSymbols(model.BitgetSpot)
+	for symbol, _ := range symbols {
+		spotSubscribes = append(spotSubscribes, symbol)
+	}
 	spotBookChannels, spotBookErr := WebSocketClient(model.BitgetSpot, bitgetSpotWsUrl,
-		spotSubscribes, subscribeHandlerBitget, bookWsHandler, orderHandler, 30)
+		spotSubscribes, subscribeHandlerBitgetSpotBookTicker, bookWsHandler, orderHandler, 30)
 	if spotBookErr == nil {
 		util.Notice(`finish connect public Bitget spot book wss `)
 		channels = append(channels, spotBookChannels...)
+	} else {
+		util.Notice(`fail to connect public Bitget spot book wss `)
+		return nil, spotBookErr
 	}
+	go maintainChannelBitgetSpot()
 	return channels, nil
+}
+
+var subscribeHandlerBitgetSpotBookTicker = func(connection *websocket.Conn, subscribes []interface{}) error {
+	var err error = nil
+	var params []map[string]string
+	for _, subscribe := range subscribes {
+		symbol := strings.Split(subscribe.(string), "_")[0]
+		params = append(params, map[string]string{"instType": "sp", "channel": "books5", "instId": symbol})
+	}
+	subscribeMap := make(map[string]interface{})
+	subscribeMap["op"] = "subscribe"
+	subscribeMap["args"] = params
+	subscribeMessage := util.JsonEncodeToByte(subscribeMap)
+	if err = SendToConnection(model.BitgetSpot, connection, subscribeMessage); err != nil {
+		util.SocketInfo(" bitget can not subscribe %s %s", subscribeMessage, err.Error())
+	}
+	util.Notice(`bitget subscribed ` + string(subscribeMessage))
+	time.Sleep(1200 * time.Millisecond)
+	return err
+}
+
+func maintainChannelBitgetSpot() {
+	if !channelMaintainingBitgetSpot {
+		channelMaintainingBitgetSpot = true
+		go func() {
+			for true {
+				time.Sleep(time.Second * 20)
+				if err := SendToAllConnections(model.BitgetSpot, []byte(`ping`)); err != nil {
+					util.SocketInfo("xt channel ping error " + err.Error())
+				}
+			}
+		}()
+	}
 }

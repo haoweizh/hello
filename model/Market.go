@@ -41,6 +41,7 @@ type Rule struct {
 }
 
 type Markets struct {
+	tickerInfos sync.Map // symbol - market - ticker 行情包含标记价格
 	bidAsks     sync.Map // symbol - market - bidAsk
 	WsDepth     sync.Map // market - []chan struct{}
 	WsInitTime  sync.Map // market - time
