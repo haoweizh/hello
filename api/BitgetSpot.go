@@ -243,5 +243,33 @@ func cancelOrdersBitgetSpot(key, secret, symbol string) (result bool) {
 }
 
 func queryOrderBitgetSpot(key, secret, symbol string, orderId string) (order *model.Order) {
+	success, _, _, dialectSymbol := model.GetFromStandard(model.BitgetSpot, symbol)
+	if !success {
+		util.Notice("fail to query spot order, GetFromStandard: " + symbol)
+		return order
+	}
+	order = &model.Order{Market: model.BitgetSpot, Status: model.CarryStatusFail, OrderId: orderId, Symbol: symbol}
+	client := dtos.BitgetRestClient{BaseUrl: bitgetRestUrl, Passphrase: model.AppConfig.Phase, ApiKey: key, ApiSecretKey: secret}
+	params := map[string]string{"symbol": dialectSymbol, "orderId": orderId}
+	httpResp, httpErr := client.DoPost("/api/spot/v1/trade/orderInfo", string(util.JsonEncodeToByte(params)))
+	orderDetailResp := &dtos.BitgetSpotOrderDetailResp{}
+	perpJsonErr := json.Unmarshal(httpResp, orderDetailResp)
+	if orderDetailResp == nil || orderDetailResp.Code != "00000" {
+		util.Notice(fmt.Sprintf("get bitget spot order detail error, resp: %s, httpErr: %v, jsonErr: %v", httpResp, httpErr, perpJsonErr))
+		return order
+	} else {
+		if len(orderDetailResp.Data) > 0 {
+			orderResp := orderDetailResp.Data[0]
+			order.DealPrice, _ = strconv.ParseFloat(orderResp.FillPrice, 64)
+			order.DealAmount, _ = strconv.ParseFloat(orderResp.FillQuantity, 64)
+			amount, _ := strconv.ParseFloat(orderResp.Quantity, 64)
+			order.UnfilledQuantity = amount - order.DealAmount
+			if orderResp.Status == "cancelled" {
+				order.Status = model.CarryStatusFail
+			} else if orderResp.Status == "full_fill" || orderResp.Status == "partial_fill" {
+				order.Status = model.CarryStatusSuccess
+			}
+		}
+	}
 	return order
 }

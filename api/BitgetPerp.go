@@ -42,6 +42,7 @@ func getMarketsBitgetPerp(key, secret string) (marketInfos map[string]*model.Mar
 		//marketInfo.CTValue, _ = strconv.ParseFloat(perpInfo.ContractSize, 64)
 		marketInfo.BuyLimitPriceRatio, _ = strconv.ParseFloat(perpInfo.BuyLimitPriceRatio, 64)
 		marketInfo.SellLimitPriceRatio, _ = strconv.ParseFloat(perpInfo.SellLimitPriceRatio, 64)
+		marketInfo.MoneyMin = 5.0
 		marketInfos[symbol] = marketInfo
 	}
 	return marketInfos
@@ -291,6 +292,11 @@ func getFundingRateBitgetPerp(key, secret, symbol string) (fundingRate *model.Fu
 }
 
 func placeOrderBitgetPerp(key, secret string, order *model.Order, orderSide, orderType, symbol string, price, amount float64) {
+	success, _, _, dialectSymbol := model.GetFromStandard(model.BitgetPerp, symbol)
+	if !success {
+		util.Notice("fail to place perp order, GetFromStandard: " + symbol)
+		return
+	}
 	priceSpot, decimalSpot := model.FormatPrice(model.BitgetPerp, symbol, price)
 	amountStr := util.CutTailZero(fmt.Sprintf(`%f`, model.GetAmountInMarket(model.BitgetPerp, symbol, amount, priceSpot)))
 	priceStr := util.CutTailZero(strconv.FormatFloat(priceSpot, 'f', decimalSpot, 64))
@@ -299,11 +305,6 @@ func placeOrderBitgetPerp(key, secret string, order *model.Order, orderSide, ord
 		tradeOrderSide = "buy_single"
 	} else {
 		tradeOrderSide = "sell_single"
-	}
-	success, _, _, dialectSymbol := model.GetFromStandard(model.BitgetPerp, symbol)
-	if !success {
-		util.Notice("fail to place perp order, GetFromStandard: " + symbol)
-		return
 	}
 	client := dtos.BitgetRestClient{BaseUrl: bitgetRestUrl, Passphrase: model.AppConfig.Phase, ApiKey: key, ApiSecretKey: secret}
 	params := map[string]string{
@@ -326,12 +327,12 @@ func placeOrderBitgetPerp(key, secret string, order *model.Order, orderSide, ord
 }
 
 func cancelOrdersBitgetPerp(key, secret, symbol string) (result bool) {
-	client := dtos.BitgetRestClient{BaseUrl: bitgetRestUrl, Passphrase: model.AppConfig.Phase, ApiKey: key, ApiSecretKey: secret}
 	success, _, _, dialectSymbol := model.GetFromStandard(model.BitgetPerp, symbol)
 	if !success {
 		util.Notice("fail to cancel perp order, GetFromStandard: " + symbol)
 		return false
 	}
+	client := dtos.BitgetRestClient{BaseUrl: bitgetRestUrl, Passphrase: model.AppConfig.Phase, ApiKey: key, ApiSecretKey: secret}
 	planHttpResp, planHttpErr := client.DoGet("/api/spot/v1/trade/open-orders", map[string]string{"symbol": dialectSymbol})
 	bitgetPerpOpenOrderResp := &dtos.BitgetPerpOpenOrderResp{}
 	jsonErr := json.Unmarshal(planHttpResp, bitgetPerpOpenOrderResp)
@@ -361,5 +362,28 @@ func cancelOrdersBitgetPerp(key, secret, symbol string) (result bool) {
 }
 
 func queryOrderBitgetPerp(key, secret, symbol string, orderId string) (order *model.Order) {
+	success, _, _, dialectSymbol := model.GetFromStandard(model.BitgetPerp, symbol)
+	if !success {
+		util.Notice("fail to query perp order, GetFromStandard: " + symbol)
+		return order
+	}
+	order = &model.Order{Market: model.BitgetPerp, Status: model.CarryStatusFail, OrderId: orderId, Symbol: symbol}
+	client := dtos.BitgetRestClient{BaseUrl: bitgetRestUrl, Passphrase: model.AppConfig.Phase, ApiKey: key, ApiSecretKey: secret}
+	httpResp, httpErr := client.DoGet("/api/mix/v1/order/detail", map[string]string{"symbol": dialectSymbol, "orderId": orderId})
+	orderDetailResp := &dtos.BitgetPerpOrderDetailResp{}
+	perpJsonErr := json.Unmarshal(httpResp, orderDetailResp)
+	if orderDetailResp == nil || orderDetailResp.Code != "00000" {
+		util.Notice(fmt.Sprintf("get bitget perp order detail error, resp: %s, httpErr: %v, jsonErr: %v", httpResp, httpErr, perpJsonErr))
+		return order
+	} else {
+		order.DealPrice = orderDetailResp.Data.PriceAvg
+		order.DealAmount = orderDetailResp.Data.FilledQty
+		order.UnfilledQuantity = orderDetailResp.Data.Size - orderDetailResp.Data.FilledQty
+		if orderDetailResp.Data.State == "canceled" {
+			order.Status = model.CarryStatusFail
+		} else if orderDetailResp.Data.State == "filled" || orderDetailResp.Data.State == "partially_filled" {
+			order.Status = model.CarryStatusSuccess
+		}
+	}
 	return order
 }
