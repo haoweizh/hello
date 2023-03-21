@@ -669,16 +669,10 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 		settings == nil || len(settings) == 0 || million-int64(tick.Ts) > 100 {
 		return
 	}
-	if breakMarkPrice(setting, tick) {
-		return
-	}
 	for _, settingRelate := range settings {
 		tickGet, tickRelate := model.AppMarkets.GetBidAsk(settingRelate.Symbol, settingRelate.Market)
 		if !tickGet || setting.ID == settingRelate.ID ||
 			(model.AppConfig.Env != `test` && million-int64(tickRelate.Ts) > 1000) {
-			continue
-		}
-		if breakMarkPrice(settingRelate, tickRelate) {
 			continue
 		}
 		for i := api.GetCrossLen() - 1; i >= 0; i-- {
@@ -722,36 +716,35 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 	}
 }
 
-func breakMarkPrice(setting *model.Setting, tick *model.BidAsk) bool {
+func breakMarkPrice(setting *model.Setting, price float64, orderSide string) bool {
 	marketInfo := model.GetMarketInfo(setting.Market, setting.Symbol)
-	if marketInfo != nil && ((marketInfo.BuyLimitPriceRatio > 0 && marketInfo.BuyLimitPriceRatio < 0.1) ||
-		(marketInfo.SellLimitPriceRatio > 0 && marketInfo.SellLimitPriceRatio < 0.1)) {
-		perpBidPrice := tick.Bids[0].Price
-		perpAskPrice := tick.Asks[0].Price
-		ticker := model.AppMarkets.GetTicker(setting.Symbol, setting.Market)
-		if ticker == nil {
+	if marketInfo != nil && orderSide == model.OrderSideBuy && (marketInfo.BuyLimitPriceRatio > 0 && marketInfo.BuyLimitPriceRatio < 0.1) {
+		markPriceInfo := model.AppMarkets.GetMarkPriceInfo(setting.Symbol, setting.Market)
+		if markPriceInfo == nil {
 			util.Notice(fmt.Sprintf("币种：%s 市场 %s 有限价条件，但是没有标记价格", setting.Symbol, setting.Market))
 			return true
 		}
-		if marketInfo.BuyLimitPriceRatio > 0 && marketInfo.BuyLimitPriceRatio < 0.1 {
-			bidMaxPrice := ticker.MarkPrice * (1 + marketInfo.BuyLimitPriceRatio)
-			bidMinPrice := ticker.MarkPrice * (1 - marketInfo.BuyLimitPriceRatio)
-			if perpBidPrice > bidMaxPrice || perpBidPrice < bidMinPrice {
-				util.Info(fmt.Sprintf("币种：%s 被限买价，买上浮：%f，标记价：%f，限最高买价：%f，限最低买价：%f，当前最佳买价：%f",
-					setting.Symbol, marketInfo.BuyLimitPriceRatio, ticker.MarkPrice, bidMaxPrice, bidMinPrice, perpBidPrice))
-				//perpBidPrice = bidMaxPrice
-				return true
-			}
+		bidMaxPrice := markPriceInfo.MarkPrice * (1 + marketInfo.BuyLimitPriceRatio)
+		bidMinPrice := markPriceInfo.MarkPrice * (1 - marketInfo.BuyLimitPriceRatio)
+		if price > bidMaxPrice || price < bidMinPrice {
+			util.Info(fmt.Sprintf("币种：%s 被限买价，买上浮：%f，标记价：%f，限最高买价：%f，限最低买价：%f，当前最佳买价：%f",
+				setting.Symbol, marketInfo.BuyLimitPriceRatio, markPriceInfo.MarkPrice, bidMaxPrice, bidMinPrice, price))
+			//perpBidPrice = bidMaxPrice
+			return true
 		}
-		if marketInfo.SellLimitPriceRatio > 0 && marketInfo.SellLimitPriceRatio < 0.1 {
-			askMaxPrice := ticker.MarkPrice * (1 + marketInfo.BuyLimitPriceRatio)
-			askMinPrice := ticker.MarkPrice * (1 - marketInfo.BuyLimitPriceRatio)
-			if perpAskPrice > askMaxPrice || perpAskPrice < askMinPrice {
-				util.Info(fmt.Sprintf("币种：%s 被限卖价，卖下浮：%f，标记价：%f，限最高卖价：%f，限最低卖价：%f，当前最佳卖价：%f",
-					setting.Symbol, marketInfo.SellLimitPriceRatio, ticker.MarkPrice, askMaxPrice, askMinPrice, perpAskPrice))
-				//perpAskPrice = askMinPrice
-				return true
-			}
+	} else if marketInfo != nil && orderSide == model.OrderSideSell && (marketInfo.SellLimitPriceRatio > 0 && marketInfo.SellLimitPriceRatio < 0.1) {
+		markPriceInfo := model.AppMarkets.GetMarkPriceInfo(setting.Symbol, setting.Market)
+		if markPriceInfo == nil {
+			util.Notice(fmt.Sprintf("币种：%s 市场 %s 有限价条件，但是没有标记价格", setting.Symbol, setting.Market))
+			return true
+		}
+		askMaxPrice := markPriceInfo.MarkPrice * (1 + marketInfo.SellLimitPriceRatio)
+		askMinPrice := markPriceInfo.MarkPrice * (1 - marketInfo.SellLimitPriceRatio)
+		if price > askMaxPrice || price < askMinPrice {
+			util.Info(fmt.Sprintf("币种：%s 被限卖价，卖下浮：%f，标记价：%f，限最高卖价：%f，限最低卖价：%f，当前最佳卖价：%f",
+				setting.Symbol, marketInfo.SellLimitPriceRatio, markPriceInfo.MarkPrice, askMaxPrice, askMinPrice, price))
+			//perpAskPrice = askMinPrice
+			return true
 		}
 	}
 	return false
@@ -905,6 +898,9 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarrySta
 				fmt.Sprintf(`%v`, green)})
 	}
 	if statusBuy == nil || statusSell == nil {
+		return nil, nil, 0, 0, 0, nil, nil
+	}
+	if breakMarkPrice(statusBuy.setting, priceBuy, model.OrderSideBuy) || breakMarkPrice(statusSell.setting, priceSell, model.OrderSideSell) {
 		return nil, nil, 0, 0, 0, nil, nil
 	}
 	// 如果上一次交易不是本交易对，但上一次交易很可能影响了资金状况，需要对本carryStatus的可买卖数量进行调整

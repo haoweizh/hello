@@ -53,7 +53,7 @@ type MarkPriceInfo struct {
 	Ts        int
 }
 
-func (markets *Markets) SetTicker(symbol, marketName string, ticker *MarkPriceInfo) {
+func (markets *Markets) SetMarkPriceInfo(symbol, marketName string, ticker *MarkPriceInfo) {
 	value, _ := markets.markPriceInfos.Load(symbol)
 	if value == nil {
 		value = &sync.Map{}
@@ -66,7 +66,7 @@ func (markets *Markets) SetTicker(symbol, marketName string, ticker *MarkPriceIn
 	}
 }
 
-func (markets *Markets) GetTicker(symbol, marketName string) *MarkPriceInfo {
+func (markets *Markets) GetMarkPriceInfo(symbol, marketName string) *MarkPriceInfo {
 	value, _ := markets.markPriceInfos.Load(symbol)
 	if value != nil {
 		item, _ := value.(*sync.Map).Load(marketName)

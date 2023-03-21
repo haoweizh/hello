@@ -132,7 +132,7 @@ func WsDepthServeBitgetPerp(markets *model.Markets, orderHandler OrderHandler) (
 				symbol := tickerData.SymbolId[0:len(tickerData.SymbolId)-4] + model.UniStandardTail[model.MarketTypePerp]
 				price, _ := strconv.ParseFloat(tickerData.MarkPrice, 64)
 				ticker := &model.MarkPriceInfo{MarkPrice: price, Ts: int(tickerData.SystemTime)}
-				markets.SetTicker(symbol, model.BitgetPerp, ticker)
+				markets.SetMarkPriceInfo(symbol, model.BitgetPerp, ticker)
 				//rate, _ := strconv.ParseFloat(tickerData.CapitalRate, 64)
 				//fundingRate := &model.FundingRate{
 				//	Rate:       rate,
