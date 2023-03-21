@@ -19,6 +19,8 @@ var monitorInfo = make(map[string]map[string]map[string][]string) // userKey - t
 var AppMetric = &MetricManager{}
 var IgnoreFunctions = map[string]bool{FunctionDynamicTurtle: true, FunctionTurtleNormal: true, FunctionDynamicCombine: true}
 
+const BitgetSpot = `bitgetspot`
+const BitgetPerp = `bitgetperp`
 const Kucoin = `kucoin`
 const KucoinSpot = `kucoinspot`
 const KucoinPerp = `kucoinperp`
@@ -72,8 +74,8 @@ var AppConfig *Config
 var AppMarkets = &Markets{}
 var ChannelMaintaining sync.Map // market - bool
 var DialectTail = map[string]map[string]string{
-	MarketTypeSpot:   {Gate: `_USDT`, Ftx: `/USD`, OKEX: `-USDT`, BybitSpot: `USDT`, BinanceSpot: `USDT`, KucoinSpot: `-USDT`},
-	MarketTypePerp:   {Gate: `_USDT`, Ftx: `-PERP`, OKEX: `-USDT-SWAP`, BybitPerp: `USDT`, BinancePerp: `USDT`, Mexc: `_USDT`, KucoinPerp: `USDTM`},
+	MarketTypeSpot:   {Gate: `_USDT`, Ftx: `/USD`, OKEX: `-USDT`, BybitSpot: `USDT`, BinanceSpot: `USDT`, KucoinSpot: `-USDT`, BitgetSpot: `USDT_SPBL`},
+	MarketTypePerp:   {Gate: `_USDT`, Ftx: `-PERP`, OKEX: `-USDT-SWAP`, BybitPerp: `USDT`, BinancePerp: `USDT`, Mexc: `_USDT`, KucoinPerp: `USDTM`, BitgetPerp: `USDT_UMCBL`},
 	MarketTypeFuture: {GXZQ: ``},
 }
 var UniStandardTail = map[string]string{MarketTypeSpot: `_USDT`, MarketTypePerp: `_PERP`, MarketTypeFuture: `_FUTURE`}

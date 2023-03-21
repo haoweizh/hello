@@ -811,6 +811,10 @@ func GetMarketInfos(market string) (marketInfo map[string]*model.MarketInfo) {
 		return getMarketsBybitSpot(accounts[0].Key, accounts[0].Secret)
 	case model.HuobiSpot:
 		return getMarketsHuobiSpot(accounts[0].Key, accounts[0].Secret)
+	case model.BitgetSpot:
+		return getMarketsBitgetSpot(accounts[0].Key, accounts[0].Secret)
+	case model.BitgetPerp:
+		return getMarketsBitgetPerp(accounts[0].Key, accounts[0].Secret)
 	}
 	return
 }
@@ -994,6 +998,11 @@ func InitMarketInfos() (success bool) {
 			}()
 		case model.BybitSpot:
 			model.SetMarketInfos(market, getMarketsBybitSpot(accounts[0].Key, accounts[0].Secret))
+		case model.BitgetSpot:
+			model.SetMarketInfos(market, getMarketsBitgetSpot(accounts[0].Key, accounts[0].Secret))
+		case model.BitgetPerp:
+			model.SetMarketInfos(market, getMarketsBitgetPerp(accounts[0].Key, accounts[0].Secret))
+			setBitgetPositionMode(accounts[0].Key, accounts[0].Secret)
 		}
 	}
 	return success
@@ -1029,6 +1038,10 @@ func CreateMarketDepthServer(markets *model.Markets, market string, orderHandler
 		channels, err = WsDepthServeFtx(markets, nil)
 	case model.Mexc:
 		channels, err = WsDepthServeMexc(markets, nil, true)
+	case model.BitgetSpot:
+		channels, err = WsDepthServeBitgetSpot(markets, orderHandler)
+	case model.BitgetPerp:
+		channels, err = WsDepthServeBitgetPerp(markets, orderHandler)
 	}
 	if err != nil {
 		util.Notice(market + ` can not create depth server ` + err.Error())
