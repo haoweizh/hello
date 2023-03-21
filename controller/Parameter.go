@@ -395,14 +395,14 @@ func holdPage(c *gin.Context) {
 		crossInU := map[string]map[string]float64{}
 		crossCount := map[string]map[string]float64{}
 		for carryRows.Next() {
-			var side, date, amountType, refreshType string
+			var side, date, refreshType string
 			var value, orderNum float64
+			var amountType int
 			_ = carryRows.Scan(&amountType, &side, &value, &date, &orderNum, &refreshType)
 			dates := strings.Split(date, `-`)
 			date = fmt.Sprintf(`%s-%s`, dates[1], dates[2])
 			date = date[0:strings.Index(date, `T`)]
-			i := model.AppConfig.GetIndexFromKey(amountType)
-			if i == index {
+			if amountType == index {
 				if crossInU[date] == nil || crossCount[date] == nil {
 					crossInU[date] = map[string]float64{}
 					crossCount[date] = map[string]float64{}
@@ -426,14 +426,15 @@ func holdPage(c *gin.Context) {
 		Where(`refresh_type!=?`, model.FunctionSimulation).Group(`market,order_side,date(order_time),amount_type,refresh_type`).Order(`date(order_time) desc, market`).Rows()
 	if carryRows != nil {
 		for carryRows.Next() {
-			var marketName, side, date, amountType, refreshType string
+			var marketName, side, date, refreshType string
 			var value, orderNum, failRate float64
+			var amountType int
 			_ = carryRows.Scan(&marketName, &amountType, &side, &value, &date, &refreshType, &orderNum)
 			dates := strings.Split(date, `-`)
 			date = fmt.Sprintf(`%s-%s`, dates[1], dates[2])
 			date = date[0:strings.Index(date, `T`)]
 			key := fmt.Sprintf(`%s-%s-%s-%s-%s`, marketName, amountType, side, date, refreshType)
-			account := model.AppConfig.GetAccountFromKey(marketName, amountType)
+			account := model.AppConfig.GetAccountFromKeyIndex(marketName, ``, amountType)
 			if account != nil && model.AppConfig.GetAccounts(marketName)[index].Key == account.Key {
 				if orderNum > 0 {
 					failRate = 100 * failData[key] / orderNum

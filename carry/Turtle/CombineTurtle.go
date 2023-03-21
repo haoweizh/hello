@@ -99,10 +99,10 @@ var ProcessCombineTurtle = func(settingCombine *model.Setting, tick *model.BidAs
 		settingNormal.PriceX, dataNormal.Liquidated, dataNormal.GetIds(), settingCombine.Chance, settingCombine.GridAmount,
 		settingCombine.PriceX, dataCombine.Liquidated, dataCombine.GetIds())
 	util.StoreSyncMap(&model.CarryInfo, msg, account.Key, msgKey)
-	placeTurtleLong(account.Key, account.Secret, model.OrderTypeStop, dataNormal, settingNormal, minSize, tick, isBig, canOpen)
-	placeTurtleShort(account.Key, account.Secret, model.OrderTypeStop, dataNormal, settingNormal, minSize, tick, isBig, canOpen)
-	placeTurtleLong(account.Key, account.Secret, model.OrderTypeLimit, dataCombine, settingCombine, minSize, tick, isBig, canOpen)
-	placeTurtleShort(account.Key, account.Secret, model.OrderTypeLimit, dataCombine, settingCombine, minSize, tick, isBig, canOpen)
+	placeTurtleLong(account, model.OrderTypeStop, dataNormal, settingNormal, minSize, tick, isBig, canOpen)
+	placeTurtleShort(account, model.OrderTypeStop, dataNormal, settingNormal, minSize, tick, isBig, canOpen)
+	placeTurtleLong(account, model.OrderTypeLimit, dataCombine, settingCombine, minSize, tick, isBig, canOpen)
+	placeTurtleShort(account, model.OrderTypeLimit, dataCombine, settingCombine, minSize, tick, isBig, canOpen)
 	needCheck := false
 	// 每次只检查一个，如果同时检查多个，会导致一个里面更新的isBig在另一个里面没有更新
 	if handleBreakLong(settingCombine, settingNormal, dataCombine, dataNormal, turtleCoins, isBig) {
@@ -225,7 +225,7 @@ func removeOpenOrders(data *api.TurtleData) {
 	}
 }
 
-func placeTurtleLong(key, secret, orderType string, data *api.TurtleData, setting *model.Setting,
+func placeTurtleLong(account *model.Account, orderType string, data *api.TurtleData, setting *model.Setting,
 	minSize float64, tick *model.BidAsk, big int, canOpen bool) {
 	amount := data.Amount
 	function := model.Open
@@ -291,7 +291,7 @@ func placeTurtleLong(key, secret, orderType string, data *api.TurtleData, settin
 				LineSell:     data.N,
 				Price:        price,
 				TriggerPrice: price,
-				AmountType:   key,
+				AmountType:   account.Index,
 				Market:       market,
 				OrderSide:    model.OrderSideBuy,
 				OrderType:    orderType,
@@ -299,7 +299,7 @@ func placeTurtleLong(key, secret, orderType string, data *api.TurtleData, settin
 				Status:       model.CarryStatusSuccess,
 				Symbol:       symbol}}
 		} else {
-			data.OrderLong = api.MustPlaceOrder(key, secret, model.OrderSideBuy, orderType, market, symbol, ``,
+			data.OrderLong = api.MustPlaceOrder(account.Key, account.Secret, model.OrderSideBuy, orderType, market, symbol, ``,
 				setting.Function, priceDeal, price, amount, nil)
 		}
 		if data.OrderAdjust == nil {
@@ -320,7 +320,7 @@ func placeTurtleLong(key, secret, orderType string, data *api.TurtleData, settin
 	}
 }
 
-func placeTurtleShort(key, secret, orderType string, data *api.TurtleData, setting *model.Setting,
+func placeTurtleShort(account *model.Account, orderType string, data *api.TurtleData, setting *model.Setting,
 	minSize float64, tick *model.BidAsk, big int, canOpen bool) {
 	amount := data.Amount
 	function := model.Open
@@ -392,7 +392,7 @@ func placeTurtleShort(key, secret, orderType string, data *api.TurtleData, setti
 				LineSell:     data.N,
 				Price:        price,
 				TriggerPrice: price,
-				AmountType:   key,
+				AmountType:   account.Index,
 				Market:       market,
 				OrderSide:    model.OrderSideSell,
 				OrderType:    orderType,
@@ -400,7 +400,7 @@ func placeTurtleShort(key, secret, orderType string, data *api.TurtleData, setti
 				Status:       model.CarryStatusSuccess,
 				Symbol:       symbol}}
 		} else {
-			data.OrderShort = api.MustPlaceOrder(key, secret, model.OrderSideSell, orderType, market, symbol, ``,
+			data.OrderShort = api.MustPlaceOrder(account.Key, account.Secret, model.OrderSideSell, orderType, market, symbol, ``,
 				setting.Function, priceDeal, price, amount, nil)
 		}
 		if data.OrderAdjust == nil {

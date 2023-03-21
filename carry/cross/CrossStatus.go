@@ -312,12 +312,12 @@ func addLastCarry(order *model.Order, setting *model.Setting) {
 	tenMin, _ := time.ParseDuration(`10m`)
 	second, _ := time.ParseDuration(`500ms`)
 	for i, lastOrder := range lastOrders[setting.Market][setting.Symbol] {
-		account := model.AppConfig.GetAccountFromKey(order.Market, order.AmountType)
+		account := model.AppConfig.GetAccountFromKeyIndex(order.Market, ``, order.AmountType)
 		now := time.Now()
 		if lastOrder == nil || order.OrderTime.Add(tenMin).Before(now) || order.OrderTime.Add(second).After(now) || account == nil {
 			continue
 		}
-		queryOrder := api.QueryOrderById(lastOrder.AmountType, account.Secret, lastOrder.Market, lastOrder.Symbol, lastOrder.OrderType, lastOrder.OrderId)
+		queryOrder := api.QueryOrderById(account.Key, account.Secret, lastOrder.Market, lastOrder.Symbol, lastOrder.OrderType, lastOrder.OrderId)
 		if queryOrder == nil {
 			continue
 		}

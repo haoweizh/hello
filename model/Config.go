@@ -35,38 +35,7 @@ type Account struct {
 var AppAccounts []map[string]*Account // account index/map/account
 var marketAccounts sync.Map           //market - []*Account
 
-//// GetCrossAccounts markets: market - bool
-//func (config *Config) GetCrossAccounts(markets map[string]bool) (crossAccounts []map[string]*Account) {
-//	for market := range markets {
-//		accounts := config.GetAccounts(market)
-//		if crossAccounts == nil {
-//			crossAccounts = make([]map[string]*Account, len(accounts))
-//		} else if len(crossAccounts) != len(accounts) {
-//			fmt.Println(fmt.Sprintf(`wrong cross config %s keys:%d accounts:%d`, market, len(accounts), len(accounts)))
-//			os.Exit(2)
-//		}
-//		for i, account := range accounts {
-//			if crossAccounts[i] == nil {
-//				crossAccounts[i] = make(map[string]*Account)
-//			}
-//			crossAccounts[i][market] = account
-//		}
-//	}
-//	return
-//}
-
-func (config *Config) GetIndexFromKey(key string) (index int) {
-	for _, accounts := range AppAccounts {
-		for _, account := range accounts {
-			if account != nil && account.Key == key {
-				return account.Index
-			}
-		}
-	}
-	return -1
-}
-
-func (config *Config) GetAccountFromKey(market, key string) (account *Account) {
+func (config *Config) GetAccountFromKeyIndex(market, key string, index int) (account *Account) {
 	accounts := config.GetAccounts(market)
 	if accounts == nil {
 		return nil
@@ -76,6 +45,9 @@ func (config *Config) GetAccountFromKey(market, key string) (account *Account) {
 			return nil
 		}
 		if item.Key == key {
+			return item
+		}
+		if index == item.Index {
 			return item
 		}
 	}

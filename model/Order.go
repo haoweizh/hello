@@ -16,7 +16,7 @@ type Order struct {
 	TriggerPrice      float64
 	UnfilledQuantity  float64 //未成交数量
 	GridPos           int64
-	AmountType        string
+	AmountType        int // 记录配置账户序号index
 	Coin              string
 	ErrCode           string
 	Function          string

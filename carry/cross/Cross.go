@@ -966,11 +966,11 @@ func placeCross(statusBuy, statusSell *CarryStatus, priceBuy, priceSell, amount 
 		now := time.Now().UnixNano()
 		orderBuy := &model.Order{OrderSide: model.OrderSideBuy, OrderType: model.OrderTypeLimit, Market: model.OKEX,
 			Symbol: statusBuy.symbol, Price: priceBuy, Amount: amount, RefreshType: model.FunctionCross, OrderTime: util.GetNow(),
-			UnfilledQuantity: amount, AmountType: statusBuy.account.Key, Status: model.CarryStatusWorking, Function: model.Open,
+			UnfilledQuantity: amount, AmountType: statusBuy.account.Index, Status: model.CarryStatusWorking, Function: model.Open,
 			OrderId: strconv.FormatInt(now, 10) + statusBuy.symbol, LineBuy: statusBuy.TradeLineBuy, LineSell: statusSell.TradeLineSell}
 		orderSell := &model.Order{OrderSide: model.OrderSideSell, OrderType: model.OrderTypeLimit, Market: model.OKEX,
 			Symbol: statusSell.symbol, Price: priceSell, Amount: amount, RefreshType: model.FunctionCross, OrderTime: util.GetNow(),
-			UnfilledQuantity: amount, AmountType: statusSell.account.Key, Status: model.CarryStatusWorking, Function: model.Open,
+			UnfilledQuantity: amount, AmountType: statusSell.account.Index, Status: model.CarryStatusWorking, Function: model.Open,
 			OrderId: strconv.FormatInt(now, 10) + statusSell.symbol, LineBuy: statusSell.TradeLineBuy, LineSell: statusSell.TradeLineSell}
 		if statusBuy.Holding*-1 >= amount {
 			orderBuy.Function = model.Close
@@ -980,7 +980,7 @@ func placeCross(statusBuy, statusSell *CarryStatus, priceBuy, priceSell, amount 
 		}
 		orderBuy.Coin = statusBuy.setting.Coin
 		orderSell.Coin = statusSell.setting.Coin
-		success, msg := api.PlacePairOKEX(statusBuy.account.Key, statusBuy.symbol, statusSell.symbol, model.OrderTypeLimit, priceBuy, priceSell, amount)
+		success, msg := api.PlacePairOKEX(statusBuy.account, statusBuy.symbol, statusSell.symbol, model.OrderTypeLimit, priceBuy, priceSell, amount)
 		if !success {
 			orderBuy.Status, orderSell.Status = model.CarryStatusFail, model.CarryStatusFail
 			orderBuy.ErrCode, orderSell.ErrCode = msg, msg
@@ -1091,7 +1091,7 @@ func placeStatus(status *CarryStatus, price float64, amount float64) {
 			}
 		}
 	}
-	account := model.AppConfig.GetAccountFromKey(status.market, status.account.Key)
+	account := model.AppConfig.GetAccountFromKeyIndex(status.market, status.account.Key, -1)
 	initStatus(account, status.setting, true)
 	util.StoreSyncMap(&lastCrosses, status.symbol, account.Key, status.market)
 }
@@ -1103,7 +1103,7 @@ var PostOrderCross = func(order *model.Order, setting *model.Setting) {
 	if setting == nil {
 		setting = api.GetSetting(model.FunctionCross, order.Market, order.Symbol)
 	}
-	account := model.AppConfig.GetAccountFromKey(order.Market, order.AmountType)
+	account := model.AppConfig.GetAccountFromKeyIndex(order.Market, ``, order.AmountType)
 	if order.HaveId() && order.Status != model.CarryStatusFail {
 		//if account != nil {
 		//	status := getCarryStatus(setting.Coin, setting.Market, setting.Symbol, account.Key)
@@ -1121,14 +1121,14 @@ var PostOrderCross = func(order *model.Order, setting *model.Setting) {
 		//status.LimitBuy = math.Min(status.LimitBuy, maxBuy)
 		//}
 		addLastCarry(order, setting)
-		addCarryResult(order.AmountType, order.Market, ``, true)
+		addCarryResult(account.Key, order.Market, ``, true)
 	} else {
 		unknownFail := true
 		if account != nil {
 			switch order.Market {
 			case model.OKEX:
 				if InsufficientCodeOKEX[order.ErrCode] && setting != nil {
-					util.Notice(`reset %s trade max with %s %s`, order.Market, order.ErrCode, order.AmountType)
+					util.Notice(`reset %s trade max with %s account index %s`, order.Market, order.ErrCode, order.AmountType)
 					status, ok := carryStatusMap.Load(fmt.Sprintf(`%s*%s*%s*%s`, setting.Coin, setting.Market, setting.Symbol, account.Key))
 					getMax, maxBuy, maxSell := api.GetTradeMaxOKEX(account.Key, account.Secret, setting.Symbol, 0)
 					if getMax && ok {
@@ -1139,18 +1139,18 @@ var PostOrderCross = func(order *model.Order, setting *model.Setting) {
 				}
 			case model.BinancePerp, model.BinanceSpot:
 				if strings.Contains(InsufficientCodeBinance, order.ErrCode) {
-					util.Notice(`reset binance trade max with %s %s`, order.ErrCode, order.AmountType)
-					spotMarkets.Delete(order.AmountType)
-					contractMarkets.Delete(order.AmountType)
+					util.Notice(`reset binance trade max with %s account index %s`, order.ErrCode, order.AmountType)
+					spotMarkets.Delete(account.Key)
+					contractMarkets.Delete(account.Key)
 					initStatus(account, setting, true)
 					unknownFail = false
 				}
 			}
 		}
 		if unknownFail {
-			addCarryResult(order.AmountType, order.Market, order.ErrCode, false)
+			addCarryResult(account.Key, order.Market, order.ErrCode, false)
 		} else {
-			addCarryResult(order.AmountType, order.Market, ``, true)
+			addCarryResult(account.Key, order.Market, ``, true)
 		}
 	}
 }

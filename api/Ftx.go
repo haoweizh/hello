@@ -725,13 +725,13 @@ func parsePositionFtx(position *model.Position, item map[string]interface{}) {
 	}
 }
 
-//remainingSize	number	31431.0
-//reduceOnly	boolean	false
-//ioc	boolean	false
-//postOnly	boolean	false
-//orderPrice	number	null	price of the order sent when this stop loss triggered
-//retryUntilFilled	boolean	false	Whether or not to keep re-triggering until filled
-//orderType	string	market	Values are market and limit
+// remainingSize	number	31431.0
+// reduceOnly	boolean	false
+// ioc	boolean	false
+// postOnly	boolean	false
+// orderPrice	number	null	price of the order sent when this stop loss triggered
+// retryUntilFilled	boolean	false	Whether or not to keep re-triggering until filled
+// orderType	string	market	Values are market and limit
 func parseOrderFtx(order *model.Order, item map[string]interface{}) {
 	if order == nil || item == nil {
 		return
@@ -797,7 +797,7 @@ func parseOrderFtx(order *model.Order, item map[string]interface{}) {
 	return
 }
 
-//orderType: "limit", "market", "stop", "trailingStop", "takeProfit"
+// orderType: "limit", "market", "stop", "trailingStop", "takeProfit"
 func placeOrderFtx(order *model.Order, key, secret, orderSide, orderType, orderParam, symbol string, orderPrice, triggerPrice, amount float64) {
 	uri := `/orders`
 	param := make(map[string]interface{})
@@ -875,7 +875,7 @@ func SignedRequestFtx(key, secret, method, path string, param, body map[string]i
 	}
 	sign := hex.EncodeToString(hash.Sum(nil))
 	headers := map[string]string{`FTX-KEY`: key, `FTX-TS`: ts, "FTX-SIGN": sign, "Content-Type": "application/json"}
-	account := model.AppConfig.GetAccountFromKey(model.Ftx, key)
+	account := model.AppConfig.GetAccountFromKeyIndex(model.Ftx, key, -1)
 	if account != nil && len(account.FtxSubAccount) > 1 {
 		headers[`FTX-SUBACCOUNT`] = account.FtxSubAccount
 	}
