@@ -25,7 +25,7 @@ func kucoinFutureClient(key, secret, passPhrase string) *kumex.ApiService {
 	return client
 }
 
-func getMarketsKucoinPerp(key, secret string) (marketInfos map[string]*model.MarketInfo) {
+func getMarketsKucoinPerp(key string) (marketInfos map[string]*model.MarketInfo) {
 	marketInfos = make(map[string]*model.MarketInfo)
 	appendFutureMarketKucoin(key, marketInfos)
 	return marketInfos
@@ -247,9 +247,6 @@ func handleKucoinPerpWS(futureMsg *kumex.WebSocketDownstreamMessage) {
 			funcHandlers := GetFunctions(model.KucoinPerp, symbol)
 			if funcHandlers != nil {
 				funcHandlers.Range(func(function, value interface{}) bool {
-					if model.IgnoreFunctions[function.(string)] {
-						return true
-					}
 					setting := GetSetting(function.(string), model.KucoinPerp, symbol)
 					if setting != nil && value != nil {
 						go value.(model.CarryHandler)(setting, &bidAsk)

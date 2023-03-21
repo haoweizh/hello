@@ -18,7 +18,7 @@ const bitgetPerpWsUrl = "wss://ws.bitget.com/mix/v1/stream"
 
 var channelMaintainingBitgetPerp = false
 
-func getMarketsBitgetPerp(key, secret string) (marketInfos map[string]*model.MarketInfo) {
+func getMarketsBitgetPerp() (marketInfos map[string]*model.MarketInfo) {
 	httpResp, httpErr := util.HttpRequest(http.MethodGet, bitgetRestUrl+"/api/mix/v1/market/contracts?productType=umcbl", "", map[string]string{}, 30)
 	perpResp := &dtos.BitgetPerpMarketResp{}
 	perpJsonErr := json.Unmarshal(httpResp, perpResp)
@@ -85,13 +85,11 @@ func WsDepthServeBitgetPerp(markets *model.Markets, orderHandler OrderHandler) (
 			bids := make([]model.Tick, 0)
 			bids = append(bids, model.Tick{Price: bidPrice, Amount: bidAmount})
 			bidAsk.Bids = bids
-
 			askPrice, _ := strconv.ParseFloat(bookWsResp.Data[0].Asks[0][0], 64)
 			askAmount, _ := strconv.ParseFloat(bookWsResp.Data[0].Asks[0][1], 64)
 			asks := make([]model.Tick, 0)
 			asks = append(asks, model.Tick{Price: askPrice, Amount: askAmount})
 			bidAsk.Asks = asks
-
 			bidAsk.Ts, _ = strconv.Atoi(bookWsResp.Data[0].Ts)
 			bidAsk.UpdateId, _ = strconv.ParseInt(bookWsResp.Data[0].Ts, 10, 64)
 			haveOld, old := markets.GetBidAsk(symbol, model.BitgetPerp)
@@ -103,9 +101,6 @@ func WsDepthServeBitgetPerp(markets *model.Markets, orderHandler OrderHandler) (
 				funcHandlers := GetFunctions(model.BitgetPerp, symbol)
 				if funcHandlers != nil {
 					funcHandlers.Range(func(function, value interface{}) bool {
-						if model.IgnoreFunctions[function.(string)] {
-							return true
-						}
 						setting := GetSetting(function.(string), model.BitgetPerp, symbol)
 						if setting != nil && value != nil {
 							go value.(model.CarryHandler)(setting, &bidAsk)
@@ -136,21 +131,16 @@ func WsDepthServeBitgetPerp(markets *model.Markets, orderHandler OrderHandler) (
 				price, _ := strconv.ParseFloat(tickerData.MarkPrice, 64)
 				ticker := &model.MarkPriceInfo{MarkPrice: price, Ts: int(tickerData.SystemTime)}
 				markets.SetMarkPriceInfo(symbol, model.BitgetPerp, ticker)
-				//rate, _ := strconv.ParseFloat(tickerData.CapitalRate, 64)
-				//fundingRate := &model.FundingRate{
-				//	Rate:       rate,
-				//	UpdateTime: util.GetNow(),
-				//	ExpireTime: tickerData.NextSettleTime,
-				//}
-				//model.SetFundingRate(model.BitgetPerp, symbol, fundingRate)
-				fundingRate := model.GetFundingRate(model.BitgetPerp, symbol)
-				if fundingRate != nil && fundingRate.Rate != 0 {
-					fundingRate.ExpireTime = tickerData.NextSettleTime / 1000
+				rate, _ := strconv.ParseFloat(tickerData.CapitalRate, 64)
+				fundingRate := &model.FundingRate{
+					Rate:       rate,
+					UpdateTime: util.GetNow(),
+					ExpireTime: tickerData.NextSettleTime / 1000,
 				}
+				model.SetFundingRate(model.BitgetPerp, symbol, fundingRate)
 			}
 		}
 	}
-
 	channels = make([]chan struct{}, 0)
 	symbols := GetMarketSymbols(model.BitgetPerp)
 	futureSubscribes := make([]interface{}, 0)
@@ -261,7 +251,6 @@ func getPositionsBitgetPerp(key, secret string) (success bool, positions []*mode
 			availableU += availableUsdt
 		}
 	}
-
 	positions = make([]*model.Position, 0)
 	for _, contract := range bitgetPositionResp.Data {
 		isSuccess, _, coin := model.GetCoinFromDialect(model.BitgetPerp, contract.Symbol)
@@ -288,7 +277,7 @@ func getPositionsBitgetPerp(key, secret string) (success bool, positions []*mode
 	return true, positions, accountValue, availableU
 }
 
-func getFundingRateBitgetPerp(key, secret, symbol string) (fundingRate *model.FundingRate) {
+func getFundingRateBitgetPerp(symbol string) (fundingRate *model.FundingRate) {
 	httpResp, httpErr := util.HttpRequest(http.MethodGet, bitgetRestUrl+"/api/mix/v1/market/current-fundRate?symbol="+symbol, "", map[string]string{}, 30)
 	bitgetFundingResp := &dtos.BitgetFundingResp{}
 	perpJsonErr := json.Unmarshal(httpResp, bitgetFundingResp)
@@ -297,7 +286,10 @@ func getFundingRateBitgetPerp(key, secret, symbol string) (fundingRate *model.Fu
 		return
 	}
 	rate, _ := strconv.ParseFloat(bitgetFundingResp.Data.FundingRate, 64)
-	fundingRate = model.GetFundingRate(model.BitgetPerp, symbol)
+	v, ok := util.LoadSyncMap(model.FundingRates, model.BitgetPerp, symbol)
+	if v != nil && ok {
+		fundingRate = v.(*model.FundingRate)
+	}
 	if fundingRate != nil && fundingRate.Rate != 0 {
 		fundingRate.Rate = rate
 		fundingRate.UpdateTime = util.GetNow()
@@ -364,7 +356,6 @@ func cancelOrdersBitgetPerp(key, secret, symbol string) (result bool) {
 	for _, openOrder := range bitgetPerpOpenOrderResp.Data.OrderList {
 		orderIds = append(orderIds, openOrder.OrderId)
 	}
-
 	params := map[string]interface{}{
 		"symbol":     dialectSymbol,
 		"marginCoin": "USDT",
@@ -377,7 +368,6 @@ func cancelOrdersBitgetPerp(key, secret, symbol string) (result bool) {
 		util.SocketInfo(fmt.Sprintf("fail to canal Bitget perp order resp: %s httpErr: %v, jsonErr: %v", httpResp, httpErr, jsonErr))
 		return false
 	}
-
 	return true
 }
 

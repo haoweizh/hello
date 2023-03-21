@@ -28,7 +28,7 @@ func kucoinRelatedClient(key, secret, passPhrase string) *kucoin.ApiService {
 	return client
 }
 
-func getMarketsKucoinSpot(key, secret string) (marketInfos map[string]*model.MarketInfo) {
+func getMarketsKucoinSpot(key string) (marketInfos map[string]*model.MarketInfo) {
 	marketInfos = make(map[string]*model.MarketInfo)
 	appendRelatedMarketsKucoin(key, marketInfos)
 	return marketInfos
@@ -191,9 +191,6 @@ func handleKucoinSpotWS(relatedMsg *kucoin.WebSocketDownstreamMessage) {
 		funcHandlers := GetFunctions(model.KucoinSpot, symbol)
 		if funcHandlers != nil {
 			funcHandlers.Range(func(function, value interface{}) bool {
-				if model.IgnoreFunctions[function.(string)] {
-					return true
-				}
 				setting := GetSetting(function.(string), model.KucoinSpot, symbol)
 				if setting != nil && value != nil {
 					go value.(model.CarryHandler)(setting, &bidAsk)

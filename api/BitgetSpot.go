@@ -19,7 +19,7 @@ const bitgetSpotWsUrl = "wss://ws.bitget.com/spot/v1/stream"
 
 var channelMaintainingBitgetSpot = false
 
-func getMarketsBitgetSpot(key, secret string) (marketInfos map[string]*model.MarketInfo) {
+func getMarketsBitgetSpot() (marketInfos map[string]*model.MarketInfo) {
 	httpResp, httpErr := util.HttpRequest(http.MethodGet, bitgetRestUrl+"/api/spot/v1/public/products", "", map[string]string{}, 30)
 	spotResp := &dtos.BitgetSpotMarketResp{}
 	spotJsonErr := json.Unmarshal(httpResp, spotResp)
@@ -90,9 +90,6 @@ func WsDepthServeBitgetSpot(markets *model.Markets, orderHandler OrderHandler) (
 				funcHandlers := GetFunctions(model.BitgetSpot, symbol)
 				if funcHandlers != nil {
 					funcHandlers.Range(func(function, value interface{}) bool {
-						if model.IgnoreFunctions[function.(string)] {
-							return true
-						}
 						setting := GetSetting(function.(string), model.BitgetSpot, symbol)
 						if setting != nil && value != nil {
 							go value.(model.CarryHandler)(setting, &bidAsk)
@@ -106,7 +103,7 @@ func WsDepthServeBitgetSpot(markets *model.Markets, orderHandler OrderHandler) (
 	channels = make([]chan struct{}, 0)
 	spotSubscribes := make([]interface{}, 0)
 	symbols := GetMarketSymbols(model.BitgetSpot)
-	for symbol, _ := range symbols {
+	for symbol := range symbols {
 		spotSubscribes = append(spotSubscribes, symbol)
 	}
 	spotBookChannels, spotBookErr := WebSocketClient(model.BitgetSpot, bitgetSpotWsUrl,

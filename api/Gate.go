@@ -295,9 +295,6 @@ var tickerHandler = gateWs.NewCallBack(func(msg *gateWs.UpdateMsg) {
 		funcHandlers := GetFunctions(model.Gate, symbol)
 		if funcHandlers != nil {
 			funcHandlers.Range(func(function, value interface{}) bool {
-				if model.IgnoreFunctions[function.(string)] {
-					return true
-				}
 				setting := GetSetting(function.(string), model.Gate, symbol)
 				if setting != nil && value != nil {
 					go value.(model.CarryHandler)(setting, &bidAsk)

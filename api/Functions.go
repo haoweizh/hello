@@ -424,7 +424,7 @@ func GetFundingRate(key, secret, market, symbol string) (success bool, rate floa
 	//	rate, expireTime = deprecated.getFundingRateBitmex(key, secret, symbol)
 	//	model.SetFundingRate(market, symbol, &model.FundingRate{Rate: rate, ExpireTime: expireTime, UpdateTime: now})
 	case model.BitgetPerp:
-		fundingRate = getFundingRateBitgetPerp(key, secret, symbol)
+		fundingRate = getFundingRateBitgetPerp(symbol)
 	case model.BybitPerp:
 		fundingRate = getFundingRateBybitPerp(key, secret, symbol)
 	case model.Ftx:
@@ -806,9 +806,9 @@ func GetMarketInfos(market string) (marketInfo map[string]*model.MarketInfo) {
 	case model.Gate:
 		_, marketInfo = getMarketsGate(accounts[0].Key, accounts[0].Secret)
 	case model.KucoinSpot:
-		return getMarketsKucoinSpot(accounts[0].Key, accounts[0].Secret)
+		return getMarketsKucoinSpot(accounts[0].Key)
 	case model.KucoinPerp:
-		return getMarketsKucoinPerp(accounts[0].Key, accounts[0].Secret)
+		return getMarketsKucoinPerp(accounts[0].Key)
 	case model.BybitPerp:
 		return getMarketsBybitPerp(accounts[0].Key, accounts[0].Secret)
 	case model.BybitSpot:
@@ -816,9 +816,9 @@ func GetMarketInfos(market string) (marketInfo map[string]*model.MarketInfo) {
 	case model.HuobiSpot:
 		return getMarketsHuobiSpot(accounts[0].Key, accounts[0].Secret)
 	case model.BitgetSpot:
-		return getMarketsBitgetSpot(accounts[0].Key, accounts[0].Secret)
+		return getMarketsBitgetSpot()
 	case model.BitgetPerp:
-		return getMarketsBitgetPerp(accounts[0].Key, accounts[0].Secret)
+		return getMarketsBitgetPerp()
 	}
 	return
 }
@@ -983,10 +983,10 @@ func InitMarketInfos() (success bool) {
 				model.SetMarketInfos(market, marketInfos)
 			}
 		case model.KucoinSpot:
-			marketInfos := getMarketsKucoinSpot(accounts[0].Key, accounts[0].Secret)
+			marketInfos := getMarketsKucoinSpot(accounts[0].Key)
 			model.SetMarketInfos(market, marketInfos)
 		case model.KucoinPerp:
-			marketInfos := getMarketsKucoinPerp(accounts[0].Key, accounts[0].Secret)
+			marketInfos := getMarketsKucoinPerp(accounts[0].Key)
 			model.SetMarketInfos(market, marketInfos)
 			setFutureAutoDeposit()
 		case model.BybitPerp:
@@ -1003,9 +1003,9 @@ func InitMarketInfos() (success bool) {
 		case model.BybitSpot:
 			model.SetMarketInfos(market, getMarketsBybitSpot(accounts[0].Key, accounts[0].Secret))
 		case model.BitgetSpot:
-			model.SetMarketInfos(market, getMarketsBitgetSpot(accounts[0].Key, accounts[0].Secret))
+			model.SetMarketInfos(market, getMarketsBitgetSpot())
 		case model.BitgetPerp:
-			model.SetMarketInfos(market, getMarketsBitgetPerp(accounts[0].Key, accounts[0].Secret))
+			model.SetMarketInfos(market, getMarketsBitgetPerp())
 			setBitgetPositionMode(accounts[0].Key, accounts[0].Secret)
 		}
 	}
