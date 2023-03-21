@@ -669,14 +669,14 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 		settings == nil || len(settings) == 0 || million-int64(tick.Ts) > 100 {
 		return
 	}
+	if checkPriceLimit(setting, tick) {
+		return
+	}
 	for _, settingRelate := range settings {
 		tickGet, tickRelate := model.AppMarkets.GetBidAsk(settingRelate.Symbol, settingRelate.Market)
 		if !tickGet || setting.ID == settingRelate.ID ||
 			(model.AppConfig.Env != `test` && million-int64(tickRelate.Ts) > 1000) {
 			continue
-		}
-		if checkPriceLimit(setting, tick) {
-			break
 		}
 		if checkPriceLimit(settingRelate, tickRelate) {
 			continue

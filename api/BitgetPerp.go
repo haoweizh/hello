@@ -128,11 +128,18 @@ func WsDepthServeBitgetPerp(markets *model.Markets, orderHandler OrderHandler) (
 			return
 		}
 		if tickerWsResp.Arg.InstType == "mc" && tickerWsResp.Action == "snapshot" {
-			for _, ticker := range tickerWsResp.Data {
-				symbol := ticker.SymbolId
-				price, _ := strconv.ParseFloat(ticker.MarkPrice, 64)
-				ticker := &model.Ticker{MarkPrice: price, Ts: int(ticker.SystemTime)}
+			for _, tickerData := range tickerWsResp.Data {
+				symbol := tickerData.SymbolId[0:len(tickerData.SymbolId)-4] + model.UniStandardTail[model.MarketTypePerp]
+				price, _ := strconv.ParseFloat(tickerData.MarkPrice, 64)
+				ticker := &model.Ticker{MarkPrice: price, Ts: int(tickerData.SystemTime)}
 				markets.SetTicker(symbol, model.BitgetPerp, ticker)
+				//rate, _ := strconv.ParseFloat(tickerData.CapitalRate, 64)
+				//fundingRate := &model.FundingRate{
+				//	Rate:       rate,
+				//	UpdateTime: util.GetNow(),
+				//	ExpireTime: tickerData.NextSettleTime,
+				//}
+				//model.SetFundingRate(model.BitgetPerp, symbol, fundingRate)
 			}
 		}
 	}
