@@ -125,6 +125,10 @@ func MustCancel(key, secret, market, symbol, orderType, orderId string, mustCanc
 // CancelOrders 暂不支持策略订单
 func CancelOrders(key, secret, market, symbol string) (result bool) {
 	switch market {
+	case model.BitgetPerp:
+		return cancelOrdersBitgetPerp(key, secret, symbol)
+	case model.BitgetSpot:
+		return cancelOrdersBitgetSpot(key, secret, symbol)
 	case model.KucoinSpot:
 		return cancelOrdersKucoinSpot(symbol)
 	case model.KucoinPerp:
@@ -349,6 +353,8 @@ func GetBalances(key, secret, market string) (
 	//	return true, balances, totalInUsd, collateral
 	//}
 	switch market {
+	case model.BitgetSpot:
+		success, balances = getBalanceBitgetSpot(key, secret)
 	case model.KucoinSpot:
 		success, balances = getBalanceKucoinSpot(key, secret)
 	case model.Gate:
@@ -414,6 +420,8 @@ func GetFundingRate(key, secret, market, symbol string) (success bool, rate floa
 	//case model.Bitmex:
 	//	rate, expireTime = deprecated.getFundingRateBitmex(key, secret, symbol)
 	//	model.SetFundingRate(market, symbol, &model.FundingRate{Rate: rate, ExpireTime: expireTime, UpdateTime: now})
+	case model.BitgetPerp:
+		fundingRate = getFundingRateBitgetPerp(key, secret, symbol)
 	case model.BybitPerp:
 		fundingRate = getFundingRateBybitPerp(key, secret, symbol)
 	case model.Ftx:
@@ -542,6 +550,8 @@ func QueryOrderById(key, secret, market, symbol, orderType, orderId string) (ord
 // availableU: 可用usd
 func GetPositions(key, secret, market string) (success bool, positions []*model.Position, accountValue, availableU float64) {
 	switch market {
+	case model.BitgetPerp:
+		return getPositionsBitgetPerp(key, secret)
 	case model.KucoinPerp:
 		return getPositionsKucoinPerp(key, secret)
 	case model.Gate:
@@ -636,6 +646,10 @@ func PlaceOrder(key, secret, orderSide, orderType, market, symbol, orderParam st
 		return
 	}
 	switch market {
+	case model.BitgetPerp:
+		placeOrderBitgetPerp(key, secret, order, orderSide, orderType, symbol, price, amount)
+	case model.BitgetSpot:
+		placeOrderBitgetSpot(key, secret, order, orderSide, orderType, symbol, price, amount)
 	case model.KucoinSpot:
 		placeOrderKucoinSpot(order, orderSide, orderType, symbol, price, amount)
 	case model.KucoinPerp:

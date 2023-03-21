@@ -154,3 +154,90 @@ func maintainChannelBitgetSpot() {
 		}()
 	}
 }
+
+func getBalanceBitgetSpot(key string, secret string) (success bool, balances []*model.Balance) {
+	client := dtos.BitgetRestClient{BaseUrl: bitgetRestUrl, Passphrase: model.AppConfig.Phase, ApiKey: key, ApiSecretKey: secret}
+	httpResp, httpErr := client.DoGet("/api/spot/v1/account/assets", map[string]string{})
+	bitgetBalanceResp := &dtos.BitgetBalanceResp{}
+	jsonErr := json.Unmarshal(httpResp, bitgetBalanceResp)
+	if bitgetBalanceResp == nil || bitgetBalanceResp.Code != "00000" {
+		util.SocketInfo(fmt.Sprintf("fail to refresh spot balance bitget, resp: %s httpErr: %v, jsonErr: %v", httpResp, httpErr, jsonErr))
+		time.Sleep(time.Second * 2)
+		return getBalanceBitgetSpot(key, secret)
+	}
+	balances = make([]*model.Balance, 0)
+	for _, account := range bitgetBalanceResp.Data {
+		balance := &model.Balance{AccountId: key, BalanceTime: util.GetNow(), Market: model.BitgetSpot, Coin: account.CoinName}
+		balance.FrozenAmount, _ = strconv.ParseFloat(account.Frozen, 64)
+		balance.AvailableWithBorrow, _ = strconv.ParseFloat(account.Available, 64)
+		balance.Amount = balance.AvailableWithBorrow + balance.FrozenAmount - balance.Borrow
+		priceGet, bidAsk := model.AppMarkets.GetBidAsk(balance.Coin+model.UniStandardTail[model.MarketTypeSpot], model.BitgetSpot)
+		if priceGet {
+			balance.UsdValue = balance.Amount * bidAsk.Bids[0].Price
+		}
+		balances = append(balances, balance)
+	}
+	return true, balances
+}
+
+func placeOrderBitgetSpot(key, secret string, order *model.Order, orderSide, orderType, symbol string, price, amount float64) {
+	priceSpot, decimalSpot := model.FormatPrice(model.BitgetSpot, symbol, price)
+	priceStr := util.CutTailZero(strconv.FormatFloat(priceSpot, 'f', decimalSpot, 64))
+	amountStr := util.CutTailZero(fmt.Sprintf(`%f`, model.GetAmountInMarket(model.BitgetSpot, symbol, amount, priceSpot)))
+	success, _, _, dialectSymbol := model.GetFromStandard(model.BitgetSpot, symbol)
+	if !success {
+		util.Notice("fail to place spot order, GetFromStandard: " + symbol)
+		return
+	}
+	client := dtos.BitgetRestClient{BaseUrl: bitgetRestUrl, Passphrase: model.AppConfig.Phase, ApiKey: key, ApiSecretKey: secret}
+	params := map[string]string{
+		"symbol":    dialectSymbol,
+		"force":     "normal",
+		"quantity":  amountStr,
+		"price":     priceStr,
+		"side":      orderSide,
+		"orderType": orderType,
+	}
+	httpResp, httpErr := client.DoPost("/api/spot/v1/trade/orders", string(util.JsonEncodeToByte(params)))
+	bitgetOrderResp := &dtos.BitgetOrderResp{}
+	jsonErr := json.Unmarshal(httpResp, bitgetOrderResp)
+	if bitgetOrderResp == nil || bitgetOrderResp.Code != "00000" {
+		util.Notice(fmt.Sprintf("fail to create bitget spot order resp: %s httpErr: %v, jsonErr: %v", httpResp, httpErr, jsonErr))
+	} else {
+		order.Status = model.CarryStatusWorking
+		order.OrderId = bitgetOrderResp.Data.OrderId
+	}
+}
+
+func cancelOrdersBitgetSpot(key, secret, symbol string) (result bool) {
+	client := dtos.BitgetRestClient{BaseUrl: bitgetRestUrl, Passphrase: model.AppConfig.Phase, ApiKey: key, ApiSecretKey: secret}
+	success, _, _, dialectSymbol := model.GetFromStandard(model.BitgetSpot, symbol)
+	if !success {
+		util.Notice("fail to cancel spot order, GetFromStandard: " + symbol)
+		return false
+	}
+	planHttpResp, planHttpErr := client.DoPost("/api/spot/v1/trade/open-orders", string(util.JsonEncodeToByte(map[string]string{"symbol": dialectSymbol})))
+	bitgetSpotOpenOrderResp := &dtos.BitgetSpotOpenOrderResp{}
+	jsonErr := json.Unmarshal(planHttpResp, bitgetSpotOpenOrderResp)
+	if bitgetSpotOpenOrderResp == nil || bitgetSpotOpenOrderResp.Code != "00000" {
+		util.Notice(fmt.Sprintf("fail to get bitget spot open order resp: %s httpErr: %v, jsonErr: %v", planHttpResp, planHttpErr, jsonErr))
+		return false
+	}
+	var orderIds []string
+	for _, openOrder := range bitgetSpotOpenOrderResp.Data {
+		orderIds = append(orderIds, openOrder.OrderId)
+	}
+
+	params := map[string]interface{}{
+		"symbol":   dialectSymbol,
+		"orderIds": orderIds,
+	}
+	httpResp, httpErr := client.DoPost("/api/spot/v1/trade/cancel-batch-orders", string(util.JsonEncodeToByte(params)))
+	jsonData, jsonErr := util.NewJSON(httpResp)
+	code, _ := jsonData.Get("code").String()
+	if jsonData == nil || code != "00000" {
+		util.SocketInfo(fmt.Sprintf("fail to canal Bitget spot order resp: %s httpErr: %v, jsonErr: %v", httpResp, httpErr, jsonErr))
+		return false
+	}
+	return true
+}

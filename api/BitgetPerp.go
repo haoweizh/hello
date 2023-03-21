@@ -130,13 +130,8 @@ func WsDepthServeBitgetPerp(markets *model.Markets, orderHandler OrderHandler) (
 			for _, ticker := range tickerWsResp.Data {
 				symbol := ticker.SymbolId
 				price, _ := strconv.ParseFloat(ticker.MarkPrice, 64)
-				ts := int(ticker.SystemTime)
-				oldMarkPrice := markets.GetMarkPrice(symbol, model.Bitget)
-				if oldMarkPrice != nil && oldMarkPrice.Ts > ts {
-					return
-				}
-				markPrice := &model.MarkPrice{MarkPrice: price, Ts: ts}
-				markets.SetMarkPrice(symbol, model.Bitget, markPrice)
+				ticker := &model.Ticker{MarkPrice: price, Ts: int(ticker.SystemTime)}
+				markets.SetTicker(symbol, model.BitgetPerp, ticker)
 			}
 		}
 	}
@@ -221,4 +216,146 @@ func maintainChannelBitgetPerp() {
 			}
 		}()
 	}
+}
+
+func getPositionsBitgetPerp(key, secret string) (success bool, positions []*model.Position, accountValue, availableU float64) {
+	client := dtos.BitgetRestClient{BaseUrl: bitgetRestUrl, Passphrase: model.AppConfig.Phase, ApiKey: key, ApiSecretKey: secret}
+	assetHttpResp, assetHttpErr := client.DoGet("/api/mix/v1/account/accounts", map[string]string{"productType": "umcbl"})
+	bitgetAssertResp := &dtos.BitgetAssertResp{}
+	jsonErr := json.Unmarshal(assetHttpResp, bitgetAssertResp)
+	if bitgetAssertResp == nil || bitgetAssertResp.Code != "00000" {
+		util.SocketInfo(fmt.Sprintf("fail to refresh contract asset bitget, resp: %s httpErr: %v, jsonErr: %v", assetHttpResp, assetHttpErr, jsonErr))
+		time.Sleep(time.Second * 2)
+		return getPositionsBitgetPerp(key, secret)
+	}
+
+	positionHttpResp, positionHttpErr := client.DoGet("/api/mix/v1/position/allPosition", map[string]string{"productType": "umcbl"})
+	bitgetPositionResp := &dtos.BitgetPositionResp{}
+	positionJsonErr := json.Unmarshal(positionHttpResp, bitgetPositionResp)
+	if bitgetPositionResp == nil || bitgetPositionResp.Code != "00000" {
+		util.SocketInfo(fmt.Sprintf("fail to refresh contract position bitget, resp: %s httpErr: %v, jsonErr: %v", positionHttpResp, positionHttpErr, positionJsonErr))
+		time.Sleep(time.Second * 2)
+		return getPositionsBitgetPerp(key, secret)
+	}
+
+	for _, asset := range bitgetAssertResp.Data {
+		if asset.MarginCoin == `USDT` {
+			availableUsdt, _ := strconv.ParseFloat(asset.Available, 64)
+			equityUsdt, _ := strconv.ParseFloat(asset.UsdtEquity, 64)
+			accountValue += equityUsdt
+			availableU += availableUsdt
+		}
+	}
+
+	positions = make([]*model.Position, 0)
+	for _, contract := range bitgetPositionResp.Data {
+		isSuccess, _, coin := model.GetCoinFromDialect(model.BitgetPerp, contract.Symbol)
+		if !isSuccess {
+			continue
+		}
+		currency := coin + model.UniStandardTail[model.MarketTypePerp]
+		position := &model.Position{Market: model.BitgetPerp, Ts: util.GetNowUnixMillion(), Currency: currency}
+		position.Direction = contract.HoldSide
+		if position.Direction == "long" {
+			position.Frozen, _ = strconv.ParseFloat(contract.Locked, 64)
+			position.Holding, _ = strconv.ParseFloat(contract.Total, 64)
+		} else {
+			frozen, _ := strconv.ParseFloat(contract.Locked, 64)
+			position.Frozen = -1 * frozen
+			total, _ := strconv.ParseFloat(contract.Total, 64)
+			position.Holding = -1 * total
+		}
+		position.LeverRate = int64(contract.Leverage)
+		position.EntryPrice, _ = strconv.ParseFloat(contract.AverageOpenPrice, 64)
+		position.Margin, _ = strconv.ParseFloat(contract.Margin, 64)
+		positions = append(positions, position)
+	}
+	return true, positions, accountValue, availableU
+}
+
+func getFundingRateBitgetPerp(key, secret, symbol string) (fundingRate *model.FundingRate) {
+	httpResp, httpErr := util.HttpRequest(http.MethodGet, bitgetRestUrl+"/api/mix/v1/market/current-fundRate?symbol="+symbol, "", map[string]string{}, 30)
+	bitgetFundingResp := &dtos.BitgetFundingResp{}
+	perpJsonErr := json.Unmarshal(httpResp, bitgetFundingResp)
+	if bitgetFundingResp == nil || bitgetFundingResp.Code != "00000" {
+		util.Notice(fmt.Sprintf("get bitget perp market error, resp: %s, httpErr: %v, jsonErr: %v", httpResp, httpErr, perpJsonErr))
+		return
+	}
+	rate, _ := strconv.ParseFloat(bitgetFundingResp.Data.FundingRate, 64)
+	fundingRate = &model.FundingRate{
+		Rate:       rate,
+		UpdateTime: util.GetNow(),
+		ExpireTime: util.GetNow().Unix() + 3600000/1000,
+	} //没有过期时间
+	return fundingRate
+}
+
+func placeOrderBitgetPerp(key, secret string, order *model.Order, orderSide, orderType, symbol string, price, amount float64) {
+	priceSpot, decimalSpot := model.FormatPrice(model.BitgetPerp, symbol, price)
+	amountStr := util.CutTailZero(fmt.Sprintf(`%f`, model.GetAmountInMarket(model.BitgetPerp, symbol, amount, priceSpot)))
+	priceStr := util.CutTailZero(strconv.FormatFloat(priceSpot, 'f', decimalSpot, 64))
+	var tradeOrderSide string
+	if orderSide == model.OrderSideBuy {
+		tradeOrderSide = "buy_single"
+	} else {
+		tradeOrderSide = "sell_single"
+	}
+	success, _, _, dialectSymbol := model.GetFromStandard(model.BitgetPerp, symbol)
+	if !success {
+		util.Notice("fail to place perp order, GetFromStandard: " + symbol)
+		return
+	}
+	client := dtos.BitgetRestClient{BaseUrl: bitgetRestUrl, Passphrase: model.AppConfig.Phase, ApiKey: key, ApiSecretKey: secret}
+	params := map[string]string{
+		"symbol":     dialectSymbol,
+		"marginCoin": "USDT",
+		"size":       amountStr,
+		"price":      priceStr,
+		"side":       tradeOrderSide,
+		"orderType":  orderType,
+	}
+	httpResp, httpErr := client.DoPost("/api/mix/v1/account/setPositionMode", string(util.JsonEncodeToByte(params)))
+	bitgetOrderResp := &dtos.BitgetOrderResp{}
+	jsonErr := json.Unmarshal(httpResp, bitgetOrderResp)
+	if bitgetOrderResp == nil || bitgetOrderResp.Code != "00000" {
+		util.Notice(fmt.Sprintf("fail to create bitget spot order resp: %s httpErr: %v, jsonErr: %v", httpResp, httpErr, jsonErr))
+	} else {
+		order.Status = model.CarryStatusWorking
+		order.OrderId = bitgetOrderResp.Data.OrderId
+	}
+}
+
+func cancelOrdersBitgetPerp(key, secret, symbol string) (result bool) {
+	client := dtos.BitgetRestClient{BaseUrl: bitgetRestUrl, Passphrase: model.AppConfig.Phase, ApiKey: key, ApiSecretKey: secret}
+	success, _, _, dialectSymbol := model.GetFromStandard(model.BitgetPerp, symbol)
+	if !success {
+		util.Notice("fail to cancel perp order, GetFromStandard: " + symbol)
+		return false
+	}
+	planHttpResp, planHttpErr := client.DoGet("/api/spot/v1/trade/open-orders", map[string]string{"symbol": dialectSymbol})
+	bitgetPerpOpenOrderResp := &dtos.BitgetPerpOpenOrderResp{}
+	jsonErr := json.Unmarshal(planHttpResp, bitgetPerpOpenOrderResp)
+	if bitgetPerpOpenOrderResp == nil || bitgetPerpOpenOrderResp.Code != "00000" {
+		util.Notice(fmt.Sprintf("fail to get bitget perp open order resp: %s httpErr: %v, jsonErr: %v", planHttpResp, planHttpErr, jsonErr))
+		return false
+	}
+	var orderIds []string
+	for _, openOrder := range bitgetPerpOpenOrderResp.Data.OrderList {
+		orderIds = append(orderIds, openOrder.OrderId)
+	}
+
+	params := map[string]interface{}{
+		"symbol":     dialectSymbol,
+		"marginCoin": "USDT",
+		"orderIds":   orderIds,
+	}
+	httpResp, httpErr := client.DoPost("/api/mix/v1/account/setPositionMode", string(util.JsonEncodeToByte(params)))
+	jsonData, jsonErr := util.NewJSON(httpResp)
+	code, _ := jsonData.Get("code").String()
+	if jsonData == nil || code != "00000" {
+		util.SocketInfo(fmt.Sprintf("fail to canal Bitget perp order resp: %s httpErr: %v, jsonErr: %v", httpResp, httpErr, jsonErr))
+		return false
+	}
+
+	return true
 }

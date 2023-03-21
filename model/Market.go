@@ -41,11 +41,40 @@ type Rule struct {
 }
 
 type Markets struct {
-	tickerInfos sync.Map // symbol - market - ticker 行情包含标记价格
+	tickers     sync.Map // symbol - market - ticker 行情包含标记价格
 	bidAsks     sync.Map // symbol - market - bidAsk
 	WsDepth     sync.Map // market - []chan struct{}
 	WsInitTime  sync.Map // market - time
 	Connections sync.Map // market - []*websocket.Conn
+}
+
+type Ticker struct {
+	MarkPrice float64
+	Ts        int
+}
+
+func (markets *Markets) SetTicker(symbol, marketName string, ticker *Ticker) {
+	value, _ := markets.tickers.Load(symbol)
+	if value == nil {
+		value = &sync.Map{}
+		markets.tickers.Store(symbol, value)
+	}
+	oldTicker := value.(*sync.Map)
+	last, _ := oldTicker.Load(marketName)
+	if last == nil || last.(*BidAsk).Ts <= ticker.Ts {
+		oldTicker.Store(marketName, ticker)
+	}
+}
+
+func (markets *Markets) GetTicker(symbol, marketName string) *Ticker {
+	value, _ := markets.tickers.Load(symbol)
+	if value != nil {
+		item, _ := value.(*sync.Map).Load(marketName)
+		if item != nil {
+			return item.(*Ticker)
+		}
+	}
+	return nil
 }
 
 func (markets *Markets) ToStringBidAsk(bidAsk *BidAsk) (result string) {
