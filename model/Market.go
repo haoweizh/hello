@@ -50,7 +50,7 @@ type Markets struct {
 
 type MarkPriceInfo struct {
 	MarkPrice float64
-	Ts        int
+	Ts        int // time in unix epoch millionSeconds
 }
 
 func (markets *Markets) SetMarkPriceInfo(symbol, marketName string, ticker *MarkPriceInfo) {

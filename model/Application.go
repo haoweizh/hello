@@ -38,6 +38,7 @@ const Ftx = `ftx`
 const Bitmex = `bitmex`
 const SubscribeDepth = `SubscribeDepth`
 const SubscribeTicker = `ticker`
+const SubscribeMarkPrice = `markPrice`
 const CarryStatusSuccess = "success"
 const CarryStatusFail = "fail"
 const CarryStatusWorking = "working"

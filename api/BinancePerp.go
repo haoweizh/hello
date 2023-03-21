@@ -104,7 +104,7 @@ func getMarketsBinancePerp(key, secret string) (marketInfos map[string]*model.Ma
 }
 
 func WsDepthServeBinancePerp(markets *model.Markets, orderHandler OrderHandler) (channels []chan struct{}, err error) {
-	subType := model.SubscribeTicker
+	subType := model.SubscribeTicker + `,` + model.SubscribeMarkPrice
 	//subType := model.SubscribeDepth
 	wsHandlerBinancePerp := func(connection *websocket.Conn, event []byte, orderHandler OrderHandler) {
 		result, wsErr := util.NewJSON(event)
@@ -197,7 +197,15 @@ func handleTickerBinancePerp(markets *model.Markets, json *simplejson.Json, stan
 func handleMarkPriceBinancePerp(markets *model.Markets, json *simplejson.Json, standardSymbol string) {
 	markPrice, _ := strconv.ParseFloat(json.Get(`p`).MustString(), 64)
 	markets.SetMarkPriceInfo(standardSymbol, model.BinancePerp, &model.MarkPriceInfo{MarkPrice: markPrice, Ts: json.Get(`E`).MustInt()})
-
+	rate, _ := strconv.ParseFloat(json.Get(`r`).MustString(), 64)
+	expireTime, _ := strconv.ParseInt(json.Get(`T`).MustString(), 10, 64)
+	fundingRate := &model.FundingRate{
+		Rate:       rate,
+		UpdateTime: util.GetNow(),
+		ExpireTime: expireTime / 1000,
+	}
+	util.Info(fmt.Sprintf(`binance get market price %s %f %f %d`, standardSymbol, markPrice, rate, expireTime))
+	model.SetFundingRate(model.BinancePerp, standardSymbol, fundingRate)
 }
 
 func handleDepthBinancePerp(markets *model.Markets, json *simplejson.Json, standardSymbol string, updateId int64) {
