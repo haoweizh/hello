@@ -238,6 +238,7 @@ func getMarketsHuobiSpot(key, secret string) (marketInfos map[string]*model.Mark
 			}
 			amountPrecision, _ := value["amount-precision"].(json.Number).Int64()
 			marketInfo.SizeIncrement = 1 / math.Pow10(int(amountPrecision))
+			marketInfo.MoneyMin = 10
 			marketInfos[marketInfo.Name] = marketInfo
 		}
 	} else {

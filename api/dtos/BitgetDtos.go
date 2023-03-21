@@ -214,3 +214,53 @@ type BitgetFundingResp struct {
 	Msg         string `json:"msg"`
 	RequestTime int64  `json:"requestTime"`
 }
+
+type BitgetPerpOrderDetailResp struct {
+	Code        string `json:"code"`
+	Msg         string `json:"msg"`
+	RequestTime int64  `json:"requestTime"`
+	Data        struct {
+		Symbol       string  `json:"symbol"`
+		Size         float64 `json:"size"`
+		OrderId      string  `json:"orderId"`
+		ClientOid    string  `json:"clientOid"`
+		FilledQty    float64 `json:"filledQty"`
+		Fee          float64 `json:"fee"`
+		Price        float64 `json:"price"`
+		PriceAvg     float64 `json:"priceAvg"`
+		State        string  `json:"state"`
+		Side         string  `json:"side"`
+		TimeInForce  string  `json:"timeInForce"`
+		TotalProfits float64 `json:"totalProfits"`
+		PosSide      string  `json:"posSide"`
+		MarginCoin   string  `json:"marginCoin"`
+		FilledAmount float64 `json:"filledAmount"`
+		OrderType    string  `json:"orderType"`
+		Leverage     string  `json:"leverage"`
+		MarginMode   string  `json:"marginMode"`
+		ReduceOnly   bool    `json:"reduceOnly"`
+		CTime        string  `json:"cTime"`
+		UTime        string  `json:"uTime"`
+	} `json:"data"`
+}
+
+type BitgetSpotOrderDetailResp struct {
+	Code        string `json:"code"`
+	Msg         string `json:"msg"`
+	RequestTime int64  `json:"requestTime"`
+	Data        []struct {
+		AccountId       string `json:"accountId"`
+		Symbol          string `json:"symbol"`
+		OrderId         string `json:"orderId"`
+		ClientOrderId   string `json:"clientOrderId"`
+		Price           string `json:"price"`
+		Quantity        string `json:"quantity"`
+		OrderType       string `json:"orderType"`
+		Side            string `json:"side"`
+		Status          string `json:"status"`
+		FillPrice       string `json:"fillPrice"`
+		FillQuantity    string `json:"fillQuantity"`
+		FillTotalAmount string `json:"fillTotalAmount"`
+		CTime           string `json:"cTime"`
+	} `json:"data"`
+}
