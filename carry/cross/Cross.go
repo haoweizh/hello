@@ -718,7 +718,7 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 
 func breakMarkPrice(setting *model.Setting, price float64, orderSide string) bool {
 	marketInfo := model.GetMarketInfo(setting.Market, setting.Symbol)
-	if marketInfo != nil && orderSide == model.OrderSideBuy && (marketInfo.BuyLimitPriceRatio > 0 && marketInfo.BuyLimitPriceRatio < 0.1) {
+	if marketInfo != nil && orderSide == model.OrderSideBuy && marketInfo.BuyLimitPriceRatio > 0 {
 		markPriceInfo := model.AppMarkets.GetMarkPriceInfo(setting.Symbol, setting.Market)
 		if markPriceInfo == nil {
 			util.Notice(fmt.Sprintf("币种：%s 市场 %s 有限价条件，但是没有标记价格", setting.Symbol, setting.Market))
@@ -732,7 +732,7 @@ func breakMarkPrice(setting *model.Setting, price float64, orderSide string) boo
 			//perpBidPrice = bidMaxPrice
 			return true
 		}
-	} else if marketInfo != nil && orderSide == model.OrderSideSell && (marketInfo.SellLimitPriceRatio > 0 && marketInfo.SellLimitPriceRatio < 0.1) {
+	} else if marketInfo != nil && orderSide == model.OrderSideSell && marketInfo.SellLimitPriceRatio > 0 {
 		markPriceInfo := model.AppMarkets.GetMarkPriceInfo(setting.Symbol, setting.Market)
 		if markPriceInfo == nil {
 			util.Notice(fmt.Sprintf("币种：%s 市场 %s 有限价条件，但是没有标记价格", setting.Symbol, setting.Market))
