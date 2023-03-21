@@ -20,6 +20,7 @@ import (
 )
 
 const OKEXTag = `f924a8c6cc6fBCDE` // okx经纪商ID
+const OKSeparator = `Sep`
 const restOKEX = `https://www.okex.com`
 const wsOKEX = `wss://ws.okex.com:8443/ws/v5/public`
 const wsPrivateOKEX = `wss://ws.okex.com:8443/ws/v5/private`
@@ -586,9 +587,9 @@ func getWSOrderArgOKEX(account *model.Account, symbol, orderSide, orderType stri
 	args = map[string]interface{}{`instId`: dialectSymbol, `tdMode`: `cross`, `side`: orderSide,
 		`sz`: amountStrPerp, `ordType`: orderType, `px`: priceStr, `tag`: OKEXTag}
 	if orderType == model.OrderTypeStop {
-		args[`algoClOrdId`] = strconv.Itoa(account.Index)
+		args[`algoClOrdId`] = fmt.Sprintf(`%d%s%d%s`, account.Index, OKSeparator, time.Now().Nanosecond(), orderSide)
 	} else {
-		args[`clOrdId`] = strconv.Itoa(account.Index)
+		args[`clOrdId`] = fmt.Sprintf(`%d%s%d%s`, account.Index, OKSeparator, time.Now().Nanosecond(), orderSide)
 	}
 	return args
 }
@@ -669,10 +670,10 @@ func placeOrderOKEX(account *model.Account, isWs bool, order *model.Order) {
 		postData[`ordType`] = `conditional`
 		postData[`slOrdPx`] = priceStr
 		postData[`slTriggerPx`] = triggerPriceStr
-		postData[`algoClOrdId`] = strconv.Itoa(account.Index)
+		postData[`algoClOrdId`] = fmt.Sprintf(`%d%s%d%s`, account.Index, OKSeparator, time.Now().Nanosecond(), order.OrderSide)
 		path = `/api/v5/trade/order-algo`
 	} else {
-		postData[`clOrdId`] = strconv.Itoa(account.Index)
+		postData[`clOrdId`] = fmt.Sprintf(`%d%s%d%s`, account.Index, OKSeparator, time.Now().Nanosecond(), order.OrderSide)
 		postData[`px`] = priceStr
 	}
 	if isWs {
@@ -913,10 +914,15 @@ func parseOrderOKEX(value map[string]interface{}) (order *model.Order) {
 		ts, _ := strconv.ParseInt(value[`cTime`].(string), 10, 64)
 		order.OrderTime = time.Unix(ts/1000, 0)
 	}
+	clOrdId := ``
 	if value[`algoClOrdId`] != nil {
-		order.AmountType, _ = strconv.Atoi(value[`algoClOrdId`].(string))
+		clOrdId = value[`algoClOrdId`].(string)
 	} else if value[`clOrdId`] != nil {
-		order.AmountType, _ = strconv.Atoi(value[`clOrdId`].(string))
+		clOrdId = value[`clOrdId`].(string)
+	}
+	if strings.Contains(clOrdId, OKSeparator) {
+		clOrdId = clOrdId[:strings.Index(clOrdId, OKSeparator)]
+		order.AmountType, _ = strconv.Atoi(clOrdId)
 	}
 	if value[`sCode`] != nil {
 		order.ErrCode = value[`sCode`].(string)
