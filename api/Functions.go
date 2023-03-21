@@ -903,7 +903,7 @@ func InitCrossMarketInfos(markets []string) {
 	for coin, infos := range infoPool {
 		//util.Notice(`handle coin %s %d`, coin, len(infos))
 		scoreOpen := 0.02
-		scoreClose := 0.01
+		scoreClose := 0.001
 		if len(infos) >= 2 {
 			for _, info := range infos {
 				if settingsDbMap[fmt.Sprintf(`%s_%s_%s`, model.FunctionCross, info.Market, info.Name)] == nil {
