@@ -280,7 +280,7 @@ func placeTurtleLong(key, secret, orderType string, data *api.TurtleData, settin
 		} else if orderType == model.OrderTypeLimit && price >= tick.Asks[0].Price {
 			data.BreakLong = true
 		}
-		if data.BreakLong && big == -1 {
+		if data.BreakLong && big == -1 && setting.Chance >= 0 {
 			util.Notice(fmt.Sprintf(`already break place fake long %s %s %s`, orderType, setting.Function, symbol))
 			data.OrderLong = []*model.Order{{
 				Amount:       amount,
@@ -381,7 +381,7 @@ func placeTurtleShort(key, secret, orderType string, data *api.TurtleData, setti
 		}
 		util.Notice(fmt.Sprintf(`place short %s %s %s %s %d %v at %e %e amt %e`,
 			orderType, setting.Function, market, symbol, setting.Chance, canOpen, priceDeal, price, amount))
-		if data.BreakShort && big == -1 {
+		if data.BreakShort && big == -1 && setting.Chance <= 0 {
 			util.Notice(fmt.Sprintf(`already break place fake short %s %s %s`, orderType, setting.Function, symbol))
 			data.OrderShort = []*model.Order{{
 				Amount:       amount,
