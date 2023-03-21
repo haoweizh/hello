@@ -19,6 +19,8 @@ import (
 	"time"
 )
 
+const OKEXTag = `f924a8c6cc6fBCDE` // okx经纪商ID
+const OKSeparator = `Sep`
 const restOKEX = `https://www.okex.com`
 const wsOKEX = `wss://ws.okex.com:8443/ws/v5/public`
 const wsPrivateOKEX = `wss://ws.okex.com:8443/ws/v5/private`
@@ -572,7 +574,7 @@ func sendSignRequestOKEX(key, secret, method, path string, param, body map[strin
 	return responseBody, err
 }
 
-func getWSOrderArgOKEX(symbol, orderSide, orderType, tag string, price, amount float64) (args map[string]interface{}) {
+func getWSOrderArgOKEX(account *model.Account, symbol, orderSide, orderType string, price, amount float64) (args map[string]interface{}) {
 	price, decimal := model.FormatPrice(model.OKEX, symbol, price)
 	priceStr := util.CutTailZero(strconv.FormatFloat(price, 'f', decimal, 64))
 	formattedAmount := model.GetAmountInMarket(model.OKEX, symbol, amount, price)
@@ -582,11 +584,17 @@ func getWSOrderArgOKEX(symbol, orderSide, orderType, tag string, price, amount f
 		amountStrPerp = util.CutTailZero(fmt.Sprintf(`%f`, usdAmount*price))
 	}
 	_, _, _, dialectSymbol := model.GetFromStandard(model.OKEX, symbol)
-	return map[string]interface{}{`instId`: dialectSymbol, `tdMode`: `cross`, `side`: orderSide,
-		`sz`: amountStrPerp, `ordType`: orderType, `px`: priceStr, `tag`: tag}
+	args = map[string]interface{}{`instId`: dialectSymbol, `tdMode`: `cross`, `side`: orderSide,
+		`sz`: amountStrPerp, `ordType`: orderType, `px`: priceStr, `tag`: OKEXTag}
+	if orderType == model.OrderTypeStop {
+		args[`algoClOrdId`] = fmt.Sprintf(`%d%s%d%s`, account.Index, OKSeparator, time.Now().Nanosecond(), orderSide)
+	} else {
+		args[`clOrdId`] = fmt.Sprintf(`%d%s%d%s`, account.Index, OKSeparator, time.Now().Nanosecond(), orderSide)
+	}
+	return args
 }
 
-func PlacePairOKEX(key, symbolBuy, symbolSell, orderType string, priceBuy, priceSell, amount float64) (success bool, errMsg string) {
+func PlacePairOKEX(account *model.Account, symbolBuy, symbolSell, orderType string, priceBuy, priceSell, amount float64) (success bool, errMsg string) {
 	if amount == 0 || priceBuy == 0 || priceSell == 0 {
 		errMsg = fmt.Sprintf(`error: wrong PlacePairOKEX amount %f buy at %f sell at %f`, amount, priceBuy, priceSell)
 		util.Notice(errMsg)
@@ -606,23 +614,23 @@ func PlacePairOKEX(key, symbolBuy, symbolSell, orderType string, priceBuy, price
 	lastSameTime[symbolSell] = now
 	lastCarryTime = now
 	subscribeArgs := []map[string]interface{}{
-		getWSOrderArgOKEX(symbolBuy, model.OrderSideBuy, orderType, key[:5], priceBuy, amount),
-		getWSOrderArgOKEX(symbolSell, model.OrderSideSell, orderType, key[:5], priceSell, amount)}
+		getWSOrderArgOKEX(account, symbolBuy, model.OrderSideBuy, orderType, priceBuy, amount),
+		getWSOrderArgOKEX(account, symbolSell, model.OrderSideSell, orderType, priceSell, amount)}
 	subscribeMap := make(map[string]interface{})
 	subscribeMap[`args`] = subscribeArgs
 	subscribeMap[`id`] = strconv.FormatInt(time.Now().UnixNano(), 10)
 	subscribeMap["op"] = "batch-orders"
 	msg := util.JsonEncodeToByte(subscribeMap)
-	if privateConnectionOKEX == nil || privateConnectionOKEX[key] == nil {
-		errMsg = fmt.Sprintf(`fail to get connection %s`, key)
+	if privateConnectionOKEX == nil || privateConnectionOKEX[account.Key] == nil {
+		errMsg = fmt.Sprintf(`fail to get connection %s`, account.Key)
 		util.Notice(errMsg)
 		return false, errMsg
 	}
 	util.Notice(`place pair %s`, msg)
 	if model.AppConfig.Env != `test` {
-		err := SendToConnection(model.OKEX, privateConnectionOKEX[key], msg)
+		err := SendToConnection(model.OKEX, privateConnectionOKEX[account.Key], msg)
 		if err != nil {
-			errMsg = fmt.Sprintf(`fail to send order ws %s return %s`, key, err.Error())
+			errMsg = fmt.Sprintf(`fail to send order ws %s return %s`, account.Key, err.Error())
 			util.Notice(errMsg)
 			return false, errMsg
 		}
@@ -636,7 +644,7 @@ func PlacePairOKEX(key, symbolBuy, symbolSell, orderType string, priceBuy, price
 // 不能使用 strconv.FormatFloat 因为有 2.00000001问题
 // priceStr := strconv.FormatFloat(order.Price, 'f', -1, 64)
 // triggerPriceStr := strconv.FormatFloat(order.TriggerPrice, 'f', -1, 64)
-func placeOrderOKEX(key, secret string, isWs bool, order *model.Order) {
+func placeOrderOKEX(account *model.Account, isWs bool, order *model.Order) {
 	price, decimal := model.FormatPrice(model.OKEX, order.Symbol, order.Price)
 	priceStr := util.CutTailZero(strconv.FormatFloat(price, 'f', decimal, 64))
 	priceTrigger, decimal := model.FormatPrice(model.OKEX, order.Symbol, order.TriggerPrice)
@@ -656,14 +664,16 @@ func placeOrderOKEX(key, secret string, isWs bool, order *model.Order) {
 		return
 	}
 	postData := map[string]interface{}{`instId`: order.Symbol, `tdMode`: `cross`, `side`: order.OrderSide,
-		`sz`: amount, `ordType`: order.OrderType}
+		`sz`: amount, `ordType`: order.OrderType, `tag`: OKEXTag}
 	path := "/api/v5/trade/order"
 	if order.OrderType == model.OrderTypeStop {
 		postData[`ordType`] = `conditional`
 		postData[`slOrdPx`] = priceStr
 		postData[`slTriggerPx`] = triggerPriceStr
+		postData[`algoClOrdId`] = fmt.Sprintf(`%d%s%d%s`, account.Index, OKSeparator, time.Now().Nanosecond(), order.OrderSide)
 		path = `/api/v5/trade/order-algo`
 	} else {
+		postData[`clOrdId`] = fmt.Sprintf(`%d%s%d%s`, account.Index, OKSeparator, time.Now().Nanosecond(), order.OrderSide)
 		postData[`px`] = priceStr
 	}
 	if isWs {
@@ -673,22 +683,21 @@ func placeOrderOKEX(key, secret string, isWs bool, order *model.Order) {
 		subscribeMap := make(map[string]interface{})
 		subscribeMap[`id`] = strconv.FormatInt(time.Now().UnixNano(), 10)
 		subscribeMap["op"] = "batch-orders"
-		postData[`tag`] = order.AmountType[:5]
 		subscribeMap[`args`] = []map[string]interface{}{postData}
 		wsOrderMsg := util.JsonEncodeToByte(subscribeMap)
 		util.SocketInfo(`ws order ` + string(wsOrderMsg))
 		order.Status = model.CarryStatusWorking
-		if privateConnectionOKEX == nil || privateConnectionOKEX[key] == nil {
-			util.Notice(fmt.Sprintf(`fail to get connection %s`, key))
+		if privateConnectionOKEX == nil || privateConnectionOKEX[account.Key] == nil {
+			util.Notice(fmt.Sprintf(`fail to get connection %s`, account.Key))
 			order.Status = model.CarryStatusFail
 		} else {
-			if err := SendToConnection(model.OKEX, privateConnectionOKEX[key], wsOrderMsg); err != nil {
-				util.Notice(fmt.Sprintf(`fail to send order ws %s %s return %s`, key, order.Symbol, err.Error()))
+			if err := SendToConnection(model.OKEX, privateConnectionOKEX[account.Key], wsOrderMsg); err != nil {
+				util.Notice(fmt.Sprintf(`fail to send order ws %s %s return %s`, account.Key, order.Symbol, err.Error()))
 				order.Status = model.CarryStatusFail
 			}
 		}
 	} else {
-		responseBody, httpErr := sendSignRequestOKEX(key, secret, http.MethodPost, path, nil, postData)
+		responseBody, httpErr := sendSignRequestOKEX(account.Key, account.Secret, http.MethodPost, path, nil, postData)
 		util.Notice(fmt.Sprintf(`place okex %s return %s`, path, string(responseBody)))
 		if httpErr != nil {
 			order.ErrCode = httpErr.Error()
@@ -905,8 +914,15 @@ func parseOrderOKEX(value map[string]interface{}) (order *model.Order) {
 		ts, _ := strconv.ParseInt(value[`cTime`].(string), 10, 64)
 		order.OrderTime = time.Unix(ts/1000, 0)
 	}
-	if value[`tag`] != nil {
-		order.AmountType = value[`tag`].(string)
+	clOrdId := ``
+	if value[`algoClOrdId`] != nil {
+		clOrdId = value[`algoClOrdId`].(string)
+	} else if value[`clOrdId`] != nil {
+		clOrdId = value[`clOrdId`].(string)
+	}
+	if strings.Contains(clOrdId, OKSeparator) {
+		clOrdId = clOrdId[:strings.Index(clOrdId, OKSeparator)]
+		order.AmountType, _ = strconv.Atoi(clOrdId)
 	}
 	if value[`sCode`] != nil {
 		order.ErrCode = value[`sCode`].(string)

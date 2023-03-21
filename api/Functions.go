@@ -637,9 +637,10 @@ func PlaceOrder(key, secret, orderSide, orderType, market, symbol, orderParam st
 			Price: price, Amount: 0, OrderId: ``, ErrCode: ``, TriggerPrice: triggerPrice,
 			Status: model.CarryStatusFail, DealAmount: 0, DealPrice: price, OrderTime: util.GetNow()}
 	}
+	account := model.AppConfig.GetAccountFromKeyIndex(market, key, -1)
 	order = &model.Order{OrderSide: markSide, OrderType: orderType, Market: market, Symbol: symbol, Price: price,
 		Amount: amount, DealAmount: 0, DealPrice: price, TriggerPrice: triggerPrice,
-		OrderTime: util.GetNow(), UnfilledQuantity: amount, AmountType: key}
+		OrderTime: util.GetNow(), UnfilledQuantity: amount, AmountType: account.Index}
 	//util.Notice(fmt.Sprintf(`...%s %s %s before order %d amount: %f price:%f triggerPrice:%f`,
 	//	orderSide, market, symbol, start, amount, price, triggerPrice))
 	if model.AppConfig.Env == `test` {
@@ -657,7 +658,7 @@ func PlaceOrder(key, secret, orderSide, orderType, market, symbol, orderParam st
 	case model.Gate:
 		placeOrderGate(key, secret, order, orderSide, orderType, symbol, price, amount)
 	case model.OKEX:
-		placeOrderOKEX(key, secret, isWs, order)
+		placeOrderOKEX(account, isWs, order)
 		if isWs {
 			order.OrderId = strconv.FormatInt(time.Now().UnixNano(), 10) + symbol
 		}
@@ -920,7 +921,7 @@ func InitCrossMarketInfos(markets []string) {
 	for coin, infos := range infoPool {
 		//util.Notice(`handle coin %s %d`, coin, len(infos))
 		scoreOpen := 0.02
-		scoreClose := 0.01
+		scoreClose := 0.001
 		if len(infos) >= 2 {
 			for _, info := range infos {
 				if settingsDbMap[fmt.Sprintf(`%s_%s_%s`, model.FunctionCross, info.Market, info.Name)] == nil {
