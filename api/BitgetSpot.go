@@ -60,7 +60,7 @@ func WsDepthServeBitgetSpot(markets *model.Markets, orderHandler OrderHandler) (
 			return
 		}
 		if bookWsResp.Arg.InstType == "sp" && bookWsResp.Action == "snapshot" {
-			if bookWsResp.Arg.InstId == "" || bookWsResp.Data == nil {
+			if bookWsResp.Arg.InstId == "" || !util.EndWith(bookWsResp.Arg.InstId, "USDT") || bookWsResp.Data == nil {
 				return
 			}
 			symbol := bookWsResp.Arg.InstId[0:len(bookWsResp.Arg.InstId)-4] + model.UniStandardTail[model.MarketTypeSpot]

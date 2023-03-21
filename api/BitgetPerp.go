@@ -72,7 +72,7 @@ func WsDepthServeBitgetPerp(markets *model.Markets, orderHandler OrderHandler) (
 			return
 		}
 		if bookWsResp.Arg.InstType == "mc" && bookWsResp.Action == "snapshot" {
-			if bookWsResp.Arg.InstId == "" || bookWsResp.Data == nil {
+			if bookWsResp.Arg.InstId == "" || !util.EndWith(bookWsResp.Arg.InstId, "USDT") || bookWsResp.Data == nil {
 				return
 			}
 			symbol := bookWsResp.Arg.InstId[0:len(bookWsResp.Arg.InstId)-4] + model.UniStandardTail[model.MarketTypePerp]
@@ -129,6 +129,9 @@ func WsDepthServeBitgetPerp(markets *model.Markets, orderHandler OrderHandler) (
 		}
 		if tickerWsResp.Arg.InstType == "mc" && tickerWsResp.Action == "snapshot" {
 			for _, tickerData := range tickerWsResp.Data {
+				if tickerData.SymbolId == "" || !util.EndWith(tickerData.SymbolId, "USDT") {
+					continue
+				}
 				symbol := tickerData.SymbolId[0:len(tickerData.SymbolId)-4] + model.UniStandardTail[model.MarketTypePerp]
 				price, _ := strconv.ParseFloat(tickerData.MarkPrice, 64)
 				ticker := &model.MarkPriceInfo{MarkPrice: price, Ts: int(tickerData.SystemTime)}
