@@ -52,7 +52,7 @@ func _(key, secret string) {
 func RefreshMarketInfo() {
 	for true {
 		time.Sleep(time.Hour * 24)
-		if !api.InitMarketInfos() {
+		if !api.InitMarketInfos(nil) {
 			util.Notice(`fatal error: can not set market mode!!`)
 		}
 	}
@@ -183,7 +183,7 @@ func Maintain() {
 	//if coinSettings != nil {
 	//	go cross.ClearCarry()
 	//}
-	api.InitMarketInfos()
+	api.InitMarketInfos(nil)
 	go RefreshMarketInfo()
 	go ReloadSettings()
 	for true {

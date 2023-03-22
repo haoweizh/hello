@@ -8,7 +8,7 @@ import (
 	"sync"
 )
 
-var marketInfos sync.Map // market - map[string]*MarketInfo //symbol - MarketInfo
+var MarketInfos *sync.Map // market - symbol - *MarketInfo
 
 var CommonCoins = map[string]bool{`btc`: true, `eth`: true, `ltc`: true, `bch`: true, `eos`: true, `xrp`: true,
 	`usdt`: true, `etc`: true, `link`: true}
@@ -40,66 +40,46 @@ func (marketInfoArray MarketInfoArray) Less(i, j int) bool {
 	return marketInfoArray[i].TradeAmount < marketInfoArray[j].TradeAmount
 }
 
-func GetMarketInfos(market string) (infos map[string]*MarketInfo) {
-	value, _ := marketInfos.Load(market)
-	if value == nil {
-		return nil
-	}
-	return value.(map[string]*MarketInfo)
-}
-
-func GetMarketInfo(market, symbol string) (marketInfo *MarketInfo) {
-	value, _ := marketInfos.Load(market)
-	if value == nil {
-		return nil
-	}
-	return value.(map[string]*MarketInfo)[symbol]
-}
-
-func SetMarketInfos(market string, value map[string]*MarketInfo) {
-	marketInfos.Store(market, value)
-}
-
 // ParseRealAmount 返回以币为单位的数量
 func ParseRealAmount(market, symbol string, amount float64) (success bool, realAmount float64) {
-	marketInfo := GetMarketInfo(market, symbol)
-	if marketInfo == nil || marketInfo.SizeIncrement == 0 {
+	v, _ := util.LoadSyncMap(MarketInfos, market, symbol)
+	if v == nil || v.(*MarketInfo).SizeIncrement == 0 {
 		return false, 0
 	}
-	if marketInfo.CTValue == 0 {
+	if v.(*MarketInfo).CTValue == 0 {
 		return true, amount
 	}
-	return true, amount * marketInfo.CTValue
+	return true, amount * v.(*MarketInfo).CTValue
 }
 
 // GetAmountInMarket 返回交易所认可的下单数量，可能是币数、张数等
 // amount: 搬砖程序中使用的币数量
 func GetAmountInMarket(market string, symbol string, amount, price float64) (formattedAmount float64) {
-	marketInfo := GetMarketInfo(market, symbol)
-	if marketInfo == nil || marketInfo.SizeIncrement == 0 || marketInfo.SizeMin == 0 {
+	v, _ := util.LoadSyncMap(MarketInfos, market, symbol)
+	if v == nil || v.(*MarketInfo).SizeIncrement == 0 || v.(*MarketInfo).SizeMin == 0 {
 		return 0
 	}
 	success, _, coin, _ := GetFromStandard(market, symbol)
-	if success && marketInfo.CTValue > 0 && marketInfo.CTCurrency == coin {
-		amount = amount / marketInfo.CTValue
+	if success && v.(*MarketInfo).CTValue > 0 && v.(*MarketInfo).CTCurrency == coin {
+		amount = amount / v.(*MarketInfo).CTValue
 	}
-	formattedAmount = marketInfo.SizeIncrement * math.Floor(amount/marketInfo.SizeIncrement)
-	decimal := util.NumDecPlaces(marketInfo.SizeIncrement)
+	formattedAmount = v.(*MarketInfo).SizeIncrement * math.Floor(amount/v.(*MarketInfo).SizeIncrement)
+	decimal := util.NumDecPlaces(v.(*MarketInfo).SizeIncrement)
 	format := `%.` + strconv.Itoa(decimal) + `f`
 	formattedAmount, _ = strconv.ParseFloat(fmt.Sprintf(format, formattedAmount), 64)
-	if formattedAmount < marketInfo.SizeMin || marketInfo.SizeMin == 0 ||
-		(marketInfo.MoneyMin > 0 && marketInfo.MoneyMin > price*formattedAmount) {
+	if formattedAmount < v.(*MarketInfo).SizeMin || v.(*MarketInfo).SizeMin == 0 ||
+		(v.(*MarketInfo).MoneyMin > 0 && v.(*MarketInfo).MoneyMin > price*formattedAmount) {
 		return 0
 	}
 	return formattedAmount
 }
 
 func FormatPrice(market, symbol string, price float64) (formattedPrice float64, decimal int) {
-	marketInfo := GetMarketInfo(market, symbol)
-	if marketInfo == nil || marketInfo.SizeIncrement == 0 {
+	v, _ := util.LoadSyncMap(MarketInfos, market, symbol)
+	if v == nil || v.(*MarketInfo).SizeIncrement == 0 {
 		return 0, 0
 	}
-	return marketInfo.PriceIncrement * math.Round(price/marketInfo.PriceIncrement), marketInfo.PriceDecimal
+	return v.(*MarketInfo).PriceIncrement * math.Round(price/v.(*MarketInfo).PriceIncrement), v.(*MarketInfo).PriceDecimal
 	//if orderSide == OrderSideBuy {
 	//	return marketInfo.PriceIncrement * math.Ceil(price/marketInfo.PriceIncrement), marketInfo.PriceDecimal
 	//} else {
