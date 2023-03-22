@@ -450,7 +450,6 @@ func setSettingsBybitPerp(key, secret, symbol string) (singleMode, crossPos bool
 	if ok && value != nil {
 		return true, true
 	}
-	settingBybit.Store(key+symbol, true)
 	postData := map[string]interface{}{`symbol`: symbol, `mode`: `MergedSingle`}
 	response, _ := SignedRequestBybitPerp(key, secret, http.MethodPost, `/private/linear/position/switch-mode`, postData)
 	setJson, err := util.NewJSON(response)
@@ -465,6 +464,9 @@ func setSettingsBybitPerp(key, secret, symbol string) (singleMode, crossPos bool
 		crossPos = true
 	} else {
 		util.Notice(fmt.Sprintf(`fail to set bybitPerp %s pos mode to cross`, symbol))
+	}
+	if singleMode && crossPos {
+		settingBybit.Store(key+symbol, true)
 	}
 	return
 }

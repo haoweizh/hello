@@ -20,7 +20,8 @@ type Config struct {
 	BybitKey, BybitSecret, BybitCarryClose, BybitCarryRate                                           string
 	BinanceKey, BinanceSecret, BinanceCarryClose, BinanceCarryRate                                   string
 	CoinparkKey, CoinparkSecret, CoinparkCarryClose, CoinparkCarryRate                               string
-	DFutureKey, DFutureSecret, MexcKey, MexcSecret, MexcCarryClose, MexcCarryRate                    string
+	BitgetKey, BitgetSecret, BitgetCarryClose, BitgetCarryRate                                       string
+	MexcKey, MexcSecret, MexcCarryClose, MexcCarryRate                                               string
 	BitmexKey, BitmexSecret, BitmexCarryClose, BitmexCarryRate, FtxSubAccount, Phase                 string
 	OKPhase, Handle, Mail, FromMail, FromMailAuth, Port, WalletKey, DBConnection, Env, FutureAddress string
 }
@@ -89,6 +90,11 @@ func (config *Config) GetAccounts(market string) []*Account {
 		closeValues = strings.Split(config.FtxCarryClose, `,`)
 		rateValues = strings.Split(config.FtxCarryRate, `,`)
 		ftxSubAccounts = strings.Split(config.FtxSubAccount, `,`)
+	case BitgetSpot, BitgetPerp:
+		keys = strings.Split(config.BitgetKey, `,`)
+		secrets = strings.Split(config.BitgetSecret, `,`)
+		closeValues = strings.Split(config.BitgetCarryClose, `,`)
+		rateValues = strings.Split(config.BitgetCarryRate, `,`)
 	case OKEX:
 		keys = strings.Split(config.OkexKey, `,`)
 		secrets = strings.Split(config.OkexSecret, `,`)
