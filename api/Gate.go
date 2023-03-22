@@ -312,20 +312,22 @@ var markPriceHandler = gateWs.NewCallBack(func(msg *gateWs.UpdateMsg) {
 		return
 	}
 	if msg.Channel == gateWs.ChannelFutureTicker {
-		var update gateWs.FuturesTicker
-		if err := json.Unmarshal(msg.Result, &update); err != nil {
+		var tickers []gateWs.FuturesTicker
+		if err := json.Unmarshal(msg.Result, &tickers); err != nil {
 			util.Notice(fmt.Sprintf("future mark price Unmarshal err:%s %s", model.Gate, err.Error()))
 			return
 		}
-		success, _, coin := model.GetCoinFromDialect(model.Gate, update.Contract)
-		if !success {
-			return
+		for _, update := range tickers {
+			success, _, coin := model.GetCoinFromDialect(model.Gate, update.Contract)
+			if !success {
+				return
+			}
+			symbol := coin + model.UniStandardTail[model.MarketTypePerp]
+			price, _ := strconv.ParseFloat(update.MarkPrice, 64)
+			ticker := &model.MarkPriceInfo{MarkPrice: price, Ts: int(msg.TimeMs)}
+			markets := model.AppMarkets
+			markets.SetMarkPriceInfo(symbol, model.Gate, ticker)
 		}
-		symbol := coin + model.UniStandardTail[model.MarketTypePerp]
-		price, _ := strconv.ParseFloat(update.MarkPrice, 64)
-		ticker := &model.MarkPriceInfo{MarkPrice: price, Ts: int(msg.TimeMs)}
-		markets := model.AppMarkets
-		markets.SetMarkPriceInfo(symbol, model.Gate, ticker)
 	}
 	return
 })
