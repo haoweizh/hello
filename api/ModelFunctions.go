@@ -472,7 +472,7 @@ func GetAccounts(index int) (accounts map[string]*model.Account) {
 	if model.AppAccounts != nil && len(model.AppAccounts) > index {
 		return model.AppAccounts[index]
 	}
-	tempAccounts := model.AppConfig.GetAccounts(model.Ftx)
+	tempAccounts := model.AppConfig.GetAccounts(model.BinancePerp)
 	size := int(math.Max(float64(GetCrossLen()), float64(len(tempAccounts))))
 	model.AppAccounts = make([]map[string]*model.Account, size)
 	for i := 0; i < size; i++ {
