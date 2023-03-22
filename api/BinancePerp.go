@@ -156,7 +156,7 @@ var subscribeHandlerBinancePerp = func(connection *websocket.Conn, subscribes []
 	if err = SendToConnection(model.BinancePerp, connection, subParamJson); err != nil {
 		util.SocketInfo("binance perp can not subscribe %s %s", subParamJson, err.Error())
 	} else {
-		util.Info(fmt.Sprintf(`subscribe %s %s %d`, model.BinancePerp, subParamJson, len(subscribes)))
+		util.Notice(fmt.Sprintf(`subscribe %s %s %d`, model.BinancePerp, subParamJson, len(subscribes)))
 	}
 	time.Sleep(time.Millisecond * 500)
 	return err
@@ -205,7 +205,7 @@ func handleMarkPriceBinancePerp(markets *model.Markets, json *simplejson.Json, s
 		UpdateTime: util.GetNow(),
 		ExpireTime: expireTime / 1000,
 	}
-	util.Info(fmt.Sprintf(`binance get market price %s %f %f %d`, standardSymbol, markPrice, rate, expireTime))
+	util.Notice(fmt.Sprintf(`binance get market price %s %f %f %d`, standardSymbol, markPrice, rate, expireTime))
 	model.SetFundingRate(model.BinancePerp, standardSymbol, fundingRate)
 }
 
