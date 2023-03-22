@@ -212,6 +212,14 @@ func GetMultiCandle(key, secret, market string, slotSeconds int, begin, end time
 	return
 }
 
+func GetMarkPrice(account *model.Account, markets *model.Markets, market, symbol string) (markPrice float64) {
+	switch market {
+	case model.BinancePerp:
+		return getMarkPriceBinancePerp(account, markets, symbol)
+	}
+	return
+}
+
 // GetCandle slotSeconds: candle的以秒计算宽度
 func GetCandle(key, secret, market, symbol string, slotSeconds int, begin, end time.Time) (candles []*model.Candle) {
 	count := (end.Unix() - begin.Unix()) / int64(slotSeconds)

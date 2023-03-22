@@ -282,6 +282,22 @@ func maintainChannelBinancePerp(subscribes []interface{}) {
 	}
 }
 
+func getMarkPriceBinancePerp(account *model.Account, markets *model.Markets, symbol string) (markPrice float64) {
+	success, _, _, dialectSymbol := model.GetFromStandard(model.BinancePerp, symbol)
+	if success {
+		responseBody := signedRequestBinancePerp(account.Key, account.Secret,
+			http.MethodGet, restBinancePerp+"/fapi/v1/premiumIndex", true, map[string]interface{}{`symbol`: dialectSymbol})
+		markPriceJson, err := util.NewJSON(responseBody)
+		if err == nil {
+			markPrice, _ = strconv.ParseFloat(markPriceJson.Get(`markPrice`).MustString(), 64)
+			mpTime := markPriceJson.Get(`time`).MustInt()
+			markets.SetMarkPriceInfo(symbol, model.BinancePerp, &model.MarkPriceInfo{MarkPrice: markPrice, Ts: mpTime})
+			util.Notice(fmt.Sprintf(`rest mark price %s %s %f time %d`, model.BinancePerp, symbol, markPrice, mpTime))
+		}
+	}
+	return markPrice
+}
+
 func placeOrderBinancePerp(key, secret string, order *model.Order, orderSide, orderType, symbol string, price, triggerPrice, amount float64) {
 	price, decimal := model.FormatPrice(model.BinancePerp, symbol, price)
 	priceStr := util.CutTailZero(strconv.FormatFloat(price, 'f', decimal, 64))
@@ -365,7 +381,7 @@ func cancelOrdersBinancePerp(key, secret string, symbol string) bool {
 
 // sdk暂不支持该接口
 func getPositionsBinancePerp(key, secret string) (success bool, positions []*model.Position, accountValue, availableU float64) {
-	responseBody := signedRequestBinance(key, secret, http.MethodGet, restBinancePerp+"/fapi/v2/account", true, nil)
+	responseBody := signedRequestBinancePerp(key, secret, http.MethodGet, restBinancePerp+"/fapi/v2/account", true, nil)
 	positionJson, err := util.NewJSON(responseBody)
 	if err != nil || positionJson == nil {
 		util.SocketInfo(`fail to refresh binance position `)
@@ -434,7 +450,7 @@ func getCandlesBinancePerp(key, secret, symbol string, begin, end time.Time, lim
 	}
 	if responseBody == nil {
 		isCache = false
-		responseBody = signedRequestBinance(key, secret, http.MethodGet, restBinancePerp+"/fapi/v1/klines", true, param)
+		responseBody = signedRequestBinancePerp(key, secret, http.MethodGet, restBinancePerp+"/fapi/v1/klines", true, param)
 	}
 	candleJson, err := util.NewJSON(responseBody)
 	errMsg := ``
@@ -474,7 +490,7 @@ func getCandlesBinancePerp(key, secret, symbol string, begin, end time.Time, lim
 	return
 }
 
-func signedRequestBinance(key, secret, method, requestUrl string, withApiKey bool, value map[string]interface{}) []byte {
+func signedRequestBinancePerp(key, secret, method, requestUrl string, withApiKey bool, value map[string]interface{}) []byte {
 	param := &url.Values{}
 	if value != nil {
 		for itemKey, itemValue := range value {
