@@ -1198,7 +1198,7 @@ func FormatCrossPair(marketBuy, marketSell, symbolBuy, symbolSell string, amount
 	marketInfoSell := model.GetMarketInfo(marketSell, symbolSell)
 	if marketInfoBuy == nil || marketInfoSell == nil {
 		util.Notice(`format %s %s %s %s %v %v`, marketBuy, marketSell, symbolBuy, symbolSell, marketInfoBuy, marketInfoSell)
-		api.InitMarketInfos()
+		//api.InitMarketInfos()
 		marketInfoTime, ok := getMarketInfoMail.Load(`FormatCrossPair`)
 		if !(ok && marketInfoTime.(time.Time).Add(time.Minute*60).After(time.Now())) {
 			notifyTime.Store(`FormatCrossPair`, time.Now())

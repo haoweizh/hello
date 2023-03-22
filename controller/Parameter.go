@@ -36,13 +36,13 @@ func ParameterServe() {
 	router.LoadHTMLGlob("templates/*")
 	router.GET("/", GetParameters)
 	//router.GET(`refresh`, RefreshParameters)
+	//router.GET(`test`, testSpeed)
 	router.GET(`pw`, GetCode)
 	router.GET(`simulate`, simulate)
 	router.GET(`cross`, crossPage)
 	router.GET(`hold`, holdPage)
 	router.GET(`tick`, tickPage)
 	router.GET(`cross_refresh`, crossRefresh)
-	router.GET(`test`, testSpeed)
 	router.GET(`debug`, debug)
 	router.GET(`wss`, WsPage)
 	router.GET(`gxzq`, simulateGXZQ)
@@ -286,7 +286,8 @@ func debug(c *gin.Context) {
 	c.String(http.StatusOK, fmt.Sprintf(`set do debug 0-false, !0-true %s`, doDebug))
 }
 
-func testSpeed(c *gin.Context) {
+// testSpeed
+func _(c *gin.Context) {
 	param := c.Query(`markets`)
 	markets := strings.Split(param, `,`)
 	low := make(map[string]int64)
