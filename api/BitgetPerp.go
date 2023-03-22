@@ -282,7 +282,7 @@ func getFundingRateBitgetPerp(symbol string) (fundingRate *model.FundingRate) {
 	bitgetFundingResp := &dtos.BitgetFundingResp{}
 	perpJsonErr := json.Unmarshal(httpResp, bitgetFundingResp)
 	if bitgetFundingResp == nil || bitgetFundingResp.Code != "00000" {
-		util.Notice(fmt.Sprintf("get bitget perp market error, resp: %s, httpErr: %v, jsonErr: %v", httpResp, httpErr, perpJsonErr))
+		util.Notice(fmt.Sprintf("get bitget perp funding rate error, resp: %s, httpErr: %v, jsonErr: %v", httpResp, httpErr, perpJsonErr))
 		return
 	}
 	rate, _ := strconv.ParseFloat(bitgetFundingResp.Data.FundingRate, 64)
