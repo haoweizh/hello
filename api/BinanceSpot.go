@@ -22,6 +22,7 @@ const wsStepBinanceSpot = 20
 var channelMaintainingBinanceSpot = false
 
 func getMarketsBinanceSpot(key, secret string) (marketInfos map[string]*model.MarketInfo) {
+	util.Notice(fmt.Sprintf("start to getMarketsBinanceSpot %s", key))
 	marketInfos = make(map[string]*model.MarketInfo)
 	client := binance.NewClient(key, secret)
 	exchangeInfo, err := client.NewExchangeInfoService().Do(context.Background())

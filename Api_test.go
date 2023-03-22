@@ -15,7 +15,6 @@ import (
 	"math"
 	"net/http"
 	"net/url"
-	"sort"
 	"strconv"
 	"strings"
 	"testing"
@@ -69,7 +68,7 @@ func Test_getCommonMarketInfos(t *testing.T) {
 	model.NewConfig()
 	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
 	//api.InitCrossMarketInfos([]string{model.Gate})
-	api.InitMarketInfos()
+	api.InitMarketInfos([]string{model.OKEX, model.BybitSpot, model.Ftx, model.Gate})
 	price, decimal := model.FormatPrice(model.BinancePerp, `SOL_PERP`, 19.407125)
 	priceStr := util.CutTailZero(strconv.FormatFloat(price, 'f', decimal, 64))
 	fmt.Println(priceStr)
@@ -79,11 +78,6 @@ func Test_getCommonMarketInfos(t *testing.T) {
 	fmt.Println(order1.OrderId)
 	success, pos, value, u := api.GetPositions(model.AppConfig.GateKey, model.AppConfig.GateSecret, model.Gate)
 	fmt.Println(fmt.Sprintf(`%v %v %v %v`, success, pos, value, u))
-	markets := api.GetMarketInfos(model.Gate)
-	for s, info := range markets {
-		fmt.Println(fmt.Sprintf(`%s %s %s`, s, info.Name, info.Market))
-	}
-	//api.InitCrossMarketInfos([]string{model.OKEX, model.Ftx, model.Gate})
 }
 
 func TestWs(t *testing.T) {
@@ -104,7 +98,7 @@ func Test_WsAndOrderApi(t *testing.T) {
 	//coin + model.UniStandardTail[model.MarketTypeSpot]}
 	model.NewConfig()
 	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
-	api.InitMarketInfos()
+	api.InitMarketInfos([]string{model.OKEX, model.BybitSpot, model.Ftx, model.Gate})
 	account := model.AppConfig.GetAccounts(market)[0]
 	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
 	api.CreateMarketDepthServer(model.AppMarkets, market, nil)
@@ -157,7 +151,6 @@ func Test_BalAndPos(t *testing.T) {
 	model.NewConfig()
 	account := model.AppConfig.GetAccounts(model.BinancePerp)[0]
 	api.GetMarkPrice(account, model.BinancePerp, `ALGO_PERP`)
-	api.GetMarketInfos(model.BinancePerp)
 	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
 	model.AppRedis = redis.NewClient(&redis.Options{
 		Addr:     model.AppConfig.RedisAddr,
@@ -168,8 +161,7 @@ func Test_BalAndPos(t *testing.T) {
 	order := api.QueryOrderById(model.AppConfig.GateKey, model.AppConfig.GateSecret, `gate`, `MGA_USDT`,
 		model.OrderTypeLimit, `144149811503`)
 	fmt.Println(order)
-	api.InitMarketInfos()
-	//balMarkets := []string{model.OKEX, model.BybitSpot, model.Ftx, model.Gate}
+	api.InitMarketInfos([]string{model.OKEX, model.BybitSpot, model.Ftx, model.Gate})
 	//for _, market := range balMarkets {
 	//	account := model.AppConfig.GetAccounts(market)[0]
 	//	success, balances, total, collateral := api.GetBalances(account.Key, account.Secret, market)
@@ -262,8 +254,6 @@ func Test_initTurtleN(t *testing.T) {
 	//end, _ := time.Parse(time.RFC3339, `2022-10-02T00:00:00+00:00`)
 	//setting := &model.Setting{Market: model.Ftx, Symbol: `RVN_PERP`, AmountLimit: 3, GridAmount: 10000}
 	//regret.ProcessCandles(setting.Market, setting.Symbol, start, end, setting)
-	marketInfos := api.GetMarketInfos(model.BinancePerp)
-	model.SetMarketInfos(model.BinancePerp, marketInfos)
 	order := api.PlaceOrder(model.AppConfig.BinanceKey, model.AppConfig.BinanceSecret, model.OrderSideSell,
 		model.OrderTypeStop, model.BinancePerp, `ETH_PERP`, ``, 1222, 1255, 0.1,
 		false, nil, nil)
@@ -272,18 +262,6 @@ func Test_initTurtleN(t *testing.T) {
 	//today, _ := model.GetMarketToday(model.BinancePerp)
 	//candle := api.CalcCandleN(model.AppConfig.BinanceKey, model.AppConfig.BinanceSecret, model.BinancePerp,
 	//	`BTC_PERP`, 86400, day)
-	marketInfos = api.GetMarketInfos(model.BinancePerp)
-	marketInfoArray := model.MarketInfoArray{}
-	for _, info := range marketInfos {
-		marketInfoArray = append(marketInfoArray, info)
-	}
-	sort.Sort(sort.Reverse(marketInfoArray))
-	for _, info := range marketInfoArray {
-		_, _, coin, _ := model.GetFromStandard(model.BinancePerp, info.Name)
-		if !model.CommonCoins[strings.ToLower(coin)] {
-			fmt.Println(fmt.Sprintf(`%s %f`, coin, info.TradeAmount))
-		}
-	}
 	_, balances, total, collateral := api.GetBalances(model.AppConfig.GateKey, model.AppConfig.GateSecret, model.Gate)
 	fmt.Println(collateral)
 	fmt.Println(total)
@@ -308,8 +286,6 @@ func Test_initTurtleN(t *testing.T) {
 	testOrder := api.QueryOrderById(model.AppConfig.FtxKey, model.AppConfig.FtxSecret, model.Ftx, ``, model.OrderTypeLimit, `82424115039`)
 	fmt.Println(testOrder.Market)
 	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
-	//api.GetFundingRate(model.Binance, `BTCUSDT`, nil)
-	api.InitMarketInfos()
 }
 
 func downList(workId, pageId int) (fileNum int) {
@@ -367,11 +343,6 @@ func Test_wallet(t *testing.T) {
 	case model.Ftx:
 		key = model.AppConfig.FtxKey
 		secret = model.AppConfig.FtxSecret
-	case model.OKEX:
-		marketInfos := api.GetMarketInfos(model.OKEX)
-		model.SetMarketInfos(model.OKEX, marketInfos)
-		key = model.AppConfig.OkexKey
-		secret = model.AppConfig.OkexSecret
 	case model.BinancePerp:
 		key = model.AppConfig.BinanceKey
 		secret = model.AppConfig.BinanceSecret
@@ -396,8 +367,6 @@ func Test_wallet(t *testing.T) {
 	//}
 	_, rate, _ := api.GetFundingRate(key, secret, model.BybitPerp, symbol)
 	_, rate, _ = api.GetFundingRate(key, secret, model.BybitPerp, `LOOKS_PERP`)
-	marketInfos := api.GetMarketInfos(model.BybitPerp)
-	model.SetMarketInfos(model.BybitPerp, marketInfos)
 	//// 1078113554871236864
 	////cancelResult := api.CancelOrders(key, secret, model.BybitSpot, `ETH-USDT`)
 	////fmt.Println(cancelResult)
@@ -411,7 +380,7 @@ func Test_wallet(t *testing.T) {
 	fmt.Println(orderBybit1.OrderId)
 	fmt.Println(fmt.Sprintf(`%f`, rate))
 	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
-	api.InitMarketInfos()
+	api.InitMarketInfos([]string{model.OKEX, model.BybitSpot, model.Ftx, model.Gate})
 	orderQuery := api.QueryOrderById(model.AppConfig.GateKey, model.AppConfig.GateSecret, model.Gate, `CFX_PERP`, model.OrderTypeLimit, `79852794326`)
 	fmt.Println(orderQuery.OrderSide)
 	order1 := api.PlaceOrder(model.AppConfig.GateKey, model.AppConfig.GateSecret, model.OrderSideBuy, model.OrderTypeLimit,
@@ -420,9 +389,8 @@ func Test_wallet(t *testing.T) {
 	fmt.Println(order1.OrderId)
 	api.CancelOrders(model.AppConfig.GateKey, model.AppConfig.GateSecret, model.Gate, `ETH_USDT`)
 	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
-	api.InitMarketInfos()
+	api.InitMarketInfos([]string{model.OKEX, model.BybitSpot, model.Ftx, model.Gate})
 	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
-	api.InitMarketInfos()
 	fmt.Println(order1.DealAmount)
 	fmt.Println(order1.DealPrice)
 	fmt.Println(order1.Status)

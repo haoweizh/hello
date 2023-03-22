@@ -280,6 +280,11 @@ func GetPriceForce(key, secret, symbol, market string) (result bool, price float
 	if len(coins) == 2 && coins[0] == coins[1] {
 		return true, 1
 	}
+	marketInfo := model.GetMarketInfo(market, symbol)
+	if marketInfo == nil {
+		util.Info(fmt.Sprintf(`not in market infos %s %s`, market, symbol))
+		return false, 0
+	}
 	switch market {
 	case model.Gate:
 		result, price = getPriceGate(key, secret, symbol)
@@ -570,12 +575,12 @@ func MustPlaceOrder(key, secret, orderSide, orderType, market, symbol, orderPara
 	refreshType string, price, triggerPrice, amount float64, setting *model.Setting) (orders []*model.Order) {
 	retry := 10
 	for i := 0; i < retry; i++ {
-		marketInfo := model.GetMarketInfo(market, symbol)
-		if marketInfo == nil {
+		v, _ := util.LoadSyncMap(model.MarketInfos, market, symbol)
+		if v == nil {
 			util.Notice(`fail to get market info when must place %s %s`, market, symbol)
 			continue
 		}
-		if marketInfo.SizeMax > 0 && amount > marketInfo.SizeMax {
+		if v.(*model.MarketInfo).SizeMax > 0 && amount > v.(*model.MarketInfo).SizeMax {
 			ordersLeft := MustPlaceOrder(key, secret, orderSide, orderType, market, symbol, orderParam, refreshType, price, triggerPrice, amount/2, setting)
 			orders = MustPlaceOrder(key, secret, orderSide, orderType, market, symbol, orderParam, refreshType, price, triggerPrice, amount/2, setting)
 			if ordersLeft == nil || len(ordersLeft) == 0 {
@@ -789,43 +794,6 @@ func _(key, secret, market, transferType string, amount float64) {
 	}
 }
 
-func GetMarketInfos(market string) (marketInfo map[string]*model.MarketInfo) {
-	marketInfo = model.GetMarketInfos(market)
-	if marketInfo != nil {
-		return marketInfo
-	}
-	accounts := model.AppConfig.GetAccounts(market)
-	switch market {
-	case model.Ftx:
-		return getMarketsFtx(accounts[0].Key, accounts[0].Secret)
-	case model.OKEX:
-		return getMarketsOKEX(accounts[0].Key, accounts[0].Secret)
-	case model.Mexc:
-		return getMarketsMexc(accounts[0].Key, accounts[0].Secret)
-	case model.BinanceSpot:
-		return getMarketsBinanceSpot(accounts[0].Key, accounts[0].Secret)
-	case model.BinancePerp:
-		return getMarketsBinancePerp(accounts[0].Key, accounts[0].Secret)
-	case model.Gate:
-		_, marketInfo = getMarketsGate(accounts[0].Key, accounts[0].Secret)
-	case model.KucoinSpot:
-		return getMarketsKucoinSpot(accounts[0].Key)
-	case model.KucoinPerp:
-		return getMarketsKucoinPerp(accounts[0].Key)
-	case model.BybitPerp:
-		return getMarketsBybitPerp(accounts[0].Key, accounts[0].Secret)
-	case model.BybitSpot:
-		return getMarketsBybitSpot(accounts[0].Key, accounts[0].Secret)
-	case model.HuobiSpot:
-		return getMarketsHuobiSpot(accounts[0].Key, accounts[0].Secret)
-	case model.BitgetSpot:
-		return getMarketsBitgetSpot()
-	case model.BitgetPerp:
-		return getMarketsBitgetPerp()
-	}
-	return
-}
-
 // FilterCross
 // 由于gate下线暂时不平仓的币 BCD OXY CRU
 // 搬砖过滤币种 AMPL IOTA REEF MIR SOS
@@ -886,23 +854,22 @@ func FilterCross(market, symbol string) bool {
 // InitCrossMarketInfos 用以初始化cross carry的各个币种市场，调用前需要truncate settings数据库表，本方法会从新插入
 func InitCrossMarketInfos(markets []string) {
 	infoPool := make(map[string][]*model.MarketInfo) // coin - []marketInfos
-	// model.Binance, model.Ftx,
-	//markets := []string{model.BybitPerp, model.BybitSpot, model.OKEX, model.Ftx, model.Gate}
-	//markets := model.GetMarkets()
-	for _, market := range markets {
-		marketInfo := GetMarketInfos(market)
-		for _, info := range marketInfo {
-			success, _, coin, _ := model.GetFromStandard(market, info.Name)
-			if success && coin != `` {
-				if infoPool[coin] == nil {
-					infoPool[coin] = make([]*model.MarketInfo, 0)
-				}
-				if !FilterCross(info.Market, info.Name) {
-					infoPool[coin] = append(infoPool[coin], info)
-				}
+	InitMarketInfos(markets)
+	model.MarketInfos.Range(func(key, value any) bool {
+		if value == nil {
+			return true
+		}
+		success, _, coin, _ := model.GetFromStandard(value.(*model.MarketInfo).Market, value.(*model.MarketInfo).Name)
+		if success && coin != `` {
+			if infoPool[coin] == nil {
+				infoPool[coin] = make([]*model.MarketInfo, 0)
+			}
+			if !FilterCross(value.(*model.MarketInfo).Market, value.(*model.MarketInfo).Name) {
+				infoPool[coin] = append(infoPool[coin], value.(*model.MarketInfo))
 			}
 		}
-	}
+		return true
+	})
 	var settingsDb []*model.Setting
 	model.AppDB.Find(&settingsDb)
 	settingsDbMap := make(map[string]*model.Setting)
@@ -934,7 +901,7 @@ func InitCrossMarketInfos(markets []string) {
 var marketInfoInitializing = false
 
 // InitMarketInfos 只支持现货SPOT和永续PERP SWAP
-func InitMarketInfos() (success bool) {
+func InitMarketInfos(markets []string) (success bool) {
 	if marketInfoInitializing {
 		return
 	}
@@ -943,17 +910,20 @@ func InitMarketInfos() (success bool) {
 		marketInfoInitializing = false
 	}()
 	success = true
-	markets := GetMarkets()
+	if markets == nil {
+		markets = GetMarkets()
+	}
+	model.MarketInfos = &sync.Map{}
 	for _, market := range markets {
 		accounts := model.AppConfig.GetAccounts(market)
+		var marketInfos map[string]*model.MarketInfo
 		switch market {
 		case model.Mexc:
-			marketInfos := getMarketsMexc(accounts[0].Key, accounts[0].Secret)
-			model.SetMarketInfos(market, marketInfos)
+			marketInfos = getMarketsMexc(accounts[0].Key, accounts[0].Secret)
 		case model.Ftx:
-			model.SetMarketInfos(market, getMarketsFtx(accounts[0].Key, accounts[0].Secret))
+			marketInfos = getMarketsFtx(accounts[0].Key, accounts[0].Secret)
 		case model.OKEX:
-			model.SetMarketInfos(market, getMarketsOKEX(accounts[0].Key, accounts[0].Secret))
+			marketInfos = getMarketsOKEX(accounts[0].Key, accounts[0].Secret)
 			for _, account := range accounts {
 				accountMode := getAccountConfigOKEX(account.Key, account.Secret)
 				util.Notice(`okex config and set: ` + accountMode)
@@ -964,11 +934,11 @@ func InitMarketInfos() (success bool) {
 				}
 			}
 		case model.HuobiSpot:
-			model.SetMarketInfos(market, getMarketsHuobiSpot(accounts[0].Key, accounts[0].Secret))
+			marketInfos = getMarketsHuobiSpot(accounts[0].Key, accounts[0].Secret)
 		case model.BinanceSpot:
-			model.SetMarketInfos(market, getMarketsBinanceSpot(accounts[0].Key, accounts[0].Secret))
+			marketInfos = getMarketsBinanceSpot(accounts[0].Key, accounts[0].Secret)
 		case model.BinancePerp:
-			model.SetMarketInfos(market, getMarketsBinancePerp(accounts[0].Key, accounts[0].Secret))
+			marketInfos = getMarketsBinancePerp(accounts[0].Key, accounts[0].Secret)
 			go func() {
 				for _, account := range accounts {
 					setPosSideBinancePerp(account.Key, account.Secret)
@@ -980,21 +950,14 @@ func InitMarketInfos() (success bool) {
 				setPosSideGate(account.Key, account.Secret)
 				setMarginSettingGate(account.Key, account.Secret)
 			}
-			var marketInfos map[string]*model.MarketInfo
-			success, marketInfos = getMarketsGate(accounts[0].Key, accounts[0].Secret)
-			if success {
-				model.SetMarketInfos(market, marketInfos)
-			}
+			_, marketInfos = getMarketsGate(accounts[0].Key, accounts[0].Secret)
 		case model.KucoinSpot:
-			marketInfos := getMarketsKucoinSpot(accounts[0].Key)
-			model.SetMarketInfos(market, marketInfos)
+			marketInfos = getMarketsKucoinSpot(accounts[0].Key)
 		case model.KucoinPerp:
-			marketInfos := getMarketsKucoinPerp(accounts[0].Key)
-			model.SetMarketInfos(market, marketInfos)
+			marketInfos = getMarketsKucoinPerp(accounts[0].Key)
 			setFutureAutoDeposit()
 		case model.BybitPerp:
-			marketInfos := getMarketsBybitPerp(accounts[0].Key, accounts[0].Secret)
-			model.SetMarketInfos(market, marketInfos)
+			marketInfos = getMarketsBybitPerp(accounts[0].Key, accounts[0].Secret)
 			go func() {
 				for _, account := range accounts {
 					for symbol := range marketInfos {
@@ -1004,12 +967,15 @@ func InitMarketInfos() (success bool) {
 				}
 			}()
 		case model.BybitSpot:
-			model.SetMarketInfos(market, getMarketsBybitSpot(accounts[0].Key, accounts[0].Secret))
+			marketInfos = getMarketsBybitSpot(accounts[0].Key, accounts[0].Secret)
 		case model.BitgetSpot:
-			model.SetMarketInfos(market, getMarketsBitgetSpot())
+			marketInfos = getMarketsBitgetSpot()
 		case model.BitgetPerp:
-			model.SetMarketInfos(market, getMarketsBitgetPerp())
+			marketInfos = getMarketsBitgetPerp()
 			setBitgetPositionMode(accounts[0].Key, accounts[0].Secret)
+		}
+		for symbol, info := range marketInfos {
+			util.StoreSyncMap(model.MarketInfos, info, market, symbol)
 		}
 	}
 	return success

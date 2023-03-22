@@ -339,9 +339,9 @@ func placeOrderHuobiSpot(key, secret string, order *model.Order, orderSide, orde
 		} else if orderType == model.OrderTypeMarket {
 			postData["order_price_type"] = "opponent"
 		}
-		marketInfo := model.GetMarketInfo(model.HuobiSpot, symbol)
+		v, _ := util.LoadSyncMap(model.MarketInfos, model.HuobiSpot, symbol)
 		_, _, coin := model.GetCoinFromDialect(model.HuobiPerp, symbol)
-		if marketInfo == nil || marketInfo.SizeIncrement == 0 || marketInfo.CTValue == 0 || marketInfo.CTCurrency != coin {
+		if v == nil || v.(model.MarketInfo).SizeIncrement == 0 || v.(model.MarketInfo).CTValue == 0 || v.(model.MarketInfo).CTCurrency != coin {
 			return
 		}
 		postData["volume"] = util.CutTailZero(fmt.Sprintf(`%f`, model.GetAmountInMarket(model.HuobiSpot, symbol, amount, price)))

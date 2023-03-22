@@ -287,31 +287,31 @@ func debug(c *gin.Context) {
 }
 
 // testSpeed
-func _(c *gin.Context) {
-	param := c.Query(`markets`)
-	markets := strings.Split(param, `,`)
-	low := make(map[string]int64)
-	high := make(map[string]int64)
-	avg := make(map[string]int64)
-	util.Info(fmt.Sprintf(`begin to test %s %d`, markets, len(markets)))
-	for _, market := range markets {
-		for i := 0; i < 50; i++ {
-			before := util.GetNowUnixMillion()
-			api.GetMarketInfos(market)
-			duration := util.GetNowUnixMillion() - before
-			if low[market] == 0 || low[market] > duration {
-				low[market] = duration
-			}
-			if high[market] < duration {
-				high[market] = duration
-			}
-			avg[market] += duration
-			time.Sleep(time.Millisecond * 200)
-			util.Info(fmt.Sprintf(`test break 200 ms %s %d`, market, duration))
-		}
-		util.Info(fmt.Sprintf(`%s %d %d %d`, market, low[market], high[market], avg[market]))
-	}
-}
+//func _(c *gin.Context) {
+//	param := c.Query(`markets`)
+//	markets := strings.Split(param, `,`)
+//	low := make(map[string]int64)
+//	high := make(map[string]int64)
+//	avg := make(map[string]int64)
+//	util.Info(fmt.Sprintf(`begin to test %s %d`, markets, len(markets)))
+//	for _, market := range markets {
+//		for i := 0; i < 50; i++ {
+//			before := util.GetNowUnixMillion()
+//			api.GetMarketInfos(market)
+//			duration := util.GetNowUnixMillion() - before
+//			if low[market] == 0 || low[market] > duration {
+//				low[market] = duration
+//			}
+//			if high[market] < duration {
+//				high[market] = duration
+//			}
+//			avg[market] += duration
+//			time.Sleep(time.Millisecond * 200)
+//			util.Info(fmt.Sprintf(`test break 200 ms %s %d`, market, duration))
+//		}
+//		util.Info(fmt.Sprintf(`%s %d %d %d`, market, low[market], high[market], avg[market]))
+//	}
+//}
 
 func holdPage(c *gin.Context) {
 	indexStr := c.Query(`index`)
@@ -454,6 +454,17 @@ func holdPage(c *gin.Context) {
 }
 
 func crossRefresh(c *gin.Context) {
+	//session := sessions.Default(c)
+	//value := c.Query(`code`)
+	//if codes[value] {
+	//	session.Set(`code`, value)
+	//	_ = session.Save()
+	//}
+	//sessionValue := session.Get(`code`)
+	//if sessionValue == nil || !codes[sessionValue.(string)] {
+	//	c.String(http.StatusOK, `no correct code`)
+	//} else {
+	//}
 	param := c.Query(`markets`)
 	api.InitCrossMarketInfos(strings.Split(param, `,`))
 	c.String(http.StatusOK, `init cross markets done`)

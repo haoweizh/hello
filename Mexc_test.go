@@ -22,8 +22,6 @@ func Test_placeOrderMexc(t *testing.T) {
 	item.(*model.Config).BinanceKey = `new key`
 	item, _ = testMap.Load(`test`)
 	fmt.Println(item.(*model.Config).BinanceKey)
-	marketInfos := api.GetMarketInfos(model.Ftx)
-	model.SetMarketInfos(model.Mexc, marketInfos)
 	//api.GetPositions(model.AppConfig.MexcKey, model.AppConfig.MexcSecret, model.Mexc)
 	//_, rate := api.GetFundingRate(model.AppConfig.MexcKey, model.AppConfig.MexcSecret, model.Mexc, `ETH_PERP`)
 	//t.Log(rate)

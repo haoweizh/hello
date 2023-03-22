@@ -360,11 +360,16 @@ func handleTurtleSettings(function, market string, accounts []*model.Account, to
 
 func getTopMarketInfos(function, market string, accounts []*model.Account) (topMarketInfos map[string]*model.MarketInfo) {
 	topMarketInfos = make(map[string]*model.MarketInfo)
-	marketInfos := GetMarketInfos(market)
 	marketInfoArray := model.MarketInfoArray{}
-	for _, info := range marketInfos {
-		marketInfoArray = append(marketInfoArray, info)
-	}
+	model.MarketInfos.Range(func(key, value any) bool {
+		if value == nil {
+			return true
+		}
+		if value.(*model.MarketInfo).Market == market {
+			marketInfoArray = append(marketInfoArray, value.(*model.MarketInfo))
+		}
+		return true
+	})
 	sort.Sort(sort.Reverse(marketInfoArray))
 	for i := 0; i < marketInfoArray.Len() && len(topMarketInfos) < topMarketInfoLen; i++ {
 		_, marketType, coinValue, _ := model.GetFromStandard(market, marketInfoArray[i].Name)

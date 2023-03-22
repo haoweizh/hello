@@ -853,10 +853,10 @@ func placeOrderGate(key, secret string, order *model.Order, orderSide, orderType
 }
 
 func getMaxLoanGate(symbol string) (success bool, maxLoan float64) {
-	marketMargin := model.GetMarketInfo(model.Gate, symbol)
+	v, _ := util.LoadSyncMap(model.MarketInfos, model.Gate, symbol)
 	_, tickRelated := model.AppMarkets.GetBidAsk(symbol, model.Gate)
-	if tickRelated != nil && marketMargin != nil {
-		maxLoan = marketMargin.BorrowUsdtMax / tickRelated.Bids[0].Price
+	if tickRelated != nil && v != nil {
+		maxLoan = v.(*model.MarketInfo).BorrowUsdtMax / tickRelated.Bids[0].Price
 	}
 	return true, maxLoan
 }

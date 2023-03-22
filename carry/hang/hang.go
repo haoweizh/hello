@@ -122,9 +122,9 @@ func handle(account *model.Account, setting *model.Setting, tick *model.BidAsk) 
 	} else {
 		return
 	}
-	marketInfo := model.GetMarketInfo(setting.Market, setting.Symbol)
+	marketInfo, _ := util.LoadSyncMap(model.MarketInfos, setting.Market, setting.Symbol)
 	if marketInfo == nil {
-		api.InitMarketInfos()
+		api.InitMarketInfos(nil)
 		return
 	}
 	marketSymbol := setting.Market + `_` + setting.Symbol
@@ -135,7 +135,7 @@ func handle(account *model.Account, setting *model.Setting, tick *model.BidAsk) 
 	side := value.(string)
 	//util.Notice(fmt.Sprintf(`status %s %s %s priceX %f market bid %f`,
 	//	setting.Market, setting.Symbol, side, setting.PriceX, tick.Asks[0].Amount))
-	placeHang(account, setting, marketInfo, side, tick)
+	placeHang(account, setting, marketInfo.(*model.MarketInfo), side, tick)
 	if setting.CloseShortMargin > 0 && tick.Asks[0].Amount < 5000 && tick.Asks[0].Amount < setting.OpenShortMargin &&
 		side == model.OrderSideBuy && tick.Asks[0].Price < 0.1 { // 吃单拉价格模式
 		order := api.PlaceOrder(account.Key, account.Secret, side, model.OrderTypeLimit, setting.Market, setting.Symbol,

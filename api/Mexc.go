@@ -141,7 +141,11 @@ func parseTicksMexc(symbol string, ts int, version int64, bidArray, asksArray []
 		if tick == nil || len(tick) != 3 {
 			continue
 		}
-		marketInfo := model.GetMarketInfo(model.Mexc, symbol)
+		var marketInfo *model.MarketInfo
+		v, _ := util.LoadSyncMap(model.MarketInfos, model.Mexc, symbol)
+		if v != nil {
+			marketInfo = v.(*model.MarketInfo)
+		}
 		if marketInfo != nil {
 			asks = append(asks, model.Tick{Side: model.OrderSideSell, Market: model.Mexc,
 				Symbol: symbol, Price: tick[0], Amount: tick[1] * marketInfo.SizeIncrement})
@@ -151,7 +155,11 @@ func parseTicksMexc(symbol string, ts int, version int64, bidArray, asksArray []
 		if tick == nil || len(tick) != 3 {
 			continue
 		}
-		marketInfo := model.GetMarketInfo(model.Mexc, symbol)
+		var marketInfo *model.MarketInfo
+		v, _ := util.LoadSyncMap(model.MarketInfos, model.Mexc, symbol)
+		if v != nil {
+			marketInfo = v.(*model.MarketInfo)
+		}
 		if marketInfo != nil {
 			bids = append(bids, model.Tick{Side: model.OrderSideBuy, Market: model.Mexc, Symbol: symbol, Price: tick[0],
 				Amount: tick[1] * marketInfo.SizeIncrement})
@@ -208,7 +216,11 @@ func placeOrderMexc(key, secret string, order *model.Order, orderSide, orderType
 	}
 	price, decimal := model.FormatPrice(model.Mexc, symbol, price)
 	priceStr := util.CutTailZero(strconv.FormatFloat(price, 'f', decimal, 64))
-	marketInfo := model.GetMarketInfo(model.Mexc, symbol)
+	var marketInfo *model.MarketInfo
+	v, _ := util.LoadSyncMap(model.MarketInfos, model.Mexc, symbol)
+	if v != nil {
+		marketInfo = v.(*model.MarketInfo)
+	}
 	order.Price = price
 	if marketInfo == nil {
 		util.Notice(fmt.Sprintf(`[mexcPlaceOrder] market info is nil for symbol %s`, symbol))
@@ -364,7 +376,11 @@ func getPositionsMexc(key, secret string) (success bool, positions []*model.Posi
 				continue
 			}
 		}
-		marketInfo := model.GetMarketInfo(model.Mexc, position.Currency)
+		var marketInfo *model.MarketInfo
+		v, _ := util.LoadSyncMap(model.MarketInfos, model.Mexc, position.Currency)
+		if v != nil {
+			marketInfo = v.(*model.MarketInfo)
+		}
 		if marketInfo == nil {
 			continue
 		}
@@ -414,7 +430,11 @@ func queryOrderMexc(key, secret, symbol string, orderId string) (order *model.Or
 	}
 	resp := &dtos.MexcContractQueryOrderResp{}
 	err = json.Unmarshal(respBytes, resp)
-	marketInfo := model.GetMarketInfo(model.Mexc, order.Symbol)
+	var marketInfo *model.MarketInfo
+	v, _ := util.LoadSyncMap(model.MarketInfos, model.Mexc, order.Symbol)
+	if v != nil {
+		marketInfo = v.(*model.MarketInfo)
+	}
 	if err != nil || !resp.Success || marketInfo == nil {
 		logMsg := fmt.Sprintf(`[contractQueryOrderMexc] Failed to query orders by order_id %s success %t statusCode %d err %+v`, order.OrderId, resp.Success, resp.Code, err)
 		util.Notice(logMsg)
