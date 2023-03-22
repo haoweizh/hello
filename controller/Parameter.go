@@ -369,10 +369,10 @@ func holdPage(c *gin.Context) {
 	duration, _ := time.ParseDuration(`-96h`)
 	timeBegin := time.Now().Add(duration)
 	timeBegin = time.Date(timeBegin.Year(), timeBegin.Month(), timeBegin.Day(), 0, 0, 0, 0, timeBegin.Location())
-	failRows, _ := model.AppDB.Model(model.Order{}).Select(`market,amount_type,order_side,date(order_time),refresh_type,count(*)`).
-		Where(`status=?`, `fail`).Group(`market,order_side,date(order_time),amount_type,refresh_type`).
+	failRows, _ := model.AppDB.Model(model.Order{}).Select(`market,account_index,order_side,date(order_time),refresh_type,count(*)`).
+		Where(`status=?`, `fail`).Group(`market,order_side,date(order_time),account_index,refresh_type`).
 		Order(`date(order_time) desc,market`).Rows()
-	failData := make(map[string]float64) // market - amount_type - side - date - fail count
+	failData := make(map[string]float64) // market - account_index - side - date - fail count
 	if failRows != nil {
 		for failRows.Next() {
 			var marketName, side, date, amountType, refreshType string
@@ -389,9 +389,9 @@ func holdPage(c *gin.Context) {
 			}
 		}
 	}
-	carryRows, _ := model.AppDB.Model(model.Order{}).Select(`amount_type,order_side,sum(price*abs(amount)),date(order_time),count(*),refresh_type`).
+	carryRows, _ := model.AppDB.Model(model.Order{}).Select(`account_index,order_side,sum(price*abs(amount)),date(order_time),count(*),refresh_type`).
 		Where(`refresh_type!=?`, model.FunctionSimulation).
-		Group(`order_side,date(order_time),amount_type,refresh_type`).Order(`date(order_time) desc`).Rows()
+		Group(`order_side,date(order_time),account_index,refresh_type`).Order(`date(order_time) desc`).Rows()
 	if carryRows != nil {
 		crossInU := map[string]map[string]float64{}
 		crossCount := map[string]map[string]float64{}
@@ -423,8 +423,8 @@ func holdPage(c *gin.Context) {
 		}
 		carryRows.Close()
 	}
-	carryRows, _ = model.AppDB.Model(model.Order{}).Select(`market,amount_type,order_side,sum(price*abs(amount)),date(order_time),refresh_type,count(*)`).
-		Where(`refresh_type!=?`, model.FunctionSimulation).Group(`market,order_side,date(order_time),amount_type,refresh_type`).Order(`date(order_time) desc, market`).Rows()
+	carryRows, _ = model.AppDB.Model(model.Order{}).Select(`market,account_index,order_side,sum(price*abs(amount)),date(order_time),refresh_type,count(*)`).
+		Where(`refresh_type!=?`, model.FunctionSimulation).Group(`market,order_side,date(order_time),account_index,refresh_type`).Order(`date(order_time) desc, market`).Rows()
 	if carryRows != nil {
 		for carryRows.Next() {
 			var marketName, side, date, refreshType string
