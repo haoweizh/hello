@@ -333,7 +333,8 @@ func holdPage(c *gin.Context) {
 			duplicated := false
 			for _, value := range marketValues {
 				if (strings.Contains(value[0], `binance`) && strings.Contains(account.Market, `binance`)) ||
-					(strings.Contains(value[0], `bybit`) && strings.Contains(account.Market, `bybit`)) {
+					(strings.Contains(value[0], `bybit`) && strings.Contains(account.Market, `bybit`)) ||
+					(strings.Contains(value[0], `bitget`) && strings.Contains(account.Market, `bitget`)) {
 					duplicated = true
 					break
 				}

@@ -518,6 +518,14 @@ func GetAccounts(index int) (accounts map[string]*model.Account) {
 	for i, account := range tempAccounts {
 		model.AppAccounts[i][model.Mexc] = account
 	}
+	tempAccounts = model.AppConfig.GetAccounts(model.BitgetSpot)
+	for i, account := range tempAccounts {
+		model.AppAccounts[i][model.BitgetSpot] = account
+	}
+	tempAccounts = model.AppConfig.GetAccounts(model.BitgetPerp)
+	for i, account := range tempAccounts {
+		model.AppAccounts[i][model.BitgetPerp] = account
+	}
 	return model.AppAccounts[index]
 }
 
