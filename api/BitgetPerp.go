@@ -124,10 +124,11 @@ func WsDepthServeBitgetPerp(markets *model.Markets, orderHandler OrderHandler) (
 		}
 		if tickerWsResp.Arg.InstType == "mc" && tickerWsResp.Action == "snapshot" {
 			for _, tickerData := range tickerWsResp.Data {
-				if tickerData.SymbolId == "" || !util.EndWith(tickerData.SymbolId, "USDT") {
+				if tickerData.SymbolId == "" {
 					continue
 				}
-				symbol := tickerData.SymbolId[0:len(tickerData.SymbolId)-4] + model.UniStandardTail[model.MarketTypePerp]
+				_, _, coin := model.GetCoinFromDialect(model.BitgetPerp, tickerData.SymbolId)
+				symbol := coin + model.UniStandardTail[model.MarketTypePerp]
 				price, _ := strconv.ParseFloat(tickerData.MarkPrice, 64)
 				ticker := &model.MarkPriceInfo{MarkPrice: price, Ts: int(tickerData.SystemTime)}
 				markets.SetMarkPriceInfo(symbol, model.BitgetPerp, ticker)
@@ -147,17 +148,6 @@ func WsDepthServeBitgetPerp(markets *model.Markets, orderHandler OrderHandler) (
 	for symbol := range symbols {
 		futureSubscribes = append(futureSubscribes, symbol)
 	}
-	perpBookChannels, perpBookErr := WebSocketClient(model.BitgetPerp, bitgetPerpWsUrl,
-		futureSubscribes, subscribeHandlerBitgetPerpBookTicker, bookWsHandler, orderHandler, 30)
-	if perpBookErr == nil {
-		util.Notice(`finish connect public Bitget perp book wss `)
-		channels = append(channels, perpBookChannels...)
-	} else {
-		util.Notice(`fail to connect public Bitget perp book wss `)
-		return nil, perpBookErr
-	}
-	time.Sleep(time.Second * 1)
-
 	markPriceChannels, markPriceErr := WebSocketClient(model.BitgetPerp, bitgetPerpWsUrl,
 		futureSubscribes, subscribeHandlerBitgetPerpMarkPrice, markPriceWsHandler, nil, 30)
 	if markPriceErr == nil {
@@ -166,6 +156,16 @@ func WsDepthServeBitgetPerp(markets *model.Markets, orderHandler OrderHandler) (
 	} else {
 		util.Notice(`fail to connect public Bitget mark price wss `)
 		return nil, markPriceErr
+	}
+	time.Sleep(time.Second * 1)
+	perpBookChannels, perpBookErr := WebSocketClient(model.BitgetPerp, bitgetPerpWsUrl,
+		futureSubscribes, subscribeHandlerBitgetPerpBookTicker, bookWsHandler, orderHandler, 30)
+	if perpBookErr == nil {
+		util.Notice(`finish connect public Bitget perp book wss `)
+		channels = append(channels, perpBookChannels...)
+	} else {
+		util.Notice(`fail to connect public Bitget perp book wss `)
+		return nil, perpBookErr
 	}
 	go maintainChannelBitgetPerp()
 	return channels, nil
