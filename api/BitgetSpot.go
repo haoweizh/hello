@@ -33,7 +33,7 @@ func getMarketsBitgetSpot() (marketInfos map[string]*model.MarketInfo) {
 			continue
 		}
 		symbol := symbolInfo.BaseCoin + model.UniStandardTail[model.MarketTypeSpot]
-		marketInfo := &model.MarketInfo{Name: symbol}
+		marketInfo := &model.MarketInfo{Name: symbol, Market: model.BitgetSpot}
 		priceDecimal, _ := strconv.Atoi(symbolInfo.PriceScale)
 		marketInfo.PriceDecimal = priceDecimal
 		marketInfo.PriceIncrement = 1 / math.Pow10(priceDecimal)
