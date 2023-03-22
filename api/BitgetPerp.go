@@ -61,7 +61,7 @@ func setBitgetPositionMode(key, secret string) {
 
 func WsDepthServeBitgetPerp(markets *model.Markets, orderHandler OrderHandler) (channels []chan struct{}, err error) {
 	bookWsHandler := func(connection *websocket.Conn, event []byte, orderHandler OrderHandler) {
-		//util.Notice(fmt.Sprintf("ws data: %s", event))
+		util.Notice(fmt.Sprintf("bitget perp ws book ticker: %s", event))
 		if len(event) == 4 {
 			return
 		}
@@ -175,7 +175,11 @@ var subscribeHandlerBitgetPerpBookTicker = func(connection *websocket.Conn, subs
 	var err error = nil
 	var params []map[string]string
 	for _, subscribe := range subscribes {
-		symbol := strings.Split(subscribe.(string), "_")[0]
+		success, _, _, dialectSymbol := model.GetFromStandard(model.BitgetPerp, subscribe.(string))
+		if !success {
+			continue
+		}
+		symbol := strings.Split(dialectSymbol, "_")[0]
 		params = append(params, map[string]string{"instType": "mc", "channel": "books1", "instId": symbol})
 	}
 	subscribeMap := make(map[string]interface{})
@@ -194,7 +198,11 @@ var subscribeHandlerBitgetPerpMarkPrice = func(connection *websocket.Conn, subsc
 	var err error = nil
 	var params []map[string]string
 	for _, subscribe := range subscribes {
-		symbol := strings.Split(subscribe.(string), "_")[0]
+		success, _, _, dialectSymbol := model.GetFromStandard(model.BitgetPerp, subscribe.(string))
+		if !success {
+			continue
+		}
+		symbol := strings.Split(dialectSymbol, "_")[0]
 		params = append(params, map[string]string{"instType": "MC", "channel": "ticker", "instId": symbol})
 	}
 	subscribeMap := make(map[string]interface{})
