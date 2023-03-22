@@ -161,7 +161,7 @@ var subscriberOKEXPrivate = func(connection *websocket.Conn, key, secret string)
 	hash.Write([]byte(toBeSign))
 	sign := base64.StdEncoding.EncodeToString(hash.Sum(nil))
 	loginArray := []map[string]interface{}{{
-		`apiKey`: key, `passphrase`: model.AppConfig.Phase, `timestamp`: timestamp, `sign`: sign}}
+		`apiKey`: key, `passphrase`: model.AppConfig.OKPhase, `timestamp`: timestamp, `sign`: sign}}
 	loginMap[`args`] = loginArray
 	err = SendToConnection(model.OKEX, connection, util.JsonEncodeToByte(loginMap))
 	if err != nil {
@@ -531,7 +531,7 @@ func sendSignRequestOKEX(key, secret, method, path string, param, body map[strin
 	u.RawQuery = q.Encode()
 	current := time.Now().In(time.UTC).Format(time.RFC3339)
 	// , `x-simulated-trading`: `1`
-	headers := map[string]string{`OK-ACCESS-KEY`: key, `OK-ACCESS-PASSPHRASE`: model.AppConfig.Phase,
+	headers := map[string]string{`OK-ACCESS-KEY`: key, `OK-ACCESS-PASSPHRASE`: model.AppConfig.OKPhase,
 		"OK-ACCESS-TIMESTAMP": current, "Content-Type": "application/json"}
 	postContent := ``
 	if body[ParamArrayOkex] == nil {
