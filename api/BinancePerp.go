@@ -204,7 +204,7 @@ func handleMarkPriceBinancePerp(markets *model.Markets, json *simplejson.Json, s
 		UpdateTime: util.GetNow(),
 		ExpireTime: json.Get(`T`).MustInt64() / 1000,
 	}
-	util.Notice(fmt.Sprintf(`binance get market price %s %f %f %d`, standardSymbol, markPrice, rate, fundingRate.ExpireTime))
+	//util.Notice(fmt.Sprintf(`binance get market price %s %f %f %d`, standardSymbol, markPrice, rate, fundingRate.ExpireTime))
 	model.SetFundingRate(model.BinancePerp, standardSymbol, fundingRate)
 }
 
@@ -290,7 +290,6 @@ func getMarkPriceBinancePerp(account *model.Account, symbol string) (markPrice f
 		markPrice, _ = strconv.ParseFloat(markPriceJson.Get(`markPrice`).MustString(), 64)
 		mpTime := markPriceJson.Get(`time`).MustInt()
 		model.AppMarkets.SetMarkPriceInfo(symbol, model.BinancePerp, &model.MarkPriceInfo{MarkPrice: markPrice, Ts: mpTime})
-		util.Notice(fmt.Sprintf(`rest mark price %s %s %f time %d`, model.BinancePerp, symbol, markPrice, mpTime))
 	}
 	return markPrice
 }

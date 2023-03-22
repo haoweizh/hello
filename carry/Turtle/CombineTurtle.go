@@ -67,7 +67,7 @@ var ProcessCombineTurtle = func(settingCombine *model.Setting, tick *model.BidAs
 	}
 	if api.HandleOrders(account.Key, account.Secret, market, symbol, settings, turtleData) ||
 		api.CheckBreak(account.Key, account.Secret, market, symbol, settings, turtleData, tick) {
-		util.Notice(fmt.Sprintf(`combine return handle or break %s %s`, market, symbol))
+		//util.Notice(fmt.Sprintf(`combine return handle or break %s %s`, market, symbol))
 		return
 	}
 	if !dataCombine.AdjustChecked && !dataNormal.AdjustChecked {

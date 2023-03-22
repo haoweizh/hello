@@ -724,8 +724,6 @@ func breakMarkPrice(account *model.Account, setting *model.Setting, price float6
 				setting.Symbol, marketInfo.BuyLimitPriceRatio, markPriceInfo.MarkPrice, bidMaxPrice, bidMinPrice, price))
 			//perpBidPrice = bidMaxPrice
 			return true
-		} else {
-			util.Notice(fmt.Sprintf(`valid price %s %s %f < %f < %f`, setting.Market, setting.Symbol, bidMinPrice, price, bidMaxPrice))
 		}
 	} else if marketInfo != nil && orderSide == model.OrderSideSell && marketInfo.SellLimitPriceRatio > 0 {
 		markPriceInfo := model.AppMarkets.GetMarkPriceInfo(setting.Symbol, setting.Market)
@@ -741,8 +739,6 @@ func breakMarkPrice(account *model.Account, setting *model.Setting, price float6
 				setting.Symbol, marketInfo.SellLimitPriceRatio, markPriceInfo.MarkPrice, askMaxPrice, askMinPrice, price))
 			//perpAskPrice = askMinPrice
 			return true
-		} else {
-			util.Notice(fmt.Sprintf(`valid price %s %s %f < %f < %f`, setting.Market, setting.Symbol, askMinPrice, price, askMaxPrice))
 		}
 	}
 	return false
