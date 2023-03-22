@@ -278,11 +278,16 @@ func getPositionsBitgetPerp(key, secret string) (success bool, positions []*mode
 }
 
 func getFundingRateBitgetPerp(symbol string) (fundingRate *model.FundingRate) {
-	httpResp, httpErr := util.HttpRequest(http.MethodGet, bitgetRestUrl+"/api/mix/v1/market/current-fundRate?symbol="+symbol, "", map[string]string{}, 30)
+	success, _, _, dialectSymbol := model.GetFromStandard(model.BitgetPerp, symbol)
+	if !success {
+		util.Notice("fail to get perp funding rate , GetFromStandard: " + symbol)
+		return
+	}
+	httpResp, httpErr := util.HttpRequest(http.MethodGet, bitgetRestUrl+"/api/mix/v1/market/current-fundRate?symbol="+dialectSymbol, "", map[string]string{}, 30)
 	bitgetFundingResp := &dtos.BitgetFundingResp{}
 	perpJsonErr := json.Unmarshal(httpResp, bitgetFundingResp)
 	if bitgetFundingResp == nil || bitgetFundingResp.Code != "00000" {
-		util.Notice(fmt.Sprintf("get bitget perp market error, resp: %s, httpErr: %v, jsonErr: %v", httpResp, httpErr, perpJsonErr))
+		util.Notice(fmt.Sprintf("get bitget perp funding rate error, resp: %s, httpErr: %v, jsonErr: %v", httpResp, httpErr, perpJsonErr))
 		return
 	}
 	rate, _ := strconv.ParseFloat(bitgetFundingResp.Data.FundingRate, 64)
