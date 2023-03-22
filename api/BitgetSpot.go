@@ -49,7 +49,7 @@ func getMarketsBitgetSpot() (marketInfos map[string]*model.MarketInfo) {
 
 func WsDepthServeBitgetSpot(markets *model.Markets, orderHandler OrderHandler) (channels []chan struct{}, err error) {
 	bookWsHandler := func(connection *websocket.Conn, event []byte, orderHandler OrderHandler) {
-		util.Notice(fmt.Sprintf("bitget spot ws book ticker: %s", event))
+		//util.Notice(fmt.Sprintf("bitget spot ws book ticker: %s", event))
 		if len(event) == 4 {
 			return
 		}

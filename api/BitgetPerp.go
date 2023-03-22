@@ -61,7 +61,7 @@ func setBitgetPositionMode(key, secret string) {
 
 func WsDepthServeBitgetPerp(markets *model.Markets, orderHandler OrderHandler) (channels []chan struct{}, err error) {
 	bookWsHandler := func(connection *websocket.Conn, event []byte, orderHandler OrderHandler) {
-		util.Notice(fmt.Sprintf("bitget perp ws book ticker: %s", event))
+		//util.Notice(fmt.Sprintf("bitget perp ws book ticker: %s", event))
 		if len(event) == 4 {
 			return
 		}
