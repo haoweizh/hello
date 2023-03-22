@@ -748,8 +748,8 @@ func GetWSSubscribe(market, symbol, subType string) (subscribe interface{}) {
 		} else if subType == model.SubscribeTicker {
 			return strings.ToLower(dialectSymbol) + `@bookTicker`
 		} else if subType == model.SubscribeMarkPrice {
-			//return strings.ToLower(dialectSymbol) + `@markPrice@1s`
-			return `!markPrice@arr`
+			return strings.ToLower(dialectSymbol) + `@markPrice@1s`
+			//return `!markPrice@arr`
 		}
 	case model.BinanceSpot: // XRPUSDT: XRPUSDT@depth5   XRP-PERP: XRPUSDT@depth5
 		if subType == model.SubscribeDepth {

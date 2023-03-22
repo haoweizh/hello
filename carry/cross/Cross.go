@@ -714,7 +714,11 @@ func breakMarkPrice(setting *model.Setting, price float64, orderSide string) boo
 		markPriceInfo := model.AppMarkets.GetMarkPriceInfo(setting.Symbol, setting.Market)
 		if markPriceInfo == nil {
 			util.Notice(fmt.Sprintf("币种：%s 市场 %s 有限价条件，但是没有标记价格", setting.Symbol, setting.Market))
-			return true
+			if setting.Market == model.BinancePerp {
+				return false
+			} else {
+				return true
+			}
 		}
 		bidMaxPrice := markPriceInfo.MarkPrice * (1 + marketInfo.BuyLimitPriceRatio)
 		bidMinPrice := markPriceInfo.MarkPrice * (1 - marketInfo.BuyLimitPriceRatio)
@@ -730,7 +734,11 @@ func breakMarkPrice(setting *model.Setting, price float64, orderSide string) boo
 		markPriceInfo := model.AppMarkets.GetMarkPriceInfo(setting.Symbol, setting.Market)
 		if markPriceInfo == nil {
 			util.Notice(fmt.Sprintf("币种：%s 市场 %s 有限价条件，但是没有标记价格", setting.Symbol, setting.Market))
-			return true
+			if setting.Market == model.BinancePerp {
+				return false
+			} else {
+				return true
+			}
 		}
 		askMaxPrice := markPriceInfo.MarkPrice * (1 + marketInfo.SellLimitPriceRatio)
 		askMinPrice := markPriceInfo.MarkPrice * (1 - marketInfo.SellLimitPriceRatio)
