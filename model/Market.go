@@ -61,7 +61,7 @@ func (markets *Markets) SetMarkPriceInfo(symbol, marketName string, ticker *Mark
 	}
 	oldTicker := value.(*sync.Map)
 	last, _ := oldTicker.Load(marketName)
-	if last == nil || last.(*BidAsk).Ts <= ticker.Ts {
+	if last == nil || last.(*MarkPriceInfo).Ts <= ticker.Ts {
 		oldTicker.Store(marketName, ticker)
 	}
 }
