@@ -351,7 +351,7 @@ func getPriceBinanceSpot(key, secret, symbol string) (success bool, price float6
 	client := binance.NewClient(key, secret)
 	resPrice, err := client.NewListPricesService().Symbol(dialectSymbol).Do(context.Background())
 	if err != nil && !strings.Contains(err.Error(), `-2010`) {
-		util.Notice(fmt.Sprintf("getPriceBinanceSpot err: %s symbol %s %s",
+		util.Notice(fmt.Sprintf("getPriceBinanceSpot err: %s standard %s dialect %s",
 			err.Error(), symbol, dialectSymbol))
 		return false, 0
 	}

@@ -74,8 +74,8 @@ func RequireDepthChanReset(markets *model.Markets, market string) bool {
 		delay := float64(now - int64(bidAsk.Ts))
 		if delay < model.AppConfig.Delay {
 			validSymbols++
-			util.Notice(fmt.Sprintf(`RequireDepthChanReset valid %d %s %s %f<%f`,
-				validSymbols, market, symbol, delay, model.AppConfig.Delay))
+			//util.Notice(fmt.Sprintf(`RequireDepthChanReset valid %d %s %s %f<%f`,
+			//	validSymbols, market, symbol, delay, model.AppConfig.Delay))
 		}
 	}
 	needReset = validSymbols*2 < len(symbols) || len(symbols)-validSymbols > 30
@@ -748,7 +748,8 @@ func GetWSSubscribe(market, symbol, subType string) (subscribe interface{}) {
 		} else if subType == model.SubscribeTicker {
 			return strings.ToLower(dialectSymbol) + `@bookTicker`
 		} else if subType == model.SubscribeMarkPrice {
-			return strings.ToLower(dialectSymbol) + `@markPrice@1s`
+			//return strings.ToLower(dialectSymbol) + `@markPrice@1s`
+			return `!markPrice@arr`
 		}
 	case model.BinanceSpot: // XRPUSDT: XRPUSDT@depth5   XRP-PERP: XRPUSDT@depth5
 		if subType == model.SubscribeDepth {
