@@ -124,7 +124,7 @@ func (markets *Markets) SetBidAsk(symbol, marketName string, bidAsk *BidAsk) boo
 	last, _ := oldBidAsk.Load(marketName)
 	if last == nil || last.(*BidAsk).Ts <= bidAsk.Ts {
 		oldBidAsk.Store(marketName, bidAsk)
-		if last != nil && time.Now().Minute() > 55 {
+		if last != nil {
 			go AppMetric.AddTick(marketName, symbol, util.GetNow(), last.(*BidAsk), bidAsk)
 		}
 		return true

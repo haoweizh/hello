@@ -41,7 +41,7 @@ type CarryMetric struct {
 
 type TickDelay struct {
 	receiveTime time.Time
-	delay       int // delay in million seconds
+	delay       int // delay in million-seconds
 }
 
 type MetricManager struct {
@@ -87,6 +87,10 @@ func (metricManager *MetricManager) AddTick(market, symbol string, current time.
 	if !ok {
 		tickMetric = &TickMetric{priceLow: 0, priceHigh: 0}
 	} else if value != nil {
+		// 每天凌晨4点清空数据
+		if current.Hour() == 4 {
+			metricManager.tickHour = sync.Map{}
+		}
 		tickMetric = value.(*TickMetric)
 		if tickMetric.countAll > 10000 {
 			tickMetric = &TickMetric{priceLow: 0, priceHigh: 0}
