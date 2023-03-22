@@ -77,7 +77,9 @@ func WsDepthServeBitgetPerp(markets *model.Markets, orderHandler OrderHandler) (
 			}
 			symbol := bookWsResp.Arg.InstId[0:len(bookWsResp.Arg.InstId)-4] + model.UniStandardTail[model.MarketTypePerp]
 			bidAsk := model.BidAsk{TsReceived: int(time.Now().UnixNano() / int64(time.Millisecond))}
-			if len(bookWsResp.Data) > 1 {
+			if len(bookWsResp.Data) > 1 ||
+				len(bookWsResp.Data[0].Bids) < 1 || len(bookWsResp.Data[0].Bids[0]) < 2 ||
+				len(bookWsResp.Data[0].Asks) < 1 || len(bookWsResp.Data[0].Asks[0]) < 2 {
 				return
 			}
 			bidPrice, _ := strconv.ParseFloat(bookWsResp.Data[0].Bids[0][0], 64)
@@ -151,7 +153,7 @@ func WsDepthServeBitgetPerp(markets *model.Markets, orderHandler OrderHandler) (
 	markPriceChannels, markPriceErr := WebSocketClient(model.BitgetPerp, bitgetPerpWsUrl,
 		futureSubscribes, subscribeHandlerBitgetPerpMarkPrice, markPriceWsHandler, nil, 30)
 	if markPriceErr == nil {
-		util.Notice(`finish connect public xt Bitget mark price wss `)
+		util.Notice(`finish connect public Bitget mark price wss `)
 		channels = append(channels, markPriceChannels...)
 	} else {
 		util.Notice(`fail to connect public Bitget mark price wss `)
