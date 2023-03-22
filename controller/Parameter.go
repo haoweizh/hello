@@ -454,20 +454,20 @@ func holdPage(c *gin.Context) {
 }
 
 func crossRefresh(c *gin.Context) {
-	session := sessions.Default(c)
-	value := c.Query(`code`)
-	if codes[value] {
-		session.Set(`code`, value)
-		_ = session.Save()
-	}
-	sessionValue := session.Get(`code`)
-	if sessionValue == nil || !codes[sessionValue.(string)] {
-		c.String(http.StatusOK, `no correct code`)
-	} else {
-		param := c.Query(`markets`)
-		api.InitCrossMarketInfos(strings.Split(param, `,`))
-		c.String(http.StatusOK, `init cross markets done`)
-	}
+	//session := sessions.Default(c)
+	//value := c.Query(`code`)
+	//if codes[value] {
+	//	session.Set(`code`, value)
+	//	_ = session.Save()
+	//}
+	//sessionValue := session.Get(`code`)
+	//if sessionValue == nil || !codes[sessionValue.(string)] {
+	//	c.String(http.StatusOK, `no correct code`)
+	//} else {
+	//}
+	param := c.Query(`markets`)
+	api.InitCrossMarketInfos(strings.Split(param, `,`))
+	c.String(http.StatusOK, `init cross markets done`)
 }
 
 func tickPage(c *gin.Context) {
