@@ -27,9 +27,7 @@ func getMarketsBinanceSpot(key, secret string) (marketInfos map[string]*model.Ma
 	client := binance.NewClient(key, secret)
 	exchangeInfo, err := client.NewExchangeInfoService().Do(context.Background())
 	if err != nil {
-		if exchangeInfo != nil {
-			util.Notice(fmt.Sprintf("getMarketsBinanceSpot %s err: %s %v", key, err.Error(), exchangeInfo))
-		}
+		util.Notice(fmt.Sprintf("getMarketsBinanceSpot %s err: %s %v", key, err.Error(), exchangeInfo))
 		time.Sleep(time.Second * 5)
 		return getMarketsBinanceSpot(key, secret)
 	}
