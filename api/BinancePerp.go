@@ -282,18 +282,15 @@ func maintainChannelBinancePerp(subscribes []interface{}) {
 	}
 }
 
-func getMarkPriceBinancePerp(account *model.Account, markets *model.Markets, symbol string) (markPrice float64) {
-	success, _, _, dialectSymbol := model.GetFromStandard(model.BinancePerp, symbol)
-	if success {
-		responseBody := signedRequestBinancePerp(account.Key, account.Secret,
-			http.MethodGet, restBinancePerp+"/fapi/v1/premiumIndex", true, map[string]interface{}{`symbol`: dialectSymbol})
-		markPriceJson, err := util.NewJSON(responseBody)
-		if err == nil {
-			markPrice, _ = strconv.ParseFloat(markPriceJson.Get(`markPrice`).MustString(), 64)
-			mpTime := markPriceJson.Get(`time`).MustInt()
-			markets.SetMarkPriceInfo(symbol, model.BinancePerp, &model.MarkPriceInfo{MarkPrice: markPrice, Ts: mpTime})
-			util.Notice(fmt.Sprintf(`rest mark price %s %s %f time %d`, model.BinancePerp, symbol, markPrice, mpTime))
-		}
+func getMarkPriceBinancePerp(account *model.Account, symbol string) (markPrice float64) {
+	responseBody := signedRequestBinancePerp(account.Key, account.Secret,
+		http.MethodGet, restBinancePerp+"/fapi/v1/premiumIndex", true, map[string]interface{}{`symbol`: symbol})
+	markPriceJson, err := util.NewJSON(responseBody)
+	if err == nil {
+		markPrice, _ = strconv.ParseFloat(markPriceJson.Get(`markPrice`).MustString(), 64)
+		mpTime := markPriceJson.Get(`time`).MustInt()
+		model.AppMarkets.SetMarkPriceInfo(symbol, model.BinancePerp, &model.MarkPriceInfo{MarkPrice: markPrice, Ts: mpTime})
+		util.Notice(fmt.Sprintf(`rest mark price %s %s %f time %d`, model.BinancePerp, symbol, markPrice, mpTime))
 	}
 	return markPrice
 }

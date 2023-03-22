@@ -212,10 +212,10 @@ func GetMultiCandle(key, secret, market string, slotSeconds int, begin, end time
 	return
 }
 
-func GetMarkPrice(account *model.Account, markets *model.Markets, market, symbol string) (markPrice float64) {
+func GetMarkPrice(account *model.Account, market, symbol string) (markPrice float64) {
 	switch market {
 	case model.BinancePerp:
-		return getMarkPriceBinancePerp(account, markets, symbol)
+		return getMarkPriceBinancePerp(account, symbol)
 	}
 	return
 }

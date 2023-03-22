@@ -155,6 +155,8 @@ func Test_WsAndOrderApi(t *testing.T) {
 
 func Test_BalAndPos(t *testing.T) {
 	model.NewConfig()
+	account := model.AppConfig.GetAccounts(model.BinancePerp)[0]
+	api.GetMarkPrice(account, model.BinancePerp, `ALGO_PERP`)
 	api.GetMarketInfos(model.BinancePerp)
 	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
 	model.AppRedis = redis.NewClient(&redis.Options{
