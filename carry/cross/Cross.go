@@ -228,7 +228,11 @@ func initStatus(account *model.Account, setting *model.Setting, absentRevert boo
 			}
 		}()
 	}
-	marketInfo := model.GetMarketInfo(setting.Market, setting.Symbol)
+	v, _ := util.LoadSyncMap(model.MarketInfos, setting.Market, setting.Symbol)
+	var marketInfo *model.MarketInfo
+	if v != nil {
+		marketInfo = v.(*model.MarketInfo)
+	}
 	if marketInfo != nil && marketInfo.SizeMax > 0 {
 		_, amount := model.ParseRealAmount(setting.Market, setting.Symbol, marketInfo.SizeMax)
 		status.AvailableBuy = math.Min(status.AvailableBuy, amount)
@@ -709,7 +713,11 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 }
 
 func breakMarkPrice(account *model.Account, setting *model.Setting, price float64, orderSide string) bool {
-	marketInfo := model.GetMarketInfo(setting.Market, setting.Symbol)
+	v, _ := util.LoadSyncMap(model.MarketInfos, setting.Market, setting.Symbol)
+	var marketInfo *model.MarketInfo
+	if v != nil {
+		marketInfo = v.(*model.MarketInfo)
+	}
 	if marketInfo != nil && orderSide == model.OrderSideBuy && marketInfo.BuyLimitPriceRatio > 0 {
 		markPriceInfo := model.AppMarkets.GetMarkPriceInfo(setting.Symbol, setting.Market)
 		if markPriceInfo == nil {
@@ -1190,8 +1198,15 @@ var PostOrderCross = func(order *model.Order, setting *model.Setting) {
 // FormatCrossPair 不支持以BTC或ETH计价的交易对，只支持USD类
 func FormatCrossPair(marketBuy, marketSell, symbolBuy, symbolSell string, amount, price float64) (
 	formattedAmount float64) {
-	marketInfoBuy := model.GetMarketInfo(marketBuy, symbolBuy)
-	marketInfoSell := model.GetMarketInfo(marketSell, symbolSell)
+	v, _ := util.LoadSyncMap(model.MarketInfos, marketBuy, symbolBuy)
+	var marketInfoBuy, marketInfoSell *model.MarketInfo
+	if v != nil {
+		marketInfoBuy = v.(*model.MarketInfo)
+	}
+	v, _ = util.LoadSyncMap(model.MarketInfos, marketSell, symbolSell)
+	if v != nil {
+		marketInfoSell = v.(*model.MarketInfo)
+	}
 	if marketInfoBuy == nil || marketInfoSell == nil {
 		util.Notice(`format %s %s %s %s %v %v`, marketBuy, marketSell, symbolBuy, symbolSell, marketInfoBuy, marketInfoSell)
 		//api.InitMarketInfos()
