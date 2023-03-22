@@ -274,14 +274,6 @@ func initStatus(account *model.Account, setting *model.Setting, absentRevert boo
 	lowLimit := lowestScore
 	status.TradeLineBuy = math.Max(standardScoreBuy*(0.5+jumpBuy*status.RateInAll), lowLimit) + status.FoundingRate
 	status.TradeLineSell = math.Max(standardScoreSell*(0.5+jumpSell*status.RateInAll), lowLimit) - status.FoundingRate
-	if status.market == model.BybitPerp {
-		if status.Holding*price > 100 {
-			status.TradeLineSell -= 0.02
-		}
-		if status.Holding*price < 0 {
-			status.TradeLineBuy -= 0.02
-		}
-	}
 	//if status.setting.Coin == `1000XEC` && status.setting.Market == model.BybitPerp && account.Index == 0 {
 	//	util.Notice(fmt.Sprintf(`%s %s bline %f = max(%f*(0.5+%f*rate %f)+funding %f hold %f`,
 	//		status.setting.Market, status.setting.Symbol, status.TradeLineBuy, standardScoreBuy, jumpBuy,
@@ -1003,11 +995,11 @@ func placeCross(statusBuy, statusSell *CarryStatus, priceBuy, priceSell, amount 
 		now := time.Now().UnixNano()
 		orderBuy := &model.Order{OrderSide: model.OrderSideBuy, OrderType: model.OrderTypeLimit, Market: model.OKEX,
 			Symbol: statusBuy.symbol, Price: priceBuy, Amount: amount, RefreshType: model.FunctionCross, OrderTime: util.GetNow(),
-			UnfilledQuantity: amount, AmountType: statusBuy.account.Index, Status: model.CarryStatusWorking, Function: model.Open,
+			UnfilledQuantity: amount, AccountIndex: statusBuy.account.Index, Status: model.CarryStatusWorking, Function: model.Open,
 			OrderId: strconv.FormatInt(now, 10) + statusBuy.symbol, LineBuy: statusBuy.TradeLineBuy, LineSell: statusSell.TradeLineSell}
 		orderSell := &model.Order{OrderSide: model.OrderSideSell, OrderType: model.OrderTypeLimit, Market: model.OKEX,
 			Symbol: statusSell.symbol, Price: priceSell, Amount: amount, RefreshType: model.FunctionCross, OrderTime: util.GetNow(),
-			UnfilledQuantity: amount, AmountType: statusSell.account.Index, Status: model.CarryStatusWorking, Function: model.Open,
+			UnfilledQuantity: amount, AccountIndex: statusSell.account.Index, Status: model.CarryStatusWorking, Function: model.Open,
 			OrderId: strconv.FormatInt(now, 10) + statusSell.symbol, LineBuy: statusSell.TradeLineBuy, LineSell: statusSell.TradeLineSell}
 		if statusBuy.Holding*-1 >= amount {
 			orderBuy.Function = model.Close
@@ -1140,7 +1132,7 @@ var PostOrderCross = func(order *model.Order, setting *model.Setting) {
 	if setting == nil {
 		setting = api.GetSetting(model.FunctionCross, order.Market, order.Symbol)
 	}
-	account := model.AppConfig.GetAccountFromKeyIndex(order.Market, ``, order.AmountType)
+	account := model.AppConfig.GetAccountFromKeyIndex(order.Market, ``, order.AccountIndex)
 	if order.HaveId() && order.Status != model.CarryStatusFail {
 		//if account != nil {
 		//	status := getCarryStatus(setting.Coin, setting.Market, setting.Symbol, account.Key)
@@ -1165,7 +1157,7 @@ var PostOrderCross = func(order *model.Order, setting *model.Setting) {
 			switch order.Market {
 			case model.OKEX:
 				if InsufficientCodeOKEX[order.ErrCode] && setting != nil {
-					util.Notice(`reset %s trade max with %s account index %s`, order.Market, order.ErrCode, order.AmountType)
+					util.Notice(`reset %s trade max with %s account index %s`, order.Market, order.ErrCode, order.AccountIndex)
 					status, ok := carryStatusMap.Load(fmt.Sprintf(`%s*%s*%s*%s`, setting.Coin, setting.Market, setting.Symbol, account.Key))
 					getMax, maxBuy, maxSell := api.GetTradeMaxOKEX(account.Key, account.Secret, setting.Symbol, 0)
 					if getMax && ok {
@@ -1176,7 +1168,7 @@ var PostOrderCross = func(order *model.Order, setting *model.Setting) {
 				}
 			case model.BinancePerp, model.BinanceSpot:
 				if strings.Contains(InsufficientCodeBinance, order.ErrCode) {
-					util.Notice(`reset binance trade max with %s account index %s`, order.ErrCode, order.AmountType)
+					util.Notice(`reset binance trade max with %s account index %s`, order.ErrCode, order.AccountIndex)
 					spotMarkets.Delete(account.Key)
 					contractMarkets.Delete(account.Key)
 					initStatus(account, setting, true)

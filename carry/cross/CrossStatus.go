@@ -312,7 +312,7 @@ func addLastCarry(order *model.Order, setting *model.Setting) {
 	tenMin, _ := time.ParseDuration(`10m`)
 	second, _ := time.ParseDuration(`500ms`)
 	for i, lastOrder := range lastOrders[setting.Market][setting.Symbol] {
-		account := model.AppConfig.GetAccountFromKeyIndex(order.Market, ``, order.AmountType)
+		account := model.AppConfig.GetAccountFromKeyIndex(order.Market, ``, order.AccountIndex)
 		now := time.Now()
 		if lastOrder == nil || order.OrderTime.Add(tenMin).Before(now) || order.OrderTime.Add(second).After(now) || account == nil {
 			continue

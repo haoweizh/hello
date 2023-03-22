@@ -85,9 +85,9 @@ func MaintainTransFee() {
 			feeIndex += len(orders)
 			for i, value := range orders {
 				util.Info(fmt.Sprintf(`%d --- id %s`, i, value.OrderId))
-				account := model.AppConfig.GetAccountFromKeyIndex(value.Market, ``, value.AmountType)
+				account := model.AppConfig.GetAccountFromKeyIndex(value.Market, ``, value.AccountIndex)
 				if account == nil {
-					util.Notice(`can not maintain order status for nil account %s %s`, value.Market, value.AmountType)
+					util.Notice(`can not maintain order status for nil account %s %s`, value.Market, value.AccountIndex)
 					continue
 				}
 				order := api.QueryOrderById(account.Key, account.Secret, value.Market, value.Symbol, value.OrderType, value.OrderId)

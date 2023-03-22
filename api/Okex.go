@@ -922,7 +922,7 @@ func parseOrderOKEX(value map[string]interface{}) (order *model.Order) {
 	}
 	if strings.Contains(clOrdId, OKSeparator) {
 		clOrdId = clOrdId[:strings.Index(clOrdId, OKSeparator)]
-		order.AmountType, _ = strconv.Atoi(clOrdId)
+		order.AccountIndex, _ = strconv.Atoi(clOrdId)
 	}
 	if value[`sCode`] != nil {
 		order.ErrCode = value[`sCode`].(string)

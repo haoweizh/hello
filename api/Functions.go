@@ -11,13 +11,12 @@ import (
 )
 
 var requireReset sync.Map
-var lastPrice = sync.Map{}     // market_symbol, price
-var lastPriceTime = sync.Map{} // market_symbol, Time
-var symbolLock sync.Mutex
-var tradeMax = make(map[string]map[string][]float64)        // key - symbol - [maxBuy合约张数/币币个数, maxSell]
-var okTradeMaxResetTime = make(map[string]map[string]int64) // key - symbol - init time in second
-var okexCrossing = sync.Map{}                               // symbol - bool
-var CandleMap = &sync.Map{}                                 // market,symbol,seconds,RFC3339 *Candle
+var lastPrice = sync.Map{}            // market_symbol, price
+var lastPriceTime = sync.Map{}        // market_symbol, Time
+var tradeMax = &sync.Map{}            // key - symbol - [maxBuy, maxSell][]float64
+var okTradeMaxResetTime = &sync.Map{} // key - symbol - init time in second
+var okexCrossing = sync.Map{}         // symbol - bool
+var CandleMap = &sync.Map{}           // market,symbol,seconds,RFC3339 *Candle
 var USDs = map[string]bool{`USD`: true, `usd`: true, `USDT`: true, `usdt`: true, `USDC`: true, `usdc`: true, `BUSD`: true, `busd`: true}
 
 func setRequireReset(market string) {
@@ -38,32 +37,20 @@ func setRequireReset(market string) {
 }
 
 func GetTradeMaxOKEX(key, secret, symbol string, expireSecond int64) (success bool, maxBuy, maxSell float64) {
-	defer symbolLock.Unlock()
-	symbolLock.Lock()
-	now := time.Now().Unix()
-	if expireSecond < 0 {
-		if tradeMax[key] != nil && tradeMax[key][symbol] != nil && len(tradeMax[key][symbol]) == 2 {
-			return true, tradeMax[key][symbol][0], tradeMax[key][symbol][1]
-		} else {
-			return false, 0, 0
-		}
+	v, ok := util.LoadSyncMap(tradeMax, key, symbol)
+	if expireSecond < 0 && ok && v != nil {
+		return true, v.([]float64)[0], v.([]float64)[1]
 	}
-	if tradeMax[key] != nil && tradeMax[key][symbol] != nil && len(tradeMax[key][symbol]) == 2 &&
-		okTradeMaxResetTime[key] != nil && now-okTradeMaxResetTime[key][symbol] < expireSecond {
-		return true, tradeMax[key][symbol][0], tradeMax[key][symbol][1]
-	}
-	if tradeMax[key] == nil {
-		tradeMax[key] = make(map[string][]float64)
-	}
-	if okTradeMaxResetTime[key] == nil {
-		okTradeMaxResetTime[key] = make(map[string]int64)
+	vTime, okTime := util.LoadSyncMap(okTradeMaxResetTime, key, symbol)
+	if v != nil && ok && vTime != nil && okTime && time.Now().Unix()-vTime.(int64) < expireSecond {
+		return true, v.([]float64)[0], v.([]float64)[1]
 	}
 	success, maxBuy, maxSell = getMaxSizeOKEX(key, secret, symbol)
 	if success {
-		tradeMax[key][symbol] = []float64{maxBuy, maxSell}
-		okTradeMaxResetTime[key][symbol] = now
+		util.StoreSyncMap(tradeMax, []float64{maxBuy, maxSell}, key, symbol)
+		util.StoreSyncMap(okTradeMaxResetTime, time.Now().Unix(), key, symbol)
 	}
-	return
+	return success, maxBuy, maxSell
 }
 
 func RequireDepthChanReset(markets *model.Markets, market string) bool {
@@ -629,7 +616,7 @@ func PlaceOrder(key, secret, orderSide, orderType, market, symbol, orderParam st
 	account := model.AppConfig.GetAccountFromKeyIndex(market, key, -1)
 	order = &model.Order{OrderSide: markSide, OrderType: orderType, Market: market, Symbol: symbol, Price: price,
 		Amount: amount, DealAmount: 0, DealPrice: price, TriggerPrice: triggerPrice,
-		OrderTime: util.GetNow(), UnfilledQuantity: amount, AmountType: account.Index}
+		OrderTime: util.GetNow(), UnfilledQuantity: amount, AccountIndex: account.Index}
 	//util.Notice(fmt.Sprintf(`...%s %s %s before order %d amount: %f price:%f triggerPrice:%f`,
 	//	orderSide, market, symbol, start, amount, price, triggerPrice))
 	if model.AppConfig.Env == `test` {
@@ -912,7 +899,7 @@ func InitCrossMarketInfos(markets []string) {
 	model.AppDB.Model(&settingsDb).Where(`function=?`, model.FunctionCross).Updates(map[string]interface{}{`valid`: false})
 	for coin, infos := range infoPool {
 		//util.Notice(`handle coin %s %d`, coin, len(infos))
-		scoreOpen := 0.02
+		scoreOpen := 0.005
 		scoreClose := 0.001
 		if len(infos) >= 2 {
 			for _, info := range infos {
