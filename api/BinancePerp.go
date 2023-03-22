@@ -128,7 +128,6 @@ func WsDepthServeBinancePerp(markets *model.Markets, orderHandler OrderHandler) 
 		if haveOld && old.UpdateId > updateId {
 			return
 		}
-		util.Info(subscribe)
 		if strings.Contains(subscribe, `@depth`) {
 			handleDepthBinancePerp(markets, result, standardSymbol, updateId)
 		} else if strings.Contains(subscribe, `@bookTicker`) {
