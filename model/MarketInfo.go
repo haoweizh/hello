@@ -40,6 +40,14 @@ func (marketInfoArray MarketInfoArray) Less(i, j int) bool {
 	return marketInfoArray[i].TradeAmount < marketInfoArray[j].TradeAmount
 }
 
+func GetMarketInfo(market, symbol string) (marketInfo *MarketInfo) {
+	v, _ := util.LoadSyncMap(MarketInfos, market, symbol)
+	if v == nil {
+		return nil
+	}
+	return v.(*MarketInfo)
+}
+
 // ParseRealAmount 返回以币为单位的数量
 func ParseRealAmount(market, symbol string, amount float64) (success bool, realAmount float64) {
 	v, _ := util.LoadSyncMap(MarketInfos, market, symbol)

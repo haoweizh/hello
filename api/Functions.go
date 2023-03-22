@@ -280,6 +280,11 @@ func GetPriceForce(key, secret, symbol, market string) (result bool, price float
 	if len(coins) == 2 && coins[0] == coins[1] {
 		return true, 1
 	}
+	marketInfo := model.GetMarketInfo(market, symbol)
+	if marketInfo == nil {
+		util.Info(fmt.Sprintf(`not in market infos %s %s`, market, symbol))
+		return false, 0
+	}
 	switch market {
 	case model.Gate:
 		result, price = getPriceGate(key, secret, symbol)
