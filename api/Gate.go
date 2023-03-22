@@ -64,6 +64,8 @@ func appendFutureMarketGate(key, secret string, marketInfos map[string]*model.Ma
 		marketInfo.SizeIncrement = marketInfo.SizeMin
 		marketInfo.CTCurrency = coin
 		marketInfo.CTValue, _ = strconv.ParseFloat(contract.QuantoMultiplier, 64)
+		marketInfo.BuyLimitPriceRatio, _ = strconv.ParseFloat(contract.OrderPriceDeviate, 64)
+		marketInfo.SellLimitPriceRatio, _ = strconv.ParseFloat(contract.OrderPriceDeviate, 64)
 		marketInfos[marketInfo.Name] = marketInfo
 	}
 }
