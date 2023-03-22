@@ -59,12 +59,12 @@ package deprecated
 //	tenMin, _ := time.ParseDuration(`10m`)
 //	second, _ := time.ParseDuration(`500ms`)
 //	for i, lastOrder := range lastOrders[setting.Market][setting.Symbol] {
-//		account := model.AppConfig.GetAccountFromKey(order.Market, order.AmountType)
+//		account := model.AppConfig.GetAccountFromKey(order.Market, order.AccountIndex)
 //		now := time.Now()
 //		if lastOrder == nil || order.OrderTime.Add(tenMin).Before(now) || order.OrderTime.Add(second).After(now) || account == nil {
 //			continue
 //		}
-//		queryOrder := api.QueryOrderById(lastOrder.AmountType, account.Secret, lastOrder.Market, lastOrder.Symbol,
+//		queryOrder := api.QueryOrderById(lastOrder.AccountIndex, account.Secret, lastOrder.Market, lastOrder.Symbol,
 //			lastOrder.Symbol, lastOrder.OrderType, lastOrder.OrderId)
 //		if queryOrder == nil {
 //			continue
@@ -109,7 +109,7 @@ package deprecated
 //		return
 //	}
 //	if order.HaveId() {
-//		_, maxBuy, maxSell := api.GetTradeMaxOKEX(order.AmountType, ``, order.Symbol, -1)
+//		_, maxBuy, maxSell := api.GetTradeMaxOKEX(order.AccountIndex, ``, order.Symbol, -1)
 //		if order.OrderSide == model.OrderSideBuy {
 //			maxBuy -= order.Amount
 //			maxSell += order.Amount
@@ -117,32 +117,32 @@ package deprecated
 //			maxBuy += order.Amount
 //			maxSell -= order.Amount
 //		}
-//		api.SetTradeMax(order.AmountType, order.Symbol, maxBuy, maxSell)
+//		api.SetTradeMax(order.AccountIndex, order.Symbol, maxBuy, maxSell)
 //		addLastCarry(order, setting)
-//		addCarryResult(order.AmountType, order.Market, true)
+//		addCarryResult(order.AccountIndex, order.Market, true)
 //	} else {
 //		unknownFail := true
-//		account := model.AppConfig.GetAccountFromKey(order.Market, order.AmountType)
+//		account := model.AppConfig.GetAccountFromKey(order.Market, order.AccountIndex)
 //		if account != nil {
 //			switch order.Market {
 //			case model.OKEX:
 //				if InsufficientCodeOKEX[order.ErrCode] {
-//					util.Notice(`reset %s trade max with %s %s`, order.Market, order.ErrCode, order.AmountType)
+//					util.Notice(`reset %s trade max with %s %s`, order.Market, order.ErrCode, order.AccountIndex)
 //					resetTradeMax(account.Key, account.Secret, model.OKEX)
 //					unknownFail = false
 //				}
 //			case model.Binance:
 //				if strings.Contains(InsufficientCodeBinance, order.ErrCode) {
-//					util.Notice(`reset binance trade max with %s %s`, order.ErrCode, order.AmountType)
+//					util.Notice(`reset binance trade max with %s %s`, order.ErrCode, order.AccountIndex)
 //					clearCarry(account.Key, account.Secret, order.Market)
 //					unknownFail = false
 //				}
 //			}
 //		}
 //		if unknownFail {
-//			addCarryResult(order.AmountType, order.Market, false)
+//			addCarryResult(order.AccountIndex, order.Market, false)
 //		} else {
-//			addCarryResult(order.AmountType, order.Market, true)
+//			addCarryResult(order.AccountIndex, order.Market, true)
 //		}
 //	}
 //}

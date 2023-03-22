@@ -85,7 +85,7 @@ package deprecated
 //		return
 //	}
 //	order := &model.Order{OrderSide: orderSide, OrderType: model.OrderTypeLimit, Market: market, Symbol: symbol,
-//		AmountType: ``, Price: price, Amount: amount, OrderId: ``, ErrCode: ``,
+//		AccountIndex: ``, Price: price, Amount: amount, OrderId: ``, ErrCode: ``,
 //		Status: model.CarryStatusFail, DealAmount: 0, DealPrice: price}
 //	order = api.PlaceOrder(key, secret, orderSide, model.OrderTypeLimit, market, symbol, ``, ``,
 //		accountType, ``, ``, price, 0, amount, true)
