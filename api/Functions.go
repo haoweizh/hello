@@ -790,6 +790,10 @@ func _(key, secret, market, transferType string, amount float64) {
 }
 
 func GetMarketInfos(market string) (marketInfo map[string]*model.MarketInfo) {
+	marketInfo = model.GetMarketInfos(market)
+	if marketInfo != nil {
+		return marketInfo
+	}
 	accounts := model.AppConfig.GetAccounts(market)
 	switch market {
 	case model.Ftx:

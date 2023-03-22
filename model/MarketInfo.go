@@ -40,6 +40,14 @@ func (marketInfoArray MarketInfoArray) Less(i, j int) bool {
 	return marketInfoArray[i].TradeAmount < marketInfoArray[j].TradeAmount
 }
 
+func GetMarketInfos(market string) (infos map[string]*MarketInfo) {
+	value, _ := marketInfos.Load(market)
+	if value == nil {
+		return nil
+	}
+	return value.(map[string]*MarketInfo)
+}
+
 func GetMarketInfo(market, symbol string) (marketInfo *MarketInfo) {
 	value, _ := marketInfos.Load(market)
 	if value == nil {
