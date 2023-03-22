@@ -222,7 +222,6 @@ var tickerHandler = gateWs.NewCallBack(func(msg *gateWs.UpdateMsg) {
 	var bidAsk model.BidAsk
 	var symbol string
 	switch msg.Channel {
-	// Pushes any update about the price and amount of best bid or ask price in realtime for subscribed currency pairs.
 	case gateWs.ChannelSpotBookTicker:
 		var update gateWs.SpotBookTickerMsg
 		if err := json.Unmarshal(msg.Result, &update); err != nil {
@@ -303,6 +302,30 @@ var tickerHandler = gateWs.NewCallBack(func(msg *gateWs.UpdateMsg) {
 			})
 		}
 	}
+})
+
+var markPriceHandler = gateWs.NewCallBack(func(msg *gateWs.UpdateMsg) {
+	if msg.Error != nil && (!strings.Contains(msg.Error.Message, "futures.ping") && !strings.Contains(msg.Error.Message, "spot.ping")) {
+		util.Notice(fmt.Sprintf("callback error: %s %s", msg.Channel, msg.Error.Error()))
+		return
+	}
+	if msg.Channel == gateWs.ChannelFutureTicker {
+		var update gateWs.FuturesTicker
+		if err := json.Unmarshal(msg.Result, &update); err != nil {
+			util.Notice(fmt.Sprintf("future mark price Unmarshal err:%s %s", model.Gate, err.Error()))
+			return
+		}
+		success, _, coin := model.GetCoinFromDialect(model.Gate, update.Contract)
+		if !success {
+			return
+		}
+		symbol := coin + model.UniStandardTail[model.MarketTypePerp]
+		price, _ := strconv.ParseFloat(update.MarkPrice, 64)
+		ticker := &model.MarkPriceInfo{MarkPrice: price, Ts: int(msg.TimeMs)}
+		markets := model.AppMarkets
+		markets.SetMarkPriceInfo(symbol, model.Gate, ticker)
+	}
+	return
 })
 
 //	var update gateWs.FuturesOrderBookUpdate
@@ -439,6 +462,12 @@ func WsDepthServeGateNew(orderHandler OrderHandler) (channels []chan struct{}, e
 		util.Notice(`finish connect public gate perp book ticker ws `)
 		channels = append(channels, perpBookTickerChannels...)
 	}
+	time.Sleep(time.Second * 1)
+	perpMarkPriceChannels, perpMarkPriceErr := WebSocketClient(model.Gate, gateWs.FuturesUsdtUrl, futureSubs, subscribeMarkPriceHandler, wsHandler, orderHandler, 30)
+	if perpMarkPriceErr == nil {
+		util.Notice(`finish connect public gate perp mark price ws `)
+		channels = append(channels, perpMarkPriceChannels...)
+	}
 	go maintainChannelGate()
 	return channels, err
 }
@@ -450,7 +479,33 @@ var wsHandler = func(connection *websocket.Conn, event []byte, orderHandler Orde
 		util.Notice(fmt.Sprintf("gate ws message Unmarshal err:%s", err.Error()))
 		return
 	}
-	tickerHandler(msg)
+	if msg.Channel == gateWs.ChannelFutureTicker {
+		markPriceHandler(msg)
+	} else {
+		tickerHandler(msg)
+	}
+}
+
+var subscribeMarkPriceHandler = func(connection *websocket.Conn, subscribes []interface{}) error {
+	var err error = nil
+	var symbols []string
+	for _, subscribe := range subscribes {
+		_, _, _, dialectSymbol := model.GetFromStandard(model.Gate, subscribe.(string))
+		symbols = append(symbols, dialectSymbol)
+	}
+	subscribeMap := map[string]interface{}{
+		"time":    time.Now().Unix(),
+		"channel": "futures.tickers",
+		"event":   "subscribe",
+		"payload": symbols,
+	}
+	subscribeMessage := util.JsonEncodeToByte(subscribeMap)
+	if err = SendToConnection(model.Gate, connection, subscribeMessage); err != nil {
+		util.SocketInfo(" gate can not subscribe perp symbols %s %s", subscribeMessage, err.Error())
+	}
+	util.Notice(`gate subscribed ` + string(subscribeMessage))
+	time.Sleep(500 * time.Millisecond)
+	return err
 }
 
 var subscribeHandler = func(connection *websocket.Conn, subscribes []interface{}) error {
