@@ -155,6 +155,8 @@ var subscribeHandlerBinancePerp = func(connection *websocket.Conn, subscribes []
 	subParamJson, _ := json.Marshal(subParam)
 	if err = SendToConnection(model.BinancePerp, connection, subParamJson); err != nil {
 		util.SocketInfo("binance perp can not subscribe %s %s", subParamJson, err.Error())
+	} else {
+		util.Info(fmt.Sprintf(`subscribe %s %v %d`, model.BinancePerp, subParamJson, len(subscribes)))
 	}
 	util.Notice(`%s send subscribe: %s `, model.BinancePerp, subParamJson)
 	time.Sleep(time.Millisecond * 500)
