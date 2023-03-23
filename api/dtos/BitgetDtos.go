@@ -179,30 +179,31 @@ type BitgetSpotOpenOrderResp struct {
 }
 
 type BitgetPerpOpenOrderResp struct {
-	Code string `json:"code"`
-	Data struct {
-		NextFlag  bool   `json:"nextFlag"`
-		EndId     string `json:"endId"`
-		OrderList []struct {
-			Symbol       string  `json:"symbol"`
-			Size         int     `json:"size"`
-			OrderId      string  `json:"orderId"`
-			ClientOid    string  `json:"clientOid"`
-			FilledQty    int     `json:"filledQty"`
-			Fee          int     `json:"fee"`
-			Price        float64 `json:"price"`
-			State        string  `json:"state"`
-			Side         string  `json:"side"`
-			TimeInForce  string  `json:"timeInForce"`
-			TotalProfits int     `json:"totalProfits"`
-			PosSide      string  `json:"posSide"`
-			MarginCoin   string  `json:"marginCoin"`
-			OrderType    string  `json:"orderType"`
-			CTime        int64   `json:"cTime"`
-		} `json:"orderList"`
-	} `json:"data"`
+	Code        string `json:"code"`
 	Msg         string `json:"msg"`
 	RequestTime int64  `json:"requestTime"`
+	Data        []struct {
+		Symbol       string  `json:"symbol"`
+		Size         float64 `json:"size"`
+		OrderId      string  `json:"orderId"`
+		ClientOid    string  `json:"clientOid"`
+		FilledQty    float64 `json:"filledQty"`
+		Fee          float64 `json:"fee"`
+		Price        float64 `json:"price"`
+		State        string  `json:"state"`
+		Side         string  `json:"side"`
+		TimeInForce  string  `json:"timeInForce"`
+		TotalProfits float64 `json:"totalProfits"`
+		PosSide      string  `json:"posSide"`
+		MarginCoin   string  `json:"marginCoin"`
+		FilledAmount float64 `json:"filledAmount"`
+		OrderType    string  `json:"orderType"`
+		Leverage     string  `json:"leverage"`
+		MarginMode   string  `json:"marginMode"`
+		ReduceOnly   bool    `json:"reduceOnly"`
+		CTime        string  `json:"cTime"`
+		UTime        string  `json:"uTime"`
+	} `json:"data"`
 }
 
 type BitgetFundingResp struct {
