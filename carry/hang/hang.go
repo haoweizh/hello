@@ -13,22 +13,10 @@ import (
 )
 
 var doWork = false
-var hanging = false
 var placeTime sync.Map // market_symbol/timeInMilli
 var hangSide sync.Map  // market_symbol/orderSide
 // var hangPrice sync.Map // market_symbol/bid1Price-ask1Price
 var dealInU sync.Map // market_symbol_timeStr/deal_in_u
-var hangLock sync.Mutex
-
-func checkSetHanging(value bool) (before bool) {
-	hangLock.Lock()
-	defer hangLock.Unlock()
-	before = hanging
-	if value == false || before == false {
-		hanging = value
-	}
-	return before
-}
 
 // ProcessHang
 // setting.chance 下单后多少million seconds cancel并进行后续下单
@@ -39,7 +27,7 @@ func checkSetHanging(value bool) (before bool) {
 // setting.CloseShortMargin 大于0时同时进行吃单
 var ProcessHang = func(setting *model.Setting, tick *model.BidAsk) {
 	if !doWork && model.AppConfig.Handle == `1` {
-		go refreshDeal()
+		go refreshDeal(setting)
 		doWork = true
 		return
 	}
@@ -117,8 +105,8 @@ func placeHang(account *model.Account, setting *model.Setting, marketInfo *model
 }
 
 func handle(account *model.Account, setting *model.Setting, tick *model.BidAsk) {
-	if !checkSetHanging(true) {
-		defer checkSetHanging(false)
+	if !api.CheckSetProcessing(setting.Function, setting.Market, setting.Symbol, true) {
+		defer api.CheckSetProcessing(setting.Function, setting.Market, setting.Symbol, false)
 	} else {
 		return
 	}
@@ -150,10 +138,10 @@ func handle(account *model.Account, setting *model.Setting, tick *model.BidAsk) 
 	placeTime.Store(marketSymbol, time.Now().UnixMilli())
 }
 
-func refreshDeal() {
+func refreshDeal(setting *model.Setting) {
 	for doWork {
 		for true {
-			if !checkSetHanging(true) {
+			if !api.CheckSetProcessing(setting.Function, setting.Market, setting.Symbol, true) {
 				break
 			} else {
 				time.Sleep(time.Millisecond * 200)
@@ -200,7 +188,7 @@ func refreshDeal() {
 				return true
 			})
 		}
-		checkSetHanging(false)
+		api.CheckSetProcessing(setting.Function, setting.Market, setting.Symbol, false)
 		time.Sleep(time.Minute * 10)
 	}
 }

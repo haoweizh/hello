@@ -282,19 +282,19 @@ func GetPriceForce(key, secret, symbol, market string) (result bool, price float
 	}
 	marketInfo := model.GetMarketInfo(market, symbol)
 	if marketInfo == nil {
-		util.Info(fmt.Sprintf(`not in market infos %s %s`, market, symbol))
+		util.Info(fmt.Sprintf(`not in market infos %s %s %s %s`, market, symbol, key, secret[0:1]))
 		return false, 0
 	}
-	switch market {
-	case model.Gate:
-		result, price = getPriceGate(key, secret, symbol)
-	case model.OKEX:
-		result, price = getPriceOKEX(key, secret, symbol)
-	case model.BinancePerp:
-		result, price = getPriceBinancePerp(key, secret, symbol)
-	case model.BinanceSpot:
-		result, price = getPriceBinanceSpot(key, secret, symbol)
-	}
+	//switch market {
+	//case model.Gate:
+	//	result, price = getPriceGate(key, secret, symbol)
+	//case model.OKEX:
+	//	result, price = getPriceOKEX(key, secret, symbol)
+	//case model.BinancePerp:
+	//	result, price = getPriceBinancePerp(key, secret, symbol)
+	//case model.BinanceSpot:
+	//	result, price = getPriceBinanceSpot(key, secret, symbol)
+	//}
 	if result {
 		lastPriceTime.Store(market+`_`+symbol, time.Now())
 		lastPrice.Store(market+`_`+symbol, price)

@@ -6,7 +6,6 @@ import (
 	"hello/model"
 	"hello/util"
 	"math"
-	"sync"
 	"time"
 )
 
@@ -19,19 +18,7 @@ type GridPos struct {
 }
 
 var dayGridPos = make(map[string]map[string]map[string]*GridPos) // dateStr - market - symbol - gridPos
-var simpleGriding = false
-var simpleGridLock sync.Mutex
 var gridCheckTime = util.GetNow()
-
-func checkSetGriding(value bool) (before bool) {
-	simpleGridLock.Lock()
-	defer simpleGridLock.Unlock()
-	before = simpleGriding
-	if value == false || before == false {
-		simpleGriding = value
-	}
-	return before
-}
 
 func calcGridAmount(key, secret, market, symbol string, price float64) (amount float64) {
 	switch market {
@@ -166,8 +153,8 @@ func getGridPos(key, secret string, setting *model.Setting) (gridPos *GridPos) {
 
 // ProcessSimpleGrid setting: grid_amount持仓量, chance 当前position
 var ProcessSimpleGrid = func(setting *model.Setting, tick *model.BidAsk) {
-	if !checkSetGriding(true) {
-		defer checkSetGriding(false)
+	if !api.CheckSetProcessing(setting.Function, setting.Market, setting.Symbol, true) {
+		defer api.CheckSetProcessing(setting.Function, setting.Market, setting.Symbol, false)
 	} else {
 		return
 	}

@@ -341,7 +341,8 @@ func getBalanceBinanceSpot(key string, secret string) (success bool, balances []
 	return true, balances
 }
 
-func getPriceBinanceSpot(key, secret, symbol string) (success bool, price float64) {
+// getPriceBinanceSpot
+func _(key, secret, symbol string) (success bool, price float64) {
 	success, _, _, dialectSymbol := model.GetFromStandard(model.BinanceSpot, symbol)
 	if !success {
 		return false, 0
@@ -351,6 +352,7 @@ func getPriceBinanceSpot(key, secret, symbol string) (success bool, price float6
 	if err != nil && !strings.Contains(err.Error(), `-2010`) {
 		util.Notice(fmt.Sprintf("getPriceBinanceSpot err: %s standard %s dialect %s",
 			err.Error(), symbol, dialectSymbol))
+		time.Sleep(time.Minute)
 		return false, 0
 	}
 	if len(resPrice) > 0 {

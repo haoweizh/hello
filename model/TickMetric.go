@@ -81,16 +81,15 @@ func (metricManager *MetricManager) AddCarry(mark string, carryOpen, carryClose 
 
 func (metricManager *MetricManager) AddTick(market, symbol string, current time.Time, lastBidAsk, bidAsk *BidAsk) {
 	//key := fmt.Sprintf(`%s*%s%d/%d_%d`, market, symbol, current.Month(), current.Day(), current.Hour())
+	if current.Second() != 0 {
+		return
+	}
 	key := fmt.Sprintf(`%s %s %d-%d %d`, market, symbol, current.Month(), current.Day(), current.Hour())
 	value, ok := metricManager.tickHour.Load(key)
 	var tickMetric *TickMetric
 	if !ok {
 		tickMetric = &TickMetric{priceLow: 0, priceHigh: 0}
 	} else if value != nil {
-		// 每天凌晨4点清空数据
-		if current.Hour() == 4 {
-			metricManager.tickHour = sync.Map{}
-		}
 		tickMetric = value.(*TickMetric)
 		if tickMetric.countAll > 10000 {
 			tickMetric = &TickMetric{priceLow: 0, priceHigh: 0}
