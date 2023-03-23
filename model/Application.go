@@ -172,8 +172,6 @@ func GetMonitorInfo(index, table string) (valueArray [][]string) {
 		if value == nil {
 			return true
 		}
-		util.Info(`getmonitorinfo value %s %d %d %s %s`,
-			key, len(valueArray), len(value.([]string)[0]), value.([]string)[0], value.([]string)[1])
 		valueArray = append(valueArray, value.([]string))
 		return true
 	})
@@ -196,6 +194,7 @@ func SetMonitorInfo(index, table, item string, value []string) {
 		infoMap = &sync.Map{}
 	}
 	infoMap.Store(item, value)
+	util.StoreSyncMap(monitorInfo, infoMap, index, table)
 }
 
 func GetOrderStatus(market, marketStatus string) (status string) {

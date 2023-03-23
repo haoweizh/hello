@@ -282,9 +282,10 @@ func GetPriceForce(key, secret, symbol, market string) (result bool, price float
 	}
 	marketInfo := model.GetMarketInfo(market, symbol)
 	if marketInfo == nil {
-		util.Info(fmt.Sprintf(`not in market infos %s %s %s %s`, market, symbol, key, secret[0:1]))
+		//util.Info(fmt.Sprintf(`not in market infos %s %s %s %s`, market, symbol, key, secret[0:1]))
 		return false, 0
 	}
+	util.Notice(`no need %s %s`, key, secret[:1])
 	//switch market {
 	//case model.Gate:
 	//	result, price = getPriceGate(key, secret, symbol)
