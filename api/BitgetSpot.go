@@ -40,6 +40,9 @@ func getMarketsBitgetSpot() (marketInfos map[string]*model.MarketInfo) {
 		amountPrecision, _ := strconv.Atoi(symbolInfo.QuantityScale)
 		marketInfo.SizeIncrement = 1 / math.Pow10(amountPrecision)
 		marketInfo.SizeMin, _ = strconv.ParseFloat(symbolInfo.MinTradeAmount, 64)
+		if marketInfo.SizeMin == 0 {
+			marketInfo.SizeMin = marketInfo.SizeIncrement
+		}
 		marketInfo.SizeMax, _ = strconv.ParseFloat(symbolInfo.MaxTradeAmount, 64)
 		marketInfo.MoneyMin, _ = strconv.ParseFloat(symbolInfo.MinTradeUSDT, 64)
 		marketInfos[marketInfo.Name] = marketInfo
