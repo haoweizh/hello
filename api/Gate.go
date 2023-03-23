@@ -59,7 +59,8 @@ func appendFutureMarketGate(key, secret string, marketInfos map[string]*model.Ma
 		minPrice, _ := strconv.ParseFloat(contract.OrderPriceRound, 64)
 		marketInfo.PriceIncrement = minPrice
 		marketInfo.PriceDecimal = util.NumDecPlaces(minPrice)
-		marketInfo.SizeMin = float64(contract.OrderSizeMin)
+		//marketInfo.SizeMin = float64(contract.OrderSizeMin)
+		marketInfo.SizeMin = 10
 		marketInfo.SizeMax = float64(contract.OrderSizeMax)
 		marketInfo.SizeIncrement = marketInfo.SizeMin
 		marketInfo.CTCurrency = coin
