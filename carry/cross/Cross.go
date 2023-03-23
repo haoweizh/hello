@@ -13,6 +13,8 @@ import (
 	"time"
 )
 
+const BitgetPosLimit = 40
+
 func checkSetCrossing(value bool) (before bool) {
 	lockCrossing.Lock()
 	defer lockCrossing.Unlock()
@@ -131,7 +133,8 @@ func createFromPosition(account *model.Account, setting *model.Setting, valueLim
 	}
 	rateLimitPosition := 2.8
 	rateLimitHolding := 0.28
-	if cm.contractValueInU/cm.accountValueInU > rateLimitPosition || valueInUsd > valueLimit || valueInUsd/cm.accountValueInU > rateLimitHolding {
+	if cm.contractValueInU/cm.accountValueInU > rateLimitPosition || valueInUsd > valueLimit ||
+		valueInUsd/cm.accountValueInU > rateLimitHolding || (setting.Market == model.BitgetPerp && len(cm.positions) > BitgetPosLimit) {
 		//util.Notice(fmt.Sprintf(`low position balance %s %s %f %f %f %f`,
 		//	key, setting.Symbol, cm.contractValueInU, cm.accountValueInU, valueInUsd, valueLimit))
 		doRevert = true
