@@ -359,26 +359,11 @@ func cancelOrdersBitgetPerp(key, secret, symbol string) (result bool) {
 		return false
 	}
 	client := dtos.BitgetRestClient{BaseUrl: bitgetRestUrl, Passphrase: model.AppConfig.Phase, ApiKey: key, ApiSecretKey: secret}
-	planHttpResp, planHttpErr := client.DoGet("/api/mix/v1/order/current", map[string]string{"symbol": dialectSymbol})
-	bitgetPerpOpenOrderResp := &dtos.BitgetPerpOpenOrderResp{}
-	jsonErr := json.Unmarshal(planHttpResp, bitgetPerpOpenOrderResp)
-	if bitgetPerpOpenOrderResp == nil || bitgetPerpOpenOrderResp.Code != "00000" {
-		util.Notice(fmt.Sprintf("fail to get bitget perp open order resp: %s httpErr: %v, jsonErr: %v", planHttpResp, planHttpErr, jsonErr))
-		return false
-	}
-	var orderIds []string
-	for _, openOrder := range bitgetPerpOpenOrderResp.Data {
-		orderIds = append(orderIds, openOrder.OrderId)
-	}
-	if len(orderIds) == 0 {
-		return true
-	}
 	params := map[string]interface{}{
 		"symbol":     dialectSymbol,
 		"marginCoin": "USDT",
-		"orderIds":   orderIds,
 	}
-	httpResp, httpErr := client.DoPost("/api/mix/v1/order/cancel-batch-orders", string(util.JsonEncodeToByte(params)))
+	httpResp, httpErr := client.DoPost("/api/mix/v1/order/cancel-symbol-orders", string(util.JsonEncodeToByte(params)))
 	jsonData, jsonErr := util.NewJSON(httpResp)
 	code, _ := jsonData.Get("code").String()
 	if jsonData == nil || code != "00000" {
