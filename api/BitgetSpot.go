@@ -231,7 +231,7 @@ func cancelOrdersBitgetSpot(key, secret, symbol string) (result bool) {
 	jsonData, jsonErr := util.NewJSON(httpResp)
 	code, _ := jsonData.Get("code").String()
 	if jsonData == nil || code != "00000" {
-		util.Notice(fmt.Sprintf("fail to canal Bitget spot order resp: %s httpErr: %v, jsonErr: %v", httpResp, httpErr, jsonErr))
+		util.Notice(fmt.Sprintf("fail to cancel Bitget spot order resp: %s httpErr: %v, jsonErr: %v", httpResp, httpErr, jsonErr))
 		return false
 	}
 	return true

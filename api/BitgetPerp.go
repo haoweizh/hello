@@ -342,7 +342,7 @@ func placeOrderBitgetPerp(key, secret string, order *model.Order, orderSide, ord
 	bitgetOrderResp := &dtos.BitgetOrderResp{}
 	jsonErr := json.Unmarshal(httpResp, bitgetOrderResp)
 	if bitgetOrderResp == nil || bitgetOrderResp.Code != "00000" {
-		util.Notice(fmt.Sprintf("fail to create bitget spot order resp: %s httpErr: %v, jsonErr: %v", httpResp, httpErr, jsonErr))
+		util.Notice(fmt.Sprintf("fail to create bitget perp order resp: %s httpErr: %v, jsonErr: %v", httpResp, httpErr, jsonErr))
 	} else {
 		order.Status = model.CarryStatusWorking
 		order.OrderId = bitgetOrderResp.Data.OrderId
@@ -364,7 +364,7 @@ func cancelOrdersBitgetPerp(key, secret, symbol string) (result bool) {
 	jsonData, jsonErr := util.NewJSON(httpResp)
 	code, _ := jsonData.Get("code").String()
 	if jsonData == nil || code != "00000" {
-		util.Notice(fmt.Sprintf("fail to canal Bitget perp order resp: %s httpErr: %v, jsonErr: %v", httpResp, httpErr, jsonErr))
+		util.Notice(fmt.Sprintf("fail to cancel Bitget perp order resp: %s httpErr: %v, jsonErr: %v", httpResp, httpErr, jsonErr))
 		return false
 	}
 	return true
