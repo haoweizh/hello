@@ -391,7 +391,7 @@ func queryOrderBitgetPerp(key, secret, symbol string, orderId string) (order *mo
 		util.Notice("fail to query bitget perp order, GetFromStandard: " + symbol)
 		return order
 	}
-	order = &model.Order{Market: model.BitgetPerp, Status: model.CarryStatusFail, OrderId: orderId, Symbol: symbol}
+	order = &model.Order{Market: model.BitgetPerp, Status: model.CarryStatusWorking, OrderId: orderId, Symbol: symbol}
 	client := dtos.BitgetRestClient{BaseUrl: bitgetRestUrl, Passphrase: model.AppConfig.Phase, ApiKey: key, ApiSecretKey: secret}
 	httpResp, httpErr := client.DoGet("/api/mix/v1/order/detail", map[string]string{"symbol": dialectSymbol, "orderId": orderId})
 	orderDetailResp := &dtos.BitgetPerpOrderDetailResp{}
@@ -407,8 +407,6 @@ func queryOrderBitgetPerp(key, secret, symbol string, orderId string) (order *mo
 			order.Status = model.CarryStatusFail
 		} else if orderDetailResp.Data.State == "filled" || orderDetailResp.Data.State == "partially_filled" {
 			order.Status = model.CarryStatusSuccess
-		} else if orderDetailResp.Data.State == "new" {
-			order.Status = model.CarryStatusWorking
 		}
 	}
 	return order

@@ -259,7 +259,7 @@ func queryOrderBitgetSpot(key, secret, symbol string, orderId string) (order *mo
 		util.Notice("fail to query bitget spot order, GetFromStandard: " + symbol)
 		return order
 	}
-	order = &model.Order{Market: model.BitgetSpot, Status: model.CarryStatusFail, OrderId: orderId, Symbol: symbol}
+	order = &model.Order{Market: model.BitgetSpot, Status: model.CarryStatusWorking, OrderId: orderId, Symbol: symbol}
 	client := dtos.BitgetRestClient{BaseUrl: bitgetRestUrl, Passphrase: model.AppConfig.Phase, ApiKey: key, ApiSecretKey: secret}
 	params := map[string]string{"symbol": dialectSymbol, "orderId": orderId}
 	httpResp, httpErr := client.DoPost("/api/spot/v1/trade/orderInfo", string(util.JsonEncodeToByte(params)))
@@ -279,8 +279,6 @@ func queryOrderBitgetSpot(key, secret, symbol string, orderId string) (order *mo
 				order.Status = model.CarryStatusFail
 			} else if orderResp.Status == "full_fill" || orderResp.Status == "partial_fill" {
 				order.Status = model.CarryStatusSuccess
-			} else if orderResp.Status == "new" {
-				order.Status = model.CarryStatusWorking
 			}
 		}
 	}
