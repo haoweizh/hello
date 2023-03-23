@@ -224,26 +224,10 @@ func cancelOrdersBitgetSpot(key, secret, symbol string) (result bool) {
 		util.Notice("fail to cancel bitget spot order, GetFromStandard: " + symbol)
 		return false
 	}
-	planHttpResp, planHttpErr := client.DoPost("/api/spot/v1/trade/open-orders", string(util.JsonEncodeToByte(map[string]string{"symbol": dialectSymbol})))
-	bitgetSpotOpenOrderResp := &dtos.BitgetSpotOpenOrderResp{}
-	jsonErr := json.Unmarshal(planHttpResp, bitgetSpotOpenOrderResp)
-	if bitgetSpotOpenOrderResp == nil || bitgetSpotOpenOrderResp.Code != "00000" {
-		util.Notice(fmt.Sprintf("fail to get bitget spot open order resp: %s httpErr: %v, jsonErr: %v", planHttpResp, planHttpErr, jsonErr))
-		return false
-	}
-	var orderIds []string
-	for _, openOrder := range bitgetSpotOpenOrderResp.Data {
-		orderIds = append(orderIds, openOrder.OrderId)
-	}
-	if len(orderIds) == 0 {
-		return true
-	}
-
 	params := map[string]interface{}{
-		"symbol":   dialectSymbol,
-		"orderIds": orderIds,
+		"symbol": dialectSymbol,
 	}
-	httpResp, httpErr := client.DoPost("/api/spot/v1/trade/cancel-batch-orders", string(util.JsonEncodeToByte(params)))
+	httpResp, httpErr := client.DoPost("/api/spot/v1/trade/cancel-symbol-order", string(util.JsonEncodeToByte(params)))
 	jsonData, jsonErr := util.NewJSON(httpResp)
 	code, _ := jsonData.Get("code").String()
 	if jsonData == nil || code != "00000" {
