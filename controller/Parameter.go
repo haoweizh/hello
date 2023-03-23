@@ -481,7 +481,7 @@ func crossPage(c *gin.Context) {
 	if len(indexStr) == 0 {
 		indexStr = `0`
 	}
-	crossInfo := model.GetMonitorInfo(indexStr, `cross`)
+	crossInfo := model.GetMonitorInfo(indexStr, model.FunctionCross)
 	c.HTML(http.StatusOK, `balance.gohtml`, gin.H{`cross`: crossInfo})
 }
 

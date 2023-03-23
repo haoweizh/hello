@@ -898,7 +898,7 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarrySta
 			fmt.Sprintf(`%.1f`, 100*scoreRelate),
 			fmt.Sprintf(`%v`, green)}
 	}
-	model.SetMonitorInfo(strconv.Itoa(index), `cross`, mark, infoValue)
+	model.SetMonitorInfo(strconv.Itoa(index), model.FunctionCross, mark, infoValue)
 	if statusBuy == nil || statusSell == nil {
 		return nil, nil, 0, 0, 0, nil, nil
 	}
