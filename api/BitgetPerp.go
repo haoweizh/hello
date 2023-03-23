@@ -55,7 +55,7 @@ func setBitgetPositionMode(key, secret string) {
 	jsonData, jsonErr := util.NewJSON(httpResp)
 	code, _ := jsonData.Get("code").String()
 	if jsonData == nil || code != "00000" {
-		util.SocketInfo(fmt.Sprintf("fail to set Bitget Position Mode, resp: %s httpErr: %v, jsonErr: %v", httpResp, httpErr, jsonErr))
+		util.SocketInfo(fmt.Sprintf("fail to set Bitgetperp Position Mode, resp: %s httpErr: %v, jsonErr: %v", httpResp, httpErr, jsonErr))
 	}
 }
 
@@ -226,7 +226,7 @@ func maintainChannelBitgetPerp() {
 			for true {
 				time.Sleep(time.Second * 20)
 				if err := SendToAllConnections(model.BitgetPerp, []byte(`ping`)); err != nil {
-					util.SocketInfo("xt channel ping error " + err.Error())
+					util.SocketInfo("bitgetperp channel ping error " + err.Error())
 				}
 			}
 		}()
@@ -239,18 +239,22 @@ func getPositionsBitgetPerp(key, secret string) (success bool, positions []*mode
 	bitgetAssertResp := &dtos.BitgetAssertResp{}
 	jsonErr := json.Unmarshal(assetHttpResp, bitgetAssertResp)
 	if bitgetAssertResp == nil || bitgetAssertResp.Code != "00000" {
-		util.SocketInfo(fmt.Sprintf("fail to refresh contract asset bitget, resp: %s httpErr: %v, jsonErr: %v", assetHttpResp, assetHttpErr, jsonErr))
+		util.SocketInfo(fmt.Sprintf("fail to refresh bitgetperp asset , resp: %s httpErr: %v, jsonErr: %v", assetHttpResp, assetHttpErr, jsonErr))
 		time.Sleep(time.Second * 2)
 		return getPositionsBitgetPerp(key, secret)
+	} else {
+		util.SocketInfo(fmt.Sprintf("get bitgetperp asset success, resp: %s ", assetHttpResp))
 	}
 
 	positionHttpResp, positionHttpErr := client.DoGet("/api/mix/v1/position/allPosition", map[string]string{"productType": "umcbl"})
 	bitgetPositionResp := &dtos.BitgetPositionResp{}
 	positionJsonErr := json.Unmarshal(positionHttpResp, bitgetPositionResp)
 	if bitgetPositionResp == nil || bitgetPositionResp.Code != "00000" {
-		util.SocketInfo(fmt.Sprintf("fail to refresh contract position bitget, resp: %s httpErr: %v, jsonErr: %v", positionHttpResp, positionHttpErr, positionJsonErr))
+		util.SocketInfo(fmt.Sprintf("fail to refresh bitgetperp position, resp: %s httpErr: %v, jsonErr: %v", positionHttpResp, positionHttpErr, positionJsonErr))
 		time.Sleep(time.Second * 2)
 		return getPositionsBitgetPerp(key, secret)
+	} else {
+		util.SocketInfo(fmt.Sprintf("get bitgetperp position success, resp: %s ", positionHttpResp))
 	}
 
 	for _, asset := range bitgetAssertResp.Data {
@@ -270,13 +274,16 @@ func getPositionsBitgetPerp(key, secret string) (success bool, positions []*mode
 		currency := coin + model.UniStandardTail[model.MarketTypePerp]
 		position := &model.Position{Market: model.BitgetPerp, Ts: util.GetNowUnixMillion(), Currency: currency}
 		position.Direction = contract.HoldSide
+		total, _ := strconv.ParseFloat(contract.Total, 64)
+		if total == 0 {
+			continue
+		}
 		if position.Direction == "long" {
 			position.Frozen, _ = strconv.ParseFloat(contract.Locked, 64)
-			position.Holding, _ = strconv.ParseFloat(contract.Total, 64)
+			position.Holding = total
 		} else {
 			frozen, _ := strconv.ParseFloat(contract.Locked, 64)
 			position.Frozen = -1 * frozen
-			total, _ := strconv.ParseFloat(contract.Total, 64)
 			position.Holding = -1 * total
 		}
 		position.LeverRate = int64(contract.Leverage)
@@ -331,7 +338,7 @@ func placeOrderBitgetPerp(key, secret string, order *model.Order, orderSide, ord
 		"side":       tradeOrderSide,
 		"orderType":  orderType,
 	}
-	httpResp, httpErr := client.DoPost("/api/mix/v1/account/setPositionMode", string(util.JsonEncodeToByte(params)))
+	httpResp, httpErr := client.DoPost("/api/mix/v1/order/placeOrder", string(util.JsonEncodeToByte(params)))
 	bitgetOrderResp := &dtos.BitgetOrderResp{}
 	jsonErr := json.Unmarshal(httpResp, bitgetOrderResp)
 	if bitgetOrderResp == nil || bitgetOrderResp.Code != "00000" {
@@ -345,11 +352,11 @@ func placeOrderBitgetPerp(key, secret string, order *model.Order, orderSide, ord
 func cancelOrdersBitgetPerp(key, secret, symbol string) (result bool) {
 	success, _, _, dialectSymbol := model.GetFromStandard(model.BitgetPerp, symbol)
 	if !success {
-		util.Notice("fail to cancel perp order, GetFromStandard: " + symbol)
+		util.Notice("fail to cancel bitget perp order, GetFromStandard: " + symbol)
 		return false
 	}
 	client := dtos.BitgetRestClient{BaseUrl: bitgetRestUrl, Passphrase: model.AppConfig.Phase, ApiKey: key, ApiSecretKey: secret}
-	planHttpResp, planHttpErr := client.DoGet("/api/spot/v1/trade/open-orders", map[string]string{"symbol": dialectSymbol})
+	planHttpResp, planHttpErr := client.DoGet("/api/mix/v1/order/current", map[string]string{"symbol": dialectSymbol})
 	bitgetPerpOpenOrderResp := &dtos.BitgetPerpOpenOrderResp{}
 	jsonErr := json.Unmarshal(planHttpResp, bitgetPerpOpenOrderResp)
 	if bitgetPerpOpenOrderResp == nil || bitgetPerpOpenOrderResp.Code != "00000" {
@@ -357,19 +364,22 @@ func cancelOrdersBitgetPerp(key, secret, symbol string) (result bool) {
 		return false
 	}
 	var orderIds []string
-	for _, openOrder := range bitgetPerpOpenOrderResp.Data.OrderList {
+	for _, openOrder := range bitgetPerpOpenOrderResp.Data {
 		orderIds = append(orderIds, openOrder.OrderId)
+	}
+	if len(orderIds) == 0 {
+		return true
 	}
 	params := map[string]interface{}{
 		"symbol":     dialectSymbol,
 		"marginCoin": "USDT",
 		"orderIds":   orderIds,
 	}
-	httpResp, httpErr := client.DoPost("/api/mix/v1/account/setPositionMode", string(util.JsonEncodeToByte(params)))
+	httpResp, httpErr := client.DoPost("/api/mix/v1/order/cancel-batch-orders", string(util.JsonEncodeToByte(params)))
 	jsonData, jsonErr := util.NewJSON(httpResp)
 	code, _ := jsonData.Get("code").String()
 	if jsonData == nil || code != "00000" {
-		util.SocketInfo(fmt.Sprintf("fail to canal Bitget perp order resp: %s httpErr: %v, jsonErr: %v", httpResp, httpErr, jsonErr))
+		util.Notice(fmt.Sprintf("fail to canal Bitget perp order resp: %s httpErr: %v, jsonErr: %v", httpResp, httpErr, jsonErr))
 		return false
 	}
 	return true
@@ -378,7 +388,7 @@ func cancelOrdersBitgetPerp(key, secret, symbol string) (result bool) {
 func queryOrderBitgetPerp(key, secret, symbol string, orderId string) (order *model.Order) {
 	success, _, _, dialectSymbol := model.GetFromStandard(model.BitgetPerp, symbol)
 	if !success {
-		util.Notice("fail to query perp order, GetFromStandard: " + symbol)
+		util.Notice("fail to query bitget perp order, GetFromStandard: " + symbol)
 		return order
 	}
 	order = &model.Order{Market: model.BitgetPerp, Status: model.CarryStatusFail, OrderId: orderId, Symbol: symbol}

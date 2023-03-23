@@ -151,7 +151,7 @@ func maintainChannelBitgetSpot() {
 			for true {
 				time.Sleep(time.Second * 20)
 				if err := SendToAllConnections(model.BitgetSpot, []byte(`ping`)); err != nil {
-					util.SocketInfo("xt channel ping error " + err.Error())
+					util.SocketInfo("bitgetspot channel ping error " + err.Error())
 				}
 			}
 		}()
@@ -164,9 +164,11 @@ func getBalanceBitgetSpot(key string, secret string) (success bool, balances []*
 	bitgetBalanceResp := &dtos.BitgetBalanceResp{}
 	jsonErr := json.Unmarshal(httpResp, bitgetBalanceResp)
 	if bitgetBalanceResp == nil || bitgetBalanceResp.Code != "00000" {
-		util.SocketInfo(fmt.Sprintf("fail to refresh spot balance bitget, resp: %s httpErr: %v, jsonErr: %v", httpResp, httpErr, jsonErr))
+		util.SocketInfo(fmt.Sprintf("fail to refresh bitgetspot balance, resp: %s httpErr: %v, jsonErr: %v", httpResp, httpErr, jsonErr))
 		time.Sleep(time.Second * 2)
 		return getBalanceBitgetSpot(key, secret)
+	} else {
+		util.SocketInfo(fmt.Sprintf("get bitgetspot balance success, resp: %s ", httpResp))
 	}
 	balances = make([]*model.Balance, 0)
 	for _, account := range bitgetBalanceResp.Data {
@@ -216,7 +218,7 @@ func cancelOrdersBitgetSpot(key, secret, symbol string) (result bool) {
 	client := dtos.BitgetRestClient{BaseUrl: bitgetRestUrl, Passphrase: model.AppConfig.Phase, ApiKey: key, ApiSecretKey: secret}
 	success, _, _, dialectSymbol := model.GetFromStandard(model.BitgetSpot, symbol)
 	if !success {
-		util.Notice("fail to cancel spot order, GetFromStandard: " + symbol)
+		util.Notice("fail to cancel bitget spot order, GetFromStandard: " + symbol)
 		return false
 	}
 	planHttpResp, planHttpErr := client.DoPost("/api/spot/v1/trade/open-orders", string(util.JsonEncodeToByte(map[string]string{"symbol": dialectSymbol})))
@@ -230,6 +232,9 @@ func cancelOrdersBitgetSpot(key, secret, symbol string) (result bool) {
 	for _, openOrder := range bitgetSpotOpenOrderResp.Data {
 		orderIds = append(orderIds, openOrder.OrderId)
 	}
+	if len(orderIds) == 0 {
+		return true
+	}
 
 	params := map[string]interface{}{
 		"symbol":   dialectSymbol,
@@ -239,7 +244,7 @@ func cancelOrdersBitgetSpot(key, secret, symbol string) (result bool) {
 	jsonData, jsonErr := util.NewJSON(httpResp)
 	code, _ := jsonData.Get("code").String()
 	if jsonData == nil || code != "00000" {
-		util.SocketInfo(fmt.Sprintf("fail to canal Bitget spot order resp: %s httpErr: %v, jsonErr: %v", httpResp, httpErr, jsonErr))
+		util.Notice(fmt.Sprintf("fail to canal Bitget spot order resp: %s httpErr: %v, jsonErr: %v", httpResp, httpErr, jsonErr))
 		return false
 	}
 	return true
@@ -248,7 +253,7 @@ func cancelOrdersBitgetSpot(key, secret, symbol string) (result bool) {
 func queryOrderBitgetSpot(key, secret, symbol string, orderId string) (order *model.Order) {
 	success, _, _, dialectSymbol := model.GetFromStandard(model.BitgetSpot, symbol)
 	if !success {
-		util.Notice("fail to query spot order, GetFromStandard: " + symbol)
+		util.Notice("fail to query bitget spot order, GetFromStandard: " + symbol)
 		return order
 	}
 	order = &model.Order{Market: model.BitgetSpot, Status: model.CarryStatusFail, OrderId: orderId, Symbol: symbol}
