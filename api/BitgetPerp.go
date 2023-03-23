@@ -407,6 +407,8 @@ func queryOrderBitgetPerp(key, secret, symbol string, orderId string) (order *mo
 			order.Status = model.CarryStatusFail
 		} else if orderDetailResp.Data.State == "filled" || orderDetailResp.Data.State == "partially_filled" {
 			order.Status = model.CarryStatusSuccess
+		} else if orderDetailResp.Data.State == "new" {
+			order.Status = model.CarryStatusWorking
 		}
 	}
 	return order

@@ -279,6 +279,8 @@ func queryOrderBitgetSpot(key, secret, symbol string, orderId string) (order *mo
 				order.Status = model.CarryStatusFail
 			} else if orderResp.Status == "full_fill" || orderResp.Status == "partial_fill" {
 				order.Status = model.CarryStatusSuccess
+			} else if orderResp.Status == "new" {
+				order.Status = model.CarryStatusWorking
 			}
 		}
 	}
