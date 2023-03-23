@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"hello/model"
 	"hello/util"
-	"math"
 	"os"
 	"sort"
 	"strings"
@@ -218,7 +217,7 @@ func prepareSettings() {
 	symbolSettings = localSymbolSettings
 }
 
-func handleCombineSettings(market string, accounts []*model.Account, topMarketInfos map[string]*model.MarketInfo) {
+func handleCombineSettings(market string, topMarketInfos map[string]*model.MarketInfo) {
 	combineMap := &sync.Map{}
 	value, ok := util.LoadSyncMap(symbolSettings, model.FunctionCombineTurtle, market)
 	if ok && value != nil {
@@ -237,18 +236,6 @@ func handleCombineSettings(market string, accounts []*model.Account, topMarketIn
 		settingNormal := &model.Setting{Valid: true, Function: model.FunctionTurtleNormal, Market: market, Symbol: info.Name,
 			OpenShortMargin: dynamicSingleLimit, AmountLimit: dynamicInAllLimit}
 		if valueCombine == nil {
-			if market == model.BinancePerp {
-				for _, account := range accounts {
-					success := SetLeverageBinancePerp(account.Key, account.Secret, info.Name, 5)
-					if success {
-						//util.Notice(fmt.Sprintf(`set leverage binanceperp %s`, info.Name))
-					} else {
-						util.Notice(fmt.Sprintf(`fail to set leverage binanceperp %s`, info.Name))
-						time.Sleep(time.Minute)
-					}
-				}
-				time.Sleep(time.Second)
-			}
 			util.Notice(`add combine binance %v`, info.Name)
 		} else {
 			settingCombine = valueCombine.(*model.Setting)
@@ -311,7 +298,7 @@ func handleCombineSettings(market string, accounts []*model.Account, topMarketIn
 	})
 }
 
-func handleTurtleSettings(function, market string, accounts []*model.Account, topMarketInfos map[string]*model.MarketInfo) {
+func handleTurtleSettings(function, market string, topMarketInfos map[string]*model.MarketInfo) {
 	settingMap := &sync.Map{}
 	value, ok := util.LoadSyncMap(symbolSettings, function, market)
 	if ok && value != nil {
@@ -322,18 +309,6 @@ func handleTurtleSettings(function, market string, accounts []*model.Account, to
 		settingTurtle := &model.Setting{Valid: true, Function: function, Market: market, Symbol: info.Name,
 			OpenShortMargin: dynamicSingleLimit, AmountLimit: dynamicInAllLimit}
 		if value == nil {
-			if settingTurtle.Market == model.BinancePerp {
-				for _, account := range accounts {
-					success := SetLeverageBinancePerp(account.Key, account.Secret, settingTurtle.Symbol, 5)
-					if success {
-						//util.Notice(fmt.Sprintf(`set leverage binanceperp %s`, settingTurtle.Symbol))
-					} else {
-						util.Notice(fmt.Sprintf(`fail to set leverage binanceperp %s`, settingTurtle.Symbol))
-						time.Sleep(time.Minute)
-					}
-				}
-				time.Sleep(time.Second)
-			}
 			util.Notice(`add settingTurtle %v`, settingTurtle.Symbol)
 		} else {
 			settingTurtle = value.(*model.Setting)
@@ -403,9 +378,9 @@ func handleSettings() (handled bool) {
 		}
 		topMarketInfos := getTopMarketInfos(function, market, accounts)
 		if haveCombine {
-			handleCombineSettings(market, accounts, topMarketInfos)
+			handleCombineSettings(market, topMarketInfos)
 		} else if haveDynamic {
-			handleTurtleSettings(function, market, accounts, topMarketInfos)
+			handleTurtleSettings(function, market, topMarketInfos)
 		}
 	}
 	return
@@ -472,14 +447,15 @@ func GetAccounts(index int) (accounts map[string]*model.Account) {
 	if model.AppAccounts != nil && len(model.AppAccounts) > index {
 		return model.AppAccounts[index]
 	}
-	tempAccounts := model.AppConfig.GetAccounts(model.BinancePerp)
-	size := int(math.Max(float64(GetCrossLen()), float64(len(tempAccounts))))
+	// 注意: 以okex的key个数作为size，如果不使用okex，请及时更换
+	size := len(model.OKEX)
 	model.AppAccounts = make([]map[string]*model.Account, size)
 	for i := 0; i < size; i++ {
 		if model.AppAccounts[i] == nil {
 			model.AppAccounts[i] = make(map[string]*model.Account)
 		}
 	}
+	tempAccounts := model.AppConfig.GetAccounts(model.Ftx)
 	for i, account := range tempAccounts {
 		model.AppAccounts[i][model.Ftx] = account
 	}

@@ -12,7 +12,6 @@ import (
 	"hello/model"
 	"hello/regret"
 	"hello/util"
-	"math"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -335,6 +334,31 @@ func Test_download(t *testing.T) {
 	//-H 'Connection: keep-alive' \
 }
 
+func Test_Orders(t *testing.T) {
+	model.NewConfig()
+	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
+	coin := `ETH`
+	market := model.BitgetPerp
+	symbol := coin + model.UniStandardTail[model.MarketTypePerp]
+	markets := []string{market}
+	api.InitMarketInfos(markets)
+	account := api.GetAccounts(0)[markets[0]]
+	order := api.PlaceOrder(account.Key, account.Secret, model.OrderSideBuy, model.OrderTypeLimit, markets[0], symbol, ``,
+		1650, 1650, 0.01, false, nil, nil)
+	if order != nil {
+		fmt.Println(fmt.Sprintf(`place %s %s`, order.OrderId, order.Status))
+	}
+	order = api.QueryOrderById(account.Key, account.Secret, market, symbol, model.OrderTypeLimit, order.OrderId)
+	if order != nil {
+		fmt.Println(fmt.Sprintf(`query %s %s`, order.OrderId, order.Status))
+	}
+	api.CancelOrders(account.Key, account.Secret, market, symbol)
+	order = api.QueryOrderById(account.Key, account.Secret, market, symbol, model.OrderTypeLimit, order.OrderId)
+	if order != nil {
+		fmt.Println(fmt.Sprintf(`query %s %s`, order.OrderId, order.Status))
+	}
+}
+
 func Test_wallet(t *testing.T) {
 	model.NewConfig()
 	var key, secret string
@@ -394,40 +418,4 @@ func Test_wallet(t *testing.T) {
 	fmt.Println(order1.DealAmount)
 	fmt.Println(order1.DealPrice)
 	fmt.Println(order1.Status)
-}
-
-func Test_accounting(t *testing.T) {
-	nums := strings.Split(`230.0,663.00,0,200.0,303.0,300.00,0`, `,`)
-	season := make([]float64, 4)
-	item := make([]float64, 3)
-	result := make([][]float64, 3)
-	for i := 0; i < 3; i++ {
-		item[i], _ = strconv.ParseFloat(nums[i], 64)
-	}
-	for i := 3; i < 7; i++ {
-		season[i-3], _ = strconv.ParseFloat(nums[i], 64)
-	}
-	for i := 0; i < len(item); i++ {
-		result[i] = make([]float64, len(season))
-		itemAll := 0.0
-		for j := 0; j < len(season); j++ {
-			result[i][j] = math.Min(math.Min(item[i]/float64(len(season)), season[j]), item[i]-itemAll)
-			season[j] -= result[i][j]
-			itemAll += result[i][j]
-		}
-		for j := 0; j < len(season); j++ {
-			if itemAll < item[i] {
-				amount := math.Min(item[i]-itemAll, season[j])
-				itemAll += amount
-				result[i][j] += amount
-				season[j] -= amount
-			}
-		}
-	}
-	for _, value := range result {
-		for j := 0; j < len(value); j++ {
-			fmt.Println(fmt.Sprintf(`%d季度： %.2f %.2f %.2f`, j+1, value[j]*0.2, value[j]*0.3, value[j]*0.5))
-		}
-		fmt.Println()
-	}
 }
