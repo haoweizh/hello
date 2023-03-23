@@ -310,7 +310,7 @@ func initStatus(account *model.Account, setting *model.Setting, absentRevert boo
 			status.AvailableSell = 0
 		}
 	}
-	carryStatusMap.Store(fmt.Sprintf(`%s*%s*%s*%s`, setting.Coin, setting.Market, setting.Symbol, account.Key), status)
+	util.StoreSyncMap(carryStatusMap, status, setting.Coin, setting.Market, setting.Symbol, account.Key)
 	return
 }
 
@@ -677,10 +677,8 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 			if account == nil || accountRelate == nil {
 				continue
 			}
-			status, okStatus := carryStatusMap.Load(fmt.Sprintf(`%s*%s*%s*%s`, setting.Coin, setting.Market, setting.Symbol, account.Key))
-			//status := getCarryStatus(setting.Coin, setting.Market, setting.Symbol, account.Key)
-			statusRelate, okRelate := carryStatusMap.Load(fmt.Sprintf(`%s*%s*%s*%s`, settingRelate.Coin, settingRelate.Market, settingRelate.Symbol, accountRelate.Key))
-			//statusRelate := getCarryStatus(settingRelate.Coin, settingRelate.Market, settingRelate.Symbol, accountRelate.Key)
+			status, okStatus := util.LoadSyncMap(carryStatusMap, setting.Coin, setting.Market, setting.Symbol, account.Key)
+			statusRelate, okRelate := util.LoadSyncMap(carryStatusMap, settingRelate.Coin, settingRelate.Market, settingRelate.Symbol, account.Key)
 			if status == nil || statusRelate == nil || status == statusRelate || !okStatus || !okRelate {
 				continue
 			}
@@ -1165,11 +1163,11 @@ var PostOrderCross = func(order *model.Order, setting *model.Setting) {
 	} else {
 		unknownFail := true
 		if account != nil {
+			status, ok := util.LoadSyncMap(carryStatusMap, setting.Coin, setting.Market, setting.Symbol, account.Key)
 			switch order.Market {
 			case model.OKEX:
 				if InsufficientCodeOKEX[order.ErrCode] && setting != nil {
 					util.Notice(`reset %s trade max with %s account index %s`, order.Market, order.ErrCode, order.AccountIndex)
-					status, ok := carryStatusMap.Load(fmt.Sprintf(`%s*%s*%s*%s`, setting.Coin, setting.Market, setting.Symbol, account.Key))
 					getMax, maxBuy, maxSell := api.GetTradeMaxOKEX(account.Key, account.Secret, setting.Symbol, 0)
 					if getMax && ok {
 						status.(*CarryStatus).LimitSell = math.Min(status.(*CarryStatus).LimitSell, maxSell)
@@ -1186,6 +1184,12 @@ var PostOrderCross = func(order *model.Order, setting *model.Setting) {
 					unknownFail = false
 				}
 			}
+			if order.OrderSide == model.OrderSideBuy {
+				status.(*CarryStatus).TradeLineBuy = 1
+			} else if order.OrderSide == model.OrderSideSell {
+				status.(*CarryStatus).TradeLineSell = 1
+			}
+			util.Notice(fmt.Sprintf(`set 1 trade line after fail %s %s %s`, setting.Market, setting.Symbol, order.OrderSide))
 		}
 		if unknownFail {
 			addCarryResult(account.Key, order.Market, order.ErrCode, false)
