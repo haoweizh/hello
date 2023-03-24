@@ -1051,7 +1051,7 @@ func placeCross(statusBuy, statusSell *CarryStatus, priceBuy, priceSell, amount 
 				amount, wsCross, PostOrderCross, statusSell.setting)
 			saveCross(order, statusSell.setting.Coin, model.FunctionCross, statusSell.TradeLineBuy, statusSell.TradeLineSell, statusSell.Holding)
 		}()
-		time.Sleep(time.Second / 4)
+		time.Sleep(time.Second * 4)
 	}
 	placeStatus(statusBuy, priceBuy, amount)
 	placeStatus(statusSell, priceSell, -1*amount)
