@@ -391,7 +391,7 @@ func queryOrderBybitPerp(key, secret, symbol, orderId string) (order *model.Orde
 		}
 		orderArray, _ := orderJson.Array()
 		for _, data := range orderArray {
-			order = &model.Order{Market: model.BybitSpot, Status: model.CarryStatusFail}
+			order = &model.Order{Market: model.BitgetPerp, Status: model.CarryStatusFail}
 			parseOrderBybitPerp(order, data.(map[string]interface{}))
 			if order.OrderId == orderId {
 				return order

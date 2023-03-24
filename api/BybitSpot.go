@@ -362,7 +362,7 @@ func queryOrderBybitSpot(key, secret, orderId string) (order *model.Order) {
 		if orderJson == nil {
 			return nil
 		}
-		order = &model.Order{Market: model.BybitPerp, Status: model.CarryStatusFail}
+		order = &model.Order{Market: model.BybitSpot, Status: model.CarryStatusFail}
 		parseOrderBybitSpot(order, orderJson.MustMap())
 	}
 	return nil

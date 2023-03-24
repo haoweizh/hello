@@ -194,6 +194,8 @@ func GetCrossMarketValue(key, secret, market string, force bool) (inAllSpot, con
 			value = createSpotMarket(key, secret, model.BybitSpot)
 		case model.BinancePerp:
 			value = createSpotMarket(key, secret, model.BinanceSpot)
+		case model.BitgetPerp:
+			value = createSpotMarket(key, secret, model.BitgetSpot)
 		default:
 			value = createSpotMarket(key, secret, market)
 		}
@@ -228,6 +230,8 @@ func GetCrossMarketValue(key, secret, market string, force bool) (inAllSpot, con
 			value = createContractMarket(key, secret, model.BinancePerp)
 		case model.BybitSpot:
 			value = createContractMarket(key, secret, model.BybitPerp)
+		case model.BitgetSpot:
+			value = createContractMarket(key, secret, model.BitgetPerp)
 		}
 	}
 	if value != nil {
