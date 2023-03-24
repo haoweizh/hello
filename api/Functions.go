@@ -638,7 +638,7 @@ func PlaceOrder(key, secret, orderSide, orderType, market, symbol, orderParam st
 	}
 	switch market {
 	case model.BitgetPerp:
-		placeOrderBitgetPerp(key, secret, order, orderSide, orderType, symbol, price, amount)
+		placeOrderBitgetPerp(key, secret, order, orderSide, orderType, orderParam, symbol, price, amount)
 	case model.BitgetSpot:
 		placeOrderBitgetSpot(key, secret, order, orderSide, orderType, symbol, price, amount)
 	case model.KucoinSpot:

@@ -63,10 +63,12 @@ const MarketTypeSpot = `spot`
 const MarketTypeFuture = `future`
 const FunctionDCarry = `dcarry`
 const FunctionComplement = `comp`
+const FunctionBitgetLiq = `liquidate`
 const Open = `open`
 const Close = `close`
 const FunctionHang = `hang`
 const PostOnly = `ParticipateDoNotInitiate`
+const ReduceOnly = `reduceOnly`
 
 var AppDB *gorm.DB
 var AppRedis *redis.Client

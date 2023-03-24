@@ -245,7 +245,6 @@ func getPositionsBitgetPerp(key, secret string) (success bool, positions []*mode
 	} else {
 		util.SocketInfo(fmt.Sprintf("get bitgetperp asset success, resp: %s ", assetHttpResp))
 	}
-
 	positionHttpResp, positionHttpErr := client.DoGet("/api/mix/v1/position/allPosition", map[string]string{"productType": "umcbl"})
 	bitgetPositionResp := &dtos.BitgetPositionResp{}
 	positionJsonErr := json.Unmarshal(positionHttpResp, bitgetPositionResp)
@@ -256,7 +255,6 @@ func getPositionsBitgetPerp(key, secret string) (success bool, positions []*mode
 	} else {
 		util.SocketInfo(fmt.Sprintf("get bitgetperp position success, resp: %s ", positionHttpResp))
 	}
-
 	for _, asset := range bitgetAssertResp.Data {
 		if asset.MarginCoin == `USDT` {
 			availableUsdt, _ := strconv.ParseFloat(asset.Available, 64)
@@ -314,7 +312,7 @@ func getFundingRateBitgetPerp(symbol string) (fundingRate *model.FundingRate) {
 		ExpireTime: (util.GetNow().Unix() + 3600000) / 1000} //没有过期时间
 }
 
-func placeOrderBitgetPerp(key, secret string, order *model.Order, orderSide, orderType, symbol string, price, amount float64) {
+func placeOrderBitgetPerp(key, secret string, order *model.Order, orderSide, orderType, orderParam, symbol string, price, amount float64) {
 	success, _, _, dialectSymbol := model.GetFromStandard(model.BitgetPerp, symbol)
 	if !success {
 		util.Notice("fail to place perp order, GetFromStandard: " + symbol)
@@ -329,15 +327,25 @@ func placeOrderBitgetPerp(key, secret string, order *model.Order, orderSide, ord
 	} else {
 		tradeOrderSide = "sell_single"
 	}
+	reduceOnly := false
+	if orderParam == model.ReduceOnly {
+		reduceOnly = true
+	}
+	ordType := ``
+	if orderType == model.OrderTypeMarket {
+		ordType = `market`
+	} else if orderType == model.OrderTypeLimit {
+		ordType = `limit`
+	}
 	client := dtos.BitgetRestClient{BaseUrl: bitgetRestUrl, Passphrase: model.AppConfig.Phase, ApiKey: key, ApiSecretKey: secret}
-	params := map[string]string{
+	params := map[string]interface{}{
 		"symbol":     dialectSymbol,
 		"marginCoin": "USDT",
 		"size":       amountStr,
 		"price":      priceStr,
 		"side":       tradeOrderSide,
-		"orderType":  orderType,
-	}
+		"orderType":  ordType,
+		"reduceOnly": reduceOnly}
 	httpResp, httpErr := client.DoPost("/api/mix/v1/order/placeOrder", string(util.JsonEncodeToByte(params)))
 	bitgetOrderResp := &dtos.BitgetOrderResp{}
 	jsonErr := json.Unmarshal(httpResp, bitgetOrderResp)

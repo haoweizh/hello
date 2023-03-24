@@ -197,6 +197,12 @@ func placeOrderBitgetSpot(key, secret string, order *model.Order, orderSide, ord
 		util.Notice("fail to place spot order, GetFromStandard: " + symbol)
 		return
 	}
+	ordType := ``
+	if orderType == model.OrderTypeMarket {
+		ordType = `market`
+	} else if orderType == model.OrderTypeLimit {
+		ordType = `limit`
+	}
 	client := dtos.BitgetRestClient{BaseUrl: bitgetRestUrl, Passphrase: model.AppConfig.Phase, ApiKey: key, ApiSecretKey: secret}
 	params := map[string]string{
 		"symbol":    dialectSymbol,
@@ -204,7 +210,7 @@ func placeOrderBitgetSpot(key, secret string, order *model.Order, orderSide, ord
 		"quantity":  amountStr,
 		"price":     priceStr,
 		"side":      orderSide,
-		"orderType": orderType,
+		"orderType": ordType,
 	}
 	httpResp, httpErr := client.DoPost("/api/spot/v1/trade/orders", string(util.JsonEncodeToByte(params)))
 	bitgetOrderResp := &dtos.BitgetOrderResp{}

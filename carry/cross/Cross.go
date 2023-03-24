@@ -13,8 +13,6 @@ import (
 	"time"
 )
 
-const BitgetPosLimit = 40
-
 func createContractMarket(key, secret, market string) (cm *contractMarket) {
 	success, positions, accountValue, availableU := api.GetPositions(key, secret, market)
 	util.Notice(fmt.Sprintf(`get positions %s %s %v account value %f available u %f`,
@@ -118,6 +116,15 @@ func createFromPosition(account *model.Account, setting *model.Setting, valueLim
 	} else if absentRevert {
 		util.Notice(fmt.Sprintf(`symbol absent revert %s %s`, setting.Market, setting.Symbol))
 		//doRevert = true
+	}
+	// bitgetperp可以开仓或减仓，不越过0反向开仓
+	if setting.Market == model.BitgetPerp && cm.positions[setting.Symbol] != nil {
+		if cm.positions[setting.Symbol].Holding > 0 {
+			carryStatus.LimitSell = cm.positions[setting.Symbol].Holding
+		} else if cm.positions[setting.Symbol].Holding < 0 {
+			carryStatus.LimitBuy = -1 * cm.positions[setting.Symbol].Holding
+		}
+		carryStatus.reduceOnly = true
 	}
 	rateLimitPosition := 2.8
 	rateLimitHolding := 0.28
@@ -381,6 +388,9 @@ func equalAccounts() {
 }
 
 func equalAccount(i int, equalChan chan int, accounts map[string]*model.Account) {
+	if accounts[model.BitgetPerp] != nil {
+		liquidateBitgetPerp(accounts[model.BitgetPerp])
+	}
 	keys := ``
 	for _, account := range accounts {
 		if account.Index != i {
@@ -407,7 +417,7 @@ func equalAccount(i int, equalChan chan int, accounts map[string]*model.Account)
 				if index > 0 {
 					util.Info(`equal coin %s account %d equal %v left hold u %f`, coin, i, coinEqual, leftHoldingInU)
 				}
-				if math.Abs(leftHoldingInU) < 10 || coinEqual {
+				if math.Abs(leftHoldingInU) < SmallInU || coinEqual {
 					break
 				}
 				if index == 10 {
@@ -462,7 +472,7 @@ func equalCoin(coin string, statuses []*CarryStatus) (isEqual bool, holdingInU f
 		}
 	}
 	holdingInU = holding * price
-	if math.Abs(holdingInU) < 10 {
+	if math.Abs(holdingInU) < SmallInU {
 		if time.Now().Hour() == 10 && time.Now().Minute()%50 == 0 {
 			//util.Notice(fmt.Sprintf(`clear holding every 10:50 %s %f %f %f`, coin, holding, price, holdingInU))
 			for _, status := range statuses {
@@ -491,7 +501,7 @@ func equalCoin(coin string, statuses []*CarryStatus) (isEqual bool, holdingInU f
 	}
 	errMsg := ``
 	now := util.GetNowUnixMillion()
-	if holdingInU > 10 {
+	if holdingInU > SmallInU {
 		orderSide = model.OrderSideSell
 		sort.Sort(sort.Reverse(bids))
 		util.Notice(fmt.Sprintf(`need equal no tick %s, %s sell holding %f worth %f  list %s %v`,
@@ -517,7 +527,7 @@ func equalCoin(coin string, statuses []*CarryStatus) (isEqual bool, holdingInU f
 				equalStatus = status
 			} else {
 				checkAmount = model.GetAmountInMarket(status.market, status.symbol, status.AvailableSell/2, price)
-				if checkAmount > 0 && status.AvailableSell*price > 10 {
+				if checkAmount > 0 && status.AvailableSell*price > SmallInU {
 					equalStatus = status
 					holding = status.AvailableSell
 				} else {
@@ -527,7 +537,7 @@ func equalCoin(coin string, statuses []*CarryStatus) (isEqual bool, holdingInU f
 			}
 		}
 	}
-	if holdingInU < -10 {
+	if holdingInU < -SmallInU {
 		orderSide = model.OrderSideBuy
 		sort.Sort(asks)
 		util.Notice(fmt.Sprintf(`need equal no tick %s, %s buy holding %f worth %f list %s %v`,
@@ -553,7 +563,7 @@ func equalCoin(coin string, statuses []*CarryStatus) (isEqual bool, holdingInU f
 				equalStatus = status
 			} else if !math.IsNaN(status.AvailableBuy) {
 				checkAmount = model.GetAmountInMarket(status.market, status.symbol, status.AvailableBuy/2, price)
-				if checkAmount > 0 && status.AvailableBuy*price > 10 {
+				if checkAmount > 0 && status.AvailableBuy*price > SmallInU {
 					equalStatus = status
 					holding = status.AvailableBuy
 				} else {
@@ -618,7 +628,7 @@ func equalCoin(coin string, statuses []*CarryStatus) (isEqual bool, holdingInU f
 				}
 			}
 		}
-	} else if math.Abs(holdingInU) > 10 {
+	} else if math.Abs(holdingInU) > SmallInU {
 		isEqual = true // 可能由于头寸太小，不满足所有市场的下单要求，而holdingU刚好大于10u，此时认为已平
 		minute := time.Now().Minute()
 		second := time.Now().Second()
@@ -1019,35 +1029,23 @@ func placeCross(statusBuy, statusSell *CarryStatus, priceBuy, priceSell, amount 
 		model.AppDB.Save(orderSell)
 	} else {
 		go func() {
-			order := api.PlaceOrder(statusBuy.account.Key, statusBuy.account.Secret, model.OrderSideBuy, model.OrderTypeLimit,
-				statusBuy.market, statusBuy.symbol, ``, priceBuy, priceBuy, amount, wsCross, PostOrderCross, statusBuy.setting)
-			if order != nil {
-				order.Coin = statusBuy.setting.Coin
-				order.LineBuy = statusBuy.TradeLineBuy
-				order.LineSell = statusBuy.TradeLineSell
-				order.Function = model.Open
-				if statusBuy.Holding*-1 >= amount {
-					order.Function = model.Close
-				}
-				order.RefreshType = model.FunctionCross
-				model.AppDB.Save(order)
+			orderParam := ``
+			if statusBuy.reduceOnly {
+				orderParam = model.ReduceOnly
 			}
+			order := api.PlaceOrder(statusBuy.account.Key, statusBuy.account.Secret, model.OrderSideBuy, model.OrderTypeLimit,
+				statusBuy.market, statusBuy.symbol, orderParam, priceBuy, priceBuy, amount, wsCross, PostOrderCross, statusBuy.setting)
+			saveCross(order, statusBuy.setting.Coin, model.FunctionCross, statusBuy.TradeLineBuy, statusBuy.TradeLineSell, statusBuy.Holding)
 		}()
 		go func() {
-			order := api.PlaceOrder(statusSell.account.Key, statusSell.account.Secret, model.OrderSideSell, model.OrderTypeLimit,
-				statusSell.market, statusSell.symbol, ``, priceSell, priceSell,
-				amount, wsCross, PostOrderCross, statusSell.setting)
-			if order != nil {
-				order.Coin = statusSell.setting.Coin
-				order.LineBuy = statusSell.TradeLineBuy
-				order.LineSell = statusSell.TradeLineSell
-				order.Function = model.Open
-				if statusSell.Holding >= amount {
-					order.Function = model.Close
-				}
-				order.RefreshType = model.FunctionCross
-				model.AppDB.Save(order)
+			orderParam := ``
+			if statusSell.reduceOnly {
+				orderParam = model.ReduceOnly
 			}
+			order := api.PlaceOrder(statusSell.account.Key, statusSell.account.Secret, model.OrderSideSell, model.OrderTypeLimit,
+				statusSell.market, statusSell.symbol, orderParam, priceSell, priceSell,
+				amount, wsCross, PostOrderCross, statusSell.setting)
+			saveCross(order, statusSell.setting.Coin, model.FunctionCross, statusSell.TradeLineBuy, statusSell.TradeLineSell, statusSell.Holding)
 		}()
 		time.Sleep(time.Second / 4)
 	}

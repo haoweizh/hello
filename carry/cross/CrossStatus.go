@@ -21,6 +21,8 @@ const compLimitInU = 30000.0
 const compTooBig = 70000.0
 const crossLimitInU = 10000.0
 const InsufficientCodeBinance = `-2010`
+const SmallInU = 10
+const BitgetPosLimit = 40
 
 var InsufficientCodeOKEX = map[string]bool{`51008`: true, `51119`: true, `51120`: true, `51131`: true, `51502`: true,
 	`58350`: true, `59108`: true, `59200`: true}
@@ -33,6 +35,7 @@ var validCrossCoin = map[string][]string{model.BinanceSpot: {`TORN`, `ANC`, `UST
 	model.Ftx:         {`REEF`, `ORBS`, `ONE`, `LUNA`, `UST`, `HT`, `TRX`, `ASD`, `FTT`, `BTT`, `JST`, `SUN`},
 	model.BybitPerp:   {`KLAY`, `ANC`, `UST`}}
 
+var liquidBitgetTime = &sync.Map{}        // key - unix second int64
 var lastOrderIndex = &sync.Map{}          // market - symbol - index int
 var lastOrders = &sync.Map{}              // market - symbol - []*Order
 var lastCrosses sync.Map                  // key*market:symbol
@@ -67,6 +70,7 @@ type spotMarket struct {
 type CarryStatus struct {
 	isSpot                      bool
 	market, symbol              string
+	reduceOnly                  bool
 	setting                     *model.Setting
 	account                     *model.Account
 	FoundingRate                float64
@@ -348,4 +352,48 @@ func addLastCarry(order *model.Order, setting *model.Setting) {
 		}
 	}
 	util.Notice(`---- add done %s`, setting.Symbol)
+}
+
+func liquidateBitgetPerp(account *model.Account) {
+	now := time.Now().Unix()
+	v, _ := liquidBitgetTime.Load(account.Key)
+	if v != nil && now-v.(int64) < 3600 {
+		return
+	}
+	success, positions, _, _ := api.GetPositions(account.Key, account.Secret, model.BitgetPerp)
+	if success {
+		liquidBitgetTime.Store(account.Key, now)
+		for _, position := range positions {
+			holding := math.Abs(position.Holding)
+			if position.EntryPrice*holding < SmallInU {
+				orderSide := model.OrderSideBuy
+				if position.Holding > 0 {
+					orderSide = model.OrderSideSell
+				}
+				util.Notice(`liquidate bitgetperp %s %s price %f hold %f`,
+					position.Currency, position.EntryPrice, orderSide, position.Holding)
+				order := api.PlaceOrder(account.Key, account.Secret, orderSide, model.OrderTypeMarket, model.BitgetPerp,
+					position.Currency, model.ReduceOnly, position.EntryPrice, position.EntryPrice, holding, false, nil, nil)
+				order.RefreshType = model.FunctionBitgetLiq
+				_, _, coin, _ := model.GetFromStandard(model.BitgetPerp, position.Currency)
+				saveCross(order, coin, model.FunctionBitgetLiq, 0, 0, position.Holding)
+			}
+		}
+	}
+}
+
+func saveCross(order *model.Order, coin, refreshType string, lineBuy, lineSell, holding float64) {
+	if order != nil {
+		order.Coin = coin
+		order.LineBuy = lineBuy
+		order.LineSell = lineSell
+		order.Function = model.Open
+		if math.Abs(holding) >= order.Amount {
+			if (holding > 0 && order.OrderSide == model.OrderSideSell) || (holding < 0 && order.OrderSide == model.OrderSideBuy) {
+				order.Function = model.Close
+			}
+		}
+		order.RefreshType = refreshType
+		model.AppDB.Save(order)
+	}
 }
