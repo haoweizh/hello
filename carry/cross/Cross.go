@@ -249,8 +249,12 @@ func initStatus(account *model.Account, setting *model.Setting, absentRevert boo
 	}
 	status.LimitBuy = math.Min(status.LimitBuy, status.AvailableBuy)
 	status.LimitSell = math.Min(status.LimitSell, status.AvailableSell)
-	standardScoreBuy := math.Max(standardScoreOpen, setting.OpenShortMargin)
-	standardScoreSell := math.Max(standardScoreOpen, setting.OpenShortMargin)
+	multiplier := 1.0
+	if setting.Market == model.BitgetPerp {
+		multiplier = 2.0
+	}
+	standardScoreBuy := math.Max(standardScoreOpen, setting.OpenShortMargin*multiplier)
+	standardScoreSell := math.Max(standardScoreOpen, setting.OpenShortMargin*multiplier)
 	getTick, ticks := model.AppMarkets.GetBidAsk(setting.Symbol, setting.Market)
 	price := 0.0
 	if getTick {
