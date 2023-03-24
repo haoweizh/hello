@@ -27,24 +27,22 @@ var InsufficientCodeOKEX = map[string]bool{`51008`: true, `51119`: true, `51120`
 
 // market/symbol/bool经过人工确认可以cross的币种
 var validCrossCoin = map[string][]string{model.BinanceSpot: {`TORN`, `ANC`, `UST`},
-							model.BinancePerp: {`TORN`, `ANC`, `UST`},
-							model.Gate:        {`AE`, `HC`, `REEF`, `ONE`, `LSK`, `GLMR`, `LEASH`, `KDA`, `BLOK`, `ANC`, `UST`},
-							model.OKEX:        {`AE`, `HC`, `ORBS`, `ONE`, `LSK`, `GLMR`, `LEASH`, `KLAY`, `KDA`, `BLOK`, `TORN`, `ANC`, `UST`},
-							model.Ftx:         {`REEF`, `ORBS`, `ONE`, `LUNA`, `UST`, `HT`, `TRX`, `ASD`, `FTT`, `BTT`, `JST`, `SUN`},
-							model.BybitPerp:   {`KLAY`, `ANC`, `UST`}}
-var lastOrderIndex = make(map[string]map[string]int64) // market - symbol - index
+	model.BinancePerp: {`TORN`, `ANC`, `UST`},
+	model.Gate:        {`AE`, `HC`, `REEF`, `ONE`, `LSK`, `GLMR`, `LEASH`, `KDA`, `BLOK`, `ANC`, `UST`},
+	model.OKEX:        {`AE`, `HC`, `ORBS`, `ONE`, `LSK`, `GLMR`, `LEASH`, `KLAY`, `KDA`, `BLOK`, `TORN`, `ANC`, `UST`},
+	model.Ftx:         {`REEF`, `ORBS`, `ONE`, `LUNA`, `UST`, `HT`, `TRX`, `ASD`, `FTT`, `BTT`, `JST`, `SUN`},
+	model.BybitPerp:   {`KLAY`, `ANC`, `UST`}}
 
-var lockCrossing, lockLastCarry sync.Mutex
-var lastOrders = make(map[string]map[string][]*model.Order, lastOrderLength) // market - symbol - []order
-var lastCrosses sync.Map                                                     // key*market:symbol
-var spotMarkets, contractMarkets sync.Map                                    // key - spotMarket/contractMarket
-var carryStatusMap = &sync.Map{}                                             // coin*market*symbol*key / CarryStatus
-var carryFail sync.Map                                                       // key fail num
-var carryStop sync.Map                                                       // key bool
-var notifyTime sync.Map                                                      // 1. market_symbol_market_symbol/time 2. funding_market_symbol/time
-var getMarketInfoMail sync.Map                                               // FormatCrossPair执行无法获取marketInfo时发送邮件，key为FormatCrossPair，value是当时时间
-var placeTick sync.Map                                                       // market_symbol_orderSide:price_amount
-var crossing bool
+var lastOrderIndex = &sync.Map{}          // market - symbol - index int
+var lastOrders = &sync.Map{}              // market - symbol - []*Order
+var lastCrosses sync.Map                  // key*market:symbol
+var spotMarkets, contractMarkets sync.Map // key - spotMarket/contractMarket
+var carryStatusMap = &sync.Map{}          // coin*market*symbol*key / CarryStatus
+var carryFail sync.Map                    // key fail num
+var carryStop sync.Map                    // key bool
+var notifyTime sync.Map                   // 1. market_symbol_market_symbol/time 2. funding_market_symbol/time
+var getMarketInfoMail sync.Map            // FormatCrossPair执行无法获取marketInfo时发送邮件，key为FormatCrossPair，value是当时时间
+var placeTick sync.Map                    // market_symbol_orderSide:price_amount
 var doCross = false
 
 // var firstComp = false
@@ -293,25 +291,29 @@ func addCarryResult(key, market, msg string, success bool) {
 
 // 某个交易对过去8次交易不成交次数达到3，暂停下单
 func addLastCarry(order *model.Order, setting *model.Setting) {
-	lockLastCarry.Lock()
-	defer lockLastCarry.Unlock()
 	if order == nil || setting == nil {
 		return
 	}
-	if lastOrders[setting.Market] == nil {
-		lastOrders[setting.Market] = make(map[string][]*model.Order)
-		lastOrderIndex[setting.Market] = make(map[string]int64)
+	var orders []*model.Order
+	v, _ := util.LoadSyncMap(lastOrders, setting.Market, setting.Symbol)
+	if v != nil {
+		orders = v.([]*model.Order)
+	} else {
+		orders = make([]*model.Order, lastOrderLength)
+		util.StoreSyncMap(lastOrderIndex, 0, setting.Market, setting.Symbol)
 	}
-	if lastOrders[setting.Market][setting.Symbol] == nil {
-		lastOrders[setting.Market][setting.Symbol] = make([]*model.Order, lastOrderLength)
-		lastOrderIndex[setting.Market][setting.Symbol] = 0
+	index := 0
+	vIndex, _ := util.LoadSyncMap(lastOrderIndex, setting.Market, setting.Symbol)
+	if vIndex != nil {
+		index = vIndex.(int)
 	}
-	lastOrders[setting.Market][setting.Symbol][lastOrderIndex[setting.Market][setting.Symbol]%lastOrderLength] = order
-	lastOrderIndex[setting.Market][setting.Symbol]++
+	orders[index%lastOrderLength] = order
+	index++
+	util.StoreSyncMap(lastOrderIndex, index, setting.Market, setting.Symbol)
 	noDealNum := 0
 	tenMin, _ := time.ParseDuration(`10m`)
 	second, _ := time.ParseDuration(`500ms`)
-	for i, lastOrder := range lastOrders[setting.Market][setting.Symbol] {
+	for i, lastOrder := range orders {
 		account := model.AppConfig.GetAccountFromKeyIndex(order.Market, ``, order.AccountIndex)
 		now := time.Now()
 		if lastOrder == nil || order.OrderTime.Add(tenMin).Before(now) || order.OrderTime.Add(second).After(now) || account == nil {
@@ -324,16 +326,16 @@ func addLastCarry(order *model.Order, setting *model.Setting) {
 		model.AppDB.Model(&queryOrder).Where(`order_id=?`, queryOrder.OrderId).Updates(
 			map[string]interface{}{`deal_amount`: queryOrder.DealAmount, `deal_price`: queryOrder.DealPrice})
 		util.Notice(fmt.Sprintf(`query last %s %s %s %f index %d`,
-			queryOrder.Symbol, queryOrder.OrderId, queryOrder.Status, queryOrder.DealAmount, lastOrderIndex[setting.Market][setting.Symbol]))
+			queryOrder.Symbol, queryOrder.OrderId, queryOrder.Status, queryOrder.DealAmount, index))
 		if queryOrder.DealAmount == 0 && order.Status != model.CarryStatusFail {
 			noDealNum++
 			if noDealNum > 3 {
 				util.Notice(fmt.Sprintf(`no deal order %s %s %d %d stop at %d`,
-					setting.Market, setting.Symbol, len(lastOrders), noDealNum, lastOrderIndex[setting.Market][setting.Symbol]))
+					setting.Market, setting.Symbol, len(orders), noDealNum, index))
 				setting.Valid = false
 				setting.UpdatedAt = now
-				lastOrders[setting.Market][setting.Symbol] = make([]*model.Order, lastOrderLength)
-				lastOrderIndex[setting.Market][setting.Symbol] = 0
+				util.StoreSyncMap(lastOrders, make([]*model.Order, lastOrderLength), setting.Market, setting.Symbol)
+				util.StoreSyncMap(lastOrderIndex, 0, setting.Market, setting.Symbol)
 				api.SendMails(`连续交易失败3次`, fmt.Sprintf(`%s %s交易失败%d次`, setting.Market, setting.Symbol, noDealNum))
 				go func() {
 					time.Sleep(time.Minute * 5)
@@ -342,7 +344,7 @@ func addLastCarry(order *model.Order, setting *model.Setting) {
 				break
 			}
 		} else {
-			lastOrders[setting.Market][setting.Symbol][i] = nil
+			orders[i] = nil
 		}
 	}
 	util.Notice(`---- add done %s`, setting.Symbol)

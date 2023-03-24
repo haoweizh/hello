@@ -15,18 +15,6 @@ import (
 
 const BitgetPosLimit = 40
 
-func checkSetCrossing(value bool) (before bool) {
-	lockCrossing.Lock()
-	defer lockCrossing.Unlock()
-	if value && crossing {
-		return crossing
-	} else {
-		temp := crossing
-		crossing = value
-		return temp
-	}
-}
-
 func createContractMarket(key, secret, market string) (cm *contractMarket) {
 	success, positions, accountValue, availableU := api.GetPositions(key, secret, market)
 	util.Notice(fmt.Sprintf(`get positions %s %s %v account value %f available u %f`,
@@ -320,7 +308,7 @@ func initStatus(account *model.Account, setting *model.Setting, absentRevert boo
 func ClearCross() {
 	for doCross {
 		for true {
-			if !checkSetCrossing(true) {
+			if !api.CheckSetProcessing(model.FunctionCross, model.FunctionCross, model.FunctionCross, true) {
 				break
 			} else {
 				time.Sleep(time.Millisecond * 10)
@@ -354,7 +342,7 @@ func ClearCross() {
 				equalAccounts()
 			}
 		}
-		checkSetCrossing(false)
+		api.CheckSetProcessing(model.FunctionCross, model.FunctionCross, model.FunctionCross, false)
 		util.Notice(`before sleep 0`)
 		time.Sleep(time.Minute * 1)
 		util.Notice(`before sleep 1`)
@@ -646,6 +634,12 @@ func equalCoin(coin string, statuses []*CarryStatus) (isEqual bool, holdingInU f
 // setting.OpenShortMargin OpenShortMargin不等于0时作为开舱标准价格，否则使用通用价格
 // setting.CloseShortMargin CloseShortMargin作为开关舱标准价格
 var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
+	// 所有cross之间互斥
+	if !api.CheckSetProcessing(setting.Function, setting.Function, setting.Function, true) {
+		defer api.CheckSetProcessing(setting.Function, setting.Function, setting.Function, false)
+	} else {
+		return
+	}
 	if !doCross && model.AppConfig.Handle == `1` {
 		go ClearCross()
 		doCross = true
@@ -994,11 +988,6 @@ func initLimitBuyAndSell(status *CarryStatus, setting *model.Setting, price floa
 }
 
 func placeCross(statusBuy, statusSell *CarryStatus, priceBuy, priceSell, amount float64) {
-	if !checkSetCrossing(true) {
-		defer checkSetCrossing(false)
-	} else {
-		return
-	}
 	score := (priceSell - priceBuy) / math.Max(priceBuy, priceSell)
 	util.Notice(fmt.Sprintf(`place cross %s %s -> %s %s at %f %f amount %f score %f hold %f buy %f hold %f sell %f`,
 		statusSell.market, statusSell.symbol, statusBuy.market, statusBuy.symbol, priceSell, priceBuy, amount,
