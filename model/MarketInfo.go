@@ -75,13 +75,12 @@ func GetAmountInMarket(market string, symbol string, amount, price float64, redu
 	decimal := util.NumDecPlaces(marketInfo.SizeIncrement)
 	format := `%.` + strconv.Itoa(decimal) + `f`
 	formattedAmount, _ = strconv.ParseFloat(fmt.Sprintf(format, formattedAmount), 64)
-	if formattedAmount < marketInfo.SizeMin || marketInfo.SizeMin == 0 {
-		return 0
-	}
 	// bitgetperp reduce的时候应该不受最小下单金额限制
 	if reduceOnly && market == BitgetPerp {
 		return formattedAmount
-	} else if marketInfo.MoneyMin > 0 && marketInfo.MoneyMin > price*formattedAmount {
+	}
+	if formattedAmount < marketInfo.SizeMin || marketInfo.SizeMin == 0 ||
+		(marketInfo.MoneyMin > 0 && marketInfo.MoneyMin > price*formattedAmount) {
 		return 0
 	}
 	return formattedAmount
