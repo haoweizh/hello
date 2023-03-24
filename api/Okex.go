@@ -577,7 +577,7 @@ func sendSignRequestOKEX(key, secret, method, path string, param, body map[strin
 func getWSOrderArgOKEX(account *model.Account, symbol, orderSide, orderType string, price, amount float64) (args map[string]interface{}) {
 	price, decimal := model.FormatPrice(model.OKEX, symbol, price)
 	priceStr := util.CutTailZero(strconv.FormatFloat(price, 'f', decimal, 64))
-	formattedAmount := model.GetAmountInMarket(model.OKEX, symbol, amount, price)
+	formattedAmount := model.GetAmountInMarket(model.OKEX, symbol, amount, price, false)
 	amountStrPerp := util.CutTailZero(fmt.Sprintf(`%f`, formattedAmount))
 	if orderType == model.OrderTypeMarket {
 		usdAmount, _ := strconv.ParseFloat(amountStrPerp, 64)
@@ -649,7 +649,7 @@ func placeOrderOKEX(account *model.Account, isWs bool, order *model.Order) {
 	priceStr := util.CutTailZero(strconv.FormatFloat(price, 'f', decimal, 64))
 	priceTrigger, decimal := model.FormatPrice(model.OKEX, order.Symbol, order.TriggerPrice)
 	triggerPriceStr := util.CutTailZero(strconv.FormatFloat(priceTrigger, 'f', decimal, 64))
-	formattedAmount := model.GetAmountInMarket(model.OKEX, order.Symbol, order.Amount, price)
+	formattedAmount := model.GetAmountInMarket(model.OKEX, order.Symbol, order.Amount, price, false)
 	amount := util.CutTailZero(fmt.Sprintf(`%f`, formattedAmount))
 	order.Price = price
 	order.TriggerPrice = priceTrigger
@@ -945,7 +945,8 @@ func parseOrderOKEX(value map[string]interface{}) (order *model.Order) {
 	return order
 }
 
-func getPriceOKEX(key, secret, symbol string) (success bool, price float64) {
+// getPriceOKEX
+func _(key, secret, symbol string) (success bool, price float64) {
 	param := map[string]interface{}{`instId`: symbol}
 	path := `/api/v5/market/ticker`
 	responseBody, _ := sendSignRequestOKEX(key, secret, http.MethodGet, path, param, nil)

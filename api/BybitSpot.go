@@ -290,7 +290,7 @@ func placeOrdersBybitSpot(order *model.Order, key, secret, orderSide, orderType,
 	postData := make(map[string]interface{})
 	path := `/spot/v1/order`
 	postData[`symbol`] = symbol
-	formattedAmount := model.GetAmountInMarket(model.BybitSpot, symbol, amount, price)
+	formattedAmount := model.GetAmountInMarket(model.BybitSpot, symbol, amount, price, false)
 	postData["qty"] = util.CutTailZero(fmt.Sprintf(`%f`, formattedAmount))
 	postData["side"] = strings.ToUpper(orderSide)
 	postData["type"] = strings.ToUpper(orderType)

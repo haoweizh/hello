@@ -325,7 +325,7 @@ func placeOrderKucoinSpot(order *model.Order, orderSide, orderType, symbol strin
 			priceSpot, decimalSpot := model.FormatPrice(model.KucoinSpot, symbol, price)
 			order.Price = priceSpot
 			createOrder.Price = util.CutTailZero(strconv.FormatFloat(priceSpot, 'f', decimalSpot, 64))
-			createOrder.Size = util.CutTailZero(fmt.Sprintf(`%f`, model.GetAmountInMarket(model.KucoinSpot, symbol, amount, price)))
+			createOrder.Size = util.CutTailZero(fmt.Sprintf(`%f`, model.GetAmountInMarket(model.KucoinSpot, symbol, amount, price, false)))
 			util.SocketInfo(fmt.Sprintf(`create spot order request: %v`, createOrder))
 			spotOrderResponse, err := kucoinRelatedClient("", "", "").CreateOrder(createOrder)
 			if err != nil || spotOrderResponse.Code != "200000" {
@@ -363,7 +363,7 @@ func placeOrderKucoinSpot(order *model.Order, orderSide, orderType, symbol strin
 			createOrder.AutoBorrow = true
 			priceSpot, decimalSpot := model.FormatPrice(model.KucoinSpot, symbol, price)
 			createOrder.Price = util.CutTailZero(strconv.FormatFloat(priceSpot, 'f', decimalSpot, 64))
-			createOrder.Size = util.CutTailZero(fmt.Sprintf(`%f`, model.GetAmountInMarket(model.Kucoin, symbol, amount, price)))
+			createOrder.Size = util.CutTailZero(fmt.Sprintf(`%f`, model.GetAmountInMarket(model.Kucoin, symbol, amount, price, false)))
 			util.SocketInfo(fmt.Sprintf(`create margin order request: %v`, createOrder))
 			req := kucoin.NewRequest(http.MethodPost, "/api/v1/margin/order", createOrder)
 			//todo CreateMarginOrder
@@ -397,7 +397,7 @@ func placeOrderKucoinSpot(order *model.Order, orderSide, orderType, symbol strin
 	}
 }
 
-func queryOrderKucoinSpot(key, secret, symbol string, orderId string) (order *model.Order) {
+func queryOrderKucoinSpot(symbol string, orderId string) (order *model.Order) {
 	orderResponse, respErr := kucoinRelatedClient("", "", "").Order(orderId)
 	if respErr != nil || orderResponse.Code != "200000" {
 		util.SocketInfo(fmt.Sprintf("function: %s fail to query kucoin spot order , err:%s, response:%v", "queryOrderKucoinSpot", respErr, orderResponse))

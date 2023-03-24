@@ -23,8 +23,8 @@ const wsStepHuobi = 50
 const restHuobiFuture = `api.hbdm.vn`
 const wsHuobiFuture = `wss://api.hbdm.vn/linear-swap-ws`
 
-//spot：现货账户, margin：逐仓杠杆账户, otc：OTC 账户, point：点卡账户, super-margin：全仓杠杆账户, investment: C2C杠杆借出账户,
-//borrow: C2C杠杆借入账户，矿池账户: minepool, ETF账户: etf, 抵押借贷账户: crypto-loans
+// spot：现货账户, margin：逐仓杠杆账户, otc：OTC 账户, point：点卡账户, super-margin：全仓杠杆账户, investment: C2C杠杆借出账户,
+// borrow: C2C杠杆借入账户，矿池账户: minepool, ETF账户: etf, 抵押借贷账户: crypto-loans
 const spotAccount = "spot"
 const marginAccountHuobi = `super-margin`
 
@@ -344,7 +344,7 @@ func placeOrderHuobiSpot(key, secret string, order *model.Order, orderSide, orde
 		if v == nil || v.(model.MarketInfo).SizeIncrement == 0 || v.(model.MarketInfo).CTValue == 0 || v.(model.MarketInfo).CTCurrency != coin {
 			return
 		}
-		postData["volume"] = util.CutTailZero(fmt.Sprintf(`%f`, model.GetAmountInMarket(model.HuobiSpot, symbol, amount, price)))
+		postData["volume"] = util.CutTailZero(fmt.Sprintf(`%f`, model.GetAmountInMarket(model.HuobiSpot, symbol, amount, price, false)))
 		responseBody := SignedRequestHuobi(key, secret, `POST`, restHuobiFuture, "/linear-swap-api/v1/swap_cross_order", postData)
 		orderJson, err := util.NewJSON(responseBody)
 		if err == nil {
@@ -376,7 +376,7 @@ func placeOrderHuobiSpot(key, secret string, order *model.Order, orderSide, orde
 			_ = GetAccountIdsHuobi(key, secret)
 		}
 		postData["account-id"] = huobiAccountMap[key][spotAccount]
-		postData["amount"] = util.CutTailZero(fmt.Sprintf(`%f`, model.GetAmountInMarket(model.HuobiSpot, symbol, amount, price)))
+		postData["amount"] = util.CutTailZero(fmt.Sprintf(`%f`, model.GetAmountInMarket(model.HuobiSpot, symbol, amount, price, false)))
 		postData["symbol"] = symbol
 		if orderType == model.OrderTypeLimit {
 			priceSpot, decimalSpot := model.FormatPrice(model.HuobiSpot, symbol, price)

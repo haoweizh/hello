@@ -379,7 +379,7 @@ func placeOrderKucoinPerp(order *model.Order, orderSide, orderType, symbol strin
 		priceFuture, decimalFuture := model.FormatPrice(model.KucoinPerp, symbol, price)
 		order.Price = priceFuture
 		params["price"] = util.CutTailZero(strconv.FormatFloat(priceFuture, 'f', decimalFuture, 64))
-		params["size"] = util.CutTailZero(fmt.Sprintf(`%f`, model.GetAmountInMarket(model.KucoinPerp, symbol, amount, price)))
+		params["size"] = util.CutTailZero(fmt.Sprintf(`%f`, model.GetAmountInMarket(model.KucoinPerp, symbol, amount, price, false)))
 		//util.SocketInfo(fmt.Sprintf(`create future order request: %s`, params))
 		futureOrderResp, err := kucoinFutureClient("", "", "").CreateOrder(params)
 		if err != nil || futureOrderResp.Code != "200000" {
@@ -411,7 +411,7 @@ func placeOrderKucoinPerp(order *model.Order, orderSide, orderType, symbol strin
 	}
 }
 
-func queryOrderKucoinPerp(key, secret, symbol string, orderId string) (order *model.Order) {
+func queryOrderKucoinPerp(symbol string, orderId string) (order *model.Order) {
 	orderResponse, respErr := kucoinFutureClient("", "", "").Order(orderId)
 	if respErr != nil || orderResponse.Code != "200000" {
 		util.SocketInfo(fmt.Sprintf("function: %s fail to query kucoin perp order , err:%s, response:%v", "queryOrderKucoinPerp", respErr, orderResponse))

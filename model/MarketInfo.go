@@ -62,21 +62,26 @@ func ParseRealAmount(market, symbol string, amount float64) (success bool, realA
 
 // GetAmountInMarket 返回交易所认可的下单数量，可能是币数、张数等
 // amount: 搬砖程序中使用的币数量
-func GetAmountInMarket(market string, symbol string, amount, price float64) (formattedAmount float64) {
-	v, _ := util.LoadSyncMap(MarketInfos, market, symbol)
-	if v == nil || v.(*MarketInfo).SizeIncrement == 0 || v.(*MarketInfo).SizeMin == 0 {
+func GetAmountInMarket(market string, symbol string, amount, price float64, reduceOnly bool) (formattedAmount float64) {
+	marketInfo := GetMarketInfo(market, symbol)
+	if marketInfo == nil || marketInfo.SizeIncrement == 0 || marketInfo.SizeMin == 0 {
 		return 0
 	}
 	success, _, coin, _ := GetFromStandard(market, symbol)
-	if success && v.(*MarketInfo).CTValue > 0 && v.(*MarketInfo).CTCurrency == coin {
-		amount = amount / v.(*MarketInfo).CTValue
+	if success && marketInfo.CTValue > 0 && marketInfo.CTCurrency == coin {
+		amount = amount / marketInfo.CTValue
 	}
-	formattedAmount = v.(*MarketInfo).SizeIncrement * math.Floor(amount/v.(*MarketInfo).SizeIncrement)
-	decimal := util.NumDecPlaces(v.(*MarketInfo).SizeIncrement)
+	formattedAmount = marketInfo.SizeIncrement * math.Floor(amount/marketInfo.SizeIncrement)
+	decimal := util.NumDecPlaces(marketInfo.SizeIncrement)
 	format := `%.` + strconv.Itoa(decimal) + `f`
 	formattedAmount, _ = strconv.ParseFloat(fmt.Sprintf(format, formattedAmount), 64)
-	if formattedAmount < v.(*MarketInfo).SizeMin || v.(*MarketInfo).SizeMin == 0 ||
-		(v.(*MarketInfo).MoneyMin > 0 && v.(*MarketInfo).MoneyMin > price*formattedAmount) {
+	if formattedAmount < marketInfo.SizeMin || marketInfo.SizeMin == 0 {
+		return 0
+	}
+	// bitgetperp reduce的时候应该不受最小下单金额限制
+	if reduceOnly && market == BitgetPerp {
+		return formattedAmount
+	} else if marketInfo.MoneyMin > 0 && marketInfo.MoneyMin > price*formattedAmount {
 		return 0
 	}
 	return formattedAmount

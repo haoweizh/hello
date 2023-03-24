@@ -285,7 +285,7 @@ func GetPriceForce(key, secret, symbol, market string) (result bool, price float
 		//util.Info(fmt.Sprintf(`not in market infos %s %s %s %s`, market, symbol, key, secret[0:1]))
 		return false, 0
 	}
-	util.Notice(`no need %s %s`, key, secret[:1])
+	//util.Notice(`no need get price through rest %s %s`, key, secret[:1])
 	//switch market {
 	//case model.Gate:
 	//	result, price = getPriceGate(key, secret, symbol)
@@ -494,9 +494,9 @@ func QueryOrderById(key, secret, market, symbol, orderType, orderId string) (ord
 	case model.BitgetSpot:
 		order = queryOrderBitgetSpot(key, secret, symbol, orderId)
 	case model.KucoinSpot:
-		order = queryOrderKucoinSpot(key, secret, symbol, orderId)
+		order = queryOrderKucoinSpot(symbol, orderId)
 	case model.KucoinPerp:
-		order = queryOrderKucoinPerp(key, secret, symbol, orderId)
+		order = queryOrderKucoinPerp(symbol, orderId)
 	case model.Gate:
 		queryOrderGate(key, secret, order)
 	case model.OKEX:

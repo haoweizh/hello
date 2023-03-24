@@ -682,7 +682,8 @@ func getPositionsGate(key string, secret string) (success bool, positions []*mod
 	return true, positions, accountValue, available
 }
 
-func getPriceGate(key, secret, symbol string) (success bool, price float64) {
+// getPriceGate
+func _(key, secret, symbol string) (success bool, price float64) {
 	client, ctx := getClientGate(key, secret)
 	_, marketType, _, dialectSymbol := model.GetFromStandard(model.Gate, symbol)
 	if marketType == model.MarketTypeSpot {
@@ -790,7 +791,7 @@ func placeOrderGate(key, secret string, order *model.Order, orderSide, orderType
 			//}
 			relatedOrder.AutoRepay = true
 		}
-		relatedOrder.Amount = util.CutTailZero(fmt.Sprintf(`%f`, model.GetAmountInMarket(model.Gate, symbol, amount, price)))
+		relatedOrder.Amount = util.CutTailZero(fmt.Sprintf(`%f`, model.GetAmountInMarket(model.Gate, symbol, amount, price, false)))
 		util.SocketInfo(`create spot order request: %v`, relatedOrder)
 		createOrder, _, err := client.SpotApi.CreateOrder(ctx, relatedOrder)
 		if err != nil {
@@ -822,7 +823,7 @@ func placeOrderGate(key, secret string, order *model.Order, orderSide, orderType
 	} else if success && marketType == model.MarketTypePerp {
 		futuresOrder := gateApi.FuturesOrder{Price: orderPriceStr, Contract: dialectSymbol}
 		futuresOrder.Size, _ = strconv.ParseInt(util.CutTailZero(
-			fmt.Sprintf(`%f`, model.GetAmountInMarket(model.Gate, symbol, amount, price))), 10, 64)
+			fmt.Sprintf(`%f`, model.GetAmountInMarket(model.Gate, symbol, amount, price, false))), 10, 64)
 		if orderSide == model.OrderSideSell {
 			futuresOrder.Size = -1 * futuresOrder.Size
 		}
