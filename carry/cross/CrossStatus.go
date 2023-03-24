@@ -298,9 +298,9 @@ func addLastCarry(order *model.Order, setting *model.Setting) {
 	v, _ := util.LoadSyncMap(lastOrders, setting.Market, setting.Symbol)
 	if v != nil {
 		orders = v.([]*model.Order)
-	} else {
+	}
+	if orders == nil {
 		orders = make([]*model.Order, lastOrderLength)
-		util.StoreSyncMap(lastOrderIndex, 0, setting.Market, setting.Symbol)
 	}
 	index := 0
 	vIndex, _ := util.LoadSyncMap(lastOrderIndex, setting.Market, setting.Symbol)
