@@ -880,8 +880,8 @@ func InitCrossMarketInfos(markets []string) {
 	model.AppDB.Model(&settingsDb).Where(`function=?`, model.FunctionCross).Updates(map[string]interface{}{`valid`: false})
 	for coin, infos := range infoPool {
 		//util.Notice(`handle coin %s %d`, coin, len(infos))
-		scoreOpen := 0.005
-		scoreClose := 0.001
+		scoreOpen := 0.015
+		scoreClose := 0.005
 		if len(infos) >= 2 {
 			for _, info := range infos {
 				if settingsDbMap[fmt.Sprintf(`%s_%s_%s`, model.FunctionCross, info.Market, info.Name)] == nil {
