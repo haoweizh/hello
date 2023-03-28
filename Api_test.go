@@ -229,11 +229,19 @@ func Test_CutTail(t *testing.T) {
 
 func Test_initTurtleN(t *testing.T) {
 	model.NewConfig()
+	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
 	//model.AppRedis = redis.NewClient(&redis.Options{
 	//	Addr:     model.AppConfig.RedisAddr,
 	//	Password: model.AppConfig.RedisPassword,
 	//	DB:       0,
 	//})
+	suc, bals, inU, cor := api.GetBalances(model.AppConfig.BybitKey, model.AppConfig.BybitSecret, model.BybitSpot)
+	fmt.Println(fmt.Sprintf(`%v %f %v`, suc, inU, cor))
+	for _, bal := range bals {
+		fmt.Println(bal.Coin)
+		fmt.Println(bal.Amount)
+	}
+
 	today, _ := model.GetMarketToday(model.BinancePerp)
 	api.GetCandle(model.AppConfig.OkexKey, model.AppConfig.OkexSecret, model.OKEX, `BTC_PERP`,
 		86400, today.Add(time.Hour*-24), today)

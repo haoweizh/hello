@@ -209,6 +209,9 @@ func GetCrossMarketValue(key, secret, market string, force bool) (inAllSpot, con
 				settings.Range(func(symbol, value interface{}) bool {
 					if sm.balances != nil && sm.balances[symbol.(string)] != nil {
 						holdingSpot += sm.balances[symbol.(string)].UsdValue
+						if market == model.BitgetSpot {
+							util.Info(fmt.Sprintf(`add holding spot %s %f`, symbol.(string), sm.balances[symbol.(string)].UsdValue))
+						}
 					}
 					return true
 				})
