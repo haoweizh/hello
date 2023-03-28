@@ -680,8 +680,12 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 		}
 		for i := api.GetCrossLen() - 1; i >= 0; i-- {
 			account := model.AppConfig.GetAccounts(setting.Market)[i]
+			accountRelate := model.AppConfig.GetAccounts(settingRelate.Market)[i]
+			if account == nil || accountRelate == nil {
+				continue
+			}
 			status, okStatus := util.LoadSyncMap(carryStatusMap, setting.Coin, setting.Market, setting.Symbol, account.Key)
-			statusRelate, okRelate := util.LoadSyncMap(carryStatusMap, settingRelate.Coin, settingRelate.Market, settingRelate.Symbol, account.Key)
+			statusRelate, okRelate := util.LoadSyncMap(carryStatusMap, settingRelate.Coin, settingRelate.Market, settingRelate.Symbol, accountRelate.Key)
 			if status == nil || statusRelate == nil || status == statusRelate || !okStatus || !okRelate {
 				continue
 			}
