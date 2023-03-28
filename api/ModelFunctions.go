@@ -190,9 +190,9 @@ func prepareSettings() {
 		}
 		if !exist {
 			settingArray = append(settingArray.([]*model.Setting), setting)
+			//util.Notice(fmt.Sprintf(`add setting array %s %s %d`, setting.Market, setting.Symbol, len(settingArray.([]*model.Setting))))
+			settings.Store(setting.Coin, settingArray)
 		}
-		//util.Notice(fmt.Sprintf(`add setting array %s %s %d`, setting.Market, setting.Symbol, len(settingArray.([]*model.Setting))))
-		settings.Store(setting.Coin, settingArray)
 		localCoinSettings.Store(setting.Function, settings)
 		var functionMarketSettings *sync.Map
 		value, ok = util.LoadSyncMap(localSymbolSettings, setting.Function, setting.Market)

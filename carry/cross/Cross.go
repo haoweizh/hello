@@ -685,7 +685,7 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 				continue
 			}
 			status, okStatus := util.LoadSyncMap(carryStatusMap, setting.Coin, setting.Market, setting.Symbol, account.Key)
-			statusRelate, okRelate := util.LoadSyncMap(carryStatusMap, settingRelate.Coin, settingRelate.Market, settingRelate.Symbol, account.Key)
+			statusRelate, okRelate := util.LoadSyncMap(carryStatusMap, settingRelate.Coin, settingRelate.Market, settingRelate.Symbol, accountRelate.Key)
 			if status == nil || statusRelate == nil || status == statusRelate || !okStatus || !okRelate {
 				continue
 			}

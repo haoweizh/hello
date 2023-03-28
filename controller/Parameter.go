@@ -352,7 +352,8 @@ func holdPage(c *gin.Context) {
 			if index > 0 {
 				inAll[0] -= keepInU
 			}
-			if account.Market != model.Ftx && account.Market != model.OKEX {
+			// 统一账户不算期货总价值
+			if account.Market != model.Ftx && account.Market != model.OKEX && account.Market != model.BybitSpot && account.Market != model.BybitPerp {
 				inAll[0] += contractAccountValue
 			}
 			inAll[1] += inAllSpot
