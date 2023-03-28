@@ -297,7 +297,7 @@ func getMarkPriceBinancePerp(account *model.Account, symbol string) (markPrice f
 func placeOrderBinancePerp(key, secret string, order *model.Order, orderSide, orderType, symbol string, price, triggerPrice, amount float64) {
 	price, decimal := model.FormatPrice(model.BinancePerp, symbol, price)
 	priceStr := util.CutTailZero(strconv.FormatFloat(price, 'f', decimal, 64))
-	formattedAmount := model.GetAmountInMarket(model.BinancePerp, symbol, amount, price)
+	formattedAmount := model.GetAmountInMarket(model.BinancePerp, symbol, amount, price, false)
 	amountStr := util.CutTailZero(fmt.Sprintf(`%f`, formattedAmount))
 	success, _, _, dialectSymbol := model.GetFromStandard(model.BinancePerp, symbol)
 	order.Price = price
@@ -617,7 +617,8 @@ func setPosSideBinancePerp(key, secret string) {
 	}
 }
 
-func getPriceBinancePerp(key, secret, symbol string) (success bool, price float64) {
+// getPriceBinancePerp
+func _(key, secret, symbol string) (success bool, price float64) {
 	success, _, _, dialectSymbol := model.GetFromStandard(model.BinancePerp, symbol)
 	if !success {
 		return false, 0

@@ -318,18 +318,18 @@ func placeOrderBitgetPerp(key, secret string, order *model.Order, orderSide, ord
 		util.Notice("fail to place perp order, GetFromStandard: " + symbol)
 		return
 	}
+	reduceOnly := false
+	if orderParam == model.ReduceOnly {
+		reduceOnly = true
+	}
 	priceSpot, decimalSpot := model.FormatPrice(model.BitgetPerp, symbol, price)
-	amountStr := util.CutTailZero(fmt.Sprintf(`%f`, model.GetAmountInMarket(model.BitgetPerp, symbol, amount, priceSpot)))
+	amountStr := util.CutTailZero(fmt.Sprintf(`%f`, model.GetAmountInMarket(model.BitgetPerp, symbol, amount, priceSpot, reduceOnly)))
 	priceStr := util.CutTailZero(strconv.FormatFloat(priceSpot, 'f', decimalSpot, 64))
 	var tradeOrderSide string
 	if orderSide == model.OrderSideBuy {
 		tradeOrderSide = "buy_single"
 	} else {
 		tradeOrderSide = "sell_single"
-	}
-	reduceOnly := false
-	if orderParam == model.ReduceOnly {
-		reduceOnly = true
 	}
 	ordType := ``
 	if orderType == model.OrderTypeMarket {

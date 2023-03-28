@@ -374,8 +374,8 @@ func liquidateBitgetPerp(account *model.Account) {
 				if position.Holding > 0 {
 					orderSide = model.OrderSideSell
 				}
-				util.Notice(`liquidate bitgetperp %s %s price %f hold %f`,
-					position.Currency, position.EntryPrice, orderSide, position.Holding)
+				util.Notice(fmt.Sprintf(`liquidate bitgetperp %s %s price %f hold %f`,
+					position.Currency, orderSide, position.EntryPrice, position.Holding))
 				order := api.PlaceOrder(account.Key, account.Secret, orderSide, model.OrderTypeMarket, model.BitgetPerp,
 					position.Currency, model.ReduceOnly, position.EntryPrice, position.EntryPrice, holding, false, nil, nil)
 				order.RefreshType = model.FunctionBitgetLiq
