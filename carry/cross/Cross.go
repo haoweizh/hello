@@ -795,6 +795,7 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarrySta
 			carryStatus.account.Key, carryStatusRelate.account.Key, coin)
 		return
 	}
+	util.Info(fmt.Sprintf(`carry coin %s %s-%s %s-%s`, coin, carryStatus.market, carryStatus.symbol, carryStatusRelate.market, carryStatusRelate.symbol))
 	var bidAmount, askAmount float64
 	priceAskRelate := tickRelate.Asks[0].Price
 	priceBidRelate := tickRelate.Bids[0].Price
