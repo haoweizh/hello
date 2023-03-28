@@ -968,7 +968,7 @@ func InitMarketInfos(markets []string) (success bool) {
 				}
 			}()
 		case model.BybitSpot:
-			marketInfos = getMarketsBybitSpot(accounts[0].Key, accounts[0].Secret)
+			marketInfos = getMarketsBybitSpot()
 		case model.BitgetSpot:
 			marketInfos = getMarketsBitgetSpot()
 		case model.BitgetPerp:
