@@ -233,9 +233,9 @@ func getPositionsBybitPerp(key, secret string) (success bool, positions []*model
 			if contract.TradeMode != 0 {
 				continue
 			}
-			_, _, currency := model.GetCoinFromDialect(model.BybitPerp, contract.Symbol)
-			symbol := currency + model.UniStandardTail[model.MarketTypePerp]
-			position := &model.Position{Market: model.BybitPerp, Ts: util.GetNowUnixMillion(), Currency: symbol}
+			_, _, coin := model.GetCoinFromDialect(model.BybitPerp, contract.Symbol)
+			currency := coin + model.UniStandardTail[model.MarketTypePerp]
+			position := &model.Position{Market: model.BybitPerp, Ts: util.GetNowUnixMillion(), Currency: currency}
 			if contract.Side == "Buy" {
 				position.Holding, _ = strconv.ParseFloat(contract.Size, 64)
 			} else if contract.Side == "Sell" {
