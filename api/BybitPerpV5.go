@@ -261,7 +261,7 @@ func getPositionsBybitPerp(key, secret string) (success bool, positions []*model
 
 func setBybitPerpLeverage(key, secret string) {
 	symbols := GetMarketSymbols(model.BybitPerp)
-	for symbol, _ := range symbols {
+	for symbol := range symbols {
 		success, _, _, dialectSymbol := model.GetFromStandard(model.BybitPerp, symbol)
 		if !success {
 			continue

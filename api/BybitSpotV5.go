@@ -205,7 +205,7 @@ func parseBookOrderSpot(markets *model.Markets, bookWsResp *dtos.BybitBookWsResp
 func getBalanceBybitSpot(key string, secret string) (success bool, balances []*model.Balance, totalInUsd float64, collateral *model.Collateral) {
 	coins := GetSettingCoins(model.FunctionCross, model.BybitSpot)
 	coinsStr := []string{"USDT"}
-	for coin, _ := range coins {
+	for coin := range coins {
 		coinsStr = append(coinsStr, coin)
 	}
 	param := map[string]interface{}{"accountType": "UNIFIED", "coin": strings.Join(coinsStr, ",")}
