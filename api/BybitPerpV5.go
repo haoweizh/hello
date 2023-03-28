@@ -278,9 +278,13 @@ func setBybitPerpLeverage(key, secret string) {
 }
 
 func placeOrderBybitPerp(key, secret string, order *model.Order, orderSide, orderType, orderParam, symbol string, price, amount float64) {
+	reduceOnly := false
+	if orderParam == model.ReduceOnly {
+		reduceOnly = true
+	}
 	priceSpot, decimalSpot := model.FormatPrice(model.BybitPerp, symbol, price)
 	priceStr := util.CutTailZero(strconv.FormatFloat(priceSpot, 'f', decimalSpot, 64))
-	amountStr := util.CutTailZero(fmt.Sprintf(`%f`, model.GetAmountInMarket(model.BybitPerp, symbol, amount, priceSpot)))
+	amountStr := util.CutTailZero(fmt.Sprintf(`%f`, model.GetAmountInMarket(model.BybitPerp, symbol, amount, priceSpot, reduceOnly)))
 	success, _, _, dialectSymbol := model.GetFromStandard(model.BybitPerp, symbol)
 	if !success {
 		util.Notice("fail to place bybit perp order, GetFromStandard: " + symbol)

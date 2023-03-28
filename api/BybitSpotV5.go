@@ -287,7 +287,7 @@ func SignedRequestBybit(key, secret, method, host, path string, body map[string]
 func placeOrderBybitSpot(key, secret string, order *model.Order, orderSide, orderType, symbol string, price, amount float64) {
 	priceSpot, decimalSpot := model.FormatPrice(model.BybitSpot, symbol, price)
 	priceStr := util.CutTailZero(strconv.FormatFloat(priceSpot, 'f', decimalSpot, 64))
-	amountStr := util.CutTailZero(fmt.Sprintf(`%f`, model.GetAmountInMarket(model.BybitSpot, symbol, amount, priceSpot)))
+	amountStr := util.CutTailZero(fmt.Sprintf(`%f`, model.GetAmountInMarket(model.BybitSpot, symbol, amount, priceSpot, false)))
 	success, _, _, dialectSymbol := model.GetFromStandard(model.BybitSpot, symbol)
 	if !success {
 		util.Notice("fail to place bybit spot order, GetFromStandard: " + symbol)
