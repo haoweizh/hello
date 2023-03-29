@@ -293,10 +293,13 @@ func maintainChannelBybit() {
 }
 
 func getBalanceBybit(key string, secret string) (success bool, balances []*model.Balance, totalInUsd float64, collateral *model.Collateral) {
-	coins := GetSettingCoins(model.FunctionCross, model.Bybit)
+	symbols := GetMarketSymbols(model.Bybit)
 	coinsStr := []string{"USDT"}
-	for coin, _ := range coins {
-		coinsStr = append(coinsStr, coin)
+	for symbol, _ := range symbols {
+		_, marketType, coin, _ := model.GetFromStandard(model.Bybit, symbol)
+		if marketType == model.MarketTypeSpot {
+			coinsStr = append(coinsStr, coin)
+		}
 	}
 	param := map[string]interface{}{"accountType": "UNIFIED", "coin": strings.Join(coinsStr, ",")}
 	httpResp, httpErr := SignedRequestBybit(key, secret, http.MethodGet, bybitRestUrl, "/v5/account/wallet-balance", param)
