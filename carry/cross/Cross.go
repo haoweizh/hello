@@ -131,7 +131,7 @@ func createFromPosition(account *model.Account, setting *model.Setting, valueLim
 	if cm.contractValueInU/cm.accountValueInU > rateLimitPosition || valueInUsd > valueLimit ||
 		valueInUsd/cm.accountValueInU > rateLimitHolding || (setting.Market == model.BitgetPerp && len(cm.positions) > BitgetPosLimit) {
 		if setting.Market == model.Bybit {
-			util.Notice(fmt.Sprintf(`low position balance %s %s %f/%f=%f %f>%f %f>0.28`,
+			util.Info(fmt.Sprintf(`low position balance %s %s %f/%f=%f %f>%f %f>0.28`,
 				key, setting.Symbol, cm.contractValueInU, cm.accountValueInU, cm.contractValueInU/cm.accountValueInU, valueInUsd, valueLimit, valueInUsd/cm.accountValueInU))
 		}
 		doRevert = true
@@ -214,6 +214,9 @@ func initStatus(account *model.Account, setting *model.Setting, absentRevert boo
 	}
 	if status == nil {
 		return
+	}
+	if setting.Market == model.Bybit {
+		util.Info(fmt.Sprintf(`%s %d %v`, setting.Symbol, setting.Chance, doRevert))
 	}
 	_, status.FoundingRate, status.FundingRateUpdateTime = api.GetFundingRate(account.Key, account.Secret, setting.Market, setting.Symbol)
 	fundingKey := fmt.Sprintf(`funding_%s_%s`, setting.Market, setting.Symbol)
