@@ -67,7 +67,7 @@ func Test_getCommonMarketInfos(t *testing.T) {
 	model.NewConfig()
 	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
 	//api.InitCrossMarketInfos([]string{model.Gate})
-	api.InitMarketInfos([]string{model.OKEX, model.BybitSpot, model.Ftx, model.Gate})
+	api.InitMarketInfos([]string{model.OKEX, model.Bybit, model.Ftx, model.Gate})
 	price, decimal := model.FormatPrice(model.BinancePerp, `SOL_PERP`, 19.407125)
 	priceStr := util.CutTailZero(strconv.FormatFloat(price, 'f', decimal, 64))
 	fmt.Println(priceStr)
@@ -97,7 +97,7 @@ func Test_WsAndOrderApi(t *testing.T) {
 	//coin + model.UniStandardTail[model.MarketTypeSpot]}
 	model.NewConfig()
 	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
-	api.InitMarketInfos([]string{model.OKEX, model.BybitSpot, model.Ftx, model.Gate})
+	api.InitMarketInfos([]string{model.OKEX, model.Bybit, model.Ftx, model.Gate})
 	account := model.AppConfig.GetAccounts(market)[0]
 	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
 	api.CreateMarketDepthServer(model.AppMarkets, market, nil)
@@ -160,7 +160,7 @@ func Test_BalAndPos(t *testing.T) {
 	order := api.QueryOrderById(model.AppConfig.GateKey, model.AppConfig.GateSecret, `gate`, `MGA_USDT`,
 		model.OrderTypeLimit, `144149811503`)
 	fmt.Println(order)
-	api.InitMarketInfos([]string{model.OKEX, model.BybitSpot, model.Ftx, model.Gate})
+	api.InitMarketInfos([]string{model.OKEX, model.Bybit, model.Ftx, model.Gate})
 	//for _, market := range balMarkets {
 	//	account := model.AppConfig.GetAccounts(market)[0]
 	//	success, balances, total, collateral := api.GetBalances(account.Key, account.Secret, market)
@@ -171,7 +171,7 @@ func Test_BalAndPos(t *testing.T) {
 	//		}
 	//	}
 	//}
-	posMarkets := []string{model.BybitPerp}
+	posMarkets := []string{model.Bybit}
 	//posMarkets := []string{model.OKEX, model.BybitPerp, model.Ftx}
 	for _, market := range posMarkets {
 		account := model.AppConfig.GetAccounts(market)[0]
@@ -235,7 +235,7 @@ func Test_initTurtleN(t *testing.T) {
 	//	Password: model.AppConfig.RedisPassword,
 	//	DB:       0,
 	//})
-	suc, bals, inU, cor := api.GetBalances(model.AppConfig.BybitKey, model.AppConfig.BybitSecret, model.BybitSpot)
+	suc, bals, inU, cor := api.GetBalances(model.AppConfig.BybitKey, model.AppConfig.BybitSecret, model.Bybit)
 	fmt.Println(fmt.Sprintf(`%v %f %v`, suc, inU, cor))
 	for _, bal := range bals {
 		fmt.Println(bal.Coin)
@@ -345,14 +345,14 @@ func Test_download(t *testing.T) {
 func Test_Orders(t *testing.T) {
 	model.NewConfig()
 	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
-	coin := `NEO`
-	market := model.BitgetPerp
-	symbol := coin + model.UniStandardTail[model.MarketTypePerp]
+	coin := `ETH`
+	market := model.Bybit
+	symbol := coin + model.UniStandardTail[model.MarketTypeSpot]
 	markets := []string{market}
 	api.InitMarketInfos(markets)
 	account := api.GetAccounts(0)[markets[0]]
-	order := api.PlaceOrder(account.Key, account.Secret, model.OrderSideSell, model.OrderTypeMarket, markets[0], symbol, model.ReduceOnly,
-		0.387694448161, 0.387694448161, 0.03, false, nil, nil)
+	order := api.PlaceOrder(account.Key, account.Secret, model.OrderSideBuy, model.OrderTypeLimit, markets[0], symbol, model.ReduceOnly,
+		1700, 1700, 0.01, false, nil, nil)
 	if order != nil {
 		fmt.Println(fmt.Sprintf(`place %s %s`, order.OrderId, order.Status))
 	}
@@ -378,7 +378,7 @@ func Test_wallet(t *testing.T) {
 	case model.BinancePerp:
 		key = model.AppConfig.BinanceKey
 		secret = model.AppConfig.BinanceSecret
-	case model.BybitPerp:
+	case model.Bybit:
 		key = model.AppConfig.BybitKey
 		secret = model.AppConfig.BybitSecret
 	case model.Gate:
@@ -397,22 +397,22 @@ func Test_wallet(t *testing.T) {
 	//	result, _, _ := api.CancelOrder(key, secret, market, symbol, m.OrderType, m.OrderId)
 	//	fmt.Println(result)
 	//}
-	_, rate, _ := api.GetFundingRate(key, secret, model.BybitPerp, symbol)
-	_, rate, _ = api.GetFundingRate(key, secret, model.BybitPerp, `LOOKS_PERP`)
+	_, rate, _ := api.GetFundingRate(key, secret, model.Bybit, symbol)
+	_, rate, _ = api.GetFundingRate(key, secret, model.Bybit, `LOOKS_PERP`)
 	//// 1078113554871236864
 	////cancelResult := api.CancelOrders(key, secret, model.BybitSpot, `ETH-USDT`)
 	////fmt.Println(cancelResult)
 	//orderBybit = api.QueryOrderById(key, secret, model.BybitPerp, `ETH-PERP`, `ETH-PERP`,
 	//	model.OrderTypeLimit, orderBybit.OrderId)
 	//fmt.Println(orderBybit.OrderId)
-	api.CancelOrder(key, secret, model.BybitPerp, `ETH-PERP`, model.OrderTypeLimit,
+	api.CancelOrder(key, secret, model.Bybit, `ETH-PERP`, model.OrderTypeLimit,
 		`d490a639-a5f7-499a-9248-142a93ddaf13`)
-	orderBybit1 := api.QueryOrderById(key, secret, model.BybitPerp, `ETH-PERP`,
+	orderBybit1 := api.QueryOrderById(key, secret, model.Bybit, `ETH-PERP`,
 		model.OrderTypeLimit, `d490a639-a5f7-499a-9248-142a93ddaf13`)
 	fmt.Println(orderBybit1.OrderId)
 	fmt.Println(fmt.Sprintf(`%f`, rate))
 	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
-	api.InitMarketInfos([]string{model.OKEX, model.BybitSpot, model.Ftx, model.Gate})
+	api.InitMarketInfos([]string{model.OKEX, model.Bybit, model.Ftx, model.Gate})
 	orderQuery := api.QueryOrderById(model.AppConfig.GateKey, model.AppConfig.GateSecret, model.Gate, `CFX_PERP`, model.OrderTypeLimit, `79852794326`)
 	fmt.Println(orderQuery.OrderSide)
 	order1 := api.PlaceOrder(model.AppConfig.GateKey, model.AppConfig.GateSecret, model.OrderSideBuy, model.OrderTypeLimit,
@@ -421,7 +421,7 @@ func Test_wallet(t *testing.T) {
 	fmt.Println(order1.OrderId)
 	api.CancelOrders(model.AppConfig.GateKey, model.AppConfig.GateSecret, model.Gate, `ETH_USDT`)
 	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
-	api.InitMarketInfos([]string{model.OKEX, model.BybitSpot, model.Ftx, model.Gate})
+	api.InitMarketInfos([]string{model.OKEX, model.Bybit, model.Ftx, model.Gate})
 	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
 	fmt.Println(order1.DealAmount)
 	fmt.Println(order1.DealPrice)
