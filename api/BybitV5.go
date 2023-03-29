@@ -21,7 +21,8 @@ import (
 const bybitRestUrl = "https://api.bybit.com"
 const bybitSpotPubWsUrl = "wss://stream.bybit.com/v5/public/spot"
 const bybitPerpPubWsUrl = "wss://stream.bybit.com/v5/public/linear"
-const bybitPriWsUrl = "wss://stream.bybit.com/v5/private"
+
+//const bybitPriWsUrl = "wss://stream.bybit.com/v5/private"
 
 var channelMaintainingBybit = false
 
@@ -83,7 +84,6 @@ func getMarketsBybitPerp(marketInfos map[string]*model.MarketInfo) {
 			util.Notice(fmt.Sprintf("get bybit perp market error, resp: %s, httpErr: %v, jsonErr: %v", httpResp, httpErr, perpJsonErr))
 			return
 		}
-
 		for _, perpInfo := range perpResp.Result.List {
 			if perpInfo.Status != "Trading" || perpInfo.QuoteCoin != "USDT" || perpInfo.ContractType != "LinearPerpetual" {
 				continue
@@ -107,7 +107,6 @@ func getMarketsBybitPerp(marketInfos map[string]*model.MarketInfo) {
 			marketInfo.SizeIncrement, _ = strconv.ParseFloat(perpInfo.LotSizeFilter.QtyStep, 64)
 			marketInfos[symbol] = marketInfo
 		}
-
 		cursor = perpResp.Result.NextPageCursor
 		if cursor == "" {
 			return
@@ -223,7 +222,6 @@ func WsDepthServeBybit(markets *model.Markets, orderHandler OrderHandler) (chann
 			parseBookOrder(markets, bookWsResp, symbol)
 		}
 	}
-
 	channels = make([]chan struct{}, 0)
 	symbols := GetMarketSymbols(model.Bybit)
 	spotSubscribes := make([]interface{}, 0)
@@ -239,14 +237,12 @@ func WsDepthServeBybit(markets *model.Markets, orderHandler OrderHandler) (chann
 			spotSubscribes = append(spotSubscribes, dialectSymbol)
 		}
 	}
-
 	spotBookChannels, spotBookErr := WebSocketClient(model.Bybit, bybitSpotPubWsUrl,
 		spotSubscribes, subscribeHandlerBybit, spotBookWsHandler, orderHandler, 10)
 	if spotBookErr == nil {
 		util.Notice(`finish connect public bybit spot book wss `)
 		channels = append(channels, spotBookChannels...)
 	}
-
 	perpBookChannels, perpBookErr := WebSocketClient(model.Bybit, bybitPerpPubWsUrl,
 		futureSubscribes, subscribeHandlerBybit, perpBookWsHandler, orderHandler, 10)
 	if perpBookErr == nil {
@@ -254,7 +250,6 @@ func WsDepthServeBybit(markets *model.Markets, orderHandler OrderHandler) (chann
 		channels = append(channels, perpBookChannels...)
 	}
 	time.Sleep(time.Second * 1)
-
 	go maintainChannelBybit()
 	return channels, nil
 }
@@ -293,9 +288,13 @@ func maintainChannelBybit() {
 }
 
 func getBalanceBybit(key string, secret string) (success bool, balances []*model.Balance, totalInUsd float64, collateral *model.Collateral) {
-	coins := GetSettingCoins(model.FunctionCross, model.Bybit)
-	coinsStr := []string{"USDT"}
-	for coin, _ := range coins {
+	marketInfos := model.GetMarketInfos(model.Bybit, model.MarketTypeSpot)
+	coinsStr := make([]string, 0)
+	for symbol, value := range marketInfos {
+		if value == nil {
+			continue
+		}
+		_, _, coin, _ := model.GetFromStandard(model.Bybit, symbol)
 		coinsStr = append(coinsStr, coin)
 	}
 	param := map[string]interface{}{"accountType": "UNIFIED", "coin": strings.Join(coinsStr, ",")}
@@ -304,7 +303,7 @@ func getBalanceBybit(key string, secret string) (success bool, balances []*model
 	jsonErr := json.Unmarshal(httpResp, balanceResp)
 	if balanceResp == nil || balanceResp.RetCode != 0 {
 		util.Notice(fmt.Sprintf("fail to refresh spot balance bybit, resp: %s httpErr: %v, jsonErr: %v", httpResp, httpErr, jsonErr))
-		time.Sleep(time.Second * 2)
+		time.Sleep(time.Minute)
 		return getBalanceBybit(key, secret)
 	} else {
 		util.SocketInfo(fmt.Sprintf("get spot balance bybit success, resp: %s ", httpResp))
@@ -355,12 +354,11 @@ func getPositionsBybit(key, secret string) (success bool, positions []*model.Pos
 		positionJsonErr := json.Unmarshal(positionHttpResp, positionResp)
 		if positionResp == nil || positionResp.RetCode != 0 {
 			util.Notice(fmt.Sprintf("fail to refresh perp position bybit, resp: %s httpErr: %v, jsonErr: %v", positionHttpResp, positionHttpErr, positionJsonErr))
-			time.Sleep(time.Second * 2)
+			time.Sleep(time.Minute)
 			return getPositionsBybit(key, secret)
 		} else {
 			util.SocketInfo(fmt.Sprintf("get perp position bybit success, resp: %s ", positionHttpResp))
 		}
-
 		for _, contract := range positionResp.Result.List {
 			if contract.TradeMode != 0 {
 				continue
@@ -383,7 +381,6 @@ func getPositionsBybit(key, secret string) (success bool, positions []*model.Pos
 			position.Margin, _ = strconv.ParseFloat(contract.PositionMM, 64)
 			positions = append(positions, position)
 		}
-
 		cursor = positionResp.Result.NextPageCursor
 		if cursor == "" {
 			return true, positions, 0
@@ -430,11 +427,12 @@ func setBybitMarginLeverage(key, secret string) {
 	if jsonData == nil || code != 0 {
 		util.Notice(fmt.Sprintf("fail to set bybit margin leverage, resp: %s httpErr: %v, jsonErr: %v", httpResp, httpErr, jsonErr))
 	}
+	time.Sleep(time.Second * 5)
 }
 
 func setBybitPerpLeverage(key, secret string) {
 	symbols := GetMarketSymbols(model.Bybit)
-	for symbol, _ := range symbols {
+	for symbol := range symbols {
 		success, marketType, _, dialectSymbol := model.GetFromStandard(model.Bybit, symbol)
 		if !success {
 			continue
@@ -447,7 +445,7 @@ func setBybitPerpLeverage(key, secret string) {
 			if jsonData == nil || code != 0 {
 				util.Notice(fmt.Sprintf("fail to set bybit perp leverage , resp: %s httpErr: %v, jsonErr: %v", httpResp, httpErr, jsonErr))
 			}
-			time.Sleep(200 * time.Millisecond)
+			time.Sleep(time.Second * 5)
 		}
 	}
 }

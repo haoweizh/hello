@@ -229,6 +229,7 @@ func Test_CutTail(t *testing.T) {
 
 func Test_initTurtleN(t *testing.T) {
 	model.NewConfig()
+	api.InitMarketInfos([]string{model.Bybit})
 	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
 	//model.AppRedis = redis.NewClient(&redis.Options{
 	//	Addr:     model.AppConfig.RedisAddr,
