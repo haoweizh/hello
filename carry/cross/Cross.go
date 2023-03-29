@@ -130,8 +130,10 @@ func createFromPosition(account *model.Account, setting *model.Setting, valueLim
 	rateLimitHolding := 0.28
 	if cm.contractValueInU/cm.accountValueInU > rateLimitPosition || valueInUsd > valueLimit ||
 		valueInUsd/cm.accountValueInU > rateLimitHolding || (setting.Market == model.BitgetPerp && len(cm.positions) > BitgetPosLimit) {
-		//util.Notice(fmt.Sprintf(`low position balance %s %s %f %f %f %f`,
-		//	key, setting.Symbol, cm.contractValueInU, cm.accountValueInU, valueInUsd, valueLimit))
+		if setting.Market == model.Bybit {
+			util.Notice(fmt.Sprintf(`low position balance %s %s %f/%f=%f %f>%f %f>0.28`,
+				key, setting.Symbol, cm.contractValueInU, cm.accountValueInU, cm.contractValueInU/cm.accountValueInU, valueInUsd, valueLimit, valueInUsd/cm.accountValueInU))
+		}
 		doRevert = true
 	}
 	return carryStatus, doRevert
@@ -183,7 +185,7 @@ func createFromBalance(account *model.Account, setting *model.Setting, valueLimi
 	if sm.balances[setting.Symbol] != nil && math.Abs(sm.balances[setting.Symbol].UsdValue) > valueLimit {
 		doRevert = true
 	}
-	if sm.collateral != nil && sm.collateral.Rate < 10 {
+	if setting.Market == model.OKEX && sm.collateral != nil && sm.collateral.Rate < 10 {
 		//(sm.collateral.Available-sm.collateral.Occupied)/sm.collateral.Available < 0.1) {
 		doRevert = true
 	}
