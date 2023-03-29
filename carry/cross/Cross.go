@@ -415,7 +415,7 @@ func equalAccount(i int, equalChan chan int, accounts map[string]*model.Account)
 				equalStatuses[j] = initStatus(account, setting, false)
 			}
 			for index := 0; index <= 10; index++ {
-				coinEqual, leftHoldingInU, _ := equalCoin(coin.(string), equalStatuses)
+				coinEqual, leftHoldingInU, _ := equalCoin(coin.(string), equalStatuses, settings.([]*model.Setting))
 				if index > 0 {
 					util.Info(`equal coin %s account %d equal %v left hold u %f`, coin, i, coinEqual, leftHoldingInU)
 				}
@@ -437,7 +437,7 @@ func equalAccount(i int, equalChan chan int, accounts map[string]*model.Account)
 
 // bybit 缺少按照symbol cancel all
 // settings []*model.Setting, coinStatus map[string]map[string]map[string]*CarryStatus
-func equalCoin(coin string, statuses []*CarryStatus) (isEqual bool, holdingInU float64, msg string) {
+func equalCoin(coin string, statuses []*CarryStatus, settings []*model.Setting) (isEqual bool, holdingInU float64, msg string) {
 	var holding, price float64
 	orderSide := ``
 	var equalStatus *CarryStatus
@@ -449,9 +449,11 @@ func equalCoin(coin string, statuses []*CarryStatus) (isEqual bool, holdingInU f
 	isEqual = true
 	holdStr := ``
 	noTicks := ``
-	for _, status := range statuses {
+	for i, status := range statuses {
 		if status == nil {
-			util.Notice(`warning: fail to get one status %s`, coin)
+			if settings[i] != nil {
+				util.Notice(`warning: fail to get one status %s %s %s`, coin, settings[i].Market, settings[i].Symbol)
+			}
 			return false, 0, `fail to equal for one nil status`
 		}
 		holding += status.Holding
