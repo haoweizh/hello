@@ -189,6 +189,9 @@ func createFromBalance(account *model.Account, setting *model.Setting, valueLimi
 		//(sm.collateral.Available-sm.collateral.Occupied)/sm.collateral.Available < 0.1) {
 		doRevert = true
 	}
+	if doRevert && setting.Market == model.Bybit {
+		util.Info(fmt.Sprintf(`spot revert %s %f<%f %f>0.2`, setting.Symbol, sm.availableU, usdLowLine, carryStatus.RateInAll))
+	}
 	return carryStatus, doRevert
 }
 
