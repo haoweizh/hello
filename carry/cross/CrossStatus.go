@@ -33,7 +33,7 @@ var validCrossCoin = map[string][]string{model.BinanceSpot: {`TORN`, `ANC`, `UST
 	model.Gate:        {`AE`, `HC`, `REEF`, `ONE`, `LSK`, `GLMR`, `LEASH`, `KDA`, `BLOK`, `ANC`, `UST`},
 	model.OKEX:        {`AE`, `HC`, `ORBS`, `ONE`, `LSK`, `GLMR`, `LEASH`, `KLAY`, `KDA`, `BLOK`, `TORN`, `ANC`, `UST`},
 	model.Ftx:         {`REEF`, `ORBS`, `ONE`, `LUNA`, `UST`, `HT`, `TRX`, `ASD`, `FTT`, `BTT`, `JST`, `SUN`},
-	model.BybitPerp:   {`KLAY`, `ANC`, `UST`}}
+	model.Bybit:       {`KLAY`, `ANC`, `UST`}}
 
 var liquidBitgetTime = &sync.Map{}        // key - unix second int64
 var lastOrderIndex = &sync.Map{}          // market - symbol - index int
@@ -190,8 +190,6 @@ func GetCrossMarketValue(key, secret, market string, force bool) (inAllSpot, con
 	value, ok := spotMarkets.Load(key)
 	if (!ok || value == nil) && force {
 		switch market {
-		case model.BybitPerp:
-			value = createSpotMarket(key, secret, model.BybitSpot)
 		case model.BinancePerp:
 			value = createSpotMarket(key, secret, model.BinanceSpot)
 		case model.BitgetPerp:
@@ -228,8 +226,6 @@ func GetCrossMarketValue(key, secret, market string, force bool) (inAllSpot, con
 		switch market {
 		case model.BinanceSpot:
 			value = createContractMarket(key, secret, model.BinancePerp)
-		case model.BybitSpot:
-			value = createContractMarket(key, secret, model.BybitPerp)
 		case model.BitgetSpot:
 			value = createContractMarket(key, secret, model.BitgetPerp)
 		}

@@ -129,10 +129,8 @@ func CancelOrders(key, secret, market, symbol string) (result bool) {
 		return cancelOrdersBinancePerp(key, secret, symbol)
 	case model.Ftx:
 		return cancelOrdersFtx(key, secret, symbol)
-	case model.BybitPerp:
-		return cancelOrdersBybitPerp(key, secret, symbol)
-	case model.BybitSpot:
-		return cancelOrdersBybitSpot(key, secret, symbol)
+	case model.Bybit:
+		return cancelOrdersBybit(key, secret, symbol)
 	case model.OKEX:
 		result, _, _ = cancelOrdersOKEX(key, secret, symbol)
 		return result
@@ -365,12 +363,12 @@ func GetBalances(key, secret, market string) (
 		success, balances, totalInUsd, collateral = getBalanceOKEX(key, secret)
 	case model.BinanceSpot:
 		success, balances = getBalanceBinanceSpot(key, secret)
-	case model.BybitSpot:
-		success, balances, totalInUsd, collateral = getBalanceBybitSpot(key, secret)
+	case model.Bybit:
+		success, balances, totalInUsd, collateral = getBalanceBybit(key, secret)
 	case model.HuobiSpot:
 		success, balances = getBalanceHuobiSpot(key, secret)
 	}
-	if market != model.Ftx && market != model.OKEX && market != model.BybitSpot {
+	if market != model.Ftx && market != model.OKEX && market != model.Bybit {
 		for _, balance := range balances {
 			if USDs[balance.Coin] {
 				totalInUsd += balance.Amount
@@ -426,8 +424,8 @@ func GetFundingRate(key, secret, market, symbol string) (success bool, rate floa
 	//	model.SetFundingRate(market, symbol, &model.FundingRate{Rate: rate, ExpireTime: expireTime, UpdateTime: now})
 	case model.BitgetPerp:
 		fundingRate = getFundingRateBitgetPerp(symbol)
-	case model.BybitPerp:
-		fundingRate = getFundingRateBybitPerp(symbol)
+	case model.Bybit:
+		fundingRate = getFundingRateBybit(symbol)
 	case model.Ftx:
 		fundingRate = GetFundingRatesFtx(key, secret, symbol)
 	case model.OKEX:
@@ -510,12 +508,10 @@ func QueryOrderById(key, secret, market, symbol, orderType, orderId string) (ord
 		order = queryOrderBinanceSpot(key, secret, symbol, orderId)
 	case model.BinancePerp:
 		order = queryOrderBinancePerp(key, secret, symbol, orderId)
-	case model.BybitPerp:
-		order = queryOrderBybitPerp(key, secret, symbol, orderId)
 	case model.HuobiPerp:
 		order = queryOrderHuobiPerp(key, secret, symbol, orderId)
-	case model.BybitSpot:
-		order = queryOrderBybitSpot(key, secret, symbol, orderId)
+	case model.Bybit:
+		order = queryOrderBybit(key, secret, symbol, orderId)
 	case model.HuobiSpot:
 		order = queryOrderHuobiSpot(key, secret, orderId)
 	case model.Ftx: // 查询是否是待成交状态，如果已成交或已取消，则ftx返回order not found信息，order为nil
@@ -560,9 +556,9 @@ func GetPositions(key, secret, market string) (success bool, positions []*model.
 		}
 		success, positions, _ = getPositionsFtx(key, secret)
 		return success, positions, accountValue, availableU
-	case model.BybitPerp:
-		_, _, total, collateral := getBalanceBybitSpot(key, secret)
-		success, positions, _ = getPositionsBybitPerp(key, secret)
+	case model.Bybit:
+		_, _, total, collateral := getBalanceBybit(key, secret)
+		success, positions, _ = getPositionsBybit(key, secret)
 		return success, positions, total, collateral.Available
 	case model.HuobiPerp:
 		return getPositionsHuobiPerp(key, secret)
@@ -658,10 +654,8 @@ func PlaceOrder(key, secret, orderSide, orderType, market, symbol, orderParam st
 		placeOrderBinanceSpot(key, secret, order, orderSide, orderType, symbol, price, amount)
 	case model.BinancePerp:
 		placeOrderBinancePerp(key, secret, order, orderSide, orderType, symbol, price, triggerPrice, amount)
-	case model.BybitPerp:
-		placeOrderBybitPerp(key, secret, order, orderSide, orderType, orderParam, symbol, price, amount)
-	case model.BybitSpot:
-		placeOrderBybitSpot(key, secret, order, orderSide, orderType, symbol, price, amount)
+	case model.Bybit:
+		placeOrderBybit(key, secret, order, orderSide, orderType, orderParam, symbol, price, amount)
 	case model.HuobiSpot:
 		placeOrderHuobiSpot(key, secret, order, orderSide, orderType, symbol, price, amount)
 	case model.HuobiPerp:
@@ -772,10 +766,6 @@ func GetWSSubscribe(market, symbol, subType string) (subscribe interface{}) {
 			return strings.ToLower(dialectSymbol) + `@depth5@100ms`
 		}
 		return strings.ToLower(dialectSymbol) + `@bookTicker`
-	case model.BybitPerp:
-		return dialectSymbol
-	case model.BybitSpot:
-		return dialectSymbol
 	case model.Ftx:
 		if subType == model.SubscribeDepth {
 			return []string{`orderbook`, dialectSymbol}
@@ -838,11 +828,6 @@ func FilterCross(market, symbol string) bool {
 	case model.BinancePerp, model.BinanceSpot:
 		switch coin {
 		case `BNB`, `FTT`:
-			return true
-		}
-	case model.BybitSpot:
-		switch coin {
-		case `GAS`, `FTT`:
 			return true
 		}
 	case model.Mexc: //不支持主流币种期货下单
@@ -959,16 +944,16 @@ func InitMarketInfos(markets []string) (success bool) {
 		case model.KucoinPerp:
 			marketInfos = getMarketsKucoinPerp(accounts[0].Key)
 			setFutureAutoDeposit()
-		case model.BybitPerp:
-			marketInfos = getMarketsBybitPerp()
+		case model.Bybit:
+			marketInfos = getMarketsBybit()
 			go func() {
 				for _, account := range accounts {
+					setBybitMarginLeverage(account.Key, account.Secret)
+					time.Sleep(time.Second)
 					setBybitPerpLeverage(account.Key, account.Secret)
 					time.Sleep(time.Minute)
 				}
 			}()
-		case model.BybitSpot:
-			marketInfos = getMarketsBybitSpot()
 		case model.BitgetSpot:
 			marketInfos = getMarketsBitgetSpot()
 		case model.BitgetPerp:
@@ -1000,12 +985,10 @@ func CreateMarketDepthServer(markets *model.Markets, market string, orderHandler
 		channels, err = WsDepthServeBinanceSpot(markets, nil)
 	case model.BinancePerp:
 		channels, err = WsDepthServeBinancePerp(markets, nil)
-	case model.BybitPerp:
-		channels, err = WsDepthServeBybitPerp(markets, orderHandler)
 	case model.HuobiPerp:
 		channels, err = WsDepthServeHuobiPerp(markets, orderHandler)
-	case model.BybitSpot:
-		channels, err = WsDepthServeBybitSpot(markets, orderHandler)
+	case model.Bybit:
+		channels, err = WsDepthServeBybit(markets, orderHandler)
 	case model.HuobiSpot:
 		channels, err = WsDepthServeHuobiSpot(markets, orderHandler)
 	case model.Ftx:

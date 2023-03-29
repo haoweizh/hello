@@ -111,7 +111,7 @@ func (config *Config) GetAccounts(market string) []*Account {
 		secrets = strings.Split(config.BitmexSecret, `,`)
 		closeValues = strings.Split(config.BitmexCarryClose, `,`)
 		rateValues = strings.Split(config.BitmexCarryRate, `,`)
-	case BybitPerp, BybitSpot:
+	case Bybit:
 		keys = strings.Split(config.BybitKey, `,`)
 		secrets = strings.Split(config.BybitSecret, `,`)
 		closeValues = strings.Split(config.BybitCarryClose, `,`)

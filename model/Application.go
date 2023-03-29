@@ -28,8 +28,7 @@ const HuobiPerp = `huobiperp`
 const Gate = `gate`
 const Mexc = `mexc`
 const DFuture = `dfuture`
-const BybitSpot = `bybitspot`
-const BybitPerp = `bybitperp`
+const Bybit = `bybit`
 const GXZQ = `GXZQ`
 const OKEX = "okex"
 const BinanceSpot = "binancespot"
@@ -76,8 +75,8 @@ var AppConfig *Config
 var AppMarkets = &Markets{}
 var ChannelMaintaining sync.Map // market - bool
 var DialectTail = map[string]map[string]string{
-	MarketTypeSpot:   {Gate: `_USDT`, Ftx: `/USD`, OKEX: `-USDT`, BybitSpot: `USDT`, BinanceSpot: `USDT`, KucoinSpot: `-USDT`, BitgetSpot: `USDT_SPBL`},
-	MarketTypePerp:   {Gate: `_USDT`, Ftx: `-PERP`, OKEX: `-USDT-SWAP`, BybitPerp: `USDT`, BinancePerp: `USDT`, Mexc: `_USDT`, KucoinPerp: `USDTM`, BitgetPerp: `USDT_UMCBL`},
+	MarketTypeSpot:   {Gate: `_USDT`, Ftx: `/USD`, OKEX: `-USDT`, Bybit: `USDT`, BinanceSpot: `USDT`, KucoinSpot: `-USDT`, BitgetSpot: `USDT_SPBL`},
+	MarketTypePerp:   {Gate: `_USDT`, Ftx: `-PERP`, OKEX: `-USDT-SWAP`, Bybit: `USDT`, BinancePerp: `USDT`, Mexc: `_USDT`, KucoinPerp: `USDTM`, BitgetPerp: `USDT_UMCBL`},
 	MarketTypeFuture: {GXZQ: ``},
 }
 var UniStandardTail = map[string]string{MarketTypeSpot: `_USDT`, MarketTypePerp: `_PERP`, MarketTypeFuture: `_FUTURE`}
@@ -139,22 +138,6 @@ var orderStatusMap = map[string]map[string]string{ // market - market status - u
 		"Rejected":        CarryStatusFail,
 		"PendingNew":      CarryStatusWorking,
 		"Expired":         CarryStatusFail},
-	BybitPerp: {
-		`Created`:         CarryStatusWorking,
-		`New`:             CarryStatusWorking,
-		`PartiallyFilled`: CarryStatusWorking,
-		`Filled`:          CarryStatusSuccess,
-		`Cancelled`:       CarryStatusFail,
-		`Rejected`:        CarryStatusFail,
-		`PendingCancel`:   CarryStatusWorking},
-	BybitSpot: {
-		`NEW`:              CarryStatusWorking,
-		`PARTIALLY_FILLED`: CarryStatusWorking,
-		`FILLED`:           CarryStatusSuccess,
-		`CANCELED`:         CarryStatusFail,
-		`PENDING_CANCEL`:   CarryStatusFail,
-		`PENDING_NEW`:      CarryStatusWorking,
-		`REJECTED`:         CarryStatusFail},
 	Ftx: {
 		`new`:       CarryStatusWorking,
 		`open`:      CarryStatusWorking,

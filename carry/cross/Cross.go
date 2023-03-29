@@ -81,7 +81,7 @@ func createFromPosition(account *model.Account, setting *model.Setting, valueLim
 		contractMarkets.Store(key, createContractMarket(key, account.Secret, setting.Market))
 		value, _ = contractMarkets.Load(key)
 		spotValue, spotOk := spotMarkets.Load(key)
-		if (setting.Market == model.OKEX || setting.Market == model.Ftx) && (spotValue == nil || !spotOk) {
+		if (setting.Market == model.OKEX || setting.Market == model.Ftx || setting.Market == model.Bybit) && (spotValue == nil || !spotOk) {
 			spotMarkets.Store(key, createSpotMarket(key, account.Secret, setting.Market))
 		}
 	}
@@ -1087,12 +1087,12 @@ func placeStatus(status *CarryStatus, price float64, amount float64) {
 			balance.AvailableWithBorrow += amount
 		}
 		valueSpot.(*spotMarket).availableU -= amount * price
-		if status.market == model.Ftx || status.market == model.OKEX {
+		if status.market == model.Ftx || status.market == model.OKEX || status.market == model.Bybit {
 			if valueContract != nil {
 				valueContract.(*contractMarket).collateralsAvailable -= amount * price
 			}
 		}
-		if status.market == model.OKEX {
+		if status.market == model.OKEX || status.market == model.Bybit {
 			valueSpot.(*spotMarket).collateral.Available -= amount * price
 		}
 	} else if valueContract != nil {
@@ -1116,6 +1116,10 @@ func placeStatus(status *CarryStatus, price float64, amount float64) {
 				valueSpot.(*spotMarket).collateral.Available += changeU * 0.1
 				valueSpot.(*spotMarket).collateral.Occupied -= changeU * 0.1
 				valueSpot.(*spotMarket).availableU += changeU * 0.1
+			} else if status.market == model.Bybit {
+				valueSpot.(*spotMarket).collateral.Available += changeU * 0.2
+				valueSpot.(*spotMarket).collateral.Occupied -= changeU * 0.2
+				valueSpot.(*spotMarket).availableU += changeU * 0.2
 			}
 		}
 	}

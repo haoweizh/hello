@@ -141,6 +141,10 @@ func WebSocketClient(market, url string, subscribes []interface{}, subHandler Su
 	msgHandler MsgHandler, orderHandler OrderHandler, step int) (stopChans []chan struct{}, connectErr error) {
 	util.Notice(market + ` create depth channel ` + url)
 	connections := make([]*websocket.Conn, 0)
+	value, ok := model.AppMarkets.Connections.Load(market)
+	if ok && value != nil {
+		connections = value.([]*websocket.Conn)
+	}
 	stopChans = make([]chan struct{}, 0)
 	var stepSubscribes []interface{}
 	for i := 0; i*step < len(subscribes); i++ {

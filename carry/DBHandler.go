@@ -123,10 +123,6 @@ func MaintainTransFee() {
 var socketMaintaining = false
 
 func ResetChannels(market string, channels []chan struct{}) {
-	//if market == model.Gate {
-	//	util.Notice(`gate do not reset channel`)
-	//	return
-	//}
 	model.ChannelMaintaining.Store(market, true)
 	model.AppMarkets.WsDepth.Delete(market)
 	model.AppMarkets.Connections.Delete(market)

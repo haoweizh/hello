@@ -232,7 +232,7 @@ func (metricManager *MetricManager) ToArray() (tickInfo [][]string) {
 			fmt.Sprintf(`%d:%d=%.1f`, metric.betweenLow, metric.betweenHigh, metric.betweenAvg),
 			fmt.Sprintf(`%d:%d=%.1f`, metric.delayLow, metric.delayHigh, metric.delayAvg),
 			fmt.Sprintf(`%f:%f`, metric.priceLow, metric.priceHigh)})
-		if strings.Contains(key.(string), BybitPerp) {
+		if strings.Contains(key.(string), Bybit) {
 			util.Info(fmt.Sprintf(`range tick %s %d %d`, key.(string), metric.countValid, metric.countAll))
 		}
 		return true
