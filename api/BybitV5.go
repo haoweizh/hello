@@ -287,6 +287,7 @@ func maintainChannelBybit() {
 	}
 }
 
+// warning: bybit现货偶发出现实际持有某个币种，但是account.Coin中没有该币种
 func getBalanceBybit(key string, secret string) (success bool, balances []*model.Balance, totalInUsd float64, collateral *model.Collateral) {
 	marketInfos := model.GetMarketInfos(model.Bybit, model.MarketTypeSpot)
 	coinsStr := make([]string, 0)
@@ -306,7 +307,7 @@ func getBalanceBybit(key string, secret string) (success bool, balances []*model
 		time.Sleep(time.Minute)
 		return getBalanceBybit(key, secret)
 	} else {
-		util.SocketInfo(fmt.Sprintf("get spot balance bybit success, resp: %s ", httpResp))
+		util.SocketInfo(fmt.Sprintf("get spot balance bybit success, %s resp: %s ", key[:5], httpResp))
 	}
 	balances = make([]*model.Balance, 0)
 	for _, account := range balanceResp.Result.List {

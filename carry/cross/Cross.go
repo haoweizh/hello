@@ -182,7 +182,11 @@ func createFromBalance(account *model.Account, setting *model.Setting, valueLimi
 		if absentRevert {
 			//doRevert = true
 		}
-		util.Info(fmt.Sprintf(`symbol absent revert %s %s`, setting.Market, setting.Symbol))
+		// warning: bybit现货偶发出现实际持有某个币种，但是sm.balances中没有该币种
+		if setting.Market == model.Bybit {
+			util.Info(fmt.Sprintf(`symbol absent revert %s %s`, setting.Market, setting.Symbol))
+			return nil, true
+		}
 	}
 	usdLowLine := math.Min(100000, 0.2*sm.accountValueInU)
 	if sm.availableU < usdLowLine || carryStatus.RateInAll > 0.2 {
