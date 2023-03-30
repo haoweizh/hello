@@ -202,6 +202,7 @@ func PrepareSettings() {
 		if functionMarketSettings == nil {
 			functionMarketSettings = &sync.Map{}
 		}
+		util.Notice(fmt.Sprintf(`add setting %s %s %s`, setting.Function, setting.Market, setting.Symbol))
 		functionMarketSettings.Store(setting.Symbol, setting)
 		util.StoreSyncMap(localSymbolSettings, functionMarketSettings, setting.Function, setting.Market)
 	}
