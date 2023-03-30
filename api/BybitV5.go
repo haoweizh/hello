@@ -322,9 +322,6 @@ func getBalanceBybit(key string, secret string) (success bool, balances []*model
 				if coinInfo.Coin == "USDT" {
 					holdAmount, _ = strconv.ParseFloat(coinInfo.AvailableToWithdraw, 64)
 				}
-				if coinInfo.Coin == `AR` {
-					util.Notice(`get balance %s %f`, key[:5], holdAmount)
-				}
 				balance.Amount = holdAmount
 				balance.AvailableWithBorrow = math.Max(0, balance.Amount) + canBorrow
 				usdValue, _ := strconv.ParseFloat(coinInfo.UsdValue, 64)
