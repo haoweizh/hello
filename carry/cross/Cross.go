@@ -58,6 +58,9 @@ func createSpotMarket(key, secret, market string) (sm *spotMarket) {
 		sm.collateral = collateral
 		for _, balance := range balances {
 			sm.balances[balance.Coin+model.UniStandardTail[model.MarketTypeSpot]] = balance
+			if balance.Coin == `FTT` && sm.market == model.Bybit {
+				util.Notice(fmt.Sprintf(`get sm %s %f`, key[:5], balance.Amount))
+			}
 			if strings.EqualFold(balance.Coin, `usd`) || strings.EqualFold(balance.Coin, `usdt`) {
 				sm.availableU += math.Min(balance.Amount, balance.AvailableWithBorrow)
 			}
