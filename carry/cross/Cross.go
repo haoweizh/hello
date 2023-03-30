@@ -348,9 +348,7 @@ func ClearCross() {
 			}
 		}
 		api.CheckSetProcessing(model.FunctionCross, model.FunctionCross, model.FunctionCross, false)
-		util.Notice(`before sleep 0`)
 		time.Sleep(time.Minute * 1)
-		util.Notice(`before sleep 1`)
 	}
 }
 

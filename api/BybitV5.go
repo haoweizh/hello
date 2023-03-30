@@ -486,6 +486,9 @@ func placeOrderBybit(key, secret string, order *model.Order, orderSide, orderTyp
 	bitgetOrderResp := &dtos.BybitOrderResp{}
 	jsonErr := json.Unmarshal(httpResp, bitgetOrderResp)
 	if bitgetOrderResp == nil || bitgetOrderResp.RetCode != 0 {
+		if bitgetOrderResp != nil {
+			order.ErrCode = strconv.Itoa(bitgetOrderResp.RetCode)
+		}
 		util.Notice(fmt.Sprintf("fail to create bybit order request: %v resp: %s httpErr: %v, jsonErr: %v", param, httpResp, httpErr, jsonErr))
 	} else {
 		order.Status = model.CarryStatusWorking
