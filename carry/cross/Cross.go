@@ -163,6 +163,9 @@ func createFromBalance(account *model.Account, setting *model.Setting, valueLimi
 		LimitBuy:      limitBuy,
 		AvailableSell: 0,
 		AvailableBuy:  availableBuy}
+	if setting.Symbol == `FTT_USDT` && key[:5] == `dzXdn` {
+		util.Notice(fmt.Sprintf(`create from balance %s %f`, key[:5], sm.balances[setting.Symbol].Amount))
+	}
 	if sm.balances[setting.Symbol] != nil {
 		balance := sm.balances[setting.Symbol]
 		if price > 0 {
