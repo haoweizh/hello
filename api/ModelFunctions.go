@@ -118,7 +118,7 @@ func GetFunctions(market, symbol string) *sync.Map {
 
 const topMarketInfoLen = 12
 
-func prepareSettings() {
+func PrepareSettings() {
 	localSymbolSettings := &sync.Map{}
 	localHandlers := &sync.Map{}
 	localCoinSettings := &sync.Map{}
@@ -391,12 +391,11 @@ func LoadSettings() bool {
 	if settingLoading {
 		return false
 	}
-	prepareSettings()
 	for _, market := range appMarkets {
 		setRequireReset(market)
 	}
 	if handleSettings() {
-		prepareSettings()
+		PrepareSettings()
 	}
 	util.Notice(`finish load settings`)
 	time.Sleep(time.Second * 5)

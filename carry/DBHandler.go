@@ -179,6 +179,7 @@ func Maintain() {
 	//if coinSettings != nil {
 	//	go cross.ClearCarry()
 	//}
+	api.PrepareSettings()
 	api.InitMarketInfos(nil)
 	go RefreshMarketInfo()
 	go ReloadSettings()
