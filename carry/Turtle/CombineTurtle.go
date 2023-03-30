@@ -76,12 +76,13 @@ var ProcessCombineTurtle = func(settingCombine *model.Setting, tick *model.BidAs
 	}
 	minSize := 0.0
 	var marketInfo *model.MarketInfo
-	v, _ := util.LoadSyncMap(model.MarketInfos, model.Mexc, symbol)
+	v, _ := util.LoadSyncMap(model.MarketInfos, market, symbol)
 	if v != nil {
 		marketInfo = v.(*model.MarketInfo)
 	}
 	if marketInfo == nil {
 		util.Notice(`fail to get marketInfo %s %s`, market, symbol)
+		return
 	} else {
 		if marketInfo.CTValue == 0 {
 			minSize = marketInfo.SizeMin
