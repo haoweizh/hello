@@ -49,19 +49,13 @@ func _(key, secret string) {
 	}
 }
 
-func RefreshMarketInfo() {
+func ReloadSettings() {
 	for true {
-		time.Sleep(time.Hour * 24)
 		if !api.InitMarketInfos(nil) {
 			util.Notice(`fatal error: can not set market mode!!`)
 		}
-	}
-}
-
-func ReloadSettings() {
-	for true {
 		api.LoadSettings()
-		time.Sleep(time.Minute * 720)
+		time.Sleep(time.Hour)
 	}
 }
 
@@ -180,8 +174,6 @@ func Maintain() {
 	//	go cross.ClearCarry()
 	//}
 	api.PrepareSettings()
-	api.InitMarketInfos(nil)
-	go RefreshMarketInfo()
 	go ReloadSettings()
 	for true {
 		go MaintainMarketChan()
