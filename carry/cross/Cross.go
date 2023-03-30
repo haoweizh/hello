@@ -166,7 +166,11 @@ func createFromBalance(account *model.Account, setting *model.Setting, valueLimi
 		AvailableSell: 0,
 		AvailableBuy:  availableBuy}
 	if key[:5] == `dzXdn` {
-		util.Notice(fmt.Sprintf(`create from balance %s %s %f`, key[:5], setting.Symbol, sm.balances[setting.Symbol].Amount))
+		if sm.balances[setting.Symbol] != nil {
+			util.Info(fmt.Sprintf(`create from balance %s %s %f`, key[:5], setting.Symbol, sm.balances[setting.Symbol].Amount))
+		} else {
+			util.Info(fmt.Sprintf(`no sm balance %s`, setting.Symbol))
+		}
 	}
 	if sm.balances[setting.Symbol] != nil {
 		balance := sm.balances[setting.Symbol]
