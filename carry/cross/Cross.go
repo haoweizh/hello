@@ -95,17 +95,15 @@ func createFromPosition(account *model.Account, setting *model.Setting, valueLim
 	}
 	cm := value.(*contractMarket)
 	getPrice, price := api.GetPriceForce(account.Key, account.Secret, setting.Symbol, setting.Market)
-	if !getPrice {
+	if !getPrice || price == 0 {
 		//price = cm.positions[setting.Symbol].EntryPrice
 		//util.Notice(`no tick price, use position price %s %s %f`, setting.Market, setting.Symbol, price)
 		return nil, false
 	}
 	limitAmount := 0.0
 	availableAmount := 0.0
-	if price > 0 {
-		limitAmount = math.Min(cm.accountValueInU/5, math.Min(cm.collateralsAvailable, openValueLimit)) / price
-		availableAmount = cm.collateralsAvailable / price
-	}
+	limitAmount = math.Min(cm.accountValueInU/5, math.Min(cm.collateralsAvailable, openValueLimit)) / price
+	availableAmount = cm.collateralsAvailable / price
 	carryStatus = &CarryStatus{isSpot: false, market: setting.Market, symbol: setting.Symbol, account: account,
 		setting:       setting,
 		LimitSell:     limitAmount,
@@ -121,7 +119,7 @@ func createFromPosition(account *model.Account, setting *model.Setting, valueLim
 		if absentRevert {
 			//doRevert = true
 		}
-		util.Info(fmt.Sprintf(`symbol absent revert %s %s`, setting.Market, setting.Symbol))
+		//util.Info(fmt.Sprintf(`symbol absent revert %s %s`, setting.Market, setting.Symbol))
 	}
 	// bitgetperp可以开仓或减仓，不越过0反向开仓
 	if setting.Market == model.BitgetPerp && cm.positions[setting.Symbol] != nil {
@@ -153,14 +151,12 @@ func createFromBalance(account *model.Account, setting *model.Setting, valueLimi
 	success, price := api.GetPriceForce(account.Key, account.Secret, setting.Symbol, setting.Market)
 	if value == nil || !success || price == 0 {
 		util.Notice(fmt.Sprintf(`nil spot market %s %s getPrice %v %f`, setting.Market, setting.Symbol, success, price))
-		return
+		return nil, true
 	}
 	sm := value.(*spotMarket)
 	limitBuy, limitSell, availableBuy := 0.0, 0.0, 0.0
-	if price > 0 {
-		limitBuy = math.Min(openValueLimit, math.Min(sm.availableU/5, sm.accountValueInU/15)) / price
-		availableBuy = sm.availableU / price
-	}
+	limitBuy = math.Min(openValueLimit, math.Min(sm.availableU/5, sm.accountValueInU/15)) / price
+	availableBuy = sm.availableU / price
 	carryStatus = &CarryStatus{isSpot: true, market: setting.Market, symbol: setting.Symbol, account: account,
 		setting:       setting,
 		LimitSell:     0,
@@ -176,9 +172,7 @@ func createFromBalance(account *model.Account, setting *model.Setting, valueLimi
 	}
 	if sm.balances[setting.Symbol] != nil {
 		balance := sm.balances[setting.Symbol]
-		if price > 0 {
-			limitSell = math.Min(math.Min(math.Max(balance.Amount, 0), balance.AvailableWithBorrow), openValueLimit/price)
-		}
+		limitSell = math.Min(math.Min(math.Max(balance.Amount, 0), balance.AvailableWithBorrow), openValueLimit/price)
 		carryStatus.Holding = balance.Amount
 		// 暂不支持借币
 		carryStatus.LimitSell = limitSell
@@ -225,7 +219,7 @@ func initStatus(account *model.Account, setting *model.Setting, absentRevert boo
 		doRevert = true
 	}
 	if status == nil {
-		return
+		return nil
 	}
 	_, status.FoundingRate, status.FundingRateUpdateTime = api.GetFundingRate(account.Key, account.Secret, setting.Market, setting.Symbol)
 	fundingKey := fmt.Sprintf(`funding_%s_%s`, setting.Market, setting.Symbol)
