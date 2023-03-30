@@ -345,6 +345,7 @@ func getTopMarketInfos(function, market string, accounts []*model.Account) (topM
 		}
 		return true
 	})
+	util.Notice(fmt.Sprintf(`get top market info array %d`, len(marketInfoArray)))
 	sort.Sort(sort.Reverse(marketInfoArray))
 	for i := 0; i < marketInfoArray.Len() && len(topMarketInfos) < topMarketInfoLen; i++ {
 		_, marketType, coinValue, _ := model.GetFromStandard(market, marketInfoArray[i].Name)
@@ -440,6 +441,7 @@ func GetMarkets() []string {
 			return nil
 		}
 	}
+	util.Notice(`load setting GetMarkets %d`, len(appMarkets))
 	return appMarkets
 }
 
