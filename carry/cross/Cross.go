@@ -116,9 +116,12 @@ func createFromPosition(account *model.Account, setting *model.Setting, valueLim
 		carryStatus.Holding = cm.positions[setting.Symbol].Holding
 		valueInUsd = math.Abs(carryStatus.Holding) * price
 		carryStatus.RateInAll = valueInUsd / cm.accountValueInU
-	} else if absentRevert {
+	} else {
+		if absentRevert {
+			//doRevert = true
+		}
 		util.Notice(fmt.Sprintf(`symbol absent revert %s %s`, setting.Market, setting.Symbol))
-		//doRevert = true
+		return nil, true
 	}
 	// bitgetperp可以开仓或减仓，不越过0反向开仓
 	if setting.Market == model.BitgetPerp && cm.positions[setting.Symbol] != nil {
@@ -176,9 +179,12 @@ func createFromBalance(account *model.Account, setting *model.Setting, valueLimi
 		carryStatus.LimitSell = limitSell
 		carryStatus.RateInAll = math.Abs(carryStatus.Holding * price / sm.accountValueInU)
 		carryStatus.AvailableSell = carryStatus.LimitSell
-	} else if absentRevert {
+	} else {
+		if absentRevert {
+			//doRevert = true
+		}
 		util.Notice(fmt.Sprintf(`symbol absent revert %s %s`, setting.Market, setting.Symbol))
-		//doRevert = true
+		return nil, true
 	}
 	usdLowLine := math.Min(100000, 0.2*sm.accountValueInU)
 	if sm.availableU < usdLowLine || carryStatus.RateInAll > 0.2 {
