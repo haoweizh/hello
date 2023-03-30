@@ -45,6 +45,7 @@ func createContractMarket(key, secret, market string) (cm *contractMarket) {
 }
 
 func createSpotMarket(key, secret, market string) (sm *spotMarket) {
+	util.Info(fmt.Sprintf(`create sm %s %s`, key[:5], market))
 	success, balances, totalInUsd, collateral := api.GetBalances(key, secret, market)
 	//for _, balance := range balances {
 	//	if balance.UsdValue == 0 && balance.Amount > 0 {
@@ -145,6 +146,7 @@ func createFromBalance(account *model.Account, setting *model.Setting, valueLimi
 	key := account.Key
 	value, ok := spotMarkets.Load(key)
 	if value == nil || !ok {
+		util.Info(fmt.Sprintf(`no spot in map create %s %s`, key[:5], setting.Market))
 		spotMarkets.Store(key, createSpotMarket(key, account.Secret, setting.Market))
 		value, ok = spotMarkets.Load(key)
 	}
@@ -169,7 +171,7 @@ func createFromBalance(account *model.Account, setting *model.Setting, valueLimi
 		if sm.balances[setting.Symbol] != nil {
 			util.Info(fmt.Sprintf(`create from balance %s %s %f`, key[:5], setting.Symbol, sm.balances[setting.Symbol].Amount))
 		} else {
-			util.Info(fmt.Sprintf(`no sm balance %s`, setting.Symbol))
+			util.Info(fmt.Sprintf(`no sm balance %s %v`, setting.Symbol, sm))
 		}
 	}
 	if sm.balances[setting.Symbol] != nil {
