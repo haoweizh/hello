@@ -349,6 +349,7 @@ func placeOrderBitgetPerp(key, secret string, order *model.Order, orderSide, ord
 	httpResp, httpErr := client.DoPost("/api/mix/v1/order/placeOrder", string(util.JsonEncodeToByte(params)))
 	bitgetOrderResp := &dtos.BitgetOrderResp{}
 	jsonErr := json.Unmarshal(httpResp, bitgetOrderResp)
+	util.Notice(fmt.Sprintf(`place bitgetperp %v`, params))
 	if bitgetOrderResp == nil {
 		util.Notice(fmt.Sprintf("fail to create bitget perp order no resp: %s httpErr: %v, jsonErr: %v", httpResp, httpErr, jsonErr))
 	} else if bitgetOrderResp.Code == "00000" {

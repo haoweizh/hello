@@ -45,7 +45,7 @@ func createContractMarket(key, secret, market string) (cm *contractMarket) {
 }
 
 func createSpotMarket(key, secret, market string) (sm *spotMarket) {
-	util.Info(fmt.Sprintf(`create sm %s %s`, key[:5], market))
+	//util.Info(fmt.Sprintf(`create sm %s %s`, key[:5], market))
 	success, balances, totalInUsd, collateral := api.GetBalances(key, secret, market)
 	//for _, balance := range balances {
 	//	if balance.UsdValue == 0 && balance.Amount > 0 {
@@ -59,9 +59,6 @@ func createSpotMarket(key, secret, market string) (sm *spotMarket) {
 		sm.collateral = collateral
 		for _, balance := range balances {
 			sm.balances[balance.Coin+model.UniStandardTail[model.MarketTypeSpot]] = balance
-			if sm.market == model.Bybit {
-				util.Notice(fmt.Sprintf(`get sm %s %s %f`, key[:5], balance.Coin, balance.Amount))
-			}
 			if strings.EqualFold(balance.Coin, `usd`) || strings.EqualFold(balance.Coin, `usdt`) {
 				sm.availableU += math.Min(balance.Amount, balance.AvailableWithBorrow)
 			}
@@ -144,7 +141,7 @@ func createFromBalance(account *model.Account, setting *model.Setting, valueLimi
 	key := account.Key
 	value, ok := spotMarkets.Load(key)
 	if value == nil || !ok {
-		util.Info(fmt.Sprintf(`no spot in map create %s %s`, key[:5], setting.Market))
+		//util.Info(fmt.Sprintf(`no spot in map create %s %s`, key[:5], setting.Market))
 		spotMarkets.Store(key, createSpotMarket(key, account.Secret, setting.Market))
 		value, ok = spotMarkets.Load(key)
 	}
@@ -184,7 +181,7 @@ func createFromBalance(account *model.Account, setting *model.Setting, valueLimi
 		}
 		// warning: bybit现货偶发出现实际持有某个币种，但是sm.balances中没有该币种
 		if setting.Market == model.Bybit {
-			util.Info(fmt.Sprintf(`symbol absent revert %s %s`, setting.Market, setting.Symbol))
+			util.Info(fmt.Sprintf(`symbol absent revert %s %s %d`, setting.Market, setting.Symbol, len(sm.balances)))
 			return nil, true
 		}
 	}
