@@ -114,7 +114,7 @@ func WsDepthServeBitgetSpot(markets *model.Markets, orderHandler OrderHandler) (
 	spotBookChannels, spotBookErr := WebSocketClient(model.BitgetSpot, bitgetSpotWsUrl,
 		spotSubscribes, subscribeHandlerBitgetSpotBookTicker, bookWsHandler, orderHandler, 30)
 	if spotBookErr == nil {
-		util.Notice(`finish connect public Bitget spot book wss `)
+		util.Info(`finish connect public Bitget spot book wss `)
 		channels = append(channels, spotBookChannels...)
 	} else {
 		util.Notice(`fail to connect public Bitget spot book wss `)
@@ -142,7 +142,7 @@ var subscribeHandlerBitgetSpotBookTicker = func(connection *websocket.Conn, subs
 	if err = SendToConnection(model.BitgetSpot, connection, subscribeMessage); err != nil {
 		util.SocketInfo(" bitget can not subscribe %s %s", subscribeMessage, err.Error())
 	}
-	util.Notice(`bitget subscribed ` + string(subscribeMessage))
+	util.Info(`bitget subscribed ` + string(subscribeMessage))
 	time.Sleep(1200 * time.Millisecond)
 	return err
 }

@@ -451,25 +451,25 @@ func WsDepthServeGateNew(orderHandler OrderHandler) (channels []chan struct{}, e
 	}
 	spotOrderBookChannels, spotOrderBookErr := WebSocketClient(model.Gate, gateWs.BaseUrl, spotOrderBookSubs, subscribeHandler, wsHandler, orderHandler, 100)
 	if spotOrderBookErr == nil {
-		util.Notice(`finish connect public gate spot order book ws `)
+		util.Info(`finish connect public gate spot order book ws `)
 		channels = append(channels, spotOrderBookChannels...)
 	}
 	time.Sleep(time.Second * 1)
 	spotBookTickerChannels, spotBookTickerErr := WebSocketClient(model.Gate, gateWs.BaseUrl, spotSubs, subscribeHandler, wsHandler, orderHandler, 30)
 	if spotBookTickerErr == nil {
-		util.Notice(`finish connect public gate spot book ticker ws `)
+		util.Info(`finish connect public gate spot book ticker ws `)
 		channels = append(channels, spotBookTickerChannels...)
 	}
 	time.Sleep(time.Second * 1)
 	perpBookTickerChannels, perpBookTickerErr := WebSocketClient(model.Gate, gateWs.FuturesUsdtUrl, futureSubs, subscribeHandler, wsHandler, orderHandler, 30)
 	if perpBookTickerErr == nil {
-		util.Notice(`finish connect public gate perp book ticker ws `)
+		util.Info(`finish connect public gate perp book ticker ws `)
 		channels = append(channels, perpBookTickerChannels...)
 	}
 	time.Sleep(time.Second * 1)
 	perpMarkPriceChannels, perpMarkPriceErr := WebSocketClient(model.Gate, gateWs.FuturesUsdtUrl, futureSubs, subscribeMarkPriceHandler, wsHandler, orderHandler, 30)
 	if perpMarkPriceErr == nil {
-		util.Notice(`finish connect public gate perp mark price ws `)
+		util.Info(`finish connect public gate perp mark price ws `)
 		channels = append(channels, perpMarkPriceChannels...)
 	}
 	go maintainChannelGate()
@@ -507,7 +507,7 @@ var subscribeMarkPriceHandler = func(connection *websocket.Conn, subscribes []in
 	if err = SendToConnection(model.Gate, connection, subscribeMessage); err != nil {
 		util.SocketInfo(" gate can not subscribe perp symbols %s %s", subscribeMessage, err.Error())
 	}
-	util.Notice(`gate subscribed ` + string(subscribeMessage))
+	util.Info(`gate subscribed ` + string(subscribeMessage))
 	time.Sleep(500 * time.Millisecond)
 	return err
 }
@@ -534,7 +534,7 @@ var subscribeHandler = func(connection *websocket.Conn, subscribes []interface{}
 			if err = SendToConnection(model.Gate, connection, subscribeMessage); err != nil {
 				util.SocketInfo(" gate can not subscribe perp symbols %s %s", subscribeMessage, err.Error())
 			}
-			util.Notice(`gate subscribed ` + string(subscribeMessage))
+			util.Info(`gate subscribed ` + string(subscribeMessage))
 			time.Sleep(500 * time.Millisecond)
 		} else { //现货ticker订阅
 			var symbols []string
@@ -552,7 +552,7 @@ var subscribeHandler = func(connection *websocket.Conn, subscribes []interface{}
 			if err = SendToConnection(model.Gate, connection, subscribeMessage); err != nil {
 				util.SocketInfo(" gate can not subscribe spot symbols %s %s", subscribeMessage, err.Error())
 			}
-			util.Notice(`gate subscribed ` + string(subscribeMessage))
+			util.Info(`gate subscribed ` + string(subscribeMessage))
 			time.Sleep(500 * time.Millisecond)
 		}
 	case []string: //orderbook订阅

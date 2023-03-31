@@ -340,7 +340,7 @@ func WsDepthServeOKEX(symbols map[string]bool, orderHandler OrderHandler) (chann
 	for _, channel := range subChannels {
 		channels = append(channels, channel)
 	}
-	util.Notice(`finish connect public okex connections %d`, len(channels))
+	util.Info(`finish connect public okex connections %d`, len(channels))
 	return channels, errPublic
 }
 

@@ -240,13 +240,13 @@ func WsDepthServeBybit(markets *model.Markets, orderHandler OrderHandler) (chann
 	spotBookChannels, spotBookErr := WebSocketClient(model.Bybit, bybitSpotPubWsUrl,
 		spotSubscribes, subscribeHandlerBybit, spotBookWsHandler, orderHandler, 10)
 	if spotBookErr == nil {
-		util.Notice(`finish connect public bybit spot book wss `)
+		util.Info(`finish connect public bybit spot book wss `)
 		channels = append(channels, spotBookChannels...)
 	}
 	perpBookChannels, perpBookErr := WebSocketClient(model.Bybit, bybitPerpPubWsUrl,
 		futureSubscribes, subscribeHandlerBybit, perpBookWsHandler, orderHandler, 10)
 	if perpBookErr == nil {
-		util.Notice(`finish connect public bybit perp book wss `)
+		util.Info(`finish connect public bybit perp book wss `)
 		channels = append(channels, perpBookChannels...)
 	}
 	time.Sleep(time.Second * 1)
@@ -268,7 +268,7 @@ var subscribeHandlerBybit = func(connection *websocket.Conn, subscribes []interf
 	if err = SendToConnection(model.Bybit, connection, subscribeMessage); err != nil {
 		util.Notice(" bybit can not subscribe %s %s", subscribeMessage, err.Error())
 	}
-	util.Notice(`bybit subscribed ` + string(subscribeMessage))
+	util.Info(`bybit subscribed ` + string(subscribeMessage))
 	time.Sleep(100 * time.Millisecond)
 	return err
 }
@@ -287,7 +287,6 @@ func maintainChannelBybit() {
 	}
 }
 
-// warning: bybit现货偶发出现实际持有某个币种，但是account.Coin中没有该币种
 func getBalanceBybit(key string, secret string) (success bool, balances []*model.Balance, totalInUsd float64, collateral *model.Collateral) {
 	//marketInfos := model.GetMarketInfos(model.Bybit, model.MarketTypeSpot)
 	//coinsStr := make([]string, 0)

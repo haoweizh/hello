@@ -31,7 +31,7 @@ var subscribeHandlerHuobiPerp = func(connection *websocket.Conn, subscribes []in
 			util.SocketInfo("HuobiPerp can not subscribe " + err.Error())
 			return err
 		}
-		util.Notice(`HuobiPerp subscribed ` + string(subscribeMessage))
+		util.Info(`HuobiPerp subscribed ` + string(subscribeMessage))
 	}
 	return err
 }
@@ -289,7 +289,7 @@ func placeOrderHuobiPerp(key, secret string, order *model.Order,
 	}
 }
 
-//cancelOrderHuobiPerp
+// cancelOrderHuobiPerp
 func _(key, secret, symbol, orderId string) (result bool, errCode, msg string) {
 	if strings.Contains(symbol, `_`) {
 		symbol = symbol[0:strings.Index(symbol, `_`)]

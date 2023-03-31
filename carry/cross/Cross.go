@@ -160,13 +160,6 @@ func createFromBalance(account *model.Account, setting *model.Setting, valueLimi
 		LimitBuy:      limitBuy,
 		AvailableSell: 0,
 		AvailableBuy:  availableBuy}
-	if key[:5] == `dzXdn` && setting.Coin == `FTT` {
-		if sm.balances[setting.Symbol] != nil {
-			util.Info(fmt.Sprintf(`create from balance %s %s %f`, key[:5], setting.Symbol, sm.balances[setting.Symbol].Amount))
-		} else {
-			util.Info(fmt.Sprintf(`no sm balance %s %d`, setting.Symbol, len(sm.balances)))
-		}
-	}
 	if sm.balances[setting.Symbol] != nil {
 		balance := sm.balances[setting.Symbol]
 		limitSell = math.Min(math.Min(math.Max(balance.Amount, 0), balance.AvailableWithBorrow), openValueLimit/price)
@@ -180,10 +173,10 @@ func createFromBalance(account *model.Account, setting *model.Setting, valueLimi
 			//doRevert = true
 		}
 		// warning: bybit现货偶发出现实际持有某个币种，但是sm.balances中没有该币种
-		if setting.Market == model.Bybit {
-			util.Info(fmt.Sprintf(`symbol absent revert %s %s %d`, setting.Market, setting.Symbol, len(sm.balances)))
-			return nil, true
-		}
+		//if setting.Market == model.Bybit {
+		//	util.Info(fmt.Sprintf(`symbol absent revert %s %s %d`, setting.Market, setting.Symbol, len(sm.balances)))
+		//	return nil, true
+		//}
 	}
 	usdLowLine := math.Min(100000, 0.2*sm.accountValueInU)
 	if sm.availableU < usdLowLine || carryStatus.RateInAll > 0.2 {

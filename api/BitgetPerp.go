@@ -153,7 +153,7 @@ func WsDepthServeBitgetPerp(markets *model.Markets, orderHandler OrderHandler) (
 	markPriceChannels, markPriceErr := WebSocketClient(model.BitgetPerp, bitgetPerpWsUrl,
 		futureSubscribes, subscribeHandlerBitgetPerpMarkPrice, markPriceWsHandler, nil, 30)
 	if markPriceErr == nil {
-		util.Notice(`finish connect public Bitget mark price wss `)
+		util.Info(`finish connect public Bitget mark price wss `)
 		channels = append(channels, markPriceChannels...)
 	} else {
 		util.Notice(`fail to connect public Bitget mark price wss `)
@@ -163,7 +163,7 @@ func WsDepthServeBitgetPerp(markets *model.Markets, orderHandler OrderHandler) (
 	perpBookChannels, perpBookErr := WebSocketClient(model.BitgetPerp, bitgetPerpWsUrl,
 		futureSubscribes, subscribeHandlerBitgetPerpBookTicker, bookWsHandler, orderHandler, 30)
 	if perpBookErr == nil {
-		util.Notice(`finish connect public Bitget perp book wss `)
+		util.Info(`finish connect public Bitget perp book wss `)
 		channels = append(channels, perpBookChannels...)
 	} else {
 		util.Notice(`fail to connect public Bitget perp book wss `)
@@ -191,7 +191,7 @@ var subscribeHandlerBitgetPerpBookTicker = func(connection *websocket.Conn, subs
 	if err = SendToConnection(model.BitgetPerp, connection, subscribeMessage); err != nil {
 		util.SocketInfo(" bitget can not subscribe %s %s", subscribeMessage, err.Error())
 	}
-	util.Notice(`bitget subscribed ` + string(subscribeMessage))
+	util.Info(`bitget subscribed ` + string(subscribeMessage))
 	time.Sleep(1200 * time.Millisecond)
 	return err
 }
@@ -214,7 +214,7 @@ var subscribeHandlerBitgetPerpMarkPrice = func(connection *websocket.Conn, subsc
 	if err = SendToConnection(model.BitgetPerp, connection, subscribeMessage); err != nil {
 		util.SocketInfo(" bitget can not subscribe %s %s", subscribeMessage, err.Error())
 	}
-	util.Notice(`bitget subscribed ` + string(subscribeMessage))
+	util.Info(`bitget subscribed ` + string(subscribeMessage))
 	time.Sleep(1200 * time.Millisecond)
 	return err
 }

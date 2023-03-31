@@ -63,7 +63,7 @@ var subscribeHandlerHuobi = func(connection *websocket.Conn, subscribes []interf
 		if err = connection.WriteMessage(websocket.TextMessage, subscribeMessage); err != nil {
 			util.SocketInfo(" huobi can not subscribe %s %s", v, err.Error())
 		}
-		util.Notice(`huobi subscribed ` + string(subscribeMessage))
+		util.Info(`huobi subscribed ` + string(subscribeMessage))
 	}
 	return err
 }
