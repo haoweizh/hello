@@ -534,7 +534,7 @@ func createTurtleLines(function, market string, account *model.Account) (msg str
 		if turtleData != nil && (turtleData.OrderLong != nil || turtleData.OrderShort != nil) {
 			msgKey := fmt.Sprintf("%s_%s_%s", function, market, symbol.(string))
 			msgValue, _ := util.LoadSyncMap(&model.CarryInfo, account.Key, msgKey)
-			util.Info(fmt.Sprintf(`get lines %s %v`, msgKey, msgValue))
+			//util.Info(fmt.Sprintf(`get lines %s %v`, msgKey, msgValue))
 			if msgValue != nil {
 				size++
 				sortable := &model.Sortable{Key: symbol.(string), Value: msgValue.(string) + "\n"}
