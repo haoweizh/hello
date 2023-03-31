@@ -55,7 +55,7 @@ func ReloadSettings() {
 			util.Notice(`fatal error: can not set market mode!!`)
 		}
 		api.LoadSettings()
-		time.Sleep(time.Hour)
+		time.Sleep(time.Minute * 10)
 	}
 }
 
