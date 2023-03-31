@@ -394,14 +394,14 @@ func LoadSettings() bool {
 	if settingLoading {
 		return false
 	}
-	for _, market := range appMarkets {
-		setRequireReset(market)
-	}
 	if handleSettings() {
 		PrepareSettings()
 	}
-	util.Notice(`finish load settings`)
 	time.Sleep(time.Second * 5)
+	for _, market := range appMarkets {
+		setRequireReset(market)
+	}
+	util.Notice(`finish load settings`)
 	settingLoading = false
 	return true
 }
