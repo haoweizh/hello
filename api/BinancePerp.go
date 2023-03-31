@@ -637,17 +637,33 @@ func _(key, secret, symbol string) (success bool, price float64) {
 	return true, 0
 }
 
-func SetLeverageBinancePerp(key, secret, symbol string, leverage int) (success bool) {
-	ok, _, _, dialectSymbol := model.GetFromStandard(model.BinancePerp, symbol)
-	if !ok {
-		return false
+var settingBinancePerp = false
+
+func SetLeverageBinancePerp(key, secret string, leverage int) (success bool) {
+	if settingBinancePerp {
+		return
 	}
-	client := futures.NewClient(key, secret)
-	_, err := client.NewChangeLeverageService().Symbol(dialectSymbol).Leverage(leverage).Do(context.Background())
-	if err != nil {
-		util.Notice(fmt.Sprintf(`fail to set binanceperp leverage %s %s %d %s`,
-			key, symbol, leverage, err.Error()))
-		return false
+	defer func() {
+		settingBinancePerp = false
+	}()
+	settingBinancePerp = true
+	symbols := GetMarketSymbols(model.BinancePerp)
+	for symbol, value := range symbols {
+		if value == false {
+			continue
+		}
+		ok, _, _, dialectSymbol := model.GetFromStandard(model.BinancePerp, symbol)
+		if !ok {
+			continue
+		}
+		client := futures.NewClient(key, secret)
+		_, err := client.NewChangeLeverageService().Symbol(dialectSymbol).Leverage(leverage).Do(context.Background())
+		if err != nil {
+			util.Notice(fmt.Sprintf(`fail to set binanceperp leverage %s %s %d %s`,
+				key, symbol, leverage, err.Error()))
+			continue
+		}
+		time.Sleep(time.Minute)
 	}
 	return true
 }

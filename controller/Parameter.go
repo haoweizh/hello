@@ -520,7 +520,7 @@ func GetCode(c *gin.Context) {
 	}
 }
 
-func createTurtleLines(function, market, key string) (msg string, size int) {
+func createTurtleLines(function, market string, account *model.Account) (msg string, size int) {
 	settingMap := api.GetSettings(function, market)
 	lines := make([]*model.Sortable, 0)
 	if settingMap == nil {
@@ -530,17 +530,16 @@ func createTurtleLines(function, market, key string) (msg string, size int) {
 		if value == nil {
 			return true
 		}
-		setting := value.(*model.Setting)
-		if setting.SymbolRelated == model.SettingTurtleRemoved && setting.Chance == 0 {
-			return true
-		}
-		msgKey := fmt.Sprintf("%s_%s_%s", function, market, setting.Symbol)
-		msgValue, _ := util.LoadSyncMap(&model.CarryInfo, key, msgKey)
-		util.Info(fmt.Sprintf(`get lines %s %v`, msgKey, msgValue))
-		if msgValue != nil {
-			size++
-			sortable := &model.Sortable{Key: setting.Symbol, Value: msgValue.(string) + "\n"}
-			lines = append(lines, sortable)
+		turtleData := api.GetTurtleData(account.Key, account.Secret, function, market, symbol.(string))
+		if turtleData != nil && (turtleData.OrderLong != nil || turtleData.OrderShort != nil) {
+			msgKey := fmt.Sprintf("%s_%s_%s", function, market, symbol.(string))
+			msgValue, _ := util.LoadSyncMap(&model.CarryInfo, account.Key, msgKey)
+			util.Info(fmt.Sprintf(`get lines %s %v`, msgKey, msgValue))
+			if msgValue != nil {
+				size++
+				sortable := &model.Sortable{Key: symbol.(string), Value: msgValue.(string) + "\n"}
+				lines = append(lines, sortable)
+			}
 		}
 		return true
 	})
@@ -559,8 +558,8 @@ func GetParameters(c *gin.Context) {
 	for _, market := range markets {
 		account := model.AppConfig.GetAccounts(market)[0]
 		userKeys = append(userKeys, account.Key)
-		msgTurtle, sizeTurtle := createTurtleLines(model.FunctionTurtle, market, account.Key)
-		msgCombine, sizeCombine := createTurtleLines(model.FunctionCombineTurtle, market, account.Key)
+		msgTurtle, sizeTurtle := createTurtleLines(model.FunctionTurtle, market, account)
+		msgCombine, sizeCombine := createTurtleLines(model.FunctionCombineTurtle, market, account)
 		msg += fmt.Sprintf("单一海龟%s 个数%d\n %s\n", market, sizeTurtle, msgTurtle)
 		msg += fmt.Sprintf("组合海龟%s 个数%d\n %s\n", market, sizeCombine, msgCombine)
 	}

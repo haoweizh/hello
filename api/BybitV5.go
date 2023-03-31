@@ -431,7 +431,16 @@ func setBybitMarginLeverage(key, secret string) {
 	time.Sleep(time.Second * 5)
 }
 
+var settingBybit = false
+
 func setBybitPerpLeverage(key, secret string) {
+	if settingBybit {
+		return
+	}
+	defer func() {
+		settingBybit = false
+	}()
+	settingBybit = true
 	symbols := GetMarketSymbols(model.Bybit)
 	for symbol := range symbols {
 		success, marketType, _, dialectSymbol := model.GetFromStandard(model.Bybit, symbol)
@@ -446,7 +455,7 @@ func setBybitPerpLeverage(key, secret string) {
 			if jsonData == nil || code != 0 {
 				util.Notice(fmt.Sprintf("fail to set bybit perp leverage , resp: %s httpErr: %v, jsonErr: %v", httpResp, httpErr, jsonErr))
 			}
-			time.Sleep(time.Second * 5)
+			time.Sleep(time.Minute)
 		}
 	}
 }

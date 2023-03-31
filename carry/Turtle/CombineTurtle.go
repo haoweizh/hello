@@ -62,9 +62,9 @@ var ProcessCombineTurtle = func(settingCombine *model.Setting, tick *model.BidAs
 	}
 	turtleData := []*api.TurtleData{dataCombine, dataNormal}
 	canOpen, turtleCoins := api.CanOpenCombine(settingCombine, settingNormal, dataCombine, dataNormal)
-	if canOpen {
-		settingCombine.SymbolRelated = ``
-	}
+	//if canOpen {
+	//	settingCombine.SymbolRelated = ``
+	//}
 	if api.HandleOrders(account.Key, account.Secret, market, symbol, settings, turtleData) ||
 		api.CheckBreak(account.Key, account.Secret, market, symbol, settings, turtleData, tick) {
 		//util.Notice(fmt.Sprintf(`combine return handle or break %s %s`, market, symbol))

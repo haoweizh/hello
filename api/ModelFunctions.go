@@ -126,26 +126,6 @@ func PrepareSettings() {
 	marketMap := make(map[string]bool)
 	model.AppDB.Where(`valid = ?`, true).Find(&appSettings)
 	util.Notice(`start to load settings %d`, len(appSettings))
-	go func() {
-		for _, setting := range appSettings {
-			if setting.Market == model.BinancePerp {
-				accounts := model.AppConfig.GetAccounts(model.BinancePerp)
-				for _, account := range accounts {
-					if len(strings.Trim(setting.Symbol, ` `)) == 0 {
-						continue
-					}
-					success := SetLeverageBinancePerp(account.Key, account.Secret, setting.Symbol, 5)
-					if success {
-						//util.Notice(fmt.Sprintf(`set leverage binanceperp %s`, setting.Symbol))
-					} else {
-						util.Notice(fmt.Sprintf(`fail to set leverage binanceperp %s`, setting.Symbol))
-						time.Sleep(time.Minute)
-					}
-				}
-				time.Sleep(time.Second)
-			}
-		}
-	}()
 	for i := 0; i < len(appSettings); i++ {
 		setting := &appSettings[i]
 		value, ok := util.LoadSyncMap(symbolSettings, setting.Function, setting.Market)
@@ -203,7 +183,7 @@ func PrepareSettings() {
 			functionMarketSettings = &sync.Map{}
 		}
 		if setting.Function != model.FunctionCross {
-			util.Notice(fmt.Sprintf(`add setting %s %s %s`, setting.Function, setting.Market, setting.Symbol))
+			util.Notice(fmt.Sprintf(`load setting %s %s %s`, setting.Function, setting.Market, setting.Symbol))
 		}
 		functionMarketSettings.Store(setting.Symbol, setting)
 		util.StoreSyncMap(localSymbolSettings, functionMarketSettings, setting.Function, setting.Market)
@@ -239,16 +219,16 @@ func handleCombineSettings(market string, topMarketInfos map[string]*model.Marke
 		settingNormal := &model.Setting{Valid: true, Function: model.FunctionTurtleNormal, Market: market, Symbol: info.Name,
 			OpenShortMargin: dynamicSingleLimit, AmountLimit: dynamicInAllLimit}
 		if valueCombine == nil {
-			util.Notice(`add combine binance %v`, info.Name)
+			util.Notice(`add combine %s %v`, market, info.Name)
 		} else {
 			settingCombine = valueCombine.(*model.Setting)
 			settingCombine.SymbolRelated = ``
-			util.Notice(`add back combine %s`, info.Name)
+			util.Notice(`add back combine %s %s`, market, info.Name)
 		}
 		if valueNormal != nil {
 			settingNormal = valueNormal.(*model.Setting)
 			settingNormal.SymbolRelated = ``
-			util.Notice(`add back normal %s`, info.Name)
+			util.Notice(`add back normal %s %s`, market, info.Name)
 		}
 		model.AppDB.Save(settingCombine)
 		model.AppDB.Save(settingNormal)
@@ -443,7 +423,6 @@ func GetMarkets() []string {
 			return nil
 		}
 	}
-	util.Notice(`load setting GetMarkets %d`, len(appMarkets))
 	return appMarkets
 }
 

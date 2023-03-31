@@ -201,7 +201,7 @@ func AdjustPosHolding(key, secret string, setting *model.Setting, data *TurtleDa
 	model.AppDB.Save(setting)
 }
 
-//handleTraceOrders
+// handleTraceOrders
 func _(key, secret, market, symbol string, settings []*model.Setting, turtleData []*TurtleData) {
 
 	today, _ := model.GetMarketToday(market)
@@ -490,14 +490,14 @@ func CanOpenCombine(setting, settingNormal *model.Setting, data, dataNormal *Tur
 		inAll = float64(len(tradingSymbols))
 		canOpen = setting.Chance != 0 || settingNormal.Chance != 0 || (math.Abs(inAll) < setting.AmountLimit &&
 			setting.SymbolRelated != model.SettingTurtleRemoved && settingNormal.SymbolRelated != model.SettingTurtleRemoved)
-		if setting.Chance == 0 && !canOpen {
-			data.OrderLong = nil
-			data.OrderShort = nil
-		}
-		if settingNormal.Chance == 0 && !canOpen {
-			dataNormal.OrderLong = nil
-			dataNormal.OrderShort = nil
-		}
+		//if setting.Chance == 0 && !canOpen {
+		//	data.OrderLong = nil
+		//	data.OrderShort = nil
+		//}
+		//if settingNormal.Chance == 0 && !canOpen {
+		//	dataNormal.OrderLong = nil
+		//	dataNormal.OrderShort = nil
+		//}
 	}
 	return canOpen, inAll
 }
@@ -550,10 +550,10 @@ func CanOpenTurtle(setting *model.Setting, data *TurtleData) (canOpen bool, inAl
 			return true
 		})
 		canOpen = setting.Chance != 0 || (setting.SymbolRelated != model.SettingTurtleRemoved && math.Abs(inAll) < setting.AmountLimit)
-		if setting.Chance == 0 && !canOpen {
-			data.OrderLong = nil
-			data.OrderShort = nil
-		}
+		//if setting.Chance == 0 && !canOpen {
+		//	data.OrderLong = nil
+		//	data.OrderShort = nil
+		//}
 	}
 	canOpen = canOpen && math.Abs(float64(setting.Chance)) < setting.OpenShortMargin
 	return canOpen, inAll

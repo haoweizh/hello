@@ -104,7 +104,16 @@ func appendFutureMarketKucoin(key string, marketInfos map[string]*model.MarketIn
 	}
 }
 
+var settingKucoinPerp = false
+
 func setFutureAutoDeposit() {
+	if settingKucoinPerp {
+		return
+	}
+	defer func() {
+		settingKucoinPerp = false
+	}()
+	settingKucoinPerp = true
 	coins := GetSettingCoins(model.FunctionCross, model.KucoinPerp)
 	for coin := range coins {
 		params := make(map[string]string)

@@ -930,8 +930,8 @@ func InitMarketInfos(markets []string) (success bool) {
 			go func() {
 				for _, account := range accounts {
 					setPosSideBinancePerp(account.Key, account.Secret)
+					SetLeverageBinancePerp(account.Key, account.Secret, 5)
 				}
-				time.Sleep(time.Minute)
 			}()
 		case model.Gate:
 			for _, account := range accounts {
@@ -951,7 +951,6 @@ func InitMarketInfos(markets []string) (success bool) {
 					setBybitMarginLeverage(account.Key, account.Secret)
 					time.Sleep(time.Second)
 					setBybitPerpLeverage(account.Key, account.Secret)
-					time.Sleep(time.Minute)
 				}
 			}()
 		case model.BitgetSpot:
