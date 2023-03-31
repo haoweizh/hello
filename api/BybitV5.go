@@ -289,16 +289,17 @@ func maintainChannelBybit() {
 
 // warning: bybit现货偶发出现实际持有某个币种，但是account.Coin中没有该币种
 func getBalanceBybit(key string, secret string) (success bool, balances []*model.Balance, totalInUsd float64, collateral *model.Collateral) {
-	marketInfos := model.GetMarketInfos(model.Bybit, model.MarketTypeSpot)
-	coinsStr := make([]string, 0)
-	for symbol, value := range marketInfos {
-		if value == nil {
-			continue
-		}
-		_, _, coin, _ := model.GetFromStandard(model.Bybit, symbol)
-		coinsStr = append(coinsStr, coin)
-	}
-	param := map[string]interface{}{"accountType": "UNIFIED", "coin": strings.Join(coinsStr, ",")}
+	//marketInfos := model.GetMarketInfos(model.Bybit, model.MarketTypeSpot)
+	//coinsStr := make([]string, 0)
+	//for symbol, value := range marketInfos {
+	//	if value == nil {
+	//		continue
+	//	}
+	//	_, _, coin, _ := model.GetFromStandard(model.Bybit, symbol)
+	//	coinsStr = append(coinsStr, coin)
+	//}
+	//param := map[string]interface{}{"accountType": "UNIFIED", "coin": strings.Join(coinsStr, ",")}
+	param := map[string]interface{}{"accountType": "UNIFIED"}
 	httpResp, httpErr := SignedRequestBybit(key, secret, http.MethodGet, bybitRestUrl, "/v5/account/wallet-balance", param)
 	balanceResp := &dtos.BybitBalanceResp{}
 	jsonErr := json.Unmarshal(httpResp, balanceResp)
