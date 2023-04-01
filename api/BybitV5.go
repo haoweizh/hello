@@ -57,7 +57,6 @@ func getMarketsBybitSpot(marketInfos map[string]*model.MarketInfo) {
 		priceIncrement, _ := strconv.ParseFloat(symbolInfo.PriceFilter.TickSize, 64)
 		marketInfo.PriceIncrement = priceIncrement
 		marketInfo.PriceDecimal = util.NumDecPlaces(priceIncrement)
-
 		sizeIncrement, _ := strconv.ParseFloat(symbolInfo.LotSizeFilter.BasePrecision, 64)
 		marketInfo.SizeIncrement = sizeIncrement
 		marketInfo.SizeMin, _ = strconv.ParseFloat(symbolInfo.LotSizeFilter.MinOrderQty, 64)
@@ -104,6 +103,7 @@ func getMarketsBybitPerp(marketInfos map[string]*model.MarketInfo) {
 				continue
 			}
 			marketInfo.SizeMin, _ = strconv.ParseFloat(perpInfo.LotSizeFilter.MinOrderQty, 64)
+			marketInfo.SizeMax, _ = strconv.ParseFloat(perpInfo.LotSizeFilter.MaxOrderQty, 64)
 			marketInfo.SizeIncrement, _ = strconv.ParseFloat(perpInfo.LotSizeFilter.QtyStep, 64)
 			marketInfos[symbol] = marketInfo
 		}
@@ -124,8 +124,8 @@ func parseBookOrder(markets *model.Markets, bookWsResp *dtos.BybitBookWsResp, sy
 		bidAmount, _ := strconv.ParseFloat(bookWsResp.Data.B[0][1], 64)
 		askPrice, _ := strconv.ParseFloat(bookWsResp.Data.A[0][0], 64)
 		askAmount, _ := strconv.ParseFloat(bookWsResp.Data.A[0][1], 64)
-		bid := model.Tick{Price: bidPrice, Amount: bidAmount}
-		ask := model.Tick{Price: askPrice, Amount: askAmount}
+		bid := model.Tick{Price: bidPrice, Amount: bidAmount, Market: model.Bybit, Symbol: symbol}
+		ask := model.Tick{Price: askPrice, Amount: askAmount, Market: model.Bybit, Symbol: symbol}
 		bidAsk.Bids = []model.Tick{bid}
 		bidAsk.Asks = []model.Tick{ask}
 	} else if bookWsResp.Type == "delta" {
@@ -144,7 +144,7 @@ func parseBookOrder(markets *model.Markets, bookWsResp *dtos.BybitBookWsResp, sy
 					continue
 				}
 				bidPrice, _ := strconv.ParseFloat(bidStr[0], 64)
-				bid := model.Tick{Price: bidPrice, Amount: bidAmount}
+				bid := model.Tick{Price: bidPrice, Amount: bidAmount, Market: model.Bybit, Symbol: symbol}
 				bidAsk.Bids = []model.Tick{bid}
 			}
 		}
@@ -157,7 +157,7 @@ func parseBookOrder(markets *model.Markets, bookWsResp *dtos.BybitBookWsResp, sy
 				if askAmount == 0 {
 					continue
 				}
-				ask := model.Tick{Price: askPrice, Amount: askAmount}
+				ask := model.Tick{Price: askPrice, Amount: askAmount, Market: model.Bybit, Symbol: symbol}
 				bidAsk.Asks = []model.Tick{ask}
 			}
 		}

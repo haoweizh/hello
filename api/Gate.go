@@ -241,8 +241,8 @@ var tickerHandler = gateWs.NewCallBack(func(msg *gateWs.UpdateMsg) {
 		askPrice, _ := strconv.ParseFloat(update.Ask, 64)
 		askAmount, _ := strconv.ParseFloat(update.AskSize, 64)
 		bidAsk = model.BidAsk{Ts: int(update.TimeInMilli), TsReceived: now, UpdateId: update.LastId,
-			Bids: []model.Tick{{Price: bidPrice, Amount: bidAmount, Market: model.Gate, Symbol: symbol, Side: model.OrderSideBuy}},
-			Asks: []model.Tick{{Price: askPrice, Amount: askAmount, Market: model.Gate, Symbol: symbol, Side: model.OrderSideSell}}}
+			Bids: []model.Tick{{Price: bidPrice, Amount: bidAmount, Market: model.Gate, Symbol: symbol}},
+			Asks: []model.Tick{{Price: askPrice, Amount: askAmount, Market: model.Gate, Symbol: symbol}}}
 	// Periodically notify top bids and asks snapshot with limited levels.
 	case gateWs.ChannelSpotOrderBook:
 		var update gateWs.SpotUpdateAllDepthMsg
@@ -263,8 +263,8 @@ var tickerHandler = gateWs.NewCallBack(func(msg *gateWs.UpdateMsg) {
 			bidAmount, _ := strconv.ParseFloat(update.Bid[0][1], 64)
 			askPrice, _ := strconv.ParseFloat(update.Ask[0][0], 64)
 			askAmount, _ := strconv.ParseFloat(update.Ask[0][1], 64)
-			bidAsk.Bids = append(bidAsk.Bids, model.Tick{Price: bidPrice, Amount: bidAmount, Market: model.Gate, Symbol: symbol, Side: model.OrderSideBuy})
-			bidAsk.Asks = append(bidAsk.Asks, model.Tick{Price: askPrice, Amount: askAmount, Market: model.Gate, Symbol: symbol, Side: model.OrderSideSell})
+			bidAsk.Bids = append(bidAsk.Bids, model.Tick{Price: bidPrice, Amount: bidAmount, Market: model.Gate, Symbol: symbol})
+			bidAsk.Asks = append(bidAsk.Asks, model.Tick{Price: askPrice, Amount: askAmount, Market: model.Gate, Symbol: symbol})
 		}
 	// Push best bid and ask in real-time.
 	case gateWs.ChannelFutureBookTicker:
@@ -284,8 +284,8 @@ var tickerHandler = gateWs.NewCallBack(func(msg *gateWs.UpdateMsg) {
 		askPrice, _ := strconv.ParseFloat(update.BestAskPrice, 64)
 		_, askAmount := model.ParseRealAmount(model.Gate, symbol, float64(update.BestAskSize))
 		bidAsk = model.BidAsk{Ts: int(update.TimeMillis), TsReceived: now, UpdateId: update.UpdateId,
-			Bids: []model.Tick{{Price: bidPrice, Amount: bidAmount, Market: model.Gate, Symbol: symbol, Side: model.OrderSideBuy}},
-			Asks: []model.Tick{{Price: askPrice, Amount: askAmount, Market: model.Gate, Symbol: symbol, Side: model.OrderSideSell}}}
+			Bids: []model.Tick{{Price: bidPrice, Amount: bidAmount, Market: model.Gate, Symbol: symbol}},
+			Asks: []model.Tick{{Price: askPrice, Amount: askAmount, Market: model.Gate, Symbol: symbol}}}
 	}
 	markets := model.AppMarkets
 	haveOld, old := markets.GetBidAsk(symbol, model.Gate)
@@ -897,8 +897,8 @@ func SetGateBidAsk(key, secret, symbol string) {
 	_, askAmount := model.ParseRealAmount(model.Gate, symbol, float64(orderBook.Asks[0].S))
 	bidAsk := model.BidAsk{Ts: int(orderBook.Update * 1000),
 		TsReceived: int(time.Now().UnixNano() / int64(time.Millisecond)),
-		Bids:       []model.Tick{{Price: bidPrice, Amount: bidAmount, Market: model.Gate, Symbol: symbol, Side: model.OrderSideBuy}},
-		Asks:       []model.Tick{{Price: askPrice, Amount: askAmount, Market: model.Gate, Symbol: symbol, Side: model.OrderSideSell}}}
+		Bids:       []model.Tick{{Price: bidPrice, Amount: bidAmount, Market: model.Gate, Symbol: symbol}},
+		Asks:       []model.Tick{{Price: askPrice, Amount: askAmount, Market: model.Gate, Symbol: symbol}}}
 	model.AppMarkets.SetBidAsk(symbol, model.Gate, &bidAsk)
 }
 

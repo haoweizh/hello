@@ -98,9 +98,9 @@ func WsDepthServeHuobiSpot(markets *model.Markets, orderHandler OrderHandler) (c
 				symbol = strings.ReplaceAll(symbol, "_", "")
 				bidAsk := model.BidAsk{Ts: responseJson.Get("ts").MustInt(), TsReceived: now, UpdateId: tickJson.Get("quoteTime").MustInt64(),
 					Bids: []model.Tick{{Price: tickJson.Get("bid").MustFloat64(), Amount: tickJson.Get("bidSize").MustFloat64(),
-						Market: model.HuobiSpot, Symbol: symbol, Side: model.OrderSideBuy}},
+						Market: model.HuobiSpot, Symbol: symbol}},
 					Asks: []model.Tick{{Price: tickJson.Get("ask").MustFloat64(), Amount: tickJson.Get("askSize").MustFloat64(),
-						Market: model.HuobiSpot, Symbol: symbol, Side: model.OrderSideSell}}}
+						Market: model.HuobiSpot, Symbol: symbol}}}
 				haveOld, old := markets.GetBidAsk(symbol, model.HuobiSpot)
 				if haveOld && old.UpdateId > bidAsk.UpdateId {
 					return
@@ -163,8 +163,8 @@ func WsDepthServeHuobiSpot(markets *model.Markets, orderHandler OrderHandler) (c
 			if !askSuccess {
 				return
 			}
-			bidAsk.Bids = []model.Tick{{Price: bidPrice, Amount: bidAmount, Market: model.HuobiSpot, Symbol: symbol, Side: model.OrderSideBuy}}
-			bidAsk.Asks = []model.Tick{{Price: askPrice, Amount: askAmount, Market: model.HuobiSpot, Symbol: symbol, Side: model.OrderSideSell}}
+			bidAsk.Bids = []model.Tick{{Price: bidPrice, Amount: bidAmount, Market: model.HuobiSpot, Symbol: symbol}}
+			bidAsk.Asks = []model.Tick{{Price: askPrice, Amount: askAmount, Market: model.HuobiSpot, Symbol: symbol}}
 
 			haveOld, old := markets.GetBidAsk(symbol, model.HuobiSpot)
 			if haveOld && old.UpdateId > bidAsk.UpdateId {

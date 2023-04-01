@@ -62,7 +62,7 @@ func WsDepthServeHuobiPerp(markets *model.Markets, orderHandler OrderHandler) ([
 				}
 				price, _ := value[0].(json.Number).Float64()
 				amount, _ := value[1].(json.Number).Float64()
-				bidAsk.Bids[i] = model.Tick{Price: price, Amount: amount, Market: model.HuobiPerp, Symbol: symbol, Side: model.OrderSideBuy}
+				bidAsk.Bids[i] = model.Tick{Price: price, Amount: amount, Market: model.HuobiPerp, Symbol: symbol}
 			}
 			for i, item := range asks {
 				value := item.([]interface{})
@@ -71,7 +71,7 @@ func WsDepthServeHuobiPerp(markets *model.Markets, orderHandler OrderHandler) ([
 				}
 				price, _ := value[0].(json.Number).Float64()
 				amount, _ := value[1].(json.Number).Float64()
-				bidAsk.Asks[i] = model.Tick{Price: price, Amount: amount, Market: model.HuobiPerp, Symbol: symbol, Side: model.OrderSideSell}
+				bidAsk.Asks[i] = model.Tick{Price: price, Amount: amount, Market: model.HuobiPerp, Symbol: symbol}
 			}
 			bidAsk.Ts = responseJson.Get(`ts`).MustInt()
 			bidAsk.TsReceived = int(util.GetNowUnixMillion())

@@ -149,8 +149,8 @@ func handleTickerBinanceSpot(markets *model.Markets, json *simplejson.Json, stan
 	}
 	if bidPrice > 0 && bidAmount > 0 && askPrice > 0 && askAmount > 0 {
 		bidAsk := model.BidAsk{Ts: ts, TsReceived: now, UpdateId: updateId,
-			Bids: []model.Tick{{Price: bidPrice, Amount: bidAmount, Market: model.BinanceSpot, Symbol: standardSymbol, Side: model.OrderSideBuy}},
-			Asks: []model.Tick{{Price: askPrice, Amount: askAmount, Market: model.BinanceSpot, Symbol: standardSymbol, Side: model.OrderSideSell}}}
+			Bids: []model.Tick{{Price: bidPrice, Amount: bidAmount, Market: model.BinanceSpot, Symbol: standardSymbol}},
+			Asks: []model.Tick{{Price: askPrice, Amount: askAmount, Market: model.BinanceSpot, Symbol: standardSymbol}}}
 		haveOld, old := markets.GetBidAsk(standardSymbol, model.BinanceSpot)
 		if haveOld && old.UpdateId > bidAsk.UpdateId {
 			return
@@ -185,7 +185,7 @@ func handleDepthBinanceSpot(markets *model.Markets, json *simplejson.Json, stand
 		}
 		price, _ := strconv.ParseFloat(value.([]interface{})[0].(string), 64)
 		amount, _ := strconv.ParseFloat(value.([]interface{})[1].(string), 64)
-		bidAsk.Bids[i] = model.Tick{Price: price, Amount: amount, Market: model.BinanceSpot, Symbol: standardSymbol, Side: model.OrderSideBuy}
+		bidAsk.Bids[i] = model.Tick{Price: price, Amount: amount, Market: model.BinanceSpot, Symbol: standardSymbol}
 	}
 	bidAsk.Asks = make([]model.Tick, len(asks))
 	for i, value := range asks {
@@ -194,7 +194,7 @@ func handleDepthBinanceSpot(markets *model.Markets, json *simplejson.Json, stand
 		}
 		price, _ := strconv.ParseFloat(value.([]interface{})[0].(string), 64)
 		amount, _ := strconv.ParseFloat(value.([]interface{})[1].(string), 64)
-		bidAsk.Asks[i] = model.Tick{Price: price, Amount: amount, Market: model.BinanceSpot, Symbol: standardSymbol, Side: model.OrderSideSell}
+		bidAsk.Asks[i] = model.Tick{Price: price, Amount: amount, Market: model.BinanceSpot, Symbol: standardSymbol}
 	}
 	sort.Sort(bidAsk.Asks)
 	sort.Sort(sort.Reverse(bidAsk.Bids))

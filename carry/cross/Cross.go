@@ -515,6 +515,7 @@ func equalCoin(coin string, statuses []*CarryStatus, settings []*model.Setting) 
 				util.Notice(fmt.Sprintf(`no status when holding in U: %f %s %s`, holdingInU, bids[i].Market, bids[i].Symbol))
 				continue
 			}
+			util.Notice(fmt.Sprintf(`equal cancel orders %s %s`, status.market, status.symbol))
 			go api.CancelOrders(status.account.Key, status.account.Secret, status.market, status.symbol)
 			if now-int64(tickTimes[status.market+status.symbol]) > 10000 || status.TradeLineSell > 0.5 {
 				errMsg += fmt.Sprintf(`%s %s delay too long or trade line sell %d %f`,
@@ -551,6 +552,7 @@ func equalCoin(coin string, statuses []*CarryStatus, settings []*model.Setting) 
 				util.Notice(fmt.Sprintf(`no status when holding in U: %f %s %s`, holdingInU, asks[i].Market, asks[i].Symbol))
 				continue
 			}
+			util.Notice(fmt.Sprintf(`equal cancel orders %s %s`, status.market, status.symbol))
 			go api.CancelOrders(status.account.Key, status.account.Secret, status.market, status.symbol)
 			if equalStatus != nil || now-int64(tickTimes[status.market+status.symbol]) > 10000 || status.TradeLineBuy > 0.5 {
 				errMsg += fmt.Sprintf(`%s %s delay too long or trade line buy %d %f`,

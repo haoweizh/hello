@@ -4,7 +4,6 @@ type Ticks []Tick
 
 type Tick struct {
 	Id                  string
-	Side                string
 	Market, Symbol      string
 	PriceStr, AmountStr string
 	Price, Amount       float64

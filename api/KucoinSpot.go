@@ -180,8 +180,8 @@ func handleKucoinSpotWS(relatedMsg *kucoin.WebSocketDownstreamMessage) {
 	askPrice, _ := strconv.ParseFloat(ticker.BestAsk, 64)
 	askAmount, _ := strconv.ParseFloat(ticker.BestAskSize, 64)
 	bidAsk := model.BidAsk{Ts: now, TsReceived: now, UpdateId: updateId,
-		Bids: []model.Tick{{Price: bidPrice, Amount: bidAmount, Market: model.KucoinSpot, Symbol: symbol, Side: model.OrderSideBuy}},
-		Asks: []model.Tick{{Price: askPrice, Amount: askAmount, Market: model.KucoinSpot, Symbol: symbol, Side: model.OrderSideSell}}}
+		Bids: []model.Tick{{Price: bidPrice, Amount: bidAmount, Market: model.KucoinSpot, Symbol: symbol}},
+		Asks: []model.Tick{{Price: askPrice, Amount: askAmount, Market: model.KucoinSpot, Symbol: symbol}}}
 	markets := model.AppMarkets
 	haveOld, old := markets.GetBidAsk(symbol, model.KucoinSpot)
 	if haveOld && old.UpdateId > bidAsk.UpdateId {

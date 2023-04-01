@@ -147,8 +147,7 @@ func parseTicksMexc(symbol string, ts int, version int64, bidArray, asksArray []
 			marketInfo = v.(*model.MarketInfo)
 		}
 		if marketInfo != nil {
-			asks = append(asks, model.Tick{Side: model.OrderSideSell, Market: model.Mexc,
-				Symbol: symbol, Price: tick[0], Amount: tick[1] * marketInfo.SizeIncrement})
+			asks = append(asks, model.Tick{Market: model.Mexc, Symbol: symbol, Price: tick[0], Amount: tick[1] * marketInfo.SizeIncrement})
 		}
 	}
 	for _, tick := range bidArray {
@@ -161,8 +160,7 @@ func parseTicksMexc(symbol string, ts int, version int64, bidArray, asksArray []
 			marketInfo = v.(*model.MarketInfo)
 		}
 		if marketInfo != nil {
-			bids = append(bids, model.Tick{Side: model.OrderSideBuy, Market: model.Mexc, Symbol: symbol, Price: tick[0],
-				Amount: tick[1] * marketInfo.SizeIncrement})
+			bids = append(bids, model.Tick{Market: model.Mexc, Symbol: symbol, Price: tick[0], Amount: tick[1] * marketInfo.SizeIncrement})
 		}
 	}
 	return &model.BidAsk{Ts: ts, TsReceived: int(time.Now().UnixMilli()), UpdateId: version, Bids: bids, Asks: asks}

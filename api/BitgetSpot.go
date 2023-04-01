@@ -76,15 +76,13 @@ func WsDepthServeBitgetSpot(markets *model.Markets, orderHandler OrderHandler) (
 			bidPrice, _ := strconv.ParseFloat(bookWsResp.Data[0].Bids[0][0], 64)
 			bidAmount, _ := strconv.ParseFloat(bookWsResp.Data[0].Bids[0][1], 64)
 			bids := make([]model.Tick, 0)
-			bids = append(bids, model.Tick{Price: bidPrice, Amount: bidAmount})
+			bids = append(bids, model.Tick{Price: bidPrice, Amount: bidAmount, Market: model.BitgetSpot, Symbol: symbol})
 			bidAsk.Bids = bids
-
 			askPrice, _ := strconv.ParseFloat(bookWsResp.Data[0].Asks[0][0], 64)
 			askAmount, _ := strconv.ParseFloat(bookWsResp.Data[0].Asks[0][1], 64)
 			asks := make([]model.Tick, 0)
-			asks = append(asks, model.Tick{Price: askPrice, Amount: askAmount})
+			asks = append(asks, model.Tick{Price: askPrice, Amount: askAmount, Market: model.BitgetSpot, Symbol: symbol})
 			bidAsk.Asks = asks
-
 			bidAsk.Ts, _ = strconv.Atoi(bookWsResp.Data[0].Ts)
 			bidAsk.UpdateId, _ = strconv.ParseInt(bookWsResp.Data[0].Ts, 10, 64)
 			haveOld, old := markets.GetBidAsk(symbol, model.BitgetSpot)

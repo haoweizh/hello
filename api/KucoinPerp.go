@@ -244,8 +244,8 @@ func handleKucoinPerpWS(futureMsg *kumex.WebSocketDownstreamMessage) {
 		askPrice, _ := strconv.ParseFloat(ticker.BestAskPrice, 64)
 		_, askAmount := model.ParseRealAmount(model.KucoinPerp, symbol, float64(ticker.BestAskSize))
 		bidAsk := model.BidAsk{Ts: ts, TsReceived: now,
-			Bids: []model.Tick{{Price: bidPrice, Amount: bidAmount, Market: model.KucoinPerp, Symbol: symbol, Side: model.OrderSideBuy}},
-			Asks: []model.Tick{{Price: askPrice, Amount: askAmount, Market: model.KucoinPerp, Symbol: symbol, Side: model.OrderSideSell}}}
+			Bids: []model.Tick{{Price: bidPrice, Amount: bidAmount, Market: model.KucoinPerp, Symbol: symbol}},
+			Asks: []model.Tick{{Price: askPrice, Amount: askAmount, Market: model.KucoinPerp, Symbol: symbol}}}
 		markets := model.AppMarkets
 		haveOld, old := markets.GetBidAsk(symbol, model.KucoinPerp)
 		if haveOld && old.Ts > bidAsk.Ts {
