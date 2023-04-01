@@ -121,11 +121,12 @@ func createFromPosition(account *model.Account, setting *model.Setting, valueLim
 	// bitgetperp可以开仓或减仓，不越过0反向开仓
 	if setting.Market == model.BitgetPerp && cm.positions[setting.Symbol] != nil {
 		if cm.positions[setting.Symbol].Holding > 0 {
+			carryStatus.reduceOnlySell = true
 			carryStatus.LimitSell = cm.positions[setting.Symbol].Holding
 		} else if cm.positions[setting.Symbol].Holding < 0 {
+			carryStatus.reduceOnlyBuy = true
 			carryStatus.LimitBuy = -1 * cm.positions[setting.Symbol].Holding
 		}
-		carryStatus.reduceOnly = true
 	}
 	rateLimitPosition := 2.8
 	rateLimitHolding := 0.28
@@ -520,7 +521,7 @@ func equalCoin(coin string, statuses []*CarryStatus, settings []*model.Setting) 
 					status.market, status.symbol, now-int64(tickTimes[status.market+status.symbol]), status.TradeLineSell)
 				continue
 			}
-			checkAmount := model.GetAmountInMarket(status.market, status.symbol, math.Abs(holding), price, status.reduceOnly)
+			checkAmount := model.GetAmountInMarket(status.market, status.symbol, math.Abs(holding), price, status.reduceOnlySell)
 			if checkAmount <= 0 {
 				errMsg += fmt.Sprintf(`check amount %s %s %f < 0`, status.market, status.symbol, checkAmount)
 				continue
@@ -528,7 +529,7 @@ func equalCoin(coin string, statuses []*CarryStatus, settings []*model.Setting) 
 			if status.AvailableSell > holding {
 				equalStatus = status
 			} else {
-				checkAmount = model.GetAmountInMarket(status.market, status.symbol, status.AvailableSell/2, price, status.reduceOnly)
+				checkAmount = model.GetAmountInMarket(status.market, status.symbol, status.AvailableSell/2, price, status.reduceOnlySell)
 				if checkAmount > 0 && status.AvailableSell*price > SmallInU {
 					equalStatus = status
 					holding = status.AvailableSell
@@ -556,7 +557,7 @@ func equalCoin(coin string, statuses []*CarryStatus, settings []*model.Setting) 
 					status.market, status.symbol, now-int64(tickTimes[status.market+status.symbol]), status.TradeLineBuy)
 				continue
 			}
-			checkAmount := model.GetAmountInMarket(status.market, status.symbol, math.Abs(holding), price, status.reduceOnly)
+			checkAmount := model.GetAmountInMarket(status.market, status.symbol, math.Abs(holding), price, status.reduceOnlyBuy)
 			if checkAmount <= 0 {
 				errMsg += fmt.Sprintf(`check amount %s %s %f < 0`, status.market, status.symbol, checkAmount)
 				continue
@@ -564,7 +565,7 @@ func equalCoin(coin string, statuses []*CarryStatus, settings []*model.Setting) 
 			if math.IsNaN(status.AvailableBuy) || status.AvailableBuy > math.Abs(holding) {
 				equalStatus = status
 			} else if !math.IsNaN(status.AvailableBuy) {
-				checkAmount = model.GetAmountInMarket(status.market, status.symbol, status.AvailableBuy/2, price, status.reduceOnly)
+				checkAmount = model.GetAmountInMarket(status.market, status.symbol, status.AvailableBuy/2, price, status.reduceOnlyBuy)
 				if checkAmount > 0 && status.AvailableBuy*price > SmallInU {
 					equalStatus = status
 					holding = status.AvailableBuy
@@ -581,24 +582,23 @@ func equalCoin(coin string, statuses []*CarryStatus, settings []*model.Setting) 
 			amount = math.Min(90000000, math.Abs(holding))
 		}
 		amount = math.Min(amount, compLimitInU/price)
-		checkAmount := model.GetAmountInMarket(equalStatus.market, equalStatus.symbol, amount, price, equalStatus.reduceOnly)
-		util.Notice(`try to equal %s %s %s holding %f at %f in u %f checked %f`,
-			coin, equalStatus.market, equalStatus.symbol, holding, price, holdingInU, checkAmount)
+		getTick, tick := model.AppMarkets.GetBidAsk(equalStatus.symbol, equalStatus.market)
+		if !getTick {
+			equalStatus.AvailableBuy, equalStatus.AvailableSell = 0, 0
+			util.Notice(`no tick when equal return %s %s %s`, coin, equalStatus.symbol, equalStatus.market)
+			return isEqual, holdingInU, ``
+		}
+		reduceOnly := equalStatus.reduceOnlySell
+		if orderSide == model.OrderSideBuy {
+			reduceOnly = equalStatus.reduceOnlyBuy
+			price = tick.Asks[0].Price
+		} else if orderSide == model.OrderSideSell {
+			price = tick.Bids[0].Price
+		}
+		checkAmount := model.GetAmountInMarket(equalStatus.market, equalStatus.symbol, amount, price, reduceOnly)
 		if checkAmount > 0 {
-			time.Sleep(time.Second)
-			getTick, tick := model.AppMarkets.GetBidAsk(equalStatus.symbol, equalStatus.market)
-			if !getTick {
-				equalStatus.AvailableBuy, equalStatus.AvailableSell = 0, 0
-				util.Notice(`no tick when equal return %s %s %s`, coin, equalStatus.symbol, equalStatus.market)
-				return isEqual, holdingInU, ``
-			}
-			if orderSide == model.OrderSideBuy {
-				price = tick.Asks[0].Price
-			} else if orderSide == model.OrderSideSell {
-				price = tick.Bids[0].Price
-			}
-			util.Notice(fmt.Sprintf(`do equal %s %s %s at %f %f %f %d amount %f`,
-				coin, equalStatus.market, equalStatus.symbol, price, tick.Asks[0].Price, tick.Bids[0].Price, tick.Ts, amount))
+			util.Notice(fmt.Sprintf(`do equal %s %s %s at %f %f %f %d amount %f holding %f worthU %f`,
+				coin, equalStatus.market, equalStatus.symbol, price, tick.Asks[0].Price, tick.Bids[0].Price, tick.Ts, amount, holding, holdingInU))
 			order := api.PlaceOrder(equalStatus.account.Key, equalStatus.account.Secret, orderSide, model.OrderTypeLimit,
 				equalStatus.market, equalStatus.symbol, ``,
 				price, price, amount, false, nil, nil)
@@ -610,15 +610,7 @@ func equalCoin(coin string, statuses []*CarryStatus, settings []*model.Setting) 
 					equalStatus.Holding -= amount
 					holdingInU -= amount * price
 				}
-				order.Coin = coin
-				order.LineBuy = equalStatus.TradeLineBuy
-				order.LineSell = equalStatus.TradeLineSell
-				order.Function = model.Close
-				if (equalStatus.Holding >= 0 && orderSide == model.OrderSideBuy) || (equalStatus.Holding <= 0 && orderSide == model.OrderSideSell) {
-					order.Function = model.Open
-				}
-				order.RefreshType = model.FunctionComplement
-				go model.AppDB.Save(order)
+				saveCross(order, coin, model.FunctionComplement, equalStatus.TradeLineBuy, equalStatus.TradeLineSell, equalStatus.Holding)
 				if equalStatus.market == model.Gate {
 					api.SetGateBidAsk(equalStatus.account.Key, equalStatus.account.Secret, equalStatus.symbol)
 				}
@@ -1032,7 +1024,7 @@ func placeCross(statusBuy, statusSell *CarryStatus, priceBuy, priceSell, amount 
 	} else {
 		go func() {
 			orderParam := ``
-			if statusBuy.reduceOnly {
+			if statusBuy.reduceOnlyBuy {
 				orderParam = model.ReduceOnly
 			}
 			order := api.PlaceOrder(statusBuy.account.Key, statusBuy.account.Secret, model.OrderSideBuy, model.OrderTypeLimit,
@@ -1041,7 +1033,7 @@ func placeCross(statusBuy, statusSell *CarryStatus, priceBuy, priceSell, amount 
 		}()
 		go func() {
 			orderParam := ``
-			if statusSell.reduceOnly {
+			if statusSell.reduceOnlySell {
 				orderParam = model.ReduceOnly
 			}
 			order := api.PlaceOrder(statusSell.account.Key, statusSell.account.Secret, model.OrderSideSell, model.OrderTypeLimit,

@@ -68,18 +68,18 @@ type spotMarket struct {
 }
 
 type CarryStatus struct {
-	isSpot                      bool
-	market, symbol              string
-	reduceOnly                  bool
-	setting                     *model.Setting
-	account                     *model.Account
-	FoundingRate                float64
-	LimitSell, LimitBuy         float64 // 最大可开仓买卖数（有机会），用于cross
-	AvailableSell, AvailableBuy float64 // 最大可买卖数（不管有无机会，能下的数量),用于comp
-	TradeLineBuy, TradeLineSell float64 // 买卖盈利线（可为负数）
-	Holding                     float64
-	RateInAll                   float64 // 现货：该币种占总权益的比例；永续：以开仓价算该币种持仓占保证金百分比
-	FundingRateUpdateTime       time.Time
+	isSpot                        bool
+	market, symbol                string
+	reduceOnlyBuy, reduceOnlySell bool
+	setting                       *model.Setting
+	account                       *model.Account
+	FoundingRate                  float64
+	LimitSell, LimitBuy           float64 // 最大可开仓买卖数（有机会），用于cross
+	AvailableSell, AvailableBuy   float64 // 最大可买卖数（不管有无机会，能下的数量),用于comp
+	TradeLineBuy, TradeLineSell   float64 // 买卖盈利线（可为负数）
+	Holding                       float64
+	RateInAll                     float64 // 现货：该币种占总权益的比例；永续：以开仓价算该币种持仓占保证金百分比
+	FundingRateUpdateTime         time.Time
 }
 
 func isValidSymbol(market, symbol string) bool {
