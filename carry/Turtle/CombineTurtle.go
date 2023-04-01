@@ -28,7 +28,7 @@ var ProcessCombineTurtle = func(settingCombine *model.Setting, tick *model.BidAs
 	maintaining, _ := model.ChannelMaintaining.Load(market)
 	if settingCombine == nil || tick == nil || tick.Asks == nil || tick.Bids == nil || model.AppConfig.Handle != `1` ||
 		(maintaining != nil && maintaining.(bool)) || (model.AppConfig.Env != `test` && now-int64(tick.Ts) > 10000) ||
-		(time.Now().Hour() == 0 && time.Now().Minute() == 0) || len(strings.Trim(symbol, ` `)) == 0 {
+		time.Now().Minute() == 0 || len(strings.Trim(symbol, ` `)) == 0 {
 		return
 	}
 	settingNormal := api.GetSetting(model.FunctionTurtleNormal, market, symbol)

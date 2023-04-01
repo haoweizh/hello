@@ -24,8 +24,7 @@ var ProcessTurtle = func(setting *model.Setting, tick *model.BidAsk) {
 	now := util.GetNowUnixMillion()
 	maintaining, ok := model.ChannelMaintaining.Load(setting.Market)
 	if setting == nil || tick == nil || tick.Asks == nil || tick.Bids == nil || model.AppConfig.Handle != `1` ||
-		(ok && maintaining.(bool)) || (model.AppConfig.Env != `test` && now-int64(tick.Ts) > 10000) ||
-		(time.Now().Hour() == 0 && time.Now().Minute() == 0) {
+		(ok && maintaining.(bool)) || (model.AppConfig.Env != `test` && now-int64(tick.Ts) > 10000) || time.Now().Minute() == 0 {
 		return
 	}
 	if setting.Chance != 0 && setting.PriceX == 0 {
