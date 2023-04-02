@@ -38,7 +38,7 @@ var ProcessHang = func(setting *model.Setting, tick *model.BidAsk) {
 	marketSymbol := fmt.Sprintf(`%s_%s`, setting.Market, setting.Symbol)
 	orderTime, okPlace := placeTime.Load(marketSymbol)
 	now := time.Now().UnixMilli()
-	accounts := api.GetAccounts(0)
+	accounts := model.GetAccounts(0)
 	if accounts == nil || len(accounts) == 0 || accounts[setting.Market] == nil {
 		return
 	}
@@ -160,7 +160,7 @@ func refreshDeal(setting *model.Setting) {
 						"market= ? and symbol= ? and refresh_type= ? and status=? and order_time>?",
 						setting.Market, setting.Symbol, model.FunctionHang, model.CarryStatusSuccess, dateStr).First(&deal)
 					dealInU.Store(setting.Market+`_`+setting.Symbol+`_`+dateStr, deal)
-					accounts := api.GetAccounts(0)
+					accounts := model.GetAccounts(0)
 					if accounts != nil && len(accounts) > 0 && accounts[setting.Market] != nil {
 						account := accounts[setting.Market]
 						success, balances, _, _ := api.GetBalances(account.Key, account.Secret, setting.Market)

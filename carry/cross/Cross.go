@@ -371,7 +371,7 @@ func equalAccounts() {
 	//needWaitEqual := false // 是否需要进入等待环节
 	for i := 0; i < api.GetCrossLen(); i++ {
 		accounts := make(map[string]*model.Account)
-		indexAccounts := api.GetAccounts(i)
+		indexAccounts := model.GetAccounts(i)
 		for _, market := range markets {
 			accounts[market] = indexAccounts[market]
 		}

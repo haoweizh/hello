@@ -34,7 +34,7 @@ type Account struct {
 	CarryRate                          float64
 }
 
-var AppAccounts []map[string]*Account // account index/map/account
+var appAccounts []map[string]*Account // account index/map/account
 var marketAccounts sync.Map           //market - []*Account
 
 func (config *Config) GetAccountFromKeyIndex(market, key string, index int) (account *Account) {
@@ -148,4 +148,71 @@ func (config *Config) GetAccounts(market string) []*Account {
 	}
 	marketAccounts.Store(market, accounts)
 	return accounts
+}
+
+func GetAccounts(index int) (accounts map[string]*Account) {
+	if appAccounts != nil {
+		if len(appAccounts) > index {
+			return appAccounts[index]
+		} else {
+			return nil
+		}
+	}
+	// 注意: 以okex的key个数作为size，如果不使用okex，请及时更换
+	size := len(OKEX)
+	appAccounts = make([]map[string]*Account, size)
+	for i := 0; i < size; i++ {
+		if appAccounts[i] == nil {
+			appAccounts[i] = make(map[string]*Account)
+		}
+	}
+	tempAccounts := AppConfig.GetAccounts(Ftx)
+	for i, account := range tempAccounts {
+		appAccounts[i][Ftx] = account
+	}
+	tempAccounts = AppConfig.GetAccounts(OKEX)
+	for i, account := range tempAccounts {
+		appAccounts[i][OKEX] = account
+	}
+	tempAccounts = AppConfig.GetAccounts(BinanceSpot)
+	for i, account := range tempAccounts {
+		appAccounts[i][BinanceSpot] = account
+	}
+	tempAccounts = AppConfig.GetAccounts(BinancePerp)
+	for i, account := range tempAccounts {
+		appAccounts[i][BinancePerp] = account
+	}
+	tempAccounts = AppConfig.GetAccounts(Gate)
+	for i, account := range tempAccounts {
+		appAccounts[i][Gate] = account
+	}
+	tempAccounts = AppConfig.GetAccounts(Bybit)
+	for i, account := range tempAccounts {
+		appAccounts[i][Bybit] = account
+	}
+	tempAccounts = AppConfig.GetAccounts(Kucoin)
+	for i, account := range tempAccounts {
+		appAccounts[i][Kucoin] = account
+	}
+	tempAccounts = AppConfig.GetAccounts(KucoinSpot)
+	for i, account := range tempAccounts {
+		appAccounts[i][KucoinSpot] = account
+	}
+	tempAccounts = AppConfig.GetAccounts(KucoinPerp)
+	for i, account := range tempAccounts {
+		appAccounts[i][KucoinPerp] = account
+	}
+	tempAccounts = AppConfig.GetAccounts(Mexc)
+	for i, account := range tempAccounts {
+		appAccounts[i][Mexc] = account
+	}
+	tempAccounts = AppConfig.GetAccounts(BitgetSpot)
+	for i, account := range tempAccounts {
+		appAccounts[i][BitgetSpot] = account
+	}
+	tempAccounts = AppConfig.GetAccounts(BitgetPerp)
+	for i, account := range tempAccounts {
+		appAccounts[i][BitgetPerp] = account
+	}
+	return appAccounts[index]
 }

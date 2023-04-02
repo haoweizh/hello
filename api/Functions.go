@@ -307,7 +307,8 @@ var getEquityTime = &sync.Map{}
 var equityMsg = &sync.Map{}
 
 func GetMarketEquity(index int) (msg string) {
-	if len(model.AppAccounts) < index {
+	accounts := model.GetAccounts(index)
+	if accounts == nil {
 		return
 	}
 	value, ok := getEquityTime.Load(index)
@@ -316,7 +317,7 @@ func GetMarketEquity(index int) (msg string) {
 		return valueMsg.(string)
 	}
 	inAll := 0.0
-	for market, account := range model.AppAccounts[index] {
+	for market, account := range accounts {
 		_, _, equity, _ := GetBalances(account.Key, account.Secret, market)
 		if equity == 0 && !account.IsUnified {
 			_, _, equity, _ = GetPositions(account.Key, account.Secret, market)

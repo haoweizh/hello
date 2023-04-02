@@ -351,7 +351,7 @@ func Test_Orders(t *testing.T) {
 	symbol := coin + model.UniStandardTail[model.MarketTypeSpot]
 	markets := []string{market}
 	api.InitMarketInfos(markets)
-	account := api.GetAccounts(0)[markets[0]]
+	account := model.GetAccounts(0)[markets[0]]
 	order := api.PlaceOrder(account.Key, account.Secret, model.OrderSideBuy, model.OrderTypeLimit, markets[0], symbol, model.ReduceOnly,
 		1700, 1700, 0.01, false, nil, nil)
 	if order != nil {

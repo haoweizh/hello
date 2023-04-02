@@ -426,69 +426,6 @@ func GetMarkets() []string {
 	return appMarkets
 }
 
-func GetAccounts(index int) (accounts map[string]*model.Account) {
-	if model.AppAccounts != nil && len(model.AppAccounts) > index {
-		return model.AppAccounts[index]
-	}
-	// 注意: 以okex的key个数作为size，如果不使用okex，请及时更换
-	size := len(model.OKEX)
-	model.AppAccounts = make([]map[string]*model.Account, size)
-	for i := 0; i < size; i++ {
-		if model.AppAccounts[i] == nil {
-			model.AppAccounts[i] = make(map[string]*model.Account)
-		}
-	}
-	tempAccounts := model.AppConfig.GetAccounts(model.Ftx)
-	for i, account := range tempAccounts {
-		model.AppAccounts[i][model.Ftx] = account
-	}
-	tempAccounts = model.AppConfig.GetAccounts(model.OKEX)
-	for i, account := range tempAccounts {
-		model.AppAccounts[i][model.OKEX] = account
-	}
-	tempAccounts = model.AppConfig.GetAccounts(model.BinanceSpot)
-	for i, account := range tempAccounts {
-		model.AppAccounts[i][model.BinanceSpot] = account
-	}
-	tempAccounts = model.AppConfig.GetAccounts(model.BinancePerp)
-	for i, account := range tempAccounts {
-		model.AppAccounts[i][model.BinancePerp] = account
-	}
-	tempAccounts = model.AppConfig.GetAccounts(model.Gate)
-	for i, account := range tempAccounts {
-		model.AppAccounts[i][model.Gate] = account
-	}
-	tempAccounts = model.AppConfig.GetAccounts(model.Bybit)
-	for i, account := range tempAccounts {
-		model.AppAccounts[i][model.Bybit] = account
-	}
-	tempAccounts = model.AppConfig.GetAccounts(model.Kucoin)
-	for i, account := range tempAccounts {
-		model.AppAccounts[i][model.Kucoin] = account
-	}
-	tempAccounts = model.AppConfig.GetAccounts(model.KucoinSpot)
-	for i, account := range tempAccounts {
-		model.AppAccounts[i][model.KucoinSpot] = account
-	}
-	tempAccounts = model.AppConfig.GetAccounts(model.KucoinPerp)
-	for i, account := range tempAccounts {
-		model.AppAccounts[i][model.KucoinPerp] = account
-	}
-	tempAccounts = model.AppConfig.GetAccounts(model.Mexc)
-	for i, account := range tempAccounts {
-		model.AppAccounts[i][model.Mexc] = account
-	}
-	tempAccounts = model.AppConfig.GetAccounts(model.BitgetSpot)
-	for i, account := range tempAccounts {
-		model.AppAccounts[i][model.BitgetSpot] = account
-	}
-	tempAccounts = model.AppConfig.GetAccounts(model.BitgetPerp)
-	for i, account := range tempAccounts {
-		model.AppAccounts[i][model.BitgetPerp] = account
-	}
-	return model.AppAccounts[index]
-}
-
 func GetCrossLen() int {
 	if crossLen > 0 {
 		return crossLen
