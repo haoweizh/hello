@@ -5,6 +5,7 @@ import (
 	"hello/model"
 	"hello/util"
 	"math"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -302,9 +303,6 @@ func GetTurtleData(key, secret, function, market, symbol string) (data *TurtleDa
 	indexMax := math.Max(turtleNDaysMin, float64(data.DaysFar))
 	duration, _ := time.ParseDuration(fmt.Sprintf(`%dh`, -24*turtleNDays))
 	candles := GetCandle(key, secret, market, symbol, 86400, today.Add(duration), today)
-	for _, candle := range candles {
-		util.Notice(`range %s %s`, candle.Symbol, candle.Begin.String())
-	}
 	if !calcCandleN(candles) {
 		util.Notice(fmt.Sprintf(`fail to calc candles n %s %s candle num %d`, market, symbol, len(candles)))
 		return nil
@@ -358,8 +356,6 @@ func GetTurtleData(key, secret, function, market, symbol string) (data *TurtleDa
 func findCandle(candles []*model.Candle, day time.Time) (resultCandle *model.Candle) {
 	for _, candle := range candles {
 		if candle.Begin == day {
-			util.Notice(fmt.Sprintf(`find candle %s %s high %f n %f time %s`,
-				candle.Market, candle.Symbol, candle.PriceHigh, candle.N, candle.Begin.String()))
 			return candle
 		}
 	}
@@ -370,13 +366,15 @@ func calcCandleN(candles []*model.Candle) (success bool) {
 	if len(candles) < turtleNDaysMin {
 		return false
 	}
+	sortedCandles := model.SortedCandle{Value: candles}
+	sort.Sort(sortedCandles)
 	beginValue := 0.0
 	for i := 0; i < turtleNDaysMin; i++ {
-		beginValue += candles[i].PriceHigh - candles[i].PriceLow
+		beginValue += sortedCandles.Value[i].PriceHigh - sortedCandles.Value[i].PriceLow
 	}
-	candles[turtleNDaysMin-1].N = beginValue / turtleNDaysMin
-	for i := turtleNDaysMin; i < len(candles); i++ {
-		candles[i].N = (candles[i-1].N*9 + candles[i].PriceHigh - candles[i].PriceLow) / 10
+	sortedCandles.Value[turtleNDaysMin-1].N = beginValue / turtleNDaysMin
+	for i := turtleNDaysMin; i < len(sortedCandles.Value); i++ {
+		sortedCandles.Value[i].N = (sortedCandles.Value[i-1].N*9 + sortedCandles.Value[i].PriceHigh - sortedCandles.Value[i].PriceLow) / 10
 	}
 	return true
 }

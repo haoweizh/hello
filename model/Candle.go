@@ -23,14 +23,14 @@ type SortedCandle struct {
 	Value []*Candle
 }
 
-func (sortedCandle *SortedCandle) Len() int {
+func (sortedCandle SortedCandle) Len() int {
 	return len(sortedCandle.Value)
 }
 
-func (sortedCandle *SortedCandle) Swap(i, j int) {
+func (sortedCandle SortedCandle) Swap(i, j int) {
 	sortedCandle.Value[i], sortedCandle.Value[j] = sortedCandle.Value[j], sortedCandle.Value[i]
 }
 
-func (sortedCandle *SortedCandle) Less(i, j int) bool {
+func (sortedCandle SortedCandle) Less(i, j int) bool {
 	return sortedCandle.Value[i].Begin.Before(sortedCandle.Value[j].Begin)
 }
