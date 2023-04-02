@@ -318,6 +318,9 @@ func GetMarketEquity(index int) (msg string) {
 	}
 	inAll := 0.0
 	for market, account := range accounts {
+		if account == nil {
+			continue
+		}
 		_, _, equity, _ := GetBalances(account.Key, account.Secret, market)
 		if equity == 0 && !account.IsUnified {
 			_, _, equity, _ = GetPositions(account.Key, account.Secret, market)
