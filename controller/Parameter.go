@@ -552,7 +552,7 @@ func createTurtleLines(function, market string, account *model.Account) (msg str
 }
 
 func GetParameters(c *gin.Context) {
-	msg := ``
+	msg := api.GetMarketEquity(0)
 	markets := api.GetMarkets()
 	userKeys := make([]string, 0)
 	for _, market := range markets {

@@ -30,7 +30,7 @@ type Config struct {
 type Account struct {
 	Index                              int // 账户索引
 	Market, Key, Secret, FtxSubAccount string
-	CarryClose                         bool
+	CarryClose, IsUnified              bool
 	CarryRate                          float64
 }
 
@@ -61,6 +61,7 @@ func (config *Config) GetAccounts(market string) []*Account {
 	if ok && value != nil {
 		return value.([]*Account)
 	}
+	isUnified := false
 	var rateValues, closeValues, keys, secrets, ftxSubAccounts []string
 	switch market {
 	case GXZQ:
@@ -86,6 +87,7 @@ func (config *Config) GetAccounts(market string) []*Account {
 		closeValues = strings.Split(config.GateCarryClose, `,`)
 		rateValues = strings.Split(config.GateCarryRate, `,`)
 	case Ftx:
+		isUnified = true
 		keys = strings.Split(config.FtxKey, `,`)
 		secrets = strings.Split(config.FtxSecret, `,`)
 		closeValues = strings.Split(config.FtxCarryClose, `,`)
@@ -97,6 +99,7 @@ func (config *Config) GetAccounts(market string) []*Account {
 		closeValues = strings.Split(config.BitgetCarryClose, `,`)
 		rateValues = strings.Split(config.BitgetCarryRate, `,`)
 	case OKEX:
+		isUnified = true
 		keys = strings.Split(config.OkexKey, `,`)
 		secrets = strings.Split(config.OkexSecret, `,`)
 		closeValues = strings.Split(config.OkexCarryClose, `,`)
@@ -112,6 +115,7 @@ func (config *Config) GetAccounts(market string) []*Account {
 		closeValues = strings.Split(config.BitmexCarryClose, `,`)
 		rateValues = strings.Split(config.BitmexCarryRate, `,`)
 	case Bybit:
+		isUnified = true
 		keys = strings.Split(config.BybitKey, `,`)
 		secrets = strings.Split(config.BybitSecret, `,`)
 		closeValues = strings.Split(config.BybitCarryClose, `,`)
@@ -129,7 +133,7 @@ func (config *Config) GetAccounts(market string) []*Account {
 	}
 	accounts := make([]*Account, len(keys))
 	for i := 0; i < len(keys); i++ {
-		account := &Account{Key: keys[i], Secret: secrets[i], Index: i, Market: market}
+		account := &Account{Key: keys[i], Secret: secrets[i], Index: i, Market: market, IsUnified: isUnified}
 		util.Notice(fmt.Sprintf(`create account %d %s %s`, account.Index, account.Market, account.Key))
 		if market == Ftx {
 			account.FtxSubAccount = ftxSubAccounts[i]

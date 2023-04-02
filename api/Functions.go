@@ -342,6 +342,33 @@ func CalcCandleN(market, symbol string, slotSeconds int, timeCandle time.Time) (
 	return candle
 }
 
+var getEquityTime = &sync.Map{}
+var equityMsg = &sync.Map{}
+
+func GetMarketEquity(index int) (msg string) {
+	if len(model.AppAccounts) > index {
+		return
+	}
+	value, ok := getEquityTime.Load(index)
+	valueMsg, okMsg := equityMsg.Load(index)
+	if ok && value != nil && okMsg && valueMsg != nil && value.(time.Time).Add(time.Minute*10).After(time.Now()) {
+		return valueMsg.(string)
+	}
+	inAll := 0.0
+	for market, account := range model.AppAccounts[index] {
+		_, _, equity, _ := GetBalances(account.Key, account.Secret, market)
+		if equity == 0 && !account.IsUnified {
+			_, _, equity, _ = GetPositions(account.Key, account.Secret, market)
+		}
+		inAll += equity
+		msg += fmt.Sprintf("%s: %f\n", market, equity)
+	}
+	msg = fmt.Sprintf("账户总权益InUsd: %f\n", inAll)
+	getEquityTime.Store(index, time.Now())
+	equityMsg.Store(index, msg)
+	return msg
+}
+
 func GetBalances(key, secret, market string) (
 	success bool, balances []*model.Balance, totalInUsd float64, collateral *model.Collateral) {
 	//now := util.GetNow().Unix()
@@ -561,7 +588,6 @@ func GetPositions(key, secret, market string) (success bool, positions []*model.
 		_, _, total, collateral := getBalanceBybit(key, secret)
 		success, positions, _ = getPositionsBybit(key, secret)
 		accountValue, availableU = total, collateral.Available
-		return success, positions, total, collateral.Available
 	case model.HuobiPerp:
 		success, positions, accountValue, availableU = getPositionsHuobiPerp(key, secret)
 	case model.OKEX:
