@@ -563,10 +563,10 @@ func GetParameters(c *gin.Context) {
 		msg += fmt.Sprintf("单一海龟%s 个数%d\n %s\n", market, sizeTurtle, msgTurtle)
 		msg += fmt.Sprintf("组合海龟%s 个数%d\n %s\n", market, sizeCombine, msgCombine)
 	}
-	setting := api.GetSetting(model.FunctionGrid, model.Ftx, `LINK-PERP`)
-	if setting != nil {
-		msg += fmt.Sprintf("%s %s %s %f\n", setting.Function, setting.Market, setting.Symbol, setting.GridAmount)
-	}
+	//setting := api.GetSetting(model.FunctionGrid, model.Ftx, `LINK-PERP`)
+	//if setting != nil {
+	//	msg += fmt.Sprintf("%s %s %s %f\n", setting.Function, setting.Market, setting.Symbol, setting.GridAmount)
+	//}
 	var orders model.Order
 	turtleRows, _ := model.AppDB.Model(&orders).Select(`market,symbol,order_side,price,deal_price,deal_amount`).
 		Where(`deal_amount>? and refresh_type!=?`, 0, model.FunctionCross).

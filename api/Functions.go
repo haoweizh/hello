@@ -16,7 +16,6 @@ var lastPriceTime = sync.Map{}        // market_symbol, Time
 var tradeMax = &sync.Map{}            // key - symbol - [maxBuy, maxSell][]float64
 var okTradeMaxResetTime = &sync.Map{} // key - symbol - init time in second
 var okexCrossing = sync.Map{}         // symbol - bool
-var CandleMap = &sync.Map{}           // market,symbol,seconds,RFC3339 *Candle
 var USDs = map[string]bool{`USD`: true, `usd`: true, `USDT`: true, `usdt`: true, `USDC`: true, `usdc`: true, `BUSD`: true, `busd`: true}
 
 func setRequireReset(market string) {
@@ -304,49 +303,11 @@ func GetPriceForce(key, secret, symbol, market string) (result bool, price float
 	return result, price
 }
 
-func CalcCandleN(market, symbol string, slotSeconds int, timeCandle time.Time) (candle *model.Candle) {
-	value, ok := util.LoadSyncMap(CandleMap, market, symbol, strconv.Itoa(slotSeconds), timeCandle.Format(time.RFC3339))
-	if ok && value != nil {
-		candle = value.(*model.Candle)
-	} else {
-		if time.Now().Second() == 0 {
-			util.Notice(fmt.Sprintf(`candle error: can not get candle %s %s %d %s`,
-				market, symbol, slotSeconds, timeCandle.Format(time.RFC3339)))
-		}
-		return nil
-	}
-	candle.N = (candle.PriceHigh - candle.PriceLow) / 20
-	for i := 1; i < 20; i++ {
-		d, _ := time.ParseDuration(fmt.Sprintf(`%ds`, -i*slotSeconds))
-		index := timeCandle.Add(d)
-		temp, _ := util.LoadSyncMap(CandleMap, market, symbol, strconv.Itoa(slotSeconds), index.Format(time.RFC3339))
-		if temp == nil {
-			if time.Now().Minute() == 0 && time.Now().Second() == 0 {
-				util.Notice(fmt.Sprintf(`candle error: can not get candle %s %s %d %s`,
-					market, symbol, slotSeconds, index.String()))
-			}
-			continue
-		}
-		candleCurrent := temp.(*model.Candle)
-		if candleCurrent.N > 0 {
-			if i == 1 {
-				candle.N += candleCurrent.N * 19 / 20
-				break
-			}
-			candle.N += candleCurrent.N * 19 / 400
-		} else {
-			candle.N += (candleCurrent.PriceHigh - candleCurrent.PriceLow) * 19 / 400
-		}
-	}
-	//util.StoreSyncMap(CandleMap, candle, market, symbol, strconv.Itoa(slotSeconds), timeCandle.Format(time.RFC3339))
-	return candle
-}
-
 var getEquityTime = &sync.Map{}
 var equityMsg = &sync.Map{}
 
 func GetMarketEquity(index int) (msg string) {
-	if len(model.AppAccounts) > index {
+	if len(model.AppAccounts) < index {
 		return
 	}
 	value, ok := getEquityTime.Load(index)

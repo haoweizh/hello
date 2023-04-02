@@ -5,7 +5,6 @@ import (
 	"hello/model"
 	"hello/util"
 	"math"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -270,6 +269,9 @@ func HandleOrders(key, secret, market, symbol string, settings []*model.Setting,
 	return true
 }
 
+const turtleNDays = 100
+const turtleNDaysMin = 10
+
 func GetTurtleData(key, secret, function, market, symbol string) (data *TurtleData) {
 	today, todayStr := model.GetMarketToday(market)
 	value, ok := util.LoadSyncMap(&TurtleDataSet, function, market, symbol, todayStr)
@@ -297,22 +299,17 @@ func GetTurtleData(key, secret, function, market, symbol string) (data *TurtleDa
 	}
 	data = &TurtleData{TurtleTime: today, Symbol: symbol, BreakLong: false, BreakShort: false, Liquidated: false,
 		DaysFar: far, DaysNear: far / 2, DaysAdjust: 5, UseNear: useNear}
-	indexMax := math.Max(21.0, float64(data.DaysFar))
-	duration, _ := time.ParseDuration(fmt.Sprintf(`%dh`, -24*int(indexMax)))
+	indexMax := math.Max(turtleNDaysMin, float64(data.DaysFar))
+	duration, _ := time.ParseDuration(fmt.Sprintf(`%dh`, -24*turtleNDays))
 	candles := GetCandle(key, secret, market, symbol, 86400, today.Add(duration), today)
-	for _, item := range candles {
-		if item == nil {
-			continue
-		}
-		value, ok = util.LoadSyncMap(CandleMap, market, symbol, strconv.Itoa(item.Seconds), item.Begin.Format(time.RFC3339))
-		if value == nil {
-			util.StoreSyncMap(CandleMap, item, market, symbol, strconv.Itoa(item.Seconds), item.Begin.Format(time.RFC3339))
-		}
+	if !calcCandleN(candles) {
+		util.Notice(fmt.Sprintf(`fail to calc candles n %s %s candle num %d`, market, symbol, len(candles)))
+		return nil
 	}
 	for i := 1; i <= int(indexMax); i++ {
 		duration, _ = time.ParseDuration(fmt.Sprintf(`%dh`, -24*i))
 		day := today.Add(duration)
-		candle := CalcCandleN(market, symbol, 86400, day)
+		candle := findCandle(candles, day)
 		if candle == nil || candle.PriceHigh == 0 || candle.PriceLow == 0 {
 			if time.Now().Second() == 0 {
 				util.Notice(`can not calc turtleDate as nil candle %s %s %s %s`,
@@ -348,8 +345,34 @@ func GetTurtleData(key, secret, function, market, symbol string) (data *TurtleDa
 		util.Notice(fmt.Sprintf(`set turtle data %v %s %s %s %s  Amount:%e N:%e %d:%e-%e %d:%e-%e`,
 			data, function, market, symbol, todayStr, data.Amount, data.N, data.DaysNear, data.LowDaysNear,
 			data.HighDaysNear, data.DaysFar, data.LowDaysFar, data.HighDaysFar))
+		return data
+	} else {
+		return nil
 	}
-	return
+}
+
+func findCandle(candles []*model.Candle, day time.Time) (resultCandle *model.Candle) {
+	for _, candle := range candles {
+		if candle.Begin == day {
+			return candle
+		}
+	}
+	return nil
+}
+
+func calcCandleN(candles []*model.Candle) (success bool) {
+	if len(candles) < turtleNDaysMin {
+		return false
+	}
+	beginValue := 0.0
+	for i := 0; i < turtleNDaysMin; i++ {
+		beginValue += candles[i].PriceHigh - candles[i].PriceLow
+	}
+	candles[turtleNDaysMin-1].N = beginValue / turtleNDaysMin
+	for i := turtleNDaysMin; i < len(candles); i++ {
+		candles[i].N = (candles[i-1].N*9 + candles[i].PriceHigh - candles[i].PriceLow) / 10
+	}
+	return true
 }
 
 func SetTurtleOrderStatus(function, market, symbol, orderId, status string) {

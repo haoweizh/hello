@@ -17,7 +17,6 @@ var CarryInfo sync.Map        // userKey - function - msg
 var monitorInfo = &sync.Map{} // userIndex - table - syncMap[string -array[]string]
 var AppMetric = &MetricManager{}
 var IgnoreFunctions = map[string]bool{FunctionDynamicTurtle: true, FunctionTurtleNormal: true, FunctionDynamicCombine: true}
-var StartTime = util.GetNow()
 
 const BitgetSpot = `bitgetspot`
 const BitgetPerp = `bitgetperp`
@@ -56,7 +55,6 @@ const FunctionDynamicTurtle = `dynamic_turtle`
 const FunctionDynamicCombine = `dynamic_combine`
 const FunctionCombineTurtle = `combine_turtle`
 const FunctionTurtleNormal = `turtle_normal`
-const FunctionGrid = `grid`
 const FunctionCross = `cross`
 const MarketTypePerp = `perp`
 const MarketTypeSpot = `spot`
@@ -199,17 +197,6 @@ func NewConfig() {
 		util.Notice(err.Error())
 		return
 	}
-}
-
-func GetMarketYesterday(market string) (yesterday time.Time, strYesterday string) {
-	yesterday = time.Now().In(time.UTC)
-	if market == OKEX {
-		yesterday = util.GetNow()
-	}
-	duration, _ := time.ParseDuration(`-24h`)
-	yesterday = yesterday.Add(duration)
-	yesterday = time.Date(yesterday.Year(), yesterday.Month(), yesterday.Day(), 0, 0, 0, 0, yesterday.Location())
-	return yesterday, yesterday.String()[0:10]
 }
 
 func GetMarketToday(market string) (today time.Time, strToday string) {
