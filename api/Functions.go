@@ -328,7 +328,7 @@ func GetMarketEquity(index int) (msg string) {
 		inAll += equity
 		msg += fmt.Sprintf("%s: %f\n", market, equity)
 	}
-	msg = fmt.Sprintf("账户总权益InUsd: %f\n", inAll)
+	msg += fmt.Sprintf("账户总权益InUsd: %f\n", inAll)
 	getEquityTime.Store(index, time.Now())
 	equityMsg.Store(index, msg)
 	return msg
