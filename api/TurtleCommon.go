@@ -376,9 +376,9 @@ func calcCandleN(candles []*model.Candle) (success bool) {
 	for i := turtleNDaysMin; i < len(sortedCandles.Value); i++ {
 		sortedCandles.Value[i].N = (sortedCandles.Value[i-1].N*9 + sortedCandles.Value[i].PriceHigh - sortedCandles.Value[i].PriceLow) / 10
 	}
-	for i, candle := range candles {
-		util.Notice(fmt.Sprintf(`candle calc %d %s %s %s %f`, i, candle.Market, candle.Symbol, candle.Begin.String(), candle.N))
-	}
+	//for i, candle := range candles {
+	//	util.Notice(fmt.Sprintf(`candle calc %d %s %s %s %f`, i, candle.Market, candle.Symbol, candle.Begin.String(), candle.N))
+	//}
 	return true
 }
 
