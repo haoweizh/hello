@@ -333,9 +333,9 @@ func CalcCandleN(market, symbol string, slotSeconds int, timeCandle time.Time) (
 				candle.N += candleCurrent.N * 19 / 20
 				break
 			}
-			candle.N += candleCurrent.N / 20
+			candle.N += candleCurrent.N * 19 / 400
 		} else {
-			candle.N += (candleCurrent.PriceHigh - candleCurrent.PriceLow) / 20
+			candle.N += (candleCurrent.PriceHigh - candleCurrent.PriceLow) * 19 / 400
 		}
 	}
 	//util.StoreSyncMap(CandleMap, candle, market, symbol, strconv.Itoa(slotSeconds), timeCandle.Format(time.RFC3339))
@@ -379,6 +379,8 @@ func GetBalances(key, secret, market string) (
 			}
 		}
 	}
+	util.Notice(fmt.Sprintf(`get balances %s %s %f %d %v %v`,
+		market, key[:5], totalInUsd, len(balances), success, balances))
 	return success, balances, totalInUsd, collateral
 }
 
@@ -537,15 +539,15 @@ func QueryOrderById(key, secret, market, symbol, orderType, orderId string) (ord
 func GetPositions(key, secret, market string) (success bool, positions []*model.Position, accountValue, availableU float64) {
 	switch market {
 	case model.BitgetPerp:
-		return getPositionsBitgetPerp(key, secret)
+		success, positions, accountValue, availableU = getPositionsBitgetPerp(key, secret)
 	case model.KucoinPerp:
-		return getPositionsKucoinPerp(key, secret)
+		success, positions, accountValue, availableU = getPositionsKucoinPerp(key, secret)
 	case model.Gate:
-		return getPositionsGate(key, secret)
+		success, positions, accountValue, availableU = getPositionsGate(key, secret)
 	case model.Mexc:
-		return getPositionsMexc(key, secret)
+		success, positions, accountValue, availableU = getPositionsMexc(key, secret)
 	case model.BinancePerp:
-		return getPositionsBinancePerp(key, secret)
+		success, positions, accountValue, availableU = getPositionsBinancePerp(key, secret)
 	case model.Ftx:
 		var balances []*model.Balance
 		success, balances, accountValue = getBalanceFtx(key, secret)
@@ -555,19 +557,21 @@ func GetPositions(key, secret, market string) (success bool, positions []*model.
 			}
 		}
 		success, positions, _ = getPositionsFtx(key, secret)
-		return success, positions, accountValue, availableU
 	case model.Bybit:
 		_, _, total, collateral := getBalanceBybit(key, secret)
 		success, positions, _ = getPositionsBybit(key, secret)
+		accountValue, availableU = total, collateral.Available
 		return success, positions, total, collateral.Available
 	case model.HuobiPerp:
-		return getPositionsHuobiPerp(key, secret)
+		success, positions, accountValue, availableU = getPositionsHuobiPerp(key, secret)
 	case model.OKEX:
 		_, _, total, collateral := getBalanceOKEX(key, secret)
 		success, positions = getPositionsOKEX(key, secret)
-		return success, positions, total, collateral.Available
+		accountValue, availableU = total, collateral.Available
 	}
-	return false, nil, 0, 0
+	util.Notice(fmt.Sprintf(`get positions %s %s %f %f %d %v %v`,
+		market, key[:5], accountValue, availableU, len(positions), success, positions))
+	return success, positions, accountValue, availableU
 }
 
 func MustPlaceOrder(key, secret, orderSide, orderType, market, symbol, orderParam,

@@ -17,6 +17,7 @@ var CarryInfo sync.Map        // userKey - function - msg
 var monitorInfo = &sync.Map{} // userIndex - table - syncMap[string -array[]string]
 var AppMetric = &MetricManager{}
 var IgnoreFunctions = map[string]bool{FunctionDynamicTurtle: true, FunctionTurtleNormal: true, FunctionDynamicCombine: true}
+var StartTime = util.GetNow()
 
 const BitgetSpot = `bitgetspot`
 const BitgetPerp = `bitgetperp`

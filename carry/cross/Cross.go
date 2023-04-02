@@ -325,6 +325,12 @@ func ClearCross() {
 			}
 		}
 		today := util.GetNow()
+		if model.StartTime.Add(time.Minute * 5).After(today) {
+			util.Notice(fmt.Sprintf(`do not equal before start + 5 min %s`, model.StartTime.String()))
+			api.CheckSetProcessing(model.FunctionCross, model.FunctionCross, model.FunctionCross, false)
+			time.Sleep(time.Minute)
+			continue
+		}
 		today = time.Date(today.Year(), today.Month(), today.Day(), 0, 0, 0, 0, today.Location())
 		carryRows, _ := model.AppDB.Model(model.Order{}).Select(`sum(price*abs(amount)),refresh_type`).
 			Where(`order_time>?`, today).Group(`refresh_type`).Rows()
