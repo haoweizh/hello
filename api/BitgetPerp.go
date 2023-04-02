@@ -239,21 +239,21 @@ func getPositionsBitgetPerp(key, secret string) (success bool, positions []*mode
 	bitgetAssertResp := &dtos.BitgetAssertResp{}
 	jsonErr := json.Unmarshal(assetHttpResp, bitgetAssertResp)
 	if bitgetAssertResp == nil || bitgetAssertResp.Code != "00000" {
-		util.SocketInfo(fmt.Sprintf("fail to refresh bitgetperp asset , resp: %s httpErr: %v, jsonErr: %v", assetHttpResp, assetHttpErr, jsonErr))
-		time.Sleep(time.Second * 2)
+		util.Notice(fmt.Sprintf("fail to refresh bitgetperp asset , resp: %s httpErr: %v, jsonErr: %v", assetHttpResp, assetHttpErr, jsonErr))
+		time.Sleep(time.Minute)
 		return getPositionsBitgetPerp(key, secret)
 	} else {
-		util.SocketInfo(fmt.Sprintf("get bitgetperp asset success, resp: %s ", assetHttpResp))
+		util.Notice(fmt.Sprintf("get bitgetperp asset success, resp: %s ", assetHttpResp))
 	}
 	positionHttpResp, positionHttpErr := client.DoGet("/api/mix/v1/position/allPosition", map[string]string{"productType": "umcbl"})
 	bitgetPositionResp := &dtos.BitgetPositionResp{}
 	positionJsonErr := json.Unmarshal(positionHttpResp, bitgetPositionResp)
 	if bitgetPositionResp == nil || bitgetPositionResp.Code != "00000" {
-		util.SocketInfo(fmt.Sprintf("fail to refresh bitgetperp position, resp: %s httpErr: %v, jsonErr: %v", positionHttpResp, positionHttpErr, positionJsonErr))
-		time.Sleep(time.Second * 2)
+		util.Notice(fmt.Sprintf("fail to refresh bitgetperp position, resp: %s httpErr: %v, jsonErr: %v", positionHttpResp, positionHttpErr, positionJsonErr))
+		time.Sleep(time.Minute)
 		return getPositionsBitgetPerp(key, secret)
 	} else {
-		util.SocketInfo(fmt.Sprintf("get bitgetperp position success, resp: %s ", positionHttpResp))
+		util.Notice(fmt.Sprintf("get bitgetperp position success, resp: %s ", positionHttpResp))
 	}
 	for _, asset := range bitgetAssertResp.Data {
 		if asset.MarginCoin == `USDT` {
@@ -288,6 +288,9 @@ func getPositionsBitgetPerp(key, secret string) (success bool, positions []*mode
 		position.EntryPrice, _ = strconv.ParseFloat(contract.AverageOpenPrice, 64)
 		position.Margin, _ = strconv.ParseFloat(contract.Margin, 64)
 		positions = append(positions, position)
+	}
+	if len(positions) == 0 && accountValue > 0 {
+		util.Notice(fmt.Sprintf(`pos error bitgetperp %d`, len(bitgetPositionResp.Data)))
 	}
 	return true, positions, accountValue, availableU
 }

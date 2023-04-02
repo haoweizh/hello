@@ -680,7 +680,8 @@ func getPositionsGate(key string, secret string) (success bool, positions []*mod
 		}
 	}
 	if accountValue != 0 && available != 0 && unrealizedPnl != 0 && len(positions) == 0 {
-		util.Notice(fmt.Sprintf(`gate error: %s %f %f %f 0 pos`, key[:5], accountValue, available, unrealizedPnl))
+		util.Notice(fmt.Sprintf(`pos error gate %s %f %f %f 0 pos items %d`,
+			key[:5], accountValue, available, unrealizedPnl, len(positionList)))
 		time.Sleep(time.Minute)
 		return getPositionsGate(key, secret)
 	}

@@ -381,20 +381,22 @@ func getPositionsBinancePerp(key, secret string) (success bool, positions []*mod
 	positionJson, err := util.NewJSON(responseBody)
 	if err != nil || positionJson == nil {
 		util.SocketInfo(`fail to refresh binance position `)
-		time.Sleep(time.Minute * 5)
+		time.Sleep(time.Minute)
 		return getPositionsBinancePerp(key, secret)
 	}
 	success = positionJson.Get("canTrade").MustBool()
+	unrealizedProfit := 0.0
+	var data []interface{}
 	if success {
 		positions = make([]*model.Position, 0)
 		totalBalanceJson := positionJson.Get(`totalWalletBalance`).MustString()
 		totalUnrealizedProfitJson := positionJson.Get(`totalUnrealizedProfit`).MustString()
 		availableJson := positionJson.Get(`availableBalance`).MustString()
-		unrealizedProfit, _ := strconv.ParseFloat(totalUnrealizedProfitJson, 64)
+		unrealizedProfit, _ = strconv.ParseFloat(totalUnrealizedProfitJson, 64)
 		totalBalance, _ := strconv.ParseFloat(totalBalanceJson, 64)
 		accountValue = totalBalance + unrealizedProfit
 		availableU, _ = strconv.ParseFloat(availableJson, 64)
-		data := positionJson.Get("positions").MustArray()
+		data, err = positionJson.Get("positions").Array()
 		for _, item := range data {
 			position := &model.Position{Market: model.BinancePerp, Ts: util.GetNowUnixMillion()}
 			value := item.(map[string]interface{})
@@ -416,6 +418,12 @@ func getPositionsBinancePerp(key, secret string) (success bool, positions []*mod
 			}
 			positions = append(positions, position)
 		}
+	}
+	if (unrealizedProfit != 0 && len(positions) == 0) || err != nil {
+		util.Notice(fmt.Sprintf(`pos error binanceperp %s %f %f %f 0 pos items %d`,
+			key[:5], accountValue, availableU, unrealizedProfit, len(data)))
+		time.Sleep(time.Minute)
+		return getPositionsBinancePerp(key, secret)
 	}
 	return success, positions, accountValue, availableU
 }

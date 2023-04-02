@@ -1263,17 +1263,25 @@ func getPositionsOKEX(key, secret string) (success bool, positions []*model.Posi
 	responseBody, _ := sendSignRequestOKEX(key, secret, http.MethodGet, `/api/v5/account/positions`, param, nil)
 	responseJson, err := util.NewJSON(responseBody)
 	if err != nil || responseJson == nil || responseJson.Get(`code`).MustString() != `0` {
-		util.SocketInfo(`fail to get okex positions `)
-		time.Sleep(time.Minute * 5)
+		util.Notice(`fail to get okex positions `)
+		time.Sleep(time.Minute)
 		return getPositionsOKEX(key, secret)
 	}
 	positions = make([]*model.Position, 0)
-	positionArray := responseJson.Get(`data`).MustArray()
+	positionArray, arrayErr := responseJson.Get(`data`).Array()
+	if arrayErr != nil {
+		util.Notice(`fail to get okex positions %s`, arrayErr.Error())
+		time.Sleep(time.Minute)
+		return getPositionsOKEX(key, secret)
+	}
 	for _, item := range positionArray {
 		result, position := parsePositionOKEX(item.(map[string]interface{}))
 		if result && position.Holding != 0 {
 			positions = append(positions, position)
 		}
+	}
+	if len(positions) == 0 {
+		util.Notice(fmt.Sprintf(`pos err okex %d %s`, len(positionArray), responseJson.Get(`data`).MustString()))
 	}
 	return true, positions
 }
