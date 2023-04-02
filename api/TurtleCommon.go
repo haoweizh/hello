@@ -338,6 +338,7 @@ func GetTurtleData(key, secret, function, market, symbol string) (data *TurtleDa
 		if i == 1 {
 			data.N = candle.N
 			data.Amount = CalcTurtleAmount(key, secret, market, symbol, data.N)
+			util.Notice(fmt.Sprintf(`set data %f %f`, data.N, data.Amount))
 		}
 	}
 	if data.Amount > 0 && data.N > 0 {
@@ -353,9 +354,9 @@ func GetTurtleData(key, secret, function, market, symbol string) (data *TurtleDa
 
 func findCandle(candles []*model.Candle, day time.Time) (resultCandle *model.Candle) {
 	for _, candle := range candles {
-		util.Notice(fmt.Sprintf(`find candle %s %s high %f n %f time %s %d==%d %v %v`,
-			candle.Market, candle.Symbol, candle.PriceHigh, candle.N, candle.Begin.String(), candle.Begin.Unix(), day.Unix(), candle.Begin == day, candle.Begin.Unix() == day.Unix()))
-		if candle.Begin.Unix() == day.Unix() {
+		if candle.Begin == day {
+			util.Notice(fmt.Sprintf(`find candle %s %s high %f n %f time %s`,
+				candle.Market, candle.Symbol, candle.PriceHigh, candle.N, candle.Begin.String()))
 			return candle
 		}
 	}
