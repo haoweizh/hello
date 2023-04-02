@@ -652,7 +652,7 @@ func getPositionsGate(key string, secret string) (success bool, positions []*mod
 		if positionsErr != nil {
 			panicGateError(key, `getPositionsGate`, positionsErr)
 		}
-		time.Sleep(time.Minute * 5)
+		time.Sleep(time.Minute)
 		util.SocketInfo(`fail to refresh future balance gate`)
 		return getPositionsGate(key, secret)
 	}
@@ -678,6 +678,11 @@ func getPositionsGate(key string, secret string) (success bool, positions []*mod
 		if position.Holding != 0 {
 			positions = append(positions, position)
 		}
+	}
+	if accountValue != 0 && available != 0 && unrealizedPnl != 0 && len(positions) == 0 {
+		util.Notice(fmt.Sprintf(`gate error: %s %f %f %f 0 pos`, key[:5], accountValue, available, unrealizedPnl))
+		time.Sleep(time.Minute)
+		return getPositionsGate(key, secret)
 	}
 	return true, positions, accountValue, available
 }
