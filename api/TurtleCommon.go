@@ -518,16 +518,16 @@ func CanOpenCombine(setting, settingNormal *model.Setting, data, dataNormal *Tur
 		settingsNormal.Range(addTrading)
 		settings.Range(addTrading)
 		inAll = float64(len(tradingSymbols))
-		canOpen = setting.Chance != 0 || settingNormal.Chance != 0 || (math.Abs(inAll) < setting.AmountLimit &&
+		canOpen = setting.Chance != 0 || settingNormal.Chance != 0 || (inAll < setting.AmountLimit &&
 			setting.SymbolRelated != model.SettingTurtleRemoved && settingNormal.SymbolRelated != model.SettingTurtleRemoved)
-		//if setting.Chance == 0 && !canOpen {
-		//	data.OrderLong = nil
-		//	data.OrderShort = nil
-		//}
-		//if settingNormal.Chance == 0 && !canOpen {
-		//	dataNormal.OrderLong = nil
-		//	dataNormal.OrderShort = nil
-		//}
+		if setting.Chance == 0 && !canOpen && inAll >= setting.AmountLimit {
+			data.OrderLong = nil
+			data.OrderShort = nil
+		}
+		if settingNormal.Chance == 0 && !canOpen && inAll >= setting.AmountLimit {
+			dataNormal.OrderLong = nil
+			dataNormal.OrderShort = nil
+		}
 	}
 	return canOpen, inAll
 }
@@ -579,11 +579,11 @@ func CanOpenTurtle(setting *model.Setting, data *TurtleData) (canOpen bool, inAl
 			}
 			return true
 		})
-		canOpen = setting.Chance != 0 || (setting.SymbolRelated != model.SettingTurtleRemoved && math.Abs(inAll) < setting.AmountLimit)
-		//if setting.Chance == 0 && !canOpen {
-		//	data.OrderLong = nil
-		//	data.OrderShort = nil
-		//}
+		canOpen = setting.Chance != 0 || (setting.SymbolRelated != model.SettingTurtleRemoved && inAll < setting.AmountLimit)
+		if setting.Chance == 0 && !canOpen && inAll >= setting.AmountLimit {
+			data.OrderLong = nil
+			data.OrderShort = nil
+		}
 	}
 	canOpen = canOpen && math.Abs(float64(setting.Chance)) < setting.OpenShortMargin
 	return canOpen, inAll
