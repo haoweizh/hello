@@ -1280,16 +1280,6 @@ func getPositionsOKEX(key, secret string) (success bool, positions []*model.Posi
 			positions = append(positions, position)
 		}
 	}
-	if len(positions) == 0 && len(positionArray) > 0 {
-		util.Notice(fmt.Sprintf(`pos err okex %d %s`, len(positionArray), responseJson.Get(`data`).MustString()))
-		for _, item := range positionArray {
-			util.Notice(fmt.Sprintf(`ori okex item %v`, item.(map[string]interface{})))
-			result, position := parsePositionOKEX(item.(map[string]interface{}))
-			util.Notice(fmt.Sprintf(`parsed okex item %v %v`, result, position))
-		}
-		time.Sleep(time.Minute)
-		return getPositionsOKEX(key, secret)
-	}
 	return true, positions
 }
 
