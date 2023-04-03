@@ -8,7 +8,6 @@ import (
 	"sort"
 	"strings"
 	"sync"
-	"time"
 )
 
 var symbolSettings = &sync.Map{} // function*market - map[symbol]*setting
@@ -377,7 +376,6 @@ func LoadSettings() bool {
 	if handleSettings() {
 		PrepareSettings()
 	}
-	time.Sleep(time.Second * 5)
 	for _, market := range appMarkets {
 		setRequireReset(market)
 	}

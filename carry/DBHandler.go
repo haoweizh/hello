@@ -51,11 +51,11 @@ func _(key, secret string) {
 
 func ReloadSettings() {
 	for true {
+		time.Sleep(time.Minute * 10)
 		if !api.InitMarketInfos(nil) {
 			util.Notice(`fatal error: can not set market mode!!`)
 		}
 		api.LoadSettings()
-		time.Sleep(time.Minute * 10)
 	}
 }
 
@@ -168,11 +168,12 @@ func Maintain() {
 	//go util.StartMidNightTimer(CancelAllOrders)
 	//go MaintainBalance()
 	go MaintainTransFee()
-	//coinSettings := model.GetCoinSettings(model.FunctionCross)
-	//if coinSettings != nil {
-	//	go cross.ClearCarry()
-	//}
+	// 1. 初始化db中的setting
 	api.PrepareSettings()
+	// 2. 初始化内存中的marketInfo
+	api.InitMarketInfos(nil)
+	// 3. 基于1和2初始化内存中的setting
+	api.LoadSettings()
 	go ReloadSettings()
 	for true {
 		go MaintainMarketChan()

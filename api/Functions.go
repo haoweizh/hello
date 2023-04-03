@@ -898,7 +898,6 @@ func InitMarketInfos(markets []string) (success bool) {
 	if markets == nil {
 		markets = GetMarkets()
 	}
-	model.MarketInfos = &sync.Map{}
 	for _, market := range markets {
 		accounts := model.AppConfig.GetAccounts(market)
 		var marketInfos map[string]*model.MarketInfo
