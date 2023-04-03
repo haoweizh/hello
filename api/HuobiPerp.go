@@ -39,7 +39,10 @@ var subscribeHandlerHuobiPerp = func(connection *websocket.Conn, subscribes []in
 func WsDepthServeHuobiPerp(markets *model.Markets, orderHandler OrderHandler) ([]chan struct{}, error) {
 	wsHandler := func(connection *websocket.Conn, event []byte, orderHandler OrderHandler) {
 		res := util.UnGzip(event)
-		responseJson, _ := util.NewJSON(res)
+		responseJson, err := util.NewJSON(res)
+		if err != nil {
+			return
+		}
 		if responseJson.Get(`ping`).MustInt() > 0 {
 			pingMap := make(map[string]interface{})
 			pingMap["pong"] = responseJson.Get(`ping`).MustInt()

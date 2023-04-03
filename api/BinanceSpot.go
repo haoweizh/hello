@@ -82,7 +82,7 @@ func WsDepthServeBinanceSpot(markets *model.Markets, orderHandler OrderHandler) 
 	wsHandler := func(connection *websocket.Conn, event []byte, orderHandler OrderHandler) {
 		result, wsErr := util.NewJSON(event)
 		if wsErr != nil {
-			util.SocketInfo(`binance fail to unmarshal json ` + err.Error())
+			util.Notice(`binance fail to unmarshal json ` + err.Error())
 			return
 		}
 		subscribe, _ := result.Get("stream").String()

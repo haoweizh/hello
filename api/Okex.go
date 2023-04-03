@@ -1319,9 +1319,10 @@ func getMaxSizeOKEX(key, secret, symbol string) (success bool, maxBuy, maxSell f
 func getFundingRateOKEX(key, secret, symbol string) (fundingRate *model.FundingRate) {
 	param := map[string]interface{}{`instId`: symbol}
 	response, _ := sendSignRequestOKEX(key, secret, http.MethodGet, `/api/v5/public/funding-rate`, param, nil)
-	fundingJson, _ := util.NewJSON(response)
+	fundingJson, fundingErr := util.NewJSON(response)
 	if fundingJson == nil || fundingJson.Get(`data`) == nil || fundingJson.Get(`data`).MustArray() == nil ||
-		len(fundingJson.Get(`data`).MustArray()) == 0 {
+		len(fundingJson.Get(`data`).MustArray()) == 0 || fundingErr != nil {
+		util.Notice(fmt.Sprintf(`fail to getFundingRateOKEX %v`, fundingErr))
 		return nil
 	}
 	data := fundingJson.Get(`data`).MustArray()[0].(map[string]interface{})

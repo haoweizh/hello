@@ -423,10 +423,20 @@ func SignedRequestBybit(key, secret, method, host, path string, body map[string]
 
 func setBybitMarginLeverage(key, secret string) {
 	httpResp, httpErr := SignedRequestBybit(key, secret, http.MethodPost, bybitRestUrl, "/v5/spot-margin-trade/set-leverage", map[string]interface{}{"leverage": "5"})
+	if httpErr != nil {
+		util.Notice(fmt.Sprintf(`fail to setBybitMarginLeverage when post %s`, httpErr.Error()))
+		return
+	}
 	jsonData, jsonErr := util.NewJSON(httpResp)
-	code, _ := jsonData.Get("retCode").Int()
-	if jsonData == nil || code != 0 {
-		util.Notice(fmt.Sprintf("fail to set bybit margin leverage, resp: %s httpErr: %v, jsonErr: %v", httpResp, httpErr, jsonErr))
+	if jsonErr != nil {
+		util.Notice(fmt.Sprintf(`fail to setBybitMarginLeverage when NewJson %s`, jsonErr.Error()))
+		return
+	}
+	if jsonData != nil {
+		code, codeErr := jsonData.Get("retCode").Int()
+		if code != 0 || codeErr != nil {
+			util.Notice(fmt.Sprintf("fail to set bybit margin leverage, resp: %s codeErr: %v", httpResp, codeErr))
+		}
 	}
 	time.Sleep(time.Second * 5)
 }
@@ -450,10 +460,20 @@ func setBybitPerpLeverage(key, secret string) {
 		if marketType == model.MarketTypePerp {
 			params := map[string]interface{}{"category": "linear", "buyLeverage": "5", "sellLeverage": "5", "symbol": dialectSymbol}
 			httpResp, httpErr := SignedRequestBybit(key, secret, http.MethodPost, bybitRestUrl, "/v5/position/set-leverage", params)
+			if httpErr != nil {
+				util.Notice(fmt.Sprintf(`fail to setBybitPerpLeverage when request %s %s`, symbol, httpErr.Error()))
+				continue
+			}
 			jsonData, jsonErr := util.NewJSON(httpResp)
-			code, _ := jsonData.Get("retCode").Int()
-			if jsonData == nil || code != 0 {
-				util.Notice(fmt.Sprintf("fail to set bybit perp leverage , resp: %s httpErr: %v, jsonErr: %v", httpResp, httpErr, jsonErr))
+			if jsonErr != nil {
+				util.Notice(fmt.Sprintf(`fail to setBybitPerpLeverage when NewJson %s %s`, symbol, jsonErr.Error()))
+				continue
+			}
+			if jsonData != nil {
+				code, codeErr := jsonData.Get("retCode").Int()
+				if code != 0 || codeErr != nil {
+					util.Notice(fmt.Sprintf("fail to set bybit perp leverage , resp: %s codeErr: %v", httpResp, codeErr))
+				}
 			}
 			time.Sleep(time.Minute)
 		}
@@ -517,13 +537,22 @@ func cancelOrdersBybit(key, secret, symbol string) (result bool) {
 		param["category"] = "spot"
 	}
 	httpResp, httpErr := SignedRequestBybit(key, secret, http.MethodPost, bybitRestUrl, "/v5/order/cancel-all", param)
-	jsonData, jsonErr := util.NewJSON(httpResp)
-	code, _ := jsonData.Get("code").Int64()
-	if jsonData == nil || code != 0 {
-		util.Notice(fmt.Sprintf("fail to cancel bybit order request: %v resp: %s httpErr: %v, jsonErr: %v", param, httpResp, httpErr, jsonErr))
-		return false
+	if httpErr != nil {
+		util.Notice(fmt.Sprintf(`fail to do post when cancelOrdersBybit %s`, httpErr.Error()))
+		return
 	}
-	return true
+	jsonData, jsonErr := util.NewJSON(httpResp)
+	if jsonErr != nil {
+		util.Notice(fmt.Sprintf(`fail to NewJson when cancelOrdersBybit %s`, jsonErr.Error()))
+		return
+	}
+	if jsonData != nil {
+		code, _ := jsonData.Get("code").Int64()
+		if code == 0 {
+			return true
+		}
+	}
+	return false
 }
 
 func getFundingRateBybit(symbol string) (fundingRate *model.FundingRate) {

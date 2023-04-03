@@ -413,8 +413,8 @@ func getTransferFtx(key, secret string) (balances []*model.Balance) {
 		}
 	}
 	response, _ = SignedRequestFtx(key, secret, `GET`, `/wallet/withdrawals`, nil, nil)
-	withdraw, err := util.NewJSON(response)
-	if err == nil && withdraw != nil {
+	withdraw, withdrawErr := util.NewJSON(response)
+	if withdrawErr == nil && withdraw != nil {
 		for _, item := range withdraw.Get(`result`).MustArray() {
 			balance := parseTransactionFtx(key, item.(map[string]interface{}), -1)
 			if balance != nil {

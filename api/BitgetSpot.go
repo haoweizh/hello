@@ -236,13 +236,22 @@ func cancelOrdersBitgetSpot(key, secret, symbol string) (result bool) {
 		"symbol": dialectSymbol,
 	}
 	httpResp, httpErr := client.DoPost("/api/spot/v1/trade/cancel-symbol-order", string(util.JsonEncodeToByte(params)))
-	jsonData, jsonErr := util.NewJSON(httpResp)
-	code, _ := jsonData.Get("code").String()
-	if jsonData == nil || code != "00000" {
-		util.Notice(fmt.Sprintf("fail to cancel Bitget spot order resp: %s httpErr: %v, jsonErr: %v", httpResp, httpErr, jsonErr))
+	if httpErr != nil {
+		util.Notice(fmt.Sprintf(`fail to post when cancelOrdersBitgetSpot %s`, httpErr.Error()))
 		return false
 	}
-	return true
+	jsonData, jsonErr := util.NewJSON(httpResp)
+	if jsonErr != nil {
+		util.Notice(fmt.Sprintf(`fail to NewJson when cancelOrdersBitgetSpot %s`, jsonErr.Error()))
+		return false
+	}
+	if jsonData != nil {
+		code, _ := jsonData.Get("code").String()
+		if code == "00000" {
+			return true
+		}
+	}
+	return false
 }
 
 func queryOrderBitgetSpot(key, secret, symbol string, orderId string) (order *model.Order) {

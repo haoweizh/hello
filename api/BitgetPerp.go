@@ -52,10 +52,20 @@ func setBitgetPositionMode(key, secret string) {
 	client := dtos.BitgetRestClient{BaseUrl: bitgetRestUrl, Passphrase: model.AppConfig.Phase, ApiKey: key, ApiSecretKey: secret}
 	params := map[string]string{"productType": "umcbl", "holdMode": "single_hold"}
 	httpResp, httpErr := client.DoPost("/api/mix/v1/account/setPositionMode", string(util.JsonEncodeToByte(params)))
+	if httpErr != nil {
+		util.Notice(fmt.Sprintf(`fail to do post when setBitgetPositionMode %s`, httpErr.Error()))
+		return
+	}
 	jsonData, jsonErr := util.NewJSON(httpResp)
-	code, _ := jsonData.Get("code").String()
-	if jsonData == nil || code != "00000" {
-		util.SocketInfo(fmt.Sprintf("fail to set Bitgetperp Position Mode, resp: %s httpErr: %v, jsonErr: %v", httpResp, httpErr, jsonErr))
+	if jsonErr != nil {
+		util.Notice(fmt.Sprintf(`fail to NewJson when setBitgetPositionMode %s`, jsonErr.Error()))
+		return
+	}
+	if jsonData != nil {
+		code, codeErr := jsonData.Get("code").String()
+		if code != "00000" || codeErr != nil {
+			util.Notice(fmt.Sprintf("fail to set Bitgetperp Position Mode, resp: %s codeErr: %v", httpResp, codeErr))
+		}
 	}
 }
 
@@ -377,13 +387,22 @@ func cancelOrdersBitgetPerp(key, secret, symbol string) (result bool) {
 		"marginCoin": "USDT",
 	}
 	httpResp, httpErr := client.DoPost("/api/mix/v1/order/cancel-symbol-orders", string(util.JsonEncodeToByte(params)))
-	jsonData, jsonErr := util.NewJSON(httpResp)
-	code, _ := jsonData.Get("code").String()
-	if jsonData == nil || code != "00000" {
-		util.Notice(fmt.Sprintf("fail to cancel Bitget perp order resp: %s httpErr: %v, jsonErr: %v", httpResp, httpErr, jsonErr))
-		return false
+	if httpErr != nil {
+		util.Notice(fmt.Sprintf(`fail to do post when cancelOrdersBitgetPerp %s`, httpErr.Error()))
+		return
 	}
-	return true
+	jsonData, jsonErr := util.NewJSON(httpResp)
+	if jsonErr != nil {
+		util.Notice(fmt.Sprintf(`fail to NewJson when cancelOrdersBitgetPerp %s`, jsonErr.Error()))
+		return
+	}
+	if jsonData != nil {
+		code, _ := jsonData.Get("code").String()
+		if code == "00000" {
+			return true
+		}
+	}
+	return false
 }
 
 func queryOrderBitgetPerp(key, secret, symbol string, orderId string) (order *model.Order) {

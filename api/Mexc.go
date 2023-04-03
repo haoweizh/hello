@@ -244,7 +244,11 @@ func placeOrderMexc(key, secret string, order *model.Order, orderSide, orderType
 		order.ErrCode = err.Error()
 		return
 	}
-	orderJson, _ := util.NewJSON(respBytes)
+	orderJson, jsonErr := util.NewJSON(respBytes)
+	if jsonErr != nil {
+		util.Notice(fmt.Sprintf(`fail to placeOrderMexc %s`, jsonErr.Error()))
+		return
+	}
 	if orderJson != nil && orderJson.Get("success").MustBool() {
 		order.Status = model.CarryStatusWorking
 		data, _ := orderJson.Get(`data`).Int64()
@@ -300,8 +304,8 @@ func cancelOrdersMexc(key string, secret string, symbol string) bool {
 		util.Notice(fmt.Sprintf(`[contractCancelOrdersMexc] Failed to cancel orders by symbol %s err %+v`, symbol, err))
 		return false
 	}
-	cancelJson, _ := util.NewJSON(responseBytes)
-	if cancelJson != nil {
+	cancelJson, jsonErr := util.NewJSON(responseBytes)
+	if cancelJson != nil && jsonErr == nil {
 		return cancelJson.Get("success").MustBool()
 	}
 	return false
@@ -315,8 +319,8 @@ func getFundingRateMexc(key, secret, symbol string) (fundingRate *model.FundingR
 		util.Notice(fmt.Sprintf(`[contractGetFundingRateMexc] Failed to get funding rate by symbol %s err %+v`, symbol, err))
 		return
 	}
-	fundingRateJson, _ := util.NewJSON(responseBytes)
-	if fundingRateJson != nil && fundingRateJson.Get(`success`).MustBool() {
+	fundingRateJson, fundingErr := util.NewJSON(responseBytes)
+	if fundingRateJson != nil && fundingRateJson.Get(`success`).MustBool() && fundingErr == nil {
 		fundingRate = &model.FundingRate{
 			Rate:       fundingRateJson.Get(`data`).Get(`fundingRate`).MustFloat64(),
 			UpdateTime: time.UnixMilli(fundingRateJson.Get(`data`).Get(`timestamp`).MustInt64()),
@@ -336,11 +340,12 @@ func getPositionsMexc(key, secret string) (success bool, positions []*model.Posi
 		time.Sleep(time.Minute * 5)
 		return getPositionsMexc(key, secret)
 	}
-	valueJson, _ := util.NewJSON(valueResponse)
-	positionJson, _ := util.NewJSON(posResponse)
+	valueJson, valueJsonErr := util.NewJSON(valueResponse)
+	positionJson, positionErr := util.NewJSON(posResponse)
 	if valueJson == nil || !valueJson.Get(`success`).MustBool() || positionJson == nil ||
-		!positionJson.Get(`success`).MustBool() {
-		util.Notice(fmt.Sprintf(`[contractGetPositionsMexc] Failed to get positions by key %s err %+v %+v`, key, valueJson, positionJson))
+		!positionJson.Get(`success`).MustBool() || valueJsonErr != nil || positionErr != nil {
+		util.Notice(fmt.Sprintf(`[contractGetPositionsMexc] Failed to get positions by key %s err %+v %+v %v %v`,
+			key, valueJson, positionJson, valueJsonErr, positionErr))
 		return getPositionsMexc(key, secret)
 	}
 	assets := valueJson.Get(`data`).MustArray()

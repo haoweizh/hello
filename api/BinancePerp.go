@@ -109,7 +109,7 @@ func WsDepthServeBinancePerp(markets *model.Markets, orderHandler OrderHandler) 
 	wsHandlerBinancePerp := func(connection *websocket.Conn, event []byte, orderHandler OrderHandler) {
 		result, wsErr := util.NewJSON(event)
 		if wsErr != nil {
-			util.SocketInfo(`binance fail to unmarshal json ` + err.Error())
+			util.Notice(`binance fail to unmarshal json ` + err.Error())
 			return
 		}
 		subscribe, _ := result.Get("stream").String()
@@ -380,7 +380,7 @@ func getPositionsBinancePerp(key, secret string) (success bool, positions []*mod
 	responseBody := signedRequestBinancePerp(key, secret, http.MethodGet, restBinancePerp+"/fapi/v2/account", true, nil)
 	positionJson, err := util.NewJSON(responseBody)
 	if err != nil || positionJson == nil {
-		util.SocketInfo(`fail to refresh binance position `)
+		util.Notice(`fail to refresh binance position `)
 		time.Sleep(time.Minute)
 		return getPositionsBinancePerp(key, secret)
 	}
@@ -462,7 +462,7 @@ func getCandlesBinancePerp(key, secret, symbol string, begin, end time.Time, lim
 		if err != nil {
 			errMsg = err.Error()
 		}
-		util.SocketInfo(`fail to get binance kline %s %s %s %d %s`, symbol, begin.String(), end.String(), slotSeconds, errMsg)
+		util.Notice(`fail to get binance kline %s %s %s %d %s`, symbol, begin.String(), end.String(), slotSeconds, errMsg)
 		return
 	}
 	items, itemErr := candleJson.Array()
@@ -473,7 +473,7 @@ func getCandlesBinancePerp(key, secret, symbol string, begin, end time.Time, lim
 		if itemErr != nil {
 			errMsg = itemErr.Error()
 		}
-		util.SocketInfo(`fail to get binance kline %s %s %s %d %s`, symbol, begin.String(), end.String(), slotSeconds, errMsg)
+		util.Notice(`fail to get binance kline %s %s %s %d %s`, symbol, begin.String(), end.String(), slotSeconds, errMsg)
 		return
 	} else if !isCache && model.AppRedis != nil {
 		util.Notice(fmt.Sprintf(`set candles to cache %s len %d`, redisKey, len(string(responseBody))))

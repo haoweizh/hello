@@ -71,7 +71,11 @@ var subscribeHandlerHuobi = func(connection *websocket.Conn, subscribes []interf
 func WsDepthServeHuobiSpot(markets *model.Markets, orderHandler OrderHandler) (channels []chan struct{}, err error) {
 	wsHandler := func(connection *websocket.Conn, event []byte, orderHandler OrderHandler) {
 		res := util.UnGzip(event)
-		responseJson, _ := util.NewJSON(res)
+		responseJson, jsonErr := util.NewJSON(res)
+		if jsonErr != nil {
+			util.Notice(fmt.Sprintf(`wsHandler fail to NewJson huobiSpot %s`, jsonErr.Error()))
+			return
+		}
 		if responseJson.Get(`ping`).MustInt() > 0 {
 			pingMap := make(map[string]interface{})
 			pingMap["pong"] = responseJson.Get(`ping`).MustInt()
@@ -122,7 +126,11 @@ func WsDepthServeHuobiSpot(markets *model.Markets, orderHandler OrderHandler) (c
 	}
 	wsHandlerDM := func(connection *websocket.Conn, event []byte, orderHandler OrderHandler) {
 		res := util.UnGzip(event)
-		responseJson, _ := util.NewJSON(res)
+		responseJson, jsonErr := util.NewJSON(res)
+		if jsonErr != nil {
+			util.Notice(fmt.Sprintf(`fail to NewJson wsHandlerDM huobi %s`, jsonErr.Error()))
+			return
+		}
 		if responseJson.Get(`ping`).MustInt() > 0 {
 			pingMap := make(map[string]interface{})
 			pingMap["pong"] = responseJson.Get(`ping`).MustInt()
@@ -240,8 +248,8 @@ func getMarketsHuobiSpot(key, secret string) (marketInfos map[string]*model.Mark
 		return getMarketsHuobiSpot(key, secret)
 	}
 	futureResponseBody := SignedRequestHuobi(key, secret, http.MethodGet, restHuobiFuture, `/linear-swap-api/v1/swap_contract_info`, nil)
-	futureSymbolsJson, err := util.NewJSON(futureResponseBody)
-	if err == nil && futureSymbolsJson != nil && strings.ToLower(futureSymbolsJson.Get(`status`).MustString()) == `ok` {
+	futureSymbolsJson, futureErr := util.NewJSON(futureResponseBody)
+	if futureErr == nil && futureSymbolsJson != nil && strings.ToLower(futureSymbolsJson.Get(`status`).MustString()) == `ok` {
 		items, _ := futureSymbolsJson.Get("data").Array()
 		for _, item := range items {
 			value := item.(map[string]interface{})
@@ -295,8 +303,8 @@ func SignedRequestHuobi(key, secret, method, host, path string, data map[string]
 func GetAccountIdsHuobi(key, secret string) (err error) {
 	responseBody := SignedRequestHuobi(key, secret, `GET`, restHuobi, "/v1/account/accounts", nil)
 	util.SocketInfo(`get huobi accounts: ` + string(responseBody))
-	accountJson, err := util.NewJSON(responseBody)
-	if err == nil {
+	accountJson, accountErr := util.NewJSON(responseBody)
+	if accountErr == nil {
 		accounts, _ := accountJson.Get("data").Array()
 		for _, value := range accounts {
 			account := value.(map[string]interface{})
@@ -310,7 +318,7 @@ func GetAccountIdsHuobi(key, secret string) (err error) {
 			}
 		}
 	}
-	return err
+	return accountErr
 }
 
 // orderType: buy-market：市价买, sell-market：市价卖, buy-limit：限价买, sell-limit：限价卖
