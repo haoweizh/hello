@@ -212,9 +212,9 @@ func GetCrossMarketValue(key, secret, market string, force bool) (inAllSpot, con
 				})
 			}
 			if sm.balances != nil {
-				if sm.balances[`FTT_USDT`] != nil {
-					keepInU += sm.balances[`FTT_USDT`].UsdValue
-				}
+				//if sm.balances[`FTT_USDT`] != nil {
+				//	keepInU += sm.balances[`FTT_USDT`].UsdValue
+				//}
 				if sm.balances[`BTC_USDT`] != nil {
 					keepInU += sm.balances[`BTC_USDT`].UsdValue
 				}

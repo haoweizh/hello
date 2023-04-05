@@ -814,17 +814,17 @@ func FilterCross(market, symbol string) bool {
 	switch market {
 	case model.Ftx:
 		switch coin {
-		case `PRIV`, `ALT`, `SHIT`, `MID`, `EXCH`, `DRGN`:
+		case `PRIV`, `ALT`, `SHIT`, `MID`, `EXCH`, `DRGN`, `FTT`:
 			return true
 		}
 	case model.OKEX:
 		switch coin {
-		case `OKB`, `FTT`:
+		case `OKB`:
 			return true
 		}
 	case model.BinancePerp, model.BinanceSpot:
 		switch coin {
-		case `BNB`, `FTT`:
+		case `BNB`:
 			return true
 		}
 	case model.Mexc: //不支持主流币种期货下单
