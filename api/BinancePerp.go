@@ -578,8 +578,8 @@ func parseOrderBinancePerp(res *futures.Order, order *model.Order) {
 		order.Price, _ = strconv.ParseFloat(res.Price, 64)
 		order.DealPrice, _ = strconv.ParseFloat(res.AvgPrice, 64)
 		order.DealAmount, _ = strconv.ParseFloat(res.ExecutedQuantity, 64)
-		order.OrderTime = time.Unix(res.Time, 0)
-		order.OrderUpdateTime = time.Unix(res.UpdateTime, 0)
+		order.OrderTime = time.UnixMilli(res.Time)
+		order.OrderUpdateTime = time.UnixMilli(res.UpdateTime)
 		order.Status = model.GetOrderStatus(model.BinancePerp, string(res.Status))
 		order.OrderId = strconv.FormatInt(res.OrderID, 10)
 		if strings.Contains(string(res.Type), `STOP`) {
