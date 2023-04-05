@@ -914,7 +914,7 @@ func parseOrderOKEX(value map[string]interface{}) (order *model.Order) {
 		ts, _ := strconv.ParseInt(value[`cTime`].(string), 10, 64)
 		order.OrderTime = time.Unix(ts/1000, 0)
 	}
-	if value[`uTim`] != nil && value[`uTime`] != `` {
+	if value[`uTime`] != nil && value[`uTime`] != `` {
 		ts, _ := strconv.ParseInt(value[`uTime`].(string), 10, 64)
 		order.OrderUpdateTime = time.UnixMilli(ts)
 		util.Info(fmt.Sprintf(`get uTime %s %s %s`, order.OrderId, order.Symbol, order.OrderUpdateTime.String()))
