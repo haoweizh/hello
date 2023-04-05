@@ -573,10 +573,11 @@ func GetParameters(c *gin.Context) {
 		Order(`update_time desc`).Limit(100).Rows()
 	if turtleRows != nil {
 		for turtleRows.Next() {
-			var updateTime, market, symbol, orderSide, price, dealPrice, dealAmount string
+			var updateTime time.Time
+			var market, symbol, orderSide, price, dealPrice, dealAmount string
 			_ = turtleRows.Scan(&updateTime, &market, &symbol, &orderSide, &price, &dealPrice, &dealAmount)
 			msg += fmt.Sprintf("[成交订单]%s %s %s %s 下单价格:%s 成交价格:%s 成交数量:%s\n",
-				updateTime, market, symbol, orderSide, price, dealPrice, dealAmount)
+				updateTime.String(), market, symbol, orderSide, price, dealPrice, dealAmount)
 		}
 		turtleRows.Close()
 	}
