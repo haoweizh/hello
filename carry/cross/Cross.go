@@ -252,6 +252,12 @@ func initStatus(account *model.Account, setting *model.Setting, absentRevert boo
 	}
 	status.LimitBuy = math.Min(status.LimitBuy, status.AvailableBuy)
 	status.LimitSell = math.Min(status.LimitSell, status.AvailableSell)
+	initTradeLine(account, setting, status, doRevert)
+	util.StoreSyncMap(carryStatusMap, status, setting.Coin, setting.Market, setting.Symbol, account.Key)
+	return
+}
+
+func initTradeLine(account *model.Account, setting *model.Setting, status *CarryStatus, doRevert bool) {
 	standardScoreBuy := math.Max(standardScoreOpen, setting.OpenShortMargin)
 	standardScoreSell := math.Max(standardScoreOpen, setting.OpenShortMargin)
 	getTick, ticks := model.AppMarkets.GetBidAsk(setting.Symbol, setting.Market)
@@ -279,18 +285,42 @@ func initStatus(account *model.Account, setting *model.Setting, absentRevert boo
 	lowLimit := lowestScore
 	status.TradeLineBuy = math.Max(standardScoreBuy*(0.5+jumpBuy*status.RateInAll), lowLimit) + status.FoundingRate
 	status.TradeLineSell = math.Max(standardScoreSell*(0.5+jumpSell*status.RateInAll), lowLimit) - status.FoundingRate
-	//if status.setting.Coin == `1000XEC` && status.setting.Market == model.BybitPerp && account.Index == 0 {
-	//	util.Notice(fmt.Sprintf(`%s %s bline %f = max(%f*(0.5+%f*rate %f)+funding %f hold %f`,
-	//		status.setting.Market, status.setting.Symbol, status.TradeLineBuy, standardScoreBuy, jumpBuy,
-	//		status.RateInAll, fundingRate, status.Holding))
-	//	util.Notice(fmt.Sprintf(`%s %s sline %f = max(%f*(0.5+%f*rate %f)-funding %f hold %f`,
-	//		status.setting.Market, status.setting.Symbol, status.TradeLineSell, standardScoreSell, jumpSell,
-	//		status.RateInAll, fundingRate, status.Holding))
-	//	status.TradeLineBuy = 1
-	//	status.TradeLineSell = 1
-	//}
 	status.TradeLineBuy *= account.CarryRate
 	status.TradeLineSell *= account.CarryRate
+	crossRows, _ := model.AppDB.Model(model.Order{}).Select(`order_side, refresh_type,sum(price*abs(amount)),avg(price)`).
+		Where(`coin=? and created_at>?`, setting.Coin, time.Now().Add(time.Minute*-360)).Group(`order_side, refresh_type`).Rows()
+	if crossRows != nil {
+		crossValues := make(map[string]float64)
+		crossPrices := make(map[string]float64)
+		for crossRows.Next() {
+			var orderSide, refreshType string
+			_ = crossRows.Scan(&orderSide, &refreshType, crossValues[orderSide+refreshType], crossPrices[orderSide+refreshType])
+		}
+		crossRows.Close()
+		// 当发生comp的单均利润小于closeShortMargin，同向comp占比越大，开仓line越高
+		if crossValues[model.OrderSideBuy+model.FunctionComplement] > 100 {
+			if crossPrices[model.OrderSideSell+model.FunctionCross]-crossPrices[model.OrderSideBuy+model.FunctionComplement] <
+				setting.CloseShortMargin && crossValues[model.OrderSideBuy+model.FunctionCross] > 0 {
+				extra := 7 * setting.CloseShortMargin * crossValues[model.OrderSideBuy+model.FunctionComplement] /
+					crossValues[model.OrderSideBuy+model.FunctionCross]
+				status.TradeLineBuy += extra
+				util.Notice(fmt.Sprintf(`comp extra buy %s %s compU %f compRate %f add %f`,
+					status.market, setting.Coin, crossValues[model.OrderSideBuy+model.FunctionComplement],
+					crossValues[model.OrderSideBuy+model.FunctionComplement]/crossValues[model.OrderSideBuy+model.FunctionCross], extra))
+			}
+		}
+		if crossValues[model.OrderSideSell+model.FunctionComplement] > 100 {
+			if crossPrices[model.OrderSideSell+model.FunctionComplement]-crossPrices[model.OrderSideBuy+model.FunctionCross] <
+				setting.CloseShortMargin && crossValues[model.OrderSideSell+model.FunctionCross] > 0 {
+				extra := 7 * setting.CloseShortMargin * crossValues[model.OrderSideSell+model.FunctionComplement] /
+					crossValues[model.OrderSideSell+model.FunctionCross]
+				status.TradeLineSell += extra
+				util.Notice(fmt.Sprintf(`comp extra sell %s %s compU %f compRate %f add %f`,
+					status.market, setting.Coin, crossValues[model.OrderSideSell+model.FunctionComplement],
+					crossValues[model.OrderSideSell+model.FunctionComplement]/crossValues[model.OrderSideSell+model.FunctionCross], extra))
+			}
+		}
+	}
 	if doRevert || account.CarryClose {
 		if status.Holding > 0 {
 			status.TradeLineBuy = 1
@@ -311,8 +341,6 @@ func initStatus(account *model.Account, setting *model.Setting, absentRevert boo
 			status.AvailableSell = 0
 		}
 	}
-	util.StoreSyncMap(carryStatusMap, status, setting.Coin, setting.Market, setting.Symbol, account.Key)
-	return
 }
 
 func ClearCross() {
