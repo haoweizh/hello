@@ -63,7 +63,7 @@ func MaintainTransFee() {
 	for true {
 		var orders []model.Order
 		for true {
-			d, _ := time.ParseDuration("-48h")
+			d, _ := time.ParseDuration("-240h")
 			dMin10, _ := time.ParseDuration("-10m")
 			now := util.GetNow()
 			lastDays2 := now.Add(d)
@@ -105,8 +105,8 @@ func MaintainTransFee() {
 				}
 				value.DealPrice = order.DealPrice
 				model.AppDB.Save(&value)
-				util.Info(fmt.Sprintf(`save order %s %s %s %s status:%s`,
-					value.OrderId, value.Symbol, value.OrderSide, value.OrderTime.String(), value.Status))
+				util.Info(fmt.Sprintf(`save order %s %s %s %s status:%s update %s`,
+					value.OrderId, value.Symbol, value.OrderSide, value.OrderTime.String(), value.Status, value.OrderUpdateTime.String()))
 				time.Sleep(time.Second)
 			}
 		}
