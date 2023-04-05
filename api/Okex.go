@@ -1030,6 +1030,7 @@ func queryOrderOKEX(key, secret, symbol, orderId, orderType string) (order *mode
 	orders := orderJson.Get("data").MustArray()
 	for _, item := range orders {
 		value := item.(map[string]interface{})
+		util.Info(fmt.Sprintf(`try to query ok %s %s`, orderType, value[`ordId`]))
 		if orderType != model.OrderTypeStop {
 			if value[`ordId`] != nil && value[`ordId`].(string) == orderId {
 				order = parseOrderOKEX(value)
