@@ -568,8 +568,8 @@ func GetParameters(c *gin.Context) {
 	//	msg += fmt.Sprintf("%s %s %s %f\n", setting.Function, setting.Market, setting.Symbol, setting.GridAmount)
 	//}
 	var orders model.Order
-	turtleRows, _ := model.AppDB.Model(&orders).Select(`update_time,market,symbol,order_side,price,deal_price,deal_amount`).
-		Where(`update_time>? and deal_amount>? and refresh_type!=?`, time.Now().Add(time.Hour*-240), 0, model.FunctionCross).
+	turtleRows, _ := model.AppDB.Model(&orders).Select(`order_update_time,market,symbol,order_side,price,deal_price,deal_amount`).
+		Where(`order_update_time>? and deal_amount>? and refresh_type!=?`, time.Now().Add(time.Hour*-240), 0, model.FunctionCross).
 		Order(`update_time desc`).Limit(100).Rows()
 	if turtleRows != nil {
 		for turtleRows.Next() {
