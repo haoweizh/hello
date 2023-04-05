@@ -93,6 +93,7 @@ func MaintainTransFee() {
 					//}
 					continue
 				}
+				value.OrderUpdateTime = order.OrderUpdateTime
 				value.Fee = order.Fee
 				value.FeeIncome = order.FeeIncome
 				value.DealAmount = order.DealAmount
