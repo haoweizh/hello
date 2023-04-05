@@ -917,7 +917,6 @@ func parseOrderOKEX(value map[string]interface{}) (order *model.Order) {
 	if value[`uTime`] != nil && value[`uTime`] != `` {
 		ts, _ := strconv.ParseInt(value[`uTime`].(string), 10, 64)
 		order.OrderUpdateTime = time.UnixMilli(ts)
-		util.Info(fmt.Sprintf(`get uTime %s %s %s`, order.OrderId, order.Symbol, order.OrderUpdateTime.String()))
 	}
 	clOrdId := ``
 	if value[`algoClOrdId`] != nil {
@@ -1030,7 +1029,6 @@ func queryOrderOKEX(key, secret, symbol, orderId, orderType string) (order *mode
 	orders := orderJson.Get("data").MustArray()
 	for _, item := range orders {
 		value := item.(map[string]interface{})
-		util.Info(fmt.Sprintf(`try to query ok %s %s`, orderType, value[`ordId`]))
 		if orderType != model.OrderTypeStop {
 			if value[`ordId`] != nil && value[`ordId`].(string) == orderId {
 				order = parseOrderOKEX(value)
