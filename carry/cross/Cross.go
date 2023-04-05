@@ -294,7 +294,10 @@ func initTradeLine(account *model.Account, setting *model.Setting, status *Carry
 		crossPrices := make(map[string]float64)
 		for crossRows.Next() {
 			var orderSide, refreshType string
-			_ = crossRows.Scan(&orderSide, &refreshType, crossValues[orderSide+refreshType], crossPrices[orderSide+refreshType])
+			var valueAll, priceAvg float64
+			_ = crossRows.Scan(&orderSide, &refreshType, &valueAll, &priceAvg)
+			crossValues[orderSide+refreshType] = valueAll
+			crossPrices[orderSide+refreshType] = priceAvg
 		}
 		crossRows.Close()
 		// 当发生comp的单均利润小于closeShortMargin，同向comp占比越大，开仓line越高
