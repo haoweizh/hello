@@ -422,6 +422,10 @@ func queryOrderBitgetPerp(key, secret, symbol string, orderId string) (order *mo
 	} else {
 		order.DealPrice = orderDetailResp.Data.PriceAvg
 		order.DealAmount = orderDetailResp.Data.FilledQty
+		intOrderTime, _ := strconv.ParseInt(orderDetailResp.Data.CTime, 10, 64)
+		order.OrderTime = time.UnixMilli(intOrderTime)
+		intUpdateTime, _ := strconv.ParseInt(orderDetailResp.Data.UTime, 10, 64)
+		order.OrderUpdateTime = time.UnixMilli(intUpdateTime)
 		order.UnfilledQuantity = orderDetailResp.Data.Size - orderDetailResp.Data.FilledQty
 		if orderDetailResp.Data.State == "canceled" {
 			order.Status = model.CarryStatusFail

@@ -928,6 +928,8 @@ func queryOrderGate(key, secret string, order *model.Order) {
 				order.Status = model.CarryStatusFail
 			}
 		}
+		order.OrderTime = time.Unix(int64(orderFuture.CreateTime), 0)
+		order.OrderUpdateTime = time.Unix(int64(orderFuture.FinishTime), 0)
 		_, order.DealAmount = model.ParseRealAmount(order.Market, order.Symbol, float64(orderFuture.Size-orderFuture.Left))
 		util.SocketInfo(`%s %s %s query result:%s %f %v`,
 			order.Market, order.Symbol, order.OrderId, order.Status, order.DealAmount, orderFuture)
@@ -937,6 +939,10 @@ func queryOrderGate(key, secret string, order *model.Order) {
 			panicGateError(key, "GetSpotOrder", err)
 			return
 		}
+		intCreateTime, _ := strconv.ParseInt(orderSpot.CreateTime, 10, 64)
+		intUpdateTime, _ := strconv.ParseInt(orderSpot.UpdateTime, 10, 64)
+		order.OrderTime = time.Unix(intCreateTime, 0)
+		order.OrderUpdateTime = time.Unix(intUpdateTime, 0)
 		order.DealAmount, _ = strconv.ParseFloat(orderSpot.FilledTotal, 64)
 		order.DealPrice, _ = strconv.ParseFloat(orderSpot.Price, 64)
 		if order.DealPrice > 0 {

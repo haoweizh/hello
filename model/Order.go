@@ -28,6 +28,7 @@ type Order struct {
 	Status            string
 	Symbol            string
 	OrderTime         time.Time
+	UpdateTime        time.Time
 	OrderUpdateTime   time.Time
 	ID                uint `gorm:"primary_key"`
 	CreatedAt         time.Time

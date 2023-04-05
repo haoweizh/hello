@@ -274,6 +274,8 @@ func queryOrderBitgetSpot(key, secret, symbol string, orderId string) (order *mo
 			orderResp := orderDetailResp.Data[0]
 			order.DealPrice, _ = strconv.ParseFloat(orderResp.FillPrice, 64)
 			order.DealAmount, _ = strconv.ParseFloat(orderResp.FillQuantity, 64)
+			intOrderTime, _ := strconv.ParseInt(orderResp.CTime, 10, 64)
+			order.OrderTime = time.Unix(intOrderTime, 0)
 			amount, _ := strconv.ParseFloat(orderResp.Quantity, 64)
 			order.UnfilledQuantity = amount - order.DealAmount
 			if orderResp.Status == "cancelled" {
