@@ -382,7 +382,7 @@ func queryOrderBinanceSpot(key, secret, symbol string, orderId string) (order *m
 			order.Price, _ = strconv.ParseFloat(orderResp.Price, 64)
 			order.DealAmount, _ = strconv.ParseFloat(orderResp.ExecutedQuantity, 64)
 			order.OrderTime = time.Unix(orderResp.Time, 0)
-			order.UpdateTime = time.Unix(orderResp.UpdateTime, 0)
+			order.OrderUpdateTime = time.Unix(orderResp.UpdateTime, 0)
 			order.Status = model.GetOrderStatus(model.BinanceSpot, string(orderResp.Status))
 			if order.Status != model.CarryStatusSuccess && order.Status != model.CarryStatusFail {
 				order.Status = model.CarryStatusWorking
