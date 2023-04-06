@@ -8,6 +8,7 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"time"
 )
 
 var symbolSettings = &sync.Map{} // function*market - map[symbol]*setting
@@ -219,6 +220,15 @@ func handleCombineSettings(market string, topMarketInfos map[string]*model.Marke
 			OpenShortMargin: dynamicSingleLimit, AmountLimit: dynamicInAllLimit}
 		if valueCombine == nil {
 			util.Notice(`add combine %s %v`, market, info.Name)
+			if settingCombine.Market == model.BinancePerp {
+				accounts := model.AppConfig.GetAccounts(model.BinancePerp)
+				for _, account := range accounts {
+					if account != nil {
+						SetSymbolLeverageBinancePerp(account, settingCombine.Symbol)
+						time.Sleep(time.Second * 10)
+					}
+				}
+			}
 		} else {
 			settingCombine = valueCombine.(*model.Setting)
 			settingCombine.SymbolRelated = ``
@@ -251,7 +261,7 @@ func handleCombineSettings(market string, topMarketInfos map[string]*model.Marke
 				setting.(*model.Setting).SymbolRelated = model.SettingTurtleRemoved
 			}
 			model.AppDB.Save(setting)
-			util.Notice(`remove setting%s`, setting.(*model.Setting).Symbol)
+			util.Info(`remove setting%s`, setting.(*model.Setting).Symbol)
 		}
 		return true
 	})
@@ -275,7 +285,7 @@ func handleCombineSettings(market string, topMarketInfos map[string]*model.Marke
 			}
 			model.AppDB.Save(setting)
 		}
-		util.Notice(`remove setting%s`, setting.(*model.Setting).Symbol)
+		util.Info(`remove setting%s`, setting.(*model.Setting).Symbol)
 		return true
 	})
 }
@@ -309,7 +319,7 @@ func handleTurtleSettings(function, market string, topMarketInfos map[string]*mo
 				setting.(*model.Setting).SymbolRelated = model.SettingTurtleRemoved
 			}
 			model.AppDB.Save(setting)
-			util.Notice(`remove setting%s`, setting.(*model.Setting).Symbol)
+			util.Info(`remove setting%s`, setting.(*model.Setting).Symbol)
 		}
 		return true
 	})

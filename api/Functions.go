@@ -930,7 +930,7 @@ func InitMarketInfos(markets []string) (success bool) {
 			go func() {
 				for _, account := range accounts {
 					setPosSideBinancePerp(account.Key, account.Secret)
-					SetLeverageBinancePerp(account.Key, account.Secret, 5)
+					SetLeverageBinancePerp(account.Key, account.Secret)
 				}
 			}()
 		case model.Gate:

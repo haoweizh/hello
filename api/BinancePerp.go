@@ -646,9 +646,24 @@ func _(key, secret, symbol string) (success bool, price float64) {
 	return true, 0
 }
 
+func SetSymbolLeverageBinancePerp(account *model.Account, symbol string) (success bool) {
+	ok, _, _, dialectSymbol := model.GetFromStandard(model.BinancePerp, symbol)
+	if !ok {
+		return false
+	}
+	client := futures.NewClient(account.Key, account.Secret)
+	_, err := client.NewChangeLeverageService().Symbol(dialectSymbol).Leverage(3).Do(context.Background())
+	if err != nil {
+		util.Notice(fmt.Sprintf(`fail to set binanceperp leverage %s %s 3 %s`,
+			account.Key, symbol, err.Error()))
+		return false
+	}
+	return true
+}
+
 var settingBinancePerp = false
 
-func SetLeverageBinancePerp(key, secret string, leverage int) (success bool) {
+func SetLeverageBinancePerp(key, secret string) (success bool) {
 	if settingBinancePerp {
 		return
 	}
@@ -666,10 +681,10 @@ func SetLeverageBinancePerp(key, secret string, leverage int) (success bool) {
 			continue
 		}
 		client := futures.NewClient(key, secret)
-		_, err := client.NewChangeLeverageService().Symbol(dialectSymbol).Leverage(leverage).Do(context.Background())
+		_, err := client.NewChangeLeverageService().Symbol(dialectSymbol).Leverage(3).Do(context.Background())
 		if err != nil {
-			util.Notice(fmt.Sprintf(`fail to set binanceperp leverage %s %s %d %s`,
-				key, symbol, leverage, err.Error()))
+			util.Notice(fmt.Sprintf(`fail to set binanceperp leverage %s %s 3 %s`,
+				key, symbol, err.Error()))
 			continue
 		}
 		time.Sleep(time.Minute)
