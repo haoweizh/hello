@@ -98,8 +98,8 @@ func getMarketsBybitPerp(marketInfos map[string]*model.MarketInfo) {
 				continue
 			}
 			maxLeverage, _ := strconv.ParseFloat(perpInfo.LeverageFilter.MaxLeverage, 64)
-			if maxLeverage < 5 {
-				util.Notice(fmt.Sprintf("最大杠杆小于5 perp info：%v", perpInfo))
+			if maxLeverage < 3 {
+				util.Notice(fmt.Sprintf("最大杠杆小于3 perp info：%v", perpInfo))
 				continue
 			}
 			marketInfo.SizeMin, _ = strconv.ParseFloat(perpInfo.LotSizeFilter.MinOrderQty, 64)
@@ -422,7 +422,7 @@ func SignedRequestBybit(key, secret, method, host, path string, body map[string]
 }
 
 func setBybitMarginLeverage(key, secret string) {
-	httpResp, httpErr := SignedRequestBybit(key, secret, http.MethodPost, bybitRestUrl, "/v5/spot-margin-trade/set-leverage", map[string]interface{}{"leverage": "5"})
+	httpResp, httpErr := SignedRequestBybit(key, secret, http.MethodPost, bybitRestUrl, "/v5/spot-margin-trade/set-leverage", map[string]interface{}{"leverage": "3"})
 	if httpErr != nil {
 		util.Notice(fmt.Sprintf(`fail to setBybitMarginLeverage when post %s`, httpErr.Error()))
 		return
@@ -439,6 +439,36 @@ func setBybitMarginLeverage(key, secret string) {
 		}
 	}
 	time.Sleep(time.Second * 5)
+}
+
+func setSymbolLeverageBybit(account *model.Account, symbol string) (setSuc bool) {
+	success, marketType, _, dialectSymbol := model.GetFromStandard(model.Bybit, symbol)
+	if !success {
+		return false
+	}
+	if marketType == model.MarketTypePerp {
+		params := map[string]interface{}{"category": "linear", "buyLeverage": "3", "sellLeverage": "3", "symbol": dialectSymbol}
+		httpResp, httpErr := SignedRequestBybit(account.Key, account.Secret, http.MethodPost, bybitRestUrl, "/v5/position/set-leverage", params)
+		if httpErr != nil {
+			util.Notice(fmt.Sprintf(`fail to setBybitPerpLeverage when request %s %s`, symbol, httpErr.Error()))
+			return false
+		}
+		jsonData, jsonErr := util.NewJSON(httpResp)
+		if jsonErr != nil {
+			util.Notice(fmt.Sprintf(`fail to setBybitPerpLeverage when NewJson %s %s`, symbol, jsonErr.Error()))
+			return false
+		}
+		if jsonData != nil {
+			code, codeErr := jsonData.Get("retCode").Int()
+			if code != 0 || codeErr != nil {
+				util.Notice(fmt.Sprintf("fail to set bybit perp leverage , resp: %s codeErr: %v", httpResp, codeErr))
+				return false
+			} else {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 var settingBybit = false
@@ -458,7 +488,7 @@ func setBybitPerpLeverage(key, secret string) {
 			continue
 		}
 		if marketType == model.MarketTypePerp {
-			params := map[string]interface{}{"category": "linear", "buyLeverage": "5", "sellLeverage": "5", "symbol": dialectSymbol}
+			params := map[string]interface{}{"category": "linear", "buyLeverage": "3", "sellLeverage": "3", "symbol": dialectSymbol}
 			httpResp, httpErr := SignedRequestBybit(key, secret, http.MethodPost, bybitRestUrl, "/v5/position/set-leverage", params)
 			if httpErr != nil {
 				util.Notice(fmt.Sprintf(`fail to setBybitPerpLeverage when request %s %s`, symbol, httpErr.Error()))

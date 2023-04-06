@@ -220,11 +220,15 @@ func handleCombineSettings(market string, topMarketInfos map[string]*model.Marke
 			OpenShortMargin: dynamicSingleLimit, AmountLimit: dynamicInAllLimit}
 		if valueCombine == nil {
 			util.Notice(`add combine %s %v`, market, info.Name)
-			if settingCombine.Market == model.BinancePerp {
-				accounts := model.AppConfig.GetAccounts(model.BinancePerp)
+			if market == model.BinancePerp || market == model.Bybit {
+				accounts := model.AppConfig.GetAccounts(market)
 				for _, account := range accounts {
 					if account != nil {
-						SetSymbolLeverageBinancePerp(account, settingCombine.Symbol)
+						if market == model.BinancePerp {
+							SetSymbolLeverageBinancePerp(account, settingCombine.Symbol)
+						} else if market == model.Bybit {
+							setSymbolLeverageBybit(account, settingCombine.Symbol)
+						}
 						time.Sleep(time.Second * 10)
 					}
 				}
