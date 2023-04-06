@@ -790,7 +790,6 @@ func _(key, secret, market, transferType string, amount float64) {
 // 某些主流币 BTC ETH LINK
 // 币种对不上 REAL, DFL, QI, WSB, TRADE,FAME,BIFI,TON,BOX,PAY,BTT
 // 法币 GBP CUSDT TRYB BRZ CAD EUR SUSD USDC TUSD`USDT EURT USD BUSD LDBUSD LDUSDT
-// 平台币 GT FTT BNB OKB MX
 // ftx预测TRUMP BOLSONARO
 func FilterCross(market, symbol string) bool {
 	filterCoins := map[string]bool{`AMPL`: true, `IOTA`: true, `REEF`: true, `MIR`: true, `LUNA`: true, // `UST`: true,
@@ -799,7 +798,7 @@ func FilterCross(market, symbol string) bool {
 		`BOX`: true, `PAY`: true, `GTC`: true, `OXY`: true, `CRU`: true, `BCD`: true,
 		`GBP`: true, `CUSDT`: true, `TRYB`: true, `BRZ`: true, `CAD`: true, `EUR`: true, `SUSD`: true, `USDC`: true,
 		`TUSD`: true, `USDT`: true, `EURT`: true, `USD`: true, `BUSD`: true, `LDUSDT`: true, `LDBUSD`: true,
-		`GT`: true, `BNB`: true, `OKB`: true, `MX`: true, `TRUMP`: true, `BOLSONARO`: true, `DEFI`: true}
+		`TRUMP`: true, `BOLSONARO`: true, `DEFI`: true}
 	_, _, coin, _ := model.GetFromStandard(market, symbol)
 	if filterCoins[coin] {
 		return true
@@ -812,6 +811,11 @@ func FilterCross(market, symbol string) bool {
 		}
 	}
 	switch market {
+	case model.Gate:
+		switch coin {
+		case `GT`:
+			return true
+		}
 	case model.Ftx:
 		switch coin {
 		case `PRIV`, `ALT`, `SHIT`, `MID`, `EXCH`, `DRGN`, `FTT`:
@@ -829,7 +833,7 @@ func FilterCross(market, symbol string) bool {
 		}
 	case model.Mexc: //不支持主流币种期货下单
 		switch coin {
-		case `BTC`, `ETH`, `LTC`, `FTT`:
+		case `BTC`, `ETH`, `LTC`, `FTT`, `MX`:
 			return true
 		}
 	}
