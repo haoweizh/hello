@@ -1168,6 +1168,9 @@ var PostOrderCross = func(order *model.Order, setting *model.Setting) {
 	if setting == nil {
 		setting = api.GetSetting(model.FunctionCross, order.Market, order.Symbol)
 	}
+	if setting == nil {
+		util.Notice(fmt.Sprintf(`fail to get setting %s %s %s`, model.FunctionCross, order.Market, order.Symbol))
+	}
 	account := model.AppConfig.GetAccountFromKeyIndex(order.Market, ``, order.AccountIndex)
 	if order.HaveId() && order.Status != model.CarryStatusFail {
 		//if account != nil {
