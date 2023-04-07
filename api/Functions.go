@@ -268,6 +268,13 @@ func GetPriceForce(key, secret, symbol, market string) (result bool, price float
 	if getBidAsk && bidAsk != nil {
 		return true, bidAsk.Bids[0].Price
 	}
+	markets := GetMarkets()
+	for _, m := range markets {
+		getBidAsk, bidAsk = model.AppMarkets.GetBidAsk(symbol, m)
+		if getBidAsk && bidAsk != nil {
+			return true, bidAsk.Bids[0].Price
+		}
+	}
 	value, okPrice := lastPrice.Load(market + `_` + symbol)
 	priceTime, okTime := lastPriceTime.Load(market + `_` + symbol)
 	if okPrice && okTime && value != nil && priceTime.(time.Time).Add(time.Minute*10).After(time.Now()) {

@@ -63,9 +63,7 @@ const TurtleTriggerDelta = 0.01
 const TurtleFar = 18
 const TurtleFarBTC = 50
 
-var TurtleDataSet = sync.Map{} // function_market_symbol_2019-12-06 *TurtleData
-var queryDataTime = &sync.Map{}
-
+var TurtleDataSet = sync.Map{}     // function_market_symbol_2019-12-06 *TurtleData
 var accountValues = &sync.Map{}    // market value
 var accountValueTime = &sync.Map{} // market time.Time
 func CalcTurtleAmount(key, secret, market, symbol string, n float64) (amount float64) {
@@ -279,13 +277,6 @@ func GetTurtleData(key, secret, function, market, symbol string) (data *TurtleDa
 	if ok && value != nil {
 		return value.(*TurtleData)
 	}
-	value, ok = util.LoadSyncMap(queryDataTime, function, market, symbol, todayStr)
-	if ok && value != nil {
-		if value.(time.Time).Add(time.Minute * 60).After(util.GetNow()) {
-			return nil
-		}
-	}
-	util.StoreSyncMap(queryDataTime, util.GetNow(), function, market, symbol, todayStr)
 	util.Notice(fmt.Sprintf(`need to create turtle data %s %s %s %s`, function, market, symbol, todayStr))
 	useNear := false
 	if function == model.FunctionTurtle || function == model.FunctionTurtleNormal {
@@ -303,6 +294,7 @@ func GetTurtleData(key, secret, function, market, symbol string) (data *TurtleDa
 	indexMax := math.Max(turtleNDaysMin, float64(data.DaysFar))
 	duration, _ := time.ParseDuration(fmt.Sprintf(`%dh`, -24*turtleNDays))
 	candles := GetCandle(key, secret, market, symbol, 86400, today.Add(duration), today)
+	time.Sleep(time.Second * 10)
 	if !calcCandleN(candles) {
 		util.Notice(fmt.Sprintf(`fail to calc candles n %s %s candle num %d`, market, symbol, len(candles)))
 		return nil
