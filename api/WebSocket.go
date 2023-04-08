@@ -122,7 +122,7 @@ func chanHandler(market string, stopChan chan struct{}, connection *websocket.Co
 	for true {
 		select {
 		case <-stopChan:
-			util.Notice("get stop struct, return")
+			//util.Info("get stop struct, return")
 			return
 		default:
 			_, message, err := connection.ReadMessage()

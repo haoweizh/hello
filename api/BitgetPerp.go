@@ -253,7 +253,7 @@ func getPositionsBitgetPerp(key, secret string) (success bool, positions []*mode
 		time.Sleep(time.Minute)
 		return getPositionsBitgetPerp(key, secret)
 	} else {
-		util.Notice(fmt.Sprintf("get bitgetperp asset success, resp: %s ", assetHttpResp))
+		util.SocketInfo(fmt.Sprintf("get bitgetperp asset success, resp: %s ", assetHttpResp))
 	}
 	positionHttpResp, positionHttpErr := client.DoGet("/api/mix/v1/position/allPosition", map[string]string{"productType": "umcbl"})
 	bitgetPositionResp := &dtos.BitgetPositionResp{}

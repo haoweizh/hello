@@ -324,6 +324,9 @@ func holdPage(c *gin.Context) {
 		index = 0
 	}
 	queryAccounts := model.GetAccounts(index)
+	if queryAccounts == nil {
+		return
+	}
 	marketValues := make([][]string, 0)
 	inAll := []float64{0, 0, 0, 0, 0, 0}
 	for _, account := range queryAccounts {
