@@ -365,12 +365,12 @@ func liquidateBitgetPerp(account *model.Account) {
 		liquidBitgetTime.Store(account.Key, now)
 		for _, position := range positions {
 			holding := math.Abs(position.Holding)
-			if position.EntryPrice*holding < SmallInU {
+			if position.EntryPrice*holding < SmallInU*2 {
 				orderSide := model.OrderSideBuy
 				if position.Holding > 0 {
 					orderSide = model.OrderSideSell
 				}
-				util.Notice(fmt.Sprintf(`liquidate bitgetperp %s %s price %f hold %f`,
+				util.Notice(fmt.Sprintf(`do liquidate bitgetperp %s %s price %f hold %f`,
 					position.Currency, orderSide, position.EntryPrice, position.Holding))
 				order := api.PlaceOrder(account.Key, account.Secret, orderSide, model.OrderTypeMarket, model.BitgetPerp,
 					position.Currency, model.ReduceOnly, position.EntryPrice, position.EntryPrice, holding, false, nil, nil)
@@ -378,8 +378,8 @@ func liquidateBitgetPerp(account *model.Account) {
 				_, _, coin, _ := model.GetFromStandard(model.BitgetPerp, position.Currency)
 				saveCross(order, coin, model.FunctionBitgetLiq, 0, 0, position.Holding)
 			} else {
-				util.Notice(fmt.Sprintf(`not liquidate bitgetperp for big perp %s %f %f`,
-					position.Currency, position.EntryPrice, position.Holding))
+				util.Notice(fmt.Sprintf(`not liquidate bitgetperp for big perp %s %f %f value %f`,
+					position.Currency, position.EntryPrice, position.Holding, position.EntryPrice*position.Holding))
 			}
 		}
 	}
