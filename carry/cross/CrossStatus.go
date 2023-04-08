@@ -378,7 +378,7 @@ func liquidateBitgetPerp(account *model.Account) {
 				_, _, coin, _ := model.GetFromStandard(model.BitgetPerp, position.Currency)
 				saveCross(order, coin, model.FunctionBitgetLiq, 0, 0, position.Holding)
 			} else {
-				util.Notice(fmt.Sprintf(`not liquidate bitgetperp for big perp %s %s %f`,
+				util.Notice(fmt.Sprintf(`not liquidate bitgetperp for big perp %s %f %f`,
 					position.Currency, position.EntryPrice, position.Holding))
 			}
 		}
