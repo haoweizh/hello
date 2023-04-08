@@ -365,7 +365,7 @@ func liquidateBitgetPerp(account *model.Account) {
 		liquidBitgetTime.Store(account.Key, now)
 		for _, position := range positions {
 			holding := math.Abs(position.Holding)
-			if position.EntryPrice*holding < SmallInU*2 {
+			if position.EntryPrice*holding < SmallInU {
 				orderSide := model.OrderSideBuy
 				if position.Holding > 0 {
 					orderSide = model.OrderSideSell
