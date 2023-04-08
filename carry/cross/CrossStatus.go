@@ -377,6 +377,9 @@ func liquidateBitgetPerp(account *model.Account) {
 				order.RefreshType = model.FunctionBitgetLiq
 				_, _, coin, _ := model.GetFromStandard(model.BitgetPerp, position.Currency)
 				saveCross(order, coin, model.FunctionBitgetLiq, 0, 0, position.Holding)
+			} else {
+				util.Notice(fmt.Sprintf(`not liquidate bitgetperp for big perp %s %s %f`,
+					position.Currency, position.EntryPrice, position.Holding))
 			}
 		}
 	}
