@@ -42,7 +42,8 @@ func (marketInfoArray MarketInfoArray) Less(i, j int) bool {
 	return marketInfoArray[i].TradeAmount < marketInfoArray[j].TradeAmount
 }
 
-func GetMarketInfos(market, marketType string) (marketInfos map[string]*MarketInfo) {
+// GetMarketInfos
+func _(market, marketType string) (marketInfos map[string]*MarketInfo) {
 	marketInfos = make(map[string]*MarketInfo)
 	MarketInfos.Range(func(key, value any) bool {
 		if value == nil {
@@ -91,9 +92,10 @@ func GetAmountInMarket(market string, symbol string, amount, price float64, redu
 	if success && marketInfo.CTValue > 0 && marketInfo.CTCurrency == coin {
 		amount = amount / marketInfo.CTValue
 	}
-	formattedAmount = marketInfo.SizeIncrement * math.Floor(amount/marketInfo.SizeIncrement)
 	decimal := util.NumDecPlaces(marketInfo.SizeIncrement)
 	format := `%.` + strconv.Itoa(decimal) + `f`
+	amount, _ = strconv.ParseFloat(fmt.Sprintf(format, amount), 64)
+	formattedAmount = marketInfo.SizeIncrement * math.Round(amount/marketInfo.SizeIncrement)
 	formattedAmount, _ = strconv.ParseFloat(fmt.Sprintf(format, formattedAmount), 64)
 	// bitgetperp reduce的时候应该不受最小下单金额限制
 	if reduceOnly && market == BitgetPerp {

@@ -346,14 +346,14 @@ func Test_download(t *testing.T) {
 func Test_Orders(t *testing.T) {
 	model.NewConfig()
 	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
-	coin := `ETH`
-	market := model.Bybit
-	symbol := coin + model.UniStandardTail[model.MarketTypeSpot]
+	coin := `KLAY`
+	market := model.BitgetPerp
+	symbol := coin + model.UniStandardTail[model.MarketTypePerp]
 	markets := []string{market}
 	api.InitMarketInfos(markets)
 	account := model.GetAccounts(0)[markets[0]]
-	order := api.PlaceOrder(account.Key, account.Secret, model.OrderSideBuy, model.OrderTypeLimit, markets[0], symbol, model.ReduceOnly,
-		1700, 1700, 0.01, false, nil, nil)
+	order := api.PlaceOrder(account.Key, account.Secret, model.OrderSideSell, model.OrderTypeLimit, markets[0], symbol, model.ReduceOnly,
+		0.2206, 0.2206, 77.8, false, nil, nil)
 	if order != nil {
 		fmt.Println(fmt.Sprintf(`place %s %s`, order.OrderId, order.Status))
 	}
