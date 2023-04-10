@@ -22,7 +22,7 @@ const compTooBig = 70000.0
 const crossLimitInU = 10000.0
 const InsufficientCodeBinance = `-2010`
 const SmallInU = 10
-const BitgetPosLimit = 40
+const BitgetPosLimit = 130
 
 var InsufficientCodeOKEX = map[string]bool{`51008`: true, `51119`: true, `51120`: true, `51131`: true, `51502`: true,
 	`58350`: true, `59108`: true, `59200`: true}
