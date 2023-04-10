@@ -418,6 +418,10 @@ func getPositionsBinancePerp(key, secret string) (success bool, positions []*mod
 			}
 			positions = append(positions, position)
 		}
+	} else {
+		util.Notice(`fail to refresh binance position `)
+		time.Sleep(time.Minute)
+		return getPositionsBinancePerp(key, secret)
 	}
 	if (unrealizedProfit != 0 && len(positions) == 0) || err != nil {
 		util.Notice(fmt.Sprintf(`pos error binanceperp %s %f %f %f 0 pos items %d`,

@@ -38,7 +38,7 @@ func createContractMarket(key, secret, market string) (cm *contractMarket) {
 		cm.accountValueInU = accountValue
 		cm.collateralsAvailable = availableU
 	} else {
-		util.Notice(`fail to createContractMarket %s $s`, market, key)
+		util.Notice(`fail to createContractMarket %s %s`, market, key)
 		return nil
 	}
 	return
