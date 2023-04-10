@@ -37,7 +37,7 @@ func getMarketsBinancePerp(key, secret string) (marketInfos map[string]*model.Ma
 			util.Notice(fmt.Sprintf("getMarketsBinancePerp err: key %s %s", key[:5], err.Error()))
 		}
 		if errTicker != nil {
-			util.Notice(fmt.Sprintf("getMarketsBinancePerp price %s err: %s", key[:5], err.Error()))
+			util.Notice(fmt.Sprintf("getMarketsBinancePerp price %s err: %s", key[:5], errTicker.Error()))
 		}
 		time.Sleep(time.Minute * 5)
 		getMarketsBinancePerp(key, secret)
