@@ -267,7 +267,7 @@ func initTradeLine(account *model.Account, setting *model.Setting, status *Carry
 	} else {
 		util.Notice(`fail to get ticket %s %s`, setting.Market, setting.Symbol)
 	}
-	jumpOpen := 7.5
+	jumpOpen := 20.0
 	jumpClose := -5.0
 	jumpBuy := jumpOpen
 	jumpSell := jumpOpen
@@ -282,9 +282,8 @@ func initTradeLine(account *model.Account, setting *model.Setting, status *Carry
 		standardScoreSell = setting.CloseShortMargin
 		status.LimitSell = math.Min(status.LimitSell, status.Holding)
 	}
-	lowLimit := lowestScore
-	status.TradeLineBuy = math.Max(standardScoreBuy*(0.5+jumpBuy*status.RateInAll), lowLimit) + status.FoundingRate
-	status.TradeLineSell = math.Max(standardScoreSell*(0.5+jumpSell*status.RateInAll), lowLimit) - status.FoundingRate
+	status.TradeLineBuy = math.Max(standardScoreBuy*(0.5+jumpBuy*status.RateInAll), lowestScore) + status.FoundingRate
+	status.TradeLineSell = math.Max(standardScoreSell*(0.5+jumpSell*status.RateInAll), lowestScore) - status.FoundingRate
 	status.TradeLineBuy *= account.CarryRate
 	status.TradeLineSell *= account.CarryRate
 	crossRows, _ := model.AppDB.Model(model.Order{}).Select(`order_side, refresh_type,sum(price*abs(amount)),avg(price)`).
