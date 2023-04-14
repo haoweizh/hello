@@ -83,7 +83,7 @@ func (metricManager *MetricManager) AddTick(market, symbol string, current time.
 	if current.Second() != 0 {
 		return
 	}
-	key := fmt.Sprintf(`%s %s %d-%d %d`, market, symbol, current.Month(), current.Day(), current.Hour())
+	key := fmt.Sprintf(`%s %s 星期%d %d`, market, symbol, current.Weekday(), current.Hour())
 	value, ok := metricManager.tickHour.Load(key)
 	var tickMetric *TickMetric
 	if !ok {
