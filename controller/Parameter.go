@@ -528,21 +528,28 @@ func createTurtleLines(function, market string, account *model.Account) (msg str
 	}
 	settingMap.Range(func(symbol, value any) bool {
 		if value == nil {
-			util.Info(fmt.Sprintf(`fail to get value for %s %s %v`, function, market, symbol))
 			return true
 		}
 		turtleData := api.GetTurtleData(account.Key, account.Secret, function, market, symbol.(string))
 		msgKey := fmt.Sprintf("%s_%s_%s", function, market, symbol.(string))
-		if turtleData != nil && (turtleData.OrderLong != nil || turtleData.OrderShort != nil) {
+		needAdd := false
+		if turtleData != nil {
+			if turtleData.OrderLong != nil || turtleData.OrderShort != nil {
+				needAdd = true
+			} else if function == model.FunctionCombineTurtle {
+				turtleNormal := api.GetTurtleData(account.Key, account.Secret, model.FunctionTurtleNormal, market, symbol.(string))
+				if turtleNormal != nil && (turtleNormal.OrderLong != nil || turtleNormal.OrderShort != nil) {
+					needAdd = true
+				}
+			}
+		}
+		if needAdd {
 			msgValue, _ := util.LoadSyncMap(&model.CarryInfo, account.Key, msgKey)
-			util.Info(fmt.Sprintf(`get lines %s %v`, msgKey, msgValue))
 			if msgValue != nil {
 				size++
 				sortable := &model.Sortable{Key: symbol.(string), Value: msgValue.(string) + "\n"}
 				lines = append(lines, sortable)
 			}
-		} else {
-			util.Info(fmt.Sprintf(`turtle data %s %v`, msgKey, turtleData))
 		}
 		return true
 	})
