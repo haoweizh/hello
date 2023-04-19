@@ -528,11 +528,12 @@ func createTurtleLines(function, market string, account *model.Account) (msg str
 	}
 	settingMap.Range(func(symbol, value any) bool {
 		if value == nil {
+			util.Info(fmt.Sprintf(`fail to get value for %s %s %v`, function, market, symbol))
 			return true
 		}
 		turtleData := api.GetTurtleData(account.Key, account.Secret, function, market, symbol.(string))
+		msgKey := fmt.Sprintf("%s_%s_%s", function, market, symbol.(string))
 		if turtleData != nil && (turtleData.OrderLong != nil || turtleData.OrderShort != nil) {
-			msgKey := fmt.Sprintf("%s_%s_%s", function, market, symbol.(string))
 			msgValue, _ := util.LoadSyncMap(&model.CarryInfo, account.Key, msgKey)
 			util.Info(fmt.Sprintf(`get lines %s %v`, msgKey, msgValue))
 			if msgValue != nil {
@@ -540,6 +541,8 @@ func createTurtleLines(function, market string, account *model.Account) (msg str
 				sortable := &model.Sortable{Key: symbol.(string), Value: msgValue.(string) + "\n"}
 				lines = append(lines, sortable)
 			}
+		} else {
+			util.Info(fmt.Sprintf(`turtle data %s %v`, msgKey, turtleData))
 		}
 		return true
 	})
