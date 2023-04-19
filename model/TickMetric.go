@@ -83,15 +83,16 @@ func (metricManager *MetricManager) AddTick(market, symbol string, current time.
 	if current.Second() != 0 {
 		return
 	}
-	key := fmt.Sprintf(`%s %s 星期%d %d`, market, symbol, current.Weekday(), current.Hour())
+	key := fmt.Sprintf(`%s %s week%d %d`, market, symbol, current.Weekday(), current.Hour())
 	value, ok := metricManager.tickHour.Load(key)
 	var tickMetric *TickMetric
-	if !ok {
-		tickMetric = &TickMetric{priceLow: 0, priceHigh: 0}
-	} else if value != nil {
+	if !ok || value == nil {
+		tickMetric = &TickMetric{priceLow: 0, priceHigh: 0, start: current}
+	} else {
 		tickMetric = value.(*TickMetric)
-		if tickMetric.countAll > 10000 {
-			tickMetric = &TickMetric{priceLow: 0, priceHigh: 0}
+		if tickMetric.start.Add(time.Hour).Before(current) {
+			tickMetric = &TickMetric{priceLow: 0, priceHigh: 0, start: current}
+			util.Notice(fmt.Sprintf(`start to add tick in new hour %s %s`, key, current.String()))
 		}
 	}
 	now := int(current.UnixNano() / int64(time.Millisecond))
