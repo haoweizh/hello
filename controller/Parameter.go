@@ -24,6 +24,7 @@ import (
 var codeGenTime int64
 var codes = make(map[string]bool)
 var simulating = false
+var candling = false
 
 const RegretTurtleGridAmount = 1000
 
@@ -46,6 +47,7 @@ func ParameterServe() {
 	router.GET(`debug`, debug)
 	router.GET(`wss`, WsPage)
 	router.GET(`gxzq`, simulateGXZQ)
+	router.GET(`candles`, getCandles)
 	var err error
 	if model.AppConfig.Port == `443` {
 		err = router.RunTLS(":"+model.AppConfig.Port, `./server.pem`, `./server.key`)
@@ -60,6 +62,10 @@ func ParameterServe() {
 
 func setSimulating(value bool) {
 	simulating = value
+}
+
+func setCandling(value bool) {
+	candling = value
 }
 
 func WsPage(c *gin.Context) {
@@ -312,6 +318,35 @@ func debug(c *gin.Context) {
 //		util.Info(fmt.Sprintf(`%s %d %d %d`, market, low[market], high[market], avg[market]))
 //	}
 //}
+
+func getCandles(c *gin.Context) {
+	if candling {
+		c.String(http.StatusLocked, `candling`)
+		return
+	}
+	defer setCandling(false)
+	setCandling(true)
+	session := sessions.Default(c)
+	value := c.Query(`code`)
+	if codes[value] {
+		session.Set(`code`, value)
+		_ = session.Save()
+	}
+	sessionValue := session.Get(`code`)
+	if sessionValue == nil || !codes[sessionValue.(string)] {
+		c.String(http.StatusUnauthorized, `wrong code`)
+		return
+	}
+	start := time.Date(2018, 1, 1, 0, 0, 0, 0, time.UTC)
+	end := time.Date(2023, 4, 1, 0, 0, 0, 0, time.UTC)
+	settings := map[string]*model.Setting{`ETH_USDT`: nil, `BTC_USDT`: nil}
+	accounts := model.GetAccounts(0)
+	if accounts != nil {
+		api.GetMultiCandle(accounts[model.BinanceSpot].Key, accounts[model.BinanceSpot].Secret, model.BinanceSpot, 60,
+			start, end, settings, true)
+	}
+	c.String(http.StatusOK, `done`)
+}
 
 func holdPage(c *gin.Context) {
 	indexStr := c.Query(`index`)

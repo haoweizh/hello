@@ -164,7 +164,8 @@ func CancelOrder(key, secret, market, symbol, orderType, orderId string) (result
 	return result, errCode, msg
 }
 
-func GetMultiCandle(key, secret, market string, slotSeconds int, begin, end time.Time, settings map[string]*model.Setting) (candles model.Candles) {
+func GetMultiCandle(key, secret, market string, slotSeconds int, begin, end time.Time,
+	settings map[string]*model.Setting, saveDB bool) (candles model.Candles) {
 	count := (end.Unix() - begin.Unix()) / int64(slotSeconds)
 	limit := 100
 	if market == model.BinancePerp {
@@ -174,8 +175,8 @@ func GetMultiCandle(key, secret, market string, slotSeconds int, begin, end time
 	}
 	if int(count) > limit {
 		duration, _ := time.ParseDuration(fmt.Sprintf(`%ds`, limit*slotSeconds))
-		candles = append(GetMultiCandle(key, secret, market, slotSeconds, begin, begin.Add(duration), settings),
-			GetMultiCandle(key, secret, market, slotSeconds, begin.Add(duration), end, settings)...)
+		candles = append(GetMultiCandle(key, secret, market, slotSeconds, begin, begin.Add(duration), settings, saveDB),
+			GetMultiCandle(key, secret, market, slotSeconds, begin.Add(duration), end, settings, saveDB)...)
 	} else {
 		candles = make([]*model.Candle, count*int64(len(settings)))
 		util.StoreSyncMap(&model.CarryInfo, fmt.Sprintf(`get multi candles slot%d count%d %s %s`,
@@ -189,8 +190,8 @@ func GetMultiCandle(key, secret, market string, slotSeconds int, begin, end time
 				temp = getCandlesFtx(key, secret, symbol, begin, end, slotSeconds)
 			case model.OKEX:
 				temp, isCache = getCandlesOKEX(key, secret, symbol, begin, end, int(count), slotSeconds)
-			case model.BinancePerp:
-				temp, isCache = getCandlesBinancePerp(key, secret, symbol, begin, end, int(count), slotSeconds)
+			case model.BinancePerp, model.BinanceSpot:
+				temp, isCache = getCandlesBinance(key, secret, market, symbol, begin, end, int(count), slotSeconds)
 			case model.GXZQ:
 				temp, isCache = getCandlesGXZQDB(symbol, begin, end, slotSeconds)
 			}
@@ -204,6 +205,9 @@ func GetMultiCandle(key, secret, market string, slotSeconds int, begin, end time
 				util.Notice(fmt.Sprintf(`get candles from cache %s %s %v %v %d %d`,
 					market, symbol, begin, end, count, slotSeconds))
 			}
+		}
+		if saveDB {
+			model.AppDB.Save(candles)
 		}
 	}
 	return
@@ -235,8 +239,8 @@ func GetCandle(key, secret, market, symbol string, slotSeconds int, begin, end t
 			candles = getCandlesFtx(key, secret, symbol, begin, end, slotSeconds)
 		case model.OKEX:
 			candles, isCache = getCandlesOKEX(key, secret, symbol, begin, end, int(count), slotSeconds)
-		case model.BinancePerp:
-			candles, isCache = getCandlesBinancePerp(key, secret, symbol, begin, end, int(count), slotSeconds)
+		case model.BinancePerp, model.BinanceSpot:
+			candles, isCache = getCandlesBinance(key, secret, market, symbol, begin, end, int(count), slotSeconds)
 		case model.GXZQ:
 			candles, isCache = getCandlesGXZQDB(symbol, begin, end, slotSeconds)
 		}

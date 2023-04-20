@@ -283,7 +283,7 @@ func maintainChannelBinancePerp(subscribes []interface{}) {
 }
 
 func getMarkPriceBinancePerp(account *model.Account, symbol string) (markPrice float64) {
-	responseBody := signedRequestBinancePerp(account.Key, account.Secret,
+	responseBody := signedRequestBinance(account.Key, account.Secret, model.BinancePerp,
 		http.MethodGet, restBinancePerp+"/fapi/v1/premiumIndex", true, map[string]interface{}{`symbol`: symbol})
 	markPriceJson, err := util.NewJSON(responseBody)
 	if err == nil {
@@ -377,7 +377,8 @@ func cancelOrdersBinancePerp(key, secret string, symbol string) bool {
 
 // sdk暂不支持该接口
 func getPositionsBinancePerp(key, secret string) (success bool, positions []*model.Position, accountValue, availableU float64) {
-	responseBody := signedRequestBinancePerp(key, secret, http.MethodGet, restBinancePerp+"/fapi/v2/account", true, nil)
+	responseBody := signedRequestBinance(key, secret, model.BinancePerp, http.MethodGet,
+		restBinancePerp+"/fapi/v2/account", true, nil)
 	positionJson, err := util.NewJSON(responseBody)
 	if err != nil || positionJson == nil {
 		util.Notice(`fail to refresh binance position `)
@@ -433,7 +434,7 @@ func getPositionsBinancePerp(key, secret string) (success bool, positions []*mod
 }
 
 // 1m 3m 5m 15m 30m 1h 2h 4h 6h 8h 12h 1d 3d 1w 1M
-func getCandlesBinancePerp(key, secret, symbol string, begin, end time.Time, limit, slotSeconds int) (
+func getCandlesBinance(key, secret, market, symbol string, begin, end time.Time, limit, slotSeconds int) (
 	candles []*model.Candle, isCache bool) {
 	interval := `1D`
 	switch slotSeconds {
@@ -447,7 +448,7 @@ func getCandlesBinancePerp(key, secret, symbol string, begin, end time.Time, lim
 		interval = `1d`
 	}
 	param := map[string]interface{}{`symbol`: symbol, `interval`: interval, `startTime`: begin.UnixMilli(), `endTime`: end.UnixMilli(), `limit`: limit}
-	redisKey := fmt.Sprintf(`%s_%s_%s_%d_%d_%d`, model.BinancePerp, symbol, interval, begin.UnixMilli(), end.UnixMilli(), limit)
+	redisKey := fmt.Sprintf(`%s_%s_%s_%d_%d_%d`, market, symbol, interval, begin.UnixMilli(), end.UnixMilli(), limit)
 	var responseBody []byte
 	if model.AppRedis != nil {
 		temp, redisErr := model.AppRedis.Get(context.Background(), redisKey).Result()
@@ -458,7 +459,11 @@ func getCandlesBinancePerp(key, secret, symbol string, begin, end time.Time, lim
 	}
 	if responseBody == nil {
 		isCache = false
-		responseBody = signedRequestBinancePerp(key, secret, http.MethodGet, restBinancePerp+"/fapi/v1/klines", true, param)
+		if market == model.BinanceSpot {
+			responseBody = signedRequestBinance(key, secret, market, http.MethodGet, restDataBinanceSpot+"/api/v3/klines", false, param)
+		} else if market == model.BinancePerp {
+			responseBody = signedRequestBinance(key, secret, market, http.MethodGet, restBinancePerp+"/fapi/v1/klines", true, param)
+		}
 	}
 	candleJson, err := util.NewJSON(responseBody)
 	errMsg := ``
@@ -485,7 +490,7 @@ func getCandlesBinancePerp(key, secret, symbol string, begin, end time.Time, lim
 	}
 	candles = make([]*model.Candle, 0)
 	for i := 0; i < len(items); i++ {
-		candle := &model.Candle{Market: model.BinancePerp, Symbol: symbol, Seconds: slotSeconds}
+		candle := &model.Candle{Market: market, Symbol: symbol, Seconds: slotSeconds}
 		value := items[i].([]interface{})
 		candle.PriceOpen, _ = strconv.ParseFloat(value[1].(string), 64)
 		candle.PriceClose, _ = strconv.ParseFloat(value[4].(string), 64)
@@ -498,12 +503,12 @@ func getCandlesBinancePerp(key, secret, symbol string, begin, end time.Time, lim
 	return
 }
 
-func signedRequestBinancePerp(key, secret, method, requestUrl string, withApiKey bool, value map[string]interface{}) []byte {
+func signedRequestBinance(key, secret, market, method, requestUrl string, withApiKey bool, value map[string]interface{}) []byte {
 	param := &url.Values{}
 	if value != nil {
 		for itemKey, itemValue := range value {
 			if itemKey == `symbol` {
-				_, _, _, itemValue = model.GetFromStandard(model.BinancePerp, itemValue.(string))
+				_, _, _, itemValue = model.GetFromStandard(market, itemValue.(string))
 			}
 			param.Set(itemKey, fmt.Sprintf(`%v`, itemValue))
 		}

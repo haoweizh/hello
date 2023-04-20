@@ -228,7 +228,7 @@ func ProcessCandles(start, end time.Time, near, far, turtleSeconds, allLimit int
 	util.StoreSyncMap(&model.CarryInfo, nil, `GetCandle`)
 	key := model.AppConfig.GetAccounts(market)[0].Key
 	secret := model.AppConfig.GetAccounts(market)[0].Secret
-	sortedCandles := api.GetMultiCandle(key, secret, market, 60, start, end, settings)
+	sortedCandles := api.GetMultiCandle(key, secret, market, 60, start, end, settings, false)
 	ago := int(math.Max(30, float64(far)))
 	duration, _ := time.ParseDuration(fmt.Sprintf(`-%ds`, turtleSeconds*ago))
 	turtleDataMap := make(map[string]*TurtleData)

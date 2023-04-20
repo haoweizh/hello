@@ -16,6 +16,8 @@ import (
 	"time"
 )
 
+// const restBinanceSpot = `https://api.binance.com`
+const restDataBinanceSpot = `https://data.binance.com`
 const wsBinanceSpot = "wss://stream.binance.com:9443/stream"
 const wsStepBinanceSpot = 20
 
