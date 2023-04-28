@@ -21,14 +21,6 @@ func (ticks Ticks) Less(i, j int) bool {
 	return ticks[i].Price < ticks[j].Price
 }
 
-func (ticks Ticks) GetMap() (tickMap map[float64]*Tick) {
-	tickMap = make(map[float64]*Tick)
-	for key, value := range ticks {
-		tickMap[value.Price] = &ticks[key]
-	}
-	return tickMap
-}
-
 func _(tickMap map[float64]*Tick) (ticks Ticks) {
 	ticks = make([]Tick, len(tickMap))
 	index := 0

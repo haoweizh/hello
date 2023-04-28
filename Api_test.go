@@ -229,29 +229,30 @@ func Test_CutTail(t *testing.T) {
 
 func Test_initTurtleN(t *testing.T) {
 	model.NewConfig()
-	api.InitMarketInfos([]string{model.Bybit})
 	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
 	//model.AppRedis = redis.NewClient(&redis.Options{
 	//	Addr:     model.AppConfig.RedisAddr,
 	//	Password: model.AppConfig.RedisPassword,
 	//	DB:       0,
 	//})
+	today, _ := model.GetMarketToday(model.BinancePerp)
+	start := time.Date(2018, 1, 1, 0, 0, 0, 0, time.UTC)
+	end := time.Date(2018, 1, 2, 0, 0, 0, 0, time.UTC)
+	settings := map[string]*model.Setting{`ETH_USDT`: nil}
+	sortedCandles := api.GetMultiCandle(model.AppConfig.BinanceKey, model.AppConfig.BinanceSecret, model.BinanceSpot, 60,
+		start, end, settings, true)
+	api.InitMarketInfos([]string{model.Bybit})
 	suc, bals, inU, cor := api.GetBalances(model.AppConfig.BybitKey, model.AppConfig.BybitSecret, model.Bybit)
 	fmt.Println(fmt.Sprintf(`%v %f %v`, suc, inU, cor))
 	for _, bal := range bals {
 		fmt.Println(bal.Coin)
 		fmt.Println(bal.Amount)
 	}
-
-	today, _ := model.GetMarketToday(model.BinancePerp)
 	api.GetCandle(model.AppConfig.OkexKey, model.AppConfig.OkexSecret, model.OKEX, `BTC_PERP`,
 		86400, today.Add(time.Hour*-24), today)
-	settings := map[string]*model.Setting{`BNX_PERP`: nil, `ETH_PERP`: nil}
 	//day := today.Add(time.Hour * -24)
 	//candles := api.CalcCandleN(model.AppConfig.BinanceKey, model.AppConfig.BinanceSecret, model.BinancePerp, `BNX_PERP`, 86400, day)
 	//fmt.Println(candles)
-	sortedCandles := api.GetMultiCandle(model.AppConfig.BinanceKey, model.AppConfig.BinanceSecret, model.BinancePerp, 60,
-		today.Add(time.Minute*-490), today, settings)
 	fmt.Println(len(sortedCandles))
 	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
 	_ = model.AppDB.AutoMigrate(&model.Setting{})
