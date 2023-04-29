@@ -305,8 +305,8 @@ func initTradeLine(account *model.Account, setting *model.Setting, status *Carry
 			lossRate := crossPrices[model.OrderSideBuy+model.FunctionComplement]/crossPrices[model.OrderSideSell+model.FunctionCross] - 1
 			if lossRate > 0 {
 				amtRate := crossValues[model.OrderSideBuy+model.FunctionComplement] / crossValues[model.OrderSideBuy+model.FunctionCross]
-				extra := math.Max(setting.CloseShortMargin, 0.001) * (amtRate - 1) * lossRate * 10000
-				extra = math.Min(math.Max(extra, 3*lossRate), 4*lossRate+setting.CloseShortMargin)
+				extra := math.Max(setting.CloseShortMargin, 0.001) * math.Pow(amtRate, 3) * lossRate * 400000
+				extra = math.Max(extra, 3*lossRate)
 				status.TradeLineBuy += extra
 				util.Notice(fmt.Sprintf(`comp extra buy %s %s compU %f compRate %f lossRate %f add %f`,
 					status.market, setting.Coin, crossValues[model.OrderSideBuy+model.FunctionComplement], amtRate, lossRate, extra))
@@ -317,8 +317,8 @@ func initTradeLine(account *model.Account, setting *model.Setting, status *Carry
 			lossRate := crossPrices[model.OrderSideBuy+model.FunctionCross]/crossPrices[model.OrderSideSell+model.FunctionComplement] - 1
 			if lossRate > 0 {
 				amtRate := crossValues[model.OrderSideSell+model.FunctionComplement] / crossValues[model.OrderSideSell+model.FunctionCross]
-				extra := math.Max(setting.CloseShortMargin, 0.001) * (amtRate - 1) * lossRate * 10000
-				extra = math.Min(math.Max(extra, 3*lossRate), 4*lossRate+setting.CloseShortMargin)
+				extra := math.Max(setting.CloseShortMargin, 0.001) * math.Pow(amtRate, 3) * lossRate * 400000
+				extra = math.Max(extra, 3*lossRate)
 				status.TradeLineSell += extra
 				util.Notice(fmt.Sprintf(`comp extra sell %s %s compU %f compRate %f lossRate %f add %f`,
 					status.market, setting.Coin, crossValues[model.OrderSideSell+model.FunctionComplement], amtRate, lossRate, extra))
