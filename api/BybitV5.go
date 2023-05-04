@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/gorilla/websocket"
+	"github.com/satori/go.uuid"
 	"hello/api/dtos"
 	"hello/model"
 	"hello/util"
@@ -419,6 +420,36 @@ func SignedRequestBybit(key, secret, method, host, path string, body map[string]
 		return httpResp, httpErr
 	}
 	return nil, http.ErrNoLocation
+}
+
+func TransferInternalBybit(key, secret, coin, amount, fromMemberId, toMemberId, fromAccountType, toAccountType string) bool {
+	transferId := uuid.NewV4()
+	param := map[string]interface{}{`transferId`: transferId.String(), `coin`: coin, `amount`: amount,
+		`fromMemberId`: fromMemberId, `toMemberId`: toMemberId, `fromAccountType`: fromAccountType, `toAccountType`: toAccountType}
+	httpResp, httpErr := SignedRequestBybit(key, secret, http.MethodPost, bybitRestUrl,
+		`/v5/asset/transfer/universal-transfer`, param)
+	if httpErr != nil {
+		return false
+	} else {
+		util.Notice(httpErr.Error())
+		util.Notice(string(httpResp))
+	}
+	return false
+}
+
+func TransferInnerBybit(key, secret, coin, amount, fromType, toType string) bool {
+	transferId := uuid.NewV4()
+	param := map[string]interface{}{"transferId": transferId.String(), `coin`: coin, `amount`: amount,
+		`fromAccountType`: fromType, `toAccountType`: toType}
+	httpResp, httpErr := SignedRequestBybit(key, secret, http.MethodPost, bybitRestUrl,
+		`/v5/asset/transfer/inter-transfer`, param)
+	if httpErr == nil {
+		return true
+	} else {
+		util.Notice(httpErr.Error())
+		util.Notice(string(httpResp))
+	}
+	return false
 }
 
 func setBybitMarginLeverage(key, secret string) {
