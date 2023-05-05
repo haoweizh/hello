@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"github.com/go-redis/redis/v8"
@@ -147,15 +148,22 @@ func Test_WsAndOrderApi(t *testing.T) {
 }
 
 func Test_BalAndPos(t *testing.T) {
+	keys := util.GetHourKeys(32)
+	fmt.Println(fmt.Sprintf(`%v`, keys))
 	model.NewConfig()
-	account := model.AppConfig.GetAccounts(model.BinancePerp)[0]
-	api.GetMarkPrice(account, model.BinancePerp, `ALGO_PERP`)
 	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
 	model.AppRedis = redis.NewClient(&redis.Options{
 		Addr:     model.AppConfig.RedisAddr,
 		Password: model.AppConfig.RedisPassword,
 		DB:       0,
 	})
+	account := model.AppConfig.GetAccounts(model.BinancePerp)[0]
+	model.AppRedis.Set(context.Background(), `test`, `11`, 0)
+	temp, err := model.AppRedis.Get(context.Background(), `test`).Result()
+	if err == nil {
+		fmt.Println(fmt.Sprintf(`%s`, temp))
+	}
+	api.GetMarkPrice(account, model.BinancePerp, `ALGO_PERP`)
 	api.GetTurtleData(model.AppConfig.OkexKey, model.AppConfig.OkexSecret, model.FunctionTurtle, model.OKEX, `MATIC_PERP`)
 	order := api.QueryOrderById(model.AppConfig.GateKey, model.AppConfig.GateSecret, `gate`, `MGA_USDT`,
 		model.OrderTypeLimit, `144149811503`)

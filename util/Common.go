@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/bitly/go-simplejson"
-	"io/ioutil"
+	"io"
 	"math"
 	"net/url"
 	"strconv"
@@ -21,7 +21,7 @@ func UnGzip(byte []byte) []byte {
 		fmt.Println(err.Error())
 		return nil
 	}
-	data, _ := ioutil.ReadAll(r)
+	var data, _ = io.ReadAll(r)
 	if r != nil {
 		r.Close()
 	}
@@ -45,20 +45,6 @@ func EndWith(full, part string) bool {
 		return false
 	}
 	return full[beginLen:] == part
-}
-
-// UnGzip
-func _(byte []byte) []byte {
-	r, err := gzip.NewReader(bytes.NewBuffer(byte))
-	if err != nil {
-		fmt.Println(err.Error())
-		return nil
-	}
-	undatas, _ := ioutil.ReadAll(r)
-	if r != nil {
-		r.Close()
-	}
-	return undatas
 }
 
 // ToJson
@@ -158,4 +144,14 @@ func StoreSyncMap(syncMap *sync.Map, value interface{}, keys ...string) {
 		key += keys[i] + `*`
 	}
 	syncMap.Store(key, value)
+}
+
+func GetHourKeys(num int) (keys []string) {
+	keys = make([]string, num)
+	now := time.Now()
+	for i := 0; i < num; i++ {
+		curTime := now.Add(time.Hour * -24 * time.Duration(i))
+		keys[i] = fmt.Sprintf(`%d-%d-%d:%d`, curTime.Year(), curTime.Month(), curTime.Day(), curTime.Hour())
+	}
+	return keys
 }
