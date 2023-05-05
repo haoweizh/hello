@@ -267,7 +267,7 @@ func GetCandle(key, secret, market, symbol string, slotSeconds int, begin, end t
 }
 
 // GetPriceForce 返回tick价格
-func GetPriceForce(key, secret, symbol, market string) (result bool, price float64) {
+func GetPriceForce(_, _, symbol, market string) (result bool, price float64) {
 	getBidAsk, bidAsk := model.AppMarkets.GetBidAsk(symbol, market)
 	if getBidAsk && bidAsk != nil {
 		return true, bidAsk.Bids[0].Price

@@ -294,8 +294,8 @@ func getMarkPriceBinancePerp(account *model.Account, symbol string) (markPrice f
 	return markPrice
 }
 
-func placeOrderBinancePerp(key, secret string, order *model.Order, orderSide, orderType, symbol string, price, triggerPrice, amount float64) {
-	price, decimal := model.FormatPrice(model.BinancePerp, symbol, price)
+func placeOrderBinancePerp(key, secret string, order *model.Order, orderSide, orderType, symbol string, oriPrice, triggerPrice, amount float64) {
+	price, decimal := model.FormatPrice(model.BinancePerp, symbol, oriPrice)
 	priceStr := util.CutTailZero(strconv.FormatFloat(price, 'f', decimal, 64))
 	formattedAmount := model.GetAmountInMarket(model.BinancePerp, symbol, amount, price, false)
 	amountStr := util.CutTailZero(fmt.Sprintf(`%f`, formattedAmount))
