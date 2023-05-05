@@ -360,13 +360,16 @@ func calcCandleN(candles []*model.Candle) (success bool) {
 	}
 	sortedCandles := model.SortedCandle{Value: candles}
 	sort.Sort(sortedCandles)
-	beginValue := 0.0
+	beginPrice := 0.0
+	beginVolume := 0.0
 	for i := 0; i < turtleNDaysMin; i++ {
-		beginValue += sortedCandles.Value[i].PriceHigh - sortedCandles.Value[i].PriceLow
+		beginPrice += sortedCandles.Value[i].PriceHigh - sortedCandles.Value[i].PriceLow
+		beginVolume += sortedCandles.Value[i].Volume
 	}
-	sortedCandles.Value[turtleNDaysMin-1].N = beginValue / turtleNDaysMin
+	sortedCandles.Value[turtleNDaysMin-1].N = beginPrice / turtleNDaysMin
 	for i := turtleNDaysMin; i < len(sortedCandles.Value); i++ {
 		sortedCandles.Value[i].N = (sortedCandles.Value[i-1].N*9 + sortedCandles.Value[i].PriceHigh - sortedCandles.Value[i].PriceLow) / 10
+		sortedCandles.Value[i].NVolume = (sortedCandles.Value[i-1].NVolume*9 + sortedCandles.Value[i].Volume) / 10
 	}
 	//for i, candle := range candles {
 	//	util.Notice(fmt.Sprintf(`candle calc %d %s %s %s %f`, i, candle.Market, candle.Symbol, candle.Begin.String(), candle.N))

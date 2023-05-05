@@ -496,6 +496,7 @@ func getCandlesBinance(key, secret, market, symbol string, begin, end time.Time,
 		candle.PriceClose, _ = strconv.ParseFloat(value[4].(string), 64)
 		candle.PriceHigh, _ = strconv.ParseFloat(value[2].(string), 64)
 		candle.PriceLow, _ = strconv.ParseFloat(value[3].(string), 64)
+		candle.Volume, _ = strconv.ParseFloat(value[7].(string), 64)
 		beginMilli, _ := value[0].(json.Number).Int64()
 		candle.Begin = time.Unix(beginMilli/1000, 0).In(begin.Location())
 		candles = append(candles, candle)

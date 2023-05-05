@@ -1426,6 +1426,7 @@ func getCandlesOKEX(key, secret, symbol string, before, after time.Time, count, 
 		candle.PriceHigh, _ = strconv.ParseFloat(item[2].(string), 64)
 		candle.PriceLow, _ = strconv.ParseFloat(item[3].(string), 64)
 		candle.PriceClose, _ = strconv.ParseFloat(item[4].(string), 64)
+		candle.Volume, _ = strconv.ParseFloat(item[7].(string), 64)
 		candles = append(candles, candle)
 	}
 	return
