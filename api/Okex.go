@@ -778,7 +778,6 @@ func getMarketsOKEX(key, secret string) (marketInfos map[string]*model.MarketInf
 					marketInfos[marketInfo.Name] = marketInfo
 				}
 			}
-			hourKeys := util.GetHourKeys(3)
 			for _, info := range marketJson.Get(`data`).MustArray() {
 				value := info.(map[string]interface{})
 				if value[`instId`] != nil {
@@ -791,22 +790,12 @@ func getMarketsOKEX(key, secret string) (marketInfos map[string]*model.MarketInf
 						continue
 					}
 					if value[`volCcy24h`] != nil && value[`last`] != nil {
-						tradeAmount := 0.0
 						if marketType == model.MarketTypeSpot {
-							tradeAmount, _ = strconv.ParseFloat(value[`volCcy24h`].(string), 64)
+							marketInfos[name].TradeAmount, _ = strconv.ParseFloat(value[`volCcy24h`].(string), 64)
 						} else if marketType == model.MarketTypePerp {
 							vol, _ := strconv.ParseFloat(value[`volCcy24h`].(string), 64)
 							lastPriceOKx, _ := strconv.ParseFloat(value[`last`].(string), 64)
-							tradeAmount = vol * lastPriceOKx
-						}
-						model.AppRedis.Set(context.Background(), hourKeys[0]+name, strconv.FormatFloat(tradeAmount, 'f', -1, 64), time.Hour*100)
-						for _, hourKey := range hourKeys {
-							temp, redisErr := model.AppRedis.Get(context.Background(), hourKey+name).Result()
-							if redisErr == nil {
-								tradeAmount, _ = strconv.ParseFloat(temp, 64)
-								marketInfos[name].TradeAmount += tradeAmount
-								util.Info(fmt.Sprintf(`add old amount okex %s %f = %f`, hourKey+name, tradeAmount, marketInfos[name].TradeAmount))
-							}
+							marketInfos[name].TradeAmount = vol * lastPriceOKx
 						}
 					}
 				}

@@ -87,7 +87,6 @@ func getMarketsBinancePerp(key, secret string) (marketInfos map[string]*model.Ma
 			marketInfos[marketInfo.Name] = marketInfo
 		}
 	}
-	hourKeys := util.GetHourKeys(3)
 	for _, stat := range stats {
 		if stat == nil {
 			continue
@@ -97,16 +96,8 @@ func getMarketsBinancePerp(key, secret string) (marketInfos map[string]*model.Ma
 			continue
 		}
 		name := coin + model.UniStandardTail[marketType]
-		model.AppRedis.Set(context.Background(), hourKeys[0]+name, stat.QuoteVolume, time.Hour*100)
 		if marketInfos[name] != nil {
-			for _, hourKey := range hourKeys {
-				temp, redisErr := model.AppRedis.Get(context.Background(), hourKey+name).Result()
-				if redisErr == nil {
-					tradeAmount, _ := strconv.ParseFloat(temp, 64)
-					marketInfos[name].TradeAmount += tradeAmount
-					util.Info(fmt.Sprintf(`add old amount binanceperp %s %f = %f`, hourKey+name, tradeAmount, marketInfos[name].TradeAmount))
-				}
-			}
+			marketInfos[name].TradeAmount, _ = strconv.ParseFloat(stat.QuoteVolume, 64)
 		}
 	}
 	return marketInfos
