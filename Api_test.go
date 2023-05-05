@@ -371,14 +371,14 @@ func Test_Orders(t *testing.T) {
 
 func Test_transferInner(t *testing.T) {
 	model.NewConfig()
-	_, assets, _, _ := api.GetBalances(model.AppConfig.BybitKey, model.AppConfig.BybitSecret, model.Bybit)
+	assets := api.GetCoinBalanceBybit(model.AppConfig.BybitKey, model.AppConfig.BybitSecret, `59372048`)
 	for _, bal := range assets {
 		if bal.Coin != `USDT` {
 			amtStr := strconv.FormatFloat(bal.Amount, 'f', -1, 64)
 			//suc := api.TransferInnerBybit(model.AppConfig.BybitKey, model.AppConfig.BybitSecret, bal.Coin,
 			//	amtStr, `UNIFIED`, `FUND`)
-			suc := api.TransferInternalBybit(model.AppConfig.BybitKey, model.AppConfig.BybitSecret, bal.Coin,
-				amtStr, `59372048`, `65058810`, `FUND`, `UNIFIED`)
+			suc := api.WithdrawBybit(model.AppConfig.BybitKey, model.AppConfig.BybitSecret, bal.Coin,
+				`65058810`, `65058810`, amtStr)
 			if !suc {
 				fmt.Println(fmt.Sprintf(`fail to transfer from FUND to UNIFIED %s %s`, bal.Coin, amtStr))
 			} else {

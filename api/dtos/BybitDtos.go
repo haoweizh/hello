@@ -84,6 +84,25 @@ type BybitBookWsResp struct {
 	} `json:"data"`
 }
 
+type BybitBalanceCoinResp struct {
+	RetCode int    `json:"retCode"`
+	RetMsg  string `json:"retMsg"`
+	Result  struct {
+		MemberId    string `json:"memberId"`
+		AccountType string `json:"accountType"`
+		List        []struct {
+			Coin               string `json:"coin"`
+			TransferBalance    string `json:"transferBalance"`
+			TotalMarginBalance string `json:"totalMarginBalance"`
+			WalletBalance      string `json:"walletBalance"`
+			Bonus              string `json:"bonus"`
+		} `json:"balance"`
+	} `json:"result"`
+	RetExtInfo struct {
+	} `json:"retExtInfo"`
+	Time int64 `json:"time"`
+}
+
 type BybitBalanceResp struct {
 	RetCode int    `json:"retCode"`
 	RetMsg  string `json:"retMsg"`

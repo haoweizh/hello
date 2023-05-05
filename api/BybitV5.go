@@ -288,6 +288,29 @@ func maintainChannelBybit() {
 	}
 }
 
+func GetCoinBalanceBybit(key, secret, accountType string) (balances []*model.Balance) {
+	param := map[string]interface{}{"accountType": `FUND`}
+	httpResp, httpErr := SignedRequestBybit(key, secret, http.MethodGet, bybitRestUrl, "/v5/asset/transfer/query-account-coins-balance", param)
+	balanceResp := &dtos.BybitBalanceCoinResp{}
+	jsonErr := json.Unmarshal(httpResp, balanceResp)
+	if balanceResp == nil || balanceResp.RetCode != 0 {
+		util.Notice(fmt.Sprintf("fail to refresh spot balance bybit, resp: %s httpErr: %v, jsonErr: %v", httpResp, httpErr, jsonErr))
+		time.Sleep(time.Minute)
+		return GetCoinBalanceBybit(key, secret, accountType)
+	} else {
+		fmt.Println(string(httpResp))
+		util.SocketInfo(fmt.Sprintf("get spot balance bybit success, %s resp: %s ", key[:5], httpResp))
+	}
+	balances = make([]*model.Balance, 0)
+	for _, account := range balanceResp.Result.List {
+		//if account.AccountType == "FUND" {
+		balance := &model.Balance{AccountId: key, BalanceTime: util.GetNow(), Market: model.Bybit, Coin: account.Coin}
+		balance.Amount, _ = strconv.ParseFloat(account.TransferBalance, 64)
+		balances = append(balances, balance)
+	}
+	return balances
+}
+
 func getBalanceBybit(key string, secret string) (success bool, balances []*model.Balance, totalInUsd float64, collateral *model.Collateral) {
 	//marketInfos := model.GetMarketInfos(model.Bybit, model.MarketTypeSpot)
 	//coinsStr := make([]string, 0)
@@ -422,22 +445,22 @@ func SignedRequestBybit(key, secret, method, host, path string, body map[string]
 	return nil, http.ErrNoLocation
 }
 
-func TransferInternalBybit(key, secret, coin, amount, fromMemberId, toMemberId, fromAccountType, toAccountType string) bool {
-	transferId := uuid.NewV4()
-	param := map[string]interface{}{`transferId`: transferId.String(), `coin`: coin, `amount`: amount,
-		`fromMemberId`: fromMemberId, `toMemberId`: toMemberId, `fromAccountType`: fromAccountType, `toAccountType`: toAccountType}
+func WithdrawBybit(key, secret, coin, chain, address, amount string) bool {
+	param := map[string]interface{}{`chain`: chain, `coin`: coin, `amount`: amount,
+		`address`: address, `accountType`: `FUND`, `timestamp`: time.Now().UnixMilli()}
 	httpResp, httpErr := SignedRequestBybit(key, secret, http.MethodPost, bybitRestUrl,
-		`/v5/asset/transfer/universal-transfer`, param)
+		`/v5/asset/withdraw/create`, param)
 	if httpErr != nil {
+		util.Notice(httpErr.Error())
 		return false
 	} else {
-		util.Notice(httpErr.Error())
 		util.Notice(string(httpResp))
+		return true
 	}
-	return false
 }
 
-func TransferInnerBybit(key, secret, coin, amount, fromType, toType string) bool {
+// TransferInnerBybit
+func _(key, secret, coin, amount, fromType, toType string) bool {
 	transferId := uuid.NewV4()
 	param := map[string]interface{}{"transferId": transferId.String(), `coin`: coin, `amount`: amount,
 		`fromAccountType`: fromType, `toAccountType`: toType}
