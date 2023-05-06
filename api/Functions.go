@@ -859,6 +859,9 @@ func InitCrossMarketInfos(markets []string) {
 	topCoins := make(map[string]bool)
 	InitMarketInfos(markets)
 	for _, market := range markets {
+		if market != model.OKEX && market != model.BinancePerp {
+			continue
+		}
 		_, topInfos := getSortedInfos(market, topMarketInfoLenCross)
 		for name, info := range topInfos {
 			_, _, coin, _ := model.GetFromStandard(info.Market, name)
