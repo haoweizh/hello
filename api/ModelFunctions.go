@@ -329,9 +329,9 @@ func handleTurtleSettings(function, market string, topMarketInfos map[string]*mo
 	})
 }
 
-func getTopMarketInfos(function, market string, accounts []*model.Account) (topMarketInfos map[string]*model.MarketInfo) {
-	topMarketInfos = make(map[string]*model.MarketInfo)
-	marketInfoArray := model.MarketInfoArray{}
+func getSortedInfos(market string, num int) (marketInfoArray model.MarketInfoArray, topInfos map[string]*model.MarketInfo) {
+	marketInfoArray = model.MarketInfoArray{}
+	topInfos = make(map[string]*model.MarketInfo)
 	model.MarketInfos.Range(func(key, value any) bool {
 		if value == nil {
 			return true
@@ -343,6 +343,15 @@ func getTopMarketInfos(function, market string, accounts []*model.Account) (topM
 	})
 	util.Notice(fmt.Sprintf(`get top market info array %d`, len(marketInfoArray)))
 	sort.Sort(sort.Reverse(marketInfoArray))
+	for i := 0; i < num && i < len(marketInfoArray); i++ {
+		topInfos[marketInfoArray[i].Name] = marketInfoArray[i]
+	}
+	return marketInfoArray, topInfos
+}
+
+func getDynamicMarketInfos(function, market string, accounts []*model.Account) (topMarketInfos map[string]*model.MarketInfo) {
+	topMarketInfos = make(map[string]*model.MarketInfo)
+	marketInfoArray, _ := getSortedInfos(market, topMarketInfoLen)
 	for i := 0; i < marketInfoArray.Len() && len(topMarketInfos) < topMarketInfoLen; i++ {
 		_, marketType, coinValue, _ := model.GetFromStandard(market, marketInfoArray[i].Name)
 		if strings.EqualFold(marketType, model.MarketTypePerp) && !model.CommonCoins[strings.ToLower(coinValue)] {
@@ -358,7 +367,7 @@ func getTopMarketInfos(function, market string, accounts []*model.Account) (topM
 	return topMarketInfos
 }
 
-func handleSettings() (handled bool) {
+func handleDynamicSettings() (handled bool) {
 	for _, market := range appMarkets {
 		_, haveDynamic := util.LoadSyncMap(symbolSettings, model.FunctionDynamicTurtle, market)
 		_, haveCombine := util.LoadSyncMap(symbolSettings, model.FunctionDynamicCombine, market)
@@ -373,7 +382,7 @@ func handleSettings() (handled bool) {
 		} else if haveDynamic {
 			function = model.FunctionTurtle
 		}
-		topMarketInfos := getTopMarketInfos(function, market, accounts)
+		topMarketInfos := getDynamicMarketInfos(function, market, accounts)
 		if haveCombine {
 			handleCombineSettings(market, topMarketInfos)
 		} else if haveDynamic {
@@ -387,7 +396,7 @@ func LoadSettings() bool {
 	if settingLoading {
 		return false
 	}
-	if handleSettings() {
+	if handleDynamicSettings() {
 		PrepareSettings()
 	}
 	for _, market := range appMarkets {

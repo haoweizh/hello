@@ -210,7 +210,7 @@ func initStatus(account *model.Account, setting *model.Setting, absentRevert boo
 	} else if marketType == model.MarketTypePerp {
 		status, doRevert = createFromPosition(account, setting, localLimit, absentRevert)
 	}
-	if setting.Chance < 0 {
+	if setting.Chance < 0 || setting.SymbolRelated != model.TopCross {
 		doRevert = true
 	}
 	if status == nil {

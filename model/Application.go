@@ -67,6 +67,7 @@ const Close = `close`
 const FunctionHang = `hang`
 const PostOnly = `ParticipateDoNotInitiate`
 const ReduceOnly = `reduceOnly`
+const TopCross = `top_cross`
 
 var AppDB *gorm.DB
 var AppRedis *redis.Client

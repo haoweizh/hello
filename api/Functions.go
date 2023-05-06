@@ -851,10 +851,22 @@ func FilterCross(market, symbol string) bool {
 	return false
 }
 
+const topMarketInfoLenCross = 30
+
 // InitCrossMarketInfos 用以初始化cross carry的各个币种市场，调用前需要truncate settings数据库表，本方法会从新插入
 func InitCrossMarketInfos(markets []string) {
 	infoPool := make(map[string][]*model.MarketInfo) // coin - []marketInfos
+	topCoins := make(map[string]bool)
 	InitMarketInfos(markets)
+	for _, market := range markets {
+		_, topInfos := getSortedInfos(market, topMarketInfoLenCross)
+		for name, info := range topInfos {
+			_, _, coin, _ := model.GetFromStandard(info.Market, name)
+			if !model.CommonCoins[strings.ToLower(coin)] {
+				topCoins[coin] = true
+			}
+		}
+	}
 	model.MarketInfos.Range(func(key, value any) bool {
 		if value == nil {
 			return true
@@ -882,16 +894,30 @@ func InitCrossMarketInfos(markets []string) {
 		scoreOpen := 0.015
 		scoreClose := 0.005
 		if len(infos) >= 2 {
+			topCross := ``
+			if topCoins[coin] {
+				topCross = model.TopCross
+			}
 			for _, info := range infos {
 				if settingsDbMap[fmt.Sprintf(`%s_%s_%s`, model.FunctionCross, info.Market, info.Name)] == nil {
-					setting := &model.Setting{Valid: true, Function: model.FunctionCross, Market: info.Market,
-						Symbol: info.Name, Coin: coin, OpenShortMargin: scoreOpen, CloseShortMargin: scoreClose}
+					setting := &model.Setting{
+						Valid:            true,
+						Function:         model.FunctionCross,
+						Market:           info.Market,
+						Symbol:           info.Name,
+						Coin:             coin,
+						OpenShortMargin:  scoreOpen,
+						CloseShortMargin: scoreClose,
+						SymbolRelated:    topCross}
 					util.Notice(fmt.Sprintf(`save setting %s %s %s %v`, info.Market, info.Name, coin, setting.Valid))
 					model.AppDB.Save(setting)
 				} else {
 					model.AppDB.Model(&settingsDb).Where("market= ? and symbol= ? and function= ?",
 						info.Market, info.Name, model.FunctionCross).Updates(map[string]interface{}{
-						`valid`: true, `open_short_margin`: scoreOpen, `close_short_margin`: scoreClose})
+						`valid`:              true,
+						`open_short_margin`:  scoreOpen,
+						`close_short_margin`: scoreClose,
+						`symbol_related`:     topCross})
 				}
 			}
 		}
