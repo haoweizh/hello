@@ -96,7 +96,7 @@ var ProcessCombineTurtle = func(settingCombine *model.Setting, tick *model.BidAs
 	isBig := dataCombine.IsBig(settingCombine, settingNormal, marketInfo)
 	msgKey := fmt.Sprintf("%s_%s_%s", model.FunctionCombineTurtle, market, symbol)
 	msg := fmt.Sprintf("[%d-%d %d:%d]%s N-Volume %f 可开%vbig:%d 币种数:%d/%d %d日:%e-%e %d日:%e-%e N:%e 仓数上限%d "+
-		"单仓数量:%e bid-ask %e %e 海龟:仓数/持仓量/开仓价/今日平仓 %d/%e/%e/%v %s\n龟汤:仓数/持仓量/开仓价/今日平仓 %d/%e/%e/%v %s",
+		"单仓数量:%e bid-ask %e %e \n海龟:仓数/持仓量/开仓价/今日平仓 %d/%e/%e/%v %s\n龟汤:仓数/持仓量/开仓价/今日平仓 %d/%e/%e/%v %s",
 		dataCombine.TurtleTime.Month(), dataCombine.TurtleTime.Day(), time.Now().Hour(), time.Now().Minute(), msgKey,
 		dataCombine.NVolume, canOpen, isBig, int(turtleCoins), int(settingCombine.AmountLimit), dataCombine.DaysFar,
 		dataCombine.LowDaysFar, dataCombine.HighDaysFar, dataCombine.DaysNear, dataCombine.LowDaysNear,
