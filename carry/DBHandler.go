@@ -51,7 +51,7 @@ func _(key, secret string) {
 
 func ReloadSettings() {
 	for true {
-		time.Sleep(time.Minute * 10)
+		time.Sleep(time.Hour * 24)
 		if !api.InitMarketInfos(nil) {
 			util.Notice(`fatal error: can not set market mode!!`)
 		}

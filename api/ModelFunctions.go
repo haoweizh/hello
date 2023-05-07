@@ -116,7 +116,8 @@ func GetFunctions(market, symbol string) *sync.Map {
 	return nil
 }
 
-const topMarketInfoLen = 10
+const topMarketInfoLen = 30
+const topTurtleDataLen = 10
 
 func PrepareSettings() {
 	localSymbolSettings := &sync.Map{}
@@ -351,6 +352,7 @@ func getSortedInfos(market string, num int) (marketInfoArray model.MarketInfoArr
 
 func getDynamicMarketInfos(function, market string, accounts []*model.Account) (topMarketInfos map[string]*model.MarketInfo) {
 	topMarketInfos = make(map[string]*model.MarketInfo)
+	turtleDataArray := TurtleDataArray{}
 	marketInfoArray, _ := getSortedInfos(market, topMarketInfoLen)
 	for i := 0; i < marketInfoArray.Len() && len(topMarketInfos) < topMarketInfoLen; i++ {
 		_, marketType, coinValue, _ := model.GetFromStandard(market, marketInfoArray[i].Name)
@@ -358,11 +360,18 @@ func getDynamicMarketInfos(function, market string, accounts []*model.Account) (
 			turtleData := GetTurtleData(accounts[0].Key, accounts[0].Secret, function, market, marketInfoArray[i].Name)
 			if turtleData != nil {
 				topMarketInfos[marketInfoArray[i].Name] = marketInfoArray[i]
+				turtleDataArray = append(turtleDataArray, turtleData)
 				util.Notice(fmt.Sprintf(`get top turtle done %s %s`, market, marketInfoArray[i].Name))
 			} else {
 				util.Notice(fmt.Sprintf(`get top turtle data fail %s %s`, market, marketInfoArray[i].Name))
 			}
 		}
+	}
+	sort.Sort(turtleDataArray)
+	for i := 0; i < turtleDataArray.Len()-topTurtleDataLen; i++ {
+		delete(topMarketInfos, turtleDataArray[i].Symbol)
+		util.Notice(fmt.Sprintf(`remove not topped %s NVolume %f left %d`,
+			turtleDataArray[i].Symbol, turtleDataArray[i].NVolume, len(topMarketInfos)))
 	}
 	return topMarketInfos
 }

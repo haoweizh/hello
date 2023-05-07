@@ -17,11 +17,25 @@ type TurtleData struct {
 	UseNear, BreakLong, BreakShort, Liquidated, AdjustChecked, OrderCleared   bool
 	TurtleTime, CheckTimeBreak, CheckTimeOpen                                 time.Time
 	HighDaysNear, LowDaysNear, HighDaysFar, LowDaysFar, LowAdjust, HighAdjust float64
-	HighToday, LowToday, N, Amount                                            float64
+	HighToday, LowToday, N, NVolume, Amount                                   float64
 	DaysNear, DaysFar, DaysAdjust, combineBig                                 int // CombineBig: -1小单，1大单，0未初始化
 	Symbol                                                                    string
 	// 适应某些交易所单笔订单不能过大，大笔订单会拆分后下成多个，因价格超出无法下成的单为了不被取消，也归入orderAdjust
 	OrderLong, OrderShort, OrderAdjust []*model.Order
+}
+
+type TurtleDataArray []*TurtleData
+
+func (turtleDataArray TurtleDataArray) Len() int {
+	return len(turtleDataArray)
+}
+
+func (turtleDataArray TurtleDataArray) Swap(i, j int) {
+	turtleDataArray[i], turtleDataArray[j] = turtleDataArray[j], turtleDataArray[i]
+}
+
+func (turtleDataArray TurtleDataArray) Less(i, j int) bool {
+	return turtleDataArray[i].NVolume < turtleDataArray[j].NVolume
 }
 
 func (turtleData *TurtleData) GetIds() (ids string) {
@@ -330,6 +344,7 @@ func GetTurtleData(key, secret, function, market, symbol string) (data *TurtleDa
 		}
 		if i == 1 {
 			data.N = candle.N
+			data.NVolume = candle.NVolume
 			data.Amount = CalcTurtleAmount(key, secret, market, symbol, data.N)
 			util.Notice(fmt.Sprintf(`set data %f %f`, data.N, data.Amount))
 		}
@@ -367,6 +382,7 @@ func calcCandleN(candles []*model.Candle) (success bool) {
 		beginVolume += sortedCandles.Value[i].Volume
 	}
 	sortedCandles.Value[turtleNDaysMin-1].N = beginPrice / turtleNDaysMin
+	sortedCandles.Value[turtleNDaysMin-1].NVolume = beginVolume / turtleNDaysMin
 	for i := turtleNDaysMin; i < len(sortedCandles.Value); i++ {
 		sortedCandles.Value[i].N = (sortedCandles.Value[i-1].N*9 + sortedCandles.Value[i].PriceHigh - sortedCandles.Value[i].PriceLow) / 10
 		sortedCandles.Value[i].NVolume = (sortedCandles.Value[i-1].NVolume*9 + sortedCandles.Value[i].Volume) / 10
