@@ -308,7 +308,6 @@ func GetTurtleData(key, secret, function, market, symbol string) (data *TurtleDa
 	indexMax := math.Max(turtleNDaysMin, float64(data.DaysFar))
 	duration, _ := time.ParseDuration(fmt.Sprintf(`%dh`, -24*turtleNDays))
 	candles := GetCandle(key, secret, market, symbol, 86400, today.Add(duration), today)
-	time.Sleep(time.Second * 10)
 	if !calcCandleN(candles) {
 		util.Notice(fmt.Sprintf(`fail to calc candles n %s %s candle num %d`, market, symbol, len(candles)))
 		return nil
