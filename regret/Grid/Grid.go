@@ -1,27 +1,14 @@
-package deprecated
+package Grid
 
 //var marketSymbolGrid = make(map[string]map[string]*grid)
 //var syncGrid = make(chan interface{}, 10)
 //var gridLock sync.Mutex
 //
 //type grid struct {
-//	griding             bool
 //	sellOrder, buyOrder *model.Order
 //	lastPrice           float64
 //	lastSide            string
 //	sameSide            int64
-//}
-//
-//func setGriding(market, symbol string, ing bool) {
-//	gridLock.Lock()
-//	defer gridLock.Unlock()
-//	if marketSymbolGrid[market] == nil {
-//		marketSymbolGrid[market] = make(map[string]*grid)
-//	}
-//	if marketSymbolGrid[market][symbol] == nil {
-//		marketSymbolGrid[market][symbol] = &grid{griding: ing}
-//	}
-//	marketSymbolGrid[market][symbol].griding = ing
 //}
 //
 //func getGrid(market, symbol string) (gridType *grid) {
