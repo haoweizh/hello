@@ -11,6 +11,7 @@ import (
 	"hello/carry/cross"
 	"hello/model"
 	"hello/regret"
+	"hello/regret/Grid"
 	"hello/util"
 	"math/rand"
 	"net/http"
@@ -40,6 +41,7 @@ func ParameterServe() {
 	//router.GET(`test`, testSpeed)
 	router.GET(`pw`, GetCode)
 	router.GET(`simulate`, simulate)
+	router.GET(`simulateGrid`, simulateGrid)
 	router.GET(`cross`, crossPage)
 	router.GET(`hold`, holdPage)
 	router.GET(`tick`, tickPage)
@@ -144,6 +146,56 @@ func simulateGXZQ(c *gin.Context) {
 		util.Notice(`done cut tail %s %s %s`, market, coins, sign)
 	}
 	util.Notice(`done cut tail all`)
+	c.String(http.StatusOK, `done`)
+}
+
+func simulateGrid(c *gin.Context) {
+	if model.AppConfig.Simulation != `on` {
+		c.String(http.StatusOK, `do not support simulate`)
+		return
+	}
+	if simulating {
+		msg, ok := util.LoadSyncMap(&model.CarryInfo, `gridInfo`)
+		if ok && msg != nil {
+			c.String(http.StatusOK, "simulating...\n"+msg.(string))
+		} else {
+			c.String(http.StatusBadRequest, `simulating can not be started`)
+		}
+		util.StoreSyncMap(&model.CarryInfo, nil, `gridInfo`)
+		return
+	} else {
+		defer setSimulating(false)
+		setSimulating(true)
+	}
+	strNew := c.Query(`new`)
+	market := c.Query(`market`)
+	coins := c.Query(`coin`)
+	strBegin := c.Query(`begin`) + `T00:00:00+00:00`
+	strEnd := c.Query(`end`) + `T00:00:00+00:00`
+	begin, _ := time.Parse(time.RFC3339, strBegin)
+	end, _ := time.Parse(time.RFC3339, strEnd)
+	session := sessions.Default(c)
+	value := c.Query(`code`)
+	if codes[value] {
+		session.Set(`code`, value)
+		_ = session.Save()
+	}
+	sessionValue := session.Get(`code`)
+	if sessionValue == nil || !codes[sessionValue.(string)] {
+		strNew = `false`
+	}
+	coinArr := strings.Split(coins, `,`)
+	for _, coin := range coinArr {
+		setting := &model.Setting{Valid: true,
+			Function:   model.FunctionGrid,
+			Market:     market,
+			Symbol:     strings.ToUpper(coin) + model.UniStandardTail[model.MarketTypePerp],
+			Coin:       coin,
+			GridAmount: 100}
+		if strNew == `true` {
+			Grid.ProcessGrid(begin, end, setting)
+		}
+	}
 	c.String(http.StatusOK, `done`)
 }
 
