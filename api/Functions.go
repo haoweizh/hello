@@ -164,6 +164,33 @@ func CancelOrder(key, secret, market, symbol, orderType, orderId string) (result
 	return result, errCode, msg
 }
 
+func CombineCandles(candles model.Candles, slots int) (combinedCandles model.Candles) {
+	if slots == 0 || len(candles) < slots {
+		return nil
+	}
+	combinedCandles = make([]*model.Candle, len(candles)/slots)
+	for i := 0; i < len(combinedCandles); i++ {
+		combinedCandles[i] = &model.Candle{Market: candles[i*slots].Market,
+			Symbol:     candles[i*slots].Symbol,
+			Begin:      candles[i*slots].Begin,
+			Seconds:    candles[i*slots].Seconds * slots,
+			PriceOpen:  candles[i*slots].PriceOpen,
+			PriceHigh:  candles[i*slots].PriceHigh,
+			PriceLow:   candles[i*slots].PriceLow,
+			PriceClose: candles[(i+1)*slots-1].PriceClose,
+			Volume:     candles[i*slots].Volume}
+		for j := i*slots + 1; j < (i+1)*slots; j++ {
+			if combinedCandles[i].PriceLow > candles[j].PriceLow {
+				combinedCandles[i].PriceLow = candles[j].PriceLow
+			}
+			if combinedCandles[i].PriceHigh < candles[j].PriceHigh {
+				combinedCandles[i].PriceHigh = candles[j].PriceHigh
+			}
+		}
+	}
+	return
+}
+
 func GetMultiCandle(key, secret, market string, slotSeconds int, begin, end time.Time,
 	settings map[string]*model.Setting, saveDB bool) (candles model.Candles) {
 	count := (end.Unix() - begin.Unix()) / int64(slotSeconds)

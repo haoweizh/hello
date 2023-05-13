@@ -27,9 +27,9 @@ func initGridData(setting *model.Setting, sortedCandles []*model.Candle) {
 	for i := gridDayLen; i < len(sortedCandles); i++ {
 		sortedCandles[i].N = (sortedCandles[i-1].N*(gridDayLen-1) +
 			sortedCandles[i].PriceHigh - sortedCandles[i].PriceLow) / gridDayLen
-		orderBuy := &model.Order{Amount: setting.GridAmount,
+		orderBuy := &model.Order{Amount: setting.GridAmount / (sortedCandles[i].PriceOpen - sortedCandles[i].N),
 			Price:            sortedCandles[i].PriceOpen - sortedCandles[i].N,
-			UnfilledQuantity: setting.GridAmount,
+			UnfilledQuantity: setting.GridAmount / (sortedCandles[i].PriceOpen - sortedCandles[i].N),
 			Function:         setting.Function,
 			Market:           setting.Market,
 			LineBuy:          sortedCandles[i].N,
@@ -41,9 +41,9 @@ func initGridData(setting *model.Setting, sortedCandles []*model.Candle) {
 			Status:      model.CarryStatusWorking,
 			Symbol:      setting.Symbol,
 			OrderTime:   sortedCandles[i].Begin}
-		orderSell := &model.Order{Amount: setting.GridAmount,
+		orderSell := &model.Order{Amount: setting.GridAmount / (sortedCandles[i].PriceOpen + sortedCandles[i].N),
 			Price:            sortedCandles[i].PriceOpen + sortedCandles[i].N,
-			UnfilledQuantity: setting.GridAmount,
+			UnfilledQuantity: setting.GridAmount / (sortedCandles[i].PriceOpen + sortedCandles[i].N),
 			Function:         setting.Function,
 			Market:           setting.Market,
 			LineBuy:          sortedCandles[i].N,
@@ -55,7 +55,7 @@ func initGridData(setting *model.Setting, sortedCandles []*model.Candle) {
 			Status:      model.CarryStatusWorking,
 			Symbol:      setting.Symbol,
 			OrderTime:   sortedCandles[i].Begin}
-		data := gridData{downOrders: []*model.Order{orderBuy, nil, nil}, upOrders: []*model.Order{orderSell, nil, nil},
+		data := &gridData{downOrders: []*model.Order{orderBuy, nil, nil}, upOrders: []*model.Order{orderSell, nil, nil},
 			candle: sortedCandles[i]}
 		grids.Store(fmt.Sprintf(`%s_%s_%d`, setting.Market, setting.Symbol, sortedCandles[i].Begin.Second()), data)
 	}
@@ -68,8 +68,9 @@ var ProcessGrid = func(start, end time.Time, setting *model.Setting) {
 		map[string]*model.Setting{setting.Symbol: setting}, false)
 	util.StoreSyncMap(&model.CarryInfo, fmt.Sprintf(`get market candle %s %s from %s len %d`,
 		setting.Market, setting.Symbol, start.String(), len(candles)), `gridInfo`)
-	gridCandles := api.GetMultiCandle(account.Key, account.Secret, setting.Market, 14400,
+	gridCandles := api.GetMultiCandle(account.Key, account.Secret, setting.Market, 3600,
 		start.Add(time.Hour*-1200), end, map[string]*model.Setting{setting.Symbol: setting}, false)
+	gridCandles = api.CombineCandles(gridCandles, 4)
 	util.StoreSyncMap(&model.CarryInfo, fmt.Sprintf(`get grid candle %s %s from %s len %d`,
 		setting.Market, setting.Symbol, start.Add(time.Hour*-1200).String(), len(gridCandles)), `gridInfo`)
 	if gridCandles != nil && gridCandles.Len() > 0 && gridCandles[0] != nil && gridCandles[len(gridCandles)-1] != nil {
@@ -131,9 +132,9 @@ func handleGrid(setting *model.Setting, orders []*model.Order, candle *model.Can
 				winPrice = orders[0].Price - n
 				losePrice = orders[0].Price + n
 			}
-			orders[1] = &model.Order{Amount: setting.GridAmount,
+			orders[1] = &model.Order{Amount: setting.GridAmount / winPrice,
 				Price:            winPrice,
-				UnfilledQuantity: setting.GridAmount,
+				UnfilledQuantity: setting.GridAmount / winPrice,
 				Function:         setting.Function,
 				Market:           setting.Market,
 				LineBuy:          n,
@@ -144,9 +145,9 @@ func handleGrid(setting *model.Setting, orders []*model.Order, candle *model.Can
 				Status:           model.CarryStatusWorking,
 				Symbol:           setting.Symbol,
 				OrderTime:        candle.Begin}
-			orders[2] = &model.Order{Amount: setting.GridAmount,
+			orders[2] = &model.Order{Amount: setting.GridAmount / losePrice,
 				Price:            losePrice,
-				UnfilledQuantity: setting.GridAmount,
+				UnfilledQuantity: setting.GridAmount / losePrice,
 				Function:         setting.Function,
 				Market:           setting.Market,
 				LineBuy:          n,

@@ -193,6 +193,9 @@ func simulateGrid(c *gin.Context) {
 			Coin:       coin,
 			GridAmount: 100}
 		if strNew == `true` {
+			fmt.Println(begin.String())
+			go model.AppDB.Where(`function=? and market=? and symbol=? and order_time>? and order_time<?`,
+				setting.Function, market, setting.Symbol, strBegin, strEnd).Delete(&model.Order{})
 			Grid.ProcessGrid(begin, end, setting)
 		}
 	}
