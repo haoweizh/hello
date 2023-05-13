@@ -205,6 +205,7 @@ func GetMultiCandle(key, secret, market string, slotSeconds int, begin, end time
 		candles = append(GetMultiCandle(key, secret, market, slotSeconds, begin, begin.Add(duration), settings, saveDB),
 			GetMultiCandle(key, secret, market, slotSeconds, begin.Add(duration), end, settings, saveDB)...)
 	} else {
+		fmt.Println(fmt.Sprintf(`get multi candle count %d * len %d`, count, len(settings)))
 		candles = make([]*model.Candle, count*int64(len(settings)))
 		util.StoreSyncMap(&model.CarryInfo, fmt.Sprintf(`get multi candles slot%d count%d %s %s`,
 			slotSeconds, count, begin.String(), end.String()), `GetCandle`)
