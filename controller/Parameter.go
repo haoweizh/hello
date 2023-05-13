@@ -167,6 +167,11 @@ func simulateGrid(c *gin.Context) {
 		defer setSimulating(false)
 		setSimulating(true)
 	}
+	strJump := c.Query(`jump`)
+	if strJump == `` {
+		strJump = `1`
+	}
+	jump, _ := strconv.ParseFloat(strJump, 64)
 	strNew := c.Query(`new`)
 	market := c.Query(`market`)
 	coins := c.Query(`coin`)
@@ -189,12 +194,13 @@ func simulateGrid(c *gin.Context) {
 		setting := &model.Setting{Valid: true,
 			Function:   model.FunctionGrid,
 			Market:     market,
+			PriceX:     jump,
 			Symbol:     strings.ToUpper(coin) + model.UniStandardTail[model.MarketTypePerp],
 			Coin:       coin,
 			GridAmount: 100}
 		if strNew == `true` {
-			go model.AppDB.Where(`function=? and market=? and symbol=? and order_time>? and order_time<?`,
-				setting.Function, market, setting.Symbol, strBegin, strEnd).Delete(&model.Order{})
+			go model.AppDB.Where(`function=? and market=? and symbol=? and order_time>? and order_time<? and line_sell=?`,
+				setting.Function, market, setting.Symbol, strBegin, strEnd, jump).Delete(&model.Order{})
 			Grid.ProcessGrid(begin, end, setting)
 		}
 	}

@@ -10,16 +10,18 @@ import (
 )
 
 // 滑点
-const tradeCost = 0.004
+const tradeCost = 0.002
 const gridDayLen = 30
 
 var grids = sync.Map{} // market_symbol: []*Candle
 
 type gridData struct {
-	downOrders, upOrders []*model.Order // 0: open 1: stopWin 2: stopLoss
+	downOrders, upOrders []*model.Order          // 0: open 1: stopWin 2: stopLoss
+	oldOrders            map[string]*model.Order // orderId - *order
 	candle               *model.Candle
 }
 
+// setting.PriceX 下单价格n的加乘倍数
 func initGridData(setting *model.Setting, sortedCandles []*model.Candle) {
 	beginPrice := 0.0
 	for i := 0; i < gridDayLen; i++ {
@@ -29,9 +31,9 @@ func initGridData(setting *model.Setting, sortedCandles []*model.Candle) {
 	for i := gridDayLen; i < len(sortedCandles); i++ {
 		sortedCandles[i].N = (sortedCandles[i-1].N*(gridDayLen-1) +
 			sortedCandles[i].PriceHigh - sortedCandles[i].PriceLow) / gridDayLen
-		orderBuy := &model.Order{Amount: setting.GridAmount / (sortedCandles[i].PriceOpen - sortedCandles[i].N),
-			Price:            sortedCandles[i].PriceOpen - sortedCandles[i].N,
-			UnfilledQuantity: setting.GridAmount / (sortedCandles[i].PriceOpen - sortedCandles[i].N),
+		orderBuy := &model.Order{Amount: setting.GridAmount / (sortedCandles[i].PriceOpen - 2*sortedCandles[i].N),
+			Price:            sortedCandles[i].PriceOpen - 2*sortedCandles[i].N,
+			UnfilledQuantity: setting.GridAmount / (sortedCandles[i].PriceOpen - 2*sortedCandles[i].N),
 			Function:         setting.Function,
 			Market:           setting.Market,
 			LineBuy:          sortedCandles[i].N,
@@ -43,9 +45,9 @@ func initGridData(setting *model.Setting, sortedCandles []*model.Candle) {
 			Status:      model.CarryStatusWorking,
 			Symbol:      setting.Symbol,
 			OrderTime:   sortedCandles[i].Begin}
-		orderSell := &model.Order{Amount: setting.GridAmount / (sortedCandles[i].PriceOpen + sortedCandles[i].N),
-			Price:            sortedCandles[i].PriceOpen + sortedCandles[i].N,
-			UnfilledQuantity: setting.GridAmount / (sortedCandles[i].PriceOpen + sortedCandles[i].N),
+		orderSell := &model.Order{Amount: setting.GridAmount / (sortedCandles[i].PriceOpen + 2*sortedCandles[i].N),
+			Price:            sortedCandles[i].PriceOpen + 2*sortedCandles[i].N,
+			UnfilledQuantity: setting.GridAmount / (sortedCandles[i].PriceOpen + 2*sortedCandles[i].N),
 			Function:         setting.Function,
 			Market:           setting.Market,
 			LineBuy:          sortedCandles[i].N,
@@ -92,44 +94,45 @@ var ProcessGrid = func(start, end time.Time, setting *model.Setting) {
 			continue
 		}
 		if currentGrid != nil && currentGrid.candle.Begin.Unix() < beginUnix {
-			postDeal(currentGrid.downOrders, candles[i])
-			postDeal(currentGrid.upOrders, candles[i])
+			if value.(*gridData).oldOrders == nil {
+				value.(*gridData).oldOrders = make(map[string]*model.Order)
+			}
+			if currentGrid.upOrders[0] != nil && currentGrid.upOrders[0].Status == model.CarryStatusSuccess {
+				value.(*gridData).oldOrders[currentGrid.upOrders[0].OrderId] = currentGrid.upOrders[0]
+			}
+			if currentGrid.downOrders[0] != nil && currentGrid.downOrders[0].Status == model.CarryStatusSuccess {
+				value.(*gridData).oldOrders[currentGrid.downOrders[0].OrderId] = currentGrid.downOrders[0]
+			}
 		}
 		currentGrid = value.(*gridData)
-		handleGrid(setting, currentGrid.downOrders, candles[i], currentGrid.candle.N)
-		handleGrid(setting, currentGrid.upOrders, candles[i], currentGrid.candle.N)
+		handleGrid(setting, currentGrid.downOrders, candles[i], currentGrid.candle.N*setting.PriceX)
+		handleGrid(setting, currentGrid.upOrders, candles[i], currentGrid.candle.N*setting.PriceX)
+		handleOld(setting, currentGrid.oldOrders, candles[i], currentGrid.candle.N*setting.PriceX)
 		util.StoreSyncMap(&model.CarryInfo, fmt.Sprintf(`deal grid candle %s %s %s for grid %s`,
 			setting.Market, setting.Symbol, candles[i].Begin.String(), currentGrid.candle.Begin.String()), `gridInfo`)
 	}
 }
 
-func postDeal(orders []*model.Order, candle *model.Candle) {
-	if orders[0] != nil && orders[0].Status == model.CarryStatusSuccess {
-		order := &model.Order{Amount: orders[0].Amount,
-			Function: orders[0].Function,
-			Market:   orders[0].Market,
-			LineBuy:  orders[0].LineBuy,
-			OrderId: fmt.Sprintf(`%s%sLiq%s%s_0`,
-				orders[0].Market, orders[0].Symbol, orders[0].OrderSide, candle.Begin.String()),
-			OrderType:   model.OrderTypeMarket,
-			Price:       candle.PriceOpen,
-			RefreshType: model.FunctionSimulation,
-			Symbol:      orders[0].Symbol,
-			OrderTime:   candle.Begin}
-		if orders[0].OrderSide == model.OrderSideBuy {
-			order.OrderSide = model.OrderSideSell
-		} else {
-			order.OrderSide = model.OrderSideBuy
-		}
-		dealGridSuccess(order)
-	}
+func dealOldLiquidate(setting *model.Setting, oldOrder *model.Order, candle *model.Candle, side, orderType string, price float64) {
+	dealGridSuccess(setting, &model.Order{Amount: oldOrder.Amount,
+		Price:       price,
+		Function:    oldOrder.Function,
+		Market:      oldOrder.Market,
+		LineBuy:     oldOrder.LineBuy,
+		OrderId:     fmt.Sprintf(`%s%s%s%s_3`, oldOrder.Market, oldOrder.Symbol, side, candle.Begin.String()),
+		OrderSide:   side,
+		OrderType:   orderType,
+		RefreshType: model.FunctionSimulation,
+		Symbol:      oldOrder.Symbol,
+		OrderTime:   candle.Begin})
 }
 
-func dealGridSuccess(order *model.Order) {
+func dealGridSuccess(setting *model.Setting, order *model.Order) {
 	order.Status = model.CarryStatusSuccess
 	order.DealAmount = order.Amount
 	order.UnfilledQuantity = 0
 	order.DealPrice = order.Price
+	order.LineSell = setting.PriceX
 	if order.OrderType != model.OrderTypeLimit {
 		if order.OrderSide == model.OrderSideSell {
 			order.DealPrice = order.Price * (1 - tradeCost)
@@ -140,6 +143,29 @@ func dealGridSuccess(order *model.Order) {
 	model.AppDB.Save(order)
 }
 
+func handleOld(setting *model.Setting, orders map[string]*model.Order, candle *model.Candle, n float64) {
+	for orderId, order := range orders {
+		price := 0.0
+		orderType := model.OrderTypeLimit
+		if candle.PriceHigh > order.Price+n {
+			price = order.Price + n
+			if order.OrderSide == model.OrderSideSell {
+				orderType = model.OrderTypeStop
+			}
+		} else if candle.PriceLow < order.Price-n {
+			price = order.Price - n
+			if order.OrderSide == model.OrderSideBuy {
+				orderType = model.OrderTypeStop
+			}
+		}
+		if price != 0 {
+			dealOldLiquidate(setting, order, candle, model.GetOppositeSide(order.OrderSide), orderType, price)
+			delete(orders, orderId)
+			util.Info(fmt.Sprintf(`remove old order %s left %d orders`, orderId, len(orders)))
+		}
+	}
+}
+
 func handleGrid(setting *model.Setting, orders []*model.Order, candle *model.Candle, n float64) {
 	// 已经完成了开仓关仓，设置为nil
 	if orders[0] == nil {
@@ -148,7 +174,7 @@ func handleGrid(setting *model.Setting, orders []*model.Order, candle *model.Can
 	if orders[0].Status == model.CarryStatusWorking {
 		if (orders[0].OrderSide == model.OrderSideBuy && orders[0].Price > candle.PriceLow) ||
 			(orders[0].OrderSide == model.OrderSideSell && orders[0].Price < candle.PriceHigh) {
-			dealGridSuccess(orders[0])
+			dealGridSuccess(setting, orders[0])
 			var winPrice, losePrice float64
 			var side string
 			if orders[0].OrderSide == model.OrderSideBuy {
@@ -190,12 +216,12 @@ func handleGrid(setting *model.Setting, orders []*model.Order, candle *model.Can
 	}
 	if orders[1] != nil && ((orders[1].OrderSide == model.OrderSideSell && candle.PriceHigh > orders[1].Price) ||
 		(orders[1].OrderSide == model.OrderSideBuy && candle.PriceLow < orders[1].Price)) {
-		dealGridSuccess(orders[1])
+		dealGridSuccess(setting, orders[1])
 		orders[0] = nil
 	}
 	if orders[2] != nil && ((orders[2].OrderSide == model.OrderSideSell && candle.PriceLow < orders[1].Price) ||
 		(orders[2].OrderSide == model.OrderSideBuy && candle.PriceHigh > orders[2].Price)) {
-		dealGridSuccess(orders[2])
+		dealGridSuccess(setting, orders[2])
 		orders[0] = nil
 	}
 }
