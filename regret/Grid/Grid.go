@@ -5,6 +5,7 @@ import (
 	"hello/api"
 	"hello/model"
 	"hello/util"
+	"math/rand"
 	"sync"
 	"time"
 )
@@ -37,28 +38,26 @@ func initGridData(setting *model.Setting, sortedCandles []*model.Candle) {
 			Function:         setting.Function,
 			Market:           setting.Market,
 			LineBuy:          sortedCandles[i].N,
-			OrderId: fmt.Sprintf(`%s%s%s%f%s_0`,
-				setting.Market, setting.Symbol, model.OrderSideBuy, setting.PriceX, sortedCandles[i].Begin.String()),
-			OrderSide:   model.OrderSideBuy,
-			OrderType:   model.OrderTypeLimit,
-			RefreshType: model.FunctionSimulation,
-			Status:      model.CarryStatusWorking,
-			Symbol:      setting.Symbol,
-			OrderTime:   sortedCandles[i].Begin}
+			OrderId:          fmt.Sprintf(`%d_%d`, sortedCandles[i].Begin.Unix(), rand.Int()),
+			OrderSide:        model.OrderSideBuy,
+			OrderType:        model.OrderTypeLimit,
+			RefreshType:      model.FunctionSimulation,
+			Status:           model.CarryStatusWorking,
+			Symbol:           setting.Symbol,
+			OrderTime:        sortedCandles[i].Begin}
 		orderSell := &model.Order{Amount: setting.GridAmount / (sortedCandles[i].PriceOpen + 2*sortedCandles[i].N),
 			Price:            sortedCandles[i].PriceOpen + 2*sortedCandles[i].N,
 			UnfilledQuantity: setting.GridAmount / (sortedCandles[i].PriceOpen + 2*sortedCandles[i].N),
 			Function:         setting.Function,
 			Market:           setting.Market,
 			LineBuy:          sortedCandles[i].N,
-			OrderId: fmt.Sprintf(`%s%s%s%f%s_0`,
-				setting.Market, setting.Symbol, model.OrderSideSell, setting.PriceX, sortedCandles[i].Begin.String()),
-			OrderSide:   model.OrderSideSell,
-			OrderType:   model.OrderTypeLimit,
-			RefreshType: model.FunctionSimulation,
-			Status:      model.CarryStatusWorking,
-			Symbol:      setting.Symbol,
-			OrderTime:   sortedCandles[i].Begin}
+			OrderId:          fmt.Sprintf(`%d_%d`, sortedCandles[i].Begin.Unix(), rand.Int()),
+			OrderSide:        model.OrderSideSell,
+			OrderType:        model.OrderTypeLimit,
+			RefreshType:      model.FunctionSimulation,
+			Status:           model.CarryStatusWorking,
+			Symbol:           setting.Symbol,
+			OrderTime:        sortedCandles[i].Begin}
 		data := &gridData{downOrders: []*model.Order{orderBuy, nil, nil}, upOrders: []*model.Order{orderSell, nil, nil},
 			candle: sortedCandles[i]}
 		grids.Store(fmt.Sprintf(`%s_%s_%d`, setting.Market, setting.Symbol, sortedCandles[i].Begin.Unix()), data)
@@ -119,7 +118,7 @@ func dealOldLiquidate(setting *model.Setting, oldOrder *model.Order, candle *mod
 		Function:    oldOrder.Function,
 		Market:      oldOrder.Market,
 		LineBuy:     oldOrder.LineBuy,
-		OrderId:     fmt.Sprintf(`%s%s%s%f%s_3`, oldOrder.Market, oldOrder.Symbol, side, setting.PriceX, candle.Begin.String()),
+		OrderId:     fmt.Sprintf(`liquidate%s`, oldOrder.OrderId),
 		OrderSide:   side,
 		OrderType:   orderType,
 		RefreshType: model.FunctionSimulation,
@@ -192,7 +191,7 @@ func handleGrid(setting *model.Setting, orders []*model.Order, candle *model.Can
 				Function:         setting.Function,
 				Market:           setting.Market,
 				LineBuy:          n,
-				OrderId:          fmt.Sprintf(`%s%s%s%f%s_1`, setting.Market, setting.Symbol, side, setting.PriceX, candle.Begin.String()),
+				OrderId:          fmt.Sprintf(`liquidate%s`, orders[0].OrderId),
 				OrderSide:        side,
 				OrderType:        model.OrderTypeLimit,
 				RefreshType:      model.FunctionSimulation,
@@ -205,7 +204,7 @@ func handleGrid(setting *model.Setting, orders []*model.Order, candle *model.Can
 				Function:         setting.Function,
 				Market:           setting.Market,
 				LineBuy:          n,
-				OrderId:          fmt.Sprintf(`%s%s%s%f%s_2`, setting.Market, setting.Symbol, side, setting.PriceX, candle.Begin.String()),
+				OrderId:          fmt.Sprintf(`liquidate%s`, orders[0].OrderId),
 				OrderSide:        side,
 				OrderType:        model.OrderTypeStop,
 				RefreshType:      model.FunctionSimulation,
