@@ -36,6 +36,7 @@ func initGridData(setting *model.Setting, sortedCandles []*model.Candle) {
 			Price:            sortedCandles[i].PriceOpen - 2*sortedCandles[i].N,
 			UnfilledQuantity: setting.GridAmount / (sortedCandles[i].PriceOpen - 2*sortedCandles[i].N),
 			Function:         setting.Function,
+			GridPos:          0,
 			Market:           setting.Market,
 			LineBuy:          sortedCandles[i].N,
 			OrderId:          fmt.Sprintf(`%d_%d`, sortedCandles[i].Begin.Unix(), rand.Int()),
@@ -49,6 +50,7 @@ func initGridData(setting *model.Setting, sortedCandles []*model.Candle) {
 			Price:            sortedCandles[i].PriceOpen + 2*sortedCandles[i].N,
 			UnfilledQuantity: setting.GridAmount / (sortedCandles[i].PriceOpen + 2*sortedCandles[i].N),
 			Function:         setting.Function,
+			GridPos:          0,
 			Market:           setting.Market,
 			LineBuy:          sortedCandles[i].N,
 			OrderId:          fmt.Sprintf(`%d_%d`, sortedCandles[i].Begin.Unix(), rand.Int()),
@@ -93,15 +95,16 @@ var ProcessGrid = func(start, end time.Time, setting *model.Setting) {
 			continue
 		}
 		if currentGrid != nil && currentGrid.candle.Begin.Unix() < beginUnix {
-			if value.(*gridData).oldOrders == nil {
-				value.(*gridData).oldOrders = make(map[string]*model.Order)
+			if currentGrid.oldOrders == nil {
+				currentGrid.oldOrders = make(map[string]*model.Order)
 			}
 			if currentGrid.upOrders[0] != nil && currentGrid.upOrders[0].Status == model.CarryStatusSuccess {
-				value.(*gridData).oldOrders[currentGrid.upOrders[0].OrderId] = currentGrid.upOrders[0]
+				currentGrid.oldOrders[currentGrid.upOrders[0].OrderId] = currentGrid.upOrders[0]
 			}
 			if currentGrid.downOrders[0] != nil && currentGrid.downOrders[0].Status == model.CarryStatusSuccess {
-				value.(*gridData).oldOrders[currentGrid.downOrders[0].OrderId] = currentGrid.downOrders[0]
+				currentGrid.oldOrders[currentGrid.downOrders[0].OrderId] = currentGrid.downOrders[0]
 			}
+			value.(*gridData).oldOrders = currentGrid.oldOrders
 		}
 		currentGrid = value.(*gridData)
 		handleGrid(setting, currentGrid.downOrders, candles[i], currentGrid.candle.N*setting.PriceX)
@@ -116,6 +119,7 @@ func dealOldLiquidate(setting *model.Setting, oldOrder *model.Order, candle *mod
 	dealGridSuccess(setting, &model.Order{Amount: oldOrder.Amount,
 		Price:       price,
 		Function:    oldOrder.Function,
+		GridPos:     3,
 		Market:      oldOrder.Market,
 		LineBuy:     oldOrder.LineBuy,
 		OrderId:     fmt.Sprintf(`liquidate%s`, oldOrder.OrderId),
@@ -189,6 +193,7 @@ func handleGrid(setting *model.Setting, orders []*model.Order, candle *model.Can
 				Price:            winPrice,
 				UnfilledQuantity: setting.GridAmount / winPrice,
 				Function:         setting.Function,
+				GridPos:          1,
 				Market:           setting.Market,
 				LineBuy:          n,
 				OrderId:          fmt.Sprintf(`liquidate%s`, orders[0].OrderId),
@@ -202,6 +207,7 @@ func handleGrid(setting *model.Setting, orders []*model.Order, candle *model.Can
 				Price:            losePrice,
 				UnfilledQuantity: setting.GridAmount / losePrice,
 				Function:         setting.Function,
+				GridPos:          2,
 				Market:           setting.Market,
 				LineBuy:          n,
 				OrderId:          fmt.Sprintf(`liquidate%s`, orders[0].OrderId),
