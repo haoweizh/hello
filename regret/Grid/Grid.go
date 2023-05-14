@@ -219,7 +219,7 @@ func handleGrid(setting *model.Setting, orders []*model.Order, candle *model.Can
 		dealGridSuccess(setting, orders[1])
 		orders[0] = nil
 	}
-	if orders[2] != nil && ((orders[2].OrderSide == model.OrderSideSell && candle.PriceLow < orders[1].Price) ||
+	if orders[2] != nil && ((orders[2].OrderSide == model.OrderSideSell && candle.PriceLow < orders[2].Price) ||
 		(orders[2].OrderSide == model.OrderSideBuy && candle.PriceHigh > orders[2].Price)) {
 		dealGridSuccess(setting, orders[2])
 		orders[0] = nil
