@@ -107,35 +107,35 @@ var ProcessGrid = func(start, end time.Time, setting *model.Setting) {
 			value.(*gridData).oldOrders = currentGrid.oldOrders
 		}
 		currentGrid = value.(*gridData)
-		handleGrid(setting, currentGrid.downOrders, candles[i], currentGrid.candle.N*setting.PriceX)
-		handleGrid(setting, currentGrid.upOrders, candles[i], currentGrid.candle.N*setting.PriceX)
-		handleOld(setting, currentGrid.oldOrders, candles[i], currentGrid.candle.N*setting.PriceX)
+		handleGrid(setting, currentGrid.downOrders, candles[i], currentGrid.candle.N)
+		handleGrid(setting, currentGrid.upOrders, candles[i], currentGrid.candle.N)
+		handleOld(setting, currentGrid.oldOrders, candles[i], currentGrid.candle.N)
 		util.StoreSyncMap(&model.CarryInfo, fmt.Sprintf(`deal grid candle %s %s %s for grid %s`,
 			setting.Market, setting.Symbol, candles[i].Begin.String(), currentGrid.candle.Begin.String()), `gridInfo`)
 	}
 }
 
-func dealOldLiquidate(setting *model.Setting, oldOrder *model.Order, candle *model.Candle, side, orderType string, price float64) {
+func dealOldLiquidate(setting *model.Setting, oldOrder *model.Order, candle *model.Candle, side, orderType string, price, n float64) {
 	dealGridSuccess(setting, &model.Order{Amount: oldOrder.Amount,
 		Price:       price,
 		Function:    oldOrder.Function,
 		GridPos:     3,
 		Market:      oldOrder.Market,
-		LineBuy:     oldOrder.LineBuy,
+		LineBuy:     n,
 		OrderId:     fmt.Sprintf(`liquidate%s`, oldOrder.OrderId),
 		OrderSide:   side,
 		OrderType:   orderType,
 		RefreshType: model.FunctionSimulation,
-		Symbol:      oldOrder.Symbol,
-		OrderTime:   candle.Begin})
+		Symbol:      oldOrder.Symbol}, candle)
 }
 
-func dealGridSuccess(setting *model.Setting, order *model.Order) {
+func dealGridSuccess(setting *model.Setting, order *model.Order, candle *model.Candle) {
 	order.Status = model.CarryStatusSuccess
 	order.DealAmount = order.Amount
 	order.UnfilledQuantity = 0
 	order.DealPrice = order.Price
 	order.LineSell = setting.PriceX
+	order.OrderTime = candle.Begin
 	if order.OrderType != model.OrderTypeLimit {
 		if order.OrderSide == model.OrderSideSell {
 			order.DealPrice = order.Price * (1 - tradeCost)
@@ -150,19 +150,19 @@ func handleOld(setting *model.Setting, orders map[string]*model.Order, candle *m
 	for orderId, order := range orders {
 		price := 0.0
 		orderType := model.OrderTypeLimit
-		if candle.PriceHigh > order.Price+n {
-			price = order.Price + n
+		if candle.PriceHigh > order.Price+n*setting.PriceX {
+			price = order.Price + n*setting.PriceX
 			if order.OrderSide == model.OrderSideSell {
 				orderType = model.OrderTypeStop
 			}
-		} else if candle.PriceLow < order.Price-n {
-			price = order.Price - n
+		} else if candle.PriceLow < order.Price-n*setting.PriceX {
+			price = order.Price - n*setting.PriceX
 			if order.OrderSide == model.OrderSideBuy {
 				orderType = model.OrderTypeStop
 			}
 		}
 		if price != 0 {
-			dealOldLiquidate(setting, order, candle, model.GetOppositeSide(order.OrderSide), orderType, price)
+			dealOldLiquidate(setting, order, candle, model.GetOppositeSide(order.OrderSide), orderType, price, n)
 			delete(orders, orderId)
 			util.Info(fmt.Sprintf(`remove old order %s left %d orders`, orderId, len(orders)))
 		}
@@ -177,17 +177,17 @@ func handleGrid(setting *model.Setting, orders []*model.Order, candle *model.Can
 	if orders[0].Status == model.CarryStatusWorking {
 		if (orders[0].OrderSide == model.OrderSideBuy && orders[0].Price > candle.PriceLow) ||
 			(orders[0].OrderSide == model.OrderSideSell && orders[0].Price < candle.PriceHigh) {
-			dealGridSuccess(setting, orders[0])
+			dealGridSuccess(setting, orders[0], candle)
 			var winPrice, losePrice float64
 			var side string
 			if orders[0].OrderSide == model.OrderSideBuy {
 				side = model.OrderSideSell
-				winPrice = orders[0].Price + n
-				losePrice = orders[0].Price - n
+				winPrice = orders[0].Price + n*setting.PriceX
+				losePrice = orders[0].Price - n*setting.PriceX
 			} else {
 				side = model.OrderSideBuy
-				winPrice = orders[0].Price - n
-				losePrice = orders[0].Price + n
+				winPrice = orders[0].Price - n*setting.PriceX
+				losePrice = orders[0].Price + n*setting.PriceX
 			}
 			orders[1] = &model.Order{Amount: setting.GridAmount / winPrice,
 				Price:            winPrice,
@@ -221,12 +221,12 @@ func handleGrid(setting *model.Setting, orders []*model.Order, candle *model.Can
 	}
 	if orders[1] != nil && ((orders[1].OrderSide == model.OrderSideSell && candle.PriceHigh > orders[1].Price) ||
 		(orders[1].OrderSide == model.OrderSideBuy && candle.PriceLow < orders[1].Price)) {
-		dealGridSuccess(setting, orders[1])
+		dealGridSuccess(setting, orders[1], candle)
 		orders[0] = nil
 	}
 	if orders[2] != nil && ((orders[2].OrderSide == model.OrderSideSell && candle.PriceLow < orders[2].Price) ||
 		(orders[2].OrderSide == model.OrderSideBuy && candle.PriceHigh > orders[2].Price)) {
-		dealGridSuccess(setting, orders[2])
+		dealGridSuccess(setting, orders[2], candle)
 		orders[0] = nil
 	}
 }
