@@ -167,11 +167,16 @@ func simulateGrid(c *gin.Context) {
 		defer setSimulating(false)
 		setSimulating(true)
 	}
-	strJump := c.Query(`jump`)
-	if strJump == `` {
-		strJump = `1`
+	strJumpWin := c.Query(`jumpwin`)
+	strJumpLose := c.Query(`jumplose`)
+	if strJumpWin == `` {
+		strJumpWin = `1`
 	}
-	jump, _ := strconv.ParseFloat(strJump, 64)
+	if strJumpLose == `` {
+		strJumpLose = `1`
+	}
+	jumpWin, _ := strconv.ParseFloat(strJumpWin, 64)
+	jumpLose, _ := strconv.ParseFloat(strJumpLose, 64)
 	strNew := c.Query(`new`)
 	market := c.Query(`market`)
 	coins := c.Query(`coin`)
@@ -192,15 +197,16 @@ func simulateGrid(c *gin.Context) {
 	coinArr := strings.Split(coins, `,`)
 	for _, coin := range coinArr {
 		setting := &model.Setting{Valid: true,
-			Function:   model.FunctionGrid,
-			Market:     market,
-			PriceX:     jump,
-			Symbol:     strings.ToUpper(coin) + model.UniStandardTail[model.MarketTypePerp],
-			Coin:       coin,
-			GridAmount: 100}
+			Function:         model.FunctionGrid,
+			Market:           market,
+			OpenShortMargin:  jumpWin,
+			CloseShortMargin: jumpLose,
+			Symbol:           strings.ToUpper(coin) + model.UniStandardTail[model.MarketTypePerp],
+			Coin:             coin,
+			GridAmount:       100}
 		if strNew == `true` {
-			go model.AppDB.Where(`function=? and market=? and symbol=? and order_time>? and order_time<? and line_sell=?`,
-				setting.Function, market, setting.Symbol, strBegin, strEnd, jump).Delete(&model.Order{})
+			go model.AppDB.Where(`function=? and market=? and symbol=? and order_time>? and order_time<? and line_buy=? and line_sell=?`,
+				setting.Function, market, setting.Symbol, strBegin, strEnd, jumpWin, jumpLose).Delete(&model.Order{})
 			Grid.ProcessGrid(begin, end, setting)
 		}
 	}

@@ -12,7 +12,7 @@ import (
 
 // 滑点
 const tradeCost = 0.002
-const gridDayLen = 30
+const gridDayLen = 50
 
 var grids = sync.Map{} // market_symbol: []*Candle
 
@@ -22,7 +22,7 @@ type gridData struct {
 	candle               *model.Candle
 }
 
-// setting.PriceX 下单价格n的加乘倍数
+// setting.OpenShortMargin, CloseShortMargin 下单价格n的赚、亏加乘倍数
 func initGridData(setting *model.Setting, sortedCandles []*model.Candle) {
 	beginPrice := 0.0
 	for i := 0; i < gridDayLen; i++ {
@@ -38,7 +38,7 @@ func initGridData(setting *model.Setting, sortedCandles []*model.Candle) {
 			Function:         setting.Function,
 			GridPos:          0,
 			Market:           setting.Market,
-			LineBuy:          sortedCandles[i].N,
+			Fee:              sortedCandles[i].N,
 			OrderId:          fmt.Sprintf(`%d_%d`, sortedCandles[i].Begin.Unix(), rand.Int()),
 			OrderSide:        model.OrderSideBuy,
 			OrderType:        model.OrderTypeLimit,
@@ -52,7 +52,7 @@ func initGridData(setting *model.Setting, sortedCandles []*model.Candle) {
 			Function:         setting.Function,
 			GridPos:          0,
 			Market:           setting.Market,
-			LineBuy:          sortedCandles[i].N,
+			Fee:              sortedCandles[i].N,
 			OrderId:          fmt.Sprintf(`%d_%d`, sortedCandles[i].Begin.Unix(), rand.Int()),
 			OrderSide:        model.OrderSideSell,
 			OrderType:        model.OrderTypeLimit,
@@ -121,7 +121,7 @@ func dealOldLiquidate(setting *model.Setting, oldOrder *model.Order, candle *mod
 		Function:    oldOrder.Function,
 		GridPos:     3,
 		Market:      oldOrder.Market,
-		LineBuy:     n,
+		Fee:         n,
 		OrderId:     fmt.Sprintf(`liquidate%s`, oldOrder.OrderId),
 		OrderSide:   side,
 		OrderType:   orderType,
@@ -134,7 +134,8 @@ func dealGridSuccess(setting *model.Setting, order *model.Order, candle *model.C
 	order.DealAmount = order.Amount
 	order.UnfilledQuantity = 0
 	order.DealPrice = order.Price
-	order.LineSell = setting.PriceX
+	order.LineBuy = setting.OpenShortMargin
+	order.LineSell = setting.CloseShortMargin
 	order.OrderTime = candle.Begin
 	if order.OrderType != model.OrderTypeLimit {
 		if order.OrderSide == model.OrderSideSell {
@@ -149,15 +150,22 @@ func dealGridSuccess(setting *model.Setting, order *model.Order, candle *model.C
 func handleOld(setting *model.Setting, orders map[string]*model.Order, candle *model.Candle, n float64) {
 	for orderId, order := range orders {
 		price := 0.0
-		orderType := model.OrderTypeLimit
-		if candle.PriceHigh > order.Price+n*setting.PriceX {
-			price = order.Price + n*setting.PriceX
-			if order.OrderSide == model.OrderSideSell {
+		orderType := ``
+		if order.OrderSide == model.OrderSideSell {
+			if candle.PriceHigh > order.Price+n*setting.CloseShortMargin {
+				price = order.Price + n*setting.CloseShortMargin
 				orderType = model.OrderTypeStop
+			} else if candle.PriceLow < order.Price-n*setting.OpenShortMargin {
+				price = order.Price - n*setting.OpenShortMargin
+				orderType = model.OrderTypeLimit
 			}
-		} else if candle.PriceLow < order.Price-n*setting.PriceX {
-			price = order.Price - n*setting.PriceX
-			if order.OrderSide == model.OrderSideBuy {
+		}
+		if order.OrderSide == model.OrderSideBuy {
+			if candle.PriceHigh > order.Price+n*setting.OpenShortMargin {
+				price = order.Price + n*setting.OpenShortMargin
+				orderType = model.OrderTypeLimit
+			} else if candle.PriceLow < order.Price-n*setting.CloseShortMargin {
+				price = order.Price - n*setting.CloseShortMargin
 				orderType = model.OrderTypeStop
 			}
 		}
@@ -182,12 +190,12 @@ func handleGrid(setting *model.Setting, orders []*model.Order, candle *model.Can
 			var side string
 			if orders[0].OrderSide == model.OrderSideBuy {
 				side = model.OrderSideSell
-				winPrice = orders[0].Price + n*setting.PriceX
-				losePrice = orders[0].Price - n*setting.PriceX
+				winPrice = orders[0].Price + n*setting.OpenShortMargin
+				losePrice = orders[0].Price - n*setting.CloseShortMargin
 			} else {
 				side = model.OrderSideBuy
-				winPrice = orders[0].Price - n*setting.PriceX
-				losePrice = orders[0].Price + n*setting.PriceX
+				winPrice = orders[0].Price - n*setting.OpenShortMargin
+				losePrice = orders[0].Price + n*setting.CloseShortMargin
 			}
 			orders[1] = &model.Order{Amount: setting.GridAmount / winPrice,
 				Price:            winPrice,
@@ -195,7 +203,7 @@ func handleGrid(setting *model.Setting, orders []*model.Order, candle *model.Can
 				Function:         setting.Function,
 				GridPos:          1,
 				Market:           setting.Market,
-				LineBuy:          n,
+				Fee:              n,
 				OrderId:          fmt.Sprintf(`liquidate%s`, orders[0].OrderId),
 				OrderSide:        side,
 				OrderType:        model.OrderTypeLimit,
@@ -209,7 +217,7 @@ func handleGrid(setting *model.Setting, orders []*model.Order, candle *model.Can
 				Function:         setting.Function,
 				GridPos:          2,
 				Market:           setting.Market,
-				LineBuy:          n,
+				Fee:              n,
 				OrderId:          fmt.Sprintf(`liquidate%s`, orders[0].OrderId),
 				OrderSide:        side,
 				OrderType:        model.OrderTypeStop,
