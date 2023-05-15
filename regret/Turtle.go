@@ -51,7 +51,7 @@ func GetTurtleData(candles []*model.Candle, near, far int, useNear bool) (turtle
 }
 
 func createTurtleOrder(setting *model.Setting, candle *model.Candle, orderSide string,
-	price, amount, n float64, currentChances, allLimit int) (order *model.Order) {
+	price, amount, n float64, currentChances, allLimit int, posNum int64) (order *model.Order) {
 	if allLimit > 0 && ((orderSide == model.OrderSideSell && currentChances <= -1*allLimit) ||
 		(orderSide == model.OrderSideBuy && currentChances >= allLimit)) {
 		return nil
@@ -71,7 +71,7 @@ func createTurtleOrder(setting *model.Setting, candle *model.Candle, orderSide s
 		RefreshType: model.FunctionSimulation,
 		Status:      model.CarryStatusWorking,
 		Symbol:      setting.Symbol,
-		GridPos:     setting.Chance,
+		GridPos:     posNum,
 		CreatedAt:   candle.Begin,
 	}
 	if orderSide == model.OrderSideBuy {
@@ -91,17 +91,19 @@ func createTurtleOrder(setting *model.Setting, candle *model.Candle, orderSide s
 
 // allLimit 小于0代表没有总仓位限制
 func calcTurtleOrders(setting *model.Setting, turtleData *TurtleData) (
-	priceShort, priceLong, amountShort, amountLong float64) {
+	priceShort, priceLong, amountShort, amountLong float64, posNumShort, posNumLong int64) {
 	priceShort = turtleData.lowFar
 	priceLong = turtleData.highFar
 	if setting.Chance == 0 && !turtleData.liquidated { // 开初始仓
 		if !slotLiquidated[fmt.Sprintf(`%s_%s_%s_%s`, setting.Market, setting.Symbol, model.OrderSideBuy, turtleData.begin.String())] {
 			amountLong = setting.GridAmount
+			posNumLong = 1
 		} else {
 			util.Info(fmt.Sprintf(`no new open buy as %s liquated`, turtleData.begin.String()))
 		}
 		if !slotLiquidated[fmt.Sprintf(`%s_%s_%s_%s`, setting.Market, setting.Symbol, model.OrderSideSell, turtleData.begin.String())] {
 			amountShort = setting.GridAmount
+			posNumShort = 1
 		} else {
 			util.Info(fmt.Sprintf(`no new open sell as %s liquated`, turtleData.begin.String()))
 		}
@@ -113,7 +115,9 @@ func calcTurtleOrders(setting *model.Setting, turtleData *TurtleData) (
 			priceShort = turtleData.highFar - 2*turtleData.n
 		}
 		amountShort = float64(setting.Chance) * setting.GridAmount
+		posNumShort = setting.Chance
 		amountLong = setting.GridAmount
+		posNumLong = 1
 	} else if setting.Chance < 0 {
 		priceShort = math.Min(turtleData.lowFar, setting.PriceX-turtleData.n/2)
 		if turtleData.useNear {
@@ -122,6 +126,8 @@ func calcTurtleOrders(setting *model.Setting, turtleData *TurtleData) (
 			priceLong = turtleData.lowFar + 2*turtleData.n
 		}
 		amountLong = math.Abs(float64(setting.Chance)) * setting.GridAmount
+		posNumLong = setting.Chance
+		posNumShort = 1
 		amountShort = setting.GridAmount
 	}
 	amountShort /= turtleData.n
@@ -160,9 +166,11 @@ func handlePrice(turtleData *TurtleData, candle *model.Candle, settings map[stri
 	}
 	currentChances := getCurrentChances(settings)
 	if turtleData.orderLong == nil && turtleData.orderShort == nil {
-		priceShort, priceLong, amountShort, amountLong := calcTurtleOrders(setting, turtleData)
-		turtleData.orderShort = createTurtleOrder(setting, candle, model.OrderSideSell, priceShort, amountShort, turtleData.n, int(currentChances), allLimit)
-		turtleData.orderLong = createTurtleOrder(setting, candle, model.OrderSideBuy, priceLong, amountLong, turtleData.n, int(currentChances), allLimit)
+		priceShort, priceLong, amountShort, amountLong, posNumShort, posNumLong := calcTurtleOrders(setting, turtleData)
+		turtleData.orderShort = createTurtleOrder(setting, candle, model.OrderSideSell,
+			priceShort, amountShort, turtleData.n, int(currentChances), allLimit, posNumShort)
+		turtleData.orderLong = createTurtleOrder(setting, candle, model.OrderSideBuy,
+			priceLong, amountLong, turtleData.n, int(currentChances), allLimit, posNumLong)
 	}
 	if turtleData.orderLong != nil && candle.PriceHigh >= turtleData.orderLong.Price {
 		if setting.Chance >= 0 {
@@ -392,22 +400,23 @@ func CutTail(market, coins, sign string) {
 }
 
 func CreateReport(market, coins, timeRange string) {
-	rows, _ := model.AppDB.Model(model.Order{}).Select(`function,symbol,order_side,sum(orders.deal_price*amount)/sum(amount),sum(amount)`).
+	rows, _ := model.AppDB.Model(model.Order{}).Select(`function,symbol,order_side,sum(orders.deal_price*amount)/sum(amount),sum(amount),count(*)`).
 		Where(`function like ? and function like ?`, `%coins`+coins+`%`, `%`+timeRange+`%`).
 		Group(`function,symbol,order_side`).Order(`function`).Rows()
 	if rows == nil {
 		return
 	}
 	i := 0
-	var count, price float64
+	var amount, price float64
+	var count int
 	var symbol, orderSide, function string
 	result := make(map[string]map[string]string, 0)
 	for rows.Next() {
-		_ = rows.Scan(&function, &symbol, &orderSide, &price, &count)
+		_ = rows.Scan(&function, &symbol, &orderSide, &price, &amount, &count)
 		if result[function] == nil {
 			result[function] = make(map[string]string)
 		}
-		result[function][symbol+`_`+orderSide] = fmt.Sprintf(`%f,%.0f`, price, count)
+		result[function][symbol+`_`+orderSide] = fmt.Sprintf(`%f,%.2f,%d`, price, amount, count)
 		fmt.Println(fmt.Sprintf(`%d %s %s`, i, function, symbol))
 		i++
 	}
