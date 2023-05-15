@@ -68,7 +68,6 @@ func createTurtleOrder(setting *model.Setting, candle *model.Candle, orderSide s
 		Market:      setting.Market,
 		OrderSide:   orderSide,
 		Price:       price,
-		Function:    model.FunctionTurtle,
 		RefreshType: model.FunctionSimulation,
 		Status:      model.CarryStatusWorking,
 		Symbol:      setting.Symbol,
@@ -393,8 +392,8 @@ func CutTail(market, coins, sign string) {
 }
 
 func CreateReport(market, coins, timeRange string) {
-	rows, _ := model.AppDB.Model(model.Order{}).Select(`function,symbol,order_side,sum(orders.deal_price*amount)/sum(amount),sum(amount)/1000`).
-		Where(`function like ? and function like ?`, `%coins`+coins+`,seconds%`, `%`+timeRange+`%`).
+	rows, _ := model.AppDB.Model(model.Order{}).Select(`function,symbol,order_side,sum(orders.deal_price*amount)/sum(amount),sum(amount)`).
+		Where(`function like ? and function like ?`, `%coins`+coins+`%`, `%`+timeRange+`%`).
 		Group(`function,symbol,order_side`).Order(`function`).Rows()
 	if rows == nil {
 		return
