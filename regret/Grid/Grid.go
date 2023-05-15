@@ -12,7 +12,7 @@ import (
 
 // 滑点
 const tradeCost = 0.002
-const gridDayLen = 50
+const NCalcLen = 50
 
 var grids = sync.Map{} // market_symbol: []*Candle
 
@@ -25,13 +25,13 @@ type gridData struct {
 // setting.OpenShortMargin, CloseShortMargin 下单价格n的赚、亏加乘倍数
 func initGridData(setting *model.Setting, sortedCandles []*model.Candle) {
 	beginPrice := 0.0
-	for i := 0; i < gridDayLen; i++ {
+	for i := 0; i < NCalcLen; i++ {
 		beginPrice += sortedCandles[i].PriceHigh - sortedCandles[i].PriceLow
 	}
-	sortedCandles[gridDayLen-1].N = beginPrice / gridDayLen
-	for i := gridDayLen; i < len(sortedCandles); i++ {
-		sortedCandles[i].N = (sortedCandles[i-1].N*(gridDayLen-1) +
-			sortedCandles[i].PriceHigh - sortedCandles[i].PriceLow) / gridDayLen
+	sortedCandles[NCalcLen-1].N = beginPrice / NCalcLen
+	for i := NCalcLen; i < len(sortedCandles); i++ {
+		sortedCandles[i].N = (sortedCandles[i-1].N*(NCalcLen-1) +
+			sortedCandles[i].PriceHigh - sortedCandles[i].PriceLow) / NCalcLen
 		orderBuy := &model.Order{Amount: setting.GridAmount / (sortedCandles[i].PriceOpen - 2*sortedCandles[i].N),
 			Price:            sortedCandles[i].PriceOpen - 2*sortedCandles[i].N,
 			UnfilledQuantity: setting.GridAmount / (sortedCandles[i].PriceOpen - 2*sortedCandles[i].N),

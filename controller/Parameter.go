@@ -106,11 +106,11 @@ func autoSimulate(market, coins string, begin, end time.Time, strBegin, strEnd s
 		symbol := coin + model.UniStandardTail[marketType]
 		settings[symbol] = &model.Setting{Market: market, Symbol: symbol, AmountLimit: float64(limit), GridAmount: RegretTurtleGridAmount}
 	}
-	sign := fmt.Sprintf(`market%s,coins%s,seconds86400,%s~%s,far%d,near%d,limit%d,allLimit%d,useNear%v`,
+	sign := fmt.Sprintf(`market%s,coins%s,%s~%s,far%d,near%d,limit%d,allLimit%d,useNear%v`,
 		market, coins, strBegin, strEnd, far, near, limit, allLimit, useNear)
 	delNum := model.AppDB.Where(`function=?`, sign).Delete(&model.Order{}).RowsAffected
 	util.Info(`del %s %d rows affected`, sign, delNum)
-	regret.ProcessCandles(begin, end, near, far, 86400, allLimit, useNear, market, sign, settings)
+	regret.ProcessCandles(begin, end, near, far, allLimit, useNear, market, sign, settings)
 	util.StoreSyncMap(&model.CarryInfo, fmt.Sprintf("done %s %s 使用回撤%v %d~%d 限制%d 总限制%d",
 		strBegin, strEnd, useNear, near, far, limit, allLimit), `auto`)
 }
@@ -251,13 +251,6 @@ func simulate(c *gin.Context) {
 	if strings.Trim(market, ` `) == `` {
 		market = model.GXZQ
 	}
-	strTurtleSeconds := c.Query(`seconds`)
-	turtleSeconds, errTurtleSeconds := strconv.ParseInt(strTurtleSeconds, 10, 64)
-	if errTurtleSeconds != nil {
-		turtleSeconds = 86400
-		strTurtleSeconds = `86400`
-		errTurtleSeconds = nil
-	}
 	nearStr := c.Query(`near`)
 	near, nearErr := strconv.ParseInt(nearStr, 10, 64)
 	farStr := c.Query(`far`)
@@ -273,8 +266,8 @@ func simulate(c *gin.Context) {
 	useNear, useNearErr := strconv.ParseBool(strUseNear)
 	begin, errBegin := time.Parse(time.RFC3339, strBegin)
 	end, errEnd := time.Parse(time.RFC3339, strEnd)
-	sign := fmt.Sprintf(`market%s,coins%s,seconds%s,%s~%s,far%s,near%s,limit%s,allLimit%s,useNear%s`,
-		market, coins, strTurtleSeconds, strBegin, strEnd, farStr, nearStr, strLimit, strAllLimit, strUseNear)
+	sign := fmt.Sprintf(`market%s,coins%s,%s~%s,far%s,near%s,limit%s,allLimit%s,useNear%s`,
+		market, coins, strBegin, strEnd, farStr, nearStr, strLimit, strAllLimit, strUseNear)
 	limit, limitErr := strconv.ParseInt(strLimit, 10, 64)
 	if limitErr != nil {
 		limit = 3
@@ -293,22 +286,17 @@ func simulate(c *gin.Context) {
 	if sessionValue == nil || !codes[sessionValue.(string)] {
 		strNew = `false`
 	} else if auto == `true` && strNew == `true` {
-		i := 25
-		autoSimulate(market, `BTC`, begin, end, strBegin, strEnd, true, i, 2*i, 3, int(allLimit))
-		autoSimulate(market, `BTC`, begin, end, strBegin, strEnd, false, i, 2*i, 3, int(allLimit))
-		autoSimulate(market, `BTC`, begin, end, strBegin, strEnd, true, i, 2*i, 1, int(allLimit))
-		autoSimulate(market, `BTC`, begin, end, strBegin, strEnd, false, i, 2*i, 1, int(allLimit))
-		i = 9
-		autoSimulate(market, `ETH`, begin, end, strBegin, strEnd, true, i, 2*i, 1, int(allLimit))
-		autoSimulate(market, `ETH`, begin, end, strBegin, strEnd, false, i, 2*i, 1, int(allLimit))
-		autoSimulate(market, `ETH`, begin, end, strBegin, strEnd, true, i, 2*i, 3, int(allLimit))
-		autoSimulate(market, `ETH`, begin, end, strBegin, strEnd, false, i, 2*i, 3, int(allLimit))
+		for i := 9; i <= 25; i++ {
+			autoSimulate(market, `BTC`, begin, end, strBegin, strEnd, true, i, 2*i, 3, int(allLimit))
+			autoSimulate(market, `BTC`, begin, end, strBegin, strEnd, false, i, 2*i, 3, int(allLimit))
+			autoSimulate(market, `ETH`, begin, end, strBegin, strEnd, true, i, 2*i, 3, int(allLimit))
+			autoSimulate(market, `ETH`, begin, end, strBegin, strEnd, false, i, 2*i, 3, int(allLimit))
+		}
 		util.StoreSyncMap(&model.CarryInfo, nil, `auto`)
 		c.String(http.StatusOK, `auto done`)
 		return
 	}
-	if errBegin != nil || errEnd != nil || turtleSeconds <= 0 || nearErr != nil || farErr != nil ||
-		useNearErr != nil || (turtleSeconds != 1800 && turtleSeconds != 14400 && turtleSeconds%86400 != 0) {
+	if errBegin != nil || errEnd != nil || nearErr != nil || farErr != nil || useNearErr != nil {
 		simulateGuide := "limit:仓数上限，可选，默认为3 \nnew:true为生成新的仿真否则为查看同参数历史仿真\n" +
 			"type:海龟的计算周期，默认86400秒，即一天，取值范围：3600、14400或86400的倍数\nmarket:模拟市场\n" +
 			"near:海龟近计算周期数，far:海龟远计算周期数\n" +
@@ -335,15 +323,15 @@ func simulate(c *gin.Context) {
 	}
 	if strNew == `true` {
 		go model.AppDB.Where(`function=?`, sign).Delete(&model.Order{})
-		regret.ProcessCandles(begin, end, int(near), int(far), int(turtleSeconds), int(allLimit), useNear, market, sign, settings)
+		regret.ProcessCandles(begin, end, int(near), int(far), int(allLimit), useNear, market, sign, settings)
 	} else {
 		util.Notice(`no need process simulate new %s`, strNew)
 	}
 	orders := make([]*model.Order, 0)
 	model.AppDB.Where(`function=?`, sign).Order(`order_time asc`).Find(&orders)
-	msg += fmt.Sprintf("Get %d orders %s %s %v %s %s from %d settings\n",
-		len(orders), strTurtleSeconds, strLimit, strUseNear, begin.String(), end.String(), len(settings))
-	msg += regret.ToString(orders, market, strTurtleSeconds, strLimit, RegretTurtleGridAmount, begin, end) + "\n"
+	msg += fmt.Sprintf("Get %d orders %s %v %s %s from %d settings\n",
+		len(orders), strLimit, strUseNear, begin.String(), end.String(), len(settings))
+	msg += regret.ToString(orders, market, strLimit, RegretTurtleGridAmount, begin, end) + "\n"
 	c.String(http.StatusOK, msg)
 }
 

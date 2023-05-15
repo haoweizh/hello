@@ -11,9 +11,11 @@ import (
 	"time"
 )
 
+const NCalcLen = 50
 const tradeCost = 0.004
+const periodSeconds = 14400
 
-var absentTurtles sync.Map // symbol_date bool
+var absentTurtles sync.Map // symbol_unix seconds bool
 
 type TurtleData struct {
 	highNear, lowNear, highFar, lowFar, n            float64
@@ -42,16 +44,14 @@ func GetTurtleData(candles []*model.Candle, near, far int, useNear bool) (turtle
 			if (turtleData.lowNear == 0 || turtleData.lowNear > candles[i-j].PriceLow) && j <= turtleData.Near {
 				turtleData.lowNear = candles[i-j].PriceLow
 			}
-			turtleKey := fmt.Sprintf(`%s_%s_%d_%d-%d-%d`, candles[i].Market, candles[i].Symbol, candles[i].Seconds,
-				candles[i].Begin.Year(), candles[i].Begin.Month(), candles[i].Begin.Day())
-			turtleDataMap[turtleKey] = turtleData
+			turtleDataMap[getTurtleKey(candles[i])] = turtleData
 		}
 	}
 	return turtleDataMap
 }
 
 func createTurtleOrder(setting *model.Setting, candle *model.Candle, orderSide string,
-	price, amount float64, currentChances, allLimit int) (order *model.Order) {
+	price, amount, n float64, currentChances, allLimit int) (order *model.Order) {
 	if allLimit > 0 && ((orderSide == model.OrderSideSell && currentChances <= -1*allLimit) ||
 		(orderSide == model.OrderSideBuy && currentChances >= allLimit)) {
 		return nil
@@ -64,9 +64,11 @@ func createTurtleOrder(setting *model.Setting, candle *model.Candle, orderSide s
 	}
 	order = &model.Order{
 		Amount:      amount,
+		Fee:         n,
 		Market:      setting.Market,
 		OrderSide:   orderSide,
 		Price:       price,
+		Function:    model.FunctionTurtle,
 		RefreshType: model.FunctionSimulation,
 		Status:      model.CarryStatusWorking,
 		Symbol:      setting.Symbol,
@@ -123,6 +125,8 @@ func calcTurtleOrders(setting *model.Setting, turtleData *TurtleData) (
 		amountLong = math.Abs(float64(setting.Chance)) * setting.GridAmount
 		amountShort = setting.GridAmount
 	}
+	amountShort /= turtleData.n
+	amountLong /= turtleData.n
 	return
 }
 
@@ -158,8 +162,8 @@ func handlePrice(turtleData *TurtleData, candle *model.Candle, settings map[stri
 	currentChances := getCurrentChances(settings)
 	if turtleData.orderLong == nil && turtleData.orderShort == nil {
 		priceShort, priceLong, amountShort, amountLong := calcTurtleOrders(setting, turtleData)
-		turtleData.orderShort = createTurtleOrder(setting, candle, model.OrderSideSell, priceShort, amountShort, int(currentChances), allLimit)
-		turtleData.orderLong = createTurtleOrder(setting, candle, model.OrderSideBuy, priceLong, amountLong, int(currentChances), allLimit)
+		turtleData.orderShort = createTurtleOrder(setting, candle, model.OrderSideSell, priceShort, amountShort, turtleData.n, int(currentChances), allLimit)
+		turtleData.orderLong = createTurtleOrder(setting, candle, model.OrderSideBuy, priceLong, amountLong, turtleData.n, int(currentChances), allLimit)
 	}
 	if turtleData.orderLong != nil && candle.PriceHigh >= turtleData.orderLong.Price {
 		if setting.Chance >= 0 {
@@ -212,16 +216,20 @@ func getTurtleCandles(candles []*model.Candle) {
 		if i == 0 {
 			candle.N = candle.PriceHigh - candle.PriceLow
 		} else {
-			candle.N = (candle.PriceHigh-candle.PriceLow)/20 + candles[i-1].N*0.95
+			candle.N = (candle.PriceHigh - candle.PriceLow + candles[i-1].N*(NCalcLen-1)) / NCalcLen
 		}
 	}
+}
+
+func getTurtleKey(candle *model.Candle) (key string) {
+	return fmt.Sprintf(`%s_%s_%d`, candle.Market, candle.Symbol, candle.Begin.Unix())
 }
 
 // ProcessCandles
 // setting.AmountLimit 开仓数上限
 // setting.GridAmount 标准一仓的数量
 // allLimit 小于0时代表没有限制
-func ProcessCandles(start, end time.Time, near, far, turtleSeconds, allLimit int, useNear bool, market, sign string, settings map[string]*model.Setting) {
+func ProcessCandles(start, end time.Time, near, far, allLimit int, useNear bool, market, sign string, settings map[string]*model.Setting) {
 	if settings == nil || len(settings) == 0 {
 		return
 	}
@@ -229,8 +237,8 @@ func ProcessCandles(start, end time.Time, near, far, turtleSeconds, allLimit int
 	key := model.AppConfig.GetAccounts(market)[0].Key
 	secret := model.AppConfig.GetAccounts(market)[0].Secret
 	sortedCandles := api.GetMultiCandle(key, secret, market, 60, start, end, settings, false)
-	ago := int(math.Max(30, float64(far)))
-	duration, _ := time.ParseDuration(fmt.Sprintf(`-%ds`, turtleSeconds*ago))
+	ago := int(math.Max(NCalcLen, float64(far)))
+	duration, _ := time.ParseDuration(fmt.Sprintf(`-%ds`, periodSeconds*ago))
 	turtleDataMap := make(map[string]*TurtleData)
 	slotLiquidated = make(map[string]bool)
 	if sortedCandles != nil && sortedCandles.Len() > 0 && sortedCandles[0] != nil && sortedCandles[len(sortedCandles)-1] != nil {
@@ -239,7 +247,8 @@ func ProcessCandles(start, end time.Time, near, far, turtleSeconds, allLimit int
 			sortedCandles[sortedCandles.Len()-1].Begin.String(), sortedCandles[sortedCandles.Len()-1].Symbol))
 	}
 	for _, setting := range settings {
-		temp := api.GetCandle(key, secret, market, setting.Symbol, turtleSeconds, start.Add(duration), end)
+		temp := api.GetCandle(key, secret, market, setting.Symbol, 3600, start.Add(duration), end)
+		temp = api.CombineCandles(temp, periodSeconds/3600)
 		util.Info(fmt.Sprintf(`get turtle candle %s %s %d setting chance %d`,
 			market, setting.Symbol, len(temp), setting.Chance))
 		getTurtleCandles(temp)
@@ -253,22 +262,21 @@ func ProcessCandles(start, end time.Time, near, far, turtleSeconds, allLimit int
 			//util.Info(`error nil sorted candle`)
 			continue
 		}
-		turtleDate := sortedCandles[i].Begin
+		turtleTime := sortedCandles[i].Begin
 		if market == model.GXZQ { // 因为有夜盘的存在，所以算作前一天的
-			if turtleDate.Hour() < 5 {
-				turtleDate = turtleDate.Add(time.Second * -1 * 86400)
+			if turtleTime.Hour() < 5 {
+				turtleTime = turtleTime.Add(time.Second * -1 * 86400)
 			}
 		}
-		strDate := fmt.Sprintf(`%d-%d-%d`, turtleDate.Year(), turtleDate.Month(), turtleDate.Day())
-		turtleKey := fmt.Sprintf(`%s_%s_%d_%s`, market, sortedCandles[i].Symbol, turtleSeconds, strDate)
+		turtleKey := getTurtleKey(sortedCandles[i])
 		if turtleDataMap[turtleKey] != nil {
 			handlePrice(turtleDataMap[turtleKey], sortedCandles[i], settings, allLimit, sign)
 		} else {
-			value, ok := absentTurtles.Load(sortedCandles[i].Symbol + strDate)
+			value, ok := absentTurtles.Load(fmt.Sprintf(`%s%d`, sortedCandles[i].Symbol, turtleTime.Unix()))
 			if !ok || value == nil || !value.(bool) {
-				absentTurtles.Store(sortedCandles[i].Symbol+strDate, true)
-				util.SocketInfo(fmt.Sprintf(`fail to get turtle data parse time from %s to %s %s %s`,
-					sortedCandles[i].Begin.String(), turtleKey, sortedCandles[i].Symbol, strDate))
+				absentTurtles.Store(fmt.Sprintf(`%s%d`, sortedCandles[i].Symbol, turtleTime.Unix()), true)
+				util.Info(fmt.Sprintf(`fail to get turtle data parse time from %s to %s %s unix second %d`,
+					sortedCandles[i].Begin.String(), turtleKey, sortedCandles[i].Symbol, turtleTime.Unix()))
 			}
 		}
 	}
@@ -280,7 +288,7 @@ type Statistic struct {
 	loses, wins []float64
 }
 
-func ToString(orders []*model.Order, market, simType, singleLimit string, gridAmount float64, begin, end time.Time) (str string) {
+func ToString(orders []*model.Order, market, singleLimit string, gridAmount float64, begin, end time.Time) (str string) {
 	str = ``
 	earnRateAll := 0.0
 	statistics := make(map[string]*Statistic)
@@ -342,10 +350,10 @@ func ToString(orders []*model.Order, market, simType, singleLimit string, gridAm
 		}
 		statistic.earnRate = (statistic.priceSell - statistic.priceBuy) / statistic.priceBuy * math.Min(statistic.amountBuy, statistic.amountSell)
 		earnRateAll += statistic.earnRate
-		str += fmt.Sprintf("%s %s %s %s 平均价差:%f‰ earnRate %.2f‰ 滑点%f type%s 仓位限制:%s"+
+		str += fmt.Sprintf("%s %s %s %s 平均价差:%f‰ earnRate %.2f‰ 滑点%f 仓位限制:%s"+
 			"\nbuy%.0f次 avgPrice %f\n"+"sell%.0f次 avgPrice %f\n",
 			market, symbol, begin.String(), end.String(), 1000*(statistic.priceSell-statistic.priceBuy)/statistic.priceBuy,
-			statistic.earnRate, tradeCost, simType, singleLimit, statistic.amountBuy/gridAmount, statistic.priceBuy, statistic.amountSell/gridAmount, statistic.priceSell)
+			statistic.earnRate, tradeCost, singleLimit, statistic.amountBuy/gridAmount, statistic.priceBuy, statistic.amountSell/gridAmount, statistic.priceSell)
 		avgWinRate := 0.0
 		if len(statistic.wins) > 0 {
 			avgWinRate = gridAmount * statistic.rateInAllWin / float64(len(statistic.wins))
@@ -378,7 +386,7 @@ func CutTail(market, coins, sign string) {
 				fmt.Println(fmt.Sprintf(`cut %s tail num %d`, symbol, delNum))
 			}
 		} else {
-			util.Notice(fmt.Sprintf(`can not get orders from %s`, sign))
+			util.Info(fmt.Sprintf(`can not get orders from %s`, sign))
 		}
 	}
 
