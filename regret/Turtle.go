@@ -96,13 +96,13 @@ func calcTurtleOrders(setting *model.Setting, turtleData *TurtleData) (
 	priceLong = turtleData.highFar
 	if setting.Chance == 0 && !turtleData.liquidated { // 开初始仓
 		if !slotLiquidated[fmt.Sprintf(`%s_%s_%s_%s`, setting.Market, setting.Symbol, model.OrderSideBuy, turtleData.begin.String())] {
-			amountLong = setting.GridAmount
+			amountLong = setting.GridAmount / turtleData.n
 			posNumLong = 1
 		} else {
 			util.Info(fmt.Sprintf(`no new open buy as %s liquated`, turtleData.begin.String()))
 		}
 		if !slotLiquidated[fmt.Sprintf(`%s_%s_%s_%s`, setting.Market, setting.Symbol, model.OrderSideSell, turtleData.begin.String())] {
-			amountShort = setting.GridAmount
+			amountShort = setting.GridAmount / turtleData.n
 			posNumShort = 1
 		} else {
 			util.Info(fmt.Sprintf(`no new open sell as %s liquated`, turtleData.begin.String()))
@@ -114,9 +114,9 @@ func calcTurtleOrders(setting *model.Setting, turtleData *TurtleData) (
 		} else {
 			priceShort = turtleData.highFar - 2*turtleData.n
 		}
-		amountShort = float64(setting.Chance) * setting.GridAmount
+		amountShort = setting.OpenShortMargin
 		posNumShort = int64(math.Abs(float64(setting.Chance)))
-		amountLong = setting.GridAmount
+		amountLong = setting.GridAmount / turtleData.n
 		posNumLong = 1
 	} else if setting.Chance < 0 {
 		priceShort = math.Min(turtleData.lowFar, setting.PriceX-turtleData.n/2)
@@ -125,13 +125,11 @@ func calcTurtleOrders(setting *model.Setting, turtleData *TurtleData) (
 		} else {
 			priceLong = turtleData.lowFar + 2*turtleData.n
 		}
-		amountLong = math.Abs(float64(setting.Chance)) * setting.GridAmount
+		amountLong = setting.OpenShortMargin
 		posNumLong = int64(math.Abs(float64(setting.Chance)))
 		posNumShort = 1
-		amountShort = setting.GridAmount
+		amountShort = setting.GridAmount / turtleData.n
 	}
-	amountShort /= turtleData.n
-	amountLong /= turtleData.n
 	return
 }
 
@@ -175,8 +173,10 @@ func handlePrice(turtleData *TurtleData, candle *model.Candle, settings map[stri
 	if turtleData.orderLong != nil && candle.PriceHigh >= turtleData.orderLong.Price {
 		if setting.Chance >= 0 {
 			setting.Chance += 1
+			setting.OpenShortMargin += turtleData.orderLong.Amount
 		} else {
 			setting.Chance = 0
+			setting.OpenShortMargin = 0
 			turtleData.liquidated = true
 			slotLiquidated[fmt.Sprintf(`%s_%s_%s_%s`, candle.Market, candle.Symbol, model.OrderSideBuy, turtleData.begin.String())] = true
 			util.Info(fmt.Sprintf(`no new open after liquated buy %s %s`, candle.Symbol, turtleData.begin.String()))
@@ -197,8 +197,10 @@ func handlePrice(turtleData *TurtleData, candle *model.Candle, settings map[stri
 	if turtleData.orderShort != nil && candle.PriceLow <= turtleData.orderShort.Price {
 		if setting.Chance <= 0 {
 			setting.Chance -= 1
+			setting.OpenShortMargin += turtleData.orderShort.Amount
 		} else {
 			setting.Chance = 0
+			setting.OpenShortMargin = 0
 			turtleData.liquidated = true
 			slotLiquidated[fmt.Sprintf(`%s_%s_%s_%s`, candle.Market, candle.Symbol, model.OrderSideSell, turtleData.begin.String())] = true
 			util.Info(fmt.Sprintf(`no new open after liquated sell %s %s`, candle.Symbol, turtleData.begin.String()))
