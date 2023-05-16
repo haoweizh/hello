@@ -18,10 +18,6 @@ var appSettings []model.Setting
 var appMarkets []string
 var crossLen int
 var settingLoading bool
-
-const dynamicSingleLimit = 3
-const dynamicInAllLimit = 10
-
 var processLock sync.Mutex
 var processing = &sync.Map{}
 
@@ -201,33 +197,35 @@ func PrepareSettings() {
 	symbolSettings = localSymbolSettings
 }
 
-func handleCombineSettings(market string, topMarketInfos map[string]*model.MarketInfo) {
+func handleCombineSettings(dyComSetting *model.Setting, topMarketInfos map[string]*model.MarketInfo) {
 	combineMap := &sync.Map{}
-	value, ok := util.LoadSyncMap(symbolSettings, model.FunctionCombineTurtle, market)
+	value, ok := util.LoadSyncMap(symbolSettings, model.FunctionCombineTurtle, dyComSetting.Market)
 	if ok && value != nil {
 		combineMap = value.(*sync.Map)
 	}
 	normalMap := &sync.Map{}
-	value, ok = util.LoadSyncMap(symbolSettings, model.FunctionTurtleNormal, market)
+	value, ok = util.LoadSyncMap(symbolSettings, model.FunctionTurtleNormal, dyComSetting.Market)
 	if ok && value != nil {
 		normalMap = value.(*sync.Map)
 	}
 	for _, info := range topMarketInfos {
 		valueCombine, _ := combineMap.Load(info.Name)
 		valueNormal, _ := normalMap.Load(info.Name)
-		settingCombine := &model.Setting{Valid: true, Function: model.FunctionCombineTurtle, Market: market, Symbol: info.Name,
-			OpenShortMargin: dynamicSingleLimit, AmountLimit: dynamicInAllLimit}
-		settingNormal := &model.Setting{Valid: true, Function: model.FunctionTurtleNormal, Market: market, Symbol: info.Name,
-			OpenShortMargin: dynamicSingleLimit, AmountLimit: dynamicInAllLimit}
+		settingCombine := &model.Setting{Valid: true, Function: model.FunctionCombineTurtle, Market: dyComSetting.Market,
+			Symbol: info.Name, OpenShortMargin: dyComSetting.OpenShortMargin, AmountLimit: dyComSetting.AmountLimit,
+			Far: dyComSetting.Far, Near: dyComSetting.Near}
+		settingNormal := &model.Setting{Valid: true, Function: model.FunctionTurtleNormal, Market: dyComSetting.Market,
+			Symbol: info.Name, OpenShortMargin: dyComSetting.OpenShortMargin, AmountLimit: dyComSetting.AmountLimit,
+			Far: dyComSetting.Far, Near: dyComSetting.Near}
 		if valueCombine == nil {
-			util.Notice(`add combine %s %v`, market, info.Name)
-			if market == model.BinancePerp || market == model.Bybit {
-				accounts := model.AppConfig.GetAccounts(market)
+			util.Notice(`add combine %s %v`, dyComSetting.Market, info.Name)
+			if dyComSetting.Market == model.BinancePerp || dyComSetting.Market == model.Bybit {
+				accounts := model.AppConfig.GetAccounts(dyComSetting.Market)
 				for _, account := range accounts {
 					if account != nil {
-						if market == model.BinancePerp {
+						if dyComSetting.Market == model.BinancePerp {
 							SetSymbolLeverageBinancePerp(account, settingCombine.Symbol)
-						} else if market == model.Bybit {
+						} else if dyComSetting.Market == model.Bybit {
 							setSymbolLeverageBybit(account, settingCombine.Symbol)
 						}
 						time.Sleep(time.Second * 10)
@@ -237,12 +235,12 @@ func handleCombineSettings(market string, topMarketInfos map[string]*model.Marke
 		} else {
 			settingCombine = valueCombine.(*model.Setting)
 			settingCombine.SymbolRelated = ``
-			util.Notice(`add back combine %s %s`, market, info.Name)
+			util.Notice(`add back combine %s %s`, dyComSetting.Market, info.Name)
 		}
 		if valueNormal != nil {
 			settingNormal = valueNormal.(*model.Setting)
 			settingNormal.SymbolRelated = ``
-			util.Notice(`add back normal %s %s`, market, info.Name)
+			util.Notice(`add back normal %s %s`, dyComSetting.Market, info.Name)
 		}
 		model.AppDB.Save(settingCombine)
 		model.AppDB.Save(settingNormal)
@@ -254,13 +252,14 @@ func handleCombineSettings(market string, topMarketInfos map[string]*model.Marke
 		var normalSetting *model.Setting
 		normalValue, _ := normalMap.Load(symbol)
 		if normalValue == nil {
-			normalSetting = &model.Setting{Valid: true, Function: model.FunctionTurtleNormal, Market: market,
-				Symbol: symbol.(string), OpenShortMargin: dynamicSingleLimit, AmountLimit: dynamicInAllLimit}
+			normalSetting = &model.Setting{Valid: true, Function: model.FunctionTurtleNormal, Market: dyComSetting.Market,
+				Symbol: symbol.(string), OpenShortMargin: dyComSetting.OpenShortMargin, AmountLimit: dyComSetting.AmountLimit,
+				Far: dyComSetting.Far, Near: dyComSetting.Near}
 			model.AppDB.Save(normalSetting)
 		} else {
 			normalSetting = normalValue.(*model.Setting)
 		}
-		_, _, coinValue, _ := model.GetFromStandard(market, symbol.(string))
+		_, _, coinValue, _ := model.GetFromStandard(dyComSetting.Market, symbol.(string))
 		if topMarketInfos[symbol.(string)] == nil && !model.CommonCoins[strings.ToLower(coinValue)] {
 			if setting.(*model.Setting).Chance == 0 && normalSetting.Chance == 0 {
 				setting.(*model.Setting).SymbolRelated = model.SettingTurtleRemoved
@@ -277,13 +276,14 @@ func handleCombineSettings(market string, topMarketInfos map[string]*model.Marke
 		var combineSetting *model.Setting
 		combineValue, _ := combineMap.Load(symbol)
 		if combineValue == nil {
-			combineSetting = &model.Setting{Valid: true, Function: model.FunctionCombineTurtle, Market: market,
-				Symbol: symbol.(string), OpenShortMargin: dynamicSingleLimit, AmountLimit: dynamicInAllLimit}
+			combineSetting = &model.Setting{Valid: true, Function: model.FunctionCombineTurtle, Market: dyComSetting.Market,
+				Symbol: symbol.(string), OpenShortMargin: dyComSetting.OpenShortMargin, AmountLimit: dyComSetting.AmountLimit,
+				Far: dyComSetting.Far, Near: dyComSetting.Near}
 			model.AppDB.Save(combineSetting)
 		} else {
 			combineSetting = combineValue.(*model.Setting)
 		}
-		_, _, coinValue, _ := model.GetFromStandard(market, symbol.(string))
+		_, _, coinValue, _ := model.GetFromStandard(dyComSetting.Market, symbol.(string))
 		if topMarketInfos[symbol.(string)] == nil && !model.CommonCoins[strings.ToLower(coinValue)] {
 			if setting.(*model.Setting).Chance == 0 && combineSetting.Chance == 0 {
 				setting.(*model.Setting).SymbolRelated = model.SettingTurtleRemoved
@@ -295,16 +295,16 @@ func handleCombineSettings(market string, topMarketInfos map[string]*model.Marke
 	})
 }
 
-func handleTurtleSettings(function, market string, topMarketInfos map[string]*model.MarketInfo) {
+func handleTurtleSettings(dySetting *model.Setting, function string, topMarketInfos map[string]*model.MarketInfo) {
 	settingMap := &sync.Map{}
-	value, ok := util.LoadSyncMap(symbolSettings, function, market)
+	value, ok := util.LoadSyncMap(symbolSettings, function, dySetting.Market)
 	if ok && value != nil {
 		settingMap = value.(*sync.Map)
 	}
 	for _, info := range topMarketInfos {
 		value, _ = settingMap.Load(info.Name)
-		settingTurtle := &model.Setting{Valid: true, Function: function, Market: market, Symbol: info.Name,
-			OpenShortMargin: dynamicSingleLimit, AmountLimit: dynamicInAllLimit}
+		settingTurtle := &model.Setting{Valid: true, Function: function, Market: dySetting.Market, Symbol: info.Name,
+			OpenShortMargin: dySetting.OpenShortMargin, AmountLimit: dySetting.AmountLimit, Far: dySetting.Far, Near: dySetting.Near}
 		if value == nil {
 			util.Notice(`add settingTurtle %v`, settingTurtle.Symbol)
 		} else {
@@ -318,7 +318,7 @@ func handleTurtleSettings(function, market string, topMarketInfos map[string]*mo
 		if setting == nil {
 			return true
 		}
-		_, _, coinValue, _ := model.GetFromStandard(market, symbol.(string))
+		_, _, coinValue, _ := model.GetFromStandard(dySetting.Market, symbol.(string))
 		if topMarketInfos[symbol.(string)] == nil && !model.CommonCoins[strings.ToLower(coinValue)] {
 			if setting.(*model.Setting).Chance == 0 {
 				setting.(*model.Setting).SymbolRelated = model.SettingTurtleRemoved
@@ -379,8 +379,8 @@ func getDynamicMarketInfos(function, market string, accounts []*model.Account) (
 
 func handleDynamicSettings() (handled bool) {
 	for _, market := range appMarkets {
-		_, haveDynamic := util.LoadSyncMap(symbolSettings, model.FunctionDynamicTurtle, market)
-		_, haveCombine := util.LoadSyncMap(symbolSettings, model.FunctionDynamicCombine, market)
+		valueDynamic, haveDynamic := util.LoadSyncMap(symbolSettings, model.FunctionDynamicTurtle, market)
+		valueCombine, haveCombine := util.LoadSyncMap(symbolSettings, model.FunctionDynamicCombine, market)
 		accounts := model.AppConfig.GetAccounts(market)
 		if (!haveDynamic && !haveCombine) || accounts == nil || len(accounts) == 0 {
 			continue
@@ -393,10 +393,28 @@ func handleDynamicSettings() (handled bool) {
 			function = model.FunctionTurtle
 		}
 		topMarketInfos := getDynamicMarketInfos(function, market, accounts)
+		var setting *model.Setting
+		getOneSetting := func(key, value any) bool {
+			if value != nil {
+				valueSetting := value.(*model.Setting)
+				if valueSetting.Market != `` && valueSetting.Near > 0 && valueSetting.Far > 0 &&
+					valueSetting.OpenShortMargin > 0 && valueSetting.AmountLimit > 0 {
+					setting = valueSetting
+					return false
+				}
+			}
+			return true
+		}
 		if haveCombine {
-			handleCombineSettings(market, topMarketInfos)
+			valueCombine.(*sync.Map).Range(getOneSetting)
+			if setting != nil {
+				handleCombineSettings(setting, topMarketInfos)
+			}
 		} else if haveDynamic {
-			handleTurtleSettings(function, market, topMarketInfos)
+			valueDynamic.(*sync.Map).Range(getOneSetting)
+			if setting != nil {
+				handleTurtleSettings(setting, function, topMarketInfos)
+			}
 		}
 	}
 	return
