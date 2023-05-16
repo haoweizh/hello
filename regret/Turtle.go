@@ -161,6 +161,7 @@ func handlePrice(turtleData *TurtleData, candle *model.Candle, settings map[stri
 	currentChances := getCurrentChances(settings)
 	if turtleData.orderLong == nil && turtleData.orderShort == nil {
 		priceShort, priceLong, amountShort, amountLong := calcTurtleOrders(setting, turtleData)
+		util.Info(fmt.Sprintf(`create buy %s %f %f`, turtleData.begin.String(), priceLong, turtleData.n))
 		turtleData.orderShort = createTurtleOrder(setting, candle, model.OrderSideSell, priceShort, amountShort, turtleData.n, int(currentChances), allLimit)
 		turtleData.orderLong = createTurtleOrder(setting, candle, model.OrderSideBuy, priceLong, amountLong, turtleData.n, int(currentChances), allLimit)
 	}
@@ -221,7 +222,8 @@ func getTurtleCandles(candles []*model.Candle) {
 }
 
 func getTurtleKey(candle *model.Candle) (key string) {
-	return fmt.Sprintf(`%s_%s_%d`, candle.Market, candle.Symbol, candle.Begin.Unix())
+	seconds := candle.Begin.Unix() - (candle.Begin.Unix() % periodSeconds)
+	return fmt.Sprintf(`%s_%s_%d`, candle.Market, candle.Symbol, seconds)
 }
 
 // ProcessCandles
