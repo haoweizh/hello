@@ -136,7 +136,9 @@ func (metricManager *MetricManager) AddTick(market, symbol string, current time.
 	//tickDelay := &TickDelay{receiveTime: current, delay: delay}
 	//metricManager.metricTicks.Store(fmt.Sprintf(`%s*%d`, marketSymbol, index), tickDelay)
 	//metricManager.index.Store(marketSymbol, (index+1)%recentTickLength)
-	metricManager.tickHour.Store(key, tickMetric)
+	if AppConfig.MetricTick {
+		metricManager.tickHour.Store(key, tickMetric)
+	}
 }
 
 //func (metricManager *MetricManager) ToTables() (tables [][]map[string]interface{}) {
