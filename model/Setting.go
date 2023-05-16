@@ -16,6 +16,7 @@ type Setting struct {
 	Coin             string
 	SymbolRelated    string // 在turtle算法中判断是否还被加入动态海龟
 	Chance           int64
+	Far, Near        int64
 	PriceX           float64
 	OpenShortMargin  float64
 	CloseShortMargin float64

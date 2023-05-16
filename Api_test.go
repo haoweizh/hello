@@ -164,7 +164,7 @@ func Test_BalAndPos(t *testing.T) {
 		fmt.Println(fmt.Sprintf(`%s`, temp))
 	}
 	api.GetMarkPrice(account, model.BinancePerp, `ALGO_PERP`)
-	api.GetTurtleData(model.AppConfig.OkexKey, model.AppConfig.OkexSecret, model.FunctionTurtle, model.OKEX, `MATIC_PERP`)
+	//api.GetTurtleData(model.AppConfig.OkexKey, model.AppConfig.OkexSecret, model.FunctionTurtle, model.OKEX, `MATIC_PERP`)
 	order := api.QueryOrderById(model.AppConfig.GateKey, model.AppConfig.GateSecret, `gate`, `MGA_USDT`,
 		model.OrderTypeLimit, `144149811503`)
 	fmt.Println(order)

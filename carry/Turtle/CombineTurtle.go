@@ -43,8 +43,8 @@ var ProcessCombineTurtle = func(settingCombine *model.Setting, tick *model.BidAs
 	}
 	settings := []*model.Setting{settingCombine, settingNormal}
 	account := model.AppConfig.GetAccounts(market)[0]
-	dataCombine := api.GetTurtleData(account.Key, account.Secret, settingCombine.Function, market, symbol)
-	dataNormal := api.GetTurtleData(account.Key, account.Secret, model.FunctionTurtleNormal, market, symbol)
+	dataCombine := api.GetTurtleData(account.Key, account.Secret, settingCombine)
+	dataNormal := api.GetTurtleData(account.Key, account.Secret, settingNormal)
 	if dataCombine == nil || dataCombine.N == 0 || dataCombine.Amount == 0 ||
 		dataNormal == nil || dataNormal.N == 0 || dataNormal.Amount == 0 {
 		if time.Now().Second() == 0 {

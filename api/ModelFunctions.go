@@ -357,7 +357,8 @@ func getDynamicMarketInfos(function, market string, accounts []*model.Account) (
 	for i := 0; i < marketInfoArray.Len() && len(topMarketInfos) < topMarketInfoLen; i++ {
 		_, marketType, coinValue, _ := model.GetFromStandard(market, marketInfoArray[i].Name)
 		if strings.EqualFold(marketType, model.MarketTypePerp) && !model.CommonCoins[strings.ToLower(coinValue)] {
-			turtleData := GetTurtleData(accounts[0].Key, accounts[0].Secret, function, market, marketInfoArray[i].Name)
+			setting := GetSetting(function, market, marketInfoArray[i].Name)
+			turtleData := GetTurtleData(accounts[0].Key, accounts[0].Secret, setting)
 			if turtleData != nil {
 				topMarketInfos[marketInfoArray[i].Name] = marketInfoArray[i]
 				turtleDataArray = append(turtleDataArray, turtleData)
