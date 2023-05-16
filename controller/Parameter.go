@@ -605,6 +605,7 @@ func GetCode(c *gin.Context) {
 		//ip, _ := util.ExternalIP()
 		//verifyUrl := fmt.Sprintf(`http://%s:8080/set?pw=%s`, ip, code)
 		go api.SendMails(`启动验证码`, `验证码是 `+code)
+		util.Notice(fmt.Sprintf(`code is %s`, code))
 		c.String(http.StatusOK, `调用成功，请查收邮箱，如果没有，检查日志`)
 	}
 }

@@ -228,17 +228,17 @@ func Test_CutTail(t *testing.T) {
 	for i := 9; i <= 25; i++ {
 		coins := `BTC`
 		sign := fmt.Sprintf(`market%s,coins%s,%s~%s,far%d,near%d,limit%d,allLimit%d,useNear%v`,
-			market, coins, strBegin, strEnd, i*2, i, 3, 36, false)
+			market, coins, strBegin, strEnd, i*2, i, 3, 35, false)
 		regret.CutTail(market, coins, sign)
 		sign = fmt.Sprintf(`market%s,coins%s,%s~%s,far%d,near%d,limit%d,allLimit%d,useNear%v`,
-			market, coins, strBegin, strEnd, i*2, i, 3, 36, true)
+			market, coins, strBegin, strEnd, i*2, i, 3, 35, true)
 		regret.CutTail(market, coins, sign)
 		coins = `ETH`
 		sign = fmt.Sprintf(`market%s,coins%s,%s~%s,far%d,near%d,limit%d,allLimit%d,useNear%v`,
-			market, coins, strBegin, strEnd, i*2, i, 3, 36, false)
+			market, coins, strBegin, strEnd, i*2, i, 3, 35, false)
 		regret.CutTail(market, coins, sign)
 		sign = fmt.Sprintf(`market%s,coins%s,%s~%s,far%d,near%d,limit%d,allLimit%d,useNear%v`,
-			market, coins, strBegin, strEnd, i*2, i, 3, 36, true)
+			market, coins, strBegin, strEnd, i*2, i, 3, 35, true)
 		regret.CutTail(market, coins, sign)
 	}
 	fmt.Println(`done`)
