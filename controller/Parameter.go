@@ -620,14 +620,14 @@ func createTurtleLines(function, market string, account *model.Account) (msg str
 		if value == nil {
 			return true
 		}
-		turtleData := api.GetTurtleData(account.Key, account.Secret, value.(*model.Setting))
+		turtleData, _ := api.GetTurtleData(account.Key, account.Secret, value.(*model.Setting), false)
 		msgKey := fmt.Sprintf("%s_%s_%s", function, market, symbol.(string))
 		needAdd := false
 		if turtleData != nil {
 			if turtleData.OrderLong != nil || turtleData.OrderShort != nil {
 				needAdd = true
 			} else if function == model.FunctionCombineTurtle {
-				turtleNormal := api.GetTurtleData(account.Key, account.Secret, value.(*model.Setting))
+				turtleNormal, _ := api.GetTurtleData(account.Key, account.Secret, value.(*model.Setting), false)
 				if turtleNormal != nil && (turtleNormal.OrderLong != nil || turtleNormal.OrderShort != nil) {
 					needAdd = true
 				}
@@ -687,7 +687,7 @@ func GetParameters(c *gin.Context) {
 
 //func RefreshParameters(c *gin.Context) {
 //	util.Notice(`controller refreshing`)
-//	api.LoadSettings()
+//	api.InitApp()
 //	for _, market := range api.GetMarkets() {
 //		channels, _ := model.AppMarkets.WsDepth.Load(market)
 //		if channels != nil {

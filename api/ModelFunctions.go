@@ -11,9 +11,10 @@ import (
 	"time"
 )
 
-var symbolSettings = &sync.Map{} // function*market - map[symbol]*setting
-var handlers = &sync.Map{}       //market*symbol / *sync.Map:map[function]carryHandler
-var coinSettings = &sync.Map{}   // function / *sync.Map:map[coin][]*model.Setting
+var DynamicHandleTime = &sync.Map{} // market - handle time.Time
+var symbolSettings = &sync.Map{}    // function*market - map[symbol]*setting
+var handlers = &sync.Map{}          //market*symbol / *sync.Map:map[function]carryHandler
+var coinSettings = &sync.Map{}      // function / *sync.Map:map[coin][]*model.Setting
 var appSettings []model.Setting
 var appMarkets []string
 var crossLen int
@@ -42,7 +43,7 @@ func GetSettingCoins(function, market string) (coins map[string]bool) {
 	})
 	if !handlerInitialized {
 		util.Notice(`load setting GetSettingCoins %s %s`, function, market)
-		if !LoadSettings() {
+		if !InitApp(true) {
 			return nil
 		}
 	}
@@ -73,7 +74,7 @@ func GetSettings(function, market string) (settingMap *sync.Map) {
 	//}
 	//if !handlerInitialized {
 	//	util.Notice(`load setting GetSettings %s %s`, function, market)
-	//	LoadSettings()
+	//	InitApp()
 	//}
 	value, ok := util.LoadSyncMap(symbolSettings, function, market)
 	if ok {
@@ -101,7 +102,7 @@ func GetFunctions(market, symbol string) *sync.Map {
 	})
 	if !handlerInitialized {
 		util.Notice(`load setting GetFunctions %s %s`, market, symbol)
-		if !LoadSettings() {
+		if !InitApp(true) {
 			return nil
 		}
 	}
@@ -358,7 +359,7 @@ func getDynamicMarketInfos(function, market string, accounts []*model.Account) (
 		_, marketType, coinValue, _ := model.GetFromStandard(market, marketInfoArray[i].Name)
 		if strings.EqualFold(marketType, model.MarketTypePerp) && !model.CommonCoins[strings.ToLower(coinValue)] {
 			setting := GetSetting(function, market, marketInfoArray[i].Name)
-			turtleData := GetTurtleData(accounts[0].Key, accounts[0].Secret, setting)
+			turtleData, _ := GetTurtleData(accounts[0].Key, accounts[0].Secret, setting, false)
 			if turtleData != nil {
 				topMarketInfos[marketInfoArray[i].Name] = marketInfoArray[i]
 				turtleDataArray = append(turtleDataArray, turtleData)
@@ -377,54 +378,63 @@ func getDynamicMarketInfos(function, market string, accounts []*model.Account) (
 	return topMarketInfos
 }
 
-func handleDynamicSettings() (handled bool) {
-	for _, market := range appMarkets {
-		valueDynamic, haveDynamic := util.LoadSyncMap(symbolSettings, model.FunctionDynamicTurtle, market)
-		valueCombine, haveCombine := util.LoadSyncMap(symbolSettings, model.FunctionDynamicCombine, market)
-		accounts := model.AppConfig.GetAccounts(market)
-		if (!haveDynamic && !haveCombine) || accounts == nil || len(accounts) == 0 {
-			continue
-		}
-		handled = true
-		var function = ``
-		if haveCombine {
-			function = model.FunctionCombineTurtle
-		} else if haveDynamic {
-			function = model.FunctionTurtle
-		}
-		topMarketInfos := getDynamicMarketInfos(function, market, accounts)
-		var setting *model.Setting
-		getOneSetting := func(key, value any) bool {
-			if value != nil {
-				valueSetting := value.(*model.Setting)
-				if valueSetting.Market != `` && valueSetting.Near > 0 && valueSetting.Far > 0 &&
-					valueSetting.OpenShortMargin > 0 && valueSetting.AmountLimit > 0 {
-					setting = valueSetting
-					return false
-				}
+func handleMarketDynamic(market string) (handled bool) {
+	valueDynamic, haveDynamic := util.LoadSyncMap(symbolSettings, model.FunctionDynamicTurtle, market)
+	valueCombine, haveCombine := util.LoadSyncMap(symbolSettings, model.FunctionDynamicCombine, market)
+	accounts := model.AppConfig.GetAccounts(market)
+	if (!haveDynamic && !haveCombine) || accounts == nil || len(accounts) == 0 {
+		return false
+	}
+	DynamicHandleTime.Store(market, time.Now())
+	var function = ``
+	if haveCombine {
+		function = model.FunctionCombineTurtle
+	} else if haveDynamic {
+		function = model.FunctionTurtle
+	}
+	topMarketInfos := getDynamicMarketInfos(function, market, accounts)
+	var setting *model.Setting
+	getOneSetting := func(key, value any) bool {
+		if value != nil {
+			valueSetting := value.(*model.Setting)
+			if valueSetting.Market != `` && valueSetting.Near > 0 && valueSetting.Far > 0 &&
+				valueSetting.OpenShortMargin > 0 && valueSetting.AmountLimit > 0 {
+				setting = valueSetting
+				return false
 			}
-			return true
 		}
-		if haveCombine {
-			valueCombine.(*sync.Map).Range(getOneSetting)
-			if setting != nil {
-				handleCombineSettings(setting, topMarketInfos)
-			}
-		} else if haveDynamic {
-			valueDynamic.(*sync.Map).Range(getOneSetting)
-			if setting != nil {
-				handleTurtleSettings(setting, function, topMarketInfos)
-			}
+		return true
+	}
+	if haveCombine {
+		valueCombine.(*sync.Map).Range(getOneSetting)
+		if setting != nil {
+			handleCombineSettings(setting, topMarketInfos)
+		}
+	} else if haveDynamic {
+		valueDynamic.(*sync.Map).Range(getOneSetting)
+		if setting != nil {
+			handleTurtleSettings(setting, function, topMarketInfos)
 		}
 	}
-	return
+	util.Notice(fmt.Sprintf(`handleMarketDynamic %s %v`, market, true))
+	return true
 }
 
-func LoadSettings() bool {
+func InitApp(refreshDynamic bool) bool {
 	if settingLoading {
 		return false
 	}
-	if handleDynamicSettings() {
+	PrepareSettings()
+	handled := false
+	for _, market := range appMarkets {
+		InitMarketInfos(market)
+		if refreshDynamic {
+			if handleMarketDynamic(market) {
+				handled = true
+			}
+		}
+	}
+	if handled {
 		PrepareSettings()
 	}
 	for _, market := range appMarkets {
@@ -438,7 +448,7 @@ func LoadSettings() bool {
 func GetMarketSymbols(market string) map[string]bool {
 	if appSettings == nil {
 		util.Notice(`load setting GetMarketSymbols %s`, market)
-		if !LoadSettings() {
+		if !InitApp(true) {
 			return nil
 		}
 	}
@@ -454,7 +464,7 @@ func GetMarketSymbols(market string) map[string]bool {
 func GetCoinSettings(function string) *sync.Map {
 	if appSettings == nil {
 		util.Notice(`load setting GetCoinSettings %s`, function)
-		if !LoadSettings() {
+		if !InitApp(true) {
 			return nil
 		}
 	}
@@ -468,7 +478,7 @@ func GetCoinSettings(function string) *sync.Map {
 func GetMarkets() []string {
 	if appSettings == nil || len(appSettings) == 0 {
 		util.Notice(`load setting GetMarkets`)
-		if !LoadSettings() {
+		if !InitApp(true) {
 			return nil
 		}
 	}

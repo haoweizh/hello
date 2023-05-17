@@ -112,7 +112,7 @@ func handle(account *model.Account, setting *model.Setting, tick *model.BidAsk) 
 	}
 	marketInfo, _ := util.LoadSyncMap(model.MarketInfos, setting.Market, setting.Symbol)
 	if marketInfo == nil {
-		api.InitMarketInfos(nil)
+		api.InitMarketInfos(setting.Market)
 		return
 	}
 	marketSymbol := setting.Market + `_` + setting.Symbol

@@ -884,8 +884,8 @@ const topMarketInfoLenCross = 30
 func InitCrossMarketInfos(markets []string) {
 	infoPool := make(map[string][]*model.MarketInfo) // coin - []marketInfos
 	topCoins := make(map[string]bool)
-	InitMarketInfos(markets)
 	for _, market := range markets {
+		InitMarketInfos(market)
 		if market != model.OKEX && market != model.BinancePerp {
 			continue
 		}
@@ -957,7 +957,7 @@ func InitCrossMarketInfos(markets []string) {
 var marketInfoInitializing = false
 
 // InitMarketInfos 只支持现货SPOT和永续PERP SWAP
-func InitMarketInfos(markets []string) (success bool) {
+func InitMarketInfos(market string) (success bool) {
 	if marketInfoInitializing {
 		return
 	}
@@ -966,70 +966,66 @@ func InitMarketInfos(markets []string) (success bool) {
 		marketInfoInitializing = false
 	}()
 	success = true
-	if markets == nil {
-		markets = GetMarkets()
-	}
-	for _, market := range markets {
-		accounts := model.AppConfig.GetAccounts(market)
-		var marketInfos map[string]*model.MarketInfo
-		switch market {
-		case model.Mexc:
-			marketInfos = getMarketsMexc(accounts[0].Key, accounts[0].Secret)
-		case model.Ftx:
-			marketInfos = getMarketsFtx(accounts[0].Key, accounts[0].Secret)
-		case model.OKEX:
-			marketInfos = getMarketsOKEX(accounts[0].Key, accounts[0].Secret)
-			for _, account := range accounts {
-				accountMode := getAccountConfigOKEX(account.Key, account.Secret)
-				util.Notice(`okex config and set: ` + accountMode)
-				if accountMode != `net_mode` {
-					if !setAccountModeOKEX(account.Key, account.Secret) {
-						success = false
-					}
+	accounts := model.AppConfig.GetAccounts(market)
+	var marketInfos map[string]*model.MarketInfo
+	switch market {
+	case model.Mexc:
+		marketInfos = getMarketsMexc(accounts[0].Key, accounts[0].Secret)
+	case model.Ftx:
+		marketInfos = getMarketsFtx(accounts[0].Key, accounts[0].Secret)
+	case model.OKEX:
+		marketInfos = getMarketsOKEX(accounts[0].Key, accounts[0].Secret)
+		for _, account := range accounts {
+			accountMode := getAccountConfigOKEX(account.Key, account.Secret)
+			util.Notice(`okex config and set: ` + accountMode)
+			if accountMode != `net_mode` {
+				if !setAccountModeOKEX(account.Key, account.Secret) {
+					success = false
 				}
 			}
-		case model.HuobiSpot:
-			marketInfos = getMarketsHuobiSpot(accounts[0].Key, accounts[0].Secret)
-		case model.BinanceSpot:
-			marketInfos = getMarketsBinanceSpot(accounts[0].Key, accounts[0].Secret)
-		case model.BinancePerp:
-			marketInfos = getMarketsBinancePerp(accounts[0].Key, accounts[0].Secret)
-			go func() {
-				for _, account := range accounts {
-					setPosSideBinancePerp(account.Key, account.Secret)
-					SetLeverageBinancePerp(account.Key, account.Secret)
-				}
-			}()
-		case model.Gate:
+		}
+	case model.HuobiSpot:
+		marketInfos = getMarketsHuobiSpot(accounts[0].Key, accounts[0].Secret)
+	case model.BinanceSpot:
+		marketInfos = getMarketsBinanceSpot(accounts[0].Key, accounts[0].Secret)
+	case model.BinancePerp:
+		marketInfos = getMarketsBinancePerp(accounts[0].Key, accounts[0].Secret)
+		go func() {
 			for _, account := range accounts {
-				setPosSideGate(account.Key, account.Secret)
-				setMarginSettingGate(account.Key, account.Secret)
+				setPosSideBinancePerp(account.Key, account.Secret)
+				SetLeverageBinancePerp(account.Key, account.Secret)
 			}
-			_, marketInfos = getMarketsGate(accounts[0].Key, accounts[0].Secret)
-		case model.KucoinSpot:
-			marketInfos = getMarketsKucoinSpot(accounts[0].Key)
-		case model.KucoinPerp:
-			marketInfos = getMarketsKucoinPerp(accounts[0].Key)
-			setFutureAutoDeposit()
-		case model.Bybit:
-			marketInfos = getMarketsBybit()
-			go func() {
-				for _, account := range accounts {
-					setBybitMarginLeverage(account.Key, account.Secret)
-					time.Sleep(time.Second)
-					setBybitPerpLeverage(account.Key, account.Secret)
-				}
-			}()
-		case model.BitgetSpot:
-			marketInfos = getMarketsBitgetSpot()
-		case model.BitgetPerp:
-			marketInfos = getMarketsBitgetPerp()
-			setBitgetPositionMode(accounts[0].Key, accounts[0].Secret)
+		}()
+	case model.Gate:
+		for _, account := range accounts {
+			setPosSideGate(account.Key, account.Secret)
+			setMarginSettingGate(account.Key, account.Secret)
 		}
-		for symbol, info := range marketInfos {
-			util.StoreSyncMap(model.MarketInfos, info, market, symbol)
-		}
+		_, marketInfos = getMarketsGate(accounts[0].Key, accounts[0].Secret)
+	case model.KucoinSpot:
+		marketInfos = getMarketsKucoinSpot(accounts[0].Key)
+	case model.KucoinPerp:
+		marketInfos = getMarketsKucoinPerp(accounts[0].Key)
+		setFutureAutoDeposit()
+	case model.Bybit:
+		marketInfos = getMarketsBybit()
+		go func() {
+			for _, account := range accounts {
+				setBybitMarginLeverage(account.Key, account.Secret)
+				time.Sleep(time.Second)
+				setBybitPerpLeverage(account.Key, account.Secret)
+			}
+		}()
+	case model.BitgetSpot:
+		marketInfos = getMarketsBitgetSpot()
+	case model.BitgetPerp:
+		marketInfos = getMarketsBitgetPerp()
+		setBitgetPositionMode(accounts[0].Key, accounts[0].Secret)
 	}
+	for symbol, info := range marketInfos {
+		util.StoreSyncMap(model.MarketInfos, info, market, symbol)
+	}
+
 	return success
 }
 

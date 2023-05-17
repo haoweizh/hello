@@ -49,16 +49,6 @@ func _(key, secret string) {
 	}
 }
 
-func ReloadSettings() {
-	for true {
-		time.Sleep(time.Hour * 24)
-		if !api.InitMarketInfos(nil) {
-			util.Notice(`fatal error: can not set market mode!!`)
-		}
-		api.LoadSettings()
-	}
-}
-
 func MaintainTransFee() {
 	for true {
 		var orders []model.Order
@@ -169,13 +159,13 @@ func Maintain() {
 	//go util.StartMidNightTimer(CancelAllOrders)
 	//go MaintainBalance()
 	go MaintainTransFee()
-	// 1. 初始化db中的setting
-	api.PrepareSettings()
-	// 2. 初始化内存中的marketInfo
-	api.InitMarketInfos(nil)
-	// 3. 基于1和2初始化内存中的setting
-	api.LoadSettings()
-	go ReloadSettings()
+	api.InitApp(true)
+	go func() {
+		for true {
+			time.Sleep(time.Hour * 24)
+			api.InitApp(false)
+		}
+	}()
 	for true {
 		go MaintainMarketChan()
 		time.Sleep(time.Minute * 2)

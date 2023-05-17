@@ -283,11 +283,24 @@ func HandleOrders(key, secret, market, symbol string, settings []*model.Setting,
 const turtleNDays = 100
 const turtleNDaysMin = 10
 
-func GetTurtleData(key, secret string, setting *model.Setting) (data *TurtleData) {
+func GetTurtleData(key, secret string, setting *model.Setting, refreshDynamic bool) (data *TurtleData, settingRefresh *model.Setting) {
 	today, todayStr := model.GetMarketToday(setting.Market)
 	value, ok := util.LoadSyncMap(&TurtleDataSet, setting.Function, setting.Market, setting.Symbol, todayStr)
 	if ok && value != nil {
-		return value.(*TurtleData)
+		return value.(*TurtleData), setting
+	}
+	if refreshDynamic {
+		refreshValue, refreshOk := DynamicHandleTime.Load(setting.Market)
+		if !refreshOk || refreshValue == nil || refreshValue.(time.Time).Add(time.Hour).Before(time.Now()) {
+			if handleMarketDynamic(setting.Market) {
+				PrepareSettings()
+			}
+			setRequireReset(setting.Market)
+			setting = GetSetting(setting.Function, setting.Market, setting.Symbol)
+		}
+	}
+	if setting == nil {
+		util.Notice(fmt.Sprintf(`fatal error nil setting after get turtle data`))
 	}
 	util.Notice(fmt.Sprintf(`need to create turtle data %s %s %s %s`,
 		setting.Function, setting.Market, setting.Symbol, todayStr))
@@ -304,7 +317,7 @@ func GetTurtleData(key, secret string, setting *model.Setting) (data *TurtleData
 	candles := GetCandle(key, secret, setting.Market, setting.Symbol, 86400, today.Add(duration), today)
 	if !calcCandleN(candles) {
 		util.Notice(fmt.Sprintf(`fail to calc candles n %s %s candle num %d`, setting.Market, setting.Symbol, len(candles)))
-		return nil
+		return nil, setting
 	}
 	for i := 1; i <= int(indexMax); i++ {
 		duration, _ = time.ParseDuration(fmt.Sprintf(`%dh`, -24*i))
@@ -315,7 +328,7 @@ func GetTurtleData(key, secret string, setting *model.Setting) (data *TurtleData
 				util.Notice(`can not calc turtleDate as nil candle %s %s %s %s`,
 					setting.Market, setting.Symbol, data.Symbol, day.String())
 			}
-			return nil
+			return nil, setting
 		}
 		if candle.PriceHigh > data.HighDaysFar && i <= data.DaysFar {
 			data.HighDaysFar = candle.PriceHigh
@@ -347,9 +360,9 @@ func GetTurtleData(key, secret string, setting *model.Setting) (data *TurtleData
 		util.Notice(fmt.Sprintf(`set turtle data %v %s %s %s %s  Amount:%e N:%e %d:%e-%e %d:%e-%e`,
 			data, setting.Function, setting.Market, setting.Symbol, todayStr, data.Amount, data.N, data.DaysNear, data.LowDaysNear,
 			data.HighDaysNear, data.DaysFar, data.LowDaysFar, data.HighDaysFar))
-		return data
+		return data, setting
 	} else {
-		return nil
+		return nil, setting
 	}
 }
 
