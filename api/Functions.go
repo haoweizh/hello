@@ -164,9 +164,32 @@ func CancelOrder(key, secret, market, symbol, orderType, orderId string) (result
 	return result, errCode, msg
 }
 
-func CombineCandles(candles model.Candles, slots int) (combinedCandles model.Candles) {
-	if slots == 0 || len(candles) < slots {
+func GetMarkPrice(account *model.Account, market, symbol string) (markPrice float64) {
+	switch market {
+	case model.BinancePerp:
+		return getMarkPriceBinancePerp(account, symbol)
+	}
+	return
+}
+
+var CandleSeconds = []int{60, 1800, 3600, 86400}
+
+func CombineCandles(key, secret, market, symbol string, slotSeconds int, begin, end time.Time) (combinedCandles model.Candles) {
+	period := 0
+	slots := 1
+	for i := len(CandleSeconds) - 1; i >= 0; i-- {
+		if slotSeconds%CandleSeconds[i] == 0 {
+			period = CandleSeconds[i]
+			slots = slotSeconds / CandleSeconds[i]
+			break
+		}
+	}
+	if period == 0 {
 		return nil
+	}
+	candles := getCandle(key, secret, market, symbol, period, begin, end)
+	if slots == 1 {
+		return candles
 	}
 	combinedCandles = make([]*model.Candle, len(candles)/slots)
 	for i := 0; i < len(combinedCandles); i++ {
@@ -186,6 +209,51 @@ func CombineCandles(candles model.Candles, slots int) (combinedCandles model.Can
 			if combinedCandles[i].PriceHigh < candles[j].PriceHigh {
 				combinedCandles[i].PriceHigh = candles[j].PriceHigh
 			}
+		}
+	}
+	return combinedCandles
+}
+
+// GetCandle slotSeconds: candle的以秒计算宽度
+func getCandle(key, secret, market, symbol string, slotSeconds int, begin, end time.Time) (candles []*model.Candle) {
+	count := (end.Unix() - begin.Unix()) / int64(slotSeconds)
+	limit := 100
+	if market == model.BinancePerp {
+		limit = 480
+	}
+	if int(count) > limit {
+		duration, _ := time.ParseDuration(fmt.Sprintf(`%ds`, limit*slotSeconds))
+		candles = append(getCandle(key, secret, market, symbol, slotSeconds, begin, begin.Add(duration)),
+			getCandle(key, secret, market, symbol, slotSeconds, begin.Add(duration), end)...)
+	} else {
+		isCache := false
+		switch market {
+		case model.Ftx:
+			candles = getCandlesFtx(key, secret, symbol, begin, end, slotSeconds)
+		case model.OKEX:
+			candles, isCache = getCandlesOKEX(key, secret, symbol, begin, end, int(count), slotSeconds)
+		case model.BinancePerp, model.BinanceSpot:
+			candles, isCache = getCandlesBinance(key, secret, market, symbol, begin, end, int(count), slotSeconds)
+		case model.GXZQ:
+			candles, isCache = getCandlesGXZQDB(symbol, begin, end, slotSeconds)
+		}
+		msg := fmt.Sprintf(`get candles %s %s %d seconds %s %d`,
+			market, symbol, slotSeconds, begin.Format(time.RFC3339), len(candles))
+		util.Info(msg)
+		oldMsg, ok := util.LoadSyncMap(&model.CarryInfo, `GetCandle`)
+		if ok && oldMsg != nil {
+			msg = oldMsg.(string) + msg
+		}
+		if len(msg) < 100000 {
+			util.StoreSyncMap(&model.CarryInfo, msg, `GetCandle`)
+		} else {
+			util.StoreSyncMap(&model.CarryInfo, nil, `GetCandle`)
+		}
+		if !isCache {
+			time.Sleep(time.Millisecond * 300)
+		} else {
+			//util.Notice(fmt.Sprintf(`get candles from cache %s %s %v %v %d %d`,
+			//	market, symbol, begin, end, count, slotSeconds))
 		}
 	}
 	return
@@ -235,59 +303,6 @@ func GetMultiCandle(key, secret, market string, slotSeconds int, begin, end time
 		}
 		if saveDB {
 			model.AppDB.Save(candles)
-		}
-	}
-	return
-}
-
-func GetMarkPrice(account *model.Account, market, symbol string) (markPrice float64) {
-	switch market {
-	case model.BinancePerp:
-		return getMarkPriceBinancePerp(account, symbol)
-	}
-	return
-}
-
-// GetCandle slotSeconds: candle的以秒计算宽度
-func GetCandle(key, secret, market, symbol string, slotSeconds int, begin, end time.Time) (candles []*model.Candle) {
-	count := (end.Unix() - begin.Unix()) / int64(slotSeconds)
-	limit := 100
-	if market == model.BinancePerp {
-		limit = 480
-	}
-	if int(count) > limit {
-		duration, _ := time.ParseDuration(fmt.Sprintf(`%ds`, limit*slotSeconds))
-		candles = append(GetCandle(key, secret, market, symbol, slotSeconds, begin, begin.Add(duration)),
-			GetCandle(key, secret, market, symbol, slotSeconds, begin.Add(duration), end)...)
-	} else {
-		isCache := false
-		switch market {
-		case model.Ftx:
-			candles = getCandlesFtx(key, secret, symbol, begin, end, slotSeconds)
-		case model.OKEX:
-			candles, isCache = getCandlesOKEX(key, secret, symbol, begin, end, int(count), slotSeconds)
-		case model.BinancePerp, model.BinanceSpot:
-			candles, isCache = getCandlesBinance(key, secret, market, symbol, begin, end, int(count), slotSeconds)
-		case model.GXZQ:
-			candles, isCache = getCandlesGXZQDB(symbol, begin, end, slotSeconds)
-		}
-		msg := fmt.Sprintf(`get candles %s %s %d seconds %s %d`,
-			market, symbol, slotSeconds, begin.Format(time.RFC3339), len(candles))
-		util.Info(msg)
-		oldMsg, ok := util.LoadSyncMap(&model.CarryInfo, `GetCandle`)
-		if ok && oldMsg != nil {
-			msg = oldMsg.(string) + msg
-		}
-		if len(msg) < 100000 {
-			util.StoreSyncMap(&model.CarryInfo, msg, `GetCandle`)
-		} else {
-			util.StoreSyncMap(&model.CarryInfo, nil, `GetCandle`)
-		}
-		if !isCache {
-			time.Sleep(time.Millisecond * 300)
-		} else {
-			//util.Notice(fmt.Sprintf(`get candles from cache %s %s %v %v %d %d`,
-			//	market, symbol, begin, end, count, slotSeconds))
 		}
 	}
 	return

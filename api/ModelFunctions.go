@@ -214,10 +214,10 @@ func handleCombineSettings(dyComSetting *model.Setting, topMarketInfos map[strin
 		valueNormal, _ := normalMap.Load(info.Name)
 		settingCombine := &model.Setting{Valid: true, Function: model.FunctionCombineTurtle, Market: dyComSetting.Market,
 			Symbol: info.Name, OpenShortMargin: dyComSetting.OpenShortMargin, AmountLimit: dyComSetting.AmountLimit,
-			Far: dyComSetting.Far, Near: dyComSetting.Near}
+			Far: dyComSetting.Far, Near: dyComSetting.Near, Seconds: dyComSetting.Seconds}
 		settingNormal := &model.Setting{Valid: true, Function: model.FunctionTurtleNormal, Market: dyComSetting.Market,
 			Symbol: info.Name, OpenShortMargin: dyComSetting.OpenShortMargin, AmountLimit: dyComSetting.AmountLimit,
-			Far: dyComSetting.Far, Near: dyComSetting.Near}
+			Far: dyComSetting.Far, Near: dyComSetting.Near, Seconds: dyComSetting.Seconds}
 		if valueCombine == nil {
 			util.Notice(`add combine %s %v`, dyComSetting.Market, info.Name)
 			if dyComSetting.Market == model.BinancePerp || dyComSetting.Market == model.Bybit {
@@ -255,7 +255,7 @@ func handleCombineSettings(dyComSetting *model.Setting, topMarketInfos map[strin
 		if normalValue == nil {
 			normalSetting = &model.Setting{Valid: true, Function: model.FunctionTurtleNormal, Market: dyComSetting.Market,
 				Symbol: symbol.(string), OpenShortMargin: dyComSetting.OpenShortMargin, AmountLimit: dyComSetting.AmountLimit,
-				Far: dyComSetting.Far, Near: dyComSetting.Near}
+				Far: dyComSetting.Far, Near: dyComSetting.Near, Seconds: dyComSetting.Seconds}
 			model.AppDB.Save(normalSetting)
 		} else {
 			normalSetting = normalValue.(*model.Setting)
@@ -279,7 +279,7 @@ func handleCombineSettings(dyComSetting *model.Setting, topMarketInfos map[strin
 		if combineValue == nil {
 			combineSetting = &model.Setting{Valid: true, Function: model.FunctionCombineTurtle, Market: dyComSetting.Market,
 				Symbol: symbol.(string), OpenShortMargin: dyComSetting.OpenShortMargin, AmountLimit: dyComSetting.AmountLimit,
-				Far: dyComSetting.Far, Near: dyComSetting.Near}
+				Far: dyComSetting.Far, Near: dyComSetting.Near, Seconds: dyComSetting.Seconds}
 			model.AppDB.Save(combineSetting)
 		} else {
 			combineSetting = combineValue.(*model.Setting)
@@ -305,7 +305,8 @@ func handleTurtleSettings(dySetting *model.Setting, function string, topMarketIn
 	for _, info := range topMarketInfos {
 		value, _ = settingMap.Load(info.Name)
 		settingTurtle := &model.Setting{Valid: true, Function: function, Market: dySetting.Market, Symbol: info.Name,
-			OpenShortMargin: dySetting.OpenShortMargin, AmountLimit: dySetting.AmountLimit, Far: dySetting.Far, Near: dySetting.Near}
+			OpenShortMargin: dySetting.OpenShortMargin, AmountLimit: dySetting.AmountLimit, Far: dySetting.Far,
+			Near: dySetting.Near, Seconds: dySetting.Seconds}
 		if value == nil {
 			util.Notice(`add settingTurtle %v`, settingTurtle.Symbol)
 		} else {

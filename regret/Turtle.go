@@ -239,7 +239,7 @@ func getTurtleKey(candle *model.Candle) (key string) {
 // setting.AmountLimit 开仓数上限
 // setting.GridAmount 标准一仓的数量
 // allLimit 小于0时代表没有限制
-func ProcessCandles(start, end time.Time, near, far, allLimit int, useNear bool, market, sign string, settings map[string]*model.Setting) {
+func ProcessCandles(start, end time.Time, far, allLimit int, useNear bool, market, sign string, settings map[string]*model.Setting) {
 	if settings == nil || len(settings) == 0 {
 		return
 	}
@@ -257,12 +257,11 @@ func ProcessCandles(start, end time.Time, near, far, allLimit int, useNear bool,
 			sortedCandles[sortedCandles.Len()-1].Begin.String(), sortedCandles[sortedCandles.Len()-1].Symbol))
 	}
 	for _, setting := range settings {
-		temp := api.GetCandle(key, secret, market, setting.Symbol, 3600, start.Add(duration), end)
-		temp = api.CombineCandles(temp, periodSeconds/3600)
+		temp := api.CombineCandles(key, secret, market, setting.Symbol, periodSeconds, start.Add(duration), end)
 		util.Info(fmt.Sprintf(`get turtle candle %s %s %d setting chance %d`,
 			market, setting.Symbol, len(temp), setting.Chance))
 		getTurtleCandles(temp)
-		tempTurtle := GetTurtleData(temp, near, far, useNear)
+		tempTurtle := GetTurtleData(temp, int(setting.Near), int(setting.Far), useNear)
 		for s, data := range tempTurtle {
 			turtleDataMap[s] = data
 		}

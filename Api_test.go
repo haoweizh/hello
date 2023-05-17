@@ -246,18 +246,23 @@ func Test_CutTail(t *testing.T) {
 
 func Test_initTurtleN(t *testing.T) {
 	model.NewConfig()
+	settings := map[string]*model.Setting{`BTC_PERP`: nil}
+	market := model.OKEX
+	account := model.AppConfig.GetAccounts(market)[0]
+	nowPeriod, _ := model.GetMarketToday(market)
+	seconds := 14400
+	sortedCandles := api.GetMultiCandle(account.Key, account.Secret, market, seconds,
+		nowPeriod.Add(time.Second*time.Duration(seconds*-1*30)), nowPeriod, settings, false)
+	candles := api.CombineCandles(account.Key, account.Secret, market, `BTC_PERP`, seconds,
+		nowPeriod.Add(time.Second*time.Duration(seconds*-1*30)), nowPeriod)
+	fmt.Println(len(candles))
 	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
 	//model.AppRedis = redis.NewClient(&redis.Options{
 	//	Addr:     model.AppConfig.RedisAddr,
 	//	Password: model.AppConfig.RedisPassword,
 	//	DB:       0,
 	//})
-	today, _ := model.GetMarketToday(model.BinancePerp)
-	start := time.Date(2018, 1, 1, 0, 0, 0, 0, time.UTC)
-	end := time.Date(2018, 1, 2, 0, 0, 0, 0, time.UTC)
-	settings := map[string]*model.Setting{`ETH_USDT`: nil}
-	sortedCandles := api.GetMultiCandle(model.AppConfig.BinanceKey, model.AppConfig.BinanceSecret, model.BinanceSpot, 60,
-		start, end, settings, true)
+
 	api.InitMarketInfos(model.Bybit)
 	suc, bals, inU, cor := api.GetBalances(model.AppConfig.BybitKey, model.AppConfig.BybitSecret, model.Bybit)
 	fmt.Println(fmt.Sprintf(`%v %f %v`, suc, inU, cor))
@@ -265,8 +270,6 @@ func Test_initTurtleN(t *testing.T) {
 		fmt.Println(bal.Coin)
 		fmt.Println(bal.Amount)
 	}
-	api.GetCandle(model.AppConfig.OkexKey, model.AppConfig.OkexSecret, model.OKEX, `BTC_PERP`,
-		86400, today.Add(time.Hour*-24), today)
 	//day := today.Add(time.Hour * -24)
 	//candles := api.CalcCandleN(model.AppConfig.BinanceKey, model.AppConfig.BinanceSecret, model.BinancePerp, `BNX_PERP`, 86400, day)
 	//fmt.Println(candles)
@@ -297,7 +300,7 @@ func Test_initTurtleN(t *testing.T) {
 		}
 	}
 	accounts := make([]*model.Account, 0)
-	account := model.AppConfig.GetAccounts(model.BinancePerp)[0]
+	account = model.AppConfig.GetAccounts(model.BinancePerp)[0]
 	if account == nil {
 		fmt.Println(`right`)
 	} else {

@@ -73,9 +73,7 @@ var ProcessGrid = func(start, end time.Time, setting *model.Setting) {
 		map[string]*model.Setting{setting.Symbol: setting}, false)
 	util.StoreSyncMap(&model.CarryInfo, fmt.Sprintf(`get market candle %s %s from %s len %d`,
 		setting.Market, setting.Symbol, start.String(), len(candles)), `gridInfo`)
-	gridCandles := api.GetMultiCandle(account.Key, account.Secret, setting.Market, 3600,
-		start.Add(time.Hour*-1200), end, map[string]*model.Setting{setting.Symbol: setting}, false)
-	gridCandles = api.CombineCandles(gridCandles, 4)
+	gridCandles := api.CombineCandles(account.Key, account.Secret, setting.Market, setting.Symbol, 14400, start.Add(time.Hour*-1200), end)
 	util.StoreSyncMap(&model.CarryInfo, fmt.Sprintf(`get grid candle %s %s from %s len %d`,
 		setting.Market, setting.Symbol, start.Add(time.Hour*-1200).String(), len(gridCandles)), `gridInfo`)
 	if gridCandles != nil && gridCandles.Len() > 0 && gridCandles[0] != nil && gridCandles[len(gridCandles)-1] != nil {

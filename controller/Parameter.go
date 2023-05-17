@@ -110,7 +110,7 @@ func autoSimulate(market, coins string, begin, end time.Time, strBegin, strEnd s
 		market, coins, strBegin, strEnd, far, near, limit, allLimit, useNear)
 	delNum := model.AppDB.Where(`function=?`, sign).Delete(&model.Order{}).RowsAffected
 	util.Info(`del %s %d rows affected`, sign, delNum)
-	regret.ProcessCandles(begin, end, near, far, allLimit, useNear, market, sign, settings)
+	regret.ProcessCandles(begin, end, far, allLimit, useNear, market, sign, settings)
 	util.StoreSyncMap(&model.CarryInfo, fmt.Sprintf("done %s %s 使用回撤%v %d~%d 限制%d 总限制%d",
 		strBegin, strEnd, useNear, near, far, limit, allLimit), `auto`)
 }
@@ -319,11 +319,11 @@ func simulate(c *gin.Context) {
 			tail = model.UniStandardTail[model.MarketTypeFuture]
 		}
 		symbol := coinArray[i] + tail
-		settings[symbol] = &model.Setting{Market: market, Symbol: symbol, AmountLimit: float64(limit), GridAmount: RegretTurtleGridAmount}
+		settings[symbol] = &model.Setting{Market: market, Symbol: symbol, AmountLimit: float64(limit), GridAmount: RegretTurtleGridAmount, Near: near, Far: far}
 	}
 	if strNew == `true` {
 		go model.AppDB.Where(`function=?`, sign).Delete(&model.Order{})
-		regret.ProcessCandles(begin, end, int(near), int(far), int(allLimit), useNear, market, sign, settings)
+		regret.ProcessCandles(begin, end, int(far), int(allLimit), useNear, market, sign, settings)
 	} else {
 		util.Notice(`no need process simulate new %s`, strNew)
 	}

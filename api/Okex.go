@@ -1414,8 +1414,9 @@ func getCandlesOKEX(key, secret, symbol string, before, after time.Time, count, 
 			candleJsons = candleJson.Get(`data`).MustArray()
 		}
 	}
-	for _, value := range candleJsons {
-		item := value.([]interface{})
+	// 由于okx交易所返回的数据是从近到以前的，所以进行了倒序
+	for i := len(candleJsons) - 1; i >= 0; i-- {
+		item := candleJsons[i].([]interface{})
 		if len(item) < 7 {
 			continue
 		}

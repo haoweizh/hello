@@ -201,6 +201,13 @@ func NewConfig() {
 	}
 }
 
+func GetNowPeriod(periodInSecond int64) (nowPeriod time.Time, nowStr string) {
+	now := time.Now()
+	seconds := now.Unix() - (now.Unix() % periodInSecond)
+	nowPeriod = time.Unix(seconds, 0)
+	return nowPeriod, fmt.Sprintf(`%d`, nowPeriod.Unix())
+}
+
 func GetMarketToday(market string) (today time.Time, strToday string) {
 	today = time.Now().In(time.UTC)
 	if market == OKEX {
@@ -208,18 +215,6 @@ func GetMarketToday(market string) (today time.Time, strToday string) {
 	}
 	today = time.Date(today.Year(), today.Month(), today.Day(), 0, 0, 0, 0, today.Location())
 	return today, today.String()[0:10]
-}
-
-func GetMarketNow(market string) time.Time {
-	switch market {
-	case OKEX:
-		location, err := time.LoadLocation("Asia/Shanghai")
-		if err == nil {
-			return time.Now().In(location)
-		}
-		return time.Now()
-	}
-	return time.Now().In(time.UTC)
 }
 
 func (config *Config) ToString() string {
