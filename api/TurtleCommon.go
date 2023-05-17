@@ -233,7 +233,7 @@ func HandleOrders(key, secret, market, symbol string, settings []*model.Setting,
 const turtleNSlots = 100
 const turtleNSlotsMin = 10
 
-func GetTurtleData(key, secret string, setting *model.Setting, refreshDynamic bool) (data *TurtleData, settingRefresh *model.Setting) {
+func GetTurtleData(key, secret, function, symbol string, setting *model.Setting, refreshDynamic bool) (data *TurtleData, settingRefresh *model.Setting) {
 	var nowPeriod time.Time
 	var nowStr string
 	if setting.Seconds >= 86400 { // 周期大于1天时，需要考虑不同交易所的时区
@@ -241,7 +241,7 @@ func GetTurtleData(key, secret string, setting *model.Setting, refreshDynamic bo
 	} else {
 		nowPeriod, nowStr = model.GetNowPeriod(setting.Seconds)
 	}
-	value, ok := util.LoadSyncMap(&TurtleDataSet, setting.Function, setting.Market, setting.Symbol, nowStr)
+	value, ok := util.LoadSyncMap(&TurtleDataSet, function, setting.Market, symbol, nowStr)
 	if ok && value != nil {
 		return value.(*TurtleData), setting
 	}
@@ -252,27 +252,26 @@ func GetTurtleData(key, secret string, setting *model.Setting, refreshDynamic bo
 				PrepareSettings()
 			}
 			setRequireReset(setting.Market)
-			setting = GetSetting(setting.Function, setting.Market, setting.Symbol)
+			setting = GetSetting(function, setting.Market, symbol)
 		}
 	}
 	if setting == nil {
 		util.Notice(fmt.Sprintf(`fatal error nil setting after get turtle data`))
 	}
-	util.Notice(fmt.Sprintf(`need to create turtle data %s %s %s %s`,
-		setting.Function, setting.Market, setting.Symbol, nowStr))
+	util.Notice(fmt.Sprintf(`need to create turtle data %s %s %s %s`, function, setting.Market, symbol, nowStr))
 	useNear := false
-	if setting.Function == model.FunctionTurtle || setting.Function == model.FunctionTurtleNormal {
+	if function == model.FunctionTurtle || function == model.FunctionTurtleNormal {
 		useNear = true
-	} else if setting.Function == model.FunctionCombineTurtle {
+	} else if function == model.FunctionCombineTurtle {
 		useNear = false
 	}
-	data = &TurtleData{TurtleTime: nowPeriod, Symbol: setting.Symbol, BreakLong: false, BreakShort: false, Liquidated: false,
+	data = &TurtleData{TurtleTime: nowPeriod, Symbol: symbol, BreakLong: false, BreakShort: false, Liquidated: false,
 		DaysFar: int(setting.Far), DaysNear: int(setting.Near), DaysAdjust: 5, UseNear: useNear}
 	indexMax := math.Max(turtleNSlotsMin, float64(data.DaysFar))
-	candles := CombineCandles(key, secret, setting.Market, setting.Symbol, int(setting.Seconds),
+	candles := CombineCandles(key, secret, setting.Market, symbol, int(setting.Seconds),
 		nowPeriod.Add(time.Second*time.Duration(setting.Seconds*-1*turtleNSlots)), nowPeriod)
 	if !calcCandleN(candles) {
-		util.Notice(fmt.Sprintf(`fail to calc candles n %s %s candle num %d`, setting.Market, setting.Symbol, len(candles)))
+		util.Notice(fmt.Sprintf(`fail to calc candles n %s %s candle num %d`, setting.Market, symbol, len(candles)))
 		return nil, setting
 	}
 	for i := 1; i <= int(indexMax); i++ {
@@ -281,7 +280,7 @@ func GetTurtleData(key, secret string, setting *model.Setting, refreshDynamic bo
 		if candle == nil || candle.PriceHigh == 0 || candle.PriceLow == 0 {
 			if time.Now().Second() == 0 {
 				util.Notice(`can not calc turtleDate as nil candle %s %s %s %s`,
-					setting.Market, setting.Symbol, data.Symbol, currentPeriod.String())
+					setting.Market, symbol, data.Symbol, currentPeriod.String())
 			}
 			return nil, setting
 		}
@@ -311,9 +310,9 @@ func GetTurtleData(key, secret string, setting *model.Setting, refreshDynamic bo
 		}
 	}
 	if data.Amount > 0 && data.N > 0 {
-		util.StoreSyncMap(&TurtleDataSet, data, setting.Function, setting.Market, setting.Symbol, nowStr)
+		util.StoreSyncMap(&TurtleDataSet, data, function, setting.Market, symbol, nowStr)
 		util.Notice(fmt.Sprintf(`set turtle data %v %s %s %s %s  Amount:%e N:%e %d:%e-%e %d:%e-%e`,
-			data, setting.Function, setting.Market, setting.Symbol, nowStr, data.Amount, data.N, data.DaysNear, data.LowDaysNear,
+			data, function, setting.Market, symbol, nowStr, data.Amount, data.N, data.DaysNear, data.LowDaysNear,
 			data.HighDaysNear, data.DaysFar, data.LowDaysFar, data.HighDaysFar))
 		return data, setting
 	} else {

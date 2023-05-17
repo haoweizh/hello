@@ -620,14 +620,15 @@ func createTurtleLines(function, market string, account *model.Account) (msg str
 		if value == nil {
 			return true
 		}
-		turtleData, _ := api.GetTurtleData(account.Key, account.Secret, value.(*model.Setting), false)
+		turtleData, _ := api.GetTurtleData(account.Key, account.Secret, function, symbol.(string), value.(*model.Setting), false)
 		msgKey := fmt.Sprintf("%s_%s_%s", function, market, symbol.(string))
 		needAdd := false
 		if turtleData != nil {
 			if turtleData.OrderLong != nil || turtleData.OrderShort != nil {
 				needAdd = true
 			} else if function == model.FunctionCombineTurtle {
-				turtleNormal, _ := api.GetTurtleData(account.Key, account.Secret, value.(*model.Setting), false)
+				turtleNormal, _ := api.GetTurtleData(account.Key, account.Secret, model.FunctionTurtleNormal,
+					symbol.(string), value.(*model.Setting), false)
 				if turtleNormal != nil && (turtleNormal.OrderLong != nil || turtleNormal.OrderShort != nil) {
 					needAdd = true
 				}
