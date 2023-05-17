@@ -198,35 +198,35 @@ func PrepareSettings() {
 	symbolSettings = localSymbolSettings
 }
 
-func handleCombineSettings(dyComSetting *model.Setting, topMarketInfos map[string]*model.MarketInfo) {
+func handleCombineSettings(mumSetting *model.Setting, topMarketInfos map[string]*model.MarketInfo) {
 	combineMap := &sync.Map{}
-	value, ok := util.LoadSyncMap(symbolSettings, model.FunctionCombineTurtle, dyComSetting.Market)
+	value, ok := util.LoadSyncMap(symbolSettings, model.FunctionCombineTurtle, mumSetting.Market)
 	if ok && value != nil {
 		combineMap = value.(*sync.Map)
 	}
 	normalMap := &sync.Map{}
-	value, ok = util.LoadSyncMap(symbolSettings, model.FunctionTurtleNormal, dyComSetting.Market)
+	value, ok = util.LoadSyncMap(symbolSettings, model.FunctionTurtleNormal, mumSetting.Market)
 	if ok && value != nil {
 		normalMap = value.(*sync.Map)
 	}
 	for _, info := range topMarketInfos {
 		valueCombine, _ := combineMap.Load(info.Name)
 		valueNormal, _ := normalMap.Load(info.Name)
-		settingCombine := &model.Setting{Valid: true, Function: model.FunctionCombineTurtle, Market: dyComSetting.Market,
-			Symbol: info.Name, OpenShortMargin: dyComSetting.OpenShortMargin, AmountLimit: dyComSetting.AmountLimit,
-			Far: dyComSetting.Far, Near: dyComSetting.Near, Seconds: dyComSetting.Seconds}
-		settingNormal := &model.Setting{Valid: true, Function: model.FunctionTurtleNormal, Market: dyComSetting.Market,
-			Symbol: info.Name, OpenShortMargin: dyComSetting.OpenShortMargin, AmountLimit: dyComSetting.AmountLimit,
-			Far: dyComSetting.Far, Near: dyComSetting.Near, Seconds: dyComSetting.Seconds}
+		settingCombine := &model.Setting{Valid: true, Function: model.FunctionCombineTurtle, Market: mumSetting.Market,
+			Symbol: info.Name, OpenShortMargin: mumSetting.OpenShortMargin, CloseShortMargin: mumSetting.CloseShortMargin,
+			AmountLimit: mumSetting.AmountLimit, Far: mumSetting.Far, Near: mumSetting.Near, Seconds: mumSetting.Seconds}
+		settingNormal := &model.Setting{Valid: true, Function: model.FunctionTurtleNormal, Market: mumSetting.Market,
+			Symbol: info.Name, OpenShortMargin: mumSetting.OpenShortMargin, CloseShortMargin: mumSetting.CloseShortMargin,
+			AmountLimit: mumSetting.AmountLimit, Far: mumSetting.Far, Near: mumSetting.Near, Seconds: mumSetting.Seconds}
 		if valueCombine == nil {
-			util.Notice(`add combine %s %v`, dyComSetting.Market, info.Name)
-			if dyComSetting.Market == model.BinancePerp || dyComSetting.Market == model.Bybit {
-				accounts := model.AppConfig.GetAccounts(dyComSetting.Market)
+			util.Notice(`add combine %s %v`, mumSetting.Market, info.Name)
+			if mumSetting.Market == model.BinancePerp || mumSetting.Market == model.Bybit {
+				accounts := model.AppConfig.GetAccounts(mumSetting.Market)
 				for _, account := range accounts {
 					if account != nil {
-						if dyComSetting.Market == model.BinancePerp {
+						if mumSetting.Market == model.BinancePerp {
 							SetSymbolLeverageBinancePerp(account, settingCombine.Symbol)
-						} else if dyComSetting.Market == model.Bybit {
+						} else if mumSetting.Market == model.Bybit {
 							setSymbolLeverageBybit(account, settingCombine.Symbol)
 						}
 						time.Sleep(time.Second * 10)
@@ -236,12 +236,12 @@ func handleCombineSettings(dyComSetting *model.Setting, topMarketInfos map[strin
 		} else {
 			settingCombine = valueCombine.(*model.Setting)
 			settingCombine.SymbolRelated = ``
-			util.Notice(`add back combine %s %s`, dyComSetting.Market, info.Name)
+			util.Notice(`add back combine %s %s`, mumSetting.Market, info.Name)
 		}
 		if valueNormal != nil {
 			settingNormal = valueNormal.(*model.Setting)
 			settingNormal.SymbolRelated = ``
-			util.Notice(`add back normal %s %s`, dyComSetting.Market, info.Name)
+			util.Notice(`add back normal %s %s`, mumSetting.Market, info.Name)
 		}
 		model.AppDB.Save(settingCombine)
 		model.AppDB.Save(settingNormal)
@@ -253,14 +253,14 @@ func handleCombineSettings(dyComSetting *model.Setting, topMarketInfos map[strin
 		var normalSetting *model.Setting
 		normalValue, _ := normalMap.Load(symbol)
 		if normalValue == nil {
-			normalSetting = &model.Setting{Valid: true, Function: model.FunctionTurtleNormal, Market: dyComSetting.Market,
-				Symbol: symbol.(string), OpenShortMargin: dyComSetting.OpenShortMargin, AmountLimit: dyComSetting.AmountLimit,
-				Far: dyComSetting.Far, Near: dyComSetting.Near, Seconds: dyComSetting.Seconds}
+			normalSetting = &model.Setting{Valid: true, Function: model.FunctionTurtleNormal, Market: mumSetting.Market,
+				Symbol: symbol.(string), OpenShortMargin: mumSetting.OpenShortMargin, CloseShortMargin: mumSetting.CloseShortMargin,
+				AmountLimit: mumSetting.AmountLimit, Far: mumSetting.Far, Near: mumSetting.Near, Seconds: mumSetting.Seconds}
 			model.AppDB.Save(normalSetting)
 		} else {
 			normalSetting = normalValue.(*model.Setting)
 		}
-		_, _, coinValue, _ := model.GetFromStandard(dyComSetting.Market, symbol.(string))
+		_, _, coinValue, _ := model.GetFromStandard(mumSetting.Market, symbol.(string))
 		if topMarketInfos[symbol.(string)] == nil && !model.CommonCoins[strings.ToLower(coinValue)] {
 			if setting.(*model.Setting).Chance == 0 && normalSetting.Chance == 0 {
 				setting.(*model.Setting).SymbolRelated = model.SettingTurtleRemoved
@@ -277,14 +277,14 @@ func handleCombineSettings(dyComSetting *model.Setting, topMarketInfos map[strin
 		var combineSetting *model.Setting
 		combineValue, _ := combineMap.Load(symbol)
 		if combineValue == nil {
-			combineSetting = &model.Setting{Valid: true, Function: model.FunctionCombineTurtle, Market: dyComSetting.Market,
-				Symbol: symbol.(string), OpenShortMargin: dyComSetting.OpenShortMargin, AmountLimit: dyComSetting.AmountLimit,
-				Far: dyComSetting.Far, Near: dyComSetting.Near, Seconds: dyComSetting.Seconds}
+			combineSetting = &model.Setting{Valid: true, Function: model.FunctionCombineTurtle, Market: mumSetting.Market,
+				Symbol: symbol.(string), OpenShortMargin: mumSetting.OpenShortMargin, CloseShortMargin: mumSetting.CloseShortMargin,
+				AmountLimit: mumSetting.AmountLimit, Far: mumSetting.Far, Near: mumSetting.Near, Seconds: mumSetting.Seconds}
 			model.AppDB.Save(combineSetting)
 		} else {
 			combineSetting = combineValue.(*model.Setting)
 		}
-		_, _, coinValue, _ := model.GetFromStandard(dyComSetting.Market, symbol.(string))
+		_, _, coinValue, _ := model.GetFromStandard(mumSetting.Market, symbol.(string))
 		if topMarketInfos[symbol.(string)] == nil && !model.CommonCoins[strings.ToLower(coinValue)] {
 			if setting.(*model.Setting).Chance == 0 && combineSetting.Chance == 0 {
 				setting.(*model.Setting).SymbolRelated = model.SettingTurtleRemoved
@@ -296,17 +296,17 @@ func handleCombineSettings(dyComSetting *model.Setting, topMarketInfos map[strin
 	})
 }
 
-func handleTurtleSettings(dySetting *model.Setting, function string, topMarketInfos map[string]*model.MarketInfo) {
+func handleTurtleSettings(mumSetting *model.Setting, function string, topMarketInfos map[string]*model.MarketInfo) {
 	settingMap := &sync.Map{}
-	value, ok := util.LoadSyncMap(symbolSettings, function, dySetting.Market)
+	value, ok := util.LoadSyncMap(symbolSettings, function, mumSetting.Market)
 	if ok && value != nil {
 		settingMap = value.(*sync.Map)
 	}
 	for _, info := range topMarketInfos {
 		value, _ = settingMap.Load(info.Name)
-		settingTurtle := &model.Setting{Valid: true, Function: function, Market: dySetting.Market, Symbol: info.Name,
-			OpenShortMargin: dySetting.OpenShortMargin, AmountLimit: dySetting.AmountLimit, Far: dySetting.Far,
-			Near: dySetting.Near, Seconds: dySetting.Seconds}
+		settingTurtle := &model.Setting{Valid: true, Function: function, Market: mumSetting.Market, Symbol: info.Name,
+			OpenShortMargin: mumSetting.OpenShortMargin, CloseShortMargin: mumSetting.CloseShortMargin,
+			AmountLimit: mumSetting.AmountLimit, Far: mumSetting.Far, Near: mumSetting.Near, Seconds: mumSetting.Seconds}
 		if value == nil {
 			util.Notice(`add settingTurtle %v`, settingTurtle.Symbol)
 		} else {
@@ -320,7 +320,7 @@ func handleTurtleSettings(dySetting *model.Setting, function string, topMarketIn
 		if setting == nil {
 			return true
 		}
-		_, _, coinValue, _ := model.GetFromStandard(dySetting.Market, symbol.(string))
+		_, _, coinValue, _ := model.GetFromStandard(mumSetting.Market, symbol.(string))
 		if topMarketInfos[symbol.(string)] == nil && !model.CommonCoins[strings.ToLower(coinValue)] {
 			if setting.(*model.Setting).Chance == 0 {
 				setting.(*model.Setting).SymbolRelated = model.SettingTurtleRemoved

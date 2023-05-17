@@ -78,32 +78,27 @@ const TurtleTriggerDelta = 0.01
 var TurtleDataSet = sync.Map{}     // function_market_symbol_unix second *TurtleData
 var accountValues = &sync.Map{}    // market value
 var accountValueTime = &sync.Map{} // market time.Time
-func CalcTurtleAmount(key, secret, market, symbol string, n float64) (amount float64) {
+func CalcTurtleAmount(key, secret string, setting *model.Setting, n float64) (amount float64) {
 	var accountValue float64
-	valueTime, _ := util.LoadSyncMap(accountValueTime, market)
+	valueTime, _ := util.LoadSyncMap(accountValueTime, setting.Market)
 	if valueTime != nil && valueTime.(time.Time).Add(time.Hour).After(time.Now()) {
-		value, _ := util.LoadSyncMap(accountValues, market)
+		value, _ := util.LoadSyncMap(accountValues, setting.Market)
 		if value != nil {
 			accountValue = value.(float64)
 		}
 	}
 	if accountValue == 0 {
-		switch market {
+		switch setting.Market {
 		case model.BinancePerp:
-			_, _, accountValue, _ = GetPositions(key, secret, market)
+			_, _, accountValue, _ = GetPositions(key, secret, setting.Market)
 		case model.Ftx, model.OKEX:
-			_, _, accountValue, _ = GetBalances(key, secret, market)
+			_, _, accountValue, _ = GetBalances(key, secret, setting.Market)
 		}
-		util.StoreSyncMap(accountValues, accountValue, market)
-		util.StoreSyncMap(accountValueTime, time.Now(), market)
+		util.StoreSyncMap(accountValues, accountValue, setting.Market)
+		util.StoreSyncMap(accountValueTime, time.Now(), setting.Market)
 	}
 	amount = 0.02 * accountValue / n
-	_, _, coin, _ := model.GetFromStandard(market, symbol)
-	if model.CommonCoins[strings.ToLower(coin)] {
-		amount = amount / 2
-	} else {
-		amount /= 4
-	}
+	amount *= setting.CloseShortMargin
 	//util.Notice(`CalcTurtleAmount %s %s %e`, setting.Market, setting.Symbol, Amount)
 	return amount
 }
@@ -311,7 +306,7 @@ func GetTurtleData(key, secret string, setting *model.Setting, refreshDynamic bo
 		if i == 1 {
 			data.N = candle.N
 			data.NVolume = candle.NVolume
-			data.Amount = CalcTurtleAmount(key, secret, setting.Market, setting.Symbol, data.N)
+			data.Amount = CalcTurtleAmount(key, secret, setting, data.N)
 			util.Notice(fmt.Sprintf(`set data %f %f`, data.N, data.Amount))
 		}
 	}
