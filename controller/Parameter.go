@@ -640,10 +640,14 @@ func createTurtleLines(function, market string, account *model.Account) (msg str
 			if msgValue != nil {
 				size++
 				sortable := &model.Sortable{Key: symbol.(string), Value: msgValue.(string) + "\n"}
-				if !commonSpaceLine && strings.Index(sortable.Key, `common_`) > 0 {
-					commonSpaceLine = true
-					sortable.Value = "\n主流币种:" + sortable.Value.(string)
+				if strings.Index(msgKey, `common_`) > 0 {
+					sortable.Key = "主流币种:" + sortable.Key
+					if !commonSpaceLine {
+						commonSpaceLine = true
+						sortable.Value = "\n主流币种:" + sortable.Value.(string)
+					}
 				}
+
 				lines = append(lines, sortable)
 			}
 		}
