@@ -613,10 +613,10 @@ func GetCode(c *gin.Context) {
 func createTurtleLines(function, market string, account *model.Account) (msg string, size int) {
 	settingMap := api.GetSettings(function, market)
 	lines := make([]*model.Sortable, 0)
+	commonLines := make([]string, 0)
 	if settingMap == nil {
 		return
 	}
-	commonSpaceLine := false
 	settingMap.Range(func(symbol, value any) bool {
 		if value == nil {
 			return true
@@ -640,15 +640,13 @@ func createTurtleLines(function, market string, account *model.Account) (msg str
 			if msgValue != nil {
 				size++
 				sortable := &model.Sortable{Key: symbol.(string), Value: msgValue.(string) + "\n"}
-				if strings.Index(msgKey, `common_`) > 0 {
-					sortable.Key = "主流币种:" + sortable.Key
-					if !commonSpaceLine {
-						commonSpaceLine = true
-						sortable.Value = "\n主流币种:" + sortable.Value.(string)
-					}
+				_, _, coin, _ := model.GetFromStandard(market, symbol.(string))
+				if model.CommonCoins[strings.ToLower(coin)] {
+					commonLines = append(commonLines, msgValue.(string))
+				} else {
+					lines = append(lines, sortable)
 				}
 
-				lines = append(lines, sortable)
 			}
 		}
 		return true
@@ -657,6 +655,9 @@ func createTurtleLines(function, market string, account *model.Account) (msg str
 	sort.Sort(sortedLines)
 	for _, line := range sortedLines.Array {
 		msg += line.Value.(string)
+	}
+	for _, line := range commonLines {
+		msg += line
 	}
 	return
 }
