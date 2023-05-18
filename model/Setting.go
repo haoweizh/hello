@@ -1,6 +1,8 @@
 package model
 
 import (
+	"fmt"
+	"strings"
 	"time"
 )
 
@@ -25,4 +27,13 @@ type Setting struct {
 	ID                 uint `gorm:"primary_key"`
 	CreatedAt          time.Time
 	UpdatedAt          time.Time
+}
+
+func GetMsgKey(function, market, symbol string) (msgKey string) {
+	_, _, coin, _ := GetFromStandard(market, symbol)
+	msgKey = fmt.Sprintf("%s_%s_%s", function, market, symbol)
+	if CommonCoins[strings.ToLower(coin)] {
+		return `common_` + msgKey
+	}
+	return msgKey
 }

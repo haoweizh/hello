@@ -622,7 +622,7 @@ func createTurtleLines(function, market string, account *model.Account) (msg str
 			return true
 		}
 		turtleData, _ := api.GetTurtleData(account.Key, account.Secret, function, symbol.(string), value.(*model.Setting), false)
-		msgKey := util.GetMsgKey(function, market, symbol.(string))
+		msgKey := model.GetMsgKey(function, market, symbol.(string))
 		needAdd := false
 		if turtleData != nil {
 			if turtleData.OrderLong != nil || turtleData.OrderShort != nil {
