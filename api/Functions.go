@@ -1020,8 +1020,12 @@ func InitMarketInfos(market string) (success bool) {
 					success = false
 				}
 			}
-			go setLeverageOkx(account)
 		}
+		go func() {
+			for _, account := range accounts {
+				setLeverageOkx(account)
+			}
+		}()
 	case model.HuobiSpot:
 		marketInfos = getMarketsHuobiSpot(accounts[0].Key, accounts[0].Secret)
 	case model.BinanceSpot:
@@ -1031,7 +1035,7 @@ func InitMarketInfos(market string) (success bool) {
 		go func() {
 			for _, account := range accounts {
 				setPosSideBinancePerp(account.Key, account.Secret)
-				SetLeverageBinancePerp(account.Key, account.Secret)
+				setLeverageBinancePerp(account.Key, account.Secret)
 			}
 		}()
 	case model.Gate:

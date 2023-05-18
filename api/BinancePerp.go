@@ -673,7 +673,7 @@ func setSymbolLeverageBinancePerp(account *model.Account, symbol string) (succes
 
 var settingBinancePerp = false
 
-func SetLeverageBinancePerp(key, secret string) (success bool) {
+func setLeverageBinancePerp(key, secret string) (success bool) {
 	if settingBinancePerp {
 		return
 	}

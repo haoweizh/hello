@@ -220,15 +220,13 @@ func handleCombineSettings(mumSetting *model.Setting, topMarketInfos map[string]
 			AmountLimit: mumSetting.AmountLimit, Far: mumSetting.Far, Near: mumSetting.Near, Seconds: mumSetting.Seconds}
 		if valueCombine == nil {
 			util.Notice(`add combine %s %v`, mumSetting.Market, info.Name)
-			if mumSetting.Market == model.BinancePerp || mumSetting.Market == model.Bybit {
-				accounts := model.AppConfig.GetAccounts(mumSetting.Market)
-				for _, account := range accounts {
-					if account != nil {
-						SetSymbolLeverage(account, settingCombine.Market, settingCombine.Symbol)
-						time.Sleep(time.Second * 10)
-					}
+			accounts := model.AppConfig.GetAccounts(mumSetting.Market)
+			for _, account := range accounts {
+				if account != nil {
+					SetSymbolLeverage(account, settingCombine.Market, settingCombine.Symbol)
 				}
 			}
+			time.Sleep(time.Second)
 		} else {
 			settingCombine = valueCombine.(*model.Setting)
 			settingCombine.SymbolRelated = ``
