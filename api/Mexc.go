@@ -230,7 +230,7 @@ func placeOrderMexc(key, secret string, order *model.Order, orderSide, orderType
 	body := map[string]interface{}{
 		"symbol":       symbol,
 		"side":         side,
-		`leverage`:     5,
+		`leverage`:     model.DefaultLeverage,
 		"type":         typeInReq,
 		"price":        priceStr,
 		`vol`:          formattedAmount,

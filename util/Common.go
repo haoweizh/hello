@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/bitly/go-simplejson"
+	"hello/model"
 	"io"
 	"math"
 	"net/url"
@@ -154,4 +155,13 @@ func GetHourKeys(num int) (keys []string) {
 		keys[i] = fmt.Sprintf(`%d-%d-%d:%d`, curTime.Year(), curTime.Month(), curTime.Day(), curTime.Hour())
 	}
 	return keys
+}
+
+func GetMsgKey(function, market, symbol string) (msgKey string) {
+	_, _, coin, _ := model.GetFromStandard(market, symbol)
+	msgKey = fmt.Sprintf("%s_%s_%s", function, market, symbol)
+	if model.CommonCoins[strings.ToLower(coin)] {
+		return `common_` + msgKey
+	}
+	return msgKey
 }

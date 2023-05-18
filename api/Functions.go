@@ -998,6 +998,7 @@ func InitMarketInfos(market string) (success bool) {
 					success = false
 				}
 			}
+			go setLeverageOkx(account)
 		}
 	case model.HuobiSpot:
 		marketInfos = getMarketsHuobiSpot(accounts[0].Key, accounts[0].Secret)
@@ -1095,6 +1096,18 @@ func SendMails(title, msg string) {
 			util.Notice(`fail to send mail title %s msg %s to %s err %s`, title, msg, mail, err.Error())
 		}
 	}
+}
+
+func SetSymbolLeverage(account *model.Account, market, symbol string) (success bool) {
+	switch market {
+	case model.BinancePerp:
+		return setSymbolLeverageBinancePerp(account, symbol)
+	case model.Bybit:
+		return setSymbolLeverageBybit(account, symbol)
+	case model.OKEX:
+		return setSymbolLeverageOkx(account, symbol)
+	}
+	return false
 }
 
 //func InitCoinBalance(key, secret, function, market string) {

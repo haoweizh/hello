@@ -616,12 +616,13 @@ func createTurtleLines(function, market string, account *model.Account) (msg str
 	if settingMap == nil {
 		return
 	}
+	commonSpaceLine := false
 	settingMap.Range(func(symbol, value any) bool {
 		if value == nil {
 			return true
 		}
 		turtleData, _ := api.GetTurtleData(account.Key, account.Secret, function, symbol.(string), value.(*model.Setting), false)
-		msgKey := fmt.Sprintf("%s_%s_%s", function, market, symbol.(string))
+		msgKey := util.GetMsgKey(function, market, symbol.(string))
 		needAdd := false
 		if turtleData != nil {
 			if turtleData.OrderLong != nil || turtleData.OrderShort != nil {
@@ -639,6 +640,10 @@ func createTurtleLines(function, market string, account *model.Account) (msg str
 			if msgValue != nil {
 				size++
 				sortable := &model.Sortable{Key: symbol.(string), Value: msgValue.(string) + "\n"}
+				if !commonSpaceLine && strings.Index(sortable.Key, `common_`) == 0 {
+					commonSpaceLine = true
+					sortable.Value = "\n主流币种:" + sortable.Value.(string)
+				}
 				lines = append(lines, sortable)
 			}
 		}

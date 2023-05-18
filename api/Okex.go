@@ -1245,6 +1245,34 @@ func setAccountModeOKEX(key, secret string) (success bool) {
 	return true
 }
 
+var settingOkx = false
+
+func setLeverageOkx(account *model.Account) (success bool) {
+	if settingOkx {
+		return
+	}
+	defer func() {
+		settingOkx = false
+	}()
+	settingOkx = true
+	symbols := GetMarketSymbols(model.OKEX)
+	for symbol := range symbols {
+		setSymbolLeverageOkx(account, symbol)
+		time.Sleep(time.Minute)
+	}
+	return true
+}
+
+func setSymbolLeverageOkx(account *model.Account, symbol string) (setSuc bool) {
+	response, _ := sendSignRequestOKEX(account.Key, account.Secret, http.MethodPost, `/api/v5/account/set-leverage`,
+		nil, map[string]interface{}{`instId`: symbol, `mgnMode`: `cross`, `lever`: strconv.Itoa(model.DefaultLeverage)})
+	responseJson, err := util.NewJSON(response)
+	if err != nil || responseJson.Get(`code`).MustString() != `0` {
+		return false
+	}
+	return true
+}
+
 // getLastPriceOKEX
 func _(key, secret, symbol string) (price float64) {
 	response, _ := sendSignRequestOKEX(key, secret, http.MethodGet, `/api/v5/market/ticker`,

@@ -99,8 +99,8 @@ func getMarketsBybitPerp(marketInfos map[string]*model.MarketInfo) {
 				continue
 			}
 			maxLeverage, _ := strconv.ParseFloat(perpInfo.LeverageFilter.MaxLeverage, 64)
-			if maxLeverage < 3 {
-				util.Notice(fmt.Sprintf("最大杠杆小于3 perp info：%v", perpInfo))
+			if maxLeverage < model.DefaultLeverage {
+				util.Notice(fmt.Sprintf("最大杠杆小于%d perp info：%v", model.DefaultLeverage, perpInfo))
 				continue
 			}
 			marketInfo.SizeMin, _ = strconv.ParseFloat(perpInfo.LotSizeFilter.MinOrderQty, 64)
@@ -476,7 +476,8 @@ func _(key, secret, coin, amount, fromType, toType string) bool {
 }
 
 func setBybitMarginLeverage(key, secret string) {
-	httpResp, httpErr := SignedRequestBybit(key, secret, http.MethodPost, bybitRestUrl, "/v5/spot-margin-trade/set-leverage", map[string]interface{}{"leverage": "3"})
+	httpResp, httpErr := SignedRequestBybit(key, secret, http.MethodPost, bybitRestUrl,
+		"/v5/spot-margin-trade/set-leverage", map[string]interface{}{"leverage": strconv.Itoa(model.DefaultLeverage)})
 	if httpErr != nil {
 		util.Notice(fmt.Sprintf(`fail to setBybitMarginLeverage when post %s`, httpErr.Error()))
 		return
@@ -501,7 +502,8 @@ func setSymbolLeverageBybit(account *model.Account, symbol string) (setSuc bool)
 		return false
 	}
 	if marketType == model.MarketTypePerp {
-		params := map[string]interface{}{"category": "linear", "buyLeverage": "3", "sellLeverage": "3", "symbol": dialectSymbol}
+		params := map[string]interface{}{"category": "linear", "buyLeverage": strconv.Itoa(model.DefaultLeverage),
+			"sellLeverage": strconv.Itoa(model.DefaultLeverage), "symbol": dialectSymbol}
 		httpResp, httpErr := SignedRequestBybit(account.Key, account.Secret, http.MethodPost, bybitRestUrl, "/v5/position/set-leverage", params)
 		if httpErr != nil {
 			util.Notice(fmt.Sprintf(`fail to setBybitPerpLeverage when request %s %s`, symbol, httpErr.Error()))
@@ -542,7 +544,8 @@ func setBybitPerpLeverage(key, secret string) {
 			continue
 		}
 		if marketType == model.MarketTypePerp {
-			params := map[string]interface{}{"category": "linear", "buyLeverage": "3", "sellLeverage": "3", "symbol": dialectSymbol}
+			params := map[string]interface{}{"category": "linear", "buyLeverage": strconv.Itoa(model.DefaultLeverage),
+				"sellLeverage": strconv.Itoa(model.DefaultLeverage), "symbol": dialectSymbol}
 			httpResp, httpErr := SignedRequestBybit(key, secret, http.MethodPost, bybitRestUrl, "/v5/position/set-leverage", params)
 			if httpErr != nil {
 				util.Notice(fmt.Sprintf(`fail to setBybitPerpLeverage when request %s %s`, symbol, httpErr.Error()))

@@ -18,6 +18,7 @@ var monitorInfo = &sync.Map{} // userIndex - table - syncMap[string -array[]stri
 var AppMetric = &MetricManager{}
 var IgnoreFunctions = map[string]bool{FunctionDynamicTurtle: true, FunctionTurtleNormal: true, FunctionDynamicCombine: true}
 
+const DefaultLeverage = 5
 const BitgetSpot = `bitgetspot`
 const BitgetPerp = `bitgetperp`
 const Kucoin = `kucoin`

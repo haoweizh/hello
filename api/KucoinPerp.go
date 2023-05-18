@@ -85,7 +85,7 @@ func appendFutureMarketKucoin(key string, marketInfos map[string]*model.MarketIn
 			continue
 		}
 
-		if contract.MaxLeverage < 5 {
+		if contract.MaxLeverage < model.DefaultLeverage {
 			util.Info(fmt.Sprintf(contract.BaseCurrency+model.UniStandardTail[model.MarketTypePerp]+"杠杆倍数：%d", contract.MaxLeverage))
 			continue
 		}
@@ -384,7 +384,7 @@ func placeOrderKucoinPerp(order *model.Order, orderSide, orderType, symbol strin
 		params["side"] = orderSide
 		params["symbol"] = dialectSymbol
 		params["type"] = orderType
-		params["leverage"] = "5"
+		params["leverage"] = strconv.Itoa(model.DefaultLeverage)
 		priceFuture, decimalFuture := model.FormatPrice(model.KucoinPerp, symbol, price)
 		order.Price = priceFuture
 		params["price"] = util.CutTailZero(strconv.FormatFloat(priceFuture, 'f', decimalFuture, 64))

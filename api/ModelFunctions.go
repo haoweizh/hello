@@ -224,11 +224,7 @@ func handleCombineSettings(mumSetting *model.Setting, topMarketInfos map[string]
 				accounts := model.AppConfig.GetAccounts(mumSetting.Market)
 				for _, account := range accounts {
 					if account != nil {
-						if mumSetting.Market == model.BinancePerp {
-							SetSymbolLeverageBinancePerp(account, settingCombine.Symbol)
-						} else if mumSetting.Market == model.Bybit {
-							setSymbolLeverageBybit(account, settingCombine.Symbol)
-						}
+						SetSymbolLeverage(account, settingCombine.Market, settingCombine.Symbol)
 						time.Sleep(time.Second * 10)
 					}
 				}
