@@ -398,9 +398,9 @@ func CheckBreak(key, secret, market, symbol string, settings []*model.Setting, t
 		return false
 	}
 	if turtleData[0].CheckTimeBreak.Add(time.Minute * 5).After(util.GetNow()) {
-		util.Notice(fmt.Sprintf(`break checked %s %s %s`, market, turtleData[0].Symbol, turtleData[0].CheckTimeBreak.String()))
 		return false
 	}
+	util.Notice(fmt.Sprintf(`break checked %s %s %s`, market, turtleData[0].Symbol, turtleData[0].CheckTimeBreak.String()))
 	for i, setting := range settings {
 		data := turtleData[i]
 		data.CheckTimeBreak = util.GetNow()
