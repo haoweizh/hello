@@ -154,9 +154,9 @@ func handleBreakLong(setting, settingOpposite *model.Setting, data, dataOpposite
 		setting.Chance = 0
 		setting.GridAmount = 0
 		setting.PriceX = 0
-		bigNew := -1
-		if settingOpposite.Chance != 0 {
-			bigNew = 1
+		bigNew := 1
+		if settingOpposite.Chance == 0 && setting.Far == settingOpposite.Far && setting.Near == settingOpposite.Near {
+			bigNew = -1
 		}
 		data.SetBig(bigNew)
 		dataOpposite.SetBig(bigNew)
@@ -199,9 +199,9 @@ func handleBreakShort(setting, settingOpposite *model.Setting, data, dataOpposit
 		setting.Chance = 0
 		setting.GridAmount = 0
 		setting.PriceX = 0
-		bigNew := -1
-		if settingOpposite.Chance != 0 {
-			bigNew = 1
+		bigNew := 1
+		if settingOpposite.Chance == 0 && setting.Far == settingOpposite.Far && setting.Near == settingOpposite.Near {
+			bigNew = -1
 		}
 		data.SetBig(bigNew)
 		dataOpposite.SetBig(bigNew)
