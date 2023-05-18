@@ -656,8 +656,9 @@ func createTurtleLines(function, market string, account *model.Account) (msg str
 	for _, line := range sortedLines.Array {
 		msg += line.Value.(string)
 	}
+	msg += "主流币\n"
 	for _, line := range commonLines {
-		msg += line
+		msg += line + "\n"
 	}
 	return
 }
