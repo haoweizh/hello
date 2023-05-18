@@ -10,6 +10,8 @@ import (
 	"time"
 )
 
+var balanceLock = sync.Map{}  // key - locker
+var positionLock = sync.Map{} // key - locker
 var requireReset sync.Map
 var lastPrice = sync.Map{}            // market_symbol, price
 var lastPriceTime = sync.Map{}        // market_symbol, Time
@@ -391,6 +393,16 @@ func GetMarketEquity(index int) (msg string) {
 
 func GetBalances(key, secret, market string) (
 	success bool, balances []*model.Balance, totalInUsd float64, collateral *model.Collateral) {
+	lock, _ := balanceLock.Load(key)
+	if lock == nil {
+		lock = &sync.Mutex{}
+		balanceLock.Store(key, lock)
+	}
+	lock.(*sync.Mutex).Lock()
+	defer func() {
+		time.Sleep(time.Millisecond * 200)
+		lock.(*sync.Mutex).Unlock()
+	}()
 	//now := util.GetNow().Unix()
 	//var update int64
 	//balances, totalInUsd, collateral, update = model.GetBalance(market)
@@ -584,6 +596,16 @@ func QueryOrderById(key, secret, market, symbol, orderType, orderId string) (ord
 // accountValue: 账户权益
 // availableU: 可用usd
 func GetPositions(key, secret, market string) (success bool, positions []*model.Position, accountValue, availableU float64) {
+	lock, _ := positionLock.Load(key)
+	if lock == nil {
+		lock = &sync.Mutex{}
+		positionLock.Store(key, lock)
+	}
+	lock.(*sync.Mutex).Lock()
+	defer func() {
+		time.Sleep(time.Millisecond * 200)
+		lock.(*sync.Mutex).Unlock()
+	}()
 	switch market {
 	case model.BitgetPerp:
 		success, positions, accountValue, availableU = getPositionsBitgetPerp(key, secret)
