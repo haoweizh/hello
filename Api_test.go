@@ -218,6 +218,7 @@ func Test_CutTail(t *testing.T) {
 	model.NewConfig()
 	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
 	//coins := `DOGE,SOL,MATIC,CHZ,LINK,ADA,BNB,FIL,SUSHI,AXS,ATOM,WAVES`
+	coins := `DOGE,SOL,ADA,MATIC,FIL,ATOM,TOMO,ONT,ZIL,OMG`
 	//allLimit := 12
 	market := model.BinancePerp
 	strBegin := `2020-05-01T00:00:00+00:00`
@@ -226,7 +227,7 @@ func Test_CutTail(t *testing.T) {
 	//coins := `DOGE,SOL,MATIC,CHZ,LINK,ADA,BNB,FIL,SUSHI,AXS,ATOM,WAVES`
 	//coinNames := strings.Split(`CZCE.CY,CZCE.FG,CZCE.MA,CZCE.OI,CZCE.PF,CZCE.RM,CZCE.SA,CZCE.SF,CZCE.SM,CZCE.SR,CZCE.TA,CZCE.UR,CZCE.ZC,DCE.c,DCE.eb,DCE.eg,DCE.i,DCE.j,DCE.jm,DCE.l,DCE.m,DCE.p,DCE.pp,DCE.v,DCE.y,SHFE.bu,SHFE.cu,SHFE.fu,SHFE.hc,SHFE.pb,SHFE.rb,SHFE.ru`, `,`)
 	for i := 9; i <= 25; i++ {
-		coins := `BTC`
+		coins = `BTC`
 		sign := fmt.Sprintf(`market%s,coins%s,%s~%s,far%d,near%d,limit%d,allLimit%d,useNear%v`,
 			market, coins, strBegin, strEnd, i*2, i, 3, 35, false)
 		regret.CutTail(market, coins, sign)
