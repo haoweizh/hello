@@ -105,7 +105,7 @@ func autoSimulate(market, coins string, begin, end time.Time, strBegin, strEnd s
 	for _, coin := range coinArray {
 		symbol := coin + model.UniStandardTail[marketType]
 		settings[symbol] = &model.Setting{Market: market, Symbol: symbol, AmountLimit: float64(limit),
-			GridAmount: RegretTurtleGridAmount, Seconds: int64(seconds)}
+			GridAmount: RegretTurtleGridAmount, Seconds: int64(seconds), Near: int64(near), Far: int64(far)}
 	}
 	sign := fmt.Sprintf(`market%s,coins%s,%s~%s,far%d,near%d,limit%d,allLimit%d,useNear%v`,
 		market, coins, strBegin, strEnd, far, near, limit, allLimit, useNear)
