@@ -221,25 +221,19 @@ func Test_CutTail(t *testing.T) {
 	coins := `DOGE,SOL,ADA,MATIC,FIL,ATOM,TOMO,ONT,ZIL,OMG`
 	//allLimit := 12
 	market := model.BinancePerp
-	strBegin := `2020-05-01T00:00:00+00:00`
+	strBegin := `2021-01-01T00:00:00+00:00`
 	strEnd := `2023-05-01T00:00:00+00:00`
 	//coins := `CZCE.FG,DCE.jm,DCE.eb,CZCE.TA,SHFE.fu,DCE.p,CZCE.SF,SHFE.hc,DCE.v,DCE.y`
 	//coins := `DOGE,SOL,MATIC,CHZ,LINK,ADA,BNB,FIL,SUSHI,AXS,ATOM,WAVES`
 	//coinNames := strings.Split(`CZCE.CY,CZCE.FG,CZCE.MA,CZCE.OI,CZCE.PF,CZCE.RM,CZCE.SA,CZCE.SF,CZCE.SM,CZCE.SR,CZCE.TA,CZCE.UR,CZCE.ZC,DCE.c,DCE.eb,DCE.eg,DCE.i,DCE.j,DCE.jm,DCE.l,DCE.m,DCE.p,DCE.pp,DCE.v,DCE.y,SHFE.bu,SHFE.cu,SHFE.fu,SHFE.hc,SHFE.pb,SHFE.rb,SHFE.ru`, `,`)
-	for i := 9; i <= 25; i++ {
-		coins = `BTC`
+	for i := 7; i <= 30; i++ {
 		sign := fmt.Sprintf(`market%s,coins%s,%s~%s,far%d,near%d,limit%d,allLimit%d,useNear%v`,
-			market, coins, strBegin, strEnd, i*2, i, 3, 35, false)
+			market, coins, strBegin, strEnd, i*2, i, 3, 10, false)
+		//marketbinanceperp,coinsDOGE,SOL,ADA,MATIC,FIL,ATOM,TOMO,ONT,ZIL,OMG,2021-01-01T00:00:00+00:00~2023-05-01T00:00:00+00:00,far20,near10,limit3,allLimit36,useNearfalse
+		//marketbinanceperp,coinsDOGE,SOL,ADA,MATIC,FIL,ATOM,TOMO,ONT,ZIL,OMG,2021-01-01T00:00:00+00:00~2023-05-01T00:00:00+00:00,far14,near7,limit3,allLimit10,useNearfalse
 		regret.CutTail(market, coins, sign)
 		sign = fmt.Sprintf(`market%s,coins%s,%s~%s,far%d,near%d,limit%d,allLimit%d,useNear%v`,
-			market, coins, strBegin, strEnd, i*2, i, 3, 35, true)
-		regret.CutTail(market, coins, sign)
-		coins = `ETH`
-		sign = fmt.Sprintf(`market%s,coins%s,%s~%s,far%d,near%d,limit%d,allLimit%d,useNear%v`,
-			market, coins, strBegin, strEnd, i*2, i, 3, 35, false)
-		regret.CutTail(market, coins, sign)
-		sign = fmt.Sprintf(`market%s,coins%s,%s~%s,far%d,near%d,limit%d,allLimit%d,useNear%v`,
-			market, coins, strBegin, strEnd, i*2, i, 3, 35, true)
+			market, coins, strBegin, strEnd, i*2, i, 3, 10, true)
 		regret.CutTail(market, coins, sign)
 	}
 	fmt.Println(`done`)

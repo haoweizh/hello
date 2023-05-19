@@ -107,11 +107,12 @@ func autoSimulate(market, coins string, begin, end time.Time, strBegin, strEnd s
 		settings[symbol] = &model.Setting{Market: market, Symbol: symbol, AmountLimit: float64(limit),
 			GridAmount: RegretTurtleGridAmount, Seconds: int64(seconds), Near: int64(near), Far: int64(far)}
 	}
-	sign := fmt.Sprintf(`market%s,coins%s,%s~%s,far%d,near%d,limit%d,allLimit%d,useNear%v`,
-		market, coins, strBegin, strEnd, far, near, limit, allLimit, useNear)
+	sign := fmt.Sprintf(`market%s,coins%s,%s~%s,far%d,near%d,limit%d,allLimit%d,useNear%vseconds%d`,
+		market, coins, strBegin, strEnd, far, near, limit, allLimit, useNear, seconds)
 	delNum := model.AppDB.Where(`function=?`, sign).Delete(&model.Order{}).RowsAffected
 	util.Info(`del %s %d rows affected`, sign, delNum)
 	regret.ProcessCandles(begin, end, far, allLimit, useNear, market, sign, settings)
+	util.Info(`auto simulation done %s`, sign)
 	util.StoreSyncMap(&model.CarryInfo, fmt.Sprintf("done %s %s 使用回撤%v %d~%d 限制%d 总限制%d",
 		strBegin, strEnd, useNear, near, far, limit, allLimit), `auto`)
 }
@@ -269,8 +270,9 @@ func simulate(c *gin.Context) {
 	useNear, useNearErr := strconv.ParseBool(strUseNear)
 	begin, errBegin := time.Parse(time.RFC3339, strBegin)
 	end, errEnd := time.Parse(time.RFC3339, strEnd)
-	sign := fmt.Sprintf(`market%s,coins%s,%s~%s,far%s,near%s,limit%s,allLimit%s,useNear%s`,
-		market, coins, strBegin, strEnd, farStr, nearStr, strLimit, strAllLimit, strUseNear)
+	sign := fmt.Sprintf(`market%s,coins%s,%s~%s,far%s,near%s,limit%s,allLimit%s,useNear%sseconds%s`,
+		market, coins, strBegin, strEnd, farStr, nearStr, strLimit, strAllLimit, strUseNear, strSeconds)
+	util.Info(fmt.Sprintf(`get simulation parameter %s auto%s`, sign, auto))
 	limit, limitErr := strconv.ParseInt(strLimit, 10, 64)
 	if limitErr != nil {
 		limit = 3
@@ -294,6 +296,7 @@ func simulate(c *gin.Context) {
 			autoSimulate(market, coins, begin, end, strBegin, strEnd, false, i, 2*i, 3, int(allLimit), int(seconds))
 		}
 		util.StoreSyncMap(&model.CarryInfo, nil, `auto`)
+		util.Info(fmt.Sprintf(`all auto simulation done`))
 		c.String(http.StatusOK, `auto done`)
 		return
 	}
