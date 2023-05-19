@@ -13,7 +13,6 @@ import (
 
 const NCalcLen = 50
 const tradeCost = 0.004
-const periodSeconds = 14400
 
 var absentTurtles sync.Map // symbol_unix seconds bool
 
@@ -27,7 +26,7 @@ type TurtleData struct {
 
 var slotLiquidated map[string]bool // market_orderSide_beginTimeString
 
-func GetTurtleData(candles []*model.Candle, near, far int, useNear bool) (turtleDataMap map[string]*TurtleData) {
+func GetTurtleData(candles []*model.Candle, near, far, slot int, useNear bool) (turtleDataMap map[string]*TurtleData) {
 	turtleDataMap = make(map[string]*TurtleData)
 	for i := far; i < len(candles); i++ {
 		turtleData := &TurtleData{liquidated: false, n: candles[i-1].N, Near: near, Far: far, useNear: useNear, begin: candles[i].Begin}
@@ -44,7 +43,7 @@ func GetTurtleData(candles []*model.Candle, near, far int, useNear bool) (turtle
 			if (turtleData.lowNear == 0 || turtleData.lowNear > candles[i-j].PriceLow) && j <= turtleData.Near {
 				turtleData.lowNear = candles[i-j].PriceLow
 			}
-			turtleDataMap[getTurtleKey(candles[i])] = turtleData
+			turtleDataMap[getTurtleKey(candles[i], int64(slot))] = turtleData
 		}
 	}
 	return turtleDataMap
@@ -230,8 +229,8 @@ func getTurtleCandles(candles []*model.Candle) {
 	}
 }
 
-func getTurtleKey(candle *model.Candle) (key string) {
-	seconds := candle.Begin.Unix() - (candle.Begin.Unix() % periodSeconds)
+func getTurtleKey(candle *model.Candle, slot int64) (key string) {
+	seconds := candle.Begin.Unix() - (candle.Begin.Unix() % slot)
 	return fmt.Sprintf(`%s_%s_%d`, candle.Market, candle.Symbol, seconds)
 }
 
@@ -248,7 +247,6 @@ func ProcessCandles(start, end time.Time, far, allLimit int, useNear bool, marke
 	secret := model.AppConfig.GetAccounts(market)[0].Secret
 	sortedCandles := api.GetMultiCandle(key, secret, market, 60, start, end, settings, false)
 	ago := int(math.Max(NCalcLen, float64(far)))
-	duration, _ := time.ParseDuration(fmt.Sprintf(`-%ds`, periodSeconds*ago))
 	turtleDataMap := make(map[string]*TurtleData)
 	slotLiquidated = make(map[string]bool)
 	if sortedCandles != nil && sortedCandles.Len() > 0 && sortedCandles[0] != nil && sortedCandles[len(sortedCandles)-1] != nil {
@@ -256,12 +254,15 @@ func ProcessCandles(start, end time.Time, far, allLimit int, useNear bool, marke
 			sortedCandles[0].Begin.String(), sortedCandles[0].Symbol,
 			sortedCandles[sortedCandles.Len()-1].Begin.String(), sortedCandles[sortedCandles.Len()-1].Symbol))
 	}
+	var slotSeconds int64
 	for _, setting := range settings {
-		temp := api.CombineCandles(key, secret, market, setting.Symbol, periodSeconds, start.Add(duration), end)
+		slotSeconds = setting.Seconds
+		duration, _ := time.ParseDuration(fmt.Sprintf(`-%ds`, int(setting.Seconds)*ago))
+		temp := api.CombineCandles(key, secret, market, setting.Symbol, int(setting.Seconds), start.Add(duration), end)
 		util.Info(fmt.Sprintf(`get turtle candle %s %s %d setting chance %d`,
 			market, setting.Symbol, len(temp), setting.Chance))
 		getTurtleCandles(temp)
-		tempTurtle := GetTurtleData(temp, int(setting.Near), int(setting.Far), useNear)
+		tempTurtle := GetTurtleData(temp, int(setting.Near), int(setting.Far), int(setting.Seconds), useNear)
 		for s, data := range tempTurtle {
 			turtleDataMap[s] = data
 		}
@@ -277,7 +278,7 @@ func ProcessCandles(start, end time.Time, far, allLimit int, useNear bool, marke
 				turtleTime = turtleTime.Add(time.Second * -1 * 86400)
 			}
 		}
-		turtleKey := getTurtleKey(sortedCandles[i])
+		turtleKey := getTurtleKey(sortedCandles[i], slotSeconds)
 		if turtleDataMap[turtleKey] != nil {
 			handlePrice(turtleDataMap[turtleKey], sortedCandles[i], settings, allLimit, sign)
 		} else {
