@@ -181,7 +181,8 @@ func PrepareSettings() {
 			functionMarketSettings = &sync.Map{}
 		}
 		if setting.Function != model.FunctionCross {
-			util.Notice(fmt.Sprintf(`load setting %s %s %s`, setting.Function, setting.Market, setting.Symbol))
+			util.Notice(fmt.Sprintf(`load setting %s %s %s %s`,
+				setting.Function, setting.Market, setting.Symbol, setting.SymbolRelated))
 		}
 		functionMarketSettings.Store(setting.Symbol, setting)
 		util.StoreSyncMap(localSymbolSettings, functionMarketSettings, setting.Function, setting.Market)
@@ -230,12 +231,12 @@ func handleCombineSettings(mumSetting *model.Setting, topMarketInfos map[string]
 		} else {
 			settingCombine = valueCombine.(*model.Setting)
 			settingCombine.SymbolRelated = ``
-			util.Notice(`add back combine %s %s`, mumSetting.Market, info.Name)
+			util.Notice(`add back combine %s %s of tops %d`, mumSetting.Market, info.Name, len(topMarketInfos))
 		}
 		if valueNormal != nil {
 			settingNormal = valueNormal.(*model.Setting)
 			settingNormal.SymbolRelated = ``
-			util.Notice(`add back normal %s %s`, mumSetting.Market, info.Name)
+			util.Notice(`add back normal %s %s of tops %d`, mumSetting.Market, info.Name, len(topMarketInfos))
 		}
 		model.AppDB.Save(settingCombine)
 		model.AppDB.Save(settingNormal)
