@@ -228,12 +228,12 @@ func Test_CutTail(t *testing.T) {
 	//coinNames := strings.Split(`CZCE.CY,CZCE.FG,CZCE.MA,CZCE.OI,CZCE.PF,CZCE.RM,CZCE.SA,CZCE.SF,CZCE.SM,CZCE.SR,CZCE.TA,CZCE.UR,CZCE.ZC,DCE.c,DCE.eb,DCE.eg,DCE.i,DCE.j,DCE.jm,DCE.l,DCE.m,DCE.p,DCE.pp,DCE.v,DCE.y,SHFE.bu,SHFE.cu,SHFE.fu,SHFE.hc,SHFE.pb,SHFE.rb,SHFE.ru`, `,`)
 	for i := 7; i <= 30; i++ {
 		sign := fmt.Sprintf(`market%s,coins%s,%s~%s,far%d,near%d,limit%d,allLimit%d,useNear%vseconds14400`,
-			market, coins, strBegin, strEnd, i*2, i, 3, 10, false)
+			market, coins, strBegin, strEnd, i*2, i, 3, 30, false)
 		//marketbinanceperp,coinsDOGE,SOL,ADA,MATIC,FIL,ATOM,TOMO,ONT,ZIL,OMG,2021-01-01T00:00:00+00:00~2023-05-01T00:00:00+00:00,far20,near10,limit3,allLimit36,useNearfalse
 		//marketbinanceperp,coinsDOGE,SOL,ADA,MATIC,FIL,ATOM,TOMO,ONT,ZIL,OMG,2021-01-01T00:00:00+00:00~2023-05-01T00:00:00+00:00,far14,near7,limit3,allLimit10,useNearfalse
 		regret.CutTail(market, coins, sign)
 		sign = fmt.Sprintf(`market%s,coins%s,%s~%s,far%d,near%d,limit%d,allLimit%d,useNear%vseconds14400`,
-			market, coins, strBegin, strEnd, i*2, i, 3, 10, true)
+			market, coins, strBegin, strEnd, i*2, i, 3, 30, true)
 		regret.CutTail(market, coins, sign)
 	}
 	fmt.Println(`done`)
