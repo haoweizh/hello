@@ -181,8 +181,8 @@ func PrepareSettings() {
 			functionMarketSettings = &sync.Map{}
 		}
 		if setting.Function != model.FunctionCross {
-			util.Notice(fmt.Sprintf(`load setting %s %s %s %s`,
-				setting.Function, setting.Market, setting.Symbol, setting.SymbolRelated))
+			util.Notice(fmt.Sprintf(`load setting %s %s %s %s %d %d`,
+				setting.Function, setting.Market, setting.Symbol, setting.SymbolRelated, setting.Far, setting.Near))
 		}
 		functionMarketSettings.Store(setting.Symbol, setting)
 		util.StoreSyncMap(localSymbolSettings, functionMarketSettings, setting.Function, setting.Market)

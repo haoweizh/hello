@@ -204,14 +204,12 @@ func Test_CreateReport(t *testing.T) {
 	//end, _ := time.Parse(time.RFC3339, `2023-01-01T00:00:00+08:00`)
 	market := model.GXZQ
 	market = model.BinancePerp
-	timeRage := `2020-05-01T00:00:00+00:00~2023-05-01T00:00:00+00:00`
+	timeRage := `2021-01-01T00:00:00+00:00~2023-05-01T00:00:00+00:00`
 	//coins := `CZCE.FG,DCE.jm,DCE.eb,CZCE.TA,SHFE.fu,DCE.p,CZCE.SF,SHFE.hc,DCE.v,DCE.y`
 	//coins := `DOGE,SOL,MATIC,CHZ,LINK,ADA,BNB,FIL,SUSHI,AXS,ATOM,WAVES`
 	//for _, s := range strings.Split(coins, `,`) {
-	coins := `BTC`
-	regret.CreateReport(market, coins, timeRage)
-	coins = `ETH`
-	regret.CreateReport(market, coins, timeRage)
+	coins := `DOGE,SOL,ADA,MATIC,FIL,ATOM,TOMO,ONT,ZIL,OMG`
+	regret.CreateReport(market, coins, timeRage, `14400`)
 }
 
 func Test_CutTail(t *testing.T) {

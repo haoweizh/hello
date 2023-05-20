@@ -262,7 +262,8 @@ func GetTurtleData(key, secret, function, symbol string, setting *model.Setting,
 	if setting == nil {
 		util.Notice(fmt.Sprintf(`fatal error nil setting after get turtle data`))
 	}
-	util.Notice(fmt.Sprintf(`need to create turtle data %s %s %s %s`, function, setting.Market, symbol, nowStr))
+	util.Notice(fmt.Sprintf(`need to create turtle data %s %s %s %s %d %d`,
+		function, setting.Market, symbol, nowStr, setting.Near, setting.Far))
 	useNear := false
 	if function == model.FunctionTurtle || function == model.FunctionTurtleNormal {
 		useNear = true
@@ -310,12 +311,12 @@ func GetTurtleData(key, secret, function, symbol string, setting *model.Setting,
 			data.N = candle.N
 			data.NVolume = candle.NVolume
 			data.Amount = CalcTurtleAmount(key, secret, setting, data.N)
-			util.Notice(fmt.Sprintf(`set data %f %f`, data.N, data.Amount))
+			util.Notice(fmt.Sprintf(`set data %s %f %f`, function, data.N, data.Amount))
 		}
 	}
 	if data.Amount > 0 && data.N > 0 {
 		util.StoreSyncMap(&TurtleDataSet, data, function, setting.Market, symbol, nowStr)
-		util.Notice(fmt.Sprintf(`set turtle%s %s %s %s  Amount:%e N:%e %d:%e-%e %d:%e-%e %v`,
+		util.Notice(fmt.Sprintf(`set turtle %s %s %s %s Amount:%e N:%e %d:%e-%e %d:%e-%e %v`,
 			function, setting.Market, symbol, nowStr, data.Amount, data.N, data.DaysNear, data.LowDaysNear,
 			data.HighDaysNear, data.DaysFar, data.LowDaysFar, data.HighDaysFar, data))
 		return data, setting
