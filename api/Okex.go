@@ -117,7 +117,7 @@ func reSubscribe(subscribes []interface{}) {
 			} else {
 				util.Notice(fmt.Sprintf(`bid ask too late okex %s %d %d`, symbol, time.Now().UnixMilli(), bidAsk.Ts))
 			}
-			setRequireReset(model.OKEX)
+			SetRequireReset(model.OKEX)
 			return
 		} else if success && bidAsk != nil && time.Now().UnixMilli()-int64(bidAsk.Ts) > 30000000 {
 			subArray = append(subArray, map[string]string{`channel`: chanelOKEX, `instId`: dialectSymbol})

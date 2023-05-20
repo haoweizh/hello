@@ -160,12 +160,15 @@ func Maintain() {
 	//go MaintainBalance()
 	go MaintainTransFee()
 	api.InitApp(true)
-	go func() {
-		for true {
-			time.Sleep(time.Hour * 24)
-			api.InitApp(false)
-		}
-	}()
+	//go func() {
+	//	for true {
+	//		time.Sleep(time.Hour * 24)
+	//		markets := api.GetMarkets()
+	//		for _, market := range markets {
+	//			api.InitMarketInfos(market)
+	//		}
+	//	}
+	//}()
 	for true {
 		go MaintainMarketChan()
 		time.Sleep(time.Minute * 2)

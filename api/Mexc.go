@@ -74,7 +74,7 @@ func maintainChannelMexc(subscribes []interface{}) {
 			if !needReset {
 				util.Notice(`no need reset %s`, model.Mexc)
 			} else {
-				setRequireReset(model.Mexc)
+				SetRequireReset(model.Mexc)
 			}
 		}
 	}

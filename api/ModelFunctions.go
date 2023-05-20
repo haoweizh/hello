@@ -348,27 +348,40 @@ func getSortedInfos(market string, num int) (marketInfoArray model.MarketInfoArr
 }
 
 func getDynamicMarketInfos(mumSetting *model.Setting, function string, accounts []*model.Account) (topMarketInfos map[string]*model.MarketInfo) {
+	InitMarketInfos(mumSetting.Market)
 	topMarketInfos = make(map[string]*model.MarketInfo)
 	turtleDataArray := TurtleDataArray{}
 	marketInfoArray, _ := getSortedInfos(mumSetting.Market, topMarketInfoLen)
 	for i := 0; i < marketInfoArray.Len() && len(topMarketInfos) < topMarketInfoLen; i++ {
 		_, marketType, coinValue, _ := model.GetFromStandard(mumSetting.Market, marketInfoArray[i].Name)
 		if strings.EqualFold(marketType, model.MarketTypePerp) && !model.CommonCoins[strings.ToLower(coinValue)] {
-			turtleData, _ := GetTurtleData(accounts[0].Key, accounts[0].Secret, function, marketInfoArray[i].Name, mumSetting, false)
-			if turtleData != nil {
-				topMarketInfos[marketInfoArray[i].Name] = marketInfoArray[i]
-				turtleDataArray = append(turtleDataArray, turtleData)
-				util.Notice(fmt.Sprintf(`get top turtle done %s %s`, mumSetting.Market, marketInfoArray[i].Name))
-			} else {
-				util.Notice(fmt.Sprintf(`get top turtle data fail %s %s`, mumSetting.Market, marketInfoArray[i].Name))
+			now := time.Now()
+			for (now.Hour() == 0 || now.Hour() == 8) && now.Minute() <= 7 {
+				turtleData, _ := GetTurtleData(accounts[0].Key, accounts[0].Secret, function, marketInfoArray[i].Name,
+					mumSetting, false)
+				if turtleData != nil {
+					topMarketInfos[marketInfoArray[i].Name] = marketInfoArray[i]
+					turtleDataArray = append(turtleDataArray, turtleData)
+					util.Notice(fmt.Sprintf(`get top turtle done %d of %d %s %s`,
+						i, topMarketInfoLen, mumSetting.Market, marketInfoArray[i].Name))
+					break
+				} else {
+					util.Notice(fmt.Sprintf(`get top turtle data fail %s %s`, mumSetting.Market, marketInfoArray[i].Name))
+					time.Sleep(time.Second * 10)
+				}
 			}
 		}
 	}
 	sort.Sort(turtleDataArray)
-	for i := 0; i < turtleDataArray.Len()-topTurtleDataLen; i++ {
-		delete(topMarketInfos, turtleDataArray[i].Symbol)
-		util.Notice(fmt.Sprintf(`remove not topped %s NVolume %f left %d`,
-			turtleDataArray[i].Symbol, turtleDataArray[i].NVolume, len(topMarketInfos)))
+	for i := 0; i < turtleDataArray.Len(); i++ {
+		if i < turtleDataArray.Len()-topTurtleDataLen {
+			delete(topMarketInfos, turtleDataArray[i].Symbol)
+			util.Notice(fmt.Sprintf(`remove not topped last %s %s %d of %d NVolume %f left %d`,
+				mumSetting.Market, turtleDataArray[i].Symbol, i, topTurtleDataLen, turtleDataArray[i].NVolume, len(topMarketInfos)))
+		} else {
+			util.Notice(fmt.Sprintf(`keep topped %s %s last %d of %d NVolume %f left %d`,
+				mumSetting.Market, turtleDataArray[i].Symbol, i, topTurtleDataLen, turtleDataArray[i].NVolume, len(topMarketInfos)))
+		}
 	}
 	return topMarketInfos
 }
@@ -399,18 +412,19 @@ func InitApp(refreshDynamic bool) bool {
 	PrepareSettings()
 	handled := false
 	for _, market := range appMarkets {
-		InitMarketInfos(market)
 		if refreshDynamic {
 			if handleMarketDynamic(market) {
 				handled = true
 			}
+		} else {
+			InitMarketInfos(market)
 		}
 	}
 	if handled {
 		PrepareSettings()
 	}
 	for _, market := range appMarkets {
-		setRequireReset(market)
+		SetRequireReset(market)
 	}
 	util.Notice(`finish load settings`)
 	settingLoading = false

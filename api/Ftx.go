@@ -74,7 +74,7 @@ func maintainChannelFtx(subscribes []interface{}) {
 				}
 				if bidAsk == nil || time.Now().UnixMilli()-int64(bidAsk.Ts) > 180000 {
 					util.Notice(fmt.Sprintf(`fail to get bidask ftx %s`, subscribe[1]))
-					setRequireReset(model.Ftx)
+					SetRequireReset(model.Ftx)
 					needReset = true
 					break
 				}

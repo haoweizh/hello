@@ -248,14 +248,15 @@ func GetTurtleData(key, secret, function, symbol string, setting *model.Setting,
 	if ok && value != nil {
 		return value.(*TurtleData), setting
 	}
-	if refreshDynamic {
+	_, _, coin, _ := model.GetFromStandard(setting.Market, symbol)
+	if refreshDynamic && !model.CommonCoins[strings.ToLower(coin)] {
 		refreshValue, refreshOk := DynamicHandleTime.Load(setting.Market)
 		if !refreshOk || refreshValue == nil || refreshValue.(time.Time).Add(time.Hour).Before(time.Now()) {
 			if handleMarketDynamic(setting.Market) {
 				PrepareSettings()
+				SetRequireReset(setting.Market)
+				setting = GetSetting(function, setting.Market, symbol)
 			}
-			setRequireReset(setting.Market)
-			setting = GetSetting(function, setting.Market, symbol)
 		}
 	}
 	if setting == nil {
@@ -314,9 +315,9 @@ func GetTurtleData(key, secret, function, symbol string, setting *model.Setting,
 	}
 	if data.Amount > 0 && data.N > 0 {
 		util.StoreSyncMap(&TurtleDataSet, data, function, setting.Market, symbol, nowStr)
-		util.Notice(fmt.Sprintf(`set turtle data %v %s %s %s %s  Amount:%e N:%e %d:%e-%e %d:%e-%e`,
-			data, function, setting.Market, symbol, nowStr, data.Amount, data.N, data.DaysNear, data.LowDaysNear,
-			data.HighDaysNear, data.DaysFar, data.LowDaysFar, data.HighDaysFar))
+		util.Notice(fmt.Sprintf(`set turtle%s %s %s %s  Amount:%e N:%e %d:%e-%e %d:%e-%e %v`,
+			function, setting.Market, symbol, nowStr, data.Amount, data.N, data.DaysNear, data.LowDaysNear,
+			data.HighDaysNear, data.DaysFar, data.LowDaysFar, data.HighDaysFar, data))
 		return data, setting
 	} else {
 		return nil, setting

@@ -20,7 +20,7 @@ var okTradeMaxResetTime = &sync.Map{} // key - symbol - init time in second
 var okexCrossing = sync.Map{}         // symbol - bool
 var USDs = map[string]bool{`USD`: true, `usd`: true, `USDT`: true, `usdt`: true, `USDC`: true, `usdc`: true, `BUSD`: true, `busd`: true}
 
-func setRequireReset(market string) {
+func SetRequireReset(market string) {
 	maintaining, _ := model.ChannelMaintaining.Load(market)
 	if maintaining == nil || !maintaining.(bool) {
 		util.Notice(`require reset %s`, market)
@@ -1067,7 +1067,6 @@ func InitMarketInfos(market string) (success bool) {
 	for symbol, info := range marketInfos {
 		util.StoreSyncMap(model.MarketInfos, info, market, symbol)
 	}
-
 	return success
 }
 

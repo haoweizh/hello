@@ -33,7 +33,7 @@ func SendToConnection(market string, connection *websocket.Conn, msg []byte) (er
 		return
 	}
 	if err = connection.WriteMessage(websocket.TextMessage, msg); err != nil {
-		setRequireReset(market)
+		SetRequireReset(market)
 		util.Notice(`fail to write to connection ` + market + string(msg) + err.Error())
 	}
 	return err
@@ -52,7 +52,7 @@ func SendToAllConnections(market string, msg []byte) (err error) {
 			continue
 		}
 		if err = connection.WriteMessage(websocket.TextMessage, msg); err != nil {
-			setRequireReset(market)
+			SetRequireReset(market)
 			util.Notice(fmt.Sprintf(`fail to write to all connection %s %d return: %s`, market, i, err.Error()))
 		}
 	}
@@ -72,7 +72,7 @@ func PongAllConnectionsInterval(market string, milliseconds int) (err error) {
 		deadline := time.Now().Add(5 * time.Second)
 		if writeError := connection.WriteControl(websocket.PongMessage, []byte{}, deadline); writeError != nil {
 			util.Notice(fmt.Sprintf(`fail to pong connection %d return: %s`, i, writeError.Error()))
-			setRequireReset(market)
+			SetRequireReset(market)
 			if writeError != nil {
 				err = writeError
 			}
@@ -127,7 +127,7 @@ func chanHandler(market string, stopChan chan struct{}, connection *websocket.Co
 		default:
 			_, message, err := connection.ReadMessage()
 			if err != nil {
-				setRequireReset(market)
+				SetRequireReset(market)
 				util.Notice(fmt.Sprintf(`%s can not read from websocket: %s`, market, err.Error()))
 				return
 			}
