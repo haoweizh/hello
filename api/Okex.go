@@ -246,7 +246,6 @@ var wsHandlerOKEX = func(connection *websocket.Conn, event []byte, orderHandler 
 	//		}
 	//	}()
 	//}
-	util.Notice(`ok event` + string(event))
 	responseJson, err := util.NewJSON(event)
 	if err != nil || responseJson == nil || responseJson.Get(`data`) == nil ||
 		len(responseJson.Get(`data`).MustArray()) == 0 ||

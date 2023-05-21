@@ -419,7 +419,8 @@ func InitApp(refreshDynamic bool) bool {
 			if handleMarketDynamic(market) {
 				handled = true
 			}
-		} else {
+		}
+		if !handled {
 			InitMarketInfos(market)
 		}
 	}
