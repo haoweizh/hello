@@ -230,9 +230,6 @@ func handleMsgOKEX(channel chan *simplejson.Json, symbol string) {
 					return true
 				})
 			}
-		} else {
-			oriJson, _ := responseJson.String()
-			util.SocketInfo(`okex response %s`, oriJson)
 		}
 	}
 }
@@ -249,6 +246,7 @@ var wsHandlerOKEX = func(connection *websocket.Conn, event []byte, orderHandler 
 	//		}
 	//	}()
 	//}
+	util.Notice(`ok event` + string(event))
 	responseJson, err := util.NewJSON(event)
 	if err != nil || responseJson == nil || responseJson.Get(`data`) == nil ||
 		len(responseJson.Get(`data`).MustArray()) == 0 ||
