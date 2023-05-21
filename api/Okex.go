@@ -230,6 +230,9 @@ func handleMsgOKEX(channel chan *simplejson.Json, symbol string) {
 					return true
 				})
 			}
+		} else {
+			oriJson, _ := responseJson.String()
+			util.SocketInfo(`okex response %s`, oriJson)
 		}
 	}
 }
