@@ -12,7 +12,6 @@ import (
 )
 
 const NCalcLen = 50
-const tradeCost = 0.0
 
 var absentTurtles sync.Map // symbol_unix seconds bool
 
@@ -74,12 +73,12 @@ func createTurtleOrder(setting *model.Setting, candle *model.Candle, orderSide s
 		CreatedAt:   candle.Begin,
 	}
 	if orderSide == model.OrderSideBuy {
-		order.DealPrice = price * (1 + tradeCost)
+		order.DealPrice = price * (1 + setting.CloseShortMargin)
 		if setting.Chance < 0 {
 			order.OrderType = model.OrderSideLiquidateShort
 		}
 	} else if orderSide == model.OrderSideSell {
-		order.DealPrice = price * (1 - tradeCost)
+		order.DealPrice = price * (1 - setting.CloseShortMargin)
 		if setting.Chance > 0 {
 			order.OrderType = model.OrderSideLiquidateLong
 		}
@@ -238,6 +237,7 @@ func getTurtleKey(candle *model.Candle, slot int64) (key string) {
 // setting.AmountLimit 开仓数上限
 // setting.GridAmount 标准一仓的数量
 // allLimit 小于0时代表没有限制
+// setting.CloseShortMargin 滑点
 func ProcessCandles(start, end time.Time, far, allLimit int, useNear bool, market, sign string, settings map[string]*model.Setting) {
 	if settings == nil || len(settings) == 0 {
 		return
@@ -360,10 +360,10 @@ func ToString(orders []*model.Order, market, singleLimit string, gridAmount floa
 		}
 		statistic.earnRate = (statistic.priceSell - statistic.priceBuy) / statistic.priceBuy * math.Min(statistic.amountBuy, statistic.amountSell)
 		earnRateAll += statistic.earnRate
-		str += fmt.Sprintf("%s %s %s %s 平均价差:%f‰ earnRate %.2f‰ 滑点%f 仓位限制:%s"+
+		str += fmt.Sprintf("%s %s %s %s 平均价差:%f‰ earnRate %.2f‰ 仓位限制:%s"+
 			"\nbuy%.0f次 avgPrice %f\n"+"sell%.0f次 avgPrice %f\n",
 			market, symbol, begin.String(), end.String(), 1000*(statistic.priceSell-statistic.priceBuy)/statistic.priceBuy,
-			statistic.earnRate, tradeCost, singleLimit, statistic.amountBuy/gridAmount, statistic.priceBuy, statistic.amountSell/gridAmount, statistic.priceSell)
+			statistic.earnRate, singleLimit, statistic.amountBuy/gridAmount, statistic.priceBuy, statistic.amountSell/gridAmount, statistic.priceSell)
 		avgWinRate := 0.0
 		if len(statistic.wins) > 0 {
 			avgWinRate = gridAmount * statistic.rateInAllWin / float64(len(statistic.wins))
