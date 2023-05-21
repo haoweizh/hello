@@ -291,8 +291,8 @@ func simulate(c *gin.Context) {
 	if sessionValue == nil || !codes[sessionValue.(string)] {
 		strNew = `false`
 	} else if auto == `true` && strNew == `true` {
-		for i := 7; i <= 30; i++ {
-			autoSimulate(market, coins, begin, end, strBegin, strEnd, true, i, 2*i, 3, int(allLimit), int(seconds))
+		for i := 3; i <= 25; i++ {
+			//autoSimulate(market, coins, begin, end, strBegin, strEnd, true, i, 2*i, 3, int(allLimit), int(seconds))
 			autoSimulate(market, coins, begin, end, strBegin, strEnd, false, i, 2*i, 3, int(allLimit), int(seconds))
 		}
 		util.StoreSyncMap(&model.CarryInfo, nil, `auto`)

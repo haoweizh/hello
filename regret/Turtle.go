@@ -12,7 +12,7 @@ import (
 )
 
 const NCalcLen = 50
-const tradeCost = 0.004
+const tradeCost = 0.0
 
 var absentTurtles sync.Map // symbol_unix seconds bool
 
