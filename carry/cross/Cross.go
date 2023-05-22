@@ -286,44 +286,12 @@ func initTradeLine(account *model.Account, setting *model.Setting, status *Carry
 	status.TradeLineSell = math.Max(standardScoreSell*(0.5+jumpSell*status.RateInAll), lowestScore) - status.FoundingRate
 	status.TradeLineBuy *= account.CarryRate
 	status.TradeLineSell *= account.CarryRate
-	crossRows, _ := model.AppDB.Model(model.Order{}).Select(`order_side, refresh_type,sum(price*abs(amount)),avg(price)`).
-		Where(`coin=? and created_at>?`, setting.Coin, time.Now().Add(time.Minute*-180)).Group(`order_side, refresh_type`).Rows()
-	if crossRows != nil {
-		crossValues := make(map[string]float64)
-		crossPrices := make(map[string]float64)
-		for crossRows.Next() {
-			var orderSide, refreshType string
-			var valueAll, priceAvg float64
-			_ = crossRows.Scan(&orderSide, &refreshType, &valueAll, &priceAvg)
-			crossValues[orderSide+refreshType] = valueAll
-			crossPrices[orderSide+refreshType] = priceAvg
-		}
-		crossRows.Close()
-		// 当发生comp的单均利润小于closeShortMargin，同向comp占比越大，开仓line越高
-		if crossValues[model.OrderSideBuy+model.FunctionComplement] > 300 &&
-			crossPrices[model.OrderSideSell+model.FunctionCross] > 0 && crossValues[model.OrderSideBuy+model.FunctionCross] > 0 {
-			lossRate := crossPrices[model.OrderSideBuy+model.FunctionComplement]/crossPrices[model.OrderSideSell+model.FunctionCross] - 1
-			if lossRate > 0 {
-				amtRate := crossValues[model.OrderSideBuy+model.FunctionComplement] / crossValues[model.OrderSideBuy+model.FunctionCross]
-				extra := math.Max(setting.CloseShortMargin, 0.001) * math.Pow(amtRate, 3) * lossRate * 400000
-				extra = math.Max(extra, 3*lossRate)
-				status.TradeLineBuy += extra
-				util.Notice(fmt.Sprintf(`comp extra buy %s %s compU %f compRate %f lossRate %f add %f`,
-					status.market, setting.Coin, crossValues[model.OrderSideBuy+model.FunctionComplement], amtRate, lossRate, extra))
-			}
-		}
-		if crossValues[model.OrderSideSell+model.FunctionComplement] > 300 &&
-			crossPrices[model.OrderSideSell+model.FunctionComplement] > 0 && crossValues[model.OrderSideSell+model.FunctionCross] > 0 {
-			lossRate := crossPrices[model.OrderSideBuy+model.FunctionCross]/crossPrices[model.OrderSideSell+model.FunctionComplement] - 1
-			if lossRate > 0 {
-				amtRate := crossValues[model.OrderSideSell+model.FunctionComplement] / crossValues[model.OrderSideSell+model.FunctionCross]
-				extra := math.Max(setting.CloseShortMargin, 0.001) * math.Pow(amtRate, 3) * lossRate * 400000
-				extra = math.Max(extra, 3*lossRate)
-				status.TradeLineSell += extra
-				util.Notice(fmt.Sprintf(`comp extra sell %s %s compU %f compRate %f lossRate %f add %f`,
-					status.market, setting.Coin, crossValues[model.OrderSideSell+model.FunctionComplement], amtRate, lossRate, extra))
-			}
-		}
+	tradeLineExtra := getTradeLineExtra(setting.Coin, setting.CloseShortMargin)
+	if tradeLineExtra != nil {
+		status.TradeLineBuy += tradeLineExtra.buyExtra
+		status.TradeLineSell += tradeLineExtra.sellExtra
+	} else {
+		util.Notice(fmt.Sprintf(`fatal error fail to get trade line extra %s`, setting.Coin))
 	}
 	if doRevert || account.CarryClose {
 		if status.Holding > 0 {

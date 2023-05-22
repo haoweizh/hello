@@ -24,6 +24,15 @@ const InsufficientCodeBinance = `-2010`
 const SmallInU = 10
 const BitgetPosLimit = 130
 
+// TradeLineExtra 由于comp比例过高或亏损过多，需要增加的额外开仓数额
+type TradeLineExtra struct {
+	coin                string
+	buyExtra, sellExtra float64
+	updateTime          time.Time
+}
+
+var extras = sync.Map{} // coin - *TradeLineExtra
+
 var InsufficientCodeOKEX = map[string]bool{`51008`: true, `51119`: true, `51120`: true, `51131`: true, `51502`: true,
 	`58350`: true, `59108`: true, `59200`: true}
 
@@ -80,6 +89,56 @@ type CarryStatus struct {
 	Holding                       float64
 	RateInAll                     float64 // 现货：该币种占总权益的比例；永续：以开仓价算该币种持仓占保证金百分比
 	FundingRateUpdateTime         time.Time
+}
+
+func getTradeLineExtra(coin string, closeLine float64) (tradeLineExtra *TradeLineExtra) {
+	now := time.Now()
+	value, ok := extras.Load(coin)
+	if ok && value != nil && value.(*TradeLineExtra).updateTime.Add(time.Minute*10).After(now) {
+		return value.(*TradeLineExtra)
+	}
+	tradeLineExtra = &TradeLineExtra{coin: coin, updateTime: now}
+	crossRows, _ := model.AppDB.Model(model.Order{}).Select(`order_side, refresh_type,sum(price*abs(amount)),avg(price)`).
+		Where(`coin=? and created_at>?`, coin, time.Now().Add(time.Minute*-180)).Group(`order_side, refresh_type`).Rows()
+	if crossRows != nil {
+		crossValues := make(map[string]float64)
+		crossPrices := make(map[string]float64)
+		for crossRows.Next() {
+			var orderSide, refreshType string
+			var valueAll, priceAvg float64
+			_ = crossRows.Scan(&orderSide, &refreshType, &valueAll, &priceAvg)
+			crossValues[orderSide+refreshType] = valueAll
+			crossPrices[orderSide+refreshType] = priceAvg
+		}
+		crossRows.Close()
+		// 当发生comp的单均利润小于closeShortMargin，同向comp占比越大，开仓line越高
+		if crossValues[model.OrderSideBuy+model.FunctionComplement] > 300 &&
+			crossPrices[model.OrderSideSell+model.FunctionCross] > 0 && crossValues[model.OrderSideBuy+model.FunctionCross] > 0 {
+			lossRate := crossPrices[model.OrderSideBuy+model.FunctionComplement]/crossPrices[model.OrderSideSell+model.FunctionCross] - 1
+			if lossRate > 0 {
+				amtRate := crossValues[model.OrderSideBuy+model.FunctionComplement] / crossValues[model.OrderSideBuy+model.FunctionCross]
+				extra := math.Max(closeLine, 0.001) * math.Pow(amtRate, 3) * lossRate * 400000
+				extra = math.Max(extra, 3*lossRate)
+				tradeLineExtra.buyExtra = extra
+				util.Notice(fmt.Sprintf(`comp extra buy %s compU %f compRate %f lossRate %f add %f`,
+					coin, crossValues[model.OrderSideBuy+model.FunctionComplement], amtRate, lossRate, extra))
+			}
+		}
+		if crossValues[model.OrderSideSell+model.FunctionComplement] > 300 &&
+			crossPrices[model.OrderSideSell+model.FunctionComplement] > 0 && crossValues[model.OrderSideSell+model.FunctionCross] > 0 {
+			lossRate := crossPrices[model.OrderSideBuy+model.FunctionCross]/crossPrices[model.OrderSideSell+model.FunctionComplement] - 1
+			if lossRate > 0 {
+				amtRate := crossValues[model.OrderSideSell+model.FunctionComplement] / crossValues[model.OrderSideSell+model.FunctionCross]
+				extra := math.Max(closeLine, 0.001) * math.Pow(amtRate, 3) * lossRate * 400000
+				extra = math.Max(extra, 3*lossRate)
+				tradeLineExtra.sellExtra = extra
+				util.Notice(fmt.Sprintf(`comp extra sell %s compU %f compRate %f lossRate %f add %f`,
+					coin, crossValues[model.OrderSideSell+model.FunctionComplement], amtRate, lossRate, extra))
+			}
+		}
+	}
+	extras.Store(coin, tradeLineExtra)
+	return
 }
 
 func isValidSymbol(market, symbol string) bool {
