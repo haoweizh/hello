@@ -6,7 +6,6 @@ import (
 	"hello/model"
 	"hello/util"
 	"math"
-	"strings"
 	"time"
 )
 
@@ -26,18 +25,16 @@ var ProcessCombineTurtle = func(settingCombine *model.Setting, tick *model.BidAs
 	}
 	now := util.GetNowUnixMillion()
 	maintaining, _ := model.ChannelMaintaining.Load(market)
+	success, _, _, _ := model.GetFromStandard(market, symbol)
 	if settingCombine == nil || tick == nil || tick.Asks == nil || tick.Bids == nil || model.AppConfig.Handle != `1` ||
 		(maintaining != nil && maintaining.(bool)) || (model.AppConfig.Env != `test` && now-int64(tick.Ts) > 10000) ||
-		time.Now().Minute() == 0 || len(strings.Trim(symbol, ` `)) == 0 {
+		time.Now().Minute() == 0 || !success {
 		return
 	}
 	settingNormal := api.GetSetting(model.FunctionTurtleNormal, market, symbol)
 	if settingNormal == nil {
 		util.Notice(fmt.Sprintf(`combine return no normal setting from %s %s`, market, symbol))
 		return
-	}
-	if symbol == `BTC_PERP` {
-		util.Notice(fmt.Sprintf(`normal %s %d %d`, market, settingNormal.Far, settingNormal.Near))
 	}
 	if (settingCombine.Chance != 0 && settingCombine.PriceX == 0) || (settingNormal.Chance != 0 && settingNormal.PriceX == 0) {
 		util.Notice(fmt.Sprintf(`combine return no last priceX %s %s %d %e %d %e`,

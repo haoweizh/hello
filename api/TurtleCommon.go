@@ -258,8 +258,6 @@ func GetTurtleData(key, secret, function, symbol string, setting *model.Setting,
 				PrepareSettings()
 				SetRequireReset(setting.Market)
 				setting = GetSetting(function, setting.Market, symbol)
-				util.Notice(fmt.Sprintf(`inside get turtle after %s %s %s %d %d`,
-					setting.Market, setting.Symbol, function, setting.Far, setting.Near))
 			}
 		}
 	}
