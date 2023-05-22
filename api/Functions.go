@@ -77,9 +77,11 @@ func RequireDepthChanReset(markets *model.Markets, market string) bool {
 			validSymbols++
 			//util.Notice(fmt.Sprintf(`RequireDepthChanReset valid %d %s %s %f<%f`,
 			//	validSymbols, market, symbol, delay, model.AppConfig.Delay))
+		} else {
+			util.Notice(fmt.Sprintf(`RequireDepthChanReset delay too long %s %s %f`, market, symbol, delay))
 		}
 	}
-	needReset = float64(validSymbols) < float64(len(symbols))*0.8 || len(symbols)-validSymbols > 30
+	needReset = float64(validSymbols) < float64(len(symbols))*0.8 || len(symbols)-validSymbols > 50
 	util.Notice(fmt.Sprintf(`RequireDepthChanReset %s %d  %f valid %d in %d needReset %v`,
 		market, now, model.AppConfig.Delay, validSymbols, len(symbols), needReset))
 	return needReset.(bool)
