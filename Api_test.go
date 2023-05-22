@@ -208,7 +208,7 @@ func Test_CreateReport(t *testing.T) {
 	//coins := `CZCE.FG,DCE.jm,DCE.eb,CZCE.TA,SHFE.fu,DCE.p,CZCE.SF,SHFE.hc,DCE.v,DCE.y`
 	//coins := `DOGE,SOL,MATIC,CHZ,LINK,ADA,BNB,FIL,SUSHI,AXS,ATOM,WAVES`
 	//for _, s := range strings.Split(coins, `,`) {
-	coins := `DOGE,SOL,ADA,MATIC,FIL,ATOM,TOMO,ONT,ZIL,OMG`
+	coins := `DOGE,SOL,ADA,MATIC,FIL,BNB,MTL,TOMO,RLC,MASK`
 	coins = `BTC`
 	regret.CreateReport(market, coins, timeRage, `86400`)
 	coins = `ETH`
@@ -218,10 +218,10 @@ func Test_CreateReport(t *testing.T) {
 func Test_CutTail(t *testing.T) {
 	model.NewConfig()
 	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
-	coins := `DOGE,SOL,ADA,MATIC,FIL,ATOM,TOMO,ONT,ZIL,OMG`
+	coins := `DOGE,SOL,ADA,MATIC,FIL,BNB,MTL,TOMO,RLC,MASK`
 	//allLimit := 12
 	market := model.BinancePerp
-	strBegin := `2020-05-01T00:00:00+00:00`
+	strBegin := `2022-05-01T00:00:00+00:00`
 	strEnd := `2023-05-01T00:00:00+00:00`
 	//coins := `CZCE.FG,DCE.jm,DCE.eb,CZCE.TA,SHFE.fu,DCE.p,CZCE.SF,SHFE.hc,DCE.v,DCE.y`
 	//coins := `DOGE,SOL,MATIC,CHZ,LINK,ADA,BNB,FIL,SUSHI,AXS,ATOM,WAVES`

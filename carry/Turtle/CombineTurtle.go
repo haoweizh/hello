@@ -424,7 +424,7 @@ func placeTurtleShort(account *model.Account, orderType string, data *api.Turtle
 			order.Function = function
 			go model.AppDB.Save(order)
 			if data.BreakShort && order.Status != model.CarryStatusSuccess {
-				util.Notice(`already break short move to adjust %v`, order.OrderId, order)
+				util.Notice(`already break short move to adjust %s %v`, order.OrderId, order)
 				data.OrderAdjust = append(data.OrderAdjust, order)
 			}
 		}
