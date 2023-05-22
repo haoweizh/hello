@@ -248,6 +248,8 @@ func GetTurtleData(key, secret, function, symbol string, setting *model.Setting,
 	if ok && value != nil {
 		return value.(*TurtleData), setting
 	}
+	util.Notice(fmt.Sprintf(`inside get turtle %s %s %s %d %d`,
+		setting.Market, setting.Symbol, function, setting.Far, setting.Near))
 	_, _, coin, _ := model.GetFromStandard(setting.Market, symbol)
 	if refreshDynamic && !model.CommonCoins[strings.ToLower(coin)] {
 		refreshValue, refreshOk := DynamicHandleTime.Load(setting.Market)
@@ -256,6 +258,8 @@ func GetTurtleData(key, secret, function, symbol string, setting *model.Setting,
 				PrepareSettings()
 				SetRequireReset(setting.Market)
 				setting = GetSetting(function, setting.Market, symbol)
+				util.Notice(fmt.Sprintf(`inside get turtle after %s %s %s %d %d`,
+					setting.Market, setting.Symbol, function, setting.Far, setting.Near))
 			}
 		}
 	}

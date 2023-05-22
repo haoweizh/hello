@@ -347,7 +347,8 @@ func getSortedInfos(market string, num int) (marketInfoArray model.MarketInfoArr
 	return marketInfoArray, topInfos
 }
 
-func getDynamicMarketInfos(mumSetting *model.Setting, function string, accounts []*model.Account) (topMarketInfos map[string]*model.MarketInfo) {
+func getDynamicMarketInfos(mumSetting *model.Setting, function string, accounts []*model.Account) (
+	topMarketInfos map[string]*model.MarketInfo) {
 	InitMarketInfos(mumSetting.Market)
 	topMarketInfos = make(map[string]*model.MarketInfo)
 	turtleDataArray := TurtleDataArray{}
