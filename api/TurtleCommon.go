@@ -15,7 +15,7 @@ type TurtleData struct {
 	// useNear是否在海龟交易时使用lowDaysNear和highDaysNear和priceX作为触发条件
 	// adjustChecked在设置为true前，不允许使用本Data进行交易
 	UseNear, BreakLong, BreakShort, Liquidated, AdjustChecked, OrderCleared   bool
-	TurtleTime, CheckTimeBreak, CheckTimeOpen                                 time.Time
+	TurtleTime, CheckUseApi, CheckTimeOpen                                    time.Time
 	HighDaysNear, LowDaysNear, HighDaysFar, LowDaysFar, LowAdjust, HighAdjust float64
 	HighToday, LowToday, N, NVolume, Amount                                   float64
 	DaysNear, DaysFar, DaysAdjust, combineBig                                 int // CombineBig: -1小单，1大单，0未初始化
@@ -404,17 +404,19 @@ func SetTurtleOrderStatus(function, market, symbol, orderId, status string) {
 }
 
 func CheckBreak(key, secret, market, symbol string, settings []*model.Setting, turtleData []*TurtleData,
-	tick *model.BidAsk) (checked bool) {
+	tick *model.BidAsk) (useApi bool) {
 	if (len(settings) != 2 && len(settings) != 1) || len(settings) != len(turtleData) {
 		util.Notice(`wrong combine turtle parameter`)
 		return false
 	}
-	if turtleData[0].CheckTimeBreak.Add(time.Minute * 5).After(util.GetNow()) {
-		return false
+	if turtleData[0].CheckUseApi.Add(time.Minute * 10).Before(util.GetNow()) {
+		useApi = true
 	}
 	for i, setting := range settings {
 		data := turtleData[i]
-		data.CheckTimeBreak = util.GetNow()
+		if useApi {
+			data.CheckUseApi = util.GetNow()
+		}
 		var orderLong, orderShort *model.Order
 		if data.OrderLong != nil && len(data.OrderLong) > 0 {
 			orderLong = data.OrderLong[0]
@@ -422,11 +424,13 @@ func CheckBreak(key, secret, market, symbol string, settings []*model.Setting, t
 		if data.OrderShort != nil && len(data.OrderShort) > 0 {
 			orderShort = data.OrderShort[0]
 		}
-		//if orderLong != nil && (orderLong.Status == model.CarryStatusSuccess || (orderLong.TriggerPrice > 0 &&
-		//	(orderLong.OrderType == model.OrderTypeStop && orderLong.TriggerPrice <= tick.Bids[0].Price) ||
-		//	(orderLong.OrderType == model.OrderTypeLimit && orderLong.Price > tick.Bids[0].Price))) {
 		if orderLong != nil {
-			if orderLong.Status == model.CarryStatusWorking {
+			if orderLong.TriggerPrice > 0 &&
+				(orderLong.OrderType == model.OrderTypeStop && orderLong.TriggerPrice <= tick.Bids[0].Price) ||
+				(orderLong.OrderType == model.OrderTypeLimit && orderLong.Price > tick.Bids[0].Price) {
+				orderLong.Status = model.CarryStatusSuccess
+			}
+			if orderLong.Status == model.CarryStatusWorking && useApi {
 				time.Sleep(time.Second * 3)
 				orderLong = QueryOrderById(key, secret, market, symbol, orderLong.OrderType, orderLong.OrderId)
 			}
@@ -437,11 +441,13 @@ func CheckBreak(key, secret, market, symbol string, settings []*model.Setting, t
 					tick.Asks[0].Price, orderLong.TriggerPrice, orderLong.Price, orderLong.OrderId))
 			}
 		}
-		//if orderShort != nil && (orderShort.Status == model.CarryStatusSuccess || (orderShort.TriggerPrice > 0 &&
-		//	(orderShort.OrderType == model.OrderTypeStop && orderShort.TriggerPrice >= tick.Asks[0].Price)) ||
-		//	(orderShort.OrderType == model.OrderTypeLimit && orderShort.Price < tick.Asks[0].Price)) {
 		if orderShort != nil {
-			if orderShort.Status == model.CarryStatusWorking {
+			if (orderShort.TriggerPrice > 0 &&
+				(orderShort.OrderType == model.OrderTypeStop && orderShort.TriggerPrice >= tick.Asks[0].Price)) ||
+				(orderShort.OrderType == model.OrderTypeLimit && orderShort.Price < tick.Asks[0].Price) {
+				orderShort.Status = model.CarryStatusSuccess
+			}
+			if orderShort.Status == model.CarryStatusWorking && useApi {
 				time.Sleep(time.Second * 3)
 				orderShort = QueryOrderById(key, secret, market, symbol, orderShort.OrderType, orderShort.OrderId)
 			}

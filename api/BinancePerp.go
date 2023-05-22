@@ -301,7 +301,9 @@ func placeOrderBinancePerp(key, secret string, order *model.Order, orderSide, or
 	amountStr := util.CutTailZero(fmt.Sprintf(`%f`, formattedAmount))
 	success, _, _, dialectSymbol := model.GetFromStandard(model.BinancePerp, symbol)
 	order.Price = price
-	order.TriggerPrice = price
+	stopPrice, stopDecimal := model.FormatPrice(model.BinancePerp, symbol, triggerPrice)
+	stopPriceStr := util.CutTailZero(strconv.FormatFloat(stopPrice, 'f', stopDecimal, 64))
+	order.TriggerPrice = stopPrice
 	if success {
 		client := futures.NewClient(key, secret)
 		service := client.NewCreateOrderService().Symbol(dialectSymbol).Quantity(amountStr)
@@ -317,9 +319,6 @@ func placeOrderBinancePerp(key, secret string, order *model.Order, orderSide, or
 			service.Price(priceStr)
 			service.TimeInForce(futures.TimeInForceTypeGTC)
 		} else if orderType == model.OrderTypeStop {
-			stopPrice, stopDecimal := model.FormatPrice(model.BinancePerp, symbol, triggerPrice)
-			stopPriceStr := util.CutTailZero(strconv.FormatFloat(stopPrice, 'f', stopDecimal, 64))
-			order.TriggerPrice = stopPrice
 			service.Type(futures.OrderTypeStop)
 			service.Price(priceStr)
 			service.StopPrice(stopPriceStr)

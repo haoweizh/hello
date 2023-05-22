@@ -745,6 +745,7 @@ func PlaceOrder(key, secret, orderSide, orderType, market, symbol, orderParam st
 	} else if order.Status == `` {
 		order.Status = model.CarryStatusWorking
 	}
+	order.TriggerPrice = triggerPrice
 	end := util.GetNowUnixMillion()
 	util.Notice(fmt.Sprintf(`...%s %s %s return order at %d distance %d %s %s price %f %f amount %f %f trigger %f %f id %s`,
 		orderSide, market, symbol, end, end-start, order.Status, order.ErrCode, price, order.Price, amount, order.Amount,
