@@ -23,6 +23,7 @@ type Setting struct {
 	CloseShortMargin   float64
 	GridAmount         float64
 	AmountLimit        float64
+	TradeCost          float64
 	ID                 uint `gorm:"primary_key"`
 	CreatedAt          time.Time
 	UpdatedAt          time.Time

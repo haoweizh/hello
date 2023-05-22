@@ -105,17 +105,22 @@ func autoSimulate(market, coins string, begin, end time.Time, strBegin, strEnd s
 	}
 	for _, coin := range coinArray {
 		symbol := coin + model.UniStandardTail[marketType]
-		settings[symbol] = &model.Setting{Market: market, Symbol: symbol, AmountLimit: float64(limit),
-			GridAmount: RegretTurtleGridAmount, Seconds: int64(seconds), Near: int64(near), Far: int64(far), CloseShortMargin: fee}
+		if useNear {
+			settings[symbol] = &model.Setting{Market: market, Symbol: symbol, AmountLimit: float64(limit),
+				GridAmount: RegretTurtleGridAmount, Seconds: int64(seconds), Near: int64(near), Far: int64(far), TradeCost: fee}
+		} else { // 以useNear false测试龟汤，所以没有设置滑点即tradeCost=0
+			settings[symbol] = &model.Setting{Market: market, Symbol: symbol, AmountLimit: float64(limit),
+				GridAmount: RegretTurtleGridAmount, Seconds: int64(seconds), Near: int64(near), Far: int64(far), TradeCost: 0}
+		}
+		sign := fmt.Sprintf(`market%s,coins%s,%s~%s,far%d,near%d,limit%d,allLimit%d,useNear%vseconds%d`,
+			market, coins, strBegin, strEnd, far, near, limit, allLimit, useNear, seconds)
+		delNum := model.AppDB.Where(`function=?`, sign).Delete(&model.Order{}).RowsAffected
+		util.Info(`del %s %d rows affected`, sign, delNum)
+		regret.ProcessCandles(begin, end, far, allLimit, useNear, market, sign, settings)
+		util.Info(`auto simulation done %s`, sign)
+		util.StoreSyncMap(&model.CarryInfo, fmt.Sprintf("done %s %s 使用回撤%v %d~%d 限制%d 总限制%d",
+			strBegin, strEnd, useNear, near, far, limit, allLimit), `auto`)
 	}
-	sign := fmt.Sprintf(`market%s,coins%s,%s~%s,far%d,near%d,limit%d,allLimit%d,useNear%vseconds%d`,
-		market, coins, strBegin, strEnd, far, near, limit, allLimit, useNear, seconds)
-	delNum := model.AppDB.Where(`function=?`, sign).Delete(&model.Order{}).RowsAffected
-	util.Info(`del %s %d rows affected`, sign, delNum)
-	regret.ProcessCandles(begin, end, far, allLimit, useNear, market, sign, settings)
-	util.Info(`auto simulation done %s`, sign)
-	util.StoreSyncMap(&model.CarryInfo, fmt.Sprintf("done %s %s 使用回撤%v %d~%d 限制%d 总限制%d",
-		strBegin, strEnd, useNear, near, far, limit, allLimit), `auto`)
 }
 
 func simulateGXZQ(c *gin.Context) {
@@ -296,10 +301,8 @@ func simulate(c *gin.Context) {
 	} else if auto == `true` && strNew == `true` {
 		for i := 3; i <= 25; i++ {
 			//autoSimulate(market, coins, begin, end, strBegin, strEnd, true, i, 2*i, 3, int(allLimit), int(seconds))
-			coins = `BTC`
 			autoSimulate(market, coins, begin, end, strBegin, strEnd, true, i, 2*i, 3, int(allLimit), int(seconds), fee)
-			coins = `ETH`
-			autoSimulate(market, coins, begin, end, strBegin, strEnd, true, i, 2*i, 3, int(allLimit), int(seconds), fee)
+			autoSimulate(market, coins, begin, end, strBegin, strEnd, false, i, 2*i, 3, int(allLimit), int(seconds), fee)
 		}
 		util.StoreSyncMap(&model.CarryInfo, nil, `auto`)
 		util.Info(fmt.Sprintf(`all auto simulation done fee %f`, fee))
@@ -330,7 +333,7 @@ func simulate(c *gin.Context) {
 		}
 		symbol := coinArray[i] + tail
 		settings[symbol] = &model.Setting{Market: market, Symbol: symbol, AmountLimit: float64(limit),
-			GridAmount: RegretTurtleGridAmount, Near: near, Far: far, Seconds: seconds, CloseShortMargin: fee}
+			GridAmount: RegretTurtleGridAmount, Near: near, Far: far, Seconds: seconds, TradeCost: fee}
 	}
 	if strNew == `true` {
 		go model.AppDB.Where(`function=?`, sign).Delete(&model.Order{})

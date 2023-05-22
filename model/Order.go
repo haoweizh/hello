@@ -29,8 +29,8 @@ type Order struct {
 	Symbol            string
 	OrderTime         time.Time
 	OrderUpdateTime   time.Time
-	ID                uint `gorm:"primary_key"`
-	CreatedAt         time.Time
+	ID                uint      `gorm:"primary_key"`
+	CreatedAt         time.Time `gorm:"idx_create_time"`
 	UpdatedAt         time.Time
 }
 

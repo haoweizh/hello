@@ -31,7 +31,7 @@ type TradeLineExtra struct {
 	updateTime          time.Time
 }
 
-var extras = sync.Map{} // coin - *TradeLineExtra
+//var extras = sync.Map{} // coin - *TradeLineExtra
 
 var InsufficientCodeOKEX = map[string]bool{`51008`: true, `51119`: true, `51120`: true, `51131`: true, `51502`: true,
 	`58350`: true, `59108`: true, `59200`: true}
@@ -92,12 +92,12 @@ type CarryStatus struct {
 }
 
 func getTradeLineExtra(coin string, closeLine float64) (tradeLineExtra *TradeLineExtra) {
-	now := time.Now()
-	value, ok := extras.Load(coin)
-	if ok && value != nil && value.(*TradeLineExtra).updateTime.Add(time.Minute*10).After(now) {
-		return value.(*TradeLineExtra)
-	}
-	tradeLineExtra = &TradeLineExtra{coin: coin, updateTime: now}
+	//now := time.Now()
+	//value, ok := extras.Load(coin)
+	//if ok && value != nil && value.(*TradeLineExtra).updateTime.Add(time.Minute*10).After(now) {
+	//	return value.(*TradeLineExtra)
+	//}
+	//tradeLineExtra = &TradeLineExtra{coin: coin, updateTime: now}
 	crossRows, _ := model.AppDB.Model(model.Order{}).Select(`order_side, refresh_type,sum(price*abs(amount)),avg(price)`).
 		Where(`coin=? and created_at>?`, coin, time.Now().Add(time.Minute*-180)).Group(`order_side, refresh_type`).Rows()
 	if crossRows != nil {
@@ -137,7 +137,7 @@ func getTradeLineExtra(coin string, closeLine float64) (tradeLineExtra *TradeLin
 			}
 		}
 	}
-	extras.Store(coin, tradeLineExtra)
+	//extras.Store(coin, tradeLineExtra)
 	return
 }
 

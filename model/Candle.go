@@ -14,7 +14,7 @@ type Candle struct {
 	PriceHigh  float64
 	PriceLow   float64
 	Volume     float64
-	N          float64 // n value for turtle
+	N, M       float64 // n value for turtle
 	NVolume    float64 // 用n值的平滑计算方法计算的交易量
 	ID         uint    `gorm:"primary_key"`
 	CreatedAt  time.Time

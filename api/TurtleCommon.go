@@ -275,7 +275,7 @@ func GetTurtleData(key, secret, function, symbol string, setting *model.Setting,
 	indexMax := math.Max(turtleNSlotsMin, float64(data.DaysFar))
 	candles := CombineCandles(key, secret, setting.Market, symbol, int(setting.Seconds),
 		nowPeriod.Add(time.Second*time.Duration(setting.Seconds*-1*turtleNSlots)), nowPeriod)
-	if !calcCandleN(candles) {
+	if !CalcCandleN(candles) {
 		util.Notice(fmt.Sprintf(`fail to calc candles n %s %s candle num %d`, setting.Market, symbol, len(candles)))
 		return nil, setting
 	}
@@ -334,7 +334,9 @@ func findCandle(candles []*model.Candle, begin time.Time) (resultCandle *model.C
 	return nil
 }
 
-func calcCandleN(candles []*model.Candle) (success bool) {
+const CandleMLen = 20
+
+func CalcCandleN(candles []*model.Candle) (success bool) {
 	if len(candles) < turtleNSlotsMin {
 		return false
 	}
@@ -351,6 +353,14 @@ func calcCandleN(candles []*model.Candle) (success bool) {
 	for i := turtleNSlotsMin; i < len(sortedCandles.Value); i++ {
 		sortedCandles.Value[i].N = (sortedCandles.Value[i-1].N*9 + sortedCandles.Value[i].PriceHigh - sortedCandles.Value[i].PriceLow) / 10
 		sortedCandles.Value[i].NVolume = (sortedCandles.Value[i-1].NVolume*9 + sortedCandles.Value[i].Volume) / 10
+	}
+	disAll := 0.0
+	for i := 0; i < len(sortedCandles.Value); i++ {
+		disAll += sortedCandles.Value[i].PriceHigh - sortedCandles.Value[i].PriceLow
+		if i >= CandleMLen {
+			disAll = disAll - sortedCandles.Value[i-CandleMLen].PriceHigh + sortedCandles.Value[i-CandleMLen].PriceLow
+			sortedCandles.Value[i].M = disAll / CandleMLen
+		}
 	}
 	//for i, candle := range candles {
 	//	util.Notice(fmt.Sprintf(`candle calc %d %s %s %s %f`, i, candle.Market, candle.Symbol, candle.Begin.String(), candle.N))
