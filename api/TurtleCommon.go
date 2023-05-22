@@ -459,7 +459,7 @@ func CheckBreak(key, secret, market, symbol string, settings []*model.Setting, t
 			}
 		}
 	}
-	return true
+	return useApi
 }
 
 func CanOpenCombine(setting, settingNormal *model.Setting, data, dataNormal *TurtleData) (canOpen bool, inAll float64) {
