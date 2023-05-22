@@ -92,12 +92,12 @@ type CarryStatus struct {
 }
 
 func getTradeLineExtra(coin string, closeLine float64) (tradeLineExtra *TradeLineExtra) {
-	//now := time.Now()
+	now := time.Now()
 	//value, ok := extras.Load(coin)
 	//if ok && value != nil && value.(*TradeLineExtra).updateTime.Add(time.Minute*10).After(now) {
 	//	return value.(*TradeLineExtra)
 	//}
-	//tradeLineExtra = &TradeLineExtra{coin: coin, updateTime: now}
+	tradeLineExtra = &TradeLineExtra{coin: coin, updateTime: now}
 	crossRows, _ := model.AppDB.Model(model.Order{}).Select(`order_side, refresh_type,sum(price*abs(amount)),avg(price)`).
 		Where(`coin=? and created_at>?`, coin, time.Now().Add(time.Minute*-180)).Group(`order_side, refresh_type`).Rows()
 	if crossRows != nil {
