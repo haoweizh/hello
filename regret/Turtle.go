@@ -89,14 +89,14 @@ func createTurtleOrder(setting *model.Setting, candle *model.Candle, orderSide s
 
 // allLimit 小于0代表没有总仓位限制
 // 在当前回归中，龟汤useNear false，海龟useNear true，龟汤数量为amount*m/n
-func calcTurtleOrders(setting *model.Setting, turtleData *TurtleData) (
+func calcTurtleOrders(setting *model.Setting, turtleData *TurtleData, useM bool) (
 	priceShort, priceLong, amountShort, amountLong float64, posNumShort, posNumLong int64) {
 	priceShort = turtleData.lowFar
 	priceLong = turtleData.highFar
 	if setting.Chance == 0 && !turtleData.liquidated { // 开初始仓
 		if !slotLiquidated[fmt.Sprintf(`%s_%s_%s_%s`, setting.Market, setting.Symbol, model.OrderSideBuy, turtleData.begin.String())] {
 			amountLong = setting.GridAmount / turtleData.n
-			if !turtleData.useNear {
+			if useM {
 				amountLong = amountLong * turtleData.m / turtleData.n
 			}
 			posNumLong = 1
@@ -105,7 +105,7 @@ func calcTurtleOrders(setting *model.Setting, turtleData *TurtleData) (
 		}
 		if !slotLiquidated[fmt.Sprintf(`%s_%s_%s_%s`, setting.Market, setting.Symbol, model.OrderSideSell, turtleData.begin.String())] {
 			amountShort = setting.GridAmount / turtleData.n
-			if !turtleData.useNear {
+			if useM {
 				amountShort = amountShort * turtleData.m / turtleData.n
 			}
 			posNumShort = 1
@@ -122,7 +122,7 @@ func calcTurtleOrders(setting *model.Setting, turtleData *TurtleData) (
 		amountShort = setting.OpenShortMargin
 		posNumShort = int64(math.Abs(float64(setting.Chance)))
 		amountLong = setting.GridAmount / turtleData.n
-		if !turtleData.useNear {
+		if useM {
 			amountLong = amountLong * turtleData.m / turtleData.n
 		}
 		posNumLong = 1
@@ -137,7 +137,7 @@ func calcTurtleOrders(setting *model.Setting, turtleData *TurtleData) (
 		posNumLong = int64(math.Abs(float64(setting.Chance)))
 		posNumShort = 1
 		amountShort = setting.GridAmount / turtleData.n
-		if !turtleData.useNear {
+		if useM {
 			amountShort = amountShort * turtleData.m / turtleData.n
 		}
 	}
@@ -151,7 +151,8 @@ func getCurrentChances(settings map[string]*model.Setting) (chances int64) {
 	return chances
 }
 
-func handlePrice(turtleData *TurtleData, candle *model.Candle, settings map[string]*model.Setting, allLimit int, sign string) {
+func handlePrice(turtleData *TurtleData, candle *model.Candle, settings map[string]*model.Setting, allLimit int,
+	sign string, useM bool) {
 	var setting *model.Setting
 	if settings != nil && candle != nil && settings[candle.Symbol] != nil {
 		setting = settings[candle.Symbol]
@@ -175,7 +176,7 @@ func handlePrice(turtleData *TurtleData, candle *model.Candle, settings map[stri
 	}
 	currentChances := getCurrentChances(settings)
 	if turtleData.orderLong == nil && turtleData.orderShort == nil {
-		priceShort, priceLong, amountShort, amountLong, posNumShort, posNumLong := calcTurtleOrders(setting, turtleData)
+		priceShort, priceLong, amountShort, amountLong, posNumShort, posNumLong := calcTurtleOrders(setting, turtleData, useM)
 		turtleData.orderShort = createTurtleOrder(setting, candle, model.OrderSideSell,
 			priceShort, amountShort, turtleData.n, int(currentChances), allLimit, posNumShort)
 		turtleData.orderLong = createTurtleOrder(setting, candle, model.OrderSideBuy,
@@ -241,7 +242,7 @@ func getTurtleKey(candle *model.Candle, slot int64) (key string) {
 // setting.GridAmount 标准一仓的数量
 // allLimit 小于0时代表没有限制
 // setting.OpenShortMargin 已开仓数量
-func ProcessCandles(start, end time.Time, far, allLimit int, useNear bool, market, sign string, settings map[string]*model.Setting) {
+func ProcessCandles(start, end time.Time, far, allLimit int, useNear, useM bool, market, sign string, settings map[string]*model.Setting) {
 	if settings == nil || len(settings) == 0 {
 		return
 	}
@@ -283,7 +284,7 @@ func ProcessCandles(start, end time.Time, far, allLimit int, useNear bool, marke
 		}
 		turtleKey := getTurtleKey(sortedCandles[i], slotSeconds)
 		if turtleDataMap[turtleKey] != nil {
-			handlePrice(turtleDataMap[turtleKey], sortedCandles[i], settings, allLimit, sign)
+			handlePrice(turtleDataMap[turtleKey], sortedCandles[i], settings, allLimit, sign, useM)
 		} else {
 			value, ok := absentTurtles.Load(fmt.Sprintf(`%s%d`, sortedCandles[i].Symbol, turtleTime.Unix()))
 			if !ok || value == nil || !value.(bool) {
