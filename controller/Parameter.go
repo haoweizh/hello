@@ -237,7 +237,7 @@ func simulate(c *gin.Context) {
 		autoMsg, _ := util.LoadSyncMap(&model.CarryInfo, `auto`)
 		if ok && msg != nil {
 			if autoMsg != nil {
-				c.String(http.StatusOK, fmt.Sprintf("simulating...\nanto："+msg.(string), autoMsg.(string)))
+				c.String(http.StatusOK, fmt.Sprintf("simulating...\nanto：%s %s", msg.(string), autoMsg.(string)))
 			} else {
 				c.String(http.StatusOK, "simulating...\n"+msg.(string))
 			}
