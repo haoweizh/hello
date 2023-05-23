@@ -305,12 +305,6 @@ func simulate(c *gin.Context) {
 		strNew = `false`
 	} else if auto == `true` && strNew == `true` {
 		for i := 3; i <= 25; i++ {
-			//autoSimulate(market, coins, begin, end, strBegin, strEnd, true, i, 2*i, 3, int(allLimit), int(seconds))
-			coins = `BTC`
-			autoSimulate(market, coins, begin, end, strBegin, strEnd, true, false, i, 2*i, 3, int(allLimit), int(seconds), fee)
-			autoSimulate(market, coins, begin, end, strBegin, strEnd, false, false, i, 2*i, 3, int(allLimit), int(seconds), fee)
-			autoSimulate(market, coins, begin, end, strBegin, strEnd, false, true, i, 2*i, 3, int(allLimit), int(seconds), fee)
-			coins = `ETH`
 			autoSimulate(market, coins, begin, end, strBegin, strEnd, true, false, i, 2*i, 3, int(allLimit), int(seconds), fee)
 			autoSimulate(market, coins, begin, end, strBegin, strEnd, false, false, i, 2*i, 3, int(allLimit), int(seconds), fee)
 			autoSimulate(market, coins, begin, end, strBegin, strEnd, false, true, i, 2*i, 3, int(allLimit), int(seconds), fee)
