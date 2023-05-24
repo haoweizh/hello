@@ -113,8 +113,9 @@ func GetFunctions(market, symbol string) *sync.Map {
 	return nil
 }
 
-const topMarketInfoLen = 30
-const topTurtleDataLen = 10
+const topMarketInfoLen = 10
+
+//const topTurtleDataLen = 10
 
 func PrepareSettings() {
 	localSymbolSettings := &sync.Map{}
@@ -361,7 +362,7 @@ func getDynamicMarketInfos(mumSetting *model.Setting, accounts []*model.Account)
 	topMarketInfos map[string]*model.MarketInfo) {
 	InitMarketInfos(mumSetting.Market)
 	topMarketInfos = make(map[string]*model.MarketInfo)
-	turtleDataArray := TurtleDataArray{}
+	//turtleDataArray := TurtleDataArray{}
 	marketInfoArray, _ := getSortedInfos(mumSetting.Market, topMarketInfoLen)
 	for i := 0; i < marketInfoArray.Len() && len(topMarketInfos) < topMarketInfoLen; i++ {
 		_, marketType, coinValue, _ := model.GetFromStandard(mumSetting.Market, marketInfoArray[i].Name)
@@ -375,7 +376,7 @@ func getDynamicMarketInfos(mumSetting *model.Setting, accounts []*model.Account)
 					mumSetting, false)
 				if turtleData != nil {
 					topMarketInfos[marketInfoArray[i].Name] = marketInfoArray[i]
-					turtleDataArray = append(turtleDataArray, turtleData)
+					//turtleDataArray = append(turtleDataArray, turtleData)
 					util.Notice(fmt.Sprintf(`get top turtle done %d of %d %s %s`,
 						i, topMarketInfoLen, mumSetting.Market, marketInfoArray[i].Name))
 					break
@@ -386,17 +387,17 @@ func getDynamicMarketInfos(mumSetting *model.Setting, accounts []*model.Account)
 			}
 		}
 	}
-	sort.Sort(turtleDataArray)
-	for i := 0; i < turtleDataArray.Len(); i++ {
-		if i < turtleDataArray.Len()-topTurtleDataLen {
-			delete(topMarketInfos, turtleDataArray[i].Symbol)
-			util.Notice(fmt.Sprintf(`remove not topped last %s %s %d of %d NVolume %f left %d`,
-				mumSetting.Market, turtleDataArray[i].Symbol, i, topTurtleDataLen, turtleDataArray[i].NVolume, len(topMarketInfos)))
-		} else {
-			util.Notice(fmt.Sprintf(`keep topped %s %s last %d of %d NVolume %f left %d`,
-				mumSetting.Market, turtleDataArray[i].Symbol, i, topTurtleDataLen, turtleDataArray[i].NVolume, len(topMarketInfos)))
-		}
-	}
+	//sort.Sort(turtleDataArray)
+	//for i := 0; i < turtleDataArray.Len(); i++ {
+	//	if i < turtleDataArray.Len()-topTurtleDataLen {
+	//		delete(topMarketInfos, turtleDataArray[i].Symbol)
+	//		util.Notice(fmt.Sprintf(`remove not topped last %s %s %d of %d NVolume %f left %d`,
+	//			mumSetting.Market, turtleDataArray[i].Symbol, i, topTurtleDataLen, turtleDataArray[i].NVolume, len(topMarketInfos)))
+	//	} else {
+	//		util.Notice(fmt.Sprintf(`keep topped %s %s last %d of %d NVolume %f left %d`,
+	//			mumSetting.Market, turtleDataArray[i].Symbol, i, topTurtleDataLen, turtleDataArray[i].NVolume, len(topMarketInfos)))
+	//	}
+	//}
 	return topMarketInfos
 }
 
