@@ -237,15 +237,15 @@ const turtleNSlots = 100
 const turtleNSlotsMin = 10
 
 // GetTurtleData refreshDynamic false时代表仅作为检查是否有足够turtleData作为top market info使用，此时不会存在缓存中，否则会引起far near错误
-func GetTurtleData(key, secret, function, symbol string, setting *model.Setting, refreshDynamic bool) (data *TurtleData, settingRefresh *model.Setting) {
+func GetTurtleData(key, secret, symbol string, setting *model.Setting, refreshDynamic bool) (data *TurtleData, settingRefresh *model.Setting) {
 	nowPeriod, nowStr := model.GetNowPeriod(setting.Market, setting.Seconds)
 	today, _ := model.GetMarketToday(setting.Market)
-	value, ok := util.LoadSyncMap(&TurtleDataSet, function, setting.Market, symbol, nowStr)
+	value, ok := util.LoadSyncMap(&TurtleDataSet, setting.Function, setting.Market, symbol, nowStr)
 	if ok && value != nil {
 		return value.(*TurtleData), setting
 	}
 	util.Notice(fmt.Sprintf(`inside get turtle %s %s %s %d %d second %d %d`,
-		setting.Market, symbol, function, setting.Far, setting.Near, today.Unix(), nowPeriod.Unix()))
+		setting.Market, symbol, setting.Function, setting.Far, setting.Near, today.Unix(), nowPeriod.Unix()))
 	_, _, coin, _ := model.GetFromStandard(setting.Market, symbol)
 	if today.Unix() == nowPeriod.Unix() && refreshDynamic && !model.CommonCoins[strings.ToLower(coin)] {
 		refreshValue, refreshOk := DynamicHandleTime.Load(setting.Market)
@@ -253,7 +253,7 @@ func GetTurtleData(key, secret, function, symbol string, setting *model.Setting,
 			if handleMarketDynamic(setting.Market) {
 				PrepareSettings()
 				SetRequireReset(setting.Market)
-				setting = GetSetting(function, setting.Market, symbol)
+				setting = GetSetting(setting.Function, setting.Market, symbol)
 			}
 		}
 	}
@@ -261,11 +261,11 @@ func GetTurtleData(key, secret, function, symbol string, setting *model.Setting,
 		util.Notice(fmt.Sprintf(`fatal error nil setting after get turtle data`))
 	}
 	util.Notice(fmt.Sprintf(`need to create turtle data %s %s %s %s %d %d`,
-		function, setting.Market, symbol, nowStr, setting.Far, setting.Near))
+		setting.Function, setting.Market, symbol, nowStr, setting.Far, setting.Near))
 	useNear := false
-	if function == model.FunctionTurtle || function == model.FunctionTurtleNormal {
+	if setting.Function == model.FunctionTurtle || setting.Function == model.FunctionTurtleNormal {
 		useNear = true
-	} else if function == model.FunctionCombineTurtle {
+	} else if setting.Function == model.FunctionCombineTurtle {
 		useNear = false
 	}
 	data = &TurtleData{TurtleTime: nowPeriod, Symbol: symbol, BreakLong: false, BreakShort: false, Liquidated: false,
@@ -309,14 +309,14 @@ func GetTurtleData(key, secret, function, symbol string, setting *model.Setting,
 			data.N = candle.N
 			data.NVolume = candle.NVolume
 			data.Amount = CalcTurtleAmount(key, secret, setting, data.N)
-			util.Notice(fmt.Sprintf(`set data %s %f %f`, function, data.N, data.Amount))
+			util.Notice(fmt.Sprintf(`set data %s %f %f`, setting.Function, data.N, data.Amount))
 		}
 	}
 	if data.Amount > 0 && data.N > 0 {
 		if refreshDynamic {
-			util.StoreSyncMap(&TurtleDataSet, data, function, setting.Market, symbol, nowStr)
+			util.StoreSyncMap(&TurtleDataSet, data, setting.Function, setting.Market, symbol, nowStr)
 			util.Notice(fmt.Sprintf(`set turtle %s %s %s %s Amount:%e N:%e %d:%e-%e %d:%e-%e %v`,
-				function, setting.Market, symbol, nowStr, data.Amount, data.N, data.DaysNear, data.LowDaysNear,
+				setting.Function, setting.Market, symbol, nowStr, data.Amount, data.N, data.DaysNear, data.LowDaysNear,
 				data.HighDaysNear, data.DaysFar, data.LowDaysFar, data.HighDaysFar, data))
 		}
 		return data, setting
