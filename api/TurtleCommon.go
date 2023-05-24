@@ -284,11 +284,6 @@ func GetTurtleData(key, secret, symbol string, setting *model.Setting, refreshDy
 			if time.Now().Second() == 0 {
 				util.Notice(`can not calc turtleDate as nil candle %s %s %s %s %d`,
 					setting.Market, symbol, data.Symbol, currentPeriod.String(), len(candles))
-				if setting.Market == model.BinancePerp && setting.Symbol == `CFX_PERP` {
-					for j, c := range candles {
-						util.Notice(fmt.Sprintf(`cfx candle %d %s`, j, c.Begin.String()))
-					}
-				}
 			}
 			return nil, setting
 		}
@@ -335,6 +330,9 @@ func findCandle(candles []*model.Candle, begin time.Time) (resultCandle *model.C
 		if candle.Begin == begin {
 			return candle
 		}
+	}
+	for _, candle := range candles {
+		util.Notice(fmt.Sprintf(`no found candle %s %s`, begin.String(), candle.Begin.String()))
 	}
 	return nil
 }
