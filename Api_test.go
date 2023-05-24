@@ -255,13 +255,13 @@ func Test_CutTail(t *testing.T) {
 
 func Test_initTurtleN(t *testing.T) {
 	model.NewConfig()
-	settings := map[string]*model.Setting{`BTC_PERP`: nil}
+	//settings := map[string]*model.Setting{`BTC_PERP`: nil}
 	market := model.OKEX
 	account := model.AppConfig.GetAccounts(market)[0]
 	nowPeriod, _ := model.GetMarketToday(market)
 	seconds := 14400
-	sortedCandles := api.GetMultiCandle(account.Key, account.Secret, market, seconds,
-		nowPeriod.Add(time.Second*time.Duration(seconds*-1*30)), nowPeriod, settings, false)
+	//sortedCandles := api.GetMultiCandle(account.Key, account.Secret, market, seconds,
+	//	nowPeriod.Add(time.Second*time.Duration(seconds*-1*30)), nowPeriod, settings, false)
 	candles := api.CombineCandles(account.Key, account.Secret, market, `BTC_PERP`, seconds,
 		nowPeriod.Add(time.Second*time.Duration(seconds*-1*30)), nowPeriod)
 	fmt.Println(len(candles))
@@ -282,7 +282,7 @@ func Test_initTurtleN(t *testing.T) {
 	//day := today.Add(time.Hour * -24)
 	//candles := api.CalcCandleN(model.AppConfig.BinanceKey, model.AppConfig.BinanceSecret, model.BinancePerp, `BNX_PERP`, 86400, day)
 	//fmt.Println(candles)
-	fmt.Println(len(sortedCandles))
+	//fmt.Println(len(sortedCandles))
 	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
 	_ = model.AppDB.AutoMigrate(&model.Setting{})
 	_ = model.AppDB.AutoMigrate(&model.Order{})

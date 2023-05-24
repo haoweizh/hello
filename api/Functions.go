@@ -195,24 +195,31 @@ func CombineCandles(key, secret, market, symbol string, slotSeconds int, begin, 
 	if slots == 1 {
 		return candles
 	}
-	combinedCandles = make([]*model.Candle, len(candles)/slots)
-	for i := 0; i < len(combinedCandles); i++ {
-		combinedCandles[i] = &model.Candle{Market: candles[i*slots].Market,
-			Symbol:     candles[i*slots].Symbol,
-			Begin:      candles[i*slots].Begin,
-			Seconds:    candles[i*slots].Seconds * slots,
-			PriceOpen:  candles[i*slots].PriceOpen,
-			PriceHigh:  candles[i*slots].PriceHigh,
-			PriceLow:   candles[i*slots].PriceLow,
-			PriceClose: candles[(i+1)*slots-1].PriceClose,
-			Volume:     candles[i*slots].Volume}
-		for j := i*slots + 1; j < (i+1)*slots; j++ {
-			if combinedCandles[i].PriceLow > candles[j].PriceLow {
-				combinedCandles[i].PriceLow = candles[j].PriceLow
+	combinedCandles = make([]*model.Candle, 0)
+	for i := 0; i <= len(candles)-slots; {
+		if candles[i] != nil && candles[i].Begin.Unix()%int64(slotSeconds) == 0 {
+			combine := &model.Candle{Market: candles[i].Market,
+				Symbol:     candles[i].Symbol,
+				Begin:      candles[i].Begin,
+				Seconds:    candles[i].Seconds * slots,
+				PriceOpen:  candles[i].PriceOpen,
+				PriceHigh:  candles[i].PriceHigh,
+				PriceLow:   candles[i].PriceLow,
+				PriceClose: candles[i+slots-1].PriceClose,
+				Volume:     candles[i].Volume}
+			for j := i + 1; j < i+slots; j++ {
+				combine.Volume += candles[j].Volume
+				if combine.PriceLow > candles[j].PriceLow {
+					combine.PriceLow = candles[j].PriceLow
+				}
+				if combine.PriceHigh < candles[j].PriceHigh {
+					combine.PriceHigh = candles[j].PriceHigh
+				}
 			}
-			if combinedCandles[i].PriceHigh < candles[j].PriceHigh {
-				combinedCandles[i].PriceHigh = candles[j].PriceHigh
-			}
+			i += slots
+			combinedCandles = append(combinedCandles, combine)
+		} else {
+			i++
 		}
 	}
 	return combinedCandles
