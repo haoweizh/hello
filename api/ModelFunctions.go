@@ -215,7 +215,7 @@ func handleCombineSettings(mumSetting *model.Setting, topMarketInfos map[string]
 		valueNormal, _ := normalMap.Load(info.Name)
 		settingCombine := &model.Setting{Valid: true, Function: model.FunctionCombineTurtle, Market: mumSetting.Market,
 			Symbol: info.Name, OpenShortMargin: mumSetting.OpenShortMargin, CloseShortMargin: mumSetting.CloseShortMargin,
-			AmountLimit: mumSetting.AmountLimit, Far: mumSetting.Far, Near: mumSetting.Near, Seconds: mumSetting.Seconds}
+			AmountLimit: mumSetting.AmountLimit, Far: mumSetting.FarCombine, Near: mumSetting.NearCombine, Seconds: mumSetting.SecondsCombine}
 		settingNormal := &model.Setting{Valid: true, Function: model.FunctionTurtleNormal, Market: mumSetting.Market,
 			Symbol: info.Name, OpenShortMargin: mumSetting.OpenShortMargin, CloseShortMargin: mumSetting.CloseShortMargin,
 			AmountLimit: mumSetting.AmountLimit, Far: mumSetting.Far, Near: mumSetting.Near, Seconds: mumSetting.Seconds}
@@ -274,7 +274,7 @@ func handleCombineSettings(mumSetting *model.Setting, topMarketInfos map[string]
 		if combineValue == nil {
 			combineSetting = &model.Setting{Valid: true, Function: model.FunctionCombineTurtle, Market: mumSetting.Market,
 				Symbol: symbol.(string), OpenShortMargin: mumSetting.OpenShortMargin, CloseShortMargin: mumSetting.CloseShortMargin,
-				AmountLimit: mumSetting.AmountLimit, Far: mumSetting.Far, Near: mumSetting.Near, Seconds: mumSetting.Seconds}
+				AmountLimit: mumSetting.AmountLimit, Far: mumSetting.FarCombine, Near: mumSetting.NearCombine, Seconds: mumSetting.SecondsCombine}
 			model.AppDB.Save(combineSetting)
 		} else {
 			combineSetting = combineValue.(*model.Setting)
