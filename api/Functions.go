@@ -224,6 +224,8 @@ func getCandle(key, secret, market, symbol string, slotSeconds int, begin, end t
 	limit := 100
 	if market == model.BinancePerp {
 		limit = 480
+	} else if market == model.OKEX {
+		limit = 300
 	}
 	if int(count) > limit {
 		duration, _ := time.ParseDuration(fmt.Sprintf(`%ds`, limit*slotSeconds))
@@ -243,7 +245,6 @@ func getCandle(key, secret, market, symbol string, slotSeconds int, begin, end t
 		}
 		msg := fmt.Sprintf(`get candles %s %s %d seconds %s %d`,
 			market, symbol, slotSeconds, begin.Format(time.RFC3339), len(candles))
-		util.Info(msg)
 		oldMsg, ok := util.LoadSyncMap(&model.CarryInfo, `GetCandle`)
 		if ok && oldMsg != nil {
 			msg = oldMsg.(string) + msg
@@ -254,7 +255,8 @@ func getCandle(key, secret, market, symbol string, slotSeconds int, begin, end t
 			util.StoreSyncMap(&model.CarryInfo, nil, `GetCandle`)
 		}
 		if !isCache {
-			time.Sleep(time.Millisecond * 300)
+			util.Notice(msg)
+			time.Sleep(time.Second)
 		} else {
 			//util.Notice(fmt.Sprintf(`get candles from cache %s %s %v %v %d %d`,
 			//	market, symbol, begin, end, count, slotSeconds))
