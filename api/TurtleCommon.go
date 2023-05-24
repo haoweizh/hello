@@ -233,9 +233,6 @@ func HandleOrders(key, secret, market, symbol string, settings []*model.Setting,
 	return true
 }
 
-const turtleNSlots = 100
-const turtleNSlotsMin = 10
-
 // GetTurtleData refreshDynamic false时代表仅作为检查是否有足够turtleData作为top market info使用，此时不会存在缓存中，否则会引起far near错误
 func GetTurtleData(key, secret, symbol string, setting *model.Setting, refreshDynamic bool) (data *TurtleData, settingRefresh *model.Setting) {
 	nowPeriod, nowStr := model.GetNowPeriod(setting.Market, setting.Seconds)
@@ -270,14 +267,17 @@ func GetTurtleData(key, secret, symbol string, setting *model.Setting, refreshDy
 	}
 	data = &TurtleData{TurtleTime: nowPeriod, Symbol: symbol, BreakLong: false, BreakShort: false, Liquidated: false,
 		DaysFar: int(setting.Far), DaysNear: int(setting.Near), DaysAdjust: 5, UseNear: useNear}
-	indexMax := math.Max(turtleNSlotsMin, float64(data.DaysFar))
+	slots := int64(200)
+	if setting.Seconds < 86400 {
+		slots = 600
+	}
 	candles := CombineCandles(key, secret, setting.Market, symbol, int(setting.Seconds),
-		nowPeriod.Add(time.Second*time.Duration(setting.Seconds*-1*turtleNSlots)), nowPeriod)
+		nowPeriod.Add(time.Second*time.Duration(setting.Seconds*-1*slots)), nowPeriod)
 	if !CalcCandleN(candles, setting) {
 		util.Notice(fmt.Sprintf(`fail to calc candles n %s %s candle num %d`, setting.Market, symbol, len(candles)))
 		return nil, setting
 	}
-	for i := 1; i <= int(indexMax); i++ {
+	for i := 1; i <= data.DaysFar; i++ {
 		currentPeriod := nowPeriod.Add(time.Second * time.Duration(setting.Seconds*int64(-i)))
 		candle := findCandle(candles, currentPeriod)
 		if candle == nil || candle.PriceHigh == 0 || candle.PriceLow == 0 {
@@ -337,26 +337,27 @@ func findCandle(candles []*model.Candle, begin time.Time) (resultCandle *model.C
 const CandleMLen = 20
 
 func CalcCandleN(candles []*model.Candle, setting *model.Setting) (success bool) {
-	calcLen := 10.0
-	if setting.Seconds < 86400 {
-		calcLen = 50.0
-	}
-	if len(candles) < turtleNSlotsMin {
+	if len(candles) < int(setting.Far) {
 		return false
 	}
+	calcLen := 10
+	if setting.Seconds < 86400 {
+		calcLen = 50
+	}
+	calcLen = int(math.Min(float64(calcLen), float64(len(candles))))
 	sortedCandles := model.SortedCandle{Value: candles}
 	sort.Sort(sortedCandles)
 	beginPrice := 0.0
 	beginVolume := 0.0
-	for i := 0; i < turtleNSlotsMin; i++ {
+	for i := 0; i < calcLen; i++ {
 		beginPrice += sortedCandles.Value[i].PriceHigh - sortedCandles.Value[i].PriceLow
 		beginVolume += sortedCandles.Value[i].Volume
 	}
-	sortedCandles.Value[turtleNSlotsMin-1].N = beginPrice / turtleNSlotsMin
-	sortedCandles.Value[turtleNSlotsMin-1].NVolume = beginVolume / turtleNSlotsMin
-	for i := turtleNSlotsMin; i < len(sortedCandles.Value); i++ {
-		sortedCandles.Value[i].N = (sortedCandles.Value[i-1].N*(calcLen-1) + sortedCandles.Value[i].PriceHigh - sortedCandles.Value[i].PriceLow) / calcLen
-		sortedCandles.Value[i].NVolume = (sortedCandles.Value[i-1].NVolume*(calcLen-1) + sortedCandles.Value[i].Volume) / calcLen
+	sortedCandles.Value[calcLen-1].N = beginPrice / float64(calcLen)
+	sortedCandles.Value[calcLen-1].NVolume = beginVolume / float64(calcLen)
+	for i := calcLen; i < len(sortedCandles.Value); i++ {
+		sortedCandles.Value[i].N = (sortedCandles.Value[i-1].N*float64(calcLen-1) + sortedCandles.Value[i].PriceHigh - sortedCandles.Value[i].PriceLow) / float64(calcLen)
+		sortedCandles.Value[i].NVolume = (sortedCandles.Value[i-1].NVolume*float64(calcLen-1) + sortedCandles.Value[i].Volume) / float64(calcLen)
 	}
 	disAll := 0.0
 	for i := 0; i < len(sortedCandles.Value); i++ {
