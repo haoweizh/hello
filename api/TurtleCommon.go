@@ -345,7 +345,7 @@ func CalcCandleN(candles []*model.Candle, setting *model.Setting) (success bool)
 	}
 	calcLen := 10
 	if setting.Seconds < 86400 {
-		calcLen = 50
+		calcLen = 30
 	}
 	calcLen = int(math.Min(float64(calcLen), float64(len(candles))))
 	sortedCandles := model.SortedCandle{Value: candles}
