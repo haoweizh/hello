@@ -249,11 +249,11 @@ func getCandle(key, secret, market, symbol string, slotSeconds int, begin, end t
 		if ok && oldMsg != nil {
 			msg = oldMsg.(string) + msg
 		}
-		if len(msg) < 100000 {
-			util.StoreSyncMap(&model.CarryInfo, msg, `GetCandle`)
-		} else {
-			util.StoreSyncMap(&model.CarryInfo, nil, `GetCandle`)
-		}
+		//if len(msg) < 100000 {
+		//	util.StoreSyncMap(&model.CarryInfo, msg, `GetCandle`)
+		//} else {
+		//	util.StoreSyncMap(&model.CarryInfo, nil, `GetCandle`)
+		//}
 		if !isCache {
 			util.Notice(msg)
 			time.Sleep(time.Second)
