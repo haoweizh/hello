@@ -234,6 +234,9 @@ func handlePrice(turtleData *TurtleData, candle *model.Candle, settings map[stri
 
 func getTurtleKey(candle *model.Candle, slot int64) (key string) {
 	seconds := candle.Begin.Unix() - (candle.Begin.Unix() % slot)
+	if candle.Market == model.OKEX {
+		seconds = candle.Begin.Unix() - (candle.Begin.Unix()+28800)%slot
+	}
 	return fmt.Sprintf(`%s_%s_%d`, candle.Market, candle.Symbol, seconds)
 }
 
