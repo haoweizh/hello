@@ -237,21 +237,16 @@ const turtleNSlots = 100
 const turtleNSlotsMin = 10
 
 func GetTurtleData(key, secret, function, symbol string, setting *model.Setting, refreshDynamic bool) (data *TurtleData, settingRefresh *model.Setting) {
-	var nowPeriod time.Time
-	var nowStr string
-	if setting.Seconds >= 86400 { // 周期大于1天时，需要考虑不同交易所的时区
-		nowPeriod, nowStr = model.GetMarketToday(setting.Market)
-	} else {
-		nowPeriod, nowStr = model.GetNowPeriod(setting.Seconds)
-	}
+	nowPeriod, nowStr := model.GetNowPeriod(setting.Seconds)
+	today, _ := model.GetMarketToday(setting.Market)
 	value, ok := util.LoadSyncMap(&TurtleDataSet, function, setting.Market, symbol, nowStr)
 	if ok && value != nil {
 		return value.(*TurtleData), setting
 	}
-	util.Notice(fmt.Sprintf(`inside get turtle %s %s %s %d %d`,
-		setting.Market, setting.Symbol, function, setting.Far, setting.Near))
+	util.Notice(fmt.Sprintf(`inside get turtle %s %s %s %d %d second %d %d`,
+		setting.Market, setting.Symbol, function, setting.Far, setting.Near, today.Unix(), nowPeriod.Unix()))
 	_, _, coin, _ := model.GetFromStandard(setting.Market, symbol)
-	if refreshDynamic && !model.CommonCoins[strings.ToLower(coin)] {
+	if today.Unix() == nowPeriod.Unix() && refreshDynamic && !model.CommonCoins[strings.ToLower(coin)] {
 		refreshValue, refreshOk := DynamicHandleTime.Load(setting.Market)
 		if !refreshOk || refreshValue == nil || refreshValue.(time.Time).Add(time.Hour).Before(time.Now()) {
 			if handleMarketDynamic(setting.Market) {
@@ -380,11 +375,7 @@ func SetTurtleOrderStatus(function, market, symbol, orderId, status string) {
 		return
 	}
 	var nowStr string
-	if setting.Seconds >= 86400 { // 周期大于1天时，需要考虑不同交易所的时区
-		_, nowStr = model.GetMarketToday(setting.Market)
-	} else {
-		_, nowStr = model.GetNowPeriod(setting.Seconds)
-	}
+	_, nowStr = model.GetNowPeriod(setting.Seconds)
 	value, ok := util.LoadSyncMap(&TurtleDataSet, function, market, symbol, nowStr)
 	if ok && value != nil {
 		turtleData := value.(*TurtleData)
