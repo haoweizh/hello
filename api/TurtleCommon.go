@@ -81,27 +81,27 @@ const TurtleTriggerDelta = 0.005
 var TurtleDataSet = sync.Map{}     // function_market_symbol_unix second *TurtleData
 var accountValues = &sync.Map{}    // market value
 var accountValueTime = &sync.Map{} // market time.Time
-func CalcTurtleAmount(key, secret string, setting *model.Setting, n float64) (amount float64) {
+func CalcTurtleAmount(account *model.Account, market string, n, amountRate float64) (amount float64) {
 	var accountValue float64
-	valueTime, _ := util.LoadSyncMap(accountValueTime, setting.Market)
+	valueTime, _ := util.LoadSyncMap(accountValueTime, market)
 	if valueTime != nil && valueTime.(time.Time).Add(time.Hour).After(time.Now()) {
-		value, _ := util.LoadSyncMap(accountValues, setting.Market)
+		value, _ := util.LoadSyncMap(accountValues, market)
 		if value != nil {
 			accountValue = value.(float64)
 		}
 	}
 	if accountValue == 0 {
-		switch setting.Market {
+		switch market {
 		case model.BinancePerp:
-			_, _, accountValue, _ = GetPositions(key, secret, setting.Market)
+			_, _, accountValue, _ = GetPositions(account.Key, account.Secret, market)
 		case model.Ftx, model.OKEX:
-			_, _, accountValue, _ = GetBalances(key, secret, setting.Market)
+			_, _, accountValue, _ = GetBalances(account.Key, account.Secret, market)
 		}
-		util.StoreSyncMap(accountValues, accountValue, setting.Market)
-		util.StoreSyncMap(accountValueTime, time.Now(), setting.Market)
+		util.StoreSyncMap(accountValues, accountValue, market)
+		util.StoreSyncMap(accountValueTime, time.Now(), market)
 	}
 	amount = 0.02 * accountValue / n
-	amount *= setting.CloseShortMargin
+	amount *= amountRate
 	//util.Notice(`CalcTurtleAmount %s %s %e`, setting.Market, setting.Symbol, Amount)
 	return amount
 }
@@ -234,58 +234,44 @@ func HandleOrders(key, secret, market, symbol string, settings []*model.Setting,
 }
 
 // GetTurtleData refreshDynamic false时代表仅作为检查是否有足够turtleData作为top market info使用，此时不会存在缓存中，否则会引起far near错误
-func GetTurtleData(key, secret, symbol string, setting *model.Setting, refreshDynamic bool) (data *TurtleData, settingRefresh *model.Setting) {
-	nowPeriod, nowStr := model.GetNowPeriod(setting.Market, setting.Seconds)
-	today, _ := model.GetMarketToday(setting.Market)
-	value, ok := util.LoadSyncMap(&TurtleDataSet, setting.Function, setting.Market, symbol, nowStr)
+func GetTurtleData(account *model.Account, function, market, symbol string, far, near, seconds int64, amountRate float64,
+	refreshDynamic bool) (data *TurtleData) {
+	nowPeriod, nowStr := model.GetNowPeriod(market, seconds)
+	today, _ := model.GetMarketToday(market)
+	value, ok := util.LoadSyncMap(&TurtleDataSet, function, market, symbol, nowStr)
 	if ok && value != nil {
-		return value.(*TurtleData), setting
+		return value.(*TurtleData)
 	}
-	util.Notice(fmt.Sprintf(`inside get turtle %s %s %s %d %d second %d %d`,
-		setting.Market, symbol, setting.Function, setting.Far, setting.Near, today.Unix(), nowPeriod.Unix()))
-	_, _, coin, _ := model.GetFromStandard(setting.Market, symbol)
+	_, _, coin, _ := model.GetFromStandard(market, symbol)
 	if today.Unix() == nowPeriod.Unix() && refreshDynamic && !model.CommonCoins[strings.ToLower(coin)] {
-		refreshValue, refreshOk := DynamicHandleTime.Load(setting.Market)
+		refreshValue, refreshOk := DynamicHandleTime.Load(market)
 		if !refreshOk || refreshValue == nil || refreshValue.(time.Time).Add(time.Hour).Before(time.Now()) {
-			if handleMarketDynamic(setting.Market) {
+			if handleMarketDynamic(market) {
 				PrepareSettings()
-				SetRequireReset(setting.Market)
-				setting = GetSetting(setting.Function, setting.Market, symbol)
+				SetRequireReset(market)
+				return nil
 			}
 		}
 	}
-	if setting == nil {
-		util.Notice(fmt.Sprintf(`fatal error nil setting after get turtle data`))
-	}
-	util.Notice(fmt.Sprintf(`need to create turtle data %s %s %s %s %d %d`,
-		setting.Function, setting.Market, symbol, nowStr, setting.Far, setting.Near))
+	util.Notice(fmt.Sprintf(`need to create turtle data %s %s %s %s %d`, function, market, symbol, nowStr, far))
 	useNear := false
-	if setting.Function == model.FunctionTurtle || setting.Function == model.FunctionTurtleNormal {
+	if function == model.FunctionTurtle || function == model.FunctionTurtleNormal {
 		useNear = true
-	} else if setting.Function == model.FunctionCombineTurtle {
+	} else if function == model.FunctionCombineTurtle {
 		useNear = false
 	}
 	data = &TurtleData{TurtleTime: nowPeriod, Symbol: symbol, BreakLong: false, BreakShort: false, Liquidated: false,
-		DaysFar: int(setting.Far), DaysNear: int(setting.Near), DaysAdjust: 5, UseNear: useNear}
-	slots := int64(200)
-	if setting.Seconds < 86400 {
-		slots = 600
-	}
-	candles := CombineCandles(key, secret, setting.Market, symbol, int(setting.Seconds),
-		nowPeriod.Add(time.Second*time.Duration(setting.Seconds*-1*slots)), nowPeriod)
-	if !CalcCandleN(candles, setting) {
-		util.Notice(fmt.Sprintf(`fail to calc candles n %s %s candle num %d`, setting.Market, symbol, len(candles)))
-		return nil, setting
-	}
+		DaysFar: int(far), DaysNear: int(near), DaysAdjust: 5, UseNear: useNear}
+	candles := getTurtleCandles(account, market, symbol, int(far), int(seconds), nowPeriod)
 	for i := 1; i <= data.DaysFar; i++ {
-		currentPeriod := nowPeriod.Add(time.Second * time.Duration(setting.Seconds*int64(-i)))
+		currentPeriod := nowPeriod.Add(time.Second * time.Duration(seconds*int64(-i)))
 		candle := findCandle(candles, currentPeriod)
 		if candle == nil || candle.PriceHigh == 0 || candle.PriceLow == 0 {
 			if time.Now().Second() == 0 {
 				util.Notice(`can not calc turtleDate as nil candle %s %s %s %s %d`,
-					setting.Market, symbol, data.Symbol, currentPeriod.String(), len(candles))
+					market, symbol, data.Symbol, currentPeriod.String(), len(candles))
 			}
-			return nil, setting
+			return nil
 		}
 		if candle.PriceHigh > data.HighDaysFar && i <= data.DaysFar {
 			data.HighDaysFar = candle.PriceHigh
@@ -306,23 +292,86 @@ func GetTurtleData(key, secret, symbol string, setting *model.Setting, refreshDy
 			data.LowAdjust = candle.PriceLow
 		}
 		if i == 1 {
+			model.AppDB.Save(candle)
 			data.N = candle.N
 			data.NVolume = candle.NVolume
-			data.Amount = CalcTurtleAmount(key, secret, setting, data.N)
-			util.Notice(fmt.Sprintf(`set data %s %f %f`, setting.Function, data.N, data.Amount))
+			data.Amount = CalcTurtleAmount(account, market, data.N, amountRate)
+			util.Notice(fmt.Sprintf(`set data %s %f %f`, function, data.N, data.Amount))
 		}
 	}
 	if data.Amount > 0 && data.N > 0 {
 		if refreshDynamic {
-			util.StoreSyncMap(&TurtleDataSet, data, setting.Function, setting.Market, symbol, nowStr)
+			util.StoreSyncMap(&TurtleDataSet, data, function, market, symbol, nowStr)
 			util.Notice(fmt.Sprintf(`set turtle %s %s %s %s Amount:%e N:%e %d:%e-%e %d:%e-%e %v`,
-				setting.Function, setting.Market, symbol, nowStr, data.Amount, data.N, data.DaysNear, data.LowDaysNear,
+				function, market, symbol, nowStr, data.Amount, data.N, data.DaysNear, data.LowDaysNear,
 				data.HighDaysNear, data.DaysFar, data.LowDaysFar, data.HighDaysFar, data))
 		}
-		return data, setting
+		return data
 	} else {
-		return nil, setting
+		return nil
 	}
+}
+
+func getTurtleCandles(account *model.Account, market, symbol string, far, seconds int, currentPeriod time.Time) (
+	candles []*model.Candle) {
+	lastPeriod := time.Unix(currentPeriod.Unix()-int64(seconds)*2, 0)
+	var lastCandles []*model.Candle
+	model.AppDB.Model(&model.Candle{}).Where(`market=? and symbol=? and begin=? and seconds=?`,
+		market, symbol, lastPeriod, seconds).Find(&lastCandles)
+	slots := far
+	var lastCandle2 *model.Candle
+	if len(lastCandles) == 0 || lastCandles[0].N == 0 || lastCandles[0].NVolume == 0 {
+		if seconds < 86400 {
+			slots = 600
+		} else {
+			slots = 200
+		}
+	} else {
+		lastCandle2 = lastCandles[0]
+	}
+	candles = CombineCandles(account, market, symbol, seconds,
+		currentPeriod.Add(time.Second*time.Duration(seconds*-1*slots)), currentPeriod)
+	if candles == nil || len(candles) < far {
+		return nil
+	}
+	calcLen := 10
+	if seconds < 86400 {
+		calcLen = 20
+	}
+	sortedCandles := &model.SortedCandle{Value: candles}
+	sort.Sort(sortedCandles)
+	if lastCandle2 == nil {
+		CalcCandleN(sortedCandles, calcLen)
+	} else {
+		lastCandle := sortedCandles.Value[len(sortedCandles.Value)-1]
+		lastCandle.N = (lastCandle2.N*float64(calcLen-1) + lastCandle.PriceHigh - lastCandle.PriceLow) / float64(calcLen)
+		lastCandle.NVolume = (lastCandle2.NVolume*float64(calcLen-1) + lastCandle.NVolume) / float64(calcLen)
+	}
+	return sortedCandles.Value
+}
+
+func CalcCandleN(sortedCandles *model.SortedCandle, calcLen int) {
+	beginPrice := 0.0
+	beginVolume := 0.0
+	calcLen = int(math.Min(float64(calcLen), float64(len(sortedCandles.Value))))
+	for i := 0; i < calcLen; i++ {
+		beginPrice += sortedCandles.Value[i].PriceHigh - sortedCandles.Value[i].PriceLow
+		beginVolume += sortedCandles.Value[i].Volume
+	}
+	sortedCandles.Value[calcLen-1].N = beginPrice / float64(calcLen)
+	sortedCandles.Value[calcLen-1].NVolume = beginVolume / float64(calcLen)
+	for i := calcLen; i < len(sortedCandles.Value); i++ {
+		sortedCandles.Value[i].N = (sortedCandles.Value[i-1].N*float64(calcLen-1) + sortedCandles.Value[i].PriceHigh - sortedCandles.Value[i].PriceLow) / float64(calcLen)
+		sortedCandles.Value[i].NVolume = (sortedCandles.Value[i-1].NVolume*float64(calcLen-1) + sortedCandles.Value[i].Volume) / float64(calcLen)
+	}
+	//disAll := 0.0
+	//for i := 0; i < len(sortedCandles.Value); i++ {
+	//	disAll += sortedCandles.Value[i].PriceHigh - sortedCandles.Value[i].PriceLow
+	//	if i >= CandleMLen {
+	//		disAll = disAll - sortedCandles.Value[i-CandleMLen].PriceHigh + sortedCandles.Value[i-CandleMLen].PriceLow
+	//		sortedCandles.Value[i].M = disAll / CandleMLen
+	//	}
+	//}
 }
 
 func findCandle(candles []*model.Candle, begin time.Time) (resultCandle *model.Candle) {
@@ -335,45 +384,6 @@ func findCandle(candles []*model.Candle, begin time.Time) (resultCandle *model.C
 		util.Notice(fmt.Sprintf(`no found candle %s %s`, begin.String(), candle.Begin.String()))
 	}
 	return nil
-}
-
-const CandleMLen = 20
-
-func CalcCandleN(candles []*model.Candle, setting *model.Setting) (success bool) {
-	if len(candles) < int(math.Max(float64(setting.Far), float64(setting.FarCombine))) {
-		return false
-	}
-	calcLen := 10
-	if setting.Seconds < 86400 {
-		calcLen = 20
-	}
-	calcLen = int(math.Min(float64(calcLen), float64(len(candles))))
-	sortedCandles := model.SortedCandle{Value: candles}
-	sort.Sort(sortedCandles)
-	beginPrice := 0.0
-	beginVolume := 0.0
-	for i := 0; i < calcLen; i++ {
-		beginPrice += sortedCandles.Value[i].PriceHigh - sortedCandles.Value[i].PriceLow
-		beginVolume += sortedCandles.Value[i].Volume
-	}
-	sortedCandles.Value[calcLen-1].N = beginPrice / float64(calcLen)
-	sortedCandles.Value[calcLen-1].NVolume = beginVolume / float64(calcLen)
-	for i := calcLen; i < len(sortedCandles.Value); i++ {
-		sortedCandles.Value[i].N = (sortedCandles.Value[i-1].N*float64(calcLen-1) + sortedCandles.Value[i].PriceHigh - sortedCandles.Value[i].PriceLow) / float64(calcLen)
-		sortedCandles.Value[i].NVolume = (sortedCandles.Value[i-1].NVolume*float64(calcLen-1) + sortedCandles.Value[i].Volume) / float64(calcLen)
-	}
-	disAll := 0.0
-	for i := 0; i < len(sortedCandles.Value); i++ {
-		disAll += sortedCandles.Value[i].PriceHigh - sortedCandles.Value[i].PriceLow
-		if i >= CandleMLen {
-			disAll = disAll - sortedCandles.Value[i-CandleMLen].PriceHigh + sortedCandles.Value[i-CandleMLen].PriceLow
-			sortedCandles.Value[i].M = disAll / CandleMLen
-		}
-	}
-	//for i, candle := range candles {
-	//	util.Notice(fmt.Sprintf(`candle calc %d %s %s %s %f`, i, candle.Market, candle.Symbol, candle.Begin.String(), candle.N))
-	//}
-	return true
 }
 
 func SetTurtleOrderStatus(function, market, symbol, orderId, status string) {

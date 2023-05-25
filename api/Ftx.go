@@ -290,7 +290,7 @@ func handleDepthFtx(markets *model.Markets, response *simplejson.Json) {
 	}
 }
 
-func getCandlesFtx(key, secret, symbol string, start, end time.Time, slotSeconds int) (
+func getCandlesFtx(account *model.Account, symbol string, start, end time.Time, slotSeconds int) (
 	candles []*model.Candle) {
 	candles = make([]*model.Candle, 0)
 	param := make(map[string]interface{})
@@ -299,7 +299,7 @@ func getCandlesFtx(key, secret, symbol string, start, end time.Time, slotSeconds
 	param[`start_time`] = fmt.Sprintf(`%d`, start.Unix())
 	param[`end_time`] = fmt.Sprintf(`%d`, end.Unix())
 	_, _, _, dialectSymbol := model.GetFromStandard(model.Ftx, symbol)
-	response, _ := SignedRequestFtx(key, secret, `GET`,
+	response, _ := SignedRequestFtx(account.Key, account.Secret, `GET`,
 		fmt.Sprintf(`/markets/%s/candles`, dialectSymbol), param, nil)
 	candleJson, err := util.NewJSON(response)
 	if err == nil {

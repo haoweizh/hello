@@ -1399,7 +1399,7 @@ func getMaxLoanOKEX(key, secret, symbol string) (success bool, maxLoan float64) 
 
 // 参数before代表返回的candle是该事件之后的，且不好该时间，所以参数传入的时候需要减去一个slotSeconds
 // getCandlesOKEX bar 1m/3m/5m/15m/30m/1H/2H/4H/6H/12H/1D/1W/1M/3M/6M/1Y
-func getCandlesOKEX(key, secret, symbol string, before, after time.Time, count, slotSeconds int) (
+func getCandlesOKEX(account *model.Account, symbol string, before, after time.Time, count, slotSeconds int) (
 	candles []*model.Candle, isCache bool) {
 	candles = make([]*model.Candle, 0)
 	bar := `1D`
@@ -1429,7 +1429,7 @@ func getCandlesOKEX(key, secret, symbol string, before, after time.Time, count, 
 	}
 	if responseBody == nil {
 		isCache = false
-		responseBody, _ = sendSignRequestOKEX(key, secret, http.MethodGet, path, param, nil)
+		responseBody, _ = sendSignRequestOKEX(account.Key, account.Secret, http.MethodGet, path, param, nil)
 	}
 	candleJson, err := util.NewJSON(responseBody)
 	if err != nil || candleJson == nil || candleJson.Get(`data`) == nil || len(candleJson.Get(`data`).MustArray()) == 0 {
@@ -1443,7 +1443,7 @@ func getCandlesOKEX(key, secret, symbol string, before, after time.Time, count, 
 	}
 	candleJsons := candleJson.Get(`data`).MustArray()
 	if len(candleJsons) < count && isCache {
-		responseBody, _ = sendSignRequestOKEX(key, secret, http.MethodGet, path, param, nil)
+		responseBody, _ = sendSignRequestOKEX(account.Key, account.Secret, http.MethodGet, path, param, nil)
 		model.AppRedis.Set(context.Background(), redisKey, string(responseBody), 0)
 		candleJson, err = util.NewJSON(responseBody)
 		if candleJson != nil {

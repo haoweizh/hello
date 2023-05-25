@@ -178,7 +178,7 @@ func GetMarkPrice(account *model.Account, market, symbol string) (markPrice floa
 
 var CandleSeconds = []int{60, 1800, 3600, 86400}
 
-func CombineCandles(key, secret, market, symbol string, slotSeconds int, begin, end time.Time) (combinedCandles model.Candles) {
+func CombineCandles(account *model.Account, market, symbol string, slotSeconds int, begin, end time.Time) (combinedCandles model.Candles) {
 	period := 0
 	slots := 1
 	for i := len(CandleSeconds) - 1; i >= 0; i-- {
@@ -191,7 +191,7 @@ func CombineCandles(key, secret, market, symbol string, slotSeconds int, begin, 
 	if period == 0 {
 		return nil
 	}
-	candles := getCandle(key, secret, market, symbol, period, begin, end)
+	candles := getCandle(account, market, symbol, period, begin, end)
 	if slots == 1 {
 		return candles
 	}
@@ -226,7 +226,7 @@ func CombineCandles(key, secret, market, symbol string, slotSeconds int, begin, 
 }
 
 // GetCandle slotSeconds: candle的以秒计算宽度
-func getCandle(key, secret, market, symbol string, slotSeconds int, begin, end time.Time) (candles []*model.Candle) {
+func getCandle(account *model.Account, market, symbol string, slotSeconds int, begin, end time.Time) (candles []*model.Candle) {
 	count := (end.Unix() - begin.Unix()) / int64(slotSeconds)
 	limit := 100
 	if market == model.BinancePerp {
@@ -236,17 +236,17 @@ func getCandle(key, secret, market, symbol string, slotSeconds int, begin, end t
 	}
 	if int(count) > limit {
 		duration, _ := time.ParseDuration(fmt.Sprintf(`%ds`, limit*slotSeconds))
-		candles = append(getCandle(key, secret, market, symbol, slotSeconds, begin, begin.Add(duration)),
-			getCandle(key, secret, market, symbol, slotSeconds, begin.Add(duration), end)...)
+		candles = append(getCandle(account, market, symbol, slotSeconds, begin, begin.Add(duration)),
+			getCandle(account, market, symbol, slotSeconds, begin.Add(duration), end)...)
 	} else {
 		isCache := false
 		switch market {
 		case model.Ftx:
-			candles = getCandlesFtx(key, secret, symbol, begin, end, slotSeconds)
+			candles = getCandlesFtx(account, symbol, begin, end, slotSeconds)
 		case model.OKEX:
-			candles, isCache = getCandlesOKEX(key, secret, symbol, begin, end, int(count), slotSeconds)
+			candles, isCache = getCandlesOKEX(account, symbol, begin, end, int(count), slotSeconds)
 		case model.BinancePerp, model.BinanceSpot:
-			candles, isCache = getCandlesBinance(key, secret, market, symbol, begin, end, int(count), slotSeconds)
+			candles, isCache = getCandlesBinance(account, market, symbol, begin, end, int(count), slotSeconds)
 		case model.GXZQ:
 			candles, isCache = getCandlesGXZQDB(symbol, begin, end, slotSeconds)
 		}
@@ -272,7 +272,7 @@ func getCandle(key, secret, market, symbol string, slotSeconds int, begin, end t
 	return
 }
 
-func GetMultiCandle(key, secret, market string, slotSeconds int, begin, end time.Time,
+func GetMultiCandle(account *model.Account, market string, slotSeconds int, begin, end time.Time,
 	settings map[string]*model.Setting, saveDB bool) (candles model.Candles) {
 	count := (end.Unix() - begin.Unix()) / int64(slotSeconds)
 	limit := 100
@@ -283,8 +283,8 @@ func GetMultiCandle(key, secret, market string, slotSeconds int, begin, end time
 	}
 	if int(count) > limit {
 		duration, _ := time.ParseDuration(fmt.Sprintf(`%ds`, limit*slotSeconds))
-		candles = append(GetMultiCandle(key, secret, market, slotSeconds, begin, begin.Add(duration), settings, saveDB),
-			GetMultiCandle(key, secret, market, slotSeconds, begin.Add(duration), end, settings, saveDB)...)
+		candles = append(GetMultiCandle(account, market, slotSeconds, begin, begin.Add(duration), settings, saveDB),
+			GetMultiCandle(account, market, slotSeconds, begin.Add(duration), end, settings, saveDB)...)
 	} else {
 		candles = make([]*model.Candle, count*int64(len(settings)))
 		util.StoreSyncMap(&model.CarryInfo, fmt.Sprintf(`get multi candles slot%d count%d %s %s`,
@@ -295,11 +295,11 @@ func GetMultiCandle(key, secret, market string, slotSeconds int, begin, end time
 			var isCache bool
 			switch market {
 			case model.Ftx:
-				temp = getCandlesFtx(key, secret, symbol, begin, end, slotSeconds)
+				temp = getCandlesFtx(account, symbol, begin, end, slotSeconds)
 			case model.OKEX:
-				temp, isCache = getCandlesOKEX(key, secret, symbol, begin, end, int(count), slotSeconds)
+				temp, isCache = getCandlesOKEX(account, symbol, begin, end, int(count), slotSeconds)
 			case model.BinancePerp, model.BinanceSpot:
-				temp, isCache = getCandlesBinance(key, secret, market, symbol, begin, end, int(count), slotSeconds)
+				temp, isCache = getCandlesBinance(account, market, symbol, begin, end, int(count), slotSeconds)
 			case model.GXZQ:
 				temp, isCache = getCandlesGXZQDB(symbol, begin, end, slotSeconds)
 			}

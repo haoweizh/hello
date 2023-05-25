@@ -69,11 +69,11 @@ func initGridData(setting *model.Setting, sortedCandles []*model.Candle) {
 var ProcessGrid = func(start, end time.Time, setting *model.Setting) {
 	util.StoreSyncMap(&model.CarryInfo, nil, `gridInfo`)
 	account := model.AppConfig.GetAccounts(setting.Market)[0]
-	candles := api.GetMultiCandle(account.Key, account.Secret, setting.Market, 60, start, end,
+	candles := api.GetMultiCandle(account, setting.Market, 60, start, end,
 		map[string]*model.Setting{setting.Symbol: setting}, false)
 	util.StoreSyncMap(&model.CarryInfo, fmt.Sprintf(`get market candle %s %s from %s len %d`,
 		setting.Market, setting.Symbol, start.String(), len(candles)), `gridInfo`)
-	gridCandles := api.CombineCandles(account.Key, account.Secret, setting.Market, setting.Symbol, 14400, start.Add(time.Hour*-1200), end)
+	gridCandles := api.CombineCandles(account, setting.Market, setting.Symbol, 14400, start.Add(time.Hour*-1200), end)
 	util.StoreSyncMap(&model.CarryInfo, fmt.Sprintf(`get grid candle %s %s from %s len %d`,
 		setting.Market, setting.Symbol, start.Add(time.Hour*-1200).String(), len(gridCandles)), `gridInfo`)
 	if gridCandles != nil && gridCandles.Len() > 0 && gridCandles[0] != nil && gridCandles[len(gridCandles)-1] != nil {

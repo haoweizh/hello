@@ -250,9 +250,7 @@ func ProcessCandles(start, end time.Time, far, allLimit int, useNear, useM bool,
 		return
 	}
 	util.StoreSyncMap(&model.CarryInfo, nil, `GetCandle`)
-	key := model.AppConfig.GetAccounts(market)[0].Key
-	secret := model.AppConfig.GetAccounts(market)[0].Secret
-	sortedCandles := api.GetMultiCandle(key, secret, market, 60, start, end, settings, false)
+	sortedCandles := api.GetMultiCandle(model.AppConfig.GetAccounts(market)[0], market, 60, start, end, settings, false)
 	ago := int(math.Max(NCalcLen, float64(far)))
 	turtleDataMap := make(map[string]*TurtleData)
 	slotLiquidated = make(map[string]bool)
@@ -265,10 +263,15 @@ func ProcessCandles(start, end time.Time, far, allLimit int, useNear, useM bool,
 	for _, setting := range settings {
 		slotSeconds = setting.Seconds
 		duration, _ := time.ParseDuration(fmt.Sprintf(`-%ds`, int(setting.Seconds)*ago))
-		temp := api.CombineCandles(key, secret, market, setting.Symbol, int(setting.Seconds), start.Add(duration), end)
+		temp := api.CombineCandles(model.AppConfig.GetAccounts(market)[0], market, setting.Symbol, int(setting.Seconds),
+			start.Add(duration), end)
 		util.Info(fmt.Sprintf(`get turtle candle %s %s %d setting chance %d`,
 			market, setting.Symbol, len(temp), setting.Chance))
-		api.CalcCandleN(temp, setting)
+		calcLen := 10
+		if setting.Seconds < 86400 {
+			calcLen = 20
+		}
+		api.CalcCandleN(&model.SortedCandle{Value: temp}, calcLen)
 		tempTurtle := GetTurtleData(temp, int(setting.Near), int(setting.Far), int(setting.Seconds), useNear)
 		for s, data := range tempTurtle {
 			turtleDataMap[s] = data

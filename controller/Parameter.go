@@ -415,8 +415,7 @@ func getCandles(c *gin.Context) {
 	settings := map[string]*model.Setting{`ETH_USDT`: nil, `BTC_USDT`: nil}
 	accounts := model.GetAccounts(0)
 	if accounts != nil {
-		api.GetMultiCandle(accounts[model.BinanceSpot].Key, accounts[model.BinanceSpot].Secret, model.BinanceSpot, 60,
-			start, end, settings, true)
+		api.GetMultiCandle(accounts[model.BinanceSpot], model.BinanceSpot, 60, start, end, settings, true)
 	}
 	c.String(http.StatusOK, `done`)
 }
@@ -538,13 +537,13 @@ func holdPage(c *gin.Context) {
 		for carryRows.Next() {
 			var marketName, side, date, refreshType string
 			var value, orderNum, failRate float64
-			var amountType int
-			_ = carryRows.Scan(&marketName, &amountType, &side, &value, &date, &refreshType, &orderNum)
+			var accountIdx int
+			_ = carryRows.Scan(&marketName, &accountIdx, &side, &value, &date, &refreshType, &orderNum)
 			dates := strings.Split(date, `-`)
 			date = fmt.Sprintf(`%s-%s`, dates[1], dates[2])
 			date = date[0:strings.Index(date, `T`)]
-			key := fmt.Sprintf(`%s-%s-%s-%s-%s`, marketName, amountType, side, date, refreshType)
-			account := model.AppConfig.GetAccountFromKeyIndex(marketName, ``, amountType)
+			key := fmt.Sprintf(`%s-%d-%s-%s-%s`, marketName, accountIdx, side, date, refreshType)
+			account := model.AppConfig.GetAccountFromKeyIndex(marketName, ``, accountIdx)
 			if account != nil && model.AppConfig.GetAccounts(marketName)[index].Key == account.Key {
 				if orderNum > 0 {
 					failRate = 100 * failData[key] / orderNum
@@ -645,14 +644,18 @@ func createTurtleLines(function, market string, account *model.Account) (msg str
 		if value == nil {
 			return true
 		}
-		turtleData, _ := api.GetTurtleData(account.Key, account.Secret, symbol.(string), value.(*model.Setting), false)
+		setting := value.(*model.Setting)
+		turtleData := api.GetTurtleData(account, function, market, symbol.(string), setting.Far, setting.Near,
+			setting.Seconds, setting.CloseShortMargin, false)
 		msgKey := model.GetMsgKey(function, market, symbol.(string))
 		needAdd := false
 		if turtleData != nil {
 			if turtleData.OrderLong != nil || turtleData.OrderShort != nil {
 				needAdd = true
 			} else if function == model.FunctionCombineTurtle {
-				turtleNormal, _ := api.GetTurtleData(account.Key, account.Secret, symbol.(string), value.(*model.Setting), false)
+				settingNormal := api.GetSetting(model.FunctionTurtleNormal, market, symbol.(string))
+				turtleNormal := api.GetTurtleData(account, model.FunctionTurtleNormal, market, symbol.(string),
+					settingNormal.Far, settingNormal.Near, settingNormal.Seconds, settingNormal.CloseShortMargin, false)
 				if turtleNormal != nil && (turtleNormal.OrderLong != nil || turtleNormal.OrderShort != nil) {
 					needAdd = true
 				}

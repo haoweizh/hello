@@ -433,7 +433,7 @@ func getPositionsBinancePerp(key, secret string) (success bool, positions []*mod
 }
 
 // 1m 3m 5m 15m 30m 1h 2h 4h 6h 8h 12h 1d 3d 1w 1M
-func getCandlesBinance(key, secret, market, symbol string, begin, end time.Time, limit, slotSeconds int) (
+func getCandlesBinance(account *model.Account, market, symbol string, begin, end time.Time, limit, slotSeconds int) (
 	candles []*model.Candle, isCache bool) {
 	interval := `1D`
 	switch slotSeconds {
@@ -459,9 +459,11 @@ func getCandlesBinance(key, secret, market, symbol string, begin, end time.Time,
 	if responseBody == nil {
 		isCache = false
 		if market == model.BinanceSpot {
-			responseBody = signedRequestBinance(key, secret, market, http.MethodGet, restDataBinanceSpot+"/api/v3/klines", false, param)
+			responseBody = signedRequestBinance(account.Key, account.Secret, market, http.MethodGet,
+				restDataBinanceSpot+"/api/v3/klines", false, param)
 		} else if market == model.BinancePerp {
-			responseBody = signedRequestBinance(key, secret, market, http.MethodGet, restBinancePerp+"/fapi/v1/klines", true, param)
+			responseBody = signedRequestBinance(account.Key, account.Secret, market, http.MethodGet,
+				restBinancePerp+"/fapi/v1/klines", true, param)
 		}
 	}
 	candleJson, err := util.NewJSON(responseBody)
