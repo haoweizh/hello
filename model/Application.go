@@ -202,13 +202,12 @@ func NewConfig() {
 	}
 }
 
-func GetNowPeriod(market string, periodInSecond int64) (nowPeriod time.Time, nowStr string) {
-	now := time.Now()
-	remainder := now.Unix() % periodInSecond
+func GetNowPeriod(market string, periodInSecond int64, periodTime time.Time) (nowPeriod time.Time, nowStr string) {
+	remainder := periodTime.Unix() % periodInSecond
 	if market == OKEX {
-		remainder = (now.Unix() + 28800) % periodInSecond
+		remainder = (periodTime.Unix() + 28800) % periodInSecond
 	}
-	seconds := now.Unix() - remainder
+	seconds := periodTime.Unix() - remainder
 	nowPeriod = time.Unix(seconds, 0)
 	return nowPeriod, fmt.Sprintf(`%d`, nowPeriod.Unix())
 }

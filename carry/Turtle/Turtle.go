@@ -33,7 +33,7 @@ var ProcessTurtle = func(setting *model.Setting, tick *model.BidAsk) {
 		return
 	}
 	account := model.AppConfig.GetAccounts(setting.Market)[0]
-	var data *api.TurtleData
+	var data *model.TurtleData
 	data = api.GetTurtleData(account, setting.Function, setting.Market, setting.Symbol, setting.Far,
 		setting.Near, setting.Seconds, setting.CloseShortMargin, true)
 	if data == nil || data.N == 0 || data.Amount == 0 || setting == nil || model.AppConfig.Env == `test` {
@@ -59,8 +59,8 @@ var ProcessTurtle = func(setting *model.Setting, tick *model.BidAsk) {
 	util.StoreSyncMap(&model.CarryInfo, msg, account.Key, msgKey)
 	priceLong := data.HighDaysFar
 	priceShort := data.LowDaysFar
-	if api.HandleOrders(account.Key, account.Secret, setting.Market, setting.Symbol, []*model.Setting{setting}, []*api.TurtleData{data}) ||
-		api.CheckBreak(account.Key, account.Secret, setting.Market, setting.Symbol, []*model.Setting{setting}, []*api.TurtleData{data}, tick) {
+	if api.HandleOrders(account.Key, account.Secret, setting.Market, setting.Symbol, []*model.Setting{setting}, []*model.TurtleData{data}) ||
+		api.CheckBreak(account, setting.Market, setting.Symbol, []*model.Setting{setting}, []*model.TurtleData{data}, tick) {
 		return
 	}
 	if !data.AdjustChecked {
@@ -171,7 +171,7 @@ var ProcessTurtle = func(setting *model.Setting, tick *model.BidAsk) {
 	}
 }
 
-func handleBreak(key, secret string, setting *model.Setting, turtleData *api.TurtleData, orderSide string) {
+func handleBreak(key, secret string, setting *model.Setting, turtleData *model.TurtleData, orderSide string) {
 	if turtleData == nil {
 		//util.Notice(fmt.Sprintf(`fatal error, nil order to break`))
 		return
@@ -201,7 +201,7 @@ func handleBreak(key, secret string, setting *model.Setting, turtleData *api.Tur
 	}
 }
 
-func placeTurtleOrders(key, secret string, turtleData *api.TurtleData, setting *model.Setting, canOpen bool, chanceInAll float64,
+func placeTurtleOrders(key, secret string, turtleData *model.TurtleData, setting *model.Setting, canOpen bool, chanceInAll float64,
 	priceShort, priceLong float64, tick *model.BidAsk) {
 	coinLimit := int64(setting.OpenShortMargin)
 	canOpen = canOpen && math.Abs(float64(setting.Chance)) < setting.OpenShortMargin
