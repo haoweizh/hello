@@ -233,7 +233,7 @@ func Test_CutTail(t *testing.T) {
 		//sign := fmt.Sprintf(`market%s,coins%s,%s~%s,far%d,near%d,limit%d,allLimit%d,useNear%v,useM%vseconds86400`,
 		//	market, coins, strBegin, strEnd, i*2, i, 3, 10, true, false)
 		//regret.CutTail(market, coins, sign)
-		sign := fmt.Sprintf(`market%s,coins%s,%s~%s,far%d,near%d,limit%d,allLimit%d,useNear%v,useM%vseconds14400,20`,
+		sign := fmt.Sprintf(`market%s,coins%s,%s~%s,far%d,near%d,limit%d,allLimit%d,useNear%v,useM%vseconds14400`,
 			market, coins, strBegin, strEnd, i*2, i, 3, 10, false, false)
 		regret.CutTail(market, coins, sign)
 		//sign = fmt.Sprintf(`market%s,coins%s,%s~%s,far%d,near%d,limit%d,allLimit%d,useNear%v,useM%vseconds86400`,
