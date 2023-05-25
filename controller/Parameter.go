@@ -305,9 +305,9 @@ func simulate(c *gin.Context) {
 		strNew = `false`
 	} else if auto == `true` && strNew == `true` {
 		for i := 3; i <= 25; i++ {
-			autoSimulate(market, coins, begin, end, strBegin, strEnd, true, false, i, 2*i, 3, int(allLimit), int(seconds), fee)
+			//autoSimulate(market, coins, begin, end, strBegin, strEnd, true, false, i, 2*i, 3, int(allLimit), int(seconds), fee)
 			autoSimulate(market, coins, begin, end, strBegin, strEnd, false, false, i, 2*i, 3, int(allLimit), int(seconds), fee)
-			autoSimulate(market, coins, begin, end, strBegin, strEnd, false, true, i, 2*i, 3, int(allLimit), int(seconds), fee)
+			//autoSimulate(market, coins, begin, end, strBegin, strEnd, false, true, i, 2*i, 3, int(allLimit), int(seconds), fee)
 		}
 		util.StoreSyncMap(&model.CarryInfo, nil, `auto`)
 		util.Info(fmt.Sprintf(`all auto simulation done fee %f`, fee))
