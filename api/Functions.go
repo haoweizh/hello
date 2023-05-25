@@ -207,16 +207,16 @@ func CombineCandles(key, secret, market, symbol string, slotSeconds int, begin, 
 				PriceLow:   candles[i].PriceLow,
 				PriceClose: candles[i+slots-1].PriceClose,
 				Volume:     candles[i].Volume}
-			for j := i + 1; j < i+slots; j++ {
-				combine.Volume += candles[j].Volume
-				if combine.PriceLow > candles[j].PriceLow {
-					combine.PriceLow = candles[j].PriceLow
+			nextTime := candles[i].Begin.Unix() + int64(slotSeconds)
+			for i = i + 1; i < len(candles) && candles[i].Begin.Unix() < nextTime; i++ {
+				combine.Volume += candles[i].Volume
+				if combine.PriceLow > candles[i].PriceLow {
+					combine.PriceLow = candles[i].PriceLow
 				}
-				if combine.PriceHigh < candles[j].PriceHigh {
-					combine.PriceHigh = candles[j].PriceHigh
+				if combine.PriceHigh < candles[i].PriceHigh {
+					combine.PriceHigh = candles[i].PriceHigh
 				}
 			}
-			i += slots
 			combinedCandles = append(combinedCandles, combine)
 		} else {
 			i++
