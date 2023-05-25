@@ -113,7 +113,7 @@ func autoSimulate(market, coins string, begin, end time.Time, strBegin, strEnd s
 				GridAmount: RegretTurtleGridAmount, Seconds: int64(seconds), Near: int64(near), Far: int64(far), TradeCost: 0}
 		}
 	}
-	sign := fmt.Sprintf(`market%s,coins%s,%s~%s,far%d,near%d,limit%d,allLimit%d,useNear%v,useM%vseconds%d,20`,
+	sign := fmt.Sprintf(`market%s,coins%s,%s~%s,far%d,near%d,limit%d,allLimit%d,useNear%v,useM%vseconds%d,30`,
 		market, coins, strBegin, strEnd, far, near, limit, allLimit, useNear, useM, seconds)
 	delNum := model.AppDB.Where(`function=?`, sign).Delete(&model.Order{}).RowsAffected
 	util.Info(`del %s %d rows affected`, sign, delNum)

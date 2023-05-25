@@ -269,7 +269,7 @@ func ProcessCandles(start, end time.Time, far, allLimit int, useNear, useM bool,
 			market, setting.Symbol, len(temp), setting.Chance))
 		calcLen := 10
 		if setting.Seconds < 86400 {
-			calcLen = 20
+			calcLen = 30
 		}
 		api.CalcCandleN(&model.SortedCandle{Value: temp}, calcLen)
 		tempTurtle := GetTurtleData(temp, int(setting.Near), int(setting.Far), int(setting.Seconds), useNear)
@@ -415,7 +415,7 @@ func CutTail(market, coins, sign string) {
 func CreateReport(market, coins, timeRange, seconds string) {
 	rows, _ := model.AppDB.Model(model.Order{}).Select(`function,symbol,order_side,sum(orders.deal_price*amount)/sum(amount),sum(amount),sum(grid_pos)`).
 		Where(`function like ? and function like ? and function like ?`,
-			`%coins`+coins+`%`, `%`+timeRange+`%`, `%`+seconds+`%`).
+			`%coins`+coins+`%`, `%`+timeRange+`%`, `%`+seconds+`,20%`).
 		Group(`function,symbol,order_side`).Order(`function`).Rows()
 	if rows == nil {
 		return

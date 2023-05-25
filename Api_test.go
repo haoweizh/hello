@@ -209,11 +209,11 @@ func Test_CreateReport(t *testing.T) {
 	//coins := `DOGE,SOL,MATIC,CHZ,LINK,ADA,BNB,FIL,SUSHI,AXS,ATOM,WAVES`
 	//for _, s := range strings.Split(coins, `,`) {
 	coins := `DOGE,SOL,ADA,MATIC,FIL,BNB,MTL,TOMO,RLC,MASK`
-	coins = `BTC`
-	regret.CreateReport(market, coins, timeRage, `86400`)
-	regret.CreateReport(market, coins, timeRage, `14400`)
-	coins = `ETH`
-	regret.CreateReport(market, coins, timeRage, `86400`)
+	//coins = `BTC`
+	//regret.CreateReport(market, coins, timeRage, `86400`)
+	//regret.CreateReport(market, coins, timeRage, `14400`)
+	//coins = `ETH`
+	//regret.CreateReport(market, coins, timeRage, `86400`)
 	regret.CreateReport(market, coins, timeRage, `14400`)
 }
 
@@ -230,15 +230,15 @@ func Test_CutTail(t *testing.T) {
 	//coinNames := strings.Split(`CZCE.CY,CZCE.FG,CZCE.MA,CZCE.OI,CZCE.PF,CZCE.RM,CZCE.SA,CZCE.SF,CZCE.SM,CZCE.SR,CZCE.TA,CZCE.UR,CZCE.ZC,DCE.c,DCE.eb,DCE.eg,DCE.i,DCE.j,DCE.jm,DCE.l,DCE.m,DCE.p,DCE.pp,DCE.v,DCE.y,SHFE.bu,SHFE.cu,SHFE.fu,SHFE.hc,SHFE.pb,SHFE.rb,SHFE.ru`, `,`)
 	for i := 3; i <= 25; i++ {
 		//coins = `ETH`
-		sign := fmt.Sprintf(`market%s,coins%s,%s~%s,far%d,near%d,limit%d,allLimit%d,useNear%v,useM%vseconds86400`,
-			market, coins, strBegin, strEnd, i*2, i, 3, 10, true, false)
-		regret.CutTail(market, coins, sign)
-		sign = fmt.Sprintf(`market%s,coins%s,%s~%s,far%d,near%d,limit%d,allLimit%d,useNear%v,useM%vseconds86400`,
+		//sign := fmt.Sprintf(`market%s,coins%s,%s~%s,far%d,near%d,limit%d,allLimit%d,useNear%v,useM%vseconds86400`,
+		//	market, coins, strBegin, strEnd, i*2, i, 3, 10, true, false)
+		//regret.CutTail(market, coins, sign)
+		sign := fmt.Sprintf(`market%s,coins%s,%s~%s,far%d,near%d,limit%d,allLimit%d,useNear%v,useM%vseconds14400,20`,
 			market, coins, strBegin, strEnd, i*2, i, 3, 10, false, false)
 		regret.CutTail(market, coins, sign)
-		sign = fmt.Sprintf(`market%s,coins%s,%s~%s,far%d,near%d,limit%d,allLimit%d,useNear%v,useM%vseconds86400`,
-			market, coins, strBegin, strEnd, i*2, i, 3, 10, false, true)
-		regret.CutTail(market, coins, sign)
+		//sign = fmt.Sprintf(`market%s,coins%s,%s~%s,far%d,near%d,limit%d,allLimit%d,useNear%v,useM%vseconds86400`,
+		//	market, coins, strBegin, strEnd, i*2, i, 3, 10, false, true)
+		//regret.CutTail(market, coins, sign)
 		//coins = `BTC`
 		//sign = fmt.Sprintf(`market%s,coins%s,%s~%s,far%d,near%d,limit%d,allLimit%d,useNear%v,useM%vseconds14400`,
 		//	market, coins, strBegin, strEnd, i*2, i, 3, 6, true, false)
@@ -262,7 +262,7 @@ func Test_initTurtleN(t *testing.T) {
 	seconds := 14400
 	//sortedCandles := api.GetMultiCandle(account.Key, account.Secret, market, seconds,
 	//	nowPeriod.Add(time.Second*time.Duration(seconds*-1*30)), nowPeriod, settings, false)
-	candles := api.CombineCandles(account.Key, account.Secret, market, `BTC_PERP`, seconds,
+	candles := api.CombineCandles(account, market, `BTC_PERP`, seconds,
 		nowPeriod.Add(time.Second*time.Duration(seconds*-1*30)), nowPeriod)
 	fmt.Println(len(candles))
 	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
