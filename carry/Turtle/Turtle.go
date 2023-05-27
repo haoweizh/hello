@@ -187,6 +187,9 @@ func handleBreak(key, secret string, setting *model.Setting, turtleData *model.T
 		util.Notice(fmt.Sprintf(`query turtle break %s %s %s %d`,
 			setting.Market, setting.Symbol, orderSide, len(orderQuery)))
 		setting.PriceX = orderQuery[0].TriggerPrice
+		for _, order := range orderQuery {
+			turtleData.OrderAdjust = append(turtleData.OrderAdjust, order)
+		}
 		turtleData.OrderLong = nil
 		turtleData.OrderShort = nil
 		if orderCancel != nil {
