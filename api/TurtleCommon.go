@@ -172,13 +172,13 @@ func clearTurtleOrders(account *model.Account, setting *model.Setting, turtle *m
 	for _, order := range turtle.OrderLong {
 		if order != nil {
 			MustCancel(account.Key, account.Secret, setting.Market, setting.Symbol, order.OrderType, order.OrderId, false)
-			time.Sleep(time.Second)
+			time.Sleep(time.Millisecond * 200)
 		}
 	}
 	for _, order := range turtle.OrderShort {
 		if order != nil {
 			MustCancel(account.Key, account.Secret, setting.Market, setting.Symbol, order.OrderType, order.OrderId, false)
-			time.Sleep(time.Second)
+			time.Sleep(time.Millisecond * 200)
 		}
 	}
 	broken := false
@@ -465,11 +465,14 @@ func CheckBreak(account *model.Account, market, symbol string, settings []*model
 				orderLong.Status = model.CarryStatusSuccess
 			}
 			if orderLong.Status == model.CarryStatusWorking && (useApi || tick == nil) {
-				time.Sleep(time.Second * 2)
 				orderLong = QueryOrderById(account.Key, account.Secret, market, symbol, orderLong.OrderType, orderLong.OrderId)
+				time.Sleep(time.Millisecond * 200)
 			}
 			if orderLong != nil && orderLong.Status == model.CarryStatusSuccess {
 				data.BreakLong = true
+				for _, order := range data.OrderLong {
+					data.OrderAdjust = append(data.OrderAdjust, order)
+				}
 				util.Notice(fmt.Sprintf(`order break long %s %s %s %d bid-ask %e %e %e %e id %s`,
 					market, symbol, orderLong.OrderType, setting.Chance, tick.Bids[0].Price,
 					tick.Asks[0].Price, orderLong.TriggerPrice, orderLong.Price, orderLong.OrderId))
@@ -482,11 +485,14 @@ func CheckBreak(account *model.Account, market, symbol string, settings []*model
 				orderShort.Status = model.CarryStatusSuccess
 			}
 			if orderShort.Status == model.CarryStatusWorking && (useApi || tick == nil) {
-				time.Sleep(time.Second * 2)
 				orderShort = QueryOrderById(account.Key, account.Secret, market, symbol, orderShort.OrderType, orderShort.OrderId)
+				time.Sleep(time.Millisecond * 200)
 			}
 			if orderShort != nil && orderShort.Status == model.CarryStatusSuccess {
 				data.BreakShort = true
+				for _, order := range data.OrderShort {
+					data.OrderAdjust = append(data.OrderAdjust, order)
+				}
 				util.Notice(fmt.Sprintf(`order break short %s %s %s %d bid-ask %e %e %e %e id %s`,
 					market, symbol, orderShort.OrderType, setting.Chance, tick.Bids[0].Price,
 					tick.Asks[0].Price, orderShort.TriggerPrice, orderShort.Price, orderShort.OrderId))

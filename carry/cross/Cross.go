@@ -785,9 +785,6 @@ func checkTradeLine(statusBuy, statusSell *CarryStatus, score float64) (valid, h
 func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarryStatus, tick, tickRelate *model.BidAsk) (
 	statusBuy, statusSell *CarryStatus, amount, priceBuy, priceSell float64, tickBuy, tickSell *model.BidAsk) {
 	now := time.Now()
-	if now.Hour()%8 == 0 && now.Minute() == 0 && now.Second() < 30 {
-		return
-	}
 	if now.Minute() <= 5 && (carryStatus.market == model.Ftx || carryStatusRelate.market == model.Ftx) {
 		return
 	}
