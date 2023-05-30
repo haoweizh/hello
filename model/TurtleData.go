@@ -12,7 +12,7 @@ type TurtleData struct {
 	UseNear, BreakLong, BreakShort, Liquidated, AdjustChecked, OrderCleared   bool
 	TurtleTime, CheckUseApi, CheckTimeOpen                                    time.Time
 	HighDaysNear, LowDaysNear, HighDaysFar, LowDaysFar, LowAdjust, HighAdjust float64
-	HighToday, LowToday, N, NVolume, Amount                                   float64
+	HighToday, LowToday, N, M, NVolume, Amount                                float64
 	DaysNear, DaysFar, DaysAdjust, combineBig                                 int // CombineBig: -1小单，1大单，0未初始化
 	Symbol                                                                    string
 	// 适应某些交易所单笔订单不能过大，大笔订单会拆分后下成多个，因价格超出无法下成的单为了不被取消，也归入orderAdjust

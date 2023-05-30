@@ -313,6 +313,7 @@ func GetTurtleData(account *model.Account, function, market, symbol string, far,
 			model.AppDB.Save(candle)
 			data.N = candle.N
 			data.NVolume = candle.NVolume
+			data.M = candle.M
 			data.Amount = CalcTurtleAmount(account, market, data.N, amountRate)
 			util.Notice(fmt.Sprintf(`set data %s %f %f`, function, data.N, data.Amount))
 		}
@@ -370,6 +371,8 @@ func getTurtleCandles(account *model.Account, market, symbol string, far, second
 	return sortedCandles.Value
 }
 
+const CandleMLen = 20
+
 func CalcCandleN(sortedCandles *model.SortedCandle, calcLen int) {
 	beginPrice := 0.0
 	beginVolume := 0.0
@@ -384,14 +387,14 @@ func CalcCandleN(sortedCandles *model.SortedCandle, calcLen int) {
 		sortedCandles.Value[i].N = (sortedCandles.Value[i-1].N*float64(calcLen-1) + sortedCandles.Value[i].PriceHigh - sortedCandles.Value[i].PriceLow) / float64(calcLen)
 		sortedCandles.Value[i].NVolume = (sortedCandles.Value[i-1].NVolume*float64(calcLen-1) + sortedCandles.Value[i].Volume) / float64(calcLen)
 	}
-	//disAll := 0.0
-	//for i := 0; i < len(sortedCandles.Value); i++ {
-	//	disAll += sortedCandles.Value[i].PriceHigh - sortedCandles.Value[i].PriceLow
-	//	if i >= CandleMLen {
-	//		disAll = disAll - sortedCandles.Value[i-CandleMLen].PriceHigh + sortedCandles.Value[i-CandleMLen].PriceLow
-	//		sortedCandles.Value[i].M = disAll / CandleMLen
-	//	}
-	//}
+	disAll := 0.0
+	for i := 0; i < len(sortedCandles.Value); i++ {
+		disAll += sortedCandles.Value[i].PriceHigh - sortedCandles.Value[i].PriceLow
+		if i >= CandleMLen {
+			disAll = disAll - sortedCandles.Value[i-CandleMLen].PriceHigh + sortedCandles.Value[i-CandleMLen].PriceLow
+			sortedCandles.Value[i].M = disAll / CandleMLen
+		}
+	}
 }
 
 func findCandle(candles []*model.Candle, begin time.Time) (resultCandle *model.Candle) {
