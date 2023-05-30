@@ -209,11 +209,9 @@ func clearTurtleOrders(account *model.Account, setting *model.Setting, turtle *m
 	}
 }
 
-var handleLastLock = sync.Mutex{}
+var getTurtleLock = sync.Mutex{}
 
 func handleLastTurtleData(account *model.Account, function, market, symbol, lastTime string) {
-	handleLastLock.Lock()
-	defer handleLastLock.Unlock()
 	util.Notice(fmt.Sprintf(`handle last turtle %s %s %s %s`, function, market, symbol, lastTime))
 	var settings []*model.Setting
 	var turtles []*model.TurtleData
@@ -249,6 +247,8 @@ func handleLastTurtleData(account *model.Account, function, market, symbol, last
 // GetTurtleData refreshDynamic false时代表仅作为检查是否有足够turtleData作为top market info使用，此时不会存在缓存中，否则会引起far near错误
 func GetTurtleData(account *model.Account, function, market, symbol string, far, near, seconds int64, amountRate float64,
 	refreshDynamic bool) (data *model.TurtleData) {
+	getTurtleLock.Lock()
+	defer getTurtleLock.Unlock()
 	now := time.Now()
 	nowPeriod, nowStr := model.GetNowPeriod(market, seconds, now)
 	today, _ := model.GetMarketToday(market)

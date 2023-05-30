@@ -416,7 +416,6 @@ func handleMarketDynamic(market string) (handled bool) {
 	if (settingDynamicTurtle == nil && settingDynamicCombine == nil) || accounts == nil || len(accounts) == 0 {
 		return false
 	}
-	DynamicHandleTime.Store(market, time.Now())
 	if settingDynamicCombine != nil {
 		topMarketInfos := getDynamicMarketInfos(settingDynamicCombine, accounts, settingDynamicCombine.Function)
 		handleCombineSettings(settingDynamicCombine, topMarketInfos)
@@ -424,6 +423,7 @@ func handleMarketDynamic(market string) (handled bool) {
 		topMarketInfos := getDynamicMarketInfos(settingDynamicTurtle, accounts, settingDynamicTurtle.Function)
 		handleTurtleSettings(settingDynamicTurtle, topMarketInfos)
 	}
+	DynamicHandleTime.Store(market, time.Now())
 	util.Notice(fmt.Sprintf(`handleMarketDynamic %s`, market))
 	return true
 }
