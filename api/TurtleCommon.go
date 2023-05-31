@@ -209,9 +209,9 @@ func clearTurtleOrders(account *model.Account, setting *model.Setting, turtle *m
 	}
 }
 
-var getTurtleLock = sync.Mutex{}
+var getTurtleLock = sync.Map{} // key - *sync.Mutex{}
 
-func handleLastTurtleData(account *model.Account, function, market, symbol, lastTime string) {
+func handleLastTurtleData(account *model.Account, function, market, symbol, lastTime string) (lastHandled bool) {
 	util.Notice(fmt.Sprintf(`handle last turtle %s %s %s %s`, function, market, symbol, lastTime))
 	var settings []*model.Setting
 	var turtles []*model.TurtleData
@@ -222,6 +222,7 @@ func handleLastTurtleData(account *model.Account, function, market, symbol, last
 			valueCombine, _ := util.LoadSyncMap(&TurtleDataSet, model.FunctionCombineTurtle, market, symbol, lastTime)
 			valueNormal, _ := util.LoadSyncMap(&TurtleDataSet, model.FunctionTurtleNormal, market, symbol, lastTime)
 			if valueCombine != nil && valueNormal != nil {
+				lastHandled = true
 				settings = []*model.Setting{settingCombine, settingNormal}
 				turtles = []*model.TurtleData{valueCombine.(*model.TurtleData), valueNormal.(*model.TurtleData)}
 				CheckBreak(account, market, symbol, settings, turtles, nil)
@@ -237,30 +238,41 @@ func handleLastTurtleData(account *model.Account, function, market, symbol, last
 		if valueTurtle == nil || settings[0] == nil {
 			return
 		}
+		lastHandled = true
 		turtles = []*model.TurtleData{valueTurtle.(*model.TurtleData)}
 		CheckBreak(account, market, symbol, settings, turtles, nil)
 		clearTurtleOrders(account, settings[0], turtles[0])
 		util.StoreSyncMap(&TurtleDataSet, nil, function, market, symbol, lastTime)
 	}
+	return lastHandled
 }
 
 // GetTurtleData refreshDynamic false时代表仅作为检查是否有足够turtleData作为top market info使用，此时不会存在缓存中，否则会引起far near错误
 func GetTurtleData(account *model.Account, function, market, symbol string, far, near, seconds int64, amountRate float64,
 	refreshDynamic bool) (data *model.TurtleData) {
 	if refreshDynamic {
-		getTurtleLock.Lock()
-		defer getTurtleLock.Unlock()
+		var lock *sync.Mutex
+		lockValue, _ := getTurtleLock.Load(account.Key)
+		if lockValue == nil {
+			lock = &sync.Mutex{}
+			getTurtleLock.Store(account.Key, lock)
+		} else {
+			lock = lockValue.(*sync.Mutex)
+		}
+		defer lock.Unlock()
+		lock.Lock()
 	}
 	now := time.Now()
 	nowPeriod, nowStr := model.GetNowPeriod(market, seconds, now)
 	today, _ := model.GetMarketToday(market)
 	value, ok := util.LoadSyncMap(&TurtleDataSet, function, market, symbol, nowStr)
+	lastHandled := false
 	if ok && value != nil {
 		return value.(*model.TurtleData)
 	} else {
 		lastTime := time.Unix(now.Unix()-seconds, 0)
 		_, lastStr := model.GetNowPeriod(market, seconds, lastTime)
-		handleLastTurtleData(account, function, market, symbol, lastStr)
+		lastHandled = handleLastTurtleData(account, function, market, symbol, lastStr)
 	}
 	_, _, coin, _ := model.GetFromStandard(market, symbol)
 	if today.Unix() == nowPeriod.Unix() && refreshDynamic && !model.CommonCoins[strings.ToLower(coin)] {
@@ -281,7 +293,10 @@ func GetTurtleData(account *model.Account, function, market, symbol string, far,
 		useNear = false
 	}
 	data = &model.TurtleData{TurtleTime: nowPeriod, Symbol: symbol, BreakLong: false, BreakShort: false, Liquidated: false,
-		DaysFar: int(far), DaysNear: int(near), DaysAdjust: 5, UseNear: useNear}
+		DaysFar: int(far), DaysNear: int(near), DaysAdjust: 5, UseNear: useNear, OrderCleared: lastHandled}
+	if lastHandled {
+		data.CheckTimeOpen = time.Now()
+	}
 	candles := getTurtleCandles(account, market, symbol, int(far), int(seconds), nowPeriod)
 	for i := 1; i <= data.DaysFar; i++ {
 		currentPeriod := nowPeriod.Add(time.Second * time.Duration(seconds*int64(-i)))
@@ -312,7 +327,7 @@ func GetTurtleData(account *model.Account, function, market, symbol string, far,
 			data.LowAdjust = candle.PriceLow
 		}
 		if i == 1 {
-			model.AppDB.Save(candle)
+			go model.AppDB.Save(candle)
 			data.N = candle.N
 			data.NVolume = candle.NVolume
 			data.M = candle.M

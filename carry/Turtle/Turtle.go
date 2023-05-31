@@ -63,9 +63,9 @@ var ProcessTurtle = func(setting *model.Setting, tick *model.BidAsk) {
 		api.CheckBreak(account, setting.Market, setting.Symbol, []*model.Setting{setting}, []*model.TurtleData{data}, tick) {
 		return
 	}
-	if !data.AdjustChecked {
-		return
-	}
+	//if !data.AdjustChecked {
+	//	return
+	//}
 	if setting.Chance == 0 { // 开初始仓
 		placeTurtleOrders(account.Key, account.Secret, data, setting, canOpenTurtle, chanceInAll, priceShort, priceLong, tick)
 		if data.BreakLong && data.OrderLong != nil {

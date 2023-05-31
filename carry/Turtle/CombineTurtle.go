@@ -73,10 +73,10 @@ var ProcessCombineTurtle = func(settingCombine *model.Setting, tick *model.BidAs
 		//util.Notice(fmt.Sprintf(`combine return handle or break %s %s`, market, symbol))
 		return
 	}
-	if !dataCombine.AdjustChecked && !dataNormal.AdjustChecked {
-		util.Notice(fmt.Sprintf(`combine return not adjusted %s %s`, market, symbol))
-		return
-	}
+	//if !dataCombine.AdjustChecked && !dataNormal.AdjustChecked {
+	//	util.Notice(fmt.Sprintf(`combine return not adjusted %s %s`, market, symbol))
+	//	return
+	//}
 	minSize := 0.0
 	var marketInfo *model.MarketInfo
 	v, _ := util.LoadSyncMap(model.MarketInfos, market, symbol)

@@ -263,7 +263,7 @@ func getCandle(account *model.Account, market, symbol string, slotSeconds int, b
 		//}
 		if !isCache {
 			util.Notice(msg)
-			time.Sleep(time.Second)
+			time.Sleep(time.Millisecond * 120)
 		} else {
 			//util.Notice(fmt.Sprintf(`get candles from cache %s %s %v %v %d %d`,
 			//	market, symbol, begin, end, count, slotSeconds))
