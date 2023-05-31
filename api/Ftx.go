@@ -80,7 +80,7 @@ func maintainChannelFtx(subscribes []interface{}) {
 				}
 			}
 			if !needReset {
-				util.Notice(`no need reset %s`, model.Ftx)
+				util.Info(`no need reset %s`, model.Ftx)
 			}
 		}
 	}

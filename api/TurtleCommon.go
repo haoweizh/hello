@@ -247,8 +247,10 @@ func handleLastTurtleData(account *model.Account, function, market, symbol, last
 // GetTurtleData refreshDynamic false时代表仅作为检查是否有足够turtleData作为top market info使用，此时不会存在缓存中，否则会引起far near错误
 func GetTurtleData(account *model.Account, function, market, symbol string, far, near, seconds int64, amountRate float64,
 	refreshDynamic bool) (data *model.TurtleData) {
-	getTurtleLock.Lock()
-	defer getTurtleLock.Unlock()
+	if refreshDynamic {
+		getTurtleLock.Lock()
+		defer getTurtleLock.Unlock()
+	}
 	now := time.Now()
 	nowPeriod, nowStr := model.GetNowPeriod(market, seconds, now)
 	today, _ := model.GetMarketToday(market)

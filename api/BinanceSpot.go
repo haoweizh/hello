@@ -241,7 +241,7 @@ func maintainChannelBinanceSpot(subscribes []interface{}) {
 				SetRequireReset(model.BinanceSpot)
 				util.Notice(`require reset binance spot %d in all %d`, timeoutNum, len(subscribes))
 			} else {
-				util.Notice(`no need reset %s`, model.BinanceSpot)
+				util.Info(`no need reset %s`, model.BinanceSpot)
 			}
 		}
 	}

@@ -123,7 +123,7 @@ func reSubscribe(subscribes []interface{}) {
 			subArray = append(subArray, map[string]string{`channel`: chanelOKEX, `instId`: dialectSymbol})
 		}
 	}
-	util.Notice(`no need reset %s`, model.OKEX)
+	util.Info(`no need reset %s`, model.OKEX)
 	if len(subArray) == 0 {
 		return
 	}

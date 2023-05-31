@@ -72,7 +72,7 @@ func maintainChannelMexc(subscribes []interface{}) {
 				time.Sleep(time.Millisecond * 100)
 			}
 			if !needReset {
-				util.Notice(`no need reset %s`, model.Mexc)
+				util.Info(`no need reset %s`, model.Mexc)
 			} else {
 				SetRequireReset(model.Mexc)
 			}

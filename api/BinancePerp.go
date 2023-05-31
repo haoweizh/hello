@@ -276,7 +276,7 @@ func maintainChannelBinancePerp(subscribes []interface{}) {
 				}
 			}
 			if !needReset {
-				util.Notice(`no need reset %s`, model.BinancePerp)
+				util.Info(`no need reset %s`, model.BinancePerp)
 			}
 		}
 	}
