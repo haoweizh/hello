@@ -700,20 +700,6 @@ func GetParameters(c *gin.Context) {
 		msgCombine, sizeCombine := createTurtleLines(model.FunctionCombineTurtle, market, account)
 		msg += fmt.Sprintf("单一海龟%s 个数%d\n %s\n", market, sizeTurtle, msgTurtle)
 		msg += fmt.Sprintf("组合海龟%s 个数%d\n %s\n", market, sizeCombine, msgCombine)
-		if market == model.OKEX {
-			api.MustCancel(account.Key, account.Secret, market, `TRX_PERP`, model.OrderTypeLimit, `583981636803907614`, true)
-			api.MustCancel(account.Key, account.Secret, market, `TRX_PERP`, model.OrderTypeLimit, `583981636086681600`, true)
-			api.MustCancel(account.Key, account.Secret, market, `TRX_PERP`, model.OrderTypeStop, `583981635419787276`, true)
-			api.MustCancel(account.Key, account.Secret, market, `TRX_PERP`, model.OrderTypeStop, `583981634786447370`, true)
-			api.MustCancel(account.Key, account.Secret, market, `XRP_PERP`, model.OrderTypeLimit, `583977714060120064`, true)
-			api.MustCancel(account.Key, account.Secret, market, `XRP_PERP`, model.OrderTypeLimit, `583977713368059913`, true)
-			api.MustCancel(account.Key, account.Secret, market, `XRP_PERP`, model.OrderTypeStop, `583977712738914307`, true)
-			api.MustCancel(account.Key, account.Secret, market, `XRP_PERP`, model.OrderTypeStop, `583977712101380109`, true)
-			api.MustCancel(account.Key, account.Secret, market, `LTC_PERP`, model.OrderTypeLimit, `583977705566654464`, true)
-			api.MustCancel(account.Key, account.Secret, market, `LTC_PERP`, model.OrderTypeLimit, `583977704874594327`, true)
-			api.MustCancel(account.Key, account.Secret, market, `LTC_PERP`, model.OrderTypeStop, `583977704220282881`, true)
-			api.MustCancel(account.Key, account.Secret, market, `LTC_PERP`, model.OrderTypeStop, `583977703561777158`, true)
-		}
 	}
 	//setting := api.GetSetting(model.FunctionGrid, model.Ftx, `LINK-PERP`)
 	//if setting != nil {
