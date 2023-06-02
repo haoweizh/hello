@@ -760,9 +760,10 @@ func breakMarkPrice(account *model.Account, setting *model.Setting, price float6
 	return false
 }
 
-func checkTradeLine(statusBuy, statusSell *CarryStatus, score float64) (valid, haveLimit bool, limit float64) {
+func checkTradeLine(statusBuy, statusSell *CarryStatus, score, price float64) (valid, haveLimit bool, limit float64) {
+	limit = math.Max(score*100000/price, 0)
 	if statusBuy.Holding >= 0 && statusSell.Holding <= 0 {
-		return score > statusBuy.TradeLineBuy && score > statusSell.TradeLineSell, false, 0
+		return score > statusBuy.TradeLineBuy && score > statusSell.TradeLineSell, true, limit
 		//} else if statusBuy.Holding < 0 && statusSell.Holding > 0 {
 		//	small := math.Min(statusBuy.TradeLineBuy, statusSell.TradeLineSell)
 		//	big := math.Max(statusBuy.TradeLineBuy, statusSell.TradeLineSell)
@@ -770,13 +771,13 @@ func checkTradeLine(statusBuy, statusSell *CarryStatus, score float64) (valid, h
 	} else {
 		marketDis := (statusBuy.TradeLineBuy + statusSell.TradeLineSell) / 2
 		if score > marketDis {
-			return true, false, 0
+			return true, true, limit
 		}
 		if statusBuy.account.CarryClose && statusBuy.Holding < 0 {
-			limit = math.Abs(statusBuy.Holding)
+			limit = math.Min(limit, math.Abs(statusBuy.Holding))
 		}
 		if statusSell.account.CarryClose && statusSell.Holding > 0 {
-			limit = statusSell.Holding
+			limit = math.Min(limit, statusSell.Holding)
 		}
 		return score > marketDis, true, limit
 	}
@@ -824,7 +825,7 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarrySta
 	//	tradeLineBuy += carryStatus.FoundingRate * temp
 	//	tradeLineSell -= carryStatus.FoundingRate * temp
 	//}
-	valid, haveLimit, limit := checkTradeLine(carryStatusRelate, carryStatus, score)
+	valid, haveLimit, limit := checkTradeLine(carryStatusRelate, carryStatus, score, priceBid)
 	if valid {
 		statusSell = carryStatus
 		statusBuy = carryStatusRelate
@@ -835,7 +836,7 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarrySta
 		askAmount = amountBid
 		bidAmount = amountAskRelate
 	} else {
-		valid, haveLimit, limit = checkTradeLine(carryStatus, carryStatusRelate, scoreRelate)
+		valid, haveLimit, limit = checkTradeLine(carryStatus, carryStatusRelate, scoreRelate, priceBid)
 		if valid {
 			statusSell = carryStatusRelate
 			statusBuy = carryStatus
