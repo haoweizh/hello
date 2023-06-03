@@ -373,7 +373,7 @@ func getTurtleCandles(account *model.Account, market, symbol string, far, second
 	}
 	candles = CombineCandles(account, market, symbol, seconds,
 		currentPeriod.Add(time.Second*time.Duration(seconds*-1*slots)), currentPeriod)
-	if candles == nil || len(candles) < far {
+	if candles == nil || len(candles) == 0 { //|| len(candles) < far {
 		return nil
 	}
 	calcLen := 10
