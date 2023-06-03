@@ -499,9 +499,8 @@ func CheckBreak(account *model.Account, market, symbol string, settings []*model
 				for _, order := range data.OrderLong {
 					data.OrderAdjust = append(data.OrderAdjust, order)
 				}
-				util.Notice(fmt.Sprintf(`order break long %s %s %s %d bid-ask %e %e %e %e id %s`,
-					market, symbol, orderLong.OrderType, setting.Chance, tick.Bids[0].Price,
-					tick.Asks[0].Price, orderLong.TriggerPrice, orderLong.Price, orderLong.OrderId))
+				util.Notice(fmt.Sprintf(`order break long %s %s %s %d %e %e id %s`,
+					market, symbol, orderLong.OrderType, setting.Chance, orderLong.TriggerPrice, orderLong.Price, orderLong.OrderId))
 			}
 		}
 		if orderShort != nil {
@@ -519,9 +518,8 @@ func CheckBreak(account *model.Account, market, symbol string, settings []*model
 				for _, order := range data.OrderShort {
 					data.OrderAdjust = append(data.OrderAdjust, order)
 				}
-				util.Notice(fmt.Sprintf(`order break short %s %s %s %d bid-ask %e %e %e %e id %s`,
-					market, symbol, orderShort.OrderType, setting.Chance, tick.Bids[0].Price,
-					tick.Asks[0].Price, orderShort.TriggerPrice, orderShort.Price, orderShort.OrderId))
+				util.Notice(fmt.Sprintf(`order break short %s %s %s %d %e %e id %s`,
+					market, symbol, orderShort.OrderType, setting.Chance, orderShort.TriggerPrice, orderShort.Price, orderShort.OrderId))
 			}
 		}
 	}
