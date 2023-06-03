@@ -249,7 +249,7 @@ func handleLastTurtleData(account *model.Account, function, market, symbol, last
 
 // GetTurtleData refreshDynamic false时代表仅作为检查是否有足够turtleData作为top market info使用，此时不会存在缓存中，否则会引起far near错误
 func GetTurtleData(account *model.Account, function, market, symbol string, far, near, seconds int64, amountRate float64,
-	refreshDynamic bool) (data *model.TurtleData) {
+	refreshDynamic bool) (data *model.TurtleData, dataValid bool) {
 	if refreshDynamic {
 		var lock *sync.Mutex
 		lockValue, _ := getTurtleLock.Load(account.Key)
@@ -264,28 +264,30 @@ func GetTurtleData(account *model.Account, function, market, symbol string, far,
 	}
 	now := time.Now()
 	nowPeriod, nowStr := model.GetNowPeriod(market, seconds, now)
-	today, _ := model.GetMarketToday(market)
 	value, ok := util.LoadSyncMap(&TurtleDataSet, function, market, symbol, nowStr)
 	lastHandled := false
 	if ok && value != nil {
-		return value.(*model.TurtleData)
+		return value.(*model.TurtleData), true
 	} else {
 		lastTime := time.Unix(now.Unix()-seconds, 0)
 		_, lastStr := model.GetNowPeriod(market, seconds, lastTime)
 		lastHandled = handleLastTurtleData(account, function, market, symbol, lastStr)
 	}
 	_, _, coin, _ := model.GetFromStandard(market, symbol)
-	if today.Unix() == nowPeriod.Unix() && refreshDynamic && !model.CommonCoins[strings.ToLower(coin)] {
+	//today, _ := model.GetMarketToday(market)
+	// today.Unix() == nowPeriod.Unix() &&
+	if refreshDynamic && !model.CommonCoins[strings.ToLower(coin)] {
 		refreshValue, refreshOk := DynamicHandleTime.Load(market)
 		if !refreshOk || refreshValue == nil || refreshValue.(time.Time).Add(time.Hour).Before(time.Now()) {
 			if handleMarketDynamic(market) {
 				PrepareSettings()
 				SetRequireReset(market)
-				return nil
+				return nil, true
 			}
 		}
 	}
-	util.Notice(fmt.Sprintf(`need to create turtle data %s %s %s %s %d`, function, market, symbol, nowStr, far))
+	util.Notice(fmt.Sprintf(`need to create turtle data %s %s %s %s %d refresh %v`,
+		function, market, symbol, nowStr, far, refreshDynamic))
 	useNear := false
 	if function == model.FunctionTurtle || function == model.FunctionTurtleNormal {
 		useNear = true
@@ -306,7 +308,11 @@ func GetTurtleData(account *model.Account, function, market, symbol string, far,
 				util.Notice(`can not calc turtleDate as nil candle %s %s %s %s %d`,
 					market, symbol, data.Symbol, currentPeriod.String(), len(candles))
 			}
-			return nil
+			if i == 1 {
+				return nil, false
+			} else {
+				return nil, true
+			}
 		}
 		if candle.PriceHigh > data.HighDaysFar && i <= data.DaysFar {
 			data.HighDaysFar = candle.PriceHigh
@@ -342,9 +348,9 @@ func GetTurtleData(account *model.Account, function, market, symbol string, far,
 				function, market, symbol, nowStr, data.Amount, data.N, data.DaysNear, data.LowDaysNear,
 				data.HighDaysNear, data.DaysFar, data.LowDaysFar, data.HighDaysFar, data))
 		}
-		return data
+		return data, true
 	} else {
-		return nil
+		return nil, false
 	}
 }
 

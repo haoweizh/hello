@@ -370,6 +370,7 @@ func getDynamicMarketInfos(mumSetting *model.Setting, accounts []*model.Account,
 			var turtleData *model.TurtleData
 			for time.Now().Minute() <= 6 || !tried {
 				tried = true
+				dataValid := false
 				far := mumSetting.Far
 				near := mumSetting.Near
 				seconds := mumSetting.Seconds
@@ -379,13 +380,16 @@ func getDynamicMarketInfos(mumSetting *model.Setting, accounts []*model.Account,
 					seconds = mumSetting.SecondsCombine
 				}
 				if near > 0 && far > near && seconds > 0 {
-					turtleData = GetTurtleData(accounts[0], function, mumSetting.Market, marketInfoArray[i].Name,
+					turtleData, dataValid = GetTurtleData(accounts[0], function, mumSetting.Market, marketInfoArray[i].Name,
 						far, near, seconds, mumSetting.CloseShortMargin, false)
 					if turtleData != nil {
 						topMarketInfos[marketInfoArray[i].Name] = marketInfoArray[i]
 						turtleDataArray = append(turtleDataArray, turtleData)
 						util.Notice(fmt.Sprintf(`get top turtle done %d of %d %s %s %d n:%f nVolume:%f`,
 							i, topMarketInfoLen, mumSetting.Market, marketInfoArray[i].Name, mumSetting.Seconds, turtleData.N, turtleData.NVolume))
+						break
+					} else if dataValid {
+						util.Notice(fmt.Sprintf(`get top turtle data fail for new coin reason`))
 						break
 					} else {
 						util.Notice(fmt.Sprintf(`get top turtle data fail %s %s`, mumSetting.Market, marketInfoArray[i].Name))

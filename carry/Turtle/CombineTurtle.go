@@ -44,9 +44,9 @@ var ProcessCombineTurtle = func(settingCombine *model.Setting, tick *model.BidAs
 	settings := []*model.Setting{settingCombine, settingNormal}
 	account := model.AppConfig.GetAccounts(market)[0]
 	var dataCombine, dataNormal *model.TurtleData
-	dataCombine = api.GetTurtleData(account, settingCombine.Function, settingCombine.Market, settingCombine.Symbol,
+	dataCombine, _ = api.GetTurtleData(account, settingCombine.Function, settingCombine.Market, settingCombine.Symbol,
 		settingCombine.Far, settingCombine.Near, settingCombine.Seconds, settingCombine.CloseShortMargin, true)
-	dataNormal = api.GetTurtleData(account, settingNormal.Function, settingNormal.Market, settingNormal.Symbol,
+	dataNormal, _ = api.GetTurtleData(account, settingNormal.Function, settingNormal.Market, settingNormal.Symbol,
 		settingNormal.Far, settingNormal.Near, settingNormal.Seconds, settingNormal.CloseShortMargin, true)
 	if dataCombine == nil || dataCombine.N == 0 || dataCombine.Amount == 0 || dataNormal == nil || dataNormal.N == 0 ||
 		dataNormal.Amount == 0 || settingCombine == nil || settingNormal == nil || model.AppConfig.Env == `test` {

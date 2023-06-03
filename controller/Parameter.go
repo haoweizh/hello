@@ -645,7 +645,7 @@ func createTurtleLines(function, market string, account *model.Account) (msg str
 			return true
 		}
 		setting := value.(*model.Setting)
-		turtleData := api.GetTurtleData(account, function, market, symbol.(string), setting.Far, setting.Near,
+		turtleData, _ := api.GetTurtleData(account, function, market, symbol.(string), setting.Far, setting.Near,
 			setting.Seconds, setting.CloseShortMargin, false)
 		msgKey := model.GetMsgKey(function, market, symbol.(string))
 		needAdd := false
@@ -654,7 +654,7 @@ func createTurtleLines(function, market string, account *model.Account) (msg str
 				needAdd = true
 			} else if function == model.FunctionCombineTurtle {
 				settingNormal := api.GetSetting(model.FunctionTurtleNormal, market, symbol.(string))
-				turtleNormal := api.GetTurtleData(account, model.FunctionTurtleNormal, market, symbol.(string),
+				turtleNormal, _ := api.GetTurtleData(account, model.FunctionTurtleNormal, market, symbol.(string),
 					settingNormal.Far, settingNormal.Near, settingNormal.Seconds, settingNormal.CloseShortMargin, false)
 				if turtleNormal != nil && (turtleNormal.OrderLong != nil || turtleNormal.OrderShort != nil) {
 					needAdd = true
