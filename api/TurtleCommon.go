@@ -295,7 +295,7 @@ func GetTurtleData(account *model.Account, function, market, symbol string, far,
 		useNear = false
 	}
 	data = &model.TurtleData{TurtleTime: nowPeriod, Symbol: symbol, BreakLong: false, BreakShort: false, Liquidated: false,
-		DaysFar: int(far), DaysNear: int(near), DaysAdjust: 5, UseNear: useNear, OrderCleared: lastHandled}
+		DaysFar: int(far), DaysNear: int(near), DaysAdjust: 5, UseNear: useNear, OrderCleared: lastHandled, OrderAdjust: make([]*model.Order, 0)}
 	if lastHandled {
 		data.CheckTimeOpen = time.Now()
 	}

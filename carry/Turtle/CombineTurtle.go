@@ -175,6 +175,9 @@ func handleBreakLong(setting, settingOpposite *model.Setting, data, dataOpposite
 		setting.Chance++
 		setting.GridAmount += data.Amount
 	}
+	for _, order := range data.OrderLong {
+		data.OrderAdjust = append(data.OrderAdjust, order)
+	}
 	util.Notice(fmt.Sprintf(`clear turtle sell when buy break %s %s %v`, setting.Market, setting.Symbol, data.OrderShort))
 	time.Sleep(time.Second * 3)
 	data.OrderLong = nil
@@ -218,6 +221,9 @@ func handleBreakShort(setting, settingOpposite *model.Setting, data, dataOpposit
 			setting.Market, setting.Symbol, setting.Chance, setting.GridAmount, setting.PriceX, data.N))
 		setting.Chance--
 		setting.GridAmount += data.Amount
+	}
+	for _, order := range data.OrderShort {
+		data.OrderAdjust = append(data.OrderAdjust, order)
 	}
 	util.Notice(fmt.Sprintf(`clear turtle buy when sell break %s %s %v`, setting.Market, setting.Symbol, data.OrderLong))
 	time.Sleep(time.Second * 3)
