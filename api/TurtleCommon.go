@@ -387,9 +387,9 @@ func getTurtleCandles(account *model.Account, market, symbol string, far, second
 	} else {
 		lastCandle := sortedCandles.Value[len(sortedCandles.Value)-1]
 		lastCandle.N = (lastCandle2.N*float64(calcLen-1) + lastCandle.PriceHigh - lastCandle.PriceLow) / float64(calcLen)
-		lastCandle.NVolume = (lastCandle2.NVolume*float64(calcLen-1) + lastCandle.NVolume) / float64(calcLen)
-		util.Notice(fmt.Sprintf(`base on last 2 candle %s %s far %d %d n-n %f %f nv-nv %f %f`,
-			market, symbol, far, seconds, lastCandle2.N, lastCandle.N, lastCandle2.NVolume, lastCandle.NVolume))
+		lastCandle.NVolume = (lastCandle2.NVolume*float64(calcLen-1) + lastCandle.Volume) / float64(calcLen)
+		util.Notice(fmt.Sprintf(`base on last 2 candle %s %s far %d %d n-n %f %f nv-nv %f %f len %d`,
+			market, symbol, far, seconds, lastCandle2.N, lastCandle.N, lastCandle2.NVolume, lastCandle.NVolume, calcLen))
 	}
 	return sortedCandles.Value
 }
