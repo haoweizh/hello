@@ -299,7 +299,7 @@ var wsHandlerPrivate = func(connection *websocket.Conn, event []byte, orderHandl
 
 func handleWSOrderOKEX(value map[string]interface{}, orderHandler OrderHandler) {
 	order := parseOrderOKEX(value)
-	util.Info(`get order sCode %s %s %v`, order.Status, order.ErrCode, value)
+	//util.Info(`get order sCode %s %s %v`, order.Status, order.ErrCode, value)
 	//dbOrder := model.Order{}
 	//model.AppDB.Where(`order_id=?`, order.OrderId).First(&dbOrder)
 	//if dbOrder.OrderId != `` {
