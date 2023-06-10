@@ -81,6 +81,8 @@ func ClearExtraOrders(key, secret, market, symbol string, dataArray []*model.Tur
 			result := MustCancel(key, secret, market, symbol, order.OrderType, order.OrderId, true)
 			util.Notice(`cancel extra stop order %s %s %s %s return %v`, market, symbol, order.OrderType, order.OrderId, result)
 			time.Sleep(time.Second)
+		} else {
+			util.Notice(`keep stop order %s %s %s`, market, symbol, order.OrderId)
 		}
 	}
 	ordersLimit := QueryOpenOrders(key, secret, market, symbol, false)
@@ -89,6 +91,8 @@ func ClearExtraOrders(key, secret, market, symbol string, dataArray []*model.Tur
 			result := MustCancel(key, secret, market, symbol, order.OrderType, order.OrderId, true)
 			util.Notice(`cancel extra limit order %s %s %s %s return %v`, market, symbol, order.OrderType, order.OrderId, result)
 			time.Sleep(time.Second)
+		} else {
+			util.Notice(`keep limit order %s %s %s`, market, symbol, order.OrderId)
 		}
 	}
 }
