@@ -715,7 +715,7 @@ func placeOrderOKEX(account *model.Account, isWs bool, order *model.Order) {
 					order.Status = model.CarryStatusFail
 					order.ErrCode = value[`sCode`].(string)
 				}
-				if value[`ordId`] != nil {
+				if value[`ordId`] != nil && len(value[`ordId`].(string)) > 0 && value[`ordId`].(string) != `0` {
 					order.OrderId = value[`ordId`].(string)
 					return
 				} else if value[`algoId`] != nil {
@@ -864,7 +864,7 @@ func parseOrderOKEX(value map[string]interface{}) (order *model.Order) {
 		return nil
 	}
 	order = &model.Order{Market: model.OKEX}
-	if value[`ordId`] != nil && value[`ordId`].(string) != `0` {
+	if value[`ordId`] != nil && value[`ordId`].(string) != `0` && value[`ordId`].(string) != `` {
 		order.OrderId = value[`ordId`].(string)
 	} else if value[`algoId`] != nil {
 		order.OrderId = value[`algoId`].(string)
