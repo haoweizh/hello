@@ -45,9 +45,9 @@ var ProcessCombineTurtle = func(settingCombine *model.Setting, tick *model.BidAs
 	account := model.AppConfig.GetAccounts(market)[0]
 	var dataCombine, dataNormal *model.TurtleData
 	dataCombine, _ = api.GetTurtleData(account, settingCombine.Function, settingCombine.Market, settingCombine.Symbol,
-		settingCombine.Far, settingCombine.Near, settingCombine.Seconds, settingCombine.CloseShortMargin, true)
+		settingCombine.Far, settingCombine.Near, settingCombine.Seconds, settingCombine.AmountRate, true)
 	dataNormal, _ = api.GetTurtleData(account, settingNormal.Function, settingNormal.Market, settingNormal.Symbol,
-		settingNormal.Far, settingNormal.Near, settingNormal.Seconds, settingNormal.CloseShortMargin, true)
+		settingNormal.Far, settingNormal.Near, settingNormal.Seconds, settingNormal.AmountRate, true)
 	if dataCombine == nil || dataCombine.N == 0 || dataCombine.Amount == 0 || dataNormal == nil || dataNormal.N == 0 ||
 		dataNormal.Amount == 0 || settingCombine == nil || settingNormal == nil || model.AppConfig.Env == `test` {
 		if time.Now().Second() == 0 {
@@ -103,7 +103,7 @@ var ProcessCombineTurtle = func(settingCombine *model.Setting, tick *model.BidAs
 		"\n龟汤:仓数/持仓量/开仓价/今日平仓 %d/%e/%e/%v %s%d 日:%e-%e %d日:%e-%e N:%e",
 		dataCombine.TurtleTime.Month(), dataCombine.TurtleTime.Day(), time.Now().Hour(), time.Now().Minute(), msgKey,
 		dataCombine.NVolume, canOpen, isBig, int(turtleCoins), int(settingCombine.AmountLimit),
-		int(settingCombine.OpenShortMargin), dataCombine.Amount, tick.Bids[0].Price, tick.Asks[0].Price,
+		int(settingCombine.ChanceLimit), dataCombine.Amount, tick.Bids[0].Price, tick.Asks[0].Price,
 		settingNormal.Chance, settingNormal.GridAmount, settingNormal.PriceX, dataNormal.Liquidated, dataNormal.GetIds(), dataNormal.DaysFar,
 		dataNormal.LowDaysFar, dataNormal.HighDaysFar, dataNormal.DaysNear, dataNormal.LowDaysNear, dataNormal.HighDaysNear, dataNormal.N,
 		settingCombine.Chance, settingCombine.GridAmount, settingCombine.PriceX, dataCombine.Liquidated, dataCombine.GetIds(), dataCombine.DaysFar,
@@ -286,7 +286,7 @@ func placeTurtleLong(account *model.Account, orderType string, data *model.Turtl
 	market := setting.Market
 	symbol := setting.Symbol
 	priceDeal := price
-	canOpen = canOpen && math.Abs(float64(setting.Chance)) < setting.OpenShortMargin
+	canOpen = canOpen && math.Abs(float64(setting.Chance)) < float64(setting.ChanceLimit)
 	if data.OrderLong == nil && (setting.Chance < 0 || canOpen) {
 		data.BreakLong = false
 		if orderType == model.OrderTypeStop {
@@ -386,7 +386,7 @@ func placeTurtleShort(account *model.Account, orderType string, data *model.Turt
 	market := setting.Market
 	symbol := setting.Symbol
 	priceDeal := price
-	canOpen = canOpen && math.Abs(float64(setting.Chance)) < setting.OpenShortMargin
+	canOpen = canOpen && math.Abs(float64(setting.Chance)) < float64(setting.ChanceLimit)
 	if data.OrderShort == nil && (setting.Chance > 0 || canOpen) {
 		data.BreakShort = false
 		if orderType == model.OrderTypeStop {

@@ -650,6 +650,6 @@ func CanOpenTurtle(setting *model.Setting, data *model.TurtleData) (canOpen bool
 			data.OrderShort = nil
 		}
 	}
-	canOpen = canOpen && math.Abs(float64(setting.Chance)) < setting.OpenShortMargin
+	canOpen = canOpen && math.Abs(float64(setting.Chance)) < float64(setting.ChanceLimit)
 	return canOpen, inAll
 }

@@ -35,7 +35,7 @@ var ProcessTurtle = func(setting *model.Setting, tick *model.BidAsk) {
 	account := model.AppConfig.GetAccounts(setting.Market)[0]
 	var data *model.TurtleData
 	data, _ = api.GetTurtleData(account, setting.Function, setting.Market, setting.Symbol, setting.Far,
-		setting.Near, setting.Seconds, setting.CloseShortMargin, true)
+		setting.Near, setting.Seconds, setting.AmountRate, true)
 	if data == nil || data.N == 0 || data.Amount == 0 || setting == nil || model.AppConfig.Env == `test` {
 		if time.Now().Minute() == 0 && time.Now().Second() == 0 {
 			util.Notice(fmt.Sprintf(`fail to get turtle %s %s`, setting.Market, setting.Symbol))
@@ -53,7 +53,7 @@ var ProcessTurtle = func(setting *model.Setting, tick *model.BidAsk) {
 		"总仓数币数/仓数币数限制:%d %d 上一次开仓的价格:%e "+
 		"%d日:%e-%e %d日:%e-%e N:%e 单次数量:%e bid-ask %e %e 当日有平仓：%v",
 		data.TurtleTime.Month(), data.TurtleTime.Day(), time.Now().Hour(), time.Now().Minute(), msgKey, data.NVolume,
-		canOpenTurtle, setting.GridAmount, setting.Chance, int(setting.OpenShortMargin), int(chanceInAll),
+		canOpenTurtle, setting.GridAmount, setting.Chance, int(setting.ChanceLimit), int(chanceInAll),
 		int(setting.AmountLimit), setting.PriceX, data.DaysFar, data.LowDaysFar, data.HighDaysFar, data.DaysNear,
 		data.LowDaysNear, data.HighDaysNear, data.N, data.Amount, tick.Bids[0].Price, tick.Asks[0].Price, data.Liquidated)
 	util.StoreSyncMap(&model.CarryInfo, msg, account.Key, msgKey)
@@ -206,8 +206,8 @@ func handleBreak(key, secret string, setting *model.Setting, turtleData *model.T
 
 func placeTurtleOrders(key, secret string, turtleData *model.TurtleData, setting *model.Setting, canOpen bool, chanceInAll float64,
 	priceShort, priceLong float64, tick *model.BidAsk) {
-	coinLimit := int64(setting.OpenShortMargin)
-	canOpen = canOpen && math.Abs(float64(setting.Chance)) < setting.OpenShortMargin
+	coinLimit := setting.ChanceLimit
+	canOpen = canOpen && math.Abs(float64(setting.Chance)) < float64(setting.ChanceLimit)
 	if turtleData.OrderLong == nil && (canOpen || setting.Chance < 0) {
 		orderSide := model.OrderSideBuy
 		typeLong := model.OrderTypeStop

@@ -214,10 +214,10 @@ func handleCombineSettings(mumSetting *model.Setting, topMarketInfos map[string]
 		valueCombine, _ := combineMap.Load(info.Name)
 		valueNormal, _ := normalMap.Load(info.Name)
 		settingCombine := &model.Setting{Valid: true, Function: model.FunctionCombineTurtle, Market: mumSetting.Market,
-			Symbol: info.Name, OpenShortMargin: mumSetting.OpenShortMargin, CloseShortMargin: mumSetting.CloseShortMargin,
+			Symbol: info.Name, ChanceLimit: mumSetting.ChanceLimitCombine, AmountRate: mumSetting.AmountRateCombine,
 			AmountLimit: mumSetting.AmountLimit, Far: mumSetting.FarCombine, Near: mumSetting.NearCombine, Seconds: mumSetting.SecondsCombine}
 		settingNormal := &model.Setting{Valid: true, Function: model.FunctionTurtleNormal, Market: mumSetting.Market,
-			Symbol: info.Name, OpenShortMargin: mumSetting.OpenShortMargin, CloseShortMargin: mumSetting.CloseShortMargin,
+			Symbol: info.Name, ChanceLimit: mumSetting.ChanceLimit, AmountRate: mumSetting.AmountRate,
 			AmountLimit: mumSetting.AmountLimit, Far: mumSetting.Far, Near: mumSetting.Near, Seconds: mumSetting.Seconds}
 		if valueCombine == nil {
 			util.Notice(`add combine %s %v`, mumSetting.Market, info.Name)
@@ -251,7 +251,7 @@ func handleCombineSettings(mumSetting *model.Setting, topMarketInfos map[string]
 		normalValue, _ := normalMap.Load(symbol)
 		if normalValue == nil {
 			normalSetting = &model.Setting{Valid: true, Function: model.FunctionTurtleNormal, Market: mumSetting.Market,
-				Symbol: symbol.(string), OpenShortMargin: mumSetting.OpenShortMargin, CloseShortMargin: mumSetting.CloseShortMargin,
+				Symbol: symbol.(string), ChanceLimit: mumSetting.ChanceLimit, AmountRate: mumSetting.AmountRate,
 				AmountLimit: mumSetting.AmountLimit, Far: mumSetting.Far, Near: mumSetting.Near, Seconds: mumSetting.Seconds}
 			model.AppDB.Save(normalSetting)
 		} else {
@@ -275,7 +275,7 @@ func handleCombineSettings(mumSetting *model.Setting, topMarketInfos map[string]
 		combineValue, _ := combineMap.Load(symbol)
 		if combineValue == nil {
 			combineSetting = &model.Setting{Valid: true, Function: model.FunctionCombineTurtle, Market: mumSetting.Market,
-				Symbol: symbol.(string), OpenShortMargin: mumSetting.OpenShortMargin, CloseShortMargin: mumSetting.CloseShortMargin,
+				Symbol: symbol.(string), ChanceLimit: mumSetting.ChanceLimitCombine, AmountRate: mumSetting.AmountRateCombine,
 				AmountLimit: mumSetting.AmountLimit, Far: mumSetting.FarCombine, Near: mumSetting.NearCombine, Seconds: mumSetting.SecondsCombine}
 			model.AppDB.Save(combineSetting)
 		} else {
@@ -302,7 +302,7 @@ func handleTurtleSettings(mumSetting *model.Setting, topMarketInfos map[string]*
 	for _, info := range topMarketInfos {
 		value, _ = settingMap.Load(info.Name)
 		settingTurtle := &model.Setting{Valid: true, Function: model.FunctionTurtle, Market: mumSetting.Market,
-			Symbol: info.Name, OpenShortMargin: mumSetting.OpenShortMargin, CloseShortMargin: mumSetting.CloseShortMargin,
+			Symbol: info.Name, ChanceLimit: mumSetting.ChanceLimit, AmountRate: mumSetting.AmountRate,
 			AmountLimit: mumSetting.AmountLimit, Far: mumSetting.Far, Near: mumSetting.Near, Seconds: mumSetting.Seconds}
 		if value == nil {
 			util.Notice(`add settingTurtle %v`, settingTurtle.Symbol)
@@ -381,7 +381,7 @@ func getDynamicMarketInfos(mumSetting *model.Setting, accounts []*model.Account,
 				}
 				if near > 0 && far > near && seconds > 0 {
 					turtleData, dataValid = GetTurtleData(accounts[0], function, mumSetting.Market, marketInfoArray[i].Name,
-						far, near, seconds, mumSetting.CloseShortMargin, false)
+						far, near, seconds, mumSetting.AmountRate, false)
 					if turtleData != nil {
 						topMarketInfos[marketInfoArray[i].Name] = marketInfoArray[i]
 						turtleDataArray = append(turtleDataArray, turtleData)
