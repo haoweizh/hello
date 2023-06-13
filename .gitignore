@@ -6,3 +6,4 @@ config.yml
 go.sum
 /go.mod
 /pkg/mod/cache/lock
+.air.toml
