@@ -98,15 +98,15 @@ var ProcessCombineTurtle = func(settingCombine *model.Setting, tick *model.BidAs
 	//价格一样：仓数相加=0时big=false；仓数相加≠0时big=true
 	isBig := dataCombine.IsBig(settingCombine, settingNormal, marketInfo)
 	msgKey := model.GetMsgKey(model.FunctionCombineTurtle, market, symbol)
-	msg := fmt.Sprintf("[%d-%d %d:%d]%s N-Volume %f 可开%v big:%d 币种数:%d/%d 仓数上限%d "+
-		"单仓数量:%e bid-ask %e %e \n海龟:仓数/持仓量/开仓价/今日平仓 %d/%e/%e/%v %s %d 日:%e-%e %d日:%e-%e N:%e"+
-		"\n龟汤:仓数/持仓量/开仓价/今日平仓 %d/%e/%e/%v %s%d 日:%e-%e %d日:%e-%e N:%e",
+	msg := fmt.Sprintf("[%d-%d %d:%d]%s N-Volume %f 可开%v big:%d 币种数:%d/%d "+
+		"单仓数量:%e bid-ask %e %e \n海龟:仓数/持仓量/开仓价/今日平仓 %d of %d/%e/%e/%v %s %d 日:%e-%e %d日:%e-%e N:%e"+
+		"\n龟汤:仓数/持仓量/开仓价/今日平仓 %d of %d/%e/%e/%v %s%d 日:%e-%e %d日:%e-%e N:%e",
 		dataCombine.TurtleTime.Month(), dataCombine.TurtleTime.Day(), time.Now().Hour(), time.Now().Minute(), msgKey,
 		dataCombine.NVolume, canOpen, isBig, int(turtleCoins), int(settingCombine.AmountLimit),
-		int(settingCombine.ChanceLimit), dataCombine.Amount, tick.Bids[0].Price, tick.Asks[0].Price,
-		settingNormal.Chance, settingNormal.GridAmount, settingNormal.PriceX, dataNormal.Liquidated, dataNormal.GetIds(), dataNormal.DaysFar,
+		dataCombine.Amount, tick.Bids[0].Price, tick.Asks[0].Price,
+		settingNormal.Chance, settingNormal.ChanceLimit, settingNormal.GridAmount, settingNormal.PriceX, dataNormal.Liquidated, dataNormal.GetIds(), dataNormal.DaysFar,
 		dataNormal.LowDaysFar, dataNormal.HighDaysFar, dataNormal.DaysNear, dataNormal.LowDaysNear, dataNormal.HighDaysNear, dataNormal.N,
-		settingCombine.Chance, settingCombine.GridAmount, settingCombine.PriceX, dataCombine.Liquidated, dataCombine.GetIds(), dataCombine.DaysFar,
+		settingCombine.Chance, settingCombine.ChanceLimit, settingCombine.GridAmount, settingCombine.PriceX, dataCombine.Liquidated, dataCombine.GetIds(), dataCombine.DaysFar,
 		dataCombine.LowDaysFar, dataCombine.HighDaysFar, dataCombine.DaysNear, dataCombine.LowDaysNear, dataCombine.HighDaysNear, dataCombine.N)
 	util.StoreSyncMap(&model.CarryInfo, msg, account.Key, msgKey)
 	placeTurtleLong(account, model.OrderTypeStop, dataNormal, settingNormal, minSize, tick, isBig, canOpen)
