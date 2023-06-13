@@ -55,8 +55,6 @@ var ProcessCombineTurtle = func(settingCombine *model.Setting, tick *model.BidAs
 		}
 		return
 	}
-	dataNormal.N = dataCombine.N
-	dataNormal.Amount = dataCombine.Amount
 	if !dataCombine.OrderCleared {
 		api.ClearOrders(account.Key, account.Secret, market, symbol)
 		dataCombine.OrderCleared = true
