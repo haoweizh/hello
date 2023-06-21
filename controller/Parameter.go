@@ -233,7 +233,7 @@ func mindZeroAddr(c *gin.Context) {
 	if sessionValue == nil || !codes[sessionValue.(string)] {
 		c.String(http.StatusUnauthorized, `not authorized`)
 	} else {
-		c.String(http.StatusOK, util.RunMindZeroAddr(6, 11, 6))
+		c.String(http.StatusOK, util.RunMindZeroAddr(6, 11, 4))
 	}
 }
 
