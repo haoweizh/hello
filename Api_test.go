@@ -13,25 +13,50 @@ import (
 	"hello/model"
 	"hello/regret"
 	"hello/util"
+	"math/rand"
 	"net/http"
 	"net/url"
+	"regexp"
 	"strconv"
 	"strings"
 	"testing"
 	"time"
 )
 
-var msgChan = make(chan string, 10)
-
-func init() {
-	go handleMsg()
-}
-
-func handleMsg() {
-	for true {
-		msg := <-msgChan
-		fmt.Println(fmt.Sprintf(`%s %d`, msg, len(msgChan)))
+func Test_Com(t *testing.T) {
+	util.MindZeroAddr(1, 2, 4)
+	src := `0x00000000458cEec48586a85fCFEb4A179706656eE321730E`
+	samples := make([]string, 10)
+	for i := range samples {
+		index := rand.Intn(len(src))
+		samples[i] = src[index:] + src[0:index]
 	}
+	reg := regexp.MustCompile("^0x0{8}")
+	if reg.MatchString(src) {
+		fmt.Println(`match`)
+	}
+	begin := time.Now().UnixMilli()
+	for i := 0; i < 10000; i++ {
+		for j := 0; j < len(samples); j++ {
+			if reg.MatchString(samples[j]) {
+
+			}
+		}
+	}
+	end := time.Now().UnixMilli()
+	fmt.Println(fmt.Sprintf(`regression time %d`, end-begin))
+
+	begin = time.Now().UnixMilli()
+	for i := 0; i < 10000; i++ {
+		for j := 0; j < len(samples); j++ {
+			reg.MatchString(samples[j])
+			if samples[j][:10] == "^0x00000000" {
+
+			}
+		}
+	}
+	end = time.Now().UnixMilli()
+	fmt.Println(fmt.Sprintf(`str comp time %d`, end-begin))
 }
 
 func timeWriter(conn *websocket.Conn) {

@@ -50,6 +50,7 @@ func ParameterServe() {
 	router.GET(`wss`, WsPage)
 	router.GET(`gxzq`, simulateGXZQ)
 	router.GET(`candles`, getCandles)
+	router.GET(`mind`, mindZeroAddr)
 	var err error
 	if model.AppConfig.Port == `443` {
 		err = router.RunTLS(":"+model.AppConfig.Port, `./server.pem`, `./server.key`)
@@ -219,6 +220,21 @@ func simulateGrid(c *gin.Context) {
 		}
 	}
 	c.String(http.StatusOK, `done`)
+}
+
+func mindZeroAddr(c *gin.Context) {
+	session := sessions.Default(c)
+	value := c.Query(`code`)
+	if codes[value] {
+		session.Set(`code`, value)
+		_ = session.Save()
+	}
+	sessionValue := session.Get(`code`)
+	if sessionValue == nil || !codes[sessionValue.(string)] {
+		c.String(http.StatusUnauthorized, `not authorized`)
+	} else {
+		c.String(http.StatusOK, util.RunMindZeroAddr(6, 11, 6))
+	}
 }
 
 // simulate
