@@ -116,7 +116,7 @@ func ComposeParams(body map[string]interface{}) (params string) {
 //	return bodyData, nil
 //}
 
-//	method: GET, POST, DELETE
+// method: GET, POST, DELETE
 func HttpRequest(method string, reqUrl string, body string, requestHeaders map[string]string, timeout int) ([]byte, error) {
 	req, createErr := http.NewRequest(method, reqUrl, strings.NewReader(body))
 	if createErr != nil {
