@@ -50,7 +50,7 @@ func ParameterServe() {
 	router.GET(`wss`, WsPage)
 	router.GET(`gxzq`, simulateGXZQ)
 	router.GET(`candles`, getCandles)
-	router.GET(`mind`, mindZeroAddr)
+	router.GET(`mine`, mindZeroAddr)
 	var err error
 	if model.AppConfig.Port == `443` {
 		err = router.RunTLS(":"+model.AppConfig.Port, `./server.pem`, `./server.key`)
