@@ -24,7 +24,6 @@ import (
 )
 
 func Test_Com(t *testing.T) {
-	util.MindZeroAddr(1, 2, 4)
 	src := `0x00000000458cEec48586a85fCFEb4A179706656eE321730E`
 	samples := make([]string, 10)
 	for i := range samples {
@@ -33,7 +32,7 @@ func Test_Com(t *testing.T) {
 	}
 	reg := regexp.MustCompile("^0x0{8}")
 	if reg.MatchString(src) {
-		fmt.Println(`match`)
+		fmt.Println(fmt.Sprintf(`match %s`, reg.String()))
 	}
 	begin := time.Now().UnixMilli()
 	for i := 0; i < 10000; i++ {
