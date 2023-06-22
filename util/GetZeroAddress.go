@@ -78,7 +78,7 @@ func getZeroAddr(patterns []*regexp.Regexp, nonce uint64) {
 				contracts := append(value.([]string), contract)
 				contractNum.Store(i, contracts)
 			} else {
-				contractNum.Store(i, 0)
+				contractNum.Store(i, make([]string, 0))
 			}
 			if i == len(patterns)-1 {
 				if atomic.AddInt64(&number, -1) < 0 {
