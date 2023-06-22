@@ -70,10 +70,10 @@ func MindZeroAddr(zeroLenFrom, zerosLenTo, concurrency int) {
 func getZeroAddr(patterns []*regexp.Regexp, nonce uint64) {
 	number := int64(1)
 	for number > 0 {
+		key, _ := crypto.GenerateKey()
+		address := crypto.PubkeyToAddress(key.PublicKey)
+		contract := crypto.CreateAddress(address, nonce).Hex()
 		for i := 0; i < len(patterns); i++ {
-			key, _ := crypto.GenerateKey()
-			address := crypto.PubkeyToAddress(key.PublicKey)
-			contract := crypto.CreateAddress(address, nonce).Hex()
 			if !patterns[i].MatchString(contract) {
 				continue
 			}
