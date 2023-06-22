@@ -22,6 +22,7 @@ var (
 //}
 
 func RunMindZeroAddr(zeroLenFrom, zerosLenTo, concurrency int) (msg string) {
+	got := false
 	if mining {
 		contractNum.Range(func(key, value any) bool {
 			if value != nil {
@@ -29,11 +30,14 @@ func RunMindZeroAddr(zeroLenFrom, zerosLenTo, concurrency int) (msg string) {
 				for _, s := range value.([]string) {
 					msg += fmt.Sprintf("%s\n", s)
 				}
+				got = true
 			}
 			return true
 		})
-		if msg == `` {
+		if !got {
 			msg = `mining, not yet found`
+		} else {
+			msg = "mining, got\n" + msg
 		}
 	} else {
 		go MindZeroAddr(zeroLenFrom, zerosLenTo, concurrency)
