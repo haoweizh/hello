@@ -35,35 +35,6 @@ func CheckSetProcessing(function, market, symbol string, value bool) (before boo
 	return before
 }
 
-func GetSettingCoins(function, market string) (coins map[string]bool) {
-	handlerInitialized := false
-	handlers.Range(func(key, value interface{}) bool {
-		handlerInitialized = true
-		return true
-	})
-	if !handlerInitialized {
-		util.Notice(`load setting GetSettingCoins %s %s`, function, market)
-		if !InitApp(true) {
-			return nil
-		}
-	}
-	value, ok := util.LoadSyncMap(symbolSettings, function, market)
-	if ok {
-		coins = make(map[string]bool)
-		value.(*sync.Map).Range(func(key, setting interface{}) bool {
-			if setting == nil {
-				return true
-			}
-			success, _, coin, _ := model.GetFromStandard(setting.(*model.Setting).Market, setting.(*model.Setting).Symbol)
-			if success {
-				coins[coin] = true
-			}
-			return true
-		})
-	}
-	return
-}
-
 func GetSettings(function, market string) (settingMap *sync.Map) {
 	//handlerInitialized := false
 	//if handlers != nil {
@@ -95,17 +66,6 @@ func GetSetting(function, market, symbol string) *model.Setting {
 }
 
 func GetFunctions(market, symbol string) *sync.Map {
-	handlerInitialized := false
-	handlers.Range(func(key, value interface{}) bool {
-		handlerInitialized = true
-		return true
-	})
-	if !handlerInitialized {
-		util.Notice(`load setting GetFunctions %s %s`, market, symbol)
-		if !InitApp(true) {
-			return nil
-		}
-	}
 	value, ok := util.LoadSyncMap(handlers, market, symbol)
 	if ok && value != nil {
 		return value.(*sync.Map)
@@ -462,9 +422,7 @@ func InitApp(refreshDynamic bool) bool {
 func GetMarketSymbols(market string) map[string]bool {
 	if appSettings == nil {
 		util.Notice(`load setting GetMarketSymbols %s`, market)
-		if !InitApp(true) {
-			return nil
-		}
+		return nil
 	}
 	symbols := make(map[string]bool)
 	for _, value := range appSettings {
@@ -478,9 +436,7 @@ func GetMarketSymbols(market string) map[string]bool {
 func GetCoinSettings(function string) *sync.Map {
 	if appSettings == nil {
 		util.Notice(`load setting GetCoinSettings %s`, function)
-		if !InitApp(true) {
-			return nil
-		}
+		return nil
 	}
 	value, ok := coinSettings.Load(function)
 	if ok {
@@ -492,9 +448,7 @@ func GetCoinSettings(function string) *sync.Map {
 func GetMarkets() []string {
 	if appSettings == nil || len(appSettings) == 0 {
 		util.Notice(`load setting GetMarkets`)
-		if !InitApp(true) {
-			return nil
-		}
+		return nil
 	}
 	return appMarkets
 }

@@ -416,7 +416,7 @@ func CutTail(market, coins, sign string) {
 func CreateReport(market, coins, timeRange, seconds string) {
 	rows, _ := model.AppDB.Model(model.Order{}).Select(`function,symbol,order_side,sum(orders.deal_price*amount)/sum(amount),sum(amount),sum(grid_pos)`).
 		Where(`function like ? and function like ? and function like ?`,
-			`%coins`+coins+`%`, `%`+timeRange+`%`, `%Mtrueseconds`+seconds+`%`).
+			`%coins`+coins+`%`, `%`+timeRange+`%`, `%Mfalseseconds`+seconds+`%`).
 		Group(`function,symbol,order_side`).Order(`function`).Rows()
 	if rows == nil {
 		return

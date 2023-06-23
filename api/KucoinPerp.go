@@ -114,16 +114,20 @@ func setFutureAutoDeposit() {
 		settingKucoinPerp = false
 	}()
 	settingKucoinPerp = true
-	coins := GetSettingCoins(model.FunctionCross, model.KucoinPerp)
-	for coin := range coins {
-		params := make(map[string]string)
-		params["symbol"] = coin + model.DialectTail[model.MarketTypePerp][model.KucoinPerp]
-		params["status"] = "true"
-		resp, err := kucoinFutureClient("", "", "").AutoDepositStatus(params)
-		if err != nil || !resp.HttpSuccessful() || !resp.ApiSuccessful() {
-			util.SocketInfo(fmt.Sprintf("function: %s symbol: %s kucoin API error", "setFutureAutoDeposit", params["symbol"]))
+	settings := GetSettings(model.FunctionCross, model.KucoinPerp)
+	settings.Range(func(key, value any) bool {
+		if value != nil {
+			setting := value.(*model.Setting)
+			params := make(map[string]string)
+			params["symbol"] = setting.Coin + model.DialectTail[model.MarketTypePerp][model.KucoinPerp]
+			params["status"] = "true"
+			resp, err := kucoinFutureClient("", "", "").AutoDepositStatus(params)
+			if err != nil || !resp.HttpSuccessful() || !resp.ApiSuccessful() {
+				util.SocketInfo(fmt.Sprintf("function: %s symbol: %s kucoin API error", "setFutureAutoDeposit", params["symbol"]))
+			}
 		}
-	}
+		return true
+	})
 }
 
 func WsDepthServeKucoinPerp() (channels []chan struct{}, err error) {
