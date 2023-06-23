@@ -2,7 +2,6 @@ package model
 
 import (
 	"fmt"
-	"math"
 	"time"
 )
 
@@ -13,7 +12,8 @@ type TurtleData struct {
 	TurtleTime, CheckUseApi, CheckTimeOpen                                    time.Time
 	HighDaysNear, LowDaysNear, HighDaysFar, LowDaysFar, LowAdjust, HighAdjust float64
 	HighToday, LowToday, N, M, NVolume, Amount                                float64
-	DaysNear, DaysFar, DaysAdjust, combineBig                                 int // CombineBig: -1小单，1大单，0未初始化
+	DaysNear, DaysFar, DaysAdjust                                             int // CombineBig: -1小单，1大单，0未初始化
+	Big                                                                       int64
 	Symbol                                                                    string
 	// 适应某些交易所单笔订单不能过大，大笔订单会拆分后下成多个，因价格超出无法下成的单为了不被取消，也归入orderAdjust
 	OrderLong, OrderShort, OrderAdjust []*Order
@@ -45,22 +45,12 @@ func (turtleData *TurtleData) GetIds() (ids string) {
 	return
 }
 
-func (turtleData *TurtleData) SetBig(isBig int) {
-	turtleData.combineBig = isBig
-}
-
-func (turtleData *TurtleData) IsBig(settingCombine, settingNormal *Setting, marketInfo *MarketInfo) (isBig int) {
-	if settingCombine.Far != settingNormal.Far || settingCombine.Near != settingNormal.Near {
-		return 1
+func ResetBig(settingNormal *Setting, dataCombine, dataNormal *TurtleData) {
+	dataNormal.Big = 1
+	dataCombine.Big = 1
+	if settingNormal.Chance == 0 {
+		dataCombine.Big = -1
 	}
-	if turtleData.combineBig == 0 {
-		if settingCombine.Chance+settingNormal.Chance == 0 && math.Abs(settingCombine.PriceX-settingNormal.PriceX) < marketInfo.PriceIncrement {
-			turtleData.combineBig = -1
-		} else {
-			turtleData.combineBig = 1
-		}
-	}
-	return turtleData.combineBig
 }
 
 func (turtleData *TurtleData) ToString() (str string) {
