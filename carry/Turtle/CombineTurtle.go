@@ -76,23 +76,6 @@ var ProcessCombineTurtle = func(settingCombine *model.Setting, tick *model.BidAs
 	//	util.Notice(fmt.Sprintf(`combine return not adjusted %s %s`, market, symbol))
 	//	return
 	//}
-	minSize := 0.0
-	var marketInfo *model.MarketInfo
-	v, _ := util.LoadSyncMap(model.MarketInfos, market, symbol)
-	if v != nil {
-		marketInfo = v.(*model.MarketInfo)
-	}
-	if marketInfo == nil {
-		util.Notice(`fail to get marketInfo %s %s`, market, symbol)
-		return
-	} else {
-		if marketInfo.CTValue == 0 {
-			minSize = marketInfo.SizeMin
-		} else {
-			minSize = marketInfo.SizeMin * marketInfo.CTValue
-		}
-		minSize = math.Max(minSize, 2*marketInfo.MoneyMin/dataCombine.LowDaysFar)
-	}
 	//价格不一样：big=true
 	//价格一样：仓数相加=0时big=false；仓数相加≠0时big=true
 	model.ResetBig(settingNormal, dataCombine, dataNormal)
@@ -110,10 +93,10 @@ var ProcessCombineTurtle = func(settingCombine *model.Setting, tick *model.BidAs
 		dataCombine.Liquidated, dataCombine.GetIds(), dataCombine.Big, dataCombine.DaysFar, dataCombine.LowDaysFar,
 		dataCombine.HighDaysFar, dataCombine.DaysNear, dataCombine.LowDaysNear, dataCombine.HighDaysNear, dataCombine.N)
 	util.StoreSyncMap(&model.CarryInfo, msg, account.Key, msgKey)
-	placeTurtleLong(account, model.OrderTypeStop, dataNormal, settingNormal, minSize, tick, canOpen)
-	placeTurtleShort(account, model.OrderTypeStop, dataNormal, settingNormal, minSize, tick, canOpen)
-	placeTurtleLong(account, model.OrderTypeLimit, dataCombine, settingCombine, minSize, tick, canOpen)
-	placeTurtleShort(account, model.OrderTypeLimit, dataCombine, settingCombine, minSize, tick, canOpen)
+	placeTurtleLong(account, model.OrderTypeStop, dataNormal, settingNormal, tick, canOpen)
+	placeTurtleShort(account, model.OrderTypeStop, dataNormal, settingNormal, tick, canOpen)
+	placeTurtleLong(account, model.OrderTypeLimit, dataCombine, settingCombine, tick, canOpen)
+	placeTurtleShort(account, model.OrderTypeLimit, dataCombine, settingCombine, tick, canOpen)
 	if handleAllBreak(settings, turtleData) {
 		api.ClearExtraOrders(account.Key, account.Secret, market, symbol, turtleData)
 	}
@@ -162,7 +145,9 @@ func handleBreakLong(setting, settingOpposite *model.Setting, data *model.Turtle
 		util.Notice(fmt.Sprintf(`加多 %s %s chance:%d Amount:%e px:%e N:%e`,
 			setting.Market, setting.Symbol, setting.Chance, setting.GridAmount, setting.PriceX, data.N))
 		setting.Chance++
-		setting.GridAmount += data.Amount
+		for _, order := range data.OrderLong {
+			setting.GridAmount += order.Amount
+		}
 	}
 	for _, order := range data.OrderLong {
 		data.OrderAdjust = append(data.OrderAdjust, order)
@@ -200,7 +185,9 @@ func handleBreakShort(setting, settingOpposite *model.Setting, data *model.Turtl
 		util.Notice(fmt.Sprintf(`加空 %s %s chance:%d Amount:%e px:%e N:%e`,
 			setting.Market, setting.Symbol, setting.Chance, setting.GridAmount, setting.PriceX, data.N))
 		setting.Chance--
-		setting.GridAmount += data.Amount
+		for _, order := range data.OrderShort {
+			setting.GridAmount += order.Amount
+		}
 	}
 	for _, order := range data.OrderShort {
 		data.OrderAdjust = append(data.OrderAdjust, order)
@@ -216,14 +203,14 @@ func handleBreakShort(setting, settingOpposite *model.Setting, data *model.Turtl
 }
 
 func placeTurtleLong(account *model.Account, orderType string, data *model.TurtleData, setting *model.Setting,
-	minSize float64, tick *model.BidAsk, canOpen bool) {
+	tick *model.BidAsk, canOpen bool) {
 	amount := data.Amount
 	function := model.Open
 	if setting.Chance < 0 {
 		function = model.Close
 		amount = setting.GridAmount
 	} else if data.Big == -1 {
-		amount = minSize
+		amount = data.AmountMin
 	}
 	price := data.HighDaysFar
 	if orderType == model.OrderTypeLimit {
@@ -313,14 +300,14 @@ func placeTurtleLong(account *model.Account, orderType string, data *model.Turtl
 }
 
 func placeTurtleShort(account *model.Account, orderType string, data *model.TurtleData, setting *model.Setting,
-	minSize float64, tick *model.BidAsk, canOpen bool) {
+	tick *model.BidAsk, canOpen bool) {
 	amount := data.Amount
 	function := model.Open
 	if setting.Chance > 0 {
 		amount = setting.GridAmount
 		function = model.Close
 	} else if data.Big == -1 {
-		amount = minSize
+		amount = data.AmountMin
 	}
 	price := data.LowDaysFar
 	if orderType == model.OrderTypeLimit {

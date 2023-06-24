@@ -173,14 +173,18 @@ func HandleOrders(key, secret, market, symbol string, settings []*model.Setting,
 }
 
 func clearTurtleOrders(account *model.Account, setting *model.Setting, turtle *model.TurtleData) {
+	longAmount := 0.0
+	shortAmount := 0.0
 	for _, order := range turtle.OrderLong {
 		if order != nil {
+			longAmount += order.Amount
 			MustCancel(account.Key, account.Secret, setting.Market, setting.Symbol, order.OrderType, order.OrderId, false)
 			time.Sleep(time.Millisecond * 200)
 		}
 	}
 	for _, order := range turtle.OrderShort {
 		if order != nil {
+			shortAmount += order.Amount
 			MustCancel(account.Key, account.Secret, setting.Market, setting.Symbol, order.OrderType, order.OrderId, false)
 			time.Sleep(time.Millisecond * 200)
 		}
@@ -190,7 +194,7 @@ func clearTurtleOrders(account *model.Account, setting *model.Setting, turtle *m
 		broken = true
 		if setting.Chance >= 0 {
 			setting.Chance++
-			setting.GridAmount += turtle.Amount
+			setting.GridAmount += longAmount
 			setting.PriceX = turtle.OrderLong[0].TriggerPrice
 		} else {
 			setting.Chance = 0
@@ -200,7 +204,7 @@ func clearTurtleOrders(account *model.Account, setting *model.Setting, turtle *m
 		broken = true
 		if setting.Chance <= 0 {
 			setting.Chance--
-			setting.GridAmount += turtle.Amount
+			setting.GridAmount += shortAmount
 			setting.PriceX = turtle.OrderShort[0].TriggerPrice
 		} else {
 			setting.Chance = 0
@@ -298,7 +302,7 @@ func GetTurtleData(account *model.Account, function, market, symbol string, far,
 	} else if function == model.FunctionCombineTurtle {
 		useNear = false
 	}
-	data = &model.TurtleData{TurtleTime: nowPeriod, Symbol: symbol, BreakLong: false, BreakShort: false, Liquidated: false,
+	data = &model.TurtleData{TurtleTime: nowPeriod, Symbol: symbol, BreakLong: false, BreakShort: false, Liquidated: false, Big: 1,
 		DaysFar: int(far), DaysNear: int(near), DaysAdjust: 5, UseNear: useNear, OrderCleared: lastHandled, OrderAdjust: make([]*model.Order, 0)}
 	if lastHandled {
 		data.CheckTimeOpen = time.Now()
@@ -351,6 +355,23 @@ func GetTurtleData(account *model.Account, function, market, symbol string, far,
 			util.Notice(fmt.Sprintf(`set turtle %s %s %s %s Amount:%e N:%e %d:%e-%e %d:%e-%e %v`,
 				function, market, symbol, nowStr, data.Amount, data.N, data.DaysNear, data.LowDaysNear,
 				data.HighDaysNear, data.DaysFar, data.LowDaysFar, data.HighDaysFar, data))
+		}
+		minSize := 0.0
+		var marketInfo *model.MarketInfo
+		v, _ := util.LoadSyncMap(model.MarketInfos, market, symbol)
+		if v != nil {
+			marketInfo = v.(*model.MarketInfo)
+		}
+		if marketInfo == nil {
+			util.Notice(`fail to get marketInfo %s %s`, market, symbol)
+			return nil, false
+		} else {
+			if marketInfo.CTValue == 0 {
+				minSize = marketInfo.SizeMin
+			} else {
+				minSize = marketInfo.SizeMin * marketInfo.CTValue
+			}
+			minSize = math.Max(minSize, 2*marketInfo.MoneyMin/data.LowDaysFar)
 		}
 		return data, true
 	} else {
