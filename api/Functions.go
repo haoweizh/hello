@@ -702,8 +702,8 @@ func PlaceOrder(key, secret, orderSide, orderType, market, symbol, orderParam st
 	case model.OrderSideSell, model.OrderSideLiquidateLong:
 		markSide = model.OrderSideSell
 	}
-	if amount < 0.0001 {
-		util.Notice(`can not place order with amount 0`)
+	if amount == 0 {
+		util.Notice(fmt.Sprintf(`can not place order with amount 0 , %s %s %s %s`, orderSide, orderType, market, symbol))
 		return &model.Order{OrderSide: markSide, OrderType: orderType, Market: market, Symbol: symbol,
 			Price: price, Amount: 0, OrderId: ``, ErrCode: ``, TriggerPrice: triggerPrice,
 			Status: model.CarryStatusFail, DealAmount: 0, DealPrice: price, OrderTime: util.GetNow()}

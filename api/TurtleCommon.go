@@ -350,13 +350,6 @@ func GetTurtleData(account *model.Account, function, market, symbol string, far,
 		}
 	}
 	if data.Amount > 0 && data.N > 0 {
-		if refreshDynamic {
-			util.StoreSyncMap(&TurtleDataSet, data, function, market, symbol, nowStr)
-			util.Notice(fmt.Sprintf(`set turtle %s %s %s %s Amount:%e N:%e %d:%e-%e %d:%e-%e %v`,
-				function, market, symbol, nowStr, data.Amount, data.N, data.DaysNear, data.LowDaysNear,
-				data.HighDaysNear, data.DaysFar, data.LowDaysFar, data.HighDaysFar, data))
-		}
-		minSize := 0.0
 		var marketInfo *model.MarketInfo
 		v, _ := util.LoadSyncMap(model.MarketInfos, market, symbol)
 		if v != nil {
@@ -367,11 +360,17 @@ func GetTurtleData(account *model.Account, function, market, symbol string, far,
 			return nil, false
 		} else {
 			if marketInfo.CTValue == 0 {
-				minSize = marketInfo.SizeMin
+				data.AmountMin = marketInfo.SizeMin
 			} else {
-				minSize = marketInfo.SizeMin * marketInfo.CTValue
+				data.AmountMin = marketInfo.SizeMin * marketInfo.CTValue
 			}
-			minSize = math.Max(minSize, 2*marketInfo.MoneyMin/data.LowDaysFar)
+			data.AmountMin = math.Max(data.AmountMin, 2*marketInfo.MoneyMin/data.LowDaysFar)
+		}
+		if refreshDynamic {
+			util.StoreSyncMap(&TurtleDataSet, data, function, market, symbol, nowStr)
+			util.Notice(fmt.Sprintf(`set turtle %s %s %s %s Amount:%e AmountMin:%e N:%e %d:%e-%e %d:%e-%e %v`,
+				function, market, symbol, nowStr, data.Amount, data.AmountMin, data.N, data.DaysNear, data.LowDaysNear,
+				data.HighDaysNear, data.DaysFar, data.LowDaysFar, data.HighDaysFar, data))
 		}
 		return data, true
 	} else {
