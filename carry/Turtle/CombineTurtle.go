@@ -98,6 +98,9 @@ var ProcessCombineTurtle = func(settingCombine *model.Setting, tick *model.BidAs
 	placeTurtleLong(account, model.OrderTypeLimit, dataCombine, settingCombine, tick, canOpen)
 	placeTurtleShort(account, model.OrderTypeLimit, dataCombine, settingCombine, tick, canOpen)
 	if handleAllBreak(settings, turtleData) {
+		for _, data := range turtleData {
+			data.AdjustChecked = true
+		}
 		api.ClearExtraOrders(account.Key, account.Secret, market, symbol, turtleData)
 	}
 }
@@ -258,28 +261,8 @@ func placeTurtleLong(account *model.Account, orderType string, data *model.Turtl
 			data.BreakLong = true
 			priceDeal = tick.Asks[0].Price * (1 + api.TurtleTriggerDelta/2)
 		}
-		if data.BreakLong && data.Big == -1 && setting.Chance >= 0 {
-			util.Notice(fmt.Sprintf(`already break place fake long %s %s %s`, orderType, setting.Function, symbol))
-			data.OrderLong = []*model.Order{{
-				Amount:       amount,
-				DealAmount:   amount,
-				DealPrice:    priceDeal,
-				OrderId:      fmt.Sprintf(`fake%d`, time.Now().UnixNano()),
-				LineBuy:      data.N,
-				LineSell:     data.N,
-				Price:        priceDeal,
-				TriggerPrice: price,
-				AccountIndex: account.Index,
-				Market:       market,
-				OrderSide:    model.OrderSideBuy,
-				OrderType:    orderType,
-				RefreshType:  setting.Function,
-				Status:       model.CarryStatusSuccess,
-				Symbol:       symbol}}
-		} else {
-			data.OrderLong = api.MustPlaceOrder(account.Key, account.Secret, model.OrderSideBuy, orderType, market, symbol, ``,
-				setting.Function, priceDeal, price, amount, nil)
-		}
+		data.OrderLong = api.MustPlaceOrder(account.Key, account.Secret, model.OrderSideBuy, orderType, market, symbol, ``,
+			setting.Function, priceDeal, price, amount, nil)
 		if data.OrderAdjust == nil {
 			data.OrderAdjust = make([]*model.Order, 0)
 		}
@@ -361,28 +344,8 @@ func placeTurtleShort(account *model.Account, orderType string, data *model.Turt
 		}
 		util.Notice(fmt.Sprintf(`place short %s %s %s %s %d %v at %e %e amt %e`,
 			orderType, setting.Function, market, symbol, setting.Chance, canOpen, priceDeal, price, amount))
-		if data.BreakShort && data.Big == -1 && setting.Chance <= 0 {
-			util.Notice(fmt.Sprintf(`already break place fake short %s %s %s`, orderType, setting.Function, symbol))
-			data.OrderShort = []*model.Order{{
-				Amount:       amount,
-				DealAmount:   amount,
-				DealPrice:    priceDeal,
-				OrderId:      fmt.Sprintf(`fake%d`, time.Now().UnixNano()),
-				LineBuy:      data.N,
-				LineSell:     data.N,
-				Price:        priceDeal,
-				TriggerPrice: price,
-				AccountIndex: account.Index,
-				Market:       market,
-				OrderSide:    model.OrderSideSell,
-				OrderType:    orderType,
-				RefreshType:  setting.Function,
-				Status:       model.CarryStatusSuccess,
-				Symbol:       symbol}}
-		} else {
-			data.OrderShort = api.MustPlaceOrder(account.Key, account.Secret, model.OrderSideSell, orderType, market, symbol, ``,
-				setting.Function, priceDeal, price, amount, nil)
-		}
+		data.OrderShort = api.MustPlaceOrder(account.Key, account.Secret, model.OrderSideSell, orderType, market, symbol, ``,
+			setting.Function, priceDeal, price, amount, nil)
 		if data.OrderAdjust == nil {
 			data.OrderAdjust = make([]*model.Order, 0)
 		}
