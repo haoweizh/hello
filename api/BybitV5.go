@@ -121,6 +121,10 @@ func parseBookOrder(markets *model.Markets, bookWsResp *dtos.BybitBookWsResp, sy
 	bidAsk.UpdateId = bookWsResp.Data.Seq
 	haveOld, old := markets.GetBidAsk(symbol, model.Bybit)
 	if bookWsResp.Type == "snapshot" {
+		if len(bookWsResp.Data.B) == 0 || len(bookWsResp.Data.A) == 0 {
+			util.Notice(fmt.Sprintf(`bybit no book data %s`, bookWsResp.Data.S))
+			return
+		}
 		bidPrice, _ := strconv.ParseFloat(bookWsResp.Data.B[0][0], 64)
 		bidAmount, _ := strconv.ParseFloat(bookWsResp.Data.B[0][1], 64)
 		askPrice, _ := strconv.ParseFloat(bookWsResp.Data.A[0][0], 64)
