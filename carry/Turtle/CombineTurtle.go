@@ -13,7 +13,7 @@ import (
 // setting.GridAmount 当前已经持仓数量
 // setting.Chance 当前开仓的个数
 // setting.PriceX 上一次开仓的价格
-// setting.OpenShortMargin 该单币种最多开仓个数
+// setting.ChanceLimit 该单币种最多开仓个数
 // setting.AmountLimit 总开仓上限
 // Order.GridPos 存储turtleData 的 isBig
 var ProcessCombineTurtle = func(settingCombine *model.Setting, tick *model.BidAsk) {

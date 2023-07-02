@@ -116,6 +116,7 @@ func calcTurtleOrders(setting *model.Setting, turtleData *TurtleData, useM bool)
 		priceLong = math.Max(turtleData.highFar, setting.PriceX+turtleData.n/2)
 		if turtleData.useNear {
 			priceShort = math.Max(setting.PriceX-2*turtleData.n, turtleData.lowNear)
+			priceShort = math.Max(priceShort, turtleData.highFar-4*turtleData.n)
 		} else {
 			priceShort = turtleData.highFar - 2*turtleData.n
 		}
@@ -130,6 +131,7 @@ func calcTurtleOrders(setting *model.Setting, turtleData *TurtleData, useM bool)
 		priceShort = math.Min(turtleData.lowFar, setting.PriceX-turtleData.n/2)
 		if turtleData.useNear {
 			priceLong = math.Min(setting.PriceX+2*turtleData.n, turtleData.highNear)
+			priceLong = math.Min(priceLong, turtleData.lowFar+4*turtleData.n)
 		} else {
 			priceLong = turtleData.lowFar + 2*turtleData.n
 		}
@@ -416,7 +418,7 @@ func CutTail(market, coins, sign string) {
 func CreateReport(market, coins, timeRange, seconds string) {
 	rows, _ := model.AppDB.Model(model.Order{}).Select(`function,symbol,order_side,sum(orders.deal_price*amount)/sum(amount),sum(amount),sum(grid_pos)`).
 		Where(`function like ? and function like ? and function like ?`,
-			`%coins`+coins+`%`, `%`+timeRange+`%`, `%Mfalseseconds`+seconds+`%`).
+			`%coins`+coins+`%`, `%`+timeRange+`%`, `%Mfalse,seconds`+seconds+`%`).
 		Group(`function,symbol,order_side`).Order(`function`).Rows()
 	if rows == nil {
 		return
