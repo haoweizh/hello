@@ -1088,12 +1088,12 @@ func placeStatus(status *CarryStatus, price float64, amount float64) {
 			balance.AvailableWithBorrow += amount
 		}
 		valueSpot.(*spotMarket).availableU -= amount * price
-		if status.market == model.Ftx || status.market == model.OKEX || status.market == model.Bybit {
+		if status.market == model.Ftx || status.market == model.OKEX || status.market == model.Bybit || (status.market == model.Gate && !model.AppConfig.GateSpot) {
 			if valueContract != nil {
 				valueContract.(*contractMarket).collateralsAvailable -= amount * price
 			}
 		}
-		if status.market == model.OKEX || status.market == model.Bybit {
+		if status.market == model.OKEX || status.market == model.Bybit || (status.market == model.Gate && !model.AppConfig.GateSpot) {
 			valueSpot.(*spotMarket).collateral.Available -= amount * price
 		}
 	} else if valueContract != nil {
@@ -1117,7 +1117,7 @@ func placeStatus(status *CarryStatus, price float64, amount float64) {
 				valueSpot.(*spotMarket).collateral.Available += changeU * 0.1
 				valueSpot.(*spotMarket).collateral.Occupied -= changeU * 0.1
 				valueSpot.(*spotMarket).availableU += changeU * 0.1
-			} else if status.market == model.Bybit {
+			} else if status.market == model.Bybit || (status.market == model.Gate && !model.AppConfig.GateSpot) {
 				valueSpot.(*spotMarket).collateral.Available += changeU * 0.2
 				valueSpot.(*spotMarket).collateral.Occupied -= changeU * 0.2
 				valueSpot.(*spotMarket).availableU += changeU * 0.2

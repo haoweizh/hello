@@ -50,6 +50,9 @@ func appendFutureMarketGate(key, secret string, marketInfos map[string]*model.Ma
 		if contract.InDelisting {
 			continue
 		}
+		if !model.AppConfig.GateSpot && !contract.EnableCredit {
+			continue
+		}
 		marketInfo := &model.MarketInfo{Market: model.Gate}
 		success, _, coin := model.GetCoinFromDialect(model.Gate, contract.Name)
 		if !success {
@@ -106,6 +109,9 @@ func appendSpotMarketsGate(key, secret string, marketInfos map[string]*model.Mar
 			panicGateError(key, "ListCrossMarginCurrencies", marginErr)
 		}
 		for _, margin := range marginCurrencyPairs {
+			if margin.Status == 0 {
+				continue
+			}
 			for _, spot := range spotCurrencyPairs {
 				_, _, coin := model.GetCoinFromDialect(model.Gate, spot.Id)
 				if coin == margin.Name {
@@ -593,9 +599,10 @@ func maintainChannelGate() {
 	}
 }
 
-func getBalanceGate(key string, secret string) (success bool, balances []*model.Balance) {
+func getBalanceGate(key string, secret string) (success bool, balances []*model.Balance, totalInUsd float64, collateral *model.Collateral) {
 	client, ctx := getClientGate(key, secret)
 	if model.AppConfig.GateSpot {
+		collateral = nil
 		accounts, _, err := client.SpotApi.ListSpotAccounts(ctx, nil)
 		if err != nil {
 			panicGateError(key, "getBalanceGate", err)
@@ -611,6 +618,7 @@ func getBalanceGate(key string, secret string) (success bool, balances []*model.
 			balance.Amount = balance.AvailableWithBorrow + balance.FrozenAmount - balance.Borrow
 			_, price := GetPriceForce(key, secret, balance.Coin+model.UniStandardTail[model.MarketTypeSpot], model.Gate)
 			balance.UsdValue = balance.Amount * price
+			totalInUsd += balance.UsdValue
 			balances = append(balances, balance)
 		}
 	} else {
@@ -623,22 +631,37 @@ func getBalanceGate(key string, secret string) (success bool, balances []*model.
 		}
 		if account.Locked {
 			util.Notice(fmt.Sprintf("margin account is locked"))
-			return false, balances
+			return false, balances, 0, nil
 		}
+		totalInUsd, _ = strconv.ParseFloat(account.PortfolioMarginTotalEquity, 64)
+		collateralAvailable, _ := strconv.ParseFloat(account.TotalAvailableMargin, 64)
+		totalMaintenanceMargin, _ := strconv.ParseFloat(account.TotalMaintenanceMargin, 64)
+		collateral = &model.Collateral{Available: collateralAvailable, Occupied: totalMaintenanceMargin}
 		balances = make([]*model.Balance, 0)
-		for index, item := range account.Balances {
-			balance := &model.Balance{AccountId: key, BalanceTime: util.GetNow(), Market: model.Gate, Coin: index}
+		for coin, item := range account.Balances {
+			balance := &model.Balance{AccountId: key, BalanceTime: util.GetNow(), Market: model.Gate, Coin: coin}
 			balance.FrozenAmount, _ = strconv.ParseFloat(item.Freeze, 64)
 			balance.Borrow, _ = strconv.ParseFloat(item.Borrowed, 64)
-			// 此处未计算可以借入的金额
+			balance.Amount = balance.AvailableWithBorrow + balance.FrozenAmount
 			balance.AvailableWithBorrow, _ = strconv.ParseFloat(item.Available, 64)
-			balance.Amount = balance.AvailableWithBorrow + balance.FrozenAmount - balance.Borrow
+			if !model.AppConfig.GateSpot && balance.Coin != "USDT" {
+				//todo 验证借币状态下
+				canBorrow := 0.0
+				borrowable, _, marginErr := client.MarginApi.GetCrossMarginBorrowable(ctx, coin)
+				if marginErr != nil {
+					panicGateError(key, "GetCrossMarginBorrowable", marginErr)
+				} else {
+					canBorrow, _ = strconv.ParseFloat(borrowable.Amount, 64)
+				}
+				balance.Amount = balance.AvailableWithBorrow + balance.FrozenAmount
+				balance.AvailableWithBorrow = math.Max(0, balance.Amount) + canBorrow
+			}
 			_, price := GetPriceForce(key, secret, balance.Coin+model.UniStandardTail[model.MarketTypeSpot], model.Gate)
 			balance.UsdValue = balance.Amount * price
 			balances = append(balances, balance)
 		}
 	}
-	return true, balances
+	return true, balances, totalInUsd, collateral
 }
 
 func getPositionsGate(key string, secret string) (success bool, positions []*model.Position, accountValue, available float64) {
@@ -790,12 +813,12 @@ func placeOrderGate(key, secret string, order *model.Order, orderSide, orderType
 			relatedOrder.Account = "spot"
 		} else {
 			relatedOrder.Account = "cross_margin"
-			//if orderSide == model.OrderSideBuy {
-			//	relatedOrder.AutoRepay = true
-			//} else {
-			//	relatedOrder.AutoBorrow = false
-			//}
-			relatedOrder.AutoRepay = true
+			if orderSide == model.OrderSideBuy {
+				relatedOrder.AutoRepay = true
+			} else {
+				relatedOrder.AutoBorrow = true
+			}
+			//relatedOrder.AutoRepay = true
 		}
 		relatedOrder.Amount = util.CutTailZero(fmt.Sprintf(`%f`, model.GetAmountInMarket(model.Gate, symbol, amount, price, false)))
 		util.SocketInfo(`create spot order request: %v`, relatedOrder)
