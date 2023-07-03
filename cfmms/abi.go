@@ -18,7 +18,7 @@ var (
 
 func Cmd() {
 	// 定义要执行的命令和参数
-	cmd := exec.Command("ls", "-l")
+	cmd := exec.Command("solc", "")
 
 	// 执行命令并获取输出
 	output, err := cmd.Output()
@@ -150,4 +150,76 @@ func GenerateGoFilesByAbi(inputpath string, outputpath string) {
 		fmt.Println(string(output))
 
 	}
+}
+
+/*
+solc --abi Store.sol
+solc --bin Store.sol
+abigen --bin=Store_sol_Store.bin --abi=Store_sol_Store.abi --pkg=store --out=Store.go
+*/
+
+func GenerateDeploymentGoFile(inputPath []string, outputpath string) {
+
+	// 删除文件
+	err := os.RemoveAll(outputpath)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// 创建输出目录（如果不存在）
+	err = os.MkdirAll(outputpath, os.ModePerm)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	for _, path := range inputPath {
+		files, err := ioutil.ReadDir(path)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		for _, file := range files {
+
+			if file.IsDir() {
+				// 如果文件是目录，可以选择进行处理
+				continue
+			}
+			filePath := filepath.Join(path, file.Name())
+			// 处理文件路径
+			fmt.Println(filePath)
+			absolutePath, err := filepath.Abs(filePath)
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			pwd, _ := os.Getwd()
+
+			extension := filepath.Ext(file.Name())
+			name := file.Name()[0 : len(file.Name())-len(extension)]
+
+			// 定义要执行的命令和参数
+
+			// 创建输出目录（如果不存在）
+			err = os.MkdirAll(outputpath+name, os.ModePerm)
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			cmd := exec.Command("solc", "--abi", absolutePath, "--output-dir="+pwd+"/"+outputpath+name)
+			fmt.Println(cmd)
+			// 执行命令并获取输出
+			output, err := cmd.Output()
+			if err != nil {
+				fmt.Println("执行命令出错:", err)
+				return
+			}
+			fmt.Println("output:", string(output))
+
+			_ = exec.Command("solc", "--bin", absolutePath, "--output-dir="+pwd+"/"+outputpath+name)
+
+			_ = exec.Command("abigen", "--bin="+pwd+"/"+outputpath+name+"/"+name+"_sol_"+name+".bin", "--abi="+pwd+"/"+outputpath+name+"/"+name+"_sol_"+name+".abi", "--pkg="+name, "--out="+pwd+"/"+outputpath+name+"/"+name+".go")
+		}
+
+	}
+
 }
