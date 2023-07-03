@@ -7,6 +7,7 @@ import (
 
 func Test_Cfmms(t *testing.T) {
 	//cfmms.Cmd()
-	cfmms.GetAbiFromEtherscan("./cfmms/contracts_helper.json", "./cfmms/abi")
-	//cfmms.GenerateGoFilesByAbi("./cfmms/abi", "./cfmms/abi_go")
+	cfmms.GetAbiFromEtherscan("./cfmms/contracts_helper.json", "./cfmms/abi/")
+	cfmms.GenerateGoFilesByAbi("./cfmms/abi", "cfmms/abi_go/")
+
 }
