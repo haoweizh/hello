@@ -426,7 +426,7 @@ func GetBalances(key, secret, market string) (
 	case model.KucoinSpot:
 		success, balances = getBalanceKucoinSpot(key, secret)
 	case model.Gate:
-		success, balances = getBalanceGate(key, secret)
+		success, balances, totalInUsd, collateral = getBalanceGate(key, secret)
 	case model.Ftx:
 		success, balances, totalInUsd = getBalanceFtx(key, secret)
 	case model.OKEX:
