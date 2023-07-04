@@ -119,8 +119,6 @@ func GenerateGoFilesByAbi(inputpath string, outputpath string) {
 			log.Fatal(err)
 		}
 
-		fmt.Println("绝对路径:", absolutePath)
-
 		//abigen --abi=/Users/uuuliu/GolandProjects/Go/hello/contracts/UniswapV3Pool/UniswapV3Pool.abi --pkg=UniswapV3Pool --out=UniswapV3Pool.go
 
 		pwd, _ := os.Getwd()
@@ -138,7 +136,7 @@ func GenerateGoFilesByAbi(inputpath string, outputpath string) {
 
 		cmd := exec.Command("abigen", "--abi="+absolutePath, "--pkg="+name, "--out="+pwd+"/"+outputpath+name+"/"+name+".go")
 
-		fmt.Println(cmd)
+		//fmt.Println(cmd)
 		// 执行命令并获取输出
 		output, err := cmd.Output()
 		if err != nil {
@@ -186,7 +184,6 @@ func GenerateDeploymentGoFile(inputPath []string, outputpath string) {
 			}
 			filePath := filepath.Join(path, file.Name())
 			// 处理文件路径
-			fmt.Println(filePath)
 			absolutePath, err := filepath.Abs(filePath)
 			if err != nil {
 				log.Fatal(err)
@@ -205,19 +202,29 @@ func GenerateDeploymentGoFile(inputPath []string, outputpath string) {
 				log.Fatal(err)
 			}
 
-			cmd := exec.Command("solc", "--abi", absolutePath, "--output-dir="+pwd+"/"+outputpath+name)
-			fmt.Println(cmd)
+			cmd_solc_abi := exec.Command("solc", "--abi", absolutePath, "--output-dir="+pwd+"/"+outputpath+name)
+			//fmt.Println(cmd)
 			// 执行命令并获取输出
-			output, err := cmd.Output()
+			_, err = cmd_solc_abi.Output()
 			if err != nil {
-				fmt.Println("执行命令出错:", err)
+				fmt.Println("执行cmd_solc_abi出错:", err)
 				return
 			}
-			fmt.Println("output:", string(output))
 
-			_ = exec.Command("solc", "--bin", absolutePath, "--output-dir="+pwd+"/"+outputpath+name)
+			cmd_solc_bin := exec.Command("solc", "--bin", absolutePath, "--output-dir="+pwd+"/"+outputpath+name)
+			_, err = cmd_solc_bin.Output()
+			if err != nil {
+				fmt.Println("执行cmd_solc_bin出错:", err)
+				return
+			}
 
-			_ = exec.Command("abigen", "--bin="+pwd+"/"+outputpath+name+"/"+name+"_sol_"+name+".bin", "--abi="+pwd+"/"+outputpath+name+"/"+name+"_sol_"+name+".abi", "--pkg="+name, "--out="+pwd+"/"+outputpath+name+"/"+name+".go")
+			cmd_abigen_bin := exec.Command("abigen", "--bin="+pwd+"/"+outputpath+name+"/"+name+".bin", "--abi="+pwd+"/"+outputpath+name+"/"+name+".abi", "--pkg="+name, "--out="+pwd+"/"+outputpath+name+"/"+name+".go")
+			_, err = cmd_abigen_bin.Output()
+			fmt.Println(cmd_abigen_bin)
+			if err != nil {
+				fmt.Println("执行cmd_abigen_bin出错:", err)
+				return
+			}
 		}
 
 	}

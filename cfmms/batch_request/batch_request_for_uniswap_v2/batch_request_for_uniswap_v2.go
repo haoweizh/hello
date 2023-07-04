@@ -1,15 +1,26 @@
 package batch_request_for_uniswap_v2
 
 import (
+	"fmt"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
+	"hello/cfmms/deployment/GetUniswapV2PairsBatchRequest"
+	"log"
 	"math/big"
 )
 
-func get_pairs_batch_request(factor common.Address, from big.Int, setp big.Int, client *ethclient.Client) []string {
+func Get_pairs_batch_request(auth *bind.TransactOpts, factory common.Address, from, setp *big.Int, client *ethclient.Client) []string {
 	var pairs []string
 
-	//constructor_args := []interface{}{factor, from, setp}
+	address, tx, instance, err := GetUniswapV2PairsBatchRequest.DeployGetUniswapV2PairsBatchRequest(auth, client, from, setp, factory)
+
+	fmt.Println(address.Hex())
+	fmt.Println(tx.Data())
+	fmt.Println(instance)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	return pairs
 

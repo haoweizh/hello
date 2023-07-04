@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.0;
 
-//import "./Console.sol";
+import "forge-std/console.sol";
 import "./Test.sol";
 import "../uniswap_v3/GetUniswapV3TickDataBatchRequest.sol";
 import "../uniswap_v3/SyncUniswapV3PoolBatchRequest.sol";
@@ -23,6 +23,6 @@ contract GasTest is DSTest {
                 tickSpacing
             );
 
-        // console.logBytes(address(batchContract).code);
+         console.logBytes(address(batchContract).code);
     }
 }
