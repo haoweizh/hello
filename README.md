@@ -27,3 +27,19 @@ https://learnblockchain.cn/docs/foundry/i18n/zh/index.html
  forge test -vvvvv  // v越多，输出的信息越详细 最多5个
 ```
 
+
+## 通过合约ABI生成go文件
+```
+   ./abigen --abi=/Users/uuuliu/GolandProjects/Go/hello/contracts/UniswapV3/UniswapV3.abi --pkg=UniswapV3 --out=UniswapV3.go
+```
+
+
+## geth 启动命令
+```
+    ./geth --mainnet --datadir "/Users/uuuliu/Downloads/work/ethereum/data" --http --http.api="eth,web3,net,debug" --authrpc.vhosts="localhost" --authrpc.jwtsecret=/Users/uuuliu/Downloads/work/ethereum/consensus/prysm/jwt.hex
+```
+
+## prysm 启动命令
+```
+    ./prysm.sh beacon-chain --checkpoint-sync-url=https://sync.invis.tools --genesis-beacon-api-url=https://sync.invis.tools  --execution-endpoint=http://localhost:8551 --jwt-secret=/Users/uuuliu/Downloads/work/ethereum/consensus/prysm/jwt.hex
+```

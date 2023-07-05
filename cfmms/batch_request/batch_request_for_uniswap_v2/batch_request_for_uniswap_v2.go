@@ -15,6 +15,7 @@ func Get_pairs_batch_request(auth *bind.TransactOpts, factory common.Address, fr
 
 	address, _, instance, err := GetUniswapV2PairsBatchRequest.DeployGetUniswapV2PairsBatchRequest(auth, client, from, setp, factory)
 
+	instance.GetUniswapV2PairsBatchRequestCaller.Call(factory, instance, from, setp, factory)
 	if err != nil {
 		return nil
 	}
