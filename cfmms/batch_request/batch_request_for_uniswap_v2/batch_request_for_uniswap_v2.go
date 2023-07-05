@@ -13,11 +13,14 @@ import (
 func Get_pairs_batch_request(auth *bind.TransactOpts, factory common.Address, from, setp *big.Int, client *ethclient.Client) []string {
 	var pairs []string
 
-	address, tx, instance, err := GetUniswapV2PairsBatchRequest.DeployGetUniswapV2PairsBatchRequest(auth, client, from, setp, factory)
+	address, _, instance, err := GetUniswapV2PairsBatchRequest.DeployGetUniswapV2PairsBatchRequest(auth, client, from, setp, factory)
 
+	if err != nil {
+		return nil
+	}
 	fmt.Println(address.Hex())
-	fmt.Println(tx.Data())
 	fmt.Println(instance)
+	fmt.Println("in========================>", instance)
 	if err != nil {
 		log.Fatal(err)
 	}
