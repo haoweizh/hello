@@ -316,7 +316,7 @@ func getPositionsKucoinPerp(key string, secret string) (success bool, positions 
 	params := make(map[string]string)
 	params["currency"] = `USDT`
 	accountResp, accountErr := kucoinFutureClient("", "", "").AccountOverview(params)
-	contractResp, err := kucoinFutureClient("", "", "").Positions()
+	contractResp, err := kucoinFutureClient(``, "", "").Positions()
 	if err != nil || accountErr != nil || accountResp.Code != "200000" || contractResp.Code != "200000" {
 		if accountErr != nil {
 			util.SocketInfo(fmt.Sprintf("fail to refresh future account kucoin, err:%s, response:%v", err, accountResp))
