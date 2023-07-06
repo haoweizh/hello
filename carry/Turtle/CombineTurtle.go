@@ -216,16 +216,20 @@ func placeTurtleLong(account *model.Account, orderType string, data *model.Turtl
 		amount = data.AmountMin
 	}
 	price := data.HighDaysFar
+	priceChange := 2 * data.N
+	if setting.Seconds == 14400 {
+		priceChange = 2.5 * data.N
+	}
 	if orderType == model.OrderTypeLimit {
 		price = data.LowDaysFar + data.N/2
 		if setting.Chance > 0 {
 			price = math.Min(data.LowDaysFar, setting.PriceX-data.N/2)
 		} else if setting.Chance < 0 {
 			if data.UseNear {
-				price = math.Max(setting.PriceX-2*data.N, data.LowDaysNear)
+				price = math.Max(setting.PriceX-priceChange, data.LowDaysNear)
 			} else {
 				//price = math.Max(data.HighDaysFar, data.HighToday) - 2*data.N
-				price = math.Max(data.HighDaysFar, setting.PriceX) - 2*data.N
+				price = math.Max(data.HighDaysFar, setting.PriceX) - priceChange
 			}
 		}
 	} else if orderType == model.OrderTypeStop {
@@ -233,12 +237,12 @@ func placeTurtleLong(account *model.Account, orderType string, data *model.Turtl
 			price = math.Max(data.HighDaysFar, setting.PriceX+data.N/2)
 		} else if setting.Chance < 0 {
 			if data.UseNear {
-				price = math.Min(setting.PriceX+2*data.N, data.HighDaysNear)
+				price = math.Min(setting.PriceX+priceChange, data.HighDaysNear)
 			} else {
 				if data.LowToday > 0 {
-					price = math.Min(data.LowDaysFar, data.LowToday) + 2*data.N
+					price = math.Min(data.LowDaysFar, data.LowToday) + priceChange
 				} else {
-					price = data.LowDaysFar + 2*data.N
+					price = data.LowDaysFar + priceChange
 				}
 			}
 		}
@@ -293,11 +297,15 @@ func placeTurtleShort(account *model.Account, orderType string, data *model.Turt
 		amount = data.AmountMin
 	}
 	price := data.LowDaysFar
+	priceChange := 2 * data.N
+	if setting.Seconds == 14400 {
+		priceChange = 2.5 * data.N
+	}
 	if orderType == model.OrderTypeLimit {
 		price = data.HighDaysFar - data.N/2
 		if setting.Chance > 0 {
 			if data.UseNear {
-				price = math.Min(setting.PriceX+2*data.N, data.HighDaysNear)
+				price = math.Min(setting.PriceX+priceChange, data.HighDaysNear)
 			} else {
 				//if data.LowToday > 0 {
 				//	price = math.Min(data.LowDaysFar, data.LowToday) + 2*data.N
@@ -305,9 +313,9 @@ func placeTurtleShort(account *model.Account, orderType string, data *model.Turt
 				//	price = data.LowDaysFar + 2*data.N
 				//}
 				if setting.PriceX > 0 {
-					price = math.Min(data.LowDaysFar, setting.PriceX) + 2*data.N
+					price = math.Min(data.LowDaysFar, setting.PriceX) + priceChange
 				} else {
-					price = data.LowDaysFar + 2*data.N
+					price = data.LowDaysFar + priceChange
 				}
 			}
 		} else if setting.Chance < 0 {
@@ -316,9 +324,9 @@ func placeTurtleShort(account *model.Account, orderType string, data *model.Turt
 	} else if orderType == model.OrderTypeStop {
 		if setting.Chance > 0 {
 			if data.UseNear {
-				price = math.Max(setting.PriceX-2*data.N, data.LowDaysNear)
+				price = math.Max(setting.PriceX-priceChange, data.LowDaysNear)
 			} else {
-				price = math.Max(data.HighDaysFar, data.HighToday) - 2*data.N
+				price = math.Max(data.HighDaysFar, data.HighToday) - priceChange
 			}
 		} else if setting.Chance < 0 {
 			price = math.Min(data.LowDaysFar, setting.PriceX-data.N/2)

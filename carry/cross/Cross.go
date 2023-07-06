@@ -267,8 +267,8 @@ func initTradeLine(account *model.Account, setting *model.Setting, status *Carry
 	} else {
 		util.Notice(`fail to get ticket %s %s`, setting.Market, setting.Symbol)
 	}
-	jumpOpen := 40.0
-	jumpClose := -10.0
+	jumpOpen := 80.0
+	jumpClose := -20.0
 	jumpBuy := jumpOpen
 	jumpSell := jumpOpen
 	if status.Holding*price < -100 {
