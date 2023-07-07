@@ -1,7 +1,6 @@
 package api
 
 import (
-	"encoding/json"
 	"fmt"
 	kumex "github.com/Kucoin/kucoin-futures-go-sdk"
 	"hello/model"
@@ -313,53 +312,53 @@ type KucoinPositionModel struct {
 type PositionsModel []*KucoinPositionModel
 
 func getPositionsKucoinPerp(key string, secret string) (success bool, positions []*model.Position, accountValue, availableU float64) {
-	params := make(map[string]string)
-	params["currency"] = `USDT`
-	accountResp, accountErr := kucoinFutureClient("", "", "").AccountOverview(params)
-	contractResp, err := kucoinFutureClient("", "", "").Positions()
-	if err != nil || accountErr != nil || accountResp.Code != "200000" || contractResp.Code != "200000" {
-		if accountErr != nil {
-			util.SocketInfo(fmt.Sprintf("fail to refresh future account kucoin, err:%s, response:%v", err, accountResp))
-		}
-		if err != nil {
-			util.SocketInfo(fmt.Sprintf("fail to refresh future position kucoin, err:%s, response:%v", err, contractResp))
-		}
-		time.Sleep(time.Minute * 5)
-		return getPositionsKucoinPerp(key, secret)
-	}
-	account := &kumex.AccountModel{}
-	accountRespError := accountResp.ReadData(account)
-	if accountRespError != nil {
-		util.SocketInfo(fmt.Sprintf("fail to get future account response kucoin, err:%s", accountRespError))
-		return false, positions, 0, 0
-	}
-	accountRespJson, _ := json.Marshal(account)
-	util.SocketInfo(fmt.Sprintf(`get future account response: %s`, accountRespJson))
-	accountValue = account.AccountEquity
-	availableU = account.AvailableBalance
-	contracts := &PositionsModel{}
-	contractRespError := contractResp.ReadData(contracts)
-	if contractRespError != nil {
-		util.SocketInfo(fmt.Sprintf("fail to get future position response kucoin, err:%s", contractRespError))
-		return false, positions, 0, 0
-	}
-	contractRespJson, _ := json.Marshal(contracts)
-	util.SocketInfo(fmt.Sprintf(`get future position response: %s`, contractRespJson))
-	positions = make([]*model.Position, 0)
-	for _, contract := range *contracts {
-		currency := strings.ReplaceAll(contract.Symbol, `USDTM`, ``) + model.UniStandardTail[model.MarketTypePerp]
-		position := &model.Position{Market: model.KucoinPerp, Ts: util.GetNowUnixMillion(), Currency: currency}
-		_, realAmount := model.ParseRealAmount(model.KucoinPerp, currency, float64(contract.CurrentQty))
-		position.Holding = realAmount
-		position.LeverRate = int64(contract.RealLeverage)
-		position.EntryPrice = contract.AvgEntryPrice
-		position.Margin = contract.PosMargin
-		position.LiquidationPrice = contract.LiquidationPrice
-		position.ProfitUnreal = contract.UnrealisedPnl
-		if position.Holding != 0 {
-			positions = append(positions, position)
-		}
-	}
+	//params := make(map[string]string)
+	//params["currency"] = `USDT`
+	//accountResp, accountErr := kucoinFutureClient("", "", "").AccountOverview(params)
+	//contractResp, err := kucoinFutureClient(``, "", "").Positions()
+	//if err != nil || accountErr != nil || accountResp.Code != "200000" || contractResp.Code != "200000" {
+	//	if accountErr != nil {
+	//		util.SocketInfo(fmt.Sprintf("fail to refresh future account kucoin, err:%s, response:%v", err, accountResp))
+	//	}
+	//	if err != nil {
+	//		util.SocketInfo(fmt.Sprintf("fail to refresh future position kucoin, err:%s, response:%v", err, contractResp))
+	//	}
+	//	time.Sleep(time.Minute * 5)
+	//	return getPositionsKucoinPerp(key, secret)
+	//}
+	//account := &kumex.AccountModel{}
+	//accountRespError := accountResp.ReadData(account)
+	//if accountRespError != nil {
+	//	util.SocketInfo(fmt.Sprintf("fail to get future account response kucoin, err:%s", accountRespError))
+	//	return false, positions, 0, 0
+	//}
+	//accountRespJson, _ := json.Marshal(account)
+	//util.SocketInfo(fmt.Sprintf(`get future account response: %s`, accountRespJson))
+	//accountValue = account.AccountEquity
+	//availableU = account.AvailableBalance
+	//contracts := &PositionsModel{}
+	//contractRespError := contractResp.ReadData(contracts)
+	//if contractRespError != nil {
+	//	util.SocketInfo(fmt.Sprintf("fail to get future position response kucoin, err:%s", contractRespError))
+	//	return false, positions, 0, 0
+	//}
+	//contractRespJson, _ := json.Marshal(contracts)
+	//util.SocketInfo(fmt.Sprintf(`get future position response: %s`, contractRespJson))
+	//positions = make([]*model.Position, 0)
+	//for _, contract := range *contracts {
+	//	currency := strings.ReplaceAll(contract.Symbol, `USDTM`, ``) + model.UniStandardTail[model.MarketTypePerp]
+	//	position := &model.Position{Market: model.KucoinPerp, Ts: util.GetNowUnixMillion(), Currency: currency}
+	//	_, realAmount := model.ParseRealAmount(model.KucoinPerp, currency, float64(contract.CurrentQty))
+	//	position.Holding = realAmount
+	//	position.LeverRate = int64(contract.RealLeverage)
+	//	position.EntryPrice = contract.AvgEntryPrice
+	//	position.Margin = contract.PosMargin
+	//	position.LiquidationPrice = contract.LiquidationPrice
+	//	position.ProfitUnreal = contract.UnrealisedPnl
+	//	if position.Holding != 0 {
+	//		positions = append(positions, position)
+	//	}
+	//}
 	return true, positions, accountValue, availableU
 }
 
