@@ -1,18 +1,13 @@
 package main
 
 import (
-	"bytes"
-	"context"
+	"encoding/hex"
 	"fmt"
-	"github.com/ethereum/go-ethereum"
-	"github.com/ethereum/go-ethereum/accounts/abi"
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/ethereum/go-ethereum/rpc"
 	"hello/cfmms"
 	"hello/cfmms/batch_request/batch_request_for_uniswap_v2"
-	"hello/cfmms/deployment/GetUniswapV2PairsBatchRequest"
 	"log"
 	"math/big"
 	"testing"
@@ -31,71 +26,92 @@ func Test_Cfmms(t *testing.T) {
 
 func Test_Get_pairs_batch_request(t *testing.T) {
 
-	privateKey := "619ee13c815b29d4384ba48c9abe5b7c5db03f130ca0ee5b0f7a5294ad8bcdad"
-	deployerPrivateKey, err := crypto.HexToECDSA(privateKey)
-	deployerAddress := crypto.PubkeyToAddress(deployerPrivateKey.PublicKey)
-
+	//privateKey := "619ee13c815b29d4384ba48c9abe5b7c5db03f130ca0ee5b0f7a5294ad8bcdad"
+	//deployerPrivateKey, err := crypto.HexToECDSA(privateKey)
+	//deployerAddress := crypto.PubkeyToAddress(deployerPrivateKey.PublicKey)
+	//
 	client, err := ethclient.Dial("https://eth-mainnet.g.alchemy.com/v2/p6QKOpJrOhTeRZ7OT1ufLKVCsqEoKzMG")
 	if err != nil {
 		fmt.Println(fmt.Sprintf("Failed to connect to the Ethereum client: %v", err))
 	}
-	fmt.Println("we have a connection")
+	//fmt.Println("we have a connection")
 	factory := common.HexToAddress("0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f") //uniswapv2
-	from := big.NewInt(2638438)
-	step := big.NewInt(300)
-
-	// 获取部署者的Nonce
-	nonce, err := client.PendingNonceAt(context.Background(), deployerAddress)
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Println("nonce========================>", nonce)
-
-	// 构建部署交易数据
-	gasPrice, err := client.SuggestGasPrice(context.Background())
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	fmt.Println("gasPrice========================>", gasPrice)
-	auth, _ := bind.NewKeyedTransactorWithChainID(deployerPrivateKey, big.NewInt(1))
-	auth.Nonce = big.NewInt(int64(nonce))
-	auth.Value = big.NewInt(0)
-	auth.GasLimit = uint64(3000000)
-	auth.GasPrice = gasPrice
-	auth.NoSend = true
-
-	batch_request_for_uniswap_v2.Get_pairs_batch_request(auth, factory, from, step, client)
+	from := big.NewInt(766)
+	step := big.NewInt(1532)
+	//
+	//// 获取部署者的Nonce
+	//nonce, err := client.PendingNonceAt(context.Background(), deployerAddress)
+	//if err != nil {
+	//	log.Fatal(err)
+	//}
+	//fmt.Println("nonce========================>", nonce)
+	//
+	//// 构建部署交易数据
+	//gasPrice, err := client.SuggestGasPrice(context.Background())
+	//if err != nil {
+	//	log.Fatal(err)
+	//}
+	//
+	//fmt.Println("gasPrice========================>", gasPrice)
+	//auth, _ := bind.NewKeyedTransactorWithChainID(deployerPrivateKey, big.NewInt(1))
+	//auth.Nonce = big.NewInt(int64(nonce))
+	//auth.Value = big.NewInt(0)
+	//auth.GasLimit = uint64(3000000)
+	//auth.GasPrice = gasPrice
+	//auth.NoSend = true
+	//
+	batch_request_for_uniswap_v2.Get_pairs_batch_request(factory, from, step, client)
 
 }
 
 func Test_Get_pairs_batch_request2(t *testing.T) {
 	// 连接以太坊客户端
-	client, err := ethclient.Dial("https://eth-mainnet.g.alchemy.com/v2/p6QKOpJrOhTeRZ7OT1ufLKVCsqEoKzMG")
+	client, err := rpc.Dial("https://eth-mainnet.g.alchemy.com/v2/p6QKOpJrOhTeRZ7OT1ufLKVCsqEoKzMG")
+	//client, err := rpc.Dial("https://mainnet.infura.io/v3/07e58c6efd224b81a0839c1f8bbc3d98")
+	//client, err := rpc.Dial("https://mainnet.infura.io/v3/07e58c6efd224b81a0839c1f8bbc3d98")
+	if err != nil {
+		log.Fatalf("Could not connect to Infura: %v", err)
+	}
+
+	type Block struct {
+		Number string
+	}
+
+	var lastBlock Block
+	err = client.Call(&lastBlock, "eth_getBlockByNumber", "latest", true)
+	if err != nil {
+		fmt.Println("Cannot get the latest block:", err)
+		return
+	}
+
+	fmt.Printf("Latest block: %v\n", lastBlock.Number)
+
+	type ByteData struct {
+		Data       string   `json:"data"`
+		AccessList []string `json:"accessList"`
+	}
+
+	// rust byte code 0x608060405234801561001057600080fd5b50604051610d4d380380610d4d833981810160405281019061003291906108ea565b6000815167ffffffffffffffff81111561004f5761004e610749565b5b60405190808252806020026020018201604052801561008857816020015b610075610697565b81526020019060019003908161006d5790505b50905060005b82518110156106355760008382815181106100ac576100ab610933565b5b602002602001015190506100c58161066460201b60201c565b156100d05750610624565b
+	// result  0x0000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000007f000000000000000000000000c02aaa39b223fe8d0a0e5c4f27ead9083c756cc20000000000000000000000000000000000000000000000000000000000000012000000000000000000000000dfdb7f72c1f195c5951a234e8db9806eb063534600000000000000000000000000000000000000000000000000000000000000120000000000000000000000000000000000000000000000082cd8770a011855a2000000000000000
+	var result any
+	err = client.Call(&result, "eth_call", ByteData{
+		Data:       "0x608060405234801561001057600080fd5b5060405161051138038061051183398181016040528101906100329190610249565b6000838361004091906102cb565b905060008167ffffffffffffffff81111561005e5761005d6102ff565b5b60405190808252806020026020018201604052801561008c5781602001602082028036833780820191505090505b50905060005b82811015610181578373ffffffffffffffffffffffffffffffffffffffff16631e3dd18b82886100c2919061032e565b6040518263ffffffff1660e01b81526004016100de9190610371565b6020604051808303816000875af11580156100fd573d6000803e3d6000fd5b505050506040513d601f19601f82011682018060405250810190610121919061038c565b828281518110610134576101336103b9565b5b602002602001019073ffffffffffffffffffffffffffffffffffffffff16908173ffffffffffffffffffffffffffffffffffffffff16815250508080610179906103e8565b915050610092565b5060008160405160200161019591906104ee565b60405160208183030381529060405290506020810180590381f35b600080fd5b6000819050919050565b6101c8816101b5565b81146101d357600080fd5b50565b6000815190506101e5816101bf565b92915050565b600073ffffffffffffffffffffffffffffffffffffffff82169050919050565b6000610216826101eb565b9050919050565b6102268161020b565b811461023157600080fd5b50565b6000815190506102438161021d565b92915050565b600080600060608486031215610262576102616101b0565b5b6000610270868287016101d6565b9350506020610281868287016101d6565b925050604061029286828701610234565b9150509250925092565b7f4e487b7100000000000000000000000000000000000000000000000000000000600052601160045260246000fd5b60006102d6826101b5565b91506102e1836101b5565b92508282039050818111156102f9576102f861029c565b5b92915050565b7f4e487b7100000000000000000000000000000000000000000000000000000000600052604160045260246000fd5b6000610339826101b5565b9150610344836101b5565b925082820190508082111561035c5761035b61029c565b5b92915050565b61036b816101b5565b82525050565b60006020820190506103866000830184610362565b92915050565b6000602082840312156103a2576103a16101b0565b5b60006103b084828501610234565b91505092915050565b7f4e487b7100000000000000000000000000000000000000000000000000000000600052603260045260246000fd5b60006103f3826101b5565b91507fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff82036104255761042461029c565b5b600182019050919050565b600081519050919050565b600082825260208201905092915050565b6000819050602082019050919050565b6104658161020b565b82525050565b6000610477838361045c565b60208301905092915050565b6000602082019050919050565b600061049b82610430565b6104a5818561043b565b93506104b08361044c565b8060005b838110156104e15781516104c8888261046b565b97506104d383610483565b9250506001810190506104b4565b5085935050505092915050565b600060208201905081810360008301526105088184610490565b90509291505056fe000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002fe000000000000000000000000c0aee478e3658e2610c5f7a4a2e1777ce9e4f2ac",
+		AccessList: []string{},
+	})
+
+	if err != nil {
+		fmt.Println("Cannot get the latest block:", err)
+		fmt.Println("err:", err.Error())
+		return
+	}
+
+	fmt.Println(result)
 	//client, err := ethclient.Dial("/Users/uuuliu/Downloads/work/ethereum/data/geth.ipc")
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	//// 部署合约的参数
-	//from := big.NewInt(2638438)
-	//step := big.NewInt(300)
-	//factory := common.HexToAddress("0x5c69bee701ef814a2b6a3edd4b1652cb9cc5aa6f")
-	//
-	//// 创建ABI编码器
-	//abiCoder, err := abi.JSON(strings.NewReader(`[{"inputs":[{"internalType":"uint256","name":"from","type":"uint256"},{"internalType":"uint256","name":"step","type":"uint256"},{"internalType":"address","name":"factory","type":"address"}],"stateMutability":"nonpayable","type":"constructor"}]`))
-	//if err != nil {
-	//	log.Fatal(err)
-	//}
-	//
-	//// 打包合约参数
-	//data, err := abiCoder.Pack("constructor", from, step, factory)
-	//if err != nil {
-	//	log.Fatal(err)
-	//}
-	//
 	// 合约部署字节码
-	hexStr := "0x608060405234801561001057600080fd5b5060405161051138038061051183398181016040528101906100329190610249565b6000838361004091906102cb565b905060008167ffffffffffffffff81111561005e5761005d6102ff565b5b60405190808252806020026020018201604052801561008c5781602001602082028036833780820191505090505b50905060005b82811015610181578373ffffffffffffffffffffffffffffffffffffffff16631e3dd18b82886100c2919061032e565b6040518263ffffffff1660e01b81526004016100de9190610371565b6020604051808303816000875af11580156100fd573d6000803e3d6000fd5b505050506040513d601f19601f82011682018060405250810190610121919061038c565b828281518110610134576101336103b9565b5b602002602001019073ffffffffffffffffffffffffffffffffffffffff16908173ffffffffffffffffffffffffffffffffffffffff16815250508080610179906103e8565b915050610092565b5060008160405160200161019591906104ee565b60405160208183030381529060405290506020810180590381f35b600080fd5b6000819050919050565b6101c8816101b5565b81146101d357600080fd5b50565b6000815190506101e5816101bf565b92915050565b600073ffffffffffffffffffffffffffffffffffffffff82169050919050565b6000610216826101eb565b9050919050565b6102268161020b565b811461023157600080fd5b50565b6000815190506102438161021d565b92915050565b600080600060608486031215610262576102616101b0565b5b6000610270868287016101d6565b9350506020610281868287016101d6565b925050604061029286828701610234565b9150509250925092565b7f4e487b7100000000000000000000000000000000000000000000000000000000600052601160045260246000fd5b60006102d6826101b5565b91506102e1836101b5565b92508282039050818111156102f9576102f861029c565b5b92915050565b7f4e487b7100000000000000000000000000000000000000000000000000000000600052604160045260246000fd5b6000610339826101b5565b9150610344836101b5565b925082820190508082111561035c5761035b61029c565b5b92915050565b61036b816101b5565b82525050565b60006020820190506103866000830184610362565b92915050565b6000602082840312156103a2576103a16101b0565b5b60006103b084828501610234565b91505092915050565b7f4e487b7100000000000000000000000000000000000000000000000000000000600052603260045260246000fd5b60006103f3826101b5565b91507fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff82036104255761042461029c565b5b600182019050919050565b600081519050919050565b600082825260208201905092915050565b6000819050602082019050919050565b6104658161020b565b82525050565b6000610477838361045c565b60208301905092915050565b6000602082019050919050565b600061049b82610430565b6104a5818561043b565b93506104b08361044c565b8060005b838110156104e15781516104c8888261046b565b97506104d383610483565b9250506001810190506104b4565b5085935050505092915050565b600060208201905081810360008301526105088184610490565b90509291505056fe"
 	//contractDeploymentBytecode := "6080604052600080fdfea2646970667358221220f3a6447f9078da7c7fb7393c482159ae841d8387e36746eac1be1d3ea8849a7964736f6c63430008100033"
 	//hexStr := "0x6080604052600080fdfea2646970667358221220f3a6447f9078da7c7fb7393c482159ae841d8387e36746eac1be1d3ea8849a7964736f6c63430008100033"
 	//hexStr := "0x60ff60005260106010f3"
@@ -111,36 +127,8 @@ func Test_Get_pairs_batch_request2(t *testing.T) {
 	//c := bind.NewBoundContract(common.Address{}, GetUniswapV2PairsBatchRequest.GetUniswapV2PairsBatchRequestMetaData.ABI, backend, backend, backend)
 	//common.FromHex(GetUniswapV2PairsBatchRequest. GetUniswapV2PairsBatchRequestMetaData.Bin)
 
-	ab, err := abi.JSON(bytes.NewBufferString(GetUniswapV2PairsBatchRequest.GetUniswapV2PairsBatchRequestMetaData.ABI))
-	if err != nil {
-		panic(err)
-	}
-	data, err := ab.Pack("", big.NewInt(2638438), big.NewInt(300), common.HexToAddress("0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f"))
-	if err != nil {
-		panic(err)
-	}
+	//batch_request_for_uniswap_v2.Get_pairs_batch_request(common.HexToAddress("0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f"), big.NewInt(2638438), big.NewInt(300), client)
 
-	// 使用 append 函数拼接两个切片
-	combined := append(common.FromHex(hexStr), data...)
-
-	fmt.Println(common.Bytes2Hex(combined))
-
-	fmt.Println("=======================================", "0x"+common.Bytes2Hex(combined))
-
-	// 构造静态调用消息
-	callMsg := ethereum.CallMsg{
-		Data:       combined,
-		AccessList: nil,
-	}
-
-	// 执行静态调用
-	result, err := client.CallContract(context.Background(), callMsg, nil)
-	if err != nil {
-		fmt.Println("CallContract error")
-		log.Fatal(err)
-	}
-
-	fmt.Println(string(result))
 }
 
 func FloatToTokenAmount(amount float64, decimals int64) *big.Int {
@@ -158,5 +146,13 @@ func Exp10(n int64) *big.Int {
 }
 
 func Test_Hex2string(t *testing.T) {
+	hexStr := "0x6080604052600080fdfea26469706673582212208cc017beed578b851e8578d2df31fe36c4108efceefd0f2d8f0be696ca6f85ee64736f6c63430008120033"
+	bytes, err := hex.DecodeString(hexStr[2:])
+	if err != nil {
+		fmt.Println("转换出错:", err)
+		return
+	}
+
+	fmt.Println(string(bytes))
 
 }
