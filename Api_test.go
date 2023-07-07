@@ -447,6 +447,11 @@ func Test_Orders(t *testing.T) {
 
 func Test_transferInner(t *testing.T) {
 	model.NewConfig()
+	suc, bals, total, _ := api.GetBalances(model.AppConfig.GateKey, model.AppConfig.GateSecret, model.Gate)
+	fmt.Println(fmt.Sprintf(`%v total %f`, suc, total))
+	for _, bal := range bals {
+		api.TransferGate(model.AppConfig.GateKey, model.AppConfig.GateSecret, `MAIN_UMFUTURE`, bal.Coin, bal.Amount)
+	}
 	assets := api.GetCoinBalanceBybit(model.AppConfig.BybitKey, model.AppConfig.BybitSecret, `59372048`)
 	for _, bal := range assets {
 		if bal.Coin != `USDT` {

@@ -164,13 +164,14 @@ func setMarginSettingGate(key, secret string) {
 	util.Notice(fmt.Sprintf("set gate margin auto repay success,response: %s", marshal))
 }
 
-func transferGate(key string, secret string, transferType string, amount float64) {
+func TransferGate(key string, secret string, transferType, currency string, amount float64) {
 	client, ctx := getClientGate(key, secret)
-	param := gateApi.Transfer{Currency: `USDT`, Amount: fmt.Sprintf("%.6f", amount), Settle: `usdt`}
+	param := gateApi.Transfer{Currency: currency, Amount: fmt.Sprintf("%f", amount), Settle: `usdt`}
 	if transferType == "MAIN_UMFUTURE" {
 		if model.AppConfig.GateSpot {
 			param.From = "spot"
-			param.To = "futures"
+			//param.To = "futures"
+			param.To = `cross_margin`
 			_, res, endErr := client.WalletApi.Transfer(ctx, param)
 			if endErr != nil {
 				util.Notice(fmt.Sprintf(`fail to transfer status %s`, res.Status))

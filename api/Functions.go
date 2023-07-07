@@ -862,15 +862,6 @@ func GetWSSubscribe(market, symbol, subType string) (subscribe interface{}) {
 	return ""
 }
 
-// Transfer
-func _(key, secret, market, transferType string, amount float64) {
-	if market == model.Gate {
-		transferGate(key, secret, transferType, amount)
-	} else if market == model.Kucoin {
-		//transferKucoin(transferType, amount)
-	}
-}
-
 // FilterCross
 // 由于gate下线暂时不平仓的币 BCD OXY CRU
 // 搬砖过滤币种 AMPL IOTA REEF MIR SOS
