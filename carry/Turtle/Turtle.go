@@ -66,6 +66,10 @@ var ProcessTurtle = func(setting *model.Setting, tick *model.BidAsk) {
 	//if !data.AdjustChecked {
 	//	return
 	//}
+	priceChange := 2 * data.N
+	if setting.Seconds == 14400 {
+		priceChange = 2.5 * data.N
+	}
 	if setting.Chance == 0 { // 开初始仓
 		placeTurtleOrders(account.Key, account.Secret, data, setting, canOpenTurtle, chanceInAll, priceShort, priceLong, tick)
 		if data.BreakLong && data.OrderLong != nil {
@@ -95,9 +99,9 @@ var ProcessTurtle = func(setting *model.Setting, tick *model.BidAsk) {
 	} else if setting.Chance > 0 {
 		priceLong = math.Max(priceLong, setting.PriceX+data.N/2)
 		if data.UseNear {
-			priceShort = math.Max(setting.PriceX-2*data.N, data.LowDaysNear)
+			priceShort = math.Max(setting.PriceX-priceChange, data.LowDaysNear)
 		} else {
-			priceShort = math.Max(data.HighDaysFar, data.HighToday) - 2*data.N
+			priceShort = math.Max(data.HighDaysFar, data.HighToday) - priceChange
 		}
 		placeTurtleOrders(account.Key, account.Secret, data, setting, canOpenTurtle, chanceInAll, priceShort, priceLong, tick)
 		// 加仓一个单位
@@ -131,12 +135,12 @@ var ProcessTurtle = func(setting *model.Setting, tick *model.BidAsk) {
 	} else if setting.Chance < 0 {
 		priceShort = math.Min(priceShort, setting.PriceX-data.N/2)
 		if data.UseNear {
-			priceLong = math.Min(setting.PriceX+2*data.N, data.HighDaysNear)
+			priceLong = math.Min(setting.PriceX+priceChange, data.HighDaysNear)
 		} else {
 			if data.LowToday > 0 {
-				priceLong = math.Min(data.LowDaysFar, data.LowToday) + 2*data.N
+				priceLong = math.Min(data.LowDaysFar, data.LowToday) + priceChange
 			} else {
-				priceLong = data.LowDaysFar + 2*data.N
+				priceLong = data.LowDaysFar + priceChange
 			}
 		}
 		placeTurtleOrders(account.Key, account.Secret, data, setting, canOpenTurtle, chanceInAll, priceShort, priceLong, tick)
