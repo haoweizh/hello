@@ -35,9 +35,9 @@ func Test_Get_pairs_batch_request(t *testing.T) {
 		fmt.Println(fmt.Sprintf("Failed to connect to the Ethereum client: %v", err))
 	}
 	//fmt.Println("we have a connection")
-	factory := common.HexToAddress("0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f") //uniswapv2
-	from := big.NewInt(766)
-	step := big.NewInt(1532)
+	factory := common.HexToAddress("0xc0aee478e3658e2610c5f7a4a2e1777ce9e4f2ac") //uniswapv2
+	from := big.NewInt(3064)
+	step := big.NewInt(3727)
 	//
 	//// 获取部署者的Nonce
 	//nonce, err := client.PendingNonceAt(context.Background(), deployerAddress)

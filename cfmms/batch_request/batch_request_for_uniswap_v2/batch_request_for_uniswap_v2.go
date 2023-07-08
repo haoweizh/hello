@@ -2,6 +2,7 @@ package batch_request_for_uniswap_v2
 
 import (
 	"context"
+	"encoding/hex"
 	"fmt"
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi"
@@ -48,7 +49,28 @@ func Get_pairs_batch_request(factory common.Address, from, setp *big.Int, client
 		log.Fatal(err)
 	}
 
-	fmt.Println(result)
+	hexString := hex.EncodeToString(result)
+	hexString = hexString[128:]
+
+	for pair := range hexString {
+		pairs = append(pairs, hexString[pair*64:(pair+1)*64])
+	}
+
+	//fmt.Println("hexString========================>", hexString)
+	//
+	//fmt.Println("result address ========================>", common.HexToAddress(hexString[:64]))
+	//fmt.Println("result address ========================>", common.HexToAddress(hexString[64:128]))
+	//fmt.Println("result address ========================>", common.HexToAddress(hexString[128:192]))
+	//
+	//fmt.Println("result========================>", result)
+	//
+	//fmt.Println("result========================>", len(result))
+	////fmt.Println("result========================>", result)
+	////res, _ := argsCodeAbi.Unpack("", result)
+	////fmt.Println("Owner: %v", common.BytesToAddress(result).Hex())
+	////res3 := FormatHex(hexutil.Encode(result))
+
+	fmt.Println("pairs", pairs)
 
 	return pairs
 
