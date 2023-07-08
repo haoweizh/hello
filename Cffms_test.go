@@ -31,36 +31,17 @@ func Test_Get_pairs_batch_request(t *testing.T) {
 	//deployerAddress := crypto.PubkeyToAddress(deployerPrivateKey.PublicKey)
 	//
 	client, err := ethclient.Dial("https://eth-mainnet.g.alchemy.com/v2/p6QKOpJrOhTeRZ7OT1ufLKVCsqEoKzMG")
+	//client, err := ethclient.Dial("http://localhost:8545")
 	if err != nil {
 		fmt.Println(fmt.Sprintf("Failed to connect to the Ethereum client: %v", err))
 	}
 	//fmt.Println("we have a connection")
-	factory := common.HexToAddress("0xc0aee478e3658e2610c5f7a4a2e1777ce9e4f2ac") //uniswapv2
+	factory := common.HexToAddress("0x5c69bee701ef814a2b6a3edd4b1652cb9cc5aa6f") //uniswapv2
 	from := big.NewInt(3064)
 	step := big.NewInt(3727)
-	//
-	//// 获取部署者的Nonce
-	//nonce, err := client.PendingNonceAt(context.Background(), deployerAddress)
-	//if err != nil {
-	//	log.Fatal(err)
-	//}
-	//fmt.Println("nonce========================>", nonce)
-	//
-	//// 构建部署交易数据
-	//gasPrice, err := client.SuggestGasPrice(context.Background())
-	//if err != nil {
-	//	log.Fatal(err)
-	//}
-	//
-	//fmt.Println("gasPrice========================>", gasPrice)
-	//auth, _ := bind.NewKeyedTransactorWithChainID(deployerPrivateKey, big.NewInt(1))
-	//auth.Nonce = big.NewInt(int64(nonce))
-	//auth.Value = big.NewInt(0)
-	//auth.GasLimit = uint64(3000000)
-	//auth.GasPrice = gasPrice
-	//auth.NoSend = true
-	//
-	batch_request_for_uniswap_v2.Get_pairs_batch_request(factory, from, step, client)
+	pairs := batch_request_for_uniswap_v2.Get_pairs_batch_request(factory, from, step, client)
+	fmt.Println(pairs)
+	batch_request_for_uniswap_v2.Get_pool_data_batch_request(pairs[:127], client)
 
 }
 

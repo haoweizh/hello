@@ -9,6 +9,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"hello/cfmms/deployment/GetUniswapV2PairsBatchRequest"
+	"hello/cfmms/deployment/GetUniswapV2PoolDataBatchRequest"
 	"log"
 	"math/big"
 	"strings"
@@ -21,29 +22,20 @@ func Get_pairs_batch_request(factory common.Address, from, setp *big.Int, client
 
 	byteCode := GetUniswapV2PairsBatchRequest.GetUniswapV2PairsBatchRequestMetaData.Bin
 
-	fmt.Println(GetUniswapV2PairsBatchRequest.GetUniswapV2PairsBatchRequestMetaData.ABI)
-
 	argsCodeAbi, err := abi.JSON(strings.NewReader(GetUniswapV2PairsBatchRequest.GetUniswapV2PairsBatchRequestMetaData.ABI))
 
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println(factory)
-	fmt.Println(from)
-	fmt.Println(setp)
 
 	argsByteCode, _ := argsCodeAbi.Pack("", from, setp, factory)
-
-	fmt.Println("argsByteCode========================>", argsByteCode)
-
-	//byteCode := "0x6080604052348015600f57600080fd5b5060405160dc38038060dc8339818101604052810190602d91906068565b506090565b600080fd5b6000819050919050565b6048816037565b8114605257600080fd5b50565b6000815190506062816041565b92915050565b600060208284031215607b57607a6032565b5b60006087848285016055565b91505092915050565b603f80609d6000396000f3fe6080604052600080fdfea26469706673582212208cc017beed578b851e8578d2df31fe36c4108efceefd0f2d8f0be696ca6f85ee64736f6c634300081200330000000000000000000000000000000000000000000000000000000000000001"
 
 	callMsg := ethereum.CallMsg{
 		Data:       append(common.FromHex(byteCode), argsByteCode...),
 		AccessList: nil,
 	}
 
-	// 执行静态调用
+	// 执行Eth_call
 	result, err := client.CallContract(context.Background(), callMsg, nil)
 	if err != nil {
 		log.Fatal(err)
@@ -52,31 +44,100 @@ func Get_pairs_batch_request(factory common.Address, from, setp *big.Int, client
 	hexString := hex.EncodeToString(result)
 	hexString = hexString[128:]
 
-	for pair := range hexString {
-		pairs = append(pairs, hexString[pair*64:(pair+1)*64])
+	for i := 0; i < len(hexString); i += 64 {
+		pairs = append(pairs, hexString[i:i+64])
 	}
-
-	//fmt.Println("hexString========================>", hexString)
-	//
-	//fmt.Println("result address ========================>", common.HexToAddress(hexString[:64]))
-	//fmt.Println("result address ========================>", common.HexToAddress(hexString[64:128]))
-	//fmt.Println("result address ========================>", common.HexToAddress(hexString[128:192]))
-	//
-	//fmt.Println("result========================>", result)
-	//
-	//fmt.Println("result========================>", len(result))
-	////fmt.Println("result========================>", result)
-	////res, _ := argsCodeAbi.Unpack("", result)
-	////fmt.Println("Owner: %v", common.BytesToAddress(result).Hex())
-	////res3 := FormatHex(hexutil.Encode(result))
-
-	fmt.Println("pairs", pairs)
 
 	return pairs
 
 }
 
-func get_pool_data_batch_request() {
+// 一次最多请求数量127   len(pool) <= 127
+func Get_pool_data_batch_request(pool []string, client *ethclient.Client) {
+
+	var target_addresses []common.Address
+
+	for _, v := range pool {
+		target_addresses = append(target_addresses, common.HexToAddress(v))
+	}
+
+	byteCode := GetUniswapV2PoolDataBatchRequest.GetUniswapV2PoolDataBatchRequestMetaData.Bin
+
+	argsCodeAbi, err := abi.JSON(strings.NewReader(GetUniswapV2PoolDataBatchRequest.GetUniswapV2PoolDataBatchRequestMetaData.ABI))
+
+	if err != nil {
+		log.Fatal("argsCodeAbi ", err)
+
+	}
+
+	fmt.Println("target_addresses ", target_addresses)
+
+	argsByteCode, _ := argsCodeAbi.Pack("", target_addresses)
+
+	fmt.Println("argsByteCode ", argsByteCode)
+
+	temp := append(common.FromHex(byteCode), argsByteCode...)
+	fmt.Println("temp ", hex.EncodeToString(temp))
+	callMsg := ethereum.CallMsg{
+		Data:       append(common.FromHex(byteCode), argsByteCode...),
+		AccessList: nil,
+	}
+
+	// 执行Eth_call
+	result, err := client.CallContract(context.Background(), callMsg, nil)
+	fmt.Println("result ", result)
+	if err != nil {
+		fmt.Println("err ", err)
+		log.Fatal(err)
+	}
+
+	hexString := hex.EncodeToString(result)
+	fmt.Println("Get_pool_data_batch_request reuslt raw", hexString)
+
+	hexString = hexString[128:]
+
+	fmt.Println("Get_pool_data_batch_request reuslt", hexString)
+
+	type PoolData struct {
+		TokenA         common.Address
+		TokenADecimals int64
+		TokenB         common.Address
+		TokenBDecimals int64
+		Reserve0       *big.Int
+		Reserve1       *big.Int
+	}
+
+	//for i := 0; i < len(hexString); i += 64 * 6 {
+	//
+	//	var poolData PoolData
+	//
+	//	poolData.TokenA = common.HexToAddress(hexString[i : i+64])
+	//	poolData.TokenADecimals = int64(new(big.Int).SetBytes(common.FromHex(hexString[i+64 : i+128])).Int64())
+	//	poolData.TokenB = common.HexToAddress(hexString[i+128 : i+192])
+	//	poolData.TokenBDecimals = int64(new(big.Int).SetBytes(common.FromHex(hexString[i+192 : i+256])).Int64())
+	//	poolData.Reserve0 = new(big.Int).SetBytes(common.FromHex(hexString[i+256 : i+320]))
+	//	poolData.Reserve1 = new(big.Int).SetBytes(common.FromHex(hexString[i+320 : i+384]))
+	//
+	//	fmt.Println("poolData ", poolData)
+	//
+	//}
+
+	oneStructLen := 64 * 6
+
+	nums := len(hexString) / oneStructLen
+
+	for i := 1; i < nums+1; i++ {
+
+		var poolData PoolData
+
+		poolData.TokenA = common.HexToAddress(hexString[(i-1)*oneStructLen : (i-1)*oneStructLen+64])
+		poolData.TokenADecimals = int64(new(big.Int).SetBytes(common.FromHex(hexString[(i-1)*oneStructLen+64 : (i-1)*oneStructLen+128])).Int64())
+		poolData.TokenB = common.HexToAddress(hexString[(i-1)*oneStructLen+128 : (i-1)*oneStructLen+192])
+		poolData.TokenBDecimals = int64(new(big.Int).SetBytes(common.FromHex(hexString[(i-1)*oneStructLen+192 : (i-1)*oneStructLen+256])).Int64())
+		poolData.Reserve0 = new(big.Int).SetBytes(common.FromHex(hexString[(i-1)*oneStructLen+256 : (i-1)*oneStructLen+320]))
+		poolData.Reserve1 = new(big.Int).SetBytes(common.FromHex(hexString[(i-1)*oneStructLen+320 : (i-1)*oneStructLen+384]))
+		fmt.Println("poolData ", poolData)
+	}
 
 }
 
