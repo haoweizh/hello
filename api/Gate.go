@@ -238,7 +238,7 @@ var tickerHandler = gateWs.NewCallBack(func(msg *gateWs.UpdateMsg) {
 			return
 		}
 		success, _, coin := model.GetCoinFromDialect(model.Gate, update.CurrencyPair)
-		if !success {
+		if !success || len(strconv.Itoa(int(update.TimeInMilli))) != 13 {
 			return
 		}
 		symbol = coin + model.UniStandardTail[model.MarketTypeSpot]
@@ -258,7 +258,7 @@ var tickerHandler = gateWs.NewCallBack(func(msg *gateWs.UpdateMsg) {
 			return
 		}
 		success, _, coin := model.GetCoinFromDialect(model.Gate, update.CurrencyPair)
-		if !success {
+		if !success || len(strconv.Itoa(int(update.TimeInMilli))) != 13 {
 			return
 		}
 		symbol = coin + model.UniStandardTail[model.MarketTypeSpot]
@@ -281,7 +281,7 @@ var tickerHandler = gateWs.NewCallBack(func(msg *gateWs.UpdateMsg) {
 			return
 		}
 		success, _, coin := model.GetCoinFromDialect(model.Gate, update.Contract)
-		if !success {
+		if !success || len(strconv.Itoa(int(update.TimeMillis))) != 13 {
 			return
 		}
 		symbol = coin + model.UniStandardTail[model.MarketTypePerp]
@@ -643,18 +643,15 @@ func getBalanceGate(key string, secret string) (success bool, balances []*model.
 			balance := &model.Balance{AccountId: key, BalanceTime: util.GetNow(), Market: model.Gate, Coin: coin}
 			balance.FrozenAmount, _ = strconv.ParseFloat(item.Freeze, 64)
 			balance.Borrow, _ = strconv.ParseFloat(item.Borrowed, 64)
-			balance.Amount = balance.AvailableWithBorrow + balance.FrozenAmount
 			balance.AvailableWithBorrow, _ = strconv.ParseFloat(item.Available, 64)
+			balance.Amount = balance.AvailableWithBorrow + balance.FrozenAmount - balance.Borrow
 			if !model.AppConfig.GateSpot && balance.Coin != "USDT" {
-				//todo 验证借币状态下
+				//todo 验证借币状态下，已知开启借币卖，就算卖不成功，借的币不会自动归还。。。
 				canBorrow := 0.0
-				borrowable, _, marginErr := client.MarginApi.GetCrossMarginBorrowable(ctx, coin)
-				if marginErr != nil {
-					panicGateError(key, "GetCrossMarginBorrowable", marginErr)
-				} else {
-					canBorrow, _ = strconv.ParseFloat(borrowable.Amount, 64)
-				}
-				balance.Amount = balance.AvailableWithBorrow + balance.FrozenAmount
+				//borrowable, _, marginErr := client.MarginApi.GetCrossMarginBorrowable(ctx, coin)
+				//if marginErr== nil {
+				//	canBorrow, _ = strconv.ParseFloat(borrowable.Amount, 64)
+				//}
 				balance.AvailableWithBorrow = math.Max(0, balance.Amount) + canBorrow
 			}
 			_, price := GetPriceForce(key, secret, balance.Coin+model.UniStandardTail[model.MarketTypeSpot], model.Gate)
@@ -814,12 +811,12 @@ func placeOrderGate(key, secret string, order *model.Order, orderSide, orderType
 			relatedOrder.Account = "spot"
 		} else {
 			relatedOrder.Account = "cross_margin"
-			if orderSide == model.OrderSideBuy {
-				relatedOrder.AutoRepay = true
-			} else {
-				relatedOrder.AutoBorrow = true
-			}
-			//relatedOrder.AutoRepay = true
+			//if orderSide == model.OrderSideBuy {
+			//	relatedOrder.AutoRepay = true
+			//} else {
+			//	relatedOrder.AutoBorrow = true
+			//}
+			relatedOrder.AutoRepay = true
 		}
 		relatedOrder.Amount = util.CutTailZero(fmt.Sprintf(`%f`, model.GetAmountInMarket(model.Gate, symbol, amount, price, false)))
 		util.SocketInfo(`create spot order request: %v`, relatedOrder)
@@ -958,7 +955,13 @@ func queryOrderGate(key, secret string, order *model.Order) {
 		util.SocketInfo(`%s %s %s query result:%s %f %v`,
 			order.Market, order.Symbol, order.OrderId, order.Status, order.DealAmount, orderFuture)
 	} else if success && marketType == model.MarketTypeSpot {
-		orderSpot, _, err := client.SpotApi.GetOrder(ctx, order.OrderId, dialectSymbol, nil)
+		localVarOptionals := &gateApi.GetOrderOpts{}
+		if model.AppConfig.GateSpot {
+			localVarOptionals = nil
+		} else {
+			localVarOptionals.Account = optional.NewString("cross_margin")
+		}
+		orderSpot, _, err := client.SpotApi.GetOrder(ctx, order.OrderId, dialectSymbol, localVarOptionals)
 		if err != nil {
 			panicGateError(key, "GetSpotOrder", err)
 			return

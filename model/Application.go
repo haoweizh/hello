@@ -194,7 +194,7 @@ func GetOrderStatus(market, marketStatus string) (status string) {
 }
 
 func NewConfig() {
-	AppConfig = &Config{GateSpot: true, KucoinSpot: true}
+	AppConfig = &Config{GateSpot: false, KucoinSpot: true}
 	err := configor.Load(AppConfig, "./config.yml")
 	if err != nil {
 		util.Notice(err.Error())
