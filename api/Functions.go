@@ -438,7 +438,8 @@ func GetBalances(key, secret, market string) (
 	case model.HuobiSpot:
 		success, balances = getBalanceHuobiSpot(key, secret)
 	}
-	if market != model.Ftx && market != model.OKEX && market != model.Bybit {
+	accounts := model.AppConfig.GetAccounts(market)
+	if len(accounts) > 0 && !accounts[0].IsUnified {
 		for _, balance := range balances {
 			if USDs[balance.Coin] {
 				totalInUsd += balance.Amount

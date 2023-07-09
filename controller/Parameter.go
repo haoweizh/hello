@@ -439,6 +439,7 @@ func getCandles(c *gin.Context) {
 }
 
 func holdPage(c *gin.Context) {
+	//api.InitCrossMarketInfos(strings.Split(`gate`, `,`))
 	indexStr := c.Query(`index`)
 	if len(indexStr) == 0 {
 		indexStr = `0`

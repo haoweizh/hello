@@ -656,6 +656,7 @@ func getBalanceGate(key string, secret string) (success bool, balances []*model.
 			}
 			_, price := GetPriceForce(key, secret, balance.Coin+model.UniStandardTail[model.MarketTypeSpot], model.Gate)
 			balance.UsdValue = balance.Amount * price
+			totalInUsd += balance.UsdValue
 			balances = append(balances, balance)
 		}
 	}
@@ -686,7 +687,6 @@ func getPositionsGate(key string, secret string) (success bool, positions []*mod
 		maintenanceMargin, _ := strconv.ParseFloat(account.MaintenanceMargin, 64)
 		accountValue = available + maintenanceMargin + unrealizedPnl
 	}
-
 	positions = make([]*model.Position, 0)
 	for _, item := range positionList {
 		getCoin, _, coin := model.GetCoinFromDialect(model.Gate, item.Contract)
