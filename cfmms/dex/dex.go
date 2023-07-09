@@ -42,9 +42,9 @@ func NewDex(factoytaddress common.Address, variant DexVariant, creationblock int
 
 	switch variant {
 	case UniswapV2:
-		return NewUniswapV2Dex(factoytaddress, creationblock, fee).(Dex)
+		//return NewUniswapV2Dex(factoytaddress, creationblock, fee).(Dex)
 	case UniswapV3:
-		return NewUniswapV3Dex(factoytaddress, creationblock, fee)
+		//return NewUniswapV3Dex(factoytaddress, creationblock, fee)
 	default:
 		return nil
 	}
