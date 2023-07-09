@@ -116,7 +116,7 @@ func Get_pool_data_batch_request(pool []string, client *ethclient.Client) []Pool
 
 }
 
-func Get_v2_pool_data_batch_request(pool *pool.UniswapV2Pool, client ethclient.Client) error {
+func Get_v2_pool_data_batch_request(pool *pool.UniswapV2Pool, client *ethclient.Client) error {
 
 	byteCode := GetUniswapV2PoolDataBatchRequest.GetUniswapV2PoolDataBatchRequestMetaData.Bin
 
