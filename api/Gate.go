@@ -677,10 +677,16 @@ func getPositionsGate(key string, secret string) (success bool, positions []*mod
 		util.SocketInfo(`fail to refresh future balance gate`)
 		return getPositionsGate(key, secret)
 	}
-	accountValue, _ = strconv.ParseFloat(account.Total, 64)
-	unrealizedPnl, _ := strconv.ParseFloat(account.UnrealisedPnl, 64)
-	accountValue += unrealizedPnl
 	available, _ = strconv.ParseFloat(account.Available, 64)
+	unrealizedPnl, _ := strconv.ParseFloat(account.UnrealisedPnl, 64)
+	if model.AppConfig.GateSpot {
+		accountValue, _ = strconv.ParseFloat(account.Total, 64)
+		accountValue += unrealizedPnl
+	} else {
+		maintenanceMargin, _ := strconv.ParseFloat(account.MaintenanceMargin, 64)
+		accountValue = available + maintenanceMargin + unrealizedPnl
+	}
+
 	positions = make([]*model.Position, 0)
 	for _, item := range positionList {
 		getCoin, _, coin := model.GetCoinFromDialect(model.Gate, item.Contract)
