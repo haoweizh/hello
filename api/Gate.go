@@ -656,7 +656,7 @@ func getBalanceGate(key string, secret string) (success bool, balances []*model.
 			}
 			_, price := GetPriceForce(key, secret, balance.Coin+model.UniStandardTail[model.MarketTypeSpot], model.Gate)
 			balance.UsdValue = balance.Amount * price
-			totalInUsd += balance.UsdValue
+			//totalInUsd += balance.UsdValue
 			balances = append(balances, balance)
 		}
 	}
