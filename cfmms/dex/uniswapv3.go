@@ -1,7 +1,5 @@
 package dex
 
-import "github.com/ethereum/go-ethereum/common"
-
 var (
 	PairCreatedEventSignature = []byte("PairCreated(address,address,address,uint256)")
 )
@@ -9,10 +7,10 @@ var (
 type UniswapV3Dex struct {
 }
 
-func NewUniswapV3Dex(factoytaddress common.Address, creationblock int64, fee int64) *Dex {
-
-}
-
+// func NewUniswapV3Dex(factoytaddress common.Address, creationblock int64, fee int64) *Dex {
+//
+//		return
+//	}
 func (u UniswapV3Dex) PoolCreatedEventSignature() []byte {
 	//TODO implement me
 	return PairCreatedEventSignature

@@ -82,7 +82,9 @@ func (config *Config) GetAccounts(market string) []*Account {
 		closeValues = strings.Split(config.KucoinCarryClose, `,`)
 		rateValues = strings.Split(config.KucoinCarryRate, `,`)
 	case Gate:
-		isUnified = true
+		if !config.GateSpot {
+			isUnified = true
+		}
 		keys = strings.Split(config.GateKey, `,`)
 		secrets = strings.Split(config.GateSecret, `,`)
 		closeValues = strings.Split(config.GateCarryClose, `,`)
