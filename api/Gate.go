@@ -50,9 +50,9 @@ func appendFutureMarketGate(key, secret string, marketInfos map[string]*model.Ma
 		if contract.InDelisting {
 			continue
 		}
-		//if !model.AppConfig.GateSpot && !contract.EnableCredit {
-		//	continue
-		//}
+		if !model.AppConfig.GateSpot && !contract.EnableCredit {
+			continue
+		}
 		marketInfo := &model.MarketInfo{Market: model.Gate}
 		success, _, coin := model.GetCoinFromDialect(model.Gate, contract.Name)
 		if !success {
