@@ -3,7 +3,6 @@ package pool
 import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
-	"hello/cfmms/batch_request/batch_request_for_uniswap_v2"
 	"math/big"
 )
 
@@ -66,7 +65,7 @@ func (pool UniswapV2Pool) CalculatePrice() (price float64) {
 func (pool *UniswapV2Pool) GetPoolData(client *ethclient.Client) {
 	//TODO implement me
 
-	data := batch_request_for_uniswap_v2.Get_v2_pool_data_batch_request(pool, client)
+	//data := batch_request_for_uniswap_v2.Get_v2_pool_data_batch_request(pool, client)
 
 	panic("implement me")
 }

@@ -634,7 +634,7 @@ func getBalanceGate(key string, secret string) (success bool, balances []*model.
 			util.Notice(fmt.Sprintf("margin account is locked"))
 			return false, balances, 0, nil
 		}
-		//totalInUsd, _ = strconv.ParseFloat(account.PortfolioMarginTotalEquity, 64)
+		totalInUsd, _ = strconv.ParseFloat(account.PortfolioMarginTotalEquity, 64)
 		collateralAvailable, _ := strconv.ParseFloat(account.TotalAvailableMargin, 64)
 		totalMaintenanceMargin, _ := strconv.ParseFloat(account.TotalMaintenanceMargin, 64)
 		collateral = &model.Collateral{Available: collateralAvailable, Occupied: totalMaintenanceMargin}
