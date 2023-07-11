@@ -36,7 +36,7 @@ func Test_Get_pairs_batch_request(t *testing.T) {
 		fmt.Println(fmt.Sprintf("Failed to connect to the Ethereum client: %v", err))
 	}
 	//fmt.Println("we have a connection")
-	factory := common.HexToAddress("0x5c69bee701ef814a2b6a3edd4b1652cb9cc5aa6f") //uniswapv2
+	factory := common.HexToAddress("0x5c69bee701ef814a2b6a3edd4b1652cb9cc5aa6f") //uniswav2_pool
 	from := big.NewInt(3064)
 	step := big.NewInt(3727)
 	pairs := batch_request_for_uniswap_v2.Get_pairs_batch_request(factory, from, step, client)

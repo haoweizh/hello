@@ -1,9 +1,10 @@
-package pool
+package uniswav2_pool
 
 import (
+	"fmt"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
-	"hello/cfmms/batch_request/batch_request_for_uniswap_v2"
+	batch_request "hello/cfmms/batch_request"
 	"math/big"
 )
 
@@ -33,7 +34,7 @@ func NewUniswapv2pool(address common.Address, token_a common.Address, token_a_de
 	}
 }
 
-func (pool UniswapV2Pool) GetPoolType() PoolType {
+func (pool UniswapV2Pool) GetPoolType() {
 	//TODO implement me
 	panic("implement me")
 }
@@ -66,7 +67,10 @@ func (pool UniswapV2Pool) CalculatePrice() (price float64) {
 func (pool *UniswapV2Pool) GetPoolData(client *ethclient.Client) {
 	//TODO implement me
 
-	data := batch_request_for_uniswap_v2.Get_v2_pool_data_batch_request(pool, client)
+	var i batch_request.BatchRequest
+
+	data := i.Get_v2_pool_data_batch_request(pool, client)
+	fmt.Println(data)
 
 	panic("implement me")
 }
