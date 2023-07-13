@@ -1,12 +1,17 @@
 package main
 
 import (
+	"context"
 	"fmt"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"hello/cfmms"
+	"hello/cfmms/abi_go/UniswapV2Factory"
 	"hello/cfmms/batch_request/batch_request_for_uniswap_v2"
+	"hello/cfmms/dex"
 	"hello/cfmms/pool"
+	"log"
 	"math/big"
 	"testing"
 )
@@ -50,4 +55,60 @@ func Test_NewFromAddress(t *testing.T) {
 
 	address := res.(*pool.UniswapV2Pool).GetAddress()
 	fmt.Println(address.(common.Address))
+}
+
+func Test_Abigo_Feature(t *testing.T) {
+
+	//client, err := ethclient.Dial("https://eth-mainnet.g.alchemy.com/v2/p6QKOpJrOhTeRZ7OT1ufLKVCsqEoKzMG")
+	client, err := ethclient.Dial("wss://eth-mainnet.g.alchemy.com/v2/p6QKOpJrOhTeRZ7OT1ufLKVCsqEoKzMG")
+	//client, err := ethclient.Dial("http://localhost:8545")
+	if err != nil {
+		fmt.Println(fmt.Sprintf("Failed to connect to the Ethereum client: %v", err))
+	}
+
+	uniswapv2 := &dex.UniswapV2Dex{
+		FactoryAddress: common.HexToAddress("0x5c69bee701ef814a2b6a3edd4b1652cb9cc5aa6f"),
+		CreationBlock:  2638438,
+	}
+
+	ins, err := UniswapV2Factory.NewUniswapV2Factory(common.HexToAddress("0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f"), client)
+	if err != nil {
+
+		fmt.Println("Failed to new contract instance")
+		log.Fatal(err)
+	}
+
+	current, _ := client.BlockNumber(context.Background())
+	for i := uniswapv2.CreationBlock; i < current; i = i + 10000 {
+
+		end := uniswapv2.CreationBlock + 10000
+
+		res, err := ins.FilterPairCreated(&bind.FilterOpts{
+			Start:   uniswapv2.CreationBlock,
+			End:     &end,
+			Context: nil,
+		}, nil, nil)
+		if err != nil {
+			fmt.Println("Failed to filterLog contract instance")
+			log.Fatal(err)
+		}
+		fmt.Println(res)
+
+		fmt.Println(res.Event)
+		fmt.Println(res.Next())
+
+		for res.Next() {
+			if res.Event.Raw.Removed {
+				continue
+			}
+			fmt.Println("finnnnnnnnnnnnnn", res.Event)
+			//res = append(res, &entity.PairCreated{
+			//	BlockNumber: iterator.Event.Raw.BlockNumber,
+			//	Pair:        iterator.Event.Pair,
+			//	Token0:      iterator.Event.Token0,
+			//	Token1:      iterator.Event.Token1,
+			//})
+		}
+	}
+
 }
