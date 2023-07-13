@@ -1,27 +1,21 @@
 package pool
 
 import (
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 )
 
-type PoolType int
-
-const (
-	UniswapV2PoolType PoolType = iota
-	UniswapV3PoolType
-)
-
 type Pool interface {
-	GetPoolType() PoolType
-	NewFromAddress(address string)
+	NewFromAddress(address common.Address, client *ethclient.Client) any
 	NewFromEventLog(log any)
 	NewEmptyPoolFromEventLog(log any)
 
 	// TODO: add more functions
+	DataIsPopulated() bool
 	SyncPool() (err error)
 	CalculatePrice() (price float64)
-	GetPoolData(client *ethclient.Client)
-	GetAddress()
+	GetPoolData(address common.Address, client *ethclient.Client)
+	GetAddress() any
 	SimulateSwap()
 	SimulateSwapMut()
 }
@@ -29,10 +23,6 @@ type Pool interface {
 type UniswapV3Pool struct {
 	FactoryAddress string
 	Token0Address  string
-}
-
-func (pool *UniswapV3Pool) GetPoolType() PoolType {
-	return UniswapV3PoolType
 }
 
 func ConvertToDecimals() {

@@ -20,47 +20,52 @@ func NewUniswapV2Dex(factory_address common.Address, creation_block int64, fee i
 	}
 }
 
-func (u UniswapV2Dex) PoolCreatedEventSignature() []byte {
+func (univ2 *UniswapV2Dex) PoolCreatedEventSignature() []byte {
 	//TODO implement me
+
 	return PAIR_CREATED_EVENT_SIGNATURE
 }
 
-func (u UniswapV2Dex) NewPoolFromEvent(log any) {
+func (univ2 *UniswapV2Dex) NewPoolFromEvent(log any) {
+	//TODO implement me
+
+	//let tokens = ethers::abi::decode(&[ParamType::Address, ParamType::Uint(256)], &log.data)?;
+	//let pair_address = tokens[0].to_owned().into_address().unwrap();
+	//Pool::new_from_address(pair_address, DexVariant::UniswapV2, middleware).await
+	panic("implement me")
+}
+
+func (univ2 *UniswapV2Dex) NewEmptyPoolFromEvent(log any) {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (u UniswapV2Dex) NewEmptyPoolFromEvent(log any) {
+func (univ2 *UniswapV2Dex) GetAllPools() {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (u UniswapV2Dex) GetAllPools() {
+func (univ2 *UniswapV2Dex) GetAllPoolsData() {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (u UniswapV2Dex) GetAllPoolsData() {
+func (univ2 *UniswapV2Dex) GetPolWithBestLiquidity() {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (u UniswapV2Dex) GetPolWithBestLiquidity() {
+func (univ2 *UniswapV2Dex) GetAllPoolsForPair() {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (u UniswapV2Dex) GetAllPoolsForPair() {
+func (univ2 *UniswapV2Dex) GetAllPoolsFromLogs() {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (u UniswapV2Dex) GetAllPoolsFromLogs() {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (u UniswapV2Dex) GetAllPoolsFromLogsWithinRange() {
+func (univ2 *UniswapV2Dex) GetAllPoolsFromLogsWithinRange() {
 	//TODO implement me
 	panic("implement me")
 }
