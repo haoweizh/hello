@@ -81,8 +81,9 @@ func Test_Abigo_Feature(t *testing.T) {
 	current, _ := client.BlockNumber(context.Background())
 	for i := uniswapv2.CreationBlock; i < current; i = i + 10000 {
 
-		end := uniswapv2.CreationBlock + 10000
+		end := i + 10000
 
+		fmt.Println("start", i, "end", end)
 		res, err := ins.FilterPairCreated(&bind.FilterOpts{
 			Start:   uniswapv2.CreationBlock,
 			End:     &end,
@@ -95,7 +96,6 @@ func Test_Abigo_Feature(t *testing.T) {
 		fmt.Println(res)
 
 		fmt.Println(res.Event)
-		fmt.Println(res.Next())
 
 		for res.Next() {
 			if res.Event.Raw.Removed {
