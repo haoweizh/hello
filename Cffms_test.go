@@ -51,9 +51,9 @@ func Test_NewFromAddress(t *testing.T) {
 		fmt.Println(fmt.Sprintf("Failed to connect to the Ethereum client: %v", err))
 	}
 	var v2pool pool.UniswapV2Pool
-	res := v2pool.NewFromAddress(common.HexToAddress("0xB4e16d0168e52d35CaCD2c6185b44281Ec28C9Dc"), client)
+	res, _ := v2pool.NewFromAddress(common.HexToAddress("0xB4e16d0168e52d35CaCD2c6185b44281Ec28C9Dc"), client)
 
-	address := res.(*pool.UniswapV2Pool).GetAddress()
+	address := res.GetAddress()
 	fmt.Println(address.(common.Address))
 }
 
@@ -67,8 +67,8 @@ func Test_Abigo_Feature(t *testing.T) {
 	}
 
 	uniswapv2 := &dex.UniswapV2Dex{
-		FactoryAddress: common.HexToAddress("0x5c69bee701ef814a2b6a3edd4b1652cb9cc5aa6f"),
-		CreationBlock:  2638438,
+		FactoryAddress: common.HexToAddress("0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f"),
+		CreationBlock:  10000835,
 	}
 
 	ins, err := UniswapV2Factory.NewUniswapV2Factory(common.HexToAddress("0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f"), client)
@@ -85,7 +85,7 @@ func Test_Abigo_Feature(t *testing.T) {
 
 		fmt.Println("start", i, "end", end)
 		res, err := ins.FilterPairCreated(&bind.FilterOpts{
-			Start:   uniswapv2.CreationBlock,
+			Start:   i,
 			End:     &end,
 			Context: nil,
 		}, nil, nil)
@@ -101,7 +101,9 @@ func Test_Abigo_Feature(t *testing.T) {
 			if res.Event.Raw.Removed {
 				continue
 			}
-			fmt.Println("finnnnnnnnnnnnnn", res.Event)
+
+			// 拿到地址 neweventFromAddress
+			fmt.Println("finnnnnnnnnnnnnn", res.Event.Pair)
 			//res = append(res, &entity.PairCreated{
 			//	BlockNumber: iterator.Event.Raw.BlockNumber,
 			//	Pair:        iterator.Event.Pair,

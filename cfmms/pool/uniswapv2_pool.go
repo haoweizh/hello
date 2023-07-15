@@ -35,18 +35,18 @@ func NewUniswapv2pool(address common.Address, token_a common.Address, token_a_de
 	}
 }
 
-func (pool *UniswapV2Pool) NewFromAddress(address common.Address, client *ethclient.Client) any {
+func (pool *UniswapV2Pool) NewFromAddress(address common.Address, client *ethclient.Client) (*UniswapV2Pool, error) {
 	//TODO implement me
-	pool.GetPoolData(address, client)
+	err := pool.GetPoolData(address, client)
 
 	if pool.DataIsPopulated() {
-		return pool
+		return pool, nil
 	}
 
-	return pool
+	return pool, err
 }
 
-func (pool UniswapV2Pool) NewFromEventLog(log any) {
+func (pool *UniswapV2Pool) NewFromEventLog(address common.Address, client *ethclient.Client) {
 
 	//TODO implement me
 	panic("implement me")
@@ -67,7 +67,7 @@ func (pool UniswapV2Pool) CalculatePrice() (price float64) {
 	panic("implement me")
 }
 
-func (pool *UniswapV2Pool) GetPoolData(address common.Address, client *ethclient.Client) {
+func (pool *UniswapV2Pool) GetPoolData(address common.Address, client *ethclient.Client) error {
 	//TODO implement me
 	poolData, err := batch_request_for_uniswap_v2.Get_v2_pool_data_batch_request(address, client)
 
@@ -89,6 +89,7 @@ func (pool *UniswapV2Pool) GetPoolData(address common.Address, client *ethclient
 		pool.Fee = 300
 		pool.Address = address
 	}
+	return err
 
 }
 

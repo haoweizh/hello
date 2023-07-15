@@ -6,8 +6,8 @@ import (
 )
 
 type Pool interface {
-	NewFromAddress(address common.Address, client *ethclient.Client) any
-	NewFromEventLog(log any)
+	NewFromAddress(address common.Address, client *ethclient.Client) Pool
+	NewFromEventLog(address common.Address, client *ethclient.Client)
 	NewEmptyPoolFromEventLog(log any)
 
 	// TODO: add more functions

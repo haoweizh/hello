@@ -1,13 +1,18 @@
 package dex
 
+import (
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/ethclient"
+)
+
 type Dex interface {
 	PoolCreatedEventSignature() []byte
-	NewPoolFromEvent(log any)
+	NewPoolFromEvent(address common.Address, client *ethclient.Client)
 	NewEmptyPoolFromEvent(log any)
 	GetAllPools()
 	GetAllPoolsData()
 
-	GetPolWithBestLiquidity()
+	GetPoolWithBestLiquidity()
 	GetAllPoolsForPair()
 	GetAllPoolsFromLogs()
 	GetAllPoolsFromLogsWithinRange()

@@ -1,7 +1,11 @@
 package dex
 
 import (
+	"fmt"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/ethclient"
+	"hello/cfmms/pool"
+	"log"
 )
 
 type UniswapV2Dex struct {
@@ -26,7 +30,7 @@ func (univ2 *UniswapV2Dex) PoolCreatedEventSignature() []byte {
 	return PAIR_CREATED_EVENT_SIGNATURE
 }
 
-func (univ2 *UniswapV2Dex) NewPoolFromEvent(eventLog any) {
+func (univ2 *UniswapV2Dex) NewPoolFromEvent(address common.Address, client *ethclient.Client) {
 	//TODO implement me
 
 	//let tokens = ethers::abi::decode(&[ParamType::Address, ParamType::Uint(256)], &log.data)?;
@@ -35,7 +39,22 @@ func (univ2 *UniswapV2Dex) NewPoolFromEvent(eventLog any) {
 
 	// uniswapv2 factory 合约Abi  method: PairCreated
 
-	panic("implement me")
+	//univ2.Pool.NewFromAddress(address, client)
+
+	//pool.UniswapV2Pool.NewFromEventLog(address, client)
+
+	//univ2.Pool.NewFromAddress(address, client)
+
+	var v2Pool pool.UniswapV2Pool
+	res, err := v2Pool.NewFromAddress(address, client)
+
+	if err != nil {
+
+		fmt.Println("NewFromAddress error")
+		log.Fatal(err)
+	}
+	fmt.Println(res)
+
 }
 
 func (univ2 *UniswapV2Dex) NewEmptyPoolFromEvent(log any) {
@@ -53,7 +72,7 @@ func (univ2 *UniswapV2Dex) GetAllPoolsData() {
 	panic("implement me")
 }
 
-func (univ2 *UniswapV2Dex) GetPolWithBestLiquidity() {
+func (univ2 *UniswapV2Dex) GetPoolWithBestLiquidity() {
 	//TODO implement me
 	panic("implement me")
 }
