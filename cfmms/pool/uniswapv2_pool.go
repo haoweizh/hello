@@ -4,12 +4,11 @@ import (
 	"encoding/hex"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
+	"hello/cfmms"
 	"hello/cfmms/batch_request/batch_request_for_uniswap_v2"
 	"log"
 	"math/big"
 )
-
-var Address0 = common.HexToAddress(`0x0000000000000000000000000000000000000000`)
 
 type UniswapV2Pool struct {
 	Address        common.Address
@@ -35,7 +34,7 @@ func NewUniswapv2pool(address common.Address, token_a common.Address, token_a_de
 	}
 }
 
-func (pool *UniswapV2Pool) NewFromAddress(address common.Address, client *ethclient.Client) (*UniswapV2Pool, error) {
+func (pool *UniswapV2Pool) NewFromAddress(address common.Address, client *ethclient.Client) (any, error) {
 	//TODO implement me
 	err := pool.GetPoolData(address, client)
 
@@ -111,7 +110,7 @@ func (pool UniswapV2Pool) SimulateSwapMut() {
 func (pool *UniswapV2Pool) DataIsPopulated() bool {
 
 	//TODO implement me
-	if pool.TokenA == Address0 || pool.TokenB == Address0 || pool.Reserve0.BitLen() == 0 || pool.Reserve1.BitLen() == 0 {
+	if pool.TokenA == cfmms.Address0 || pool.TokenB == cfmms.Address0 || pool.Reserve0.BitLen() == 0 || pool.Reserve1.BitLen() == 0 {
 		return false
 	}
 

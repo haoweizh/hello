@@ -6,7 +6,7 @@ import (
 )
 
 type Pool interface {
-	NewFromAddress(address common.Address, client *ethclient.Client) Pool
+	NewFromAddress(address common.Address, client *ethclient.Client) (any, error)
 	NewFromEventLog(address common.Address, client *ethclient.Client)
 	NewEmptyPoolFromEventLog(log any)
 
@@ -14,15 +14,10 @@ type Pool interface {
 	DataIsPopulated() bool
 	SyncPool() (err error)
 	CalculatePrice() (price float64)
-	GetPoolData(address common.Address, client *ethclient.Client)
+	GetPoolData(address common.Address, client *ethclient.Client) error
 	GetAddress() any
 	SimulateSwap()
 	SimulateSwapMut()
-}
-
-type UniswapV3Pool struct {
-	FactoryAddress string
-	Token0Address  string
 }
 
 func ConvertToDecimals() {
