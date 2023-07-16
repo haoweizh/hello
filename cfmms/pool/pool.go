@@ -1,5 +1,10 @@
 package pool
 
+import (
+	"github.com/ethereum/go-ethereum/ethclient"
+	"hello/cfmms/batch_request/batch_request_for_uniswap_v2"
+)
+
 type PoolType int
 
 const (
@@ -9,15 +14,15 @@ const (
 
 type Pool interface {
 	GetPoolType() PoolType
-	NewFromAddress(address string) (pool Pool, err error)
-	NewFromEventLog(log any) (pool Pool, err error)
-	NewEmptyPoolFromEventLog(log any) (pool Pool, err error)
+	NewFromAddress(address string)
+	NewFromEventLog(log any)
+	NewEmptyPoolFromEventLog(log any)
 
 	// TODO: add more functions
 	SyncPool() (err error)
 	CalculatePrice() (price float64)
-	GetPoolData()
-	Address()
+	GetPoolData(client *ethclient.Client) (pool batch_request_for_uniswap_v2.PoolData)
+	GetAddress()
 	SimulateSwap()
 	SimulateSwapMut()
 }

@@ -3,8 +3,6 @@ package pool
 import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
-	"hello/cfmms/batch_request/batch_request_for_uniswap_v2"
-	"log"
 	"math/big"
 )
 
@@ -34,31 +32,55 @@ func NewUniswapv2pool(address common.Address, token_a common.Address, token_a_de
 	}
 }
 
-func (pool *UniswapV2Pool) NewFromAddress(address common.Address, client ethclient.Client) error {
-	uniswapv2pool := NewUniswapv2pool(address, common.Address{}, 0, common.Address{}, 0, big.NewInt(0), big.NewInt(0), 300)
-	err := uniswapv2pool.getPoolData(client)
-
-	if !pool.dataIsPopulated() {
-		log.Fatal("pool data is not populated")
-		return err
-	}
-	return err
-
+func (pool UniswapV2Pool) GetPoolType() PoolType {
+	//TODO implement me
+	panic("implement me")
 }
 
-//
-//func (pool *UniswapV2Pool) NewEmptyPoolFromEventLog(log any, client ethclient.Client) error {
-//
-//}
-
-func (pool *UniswapV2Pool) getPoolData(client ethclient.Client) (err error) {
-	err = batch_request_for_uniswap_v2.Get_v2_pool_data_batch_request(pool, client)
-	return err
+func (pool UniswapV2Pool) NewFromAddress(address string) {
+	//TODO implement me
+	panic("implement me")
 }
 
-func (pool *UniswapV2Pool) dataIsPopulated() bool {
-	if pool.Reserve0 != nil && pool.Reserve1 != nil && pool.TokenA != Address0 && pool.TokenB != Address0 {
-		return true
-	}
-	return false
+func (pool UniswapV2Pool) NewFromEventLog(log any) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (pool UniswapV2Pool) NewEmptyPoolFromEventLog(log any) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (pool UniswapV2Pool) SyncPool() (err error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (pool UniswapV2Pool) CalculatePrice() (price float64) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (pool *UniswapV2Pool) GetPoolData(client *ethclient.Client) {
+	//TODO implement me
+
+	//data := batch_request_for_uniswap_v2.Get_v2_pool_data_batch_request(pool, client)
+
+	panic("implement me")
+}
+
+func (pool UniswapV2Pool) GetAddress() {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (pool UniswapV2Pool) SimulateSwap() {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (pool UniswapV2Pool) SimulateSwapMut() {
+	//TODO implement me
+	panic("implement me")
 }
