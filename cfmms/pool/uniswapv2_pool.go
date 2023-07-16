@@ -4,8 +4,8 @@ import (
 	"encoding/hex"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
-	"hello/cfmms"
 	"hello/cfmms/batch_request/batch_request_for_uniswap_v2"
+	"hello/cfmms/utils"
 	"log"
 	"math/big"
 )
@@ -109,8 +109,7 @@ func (pool UniswapV2Pool) SimulateSwapMut() {
 
 func (pool *UniswapV2Pool) DataIsPopulated() bool {
 
-	//TODO implement me
-	if pool.TokenA == cfmms.Address0 || pool.TokenB == cfmms.Address0 || pool.Reserve0.BitLen() == 0 || pool.Reserve1.BitLen() == 0 {
+	if pool.TokenA == utils.Address0 || pool.TokenB == utils.Address0 || pool.Reserve0.BitLen() == 0 || pool.Reserve1.BitLen() == 0 {
 		return false
 	}
 

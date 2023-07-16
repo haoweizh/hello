@@ -53,8 +53,9 @@ func Test_NewFromAddress(t *testing.T) {
 	var v2pool pool.UniswapV2Pool
 	res, _ := v2pool.NewFromAddress(common.HexToAddress("0xB4e16d0168e52d35CaCD2c6185b44281Ec28C9Dc"), client)
 
-	address := res.GetAddress()
-	fmt.Println(address.(common.Address))
+	fmt.Println(res)
+	//address := res.GetAddress()
+	//fmt.Println(address.(common.Address))
 }
 
 func Test_Abigo_Feature(t *testing.T) {
@@ -113,4 +114,18 @@ func Test_Abigo_Feature(t *testing.T) {
 		}
 	}
 
+}
+
+func Test_RemoveEmptyPools(t *testing.T) {
+
+	var pools []pool.Pool
+
+	v2 := append(pools, &pool.UniswapV2Pool{
+		Address:  common.HexToAddress("0x1"),
+		Reserve0: big.NewInt(0),
+	}, &pool.UniswapV3Pool{
+		Reserve0: big.NewInt(1),
+	})
+
+	cfmms.RemoveEmptyPools(v2)
 }
