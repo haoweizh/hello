@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
+	"hello/cfmms"
 	"hello/cfmms/pool"
 	"log"
 )
@@ -62,12 +63,12 @@ func (univ2 *UniswapV2Dex) NewEmptyPoolFromEvent(log any) {
 	panic("implement me")
 }
 
-func (univ2 *UniswapV2Dex) GetAllPools() {
+func (univ2 *UniswapV2Dex) GetAllPools(requestThrottle *cfmms.Throttle, client *ethclient.Client, step uint64) ([]pool.Pool, error) {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (univ2 *UniswapV2Dex) GetAllPoolsData() {
+func (univ2 *UniswapV2Dex) GetAllPoolsData(pool *[]pool.Pool, requestThrottle *cfmms.Throttle, client *ethclient.Client) error {
 	//TODO implement me
 	panic("implement me")
 }
@@ -90,4 +91,8 @@ func (univ2 *UniswapV2Dex) GetAllPoolsFromLogs() {
 func (univ2 *UniswapV2Dex) GetAllPoolsFromLogsWithinRange() {
 	//TODO implement me
 	panic("implement me")
+}
+
+func (univ2 *UniswapV2Dex) GetFactoryAddress() common.Address {
+	return common.HexToAddress("0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f")
 }
