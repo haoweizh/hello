@@ -16,7 +16,6 @@ type Dex interface {
 
 	GetPoolWithBestLiquidity()
 	GetAllPoolsForPair()
-	GetAllPoolsFromLogs()
 	GetAllPoolsFromLogsWithinRange()
 	GetFactoryAddress() common.Address
 }

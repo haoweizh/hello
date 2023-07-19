@@ -68,9 +68,9 @@ func (univ2 *UniswapV2Dex) NewEmptyPoolFromEvent(log any) {
 
 func (univ2 *UniswapV2Dex) GetAllPools(requestThrottle *utils.Throttle, client *ethclient.Client, step uint64) (any, error) {
 
-	pools := univ2.getAllPairsViaBatchedCalls(client, requestThrottle)
+	pools, err := univ2.getAllPairsViaBatchedCalls(client, requestThrottle)
 
-	return pools, nil
+	return pools, err
 }
 
 func (univ2 *UniswapV2Dex) GetAllPoolsData(pool *[]pool.Pool, requestThrottle *utils.Throttle, client *ethclient.Client) error {
@@ -88,11 +88,6 @@ func (univ2 *UniswapV2Dex) GetAllPoolsForPair() {
 	panic("implement me")
 }
 
-func (univ2 *UniswapV2Dex) GetAllPoolsFromLogs() {
-	//TODO implement me
-	panic("implement me")
-}
-
 func (univ2 *UniswapV2Dex) GetAllPoolsFromLogsWithinRange() {
 	//TODO implement me
 	panic("implement me")
@@ -102,16 +97,16 @@ func (univ2 *UniswapV2Dex) GetFactoryAddress() common.Address {
 	return common.HexToAddress("0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f")
 }
 
-func (univ2 *UniswapV2Dex) getAllPairsViaBatchedCalls(client *ethclient.Client, requestThrottle *utils.Throttle) []pool.UniswapV2Pool {
+func (univ2 *UniswapV2Dex) getAllPairsViaBatchedCalls(client *ethclient.Client, requestThrottle *utils.Throttle) ([]pool.UniswapV2Pool, error) {
 	ins, err := UniswapV2Factory.NewUniswapV2Factory(univ2.FactoryAddress, client)
 	if err != nil {
 		fmt.Println("NewUniswapV2Factory error")
-		return nil
+		return nil, err
 	}
 	allpairslen, err := ins.AllPairsLength(nil)
 	if err != nil {
 		fmt.Println("AllPairsLength error")
-		return nil
+		return nil, err
 	}
 
 	// initialize progress bar
@@ -143,7 +138,7 @@ func (univ2 *UniswapV2Dex) getAllPairsViaBatchedCalls(client *ethclient.Client, 
 
 		err := bar.Add(int(step))
 		if err != nil {
-			return nil
+			return nil, err
 		}
 
 	}
@@ -156,6 +151,6 @@ func (univ2 *UniswapV2Dex) getAllPairsViaBatchedCalls(client *ethclient.Client, 
 	}
 	fmt.Println(pools)
 
-	return pools
+	return pools, err
 
 }

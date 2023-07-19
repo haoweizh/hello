@@ -1,10 +1,15 @@
 package dex
 
 import (
+	"context"
+	"fmt"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
+	"hello/cfmms/abi_go/UniswapV3Factory"
 	"hello/cfmms/pool"
 	"hello/cfmms/utils"
+	"log"
 )
 
 var (
@@ -31,9 +36,19 @@ func (u *UniswapV3Dex) NewEmptyPoolFromEvent(log any) {
 	panic("implement me")
 }
 
-func (u *UniswapV3Dex) GetAllPools(requestThrottle *utils.Throttle, client *ethclient.Client, step uint64) ([]pool.Pool, error) {
+func (u *UniswapV3Dex) GetAllPools(requestThrottle *utils.Throttle, client *ethclient.Client, step int64) ([]pool.Pool, error) {
 	//TODO implement me
-	panic("implement me")
+
+	current_block, err := client.BlockNumber(context.Background())
+	if err != nil {
+		fmt.Println("client.BlockNumber error")
+		return nil, err
+	}
+
+	pools := u.GetAllPoolsFromLogs(int64(current_block), step, requestThrottle, client)
+
+	return pools, nil
+
 }
 
 func (u *UniswapV3Dex) GetAllPoolsData(pool *[]pool.Pool, requestThrottle *utils.Throttle, client *ethclient.Client) error {
@@ -51,9 +66,43 @@ func (u *UniswapV3Dex) GetAllPoolsForPair() {
 	panic("implement me")
 }
 
-func (u *UniswapV3Dex) GetAllPoolsFromLogs() {
+func (u *UniswapV3Dex) GetAllPoolsFromLogs(currentBlock int64, step int64, requestThrottle *utils.Throttle, client *ethclient.Client) []pool.Pool {
 	//TODO implement me
-	panic("implement me")
+	aggregatedPairs := make([]pool.Pool, 0)
+
+	ins, err := UniswapV3Factory.NewUniswapV3Factory(u.FactoryAddress, client)
+	if err != nil {
+		fmt.Println("UniswapV3Factory.NewUniswapV3Factory error")
+		return nil
+	}
+
+	for fromBlock := u.CreationBlock; fromBlock < currentBlock; fromBlock += step {
+
+		end := uint64(fromBlock + step)
+
+		res, err := ins.FilterPoolCreated(&bind.FilterOpts{
+			Start:   uint64(fromBlock),
+			End:     &end,
+			Context: nil,
+		}, nil, nil, nil)
+		if err != nil {
+			fmt.Println("Failed to filterLog contract instance")
+			log.Fatal(err)
+		}
+		fmt.Println(res)
+
+		fmt.Println(res.Event)
+
+		for res.Next() {
+			if res.Event.Raw.Removed {
+				continue
+			}
+			// 拿到地址 neweventFromAddress
+			fmt.Println("finnnnnnnnnnnnnn", res.Event.Pool)
+		}
+	}
+
+	return aggregatedPairs
 }
 
 func (u *UniswapV3Dex) GetAllPoolsFromLogsWithinRange() {
