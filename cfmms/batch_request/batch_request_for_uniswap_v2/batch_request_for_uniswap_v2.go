@@ -15,7 +15,7 @@ import (
 	"strings"
 )
 
-func Get_pairs_batch_request(factory common.Address, from, setp *big.Int, client *ethclient.Client) []string {
+func Get_pairs_batch_request(factory common.Address, from, setp int64, client *ethclient.Client) []string {
 	var pairs []string
 
 	// TODO: eth_call 获取合约返回值

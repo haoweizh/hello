@@ -6,6 +6,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/schollz/progressbar/v3"
 	"hello/cfmms"
 	"hello/cfmms/abi_go/UniswapV2Factory"
 	"hello/cfmms/batch_request/batch_request_for_uniswap_v2"
@@ -14,6 +15,7 @@ import (
 	"log"
 	"math/big"
 	"testing"
+	"time"
 )
 
 const (
@@ -36,8 +38,8 @@ func Test_Get_pairs_batch_request(t *testing.T) {
 	}
 	//fmt.Println("we have a connection")
 	factory := common.HexToAddress("0x5c69bee701ef814a2b6a3edd4b1652cb9cc5aa6f") //uniswav2_pool
-	from := big.NewInt(3064)
-	step := big.NewInt(3727)
+	from := int64(3064)
+	step := int64(3727)
 	pairs := batch_request_for_uniswap_v2.Get_pairs_batch_request(factory, from, step, client)
 	fmt.Println(pairs)
 	batch_request_for_uniswap_v2.Get_pool_data_batch_request(pairs[:127], client)
@@ -124,8 +126,20 @@ func Test_RemoveEmptyPools(t *testing.T) {
 		Address:  common.HexToAddress("0x1"),
 		Reserve0: big.NewInt(0),
 	}, &pool.UniswapV3Pool{
-		Reserve0: big.NewInt(1),
+		Address: common.HexToAddress("0x2"),
 	})
 
 	cfmms.RemoveEmptyPools(v2)
+}
+
+func Test_SyncPairsTest(t *testing.T) {
+	cfmms.SyncPairsTest()
+}
+
+func Test_Progressbar(t *testing.T) {
+	bar := progressbar.Default(100)
+	for i := 0; i < 100; i++ {
+		bar.Add(1)
+		time.Sleep(40 * time.Millisecond)
+	}
 }

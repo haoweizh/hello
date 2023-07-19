@@ -1,6 +1,11 @@
 package dex
 
-import "github.com/ethereum/go-ethereum/common"
+import (
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/ethclient"
+	"hello/cfmms/pool"
+	"hello/cfmms/utils"
+)
 
 var (
 	PairCreatedEventSignature = []byte("PairCreated(address,address,address,uint256)")
@@ -16,7 +21,7 @@ func (u *UniswapV3Dex) PoolCreatedEventSignature() []byte {
 	panic("implement me")
 }
 
-func (u *UniswapV3Dex) NewPoolFromEvent(log any) {
+func (u *UniswapV3Dex) NewPoolFromEvent(address common.Address, client *ethclient.Client) {
 	//TODO implement me
 	panic("implement me")
 }
@@ -26,12 +31,12 @@ func (u *UniswapV3Dex) NewEmptyPoolFromEvent(log any) {
 	panic("implement me")
 }
 
-func (u *UniswapV3Dex) GetAllPools() {
+func (u *UniswapV3Dex) GetAllPools(requestThrottle *utils.Throttle, client *ethclient.Client, step uint64) ([]pool.Pool, error) {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (u *UniswapV3Dex) GetAllPoolsData() {
+func (u *UniswapV3Dex) GetAllPoolsData(pool *[]pool.Pool, requestThrottle *utils.Throttle, client *ethclient.Client) error {
 	//TODO implement me
 	panic("implement me")
 }
@@ -52,6 +57,11 @@ func (u *UniswapV3Dex) GetAllPoolsFromLogs() {
 }
 
 func (u *UniswapV3Dex) GetAllPoolsFromLogsWithinRange() {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (u *UniswapV3Dex) GetFactoryAddress() common.Address {
 	//TODO implement me
 	panic("implement me")
 }

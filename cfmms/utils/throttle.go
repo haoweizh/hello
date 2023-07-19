@@ -1,4 +1,4 @@
-package cfmms
+package utils
 
 import (
 	"sync"

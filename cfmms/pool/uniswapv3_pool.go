@@ -12,9 +12,12 @@ type UniswapV3Pool struct {
 	TokenADecimals int64
 	TokenB         common.Address
 	TokenBDecimals int64
-	Reserve0       *big.Int
-	Reserve1       *big.Int
+	Liquidity      *big.Int
+	SqrtPrice      *big.Int
 	Fee            int64
+	Tick           *big.Int
+	TickSpacing    int64
+	LiquidityNet   *big.Int
 }
 
 func (u *UniswapV3Pool) NewFromAddress(address common.Address, client *ethclient.Client) (any, error) {
