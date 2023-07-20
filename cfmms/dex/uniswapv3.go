@@ -31,9 +31,29 @@ func (u *UniswapV3Dex) NewPoolFromEvent(address common.Address, client *ethclien
 	panic("implement me")
 }
 
-func (u *UniswapV3Dex) NewEmptyPoolFromEvent(log any) {
-	//TODO implement me
-	panic("implement me")
+func (u *UniswapV3Dex) NewEmptyPoolFromEvent(log any) pool.Pool {
+	let tokens = ethers::abi::decode(&[ParamType::Uint(32), ParamType::Address], &log.data)?;
+	let token_a = H160::from(log.topics[0]);
+	let token_b = H160::from(log.topics[1]);
+	let fee = tokens[0].to_owned().into_uint().unwrap().as_u32();
+	let address = tokens[1].to_owned().into_address().unwrap();
+
+	Ok(Pool::UniswapV3(UniswapV3Pool {
+	address,
+	token_a,
+	token_b,
+	token_a_decimals: 0,
+	token_b_decimals: 0,
+	fee,
+	liquidity: 0,
+	sqrt_price: U256::zero(),
+	tick_spacing: 0,
+	tick: 0,
+	liquidity_net: 0,
+	}))
+
+
+
 }
 
 func (u *UniswapV3Dex) GetAllPools(requestThrottle *utils.Throttle, client *ethclient.Client, step int64) ([]pool.Pool, error) {
@@ -77,9 +97,8 @@ func (u *UniswapV3Dex) GetAllPoolsFromLogs(currentBlock int64, step int64, reque
 	}
 
 	for fromBlock := u.CreationBlock; fromBlock < currentBlock; fromBlock += step {
-
+		requestThrottle.IncrementOrSleep(1)
 		end := uint64(fromBlock + step)
-
 		res, err := ins.FilterPoolCreated(&bind.FilterOpts{
 			Start:   uint64(fromBlock),
 			End:     &end,
@@ -99,7 +118,11 @@ func (u *UniswapV3Dex) GetAllPoolsFromLogs(currentBlock int64, step int64, reque
 			}
 			// 拿到地址 neweventFromAddress
 			fmt.Println("finnnnnnnnnnnnnn", res.Event.Pool)
+
+			poolFromEvent := u.NewEmptyPoolFromEvent(res.Event.Pool)
+			aggregatedPairs = append(aggregatedPairs, poolFromEvent)
 		}
+
 	}
 
 	return aggregatedPairs

@@ -10,7 +10,7 @@ import (
 type Dex interface {
 	PoolCreatedEventSignature() []byte
 	NewPoolFromEvent(address common.Address, client *ethclient.Client)
-	NewEmptyPoolFromEvent(log any)
+	NewEmptyPoolFromEvent(log any) any
 	GetAllPools(requestThrottle *utils.Throttle, client *ethclient.Client, step uint64) (any, error)
 	GetAllPoolsData(pool *[]pool.Pool, requestThrottle *utils.Throttle, client *ethclient.Client) error
 
