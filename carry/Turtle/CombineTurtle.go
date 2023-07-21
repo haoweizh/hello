@@ -213,7 +213,11 @@ func placeTurtleLong(account *model.Account, orderType string, data *model.Turtl
 		function = model.Close
 		amount = setting.GridAmount
 	} else if data.Big == -1 {
-		amount = data.AmountMin
+		if setting.Seconds == 14400 {
+			amount = data.Amount * 2 / 3
+		} else {
+			amount = data.AmountMin
+		}
 	}
 	price := data.HighDaysFar
 	priceChange := 2 * data.N
@@ -295,7 +299,11 @@ func placeTurtleShort(account *model.Account, orderType string, data *model.Turt
 		amount = setting.GridAmount
 		function = model.Close
 	} else if data.Big == -1 {
-		amount = data.AmountMin
+		if setting.Seconds == 14400 {
+			amount = data.Amount * 2 / 3
+		} else {
+			amount = data.AmountMin
+		}
 	}
 	price := data.LowDaysFar
 	priceChange := 2 * data.N
