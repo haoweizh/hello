@@ -37,12 +37,14 @@ func Test_Get_pairs_batch_request(t *testing.T) {
 		fmt.Println(fmt.Sprintf("Failed to connect to the Ethereum client: %v", err))
 	}
 	//fmt.Println("we have a connection")
-	factory := common.HexToAddress("0x5c69bee701ef814a2b6a3edd4b1652cb9cc5aa6f") //uniswav2_pool
-	from := int64(3064)
-	step := int64(3727)
-	pairs := batch_request_for_uniswap_v2.Get_pairs_batch_request(factory, from, step, client)
+	factory := common.HexToAddress("0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f") //uniswav2_pool
+
+	// FIXME: 修改数据类型为big.int
+	from := int64(2)
+	step := int64(6)
+	pairs := batch_request_for_uniswap_v2.GetPairsBatchRequest(factory, from, step, client)
 	fmt.Println(pairs)
-	batch_request_for_uniswap_v2.Get_pool_data_batch_request(pairs[:127], client)
+	//batch_request_for_uniswap_v2.Get_pool_data_batch_request(pairs[:127], client)
 
 }
 

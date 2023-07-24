@@ -12,16 +12,14 @@ import (
 
 func SyncPairs(dexes []dex.Dex, client *ethclient.Client, checkpoint_path string) {
 
-	SyncPairsWithThrottle(dexes, 100000, client, 0, checkpoint_path)
+	SyncPairsWithThrottle(dexes, 100000, client, checkpoint_path)
 }
 
-func SyncPairsWithThrottle(dexes []dex.Dex, step uint64, client *ethclient.Client, requests_per_second_limit uint64, checkpoint_path string) {
+func SyncPairsWithThrottle(dexes []dex.Dex, step int64, client *ethclient.Client, checkpoint_path string) {
 
 	wg := sync.WaitGroup{}
 
 	currentBlock, _ := client.BlockNumber(context.Background())
-
-	request_throttle := utils.NewThrottle(requests_per_second_limit)
 
 	var aggregatedPools []pool.Pool
 
@@ -32,7 +30,7 @@ func SyncPairsWithThrottle(dexes []dex.Dex, step uint64, client *ethclient.Clien
 			defer wg.Done()
 
 			// Get all pools from the dex
-			pools, err := dexIns.GetAllPools(request_throttle, client, step)
+			pools, err := dexIns.GetAllPools(client, step)
 			if err != nil {
 				// Handle error
 				fmt.Println(err)
@@ -40,7 +38,7 @@ func SyncPairsWithThrottle(dexes []dex.Dex, step uint64, client *ethclient.Clien
 			}
 
 			// Get all pool data and sync the pool
-			err = dexIns.GetAllPoolsData(pools.(*[]pool.Pool), request_throttle, client)
+			err = dexIns.GetAllPoolsData(pools.(*[]pool.Pool), client)
 			if err != nil {
 				// Handle error
 				fmt.Println(err)
@@ -69,22 +67,22 @@ func SyncPairsWithStep() {
 
 func RemoveEmptyPools(pools []pool.Pool) []pool.Pool {
 
-	var cleaned_pools []pool.Pool
+	var cleanedPools []pool.Pool
 
 	for _, p := range pools {
 
 		switch p.(type) {
 		case *pool.UniswapV2Pool:
 			if p.(*pool.UniswapV2Pool).TokenA != utils.Address0 {
-				cleaned_pools = append(cleaned_pools, p)
+				cleanedPools = append(cleanedPools, p)
 			}
 		case *pool.UniswapV3Pool:
 			if p.(*pool.UniswapV3Pool).TokenA != utils.Address0 {
-				cleaned_pools = append(cleaned_pools, p)
+				cleanedPools = append(cleanedPools, p)
 			}
 		}
 
 	}
 
-	return cleaned_pools
+	return cleanedPools
 }

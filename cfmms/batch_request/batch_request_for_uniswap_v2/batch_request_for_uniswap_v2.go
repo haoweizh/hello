@@ -15,7 +15,7 @@ import (
 	"strings"
 )
 
-func Get_pairs_batch_request(factory common.Address, from, setp int64, client *ethclient.Client) []string {
+func GetPairsBatchRequest(factory common.Address, from, setp *int64, client *ethclient.Client) []string {
 	var pairs []string
 
 	// TODO: eth_call 获取合约返回值
@@ -25,11 +25,20 @@ func Get_pairs_batch_request(factory common.Address, from, setp int64, client *e
 	argsCodeAbi, err := abi.JSON(strings.NewReader(GetUniswapV2PairsBatchRequest.GetUniswapV2PairsBatchRequestMetaData.ABI))
 
 	if err != nil {
-		log.Fatal(err)
+		fmt.Println("abi.JSON error")
+		return nil
+
 	}
 
-	argsByteCode, _ := argsCodeAbi.Pack("", from, setp, factory)
+	fmt.Println("from", from, "step", setp)
 
+	argsByteCode, err := argsCodeAbi.Pack("", from, setp, factory)
+	if err != nil {
+		fmt.Println("argsCodeAbi.Pack error", err)
+		return nil
+	}
+
+	fmt.Println("argsByteCode", argsByteCode)
 	callMsg := ethereum.CallMsg{
 		Data:       append(common.FromHex(byteCode), argsByteCode...),
 		AccessList: nil,
@@ -38,7 +47,8 @@ func Get_pairs_batch_request(factory common.Address, from, setp int64, client *e
 	// 执行Eth_call
 	result, err := client.CallContract(context.Background(), callMsg, nil)
 	if err != nil {
-		log.Fatal(err)
+		fmt.Println("client.CallContract error")
+		return nil
 	}
 
 	hexString := hex.EncodeToString(result)
@@ -89,7 +99,8 @@ func Get_pool_data_batch_request(pool []string, client *ethclient.Client) []byte
 	// 执行 Eth_call
 	result, err := client.CallContract(context.Background(), callMsg, nil)
 	if err != nil {
-		log.Fatal(err)
+		fmt.Println("client.CallContract2 error")
+		return nil
 	}
 
 	//  TODO: 返回给数据给外部处理  内部处理数据 设计包的循环引用

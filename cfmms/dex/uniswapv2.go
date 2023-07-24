@@ -5,11 +5,13 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/schollz/progressbar/v3"
+	"golang.org/x/time/rate"
 	"hello/cfmms/abi_go/UniswapV2Factory"
 	"hello/cfmms/batch_request/batch_request_for_uniswap_v2"
 	"hello/cfmms/pool"
-	"hello/cfmms/utils"
 	"log"
+	"sync"
+	"time"
 )
 
 type UniswapV2Dex struct {
@@ -61,19 +63,29 @@ func (univ2 *UniswapV2Dex) NewPoolFromEvent(address common.Address, client *ethc
 
 }
 
-func (univ2 *UniswapV2Dex) NewEmptyPoolFromEvent(log any) {
+func (univ2 *UniswapV2Dex) NewEmptyPoolFromEvent(log any) any {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (univ2 *UniswapV2Dex) GetAllPools(requestThrottle *utils.Throttle, client *ethclient.Client, step uint64) (any, error) {
+func (univ2 *UniswapV2Dex) GetAllPools(client *ethclient.Client, step int64) (any, error) {
 
-	pools, err := univ2.getAllPairsViaBatchedCalls(client, requestThrottle)
+	var pools *sync.Map
+	var err error
+	// 限制速率 创建一个每秒允许 100 个事件的速率限制器，并且允许 100 个突发事件。
+	limiter := rate.NewLimiter(rate.Every(time.Second/100), 100)
+	if limiter.Allow() {
+		pools, err = univ2.getAllPairsViaBatchedCalls(client)
+		if err != nil {
+			fmt.Println("getAllPairsViaBatchedCalls error")
+			return nil, err
+		}
+	}
 
 	return pools, err
 }
 
-func (univ2 *UniswapV2Dex) GetAllPoolsData(pool *[]pool.Pool, requestThrottle *utils.Throttle, client *ethclient.Client) error {
+func (univ2 *UniswapV2Dex) GetAllPoolsData(pool *[]pool.Pool, client *ethclient.Client) error {
 	//TODO implement me
 	panic("implement me")
 }
@@ -97,7 +109,8 @@ func (univ2 *UniswapV2Dex) GetFactoryAddress() common.Address {
 	return common.HexToAddress("0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f")
 }
 
-func (univ2 *UniswapV2Dex) getAllPairsViaBatchedCalls(client *ethclient.Client, requestThrottle *utils.Throttle) ([]pool.UniswapV2Pool, error) {
+func (univ2 *UniswapV2Dex) getAllPairsViaBatchedCalls(client *ethclient.Client) (*sync.Map, error) {
+
 	ins, err := UniswapV2Factory.NewUniswapV2Factory(univ2.FactoryAddress, client)
 	if err != nil {
 		fmt.Println("NewUniswapV2Factory error")
@@ -112,7 +125,8 @@ func (univ2 *UniswapV2Dex) getAllPairsViaBatchedCalls(client *ethclient.Client, 
 	// initialize progress bar
 	bar := progressbar.Default(allpairslen.Int64())
 
-	pairs := make([]any, 0, allpairslen.Int64())
+	//pairs := make([]any, 0, allpairslen.Int64())
+	pairs := sync.Map{}
 
 	step := int64(766) // 超出报错  max batch size for this call until codesize is too large
 
@@ -125,9 +139,7 @@ func (univ2 *UniswapV2Dex) getAllPairsViaBatchedCalls(client *ethclient.Client, 
 
 	for idxFrom := int64(0); idxFrom < allpairslen.Int64(); idxFrom += step {
 
-		requestThrottle.IncrementOrSleep(1)
-
-		pairs = append(pairs, batch_request_for_uniswap_v2.Get_pairs_batch_request(univ2.FactoryAddress, idxFrom, step, client))
+		//pairs = append(pairs, batch_request_for_uniswap_v2.Get_pairs_batch_request(univ2.FactoryAddress, idxFrom, step, client))
 
 		idxFrom = idxTo
 		if idxTo+step > allpairslen.Int64() {
@@ -135,22 +147,28 @@ func (univ2 *UniswapV2Dex) getAllPairsViaBatchedCalls(client *ethclient.Client, 
 		} else {
 			idxTo += step
 		}
+		fmt.Println("idxFrom:", idxFrom, "idxTo:", idxTo)
+		for k, v := range batch_request_for_uniswap_v2.GetPairsBatchRequest(univ2.FactoryAddress, idxFrom, idxTo, client) {
+			pairs.Store(k, v)
+		}
 
 		err := bar.Add(int(step))
 		if err != nil {
-			return nil, err
+			fmt.Println("bar.Add error")
+			return &sync.Map{}, err
 		}
 
 	}
 
-	fmt.Println(pairs)
-	pools := make([]pool.UniswapV2Pool, 0)
+	//pools := make([]pool.UniswapV2Pool, 0)
 
-	for _, v := range pairs {
-		pools = append(pools, pool.UniswapV2Pool{Address: v.(common.Address)})
-	}
-	fmt.Println(pools)
+	pools := sync.Map{}
 
-	return pools, err
+	pairs.Range(func(k, v interface{}) bool {
+		pools.Store(k, pool.UniswapV2Pool{Address: v.(common.Address)})
+		return true
+	})
+
+	return &pools, err
 
 }

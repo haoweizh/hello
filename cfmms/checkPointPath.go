@@ -92,49 +92,4 @@ func ConstructCheckpoint(dexes []dex.Dex, pools []pool.Pool, latest_block uint64
 }
 
 func DeConstructCheckpoint(checkpoint_path string) {
-
-	//	let mut dexes = vec![];
-	//
-	//	let checkpoint_json: serde_json::Value = serde_json::from_str(
-	//		read_to_string(checkpoint_path)
-	//	.expect("Error when reading in checkpoint json")
-	//	.as_str(),
-	//)
-	//	.expect("Error when converting checkpoint file contents to serde_json::Value");
-	//
-	//	let block_number = checkpoint_json
-	//	.get("block_number")
-	//	.expect("Could not get block_number from checkpoint")
-	//	.as_u64()
-	//	.expect("Could not convert block_number to u64");
-	//
-	//	for dex_data in checkpoint_json
-	//	.get("dexes")
-	//	.expect("Could not get checkpoint_data")
-	//	.as_array()
-	//	.expect("Could not unwrap checkpoint json into array")
-	//	.iter()
-	//	{
-	//		let dex = deconstruct_dex_from_checkpoint(
-	//		dex_data
-	//		.as_object()
-	//		.expect("Dex checkpoint is not formatted correctly"),
-	//	);
-	//
-	//		dexes.push(dex);
-	//	}
-	//
-	//	//get all pools
-	//	let pools_array = checkpoint_json
-	//	.get("pools")
-	//	.expect("Could not get pools from checkpoint")
-	//	.as_array()
-	//	.expect("Could not convert pools to value array");
-	//
-	//	let pools = deconstruct_pools_from_checkpoint(pools_array);
-	//
-	//	(dexes, pools, BlockNumber::Number(block_number.into()))
-
-	//dexex := make([]dex.Dex, 0)
-
 }
