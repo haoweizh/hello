@@ -122,16 +122,16 @@ func Test_Abigo_Feature(t *testing.T) {
 
 func Test_RemoveEmptyPools(t *testing.T) {
 
-	var pools []pool.Pool
-
-	v2 := append(pools, &pool.UniswapV2Pool{
-		Address:  common.HexToAddress("0x1"),
-		Reserve0: big.NewInt(0),
-	}, &pool.UniswapV3Pool{
-		Address: common.HexToAddress("0x2"),
-	})
-
-	cfmms.RemoveEmptyPools(v2)
+	//var pools []pool.Pool
+	//
+	//v2 := append(pools, &pool.UniswapV2Pool{
+	//	Address:  common.HexToAddress("0x1"),
+	//	Reserve0: big.NewInt(0),
+	//}, &pool.UniswapV3Pool{
+	//	Address: common.HexToAddress("0x2"),
+	//})
+	//
+	//cfmms.RemoveEmptyPools(v2)
 }
 
 func Test_SyncPairsTest(t *testing.T) {

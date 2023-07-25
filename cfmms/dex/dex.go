@@ -3,8 +3,8 @@ package dex
 import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
-	"hello/cfmms/pool"
 	"math/big"
+	"sync"
 )
 
 type Dex interface {
@@ -12,7 +12,7 @@ type Dex interface {
 	NewPoolFromEvent(address common.Address, client *ethclient.Client)
 	NewEmptyPoolFromEvent(log any) any
 	GetAllPools(client *ethclient.Client, step *big.Int) (any, error)
-	GetAllPoolsData(pool *[]pool.Pool, client *ethclient.Client) error
+	GetAllPoolsData(pools *sync.Map, client *ethclient.Client) error
 
 	GetPoolWithBestLiquidity()
 	GetAllPoolsForPair()

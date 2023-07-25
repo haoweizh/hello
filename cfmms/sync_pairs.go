@@ -34,12 +34,12 @@ func SyncPairsWithThrottle(dexes []dex.Dex, step *big.Int, client *ethclient.Cli
 			pools, err := dexIns.GetAllPools(client, step)
 			if err != nil {
 				// Handle error
-				fmt.Println(err)
+				fmt.Println("GetAllpools err", err)
 				return
 			}
 
 			// Get all pool data and sync the pool
-			err = dexIns.GetAllPoolsData(pools.(*[]pool.Pool), client)
+			err = dexIns.GetAllPoolsData(pools.(*sync.Map), client)
 			if err != nil {
 				// Handle error
 				fmt.Println(err)
@@ -47,10 +47,10 @@ func SyncPairsWithThrottle(dexes []dex.Dex, step *big.Int, client *ethclient.Cli
 			}
 
 			// Clean empty pools
-			pools = RemoveEmptyPools(pools.([]pool.Pool))
+			pools = RemoveEmptyPools(pools.(*sync.Map))
 
 			// Append pools to aggregatedPools
-			aggregatedPools = append(aggregatedPools, pools.([]pool.Pool)...)
+			//aggregatedPools = append(aggregatedPools, pools.([]pool.Pool)...)
 
 		}(dexIns)
 	}
@@ -66,24 +66,23 @@ func SyncPairsWithStep() {
 
 }
 
-func RemoveEmptyPools(pools []pool.Pool) []pool.Pool {
+func RemoveEmptyPools(pools *sync.Map) *sync.Map {
 
-	var cleanedPools []pool.Pool
+	var cleanedPools *sync.Map
 
-	for _, p := range pools {
-
+	pools.Range(func(key, p any) bool {
 		switch p.(type) {
 		case *pool.UniswapV2Pool:
 			if p.(*pool.UniswapV2Pool).TokenA != utils.Address0 {
-				cleanedPools = append(cleanedPools, p)
+				cleanedPools.Store(key, p)
 			}
 		case *pool.UniswapV3Pool:
 			if p.(*pool.UniswapV3Pool).TokenA != utils.Address0 {
-				cleanedPools = append(cleanedPools, p)
+				cleanedPools.Store(key, p)
 			}
 		}
-
-	}
+		return true
+	})
 
 	return cleanedPools
 }

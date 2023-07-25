@@ -46,7 +46,7 @@ func GetPairsBatchRequest(factory common.Address, from, setp *big.Int, client *e
 	// 执行Eth_call
 	result, err := client.CallContract(context.Background(), callMsg, nil)
 	if err != nil {
-		fmt.Println("client.CallContract error")
+		fmt.Println("client.CallContract error", err)
 		return nil
 	}
 
@@ -57,6 +57,7 @@ func GetPairsBatchRequest(factory common.Address, from, setp *big.Int, client *e
 		pairs = append(pairs, hexString[i:i+64])
 	}
 
+	//fmt.Println("pairs", pairs)
 	return pairs
 
 }

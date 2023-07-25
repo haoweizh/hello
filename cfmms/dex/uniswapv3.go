@@ -10,6 +10,7 @@ import (
 	"hello/cfmms/pool"
 	"log"
 	"math/big"
+	"sync"
 )
 
 var (
@@ -53,7 +54,7 @@ func (u *UniswapV3Dex) GetAllPools(client *ethclient.Client, step *big.Int) (any
 
 }
 
-func (u *UniswapV3Dex) GetAllPoolsData(pool *[]pool.Pool, client *ethclient.Client) error {
+func (u *UniswapV3Dex) GetAllPoolsData(pool *sync.Map, client *ethclient.Client) error {
 	//TODO implement me
 	panic("implement me")
 }
