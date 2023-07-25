@@ -39,12 +39,12 @@ func Test_Get_pairs_batch_request(t *testing.T) {
 	//fmt.Println("we have a connection")
 	factory := common.HexToAddress("0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f") //uniswav2_pool
 
-	// FIXME: 修改数据类型为big.int
-	from := int64(2)
-	step := int64(6)
+	//
+	from := big.NewInt(0)
+	step := big.NewInt(766)
 	pairs := batch_request_for_uniswap_v2.GetPairsBatchRequest(factory, from, step, client)
 	fmt.Println(pairs)
-	//batch_request_for_uniswap_v2.Get_pool_data_batch_request(pairs[:127], client)
+	batch_request_for_uniswap_v2.Get_pool_data_batch_request(pairs[:127], client)
 
 }
 

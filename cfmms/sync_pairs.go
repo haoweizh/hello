@@ -7,15 +7,16 @@ import (
 	"hello/cfmms/dex"
 	"hello/cfmms/pool"
 	"hello/cfmms/utils"
+	"math/big"
 	"sync"
 )
 
 func SyncPairs(dexes []dex.Dex, client *ethclient.Client, checkpoint_path string) {
 
-	SyncPairsWithThrottle(dexes, 100000, client, checkpoint_path)
+	SyncPairsWithThrottle(dexes, big.NewInt(10000), client, checkpoint_path)
 }
 
-func SyncPairsWithThrottle(dexes []dex.Dex, step int64, client *ethclient.Client, checkpoint_path string) {
+func SyncPairsWithThrottle(dexes []dex.Dex, step *big.Int, client *ethclient.Client, checkpoint_path string) {
 
 	wg := sync.WaitGroup{}
 

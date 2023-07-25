@@ -10,6 +10,7 @@ import (
 	"hello/cfmms/batch_request/batch_request_for_uniswap_v2"
 	"hello/cfmms/pool"
 	"log"
+	"math/big"
 	"sync"
 	"time"
 )
@@ -68,7 +69,7 @@ func (univ2 *UniswapV2Dex) NewEmptyPoolFromEvent(log any) any {
 	panic("implement me")
 }
 
-func (univ2 *UniswapV2Dex) GetAllPools(client *ethclient.Client, step int64) (any, error) {
+func (univ2 *UniswapV2Dex) GetAllPools(client *ethclient.Client, step *big.Int) (any, error) {
 
 	var pools *sync.Map
 	var err error
@@ -128,39 +129,32 @@ func (univ2 *UniswapV2Dex) getAllPairsViaBatchedCalls(client *ethclient.Client) 
 	//pairs := make([]any, 0, allpairslen.Int64())
 	pairs := sync.Map{}
 
-	step := int64(766) // 超出报错  max batch size for this call until codesize is too large
+	step := big.NewInt(766) // 超出报错  max batch size for this call until codesize is too large
 
-	var idxTo int64
-	if step > allpairslen.Int64() {
-		idxTo = allpairslen.Int64()
+	var idxTo *big.Int
+	if step.Cmp(allpairslen) > 0 {
+		idxTo = allpairslen
 	} else {
 		idxTo = step
 	}
 
-	for idxFrom := int64(0); idxFrom < allpairslen.Int64(); idxFrom += step {
-
-		//pairs = append(pairs, batch_request_for_uniswap_v2.Get_pairs_batch_request(univ2.FactoryAddress, idxFrom, step, client))
-
-		idxFrom = idxTo
-		if idxTo+step > allpairslen.Int64() {
-			idxTo = allpairslen.Int64() - 1
-		} else {
-			idxTo += step
-		}
-		fmt.Println("idxFrom:", idxFrom, "idxTo:", idxTo)
+	for idxFrom := big.NewInt(0); idxTo.Cmp(allpairslen) < 0; {
 		for k, v := range batch_request_for_uniswap_v2.GetPairsBatchRequest(univ2.FactoryAddress, idxFrom, idxTo, client) {
-			pairs.Store(k, v)
+			pairs.Store(k+int(idxFrom.Int64()), v)
 		}
-
-		err := bar.Add(int(step))
+		idxFrom = big.NewInt(0).Add(idxTo, big.NewInt(0))
+		if big.NewInt(0).Add(idxTo, step).Cmp(allpairslen) > 0 {
+			idxTo = big.NewInt(0).Sub(allpairslen, big.NewInt(1))
+		} else {
+			idxTo = big.NewInt(0).Add(idxTo, step)
+		}
+		err := bar.Add(int(step.Int64()))
 		if err != nil {
 			fmt.Println("bar.Add error")
 			return &sync.Map{}, err
 		}
 
 	}
-
-	//pools := make([]pool.UniswapV2Pool, 0)
 
 	pools := sync.Map{}
 

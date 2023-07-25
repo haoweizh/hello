@@ -15,7 +15,7 @@ import (
 	"strings"
 )
 
-func GetPairsBatchRequest(factory common.Address, from, setp *int64, client *ethclient.Client) []string {
+func GetPairsBatchRequest(factory common.Address, from, setp *big.Int, client *ethclient.Client) []string {
 	var pairs []string
 
 	// TODO: eth_call 获取合约返回值
@@ -38,7 +38,6 @@ func GetPairsBatchRequest(factory common.Address, from, setp *int64, client *eth
 		return nil
 	}
 
-	fmt.Println("argsByteCode", argsByteCode)
 	callMsg := ethereum.CallMsg{
 		Data:       append(common.FromHex(byteCode), argsByteCode...),
 		AccessList: nil,

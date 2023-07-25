@@ -9,6 +9,7 @@ import (
 	"hello/cfmms/abi_go/UniswapV3Factory"
 	"hello/cfmms/pool"
 	"log"
+	"math/big"
 )
 
 var (
@@ -17,7 +18,7 @@ var (
 
 type UniswapV3Dex struct {
 	FactoryAddress common.Address
-	CreationBlock  int64
+	CreationBlock  *big.Int
 }
 
 func (u *UniswapV3Dex) PoolCreatedEventSignature() []byte {
@@ -37,7 +38,7 @@ func (u *UniswapV3Dex) NewEmptyPoolFromEvent(log any) any {
 
 }
 
-func (u *UniswapV3Dex) GetAllPools(client *ethclient.Client, step int64) (any, error) {
+func (u *UniswapV3Dex) GetAllPools(client *ethclient.Client, step *big.Int) (any, error) {
 	//TODO implement me
 
 	current_block, err := client.BlockNumber(context.Background())
@@ -46,7 +47,7 @@ func (u *UniswapV3Dex) GetAllPools(client *ethclient.Client, step int64) (any, e
 		return nil, err
 	}
 
-	pools := u.GetAllPoolsFromLogs(int64(current_block), step, client)
+	pools := u.GetAllPoolsFromLogs(big.NewInt(int64(current_block)), step, client)
 
 	return pools, nil
 
@@ -67,7 +68,7 @@ func (u *UniswapV3Dex) GetAllPoolsForPair() {
 	panic("implement me")
 }
 
-func (u *UniswapV3Dex) GetAllPoolsFromLogs(currentBlock int64, step int64, client *ethclient.Client) []pool.Pool {
+func (u *UniswapV3Dex) GetAllPoolsFromLogs(currentBlock *big.Int, step *big.Int, client *ethclient.Client) []pool.Pool {
 	//TODO implement me
 	aggregatedPairs := make([]pool.Pool, 0)
 
@@ -77,10 +78,10 @@ func (u *UniswapV3Dex) GetAllPoolsFromLogs(currentBlock int64, step int64, clien
 		return nil
 	}
 
-	for fromBlock := u.CreationBlock; fromBlock < currentBlock; fromBlock += step {
-		end := uint64(fromBlock + step)
+	for fromBlock := u.CreationBlock; fromBlock.Cmp(currentBlock) < 0; fromBlock = big.NewInt(0).Add(fromBlock, step) {
+		end := big.NewInt(0).Add(fromBlock, step).Uint64()
 		res, err := ins.FilterPoolCreated(&bind.FilterOpts{
-			Start:   uint64(fromBlock),
+			Start:   fromBlock.Uint64(),
 			End:     &end,
 			Context: nil,
 		}, nil, nil, nil)
