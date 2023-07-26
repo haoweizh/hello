@@ -86,10 +86,15 @@ func Get_pool_data_batch_request(pool []string, client *ethclient.Client) []byte
 	argsCodeAbi, err := abi.JSON(strings.NewReader(GetUniswapV2PoolDataBatchRequest.GetUniswapV2PoolDataBatchRequestMetaData.ABI))
 
 	if err != nil {
-		log.Fatal(err)
+		fmt.Println("abi.JSON error", err)
+		return nil
 	}
 
-	argsByteCode, _ := argsCodeAbi.Pack("", target_addresses)
+	argsByteCode, err := argsCodeAbi.Pack("", target_addresses)
+	if err != nil {
+		fmt.Println("argsCodeAbi.Pack error", err)
+		return nil
+	}
 
 	callMsg := ethereum.CallMsg{
 		Data:       append(common.FromHex(byteCode), argsByteCode...),
@@ -99,7 +104,7 @@ func Get_pool_data_batch_request(pool []string, client *ethclient.Client) []byte
 	// 执行 Eth_call
 	result, err := client.CallContract(context.Background(), callMsg, nil)
 	if err != nil {
-		fmt.Println("client.CallContract2 error")
+		fmt.Println("client.CallContract2 error", err)
 		return nil
 	}
 

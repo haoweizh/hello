@@ -84,6 +84,43 @@ func (univ2 *UniswapV2Dex) GetAllPoolsData(pools *sync.Map, client *ethclient.Cl
 
 	//fmt.Println("GetAllPoolsData start", pools)
 	fmt.Println("GetAllPoolsData start")
+	//step := big.NewInt(127) // 超出报错  max batch size for this call until codesize is too large
+
+	fmt.Println("pools", pools)
+
+	fi, ok := pools.Load(0)
+	if ok {
+		fmt.Println("pools", fi.(pool.UniswapV2Pool).Address)
+	}
+
+	var poolArray []string
+	pools.Range(func(key, value any) bool {
+
+		poolArray = append(poolArray, value.(pool.UniswapV2Pool).Address.String())
+		return true
+
+	})
+
+	// TODO 127 个一组 并发处理
+	var temp []string
+	var remain []string
+
+	num := len(poolArray) % 127
+
+	remain = append(remain, poolArray[len(poolArray)-num:]...)
+
+	for k, v := range poolArray {
+		temp = append(temp, v)
+		if k%127 == 0 {
+			go func() {
+				fmt.Println("poolArray", k, v)
+				batch_request_for_uniswap_v2.Get_pool_data_batch_request(temp, client)
+				temp = nil
+			}()
+		}
+	}
+
+	batch_request_for_uniswap_v2.Get_pool_data_batch_request(remain, client)
 
 	return nil
 }
@@ -120,6 +157,8 @@ func (univ2 *UniswapV2Dex) getAllPairsViaBatchedCalls(client *ethclient.Client) 
 		return nil, err
 	}
 
+	// TODO: remove this  调试减少数量
+	allpairslen = big.NewInt(766)
 	// initialize progress bar
 
 	pairs := sync.Map{}
