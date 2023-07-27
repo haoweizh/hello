@@ -7,8 +7,11 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"hello/cfmms/abi_go/UniswapV3Factory"
+	"hello/cfmms/batch_request/batch_request_for_uniswap_v3"
 	"hello/cfmms/pool"
 	"math/big"
+	"sync"
+	"time"
 )
 
 var (
@@ -53,13 +56,17 @@ func (u *UniswapV3Dex) NewEmptyPoolFromEvent(log any) any {
 func (u *UniswapV3Dex) GetAllPools(client *ethclient.Client, step *big.Int) (any, error) {
 	//TODO implement me
 
-	current_block, err := client.BlockNumber(context.Background())
+	currentBlock, err := client.BlockNumber(context.Background())
+
+	// FIXME: 测试用
+	currentBlock = uint64(12379621)
+
 	if err != nil {
 		fmt.Println("client.BlockNumber error")
 		return nil, err
 	}
 
-	pools := u.GetAllPoolsFromLogs(big.NewInt(int64(current_block)), step, client)
+	pools := u.GetAllPoolsFromLogs(big.NewInt(int64(currentBlock)), step, client)
 
 	return pools, nil
 
@@ -68,11 +75,36 @@ func (u *UniswapV3Dex) GetAllPools(client *ethclient.Client, step *big.Int) (any
 func (u *UniswapV3Dex) GetAllPoolsData(v3pools any, client *ethclient.Client) error {
 
 	pools := v3pools.([]pool.UniswapV3Pool)
-	fmt.Println("pools", pools)
-	//  
+	var targetAddress []any
+	for _, v3pool := range pools {
+		targetAddress = append(targetAddress, v3pool.Address)
+	}
 
-	//TODO implement me
-	panic("implement me")
+	chunkSize := 56 // max batch size for this call until codesize is too large
+	chunks := splitSlice(targetAddress, chunkSize)
+
+	wg := &sync.WaitGroup{}
+
+	for _, chunk := range chunks {
+		wg.Add(1)
+		go func(chunk []any) {
+			defer wg.Done()
+			var temp []common.Address
+			for _, item := range chunk {
+				temp = append(temp, item.(common.Address))
+			}
+			result, err := batch_request_for_uniswap_v3.GetPoolDataBatchRequest(temp, client)
+			if err != nil {
+				fmt.Println("batch_request_for_uniswap_v3.GetPoolDataBatchRequest error")
+			}
+			fmt.Println("result", result)
+		}(chunk)
+		time.Sleep(time.Second / 20)
+	}
+
+	wg.Wait()
+
+	return nil
 }
 
 func (u *UniswapV3Dex) GetPoolWithBestLiquidity() {

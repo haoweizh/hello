@@ -94,7 +94,7 @@ func (univ2 *UniswapV2Dex) GetAllPoolsData(v2pools any, client *ethclient.Client
 		fmt.Println("pools", fi.(pool.UniswapV2Pool).Address)
 	}
 
-	var poolArray []string
+	var poolArray []any
 	pools.Range(func(key, value any) bool {
 
 		poolArray = append(poolArray, value.(pool.UniswapV2Pool).Address.String())
@@ -104,14 +104,18 @@ func (univ2 *UniswapV2Dex) GetAllPoolsData(v2pools any, client *ethclient.Client
 
 	v2poolsData := &sync.Map{}
 	wg := &sync.WaitGroup{}
-	chunkSize := 127
+	chunkSize := 127 // max batch size for this call until codesize is too large
 	chunks := splitSlice(poolArray, chunkSize)
 
 	for _, chunk := range chunks {
 		wg.Add(1)
-		go func(chunk []string) {
+		go func(chunk []any) {
 			defer wg.Done()
-			result := batch_request_for_uniswap_v2.Get_pool_data_batch_request(chunk, client)
+			var temp []string
+			for _, item := range chunk {
+				temp = append(temp, item.(string))
+			}
+			result := batch_request_for_uniswap_v2.Get_pool_data_batch_request(temp, client)
 			hexString := hex.EncodeToString(result)
 			hexString = hexString[128:]
 			oneStructLen := 64 * 6
@@ -119,7 +123,7 @@ func (univ2 *UniswapV2Dex) GetAllPoolsData(v2pools any, client *ethclient.Client
 			var poolDataList []pool.UniswapV2Pool
 			for i := 1; i < nums+1; i++ {
 				var poolData pool.UniswapV2Pool
-				poolData.Address = common.HexToAddress(chunk[i-1])
+				poolData.Address = common.HexToAddress(temp[i-1])
 				poolData.TokenA = common.HexToAddress(hexString[(i-1)*oneStructLen : (i-1)*oneStructLen+64])
 				poolData.TokenADecimals = int64(new(big.Int).SetBytes(common.FromHex(hexString[(i-1)*oneStructLen+64 : (i-1)*oneStructLen+128])).Int64())
 				poolData.TokenB = common.HexToAddress(hexString[(i-1)*oneStructLen+128 : (i-1)*oneStructLen+192])
@@ -217,8 +221,8 @@ func (univ2 *UniswapV2Dex) getAllPairsViaBatchedCalls(client *ethclient.Client) 
 
 }
 
-func splitSlice(slice []string, chunkSize int) [][]string {
-	var chunks [][]string
+func splitSlice(slice []any, chunkSize int) [][]any {
+	var chunks [][]any
 	for i := 0; i < len(slice); i += chunkSize {
 		end := i + chunkSize
 		if end > len(slice) {
