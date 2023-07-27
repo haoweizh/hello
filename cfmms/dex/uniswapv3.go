@@ -8,9 +8,7 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	"hello/cfmms/abi_go/UniswapV3Factory"
 	"hello/cfmms/pool"
-	"log"
 	"math/big"
-	"sync"
 )
 
 var (
@@ -34,8 +32,21 @@ func (u *UniswapV3Dex) NewPoolFromEvent(address common.Address, client *ethclien
 
 func (u *UniswapV3Dex) NewEmptyPoolFromEvent(log any) any {
 
-	var pool1 pool.Pool
-	return pool1
+	it := log.(*UniswapV3Factory.UniswapV3FactoryPoolCreated)
+
+	return pool.UniswapV3Pool{
+		Address:        it.Pool,
+		TokenA:         it.Token0,
+		TokenADecimals: 0,
+		TokenB:         it.Token1,
+		TokenBDecimals: 0,
+		Liquidity:      nil,
+		SqrtPrice:      nil,
+		Fee:            it.Fee,
+		Tick:           nil,
+		TickSpacing:    it.TickSpacing,
+		LiquidityNet:   nil,
+	}
 
 }
 
@@ -54,7 +65,12 @@ func (u *UniswapV3Dex) GetAllPools(client *ethclient.Client, step *big.Int) (any
 
 }
 
-func (u *UniswapV3Dex) GetAllPoolsData(pool *sync.Map, client *ethclient.Client) error {
+func (u *UniswapV3Dex) GetAllPoolsData(v3pools any, client *ethclient.Client) error {
+
+	pools := v3pools.([]pool.UniswapV3Pool)
+	fmt.Println("pools", pools)
+	//  
+
 	//TODO implement me
 	panic("implement me")
 }
@@ -69,42 +85,36 @@ func (u *UniswapV3Dex) GetAllPoolsForPair() {
 	panic("implement me")
 }
 
-func (u *UniswapV3Dex) GetAllPoolsFromLogs(currentBlock *big.Int, step *big.Int, client *ethclient.Client) []pool.Pool {
+func (u *UniswapV3Dex) GetAllPoolsFromLogs(currentBlock *big.Int, step *big.Int, client *ethclient.Client) []pool.UniswapV3Pool {
 	//TODO implement me
-	aggregatedPairs := make([]pool.Pool, 0)
+	aggregatedPairs := make([]pool.UniswapV3Pool, 0)
 
 	ins, err := UniswapV3Factory.NewUniswapV3Factory(u.FactoryAddress, client)
 	if err != nil {
 		fmt.Println("UniswapV3Factory.NewUniswapV3Factory error")
 		return nil
 	}
-
 	for fromBlock := u.CreationBlock; fromBlock.Cmp(currentBlock) < 0; fromBlock = big.NewInt(0).Add(fromBlock, step) {
 		end := big.NewInt(0).Add(fromBlock, step).Uint64()
+
+		fmt.Println("fromBlock", fromBlock, "currentBlock", currentBlock, "end", end)
+
 		res, err := ins.FilterPoolCreated(&bind.FilterOpts{
 			Start:   fromBlock.Uint64(),
 			End:     &end,
 			Context: nil,
 		}, nil, nil, nil)
 		if err != nil {
-			fmt.Println("Failed to filterLog contract instance")
-			log.Fatal(err)
+			fmt.Println("Failed to filterLog contract instance", err)
+			return nil
 		}
-		fmt.Println(res)
-
-		fmt.Println(res.Event)
-
 		for res.Next() {
 			if res.Event.Raw.Removed {
 				continue
 			}
-			// 拿到地址 neweventFromAddress
-			fmt.Println("finnnnnnnnnnnnnn", res.Event.Pool)
-
-			poolFromEvent := u.NewEmptyPoolFromEvent(res.Event.Pool)
-
+			poolFromEvent := u.NewEmptyPoolFromEvent(res.Event)
 			fmt.Println("poolFromEvent", poolFromEvent)
-			aggregatedPairs = append(aggregatedPairs, poolFromEvent.(pool.Pool))
+			aggregatedPairs = append(aggregatedPairs, poolFromEvent.(pool.UniswapV3Pool))
 		}
 
 	}

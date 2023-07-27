@@ -1,6 +1,7 @@
 package dex
 
 import (
+	"encoding/hex"
 	"fmt"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
@@ -79,14 +80,14 @@ func (univ2 *UniswapV2Dex) GetAllPools(client *ethclient.Client, step *big.Int) 
 	return pools, err
 }
 
-func (univ2 *UniswapV2Dex) GetAllPoolsData(pools *sync.Map, client *ethclient.Client) error {
+func (univ2 *UniswapV2Dex) GetAllPoolsData(v2pools any, client *ethclient.Client) error {
 	//TODO implement me
+
+	pools := v2pools.(*sync.Map)
 
 	//fmt.Println("GetAllPoolsData start", pools)
 	fmt.Println("GetAllPoolsData start")
 	//step := big.NewInt(127) // 超出报错  max batch size for this call until codesize is too large
-
-	fmt.Println("pools", pools)
 
 	fi, ok := pools.Load(0)
 	if ok {
@@ -101,27 +102,47 @@ func (univ2 *UniswapV2Dex) GetAllPoolsData(pools *sync.Map, client *ethclient.Cl
 
 	})
 
-	// TODO 127 个一组 并发处理
-	var temp []string
-	var remain []string
+	v2poolsData := &sync.Map{}
+	wg := &sync.WaitGroup{}
+	chunkSize := 127
+	chunks := splitSlice(poolArray, chunkSize)
 
-	num := len(poolArray) % 127
+	for _, chunk := range chunks {
+		wg.Add(1)
+		go func(chunk []string) {
+			defer wg.Done()
+			result := batch_request_for_uniswap_v2.Get_pool_data_batch_request(chunk, client)
+			hexString := hex.EncodeToString(result)
+			hexString = hexString[128:]
+			oneStructLen := 64 * 6
+			nums := len(hexString) / oneStructLen
+			var poolDataList []pool.UniswapV2Pool
+			for i := 1; i < nums+1; i++ {
+				var poolData pool.UniswapV2Pool
+				poolData.Address = common.HexToAddress(chunk[i-1])
+				poolData.TokenA = common.HexToAddress(hexString[(i-1)*oneStructLen : (i-1)*oneStructLen+64])
+				poolData.TokenADecimals = int64(new(big.Int).SetBytes(common.FromHex(hexString[(i-1)*oneStructLen+64 : (i-1)*oneStructLen+128])).Int64())
+				poolData.TokenB = common.HexToAddress(hexString[(i-1)*oneStructLen+128 : (i-1)*oneStructLen+192])
+				poolData.TokenBDecimals = int64(new(big.Int).SetBytes(common.FromHex(hexString[(i-1)*oneStructLen+192 : (i-1)*oneStructLen+256])).Int64())
+				poolData.Reserve0 = new(big.Int).SetBytes(common.FromHex(hexString[(i-1)*oneStructLen+256 : (i-1)*oneStructLen+320]))
+				poolData.Reserve1 = new(big.Int).SetBytes(common.FromHex(hexString[(i-1)*oneStructLen+320 : (i-1)*oneStructLen+384]))
+				poolData.Fee = 300
+				poolDataList = append(poolDataList, poolData)
+			}
 
-	remain = append(remain, poolArray[len(poolArray)-num:]...)
-
-	for k, v := range poolArray {
-		temp = append(temp, v)
-		if k%127 == 0 {
-			go func() {
-				fmt.Println("poolArray", k, v)
-				batch_request_for_uniswap_v2.Get_pool_data_batch_request(temp, client)
-				temp = nil
-			}()
-		}
+			for i, v2Pool := range poolDataList {
+				v2poolsData.Store(i, v2Pool)
+			}
+		}(chunk)
+		time.Sleep(time.Second / 20)
 	}
 
-	batch_request_for_uniswap_v2.Get_pool_data_batch_request(remain, client)
+	wg.Wait()
 
+	// 拿到数据
+	if v, ok := v2poolsData.Load(0); ok {
+		fmt.Println(v)
+	}
 	return nil
 }
 
@@ -194,4 +215,16 @@ func (univ2 *UniswapV2Dex) getAllPairsViaBatchedCalls(client *ethclient.Client) 
 
 	return &pools, err
 
+}
+
+func splitSlice(slice []string, chunkSize int) [][]string {
+	var chunks [][]string
+	for i := 0; i < len(slice); i += chunkSize {
+		end := i + chunkSize
+		if end > len(slice) {
+			end = len(slice)
+		}
+		chunks = append(chunks, slice[i:end])
+	}
+	return chunks
 }

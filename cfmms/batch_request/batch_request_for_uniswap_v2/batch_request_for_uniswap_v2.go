@@ -81,6 +81,7 @@ func Get_pool_data_batch_request(pool []string, client *ethclient.Client) []byte
 		target_addresses = append(target_addresses, common.HexToAddress(v))
 	}
 
+	fmt.Println("一次获取数量", len(target_addresses))
 	byteCode := GetUniswapV2PoolDataBatchRequest.GetUniswapV2PoolDataBatchRequestMetaData.Bin
 
 	argsCodeAbi, err := abi.JSON(strings.NewReader(GetUniswapV2PoolDataBatchRequest.GetUniswapV2PoolDataBatchRequestMetaData.ABI))

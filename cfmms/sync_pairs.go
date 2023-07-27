@@ -39,7 +39,7 @@ func SyncPairsWithThrottle(dexes []dex.Dex, step *big.Int, client *ethclient.Cli
 			}
 
 			// Get all pool data and sync the pool
-			err = dexIns.GetAllPoolsData(pools.(*sync.Map), client)
+			err = dexIns.GetAllPoolsData(pools, client)
 			if err != nil {
 				// Handle error
 				fmt.Println(err)

@@ -14,9 +14,9 @@ type UniswapV3Pool struct {
 	TokenBDecimals int64
 	Liquidity      *big.Int
 	SqrtPrice      *big.Int
-	Fee            int64
+	Fee            *big.Int
 	Tick           *big.Int
-	TickSpacing    int64
+	TickSpacing    *big.Int
 	LiquidityNet   *big.Int
 }
 
