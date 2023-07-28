@@ -1,1 +1,1 @@
-{"block_number":17775341,"checkpoint_timestamp":"2023-07-26T14:03:39.311829+08:00","dexes":[{"block_number":17775341,"dex_variant":"UniswapV2","factory_address":"0x5c69bee701ef814a2b6a3edd4b1652cb9cc5aa6f","fee":0}]}
+{"block_number":17788618,"checkpoint_timestamp":"2023-07-28T10:37:32.905579+08:00","dexes":[{"block_number":17788618,"dex_variant":"UniswapV3","factory_address":"0x1f98431c8ad98523631ae4a59f267346ea31f984"}]}

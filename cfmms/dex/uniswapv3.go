@@ -2,6 +2,7 @@ package dex
 
 import (
 	"context"
+	"encoding/hex"
 	"fmt"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
@@ -74,11 +75,12 @@ func (u *UniswapV3Dex) GetAllPools(client *ethclient.Client, step *big.Int) (any
 
 func (u *UniswapV3Dex) GetAllPoolsData(v3pools any, client *ethclient.Client) error {
 
-	pools := v3pools.([]pool.UniswapV3Pool)
 	var targetAddress []any
-	for _, v3pool := range pools {
-		targetAddress = append(targetAddress, v3pool.Address)
-	}
+
+	v3pools.(*sync.Map).Range(func(key, value any) bool {
+		targetAddress = append(targetAddress, key)
+		return true
+	})
 
 	chunkSize := 56 // max batch size for this call until codesize is too large
 	chunks := splitSlice(targetAddress, chunkSize)
@@ -95,9 +97,12 @@ func (u *UniswapV3Dex) GetAllPoolsData(v3pools any, client *ethclient.Client) er
 			}
 			result, err := batch_request_for_uniswap_v3.GetPoolDataBatchRequest(temp, client)
 			if err != nil {
-				fmt.Println("batch_request_for_uniswap_v3.GetPoolDataBatchRequest error")
+				fmt.Println("batch_request_for_uniswap_v3.GetPoolDataBatchRequest error", err)
+				return
 			}
-			fmt.Println("result", result)
+			poolsData := decodeResult(result)
+
+			fmt.Println("result", poolsData)
 		}(chunk)
 		time.Sleep(time.Second / 20)
 	}
@@ -117,40 +122,75 @@ func (u *UniswapV3Dex) GetAllPoolsForPair() {
 	panic("implement me")
 }
 
-func (u *UniswapV3Dex) GetAllPoolsFromLogs(currentBlock *big.Int, step *big.Int, client *ethclient.Client) []pool.UniswapV3Pool {
-	//TODO implement me
-	aggregatedPairs := make([]pool.UniswapV3Pool, 0)
+func (u *UniswapV3Dex) GetAllPoolsFromLogs(currentBlock *big.Int, step *big.Int, client *ethclient.Client) *sync.Map {
+	//aggregatedPairs := make([]pool.UniswapV3Pool, 0)
+
+	aggregatedPairs := &sync.Map{}
 
 	ins, err := UniswapV3Factory.NewUniswapV3Factory(u.FactoryAddress, client)
 	if err != nil {
-		fmt.Println("UniswapV3Factory.NewUniswapV3Factory error")
+		fmt.Println("get uniswav3factory ins error", err)
 		return nil
 	}
+
+	wg := &sync.WaitGroup{}
+
 	for fromBlock := u.CreationBlock; fromBlock.Cmp(currentBlock) < 0; fromBlock = big.NewInt(0).Add(fromBlock, step) {
-		end := big.NewInt(0).Add(fromBlock, step).Uint64()
 
-		fmt.Println("fromBlock", fromBlock, "currentBlock", currentBlock, "end", end)
+		wg.Add(1)
+		go func(fromBlock *big.Int, step *big.Int) {
+			defer wg.Done()
 
-		res, err := ins.FilterPoolCreated(&bind.FilterOpts{
-			Start:   fromBlock.Uint64(),
-			End:     &end,
-			Context: nil,
-		}, nil, nil, nil)
-		if err != nil {
-			fmt.Println("Failed to filterLog contract instance", err)
-			return nil
-		}
-		for res.Next() {
-			if res.Event.Raw.Removed {
-				continue
+			end := big.NewInt(0).Add(fromBlock, step).Uint64()
+
+			fmt.Println("fromBlock", fromBlock, "currentBlock", currentBlock, "end", end)
+
+			res, err := ins.FilterPoolCreated(&bind.FilterOpts{
+				Start:   fromBlock.Uint64(),
+				End:     &end,
+				Context: nil,
+			}, nil, nil, nil)
+			if err != nil {
+				fmt.Println("Failed to filterLog contract instance", err)
+				return
 			}
-			poolFromEvent := u.NewEmptyPoolFromEvent(res.Event)
-			fmt.Println("poolFromEvent", poolFromEvent)
-			aggregatedPairs = append(aggregatedPairs, poolFromEvent.(pool.UniswapV3Pool))
-		}
+			for res.Next() {
+				if res.Event.Raw.Removed {
+					continue
+				}
+				poolFromEvent := u.NewEmptyPoolFromEvent(res.Event)
+				aggregatedPairs.Store(poolFromEvent.(pool.UniswapV3Pool).Address, poolFromEvent)
+			}
+
+		}(fromBlock, step)
+
+		time.Sleep(time.Second / 20)
+
+		//end := big.NewInt(0).Add(fromBlock, step).Uint64()
+		//
+		//fmt.Println("fromBlock", fromBlock, "currentBlock", currentBlock, "end", end)
+		//
+		//res, err := ins.FilterPoolCreated(&bind.FilterOpts{
+		//	Start:   fromBlock.Uint64(),
+		//	End:     &end,
+		//	Context: nil,
+		//}, nil, nil, nil)
+		//if err != nil {
+		//	fmt.Println("Failed to filterLog contract instance", err)
+		//	return nil
+		//}
+		//for res.Next() {
+		//	if res.Event.Raw.Removed {
+		//		continue
+		//	}
+		//	poolFromEvent := u.NewEmptyPoolFromEvent(res.Event)
+		//	fmt.Println("poolFromEvent", poolFromEvent)
+		//	aggregatedPairs = append(aggregatedPairs, poolFromEvent.(pool.UniswapV3Pool))
+		//}
 
 	}
 
+	wg.Wait()
 	return aggregatedPairs
 }
 
@@ -160,6 +200,37 @@ func (u *UniswapV3Dex) GetAllPoolsFromLogsWithinRange() {
 }
 
 func (u *UniswapV3Dex) GetFactoryAddress() common.Address {
-	//TODO implement me
-	panic("implement me")
+
+	return u.FactoryAddress
+}
+
+func decodeResult(result interface{}) []pool.UniswapV3Pool {
+
+	hexString := hex.EncodeToString(result.([]byte))
+
+	hexString = hexString[128:]
+
+	fmt.Println("hexString", hexString)
+
+	oneStructLen := 64 * 10 // solidity struct length
+
+	nums := len(hexString) / oneStructLen
+	var poolDataList []pool.UniswapV3Pool
+	for i := 1; i < nums+1; i++ {
+		var poolData pool.UniswapV3Pool
+		poolData.TokenA = common.HexToAddress(hexString[(i-1)*oneStructLen : (i-1)*oneStructLen+64])
+		poolData.TokenADecimals = int64(new(big.Int).SetBytes(common.FromHex(hexString[(i-1)*oneStructLen+64 : (i-1)*oneStructLen+128])).Int64())
+		poolData.TokenB = common.HexToAddress(hexString[(i-1)*oneStructLen+128 : (i-1)*oneStructLen+192])
+		poolData.TokenBDecimals = int64(new(big.Int).SetBytes(common.FromHex(hexString[(i-1)*oneStructLen+192 : (i-1)*oneStructLen+256])).Int64())
+		poolData.Liquidity = new(big.Int).SetBytes(common.FromHex(hexString[(i-1)*oneStructLen+256 : (i-1)*oneStructLen+320]))
+		poolData.SqrtPrice = new(big.Int).SetBytes(common.FromHex(hexString[(i-1)*oneStructLen+320 : (i-1)*oneStructLen+384]))
+		poolData.Tick = new(big.Int).SetBytes(common.FromHex(hexString[(i-1)*oneStructLen+384 : (i-1)*oneStructLen+448]))
+		poolData.TickSpacing = new(big.Int).SetBytes(common.FromHex(hexString[(i-1)*oneStructLen+448 : (i-1)*oneStructLen+512]))
+		poolData.Fee = new(big.Int).SetBytes(common.FromHex(hexString[(i-1)*oneStructLen+512 : (i-1)*oneStructLen+576]))
+		poolData.LiquidityNet = new(big.Int).SetBytes(common.FromHex(hexString[(i-1)*oneStructLen+576 : (i-1)*oneStructLen+640]))
+		poolDataList = append(poolDataList, poolData)
+	}
+
+	return poolDataList
+
 }

@@ -22,7 +22,7 @@ func SyncPairsWithThrottle(dexes []dex.Dex, step *big.Int, client *ethclient.Cli
 
 	currentBlock, _ := client.BlockNumber(context.Background())
 
-	var aggregatedPools []pool.Pool
+	var aggregatedPools *sync.Map
 
 	for _, dexIns := range dexes {
 		wg.Add(1)
@@ -46,11 +46,16 @@ func SyncPairsWithThrottle(dexes []dex.Dex, step *big.Int, client *ethclient.Cli
 				return
 			}
 
-			// Clean empty pools
-			pools = RemoveEmptyPools(pools.(*sync.Map))
+			fmt.Println("pools", pools)
 
-			// Append pools to aggregatedPools
-			//aggregatedPools = append(aggregatedPools, pools.([]pool.Pool)...)
+			pools.(*sync.Map).Range(func(key, value any) bool {
+				fmt.Println("key", key)
+				fmt.Println("value", value.(pool.UniswapV3Pool).Liquidity)
+				return true
+			})
+
+			// Clean empty pools
+			aggregatedPools = RemoveEmptyPools(pools.(*sync.Map))
 
 		}(dexIns)
 	}

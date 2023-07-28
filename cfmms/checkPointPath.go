@@ -6,6 +6,7 @@ import (
 	"hello/cfmms/dex"
 	"hello/cfmms/pool"
 	"os"
+	"sync"
 	"time"
 )
 
@@ -13,7 +14,7 @@ func SyncPoolsFromCheckpoint() {
 
 }
 
-func ConstructCheckpoint(dexes []dex.Dex, pools []pool.Pool, latest_block uint64, checkpoint_path string) {
+func ConstructCheckpoint(dexes []dex.Dex, aggregatedPools *sync.Map, latest_block uint64, checkpoint_path string) {
 
 	mp := make(map[string]any)
 
@@ -41,9 +42,10 @@ func ConstructCheckpoint(dexes []dex.Dex, pools []pool.Pool, latest_block uint64
 	mp["dexes"] = dexesArray
 
 	pools_array := make([]map[string]interface{}, 0)
-	for _, p := range pools {
-		pool_map := make(map[string]interface{})
 
+	fmt.Println("aggregatedPools", aggregatedPools)
+	aggregatedPools.Range(func(key, p interface{}) bool {
+		pool_map := make(map[string]interface{})
 		switch p.(type) {
 		case *pool.UniswapV2Pool:
 			pool_map["pool_variant"] = "UniswapV2"
@@ -55,6 +57,7 @@ func ConstructCheckpoint(dexes []dex.Dex, pools []pool.Pool, latest_block uint64
 			pool_map["token_b_decimals"] = p.(*pool.UniswapV2Pool).TokenBDecimals
 
 			pools_array = append(pools_array, pool_map)
+
 		case *pool.UniswapV3Pool:
 			pool_map["dex_variant"] = "UniswapV3"
 			pool_map["address"] = p.(*pool.UniswapV3Pool).Address
@@ -70,9 +73,44 @@ func ConstructCheckpoint(dexes []dex.Dex, pools []pool.Pool, latest_block uint64
 			pool_map["liquidity_net"] = p.(*pool.UniswapV3Pool).LiquidityNet
 
 			pools_array = append(pools_array, pool_map)
+
 		}
 		pools_array = append(pools_array, pool_map)
-	}
+		return true
+	})
+
+	//for _, p := range pools {
+	//	pool_map := make(map[string]interface{})
+	//
+	//	switch p.(type) {
+	//	case *pool.UniswapV2Pool:
+	//		pool_map["pool_variant"] = "UniswapV2"
+	//		pool_map["address"] = p.(*pool.UniswapV2Pool).Address
+	//		pool_map["token_a"] = p.(*pool.UniswapV2Pool).TokenA
+	//		pool_map["token_b"] = p.(*pool.UniswapV2Pool).TokenB
+	//		pool_map["fee"] = p.(*pool.UniswapV2Pool).Fee
+	//		pool_map["token_a_decimals"] = p.(*pool.UniswapV2Pool).TokenADecimals
+	//		pool_map["token_b_decimals"] = p.(*pool.UniswapV2Pool).TokenBDecimals
+	//
+	//		pools_array = append(pools_array, pool_map)
+	//	case *pool.UniswapV3Pool:
+	//		pool_map["dex_variant"] = "UniswapV3"
+	//		pool_map["address"] = p.(*pool.UniswapV3Pool).Address
+	//		pool_map["token_a"] = p.(*pool.UniswapV3Pool).TokenA
+	//		pool_map["token_a_decimals"] = p.(*pool.UniswapV3Pool).TokenB
+	//		pool_map["token_b"] = p.(*pool.UniswapV3Pool).TokenADecimals
+	//		pool_map["token_b_decimals"] = p.(*pool.UniswapV3Pool).TokenBDecimals
+	//		pool_map["liquidity"] = p.(*pool.UniswapV3Pool).Liquidity
+	//		pool_map["sqrt_price"] = p.(*pool.UniswapV3Pool).SqrtPrice
+	//		pool_map["fee"] = p.(*pool.UniswapV3Pool).Fee
+	//		pool_map["tick"] = p.(*pool.UniswapV3Pool).Tick
+	//		pool_map["tick_spacing"] = p.(*pool.UniswapV3Pool).TickSpacing
+	//		pool_map["liquidity_net"] = p.(*pool.UniswapV3Pool).LiquidityNet
+	//
+	//		pools_array = append(pools_array, pool_map)
+	//	}
+	//	pools_array = append(pools_array, pool_map)
+	//}
 	// Todo: 写入文件
 
 	dataBytes, err := json.Marshal(mp)
