@@ -10,6 +10,7 @@ import (
 	"hello/cfmms/abi_go/UniswapV3Factory"
 	"hello/cfmms/batch_request/batch_request_for_uniswap_v3"
 	"hello/cfmms/pool"
+	"hello/cfmms/utils"
 	"math/big"
 	"sync"
 	"time"
@@ -195,6 +196,8 @@ func decodeResult(temp []common.Address, result interface{}) []pool.UniswapV3Poo
 
 	nums := len(hexString) / oneStructLen
 	var poolDataList []pool.UniswapV3Pool
+
+	// TODO:  tick 数据不准确
 	for i := 1; i < nums+1; i++ {
 		var poolData pool.UniswapV3Pool
 		poolData.Address = temp[i-1]
@@ -204,7 +207,15 @@ func decodeResult(temp []common.Address, result interface{}) []pool.UniswapV3Poo
 		poolData.TokenBDecimals = int64(new(big.Int).SetBytes(common.FromHex(hexString[(i-1)*oneStructLen+192 : (i-1)*oneStructLen+256])).Int64())
 		poolData.Liquidity = new(big.Int).SetBytes(common.FromHex(hexString[(i-1)*oneStructLen+256 : (i-1)*oneStructLen+320]))
 		poolData.SqrtPrice = new(big.Int).SetBytes(common.FromHex(hexString[(i-1)*oneStructLen+320 : (i-1)*oneStructLen+384]))
-		poolData.Tick = new(big.Int).SetBytes(common.FromHex(hexString[(i-1)*oneStructLen+384 : (i-1)*oneStructLen+448]))
+
+		fmt.Println("poolData.SqrtPrice", poolData.SqrtPrice, "poolData.Address", poolData.Address)
+		// tick 为负数处理
+		tickData, isNegative := utils.BigIntIsNegative(common.FromHex(hexString[(i-1)*oneStructLen+384 : (i-1)*oneStructLen+448]))
+
+		poolData.Tick = new(big.Int).SetBytes(tickData)
+		if isNegative {
+			poolData.Tick = new(big.Int).Neg(poolData.Tick)
+		}
 		poolData.TickSpacing = new(big.Int).SetBytes(common.FromHex(hexString[(i-1)*oneStructLen+448 : (i-1)*oneStructLen+512]))
 		poolData.Fee = new(big.Int).SetBytes(common.FromHex(hexString[(i-1)*oneStructLen+512 : (i-1)*oneStructLen+576]))
 		poolData.LiquidityNet = new(big.Int).SetBytes(common.FromHex(hexString[(i-1)*oneStructLen+576 : (i-1)*oneStructLen+640]))
