@@ -73,7 +73,7 @@ func (u *UniswapV3Dex) GetAllPools(client *ethclient.Client, step *big.Int) (any
 
 }
 
-func (u *UniswapV3Dex) GetAllPoolsData(v3pools any, client *ethclient.Client) error {
+func (u *UniswapV3Dex) GetAllPoolsData(v3pools any, client *ethclient.Client) *sync.Map {
 
 	var targetAddress []any
 
@@ -86,6 +86,7 @@ func (u *UniswapV3Dex) GetAllPoolsData(v3pools any, client *ethclient.Client) er
 	chunks := splitSlice(targetAddress, chunkSize)
 
 	wg := &sync.WaitGroup{}
+	poolsWithData := &sync.Map{}
 
 	for _, chunk := range chunks {
 		wg.Add(1)
@@ -100,16 +101,18 @@ func (u *UniswapV3Dex) GetAllPoolsData(v3pools any, client *ethclient.Client) er
 				fmt.Println("batch_request_for_uniswap_v3.GetPoolDataBatchRequest error", err)
 				return
 			}
-			poolsData := decodeResult(result)
+			data := decodeResult(temp, result)
+			for i := 0; i < len(data); i++ {
+				poolsWithData.Store(i, data[i])
+			}
 
-			fmt.Println("result", poolsData)
 		}(chunk)
 		time.Sleep(time.Second / 20)
 	}
 
 	wg.Wait()
 
-	return nil
+	return poolsWithData
 }
 
 func (u *UniswapV3Dex) GetPoolWithBestLiquidity() {
@@ -166,28 +169,6 @@ func (u *UniswapV3Dex) GetAllPoolsFromLogs(currentBlock *big.Int, step *big.Int,
 
 		time.Sleep(time.Second / 20)
 
-		//end := big.NewInt(0).Add(fromBlock, step).Uint64()
-		//
-		//fmt.Println("fromBlock", fromBlock, "currentBlock", currentBlock, "end", end)
-		//
-		//res, err := ins.FilterPoolCreated(&bind.FilterOpts{
-		//	Start:   fromBlock.Uint64(),
-		//	End:     &end,
-		//	Context: nil,
-		//}, nil, nil, nil)
-		//if err != nil {
-		//	fmt.Println("Failed to filterLog contract instance", err)
-		//	return nil
-		//}
-		//for res.Next() {
-		//	if res.Event.Raw.Removed {
-		//		continue
-		//	}
-		//	poolFromEvent := u.NewEmptyPoolFromEvent(res.Event)
-		//	fmt.Println("poolFromEvent", poolFromEvent)
-		//	aggregatedPairs = append(aggregatedPairs, poolFromEvent.(pool.UniswapV3Pool))
-		//}
-
 	}
 
 	wg.Wait()
@@ -204,13 +185,11 @@ func (u *UniswapV3Dex) GetFactoryAddress() common.Address {
 	return u.FactoryAddress
 }
 
-func decodeResult(result interface{}) []pool.UniswapV3Pool {
+func decodeResult(temp []common.Address, result interface{}) []pool.UniswapV3Pool {
 
 	hexString := hex.EncodeToString(result.([]byte))
 
 	hexString = hexString[128:]
-
-	fmt.Println("hexString", hexString)
 
 	oneStructLen := 64 * 10 // solidity struct length
 
@@ -218,6 +197,7 @@ func decodeResult(result interface{}) []pool.UniswapV3Pool {
 	var poolDataList []pool.UniswapV3Pool
 	for i := 1; i < nums+1; i++ {
 		var poolData pool.UniswapV3Pool
+		poolData.Address = temp[i-1]
 		poolData.TokenA = common.HexToAddress(hexString[(i-1)*oneStructLen : (i-1)*oneStructLen+64])
 		poolData.TokenADecimals = int64(new(big.Int).SetBytes(common.FromHex(hexString[(i-1)*oneStructLen+64 : (i-1)*oneStructLen+128])).Int64())
 		poolData.TokenB = common.HexToAddress(hexString[(i-1)*oneStructLen+128 : (i-1)*oneStructLen+192])

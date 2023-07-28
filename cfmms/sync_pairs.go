@@ -39,23 +39,10 @@ func SyncPairsWithThrottle(dexes []dex.Dex, step *big.Int, client *ethclient.Cli
 			}
 
 			// Get all pool data and sync the pool
-			err = dexIns.GetAllPoolsData(pools, client)
-			if err != nil {
-				// Handle error
-				fmt.Println(err)
-				return
-			}
-
-			fmt.Println("pools", pools)
-
-			pools.(*sync.Map).Range(func(key, value any) bool {
-				fmt.Println("key", key)
-				fmt.Println("value", value.(pool.UniswapV3Pool).Liquidity)
-				return true
-			})
+			poolWithData := dexIns.GetAllPoolsData(pools, client)
 
 			// Clean empty pools
-			aggregatedPools = RemoveEmptyPools(pools.(*sync.Map))
+			aggregatedPools = RemoveEmptyPools(poolWithData)
 
 		}(dexIns)
 	}
@@ -73,7 +60,7 @@ func SyncPairsWithStep() {
 
 func RemoveEmptyPools(pools *sync.Map) *sync.Map {
 
-	var cleanedPools *sync.Map
+	var cleanedPools sync.Map
 
 	pools.Range(func(key, p any) bool {
 		switch p.(type) {
@@ -81,13 +68,13 @@ func RemoveEmptyPools(pools *sync.Map) *sync.Map {
 			if p.(*pool.UniswapV2Pool).TokenA != utils.Address0 {
 				cleanedPools.Store(key, p)
 			}
-		case *pool.UniswapV3Pool:
-			if p.(*pool.UniswapV3Pool).TokenA != utils.Address0 {
+		case pool.UniswapV3Pool:
+			if p.(pool.UniswapV3Pool).TokenA != utils.Address0 {
 				cleanedPools.Store(key, p)
 			}
 		}
 		return true
 	})
 
-	return cleanedPools
+	return &cleanedPools
 }

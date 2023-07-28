@@ -80,7 +80,7 @@ func (univ2 *UniswapV2Dex) GetAllPools(client *ethclient.Client, step *big.Int) 
 	return pools, err
 }
 
-func (univ2 *UniswapV2Dex) GetAllPoolsData(v2pools any, client *ethclient.Client) error {
+func (univ2 *UniswapV2Dex) GetAllPoolsData(v2pools any, client *ethclient.Client) *sync.Map {
 	//TODO implement me
 
 	pools := v2pools.(*sync.Map)
@@ -143,11 +143,7 @@ func (univ2 *UniswapV2Dex) GetAllPoolsData(v2pools any, client *ethclient.Client
 
 	wg.Wait()
 
-	// 拿到数据
-	if v, ok := v2poolsData.Load(0); ok {
-		fmt.Println(v)
-	}
-	return nil
+	return v2poolsData
 }
 
 func (univ2 *UniswapV2Dex) GetPoolWithBestLiquidity() {
