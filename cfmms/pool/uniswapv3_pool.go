@@ -3,6 +3,7 @@ package pool
 import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
+	"hello/cfmms/batch_request/batch_request_for_uniswap_v3"
 	"math/big"
 )
 
@@ -21,8 +22,23 @@ type UniswapV3Pool struct {
 }
 
 func (u *UniswapV3Pool) NewFromAddress(address common.Address, client *ethclient.Client) (any, error) {
-	//TODO implement me
-	panic("implement me")
+	//  从地址创建一个新的UniswapV3Pool
+	v3pool := UniswapV3Pool{
+		Address:        address,
+		TokenA:         nil,
+		TokenADecimals: 0,
+		TokenB:         nil,
+		TokenBDecimals: 0,
+		Liquidity:      nil,
+		SqrtPrice:      nil,
+		Fee:            nil,
+		Tick:           nil,
+		TickSpacing:    nil,
+		LiquidityNet:   nil,
+	}
+	v3pool.GetPoolData(address, client)
+
+	return v3pool, nil
 }
 
 func (u *UniswapV3Pool) NewFromEventLog(address common.Address, client *ethclient.Client) {
@@ -51,8 +67,8 @@ func (u *UniswapV3Pool) CalculatePrice() (price float64) {
 }
 
 func (u *UniswapV3Pool) GetPoolData(address common.Address, client *ethclient.Client) error {
-	//TODO implement me
-	panic("implement me")
+	get_v3_pool_data_batch_request := batch_request_for_uniswap_v3.GetV3PoolDataBatchRequest(address, client)
+	return nil
 }
 
 func (u *UniswapV3Pool) GetAddress() any {

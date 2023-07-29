@@ -64,8 +64,8 @@ func RemoveEmptyPools(pools *sync.Map) *sync.Map {
 
 	pools.Range(func(key, p any) bool {
 		switch p.(type) {
-		case *pool.UniswapV2Pool:
-			if p.(*pool.UniswapV2Pool).TokenA != utils.Address0 {
+		case pool.UniswapV2Pool:
+			if p.(pool.UniswapV2Pool).TokenA != utils.Address0 {
 				cleanedPools.Store(key, p)
 			}
 		case pool.UniswapV3Pool:

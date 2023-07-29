@@ -197,7 +197,6 @@ func decodeResult(temp []common.Address, result interface{}) []pool.UniswapV3Poo
 	nums := len(hexString) / oneStructLen
 	var poolDataList []pool.UniswapV3Pool
 
-	// TODO:  tick 数据不准确
 	for i := 1; i < nums+1; i++ {
 		var poolData pool.UniswapV3Pool
 		poolData.Address = temp[i-1]
@@ -208,7 +207,6 @@ func decodeResult(temp []common.Address, result interface{}) []pool.UniswapV3Poo
 		poolData.Liquidity = new(big.Int).SetBytes(common.FromHex(hexString[(i-1)*oneStructLen+256 : (i-1)*oneStructLen+320]))
 		poolData.SqrtPrice = new(big.Int).SetBytes(common.FromHex(hexString[(i-1)*oneStructLen+320 : (i-1)*oneStructLen+384]))
 
-		fmt.Println("poolData.SqrtPrice", poolData.SqrtPrice, "poolData.Address", poolData.Address)
 		// tick 为负数处理
 		tickData, isNegative := utils.BigIntIsNegative(common.FromHex(hexString[(i-1)*oneStructLen+384 : (i-1)*oneStructLen+448]))
 

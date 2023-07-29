@@ -18,7 +18,7 @@ func ConstructCheckpoint(dexes []dex.Dex, aggregatedPools *sync.Map, latest_bloc
 
 	mp := make(map[string]any)
 
-	mp["checkpoint_timestamp"] = time.Now()
+	mp["checkpoint_timestamp"] = time.Now().Unix()
 	mp["block_number"] = latest_block
 
 	// Add dexes to checkpoint
@@ -43,18 +43,17 @@ func ConstructCheckpoint(dexes []dex.Dex, aggregatedPools *sync.Map, latest_bloc
 
 	pools_array := make([]map[string]interface{}, 0)
 
-	fmt.Println("aggregatedPools", aggregatedPools)
 	aggregatedPools.Range(func(key, p interface{}) bool {
 		pool_map := make(map[string]interface{})
 		switch p.(type) {
-		case *pool.UniswapV2Pool:
+		case pool.UniswapV2Pool:
 			pool_map["pool_variant"] = "UniswapV2"
-			pool_map["address"] = p.(*pool.UniswapV2Pool).Address
-			pool_map["token_a"] = p.(*pool.UniswapV2Pool).TokenA
-			pool_map["token_b"] = p.(*pool.UniswapV2Pool).TokenB
-			pool_map["fee"] = p.(*pool.UniswapV2Pool).Fee
-			pool_map["token_a_decimals"] = p.(*pool.UniswapV2Pool).TokenADecimals
-			pool_map["token_b_decimals"] = p.(*pool.UniswapV2Pool).TokenBDecimals
+			pool_map["address"] = p.(pool.UniswapV2Pool).Address
+			pool_map["token_a"] = p.(pool.UniswapV2Pool).TokenA
+			pool_map["token_b"] = p.(pool.UniswapV2Pool).TokenB
+			pool_map["fee"] = p.(pool.UniswapV2Pool).Fee
+			pool_map["token_a_decimals"] = p.(pool.UniswapV2Pool).TokenADecimals
+			pool_map["token_b_decimals"] = p.(pool.UniswapV2Pool).TokenBDecimals
 
 			pools_array = append(pools_array, pool_map)
 
