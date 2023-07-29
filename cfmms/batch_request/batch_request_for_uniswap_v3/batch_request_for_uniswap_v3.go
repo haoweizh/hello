@@ -44,7 +44,7 @@ func GetPoolDataBatchRequest(targetAddress []common.Address, client *ethclient.C
 
 }
 
-func GetV3PoolDataBatchRequest(client *ethclient.Client) error {
+func GetV3PoolDataBatchRequest(address common.Address, client *ethclient.Client) error {
 
 	return nil
 }
