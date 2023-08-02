@@ -295,7 +295,7 @@ func placeTurtleShort(account *model.Account, orderType string, data *model.Turt
 		amount = setting.GridAmount
 		function = model.Close
 	} else if data.Big == -1 {
-		amount = data.AmountMin
+		amount = data.Amount / 2
 	}
 	price := data.LowDaysFar
 	priceChange := 2 * data.N
