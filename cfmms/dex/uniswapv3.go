@@ -13,7 +13,6 @@ import (
 	"hello/cfmms/utils"
 	"math/big"
 	"sync"
-	"time"
 )
 
 var (
@@ -61,7 +60,7 @@ func (u *UniswapV3Dex) GetAllPools(client *ethclient.Client, step *big.Int) (any
 	currentBlock, err := client.BlockNumber(context.Background())
 
 	// FIXME: 测试用
-	currentBlock = uint64(12379621)
+	//currentBlock = uint64(12379621)
 
 	if err != nil {
 		fmt.Println("client.BlockNumber error")
@@ -108,7 +107,7 @@ func (u *UniswapV3Dex) GetAllPoolsData(v3pools any, client *ethclient.Client) *s
 			}
 
 		}(chunk)
-		time.Sleep(time.Second / 20)
+		//time.Sleep(time.Second / 20)
 	}
 
 	wg.Wait()
@@ -168,7 +167,7 @@ func (u *UniswapV3Dex) GetAllPoolsFromLogs(currentBlock *big.Int, step *big.Int,
 
 		}(fromBlock, step)
 
-		time.Sleep(time.Second / 20)
+		//time.Sleep(time.Second / 20)
 
 	}
 

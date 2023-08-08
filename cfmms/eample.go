@@ -5,13 +5,14 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"hello/cfmms/dex"
+	"hello/cfmms/pool"
 	"math/big"
 )
 
 func SyncPairsTest() {
 
-	client, err := ethclient.Dial("https://eth-mainnet.g.alchemy.com/v2/p6QKOpJrOhTeRZ7OT1ufLKVCsqEoKzMG")
-	//client, err := ethclient.Dial("http://localhost:8545")
+	//client, err := ethclient.Dial("https://eth-mainnet.g.alchemy.com/v2/p6QKOpJrOhTeRZ7OT1ufLKVCsqEoKzMG")
+	client, err := ethclient.Dial("http://188.40.132.112:8545")
 	if err != nil {
 		fmt.Println(fmt.Sprintf("Failed to connect to the Ethereum client: %v", err))
 	}
@@ -29,5 +30,19 @@ func SyncPairsTest() {
 	})
 
 	SyncPairs(initDex, client, "./")
+	//v2pool := CreateNewPool(&pool.UniswapV2Pool{
+	//	Address: common.HexToAddress("0x88d97d199b9ed37c29d846d00d443de980832a22"),
+	//}, client)
+	//fmt.Println(v2pool)
+}
+
+func CreateNewPool(poolType pool.Pool, client *ethclient.Client) any {
+
+	poolIns, err := poolType.NewFromAddress(poolType.GetAddress(), client)
+	if err != nil {
+		fmt.Println("NewFromAddress error")
+		return nil
+	}
+	return poolIns
 
 }

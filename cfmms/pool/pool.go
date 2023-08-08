@@ -3,6 +3,7 @@ package pool
 import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
+	"math/big"
 )
 
 type Pool interface {
@@ -13,11 +14,11 @@ type Pool interface {
 	// TODO: add more functions
 	DataIsPopulated() bool
 	SyncPool() (err error)
-	CalculatePrice() (price float64)
-	GetPoolData(address common.Address, client *ethclient.Client) error
-	GetAddress() any
-	SimulateSwap()
-	SimulateSwapMut()
+	CalculatePrice(baseToken common.Address)
+	GetPoolData(client *ethclient.Client) error
+	GetAddress() common.Address
+	SimulateSwap(tokenIn common.Address, amoutnIn *big.Int)
+	SimulateSwapMut(tokenIn common.Address, amountIn *big.Int) uint64
 }
 
 func ConvertToDecimals() {
