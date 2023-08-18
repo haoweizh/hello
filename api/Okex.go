@@ -40,12 +40,12 @@ func maintainChannelOKEX(subscribes []interface{}) {
 	if !channelMaintainingOKEX {
 		channelMaintainingOKEX = true
 		go func() {
-			for true {
+			for {
 				time.Sleep(time.Minute * 5)
 				reSubscribe(subscribes)
 			}
 		}()
-		for true {
+		for {
 			time.Sleep(time.Second * 25)
 			accounts := model.AppConfig.GetAccounts(model.OKEX)
 			for _, account := range accounts {
@@ -355,7 +355,7 @@ func handleBooksUpdate(symbol string, data map[string]interface{}, bidAsk *model
 	newBids := make([]model.Tick, 0)
 	i := 0
 	j := 0
-	for true {
+	for {
 		if j >= len(bidAskUpdate.Asks) {
 			if i < len(bidAsk.Asks) {
 				newAsks = append(newAsks, bidAsk.Asks[i])
@@ -392,7 +392,7 @@ func handleBooksUpdate(symbol string, data map[string]interface{}, bidAsk *model
 	}
 	i = 0
 	j = 0
-	for true {
+	for {
 		if j >= len(bidAskUpdate.Bids) {
 			if i < len(bidAsk.Bids) {
 				newBids = append(newBids, bidAsk.Bids[i])
