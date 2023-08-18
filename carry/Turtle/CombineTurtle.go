@@ -37,6 +37,10 @@ var ProcessCombineTurtle = func(settingCombine *model.Setting, tick *model.BidAs
 		util.Notice(fmt.Sprintf(`combine return no normal setting from %s %s`, market, symbol))
 		return
 	}
+	if settingNormal.Chance == 0 && settingNormal.SymbolRelated == model.SettingTurtleRemoved &&
+		settingCombine.Chance == 0 && settingCombine.SymbolRelated == model.SettingTurtleRemoved {
+		return
+	}
 	if (settingCombine.Chance != 0 && settingCombine.PriceX == 0) || (settingNormal.Chance != 0 && settingNormal.PriceX == 0) {
 		util.Notice(fmt.Sprintf(`combine return no last priceX %s %s %d %e %d %e`,
 			market, symbol, settingCombine.Chance, settingCombine.PriceX, settingNormal.Chance, settingNormal.PriceX))
