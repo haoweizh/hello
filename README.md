@@ -1,45 +1,27 @@
 hello
+(注： CEX相关兼容性改造工作未在本文中进行描述)
 
+# Entities
+1. Chain: 分为DriverEthereum/DriverBSC等，封装了各个chain的读写功能。可能包括account balance查询、合约调用、block信息查询等
+注： Chain的信息可以存DB，这样程序重启后从DB中可以获取同步了多少块的信息
+2. Wallet: 每个Chain对应一个account，提供账户信息保存、更新功能
+3. Market: 包括MarketUniSwapV3, MarketSushiSwap等，根据不同的market就能对应不同的SDK，用于调用对应的Driver
+4. Tick: 包括market, coinLeft, coinRight, time(用于表明tick新鲜度), []bid, []ask等
+5. TickPool: 提供tick检索获取、写入更新功能
+6. Ring: 可获利交易环
+7. Setting: 同现有setting设计，用于限制搬砖的范围
 
-# 环境搭建
-1. rust (for foundry)
-2. nodejs (for openzeppelin)
-3. solidity (for solidity) 
-4. geth (for ethereum)
-5. prmsym (for ethereum)
+# Function models
+1. BlockMonitor 
+   - 主动轮询或订阅被动获取chain上block信息
+   - 调用chain的api计算出tick
+   - 将tick放入TickPool成功后，发送给TickChannel由相应的channel handle
+2. RingWorker
+    - 监听TickChannel,基于获取的Tick尝试build ring
+    - 执行ring
+3. RingPostHandler
+   - 基于执行ring的结果和wallet信息处理上次下单的后续，包括取消、找平。
+   - RingPostHandler的触发可能是由chain block打包事件发送到channel触发，也可能根据时间或者某种下单行为触发。总之需要考虑wallet信息的实时同步，可能需要对RingWorker等进行加锁
 
-
-
-
-# 合约框架
-## foundry 文档
-https://learnblockchain.cn/docs/foundry/i18n/zh/index.html
-
-
-## foundry init
-```
- forge init --force --no-git
-```
-
-
-## foundry test
-```
- forge test -vvvvv  // v越多，输出的信息越详细 最多5个
-```
-
-
-## 通过合约ABI生成go文件
-```
-   ./abigen --abi=/Users/uuuliu/GolandProjects/Go/hello/contracts/UniswapV3/UniswapV3.abi --pkg=UniswapV3 --out=UniswapV3.go
-```
-
-
-## geth 启动命令
-```
-    ./geth --mainnet --datadir "/Users/uuuliu/Downloads/work/ethereum/data" --http --http.api="eth,web3,net,debug" --authrpc.vhosts="localhost" --authrpc.jwtsecret=/Users/uuuliu/Downloads/work/ethereum/consensus/prysm/jwt.hex
-```
-
-## prysm 启动命令
-```
-    ./prysm.sh beacon-chain --checkpoint-sync-url=https://sync.invis.tools --genesis-beacon-api-url=https://sync.invis.tools  --execution-endpoint=http://localhost:8551 --jwt-secret=/Users/uuuliu/Downloads/work/ethereum/consensus/prysm/jwt.hex
-```
+# TBD
+1. 是否通过flash bot进行下单，该决策会影响RingPostHandler的机制设计
