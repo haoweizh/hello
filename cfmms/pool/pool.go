@@ -14,7 +14,7 @@ type Pool interface {
 	// TODO: add more functions
 	DataIsPopulated() bool
 	SyncPool() (err error)
-	CalculatePrice(baseToken common.Address)
+	CalculatePrice(baseToken common.Address) string
 	GetPoolData(client *ethclient.Client) error
 	GetAddress() common.Address
 	SimulateSwap(tokenIn common.Address, amoutnIn *big.Int)

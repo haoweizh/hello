@@ -3,13 +3,16 @@ package pool
 import (
 	"encoding/hex"
 	"fmt"
+	v3sdkUtils "github.com/daoleno/uniswapv3-sdk/utils"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/shopspring/decimal"
 	"hello/cfmms/abi_go/Erc20"
 	"hello/cfmms/abi_go/UniswapV3PoolSol"
 	"hello/cfmms/batch_request/batch_request_for_uniswap_v3"
 	"hello/cfmms/utils"
+	"math"
 	"math/big"
 )
 
@@ -145,9 +148,27 @@ func (u *UniswapV3Pool) GetAddress() common.Address {
 	return u.Address
 }
 
-func (u *UniswapV3Pool) CalculatePrice(baseToken common.Address) {
-	//TODO implement me
-	panic("implement me")
+func (u *UniswapV3Pool) CalculatePrice(baseToken common.Address) float64 {
+
+	tick, _ := v3sdkUtils.GetTickAtSqrtRatio(u.SqrtPrice)
+	fmt.Println("tick", tick)
+	shift := u.TokenADecimals - u.TokenBDecimals
+	price := 0.0
+	b := decimal.NewFromFloat(1.0001)
+	if shift < 0 {
+
+		price, _ = b.Pow(decimal.NewFromFloat(float64(tick))).Div(decimal.NewFromFloat(math.Pow(10, float64(-shift)))).Float64()
+	} else {
+		price, _ = b.Pow(decimal.NewFromFloat(float64(tick))).Mul(decimal.NewFromFloat(math.Pow(10, float64(shift)))).Float64()
+	}
+
+	if baseToken == u.TokenA {
+		return price
+	} else {
+		return 1.0 / price
+	}
+	return price
+
 }
 
 func (u *UniswapV3Pool) SimulateSwap(tokenIn common.Address, amoutnIn *big.Int) {
@@ -325,25 +346,6 @@ func (u *UniswapV3Pool) updatePoolFromSwapLog(client *ethclient.Client) {
 //Returns reserve0, reserve1
 
 func (u *UniswapV3Pool) decodeSwapLog(log any) {
-	//	let log_data = decode(
-	//		&[
-	//			ParamType::Int(256),  //amount0
-	//		ParamType::Int(256),  //amount1
-	//		ParamType::Uint(160), //sqrtPriceX96
-	//		ParamType::Uint(128), //liquidity
-	//		ParamType::Int(24),
-	//],
-	//	&swap_log.data,
-	//	)
-	//	.expect("Could not get log data");
-	//
-	//	let amount_0 = I256::from_raw(log_data[1].to_owned().into_int().unwrap());
-	//	let amount_1 = I256::from_raw(log_data[1].to_owned().into_int().unwrap());
-	//	let sqrt_price = log_data[2].to_owned().into_uint().unwrap();
-	//	let liquidity = log_data[3].to_owned().into_uint().unwrap().as_u128();
-	//	let tick = log_data[4].to_owned().into_uint().unwrap().as_u32() as i32;
-	//
-	//	(amount_0, amount_1, sqrt_price, liquidity, tick)
 
 	return
 }

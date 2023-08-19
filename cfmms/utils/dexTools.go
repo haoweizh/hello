@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"fmt"
 	"github.com/ethereum/go-ethereum/common"
 	"math"
 	"math/big"
@@ -72,99 +73,186 @@ func q16ToF64(x uint64) float64 {
 	return float64(x) / math.Pow(2, 16)
 }
 func Div64X64(x, y *big.Int) (*big.Int, error) {
-	if y.Sign() != 0 {
-		var answer *big.Int
+	//if y.Sign() != 0 {
+	//	var answer *big.Int
+	//
+	//	if x.Cmp(U256_0XFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF) <= 0 {
+	//		answer = new(big.Int).Mul(x, new(big.Int).Lsh(big.NewInt(1), 64))
+	//		answer = answer.Div(answer, y)
+	//	} else {
+	//		msb := U256_192
+	//		xc := new(big.Int).Rsh(x, 192)
+	//
+	//		if xc.Cmp(U256_0X100000000) >= 0 {
+	//			xc = new(big.Int).Rsh(xc, 32)
+	//			msb = msb.Add(msb, U256_32)
+	//		}
+	//
+	//		if xc.Cmp(U256_0X10000) >= 0 {
+	//			xc = new(big.Int).Rsh(xc, 16)
+	//			msb = msb.Add(msb, U256_16)
+	//		}
+	//
+	//		if xc.Cmp(U256_0X100) >= 0 {
+	//			xc = new(big.Int).Rsh(xc, 8)
+	//			msb = msb.Add(msb, U256_8)
+	//		}
+	//
+	//		if xc.Cmp(U256_16) >= 0 {
+	//			xc = new(big.Int).Rsh(xc, 4)
+	//			msb = msb.Add(msb, U256_4)
+	//		}
+	//
+	//		if xc.Cmp(U256_4) >= 0 {
+	//			xc = new(big.Int).Rsh(xc, 2)
+	//			msb = msb.Add(msb, U256_2)
+	//		}
+	//
+	//		if xc.Cmp(U256_2) >= 0 {
+	//			msb = msb.Add(msb, big.NewInt(1))
+	//		}
+	//
+	//		exp := new(big.Int).Sub(U256_255, msb)
+	//		exp = new(big.Int).Lsh(exp, 192)
+	//
+	//		num := new(big.Int).Lsh(big.NewInt(1), 191)
+	//		num = new(big.Int).Sub(num, new(big.Int).SetUint64(1))
+	//
+	//		tmep := msb.Sub(msb, U256_191).Uint64()
+	//
+	//		den := new(big.Int).Rsh(y.Sub(y, big.NewInt(1)), uint(tmep))
+	//
+	//		den = new(big.Int).Add(den, big.NewInt(1))
+	//
+	//		answer = new(big.Int).Mul(x, exp)
+	//		answer = answer.Div(answer, new(big.Int).Add(den, num))
+	//	}
+	//
+	//	// 判断是否溢出
+	//	overflow := new(big.Int).Sub(answer, U256_0XFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF)
+	//	if overflow.Cmp(big.NewInt(0)) > 0 {
+	//		return nil, &ArithmeticError{msg: "ShadowOverflow"}
+	//	}
+	//
+	//	hi := new(big.Int).Mul(answer, new(big.Int).Rsh(y, 128))
+	//	lo := new(big.Int).Mul(answer, new(big.Int).And(y, U256_0XFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF))
+	//
+	//	xh := new(big.Int).Rsh(x, 192)
+	//	xl := new(big.Int).Lsh(x, 64)
+	//
+	//	if xl.Cmp(lo) < 0 {
+	//		xh = xh.Sub(xh, big.NewInt(1))
+	//	}
+	//
+	//	xl = xl.Sub(xl, lo)
+	//	lo = lo.Lsh(hi, 128)
+	//
+	//	if xl.Cmp(lo) < 0 {
+	//		xh = xh.Sub(xh, big.NewInt(1))
+	//	}
+	//
+	//	xl = xl.Sub(xl, lo)
+	//
+	//	if xh.Cmp(new(big.Int).Rsh(hi, 128)) != 0 {
+	//		return nil, &ArithmeticError{msg: "RoundingError"}
+	//	}
+	//
+	//	answer = answer.Add(answer, new(big.Int).Div(xl, y))
+	//	// 判断是否溢出
+	//	overflow = new(big.Int).Sub(answer, U256_0XFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF)
+	//	if overflow.Cmp(big.NewInt(0)) > 0 {
+	//		return nil, &ArithmeticError{msg: "ShadowOverflow"}
+	//	}
+	//
+	//	return answer, nil
+	//}
+	//
+	//return nil, &ArithmeticError{msg: "YIsZero"}
 
-		if x.Cmp(U256_0XFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF) <= 0 {
-			answer = new(big.Int).Mul(x, new(big.Int).Lsh(big.NewInt(1), 64))
-			answer = answer.Div(answer, y)
+	zero := big.NewInt(0)
+	one := big.NewInt(1)
+	maxUint256 := new(big.Int).SetUint64(0xFFFFFFFFFFFFFFFF)
+	answer := new(big.Int)
+
+	if y.Cmp(zero) != 0 {
+		msb := new(big.Int)
+		xc := new(big.Int).Rsh(x, 192)
+
+		if x.Cmp(maxUint256) <= 0 {
+			answer.Lsh(x, 64)
+			answer.Div(answer, y)
 		} else {
-			msb := U256_192
-			xc := new(big.Int).Rsh(x, 192)
+			msb.SetUint64(192)
 
-			if xc.Cmp(U256_0X100000000) >= 0 {
-				xc = new(big.Int).Rsh(xc, 32)
-				msb = msb.Add(msb, U256_32)
+			if xc.Cmp(big.NewInt(0x100000000)) >= 0 {
+				xc.Rsh(xc, 32)
+				msb.Add(msb, big.NewInt(32))
 			}
 
-			if xc.Cmp(U256_0X10000) >= 0 {
-				xc = new(big.Int).Rsh(xc, 16)
-				msb = msb.Add(msb, U256_16)
+			if xc.Cmp(big.NewInt(0x10000)) >= 0 {
+				xc.Rsh(xc, 16)
+				msb.Add(msb, big.NewInt(16))
 			}
 
-			if xc.Cmp(U256_0X100) >= 0 {
-				xc = new(big.Int).Rsh(xc, 8)
-				msb = msb.Add(msb, U256_8)
+			if xc.Cmp(big.NewInt(0x100)) >= 0 {
+				xc.Rsh(xc, 8)
+				msb.Add(msb, big.NewInt(8))
 			}
 
-			if xc.Cmp(U256_16) >= 0 {
-				xc = new(big.Int).Rsh(xc, 4)
-				msb = msb.Add(msb, U256_4)
+			if xc.Cmp(big.NewInt(0x10)) >= 0 {
+				xc.Rsh(xc, 4)
+				msb.Add(msb, big.NewInt(4))
 			}
 
-			if xc.Cmp(U256_4) >= 0 {
-				xc = new(big.Int).Rsh(xc, 2)
-				msb = msb.Add(msb, U256_2)
+			if xc.Cmp(big.NewInt(0x4)) >= 0 {
+				xc.Rsh(xc, 2)
+				msb.Add(msb, big.NewInt(2))
 			}
 
-			if xc.Cmp(U256_2) >= 0 {
-				msb = msb.Add(msb, big.NewInt(1))
+			if xc.Cmp(big.NewInt(0x2)) >= 0 {
+				msb.Add(msb, one)
 			}
 
-			exp := new(big.Int).Sub(U256_255, msb)
-			exp = new(big.Int).Lsh(exp, 192)
-
-			num := new(big.Int).Lsh(big.NewInt(1), 191)
-			num = new(big.Int).Sub(num, new(big.Int).SetUint64(1))
-
-			tmep := msb.Sub(msb, U256_191).Uint64()
-
-			den := new(big.Int).Rsh(y.Sub(y, big.NewInt(1)), uint(tmep))
-
-			den = new(big.Int).Add(den, big.NewInt(1))
-
-			answer = new(big.Int).Mul(x, exp)
-			answer = answer.Div(answer, new(big.Int).Add(den, num))
+			answer.Lsh(x, uint(255-msb.Uint64()))
+			yMinusOne := new(big.Int).Sub(y, one)
+			answer.Div(answer, new(big.Int).Add(yMinusOne.Rsh(yMinusOne, uint(msb.Uint64()-191)), one))
 		}
 
-		// 判断是否溢出
-		overflow := new(big.Int).Sub(answer, U256_0XFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF)
-		if overflow.Cmp(big.NewInt(0)) > 0 {
-			return nil, &ArithmeticError{msg: "ShadowOverflow"}
+		if answer.Cmp(maxUint256) > 0 {
+			return nil, fmt.Errorf("ShadowOverflow")
 		}
 
 		hi := new(big.Int).Mul(answer, new(big.Int).Rsh(y, 128))
-		lo := new(big.Int).Mul(answer, new(big.Int).And(y, U256_0XFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF))
+		lo := new(big.Int).Mul(answer, new(big.Int).And(y, maxUint256))
 
-		xh := new(big.Int).Rsh(x, 192)
 		xl := new(big.Int).Lsh(x, 64)
+		xl.Sub(xl, lo)
 
 		if xl.Cmp(lo) < 0 {
-			xh = xh.Sub(xh, big.NewInt(1))
+			hi.Sub(hi, one)
 		}
 
-		xl = xl.Sub(xl, lo)
-		lo = lo.Lsh(hi, 128)
+		lo.Mul(hi, new(big.Int).Lsh(y, 128))
+		xh := new(big.Int).Rsh(x, 192)
 
 		if xl.Cmp(lo) < 0 {
-			xh = xh.Sub(xh, big.NewInt(1))
+			xh.Sub(xh, one)
 		}
 
-		xl = xl.Sub(xl, lo)
+		xl.Sub(xl, lo)
 
 		if xh.Cmp(new(big.Int).Rsh(hi, 128)) != 0 {
-			return nil, &ArithmeticError{msg: "RoundingError"}
+			return nil, fmt.Errorf("RoundingError")
 		}
 
-		answer = answer.Add(answer, new(big.Int).Div(xl, y))
-		// 判断是否溢出
-		overflow = new(big.Int).Sub(answer, U256_0XFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF)
-		if overflow.Cmp(big.NewInt(0)) > 0 {
-			return nil, &ArithmeticError{msg: "ShadowOverflow"}
+		answer.Add(answer, new(big.Int).Div(xl, y))
+
+		if answer.Cmp(maxUint256) > 0 {
+			return nil, fmt.Errorf("ShadowOverflow")
 		}
 
 		return answer, nil
 	}
 
-	return nil, &ArithmeticError{msg: "YIsZero"}
+	return nil, fmt.Errorf("YIsZero")
 }

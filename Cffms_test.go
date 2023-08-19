@@ -12,6 +12,7 @@ import (
 	"hello/cfmms/batch_request/batch_request_for_uniswap_v2"
 	"hello/cfmms/dex"
 	"hello/cfmms/pool"
+	"hello/cfmms/utils"
 	"log"
 	"math/big"
 	"testing"
@@ -141,7 +142,43 @@ func Test_SyncPairsTest(t *testing.T) {
 func Test_Progressbar(t *testing.T) {
 	bar := progressbar.Default(100)
 	for i := 0; i < 100; i++ {
+
 		bar.Add(1)
 		time.Sleep(40 * time.Millisecond)
 	}
+}
+
+func Test_PriceV2(t *testing.T) {
+	client, err := ethclient.Dial("http://188.40.132.112:8545")
+	//client, err := ethclient.Dial("ws://188.40.132.112:8546")
+	if err != nil {
+		fmt.Println(fmt.Sprintf("Failed to connect to the Ethereum client: %v", err))
+	}
+
+	cfmms.CalculatePrice(client)
+}
+
+func Test_PriceV3(t *testing.T) {
+	client, err := ethclient.Dial("http://188.40.132.112:8545")
+	if err != nil {
+		fmt.Println(fmt.Sprintf("Failed to connect to the Ethereum client: %v", err))
+	}
+
+	cfmms.CalculatePriceV3(client)
+}
+
+func Test_Fraction(t *testing.T) {
+	deno := big.NewInt(0)
+	deno.SetString("45649181384567604151811", 10)
+	num := big.NewInt(0)
+	num.SetString("15815507900982712632", 10)
+	nul := utils.Fraction{
+		Denominator: deno,
+		Numerator:   num,
+	}
+
+	fmt.Println(nul.Quotient())
+	fmt.Println(nul.Remainder())
+	fmt.Println(nul.ToFixed(19))
+	fmt.Println(nul.ToSignificant(8))
 }
