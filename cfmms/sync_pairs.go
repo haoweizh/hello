@@ -1,0 +1,80 @@
+package cfmms
+
+import (
+	"context"
+	"fmt"
+	"github.com/ethereum/go-ethereum/ethclient"
+	"hello/cfmms/dex"
+	"hello/cfmms/pool"
+	"hello/cfmms/utils"
+	"math/big"
+	"sync"
+)
+
+func SyncPairs(dexes []dex.Dex, client *ethclient.Client, checkpoint_path string) {
+
+	SyncPairsWithThrottle(dexes, big.NewInt(10000), client, checkpoint_path)
+}
+
+func SyncPairsWithThrottle(dexes []dex.Dex, step *big.Int, client *ethclient.Client, checkpoint_path string) {
+
+	wg := sync.WaitGroup{}
+
+	currentBlock, _ := client.BlockNumber(context.Background())
+
+	var aggregatedPools *sync.Map
+
+	for _, dexIns := range dexes {
+		wg.Add(1)
+
+		go func(dexIns dex.Dex) {
+			defer wg.Done()
+
+			// Get all pools from the dex
+			pools, err := dexIns.GetAllPools(client, step)
+			if err != nil {
+				// Handle error
+				fmt.Println("GetAllpools err", err)
+				return
+			}
+
+			// Get all pool data and sync the pool
+			poolWithData := dexIns.GetAllPoolsData(pools, client)
+
+			// Clean empty pools
+			aggregatedPools = RemoveEmptyPools(poolWithData)
+
+		}(dexIns)
+	}
+	wg.Wait()
+
+	if checkpoint_path != "" {
+		ConstructCheckpoint(dexes, aggregatedPools, currentBlock, checkpoint_path)
+	}
+
+}
+
+func SyncPairsWithStep() {
+
+}
+
+func RemoveEmptyPools(pools *sync.Map) *sync.Map {
+
+	var cleanedPools sync.Map
+
+	pools.Range(func(key, p any) bool {
+		switch p.(type) {
+		case pool.UniswapV2Pool:
+			if p.(pool.UniswapV2Pool).TokenA != utils.Address0 {
+				cleanedPools.Store(key, p)
+			}
+		case pool.UniswapV3Pool:
+			if p.(pool.UniswapV3Pool).TokenA != utils.Address0 {
+				cleanedPools.Store(key, p)
+			}
+		}
+		return true
+	})
+
+	return &cleanedPools
+}

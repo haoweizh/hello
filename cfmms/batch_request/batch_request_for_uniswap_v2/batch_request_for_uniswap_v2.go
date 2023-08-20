@@ -3,6 +3,7 @@ package batch_request_for_uniswap_v2
 import (
 	"context"
 	"encoding/hex"
+	"fmt"
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
@@ -14,7 +15,7 @@ import (
 	"strings"
 )
 
-func Get_pairs_batch_request(factory common.Address, from, setp *big.Int, client *ethclient.Client) []string {
+func GetPairsBatchRequest(factory common.Address, from, setp *big.Int, client *ethclient.Client) []string {
 	var pairs []string
 
 	// TODO: eth_call 获取合约返回值
@@ -24,10 +25,18 @@ func Get_pairs_batch_request(factory common.Address, from, setp *big.Int, client
 	argsCodeAbi, err := abi.JSON(strings.NewReader(GetUniswapV2PairsBatchRequest.GetUniswapV2PairsBatchRequestMetaData.ABI))
 
 	if err != nil {
-		log.Fatal(err)
+		fmt.Println("abi.JSON error")
+		return nil
+
 	}
 
-	argsByteCode, _ := argsCodeAbi.Pack("", from, setp, factory)
+	fmt.Println("from", from, "step", setp)
+
+	argsByteCode, err := argsCodeAbi.Pack("", from, setp, factory)
+	if err != nil {
+		fmt.Println("argsCodeAbi.Pack error", err)
+		return nil
+	}
 
 	callMsg := ethereum.CallMsg{
 		Data:       append(common.FromHex(byteCode), argsByteCode...),
@@ -37,7 +46,8 @@ func Get_pairs_batch_request(factory common.Address, from, setp *big.Int, client
 	// 执行Eth_call
 	result, err := client.CallContract(context.Background(), callMsg, nil)
 	if err != nil {
-		log.Fatal(err)
+		fmt.Println("client.CallContract error", err)
+		return nil
 	}
 
 	hexString := hex.EncodeToString(result)
@@ -47,6 +57,7 @@ func Get_pairs_batch_request(factory common.Address, from, setp *big.Int, client
 		pairs = append(pairs, hexString[i:i+64])
 	}
 
+	//fmt.Println("pairs", pairs)
 	return pairs
 
 }
@@ -62,7 +73,7 @@ type PoolData struct {
 }
 
 // 一次最多请求数量127   len(pool) <= 127
-func Get_pool_data_batch_request(pool []string, client *ethclient.Client) []PoolData {
+func Get_pool_data_batch_request(pool []string, client *ethclient.Client) []byte {
 
 	var target_addresses []common.Address
 
@@ -70,15 +81,21 @@ func Get_pool_data_batch_request(pool []string, client *ethclient.Client) []Pool
 		target_addresses = append(target_addresses, common.HexToAddress(v))
 	}
 
+	fmt.Println("一次获取数量", len(target_addresses))
 	byteCode := GetUniswapV2PoolDataBatchRequest.GetUniswapV2PoolDataBatchRequestMetaData.Bin
 
 	argsCodeAbi, err := abi.JSON(strings.NewReader(GetUniswapV2PoolDataBatchRequest.GetUniswapV2PoolDataBatchRequestMetaData.ABI))
 
 	if err != nil {
-		log.Fatal(err)
+		fmt.Println("abi.JSON error", err)
+		return nil
 	}
 
-	argsByteCode, _ := argsCodeAbi.Pack("", target_addresses)
+	argsByteCode, err := argsCodeAbi.Pack("", target_addresses)
+	if err != nil {
+		fmt.Println("argsCodeAbi.Pack error", err)
+		return nil
+	}
 
 	callMsg := ethereum.CallMsg{
 		Data:       append(common.FromHex(byteCode), argsByteCode...),
@@ -88,68 +105,79 @@ func Get_pool_data_batch_request(pool []string, client *ethclient.Client) []Pool
 	// 执行 Eth_call
 	result, err := client.CallContract(context.Background(), callMsg, nil)
 	if err != nil {
-		log.Fatal(err)
+		fmt.Println("client.CallContract2 error", err)
+		return nil
 	}
 
-	hexString := hex.EncodeToString(result)
+	//  TODO: 返回给数据给外部处理  内部处理数据 设计包的循环引用
 
-	hexString = hexString[128:]
+	return result
 
-	oneStructLen := 64 * 6
-
-	nums := len(hexString) / oneStructLen
-	var poolDataList []PoolData
-	for i := 1; i < nums+1; i++ {
-		var poolData PoolData
-		poolData.TokenA = common.HexToAddress(hexString[(i-1)*oneStructLen : (i-1)*oneStructLen+64])
-		poolData.TokenADecimals = int64(new(big.Int).SetBytes(common.FromHex(hexString[(i-1)*oneStructLen+64 : (i-1)*oneStructLen+128])).Int64())
-		poolData.TokenB = common.HexToAddress(hexString[(i-1)*oneStructLen+128 : (i-1)*oneStructLen+192])
-		poolData.TokenBDecimals = int64(new(big.Int).SetBytes(common.FromHex(hexString[(i-1)*oneStructLen+192 : (i-1)*oneStructLen+256])).Int64())
-		poolData.Reserve0 = new(big.Int).SetBytes(common.FromHex(hexString[(i-1)*oneStructLen+256 : (i-1)*oneStructLen+320]))
-		poolData.Reserve1 = new(big.Int).SetBytes(common.FromHex(hexString[(i-1)*oneStructLen+320 : (i-1)*oneStructLen+384]))
-		poolData.Fee = 300
-		poolDataList = append(poolDataList, poolData)
-	}
-
-	return poolDataList
+	//hexString := hex.EncodeToString(result)
+	//hexString = hexString[128:]
+	//
+	//oneStructLen := 64 * 6
+	//
+	//nums := len(hexString) / oneStructLen
+	//var poolDataList []PoolData
+	//for i := 1; i < nums+1; i++ {
+	//	var poolData PoolData
+	//	poolData.TokenA = common.HexToAddress(hexString[(i-1)*oneStructLen : (i-1)*oneStructLen+64])
+	//	poolData.TokenADecimals = int64(new(big.Int).SetBytes(common.FromHex(hexString[(i-1)*oneStructLen+64 : (i-1)*oneStructLen+128])).Int64())
+	//	poolData.TokenB = common.HexToAddress(hexString[(i-1)*oneStructLen+128 : (i-1)*oneStructLen+192])
+	//	poolData.TokenBDecimals = int64(new(big.Int).SetBytes(common.FromHex(hexString[(i-1)*oneStructLen+192 : (i-1)*oneStructLen+256])).Int64())
+	//	poolData.Reserve0 = new(big.Int).SetBytes(common.FromHex(hexString[(i-1)*oneStructLen+256 : (i-1)*oneStructLen+320]))
+	//	poolData.Reserve1 = new(big.Int).SetBytes(common.FromHex(hexString[(i-1)*oneStructLen+320 : (i-1)*oneStructLen+384]))
+	//	poolData.Fee = 300
+	//	poolDataList = append(poolDataList, poolData)
+	//}
+	//
+	//return poolDataList
 
 }
 
-//
-//func Get_v2_pool_data_batch_request(pool *pool.UniswapV2Pool, client *ethclient.Client) error {
-//
-//	byteCode := GetUniswapV2PoolDataBatchRequest.GetUniswapV2PoolDataBatchRequestMetaData.Bin
-//
-//	argsCodeAbi, err := abi.JSON(strings.NewReader(GetUniswapV2PoolDataBatchRequest.GetUniswapV2PoolDataBatchRequestMetaData.ABI))
-//
-//	if err != nil {
-//		log.Fatal(err)
-//	}
-//
-//	argsByteCode, _ := argsCodeAbi.Pack("", pool.Address)
-//
-//	callMsg := ethereum.CallMsg{
-//		Data:       append(common.FromHex(byteCode), argsByteCode...),
-//		AccessList: nil,
-//	}
-//
-//	// 执行 Eth_call
-//	result, err := client.CallContract(context.Background(), callMsg, nil)
-//	if err != nil {
-//		log.Fatal(err)
-//	}
-//	hexString := hex.EncodeToString(result)
-//	hexString = hexString[128:]
-//	oneStructLen := 64 * 6
-//	nums := len(hexString) / oneStructLen
-//	for i := 1; i < nums+1; i++ {
-//		pool.TokenA = common.HexToAddress(hexString[(i-1)*oneStructLen : (i-1)*oneStructLen+64])
-//		pool.TokenADecimals = int64(new(big.Int).SetBytes(common.FromHex(hexString[(i-1)*oneStructLen+64 : (i-1)*oneStructLen+128])).Int64())
-//		pool.TokenB = common.HexToAddress(hexString[(i-1)*oneStructLen+128 : (i-1)*oneStructLen+192])
-//		pool.TokenBDecimals = int64(new(big.Int).SetBytes(common.FromHex(hexString[(i-1)*oneStructLen+192 : (i-1)*oneStructLen+256])).Int64())
-//		pool.Reserve0 = new(big.Int).SetBytes(common.FromHex(hexString[(i-1)*oneStructLen+256 : (i-1)*oneStructLen+320]))
-//		pool.Reserve1 = new(big.Int).SetBytes(common.FromHex(hexString[(i-1)*oneStructLen+320 : (i-1)*oneStructLen+384]))
-//		pool.Fee = 300
-//	}
-//	return err
-//}
+func Get_v2_pool_data_batch_request(address common.Address, client *ethclient.Client) ([]byte, error) {
+
+	byteCode := GetUniswapV2PoolDataBatchRequest.GetUniswapV2PoolDataBatchRequestMetaData.Bin
+
+	argsCodeAbi, err := abi.JSON(strings.NewReader(GetUniswapV2PoolDataBatchRequest.GetUniswapV2PoolDataBatchRequestMetaData.ABI))
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	argsByteCode, err := argsCodeAbi.Pack("", []common.Address{address})
+
+	if err != nil {
+		fmt.Println("argsByteCode err", err)
+		log.Fatal(err)
+	}
+
+	callMsg := ethereum.CallMsg{
+		Data:       append(common.FromHex(byteCode), argsByteCode...),
+		AccessList: nil,
+	}
+
+	// 执行 Eth_call
+	result, err := client.CallContract(context.Background(), callMsg, nil)
+	if err != nil {
+		fmt.Println("Get_v2_pool_data_batch_request err", err)
+		log.Fatal(err)
+	}
+
+	return result, err
+	//hexString := hex.EncodeToString(result)
+	//hexString = hexString[128:]
+	//oneStructLen := 64 * 6
+	//nums := len(hexString) / oneStructLen
+	//for i := 1; i < nums+1; i++ {
+	//	pool.TokenA = common.HexToAddress(hexString[(i-1)*oneStructLen : (i-1)*oneStructLen+64])
+	//	pool.TokenADecimals = int64(new(big.Int).SetBytes(common.FromHex(hexString[(i-1)*oneStructLen+64 : (i-1)*oneStructLen+128])).Int64())
+	//	pool.TokenB = common.HexToAddress(hexString[(i-1)*oneStructLen+128 : (i-1)*oneStructLen+192])
+	//	pool.TokenBDecimals = int64(new(big.Int).SetBytes(common.FromHex(hexString[(i-1)*oneStructLen+192 : (i-1)*oneStructLen+256])).Int64())
+	//	pool.Reserve0 = new(big.Int).SetBytes(common.FromHex(hexString[(i-1)*oneStructLen+256 : (i-1)*oneStructLen+320]))
+	//	pool.Reserve1 = new(big.Int).SetBytes(common.FromHex(hexString[(i-1)*oneStructLen+320 : (i-1)*oneStructLen+384]))
+	//	pool.Fee = 300
+	//}
+	//return err
+}

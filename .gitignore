@@ -9,5 +9,3 @@ go.sum
 
 contracts/out
 contracts/lib
-cfmms/abi
-cfmms/abi_go

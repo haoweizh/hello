@@ -1,39 +1,24 @@
 package pool
 
 import (
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
-	"hello/cfmms/batch_request/batch_request_for_uniswap_v2"
-)
-
-type PoolType int
-
-const (
-	UniswapV2PoolType PoolType = iota
-	UniswapV3PoolType
+	"math/big"
 )
 
 type Pool interface {
-	GetPoolType() PoolType
-	NewFromAddress(address string)
-	NewFromEventLog(log any)
+	NewFromAddress(address common.Address, client *ethclient.Client) (any, error)
+	NewFromEventLog(address common.Address, client *ethclient.Client)
 	NewEmptyPoolFromEventLog(log any)
 
 	// TODO: add more functions
+	DataIsPopulated() bool
 	SyncPool() (err error)
-	CalculatePrice() (price float64)
-	GetPoolData(client *ethclient.Client) (pool batch_request_for_uniswap_v2.PoolData)
-	GetAddress()
-	SimulateSwap()
-	SimulateSwapMut()
-}
-
-type UniswapV3Pool struct {
-	FactoryAddress string
-	Token0Address  string
-}
-
-func (pool *UniswapV3Pool) GetPoolType() PoolType {
-	return UniswapV3PoolType
+	CalculatePrice(baseToken common.Address) string
+	GetPoolData(client *ethclient.Client) error
+	GetAddress() common.Address
+	SimulateSwap(tokenIn common.Address, amoutnIn *big.Int)
+	SimulateSwapMut(tokenIn common.Address, amountIn *big.Int) uint64
 }
 
 func ConvertToDecimals() {
