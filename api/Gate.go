@@ -634,7 +634,7 @@ func getBalanceGate(key string, secret string) (success bool, balances []*model.
 			util.Notice(fmt.Sprintf("margin account is locked"))
 			return false, balances, 0, nil
 		}
-		//totalInUsd, _ = strconv.ParseFloat(account.PortfolioMarginTotalEquity, 64)
+		totalInUsd, _ = strconv.ParseFloat(account.PortfolioMarginTotalEquity, 64)
 		collateralAvailable, _ := strconv.ParseFloat(account.TotalAvailableMargin, 64)
 		totalMaintenanceMargin, _ := strconv.ParseFloat(account.TotalMaintenanceMargin, 64)
 		collateral = &model.Collateral{Available: collateralAvailable, Occupied: totalMaintenanceMargin}
@@ -656,7 +656,7 @@ func getBalanceGate(key string, secret string) (success bool, balances []*model.
 			}
 			_, price := GetPriceForce(key, secret, balance.Coin+model.UniStandardTail[model.MarketTypeSpot], model.Gate)
 			balance.UsdValue = balance.Amount * price
-			totalInUsd += balance.UsdValue
+			//totalInUsd += balance.UsdValue
 			balances = append(balances, balance)
 		}
 	}

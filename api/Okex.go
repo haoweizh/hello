@@ -40,12 +40,12 @@ func maintainChannelOKEX(subscribes []interface{}) {
 	if !channelMaintainingOKEX {
 		channelMaintainingOKEX = true
 		go func() {
-			for true {
+			for {
 				time.Sleep(time.Minute * 5)
 				reSubscribe(subscribes)
 			}
 		}()
-		for true {
+		for {
 			time.Sleep(time.Second * 25)
 			accounts := model.AppConfig.GetAccounts(model.OKEX)
 			for _, account := range accounts {
@@ -355,7 +355,7 @@ func handleBooksUpdate(symbol string, data map[string]interface{}, bidAsk *model
 	newBids := make([]model.Tick, 0)
 	i := 0
 	j := 0
-	for true {
+	for {
 		if j >= len(bidAskUpdate.Asks) {
 			if i < len(bidAsk.Asks) {
 				newAsks = append(newAsks, bidAsk.Asks[i])
@@ -392,7 +392,7 @@ func handleBooksUpdate(symbol string, data map[string]interface{}, bidAsk *model
 	}
 	i = 0
 	j = 0
-	for true {
+	for {
 		if j >= len(bidAskUpdate.Bids) {
 			if i < len(bidAsk.Bids) {
 				newBids = append(newBids, bidAsk.Bids[i])
@@ -963,6 +963,7 @@ func _(key, secret, symbol string) (success bool, price float64) {
 	return err == nil, price
 }
 
+// re-query if return code 50011: Too Many Requests
 func queryOpenOrdersOKEX(key, secret, symbol string, isStop bool) (orders []*model.Order) {
 	param := map[string]interface{}{`instId`: symbol}
 	path := `/api/v5/trade/orders-pending`
@@ -972,6 +973,13 @@ func queryOpenOrdersOKEX(key, secret, symbol string, isStop bool) (orders []*mod
 	}
 	responseBody, _ := sendSignRequestOKEX(key, secret, http.MethodGet, path, param, nil)
 	orderJson, err := util.NewJSON(responseBody)
+	if err == nil {
+		if `50011` == strings.Trim(orderJson.Get(`code`).MustString(), ` `) {
+			util.Notice(`sleep 1 min and re-query orders when get code 50011`)
+			time.Sleep(time.Minute)
+			return queryOpenOrdersOKEX(key, secret, symbol, isStop)
+		}
+	}
 	if err != nil || orderJson == nil || orderJson.Get(`data`) == nil {
 		return
 	}

@@ -550,27 +550,17 @@ func CheckBreak(account *model.Account, market, symbol string, settings []*model
 	return useApi
 }
 
-func CanOpenCombine(setting, settingNormal *model.Setting, data, dataNormal *model.TurtleData) (canOpen bool, inAll float64) {
+func CanOpenCombine(setting, settingOppo *model.Setting, data, dataNormal *model.TurtleData) (canOpen bool, inAll float64) {
 	success, _, coin, _ := model.GetFromStandard(setting.Market, setting.Symbol)
 	if !success {
 		return false, 0
 	}
 	settings := GetSettings(setting.Function, setting.Market)
-	settingsNormal := GetSettings(model.FunctionTurtleNormal, setting.Market)
-	if settings == nil || settingsNormal == nil {
+	settingsOppo := GetSettings(settingOppo.Function, setting.Market)
+	if settings == nil || settingsOppo == nil {
 		return false, 0
 	}
 	tradingSymbols := make(map[string]bool)
-	addChance := func(symbol, value any) bool {
-		if value != nil {
-			valueSetting := value.(*model.Setting)
-			_, _, valueCoin, _ := model.GetFromStandard(valueSetting.Market, valueSetting.Symbol)
-			if model.CommonCoins[strings.ToLower(valueCoin)] {
-				inAll += float64(valueSetting.Chance)
-			}
-		}
-		return true
-	}
 	addTrading := func(symbol, value any) bool {
 		if value != nil {
 			valueSetting := value.(*model.Setting)
@@ -584,32 +574,18 @@ func CanOpenCombine(setting, settingNormal *model.Setting, data, dataNormal *mod
 		return true
 	}
 	if model.CommonCoins[strings.ToLower(coin)] {
-		settings.Range(addChance)
-		settingsNormal.Range(addChance)
-		canOpen = math.Abs(inAll) < setting.AmountLimit
-		if !canOpen && inAll > 0 && setting.Chance >= 0 {
-			data.OrderLong = nil
-		}
-		if !canOpen && inAll < 0 && setting.Chance <= 0 {
-			data.OrderShort = nil
-		}
-		if !canOpen && inAll > 0 && settingNormal.Chance >= 0 {
-			dataNormal.OrderLong = nil
-		}
-		if !canOpen && inAll < 0 && settingNormal.Chance <= 0 {
-			dataNormal.OrderShort = nil
-		}
+		return true, 0
 	} else {
-		settingsNormal.Range(addTrading)
+		settingsOppo.Range(addTrading)
 		settings.Range(addTrading)
 		inAll = float64(len(tradingSymbols))
-		canOpen = setting.Chance != 0 || settingNormal.Chance != 0 || (inAll < setting.AmountLimit &&
-			setting.SymbolRelated != model.SettingTurtleRemoved && settingNormal.SymbolRelated != model.SettingTurtleRemoved)
+		canOpen = setting.Chance != 0 || settingOppo.Chance != 0 || (inAll < setting.AmountLimit &&
+			setting.SymbolRelated != model.SettingTurtleRemoved && settingOppo.SymbolRelated != model.SettingTurtleRemoved)
 		if setting.Chance == 0 && !canOpen && inAll >= setting.AmountLimit {
 			data.OrderLong = nil
 			data.OrderShort = nil
 		}
-		if settingNormal.Chance == 0 && !canOpen && inAll >= setting.AmountLimit {
+		if settingOppo.Chance == 0 && !canOpen && inAll >= setting.AmountLimit {
 			dataNormal.OrderLong = nil
 			dataNormal.OrderShort = nil
 		}

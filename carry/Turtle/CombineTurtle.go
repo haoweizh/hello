@@ -37,6 +37,10 @@ var ProcessCombineTurtle = func(settingCombine *model.Setting, tick *model.BidAs
 		util.Notice(fmt.Sprintf(`combine return no normal setting from %s %s`, market, symbol))
 		return
 	}
+	if settingNormal.Chance == 0 && settingNormal.SymbolRelated == model.SettingTurtleRemoved &&
+		settingCombine.Chance == 0 && settingCombine.SymbolRelated == model.SettingTurtleRemoved {
+		return
+	}
 	if (settingCombine.Chance != 0 && settingCombine.PriceX == 0) || (settingNormal.Chance != 0 && settingNormal.PriceX == 0) {
 		util.Notice(fmt.Sprintf(`combine return no last priceX %s %s %d %e %d %e`,
 			market, symbol, settingCombine.Chance, settingCombine.PriceX, settingNormal.Chance, settingNormal.PriceX))
@@ -212,8 +216,11 @@ func placeTurtleLong(account *model.Account, orderType string, data *model.Turtl
 	if setting.Chance < 0 {
 		function = model.Close
 		amount = setting.GridAmount
+		if setting.Function == model.FunctionCombineTurtle && data.Big == 1 {
+			amount = math.Abs(float64(setting.Chance)) * data.Amount
+		}
 	} else if data.Big == -1 {
-		amount = data.AmountMin
+		amount = data.Amount / 2
 	}
 	price := data.HighDaysFar
 	priceChange := 2 * data.N
@@ -250,8 +257,8 @@ func placeTurtleLong(account *model.Account, orderType string, data *model.Turtl
 	market := setting.Market
 	symbol := setting.Symbol
 	priceDeal := price
-	canOpen = canOpen && math.Abs(float64(setting.Chance)) < float64(setting.ChanceLimit)
-	if data.OrderLong == nil && (setting.Chance < 0 || canOpen) {
+	canOpen = canOpen && float64(setting.Chance) < float64(setting.ChanceLimit)
+	if data.OrderLong == nil && canOpen {
 		data.BreakLong = false
 		if orderType == model.OrderTypeStop {
 			if price <= tick.Asks[0].Price {
@@ -294,8 +301,11 @@ func placeTurtleShort(account *model.Account, orderType string, data *model.Turt
 	if setting.Chance > 0 {
 		amount = setting.GridAmount
 		function = model.Close
+		if setting.Function == model.FunctionCombineTurtle && data.Big == 1 {
+			amount = math.Abs(float64(setting.Chance)) * data.Amount
+		}
 	} else if data.Big == -1 {
-		amount = data.AmountMin
+		amount = data.Amount / 2
 	}
 	price := data.LowDaysFar
 	priceChange := 2 * data.N
@@ -336,8 +346,8 @@ func placeTurtleShort(account *model.Account, orderType string, data *model.Turt
 	market := setting.Market
 	symbol := setting.Symbol
 	priceDeal := price
-	canOpen = canOpen && math.Abs(float64(setting.Chance)) < float64(setting.ChanceLimit)
-	if data.OrderShort == nil && (setting.Chance > 0 || canOpen) {
+	canOpen = canOpen && float64(setting.Chance) > -1*float64(setting.ChanceLimit)
+	if data.OrderShort == nil && canOpen {
 		data.BreakShort = false
 		if orderType == model.OrderTypeStop {
 			if price >= tick.Bids[0].Price {
