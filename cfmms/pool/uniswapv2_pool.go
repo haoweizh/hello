@@ -239,36 +239,37 @@ func (v2pool *UniswapV2Pool) CalculatePrice64X64(baseToken common.Address) strin
 	return ""
 }
 
-func (v2pool *UniswapV2Pool) GetAmountOut(reserveIn, reserveOut *big.Int, amountIn uint64) *utils.Fraction {
-	if amountIn == 0 || reserveIn.Cmp(big.NewInt(0)) == 0 || reserveOut.Cmp(big.NewInt(0)) == 0 {
+func (v2pool *UniswapV2Pool) GetAmountOut(reserveIn, reserveOut *big.Int, amountIn *big.Int) *utils.Fraction {
+	if amountIn.Cmp(big.NewInt(0)) == 0 || reserveIn.Cmp(big.NewInt(0)) == 0 || reserveOut.Cmp(big.NewInt(0)) == 0 {
 		return nil
 	}
-	amountInWithFee := new(big.Int).Mul(big.NewInt(int64(amountIn)), big.NewInt(997))
+	amountInWithFee := new(big.Int).Mul(amountIn, big.NewInt(997))
 	numerator := new(big.Int).Mul(amountInWithFee, reserveOut)
 	denominator := new(big.Int).Add(new(big.Int).Mul(reserveIn, big.NewInt(1000)), amountInWithFee)
 	return utils.NewFraction(numerator, denominator)
 
 }
 
-func (v2pool *UniswapV2Pool) SimulateSwap(tokenIn common.Address, amountIn *big.Int) {
+func (v2pool *UniswapV2Pool) SimulateSwap(tokenIn common.Address, amountIn *big.Int) *utils.Fraction {
 	if v2pool.TokenA == tokenIn {
-		v2pool.GetAmountOut(v2pool.Reserve0, v2pool.Reserve1, amountIn.Uint64())
+		return v2pool.GetAmountOut(v2pool.Reserve0, v2pool.Reserve1, amountIn)
 	} else {
-		v2pool.GetAmountOut(v2pool.Reserve1, v2pool.Reserve0, amountIn.Uint64())
+		return v2pool.GetAmountOut(v2pool.Reserve1, v2pool.Reserve0, amountIn)
 	}
 
+	return nil
 }
 
 func (v2pool *UniswapV2Pool) SimulateSwapMut(tokenIn common.Address, amountIn *big.Int) {
 
 	if v2pool.TokenA == tokenIn {
-		amountOut := v2pool.GetAmountOut(v2pool.Reserve0, v2pool.Reserve1, amountIn.Uint64())
+		amountOut := v2pool.GetAmountOut(v2pool.Reserve0, v2pool.Reserve1, amountIn)
 		v2pool.Reserve0.Add(v2pool.Reserve0, amountIn)
 		z := new(big.Int)
 		z.SetString(amountOut.ToSignificant(18), 10)
 		v2pool.Reserve1.Sub(v2pool.Reserve1, z)
 	} else {
-		amountOut := v2pool.GetAmountOut(v2pool.Reserve1, v2pool.Reserve0, amountIn.Uint64())
+		amountOut := v2pool.GetAmountOut(v2pool.Reserve1, v2pool.Reserve0, amountIn)
 		z := new(big.Int)
 		z.SetString(amountOut.ToSignificant(18), 10)
 		v2pool.Reserve0.Sub(v2pool.Reserve0, z)

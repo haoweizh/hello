@@ -2,11 +2,13 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/eth/tracers"
 	"github.com/ethereum/go-ethereum/ethclient"
-	"github.com/schollz/progressbar/v3"
+	"github.com/ethereum/go-ethereum/internal/ethapi"
 	"hello/cfmms"
 	"hello/cfmms/abi_go/UniswapV2Factory"
 	"hello/cfmms/batch_request/batch_request_for_uniswap_v2"
@@ -16,7 +18,6 @@ import (
 	"log"
 	"math/big"
 	"testing"
-	"time"
 )
 
 const (
@@ -139,15 +140,6 @@ func Test_SyncPairsTest(t *testing.T) {
 	cfmms.SyncPairsTest()
 }
 
-func Test_Progressbar(t *testing.T) {
-	bar := progressbar.Default(100)
-	for i := 0; i < 100; i++ {
-
-		bar.Add(1)
-		time.Sleep(40 * time.Millisecond)
-	}
-}
-
 func Test_PriceV2(t *testing.T) {
 	client, err := ethclient.Dial("http://188.40.132.112:8545")
 	//client, err := ethclient.Dial("ws://188.40.132.112:8546")
@@ -181,4 +173,46 @@ func Test_Fraction(t *testing.T) {
 	fmt.Println(nul.Remainder())
 	fmt.Println(nul.ToFixed(19))
 	fmt.Println(nul.ToSignificant(8))
+}
+
+func Test_SimulateSwapV2(t *testing.T) {
+	client, err := ethclient.Dial("http://188.40.132.112:8545")
+	if err != nil {
+		fmt.Println(fmt.Sprintf("Failed to connect to the Ethereum client: %v", err))
+	}
+	cfmms.SimulateSwapV2(client)
+
+	//big.Int 2 big.Float
+	//intValue := big.NewInt(123456789)
+	//floatValue := new(big.Float).SetInt(intValue)
+	//result, _ := floatValue.Float64()
+	//fmt.Println(result)
+
+}
+
+func Test_DebugTraceCall(t *testing.T) {
+	client, err := ethclient.Dial("http://188.40.132.112:8545")
+	if err != nil {
+		fmt.Println(fmt.Sprintf("Failed to connect to the Ethereum client: %v", err))
+	}
+	//callMsg := ethereum.CallMsg{
+	//From: common.HexToAddress("0x8E17d7A5Eeb39E558021e0B5F75Ad60CF9a1a939"),
+	//To: ,
+	//Data: '0x00e7cb033de0a12e000693b5c08bbaf8000323130327a36854d2877702675e6ceb975b4a1dff9fb7baf4c91ea964669221f4bd31ea8212119f94a611fa969881cba3ea06fa3d1e64',
+	//Value: '0x0',
+	//Gas: "0x5e90f"
+	//}
+
+	var res interface{}
+	err = client.Client().CallContext(context.Background(), res, "debug_traceCall", &ethapi.TransactionArgs{}, "pending", &tracers.TraceConfig{
+		Tracer:       "callTracer",
+		TracerConfig: make(json.RawMessage, 0),
+	})
+
+	if err != nil {
+
+		fmt.Println(err)
+
+	}
+	fmt.Println(res)
 }
