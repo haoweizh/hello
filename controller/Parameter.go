@@ -670,14 +670,14 @@ func createTurtleLines(function, market string, account *model.Account) (msg str
 		msgKey := model.GetMsgKey(function, market, symbol.(string))
 		needAdd := false
 		if turtleData != nil {
-			if turtleData.(model.TurtleData).OrderLong != nil || turtleData.(model.TurtleData).OrderShort != nil {
+			if turtleData.(*model.TurtleData).OrderLong != nil || turtleData.(*model.TurtleData).OrderShort != nil {
 				needAdd = true
 			} else if function == model.FunctionCombineTurtle {
 				settingNormal := api.GetSetting(model.FunctionTurtleNormal, market, symbol.(string))
 				_, nowStr = model.GetNowPeriod(market, settingNormal.Seconds, now)
 				turtleNormal, _ := util.LoadSyncMap(&api.TurtleDataSet, function, market, symbol.(string), nowStr)
-				if turtleNormal != nil && (turtleNormal.(model.TurtleData).OrderLong != nil ||
-					turtleNormal.(model.TurtleData).OrderShort != nil) {
+				if turtleNormal != nil && (turtleNormal.(*model.TurtleData).OrderLong != nil ||
+					turtleNormal.(*model.TurtleData).OrderShort != nil) {
 					needAdd = true
 				}
 			}
