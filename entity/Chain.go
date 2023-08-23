@@ -1,4 +1,4 @@
-package Entity
+package entity
 
 type Chain struct {
 	Name         string
