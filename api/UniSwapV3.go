@@ -5,10 +5,10 @@ import (
 	"hello/entity"
 )
 
-// TickServeUniSwapV3 todo: read from ChanBlock, invoke calcPrice, create tick to feed handler
+// TickServeUniSwapV3 todo: read from MemPoolPending, invoke calcPrice, create tick to feed handler
 func TickServeUniSwapV3() {
 	for {
-		msg := <-entity.ChanBlock
+		msg := <-entity.MemPoolPending
 		fmt.Print(msg)
 		//if model.AppMarkets.SetBidAsk(standardSymbol, model.UniSwapV3, bidAsk) {
 		//	funcHandlers := GetFunctions(model.UniSwapV3, standardSymbol)
