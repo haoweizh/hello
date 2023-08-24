@@ -1,4 +1,4 @@
 package entity
 
 var AppChains []Chain
-var ChanBlock chan interface{}
+var MemPoolPending chan interface{}
