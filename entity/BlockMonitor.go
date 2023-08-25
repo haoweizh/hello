@@ -1,6 +1,8 @@
 package entity
 
-import "time"
+import (
+	"time"
+)
 
 var DealBlockHeight int64
 var DealBlockTime time.Time
@@ -9,6 +11,7 @@ var DealBlockTime time.Time
 // 1. load blockHeight: select max(BlockHeight) from Contract
 // 2. load to set ContractPool & ContractPoolPending
 func LoadBlockDB() {
+
 }
 
 func SaveBlockDB() {

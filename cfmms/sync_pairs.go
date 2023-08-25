@@ -7,6 +7,7 @@ import (
 	"hello/cfmms/dex"
 	"hello/cfmms/pool"
 	"hello/cfmms/utils"
+	"hello/model"
 	"math/big"
 	"sync"
 )
@@ -17,6 +18,8 @@ func SyncPairs(dexes []dex.Dex, client *ethclient.Client, checkpoint_path string
 }
 
 func SyncPairsWithThrottle(dexes []dex.Dex, step *big.Int, client *ethclient.Client, checkpoint_path string) {
+
+	_ = model.AppDB.AutoMigrate(&model.Setting{})
 
 	wg := sync.WaitGroup{}
 

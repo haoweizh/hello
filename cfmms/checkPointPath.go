@@ -16,6 +16,8 @@ func SyncPoolsFromCheckpoint() {
 
 func ConstructCheckpoint(dexes []dex.Dex, aggregatedPools *sync.Map, latest_block uint64, checkpoint_path string) {
 
+	// save in sql
+
 	mp := make(map[string]any)
 
 	mp["checkpoint_timestamp"] = time.Now().Unix()

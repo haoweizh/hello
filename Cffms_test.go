@@ -2,13 +2,16 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/eth/tracers"
+	"github.com/ethereum/go-ethereum/eth/tracers/logger"
 	"github.com/ethereum/go-ethereum/ethclient"
-	"github.com/ethereum/go-ethereum/internal/ethapi"
+	"github.com/ethereum/go-ethereum/ethclient/gethclient"
+	"github.com/ethereum/go-ethereum/rpc"
 	"hello/cfmms"
 	"hello/cfmms/abi_go/UniswapV2Factory"
 	"hello/cfmms/batch_request/batch_request_for_uniswap_v2"
@@ -191,28 +194,79 @@ func Test_SimulateSwapV2(t *testing.T) {
 }
 
 func Test_DebugTraceCall(t *testing.T) {
-	client, err := ethclient.Dial("http://188.40.132.112:8545")
+	// todo: 模拟交易
+	// todo: 查貔貅币种
+	// todo: 含税币种
+
+	rc, err := rpc.Dial("ws://188.40.132.112:8546")
 	if err != nil {
-		fmt.Println(fmt.Sprintf("Failed to connect to the Ethereum client: %v", err))
+		log.Printf("failed to dial: %v", err)
+		return
 	}
-	//callMsg := ethereum.CallMsg{
-	//From: common.HexToAddress("0x8E17d7A5Eeb39E558021e0B5F75Ad60CF9a1a939"),
-	//To: ,
-	//Data: '0x00e7cb033de0a12e000693b5c08bbaf8000323130327a36854d2877702675e6ceb975b4a1dff9fb7baf4c91ea964669221f4bd31ea8212119f94a611fa969881cba3ea06fa3d1e64',
-	//Value: '0x0',
-	//Gas: "0x5e90f"
-	//}
+	gc := gethclient.New(rc)
 
-	var res interface{}
-	err = client.Client().CallContext(context.Background(), res, "debug_traceCall", &ethapi.TransactionArgs{}, "pending", &tracers.TraceConfig{
-		Tracer:       "callTracer",
-		TracerConfig: make(json.RawMessage, 0),
-	})
-
+	transactions := make(chan *types.Transaction, 100)
+	_, err = gc.SubscribeFullPendingTransactions(context.Background(), transactions)
 	if err != nil {
-
-		fmt.Println(err)
-
+		log.Printf("failed to SubscribePendingTransactions: %v", err)
+		return
 	}
-	fmt.Println(res)
+	log.Print("subscribed pending txs now")
+	for {
+		select {
+		case transaction := <-transactions:
+			// 这里的transaction是完整数据，可以直接使用
+			txBytes, err := transaction.MarshalJSON()
+			if err != nil {
+				continue
+			}
+
+			// todo: debug_traceCall
+
+			var result interface{}
+			tracerOpt := "callTracer"
+			chainId, err := ethclient.NewClient(rc).NetworkID(context.Background())
+			if err != nil {
+				fmt.Println("Failed to get chainId", err)
+				return
+			}
+			arg, _ := toCallArg(transaction, chainId)
+			logConfig := logger.Config{
+				DisableStack:   true,
+				DisableStorage: true,
+				Debug:          true,
+			}
+			err = ethclient.NewClient(rc).Client().CallContext(context.Background(), &result, "debug_traceCall", arg, "latest", &tracers.TraceConfig{Config: &logConfig, Tracer: &tracerOpt})
+			//if err != nil {
+			//	return
+			//}
+
+			log.Printf("received tx %s", string(txBytes))
+			log.Printf("received tx %s", result)
+		}
+	}
+}
+
+func toCallArg(tx *types.Transaction, chainID *big.Int) (interface{}, error) {
+	from, err := types.Sender(types.LatestSignerForChainID(chainID), tx)
+	if err != nil {
+		return nil, err
+	}
+	arg := map[string]interface{}{
+		"from": from,
+		"to":   tx.To(),
+	}
+	if len(tx.Data()) > 0 {
+		arg["data"] = hexutil.Bytes(tx.Data())
+	}
+	if tx.Value() != nil {
+		arg["value"] = (*hexutil.Big)(tx.Value())
+	}
+	if tx.Gas() != 0 {
+		arg["gas"] = hexutil.Uint64(tx.Gas())
+	}
+	if tx.GasPrice() != nil {
+		arg["gasPrice"] = (*hexutil.Big)(tx.GasPrice())
+	}
+	return arg, nil
 }
