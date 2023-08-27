@@ -18,6 +18,9 @@ var monitorInfo = &sync.Map{} // userIndex - table - syncMap[string -array[]stri
 var AppMetric = &MetricManager{}
 var IgnoreFunctions = map[string]bool{FunctionDynamicTurtle: true, FunctionTurtleNormal: true, FunctionDynamicCombine: true}
 
+const Way_Dex = `dex`
+const Way_Cex_Spot = `cexSpot`
+const Way_Cex_Perp = `cexPerp`
 const UniSwapV3 = `uniswapv3`
 const DefaultLeverage = 5
 const BitgetSpot = `bitgetspot`

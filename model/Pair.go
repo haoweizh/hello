@@ -1,6 +1,23 @@
 package model
 
-import "fmt"
+import (
+	"fmt"
+)
+
+type Ring struct {
+	Complete           bool // already be a ring or not
+	LinkedCoins        map[string]bool
+	CoinHead, CoinTail string
+	Settings           map[string]string // settingKey - orderSide
+}
+
+func (ring *Ring) Equals(compRing *Ring) (isEqual bool) {
+	if len(ring.Settings) == 0 || len(compRing.Settings) == 0 {
+		return false
+	}
+
+	return false
+}
 
 type Pool struct {
 	Address            string
