@@ -12,11 +12,15 @@ type Ring struct {
 }
 
 func (ring *Ring) Equals(compRing *Ring) (isEqual bool) {
-	if len(ring.Settings) == 0 || len(compRing.Settings) == 0 {
+	if compRing == nil || ring.Settings == nil || compRing.Settings == nil || len(ring.Settings) != len(compRing.Settings) {
 		return false
 	}
-
-	return false
+	for settingKey, orderSide := range ring.Settings {
+		if compRing.Settings[settingKey] != orderSide {
+			return false
+		}
+	}
+	return true
 }
 
 type Pool struct {
