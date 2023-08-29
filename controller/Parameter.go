@@ -664,18 +664,20 @@ func createTurtleLines(function, market string, account *model.Account) (msg str
 			return true
 		}
 		setting := value.(*model.Setting)
-		turtleData, _ := api.GetTurtleData(account, function, market, symbol.(string), setting.Far, setting.Near,
-			setting.Seconds, setting.CloseShortMargin, false)
+		now := time.Now()
+		_, nowStr := model.GetNowPeriod(market, setting.Seconds, now)
+		turtleData, _ := util.LoadSyncMap(&api.TurtleDataSet, function, market, symbol.(string), nowStr)
 		msgKey := model.GetMsgKey(function, market, symbol.(string))
 		needAdd := false
 		if turtleData != nil {
-			if turtleData.OrderLong != nil || turtleData.OrderShort != nil {
+			if turtleData.(*model.TurtleData).OrderLong != nil || turtleData.(*model.TurtleData).OrderShort != nil {
 				needAdd = true
 			} else if function == model.FunctionCombineTurtle {
 				settingNormal := api.GetSetting(model.FunctionTurtleNormal, market, symbol.(string))
-				turtleNormal, _ := api.GetTurtleData(account, model.FunctionTurtleNormal, market, symbol.(string),
-					settingNormal.Far, settingNormal.Near, settingNormal.Seconds, settingNormal.CloseShortMargin, false)
-				if turtleNormal != nil && (turtleNormal.OrderLong != nil || turtleNormal.OrderShort != nil) {
+				_, nowStr = model.GetNowPeriod(market, settingNormal.Seconds, now)
+				turtleNormal, _ := util.LoadSyncMap(&api.TurtleDataSet, function, market, symbol.(string), nowStr)
+				if turtleNormal != nil && (turtleNormal.(*model.TurtleData).OrderLong != nil ||
+					turtleNormal.(*model.TurtleData).OrderShort != nil) {
 					needAdd = true
 				}
 			}

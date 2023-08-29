@@ -153,9 +153,6 @@ func HandleOrders(key, secret, market, symbol string, settings []*model.Setting,
 		util.Notice(`wrong combine turtle parameter`)
 		return false
 	}
-	if turtleData[0].CheckTimeOpen.Add(time.Minute * 10).After(util.GetNow()) {
-		return false
-	}
 	if len(settings) == 1 {
 		AdjustPosHolding(key, secret, settings[0], turtleData[0])
 	} else if len(settings) == 2 {
@@ -166,6 +163,9 @@ func HandleOrders(key, secret, market, symbol string, settings []*model.Setting,
 		}
 		turtleData[0].AdjustChecked = true
 		turtleData[1].AdjustChecked = true
+	}
+	if turtleData[0].CheckTimeOpen.Add(time.Minute * 10).After(util.GetNow()) {
+		return false
 	}
 	turtleData[0].CheckTimeOpen = util.GetNow()
 	ClearExtraOrders(key, secret, market, symbol, turtleData)
