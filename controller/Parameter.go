@@ -211,7 +211,7 @@ func simulateGrid(c *gin.Context) {
 			OpenShortMargin:  jumpWin,
 			CloseShortMargin: jumpLose,
 			Symbol:           strings.ToUpper(coin) + model.UniStandardTail[model.MarketTypePerp],
-			Coin:             coin,
+			Coin0:            coin,
 			GridAmount:       100}
 		if strNew == `true` {
 			go model.AppDB.Where(`function=? and market=? and symbol=? and order_time>? and order_time<? and line_buy=? and line_sell=?`,

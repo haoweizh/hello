@@ -383,11 +383,11 @@ package api
 //		}
 //		balances = make([]*model.Balance, 0)
 //		for _, account := range *spotAccounts {
-//			balance := &model.Balance{AccountId: key, BalanceTime: util.GetNow(), Market: model.Kucoin, Coin: account.Currency}
+//			balance := &model.Balance{AccountId: key, BalanceTime: util.GetNow(), Market: model.Kucoin, Coin0: account.Currency}
 //			balance.FrozenAmount, _ = strconv.ParseFloat(account.Holds, 64)
 //			balance.Amount, _ = strconv.ParseFloat(account.Balance, 64)
 //			balance.AvailableWithBorrow, _ = strconv.ParseFloat(account.Available, 64)
-//			_, price := model.AppMarkets.GetPriceForce(balance.Coin+model.UniStandardTail[model.MarketTypeSpot], model.Kucoin)
+//			_, price := model.AppMarkets.GetPriceForce(balance.Coin0+model.UniStandardTail[model.MarketTypeSpot], model.Kucoin)
 //			balance.UsdValue = balance.Amount * price
 //			balances = append(balances, balance)
 //		}
@@ -408,7 +408,7 @@ package api
 //		}
 //		balances = make([]*model.Balance, 0)
 //		for _, account := range marginAccount.Accounts {
-//			balance := &model.Balance{AccountId: key, BalanceTime: util.GetNow(), Market: model.Kucoin, Coin: account.Currency}
+//			balance := &model.Balance{AccountId: key, BalanceTime: util.GetNow(), Market: model.Kucoin, Coin0: account.Currency}
 //			balance.FrozenAmount, _ = account.HoldBalance.Float64()
 //			available, _ := account.AvailableBalance.Float64()
 //			balance.Borrow, _ = account.Liability.Float64()
@@ -416,7 +416,7 @@ package api
 //			balance.AvailableWithBorrow = available + canBorrow
 //			balance.Amount, _ = account.TotalBalance.Float64()
 //			balance.Amount = balance.Amount - balance.Borrow
-//			_, price := model.AppMarkets.GetPriceForce(balance.Coin+model.UniStandardTail[model.MarketTypeSpot], model.Kucoin)
+//			_, price := model.AppMarkets.GetPriceForce(balance.Coin0+model.UniStandardTail[model.MarketTypeSpot], model.Kucoin)
 //			balance.UsdValue = balance.Amount * price
 //			balances = append(balances, balance)
 //		}

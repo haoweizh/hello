@@ -149,7 +149,7 @@ type BybitBalanceResp struct {
 //		Spot struct {
 //			Status string `json:"status"`
 //			Assets []struct {
-//				Coin     string `json:"coin"`
+//				Coin0     string `json:"coin"`
 //				Frozen   string `json:"frozen"`
 //				Free     string `json:"free"`
 //				Withdraw string `json:"withdraw"`

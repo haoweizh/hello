@@ -454,7 +454,7 @@ package deprecated
 //		}
 //	}
 //	if data[`currency`] != nil {
-//		balance.Coin = strings.ToLower(data[`currency`].(string))
+//		balance.Coin0 = strings.ToLower(data[`currency`].(string))
 //	}
 //	if data[`amount`] != nil {
 //		balance.Amount, _ = data[`amount`].(json.Number).Float64()
@@ -592,7 +592,7 @@ package deprecated
 //			coin := value[`currency`].(string)
 //			balance := balanceMap[coin]
 //			if balance == nil {
-//				balance = &model.Balance{AccountId: accountId, BalanceTime: util.GetNow(), Market: model.Huobi, Coin: coin}
+//				balance = &model.Balance{AccountId: accountId, BalanceTime: util.GetNow(), Market: model.Huobi, Coin0: coin}
 //				balanceMap[coin] = balance
 //			}
 //			switch value["type"] {
@@ -608,11 +608,11 @@ package deprecated
 //		balances = make([]*model.Balance, 0)
 //		for _, balance := range balanceMap {
 //			balance.Amount = balance.AvailableWithBorrow + balance.FrozenAmount - balance.Borrow
-//			priceGet, bidAsk := model.AppMarkets.GetBidAsk(balance.Coin+`usdt`, model.Huobi)
+//			priceGet, bidAsk := model.AppMarkets.GetBidAsk(balance.Coin0+`usdt`, model.Huobi)
 //			if priceGet {
 //				balance.UsdValue = balance.Amount * bidAsk.Bids[0].Price
 //			}
-//			balance.ID = fmt.Sprintf(`%s_%s_%s`, balance.Market, balance.Coin, balance.BalanceTime.String()[0:10])
+//			balance.ID = fmt.Sprintf(`%s_%s_%s`, balance.Market, balance.Coin0, balance.BalanceTime.String()[0:10])
 //			balances = append(balances, balance)
 //		}
 //	} else {

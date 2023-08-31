@@ -49,7 +49,7 @@ func createSpotMarket(key, secret, market string) (sm *spotMarket) {
 	success, balances, totalInUsd, collateral := api.GetBalances(key, secret, market)
 	//for _, balance := range balances {
 	//	if balance.UsdValue == 0 && balance.Amount > 0 {
-	//		util.Notice(fmt.Sprintf(`usdvalue 0 %s %s %f`, market, balance.Coin, balance.Amount))
+	//		util.Notice(fmt.Sprintf(`usdvalue 0 %s %s %f`, market, balance.Coin0, balance.Amount))
 	//	}
 	//}
 	if success {
@@ -253,7 +253,7 @@ func initStatus(account *model.Account, setting *model.Setting, absentRevert boo
 	status.LimitBuy = math.Min(status.LimitBuy, status.AvailableBuy)
 	status.LimitSell = math.Min(status.LimitSell, status.AvailableSell)
 	initTradeLine(account, setting, status, doRevert)
-	util.StoreSyncMap(carryStatusMap, status, setting.Coin, setting.Market, setting.Symbol, account.Key)
+	util.StoreSyncMap(carryStatusMap, status, setting.Coin0, setting.Market, setting.Symbol, account.Key)
 	return
 }
 
@@ -286,12 +286,12 @@ func initTradeLine(account *model.Account, setting *model.Setting, status *Carry
 	status.TradeLineSell = math.Max(standardScoreSell*(0.5+jumpSell*status.RateInAll), lowestScore) - status.FoundingRate
 	status.TradeLineBuy *= account.CarryRate
 	status.TradeLineSell *= account.CarryRate
-	tradeLineExtra := getTradeLineExtra(setting.Coin, setting.CloseShortMargin)
+	tradeLineExtra := getTradeLineExtra(setting.Coin0, setting.CloseShortMargin)
 	if tradeLineExtra != nil {
 		status.TradeLineBuy += tradeLineExtra.buyExtra
 		status.TradeLineSell += tradeLineExtra.sellExtra
 	} else {
-		util.Notice(fmt.Sprintf(`fatal error fail to get trade line extra %s`, setting.Coin))
+		util.Notice(fmt.Sprintf(`fatal error fail to get trade line extra %s`, setting.Coin0))
 	}
 	if doRevert || account.CarryClose {
 		if status.Holding > 0 {
@@ -663,7 +663,7 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 	if coinSettings == nil {
 		settings = nil
 	} else {
-		value, _ := coinSettings.Load(setting.Coin)
+		value, _ := coinSettings.Load(setting.Coin0)
 		if value != nil {
 			settings = value.([]*model.Setting)
 		}
@@ -686,13 +686,13 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 			if account == nil || accountRelate == nil {
 				continue
 			}
-			status, okStatus := util.LoadSyncMap(carryStatusMap, setting.Coin, setting.Market, setting.Symbol, account.Key)
-			statusRelate, okRelate := util.LoadSyncMap(carryStatusMap, settingRelate.Coin, settingRelate.Market, settingRelate.Symbol, accountRelate.Key)
+			status, okStatus := util.LoadSyncMap(carryStatusMap, setting.Coin0, setting.Market, setting.Symbol, account.Key)
+			statusRelate, okRelate := util.LoadSyncMap(carryStatusMap, settingRelate.Coin0, settingRelate.Market, settingRelate.Symbol, accountRelate.Key)
 			if status == nil || statusRelate == nil || status == statusRelate || !okStatus || !okRelate {
 				continue
 			}
 			statusBuy, statusSell, amount, priceBuy, priceSell, tickBuy, tickSell :=
-				calcAmount(i, setting.Coin, status.(*CarryStatus), statusRelate.(*CarryStatus), tick, tickRelate)
+				calcAmount(i, setting.Coin0, status.(*CarryStatus), statusRelate.(*CarryStatus), tick, tickRelate)
 			if amount > 0 {
 				placeBuyStr := fmt.Sprintf(`%s_%s_%s`, statusBuy.market, statusBuy.symbol, model.OrderSideBuy)
 				placeSellStr := fmt.Sprintf(`%s_%s_%s`, statusSell.market, statusSell.symbol, model.OrderSideSell)
@@ -1019,8 +1019,8 @@ func placeCross(statusBuy, statusSell *CarryStatus, priceBuy, priceSell, amount 
 		if statusSell.Holding >= amount {
 			orderSell.Function = model.Close
 		}
-		orderBuy.Coin = statusBuy.setting.Coin
-		orderSell.Coin = statusSell.setting.Coin
+		orderBuy.Coin = statusBuy.setting.Coin0
+		orderSell.Coin = statusSell.setting.Coin0
 		success, msg := api.PlacePairOKEX(statusBuy.account, statusBuy.symbol, statusSell.symbol, model.OrderTypeLimit, priceBuy, priceSell, amount)
 		if !success {
 			orderBuy.Status, orderSell.Status = model.CarryStatusFail, model.CarryStatusFail
@@ -1036,7 +1036,7 @@ func placeCross(statusBuy, statusSell *CarryStatus, priceBuy, priceSell, amount 
 			}
 			order := api.PlaceOrder(statusBuy.account.Key, statusBuy.account.Secret, model.OrderSideBuy, model.OrderTypeLimit,
 				statusBuy.market, statusBuy.symbol, orderParam, priceBuy, priceBuy, amount, wsCross, PostOrderCross, statusBuy.setting)
-			saveCross(order, statusBuy.setting.Coin, model.FunctionCross, statusBuy.TradeLineBuy, statusBuy.TradeLineSell, statusBuy.Holding)
+			saveCross(order, statusBuy.setting.Coin0, model.FunctionCross, statusBuy.TradeLineBuy, statusBuy.TradeLineSell, statusBuy.Holding)
 		}()
 		go func() {
 			orderParam := ``
@@ -1046,7 +1046,7 @@ func placeCross(statusBuy, statusSell *CarryStatus, priceBuy, priceSell, amount 
 			order := api.PlaceOrder(statusSell.account.Key, statusSell.account.Secret, model.OrderSideSell, model.OrderTypeLimit,
 				statusSell.market, statusSell.symbol, orderParam, priceSell, priceSell,
 				amount, wsCross, PostOrderCross, statusSell.setting)
-			saveCross(order, statusSell.setting.Coin, model.FunctionCross, statusSell.TradeLineBuy, statusSell.TradeLineSell, statusSell.Holding)
+			saveCross(order, statusSell.setting.Coin0, model.FunctionCross, statusSell.TradeLineBuy, statusSell.TradeLineSell, statusSell.Holding)
 		}()
 		time.Sleep(time.Second * 4)
 	}
@@ -1080,7 +1080,7 @@ func placeStatus(status *CarryStatus, price float64, amount float64) {
 		if balance == nil {
 			util.Notice(fmt.Sprintf(`warning no balance %s %s %s`,
 				status.account.Key, status.market, status.symbol))
-			balance = &model.Balance{Amount: amount, UsdValue: amount * price, Market: status.market, Coin: status.setting.Coin}
+			balance = &model.Balance{Amount: amount, UsdValue: amount * price, Market: status.market, Coin: status.setting.Coin0}
 			valueSpot.(*spotMarket).balances[status.symbol] = balance
 		} else {
 			balance.Amount += amount
@@ -1141,7 +1141,7 @@ var PostOrderCross = func(order *model.Order, setting *model.Setting) {
 	account := model.AppConfig.GetAccountFromKeyIndex(order.Market, ``, order.AccountIndex)
 	if order.HaveId() && order.Status != model.CarryStatusFail {
 		//if account != nil {
-		//	status := getCarryStatus(setting.Coin, setting.Market, setting.Symbol, account.Key)
+		//	status := getCarryStatus(setting.Coin0, setting.Market, setting.Symbol, account.Key)
 		//	placeStatus(status, order.Price, order.Amount)
 		//maxBuy := status.LimitBuy
 		//maxSell := status.LimitSell
@@ -1160,7 +1160,7 @@ var PostOrderCross = func(order *model.Order, setting *model.Setting) {
 	} else {
 		unknownFail := true
 		if account != nil {
-			status, ok := util.LoadSyncMap(carryStatusMap, setting.Coin, setting.Market, setting.Symbol, account.Key)
+			status, ok := util.LoadSyncMap(carryStatusMap, setting.Coin0, setting.Market, setting.Symbol, account.Key)
 			switch order.Market {
 			case model.OKEX:
 				if InsufficientCodeOKEX[order.ErrCode] && setting != nil {

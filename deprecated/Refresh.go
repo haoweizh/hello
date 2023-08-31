@@ -58,7 +58,7 @@ package deprecated
 //			if marketBalances[key] == nil {
 //				marketBalances[key] = make(map[string]*model.Balance)
 //			}
-//			marketBalances[key][market+`-`+balance.Coin] = balance
+//			marketBalances[key][market+`-`+balance.Coin0] = balance
 //		}
 //	}
 //}
@@ -97,7 +97,7 @@ package deprecated
 //		}
 //		if order != nil && order.Status == model.CarryStatusWorking {
 //			util.Notice(fmt.Sprintf(`coin rate=%f left:%s %f right:%s %f`,
-//				rate, left.Coin, left.Amount, right.Coin, right.Amount/tick.Asks[0].Price))
+//				rate, left.Coin0, left.Amount, right.Coin0, right.Amount/tick.Asks[0].Price))
 //			time.Sleep(time.Duration(2) * time.Second)
 //			api.CancelOrders(key, secret, setting.Market, setting.Symbol)
 //		}

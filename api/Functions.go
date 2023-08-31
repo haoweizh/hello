@@ -976,7 +976,7 @@ func InitCrossMarketInfos(markets []string) {
 						Function:         model.FunctionCross,
 						Market:           info.Market,
 						Symbol:           info.Name,
-						Coin:             coin,
+						Coin0:            coin,
 						OpenShortMargin:  scoreOpen,
 						CloseShortMargin: scoreClose,
 						SymbolRelated:    topCross}
@@ -1145,7 +1145,7 @@ func SetSymbolLeverage(account *model.Account, market, symbol string) (success b
 //	_, balances, _ := GetBalances(key, secret, market, 0)
 //	balanceMap := make(map[string]*model.Balance)
 //	for _, balance := range balances {
-//		balanceMap[balance.Coin] = balance
+//		balanceMap[balance.Coin0] = balance
 //	}
 //	i := 0
 //	for _, items := range settings {

@@ -315,7 +315,7 @@ package api
 //
 //	balances = make([]*model.Balance, 0)
 //	for _, account := range spotAccountResp.Result.Assets {
-//		balance := &model.Balance{AccountId: key, BalanceTime: util.GetNow(), Market: model.XT, Coin: account.Currency}
+//		balance := &model.Balance{AccountId: key, BalanceTime: util.GetNow(), Market: model.XT, Coin0: account.Currency}
 //		balance.FrozenAmount, _ = strconv.ParseFloat(account.FrozenAmount, 64)
 //		balance.Available, _ = strconv.ParseFloat(account.AvailableAmount, 64)
 //		balance.AvailableWithBorrow, _ = strconv.ParseFloat(account.AvailableAmount, 64)
@@ -361,7 +361,7 @@ package api
 //	}
 //
 //	for _, asset := range xtContractAssetResp.Result {
-//		if asset.Coin == `usdt` {
+//		if asset.Coin0 == `usdt` {
 //			assetBalance, _ := strconv.ParseFloat(asset.AvailableBalance, 64)
 //			posBalance += assetBalance
 //		}

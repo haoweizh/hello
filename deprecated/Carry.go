@@ -212,7 +212,7 @@ package deprecated
 //	localUsdAvailable := 0.0
 //	borrowAll := 0.0
 //	for _, value := range balances {
-//		coin := strings.ToUpper(value.Coin)
+//		coin := strings.ToUpper(value.Coin0)
 //		success, bidAsk := model.AppMarkets.GetBidAsk(coin+model.GetSpotTail(market), market)
 //		if !success && settingCoins[coin] {
 //			util.Notice(`fail to get setting coin bid ask %s , return`, coin)
@@ -467,7 +467,7 @@ package deprecated
 //		}
 //	}
 //	for _, balance := range balances {
-//		if strings.ToUpper(balance.Coin+tail) == setting.Symbol || (strings.ToLower(balance.Coin+tail) == setting.Symbol) {
+//		if strings.ToUpper(balance.Coin0+tail) == setting.Symbol || (strings.ToLower(balance.Coin0+tail) == setting.Symbol) {
 //			amountRelated = balance.Amount
 //			relatedBalance = balance
 //		}
@@ -486,7 +486,7 @@ package deprecated
 //	balance, amountPerp, amountRelated := getCarryAmounts(setting, balances, positions)
 //	if balance == nil {
 //		if amountPerp != 0 {
-//			balance = &model.Balance{Coin: coin, Market: setting.Market}
+//			balance = &model.Balance{Coin0: coin, Market: setting.Market}
 //		} else {
 //			//util.Notice(`func:makeEqual can not get balance %s %s`, key, coin)
 //			return
@@ -601,7 +601,7 @@ package deprecated
 //	for coin := range coins[market] {
 //		balance := getCarryBalance(key, coin)
 //		if balance == nil {
-//			balance = &model.Balance{Coin: coin, Market: market}
+//			balance = &model.Balance{Coin0: coin, Market: market}
 //		}
 //		//if market == model.Binance || market == model.Gate {
 //		//	success, maxLoan := api.GetMaxLoan(key, secret, market, coin)

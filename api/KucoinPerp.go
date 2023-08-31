@@ -118,7 +118,7 @@ func setFutureAutoDeposit() {
 		if value != nil {
 			setting := value.(*model.Setting)
 			params := make(map[string]string)
-			params["symbol"] = setting.Coin + model.DialectTail[model.MarketTypePerp][model.KucoinPerp]
+			params["symbol"] = setting.Coin0 + model.DialectTail[model.MarketTypePerp][model.KucoinPerp]
 			params["status"] = "true"
 			resp, err := kucoinFutureClient("", "", "").AutoDepositStatus(params)
 			if err != nil || !resp.HttpSuccessful() || !resp.ApiSuccessful() {

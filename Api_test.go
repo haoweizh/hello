@@ -198,7 +198,7 @@ func Test_BalAndPos(t *testing.T) {
 	//	success, balances, total, collateral := api.GetBalances(account.Key, account.Secret, market)
 	//	fmt.Println(fmt.Sprintf(`%v %f %v %d`, success, total, collateral, len(balances)))
 	//	for _, balance := range balances {
-	//		if balance.Coin == `USDT` || balance.Coin == `USD` {
+	//		if balance.Coin0 == `USDT` || balance.Coin0 == `USD` {
 	//			fmt.Println(fmt.Sprintf(`usd amount %s %f`, market, balance.Amount))
 	//		}
 	//	}
@@ -456,7 +456,7 @@ func Test_transferInner(t *testing.T) {
 	for _, bal := range assets {
 		if bal.Coin != `USDT` {
 			amtStr := strconv.FormatFloat(bal.Amount, 'f', -1, 64)
-			//suc := api.TransferInnerBybit(model.AppConfig.BybitKey, model.AppConfig.BybitSecret, bal.Coin,
+			//suc := api.TransferInnerBybit(model.AppConfig.BybitKey, model.AppConfig.BybitSecret, bal.Coin0,
 			//	amtStr, `UNIFIED`, `FUND`)
 			suc := api.WithdrawBybit(model.AppConfig.BybitKey, model.AppConfig.BybitSecret, bal.Coin,
 				`65058810`, `65058810`, amtStr)

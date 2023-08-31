@@ -30,8 +30,8 @@ func _(key, secret string) {
 			_, balance, _, _ := api.GetBalances(key, secret, market)
 			balances = append(balances, balance...)
 			//for _, item := range balance {
-			//	key := fmt.Sprintf(`[balance]%s_%s`, item.Market, item.Coin)
-			//	if item.Amount > 10 || strings.ToLower(item.Coin) == `btc` {
+			//	key := fmt.Sprintf(`[balance]%s_%s`, item.Market, item.Coin0)
+			//	if item.Amount > 10 || strings.ToLower(item.Coin0) == `btc` {
 			//		model.SetCarryInfo(key, fmt.Sprintf(`%f %s`, item.Amount, item.BalanceTime.String()))
 			//	}
 			//}
@@ -39,7 +39,7 @@ func _(key, secret string) {
 		}
 		//for _, balance := range balances {
 		//util.Notice(fmt.Sprintf(`balance info: %s %s %s %f %f %s`,
-		//	balance.ID, balance.Market, balance.Coin, balance.Action, balance.Amount, balance.BalanceTime.String()))
+		//	balance.ID, balance.Market, balance.Coin0, balance.Action, balance.Amount, balance.BalanceTime.String()))
 		//if balance.Amount > 1 {
 		//	model.AppDB.Save(&balance)
 		//}

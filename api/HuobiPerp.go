@@ -110,7 +110,7 @@ func WsDepthServeHuobiPerp(markets *model.Markets, orderHandler OrderHandler) ([
 //	balance = &model.Balance{
 //		AccountId:   key,
 //		BalanceTime: util.GetNow(),
-//		Coin:        currency,
+//		Coin0:        currency,
 //		Market:      model.HuobiPerp,
 //		ID:          model.HuobiPerp + `_` + currency + `_` + util.GetNow().String()[0:10],
 //	}

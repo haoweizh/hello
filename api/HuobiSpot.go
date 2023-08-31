@@ -466,7 +466,7 @@ func queryOrderHuobiSpot(key, secret, orderId string) (order *model.Order) {
 //		}
 //	}
 //	if data[`currency`] != nil {
-//		balance.Coin = strings.ToLower(data[`currency`].(string))
+//		balance.Coin0 = strings.ToLower(data[`currency`].(string))
 //	}
 //	if data[`amount`] != nil {
 //		balance.Amount, _ = data[`amount`].(json.Number).Float64()

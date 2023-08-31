@@ -178,7 +178,7 @@ func getBalanceBitgetSpot(key string, secret string) (success bool, balances []*
 		balance.AvailableWithBorrow, _ = strconv.ParseFloat(account.Available, 64)
 		balance.Amount = balance.AvailableWithBorrow + balance.FrozenAmount - balance.Borrow
 		priceGet, price := GetPriceForce(key, secret, balance.Coin+model.UniStandardTail[model.MarketTypeSpot], model.BitgetSpot)
-		//priceGet, bidAsk := model.AppMarkets.GetBidAsk(balance.Coin+model.UniStandardTail[model.MarketTypeSpot], model.BitgetSpot)
+		//priceGet, bidAsk := model.AppMarkets.GetBidAsk(balance.Coin0+model.UniStandardTail[model.MarketTypeSpot], model.BitgetSpot)
 		if priceGet {
 			balance.UsdValue = balance.Amount * price
 		}

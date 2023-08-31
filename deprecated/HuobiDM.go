@@ -108,7 +108,7 @@ package deprecated
 //	balance = &model.Balance{
 //		AccountId:   key,
 //		BalanceTime: util.GetNow(),
-//		Coin:        currency,
+//		Coin0:        currency,
 //		Market:      model.HuobiDM,
 //		ID:          model.HuobiDM + `_` + currency + `_` + util.GetNow().String()[0:10],
 //	}

@@ -84,7 +84,7 @@ package deprecated
 //				localUsdAvailable := 0.0
 //				borrowAll := 0.0
 //				for _, value := range balances {
-//					coin := strings.ToUpper(value.Coin)
+//					coin := strings.ToUpper(value.Coin0)
 //					if market == model.OKEX { // 针对okex不能从balance获取可借数的问题进行特殊处理
 //						preBalance := getCarryBalance(key, coin)
 //						if preBalance != nil {
@@ -257,7 +257,7 @@ package deprecated
 //		}
 //	}
 //	for _, balance := range balances {
-//		if strings.ToUpper(balance.Coin+tail) == setting.Symbol {
+//		if strings.ToUpper(balance.Coin0+tail) == setting.Symbol {
 //			amountRelated = balance.Amount
 //			balanceExist = true
 //		}
@@ -356,7 +356,7 @@ package deprecated
 //	for coin := range coins[market] {
 //		balance := getCarryBalance(key, coin)
 //		if balance == nil {
-//			balance = &model.Balance{Coin: coin, Market: market}
+//			balance = &model.Balance{Coin0: coin, Market: market}
 //		}
 //		if market == model.OKEX {
 //			success, maxLoan := api.GetMaxLoan(key, secret, market, coin)
