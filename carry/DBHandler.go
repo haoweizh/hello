@@ -16,7 +16,7 @@ var balanceMaintainDay = util.GetNow()
 
 // MaintainBalance
 func _(key, secret string) {
-	for true {
+	for {
 		markets := api.GetMarkets()
 		balances := make([]*model.Balance, 0)
 		balanceTime := util.GetNow()
@@ -50,9 +50,9 @@ func _(key, secret string) {
 }
 
 func MaintainTransFee() {
-	for true {
+	for {
 		var orders []model.Order
-		for true {
+		for {
 			d, _ := time.ParseDuration("-240h")
 			dMin10, _ := time.ParseDuration("-10m")
 			now := util.GetNow()
@@ -169,7 +169,7 @@ func Maintain() {
 	//		}
 	//	}
 	//}()
-	for true {
+	for {
 		go MaintainMarketChan()
 		time.Sleep(time.Minute * 2)
 	}

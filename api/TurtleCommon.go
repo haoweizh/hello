@@ -566,7 +566,7 @@ func CanOpenCombine(setting, settingOppo *model.Setting, data, dataNormal *model
 			valueSetting := value.(*model.Setting)
 			_, _, valueCoin, _ := model.GetFromStandard(valueSetting.Market, valueSetting.Symbol)
 			if !model.CommonCoins[strings.ToLower(valueCoin)] {
-				if valueSetting.Chance != 0 {
+				if valueSetting.Chance != 0 && valueSetting.Function == model.FunctionTurtleNormal {
 					tradingSymbols[valueSetting.Symbol] = true
 				}
 			}

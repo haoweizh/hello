@@ -309,10 +309,11 @@ func getSortedInfos(market string, num int) (marketInfoArray model.MarketInfoArr
 		}
 		return true
 	})
-	util.Notice(fmt.Sprintf(`get top market info array %d`, len(marketInfoArray)))
 	sort.Sort(sort.Reverse(marketInfoArray))
 	for i := 0; i < num && i < len(marketInfoArray); i++ {
 		topInfos[marketInfoArray[i].Name] = marketInfoArray[i]
+		util.Notice(fmt.Sprintf(`get top market info to array %s %s trade amount %fu`,
+			market, marketInfoArray[i].Name, marketInfoArray[i].TradeAmount))
 	}
 	return marketInfoArray, topInfos
 }
