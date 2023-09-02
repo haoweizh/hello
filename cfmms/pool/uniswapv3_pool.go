@@ -3,24 +3,28 @@ package pool
 import (
 	"encoding/hex"
 	"fmt"
+	"hello/cfmms/abi_go/Erc20"
+	"hello/cfmms/abi_go/UniswapV3PoolSol"
+	"hello/cfmms/batch_request/batch_request_for_uniswap_v3"
+	"hello/cfmms/utils"
+	"hello/model"
+	"math"
+	"math/big"
+
 	v3sdkUtils "github.com/daoleno/uniswapv3-sdk/utils"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/shopspring/decimal"
-	"hello/cfmms/abi_go/Erc20"
-	"hello/cfmms/abi_go/UniswapV3PoolSol"
-	"hello/cfmms/batch_request/batch_request_for_uniswap_v3"
-	"hello/cfmms/utils"
-	"math"
-	"math/big"
 )
 
 type UniswapV3Pool struct {
 	Address        common.Address
 	TokenA         common.Address
+	TokenAName     string
 	TokenADecimals int64
 	TokenB         common.Address
+	TokenBName     string
 	TokenBDecimals int64
 	Liquidity      *big.Int
 	SqrtPrice      *big.Int
@@ -146,6 +150,34 @@ func (u *UniswapV3Pool) GetPoolData(client *ethclient.Client) error {
 
 func (u *UniswapV3Pool) GetAddress() common.Address {
 	return u.Address
+}
+
+func (u *UniswapV3Pool) GetKey() string {
+	return model.UniSwapV3 + "_" + u.GetSymbol()
+}
+
+func (u *UniswapV3Pool) GetSymbol() string {
+	return fmt.Sprintf("%s_%s_%f", u.TokenAName, u.TokenBName, u.Fee)
+}
+
+// Predict price after tokenA is swapped, tokenAAmountChange can be negative or positive.
+func (u *UniswapV3Pool) PredictPrice(tokenAAmountChange float64) float64 {
+	panic("implement me")
+}
+
+func (u *UniswapV3Pool) GetSetting() *model.Setting {
+	scoreOpen := 0.015
+	scoreClose := 0.005
+	return &model.Setting{
+		Valid:            true,
+		Function:         model.FunctionCross,
+		Market:           model.UniSwapV3,
+		Symbol:           u.GetSymbol(),
+		Coin0:            u.TokenAName,
+		Coin1:            u.TokenBName,
+		OpenShortMargin:  scoreOpen,
+		CloseShortMargin: scoreClose,
+	}
 }
 
 func (u *UniswapV3Pool) CalculatePrice(baseToken common.Address) float64 {
