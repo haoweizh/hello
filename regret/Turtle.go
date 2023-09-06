@@ -270,10 +270,6 @@ func ProcessCandles(start, end time.Time, far, allLimit int, useNear, useM bool,
 		util.Info(fmt.Sprintf(`get turtle candle %s %s %d setting chance %d`,
 			market, setting.Symbol, len(temp), setting.Chance))
 		calcLen := 10
-		if setting.Seconds < 86400 {
-			calcLen = 30
-		}
-		calcLen = 20
 		api.CalcCandleN(&model.SortedCandle{Value: temp}, calcLen)
 		tempTurtle := GetTurtleData(temp, int(setting.Near), int(setting.Far), int(setting.Seconds), useNear)
 		for s, data := range tempTurtle {

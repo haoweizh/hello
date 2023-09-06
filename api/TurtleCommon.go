@@ -401,9 +401,6 @@ func getTurtleCandles(account *model.Account, market, symbol string, far, second
 		return nil
 	}
 	calcLen := 10
-	if seconds < 86400 {
-		calcLen = 20
-	}
 	sortedCandles := &model.SortedCandle{Value: candles}
 	sort.Sort(sortedCandles)
 	if lastCandle2 == nil {
@@ -418,7 +415,7 @@ func getTurtleCandles(account *model.Account, market, symbol string, far, second
 	return sortedCandles.Value
 }
 
-const CandleMLen = 20
+const CandleMLen = 10
 
 func CalcCandleN(sortedCandles *model.SortedCandle, calcLen int) {
 	beginPrice := 0.0
