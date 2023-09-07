@@ -54,6 +54,10 @@ func GetSettings(function, market string) (settingMap *sync.Map) {
 	return nil
 }
 
+func GetSettingFromKey(settingKey string) *model.Setting {
+	return nil
+}
+
 func GetSetting(function, market, symbol string) *model.Setting {
 	settings := GetSettings(function, market)
 	if settings != nil {
