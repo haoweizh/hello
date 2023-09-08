@@ -30,7 +30,11 @@ type Setting struct {
 }
 
 func (setting *Setting) GetKey() (key string) {
-	return fmt.Sprintf("%s_%s_%s_%s", setting.Function, setting.Market, setting.Symbol, setting.Way)
+	return ComposeSettingKey(setting.Function, setting.Market, setting.Symbol, setting.Way)
+}
+
+func ComposeSettingKey(function, market, symbol, way string) string {
+	return fmt.Sprintf(`%s_%s_%s_%s`, function, market, symbol, way)
 }
 
 func GetMsgKey(function, market, symbol string) (msgKey string) {
