@@ -16,7 +16,7 @@ var HandlerMap = make(map[string]CarryHandler)
 var CarryInfo sync.Map        // userKey - function - msg
 var monitorInfo = &sync.Map{} // userIndex - table - syncMap[string -array[]string]
 var AppMetric = &MetricManager{}
-var IgnoreFunctions = map[string]bool{FunctionDynamicTurtle: true, FunctionTurtleNormal: true, FunctionDynamicCombine: true}
+var IgnoreFunctions = map[string]bool{FunctionDynamicTurtle: true, FunctionTurtleNormal: true, FunctionDynamicCombine: true, FunctionDynamicBoost: true}
 
 const DefaultLeverage = 5
 const BitgetSpot = `bitgetspot`
@@ -52,9 +52,11 @@ const OrderSideLiquidateShort = `liquidateShort`
 const FunctionSimulation = `simulation`
 const FunctionTurtle = `turtle`
 const FunctionGrid = `grid`
+const FunctionBoost = `boost`
 const FunctionTurtleAdjust = `turtle_adjust`
 const FunctionDynamicTurtle = `dynamic_turtle`
 const FunctionDynamicCombine = `dynamic_combine`
+const FunctionDynamicBoost = `dynamic_boost`
 const FunctionCombineTurtle = `combine_turtle`
 const FunctionTurtleNormal = `turtle_normal`
 const FunctionCross = `cross`

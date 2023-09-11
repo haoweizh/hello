@@ -73,9 +73,6 @@ func GetFunctions(market, symbol string) *sync.Map {
 	return nil
 }
 
-const topMarketInfoLen = 30
-const topTurtleDataLen = 10
-
 func PrepareSettings() {
 	localSymbolSettings := &sync.Map{}
 	localHandlers := &sync.Map{}
@@ -253,33 +250,33 @@ func handleCombineSettings(mumSetting *model.Setting, topMarketInfos map[string]
 	})
 }
 
-func handleTurtleSettings(mumSetting *model.Setting, topMarketInfos map[string]*model.MarketInfo) {
+func handleSingleSettings(mumSetting *model.Setting, topMarketInfos map[string]*model.MarketInfo, function string) {
 	settingMap := &sync.Map{}
-	value, ok := util.LoadSyncMap(symbolSettings, model.FunctionTurtle, mumSetting.Market)
+	value, ok := util.LoadSyncMap(symbolSettings, function, mumSetting.Market)
 	if ok && value != nil {
 		settingMap = value.(*sync.Map)
 	}
 	for _, info := range topMarketInfos {
 		value, _ = settingMap.Load(info.Name)
-		settingTurtle := &model.Setting{Valid: true, Function: model.FunctionTurtle, Market: mumSetting.Market,
+		settingNew := &model.Setting{Valid: true, Function: function, Market: mumSetting.Market,
 			Symbol: info.Name, ChanceLimit: mumSetting.ChanceLimit, AmountRate: mumSetting.AmountRate,
 			AmountLimit: mumSetting.AmountLimit, Far: mumSetting.Far, Near: mumSetting.Near, Seconds: mumSetting.Seconds}
 		if value == nil {
-			util.Notice(`add settingTurtle %v`, settingTurtle.Symbol)
+			util.Notice(`add settingNew %v`, settingNew.Symbol)
 			accounts := model.AppConfig.GetAccounts(mumSetting.Market)
 			for _, account := range accounts {
 				if account != nil {
-					SetSymbolLeverage(account, settingTurtle.Market, settingTurtle.Symbol)
+					SetSymbolLeverage(account, settingNew.Market, settingNew.Symbol)
 				}
 			}
 			time.Sleep(time.Second)
 		} else {
-			settingTurtle = value.(*model.Setting)
-			settingTurtle.SymbolRelated = ``
-			util.Notice(`add settingTurtle back %s`, info.Name)
+			settingNew = value.(*model.Setting)
+			settingNew.SymbolRelated = ``
+			util.Notice(`add settingNew back %s`, info.Name)
 		}
-		settingMap.Store(info.Name, settingTurtle)
-		model.AppDB.Save(settingTurtle)
+		settingMap.Store(info.Name, settingNew)
+		model.AppDB.Save(settingNew)
 	}
 	settingMap.Range(func(symbol, setting interface{}) bool {
 		if setting == nil {
@@ -318,13 +315,12 @@ func getSortedInfos(market string, num int) (marketInfoArray model.MarketInfoArr
 	return marketInfoArray, topInfos
 }
 
-func getDynamicMarketInfos(mumSetting *model.Setting, accounts []*model.Account, function string) (
+func getDynamicMarketInfos(mumSetting *model.Setting, accounts []*model.Account, function string, lenInfo, lenData int) (
 	topMarketInfos map[string]*model.MarketInfo) {
-	InitMarketInfos(mumSetting.Market)
 	topMarketInfos = make(map[string]*model.MarketInfo)
 	turtleDataArray := model.TurtleDataArray{}
-	marketInfoArray, _ := getSortedInfos(mumSetting.Market, topMarketInfoLen)
-	for i := 0; i < marketInfoArray.Len() && len(topMarketInfos) < topMarketInfoLen; i++ {
+	marketInfoArray, _ := getSortedInfos(mumSetting.Market, lenInfo)
+	for i := 0; i < marketInfoArray.Len() && len(topMarketInfos) < lenInfo; i++ {
 		_, marketType, coinValue, _ := model.GetFromStandard(mumSetting.Market, marketInfoArray[i].Name)
 		if strings.EqualFold(marketType, model.MarketTypePerp) && !model.CommonCoins[strings.ToLower(coinValue)] {
 			tried := false
@@ -347,7 +343,7 @@ func getDynamicMarketInfos(mumSetting *model.Setting, accounts []*model.Account,
 						topMarketInfos[marketInfoArray[i].Name] = marketInfoArray[i]
 						turtleDataArray = append(turtleDataArray, turtleData)
 						util.Notice(fmt.Sprintf(`get top turtle done %d of %d %s %s %d n:%f nVolume:%f`,
-							i, topMarketInfoLen, mumSetting.Market, marketInfoArray[i].Name, mumSetting.Seconds, turtleData.N, turtleData.NVolume))
+							i, lenInfo, mumSetting.Market, marketInfoArray[i].Name, mumSetting.Seconds, turtleData.N, turtleData.NVolume))
 						break
 					} else if dataValid {
 						util.Notice(fmt.Sprintf(`get top turtle data fail for new coin reason`))
@@ -362,13 +358,13 @@ func getDynamicMarketInfos(mumSetting *model.Setting, accounts []*model.Account,
 	}
 	sort.Sort(turtleDataArray)
 	for i := 0; i < turtleDataArray.Len(); i++ {
-		if i < turtleDataArray.Len()-topTurtleDataLen {
+		if i < turtleDataArray.Len()-lenData {
 			delete(topMarketInfos, turtleDataArray[i].Symbol)
 			util.Notice(fmt.Sprintf(`remove not topped last %s %s %d of %d NVolume %f left %d`,
-				mumSetting.Market, turtleDataArray[i].Symbol, i, topTurtleDataLen, turtleDataArray[i].NVolume, len(topMarketInfos)))
+				mumSetting.Market, turtleDataArray[i].Symbol, i, lenData, turtleDataArray[i].NVolume, len(topMarketInfos)))
 		} else {
 			util.Notice(fmt.Sprintf(`keep topped %s %s last %d of %d NVolume %f left %d`,
-				mumSetting.Market, turtleDataArray[i].Symbol, i, topTurtleDataLen, turtleDataArray[i].NVolume, len(topMarketInfos)))
+				mumSetting.Market, turtleDataArray[i].Symbol, i, lenData, turtleDataArray[i].NVolume, len(topMarketInfos)))
 		}
 	}
 	return topMarketInfos
@@ -377,19 +373,25 @@ func getDynamicMarketInfos(mumSetting *model.Setting, accounts []*model.Account,
 func handleMarketDynamic(market string) (handled bool) {
 	settingDynamicTurtle := GetSetting(model.FunctionDynamicTurtle, market, ``)
 	settingDynamicCombine := GetSetting(model.FunctionDynamicCombine, market, ``)
+	settingDynamicBoost := GetSetting(model.FunctionDynamicBoost, market, ``)
 	accounts := model.AppConfig.GetAccounts(market)
-	if (settingDynamicTurtle == nil && settingDynamicCombine == nil) || accounts == nil || len(accounts) == 0 {
+	if (settingDynamicTurtle == nil && settingDynamicCombine == nil || settingDynamicBoost == nil) ||
+		accounts == nil || len(accounts) == 0 {
 		return false
 	}
+	InitMarketInfos(market)
 	if settingDynamicCombine != nil {
-		topMarketInfos := getDynamicMarketInfos(settingDynamicCombine, accounts, settingDynamicCombine.Function)
+		topMarketInfos := getDynamicMarketInfos(settingDynamicCombine, accounts, settingDynamicCombine.Function, 30, 10)
 		handleCombineSettings(settingDynamicCombine, topMarketInfos)
 	} else if settingDynamicTurtle != nil {
-		topMarketInfos := getDynamicMarketInfos(settingDynamicTurtle, accounts, settingDynamicTurtle.Function)
-		handleTurtleSettings(settingDynamicTurtle, topMarketInfos)
+		topMarketInfos := getDynamicMarketInfos(settingDynamicTurtle, accounts, settingDynamicTurtle.Function, 30, 10)
+		handleSingleSettings(settingDynamicTurtle, topMarketInfos, model.FunctionTurtle)
+	} else if settingDynamicBoost != nil {
+		topMarketInfos := getDynamicMarketInfos(settingDynamicBoost, accounts, settingDynamicBoost.Function, 10, 10)
+		handleSingleSettings(settingDynamicBoost, topMarketInfos, model.FunctionBoost)
 	}
 	DynamicHandleTime.Store(market, time.Now())
-	util.Notice(fmt.Sprintf(`handleMarketDynamic %s`, market))
+	util.Notice(fmt.Sprintf(`handle Dynamic settings %s`, market))
 	return true
 }
 
