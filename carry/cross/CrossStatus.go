@@ -118,7 +118,7 @@ func getTradeLineExtra(coin string, closeLine float64) (tradeLineExtra *TradeLin
 				amtRate := crossValues[model.OrderSideBuy+model.FunctionComplement] / crossValues[model.OrderSideBuy+model.FunctionCross]
 				extra := math.Max(closeLine, 0.001) * math.Pow(amtRate, 3) * lossRate * 400000
 				extra = math.Max(extra, 3*lossRate)
-				tradeLineExtra.buyExtra = extra
+				tradeLineExtra.buyExtra = math.Min(extra, 0.4)
 				util.Notice(fmt.Sprintf(`comp extra buy %s compU %f compRate %f lossRate %f add %f`,
 					coin, crossValues[model.OrderSideBuy+model.FunctionComplement], amtRate, lossRate, extra))
 			}
@@ -130,7 +130,7 @@ func getTradeLineExtra(coin string, closeLine float64) (tradeLineExtra *TradeLin
 				amtRate := crossValues[model.OrderSideSell+model.FunctionComplement] / crossValues[model.OrderSideSell+model.FunctionCross]
 				extra := math.Max(closeLine, 0.001) * math.Pow(amtRate, 3) * lossRate * 400000
 				extra = math.Max(extra, 3*lossRate)
-				tradeLineExtra.sellExtra = extra
+				tradeLineExtra.sellExtra = math.Min(extra, 0.4)
 				util.Notice(fmt.Sprintf(`comp extra sell %s compU %f compRate %f lossRate %f add %f`,
 					coin, crossValues[model.OrderSideSell+model.FunctionComplement], amtRate, lossRate, extra))
 			}

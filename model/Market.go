@@ -104,7 +104,7 @@ func (markets *Markets) GetBidAsk(symbol, market string) (result bool, bidAsk *B
 
 func (markets *Markets) SetBidAsk(symbol, marketName string, bidAsk *BidAsk) bool {
 	if bidAsk == nil || bidAsk.Bids == nil || bidAsk.Asks == nil || bidAsk.Bids.Len() == 0 || bidAsk.Asks.Len() == 0 {
-		util.SocketInfo(fmt.Sprintf(`do not set nil or empty bid ask %s %s data:%v`, marketName, symbol, bidAsk))
+		//util.SocketInfo(fmt.Sprintf(`do not set nil or empty bid ask %s %s data:%v`, marketName, symbol, bidAsk))
 		return false
 	}
 	if bidAsk.Bids[0].Price >= bidAsk.Asks[0].Price || bidAsk.Bids[0].Price == 0 || bidAsk.Bids[0].Amount == 0 ||
