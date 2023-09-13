@@ -926,7 +926,7 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarrySta
 		if haveLimit {
 			amount = math.Min(amount, limit)
 		}
-		amount = math.Min(amount, crossLimitInU/priceSell)
+		amount = math.Min(amount, openValueLimit/priceSell)
 		amount = FormatCrossPair(statusBuy.market, statusSell.market, statusBuy.symbol, statusSell.symbol, amount, priceBuy)
 	}
 	if checkScoreLimit(carryStatus.market, carryStatus.symbol, carryStatusRelate.market, carryStatusRelate.symbol, amount, score, scoreRelate) {
