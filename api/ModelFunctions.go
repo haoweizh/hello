@@ -260,7 +260,8 @@ func handleSingleSettings(mumSetting *model.Setting, topMarketInfos map[string]*
 		value, _ = settingMap.Load(info.Name)
 		settingNew := &model.Setting{Valid: true, Function: function, Market: mumSetting.Market,
 			Symbol: info.Name, ChanceLimit: mumSetting.ChanceLimit, AmountRate: mumSetting.AmountRate,
-			AmountLimit: mumSetting.AmountLimit, Far: mumSetting.Far, Near: mumSetting.Near, Seconds: mumSetting.Seconds}
+			AmountLimit: mumSetting.AmountLimit, Far: mumSetting.Far, Near: mumSetting.Near, Seconds: mumSetting.Seconds,
+			FarCombine: mumSetting.FarCombine, NearCombine: mumSetting.NearCombine, SecondsCombine: mumSetting.SecondsCombine}
 		if value == nil {
 			util.Notice(`add settingNew %v`, settingNew.Symbol)
 			accounts := model.AppConfig.GetAccounts(mumSetting.Market)
@@ -328,17 +329,15 @@ func getDynamicMarketInfos(mumSetting *model.Setting, accounts []*model.Account,
 			for time.Now().Minute() <= 6 || !tried {
 				tried = true
 				dataValid := false
-				far := mumSetting.Far
-				near := mumSetting.Near
-				seconds := mumSetting.Seconds
-				if function == model.FunctionDynamicCombine && far*seconds < mumSetting.FarCombine*mumSetting.SecondsCombine {
-					far = mumSetting.FarCombine
-					near = mumSetting.NearCombine
-					seconds = mumSetting.SecondsCombine
+				checkSetting := &model.Setting{Function: function, Market: mumSetting.Market, Symbol: marketInfoArray[i].Name,
+					Far: mumSetting.Far, Near: mumSetting.Near, Seconds: mumSetting.Seconds, AmountRate: mumSetting.AmountRate}
+				if function == model.FunctionDynamicCombine && checkSetting.Far*checkSetting.Seconds < mumSetting.FarCombine*mumSetting.SecondsCombine {
+					checkSetting.Far = mumSetting.FarCombine
+					checkSetting.Near = mumSetting.NearCombine
+					checkSetting.Seconds = mumSetting.SecondsCombine
 				}
-				if near > 0 && far > near && seconds > 0 {
-					turtleData, dataValid = GetTurtleData(accounts[0], function, mumSetting.Market, marketInfoArray[i].Name,
-						far, near, seconds, mumSetting.AmountRate, false)
+				if checkSetting.Near > 0 && checkSetting.Far >= checkSetting.Near && checkSetting.Seconds > 0 {
+					turtleData, dataValid = GetTurtleData(accounts[0], checkSetting, false)
 					if turtleData != nil {
 						topMarketInfos[marketInfoArray[i].Name] = marketInfoArray[i]
 						turtleDataArray = append(turtleDataArray, turtleData)

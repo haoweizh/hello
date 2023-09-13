@@ -148,6 +148,7 @@ func Maintain() {
 	model.HandlerMap[model.FunctionCross] = cross.ProcessCross
 	model.HandlerMap[model.FunctionHang] = hang.ProcessHang
 	model.HandlerMap[model.FunctionCombineTurtle] = Turtle.ProcessCombineTurtle
+	model.HandlerMap[model.FunctionBoost] = Turtle.ProcessBoost
 	_ = model.AppDB.AutoMigrate(&model.Setting{})
 	_ = model.AppDB.AutoMigrate(&model.Order{})
 	_ = model.AppDB.AutoMigrate(&model.Balance{})

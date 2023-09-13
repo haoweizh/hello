@@ -49,10 +49,8 @@ var ProcessCombineTurtle = func(settingCombine *model.Setting, tick *model.BidAs
 	settings := []*model.Setting{settingCombine, settingNormal}
 	account := model.AppConfig.GetAccounts(market)[0]
 	var dataCombine, dataNormal *model.TurtleData
-	dataCombine, _ = api.GetTurtleData(account, settingCombine.Function, settingCombine.Market, settingCombine.Symbol,
-		settingCombine.Far, settingCombine.Near, settingCombine.Seconds, settingCombine.AmountRate, true)
-	dataNormal, _ = api.GetTurtleData(account, settingNormal.Function, settingNormal.Market, settingNormal.Symbol,
-		settingNormal.Far, settingNormal.Near, settingNormal.Seconds, settingNormal.AmountRate, true)
+	dataCombine, _ = api.GetTurtleData(account, settingCombine, true)
+	dataNormal, _ = api.GetTurtleData(account, settingNormal, true)
 	if dataCombine == nil || dataCombine.N == 0 || dataCombine.Amount == 0 || dataNormal == nil || dataNormal.N == 0 ||
 		dataNormal.Amount == 0 || settingCombine == nil || settingNormal == nil || model.AppConfig.Env == `test` {
 		if time.Now().Second() == 0 {
@@ -91,11 +89,11 @@ var ProcessCombineTurtle = func(settingCombine *model.Setting, tick *model.BidAs
 		dataCombine.NVolume, canOpen, int(turtleCoins), int(settingCombine.AmountLimit), dataCombine.Amount,
 		tick.Bids[0].Price, tick.Asks[0].Price,
 		settingNormal.Chance, settingNormal.ChanceLimit, settingNormal.GridAmount, settingNormal.PriceX, dataNormal.Liquidated,
-		dataNormal.GetIds(), dataNormal.Big, dataNormal.DaysFar, dataNormal.LowDaysFar, dataNormal.HighDaysFar,
-		dataNormal.DaysNear, dataNormal.LowDaysNear, dataNormal.HighDaysNear, dataNormal.N,
+		dataNormal.GetIds(), dataNormal.Big, dataNormal.DaysFar, dataNormal.LowFar, dataNormal.HighFar,
+		dataNormal.DaysNear, dataNormal.LowNear, dataNormal.HighNear, dataNormal.N,
 		settingCombine.Chance, settingCombine.ChanceLimit, settingCombine.GridAmount, settingCombine.PriceX,
-		dataCombine.Liquidated, dataCombine.GetIds(), dataCombine.Big, dataCombine.DaysFar, dataCombine.LowDaysFar,
-		dataCombine.HighDaysFar, dataCombine.DaysNear, dataCombine.LowDaysNear, dataCombine.HighDaysNear, dataCombine.N)
+		dataCombine.Liquidated, dataCombine.GetIds(), dataCombine.Big, dataCombine.DaysFar, dataCombine.LowFar,
+		dataCombine.HighFar, dataCombine.DaysNear, dataCombine.LowNear, dataCombine.HighNear, dataCombine.N)
 	util.StoreSyncMap(&model.CarryInfo, msg, account.Key, msgKey)
 	placeTurtleLong(account, model.OrderTypeStop, dataNormal, settingNormal, tick, canOpen)
 	placeTurtleShort(account, model.OrderTypeStop, dataNormal, settingNormal, tick, canOpen)
@@ -222,34 +220,34 @@ func placeTurtleLong(account *model.Account, orderType string, data *model.Turtl
 	} else if data.Big == -1 {
 		amount = data.Amount / 2
 	}
-	price := data.HighDaysFar
+	price := data.HighFar
 	priceChange := 2 * data.N
 	if setting.Seconds == 14400 && orderType == model.OrderTypeStop {
 		priceChange = 2.5 * data.N
 	}
 	if orderType == model.OrderTypeLimit {
-		price = data.LowDaysFar + data.N/2
+		price = data.LowFar + data.N/2
 		if setting.Chance > 0 {
-			price = math.Min(data.LowDaysFar, setting.PriceX-data.N/2)
+			price = math.Min(data.LowFar, setting.PriceX-data.N/2)
 		} else if setting.Chance < 0 {
 			if data.UseNear {
-				price = math.Max(setting.PriceX-priceChange, data.LowDaysNear)
+				price = math.Max(setting.PriceX-priceChange, data.LowNear)
 			} else {
-				//price = math.Max(data.HighDaysFar, data.HighToday) - 2*data.N
-				price = math.Max(data.HighDaysFar, setting.PriceX) - priceChange
+				//price = math.Max(data.HighFar, data.HighToday) - 2*data.N
+				price = math.Max(data.HighFar, setting.PriceX) - priceChange
 			}
 		}
 	} else if orderType == model.OrderTypeStop {
 		if setting.Chance > 0 {
-			price = math.Max(data.HighDaysFar, setting.PriceX+data.N/2)
+			price = math.Max(data.HighFar, setting.PriceX+data.N/2)
 		} else if setting.Chance < 0 {
 			if data.UseNear {
-				price = math.Min(setting.PriceX+priceChange, data.HighDaysNear)
+				price = math.Min(setting.PriceX+priceChange, data.HighNear)
 			} else {
 				if data.LowToday > 0 {
-					price = math.Min(data.LowDaysFar, data.LowToday) + priceChange
+					price = math.Min(data.LowFar, data.LowToday) + priceChange
 				} else {
-					price = data.LowDaysFar + priceChange
+					price = data.LowFar + priceChange
 				}
 			}
 		}
@@ -279,7 +277,7 @@ func placeTurtleLong(account *model.Account, orderType string, data *model.Turtl
 		}
 		util.Notice(fmt.Sprintf(`place long %s %s %s %s %s %d %v at %e %e amt %e, useNear %v priceX %f n:%f seconds %d near %f %f far %f %f`,
 			orderType, setting.Function, market, symbol, orderType, setting.Chance, canOpen, priceDeal, price, amount,
-			data.UseNear, setting.PriceX, data.N, setting.Seconds, data.LowDaysNear, data.HighDaysNear, data.LowDaysFar, data.HighDaysFar))
+			data.UseNear, setting.PriceX, data.N, setting.Seconds, data.LowNear, data.HighNear, data.LowFar, data.HighFar))
 		for _, order := range data.OrderLong {
 			order.LineBuy = data.N
 			order.LineSell = data.N
@@ -307,40 +305,40 @@ func placeTurtleShort(account *model.Account, orderType string, data *model.Turt
 	} else if data.Big == -1 {
 		amount = data.Amount / 2
 	}
-	price := data.LowDaysFar
+	price := data.LowFar
 	priceChange := 2 * data.N
 	if setting.Seconds == 14400 && orderType == model.OrderTypeStop {
 		priceChange = 2.5 * data.N
 	}
 	if orderType == model.OrderTypeLimit {
-		price = data.HighDaysFar - data.N/2
+		price = data.HighFar - data.N/2
 		if setting.Chance > 0 {
 			if data.UseNear {
-				price = math.Min(setting.PriceX+priceChange, data.HighDaysNear)
+				price = math.Min(setting.PriceX+priceChange, data.HighNear)
 			} else {
 				//if data.LowToday > 0 {
-				//	price = math.Min(data.LowDaysFar, data.LowToday) + 2*data.N
+				//	price = math.Min(data.LowFar, data.LowToday) + 2*data.N
 				//} else {
-				//	price = data.LowDaysFar + 2*data.N
+				//	price = data.LowFar + 2*data.N
 				//}
 				if setting.PriceX > 0 {
-					price = math.Min(data.LowDaysFar, setting.PriceX) + priceChange
+					price = math.Min(data.LowFar, setting.PriceX) + priceChange
 				} else {
-					price = data.LowDaysFar + priceChange
+					price = data.LowFar + priceChange
 				}
 			}
 		} else if setting.Chance < 0 {
-			price = math.Max(data.HighDaysFar, setting.PriceX+data.N/2)
+			price = math.Max(data.HighFar, setting.PriceX+data.N/2)
 		}
 	} else if orderType == model.OrderTypeStop {
 		if setting.Chance > 0 {
 			if data.UseNear {
-				price = math.Max(setting.PriceX-priceChange, data.LowDaysNear)
+				price = math.Max(setting.PriceX-priceChange, data.LowNear)
 			} else {
-				price = math.Max(data.HighDaysFar, data.HighToday) - priceChange
+				price = math.Max(data.HighFar, data.HighToday) - priceChange
 			}
 		} else if setting.Chance < 0 {
-			price = math.Min(data.LowDaysFar, setting.PriceX-data.N/2)
+			price = math.Min(data.LowFar, setting.PriceX-data.N/2)
 		}
 	}
 	market := setting.Market
@@ -363,7 +361,7 @@ func placeTurtleShort(account *model.Account, orderType string, data *model.Turt
 		}
 		util.Notice(fmt.Sprintf(`place short %s %s %s %s %s %d %v at %e %e amt %e, useNear %v priceX %f n:%f seconds %d near %f %f far %f %f`,
 			orderType, setting.Function, market, symbol, orderType, setting.Chance, canOpen, priceDeal, price, amount,
-			data.UseNear, setting.PriceX, data.N, setting.Seconds, data.LowDaysNear, data.HighDaysNear, data.LowDaysFar, data.HighDaysFar))
+			data.UseNear, setting.PriceX, data.N, setting.Seconds, data.LowNear, data.HighNear, data.LowFar, data.HighFar))
 		data.OrderShort = api.MustPlaceOrder(account.Key, account.Secret, model.OrderSideSell, orderType, market, symbol, ``,
 			setting.Function, priceDeal, price, amount, nil)
 		if data.OrderAdjust == nil {
