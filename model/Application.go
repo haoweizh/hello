@@ -45,6 +45,7 @@ const CarryStatusWorking = "working"
 const OrderTypeLimit = `limit`
 const OrderTypeMarket = `market`
 const OrderTypeStop = `stop`
+const OrderTypeTrailStop = `trail_stop`
 const OrderSideBuy = `buy`
 const OrderSideSell = `sell`
 const OrderSideLiquidateLong = `liquidateLong`

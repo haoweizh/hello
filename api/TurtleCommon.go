@@ -307,47 +307,14 @@ func GetTurtleData(account *model.Account, setting *model.Setting, refreshDynami
 	if lastHandled {
 		data.CheckTimeOpen = time.Now()
 	}
-	candles := getTurtleCandles(account, setting.Market, setting.Symbol, int(setting.Far), int(setting.Seconds), nowPeriod)
-	for i := 1; i <= data.DaysFar; i++ {
-		currentPeriod := nowPeriod.Add(time.Second * time.Duration(setting.Seconds*int64(-i)))
-		candle := findCandle(candles, currentPeriod)
-		if candle == nil || candle.PriceHigh == 0 || candle.PriceLow == 0 {
-			if time.Now().Second() == 0 {
-				util.Notice(`can not calc turtleDate as nil candle %s %s %s %s %d`,
-					setting.Market, setting.Symbol, data.Symbol, currentPeriod.String(), len(candles))
-			}
-			if i == 1 {
-				return nil, false
-			} else {
-				return nil, true
-			}
-		}
-		if candle.PriceHigh > data.HighFar && i <= data.DaysFar {
-			data.HighFar = candle.PriceHigh
-		}
-		if (data.LowFar == 0 || data.LowFar > candle.PriceLow) && i <= data.DaysFar {
-			data.LowFar = candle.PriceLow
-		}
-		if candle.PriceHigh > data.HighNear && i <= data.DaysNear {
-			data.HighNear = candle.PriceHigh
-		}
-		if (data.LowNear == 0 || data.LowNear > candle.PriceLow) && i <= data.DaysNear {
-			data.LowNear = candle.PriceLow
-		}
-		if candle.PriceHigh > data.HighAdjust && i <= data.DaysAdjust {
-			data.HighAdjust = candle.PriceHigh
-		}
-		if (data.LowAdjust == 0 || data.LowAdjust > candle.PriceLow) && i <= data.DaysAdjust {
-			data.LowAdjust = candle.PriceLow
-		}
-		if i == 1 {
-			go model.AppDB.Save(candle)
-			data.N = candle.N
-			data.NVolume = candle.NVolume
-			data.M = candle.M
-			data.Amount = CalcTurtleAmount(account, setting.Market, data.N, setting.AmountRate)
-			util.Notice(fmt.Sprintf(`set data %s %f %f`, setting.Function, data.N, data.Amount))
-		}
+	success := false
+	success, data.HighFar, data.LowFar, data.HighNear, data.LowNear, data.HighAdjust, data.LowAdjust, data.N,
+		data.M, data.NVolume, data.Amount = getCandleData(account, setting.Market, setting.Symbol,
+		data.DaysFar, data.DaysNear, int(setting.Seconds), data.DaysAdjust, setting.AmountRate, nowPeriod)
+	if setting.Function == model.FunctionBoost {
+		success, data.HighFarRe, data.LowFarRe, data.HighNearRe, data.LowNearRe, _, _, data.N, data.M, _, data.Amount =
+			getCandleData(account, setting.Market, setting.Symbol, data.DaysFarRe, data.DaysNearRe,
+				int(setting.SecondsCombine), data.DaysAdjust, setting.AmountRate, nowPeriod)
 	}
 	if data.Amount > 0 && data.N > 0 {
 		var marketInfo *model.MarketInfo
@@ -372,14 +339,15 @@ func GetTurtleData(account *model.Account, setting *model.Setting, refreshDynami
 				setting.Function, setting.Market, setting.Symbol, nowStr, data.Amount, data.AmountMin, data.N,
 				data.DaysNear, data.LowNear, data.HighNear, data.DaysFar, data.LowFar, data.HighFar, data))
 		}
-		return data, true
+		util.Notice(fmt.Sprintf(`set data %s %f %f`, setting.Function, data.N, data.Amount))
+		return data, success
 	} else {
 		return nil, false
 	}
 }
 
-func getCandleData(account *model.Account, function, market, symbol string, far, near, seconds, adjust int, amountRate float64, nowPeriod time.Time) (
-	success bool, highFar, lowFar, highNear, lowNear, highAdjust, lowAdjust, n, m, nVolume, amount float64) {
+func getCandleData(account *model.Account, market, symbol string, far, near, seconds, adjust int, amountRate float64, nowPeriod time.Time) (
+	getCandle bool, highFar, lowFar, highNear, lowNear, highAdjust, lowAdjust, n, m, nVolume, amount float64) {
 	candles := getTurtleCandles(account, market, symbol, far, seconds, nowPeriod)
 	for i := 1; i <= far; i++ {
 		currentPeriod := nowPeriod.Add(time.Second * time.Duration(seconds*-i))
@@ -389,12 +357,9 @@ func getCandleData(account *model.Account, function, market, symbol string, far,
 				util.Notice(`can not calc turtleDate as nil candle %s %s %s %d`,
 					market, symbol, currentPeriod.String(), len(candles))
 			}
-			if i == 1 {
-				return false, highFar, lowFar, highNear, lowNear, highAdjust, lowAdjust, n, m, nVolume, amount
-			} else {
-				return true, highFar, lowFar, highNear, lowNear, highAdjust, lowAdjust, n, m, nVolume, amount
-			}
+			return
 		}
+		getCandle = true
 		if candle.PriceHigh > highFar && i <= far {
 			highFar = candle.PriceHigh
 		}
@@ -419,14 +384,12 @@ func getCandleData(account *model.Account, function, market, symbol string, far,
 			nVolume = candle.NVolume
 			m = candle.M
 			amount = CalcTurtleAmount(account, market, n, amountRate)
-			util.Notice(fmt.Sprintf(`set data %s %f %f`, function, n, amount))
 		}
 	}
 	return
 }
 
-func getTurtleCandles(account *model.Account, market, symbol string, far, seconds int, currentPeriod time.Time) (
-	candles []*model.Candle) {
+func getTurtleCandles(account *model.Account, market, symbol string, far, seconds int, currentPeriod time.Time) (candles []*model.Candle) {
 	lastPeriod := time.Unix(currentPeriod.Unix()-int64(seconds)*2, 0)
 	var lastCandles []*model.Candle
 	model.AppDB.Model(&model.Candle{}).Where(`market=? and symbol=? and begin=? and seconds=?`,
