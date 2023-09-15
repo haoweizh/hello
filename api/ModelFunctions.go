@@ -386,7 +386,7 @@ func handleMarketDynamic(market string) (handled bool) {
 		topMarketInfos := getDynamicMarketInfos(settingDynamicTurtle, accounts, settingDynamicTurtle.Function, 30, 10)
 		handleSingleSettings(settingDynamicTurtle, topMarketInfos, model.FunctionTurtle)
 	} else if settingDynamicBoost != nil {
-		topMarketInfos := getDynamicMarketInfos(settingDynamicBoost, accounts, settingDynamicBoost.Function, 10, 10)
+		topMarketInfos := getDynamicMarketInfos(settingDynamicBoost, accounts, settingDynamicBoost.Function, 15, 15)
 		handleSingleSettings(settingDynamicBoost, topMarketInfos, model.FunctionBoost)
 	}
 	DynamicHandleTime.Store(market, time.Now())
