@@ -378,7 +378,7 @@ func handleMarketDynamic(market string) (handled bool) {
 	settingDynamicCombine := GetSetting(model.FunctionDynamicCombine, market, ``)
 	settingDynamicBoost := GetSetting(model.FunctionDynamicBoost, market, ``)
 	accounts := model.AppConfig.GetAccounts(market)
-	if (settingDynamicTurtle == nil && settingDynamicCombine == nil || settingDynamicBoost == nil) ||
+	if (settingDynamicTurtle == nil && settingDynamicCombine == nil && settingDynamicBoost == nil) ||
 		accounts == nil || len(accounts) == 0 {
 		return false
 	}
