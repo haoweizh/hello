@@ -258,8 +258,8 @@ func handleSingleSettings(mumSetting *model.Setting, topMarketInfos map[string]*
 	}
 	for _, info := range topMarketInfos {
 		value, _ = settingMap.Load(info.Name)
-		settingNew := &model.Setting{Valid: true, Function: function, Market: mumSetting.Market,
-			Symbol: info.Name, ChanceLimit: mumSetting.ChanceLimit, AmountRate: mumSetting.AmountRate,
+		settingNew := &model.Setting{Valid: true, Function: function, Market: mumSetting.Market, Symbol: info.Name,
+			ChanceLimit: mumSetting.ChanceLimit, AmountRate: mumSetting.AmountRate, AmountRateCombine: mumSetting.AmountRateCombine,
 			AmountLimit: mumSetting.AmountLimit, Far: mumSetting.Far, Near: mumSetting.Near, Seconds: mumSetting.Seconds,
 			FarCombine: mumSetting.FarCombine, NearCombine: mumSetting.NearCombine, SecondsCombine: mumSetting.SecondsCombine}
 		if value == nil {
@@ -389,7 +389,7 @@ func handleMarketDynamic(market string) (handled bool) {
 	} else if settingDynamicTurtle != nil {
 		topMarketInfos := getDynamicMarketInfos(settingDynamicTurtle, accounts, settingDynamicTurtle.Function, 30, 10)
 		handleSingleSettings(settingDynamicTurtle, topMarketInfos, model.FunctionTurtle)
-	} else if settingDynamicBoost != nil {
+	} else if settingDynamicBoost != nil && settingDynamicBoost.AmountRateCombine > 0 {
 		topMarketInfos := getDynamicMarketInfos(settingDynamicBoost, accounts, settingDynamicBoost.Function, 15, 15)
 		handleSingleSettings(settingDynamicBoost, topMarketInfos, model.FunctionBoost)
 	}
