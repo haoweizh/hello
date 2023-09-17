@@ -33,19 +33,21 @@ var ProcessBoost = func(setting *model.Setting, tick *model.BidAsk) {
 	account := model.AppConfig.GetAccounts(setting.Market)[0]
 	data, _ := api.GetTurtleData(account, setting.Function, setting.Market, setting.Symbol, setting.Far, setting.Near,
 		setting.Seconds, setting.AmountRate, true)
-	if setting.Function == model.FunctionBoost {
-		dataLiquid, _ := api.GetTurtleData(account, `calc_n`, setting.Market, setting.Symbol, setting.FarCombine,
-			setting.NearCombine, setting.SecondsCombine, setting.AmountRateCombine, true)
-		data.N = dataLiquid.N
-		data.Amount = dataLiquid.Amount
-	}
-	if data == nil || data.N == 0 || data.Amount == 0 || setting == nil || model.AppConfig.Env == `test` {
+	if data == nil || setting == nil || model.AppConfig.Env == `test` {
 		if time.Now().Second() == 0 {
 			util.Notice(fmt.Sprintf(`combine return no turtle combine turtle %s %s`, setting.Market, setting.Symbol))
 		}
 		return
 	}
-	if data.Liquidated {
+	if setting.Function == model.FunctionBoost {
+		dataLiquid, _ := api.GetTurtleData(account, `calc_n`, setting.Market, setting.Symbol, setting.FarCombine,
+			setting.NearCombine, setting.SecondsCombine, setting.AmountRateCombine, true)
+		if dataLiquid != nil {
+			data.N = dataLiquid.N
+			data.Amount = dataLiquid.Amount
+		}
+	}
+	if data.Liquidated || data.Amount == 0 || data.N == 0 {
 		return
 	}
 	if !data.OrderCleared {

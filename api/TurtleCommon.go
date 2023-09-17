@@ -318,10 +318,15 @@ func GetTurtleData(account *model.Account, function, market, symbol string, far,
 	if lastHandled {
 		data.CheckTimeOpen = time.Now()
 	}
-	success := false
-	success, data.HighFar, data.LowFar, data.HighNear, data.LowNear, data.HighAdjust, data.LowAdjust, data.N,
+	var getOne, getAll bool
+	getOne, getAll, data.HighFar, data.LowFar, data.HighNear, data.LowNear, data.HighAdjust, data.LowAdjust, data.N,
 		data.M, data.NVolume, data.Amount = getCandleData(account, market, symbol,
 		data.DaysFar, data.DaysNear, int(seconds), data.DaysAdjust, amountRate, nowPeriod)
+	if !getOne {
+		return nil, false
+	} else if !getAll {
+		return nil, true
+	}
 	if data.Amount > 0 && data.N > 0 {
 		var marketInfo *model.MarketInfo
 		v, _ := util.LoadSyncMap(model.MarketInfos, market, symbol)
@@ -346,14 +351,14 @@ func GetTurtleData(account *model.Account, function, market, symbol string, far,
 				data.DaysNear, data.LowNear, data.HighNear, data.DaysFar, data.LowFar, data.HighFar, data))
 		}
 		util.Notice(fmt.Sprintf(`set data %s %f %f`, function, data.N, data.Amount))
-		return data, success
+		return data, true
 	} else {
 		return nil, false
 	}
 }
 
 func getCandleData(account *model.Account, market, symbol string, far, near, seconds, adjust int, amountRate float64, nowPeriod time.Time) (
-	getCandle bool, highFar, lowFar, highNear, lowNear, highAdjust, lowAdjust, n, m, nVolume, amount float64) {
+	getOne, getAll bool, highFar, lowFar, highNear, lowNear, highAdjust, lowAdjust, n, m, nVolume, amount float64) {
 	candles := getTurtleCandles(account, market, symbol, far, seconds, nowPeriod)
 	for i := 1; i <= far; i++ {
 		currentPeriod := nowPeriod.Add(time.Second * time.Duration(seconds*-i))
@@ -365,7 +370,7 @@ func getCandleData(account *model.Account, market, symbol string, far, near, sec
 			}
 			return
 		}
-		getCandle = true
+		getOne = true
 		if candle.PriceHigh > highFar && i <= far {
 			highFar = candle.PriceHigh
 		}
@@ -392,6 +397,7 @@ func getCandleData(account *model.Account, market, symbol string, far, near, sec
 			amount = CalcTurtleAmount(account, market, n, amountRate)
 		}
 	}
+	getAll = true
 	return
 }
 
