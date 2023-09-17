@@ -464,7 +464,8 @@ func findCandle(candles []*model.Candle, begin time.Time) (resultCandle *model.C
 		}
 	}
 	for _, candle := range candles {
-		util.Notice(fmt.Sprintf(`no found candle %s %s`, begin.String(), candle.Begin.String()))
+		util.Notice(fmt.Sprintf(`no found candle %s %s %s %s`,
+			candle.Market, candle.Symbol, begin.String(), candle.Begin.String()))
 	}
 	return nil
 }
