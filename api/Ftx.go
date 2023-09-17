@@ -461,7 +461,7 @@ func cancelOrdersFtx(key, secret, symbol string) (result bool) {
 // {"success":true,"result":"Order cancelled"}
 func cancelOrderFtx(key, secret, orderType, orderId string) (result bool) {
 	path := `/orders/%s`
-	if orderType == model.OrderTypeStop {
+	if orderType == model.OrderTypeStop || orderType == model.OrderTypeTrailStop {
 		path = `/conditional_orders/%s`
 	}
 	response, _ := SignedRequestFtx(key, secret, `DELETE`, fmt.Sprintf(path, orderId), nil, nil)

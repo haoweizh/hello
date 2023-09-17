@@ -43,19 +43,15 @@ func CalcTurtleAmount(account *model.Account, market string, n, amountRate float
 
 // ClearOrders
 // 取消market交易所中symbol交易对的所有limit、stop单
-func ClearOrders(key, secret, market, symbol string) {
-	ordersLimit := QueryOpenOrders(key, secret, market, symbol, false)
-	ordersStop := QueryOpenOrders(key, secret, market, symbol, true)
-	for _, order := range ordersLimit {
-		if order != nil {
-			util.Notice(`cancel pending turtle limit order %s %s %s`, market, symbol, order.OrderId)
-			MustCancel(key, secret, market, symbol, model.OrderTypeLimit, order.OrderId, true)
+func ClearOrders(key, secret, market, symbol string, keepTypes map[string]bool) {
+	orders := QueryOpenOrders(key, secret, market, symbol)
+	for _, order := range orders {
+		if keepTypes != nil && keepTypes[order.OrderType] {
+			continue
 		}
-	}
-	for _, order := range ordersStop {
 		if order != nil {
-			util.Notice(`cancel pending turtle stop order %s %s %s`, market, symbol, order.OrderId)
-			MustCancel(key, secret, market, symbol, model.OrderTypeStop, order.OrderId, true)
+			util.Notice(`cancel pending turtle order %s %s %s`, market, symbol, order.OrderId)
+			MustCancel(key, secret, market, symbol, order.OrderType, order.OrderId, true)
 		}
 	}
 }
@@ -74,25 +70,21 @@ func ClearExtraOrders(key, secret, market, symbol string, dataArray []*model.Tur
 		for _, order := range data.OrderAdjust {
 			keepOrders[order.OrderId] = true
 		}
+		for _, order := range data.OrderTrail {
+			keepOrders[order.OrderId] = true
+		}
 	}
-	ordersStop := QueryOpenOrders(key, secret, market, symbol, true)
-	for _, order := range ordersStop {
+	orders := QueryOpenOrders(key, secret, market, symbol)
+	for _, order := range orders {
+		if order == nil {
+			continue
+		}
 		if !keepOrders[order.OrderId] {
 			result := MustCancel(key, secret, market, symbol, order.OrderType, order.OrderId, true)
-			util.Notice(`cancel extra stop order %s %s %s %s return %v`, market, symbol, order.OrderType, order.OrderId, result)
+			util.Notice(`cancel extra order %s %s %s %s return %v`, market, symbol, order.OrderType, order.OrderId, result)
 			time.Sleep(time.Second)
 		} else {
 			util.Notice(`keep stop order %s %s %s`, market, symbol, order.OrderId)
-		}
-	}
-	ordersLimit := QueryOpenOrders(key, secret, market, symbol, false)
-	for _, order := range ordersLimit {
-		if !keepOrders[order.OrderId] {
-			result := MustCancel(key, secret, market, symbol, order.OrderType, order.OrderId, true)
-			util.Notice(`cancel extra limit order %s %s %s %s return %v`, market, symbol, order.OrderType, order.OrderId, result)
-			time.Sleep(time.Second)
-		} else {
-			util.Notice(`keep limit order %s %s %s`, market, symbol, order.OrderId)
 		}
 	}
 }
@@ -210,6 +202,16 @@ func clearTurtleOrders(account *model.Account, setting *model.Setting, turtle *m
 			setting.Chance = 0
 		}
 	}
+	if setting.Chance == 0 {
+		for _, order := range turtle.OrderTrail {
+			MustCancel(account.Key, account.Secret, setting.Market, setting.Symbol, order.OrderType, order.OrderId, false)
+			time.Sleep(time.Millisecond * 200)
+		}
+	}
+	if turtle.BreakTrail {
+		broken = true
+		setting.Chance = 0
+	}
 	if broken {
 		model.AppDB.Model(&model.Setting{}).Where("market= ? and Symbol= ? and function= ?",
 			setting.Market, setting.Symbol, setting.Function).Updates(map[string]interface{}{
@@ -240,7 +242,7 @@ func handleLastTurtleData(account *model.Account, function, market, symbol, last
 				util.StoreSyncMap(&TurtleDataSet, nil, model.FunctionTurtleNormal, market, symbol, lastTime)
 			}
 		}
-	} else if function == model.FunctionTurtle {
+	} else if function == model.FunctionTurtle || function == model.FunctionBoost {
 		settings = []*model.Setting{GetSetting(function, market, symbol)}
 		valueTurtle, _ := util.LoadSyncMap(&TurtleDataSet, function, market, symbol, lastTime)
 		if valueTurtle == nil || settings[0] == nil {
@@ -256,7 +258,8 @@ func handleLastTurtleData(account *model.Account, function, market, symbol, last
 }
 
 // GetTurtleData refreshDynamic false时代表仅作为检查是否有足够turtleData作为top market info使用，此时不会存在缓存中，否则会引起far near错误
-func GetTurtleData(account *model.Account, setting *model.Setting, refreshDynamic bool) (data *model.TurtleData, dataValid bool) {
+func GetTurtleData(account *model.Account, function, market, symbol string, far, near, seconds int64,
+	amountRate float64, refreshDynamic bool) (data *model.TurtleData, dataValid bool) {
 	if refreshDynamic {
 		var lock *sync.Mutex
 		lockValue, _ := getTurtleLock.Load(account.Key)
@@ -270,60 +273,63 @@ func GetTurtleData(account *model.Account, setting *model.Setting, refreshDynami
 		lock.Lock()
 	}
 	now := time.Now()
-	nowPeriod, nowStr := model.GetNowPeriod(setting.Market, setting.Seconds, now)
-	value, ok := util.LoadSyncMap(&TurtleDataSet, setting.Function, setting.Market, setting.Symbol, nowStr)
+	nowPeriod, nowStr := model.GetNowPeriod(market, seconds, now)
+	value, ok := util.LoadSyncMap(&TurtleDataSet, function, market, symbol, nowStr)
 	lastHandled := false
 	if ok && value != nil {
 		return value.(*model.TurtleData), true
 	} else {
-		lastTime := time.Unix(now.Unix()-setting.Seconds, 0)
-		_, lastStr := model.GetNowPeriod(setting.Market, setting.Seconds, lastTime)
-		lastHandled = handleLastTurtleData(account, setting.Function, setting.Market, setting.Symbol, lastStr)
+		lastTime := time.Unix(now.Unix()-seconds, 0)
+		_, lastStr := model.GetNowPeriod(market, seconds, lastTime)
+		lastHandled = handleLastTurtleData(account, function, market, symbol, lastStr)
 	}
-	_, _, coin, _ := model.GetFromStandard(setting.Market, setting.Symbol)
+	_, _, coin, _ := model.GetFromStandard(market, symbol)
 	//today, _ := model.GetMarketToday(market)
 	// today.Unix() == nowPeriod.Unix() &&
 	if refreshDynamic && !model.CommonCoins[strings.ToLower(coin)] {
-		refreshValue, refreshOk := DynamicHandleTime.Load(setting.Market)
+		refreshValue, refreshOk := DynamicHandleTime.Load(market)
 		if !refreshOk || refreshValue == nil || refreshValue.(time.Time).Add(time.Hour).Before(time.Now()) {
-			if handleMarketDynamic(setting.Market) {
+			if handleMarketDynamic(market) {
 				PrepareSettings()
-				SetRequireReset(setting.Market)
+				SetRequireReset(market)
 				return nil, true
 			}
 		}
 	}
 	util.Notice(fmt.Sprintf(`need to create turtle data %s %s %s %s %d refresh %v`,
-		setting.Function, setting.Market, setting.Symbol, nowStr, setting.Far, refreshDynamic))
-	useNear := false
-	if setting.Function == model.FunctionTurtle || setting.Function == model.FunctionTurtleNormal || setting.Function == model.FunctionBoost {
-		useNear = true
-	} else if setting.Function == model.FunctionCombineTurtle {
-		useNear = false
+		function, market, symbol, nowStr, far, refreshDynamic))
+	data = &model.TurtleData{TurtleTime: nowPeriod, Symbol: symbol, Big: 1, DaysFar: int(far), DaysNear: int(near),
+		DaysAdjust: 5, OrderCleared: lastHandled, OrderAdjust: make([]*model.Order, 0)}
+	if function == model.FunctionTurtle || function == model.FunctionTurtleNormal {
+		data.UseNear = true
+	} else if function == model.FunctionCombineTurtle {
+		data.UseNear = false
+	} else if function == model.FunctionBoost {
+		data.UseNear = true
+		openOrders := QueryOpenOrders(account.Key, account.Secret, market, symbol)
+		data.OrderTrail = make([]*model.Order, 0)
+		for _, order := range openOrders {
+			if order.OrderType == model.OrderTypeTrailStop {
+				order.Function = model.Close
+				data.OrderTrail = append(data.OrderTrail, order)
+			}
+		}
 	}
-	data = &model.TurtleData{TurtleTime: nowPeriod, Symbol: setting.Symbol, BreakLong: false, BreakShort: false, Liquidated: false,
-		Big: 1, DaysFar: int(setting.Far), DaysNear: int(setting.Near), DaysAdjust: 5, UseNear: useNear, OrderCleared: lastHandled,
-		OrderAdjust: make([]*model.Order, 0), DaysFarRe: int(setting.FarCombine), DaysNearRe: int(setting.NearCombine)}
 	if lastHandled {
 		data.CheckTimeOpen = time.Now()
 	}
 	success := false
 	success, data.HighFar, data.LowFar, data.HighNear, data.LowNear, data.HighAdjust, data.LowAdjust, data.N,
-		data.M, data.NVolume, data.Amount = getCandleData(account, setting.Market, setting.Symbol,
-		data.DaysFar, data.DaysNear, int(setting.Seconds), data.DaysAdjust, setting.AmountRate, nowPeriod)
-	if setting.Function == model.FunctionBoost {
-		success, data.HighFarRe, data.LowFarRe, data.HighNearRe, data.LowNearRe, _, _, data.N, data.M, _, data.Amount =
-			getCandleData(account, setting.Market, setting.Symbol, data.DaysFarRe, data.DaysNearRe,
-				int(setting.SecondsCombine), data.DaysAdjust, setting.AmountRate, nowPeriod)
-	}
+		data.M, data.NVolume, data.Amount = getCandleData(account, market, symbol,
+		data.DaysFar, data.DaysNear, int(seconds), data.DaysAdjust, amountRate, nowPeriod)
 	if data.Amount > 0 && data.N > 0 {
 		var marketInfo *model.MarketInfo
-		v, _ := util.LoadSyncMap(model.MarketInfos, setting.Market, setting.Symbol)
+		v, _ := util.LoadSyncMap(model.MarketInfos, market, symbol)
 		if v != nil {
 			marketInfo = v.(*model.MarketInfo)
 		}
 		if marketInfo == nil {
-			util.Notice(`fail to get marketInfo %s %s`, setting.Market, setting.Symbol)
+			util.Notice(`fail to get marketInfo %s %s`, market, symbol)
 			return nil, false
 		} else {
 			if marketInfo.CTValue == 0 {
@@ -334,12 +340,12 @@ func GetTurtleData(account *model.Account, setting *model.Setting, refreshDynami
 			data.AmountMin = math.Max(data.AmountMin, 2*marketInfo.MoneyMin/data.LowFar)
 		}
 		if refreshDynamic {
-			util.StoreSyncMap(&TurtleDataSet, data, setting.Function, setting.Market, setting.Symbol, nowStr)
+			util.StoreSyncMap(&TurtleDataSet, data, function, market, symbol, nowStr)
 			util.Notice(fmt.Sprintf(`set turtle %s %s %s %s Amount:%e AmountMin:%e N:%e %d:%e-%e %d:%e-%e %v`,
-				setting.Function, setting.Market, setting.Symbol, nowStr, data.Amount, data.AmountMin, data.N,
+				function, market, symbol, nowStr, data.Amount, data.AmountMin, data.N,
 				data.DaysNear, data.LowNear, data.HighNear, data.DaysFar, data.LowFar, data.HighFar, data))
 		}
-		util.Notice(fmt.Sprintf(`set data %s %f %f`, setting.Function, data.N, data.Amount))
+		util.Notice(fmt.Sprintf(`set data %s %f %f`, function, data.N, data.Amount))
 		return data, success
 	} else {
 		return nil, false
@@ -508,12 +514,15 @@ func CheckBreak(account *model.Account, market, symbol string, settings []*model
 		if useApi {
 			data.CheckUseApi = util.GetNow()
 		}
-		var orderLong, orderShort *model.Order
+		var orderLong, orderShort, orderTrail *model.Order
 		if data.OrderLong != nil && len(data.OrderLong) > 0 {
 			orderLong = data.OrderLong[0]
 		}
 		if data.OrderShort != nil && len(data.OrderShort) > 0 {
 			orderShort = data.OrderShort[0]
+		}
+		if data.OrderTrail != nil && len(data.OrderTrail) > 0 {
+			orderTrail = data.OrderTrail[0]
 		}
 		if orderLong != nil {
 			if tick != nil && orderLong.TriggerPrice > 0 &&
@@ -551,6 +560,15 @@ func CheckBreak(account *model.Account, market, symbol string, settings []*model
 				}
 				util.Notice(fmt.Sprintf(`order break short %s %s %s %d %e %e id %s`,
 					market, symbol, orderShort.OrderType, setting.Chance, orderShort.TriggerPrice, orderShort.Price, orderShort.OrderId))
+			}
+		}
+		if orderTrail != nil && (useApi || tick == nil) {
+			orderTrail = QueryOrderById(account.Key, account.Secret, market, symbol, orderTrail.OrderType, orderTrail.OrderId)
+			time.Sleep(time.Millisecond * 200)
+			if orderTrail != nil && orderTrail.Status == model.CarryStatusSuccess {
+				data.BreakTrail = true
+				util.Notice(fmt.Sprintf(`order break trail %s %s %s %d %e %e id %s`,
+					market, symbol, orderTrail.OrderType, setting.Chance, orderTrail.TriggerPrice, orderTrail.Price, orderShort.OrderId))
 			}
 		}
 	}

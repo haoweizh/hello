@@ -49,8 +49,10 @@ var ProcessCombineTurtle = func(settingCombine *model.Setting, tick *model.BidAs
 	settings := []*model.Setting{settingCombine, settingNormal}
 	account := model.AppConfig.GetAccounts(market)[0]
 	var dataCombine, dataNormal *model.TurtleData
-	dataCombine, _ = api.GetTurtleData(account, settingCombine, true)
-	dataNormal, _ = api.GetTurtleData(account, settingNormal, true)
+	dataCombine, _ = api.GetTurtleData(account, settingCombine.Function, settingCombine.Market, settingCombine.Symbol,
+		settingCombine.Far, settingCombine.Near, settingCombine.Seconds, settingCombine.AmountRate, true)
+	dataNormal, _ = api.GetTurtleData(account, settingNormal.Function, settingNormal.Market, settingNormal.Symbol,
+		settingNormal.Far, settingNormal.Near, settingNormal.Seconds, settingNormal.AmountRate, true)
 	if dataCombine == nil || dataCombine.N == 0 || dataCombine.Amount == 0 || dataNormal == nil || dataNormal.N == 0 ||
 		dataNormal.Amount == 0 || settingCombine == nil || settingNormal == nil || model.AppConfig.Env == `test` {
 		if time.Now().Second() == 0 {
@@ -59,7 +61,7 @@ var ProcessCombineTurtle = func(settingCombine *model.Setting, tick *model.BidAs
 		return
 	}
 	if !dataCombine.OrderCleared {
-		api.ClearOrders(account.Key, account.Secret, market, symbol)
+		api.ClearOrders(account.Key, account.Secret, market, symbol, map[string]bool{model.OrderTypeTrailStop: true})
 		dataCombine.OrderCleared = true
 		util.Notice(fmt.Sprintf(`combine return not cleared %s %s %v`, market, symbol, dataCombine.OrderCleared))
 		return
@@ -108,102 +110,72 @@ var ProcessCombineTurtle = func(settingCombine *model.Setting, tick *model.BidAs
 }
 
 func handleAllBreak(settings []*model.Setting, turtles []*model.TurtleData) (needCheck bool) {
-	if settings == nil || len(settings) != 2 || turtles == nil || len(turtles) != 2 {
+	if settings == nil || turtles == nil || len(settings) != len(turtles) {
 		return false
 	}
 	// 每次只检查一个，如果同时检查多个，会导致一个里面更新的isBig在另一个里面没有更新
-	if handleBreakLong(settings[0], settings[1], turtles[0]) {
-		needCheck = true
-	}
-	if handleBreakShort(settings[0], settings[1], turtles[0]) {
-		needCheck = true
-	}
-	if handleBreakLong(settings[1], settings[0], turtles[1]) {
-		needCheck = true
-	}
-	if handleBreakShort(settings[1], settings[0], turtles[1]) {
-		needCheck = true
+	for i, setting := range settings {
+		var orders []*model.Order
+		if handleBreak(setting, turtles[i].OrderLong, turtles[i].BreakLong) {
+			needCheck = true
+			orders = turtles[i].OrderLong
+		} else if handleBreak(setting, turtles[i].OrderShort, turtles[i].BreakShort) {
+			orders = turtles[i].OrderShort
+			needCheck = true
+		} else if handleBreak(setting, turtles[i].OrderTrail, turtles[i].BreakTrail) {
+			orders = turtles[i].OrderTrail
+			needCheck = true
+		}
+		if needCheck {
+			// 保护起来，不进行主动撤单，以免未完全成交
+			for _, order := range orders {
+				turtles[i].OrderAdjust = append(turtles[i].OrderAdjust, order)
+			}
+			time.Sleep(time.Second * 3)
+			turtles[i].OrderLong = nil
+			turtles[i].OrderShort = nil
+			turtles[i].OrderTrail = nil
+			model.AppDB.Model(setting).Where("market= ? and Symbol= ? and function= ?",
+				setting.Market, setting.Symbol, setting.Function).Updates(map[string]interface{}{
+				`price_x`: setting.PriceX, `chance`: setting.Chance, `grid_amount`: setting.GridAmount})
+		}
 	}
 	return
 }
 
-func handleBreakLong(setting, settingOpposite *model.Setting, data *model.TurtleData) (work bool) {
-	if data == nil || data.OrderLong == nil || len(data.OrderLong) == 0 || !data.BreakLong {
+// handleBreak
+// 由于OrderTypeTrailStop订单有可能是通过API load进来的，所以没有 order.Function且此类订单都是close的，故特殊处理了
+func handleBreak(setting *model.Setting, orders []*model.Order, orderBreak bool) (work bool) {
+	if orders == nil || len(orders) == 0 || !orderBreak {
 		return false
 	}
-	if data.OrderLong[0].TriggerPrice > 0 {
-		setting.PriceX = data.OrderLong[0].TriggerPrice
+	if orders[0].TriggerPrice > 0 {
+		setting.PriceX = orders[0].TriggerPrice
 	} else {
-		setting.PriceX = data.OrderLong[0].Price
+		setting.PriceX = orders[0].Price
 	}
-	util.Notice(fmt.Sprintf(`query %s break buy %s %s %d %s %s chances %d %d`,
-		setting.Function, setting.Market, setting.Symbol, len(data.OrderLong), data.OrderLong[0].OrderId,
-		data.OrderLong[0].Function, setting.Chance, settingOpposite.Chance))
-	if data.OrderLong[0].Function == model.Close {
-		msg := fmt.Sprintf(`liquidate long %s %s chance:%d Amount:%e px:%e N:%e`,
-			setting.Market, setting.Symbol, setting.Chance, setting.GridAmount, setting.PriceX, data.N)
-		go api.SendMails(`平多`+setting.Market+setting.Symbol, msg)
+	util.Notice(fmt.Sprintf(`query %s break %s %s %s %d %s %s chances %d`,
+		setting.Function, setting.Market, setting.Symbol, orders[0].OrderSide, len(orders), orders[0].OrderId, orders[0].Function, setting.Chance))
+	if orders[0].Function == model.Close || orders[0].OrderType == model.OrderTypeTrailStop {
+		msg := fmt.Sprintf(`liquidate: %s %s chance:%d Amount:%e px:%e`,
+			setting.Market, setting.Symbol, setting.Chance, setting.GridAmount, setting.PriceX)
+		go api.SendMails(`平`+setting.Market+setting.Symbol, msg)
 		setting.Chance = 0
 		setting.GridAmount = 0
 		setting.PriceX = 0
-	} else if data.OrderLong[0].Function == model.Open {
-		util.Notice(fmt.Sprintf(`加多 %s %s chance:%d Amount:%e px:%e N:%e`,
-			setting.Market, setting.Symbol, setting.Chance, setting.GridAmount, setting.PriceX, data.N))
-		setting.Chance++
-		for _, order := range data.OrderLong {
+	} else if orders[0].Function == model.Open {
+		util.Notice(fmt.Sprintf(`加%s %s %s chance:%d Amount:%e px:%e`,
+			orders[0].OrderSide, setting.Market, setting.Symbol, setting.Chance, setting.GridAmount, setting.PriceX))
+		if orders[0].OrderSide == model.OrderSideSell {
+			setting.Chance--
+		} else if orders[0].OrderSide == model.OrderSideBuy {
+			setting.Chance++
+		}
+		for _, order := range orders {
 			setting.GridAmount += order.Amount
 		}
 	}
-	for _, order := range data.OrderLong {
-		data.OrderAdjust = append(data.OrderAdjust, order)
-	}
-	util.Notice(fmt.Sprintf(`clear turtle sell when buy break %s %s %v`, setting.Market, setting.Symbol, data.OrderShort))
-	time.Sleep(time.Second * 3)
-	data.OrderLong = nil
-	data.OrderShort = nil
-	model.AppDB.Model(setting).Where("market= ? and Symbol= ? and function= ?",
-		setting.Market, setting.Symbol, setting.Function).Updates(map[string]interface{}{
-		`price_x`: setting.PriceX, `chance`: setting.Chance, `grid_amount`: setting.GridAmount})
-	return true
-}
-
-func handleBreakShort(setting, settingOpposite *model.Setting, data *model.TurtleData) (work bool) {
-	if data == nil || data.OrderShort == nil || len(data.OrderShort) == 0 || !data.BreakShort {
-		return false
-	}
-	if data.OrderShort[0].TriggerPrice > 0 {
-		setting.PriceX = data.OrderShort[0].TriggerPrice
-	} else {
-		setting.PriceX = data.OrderShort[0].Price
-	}
-	util.Notice(fmt.Sprintf(`query %s break sell %s %s %d %s %s chances %d %d`,
-		setting.Function, setting.Market, setting.Symbol, len(data.OrderShort), data.OrderShort[0].OrderId,
-		data.OrderShort[0].Function, setting.Chance, settingOpposite.Chance))
-	if data.OrderShort[0].Function == model.Close {
-		msg := fmt.Sprintf(`liquidate short: %s %s chance:%d Amount:%e px:%e N:%e`,
-			setting.Market, setting.Symbol, setting.Chance, setting.GridAmount, setting.PriceX, data.N)
-		go api.SendMails(`平空`+setting.Market+setting.Symbol, msg)
-		setting.Chance = 0
-		setting.GridAmount = 0
-		setting.PriceX = 0
-	} else {
-		util.Notice(fmt.Sprintf(`加空 %s %s chance:%d Amount:%e px:%e N:%e`,
-			setting.Market, setting.Symbol, setting.Chance, setting.GridAmount, setting.PriceX, data.N))
-		setting.Chance--
-		for _, order := range data.OrderShort {
-			setting.GridAmount += order.Amount
-		}
-	}
-	for _, order := range data.OrderShort {
-		data.OrderAdjust = append(data.OrderAdjust, order)
-	}
-	util.Notice(fmt.Sprintf(`clear turtle buy when sell break %s %s %v`, setting.Market, setting.Symbol, data.OrderLong))
-	time.Sleep(time.Second * 3)
-	data.OrderLong = nil
-	data.OrderShort = nil
-	model.AppDB.Model(setting).Where("market= ? and Symbol= ? and function= ?",
-		setting.Market, setting.Symbol, setting.Function).Updates(map[string]interface{}{
-		`price_x`: setting.PriceX, `chance`: setting.Chance, `grid_amount`: setting.GridAmount})
+	util.Notice(fmt.Sprintf(`clear turtle buy when sell break %s %s %v`, setting.Market, setting.Symbol, orders))
 	return true
 }
 

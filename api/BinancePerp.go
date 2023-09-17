@@ -254,7 +254,7 @@ func handleDepthBinancePerp(markets *model.Markets, json *simplejson.Json, stand
 func maintainChannelBinancePerp(subscribes []interface{}) {
 	if !channelMaintainingBinancePerp {
 		channelMaintainingBinancePerp = true
-		for true {
+		for {
 			time.Sleep(time.Minute * 5)
 			err := PongAllConnectionsInterval(model.BinancePerp, 500)
 			if err != nil {
@@ -294,6 +294,8 @@ func getMarkPriceBinancePerp(account *model.Account, symbol string) (markPrice f
 	return markPrice
 }
 
+// OrderTypeTrailStop时 price: activationPrice; triggerPrice:
+// callbackRate min 0.001, max 0.05 where 0.01 for 1% 注意此处和binance文档中不同，需要额外乘以100
 func placeOrderBinancePerp(key, secret string, order *model.Order, orderSide, orderType, symbol string, oriPrice, triggerPrice, amount float64) {
 	price, decimal := model.FormatPrice(model.BinancePerp, symbol, oriPrice)
 	priceStr := util.CutTailZero(strconv.FormatFloat(price, 'f', decimal, 64))
@@ -312,17 +314,24 @@ func placeOrderBinancePerp(key, secret string, order *model.Order, orderSide, or
 		} else if orderSide == model.OrderSideSell {
 			service.Side(futures.SideTypeSell)
 		}
-		if orderType == model.OrderTypeMarket {
+		switch orderType {
+		case model.OrderTypeMarket:
 			service.Type(futures.OrderTypeMarket)
-		} else if orderType == model.OrderTypeLimit {
+		case model.OrderTypeLimit:
 			service.Type(futures.OrderTypeLimit)
 			service.Price(priceStr)
 			service.TimeInForce(futures.TimeInForceTypeGTC)
-		} else if orderType == model.OrderTypeStop {
+		case model.OrderTypeStop:
 			service.Type(futures.OrderTypeStop)
 			service.Price(priceStr)
 			service.StopPrice(stopPriceStr)
 			service.PriceProtect(true)
+		case model.OrderTypeTrailStop:
+			// 注意此处和binance文档中不同，需要额外乘以100
+			stopPriceStr = util.CutTailZero(strconv.FormatFloat(100*triggerPrice, 'f', 1, 64))
+			service.Type(futures.OrderTypeTrailingStopMarket)
+			service.ActivationPrice(priceStr)
+			service.CallbackRate(stopPriceStr)
 		}
 		orderResponse, err := service.Do(context.Background())
 		if err != nil {
@@ -583,8 +592,11 @@ func queryOpenOrdersBinancePerp(key, secret, symbol string) (orders []*model.Ord
 
 func parseOrderBinancePerp(res *futures.Order, order *model.Order) {
 	if res != nil {
-		order.OrderSide = strings.ToLower(string(res.Side))
-		order.OrderType = strings.ToLower(string(res.Type))
+		if strings.Contains(strings.ToLower(string(res.Side)), `buy`) {
+			order.OrderSide = model.OrderSideBuy
+		} else if strings.Contains(strings.ToLower(string(res.Side)), `sell`) {
+			order.OrderSide = model.OrderSideSell
+		}
 		order.Amount, _ = strconv.ParseFloat(res.OrigQuantity, 64)
 		order.Price, _ = strconv.ParseFloat(res.Price, 64)
 		order.DealPrice, _ = strconv.ParseFloat(res.AvgPrice, 64)
@@ -593,13 +605,17 @@ func parseOrderBinancePerp(res *futures.Order, order *model.Order) {
 		order.OrderUpdateTime = time.UnixMilli(res.UpdateTime)
 		order.Status = model.GetOrderStatus(model.BinancePerp, string(res.Status))
 		order.OrderId = strconv.FormatInt(res.OrderID, 10)
-		if strings.Contains(string(res.Type), `STOP`) {
+		orderType := strings.Trim(string(res.Type), ` `)
+		switch orderType {
+		case `STOP`:
 			order.OrderType = model.OrderTypeStop
-		} else if strings.Contains(string(res.Type), `LIMIT`) {
+		case `LIMIT`:
 			order.OrderType = model.OrderTypeLimit
-		} else if strings.Contains(string(res.Type), `MARKET`) {
+		case `MARKET`:
 			order.OrderType = model.OrderTypeMarket
-		} else {
+		case `TRAILING_STOP_MARKET`:
+			order.OrderType = model.OrderTypeTrailStop
+		default:
 			order.OrderType = model.OrderTypeLimit
 		}
 		if order.Status != model.CarryStatusSuccess && order.Status != model.CarryStatusFail {

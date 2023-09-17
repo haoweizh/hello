@@ -8,15 +8,15 @@ import (
 type TurtleData struct {
 	// useNear是否在海龟交易时使用lowDaysNear和highDaysNear和priceX作为触发条件
 	// adjustChecked在设置为true前，不允许使用本Data进行交易
-	UseNear, BreakLong, BreakShort, Liquidated, AdjustChecked, OrderCleared                 bool
-	TurtleTime, CheckUseApi, CheckTimeOpen                                                  time.Time
-	HighNear, LowNear, HighFar, LowFar, float64, HighNearRe, LowNearRe, HighFarRe, LowFarRe float64
-	LowAdjust, HighAdjust, HighToday, LowToday, N, M, NVolume, Amount, AmountMin            float64
-	DaysNear, DaysNearRe, DaysFar, DaysFarRe, DaysAdjust                                    int // CombineBig: -1小单，1大单，0未初始化
-	Big                                                                                     int64
-	Symbol                                                                                  string
+	UseNear, BreakLong, BreakShort, BreakTrail, Liquidated, AdjustChecked, OrderCleared bool
+	TurtleTime, CheckUseApi, CheckTimeOpen                                              time.Time
+	HighNear, LowNear, HighFar, LowFar, LowAdjust, HighAdjust                           float64
+	HighToday, LowToday, N, M, NVolume, Amount, AmountMin                               float64
+	DaysNear, DaysFar, DaysAdjust                                                       int // CombineBig: -1小单，1大单，0未初始化
+	Big                                                                                 int64
+	Symbol                                                                              string
 	// 适应某些交易所单笔订单不能过大，大笔订单会拆分后下成多个，因价格超出无法下成的单为了不被取消，也归入orderAdjust
-	OrderLong, OrderShort, OrderAdjust []*Order
+	OrderLong, OrderShort, OrderTrail, OrderAdjust []*Order
 }
 
 type TurtleDataArray []*TurtleData

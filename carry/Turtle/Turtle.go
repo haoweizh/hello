@@ -37,7 +37,8 @@ var ProcessTurtle = func(setting *model.Setting, tick *model.BidAsk) {
 	}
 	account := model.AppConfig.GetAccounts(setting.Market)[0]
 	var data *model.TurtleData
-	data, _ = api.GetTurtleData(account, setting, true)
+	data, _ = api.GetTurtleData(account, setting.Function, setting.Market, setting.Symbol, setting.Far, setting.Near,
+		setting.Seconds, setting.AmountRate, true)
 	if data == nil || data.N == 0 || data.Amount == 0 || setting == nil || model.AppConfig.Env == `test` {
 		if time.Now().Minute() == 0 && time.Now().Second() == 0 {
 			util.Notice(fmt.Sprintf(`fail to get turtle %s %s`, setting.Market, setting.Symbol))
@@ -45,7 +46,7 @@ var ProcessTurtle = func(setting *model.Setting, tick *model.BidAsk) {
 		return
 	}
 	if !data.OrderCleared {
-		api.ClearOrders(account.Key, account.Secret, setting.Market, setting.Symbol)
+		api.ClearOrders(account.Key, account.Secret, setting.Market, setting.Symbol, map[string]bool{model.OrderTypeTrailStop: true})
 		data.OrderCleared = true
 		return
 	}
@@ -75,7 +76,7 @@ var ProcessTurtle = func(setting *model.Setting, tick *model.BidAsk) {
 	if setting.Chance == 0 { // 开初始仓
 		placeTurtleOrders(account.Key, account.Secret, data, setting, canOpenTurtle, chanceInAll, priceShort, priceLong, tick)
 		if data.BreakLong && data.OrderLong != nil {
-			handleBreak(account.Key, account.Secret, setting, data, model.OrderSideBuy)
+			handleTurtleBreak(account.Key, account.Secret, setting, data, model.OrderSideBuy)
 			setting.Chance = 1
 			setting.GridAmount = data.Amount
 			model.AppDB.Model(setting).Where("market= ? and Symbol= ? and function= ?",
@@ -87,7 +88,7 @@ var ProcessTurtle = func(setting *model.Setting, tick *model.BidAsk) {
 				priceShort, priceLong, setting.PriceX, data.N))
 		}
 		if data.BreakShort && data.OrderShort != nil {
-			handleBreak(account.Key, account.Secret, setting, data, model.OrderSideSell)
+			handleTurtleBreak(account.Key, account.Secret, setting, data, model.OrderSideSell)
 			setting.Chance = -1
 			setting.GridAmount = data.Amount
 			model.AppDB.Model(setting).Where("market= ? and Symbol= ? and function= ?",
@@ -108,7 +109,7 @@ var ProcessTurtle = func(setting *model.Setting, tick *model.BidAsk) {
 		placeTurtleOrders(account.Key, account.Secret, data, setting, canOpenTurtle, chanceInAll, priceShort, priceLong, tick)
 		// 加仓一个单位
 		if data.BreakLong && data.OrderLong != nil {
-			handleBreak(account.Key, account.Secret, setting, data, model.OrderSideBuy)
+			handleTurtleBreak(account.Key, account.Secret, setting, data, model.OrderSideBuy)
 			setting.Chance = setting.Chance + 1
 			setting.GridAmount = setting.GridAmount + data.Amount
 			model.AppDB.Model(setting).Where("market= ? and Symbol= ? and function= ?",
@@ -120,7 +121,7 @@ var ProcessTurtle = func(setting *model.Setting, tick *model.BidAsk) {
 		}
 		// 平多
 		if data.BreakShort && data.OrderShort != nil {
-			handleBreak(account.Key, account.Secret, setting, data, model.OrderSideSell)
+			handleTurtleBreak(account.Key, account.Secret, setting, data, model.OrderSideSell)
 			go api.SendMails(`平多`+setting.Market+setting.Symbol,
 				fmt.Sprintf(`止盈止损at%e 仓位%d 数量 %e`, priceShort, setting.Chance, setting.GridAmount))
 			data.Liquidated = true
@@ -148,7 +149,7 @@ var ProcessTurtle = func(setting *model.Setting, tick *model.BidAsk) {
 		placeTurtleOrders(account.Key, account.Secret, data, setting, canOpenTurtle, chanceInAll, priceShort, priceLong, tick)
 		// 加仓一个单位
 		if data.BreakShort && data.OrderShort != nil {
-			handleBreak(account.Key, account.Secret, setting, data, model.OrderSideSell)
+			handleTurtleBreak(account.Key, account.Secret, setting, data, model.OrderSideSell)
 			setting.Chance = setting.Chance - 1
 			setting.GridAmount = setting.GridAmount + data.Amount
 			model.AppDB.Model(setting).Where("market= ? and Symbol= ? and function= ?",
@@ -159,7 +160,7 @@ var ProcessTurtle = func(setting *model.Setting, tick *model.BidAsk) {
 				setting.PriceX, data.N))
 		} // liquidate short
 		if data.BreakLong && data.OrderLong != nil {
-			handleBreak(account.Key, account.Secret, setting, data, model.OrderSideBuy)
+			handleTurtleBreak(account.Key, account.Secret, setting, data, model.OrderSideBuy)
 			go api.SendMails(`平空`+setting.Market+setting.Symbol,
 				fmt.Sprintf(`止盈止损at%e 仓位%d 数量 %e`,
 					priceLong, setting.Chance, setting.GridAmount))
@@ -177,7 +178,7 @@ var ProcessTurtle = func(setting *model.Setting, tick *model.BidAsk) {
 	}
 }
 
-func handleBreak(key, secret string, setting *model.Setting, turtleData *model.TurtleData, orderSide string) {
+func handleTurtleBreak(key, secret string, setting *model.Setting, turtleData *model.TurtleData, orderSide string) {
 	if turtleData == nil {
 		//util.Notice(fmt.Sprintf(`fatal error, nil order to break`))
 		return

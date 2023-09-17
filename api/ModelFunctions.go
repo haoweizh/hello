@@ -329,15 +329,19 @@ func getDynamicMarketInfos(mumSetting *model.Setting, accounts []*model.Account,
 			for time.Now().Minute() <= 6 || !tried {
 				tried = true
 				dataValid := false
-				checkSetting := &model.Setting{Function: function, Market: mumSetting.Market, Symbol: marketInfoArray[i].Name,
-					Far: mumSetting.Far, Near: mumSetting.Near, Seconds: mumSetting.Seconds, AmountRate: mumSetting.AmountRate}
-				if function == model.FunctionDynamicCombine && checkSetting.Far*checkSetting.Seconds < mumSetting.FarCombine*mumSetting.SecondsCombine {
-					checkSetting.Far = mumSetting.FarCombine
-					checkSetting.Near = mumSetting.NearCombine
-					checkSetting.Seconds = mumSetting.SecondsCombine
+				far := mumSetting.Far
+				near := mumSetting.Near
+				seconds := mumSetting.Seconds
+				//checkSetting := &model.Setting{Function: function, Market: mumSetting.Market, Symbol: marketInfoArray[i].Name,
+				//	Far: mumSetting.Far, Near: mumSetting.Near, Seconds: mumSetting.Seconds, AmountRate: mumSetting.AmountRate}
+				if function == model.FunctionDynamicCombine && far*seconds < mumSetting.FarCombine*mumSetting.SecondsCombine {
+					far = mumSetting.FarCombine
+					near = mumSetting.NearCombine
+					seconds = mumSetting.SecondsCombine
 				}
-				if checkSetting.Near > 0 && checkSetting.Far >= checkSetting.Near && checkSetting.Seconds > 0 {
-					turtleData, dataValid = GetTurtleData(accounts[0], checkSetting, false)
+				if near > 0 && far >= near && seconds > 0 {
+					turtleData, dataValid = GetTurtleData(accounts[0], function, mumSetting.Market, marketInfoArray[i].Name,
+						mumSetting.Far, mumSetting.Near, mumSetting.Seconds, mumSetting.AmountRate, false)
 					if turtleData != nil {
 						topMarketInfos[marketInfoArray[i].Name] = marketInfoArray[i]
 						turtleDataArray = append(turtleDataArray, turtleData)

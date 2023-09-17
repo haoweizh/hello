@@ -304,7 +304,7 @@ func Test_initTurtleN(t *testing.T) {
 	market := model.OKEX
 	account := model.AppConfig.GetAccounts(market)[0]
 	fmt.Println(model.AppConfig.OKPhase)
-	orders := api.QueryOpenOrders(account.Key, account.Secret, market, `ARB_PERP`, true)
+	orders := api.QueryOpenOrders(account.Key, account.Secret, market, `ARB_PERP`)
 	fmt.Println(len(orders))
 	nowPeriod, _ := model.GetMarketToday(market)
 	seconds := 14400
