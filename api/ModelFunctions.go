@@ -359,18 +359,30 @@ func getDynamicMarketInfos(mumSetting *model.Setting, accounts []*model.Account,
 			}
 		}
 	}
-	sort.Sort(turtleDataArray)
-	for i := 0; i < turtleDataArray.Len(); i++ {
-		if i < turtleDataArray.Len()-lenData {
-			delete(topMarketInfos, turtleDataArray[i].Symbol)
-			util.Notice(fmt.Sprintf(`remove not topped last %s %s %d of %d NVolume %f left %d`,
-				mumSetting.Market, turtleDataArray[i].Symbol, i, lenData, turtleDataArray[i].NVolume, len(topMarketInfos)))
-		} else {
-			util.Notice(fmt.Sprintf(`keep topped %s %s last %d of %d NVolume %f left %d`,
-				mumSetting.Market, turtleDataArray[i].Symbol, i, lenData, turtleDataArray[i].NVolume, len(topMarketInfos)))
+	if function == model.FunctionDynamicBoost {
+		marketInfo24hr := make(map[string]*model.MarketInfo)
+		num := 0
+		for i := 0; i < len(marketInfoArray) && num < lenData; i++ {
+			if marketInfoArray[i] != nil && topMarketInfos[marketInfoArray[i].Name] != nil {
+				marketInfo24hr[marketInfoArray[i].Name] = marketInfoArray[i]
+				num++
+			}
 		}
+		return marketInfo24hr
+	} else {
+		sort.Sort(turtleDataArray)
+		for i := 0; i < turtleDataArray.Len(); i++ {
+			if i < turtleDataArray.Len()-lenData {
+				delete(topMarketInfos, turtleDataArray[i].Symbol)
+				util.Notice(fmt.Sprintf(`remove not topped last %s %s %d of %d NVolume %f left %d`,
+					mumSetting.Market, turtleDataArray[i].Symbol, i, lenData, turtleDataArray[i].NVolume, len(topMarketInfos)))
+			} else {
+				util.Notice(fmt.Sprintf(`keep topped %s %s last %d of %d NVolume %f left %d`,
+					mumSetting.Market, turtleDataArray[i].Symbol, i, lenData, turtleDataArray[i].NVolume, len(topMarketInfos)))
+			}
+		}
+		return topMarketInfos
 	}
-	return topMarketInfos
 }
 
 func handleMarketDynamic(market string) (handled bool) {
@@ -390,7 +402,7 @@ func handleMarketDynamic(market string) (handled bool) {
 		topMarketInfos := getDynamicMarketInfos(settingDynamicTurtle, accounts, settingDynamicTurtle.Function, 30, 10)
 		handleSingleSettings(settingDynamicTurtle, topMarketInfos, model.FunctionTurtle)
 	} else if settingDynamicBoost != nil && settingDynamicBoost.AmountRateCombine > 0 {
-		topMarketInfos := getDynamicMarketInfos(settingDynamicBoost, accounts, settingDynamicBoost.Function, 15, 15)
+		topMarketInfos := getDynamicMarketInfos(settingDynamicBoost, accounts, settingDynamicBoost.Function, 30, 15)
 		handleSingleSettings(settingDynamicBoost, topMarketInfos, model.FunctionBoost)
 	}
 	DynamicHandleTime.Store(market, time.Now())
