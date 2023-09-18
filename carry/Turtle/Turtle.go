@@ -32,7 +32,7 @@ var ProcessTurtle = func(setting *model.Setting, tick *model.BidAsk) {
 			setting.Market, setting.Symbol, setting.Chance, setting.PriceX))
 		return
 	}
-	if setting.Chance == 0 && setting.SymbolRelated == model.SettingTurtleRemoved {
+	if setting.Chance == 0 && setting.SymbolRelated == model.SettingTurtleRemoved && !api.TurtleDataWorking(setting) {
 		return
 	}
 	account := model.AppConfig.GetAccounts(setting.Market)[0]

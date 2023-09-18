@@ -22,7 +22,7 @@ var ProcessBoost = func(setting *model.Setting, tick *model.BidAsk) {
 		!success {
 		return
 	}
-	if setting.Chance == 0 && setting.SymbolRelated == model.SettingTurtleRemoved {
+	if setting.Chance == 0 && setting.SymbolRelated == model.SettingTurtleRemoved && !api.TurtleDataWorking(setting) {
 		return
 	}
 	if setting.Chance != 0 && setting.PriceX == 0 {

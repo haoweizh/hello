@@ -257,6 +257,19 @@ func handleLastTurtleData(account *model.Account, function, market, symbol, last
 	return lastHandled
 }
 
+func TurtleDataWorking(setting *model.Setting) (working bool) {
+	now := time.Now()
+	_, nowStr := model.GetNowPeriod(setting.Market, setting.SecondsCombine, now)
+	value, _ := util.LoadSyncMap(&TurtleDataSet, setting.Function, setting.Market, setting.Symbol, nowStr)
+	if value == nil {
+		return false
+	}
+	if value.(*model.TurtleData).OrderLong == nil && value.(*model.TurtleData).OrderShort == nil && value.(*model.TurtleData).OrderTrail == nil {
+		return false
+	}
+	return true
+}
+
 // GetTurtleData refreshDynamic false时代表仅作为检查是否有足够turtleData作为top market info使用，此时不会存在缓存中，否则会引起far near错误
 func GetTurtleData(account *model.Account, function, market, symbol string, far, near, seconds int64,
 	amountRate float64, refreshDynamic bool) (data *model.TurtleData, dataValid bool) {
