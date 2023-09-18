@@ -37,7 +37,6 @@ func CalcTurtleAmount(account *model.Account, market string, n, amountRate float
 	}
 	amount = 0.02 * accountValue / n
 	amount *= amountRate
-	//util.Notice(`CalcTurtleAmount %s %s %e`, setting.Market, setting.Symbol, Amount)
 	return amount
 }
 
