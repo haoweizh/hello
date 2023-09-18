@@ -26,7 +26,7 @@ var ProcessBoost = func(setting *model.Setting, tick *model.BidAsk) {
 		return
 	}
 	if setting.Chance != 0 && setting.PriceX == 0 {
-		util.Notice(fmt.Sprintf(`combine return no last priceX %s %s %d %e %d %e`,
+		util.Notice(fmt.Sprintf(`boost return no last priceX %s %s %d %e %d %e`,
 			setting.Market, setting.Symbol, setting.Chance, setting.PriceX, setting.Chance, setting.PriceX))
 		return
 	}
@@ -35,7 +35,7 @@ var ProcessBoost = func(setting *model.Setting, tick *model.BidAsk) {
 		setting.Seconds, setting.AmountRate, true)
 	if data == nil || setting == nil || model.AppConfig.Env == `test` {
 		if time.Now().Second() == 0 {
-			util.Notice(fmt.Sprintf(`combine return no turtle combine turtle %s %s`, setting.Market, setting.Symbol))
+			util.Notice(fmt.Sprintf(`boost return no turtle boost %s %s`, setting.Market, setting.Symbol))
 		}
 		return
 	}
@@ -53,13 +53,12 @@ var ProcessBoost = func(setting *model.Setting, tick *model.BidAsk) {
 	if !data.OrderCleared {
 		api.ClearOrders(account.Key, account.Secret, setting.Market, setting.Symbol, map[string]bool{model.OrderTypeTrailStop: true})
 		data.OrderCleared = true
-		util.Notice(fmt.Sprintf(`combine return not cleared %s %s %v`, setting.Market, setting.Symbol, data.OrderCleared))
+		util.Notice(fmt.Sprintf(`boost return not cleared %s %s %v`, setting.Market, setting.Symbol, data.OrderCleared))
 		return
 	}
 	canOpen, turtleCoins := api.CanOpenTurtle(setting, data)
 	if api.HandleOrders(account.Key, account.Secret, setting.Market, setting.Symbol, []*model.Setting{setting}, []*model.TurtleData{data}) ||
 		api.CheckBreak(account, setting.Market, setting.Symbol, []*model.Setting{setting}, []*model.TurtleData{data}, tick) {
-		//util.Notice(fmt.Sprintf(`combine return handle or break %s %s`, market, symbol))
 		return
 	}
 	msgKey := model.GetMsgKey(model.FunctionBoost, setting.Market, setting.Symbol)

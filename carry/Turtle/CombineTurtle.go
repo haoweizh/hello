@@ -196,7 +196,7 @@ func placeTurtleLong(account *model.Account, orderType string, data *model.Turtl
 	}
 	price := data.HighFar
 	priceChange := 2 * data.N
-	if setting.Seconds == 14400 && orderType == model.OrderTypeStop {
+	if (setting.Seconds == 14400 && orderType == model.OrderTypeStop) || setting.Function == model.FunctionBoost {
 		priceChange = 2.5 * data.N
 	}
 	if orderType == model.OrderTypeLimit {
@@ -281,7 +281,7 @@ func placeTurtleShort(account *model.Account, orderType string, data *model.Turt
 	}
 	price := data.LowFar
 	priceChange := 2 * data.N
-	if setting.Seconds == 14400 && orderType == model.OrderTypeStop {
+	if (setting.Seconds == 14400 && orderType == model.OrderTypeStop) || setting.Function == model.FunctionBoost {
 		priceChange = 2.5 * data.N
 	}
 	if orderType == model.OrderTypeLimit {
