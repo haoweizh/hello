@@ -285,9 +285,9 @@ func handleSingleSettings(mumSetting *model.Setting, topMarketInfos map[string]*
 		}
 		_, _, coinValue, _ := model.GetFromStandard(mumSetting.Market, symbol.(string))
 		if topMarketInfos[symbol.(string)] == nil && !model.CommonCoins[strings.ToLower(coinValue)] {
-			if setting.(*model.Setting).Chance == 0 {
-				setting.(*model.Setting).SymbolRelated = model.SettingTurtleRemoved
-			}
+			//if setting.(*model.Setting).Chance == 0 {
+			//}
+			setting.(*model.Setting).SymbolRelated = model.SettingTurtleRemoved
 			model.AppDB.Save(setting)
 			util.Info(`remove setting%s`, setting.(*model.Setting).Symbol)
 		}

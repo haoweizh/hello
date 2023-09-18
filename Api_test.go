@@ -472,6 +472,7 @@ func Test_transferInner(t *testing.T) {
 
 func Test_wallet(t *testing.T) {
 	model.NewConfig()
+	api.InitMarketInfos(model.BinancePerp)
 	var key, secret string
 	market := model.BinancePerp
 	switch market {
