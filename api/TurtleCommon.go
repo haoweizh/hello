@@ -257,17 +257,21 @@ func handleLastTurtleData(account *model.Account, function, market, symbol, last
 	return lastHandled
 }
 
-func TurtleDataWorking(setting *model.Setting) (working bool) {
+func TurtleDataWorking(account *model.Account, setting *model.Setting) (working bool) {
+	if setting.Chance != 0 || setting.SymbolRelated != model.SettingTurtleRemoved {
+		return true
+	}
 	now := time.Now()
-	_, nowStr := model.GetNowPeriod(setting.Market, setting.SecondsCombine, now)
+	nowPeriod, nowStr := model.GetNowPeriod(setting.Market, setting.SecondsCombine, now)
 	value, _ := util.LoadSyncMap(&TurtleDataSet, setting.Function, setting.Market, setting.Symbol, nowStr)
 	if value == nil {
+		util.StoreSyncMap(&TurtleDataSet, &model.TurtleData{TurtleTime: nowPeriod, Symbol: setting.Symbol,
+			OrderCleared: true}, setting.Function, setting.Market, setting.Symbol, nowStr)
+		ClearOrders(account.Key, account.Secret, setting.Market, setting.Symbol, nil)
+		return false
+	} else {
 		return false
 	}
-	if value.(*model.TurtleData).OrderLong == nil && value.(*model.TurtleData).OrderShort == nil && value.(*model.TurtleData).OrderTrail == nil {
-		return false
-	}
-	return true
 }
 
 // GetTurtleData refreshDynamic false时代表仅作为检查是否有足够turtleData作为top market info使用，此时不会存在缓存中，否则会引起far near错误

@@ -37,8 +37,8 @@ var ProcessCombineTurtle = func(settingCombine *model.Setting, tick *model.BidAs
 		util.Notice(fmt.Sprintf(`combine return no normal setting from %s %s`, market, symbol))
 		return
 	}
-	if settingNormal.Chance == 0 && settingNormal.SymbolRelated == model.SettingTurtleRemoved && !api.TurtleDataWorking(settingNormal) &&
-		settingCombine.Chance == 0 && settingCombine.SymbolRelated == model.SettingTurtleRemoved && !api.TurtleDataWorking(settingCombine) {
+	account := model.AppConfig.GetAccounts(market)[0]
+	if settingNormal.Chance == 0 && settingNormal.SymbolRelated == model.SettingTurtleRemoved && !api.TurtleDataWorking(account, settingCombine) {
 		return
 	}
 	if (settingCombine.Chance != 0 && settingCombine.PriceX == 0) || (settingNormal.Chance != 0 && settingNormal.PriceX == 0) {
@@ -47,7 +47,6 @@ var ProcessCombineTurtle = func(settingCombine *model.Setting, tick *model.BidAs
 		return
 	}
 	settings := []*model.Setting{settingCombine, settingNormal}
-	account := model.AppConfig.GetAccounts(market)[0]
 	var dataCombine, dataNormal *model.TurtleData
 	dataCombine, _ = api.GetTurtleData(account, settingCombine.Function, settingCombine.Market, settingCombine.Symbol,
 		settingCombine.Far, settingCombine.Near, settingCombine.Seconds, settingCombine.AmountRate, true)

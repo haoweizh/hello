@@ -22,7 +22,8 @@ var ProcessBoost = func(setting *model.Setting, tick *model.BidAsk) {
 		!success {
 		return
 	}
-	if setting.Chance == 0 && setting.SymbolRelated == model.SettingTurtleRemoved && !api.TurtleDataWorking(setting) {
+	account := model.AppConfig.GetAccounts(setting.Market)[0]
+	if !api.TurtleDataWorking(account, setting) {
 		return
 	}
 	if setting.Chance != 0 && setting.PriceX == 0 {
@@ -30,7 +31,6 @@ var ProcessBoost = func(setting *model.Setting, tick *model.BidAsk) {
 			setting.Market, setting.Symbol, setting.Chance, setting.PriceX, setting.Chance, setting.PriceX))
 		return
 	}
-	account := model.AppConfig.GetAccounts(setting.Market)[0]
 	data, _ := api.GetTurtleData(account, setting.Function, setting.Market, setting.Symbol, setting.Far, setting.Near,
 		setting.Seconds, setting.AmountRate, true)
 	if data == nil || setting == nil || model.AppConfig.Env == `test` {
