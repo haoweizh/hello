@@ -492,7 +492,7 @@ func Test_wallet(t *testing.T) {
 	//for _, order := range orders {
 	//	fmt.Println(order.OrderId)
 	//}
-	orderQuery0 := api.QueryOrderById(model.AppConfig.BinanceKey, model.AppConfig.BinanceSecret, model.BinancePerp, `ETH_PERP`, model.OrderTypeLimit, `8389765617500555335`)
+	orderQuery0 := api.QueryOrderById(model.AppConfig.BinanceKey, model.AppConfig.BinanceSecret, model.BinancePerp, `ETH_PERP`, model.OrderTypeLimit, `33217521211`)
 	fmt.Println(orderQuery0.OrderId)
 	success, price := api.GetPriceForce(key, secret, `LDBNB_USDT`, market)
 	success, price = api.GetPriceForce(key, secret, `BTC_USDT`, market)

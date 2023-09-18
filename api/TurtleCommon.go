@@ -120,6 +120,7 @@ func AdjustPosHolding(key, secret string, setting *model.Setting, data *model.Tu
 			for _, order := range data.OrderAdjust {
 				if order != nil {
 					order.RefreshType = model.FunctionTurtleAdjust
+					order.Function = model.Close
 					model.AppDB.Save(order)
 				}
 			}
