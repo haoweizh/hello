@@ -634,11 +634,14 @@ func queryOrderBinancePerp(key, secret, symbol string, orderId string) (order *m
 		orderIdInt, _ := strconv.ParseInt(orderId, 10, 64)
 		client := futures.NewClient(key, secret)
 		orderResp, err := client.NewGetOrderService().Symbol(dialectSymbol).OrderID(orderIdInt).Do(context.Background())
+		order = &model.Order{Market: model.BinancePerp, Status: model.CarryStatusFail, OrderId: orderId, Symbol: symbol}
 		if err != nil {
 			util.Notice(fmt.Sprintf("queryOrderBinancePerp err %s id %s  err %s", symbol, orderId, err.Error()))
+			if strings.Contains(err.Error(), `-2013`) {
+				return nil
+			}
 			return
 		}
-		order = &model.Order{Market: model.BinancePerp, Status: model.CarryStatusFail, OrderId: orderId, Symbol: symbol}
 		parseOrderBinancePerp(orderResp, order)
 	}
 	return
