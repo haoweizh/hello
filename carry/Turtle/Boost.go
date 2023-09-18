@@ -85,6 +85,7 @@ var ProcessBoost = func(setting *model.Setting, tick *model.BidAsk) {
 		if data.OrderTrail != nil {
 			for _, order := range data.OrderTrail {
 				order.Function = model.Close
+				model.AppDB.Save(order)
 			}
 		}
 	}
