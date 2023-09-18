@@ -635,7 +635,7 @@ func queryOrderBinancePerp(key, secret, symbol string, orderId string) (order *m
 		client := futures.NewClient(key, secret)
 		orderResp, err := client.NewGetOrderService().Symbol(dialectSymbol).OrderID(orderIdInt).Do(context.Background())
 		if err != nil {
-			util.Notice("queryOrderBinancePerp err: " + err.Error())
+			util.Notice(fmt.Sprintf("queryOrderBinancePerp err %s id %s  err %s", symbol, orderId, err.Error()))
 			return
 		}
 		order = &model.Order{Market: model.BinancePerp, Status: model.CarryStatusFail, OrderId: orderId, Symbol: symbol}

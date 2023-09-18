@@ -473,7 +473,7 @@ func Test_transferInner(t *testing.T) {
 func Test_wallet(t *testing.T) {
 	model.NewConfig()
 	var key, secret string
-	market := model.BinanceSpot
+	market := model.BinancePerp
 	switch market {
 	case model.Ftx:
 		key = model.AppConfig.FtxKey
@@ -488,6 +488,12 @@ func Test_wallet(t *testing.T) {
 		key = model.AppConfig.GateKey
 		secret = model.AppConfig.GateSecret
 	}
+	//orders := api.QueryOpenOrders(model.AppConfig.BinanceKey, model.AppConfig.BinanceSecret, model.BinancePerp, `ETH_PERP`)
+	//for _, order := range orders {
+	//	fmt.Println(order.OrderId)
+	//}
+	orderQuery0 := api.QueryOrderById(model.AppConfig.BinanceKey, model.AppConfig.BinanceSecret, model.BinancePerp, `ETH_PERP`, model.OrderTypeLimit, `8389765617500555335`)
+	fmt.Println(orderQuery0.OrderId)
 	success, price := api.GetPriceForce(key, secret, `LDBNB_USDT`, market)
 	success, price = api.GetPriceForce(key, secret, `BTC_USDT`, market)
 	fmt.Println(fmt.Sprintf(`%v %f`, success, price))
