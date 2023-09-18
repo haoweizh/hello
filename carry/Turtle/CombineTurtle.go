@@ -229,7 +229,7 @@ func placeTurtleLong(account *model.Account, orderType string, data *model.Turtl
 	market := setting.Market
 	symbol := setting.Symbol
 	priceDeal := price
-	canOpen = canOpen && float64(setting.Chance) < float64(setting.ChanceLimit)
+	canOpen = (canOpen && float64(setting.Chance) < float64(setting.ChanceLimit)) || setting.Chance < 0
 	if data.OrderLong == nil && canOpen {
 		data.BreakLong = false
 		if orderType == model.OrderTypeStop {
@@ -318,7 +318,7 @@ func placeTurtleShort(account *model.Account, orderType string, data *model.Turt
 	market := setting.Market
 	symbol := setting.Symbol
 	priceDeal := price
-	canOpen = canOpen && float64(setting.Chance) > -1*float64(setting.ChanceLimit)
+	canOpen = (canOpen && float64(setting.Chance) > -1*float64(setting.ChanceLimit)) || setting.Chance > 0
 	if data.OrderShort == nil && canOpen {
 		data.BreakShort = false
 		if orderType == model.OrderTypeStop {
