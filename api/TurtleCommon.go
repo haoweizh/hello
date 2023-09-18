@@ -313,6 +313,8 @@ func GetTurtleData(account *model.Account, function, market, symbol string, far,
 			if order.OrderType == model.OrderTypeTrailStop {
 				order.Function = model.Close
 				data.OrderTrail = append(data.OrderTrail, order)
+				util.Notice(fmt.Sprintf(`inherit trail order %s %s %s now %s`,
+					order.Market, order.Symbol, order.OrderId, nowStr))
 			}
 		}
 	}
