@@ -366,6 +366,11 @@ func getDynamicMarketInfos(mumSetting *model.Setting, accounts []*model.Account,
 			if marketInfoArray[i] != nil && topMarketInfos[marketInfoArray[i].Name] != nil {
 				marketInfo24hr[marketInfoArray[i].Name] = marketInfoArray[i]
 				num++
+				util.Notice(fmt.Sprintf(`keep topped %s %s %s last %d of %d NVolume %f left %d`,
+					function, mumSetting.Market, turtleDataArray[i].Symbol, i, lenData, turtleDataArray[i].NVolume, len(topMarketInfos)))
+			} else {
+				util.Notice(fmt.Sprintf(`remove nil data %s %s %s last %d of %d NVolume %f left %d`,
+					function, mumSetting.Market, turtleDataArray[i].Symbol, i, lenData, turtleDataArray[i].NVolume, len(topMarketInfos)))
 			}
 		}
 		return marketInfo24hr
