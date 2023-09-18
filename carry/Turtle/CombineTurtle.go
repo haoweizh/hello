@@ -134,7 +134,9 @@ func handleAllBreak(settings []*model.Setting, turtles []*model.TurtleData) (nee
 			time.Sleep(time.Second * 3)
 			turtles[i].OrderLong = nil
 			turtles[i].OrderShort = nil
-			turtles[i].OrderTrail = nil
+			if setting.Chance == 0 {
+				turtles[i].OrderTrail = nil
+			}
 			model.AppDB.Model(setting).Where("market= ? and Symbol= ? and function= ?",
 				setting.Market, setting.Symbol, setting.Function).Updates(map[string]interface{}{
 				`price_x`: setting.PriceX, `chance`: setting.Chance, `grid_amount`: setting.GridAmount})
