@@ -72,7 +72,7 @@ var ProcessBoost = func(setting *model.Setting, tick *model.BidAsk) {
 	util.StoreSyncMap(&model.CarryInfo, msg, account.Key, msgKey)
 	placeTurtleLong(account, model.OrderTypeStop, data, setting, tick, canOpen)
 	placeTurtleShort(account, model.OrderTypeStop, data, setting, tick, canOpen)
-	if data.OrderTrail == nil && setting.Function == model.FunctionBoost {
+	if (data.OrderTrail == nil || len(data.OrderTrail) == 0) && setting.Function == model.FunctionBoost {
 		if setting.Chance == setting.ChanceLimit {
 			util.Notice(fmt.Sprintf(`place trail liquid %s %s %s amt %f`, model.OrderSideSell, setting.Market, setting.Symbol, setting.GridAmount))
 			data.OrderTrail = api.MustPlaceOrder(account.Key, account.Secret, model.OrderSideSell, model.OrderTypeTrailStop,

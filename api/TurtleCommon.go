@@ -181,6 +181,12 @@ func clearTurtleOrders(account *model.Account, setting *model.Setting, turtle *m
 			time.Sleep(time.Millisecond * 200)
 		}
 	}
+	for _, order := range turtle.OrderAdjust {
+		if order != nil {
+			MustCancel(account.Key, account.Secret, setting.Market, setting.Symbol, order.OrderType, order.OrderId, false)
+			time.Sleep(time.Millisecond * 200)
+		}
+	}
 	broken := false
 	if turtle.BreakLong && turtle.OrderLong != nil && len(turtle.OrderLong) > 0 {
 		broken = true
