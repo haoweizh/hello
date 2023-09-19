@@ -100,54 +100,19 @@ var ProcessCombineTurtle = func(settingCombine *model.Setting, tick *model.BidAs
 	placeTurtleShort(account, model.OrderTypeStop, dataNormal, settingNormal, tick, canOpen)
 	placeTurtleLong(account, model.OrderTypeLimit, dataCombine, settingCombine, tick, canOpen)
 	placeTurtleShort(account, model.OrderTypeLimit, dataCombine, settingCombine, tick, canOpen)
-	if handleAllBreak(settings, turtleData) {
-		for _, data := range turtleData {
-			data.AdjustChecked = true
-		}
-		api.ClearExtraOrders(account.Key, account.Secret, market, symbol, turtleData)
-	}
-}
-
-func handleAllBreak(settings []*model.Setting, turtles []*model.TurtleData) (needCheck bool) {
-	if settings == nil || turtles == nil || len(settings) != len(turtles) {
-		return false
-	}
-	// 每次只检查一个，如果同时检查多个，会导致一个里面更新的isBig在另一个里面没有更新
 	for i, setting := range settings {
-		var orders []*model.Order
-		if handleBreak(setting, turtles[i].OrderLong, turtles[i].BreakLong) {
-			needCheck = true
-			orders = turtles[i].OrderLong
-		} else if handleBreak(setting, turtles[i].OrderShort, turtles[i].BreakShort) {
-			orders = turtles[i].OrderShort
-			needCheck = true
-		} else if handleBreak(setting, turtles[i].OrderTrail, turtles[i].BreakTrail) {
-			orders = turtles[i].OrderTrail
-			needCheck = true
-		}
-		if needCheck {
-			// 保护起来，不进行主动撤单，以免未完全成交
-			for _, order := range orders {
-				turtles[i].OrderAdjust = append(turtles[i].OrderAdjust, order)
-			}
-			time.Sleep(time.Second * 3)
-			turtles[i].OrderLong = nil
-			turtles[i].OrderShort = nil
-			if setting.Chance == 0 {
-				turtles[i].OrderTrail = nil
-			}
-			model.AppDB.Model(setting).Where("market= ? and Symbol= ? and function= ?",
-				setting.Market, setting.Symbol, setting.Function).Updates(map[string]interface{}{
-				`price_x`: setting.PriceX, `chance`: setting.Chance, `grid_amount`: setting.GridAmount})
+		if handleBreak(setting, turtleData[i], turtleData[i].OrderLong, turtleData[i].BreakLong) ||
+			handleBreak(setting, turtleData[i], turtleData[i].OrderShort, turtleData[i].BreakShort) ||
+			handleBreak(setting, turtleData[i], turtleData[i].OrderTrail, turtleData[i].BreakTrail) {
+			api.ClearExtraOrders(account.Key, account.Secret, market, symbol, turtleData)
 		}
 	}
-	return
 }
 
 // handleBreak
 // 由于OrderTypeTrailStop订单有可能是通过API load进来的，所以没有 order.Function且此类订单都是close的，故特殊处理了
-func handleBreak(setting *model.Setting, orders []*model.Order, orderBreak bool) (work bool) {
-	if orders == nil || len(orders) == 0 || !orderBreak {
+func handleBreak(setting *model.Setting, data *model.TurtleData, orders []*model.Order, orderBreak bool) (work bool) {
+	if orders == nil || len(orders) == 0 || !orderBreak || data == nil {
 		return false
 	}
 	if orders[0].TriggerPrice > 0 {
@@ -164,6 +129,7 @@ func handleBreak(setting *model.Setting, orders []*model.Order, orderBreak bool)
 		setting.Chance = 0
 		setting.GridAmount = 0
 		setting.PriceX = 0
+		data.Liquidated = true
 	} else if orders[0].Function == model.Open {
 		util.Notice(fmt.Sprintf(`加%s %s %s chance:%d Amount:%e px:%e`,
 			orders[0].OrderSide, setting.Market, setting.Symbol, setting.Chance, setting.GridAmount, setting.PriceX))
@@ -176,6 +142,17 @@ func handleBreak(setting *model.Setting, orders []*model.Order, orderBreak bool)
 			setting.GridAmount += order.Amount
 		}
 	}
+	// 保护起来，不进行主动撤单，以免未完全成交
+	for _, order := range orders {
+		data.OrderAdjust = append(data.OrderAdjust, order)
+	}
+	time.Sleep(time.Second * 3)
+	data.OrderLong = nil
+	data.OrderShort = nil
+	data.OrderTrail = nil
+	model.AppDB.Model(setting).Where("market= ? and Symbol= ? and function= ?",
+		setting.Market, setting.Symbol, setting.Function).Updates(map[string]interface{}{
+		`price_x`: setting.PriceX, `chance`: setting.Chance, `grid_amount`: setting.GridAmount})
 	util.Notice(fmt.Sprintf(`clear turtle buy when sell break %s %s %v`, setting.Market, setting.Symbol, orders))
 	return true
 }

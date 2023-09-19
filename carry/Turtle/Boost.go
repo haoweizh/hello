@@ -89,8 +89,9 @@ var ProcessBoost = func(setting *model.Setting, tick *model.BidAsk) {
 			}
 		}
 	}
-	if handleAllBreak([]*model.Setting{setting}, []*model.TurtleData{data}) {
-		data.AdjustChecked = true
+	if handleBreak(setting, data, data.OrderLong, data.BreakLong) ||
+		handleBreak(setting, data, data.OrderShort, data.BreakShort) ||
+		handleBreak(setting, data, data.OrderTrail, data.BreakTrail) {
 		api.ClearExtraOrders(account.Key, account.Secret, setting.Market, setting.Symbol, []*model.TurtleData{data})
 	}
 }
