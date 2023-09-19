@@ -548,7 +548,11 @@ func holdPage(c *gin.Context) {
 					strconv.FormatFloat(crossCount[date][key], 'f', 0, 64), ``})
 			}
 		}
-		carryRows.Close()
+		err := carryRows.Close()
+		if err != nil {
+			util.Notice(fmt.Sprintf(`fail to close DB for carry rows`))
+			return
+		}
 	}
 	carryRows, _ = model.AppDB.Model(model.Order{}).Select(`market,account_index,order_side,sum(price*abs(amount)),date(order_time),refresh_type,count(*)`).
 		Where(`refresh_type!=?`, model.FunctionSimulation).Group(`market,order_side,date(order_time),account_index,refresh_type`).Order(`date(order_time) desc, market`).Rows()
@@ -573,7 +577,11 @@ func holdPage(c *gin.Context) {
 					strconv.FormatFloat(failRate, 'f', 2, 64)})
 			}
 		}
-		carryRows.Close()
+		err := carryRows.Close()
+		if err != nil {
+			util.Notice(fmt.Sprintf(`fail to close DB for carry rows`))
+			return
+		}
 	}
 	c.HTML(http.StatusOK, `hold.gohtml`, gin.H{
 		`marketValue`: marketValues, `trade`: tradeInfo, `holdings`: cross.GetHoldings(queryAccounts)})
@@ -722,7 +730,7 @@ func GetParameters(c *gin.Context) {
 		msgBoost, sizeBoost := createTurtleLines(model.FunctionBoost, market, account)
 		msg += fmt.Sprintf("单一海龟%s 个数%d\n %s\n", market, sizeTurtle, msgTurtle)
 		msg += fmt.Sprintf("组合海龟%s 个数%d\n %s\n", market, sizeCombine, msgCombine)
-		msgCombine += fmt.Sprintf("Boost%s 个数%d\n %s\n", market, sizeBoost, msgBoost)
+		msg += fmt.Sprintf("Boost%s 个数%d\n %s\n", market, sizeBoost, msgBoost)
 	}
 	//setting := api.GetSetting(model.FunctionGrid, model.Ftx, `LINK-PERP`)
 	//if setting != nil {
