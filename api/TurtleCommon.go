@@ -268,7 +268,7 @@ func TurtleDataWorking(account *model.Account, setting *model.Setting) (working 
 		return true
 	}
 	now := time.Now()
-	nowPeriod, nowStr := model.GetNowPeriod(setting.Market, setting.SecondsCombine, now)
+	nowPeriod, nowStr := model.GetNowPeriod(setting.Market, setting.Seconds, now)
 	value, _ := util.LoadSyncMap(&TurtleDataSet, setting.Function, setting.Market, setting.Symbol, nowStr)
 	if value == nil {
 		util.StoreSyncMap(&TurtleDataSet, &model.TurtleData{TurtleTime: nowPeriod, Symbol: setting.Symbol,
