@@ -679,7 +679,12 @@ func MustPlaceOrder(key, secret, orderSide, orderType, market, symbol, orderPara
 			if order != nil && order.OrderId != `` && order.Status != model.CarryStatusFail {
 				order.RefreshType = refreshType
 				return []*model.Order{order}
-			} else {
+			} else { // binance perp 下单返回 -4005 代表数量太大，分两半继续下单
+				if order != nil && strings.Contains(order.ErrCode, `-4005`) {
+					util.Notice(fmt.Sprintf(`binance perp 下单返回 -4005 代表数量%f太大，减小marketInfo sizemax %f`,
+						amount, v.(*model.MarketInfo).SizeMax))
+					v.(*model.MarketInfo).SizeMax = 0.52 * amount
+				}
 				time.Sleep(time.Second * 3)
 				util.Notice(fmt.Sprintf(`fail to place order %d time, re order`, i))
 			}
