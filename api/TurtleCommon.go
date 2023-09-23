@@ -447,36 +447,43 @@ func getTurtleCandles(account *model.Account, market, symbol string, far, second
 	if candles == nil || len(candles) == 0 { //|| len(candles) < far {
 		return nil
 	}
-	calcLen := 10
+	calcLenN := 10
+	calcLenV := 20
 	sortedCandles := &model.SortedCandle{Value: candles}
 	sort.Sort(sortedCandles)
 	if lastCandle2 == nil {
-		CalcCandleN(sortedCandles, calcLen)
+		CalcCandleN(sortedCandles, calcLenN, calcLenV)
 	} else {
 		lastCandle := sortedCandles.Value[len(sortedCandles.Value)-1]
-		lastCandle.N = (lastCandle2.N*float64(calcLen-1) + lastCandle.PriceHigh - lastCandle.PriceLow) / float64(calcLen)
-		lastCandle.NVolume = (lastCandle2.NVolume*float64(calcLen-1) + lastCandle.Volume) / float64(calcLen)
-		util.Notice(fmt.Sprintf(`base on last 2 candle %s %s far %d %d n-n %f %f nv-nv %f %f len %d`,
-			market, symbol, far, seconds, lastCandle2.N, lastCandle.N, lastCandle2.NVolume, lastCandle.NVolume, calcLen))
+		lastCandle.N = (lastCandle2.N*float64(calcLenN-1) + lastCandle.PriceHigh - lastCandle.PriceLow) / float64(calcLenN)
+		lastCandle.NVolume = (lastCandle2.NVolume*float64(calcLenV-1) + lastCandle.Volume) / float64(calcLenV)
+		util.Notice(fmt.Sprintf(`base on last 2 candle %s %s far %d %d n-n %f %f nv-nv %f %f len %d volume len %d`,
+			market, symbol, far, seconds, lastCandle2.N, lastCandle.N, lastCandle2.NVolume, lastCandle.NVolume, calcLenN, calcLenV))
 	}
 	return sortedCandles.Value
 }
 
 const CandleMLen = 10
 
-func CalcCandleN(sortedCandles *model.SortedCandle, calcLen int) {
+func CalcCandleN(sortedCandles *model.SortedCandle, calcLenN, calcLenV int) {
 	beginPrice := 0.0
 	beginVolume := 0.0
-	calcLen = int(math.Min(float64(calcLen), float64(len(sortedCandles.Value))))
-	for i := 0; i < calcLen; i++ {
+	calcLenN = int(math.Min(float64(calcLenN), float64(len(sortedCandles.Value))))
+	calcLenV = int(math.Min(float64(calcLenV), float64(len(sortedCandles.Value))))
+	for i := 0; i < calcLenN; i++ {
 		beginPrice += sortedCandles.Value[i].PriceHigh - sortedCandles.Value[i].PriceLow
+	}
+	for i := 0; i < calcLenV; i++ {
 		beginVolume += sortedCandles.Value[i].Volume
 	}
-	sortedCandles.Value[calcLen-1].N = beginPrice / float64(calcLen)
-	sortedCandles.Value[calcLen-1].NVolume = beginVolume / float64(calcLen)
-	for i := calcLen; i < len(sortedCandles.Value); i++ {
-		sortedCandles.Value[i].N = (sortedCandles.Value[i-1].N*float64(calcLen-1) + sortedCandles.Value[i].PriceHigh - sortedCandles.Value[i].PriceLow) / float64(calcLen)
-		sortedCandles.Value[i].NVolume = (sortedCandles.Value[i-1].NVolume*float64(calcLen-1) + sortedCandles.Value[i].Volume) / float64(calcLen)
+	sortedCandles.Value[calcLenN-1].N = beginPrice / float64(calcLenN)
+	sortedCandles.Value[calcLenV-1].NVolume = beginVolume / float64(calcLenV)
+	for i := calcLenN; i < len(sortedCandles.Value); i++ {
+		sortedCandles.Value[i].N = (sortedCandles.Value[i-1].N*float64(calcLenN-1) + sortedCandles.Value[i].PriceHigh - sortedCandles.Value[i].PriceLow) / float64(calcLenN)
+
+	}
+	for i := calcLenV; i < len(sortedCandles.Value); i++ {
+		sortedCandles.Value[i].NVolume = (sortedCandles.Value[i-1].NVolume*float64(calcLenV-1) + sortedCandles.Value[i].Volume) / float64(calcLenV)
 	}
 	disAll := 0.0
 	for i := 0; i < len(sortedCandles.Value); i++ {

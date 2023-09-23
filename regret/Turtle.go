@@ -269,8 +269,9 @@ func ProcessCandles(start, end time.Time, far, allLimit int, useNear, useM bool,
 			start.Add(duration), end)
 		util.Info(fmt.Sprintf(`get turtle candle %s %s %d setting chance %d`,
 			market, setting.Symbol, len(temp), setting.Chance))
-		calcLen := 10
-		api.CalcCandleN(&model.SortedCandle{Value: temp}, calcLen)
+		calcLenN := 10
+		calcLenV := 20
+		api.CalcCandleN(&model.SortedCandle{Value: temp}, calcLenN, calcLenV)
 		tempTurtle := GetTurtleData(temp, int(setting.Near), int(setting.Far), int(setting.Seconds), useNear)
 		for s, data := range tempTurtle {
 			turtleDataMap[s] = data
