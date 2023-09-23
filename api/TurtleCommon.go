@@ -268,7 +268,7 @@ func TurtleDataWorking(account *model.Account, setting *model.Setting) (working 
 		return true
 	}
 	now := time.Now()
-	nowPeriod, nowStr := model.GetNowPeriod(setting.Market, setting.SecondsCombine, now)
+	nowPeriod, nowStr := model.GetNowPeriod(setting.Market, setting.Seconds, now)
 	value, _ := util.LoadSyncMap(&TurtleDataSet, setting.Function, setting.Market, setting.Symbol, nowStr)
 	if value == nil {
 		util.StoreSyncMap(&TurtleDataSet, &model.TurtleData{TurtleTime: nowPeriod, Symbol: setting.Symbol,
@@ -311,7 +311,7 @@ func GetTurtleData(account *model.Account, function, market, symbol string, far,
 	// today.Unix() == nowPeriod.Unix() &&
 	if refreshDynamic && !model.CommonCoins[strings.ToLower(coin)] {
 		refreshValue, refreshOk := DynamicHandleTime.Load(market)
-		if !refreshOk || refreshValue == nil || refreshValue.(time.Time).Add(time.Hour).Before(time.Now()) {
+		if !refreshOk || refreshValue == nil || refreshValue.(time.Time).Add(time.Minute*15).Before(time.Now()) {
 			if handleMarketDynamic(market) {
 				PrepareSettings()
 				SetRequireReset(market)
@@ -375,7 +375,7 @@ func GetTurtleData(account *model.Account, function, market, symbol string, far,
 				function, market, symbol, nowStr, data.Amount, data.AmountMin, data.N,
 				data.DaysNear, data.LowNear, data.HighNear, data.DaysFar, data.LowFar, data.HighFar, data))
 		}
-		util.Notice(fmt.Sprintf(`set data %s %f %f`, function, data.N, data.Amount))
+		util.Notice(fmt.Sprintf(`set data %s %s %s %f %f`, market, symbol, function, data.N, data.Amount))
 		return data, true
 	} else {
 		return nil, false

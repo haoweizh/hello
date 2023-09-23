@@ -33,7 +33,7 @@ var ProcessBoost = func(setting *model.Setting, tick *model.BidAsk) {
 	}
 	data, _ := api.GetTurtleData(account, setting.Function, setting.Market, setting.Symbol, setting.Far, setting.Near,
 		setting.Seconds, setting.AmountRate, true)
-	if data == nil || setting == nil || model.AppConfig.Env == `test` {
+	if data == nil || setting == nil || model.AppConfig.Env == `test` || data.Amount == 0 || data.N == 0 {
 		if time.Now().Second() == 0 {
 			util.Notice(fmt.Sprintf(`boost return no turtle boost %s %s`, setting.Market, setting.Symbol))
 		}

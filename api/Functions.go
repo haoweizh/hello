@@ -373,6 +373,7 @@ var getEquityTime = &sync.Map{}
 var equityMsg = &sync.Map{}
 
 func GetMarketEquity(index int) (msg string) {
+	markets := GetMarkets()
 	accounts := model.GetAccounts(index)
 	if accounts == nil {
 		return
@@ -383,18 +384,18 @@ func GetMarketEquity(index int) (msg string) {
 		return valueMsg.(string)
 	}
 	inAll := 0.0
-	for market, account := range accounts {
-		if account == nil {
+	for _, market := range markets {
+		if accounts[market] == nil {
 			continue
 		}
-		util.Notice(fmt.Sprintf(`try to get value for %s account %s`, market, account.Key[:5]))
-		_, _, equity, _ := GetBalances(account.Key, account.Secret, market)
-		if equity == 0 && !account.IsUnified {
-			_, _, equity, _ = GetPositions(account.Key, account.Secret, market)
+		util.Notice(fmt.Sprintf(`try to get value for %s account %s`, market, accounts[market].Key[:5]))
+		_, _, equity, _ := GetBalances(accounts[market].Key, accounts[market].Secret, market)
+		if equity == 0 && !accounts[market].IsUnified {
+			_, _, equity, _ = GetPositions(accounts[market].Key, accounts[market].Secret, market)
 		}
 		inAll += equity
 		msg += fmt.Sprintf("%s: %f\n", market, equity)
-		util.Notice(fmt.Sprintf(`try to get value done %s account %s %s`, market, account.Key[:5], msg))
+		util.Notice(fmt.Sprintf(`try to get value done %s account %s %s`, market, accounts[market].Key[:5], msg))
 	}
 	msg += fmt.Sprintf("账户总权益InUsd: %f\n", inAll)
 	getEquityTime.Store(index, time.Now())
@@ -678,7 +679,12 @@ func MustPlaceOrder(key, secret, orderSide, orderType, market, symbol, orderPara
 			if order != nil && order.OrderId != `` && order.Status != model.CarryStatusFail {
 				order.RefreshType = refreshType
 				return []*model.Order{order}
-			} else {
+			} else { // binance perp 下单返回 -4005 代表数量太大，分两半继续下单
+				if order != nil && strings.Contains(order.ErrCode, `-4005`) {
+					util.Notice(fmt.Sprintf(`binance perp 下单返回 -4005 代表数量%f太大，减小marketInfo sizemax %f`,
+						amount, v.(*model.MarketInfo).SizeMax))
+					v.(*model.MarketInfo).SizeMax = 0.52 * amount
+				}
 				time.Sleep(time.Second * 3)
 				util.Notice(fmt.Sprintf(`fail to place order %d time, re order`, i))
 			}
