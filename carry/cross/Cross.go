@@ -99,7 +99,7 @@ func createFromPosition(account *model.Account, setting *model.Setting, valueLim
 	}
 	limitAmount := 0.0
 	availableAmount := 0.0
-	limitAmount = math.Min(cm.accountValueInU/5, math.Min(cm.collateralsAvailable, openValueLimit)) / price
+	limitAmount = math.Min(cm.accountValueInU/5, cm.collateralsAvailable) / price
 	availableAmount = cm.collateralsAvailable / price
 	carryStatus = &CarryStatus{isSpot: false, market: setting.Market, symbol: setting.Symbol, account: account,
 		setting:       setting,
@@ -153,7 +153,11 @@ func createFromBalance(account *model.Account, setting *model.Setting, valueLimi
 	}
 	sm := value.(*spotMarket)
 	limitBuy, limitSell, availableBuy := 0.0, 0.0, 0.0
-	limitBuy = math.Min(openValueLimit, math.Min(sm.availableU/5, sm.accountValueInU/15)) / price
+	if setting.Function == model.FunctionCross {
+		limitBuy = math.Min(sm.availableU/5, sm.accountValueInU/15) / price
+	} else if setting.Function == model.FunctionQueue {
+		limitBuy = sm.availableU * 0.9 / price
+	}
 	availableBuy = sm.availableU / price
 	carryStatus = &CarryStatus{isSpot: true, market: setting.Market, symbol: setting.Symbol, account: account,
 		setting:       setting,
@@ -163,7 +167,7 @@ func createFromBalance(account *model.Account, setting *model.Setting, valueLimi
 		AvailableBuy:  availableBuy}
 	if sm.balances[setting.Symbol] != nil {
 		balance := sm.balances[setting.Symbol]
-		limitSell = math.Min(math.Min(math.Max(balance.Amount, 0), balance.AvailableWithBorrow), openValueLimit/price)
+		limitSell = math.Min(math.Max(balance.Amount, 0), balance.AvailableWithBorrow)
 		carryStatus.Holding = balance.Amount
 		// 暂不支持借币
 		carryStatus.LimitSell = limitSell
@@ -214,6 +218,7 @@ func initStatus(account *model.Account, setting *model.Setting, absentRevert boo
 		doRevert = true
 	}
 	if status == nil {
+		util.Notice(fmt.Sprintf(`fail to crate status %s %s`, setting.Market, setting.Symbol))
 		return nil
 	}
 	_, status.FoundingRate, status.FundingRateUpdateTime = api.GetFundingRate(account.Key, account.Secret, setting.Market, setting.Symbol)
@@ -317,7 +322,7 @@ func initTradeLine(account *model.Account, setting *model.Setting, status *Carry
 
 func ClearCross() {
 	for doCross {
-		for true {
+		for {
 			if !api.CheckSetProcessing(model.FunctionCross, model.FunctionCross, model.FunctionCross, true) {
 				break
 			} else {
@@ -378,7 +383,7 @@ func equalAccounts() {
 		waitEqual[i] = true
 		go equalAccount(i, equalChannel, accounts)
 	}
-	for true {
+	for {
 		index := <-equalChannel
 		waitEqual[index] = false
 		finish := true
@@ -420,7 +425,7 @@ func equalAccount(i int, equalChan chan int, accounts map[string]*model.Account)
 				equalStatuses[j] = initStatus(account, setting, false)
 			}
 			for index := 0; index <= 10; index++ {
-				coinEqual, leftHoldingInU, _ := equalCoin(coin.(string), equalStatuses, settings.([]*model.Setting))
+				coinEqual, leftHoldingInU, _ := equalCoin(coin.(string), equalStatuses)
 				if index > 0 {
 					util.Info(`equal coin %s account %d equal %v left hold u %f`, coin, i, coinEqual, leftHoldingInU)
 				}
@@ -442,7 +447,7 @@ func equalAccount(i int, equalChan chan int, accounts map[string]*model.Account)
 
 // bybit 缺少按照symbol cancel all
 // settings []*model.Setting, coinStatus map[string]map[string]map[string]*CarryStatus
-func equalCoin(coin string, statuses []*CarryStatus, settings []*model.Setting) (isEqual bool, holdingInU float64, msg string) {
+func equalCoin(coin string, statuses []*CarryStatus) (isEqual bool, holdingInU float64, msg string) {
 	var holding, price float64
 	orderSide := ``
 	var equalStatus *CarryStatus
@@ -454,11 +459,9 @@ func equalCoin(coin string, statuses []*CarryStatus, settings []*model.Setting) 
 	isEqual = true
 	holdStr := ``
 	noTicks := ``
-	for i, status := range statuses {
+	for _, status := range statuses {
 		if status == nil {
-			if settings[i] != nil {
-				util.Notice(`warning: fail to get one status %s %s %s`, coin, settings[i].Market, settings[i].Symbol)
-			}
+			util.Notice(`warning: fail to get one status %s`, coin)
 			return false, 0, `fail to equal for one nil status`
 		}
 		holding += status.Holding
@@ -477,7 +480,7 @@ func equalCoin(coin string, statuses []*CarryStatus, settings []*model.Setting) 
 		bidStatus[fmt.Sprintf(`%s_%s`, status.market, status.symbol)] = status
 		askStatus[fmt.Sprintf(`%s_%s`, status.market, status.symbol)] = status
 		if price == 0 {
-			price = bids[0].Price + asks[0].Price
+			price = bids[0].Price
 		}
 	}
 	holdingInU = holding * price
@@ -485,6 +488,9 @@ func equalCoin(coin string, statuses []*CarryStatus, settings []*model.Setting) 
 		if time.Now().Hour() == 10 && time.Now().Minute()%50 == 0 {
 			//util.Notice(fmt.Sprintf(`clear holding every 10:50 %s %f %f %f`, coin, holding, price, holdingInU))
 			for _, status := range statuses {
+				if status.setting == nil || status.setting.Function != model.FunctionCross {
+					continue
+				}
 				time.Sleep(time.Millisecond * 100)
 				go api.CancelOrders(status.account.Key, status.account.Secret, status.market, status.symbol)
 			}
@@ -521,12 +527,14 @@ func equalCoin(coin string, statuses []*CarryStatus, settings []*model.Setting) 
 				util.Notice(fmt.Sprintf(`no status when holding in U: %f %s %s`, holdingInU, bids[i].Market, bids[i].Symbol))
 				continue
 			}
-			util.Notice(fmt.Sprintf(`equal cancel orders %s %s`, status.market, status.symbol))
-			go api.CancelOrders(status.account.Key, status.account.Secret, status.market, status.symbol)
-			if now-int64(tickTimes[status.market+status.symbol]) > 10000 || status.TradeLineSell > 0.5 {
-				errMsg += fmt.Sprintf(`%s %s delay too long or trade line sell %d %f`,
-					status.market, status.symbol, now-int64(tickTimes[status.market+status.symbol]), status.TradeLineSell)
-				continue
+			if status.setting != nil && status.setting.Function != model.FunctionQueue {
+				util.Notice(fmt.Sprintf(`equal cancel orders %s %s`, status.market, status.symbol))
+				go api.CancelOrders(status.account.Key, status.account.Secret, status.market, status.symbol)
+				if now-int64(tickTimes[status.market+status.symbol]) > 10000 || status.TradeLineSell > 0.5 {
+					errMsg += fmt.Sprintf(`%s %s delay too long or trade line sell %d %f`,
+						status.market, status.symbol, now-int64(tickTimes[status.market+status.symbol]), status.TradeLineSell)
+					continue
+				}
 			}
 			checkAmount := model.GetAmountInMarket(status.market, status.symbol, math.Abs(holding), price, status.reduceOnlySell)
 			if checkAmount <= 0 {
@@ -558,12 +566,14 @@ func equalCoin(coin string, statuses []*CarryStatus, settings []*model.Setting) 
 				util.Notice(fmt.Sprintf(`no status when holding in U: %f %s %s`, holdingInU, asks[i].Market, asks[i].Symbol))
 				continue
 			}
-			util.Notice(fmt.Sprintf(`equal cancel orders %s %s`, status.market, status.symbol))
-			go api.CancelOrders(status.account.Key, status.account.Secret, status.market, status.symbol)
-			if equalStatus != nil || now-int64(tickTimes[status.market+status.symbol]) > 10000 || status.TradeLineBuy > 0.5 {
-				errMsg += fmt.Sprintf(`%s %s delay too long or trade line buy %d %f`,
-					status.market, status.symbol, now-int64(tickTimes[status.market+status.symbol]), status.TradeLineBuy)
-				continue
+			if status.setting != nil && status.setting.Function != model.FunctionQueue {
+				util.Notice(fmt.Sprintf(`equal cancel orders %s %s`, status.market, status.symbol))
+				go api.CancelOrders(status.account.Key, status.account.Secret, status.market, status.symbol)
+				if equalStatus != nil || now-int64(tickTimes[status.market+status.symbol]) > 10000 || status.TradeLineBuy > 0.5 {
+					errMsg += fmt.Sprintf(`%s %s delay too long or trade line buy %d %f`,
+						status.market, status.symbol, now-int64(tickTimes[status.market+status.symbol]), status.TradeLineBuy)
+					continue
+				}
 			}
 			checkAmount := model.GetAmountInMarket(status.market, status.symbol, math.Abs(holding), price, status.reduceOnlyBuy)
 			if checkAmount <= 0 {

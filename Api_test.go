@@ -300,6 +300,14 @@ func Test_CutTail(t *testing.T) {
 }
 
 func Test_initTurtleN(t *testing.T) {
+	testMap := map[int]string{1: `1`, 2: `2`, 3: `3`, 4: `4`, 5: `5`}
+	for i := range testMap {
+		if i == 2 || i == 4 {
+			delete(testMap, i)
+			fmt.Println(fmt.Sprintf(`delete %d`, i))
+		}
+		fmt.Println(fmt.Sprintf(`handle %d`, i))
+	}
 	model.NewConfig()
 	market := model.OKEX
 	account := model.AppConfig.GetAccounts(market)[0]
