@@ -392,9 +392,9 @@ func getCandleData(account *model.Account, market, symbol string, far, near, sec
 		candle := findCandle(candles, currentPeriod)
 		if candle == nil || candle.PriceHigh == 0 || candle.PriceLow == 0 {
 			if time.Now().Second() == 0 {
+				util.Notice(`can not calc turtleDate as nil candle %s %s %s %d`,
+					market, symbol, currentPeriod.String(), len(candles))
 			}
-			util.Notice(`can not calc turtleDate as nil candle %s %s %s %d`,
-				market, symbol, currentPeriod.String(), len(candles))
 			return
 		}
 		getOne = true
