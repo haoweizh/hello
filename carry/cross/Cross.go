@@ -488,7 +488,7 @@ func equalCoin(coin string, statuses []*CarryStatus) (isEqual bool, holdingInU f
 		if time.Now().Hour() == 10 && time.Now().Minute()%50 == 0 {
 			//util.Notice(fmt.Sprintf(`clear holding every 10:50 %s %f %f %f`, coin, holding, price, holdingInU))
 			for _, status := range statuses {
-				if status.setting == nil || status.setting.Function != model.FunctionCross {
+				if status.setting == nil || status.setting.Function == model.FunctionQueue {
 					continue
 				}
 				time.Sleep(time.Millisecond * 100)
