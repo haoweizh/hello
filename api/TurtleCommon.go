@@ -348,8 +348,10 @@ func GetTurtleData(account *model.Account, function, market, symbol string, far,
 		data.M, data.NVolume, data.Amount = getCandleData(account, market, symbol,
 		data.DaysFar, data.DaysNear, int(seconds), data.DaysAdjust, amountRate, nowPeriod)
 	if !getOne {
+		util.Notice(fmt.Sprintf(`fail to getOne %s %s %d %d`, market, symbol, data.DaysFar, seconds))
 		return nil, false
 	} else if !getAll {
+		util.Notice(fmt.Sprintf(`fail to getAll %s %s %d %d`, market, symbol, data.DaysFar, seconds))
 		return nil, true
 	}
 	if data.Amount > 0 && data.N > 0 {
@@ -390,9 +392,9 @@ func getCandleData(account *model.Account, market, symbol string, far, near, sec
 		candle := findCandle(candles, currentPeriod)
 		if candle == nil || candle.PriceHigh == 0 || candle.PriceLow == 0 {
 			if time.Now().Second() == 0 {
-				util.Notice(`can not calc turtleDate as nil candle %s %s %s %d`,
-					market, symbol, currentPeriod.String(), len(candles))
 			}
+			util.Notice(`can not calc turtleDate as nil candle %s %s %s %d`,
+				market, symbol, currentPeriod.String(), len(candles))
 			return
 		}
 		getOne = true
