@@ -40,9 +40,13 @@ func CalcTurtleAmount(account *model.Account, market string, n, amountRate float
 	return amount
 }
 
+var clearLock sync.Mutex
+
 // ClearOrders
 // 取消market交易所中symbol交易对的所有limit、stop单
 func ClearOrders(key, secret, market, symbol string, keepTypes map[string]bool) {
+	defer clearLock.Unlock()
+	clearLock.Lock()
 	orders := QueryOpenOrders(key, secret, market, symbol)
 	for _, order := range orders {
 		if keepTypes != nil && keepTypes[order.OrderType] {
@@ -53,6 +57,7 @@ func ClearOrders(key, secret, market, symbol string, keepTypes map[string]bool) 
 			MustCancel(key, secret, market, symbol, order.OrderType, order.OrderId, true)
 		}
 	}
+	time.Sleep(time.Second)
 }
 
 // ClearExtraOrders
@@ -104,8 +109,8 @@ func AdjustPosHolding(key, secret string, setting *model.Setting, data *model.Tu
 	}
 	if posMap[setting.Symbol] != nil { //setting.Chance和pos.Holding相乘小于零代表方向相反，此时设置为0
 		if float64(setting.Chance)*posMap[setting.Symbol].Holding <= 0 {
-			util.Notice(`update turtle side %s %s %s %d %e %e from %d`,
-				setting.Market, setting.Symbol, setting.Function, setting.Chance, posMap[setting.Symbol].Holding, setting.GridAmount, setting.Chance)
+			util.Notice(`update turtle side %s %s %s holding %e grid amount %e chance %d`,
+				setting.Market, setting.Symbol, setting.Function, posMap[setting.Symbol].Holding, setting.GridAmount, setting.Chance)
 			setting.GridAmount = 0
 			setting.Chance = 0
 			setting.PriceX = 0
@@ -306,15 +311,11 @@ func GetTurtleData(account *model.Account, function, market, symbol string, far,
 		function, market, symbol, nowStr, far, refreshDynamic))
 	data = &model.TurtleData{TurtleTime: nowPeriod, Symbol: symbol, Big: 1, DaysFar: int(far), DaysNear: int(near),
 		DaysAdjust: 5, OrderCleared: lastHandled, OrderAdjust: make([]*model.Order, 0)}
-	if removed {
-		util.StoreSyncMap(&TurtleDataSet, data, function, market, symbol, nowStr)
-		return data, true
-	}
 	if function == model.FunctionTurtle || function == model.FunctionTurtleNormal {
 		data.UseNear = true
 	} else if function == model.FunctionCombineTurtle {
 		data.UseNear = false
-	} else if function == model.FunctionBoost {
+	} else if function == model.FunctionBoost && !removed {
 		data.UseNear = true
 		openOrders := QueryOpenOrders(account.Key, account.Secret, market, symbol)
 		data.OrderTrail = make([]*model.Order, 0)
