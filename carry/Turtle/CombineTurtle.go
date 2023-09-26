@@ -53,7 +53,7 @@ var ProcessCombineTurtle = func(settingCombine *model.Setting, tick *model.BidAs
 		settingNormal.Far, settingNormal.Near, settingNormal.Seconds, settingNormal.AmountRate, true, removed)
 	if dataCombine == nil || dataCombine.N == 0 || dataCombine.Amount == 0 || dataNormal == nil || dataNormal.N == 0 ||
 		dataNormal.Amount == 0 || settingCombine == nil || settingNormal == nil || model.AppConfig.Env == `test` {
-		if time.Now().Second() == 0 {
+		if time.Now().Minute() == 0 && time.Now().Second() == 0 {
 			util.Notice(fmt.Sprintf(`combine return no turtle combine turtle %s %s`, market, symbol))
 		}
 		return
