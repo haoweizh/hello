@@ -263,26 +263,9 @@ func handleLastTurtleData(account *model.Account, function, market, symbol, last
 	return lastHandled
 }
 
-func TurtleDataWorking(account *model.Account, setting *model.Setting) (working bool) {
-	if setting.Chance != 0 || setting.SymbolRelated != model.SettingTurtleRemoved {
-		return true
-	}
-	now := time.Now()
-	nowPeriod, nowStr := model.GetNowPeriod(setting.Market, setting.Seconds, now)
-	value, _ := util.LoadSyncMap(&TurtleDataSet, setting.Function, setting.Market, setting.Symbol, nowStr)
-	if value == nil {
-		util.StoreSyncMap(&TurtleDataSet, &model.TurtleData{TurtleTime: nowPeriod, Symbol: setting.Symbol,
-			OrderCleared: true}, setting.Function, setting.Market, setting.Symbol, nowStr)
-		ClearOrders(account.Key, account.Secret, setting.Market, setting.Symbol, nil)
-		return false
-	} else {
-		return false
-	}
-}
-
 // GetTurtleData refreshDynamic false时代表仅作为检查是否有足够turtleData作为top market info使用，此时不会存在缓存中，否则会引起far near错误
 func GetTurtleData(account *model.Account, function, market, symbol string, far, near, seconds int64,
-	amountRate float64, refreshDynamic bool) (data *model.TurtleData, dataValid bool) {
+	amountRate float64, refreshDynamic, removed bool) (data *model.TurtleData, dataValid bool) {
 	if refreshDynamic {
 		var lock *sync.Mutex
 		lockValue, _ := getTurtleLock.Load(account.Key)
@@ -323,6 +306,10 @@ func GetTurtleData(account *model.Account, function, market, symbol string, far,
 		function, market, symbol, nowStr, far, refreshDynamic))
 	data = &model.TurtleData{TurtleTime: nowPeriod, Symbol: symbol, Big: 1, DaysFar: int(far), DaysNear: int(near),
 		DaysAdjust: 5, OrderCleared: lastHandled, OrderAdjust: make([]*model.Order, 0)}
+	if removed {
+		util.StoreSyncMap(&TurtleDataSet, data, function, market, symbol, nowStr)
+		return data, true
+	}
 	if function == model.FunctionTurtle || function == model.FunctionTurtleNormal {
 		data.UseNear = true
 	} else if function == model.FunctionCombineTurtle {
