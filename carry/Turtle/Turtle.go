@@ -36,7 +36,7 @@ var ProcessTurtle = func(setting *model.Setting, tick *model.BidAsk) {
 	var data *model.TurtleData
 	data, _ = api.GetTurtleData(account, setting.Function, setting.Market, setting.Symbol, setting.Far, setting.Near,
 		setting.Seconds, setting.AmountRate, true, setting.Chance == 0 && setting.SymbolRelated == model.SettingTurtleRemoved)
-	if data == nil || data.N == 0 || data.Amount == 0 || setting == nil || model.AppConfig.Env == `test` {
+	if data == nil || setting == nil || model.AppConfig.Env == `test` {
 		if time.Now().Minute() == 0 && time.Now().Second() == 0 {
 			util.Notice(fmt.Sprintf(`fail to get turtle %s %s`, setting.Market, setting.Symbol))
 		}
@@ -61,6 +61,9 @@ var ProcessTurtle = func(setting *model.Setting, tick *model.BidAsk) {
 	priceShort := data.LowFar
 	if api.HandleOrders(account.Key, account.Secret, setting.Market, setting.Symbol, []*model.Setting{setting}, []*model.TurtleData{data}) ||
 		api.CheckBreak(account, setting.Market, setting.Symbol, []*model.Setting{setting}, []*model.TurtleData{data}, tick) {
+		return
+	}
+	if data.N == 0 || data.Amount == 0 {
 		return
 	}
 	//if !data.AdjustChecked {

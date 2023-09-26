@@ -30,7 +30,7 @@ var ProcessBoost = func(setting *model.Setting, tick *model.BidAsk) {
 	}
 	data, _ := api.GetTurtleData(account, setting.Function, setting.Market, setting.Symbol, setting.Far, setting.Near,
 		setting.Seconds, setting.AmountRate, true, setting.Chance == 0 && setting.SymbolRelated == model.SettingTurtleRemoved)
-	if data == nil || setting == nil || model.AppConfig.Env == `test` || data.Amount == 0 || data.N == 0 {
+	if data == nil || setting == nil || model.AppConfig.Env == `test` {
 		if time.Now().Minute() == 0 && time.Now().Second() == 0 {
 			util.Notice(fmt.Sprintf(`boost return no turtle boost %s %s`, setting.Market, setting.Symbol))
 		}
@@ -44,9 +44,6 @@ var ProcessBoost = func(setting *model.Setting, tick *model.BidAsk) {
 			data.Amount = dataLiquid.Amount
 		}
 	}
-	if data.Liquidated || data.Amount == 0 || data.N == 0 {
-		return
-	}
 	if !data.OrderCleared {
 		api.ClearOrders(account.Key, account.Secret, setting.Market, setting.Symbol, map[string]bool{model.OrderTypeTrailStop: true})
 		data.OrderCleared = true
@@ -56,6 +53,9 @@ var ProcessBoost = func(setting *model.Setting, tick *model.BidAsk) {
 	canOpen, turtleCoins := api.CanOpenTurtle(setting, data)
 	if api.HandleOrders(account.Key, account.Secret, setting.Market, setting.Symbol, []*model.Setting{setting}, []*model.TurtleData{data}) ||
 		api.CheckBreak(account, setting.Market, setting.Symbol, []*model.Setting{setting}, []*model.TurtleData{data}, tick) {
+		return
+	}
+	if data.Liquidated || data.Amount == 0 || data.N == 0 {
 		return
 	}
 	msgKey := model.GetMsgKey(model.FunctionBoost, setting.Market, setting.Symbol)
