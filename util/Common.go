@@ -127,6 +127,17 @@ func _(f func()) {
 	}()
 }
 
+func DelSyncMap(syncMap *sync.Map, keys ...string) {
+	if syncMap == nil {
+		return
+	}
+	key := ``
+	for i := 0; i < len(keys); i++ {
+		key += keys[i] + `*`
+	}
+	syncMap.Delete(key)
+}
+
 func LoadSyncMap(syncMap *sync.Map, keys ...string) (interface{}, bool) {
 	if syncMap == nil {
 		return nil, false
@@ -139,6 +150,9 @@ func LoadSyncMap(syncMap *sync.Map, keys ...string) (interface{}, bool) {
 }
 
 func StoreSyncMap(syncMap *sync.Map, value interface{}, keys ...string) {
+	if syncMap == nil {
+		return
+	}
 	key := ``
 	for i := 0; i < len(keys); i++ {
 		key += keys[i] + `*`

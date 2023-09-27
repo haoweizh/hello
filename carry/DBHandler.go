@@ -86,7 +86,6 @@ func MaintainTransFee() {
 				}
 				value.OrderUpdateTime = order.OrderUpdateTime
 				value.Fee = order.Fee
-				value.FeeIncome = order.FeeIncome
 				value.DealAmount = order.DealAmount
 				if order.Status != `` {
 					value.Status = order.Status
@@ -117,7 +116,7 @@ func ResetChannels(market string, channels []chan struct{}) {
 		channel <- struct{}{}
 		close(channel)
 	}
-	model.AppMarkets.WsDepth.Store(market, api.CreateMarketDepthServer(model.AppMarkets, market, cross.PostOrderCross))
+	model.AppMarkets.WsDepth.Store(market, api.CreateMarketDepthServer(model.AppMarkets, market))
 	model.ChannelMaintaining.Store(market, false)
 	util.Notice(market + " reset depth channel done")
 }
@@ -130,7 +129,7 @@ func MaintainMarketChan() {
 	for _, market := range api.GetMarkets() {
 		channels, _ := model.AppMarkets.WsDepth.Load(market)
 		if channels == nil || len(channels.([]chan struct{})) == 0 {
-			model.AppMarkets.WsDepth.Store(market, api.CreateMarketDepthServer(model.AppMarkets, market, cross.PostOrderCross))
+			model.AppMarkets.WsDepth.Store(market, api.CreateMarketDepthServer(model.AppMarkets, market))
 			model.AppMarkets.WsInitTime.Store(market, util.GetNow())
 			util.Notice(fmt.Sprintf("%s create new depth channel ", market))
 		} else if api.RequireDepthChanReset(model.AppMarkets, market) {
@@ -139,9 +138,12 @@ func MaintainMarketChan() {
 			model.AppMarkets.WsInitTime.Store(market, util.GetNow())
 			//time.Sleep(time.Minute)
 		}
-		conn, _ := model.AppMarkets.AccountConnection.Load(market)
-		if conn == nil {
-			api.CreateAccountWsServer(market)
+		accounts := model.AppConfig.GetAccounts(market)
+		for _, account := range accounts {
+			value, _ := util.LoadSyncMap(&model.AppMarkets.AccountConns, market, account.Key)
+			if value == nil {
+				api.CreateAccountWsServer(market)
+			}
 		}
 	}
 	socketMaintaining = false
@@ -155,6 +157,8 @@ func Maintain() {
 	model.HandlerMap[model.FunctionCombineTurtle] = Turtle.ProcessCombineTurtle
 	model.HandlerMap[model.FunctionBoost] = Turtle.ProcessBoost
 	model.HandlerMap[model.FunctionGrid] = grid.ProcessGrid
+	model.AccountHandlerMap[model.FunctionGrid] = grid.ProcessGridOrder
+	model.AccountHandlerMap[model.FunctionCross] = cross.PostOrderCross
 	_ = model.AppDB.AutoMigrate(&model.Setting{})
 	_ = model.AppDB.AutoMigrate(&model.Order{})
 	_ = model.AppDB.AutoMigrate(&model.Balance{})

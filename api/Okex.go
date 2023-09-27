@@ -34,7 +34,31 @@ var msgChanOKEX = make(map[string]chan *simplejson.Json)
 // var wrongs = make(map[string]bool)
 // var wrongLock sync.Mutex
 var channelMaintainingOKEX = false
-var privateConnectionOKEX = make(map[string]*websocket.Conn) // key - connection
+var accountConnMaintainingOKEX = false
+
+//var privateConnectionOKEX = make(map[string]*websocket.Conn) // key - connection
+
+func maintainAccountConnOKEX() {
+	if !accountConnMaintainingOKEX {
+		accountConnMaintainingOKEX = true
+		for {
+			time.Sleep(time.Second * 25)
+			accounts := model.AppConfig.GetAccounts(model.OKEX)
+			for _, account := range accounts {
+				if account == nil {
+					continue
+				}
+				value, _ := util.LoadSyncMap(&model.AppMarkets.AccountConns, model.OKEX, account.Key)
+				if value == nil {
+					util.Notice(fmt.Sprintf(`no private connection %s`, account.Key))
+				}
+				if err := SendToConnection(model.OKEX, value.(*websocket.Conn), []byte(`ping`)); err != nil {
+					util.SocketInfo("okex server ping client error " + err.Error())
+				}
+			}
+		}
+	}
+}
 
 func maintainChannelOKEX(subscribes []interface{}) {
 	if !channelMaintainingOKEX {
@@ -47,15 +71,6 @@ func maintainChannelOKEX(subscribes []interface{}) {
 		}()
 		for {
 			time.Sleep(time.Second * 25)
-			accounts := model.AppConfig.GetAccounts(model.OKEX)
-			for _, account := range accounts {
-				if privateConnectionOKEX[account.Key] == nil {
-					util.Notice(fmt.Sprintf(`no private connection %s`, account.Key))
-				}
-				if err := SendToConnection(model.OKEX, privateConnectionOKEX[account.Key], []byte(`ping`)); err != nil {
-					util.SocketInfo("okex server ping client error " + err.Error())
-				}
-			}
 			err := SendToAllConnections(model.OKEX, []byte(`ping`))
 			if err != nil {
 				util.SocketInfo("okex server ping client error " + err.Error())
@@ -151,27 +166,6 @@ func reSubscribe(subscribes []interface{}) {
 	}
 }
 
-var subscriberOKEXPrivate = func(connection *websocket.Conn, key, secret string) error {
-	var err error = nil
-	loginMap := make(map[string]interface{})
-	loginMap[`op`] = `login`
-	timestamp := time.Now().Unix()
-	toBeSign := fmt.Sprintf(`%dGET/users/self/verify`, timestamp)
-	hash := hmac.New(sha256.New, []byte(secret))
-	hash.Write([]byte(toBeSign))
-	sign := base64.StdEncoding.EncodeToString(hash.Sum(nil))
-	loginArray := []map[string]interface{}{{
-		`apiKey`: key, `passphrase`: model.AppConfig.OKPhase, `timestamp`: timestamp, `sign`: sign}}
-	loginMap[`args`] = loginArray
-	err = SendToConnection(model.OKEX, connection, util.JsonEncodeToByte(loginMap))
-	if err != nil {
-		util.SocketInfo(fmt.Sprintf(`fail to login okex ws: %s return %s`, key, err.Error()))
-	} else {
-		util.SocketInfo(fmt.Sprintf(`login okex ws: %s`, key))
-	}
-	return err
-}
-
 var subscribeHandlerOKEX = func(connection *websocket.Conn, subscribes []interface{}) error {
 	var err error = nil
 	subscribeMap := make(map[string]interface{})
@@ -235,7 +229,7 @@ func handleMsgOKEX(channel chan *simplejson.Json, symbol string) {
 }
 
 // lastPingTime := util.GetNow().Unix()
-var wsHandlerOKEX = func(connection *websocket.Conn, event []byte, orderHandler OrderHandler) {
+var wsHandlerOKEX = func(event []byte) {
 	//now := util.GetNow().Unix()
 	//if now-lastPingTime > 25 { // ping okex server every 30 seconds
 	//	lastPingTime = now
@@ -261,7 +255,7 @@ var wsHandlerOKEX = func(connection *websocket.Conn, event []byte, orderHandler 
 	}
 }
 
-var wsHandlerPrivate = func(connection *websocket.Conn, event []byte, orderHandler OrderHandler) {
+var wsAccountHandlerOKEX = func(event []byte) {
 	responseJson, err := util.NewJSON(event)
 	if err != nil || responseJson == nil {
 		return
@@ -276,9 +270,19 @@ var wsHandlerPrivate = func(connection *websocket.Conn, event []byte, orderHandl
 				subArray = append(subArray, map[string]string{`channel`: `orders`, `instType`: `ANY`, `instId`: subscribes[j].(string)})
 			}
 			subscribeMap[`args`] = subArray
-			if err = SendToConnection(model.OKEX, connection, util.JsonEncodeToByte(subscribeMap)); err != nil {
-				util.SocketInfo("okex can not subscribe private " + err.Error())
-				continue
+			accounts := model.AppConfig.GetAccounts(model.OKEX)
+			for _, account := range accounts {
+				if account == nil {
+					continue
+				}
+				value, _ := util.LoadSyncMap(&model.AppMarkets.AccountConns, model.OKEX, account.Key)
+				if value == nil {
+					continue
+				}
+				if err = SendToConnection(model.OKEX, value.(*websocket.Conn), util.JsonEncodeToByte(subscribeMap)); err != nil {
+					util.SocketInfo("okex can not subscribe private " + err.Error())
+					continue
+				}
 			}
 		}
 	}
@@ -293,55 +297,69 @@ var wsHandlerPrivate = func(connection *websocket.Conn, event []byte, orderHandl
 	data := responseJson.Get(`data`).MustArray()
 	for _, item := range data {
 		value := item.(map[string]interface{})
-		go handleWSOrderOKEX(value, orderHandler)
+		go func() {
+			order := parseOrderOKEX(value)
+			funcHandlers := GetFunctions(model.OKEX, order.Symbol)
+			if funcHandlers != nil {
+				funcHandlers.Range(func(function, value interface{}) bool {
+					if model.AccountHandlerMap[function.(string)] != nil {
+						if function.(string) == model.FunctionCross {
+							// 当前只针对错误订单进行处理
+							if strings.Trim(order.ErrCode, ` `) != `0` && !order.HaveId() {
+								go model.AccountHandlerMap[function.(string)](order)
+							}
+						} else {
+							go model.AccountHandlerMap[function.(string)](order)
+						}
+					}
+					return true
+				})
+			}
+		}()
 	}
 }
 
-func handleWSOrderOKEX(value map[string]interface{}, orderHandler OrderHandler) {
-	order := parseOrderOKEX(value)
-	//util.Info(`get order sCode %s %s %v`, order.Status, order.ErrCode, value)
-	//dbOrder := model.Order{}
-	//model.AppDB.Where(`order_id=?`, order.OrderId).First(&dbOrder)
-	//if dbOrder.OrderId != `` {
-	//	order.ID = dbOrder.ID
-	//	util.Info(fmt.Sprintf(`query order %s id %d`, order.OrderId, dbOrder.ID))
-	//} else {
-	//	util.Info(`db can not get orderId %s`, order.OrderId)
-	//}
-	//model.AppDB.Save(order)
-	// 当前只针对错误订单进行处理
-	if orderHandler != nil && strings.Trim(order.ErrCode, ` `) != `0` && !order.HaveId() {
-		orderHandler(order, nil)
+func WsAccountServeOKEX() {
+	accounts := model.AppConfig.GetAccounts(model.OKEX)
+	for _, account := range accounts {
+		if account == nil {
+			continue
+		}
+		conn, err := WsAccountClient(account.Key, model.OKEX, wsPrivateOKEX, wsAccountHandlerOKEX)
+		if err != nil {
+			util.Notice("can not create web socket " + err.Error())
+		} else if conn != nil {
+			loginMap := make(map[string]interface{})
+			loginMap[`op`] = `login`
+			timestamp := time.Now().Unix()
+			toBeSign := fmt.Sprintf(`%dGET/users/self/verify`, timestamp)
+			hash := hmac.New(sha256.New, []byte(account.Secret))
+			hash.Write([]byte(toBeSign))
+			sign := base64.StdEncoding.EncodeToString(hash.Sum(nil))
+			loginArray := []map[string]interface{}{{
+				`apiKey`: account.Key, `passphrase`: model.AppConfig.OKPhase, `timestamp`: timestamp, `sign`: sign}}
+			loginMap[`args`] = loginArray
+			err = SendToConnection(model.OKEX, conn, util.JsonEncodeToByte(loginMap))
+			if err != nil {
+				util.SocketInfo(fmt.Sprintf(`fail to login okex ws: %s return %s`, account.Key, err.Error()))
+			} else {
+				util.SocketInfo(fmt.Sprintf(`login okex ws: %s`, account.Key))
+			}
+		}
 	}
 }
 
-func WsDepthServeOKEX(symbols map[string]bool, orderHandler OrderHandler) (channels []chan struct{}, err error) {
+func WsDepthServeOKEX(symbols map[string]bool) (channels []chan struct{}, err error) {
 	for s := range symbols {
 		if msgChanOKEX[s] == nil {
 			msgChanOKEX[s] = make(chan *simplejson.Json, 1000)
 			go handleMsgOKEX(msgChanOKEX[s], s)
 		}
 	}
-	channels = make([]chan struct{}, 0)
-	accounts := model.AppConfig.GetAccounts(model.OKEX)
-	for _, account := range accounts {
-		privateConnectionOKEX[account.Key], err = newConnection(wsPrivateOKEX)
-		stopChan := make(chan struct{}, 2)
-		if err != nil {
-			util.Notice("can not create web socket " + err.Error())
-		} else {
-			go chanHandler(model.OKEX, stopChan, privateConnectionOKEX[account.Key], wsHandlerPrivate, orderHandler)
-			_ = subscriberOKEXPrivate(privateConnectionOKEX[account.Key], account.Key, account.Secret)
-		}
-		channels = append(channels, stopChan)
-	}
 	subChannels, errPublic := WebSocketClient(model.OKEX, wsOKEX, GetWSSubscribes(model.OKEX, model.SubscribeDepth),
-		subscribeHandlerOKEX, wsHandlerOKEX, orderHandler, wsStepOKEX)
-	for _, channel := range subChannels {
-		channels = append(channels, channel)
-	}
-	util.Info(`finish connect public okex connections %d`, len(channels))
-	return channels, errPublic
+		subscribeHandlerOKEX, wsHandlerOKEX, wsStepOKEX)
+	util.Info(`finish connect public okex connections %d`, len(subChannels))
+	return subChannels, errPublic
 }
 
 func handleBooksUpdate(symbol string, data map[string]interface{}, bidAsk *model.BidAsk) (
@@ -621,14 +639,15 @@ func PlacePairOKEX(account *model.Account, symbolBuy, symbolSell, orderType stri
 	subscribeMap[`id`] = strconv.FormatInt(time.Now().UnixNano(), 10)
 	subscribeMap["op"] = "batch-orders"
 	msg := util.JsonEncodeToByte(subscribeMap)
-	if privateConnectionOKEX == nil || privateConnectionOKEX[account.Key] == nil {
+	value, _ := util.LoadSyncMap(&model.AppMarkets.AccountConns, model.OKEX, account.Key)
+	if value == nil {
 		errMsg = fmt.Sprintf(`fail to get connection %s`, account.Key)
 		util.Notice(errMsg)
 		return false, errMsg
 	}
 	util.Notice(`place pair %s`, msg)
 	if model.AppConfig.Env != `test` {
-		err := SendToConnection(model.OKEX, privateConnectionOKEX[account.Key], msg)
+		err := SendToConnection(model.OKEX, value.(*websocket.Conn), msg)
 		if err != nil {
 			errMsg = fmt.Sprintf(`fail to send order ws %s return %s`, account.Key, err.Error())
 			util.Notice(errMsg)
@@ -693,11 +712,12 @@ func placeOrderOKEX(account *model.Account, isWs bool, order *model.Order) {
 		wsOrderMsg := util.JsonEncodeToByte(subscribeMap)
 		util.SocketInfo(`ws order ` + string(wsOrderMsg))
 		order.Status = model.CarryStatusWorking
-		if privateConnectionOKEX == nil || privateConnectionOKEX[account.Key] == nil {
+		value, _ := util.LoadSyncMap(&model.AppMarkets.AccountConns, model.OKEX, account.Key)
+		if value == nil {
 			util.Notice(fmt.Sprintf(`fail to get connection %s`, account.Key))
 			order.Status = model.CarryStatusFail
 		} else {
-			if err := SendToConnection(model.OKEX, privateConnectionOKEX[account.Key], wsOrderMsg); err != nil {
+			if err := SendToConnection(model.OKEX, value.(*websocket.Conn), wsOrderMsg); err != nil {
 				util.Notice(fmt.Sprintf(`fail to send order ws %s %s return %s`, account.Key, order.Symbol, err.Error()))
 				order.Status = model.CarryStatusFail
 			}

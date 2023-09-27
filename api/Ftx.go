@@ -119,7 +119,7 @@ var subscribeHandlerFtx = func(connection *websocket.Conn, subscribes []interfac
 }
 
 func WsDepthServeFtx(markets *model.Markets, orderHandler OrderHandler) ([]chan struct{}, error) {
-	wsHandler := func(connection *websocket.Conn, event []byte, orderHandler OrderHandler) {
+	wsHandler := func(event []byte) {
 		responseJson, err := util.NewJSON(event)
 		if err != nil {
 			util.SocketInfo(`fail to unmarshal json ` + err.Error())
@@ -140,7 +140,7 @@ func WsDepthServeFtx(markets *model.Markets, orderHandler OrderHandler) ([]chan 
 	subscribes := GetWSSubscribes(model.Ftx, subType)
 	subscribes = append(subscribes, GetWSSubscribe(model.Ftx, `USDT_USDT`, model.SubscribeDepth))
 	subscribes = append(subscribes, GetWSSubscribe(model.Ftx, `USDT_USDT`, model.SubscribeTicker))
-	return WebSocketClient(model.Ftx, wsFtx, subscribes, subscribeHandlerFtx, wsHandler, orderHandler, wsStepFtx)
+	return WebSocketClient(model.Ftx, wsFtx, subscribes, subscribeHandlerFtx, wsHandler, wsStepFtx)
 }
 
 func handleTickerFtx(markets *model.Markets, response *simplejson.Json) {

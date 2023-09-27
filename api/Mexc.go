@@ -80,7 +80,7 @@ func maintainChannelMexc(subscribes []interface{}) {
 	}
 }
 
-func WsDepthServeMexc(markets *model.Markets, orderHandler OrderHandler, useFullDepthSub bool) (channels []chan struct{}, err error) {
+func WsDepthServeMexc(markets *model.Markets, useFullDepthSub bool) (channels []chan struct{}, err error) {
 	symbols := GetMarketSymbols(model.Mexc)
 	if !useFullDepthSub {
 		limiter := time.Tick(time.Millisecond * 100)
@@ -89,7 +89,7 @@ func WsDepthServeMexc(markets *model.Markets, orderHandler OrderHandler, useFull
 			initMexcContractDepth(markets, symbol)
 		}
 	}
-	wsHandler := func(connection *websocket.Conn, event []byte, orderHandler OrderHandler) {
+	wsHandler := func(event []byte) {
 		newJson, wsErr := util.NewJSON(event)
 		if wsErr != nil {
 			util.SocketInfo(`MEXC fail to unmarshal json ` + err.Error())
@@ -128,10 +128,10 @@ func WsDepthServeMexc(markets *model.Markets, orderHandler OrderHandler, useFull
 	}
 	if !useFullDepthSub { // 订阅contract深度增量
 		return WebSocketClient(model.Mexc, mexcContractWSUrl,
-			GetWSSubscribes(model.Mexc, mexcContractDepthIncSubType), subscribeHandlerMexc, wsHandler, orderHandler, wsStepMexc)
+			GetWSSubscribes(model.Mexc, mexcContractDepthIncSubType), subscribeHandlerMexc, wsHandler, wsStepMexc)
 	} else { // 订阅contract 5档深度全量
 		return WebSocketClient(model.Mexc, mexcContractWSUrl, GetWSSubscribes(model.Mexc, mexcContractDepthFullSubType),
-			subscribeHandlerMexc, wsHandler, orderHandler, wsStepMexc)
+			subscribeHandlerMexc, wsHandler, wsStepMexc)
 	}
 }
 

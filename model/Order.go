@@ -10,7 +10,6 @@ type Order struct {
 	DealAmount        float64
 	DealPrice         float64
 	Fee               float64
-	FeeIncome         float64
 	LineBuy, LineSell float64
 	Price             float64
 	TriggerPrice      float64

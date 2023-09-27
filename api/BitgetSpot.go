@@ -50,8 +50,8 @@ func getMarketsBitgetSpot() (marketInfos map[string]*model.MarketInfo) {
 	return marketInfos
 }
 
-func WsDepthServeBitgetSpot(markets *model.Markets, orderHandler OrderHandler) (channels []chan struct{}, err error) {
-	bookWsHandler := func(connection *websocket.Conn, event []byte, orderHandler OrderHandler) {
+func WsDepthServeBitgetSpot(markets *model.Markets) (channels []chan struct{}, err error) {
+	bookWsHandler := func(event []byte) {
 		//util.Notice(fmt.Sprintf("bitget spot ws book ticker: %s", event))
 		if len(event) == 4 {
 			return
@@ -110,7 +110,7 @@ func WsDepthServeBitgetSpot(markets *model.Markets, orderHandler OrderHandler) (
 		spotSubscribes = append(spotSubscribes, symbol)
 	}
 	spotBookChannels, spotBookErr := WebSocketClient(model.BitgetSpot, bitgetSpotWsUrl,
-		spotSubscribes, subscribeHandlerBitgetSpotBookTicker, bookWsHandler, orderHandler, 30)
+		spotSubscribes, subscribeHandlerBitgetSpotBookTicker, bookWsHandler, 30)
 	if spotBookErr == nil {
 		util.Info(`finish connect public Bitget spot book wss `)
 		channels = append(channels, spotBookChannels...)

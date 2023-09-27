@@ -11,8 +11,10 @@ import (
 	"time"
 )
 
-type PostOrder func(order *Order, setting *Setting) // 处理下单后的函数
+type PostOrder func(order *Order) // 处理下单后的函数
 var HandlerMap = make(map[string]CarryHandler)
+var AccountHandlerMap = make(map[string]WsOrderHandler)
+
 var CarryInfo sync.Map        // userKey - function - msg
 var monitorInfo = &sync.Map{} // userIndex - table - syncMap[string -array[]string]
 var AppMetric = &MetricManager{}

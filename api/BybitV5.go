@@ -186,8 +186,8 @@ func parseBookOrder(markets *model.Markets, bookWsResp *dtos.BybitBookWsResp, sy
 	}
 }
 
-func WsDepthServeBybit(markets *model.Markets, orderHandler OrderHandler) (channels []chan struct{}, err error) {
-	spotBookWsHandler := func(connection *websocket.Conn, event []byte, orderHandler OrderHandler) {
+func WsDepthServeBybit(markets *model.Markets) (channels []chan struct{}, err error) {
+	spotBookWsHandler := func(event []byte) {
 		//fmt.Println(fmt.Sprintf("spot book data: %s", event))
 		bookWsResp := &dtos.BybitBookWsResp{}
 		jsonErr := json.Unmarshal(event, bookWsResp)
@@ -207,7 +207,7 @@ func WsDepthServeBybit(markets *model.Markets, orderHandler OrderHandler) (chann
 			parseBookOrder(markets, bookWsResp, symbol)
 		}
 	}
-	perpBookWsHandler := func(connection *websocket.Conn, event []byte, orderHandler OrderHandler) {
+	perpBookWsHandler := func(event []byte) {
 		//fmt.Println(fmt.Sprintf("perp book data: %s", event))
 		bookWsResp := &dtos.BybitBookWsResp{}
 		jsonErr := json.Unmarshal(event, bookWsResp)
@@ -243,13 +243,13 @@ func WsDepthServeBybit(markets *model.Markets, orderHandler OrderHandler) (chann
 		}
 	}
 	spotBookChannels, spotBookErr := WebSocketClient(model.Bybit, bybitSpotPubWsUrl,
-		spotSubscribes, subscribeHandlerBybit, spotBookWsHandler, orderHandler, 10)
+		spotSubscribes, subscribeHandlerBybit, spotBookWsHandler, 10)
 	if spotBookErr == nil {
 		util.Info(`finish connect public bybit spot book wss `)
 		channels = append(channels, spotBookChannels...)
 	}
 	perpBookChannels, perpBookErr := WebSocketClient(model.Bybit, bybitPerpPubWsUrl,
-		futureSubscribes, subscribeHandlerBybit, perpBookWsHandler, orderHandler, 10)
+		futureSubscribes, subscribeHandlerBybit, perpBookWsHandler, 10)
 	if perpBookErr == nil {
 		util.Info(`finish connect public bybit perp book wss `)
 		channels = append(channels, perpBookChannels...)

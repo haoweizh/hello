@@ -251,21 +251,28 @@ func placeGrid(account *model.Account, setting *model.Setting, data *DataGrid, t
 }
 
 // todo add binancePerp maintain account ws
-var ProcessOrderSuccess = func(setting *model.Setting) {
+// todo test okex pair order and order post
+var ProcessGridOrder = func(order *model.Order) {
 	for {
-		for {
-			if !api.CheckSetProcessing(model.FunctionGrid, model.FunctionGrid, model.FunctionGrid, true) {
-				break
-			} else {
-				time.Sleep(time.Second)
-			}
+		if !api.CheckSetProcessing(model.FunctionGrid, model.FunctionGrid, model.FunctionGrid, true) {
+			break
+		} else {
+			time.Sleep(time.Second)
 		}
-		account := model.AppConfig.GetAccounts(setting.Market)[0]
-		_, tickRelated := model.AppMarkets.GetBidAsk(setting.Symbol, setting.Market)
+	}
+	if order == nil || order.Status != model.CarryStatusSuccess {
+		return
+	}
+	accounts := model.AppConfig.GetAccounts(order.Market)
+	for _, account := range accounts {
+		_, tickRelated := model.AppMarkets.GetBidAsk(order.Symbol, order.Market)
 		if account != nil && tickRelated != nil && tickRelated.Bids != nil && len(tickRelated.Bids) > 0 &&
 			tickRelated.Asks != nil && len(tickRelated.Asks) > 0 {
-			GetDataGrid(account, setting, tickRelated, true)
+			setting := api.GetSetting(model.FunctionGrid, order.Market, order.Symbol)
+			if setting != nil {
+				GetDataGrid(account, setting, tickRelated, true)
+			}
 		}
-		api.CheckSetProcessing(model.FunctionGrid, model.FunctionGrid, model.FunctionGrid, false)
 	}
+	api.CheckSetProcessing(model.FunctionGrid, model.FunctionGrid, model.FunctionGrid, false)
 }

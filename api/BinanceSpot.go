@@ -79,9 +79,9 @@ func getMarketsBinanceSpot(key, secret string) (marketInfos map[string]*model.Ma
 	return marketInfos
 }
 
-func WsDepthServeBinanceSpot(markets *model.Markets, orderHandler OrderHandler) (channels []chan struct{}, err error) {
+func WsDepthServeBinanceSpot(markets *model.Markets) (channels []chan struct{}, err error) {
 	subType := model.SubscribeTicker
-	wsHandler := func(connection *websocket.Conn, event []byte, orderHandler OrderHandler) {
+	wsHandler := func(event []byte) {
 		result, wsErr := util.NewJSON(event)
 		if wsErr != nil {
 			util.Notice(`binance fail to unmarshal json ` + err.Error())
@@ -117,7 +117,7 @@ func WsDepthServeBinanceSpot(markets *model.Markets, orderHandler OrderHandler) 
 	channels = make([]chan struct{}, 0)
 	spotSubs := GetWSSubscribes(model.BinanceSpot, subType)
 	spotChans, spotErr := WebSocketClient(model.BinanceSpot, wsBinanceSpot, spotSubs,
-		subscribeHandlerBinanceSpot, wsHandler, orderHandler, wsStepBinanceSpot)
+		subscribeHandlerBinanceSpot, wsHandler, wsStepBinanceSpot)
 	if spotErr != nil {
 		util.SocketInfo(`fail to create binance spot conn %s`, spotErr.Error())
 	}

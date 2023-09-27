@@ -1137,13 +1137,11 @@ func placeStatus(status *CarryStatus, price float64, amount float64) {
 	util.StoreSyncMap(&lastCrosses, status.symbol, account.Key, status.market)
 }
 
-var PostOrderCross = func(order *model.Order, setting *model.Setting) {
+var PostOrderCross = func(order *model.Order) {
 	if order == nil {
 		return
 	}
-	if setting == nil {
-		setting = api.GetSetting(model.FunctionCross, order.Market, order.Symbol)
-	}
+	setting := api.GetSetting(model.FunctionCross, order.Market, order.Symbol)
 	if setting == nil {
 		util.Notice(fmt.Sprintf(`fail to get setting %s %s %s`, model.FunctionCross, order.Market, order.Symbol))
 		return

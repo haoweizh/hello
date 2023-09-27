@@ -442,7 +442,7 @@ func _() (err error) {
 	return err
 }
 
-func WsDepthServeGateNew(orderHandler OrderHandler) (channels []chan struct{}, err error) {
+func WsDepthServeGateNew() (channels []chan struct{}, err error) {
 	var spotSubs, spotOrderBookSubs, futureSubs []interface{}
 	channels = make([]chan struct{}, 0)
 	symbols := GetMarketSymbols(model.Gate)
@@ -456,25 +456,25 @@ func WsDepthServeGateNew(orderHandler OrderHandler) (channels []chan struct{}, e
 			futureSubs = append(futureSubs, symbol)
 		}
 	}
-	spotOrderBookChannels, spotOrderBookErr := WebSocketClient(model.Gate, gateWs.BaseUrl, spotOrderBookSubs, subscribeHandler, wsHandler, orderHandler, 100)
+	spotOrderBookChannels, spotOrderBookErr := WebSocketClient(model.Gate, gateWs.BaseUrl, spotOrderBookSubs, subscribeHandler, wsHandler, 100)
 	if spotOrderBookErr == nil {
 		util.Info(`finish connect public gate spot order book ws `)
 		channels = append(channels, spotOrderBookChannels...)
 	}
 	time.Sleep(time.Second * 1)
-	spotBookTickerChannels, spotBookTickerErr := WebSocketClient(model.Gate, gateWs.BaseUrl, spotSubs, subscribeHandler, wsHandler, orderHandler, 30)
+	spotBookTickerChannels, spotBookTickerErr := WebSocketClient(model.Gate, gateWs.BaseUrl, spotSubs, subscribeHandler, wsHandler, 30)
 	if spotBookTickerErr == nil {
 		util.Info(`finish connect public gate spot book ticker ws `)
 		channels = append(channels, spotBookTickerChannels...)
 	}
 	time.Sleep(time.Second * 1)
-	perpBookTickerChannels, perpBookTickerErr := WebSocketClient(model.Gate, gateWs.FuturesUsdtUrl, futureSubs, subscribeHandler, wsHandler, orderHandler, 30)
+	perpBookTickerChannels, perpBookTickerErr := WebSocketClient(model.Gate, gateWs.FuturesUsdtUrl, futureSubs, subscribeHandler, wsHandler, 30)
 	if perpBookTickerErr == nil {
 		util.Info(`finish connect public gate perp book ticker ws `)
 		channels = append(channels, perpBookTickerChannels...)
 	}
 	time.Sleep(time.Second * 1)
-	perpMarkPriceChannels, perpMarkPriceErr := WebSocketClient(model.Gate, gateWs.FuturesUsdtUrl, futureSubs, subscribeMarkPriceHandler, wsHandler, orderHandler, 30)
+	perpMarkPriceChannels, perpMarkPriceErr := WebSocketClient(model.Gate, gateWs.FuturesUsdtUrl, futureSubs, subscribeMarkPriceHandler, wsHandler, 30)
 	if perpMarkPriceErr == nil {
 		util.Info(`finish connect public gate perp mark price ws `)
 		channels = append(channels, perpMarkPriceChannels...)
@@ -483,7 +483,7 @@ func WsDepthServeGateNew(orderHandler OrderHandler) (channels []chan struct{}, e
 	return channels, err
 }
 
-var wsHandler = func(connection *websocket.Conn, event []byte, orderHandler OrderHandler) {
+var wsHandler = func(event []byte) {
 	//fmt.Println(fmt.Sprintf("ws resp：%s", event))
 	msg := &gateWs.UpdateMsg{}
 	if err := json.Unmarshal(event, msg); err != nil {

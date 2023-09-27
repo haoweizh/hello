@@ -105,12 +105,37 @@ func getMarketsBinancePerp(key, secret string) (marketInfos map[string]*model.Ma
 }
 
 func WsAccountServeBinancePerp() {
-	wsAccountHandler := func(connection *websocket.Conn, event []byte, orderHandler OrderHandler) {}
-	accounts := model.GetAccounts(0)
-	if accounts[model.BinancePerp] != nil {
-		success, listenKey := renewListenKeyBinancePerp(accounts[model.BinancePerp])
+	wsAccountHandler := func(event []byte) {
+		result, wsErr := util.NewJSON(event)
+		if wsErr != nil {
+			util.Notice(`binancePerp fail to unmarshal account ws json ` + wsErr.Error())
+			return
+		}
+		result = result.Get(`data`)
+		if result == nil {
+			return
+		}
+		if strings.EqualFold(result.Get(`e`).MustString(), `ORDER_TRADE_UPDATE`) {
+			order := parseOrderJsBinancePerp(result.Get(`0`))
+			funcHandlers := GetFunctions(model.BinancePerp, order.Symbol)
+			if funcHandlers != nil {
+				funcHandlers.Range(func(function, value interface{}) bool {
+					if model.AccountHandlerMap[function.(string)] != nil {
+						go model.AccountHandlerMap[function.(string)](order)
+					}
+					return true
+				})
+			}
+		}
+	}
+	accounts := model.AppConfig.GetAccounts(model.BinancePerp)
+	for _, account := range accounts {
+		if account == nil {
+			return
+		}
+		success, listenKey := renewListenKeyBinancePerp(account)
 		if success {
-			err := WsAccountClient(model.BinancePerp, wsAccountBinancePerp+listenKey, wsAccountHandler)
+			_, err := WsAccountClient(account.Key, model.BinancePerp, wsAccountBinancePerp+listenKey, wsAccountHandler)
 			if err != nil {
 				util.Notice(fmt.Sprintf(`fail to create account ws binancePerp %s`, err.Error()))
 				return
@@ -119,13 +144,13 @@ func WsAccountServeBinancePerp() {
 	}
 }
 
-func WsDepthServeBinancePerp(markets *model.Markets, orderHandler OrderHandler) (channels []chan struct{}, err error) {
+func WsDepthServeBinancePerp(markets *model.Markets) (channels []chan struct{}, err error) {
 	subType := model.SubscribeTicker + `,` + model.SubscribeMarkPrice
 	//subType := model.SubscribeDepth
-	wsHandlerBinancePerp := func(connection *websocket.Conn, event []byte, orderHandler OrderHandler) {
+	wsHandlerBinancePerp := func(event []byte) {
 		result, wsErr := util.NewJSON(event)
 		if wsErr != nil {
-			util.Notice(`binance fail to unmarshal json ` + err.Error())
+			util.Notice(`binance fail to unmarshal json ` + wsErr.Error())
 			return
 		}
 		subscribe, _ := result.Get("stream").String()
@@ -155,7 +180,7 @@ func WsDepthServeBinancePerp(markets *model.Markets, orderHandler OrderHandler) 
 	channels = make([]chan struct{}, 0)
 	perpSubs := GetWSSubscribes(model.BinancePerp, subType)
 	perpChans, perpErr := WebSocketClient(model.BinancePerp, wsBinancePerp, perpSubs,
-		subscribeHandlerBinancePerp, wsHandlerBinancePerp, orderHandler, wsStepBinancePerp)
+		subscribeHandlerBinancePerp, wsHandlerBinancePerp, wsStepBinancePerp)
 	if perpErr != nil {
 		util.SocketInfo(`fail to create binance perp conn %s`, perpErr.Error())
 	}
@@ -324,6 +349,10 @@ func getMarkPriceBinancePerp(account *model.Account, symbol string) (markPrice f
 
 // OrderTypeTrailStop时 price: activationPrice; triggerPrice:
 // callbackRate min 0.001, max 0.05 where 0.01 for 1% 注意此处和binance文档中不同，需要额外乘以100
+// 特殊的自定义订单ID:
+// "autoclose-"开头的字符串: 系统强平订单
+// "adl_autoclose": ADL自动减仓订单
+// "settlement_autoclose-": 下架或交割的结算订单
 func placeOrderBinancePerp(key, secret string, order *model.Order, orderSide, orderType, symbol string, oriPrice, triggerPrice, amount float64) {
 	price, decimal := model.FormatPrice(model.BinancePerp, symbol, oriPrice)
 	priceStr := util.CutTailZero(strconv.FormatFloat(price, 'f', decimal, 64))
@@ -618,6 +647,34 @@ func queryOpenOrdersBinancePerp(key, secret, symbol string) (orders []*model.Ord
 	return
 }
 
+func parseOrderJsBinancePerp(json *simplejson.Json) (order *model.Order) {
+	if json == nil {
+		return nil
+	}
+	order = &model.Order{Market: model.BinancePerp}
+	symbol := json.Get(`s`).MustString()
+	success, _, coin := model.GetCoinFromDialect(model.BinancePerp, symbol)
+	if success {
+		order.Coin = coin
+		order.Symbol = coin + model.UniStandardTail[model.MarketTypePerp]
+	}
+	if strings.EqualFold(json.Get(`S`).MustString(), model.OrderSideSell) {
+		order.OrderSide = model.OrderSideSell
+	} else if strings.EqualFold(json.Get(`S`).MustString(), model.OrderSideBuy) {
+		order.OrderSide = model.OrderSideBuy
+	}
+	order.OrderType = GetStandardOrderType(model.BinancePerp, json.Get(`o`).MustString())
+	order.Amount = json.Get("q").MustFloat64()
+	order.Price = json.Get(`p`).MustFloat64()
+	order.DealPrice = json.Get("ap").MustFloat64()
+	order.DealAmount = json.Get("z").MustFloat64()
+	order.TriggerPrice = json.Get("sp").MustFloat64()
+	order.OrderId = strconv.Itoa(json.Get("i").MustInt())
+	order.Fee = json.Get("n").MustFloat64()
+	order.Status = model.GetOrderStatus(model.BinancePerp, json.Get("X").MustString())
+	return order
+}
+
 func parseOrderBinancePerp(res *futures.Order, order *model.Order) {
 	if res != nil {
 		if strings.Contains(strings.ToLower(string(res.Side)), `buy`) {
@@ -634,18 +691,7 @@ func parseOrderBinancePerp(res *futures.Order, order *model.Order) {
 		order.Status = model.GetOrderStatus(model.BinancePerp, string(res.Status))
 		order.OrderId = strconv.FormatInt(res.OrderID, 10)
 		orderType := strings.Trim(string(res.Type), ` `)
-		switch orderType {
-		case `STOP`:
-			order.OrderType = model.OrderTypeStop
-		case `LIMIT`:
-			order.OrderType = model.OrderTypeLimit
-		case `MARKET`:
-			order.OrderType = model.OrderTypeMarket
-		case `TRAILING_STOP_MARKET`:
-			order.OrderType = model.OrderTypeTrailStop
-		default:
-			order.OrderType = model.OrderTypeLimit
-		}
+		order.OrderType = GetStandardOrderType(model.BinancePerp, orderType)
 		if order.Status != model.CarryStatusSuccess && order.Status != model.CarryStatusFail {
 			order.Status = model.CarryStatusWorking
 		}

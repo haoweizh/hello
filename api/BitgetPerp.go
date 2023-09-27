@@ -69,8 +69,8 @@ func setBitgetPositionMode(key, secret string) {
 	}
 }
 
-func WsDepthServeBitgetPerp(markets *model.Markets, orderHandler OrderHandler) (channels []chan struct{}, err error) {
-	bookWsHandler := func(connection *websocket.Conn, event []byte, orderHandler OrderHandler) {
+func WsDepthServeBitgetPerp(markets *model.Markets) (channels []chan struct{}, err error) {
+	bookWsHandler := func(event []byte) {
 		//util.Notice(fmt.Sprintf("bitget perp ws book ticker: %s", event))
 		if len(event) == 4 {
 			return
@@ -123,7 +123,7 @@ func WsDepthServeBitgetPerp(markets *model.Markets, orderHandler OrderHandler) (
 			}
 		}
 	}
-	markPriceWsHandler := func(connection *websocket.Conn, event []byte, orderHandler OrderHandler) {
+	markPriceWsHandler := func(event []byte) {
 		//util.Notice(fmt.Sprintf("ws data: %s", event))
 		if len(event) == 4 {
 			return
@@ -161,7 +161,7 @@ func WsDepthServeBitgetPerp(markets *model.Markets, orderHandler OrderHandler) (
 		futureSubscribes = append(futureSubscribes, symbol)
 	}
 	markPriceChannels, markPriceErr := WebSocketClient(model.BitgetPerp, bitgetPerpWsUrl,
-		futureSubscribes, subscribeHandlerBitgetPerpMarkPrice, markPriceWsHandler, nil, 30)
+		futureSubscribes, subscribeHandlerBitgetPerpMarkPrice, markPriceWsHandler, 30)
 	if markPriceErr == nil {
 		util.Info(`finish connect public Bitget mark price wss `)
 		channels = append(channels, markPriceChannels...)
@@ -171,7 +171,7 @@ func WsDepthServeBitgetPerp(markets *model.Markets, orderHandler OrderHandler) (
 	}
 	time.Sleep(time.Second * 1)
 	perpBookChannels, perpBookErr := WebSocketClient(model.BitgetPerp, bitgetPerpWsUrl,
-		futureSubscribes, subscribeHandlerBitgetPerpBookTicker, bookWsHandler, orderHandler, 30)
+		futureSubscribes, subscribeHandlerBitgetPerpBookTicker, bookWsHandler, 30)
 	if perpBookErr == nil {
 		util.Info(`finish connect public Bitget perp book wss `)
 		channels = append(channels, perpBookChannels...)

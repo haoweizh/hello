@@ -68,8 +68,8 @@ var subscribeHandlerHuobi = func(connection *websocket.Conn, subscribes []interf
 	return err
 }
 
-func WsDepthServeHuobiSpot(markets *model.Markets, orderHandler OrderHandler) (channels []chan struct{}, err error) {
-	wsHandler := func(connection *websocket.Conn, event []byte, orderHandler OrderHandler) {
+func WsDepthServeHuobiSpot(markets *model.Markets) (channels []chan struct{}, err error) {
+	wsHandler := func(event []byte) {
 		res := util.UnGzip(event)
 		responseJson, jsonErr := util.NewJSON(res)
 		if jsonErr != nil {
@@ -124,7 +124,7 @@ func WsDepthServeHuobiSpot(markets *model.Markets, orderHandler OrderHandler) (c
 			}
 		}
 	}
-	wsHandlerDM := func(connection *websocket.Conn, event []byte, orderHandler OrderHandler) {
+	wsHandlerDM := func(event []byte) {
 		res := util.UnGzip(event)
 		responseJson, jsonErr := util.NewJSON(res)
 		if jsonErr != nil {
@@ -201,13 +201,12 @@ func WsDepthServeHuobiSpot(markets *model.Markets, orderHandler OrderHandler) (c
 			spotSubscribes = append(spotSubscribes, subscribe)
 		}
 	}
-	channels, channelErr := WebSocketClient(model.HuobiSpot, wsHuobi, spotSubscribes, subscribeHandlerHuobi, wsHandler,
-		orderHandler, wsStepHuobi)
+	channels, channelErr := WebSocketClient(model.HuobiSpot, wsHuobi, spotSubscribes, subscribeHandlerHuobi, wsHandler, wsStepHuobi)
 	if channelErr != nil {
 		util.SocketInfo(`fail to create huobi conn %s`, channelErr.Error())
 	}
 	dmChannels, dmChannelErr := WebSocketClient(model.HuobiSpot, wsHuobiFuture, futureSubscribes, subscribeHandlerHuobi,
-		wsHandlerDM, orderHandler, wsStepHuobi)
+		wsHandlerDM, wsStepHuobi)
 	if dmChannelErr != nil {
 		util.SocketInfo(`fail to create HuobiFuture %s`, dmChannelErr.Error())
 	} else {

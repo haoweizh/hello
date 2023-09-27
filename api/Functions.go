@@ -652,6 +652,25 @@ func GetPositions(key, secret, market string) (success bool, positions []*model.
 	return success, positions, accountValue, availableU
 }
 
+func GetStandardOrderType(market, dialectType string) (standardType string) {
+	switch market {
+	case model.BinancePerp:
+		switch dialectType {
+		case `STOP`:
+			return model.OrderTypeStop
+		case `LIMIT`:
+			return model.OrderTypeLimit
+		case `MARKET`:
+			return model.OrderTypeMarket
+		case `TRAILING_STOP_MARKET`:
+			return model.OrderTypeTrailStop
+		default:
+			return model.OrderTypeLimit
+		}
+	}
+	return ``
+}
+
 func MustPlaceOrder(key, secret, orderSide, orderType, market, symbol, orderParam,
 	refreshType string, price, triggerPrice, amount float64, setting *model.Setting) (orders []*model.Order) {
 	retry := 10
@@ -764,7 +783,7 @@ func PlaceOrder(key, secret, orderSide, orderType, market, symbol, orderParam st
 		orderSide, market, symbol, end, end-start, order.Status, order.ErrCode, price, order.Price, amount, order.Amount,
 		triggerPrice, order.TriggerPrice, order.OrderId))
 	if postOrder != nil && setting != nil {
-		go postOrder(order, setting)
+		go postOrder(order)
 	}
 	return order
 }
@@ -1081,10 +1100,13 @@ func CreateAccountWsServer(market string) {
 	switch market {
 	case model.BinancePerp:
 		WsAccountServeBinancePerp()
+	case model.OKEX:
+		WsAccountServeOKEX()
+		go maintainAccountConnOKEX()
 	}
 }
 
-func CreateMarketDepthServer(markets *model.Markets, market string, orderHandler OrderHandler) (
+func CreateMarketDepthServer(markets *model.Markets, market string) (
 	channels []chan struct{}) {
 	util.Notice(" create depth chan for " + market)
 	channels = make([]chan struct{}, 1)
@@ -1095,27 +1117,27 @@ func CreateMarketDepthServer(markets *model.Markets, market string, orderHandler
 	case model.KucoinPerp:
 		channels, err = WsDepthServeKucoinPerp()
 	case model.Gate:
-		channels, err = WsDepthServeGateNew(orderHandler)
+		channels, err = WsDepthServeGateNew()
 	case model.OKEX:
-		channels, err = WsDepthServeOKEX(GetMarketSymbols(model.OKEX), orderHandler)
+		channels, err = WsDepthServeOKEX(GetMarketSymbols(model.OKEX))
 	case model.BinanceSpot:
-		channels, err = WsDepthServeBinanceSpot(markets, nil)
+		channels, err = WsDepthServeBinanceSpot(markets)
 	case model.BinancePerp:
-		channels, err = WsDepthServeBinancePerp(markets, nil)
+		channels, err = WsDepthServeBinancePerp(markets)
 	case model.HuobiPerp:
-		channels, err = WsDepthServeHuobiPerp(markets, orderHandler)
+		channels, err = WsDepthServeHuobiPerp(markets)
 	case model.Bybit:
-		channels, err = WsDepthServeBybit(markets, orderHandler)
+		channels, err = WsDepthServeBybit(markets)
 	case model.HuobiSpot:
-		channels, err = WsDepthServeHuobiSpot(markets, orderHandler)
+		channels, err = WsDepthServeHuobiSpot(markets)
 	case model.Ftx:
 		channels, err = WsDepthServeFtx(markets, nil)
 	case model.Mexc:
-		channels, err = WsDepthServeMexc(markets, nil, true)
+		channels, err = WsDepthServeMexc(markets, true)
 	case model.BitgetSpot:
-		channels, err = WsDepthServeBitgetSpot(markets, orderHandler)
+		channels, err = WsDepthServeBitgetSpot(markets)
 	case model.BitgetPerp:
-		channels, err = WsDepthServeBitgetPerp(markets, orderHandler)
+		channels, err = WsDepthServeBitgetPerp(markets)
 	}
 	if err != nil {
 		util.Notice(market + ` can not create depth server ` + err.Error())

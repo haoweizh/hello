@@ -36,8 +36,8 @@ var subscribeHandlerHuobiPerp = func(connection *websocket.Conn, subscribes []in
 	return err
 }
 
-func WsDepthServeHuobiPerp(markets *model.Markets, orderHandler OrderHandler) ([]chan struct{}, error) {
-	wsHandler := func(connection *websocket.Conn, event []byte, orderHandler OrderHandler) {
+func WsDepthServeHuobiPerp(markets *model.Markets) ([]chan struct{}, error) {
+	wsHandler := func(event []byte) {
 		res := util.UnGzip(event)
 		responseJson, err := util.NewJSON(res)
 		if err != nil {
@@ -47,8 +47,15 @@ func WsDepthServeHuobiPerp(markets *model.Markets, orderHandler OrderHandler) ([
 			pingMap := make(map[string]interface{})
 			pingMap["pong"] = responseJson.Get(`ping`).MustInt()
 			pingParams := util.JsonEncodeToByte(pingMap)
-			if err := SendToConnection(model.HuobiPerp, connection, pingParams); err != nil {
-				util.SocketInfo("HuobiPerp server ping client error " + err.Error())
+			value, _ := model.AppMarkets.Connections.Load(model.HuobiPerp)
+			connections := value.([]*websocket.Conn)
+			for _, connection := range connections {
+				if connection == nil {
+					continue
+				}
+				if subErr := SendToConnection(model.HuobiPerp, connection, pingParams); subErr != nil {
+					util.SocketInfo("HuobiPerp server ping client error " + subErr.Error())
+				}
 			}
 		} else {
 			responseJson = responseJson.Get(`tick`)
@@ -99,7 +106,7 @@ func WsDepthServeHuobiPerp(markets *model.Markets, orderHandler OrderHandler) ([
 		}
 	}
 	return WebSocketClient(model.HuobiPerp, wsHuobiPerp, GetWSSubscribes(model.HuobiPerp, model.SubscribeDepth),
-		subscribeHandlerHuobiPerp, wsHandler, orderHandler, wsStepHuobi)
+		subscribeHandlerHuobiPerp, wsHandler, wsStepHuobi)
 }
 
 //func parseBalanceHuobiPerp(key string, data map[string]interface{}) (balance *model.Balance) {

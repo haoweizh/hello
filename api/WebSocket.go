@@ -12,8 +12,8 @@ import (
 	"time"
 )
 
-type OrderHandler func(order *model.Order, setting *model.Setting)
-type MsgHandler func(connection *websocket.Conn, message []byte, orderHandler OrderHandler)
+type OrderHandler func(order *model.Order)
+type MsgHandler func(message []byte)
 type WSMsgHandler func(client *WSClient, message []byte)
 type SubscribeHandler func(connection *websocket.Conn, subscribes []interface{}) error
 
@@ -112,7 +112,7 @@ func newConnection(url string) (*websocket.Conn, error) {
 	return c, nil
 }
 
-func chanHandler(market string, stopChan chan struct{}, connection *websocket.Conn, msgHandler MsgHandler, orderHandler OrderHandler) {
+func chanHandler(market string, stopChan chan struct{}, connection *websocket.Conn, msgHandler MsgHandler) {
 	defer func() {
 		err := connection.Close()
 		if err != nil {
@@ -132,26 +132,25 @@ func chanHandler(market string, stopChan chan struct{}, connection *websocket.Co
 				return
 			}
 			//util.SocketInfo(string(message))
-			msgHandler(connection, message, orderHandler)
+			msgHandler(message)
 		}
 	}
 }
 
-func WsAccountClient(market, url string, msgHandler MsgHandler) (err error) {
+func WsAccountClient(key, market, url string, msgHandler MsgHandler) (connection *websocket.Conn, err error) {
 	util.Notice(market + ` create account channel ` + url)
-	model.AppMarkets.AccountConnection.Delete(market)
-	var connection *websocket.Conn
+	util.DelSyncMap(&model.AppMarkets.AccountConns, market, key)
 	connection, err = newConnection(url)
 	if err != nil {
 		util.SocketInfo("can not create web socket" + err.Error())
-		return err
+		return nil, err
 	}
-	model.AppMarkets.AccountConnection.Store(market, connection)
+	util.StoreSyncMap(&model.AppMarkets.AccountConns, connection, market, key)
 	go func() {
 		for {
 			_, message, readErr := connection.ReadMessage()
 			if readErr != nil {
-				model.AppMarkets.AccountConnection.Delete(market)
+				util.DelSyncMap(&model.AppMarkets.AccountConns, market, key)
 				closeErr := connection.Close()
 				if closeErr != nil {
 					util.Notice(fmt.Sprintf(`connection closed %s`, closeErr.Error()))
@@ -160,15 +159,15 @@ func WsAccountClient(market, url string, msgHandler MsgHandler) (err error) {
 				return
 			}
 			if msgHandler != nil {
-				msgHandler(connection, message, nil)
+				msgHandler(message)
 			}
 		}
 	}()
-	return nil
+	return connection, nil
 }
 
 func WebSocketClient(market, url string, subscribes []interface{}, subHandler SubscribeHandler,
-	msgHandler MsgHandler, orderHandler OrderHandler, step int) (stopChans []chan struct{}, connectErr error) {
+	msgHandler MsgHandler, step int) (stopChans []chan struct{}, connectErr error) {
 	util.Notice(market + ` create depth channel ` + url)
 	connections := make([]*websocket.Conn, 0)
 	value, ok := model.AppMarkets.Connections.Load(market)
@@ -189,7 +188,7 @@ func WebSocketClient(market, url string, subscribes []interface{}, subHandler Su
 			util.SocketInfo("can not create web socket" + err.Error())
 			return nil, connectErr
 		}
-		go chanHandler(market, stopChan, connection, msgHandler, orderHandler)
+		go chanHandler(market, stopChan, connection, msgHandler)
 		if subHandler != nil {
 			_ = subHandler(connection, stepSubscribes)
 		}
