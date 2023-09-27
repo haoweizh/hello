@@ -119,7 +119,7 @@ func chanHandler(market string, stopChan chan struct{}, connection *websocket.Co
 			util.Notice(fmt.Sprintf(`connection closed %s`, err.Error()))
 		}
 	}()
-	for true {
+	for {
 		select {
 		case <-stopChan:
 			//util.Info("get stop struct, return")
@@ -137,6 +137,36 @@ func chanHandler(market string, stopChan chan struct{}, connection *websocket.Co
 	}
 }
 
+func WsAccountClient(market, url string, msgHandler MsgHandler) (err error) {
+	util.Notice(market + ` create account channel ` + url)
+	model.AppMarkets.AccountConnection.Delete(market)
+	var connection *websocket.Conn
+	connection, err = newConnection(url)
+	if err != nil {
+		util.SocketInfo("can not create web socket" + err.Error())
+		return err
+	}
+	model.AppMarkets.AccountConnection.Store(market, connection)
+	go func() {
+		for {
+			_, message, readErr := connection.ReadMessage()
+			if readErr != nil {
+				model.AppMarkets.AccountConnection.Delete(market)
+				closeErr := connection.Close()
+				if closeErr != nil {
+					util.Notice(fmt.Sprintf(`connection closed %s`, closeErr.Error()))
+				}
+				util.Notice(fmt.Sprintf(`%s can not read from account ws: %s`, market, err.Error()))
+				return
+			}
+			if msgHandler != nil {
+				msgHandler(connection, message, nil)
+			}
+		}
+	}()
+	return nil
+}
+
 func WebSocketClient(market, url string, subscribes []interface{}, subHandler SubscribeHandler,
 	msgHandler MsgHandler, orderHandler OrderHandler, step int) (stopChans []chan struct{}, connectErr error) {
 	util.Notice(market + ` create depth channel ` + url)
@@ -147,7 +177,7 @@ func WebSocketClient(market, url string, subscribes []interface{}, subHandler Su
 	}
 	stopChans = make([]chan struct{}, 0)
 	var stepSubscribes []interface{}
-	for i := 0; i*step < len(subscribes); i++ {
+	for i := 0; subscribes != nil && i*step < len(subscribes); i++ {
 		if (i+1)*step < len(subscribes) {
 			stepSubscribes = subscribes[i*step : (i+1)*step]
 		} else {
@@ -160,7 +190,9 @@ func WebSocketClient(market, url string, subscribes []interface{}, subHandler Su
 			return nil, connectErr
 		}
 		go chanHandler(market, stopChan, connection, msgHandler, orderHandler)
-		_ = subHandler(connection, stepSubscribes)
+		if subHandler != nil {
+			_ = subHandler(connection, stepSubscribes)
+		}
 		stopChans = append(stopChans, stopChan)
 		connections = append(connections, connection)
 	}

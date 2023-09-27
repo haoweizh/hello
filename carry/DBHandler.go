@@ -5,6 +5,7 @@ import (
 	"hello/api"
 	"hello/carry/Turtle"
 	"hello/carry/cross"
+	"hello/carry/grid"
 	"hello/carry/hang"
 	"hello/model"
 	"hello/util"
@@ -138,6 +139,10 @@ func MaintainMarketChan() {
 			model.AppMarkets.WsInitTime.Store(market, util.GetNow())
 			//time.Sleep(time.Minute)
 		}
+		conn, _ := model.AppMarkets.AccountConnection.Load(market)
+		if conn == nil {
+			api.CreateAccountWsServer(market)
+		}
 	}
 	socketMaintaining = false
 }
@@ -149,6 +154,7 @@ func Maintain() {
 	model.HandlerMap[model.FunctionHang] = hang.ProcessHang
 	model.HandlerMap[model.FunctionCombineTurtle] = Turtle.ProcessCombineTurtle
 	model.HandlerMap[model.FunctionBoost] = Turtle.ProcessBoost
+	model.HandlerMap[model.FunctionGrid] = grid.ProcessGrid
 	_ = model.AppDB.AutoMigrate(&model.Setting{})
 	_ = model.AppDB.AutoMigrate(&model.Order{})
 	_ = model.AppDB.AutoMigrate(&model.Balance{})

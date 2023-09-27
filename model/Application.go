@@ -64,6 +64,7 @@ const FunctionTurtleNormal = `turtle_normal`
 const FunctionCross = `cross`
 const FunctionQueue = `queue`
 const FunctionQueueLiq = `liquid`
+const FunctionGridRelate = `grid_relate`
 const MarketTypePerp = `perp`
 const MarketTypeSpot = `spot`
 const MarketTypeFuture = `future`

@@ -1077,6 +1077,13 @@ func InitMarketInfos(market string) (success bool) {
 	return success
 }
 
+func CreateAccountWsServer(market string) {
+	switch market {
+	case model.BinancePerp:
+		WsAccountServeBinancePerp()
+	}
+}
+
 func CreateMarketDepthServer(markets *model.Markets, market string, orderHandler OrderHandler) (
 	channels []chan struct{}) {
 	util.Notice(" create depth chan for " + market)

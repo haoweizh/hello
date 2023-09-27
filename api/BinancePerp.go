@@ -23,6 +23,7 @@ import (
 
 const restBinancePerp = `https://fapi.binance.com`
 const wsBinancePerp = `wss://fstream.binance.com/stream`
+const wsAccountBinancePerp = `wss://fstream.binance.com/ws/`
 const wsStepBinancePerp = 20
 
 var channelMaintainingBinancePerp = false
@@ -101,6 +102,21 @@ func getMarketsBinancePerp(key, secret string) (marketInfos map[string]*model.Ma
 		}
 	}
 	return marketInfos
+}
+
+func WsAccountServeBinancePerp() {
+	wsAccountHandler := func(connection *websocket.Conn, event []byte, orderHandler OrderHandler) {}
+	accounts := model.GetAccounts(0)
+	if accounts[model.BinancePerp] != nil {
+		success, listenKey := renewListenKeyBinancePerp(accounts[model.BinancePerp])
+		if success {
+			err := WsAccountClient(model.BinancePerp, wsAccountBinancePerp+listenKey, wsAccountHandler)
+			if err != nil {
+				util.Notice(fmt.Sprintf(`fail to create account ws binancePerp %s`, err.Error()))
+				return
+			}
+		}
+	}
 }
 
 func WsDepthServeBinancePerp(markets *model.Markets, orderHandler OrderHandler) (channels []chan struct{}, err error) {
@@ -280,6 +296,18 @@ func maintainChannelBinancePerp(subscribes []interface{}) {
 			}
 		}
 	}
+}
+
+func renewListenKeyBinancePerp(account *model.Account) (success bool, listenKey string) {
+	signedRequestBinance(account.Key, account.Secret, model.BinancePerp, http.MethodDelete,
+		restBinancePerp+`/fapi/v1/listenKey`, true, nil)
+	response := signedRequestBinance(account.Key, account.Secret, model.BinancePerp, http.MethodPost,
+		restBinancePerp+`/fapi/v1/listenKey`, true, nil)
+	keyJson, _ := util.NewJSON(response)
+	if keyJson != nil && len(keyJson.Get(`listenKey`).MustString()) > 0 {
+		return true, keyJson.Get(`listenKey`).MustString()
+	}
+	return false, ``
 }
 
 func getMarkPriceBinancePerp(account *model.Account, symbol string) (markPrice float64) {

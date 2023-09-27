@@ -41,11 +41,12 @@ type Rule struct {
 }
 
 type Markets struct {
-	markPriceInfos sync.Map // symbol - market - ticker 行情包含标记价格
-	bidAsks        sync.Map // symbol - market - bidAsk
-	WsDepth        sync.Map // market - []chan struct{}
-	WsInitTime     sync.Map // market - time
-	Connections    sync.Map // market - []*websocket.Conn
+	markPriceInfos    sync.Map // symbol - market - ticker 行情包含标记价格
+	bidAsks           sync.Map // symbol - market - bidAsk
+	WsDepth           sync.Map // market - []chan struct{}
+	WsInitTime        sync.Map // market - time
+	Connections       sync.Map // market - []*websocket.Conn
+	AccountConnection sync.Map // market -*websocket.Conn
 }
 
 type MarkPriceInfo struct {

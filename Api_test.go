@@ -472,7 +472,6 @@ func Test_transferInner(t *testing.T) {
 
 func Test_wallet(t *testing.T) {
 	model.NewConfig()
-	api.InitMarketInfos(model.BinancePerp)
 	var key, secret string
 	market := model.BinancePerp
 	switch market {
@@ -489,6 +488,7 @@ func Test_wallet(t *testing.T) {
 		key = model.AppConfig.GateKey
 		secret = model.AppConfig.GateSecret
 	}
+	api.InitMarketInfos(model.BinancePerp)
 	//orders := api.QueryOpenOrders(model.AppConfig.BinanceKey, model.AppConfig.BinanceSecret, model.BinancePerp, `ETH_PERP`)
 	//for _, order := range orders {
 	//	fmt.Println(order.OrderId)
