@@ -111,6 +111,13 @@ func ResetChannels(market string, channels []chan struct{}) {
 	model.ChannelMaintaining.Store(market, true)
 	model.AppMarkets.WsDepth.Delete(market)
 	model.AppMarkets.Connections.Delete(market)
+	accounts := model.AppConfig.GetAccounts(market)
+	for _, account := range accounts {
+		if account == nil {
+			continue
+		}
+		util.DelSyncMap(&model.AppMarkets.AccountConns, market, account.Key)
+	}
 	for i, channel := range channels {
 		util.Notice(`send to stop connection %s %d`, market, i)
 		channel <- struct{}{}
