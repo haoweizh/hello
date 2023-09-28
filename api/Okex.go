@@ -144,7 +144,7 @@ func reSubscribe(subscribes []interface{}) {
 	}
 	subscribeMap[`args`] = subArray
 	if err := SendToAllConnections(model.OKEX, util.JsonEncodeToByte(subscribeMap)); err != nil {
-		util.SocketInfo("okex can not unsubscribe " + err.Error())
+		util.Notice("okex can not unsubscribe " + err.Error())
 	}
 	time.Sleep(time.Second * 3)
 	if len(connections) == 0 {

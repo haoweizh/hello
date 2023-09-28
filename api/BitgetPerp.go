@@ -263,7 +263,7 @@ func getPositionsBitgetPerp(key, secret string) (success bool, positions []*mode
 		time.Sleep(time.Minute)
 		return getPositionsBitgetPerp(key, secret)
 	} else {
-		util.Notice(fmt.Sprintf("get bitgetperp position success, resp: %s ", positionHttpResp))
+		util.SocketInfo(fmt.Sprintf("get bitgetperp position success, resp: %s ", positionHttpResp))
 	}
 	for _, asset := range bitgetAssertResp.Data {
 		if asset.MarginCoin == `USDT` {

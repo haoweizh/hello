@@ -37,7 +37,7 @@ var subscribeHandlerHuobiPerp = func(connection *websocket.Conn, subscribes []in
 }
 
 func WsDepthServeHuobiPerp(markets *model.Markets) ([]chan struct{}, error) {
-	wsHandler := func(event []byte) {
+	wsMsgHandler := func(event []byte) {
 		res := util.UnGzip(event)
 		responseJson, err := util.NewJSON(res)
 		if err != nil {
@@ -106,7 +106,7 @@ func WsDepthServeHuobiPerp(markets *model.Markets) ([]chan struct{}, error) {
 		}
 	}
 	return WebSocketClient(model.HuobiPerp, wsHuobiPerp, GetWSSubscribes(model.HuobiPerp, model.SubscribeDepth),
-		subscribeHandlerHuobiPerp, wsHandler, wsStepHuobi)
+		subscribeHandlerHuobiPerp, wsMsgHandler, wsStepHuobi)
 }
 
 //func parseBalanceHuobiPerp(key string, data map[string]interface{}) (balance *model.Balance) {

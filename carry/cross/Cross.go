@@ -350,7 +350,10 @@ func ClearCross() {
 				crossInU = amountInU
 			}
 		}
-		carryRows.Close()
+		err := carryRows.Close()
+		if err != nil {
+			continue
+		}
 		msg := fmt.Sprintf(`comp %f cross %f`, compInU, crossInU)
 		util.Notice(msg)
 		if model.AppConfig.Handle == `1` {

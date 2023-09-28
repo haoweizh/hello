@@ -53,7 +53,8 @@ func SendToAllConnections(market string, msg []byte) (err error) {
 		}
 		if err = connection.WriteMessage(websocket.TextMessage, msg); err != nil {
 			SetRequireReset(market)
-			util.Notice(fmt.Sprintf(`fail to write to all connection %s %d return: %s`, market, i, err.Error()))
+			util.Notice(fmt.Sprintf(`fail to write to all connection %s %d %s return: %s`,
+				market, i, msg, err.Error()))
 		}
 	}
 	return err
@@ -170,10 +171,7 @@ func WebSocketClient(market, url string, subscribes []interface{}, subHandler Su
 	msgHandler MsgHandler, step int) (stopChans []chan struct{}, connectErr error) {
 	util.Notice(market + ` create depth channel ` + url)
 	connections := make([]*websocket.Conn, 0)
-	value, ok := model.AppMarkets.Connections.Load(market)
-	if ok && value != nil {
-		connections = value.([]*websocket.Conn)
-	}
+	model.AppMarkets.Connections.Delete(market)
 	stopChans = make([]chan struct{}, 0)
 	var stepSubscribes []interface{}
 	for i := 0; subscribes != nil && i*step < len(subscribes); i++ {
