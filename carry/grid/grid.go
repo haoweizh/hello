@@ -35,10 +35,11 @@ var ProcessGrid = func(setting *model.Setting, tick *model.BidAsk) {
 	now := util.GetNowUnixMillion()
 	maintaining, _ := model.ChannelMaintaining.Load(setting.Market)
 	_, tickRelated := model.AppMarkets.GetBidAsk(setting.SymbolRelated, setting.MarketRelated)
+	util.Notice(fmt.Sprintf(`break 0 %s %s`, setting.Market, setting.Symbol))
 	if tick == nil || tick.Asks == nil || tick.Bids == nil || model.AppConfig.Handle != `1` || account == nil ||
-		(maintaining != nil && maintaining.(bool)) || (model.AppConfig.Env != `test` && now-int64(tick.Ts) > 10000) ||
-		setting.Coin == `` || tickRelated == nil || tickRelated.Asks == nil || tickRelated.Bids == nil ||
-		(model.AppConfig.Env != `test` && now-int64(tickRelated.Ts) > 10000) {
+		(maintaining != nil && maintaining.(bool)) || (model.AppConfig.Env != `test` && now-int64(tick.Ts) > 1000) ||
+		tickRelated == nil || tickRelated.Asks == nil || tickRelated.Bids == nil ||
+		(model.AppConfig.Env != `test` && now-int64(tickRelated.Ts) > 1000) {
 		return
 	}
 	cache, data := GetDataGrid(account, setting, tickRelated, false)
