@@ -69,7 +69,7 @@ var ProcessGrid = func(setting *model.Setting, tick *model.BidAsk) {
 				}
 				data.orderShort = nil
 			}
-		} else if math.Abs(data.Holding)*tick.Bids[0].Price > 20 {
+		} else {
 			placeGrid(account, setting, data, tick, tickRelated)
 		}
 	} else {
