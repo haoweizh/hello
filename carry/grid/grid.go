@@ -110,7 +110,7 @@ func liqGrid(account *model.Account, setting *model.Setting, data *DataGrid, tic
 		util.Notice(fmt.Sprintf(`grid liq when canOpen:%v %s %s %s holding %f at %f amt %f`,
 			canOpen, setting.Market, setting.Symbol, side, data.Holding, price, data.Holding))
 		orders := api.MustPlaceOrder(account.Key, account.Secret, side, model.OrderTypeLimit, data.Market,
-			data.Symbol, ``, refreshType, price, price, data.Holding, setting)
+			data.Symbol, ``, refreshType, price, price, math.Abs(data.Holding), setting)
 		for _, order := range orders {
 			model.AppDB.Save(order)
 			if !canOpen {
