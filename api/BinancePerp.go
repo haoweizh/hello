@@ -116,7 +116,8 @@ var wsAccountHandler = func(event []byte) {
 		return
 	}
 	if strings.EqualFold(result.Get(`e`).MustString(), `ORDER_TRADE_UPDATE`) {
-		order := parseOrderJsBinancePerp(result.Get(`0`))
+		util.Notice(fmt.Sprintf(`-test binanceperp %s`, string(event)))
+		order := parseOrderJsBinancePerp(result.Get(`data`))
 		funcHandlers := GetFunctions(model.BinancePerp, order.Symbol)
 		if funcHandlers != nil {
 			funcHandlers.Range(func(function, value interface{}) bool {
