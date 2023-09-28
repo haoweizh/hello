@@ -504,7 +504,7 @@ func SetTurtleOrderStatus(function, market, symbol, orderId, status string) {
 		return
 	}
 	account := model.AppConfig.GetAccounts(setting.Market)[0]
-	if account == nil || setting == nil {
+	if account == nil || setting == nil || setting.Seconds <= 0 {
 		return
 	}
 	var nowStr string
