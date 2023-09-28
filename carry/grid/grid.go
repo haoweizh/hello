@@ -126,6 +126,9 @@ func liqGrid(account *model.Account, setting *model.Setting, data *DataGrid, tic
 			}
 		}
 	}
+	if !canOpen {
+		GetDataGrid(account, setting, tickRelated, true)
+	}
 }
 
 func GetDataGrid(account *model.Account, setting *model.Setting, tickRelate *model.BidAsk, refresh bool) (cache bool, data *DataGrid) {
