@@ -121,7 +121,6 @@ var wsAccountHandler = func(event []byte) {
 		if funcHandlers != nil {
 			funcHandlers.Range(func(function, value interface{}) bool {
 				if model.AccountHandlerMap[function.(string)] != nil {
-					util.Notice(fmt.Sprintf(`-test binanceperp ws- %v`, order))
 					go model.AccountHandlerMap[function.(string)](order)
 				}
 				return true
