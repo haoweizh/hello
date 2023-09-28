@@ -118,7 +118,7 @@ var subscribeHandlerFtx = func(connection *websocket.Conn, subscribes []interfac
 	return err
 }
 
-func WsDepthServeFtx(markets *model.Markets, orderHandler OrderHandler) ([]chan struct{}, error) {
+func WsDepthServeFtx(markets *model.Markets) ([]chan struct{}, error) {
 	wsHandler := func(event []byte) {
 		responseJson, err := util.NewJSON(event)
 		if err != nil {
@@ -186,7 +186,7 @@ func handleTickerFtx(markets *model.Markets, response *simplejson.Json) {
 		if funcHandlers != nil {
 			funcHandlers.Range(func(function, value interface{}) bool {
 				setting := GetSetting(function.(string), model.Ftx, standardSymbol)
-				if setting != nil && value != nil {
+				if setting != nil && value != nil && value.(model.CarryHandler) != nil {
 					go value.(model.CarryHandler)(setting, bidAsk)
 				}
 				return true
@@ -280,7 +280,7 @@ func handleDepthFtx(markets *model.Markets, response *simplejson.Json) {
 			if funcHandlers != nil {
 				funcHandlers.Range(func(function, value interface{}) bool {
 					setting := GetSetting(function.(string), model.Ftx, standardSymbol)
-					if setting != nil && value != nil {
+					if setting != nil && value != nil && value.(model.CarryHandler) != nil {
 						go value.(model.CarryHandler)(setting, bidAsk)
 					}
 					return true
