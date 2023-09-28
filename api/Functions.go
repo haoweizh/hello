@@ -1131,7 +1131,7 @@ func CreateMarketDepthServer(markets *model.Markets, market string) (
 	case model.HuobiSpot:
 		channels, err = WsDepthServeHuobiSpot(markets)
 	case model.Ftx:
-		channels, err = WsDepthServeFtx(markets, nil)
+		channels, err = WsDepthServeFtx(markets)
 	case model.Mexc:
 		channels, err = WsDepthServeMexc(markets, true)
 	case model.BitgetSpot:
