@@ -231,12 +231,18 @@ func placeGrid(account *model.Account, setting *model.Setting, data *DataGrid, t
 			setting.Market, setting.Symbol, ``, model.FunctionGrid, priceLong, priceLong, setting.GridAmount, setting)
 		util.Notice(fmt.Sprintf(`place grid %s %s at %f amt %f order %v`,
 			setting.Market, setting.Symbol, priceLong, setting.GridAmount, data.OrderLong))
+		for _, order := range data.OrderLong {
+			model.AppDB.Save(order)
+		}
 	}
 	if data.orderShort == nil {
 		data.orderShort = api.MustPlaceOrder(account.Key, account.Secret, model.OrderSideSell, model.OrderTypeLimit,
 			setting.Market, setting.Symbol, ``, model.FunctionGrid, priceShort, priceShort, setting.GridAmount, setting)
 		util.Notice(fmt.Sprintf(`place grid %s %s at %f amt %f order %v`,
 			setting.Market, setting.Symbol, priceLong, setting.GridAmount, data.orderShort))
+		for _, order := range data.OrderLong {
+			model.AppDB.Save(order)
+		}
 	}
 	return true
 }
