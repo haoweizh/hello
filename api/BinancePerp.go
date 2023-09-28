@@ -341,6 +341,9 @@ func renewListenKeyBinancePerp(account *model.Account) (success bool, listenKey 
 	if keyJson != nil && len(keyJson.Get(`listenKey`).MustString()) > 0 {
 		return true, keyJson.Get(`listenKey`).MustString()
 	}
+	time.Sleep(time.Second * 3)
+	util.Notice(fmt.Sprintf(`fail to renew binanceperp listen key retry`))
+	renewListenKeyBinancePerp(account)
 	return false, ``
 }
 
