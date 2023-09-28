@@ -315,14 +315,15 @@ func getFundingRateBitgetPerp(symbol string) (fundingRate *model.FundingRate) {
 	bitgetFundingResp := &dtos.BitgetFundingResp{}
 	perpJsonErr := json.Unmarshal(httpResp, bitgetFundingResp)
 	if bitgetFundingResp == nil || bitgetFundingResp.Code != "00000" {
-		util.Notice(fmt.Sprintf("get bitget perp funding rate error, resp: %s, httpErr: %v, jsonErr: %v", httpResp, httpErr, perpJsonErr))
+		util.Notice(fmt.Sprintf("get bitget perp funding rate error, %s resp: %s, httpErr: %v, jsonErr: %v",
+			symbol, httpResp, httpErr, perpJsonErr))
 		return
 	}
 	rate, _ := strconv.ParseFloat(bitgetFundingResp.Data.FundingRate, 64)
 	return &model.FundingRate{
 		Rate:       rate,
 		UpdateTime: util.GetNow(),
-		ExpireTime: (util.GetNow().Unix() + 3600000) / 1000} //没有过期时间
+		ExpireTime: util.GetNow().Unix() + 3600} //没有过期时间
 }
 
 func placeOrderBitgetPerp(key, secret string, order *model.Order, orderSide, orderType, orderParam, symbol string, price, amount float64) {
