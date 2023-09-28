@@ -156,7 +156,7 @@ func WsAccountClient(key, market, url string, msgHandler MsgHandler) (connection
 				if closeErr != nil {
 					util.Notice(fmt.Sprintf(`connection closed %s`, closeErr.Error()))
 				}
-				util.Notice(fmt.Sprintf(`%s can not read from account ws: %s`, market, err.Error()))
+				util.Notice(fmt.Sprintf(`%s can not read from account ws: %s`, market, readErr.Error()))
 				return
 			}
 			if msgHandler != nil {
