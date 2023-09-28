@@ -27,6 +27,7 @@ const wsAccountBinancePerp = `wss://fstream.binance.com/ws/`
 const wsStepBinancePerp = 20
 
 var channelMaintainingBinancePerp = false
+var maintainingAccountConnBinancePerp = false
 
 func getMarketsBinancePerp(key, secret string) (marketInfos map[string]*model.MarketInfo) {
 	marketInfos = make(map[string]*model.MarketInfo)
@@ -104,42 +105,50 @@ func getMarketsBinancePerp(key, secret string) (marketInfos map[string]*model.Ma
 	return marketInfos
 }
 
-func WsAccountServeBinancePerp() {
-	wsAccountHandler := func(event []byte) {
-		result, wsErr := util.NewJSON(event)
-		if wsErr != nil {
-			util.Notice(`binancePerp fail to unmarshal account ws json ` + wsErr.Error())
-			return
-		}
-		result = result.Get(`data`)
-		if result == nil {
-			return
-		}
-		if strings.EqualFold(result.Get(`e`).MustString(), `ORDER_TRADE_UPDATE`) {
-			order := parseOrderJsBinancePerp(result.Get(`0`))
-			funcHandlers := GetFunctions(model.BinancePerp, order.Symbol)
-			if funcHandlers != nil {
-				funcHandlers.Range(func(function, value interface{}) bool {
-					if model.AccountHandlerMap[function.(string)] != nil {
-						go model.AccountHandlerMap[function.(string)](order)
-					}
-					return true
-				})
-			}
+var wsAccountHandler = func(event []byte) {
+	result, wsErr := util.NewJSON(event)
+	if wsErr != nil {
+		util.Notice(`binancePerp fail to unmarshal account ws json ` + wsErr.Error())
+		return
+	}
+	result = result.Get(`data`)
+	if result == nil {
+		return
+	}
+	if strings.EqualFold(result.Get(`e`).MustString(), `ORDER_TRADE_UPDATE`) {
+		order := parseOrderJsBinancePerp(result.Get(`0`))
+		funcHandlers := GetFunctions(model.BinancePerp, order.Symbol)
+		if funcHandlers != nil {
+			funcHandlers.Range(func(function, value interface{}) bool {
+				if model.AccountHandlerMap[function.(string)] != nil {
+					util.Notice(fmt.Sprintf(`-test binanceperp ws- %v`, order))
+					go model.AccountHandlerMap[function.(string)](order)
+				}
+				return true
+			})
 		}
 	}
-	accounts := model.AppConfig.GetAccounts(model.BinancePerp)
-	for _, account := range accounts {
-		if account == nil {
-			return
-		}
-		success, listenKey := renewListenKeyBinancePerp(account)
-		if success {
-			_, err := WsAccountClient(account.Key, model.BinancePerp, wsAccountBinancePerp+listenKey, wsAccountHandler)
-			if err != nil {
-				util.Notice(fmt.Sprintf(`fail to create account ws binancePerp %s`, err.Error()))
-				return
+}
+
+func WsAccountServeBinancePerp() {
+	if !maintainingAccountConnBinancePerp {
+		maintainingAccountConnBinancePerp = true
+		for {
+			accounts := model.AppConfig.GetAccounts(model.BinancePerp)
+			for _, account := range accounts {
+				if account == nil {
+					return
+				}
+				success, listenKey := renewListenKeyBinancePerp(account)
+				if success {
+					_, err := WsAccountClient(account.Key, model.BinancePerp, wsAccountBinancePerp+listenKey, wsAccountHandler)
+					if err != nil {
+						util.Notice(fmt.Sprintf(`fail to create account ws binancePerp %s`, err.Error()))
+						return
+					}
+				}
 			}
+			time.Sleep(time.Minute * 30)
 		}
 	}
 }

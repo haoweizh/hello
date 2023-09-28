@@ -1099,7 +1099,7 @@ func InitMarketInfos(market string) (success bool) {
 func CreateAccountWsServer(market string) {
 	switch market {
 	case model.BinancePerp:
-		WsAccountServeBinancePerp()
+		go WsAccountServeBinancePerp()
 	case model.OKEX:
 		WsAccountServeOKEX()
 		go maintainAccountConnOKEX()

@@ -250,9 +250,8 @@ func placeGrid(account *model.Account, setting *model.Setting, data *DataGrid, t
 	return true
 }
 
-// todo add binancePerp maintain account ws
-// todo test okex pair order and order post
 // todo deal with 1000PEPE
+// todo deal with multi accounts
 var ProcessGridOrder = func(order *model.Order) {
 	for {
 		if !api.CheckSetProcessing(model.FunctionGrid, model.FunctionGrid, model.FunctionGrid, true) {
