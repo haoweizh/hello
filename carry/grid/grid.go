@@ -190,14 +190,15 @@ func canOpen(setting *model.Setting, tick, tickRelate *model.BidAsk) (can bool) 
 		return false
 	}
 	marketInfoRelate := vRelate.(*model.MarketInfo)
-	if tickRelate.Asks[0].Price-tickRelate.Bids[0].Price > marketInfoRelate.SizeIncrement {
+	priceDis := tickRelate.Asks[0].Price - tickRelate.Bids[0].Price - marketInfoRelate.PriceIncrement*1.1
+	if priceDis > 0 {
 		return false
 	}
 	if tickRelate.Asks[0].Price*tickRelate.Asks[0].Amount < setting.AmountLimit ||
 		tickRelate.Bids[0].Price*tickRelate.Bids[0].Amount < setting.AmountLimit {
 		return false
 	}
-	if tickRelate.Asks[0].Amount > 5*tickRelate.Bids[0].Amount || tickRelate.Bids[0].Amount*5 > tickRelate.Asks[0].Amount {
+	if tickRelate.Asks[0].Amount > 5*tickRelate.Bids[0].Amount || tickRelate.Bids[0].Amount > tickRelate.Asks[0].Amount*5 {
 		return false
 	}
 	if tick.Bids[0].Price <= tickRelate.Bids[0].Price*setting.RateRelated || tick.Asks[0].Price >= tickRelate.Asks[0].Price*setting.RateRelated {
