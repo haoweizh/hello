@@ -35,7 +35,6 @@ var ProcessGrid = func(setting *model.Setting, tick *model.BidAsk) {
 	now := util.GetNowUnixMillion()
 	maintaining, _ := model.ChannelMaintaining.Load(setting.Market)
 	_, tickRelated := model.AppMarkets.GetBidAsk(setting.SymbolRelated, setting.MarketRelated)
-	util.Notice(fmt.Sprintf(`break 0 %s %s`, setting.Market, setting.Symbol))
 	if tick == nil || tick.Asks == nil || tick.Bids == nil || model.AppConfig.Handle != `1` || account == nil ||
 		(maintaining != nil && maintaining.(bool)) || (model.AppConfig.Env != `test` && now-int64(tick.Ts) > 1000) ||
 		tickRelated == nil || tickRelated.Asks == nil || tickRelated.Bids == nil ||
@@ -47,6 +46,7 @@ var ProcessGrid = func(setting *model.Setting, tick *model.BidAsk) {
 		return
 	}
 	if now-data.RefreshTime > 60000 {
+		util.Notice(fmt.Sprintf(`refresh time %d %d = %d`, now, data.RefreshTime, now-data.RefreshTime))
 		GetDataGrid(account, setting, tickRelated, true)
 		return
 	}
@@ -183,7 +183,7 @@ func GetDataGrid(account *model.Account, setting *model.Setting, tickRelate *mod
 		}
 	}
 	util.StoreSyncMap(dataGrids, data, setting.Market, setting.Symbol)
-	util.Notice(fmt.Sprintf(`set data %s %s %f`, data.Market, data.Symbol, data.Holding))
+	util.Notice(fmt.Sprintf(`set data %s %s %f refresh %v`, data.Market, data.Symbol, data.Holding, refresh))
 	return false, data
 }
 
