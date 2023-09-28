@@ -111,13 +111,12 @@ var wsAccountHandler = func(event []byte) {
 		util.Notice(`binancePerp fail to unmarshal account ws json ` + wsErr.Error())
 		return
 	}
-	util.Notice(fmt.Sprintf(`-test binanceperp- event %s`, string(event)))
-	result = result.Get(`data`)
-	if result == nil {
-		return
-	}
 	if strings.EqualFold(result.Get(`e`).MustString(), `ORDER_TRADE_UPDATE`) {
-		order := parseOrderJsBinancePerp(result.Get(`data`))
+		result = result.Get(`o`)
+		order := parseOrderJsBinancePerp(result)
+		if !order.HaveId() {
+			return
+		}
 		funcHandlers := GetFunctions(model.BinancePerp, order.Symbol)
 		if funcHandlers != nil {
 			funcHandlers.Range(func(function, value interface{}) bool {
