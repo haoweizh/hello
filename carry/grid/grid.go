@@ -136,11 +136,7 @@ func GetDataGrid(account *model.Account, setting *model.Setting, tickRelate *mod
 	if ok && value != nil && !refresh {
 		return true, value.(*DataGrid)
 	}
-	if value != nil {
-		data = value.(*DataGrid)
-	} else {
-		data = &DataGrid{Market: setting.Market, Symbol: setting.Symbol, Holding: 0, RefreshTime: time.Now().UnixMilli()}
-	}
+	data = &DataGrid{Market: setting.Market, Symbol: setting.Symbol, Holding: 0, RefreshTime: time.Now().UnixMilli()}
 	orders := api.QueryOpenOrders(account.Key, account.Secret, setting.Market, setting.Symbol)
 	for _, order := range orders {
 		if order.Price > tickRelate.Asks[0].Price*setting.RateRelated || order.Price < tickRelate.Bids[0].Price*setting.RateRelated {
@@ -184,6 +180,7 @@ func GetDataGrid(account *model.Account, setting *model.Setting, tickRelate *mod
 	}
 	util.StoreSyncMap(dataGrids, data, setting.Market, setting.Symbol)
 	util.Notice(fmt.Sprintf(`set data %s %s %f refresh %v`, data.Market, data.Symbol, data.Holding, refresh))
+	time.Sleep(time.Second * 2)
 	return false, data
 }
 
@@ -251,6 +248,7 @@ var ProcessGridOrder = func(order *model.Order) {
 			time.Sleep(time.Second)
 		}
 	}
+	defer api.CheckSetProcessing(model.FunctionGrid, model.FunctionGrid, model.FunctionGrid, false)
 	if order == nil || order.Status != model.CarryStatusSuccess {
 		return
 	}
@@ -270,5 +268,4 @@ var ProcessGridOrder = func(order *model.Order) {
 			}
 		}
 	}
-	api.CheckSetProcessing(model.FunctionGrid, model.FunctionGrid, model.FunctionGrid, false)
 }
