@@ -18,7 +18,7 @@ type DataGrid struct {
 	RefreshTime           int64 // million-seconds
 }
 
-var dataGrids *sync.Map // market*symbol *DataGrid
+var dataGrids = &sync.Map{} // market*symbol *DataGrid
 
 // ProcessGrid
 // settingRelate.AmountLimit 以计价货币为单位的最小下单数量检查
