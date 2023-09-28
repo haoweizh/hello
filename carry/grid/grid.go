@@ -165,7 +165,7 @@ func GetDataGrid(account *model.Account, setting *model.Setting, tickRelate *mod
 	if marketType == model.MarketTypePerp {
 		_, positions, _, _ := api.GetPositions(account.Key, account.Secret, setting.Market)
 		for _, position := range positions {
-			if strings.EqualFold(coin, position.Currency) {
+			if strings.EqualFold(setting.Symbol, position.Currency) {
 				data.Holding = position.Holding
 				break
 			}
