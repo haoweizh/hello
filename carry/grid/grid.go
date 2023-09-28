@@ -18,7 +18,7 @@ type DataGrid struct {
 	RefreshTime           int64 // million-seconds
 }
 
-var dataGrids = &sync.Map{} // market*symbol *DataGrid
+var dataGrids = &sync.Map{} // account.key*market*symbol *DataGrid
 
 // ProcessGrid
 // settingRelate.AmountLimit 以计价货币为单位的最小下单数量检查
@@ -107,10 +107,10 @@ func liqGrid(account *model.Account, setting *model.Setting, data *DataGrid, tic
 		placeOrder = true
 	}
 	if placeOrder {
-		orders := api.MustPlaceOrder(account.Key, account.Secret, side, model.OrderTypeLimit, data.Market,
-			data.Symbol, ``, refreshType, price, price, data.Holding, setting)
 		util.Notice(fmt.Sprintf(`grid liq when canOpen:%v %s %s %s holding %f at %f amt %f`,
 			canOpen, setting.Market, setting.Symbol, side, data.Holding, price, data.Holding))
+		orders := api.MustPlaceOrder(account.Key, account.Secret, side, model.OrderTypeLimit, data.Market,
+			data.Symbol, ``, refreshType, price, price, data.Holding, setting)
 		for _, order := range orders {
 			model.AppDB.Save(order)
 			if !canOpen {
@@ -126,13 +126,10 @@ func liqGrid(account *model.Account, setting *model.Setting, data *DataGrid, tic
 			}
 		}
 	}
-	if !canOpen {
-		GetDataGrid(account, setting, tickRelated, true)
-	}
 }
 
 func GetDataGrid(account *model.Account, setting *model.Setting, tickRelate *model.BidAsk, refresh bool) (cache bool, data *DataGrid) {
-	value, ok := util.LoadSyncMap(dataGrids, setting.Market, setting.Symbol)
+	value, ok := util.LoadSyncMap(dataGrids, account.Key, setting.Market, setting.Symbol)
 	if ok && value != nil && !refresh {
 		return true, value.(*DataGrid)
 	}
@@ -178,8 +175,9 @@ func GetDataGrid(account *model.Account, setting *model.Setting, tickRelate *mod
 			}
 		}
 	}
-	util.StoreSyncMap(dataGrids, data, setting.Market, setting.Symbol)
-	util.Notice(fmt.Sprintf(`set data %s %s %f refresh %v`, data.Market, data.Symbol, data.Holding, refresh))
+	util.StoreSyncMap(dataGrids, data, account.Key, setting.Market, setting.Symbol)
+	util.Notice(fmt.Sprintf(`set data %s %s %s %f refresh %v`,
+		account.Key, data.Market, data.Symbol, data.Holding, refresh))
 	time.Sleep(time.Second * 2)
 	return false, data
 }
@@ -229,7 +227,7 @@ func placeGrid(account *model.Account, setting *model.Setting, data *DataGrid, t
 	if data.OrderLong == nil {
 		data.OrderLong = api.MustPlaceOrder(account.Key, account.Secret, model.OrderSideBuy, model.OrderTypeLimit,
 			setting.Market, setting.Symbol, ``, model.FunctionGrid, priceLong, priceLong, setting.GridAmount, setting)
-		util.Notice(fmt.Sprintf(`place grid %s %s at %f amt %f order %v`,
+		util.Notice(fmt.Sprintf(`place grid buy %s %s at %f amt %f order %v`,
 			setting.Market, setting.Symbol, priceLong, setting.GridAmount, data.OrderLong))
 		for _, order := range data.OrderLong {
 			model.AppDB.Save(order)
@@ -238,8 +236,8 @@ func placeGrid(account *model.Account, setting *model.Setting, data *DataGrid, t
 	if data.orderShort == nil {
 		data.orderShort = api.MustPlaceOrder(account.Key, account.Secret, model.OrderSideSell, model.OrderTypeLimit,
 			setting.Market, setting.Symbol, ``, model.FunctionGrid, priceShort, priceShort, setting.GridAmount, setting)
-		util.Notice(fmt.Sprintf(`place grid %s %s at %f amt %f order %v`,
-			setting.Market, setting.Symbol, priceLong, setting.GridAmount, data.orderShort))
+		util.Notice(fmt.Sprintf(`place grid sell %s %s at %f amt %f order %v`,
+			setting.Market, setting.Symbol, priceShort, setting.GridAmount, data.orderShort))
 		for _, order := range data.orderShort {
 			model.AppDB.Save(order)
 		}
