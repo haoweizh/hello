@@ -171,6 +171,14 @@ func Test_WsAndOrderApi(t *testing.T) {
 	select {}
 }
 
+func Test_AccountHandler(t *testing.T) {
+	model.NewConfig()
+	api.CreateAccountWsServer(model.BinancePerp)
+	for {
+		time.Sleep(time.Minute)
+	}
+}
+
 func Test_BalAndPos(t *testing.T) {
 	keys := util.GetHourKeys(32)
 	fmt.Println(fmt.Sprintf(`%v`, keys))

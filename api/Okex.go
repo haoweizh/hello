@@ -51,6 +51,7 @@ func maintainAccountConnOKEX() {
 				value, _ := util.LoadSyncMap(&model.AppMarkets.AccountConns, model.OKEX, account.Key)
 				if value == nil {
 					util.Notice(fmt.Sprintf(`-test ok ws- no private connection %s`, account.Key))
+					continue
 				}
 				if err := SendToConnection(model.OKEX, value.(*websocket.Conn), []byte(`ping`)); err != nil {
 					util.Notice("-test ok ws-okex server ping client error " + err.Error())

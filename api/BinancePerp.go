@@ -145,7 +145,7 @@ func WsAccountServeBinancePerp() {
 					_, err := WsAccountClient(account.Key, model.BinancePerp, wsAccountBinancePerp+listenKey, wsAccountHandler)
 					if err != nil {
 						util.Notice(fmt.Sprintf(`fail to create account ws binancePerp %s`, err.Error()))
-						return
+						continue
 					}
 				}
 			}
