@@ -24,27 +24,17 @@ var dataGrids *sync.Map // market*symbol *DataGrid
 // settingRelate.AmountLimit 以计价货币为单位的最小下单数量检查
 // setting.OpenShortMargin 平仓绝对值价差
 // setting.GridAmount 下单绝对数量
+// setting.RateRelated related symbol对应的price乘数,price*settingRelated和amount/settingRelated与tick进行比较
 var ProcessGrid = func(setting *model.Setting, tick *model.BidAsk) {
 	if !api.CheckSetProcessing(model.FunctionGrid, model.FunctionGrid, model.FunctionGrid, true) {
 		defer api.CheckSetProcessing(model.FunctionGrid, model.FunctionGrid, model.FunctionGrid, false)
 	} else {
 		return
 	}
-	var settingRelate *model.Setting
 	account := model.AppConfig.GetAccounts(setting.Market)[0]
 	now := util.GetNowUnixMillion()
 	maintaining, _ := model.ChannelMaintaining.Load(setting.Market)
-	value := api.GetCoinSettings(model.FunctionGridRelate)
-	if value != nil {
-		valueSettings, _ := value.Load(setting.Coin)
-		if valueSettings != nil && len(valueSettings.([]*model.Setting)) == 1 {
-			settingRelate = valueSettings.([]*model.Setting)[0]
-		}
-	}
-	if settingRelate == nil {
-		return
-	}
-	_, tickRelated := model.AppMarkets.GetBidAsk(settingRelate.Symbol, settingRelate.Market)
+	_, tickRelated := model.AppMarkets.GetBidAsk(setting.SymbolRelated, setting.MarketRelated)
 	if tick == nil || tick.Asks == nil || tick.Bids == nil || model.AppConfig.Handle != `1` || account == nil ||
 		(maintaining != nil && maintaining.(bool)) || (model.AppConfig.Env != `test` && now-int64(tick.Ts) > 10000) ||
 		setting.Coin == `` || tickRelated == nil || tickRelated.Asks == nil || tickRelated.Bids == nil ||
@@ -59,10 +49,7 @@ var ProcessGrid = func(setting *model.Setting, tick *model.BidAsk) {
 		GetDataGrid(account, setting, tickRelated, true)
 		return
 	}
-	if tickRelated == nil || tickRelated.Bids == nil || len(tickRelated.Bids) == 0 || tickRelated.Asks == nil || len(tickRelated.Asks) == 0 {
-		return
-	}
-	canOpen := canOpen(settingRelate, tick, tickRelated)
+	canOpen := canOpen(setting, tick, tickRelated)
 	if math.Abs(data.Holding)*tick.Bids[0].Price <= 20 {
 		if !canOpen {
 			if data.OrderLong != nil {
@@ -96,14 +83,14 @@ func liqGrid(account *model.Account, setting *model.Setting, data *DataGrid, tic
 	if canOpen && data.Holding > 0 {
 		refreshType = model.FunctionGrid
 		side = model.OrderSideSell
-		price = math.Min(tick.Asks[0].Price+setting.OpenShortMargin, tickRelated.Asks[0].Price)
+		price = math.Min(tick.Asks[0].Price+setting.OpenShortMargin, tickRelated.Asks[0].Price*setting.RateRelated)
 		if data.orderShort == nil {
 			placeOrder = true
 		}
 	} else if canOpen && data.Holding < 0 {
 		refreshType = model.FunctionGrid
 		side = model.OrderSideBuy
-		price = math.Max(tick.Bids[0].Price-setting.OpenShortMargin, tickRelated.Bids[0].Price)
+		price = math.Max(tick.Bids[0].Price-setting.OpenShortMargin, tickRelated.Bids[0].Price*setting.RateRelated)
 		if data.OrderLong == nil {
 			placeOrder = true
 		}
@@ -155,9 +142,9 @@ func GetDataGrid(account *model.Account, setting *model.Setting, tickRelate *mod
 	}
 	orders := api.QueryOpenOrders(account.Key, account.Secret, setting.Market, setting.Symbol)
 	for _, order := range orders {
-		if order.Price > tickRelate.Asks[0].Price || order.Price < tickRelate.Bids[0].Price {
+		if order.Price > tickRelate.Asks[0].Price*setting.RateRelated || order.Price < tickRelate.Bids[0].Price*setting.RateRelated {
 			util.Notice(fmt.Sprintf(`Cancel out price range order %s %s %s %s %f [%f %f]`,
-				order.Market, order.Symbol, order.OrderSide, order.OrderId, order.Price, tickRelate.Bids[0].Price, tickRelate.Asks[0].Price))
+				order.Market, order.Symbol, order.OrderSide, order.OrderId, order.Price, tickRelate.Bids[0].Price*setting.RateRelated, tickRelate.Asks[0].Price*setting.RateRelated))
 			api.MustCancel(account.Key, account.Secret, setting.Market, setting.Symbol, order.OrderType, order.OrderId, true)
 		} else {
 			if order.OrderSide == model.OrderSideSell {
@@ -199,8 +186,8 @@ func GetDataGrid(account *model.Account, setting *model.Setting, tickRelate *mod
 	return false, data
 }
 
-func canOpen(settingRelate *model.Setting, tick, tickRelate *model.BidAsk) (can bool) {
-	vRelate, _ := util.LoadSyncMap(model.MarketInfos, settingRelate.Market, settingRelate.Symbol)
+func canOpen(setting *model.Setting, tick, tickRelate *model.BidAsk) (can bool) {
+	vRelate, _ := util.LoadSyncMap(model.MarketInfos, setting.MarketRelated, setting.SymbolRelated)
 	if vRelate == nil {
 		return false
 	}
@@ -208,14 +195,14 @@ func canOpen(settingRelate *model.Setting, tick, tickRelate *model.BidAsk) (can 
 	if tickRelate.Asks[0].Price-tickRelate.Bids[0].Price > marketInfoRelate.SizeIncrement {
 		return false
 	}
-	if tickRelate.Asks[0].Price*tickRelate.Asks[0].Amount < settingRelate.AmountLimit ||
-		tickRelate.Bids[0].Price*tickRelate.Bids[0].Amount < settingRelate.AmountLimit {
+	if tickRelate.Asks[0].Price*tickRelate.Asks[0].Amount < setting.AmountLimit ||
+		tickRelate.Bids[0].Price*tickRelate.Bids[0].Amount < setting.AmountLimit {
 		return false
 	}
 	if tickRelate.Asks[0].Amount > 5*tickRelate.Bids[0].Amount || tickRelate.Bids[0].Amount*5 > tickRelate.Asks[0].Amount {
 		return false
 	}
-	if tick.Bids[0].Price <= tickRelate.Bids[0].Price || tick.Asks[0].Price >= tickRelate.Asks[0].Price {
+	if tick.Bids[0].Price <= tickRelate.Bids[0].Price*setting.RateRelated || tick.Asks[0].Price >= tickRelate.Asks[0].Price*setting.RateRelated {
 		return false
 	}
 	return true
@@ -226,32 +213,35 @@ func placeGrid(account *model.Account, setting *model.Setting, data *DataGrid, t
 	if v == nil {
 		return false
 	}
-	inLong := tick.Bids[0].Price - tickRelate.Bids[0].Price
-	inShort := tickRelate.Asks[0].Price - tick.Asks[0].Price
+	inLong := tick.Bids[0].Price - tickRelate.Bids[0].Price*setting.RateRelated
+	inShort := tickRelate.Asks[0].Price*setting.RateRelated - tick.Asks[0].Price
 	if inLong <= 0 || inShort <= 0 {
 		return false
 	}
 	var priceLong, priceShort float64
+	priceDis := tickRelate.Asks[0].Price*setting.RateRelated - tickRelate.Bids[0].Price*setting.RateRelated
 	if inLong > inShort {
-		priceShort = math.Min(tickRelate.Asks[0].Price, tick.Asks[0].Price+0.1*(tickRelate.Asks[0].Price-tickRelate.Bids[0].Price))
+		priceShort = math.Min(tickRelate.Asks[0].Price*setting.RateRelated, tick.Asks[0].Price+0.1*priceDis)
 		priceLong = priceShort - setting.OpenShortMargin
 	} else {
-		priceLong = math.Max(tickRelate.Bids[0].Price, tick.Bids[0].Price-0.1*(tickRelate.Asks[0].Price-tickRelate.Bids[0].Price))
+		priceLong = math.Max(tickRelate.Bids[0].Price*setting.RateRelated, tick.Bids[0].Price-0.1*priceDis)
 		priceShort = priceLong + setting.OpenShortMargin
 	}
 	if data.OrderLong == nil {
 		data.OrderLong = api.MustPlaceOrder(account.Key, account.Secret, model.OrderSideBuy, model.OrderTypeLimit,
 			setting.Market, setting.Symbol, ``, model.FunctionGrid, priceLong, priceLong, setting.GridAmount, setting)
+		util.Notice(fmt.Sprintf(`place grid %s %s at %f amt %f order %v`,
+			setting.Market, setting.Symbol, priceLong, setting.GridAmount, data.OrderLong))
 	}
 	if data.orderShort == nil {
 		data.orderShort = api.MustPlaceOrder(account.Key, account.Secret, model.OrderSideSell, model.OrderTypeLimit,
 			setting.Market, setting.Symbol, ``, model.FunctionGrid, priceShort, priceShort, setting.GridAmount, setting)
+		util.Notice(fmt.Sprintf(`place grid %s %s at %f amt %f order %v`,
+			setting.Market, setting.Symbol, priceLong, setting.GridAmount, data.orderShort))
 	}
 	return true
 }
 
-// todo deal with 1000PEPE
-// todo deal with multi accounts
 var ProcessGridOrder = func(order *model.Order) {
 	for {
 		if !api.CheckSetProcessing(model.FunctionGrid, model.FunctionGrid, model.FunctionGrid, true) {
@@ -264,12 +254,17 @@ var ProcessGridOrder = func(order *model.Order) {
 		return
 	}
 	accounts := model.AppConfig.GetAccounts(order.Market)
+	setting := api.GetSetting(model.FunctionGrid, order.Market, order.Symbol)
+	if setting == nil {
+		return
+	}
 	for _, account := range accounts {
-		_, tickRelated := model.AppMarkets.GetBidAsk(order.Symbol, order.Market)
+		_, tickRelated := model.AppMarkets.GetBidAsk(setting.SymbolRelated, setting.MarketRelated)
 		if account != nil && tickRelated != nil && tickRelated.Bids != nil && len(tickRelated.Bids) > 0 &&
 			tickRelated.Asks != nil && len(tickRelated.Asks) > 0 {
 			setting := api.GetSetting(model.FunctionGrid, order.Market, order.Symbol)
 			if setting != nil {
+				util.Notice(fmt.Sprintf(`get order success, refresh data grid %v`, order))
 				GetDataGrid(account, setting, tickRelated, true)
 			}
 		}

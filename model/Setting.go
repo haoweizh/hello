@@ -17,7 +17,7 @@ type Setting struct {
 	Market                                     string `gorm:"index:function_market_symbol,unique"`
 	Symbol                                     string `gorm:"index:function_market_symbol,unique"`
 	Coin                                       string
-	SymbolRelated                              string // 在turtle算法中判断是否还被加入动态海龟
+	SymbolRelated, MarketRelated               string // 在turtle算法中判断是否还被加入动态海龟
 	Chance, ChanceLimit, ChanceLimitCombine    int64
 	Far, Near, Seconds                         int64
 	FarCombine, NearCombine, SecondsCombine    int64
@@ -25,6 +25,7 @@ type Setting struct {
 	OpenShortMargin, CloseShortMargin          float64
 	AmountLimit, AmountRate, AmountRateCombine float64
 	TradeCost                                  float64
+	RateRelated                                float64
 	ID                                         uint `gorm:"primary_key"`
 	CreatedAt                                  time.Time
 	UpdatedAt                                  time.Time

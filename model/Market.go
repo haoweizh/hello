@@ -116,6 +116,20 @@ func (markets *Markets) SetBidAsk(symbol, marketName string, bidAsk *BidAsk) boo
 		}
 		return false
 	}
+	//_, _, coin, _ := GetFromStandard(marketName, symbol)
+	//if len(coin) > 4 && coin[:4] == `1000` {
+	//	settings := api.GetSettingsFromCoin(coin[4:])
+	//	if settings != nil && len(settings) > 0 {
+	//		for i := 0; i < bidAsk.Bids.Len(); i++ {
+	//			bidAsk.Bids[0].PriceDiv1000 = bidAsk.Bids[0].Price / 1000
+	//			bidAsk.Bids[0].AmountMul1000 = bidAsk.Bids[0].Amount * 1000
+	//		}
+	//		for i := 0; i < bidAsk.Asks.Len(); i++ {
+	//			bidAsk.Asks[0].PriceDiv1000 = bidAsk.Asks[0].Price / 1000
+	//			bidAsk.Asks[0].AmountMul1000 = bidAsk.Asks[0].Amount * 1000
+	//		}
+	//	}
+	//}
 	value, _ := markets.bidAsks.Load(symbol)
 	if value == nil {
 		value = &sync.Map{}

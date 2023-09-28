@@ -456,8 +456,29 @@ func GetMarketSymbols(market string) map[string]bool {
 	return symbols
 }
 
+//func GetSettingsFromCoin(coin string) (settings []*model.Setting) {
+//	if appSettings == nil || coinSettings == nil {
+//		util.Notice(`load setting GetSettingsFromCoin fail`)
+//		return nil
+//	}
+//	settings = make([]*model.Setting, 0)
+//	coinSettings.Range(func(function, value any) bool {
+//		if value == nil {
+//			return true
+//		}
+//		array, _ := value.(*sync.Map).Load(coin)
+//		if array != nil {
+//			for _, setting := range array.([]*model.Setting) {
+//				settings = append(settings, setting)
+//			}
+//		}
+//		return true
+//	})
+//	return settings
+//}
+
 func GetCoinSettings(function string) *sync.Map {
-	if appSettings == nil {
+	if appSettings == nil || coinSettings == nil {
 		util.Notice(`load setting GetCoinSettings %s`, function)
 		return nil
 	}
