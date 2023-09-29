@@ -45,12 +45,9 @@ func (turtleData *TurtleData) GetIds() (ids string) {
 	return
 }
 
-func ResetBig(settingNormal *Setting, dataCombine, dataNormal *TurtleData) {
+func ResetBig(dataCombine, dataNormal *TurtleData) {
 	dataNormal.Big = 1
-	dataCombine.Big = 1
-	if settingNormal.Chance == 0 {
-		dataCombine.Big = -1
-	}
+	dataCombine.Big = -1
 }
 
 func (turtleData *TurtleData) ToString() (str string) {

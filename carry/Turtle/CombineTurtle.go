@@ -82,7 +82,7 @@ var ProcessCombineTurtle = func(settingCombine *model.Setting, tick *model.BidAs
 	if dataNormal.N == 0 || dataNormal.Amount == 0 || dataCombine.N == 0 || dataCombine.Amount == 0 {
 		return
 	}
-	model.ResetBig(settingNormal, dataCombine, dataNormal)
+	model.ResetBig(dataCombine, dataNormal)
 	msgKey := model.GetMsgKey(model.FunctionCombineTurtle, market, symbol)
 	msg := fmt.Sprintf("[%d-%d %d:%d]%s N-Volume %f 可开%v 币种数:%d/%d "+
 		"单仓数量:%e bid-ask %e %e \n海龟:仓数/持仓量/开仓价/今日平仓 %d of %d/%e/%e/%v %s %d big:%d 日:%e-%e %d日:%e-%e N:%e"+
@@ -97,10 +97,18 @@ var ProcessCombineTurtle = func(settingCombine *model.Setting, tick *model.BidAs
 		dataCombine.Liquidated, dataCombine.GetIds(), dataCombine.Big, dataCombine.DaysFar, dataCombine.LowFar,
 		dataCombine.HighFar, dataCombine.DaysNear, dataCombine.LowNear, dataCombine.HighNear, dataCombine.N)
 	util.StoreSyncMap(&model.CarryInfo, msg, account.Key, msgKey)
-	placeTurtleLong(account, model.OrderTypeStop, dataNormal, settingNormal, tick, canOpen)
-	placeTurtleShort(account, model.OrderTypeStop, dataNormal, settingNormal, tick, canOpen)
-	placeTurtleLong(account, model.OrderTypeLimit, dataCombine, settingCombine, tick, canOpen)
-	placeTurtleShort(account, model.OrderTypeLimit, dataCombine, settingCombine, tick, canOpen)
+	placeTurtleLong(account, model.OrderTypeStop, dataNormal, settingNormal, tick, canOpen, true, false)
+	placeTurtleShort(account, model.OrderTypeStop, dataNormal, settingNormal, tick, canOpen, true, false)
+	isLongBigCombine := false
+	isShortBigCombine := false
+	if settingNormal.Chance > 0 {
+		isShortBigCombine = true
+	}
+	if settingNormal.Chance < 0 {
+		isLongBigCombine = true
+	}
+	placeTurtleLong(account, model.OrderTypeLimit, dataCombine, settingCombine, tick, canOpen, isLongBigCombine, settingNormal.Chance != 0)
+	placeTurtleShort(account, model.OrderTypeLimit, dataCombine, settingCombine, tick, canOpen, isShortBigCombine, settingNormal.Chance != 0)
 	for i, setting := range settings {
 		if handleBreak(setting, turtleData[i], turtleData[i].OrderLong, turtleData[i].BreakLong) ||
 			handleBreak(setting, turtleData[i], turtleData[i].OrderShort, turtleData[i].BreakShort) ||
@@ -158,17 +166,19 @@ func handleBreak(setting *model.Setting, data *model.TurtleData, orders []*model
 	return true
 }
 
+// 海龟没持仓: 龟汤的平仓单数量：实际龟汤仓位大小，
+// 海龟有持仓: 龟汤的平仓单数量：龟汤仓数*大单
 func placeTurtleLong(account *model.Account, orderType string, data *model.TurtleData, setting *model.Setting,
-	tick *model.BidAsk, canOpen bool) {
+	tick *model.BidAsk, canOpen, isBig, normalHolding bool) {
 	amount := data.Amount
 	function := model.Open
 	if setting.Chance < 0 {
 		function = model.Close
 		amount = setting.GridAmount
-		if setting.Function == model.FunctionCombineTurtle && data.Big == 1 {
+		if setting.Function == model.FunctionCombineTurtle && normalHolding {
 			amount = math.Abs(float64(setting.Chance)) * data.Amount
 		}
-	} else if data.Big == -1 {
+	} else if !isBig {
 		amount = data.Amount / 2
 	}
 	price := data.HighFar
@@ -243,17 +253,19 @@ func placeTurtleLong(account *model.Account, orderType string, data *model.Turtl
 	}
 }
 
+// 海龟没持仓: 龟汤的平仓单数量：实际龟汤仓位大小，
+// 海龟有持仓: 龟汤的平仓单数量：龟汤仓数*大单
 func placeTurtleShort(account *model.Account, orderType string, data *model.TurtleData, setting *model.Setting,
-	tick *model.BidAsk, canOpen bool) {
+	tick *model.BidAsk, canOpen, isBig, normalHolding bool) {
 	amount := data.Amount
 	function := model.Open
 	if setting.Chance > 0 {
 		amount = setting.GridAmount
 		function = model.Close
-		if setting.Function == model.FunctionCombineTurtle && data.Big == 1 {
+		if setting.Function == model.FunctionCombineTurtle && normalHolding {
 			amount = math.Abs(float64(setting.Chance)) * data.Amount
 		}
-	} else if data.Big == -1 {
+	} else if !isBig {
 		amount = data.Amount / 2
 	}
 	price := data.LowFar
