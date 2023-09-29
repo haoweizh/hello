@@ -90,6 +90,13 @@ func liqGrid(account *model.Account, setting *model.Setting, data *DataGrid, tic
 		} else {
 			cancelOrders = data.orderShort
 		}
+		for _, order := range data.OrderLong {
+			if order != nil {
+				api.MustCancel(account.Key, account.Secret, order.Market, order.Symbol, order.OrderType, order.OrderId, true)
+				util.Notice(fmt.Sprintf(`can order %s when holding %f %s %s orderId %s`,
+					order.OrderSide, data.Holding, order.Market, order.Symbol, order.OrderId))
+			}
+		}
 	} else if data.Holding < 0 {
 		side = model.OrderSideBuy
 		price = tick.Bids[0].Price
@@ -97,6 +104,13 @@ func liqGrid(account *model.Account, setting *model.Setting, data *DataGrid, tic
 			placeOrder = true
 		} else {
 			cancelOrders = data.OrderLong
+		}
+		for _, order := range data.orderShort {
+			if order != nil {
+				api.MustCancel(account.Key, account.Secret, order.Market, order.Symbol, order.OrderType, order.OrderId, true)
+				util.Notice(fmt.Sprintf(`can order %s when holding %f %s %s orderId %s`,
+					order.OrderSide, data.Holding, order.Market, order.Symbol, order.OrderId))
+			}
 		}
 	}
 	if placeOrder {
