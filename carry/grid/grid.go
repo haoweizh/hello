@@ -86,14 +86,14 @@ func liqGrid(account *model.Account, setting *model.Setting, data *DataGrid, tic
 	if openCode > 0 && data.Holding > 0 {
 		refreshType = model.FunctionGrid
 		side = model.OrderSideSell
-		price = math.Min(tick.Asks[0].Price+setting.OpenShortMargin, tickRelated.Asks[0].Price*setting.RateRelated)
+		price = math.Min(tick.Asks[0].Price+setting.OpenShortMargin/2, tickRelated.Asks[0].Price*setting.RateRelated)
 		if data.orderShort == nil {
 			placeOrder = true
 		}
 	} else if openCode > 0 && data.Holding < 0 {
 		refreshType = model.FunctionGrid
 		side = model.OrderSideBuy
-		price = math.Max(tick.Bids[0].Price-setting.OpenShortMargin, tickRelated.Bids[0].Price*setting.RateRelated)
+		price = math.Max(tick.Bids[0].Price-setting.OpenShortMargin/2, tickRelated.Bids[0].Price*setting.RateRelated)
 		if data.OrderLong == nil {
 			placeOrder = true
 		}
