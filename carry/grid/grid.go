@@ -260,7 +260,8 @@ var ProcessGridOrder = func(order *model.Order) {
 	if order == nil || order.Status != model.CarryStatusSuccess {
 		return
 	}
-	model.AppDB.Save(order)
+	model.AppDB.Model(order).Where(`order_id=?`, order.OrderId).Updates(map[string]interface{}{
+		`deal_price`: order.DealPrice, `deal_amount`: order.DealAmount, `fee`: order.Fee, `status`: order.Status})
 	accounts := model.AppConfig.GetAccounts(order.Market)
 	setting := api.GetSetting(model.FunctionGrid, order.Market, order.Symbol)
 	if setting == nil {
