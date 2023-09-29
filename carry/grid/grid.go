@@ -78,9 +78,11 @@ var ProcessGrid = func(setting *model.Setting, tick *model.BidAsk) {
 }
 
 func liqGrid(account *model.Account, setting *model.Setting, data *DataGrid, tick, tickRelated *model.BidAsk, openCode int) {
-	var refreshType, side string
+	var side string
 	var price float64
 	placeOrder := false
+	openCode = 1
+	refreshType := model.FunctionComplement
 	if openCode > 0 && data.Holding > 0 {
 		refreshType = model.FunctionGrid
 		side = model.OrderSideSell
@@ -272,7 +274,7 @@ var ProcessGridOrder = func(order *model.Order) {
 		if account != nil && tickRelated != nil && tickRelated.Bids != nil && len(tickRelated.Bids) > 0 &&
 			tickRelated.Asks != nil && len(tickRelated.Asks) > 0 {
 			setting := api.GetSetting(model.FunctionGrid, order.Market, order.Symbol)
-			if setting != nil {
+			if setting != nil && order.Status == model.CarryStatusSuccess {
 				util.Notice(fmt.Sprintf(`get order success, refresh data grid %v`, order))
 				GetDataGrid(account, setting, tickRelated, true)
 			}
