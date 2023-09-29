@@ -129,7 +129,7 @@ func liqGrid(account *model.Account, setting *model.Setting, data *DataGrid, tic
 	} else {
 		needCancel := false
 		for _, order := range cancelOrders {
-			if (order.OrderSide == model.OrderSideBuy && tick.Bids[0].Price-order.Price > 2*setting.OpenShortMargin) || (order.OrderSide == model.OrderSideSell && order.Price-tick.Asks[0].Price > 2*setting.OpenShortMargin) {
+			if (order.OrderSide == model.OrderSideBuy && tick.Bids[0].Price-order.Price > setting.OpenShortMargin) || (order.OrderSide == model.OrderSideSell && order.Price-tick.Asks[0].Price > setting.OpenShortMargin) {
 				needCancel = true
 			}
 		}
