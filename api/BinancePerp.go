@@ -117,7 +117,6 @@ var wsAccountHandler = func(event []byte) {
 		if !order.HaveId() {
 			return
 		}
-		util.Notice(`binanceperp event order ` + string(event))
 		funcHandlers := GetFunctions(model.BinancePerp, order.Symbol)
 		if funcHandlers != nil {
 			funcHandlers.Range(func(function, value interface{}) bool {
@@ -676,13 +675,13 @@ func parseOrderJsBinancePerp(json *simplejson.Json) (order *model.Order) {
 		order.OrderSide = model.OrderSideBuy
 	}
 	order.OrderType = GetStandardOrderType(model.BinancePerp, json.Get(`o`).MustString())
-	order.Amount = json.Get("q").MustFloat64()
-	order.Price = json.Get(`p`).MustFloat64()
-	order.DealPrice = json.Get("ap").MustFloat64()
-	order.DealAmount = json.Get("z").MustFloat64()
-	order.TriggerPrice = json.Get("sp").MustFloat64()
+	order.Amount, _ = strconv.ParseFloat(json.Get("q").MustString(), 64)
+	order.Price, _ = strconv.ParseFloat(json.Get(`p`).MustString(), 64)
+	order.DealPrice, _ = strconv.ParseFloat(json.Get("ap").MustString(), 64)
+	order.DealAmount, _ = strconv.ParseFloat(json.Get("z").MustString(), 64)
+	order.TriggerPrice, _ = strconv.ParseFloat(json.Get("sp").MustString(), 64)
 	order.OrderId = strconv.Itoa(json.Get("i").MustInt())
-	order.Fee = json.Get("n").MustFloat64()
+	order.Fee, _ = strconv.ParseFloat(json.Get("n").MustString(), 64)
 	order.Status = model.GetOrderStatus(model.BinancePerp, json.Get("X").MustString())
 	return order
 }

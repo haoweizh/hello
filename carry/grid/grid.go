@@ -267,8 +267,8 @@ var ProcessGridOrder = func(order *model.Order) {
 		}
 	}
 	defer api.CheckSetProcessing(model.FunctionGrid, model.FunctionGrid, model.FunctionGrid, false)
-	util.Notice(fmt.Sprintf(`deal grid order %s %s %s deal at %f deal amt %f`,
-		order.Market, order.Symbol, order.OrderId, order.DealPrice, order.DealAmount))
+	util.Notice(fmt.Sprintf(`deal grid order %s %s %s %s deal at %f deal amt %f`,
+		order.Market, order.Symbol, order.OrderId, order.Status, order.DealPrice, order.DealAmount))
 	if order == nil || order.DealAmount == 0 || order.DealPrice == 0 {
 		return
 	}
