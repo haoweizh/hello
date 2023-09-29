@@ -141,7 +141,6 @@ func liqGrid(account *model.Account, setting *model.Setting, data *DataGrid, tic
 			}
 			priceFloor := math.Floor(order.Price/(setting.RateRelated*marketInfoRelated.PriceIncrement)) * setting.RateRelated * marketInfoRelated.PriceIncrement
 			priceCeil := math.Ceil(order.Price/(setting.RateRelated*marketInfoRelated.PriceIncrement)) * setting.RateRelated * marketInfoRelated.PriceIncrement
-			util.Notice(fmt.Sprintf(`order price %f [%f %f]`, order.Price, priceFloor, priceCeil))
 			if tick.Asks[0].Price >= priceCeil || tick.Bids[0].Price <= priceFloor {
 				needCancel = true
 			}
