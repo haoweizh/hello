@@ -60,6 +60,7 @@ var ProcessGrid = func(setting *model.Setting, tick *model.BidAsk) {
 						openCode, setting.Market, setting.Symbol, order.OrderSide, order.OrderId))
 				}
 				data.OrderLong = nil
+				time.Sleep(time.Second * 3)
 			}
 			if data.orderShort != nil {
 				for _, order := range data.orderShort {
@@ -68,6 +69,7 @@ var ProcessGrid = func(setting *model.Setting, tick *model.BidAsk) {
 						openCode, setting.Market, setting.Symbol, order.OrderSide, order.OrderId))
 				}
 				data.orderShort = nil
+				time.Sleep(time.Second * 3)
 			}
 		} else {
 			placeGrid(account, setting, data, tick, tickRelated)
@@ -265,6 +267,8 @@ var ProcessGridOrder = func(order *model.Order) {
 		}
 	}
 	defer api.CheckSetProcessing(model.FunctionGrid, model.FunctionGrid, model.FunctionGrid, false)
+	util.Notice(fmt.Sprintf(`deal grid order %s %s %s deal at %f deal amt %f`,
+		order.Market, order.Symbol, order.OrderId, order.DealPrice, order.DealAmount))
 	if order == nil || order.DealAmount == 0 || order.DealPrice == 0 {
 		return
 	}
