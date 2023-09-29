@@ -73,68 +73,64 @@ var ProcessGrid = func(setting *model.Setting, tick *model.BidAsk) {
 			placeGrid(account, setting, data, tick, tickRelated)
 		}
 	} else {
-		liqGrid(account, setting, data, tick, tickRelated, openCode)
+		liqGrid(account, setting, data, tick, tickRelated)
 	}
 }
 
-func liqGrid(account *model.Account, setting *model.Setting, data *DataGrid, tick, tickRelated *model.BidAsk, openCode int) {
+func liqGrid(account *model.Account, setting *model.Setting, data *DataGrid, tick, tickRelated *model.BidAsk) {
 	var side string
 	var price float64
 	placeOrder := false
-	openCode = 1
-	refreshType := model.FunctionComplement
 	value, _ := util.LoadSyncMap(model.MarketInfos, setting.Market, setting.Symbol)
 	if value == nil {
 		return
 	}
 	marketInfo := value.(*model.MarketInfo)
-	if openCode > 0 && data.Holding > 0 {
-		refreshType = model.FunctionGrid
+	var cancelOrders []*model.Order
+	if data.Holding > 0 {
 		side = model.OrderSideSell
 		price = math.Min(tick.Asks[0].Price+marketInfo.PriceIncrement, tickRelated.Asks[0].Price*setting.RateRelated)
 		if data.orderShort == nil {
 			placeOrder = true
+		} else {
+			cancelOrders = data.orderShort
 		}
-	} else if openCode > 0 && data.Holding < 0 {
-		refreshType = model.FunctionGrid
+	} else if data.Holding < 0 {
 		side = model.OrderSideBuy
 		price = math.Max(tick.Bids[0].Price-marketInfo.PriceIncrement, tickRelated.Bids[0].Price*setting.RateRelated)
 		if data.OrderLong == nil {
 			placeOrder = true
+		} else {
+			cancelOrders = data.OrderLong
 		}
-	} else if openCode < 0 && data.Holding > 0 {
-		refreshType = model.FunctionComplement
-		side = model.OrderSideSell
-		price = tick.Bids[0].Price * 0.99
-		placeOrder = true
-	} else if openCode < 0 && data.Holding < 0 {
-		refreshType = model.FunctionComplement
-		side = model.OrderSideBuy
-		price = tick.Asks[0].Price * 1.01
-		placeOrder = true
 	}
 	if placeOrder {
-		util.Notice(fmt.Sprintf(`grid liq when openCode:%d %s %s %s holding %f at %f amt %f`,
-			openCode, setting.Market, setting.Symbol, side, data.Holding, price, data.Holding))
+		util.Notice(fmt.Sprintf(`grid liq when openCode:%s %s %s holding %f at %f amt %f`,
+			setting.Market, setting.Symbol, side, data.Holding, price, data.Holding))
 		orders := api.MustPlaceOrder(account.Key, account.Secret, side, model.OrderTypeLimit, data.Market,
-			data.Symbol, ``, refreshType, price, price, math.Abs(data.Holding), setting)
+			data.Symbol, ``, model.FunctionComplement, price, price, math.Abs(data.Holding), setting)
 		for _, order := range orders {
 			model.AppDB.Save(order)
-			if openCode < 0 {
-				time.Sleep(time.Second)
-				api.MustCancel(account.Key, account.Secret, setting.Market, setting.Symbol, model.OrderTypeLimit, order.OrderId, true)
+		}
+		if side == model.OrderSideSell {
+			data.orderShort = orders
+		} else if side == model.OrderSideBuy {
+			data.OrderLong = orders
+		}
+	} else {
+		needCancel := false
+		for _, order := range cancelOrders {
+			if (order.OrderSide == model.OrderSideBuy && tick.Bids[0].Price-order.Price > 2*setting.OpenShortMargin) || (order.OrderSide == model.OrderSideSell && order.Price-tick.Asks[0].Price > 2*setting.OpenShortMargin) {
+				needCancel = true
 			}
 		}
-		if openCode > 0 {
-			if side == model.OrderSideSell {
-				data.orderShort = orders
-			} else if side == model.OrderSideBuy {
-				data.OrderLong = orders
+		if needCancel {
+			for _, order := range cancelOrders {
+				util.Notice(fmt.Sprintf(`liq cancel out range order %s %s %s %s %f tick [%f %f]`,
+					order.Market, order.Symbol, order.OrderSide, order.OrderId, order.Price, tick.Bids[0].Price, tick.Asks[0].Price))
+				api.MustCancel(account.Key, account.Secret, data.Market, data.Symbol, model.OrderTypeLimit, order.OrderId, true)
 			}
 		}
-	}
-	if openCode < 0 {
-		GetDataGrid(account, setting, tickRelated, true)
 	}
 }
 
