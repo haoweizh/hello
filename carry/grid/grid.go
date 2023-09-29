@@ -80,6 +80,11 @@ var ProcessGrid = func(setting *model.Setting, tick *model.BidAsk) {
 }
 
 func liqGrid(account *model.Account, setting *model.Setting, data *DataGrid, tick *model.BidAsk) {
+	vRelate, _ := util.LoadSyncMap(model.MarketInfos, setting.MarketRelated, setting.SymbolRelated)
+	if vRelate == nil {
+		return
+	}
+	marketInfoRelated := vRelate.(*model.MarketInfo)
 	var side string
 	var price float64
 	placeOrder := false
@@ -131,7 +136,14 @@ func liqGrid(account *model.Account, setting *model.Setting, data *DataGrid, tic
 	} else {
 		needCancel := false
 		for _, order := range cancelOrders {
-			if (order.OrderSide == model.OrderSideBuy && tick.Bids[0].Price-order.Price > 2*setting.OpenShortMargin) || (order.OrderSide == model.OrderSideSell && order.Price-tick.Asks[0].Price > 2*setting.OpenShortMargin) {
+			if order == nil {
+				continue
+			}
+			priceFloor := math.Floor(order.Price/(setting.RateRelated*marketInfoRelated.PriceIncrement)) * setting.RateRelated * marketInfoRelated.PriceIncrement
+			priceCeil := math.Ceil(order.Price/(setting.RateRelated*marketInfoRelated.PriceIncrement)) * setting.RateRelated * marketInfoRelated.PriceIncrement
+			util.Notice(fmt.Sprintf(`order price %f [%f %f]`, order.Price, priceFloor, priceCeil))
+			if (order.OrderSide == model.OrderSideBuy && tick.Asks[0].Price >= priceFloor) ||
+				(order.OrderSide == model.OrderSideSell && tick.Bids[0].Price <= priceCeil) {
 				needCancel = true
 			}
 		}
@@ -223,20 +235,22 @@ func canOpen(setting *model.Setting, tick, tickRelate *model.BidAsk) (can int) {
 }
 
 func placeGrid(account *model.Account, setting *model.Setting, data *DataGrid, tick, tickRelate *model.BidAsk) (success bool) {
-	inLong := tick.Bids[0].Price - tickRelate.Bids[0].Price*setting.RateRelated
-	inShort := tickRelate.Asks[0].Price*setting.RateRelated - tick.Asks[0].Price
-	if inLong <= 0 || inShort <= 0 {
-		return false
-	}
-	var priceLong, priceShort float64
-	priceDis := tickRelate.Asks[0].Price*setting.RateRelated - tickRelate.Bids[0].Price*setting.RateRelated
-	if inLong > inShort {
-		priceShort = math.Min(tickRelate.Asks[0].Price*setting.RateRelated, tick.Asks[0].Price+0.1*priceDis)
-		priceLong = priceShort - setting.OpenShortMargin
-	} else {
-		priceLong = math.Max(tickRelate.Bids[0].Price*setting.RateRelated, tick.Bids[0].Price-0.1*priceDis)
-		priceShort = priceLong + setting.OpenShortMargin
-	}
+	//inLong := tick.Bids[0].Price - tickRelate.Bids[0].Price*setting.RateRelated
+	//inShort := tickRelate.Asks[0].Price*setting.RateRelated - tick.Asks[0].Price
+	//if inLong <= 0 || inShort <= 0 {
+	//	return false
+	//}
+	//var priceLong, priceShort float64
+	//priceDis := tickRelate.Asks[0].Price*setting.RateRelated - tickRelate.Bids[0].Price*setting.RateRelated
+	//if inLong > inShort {
+	//	priceShort = math.Min(tickRelate.Asks[0].Price*setting.RateRelated, tick.Asks[0].Price+0.5*setting.OpenShortMargin)
+	//	priceLong = priceShort - setting.OpenShortMargin
+	//} else {
+	//	priceLong = math.Max(tickRelate.Bids[0].Price*setting.RateRelated, tick.Bids[0].Price-0.5*setting.OpenShortMargin)
+	//	priceShort = priceLong + setting.OpenShortMargin
+	//}
+	priceLong := math.Max(tickRelate.Bids[0].Price*setting.RateRelated, tick.Bids[0].Price-setting.OpenShortMargin)
+	priceShort := math.Min(tickRelate.Asks[0].Price*setting.RateRelated, tick.Asks[0].Price+setting.OpenShortMargin)
 	if data.OrderLong == nil {
 		data.OrderLong = api.MustPlaceOrder(account.Key, account.Secret, model.OrderSideBuy, model.OrderTypeLimit,
 			setting.Market, setting.Symbol, ``, model.FunctionGrid, priceLong, priceLong, setting.GridAmount, setting)
