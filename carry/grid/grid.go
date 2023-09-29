@@ -73,23 +73,18 @@ var ProcessGrid = func(setting *model.Setting, tick *model.BidAsk) {
 			placeGrid(account, setting, data, tick, tickRelated)
 		}
 	} else {
-		liqGrid(account, setting, data, tick, tickRelated)
+		liqGrid(account, setting, data, tick)
 	}
 }
 
-func liqGrid(account *model.Account, setting *model.Setting, data *DataGrid, tick, tickRelated *model.BidAsk) {
+func liqGrid(account *model.Account, setting *model.Setting, data *DataGrid, tick *model.BidAsk) {
 	var side string
 	var price float64
 	placeOrder := false
-	value, _ := util.LoadSyncMap(model.MarketInfos, setting.Market, setting.Symbol)
-	if value == nil {
-		return
-	}
-	marketInfo := value.(*model.MarketInfo)
 	var cancelOrders []*model.Order
 	if data.Holding > 0 {
 		side = model.OrderSideSell
-		price = math.Min(tick.Asks[0].Price+marketInfo.PriceIncrement, tickRelated.Asks[0].Price*setting.RateRelated)
+		price = tick.Asks[0].Price
 		if data.orderShort == nil {
 			placeOrder = true
 		} else {
@@ -97,7 +92,7 @@ func liqGrid(account *model.Account, setting *model.Setting, data *DataGrid, tic
 		}
 	} else if data.Holding < 0 {
 		side = model.OrderSideBuy
-		price = math.Max(tick.Bids[0].Price-marketInfo.PriceIncrement, tickRelated.Bids[0].Price*setting.RateRelated)
+		price = tick.Bids[0].Price
 		if data.OrderLong == nil {
 			placeOrder = true
 		} else {
