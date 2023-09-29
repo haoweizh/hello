@@ -257,7 +257,7 @@ var ProcessGridOrder = func(order *model.Order) {
 		}
 	}
 	defer api.CheckSetProcessing(model.FunctionGrid, model.FunctionGrid, model.FunctionGrid, false)
-	if order == nil || order.Status != model.CarryStatusSuccess {
+	if order == nil || order.DealAmount == 0 || order.DealPrice == 0 {
 		return
 	}
 	model.AppDB.Model(order).Where(`order_id=?`, order.OrderId).Updates(map[string]interface{}{
