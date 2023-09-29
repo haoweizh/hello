@@ -55,7 +55,7 @@ var ProcessGrid = func(setting *model.Setting, tick *model.BidAsk) {
 		if openCode < 0 {
 			if data.OrderLong != nil {
 				for _, order := range data.OrderLong {
-					api.MustCancel(account.Key, account.Secret, setting.Market, setting.Symbol, model.OrderTypeLimit, order.OrderId, true)
+					api.CancelOrder(account.Key, account.Secret, setting.Market, setting.Symbol, model.OrderTypeLimit, order.OrderId)
 					util.Notice(fmt.Sprintf(`can not open code %d %s %s cancel %s %s`,
 						openCode, setting.Market, setting.Symbol, order.OrderSide, order.OrderId))
 				}
@@ -64,7 +64,7 @@ var ProcessGrid = func(setting *model.Setting, tick *model.BidAsk) {
 			}
 			if data.orderShort != nil {
 				for _, order := range data.orderShort {
-					api.MustCancel(account.Key, account.Secret, setting.Market, setting.Symbol, model.OrderTypeLimit, order.OrderId, true)
+					api.CancelOrder(account.Key, account.Secret, setting.Market, setting.Symbol, model.OrderTypeLimit, order.OrderId)
 					util.Notice(fmt.Sprintf(`can not open code %d %s %s cancel %s %s`,
 						openCode, setting.Market, setting.Symbol, order.OrderSide, order.OrderId))
 				}
@@ -99,7 +99,7 @@ func liqGrid(account *model.Account, setting *model.Setting, data *DataGrid, tic
 		}
 		for _, order := range data.OrderLong {
 			if order != nil {
-				api.MustCancel(account.Key, account.Secret, order.Market, order.Symbol, order.OrderType, order.OrderId, true)
+				api.CancelOrder(account.Key, account.Secret, order.Market, order.Symbol, order.OrderType, order.OrderId)
 				util.Notice(fmt.Sprintf(`can order %s when holding %f %s %s orderId %s`,
 					order.OrderSide, data.Holding, order.Market, order.Symbol, order.OrderId))
 			}
@@ -114,7 +114,7 @@ func liqGrid(account *model.Account, setting *model.Setting, data *DataGrid, tic
 		}
 		for _, order := range data.orderShort {
 			if order != nil {
-				api.MustCancel(account.Key, account.Secret, order.Market, order.Symbol, order.OrderType, order.OrderId, true)
+				api.CancelOrder(account.Key, account.Secret, order.Market, order.Symbol, order.OrderType, order.OrderId)
 				util.Notice(fmt.Sprintf(`can order %s when holding %f %s %s orderId %s`,
 					order.OrderSide, data.Holding, order.Market, order.Symbol, order.OrderId))
 			}
@@ -142,8 +142,7 @@ func liqGrid(account *model.Account, setting *model.Setting, data *DataGrid, tic
 			priceFloor := math.Floor(order.Price/(setting.RateRelated*marketInfoRelated.PriceIncrement)) * setting.RateRelated * marketInfoRelated.PriceIncrement
 			priceCeil := math.Ceil(order.Price/(setting.RateRelated*marketInfoRelated.PriceIncrement)) * setting.RateRelated * marketInfoRelated.PriceIncrement
 			util.Notice(fmt.Sprintf(`order price %f [%f %f]`, order.Price, priceFloor, priceCeil))
-			if (order.OrderSide == model.OrderSideBuy && tick.Asks[0].Price >= priceFloor) ||
-				(order.OrderSide == model.OrderSideSell && tick.Bids[0].Price <= priceCeil) {
+			if tick.Asks[0].Price >= priceCeil || tick.Bids[0].Price <= priceFloor {
 				needCancel = true
 			}
 		}
@@ -151,7 +150,7 @@ func liqGrid(account *model.Account, setting *model.Setting, data *DataGrid, tic
 			for _, order := range cancelOrders {
 				util.Notice(fmt.Sprintf(`liq cancel out range order %s %s %s %s %f tick [%f %f]`,
 					order.Market, order.Symbol, order.OrderSide, order.OrderId, order.Price, tick.Bids[0].Price, tick.Asks[0].Price))
-				api.MustCancel(account.Key, account.Secret, data.Market, data.Symbol, model.OrderTypeLimit, order.OrderId, true)
+				api.CancelOrder(account.Key, account.Secret, data.Market, data.Symbol, model.OrderTypeLimit, order.OrderId)
 			}
 		}
 	}
@@ -168,7 +167,7 @@ func GetDataGrid(account *model.Account, setting *model.Setting, tickRelate *mod
 		if order.Price > tickRelate.Asks[0].Price*setting.RateRelated || order.Price < tickRelate.Bids[0].Price*setting.RateRelated {
 			util.Notice(fmt.Sprintf(`Cancel out price range order %s %s %s %s %f [%f %f]`,
 				order.Market, order.Symbol, order.OrderSide, order.OrderId, order.Price, tickRelate.Bids[0].Price*setting.RateRelated, tickRelate.Asks[0].Price*setting.RateRelated))
-			api.MustCancel(account.Key, account.Secret, setting.Market, setting.Symbol, order.OrderType, order.OrderId, true)
+			api.CancelOrder(account.Key, account.Secret, setting.Market, setting.Symbol, order.OrderType, order.OrderId)
 		} else {
 			if order.OrderSide == model.OrderSideSell {
 				if data.orderShort == nil {
