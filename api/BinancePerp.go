@@ -117,6 +117,7 @@ var wsAccountHandler = func(event []byte) {
 		if !order.HaveId() {
 			return
 		}
+		util.Notice(`binanceperp event order ` + string(event))
 		funcHandlers := GetFunctions(model.BinancePerp, order.Symbol)
 		if funcHandlers != nil {
 			funcHandlers.Range(func(function, value interface{}) bool {
