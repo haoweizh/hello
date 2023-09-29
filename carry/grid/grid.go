@@ -83,17 +83,22 @@ func liqGrid(account *model.Account, setting *model.Setting, data *DataGrid, tic
 	placeOrder := false
 	openCode = 1
 	refreshType := model.FunctionComplement
+	value, _ := util.LoadSyncMap(model.MarketInfos, setting.Market, setting.Symbol)
+	if value == nil {
+		return
+	}
+	marketInfo := value.(*model.MarketInfo)
 	if openCode > 0 && data.Holding > 0 {
 		refreshType = model.FunctionGrid
 		side = model.OrderSideSell
-		price = math.Min(tick.Asks[0].Price+setting.OpenShortMargin/2, tickRelated.Asks[0].Price*setting.RateRelated)
+		price = math.Min(tick.Asks[0].Price+marketInfo.PriceIncrement, tickRelated.Asks[0].Price*setting.RateRelated)
 		if data.orderShort == nil {
 			placeOrder = true
 		}
 	} else if openCode > 0 && data.Holding < 0 {
 		refreshType = model.FunctionGrid
 		side = model.OrderSideBuy
-		price = math.Max(tick.Bids[0].Price-setting.OpenShortMargin/2, tickRelated.Bids[0].Price*setting.RateRelated)
+		price = math.Max(tick.Bids[0].Price-marketInfo.PriceIncrement, tickRelated.Bids[0].Price*setting.RateRelated)
 		if data.OrderLong == nil {
 			placeOrder = true
 		}
@@ -211,10 +216,6 @@ func canOpen(setting *model.Setting, tick, tickRelate *model.BidAsk) (can int) {
 }
 
 func placeGrid(account *model.Account, setting *model.Setting, data *DataGrid, tick, tickRelate *model.BidAsk) (success bool) {
-	v, _ := util.LoadSyncMap(model.MarketInfos, setting.Market, setting.Symbol)
-	if v == nil {
-		return false
-	}
 	inLong := tick.Bids[0].Price - tickRelate.Bids[0].Price*setting.RateRelated
 	inShort := tickRelate.Asks[0].Price*setting.RateRelated - tick.Asks[0].Price
 	if inLong <= 0 || inShort <= 0 {
