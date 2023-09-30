@@ -247,8 +247,8 @@ func placeGrid(account *model.Account, setting *model.Setting, data *DataGrid, t
 	//	priceLong = math.Max(tickRelate.Bids[0].Price*setting.RateRelated, tick.Bids[0].Price-0.5*setting.OpenShortMargin)
 	//	priceShort = priceLong + setting.OpenShortMargin
 	//}
-	priceLong := math.Max(tickRelate.Bids[0].Price*setting.RateRelated, tick.Bids[0].Price-setting.OpenShortMargin)
-	priceShort := math.Min(tickRelate.Asks[0].Price*setting.RateRelated, tick.Asks[0].Price+setting.OpenShortMargin)
+	priceLong := math.Max(tickRelate.Bids[0].Price*setting.RateRelated/2+tick.Bids[0].Price/2, tick.Bids[0].Price-setting.OpenShortMargin)
+	priceShort := math.Min(tickRelate.Asks[0].Price*setting.RateRelated/2+tick.Asks[0].Price/2, tick.Asks[0].Price+setting.OpenShortMargin)
 	if data.OrderLong == nil {
 		data.OrderLong = api.MustPlaceOrder(account.Key, account.Secret, model.OrderSideBuy, model.OrderTypeLimit,
 			setting.Market, setting.Symbol, ``, model.FunctionGrid, priceLong, priceLong, setting.GridAmount, setting)
