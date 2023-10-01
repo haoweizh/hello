@@ -107,10 +107,12 @@ func AdjustPosHolding(key, secret string, setting *model.Setting, data *model.Tu
 	posMap := make(map[string]*model.Position)
 	for _, pos := range marketPos {
 		posMap[strings.ToUpper(pos.Currency)] = pos
-		util.Notice(`notice LPT %s holding %f chance %d`, pos.Currency, pos.Holding, setting.Chance)
+		if pos.Currency == `LPT_PERP` {
+			util.Notice(`notice LPT %s %s holding %f chance %d`, setting.Market, pos.Currency, pos.Holding, setting.Chance)
+		}
 	}
 	if posMap[setting.Symbol] != nil { //setting.Chance和pos.Holding相乘小于零代表方向相反，此时设置为0
-		util.Notice(`notice result %d %s %f`, setting.Chance, setting.Symbol, posMap[setting.Symbol].Holding)
+		util.Notice(`notice result %s %s %d %f`, setting.Market, setting.Symbol, setting.Chance, posMap[setting.Symbol].Holding)
 		if float64(setting.Chance)*posMap[setting.Symbol].Holding <= 0 {
 			util.Notice(`update turtle side %s %s %s holding %e grid amount %e chance %d`,
 				setting.Market, setting.Symbol, setting.Function, posMap[setting.Symbol].Holding, setting.GridAmount, setting.Chance)

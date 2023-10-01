@@ -1169,6 +1169,9 @@ func parsePositionOKEX(value map[string]interface{}) (success bool, position *mo
 			pos, _ := strconv.ParseFloat(value[`pos`].(string), 64)
 			if marketType == model.MarketTypePerp {
 				success, position.Holding = model.ParseRealAmount(model.OKEX, position.Currency, pos)
+				if position.Currency == `LPT_PERP` {
+					util.Notice(fmt.Sprintf(`okex get postion %s %f to %f`, position.Currency, pos, position.Holding))
+				}
 			} else {
 				position.Holding = pos
 			}

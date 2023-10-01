@@ -73,6 +73,9 @@ func GetMarketInfo(market, symbol string) (marketInfo *MarketInfo) {
 func ParseRealAmount(market, symbol string, amount float64) (success bool, realAmount float64) {
 	v, _ := util.LoadSyncMap(MarketInfos, market, symbol)
 	if v == nil || v.(*MarketInfo).SizeIncrement == 0 {
+		if market == OKEX && symbol == `LPT_PERP` {
+			util.Notice(fmt.Sprintf(`inside parse amount %v`, v))
+		}
 		return false, 0
 	}
 	if v.(*MarketInfo).CTValue == 0 {
