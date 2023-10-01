@@ -13,6 +13,7 @@ import (
 
 const TurtleTriggerDelta = 0.005
 
+var positionsCache = &sync.Map{}   // symbol - position holding amount
 var TurtleDataSet = sync.Map{}     // function_market_symbol_unix second *TurtleData
 var accountValues = &sync.Map{}    // market value
 var accountValueTime = &sync.Map{} // market time.Time
@@ -304,9 +305,20 @@ func GetTurtleData(account *model.Account, function, market, symbol string, far,
 			if handleMarketDynamic(market) {
 				PrepareSettings()
 				SetRequireReset(market)
+				success, positions, _, _ := GetPositions(account.Key, account.Secret, market)
+				if success {
+					positionsCache = &sync.Map{}
+					for _, position := range positions {
+						positionsCache.Store(strings.ToUpper(position.Currency), position)
+					}
+				}
 				return nil, true
 			}
 		}
+	}
+	posValue, _ := positionsCache.Load(symbol)
+	if posValue != nil && posValue.(*model.Position).Holding != 0 {
+		removed = false
 	}
 	if removed {
 		return nil, false
