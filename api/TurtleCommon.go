@@ -87,8 +87,8 @@ func ClearExtraOrders(key, secret, market, symbol string, dataArray []*model.Tur
 			result := MustCancel(key, secret, market, symbol, order.OrderType, order.OrderId, true)
 			util.Notice(`cancel extra order %s %s %s %s return %v`, market, symbol, order.OrderType, order.OrderId, result)
 			time.Sleep(time.Second)
-		} else {
-			util.Notice(`keep stop order %s %s %s`, market, symbol, order.OrderId)
+			//} else {
+			//	util.Notice(`keep stop order %s %s %s`, market, symbol, order.OrderId)
 		}
 	}
 }
@@ -306,6 +306,9 @@ func GetTurtleData(account *model.Account, function, market, symbol string, far,
 				return nil, true
 			}
 		}
+	}
+	if removed {
+		return nil, false
 	}
 	util.Notice(fmt.Sprintf(`need to create turtle data %s %s %s %s %d refresh %v`,
 		function, market, symbol, nowStr, far, refreshDynamic))
