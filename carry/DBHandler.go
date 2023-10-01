@@ -7,6 +7,7 @@ import (
 	"hello/carry/cross"
 	"hello/carry/grid"
 	"hello/carry/hang"
+	"hello/carry/queue"
 	"hello/model"
 	"hello/util"
 	"time"
@@ -164,7 +165,9 @@ func Maintain() {
 	model.HandlerMap[model.FunctionCombineTurtle] = Turtle.ProcessCombineTurtle
 	model.HandlerMap[model.FunctionBoost] = Turtle.ProcessBoost
 	model.HandlerMap[model.FunctionGrid] = grid.ProcessGrid
+	model.HandlerMap[model.FunctionQueue] = queue.ProcessQueue
 	model.AccountHandlerMap[model.FunctionGrid] = grid.ProcessGridOrder
+	model.AccountHandlerMap[model.FunctionQueue] = queue.ProcessQueueLiq
 	model.AccountHandlerMap[model.FunctionCross] = cross.PostOrderCross
 	_ = model.AppDB.AutoMigrate(&model.Setting{})
 	_ = model.AppDB.AutoMigrate(&model.Order{})

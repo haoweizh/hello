@@ -10,17 +10,19 @@ import (
 	"hello/model"
 	"hello/util"
 	"math/rand"
+	"net/http"
 	"sort"
 	"strconv"
 	"strings"
 	"time"
 )
 
-// const restBinanceSpot = `https://api.binance.com`
+const restBinanceSpot = `https://api.binance.com`
 const restDataBinanceSpot = `https://data.binance.com`
-const wsBinanceSpot = "wss://stream.binance.com:9443/stream"
+const wsBinanceSpot = "wss://stream.binance.com:9443/"
 const wsStepBinanceSpot = 20
 
+var maintainingAccountConnBinanceSpot = false
 var channelMaintainingBinanceSpot = false
 
 func getMarketsBinanceSpot(key, secret string) (marketInfos map[string]*model.MarketInfo) {
@@ -116,7 +118,7 @@ func WsDepthServeBinanceSpot(markets *model.Markets) (channels []chan struct{}, 
 	}
 	channels = make([]chan struct{}, 0)
 	spotSubs := GetWSSubscribes(model.BinanceSpot, subType)
-	spotChans, spotErr := WebSocketClient(model.BinanceSpot, wsBinanceSpot, spotSubs,
+	spotChans, spotErr := WebSocketClient(model.BinanceSpot, wsBinanceSpot+`stream`, spotSubs,
 		subscribeHandlerBinanceSpot, wsHandler, wsStepBinanceSpot)
 	if spotErr != nil {
 		util.SocketInfo(`fail to create binance spot conn %s`, spotErr.Error())
@@ -217,7 +219,7 @@ func handleDepthBinanceSpot(markets *model.Markets, json *simplejson.Json, stand
 func maintainChannelBinanceSpot(subscribes []interface{}) {
 	if !channelMaintainingBinanceSpot {
 		channelMaintainingBinanceSpot = true
-		for true {
+		for {
 			time.Sleep(time.Minute * 5)
 			err := PongAllConnectionsInterval(model.BinanceSpot, 500)
 			if err != nil {
@@ -282,7 +284,109 @@ func placeOrderBinanceSpot(key, secret string, order *model.Order, orderSide, or
 	}
 }
 
-func cancelOrdersBinanceSpot(key string, secret string, symbol string) bool {
+func parseOrderBinanceSpot(orderJson *simplejson.Json) (order *model.Order) {
+	if orderJson == nil {
+		return nil
+	}
+	order = &model.Order{Market: model.BinanceSpot}
+	suc, _, coin := model.GetCoinFromDialect(model.BinanceSpot, orderJson.Get(`symbol`).MustString())
+	if suc {
+		order.Symbol = coin + model.UniStandardTail[model.MarketTypeSpot]
+	}
+	order.OrderId = strconv.Itoa(orderJson.Get("orderId").MustInt())
+	order.OrderTime = time.UnixMilli(orderJson.Get("transactTime").MustInt64())
+	order.Price, _ = strconv.ParseFloat(orderJson.Get(`price`).MustString(), 64)
+	order.Amount, _ = strconv.ParseFloat(orderJson.Get("origQty").MustString(), 64)
+	order.DealPrice, _ = strconv.ParseFloat(orderJson.Get(`executedQty`).MustString(), 64)
+	if strings.EqualFold(orderJson.Get(`side`).MustString(), model.OrderSideSell) {
+		order.OrderSide = model.OrderSideSell
+	} else if strings.EqualFold(orderJson.Get(`side`).MustString(), model.OrderSideBuy) {
+		order.OrderSide = model.OrderSideBuy
+	}
+	order.Status = model.GetOrderStatus(model.BinanceSpot, orderJson.Get(`status`).MustString())
+	order.OrderType = GetStandardOrderType(model.BinanceSpot, orderJson.Get(`type`).MustString())
+	return order
+}
+
+func WsAccountServeBinanceSpot() {
+	var wsAccountHandler = func(event []byte) {
+		result, wsErr := util.NewJSON(event)
+		if wsErr != nil {
+			util.Notice(`binanceSpot fail to unmarshal account ws json ` + wsErr.Error())
+			return
+		}
+		if strings.EqualFold(result.Get(`e`).MustString(), `executionReport`) {
+			result = result.Get(`o`)
+			order := parseOrderJsBinance(model.BinanceSpot, result)
+			if !order.HaveId() {
+				return
+			}
+			funcHandlers := GetFunctions(model.BinanceSpot, order.Symbol)
+			if funcHandlers != nil {
+				funcHandlers.Range(func(function, value interface{}) bool {
+					if model.AccountHandlerMap[function.(string)] != nil {
+						go model.AccountHandlerMap[function.(string)](order)
+					}
+					return true
+				})
+			}
+		}
+	}
+	if !maintainingAccountConnBinanceSpot {
+		maintainingAccountConnBinanceSpot = true
+		for {
+			accounts := model.AppConfig.GetAccounts(model.BinanceSpot)
+			for _, account := range accounts {
+				if account == nil {
+					return
+				}
+				success, listenKey := renewListenKeyBinanceSpot(account)
+				if success {
+					_, err := WsAccountClient(account.Key, model.BinanceSpot, wsBinanceSpot+`ws/`+listenKey, wsAccountHandler)
+					if err != nil {
+						util.Notice(fmt.Sprintf(`fail to create account ws binancePerp %s`, err.Error()))
+						continue
+					}
+				}
+			}
+			time.Sleep(time.Minute * 30)
+		}
+	}
+}
+
+func renewListenKeyBinanceSpot(account *model.Account) (success bool, listenKey string) {
+	signedRequestBinance(account.Key, account.Secret, model.BinanceSpot, http.MethodDelete,
+		restBinanceSpot+`/api/v3/userDataStream`, true, nil)
+	response := signedRequestBinance(account.Key, account.Secret, model.BinanceSpot, http.MethodPost,
+		restBinanceSpot+`/api/v3/userDataStream`, true, nil)
+	keyJson, _ := util.NewJSON(response)
+	if keyJson != nil && len(keyJson.Get(`listenKey`).MustString()) > 0 {
+		return true, keyJson.Get(`listenKey`).MustString()
+	}
+	time.Sleep(time.Second * 3)
+	util.Notice(fmt.Sprintf(`fail to renew binanceSpot listen key retry`))
+	renewListenKeyBinanceSpot(account)
+	return false, ``
+}
+
+func cancelOrderBinanceSpot(key, secret, symbol, orderId string) (suc bool, order *model.Order) {
+	success, _, _, dialectSymbol := model.GetFromStandard(model.BinanceSpot, symbol)
+	if !success {
+		return false, nil
+	}
+	responseBody := signedRequestBinance(key, secret, model.BinanceSpot, http.MethodDelete, restBinanceSpot+"/api/v3/order",
+		true, map[string]interface{}{`symbol`: dialectSymbol, `orderId`: orderId})
+	orderJson, err := util.NewJSON(responseBody)
+	if err == nil {
+		order = parseOrderBinanceSpot(orderJson)
+		if order != nil && order.Status == model.CarryStatusFail {
+			return true, order
+		}
+	}
+	return false, nil
+}
+
+func cancelOrdersBinanceSpot(key, secret, symbol string) bool {
 	success, marketType, coin, dialectSymbol := model.GetFromStandard(model.BinanceSpot, symbol)
 	if !success {
 		return false

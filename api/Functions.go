@@ -163,6 +163,8 @@ func CancelOrder(key, secret, market, symbol, orderType, orderId string) (result
 		result = cancelOrderGate(key, secret, symbol, orderId)
 	case model.BinancePerp:
 		result = cancelOrderBinancePerp(key, secret, symbol, orderId)
+	case model.BinanceSpot:
+		result, _ = cancelOrderBinanceSpot(key, secret, symbol, orderId)
 	}
 	util.Notice(fmt.Sprintf(`[cancel %s %v %s %s]`, orderId, result, market, symbol))
 	return result, errCode, msg
@@ -667,6 +669,17 @@ func GetStandardOrderType(market, dialectType string) (standardType string) {
 		default:
 			return model.OrderTypeLimit
 		}
+	case model.BinanceSpot:
+		switch dialectType {
+		case `LIMIT`:
+			return model.OrderTypeLimit
+		case `MARKET`:
+			return model.OrderTypeMarket
+		case `STOP_LOSS`, `TAKE_PROFIT`, `STOP_LOSS_LIMIT`, `TAKE_PROFIT_LIMIT`:
+			return model.OrderTypeStop
+		default:
+			return `` // LIMIT_MAKER
+		}
 	}
 	return ``
 }
@@ -1100,6 +1113,8 @@ func CreateAccountWsServer(market string) {
 	switch market {
 	case model.BinancePerp:
 		go WsAccountServeBinancePerp()
+	case model.BinanceSpot:
+		go WsAccountServeBinanceSpot()
 	case model.OKEX:
 		WsAccountServeOKEX()
 		go maintainAccountConnOKEX()

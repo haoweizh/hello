@@ -110,9 +110,27 @@ var ProcessCombineTurtle = func(settingCombine *model.Setting, tick *model.BidAs
 	placeTurtleLong(account, model.OrderTypeLimit, dataCombine, settingCombine, tick, canOpen, isLongBigCombine, settingNormal.Chance != 0)
 	placeTurtleShort(account, model.OrderTypeLimit, dataCombine, settingCombine, tick, canOpen, isShortBigCombine, settingNormal.Chance != 0)
 	for i, setting := range settings {
-		if handleBreak(setting, turtleData[i], turtleData[i].OrderLong, turtleData[i].BreakLong) ||
-			handleBreak(setting, turtleData[i], turtleData[i].OrderShort, turtleData[i].BreakShort) ||
-			handleBreak(setting, turtleData[i], turtleData[i].OrderTrail, turtleData[i].BreakTrail) {
+		needClear := false
+		if handleBreak(setting, turtleData[i], turtleData[i].OrderLong, turtleData[i].BreakLong) {
+			needClear = true
+		}
+		if handleBreak(setting, turtleData[i], turtleData[i].OrderShort, turtleData[i].BreakShort) {
+			needClear = true
+		}
+		if handleBreak(setting, turtleData[i], turtleData[i].OrderTrail, turtleData[i].BreakTrail) {
+			needClear = true
+		}
+		if needClear { // 海龟平仓或者龟汤平仓时，龟汤或者海龟的平仓单也要撤单，核对仓位后重新下单
+			if setting.Chance == 0 {
+				for j, settingOppo := range settings {
+					if settingOppo.Chance > 0 {
+						turtleData[j].OrderShort = nil
+					}
+					if settingOppo.Chance < 0 {
+						turtleData[j].OrderLong = nil
+					}
+				}
+			}
 			api.ClearExtraOrders(account.Key, account.Secret, market, symbol, turtleData)
 		}
 	}
@@ -177,6 +195,9 @@ func placeTurtleLong(account *model.Account, orderType string, data *model.Turtl
 		amount = setting.GridAmount
 		if setting.Function == model.FunctionCombineTurtle && normalHolding {
 			amount = math.Abs(float64(setting.Chance)) * data.Amount
+		}
+		if setting.Function == model.FunctionCombineTurtle {
+			amount = math.Min(1.5*setting.GridAmount, amount)
 		}
 	} else if !isBig {
 		amount = data.Amount / 2
@@ -264,6 +285,9 @@ func placeTurtleShort(account *model.Account, orderType string, data *model.Turt
 		function = model.Close
 		if setting.Function == model.FunctionCombineTurtle && normalHolding {
 			amount = math.Abs(float64(setting.Chance)) * data.Amount
+		}
+		if setting.Function == model.FunctionCombineTurtle {
+			amount = math.Min(1.5*setting.GridAmount, amount)
 		}
 	} else if !isBig {
 		amount = data.Amount / 2

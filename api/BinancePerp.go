@@ -105,31 +105,30 @@ func getMarketsBinancePerp(key, secret string) (marketInfos map[string]*model.Ma
 	return marketInfos
 }
 
-var wsAccountHandler = func(event []byte) {
-	result, wsErr := util.NewJSON(event)
-	if wsErr != nil {
-		util.Notice(`binancePerp fail to unmarshal account ws json ` + wsErr.Error())
-		return
-	}
-	if strings.EqualFold(result.Get(`e`).MustString(), `ORDER_TRADE_UPDATE`) {
-		result = result.Get(`o`)
-		order := parseOrderJsBinancePerp(result)
-		if !order.HaveId() {
+func WsAccountServeBinancePerp() {
+	var wsAccountHandler = func(event []byte) {
+		result, wsErr := util.NewJSON(event)
+		if wsErr != nil {
+			util.Notice(`binancePerp fail to unmarshal account ws json ` + wsErr.Error())
 			return
 		}
-		funcHandlers := GetFunctions(model.BinancePerp, order.Symbol)
-		if funcHandlers != nil {
-			funcHandlers.Range(func(function, value interface{}) bool {
-				if model.AccountHandlerMap[function.(string)] != nil {
-					go model.AccountHandlerMap[function.(string)](order)
-				}
-				return true
-			})
+		if strings.EqualFold(result.Get(`e`).MustString(), `ORDER_TRADE_UPDATE`) {
+			result = result.Get(`o`)
+			order := parseOrderJsBinance(model.BinancePerp, result)
+			if !order.HaveId() {
+				return
+			}
+			funcHandlers := GetFunctions(model.BinancePerp, order.Symbol)
+			if funcHandlers != nil {
+				funcHandlers.Range(func(function, value interface{}) bool {
+					if model.AccountHandlerMap[function.(string)] != nil {
+						go model.AccountHandlerMap[function.(string)](order)
+					}
+					return true
+				})
+			}
 		}
 	}
-}
-
-func WsAccountServeBinancePerp() {
 	if !maintainingAccountConnBinancePerp {
 		maintainingAccountConnBinancePerp = true
 		for {
@@ -658,23 +657,23 @@ func queryOpenOrdersBinancePerp(key, secret, symbol string) (orders []*model.Ord
 	return
 }
 
-func parseOrderJsBinancePerp(json *simplejson.Json) (order *model.Order) {
+func parseOrderJsBinance(market string, json *simplejson.Json) (order *model.Order) {
 	if json == nil {
 		return nil
 	}
-	order = &model.Order{Market: model.BinancePerp}
+	order = &model.Order{Market: market}
 	symbol := json.Get(`s`).MustString()
-	success, _, coin := model.GetCoinFromDialect(model.BinancePerp, symbol)
+	success, marketType, coin := model.GetCoinFromDialect(market, symbol)
 	if success {
 		order.Coin = coin
-		order.Symbol = coin + model.UniStandardTail[model.MarketTypePerp]
+		order.Symbol = coin + model.UniStandardTail[marketType]
 	}
 	if strings.EqualFold(json.Get(`S`).MustString(), model.OrderSideSell) {
 		order.OrderSide = model.OrderSideSell
 	} else if strings.EqualFold(json.Get(`S`).MustString(), model.OrderSideBuy) {
 		order.OrderSide = model.OrderSideBuy
 	}
-	order.OrderType = GetStandardOrderType(model.BinancePerp, json.Get(`o`).MustString())
+	order.OrderType = GetStandardOrderType(market, json.Get(`o`).MustString())
 	order.Amount, _ = strconv.ParseFloat(json.Get("q").MustString(), 64)
 	order.Price, _ = strconv.ParseFloat(json.Get(`p`).MustString(), 64)
 	order.DealPrice, _ = strconv.ParseFloat(json.Get("ap").MustString(), 64)
@@ -682,7 +681,7 @@ func parseOrderJsBinancePerp(json *simplejson.Json) (order *model.Order) {
 	order.TriggerPrice, _ = strconv.ParseFloat(json.Get("sp").MustString(), 64)
 	order.OrderId = strconv.Itoa(json.Get("i").MustInt())
 	order.Fee, _ = strconv.ParseFloat(json.Get("n").MustString(), 64)
-	order.Status = model.GetOrderStatus(model.BinancePerp, json.Get("X").MustString())
+	order.Status = model.GetOrderStatus(market, json.Get("X").MustString())
 	return order
 }
 
