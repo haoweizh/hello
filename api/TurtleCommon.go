@@ -109,8 +109,12 @@ func AdjustPosHolding(key, secret string, setting *model.Setting, data *model.Tu
 		posMap[strings.ToUpper(pos.Currency)] = pos
 		if pos.Currency == `LPT_PERP` {
 			util.Notice(`notice LPT %s %s holding %f chance %d`, setting.Market, pos.Currency, pos.Holding, setting.Chance)
-			util.Notice(`notice result %s %s %d %f`, setting.Market, setting.Symbol, setting.Chance, posMap[setting.Symbol].Holding)
 		}
+	}
+	if posMap[`LPT_PERP`] == nil {
+		util.Notice(`none lpt for %s %s`, setting.Market, setting.Symbol)
+	} else {
+		util.Notice(`have lpt for %s %s %f`, setting.Market, setting.Symbol, posMap[`LPT_PERP`].Holding)
 	}
 	if posMap[setting.Symbol] != nil { //setting.Chance和pos.Holding相乘小于零代表方向相反，此时设置为0
 		util.Notice(`notice result %s %s %d %f`, setting.Market, setting.Symbol, setting.Chance, posMap[setting.Symbol].Holding)
