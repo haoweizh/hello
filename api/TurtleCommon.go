@@ -233,7 +233,6 @@ func clearTurtleOrders(account *model.Account, setting *model.Setting, turtle *m
 var getTurtleLock = sync.Map{} // key - *sync.Mutex{}
 
 func handleLastTurtleData(account *model.Account, function, market, symbol, lastTime string) (lastHandled bool) {
-	util.Notice(fmt.Sprintf(`handle last turtle %s %s %s %s`, function, market, symbol, lastTime))
 	var settings []*model.Setting
 	var turtles []*model.TurtleData
 	if function == model.FunctionCombineTurtle || function == model.FunctionTurtleNormal {
@@ -243,6 +242,7 @@ func handleLastTurtleData(account *model.Account, function, market, symbol, last
 			valueCombine, _ := util.LoadSyncMap(&TurtleDataSet, model.FunctionCombineTurtle, market, symbol, lastTime)
 			valueNormal, _ := util.LoadSyncMap(&TurtleDataSet, model.FunctionTurtleNormal, market, symbol, lastTime)
 			if valueCombine != nil && valueNormal != nil {
+				util.Notice(fmt.Sprintf(`handle last turtle %s %s %s %s`, function, market, symbol, lastTime))
 				lastHandled = true
 				settings = []*model.Setting{settingCombine, settingNormal}
 				turtles = []*model.TurtleData{valueCombine.(*model.TurtleData), valueNormal.(*model.TurtleData)}
@@ -259,6 +259,7 @@ func handleLastTurtleData(account *model.Account, function, market, symbol, last
 		if valueTurtle == nil || settings[0] == nil {
 			return
 		}
+		util.Notice(fmt.Sprintf(`handle last turtle %s %s %s %s`, function, market, symbol, lastTime))
 		lastHandled = true
 		turtles = []*model.TurtleData{valueTurtle.(*model.TurtleData)}
 		CheckBreak(account, market, symbol, settings, turtles, nil)
