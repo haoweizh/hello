@@ -13,7 +13,7 @@ import (
 
 const TurtleTriggerDelta = 0.005
 
-var positionsCache = &sync.Map{}   // symbol - position holding amount
+var positionsCache = &sync.Map{}   // key - symbol - position holding amount
 var TurtleDataSet = sync.Map{}     // function_market_symbol_unix second *TurtleData
 var accountValues = &sync.Map{}    // market value
 var accountValueTime = &sync.Map{} // market time.Time
@@ -109,6 +109,7 @@ func AdjustPosHolding(key, secret string, setting *model.Setting, data *model.Tu
 		posMap[strings.ToUpper(pos.Currency)] = pos
 		if pos.Currency == `LPT_PERP` {
 			util.Notice(`notice LPT %s %s holding %f chance %d`, setting.Market, pos.Currency, pos.Holding, setting.Chance)
+			util.Notice(`notice result %s %s %d %f`, setting.Market, setting.Symbol, setting.Chance, posMap[setting.Symbol].Holding)
 		}
 	}
 	if posMap[setting.Symbol] != nil { //setting.Chance和pos.Holding相乘小于零代表方向相反，此时设置为0
@@ -311,18 +312,22 @@ func GetTurtleData(account *model.Account, function, market, symbol string, far,
 				SetRequireReset(market)
 				success, positions, _, _ := GetPositions(account.Key, account.Secret, market)
 				if success {
-					positionsCache = &sync.Map{}
+					posMap := &sync.Map{}
+					positionsCache.Store(account.Key, posMap)
 					for _, position := range positions {
-						positionsCache.Store(strings.ToUpper(position.Currency), position)
+						posMap.Store(strings.ToUpper(position.Currency), position)
 					}
 				}
 				return nil, true
 			}
 		}
 	}
-	posValue, _ := positionsCache.Load(symbol)
-	if posValue != nil && posValue.(*model.Position).Holding != 0 {
-		removed = false
+	posValue, _ := positionsCache.Load(account.Key)
+	if posValue != nil {
+		holdingValue, _ := posValue.(*sync.Map).Load(symbol)
+		if holdingValue != nil && holdingValue.(*model.Position).Holding != 0 {
+			removed = false
+		}
 	}
 	if removed {
 		return nil, false
