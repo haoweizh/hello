@@ -107,17 +107,8 @@ func AdjustPosHolding(key, secret string, setting *model.Setting, data *model.Tu
 	posMap := make(map[string]*model.Position)
 	for _, pos := range marketPos {
 		posMap[strings.ToUpper(pos.Currency)] = pos
-		if pos.Currency == `LPT_PERP` {
-			util.Notice(`notice LPT %s %s holding %f chance %d`, setting.Market, pos.Currency, pos.Holding, setting.Chance)
-		}
-	}
-	if posMap[`LPT_PERP`] == nil {
-		util.Notice(`none lpt for %s %s`, setting.Market, setting.Symbol)
-	} else {
-		util.Notice(`have lpt for %s %s %f`, setting.Market, setting.Symbol, posMap[`LPT_PERP`].Holding)
 	}
 	if posMap[setting.Symbol] != nil { //setting.Chance和pos.Holding相乘小于零代表方向相反，此时设置为0
-		util.Notice(`notice result %s %s %d %f`, setting.Market, setting.Symbol, setting.Chance, posMap[setting.Symbol].Holding)
 		if float64(setting.Chance)*posMap[setting.Symbol].Holding <= 0 {
 			util.Notice(`update turtle side %s %s %s holding %e grid amount %e chance %d`,
 				setting.Market, setting.Symbol, setting.Function, posMap[setting.Symbol].Holding, setting.GridAmount, setting.Chance)
@@ -317,10 +308,11 @@ func GetTurtleData(account *model.Account, function, market, symbol string, far,
 				success, positions, _, _ := GetPositions(account.Key, account.Secret, market)
 				if success {
 					posMap := &sync.Map{}
-					positionsCache.Store(account.Key, posMap)
 					for _, position := range positions {
 						posMap.Store(strings.ToUpper(position.Currency), position)
 					}
+					util.Notice(fmt.Sprintf(`store pos %s %s %d`, account.Key, market, len(positions)))
+					positionsCache.Store(account.Key, posMap)
 				}
 				return nil, true
 			}
@@ -330,6 +322,7 @@ func GetTurtleData(account *model.Account, function, market, symbol string, far,
 	if posValue != nil {
 		holdingValue, _ := posValue.(*sync.Map).Load(symbol)
 		if holdingValue != nil && holdingValue.(*model.Position).Holding != 0 {
+			util.Notice(fmt.Sprintf(`not removed %s %s %f`, account.Key, symbol, holdingValue.(*model.Position).Holding))
 			removed = false
 		}
 	}
