@@ -110,7 +110,7 @@ func AdjustPosHolding(key, secret string, setting *model.Setting, data *model.Tu
 	}
 	if posMap[setting.Symbol] != nil { //setting.Chance和pos.Holding相乘小于零代表方向相反，此时设置为0
 		if float64(setting.Chance)*posMap[setting.Symbol].Holding <= 0 {
-			util.Notice(`update turtle side %s %s %s holding %e grid amount %e chance %d`,
+			util.Notice(`...place order to update turtle side %s %s %s holding %e grid amount %e chance %d`,
 				setting.Market, setting.Symbol, setting.Function, posMap[setting.Symbol].Holding, setting.GridAmount, setting.Chance)
 			setting.GridAmount = 0
 			setting.Chance = 0
@@ -311,7 +311,7 @@ func GetTurtleData(account *model.Account, function, market, symbol string, far,
 					for _, position := range positions {
 						posMap.Store(strings.ToUpper(position.Currency), position)
 					}
-					util.Notice(fmt.Sprintf(`store pos %s %s %d`, account.Key, market, len(positions)))
+					util.Notice(fmt.Sprintf(`update positions when refresh %s %s %d`, account.Key, market, len(positions)))
 					positionsCache.Store(account.Key, posMap)
 				}
 				return nil, true

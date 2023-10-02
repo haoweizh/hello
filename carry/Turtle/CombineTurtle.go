@@ -6,6 +6,7 @@ import (
 	"hello/model"
 	"hello/util"
 	"math"
+	"strings"
 	"time"
 )
 
@@ -123,11 +124,24 @@ var ProcessCombineTurtle = func(settingCombine *model.Setting, tick *model.BidAs
 		if needClear { // 海龟平仓或者龟汤平仓时，龟汤或者海龟的平仓单也要撤单，核对仓位后重新下单
 			if setting.Chance == 0 {
 				for j, settingOppo := range settings {
-					if settingOppo.Chance > 0 {
-						turtleData[j].OrderShort = nil
-					}
-					if settingOppo.Chance < 0 {
-						turtleData[j].OrderLong = nil
+					if (settingOppo.Chance > 0 && turtleData[j].OrderShort != nil) ||
+						(settingOppo.Chance < 0 && turtleData[j].OrderLong != nil) {
+						success, positions, _, _ := api.GetPositions(account.Key, account.Secret, settingOppo.Market)
+						if success {
+							for _, position := range positions {
+								if strings.EqualFold(position.Currency, settingOppo.Symbol) {
+									util.Notice(fmt.Sprintf(`update grid amt to holding %s %s %f %f`,
+										settingOppo.Market, settingOppo.Symbol, setting.GridAmount, position.Holding))
+									settingOppo.GridAmount = math.Abs(position.Holding)
+								}
+							}
+						}
+						if settingOppo.Chance > 0 {
+							turtleData[j].OrderShort = nil
+						}
+						if settingOppo.Chance < 0 {
+							turtleData[j].OrderLong = nil
+						}
 					}
 				}
 			}
