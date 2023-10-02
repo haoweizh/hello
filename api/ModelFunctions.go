@@ -220,7 +220,7 @@ func handleCombineSettings(mumSetting *model.Setting, topMarketInfos map[string]
 				setting.(*model.Setting).SymbolRelated = model.SettingTurtleRemoved
 			}
 			model.AppDB.Save(setting)
-			util.Info(`remove setting%s`, setting.(*model.Setting).Symbol)
+			util.Notice(`remove setting %s %s`, setting.(*model.Setting).Market, setting.(*model.Setting).Symbol)
 		}
 		return true
 	})
@@ -245,7 +245,7 @@ func handleCombineSettings(mumSetting *model.Setting, topMarketInfos map[string]
 			}
 			model.AppDB.Save(setting)
 		}
-		util.Info(`remove setting%s`, setting.(*model.Setting).Symbol)
+		util.Notice(`remove setting %s %s`, setting.(*model.Setting).Market, setting.(*model.Setting).Symbol)
 		return true
 	})
 }
