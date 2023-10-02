@@ -73,10 +73,9 @@ var ProcessCombineTurtle = func(settingCombine *model.Setting, tick *model.BidAs
 		//util.Notice(fmt.Sprintf(`combine return handle or break %s %s`, market, symbol))
 		return
 	}
-	//if !dataCombine.AdjustChecked && !dataNormal.AdjustChecked {
-	//	util.Notice(fmt.Sprintf(`combine return not adjusted %s %s`, market, symbol))
-	//	return
-	//}
+	if removed { // 上面处理完adjust等事务后，removed的币种不再被执行
+		return
+	}
 	//价格不一样：big=true
 	//价格一样：仓数相加=0时big=false；仓数相加≠0时big=true
 	if dataNormal.N == 0 || dataNormal.Amount == 0 || dataCombine.N == 0 || dataCombine.Amount == 0 {
