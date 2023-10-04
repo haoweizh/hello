@@ -195,7 +195,7 @@ func handleTurtleBreak(key, secret string, setting *model.Setting, turtleData *m
 			setting.Market, setting.Symbol, orderSide, len(orderQuery)))
 		setting.PriceX = orderQuery[0].TriggerPrice
 		for _, order := range orderQuery {
-			turtleData.OrderAdjust = append(turtleData.OrderAdjust, order)
+			turtleData.OrderAdjust[order.OrderId] = order
 		}
 		turtleData.OrderLong = nil
 		turtleData.OrderShort = nil
@@ -236,7 +236,7 @@ func placeTurtleOrders(key, secret string, turtleData *model.TurtleData, setting
 			turtleData.OrderLong = api.MustPlaceOrder(key, secret, orderSide, model.OrderTypeLimit, setting.Market, setting.Symbol, ``,
 				setting.Function, priceLong*(1+api.TurtleTriggerDelta/2), priceLong, amount, setting)
 			for _, order := range turtleData.OrderLong {
-				turtleData.OrderAdjust = append(turtleData.OrderAdjust, order)
+				turtleData.OrderAdjust[order.OrderId] = order
 			}
 			turtleData.BreakLong = true
 		} else {
@@ -270,7 +270,7 @@ func placeTurtleOrders(key, secret string, turtleData *model.TurtleData, setting
 			turtleData.OrderShort = api.MustPlaceOrder(key, secret, orderSide, model.OrderTypeLimit, setting.Market, setting.Symbol, ``,
 				setting.Function, priceShort*(1-api.TurtleTriggerDelta/2), priceShort, amount, setting)
 			for _, order := range turtleData.OrderShort {
-				turtleData.OrderAdjust = append(turtleData.OrderAdjust, order)
+				turtleData.OrderAdjust[order.OrderId] = order
 			}
 			turtleData.BreakShort = true
 		} else {

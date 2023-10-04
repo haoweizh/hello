@@ -16,7 +16,8 @@ type TurtleData struct {
 	Big                                                                                 int64
 	Symbol                                                                              string
 	// 适应某些交易所单笔订单不能过大，大笔订单会拆分后下成多个，因价格超出无法下成的单为了不被取消，也归入orderAdjust
-	OrderLong, OrderShort, OrderTrail, OrderAdjust []*Order
+	OrderLong, OrderShort, OrderTrail []*Order
+	OrderAdjust                       map[string]*Order
 }
 
 type TurtleDataArray []*TurtleData

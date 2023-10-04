@@ -185,7 +185,7 @@ func handleBreak(setting *model.Setting, data *model.TurtleData, orders []*model
 	}
 	// 保护起来，不进行主动撤单，以免未完全成交
 	for _, order := range orders {
-		data.OrderAdjust = append(data.OrderAdjust, order)
+		data.OrderAdjust[order.OrderId] = order
 	}
 	time.Sleep(time.Second * 3)
 	data.OrderLong = nil
@@ -269,7 +269,7 @@ func placeTurtleLong(account *model.Account, orderType string, data *model.Turtl
 		data.OrderLong = api.MustPlaceOrder(account.Key, account.Secret, model.OrderSideBuy, orderType, market, symbol, ``,
 			setting.Function, priceDeal, price, amount, nil)
 		if data.OrderAdjust == nil {
-			data.OrderAdjust = make([]*model.Order, 0)
+			data.OrderAdjust = make(map[string]*model.Order)
 		}
 		util.Notice(fmt.Sprintf(`place long %s %s %s %s %s %d %v at %e %e amt %e, useNear %v priceX %f n:%f seconds %d near %f %f far %f %f`,
 			orderType, setting.Function, market, symbol, orderType, setting.Chance, canOpen, priceDeal, price, amount,
@@ -282,7 +282,7 @@ func placeTurtleLong(account *model.Account, orderType string, data *model.Turtl
 			go model.AppDB.Save(order)
 			if data.BreakLong && order.Status != model.CarryStatusSuccess {
 				util.Notice(`already break long move to adjust %s %v`, order.OrderId, order)
-				data.OrderAdjust = append(data.OrderAdjust, order)
+				data.OrderAdjust[order.OrderId] = order
 			}
 		}
 	}
@@ -366,7 +366,7 @@ func placeTurtleShort(account *model.Account, orderType string, data *model.Turt
 		data.OrderShort = api.MustPlaceOrder(account.Key, account.Secret, model.OrderSideSell, orderType, market, symbol, ``,
 			setting.Function, priceDeal, price, amount, nil)
 		if data.OrderAdjust == nil {
-			data.OrderAdjust = make([]*model.Order, 0)
+			data.OrderAdjust = make(map[string]*model.Order)
 		}
 		for _, order := range data.OrderShort {
 			order.LineBuy = data.N
@@ -376,7 +376,7 @@ func placeTurtleShort(account *model.Account, orderType string, data *model.Turt
 			go model.AppDB.Save(order)
 			if data.BreakShort && order.Status != model.CarryStatusSuccess {
 				util.Notice(`already break short move to adjust %s %v`, order.OrderId, order)
-				data.OrderAdjust = append(data.OrderAdjust, order)
+				data.OrderAdjust[order.OrderId] = order
 			}
 		}
 	}

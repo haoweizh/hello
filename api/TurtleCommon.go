@@ -115,18 +115,23 @@ func AdjustPosHolding(key, secret string, setting *model.Setting, data *model.Tu
 			setting.GridAmount = 0
 			setting.Chance = 0
 			setting.PriceX = 0
+			var orders []*model.Order
 			if posMap[setting.Symbol].Holding > 0 {
-				data.OrderAdjust = MustPlaceOrder(key, secret, model.OrderSideSell, model.OrderTypeStop, setting.Market, setting.Symbol, ``,
+				orders = MustPlaceOrder(key, secret, model.OrderSideSell, model.OrderTypeStop, setting.Market, setting.Symbol, ``,
 					model.FunctionTurtleAdjust, data.LowAdjust*(1-TurtleTriggerDelta), data.LowAdjust, posMap[setting.Symbol].Holding, setting)
 			} else if posMap[setting.Symbol].Holding < 0 {
-				data.OrderAdjust = MustPlaceOrder(key, secret, model.OrderSideBuy, model.OrderTypeStop, setting.Market, setting.Symbol, ``,
+				orders = MustPlaceOrder(key, secret, model.OrderSideBuy, model.OrderTypeStop, setting.Market, setting.Symbol, ``,
 					model.FunctionTurtleAdjust, data.HighAdjust*(1+TurtleTriggerDelta), data.HighAdjust, -1*posMap[setting.Symbol].Holding, setting)
 			}
-			for _, order := range data.OrderAdjust {
+			for _, order := range orders {
 				if order != nil {
 					order.RefreshType = model.FunctionTurtleAdjust
 					order.Function = model.Close
 					model.AppDB.Save(order)
+					if data.OrderAdjust == nil {
+						data.OrderAdjust = make(map[string]*model.Order)
+					}
+					data.OrderAdjust[order.OrderId] = order
 				}
 			}
 		} else if setting.GridAmount != math.Abs(posMap[setting.Symbol].Holding) {
@@ -335,7 +340,7 @@ func GetTurtleData(account *model.Account, function, market, symbol string, far,
 	util.Notice(fmt.Sprintf(`need to create turtle data %s %s %s %s %d refresh %v`,
 		function, market, symbol, nowStr, far, refreshDynamic))
 	data = &model.TurtleData{TurtleTime: nowPeriod, Symbol: symbol, Big: 1, DaysFar: int(far), DaysNear: int(near),
-		DaysAdjust: 5, OrderCleared: lastHandled, OrderAdjust: make([]*model.Order, 0)}
+		DaysAdjust: 5, OrderCleared: lastHandled, OrderAdjust: make(map[string]*model.Order)}
 	if function == model.FunctionTurtle || function == model.FunctionTurtleNormal {
 		data.UseNear = true
 	} else if function == model.FunctionCombineTurtle {
@@ -591,7 +596,7 @@ func CheckBreak(account *model.Account, market, symbol string, settings []*model
 			if orderLong != nil && orderLong.Status == model.CarryStatusSuccess {
 				data.BreakLong = true
 				for _, order := range data.OrderLong {
-					data.OrderAdjust = append(data.OrderAdjust, order)
+					data.OrderAdjust[order.OrderId] = order
 				}
 				util.Notice(fmt.Sprintf(`order break long %s %s %s %d %e %e id %s usdApi %v`,
 					market, symbol, orderLong.OrderType, setting.Chance, orderLong.TriggerPrice, orderLong.Price, orderLong.OrderId, useApi))
@@ -610,7 +615,7 @@ func CheckBreak(account *model.Account, market, symbol string, settings []*model
 			if orderShort != nil && orderShort.Status == model.CarryStatusSuccess {
 				data.BreakShort = true
 				for _, order := range data.OrderShort {
-					data.OrderAdjust = append(data.OrderAdjust, order)
+					data.OrderAdjust[order.OrderId] = order
 				}
 				util.Notice(fmt.Sprintf(`order break short %s %s %s %d %e %e id %s useApi %v`,
 					market, symbol, orderShort.OrderType, setting.Chance, orderShort.TriggerPrice, orderShort.Price, orderShort.OrderId, useApi))
