@@ -105,28 +105,32 @@ func liqQueue(setting *model.Setting, data *DataQueue, tick, tickLiq *model.BidA
 
 func placeQueue(setting *model.Setting, data *DataQueue, tick *model.BidAsk) (placed bool) {
 	var orders []*model.Order
-	util.Notice(fmt.Sprintf(`tick %s %d %f,%f - %f,%f`,
+	util.Notice(fmt.Sprintf(`tick %s %d %e,%e - %e,%e`,
 		setting.Symbol, tick.Ts, tick.Bids[0].Price, tick.Bids[0].Amount, tick.Asks[0].Price, tick.Asks[0].Amount))
 	if data.baseAvailable*tick.Bids[0].Price > 20 {
-		util.Notice(fmt.Sprintf(`try to place queue order %s %s %s %s at %f amt %f`,
-			setting.Function, setting.Market, setting.Symbol, model.OrderSideSell, tick.Asks[0].Price, data.baseAvailable))
+		util.Notice(fmt.Sprintf(`try to place queue order %s %s %s %s at %e amt %e`,
+			setting.Function, setting.Market, setting.Symbol, model.OrderSideSell, tick.Asks[0].Price,
+			data.baseAvailable-10/tick.Asks[0].Price))
 		orders = api.MustPlaceOrder(data.account.Key, data.account.Secret, model.OrderSideSell, model.OrderTypeLimit, setting.Market,
-			setting.Symbol, ``, setting.Function, tick.Asks[0].Price, tick.Asks[0].Price, data.baseAvailable, setting)
+			setting.Symbol, ``, setting.Function, tick.Asks[0].Price, tick.Asks[0].Price,
+			data.baseAvailable-10/tick.Asks[0].Price, setting)
 		for _, order := range orders {
 			if order == nil || !order.HaveId() {
 				continue
 			}
 			data.QueueOrders[order.OrderId] = order
-			util.Notice(fmt.Sprintf(`place queue order %s %s %s %s at %f amt %f return %s`,
+			util.Notice(fmt.Sprintf(`place queue order %s %s %s %s at %e amt %e return %s`,
 				setting.Function, setting.Market, setting.Symbol, model.OrderSideBuy, order.Price, data.baseAvailable, order.OrderId))
 		}
 		placed = true
 	}
 	if data.quoteAvailable > 20 {
-		util.Notice(fmt.Sprintf(`try to place queue order %s %s %s %s at %f amt %f`,
-			setting.Function, setting.Market, setting.Symbol, model.OrderSideBuy, tick.Bids[0].Price, data.baseAvailable))
+		util.Notice(fmt.Sprintf(`try to place queue order %s %s %s %s at %e amt in u %f amt %e`,
+			setting.Function, setting.Market, setting.Symbol, model.OrderSideBuy, tick.Bids[0].Price, data.quoteAvailable,
+			(data.quoteAvailable-10)/tick.Bids[0].Price))
 		orders = api.MustPlaceOrder(data.account.Key, data.account.Secret, model.OrderSideBuy, model.OrderTypeLimit, setting.Market,
-			setting.Symbol, ``, setting.Function, tick.Bids[0].Price, tick.Bids[0].Price, data.quoteAvailable/tick.Bids[0].Price, setting)
+			setting.Symbol, ``, setting.Function, tick.Bids[0].Price, tick.Bids[0].Price,
+			(data.quoteAvailable-10)/tick.Bids[0].Price, setting)
 		for _, order := range orders {
 			if order == nil {
 				continue
