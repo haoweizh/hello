@@ -105,9 +105,11 @@ func liqQueue(setting *model.Setting, data *DataQueue, tick, tickLiq *model.BidA
 
 func placeQueue(setting *model.Setting, data *DataQueue, tick *model.BidAsk) (placed bool) {
 	var orders []*model.Order
+	util.Notice(fmt.Sprintf(`tick %s %d %f,%f - %f,%f`,
+		setting.Symbol, tick.Ts, tick.Bids[0].Price, tick.Bids[0].Amount, tick.Asks[0].Price, tick.Asks[0].Amount))
 	if data.baseAvailable*tick.Bids[0].Price > 20 {
 		util.Notice(fmt.Sprintf(`try to place queue order %s %s %s %s at %f amt %f`,
-			setting.Function, setting.Market, setting.Symbol, model.OrderSideBuy, tick.Asks[0].Price, data.baseAvailable))
+			setting.Function, setting.Market, setting.Symbol, model.OrderSideSell, tick.Asks[0].Price, data.baseAvailable))
 		orders = api.MustPlaceOrder(data.account.Key, data.account.Secret, model.OrderSideSell, model.OrderTypeLimit, setting.Market,
 			setting.Symbol, ``, setting.Function, tick.Asks[0].Price, tick.Asks[0].Price, data.baseAvailable, setting)
 		for _, order := range orders {
@@ -122,7 +124,7 @@ func placeQueue(setting *model.Setting, data *DataQueue, tick *model.BidAsk) (pl
 	}
 	if data.quoteAvailable > 20 {
 		util.Notice(fmt.Sprintf(`try to place queue order %s %s %s %s at %f amt %f`,
-			setting.Function, setting.Market, setting.Symbol, model.OrderSideSell, tick.Bids[0].Price, data.baseAvailable))
+			setting.Function, setting.Market, setting.Symbol, model.OrderSideBuy, tick.Bids[0].Price, data.baseAvailable))
 		orders = api.MustPlaceOrder(data.account.Key, data.account.Secret, model.OrderSideBuy, model.OrderTypeLimit, setting.Market,
 			setting.Symbol, ``, setting.Function, tick.Bids[0].Price, tick.Bids[0].Price, data.quoteAvailable/tick.Bids[0].Price, setting)
 		for _, order := range orders {
