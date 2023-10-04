@@ -115,7 +115,7 @@ func placeQueue(setting *model.Setting, data *DataQueue, tick *model.BidAsk) (pl
 		placed = true
 	}
 	if data.quoteAvailable > 20 {
-		orders := api.MustPlaceOrder(data.account.Key, data.account.Secret, model.OrderSideBuy, model.OrderTypeLimit, setting.Market,
+		orders = api.MustPlaceOrder(data.account.Key, data.account.Secret, model.OrderSideBuy, model.OrderTypeLimit, setting.Market,
 			setting.Symbol, ``, setting.Function, tick.Bids[0].Price, tick.Bids[0].Price, data.quoteAvailable/tick.Bids[0].Price, setting)
 		for _, order := range orders {
 			if order == nil {
@@ -224,7 +224,7 @@ var ProcessQueueLiq = func(order *model.Order) {
 	defer api.CheckSetProcessing(model.FunctionQueue, model.FunctionQueue, model.FunctionQueue, false)
 	util.Notice(fmt.Sprintf(`deal queen order %s %s %s %s deal at %f deal amt %f`,
 		order.Market, order.Symbol, order.OrderId, order.Status, order.DealPrice, order.DealAmount))
-	if order == nil || order.DealAmount == 0 || order.DealPrice == 0 {
+	if order == nil || !order.HaveId() {
 		return
 	}
 	model.AppDB.Model(order).Where(`order_id=?`, order.OrderId).Updates(map[string]interface{}{

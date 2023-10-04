@@ -309,11 +309,12 @@ func Test_CutTail(t *testing.T) {
 
 func Test_initTurtleN(t *testing.T) {
 	model.NewConfig()
-	market := model.OKEX
+	market := model.BinancePerp
 	account := model.AppConfig.GetAccounts(market)[0]
-	fmt.Println(model.AppConfig.OKPhase)
-	orders := api.QueryOpenOrders(account.Key, account.Secret, market, `ARB_PERP`)
-	fmt.Println(len(orders))
+	api.RenewListenKeyBinanceSpot(account)
+	//fmt.Println(model.AppConfig.OKPhase)
+	//orders := api.QueryOpenOrders(account.Key, account.Secret, market, `ARB_PERP`)
+	//fmt.Println(len(orders))
 	nowPeriod, _ := model.GetMarketToday(market)
 	seconds := 14400
 	//sortedCandles := api.GetMultiCandle(account.Key, account.Secret, market, seconds,

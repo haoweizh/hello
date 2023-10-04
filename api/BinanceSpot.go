@@ -316,7 +316,6 @@ func WsAccountServeBinanceSpot() {
 			return
 		}
 		if strings.EqualFold(result.Get(`e`).MustString(), `executionReport`) {
-			result = result.Get(`o`)
 			order := parseOrderJsBinance(model.BinanceSpot, result)
 			if !order.HaveId() {
 				return
@@ -334,38 +333,46 @@ func WsAccountServeBinanceSpot() {
 	}
 	if !maintainingAccountConnBinanceSpot {
 		maintainingAccountConnBinanceSpot = true
+		created := true
 		for {
 			accounts := model.AppConfig.GetAccounts(model.BinanceSpot)
 			for _, account := range accounts {
 				if account == nil {
 					return
 				}
-				success, listenKey := renewListenKeyBinanceSpot(account)
+				success, listenKey := RenewListenKeyBinanceSpot(account)
 				if success {
 					_, err := WsAccountClient(account.Key, model.BinanceSpot, wsBinanceSpot+`ws/`+listenKey, wsAccountHandler)
 					if err != nil {
-						util.Notice(fmt.Sprintf(`fail to create account ws binancePerp %s`, err.Error()))
+						created = false
+						util.Notice(fmt.Sprintf(`fail to create account ws BinanceSpot %s`, err.Error()))
 						continue
 					}
+				} else {
+					created = false
 				}
 			}
-			time.Sleep(time.Minute * 30)
+			if created {
+				time.Sleep(time.Minute * 30)
+			} else {
+				time.Sleep(time.Minute * 3)
+			}
 		}
 	}
 }
 
-func renewListenKeyBinanceSpot(account *model.Account) (success bool, listenKey string) {
-	signedRequestBinance(account.Key, account.Secret, model.BinanceSpot, http.MethodDelete,
-		restBinanceSpot+`/api/v3/userDataStream`, true, nil)
+func RenewListenKeyBinanceSpot(account *model.Account) (success bool, listenKey string) {
+	//signedRequestBinance(account.Key, account.Secret, model.BinanceSpot, http.MethodDelete,
+	//	restBinanceSpot+`/api/v3/userDataStream`, true, nil)
 	response := signedRequestBinance(account.Key, account.Secret, model.BinanceSpot, http.MethodPost,
-		restBinanceSpot+`/api/v3/userDataStream`, true, nil)
+		restBinanceSpot+`/api/v3/userDataStream`, false, nil)
 	keyJson, _ := util.NewJSON(response)
 	if keyJson != nil && len(keyJson.Get(`listenKey`).MustString()) > 0 {
 		return true, keyJson.Get(`listenKey`).MustString()
 	}
 	time.Sleep(time.Second * 3)
 	util.Notice(fmt.Sprintf(`fail to renew binanceSpot listen key retry`))
-	renewListenKeyBinanceSpot(account)
+	RenewListenKeyBinanceSpot(account)
 	return false, ``
 }
 

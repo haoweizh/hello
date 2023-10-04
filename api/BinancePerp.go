@@ -600,7 +600,9 @@ func signedRequestBinance(key, secret, market, method, requestUrl string, withAp
 		param.Set("signature", hex.EncodeToString(hash.Sum(nil)))
 	}
 	headers := map[string]string{"X-MBX-APIKEY": key}
-	requestUrl = requestUrl + "?" + param.Encode()
+	if len(param.Encode()) > 0 {
+		requestUrl = requestUrl + "?" + param.Encode()
+	}
 	responseBody, _ := util.HttpRequest(method, requestUrl, "", headers, 60)
 	logMsg := fmt.Sprintf(`binance key %s request %s body %v return %s`,
 		key, requestUrl, param, string(responseBody))
