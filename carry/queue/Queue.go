@@ -86,11 +86,15 @@ var ProcessQueue = func(setting *model.Setting, tick *model.BidAsk) {
 func liqQueue(setting *model.Setting, data *DataQueue, tick, tickLiq *model.BidAsk) (placed bool) {
 	holdInQuote := data.baseHold*tick.Bids[0].Price + data.BaseHoldLiq*tickLiq.Bids[0].Price
 	if holdInQuote > 20 {
+		util.Notice(fmt.Sprintf(`try to liq queue order %s %s %s %s value %f amt %f`,
+			setting.Function, setting.Market, setting.Symbol, model.OrderSideSell, holdInQuote, holdInQuote/tickLiq.Bids[0].Price))
 		api.PlaceOrder(data.accountLiq.Key, data.accountLiq.Secret, model.OrderSideSell, model.OrderTypeMarket,
 			setting.MarketRelated, setting.SymbolRelated, ``, tickLiq.Bids[0].Price, tickLiq.Bids[0].Price,
 			holdInQuote/tickLiq.Bids[0].Price, false, nil, setting)
 		return true
 	} else if holdInQuote < -20 {
+		util.Notice(fmt.Sprintf(`try to liq queue order %s %s %s %s value %f amt %f`,
+			setting.Function, setting.Market, setting.Symbol, model.OrderSideBuy, holdInQuote, holdInQuote/tickLiq.Asks[0].Price))
 		api.PlaceOrder(data.accountLiq.Key, data.accountLiq.Secret, model.OrderSideBuy, model.OrderTypeMarket,
 			setting.MarketRelated, setting.SymbolRelated, ``, tickLiq.Asks[0].Price, tickLiq.Asks[0].Price,
 			holdInQuote/tickLiq.Asks[0].Price, false, nil, setting)
@@ -102,6 +106,8 @@ func liqQueue(setting *model.Setting, data *DataQueue, tick, tickLiq *model.BidA
 func placeQueue(setting *model.Setting, data *DataQueue, tick *model.BidAsk) (placed bool) {
 	var orders []*model.Order
 	if data.baseAvailable*tick.Bids[0].Price > 20 {
+		util.Notice(fmt.Sprintf(`try to place queue order %s %s %s %s at %f amt %f`,
+			setting.Function, setting.Market, setting.Symbol, model.OrderSideBuy, tick.Asks[0].Price, data.baseAvailable))
 		orders = api.MustPlaceOrder(data.account.Key, data.account.Secret, model.OrderSideSell, model.OrderTypeLimit, setting.Market,
 			setting.Symbol, ``, setting.Function, tick.Asks[0].Price, tick.Asks[0].Price, data.baseAvailable, setting)
 		for _, order := range orders {
@@ -115,6 +121,8 @@ func placeQueue(setting *model.Setting, data *DataQueue, tick *model.BidAsk) (pl
 		placed = true
 	}
 	if data.quoteAvailable > 20 {
+		util.Notice(fmt.Sprintf(`try to place queue order %s %s %s %s at %f amt %f`,
+			setting.Function, setting.Market, setting.Symbol, model.OrderSideSell, tick.Bids[0].Price, data.baseAvailable))
 		orders = api.MustPlaceOrder(data.account.Key, data.account.Secret, model.OrderSideBuy, model.OrderTypeLimit, setting.Market,
 			setting.Symbol, ``, setting.Function, tick.Bids[0].Price, tick.Bids[0].Price, data.quoteAvailable/tick.Bids[0].Price, setting)
 		for _, order := range orders {
