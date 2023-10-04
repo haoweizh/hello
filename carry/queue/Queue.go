@@ -173,7 +173,7 @@ func GetData(setting *model.Setting, refresh bool) (cache bool, data *DataQueue)
 	if value != nil && now-value.(*DataQueue).updatedInMilli < 60000 && !refresh {
 		return true, value.(*DataQueue)
 	}
-	data = &DataQueue{account: model.AppConfig.GetAccounts(setting.Market)[0],
+	data = &DataQueue{account: model.AppConfig.GetAccounts(setting.Market)[0], QueueOrders: make(map[string]*model.Order),
 		accountLiq: model.AppConfig.GetAccounts(setting.MarketRelated)[0], setting: setting}
 	orders := api.QueryOpenOrders(data.account.Key, data.account.Secret, setting.Market, setting.Symbol)
 	for _, order := range orders {
