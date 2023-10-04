@@ -552,6 +552,8 @@ func QueryOpenOrders(key, secret, market, symbol string) (orders []*model.Order)
 		}
 	case model.BinancePerp:
 		orders = queryOpenOrdersBinancePerp(key, secret, symbol)
+	case model.BinanceSpot:
+		orders = queryOpenOrdersBinanceSpot(key, secret, symbol)
 	}
 	return orders
 }

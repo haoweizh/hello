@@ -284,6 +284,29 @@ func placeOrderBinanceSpot(key, secret string, order *model.Order, orderSide, or
 	}
 }
 
+func parseOrderBinanceSpotSdk(orderResp *binance.Order, symbol string) (order *model.Order) {
+	if orderResp == nil {
+		return nil
+	}
+	order = &model.Order{Market: model.BinanceSpot, Status: model.CarryStatusFail}
+	order.OrderId = strconv.FormatInt(orderResp.OrderID, 10)
+	order.Symbol = symbol
+	order.OrderSide = strings.ToLower(string(orderResp.Side))
+	order.OrderType = strings.ToLower(string(orderResp.Type))
+	order.Amount, _ = strconv.ParseFloat(orderResp.OrigQuantity, 64)
+	order.Price, _ = strconv.ParseFloat(orderResp.Price, 64)
+	order.DealAmount, _ = strconv.ParseFloat(orderResp.ExecutedQuantity, 64)
+	order.OrderTime = time.UnixMilli(orderResp.Time)
+	order.OrderUpdateTime = time.UnixMilli(orderResp.UpdateTime)
+	order.Status = model.GetOrderStatus(model.BinanceSpot, string(orderResp.Status))
+	if order.Status != model.CarryStatusSuccess && order.Status != model.CarryStatusFail {
+		order.Status = model.CarryStatusWorking
+	}
+	if order.DealAmount > 0 && order.DealPrice == 0 {
+		order.DealPrice = order.Price
+	}
+	return order
+}
 func parseOrderBinanceSpot(orderJson *simplejson.Json) (order *model.Order) {
 	if orderJson == nil {
 		return nil
@@ -475,6 +498,23 @@ func _(key, secret, symbol string) (success bool, price float64) {
 	return true, 0
 }
 
+func queryOpenOrdersBinanceSpot(key, secret, symbol string) (orders []*model.Order) {
+	success, _, _, dialectSymbol := model.GetFromStandard(model.BinanceSpot, symbol)
+	if success {
+		orders = make([]*model.Order, 0)
+		client := binance.NewClient(key, secret)
+		resArray, err := client.NewListOpenOrdersService().Symbol(dialectSymbol).Do(context.Background())
+		if err != nil {
+			util.Notice(`queryOpenOrdersBinanceSpot err ` + err.Error())
+		}
+		for _, res := range resArray {
+			order := parseOrderBinanceSpotSdk(res, symbol)
+			orders = append(orders, order)
+		}
+	}
+	return
+}
+
 func queryOrderBinanceSpot(key, secret, symbol string, orderId string) (order *model.Order) {
 	success, _, _, dialectSymbol := model.GetFromStandard(model.BinanceSpot, symbol)
 	if success {
@@ -485,25 +525,7 @@ func queryOrderBinanceSpot(key, secret, symbol string, orderId string) (order *m
 			util.Notice("queryOrderBinanceSpot err: " + err.Error())
 			return
 		}
-		order = &model.Order{Market: model.BinanceSpot, Status: model.CarryStatusFail}
-		if orderResp != nil {
-			order.OrderId = orderId
-			order.Symbol = symbol
-			order.OrderSide = strings.ToLower(string(orderResp.Side))
-			order.OrderType = strings.ToLower(string(orderResp.Type))
-			order.Amount, _ = strconv.ParseFloat(orderResp.OrigQuantity, 64)
-			order.Price, _ = strconv.ParseFloat(orderResp.Price, 64)
-			order.DealAmount, _ = strconv.ParseFloat(orderResp.ExecutedQuantity, 64)
-			order.OrderTime = time.UnixMilli(orderResp.Time)
-			order.OrderUpdateTime = time.UnixMilli(orderResp.UpdateTime)
-			order.Status = model.GetOrderStatus(model.BinanceSpot, string(orderResp.Status))
-			if order.Status != model.CarryStatusSuccess && order.Status != model.CarryStatusFail {
-				order.Status = model.CarryStatusWorking
-			}
-			if order.DealAmount > 0 && order.DealPrice == 0 {
-				order.DealPrice = order.Price
-			}
-		}
+		order = parseOrderBinanceSpotSdk(orderResp, symbol)
 	}
 	return
 }
