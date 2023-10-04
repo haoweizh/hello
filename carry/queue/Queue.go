@@ -105,8 +105,6 @@ func liqQueue(setting *model.Setting, data *DataQueue, tick, tickLiq *model.BidA
 
 func placeQueue(setting *model.Setting, data *DataQueue, tick *model.BidAsk) (placed bool) {
 	var orders []*model.Order
-	util.Notice(fmt.Sprintf(`tick %s %d %e,%e - %e,%e`,
-		setting.Symbol, tick.Ts, tick.Bids[0].Price, tick.Bids[0].Amount, tick.Asks[0].Price, tick.Asks[0].Amount))
 	if data.baseAvaWithBow*tick.Bids[0].Price > 20 {
 		util.Notice(fmt.Sprintf(`try to place queue order %s %s %s %s at %e amt %e`,
 			setting.Function, setting.Market, setting.Symbol, model.OrderSideSell, tick.Asks[0].Price,
