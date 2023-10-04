@@ -177,6 +177,7 @@ func GetData(setting *model.Setting, refresh bool) (cache bool, data *DataQueue)
 	for _, order := range orders {
 		if order != nil {
 			data.QueueOrders[order.OrderId] = order
+			util.Notice(fmt.Sprintf(`add order into queue %s %s %s`, order.Market, order.Symbol, order.OrderId))
 		}
 	}
 	var success1, success2, success3, success4 bool
