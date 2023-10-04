@@ -213,4 +213,35 @@ func getHolding(account *model.Account, market, symbol string) (success bool, ho
 
 // 1. check binance spot api
 // 2. add binance margin api
-var ProcessQueueLiq = func(order *model.Order) {}
+var ProcessQueueLiq = func(order *model.Order) {
+	for {
+		if !api.CheckSetProcessing(model.FunctionQueue, model.FunctionQueue, model.FunctionQueue, true) {
+			break
+		} else {
+			time.Sleep(time.Second)
+		}
+	}
+	defer api.CheckSetProcessing(model.FunctionQueue, model.FunctionQueue, model.FunctionQueue, false)
+	util.Notice(fmt.Sprintf(`deal queen order %s %s %s %s deal at %f deal amt %f`,
+		order.Market, order.Symbol, order.OrderId, order.Status, order.DealPrice, order.DealAmount))
+	if order == nil || order.DealAmount == 0 || order.DealPrice == 0 {
+		return
+	}
+	model.AppDB.Model(order).Where(`order_id=?`, order.OrderId).Updates(map[string]interface{}{
+		`deal_price`: order.DealPrice, `deal_amount`: order.DealAmount, `fee`: order.Fee, `status`: order.Status})
+	accounts := model.AppConfig.GetAccounts(order.Market)
+	setting := api.GetSetting(model.FunctionQueue, order.Market, order.Symbol)
+	if setting == nil {
+		return
+	}
+	for _, account := range accounts {
+		_, tickRelated := model.AppMarkets.GetBidAsk(setting.SymbolRelated, setting.MarketRelated)
+		if account != nil && tickRelated != nil && tickRelated.Bids != nil && len(tickRelated.Bids) > 0 &&
+			tickRelated.Asks != nil && len(tickRelated.Asks) > 0 {
+			if order.Status == model.CarryStatusSuccess {
+				util.Notice(fmt.Sprintf(`get order success, refresh data queue %v`, order))
+				GetData(setting, true)
+			}
+		}
+	}
+}

@@ -229,6 +229,9 @@ func clearTurtleOrders(account *model.Account, setting *model.Setting, turtle *m
 			setting.Market, setting.Symbol, setting.Function).Updates(map[string]interface{}{
 			`price_x`: setting.PriceX, `chance`: setting.Chance, `grid_amount`: setting.GridAmount})
 	}
+	turtle.OrderLong = nil
+	turtle.OrderShort = nil
+	turtle.OrderTrail = nil
 }
 
 var getTurtleLock = sync.Map{} // key - *sync.Mutex{}
@@ -250,8 +253,8 @@ func handleLastTurtleData(account *model.Account, function, market, symbol, last
 				CheckBreak(account, market, symbol, settings, turtles, nil)
 				clearTurtleOrders(account, settings[0], turtles[0])
 				clearTurtleOrders(account, settings[1], turtles[1])
-				util.StoreSyncMap(&TurtleDataSet, nil, model.FunctionCombineTurtle, market, symbol, lastTime)
-				util.StoreSyncMap(&TurtleDataSet, nil, model.FunctionTurtleNormal, market, symbol, lastTime)
+				util.DelSyncMap(&TurtleDataSet, model.FunctionCombineTurtle, market, symbol, lastTime)
+				util.DelSyncMap(&TurtleDataSet, model.FunctionTurtleNormal, market, symbol, lastTime)
 			}
 		}
 	} else if function == model.FunctionTurtle || function == model.FunctionBoost {
@@ -590,8 +593,8 @@ func CheckBreak(account *model.Account, market, symbol string, settings []*model
 				for _, order := range data.OrderLong {
 					data.OrderAdjust = append(data.OrderAdjust, order)
 				}
-				util.Notice(fmt.Sprintf(`order break long %s %s %s %d %e %e id %s`,
-					market, symbol, orderLong.OrderType, setting.Chance, orderLong.TriggerPrice, orderLong.Price, orderLong.OrderId))
+				util.Notice(fmt.Sprintf(`order break long %s %s %s %d %e %e id %s usdApi %v`,
+					market, symbol, orderLong.OrderType, setting.Chance, orderLong.TriggerPrice, orderLong.Price, orderLong.OrderId, useApi))
 			}
 		}
 		if orderShort != nil {
@@ -609,8 +612,8 @@ func CheckBreak(account *model.Account, market, symbol string, settings []*model
 				for _, order := range data.OrderShort {
 					data.OrderAdjust = append(data.OrderAdjust, order)
 				}
-				util.Notice(fmt.Sprintf(`order break short %s %s %s %d %e %e id %s`,
-					market, symbol, orderShort.OrderType, setting.Chance, orderShort.TriggerPrice, orderShort.Price, orderShort.OrderId))
+				util.Notice(fmt.Sprintf(`order break short %s %s %s %d %e %e id %s useApi %v`,
+					market, symbol, orderShort.OrderType, setting.Chance, orderShort.TriggerPrice, orderShort.Price, orderShort.OrderId, useApi))
 			}
 		}
 		if orderTrail != nil && (useApi || tick == nil) {
@@ -618,8 +621,8 @@ func CheckBreak(account *model.Account, market, symbol string, settings []*model
 			time.Sleep(time.Millisecond * 200)
 			if orderTrail != nil && orderTrail.Status == model.CarryStatusSuccess {
 				data.BreakTrail = true
-				util.Notice(fmt.Sprintf(`order break trail %s %s %s %d %e %e id %s`,
-					market, symbol, orderTrail.OrderType, setting.Chance, orderTrail.TriggerPrice, orderTrail.Price, orderShort.OrderId))
+				util.Notice(fmt.Sprintf(`order break trail %s %s %s %d %e %e id %s useApi %v`,
+					market, symbol, orderTrail.OrderType, setting.Chance, orderTrail.TriggerPrice, orderTrail.Price, orderShort.OrderId, useApi))
 			}
 		}
 	}

@@ -295,8 +295,7 @@ var ProcessGridOrder = func(order *model.Order) {
 		_, tickRelated := model.AppMarkets.GetBidAsk(setting.SymbolRelated, setting.MarketRelated)
 		if account != nil && tickRelated != nil && tickRelated.Bids != nil && len(tickRelated.Bids) > 0 &&
 			tickRelated.Asks != nil && len(tickRelated.Asks) > 0 {
-			setting := api.GetSetting(model.FunctionGrid, order.Market, order.Symbol)
-			if setting != nil && order.Status == model.CarryStatusSuccess {
+			if order.Status == model.CarryStatusSuccess {
 				util.Notice(fmt.Sprintf(`get order success, refresh data grid %v`, order))
 				GetDataGrid(account, setting, tickRelated, true)
 			}
