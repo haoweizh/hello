@@ -21,7 +21,9 @@ type DataQueue struct {
 var DataMap = &sync.Map{} // market*symbol-*DataQueue
 
 // ProcessQueue
+// setting.OpenShortMargin 平仓绝对值价差
 // setting.AmountLimit要求Tick买卖1的计价币种最低挂单数量要求，不达要求不排队
+// setting.RateRelated related symbol对应的price乘数,price*settingRelated
 var ProcessQueue = func(setting *model.Setting, tick *model.BidAsk) {
 	if !api.CheckSetProcessing(model.FunctionQueue, model.FunctionQueue, model.FunctionQueue, true) {
 		defer api.CheckSetProcessing(model.FunctionQueue, model.FunctionQueue, model.FunctionQueue, false)
