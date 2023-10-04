@@ -453,8 +453,8 @@ func GetBalances(key, secret, market string) (
 			}
 		}
 	}
-	util.Notice(fmt.Sprintf(`get balances %s %s %f %d %v`,
-		market, key[:5], totalInUsd, len(balances), success))
+	//util.Notice(fmt.Sprintf(`get balances %s %s %f %d %v`,
+	//	market, key[:5], totalInUsd, len(balances), success))
 	return success, balances, totalInUsd, collateral
 }
 
@@ -651,8 +651,8 @@ func GetPositions(key, secret, market string) (success bool, positions []*model.
 		success, positions = getPositionsOKEX(key, secret)
 		accountValue, availableU = total, collateral.Available
 	}
-	util.Notice(fmt.Sprintf(`get positions %s %s %f %f %d %v`,
-		market, key[:5], accountValue, availableU, len(positions), success))
+	//util.Notice(fmt.Sprintf(`get positions %s %s %f %f %d %v`,
+	//	market, key[:5], accountValue, availableU, len(positions), success))
 	return success, positions, accountValue, availableU
 }
 
