@@ -134,12 +134,12 @@ func placeQueue(setting *model.Setting, data *DataQueue, tick *model.BidAsk) (pl
 				continue
 			}
 			data.QueueOrders[order.OrderId] = order
-			util.Notice(fmt.Sprintf(`place queue order %s %s %s %s at %f amt %f return %s`,
+			util.Notice(fmt.Sprintf(`place queue order %s %s %s %s at %e amt %e return %s`,
 				setting.Function, setting.Market, setting.Symbol, model.OrderSideSell, order.Price, data.quoteAvaWithBow/tick.Bids[0].Price, order.OrderId))
 		}
 		placed = true
 	}
-	return false
+	return placed
 }
 
 func canQueue(setting *model.Setting, tick, tickLiq *model.BidAsk) (can int) {
