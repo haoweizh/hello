@@ -11,11 +11,11 @@ import (
 )
 
 type DataQueue struct {
-	account, accountLiq                                  *model.Account
-	setting                                              *model.Setting
-	baseAvailable, quoteAvailable, baseHold, BaseHoldLiq float64
-	QueueOrders                                          map[string]*model.Order
-	updatedInMilli                                       int64
+	account, accountLiq                                    *model.Account
+	setting                                                *model.Setting
+	baseAvaWithBow, quoteAvaWithBow, baseHold, BaseHoldLiq float64
+	QueueOrders                                            map[string]*model.Order
+	updatedInMilli                                         int64
 }
 
 var DataMap = &sync.Map{} // market*symbol-*DataQueue
@@ -107,37 +107,37 @@ func placeQueue(setting *model.Setting, data *DataQueue, tick *model.BidAsk) (pl
 	var orders []*model.Order
 	util.Notice(fmt.Sprintf(`tick %s %d %e,%e - %e,%e`,
 		setting.Symbol, tick.Ts, tick.Bids[0].Price, tick.Bids[0].Amount, tick.Asks[0].Price, tick.Asks[0].Amount))
-	if data.baseAvailable*tick.Bids[0].Price > 20 {
+	if data.baseAvaWithBow*tick.Bids[0].Price > 20 {
 		util.Notice(fmt.Sprintf(`try to place queue order %s %s %s %s at %e amt %e`,
 			setting.Function, setting.Market, setting.Symbol, model.OrderSideSell, tick.Asks[0].Price,
-			data.baseAvailable-10/tick.Asks[0].Price))
+			data.baseAvaWithBow-10/tick.Asks[0].Price))
 		orders = api.MustPlaceOrder(data.account.Key, data.account.Secret, model.OrderSideSell, model.OrderTypeLimit, setting.Market,
 			setting.Symbol, ``, setting.Function, tick.Asks[0].Price, tick.Asks[0].Price,
-			data.baseAvailable-10/tick.Asks[0].Price, setting)
+			data.baseAvaWithBow-10/tick.Asks[0].Price, setting)
 		for _, order := range orders {
 			if order == nil || !order.HaveId() {
 				continue
 			}
 			data.QueueOrders[order.OrderId] = order
 			util.Notice(fmt.Sprintf(`place queue order %s %s %s %s at %e amt %e return %s`,
-				setting.Function, setting.Market, setting.Symbol, model.OrderSideBuy, order.Price, data.baseAvailable, order.OrderId))
+				setting.Function, setting.Market, setting.Symbol, model.OrderSideBuy, order.Price, data.baseAvaWithBow, order.OrderId))
 		}
 		placed = true
 	}
-	if data.quoteAvailable > 20 {
+	if data.quoteAvaWithBow > 20 {
 		util.Notice(fmt.Sprintf(`try to place queue order %s %s %s %s at %e amt in u %f amt %e`,
-			setting.Function, setting.Market, setting.Symbol, model.OrderSideBuy, tick.Bids[0].Price, data.quoteAvailable,
-			(data.quoteAvailable-10)/tick.Bids[0].Price))
+			setting.Function, setting.Market, setting.Symbol, model.OrderSideBuy, tick.Bids[0].Price, data.quoteAvaWithBow,
+			(data.quoteAvaWithBow-10)/tick.Bids[0].Price))
 		orders = api.MustPlaceOrder(data.account.Key, data.account.Secret, model.OrderSideBuy, model.OrderTypeLimit, setting.Market,
 			setting.Symbol, ``, setting.Function, tick.Bids[0].Price, tick.Bids[0].Price,
-			(data.quoteAvailable-10)/tick.Bids[0].Price, setting)
+			(data.quoteAvaWithBow-10)/tick.Bids[0].Price, setting)
 		for _, order := range orders {
 			if order == nil {
 				continue
 			}
 			data.QueueOrders[order.OrderId] = order
 			util.Notice(fmt.Sprintf(`place queue order %s %s %s %s at %f amt %f return %s`,
-				setting.Function, setting.Market, setting.Symbol, model.OrderSideSell, order.Price, data.quoteAvailable/tick.Bids[0].Price, order.OrderId))
+				setting.Function, setting.Market, setting.Symbol, model.OrderSideSell, order.Price, data.quoteAvaWithBow/tick.Bids[0].Price, order.OrderId))
 		}
 		placed = true
 	}
@@ -184,9 +184,9 @@ func GetData(setting *model.Setting, refresh bool) (cache bool, data *DataQueue)
 	var success1, success2, success3, success4 bool
 	success1, data.baseHold = getHolding(data.account, setting.Market, setting.Symbol)
 	success2, data.BaseHoldLiq = getHolding(data.accountLiq, setting.MarketRelated, setting.SymbolRelated)
-	success3, data.quoteAvailable = getAvailable(data.account, setting.Market, `usdt`)
+	success3, data.quoteAvaWithBow = getAvailable(data.account, setting.Market, `usdt`)
 	_, _, coin, _ := model.GetFromStandard(setting.Market, setting.Symbol)
-	success4, data.baseAvailable = getAvailable(data.account, setting.Market, coin)
+	success4, data.baseAvaWithBow = getAvailable(data.account, setting.Market, coin)
 	if success1 && success2 && success3 && success4 {
 		data.updatedInMilli = now
 		util.StoreSyncMap(DataMap, data, setting.Market, setting.Symbol)
@@ -199,7 +199,7 @@ func getAvailable(account *model.Account, market, coin string) (success bool, ho
 	_, balances, _, _ := api.GetBalances(account.Key, account.Secret, market)
 	for _, balance := range balances {
 		if strings.EqualFold(balance.Coin, coin) {
-			return true, balance.Amount
+			return true, balance.AvailableWithBorrow
 		}
 	}
 	return false, 0
