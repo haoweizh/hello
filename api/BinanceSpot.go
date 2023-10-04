@@ -400,12 +400,8 @@ func RenewListenKeyBinanceSpot(account *model.Account) (success bool, listenKey 
 }
 
 func cancelOrderBinanceSpot(key, secret, symbol, orderId string) (suc bool, order *model.Order) {
-	success, _, _, dialectSymbol := model.GetFromStandard(model.BinanceSpot, symbol)
-	if !success {
-		return false, nil
-	}
 	responseBody := signedRequestBinance(key, secret, model.BinanceSpot, http.MethodDelete, restBinanceSpot+"/api/v3/order",
-		true, map[string]interface{}{`symbol`: dialectSymbol, `orderId`: orderId})
+		true, map[string]interface{}{`symbol`: symbol, `orderId`: orderId})
 	orderJson, err := util.NewJSON(responseBody)
 	if err == nil {
 		order = parseOrderBinanceSpot(orderJson)

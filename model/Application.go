@@ -100,7 +100,7 @@ func GetFromStandard(market, standardSymbol string) (success bool, marketType, c
 			return true, mType, coin, coin + DialectTail[mType][market]
 		}
 	}
-	util.Notice(`fail to parse standard symbol %s`, standardSymbol)
+	util.Notice(`fail to parse standard symbol %s %s`, market, standardSymbol)
 	return false, ``, ``, ``
 }
 
