@@ -167,7 +167,7 @@ func reSubscribe(subscribes []interface{}) {
 	}
 }
 
-var subscribeHandlerOKEX = func(connection *websocket.Conn, subscribes []interface{}) error {
+var subscribeHandlerOKEX = func(market string, connection *websocket.Conn, subscribes []interface{}) error {
 	var err error = nil
 	subscribeMap := make(map[string]interface{})
 	subscribeMap["op"] = "subscribe"

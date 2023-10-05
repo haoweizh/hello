@@ -93,6 +93,13 @@ func Test_getCommonMarketInfos(t *testing.T) {
 	//model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
 	//api.InitCrossMarketInfos([]string{model.Gate})
 	api.InitMarketInfos(model.BinanceSpot)
+	api.InitMarketInfos(model.BinancePerp)
+	model.MarketInfos.Range(func(key, value any) bool {
+		if value != nil && value.(*model.MarketInfo).PriceIncrement < 0.0000001 {
+			fmt.Println(key.(string))
+		}
+		return true
+	})
 	price, decimal := model.FormatPrice(model.BinancePerp, `SOL_PERP`, 19.407125)
 	priceStr := util.CutTailZero(strconv.FormatFloat(price, 'f', decimal, 64))
 	fmt.Println(priceStr)

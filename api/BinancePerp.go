@@ -194,14 +194,14 @@ func WsDepthServeBinancePerp(markets *model.Markets) (channels []chan struct{}, 
 	return perpChans, err
 }
 
-var subscribeHandlerBinancePerp = func(connection *websocket.Conn, subscribes []interface{}) error {
+var subscribeHandlerBinancePerp = func(market string, connection *websocket.Conn, subscribes []interface{}) error {
 	var err error = nil
 	subParam := make(map[string]interface{})
 	subParam["method"] = "SUBSCRIBE"
 	subParam["params"] = subscribes
 	subParam["id"] = int(rand.Float64() * 10000)
 	subParamJson, _ := json.Marshal(subParam)
-	if err = SendToConnection(model.BinancePerp, connection, subParamJson); err != nil {
+	if err = SendToConnection(market, connection, subParamJson); err != nil {
 		util.SocketInfo("binance perp can not subscribe %s %s", subParamJson, err.Error())
 	} else {
 		util.Info(fmt.Sprintf(`subscribe %s %s %d`, model.BinancePerp, subParamJson, len(subscribes)))
@@ -536,7 +536,7 @@ func getCandlesBinance(account *model.Account, market, symbol string, begin, end
 		isCache = false
 		if market == model.BinanceSpot {
 			responseBody = signedRequestBinance(account.Key, account.Secret, market, http.MethodGet,
-				restDataBinanceSpot+"/api/v3/klines", false, param)
+				restDataBinance+"/api/v3/klines", false, param)
 		} else if market == model.BinancePerp {
 			responseBody = signedRequestBinance(account.Key, account.Secret, market, http.MethodGet,
 				restBinancePerp+"/fapi/v1/klines", true, param)

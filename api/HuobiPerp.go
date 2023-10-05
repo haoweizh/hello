@@ -20,7 +20,7 @@ import (
 const restHuobiPerp = `api.hbdm.vn`
 const wsHuobiPerp = `wss://api.hbdm.vn/ws`
 
-var subscribeHandlerHuobiPerp = func(connection *websocket.Conn, subscribes []interface{}) error {
+var subscribeHandlerHuobiPerp = func(market string, connection *websocket.Conn, subscribes []interface{}) error {
 	var err error = nil
 	for _, v := range subscribes {
 		subscribeMap := make(map[string]interface{})

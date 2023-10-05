@@ -53,7 +53,7 @@ type HuobiMessage struct {
 	} `json:"tick"`
 }
 
-var subscribeHandlerHuobi = func(connection *websocket.Conn, subscribes []interface{}) error {
+var subscribeHandlerHuobi = func(market string, connection *websocket.Conn, subscribes []interface{}) error {
 	var err error = nil
 	for _, v := range subscribes {
 		subscribeMap := make(map[string]interface{})

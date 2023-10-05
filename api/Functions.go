@@ -126,8 +126,8 @@ func CancelOrders(key, secret, market, symbol string) (result bool) {
 		return cancelOrdersGate(key, secret, symbol)
 	case model.Mexc:
 		return cancelOrdersMexc(key, secret, symbol)
-	case model.BinanceSpot:
-		return cancelOrdersBinanceSpot(key, secret, symbol)
+	case model.BinanceSpot, model.BinanceMargin:
+		return cancelOrdersBinance(key, secret, market, symbol)
 	case model.BinancePerp:
 		return cancelOrdersBinancePerp(key, secret, symbol)
 	case model.Ftx:
@@ -164,7 +164,7 @@ func CancelOrder(key, secret, market, symbol, orderType, orderId string) (result
 	case model.BinancePerp:
 		result = cancelOrderBinancePerp(key, secret, symbol, orderId)
 	case model.BinanceSpot:
-		result, _ = cancelOrderBinanceSpot(key, secret, symbol, orderId)
+		result, _ = cancelOrderBinance(key, secret, market, symbol, orderId)
 	}
 	util.Notice(fmt.Sprintf(`[cancel %s %v %s %s]`, orderId, result, market, symbol))
 	return result, errCode, msg
@@ -436,6 +436,8 @@ func GetBalances(key, secret, market string) (
 		success, balances, totalInUsd, collateral = getBalanceOKEX(key, secret)
 	case model.BinanceSpot:
 		success, balances = getBalanceBinanceSpot(key, secret)
+	case model.BinanceMargin:
+		success, balances = getBalanceBinanceMargin(key, secret)
 	case model.Bybit:
 		success, balances, totalInUsd, collateral = getBalanceBybit(key, secret)
 	case model.HuobiSpot:
@@ -671,7 +673,7 @@ func GetStandardOrderType(market, dialectType string) (standardType string) {
 		default:
 			return model.OrderTypeLimit
 		}
-	case model.BinanceSpot:
+	case model.BinanceSpot, model.BinanceMargin:
 		switch dialectType {
 		case `LIMIT`:
 			return model.OrderTypeLimit
@@ -844,8 +846,8 @@ func GetWSSubscribes(market, subType string) []interface{} {
 	switch market {
 	case model.OKEX:
 		go maintainChannelOKEX(subscribes)
-	case model.BinanceSpot:
-		go maintainChannelBinanceSpot(subscribes)
+	case model.BinanceSpot, model.BinanceMargin:
+		go maintainChannelBinance(market, subscribes)
 	case model.BinancePerp:
 		go maintainChannelBinancePerp(subscribes)
 	case model.Ftx:
@@ -883,7 +885,7 @@ func GetWSSubscribe(market, symbol, subType string) (subscribe interface{}) {
 			return strings.ToLower(dialectSymbol) + `@markPrice@1s`
 			//return `!markPrice@arr`
 		}
-	case model.BinanceSpot: // XRPUSDT: XRPUSDT@depth5   XRP-PERP: XRPUSDT@depth5
+	case model.BinanceSpot, model.BinanceMargin: // XRPUSDT: XRPUSDT@depth5   XRP-PERP: XRPUSDT@depth5
 		if subType == model.SubscribeDepth {
 			return strings.ToLower(dialectSymbol) + `@depth5@100ms`
 		}
@@ -1070,7 +1072,9 @@ func InitMarketInfos(market string) (success bool) {
 	case model.HuobiSpot:
 		marketInfos = getMarketsHuobiSpot(accounts[0].Key, accounts[0].Secret)
 	case model.BinanceSpot:
-		marketInfos = getMarketsBinanceSpot(accounts[0].Key, accounts[0].Secret)
+		marketInfos = getMarketsBinance(accounts[0], market, model.MarketTypeSpot)
+	case model.BinanceMargin:
+		marketInfos = getMarketsBinance(accounts[0], market, model.MarketTypeMargin)
 	case model.BinancePerp:
 		marketInfos = getMarketsBinancePerp(accounts[0].Key, accounts[0].Secret)
 		go func() {
@@ -1137,8 +1141,8 @@ func CreateMarketDepthServer(markets *model.Markets, market string) (
 		channels, err = WsDepthServeGateNew()
 	case model.OKEX:
 		channels, err = WsDepthServeOKEX(GetMarketSymbols(model.OKEX))
-	case model.BinanceSpot:
-		channels, err = WsDepthServeBinanceSpot(markets)
+	case model.BinanceSpot, model.BinanceMargin:
+		channels, err = WsDepthServeBinance(markets, market)
 	case model.BinancePerp:
 		channels, err = WsDepthServeBinancePerp(markets)
 	case model.HuobiPerp:

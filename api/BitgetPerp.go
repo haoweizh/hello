@@ -183,7 +183,7 @@ func WsDepthServeBitgetPerp(markets *model.Markets) (channels []chan struct{}, e
 	return channels, nil
 }
 
-var subscribeHandlerBitgetPerpBookTicker = func(connection *websocket.Conn, subscribes []interface{}) error {
+var subscribeHandlerBitgetPerpBookTicker = func(market string, connection *websocket.Conn, subscribes []interface{}) error {
 	var err error = nil
 	var params []map[string]string
 	for _, subscribe := range subscribes {
@@ -206,7 +206,7 @@ var subscribeHandlerBitgetPerpBookTicker = func(connection *websocket.Conn, subs
 	return err
 }
 
-var subscribeHandlerBitgetPerpMarkPrice = func(connection *websocket.Conn, subscribes []interface{}) error {
+var subscribeHandlerBitgetPerpMarkPrice = func(market string, connection *websocket.Conn, subscribes []interface{}) error {
 	var err error = nil
 	var params []map[string]string
 	for _, subscribe := range subscribes {

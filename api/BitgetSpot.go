@@ -122,7 +122,7 @@ func WsDepthServeBitgetSpot(markets *model.Markets) (channels []chan struct{}, e
 	return channels, nil
 }
 
-var subscribeHandlerBitgetSpotBookTicker = func(connection *websocket.Conn, subscribes []interface{}) error {
+var subscribeHandlerBitgetSpotBookTicker = func(market string, connection *websocket.Conn, subscribes []interface{}) error {
 	var err error = nil
 	var params []map[string]string
 	for _, subscribe := range subscribes {

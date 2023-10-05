@@ -259,7 +259,7 @@ func WsDepthServeBybit(markets *model.Markets) (channels []chan struct{}, err er
 	return channels, nil
 }
 
-var subscribeHandlerBybit = func(connection *websocket.Conn, subscribes []interface{}) error {
+var subscribeHandlerBybit = func(market string, connection *websocket.Conn, subscribes []interface{}) error {
 	var err error = nil
 	var params []string
 	for _, subscribe := range subscribes {

@@ -185,7 +185,7 @@ func initMexcContractDepth(markets *model.Markets, symbol string) {
 }
 
 // endregion
-var subscribeHandlerMexc = func(connection *websocket.Conn, subscribes []interface{}) error {
+var subscribeHandlerMexc = func(market string, connection *websocket.Conn, subscribes []interface{}) error {
 	var err error
 	for _, subscribe := range subscribes {
 		subMsg := fmt.Sprintf(`%s`, subscribe)

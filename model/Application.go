@@ -36,6 +36,7 @@ const Bybit = `bybit`
 const GXZQ = `GXZQ`
 const OKEX = "okex"
 const BinanceSpot = "binancespot"
+const BinanceMargin = `binancemargin`
 const BinancePerp = "binanceperp"
 const Ftx = `ftx`
 const Bitmex = `bitmex`
@@ -67,6 +68,7 @@ const FunctionCross = `cross`
 const FunctionQueue = `queue`
 const MarketTypePerp = `perp`
 const MarketTypeSpot = `spot`
+const MarketTypeMargin = `margin`
 const MarketTypeFuture = `future`
 const FunctionDCarry = `dcarry`
 const FunctionComplement = `comp`
@@ -87,8 +89,10 @@ var DialectTail = map[string]map[string]string{
 	MarketTypeSpot:   {Gate: `_USDT`, Ftx: `/USD`, OKEX: `-USDT`, Bybit: `USDT`, BinanceSpot: `USDT`, KucoinSpot: `-USDT`, BitgetSpot: `USDT_SPBL`},
 	MarketTypePerp:   {Gate: `_USDT`, Ftx: `-PERP`, OKEX: `-USDT-SWAP`, Bybit: `USDT`, BinancePerp: `USDT`, Mexc: `_USDT`, KucoinPerp: `USDTM`, BitgetPerp: `USDT_UMCBL`},
 	MarketTypeFuture: {GXZQ: ``},
+	MarketTypeMargin: {BinanceMargin: `USDT`},
 }
-var UniStandardTail = map[string]string{MarketTypeSpot: `_USDT`, MarketTypePerp: `_PERP`, MarketTypeFuture: `_FUTURE`}
+var UniStandardTail = map[string]string{MarketTypeSpot: `_USDT`, MarketTypeMargin: `_USDT`, MarketTypePerp: `_PERP`,
+	MarketTypeFuture: `_FUTURE`}
 
 func GetFromStandard(market, standardSymbol string) (success bool, marketType, coinValue, dialectSymbol string) {
 	if len(strings.Trim(standardSymbol, ` `)) == 0 {
@@ -128,6 +132,15 @@ var orderStatusMap = map[string]map[string]string{ // market - market status - u
 		"EXPIRED":          CarryStatusFail,
 	},
 	BinanceSpot: {
+		"NEW":              CarryStatusWorking,
+		"PARTIALLY_FILLED": CarryStatusWorking,
+		"PENDING_CANCEL":   CarryStatusWorking,
+		"FILLED":           CarryStatusSuccess,
+		"CANCELED":         CarryStatusFail,
+		"REJECTED":         CarryStatusFail,
+		"EXPIRED":          CarryStatusFail,
+	},
+	BinanceMargin: {
 		"NEW":              CarryStatusWorking,
 		"PARTIALLY_FILLED": CarryStatusWorking,
 		"PENDING_CANCEL":   CarryStatusWorking,

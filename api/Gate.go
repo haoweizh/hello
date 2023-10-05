@@ -497,7 +497,7 @@ var wsHandler = func(event []byte) {
 	}
 }
 
-var subscribeMarkPriceHandler = func(connection *websocket.Conn, subscribes []interface{}) error {
+var subscribeMarkPriceHandler = func(market string, connection *websocket.Conn, subscribes []interface{}) error {
 	var err error = nil
 	var symbols []string
 	for _, subscribe := range subscribes {
@@ -519,7 +519,7 @@ var subscribeMarkPriceHandler = func(connection *websocket.Conn, subscribes []in
 	return err
 }
 
-var subscribeHandler = func(connection *websocket.Conn, subscribes []interface{}) error {
+var subscribeHandler = func(market string, connection *websocket.Conn, subscribes []interface{}) error {
 	var err error = nil
 	switch subscribes[0].(type) {
 	case string: //ticker订阅

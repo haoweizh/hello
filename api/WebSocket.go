@@ -15,7 +15,7 @@ import (
 type OrderHandler func(order *model.Order)
 type MsgHandler func(message []byte)
 type WSMsgHandler func(client *WSClient, message []byte)
-type SubscribeHandler func(connection *websocket.Conn, subscribes []interface{}) error
+type SubscribeHandler func(market string, connection *websocket.Conn, subscribes []interface{}) error
 
 var wsLock sync.Mutex
 
@@ -188,7 +188,7 @@ func WebSocketClient(market, url string, subscribes []interface{}, subHandler Su
 		}
 		go chanHandler(market, stopChan, connection, msgHandler)
 		if subHandler != nil {
-			_ = subHandler(connection, stepSubscribes)
+			_ = subHandler(market, connection, stepSubscribes)
 		}
 		stopChans = append(stopChans, stopChan)
 		connections = append(connections, connection)
