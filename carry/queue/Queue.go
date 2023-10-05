@@ -89,7 +89,7 @@ var ProcessQueue = func(setting *model.Setting, tick *model.BidAsk) {
 func liqQueue(setting *model.Setting, data *DataQueue, tick, tickLiq *model.BidAsk) (placed bool) {
 	holdInQuote := data.baseHold*tick.Bids[0].Price + data.BaseHoldLiq*tickLiq.Bids[0].Price
 	if holdInQuote > 20 && tickLiq.Bids[0].Price*setting.RateRelated-tick.Bids[0].Price > setting.OpenShortMargin {
-		util.Notice(fmt.Sprintf(`try to liq queue order %s %s %s %s value %f amt %f liq price %f > %f`,
+		util.Notice(fmt.Sprintf(`try to liq queue order %s %s %s %s value %f amt %f liq price %e > %e`,
 			setting.Function, setting.MarketRelated, setting.SymbolRelated, model.OrderSideSell, holdInQuote,
 			holdInQuote/tickLiq.Bids[0].Price, tickLiq.Bids[0].Price*setting.RateRelated, setting.OpenShortMargin))
 		order := api.PlaceOrder(data.accountLiq.Key, data.accountLiq.Secret, model.OrderSideSell, model.OrderTypeMarket,
@@ -98,7 +98,7 @@ func liqQueue(setting *model.Setting, data *DataQueue, tick, tickLiq *model.BidA
 		model.AppDB.Save(&order)
 		return true
 	} else if holdInQuote < -20 && tick.Asks[0].Price-tickLiq.Asks[0].Price*setting.RateRelated > setting.OpenShortMargin {
-		util.Notice(fmt.Sprintf(`try to liq queue order %s %s %s %s value %f amt %f %f > %f`,
+		util.Notice(fmt.Sprintf(`try to liq queue order %s %s %s %s value %f amt %f %e > %e`,
 			setting.Function, setting.MarketRelated, setting.SymbolRelated, model.OrderSideBuy, holdInQuote,
 			holdInQuote/tickLiq.Asks[0].Price, tick.Asks[0].Price-tickLiq.Asks[0].Price*setting.RateRelated, setting.OpenShortMargin))
 		order := api.PlaceOrder(data.accountLiq.Key, data.accountLiq.Secret, model.OrderSideBuy, model.OrderTypeMarket,
