@@ -89,18 +89,22 @@ var ProcessQueue = func(setting *model.Setting, tick *model.BidAsk) {
 func liqQueue(setting *model.Setting, data *DataQueue, tick, tickLiq *model.BidAsk) (placed bool) {
 	holdInQuote := data.baseHold*tick.Bids[0].Price + data.BaseHoldLiq*tickLiq.Bids[0].Price
 	if holdInQuote > 20 && tickLiq.Bids[0].Price*setting.RateRelated-tick.Bids[0].Price > setting.OpenShortMargin {
-		util.Notice(fmt.Sprintf(`try to liq queue order %s %s %s %s value %f amt %f`,
-			setting.Function, setting.MarketRelated, setting.SymbolRelated, model.OrderSideSell, holdInQuote, holdInQuote/tickLiq.Bids[0].Price))
-		api.PlaceOrder(data.accountLiq.Key, data.accountLiq.Secret, model.OrderSideSell, model.OrderTypeMarket,
+		util.Notice(fmt.Sprintf(`try to liq queue order %s %s %s %s value %f amt %f liq price %f > %f`,
+			setting.Function, setting.MarketRelated, setting.SymbolRelated, model.OrderSideSell, holdInQuote,
+			holdInQuote/tickLiq.Bids[0].Price, tickLiq.Bids[0].Price*setting.RateRelated, setting.OpenShortMargin))
+		order := api.PlaceOrder(data.accountLiq.Key, data.accountLiq.Secret, model.OrderSideSell, model.OrderTypeMarket,
 			setting.MarketRelated, setting.SymbolRelated, ``, tickLiq.Bids[0].Price, tickLiq.Bids[0].Price,
 			holdInQuote/tickLiq.Bids[0].Price, false, nil, setting)
+		model.AppDB.Save(&order)
 		return true
 	} else if holdInQuote < -20 && tick.Asks[0].Price-tickLiq.Asks[0].Price*setting.RateRelated > setting.OpenShortMargin {
-		util.Notice(fmt.Sprintf(`try to liq queue order %s %s %s %s value %f amt %f`,
-			setting.Function, setting.MarketRelated, setting.SymbolRelated, model.OrderSideBuy, holdInQuote, holdInQuote/tickLiq.Asks[0].Price))
-		api.PlaceOrder(data.accountLiq.Key, data.accountLiq.Secret, model.OrderSideBuy, model.OrderTypeMarket,
+		util.Notice(fmt.Sprintf(`try to liq queue order %s %s %s %s value %f amt %f %f > %f`,
+			setting.Function, setting.MarketRelated, setting.SymbolRelated, model.OrderSideBuy, holdInQuote,
+			holdInQuote/tickLiq.Asks[0].Price, tick.Asks[0].Price-tickLiq.Asks[0].Price*setting.RateRelated, setting.OpenShortMargin))
+		order := api.PlaceOrder(data.accountLiq.Key, data.accountLiq.Secret, model.OrderSideBuy, model.OrderTypeMarket,
 			setting.MarketRelated, setting.SymbolRelated, ``, tickLiq.Asks[0].Price, tickLiq.Asks[0].Price,
 			math.Abs(holdInQuote)/tickLiq.Asks[0].Price, false, nil, setting)
+		model.AppDB.Save(&order)
 		return true
 	}
 	return false
@@ -119,6 +123,7 @@ func placeQueue(setting *model.Setting, data *DataQueue, tick *model.BidAsk) (pl
 			if order == nil || !order.HaveId() {
 				continue
 			}
+			model.AppDB.Save(&order)
 			data.QueueOrders[order.OrderId] = order
 			util.Notice(fmt.Sprintf(`place queue order %s %s %s %s at %e amt %e return %s`,
 				setting.Function, setting.Market, setting.Symbol, model.OrderSideBuy, order.Price, data.baseAvaWithBow, order.OrderId))
@@ -136,6 +141,7 @@ func placeQueue(setting *model.Setting, data *DataQueue, tick *model.BidAsk) (pl
 			if order == nil {
 				continue
 			}
+			model.AppDB.Save(&order)
 			data.QueueOrders[order.OrderId] = order
 			util.Notice(fmt.Sprintf(`place queue order %s %s %s %s at %e amt %e return %s`,
 				setting.Function, setting.Market, setting.Symbol, model.OrderSideSell, order.Price, data.quoteAvaWithBow/tick.Bids[0].Price, order.OrderId))
@@ -227,7 +233,6 @@ func getHolding(account *model.Account, market, symbol string) (success bool, ho
 	return false, 0
 }
 
-// 2. add binance margin api
 var ProcessQueueLiq = func(order *model.Order) {
 	for {
 		if !api.CheckSetProcessing(model.FunctionQueue, model.FunctionQueue, model.FunctionQueue, true) {
