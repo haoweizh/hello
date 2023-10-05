@@ -90,6 +90,8 @@ func Test_ws(t *testing.T) {
 
 func Test_getCommonMarketInfos(t *testing.T) {
 	model.NewConfig()
+	account := model.AppConfig.GetAccounts(model.BinanceSpot)[0]
+	api.QueryOpenOrders(account.Key, account.Secret, model.BinanceSpot, `PEPE_USDT`)
 	//model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
 	//api.InitCrossMarketInfos([]string{model.Gate})
 	api.InitMarketInfos(model.BinanceSpot)

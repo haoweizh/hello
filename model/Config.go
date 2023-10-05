@@ -107,7 +107,7 @@ func (config *Config) GetAccounts(market string) []*Account {
 		secrets = strings.Split(config.OkexSecret, `,`)
 		closeValues = strings.Split(config.OkexCarryClose, `,`)
 		rateValues = strings.Split(config.OkexCarryRate, `,`)
-	case BinanceSpot, BinancePerp:
+	case BinanceSpot, BinancePerp, BinanceMargin:
 		keys = strings.Split(config.BinanceKey, `,`)
 		secrets = strings.Split(config.BinanceSecret, `,`)
 		closeValues = strings.Split(config.BinanceCarryClose, `,`)
