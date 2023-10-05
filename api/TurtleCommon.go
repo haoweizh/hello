@@ -309,7 +309,7 @@ func GetTurtleData(account *model.Account, function, market, symbol string, far,
 	// today.Unix() == nowPeriod.Unix() &&
 	if refreshDynamic && !model.CommonCoins[strings.ToLower(coin)] {
 		refreshValue, refreshOk := DynamicHandleTime.Load(market)
-		if !refreshOk || refreshValue == nil || refreshValue.(time.Time).Add(time.Minute*15).Before(time.Now()) {
+		if !refreshOk || refreshValue == nil || refreshValue.(time.Time).Before(nowPeriod) {
 			if handleMarketDynamic(market) {
 				PrepareSettings()
 				SetRequireReset(market)
