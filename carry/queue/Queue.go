@@ -76,12 +76,12 @@ var ProcessQueue = func(setting *model.Setting, tick *model.BidAsk) {
 		return
 	}
 	if placeQueue(setting, data, tick) {
-		time.Sleep(time.Second)
+		time.Sleep(time.Second * 5)
 		GetData(setting, true)
 		return
 	}
 	if liqQueue(setting, data, tick, tickLiq) {
-		time.Sleep(time.Second)
+		time.Sleep(time.Second * 5)
 		GetData(setting, true)
 	}
 }
@@ -152,22 +152,22 @@ func placeQueue(setting *model.Setting, data *DataQueue, tick *model.BidAsk) (pl
 }
 
 func canQueue(setting *model.Setting, tick, tickLiq *model.BidAsk) (can int) {
-	//v, _ := util.LoadSyncMap(model.MarketInfos, setting.Market, setting.Symbol)
-	//if v == nil {
-	//	return -1
-	//}
-	//marketInfo := v.(*model.MarketInfo)
-	//priceDis := tick.Asks[0].Price - tick.Bids[0].Price - marketInfo.PriceIncrement*1.1
-	//if priceDis > 0 {
-	//	return -2
-	//}
-	//if tick.Asks[0].Price*tick.Asks[0].Amount < setting.AmountLimit ||
-	//	tick.Bids[0].Price*tick.Bids[0].Amount < setting.AmountLimit {
-	//	return -3
-	//}
-	//if tickLiq.Asks[0].Amount > 10*tickLiq.Bids[0].Amount || tickLiq.Bids[0].Amount > tickLiq.Asks[0].Amount*10 {
-	//	return -4
-	//}
+	v, _ := util.LoadSyncMap(model.MarketInfos, setting.Market, setting.Symbol)
+	if v == nil {
+		return -1
+	}
+	marketInfo := v.(*model.MarketInfo)
+	priceDis := tick.Asks[0].Price - tick.Bids[0].Price - marketInfo.PriceIncrement*1.1
+	if priceDis > 0 {
+		return -2
+	}
+	if tick.Asks[0].Price*tick.Asks[0].Amount < setting.AmountLimit ||
+		tick.Bids[0].Price*tick.Bids[0].Amount < setting.AmountLimit {
+		return -3
+	}
+	if tickLiq.Asks[0].Amount > 10*tickLiq.Bids[0].Amount || tickLiq.Bids[0].Amount > tickLiq.Asks[0].Amount*10 {
+		return -4
+	}
 	//if tick.Bids[0].Price >= tickLiq.Bids[0].Price*setting.RateRelated || tick.Asks[0].Price <= tickLiq.Asks[0].Price*setting.RateRelated {
 	//	return -5
 	//}
@@ -186,7 +186,7 @@ func GetData(setting *model.Setting, refresh bool) (cache bool, data *DataQueue)
 	for _, order := range orders {
 		if order != nil {
 			data.QueueOrders[order.OrderId] = order
-			util.Notice(fmt.Sprintf(`add order into queue %s %s %s`, order.Market, order.Symbol, order.OrderId))
+			//util.Notice(fmt.Sprintf(`add order into queue %s %s %s`, order.Market, order.Symbol, order.OrderId))
 		}
 	}
 	var success1, success2, success3, success4 bool
@@ -242,8 +242,6 @@ var ProcessQueueLiq = func(order *model.Order) {
 		}
 	}
 	defer api.CheckSetProcessing(model.FunctionQueue, model.FunctionQueue, model.FunctionQueue, false)
-	util.Notice(fmt.Sprintf(`deal queen order %s %s %s %s deal at %f deal amt %f`,
-		order.Market, order.Symbol, order.OrderId, order.Status, order.DealPrice, order.DealAmount))
 	if order == nil || !order.HaveId() {
 		return
 	}

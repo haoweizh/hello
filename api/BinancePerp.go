@@ -679,6 +679,9 @@ func parseOrderJsBinance(market string, json *simplejson.Json) (order *model.Ord
 	order.Amount, _ = strconv.ParseFloat(json.Get("q").MustString(), 64)
 	order.Price, _ = strconv.ParseFloat(json.Get(`p`).MustString(), 64)
 	order.DealPrice, _ = strconv.ParseFloat(json.Get("ap").MustString(), 64)
+	if marketType == model.MarketTypeSpot {
+		order.DealPrice, _ = strconv.ParseFloat(json.Get(`L`).MustString(), 64)
+	}
 	order.DealAmount, _ = strconv.ParseFloat(json.Get("z").MustString(), 64)
 	order.TriggerPrice, _ = strconv.ParseFloat(json.Get("sp").MustString(), 64)
 	order.OrderId = strconv.Itoa(json.Get("i").MustInt())
