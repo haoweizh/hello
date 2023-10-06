@@ -549,8 +549,6 @@ func queryOpenOrdersBinanceSpot(key, secret, symbol string) (orders []*model.Ord
 		resArray, err := client.NewListOpenOrdersService().Symbol(dialectSymbol).Do(context.Background())
 		if err != nil {
 			util.Notice(`queryOpenOrdersBinanceSpot err %s %s %s`, symbol, dialectSymbol, err.Error())
-		} else {
-			util.Notice(`queryOpenOrdersBinanceSpot success %s %s`, symbol, dialectSymbol)
 		}
 		for _, res := range resArray {
 			order := parseOrderBinanceSpotSdk(res, symbol)

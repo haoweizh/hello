@@ -61,16 +61,18 @@ var ProcessQueue = func(setting *model.Setting, tick *model.BidAsk) {
 	if canceled {
 		return
 	}
-	queueCode := canQueue(setting, tick)
+	queueCode, cancelBuy, cancelSell := canQueue(setting, tick)
 	if queueCode < 0 {
 		for _, order := range data.QueueOrders {
-			success, _, _ := api.CancelOrder(data.account.Key, data.account.Secret, order.Market, order.Symbol,
-				model.OrderTypeLimit, order.OrderId)
-			if success {
-				delete(data.QueueOrders, order.OrderId)
-				util.Notice(fmt.Sprintf(`clear all order when can not queue code %d %s %s %s left %d`,
-					queueCode, setting.Market, setting.Symbol, order.OrderId, len(data.QueueOrders)))
-				time.Sleep(time.Second)
+			if (cancelBuy && order.OrderSide == model.OrderSideBuy) || (cancelSell && order.OrderSide == model.OrderSideSell) {
+				success, _, _ := api.CancelOrder(data.account.Key, data.account.Secret, order.Market, order.Symbol,
+					model.OrderTypeLimit, order.OrderId)
+				if success {
+					delete(data.QueueOrders, order.OrderId)
+					util.Notice(fmt.Sprintf(`clear all order when can not queue code %d %s %s %s left %d`,
+						queueCode, setting.Market, setting.Symbol, order.OrderId, len(data.QueueOrders)))
+					time.Sleep(time.Second)
+				}
 			}
 		}
 		return
@@ -151,27 +153,26 @@ func placeQueue(setting *model.Setting, data *DataQueue, tick *model.BidAsk) (pl
 	return placed
 }
 
-func canQueue(setting *model.Setting, tick *model.BidAsk) (can int) {
+func canQueue(setting *model.Setting, tick *model.BidAsk) (code int, cancelBuy, cancelSell bool) {
 	v, _ := util.LoadSyncMap(model.MarketInfos, setting.Market, setting.Symbol)
 	if v == nil {
-		return -1
+		return -1, true, true
 	}
 	marketInfo := v.(*model.MarketInfo)
 	priceDis := tick.Asks[0].Price - tick.Bids[0].Price - marketInfo.PriceIncrement*1.1
 	if priceDis > 0 {
-		return -2
+		return -2, true, true
 	}
-	if tick.Asks[0].Price*tick.Asks[0].Amount < setting.AmountLimit ||
-		tick.Bids[0].Price*tick.Bids[0].Amount < setting.AmountLimit {
-		return -3
+	if tick.Asks[0].Price*tick.Asks[0].Amount < setting.AmountLimit && tick.Bids[0].Amount > tick.Asks[0].Amount*10 {
+		return -3, false, true
 	}
-	if tick.Asks[0].Amount > 10*tick.Bids[0].Amount || tick.Bids[0].Amount > tick.Asks[0].Amount*10 {
-		return -4
+	if tick.Bids[0].Price*tick.Bids[0].Amount < setting.AmountLimit && tick.Asks[0].Amount > 10*tick.Bids[0].Amount {
+		return -4, true, false
 	}
 	//if tick.Bids[0].Price >= tickLiq.Bids[0].Price*setting.RateRelated || tick.Asks[0].Price <= tickLiq.Asks[0].Price*setting.RateRelated {
 	//	return -5
 	//}
-	return 1
+	return 1, false, false
 }
 
 func GetData(setting *model.Setting, refresh bool) (cache bool, data *DataQueue) {
@@ -195,8 +196,8 @@ func GetData(setting *model.Setting, refresh bool) (cache bool, data *DataQueue)
 	success3, data.quoteAvaWithBow = getAvailable(data.account, setting.Market, `usdt`)
 	_, _, coin, _ := model.GetFromStandard(setting.Market, setting.Symbol)
 	success4, data.baseAvaWithBow = getAvailable(data.account, setting.Market, coin)
-	util.Notice(fmt.Sprintf(`get data %v %v %v %v %e %e %e %e`,
-		success1, success2, success3, success4, data.baseHold, data.BaseHoldLiq, data.quoteAvaWithBow, data.baseAvaWithBow))
+	//util.Notice(fmt.Sprintf(`get data %v %v %v %v %e %e %e %e`,
+	//	success1, success2, success3, success4, data.baseHold, data.BaseHoldLiq, data.quoteAvaWithBow, data.baseAvaWithBow))
 	if success1 && success2 && success3 && success4 {
 		data.updatedInMilli = now
 		util.StoreSyncMap(DataMap, data, setting.Market, setting.Symbol)
