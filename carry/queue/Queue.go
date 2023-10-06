@@ -69,8 +69,9 @@ var ProcessQueue = func(setting *model.Setting, tick *model.BidAsk) {
 					model.OrderTypeLimit, order.OrderId)
 				if success {
 					delete(data.QueueOrders, order.OrderId)
-					util.Notice(fmt.Sprintf(`clear all order when can not queue code %d %s %s %s left %d`,
-						queueCode, setting.Market, setting.Symbol, order.OrderId, len(data.QueueOrders)))
+					util.Notice(fmt.Sprintf(`clear all order when can not queue code %d %s %s %s left %d tick [%e %e %e %e]`,
+						queueCode, setting.Market, setting.Symbol, order.OrderId, len(data.QueueOrders), tick.Bids[0].Price,
+						tick.Bids[0].Amount, tick.Asks[0].Price, tick.Asks[0].Amount))
 					time.Sleep(time.Second)
 				}
 			}
