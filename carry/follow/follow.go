@@ -54,6 +54,7 @@ var ProcessFollow = func(setting *model.Setting, tick *model.BidAsk) {
 					tickOrder.Asks[0].Price, tickOrder.Asks[0].Price, math.Abs(holding), false, nil, setting)
 			}
 			if orderLiq != nil && orderLiq.HaveId() {
+				timeFollow = now
 				orderLiq.RefreshType = model.FunctionComplement
 				model.AppDB.Save(&orderLiq)
 				util.Notice(fmt.Sprintf(`liq order %s %s %s %s holding %e`,
