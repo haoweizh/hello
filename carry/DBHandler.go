@@ -5,6 +5,7 @@ import (
 	"hello/api"
 	"hello/carry/Turtle"
 	"hello/carry/cross"
+	"hello/carry/follow"
 	"hello/carry/grid"
 	"hello/carry/hang"
 	"hello/carry/queue"
@@ -166,6 +167,7 @@ func Maintain() {
 	model.HandlerMap[model.FunctionBoost] = Turtle.ProcessBoost
 	model.HandlerMap[model.FunctionGrid] = grid.ProcessGrid
 	model.HandlerMap[model.FunctionQueue] = queue.ProcessQueue
+	model.HandlerMap[model.FunctionFollow] = follow.ProcessFollow
 	model.AccountHandlerMap[model.FunctionGrid] = grid.ProcessGridOrder
 	model.AccountHandlerMap[model.FunctionQueue] = queue.ProcessQueueLiq
 	model.AccountHandlerMap[model.FunctionCross] = cross.PostOrderCross

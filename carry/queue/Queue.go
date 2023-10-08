@@ -3,6 +3,7 @@ package queue
 import (
 	"fmt"
 	"hello/api"
+	"hello/carry"
 	"hello/model"
 	"hello/util"
 	"math"
@@ -192,8 +193,8 @@ func GetData(setting *model.Setting, refresh bool) (cache bool, data *DataQueue)
 		}
 	}
 	var success1, success2, success3, success4 bool
-	success1, data.baseHold = getHolding(data.account, setting.Market, setting.Symbol)
-	success2, data.BaseHoldLiq = getHolding(data.accountLiq, setting.MarketRelated, setting.SymbolRelated)
+	success1, data.baseHold = carry.GetHolding(data.account, setting.Market, setting.Symbol)
+	success2, data.BaseHoldLiq = carry.GetHolding(data.accountLiq, setting.MarketRelated, setting.SymbolRelated)
 	success3, data.quoteAvaWithBow = getAvailable(data.account, setting.Market, `usdt`)
 	_, _, coin, _ := model.GetFromStandard(setting.Market, setting.Symbol)
 	success4, data.baseAvaWithBow = getAvailable(data.account, setting.Market, coin)
@@ -215,26 +216,6 @@ func getAvailable(account *model.Account, market, coin string) (success bool, ho
 	for _, balance := range balances {
 		if strings.EqualFold(balance.Coin, coin) {
 			return true, balance.AvailableWithBorrow
-		}
-	}
-	return false, 0
-}
-
-func getHolding(account *model.Account, market, symbol string) (success bool, holding float64) {
-	_, marketType, coin, _ := model.GetFromStandard(market, symbol)
-	if marketType == model.MarketTypePerp {
-		_, positions, _, _ := api.GetPositions(account.Key, account.Secret, market)
-		for _, position := range positions {
-			if strings.EqualFold(symbol, position.Currency) {
-				return true, position.Holding
-			}
-		}
-	} else if marketType == model.MarketTypeSpot {
-		_, balances, _, _ := api.GetBalances(account.Key, account.Secret, market)
-		for _, balance := range balances {
-			if strings.EqualFold(balance.Coin, coin) {
-				return true, balance.Amount
-			}
 		}
 	}
 	return false, 0

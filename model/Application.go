@@ -66,6 +66,7 @@ const FunctionCombineTurtle = `combine_turtle`
 const FunctionTurtleNormal = `turtle_normal`
 const FunctionCross = `cross`
 const FunctionQueue = `queue`
+const FunctionFollow = `follow`
 const MarketTypePerp = `perp`
 const MarketTypeSpot = `spot`
 const MarketTypeMargin = `margin`
