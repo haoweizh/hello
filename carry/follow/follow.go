@@ -48,10 +48,10 @@ var ProcessFollow = func(setting *model.Setting, tick *model.BidAsk) {
 			var orderLiq *model.Order
 			profitSell := tickOrder.Bids[0].Price - tick.Bids[0].Price*setting.RateRelated
 			profitBuy := tick.Asks[0].Price*setting.RateRelated - tickOrder.Asks[0].Price
-			if holding > 0 && profitSell > setting.OpenShortMargin {
+			if holding > 0 && profitSell > setting.OpenShortMargin && quantityAsk > 3*setting.AmountLimit && quantityAsk > 0.7*quantityBid {
 				orderLiq = api.PlaceOrder(account.Key, account.Secret, model.OrderSideSell, model.OrderTypeMarket, setting.MarketRelated, setting.SymbolRelated, ``,
 					tickOrder.Bids[0].Price, tickOrder.Bids[0].Price, holding, false, nil, setting)
-			} else if holding < 0 && profitBuy > setting.OpenShortMargin {
+			} else if holding < 0 && profitBuy > setting.OpenShortMargin && quantityBid > 3*setting.AmountLimit && quantityBid > 0.7*quantityAsk {
 				orderLiq = api.PlaceOrder(account.Key, account.Secret, model.OrderSideBuy, model.OrderTypeMarket, setting.MarketRelated, setting.SymbolRelated, ``,
 					tickOrder.Asks[0].Price, tickOrder.Asks[0].Price, math.Abs(holding), false, nil, setting)
 			}
@@ -65,10 +65,12 @@ var ProcessFollow = func(setting *model.Setting, tick *model.BidAsk) {
 			}
 		} else {
 			var order *model.Order
-			if quantityBid < setting.AmountLimit && quantityBid*4 < quantityAsk && tick.Bids[0].Price == normalPriceBid && now-normalTimeBid < 10000 {
+			if quantityBid < setting.AmountLimit && quantityBid*4 < quantityAsk && tick.Bids[0].Price == normalPriceBid &&
+				now-normalTimeBid < 10000 && tickOrder.Bids[0].Price-setting.RateRelated*tick.Bids[0].Price > setting.OpenShortMargin {
 				order = api.PlaceOrder(account.Key, account.Secret, model.OrderSideSell, model.OrderTypeLimit, setting.MarketRelated, setting.SymbolRelated, ``,
 					tick.Bids[0].Price*setting.RateRelated, tick.Bids[0].Price*setting.RateRelated, setting.GridAmount, false, nil, setting)
-			} else if quantityAsk < setting.AmountLimit && quantityAsk*4 < quantityBid && tick.Asks[0].Price == normalPriceAsk && now-normalTimeAsk < 10000 {
+			} else if quantityAsk < setting.AmountLimit && quantityAsk*4 < quantityBid && tick.Asks[0].Price == normalPriceAsk &&
+				now-normalTimeAsk < 10000 && tick.Asks[0].Price*setting.RateRelated-tickOrder.Asks[0].Price > setting.OpenShortMargin {
 				order = api.PlaceOrder(account.Key, account.Secret, model.OrderSideBuy, model.OrderTypeLimit, setting.MarketRelated, setting.SymbolRelated, ``,
 					tick.Asks[0].Price*setting.RateRelated, tick.Asks[0].Price*setting.RateRelated, setting.GridAmount, false, nil, setting)
 			}
