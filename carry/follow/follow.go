@@ -3,7 +3,6 @@ package follow
 import (
 	"fmt"
 	"hello/api"
-	"hello/carry"
 	"hello/model"
 	"hello/util"
 	"math"
@@ -83,7 +82,7 @@ var ProcessFollow = func(setting *model.Setting, tick *model.BidAsk) {
 		orders := api.QueryOpenOrders(account.Key, account.Secret, setting.MarketRelated, setting.SymbolRelated)
 		if len(orders) == 0 {
 			var success bool
-			success, holding = carry.GetHolding(account, setting.MarketRelated, setting.SymbolRelated)
+			success, holding = api.GetHolding(account, setting.MarketRelated, setting.SymbolRelated)
 			if success {
 				timeFollow = 0
 				util.Notice(fmt.Sprintf(`orders 0 set holding %e`, holding))

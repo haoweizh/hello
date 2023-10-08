@@ -3,7 +3,6 @@ package queue
 import (
 	"fmt"
 	"hello/api"
-	"hello/carry"
 	"hello/model"
 	"hello/util"
 	"math"
@@ -193,8 +192,8 @@ func GetData(setting *model.Setting, refresh bool) (cache bool, data *DataQueue)
 		}
 	}
 	var success1, success2, success3, success4 bool
-	success1, data.baseHold = carry.GetHolding(data.account, setting.Market, setting.Symbol)
-	success2, data.BaseHoldLiq = carry.GetHolding(data.accountLiq, setting.MarketRelated, setting.SymbolRelated)
+	success1, data.baseHold = api.GetHolding(data.account, setting.Market, setting.Symbol)
+	success2, data.BaseHoldLiq = api.GetHolding(data.accountLiq, setting.MarketRelated, setting.SymbolRelated)
 	success3, data.quoteAvaWithBow = getAvailable(data.account, setting.Market, `usdt`)
 	_, _, coin, _ := model.GetFromStandard(setting.Market, setting.Symbol)
 	success4, data.baseAvaWithBow = getAvailable(data.account, setting.Market, coin)
