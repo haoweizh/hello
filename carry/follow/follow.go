@@ -46,10 +46,12 @@ var ProcessFollow = func(setting *model.Setting, tick *model.BidAsk) {
 	if timeFollow == 0 {
 		if math.Abs(holding)*tickOrder.Bids[0].Price > 10 {
 			var orderLiq *model.Order
-			if holding > 0 && tickOrder.Bids[0].Price-tick.Bids[0].Price*setting.RateRelated > setting.OpenShortMargin {
+			profitSell := tickOrder.Bids[0].Price - tick.Bids[0].Price*setting.RateRelated
+			profitBuy := tick.Asks[0].Price*setting.RateRelated - tickOrder.Asks[0].Price
+			if holding > 0 && profitSell > setting.OpenShortMargin {
 				orderLiq = api.PlaceOrder(account.Key, account.Secret, model.OrderSideSell, model.OrderTypeMarket, setting.MarketRelated, setting.SymbolRelated, ``,
 					tickOrder.Bids[0].Price, tickOrder.Bids[0].Price, holding, false, nil, setting)
-			} else if holding < 0 && tick.Asks[0].Price*setting.RateRelated-tickOrder.Asks[0].Price > setting.OpenShortMargin {
+			} else if holding < 0 && profitBuy > setting.OpenShortMargin {
 				orderLiq = api.PlaceOrder(account.Key, account.Secret, model.OrderSideBuy, model.OrderTypeMarket, setting.MarketRelated, setting.SymbolRelated, ``,
 					tickOrder.Asks[0].Price, tickOrder.Asks[0].Price, math.Abs(holding), false, nil, setting)
 			}
@@ -57,8 +59,9 @@ var ProcessFollow = func(setting *model.Setting, tick *model.BidAsk) {
 				timeFollow = now
 				orderLiq.RefreshType = model.FunctionComplement
 				model.AppDB.Save(&orderLiq)
-				util.Notice(fmt.Sprintf(`liq order %s %s %s %s holding %e`,
-					orderLiq.Market, orderLiq.Symbol, orderLiq.OrderSide, orderLiq.OrderId, holding))
+				util.Notice(fmt.Sprintf(`liq order %s %s %s %s holding %e tick[%e %e] tickOrder[%e %e] profit %e %e`,
+					orderLiq.Market, orderLiq.Symbol, orderLiq.OrderSide, orderLiq.OrderId, holding, tick.Bids[0].Price,
+					tick.Asks[0].Price, tickOrder.Bids[0].Price, tickOrder.Asks[0].Price, profitBuy, profitSell))
 			}
 		} else {
 			var order *model.Order
