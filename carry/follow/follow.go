@@ -23,6 +23,7 @@ const StatusChaos = `chaos`
 // tick.Price*setting.RateRelated换算成tickOrder.price,即1000
 // setting.OpenShortMargin settingCloseShortMargin 以related tick计的价差要求
 // setting.GridAmount 以related tick计的数量
+// setting.PriceX 判定down up时买卖盘数量的比例设定,即抛压、买压阈值
 var ProcessFollow = func(setting *model.Setting, tick *model.BidAsk) {
 	if !api.CheckSetProcessing(model.FunctionFollow, model.FunctionFollow, model.FunctionFollow, true) {
 		defer api.CheckSetProcessing(model.FunctionFollow, model.FunctionFollow, model.FunctionFollow, false)
@@ -88,9 +89,9 @@ func updateStatus(setting *model.Setting, tick *model.BidAsk) {
 		normalPriceBid = tick.Bids[0].Price
 		normalPriceAsk = tick.Asks[0].Price
 		update = StatusNormal
-	} else if quantityBid < float64(setting.Near) && quantityBid*4 < quantityAsk && tick.Bids[0].Price == normalPriceBid {
+	} else if quantityBid < float64(setting.Near) && quantityBid/quantityAsk < setting.PriceX && tick.Bids[0].Price == normalPriceBid {
 		update = StatusDown
-	} else if quantityAsk < float64(setting.Near) && quantityAsk*4 < quantityBid && tick.Asks[0].Price == normalPriceAsk {
+	} else if quantityAsk < float64(setting.Near) && quantityAsk/quantityBid < setting.PriceX && tick.Asks[0].Price == normalPriceAsk {
 		update = StatusUp
 	} else {
 		update = StatusChaos
