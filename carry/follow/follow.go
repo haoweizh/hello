@@ -77,7 +77,8 @@ func updateStatus(setting *model.Setting, tick *model.BidAsk) {
 		normalPriceAsk = 0
 		normalPriceBid = 0
 		update = StatusChaos
-	} else if quantityBid > float64(setting.Far) && quantityAsk > float64(setting.Far) {
+	}
+	if quantityBid > float64(setting.Far) && quantityAsk > float64(setting.Far) {
 		normalPriceBid = tick.Bids[0].Price
 		normalPriceAsk = tick.Asks[0].Price
 		update = StatusNormal
