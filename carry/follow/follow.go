@@ -73,12 +73,18 @@ func updateStatus(setting *model.Setting, tick *model.BidAsk) {
 	quantityBid := tick.Bids[0].Price * tick.Bids[0].Amount
 	quantityAsk := tick.Asks[0].Price * tick.Asks[0].Amount
 	var update = ``
+	v, _ := util.LoadSyncMap(model.MarketInfos, setting.Market, setting.Symbol)
+	if v == nil {
+		return
+	}
+	marketInfo := v.(*model.MarketInfo)
+	priceDis := tick.Asks[0].Price - tick.Bids[0].Price - marketInfo.PriceIncrement*1.1
 	if tick.Bids[0].Price != normalPriceBid || tick.Asks[0].Price != normalPriceAsk {
 		normalPriceAsk = 0
 		normalPriceBid = 0
 		update = StatusChaos
 	}
-	if quantityBid > float64(setting.Far) && quantityAsk > float64(setting.Far) {
+	if quantityBid > float64(setting.Far) && quantityAsk > float64(setting.Far) && priceDis < 0 {
 		normalPriceBid = tick.Bids[0].Price
 		normalPriceAsk = tick.Asks[0].Price
 		update = StatusNormal
@@ -103,11 +109,11 @@ func placeLiq(account *model.Account, setting *model.Setting, tick, tickOrder *m
 	profitSell := tickOrder.Bids[0].Price - tick.Bids[0].Price*setting.RateRelated
 	profitBuy := tick.Asks[0].Price*setting.RateRelated - tickOrder.Asks[0].Price
 	if holding > 0 && ((profitSell > setting.CloseShortMargin && followStatus == StatusNormal) ||
-		tickOrder.Bids[0].Price-tick.Asks[0].Price*setting.RateRelated > setting.OpenShortMargin) {
+		(followStatus != StatusUp && tickOrder.Bids[0].Price-tick.Asks[0].Price*setting.RateRelated > setting.OpenShortMargin)) {
 		orderLiq = api.PlaceOrder(account.Key, account.Secret, model.OrderSideSell, model.OrderTypeMarket, setting.MarketRelated, setting.SymbolRelated, ``,
 			tickOrder.Bids[0].Price, tickOrder.Bids[0].Price, holding, false, nil, setting)
 	} else if holding < 0 && ((profitBuy > setting.CloseShortMargin && followStatus == StatusNormal) ||
-		tick.Bids[0].Price*setting.RateRelated-tickOrder.Asks[0].Price > setting.OpenShortMargin) {
+		(followStatus != StatusDown && tick.Bids[0].Price*setting.RateRelated-tickOrder.Asks[0].Price > setting.OpenShortMargin)) {
 		orderLiq = api.PlaceOrder(account.Key, account.Secret, model.OrderSideBuy, model.OrderTypeMarket, setting.MarketRelated, setting.SymbolRelated, ``,
 			tickOrder.Asks[0].Price, tickOrder.Asks[0].Price, math.Abs(holding), false, nil, setting)
 	}
@@ -124,12 +130,12 @@ func placeLiq(account *model.Account, setting *model.Setting, tick, tickOrder *m
 func placeFollow(account *model.Account, setting *model.Setting, tick, tickOrder *model.BidAsk) {
 	var order *model.Order
 	if (followStatus == StatusDown && tickOrder.Bids[0].Price-setting.RateRelated*tick.Bids[0].Price > setting.OpenShortMargin) ||
-		tickOrder.Bids[0].Price-setting.RateRelated*tick.Asks[0].Price > setting.OpenShortMargin {
+		(followStatus != StatusUp && tickOrder.Bids[0].Price-setting.RateRelated*tick.Asks[0].Price > setting.OpenShortMargin) {
 		order = api.PlaceOrder(account.Key, account.Secret, model.OrderSideSell, model.OrderTypeLimit, setting.MarketRelated, setting.SymbolRelated, ``,
 			tick.Bids[0].Price*setting.RateRelated, tick.Bids[0].Price*setting.RateRelated, setting.GridAmount, false, nil, setting)
 	}
 	if (followStatus == StatusUp && tick.Asks[0].Price*setting.RateRelated-tickOrder.Asks[0].Price > setting.OpenShortMargin) ||
-		tick.Bids[0].Price*setting.RateRelated-tickOrder.Asks[0].Price > setting.OpenShortMargin {
+		(followStatus != StatusDown && tick.Bids[0].Price*setting.RateRelated-tickOrder.Asks[0].Price > setting.OpenShortMargin) {
 		order = api.PlaceOrder(account.Key, account.Secret, model.OrderSideBuy, model.OrderTypeLimit, setting.MarketRelated, setting.SymbolRelated, ``,
 			tick.Asks[0].Price*setting.RateRelated, tick.Asks[0].Price*setting.RateRelated, setting.GridAmount, false, nil, setting)
 	}
