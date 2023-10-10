@@ -130,12 +130,12 @@ func placeLiq(account *model.Account, setting *model.Setting, tick, tickOrder *m
 func placeFollow(account *model.Account, setting *model.Setting, tick, tickOrder *model.BidAsk) {
 	var order *model.Order
 	if (followStatus == StatusDown && tickOrder.Bids[0].Price-setting.RateRelated*tick.Bids[0].Price > setting.OpenShortMargin) ||
-		(followStatus != StatusUp && tickOrder.Bids[0].Price-setting.RateRelated*tick.Asks[0].Price > setting.OpenShortMargin) {
+		(followStatus == StatusNormal && tickOrder.Bids[0].Price-setting.RateRelated*tick.Asks[0].Price > setting.OpenShortMargin) {
 		order = api.PlaceOrder(account.Key, account.Secret, model.OrderSideSell, model.OrderTypeLimit, setting.MarketRelated, setting.SymbolRelated, ``,
 			tick.Bids[0].Price*setting.RateRelated, tick.Bids[0].Price*setting.RateRelated, setting.GridAmount, false, nil, setting)
 	}
 	if (followStatus == StatusUp && tick.Asks[0].Price*setting.RateRelated-tickOrder.Asks[0].Price > setting.OpenShortMargin) ||
-		(followStatus != StatusDown && tick.Bids[0].Price*setting.RateRelated-tickOrder.Asks[0].Price > setting.OpenShortMargin) {
+		(followStatus == StatusNormal && tick.Bids[0].Price*setting.RateRelated-tickOrder.Asks[0].Price > setting.OpenShortMargin) {
 		order = api.PlaceOrder(account.Key, account.Secret, model.OrderSideBuy, model.OrderTypeLimit, setting.MarketRelated, setting.SymbolRelated, ``,
 			tick.Asks[0].Price*setting.RateRelated, tick.Asks[0].Price*setting.RateRelated, setting.GridAmount, false, nil, setting)
 	}
