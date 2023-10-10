@@ -82,7 +82,6 @@ func updateStatus(setting *model.Setting, tick *model.BidAsk) {
 		normalPriceBid = tick.Bids[0].Price
 		normalPriceAsk = tick.Asks[0].Price
 		update = StatusNormal
-		return
 	}
 	if quantityBid < float64(setting.Near) && quantityBid*4 < quantityAsk && tick.Bids[0].Price == normalPriceBid {
 		update = StatusDown
