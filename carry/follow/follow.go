@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-// var normalPriceBid, normalPriceAsk,
+var ordPriceBid, ordPriceAsk float64
 var holding float64
 var followOrderTime = time.Now().UnixMilli()
 
@@ -108,6 +108,9 @@ var ProcessFollow = func(setting *model.Setting, tick *model.BidAsk) {
 //}
 
 func placeLiq(account *model.Account, setting *model.Setting, tick, tickOrder *model.BidAsk) {
+	if tick.Bids[0].Price == ordPriceBid || tick.Asks[0].Price == ordPriceAsk {
+		return
+	}
 	var orderLiq *model.Order
 	now := time.Now().UnixMilli()
 	profitSell := tickOrder.Bids[0].Price - tick.Bids[0].Price*setting.RateRelated
@@ -141,19 +144,16 @@ func placeFollow(account *model.Account, setting *model.Setting, tick, tickOrder
 	//	order = api.PlaceOrder(account.Key, account.Secret, model.OrderSideBuy, model.OrderTypeLimit, setting.MarketRelated, setting.SymbolRelated, ``,
 	//		tick.Asks[0].Price*setting.RateRelated, tick.Asks[0].Price*setting.RateRelated, setting.GridAmount, false, nil, setting)
 	//}
-	v, _ := util.LoadSyncMap(model.MarketInfos, setting.MarketRelated, setting.SymbolRelated)
-	if v == nil {
-		return
-	}
-	marketInfo := v.(*model.MarketInfo)
-	if tickOrder.Bids[0].Price-setting.RateRelated*tick.Asks[0].Price+marketInfo.PriceIncrement >= 0 {
+	if tickOrder.Bids[0].Price-setting.RateRelated*tick.Asks[0].Price >= 0 {
 		order = api.PlaceOrder(account.Key, account.Secret, model.OrderSideBuy, model.OrderTypeMarket, setting.MarketRelated, setting.SymbolRelated, ``,
 			tickOrder.Asks[0].Price, tickOrder.Asks[0].Price, setting.GridAmount, false, nil, setting)
-	} else if tick.Bids[0].Price*setting.RateRelated-tickOrder.Asks[0].Price+marketInfo.PriceIncrement >= 0 {
+	} else if tick.Bids[0].Price*setting.RateRelated-tickOrder.Asks[0].Price >= 0 {
 		order = api.PlaceOrder(account.Key, account.Secret, model.OrderSideSell, model.OrderTypeMarket, setting.MarketRelated, setting.SymbolRelated, ``,
 			tickOrder.Bids[0].Price, tickOrder.Bids[0].Price, setting.GridAmount, false, nil, setting)
 	}
 	if order != nil && order.HaveId() {
+		ordPriceBid = tick.Bids[0].Price
+		ordPriceAsk = tick.Asks[0].Price
 		order.RefreshType = model.FunctionQueue
 		model.AppDB.Save(&order)
 		followOrderTime = time.Now().UnixMilli()
