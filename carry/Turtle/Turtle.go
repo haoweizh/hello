@@ -70,9 +70,9 @@ var ProcessTurtle = func(setting *model.Setting, tick *model.BidAsk) {
 	//	return
 	//}
 	priceChange := 2 * data.N
-	if setting.Seconds == 14400 {
-		priceChange = 2.5 * data.N
-	}
+	//if setting.Seconds == 14400 {
+	//	priceChange = 2.5 * data.N
+	//}
 	if setting.Chance == 0 { // 开初始仓
 		placeTurtleOrders(account.Key, account.Secret, data, setting, canOpenTurtle, chanceInAll, priceShort, priceLong, tick)
 		if data.BreakLong && data.OrderLong != nil {
