@@ -39,7 +39,7 @@ var ProcessFollow = func(setting *model.Setting, tick *model.BidAsk) {
 		(maintaining != nil && maintaining.(bool)) || (model.AppConfig.Env != `test` && (now-int64(tick.Ts) > 1000) || (now-int64(tickOrder.Ts) > 1000)) {
 		return
 	}
-	updateStatus(setting, tick)
+	updateStatus(setting, tick, tickOrder)
 	if followOrderTime == 0 {
 		if math.Abs(holding)*tickOrder.Bids[0].Price > 10 {
 			if time.Now().Second() == 0 {
@@ -70,7 +70,7 @@ var ProcessFollow = func(setting *model.Setting, tick *model.BidAsk) {
 	}
 }
 
-func updateStatus(setting *model.Setting, tick *model.BidAsk) {
+func updateStatus(setting *model.Setting, tick, tickOrder *model.BidAsk) {
 	quantityBid := tick.Bids[0].Price * tick.Bids[0].Amount
 	quantityAsk := tick.Asks[0].Price * tick.Asks[0].Amount
 	var update = ``
@@ -97,8 +97,9 @@ func updateStatus(setting *model.Setting, tick *model.BidAsk) {
 		update = StatusChaos
 	}
 	if update != `` && update != followStatus {
-		util.Notice(fmt.Sprintf(`update follow status %s->%s normal price[%e %e] tick [%e %e %e %e]`,
-			followStatus, update, normalPriceBid, normalPriceAsk, tick.Bids[0].Price, tick.Bids[0].Amount, tick.Asks[0].Price, tick.Asks[0].Amount))
+		util.Notice(fmt.Sprintf(`update follow status %s->%s normal price[%e %e] tick [%e %e %e %e] tickOrder[%e %e %e %e]`,
+			followStatus, update, normalPriceBid, normalPriceAsk, tick.Bids[0].Price, tick.Bids[0].Amount, tick.Asks[0].Price,
+			tick.Asks[0].Amount, tickOrder.Bids[0].Price, tickOrder.Bids[0].Amount, tickOrder.Asks[0].Price, tickOrder.Asks[0].Amount))
 		followStatus = update
 	}
 	return
