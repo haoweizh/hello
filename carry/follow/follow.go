@@ -9,14 +9,16 @@ import (
 	"time"
 )
 
-var normalPriceBid, normalPriceAsk, holding float64
+// var normalPriceBid, normalPriceAsk,
+var holding float64
 var followOrderTime = time.Now().UnixMilli()
-var followStatus = StatusChaos
 
-const StatusNormal = `normal`
-const StatusDown = `down`
-const StatusUp = `up`
-const StatusChaos = `chaos`
+//var followStatus = StatusChaos
+//
+//const StatusNormal = `normal`
+//const StatusDown = `down`
+//const StatusUp = `up`
+//const StatusChaos = `chaos`
 
 // ProcessFollow
 // setting.Far setting.Low 判定触发买卖1的计价币种为异常数量的挂单数量要求
@@ -39,7 +41,7 @@ var ProcessFollow = func(setting *model.Setting, tick *model.BidAsk) {
 		(maintaining != nil && maintaining.(bool)) || (model.AppConfig.Env != `test` && (now-int64(tick.Ts) > 1000) || (now-int64(tickOrder.Ts) > 1000)) {
 		return
 	}
-	updateStatus(setting, tick, tickOrder)
+	//updateStatus(setting, tick, tickOrder)
 	if followOrderTime == 0 {
 		if math.Abs(holding)*tickOrder.Bids[0].Price > 10 {
 			if time.Now().Second() == 0 {
@@ -70,52 +72,50 @@ var ProcessFollow = func(setting *model.Setting, tick *model.BidAsk) {
 	}
 }
 
-func updateStatus(setting *model.Setting, tick, tickOrder *model.BidAsk) {
-	quantityBid := tick.Bids[0].Price * tick.Bids[0].Amount
-	quantityAsk := tick.Asks[0].Price * tick.Asks[0].Amount
-	var update = ``
-	v, _ := util.LoadSyncMap(model.MarketInfos, setting.Market, setting.Symbol)
-	if v == nil {
-		return
-	}
-	marketInfo := v.(*model.MarketInfo)
-	priceDis := tick.Asks[0].Price - tick.Bids[0].Price - marketInfo.PriceIncrement*1.1
-	if tick.Bids[0].Price != normalPriceBid || tick.Asks[0].Price != normalPriceAsk {
-		normalPriceAsk = 0
-		normalPriceBid = 0
-		update = StatusChaos
-	}
-	if quantityBid > float64(setting.Far) && quantityAsk > float64(setting.Far) && priceDis < 0 {
-		normalPriceBid = tick.Bids[0].Price
-		normalPriceAsk = tick.Asks[0].Price
-		update = StatusNormal
-	} else if quantityBid < float64(setting.Near) && quantityBid/quantityAsk < setting.PriceX && tick.Bids[0].Price == normalPriceBid {
-		update = StatusDown
-	} else if quantityAsk < float64(setting.Near) && quantityAsk/quantityBid < setting.PriceX && tick.Asks[0].Price == normalPriceAsk {
-		update = StatusUp
-	} else {
-		update = StatusChaos
-	}
-	if update != `` && update != followStatus {
-		util.Notice(fmt.Sprintf(`update follow status %s->%s normal price[%e %e] tick [%e %e %e %e] tickOrder[%e %e %e %e]`,
-			followStatus, update, normalPriceBid, normalPriceAsk, tick.Bids[0].Price, tick.Bids[0].Amount, tick.Asks[0].Price,
-			tick.Asks[0].Amount, tickOrder.Bids[0].Price, tickOrder.Bids[0].Amount, tickOrder.Asks[0].Price, tickOrder.Asks[0].Amount))
-		followStatus = update
-	}
-	return
-}
+//func updateStatus(setting *model.Setting, tick, tickOrder *model.BidAsk) {
+//	quantityBid := tick.Bids[0].Price * tick.Bids[0].Amount
+//	quantityAsk := tick.Asks[0].Price * tick.Asks[0].Amount
+//	var update = ``
+//	v, _ := util.LoadSyncMap(model.MarketInfos, setting.Market, setting.Symbol)
+//	if v == nil {
+//		return
+//	}
+//	marketInfo := v.(*model.MarketInfo)
+//	priceDis := tick.Asks[0].Price - tick.Bids[0].Price - marketInfo.PriceIncrement*1.1
+//	if tick.Bids[0].Price != normalPriceBid || tick.Asks[0].Price != normalPriceAsk {
+//		normalPriceAsk = 0
+//		normalPriceBid = 0
+//		update = StatusChaos
+//	}
+//	if quantityBid > float64(setting.Far) && quantityAsk > float64(setting.Far) && priceDis < 0 {
+//		normalPriceBid = tick.Bids[0].Price
+//		normalPriceAsk = tick.Asks[0].Price
+//		update = StatusNormal
+//	} else if quantityBid < float64(setting.Near) && quantityBid/quantityAsk < setting.PriceX && tick.Bids[0].Price == normalPriceBid {
+//		update = StatusDown
+//	} else if quantityAsk < float64(setting.Near) && quantityAsk/quantityBid < setting.PriceX && tick.Asks[0].Price == normalPriceAsk {
+//		update = StatusUp
+//	} else {
+//		update = StatusChaos
+//	}
+//	if update != `` && update != followStatus {
+//		util.Notice(fmt.Sprintf(`update follow status %s->%s normal price[%e %e] tick [%e %e %e %e] tickOrder[%e %e %e %e]`,
+//			followStatus, update, normalPriceBid, normalPriceAsk, tick.Bids[0].Price, tick.Bids[0].Amount, tick.Asks[0].Price,
+//			tick.Asks[0].Amount, tickOrder.Bids[0].Price, tickOrder.Bids[0].Amount, tickOrder.Asks[0].Price, tickOrder.Asks[0].Amount))
+//		followStatus = update
+//	}
+//	return
+//}
 
 func placeLiq(account *model.Account, setting *model.Setting, tick, tickOrder *model.BidAsk) {
 	var orderLiq *model.Order
 	now := time.Now().UnixMilli()
 	profitSell := tickOrder.Bids[0].Price - tick.Bids[0].Price*setting.RateRelated
 	profitBuy := tick.Asks[0].Price*setting.RateRelated - tickOrder.Asks[0].Price
-	if holding > 0 && ((profitSell > setting.CloseShortMargin && followStatus == StatusNormal) ||
-		(followStatus != StatusUp && tickOrder.Bids[0].Price-tick.Asks[0].Price*setting.RateRelated > setting.OpenShortMargin)) {
+	if holding > 0 && profitSell > setting.CloseShortMargin {
 		orderLiq = api.PlaceOrder(account.Key, account.Secret, model.OrderSideSell, model.OrderTypeMarket, setting.MarketRelated, setting.SymbolRelated, ``,
 			tickOrder.Bids[0].Price, tickOrder.Bids[0].Price, holding, false, nil, setting)
-	} else if holding < 0 && ((profitBuy > setting.CloseShortMargin && followStatus == StatusNormal) ||
-		(followStatus != StatusDown && tick.Bids[0].Price*setting.RateRelated-tickOrder.Asks[0].Price > setting.OpenShortMargin)) {
+	} else if holding < 0 && profitBuy > setting.CloseShortMargin {
 		orderLiq = api.PlaceOrder(account.Key, account.Secret, model.OrderSideBuy, model.OrderTypeMarket, setting.MarketRelated, setting.SymbolRelated, ``,
 			tickOrder.Asks[0].Price, tickOrder.Asks[0].Price, math.Abs(holding), false, nil, setting)
 	}
@@ -131,15 +131,27 @@ func placeLiq(account *model.Account, setting *model.Setting, tick, tickOrder *m
 
 func placeFollow(account *model.Account, setting *model.Setting, tick, tickOrder *model.BidAsk) {
 	var order *model.Order
-	if (followStatus == StatusDown && tickOrder.Bids[0].Price-setting.RateRelated*tick.Bids[0].Price > setting.OpenShortMargin) ||
-		(followStatus == StatusNormal && tickOrder.Bids[0].Price-setting.RateRelated*tick.Asks[0].Price > setting.OpenShortMargin) {
-		order = api.PlaceOrder(account.Key, account.Secret, model.OrderSideSell, model.OrderTypeLimit, setting.MarketRelated, setting.SymbolRelated, ``,
-			tick.Bids[0].Price*setting.RateRelated, tick.Bids[0].Price*setting.RateRelated, setting.GridAmount, false, nil, setting)
+	//if (followStatus == StatusDown && tickOrder.Bids[0].Price-setting.RateRelated*tick.Bids[0].Price > setting.OpenShortMargin) ||
+	//	(followStatus == StatusNormal && tickOrder.Bids[0].Price-setting.RateRelated*tick.Asks[0].Price > setting.OpenShortMargin) {
+	//	order = api.PlaceOrder(account.Key, account.Secret, model.OrderSideSell, model.OrderTypeLimit, setting.MarketRelated, setting.SymbolRelated, ``,
+	//		tick.Bids[0].Price*setting.RateRelated, tick.Bids[0].Price*setting.RateRelated, setting.GridAmount, false, nil, setting)
+	//}
+	//if (followStatus == StatusUp && tick.Asks[0].Price*setting.RateRelated-tickOrder.Asks[0].Price > setting.OpenShortMargin) ||
+	//	(followStatus == StatusNormal && tick.Bids[0].Price*setting.RateRelated-tickOrder.Asks[0].Price > setting.OpenShortMargin) {
+	//	order = api.PlaceOrder(account.Key, account.Secret, model.OrderSideBuy, model.OrderTypeLimit, setting.MarketRelated, setting.SymbolRelated, ``,
+	//		tick.Asks[0].Price*setting.RateRelated, tick.Asks[0].Price*setting.RateRelated, setting.GridAmount, false, nil, setting)
+	//}
+	v, _ := util.LoadSyncMap(model.MarketInfos, setting.MarketRelated, setting.SymbolRelated)
+	if v == nil {
+		return
 	}
-	if (followStatus == StatusUp && tick.Asks[0].Price*setting.RateRelated-tickOrder.Asks[0].Price > setting.OpenShortMargin) ||
-		(followStatus == StatusNormal && tick.Bids[0].Price*setting.RateRelated-tickOrder.Asks[0].Price > setting.OpenShortMargin) {
-		order = api.PlaceOrder(account.Key, account.Secret, model.OrderSideBuy, model.OrderTypeLimit, setting.MarketRelated, setting.SymbolRelated, ``,
-			tick.Asks[0].Price*setting.RateRelated, tick.Asks[0].Price*setting.RateRelated, setting.GridAmount, false, nil, setting)
+	marketInfo := v.(*model.MarketInfo)
+	if tickOrder.Bids[0].Price-setting.RateRelated*tick.Asks[0].Price+marketInfo.PriceIncrement >= 0 {
+		order = api.PlaceOrder(account.Key, account.Secret, model.OrderSideBuy, model.OrderTypeMarket, setting.MarketRelated, setting.SymbolRelated, ``,
+			tickOrder.Asks[0].Price, tickOrder.Asks[0].Price, setting.GridAmount, false, nil, setting)
+	} else if tick.Bids[0].Price*setting.RateRelated-tickOrder.Asks[0].Price+marketInfo.PriceIncrement >= 0 {
+		order = api.PlaceOrder(account.Key, account.Secret, model.OrderSideSell, model.OrderTypeMarket, setting.MarketRelated, setting.SymbolRelated, ``,
+			tickOrder.Bids[0].Price, tickOrder.Bids[0].Price, setting.GridAmount, false, nil, setting)
 	}
 	if order != nil && order.HaveId() {
 		order.RefreshType = model.FunctionQueue
