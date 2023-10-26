@@ -15,6 +15,7 @@ const TurtleTriggerDelta = 0.005
 
 var positionsCache = &sync.Map{}   // key - symbol - position holding amount
 var TurtleDataSet = sync.Map{}     // function_market_symbol_unix second *TurtleData
+var CombineFulled = &sync.Map{}    // market_unix seconds bool
 var accountValues = &sync.Map{}    // market value
 var accountValueTime = &sync.Map{} // market time.Time
 func CalcTurtleAmount(account *model.Account, market string, n, amountRate float64) (amount float64) {
@@ -634,7 +635,7 @@ func CheckBreak(account *model.Account, market, symbol string, settings []*model
 	return useApi
 }
 
-func CanOpenCombine(setting, settingOppo *model.Setting, data, dataNormal *model.TurtleData) (canOpen bool, inAll float64) {
+func CanOpenCombine(setting, settingOppo *model.Setting, data, dataNormal *model.TurtleData, checkFulled bool) (canOpen bool, inAll float64) {
 	success, _, coin, _ := model.GetFromStandard(setting.Market, setting.Symbol)
 	if !success {
 		return false, 0
@@ -644,14 +645,26 @@ func CanOpenCombine(setting, settingOppo *model.Setting, data, dataNormal *model
 	if settings == nil || settingsOppo == nil {
 		return false, 0
 	}
-	tradingSymbols := make(map[string]bool)
-	addTrading := func(symbol, value any) bool {
+	//tradingSymbols := make(map[string]bool)
+	//addTrading := func(symbol, value any) bool {
+	//	if value != nil {
+	//		valueSetting := value.(*model.Setting)
+	//		_, _, valueCoin, _ := model.GetFromStandard(valueSetting.Market, valueSetting.Symbol)
+	//		if !model.CommonCoins[strings.ToLower(valueCoin)] {
+	//			if valueSetting.Chance != 0 && valueSetting.Function == model.FunctionTurtleNormal {
+	//				tradingSymbols[valueSetting.Symbol] = true
+	//			}
+	//		}
+	//	}
+	//	return true
+	//}
+	sumChance := func(symbol, value any) bool {
 		if value != nil {
 			valueSetting := value.(*model.Setting)
 			_, _, valueCoin, _ := model.GetFromStandard(valueSetting.Market, valueSetting.Symbol)
 			if !model.CommonCoins[strings.ToLower(valueCoin)] {
-				if valueSetting.Chance != 0 && valueSetting.Function == model.FunctionTurtleNormal {
-					tradingSymbols[valueSetting.Symbol] = true
+				if valueSetting.Function == model.FunctionTurtleNormal {
+					inAll += float64(valueSetting.Chance)
 				}
 			}
 		}
@@ -660,11 +673,23 @@ func CanOpenCombine(setting, settingOppo *model.Setting, data, dataNormal *model
 	if model.CommonCoins[strings.ToLower(coin)] {
 		return true, 0
 	} else {
-		settingsOppo.Range(addTrading)
-		settings.Range(addTrading)
-		inAll = float64(len(tradingSymbols))
+		//settingsOppo.Range(addTrading)
+		//settings.Range(addTrading)
+		//inAll = float64(len(tradingSymbols))
+		settingsOppo.Range(sumChance)
+		settings.Range(sumChance)
 		canOpen = setting.Chance != 0 || settingOppo.Chance != 0 || (inAll < setting.AmountLimit &&
 			setting.SymbolRelated != model.SettingTurtleRemoved && settingOppo.SymbolRelated != model.SettingTurtleRemoved)
+		if checkFulled {
+			now := time.Now()
+			_, nowStr := model.GetNowPeriod(setting.Market, setting.Seconds, now)
+			fulled, _ := util.LoadSyncMap(CombineFulled, setting.Market, nowStr)
+			if fulled != nil && fulled.(bool) {
+				canOpen = false
+			} else if inAll >= setting.AmountLimit {
+				util.StoreSyncMap(CombineFulled, true, setting.Market, nowStr)
+			}
+		}
 		if setting.Chance == 0 && !canOpen && inAll >= setting.AmountLimit {
 			data.OrderLong = nil
 			data.OrderShort = nil

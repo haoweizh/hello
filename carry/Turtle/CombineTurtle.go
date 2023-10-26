@@ -65,7 +65,7 @@ var ProcessCombineTurtle = func(settingCombine *model.Setting, tick *model.BidAs
 		return
 	}
 	turtleData := []*model.TurtleData{dataCombine, dataNormal}
-	canOpen, turtleCoins := api.CanOpenCombine(settingCombine, settingNormal, dataCombine, dataNormal)
+	canOpen, turtleCoins := api.CanOpenCombine(settingCombine, settingNormal, dataCombine, dataNormal, true)
 	//if canOpen {
 	//	settingCombine.SymbolRelated = ``
 	//}
@@ -97,6 +97,32 @@ var ProcessCombineTurtle = func(settingCombine *model.Setting, tick *model.BidAs
 		dataCombine.Liquidated, dataCombine.GetIds(), dataCombine.Big, dataCombine.DaysFar, dataCombine.LowFar,
 		dataCombine.HighFar, dataCombine.DaysNear, dataCombine.LowNear, dataCombine.HighNear, dataCombine.N)
 	util.StoreSyncMap(&model.CarryInfo, msg, account.Key, msgKey)
+	placeCombineOrders(account, dataNormal, dataCombine, settingNormal, settingCombine, tick, canOpen)
+	tryOpen := false
+	for i, setting := range settings {
+		needClear := false
+		if handleBreak(setting, turtleData[i], turtleData[i].OrderLong, turtleData[i].BreakLong) {
+			needClear = true
+			tryOpen = true
+		}
+		if handleBreak(setting, turtleData[i], turtleData[i].OrderShort, turtleData[i].BreakShort) {
+			needClear = true
+			tryOpen = true
+		}
+		if handleBreak(setting, turtleData[i], turtleData[i].OrderTrail, turtleData[i].BreakTrail) {
+			needClear = true
+		}
+		if needClear {
+			api.ClearExtraOrders(account.Key, account.Secret, market, symbol, turtleData)
+		}
+	}
+	if tryOpen {
+		canOpen, _ = api.CanOpenCombine(settingCombine, settingNormal, dataCombine, dataNormal, false)
+		placeCombineOrders(account, dataNormal, dataCombine, settingNormal, settingCombine, tick, canOpen)
+	}
+}
+
+func placeCombineOrders(account *model.Account, dataNormal, dataCombine *model.TurtleData, settingNormal, settingCombine *model.Setting, tick *model.BidAsk, canOpen bool) {
 	placeTurtleLong(account, model.OrderTypeStop, dataNormal, settingNormal, tick, canOpen, true, false)
 	placeTurtleShort(account, model.OrderTypeStop, dataNormal, settingNormal, tick, canOpen, true, false)
 	isLongBigCombine := false
@@ -109,47 +135,7 @@ var ProcessCombineTurtle = func(settingCombine *model.Setting, tick *model.BidAs
 	}
 	placeTurtleLong(account, model.OrderTypeLimit, dataCombine, settingCombine, tick, canOpen, isLongBigCombine, settingNormal.Chance != 0)
 	placeTurtleShort(account, model.OrderTypeLimit, dataCombine, settingCombine, tick, canOpen, isShortBigCombine, settingNormal.Chance != 0)
-	for i, setting := range settings {
-		needClear := false
-		if handleBreak(setting, turtleData[i], turtleData[i].OrderLong, turtleData[i].BreakLong) {
-			needClear = true
-		}
-		if handleBreak(setting, turtleData[i], turtleData[i].OrderShort, turtleData[i].BreakShort) {
-			needClear = true
-		}
-		if handleBreak(setting, turtleData[i], turtleData[i].OrderTrail, turtleData[i].BreakTrail) {
-			needClear = true
-		}
-		if needClear {
-			api.ClearExtraOrders(account.Key, account.Secret, market, symbol, turtleData)
-		}
-	}
 }
-
-// 海龟平仓或者龟汤平仓时，龟汤或者海龟的平仓单也要撤单，核对仓位后重新下单
-//if setting.Chance == 0 {
-//for j, settingOppo := range settings {
-//	if (settingOppo.Chance > 0 && turtleData[j].OrderShort != nil) ||
-//		(settingOppo.Chance < 0 && turtleData[j].OrderLong != nil) {
-//success, positions, _, _ := api.GetPositions(account.Key, account.Secret, settingOppo.Market)
-//if success {
-//	for _, position := range positions {
-//		if strings.EqualFold(position.Currency, settingOppo.Symbol) {
-//			util.Notice(fmt.Sprintf(`update grid amt to holding %s %s %f %f`,
-//				settingOppo.Market, settingOppo.Symbol, setting.GridAmount, position.Holding))
-//			settingOppo.GridAmount = math.Abs(position.Holding)
-//		}
-//	}
-//}
-//if settingOppo.Chance > 0 {
-//	turtleData[j].OrderShort = nil
-//}
-//if settingOppo.Chance < 0 {
-//	turtleData[j].OrderLong = nil
-//}
-//}
-//}
-//}
 
 // handleBreak
 // 由于OrderTypeTrailStop订单有可能是通过API load进来的，所以没有 order.Function且此类订单都是close的，故特殊处理了
