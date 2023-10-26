@@ -677,9 +677,11 @@ func createTurtleLines(function, market string, account *model.Account) (msg str
 		turtleData, _ := util.LoadSyncMap(&api.TurtleDataSet, function, market, symbol.(string), nowStr)
 		msgKey := model.GetMsgKey(function, market, symbol.(string))
 		needAdd := false
+		util.Notice(fmt.Sprintf(`check setting %s %s`, setting.Market, setting.Symbol))
 		if turtleData != nil {
 			if turtleData.(*model.TurtleData).OrderLong != nil || turtleData.(*model.TurtleData).OrderShort != nil {
 				needAdd = true
+				util.Notice(fmt.Sprintf(`check setting add combine %s %s`, setting.Market, setting.Symbol))
 			} else if function == model.FunctionCombineTurtle {
 				settingNormal := api.GetSetting(model.FunctionTurtleNormal, market, symbol.(string))
 				_, nowStr = model.GetNowPeriod(market, settingNormal.Seconds, now)
@@ -687,6 +689,7 @@ func createTurtleLines(function, market string, account *model.Account) (msg str
 				if turtleNormal != nil && (turtleNormal.(*model.TurtleData).OrderLong != nil ||
 					turtleNormal.(*model.TurtleData).OrderShort != nil) {
 					needAdd = true
+					util.Notice(fmt.Sprintf(`check setting add normal %s %s`, setting.Market, setting.Symbol))
 				}
 			}
 		}

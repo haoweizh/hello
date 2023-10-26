@@ -635,14 +635,14 @@ func CheckBreak(account *model.Account, market, symbol string, settings []*model
 	return useApi
 }
 
-func CanOpenCombine(setting, settingOppo *model.Setting, data, dataNormal *model.TurtleData, checkFulled bool) (canOpen bool, inAll float64) {
-	success, _, coin, _ := model.GetFromStandard(setting.Market, setting.Symbol)
+func CanOpenCombine(settingCombine, settingNormal *model.Setting, data, dataNormal *model.TurtleData, checkFulled bool) (canOpen bool, inAll float64) {
+	success, _, coin, _ := model.GetFromStandard(settingCombine.Market, settingCombine.Symbol)
 	if !success {
 		return false, 0
 	}
-	settings := GetSettings(setting.Function, setting.Market)
-	settingsOppo := GetSettings(settingOppo.Function, setting.Market)
-	if settings == nil || settingsOppo == nil {
+	settingsCombine := GetSettings(settingCombine.Function, settingCombine.Market)
+	settingsNormal := GetSettings(settingNormal.Function, settingCombine.Market)
+	if settingsCombine == nil || settingsNormal == nil {
 		return false, 0
 	}
 	//tradingSymbols := make(map[string]bool)
@@ -673,28 +673,26 @@ func CanOpenCombine(setting, settingOppo *model.Setting, data, dataNormal *model
 	if model.CommonCoins[strings.ToLower(coin)] {
 		return true, 0
 	} else {
-		//settingsOppo.Range(addTrading)
-		//settings.Range(addTrading)
-		//inAll = float64(len(tradingSymbols))
-		settingsOppo.Range(sumChance)
-		settings.Range(sumChance)
-		canOpen = setting.Chance != 0 || settingOppo.Chance != 0 || (inAll < setting.AmountLimit &&
-			setting.SymbolRelated != model.SettingTurtleRemoved && settingOppo.SymbolRelated != model.SettingTurtleRemoved)
+		settingsNormal.Range(sumChance)
+		settingsCombine.Range(sumChance)
+		canOpen = settingCombine.Chance != 0 || settingNormal.Chance != 0 || (inAll < settingCombine.AmountLimit &&
+			settingCombine.SymbolRelated != model.SettingTurtleRemoved && settingNormal.SymbolRelated != model.SettingTurtleRemoved)
 		if checkFulled {
 			now := time.Now()
-			_, nowStr := model.GetNowPeriod(setting.Market, setting.Seconds, now)
-			fulled, _ := util.LoadSyncMap(CombineFulled, setting.Market, nowStr)
+			_, nowStr := model.GetNowPeriod(settingCombine.Market, settingCombine.Seconds, now)
+			fulled, _ := util.LoadSyncMap(CombineFulled, settingCombine.Market, nowStr)
 			if fulled != nil && fulled.(bool) {
-				canOpen = false
-			} else if inAll >= setting.AmountLimit {
-				util.StoreSyncMap(CombineFulled, true, setting.Market, nowStr)
+				canOpen = settingCombine.Chance != 0 || settingNormal.Chance != 0
+			} else if inAll >= settingCombine.AmountLimit {
+				util.StoreSyncMap(CombineFulled, true, settingCombine.Market, nowStr)
 			}
+			settingNormal.ChanceLimitCombine = int64(inAll)
 		}
-		if setting.Chance == 0 && !canOpen && inAll >= setting.AmountLimit {
+		if settingCombine.Chance == 0 && !canOpen && inAll >= settingCombine.AmountLimit {
 			data.OrderLong = nil
 			data.OrderShort = nil
 		}
-		if settingOppo.Chance == 0 && !canOpen && inAll >= setting.AmountLimit {
+		if settingNormal.Chance == 0 && !canOpen && inAll >= settingCombine.AmountLimit {
 			dataNormal.OrderLong = nil
 			dataNormal.OrderShort = nil
 		}
