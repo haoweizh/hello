@@ -686,7 +686,7 @@ func CanOpenCombine(settingCombine, settingNormal *model.Setting, data, dataNorm
 			} else if inAll >= settingCombine.AmountLimit {
 				util.StoreSyncMap(CombineFulled, true, settingCombine.Market, nowStr)
 			}
-			settingNormal.ChanceLimitCombine = int64(inAll)
+			//settingNormal.ChanceLimitCombine = int64(inAll)
 		}
 		if settingCombine.Chance == 0 && !canOpen && inAll >= settingCombine.AmountLimit {
 			data.OrderLong = nil
