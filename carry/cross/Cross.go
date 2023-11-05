@@ -32,6 +32,8 @@ func createContractMarket(key, secret, market string) (cm *contractMarket) {
 					} else {
 						cm.contractValueInU += position.EntryPrice * math.Abs(position.Holding)
 					}
+				} else {
+					util.Info(fmt.Sprintf(`holding absent pos %s %s %f`, market, position.Currency, position.Holding))
 				}
 			}
 		}
@@ -47,24 +49,27 @@ func createContractMarket(key, secret, market string) (cm *contractMarket) {
 func createSpotMarket(key, secret, market string) (sm *spotMarket) {
 	//util.Info(fmt.Sprintf(`create sm %s %s`, key[:5], market))
 	success, balances, totalInUsd, collateral := api.GetBalances(key, secret, market)
-	//for _, balance := range balances {
-	//	if balance.UsdValue == 0 && balance.Amount > 0 {
-	//		util.Notice(fmt.Sprintf(`usdvalue 0 %s %s %f`, market, balance.Coin, balance.Amount))
-	//	}
-	//}
 	if success {
 		sm = &spotMarket{key: key, market: market}
 		sm.balances = make(map[string]*model.Balance)
 		sm.accountValueInU = totalInUsd
 		sm.collateral = collateral
+		settings := api.GetSettings(model.FunctionCross, market)
 		for _, balance := range balances {
-			sm.balances[balance.Coin+model.UniStandardTail[model.MarketTypeSpot]] = balance
+			symbol := balance.Coin + model.UniStandardTail[model.MarketTypeSpot]
+			sm.balances[symbol] = balance
 			if strings.EqualFold(balance.Coin, `usd`) || strings.EqualFold(balance.Coin, `usdt`) {
 				sm.availableU += math.Min(balance.Amount, balance.AvailableWithBorrow)
 			}
 			// 可用usd数量需要减去现有所有借币负债总额
 			if balance.UsdValue < 0 {
 				sm.availableU -= math.Abs(balance.UsdValue)
+			}
+			if settings != nil {
+				value, ok := settings.Load(symbol)
+				if !ok || value == nil {
+					util.Info(fmt.Sprintf(`holding absent pos %s %s %f`, market, symbol, balance.Amount))
+				}
 			}
 		}
 	} else {
@@ -142,7 +147,6 @@ func createFromBalance(account *model.Account, setting *model.Setting, valueLimi
 	key := account.Key
 	value, ok := spotMarkets.Load(key)
 	if value == nil || !ok {
-		//util.Info(fmt.Sprintf(`no spot in map create %s %s`, key[:5], setting.Market))
 		spotMarkets.Store(key, createSpotMarket(key, account.Secret, setting.Market))
 		value, ok = spotMarkets.Load(key)
 	}
