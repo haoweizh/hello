@@ -68,7 +68,7 @@ func createSpotMarket(key, secret, market string) (sm *spotMarket) {
 			if settings != nil {
 				value, ok := settings.Load(symbol)
 				if !ok || value == nil {
-					util.Info(fmt.Sprintf(`holding absent pos %s %s %f`, market, symbol, balance.Amount))
+					util.Info(fmt.Sprintf(`holding absent bal %s %s %f`, market, symbol, balance.Amount))
 				}
 			}
 		}
