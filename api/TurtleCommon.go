@@ -469,7 +469,7 @@ func getTurtleCandles(account *model.Account, market, symbol string, far, second
 		return nil
 	}
 	calcLenN := 10
-	calcLenV := 15
+	calcLenV := 10
 	sortedCandles := &model.SortedCandle{Value: candles}
 	sort.Sort(sortedCandles)
 	if lastCandle2 == nil {
