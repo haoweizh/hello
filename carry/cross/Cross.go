@@ -32,7 +32,7 @@ func createContractMarket(key, secret, market string) (cm *contractMarket) {
 					} else {
 						cm.contractValueInU += position.EntryPrice * math.Abs(position.Holding)
 					}
-				} else {
+				} else if math.Abs(position.Holding) > 0 {
 					util.Info(fmt.Sprintf(`holding absent pos %s %s %f`, market, position.Currency, position.Holding))
 				}
 			}
@@ -67,7 +67,7 @@ func createSpotMarket(key, secret, market string) (sm *spotMarket) {
 			}
 			if settings != nil {
 				value, ok := settings.Load(symbol)
-				if !ok || value == nil {
+				if (!ok || value == nil) && balance.Amount > 0 {
 					util.Info(fmt.Sprintf(`holding absent bal %s %s %f`, market, symbol, balance.Amount))
 				}
 			}
