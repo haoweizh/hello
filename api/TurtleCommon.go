@@ -594,7 +594,7 @@ func CheckBreak(account *model.Account, market, symbol string, settings []*model
 				orderLong = QueryOrderById(account.Key, account.Secret, market, symbol, orderLong.OrderType, orderLong.OrderId)
 				time.Sleep(time.Millisecond * 200)
 			}
-			if orderLong != nil && orderLong.Status == model.CarryStatusSuccess {
+			if orderLong != nil && (orderLong.Status == model.CarryStatusSuccess || orderLong.DealAmount*3 > orderLong.Amount*2) {
 				data.BreakLong = true
 				for _, order := range data.OrderLong {
 					data.OrderAdjust[order.OrderId] = order
@@ -613,7 +613,7 @@ func CheckBreak(account *model.Account, market, symbol string, settings []*model
 				orderShort = QueryOrderById(account.Key, account.Secret, market, symbol, orderShort.OrderType, orderShort.OrderId)
 				time.Sleep(time.Millisecond * 200)
 			}
-			if orderShort != nil && orderShort.Status == model.CarryStatusSuccess {
+			if orderShort != nil && (orderShort.Status == model.CarryStatusSuccess || orderShort.DealAmount*3 > orderShort.Amount*2) {
 				data.BreakShort = true
 				for _, order := range data.OrderShort {
 					data.OrderAdjust[order.OrderId] = order
