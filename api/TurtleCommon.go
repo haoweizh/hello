@@ -587,7 +587,7 @@ func CheckBreak(account *model.Account, market, symbol string, settings []*model
 		if orderLong != nil {
 			if tick != nil && orderLong.TriggerPrice > 0 &&
 				((orderLong.OrderType == model.OrderTypeStop && orderLong.TriggerPrice <= tick.Bids[0].Price) ||
-					(orderLong.OrderType == model.OrderTypeLimit && orderLong.Price > tick.Bids[0].Price)) {
+					(orderLong.OrderType == model.OrderTypeLimit && orderLong.Price >= tick.Asks[0].Price)) {
 				orderLong.Status = model.CarryStatusSuccess
 			}
 			if orderLong.Status == model.CarryStatusWorking && (useApi || tick == nil) {
@@ -606,7 +606,7 @@ func CheckBreak(account *model.Account, market, symbol string, settings []*model
 		if orderShort != nil {
 			if tick != nil && orderShort.TriggerPrice > 0 &&
 				((orderShort.OrderType == model.OrderTypeStop && orderShort.TriggerPrice >= tick.Asks[0].Price) ||
-					(orderShort.OrderType == model.OrderTypeLimit && orderShort.Price < tick.Asks[0].Price)) {
+					(orderShort.OrderType == model.OrderTypeLimit && orderShort.Price <= tick.Bids[0].Price)) {
 				orderShort.Status = model.CarryStatusSuccess
 			}
 			if orderShort.Status == model.CarryStatusWorking && (useApi || tick == nil) {
