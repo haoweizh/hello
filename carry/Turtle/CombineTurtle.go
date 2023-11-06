@@ -198,7 +198,7 @@ func placeTurtleLong(account *model.Account, orderType string, data *model.Turtl
 			amount = math.Abs(float64(setting.Chance)) * data.Amount
 		}
 		if setting.Function == model.FunctionCombineTurtle {
-			amount = math.Min(1.5*setting.GridAmount, amount)
+			amount = math.Max(math.Min(1.5*setting.GridAmount, amount), 0.85*setting.GridAmount)
 		}
 	} else if !isBig {
 		amount = data.Amount / 2
@@ -285,7 +285,7 @@ func placeTurtleShort(account *model.Account, orderType string, data *model.Turt
 			amount = math.Abs(float64(setting.Chance)) * data.Amount
 		}
 		if setting.Function == model.FunctionCombineTurtle {
-			amount = math.Min(1.5*setting.GridAmount, amount)
+			amount = math.Max(math.Min(1.5*setting.GridAmount, amount), 0.85*setting.GridAmount)
 		}
 	} else if !isBig {
 		amount = data.Amount / 2
