@@ -18,27 +18,31 @@ var TurtleDataSet = sync.Map{}     // function_market_symbol_unix second *Turtle
 var CombineFulled = &sync.Map{}    // market_unix seconds bool
 var accountValues = &sync.Map{}    // market value
 var accountValueTime = &sync.Map{} // market time.Time
-func CalcTurtleAmount(account *model.Account, market string, n, amountRate float64) (amount float64) {
+func CalcTurtleAmount(account *model.Account, n, amountRate float64, candle *model.Candle) (amount float64) {
 	var accountValue float64
-	valueTime, _ := util.LoadSyncMap(accountValueTime, market)
+	valueTime, _ := util.LoadSyncMap(accountValueTime, candle.Market)
 	if valueTime != nil && valueTime.(time.Time).Add(time.Hour).After(time.Now()) {
-		value, _ := util.LoadSyncMap(accountValues, market)
+		value, _ := util.LoadSyncMap(accountValues, candle.Market)
 		if value != nil {
 			accountValue = value.(float64)
 		}
 	}
 	if accountValue == 0 {
-		switch market {
+		switch candle.Market {
 		case model.BinancePerp:
-			_, _, accountValue, _ = GetPositions(account.Key, account.Secret, market)
+			_, _, accountValue, _ = GetPositions(account.Key, account.Secret, candle.Market)
 		case model.Ftx, model.OKEX:
-			_, _, accountValue, _ = GetBalances(account.Key, account.Secret, market)
+			_, _, accountValue, _ = GetBalances(account.Key, account.Secret, candle.Market)
 		}
-		util.StoreSyncMap(accountValues, accountValue, market)
-		util.StoreSyncMap(accountValueTime, time.Now(), market)
+		util.StoreSyncMap(accountValues, accountValue, candle.Market)
+		util.StoreSyncMap(accountValueTime, time.Now(), candle.Market)
 	}
 	amount = 0.02 * accountValue / n
 	amount *= amountRate
+	_, _, coin, _ := model.GetFromStandard(candle.Market, candle.Symbol)
+	if !model.CommonCoins[coin] {
+		amount = math.Min(amount, 50000/candle.PriceClose)
+	}
 	return amount
 }
 
@@ -440,7 +444,7 @@ func getCandleData(account *model.Account, market, symbol string, far, near, sec
 			n = candle.N
 			nVolume = candle.NVolume
 			m = candle.M
-			amount = CalcTurtleAmount(account, market, n, amountRate)
+			amount = CalcTurtleAmount(account, n, amountRate, candle)
 		}
 	}
 	getAll = true
