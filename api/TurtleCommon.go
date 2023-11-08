@@ -40,7 +40,7 @@ func CalcTurtleAmount(account *model.Account, n, amountRate float64, candle *mod
 	amount = 0.02 * accountValue / n
 	amount *= amountRate
 	_, _, coin, _ := model.GetFromStandard(candle.Market, candle.Symbol)
-	if !model.CommonCoins[coin] {
+	if !model.CommonCoins[strings.ToLower(coin)] {
 		amount = math.Min(amount, 50000/candle.PriceClose)
 	}
 	return amount
