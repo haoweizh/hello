@@ -429,6 +429,7 @@ func getCandleData(account *model.Account, market, symbol, function string, far,
 			data.M = candle.M
 			priceClose = candle.PriceClose
 			data.Amount = CalcTurtleAmount(account, data.N, amountRate, candle)
+			util.Info(fmt.Sprintf(`calc amt %s %s %s %f %f %f`, market, symbol, function, data.N, amountRate, data.Amount))
 		}
 	}
 	if function == model.FunctionTurtle || function == model.FunctionTurtleNormal {
