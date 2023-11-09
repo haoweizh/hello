@@ -280,7 +280,7 @@ func handleLastTurtleData(account *model.Account, function, market, symbol, last
 }
 
 // GetTurtleData refreshDynamic false时代表仅作为检查是否有足够turtleData作为top market info使用，此时不会存在缓存中，否则会引起far near错误
-func GetTurtleData(account *model.Account, function, market, symbol string, far, near, seconds int64,
+func GetTurtleData(account *model.Account, function, market, symbol string, far, near, seconds, chanceLimit int64,
 	amountRate float64, refreshDynamic, removed bool) (data *model.TurtleData, dataValid bool) {
 	if refreshDynamic {
 		var lock *sync.Mutex
@@ -341,7 +341,8 @@ func GetTurtleData(account *model.Account, function, market, symbol string, far,
 	util.Notice(fmt.Sprintf(`need to create turtle data %s %s %s %s %d refresh %v`,
 		function, market, symbol, nowStr, far, refreshDynamic))
 	var getOne, getAll bool
-	getOne, getAll, data = getCandleData(account, market, symbol, function, int(far), int(near), int(seconds), 5, amountRate, nowPeriod)
+	getOne, getAll, data = getCandleData(account, market, symbol, function, int(far), int(near), int(seconds), 5,
+		float64(chanceLimit), amountRate, nowPeriod)
 	if !getOne {
 		util.Notice(fmt.Sprintf(`fail to getOne %s %s %d %d`, market, symbol, data.DaysFar, seconds))
 		return nil, false
@@ -383,8 +384,8 @@ func GetTurtleData(account *model.Account, function, market, symbol string, far,
 	}
 }
 
-func getCandleData(account *model.Account, market, symbol, function string, far, near, seconds, adjust int, amountRate float64, nowPeriod time.Time) (
-	getOne, getAll bool, data *model.TurtleData) {
+func getCandleData(account *model.Account, market, symbol, function string, far, near, seconds, adjust int,
+	chanceLimit, amountRate float64, nowPeriod time.Time) (getOne, getAll bool, data *model.TurtleData) {
 	candles := getTurtleCandles(account, market, symbol, far, seconds, nowPeriod)
 	data = &model.TurtleData{TurtleTime: nowPeriod, Symbol: symbol, Big: 1, DaysFar: far, DaysNear: near,
 		DaysAdjust: adjust, OrderAdjust: make(map[string]*model.Order)}
@@ -446,15 +447,15 @@ func getCandleData(account *model.Account, market, symbol, function string, far,
 	_, _, coin, _ := model.GetFromStandard(market, symbol)
 	if model.CommonCoins[strings.ToLower(coin)] {
 		if function == model.FunctionCombineTurtle {
-			data.Amount = math.Min(data.Amount, 640000/priceClose)
+			data.Amount = math.Min(data.Amount, 1920000/priceClose/chanceLimit)
 		} else {
-			data.Amount = math.Min(data.Amount, 800000/priceClose)
+			data.Amount = math.Min(data.Amount, 2400000/priceClose/chanceLimit)
 		}
 	} else {
 		if function == model.FunctionCombineTurtle {
-			data.Amount = math.Min(data.Amount, 40000/priceClose)
+			data.Amount = math.Min(data.Amount, 120000/priceClose/chanceLimit)
 		} else {
-			data.Amount = math.Min(data.Amount, 50000/priceClose)
+			data.Amount = math.Min(data.Amount, 150000/priceClose/chanceLimit)
 		}
 	}
 	getAll = true

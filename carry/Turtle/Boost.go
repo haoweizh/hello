@@ -29,7 +29,7 @@ var ProcessBoost = func(setting *model.Setting, tick *model.BidAsk) {
 		return
 	}
 	data, _ := api.GetTurtleData(account, setting.Function, setting.Market, setting.Symbol, setting.Far, setting.Near,
-		setting.Seconds, setting.AmountRate, true, setting.Chance == 0 && setting.SymbolRelated == model.SettingTurtleRemoved)
+		setting.Seconds, setting.ChanceLimit, setting.AmountRate, true, setting.Chance == 0 && setting.SymbolRelated == model.SettingTurtleRemoved)
 	if data == nil || setting == nil || model.AppConfig.Env == `test` {
 		if time.Now().Minute() == 0 && time.Now().Second() == 0 {
 			util.Notice(fmt.Sprintf(`boost return no turtle boost %s %s`, setting.Market, setting.Symbol))
@@ -38,7 +38,8 @@ var ProcessBoost = func(setting *model.Setting, tick *model.BidAsk) {
 	}
 	if setting.Function == model.FunctionBoost {
 		dataLiquid, _ := api.GetTurtleData(account, `calc_n`, setting.Market, setting.Symbol, setting.FarCombine,
-			setting.NearCombine, setting.SecondsCombine, setting.AmountRateCombine, true, setting.Chance == 0 && setting.SymbolRelated == model.SettingTurtleRemoved)
+			setting.NearCombine, setting.SecondsCombine, setting.ChanceLimitCombine, setting.AmountRateCombine,
+			true, setting.Chance == 0 && setting.SymbolRelated == model.SettingTurtleRemoved)
 		if dataLiquid != nil {
 			data.N = dataLiquid.N
 			data.Amount = dataLiquid.Amount

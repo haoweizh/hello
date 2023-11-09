@@ -48,9 +48,9 @@ var ProcessCombineTurtle = func(settingCombine *model.Setting, tick *model.BidAs
 	removed := settingNormal.Chance == 0 && settingNormal.SymbolRelated == model.SettingTurtleRemoved &&
 		settingCombine.Chance == 0 && settingCombine.SymbolRelated == model.SettingTurtleRemoved
 	dataCombine, _ = api.GetTurtleData(account, settingCombine.Function, settingCombine.Market, settingCombine.Symbol,
-		settingCombine.Far, settingCombine.Near, settingCombine.Seconds, settingCombine.AmountRate, true, removed)
+		settingCombine.Far, settingCombine.Near, settingCombine.Seconds, settingCombine.ChanceLimit, settingCombine.AmountRate, true, removed)
 	dataNormal, _ = api.GetTurtleData(account, settingNormal.Function, settingNormal.Market, settingNormal.Symbol,
-		settingNormal.Far, settingNormal.Near, settingNormal.Seconds, settingNormal.AmountRate, true, removed)
+		settingNormal.Far, settingNormal.Near, settingNormal.Seconds, settingNormal.ChanceLimit, settingNormal.AmountRate, true, removed)
 	if dataCombine == nil || dataNormal == nil || settingCombine == nil || settingNormal == nil || model.AppConfig.Env == `test` {
 		if time.Now().Minute() == 0 && time.Now().Second() == 0 {
 			util.Notice(fmt.Sprintf(`combine return no turtle combine turtle %s %s`, market, symbol))
@@ -90,12 +90,12 @@ var ProcessCombineTurtle = func(settingCombine *model.Setting, tick *model.BidAs
 		tick.Bids[0].Price, tick.Asks[0].Price)
 	msg += fmt.Sprintf("海龟:仓数/持仓量/开仓价 %d of %d/%e/%e 平过%v 数量 %e %s%d big:%d 日:%e-%e %d日:%e-%e N:%e\n",
 		settingNormal.Chance, settingNormal.ChanceLimit, settingNormal.GridAmount, settingNormal.PriceX, dataNormal.Liquidated,
-		dataNormal.Amount, dataNormal.GetIds(), dataNormal.Big, dataNormal.DaysFar, dataNormal.LowFar, dataNormal.HighFar,
-		dataNormal.DaysNear, dataNormal.LowNear, dataNormal.HighNear, dataNormal.N)
+		dataNormal.Amount*float64(settingNormal.ChanceLimit), dataNormal.GetIds(), dataNormal.Big, dataNormal.DaysFar,
+		dataNormal.LowFar, dataNormal.HighFar, dataNormal.DaysNear, dataNormal.LowNear, dataNormal.HighNear, dataNormal.N)
 	msg += fmt.Sprintf("龟汤:仓数/持仓量/开仓价 %d of %d/%e/%e 平过%v 数量 %e %s%d big:%d 日:%e-%e %d日:%e-%e N:%e",
 		settingCombine.Chance, settingCombine.ChanceLimit, settingCombine.GridAmount, settingCombine.PriceX, dataCombine.Liquidated,
-		dataCombine.Amount, dataCombine.GetIds(), dataCombine.Big, dataCombine.DaysFar, dataCombine.LowFar,
-		dataCombine.HighFar, dataCombine.DaysNear, dataCombine.LowNear, dataCombine.HighNear, dataCombine.N)
+		dataCombine.Amount*float64(settingCombine.ChanceLimit), dataCombine.GetIds(), dataCombine.Big, dataCombine.DaysFar,
+		dataCombine.LowFar, dataCombine.HighFar, dataCombine.DaysNear, dataCombine.LowNear, dataCombine.HighNear, dataCombine.N)
 	util.StoreSyncMap(&model.CarryInfo, msg, account.Key, msgKey)
 	placeCombineOrders(account, dataNormal, dataCombine, settingNormal, settingCombine, tick, canOpen)
 	tryOpen := false
