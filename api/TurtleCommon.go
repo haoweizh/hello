@@ -344,38 +344,18 @@ func GetTurtleData(account *model.Account, function, market, symbol string, far,
 	}
 	util.Notice(fmt.Sprintf(`need to create turtle data %s %s %s %s %d refresh %v`,
 		function, market, symbol, nowStr, far, refreshDynamic))
-	data = &model.TurtleData{TurtleTime: nowPeriod, Symbol: symbol, Big: 1, DaysFar: int(far), DaysNear: int(near),
-		DaysAdjust: 5, OrderCleared: lastHandled, OrderAdjust: make(map[string]*model.Order)}
-	if function == model.FunctionTurtle || function == model.FunctionTurtleNormal {
-		data.UseNear = true
-	} else if function == model.FunctionCombineTurtle {
-		data.UseNear = false
-	} else if function == model.FunctionBoost && !removed {
-		data.UseNear = true
-		openOrders := QueryOpenOrders(account.Key, account.Secret, market, symbol)
-		data.OrderTrail = make([]*model.Order, 0)
-		for _, order := range openOrders {
-			if order.OrderType == model.OrderTypeTrailStop {
-				order.Function = model.Close
-				data.OrderTrail = append(data.OrderTrail, order)
-				util.Notice(fmt.Sprintf(`inherit trail order %s %s %s now %s`,
-					order.Market, order.Symbol, order.OrderId, nowStr))
-			}
-		}
-	}
-	if lastHandled {
-		data.CheckTimeOpen = time.Now()
-	}
 	var getOne, getAll bool
-	getOne, getAll, data.HighFar, data.LowFar, data.HighNear, data.LowNear, data.HighAdjust, data.LowAdjust, data.N,
-		data.M, data.NVolume, data.Amount = getCandleData(account, market, symbol,
-		data.DaysFar, data.DaysNear, int(seconds), data.DaysAdjust, amountRate, nowPeriod)
+	getOne, getAll, data = getCandleData(account, market, symbol, function, int(far), int(near), int(seconds), 5, amountRate, nowPeriod)
 	if !getOne {
 		util.Notice(fmt.Sprintf(`fail to getOne %s %s %d %d`, market, symbol, data.DaysFar, seconds))
 		return nil, false
 	} else if !getAll {
 		util.Notice(fmt.Sprintf(`fail to getAll %s %s %d %d`, market, symbol, data.DaysFar, seconds))
 		return nil, true
+	}
+	data.OrderCleared = lastHandled
+	if lastHandled {
+		data.CheckTimeOpen = time.Now()
 	}
 	if data.Amount > 0 && data.N > 0 {
 		var marketInfo *model.MarketInfo
@@ -407,9 +387,12 @@ func GetTurtleData(account *model.Account, function, market, symbol string, far,
 	}
 }
 
-func getCandleData(account *model.Account, market, symbol string, far, near, seconds, adjust int, amountRate float64, nowPeriod time.Time) (
-	getOne, getAll bool, highFar, lowFar, highNear, lowNear, highAdjust, lowAdjust, n, m, nVolume, amount float64) {
+func getCandleData(account *model.Account, market, symbol, function string, far, near, seconds, adjust int, amountRate float64, nowPeriod time.Time) (
+	getOne, getAll bool, data *model.TurtleData) {
 	candles := getTurtleCandles(account, market, symbol, far, seconds, nowPeriod)
+	data = &model.TurtleData{TurtleTime: nowPeriod, Symbol: symbol, Big: 1, DaysFar: far, DaysNear: near,
+		DaysAdjust: adjust, OrderAdjust: make(map[string]*model.Order)}
+	priceClose := 0.0
 	for i := 1; i <= far; i++ {
 		currentPeriod := nowPeriod.Add(time.Second * time.Duration(seconds*-i))
 		candle := findCandle(candles, currentPeriod)
@@ -421,30 +404,60 @@ func getCandleData(account *model.Account, market, symbol string, far, near, sec
 			return
 		}
 		getOne = true
-		if candle.PriceHigh > highFar && i <= far {
-			highFar = candle.PriceHigh
+		if candle.PriceHigh > data.HighFar && i <= far {
+			data.HighFar = candle.PriceHigh
 		}
-		if (lowFar == 0 || lowFar > candle.PriceLow) && i <= far {
-			lowFar = candle.PriceLow
+		if (data.LowFar == 0 || data.LowFar > candle.PriceLow) && i <= far {
+			data.LowFar = candle.PriceLow
 		}
-		if candle.PriceHigh > highNear && i <= near {
-			highNear = candle.PriceHigh
+		if candle.PriceHigh > data.HighNear && i <= near {
+			data.HighNear = candle.PriceHigh
 		}
-		if (lowNear == 0 || lowNear > candle.PriceLow) && i <= near {
-			lowNear = candle.PriceLow
+		if (data.LowNear == 0 || data.LowNear > candle.PriceLow) && i <= near {
+			data.LowNear = candle.PriceLow
 		}
-		if candle.PriceHigh > highAdjust && i <= adjust {
-			highAdjust = candle.PriceHigh
+		if candle.PriceHigh > data.HighAdjust && i <= adjust {
+			data.HighAdjust = candle.PriceHigh
 		}
-		if (lowAdjust == 0 || lowAdjust > candle.PriceLow) && i <= adjust {
-			lowAdjust = candle.PriceLow
+		if (data.LowAdjust == 0 || data.LowAdjust > candle.PriceLow) && i <= adjust {
+			data.LowAdjust = candle.PriceLow
 		}
 		if i == 1 {
 			go model.AppDB.Save(candle)
-			n = candle.N
-			nVolume = candle.NVolume
-			m = candle.M
-			amount = CalcTurtleAmount(account, n, amountRate, candle)
+			data.N = candle.N
+			data.NVolume = candle.NVolume
+			data.M = candle.M
+			priceClose = candle.PriceClose
+			data.Amount = CalcTurtleAmount(account, data.N, amountRate, candle)
+		}
+	}
+	if function == model.FunctionTurtle || function == model.FunctionTurtleNormal {
+		data.UseNear = true
+	} else if function == model.FunctionCombineTurtle {
+		data.UseNear = false
+	} else if function == model.FunctionBoost {
+		data.UseNear = true
+		openOrders := QueryOpenOrders(account.Key, account.Secret, market, symbol)
+		data.OrderTrail = make([]*model.Order, 0)
+		for _, order := range openOrders {
+			if order.OrderType == model.OrderTypeTrailStop {
+				order.Function = model.Close
+				data.OrderTrail = append(data.OrderTrail, order)
+			}
+		}
+	}
+	_, _, coin, _ := model.GetFromStandard(market, symbol)
+	if model.CommonCoins[strings.ToLower(coin)] {
+		if function == model.FunctionCombineTurtle {
+			data.Amount = math.Min(data.Amount, 640000/priceClose)
+		} else {
+			data.Amount = math.Min(data.Amount, 800000/priceClose)
+		}
+	} else {
+		if function == model.FunctionCombineTurtle {
+			data.Amount = math.Min(data.Amount, 40000/priceClose)
+		} else {
+			data.Amount = math.Min(data.Amount, 50000/priceClose)
 		}
 	}
 	getAll = true
