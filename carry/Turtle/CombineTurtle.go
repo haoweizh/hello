@@ -51,8 +51,8 @@ var ProcessCombineTurtle = func(settingCombine *model.Setting, tick *model.BidAs
 		settingCombine.Far, settingCombine.Near, settingCombine.Seconds, settingCombine.ChanceLimit, settingCombine.AmountRate, true, removed)
 	dataNormal, _ = api.GetTurtleData(account, settingNormal.Function, settingNormal.Market, settingNormal.Symbol,
 		settingNormal.Far, settingNormal.Near, settingNormal.Seconds, settingNormal.ChanceLimit, settingNormal.AmountRate, true, removed)
-	if !removed && (dataCombine == nil || dataNormal == nil) {
-		if time.Now().Minute() == 0 && time.Now().Second() == 0 {
+	if dataCombine == nil || dataNormal == nil || settingCombine == nil || settingNormal == nil || model.AppConfig.Env == `test` {
+		if !removed && (time.Now().Minute() == 0 && time.Now().Second() == 0) {
 			util.Notice(fmt.Sprintf(`combine return no turtle combine turtle %s %s`, market, symbol))
 		}
 		return
