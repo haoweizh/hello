@@ -245,7 +245,7 @@ var getTurtleLock = sync.Map{} // key - *sync.Mutex{}
 func handleLastTurtleData(account *model.Account, function, market, symbol, lastTime string) (lastHandled bool) {
 	var settings []*model.Setting
 	var turtles []*model.TurtleData
-	if function == model.FunctionCombineTurtle || function == model.FunctionTurtleNormal {
+	if function == model.FunctionCombineTurtle {
 		settingCombine := GetSetting(model.FunctionCombineTurtle, market, symbol)
 		settingNormal := GetSetting(model.FunctionTurtleNormal, market, symbol)
 		if settingCombine != nil && settingNormal != nil {
@@ -287,6 +287,7 @@ func GetTurtleData(account *model.Account, function, market, symbol string, far,
 		lockValue, _ := util.LoadSyncMap(&getTurtleLock, account.Key, function)
 		if lockValue == nil {
 			lock = &sync.Mutex{}
+			util.Notice(fmt.Sprintf(`create lock %s %s`, account.Key, function))
 			util.StoreSyncMap(&getTurtleLock, lock, account.Key, function)
 		} else {
 			lock = lockValue.(*sync.Mutex)

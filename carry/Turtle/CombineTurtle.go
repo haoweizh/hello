@@ -57,10 +57,9 @@ var ProcessCombineTurtle = func(settingCombine *model.Setting, tick *model.BidAs
 		}
 		return
 	}
-	if !dataCombine.OrderCleared && !dataNormal.OrderCleared {
+	if !dataCombine.OrderCleared {
 		api.ClearOrders(account.Key, account.Secret, market, symbol, map[string]bool{model.OrderTypeTrailStop: true})
 		dataCombine.OrderCleared = true
-		dataNormal.OrderCleared = true
 		util.Notice(fmt.Sprintf(`combine return not cleared %s %s %v`, market, symbol, dataCombine.OrderCleared))
 		return
 	}
