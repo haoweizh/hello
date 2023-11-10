@@ -284,10 +284,10 @@ func GetTurtleData(account *model.Account, function, market, symbol string, far,
 	amountRate float64, refreshDynamic, removed bool) (data *model.TurtleData, dataValid bool) {
 	if refreshDynamic {
 		var lock *sync.Mutex
-		lockValue, _ := getTurtleLock.Load(account.Key)
+		lockValue, _ := util.LoadSyncMap(&getTurtleLock, account.Key, function)
 		if lockValue == nil {
 			lock = &sync.Mutex{}
-			getTurtleLock.Store(account.Key, lock)
+			util.StoreSyncMap(&getTurtleLock, lock, account.Key, function)
 		} else {
 			lock = lockValue.(*sync.Mutex)
 		}
