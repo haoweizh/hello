@@ -65,7 +65,11 @@ var ProcessCombineTurtle = func(settingCombine *model.Setting, tick *model.BidAs
 		return
 	}
 	turtleData := []*model.TurtleData{dataCombine, dataNormal}
-	canOpen, turtleCoins := api.CanOpenCombine(settingCombine, settingNormal, dataCombine, dataNormal, true)
+	checkFulled := true
+	if settingCombine.Seconds > 43200 {
+		checkFulled = false
+	}
+	canOpen, turtleCoins := api.CanOpenCombine(settingCombine, settingNormal, dataCombine, dataNormal, checkFulled)
 	//if canOpen {
 	//	settingCombine.SymbolRelated = ``
 	//}
