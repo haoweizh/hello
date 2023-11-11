@@ -6,6 +6,7 @@ import (
 	"hello/model"
 	"hello/util"
 	"math"
+	"sync"
 	"time"
 )
 
@@ -121,7 +122,19 @@ var ProcessCombineTurtle = func(settingCombine *model.Setting, tick *model.BidAs
 	}
 }
 
+var placeTurtleLock = &sync.Map{} // key - *sync.Mutex{}
+
 func placeCombineOrders(account *model.Account, dataNormal, dataCombine *model.TurtleData, settingNormal, settingCombine *model.Setting, tick *model.BidAsk, canOpen bool) {
+	var lock *sync.Mutex
+	lockValue, _ := placeTurtleLock.Load(account.Key)
+	if lockValue == nil {
+		lock = &sync.Mutex{}
+		placeTurtleLock.Store(account.Key, lock)
+	} else {
+		lock = lockValue.(*sync.Mutex)
+	}
+	defer lock.Unlock()
+	lock.Lock()
 	placeTurtleLong(account, model.OrderTypeStop, dataNormal, settingNormal, tick, canOpen, true, false)
 	placeTurtleShort(account, model.OrderTypeStop, dataNormal, settingNormal, tick, canOpen, true, false)
 	isLongBigCombine := false

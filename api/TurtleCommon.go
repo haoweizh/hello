@@ -307,11 +307,11 @@ func GetTurtleData(account *model.Account, function, market, symbol string, far,
 		lastHandled = handleLastTurtleData(account, function, market, symbol, lastStr)
 	}
 	_, _, coin, _ := model.GetFromStandard(market, symbol)
-	//today, _ := model.GetMarketToday(market)
-	// today.Unix() == nowPeriod.Unix() &&
 	if refreshDynamic && !model.CommonCoins[strings.ToLower(coin)] {
 		refreshValue, refreshOk := DynamicHandleTime.Load(market)
-		if !refreshOk || refreshValue == nil || refreshValue.(time.Time).Before(nowPeriod) {
+		// 在本周期结束前300s刷新，且距离上一次刷新60分钟以上
+		if !refreshOk || refreshValue == nil || (refreshValue.(time.Time).Add(time.Hour).Before(now) &&
+			refreshValue.(time.Time).After(nowPeriod.Add(time.Second*time.Duration(seconds-300)))) {
 			if handleMarketDynamic(market) {
 				PrepareSettings()
 				SetRequireReset(market)
