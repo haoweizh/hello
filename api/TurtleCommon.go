@@ -476,6 +476,10 @@ func getTurtleCandles(account *model.Account, market, symbol string, far, second
 	}
 	calcLenN := 10
 	calcLenV := 10
+	if seconds == 86400 {
+		calcLenN = 20
+		calcLenV = 20
+	}
 	sortedCandles := &model.SortedCandle{Value: candles}
 	sort.Sort(sortedCandles)
 	if lastCandle2 == nil {
