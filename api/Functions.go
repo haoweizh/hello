@@ -88,7 +88,7 @@ func RequireDepthChanReset(markets *model.Markets, market string) bool {
 }
 
 func MustCancel(key, secret, market, symbol, orderType, orderId string, mustCancel bool) (res bool) {
-	sleepTime := 1
+	sleepTime := 10
 	for i := 0; i < 20; i++ {
 		result, errCode, _ := CancelOrder(key, secret, market, symbol, orderType, orderId)
 		res = result
