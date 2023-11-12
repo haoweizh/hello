@@ -586,7 +586,8 @@ func sendSignRequestOKEX(key, secret, method, path string, param, body map[strin
 	responseBody, err := util.HttpRequest(method, u.String(), postContent, headers, 60)
 	logMsg := fmt.Sprintf(`okex key %s request %s body %s return %s`,
 		key, u.String(), toBeSign, string(responseBody))
-	if strings.Contains(u.String(), `/api/v5/trade/order`) && method == http.MethodPost {
+	if (strings.Contains(u.String(), `cancel`) || strings.Contains(u.String(), `/api/v5/trade/order`)) &&
+		method == http.MethodPost {
 		util.Notice(logMsg)
 	} else { //if !strings.Contains(u.String(), `balance`) && !strings.Contains(path, `positions`) {
 		util.SocketInfo(logMsg)
