@@ -537,7 +537,8 @@ func QueryOpenOrders(key, secret, market, symbol string) (orders []*model.Order)
 	switch market {
 	case model.OKEX:
 		orders = queryOpenOrdersOKEX(key, secret, symbol, true)
-		for _, order := range queryOpenOrdersOKEX(key, secret, symbol, false) {
+		temp := queryOpenOrdersOKEX(key, secret, symbol, false)
+		for _, order := range temp {
 			orders = append(orders, order)
 		}
 	case model.Ftx:

@@ -837,36 +837,77 @@ func getMarketsOKEX(key, secret string) (marketInfos map[string]*model.MarketInf
 	return
 }
 
-// cancelOrdersOKEX 暂不支持策略订单
+// cancelOrdersOKEX 策略订单每次最多10个，非策略订单每次最多20个
 func cancelOrdersOKEX(key, secret, symbol string) (result bool, code, msg string) {
 	orders := queryOpenOrdersOKEX(key, secret, symbol, false)
 	if len(orders) <= 0 {
 		return true, ``, ``
 	}
-	data := make([]map[string]interface{}, len(orders))
-	for i, order := range orders {
-		data[i] = map[string]interface{}{`instId`: symbol, `ordId`: order.OrderId}
-	}
-	postArray := map[string]interface{}{ParamArrayOkex: data}
-	responseBody, _ := sendSignRequestOKEX(key, secret, http.MethodPost, "/api/v5/trade/cancel-batch-orders", nil, postArray)
-	resultJson, err := util.NewJSON(responseBody)
-	if err == nil && resultJson != nil {
-		code = resultJson.Get(`code`).MustString()
-		if code == `0` {
-			return true, code, resultJson.Get(`msg`).MustString()
+	normalOrders := make([]map[string]interface{}, 0)
+	algoOrders := make([]map[string]interface{}, 0)
+	advOrders := make([]map[string]interface{}, 0)
+	for _, order := range orders {
+		if order == nil {
+			continue
+		}
+		if (order.OrderType == model.OrderTypeLimit || order.OrderType == model.OrderTypeMarket) && len(normalOrders) <= 20 {
+			normalOrders = append(normalOrders, map[string]interface{}{`instId`: symbol, `ordId`: order.OrderId})
+		} else if order.OrderType == model.OrderTypeStop && len(algoOrders) <= 10 {
+			algoOrders = append(algoOrders, map[string]interface{}{`instId`: symbol, `algoId`: order.OrderId})
+		} else if order.OrderType == model.OrderTypeTrailStop && len(advOrders) <= 10 {
+			advOrders = append(advOrders, map[string]interface{}{`instId`: symbol, `algoId`: order.OrderId})
 		}
 	}
-	return false, code, ``
+	if len(normalOrders) > 20 || len(algoOrders) > 10 || len(advOrders) > 10 {
+		util.Notice(fmt.Sprintf(`fatal error: too many normal order to be canceled normal: %d algo: %d adv:%d`,
+			len(normalOrders), len(algoOrders), len(advOrders)))
+	}
+	if len(normalOrders) > 0 {
+		responseBody, _ := sendSignRequestOKEX(key, secret, http.MethodPost, "/api/v5/trade/cancel-batch-orders",
+			nil, map[string]interface{}{ParamArrayOkex: normalOrders})
+		resultJson, err := util.NewJSON(responseBody)
+		if err == nil && resultJson != nil {
+			result = true
+			code = resultJson.Get(`code`).MustString()
+			msg = resultJson.Get(`msg`).MustString()
+		}
+	}
+	if len(algoOrders) > 0 {
+		responseBody, _ := sendSignRequestOKEX(key, secret, http.MethodPost, `/api/v5/trade/cancel-algos`,
+			nil, map[string]interface{}{ParamArrayOkex: algoOrders})
+		resultJson, err := util.NewJSON(responseBody)
+		if err == nil && resultJson != nil {
+			result = true
+			code += resultJson.Get(`code`).MustString()
+			msg += resultJson.Get(`msg`).MustString()
+		}
+	}
+	if len(advOrders) > 0 {
+		responseBody, _ := sendSignRequestOKEX(key, secret, http.MethodPost, `/api/v5/trade/cancel-advance-algos`,
+			nil, map[string]interface{}{ParamArrayOkex: advOrders})
+		resultJson, err := util.NewJSON(responseBody)
+		if err == nil && resultJson != nil {
+			result = true
+			code += resultJson.Get(`code`).MustString()
+			msg += resultJson.Get(`msg`).MustString()
+		}
+	}
+	return result, code, msg
 }
 
 func cancelOrderOkex(key, secret, symbol string, orderId, orderType string) (result bool, errCode, msg string) {
 	postData := map[string]interface{}{`instId`: symbol}
 	var responseBody []byte
-	if orderType == model.OrderTypeStop || orderType == model.OrderTypeTrailStop {
+	if orderType == model.OrderTypeStop {
 		postData[`algoId`] = orderId
 		data := []map[string]interface{}{postData}
 		postArray := map[string]interface{}{ParamArrayOkex: data}
 		responseBody, _ = sendSignRequestOKEX(key, secret, http.MethodPost, `/api/v5/trade/cancel-algos`, nil, postArray)
+	} else if orderType == model.OrderTypeTrailStop {
+		postData[`algoId`] = orderId
+		data := []map[string]interface{}{postData}
+		postArray := map[string]interface{}{ParamArrayOkex: data}
+		responseBody, _ = sendSignRequestOKEX(key, secret, http.MethodPost, `/api/v5/trade/cancel-advance-algos`, nil, postArray)
 	} else {
 		postData[`ordId`] = orderId
 		responseBody, _ = sendSignRequestOKEX(key, secret, http.MethodPost, "/api/v5/trade/cancel-order", nil, postData)
