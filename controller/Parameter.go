@@ -726,10 +726,8 @@ func GetParameters(c *gin.Context) {
 		userKeys = append(userKeys, account.Key)
 		msgTurtle, sizeTurtle := createTurtleLines(model.FunctionTurtle, market, account)
 		msgCombine, sizeCombine := createTurtleLines(model.FunctionCombineTurtle, market, account)
-		msgBoost, sizeBoost := createTurtleLines(model.FunctionBoost, market, account)
 		msg += fmt.Sprintf("单一海龟%s 个数%d\n %s\n", market, sizeTurtle, msgTurtle)
 		msg += fmt.Sprintf("组合海龟%s 个数%d\n %s\n", market, sizeCombine, msgCombine)
-		msg += fmt.Sprintf("Boost%s 个数%d\n %s\n", market, sizeBoost, msgBoost)
 	}
 	//setting := api.GetSetting(model.FunctionGrid, model.Ftx, `LINK-PERP`)
 	//if setting != nil {
