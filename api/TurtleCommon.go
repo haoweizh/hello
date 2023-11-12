@@ -59,7 +59,6 @@ func ClearOrders(key, secret, market, symbol string, keepTypes map[string]bool) 
 			MustCancel(key, secret, market, symbol, order.OrderType, order.OrderId, true)
 		}
 	}
-	time.Sleep(time.Second)
 }
 
 // ClearExtraOrders
@@ -88,9 +87,6 @@ func ClearExtraOrders(key, secret, market, symbol string, dataArray []*model.Tur
 		if !keepOrders[order.OrderId] {
 			result := MustCancel(key, secret, market, symbol, order.OrderType, order.OrderId, true)
 			util.Notice(`cancel extra order %s %s %s %s return %v`, market, symbol, order.OrderType, order.OrderId, result)
-			time.Sleep(time.Second)
-			//} else {
-			//	util.Notice(`keep stop order %s %s %s`, market, symbol, order.OrderId)
 		}
 	}
 }
@@ -602,7 +598,6 @@ func CheckBreak(account *model.Account, market, symbol string, settings []*model
 			}
 			if orderLong.Status == model.CarryStatusWorking && (useApi || tick == nil) {
 				orderLong = QueryOrderById(account.Key, account.Secret, market, symbol, orderLong.OrderType, orderLong.OrderId)
-				time.Sleep(time.Millisecond * 100)
 			}
 			if orderLong != nil && (orderLong.Status == model.CarryStatusSuccess || orderLong.DealAmount*3 > orderLong.Amount*2) {
 				data.BreakLong = true
@@ -621,7 +616,6 @@ func CheckBreak(account *model.Account, market, symbol string, settings []*model
 			}
 			if orderShort.Status == model.CarryStatusWorking && (useApi || tick == nil) {
 				orderShort = QueryOrderById(account.Key, account.Secret, market, symbol, orderShort.OrderType, orderShort.OrderId)
-				time.Sleep(time.Millisecond * 100)
 			}
 			if orderShort != nil && (orderShort.Status == model.CarryStatusSuccess || orderShort.DealAmount*3 > orderShort.Amount*2) {
 				data.BreakShort = true
@@ -634,7 +628,6 @@ func CheckBreak(account *model.Account, market, symbol string, settings []*model
 		}
 		if orderTrail != nil && (useApi || tick == nil) {
 			orderTrail = QueryOrderById(account.Key, account.Secret, market, symbol, orderTrail.OrderType, orderTrail.OrderId)
-			time.Sleep(time.Millisecond * 100)
 			if orderTrail != nil && orderTrail.Status == model.CarryStatusSuccess {
 				data.BreakTrail = true
 				util.Notice(fmt.Sprintf(`order break trail %s %s %s %d %e %e id %s useApi %v`,

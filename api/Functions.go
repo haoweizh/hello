@@ -415,7 +415,7 @@ func GetBalances(key, secret, market string) (
 	}
 	lock.(*sync.Mutex).Lock()
 	defer func() {
-		time.Sleep(time.Millisecond * 200)
+		time.Sleep(time.Millisecond * 100)
 		lock.(*sync.Mutex).Unlock()
 	}()
 	//now := util.GetNow().Unix()
@@ -620,7 +620,7 @@ func GetPositions(key, secret, market string) (success bool, positions []*model.
 	}
 	lock.(*sync.Mutex).Lock()
 	defer func() {
-		time.Sleep(time.Millisecond * 200)
+		time.Sleep(time.Millisecond * 100)
 		lock.(*sync.Mutex).Unlock()
 	}()
 	switch market {
@@ -722,7 +722,7 @@ func MustPlaceOrder(key, secret, orderSide, orderType, market, symbol, orderPara
 					util.Notice(fmt.Sprintf(`binance perp 下单返回 -4005 代表数量%f太大，减小marketInfo size max %f`,
 						amount, v.(*model.MarketInfo).SizeMax))
 				}
-				time.Sleep(time.Second * 3)
+				time.Sleep(time.Second * 10)
 				util.Notice(fmt.Sprintf(`fail to place order %d time, re order`, i))
 			}
 		}

@@ -184,7 +184,6 @@ func handleCombineSettings(mumSetting *model.Setting, topMarketInfos map[string]
 					SetSymbolLeverage(account, settingCombine.Market, settingCombine.Symbol)
 				}
 			}
-			time.Sleep(time.Second)
 		} else {
 			settingCombine = valueCombine.(*model.Setting)
 			settingCombine.SymbolRelated = ``
@@ -270,7 +269,6 @@ func handleSingleSettings(mumSetting *model.Setting, topMarketInfos map[string]*
 					SetSymbolLeverage(account, settingNew.Market, settingNew.Symbol)
 				}
 			}
-			time.Sleep(time.Second)
 		} else {
 			settingNew = value.(*model.Setting)
 			settingNew.SymbolRelated = ``
