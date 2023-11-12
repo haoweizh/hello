@@ -310,7 +310,7 @@ func GetMultiCandle(account *model.Account, market string, slotSeconds int, begi
 			}
 			i++
 			if !isCache {
-				time.Sleep(time.Millisecond * 300)
+				time.Sleep(time.Millisecond * 100)
 			} else {
 				//util.Notice(fmt.Sprintf(`get candles from cache %s %s %v %v %d %d`,
 				//	market, symbol, begin, end, count, slotSeconds))
