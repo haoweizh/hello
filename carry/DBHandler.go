@@ -164,7 +164,6 @@ func Maintain() {
 	model.HandlerMap[model.FunctionCross] = cross.ProcessCross
 	model.HandlerMap[model.FunctionHang] = hang.ProcessHang
 	model.HandlerMap[model.FunctionCombineTurtle] = Turtle.ProcessCombineTurtle
-	model.HandlerMap[model.FunctionBoost] = Turtle.ProcessBoost
 	model.HandlerMap[model.FunctionGrid] = grid.ProcessGrid
 	model.HandlerMap[model.FunctionQueue] = queue.ProcessQueue
 	model.HandlerMap[model.FunctionFollow] = follow.ProcessFollow

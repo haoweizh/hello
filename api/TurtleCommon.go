@@ -265,7 +265,7 @@ func handleLastTurtleData(account *model.Account, function, market, symbol, last
 				CancelOrders(account.Key, account.Secret, market, symbol)
 			}
 		}
-	} else if function == model.FunctionTurtle || function == model.FunctionBoost {
+	} else if function == model.FunctionTurtle {
 		settings = []*model.Setting{GetSetting(function, market, symbol)}
 		valueTurtle, _ := util.LoadSyncMap(&TurtleDataSet, function, market, symbol, lastTime)
 		if valueTurtle == nil || settings[0] == nil {
@@ -437,16 +437,6 @@ func getCandleData(account *model.Account, market, symbol, function string, far,
 		data.UseNear = true
 	} else if function == model.FunctionCombineTurtle {
 		data.UseNear = false
-	} else if function == model.FunctionBoost {
-		data.UseNear = true
-		openOrders := QueryOpenOrders(account.Key, account.Secret, market, symbol)
-		data.OrderTrail = make([]*model.Order, 0)
-		for _, order := range openOrders {
-			if order.OrderType == model.OrderTypeTrailStop {
-				order.Function = model.Close
-				data.OrderTrail = append(data.OrderTrail, order)
-			}
-		}
 	}
 	_, _, coin, _ := model.GetFromStandard(market, symbol)
 	if model.CommonCoins[strings.ToLower(coin)] {
