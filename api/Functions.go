@@ -139,6 +139,7 @@ func CancelOrders(key, secret, market, symbol string) (result bool) {
 	case model.HuobiSpot:
 		result = cancelOrdersHuobiSpot(key, secret, symbol)
 	}
+	time.Sleep(time.Second * 2)
 	util.Notice(fmt.Sprintf(`cancel all orders %s %s return %v`, market, symbol, result))
 	return result
 }
