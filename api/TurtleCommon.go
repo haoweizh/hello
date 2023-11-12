@@ -261,6 +261,8 @@ func handleLastTurtleData(account *model.Account, function, market, symbol, last
 				clearTurtleOrders(account, settings[1], turtles[1])
 				util.DelSyncMap(&TurtleDataSet, model.FunctionCombineTurtle, market, symbol, lastTime)
 				util.DelSyncMap(&TurtleDataSet, model.FunctionTurtleNormal, market, symbol, lastTime)
+			} else {
+				CancelOrders(account.Key, account.Secret, market, symbol)
 			}
 		}
 	} else if function == model.FunctionTurtle || function == model.FunctionBoost {

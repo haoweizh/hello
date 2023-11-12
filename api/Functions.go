@@ -115,32 +115,32 @@ func MustCancel(key, secret, market, symbol, orderType, orderId string, mustCanc
 func CancelOrders(key, secret, market, symbol string) (result bool) {
 	switch market {
 	case model.BitgetPerp:
-		return cancelOrdersBitgetPerp(key, secret, symbol)
+		result = cancelOrdersBitgetPerp(key, secret, symbol)
 	case model.BitgetSpot:
-		return cancelOrdersBitgetSpot(key, secret, symbol)
+		result = cancelOrdersBitgetSpot(key, secret, symbol)
 	case model.KucoinSpot:
-		return cancelOrdersKucoinSpot(symbol)
+		result = cancelOrdersKucoinSpot(symbol)
 	case model.KucoinPerp:
-		return cancelOrdersKucoinPerp(symbol)
+		result = cancelOrdersKucoinPerp(symbol)
 	case model.Gate:
-		return cancelOrdersGate(key, secret, symbol)
+		result = cancelOrdersGate(key, secret, symbol)
 	case model.Mexc:
-		return cancelOrdersMexc(key, secret, symbol)
+		result = cancelOrdersMexc(key, secret, symbol)
 	case model.BinanceSpot, model.BinanceMargin:
-		return cancelOrdersBinance(key, secret, market, symbol)
+		result = cancelOrdersBinance(key, secret, market, symbol)
 	case model.BinancePerp:
-		return cancelOrdersBinancePerp(key, secret, symbol)
+		result = cancelOrdersBinancePerp(key, secret, symbol)
 	case model.Ftx:
-		return cancelOrdersFtx(key, secret, symbol)
+		result = cancelOrdersFtx(key, secret, symbol)
 	case model.Bybit:
-		return cancelOrdersBybit(key, secret, symbol)
+		result = cancelOrdersBybit(key, secret, symbol)
 	case model.OKEX:
 		result, _, _ = cancelOrdersOKEX(key, secret, symbol)
-		return result
 	case model.HuobiSpot:
-		return cancelOrdersHuobiSpot(key, secret, symbol)
+		result = cancelOrdersHuobiSpot(key, secret, symbol)
 	}
-	return false
+	util.Notice(fmt.Sprintf(`cancel all orders %s %s return %v`, market, symbol, result))
+	return result
 }
 
 // CancelOrder 支持普通订单、stop订单
