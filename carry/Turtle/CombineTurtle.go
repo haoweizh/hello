@@ -68,6 +68,9 @@ var ProcessCombineTurtle = func(settingCombine *model.Setting, tick *model.BidAs
 		util.Notice(fmt.Sprintf(`combine return not cleared %s %s %v`, market, symbol, dataCombine.OrderCleared))
 		return
 	}
+	if dataNormal.N == 0 || dataNormal.Amount == 0 || dataCombine.N == 0 || dataCombine.Amount == 0 {
+		return
+	}
 	turtleData := []*model.TurtleData{dataCombine, dataNormal}
 	checkFulled := true
 	if settingCombine.Seconds > 43200 {
@@ -77,9 +80,6 @@ var ProcessCombineTurtle = func(settingCombine *model.Setting, tick *model.BidAs
 	if api.HandleOrders(account.Key, account.Secret, market, symbol, settings, turtleData) ||
 		api.CheckBreak(account, market, symbol, settings, turtleData, tick) {
 		//util.Notice(fmt.Sprintf(`combine return handle or break %s %s`, market, symbol))
-		return
-	}
-	if dataNormal.N == 0 || dataNormal.Amount == 0 || dataCombine.N == 0 || dataCombine.Amount == 0 {
 		return
 	}
 	model.ResetBig(dataCombine, dataNormal)
