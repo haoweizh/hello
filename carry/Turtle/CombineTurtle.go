@@ -48,6 +48,9 @@ var ProcessCombineTurtle = func(settingCombine *model.Setting, tick *model.BidAs
 	var dataCombine, dataNormal *model.TurtleData
 	removed := settingNormal.Chance == 0 && settingNormal.SymbolRelated == model.SettingTurtleRemoved &&
 		settingCombine.Chance == 0 && settingCombine.SymbolRelated == model.SettingTurtleRemoved
+	if removed && time.Now().Minute() < 5 {
+		return
+	}
 	dataCombine, _ = api.GetTurtleData(account, settingCombine.Function, settingCombine.Market, settingCombine.Symbol,
 		settingCombine.Far, settingCombine.Near, settingCombine.Seconds, settingCombine.ChanceLimit, settingCombine.AmountRate, true, removed)
 	dataNormal, _ = api.GetTurtleData(account, settingNormal.Function, settingNormal.Market, settingNormal.Symbol,

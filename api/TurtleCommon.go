@@ -183,20 +183,20 @@ func clearTurtleOrders(account *model.Account, setting *model.Setting, turtle *m
 		if order != nil {
 			longAmount += order.Amount
 			MustCancel(account.Key, account.Secret, setting.Market, setting.Symbol, order.OrderType, order.OrderId, false)
-			time.Sleep(time.Millisecond * 200)
+			time.Sleep(time.Millisecond * 100)
 		}
 	}
 	for _, order := range turtle.OrderShort {
 		if order != nil {
 			shortAmount += order.Amount
 			MustCancel(account.Key, account.Secret, setting.Market, setting.Symbol, order.OrderType, order.OrderId, false)
-			time.Sleep(time.Millisecond * 200)
+			time.Sleep(time.Millisecond * 100)
 		}
 	}
 	for _, order := range turtle.OrderAdjust {
 		if order != nil {
 			MustCancel(account.Key, account.Secret, setting.Market, setting.Symbol, order.OrderType, order.OrderId, false)
-			time.Sleep(time.Millisecond * 200)
+			time.Sleep(time.Millisecond * 100)
 		}
 	}
 	broken := false
@@ -223,7 +223,7 @@ func clearTurtleOrders(account *model.Account, setting *model.Setting, turtle *m
 	if setting.Chance == 0 {
 		for _, order := range turtle.OrderTrail {
 			MustCancel(account.Key, account.Secret, setting.Market, setting.Symbol, order.OrderType, order.OrderId, false)
-			time.Sleep(time.Millisecond * 200)
+			time.Sleep(time.Millisecond * 100)
 		}
 	}
 	if turtle.BreakTrail {
@@ -269,6 +269,7 @@ func handleLastTurtleData(account *model.Account, function, market, symbol, last
 		settings = []*model.Setting{GetSetting(function, market, symbol)}
 		valueTurtle, _ := util.LoadSyncMap(&TurtleDataSet, function, market, symbol, lastTime)
 		if valueTurtle == nil || settings[0] == nil {
+			CancelOrders(account.Key, account.Secret, market, symbol)
 			return
 		}
 		util.Notice(fmt.Sprintf(`handle last turtle %s %s %s %s`, function, market, symbol, lastTime))
@@ -391,7 +392,7 @@ func getCandleData(account *model.Account, market, symbol, function string, far,
 	chanceLimit, amountRate float64, nowPeriod time.Time) (getOne, getAll bool, data *model.TurtleData) {
 	candles := getTurtleCandles(account, market, symbol, far, seconds, nowPeriod)
 	data = &model.TurtleData{TurtleTime: nowPeriod, Symbol: symbol, Big: 1, DaysFar: far, DaysNear: near,
-		DaysAdjust: adjust, OrderAdjust: make(map[string]*model.Order)}
+		DaysAdjust: adjust, OrderAdjust: make(map[string]*model.Order), OrderCleared: false}
 	priceClose := 0.0
 	for i := 1; i <= far; i++ {
 		currentPeriod := nowPeriod.Add(time.Second * time.Duration(seconds*-i))
@@ -610,7 +611,7 @@ func CheckBreak(account *model.Account, market, symbol string, settings []*model
 			}
 			if orderLong.Status == model.CarryStatusWorking && (useApi || tick == nil) {
 				orderLong = QueryOrderById(account.Key, account.Secret, market, symbol, orderLong.OrderType, orderLong.OrderId)
-				time.Sleep(time.Millisecond * 200)
+				time.Sleep(time.Millisecond * 100)
 			}
 			if orderLong != nil && (orderLong.Status == model.CarryStatusSuccess || orderLong.DealAmount*3 > orderLong.Amount*2) {
 				data.BreakLong = true
@@ -629,7 +630,7 @@ func CheckBreak(account *model.Account, market, symbol string, settings []*model
 			}
 			if orderShort.Status == model.CarryStatusWorking && (useApi || tick == nil) {
 				orderShort = QueryOrderById(account.Key, account.Secret, market, symbol, orderShort.OrderType, orderShort.OrderId)
-				time.Sleep(time.Millisecond * 200)
+				time.Sleep(time.Millisecond * 100)
 			}
 			if orderShort != nil && (orderShort.Status == model.CarryStatusSuccess || orderShort.DealAmount*3 > orderShort.Amount*2) {
 				data.BreakShort = true
@@ -642,7 +643,7 @@ func CheckBreak(account *model.Account, market, symbol string, settings []*model
 		}
 		if orderTrail != nil && (useApi || tick == nil) {
 			orderTrail = QueryOrderById(account.Key, account.Secret, market, symbol, orderTrail.OrderType, orderTrail.OrderId)
-			time.Sleep(time.Millisecond * 200)
+			time.Sleep(time.Millisecond * 100)
 			if orderTrail != nil && orderTrail.Status == model.CarryStatusSuccess {
 				data.BreakTrail = true
 				util.Notice(fmt.Sprintf(`order break trail %s %s %s %d %e %e id %s useApi %v`,
