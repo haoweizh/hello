@@ -74,19 +74,11 @@ var ProcessCombineTurtle = func(settingCombine *model.Setting, tick *model.BidAs
 		checkFulled = false
 	}
 	canOpen, turtleCoins := api.CanOpenCombine(settingCombine, settingNormal, dataCombine, dataNormal, checkFulled)
-	//if canOpen {
-	//	settingCombine.SymbolRelated = ``
-	//}
 	if api.HandleOrders(account.Key, account.Secret, market, symbol, settings, turtleData) ||
 		api.CheckBreak(account, market, symbol, settings, turtleData, tick) {
 		//util.Notice(fmt.Sprintf(`combine return handle or break %s %s`, market, symbol))
 		return
 	}
-	if removed { // 上面处理完adjust等事务后，removed的币种不再被执行
-		return
-	}
-	//价格不一样：big=true
-	//价格一样：仓数相加=0时big=false；仓数相加≠0时big=true
 	if dataNormal.N == 0 || dataNormal.Amount == 0 || dataCombine.N == 0 || dataCombine.Amount == 0 {
 		return
 	}
