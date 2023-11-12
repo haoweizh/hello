@@ -259,17 +259,9 @@ func getCandle(account *model.Account, market, symbol string, slotSeconds int, b
 		if ok && oldMsg != nil {
 			msg = oldMsg.(string) + msg
 		}
-		//if len(msg) < 100000 {
-		//	util.StoreSyncMap(&model.CarryInfo, msg, `GetCandle`)
-		//} else {
-		//	util.StoreSyncMap(&model.CarryInfo, nil, `GetCandle`)
-		//}
 		if !isCache {
 			util.Notice(msg)
 			time.Sleep(time.Millisecond * 100)
-		} else {
-			//util.Notice(fmt.Sprintf(`get candles from cache %s %s %v %v %d %d`,
-			//	market, symbol, begin, end, count, slotSeconds))
 		}
 	}
 	return

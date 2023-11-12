@@ -1477,6 +1477,7 @@ func getCandlesOKEX(account *model.Account, symbol string, before, after time.Ti
 		if redisErr == nil {
 			responseBody = []byte(temp)
 			isCache = true
+			util.Notice(fmt.Sprintf(`get candles from key %s %d`, redisKey, len(temp)))
 		}
 	}
 	if responseBody == nil {
@@ -1487,6 +1488,7 @@ func getCandlesOKEX(account *model.Account, symbol string, before, after time.Ti
 	if err != nil || candleJson == nil || candleJson.Get(`data`) == nil || len(candleJson.Get(`data`).MustArray()) == 0 {
 		if model.AppRedis != nil {
 			model.AppRedis.Del(context.Background(), redisKey)
+			util.Notice(fmt.Sprintf(`del redis key %s`, redisKey))
 		}
 		return
 	} else if !isCache && model.AppRedis != nil {

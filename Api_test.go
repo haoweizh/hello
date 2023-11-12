@@ -188,16 +188,25 @@ func Test_AccountHandler(t *testing.T) {
 	}
 }
 
-func Test_BalAndPos(t *testing.T) {
-	keys := util.GetHourKeys(32)
-	fmt.Println(fmt.Sprintf(`%v`, keys))
+func Test_Redis(t *testing.T) {
 	model.NewConfig()
-	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
+	//model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
 	model.AppRedis = redis.NewClient(&redis.Options{
 		Addr:     model.AppConfig.RedisAddr,
 		Password: model.AppConfig.RedisPassword,
 		DB:       0,
 	})
+	//model.AppRedis.Set(context.Background(), `test234`, `string(responseBody)`, 0)
+	temp, redisErr := model.AppRedis.Get(context.Background(), `okex_ARB_PERP_1H_1699027200000_1699747200000_200`).Result()
+	if redisErr != nil {
+		fmt.Println(redisErr.Error())
+	} else {
+		fmt.Println(temp)
+	}
+}
+
+func Test_BalAndPos(t *testing.T) {
+	model.NewConfig()
 	account := model.AppConfig.GetAccounts(model.BinancePerp)[0]
 	model.AppRedis.Set(context.Background(), `test`, `11`, 0)
 	temp, err := model.AppRedis.Get(context.Background(), `test`).Result()
