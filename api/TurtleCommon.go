@@ -256,7 +256,7 @@ func handleLastTurtleData(account *model.Account, function, market, symbol, last
 				util.Notice(fmt.Sprintf(`handle last turtle %s %s %s %s`, function, market, symbol, lastTime))
 				settings = []*model.Setting{settingCombine, settingNormal}
 				turtles = []*model.TurtleData{valueCombine.(*model.TurtleData), valueNormal.(*model.TurtleData)}
-				CheckBreak(account, market, symbol, settings, turtles, nil)
+				//CheckBreak(account, market, symbol, settings, turtles, nil)
 				clearTurtleOrders(account, settings[0], turtles[0])
 				clearTurtleOrders(account, settings[1], turtles[1])
 				util.DelSyncMap(&TurtleDataSet, model.FunctionCombineTurtle, market, symbol, lastTime)
@@ -275,7 +275,7 @@ func handleLastTurtleData(account *model.Account, function, market, symbol, last
 		}
 		util.Notice(fmt.Sprintf(`handle last turtle %s %s %s %s`, function, market, symbol, lastTime))
 		turtles = []*model.TurtleData{valueTurtle.(*model.TurtleData)}
-		CheckBreak(account, market, symbol, settings, turtles, nil)
+		//CheckBreak(account, market, symbol, settings, turtles, nil)
 		clearTurtleOrders(account, settings[0], turtles[0])
 		util.StoreSyncMap(&TurtleDataSet, nil, function, market, symbol, lastTime)
 	}
