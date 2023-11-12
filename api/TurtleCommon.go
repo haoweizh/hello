@@ -340,7 +340,10 @@ func GetTurtleData(account *model.Account, function, market, symbol string, far,
 		}
 	}
 	if removed {
-		return nil, false
+		data = &model.TurtleData{TurtleTime: nowPeriod, Symbol: symbol, Big: 1, DaysFar: int(far), DaysNear: int(near),
+			DaysAdjust: 5, OrderAdjust: make(map[string]*model.Order), OrderCleared: false}
+		util.StoreSyncMap(&TurtleDataSet, data, function, market, symbol, nowStr)
+		return data, false
 	}
 	util.Notice(fmt.Sprintf(`need to create turtle data %s %s %s %s %d refresh %v`,
 		function, market, symbol, nowStr, far, refreshDynamic))
