@@ -9,7 +9,7 @@ type TurtleData struct {
 	// useNear是否在海龟交易时使用lowDaysNear和highDaysNear和priceX作为触发条件
 	// adjustChecked在设置为true前，不允许使用本Data进行交易
 	UseNear, BreakLong, BreakShort, BreakTrail, Liquidated, AdjustChecked, OrderCleared bool
-	TurtleTime, CheckUseApi, CheckTimeOpen                                              time.Time
+	TurtleTime, CheckUseApi, CheckTimeOpen, Expire                                      time.Time
 	HighNear, LowNear, HighFar, LowFar, LowAdjust, HighAdjust                           float64
 	HighToday, LowToday, N, M, NVolume, Amount, AmountMin                               float64
 	DaysNear, DaysFar, DaysAdjust                                                       int // CombineBig: -1小单，1大单，0未初始化

@@ -330,8 +330,9 @@ func GetTurtleData(account *model.Account, function, market, symbol string, far,
 		}
 	}
 	if removed {
-		data = &model.TurtleData{TurtleTime: nowPeriod, Symbol: symbol, Big: 1, DaysFar: int(far), DaysNear: int(near),
-			DaysAdjust: 5, OrderAdjust: make(map[string]*model.Order), OrderCleared: lastHandled, CheckTimeOpen: time.Now()}
+		data = &model.TurtleData{TurtleTime: nowPeriod, Expire: nowPeriod.Add(time.Second * time.Duration(seconds)),
+			Symbol: symbol, Big: 1, DaysFar: int(far), DaysNear: int(near), DaysAdjust: 5,
+			OrderAdjust: make(map[string]*model.Order), OrderCleared: lastHandled, CheckTimeOpen: time.Now()}
 		util.StoreSyncMap(&TurtleDataSet, data, function, market, symbol, nowStr)
 		return data, false
 	}
@@ -384,8 +385,8 @@ func GetTurtleData(account *model.Account, function, market, symbol string, far,
 func getCandleData(account *model.Account, market, symbol, function string, far, near, seconds, adjust int,
 	chanceLimit, amountRate float64, nowPeriod time.Time) (getOne, getAll bool, data *model.TurtleData) {
 	candles := getTurtleCandles(account, market, symbol, far, seconds, nowPeriod)
-	data = &model.TurtleData{TurtleTime: nowPeriod, Symbol: symbol, Big: 1, DaysFar: far, DaysNear: near,
-		DaysAdjust: adjust, OrderAdjust: make(map[string]*model.Order), OrderCleared: false}
+	data = &model.TurtleData{TurtleTime: nowPeriod, Expire: nowPeriod.Add(time.Second * time.Duration(seconds)), Big: 1,
+		Symbol: symbol, DaysFar: far, DaysNear: near, DaysAdjust: adjust, OrderAdjust: make(map[string]*model.Order), OrderCleared: false}
 	priceClose := 0.0
 	for i := 1; i <= far; i++ {
 		currentPeriod := nowPeriod.Add(time.Second * time.Duration(seconds*-i))
