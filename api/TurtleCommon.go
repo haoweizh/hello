@@ -668,7 +668,12 @@ func CanOpenCombine(settingCombine, settingNormal *model.Setting, data, dataNorm
 			_, _, valueCoin, _ := model.GetFromStandard(valueSetting.Market, valueSetting.Symbol)
 			if !model.CommonCoins[strings.ToLower(valueCoin)] {
 				if valueSetting.Function == model.FunctionTurtleNormal {
-					inAll += float64(valueSetting.Chance)
+					//inAll += float64(valueSetting.Chance)
+					if valueSetting.Chance > 0 {
+						inAll++
+					} else if valueSetting.Chance < 0 {
+						inAll--
+					}
 				}
 			}
 		}
@@ -678,7 +683,7 @@ func CanOpenCombine(settingCombine, settingNormal *model.Setting, data, dataNorm
 		return true, 0
 	} else {
 		settingsNormal.Range(sumChance)
-		settingsCombine.Range(sumChance)
+		//settingsCombine.Range(sumChance)
 		canOpen = settingCombine.Chance != 0 || settingNormal.Chance != 0 || (inAll < settingCombine.AmountLimit &&
 			settingCombine.SymbolRelated != model.SettingTurtleRemoved && settingNormal.SymbolRelated != model.SettingTurtleRemoved)
 		if checkFulled {
