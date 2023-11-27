@@ -143,10 +143,8 @@ func placeCombineOrders(account *model.Account, dataNormal, dataCombine *model.T
 	} else {
 		lock = lockValue.(*sync.Mutex)
 	}
-	if settingNormal.Market == model.BinancePerp {
-		defer lock.Unlock()
-		lock.Lock()
-	}
+	defer lock.Unlock()
+	lock.Lock()
 	placeTurtleLong(account, model.OrderTypeStop, dataNormal, settingNormal, tick, canOpen, true, false)
 	placeTurtleShort(account, model.OrderTypeStop, dataNormal, settingNormal, tick, canOpen, true, false)
 	isLongBigCombine := false
