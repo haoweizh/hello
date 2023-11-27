@@ -87,7 +87,20 @@ func RequireDepthChanReset(markets *model.Markets, market string) bool {
 	return needReset.(bool)
 }
 
+var mustCancelLock = &sync.Map{} // key - *sync.Mutex{}
 func MustCancel(key, secret, market, symbol, orderType, orderId string, mustCancel bool) (res bool) {
+	var lock *sync.Mutex
+	lockValue, _ := mustCancelLock.Load(key)
+	if lockValue == nil {
+		lock = &sync.Mutex{}
+		mustCancelLock.Store(key, lock)
+	} else {
+		lock = lockValue.(*sync.Mutex)
+	}
+	if market != model.OKEX {
+		defer lock.Unlock()
+		lock.Lock()
+	}
 	sleepTime := 10
 	for i := 0; i < 20; i++ {
 		result, errCode, _ := CancelOrder(key, secret, market, symbol, orderType, orderId)
@@ -95,6 +108,7 @@ func MustCancel(key, secret, market, symbol, orderType, orderId string, mustCanc
 		util.Notice(fmt.Sprintf(`[cancel] %s %s %s %s for %d times, return %t `,
 			market, symbol, orderType, orderId, i, result))
 		if result || !mustCancel || errCode == `0` {
+			time.Sleep(time.Millisecond * 100)
 			return result
 		}
 		if errCode == `3008` && i >= 3 {

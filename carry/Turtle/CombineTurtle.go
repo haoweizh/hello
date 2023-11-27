@@ -143,7 +143,7 @@ func placeCombineOrders(account *model.Account, dataNormal, dataCombine *model.T
 	} else {
 		lock = lockValue.(*sync.Mutex)
 	}
-	if settingNormal.Symbol != model.OKEX {
+	if settingNormal.Market == model.BinancePerp {
 		defer lock.Unlock()
 		lock.Lock()
 	}

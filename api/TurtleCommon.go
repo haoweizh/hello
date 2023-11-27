@@ -180,21 +180,18 @@ func clearTurtleOrders(account *model.Account, setting *model.Setting, turtle *m
 	for _, order := range turtle.OrderLong {
 		if order != nil {
 			longAmount += order.Amount
-			MustCancel(account.Key, account.Secret, setting.Market, setting.Symbol, order.OrderType, order.OrderId, false)
-			time.Sleep(time.Millisecond * 100)
+			go MustCancel(account.Key, account.Secret, setting.Market, setting.Symbol, order.OrderType, order.OrderId, false)
 		}
 	}
 	for _, order := range turtle.OrderShort {
 		if order != nil {
 			shortAmount += order.Amount
-			MustCancel(account.Key, account.Secret, setting.Market, setting.Symbol, order.OrderType, order.OrderId, false)
-			time.Sleep(time.Millisecond * 100)
+			go MustCancel(account.Key, account.Secret, setting.Market, setting.Symbol, order.OrderType, order.OrderId, false)
 		}
 	}
 	for _, order := range turtle.OrderAdjust {
 		if order != nil {
-			MustCancel(account.Key, account.Secret, setting.Market, setting.Symbol, order.OrderType, order.OrderId, false)
-			time.Sleep(time.Millisecond * 100)
+			go MustCancel(account.Key, account.Secret, setting.Market, setting.Symbol, order.OrderType, order.OrderId, false)
 		}
 	}
 	broken := false
@@ -220,8 +217,7 @@ func clearTurtleOrders(account *model.Account, setting *model.Setting, turtle *m
 	}
 	if setting.Chance == 0 {
 		for _, order := range turtle.OrderTrail {
-			MustCancel(account.Key, account.Secret, setting.Market, setting.Symbol, order.OrderType, order.OrderId, false)
-			time.Sleep(time.Millisecond * 100)
+			go MustCancel(account.Key, account.Secret, setting.Market, setting.Symbol, order.OrderType, order.OrderId, false)
 		}
 	}
 	if turtle.BreakTrail {
