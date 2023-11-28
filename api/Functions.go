@@ -102,7 +102,7 @@ func MustCancel(key, secret, market, symbol, orderType, orderId string, mustCanc
 		lock.Lock()
 	}
 	sleepTime := 10
-	for i := 0; i < 20; i++ {
+	for i := 0; i < 4; i++ {
 		result, errCode, msg := CancelOrder(key, secret, market, symbol, orderType, orderId)
 		res = result
 		util.Notice(fmt.Sprintf(`[cancel] %s %s %s %s for %d times, return %t code %s msg %s `,
