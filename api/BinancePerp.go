@@ -429,6 +429,8 @@ func cancelOrderBinancePerp(key, secret, symbol, orderId string) bool {
 		return false
 	} else if res.Status == `CANCELED` {
 		return true
+	} else {
+		util.Notice(fmt.Sprintf(`cancelOrderBinancePerp status %v`, res.Status))
 	}
 	return false
 }
