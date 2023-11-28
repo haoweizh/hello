@@ -614,8 +614,12 @@ func signedRequestBinance(key, secret, market, method, requestUrl string, withAp
 		util.SocketInfo(logMsg)
 	}
 	responseJson, err := util.NewJSON(responseBody)
-	if err != nil || responseJson == nil {
-		util.Notice(`fail to parse json`)
+	if err != nil {
+		util.Notice(`fail to parse json ` + err.Error())
+		return nil
+	}
+	if responseJson == nil {
+		util.Notice(`no response data`)
 		return nil
 	}
 	code := responseJson.Get(`code`).MustInt()

@@ -140,7 +140,7 @@ func CancelAll(key, secret, market string) {
 	case model.BinancePerp:
 		orders := queryOpenOrdersBinancePerp(key, secret, ``)
 		for _, order := range orders {
-			result, _ := cancelOrderBinance(key, secret, market, order.Symbol, order.OrderId)
+			result := cancelOrderBinancePerp(key, secret, order.Symbol, order.OrderId)
 			util.Notice(fmt.Sprintf(`cancelAllBinancePerp %s id %s return %v code`,
 				order.Symbol, order.OrderId, result))
 			time.Sleep(time.Millisecond * 100)
