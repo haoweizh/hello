@@ -645,10 +645,13 @@ func getFundingRateBinancePerp(key, secret, symbol string) (fundingRate *model.F
 
 func queryOpenOrdersBinancePerp(key, secret, symbol string) (orders []*model.Order) {
 	success, _, _, dialectSymbol := model.GetFromStandard(model.BinancePerp, symbol)
-	if success {
+	if success || symbol == `` {
 		orders = make([]*model.Order, 0)
-		client := futures.NewClient(key, secret)
-		resArray, err := client.NewListOpenOrdersService().Symbol(dialectSymbol).Do(context.Background())
+		listOpenOrderService := futures.NewClient(key, secret).NewListOpenOrdersService()
+		if symbol != `` {
+			listOpenOrderService = listOpenOrderService.Symbol(dialectSymbol)
+		}
+		resArray, err := listOpenOrderService.Do(context.Background())
 		if err != nil {
 			util.Notice(`queryOpenOrdersBinancePerp err ` + err.Error())
 		}

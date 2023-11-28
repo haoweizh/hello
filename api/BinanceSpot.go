@@ -543,10 +543,13 @@ func _(key, secret, symbol string) (success bool, price float64) {
 
 func queryOpenOrdersBinanceSpot(key, secret, symbol string) (orders []*model.Order) {
 	success, _, _, dialectSymbol := model.GetFromStandard(model.BinanceSpot, symbol)
-	if success {
+	if success || symbol == `` {
 		orders = make([]*model.Order, 0)
-		client := binance.NewClient(key, secret)
-		resArray, err := client.NewListOpenOrdersService().Symbol(dialectSymbol).Do(context.Background())
+		listOpenOrderService := binance.NewClient(key, secret).NewListOpenOrdersService()
+		if symbol != `` {
+			listOpenOrderService = listOpenOrderService.Symbol(dialectSymbol)
+		}
+		resArray, err := listOpenOrderService.Do(context.Background())
 		if err != nil {
 			util.Notice(`queryOpenOrdersBinanceSpot err %s %s %s`, symbol, dialectSymbol, err.Error())
 		}

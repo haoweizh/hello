@@ -431,6 +431,10 @@ func InitApp(refreshDynamic bool) bool {
 	}
 	for _, market := range appMarkets {
 		SetRequireReset(market)
+		accounts := model.AppConfig.GetAccounts(market)
+		for _, account := range accounts {
+			CancelAll(account.Key, account.Secret, market)
+		}
 	}
 	util.Notice(`finish load settings`)
 	settingLoading = false

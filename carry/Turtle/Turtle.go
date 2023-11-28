@@ -33,13 +33,6 @@ var ProcessTurtle = func(setting *model.Setting, tick *model.BidAsk) {
 		return
 	}
 	account := model.AppConfig.GetAccounts(setting.Market)[0]
-	value, suc := util.LoadSyncMap(api.RestartCanceled, account.Key, setting.Symbol)
-	if !suc || value == nil || value.(bool) == false {
-		if api.CancelOrders(account.Key, account.Secret, setting.Market, setting.Symbol) {
-			util.StoreSyncMap(api.RestartCanceled, true, account.Key, setting.Symbol)
-		}
-		return
-	}
 	var data *model.TurtleData
 	data, _ = api.GetTurtleData(account, setting.Function, setting.Market, setting.Symbol, setting.Far, setting.Near,
 		setting.Seconds, setting.ChanceLimit, setting.AmountRate, true, setting.Chance == 0 && setting.SymbolRelated == model.SettingTurtleRemoved)

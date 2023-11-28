@@ -125,6 +125,29 @@ func MustCancel(key, secret, market, symbol, orderType, orderId string, mustCanc
 	return res
 }
 
+func CancelAll(key, secret, market string) {
+	switch market {
+	case model.OKEX:
+		cancelAllOkex(key, secret)
+	case model.BinanceSpot:
+		orders := queryOpenOrdersBinanceSpot(key, secret, ``)
+		for _, order := range orders {
+			result, _ := cancelOrderBinance(key, secret, market, order.Symbol, order.OrderId)
+			util.Notice(fmt.Sprintf(`cancelAllBinace %s id %s return %v`,
+				order.Symbol, order.OrderId, result))
+			time.Sleep(time.Millisecond * 100)
+		}
+	case model.BinancePerp:
+		orders := queryOpenOrdersBinancePerp(key, secret, ``)
+		for _, order := range orders {
+			result, _ := cancelOrderBinance(key, secret, market, order.Symbol, order.OrderId)
+			util.Notice(fmt.Sprintf(`cancelAllBinancePerp %s id %s return %v code`,
+				order.Symbol, order.OrderId, result))
+			time.Sleep(time.Millisecond * 100)
+		}
+	}
+}
+
 // CancelOrders 暂不支持策略订单
 func CancelOrders(key, secret, market, symbol string) (result bool) {
 	switch market {

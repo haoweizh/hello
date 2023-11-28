@@ -592,6 +592,7 @@ func sendSignRequestOKEX(key, secret, method, path string, param, body map[strin
 	} else { //if !strings.Contains(u.String(), `balance`) && !strings.Contains(path, `positions`) {
 		util.SocketInfo(logMsg)
 	}
+	time.Sleep(time.Millisecond * 100)
 	return responseBody, err
 }
 
@@ -838,6 +839,23 @@ func getMarketsOKEX(key, secret string) (marketInfos map[string]*model.MarketInf
 	return
 }
 
+func cancelAllOkex(key, secret string) {
+	orders := make([]*model.Order, 0)
+	ordersConditional := queryOpenOrdersOKEX(key, secret, ``, true)
+	ordersNormal := queryOpenOrdersOKEX(key, secret, ``, false)
+	for _, order := range ordersConditional {
+		orders = append(orders, order)
+	}
+	for _, order := range ordersNormal {
+		orders = append(orders, order)
+	}
+	for _, order := range orders {
+		result, errCode, msg := cancelOrderOkex(key, secret, order.Symbol, order.OrderId, order.OrderType)
+		util.Notice(fmt.Sprintf(`cancelAllOkex %s id %s type %s return %v code %s %s`,
+			order.Symbol, order.OrderId, order.OrderType, result, errCode, msg))
+	}
+}
+
 // cancelOrdersOKEX 策略订单每次最多10个，非策略订单每次最多20个
 func cancelOrdersOKEX(key, secret, symbol string) (result bool, code, msg string) {
 	orders := queryOpenOrdersOKEX(key, secret, symbol, false)
@@ -1045,7 +1063,10 @@ func _(key, secret, symbol string) (success bool, price float64) {
 
 // re-query if return code 50011: Too Many Requests
 func queryOpenOrdersOKEX(key, secret, symbol string, conditional bool) (orders []*model.Order) {
-	param := map[string]interface{}{`instId`: symbol}
+	param := make(map[string]interface{})
+	if len(symbol) > 0 {
+		param[`instId`] = symbol
+	}
 	path := `/api/v5/trade/orders-pending`
 	if conditional {
 		path = `/api/v5/trade/orders-algo-pending`

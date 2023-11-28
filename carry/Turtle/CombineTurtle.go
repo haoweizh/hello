@@ -39,13 +39,6 @@ var ProcessCombineTurtle = func(settingCombine *model.Setting, tick *model.BidAs
 		return
 	}
 	account := model.AppConfig.GetAccounts(market)[0]
-	value, suc := util.LoadSyncMap(api.RestartCanceled, account.Key, symbol)
-	if !suc || value == nil || value.(bool) == false {
-		if api.CancelOrders(account.Key, account.Secret, settingNormal.Market, settingNormal.Symbol) {
-			util.StoreSyncMap(api.RestartCanceled, true, account.Key, symbol)
-		}
-		return
-	}
 	if (settingCombine.Chance != 0 && settingCombine.PriceX == 0) || (settingNormal.Chance != 0 && settingNormal.PriceX == 0) {
 		util.Notice(fmt.Sprintf(`combine return no last priceX %s %s %d %e %d %e`,
 			market, symbol, settingCombine.Chance, settingCombine.PriceX, settingNormal.Chance, settingNormal.PriceX))
