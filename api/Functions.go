@@ -141,7 +141,7 @@ func CancelAll(key, secret, market string) {
 		orders := queryOpenOrdersBinancePerp(key, secret, ``)
 		for _, order := range orders {
 			result := cancelOrderBinancePerp(key, secret, order.Symbol, order.OrderId)
-			util.Notice(fmt.Sprintf(`cancelAllBinancePerp %s id %s return %v code`,
+			util.Notice(fmt.Sprintf(`cancelAllBinancePerp %s id %s return %v`,
 				order.Symbol, order.OrderId, result))
 			time.Sleep(time.Millisecond * 100)
 		}
@@ -607,10 +607,6 @@ func QueryOrderById(key, secret, market, symbol, orderType, orderId string) (ord
 		queryOrderGate(key, secret, order)
 	case model.OKEX:
 		order = queryOrderOKEX(key, secret, symbol, orderId, orderType)
-		if order != nil {
-			order.Market = market
-			order.Symbol = symbol
-		}
 		return order
 	case model.BinanceSpot:
 		order = queryOrderBinanceSpot(key, secret, symbol, orderId)

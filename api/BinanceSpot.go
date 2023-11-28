@@ -277,13 +277,14 @@ func placeOrderBinanceSpot(key, secret string, order *model.Order, orderSide, or
 	}
 }
 
-func parseOrderBinanceSpotSdk(orderResp *binance.Order, symbol string) (order *model.Order) {
+func parseOrderBinanceSpotSdk(orderResp *binance.Order) (order *model.Order) {
 	if orderResp == nil {
 		return nil
 	}
 	order = &model.Order{Market: model.BinanceSpot, Status: model.CarryStatusFail}
 	order.OrderId = strconv.FormatInt(orderResp.OrderID, 10)
-	order.Symbol = symbol
+	_, marketType, coin := model.GetCoinFromDialect(model.BinanceSpot, orderResp.Symbol)
+	order.Symbol = coin + model.UniStandardTail[marketType]
 	order.OrderSide = strings.ToLower(string(orderResp.Side))
 	order.OrderType = strings.ToLower(string(orderResp.Type))
 	order.Amount, _ = strconv.ParseFloat(orderResp.OrigQuantity, 64)
@@ -554,7 +555,7 @@ func queryOpenOrdersBinanceSpot(key, secret, symbol string) (orders []*model.Ord
 			util.Notice(`queryOpenOrdersBinanceSpot err %s %s %s`, symbol, dialectSymbol, err.Error())
 		}
 		for _, res := range resArray {
-			order := parseOrderBinanceSpotSdk(res, symbol)
+			order := parseOrderBinanceSpotSdk(res)
 			orders = append(orders, order)
 		}
 	}
@@ -571,7 +572,7 @@ func queryOrderBinanceSpot(key, secret, symbol string, orderId string) (order *m
 			util.Notice("queryOrderBinanceSpot err: " + err.Error())
 			return
 		}
-		order = parseOrderBinanceSpotSdk(orderResp, symbol)
+		order = parseOrderBinanceSpotSdk(orderResp)
 	}
 	return
 }

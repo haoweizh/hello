@@ -662,7 +662,7 @@ func queryOpenOrdersBinancePerp(key, secret, symbol string) (orders []*model.Ord
 			util.Notice(`queryOpenOrdersBinancePerp err ` + err.Error())
 		}
 		for _, res := range resArray {
-			order := &model.Order{Market: model.BinancePerp, Status: model.CarryStatusFail, Symbol: symbol}
+			order := &model.Order{Market: model.BinancePerp, Status: model.CarryStatusFail}
 			parseOrderBinancePerp(res, order)
 			orders = append(orders, order)
 		}
@@ -708,6 +708,8 @@ func parseOrderBinancePerp(res *futures.Order, order *model.Order) {
 		} else if strings.Contains(strings.ToLower(string(res.Side)), `sell`) {
 			order.OrderSide = model.OrderSideSell
 		}
+		_, marketType, coin := model.GetCoinFromDialect(model.BinancePerp, res.Symbol)
+		order.Symbol = coin + model.UniStandardTail[marketType]
 		order.Amount, _ = strconv.ParseFloat(res.OrigQuantity, 64)
 		order.Price, _ = strconv.ParseFloat(res.Price, 64)
 		order.DealPrice, _ = strconv.ParseFloat(res.AvgPrice, 64)
@@ -734,7 +736,7 @@ func queryOrderBinancePerp(key, secret, symbol string, orderId string) (order *m
 		orderIdInt, _ := strconv.ParseInt(orderId, 10, 64)
 		client := futures.NewClient(key, secret)
 		orderResp, err := client.NewGetOrderService().Symbol(dialectSymbol).OrderID(orderIdInt).Do(context.Background())
-		order = &model.Order{Market: model.BinancePerp, Status: model.CarryStatusFail, OrderId: orderId, Symbol: symbol}
+		order = &model.Order{Market: model.BinancePerp, Status: model.CarryStatusFail, OrderId: orderId}
 		if err != nil {
 			util.Notice(fmt.Sprintf("queryOrderBinancePerp err %s id %s  err %s", symbol, orderId, err.Error()))
 			if strings.Contains(err.Error(), `-2013`) {
