@@ -103,15 +103,18 @@ func MustCancel(key, secret, market, symbol, orderType, orderId string, mustCanc
 	}
 	sleepTime := 10
 	for i := 0; i < 20; i++ {
-		result, errCode, _ := CancelOrder(key, secret, market, symbol, orderType, orderId)
+		result, errCode, msg := CancelOrder(key, secret, market, symbol, orderType, orderId)
 		res = result
-		util.Notice(fmt.Sprintf(`[cancel] %s %s %s %s for %d times, return %t `,
-			market, symbol, orderType, orderId, i, result))
+		util.Notice(fmt.Sprintf(`[cancel] %s %s %s %s for %d times, return %t code %s msg %s `,
+			market, symbol, orderType, orderId, i, result, errCode, msg))
 		if result || !mustCancel || errCode == `0` {
 			time.Sleep(time.Millisecond * 100)
 			return result
 		}
 		if errCode == `3008` && i >= 3 {
+			return result
+		}
+		if market == model.OKEX && strings.Contains(msg, `All operations failed`) {
 			return result
 		}
 		//if result || !mustCancel { //3008:"submit cancel invalid order state
