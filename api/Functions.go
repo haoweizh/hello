@@ -658,7 +658,9 @@ func GetPositions(key, secret, market string) (success bool, positions []*model.
 	case model.KucoinPerp:
 		success, positions, accountValue, availableU = getPositionsKucoinPerp(key, secret)
 	case model.Gate:
-		success, positions, accountValue, availableU = getPositionsGate(key, secret)
+		_, _, total, collateral := getBalanceGate(key, secret)
+		success, positions = getPositionsGate(key, secret)
+		accountValue, availableU = total, collateral.Available
 	case model.Mexc:
 		success, positions, accountValue, availableU = getPositionsMexc(key, secret)
 	case model.BinancePerp:

@@ -11,7 +11,7 @@ import (
 
 type Config struct {
 	Delay                                                                                            float64
-	KucoinSpot, GateSpot, MetricTick                                                                 bool
+	KucoinSpot, MetricTick                                                                           bool
 	KucoinRelatedKey, KucoinRelatedSecret, KucoinFutureKey, KucoinFutureSecret                       string
 	KucoinCarryClose, KucoinCarryRate, Simulation, Equal                                             string
 	GateKey, GateSecret, GateCarryClose, GateCarryRate                                               string
@@ -82,9 +82,7 @@ func (config *Config) GetAccounts(market string) []*Account {
 		closeValues = strings.Split(config.KucoinCarryClose, `,`)
 		rateValues = strings.Split(config.KucoinCarryRate, `,`)
 	case Gate:
-		if !config.GateSpot {
-			isUnified = true
-		}
+		isUnified = true
 		keys = strings.Split(config.GateKey, `,`)
 		secrets = strings.Split(config.GateSecret, `,`)
 		closeValues = strings.Split(config.GateCarryClose, `,`)
