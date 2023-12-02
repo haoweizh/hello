@@ -91,7 +91,7 @@ var DialectTail = map[string]map[string]string{
 	MarketTypeFuture: {GXZQ: ``},
 	MarketTypeMargin: {BinanceMargin: `USDT`, BinanceSpot: `USDT`},
 }
-var UniStandardTail = map[string]string{MarketTypeSpot: `_USDT`, MarketTypeMargin: `_USDT`, MarketTypePerp: `_PERP`,
+var UniStandardTail = map[string]string{MarketTypeSpot: `_USDT`, MarketTypePerp: `_PERP`,
 	MarketTypeFuture: `_FUTURE`}
 
 func GetFromStandard(market, standardSymbol string) (success bool, marketType, coinValue, dialectSymbol string) {

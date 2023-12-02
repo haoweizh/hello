@@ -41,7 +41,11 @@ func getMarketsBinance(account *model.Account, market, marketType string) (marke
 			(market == model.BinanceMargin && !item.IsMarginTradingAllowed) {
 			continue
 		}
-		marketInfo := &model.MarketInfo{Market: market, MoneyMin: 10, Name: item.BaseAsset + model.UniStandardTail[marketType]}
+		uniTail := model.UniStandardTail[marketType]
+		if marketType == model.MarketTypeMargin {
+			uniTail = model.UniStandardTail[model.MarketTypeSpot]
+		}
+		marketInfo := &model.MarketInfo{Market: market, MoneyMin: 10, Name: item.BaseAsset + uniTail}
 		for _, data := range item.Filters {
 			filterType := data[`filterType`].(string)
 			if filterType == `PRICE_FILTER` {
@@ -96,7 +100,7 @@ func WsDepthServeBinance(marketConns *model.Markets, market string) (channels []
 		}
 		standardSymbol := coin + model.UniStandardTail[model.MarketTypeSpot]
 		if market == model.BinanceMargin {
-			standardSymbol = coin + model.UniStandardTail[model.MarketTypeMargin]
+			standardSymbol = coin + model.UniStandardTail[model.MarketTypeSpot]
 		}
 		haveOld, old := marketConns.GetBidAsk(standardSymbol, market)
 		if haveOld && old.UpdateId > updateId {
@@ -465,7 +469,7 @@ func getBalanceBinanceMargin(key, secret string) (success bool, balances []*mode
 			balance.Amount = balance.AvailableWithBorrow + lockAmount
 		}
 		if balance.UsdValue == 0 && balance.Amount > 0 {
-			symbolStandard := balance.Coin + model.UniStandardTail[model.MarketTypeMargin]
+			symbolStandard := balance.Coin + model.UniStandardTail[model.MarketTypeSpot]
 			_, price := GetPriceForce(key, secret, symbolStandard, model.BinanceMargin)
 			balance.UsdValue = balance.Amount * price
 		}

@@ -190,7 +190,7 @@ func Test_AccountHandler(t *testing.T) {
 
 func Test_Redis(t *testing.T) {
 	model.NewConfig()
-	_, _, _, symbol := model.GetFromStandard(model.Gate, `BTC_USDT`)
+	_, _, _, symbol := model.GetFromStandard(model.Gate, `BTC`)
 	fmt.Println(symbol)
 	//model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
 	model.AppRedis = redis.NewClient(&redis.Options{

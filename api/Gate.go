@@ -380,11 +380,9 @@ func WsDepthServeGateNew() (channels []chan struct{}, err error) {
 	channels = make([]chan struct{}, 0)
 	symbols := GetMarketSymbols(model.Gate)
 	for symbol := range symbols {
-		util.Notice(`test1 ` + symbol)
 		if strings.LastIndex(symbol, model.UniStandardTail[model.MarketTypeSpot]) == len(symbol)-len(model.UniStandardTail[model.MarketTypeSpot]) &&
 			len(symbol)-len(model.UniStandardTail[model.MarketTypeSpot]) > 0 {
 			spotSubs = append(spotSubs, symbol)
-			util.Notice(`test2`, symbol)
 			spotOrderBookSubs = append(spotOrderBookSubs, []string{symbol, "5", "100ms"})
 		} else if strings.LastIndex(symbol, model.UniStandardTail[model.MarketTypePerp]) == len(symbol)-len(model.UniStandardTail[model.MarketTypePerp]) &&
 			len(symbol)-len(model.UniStandardTail[model.MarketTypePerp]) > 0 {
@@ -510,8 +508,6 @@ var subscribeHandler = func(market string, connection *websocket.Conn, subscribe
 			subscribeMessage := util.JsonEncodeToByte(subscribeMap)
 			if err = SendToConnection(model.Gate, connection, subscribeMessage); err != nil {
 				util.SocketInfo(" gate can not subscribe spot order book symbol %s %s", subscribeMessage, err.Error())
-			} else {
-				util.Notice(`gate sub order_book %s symbols %v to %s`, string(subscribeMessage), subscribe, dialectSymbol)
 			}
 			time.Sleep(10 * time.Millisecond)
 		}
