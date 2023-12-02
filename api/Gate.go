@@ -509,7 +509,7 @@ var subscribeHandler = func(market string, connection *websocket.Conn, subscribe
 			if err = SendToConnection(model.Gate, connection, subscribeMessage); err != nil {
 				util.SocketInfo(" gate can not subscribe spot order book symbol %s %s", subscribeMessage, err.Error())
 			} else {
-				util.Notice(`gate sub order_book %v`, subscribeMessage)
+				util.Notice(`gate sub order_book %s`, string(subscribeMessage))
 			}
 			time.Sleep(10 * time.Millisecond)
 		}
