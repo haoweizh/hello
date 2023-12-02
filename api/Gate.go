@@ -158,7 +158,7 @@ func panicGateError(key, function string, err error) {
 
 var tickerHandler = gateWs.NewCallBack(func(msg *gateWs.UpdateMsg) {
 	if msg.Error != nil && (!strings.Contains(msg.Error.Message, "futures.ping") && !strings.Contains(msg.Error.Message, "spot.ping")) {
-		util.Notice(fmt.Sprintf("callback error: %s %s", msg.Channel, msg.Error.Error()))
+		util.Notice(fmt.Sprintf("callback error in ticker: %s %s", msg.Channel, msg.Error.Error()))
 		return
 	}
 	var bidAsk model.BidAsk
@@ -508,6 +508,8 @@ var subscribeHandler = func(market string, connection *websocket.Conn, subscribe
 			subscribeMessage := util.JsonEncodeToByte(subscribeMap)
 			if err = SendToConnection(model.Gate, connection, subscribeMessage); err != nil {
 				util.SocketInfo(" gate can not subscribe spot order book symbol %s %s", subscribeMessage, err.Error())
+			} else {
+				util.Notice(`gate sub order_book %v`, subscribeMessage)
 			}
 			time.Sleep(10 * time.Millisecond)
 		}
