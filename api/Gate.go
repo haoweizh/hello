@@ -384,6 +384,7 @@ func WsDepthServeGateNew() (channels []chan struct{}, err error) {
 		if strings.LastIndex(symbol, model.UniStandardTail[model.MarketTypeSpot]) == len(symbol)-len(model.UniStandardTail[model.MarketTypeSpot]) &&
 			len(symbol)-len(model.UniStandardTail[model.MarketTypeSpot]) > 0 {
 			spotSubs = append(spotSubs, symbol)
+			util.Notice(`test2`, symbol)
 			spotOrderBookSubs = append(spotOrderBookSubs, []string{symbol, "5", "100ms"})
 		} else if strings.LastIndex(symbol, model.UniStandardTail[model.MarketTypePerp]) == len(symbol)-len(model.UniStandardTail[model.MarketTypePerp]) &&
 			len(symbol)-len(model.UniStandardTail[model.MarketTypePerp]) > 0 {
