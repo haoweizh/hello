@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/antihax/optional"
 	gateApi "github.com/gateio/gateapi-go/v6"
@@ -147,7 +148,8 @@ func TransferGate(key string, secret string, transferType, currency string, amou
 }
 
 func panicGateError(key, function string, err error) {
-	if e, ok := err.(gateApi.GateAPIError); ok {
+	var e gateApi.GateAPIError
+	if errors.As(err, &e) {
 		util.SocketInfo(fmt.Sprintf("key %s function: %s Gate API error, label: %s, message: %s",
 			key, function, e.Label, e.Message))
 	}
@@ -517,7 +519,7 @@ func maintainChannelGate() {
 	if !channelMaintainingGate {
 		channelMaintainingGate = true
 		go func() {
-			for true {
+			for {
 				time.Sleep(time.Second * 10)
 				if err := SendToAllConnections(model.Gate, util.JsonEncodeToByte(map[string]interface{}{"time": time.Now().Unix(), "channel": "spot.ping"})); err != nil {
 					util.SocketInfo("gate channel ping error " + err.Error())
