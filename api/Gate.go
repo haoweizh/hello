@@ -380,6 +380,7 @@ func WsDepthServeGateNew() (channels []chan struct{}, err error) {
 	channels = make([]chan struct{}, 0)
 	symbols := GetMarketSymbols(model.Gate)
 	for symbol := range symbols {
+		util.Notice(`test1 ` + symbol)
 		if strings.LastIndex(symbol, model.UniStandardTail[model.MarketTypeSpot]) == len(symbol)-len(model.UniStandardTail[model.MarketTypeSpot]) &&
 			len(symbol)-len(model.UniStandardTail[model.MarketTypeSpot]) > 0 {
 			spotSubs = append(spotSubs, symbol)
