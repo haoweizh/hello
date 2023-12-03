@@ -128,9 +128,10 @@ func chanHandler(market string, stopChan chan struct{}, connection *websocket.Co
 		default:
 			_, message, err := connection.ReadMessage()
 			if err != nil {
-				SetRequireReset(market)
-				if strings.Contains(err.Error(), `EOF`) {
+				if !strings.Contains(err.Error(), `EOF`) {
 					util.Notice(fmt.Sprintf(`%s can not read from websocket: %s`, market, err.Error()))
+				} else {
+					SetRequireReset(market)
 				}
 				return
 			}
