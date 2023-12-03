@@ -97,10 +97,8 @@ func MustCancel(key, secret, market, symbol, orderType, orderId string, mustCanc
 	} else {
 		lock = lockValue.(*sync.Mutex)
 	}
-	if market != model.OKEX {
-		defer lock.Unlock()
-		lock.Lock()
-	}
+	defer lock.Unlock()
+	lock.Lock()
 	sleepTime := 10
 	for i := 0; i < 4; i++ {
 		result, errCode, msg := CancelOrder(key, secret, market, symbol, orderType, orderId)
@@ -108,7 +106,7 @@ func MustCancel(key, secret, market, symbol, orderType, orderId string, mustCanc
 		util.Notice(fmt.Sprintf(`[cancel] %s %s %s %s for %d times, return %t code %s msg %s `,
 			market, symbol, orderType, orderId, i, result, errCode, msg))
 		if result || !mustCancel || errCode == `0` {
-			time.Sleep(time.Millisecond * 100)
+			time.Sleep(time.Millisecond * 50)
 			return result
 		}
 		if errCode == `3008` && i >= 3 {
