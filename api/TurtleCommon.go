@@ -56,7 +56,7 @@ func ClearOrders(key, secret, market, symbol string, keepTypes map[string]bool) 
 		}
 		if order != nil {
 			util.Notice(`cancel pending turtle order %s %s %s`, market, symbol, order.OrderId)
-			MustCancel(key, secret, market, symbol, order.OrderType, order.OrderId, true)
+			MustCancel(key, secret, market, symbol, order.OrderType, order.OrderId, false)
 		}
 	}
 }
@@ -85,7 +85,7 @@ func ClearExtraOrders(key, secret, market, symbol string, dataArray []*model.Tur
 			continue
 		}
 		if !keepOrders[order.OrderId] {
-			result := MustCancel(key, secret, market, symbol, order.OrderType, order.OrderId, true)
+			result := MustCancel(key, secret, market, symbol, order.OrderType, order.OrderId, false)
 			util.Notice(`cancel extra order %s %s %s %s return %v`, market, symbol, order.OrderType, order.OrderId, result)
 		}
 	}

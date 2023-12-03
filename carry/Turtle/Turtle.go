@@ -203,7 +203,7 @@ func handleTurtleBreak(key, secret string, setting *model.Setting, turtleData *m
 			for _, order := range orderCancel {
 				temp := api.QueryOrderById(key, secret, setting.Market, setting.Symbol, order.OrderType, order.OrderId)
 				if temp != nil && temp.Status == model.CarryStatusWorking {
-					go api.MustCancel(key, secret, order.Market, order.Symbol, order.OrderType, order.OrderId, true)
+					go api.MustCancel(key, secret, order.Market, order.Symbol, order.OrderType, order.OrderId, false)
 				}
 			}
 		}
