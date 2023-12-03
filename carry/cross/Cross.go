@@ -222,7 +222,7 @@ func initStatus(account *model.Account, setting *model.Setting, absentRevert boo
 		doRevert = true
 	}
 	if status == nil {
-		util.Notice(fmt.Sprintf(`fail to crate status %s %s`, setting.Market, setting.Symbol))
+		util.Notice(fmt.Sprintf(`fail to create status %s %s`, setting.Market, setting.Symbol))
 		return nil
 	}
 	_, status.FoundingRate, status.FundingRateUpdateTime = api.GetFundingRate(account.Key, account.Secret, setting.Market, setting.Symbol)

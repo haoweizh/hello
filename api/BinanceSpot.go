@@ -232,7 +232,12 @@ func maintainChannelBinance(market string, subscribes []interface{}) {
 				_, bidAsk := model.AppMarkets.GetBidAsk(symbol, market)
 				if bidAsk == nil || time.Now().UnixMilli()-int64(bidAsk.Ts) > 180000 {
 					timeoutNum++
-					util.Notice("binance spot subscribe timeout " + symbol)
+					if bidAsk == nil {
+						util.Notice("binance spot subscribe nil " + symbol)
+					} else {
+						util.Notice(fmt.Sprintf(`binance spot subscribe timeout %s %d`,
+							symbol, time.Now().UnixMilli()-int64(bidAsk.Ts)))
+					}
 				}
 			}
 			if len(subscribes) > 0 && timeoutNum*10 > len(subscribes) {
