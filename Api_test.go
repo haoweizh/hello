@@ -329,8 +329,13 @@ func Test_CutTail(t *testing.T) {
 
 func Test_initTurtleN(t *testing.T) {
 	model.NewConfig()
-	market := model.BinancePerp
+	market := model.OKEX
 	account := model.AppConfig.GetAccounts(market)[0]
+	now := time.Now()
+	nowPeriod1, _ := model.GetNowPeriod(market, 86400, now)
+	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
+	api.GetCandleData(account, market, `GAS_PERP`, model.FunctionCombineTurtle, 18, 9, 86400,
+		5, 3, 0.1, nowPeriod1)
 	api.RenewListenKeyBinanceSpot(account)
 	//fmt.Println(model.AppConfig.OKPhase)
 	//orders := api.QueryOpenOrders(account.Key, account.Secret, market, `ARB_PERP`)

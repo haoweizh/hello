@@ -334,7 +334,7 @@ func GetTurtleData(account *model.Account, function, market, symbol string, far,
 	util.Notice(fmt.Sprintf(`need to create turtle data %s %s %s %s %d refresh %v`,
 		function, market, symbol, nowStr, far, refreshDynamic))
 	var getOne, getAll bool
-	getOne, getAll, data = getCandleData(account, market, symbol, function, int(far), int(near), int(seconds), 5,
+	getOne, getAll, data = GetCandleData(account, market, symbol, function, int(far), int(near), int(seconds), 5,
 		float64(chanceLimit), amountRate, nowPeriod)
 	if !getOne {
 		util.Notice(fmt.Sprintf(`fail to getOne %s %s %d %d`, market, symbol, data.DaysFar, seconds))
@@ -377,7 +377,7 @@ func GetTurtleData(account *model.Account, function, market, symbol string, far,
 	}
 }
 
-func getCandleData(account *model.Account, market, symbol, function string, far, near, seconds, adjust int,
+func GetCandleData(account *model.Account, market, symbol, function string, far, near, seconds, adjust int,
 	chanceLimit, amountRate float64, nowPeriod time.Time) (getOne, getAll bool, data *model.TurtleData) {
 	candles := getTurtleCandles(account, market, symbol, far, seconds, nowPeriod)
 	data = &model.TurtleData{TurtleTime: nowPeriod, Expire: nowPeriod.Add(time.Second * time.Duration(seconds)), Big: 1,
