@@ -467,7 +467,7 @@ func getTurtleCandles(account *model.Account, market, symbol string, far, second
 		return nil
 	}
 	calcLenN := 10
-	calcLenV := 10
+	calcLenV := 5
 	if seconds == 14400 {
 		calcLenN = 20
 		calcLenV = 10
