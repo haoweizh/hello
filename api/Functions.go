@@ -720,7 +720,7 @@ func GetStandardOrderType(market, dialectType string) (standardType string) {
 
 func MustPlaceOrder(key, secret, orderSide, orderType, market, symbol, orderParam,
 	refreshType string, price, triggerPrice, amount float64, setting *model.Setting) (orders []*model.Order) {
-	retry := 10
+	retry := 2
 	for i := 0; i < retry; i++ {
 		v, _ := util.LoadSyncMap(model.MarketInfos, market, symbol)
 		if v == nil {
@@ -751,7 +751,11 @@ func MustPlaceOrder(key, secret, orderSide, orderType, market, symbol, orderPara
 					util.Notice(fmt.Sprintf(`binance perp 下单返回 -4005 代表数量%f太大，减小marketInfo size max %f`,
 						amount, v.(*model.MarketInfo).SizeMax))
 				}
-				time.Sleep(time.Second * 10)
+				// <APIError> code=-2027, msg=Exceeded the maximum allowable position at current leverage.
+				if order != nil && strings.Contains(order.ErrCode, `-2027`) {
+					break
+				}
+				time.Sleep(time.Second * 30)
 				util.Notice(fmt.Sprintf(`fail to place order %d time, re order`, i))
 			}
 		}
