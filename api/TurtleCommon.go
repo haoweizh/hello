@@ -11,7 +11,7 @@ import (
 	"time"
 )
 
-const TurtleTriggerDelta = 0.005
+const TurtleTriggerDelta = 0.003
 
 var positionsCache = &sync.Map{}   // key - symbol - position holding amount
 var TurtleDataSet = sync.Map{}     // function_market_symbol_unix second *TurtleData
@@ -88,7 +88,7 @@ func ClearExtraOrders(key, secret, market, symbol string, dataArray []*model.Tur
 	}
 }
 
-func AdjustPosHolding(key, secret string, setting *model.Setting, data *model.TurtleData) {
+func AdjustPosHolding(key, secret string, setting *model.Setting, data *model.TurtleData, tick *model.BidAsk) {
 	if data.AdjustChecked {
 		return
 	}
@@ -111,12 +111,31 @@ func AdjustPosHolding(key, secret string, setting *model.Setting, data *model.Tu
 			setting.Chance = 0
 			setting.PriceX = 0
 			var orders []*model.Order
+			orderSide := ``
+			orderType := model.OrderTypeStop
+			var price, priceDeal float64
 			if posMap[setting.Symbol].Holding > 0 {
-				orders = MustPlaceOrder(key, secret, model.OrderSideSell, model.OrderTypeStop, setting.Market, setting.Symbol, ``,
-					model.FunctionTurtleAdjust, data.LowAdjust*(1-TurtleTriggerDelta), data.LowAdjust, posMap[setting.Symbol].Holding, setting)
+				orderSide = model.OrderSideSell
+				price = data.LowAdjust
+				priceDeal = data.LowAdjust * (1 - TurtleTriggerDelta)
+				if data.LowAdjust >= tick.Bids[0].Price {
+					orderType = model.OrderTypeLimit
+					price = tick.Bids[0].Price
+					priceDeal = tick.Bids[0].Price * (1 - TurtleTriggerDelta)
+				}
 			} else if posMap[setting.Symbol].Holding < 0 {
-				orders = MustPlaceOrder(key, secret, model.OrderSideBuy, model.OrderTypeStop, setting.Market, setting.Symbol, ``,
-					model.FunctionTurtleAdjust, data.HighAdjust*(1+TurtleTriggerDelta), data.HighAdjust, -1*posMap[setting.Symbol].Holding, setting)
+				orderSide = model.OrderSideBuy
+				price = data.HighAdjust
+				priceDeal = data.HighAdjust * (1 + TurtleTriggerDelta)
+				if data.HighAdjust <= tick.Asks[0].Price {
+					orderType = model.OrderTypeLimit
+					price = tick.Asks[0].Price
+					priceDeal = tick.Asks[0].Price * (1 + TurtleTriggerDelta)
+				}
+			}
+			if orderSide != `` {
+				orders = MustPlaceOrder(key, secret, orderSide, orderType, setting.Market, setting.Symbol, ``,
+					model.FunctionTurtleAdjust, priceDeal, price, math.Abs(posMap[setting.Symbol].Holding), setting)
 			}
 			for _, order := range orders {
 				if order != nil {
@@ -146,18 +165,19 @@ func AdjustPosHolding(key, secret string, setting *model.Setting, data *model.Tu
 	model.AppDB.Save(setting)
 }
 
-func HandleOrders(key, secret, market, symbol string, settings []*model.Setting, turtleData []*model.TurtleData) (checked bool) {
+func HandleOrders(key, secret, market, symbol string, settings []*model.Setting, turtleData []*model.TurtleData,
+	tick *model.BidAsk) (checked bool) {
 	if (len(settings) != 2 && len(settings) != 1) || len(settings) != len(turtleData) {
 		util.Notice(`wrong combine turtle parameter`)
 		return false
 	}
 	if len(settings) == 1 {
-		AdjustPosHolding(key, secret, settings[0], turtleData[0])
+		AdjustPosHolding(key, secret, settings[0], turtleData[0], tick)
 	} else if len(settings) == 2 {
 		if settings[0].Chance == 0 {
-			AdjustPosHolding(key, secret, settings[1], turtleData[1])
+			AdjustPosHolding(key, secret, settings[1], turtleData[1], tick)
 		} else if settings[1].Chance == 0 {
-			AdjustPosHolding(key, secret, settings[0], turtleData[0])
+			AdjustPosHolding(key, secret, settings[0], turtleData[0], tick)
 		}
 		turtleData[0].AdjustChecked = true
 		turtleData[1].AdjustChecked = true
@@ -196,7 +216,7 @@ func clearTurtleOrders(account *model.Account, setting *model.Setting, turtle *m
 		if setting.Chance >= 0 {
 			setting.Chance++
 			setting.GridAmount += longAmount
-			setting.PriceX = turtle.OrderLong[0].TriggerPrice
+			setting.PriceX = turtle.OrderLong[0].Price / (1 + TurtleTriggerDelta)
 		} else {
 			setting.Chance = 0
 		}
@@ -206,7 +226,7 @@ func clearTurtleOrders(account *model.Account, setting *model.Setting, turtle *m
 		if setting.Chance <= 0 {
 			setting.Chance--
 			setting.GridAmount += shortAmount
-			setting.PriceX = turtle.OrderShort[0].TriggerPrice
+			setting.PriceX = turtle.OrderShort[0].Price / (1 - TurtleTriggerDelta)
 		} else {
 			setting.Chance = 0
 		}
