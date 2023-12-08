@@ -75,9 +75,6 @@ func ClearExtraOrders(key, secret, market, symbol string, dataArray []*model.Tur
 		for _, order := range data.OrderAdjust {
 			keepOrders[order.OrderId] = true
 		}
-		for _, order := range data.OrderTrail {
-			keepOrders[order.OrderId] = true
-		}
 	}
 	orders := QueryOpenOrders(key, secret, market, symbol)
 	for _, order := range orders {
@@ -214,15 +211,6 @@ func clearTurtleOrders(account *model.Account, setting *model.Setting, turtle *m
 			setting.Chance = 0
 		}
 	}
-	if setting.Chance == 0 {
-		for _, order := range turtle.OrderTrail {
-			go MustCancel(account.Key, account.Secret, setting.Market, setting.Symbol, order.OrderType, order.OrderId, false)
-		}
-	}
-	if turtle.BreakTrail {
-		broken = true
-		setting.Chance = 0
-	}
 	if broken {
 		model.AppDB.Model(&model.Setting{}).Where("market= ? and Symbol= ? and function= ?",
 			setting.Market, setting.Symbol, setting.Function).Updates(map[string]interface{}{
@@ -230,7 +218,6 @@ func clearTurtleOrders(account *model.Account, setting *model.Setting, turtle *m
 	}
 	turtle.OrderLong = nil
 	turtle.OrderShort = nil
-	turtle.OrderTrail = nil
 }
 
 var getTurtleLock = sync.Map{} // key - *sync.Mutex{}
@@ -576,15 +563,12 @@ func CheckBreak(account *model.Account, market, symbol string, settings []*model
 		if useApi {
 			data.CheckUseApi = util.GetNow()
 		}
-		var orderLong, orderShort, orderTrail *model.Order
+		var orderLong, orderShort *model.Order
 		if data.OrderLong != nil && len(data.OrderLong) > 0 {
 			orderLong = data.OrderLong[0]
 		}
 		if data.OrderShort != nil && len(data.OrderShort) > 0 {
 			orderShort = data.OrderShort[0]
-		}
-		if data.OrderTrail != nil && len(data.OrderTrail) > 0 {
-			orderTrail = data.OrderTrail[0]
 		}
 		if orderLong != nil {
 			if tick != nil && orderLong.TriggerPrice > 0 &&
@@ -620,14 +604,6 @@ func CheckBreak(account *model.Account, market, symbol string, settings []*model
 				}
 				util.Notice(fmt.Sprintf(`order break short %s %s %s %d %e %e id %s useApi %v`,
 					market, symbol, orderShort.OrderType, setting.Chance, orderShort.TriggerPrice, orderShort.Price, orderShort.OrderId, useApi))
-			}
-		}
-		if orderTrail != nil && (useApi || tick == nil) {
-			orderTrail = QueryOrderById(account.Key, account.Secret, market, symbol, orderTrail.OrderType, orderTrail.OrderId)
-			if orderTrail != nil && orderTrail.Status == model.CarryStatusSuccess {
-				data.BreakTrail = true
-				util.Notice(fmt.Sprintf(`order break trail %s %s %s %d %e %e id %s useApi %v`,
-					market, symbol, orderTrail.OrderType, setting.Chance, orderTrail.TriggerPrice, orderTrail.Price, orderShort.OrderId, useApi))
 			}
 		}
 	}

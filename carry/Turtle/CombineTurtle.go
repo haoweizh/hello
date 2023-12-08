@@ -102,8 +102,8 @@ var ProcessCombineTurtle = func(settingCombine *model.Setting, tick *model.BidAs
 	util.StoreSyncMap(&model.CarryInfo, msg, account.Key, msgKey)
 	placeCombineOrders(account, dataNormal, dataCombine, settingNormal, settingCombine, tick, canOpen)
 	tryOpen := false
+	needClear := false
 	for i, setting := range settings {
-		needClear := false
 		if handleBreak(setting, turtleData[i], turtleData[i].OrderLong, turtleData[i].BreakLong) {
 			needClear = true
 			tryOpen = true
@@ -112,12 +112,22 @@ var ProcessCombineTurtle = func(settingCombine *model.Setting, tick *model.BidAs
 			needClear = true
 			tryOpen = true
 		}
-		if handleBreak(setting, turtleData[i], turtleData[i].OrderTrail, turtleData[i].BreakTrail) {
-			needClear = true
+	}
+	if needClear {
+		allLiquidate := true
+		for _, setting := range settings {
+			if setting.Chance != 0 {
+				allLiquidate = false
+			}
 		}
-		if needClear {
-			api.ClearExtraOrders(account.Key, account.Secret, market, symbol, turtleData)
+		if allLiquidate {
+			for _, data := range turtleData {
+				data.AdjustChecked = false
+				util.Notice(fmt.Sprintf(`set need check adjust after both setting liquidate %s %s`,
+					settingCombine.Market, data.Symbol))
+			}
 		}
+		api.ClearExtraOrders(account.Key, account.Secret, market, symbol, turtleData)
 	}
 	if tryOpen {
 		canOpen, _ = api.CanOpenCombine(settingCombine, settingNormal, dataCombine, dataNormal, false)
@@ -194,7 +204,6 @@ func handleBreak(setting *model.Setting, data *model.TurtleData, orders []*model
 	time.Sleep(time.Second * 3)
 	data.OrderLong = nil
 	data.OrderShort = nil
-	data.OrderTrail = nil
 	model.AppDB.Model(setting).Where("market= ? and Symbol= ? and function= ?",
 		setting.Market, setting.Symbol, setting.Function).Updates(map[string]interface{}{
 		`price_x`: setting.PriceX, `chance`: setting.Chance, `grid_amount`: setting.GridAmount})
