@@ -101,16 +101,13 @@ var ProcessCombineTurtle = func(settingCombine *model.Setting, tick *model.BidAs
 		dataCombine.LowFar, dataCombine.HighFar, dataCombine.DaysNear, dataCombine.LowNear, dataCombine.HighNear, dataCombine.N)
 	util.StoreSyncMap(&model.CarryInfo, msg, account.Key, msgKey)
 	placeCombineOrders(account, dataNormal, dataCombine, settingNormal, settingCombine, tick, canOpen)
-	tryOpen := false
 	needClear := false
 	for i, setting := range settings {
 		if handleBreak(setting, turtleData[i], turtleData[i].OrderLong, turtleData[i].BreakLong) {
 			needClear = true
-			tryOpen = true
 		}
 		if handleBreak(setting, turtleData[i], turtleData[i].OrderShort, turtleData[i].BreakShort) {
 			needClear = true
-			tryOpen = true
 		}
 	}
 	if needClear {
@@ -128,8 +125,6 @@ var ProcessCombineTurtle = func(settingCombine *model.Setting, tick *model.BidAs
 			}
 		}
 		api.ClearExtraOrders(account.Key, account.Secret, market, symbol, turtleData)
-	}
-	if tryOpen {
 		canOpen, _ = api.CanOpenCombine(settingCombine, settingNormal, dataCombine, dataNormal, false)
 		placeCombineOrders(account, dataNormal, dataCombine, settingNormal, settingCombine, tick, canOpen)
 	}

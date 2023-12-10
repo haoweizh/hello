@@ -695,10 +695,16 @@ func CanOpenCombine(settingCombine, settingNormal *model.Setting, data, dataNorm
 			//settingNormal.ChanceLimitCombine = int64(inAll)
 		}
 		if settingCombine.Chance == 0 && !canOpen && inAll >= settingCombine.AmountLimit {
+			if data.OrderLong != nil || data.OrderShort != nil {
+				data.CheckTimeOpen = time.Now().Add(time.Hour * -1)
+			}
 			data.OrderLong = nil
 			data.OrderShort = nil
 		}
 		if settingNormal.Chance == 0 && !canOpen && inAll >= settingCombine.AmountLimit {
+			if dataNormal.OrderLong != nil || dataNormal.OrderShort != nil {
+				dataNormal.CheckTimeOpen = time.Now().Add(time.Hour * -1)
+			}
 			dataNormal.OrderLong = nil
 			dataNormal.OrderShort = nil
 		}
