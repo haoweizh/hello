@@ -174,6 +174,9 @@ func handleBreak(setting *model.Setting, data *model.TurtleData, orders []*model
 	if orders[0].OrderSide == model.OrderSideSell {
 		setting.PriceX = orders[0].Price / (1 - api.TurtleTriggerDelta)
 	}
+	if orders[0].TriggerPrice > 0 {
+		setting.PriceX = orders[0].TriggerPrice
+	}
 	util.Notice(fmt.Sprintf(`query %s break %s %s %s %d %s %s chances %d`,
 		setting.Function, setting.Market, setting.Symbol, orders[0].OrderSide, len(orders), orders[0].OrderId, orders[0].Function, setting.Chance))
 	if orders[0].Function == model.Close || orders[0].OrderType == model.OrderTypeTrailStop {
@@ -273,10 +276,12 @@ func placeTurtleLong(account *model.Account, orderType string, data *model.Turtl
 			if price <= tick.Asks[0].Price {
 				data.BreakLong = true
 				orderType = model.OrderTypeLimit
+				price = tick.Asks[0].Price
 			}
 			priceDeal = price * (1 + api.TurtleTriggerDelta)
 		} else if orderType == model.OrderTypeLimit && price >= tick.Asks[0].Price {
 			data.BreakLong = true
+			price = tick.Asks[0].Price
 			priceDeal = tick.Asks[0].Price * (1 + api.TurtleTriggerDelta)
 		}
 		data.OrderLong = api.MustPlaceOrder(account.Key, account.Secret, model.OrderSideBuy, orderType, market, symbol, ``,
@@ -369,11 +374,13 @@ func placeTurtleShort(account *model.Account, orderType string, data *model.Turt
 			if price >= tick.Bids[0].Price {
 				data.BreakShort = true
 				orderType = model.OrderTypeLimit
+				price = tick.Bids[0].Price
 			}
 			priceDeal = price * (1 - api.TurtleTriggerDelta)
 		} else if orderType == model.OrderTypeLimit && price <= tick.Bids[0].Price {
 			data.BreakShort = true
 			priceDeal = tick.Bids[0].Price * (1 - api.TurtleTriggerDelta)
+			price = tick.Bids[0].Price
 		}
 		util.Notice(fmt.Sprintf(`place short %s %s %s %s %s %d %v at %e %e amt %e, useNear %v priceX %f n:%f seconds %d near %f %f far %f %f`,
 			orderType, setting.Function, market, symbol, orderType, setting.Chance, canOpen, priceDeal, price, amount,

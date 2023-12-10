@@ -217,6 +217,9 @@ func clearTurtleOrders(account *model.Account, setting *model.Setting, turtle *m
 			setting.Chance++
 			setting.GridAmount += longAmount
 			setting.PriceX = turtle.OrderLong[0].Price / (1 + TurtleTriggerDelta)
+			if turtle.OrderLong[0].TriggerPrice > 0 {
+				setting.PriceX = turtle.OrderLong[0].TriggerPrice
+			}
 		} else {
 			setting.Chance = 0
 		}
@@ -227,6 +230,9 @@ func clearTurtleOrders(account *model.Account, setting *model.Setting, turtle *m
 			setting.Chance--
 			setting.GridAmount += shortAmount
 			setting.PriceX = turtle.OrderShort[0].Price / (1 - TurtleTriggerDelta)
+			if turtle.OrderShort[0].TriggerPrice > 0 {
+				setting.PriceX = turtle.OrderShort[0].TriggerPrice
+			}
 		} else {
 			setting.Chance = 0
 		}

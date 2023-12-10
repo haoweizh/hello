@@ -992,6 +992,15 @@ func parseOrderOKEX(value map[string]interface{}) (order *model.Order) {
 	if value[`avgPx`] != nil && value[`avgPx`] != `` {
 		order.DealPrice, _ = strconv.ParseFloat(value[`avgPx`].(string), 64)
 	}
+	if value[`slTriggerPx`] != nil && value[`slTriggerPx`] != `` {
+		order.TriggerPrice, _ = strconv.ParseFloat(value[`slTriggerPx`].(string), 64)
+	} else if value[`tpTriggerPx`] != nil && value[`tpTriggerPx`] != `` {
+		order.TriggerPrice, _ = strconv.ParseFloat(value[`tpTriggerPx`].(string), 64)
+	} else if value[`triggerPx`] != nil && value[`triggerPx`] != `` {
+		order.TriggerPrice, _ = strconv.ParseFloat(value[`triggerPx`].(string), 64)
+	} else if value[`moveTriggerPx`] != nil && value[`moveTriggerPx`] != `` {
+		order.TriggerPrice, _ = strconv.ParseFloat(value[`moveTriggerPx`].(string), 64)
+	}
 	if value[`state`] != nil {
 		status := value[`state`].(string)
 		switch status {
