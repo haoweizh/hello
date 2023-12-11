@@ -172,10 +172,12 @@ func handleCombineSettings(mumSetting *model.Setting, topMarketInfos map[string]
 		valueNormal, _ := normalMap.Load(info.Name)
 		settingCombine := &model.Setting{Valid: true, Function: model.FunctionCombineTurtle, Market: mumSetting.Market,
 			Symbol: info.Name, ChanceLimit: mumSetting.ChanceLimitCombine, AmountRate: mumSetting.AmountRateCombine,
-			AmountLimit: mumSetting.AmountLimit, Far: mumSetting.FarCombine, Near: mumSetting.NearCombine, Seconds: mumSetting.SecondsCombine}
+			AmountLimit: mumSetting.AmountLimit, Far: mumSetting.FarCombine, Near: mumSetting.NearCombine,
+			Seconds: mumSetting.SecondsCombine, MarketRelated: mumSetting.MarketRelated}
 		settingNormal := &model.Setting{Valid: true, Function: model.FunctionTurtleNormal, Market: mumSetting.Market,
 			Symbol: info.Name, ChanceLimit: mumSetting.ChanceLimit, AmountRate: mumSetting.AmountRate,
-			AmountLimit: mumSetting.AmountLimit, Far: mumSetting.Far, Near: mumSetting.Near, Seconds: mumSetting.Seconds}
+			AmountLimit: mumSetting.AmountLimit, Far: mumSetting.Far, Near: mumSetting.Near, Seconds: mumSetting.Seconds,
+			MarketRelated: mumSetting.MarketRelated}
 		if valueCombine == nil {
 			util.Notice(`add combine %s %v`, mumSetting.Market, info.Name)
 			accounts := model.AppConfig.GetAccounts(mumSetting.Market)

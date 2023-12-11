@@ -634,29 +634,32 @@ func CheckBreak(account *model.Account, market, symbol string, settings []*model
 	return useApi
 }
 
-func CanOpenCombine(settingCombine, settingNormal *model.Setting, data, dataNormal *model.TurtleData, checkFulled bool) (canOpen bool, inAll float64) {
+func CanOpenCombine(account *model.Account, settingCombine, settingNormal *model.Setting, dataCombine,
+	dataNormal *model.TurtleData, checkFulled bool) (
+	canOpen, canStartCombine, canStartTurtle bool, inAll float64) {
 	success, _, coin, _ := model.GetFromStandard(settingCombine.Market, settingCombine.Symbol)
 	if !success {
-		return false, 0
+		return false, false, false, 0
 	}
 	settingsCombine := GetSettings(settingCombine.Function, settingCombine.Market)
 	settingsNormal := GetSettings(settingNormal.Function, settingCombine.Market)
 	if settingsCombine == nil || settingsNormal == nil {
-		return false, 0
+		return false, false, false, 0
 	}
-	//tradingSymbols := make(map[string]bool)
-	//addTrading := func(symbol, value any) bool {
-	//	if value != nil {
-	//		valueSetting := value.(*model.Setting)
-	//		_, _, valueCoin, _ := model.GetFromStandard(valueSetting.Market, valueSetting.Symbol)
-	//		if !model.CommonCoins[strings.ToLower(valueCoin)] {
-	//			if valueSetting.Chance != 0 && valueSetting.Function == model.FunctionTurtleNormal {
-	//				tradingSymbols[valueSetting.Symbol] = true
-	//			}
-	//		}
-	//	}
-	//	return true
-	//}
+	tradingSymbols := make(map[string]bool)
+	addTrading := func(symbol, value any) bool {
+		if value != nil {
+			valueSetting := value.(*model.Setting)
+			_, _, valueCoin, _ := model.GetFromStandard(valueSetting.Market, valueSetting.Symbol)
+			if !model.CommonCoins[strings.ToLower(valueCoin)] {
+				if valueSetting.Chance != 0 && valueSetting.Function == model.FunctionCombineTurtle {
+					tradingSymbols[valueSetting.Symbol] = true
+				}
+			}
+		}
+		return true
+	}
+	turtleSymbolNum := 0
 	sumChance := func(symbol, value any) bool {
 		if value != nil {
 			valueSetting := value.(*model.Setting)
@@ -665,9 +668,9 @@ func CanOpenCombine(settingCombine, settingNormal *model.Setting, data, dataNorm
 				if valueSetting.Function == model.FunctionTurtleNormal {
 					//inAll += float64(valueSetting.Chance)
 					if valueSetting.Chance > 0 {
-						inAll++
+						turtleSymbolNum++
 					} else if valueSetting.Chance < 0 {
-						inAll--
+						turtleSymbolNum--
 					}
 				}
 			}
@@ -675,10 +678,26 @@ func CanOpenCombine(settingCombine, settingNormal *model.Setting, data, dataNorm
 		return true
 	}
 	if model.CommonCoins[strings.ToLower(coin)] {
-		return true, 0
+		return true, true, true, 0
 	} else {
 		settingsNormal.Range(sumChance)
-		//settingsCombine.Range(sumChance)
+		settingsCombine.Range(addTrading)
+		if settingNormal.MarketRelated == model.TurtleTypeChange && settingCombine.MarketRelated == model.TurtleTypeChange {
+			inAll = math.Abs(float64(turtleSymbolNum)) + float64(len(tradingSymbols))
+			if settingCombine.Chance == 0 && settingNormal.Chance == 0 {
+				if math.Abs(float64(turtleSymbolNum)) <= settingNormal.AmountLimit/2 {
+					canStartTurtle = true
+					canStartCombine = false
+				} else {
+					canStartTurtle = false
+					canStartCombine = true
+				}
+			}
+		} else {
+			inAll = float64(turtleSymbolNum)
+			canStartTurtle = true
+			canStartCombine = true
+		}
 		canOpen = settingCombine.Chance != 0 || settingNormal.Chance != 0 || (inAll < settingCombine.AmountLimit &&
 			settingCombine.SymbolRelated != model.SettingTurtleRemoved && settingNormal.SymbolRelated != model.SettingTurtleRemoved)
 		if checkFulled {
@@ -692,22 +711,36 @@ func CanOpenCombine(settingCombine, settingNormal *model.Setting, data, dataNorm
 			}
 			//settingNormal.ChanceLimitCombine = int64(inAll)
 		}
-		if settingCombine.Chance == 0 && !canOpen && inAll >= settingCombine.AmountLimit {
-			if data.OrderLong != nil || data.OrderShort != nil {
-				data.CheckTimeOpen = time.Now().Add(time.Hour * -1)
+		if settingCombine.Chance == 0 && ((!canOpen && inAll >= settingCombine.AmountLimit) || !canStartCombine) {
+			if dataCombine.OrderLong != nil {
+				for _, order := range dataCombine.OrderLong {
+					MustCancel(account.Key, account.Secret, settingCombine.Market, settingCombine.Symbol, order.OrderType, order.OrderId, false)
+				}
+				dataCombine.OrderLong = nil
 			}
-			data.OrderLong = nil
-			data.OrderShort = nil
+			if dataCombine.OrderShort != nil {
+				for _, order := range dataCombine.OrderShort {
+					MustCancel(account.Key, account.Secret, settingCombine.Market, settingCombine.Symbol, order.OrderType, order.OrderId, false)
+				}
+				dataCombine.OrderShort = nil
+			}
 		}
-		if settingNormal.Chance == 0 && !canOpen && inAll >= settingCombine.AmountLimit {
-			if dataNormal.OrderLong != nil || dataNormal.OrderShort != nil {
-				dataNormal.CheckTimeOpen = time.Now().Add(time.Hour * -1)
+		if settingNormal.Chance == 0 && ((!canOpen && inAll >= settingCombine.AmountLimit) || !canStartTurtle) {
+			if dataNormal.OrderLong != nil {
+				for _, order := range dataNormal.OrderLong {
+					MustCancel(account.Key, account.Secret, settingNormal.Market, settingNormal.Symbol, order.OrderType, order.OrderId, false)
+				}
+				dataNormal.OrderLong = nil
 			}
-			dataNormal.OrderLong = nil
-			dataNormal.OrderShort = nil
+			if dataNormal.OrderShort != nil {
+				for _, order := range dataNormal.OrderShort {
+					MustCancel(account.Key, account.Secret, settingNormal.Market, settingNormal.Symbol, order.OrderType, order.OrderId, false)
+				}
+				dataNormal.OrderShort = nil
+			}
 		}
 	}
-	return canOpen, inAll
+	return canOpen, canStartCombine, canStartTurtle, inAll
 }
 
 // CanOpenTurtle CanOpenTurtle  主流币检查仓位总数;非主流检查交易币种个数
