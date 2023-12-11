@@ -271,7 +271,6 @@ func placeTurtleLong(account *model.Account, orderType string, data *model.Turtl
 			if price <= tick.Asks[0].Price {
 				data.BreakLong = true
 				orderType = model.OrderTypeLimit
-				price = tick.Asks[0].Price
 			}
 			priceDeal = price * (1 + api.TurtleTriggerDelta)
 		} else if orderType == model.OrderTypeLimit && price >= tick.Asks[0].Price {
@@ -369,7 +368,6 @@ func placeTurtleShort(account *model.Account, orderType string, data *model.Turt
 			if price >= tick.Bids[0].Price {
 				data.BreakShort = true
 				orderType = model.OrderTypeLimit
-				price = tick.Bids[0].Price
 			}
 			priceDeal = price * (1 - api.TurtleTriggerDelta)
 		} else if orderType == model.OrderTypeLimit && price <= tick.Bids[0].Price {

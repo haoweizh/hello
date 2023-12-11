@@ -240,7 +240,7 @@ func placeTurtleOrders(key, secret string, turtleData *model.TurtleData, setting
 		turtleData.BreakLong = false
 		if priceLong <= tick.Asks[0].Price {
 			turtleData.OrderLong = api.MustPlaceOrder(key, secret, orderSide, model.OrderTypeLimit, setting.Market, setting.Symbol, ``,
-				setting.Function, tick.Asks[0].Price*(1+api.TurtleTriggerDelta), tick.Asks[0].Price, amount, setting)
+				setting.Function, priceLong*(1+api.TurtleTriggerDelta), priceLong, amount, setting)
 			for _, order := range turtleData.OrderLong {
 				turtleData.OrderAdjust[order.OrderId] = order
 			}
@@ -274,7 +274,7 @@ func placeTurtleOrders(key, secret string, turtleData *model.TurtleData, setting
 		turtleData.BreakShort = false
 		if priceShort >= tick.Bids[0].Price {
 			turtleData.OrderShort = api.MustPlaceOrder(key, secret, orderSide, model.OrderTypeLimit, setting.Market, setting.Symbol, ``,
-				setting.Function, tick.Bids[0].Price*(1-api.TurtleTriggerDelta), tick.Bids[0].Price, amount, setting)
+				setting.Function, priceShort*(1-api.TurtleTriggerDelta), priceShort, amount, setting)
 			for _, order := range turtleData.OrderShort {
 				turtleData.OrderAdjust[order.OrderId] = order
 			}

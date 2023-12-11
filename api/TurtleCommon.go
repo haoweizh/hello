@@ -120,8 +120,7 @@ func AdjustPosHolding(key, secret string, setting *model.Setting, data *model.Tu
 				priceDeal = data.LowAdjust * (1 - TurtleTriggerDelta)
 				if data.LowAdjust >= tick.Bids[0].Price {
 					orderType = model.OrderTypeLimit
-					price = tick.Bids[0].Price
-					priceDeal = tick.Bids[0].Price * (1 - TurtleTriggerDelta)
+					priceDeal = price * (1 - TurtleTriggerDelta)
 				}
 			} else if posMap[setting.Symbol].Holding < 0 {
 				orderSide = model.OrderSideBuy
@@ -129,8 +128,7 @@ func AdjustPosHolding(key, secret string, setting *model.Setting, data *model.Tu
 				priceDeal = data.HighAdjust * (1 + TurtleTriggerDelta)
 				if data.HighAdjust <= tick.Asks[0].Price {
 					orderType = model.OrderTypeLimit
-					price = tick.Asks[0].Price
-					priceDeal = tick.Asks[0].Price * (1 + TurtleTriggerDelta)
+					priceDeal = price * (1 + TurtleTriggerDelta)
 				}
 			}
 			if orderSide != `` {
