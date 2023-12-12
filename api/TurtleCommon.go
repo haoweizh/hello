@@ -689,13 +689,15 @@ func CanOpenCombine(account *model.Account, settingCombine, settingNormal *model
 				canStartTurtle = false
 				canStartCombine = true
 			}
+			canOpen = turtleSymbolNum < settingCombine.AmountLimit &&
+				settingCombine.SymbolRelated != model.SettingTurtleRemoved && settingNormal.SymbolRelated != model.SettingTurtleRemoved
 		} else {
 			inAll = turtleSymbolNum
 			canStartTurtle = true
 			canStartCombine = true
+			canOpen = settingCombine.Chance != 0 || settingNormal.Chance != 0 || (turtleSymbolNum < settingCombine.AmountLimit &&
+				settingCombine.SymbolRelated != model.SettingTurtleRemoved && settingNormal.SymbolRelated != model.SettingTurtleRemoved)
 		}
-		canOpen = turtleSymbolNum < settingCombine.AmountLimit &&
-			settingCombine.SymbolRelated != model.SettingTurtleRemoved && settingNormal.SymbolRelated != model.SettingTurtleRemoved
 		if checkFulled {
 			now := time.Now()
 			_, nowStr := model.GetNowPeriod(settingCombine.Market, settingCombine.Seconds, now)
