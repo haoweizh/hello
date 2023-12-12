@@ -79,7 +79,7 @@ var ProcessCombineTurtle = func(settingCombine *model.Setting, tick *model.BidAs
 	if settingCombine.Seconds >= 43200 || settingCombine.Market == model.OKEX {
 		checkFulled = false
 	}
-	canOpen, canStartCombine, canStartTurtle, turtleCoins := api.CanOpenCombine(
+	canOpen, canStartCombine, canStartTurtle, turtleSymbolNum, turtleCoins := api.CanOpenCombine(
 		account, settingCombine, settingNormal, dataCombine, dataNormal, checkFulled)
 	if api.HandleOrders(account.Key, account.Secret, market, symbol, settings, turtleData, tick) ||
 		api.CheckBreak(account, market, symbol, settings, turtleData, tick) {
@@ -88,10 +88,10 @@ var ProcessCombineTurtle = func(settingCombine *model.Setting, tick *model.BidAs
 	}
 	model.ResetBig(dataCombine, dataNormal)
 	msgKey := model.GetMsgKey(model.FunctionCombineTurtle, market, symbol)
-	msg := fmt.Sprintf("[%d-%d %d:%d]%s N-Volume %f 可开%v(海龟%v 龟汤%v) 币种数:%d/%d bid-ask %e %e \n",
+	msg := fmt.Sprintf("[%d-%d %d:%d]%s N-Volume %f 可开%v龟仓数%f(海龟%v 龟汤%v) 币种数:%d/%d bid-ask %e %e \n",
 		dataCombine.TurtleTime.Month(), dataCombine.TurtleTime.Day(), time.Now().Hour(), time.Now().Minute(), msgKey,
-		dataCombine.NVolume, canOpen, canStartTurtle, canStartCombine, int(turtleCoins), int(settingCombine.AmountLimit),
-		tick.Bids[0].Price, tick.Asks[0].Price)
+		dataCombine.NVolume, canOpen, turtleSymbolNum, canStartTurtle, canStartCombine, int(turtleCoins),
+		int(settingCombine.AmountLimit), tick.Bids[0].Price, tick.Asks[0].Price)
 	msg += fmt.Sprintf("海龟:仓数/持仓量/开仓价 %d of %d/%e/%e 平过%v 数量 %e %s%d big:%d 日:%e-%e %d日:%e-%e N:%e\n",
 		settingNormal.Chance, settingNormal.ChanceLimit, settingNormal.GridAmount, settingNormal.PriceX, dataNormal.Liquidated,
 		dataNormal.Amount*float64(settingNormal.ChanceLimit), dataNormal.GetIds(), dataNormal.Big, dataNormal.DaysFar,
@@ -159,7 +159,7 @@ func placeCombineOrders(account *model.Account, dataNormal, dataCombine *model.T
 		placeTurtleLong(account, model.OrderTypeStop, dataNormal, settingNormal, tick, canOpen, true)
 		placeTurtleShort(account, model.OrderTypeStop, dataNormal, settingNormal, tick, canOpen, true)
 	}
-	if settingCombine.Chance != 0 || (canStartCombine && settingNormal.Chance == 0) {
+	if settingCombine.Chance != 0 || (canStartCombine && (settingNormal.Chance == 0 || canStartTurtle)) {
 		isLongBigCombine := false
 		isShortBigCombine := false
 		if settingNormal.Chance > 0 {

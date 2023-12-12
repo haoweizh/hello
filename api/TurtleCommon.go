@@ -635,15 +635,15 @@ func CheckBreak(account *model.Account, market, symbol string, settings []*model
 }
 
 func CanOpenCombine(account *model.Account, settingCombine, settingNormal *model.Setting, dataCombine,
-	dataNormal *model.TurtleData, checkFulled bool) (canOpen, canStartCombine, canStartTurtle bool, inAll float64) {
+	dataNormal *model.TurtleData, checkFulled bool) (canOpen, canStartCombine, canStartTurtle bool, turtleSymbolNum, inAll float64) {
 	success, _, coin, _ := model.GetFromStandard(settingCombine.Market, settingCombine.Symbol)
 	if !success {
-		return false, false, false, 0
+		return false, false, false, 0, 0
 	}
 	settingsCombine := GetSettings(settingCombine.Function, settingCombine.Market)
 	settingsNormal := GetSettings(settingNormal.Function, settingCombine.Market)
 	if settingsCombine == nil || settingsNormal == nil {
-		return false, false, false, 0
+		return false, false, false, 0, 0
 	}
 	tradingSymbols := make(map[string]bool)
 	addTrading := func(symbol, value any) bool {
@@ -658,7 +658,6 @@ func CanOpenCombine(account *model.Account, settingCombine, settingNormal *model
 		}
 		return true
 	}
-	turtleSymbolNum := 0
 	sumChance := func(symbol, value any) bool {
 		if value != nil {
 			valueSetting := value.(*model.Setting)
@@ -677,13 +676,13 @@ func CanOpenCombine(account *model.Account, settingCombine, settingNormal *model
 		return true
 	}
 	if model.CommonCoins[strings.ToLower(coin)] {
-		return true, true, true, 0
+		return true, true, true, 0, 0
 	} else {
 		settingsNormal.Range(sumChance)
 		settingsCombine.Range(addTrading)
 		if settingNormal.MarketRelated == model.TurtleTypeChange && settingCombine.MarketRelated == model.TurtleTypeChange {
-			inAll = math.Abs(float64(turtleSymbolNum)) + float64(len(tradingSymbols))
-			if math.Abs(float64(turtleSymbolNum)) <= settingNormal.AmountLimit/2 {
+			inAll = math.Abs(turtleSymbolNum) + float64(len(tradingSymbols))
+			if math.Abs(turtleSymbolNum) <= settingNormal.AmountLimit/2 {
 				canStartTurtle = true
 				canStartCombine = false
 			} else {
@@ -691,7 +690,7 @@ func CanOpenCombine(account *model.Account, settingCombine, settingNormal *model
 				canStartCombine = true
 			}
 		} else {
-			inAll = float64(turtleSymbolNum)
+			inAll = turtleSymbolNum
 			canStartTurtle = true
 			canStartCombine = true
 		}
@@ -737,7 +736,7 @@ func CanOpenCombine(account *model.Account, settingCombine, settingNormal *model
 			}
 		}
 	}
-	return canOpen, canStartCombine, canStartTurtle, inAll
+	return canOpen, canStartCombine, canStartTurtle, turtleSymbolNum, inAll
 }
 
 // CanOpenTurtle CanOpenTurtle  主流币检查仓位总数;非主流检查交易币种个数
