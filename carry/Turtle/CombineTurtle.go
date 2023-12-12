@@ -79,8 +79,7 @@ var ProcessCombineTurtle = func(settingCombine *model.Setting, tick *model.BidAs
 	if settingCombine.Seconds >= 43200 || settingCombine.Market == model.OKEX {
 		checkFulled = false
 	}
-	canOpen, canStartCombine, canStartTurtle, turtleSymbolNum, turtleCoins := api.CanOpenCombine(
-		account, settingCombine, settingNormal, dataCombine, dataNormal, checkFulled)
+	canOpen, canStartCombine, canStartTurtle, turtleSymbolNum, turtleCoins := api.CanOpenCombine(settingCombine, settingNormal, checkFulled)
 	if api.HandleOrders(account.Key, account.Secret, market, symbol, settings, turtleData, tick) ||
 		api.CheckBreak(account, market, symbol, settings, turtleData, tick) {
 		//util.Notice(fmt.Sprintf(`combine return handle or break %s %s`, market, symbol))
@@ -88,10 +87,10 @@ var ProcessCombineTurtle = func(settingCombine *model.Setting, tick *model.BidAs
 	}
 	model.ResetBig(dataCombine, dataNormal)
 	msgKey := model.GetMsgKey(model.FunctionCombineTurtle, market, symbol)
-	msg := fmt.Sprintf("[%d-%d %d:%d]%s N-Volume %f 可开%v龟仓数%d(海龟%v 龟汤%v) 币种数:%d/%d bid-ask %e %e \n",
+	msg := fmt.Sprintf("[%d-%d %d:%d]%s N-Volume %f 可开%v龟仓数%d(海龟%v 龟汤%v) 币种数:%d/%d满币%v bid-ask %e %e \n",
 		dataCombine.TurtleTime.Month(), dataCombine.TurtleTime.Day(), time.Now().Hour(), time.Now().Minute(), msgKey,
 		dataCombine.NVolume, canOpen, int64(turtleSymbolNum), canStartTurtle, canStartCombine, int(turtleCoins),
-		int(settingCombine.AmountLimit), tick.Bids[0].Price, tick.Asks[0].Price)
+		int(settingCombine.AmountLimit), turtleCoins >= settingCombine.AmountLimit, tick.Bids[0].Price, tick.Asks[0].Price)
 	msg += fmt.Sprintf("海龟:仓数/持仓量/开仓价 %d of %d/%e/%e 平过%v 数量 %e %s%d big:%d 日:%e-%e %d日:%e-%e N:%e\n",
 		settingNormal.Chance, settingNormal.ChanceLimit, settingNormal.GridAmount, settingNormal.PriceX, dataNormal.Liquidated,
 		dataNormal.Amount*float64(settingNormal.ChanceLimit), dataNormal.GetIds(), dataNormal.Big, dataNormal.DaysFar,
@@ -134,13 +133,18 @@ var placeTurtleLock = &sync.Map{} // key - *sync.Mutex{}
 // 龟模式 = canStartTurtle==true && canStartCombine==false
 // 双持    可加龟  可加汤
 // 单龟    可加龟  不加汤
-// 单汤    可加龟(即使canOpen==false)  可加汤
+// 单汤    可加龟  可加汤
 // 双0     可加龟  不加汤
 // 汤模式 = canStartTurtle==false && canStartCombine==true
 // 双持    可加龟  可加汤
 // 单龟    可加龟  不加汤
 // 单汤    不加龟  可加汤
 // 双0     不加龟  可加汤
+// 满币种模式：canOpen == false
+// 双持    可加龟  可加汤
+// 单龟    可加龟  不加汤
+// 单汤    可加龟  可加汤
+// 双0     不加龟  不加汤
 func placeCombineOrders(account *model.Account, dataNormal, dataCombine *model.TurtleData, settingNormal,
 	settingCombine *model.Setting, tick *model.BidAsk, canOpen, canStartTurtle, canStartCombine bool) {
 	var lock *sync.Mutex
@@ -155,24 +159,48 @@ func placeCombineOrders(account *model.Account, dataNormal, dataCombine *model.T
 		defer lock.Unlock()
 		lock.Lock()
 	}
-	if canStartTurtle || settingNormal.Chance != 0 {
-		if canStartTurtle && settingNormal.Chance == 0 && settingCombine.Chance != 0 {
-			canOpen = true
+	if canOpen {
+		if canStartTurtle || settingNormal.Chance != 0 {
+			placeTurtleLong(account, model.OrderTypeStop, dataNormal, settingNormal, tick, canOpen, true)
+			placeTurtleShort(account, model.OrderTypeStop, dataNormal, settingNormal, tick, canOpen, true)
+		} else {
+			removeTurtleOrders(account, settingNormal.Market, settingNormal.Symbol, dataNormal)
 		}
-		placeTurtleLong(account, model.OrderTypeStop, dataNormal, settingNormal, tick, canOpen, true)
-		placeTurtleShort(account, model.OrderTypeStop, dataNormal, settingNormal, tick, canOpen, true)
+		if settingCombine.Chance != 0 || (canStartCombine && (settingNormal.Chance == 0 || canStartTurtle)) {
+			isLongBigCombine := false
+			isShortBigCombine := false
+			if settingNormal.Chance > 0 {
+				isShortBigCombine = true
+			}
+			if settingNormal.Chance < 0 {
+				isLongBigCombine = true
+			}
+			placeTurtleLong(account, model.OrderTypeLimit, dataCombine, settingCombine, tick, canOpen, isLongBigCombine)
+			placeTurtleShort(account, model.OrderTypeLimit, dataCombine, settingCombine, tick, canOpen, isShortBigCombine)
+		} else {
+			removeTurtleOrders(account, settingCombine.Market, settingCombine.Symbol, dataCombine)
+		}
+	} else {
+		removeTurtleOrders(account, settingNormal.Market, settingNormal.Symbol, dataNormal)
+		removeTurtleOrders(account, settingCombine.Market, settingCombine.Symbol, dataCombine)
 	}
-	if settingCombine.Chance != 0 || (canStartCombine && (settingNormal.Chance == 0 || canStartTurtle)) {
-		isLongBigCombine := false
-		isShortBigCombine := false
-		if settingNormal.Chance > 0 {
-			isShortBigCombine = true
+}
+
+func removeTurtleOrders(account *model.Account, market, symbol string, data *model.TurtleData) {
+	if data == nil {
+		return
+	}
+	if data.OrderLong != nil {
+		for _, order := range data.OrderLong {
+			api.MustCancel(account.Key, account.Secret, market, symbol, order.OrderType, order.OrderId, false)
 		}
-		if settingNormal.Chance < 0 {
-			isLongBigCombine = true
+		data.OrderLong = nil
+	}
+	if data.OrderShort != nil {
+		for _, order := range data.OrderShort {
+			api.MustCancel(account.Key, account.Secret, market, symbol, order.OrderType, order.OrderId, false)
 		}
-		placeTurtleLong(account, model.OrderTypeLimit, dataCombine, settingCombine, tick, canOpen, isLongBigCombine)
-		placeTurtleShort(account, model.OrderTypeLimit, dataCombine, settingCombine, tick, canOpen, isShortBigCombine)
+		data.OrderShort = nil
 	}
 }
 

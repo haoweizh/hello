@@ -634,8 +634,10 @@ func CheckBreak(account *model.Account, market, symbol string, settings []*model
 	return useApi
 }
 
-func CanOpenCombine(account *model.Account, settingCombine, settingNormal *model.Setting, dataCombine,
-	dataNormal *model.TurtleData, checkFulled bool) (canOpen, canStartCombine, canStartTurtle bool, turtleSymbolNum, inAll float64) {
+// CanOpenCombine
+// change算法 币种数=海龟仓数绝对值+单汤币数
+func CanOpenCombine(settingCombine, settingNormal *model.Setting, checkFulled bool) (
+	canOpen, canStartCombine, canStartTurtle bool, turtleSymbolNum, inAll float64) {
 	success, _, coin, _ := model.GetFromStandard(settingCombine.Market, settingCombine.Symbol)
 	if !success {
 		return false, false, false, 0, 0
@@ -652,7 +654,10 @@ func CanOpenCombine(account *model.Account, settingCombine, settingNormal *model
 			_, _, valueCoin, _ := model.GetFromStandard(valueSetting.Market, valueSetting.Symbol)
 			if !model.CommonCoins[strings.ToLower(valueCoin)] {
 				if valueSetting.Chance != 0 && valueSetting.Function == model.FunctionCombineTurtle {
-					tradingSymbols[valueSetting.Symbol] = true
+					normal := GetSetting(model.FunctionTurtleNormal, valueSetting.Market, valueSetting.Symbol)
+					if normal.Chance == 0 {
+						tradingSymbols[valueSetting.Symbol] = true
+					}
 				}
 			}
 		}
@@ -689,15 +694,13 @@ func CanOpenCombine(account *model.Account, settingCombine, settingNormal *model
 				canStartTurtle = false
 				canStartCombine = true
 			}
-			canOpen = inAll < settingCombine.AmountLimit &&
-				settingCombine.SymbolRelated != model.SettingTurtleRemoved && settingNormal.SymbolRelated != model.SettingTurtleRemoved
 		} else {
 			inAll = turtleSymbolNum
 			canStartTurtle = true
 			canStartCombine = true
-			canOpen = settingCombine.Chance != 0 || settingNormal.Chance != 0 || (inAll < settingCombine.AmountLimit &&
-				settingCombine.SymbolRelated != model.SettingTurtleRemoved && settingNormal.SymbolRelated != model.SettingTurtleRemoved)
 		}
+		canOpen = settingCombine.Chance != 0 || settingNormal.Chance != 0 || (inAll < settingCombine.AmountLimit &&
+			settingCombine.SymbolRelated != model.SettingTurtleRemoved && settingNormal.SymbolRelated != model.SettingTurtleRemoved)
 		if checkFulled {
 			now := time.Now()
 			_, nowStr := model.GetNowPeriod(settingCombine.Market, settingCombine.Seconds, now)
@@ -708,34 +711,6 @@ func CanOpenCombine(account *model.Account, settingCombine, settingNormal *model
 				util.StoreSyncMap(CombineFulled, true, settingCombine.Market, nowStr)
 			}
 			//settingNormal.ChanceLimitCombine = int64(inAll)
-		}
-		if settingCombine.Chance == 0 && ((!canOpen && inAll >= settingCombine.AmountLimit) || !canStartCombine) {
-			if dataCombine.OrderLong != nil {
-				for _, order := range dataCombine.OrderLong {
-					MustCancel(account.Key, account.Secret, settingCombine.Market, settingCombine.Symbol, order.OrderType, order.OrderId, false)
-				}
-				dataCombine.OrderLong = nil
-			}
-			if dataCombine.OrderShort != nil {
-				for _, order := range dataCombine.OrderShort {
-					MustCancel(account.Key, account.Secret, settingCombine.Market, settingCombine.Symbol, order.OrderType, order.OrderId, false)
-				}
-				dataCombine.OrderShort = nil
-			}
-		}
-		if settingNormal.Chance == 0 && ((!canOpen && inAll >= settingCombine.AmountLimit) || !canStartTurtle) {
-			if dataNormal.OrderLong != nil {
-				for _, order := range dataNormal.OrderLong {
-					MustCancel(account.Key, account.Secret, settingNormal.Market, settingNormal.Symbol, order.OrderType, order.OrderId, false)
-				}
-				dataNormal.OrderLong = nil
-			}
-			if dataNormal.OrderShort != nil {
-				for _, order := range dataNormal.OrderShort {
-					MustCancel(account.Key, account.Secret, settingNormal.Market, settingNormal.Symbol, order.OrderType, order.OrderId, false)
-				}
-				dataNormal.OrderShort = nil
-			}
 		}
 	}
 	return canOpen, canStartCombine, canStartTurtle, turtleSymbolNum, inAll
