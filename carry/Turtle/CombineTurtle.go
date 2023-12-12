@@ -131,6 +131,16 @@ var ProcessCombineTurtle = func(settingCombine *model.Setting, tick *model.BidAs
 
 var placeTurtleLock = &sync.Map{} // key - *sync.Mutex{}
 
+// 龟模式 = canStartTurtle==true && canStartCombine==false
+// 双持    可加龟  可加汤
+// 单龟    可加龟  不加汤
+// 单汤    可加龟  可加汤
+// 双0     可加龟  不加汤
+// 汤模式 = canStartTurtle==false && canStartCombine==true
+// 双持    可加龟  可加汤
+// 单龟    可加龟  不加汤
+// 单汤    不加龟  可加汤
+// 双0     不加龟  可加汤
 func placeCombineOrders(account *model.Account, dataNormal, dataCombine *model.TurtleData, settingNormal,
 	settingCombine *model.Setting, tick *model.BidAsk, canOpen, canStartTurtle, canStartCombine bool) {
 	var lock *sync.Mutex
@@ -145,21 +155,11 @@ func placeCombineOrders(account *model.Account, dataNormal, dataCombine *model.T
 		defer lock.Unlock()
 		lock.Lock()
 	}
-	if canStartTurtle == false || canStartCombine == false {
-		if settingNormal.Chance != 0 {
-			canStartTurtle = true
-			canStartCombine = false
-		}
-		if settingCombine.Chance != 0 {
-			canStartCombine = true
-			canStartTurtle = false
-		}
-	}
-	if canStartTurtle {
+	if canStartTurtle || settingNormal.Chance != 0 {
 		placeTurtleLong(account, model.OrderTypeStop, dataNormal, settingNormal, tick, canOpen, true)
 		placeTurtleShort(account, model.OrderTypeStop, dataNormal, settingNormal, tick, canOpen, true)
 	}
-	if canStartCombine {
+	if settingCombine.Chance != 0 || (canStartCombine && settingNormal.Chance == 0) {
 		isLongBigCombine := false
 		isShortBigCombine := false
 		if settingNormal.Chance > 0 {
