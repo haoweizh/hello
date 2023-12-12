@@ -687,7 +687,7 @@ func CanOpenCombine(settingCombine, settingNormal *model.Setting, checkFulled bo
 		settingsCombine.Range(addTrading)
 		if settingNormal.MarketRelated == model.TurtleTypeChange && settingCombine.MarketRelated == model.TurtleTypeChange {
 			inAll = math.Abs(turtleSymbolNum) + float64(len(tradingSymbols))
-			if math.Abs(turtleSymbolNum) <= settingNormal.AmountLimit/2 {
+			if int(math.Abs(turtleSymbolNum)) < int(math.Ceil(settingNormal.AmountLimit/2)) {
 				canStartTurtle = true
 				canStartCombine = false
 			} else {

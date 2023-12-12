@@ -262,6 +262,12 @@ func placeTurtleLong(account *model.Account, orderType string, data *model.Turtl
 	if setting.Chance < 0 {
 		function = model.Close
 		amount = setting.GridAmount
+		if amount == 0 {
+			util.Notice(fmt.Sprintf(`fail to place short amt 0 from grid amt, set chance 0 %s %s %d`,
+				setting.Market, setting.Symbol, setting.Chance))
+			setting.Chance = 0
+			return
+		}
 	} else if !isBig {
 		amount = data.Amount / 2
 	}
@@ -348,6 +354,12 @@ func placeTurtleShort(account *model.Account, orderType string, data *model.Turt
 	if setting.Chance > 0 {
 		amount = setting.GridAmount
 		function = model.Close
+		if amount == 0 {
+			util.Notice(fmt.Sprintf(`fail to place short amt 0 from grid amt, set chance 0 %s %s %d`,
+				setting.Market, setting.Symbol, setting.Chance))
+			setting.Chance = 0
+			return
+		}
 	} else if !isBig {
 		amount = data.Amount / 2
 	}
