@@ -76,7 +76,7 @@ var ProcessCombineTurtle = func(settingCombine *model.Setting, tick *model.BidAs
 	}
 	turtleData := []*model.TurtleData{dataCombine, dataNormal}
 	checkFulled := true
-	if settingCombine.Seconds > 43200 {
+	if settingCombine.Seconds >= 43200 || settingCombine.Market == model.OKEX {
 		checkFulled = false
 	}
 	canOpen, canStartCombine, canStartTurtle, turtleCoins := api.CanOpenCombine(

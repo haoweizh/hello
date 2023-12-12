@@ -635,8 +635,7 @@ func CheckBreak(account *model.Account, market, symbol string, settings []*model
 }
 
 func CanOpenCombine(account *model.Account, settingCombine, settingNormal *model.Setting, dataCombine,
-	dataNormal *model.TurtleData, checkFulled bool) (
-	canOpen, canStartCombine, canStartTurtle bool, inAll float64) {
+	dataNormal *model.TurtleData, checkFulled bool) (canOpen, canStartCombine, canStartTurtle bool, inAll float64) {
 	success, _, coin, _ := model.GetFromStandard(settingCombine.Market, settingCombine.Symbol)
 	if !success {
 		return false, false, false, 0
