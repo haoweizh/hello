@@ -182,16 +182,8 @@ func placeCombineOrders(account *model.Account, dataNormal, dataCombine *model.T
 	if canOpen {
 		placeTurtleLong(account, model.OrderTypeStop, dataNormal, settingNormal, tick, canStartTurtle, true)
 		placeTurtleShort(account, model.OrderTypeStop, dataNormal, settingNormal, tick, canStartTurtle, true)
-		isLongBigCombine := false
-		isShortBigCombine := false
-		if settingNormal.Chance > 0 || settingNormal.MarketRelated == model.TurtleTypeChange {
-			isShortBigCombine = true
-		}
-		if settingNormal.Chance < 0 || settingNormal.MarketRelated == model.TurtleTypeChange {
-			isLongBigCombine = true
-		}
-		placeTurtleLong(account, model.OrderTypeLimit, dataCombine, settingCombine, tick, canStartCombine, isLongBigCombine)
-		placeTurtleShort(account, model.OrderTypeLimit, dataCombine, settingCombine, tick, canStartCombine, isShortBigCombine)
+		placeTurtleLong(account, model.OrderTypeLimit, dataCombine, settingCombine, tick, canStartCombine, true)
+		placeTurtleShort(account, model.OrderTypeLimit, dataCombine, settingCombine, tick, canStartCombine, true)
 		if !canStartTurtle && settingNormal.Chance == 0 {
 			removeTurtleOrders(account, settingNormal.Market, settingNormal.Symbol, dataNormal)
 		}
