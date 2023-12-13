@@ -648,28 +648,26 @@ func CanOpenCombine(settingCombine, settingNormal *model.Setting, checkFulled bo
 		return false, false, false, 0, 0
 	}
 	tradingSymbols := make(map[string]bool)
-	addTrading := func(symbol, value any) bool {
+	// 计算龟汤持仓币种的数目，持多仓的和空仓的都+1
+	sumCombine := func(symbol, value any) bool {
 		if value != nil {
 			valueSetting := value.(*model.Setting)
 			_, _, valueCoin, _ := model.GetFromStandard(valueSetting.Market, valueSetting.Symbol)
 			if !model.CommonCoins[strings.ToLower(valueCoin)] {
 				if valueSetting.Chance != 0 && valueSetting.Function == model.FunctionCombineTurtle {
-					normal := GetSetting(model.FunctionTurtleNormal, valueSetting.Market, valueSetting.Symbol)
-					if normal.Chance == 0 {
-						tradingSymbols[valueSetting.Symbol] = true
-					}
+					tradingSymbols[valueSetting.Symbol] = true
 				}
 			}
 		}
 		return true
 	}
-	sumChance := func(symbol, value any) bool {
+	// 计算海龟持仓币种的数目，持多仓的+1，空仓的-1
+	sumTurtle := func(symbol, value any) bool {
 		if value != nil {
 			valueSetting := value.(*model.Setting)
 			_, _, valueCoin, _ := model.GetFromStandard(valueSetting.Market, valueSetting.Symbol)
 			if !model.CommonCoins[strings.ToLower(valueCoin)] {
 				if valueSetting.Function == model.FunctionTurtleNormal {
-					//inAll += float64(valueSetting.Chance)
 					if valueSetting.Chance > 0 {
 						turtleSymbolNum++
 					} else if valueSetting.Chance < 0 {
@@ -680,17 +678,32 @@ func CanOpenCombine(settingCombine, settingNormal *model.Setting, checkFulled bo
 		}
 		return true
 	}
+	commonInTurtle := false
+	checkCommonTurtle := func(symbol, value any) bool {
+		if value != nil {
+			valueSetting := value.(*model.Setting)
+			_, _, valueCoin, _ := model.GetFromStandard(valueSetting.Market, valueSetting.Symbol)
+			if model.CommonCoins[strings.ToLower(valueCoin)] {
+				if valueSetting.Function == model.FunctionTurtleNormal && valueSetting.Chance != 0 {
+					commonInTurtle = true
+				}
+			}
+		}
+		return true
+	}
 	if model.CommonCoins[strings.ToLower(coin)] {
 		return true, true, true, 0, 0
 	} else {
-		settingsNormal.Range(sumChance)
-		settingsCombine.Range(addTrading)
+		settingsNormal.Range(sumTurtle)
+		settingsCombine.Range(sumCombine)
 		if settingNormal.MarketRelated == model.TurtleTypeChange && settingCombine.MarketRelated == model.TurtleTypeChange {
-			inAll = math.Abs(turtleSymbolNum) + float64(len(tradingSymbols))
-			if int(math.Abs(turtleSymbolNum)) < int(math.Ceil(settingNormal.AmountLimit/2)) {
+			settingsNormal.Range(checkCommonTurtle)
+			if commonInTurtle {
+				inAll = math.Abs(turtleSymbolNum)
 				canStartTurtle = true
 				canStartCombine = false
 			} else {
+				inAll = float64(len(tradingSymbols))
 				canStartTurtle = false
 				canStartCombine = true
 			}

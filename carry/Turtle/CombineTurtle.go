@@ -145,6 +145,26 @@ var placeTurtleLock = &sync.Map{} // key - *sync.Mutex{}
 // 单龟    可加龟  不加汤
 // 单汤    可加龟  可加汤
 // 双0     不加龟  不加汤
+// if canStartTurtle || settingNormal.Chance != 0 {
+// placeTurtleLong(account, model.OrderTypeStop, dataNormal, settingNormal, tick, canOpen, true)
+// placeTurtleShort(account, model.OrderTypeStop, dataNormal, settingNormal, tick, canOpen, true)
+// } else {
+// removeTurtleOrders(account, settingNormal.Market, settingNormal.Symbol, dataNormal)
+// }
+// if settingCombine.Chance != 0 || (canStartCombine && (settingNormal.Chance == 0 || canStartTurtle)) {
+// isLongBigCombine := false
+// isShortBigCombine := false
+// if settingNormal.Chance > 0 || settingNormal.MarketRelated == model.TurtleTypeChange {
+// isShortBigCombine = true
+// }
+// if settingNormal.Chance < 0 || settingNormal.MarketRelated == model.TurtleTypeChange {
+// isLongBigCombine = true
+// }
+// placeTurtleLong(account, model.OrderTypeLimit, dataCombine, settingCombine, tick, canOpen, isLongBigCombine)
+// placeTurtleShort(account, model.OrderTypeLimit, dataCombine, settingCombine, tick, canOpen, isShortBigCombine)
+// } else {
+// removeTurtleOrders(account, settingCombine.Market, settingCombine.Symbol, dataCombine)
+// }
 func placeCombineOrders(account *model.Account, dataNormal, dataCombine *model.TurtleData, settingNormal,
 	settingCombine *model.Setting, tick *model.BidAsk, canOpen, canStartTurtle, canStartCombine bool) {
 	var lock *sync.Mutex
@@ -160,24 +180,22 @@ func placeCombineOrders(account *model.Account, dataNormal, dataCombine *model.T
 		lock.Lock()
 	}
 	if canOpen {
-		if canStartTurtle || settingNormal.Chance != 0 {
-			placeTurtleLong(account, model.OrderTypeStop, dataNormal, settingNormal, tick, canOpen, true)
-			placeTurtleShort(account, model.OrderTypeStop, dataNormal, settingNormal, tick, canOpen, true)
-		} else {
+		placeTurtleLong(account, model.OrderTypeStop, dataNormal, settingNormal, tick, canStartTurtle, true)
+		placeTurtleShort(account, model.OrderTypeStop, dataNormal, settingNormal, tick, canStartTurtle, true)
+		isLongBigCombine := false
+		isShortBigCombine := false
+		if settingNormal.Chance > 0 || settingNormal.MarketRelated == model.TurtleTypeChange {
+			isShortBigCombine = true
+		}
+		if settingNormal.Chance < 0 || settingNormal.MarketRelated == model.TurtleTypeChange {
+			isLongBigCombine = true
+		}
+		placeTurtleLong(account, model.OrderTypeLimit, dataCombine, settingCombine, tick, canStartCombine, isLongBigCombine)
+		placeTurtleShort(account, model.OrderTypeLimit, dataCombine, settingCombine, tick, canStartCombine, isShortBigCombine)
+		if !canStartTurtle && settingNormal.Chance == 0 {
 			removeTurtleOrders(account, settingNormal.Market, settingNormal.Symbol, dataNormal)
 		}
-		if settingCombine.Chance != 0 || (canStartCombine && (settingNormal.Chance == 0 || canStartTurtle)) {
-			isLongBigCombine := false
-			isShortBigCombine := false
-			if settingNormal.Chance > 0 || settingNormal.MarketRelated == model.TurtleTypeChange {
-				isShortBigCombine = true
-			}
-			if settingNormal.Chance < 0 || settingNormal.MarketRelated == model.TurtleTypeChange {
-				isLongBigCombine = true
-			}
-			placeTurtleLong(account, model.OrderTypeLimit, dataCombine, settingCombine, tick, canOpen, isLongBigCombine)
-			placeTurtleShort(account, model.OrderTypeLimit, dataCombine, settingCombine, tick, canOpen, isShortBigCombine)
-		} else {
+		if !canStartCombine && settingCombine.Chance == 0 {
 			removeTurtleOrders(account, settingCombine.Market, settingCombine.Symbol, dataCombine)
 		}
 	} else {
