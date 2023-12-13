@@ -169,10 +169,10 @@ func placeCombineOrders(account *model.Account, dataNormal, dataCombine *model.T
 		if settingCombine.Chance != 0 || (canStartCombine && (settingNormal.Chance == 0 || canStartTurtle)) {
 			isLongBigCombine := false
 			isShortBigCombine := false
-			if settingNormal.Chance > 0 {
+			if settingNormal.Chance > 0 || settingNormal.MarketRelated == model.TurtleTypeChange {
 				isShortBigCombine = true
 			}
-			if settingNormal.Chance < 0 {
+			if settingNormal.Chance < 0 || settingNormal.MarketRelated == model.TurtleTypeChange {
 				isLongBigCombine = true
 			}
 			placeTurtleLong(account, model.OrderTypeLimit, dataCombine, settingCombine, tick, canOpen, isLongBigCombine)
