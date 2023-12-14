@@ -647,15 +647,15 @@ func CanOpenCombine(settingCombine, settingNormal *model.Setting, checkFulled bo
 	if settingsCombine == nil || settingsNormal == nil {
 		return false, false, false, 0, 0
 	}
-	tradingSymbols := make(map[string]bool)
-	// 计算持仓币种的数目，持多仓的和空仓的都+1
-	sumTrading := func(symbol, value any) bool {
+	tradingCombines := make(map[string]bool)
+	// 计算龟汤持仓币种的数目，持多仓的和空仓的都+1
+	sumCombine := func(symbol, value any) bool {
 		if value != nil {
 			valueSetting := value.(*model.Setting)
 			_, _, valueCoin, _ := model.GetFromStandard(valueSetting.Market, valueSetting.Symbol)
 			if !model.CommonCoins[strings.ToLower(valueCoin)] {
-				if valueSetting.Chance != 0 {
-					tradingSymbols[valueSetting.Symbol] = true
+				if valueSetting.Chance != 0 && valueSetting.Function == model.FunctionCombineTurtle {
+					tradingCombines[valueSetting.Symbol] = true
 				}
 			}
 		}
@@ -698,8 +698,7 @@ func CanOpenCombine(settingCombine, settingNormal *model.Setting, checkFulled bo
 		return true, true, true, 0, 0
 	} else {
 		settingsNormal.Range(sumTurtle)
-		settingsCombine.Range(sumTrading)
-		settingsNormal.Range(sumTrading)
+		settingsCombine.Range(sumCombine)
 		if settingNormal.MarketRelated == model.TurtleTypeChange && settingCombine.MarketRelated == model.TurtleTypeChange {
 			settingsNormal.Range(checkCommonTurtle)
 			if commonInTurtle {
@@ -707,13 +706,13 @@ func CanOpenCombine(settingCombine, settingNormal *model.Setting, checkFulled bo
 				canStartTurtle = true
 				canStartCombine = false
 			} else {
-				inAll = float64(len(tradingSymbols))
+				inAll = float64(len(tradingCombines)) + math.Abs(turtleSymbolNum)
 				canStartTurtle = false
 				canStartCombine = true
 			}
+			inAll = float64(len(tradingCombines)) + math.Abs(turtleSymbolNum)
 			canStartTurtle = false
 			canStartCombine = true
-			inAll = float64(len(tradingSymbols))
 		} else {
 			inAll = turtleSymbolNum
 			canStartTurtle = true
