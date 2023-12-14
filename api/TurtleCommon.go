@@ -678,38 +678,38 @@ func CanOpenCombine(settingCombine, settingNormal *model.Setting, checkFulled bo
 		}
 		return true
 	}
-	//commonInTurtle := false
-	//checkCommonTurtle := func(symbol, value any) bool {
-	//	if value != nil {
-	//		valueSetting := value.(*model.Setting)
-	//		_, _, valueCoin, _ := model.GetFromStandard(valueSetting.Market, valueSetting.Symbol)
-	//		if strings.ToLower(valueCoin) == `btc` || strings.ToLower(valueCoin) == `eth` { // model.CommonCoins[strings.ToLower(valueCoin)] {
-	//			if valueSetting.Function == model.FunctionTurtleNormal && valueSetting.Chance != 0 {
-	//				commonInTurtle = true
-	//				if time.Now().Second() == 0 {
-	//					util.Info(fmt.Sprintf(`set turtle true %s %s`, valueSetting.Market, valueSetting.Symbol))
-	//				}
-	//			}
-	//		}
-	//	}
-	//	return true
-	//}
+	commonInTurtle := false
+	checkCommonTurtle := func(symbol, value any) bool {
+		if value != nil {
+			valueSetting := value.(*model.Setting)
+			_, _, valueCoin, _ := model.GetFromStandard(valueSetting.Market, valueSetting.Symbol)
+			if strings.ToLower(valueCoin) == `btc` || strings.ToLower(valueCoin) == `eth` { // model.CommonCoins[strings.ToLower(valueCoin)] {
+				if valueSetting.Function == model.FunctionTurtleNormal && valueSetting.Chance != 0 {
+					commonInTurtle = true
+					if time.Now().Second() == 0 {
+						util.Info(fmt.Sprintf(`set turtle true %s %s`, valueSetting.Market, valueSetting.Symbol))
+					}
+				}
+			}
+		}
+		return true
+	}
 	if model.CommonCoins[strings.ToLower(coin)] {
 		return true, true, true, 0, 0
 	} else {
 		settingsNormal.Range(sumTurtle)
 		settingsCombine.Range(sumCombine)
 		if settingNormal.MarketRelated == model.TurtleTypeChange && settingCombine.MarketRelated == model.TurtleTypeChange {
-			//settingsNormal.Range(checkCommonTurtle)
-			//if commonInTurtle {
-			//	inAll = math.Abs(turtleSymbolNum)
-			//	canStartTurtle = true
-			//	canStartCombine = false
-			//} else {
-			//	inAll = float64(len(tradingSymbols))
-			//	canStartTurtle = false
-			//	canStartCombine = true
-			//}
+			settingsNormal.Range(checkCommonTurtle)
+			if commonInTurtle {
+				inAll = math.Abs(turtleSymbolNum)
+				canStartTurtle = true
+				canStartCombine = false
+			} else {
+				inAll = float64(len(tradingSymbols))
+				canStartTurtle = false
+				canStartCombine = true
+			}
 			canStartTurtle = false
 			canStartCombine = true
 		} else {
