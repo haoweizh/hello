@@ -700,15 +700,23 @@ func CanOpenCombine(settingCombine, settingNormal *model.Setting, checkFulled bo
 		settingsNormal.Range(sumTurtle)
 		settingsCombine.Range(sumCombine)
 		if settingNormal.MarketRelated == model.TurtleTypeChange && settingCombine.MarketRelated == model.TurtleTypeChange {
-			settingsNormal.Range(checkCommonTurtle)
-			if commonInTurtle {
-				inAll = math.Abs(turtleSymbolNum)
+			if settingCombine.ChanceLimitCombine == 1 && settingNormal.ChanceLimitCombine == 1 {
 				canStartTurtle = true
 				canStartCombine = false
-			} else {
-				inAll = float64(len(tradingSymbols))
+			} else if settingCombine.ChanceLimitCombine == -1 && settingNormal.ChanceLimitCombine == -1 {
 				canStartTurtle = false
 				canStartCombine = true
+			} else {
+				settingsNormal.Range(checkCommonTurtle)
+				if commonInTurtle {
+					inAll = math.Abs(turtleSymbolNum)
+					canStartTurtle = true
+					canStartCombine = false
+				} else {
+					inAll = float64(len(tradingSymbols))
+					canStartTurtle = false
+					canStartCombine = true
+				}
 			}
 		} else {
 			inAll = turtleSymbolNum
