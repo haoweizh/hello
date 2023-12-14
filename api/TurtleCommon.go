@@ -649,13 +649,16 @@ func CanOpenCombine(settingCombine, settingNormal *model.Setting, checkFulled bo
 	}
 	tradingCombines := make(map[string]bool)
 	// 计算龟汤持仓币种的数目，持多仓的和空仓的都+1
-	sumCombine := func(symbol, value any) bool {
+	sumCombineOnly := func(symbol, value any) bool {
 		if value != nil {
 			valueSetting := value.(*model.Setting)
 			_, _, valueCoin, _ := model.GetFromStandard(valueSetting.Market, valueSetting.Symbol)
 			if !model.CommonCoins[strings.ToLower(valueCoin)] {
 				if valueSetting.Chance != 0 && valueSetting.Function == model.FunctionCombineTurtle {
-					tradingCombines[valueSetting.Symbol] = true
+					normal := GetSetting(model.FunctionTurtleNormal, valueSetting.Market, valueSetting.Symbol)
+					if normal != nil && normal.Chance == 0 {
+						tradingCombines[valueSetting.Symbol] = true
+					}
 				}
 			}
 		}
@@ -698,7 +701,7 @@ func CanOpenCombine(settingCombine, settingNormal *model.Setting, checkFulled bo
 		return true, true, true, 0, 0
 	} else {
 		settingsNormal.Range(sumTurtle)
-		settingsCombine.Range(sumCombine)
+		settingsCombine.Range(sumCombineOnly)
 		if settingNormal.MarketRelated == model.TurtleTypeChange && settingCombine.MarketRelated == model.TurtleTypeChange {
 			settingsNormal.Range(checkCommonTurtle)
 			if commonInTurtle {
