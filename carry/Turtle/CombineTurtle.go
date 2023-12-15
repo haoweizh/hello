@@ -119,7 +119,7 @@ var ProcessCombineTurtle = func(settingCombine *model.Setting, tick *model.BidAs
 		}
 		if allLiquidate {
 			for _, data := range turtleData {
-				data.AdjustChecked = false
+				//data.AdjustChecked = false
 				util.Notice(fmt.Sprintf(`set need check adjust after both setting liquidate %s %s`,
 					settingCombine.Market, data.Symbol))
 			}
