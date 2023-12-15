@@ -686,9 +686,6 @@ func CanOpenCombine(settingCombine, settingNormal *model.Setting, checkFulled bo
 			if strings.ToLower(valueCoin) == `btc` || strings.ToLower(valueCoin) == `eth` { // model.CommonCoins[strings.ToLower(valueCoin)] {
 				if valueSetting.Function == model.FunctionTurtleNormal && valueSetting.Chance != 0 {
 					commonInTurtle = true
-					if time.Now().Second() == 0 {
-						util.Info(fmt.Sprintf(`set turtle true %s %s`, valueSetting.Market, valueSetting.Symbol))
-					}
 				}
 			}
 		}

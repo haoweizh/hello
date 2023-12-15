@@ -73,7 +73,11 @@ func GetFunctions(market, symbol string) *sync.Map {
 	return nil
 }
 
+var lockRefreshSetting sync.Mutex
+
 func PrepareSettings() {
+	lockRefreshSetting.Lock()
+	defer lockRefreshSetting.Unlock()
 	localSymbolSettings := &sync.Map{}
 	localHandlers := &sync.Map{}
 	localCoinSettings := &sync.Map{}
