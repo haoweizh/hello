@@ -62,11 +62,12 @@ func RequireDepthChanReset(markets *model.Markets, market string) bool {
 		return true
 	}
 	now := util.GetNowUnixMillion()
-	validSymbols := 0
+	validSymbolNum := 0
+	validSymbols := make(map[string]bool)
 	symbols := GetMarketSymbols(market)
 	for symbol := range symbols {
 		if len(strings.Trim(symbol, ` `)) == 0 {
-			validSymbols++
+			validSymbolNum++
 		}
 		_, bidAsk := markets.GetBidAsk(symbol, market)
 		if bidAsk == nil {
@@ -74,16 +75,36 @@ func RequireDepthChanReset(markets *model.Markets, market string) bool {
 		}
 		delay := float64(now - int64(bidAsk.Ts))
 		if delay < model.AppConfig.Delay {
-			validSymbols++
+			validSymbolNum++
+			validSymbols[symbol] = true
 			//util.Notice(fmt.Sprintf(`RequireDepthChanReset valid %d %s %s %f<%f`,
-			//	validSymbols, market, symbol, delay, model.AppConfig.Delay))
+			//	validSymbolNum, market, symbol, delay, model.AppConfig.Delay))
 		} else {
 			util.Info(fmt.Sprintf(`RequireDepthChanReset delay too long %s %s %f`, market, symbol, delay))
 		}
 	}
-	needReset = float64(validSymbols) < float64(len(symbols))*0.8 || len(symbols)-validSymbols > 50
+	needReset = float64(validSymbolNum) < float64(len(symbols))*0.8 || len(symbols)-validSymbolNum > 50
+	for funcName := range model.HandlerMap {
+		settings := GetSettings(funcName, market)
+		if settings == nil {
+			continue
+		}
+		settings.Range(func(key, value interface{}) bool {
+			if value == nil {
+				return true
+			}
+			setting := value.(*model.Setting)
+			if setting.Function != model.FunctionCross && !validSymbols[setting.Symbol] {
+				util.Notice(fmt.Sprintf(`need reset for important time out %s %s %s`,
+					market, setting.Function, setting.Symbol))
+				needReset = true
+				return false
+			}
+			return true
+		})
+	}
 	util.Info(fmt.Sprintf(`RequireDepthChanReset %s %d  %f valid %d in %d needReset %v`,
-		market, now, model.AppConfig.Delay, validSymbols, len(symbols), needReset))
+		market, now, model.AppConfig.Delay, validSymbolNum, len(symbols), needReset))
 	return needReset.(bool)
 }
 
