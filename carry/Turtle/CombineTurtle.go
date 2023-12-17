@@ -40,8 +40,10 @@ var ProcessCombineTurtle = func(settingCombine *model.Setting, tick *model.BidAs
 	}
 	account := model.AppConfig.GetAccounts(market)[0]
 	if (settingCombine.Chance != 0 && settingCombine.PriceX == 0) || (settingNormal.Chance != 0 && settingNormal.PriceX == 0) {
-		util.Notice(fmt.Sprintf(`combine return no last priceX %s %s %d %e %d %e`,
-			market, symbol, settingCombine.Chance, settingCombine.PriceX, settingNormal.Chance, settingNormal.PriceX))
+		if time.Now().Second() == 0 {
+			util.Notice(fmt.Sprintf(`combine return no last priceX %s %s %d %e %d %e`,
+				market, symbol, settingCombine.Chance, settingCombine.PriceX, settingNormal.Chance, settingNormal.PriceX))
+		}
 		return
 	}
 	settings := []*model.Setting{settingCombine, settingNormal}
@@ -63,6 +65,9 @@ var ProcessCombineTurtle = func(settingCombine *model.Setting, tick *model.BidAs
 		return
 	}
 	if time.Now().After(dataCombine.Expire) || time.Now().After(dataNormal.Expire) {
+		if time.Now().Second() == 0 {
+			util.Notice(fmt.Sprintf(`turtle data expired %s %s`, settingCombine.Market, settingCombine.Symbol))
+		}
 		return
 	}
 	if !dataCombine.OrderCleared {
@@ -72,6 +77,10 @@ var ProcessCombineTurtle = func(settingCombine *model.Setting, tick *model.BidAs
 		return
 	}
 	if dataNormal.N == 0 || dataNormal.Amount == 0 || dataCombine.N == 0 || dataCombine.Amount == 0 {
+		if time.Now().Second() == 0 {
+			util.Notice(fmt.Sprintf(`invalid turtle data n %s %s %f %f %f %f`,
+				settingCombine.Market, settingCombine.Symbol, dataNormal.N, dataNormal.Amount, dataCombine.N, dataCombine.Amount))
+		}
 		return
 	}
 	turtleData := []*model.TurtleData{dataCombine, dataNormal}
