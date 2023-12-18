@@ -193,31 +193,45 @@ func placeCombineOrders(account *model.Account, dataNormal, dataCombine *model.T
 		placeTurtleShort(account, model.OrderTypeStop, dataNormal, settingNormal, tick, canStartTurtle, true)
 		placeTurtleLong(account, model.OrderTypeLimit, dataCombine, settingCombine, tick, canStartCombine, true)
 		placeTurtleShort(account, model.OrderTypeLimit, dataCombine, settingCombine, tick, canStartCombine, true)
-		if !canStartTurtle && settingNormal.Chance == 0 {
-			removeTurtleOrders(account, settingNormal.Market, settingNormal.Symbol, dataNormal)
+		if !canStartTurtle {
+			removeLongOrders(account, settingNormal, dataNormal)
+			removeShortOrders(account, settingNormal, dataNormal)
 		}
-		if !canStartCombine && settingCombine.Chance == 0 {
-			removeTurtleOrders(account, settingCombine.Market, settingCombine.Symbol, dataCombine)
+		if !canStartCombine {
+			removeLongOrders(account, settingCombine, dataCombine)
+			removeShortOrders(account, settingCombine, dataCombine)
 		}
 	} else {
-		removeTurtleOrders(account, settingNormal.Market, settingNormal.Symbol, dataNormal)
-		removeTurtleOrders(account, settingCombine.Market, settingCombine.Symbol, dataCombine)
+		removeLongOrders(account, settingNormal, dataNormal)
+		removeShortOrders(account, settingNormal, dataNormal)
+		removeLongOrders(account, settingCombine, dataCombine)
+		removeShortOrders(account, settingCombine, dataCombine)
 	}
 }
 
-func removeTurtleOrders(account *model.Account, market, symbol string, data *model.TurtleData) {
-	if data == nil {
+func removeLongOrders(account *model.Account, setting *model.Setting, data *model.TurtleData) {
+	if data == nil || setting == nil {
 		return
 	}
-	if data.OrderLong != nil {
-		for _, order := range data.OrderLong {
-			api.MustCancel(account.Key, account.Secret, market, symbol, order.OrderType, order.OrderId, false)
+	if setting.Chance >= 0 {
+		if data.OrderLong != nil {
+			for _, order := range data.OrderLong {
+				api.MustCancel(account.Key, account.Secret, setting.Market, setting.Symbol, order.OrderType, order.OrderId, false)
+			}
 		}
 		data.OrderLong = nil
 	}
-	if data.OrderShort != nil {
-		for _, order := range data.OrderShort {
-			api.MustCancel(account.Key, account.Secret, market, symbol, order.OrderType, order.OrderId, false)
+}
+
+func removeShortOrders(account *model.Account, setting *model.Setting, data *model.TurtleData) {
+	if data == nil || setting == nil {
+		return
+	}
+	if setting.Chance <= 0 {
+		if data.OrderShort != nil {
+			for _, order := range data.OrderShort {
+				api.MustCancel(account.Key, account.Secret, setting.Market, setting.Symbol, order.OrderType, order.OrderId, false)
+			}
 		}
 		data.OrderShort = nil
 	}
