@@ -710,9 +710,6 @@ func CanOpenCombine(settingCombine, settingNormal *model.Setting, checkFulled bo
 				canStartTurtle = false
 				canStartCombine = true
 			}
-			inAll = float64(len(tradingCombines)) + math.Abs(turtleSymbolNum)
-			canStartTurtle = false
-			canStartCombine = true
 		} else {
 			inAll = turtleSymbolNum
 			canStartTurtle = true
