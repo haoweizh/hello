@@ -681,14 +681,14 @@ func CanOpenCombine(settingCombine, settingNormal *model.Setting, checkFulled bo
 		}
 		return true
 	}
-	commonInTurtle := false
+	btcInTurtle := false
 	checkCommonTurtle := func(symbol, value any) bool {
 		if value != nil {
 			valueSetting := value.(*model.Setting)
 			_, _, valueCoin, _ := model.GetFromStandard(valueSetting.Market, valueSetting.Symbol)
-			if strings.ToLower(valueCoin) == `btc` || strings.ToLower(valueCoin) == `eth` { // model.CommonCoins[strings.ToLower(valueCoin)] {
+			if strings.ToLower(valueCoin) == `btc` {
 				if valueSetting.Function == model.FunctionTurtleNormal && valueSetting.Chance != 0 {
-					commonInTurtle = true
+					btcInTurtle = true
 				}
 			}
 		}
@@ -701,7 +701,7 @@ func CanOpenCombine(settingCombine, settingNormal *model.Setting, checkFulled bo
 		settingsCombine.Range(sumCombineOnly)
 		if settingNormal.MarketRelated == model.TurtleTypeChange && settingCombine.MarketRelated == model.TurtleTypeChange {
 			settingsNormal.Range(checkCommonTurtle)
-			if commonInTurtle {
+			if btcInTurtle {
 				inAll = math.Abs(turtleSymbolNum)
 				canStartTurtle = true
 				canStartCombine = false
