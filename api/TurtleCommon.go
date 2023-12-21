@@ -681,41 +681,45 @@ func CanOpenCombine(settingCombine, settingNormal *model.Setting, checkFulled bo
 		}
 		return true
 	}
-	btcInTurtle := false
-	checkCommonTurtle := func(symbol, value any) bool {
-		if value != nil {
-			valueSetting := value.(*model.Setting)
-			_, _, valueCoin, _ := model.GetFromStandard(valueSetting.Market, valueSetting.Symbol)
-			if strings.ToLower(valueCoin) == `btc` {
-				if valueSetting.Function == model.FunctionTurtleNormal && valueSetting.Chance != 0 {
-					btcInTurtle = true
-				}
-			}
-		}
-		return true
-	}
+	//btcInTurtle := false
+	//checkCommonTurtle := func(symbol, value any) bool {
+	//	if value != nil {
+	//		valueSetting := value.(*model.Setting)
+	//		_, _, valueCoin, _ := model.GetFromStandard(valueSetting.Market, valueSetting.Symbol)
+	//		if strings.ToLower(valueCoin) == `btc` {
+	//			if valueSetting.Function == model.FunctionTurtleNormal && valueSetting.Chance != 0 {
+	//				btcInTurtle = true
+	//			}
+	//		}
+	//	}
+	//	return true
+	//}
 	if model.CommonCoins[strings.ToLower(coin)] {
 		return true, true, true, 0, 0
 	} else {
 		settingsNormal.Range(sumTurtle)
 		settingsCombine.Range(sumCombineOnly)
 		if settingNormal.MarketRelated == model.TurtleTypeChange && settingCombine.MarketRelated == model.TurtleTypeChange {
-			settingsNormal.Range(checkCommonTurtle)
-			if btcInTurtle {
-				inAll = math.Abs(turtleSymbolNum)
-				canStartTurtle = true
-				canStartCombine = false
-			} else {
+			btcSetting := GetSetting(model.FunctionTurtleNormal, settingNormal.Market, `BTC_PERP`)
+			if btcSetting == nil || btcSetting.Chance == 0 {
 				inAll = float64(len(tradingCombines)) + math.Abs(turtleSymbolNum)
 				canStartTurtle = false
 				canStartCombine = true
+			} else if int(math.Abs(float64(btcSetting.Chance))) == 1 {
+				inAll = turtleSymbolNum
+				canStartTurtle = true
+				canStartCombine = true
+			} else if int(math.Abs(float64(btcSetting.Chance))) == 2 {
+				inAll = turtleSymbolNum
+				canStartTurtle = true
+				canStartCombine = false
 			}
 		} else {
 			inAll = turtleSymbolNum
 			canStartTurtle = true
 			canStartCombine = true
 		}
-		canOpen = settingCombine.Chance != 0 || settingNormal.Chance != 0 || (inAll < settingCombine.AmountLimit &&
+		canOpen = settingCombine.Chance != 0 || settingNormal.Chance != 0 || (math.Abs(inAll) < settingCombine.AmountLimit &&
 			settingCombine.SymbolRelated != model.SettingTurtleRemoved && settingNormal.SymbolRelated != model.SettingTurtleRemoved)
 		if checkFulled {
 			now := time.Now()
@@ -723,7 +727,7 @@ func CanOpenCombine(settingCombine, settingNormal *model.Setting, checkFulled bo
 			fulled, _ := util.LoadSyncMap(CombineFulled, settingCombine.Market, nowStr)
 			if fulled != nil && fulled.(bool) {
 				canOpen = settingCombine.Chance != 0 || settingNormal.Chance != 0
-			} else if inAll >= settingCombine.AmountLimit {
+			} else if math.Abs(inAll) >= settingCombine.AmountLimit {
 				util.StoreSyncMap(CombineFulled, true, settingCombine.Market, nowStr)
 			}
 			//settingNormal.ChanceLimitCombine = int64(inAll)
