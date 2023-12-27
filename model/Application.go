@@ -21,7 +21,7 @@ var AppMetric = &MetricManager{}
 var IgnoreFunctions = map[string]bool{FunctionDynamicTurtle: true, FunctionTurtleNormal: true,
 	FunctionDynamicCombine: true, FunctionDynamicBoost: true}
 
-const DefaultLeverage = 5
+const DefaultLeverage = 3
 const BitgetSpot = `bitgetspot`
 const BitgetPerp = `bitgetperp`
 const Kucoin = `kucoin`
