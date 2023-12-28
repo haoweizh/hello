@@ -51,6 +51,7 @@ func ParameterServe() {
 	router.GET(`gxzq`, simulateGXZQ)
 	router.GET(`candles`, getCandles)
 	router.GET(`mine`, mindZeroAddr)
+	router.GET(`clear`, clearSpot)
 	var err error
 	if model.AppConfig.Port == `443` {
 		err = router.RunTLS(":"+model.AppConfig.Port, `./server.pem`, `./server.key`)
@@ -61,6 +62,25 @@ func ParameterServe() {
 		fmt.Println(`port occupied, exit ` + err.Error())
 		os.Exit(1)
 	}
+}
+
+func clearSpot(c *gin.Context) {
+	accounts := model.GetAccounts(0)
+	for _, account := range accounts {
+		_, balances, _, _ := api.GetBalances(account.Key, account.Secret, account.Market)
+		for _, balance := range balances {
+			symbol := strings.ToUpper(balance.Coin + `_USDT`)
+			_, tick := model.AppMarkets.GetBidAsk(symbol, account.Market)
+			if tick == nil {
+				continue
+			}
+			order := api.PlaceOrder(account.Key, account.Secret, model.OrderSideSell, model.OrderTypeMarket, account.Market, symbol,
+				``, tick.Bids[0].Price, tick.Bids[0].Price, balance.Amount, false, nil, nil)
+			util.Notice(fmt.Sprintf(`sell %s amt %f at %f orderId %s`, order.Symbol, order.Amount, order.Price, order.OrderId))
+			time.Sleep(time.Second)
+		}
+	}
+	c.String(http.StatusOK, `done`)
 }
 
 func setSimulating(value bool) {

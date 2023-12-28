@@ -504,6 +504,20 @@ func Test_transferInner(t *testing.T) {
 	}
 }
 
+func Test_ClearSpot(t *testing.T) {
+	model.NewConfig()
+	key := model.AppConfig.BitgetKey
+	secret := model.AppConfig.BitmexSecret
+	market := model.BitgetSpot
+	_, balances, _, _ := api.GetBalances(key, secret, market)
+	for _, balance := range balances {
+		order := api.PlaceOrder(key, secret, model.OrderSideSell, model.OrderTypeMarket, market, strings.ToUpper(balance.Coin+`_USDT`),
+			``, 44444, 44444, balance.Amount, false, nil, nil)
+		fmt.Println(fmt.Sprintf(`sell %s amt %f at %f orderId %s`, order.Symbol, order.Amount, order.Price, order.OrderId))
+		time.Sleep(time.Second)
+	}
+}
+
 func Test_wallet(t *testing.T) {
 	model.NewConfig()
 	var key, secret string
