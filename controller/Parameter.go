@@ -76,7 +76,7 @@ func clearSpot(c *gin.Context) {
 		for _, balance := range balances {
 			symbol := strings.ToUpper(balance.Coin + `_USDT`)
 			_, tick := model.AppMarkets.GetBidAsk(symbol, account.Market)
-			if tick == nil {
+			if tick == nil || tick.Bids[0].Price*balance.Amount < 20 {
 				continue
 			}
 			order := api.PlaceOrder(account.Key, account.Secret, model.OrderSideSell, model.OrderTypeMarket, account.Market, symbol,
