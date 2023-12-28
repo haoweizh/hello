@@ -51,7 +51,6 @@ func ParameterServe() {
 	router.GET(`gxzq`, simulateGXZQ)
 	router.GET(`candles`, getCandles)
 	router.GET(`mine`, mindZeroAddr)
-	router.GET(`clear`, clearSpot)
 	var err error
 	if model.AppConfig.Port == `443` {
 		err = router.RunTLS(":"+model.AppConfig.Port, `./server.pem`, `./server.key`)
@@ -64,29 +63,29 @@ func ParameterServe() {
 	}
 }
 
-func clearSpot(c *gin.Context) {
-	accounts := model.GetAccounts(0)
-	util.Notice(fmt.Sprintf(`get accounts %d`, len(accounts)))
-	for _, account := range accounts {
-		if account == nil || (account.Market != model.Gate && account.Market != model.BinanceSpot) {
-			continue
-		}
-		util.Notice(fmt.Sprintf(`start to clear account %s %s`, account.Market, account.Key))
-		_, balances, _, _ := api.GetBalances(account.Key, account.Secret, account.Market)
-		for _, balance := range balances {
-			symbol := strings.ToUpper(balance.Coin + `_USDT`)
-			_, tick := model.AppMarkets.GetBidAsk(symbol, account.Market)
-			if tick == nil || tick.Bids[0].Price*balance.Amount < 20 {
-				continue
-			}
-			order := api.PlaceOrder(account.Key, account.Secret, model.OrderSideSell, model.OrderTypeLimit, account.Market, symbol,
-				``, tick.Bids[0].Price*0.98, tick.Bids[0].Price*0.98, balance.Amount*0.98, false, nil, nil)
-			util.Notice(fmt.Sprintf(`sell %s amt %f at %f orderId %s`, order.Symbol, order.Amount, order.Price, order.OrderId))
-			time.Sleep(time.Second)
-		}
-	}
-	c.String(http.StatusOK, `done`)
-}
+//func clearSpot(c *gin.Context) {
+//	accounts := model.GetAccounts(0)
+//	util.Notice(fmt.Sprintf(`get accounts %d`, len(accounts)))
+//	for _, account := range accounts {
+//		if account == nil || (account.Market != model.Gate && account.Market != model.BinanceSpot) {
+//			continue
+//		}
+//		util.Notice(fmt.Sprintf(`start to clear account %s %s`, account.Market, account.Key))
+//		_, balances, _, _ := api.GetBalances(account.Key, account.Secret, account.Market)
+//		for _, balance := range balances {
+//			symbol := strings.ToUpper(balance.Coin + `_USDT`)
+//			_, tick := model.AppMarkets.GetBidAsk(symbol, account.Market)
+//			if tick == nil || tick.Bids[0].Price*balance.Amount < 20 {
+//				continue
+//			}
+//			order := api.PlaceOrder(account.Key, account.Secret, model.OrderSideSell, model.OrderTypeLimit, account.Market, symbol,
+//				``, tick.Bids[0].Price*0.98, tick.Bids[0].Price*0.98, balance.Amount*0.98, false, nil, nil)
+//			util.Notice(fmt.Sprintf(`sell %s amt %f at %f orderId %s`, order.Symbol, order.Amount, order.Price, order.OrderId))
+//			time.Sleep(time.Second)
+//		}
+//	}
+//	c.String(http.StatusOK, `done`)
+//}
 
 func setSimulating(value bool) {
 	simulating = value
