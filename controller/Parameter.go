@@ -66,7 +66,12 @@ func ParameterServe() {
 
 func clearSpot(c *gin.Context) {
 	accounts := model.GetAccounts(0)
+	util.Notice(fmt.Sprintf(`get accounts %d`, len(accounts)))
 	for _, account := range accounts {
+		if account == nil {
+			continue
+		}
+		util.Notice(fmt.Sprintf(`start to clear account %s %s`, account.Market, account.Key))
 		_, balances, _, _ := api.GetBalances(account.Key, account.Secret, account.Market)
 		for _, balance := range balances {
 			symbol := strings.ToUpper(balance.Coin + `_USDT`)
