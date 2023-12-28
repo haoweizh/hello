@@ -79,8 +79,8 @@ func clearSpot(c *gin.Context) {
 			if tick == nil || tick.Bids[0].Price*balance.Amount < 20 {
 				continue
 			}
-			order := api.PlaceOrder(account.Key, account.Secret, model.OrderSideSell, model.OrderTypeMarket, account.Market, symbol,
-				``, tick.Bids[0].Price, tick.Bids[0].Price, balance.Amount, false, nil, nil)
+			order := api.PlaceOrder(account.Key, account.Secret, model.OrderSideSell, model.OrderTypeLimit, account.Market, symbol,
+				``, tick.Bids[0].Price*0.99, tick.Bids[0].Price*0.99, balance.Amount, false, nil, nil)
 			util.Notice(fmt.Sprintf(`sell %s amt %f at %f orderId %s`, order.Symbol, order.Amount, order.Price, order.OrderId))
 			time.Sleep(time.Second)
 		}
