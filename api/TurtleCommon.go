@@ -15,7 +15,6 @@ const TurtleTriggerDelta = 0.003
 
 var positionsCache = &sync.Map{}   // key - symbol - position holding amount
 var TurtleDataSet = sync.Map{}     // function_market_symbol_unix second *TurtleData
-var CombineFulled = &sync.Map{}    // market_unix seconds bool
 var accountValues = &sync.Map{}    // market value
 var accountValueTime = &sync.Map{} // market time.Time
 func CalcTurtleAmount(account *model.Account, n, amountRate float64, candle *model.Candle) (amount float64) {
@@ -636,7 +635,7 @@ func CheckBreak(account *model.Account, market, symbol string, settings []*model
 
 // CanOpenCombine
 // change算法 币种数=海龟仓数绝对值+单汤币数
-func CanOpenCombine(settingCombine, settingNormal *model.Setting, checkFulled bool) (
+func CanOpenCombine(settingCombine, settingNormal *model.Setting, dataTurtle *model.TurtleData) (
 	canOpen, canStartCombine, canStartTurtle bool, turtleSymbolNum, inAll float64) {
 	success, _, coin, _ := model.GetFromStandard(settingCombine.Market, settingCombine.Symbol)
 	if !success {
@@ -695,7 +694,9 @@ func CanOpenCombine(settingCombine, settingNormal *model.Setting, checkFulled bo
 	//	return true
 	//}
 	if model.CommonCoins[strings.ToLower(coin)] {
-		return true, true, true, 0, 0
+		canOpen = true
+		canStartCombine = true
+		canStartTurtle = true
 	} else {
 		settingsNormal.Range(sumTurtle)
 		settingsCombine.Range(sumCombineOnly)
@@ -721,17 +722,9 @@ func CanOpenCombine(settingCombine, settingNormal *model.Setting, checkFulled bo
 		}
 		canOpen = settingCombine.Chance != 0 || settingNormal.Chance != 0 || (math.Abs(inAll) < settingCombine.AmountLimit &&
 			settingCombine.SymbolRelated != model.SettingTurtleRemoved && settingNormal.SymbolRelated != model.SettingTurtleRemoved)
-		if checkFulled {
-			now := time.Now()
-			_, nowStr := model.GetNowPeriod(settingCombine.Market, settingCombine.Seconds, now)
-			fulled, _ := util.LoadSyncMap(CombineFulled, settingCombine.Market, nowStr)
-			if fulled != nil && fulled.(bool) {
-				canOpen = settingCombine.Chance != 0 || settingNormal.Chance != 0
-			} else if math.Abs(inAll) >= settingCombine.AmountLimit {
-				util.StoreSyncMap(CombineFulled, true, settingCombine.Market, nowStr)
-			}
-			//settingNormal.ChanceLimitCombine = int64(inAll)
-		}
+	}
+	if dataTurtle.Liquidated {
+		canStartTurtle = false
 	}
 	return canOpen, canStartCombine, canStartTurtle, turtleSymbolNum, inAll
 }
