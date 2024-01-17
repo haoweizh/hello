@@ -88,7 +88,7 @@ var ProcessCombineTurtle = func(settingCombine *model.Setting, tick *model.BidAs
 	//if settingCombine.Seconds >= 43200 || settingCombine.Market == model.OKEX {
 	//	checkFulled = false
 	//}
-	canOpen, canStartCombine, canStartTurtle, turtleSymbolNum, turtleCoins := api.CanOpenCombine(settingCombine, settingNormal, false)
+	canOpen, canStartCombine, canStartTurtle, turtleSymbolNum, turtleCoins := api.CanOpenCombine(settingCombine, settingNormal, dataNormal)
 	if api.HandleOrders(account.Key, account.Secret, market, symbol, settings, turtleData, tick) ||
 		api.CheckBreak(account, market, symbol, settings, turtleData, tick) {
 		//util.Notice(fmt.Sprintf(`combine return handle or break %s %s`, market, symbol))
@@ -252,7 +252,7 @@ func handleBreak(setting *model.Setting, data *model.TurtleData, orders []*model
 	}
 	util.Notice(fmt.Sprintf(`query %s break %s %s %s %d %s %s chances %d`,
 		setting.Function, setting.Market, setting.Symbol, orders[0].OrderSide, len(orders), orders[0].OrderId, orders[0].Function, setting.Chance))
-	if orders[0].Function == model.Close || orders[0].OrderType == model.OrderTypeTrailStop {
+	if (orders[0].RefreshType != model.FunctionTurtleAdjust && orders[0].Function == model.Close) || orders[0].OrderType == model.OrderTypeTrailStop {
 		msg := fmt.Sprintf(`liquidate: %s %s chance:%d Amount:%e px:%e`,
 			setting.Market, setting.Symbol, setting.Chance, setting.GridAmount, setting.PriceX)
 		go api.SendMails(`平`+setting.Market+setting.Symbol, msg)
