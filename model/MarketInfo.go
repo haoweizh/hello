@@ -13,6 +13,8 @@ var MarketInfos = &sync.Map{} // market - symbol - *MarketInfo
 var CommonCoins = map[string]bool{`btc`: true, `eth`: true, `ltc`: true, `bch`: true, `eos`: true, `xrp`: true,
 	`usdt`: true, `etc`: true, `link`: true, `trx`: true, `bnb`: true}
 
+var NoTurtleCoins = map[string]bool{`yfii`: true}
+
 type MarketInfo struct {
 	Market, Name, CTCurrency                string
 	CanBorrow                               bool

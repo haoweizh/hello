@@ -327,7 +327,8 @@ func getDynamicMarketInfos(mumSetting *model.Setting, accounts []*model.Account,
 	marketInfoArray, _ := getSortedInfos(mumSetting.Market, lenInfo)
 	for i := 0; i < marketInfoArray.Len() && len(topMarketInfos) < lenInfo; i++ {
 		_, marketType, coinValue, _ := model.GetFromStandard(mumSetting.Market, marketInfoArray[i].Name)
-		if strings.EqualFold(marketType, model.MarketTypePerp) && !model.CommonCoins[strings.ToLower(coinValue)] {
+		if strings.EqualFold(marketType, model.MarketTypePerp) && !model.CommonCoins[strings.ToLower(coinValue)] &&
+			!model.NoTurtleCoins[strings.ToLower(coinValue)] {
 			tried := false
 			var turtleData *model.TurtleData
 			for time.Now().Minute() <= 6 || !tried {
