@@ -243,9 +243,10 @@ func handleBreak(setting *model.Setting, data *model.TurtleData, orders []*model
 	if orders == nil || len(orders) == 0 || !orderBreak || data == nil {
 		return false
 	}
-	setting.PriceX = orders[0].Price / (1 + api.TurtleTriggerDelta)
+	turtleTriggerDelta := api.GetTurtleTriggerDelta(setting.Market)
+	setting.PriceX = orders[0].Price / (1 + turtleTriggerDelta)
 	if orders[0].OrderSide == model.OrderSideSell {
-		setting.PriceX = orders[0].Price / (1 - api.TurtleTriggerDelta)
+		setting.PriceX = orders[0].Price / (1 - turtleTriggerDelta)
 	}
 	if orders[0].TriggerPrice > 0 {
 		setting.PriceX = orders[0].TriggerPrice
@@ -346,19 +347,30 @@ func placeTurtleLong(account *model.Account, orderType string, data *model.Turtl
 	canOpen = (canOpen && float64(setting.Chance) < float64(setting.ChanceLimit)) || setting.Chance < 0
 	if data.OrderLong == nil && canOpen {
 		data.BreakLong = false
+		turtleTriggerDelta := api.GetTurtleTriggerDelta(setting.Market)
 		if orderType == model.OrderTypeStop {
 			if price <= tick.Asks[0].Price {
 				data.BreakLong = true
 				orderType = model.OrderTypeLimit
 			}
-			priceDeal = price * (1 + api.TurtleTriggerDelta)
+			priceDeal = price * (1 + turtleTriggerDelta)
 		} else if orderType == model.OrderTypeLimit && price >= tick.Asks[0].Price {
 			data.BreakLong = true
 			price = tick.Asks[0].Price
-			priceDeal = tick.Asks[0].Price * (1 + api.TurtleTriggerDelta)
+			priceDeal = tick.Asks[0].Price * (1 + turtleTriggerDelta)
 		}
-		data.OrderLong = api.MustPlaceOrder(account.Key, account.Secret, model.OrderSideBuy, orderType, market, symbol, ``,
-			setting.Function, priceDeal, price, amount, nil)
+		if market == model.OKEX && function == model.Close {
+			data.OrderLong = api.MustPlaceOrder(account.Key, account.Secret, model.OrderSideBuy, orderType, market, symbol, ``,
+				setting.Function, priceDeal, price, amount/2, nil)
+			halfOrders := api.MustPlaceOrder(account.Key, account.Secret, model.OrderSideBuy, orderType, market, symbol, ``,
+				setting.Function, priceDeal, price, amount/2, nil)
+			for _, order := range halfOrders {
+				data.OrderLong = append(data.OrderLong, order)
+			}
+		} else {
+			data.OrderLong = api.MustPlaceOrder(account.Key, account.Secret, model.OrderSideBuy, orderType, market, symbol, ``,
+				setting.Function, priceDeal, price, amount, nil)
+		}
 		if data.OrderAdjust == nil {
 			data.OrderAdjust = make(map[string]*model.Order)
 		}
@@ -438,22 +450,33 @@ func placeTurtleShort(account *model.Account, orderType string, data *model.Turt
 	canOpen = (canOpen && float64(setting.Chance) > -1*float64(setting.ChanceLimit)) || setting.Chance > 0
 	if data.OrderShort == nil && canOpen {
 		data.BreakShort = false
+		turtleTriggerDelta := api.GetTurtleTriggerDelta(setting.Market)
 		if orderType == model.OrderTypeStop {
 			if price >= tick.Bids[0].Price {
 				data.BreakShort = true
 				orderType = model.OrderTypeLimit
 			}
-			priceDeal = price * (1 - api.TurtleTriggerDelta)
+			priceDeal = price * (1 - turtleTriggerDelta)
 		} else if orderType == model.OrderTypeLimit && price <= tick.Bids[0].Price {
 			data.BreakShort = true
-			priceDeal = tick.Bids[0].Price * (1 - api.TurtleTriggerDelta)
+			priceDeal = tick.Bids[0].Price * (1 - turtleTriggerDelta)
 			price = tick.Bids[0].Price
 		}
 		util.Notice(fmt.Sprintf(`place short %s %s %s %s %s %d %v at %e %e amt %e, useNear %v priceX %f n:%f seconds %d near %f %f far %f %f`,
 			orderType, setting.Function, market, symbol, orderType, setting.Chance, canOpen, priceDeal, price, amount,
 			data.UseNear, setting.PriceX, data.N, setting.Seconds, data.LowNear, data.HighNear, data.LowFar, data.HighFar))
-		data.OrderShort = api.MustPlaceOrder(account.Key, account.Secret, model.OrderSideSell, orderType, market, symbol, ``,
-			setting.Function, priceDeal, price, amount, nil)
+		if market == model.OKEX && function == model.Close {
+			data.OrderShort = api.MustPlaceOrder(account.Key, account.Secret, model.OrderSideSell, orderType, market, symbol, ``,
+				setting.Function, priceDeal, price, amount/2, nil)
+			halfOrders := api.MustPlaceOrder(account.Key, account.Secret, model.OrderSideSell, orderType, market, symbol, ``,
+				setting.Function, priceDeal, price, amount/2, nil)
+			for _, order := range halfOrders {
+				data.OrderShort = append(data.OrderShort, order)
+			}
+		} else {
+			data.OrderShort = api.MustPlaceOrder(account.Key, account.Secret, model.OrderSideSell, orderType, market, symbol, ``,
+				setting.Function, priceDeal, price, amount, nil)
+		}
 		if data.OrderAdjust == nil {
 			data.OrderAdjust = make(map[string]*model.Order)
 		}

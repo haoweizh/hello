@@ -11,7 +11,14 @@ import (
 	"time"
 )
 
-const TurtleTriggerDelta = 0.003
+//const TurtleTriggerDelta = 0.003
+
+func GetTurtleTriggerDelta(market string) float64 {
+	if market == model.OKEX {
+		return 0.001
+	}
+	return 0.003
+}
 
 var positionsCache = &sync.Map{}   // key - symbol - position holding amount
 var TurtleDataSet = sync.Map{}     // function_market_symbol_unix second *TurtleData
@@ -113,21 +120,22 @@ func AdjustPosHolding(key, secret string, setting *model.Setting, data *model.Tu
 			orderSide := ``
 			orderType := model.OrderTypeStop
 			var price, priceDeal float64
+			turtleTriggerDelta := GetTurtleTriggerDelta(setting.Market)
 			if posMap[setting.Symbol].Holding > 0 {
 				orderSide = model.OrderSideSell
 				price = data.LowAdjust
-				priceDeal = data.LowAdjust * (1 - TurtleTriggerDelta)
+				priceDeal = data.LowAdjust * (1 - turtleTriggerDelta)
 				if data.LowAdjust >= tick.Bids[0].Price {
 					orderType = model.OrderTypeLimit
-					priceDeal = price * (1 - TurtleTriggerDelta)
+					priceDeal = price * (1 - turtleTriggerDelta)
 				}
 			} else if posMap[setting.Symbol].Holding < 0 {
 				orderSide = model.OrderSideBuy
 				price = data.HighAdjust
-				priceDeal = data.HighAdjust * (1 + TurtleTriggerDelta)
+				priceDeal = data.HighAdjust * (1 + turtleTriggerDelta)
 				if data.HighAdjust <= tick.Asks[0].Price {
 					orderType = model.OrderTypeLimit
-					priceDeal = price * (1 + TurtleTriggerDelta)
+					priceDeal = price * (1 + turtleTriggerDelta)
 				}
 			}
 			if orderSide != `` {
@@ -208,12 +216,13 @@ func clearTurtleOrders(account *model.Account, setting *model.Setting, turtle *m
 		}
 	}
 	broken := false
+	turtleTriggerDelta := GetTurtleTriggerDelta(setting.Market)
 	if turtle.BreakLong && turtle.OrderLong != nil && len(turtle.OrderLong) > 0 {
 		broken = true
 		if setting.Chance >= 0 {
 			setting.Chance++
 			setting.GridAmount += longAmount
-			setting.PriceX = turtle.OrderLong[0].Price / (1 + TurtleTriggerDelta)
+			setting.PriceX = turtle.OrderLong[0].Price / (1 + turtleTriggerDelta)
 			if turtle.OrderLong[0].TriggerPrice > 0 {
 				setting.PriceX = turtle.OrderLong[0].TriggerPrice
 			}
@@ -226,7 +235,7 @@ func clearTurtleOrders(account *model.Account, setting *model.Setting, turtle *m
 		if setting.Chance <= 0 {
 			setting.Chance--
 			setting.GridAmount += shortAmount
-			setting.PriceX = turtle.OrderShort[0].Price / (1 - TurtleTriggerDelta)
+			setting.PriceX = turtle.OrderShort[0].Price / (1 - turtleTriggerDelta)
 			if turtle.OrderShort[0].TriggerPrice > 0 {
 				setting.PriceX = turtle.OrderShort[0].TriggerPrice
 			}
