@@ -15,7 +15,7 @@ import (
 
 func GetTurtleTriggerDelta(market string) float64 {
 	if market == model.OKEX {
-		return 0.001
+		return 0.002
 	}
 	return 0.003
 }
