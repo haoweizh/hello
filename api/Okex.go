@@ -1126,10 +1126,10 @@ func queryOrderOKEX(key, secret, symbol, orderId, orderType string) (order *mode
 	path := `/api/v5/trade/order`
 	param := map[string]interface{}{"ordId": orderId, "instId": symbol}
 	if orderType == model.OrderTypeStop {
-		path = `/api/v5/trade/orders-algo-pending`
+		path = `/api/v5/trade/order-algo`
 		param = map[string]interface{}{`algoId`: orderId, `ordType`: `conditional`}
 	} else if orderType == model.OrderTypeTrailStop {
-		path = `/api/v5/trade/orders-algo-pending`
+		path = `/api/v5/trade/order-algo`
 		param = map[string]interface{}{`algoId`: orderId, `ordType`: `move_order_stop`}
 	}
 	responseBody, _ := sendSignRequestOKEX(key, secret, http.MethodGet, path, param, nil)

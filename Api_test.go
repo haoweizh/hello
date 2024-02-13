@@ -521,7 +521,7 @@ func Test_ClearSpot(t *testing.T) {
 func Test_wallet(t *testing.T) {
 	model.NewConfig()
 	var key, secret string
-	market := model.BinancePerp
+	market := model.OKEX
 	switch market {
 	case model.Ftx:
 		key = model.AppConfig.FtxKey
@@ -536,12 +536,13 @@ func Test_wallet(t *testing.T) {
 		key = model.AppConfig.GateKey
 		secret = model.AppConfig.GateSecret
 	}
-	api.InitMarketInfos(model.BinancePerp)
+	//api.InitMarketInfos(model.BinancePerp)
 	//orders := api.QueryOpenOrders(model.AppConfig.BinanceKey, model.AppConfig.BinanceSecret, model.BinancePerp, `ETH_PERP`)
 	//for _, order := range orders {
 	//	fmt.Println(order.OrderId)
 	//}
-	orderQuery0 := api.QueryOrderById(model.AppConfig.BinanceKey, model.AppConfig.BinanceSecret, model.BinancePerp, `ETH_PERP`, model.OrderTypeLimit, `33217521211`)
+	orderQuery0 := api.QueryOrderById(model.AppConfig.OkexKey, model.AppConfig.OkexSecret, model.OKEX,
+		`PERP_PERP`, model.OrderTypeStop, `677454279384674316`)
 	fmt.Println(orderQuery0.OrderId)
 	success, price := api.GetPriceForce(key, secret, `LDBNB_USDT`, market)
 	success, price = api.GetPriceForce(key, secret, `BTC_USDT`, market)

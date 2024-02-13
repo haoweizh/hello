@@ -112,10 +112,10 @@ var ProcessCombineTurtle = func(settingCombine *model.Setting, tick *model.BidAs
 	placeCombineOrders(account, dataNormal, dataCombine, settingNormal, settingCombine, tick, canOpen, canStartTurtle, canStartCombine)
 	needClear := false
 	for i, setting := range settings {
-		if handleBreak(setting, turtleData[i], turtleData[i].OrderLong, turtleData[i].BreakLong) {
+		if handleBreak(account, setting, turtleData[i], turtleData[i].OrderLong, turtleData[i].BreakLong) {
 			needClear = true
 		}
-		if handleBreak(setting, turtleData[i], turtleData[i].OrderShort, turtleData[i].BreakShort) {
+		if handleBreak(account, setting, turtleData[i], turtleData[i].OrderShort, turtleData[i].BreakShort) {
 			needClear = true
 		}
 	}
@@ -239,7 +239,7 @@ func removeShortOrders(account *model.Account, setting *model.Setting, data *mod
 
 // handleBreak
 // 由于OrderTypeTrailStop订单有可能是通过API load进来的，所以没有 order.Function且此类订单都是close的，故特殊处理了
-func handleBreak(setting *model.Setting, data *model.TurtleData, orders []*model.Order, orderBreak bool) (work bool) {
+func handleBreak(account *model.Account, setting *model.Setting, data *model.TurtleData, orders []*model.Order, orderBreak bool) (work bool) {
 	if orders == nil || len(orders) == 0 || !orderBreak || data == nil {
 		return false
 	}
@@ -276,6 +276,13 @@ func handleBreak(setting *model.Setting, data *model.TurtleData, orders []*model
 	// 保护起来，不进行主动撤单，以免未完全成交
 	for _, order := range orders {
 		data.OrderAdjust[order.OrderId] = order
+		if order.OrderType != model.OrderTypeLimit && order.Market == model.OKEX {
+			order = api.QueryOrderById(account.Key, account.Secret, setting.Market, setting.Symbol, order.OrderType, order.OrderId)
+			if order != nil && order.OrderId != `` {
+				data.OrderAdjust[order.OrderId] = order
+				util.Notice(fmt.Sprintf(`add okex algo order after break to normal order %s`, order.OrderId))
+			}
+		}
 	}
 	time.Sleep(time.Second * 3)
 	data.OrderLong = nil
@@ -359,18 +366,8 @@ func placeTurtleLong(account *model.Account, orderType string, data *model.Turtl
 			price = tick.Asks[0].Price
 			priceDeal = tick.Asks[0].Price * (1 + turtleTriggerDelta)
 		}
-		if market == model.OKEX && function == model.Close {
-			data.OrderLong = api.MustPlaceOrder(account.Key, account.Secret, model.OrderSideBuy, orderType, market, symbol, ``,
-				setting.Function, priceDeal, price, amount/2, nil)
-			halfOrders := api.MustPlaceOrder(account.Key, account.Secret, model.OrderSideBuy, orderType, market, symbol, ``,
-				setting.Function, priceDeal, price, amount/2, nil)
-			for _, order := range halfOrders {
-				data.OrderLong = append(data.OrderLong, order)
-			}
-		} else {
-			data.OrderLong = api.MustPlaceOrder(account.Key, account.Secret, model.OrderSideBuy, orderType, market, symbol, ``,
-				setting.Function, priceDeal, price, amount, nil)
-		}
+		data.OrderLong = api.MustPlaceOrder(account.Key, account.Secret, model.OrderSideBuy, orderType, market, symbol, ``,
+			setting.Function, priceDeal, price, amount, nil)
 		if data.OrderAdjust == nil {
 			data.OrderAdjust = make(map[string]*model.Order)
 		}
@@ -465,18 +462,8 @@ func placeTurtleShort(account *model.Account, orderType string, data *model.Turt
 		util.Notice(fmt.Sprintf(`place short %s %s %s %s %s %d %v at %e %e amt %e, useNear %v priceX %f n:%f seconds %d near %f %f far %f %f`,
 			orderType, setting.Function, market, symbol, orderType, setting.Chance, canOpen, priceDeal, price, amount,
 			data.UseNear, setting.PriceX, data.N, setting.Seconds, data.LowNear, data.HighNear, data.LowFar, data.HighFar))
-		if market == model.OKEX && function == model.Close {
-			data.OrderShort = api.MustPlaceOrder(account.Key, account.Secret, model.OrderSideSell, orderType, market, symbol, ``,
-				setting.Function, priceDeal, price, amount/2, nil)
-			halfOrders := api.MustPlaceOrder(account.Key, account.Secret, model.OrderSideSell, orderType, market, symbol, ``,
-				setting.Function, priceDeal, price, amount/2, nil)
-			for _, order := range halfOrders {
-				data.OrderShort = append(data.OrderShort, order)
-			}
-		} else {
-			data.OrderShort = api.MustPlaceOrder(account.Key, account.Secret, model.OrderSideSell, orderType, market, symbol, ``,
-				setting.Function, priceDeal, price, amount, nil)
-		}
+		data.OrderShort = api.MustPlaceOrder(account.Key, account.Secret, model.OrderSideSell, orderType, market, symbol, ``,
+			setting.Function, priceDeal, price, amount, nil)
 		if data.OrderAdjust == nil {
 			data.OrderAdjust = make(map[string]*model.Order)
 		}
