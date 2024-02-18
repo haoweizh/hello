@@ -315,8 +315,7 @@ func GetTurtleData(account *model.Account, function, market, symbol string, far,
 		defer lock.Unlock()
 		lock.Lock()
 	}
-	_, _, coin, _ := model.GetFromStandard(market, symbol)
-	if refreshDynamic && !model.CommonCoins[strings.ToLower(coin)] {
+	if refreshDynamic && !model.BtcEthSymbols[symbol] {
 		refreshValue, refreshOk := DynamicHandleTime.Load(market)
 		if !refreshOk || refreshValue == nil || refreshValue.(time.Time).Before(nowPeriod) {
 			if handleMarketDynamic(market) {
@@ -446,8 +445,7 @@ func GetCandleData(account *model.Account, market, symbol, function string, far,
 	} else if function == model.FunctionCombineTurtle {
 		data.UseNear = false
 	}
-	_, _, coin, _ := model.GetFromStandard(market, symbol)
-	if model.CommonCoins[strings.ToLower(coin)] {
+	if model.BtcEthSymbols[symbol] {
 		if function == model.FunctionCombineTurtle {
 			data.Amount = math.Min(data.Amount, 1920000/priceClose/chanceLimit)
 		} else {
@@ -646,10 +644,6 @@ func CheckBreak(account *model.Account, market, symbol string, settings []*model
 // change算法 币种数=海龟仓数绝对值+单汤币数
 func CanOpenCombine(settingCombine, settingNormal *model.Setting, dataTurtle *model.TurtleData) (
 	canOpen, canStartCombine, canStartTurtle bool, turtleSymbolNum, inAll float64) {
-	success, _, coin, _ := model.GetFromStandard(settingCombine.Market, settingCombine.Symbol)
-	if !success {
-		return false, false, false, 0, 0
-	}
 	settingsCombine := GetSettings(settingCombine.Function, settingCombine.Market)
 	settingsNormal := GetSettings(settingNormal.Function, settingCombine.Market)
 	if settingsCombine == nil || settingsNormal == nil {
@@ -660,8 +654,7 @@ func CanOpenCombine(settingCombine, settingNormal *model.Setting, dataTurtle *mo
 	sumCombineOnly := func(symbol, value any) bool {
 		if value != nil {
 			valueSetting := value.(*model.Setting)
-			_, _, valueCoin, _ := model.GetFromStandard(valueSetting.Market, valueSetting.Symbol)
-			if !model.CommonCoins[strings.ToLower(valueCoin)] {
+			if !model.BtcEthSymbols[valueSetting.Symbol] {
 				if valueSetting.Chance != 0 && valueSetting.Function == model.FunctionCombineTurtle {
 					normal := GetSetting(model.FunctionTurtleNormal, valueSetting.Market, valueSetting.Symbol)
 					if normal != nil && normal.Chance == 0 {
@@ -676,8 +669,7 @@ func CanOpenCombine(settingCombine, settingNormal *model.Setting, dataTurtle *mo
 	sumTurtle := func(symbol, value any) bool {
 		if value != nil {
 			valueSetting := value.(*model.Setting)
-			_, _, valueCoin, _ := model.GetFromStandard(valueSetting.Market, valueSetting.Symbol)
-			if !model.CommonCoins[strings.ToLower(valueCoin)] {
+			if !model.BtcEthSymbols[valueSetting.Symbol] {
 				if valueSetting.Function == model.FunctionTurtleNormal {
 					if valueSetting.Chance > 0 {
 						turtleSymbolNum++
@@ -702,7 +694,7 @@ func CanOpenCombine(settingCombine, settingNormal *model.Setting, dataTurtle *mo
 	//	}
 	//	return true
 	//}
-	if model.CommonCoins[strings.ToLower(coin)] {
+	if model.BtcEthSymbols[settingCombine.Symbol] {
 		canOpen = true
 		canStartCombine = true
 		canStartTurtle = true
@@ -744,21 +736,16 @@ func CanOpenCombine(settingCombine, settingNormal *model.Setting, dataTurtle *mo
 // 当setting.OpenShortMargin小于0时不限制本币种仓位，等于0时不许开仓（未实现）
 // 当setting.AmountLimit小于0时不限制总仓位或开仓币数，等于0时不许开仓（未实现）
 func CanOpenTurtle(setting *model.Setting, data *model.TurtleData) (canOpen bool, inAll float64) {
-	success, _, coin, _ := model.GetFromStandard(setting.Market, setting.Symbol)
-	if !success {
-		return false, 0
-	}
 	settings := GetSettings(setting.Function, setting.Market)
 	if settings == nil {
 		return false, 0
 	}
-	if model.CommonCoins[strings.ToLower(coin)] {
+	if model.BtcEthSymbols[setting.Symbol] {
 		settings.Range(func(symbol, value any) bool {
 			if value != nil {
 				valueSetting := value.(*model.Setting)
-				_, _, valueCoin, _ := model.GetFromStandard(valueSetting.Market, valueSetting.Symbol)
 				if valueSetting.Market == setting.Market && valueSetting.Function == setting.Function &&
-					model.CommonCoins[strings.ToLower(valueCoin)] {
+					model.BtcEthSymbols[valueSetting.Symbol] {
 					inAll += float64(valueSetting.Chance)
 				}
 			}
@@ -775,9 +762,8 @@ func CanOpenTurtle(setting *model.Setting, data *model.TurtleData) (canOpen bool
 		settings.Range(func(symbol, value any) bool {
 			if value != nil {
 				valueSetting := value.(*model.Setting)
-				_, _, valueCoin, _ := model.GetFromStandard(valueSetting.Market, valueSetting.Symbol)
 				if valueSetting.Market == setting.Market && valueSetting.Function == setting.Function &&
-					!model.CommonCoins[strings.ToLower(valueCoin)] {
+					!model.BtcEthSymbols[valueSetting.Symbol] {
 					if valueSetting.Chance != 0 {
 						inAll++
 					}

@@ -219,8 +219,7 @@ func handleCombineSettings(mumSetting *model.Setting, topMarketInfos map[string]
 		} else {
 			normalSetting = normalValue.(*model.Setting)
 		}
-		_, _, coinValue, _ := model.GetFromStandard(mumSetting.Market, symbol.(string))
-		if topMarketInfos[symbol.(string)] == nil && !model.CommonCoins[strings.ToLower(coinValue)] {
+		if topMarketInfos[symbol.(string)] == nil && !model.BtcEthSymbols[symbol.(string)] {
 			if setting.(*model.Setting).Chance == 0 && normalSetting.Chance == 0 {
 				setting.(*model.Setting).SymbolRelated = model.SettingTurtleRemoved
 			}
@@ -243,8 +242,7 @@ func handleCombineSettings(mumSetting *model.Setting, topMarketInfos map[string]
 		} else {
 			combineSetting = combineValue.(*model.Setting)
 		}
-		_, _, coinValue, _ := model.GetFromStandard(mumSetting.Market, symbol.(string))
-		if topMarketInfos[symbol.(string)] == nil && !model.CommonCoins[strings.ToLower(coinValue)] {
+		if topMarketInfos[symbol.(string)] == nil && !model.BtcEthSymbols[symbol.(string)] {
 			if setting.(*model.Setting).Chance == 0 && combineSetting.Chance == 0 {
 				setting.(*model.Setting).SymbolRelated = model.SettingTurtleRemoved
 			}
@@ -287,8 +285,7 @@ func handleSingleSettings(mumSetting *model.Setting, topMarketInfos map[string]*
 		if setting == nil {
 			return true
 		}
-		_, _, coinValue, _ := model.GetFromStandard(mumSetting.Market, symbol.(string))
-		if topMarketInfos[symbol.(string)] == nil && !model.CommonCoins[strings.ToLower(coinValue)] {
+		if topMarketInfos[symbol.(string)] == nil && !model.BtcEthSymbols[symbol.(string)] {
 			//if setting.(*model.Setting).Chance == 0 {
 			//}
 			setting.(*model.Setting).SymbolRelated = model.SettingTurtleRemoved
@@ -327,7 +324,7 @@ func getDynamicMarketInfos(mumSetting *model.Setting, accounts []*model.Account,
 	marketInfoArray, _ := getSortedInfos(mumSetting.Market, lenInfo)
 	for i := 0; i < marketInfoArray.Len() && len(topMarketInfos) < lenInfo; i++ {
 		_, marketType, coinValue, _ := model.GetFromStandard(mumSetting.Market, marketInfoArray[i].Name)
-		if strings.EqualFold(marketType, model.MarketTypePerp) && !model.CommonCoins[strings.ToLower(coinValue)] &&
+		if strings.EqualFold(marketType, model.MarketTypePerp) && !model.BtcEthSymbols[marketInfoArray[i].Name] &&
 			!model.NoTurtleCoins[strings.ToLower(coinValue)] {
 			tried := false
 			var turtleData *model.TurtleData
