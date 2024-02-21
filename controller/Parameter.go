@@ -213,6 +213,8 @@ func simulateGrid(c *gin.Context) {
 	strNew := c.Query(`new`)
 	market := c.Query(`market`)
 	coins := c.Query(`coin`)
+	strSeconds := c.Query(`seconds`)
+	seconds, _ := strconv.ParseInt(strSeconds, 10, 64)
 	strBegin := c.Query(`begin`) + `T00:00:00+00:00`
 	strEnd := c.Query(`end`) + `T00:00:00+00:00`
 	begin, _ := time.Parse(time.RFC3339, strBegin)
@@ -236,6 +238,7 @@ func simulateGrid(c *gin.Context) {
 			CloseShortMargin: jumpLose,
 			Symbol:           strings.ToUpper(coin) + model.UniStandardTail[model.MarketTypePerp],
 			Coin:             coin,
+			Seconds:          seconds,
 			GridAmount:       100}
 		if strNew == `true` {
 			go model.AppDB.Where(`function=? and market=? and symbol=? and order_time>? and order_time<? and line_buy=? and line_sell=?`,
