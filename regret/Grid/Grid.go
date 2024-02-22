@@ -20,7 +20,7 @@ type Data struct {
 	begin                  time.Time
 }
 
-func createOrders(setting *model.Setting, data *Data) {
+func createOrders(setting *model.Setting, data *Data, candle *model.Candle) {
 	if (data.orderBuy == nil || data.orderBuy.Status != model.CarryStatusWorking) && setting.Chance < 3 {
 		price := data.priceLow + data.N/2
 		if setting.Chance > 0 {
@@ -49,7 +49,8 @@ func createOrders(setting *model.Setting, data *Data) {
 			OrderType:        model.OrderTypeLimit,
 			RefreshType:      model.FunctionSimulation,
 			Status:           model.CarryStatusWorking,
-			Symbol:           setting.Symbol}
+			Symbol:           setting.Symbol,
+			OrderTime:        candle.Begin}
 	}
 	if (data.orderSell == nil || data.orderSell.Status != model.CarryStatusWorking) && setting.Chance > -3 {
 		price := data.priceHigh - data.N/2
@@ -79,7 +80,8 @@ func createOrders(setting *model.Setting, data *Data) {
 			OrderType:        model.OrderTypeLimit,
 			RefreshType:      model.FunctionSimulation,
 			Status:           model.CarryStatusWorking,
-			Symbol:           setting.Symbol}
+			Symbol:           setting.Symbol,
+			OrderTime:        candle.Begin}
 	}
 	return
 }
@@ -130,7 +132,7 @@ var ProcessGrid = func(start, end time.Time, setting *model.Setting) {
 			util.Notice(fmt.Sprintf(`fail to get combine candle %s %s %d`, candles[i].Market, candles[i].Symbol, beginUnix))
 			continue
 		}
-		createOrders(setting, gridMap[beginUnix])
+		createOrders(setting, gridMap[beginUnix], candles[i])
 		handleGrid(setting, gridMap[beginUnix], candles[i])
 		//handleOld(setting, currentGrid.oldOrders, candles[i], currentGrid.candle.N)
 		util.StoreSyncMap(&model.CarryInfo, fmt.Sprintf(`deal grid candle %s %s for grid %s`,
@@ -145,7 +147,7 @@ func dealGridSuccess(setting *model.Setting, order *model.Order, candle *model.C
 	order.DealPrice = order.Price
 	order.LineBuy = setting.OpenShortMargin
 	order.LineSell = setting.CloseShortMargin
-	order.OrderTime = candle.Begin
+	order.OrderUpdateTime = candle.Begin
 	order.OrderId = fmt.Sprintf(`%d_%d`, candle.Begin.Unix(), rand.Int())
 	if order.OrderType != model.OrderTypeLimit {
 		if order.OrderSide == model.OrderSideSell {
@@ -160,7 +162,6 @@ func dealGridSuccess(setting *model.Setting, order *model.Order, candle *model.C
 func handleGrid(setting *model.Setting, data *Data, candle *model.Candle) {
 	if data.orderBuy != nil && data.orderBuy.Status == model.CarryStatusWorking && candle.PriceLow < data.orderBuy.Price {
 		dealGridSuccess(setting, data.orderBuy, candle)
-		data.orderBuy = nil
 		setting.PriceX = data.orderBuy.Price
 		if setting.Chance >= 0 {
 			setting.Chance += 1
@@ -169,10 +170,10 @@ func handleGrid(setting *model.Setting, data *Data, candle *model.Candle) {
 			setting.Chance = 0
 			setting.GridAmount = 0
 		}
+		data.orderBuy = nil
 	}
 	if data.orderSell != nil && data.orderSell.Status == model.CarryStatusWorking && candle.PriceHigh > data.orderSell.Price {
 		dealGridSuccess(setting, data.orderSell, candle)
-		data.orderSell = nil
 		setting.PriceX = data.orderSell.Price
 		if setting.Chance <= 0 {
 			setting.Chance -= 1
@@ -181,5 +182,6 @@ func handleGrid(setting *model.Setting, data *Data, candle *model.Candle) {
 			setting.Chance = 0
 			setting.GridAmount = 0
 		}
+		data.orderSell = nil
 	}
 }

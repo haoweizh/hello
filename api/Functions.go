@@ -332,6 +332,8 @@ func GetMultiCandle(account *model.Account, market string, slotSeconds int, begi
 	limit := 100
 	if market == model.BinancePerp {
 		limit = 480
+	} else if market == model.OKEX {
+		limit = 300
 	} else if market == model.GXZQ {
 		limit = 10000
 	}

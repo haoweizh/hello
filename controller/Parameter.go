@@ -204,11 +204,13 @@ func simulateGrid(c *gin.Context) {
 	market := c.Query(`market`)
 	coins := c.Query(`coin`)
 	strSeconds := c.Query(`seconds`)
-	seconds, _ := strconv.ParseInt(strSeconds, 10, 64)
+	strFar := c.Query(`far`)
+	far, errFar := strconv.ParseInt(strFar, 10, 64)
+	seconds, errSeconds := strconv.ParseInt(strSeconds, 10, 64)
 	strBegin := c.Query(`begin`) + `T00:00:00+00:00`
 	strEnd := c.Query(`end`) + `T00:00:00+00:00`
-	begin, _ := time.Parse(time.RFC3339, strBegin)
-	end, _ := time.Parse(time.RFC3339, strEnd)
+	begin, errBegin := time.Parse(time.RFC3339, strBegin)
+	end, errEnd := time.Parse(time.RFC3339, strEnd)
 	session := sessions.Default(c)
 	value := c.Query(`code`)
 	if codes[value] {
@@ -216,7 +218,7 @@ func simulateGrid(c *gin.Context) {
 		_ = session.Save()
 	}
 	sessionValue := session.Get(`code`)
-	if sessionValue == nil || !codes[sessionValue.(string)] {
+	if sessionValue == nil || !codes[sessionValue.(string)] || errFar != nil || errSeconds != nil || errBegin != nil || errEnd != nil {
 		strNew = `false`
 	}
 	coinArr := strings.Split(coins, `,`)
@@ -226,6 +228,7 @@ func simulateGrid(c *gin.Context) {
 			Market:   market,
 			Symbol:   strings.ToUpper(coin) + model.UniStandardTail[model.MarketTypePerp],
 			Coin:     coin,
+			Far:      far,
 			Seconds:  seconds}
 		if strNew == `true` {
 			go model.AppDB.Where(`function=? and market=? and symbol=? and order_time>? and order_time<?`,

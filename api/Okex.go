@@ -1523,6 +1523,7 @@ func getMaxLoanOKEX(key, secret, symbol string) (success bool, maxLoan float64) 
 
 // 参数before代表返回的candle是该事件之后的，且不好该时间，所以参数传入的时候需要减去一个slotSeconds
 // getCandlesOKEX bar 1m/3m/5m/15m/30m/1H/2H/4H/6H/12H/1D/1W/1M/3M/6M/1Y
+// 1m的数据只支持过去24小时内的
 func getCandlesOKEX(account *model.Account, symbol string, before, after time.Time, count, slotSeconds int) (
 	candles []*model.Candle, isCache bool) {
 	candles = make([]*model.Candle, 0)
