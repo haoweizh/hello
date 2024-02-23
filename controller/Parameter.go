@@ -223,16 +223,16 @@ func simulateGrid(c *gin.Context) {
 		strNew = `false`
 	}
 	coinArr := strings.Split(coins, `,`)
+	function = fmt.Sprintf(`%s_%d_%d`, function, far, seconds)
 	for _, coin := range coinArr {
 		setting := &model.Setting{Valid: true,
-			Market:  market,
-			Symbol:  strings.ToUpper(coin) + model.UniStandardTail[model.MarketTypePerp],
-			Coin:    coin,
-			Far:     far,
-			Seconds: seconds}
+			Market:   market,
+			Symbol:   strings.ToUpper(coin) + model.UniStandardTail[model.MarketTypePerp],
+			Coin:     coin,
+			Function: function,
+			Far:      far,
+			Seconds:  seconds}
 		if strNew == `true` {
-			function = fmt.Sprintf(`%s_%d_%d`, function, setting.Far, setting.Seconds)
-			setting.Function = function
 			go model.AppDB.Where(`function=? and market=? and symbol=? and order_time>? and order_time<?`,
 				setting.Function, market, setting.Symbol, strBegin, strEnd).Delete(&model.Order{})
 			Grid.ProcessGrid(begin, end, setting)
