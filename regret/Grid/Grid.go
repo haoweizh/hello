@@ -53,7 +53,7 @@ func createOrders(setting *model.Setting, data *Data, candle *model.Candle) {
 			Status:           model.CarryStatusWorking,
 			Symbol:           setting.Symbol,
 			OrderTime:        candle.Begin}
-		util.Notice(fmt.Sprintf(`create order %s %s %s amt %f at %f %s`,
+		util.Info(fmt.Sprintf(`create order %s %s %s amt %f at %f %s`,
 			data.orderBuy.Market, data.orderBuy.Symbol, data.orderBuy.OrderSide, data.orderBuy.Amount, data.orderBuy.Price, data.orderBuy.OrderTime.String()))
 	}
 	if (data.orderSell == nil || data.orderSell.Status != model.CarryStatusWorking) && setting.Chance > -3 &&
@@ -87,7 +87,7 @@ func createOrders(setting *model.Setting, data *Data, candle *model.Candle) {
 			Status:           model.CarryStatusWorking,
 			Symbol:           setting.Symbol,
 			OrderTime:        candle.Begin}
-		util.Notice(fmt.Sprintf(`create order %s %s %s amt %f at %f %s`,
+		util.Info(fmt.Sprintf(`create order %s %s %s amt %f at %f %s`,
 			data.orderSell.Market, data.orderSell.Symbol, data.orderSell.OrderSide, data.orderSell.Amount, data.orderSell.Price, data.orderSell.OrderTime.String()))
 	}
 	return
@@ -150,7 +150,7 @@ var ProcessGrid = func(start, end time.Time, setting *model.Setting) {
 		}
 		if msgHandle != fmt.Sprintf(`deal grid candle %s`, sign) {
 			msgHandle = fmt.Sprintf(`deal grid candle %s`, sign)
-			util.Notice(msgHandle)
+			util.Info(msgHandle)
 		}
 		createOrders(setting, gridMap[sign], candles[i])
 		handleGrid(setting, gridMap[sign], candles[i])
@@ -175,7 +175,7 @@ func dealGridSuccess(setting *model.Setting, order *model.Order, candle *model.C
 			order.DealPrice = order.Price * (1 + tradeCost)
 		}
 	}
-	util.Notice(fmt.Sprintf(`success deal %s %s %s amt %f at %f %s candle %f - %f %s`,
+	util.Info(fmt.Sprintf(`success deal %s %s %s amt %f at %f %s candle %f - %f %s`,
 		order.Market, order.Symbol, order.OrderSide, order.Amount, order.Price, order.OrderTime.String(),
 		candle.PriceLow, candle.PriceHigh, candle.Begin.String()))
 	model.AppDB.Save(order)
@@ -193,7 +193,7 @@ func handleGrid(setting *model.Setting, data *Data, candle *model.Candle) {
 		data.orderBuy.GridPos = setting.Chance
 		dealGridSuccess(setting, data.orderBuy, candle)
 		data.orderBuy = nil
-		util.Notice(fmt.Sprintf(`set setting %s %s chance %d amt %f time %s`,
+		util.Info(fmt.Sprintf(`set setting %s %s chance %d amt %f time %s`,
 			setting.Market, setting.Symbol, setting.Chance, setting.GridAmount, candle.Begin.String()))
 	}
 	if data.orderSell != nil && data.orderSell.Status == model.CarryStatusWorking && candle.PriceHigh > data.orderSell.Price {
@@ -207,7 +207,7 @@ func handleGrid(setting *model.Setting, data *Data, candle *model.Candle) {
 		data.orderSell.GridPos = setting.Chance
 		dealGridSuccess(setting, data.orderSell, candle)
 		data.orderSell = nil
-		util.Notice(fmt.Sprintf(`set setting %s %s chance %d amt %f time %s`,
+		util.Info(fmt.Sprintf(`set setting %s %s chance %d amt %f time %s`,
 			setting.Market, setting.Symbol, setting.Chance, setting.GridAmount, candle.Begin.String()))
 	}
 }
