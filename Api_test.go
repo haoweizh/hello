@@ -252,9 +252,9 @@ func Test_BalAndPos(t *testing.T) {
 func Test_DealGridSimulate(t *testing.T) {
 	model.NewConfig()
 	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
-	//funcName := `both_18_86400`
+	funcName := `both_60_14400`
 	symbols := []string{`SOL_PERP`, `1000SHIB_PERP`, `SOL_PERP`, `DOGE_PERP`, `MATIC_PERP`, `OP_PERP`, `APT_PERP`,
-		`ADA_PERP`, `1000PEPE_PERP`, `TRB_PERP`, `ARB_PERP`, `WLD_PERP`, `SUI_PERP`, `FIL_PERP`, `DYDX_PERP`, `FTM_PERP`,
+		`ADA_PERP`, `1000PEPE_PERP`, `TRB_PERP`, `WLD_PERP`, `SUI_PERP`, `FIL_PERP`, `DYDX_PERP`, `FTM_PERP`,
 		`AVAX_PERP`, `INJ_PERP`, `GMT_PERP`, `DOT_PERP`, `CFX_PERP`, `BTC_PERP`, `ETH_PERP`}
 	for _, symbol := range symbols {
 		//orders := make([]*model.Order, 0)
@@ -269,13 +269,15 @@ func Test_DealGridSimulate(t *testing.T) {
 		//} else {
 		//	util.Info(fmt.Sprintf(`can not get orders from %s %s grid 0`, model.BinancePerp, symbol))
 		//}
-		rows, _ := model.AppDB.Model(model.Order{}).Select(`symbol,order_side,sum(orders.deal_price*amount)/sum(amount),sum(amount)`).
-			Group(`function,symbol,order_side`).Rows()
+		rows, _ := model.AppDB.Model(model.Order{}).Select(`symbol,order_side,sum(orders.deal_price*amount)/sum(amount),sum(amount),count(*)`).
+			Where(`function=? and symbol=?`, funcName, symbol).Group(`function,symbol,order_side`).Rows()
 		for rows.Next() {
 			var orderSide string
-			var price, amount float64
-			_ = rows.Scan(&symbol, &orderSide, &price, &amount)
-			util.InfoSync(fmt.Sprintf(`%s,%s,%f,%f,%f`, symbol, orderSide, price, amount, amount*price))
+			var price, amount, count float64
+			_ = rows.Scan(&symbol, &orderSide, &price, &amount, &count)
+			msg := fmt.Sprintf(`%s,%s,%f,%f,%f,%f`, symbol, orderSide, price, amount, amount*price, count)
+			util.InfoSync(msg)
+			fmt.Println(msg)
 		}
 	}
 }

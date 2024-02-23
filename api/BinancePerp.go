@@ -532,7 +532,7 @@ func getCandlesBinance(account *model.Account, market, symbol string, begin, end
 		if redisErr == nil {
 			responseBody = []byte(temp)
 			isCache = true
-			util.Notice(fmt.Sprintf(`get candles from key %s %d`, redisKey, len(temp)))
+			//util.Notice(fmt.Sprintf(`get candles from key %s %d`, redisKey, len(temp)))
 		}
 	}
 	if responseBody == nil {
