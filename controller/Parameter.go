@@ -204,9 +204,8 @@ func simulateGrid(c *gin.Context) {
 	market := c.Query(`market`)
 	coins := c.Query(`coin`)
 	strSeconds := c.Query(`seconds`)
-	strFar := c.Query(`far`)
-	strClose := c.Query(`doClose`)
-	doClose, errClose := strconv.ParseBool(strClose)
+	strFar := c.Query(`far`) // both, buy, sell
+	function := c.Query(`function`)
 	far, errFar := strconv.ParseInt(strFar, 10, 64)
 	seconds, errSeconds := strconv.ParseInt(strSeconds, 10, 64)
 	strBegin := c.Query(`begin`) + `T00:00:00+00:00`
@@ -220,15 +219,11 @@ func simulateGrid(c *gin.Context) {
 		_ = session.Save()
 	}
 	sessionValue := session.Get(`code`)
-	if sessionValue == nil || !codes[sessionValue.(string)] || errFar != nil || errSeconds != nil || errBegin != nil || errEnd != nil || errClose != nil {
+	if sessionValue == nil || !codes[sessionValue.(string)] || errFar != nil || errSeconds != nil || errBegin != nil || errEnd != nil {
 		strNew = `false`
 	}
 	coinArr := strings.Split(coins, `,`)
 	for _, coin := range coinArr {
-		function := model.FunctionGrid + `both`
-		if !doClose {
-			function = model.FunctionGrid + `buy`
-		}
 		setting := &model.Setting{Valid: true,
 			Function: function,
 			Market:   market,
