@@ -274,11 +274,11 @@ func Test_CreateReport(t *testing.T) {
 func Test_CutTail(t *testing.T) {
 	model.NewConfig()
 	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
-	coins := `DOGE,SOL,ADA,MATIC,FIL,BNB,MTL,TOMO,RLC`
+	coins := `SOL,1000SHIB,SOL,DOGE,MATIC,OP,APT,ADA,1000PEPE,TRB,ARB,WLD,SUI,FIL,DYDX,FTM,AVAX,INJ,GMT,DOT,CFX,BTC,ETH`
 	//allLimit := 12
 	market := model.BinancePerp
-	strBegin := `2021-07-01T00:00:00+00:00`
-	strEnd := `2023-07-01T00:00:00+00:00`
+	strBegin := `2023-02-22T00:00:00+00:00`
+	strEnd := `2024-2-22T00:00:00+00:00`
 	sign := fmt.Sprintf(`market%s,coins%s,%s~%s,far%d,near%d,limit%d,allLimit%d,useNear%v,useM%v,seconds86400`,
 		market, coins, strBegin, strEnd, 18, 9, 3, 10, true, false)
 	regret.CutTail(market, coins, sign)
