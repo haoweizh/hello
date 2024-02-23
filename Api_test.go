@@ -249,6 +249,29 @@ func Test_BalAndPos(t *testing.T) {
 	}
 }
 
+func Test_DealGridSimulate(t *testing.T) {
+	model.NewConfig()
+	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
+	funcName := `both`
+	symbols := []string{`SOL_PERP`, `1000SHIB_PERP`, `SOL_PERP`, `DOGE_PERP`, `MATIC_PERP`, `OP_PERP`, `APT_PERP`,
+		`ADA_PERP`, `1000PEPE_PERP`, `TRB_PERP`, `ARB_PERP`, `WLD_PERP`, `SUI_PERP`, `FIL_PERP`, `DYDX_PERP`, `FTM_PERP`,
+		`AVAX_PERP`, `INJ_PERP`, `GMT_PERP`, `DOT_PERP`, `CFX_PERP`, `BTC_PERP`, `ETH_PERP`}
+	for _, symbol := range symbols {
+		orders := make([]*model.Order, 0)
+		model.AppDB.Where(`market=? and refresh_type=? and function=? and symbol=? and grid_pos=?`,
+			model.BinancePerp, model.FunctionSimulation, funcName, symbol, 0).Order(`order_time desc`).Limit(1).Find(&orders)
+		if len(orders) > 0 {
+			delNum := model.AppDB.Where(`market=? and refresh_type=? and function=? and symbol=? and order_time>?`,
+				model.BinancePerp, model.FunctionSimulation, funcName, symbol, orders[0].OrderTime).Delete(&model.Order{}).RowsAffected
+			if delNum > 0 {
+				fmt.Println(fmt.Sprintf(`cut %s tail num %d`, symbol, delNum))
+			}
+		} else {
+			util.Info(fmt.Sprintf(`can not get orders from %s %s grid 0`, model.BinancePerp, symbol))
+		}
+	}
+}
+
 func Test_CreateReport(t *testing.T) {
 	model.NewConfig()
 	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
