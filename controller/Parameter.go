@@ -238,6 +238,7 @@ func simulateGrid(c *gin.Context) {
 			Grid.ProcessGrid(begin, end, setting)
 		}
 	}
+	util.Notice(fmt.Sprintf(`done simulate grid`))
 	c.String(http.StatusOK, `done`)
 }
 

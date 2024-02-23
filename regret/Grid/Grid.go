@@ -129,15 +129,17 @@ var ProcessGrid = func(start, end time.Time, setting *model.Setting) {
 				data.priceHigh = gridCandles[j].PriceHigh
 			}
 		}
-		sign := fmt.Sprintf(fmt.Sprintf(`%s%s%d`, setting.Market, setting.Symbol,
-			gridCandles[i].Begin.Unix()-gridCandles[i].Begin.Unix()%setting.Seconds))
+		sign := fmt.Sprintf(`%s%s%d`, setting.Market, setting.Symbol, gridCandles[i].Begin.Unix()-gridCandles[i].Begin.Unix()%setting.Seconds)
 		gridMap[sign] = data
 	}
 	msgMiss := ``
 	msgHandle := ``
 	for i := 0; i < len(candles); i++ {
-		sign := fmt.Sprintf(fmt.Sprintf(`%s%s%d`, setting.Market, setting.Symbol,
-			candles[i].Begin.Unix()-candles[i].Begin.Unix()%setting.Seconds))
+		if candles[i] == nil {
+			util.Notice(fmt.Sprintf(`fail to get market candle %s %s %d`, setting.Market, setting.Symbol, i))
+			continue
+		}
+		sign := fmt.Sprintf(`%s%s%d`, setting.Market, setting.Symbol, candles[i].Begin.Unix()-candles[i].Begin.Unix()%setting.Seconds)
 		if gridMap[sign] == nil {
 			if msgMiss != fmt.Sprintf(`fail to get combine candle %s`, sign) {
 				msgMiss = fmt.Sprintf(`fail to get combine candle %s`, sign)
