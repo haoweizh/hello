@@ -7,6 +7,7 @@ import (
 	"hello/util"
 	"math"
 	"math/rand"
+	"strings"
 	"time"
 )
 
@@ -22,7 +23,7 @@ type Data struct {
 
 func createOrders(setting *model.Setting, data *Data, candle *model.Candle) {
 	if (data.orderBuy == nil || data.orderBuy.Status != model.CarryStatusWorking) && setting.Chance < 3 &&
-		(setting.Function == `both` || setting.Function == `buy` || setting.Chance < 0) {
+		(strings.Contains(setting.Function, `both`) || strings.Contains(setting.Function, `buy`) || setting.Chance < 0) {
 		price := data.priceLow + data.N/2
 		if setting.Chance > 0 {
 			price = math.Min(data.priceLow, setting.PriceX-data.N/2)
@@ -56,7 +57,7 @@ func createOrders(setting *model.Setting, data *Data, candle *model.Candle) {
 			data.orderBuy.Market, data.orderBuy.Symbol, data.orderBuy.OrderSide, data.orderBuy.Amount, data.orderBuy.Price, data.orderBuy.OrderTime.String()))
 	}
 	if (data.orderSell == nil || data.orderSell.Status != model.CarryStatusWorking) && setting.Chance > -3 &&
-		(setting.Function == `both` || setting.Function == `sell` || setting.Chance > 0) {
+		(strings.Contains(setting.Function, `both`) || strings.Contains(setting.Function, `sell`) || setting.Chance > 0) {
 		price := data.priceHigh - data.N/2
 		if setting.Chance > 0 {
 			priceChange := 1.5 * data.N
