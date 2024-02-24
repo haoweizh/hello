@@ -6,7 +6,6 @@ import (
 	"hello/model"
 	"hello/util"
 	"math"
-	"math/rand"
 	"strings"
 	"time"
 )
@@ -166,7 +165,7 @@ func dealGridSuccess(setting *model.Setting, order *model.Order, candle *model.C
 	order.UnfilledQuantity = 0
 	order.DealPrice = order.Price
 	order.OrderUpdateTime = candle.Begin
-	order.OrderId = fmt.Sprintf(`%d_%d`, candle.Begin.Unix(), rand.Int())
+	order.OrderId = fmt.Sprintf(`%d_%s_%d`, candle.Begin.Unix(), order.OrderSide, time.Now().Nanosecond())
 	setting.PriceX = order.Price
 	if order.OrderType != model.OrderTypeLimit {
 		if order.OrderSide == model.OrderSideSell {
@@ -175,9 +174,9 @@ func dealGridSuccess(setting *model.Setting, order *model.Order, candle *model.C
 			order.DealPrice = order.Price * (1 + tradeCost)
 		}
 	}
-	util.Info(fmt.Sprintf(`success deal %s %s %s amt %f at %f %s candle %f - %f %s`,
+	util.Info(fmt.Sprintf(`success deal %s %s %s amt %f at %f %s candle %f - %f %s chance %d`,
 		order.Market, order.Symbol, order.OrderSide, order.Amount, order.Price, order.OrderTime.String(),
-		candle.PriceLow, candle.PriceHigh, candle.Begin.String()))
+		candle.PriceLow, candle.PriceHigh, candle.Begin.String(), setting.Chance))
 	model.AppDB.Save(order)
 }
 

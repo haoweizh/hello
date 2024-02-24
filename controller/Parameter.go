@@ -226,12 +226,14 @@ func simulateGrid(c *gin.Context) {
 	function = fmt.Sprintf(`%s_%d_%d`, function, far, seconds)
 	for _, coin := range coinArr {
 		setting := &model.Setting{Valid: true,
-			Market:   market,
-			Symbol:   strings.ToUpper(coin) + model.UniStandardTail[model.MarketTypePerp],
-			Coin:     coin,
-			Function: function,
-			Far:      far,
-			Seconds:  seconds}
+			Market:     market,
+			Symbol:     strings.ToUpper(coin) + model.UniStandardTail[model.MarketTypePerp],
+			Coin:       coin,
+			Chance:     0,
+			GridAmount: 0,
+			Function:   function,
+			Far:        far,
+			Seconds:    seconds}
 		if strNew == `true` {
 			delNum := model.AppDB.Where(`function=? and market=? and symbol=? and order_time>? and order_time<?`,
 				setting.Function, market, setting.Symbol, strBegin, strEnd).Delete(&model.Order{}).RowsAffected
