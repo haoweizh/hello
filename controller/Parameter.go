@@ -233,8 +233,9 @@ func simulateGrid(c *gin.Context) {
 			Far:      far,
 			Seconds:  seconds}
 		if strNew == `true` {
-			go model.AppDB.Where(`function=? and market=? and symbol=? and order_time>? and order_time<?`,
-				setting.Function, market, setting.Symbol, strBegin, strEnd).Delete(&model.Order{})
+			delNum := model.AppDB.Where(`function=? and market=? and symbol=? and order_time>? and order_time<?`,
+				setting.Function, market, setting.Symbol, strBegin, strEnd).Delete(&model.Order{}).RowsAffected
+			util.Notice(fmt.Sprintf(`del rows %d %s %s %s %s~%s`, delNum, function, market, setting.Symbol, strBegin, strEnd))
 			Grid.ProcessGrid(begin, end, setting)
 		}
 	}
