@@ -252,33 +252,47 @@ func Test_BalAndPos(t *testing.T) {
 func Test_DealGridSimulate(t *testing.T) {
 	model.NewConfig()
 	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
-	funcName := `both_60_14400`
-	symbols := []string{`SOL_PERP`, `1000SHIB_PERP`, `SOL_PERP`, `DOGE_PERP`, `MATIC_PERP`, `OP_PERP`, `APT_PERP`,
-		`ADA_PERP`, `1000PEPE_PERP`, `TRB_PERP`, `WLD_PERP`, `SUI_PERP`, `FIL_PERP`, `DYDX_PERP`, `FTM_PERP`,
-		`AVAX_PERP`, `INJ_PERP`, `GMT_PERP`, `DOT_PERP`, `CFX_PERP`, `BTC_PERP`, `ETH_PERP`}
+	funcNames := []string{`both_60_14400`, `buy_60_14400`, `both_18_86400`, `buy_18_86400`}
+	symbols := []string{`1000SHIB_PERP`, `SOL_PERP`, `DOGE_PERP`, `MATIC_PERP`, `OP_PERP`, `APT_PERP`, `ADA_PERP`, `TRB_PERP`,
+		`FIL_PERP`, `DYDX_PERP`, `FTM_PERP`, `AVAX_PERP`, `INJ_PERP`, `GMT_PERP`, `DOT_PERP`, `BTC_PERP`, `ETH_PERP`}
+	result := make(map[string]map[string]map[string]string)
 	for _, symbol := range symbols {
-		//orders := make([]*model.Order, 0)
-		//model.AppDB.Where(`market=? and refresh_type=? and function=? and symbol=? and grid_pos=?`,
-		//	model.BinancePerp, model.FunctionSimulation, funcName, symbol, 0).Order(`order_time desc`).Limit(1).Find(&orders)
-		//if len(orders) > 0 {
-		//	delNum := model.AppDB.Where(`market=? and refresh_type=? and function=? and symbol=? and order_time>?`,
-		//		model.BinancePerp, model.FunctionSimulation, funcName, symbol, orders[0].OrderTime).Delete(&model.Order{}).RowsAffected
-		//	if delNum > 0 {
-		//		fmt.Println(fmt.Sprintf(`cut %s tail num %d`, symbol, delNum))
-		//	}
-		//} else {
-		//	util.Info(fmt.Sprintf(`can not get orders from %s %s grid 0`, model.BinancePerp, symbol))
-		//}
-		rows, _ := model.AppDB.Model(model.Order{}).Select(`symbol,order_side,sum(orders.deal_price*amount)/sum(amount),sum(amount),count(*)`).
-			Where(`function=? and symbol=?`, funcName, symbol).Group(`function,symbol,order_side`).Rows()
-		for rows.Next() {
-			var orderSide string
-			var price, amount, count float64
-			_ = rows.Scan(&symbol, &orderSide, &price, &amount, &count)
-			msg := fmt.Sprintf(`%s,%s,%f,%f,%f,%f`, symbol, orderSide, price, amount, amount*price, count)
-			util.InfoSync(msg)
-			fmt.Println(msg)
+		for _, funcName := range funcNames {
+			//orders := make([]*model.Order, 0)
+			//model.AppDB.Where(`market=? and refresh_type=? and function=? and symbol=? and grid_pos=?`,
+			//	model.BinancePerp, model.FunctionSimulation, funcName, symbol, 0).Order(`order_time desc`).Limit(1).Find(&orders)
+			//if len(orders) > 0 {
+			//	delNum := model.AppDB.Where(`market=? and refresh_type=? and function=? and symbol=? and order_time>?`,
+			//		model.BinancePerp, model.FunctionSimulation, funcName, symbol, orders[0].OrderTime).Delete(&model.Order{}).RowsAffected
+			//	if delNum > 0 {
+			//		fmt.Println(fmt.Sprintf(`cut %s tail num %d`, symbol, delNum))
+			//	}
+			//} else {
+			//	util.Info(fmt.Sprintf(`can not get orders from %s %s grid 0`, model.BinancePerp, symbol))
+			//}
+			rows, _ := model.AppDB.Model(model.Order{}).Select(`symbol,order_side,sum(orders.deal_price*amount)/sum(amount),sum(amount)`).
+				Where(`function=? and symbol=?`, funcName, symbol).Group(`function,symbol,order_side`).Rows()
+			for rows.Next() {
+				var orderSide string
+				var price, amount float64
+				_ = rows.Scan(&symbol, &orderSide, &price, &amount)
+				if result[symbol] == nil {
+					result[symbol] = make(map[string]map[string]string)
+				}
+				if result[symbol][funcName] == nil {
+					result[symbol][funcName] = make(map[string]string)
+				}
+				result[symbol][funcName][orderSide] = fmt.Sprintf(`%f,%f,%f`, price, amount, amount*price)
+			}
 		}
+	}
+	for symbol, funcMap := range result {
+		msg := `,` + symbol
+		for _, funcName := range funcNames {
+			msg += fmt.Sprintf(`,%s,%s`, funcMap[funcName][`buy`], funcMap[funcName][`sell`])
+			fmt.Println(fmt.Sprintf(`%s %s buy %s sell %s`, symbol, funcName, funcMap[funcName][`buy`], funcMap[funcName][`sell`]))
+		}
+		util.InfoSync(msg)
 	}
 }
 
@@ -307,7 +321,7 @@ func Test_CreateReport(t *testing.T) {
 func Test_CutTail(t *testing.T) {
 	model.NewConfig()
 	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
-	coins := `1000SHIB,SOL,SOL,DOGE,MATIC,OP,APT,ADA,1000PEPE,TRB,ARB,WLD,SUI,FIL,DYDX,FTM,AVAX,INJ,GMT,DOT,CFX,BTC,ETH`
+	coins := `1000SHIB,SOL,SOL,DOGE,MATIC,OP,APT,ADA,TRB,FIL,DYDX,FTM,AVAX,INJ,GMT,DOT,BTC,ETH`
 	//allLimit := 12
 	market := model.BinancePerp
 	strBegin := `2023-02-22T00:00:00+00:00`
