@@ -164,7 +164,7 @@ func dealGridSuccess(setting *model.Setting, order *model.Order, candle *model.C
 	order.DealAmount = order.Amount
 	order.UnfilledQuantity = 0
 	order.DealPrice = order.Price
-	order.OrderUpdateTime = candle.Begin
+	order.OrderTime = candle.Begin
 	order.OrderId = fmt.Sprintf(`%d_%s_%d`, candle.Begin.Unix(), order.OrderSide, time.Now().Nanosecond())
 	setting.PriceX = order.Price
 	if order.OrderType != model.OrderTypeLimit {
