@@ -223,7 +223,7 @@ func simulateGrid(c *gin.Context) {
 		strNew = `false`
 	}
 	coinArr := strings.Split(coins, `,`)
-	function = fmt.Sprintf(`%s_%d_%d`, function, far, seconds)
+	function = fmt.Sprintf(`%s_%d_%d_%s_%s`, function, far, seconds, strBegin, strEnd)
 	for _, coin := range coinArr {
 		setting := &model.Setting{Valid: true,
 			Market:     market,
@@ -241,7 +241,7 @@ func simulateGrid(c *gin.Context) {
 			Grid.ProcessGrid(begin, end, setting)
 		}
 	}
-	util.Notice(fmt.Sprintf(`done simulate grid`))
+	util.Notice(fmt.Sprintf(`done simulate grid` + function))
 	c.String(http.StatusOK, `done`)
 }
 

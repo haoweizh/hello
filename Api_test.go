@@ -287,12 +287,10 @@ func Test_DealGridSimulate(t *testing.T) {
 		}
 	}
 	for symbol, funcMap := range result {
-		msg := `,` + symbol
 		for _, funcName := range funcNames {
-			msg += fmt.Sprintf(`,%s,%s`, funcMap[funcName][`buy`], funcMap[funcName][`sell`])
-			fmt.Println(fmt.Sprintf(`%s %s buy %s sell %s`, symbol, funcName, funcMap[funcName][`buy`], funcMap[funcName][`sell`]))
+			msg := fmt.Sprintf(`,%s,%s,%s,%s`, symbol, funcName, funcMap[funcName][`buy`], funcMap[funcName][`sell`])
+			util.InfoSync(msg)
 		}
-		util.InfoSync(msg)
 	}
 }
 
