@@ -252,24 +252,27 @@ func Test_BalAndPos(t *testing.T) {
 func Test_DealGridSimulate(t *testing.T) {
 	model.NewConfig()
 	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
-	funcNames := []string{`both_60_14400`, `buy_60_14400`, `both_18_86400`, `buy_18_86400`}
+	funcNames := []string{`both_60_14400_2023-01-01T00:00:00+00:00_2023-07-01T00:00:00+00:00`,
+		`buy_60_14400_2023-01-01T00:00:00+00:00_2023-07-01T00:00:00+00:00`,
+		`both_18_86400_2023-01-01T00:00:00+00:00_2023-07-01T00:00:00+00:00`,
+		`buy_18_86400_2023-01-01T00:00:00+00:00_2023-07-01T00:00:00+00:00`}
 	symbols := []string{`1000SHIB_PERP`, `SOL_PERP`, `DOGE_PERP`, `MATIC_PERP`, `OP_PERP`, `APT_PERP`, `ADA_PERP`, `TRB_PERP`,
 		`FIL_PERP`, `DYDX_PERP`, `FTM_PERP`, `AVAX_PERP`, `INJ_PERP`, `GMT_PERP`, `DOT_PERP`, `BTC_PERP`, `ETH_PERP`}
 	result := make(map[string]map[string]map[string]string)
 	for _, symbol := range symbols {
 		for _, funcName := range funcNames {
-			//orders := make([]*model.Order, 0)
-			//model.AppDB.Where(`market=? and refresh_type=? and function=? and symbol=? and grid_pos=?`,
-			//	model.BinancePerp, model.FunctionSimulation, funcName, symbol, 0).Order(`order_time desc`).Limit(1).Find(&orders)
-			//if len(orders) > 0 {
-			//	delNum := model.AppDB.Where(`market=? and refresh_type=? and function=? and symbol=? and order_time>?`,
-			//		model.BinancePerp, model.FunctionSimulation, funcName, symbol, orders[0].OrderTime).Delete(&model.Order{}).RowsAffected
-			//	if delNum > 0 {
-			//		fmt.Println(fmt.Sprintf(`cut %s tail num %d`, symbol, delNum))
-			//	}
-			//} else {
-			//	util.Info(fmt.Sprintf(`can not get orders from %s %s grid 0`, model.BinancePerp, symbol))
-			//}
+			orders := make([]*model.Order, 0)
+			model.AppDB.Where(`market=? and refresh_type=? and function=? and symbol=? and grid_pos=?`,
+				model.BinancePerp, model.FunctionSimulation, funcName, symbol, 0).Order(`order_time desc`).Limit(1).Find(&orders)
+			if len(orders) > 0 {
+				delNum := model.AppDB.Where(`market=? and refresh_type=? and function=? and symbol=? and order_time>?`,
+					model.BinancePerp, model.FunctionSimulation, funcName, symbol, orders[0].OrderTime).Delete(&model.Order{}).RowsAffected
+				if delNum > 0 {
+					fmt.Println(fmt.Sprintf(`cut %s tail num %d`, symbol, delNum))
+				}
+			} else {
+				util.Info(fmt.Sprintf(`can not get orders from %s %s grid 0`, model.BinancePerp, symbol))
+			}
 			rows, _ := model.AppDB.Model(model.Order{}).Select(`symbol,order_side,sum(orders.deal_price*amount)/sum(amount),sum(amount)`).
 				Where(`function=? and symbol=?`, funcName, symbol).Group(`function,symbol,order_side`).Rows()
 			for rows.Next() {

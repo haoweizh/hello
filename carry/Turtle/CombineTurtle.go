@@ -329,12 +329,7 @@ func placeTurtleLong(account *model.Account, orderType string, data *model.Turtl
 					priceChange = 2.5 * data.N
 				}
 			}
-			if data.UseNear {
-				price = math.Max(setting.PriceX-priceChange, data.LowNear)
-			} else {
-				//price = math.Max(data.HighFar, setting.PriceX) - priceChange
-				price = math.Max(setting.PriceX/3+data.HighFar*2/3-priceChange, data.LowFar)
-			}
+			price = math.Max(setting.PriceX/3+data.HighFar*2/3-priceChange, data.LowFar)
 		}
 	} else if orderType == model.OrderTypeStop {
 		if setting.Chance > 0 {
@@ -427,15 +422,7 @@ func placeTurtleShort(account *model.Account, orderType string, data *model.Turt
 					priceChange = 2.5 * data.N
 				}
 			}
-			if data.UseNear {
-				price = math.Min(setting.PriceX+priceChange, data.HighNear)
-			} else {
-				if setting.PriceX > 0 {
-					price = math.Min(setting.PriceX/3+data.LowFar*2/3+priceChange, data.HighFar)
-				} else {
-					price = data.LowFar + priceChange
-				}
-			}
+			price = math.Min(setting.PriceX/3+data.LowFar*2/3+priceChange, data.HighFar)
 		} else if setting.Chance < 0 {
 			price = math.Max(data.HighFar, setting.PriceX+data.N/2)
 		}
