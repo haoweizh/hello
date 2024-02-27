@@ -21,20 +21,17 @@ type Data struct {
 }
 
 func createOrders(setting *model.Setting, data *Data, candle *model.Candle) {
+	priceChange := 2 * data.N
+	if setting.Seconds == 14400 {
+		priceChange = 2.5 * data.N
+	}
 	if setting.Chance < 3 && (strings.Contains(setting.Function, `both`) ||
 		strings.Contains(setting.Function, `buy`) || setting.Chance < 0) {
 		price := data.priceLow + data.N/2
 		if setting.Chance > 0 {
 			price = math.Min(data.priceLow, setting.PriceX-data.N/2)
 		} else if setting.Chance < 0 {
-			priceChange := 1.5 * data.N
-			if setting.Seconds == 14400 {
-				priceChange = 2 * data.N
-				if !model.CommonTurtleSymbols[setting.Symbol] {
-					priceChange = 2.5 * data.N
-				}
-			}
-			price = math.Max(setting.PriceX/3+data.priceHigh*2/3-priceChange, data.priceLow)
+			price = math.Max(math.Max(setting.PriceX, data.priceHigh)-priceChange, data.priceLow)
 		}
 		amount := fixAmtU / price
 		if setting.Chance < 0 {
@@ -59,14 +56,7 @@ func createOrders(setting *model.Setting, data *Data, candle *model.Candle) {
 		strings.Contains(setting.Function, `sell`) || setting.Chance > 0) {
 		price := data.priceHigh - data.N/2
 		if setting.Chance > 0 {
-			priceChange := 1.5 * data.N
-			if setting.Seconds == 14400 {
-				priceChange = 2 * data.N
-				if !model.CommonTurtleSymbols[setting.Symbol] {
-					priceChange = 2.5 * data.N
-				}
-			}
-			price = math.Min(setting.PriceX/3+data.priceLow*2/3+priceChange, data.priceHigh)
+			price = math.Min(math.Min(setting.PriceX, data.priceLow)+priceChange, data.priceHigh)
 		} else if setting.Chance < 0 {
 			price = math.Max(data.priceHigh, setting.PriceX+data.N/2)
 		}
