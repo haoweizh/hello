@@ -528,9 +528,9 @@ func getCandlesBinance(account *model.Account, market, symbol string, begin, end
 	redisKey := fmt.Sprintf(`%s_%s_%s_%d_%d_%d`, market, symbol, interval, begin.UnixMilli(), end.UnixMilli(), limit)
 	var responseBody []byte
 	if model.AppRedis != nil {
-		temp, redisErr := model.AppRedis.Get(context.Background(), redisKey).Result()
+		temp, redisErr := model.AppRedis.Get(context.Background(), redisKey).Bytes()
 		if redisErr == nil {
-			responseBody = []byte(temp)
+			responseBody = util.UnGzip(temp)
 			isCache = true
 			//util.Notice(fmt.Sprintf(`get candles from key %s %d`, redisKey, len(temp)))
 		}
@@ -566,8 +566,9 @@ func getCandlesBinance(account *model.Account, market, symbol string, begin, end
 		util.Notice(`fail to get binance kline %s %s %s %d %s`, symbol, begin.String(), end.String(), slotSeconds, errMsg)
 		return
 	} else if !isCache && model.AppRedis != nil {
-		util.Notice(fmt.Sprintf(`set candles to cache %s len %d`, redisKey, len(string(responseBody))))
-		model.AppRedis.Set(context.Background(), redisKey, string(responseBody), 0)
+		val := util.Compress(responseBody)
+		util.Notice(fmt.Sprintf(`set candles to cache %s len %d compress %d`, redisKey, len(responseBody), len(val)))
+		model.AppRedis.Set(context.Background(), redisKey, val, 0)
 	}
 	candles = make([]*model.Candle, 0)
 	for i := 0; i < len(items); i++ {

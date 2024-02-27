@@ -1546,9 +1546,9 @@ func getCandlesOKEX(account *model.Account, symbol string, before, after time.Ti
 	redisKey := fmt.Sprintf(`%s_%s_%s_%d_%d_%d`, model.OKEX, symbol, bar, before.UnixMilli(), after.UnixMilli(), count)
 	var responseBody []byte
 	if model.AppRedis != nil {
-		temp, redisErr := model.AppRedis.Get(context.Background(), redisKey).Result()
+		temp, redisErr := model.AppRedis.Get(context.Background(), redisKey).Bytes()
 		if redisErr == nil {
-			responseBody = []byte(temp)
+			responseBody = util.UnGzip(temp)
 			isCache = true
 			util.Notice(fmt.Sprintf(`get candles from key %s %d`, redisKey, len(temp)))
 		}
@@ -1566,12 +1566,12 @@ func getCandlesOKEX(account *model.Account, symbol string, before, after time.Ti
 		return
 	} else if !isCache && model.AppRedis != nil {
 		util.Notice(fmt.Sprintf(`set candles to cache %s len %d`, redisKey, len(string(responseBody))))
-		model.AppRedis.Set(context.Background(), redisKey, string(responseBody), 0)
+		model.AppRedis.Set(context.Background(), redisKey, util.Compress(responseBody), 0)
 	}
 	candleJsons := candleJson.Get(`data`).MustArray()
 	if len(candleJsons) < count && isCache {
 		responseBody, _ = sendSignRequestOKEX(account.Key, account.Secret, http.MethodGet, path, param, nil)
-		model.AppRedis.Set(context.Background(), redisKey, string(responseBody), 0)
+		model.AppRedis.Set(context.Background(), redisKey, util.Compress(responseBody), 0)
 		candleJson, err = util.NewJSON(responseBody)
 		if candleJson != nil {
 			candleJsons = candleJson.Get(`data`).MustArray()

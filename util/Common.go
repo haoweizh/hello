@@ -15,6 +15,18 @@ import (
 	"time"
 )
 
+func Compress(content []byte) []byte {
+	var b bytes.Buffer
+	writer := gzip.NewWriter(&b)
+	if _, err := writer.Write(content); err != nil {
+		Notice(`fail to compress ` + err.Error())
+	}
+	if err := writer.Close(); err != nil {
+		Notice(`fail to compress ` + err.Error())
+	}
+	return b.Bytes()
+}
+
 func UnGzip(byte []byte) []byte {
 	r, err := gzip.NewReader(bytes.NewBuffer(byte))
 	if err != nil {
@@ -159,14 +171,4 @@ func StoreSyncMap(syncMap *sync.Map, value interface{}, keys ...string) {
 		key += keys[i] + `*`
 	}
 	syncMap.Store(key, value)
-}
-
-func GetHourKeys(num int) (keys []string) {
-	keys = make([]string, num)
-	now := time.Now()
-	for i := 0; i < num; i++ {
-		curTime := now.Add(time.Hour * -24 * time.Duration(i))
-		keys[i] = fmt.Sprintf(`%d-%d-%d:%d`, curTime.Year(), curTime.Month(), curTime.Day(), curTime.Hour())
-	}
-	return keys
 }
