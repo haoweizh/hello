@@ -322,22 +322,16 @@ func placeTurtleLong(account *model.Account, orderType string, data *model.Turtl
 		if setting.Chance > 0 {
 			price = math.Min(data.LowFar, setting.PriceX-data.N/2)
 		} else if setting.Chance < 0 {
-			priceChange = 1.5 * data.N
+			priceChange = 2 * data.N
 			if setting.Seconds == 14400 {
-				priceChange = 2 * data.N
-				if !model.CommonTurtleSymbols[setting.Symbol] {
-					priceChange = 2.5 * data.N
-				}
+				priceChange = 2.5 * data.N
 			}
-			price = math.Max(setting.PriceX/3+data.HighFar*2/3-priceChange, data.LowFar)
+			//price = math.Max(setting.PriceX/3+data.HighFar*2/3-priceChange, data.LowFar)
 		}
 	} else if orderType == model.OrderTypeStop {
 		if setting.Chance > 0 {
 			price = math.Max(data.HighFar, setting.PriceX+data.N/2)
 		} else if setting.Chance < 0 {
-			if setting.Seconds == 14400 && !model.CommonTurtleSymbols[setting.Symbol] {
-				priceChange = 3 * data.N
-			}
 			if data.UseNear {
 				price = math.Min(setting.PriceX+priceChange, data.HighNear)
 			} else {
@@ -415,14 +409,11 @@ func placeTurtleShort(account *model.Account, orderType string, data *model.Turt
 	if orderType == model.OrderTypeLimit {
 		price = data.HighFar - data.N/2
 		if setting.Chance > 0 {
-			priceChange = 1.5 * data.N
+			priceChange = 2 * data.N
 			if setting.Seconds == 14400 {
-				priceChange = 2 * data.N
-				if !model.CommonTurtleSymbols[setting.Symbol] {
-					priceChange = 2.5 * data.N
-				}
+				priceChange = 2.5 * data.N
 			}
-			price = math.Min(setting.PriceX/3+data.LowFar*2/3+priceChange, data.HighFar)
+			//price = math.Min(setting.PriceX/3+data.LowFar*2/3+priceChange, data.HighFar)
 		} else if setting.Chance < 0 {
 			price = math.Max(data.HighFar, setting.PriceX+data.N/2)
 		}
@@ -432,9 +423,6 @@ func placeTurtleShort(account *model.Account, orderType string, data *model.Turt
 		}
 	} else if orderType == model.OrderTypeStop {
 		if setting.Chance > 0 {
-			if setting.Seconds == 14400 && !model.CommonTurtleSymbols[setting.Symbol] {
-				priceChange = 3 * data.N
-			}
 			if data.UseNear {
 				price = math.Max(setting.PriceX-priceChange, data.LowNear)
 			} else {
