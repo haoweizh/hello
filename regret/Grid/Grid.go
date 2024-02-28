@@ -25,17 +25,14 @@ func createOrders(setting *model.Setting, data *Data, candle *model.Candle) {
 	if setting.Seconds == 14400 {
 		priceChange = 2.5 * data.N
 	}
-	if setting.Chance < 3 && (strings.Contains(setting.Function, `both`) ||
-		strings.Contains(setting.Function, `buy`) || setting.Chance < 0) {
+	if data.orderBuy == nil && setting.Chance < 3 && (!strings.Contains(setting.Function, `sell`) || setting.Chance < 0) {
 		price := data.priceLow + data.N/2
+		amount := fixAmtU / price
 		if setting.Chance > 0 {
 			price = math.Min(data.priceLow, setting.PriceX-data.N/2)
 		} else if setting.Chance < 0 {
-			price = math.Max(math.Max(setting.PriceX, data.priceHigh)-priceChange, data.priceLow)
-		}
-		amount := fixAmtU / price
-		if setting.Chance < 0 {
 			amount = setting.GridAmount
+			price = math.Max(math.Max(setting.PriceX, data.priceHigh)-priceChange, data.priceLow)
 		}
 		data.orderBuy = &model.Order{Amount: amount,
 			Price:            price,
@@ -52,17 +49,14 @@ func createOrders(setting *model.Setting, data *Data, candle *model.Candle) {
 		util.Info(fmt.Sprintf(`create order %s %s %s amt %f at %f %s`,
 			data.orderBuy.Market, data.orderBuy.Symbol, data.orderBuy.OrderSide, data.orderBuy.Amount, data.orderBuy.Price, data.orderBuy.OrderTime.String()))
 	}
-	if setting.Chance > -3 && (strings.Contains(setting.Function, `both`) ||
-		strings.Contains(setting.Function, `sell`) || setting.Chance > 0) {
+	if data.orderSell == nil && setting.Chance > -3 && (!strings.Contains(setting.Function, `buy`) || setting.Chance > 0) {
 		price := data.priceHigh - data.N/2
-		if setting.Chance > 0 {
-			price = math.Min(math.Min(setting.PriceX, data.priceLow)+priceChange, data.priceHigh)
-		} else if setting.Chance < 0 {
-			price = math.Max(data.priceHigh, setting.PriceX+data.N/2)
-		}
 		amount := fixAmtU / price
 		if setting.Chance > 0 {
 			amount = setting.GridAmount
+			price = math.Min(math.Min(setting.PriceX, data.priceLow)+priceChange, data.priceHigh)
+		} else if setting.Chance < 0 {
+			price = math.Max(data.priceHigh, setting.PriceX+data.N/2)
 		}
 		data.orderSell = &model.Order{Amount: amount,
 			Price:            price,
@@ -155,6 +149,7 @@ func dealGridSuccess(setting *model.Setting, order *model.Order, candle *model.C
 	order.UnfilledQuantity = 0
 	order.DealPrice = order.Price
 	order.OrderTime = candle.Begin
+	order.GridPos = setting.Chance
 	order.OrderId = fmt.Sprintf(`%d_%s_%d`, candle.Begin.Unix(), order.OrderSide, time.Now().Nanosecond())
 	setting.PriceX = order.Price
 	if order.OrderType != model.OrderTypeLimit {
@@ -166,7 +161,7 @@ func dealGridSuccess(setting *model.Setting, order *model.Order, candle *model.C
 	}
 	util.Info(fmt.Sprintf(`success deal %s %s %s amt %f at %f %s candle %f - %f %s chance %d`,
 		order.Market, order.Symbol, order.OrderSide, order.Amount, order.Price, order.OrderTime.String(),
-		candle.PriceLow, candle.PriceHigh, candle.Begin.String(), setting.Chance))
+		candle.PriceLow, candle.PriceHigh, candle.Begin.String(), order.GridPos))
 	model.AppDB.Save(order)
 }
 
@@ -179,7 +174,6 @@ func handleGrid(setting *model.Setting, data *Data, candle *model.Candle) {
 			setting.Chance = 0
 			setting.GridAmount = 0
 		}
-		data.orderBuy.GridPos = setting.Chance
 		dealGridSuccess(setting, data.orderBuy, candle)
 		data.orderBuy = nil
 		util.Info(fmt.Sprintf(`set setting %s %s chance %d amt %f time %s`,
@@ -192,7 +186,6 @@ func handleGrid(setting *model.Setting, data *Data, candle *model.Candle) {
 			setting.Chance = 0
 			setting.GridAmount = 0
 		}
-		data.orderSell.GridPos = setting.Chance
 		dealGridSuccess(setting, data.orderSell, candle)
 		data.orderSell = nil
 		util.Info(fmt.Sprintf(`set setting %s %s chance %d amt %f time %s`,
