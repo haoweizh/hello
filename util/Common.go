@@ -30,7 +30,7 @@ func Compress(content []byte) []byte {
 func UnGzip(byte []byte) []byte {
 	r, err := gzip.NewReader(bytes.NewBuffer(byte))
 	if err != nil {
-		Notice(`fail to un-compress ` + err.Error())
+		Notice(fmt.Sprintf(`fail to un-compress %s, %d`, err.Error(), len(byte)))
 		return nil
 	}
 	var data, _ = io.ReadAll(r)

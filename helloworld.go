@@ -1,7 +1,6 @@
 package main
 
 import (
-	"github.com/go-redis/redis/v8"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"hello/api"
@@ -26,11 +25,11 @@ func main() {
 		util.Notice(err.Error())
 		return
 	}
-	model.AppRedis = redis.NewClient(&redis.Options{
-		Addr:     model.AppConfig.RedisAddr,
-		Password: model.AppConfig.RedisPassword,
-		DB:       0,
-	})
+	//model.AppRedis = redis.NewClient(&redis.Options{
+	//	Addr:     model.AppConfig.RedisAddr,
+	//	Password: model.AppConfig.RedisPassword,
+	//	DB:       0,
+	//})
 	go controller.ParameterServe()
 	go api.AppWSManager.Start()
 	carry.Maintain()

@@ -322,7 +322,7 @@ func Test_CreateReport(t *testing.T) {
 func Test_CutTail(t *testing.T) {
 	model.NewConfig()
 	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
-	coins := `1000SHIB,SOL,SOL,DOGE,MATIC,OP,APT,ADA,TRB,FIL,DYDX,FTM,AVAX,INJ,GMT,DOT,BTC,ETH`
+	coins := `1000SHIB,SOL,DOGE,MATIC,OP,APT,ADA,TRB,FIL,DYDX,FTM,AVAX,INJ,GMT,DOT,BTC,ETH`
 	//allLimit := 12
 	market := model.BinancePerp
 	strBegin := `2023-02-22T00:00:00+00:00`
