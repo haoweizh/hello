@@ -9,7 +9,6 @@ const (
 	UniswapV3
 )
 
-// 肯定不对啊       DexVariant  是个int值
 func (v DexVariant) PoolCreatedEventSignature() []byte {
 	switch v {
 	case UniswapV2:
