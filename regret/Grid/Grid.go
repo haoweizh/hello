@@ -99,12 +99,16 @@ var ProcessGrid = func(start, end time.Time, setting *model.Setting) {
 	startPoint := int(math.Max(float64(calcLenN), float64(setting.Far)))
 	for i := 0; i < startPoint; i++ {
 		beginPrice += gridCandles[i].PriceHigh - gridCandles[i].PriceLow
+		if i == startPoint-1 {
+			gridCandles[i].N = beginPrice / float64(startPoint)
+		}
 	}
 	gridMap := make(map[string]*Data)
-	gridCandles[calcLenN-1].N = beginPrice / float64(calcLenN)
 	for i := startPoint; i < len(gridCandles); i++ {
 		data := &Data{begin: gridCandles[i].Begin,
 			N: (gridCandles[i-1].N*(float64(calcLenN)-1) + gridCandles[i].PriceHigh - gridCandles[i].PriceLow) / float64(calcLenN)}
+		gridCandles[i].N = data.N
+		fmt.Println(fmt.Sprintf(`dis:%f n:%f`, gridCandles[i].PriceHigh-gridCandles[i].PriceLow, data.N))
 		for j := i - int(setting.Far); j < i; j++ {
 			if data.priceLow == 0 || data.priceLow > gridCandles[j].PriceLow {
 				data.priceLow = gridCandles[j].PriceLow
