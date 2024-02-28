@@ -528,9 +528,9 @@ func getCandlesBinance(account *model.Account, market, symbol string, begin, end
 	redisKey := fmt.Sprintf(`%s_%s_%s_%d_%d_%d`, market, symbol, interval, begin.UnixMilli(), end.UnixMilli(), limit)
 	var responseBody []byte
 	if model.AppRedis != nil {
-		temp, redisErr := model.AppRedis.Get(context.Background(), redisKey).Bytes()
+		temp, redisErr := model.AppRedis.Get(context.Background(), redisKey).Result()
 		if redisErr == nil {
-			responseBody = util.UnGzip(temp)
+			responseBody = util.UnGzip([]byte(temp))
 			isCache = true
 			//util.Notice(fmt.Sprintf(`get candles from key %s %d`, redisKey, len(temp)))
 		}

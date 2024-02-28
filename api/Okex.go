@@ -1546,9 +1546,9 @@ func getCandlesOKEX(account *model.Account, symbol string, before, after time.Ti
 	redisKey := fmt.Sprintf(`%s_%s_%s_%d_%d_%d`, model.OKEX, symbol, bar, before.UnixMilli(), after.UnixMilli(), count)
 	var responseBody []byte
 	if model.AppRedis != nil {
-		temp, redisErr := model.AppRedis.Get(context.Background(), redisKey).Bytes()
+		temp, redisErr := model.AppRedis.Get(context.Background(), redisKey).Result()
 		if redisErr == nil {
-			responseBody = util.UnGzip(temp)
+			responseBody = util.UnGzip([]byte(temp))
 			isCache = true
 			util.Notice(fmt.Sprintf(`get candles from key %s %d`, redisKey, len(temp)))
 		}
