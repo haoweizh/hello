@@ -203,11 +203,11 @@ func simulateGrid(c *gin.Context) {
 	strNew := c.Query(`new`)
 	market := c.Query(`market`)
 	coins := c.Query(`coin`)
-	strSeconds := c.Query(`seconds`)
-	strFar := c.Query(`far`) // both, buy, sell
-	function := c.Query(`function`)
-	far, errFar := strconv.ParseInt(strFar, 10, 64)
-	seconds, errSeconds := strconv.ParseInt(strSeconds, 10, 64)
+	//strSeconds := c.Query(`seconds`)
+	//strFar := c.Query(`far`) // both, buy, sell
+	//function := c.Query(`function`)
+	//far, errFar := strconv.ParseInt(strFar, 10, 64)
+	//seconds, errSeconds := strconv.ParseInt(strSeconds, 10, 64)
 	strBegin := c.Query(`begin`) + `T00:00:00+00:00`
 	strEnd := c.Query(`end`) + `T00:00:00+00:00`
 	begin, errBegin := time.Parse(time.RFC3339, strBegin)
@@ -219,29 +219,33 @@ func simulateGrid(c *gin.Context) {
 		_ = session.Save()
 	}
 	sessionValue := session.Get(`code`)
-	if sessionValue == nil || !codes[sessionValue.(string)] || errFar != nil || errSeconds != nil || errBegin != nil || errEnd != nil {
+	if sessionValue == nil || !codes[sessionValue.(string)] || errBegin != nil || errEnd != nil {
 		strNew = `false`
 	}
 	coinArr := strings.Split(coins, `,`)
-	function = fmt.Sprintf(`%s_%d_%d_%s_%s`, function, far, seconds, strBegin, strEnd)
 	for _, coin := range coinArr {
-		setting := &model.Setting{Valid: true,
-			Market:     market,
-			Symbol:     strings.ToUpper(coin) + model.UniStandardTail[model.MarketTypePerp],
-			Coin:       coin,
-			Chance:     0,
-			GridAmount: 0,
-			Function:   function,
-			Far:        far,
-			Seconds:    seconds}
 		if strNew == `true` {
-			delNum := model.AppDB.Where(`function=? and market=? and symbol=? and order_time>? and order_time<?`,
-				setting.Function, market, setting.Symbol, strBegin, strEnd).Delete(&model.Order{}).RowsAffected
-			util.Notice(fmt.Sprintf(`del rows %d %s %s %s %s~%s`, delNum, function, market, setting.Symbol, strBegin, strEnd))
-			Grid.ProcessGrid(begin, end, setting)
+			symbol := strings.ToUpper(coin) + model.UniStandardTail[model.MarketTypePerp]
+			account := model.AppConfig.GetAccounts(market)[0]
+			candles := api.GetMultiCandle(account, market, 60, begin, end,
+				map[string]*model.Setting{symbol: {Market: market, Symbol: symbol, Coin: coin}}, false)
+			util.StoreSyncMap(&model.CarryInfo, fmt.Sprintf(`get market candle %s %s from %s len %d`,
+				market, symbol, begin.String(), len(candles)), `gridInfo`)
+			settings := []*model.Setting{
+				{Market: market, Symbol: symbol, Coin: coin, Function: fmt.Sprintf(`both_18_86400_%s_%s`, strBegin, strEnd), Far: 18, Seconds: 86400},
+				{Market: market, Symbol: symbol, Coin: coin, Function: fmt.Sprintf(`buy_18_86400_%s_%s`, strBegin, strEnd), Far: 18, Seconds: 86400},
+				{Market: market, Symbol: symbol, Coin: coin, Function: fmt.Sprintf(`both_60_14400_%s_%s`, strBegin, strEnd), Far: 60, Seconds: 14400},
+				{Market: market, Symbol: symbol, Coin: coin, Function: fmt.Sprintf(`buy_60_14400_%s_%s`, strBegin, strEnd), Far: 60, Seconds: 14400},
+			}
+			for _, setting := range settings {
+				delNum := model.AppDB.Where(`function=? and market=? and symbol=? and order_time>? and order_time<?`,
+					setting.Function, market, setting.Symbol, strBegin, strEnd).Delete(&model.Order{}).RowsAffected
+				util.Notice(fmt.Sprintf(`del rows %d %s %s %s %s~%s`, delNum, setting.Function, market, setting.Symbol, strBegin, strEnd))
+				Grid.ProcessGrid(begin, end, setting, candles)
+			}
 		}
 	}
-	util.Notice(fmt.Sprintf(`done simulate grid` + function))
+	util.Notice(fmt.Sprintf(`done simulate grid %s %v`, market, coins))
 	c.String(http.StatusOK, `done`)
 }
 

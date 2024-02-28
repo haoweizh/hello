@@ -76,13 +76,9 @@ func createOrders(setting *model.Setting, data *Data, candle *model.Candle) {
 	return
 }
 
-var ProcessGrid = func(start, end time.Time, setting *model.Setting) {
+var ProcessGrid = func(start, end time.Time, setting *model.Setting, candles model.Candles) {
 	util.StoreSyncMap(&model.CarryInfo, nil, `gridInfo`)
 	account := model.AppConfig.GetAccounts(setting.Market)[0]
-	candles := api.GetMultiCandle(account, setting.Market, 60, start, end,
-		map[string]*model.Setting{setting.Symbol: setting}, false)
-	util.StoreSyncMap(&model.CarryInfo, fmt.Sprintf(`get market candle %s %s from %s len %d`,
-		setting.Market, setting.Symbol, start.String(), len(candles)), `gridInfo`)
 	gridCandles := api.CombineCandles(account, setting.Market, setting.Symbol, int(setting.Seconds), start.Add(time.Hour*-1200), end)
 	util.StoreSyncMap(&model.CarryInfo, fmt.Sprintf(`get grid candle %s %s from %s len %d`,
 		setting.Market, setting.Symbol, start.Add(time.Hour*-1200).String(), len(gridCandles)), `gridInfo`)
