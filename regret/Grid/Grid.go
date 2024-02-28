@@ -108,7 +108,6 @@ var ProcessGrid = func(start, end time.Time, setting *model.Setting) {
 		data := &Data{begin: gridCandles[i].Begin,
 			N: (gridCandles[i-1].N*(float64(calcLenN)-1) + gridCandles[i].PriceHigh - gridCandles[i].PriceLow) / float64(calcLenN)}
 		gridCandles[i].N = data.N
-		fmt.Println(fmt.Sprintf(`dis:%f n:%f`, gridCandles[i].PriceHigh-gridCandles[i].PriceLow, data.N))
 		for j := i - int(setting.Far); j < i; j++ {
 			if data.priceLow == 0 || data.priceLow > gridCandles[j].PriceLow {
 				data.priceLow = gridCandles[j].PriceLow
