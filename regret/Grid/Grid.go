@@ -147,7 +147,7 @@ func dealGridSuccess(setting *model.Setting, order *model.Order, candle *model.C
 	order.DealAmount = order.Amount
 	order.UnfilledQuantity = 0
 	order.DealPrice = order.Price
-	order.OrderTime = candle.Begin
+	order.UpdatedAt = candle.Begin
 	order.GridPos = setting.Chance
 	order.OrderId = fmt.Sprintf(`%d_%s_%d`, candle.Begin.Unix(), order.OrderSide, time.Now().Nanosecond())
 	setting.PriceX = order.Price
@@ -178,7 +178,8 @@ func handleGrid(setting *model.Setting, data *Data, candle *model.Candle) {
 		data.orderSell = nil
 		util.Info(fmt.Sprintf(`set setting %s %s chance %d amt %f time %s`,
 			setting.Market, setting.Symbol, setting.Chance, setting.GridAmount, candle.Begin.String()))
-	} else if data.orderSell != nil && data.orderSell.Status == model.CarryStatusWorking && candle.PriceHigh > data.orderSell.Price {
+	}
+	if data.orderSell != nil && data.orderSell.Status == model.CarryStatusWorking && candle.PriceHigh > data.orderSell.Price {
 		if setting.Chance <= 0 {
 			setting.Chance -= 1
 			setting.GridAmount += data.orderSell.Amount
