@@ -27,7 +27,7 @@ func createOrders(setting *model.Setting, data *Data, candle *model.Candle) {
 	}
 	if data.orderBuy == nil && setting.Chance < 3 && (!strings.Contains(setting.Function, `sell`) || setting.Chance < 0) {
 		price := data.priceLow + data.N/2
-		amount := 0.0
+		amount := fixAmtU / price / data.N
 		if setting.Chance > 0 {
 			price = math.Min(data.priceLow, setting.PriceX-data.N/2)
 			amount = fixAmtU / price / data.N
@@ -56,7 +56,7 @@ func createOrders(setting *model.Setting, data *Data, candle *model.Candle) {
 	}
 	if data.orderSell == nil && setting.Chance > -3 && (!strings.Contains(setting.Function, `buy`) || setting.Chance > 0) {
 		price := data.priceHigh - data.N/2
-		amount := 0.0
+		amount := fixAmtU / price / data.N
 		if setting.Chance > 0 {
 			amount = setting.GridAmount
 			if setting.CloseShortMargin == 3 {
