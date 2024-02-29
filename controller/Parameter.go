@@ -236,6 +236,10 @@ func simulateGrid(c *gin.Context) {
 				{Market: market, Symbol: symbol, Coin: coin, Function: fmt.Sprintf(`buy_18_86400_%s_%s`, strBegin, strEnd), Far: 18, Seconds: 86400},
 				{Market: market, Symbol: symbol, Coin: coin, Function: fmt.Sprintf(`both_60_14400_%s_%s`, strBegin, strEnd), Far: 60, Seconds: 14400},
 				{Market: market, Symbol: symbol, Coin: coin, Function: fmt.Sprintf(`buy_60_14400_%s_%s`, strBegin, strEnd), Far: 60, Seconds: 14400},
+				{Market: market, Symbol: symbol, Coin: coin, Function: fmt.Sprintf(`both_d3_18_86400_%s_%s`, strBegin, strEnd), Far: 18, Seconds: 86400, CloseShortMargin: 3},
+				{Market: market, Symbol: symbol, Coin: coin, Function: fmt.Sprintf(`buy_d3_18_86400_%s_%s`, strBegin, strEnd), Far: 18, Seconds: 86400, CloseShortMargin: 3},
+				{Market: market, Symbol: symbol, Coin: coin, Function: fmt.Sprintf(`both_d3_60_14400_%s_%s`, strBegin, strEnd), Far: 60, Seconds: 14400, CloseShortMargin: 3},
+				{Market: market, Symbol: symbol, Coin: coin, Function: fmt.Sprintf(`buy_d3_60_14400_%s_%s`, strBegin, strEnd), Far: 60, Seconds: 14400, CloseShortMargin: 3},
 			}
 			for _, setting := range settings {
 				delNum := model.AppDB.Where(`function=? and market=? and symbol=? and order_time>? and order_time<?`,
