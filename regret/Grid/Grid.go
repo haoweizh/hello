@@ -39,7 +39,8 @@ func createOrders(setting *model.Setting, data *Data, candle *model.Candle) {
 				price = math.Max(math.Max(setting.PriceX, data.priceHigh)-priceChange, data.priceLow)
 			}
 		}
-		data.orderBuy = &model.Order{Amount: amount,
+		data.orderBuy = &model.Order{
+			Amount:           amount,
 			Price:            price,
 			UnfilledQuantity: amount,
 			Function:         setting.Function,
@@ -68,7 +69,8 @@ func createOrders(setting *model.Setting, data *Data, candle *model.Candle) {
 			price = math.Max(data.priceHigh, setting.PriceX+data.N/2)
 			amount = fixAmtU / data.N
 		}
-		data.orderSell = &model.Order{Amount: amount,
+		data.orderSell = &model.Order{
+			Amount:           amount,
 			Price:            price,
 			UnfilledQuantity: amount,
 			Function:         setting.Function,
