@@ -32,8 +32,8 @@ func createOrders(setting *model.Setting, data *Data, candle *model.Candle) {
 			price = math.Min(data.priceLow, setting.PriceX-data.N/2)
 		} else if setting.Chance < 0 {
 			amount = setting.GridAmount
-			//price = math.Max(math.Max(setting.PriceX, data.priceHigh)-priceChange, data.priceLow)
-			price = math.Max(setting.PriceX/3+data.priceHigh*2/3-priceChange, data.priceLow)
+			price = math.Max(math.Max(setting.PriceX, data.priceHigh)-priceChange, data.priceLow)
+			//price = math.Max(setting.PriceX/3+data.priceHigh*2/3-priceChange, data.priceLow)
 		}
 		data.orderBuy = &model.Order{Amount: amount,
 			Price:            price,
@@ -55,8 +55,8 @@ func createOrders(setting *model.Setting, data *Data, candle *model.Candle) {
 		amount := fixAmtU / price
 		if setting.Chance > 0 {
 			amount = setting.GridAmount
-			//price = math.Min(math.Min(setting.PriceX, data.priceLow)+priceChange, data.priceHigh)
-			price = math.Min(setting.PriceX/3+data.priceLow*2/3+priceChange, data.priceHigh)
+			price = math.Min(math.Min(setting.PriceX, data.priceLow)+priceChange, data.priceHigh)
+			//price = math.Min(setting.PriceX/3+data.priceLow*2/3+priceChange, data.priceHigh)
 		} else if setting.Chance < 0 {
 			price = math.Max(data.priceHigh, setting.PriceX+data.N/2)
 		}

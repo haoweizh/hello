@@ -257,7 +257,7 @@ func Test_DealGridSimulate(t *testing.T) {
 		`both_18_86400_2022-02-27T00:00:00+00:00_2024-02-27T00:00:00+00:00`,
 		`buy_18_86400_2022-02-27T00:00:00+00:00_2024-02-27T00:00:00+00:00`}
 	//symbols := []string{`1000SHIB_PERP`, `SOL_PERP`, `DOGE_PERP`, `MATIC_PERP`, `OP_PERP`, `APT_PERP`, `ADA_PERP`, `TRB_PERP`,
-	//	`FIL_PERP`, `DYDX_PERP`, `FTM_PERP`, `AVAX_PERP`, `INJ_PERP`, `GMT_PERP`, `DOT_PERP`}
+	//	`FIL_PERP`, `DYDX_PERP`, `FTM_PERP`, `AVAX_PERP`, `INJ_PERP`, `GMT_PERP`, `DOT_PERP`, `BTC_PERP`, `ETH_PERP`}
 	symbols := []string{`BTC_PERP`, `ETH_PERP`}
 	result := make(map[string]map[string]map[string]string)
 	for _, symbol := range symbols {
