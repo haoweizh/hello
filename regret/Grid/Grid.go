@@ -27,7 +27,7 @@ func createOrders(setting *model.Setting, data *Data, candle *model.Candle) {
 	}
 	if data.orderBuy == nil && setting.Chance < 3 && (!strings.Contains(setting.Function, `sell`) || setting.Chance < 0) {
 		price := data.priceLow + data.N/2
-		amount := fixAmtU / price
+		amount := fixAmtU / price / data.N
 		if setting.Chance > 0 {
 			price = math.Min(data.priceLow, setting.PriceX-data.N/2)
 		} else if setting.Chance < 0 {
