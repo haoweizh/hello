@@ -8,6 +8,7 @@ import (
 	"github.com/ethereum/go-ethereum/rpc"
 	"hello/cfmms"
 	"hello/cfmms/batch_request/batch_request_for_uniswap_v2"
+	"hello/cfmms/chainTrade"
 	"log"
 	"math/big"
 	"testing"
@@ -105,10 +106,10 @@ func Test_Get_pairs_batch_request2(t *testing.T) {
 	//}
 	//hexStr := GetUniswapV2PairsBatchRequest.GetUniswapV2PairsBatchRequestMetaData.Bin
 
-	//c := bind.NewBoundContract(common.Address{}, GetUniswapV2PairsBatchRequest.GetUniswapV2PairsBatchRequestMetaData.ABI, backend, backend, backend)
-	//common.FromHex(GetUniswapV2PairsBatchRequest. GetUniswapV2PairsBatchRequestMetaData.Bin)
+	//c := bind.NewBoundContract(chainTrade.Address{}, GetUniswapV2PairsBatchRequest.GetUniswapV2PairsBatchRequestMetaData.ABI, backend, backend, backend)
+	//chainTrade.FromHex(GetUniswapV2PairsBatchRequest. GetUniswapV2PairsBatchRequestMetaData.Bin)
 
-	//batch_request_for_uniswap_v2.Get_pairs_batch_request(common.HexToAddress("0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f"), big.NewInt(2638438), big.NewInt(300), client)
+	//batch_request_for_uniswap_v2.Get_pairs_batch_request(chainTrade.HexToAddress("0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f"), big.NewInt(2638438), big.NewInt(300), client)
 
 }
 
@@ -136,4 +137,23 @@ func Test_Hex2string(t *testing.T) {
 
 	fmt.Println(string(bytes))
 
+}
+
+func Test_GenerateAccount(t *testing.T) {
+
+	address := common.HexToAddress("0x3fF4F53D4778cE717c9dAE3558623d57e8BBA62A")
+
+	// 本地生成钱包地址
+	//account := chainTrade.GenerateAccount()
+
+	balance := chainTrade.GetBalance(address)
+	pendingBalance := chainTrade.GetPendingBalance(address)
+	fmt.Println("balance", balance)
+	fmt.Println("pendingBalance", pendingBalance)
+
+	chainTrade.GetBlockHeader()
+	chainTrade.GetBlock(big.NewInt(10617663))
+	chainTrade.GetTransaction(common.HexToHash("0x05db441ae65a3d6953a1ae70979af439bd9614cea99efaf8f1b5fa87e41ab839"))
+	chainTrade.GetTransactionCount(chainTrade.GetBlock(big.NewInt(10617663)))
+	//fmt.Println(account)
 }

@@ -10,3 +10,4 @@ contract CounterScript is Script {
         vm.broadcast();
     }
 }
+

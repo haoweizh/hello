@@ -143,12 +143,12 @@ func Get_pool_data_batch_request(pool []string, client *ethclient.Client) []Pool
 //	oneStructLen := 64 * 6
 //	nums := len(hexString) / oneStructLen
 //	for i := 1; i < nums+1; i++ {
-//		pool.TokenA = common.HexToAddress(hexString[(i-1)*oneStructLen : (i-1)*oneStructLen+64])
-//		pool.TokenADecimals = int64(new(big.Int).SetBytes(common.FromHex(hexString[(i-1)*oneStructLen+64 : (i-1)*oneStructLen+128])).Int64())
-//		pool.TokenB = common.HexToAddress(hexString[(i-1)*oneStructLen+128 : (i-1)*oneStructLen+192])
-//		pool.TokenBDecimals = int64(new(big.Int).SetBytes(common.FromHex(hexString[(i-1)*oneStructLen+192 : (i-1)*oneStructLen+256])).Int64())
-//		pool.Reserve0 = new(big.Int).SetBytes(common.FromHex(hexString[(i-1)*oneStructLen+256 : (i-1)*oneStructLen+320]))
-//		pool.Reserve1 = new(big.Int).SetBytes(common.FromHex(hexString[(i-1)*oneStructLen+320 : (i-1)*oneStructLen+384]))
+//		pool.TokenA = chainTrade.HexToAddress(hexString[(i-1)*oneStructLen : (i-1)*oneStructLen+64])
+//		pool.TokenADecimals = int64(new(big.Int).SetBytes(chainTrade.FromHex(hexString[(i-1)*oneStructLen+64 : (i-1)*oneStructLen+128])).Int64())
+//		pool.TokenB = chainTrade.HexToAddress(hexString[(i-1)*oneStructLen+128 : (i-1)*oneStructLen+192])
+//		pool.TokenBDecimals = int64(new(big.Int).SetBytes(chainTrade.FromHex(hexString[(i-1)*oneStructLen+192 : (i-1)*oneStructLen+256])).Int64())
+//		pool.Reserve0 = new(big.Int).SetBytes(chainTrade.FromHex(hexString[(i-1)*oneStructLen+256 : (i-1)*oneStructLen+320]))
+//		pool.Reserve1 = new(big.Int).SetBytes(chainTrade.FromHex(hexString[(i-1)*oneStructLen+320 : (i-1)*oneStructLen+384]))
 //		pool.Fee = 300
 //	}
 //	return err
