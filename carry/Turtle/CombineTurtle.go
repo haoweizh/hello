@@ -120,19 +120,6 @@ var ProcessCombineTurtle = func(settingCombine *model.Setting, tick *model.BidAs
 		}
 	}
 	if needClear {
-		allLiquidate := true
-		for _, setting := range settings {
-			if setting.Chance != 0 {
-				allLiquidate = false
-			}
-		}
-		if allLiquidate {
-			for _, data := range turtleData {
-				//data.AdjustChecked = false
-				util.Notice(fmt.Sprintf(`set need check adjust after both setting liquidate %s %s`,
-					settingCombine.Market, data.Symbol))
-			}
-		}
 		api.ClearExtraOrders(account.Key, account.Secret, market, symbol, turtleData)
 	}
 }

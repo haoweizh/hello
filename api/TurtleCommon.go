@@ -612,6 +612,15 @@ func CheckBreak(account *model.Account, market, symbol string, settings []*model
 				data.BreakLong = true
 				for _, order := range data.OrderLong {
 					data.OrderAdjust[order.OrderId] = order
+					if order.Market == model.OKEX && order.OrderType != model.OrderTypeLimit {
+						limitOrder := QueryOrderById(account.Key, account.Secret, order.Market, order.Symbol,
+							order.OrderType, order.OrderId)
+						if limitOrder != nil {
+							data.OrderAdjust[limitOrder.OrderId] = limitOrder
+							util.Notice(fmt.Sprintf(`add okex created limit order into turtle adjust %s %s->%s`,
+								order.Symbol, order.OrderId, limitOrder.OrderId))
+						}
+					}
 				}
 				util.Notice(fmt.Sprintf(`order break long %s %s %s %d %e %e id %s usdApi %v`,
 					market, symbol, orderLong.OrderType, setting.Chance, orderLong.TriggerPrice, orderLong.Price, orderLong.OrderId, useApi))
@@ -630,6 +639,15 @@ func CheckBreak(account *model.Account, market, symbol string, settings []*model
 				data.BreakShort = true
 				for _, order := range data.OrderShort {
 					data.OrderAdjust[order.OrderId] = order
+					if order.Market == model.OKEX && order.OrderType != model.OrderTypeLimit {
+						limitOrder := QueryOrderById(account.Key, account.Secret, order.Market, order.Symbol,
+							order.OrderType, order.OrderId)
+						if limitOrder != nil {
+							data.OrderAdjust[limitOrder.OrderId] = limitOrder
+							util.Notice(fmt.Sprintf(`add okex created limit order into turtle adjust %s %s->%s`,
+								order.Symbol, order.OrderId, limitOrder.OrderId))
+						}
+					}
 				}
 				util.Notice(fmt.Sprintf(`order break short %s %s %s %d %e %e id %s useApi %v`,
 					market, symbol, orderShort.OrderType, setting.Chance, orderShort.TriggerPrice, orderShort.Price, orderShort.OrderId, useApi))
