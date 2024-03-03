@@ -538,7 +538,8 @@ func GetFundingRate(key, secret, market, symbol string) (success bool, rate floa
 	now := util.GetNow().Unix()
 	if fundingRate != nil && now < fundingRate.ExpireTime && fundingRate.UpdateTime.Add(time.Minute*5).After(time.Now()) {
 		if market == model.OKEX {
-			util.Notice(fmt.Sprintf(`get okx funding rate %f till %s`, fundingRate.Rate, fundingRate.UpdateTime.String()))
+			util.Notice(fmt.Sprintf(`get okx funding rate %f update %s till %s`,
+				fundingRate.Rate, fundingRate.UpdateTime.String(), time.Unix(fundingRate.ExpireTime, 0).String()))
 		}
 		return true, fundingRate.Rate, fundingRate.UpdateTime
 	}
