@@ -252,16 +252,18 @@ func Test_BalAndPos(t *testing.T) {
 func Test_DealGridSimulate(t *testing.T) {
 	model.NewConfig()
 	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
-	funcNames := []string{`both_60_14400_2023-02-27T00:00:00+00:00_2024-02-27T00:00:00+00:00`,
-		`buy_60_14400_2023-02-27T00:00:00+00:00_2024-02-27T00:00:00+00:00`,
-		`both_18_86400_2023-02-27T00:00:00+00:00_2024-02-27T00:00:00+00:00`,
-		`buy_18_86400_2023-02-27T00:00:00+00:00_2024-02-27T00:00:00+00:00`,
-		`both_d3_60_14400_2023-02-27T00:00:00+00:00_2024-02-27T00:00:00+00:00`,
-		`buy_d3_60_14400_2023-02-27T00:00:00+00:00_2024-02-27T00:00:00+00:00`,
-		`both_d3_18_86400_2023-02-27T00:00:00+00:00_2024-02-27T00:00:00+00:00`,
-		`buy_d3_18_86400_2023-02-27T00:00:00+00:00_2024-02-27T00:00:00+00:00`}
-	symbols := []string{`1000SHIB_PERP`, `SOL_PERP`, `DOGE_PERP`, `MATIC_PERP`, `OP_PERP`, `APT_PERP`, `ADA_PERP`, `TRB_PERP`,
-		`FIL_PERP`, `DYDX_PERP`, `FTM_PERP`, `AVAX_PERP`, `INJ_PERP`, `GMT_PERP`, `DOT_PERP`, `BTC_PERP`, `ETH_PERP`}
+	funcNames := []string{
+		`both_60_14400_2022-02-27T00:00:00+00:00_2024-02-27T00:00:00+00:00`,
+		`buy_60_14400_2022-02-27T00:00:00+00:00_2024-02-27T00:00:00+00:00`,
+		`both_18_86400_2022-02-27T00:00:00+00:00_2024-02-27T00:00:00+00:00`,
+		`buy_18_86400_2022-02-27T00:00:00+00:00_2024-02-27T00:00:00+00:00`,
+		`both_d3_60_14400_2022-02-27T00:00:00+00:00_2024-02-27T00:00:00+00:00`,
+		`buy_d3_60_14400_2022-02-27T00:00:00+00:00_2024-02-27T00:00:00+00:00`,
+		`both_d3_18_86400_2022-02-27T00:00:00+00:00_2024-02-27T00:00:00+00:00`,
+		`buy_d3_18_86400_2022-02-27T00:00:00+00:00_2024-02-27T00:00:00+00:00`}
+	symbols := []string{`1000SHIB_PERP`, `SOL_PERP`, `DOGE_PERP`, `MATIC_PERP`, `ADA_PERP`, `TRB_PERP`, `FIL_PERP`,
+		`DYDX_PERP`, `FTM_PERP`, `AVAX_PERP`, `DOT_PERP`, `MASK_PERP`, `NEAR_PERP`, `BLZ_PERP`, `MKR_PERP`, `GALA_PERP`,
+		`STORJ_PERP`, `ATOM_PERP`, `RUNE_PERP`, `CRV_PERP`}
 	//symbols := []string{`BTC_PERP`, `ETH_PERP`}
 	result := make(map[string]map[string]map[string]string)
 	for _, symbol := range symbols {
@@ -327,7 +329,7 @@ func Test_CreateReport(t *testing.T) {
 func Test_CutTail(t *testing.T) {
 	model.NewConfig()
 	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
-	coins := `1000SHIB,SOL,DOGE,MATIC,OP,APT,ADA,TRB,FIL,DYDX,FTM,AVAX,INJ,GMT,DOT,BTC,ETH`
+	coins := `1000SHIB,SOL,DOGE,MATIC,ADA,TRB,FIL,DYDX,FTM,AVAX,DOT,MASK,NEAR,BLZ,MKR,GALA,STORJ,ATOM,RUNE,CRV`
 	//allLimit := 12
 	market := model.BinancePerp
 	strBegin := `2023-02-22T00:00:00+00:00`

@@ -1491,12 +1491,11 @@ func getFundingRateOKEX(key, secret, symbol string) (fundingRate *model.FundingR
 	}
 	data := fundingJson.Get(`data`).MustArray()[0].(map[string]interface{})
 	rate, _ := strconv.ParseFloat(data[`fundingRate`].(string), 64)
-	rateNext, _ := strconv.ParseFloat(data[`nextFundingRate`].(string), 64)
+	//rateNext, _ := strconv.ParseFloat(data[`nextFundingRate`].(string), 64)
 	rateTime, _ := strconv.ParseInt(data[`fundingTime`].(string), 10, 64)
 	rateTime /= 1000
 	return &model.FundingRate{
 		Rate:       rate,
-		RateNext:   rateNext,
 		UpdateTime: util.GetNow(),
 		ExpireTime: rateTime}
 }

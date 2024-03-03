@@ -536,18 +536,10 @@ func GetFundingRate(key, secret, market, symbol string) (success bool, rate floa
 		fundingRate = value.(*model.FundingRate)
 	}
 	now := util.GetNow().Unix()
-	// 针对ok用新expireTime返回旧数据问题的特殊处理; 其他交易所的资金费率都会实时变动
-	if fundingRate != nil && market == model.OKEX {
-		if now < fundingRate.ExpireTime-60 && fundingRate.UpdateTime.Add(time.Minute*5).After(time.Now()) {
-			return true, fundingRate.Rate, fundingRate.UpdateTime
-		} else if now > fundingRate.ExpireTime-60 && now < fundingRate.ExpireTime+240 {
-			if now < fundingRate.ExpireTime {
-				return true, fundingRate.Rate, fundingRate.UpdateTime
-			} else {
-				return true, fundingRate.RateNext, fundingRate.UpdateTime
-			}
+	if fundingRate != nil && now < fundingRate.ExpireTime && fundingRate.UpdateTime.Add(time.Minute*5).After(time.Now()) {
+		if market == model.OKEX {
+			util.Notice(fmt.Sprintf(`get okx funding rate %f till %s`, fundingRate.Rate, fundingRate.UpdateTime.String()))
 		}
-	} else if fundingRate != nil && now < fundingRate.ExpireTime && fundingRate.UpdateTime.Add(time.Minute*5).After(time.Now()) {
 		return true, fundingRate.Rate, fundingRate.UpdateTime
 	}
 	switch market {
