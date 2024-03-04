@@ -764,9 +764,9 @@ func MustPlaceOrder(key, secret, orderSide, orderType, market, symbol, orderPara
 						amount, v.(*model.MarketInfo).SizeMax))
 				}
 				// <APIError> code=-2027, msg=Exceeded the maximum allowable position at current leverage.
-				if order != nil && strings.Contains(order.ErrCode, `-2027`) {
-					break
-				}
+				//if order != nil && strings.Contains(order.ErrCode, `-2027`) {
+				//	break
+				//}
 				time.Sleep(time.Second * 30)
 				util.Notice(fmt.Sprintf(`fail to place order %d time, re order`, i))
 			}
