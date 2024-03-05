@@ -35,12 +35,21 @@ import (
 // const ChainClientRpc = "http://127.0.0.1:8545"
 const ChainClientRpc = "https://goerli.infura.io/v3/bc26f6bef4a34dd586cb012f82d561d5"
 
+// 测试账号
+var privateKey *ecdsa.PrivateKey
+var publicAddress common.Address
+
 var client *ethclient.Client
 
 func init() {
 
 	var err error
 	client, err = ethclient.Dial(ChainClientRpc)
+	if err != nil {
+		log.Fatal(err)
+	}
+	publicAddress = common.HexToAddress("0x86cd4052f6997EB292298106b45C6A798B2cB854")
+	privateKey, err = crypto.HexToECDSA("d3f1d181ec154b4add69f5f91187e81567916bb64b18b1e4163f9baa4d00ef63")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -172,7 +181,71 @@ func GetTransactionInfo(block *types.Block) {
 		fmt.Println(tx.Nonce())             // 110644
 		fmt.Println(tx.Data())              // []
 		fmt.Println(tx.To().Hex())          // 0x55fE59D8Ad77035154dDd0AD0388D09Dd4047A8e
+		GetTransactionReceipt(tx)
 	}
+}
+
+// 获取执行事务的结果
+
+func GetTransactionReceipt(tx *types.Transaction) (*types.Receipt, error) {
+	receipt, err := client.TransactionReceipt(context.Background(), tx.Hash())
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println("receipt status:", receipt.Status) // 1 成功 0 失败
+	fmt.Println("receipt log:", receipt.Logs)      // TODO：日志什么干嘛的？
+	return receipt, nil
+}
+
+// 发送 EIP1559 交易
+
+func Send1559Tx() {
+	nonce, err := client.PendingNonceAt(context.Background(), publicAddress)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Println(nonce)
+	value := big.NewInt(100000000000000) // in wei (0.0001 eth)
+	gasLimit := uint64(21000)            // in units
+	tip := big.NewInt(2000000000)        // maxPriorityFeePerGas = 2 Gwei
+	feeCap := big.NewInt(20000000000)    // maxFeePerGas = 20 Gwei
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	toAddress := common.HexToAddress("0x3fF4F53D4778cE717c9dAE3558623d57e8BBA62A")
+	var data []byte
+
+	chainID, err := client.NetworkID(context.Background())
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	tx := types.NewTx(&types.DynamicFeeTx{
+		ChainID:   chainID,
+		Nonce:     nonce,
+		GasFeeCap: feeCap,
+		GasTipCap: tip,
+		Gas:       gasLimit,
+		To:        &toAddress,
+		Value:     value,
+		Data:      data,
+	})
+
+	signedTx, err := types.SignTx(tx, types.LatestSignerForChainID(chainID), privateKey)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	err = client.SendTransaction(context.Background(), signedTx)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Printf("Transaction hash: %s", signedTx.Hash().Hex())
+
 }
 
 func CreateUnlockEvent(address string) {

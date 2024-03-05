@@ -141,19 +141,21 @@ func Test_Hex2string(t *testing.T) {
 
 func Test_GenerateAccount(t *testing.T) {
 
-	address := common.HexToAddress("0x3fF4F53D4778cE717c9dAE3558623d57e8BBA62A")
+	//address := common.HexToAddress("0x3fF4F53D4778cE717c9dAE3558623d57e8BBA62A")
 
 	// 本地生成钱包地址
 	//account := chainTrade.GenerateAccount()
 
-	balance := chainTrade.GetBalance(address)
-	pendingBalance := chainTrade.GetPendingBalance(address)
-	fmt.Println("balance", balance)
-	fmt.Println("pendingBalance", pendingBalance)
-
-	chainTrade.GetBlockHeader()
-	chainTrade.GetBlock(big.NewInt(10617663))
-	chainTrade.GetTransaction(common.HexToHash("0x05db441ae65a3d6953a1ae70979af439bd9614cea99efaf8f1b5fa87e41ab839"))
-	chainTrade.GetTransactionCount(chainTrade.GetBlock(big.NewInt(10617663)))
+	//balance := chainTrade.GetBalance(address)
+	//pendingBalance := chainTrade.GetPendingBalance(address)
+	//fmt.Println("balance", balance)
+	//fmt.Println("pendingBalance", pendingBalance)
+	//
+	//chainTrade.GetBlockHeader()
+	//chainTrade.GetBlock(big.NewInt(10617663))
+	//chainTrade.GetTransaction(common.HexToHash("0x05db441ae65a3d6953a1ae70979af439bd9614cea99efaf8f1b5fa87e41ab839"))
+	//chainTrade.GetTransactionCount(chainTrade.GetBlock(big.NewInt(10617663)))
+	//chainTrade.GetTransactionInfo(chainTrade.GetBlock(big.NewInt(10617663)))
+	chainTrade.Send1559Tx()
 	//fmt.Println(account)
 }
