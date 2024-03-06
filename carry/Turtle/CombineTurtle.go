@@ -311,6 +311,10 @@ func placeTurtleLong(account *model.Account, orderType string, data *model.Turtl
 		} else if setting.Chance < 0 {
 			price = math.Max(math.Max(setting.PriceX, data.HighFar)-priceChange, data.LowFar)
 		}
+		// 主流币龟汤不主动开仓
+		if setting.Chance >= 0 && model.CommonTurtleSymbols[setting.Symbol] {
+			canOpen = false
+		}
 	} else if orderType == model.OrderTypeStop {
 		if setting.Chance > 0 {
 			price = math.Max(data.HighFar, setting.PriceX+data.N/2)
@@ -397,9 +401,9 @@ func placeTurtleShort(account *model.Account, orderType string, data *model.Turt
 			price = math.Max(data.HighFar, setting.PriceX+data.N/2)
 		}
 		// 主流币龟汤不主动开仓
-		//if setting.Chance <= 0 && model.CommonTurtleSymbols[setting.Symbol] {
-		//	canOpen = false
-		//}
+		if setting.Chance <= 0 && model.CommonTurtleSymbols[setting.Symbol] {
+			canOpen = false
+		}
 	} else if orderType == model.OrderTypeStop {
 		if setting.Chance > 0 {
 			if data.UseNear {
