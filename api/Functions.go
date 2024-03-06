@@ -767,7 +767,7 @@ func MustPlaceOrder(key, secret, orderSide, orderType, market, symbol, orderPara
 				//if order != nil && strings.Contains(order.ErrCode, `-2027`) {
 				//	break
 				//}
-				time.Sleep(time.Second * 30)
+				time.Sleep(time.Second * 10)
 				util.Notice(fmt.Sprintf(`fail to place order %d time, re order`, i))
 			}
 		}
