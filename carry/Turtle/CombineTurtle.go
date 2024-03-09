@@ -264,10 +264,10 @@ func handleBreak(account *model.Account, setting *model.Setting, data *model.Tur
 	for _, order := range orders {
 		data.OrderAdjust[order.OrderId] = order
 		if order.OrderType != model.OrderTypeLimit && order.Market == model.OKEX {
-			order = api.QueryOrderById(account.Key, account.Secret, setting.Market, setting.Symbol, order.OrderType, order.OrderId)
-			if order != nil && order.OrderId != `` {
-				data.OrderAdjust[order.OrderId] = order
-				util.Notice(fmt.Sprintf(`add okex algo order after break to normal order %s`, order.OrderId))
+			orderAlgo := api.QueryOrderById(account.Key, account.Secret, setting.Market, setting.Symbol, order.OrderType, order.OrderId)
+			if orderAlgo != nil && orderAlgo.OrderId != `` {
+				data.OrderAdjust[orderAlgo.OrderId] = orderAlgo
+				util.Notice(fmt.Sprintf(`add okex algo order after break to normal order %s->%s`, order.OrderId, orderAlgo.OrderId))
 			}
 		}
 	}
@@ -311,6 +311,10 @@ func placeTurtleLong(account *model.Account, orderType string, data *model.Turtl
 		} else if setting.Chance < 0 {
 			price = math.Max(math.Max(setting.PriceX, data.HighFar)-priceChange, data.LowFar)
 		}
+		// 主流币龟汤不主动开仓
+		//if setting.Chance >= 0 && model.CommonTurtleSymbols[setting.Symbol] {
+		//	canOpen = false
+		//}
 	} else if orderType == model.OrderTypeStop {
 		if setting.Chance > 0 {
 			price = math.Max(data.HighFar, setting.PriceX+data.N/2)

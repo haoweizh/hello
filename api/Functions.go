@@ -536,10 +536,6 @@ func GetFundingRate(key, secret, market, symbol string) (success bool, rate floa
 	}
 	now := util.GetNow().Unix()
 	if fundingRate != nil && now < fundingRate.ExpireTime && fundingRate.UpdateTime.Add(time.Minute*5).After(time.Now()) {
-		if market == model.OKEX {
-			util.Notice(fmt.Sprintf(`get okx funding rate %s %f update %s till %s`,
-				symbol, fundingRate.Rate, fundingRate.UpdateTime.String(), time.Unix(fundingRate.ExpireTime, 0).String()))
-		}
 		return true, fundingRate.Rate, fundingRate.UpdateTime
 	}
 	switch market {
@@ -767,10 +763,10 @@ func MustPlaceOrder(key, secret, orderSide, orderType, market, symbol, orderPara
 						amount, v.(*model.MarketInfo).SizeMax))
 				}
 				// <APIError> code=-2027, msg=Exceeded the maximum allowable position at current leverage.
-				if order != nil && strings.Contains(order.ErrCode, `-2027`) {
-					break
-				}
-				time.Sleep(time.Second * 30)
+				//if order != nil && strings.Contains(order.ErrCode, `-2027`) {
+				//	break
+				//}
+				time.Sleep(time.Second * 10)
 				util.Notice(fmt.Sprintf(`fail to place order %d time, re order`, i))
 			}
 		}
