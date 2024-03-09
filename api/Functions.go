@@ -30,8 +30,7 @@ func SetRequireReset(market string) {
 			checkTime := initTime.(time.Time).Add(duration)
 			if util.GetNow().After(checkTime) {
 				requireReset.Store(market, true)
-			} else {
-				util.Notice(`just reset ws channel ignore %s reset after %v`, market, checkTime)
+				util.Notice(`ready to reset ws channel %s reset after %v`, market, checkTime)
 			}
 		}
 	}

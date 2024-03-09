@@ -290,17 +290,6 @@ func handleLastTurtleData(account *model.Account, function, market, symbol, last
 // GetTurtleData refreshDynamic false时代表仅作为检查是否有足够turtleData作为top market info使用，此时不会存在缓存中，否则会引起far near错误
 func GetTurtleData(account *model.Account, function, market, symbol string, far, near, seconds, chanceLimit int64,
 	amountRate float64, refreshDynamic, removed bool) (data *model.TurtleData, dataValid bool) {
-	now := time.Now()
-	nowPeriod, nowStr := model.GetNowPeriod(market, seconds, now)
-	value, ok := util.LoadSyncMap(&TurtleDataSet, function, market, symbol, nowStr)
-	lastHandled := false
-	if ok && value != nil {
-		return value.(*model.TurtleData), true
-	} else {
-		lastTime := time.Unix(now.Unix()-seconds, 0)
-		_, lastStr := model.GetNowPeriod(market, seconds, lastTime)
-		lastHandled = handleLastTurtleData(account, function, market, symbol, lastStr)
-	}
 	if refreshDynamic {
 		var lock *sync.Mutex
 		lockValue, _ := util.LoadSyncMap(&getTurtleLock, account.Key, function)
@@ -313,6 +302,17 @@ func GetTurtleData(account *model.Account, function, market, symbol string, far,
 		}
 		defer lock.Unlock()
 		lock.Lock()
+	}
+	now := time.Now()
+	nowPeriod, nowStr := model.GetNowPeriod(market, seconds, now)
+	value, ok := util.LoadSyncMap(&TurtleDataSet, function, market, symbol, nowStr)
+	lastHandled := false
+	if ok && value != nil {
+		return value.(*model.TurtleData), true
+	} else {
+		lastTime := time.Unix(now.Unix()-seconds, 0)
+		_, lastStr := model.GetNowPeriod(market, seconds, lastTime)
+		lastHandled = handleLastTurtleData(account, function, market, symbol, lastStr)
 	}
 	if refreshDynamic && !model.CommonTurtleSymbols[symbol] {
 		refreshValue, refreshOk := DynamicHandleTime.Load(market)
