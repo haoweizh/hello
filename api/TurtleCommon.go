@@ -69,16 +69,26 @@ func ClearOrders(key, secret, market, symbol string, keepTypes map[string]bool) 
 // ClearExtraOrders
 // 取消market交易所中symbol交易对中没有被纳入管理或已经超出仓数限制的订单
 func ClearExtraOrders(key, secret, market, symbol string, dataArray []*model.TurtleData) {
-	keepOrders := make(map[string]bool)
+	keepOrders := make(map[string]*model.Order)
 	for _, data := range dataArray {
 		for _, order := range data.OrderLong {
-			keepOrders[order.OrderId] = true
+			keepOrders[order.OrderId] = order
 		}
 		for _, order := range data.OrderShort {
-			keepOrders[order.OrderId] = true
+			keepOrders[order.OrderId] = order
 		}
 		for _, order := range data.OrderAdjust {
-			keepOrders[order.OrderId] = true
+			keepOrders[order.OrderId] = order
+		}
+	}
+	algoLimitOrders := make(map[string]*model.Order)
+	for _, order := range keepOrders {
+		if order != nil && order.OrderType != model.OrderTypeLimit && order.Market == model.OKEX {
+			orderLimit := QueryOrderById(key, secret, order.Market, order.Symbol, order.OrderType, order.OrderId)
+			if orderLimit != nil && orderLimit.OrderId != `` {
+				algoLimitOrders[orderLimit.OrderId] = orderLimit
+				util.Notice(fmt.Sprintf(`add okex algo order after break to normal order %s->%s`, order.OrderId, orderLimit.OrderId))
+			}
 		}
 	}
 	orders := QueryOpenOrders(key, secret, market, symbol)
@@ -86,7 +96,7 @@ func ClearExtraOrders(key, secret, market, symbol string, dataArray []*model.Tur
 		if order == nil {
 			continue
 		}
-		if !keepOrders[order.OrderId] {
+		if keepOrders[order.OrderId] == nil && algoLimitOrders[order.OrderId] == nil {
 			result := MustCancel(key, secret, market, symbol, order.OrderType, order.OrderId, false)
 			util.Notice(`cancel extra order %s %s %s %s return %v`, market, symbol, order.OrderType, order.OrderId, result)
 		}

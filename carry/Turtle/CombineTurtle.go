@@ -112,10 +112,10 @@ var ProcessCombineTurtle = func(settingCombine *model.Setting, tick *model.BidAs
 	placeCombineOrders(account, dataNormal, dataCombine, settingNormal, settingCombine, tick, canOpen, canStartTurtle, canStartCombine)
 	needClear := false
 	for i, setting := range settings {
-		if handleBreak(account, setting, turtleData[i], turtleData[i].OrderLong, turtleData[i].BreakLong) {
+		if handleBreak(setting, turtleData[i], turtleData[i].OrderLong, turtleData[i].BreakLong) {
 			needClear = true
 		}
-		if handleBreak(account, setting, turtleData[i], turtleData[i].OrderShort, turtleData[i].BreakShort) {
+		if handleBreak(setting, turtleData[i], turtleData[i].OrderShort, turtleData[i].BreakShort) {
 			needClear = true
 		}
 	}
@@ -226,7 +226,7 @@ func removeShortOrders(account *model.Account, setting *model.Setting, data *mod
 
 // handleBreak
 // 由于OrderTypeTrailStop订单有可能是通过API load进来的，所以没有 order.Function且此类订单都是close的，故特殊处理了
-func handleBreak(account *model.Account, setting *model.Setting, data *model.TurtleData, orders []*model.Order, orderBreak bool) (work bool) {
+func handleBreak(setting *model.Setting, data *model.TurtleData, orders []*model.Order, orderBreak bool) (work bool) {
 	if orders == nil || len(orders) == 0 || !orderBreak || data == nil {
 		return false
 	}
@@ -263,13 +263,6 @@ func handleBreak(account *model.Account, setting *model.Setting, data *model.Tur
 	// 保护起来，不进行主动撤单，以免未完全成交
 	for _, order := range orders {
 		data.OrderAdjust[order.OrderId] = order
-		if order.OrderType != model.OrderTypeLimit && order.Market == model.OKEX {
-			orderAlgo := api.QueryOrderById(account.Key, account.Secret, setting.Market, setting.Symbol, order.OrderType, order.OrderId)
-			if orderAlgo != nil && orderAlgo.OrderId != `` {
-				data.OrderAdjust[orderAlgo.OrderId] = orderAlgo
-				util.Notice(fmt.Sprintf(`add okex algo order after break to normal order %s->%s`, order.OrderId, orderAlgo.OrderId))
-			}
-		}
 	}
 	time.Sleep(time.Second * 3)
 	data.OrderLong = nil
