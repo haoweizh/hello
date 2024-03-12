@@ -1153,6 +1153,13 @@ func InitMarketInfos(market string) (success bool) {
 		marketInfos = getMarketsBitgetPerp()
 		setBitgetPositionMode(accounts[0].Key, accounts[0].Secret)
 	}
+	model.MarketInfos = &sync.Map{}
+	for _, setting := range appSettings {
+		if setting.Market == market && marketInfos[setting.Symbol] == nil {
+			setting.Valid = false
+			util.Notice(`warning %s %s un-list from market`, market, setting.Symbol)
+		}
+	}
 	for symbol, info := range marketInfos {
 		util.StoreSyncMap(model.MarketInfos, info, market, symbol)
 	}

@@ -209,6 +209,7 @@ func Test_Redis(t *testing.T) {
 
 func Test_BalAndPos(t *testing.T) {
 	model.NewConfig()
+	api.InitMarketInfos(model.OKEX)
 	account := model.AppConfig.GetAccounts(model.BinancePerp)[0]
 	model.AppRedis.Set(context.Background(), `test`, `11`, 0)
 	temp, err := model.AppRedis.Get(context.Background(), `test`).Result()
@@ -220,7 +221,6 @@ func Test_BalAndPos(t *testing.T) {
 	order := api.QueryOrderById(model.AppConfig.GateKey, model.AppConfig.GateSecret, `gate`, `MGA_USDT`,
 		model.OrderTypeLimit, `144149811503`)
 	fmt.Println(order)
-	api.InitMarketInfos(model.OKEX)
 	//for _, market := range balMarkets {
 	//	account := model.AppConfig.GetAccounts(market)[0]
 	//	success, balances, total, collateral := api.GetBalances(account.Key, account.Secret, market)
