@@ -26,8 +26,7 @@ func SetRequireReset(market string) {
 		util.Notice(`require reset %s`, market)
 		initTime, getTime := model.AppMarkets.WsInitTime.Load(market)
 		if getTime && initTime != nil {
-			duration, _ := time.ParseDuration(`600s`)
-			checkTime := initTime.(time.Time).Add(duration)
+			checkTime := initTime.(time.Time).Add(time.Millisecond * time.Duration(model.AppConfig.Delay*5))
 			if util.GetNow().After(checkTime) {
 				requireReset.Store(market, true)
 				util.Notice(`ready to reset ws channel %s reset after %v`, market, checkTime)
