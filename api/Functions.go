@@ -1155,7 +1155,7 @@ func InitMarketInfos(market string) (success bool) {
 	}
 	model.MarketInfos = &sync.Map{}
 	for _, setting := range appSettings {
-		if setting.Market == market && marketInfos[setting.Symbol] == nil {
+		if setting.Market == market && marketInfos[setting.Symbol] == nil && strings.Trim(setting.Symbol, ` `) != `` {
 			setting.Valid = false
 			util.Notice(`warning %s %s un-list from market`, market, setting.Symbol)
 		}
