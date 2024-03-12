@@ -172,9 +172,9 @@ func AdjustPosHolding(key, secret string, setting *model.Setting, data *model.Tu
 		setting.Chance = 0
 		setting.PriceX = 0
 		//util.Notice(`update turtle when absent %s %s %d`, setting.Market, setting.Symbol, len(posMap))
-		for s, position := range posMap {
-			util.Notice(`present %s %s %e`, s, position.Currency, position.Holding)
-		}
+		//for s, position := range posMap {
+		//	util.Notice(`present %s %s %e`, s, position.Currency, position.Holding)
+		//}
 	}
 	model.AppDB.Save(setting)
 }
