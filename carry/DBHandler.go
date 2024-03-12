@@ -107,8 +107,6 @@ func MaintainTransFee() {
 	}
 }
 
-var socketMaintaining = false
-
 func ResetChannels(market string, channels []chan struct{}) {
 	model.ChannelMaintaining.Store(market, true)
 	model.AppMarkets.WsDepth.Delete(market)
@@ -130,18 +128,19 @@ func ResetChannels(market string, channels []chan struct{}) {
 	util.Notice(market + " reset depth channel done")
 }
 
-func MaintainMarketChan() {
-	if socketMaintaining {
-		return
-	}
-	socketMaintaining = true
+func MaintainMarketChan() (reset bool) {
 	for _, market := range api.GetMarkets() {
 		channels, _ := model.AppMarkets.WsDepth.Load(market)
+		marketReset := false
 		if channels == nil || len(channels.([]chan struct{})) == 0 {
+			reset = true
+			marketReset = true
 			model.AppMarkets.WsDepth.Store(market, api.CreateMarketDepthServer(model.AppMarkets, market))
 			model.AppMarkets.WsInitTime.Store(market, util.GetNow())
 			util.Notice(fmt.Sprintf("%s create new depth channel ", market))
 		} else if api.RequireDepthChanReset(model.AppMarkets, market) {
+			reset = true
+			marketReset = true
 			util.Notice(fmt.Sprintf("%s require new depth channel ", market))
 			ResetChannels(market, channels.([]chan struct{}))
 			model.AppMarkets.WsInitTime.Store(market, util.GetNow())
@@ -150,12 +149,12 @@ func MaintainMarketChan() {
 		accounts := model.AppConfig.GetAccounts(market)
 		for _, account := range accounts {
 			value, _ := util.LoadSyncMap(&model.AppMarkets.AccountConns, market, account.Key)
-			if value == nil {
+			if value == nil || marketReset {
 				api.CreateAccountWsServer(market)
 			}
 		}
 	}
-	socketMaintaining = false
+	return reset
 }
 
 func Maintain() {
@@ -192,7 +191,10 @@ func Maintain() {
 	//	}
 	//}()
 	for {
-		go MaintainMarketChan()
-		time.Sleep(time.Millisecond * time.Duration(model.AppConfig.Delay/10))
+		if MaintainMarketChan() {
+			time.Sleep(time.Millisecond * time.Duration(model.AppConfig.Delay*2))
+		} else {
+			time.Sleep(time.Millisecond * time.Duration(model.AppConfig.Delay/10))
+		}
 	}
 }
