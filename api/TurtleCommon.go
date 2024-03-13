@@ -87,7 +87,7 @@ func ClearExtraOrders(key, secret, market, symbol string, dataArray []*model.Tur
 			orderLimit := QueryOrderById(key, secret, order.Market, order.Symbol, order.OrderType, order.OrderId)
 			if orderLimit != nil && orderLimit.OrderId != `` {
 				algoLimitOrders[orderLimit.OrderId] = orderLimit
-				util.Notice(fmt.Sprintf(`add okex algo order after break to normal order %s->%s`, order.OrderId, orderLimit.OrderId))
+				//util.Notice(fmt.Sprintf(`add okex algo order after break to normal order %s->%s`, order.OrderId, orderLimit.OrderId))
 			}
 		}
 	}
