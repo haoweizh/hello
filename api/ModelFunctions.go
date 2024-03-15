@@ -142,7 +142,7 @@ func PrepareSettings() {
 			functionMarketSettings = &sync.Map{}
 		}
 		if setting.Function != model.FunctionCross {
-			util.Notice(fmt.Sprintf(`load setting %s %s %s %s %d %d`,
+			util.Info(fmt.Sprintf(`load setting %s %s %s %s %d %d`,
 				setting.Function, setting.Market, setting.Symbol, setting.SymbolRelated, setting.Far, setting.Near))
 		}
 		functionMarketSettings.Store(setting.Symbol, setting)
@@ -452,7 +452,8 @@ func GetMarketSymbols(market string) map[string]bool {
 	}
 	symbols := make(map[string]bool)
 	for _, value := range appSettings {
-		if value.Market == market && value.Valid {
+		marketInfo, getMarketInfo := util.LoadSyncMap(model.MarketInfos, market, value.Symbol)
+		if value.Market == market && value.Valid && marketInfo != nil && getMarketInfo {
 			symbols[value.Symbol] = true
 		}
 	}
