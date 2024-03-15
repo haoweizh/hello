@@ -92,6 +92,9 @@ func RequireDepthChanReset(markets *model.Markets, market string) bool {
 				return true
 			}
 			setting := value.(*model.Setting)
+			if symbols[setting.Symbol] != true {
+				return true
+			}
 			if setting.Function != model.FunctionCross && !validSymbols[setting.Symbol] {
 				util.Notice(fmt.Sprintf(`need reset for important time out %s %s %s`,
 					market, setting.Function, setting.Symbol))
