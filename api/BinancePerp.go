@@ -155,9 +155,6 @@ func WsDepthServeBinancePerp(markets *model.Markets) (channels []chan struct{}, 
 	subType := model.SubscribeTicker
 	//subType := model.SubscribeDepth+ `,` + model.SubscribeMarkPrice
 	wsHandlerBinancePerp := func(event []byte) {
-		if strings.Contains(string(event), `ping`) {
-			util.Info(`binancePerp ping` + string(event))
-		}
 		result, wsErr := util.NewJSON(event)
 		if wsErr != nil {
 			util.Notice(`binance fail to unmarshal json ` + wsErr.Error())
