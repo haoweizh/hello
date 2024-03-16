@@ -1088,6 +1088,7 @@ func InitMarketInfos(market string) (success bool) {
 	if marketInfoInitializing {
 		return
 	}
+	util.Notice(fmt.Sprintf(`start to init market infos %s`, market))
 	marketInfoInitializing = true
 	defer func() {
 		marketInfoInitializing = false
