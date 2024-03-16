@@ -152,8 +152,8 @@ func WsAccountServeBinancePerp() {
 }
 
 func WsDepthServeBinancePerp(markets *model.Markets) (channels []chan struct{}, err error) {
-	subType := model.SubscribeTicker + `,` + model.SubscribeMarkPrice
-	//subType := model.SubscribeDepth
+	subType := model.SubscribeTicker
+	//subType := model.SubscribeDepth+ `,` + model.SubscribeMarkPrice
 	wsHandlerBinancePerp := func(event []byte) {
 		result, wsErr := util.NewJSON(event)
 		if wsErr != nil {

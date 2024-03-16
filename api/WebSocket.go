@@ -183,6 +183,9 @@ func WebSocketClient(market, url string, subscribes []interface{}, subHandler Su
 			stepSubscribes = subscribes[i*step:]
 		}
 		connection, err := newConnection(url)
+		connection.SetPingHandler(func(appData string) error {
+			return connection.WriteControl(websocket.PongMessage, []byte(appData), time.Now().Add(time.Minute))
+		})
 		stopChan := make(chan struct{}, 2)
 		if err != nil {
 			util.SocketInfo("can not create web socket" + err.Error())
