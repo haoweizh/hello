@@ -330,9 +330,10 @@ func placeTurtleLong(account *model.Account, orderType string, data, dataOppo *m
 			if v != nil {
 				priceInc := v.(*model.MarketInfo).PriceIncrement
 				if dataOppo != nil && dataOppo.OrderShort != nil && len(dataOppo.OrderShort) > 0 &&
-					dataOppo.OrderShort[0].Price >= price && dataOppo.OrderShort[0].Price-price <= priceInc {
-					util.Notice(fmt.Sprintf(`self trade %s %s limit sell %f stop buy %f to %f`,
-						setting.Market, setting.Symbol, dataOppo.OrderShort[0].Price, price, dataOppo.OrderShort[0].Price+priceInc))
+					math.Abs(dataOppo.OrderShort[0].Price-price) <= priceInc {
+					util.Notice(fmt.Sprintf(`self trade %s %s chance %d limit sell %f stop buy %f to %f`,
+						setting.Market, setting.Symbol, setting.Chance, dataOppo.OrderShort[0].Price, price,
+						dataOppo.OrderShort[0].Price+priceInc))
 					price = dataOppo.OrderShort[0].Price + priceInc
 				}
 			}
@@ -425,14 +426,15 @@ func placeTurtleShort(account *model.Account, orderType string, data, dataOppo *
 		} else if setting.Chance < 0 {
 			price = math.Min(data.LowFar, setting.PriceX-data.N/2)
 		}
-		if setting.Market == model.OKEX && data.OrderShort == nil {
+		if data.OrderShort == nil {
 			v, _ := util.LoadSyncMap(model.MarketInfos, setting.Market, setting.Symbol)
 			if v != nil {
 				priceInc := v.(*model.MarketInfo).PriceIncrement
 				if dataOppo != nil && dataOppo.OrderLong != nil && len(dataOppo.OrderLong) > 0 &&
-					dataOppo.OrderLong[0].Price <= price && price-dataOppo.OrderLong[0].Price <= priceInc {
-					util.Notice(fmt.Sprintf(`self trade %s %s limit buy %f stop sell %f to %f`,
-						setting.Market, setting.Symbol, dataOppo.OrderLong[0].Price, price, dataOppo.OrderLong[0].Price-priceInc))
+					math.Abs(price-dataOppo.OrderLong[0].Price) <= priceInc {
+					util.Notice(fmt.Sprintf(`self trade %s %s chance %d limit buy %f stop sell %f to %f`,
+						setting.Market, setting.Symbol, setting.Chance, dataOppo.OrderLong[0].Price, price,
+						dataOppo.OrderLong[0].Price-priceInc))
 					price = dataOppo.OrderLong[0].Price - priceInc
 				}
 			}
