@@ -19,7 +19,6 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-	"sync"
 	"testing"
 	"time"
 )
@@ -209,27 +208,9 @@ func Test_Redis(t *testing.T) {
 }
 
 func Test_BalAndPos(t *testing.T) {
-	mi := sync.Map{}
-	mi.Store(`1`, true)
-	mi.Store(`2`, true)
-	mi.Store(`3`, true)
-	mi.Store(`11`, true)
-	mi.Store(`21`, true)
-	mi.Store(`31`, true)
-	mi.Store(`111`, true)
-	mi.Store(`211`, true)
-	mi.Store(`311`, true)
-	mi.Range(func(key, value any) bool {
-		if strings.Index(key.(string), `2`) == 0 {
-			mi.Delete(key)
-		}
-		return true
-	})
-	mi.Range(func(key, value any) bool {
-		fmt.Println(fmt.Sprintf(`%v %v`, key, value))
-		return true
-	})
 	model.NewConfig()
+	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
+	api.InitCrossMarketInfos([]string{model.BinancePerp, model.OKEX})
 	api.InitMarketInfos(model.OKEX)
 	account := model.AppConfig.GetAccounts(model.BinancePerp)[0]
 	model.AppRedis.Set(context.Background(), `test`, `11`, 0)

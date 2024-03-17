@@ -1047,7 +1047,7 @@ func InitCrossMarketInfos(markets []string) {
 	}
 	model.AppDB.Model(&settingsDb).Where(`function=?`, model.FunctionCross).Updates(map[string]interface{}{`valid`: false})
 	for coin, infos := range infoPool {
-		//util.Notice(`handle coin %s %d`, coin, len(infos))
+		util.Notice(`handle coin %s %d`, coin, len(infos))
 		scoreOpen := 0.015
 		scoreClose := 0.005
 		if len(infos) >= 2 {
@@ -1088,6 +1088,7 @@ func InitMarketInfos(market string) (success bool) {
 	if marketInfoInitializing {
 		return
 	}
+	util.Notice(fmt.Sprintf(`start to init market infos %s`, market))
 	marketInfoInitializing = true
 	defer func() {
 		marketInfoInitializing = false
