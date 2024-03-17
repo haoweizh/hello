@@ -325,7 +325,7 @@ func placeTurtleLong(account *model.Account, orderType string, data, dataOppo *m
 				}
 			}
 		}
-		if setting.Market == model.OKEX {
+		if setting.Market == model.OKEX && data.OrderLong == nil {
 			v, _ := util.LoadSyncMap(model.MarketInfos, setting.Market, setting.Symbol)
 			if v != nil {
 				priceInc := v.(*model.MarketInfo).PriceIncrement
@@ -425,7 +425,7 @@ func placeTurtleShort(account *model.Account, orderType string, data, dataOppo *
 		} else if setting.Chance < 0 {
 			price = math.Min(data.LowFar, setting.PriceX-data.N/2)
 		}
-		if setting.Market == model.OKEX {
+		if setting.Market == model.OKEX && data.OrderShort == nil {
 			v, _ := util.LoadSyncMap(model.MarketInfos, setting.Market, setting.Symbol)
 			if v != nil {
 				priceInc := v.(*model.MarketInfo).PriceIncrement
