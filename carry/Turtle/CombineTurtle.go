@@ -325,14 +325,14 @@ func placeTurtleLong(account *model.Account, orderType string, data, dataOppo *m
 				}
 			}
 		}
-		if setting.Market == model.OKEX && data.OrderLong == nil {
+		if data.OrderLong == nil {
 			v, _ := util.LoadSyncMap(model.MarketInfos, setting.Market, setting.Symbol)
 			if v != nil {
 				priceInc := v.(*model.MarketInfo).PriceIncrement
 				if dataOppo != nil && dataOppo.OrderShort != nil && len(dataOppo.OrderShort) > 0 &&
 					dataOppo.OrderShort[0].Price >= price && dataOppo.OrderShort[0].Price-price <= priceInc {
-					util.Notice(fmt.Sprintf(`okex self trade %s limit sell %f stop buy %f to %f`,
-						setting.Symbol, dataOppo.OrderShort[0].Price, price, dataOppo.OrderShort[0].Price+priceInc))
+					util.Notice(fmt.Sprintf(`self trade %s %s limit sell %f stop buy %f to %f`,
+						setting.Market, setting.Symbol, dataOppo.OrderShort[0].Price, price, dataOppo.OrderShort[0].Price+priceInc))
 					price = dataOppo.OrderShort[0].Price + priceInc
 				}
 			}
@@ -431,8 +431,8 @@ func placeTurtleShort(account *model.Account, orderType string, data, dataOppo *
 				priceInc := v.(*model.MarketInfo).PriceIncrement
 				if dataOppo != nil && dataOppo.OrderLong != nil && len(dataOppo.OrderLong) > 0 &&
 					dataOppo.OrderLong[0].Price <= price && price-dataOppo.OrderLong[0].Price <= priceInc {
-					util.Notice(fmt.Sprintf(`okex self trade %s limit buy %f stop sell %f to %f`,
-						setting.Symbol, dataOppo.OrderLong[0].Price, price, dataOppo.OrderLong[0].Price-priceInc))
+					util.Notice(fmt.Sprintf(`self trade %s %s limit buy %f stop sell %f to %f`,
+						setting.Market, setting.Symbol, dataOppo.OrderLong[0].Price, price, dataOppo.OrderLong[0].Price-priceInc))
 					price = dataOppo.OrderLong[0].Price - priceInc
 				}
 			}
