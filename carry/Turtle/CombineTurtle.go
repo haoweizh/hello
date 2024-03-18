@@ -176,10 +176,10 @@ func placeCombineOrders(account *model.Account, dataNormal, dataCombine *model.T
 		lock.Lock()
 	}
 	if canOpen {
-		placeTurtleLong(account, model.OrderTypeStop, dataNormal, settingNormal, tick, canStartTurtle, true)
-		placeTurtleShort(account, model.OrderTypeStop, dataNormal, settingNormal, tick, canStartTurtle, true)
-		placeTurtleLong(account, model.OrderTypeLimit, dataCombine, settingCombine, tick, canStartCombine, true)
-		placeTurtleShort(account, model.OrderTypeLimit, dataCombine, settingCombine, tick, canStartCombine, true)
+		placeTurtleLong(account, model.OrderTypeLimit, dataCombine, dataNormal, settingCombine, tick, canStartCombine, true)
+		placeTurtleShort(account, model.OrderTypeLimit, dataCombine, dataNormal, settingCombine, tick, canStartCombine, true)
+		placeTurtleLong(account, model.OrderTypeStop, dataNormal, dataCombine, settingNormal, tick, canStartTurtle, true)
+		placeTurtleShort(account, model.OrderTypeStop, dataNormal, dataCombine, settingNormal, tick, canStartTurtle, true)
 		if !canStartTurtle {
 			removeLongOrders(account, settingNormal, dataNormal)
 			removeShortOrders(account, settingNormal, dataNormal)
@@ -276,7 +276,7 @@ func handleBreak(setting *model.Setting, data *model.TurtleData, orders []*model
 
 // 海龟没持仓: 龟汤的平仓单数量：实际龟汤仓位大小，
 // 海龟有持仓: 龟汤的平仓单数量：龟汤仓数*大单
-func placeTurtleLong(account *model.Account, orderType string, data *model.TurtleData, setting *model.Setting,
+func placeTurtleLong(account *model.Account, orderType string, data, dataOppo *model.TurtleData, setting *model.Setting,
 	tick *model.BidAsk, canOpen, isBig bool) {
 	amount := data.Amount
 	function := model.Open
@@ -298,11 +298,14 @@ func placeTurtleLong(account *model.Account, orderType string, data *model.Turtl
 		priceChange = 2.5 * data.N
 	}
 	if orderType == model.OrderTypeLimit {
-		price = data.LowFar + data.N/2
-		if setting.Chance > 0 {
-			price = math.Min(data.LowFar, setting.PriceX-data.N/2)
-		} else if setting.Chance < 0 {
+		if setting.Chance < 0 {
 			price = math.Max(math.Max(setting.PriceX, data.HighFar)-priceChange, data.LowFar)
+		} else if setting.Chance == 0 {
+			price = data.LowFar + data.N/2
+		} else if setting.Chance == 1 {
+			price = data.LowFar
+		} else if setting.Chance > 1 {
+			price = setting.PriceX - data.N/2
 		}
 		// 主流币龟汤不主动开仓
 		//if setting.Chance >= 0 && model.CommonTurtleSymbols[setting.Symbol] {
@@ -319,6 +322,19 @@ func placeTurtleLong(account *model.Account, orderType string, data *model.Turtl
 					price = math.Min(data.LowFar, data.LowToday) + priceChange
 				} else {
 					price = data.LowFar + priceChange
+				}
+			}
+		}
+		if data.OrderLong == nil {
+			v, _ := util.LoadSyncMap(model.MarketInfos, setting.Market, setting.Symbol)
+			if v != nil {
+				priceInc := v.(*model.MarketInfo).PriceIncrement
+				if dataOppo != nil && dataOppo.OrderShort != nil && len(dataOppo.OrderShort) > 0 &&
+					math.Abs(dataOppo.OrderShort[0].Price-price) <= priceInc {
+					util.Notice(fmt.Sprintf(`self trade %s %s chance %d limit sell %f stop buy %f to %f`,
+						setting.Market, setting.Symbol, setting.Chance, dataOppo.OrderShort[0].Price, price,
+						dataOppo.OrderShort[0].Price+priceInc))
+					price = dataOppo.OrderShort[0].Price + priceInc
 				}
 			}
 		}
@@ -365,7 +381,7 @@ func placeTurtleLong(account *model.Account, orderType string, data *model.Turtl
 
 // 海龟没持仓: 龟汤的平仓单数量：实际龟汤仓位大小，
 // 海龟有持仓: 龟汤的平仓单数量：龟汤仓数*大单
-func placeTurtleShort(account *model.Account, orderType string, data *model.TurtleData, setting *model.Setting,
+func placeTurtleShort(account *model.Account, orderType string, data, dataOppo *model.TurtleData, setting *model.Setting,
 	tick *model.BidAsk, canOpen, isBig bool) {
 	amount := data.Amount
 	function := model.Open
@@ -387,11 +403,14 @@ func placeTurtleShort(account *model.Account, orderType string, data *model.Turt
 		priceChange = 2.5 * data.N
 	}
 	if orderType == model.OrderTypeLimit {
-		price = data.HighFar - data.N/2
 		if setting.Chance > 0 {
 			price = math.Min(math.Min(setting.PriceX, data.LowFar)+priceChange, data.HighFar)
-		} else if setting.Chance < 0 {
-			price = math.Max(data.HighFar, setting.PriceX+data.N/2)
+		} else if setting.Chance == 0 {
+			price = data.HighFar - data.N/2
+		} else if setting.Chance == -1 {
+			price = data.HighFar
+		} else if setting.Chance < -1 {
+			price = setting.PriceX + data.N/2
 		}
 		// 主流币龟汤不主动开仓
 		//if setting.Chance <= 0 && model.CommonTurtleSymbols[setting.Symbol] {
@@ -406,6 +425,19 @@ func placeTurtleShort(account *model.Account, orderType string, data *model.Turt
 			}
 		} else if setting.Chance < 0 {
 			price = math.Min(data.LowFar, setting.PriceX-data.N/2)
+		}
+		if data.OrderShort == nil {
+			v, _ := util.LoadSyncMap(model.MarketInfos, setting.Market, setting.Symbol)
+			if v != nil {
+				priceInc := v.(*model.MarketInfo).PriceIncrement
+				if dataOppo != nil && dataOppo.OrderLong != nil && len(dataOppo.OrderLong) > 0 &&
+					math.Abs(price-dataOppo.OrderLong[0].Price) <= priceInc {
+					util.Notice(fmt.Sprintf(`self trade %s %s chance %d limit buy %f stop sell %f to %f`,
+						setting.Market, setting.Symbol, setting.Chance, dataOppo.OrderLong[0].Price, price,
+						dataOppo.OrderLong[0].Price-priceInc))
+					price = dataOppo.OrderLong[0].Price - priceInc
+				}
+			}
 		}
 	}
 	market := setting.Market
