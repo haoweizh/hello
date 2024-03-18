@@ -183,14 +183,14 @@ func WebSocketClient(market, url string, subscribes []interface{}, subHandler Su
 			stepSubscribes = subscribes[i*step:]
 		}
 		connection, err := newConnection(url)
+		if err != nil || connection == nil {
+			util.SocketInfo("can not create web socket" + err.Error())
+			return nil, connectErr
+		}
 		connection.SetPingHandler(func(appData string) error {
 			return connection.WriteControl(websocket.PongMessage, []byte(appData), time.Now().Add(time.Minute))
 		})
 		stopChan := make(chan struct{}, 2)
-		if err != nil {
-			util.SocketInfo("can not create web socket" + err.Error())
-			return nil, connectErr
-		}
 		go chanHandler(market, stopChan, connection, msgHandler)
 		if subHandler != nil {
 			_ = subHandler(market, connection, stepSubscribes)
