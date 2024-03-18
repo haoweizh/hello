@@ -307,10 +307,6 @@ func placeTurtleLong(account *model.Account, orderType string, data, dataOppo *m
 		} else if setting.Chance > 1 {
 			price = setting.PriceX - data.N/2
 		}
-		// 主流币龟汤不主动开仓
-		//if setting.Chance >= 0 && model.CommonTurtleSymbols[setting.Symbol] {
-		//	canOpen = false
-		//}
 	} else if orderType == model.OrderTypeStop {
 		if setting.Chance > 0 {
 			price = math.Max(data.HighFar, setting.PriceX+data.N/2)
@@ -325,17 +321,13 @@ func placeTurtleLong(account *model.Account, orderType string, data, dataOppo *m
 				}
 			}
 		}
-		if data.OrderLong == nil {
-			v, _ := util.LoadSyncMap(model.MarketInfos, setting.Market, setting.Symbol)
-			if v != nil {
-				priceInc := v.(*model.MarketInfo).PriceIncrement
-				if dataOppo != nil && dataOppo.OrderShort != nil && len(dataOppo.OrderShort) > 0 &&
-					math.Abs(dataOppo.OrderShort[0].Price-price) <= priceInc {
-					util.Notice(fmt.Sprintf(`self trade %s %s chance %d limit sell %f stop buy %f to %f`,
-						setting.Market, setting.Symbol, setting.Chance, dataOppo.OrderShort[0].Price, price,
-						dataOppo.OrderShort[0].Price+priceInc))
-					price = dataOppo.OrderShort[0].Price + priceInc
-				}
+	}
+	if data.OrderLong == nil && dataOppo != nil && dataOppo.OrderShort != nil && len(dataOppo.OrderShort) > 0 {
+		v, _ := util.LoadSyncMap(model.MarketInfos, setting.Market, setting.Symbol)
+		if v != nil {
+			priceInc := v.(*model.MarketInfo).PriceIncrement
+			if math.Abs(dataOppo.OrderShort[0].Price-price) <= priceInc {
+				price = dataOppo.OrderShort[0].Price + priceInc
 			}
 		}
 	}
@@ -412,10 +404,6 @@ func placeTurtleShort(account *model.Account, orderType string, data, dataOppo *
 		} else if setting.Chance < -1 {
 			price = setting.PriceX + data.N/2
 		}
-		// 主流币龟汤不主动开仓
-		//if setting.Chance <= 0 && model.CommonTurtleSymbols[setting.Symbol] {
-		//	canOpen = false
-		//}
 	} else if orderType == model.OrderTypeStop {
 		if setting.Chance > 0 {
 			if data.UseNear {
@@ -426,17 +414,13 @@ func placeTurtleShort(account *model.Account, orderType string, data, dataOppo *
 		} else if setting.Chance < 0 {
 			price = math.Min(data.LowFar, setting.PriceX-data.N/2)
 		}
-		if data.OrderShort == nil {
-			v, _ := util.LoadSyncMap(model.MarketInfos, setting.Market, setting.Symbol)
-			if v != nil {
-				priceInc := v.(*model.MarketInfo).PriceIncrement
-				if dataOppo != nil && dataOppo.OrderLong != nil && len(dataOppo.OrderLong) > 0 &&
-					math.Abs(price-dataOppo.OrderLong[0].Price) <= priceInc {
-					util.Notice(fmt.Sprintf(`self trade %s %s chance %d limit buy %f stop sell %f to %f`,
-						setting.Market, setting.Symbol, setting.Chance, dataOppo.OrderLong[0].Price, price,
-						dataOppo.OrderLong[0].Price-priceInc))
-					price = dataOppo.OrderLong[0].Price - priceInc
-				}
+	}
+	if data.OrderShort == nil && dataOppo != nil && dataOppo.OrderLong != nil && len(dataOppo.OrderLong) > 0 {
+		v, _ := util.LoadSyncMap(model.MarketInfos, setting.Market, setting.Symbol)
+		if v != nil {
+			priceInc := v.(*model.MarketInfo).PriceIncrement
+			if math.Abs(dataOppo.OrderLong[0].Price-price) <= priceInc {
+				price = dataOppo.OrderLong[0].Price - priceInc
 			}
 		}
 	}
