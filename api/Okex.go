@@ -21,9 +21,9 @@ import (
 
 const OKEXTag = `f924a8c6cc6fBCDE` // okx经纪商ID
 const OKSeparator = `Sep`
-const restOKEX = `https://www.okex.com`
-const wsOKEX = `wss://ws.okex.com:8443/ws/v5/public`
-const wsPrivateOKEX = `wss://ws.okex.com:8443/ws/v5/private`
+const restOKEX = `https://www.okx.com`
+const wsOKEX = `wss://ws.okx.com:8443/ws/v5/public`
+const wsPrivateOKEX = `wss://ws.okx.com:8443/ws/v5/private`
 const wsStepOKEX = 30
 const ParamArrayOkex = `OK_ARRAY`
 const chanelOKEX = `bbo-tbt` //`books5`
