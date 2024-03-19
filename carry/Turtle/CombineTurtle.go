@@ -308,7 +308,6 @@ func placeTurtleLong(account *model.Account, orderType string, data *model.Turtl
 			price = setting.PriceX - data.N/2
 		}
 	} else if orderType == model.OrderTypeStop {
-		usePriceInc := false
 		priceInc := 0.0
 		v, _ := util.LoadSyncMap(model.MarketInfos, setting.Market, setting.Symbol)
 		if v != nil {
@@ -316,8 +315,7 @@ func placeTurtleLong(account *model.Account, orderType string, data *model.Turtl
 		}
 		if setting.Chance > 0 {
 			if data.HighFar > setting.PriceX+data.N/2 {
-				usePriceInc = true
-				price = data.HighFar
+				price = data.HighFar + priceInc
 			} else {
 				price = setting.PriceX + data.N/2
 			}
@@ -326,22 +324,17 @@ func placeTurtleLong(account *model.Account, orderType string, data *model.Turtl
 				if setting.PriceX+priceChange < data.HighNear {
 					price = setting.PriceX + priceChange
 				} else {
-					usePriceInc = true
-					price = data.HighNear
+					price = data.HighNear + priceInc
 				}
 			} else {
-				usePriceInc = true
 				if data.LowToday > 0 {
-					price = math.Min(data.LowFar, data.LowToday) + priceChange
+					price = math.Min(data.LowFar, data.LowToday) + priceChange + priceInc
 				} else {
-					price = data.LowFar + priceChange
+					price = data.LowFar + priceChange + priceInc
 				}
 			}
-		}
-		if usePriceInc {
-			price = price + priceInc
-			util.Notice(fmt.Sprintf(`self trade back %s %s buy at %f inc %f chance %d priceX %f n %f`,
-				setting.Market, setting.Symbol, price, priceInc, setting.Chance, setting.PriceX, data.N))
+		} else if setting.Chance == 0 {
+			price += priceInc
 		}
 	}
 	market := setting.Market
@@ -419,7 +412,6 @@ func placeTurtleShort(account *model.Account, orderType string, data *model.Turt
 		}
 	} else if orderType == model.OrderTypeStop {
 		priceInc := 0.0
-		usePriceInc := false
 		v, _ := util.LoadSyncMap(model.MarketInfos, setting.Market, setting.Symbol)
 		if v != nil {
 			priceInc = v.(*model.MarketInfo).PriceIncrement
@@ -429,25 +421,19 @@ func placeTurtleShort(account *model.Account, orderType string, data *model.Turt
 				if setting.PriceX-priceChange > data.LowNear {
 					price = setting.PriceX - priceChange
 				} else {
-					usePriceInc = true
-					price = data.LowNear
+					price = data.LowNear - priceInc
 				}
 			} else {
-				usePriceInc = true
-				price = math.Max(data.HighFar, data.HighToday) - priceChange
+				price = math.Max(data.HighFar, data.HighToday) - priceChange - priceInc
 			}
 		} else if setting.Chance < 0 {
 			if data.LowFar < setting.PriceX-data.N/2 {
-				usePriceInc = true
-				price = data.LowFar
+				price = data.LowFar - priceInc
 			} else {
 				price = setting.PriceX - data.N/2
 			}
-		}
-		if usePriceInc {
-			price = price - priceInc
-			util.Notice(fmt.Sprintf(`self trade back %s %s sell at %f inc %f chance %d priceX %f n %f`,
-				setting.Market, setting.Symbol, price, priceInc, setting.Chance, setting.PriceX, data.N))
+		} else if setting.Chance == 0 {
+			price -= priceInc
 		}
 	}
 	market := setting.Market
