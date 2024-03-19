@@ -331,10 +331,11 @@ func placeTurtleLong(account *model.Account, orderType string, data, dataOppo *m
 			v, _ := util.LoadSyncMap(model.MarketInfos, setting.Market, setting.Symbol)
 			if v != nil {
 				priceInc := v.(*model.MarketInfo).PriceIncrement
+				priceOppo := math.Max(dataOppo.OrderShort[0].Price, dataOppo.OrderShort[0].TriggerPrice)
 				util.Notice(fmt.Sprintf(`self trade %s %s %s oppo sell %f %f -> %f`,
-					setting.Market, setting.Symbol, orderType, dataOppo.OrderShort[0].Price, price, dataOppo.OrderShort[0].Price-priceInc))
-				if math.Abs(dataOppo.OrderShort[0].Price-price) <= priceInc {
-					price = dataOppo.OrderShort[0].Price + priceInc
+					setting.Market, setting.Symbol, orderType, priceOppo, price, priceOppo-priceInc))
+				if math.Abs(priceOppo-price) <= priceInc {
+					price = priceOppo + priceInc
 				}
 			}
 		}
@@ -426,10 +427,14 @@ func placeTurtleShort(account *model.Account, orderType string, data, dataOppo *
 			v, _ := util.LoadSyncMap(model.MarketInfos, setting.Market, setting.Symbol)
 			if v != nil {
 				priceInc := v.(*model.MarketInfo).PriceIncrement
+				priceOppo := math.Min(dataOppo.OrderLong[0].Price, dataOppo.OrderLong[0].TriggerPrice)
+				if priceOppo == 0 {
+					priceOppo = dataOppo.OrderLong[0].Price
+				}
 				util.Notice(fmt.Sprintf(`self trade %s %s %s oppo buy %f place sell %f -> %f`,
-					setting.Market, setting.Symbol, orderType, dataOppo.OrderLong[0].Price, price, dataOppo.OrderLong[0].Price-priceInc))
-				if math.Abs(dataOppo.OrderLong[0].Price-price) <= priceInc {
-					price = dataOppo.OrderLong[0].Price - priceInc
+					setting.Market, setting.Symbol, orderType, priceOppo, price, priceOppo-priceInc))
+				if math.Abs(priceOppo-price) <= priceInc {
+					price = priceOppo - priceInc
 				}
 			}
 		}
