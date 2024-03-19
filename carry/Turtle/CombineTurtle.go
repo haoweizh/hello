@@ -322,20 +322,22 @@ func placeTurtleLong(account *model.Account, orderType string, data, dataOppo *m
 			}
 		}
 	}
-	if data.OrderLong == nil && dataOppo != nil && dataOppo.OrderShort != nil && len(dataOppo.OrderShort) > 0 {
-		v, _ := util.LoadSyncMap(model.MarketInfos, setting.Market, setting.Symbol)
-		if v != nil {
-			priceInc := v.(*model.MarketInfo).PriceIncrement
-			if math.Abs(dataOppo.OrderShort[0].Price-price) <= priceInc {
-				price = dataOppo.OrderShort[0].Price + priceInc
-			}
-		}
-	}
 	market := setting.Market
 	symbol := setting.Symbol
 	priceDeal := price
 	canOpen = (canOpen && float64(setting.Chance) < float64(setting.ChanceLimit)) || setting.Chance < 0
 	if data.OrderLong == nil && canOpen {
+		if dataOppo != nil && dataOppo.OrderShort != nil && len(dataOppo.OrderShort) > 0 {
+			v, _ := util.LoadSyncMap(model.MarketInfos, setting.Market, setting.Symbol)
+			if v != nil {
+				priceInc := v.(*model.MarketInfo).PriceIncrement
+				util.Notice(fmt.Sprintf(`self trade %s %s %s oppo sell %f %f -> %f`,
+					setting.Market, setting.Symbol, orderType, dataOppo.OrderShort[0].Price, price, dataOppo.OrderShort[0].Price-priceInc))
+				if math.Abs(dataOppo.OrderShort[0].Price-price) <= priceInc {
+					price = dataOppo.OrderShort[0].Price + priceInc
+				}
+			}
+		}
 		data.BreakLong = false
 		turtleTriggerDelta := api.GetTurtleTriggerDelta(setting.Market)
 		if orderType == model.OrderTypeStop {
@@ -415,20 +417,22 @@ func placeTurtleShort(account *model.Account, orderType string, data, dataOppo *
 			price = math.Min(data.LowFar, setting.PriceX-data.N/2)
 		}
 	}
-	if data.OrderShort == nil && dataOppo != nil && dataOppo.OrderLong != nil && len(dataOppo.OrderLong) > 0 {
-		v, _ := util.LoadSyncMap(model.MarketInfos, setting.Market, setting.Symbol)
-		if v != nil {
-			priceInc := v.(*model.MarketInfo).PriceIncrement
-			if math.Abs(dataOppo.OrderLong[0].Price-price) <= priceInc {
-				price = dataOppo.OrderLong[0].Price - priceInc
-			}
-		}
-	}
 	market := setting.Market
 	symbol := setting.Symbol
 	priceDeal := price
 	canOpen = (canOpen && float64(setting.Chance) > -1*float64(setting.ChanceLimit)) || setting.Chance > 0
 	if data.OrderShort == nil && canOpen {
+		if dataOppo != nil && dataOppo.OrderLong != nil && len(dataOppo.OrderLong) > 0 {
+			v, _ := util.LoadSyncMap(model.MarketInfos, setting.Market, setting.Symbol)
+			if v != nil {
+				priceInc := v.(*model.MarketInfo).PriceIncrement
+				util.Notice(fmt.Sprintf(`self trade %s %s %s oppo buy %f place sell %f -> %f`,
+					setting.Market, setting.Symbol, orderType, dataOppo.OrderLong[0].Price, price, dataOppo.OrderLong[0].Price-priceInc))
+				if math.Abs(dataOppo.OrderLong[0].Price-price) <= priceInc {
+					price = dataOppo.OrderLong[0].Price - priceInc
+				}
+			}
+		}
 		data.BreakShort = false
 		turtleTriggerDelta := api.GetTurtleTriggerDelta(setting.Market)
 		if orderType == model.OrderTypeStop {
