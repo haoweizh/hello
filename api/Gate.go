@@ -40,7 +40,7 @@ func getMarketsGate(key, secret string) (success bool, marketInfos map[string]*m
 // 市场minSize按照张数计算的
 func appendFutureMarketGate(key, secret string, marketInfos map[string]*model.MarketInfo) {
 	client, ctx := getClientGate(key, secret)
-	contracts, _, futureErr := client.FuturesApi.ListFuturesContracts(ctx, `usdt`)
+	contracts, _, futureErr := client.FuturesApi.ListFuturesContracts(ctx, `usdt`, nil)
 	if futureErr != nil {
 		panicGateError(key, "ListFuturesContracts", futureErr)
 		time.Sleep(time.Minute * 5)
@@ -535,7 +535,7 @@ func maintainChannelGate() {
 
 func getBalanceGate(key string, secret string) (success bool, balances []*model.Balance, totalInUsd float64, collateral *model.Collateral) {
 	client, ctx := getClientGate(key, secret)
-	portfolioAccount, _, portfolioErr := client.PortfolioApi.ListPortfolioAccounts(ctx, nil)
+	portfolioAccount, _, portfolioErr := client.UnifiedApi.ListUnifiedAccounts(ctx, nil)
 	if portfolioErr != nil {
 		panicGateError(key, "getBalanceGate", portfolioErr)
 		time.Sleep(time.Minute * 5)
@@ -546,7 +546,7 @@ func getBalanceGate(key string, secret string) (success bool, balances []*model.
 		util.Notice(fmt.Sprintf("portfolio account is locked"))
 		return false, balances, 0, nil
 	}
-	totalInUsd, _ = strconv.ParseFloat(portfolioAccount.PortfolioMarginTotalEquity, 64)
+	totalInUsd, _ = strconv.ParseFloat(portfolioAccount.UnifiedAccountTotalEquity, 64)
 	collateralAvailable, _ := strconv.ParseFloat(portfolioAccount.TotalAvailableMargin, 64)
 	totalMaintenanceMargin, _ := strconv.ParseFloat(portfolioAccount.TotalMaintenanceMargin, 64)
 	collateral = &model.Collateral{Available: collateralAvailable, Occupied: totalMaintenanceMargin}
