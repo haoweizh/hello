@@ -109,7 +109,10 @@ func getTradeLineExtra(coin string, closeLine float64) (tradeLineExtra *TradeLin
 			crossValues[orderSide+refreshType] = valueAll
 			crossPrices[orderSide+refreshType] = priceAvg
 		}
-		crossRows.Close()
+		err := crossRows.Close()
+		if err != nil {
+			util.Notice(fmt.Sprintf(`fail to close db query %s`, err.Error()))
+		}
 		// 当发生comp的单均利润小于closeShortMargin，同向comp占比越大，开仓line越高
 		if crossValues[model.OrderSideBuy+model.FunctionComplement] > 300 &&
 			crossPrices[model.OrderSideSell+model.FunctionCross] > 0 && crossValues[model.OrderSideBuy+model.FunctionCross] > 0 {
@@ -411,7 +414,7 @@ func addLastCarry(order *model.Order, setting *model.Setting) {
 			orders[i] = nil
 		}
 	}
-	util.Notice(`---- add done %s`, setting.Symbol)
+	//util.Notice(`---- add done %s`, setting.Symbol)
 }
 
 func liquidateBitgetPerp(account *model.Account) {
