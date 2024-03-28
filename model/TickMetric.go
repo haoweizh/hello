@@ -92,7 +92,7 @@ func (metricManager *MetricManager) AddTick(market, symbol string, current time.
 		tickMetric = value.(*TickMetric)
 		if tickMetric.start.Add(time.Hour).Before(current) {
 			tickMetric = &TickMetric{priceLow: 0, priceHigh: 0, start: current}
-			util.Notice(fmt.Sprintf(`start to add tick in new hour %s %s`, key, current.String()))
+			//util.Notice(fmt.Sprintf(`start to add tick in new hour %s %s`, key, current.String()))
 		}
 	}
 	now := int(current.UnixNano() / int64(time.Millisecond))
