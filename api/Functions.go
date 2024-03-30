@@ -731,8 +731,19 @@ func GetStandardOrderType(market, dialectType string) (standardType string) {
 	return ``
 }
 
+var mustPlaceLock = &sync.Map{} // key - *sync.Mutex{}
 func MustPlaceOrder(key, secret, orderSide, orderType, market, symbol, orderParam,
 	refreshType string, price, triggerPrice, amount float64, setting *model.Setting) (orders []*model.Order) {
+	var lock *sync.Mutex
+	lockValue, _ := mustPlaceLock.Load(key)
+	if lockValue == nil {
+		lock = &sync.Mutex{}
+		mustPlaceLock.Store(key, lock)
+	} else {
+		lock = lockValue.(*sync.Mutex)
+	}
+	defer lock.Unlock()
+	lock.Lock()
 	retry := 2
 	for i := 0; i < retry; i++ {
 		v, _ := util.LoadSyncMap(model.MarketInfos, market, symbol)

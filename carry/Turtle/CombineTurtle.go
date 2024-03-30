@@ -6,7 +6,6 @@ import (
 	"hello/model"
 	"hello/util"
 	"math"
-	"sync"
 	"time"
 )
 
@@ -124,57 +123,8 @@ var ProcessCombineTurtle = func(settingCombine *model.Setting, tick *model.BidAs
 	}
 }
 
-var placeTurtleLock = &sync.Map{} // key - *sync.Mutex{}
-
-// 龟模式 = canStartTurtle==true && canStartCombine==false
-// 双持    可加龟  可加汤
-// 单龟    可加龟  不加汤
-// 单汤    可加龟  可加汤
-// 双0     可加龟  不加汤
-// 汤模式 = canStartTurtle==false && canStartCombine==true
-// 双持    可加龟  可加汤
-// 单龟    可加龟  不加汤
-// 单汤    不加龟  可加汤
-// 双0     不加龟  可加汤
-// 满币种模式：canOpen == false
-// 双持    可加龟  可加汤
-// 单龟    可加龟  不加汤
-// 单汤    可加龟  可加汤
-// 双0     不加龟  不加汤
-// if canStartTurtle || settingNormal.Chance != 0 {
-// placeTurtleLong(account, model.OrderTypeStop, dataNormal, settingNormal, tick, canOpen, true)
-// placeTurtleShort(account, model.OrderTypeStop, dataNormal, settingNormal, tick, canOpen, true)
-// } else {
-// removeTurtleOrders(account, settingNormal.Market, settingNormal.Symbol, dataNormal)
-// }
-// if settingCombine.Chance != 0 || (canStartCombine && (settingNormal.Chance == 0 || canStartTurtle)) {
-// isLongBigCombine := false
-// isShortBigCombine := false
-// if settingNormal.Chance > 0 || settingNormal.MarketRelated == model.TurtleTypeChange {
-// isShortBigCombine = true
-// }
-// if settingNormal.Chance < 0 || settingNormal.MarketRelated == model.TurtleTypeChange {
-// isLongBigCombine = true
-// }
-// placeTurtleLong(account, model.OrderTypeLimit, dataCombine, settingCombine, tick, canOpen, isLongBigCombine)
-// placeTurtleShort(account, model.OrderTypeLimit, dataCombine, settingCombine, tick, canOpen, isShortBigCombine)
-// } else {
-// removeTurtleOrders(account, settingCombine.Market, settingCombine.Symbol, dataCombine)
-// }
 func placeCombineOrders(account *model.Account, dataNormal, dataCombine *model.TurtleData, settingNormal,
 	settingCombine *model.Setting, tick *model.BidAsk, canOpen, canStartTurtle, canStartCombine bool) {
-	var lock *sync.Mutex
-	lockValue, _ := placeTurtleLock.Load(account.Key)
-	if lockValue == nil {
-		lock = &sync.Mutex{}
-		placeTurtleLock.Store(account.Key, lock)
-	} else {
-		lock = lockValue.(*sync.Mutex)
-	}
-	if settingNormal.Market != model.OKEX {
-		defer lock.Unlock()
-		lock.Lock()
-	}
 	if canOpen {
 		placeTurtleLong(account, model.OrderTypeLimit, dataCombine, settingCombine, tick, canStartCombine, true)
 		placeTurtleShort(account, model.OrderTypeLimit, dataCombine, settingCombine, tick, canStartCombine, true)

@@ -708,7 +708,7 @@ func createTurtleLines(function, market string, account *model.Account) (msg str
 		turtleData, _ := util.LoadSyncMap(&api.TurtleDataSet, function, market, symbol.(string), nowStr)
 		msgKey := model.GetMsgKey(function, market, symbol.(string))
 		needAdd := false
-		util.Info(fmt.Sprintf(`create lines %s %s %s`, function, market, symbol))
+		//util.Info(fmt.Sprintf(`create lines %s %s %s`, function, market, symbol))
 		if turtleData != nil {
 			if turtleData.(*model.TurtleData).OrderLong != nil || turtleData.(*model.TurtleData).OrderShort != nil {
 				needAdd = true
