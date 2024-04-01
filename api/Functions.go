@@ -10,8 +10,10 @@ import (
 	"time"
 )
 
-var balanceLock = sync.Map{}  // key - locker
-var positionLock = sync.Map{} // key - locker
+var balanceLock = sync.Map{}     // key - locker
+var positionLock = sync.Map{}    // key - locker
+var mustPlaceLock = &sync.Map{}  // key - *sync.Mutex{}
+var mustCancelLock = &sync.Map{} // key - *sync.Mutex{}
 var requireReset sync.Map
 var lastPrice = sync.Map{}            // market_symbol, price
 var lastPriceTime = sync.Map{}        // market_symbol, Time
@@ -109,7 +111,6 @@ func RequireDepthChanReset(markets *model.Markets, market string) bool {
 	return needReset.(bool)
 }
 
-var mustCancelLock = &sync.Map{} // key - *sync.Mutex{}
 func MustCancel(key, secret, market, symbol, orderType, orderId string, mustCancel bool) (res bool) {
 	var lock *sync.Mutex
 	lockValue, _ := mustCancelLock.Load(key)
@@ -731,7 +732,6 @@ func GetStandardOrderType(market, dialectType string) (standardType string) {
 	return ``
 }
 
-var mustPlaceLock = &sync.Map{} // key - *sync.Mutex{}
 func MustPlaceOrder(key, secret, orderSide, orderType, market, symbol, orderParam,
 	refreshType string, price, triggerPrice, amount float64, setting *model.Setting) (orders []*model.Order) {
 	var lock *sync.Mutex

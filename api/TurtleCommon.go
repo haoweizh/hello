@@ -750,6 +750,11 @@ func CanOpenCombine(settingCombine, settingNormal *model.Setting, dataTurtle *mo
 		}
 		canOpen = settingCombine.Chance != 0 || settingNormal.Chance != 0 || (math.Abs(inAll) < settingCombine.AmountLimit &&
 			settingCombine.SymbolRelated != model.SettingTurtleRemoved && settingNormal.SymbolRelated != model.SettingTurtleRemoved)
+		now := time.Now()
+		if canOpen == false && now.Minute()%10 == 0 && now.Second() == 0 {
+			util.Notice(fmt.Sprintf(`can not open %s %s canCombine %v canTurtle %v turtle symbols %f inAll %f`,
+				settingNormal.Market, settingNormal.Symbol, canStartCombine, canStartTurtle, turtleSymbolNum, inAll))
+		}
 	}
 	if dataTurtle.Liquidated {
 		canStartTurtle = false
