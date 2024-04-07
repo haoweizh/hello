@@ -15,29 +15,44 @@ const tradeCost = 0.002
 const fixAmtU = 100.0
 
 type Data struct {
-	priceLow, priceHigh, N float64
-	orderBuy, orderSell    *model.Order
-	begin                  time.Time
+	priceLowFar, priceHighFar, priceLowNear, priceHighNear, N float64
+	orderBuy, orderSell                                       *model.Order
+	begin                                                     time.Time
 }
 
 func createOrders(setting *model.Setting, data *Data, candle *model.Candle) {
 	priceChange := 2 * data.N
+	lowRate := 1.6
 	if setting.Seconds == 14400 {
 		priceChange = 2.5 * data.N
+		lowRate = 1.4
 	}
-	if data.orderBuy == nil && setting.Chance < 3 && (!strings.Contains(setting.Function, `sell`) || setting.Chance < 0) {
-		price := data.priceLow + data.N/2
+	canOpen := true
+	if strings.Contains(setting.Function, `openbig`) {
+		if data.priceLowNear*lowRate > data.priceLowFar {
+			canOpen = true
+		} else {
+			canOpen = false
+		}
+	} else {
+		if data.priceLowNear*lowRate > data.priceLowFar {
+			canOpen = false
+		} else {
+			canOpen = true
+		}
+	}
+	if data.orderBuy == nil && setting.Chance < 3 && (canOpen || setting.Chance < 0) {
 		amount := fixAmtU / data.N
-		if setting.Chance > 0 {
-			price = math.Min(data.priceLow, setting.PriceX-data.N/2)
-			amount = fixAmtU / data.N
-		} else if setting.Chance < 0 {
+		price := data.priceHighFar
+		if setting.Chance < 0 {
 			amount = setting.GridAmount
-			if setting.CloseShortMargin == 3 {
-				price = math.Max(setting.PriceX/3+data.priceHigh*2/3-priceChange, data.priceLow)
-			} else {
-				price = math.Max(math.Max(setting.PriceX, data.priceHigh)-priceChange, data.priceLow)
-			}
+			price = math.Max(math.Max(setting.PriceX, data.priceHighFar)-priceChange, data.priceLowFar)
+		} else if setting.Chance == 0 {
+			price = data.priceLowFar + data.N/2
+		} else if setting.Chance == 1 {
+			price = data.priceLowFar
+		} else if setting.Chance > 1 {
+			price = setting.PriceX - data.N/2
 		}
 		data.orderBuy = &model.Order{
 			Amount:           amount,
@@ -55,19 +70,18 @@ func createOrders(setting *model.Setting, data *Data, candle *model.Candle) {
 		util.Info(fmt.Sprintf(`create order %s %s %s amt %f at %f %s`,
 			data.orderBuy.Market, data.orderBuy.Symbol, data.orderBuy.OrderSide, data.orderBuy.Amount, data.orderBuy.Price, data.orderBuy.OrderTime.String()))
 	}
-	if data.orderSell == nil && setting.Chance > -3 && (!strings.Contains(setting.Function, `buy`) || setting.Chance > 0) {
-		price := data.priceHigh - data.N/2
+	if data.orderSell == nil && setting.Chance > -3 && (canOpen || setting.Chance > 0) {
+		price := data.priceLowFar
 		amount := fixAmtU / data.N
 		if setting.Chance > 0 {
 			amount = setting.GridAmount
-			if setting.CloseShortMargin == 3 {
-				price = math.Min(setting.PriceX/3+data.priceLow*2/3+priceChange, data.priceHigh)
-			} else {
-				price = math.Min(math.Min(setting.PriceX, data.priceLow)+priceChange, data.priceHigh)
-			}
-		} else if setting.Chance < 0 {
-			price = math.Max(data.priceHigh, setting.PriceX+data.N/2)
-			amount = fixAmtU / data.N
+			price = math.Min(math.Min(setting.PriceX, data.priceLowFar)+priceChange, data.priceHighFar)
+		} else if setting.Chance == 0 {
+			price = data.priceHighFar - data.N/2
+		} else if setting.Chance == -1 {
+			price = data.priceHighFar
+		} else if setting.Chance < -1 {
+			price = setting.PriceX + data.N/2
 		}
 		data.orderSell = &model.Order{
 			Amount:           amount,
@@ -117,11 +131,19 @@ var ProcessGrid = func(start, end time.Time, setting *model.Setting, candles mod
 			N: (gridCandles[i-1].N*(float64(calcLenN)-1) + gridCandles[i].PriceHigh - gridCandles[i].PriceLow) / float64(calcLenN)}
 		gridCandles[i].N = data.N
 		for j := i - int(setting.Far); j < i; j++ {
-			if data.priceLow == 0 || data.priceLow > gridCandles[j].PriceLow {
-				data.priceLow = gridCandles[j].PriceLow
+			if data.priceLowFar == 0 || data.priceLowFar > gridCandles[j].PriceLow {
+				data.priceLowFar = gridCandles[j].PriceLow
 			}
-			if data.priceHigh < gridCandles[j].PriceHigh {
-				data.priceHigh = gridCandles[j].PriceHigh
+			if data.priceHighFar < gridCandles[j].PriceHigh {
+				data.priceHighFar = gridCandles[j].PriceHigh
+			}
+			if j >= i-int(setting.Near) {
+				if data.priceLowNear == 0 || data.priceLowNear > gridCandles[j].PriceLow {
+					data.priceLowNear = gridCandles[j].PriceLow
+				}
+				if data.priceHighNear < gridCandles[j].PriceHigh {
+					data.priceHighNear = gridCandles[j].PriceHigh
+				}
 			}
 		}
 		sign := fmt.Sprintf(`%s%s%d`, setting.Market, setting.Symbol, gridCandles[i].Begin.Unix()-gridCandles[i].Begin.Unix()%setting.Seconds)
