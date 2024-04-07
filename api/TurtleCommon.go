@@ -563,7 +563,7 @@ func SetTurtleOrderStatus(function, market, symbol, orderId, status string) {
 		return
 	}
 	account := model.AppConfig.GetAccounts(setting.Market)[0]
-	if account == nil || setting == nil || setting.Seconds <= 0 {
+	if account == nil || setting.Seconds <= 0 {
 		return
 	}
 	var nowStr string
@@ -733,9 +733,9 @@ func CanOpenCombine(settingCombine, settingNormal *model.Setting, dataTurtle *mo
 		}
 	} else {
 		if settingCombine.Seconds == 14400 {
-			lowRate = 1.3
+			lowRate = 1.4
 		} else {
-			lowRate = 1.45
+			lowRate = 1.6
 		}
 		settingsNormal.Range(sumTurtle)
 		settingsCombine.Range(sumCombineOnly)
