@@ -726,8 +726,17 @@ func CanOpenCombine(settingCombine, settingNormal *model.Setting, dataTurtle *mo
 		canOpen = true
 		canStartCombine = true
 		canStartTurtle = true
+		if settingCombine.Seconds == 14400 {
+			lowRate = 1.2
+		} else {
+			lowRate = 1.3
+		}
 	} else {
-		lowRate = 1.5
+		if settingCombine.Seconds == 14400 {
+			lowRate = 1.3
+		} else {
+			lowRate = 1.45
+		}
 		settingsNormal.Range(sumTurtle)
 		settingsCombine.Range(sumCombineOnly)
 		if settingNormal.MarketRelated == model.TurtleTypeChange && settingCombine.MarketRelated == model.TurtleTypeChange {
