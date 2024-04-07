@@ -761,7 +761,7 @@ func CanOpenCombine(settingCombine, settingNormal *model.Setting, dataTurtle *mo
 	}
 	lowRate := 1.3
 	if settingCombine.Seconds == 86400 {
-		lowRate = 1.4
+		lowRate = 1.3
 	}
 	if dataTurtle.HighFar < lowRate*dataTurtle.LowFar {
 		canStartCombine = false
