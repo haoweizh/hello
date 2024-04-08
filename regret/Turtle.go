@@ -423,7 +423,7 @@ func CreateReport(market, coins, function string) {
 	var amount, price float64
 	var count int
 	var symbol, orderSide string
-	result := make(map[string]map[string]string, 0)
+	result := make(map[string]map[string]string)
 	for rows.Next() {
 		_ = rows.Scan(&function, &symbol, &orderSide, &price, &amount, &count)
 		if result[function] == nil {
@@ -440,6 +440,12 @@ func CreateReport(market, coins, function string) {
 			symbol = strings.ToUpper(coin) + model.UniStandardTail[model.MarketTypePerp]
 			if market == model.GXZQ {
 				symbol = coin + model.UniStandardTail[model.MarketTypeFuture]
+			}
+			if result[function][symbol+`_buy`] == `` {
+				result[function][symbol+`_buy`] = `0,0,0`
+			}
+			if result[function][symbol+`_sell`] == `` {
+				result[function][symbol+`_sell`] = `0,0,0`
 			}
 			line += fmt.Sprintf(`,%s,%s`, result[function][symbol+`_buy`], result[function][symbol+`_sell`])
 		}

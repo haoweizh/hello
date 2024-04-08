@@ -6,7 +6,6 @@ import (
 	"hello/model"
 	"hello/util"
 	"math"
-	"strings"
 	"time"
 )
 
@@ -22,24 +21,14 @@ type Data struct {
 
 func createOrders(setting *model.Setting, data *Data, candle *model.Candle) {
 	priceChange := 2 * data.N
-	lowRate := 1.6
 	if setting.Seconds == 14400 {
 		priceChange = 2.5 * data.N
-		lowRate = 1.4
 	}
 	canOpen := true
-	if strings.Contains(setting.Function, `openbig`) {
-		if data.priceLowNear*lowRate > data.priceHighNear {
-			canOpen = true
-		} else {
-			canOpen = false
-		}
+	if data.priceLowNear*setting.CloseShortMargin > data.priceHighNear {
+		canOpen = true
 	} else {
-		if data.priceLowNear*lowRate > data.priceHighNear {
-			canOpen = false
-		} else {
-			canOpen = true
-		}
+		canOpen = false
 	}
 	if data.orderBuy == nil && setting.Chance < 3 && (canOpen || setting.Chance < 0) {
 		amount := fixAmtU / data.N
