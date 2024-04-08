@@ -11,3 +11,5 @@ contracts/out
 contracts/lib
 cfmms/abi
 cfmms/abi_go
+/qodana.sarif.json
+/qodana.yaml

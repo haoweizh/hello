@@ -255,18 +255,17 @@ func Test_DealGridSimulate(t *testing.T) {
 	model.NewConfig()
 	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
 	funcNames := []string{
-		`both_60_14400_2022-02-27T00:00:00+00:00_2024-02-27T00:00:00+00:00`,
-		`buy_60_14400_2022-02-27T00:00:00+00:00_2024-02-27T00:00:00+00:00`,
-		`both_18_86400_2022-02-27T00:00:00+00:00_2024-02-27T00:00:00+00:00`,
-		`buy_18_86400_2022-02-27T00:00:00+00:00_2024-02-27T00:00:00+00:00`,
-		`both_d3_60_14400_2022-02-27T00:00:00+00:00_2024-02-27T00:00:00+00:00`,
-		`buy_d3_60_14400_2022-02-27T00:00:00+00:00_2024-02-27T00:00:00+00:00`,
-		`both_d3_18_86400_2022-02-27T00:00:00+00:00_2024-02-27T00:00:00+00:00`,
-		`buy_d3_18_86400_2022-02-27T00:00:00+00:00_2024-02-27T00:00:00+00:00`}
+		`openbig_60_14400_2023-04-01T00:00:00+00:00_2024-04-01T00:00:00+00:00`,
+		`opensmall_60_14400_2023-04-01T00:00:00+00:00_2024-04-01T00:00:00+00:00`,
+		`openbig_20_86400_2023-04-01T00:00:00+00:00_2024-04-01T00:00:00+00:00`,
+		`opensmall_20_86400_2023-04-01T00:00:00+00:00_2024-04-01T00:00:00+00:00`,
+		`openbig_60_14400_2022-04-01T00:00:00+00:00_2024-04-01T00:00:00+00:00`,
+		`opensmall_60_14400_2022-04-01T00:00:00+00:00_2024-04-01T00:00:00+00:00`,
+		`openbig_20_86400_2022-04-01T00:00:00+00:00_2024-04-01T00:00:00+00:00`,
+		`opensmall_20_86400_2022-04-01T00:00:00+00:00_2024-04-01T00:00:00+00:00`}
 	symbols := []string{`1000SHIB_PERP`, `SOL_PERP`, `DOGE_PERP`, `MATIC_PERP`, `ADA_PERP`, `TRB_PERP`, `FIL_PERP`,
 		`DYDX_PERP`, `FTM_PERP`, `AVAX_PERP`, `DOT_PERP`, `MASK_PERP`, `NEAR_PERP`, `BLZ_PERP`, `MKR_PERP`, `GALA_PERP`,
-		`STORJ_PERP`, `ATOM_PERP`, `RUNE_PERP`, `CRV_PERP`}
-	//symbols := []string{`BTC_PERP`, `ETH_PERP`}
+		`STORJ_PERP`, `ATOM_PERP`, `RUNE_PERP`, `CRV_PERP`, `BTC_PERP`, `ETH_PERP`}
 	result := make(map[string]map[string]map[string]string)
 	for _, symbol := range symbols {
 		for _, funcName := range funcNames {
@@ -313,19 +312,28 @@ func Test_CreateReport(t *testing.T) {
 	//end, _ := time.Parse(time.RFC3339, `2023-01-01T00:00:00+08:00`)
 	market := model.GXZQ
 	market = model.BinancePerp
-	timeRage := `2021-07-01T00:00:00+00:00~2023-07-01T00:00:00+00:00`
+	//timeRage := `2021-07-01T00:00:00+00:00~2023-07-01T00:00:00+00:00`
 	//coins := `CZCE.FG,DCE.jm,DCE.eb,CZCE.TA,SHFE.fu,DCE.p,CZCE.SF,SHFE.hc,DCE.v,DCE.y`
 	//coins := `DOGE,SOL,MATIC,CHZ,LINK,ADA,BNB,FIL,SUSHI,AXS,ATOM,WAVES`
 	//for _, s := range strings.Split(coins, `,`) {
-	coins := `DOGE,SOL,ADA,MATIC,FIL,BNB,MTL,TOMO,RLC`
-	regret.CreateReport(market, coins, timeRage, `86400`)
-	regret.CreateReport(market, coins, timeRage, `14400`)
-	coins = `BTC`
-	regret.CreateReport(market, coins, timeRage, `86400`)
-	regret.CreateReport(market, coins, timeRage, `14400`)
-	coins = `ETH`
-	regret.CreateReport(market, coins, timeRage, `86400`)
-	regret.CreateReport(market, coins, timeRage, `14400`)
+	coins := `1000SHIB,SOL,DOGE,MATIC,ADA,TRB,FIL,DYDX,FTM,AVAX,DOT,MASK,NEAR,BLZ,MKR,GALA,STORJ,ATOM,RUNE,CRV,BTC,ETH`
+	functions := []string{`openbig_20_86400_2023-04-01T00:00:00+00:00_2024-04-01T00:00:00+00:00`,
+		`opensmall_20_86400_2023-04-01T00:00:00+00:00_2024-04-01T00:00:00+00:00`,
+		`openbig_60_14400_2023-04-01T00:00:00+00:00_2024-04-01T00:00:00+00:00`,
+		`opensmall_60_14400_2023-04-01T00:00:00+00:00_2024-04-01T00:00:00+00:00`,
+		`openbig_20_86400_2022-04-01T00:00:00+00:00_2024-04-01T00:00:00+00:00`,
+		`opensmall_20_86400_2022-04-01T00:00:00+00:00_2024-04-01T00:00:00+00:00`,
+		`openbig_60_14400_2022-04-01T00:00:00+00:00_2024-04-01T00:00:00+00:00`,
+		`opensmall_60_14400_2022-04-01T00:00:00+00:00_2024-04-01T00:00:00+00:00`}
+	for _, function := range functions {
+		regret.CreateReport(market, coins, function)
+	}
+	//coins = `BTC`
+	//regret.CreateReport(market, coins, timeRage, `86400`)
+	//regret.CreateReport(market, coins, timeRage, `14400`)
+	//coins = `ETH`
+	//regret.CreateReport(market, coins, timeRage, `86400`)
+	//regret.CreateReport(market, coins, timeRage, `14400`)
 }
 
 func Test_CutTail(t *testing.T) {

@@ -412,10 +412,9 @@ func CutTail(market, coins, sign string) {
 
 }
 
-func CreateReport(market, coins, timeRange, seconds string) {
+func CreateReport(market, coins, function string) {
 	rows, _ := model.AppDB.Model(model.Order{}).Select(`function,symbol,order_side,sum(orders.deal_price*amount)/sum(amount),sum(amount),sum(grid_pos)`).
-		Where(`function like ? and function like ? and function like ?`,
-			`%coins`+coins+`%`, `%`+timeRange+`%`, `%Mfalse,seconds`+seconds+`%`).
+		Where(`function = ?`, function).
 		Group(`function,symbol,order_side`).Order(`function`).Rows()
 	if rows == nil {
 		return
@@ -423,7 +422,7 @@ func CreateReport(market, coins, timeRange, seconds string) {
 	i := 0
 	var amount, price float64
 	var count int
-	var symbol, orderSide, function string
+	var symbol, orderSide string
 	result := make(map[string]map[string]string, 0)
 	for rows.Next() {
 		_ = rows.Scan(&function, &symbol, &orderSide, &price, &amount, &count)

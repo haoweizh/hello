@@ -29,13 +29,13 @@ func createOrders(setting *model.Setting, data *Data, candle *model.Candle) {
 	}
 	canOpen := true
 	if strings.Contains(setting.Function, `openbig`) {
-		if data.priceLowNear*lowRate > data.priceLowFar {
+		if data.priceLowNear*lowRate > data.priceHighNear {
 			canOpen = true
 		} else {
 			canOpen = false
 		}
 	} else {
-		if data.priceLowNear*lowRate > data.priceLowFar {
+		if data.priceLowNear*lowRate > data.priceHighNear {
 			canOpen = false
 		} else {
 			canOpen = true
