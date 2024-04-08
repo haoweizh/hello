@@ -25,7 +25,7 @@ func createOrders(setting *model.Setting, data *Data, candle *model.Candle) {
 		priceChange = 2.5 * data.N
 	}
 	canOpen := true
-	if data.priceLowNear*setting.CloseShortMargin > data.priceHighNear {
+	if data.priceLowNear*setting.CloseShortMargin < data.priceHighNear {
 		canOpen = true
 	} else {
 		canOpen = false
