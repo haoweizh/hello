@@ -412,7 +412,7 @@ func CutTail(market, coins, sign string) {
 
 }
 
-func CreateReport(market, coins, function string) {
+func CreateReport(market, function string, coins []string) {
 	rows, _ := model.AppDB.Model(model.Order{}).Select(`function,symbol,order_side,sum(orders.deal_price*amount)/sum(amount),sum(amount),sum(grid_pos)`).
 		Where(`function = ?`, function).
 		Group(`function,symbol,order_side`).Order(`function`).Rows()
@@ -423,31 +423,34 @@ func CreateReport(market, coins, function string) {
 	var amount, price float64
 	var count int
 	var symbol, orderSide string
-	result := make(map[string]map[string]string)
+	resultPrice := make(map[string]map[string]float64)
+	resultAmt := make(map[string]map[string]float64)
 	for rows.Next() {
 		_ = rows.Scan(&function, &symbol, &orderSide, &price, &amount, &count)
-		if result[function] == nil {
-			result[function] = make(map[string]string)
+		if resultPrice[function] == nil {
+			resultPrice[function] = make(map[string]float64)
 		}
-		result[function][symbol+`_`+orderSide] = fmt.Sprintf(`%f,%.2f,%d`, price, amount, count)
+		if resultAmt[function] == nil {
+			resultAmt[function] = make(map[string]float64)
+		}
+		resultPrice[function][symbol+`_`+orderSide] = price
+		resultAmt[function][symbol+`_`+orderSide] = amount
 		fmt.Println(fmt.Sprintf(`%d %s %s`, i, function, symbol))
 		i++
 	}
-	coinArray := strings.Split(coins, `,`)
-	for function = range result {
+	for function = range resultPrice {
 		line := function
-		for _, coin := range coinArray {
+		for _, coin := range coins {
 			symbol = strings.ToUpper(coin) + model.UniStandardTail[model.MarketTypePerp]
 			if market == model.GXZQ {
 				symbol = coin + model.UniStandardTail[model.MarketTypeFuture]
 			}
-			if result[function][symbol+`_buy`] == `` {
-				result[function][symbol+`_buy`] = `0,0,0`
-			}
-			if result[function][symbol+`_sell`] == `` {
-				result[function][symbol+`_sell`] = `0,0,0`
-			}
-			line += fmt.Sprintf(`,%s,%s`, result[function][symbol+`_buy`], result[function][symbol+`_sell`])
+			priceBuy := resultPrice[function][symbol+`_buy`]
+			priceSell := resultPrice[function][symbol+`_sell`]
+			amtBuy := resultAmt[function][symbol+`_buy`]
+			amtSell := resultAmt[function][symbol+`_sell`]
+			line += fmt.Sprintf(`,%f,%f,%f,%f,%v,%.2f`,
+				priceBuy, priceSell, amtBuy, amtSell, amtBuy == amtSell, (priceSell-priceBuy)*amtBuy)
 		}
 		util.InfoSync(line)
 	}

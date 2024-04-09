@@ -733,9 +733,9 @@ func CanOpenCombine(settingCombine, settingNormal *model.Setting, dataTurtle *mo
 		}
 	} else {
 		if settingCombine.Seconds == 14400 {
-			lowRate = 1.3
+			lowRate = 1.25
 		} else {
-			lowRate = 1.6
+			lowRate = 1.65
 		}
 		settingsNormal.Range(sumTurtle)
 		settingsCombine.Range(sumCombineOnly)
