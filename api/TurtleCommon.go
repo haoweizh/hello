@@ -733,7 +733,7 @@ func CanOpenCombine(settingCombine, settingNormal *model.Setting, dataTurtle *mo
 		}
 	} else {
 		if settingCombine.Seconds == 14400 {
-			lowRate = 1.4
+			lowRate = 1.3
 		} else {
 			lowRate = 1.6
 		}

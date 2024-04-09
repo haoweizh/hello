@@ -232,14 +232,14 @@ func simulateGrid(c *gin.Context) {
 			util.StoreSyncMap(&model.CarryInfo, fmt.Sprintf(`get market candle %s %s from %s len %d`,
 				market, symbol, begin.String(), len(candles)), `gridInfo`)
 			settings := []*model.Setting{
+				{Market: market, Symbol: symbol, Coin: coin, Function: fmt.Sprintf(`1.1_20_86400_%s_%s`, strBegin, strEnd), Far: 20, Near: 10, Seconds: 86400, CloseShortMargin: 1.1},
+				{Market: market, Symbol: symbol, Coin: coin, Function: fmt.Sprintf(`1.1_60_14400_%s_%s`, strBegin, strEnd), Far: 60, Near: 30, Seconds: 14400, CloseShortMargin: 1.1},
+				{Market: market, Symbol: symbol, Coin: coin, Function: fmt.Sprintf(`1.2_20_86400_%s_%s`, strBegin, strEnd), Far: 20, Near: 10, Seconds: 86400, CloseShortMargin: 1.2},
+				{Market: market, Symbol: symbol, Coin: coin, Function: fmt.Sprintf(`1.2_60_14400_%s_%s`, strBegin, strEnd), Far: 60, Near: 30, Seconds: 14400, CloseShortMargin: 1.2},
+				{Market: market, Symbol: symbol, Coin: coin, Function: fmt.Sprintf(`1.15_20_86400_%s_%s`, strBegin, strEnd), Far: 20, Near: 10, Seconds: 86400, CloseShortMargin: 1.15},
+				{Market: market, Symbol: symbol, Coin: coin, Function: fmt.Sprintf(`1.15_60_14400_%s_%s`, strBegin, strEnd), Far: 60, Near: 30, Seconds: 14400, CloseShortMargin: 1.15},
 				{Market: market, Symbol: symbol, Coin: coin, Function: fmt.Sprintf(`1.3_20_86400_%s_%s`, strBegin, strEnd), Far: 20, Near: 10, Seconds: 86400, CloseShortMargin: 1.3},
 				{Market: market, Symbol: symbol, Coin: coin, Function: fmt.Sprintf(`1.3_60_14400_%s_%s`, strBegin, strEnd), Far: 60, Near: 30, Seconds: 14400, CloseShortMargin: 1.3},
-				{Market: market, Symbol: symbol, Coin: coin, Function: fmt.Sprintf(`1.4_20_86400_%s_%s`, strBegin, strEnd), Far: 20, Near: 10, Seconds: 86400, CloseShortMargin: 1.4},
-				{Market: market, Symbol: symbol, Coin: coin, Function: fmt.Sprintf(`1.4_60_14400_%s_%s`, strBegin, strEnd), Far: 60, Near: 30, Seconds: 14400, CloseShortMargin: 1.4},
-				{Market: market, Symbol: symbol, Coin: coin, Function: fmt.Sprintf(`1.45_20_86400_%s_%s`, strBegin, strEnd), Far: 20, Near: 10, Seconds: 86400, CloseShortMargin: 1.45},
-				{Market: market, Symbol: symbol, Coin: coin, Function: fmt.Sprintf(`1.45_60_14400_%s_%s`, strBegin, strEnd), Far: 60, Near: 30, Seconds: 14400, CloseShortMargin: 1.45},
-				{Market: market, Symbol: symbol, Coin: coin, Function: fmt.Sprintf(`1.6_20_86400_%s_%s`, strBegin, strEnd), Far: 20, Near: 10, Seconds: 86400, CloseShortMargin: 1.6},
-				{Market: market, Symbol: symbol, Coin: coin, Function: fmt.Sprintf(`1.6_60_14400_%s_%s`, strBegin, strEnd), Far: 60, Near: 30, Seconds: 14400, CloseShortMargin: 1.6},
 			}
 			for _, setting := range settings {
 				delNum := model.AppDB.Where(`function=? and market=? and symbol=? and order_time>? and order_time<?`,
