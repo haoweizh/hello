@@ -727,7 +727,7 @@ func CanOpenCombine(settingCombine, settingNormal *model.Setting, dataTurtle *mo
 		canStartCombine = true
 		canStartTurtle = true
 		if settingCombine.Seconds == 14400 {
-			lowRate = 1.2
+			lowRate = 1.1
 		} else {
 			lowRate = 1.3
 		}
