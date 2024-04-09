@@ -439,6 +439,7 @@ func CreateReport(market, function string, coins []string) {
 		i++
 	}
 	for function = range resultPrice {
+		result := 0.0
 		line := function
 		for _, coin := range coins {
 			symbol = strings.ToUpper(coin) + model.UniStandardTail[model.MarketTypePerp]
@@ -449,9 +450,12 @@ func CreateReport(market, function string, coins []string) {
 			priceSell := resultPrice[function][symbol+`_sell`]
 			amtBuy := resultAmt[function][symbol+`_buy`]
 			amtSell := resultAmt[function][symbol+`_sell`]
+			valid := amtBuy == 0 || amtSell == 0 || amtSell/amtBuy < 1.01 && amtBuy/amtSell > 0.99
 			line += fmt.Sprintf(`,%f,%f,%f,%f,%v,%.2f`,
-				priceBuy, priceSell, amtBuy, amtSell, amtBuy == amtSell, (priceSell-priceBuy)*amtBuy)
+				priceBuy, priceSell, amtBuy, amtSell, valid, (priceSell-priceBuy)*amtBuy)
+			result += (priceSell - priceBuy) * amtBuy
 		}
+		line += fmt.Sprintf(`,%.2f`, result)
 		util.InfoSync(line)
 	}
 }
