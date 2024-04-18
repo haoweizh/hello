@@ -135,8 +135,12 @@ func createFromPosition(account *model.Account, setting *model.Setting, valueLim
 	}
 	rateLimitPosition := 2.8
 	rateLimitHolding := 0.28
+	if setting.Market == model.Gate {
+		rateLimitPosition = 1.3
+	}
 	if cm.contractValueInU/cm.accountValueInU > rateLimitPosition || valueInUsd > valueLimit ||
-		valueInUsd/cm.accountValueInU > rateLimitHolding || (setting.Market == model.BitgetPerp && len(cm.positions) > BitgetPosLimit) {
+		valueInUsd/cm.accountValueInU > rateLimitHolding ||
+		(setting.Market == model.BitgetPerp && len(cm.positions) > BitgetPosLimit) {
 		doRevert = true
 	}
 	return carryStatus, doRevert
@@ -922,7 +926,7 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarrySta
 			fmt.Sprintf(`%v`, green)}
 	}
 	model.SetMonitorInfo(strconv.Itoa(index), model.FunctionCross, mark, infoValue)
-	if statusBuy == nil || statusSell == nil {
+	if statusBuy == nil {
 		return nil, nil, 0, 0, 0, nil, nil
 	}
 	if breakMarkPrice(statusBuy.account, statusBuy.setting, priceBuy, model.OrderSideBuy) ||
