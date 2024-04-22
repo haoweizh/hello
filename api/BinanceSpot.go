@@ -74,12 +74,55 @@ func getMarketsBinance(account *model.Account, market, marketType string) (marke
 	return marketInfos
 }
 
+func WsKLineBinance(market string) ([]chan struct{}, error) {
+	msgHandler := func(event []byte) {
+		result, wsErr := util.NewJSON(event)
+		if wsErr != nil {
+			util.Notice(`binance fail to unmarshal json ` + wsErr.Error())
+			return
+		}
+		result = result.Get(`data`)
+		if result == nil {
+			return
+		}
+		subscribe, _ := result.Get("e").String()
+		dialectSymbol := result.Get(`s`).MustString()
+		if subscribe != `kline` {
+			return
+		}
+		success, _, coin := model.GetCoinFromDialect(market, dialectSymbol)
+		if !success {
+			return
+		}
+		standardSymbol := coin + model.UniStandardTail[model.MarketTypeSpot]
+		if market == model.BinanceMargin {
+			standardSymbol = coin + model.UniStandardTail[model.MarketTypeSpot]
+		}
+		result = result.Get(`k`)
+		candle := &model.Candle{Market: market, Symbol: standardSymbol, Begin: time.Unix(result.Get(`t`).MustInt64(), 0), Seconds: 1}
+		candle.PriceOpen, _ = strconv.ParseFloat(result.Get(`o`).MustString(), 64)
+		candle.PriceClose, _ = strconv.ParseFloat(result.Get(`c`).MustString(), 64)
+		candle.PriceHigh, _ = strconv.ParseFloat(result.Get(`h`).MustString(), 64)
+		candle.PriceLow, _ = strconv.ParseFloat(result.Get(`l`).MustString(), 64)
+		candle.Volume, _ = strconv.ParseFloat(result.Get(`v`).MustString(), 64)
+		model.KLineChan <- candle
+		model.AppMarkets.SetCandle(candle.Symbol, candle.Market, candle)
+	}
+	klineSubs := GetKLineSubs(market)
+	chans, err := WebSocketClient(market, wsBinance+`stream`, klineSubs,
+		subscribeHandlerBinance, msgHandler, wsStepBinance)
+	if err != nil {
+		util.SocketInfo(`fail to create binance spot kline conn %s`, err.Error())
+	}
+	return chans, err
+}
+
 func WsDepthServeBinance(marketConns *model.Markets, market string) (channels []chan struct{}, err error) {
 	subType := model.SubscribeTicker
 	wsHandlerBinance := func(event []byte) {
 		result, wsErr := util.NewJSON(event)
 		if wsErr != nil {
-			util.Notice(`binance fail to unmarshal json ` + err.Error())
+			util.Notice(`binance fail to unmarshal json ` + wsErr.Error())
 			return
 		}
 		subscribe, _ := result.Get("stream").String()
@@ -112,7 +155,6 @@ func WsDepthServeBinance(marketConns *model.Markets, market string) (channels []
 			handleTickerBinance(marketConns, result, market, standardSymbol, updateId)
 		}
 	}
-	channels = make([]chan struct{}, 0)
 	spotSubs := GetWSSubscribes(market, subType)
 	spotChans, spotErr := WebSocketClient(market, wsBinance+`stream`, spotSubs,
 		subscribeHandlerBinance, wsHandlerBinance, wsStepBinance)

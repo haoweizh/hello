@@ -14,15 +14,15 @@ import (
 
 type OrderHandler func(order *model.Order)
 type MsgHandler func(message []byte)
-type WSMsgHandler func(client *WSClient, message []byte)
+type WSMsgHandler func(client *WSAgent, message []byte)
 type SubscribeHandler func(market string, connection *websocket.Conn, subscribes []interface{}) error
 
 var wsLock sync.Mutex
 
 var AppWSManager = WSManager{
-	Register:   make(chan *WSClient),
-	Unregister: make(chan *WSClient),
-	Clients:    make(map[*WSClient]bool),
+	Register:    make(chan *WSAgent),
+	Unregister:  make(chan *WSAgent),
+	Connections: make(map[*WSAgent]bool),
 }
 
 func SendToConnection(market string, connection *websocket.Conn, msg []byte) (err error) {
@@ -74,9 +74,7 @@ func PongAllConnectionsInterval(market string, milliseconds int) (err error) {
 		if writeError := connection.WriteControl(websocket.PongMessage, []byte{}, deadline); writeError != nil {
 			util.Notice(fmt.Sprintf(`fail to pong connection %d return: %s`, i, writeError.Error()))
 			SetRequireReset(market)
-			if writeError != nil {
-				err = writeError
-			}
+			err = writeError
 		}
 		time.Sleep(time.Millisecond * time.Duration(milliseconds))
 	}
@@ -172,8 +170,12 @@ func WsAccountClient(key, market, url string, msgHandler MsgHandler) (connection
 func WebSocketClient(market, url string, subscribes []interface{}, subHandler SubscribeHandler,
 	msgHandler MsgHandler, step int) (stopChans []chan struct{}, connectErr error) {
 	util.Notice(market + ` create depth channel ` + url)
+	value, _ := model.AppMarkets.Connections.Load(market)
 	connections := make([]*websocket.Conn, 0)
-	model.AppMarkets.Connections.Delete(market)
+	if value != nil {
+		connections = value.([]*websocket.Conn)
+	}
+	//model.AppMarkets.Connections.Delete(market)
 	stopChans = make([]chan struct{}, 0)
 	var stepSubscribes []interface{}
 	for i := 0; subscribes != nil && i*step < len(subscribes); i++ {
@@ -184,7 +186,9 @@ func WebSocketClient(market, url string, subscribes []interface{}, subHandler Su
 		}
 		connection, err := newConnection(url)
 		if err != nil || connection == nil {
-			util.SocketInfo("can not create web socket" + err.Error())
+			if err != nil {
+				util.SocketInfo("can not create web socket" + err.Error())
+			}
 			return nil, connectErr
 		}
 		connection.SetPingHandler(func(appData string) error {
@@ -203,12 +207,12 @@ func WebSocketClient(market, url string, subscribes []interface{}, subHandler Su
 }
 
 type WSManager struct {
-	Clients    map[*WSClient]bool
-	Register   chan *WSClient
-	Unregister chan *WSClient
+	Connections map[*WSAgent]bool
+	Register    chan *WSAgent
+	Unregister  chan *WSAgent
 }
 
-type WSClient struct {
+type WSAgent struct {
 	ID        string
 	Socket    *websocket.Conn
 	ChanWrite chan []byte
@@ -228,42 +232,42 @@ func (manager *WSManager) Start() {
 	for {
 		select {
 		case conn := <-manager.Register:
-			manager.Clients[conn] = true
+			manager.Connections[conn] = true
 			jsonMessage, _ := json.Marshal(&Message{Content: "/A new socket has connected."})
 			manager.Send(jsonMessage, conn)
-			fmt.Println(fmt.Sprintf(`after registerd %d`, len(manager.Clients)))
+			util.Info(fmt.Sprintf(`after registerd %d`, len(manager.Connections)))
 		case conn := <-manager.Unregister:
-			if _, ok := manager.Clients[conn]; ok {
+			if _, ok := manager.Connections[conn]; ok {
 				conn.Close()
-				delete(manager.Clients, conn)
+				delete(manager.Connections, conn)
 				jsonMessage, _ := json.Marshal(&Message{Content: "/A socket has disconnected."})
 				manager.Send(jsonMessage, conn)
-				fmt.Println(fmt.Sprintf(`after unregister %d`, len(manager.Clients)))
+				util.Info(fmt.Sprintf(`after unregister %d`, len(manager.Connections)))
 			}
 		}
 	}
 }
 
-func (manager *WSManager) Send(message []byte, ignore *WSClient) {
-	for conn := range manager.Clients {
+func (manager *WSManager) Send(message []byte, ignore *WSAgent) {
+	for conn := range manager.Connections {
 		if conn != ignore {
 			conn.ChanWrite <- message
 		}
 	}
 }
 
-func (c *WSClient) Close() {
+func (c *WSAgent) Close() {
 	close(c.ChanRead)
 	close(c.ChanWrite)
 	_ = c.Socket.Close()
 }
 
-func (c *WSClient) Read(msgHandler WSMsgHandler) {
+func (c *WSAgent) Read(msgHandler WSMsgHandler) {
 	defer func() {
 		c.Manager.Unregister <- c
 	}()
 	go func() {
-		for true {
+		for {
 			_, message, err := c.Socket.ReadMessage()
 			if err != nil {
 				break
@@ -289,14 +293,14 @@ func (c *WSClient) Read(msgHandler WSMsgHandler) {
 			if c.Pinged {
 				c.Pinged = false
 			} else {
-				fmt.Println(`time out no ping`)
+				util.Info(`time out without ping`)
 				return
 			}
 		}
 	}
 }
 
-func (c *WSClient) Write() {
+func (c *WSAgent) Write() {
 	defer func() {
 		c.Manager.Unregister <- c
 	}()

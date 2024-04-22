@@ -41,12 +41,13 @@ type Rule struct {
 }
 
 type Markets struct {
-	markPriceInfos sync.Map // symbol - market - ticker 行情包含标记价格
-	bidAsks        sync.Map // symbol - market - bidAsk
-	WsDepth        sync.Map // market - []chan struct{}
-	WsInitTime     sync.Map // market - time
-	Connections    sync.Map // market - []*websocket.Conn
-	AccountConns   sync.Map // market*accountKey - *websocket.Conn
+	markPriceInfos   sync.Map // symbol - market - ticker 行情包含标记价格
+	bidAsks          sync.Map // symbol - market - bidAsk
+	kLines           sync.Map // symbol - market - *candle
+	WsDepth, WSKLine sync.Map // market - []chan struct{}
+	WsInitTime       sync.Map // market - time
+	Connections      sync.Map // market - []*websocket.Conn for depth connections only
+	AccountConns     sync.Map // market*accountKey - *websocket.Conn
 }
 
 type MarkPriceInfo struct {
@@ -90,6 +91,32 @@ func (markets *Markets) ToStringBidAsk(bidAsk *BidAsk) (result string) {
 		result += fmt.Sprintf(`%f,`, bidAsk.Asks[i].Price)
 	}
 	return
+}
+
+func (markets *Markets) GetKLine(symbol, market string) (result bool, candle *Candle) {
+	value, _ := markets.kLines.Load(symbol)
+	if value != nil {
+		item, _ := value.(*sync.Map).Load(market)
+		if item != nil {
+			return true, item.(*Candle)
+		}
+	}
+	return false, nil
+}
+
+func (markets *Markets) SetCandle(symbol, market string, candle *Candle) bool {
+	value, _ := markets.kLines.Load(symbol)
+	if value == nil {
+		value = &sync.Map{}
+		markets.kLines.Store(symbol, value)
+	}
+	symbolCandle := value.(*sync.Map)
+	last, _ := symbolCandle.Load(market)
+	if last == nil || last.(*Candle).Begin.Before(candle.Begin) {
+		symbolCandle.Store(market, candle)
+		return true
+	}
+	return false
 }
 
 func (markets *Markets) GetBidAsk(symbol, market string) (result bool, bidAsk *BidAsk) {

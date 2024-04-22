@@ -17,7 +17,7 @@ type Setting struct {
 	Market                                     string `gorm:"index:function_market_symbol,unique"`
 	Symbol                                     string `gorm:"index:function_market_symbol,unique"`
 	Coin                                       string
-	SymbolRelated, MarketRelated               string // 在turtle算法中判断是否还被加入动态海龟
+	SymbolRelated, MarketRelated, WSType       string // 在turtle算法中判断是否还被加入动态海龟
 	Chance, ChanceLimit, ChanceLimitCombine    int64
 	Far, Near, Seconds                         int64
 	FarCombine, NearCombine, SecondsCombine    int64

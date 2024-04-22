@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>监控平台</title>
+    <script type="text/javascript">
+
+        function displayStatus(event) {
+            let lines = JSON.parse(event.data)
+            let table_dom = document.getElementById("status");
+            let resArr = [];
+            for (let key in lines) {
+                let value = lines[key]
+                resArr.push('<tr>');
+                for (let column in value) {
+                    resArr.push(`<td>${column}:${value[column]}</td>`);
+                }
+                resArr.push('</tr>');
+            }
+            table_dom.innerHTML = resArr.join("");
+        }
+
+        function WorkStatus() {
+            if ("WebSocket" in window) {
+                const ws = new WebSocket("ws://" + window.location.host + ":" + window.location.port + "/ws");
+                let pingInterval = {}
+                let refreshInterval = {}
+                ws.onopen = function () {
+                    ws.send("run")
+                    pingInterval = self.setInterval(function () {
+                        ws.send("ping");
+                    }, 30000);
+                    refreshInterval = self.setInterval(function () {
+                        ws.send("refresh")
+                    }, 500)
+                };
+                ws.onmessage = function (evt) {
+                    displayStatus(evt)
+                };
+                ws.onclose = function () {
+                    clearInterval(pingInterval)
+                    clearInterval(refreshInterval)
+                };
+            } else alert("您的浏览器不支持 WebSocket!");
+        }
+    </script>
+</head>
+<body>
+<table id="status" border="1">
+</table>
+
+<div id="sse">
+    <a href="javascript:WorkStatus()">运行</a>
+</div>
+</body>

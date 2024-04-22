@@ -21,7 +21,7 @@ func init() {
 }
 
 func logChanHandler() {
-	for true {
+	for {
 		msg := <-logChan
 		msgType := msg[0:7]
 		msgContent := msg[7:]

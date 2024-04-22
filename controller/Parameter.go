@@ -51,6 +51,7 @@ func ParameterServe() {
 	router.GET(`gxzq`, simulateGXZQ)
 	router.GET(`candles`, getCandles)
 	router.GET(`mine`, mindZeroAddr)
+	router.GET(`monitor`, MonitorTrade)
 	var err error
 	if model.AppConfig.Port == `443` {
 		err = router.RunTLS(":"+model.AppConfig.Port, `./server.pem`, `./server.key`)
@@ -96,7 +97,7 @@ func setCandling(value bool) {
 }
 
 func WsPage(c *gin.Context) {
-	wsHandler := func(client *api.WSClient, event []byte) {
+	wsHandler := func(client *api.WSAgent, event []byte) {
 		fmt.Println(`receive from ws ` + string(event))
 		//Manager.Broadcast <- jsonMessage
 		client.Manager.Send(event, nil)
@@ -107,7 +108,7 @@ func WsPage(c *gin.Context) {
 		http.NotFound(c.Writer, c.Request)
 		return
 	}
-	wsClient := &api.WSClient{
+	wsClient := &api.WSAgent{
 		ID:        uuid.NewV4().String(),
 		Socket:    conn,
 		ChanRead:  make(chan []byte),
@@ -131,10 +132,10 @@ func autoSimulate(market, coins string, begin, end time.Time, strBegin, strEnd s
 	for _, coin := range coinArray {
 		symbol := coin + model.UniStandardTail[marketType]
 		if useNear {
-			settings[symbol] = &model.Setting{Market: market, Symbol: symbol, AmountLimit: float64(limit),
+			settings[symbol] = &model.Setting{Market: market, Symbol: symbol, AmountLimit: float64(limit), WSType: model.WSTypeTicker,
 				GridAmount: RegretTurtleGridAmount, Seconds: int64(seconds), Near: int64(near), Far: int64(far), TradeCost: fee}
 		} else { // 以useNear false测试龟汤，所以没有设置滑点即tradeCost=0
-			settings[symbol] = &model.Setting{Market: market, Symbol: symbol, AmountLimit: float64(limit),
+			settings[symbol] = &model.Setting{Market: market, Symbol: symbol, AmountLimit: float64(limit), WSType: model.WSTypeTicker,
 				GridAmount: RegretTurtleGridAmount, Seconds: int64(seconds), Near: int64(near), Far: int64(far), TradeCost: 0}
 		}
 	}
@@ -386,7 +387,7 @@ func simulate(c *gin.Context) {
 			tail = model.UniStandardTail[model.MarketTypeFuture]
 		}
 		symbol := coinArray[i] + tail
-		settings[symbol] = &model.Setting{Market: market, Symbol: symbol, AmountLimit: float64(limit),
+		settings[symbol] = &model.Setting{Market: market, Symbol: symbol, AmountLimit: float64(limit), WSType: model.WSTypeTicker,
 			GridAmount: RegretTurtleGridAmount, Near: near, Far: far, Seconds: seconds, TradeCost: fee}
 	}
 	if strNew == `true` {

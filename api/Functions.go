@@ -54,6 +54,20 @@ func GetTradeMaxOKEX(key, secret, symbol string, expireSecond int64) (success bo
 	return success, maxBuy, maxSell
 }
 
+func RequireKLineReset(markets *model.Markets, market string) (needReset bool) {
+	settings := GetSettings(model.FunctionKLine, market)
+	settings.Range(func(symbol, setting any) bool {
+		_, candle := markets.GetKLine(symbol.(string), market)
+		if candle.Begin.Add(time.Duration(candle.Seconds)*time.Second).UnixMilli()+int64(model.AppConfig.Delay) <
+			time.Now().UnixMilli() {
+			needReset = true
+			return false
+		}
+		return true
+	})
+	return needReset
+}
+
 func RequireDepthChanReset(markets *model.Markets, market string) bool {
 	needReset, ok := requireReset.Load(market)
 	if ok && needReset != nil && needReset.(bool) {
@@ -406,24 +420,8 @@ func GetPriceForce(_, _, symbol, market string) (result bool, price float64) {
 		//util.Info(fmt.Sprintf(`not in market infos %s %s %s %s`, market, symbol, key, secret[0:1]))
 		return false, 0
 	}
-	//util.Notice(`no need get price through rest %s %s`, key, secret[:1])
-	//switch market {
-	//case model.Gate:
-	//	result, price = getPriceGate(key, secret, symbol)
-	//case model.OKEX:
-	//	result, price = getPriceOKEX(key, secret, symbol)
-	//case model.BinancePerp:
-	//	result, price = getPriceBinancePerp(key, secret, symbol)
-	//case model.BinanceSpot:
-	//	result, price = getPriceBinanceSpot(key, secret, symbol)
-	//}
-	if result {
-		lastPriceTime.Store(market+`_`+symbol, time.Now())
-		lastPrice.Store(market+`_`+symbol, price)
-	} else { // 针对查询失败的币种，以0处理，并且4小时内不再重新查询
-		lastPriceTime.Store(market+`_`+symbol, time.Now().Add(time.Second*14400))
-		lastPrice.Store(market+`_`+symbol, price)
-	}
+	lastPriceTime.Store(market+`_`+symbol, time.Now().Add(time.Second*14400))
+	lastPrice.Store(market+`_`+symbol, price)
 	return result, price
 }
 
@@ -863,6 +861,20 @@ func PlaceOrder(key, secret, orderSide, orderType, market, symbol, orderParam st
 	return order
 }
 
+func GetKLineSubs(market string) (subs []interface{}) {
+	settings := GetSettings(model.FunctionKLine, market)
+	subs = make([]interface{}, 0)
+	switch market {
+	case model.BinanceSpot:
+		settings.Range(func(symbol, value any) bool {
+			_, _, _, dialectSymbol := model.GetFromStandard(market, symbol.(string))
+			subs = append(subs, dialectSymbol+`@kline_1s`)
+			return true
+		})
+	}
+	return
+}
+
 func GetWSSubscribes(market, subType string) []interface{} {
 	symbols := GetMarketSymbols(market)
 	subscribes := make([]interface{}, 0)
@@ -1071,6 +1083,7 @@ func InitCrossMarketInfos(markets []string) {
 					setting := &model.Setting{
 						Valid:            true,
 						Function:         model.FunctionCross,
+						WSType:           model.WSTypeTicker,
 						Market:           info.Market,
 						Symbol:           info.Name,
 						Coin:             coin,
@@ -1196,6 +1209,15 @@ func CreateAccountWsServer(market string) {
 		WsAccountServeOKEX()
 		go maintainAccountConnOKEX()
 	}
+}
+
+func CreateKLineWS(market string) (channels []chan struct{}) {
+	util.Notice(" create KLine ws chan for " + market)
+	switch market {
+	case model.BinanceSpot:
+		channels, _ = WsKLineBinance(market)
+	}
+	return
 }
 
 func CreateMarketDepthServer(markets *model.Markets, market string) (
