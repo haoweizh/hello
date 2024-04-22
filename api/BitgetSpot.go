@@ -153,8 +153,6 @@ func maintainChannelBitgetSpot() {
 				time.Sleep(time.Second * 20)
 				if err := SendToAllConnections(model.BitgetSpot, []byte(`ping`)); err != nil {
 					util.Info("bitget spot channel ping error " + err.Error())
-				} else {
-					util.Info("bitget spot channel ping success")
 				}
 			}
 		}()

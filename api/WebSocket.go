@@ -43,9 +43,6 @@ func SendToAllConnections(market string, msg []byte) (err error) {
 	defer wsLock.Unlock()
 	wsLock.Lock()
 	value, _ := model.AppMarkets.Connections.Load(market)
-	if market == model.BitgetPerp || market == model.BitgetSpot {
-		util.Info(fmt.Sprintf(`ping to ws conns %s %d`, market, len(value.([]*websocket.Conn))))
-	}
 	if value == nil {
 		return
 	}
@@ -58,8 +55,6 @@ func SendToAllConnections(market string, msg []byte) (err error) {
 			SetRequireReset(market)
 			util.Info(fmt.Sprintf(`fail to write to all connection %s %d %s return: %s`,
 				market, i, msg, err.Error()))
-		} else {
-			util.Info(fmt.Sprintf(`success send ping to %s conn %d`, market, i))
 		}
 	}
 	return err

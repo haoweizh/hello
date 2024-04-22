@@ -237,8 +237,6 @@ func maintainChannelBitgetPerp() {
 				time.Sleep(time.Second * 20)
 				if err := SendToAllConnections(model.BitgetPerp, []byte(`ping`)); err != nil {
 					util.Info("bitget perp channel ping error " + err.Error())
-				} else {
-					util.Info("bitget perp channel ping success")
 				}
 			}
 		}()
