@@ -199,10 +199,10 @@ var subscribeHandlerBitgetPerpBookTicker = func(market string, connection *webso
 	subscribeMap["args"] = params
 	subscribeMessage := util.JsonEncodeToByte(subscribeMap)
 	if err = SendToConnection(model.BitgetPerp, connection, subscribeMessage); err != nil {
-		util.SocketInfo(" bitget can not subscribe %s %s", subscribeMessage, err.Error())
+		util.Info(" bitget can not subscribe %s %s", subscribeMessage, err.Error())
 	}
 	util.Info(`bitget subscribed ` + string(subscribeMessage))
-	time.Sleep(1200 * time.Millisecond)
+	time.Sleep(time.Second)
 	return err
 }
 
@@ -222,10 +222,10 @@ var subscribeHandlerBitgetPerpMarkPrice = func(market string, connection *websoc
 	subscribeMap["args"] = params
 	subscribeMessage := util.JsonEncodeToByte(subscribeMap)
 	if err = SendToConnection(model.BitgetPerp, connection, subscribeMessage); err != nil {
-		util.SocketInfo(" bitget can not subscribe %s %s", subscribeMessage, err.Error())
+		util.Info(" bitget can not subscribe %s %s", subscribeMessage, err.Error())
 	}
 	util.Info(`bitget subscribed ` + string(subscribeMessage))
-	time.Sleep(1200 * time.Millisecond)
+	time.Sleep(time.Second)
 	return err
 }
 
@@ -233,10 +233,12 @@ func maintainChannelBitgetPerp() {
 	if !channelMaintainingBitgetPerp {
 		channelMaintainingBitgetPerp = true
 		go func() {
-			for true {
+			for {
 				time.Sleep(time.Second * 20)
 				if err := SendToAllConnections(model.BitgetPerp, []byte(`ping`)); err != nil {
-					util.SocketInfo("bitgetperp channel ping error " + err.Error())
+					util.Info("bitget perp channel ping error " + err.Error())
+				} else {
+					util.Info("bitget perp channel ping success")
 				}
 			}
 		}()

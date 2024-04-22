@@ -53,8 +53,10 @@ func SendToAllConnections(market string, msg []byte) (err error) {
 		}
 		if err = connection.WriteMessage(websocket.TextMessage, msg); err != nil {
 			SetRequireReset(market)
-			util.Notice(fmt.Sprintf(`fail to write to all connection %s %d %s return: %s`,
+			util.Info(fmt.Sprintf(`fail to write to all connection %s %d %s return: %s`,
 				market, i, msg, err.Error()))
+		} else {
+			util.Info(fmt.Sprintf(`success send ping to %s conn %d`, market, i))
 		}
 	}
 	return err

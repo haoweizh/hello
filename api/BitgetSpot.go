@@ -138,10 +138,10 @@ var subscribeHandlerBitgetSpotBookTicker = func(market string, connection *webso
 	subscribeMap["args"] = params
 	subscribeMessage := util.JsonEncodeToByte(subscribeMap)
 	if err = SendToConnection(model.BitgetSpot, connection, subscribeMessage); err != nil {
-		util.SocketInfo(" bitget can not subscribe %s %s", subscribeMessage, err.Error())
+		util.Info(" bitget can not subscribe %s %s", subscribeMessage, err.Error())
 	}
 	util.Info(`bitget subscribed ` + string(subscribeMessage))
-	time.Sleep(1200 * time.Millisecond)
+	time.Sleep(time.Second)
 	return err
 }
 
@@ -149,10 +149,12 @@ func maintainChannelBitgetSpot() {
 	if !channelMaintainingBitgetSpot {
 		channelMaintainingBitgetSpot = true
 		go func() {
-			for true {
+			for {
 				time.Sleep(time.Second * 20)
 				if err := SendToAllConnections(model.BitgetSpot, []byte(`ping`)); err != nil {
-					util.SocketInfo("bitgetspot channel ping error " + err.Error())
+					util.Info("bitget spot channel ping error " + err.Error())
+				} else {
+					util.Info("bitget spot channel ping success")
 				}
 			}
 		}()
