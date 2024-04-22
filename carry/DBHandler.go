@@ -158,10 +158,12 @@ func MaintainMarketChan() (reset bool) {
 		}
 		settings := api.GetSettings(model.FunctionKLine, market)
 		doKLine := false
-		settings.Range(func(symbol, setting any) bool {
-			doKLine = true
-			return false
-		})
+		if settings != nil {
+			settings.Range(func(symbol, setting any) bool {
+				doKLine = true
+				return false
+			})
+		}
 		if doKLine {
 			klineWS, _ := model.AppMarkets.WSKLine.Load(market)
 			if klineWS == nil || len(klineWS.([]chan struct{})) == 0 {

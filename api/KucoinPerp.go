@@ -114,6 +114,9 @@ func setFutureAutoDeposit() {
 	}()
 	settingKucoinPerp = true
 	settings := GetSettings(model.FunctionCross, model.KucoinPerp)
+	if settings == nil {
+		return
+	}
 	settings.Range(func(key, value any) bool {
 		if value != nil {
 			setting := value.(*model.Setting)

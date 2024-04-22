@@ -56,6 +56,9 @@ func GetTradeMaxOKEX(key, secret, symbol string, expireSecond int64) (success bo
 
 func RequireKLineReset(markets *model.Markets, market string) (needReset bool) {
 	settings := GetSettings(model.FunctionKLine, market)
+	if settings == nil {
+		return false
+	}
 	settings.Range(func(symbol, setting any) bool {
 		_, candle := markets.GetKLine(symbol.(string), market)
 		if candle.Begin.Add(time.Duration(candle.Seconds)*time.Second).UnixMilli()+int64(model.AppConfig.Delay) <
@@ -863,6 +866,9 @@ func PlaceOrder(key, secret, orderSide, orderType, market, symbol, orderParam st
 
 func GetKLineSubs(market string) (subs []interface{}) {
 	settings := GetSettings(model.FunctionKLine, market)
+	if settings == nil {
+		return nil
+	}
 	subs = make([]interface{}, 0)
 	switch market {
 	case model.BinanceSpot:
