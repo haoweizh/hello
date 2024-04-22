@@ -43,6 +43,9 @@ func SendToAllConnections(market string, msg []byte) (err error) {
 	defer wsLock.Unlock()
 	wsLock.Lock()
 	value, _ := model.AppMarkets.Connections.Load(market)
+	if market == model.BitgetPerp || market == model.BitgetSpot {
+		util.Info(fmt.Sprintf(`ping to ws conns %s %d`, market, len(value.([]*websocket.Conn))))
+	}
 	if value == nil {
 		return
 	}
