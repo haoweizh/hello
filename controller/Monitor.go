@@ -10,6 +10,12 @@ import (
 	"time"
 )
 
+func monitorEntry(c *gin.Context) {
+	//data := make(map[string]string)
+	//data[`status`] = `状态`
+	c.HTML(http.StatusOK, `monitor.gohtml`, nil)
+}
+
 func MonitorTrade(c *gin.Context) {
 	wsHandler := func(client *api.WSAgent, event []byte) {
 		received := string(event)

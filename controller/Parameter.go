@@ -5,8 +5,6 @@ import (
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-contrib/sessions/cookie"
 	"github.com/gin-gonic/gin"
-	"github.com/gorilla/websocket"
-	"github.com/satori/go.uuid"
 	"hello/api"
 	"hello/carry/cross"
 	"hello/model"
@@ -47,11 +45,11 @@ func ParameterServe() {
 	router.GET(`tick`, tickPage)
 	router.GET(`cross_refresh`, crossRefresh)
 	router.GET(`debug`, debug)
-	router.GET(`wss`, WsPage)
 	router.GET(`gxzq`, simulateGXZQ)
 	router.GET(`candles`, getCandles)
 	router.GET(`mine`, mindZeroAddr)
 	router.GET(`monitor`, MonitorTrade)
+	router.GET(`entry`, monitorEntry)
 	var err error
 	if model.AppConfig.Port == `443` {
 		err = router.RunTLS(":"+model.AppConfig.Port, `./server.pem`, `./server.key`)
@@ -94,31 +92,6 @@ func setSimulating(value bool) {
 
 func setCandling(value bool) {
 	candling = value
-}
-
-func WsPage(c *gin.Context) {
-	wsHandler := func(client *api.WSAgent, event []byte) {
-		fmt.Println(`receive from ws ` + string(event))
-		//Manager.Broadcast <- jsonMessage
-		client.Manager.Send(event, nil)
-	}
-	conn, err := (&websocket.Upgrader{
-		CheckOrigin: func(r *http.Request) bool { return true }}).Upgrade(c.Writer, c.Request, nil)
-	if err != nil {
-		http.NotFound(c.Writer, c.Request)
-		return
-	}
-	wsClient := &api.WSAgent{
-		ID:        uuid.NewV4().String(),
-		Socket:    conn,
-		ChanRead:  make(chan []byte),
-		ChanWrite: make(chan []byte),
-		Pinged:    true,
-		Timer:     time.NewTimer(3 * time.Second),
-		Manager:   &api.AppWSManager}
-	wsClient.Manager.Register <- wsClient
-	go wsClient.Read(wsHandler)
-	go wsClient.Write()
 }
 
 func autoSimulate(market, coins string, begin, end time.Time, strBegin, strEnd string, useNear, useM bool,

@@ -30,6 +30,13 @@ func (slideRing *SlideRing) add(value interface{}) {
 	slideRing.data[slideRing.current] = value
 }
 
+func (slideRing *SlideRing) getIndex(index int) interface{} {
+	if slideRing.data == nil || len(slideRing.data) < index {
+		return nil
+	}
+	return slideRing.data[index]
+}
+
 func (slideRing *SlideRing) get() (start, current interface{}) {
 	if slideRing.data != nil {
 		if slideRing.start < len(slideRing.data) {

@@ -61,7 +61,7 @@ func RequireKLineReset(markets *model.Markets, market string) (needReset bool) {
 	}
 	settings.Range(func(symbol, setting any) bool {
 		_, candle := markets.GetKLine(symbol.(string), market)
-		if candle.Begin.Add(time.Duration(candle.Seconds)*time.Second).UnixMilli()+int64(model.AppConfig.Delay) <
+		if candle == nil || candle.Begin.Add(time.Duration(candle.Seconds)*time.Second).UnixMilli()+int64(model.AppConfig.Delay) <
 			time.Now().UnixMilli() {
 			needReset = true
 			return false
