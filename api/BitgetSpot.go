@@ -90,7 +90,6 @@ func WsDepthServeBitgetSpot(markets *model.Markets) (channels []chan struct{}, e
 				return
 			}
 			if markets.SetBidAsk(symbol, model.BitgetSpot, &bidAsk) {
-				util.Info(fmt.Sprintf("success get bitget ticker: %s %f", symbol, bidAsk.Asks[0].Price))
 				funcHandlers := GetFunctions(model.BitgetSpot, symbol)
 				if funcHandlers != nil {
 					funcHandlers.Range(func(function, value interface{}) bool {
