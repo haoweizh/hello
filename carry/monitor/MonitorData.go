@@ -81,6 +81,9 @@ func KLineServer() {
 	markets := api.GetMarkets()
 	for _, market := range markets {
 		settings := api.GetSettings(model.FunctionKLine, market)
+		if settings == nil {
+			continue
+		}
 		settings.Range(func(symbol, setting any) bool {
 			util.StoreSyncMap(DataMonitor, &AggregationCandle{
 				timeInterval: time.Duration(setting.(*model.Setting).Seconds) * time.Second, slideRing: &SlideRing{}},
