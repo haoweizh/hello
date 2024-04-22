@@ -110,7 +110,6 @@ func MaintainTransFee() {
 }
 
 func ClearChannels(market string, chanMap *sync.Map) {
-	model.ChannelMaintaining.Store(market, true)
 	accounts := model.AppConfig.GetAccounts(market)
 	for _, account := range accounts {
 		if account == nil {
@@ -127,8 +126,6 @@ func ClearChannels(market string, chanMap *sync.Map) {
 		}
 		chanMap.Delete(market)
 	}
-	model.ChannelMaintaining.Store(market, false)
-	util.Notice(market + " reset depth channel done")
 }
 
 func MaintainMarketChan() (reset bool) {
@@ -145,10 +142,12 @@ func MaintainMarketChan() (reset bool) {
 			reset = true
 			marketReset = true
 			util.Notice(fmt.Sprintf("%s require new depth channel ", market))
+			model.ChannelMaintaining.Store(market, true)
 			ClearChannels(market, &model.AppMarkets.WsDepth)
 			model.AppMarkets.WsDepth.Store(market, api.CreateMarketDepthServer(model.AppMarkets, market))
 			model.AppMarkets.WsInitTime.Store(market, util.GetNow())
-			//time.Sleep(time.Minute)
+			model.ChannelMaintaining.Store(market, false)
+			util.Notice(market + " reset depth channel done")
 		}
 		accounts := model.AppConfig.GetAccounts(market)
 		for _, account := range accounts {
@@ -172,8 +171,11 @@ func MaintainMarketChan() (reset bool) {
 			} else if api.RequireKLineReset(model.AppMarkets, market) {
 				reset = true
 				util.Notice(fmt.Sprintf("%s require new kline channel ", market))
+				model.ChannelMaintaining.Store(market, true)
 				ClearChannels(market, &model.AppMarkets.WSKLine)
 				model.AppMarkets.WsDepth.Store(market, api.CreateKLineWS(market))
+				model.ChannelMaintaining.Store(market, false)
+				util.Notice(market + " reset depth channel done")
 			}
 		}
 		if reset {
