@@ -205,6 +205,7 @@ func WebSocketClient(market, url string, subscribes []interface{}, subHandler Su
 		connections = append(connections, connection)
 	}
 	model.AppMarkets.Connections.Store(market, connections)
+	util.Info(fmt.Sprintf(`ws client add conns %s %d`, market, len(connections)))
 	return
 }
 
