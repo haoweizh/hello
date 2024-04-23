@@ -206,7 +206,7 @@ func Maintain() {
 	//}()
 	for {
 		if MaintainMarketChan() {
-			time.Sleep(time.Millisecond * time.Duration(model.AppConfig.Delay*2))
+			time.Sleep(time.Minute * 2)
 		}
 	}
 }
