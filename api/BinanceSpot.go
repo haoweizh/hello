@@ -410,12 +410,13 @@ func WsAccountServeBinanceSpot() {
 				}
 				success, listenKey := RenewListenKeyBinanceSpot(account)
 				if success {
-					_, err := WsAccountClient(account.Key, model.BinanceSpot, wsBinance+`ws/`+listenKey, wsAccountHandler)
+					conn, err := WsAccountClient(account.Key, model.BinanceSpot, wsBinance+`ws/`+listenKey, wsAccountHandler)
 					if err != nil {
 						created = false
 						util.Notice(fmt.Sprintf(`fail to create account ws BinanceSpot %s`, err.Error()))
 						continue
 					}
+					util.StoreSyncMap(&model.AppEnvironment.AccountConns, conn, model.BinanceSpot, account.Key)
 				} else {
 					created = false
 				}

@@ -155,10 +155,6 @@ func WsAccountClient(key, market, url string, msgHandler MsgHandler) (connection
 				if closeErr != nil {
 					util.Notice(fmt.Sprintf(`connection closed %s`, closeErr.Error()))
 				}
-				value, _ := model.AppEnvironment.SocketsTick.Load(market)
-				if value != nil {
-					delete(value.(map[*websocket.Conn]bool), connection)
-				}
 				util.Notice(fmt.Sprintf(`%s can not read from account ws: %s`, market, readErr.Error()))
 				return
 			}

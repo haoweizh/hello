@@ -350,6 +350,7 @@ func WsAccountServeOKEX() {
 			} else {
 				util.Notice(fmt.Sprintf(`login okex ws: %s`, account.Key))
 			}
+			util.StoreSyncMap(&model.AppEnvironment.AccountConns, conn, model.OKEX, account.Key)
 		}
 	}
 }
