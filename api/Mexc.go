@@ -60,7 +60,7 @@ func maintainChannelMexc(subscribes []interface{}) {
 					continue
 				}
 				symbol := coin + model.UniStandardTail[marketType]
-				_, bidAsk := model.AppMarkets.GetBidAsk(symbol, model.Mexc)
+				_, bidAsk := model.AppEnvironment.GetBidAsk(symbol, model.Mexc)
 				if bidAsk == nil || time.Now().UnixMilli()-int64(bidAsk.Ts) > 180000 {
 					needReset = true
 					break
@@ -80,13 +80,13 @@ func maintainChannelMexc(subscribes []interface{}) {
 	}
 }
 
-func WsDepthServeMexc(markets *model.Markets, useFullDepthSub bool) (channels []chan struct{}, err error) {
+func WsDepthServeMexc(environment *model.Environment, useFullDepthSub bool) (channels []chan struct{}, err error) {
 	symbols := GetMarketSymbols(model.Mexc)
 	if !useFullDepthSub {
 		limiter := time.Tick(time.Millisecond * 100)
 		for symbol := range symbols {
 			<-limiter
-			initMexcContractDepth(markets, symbol)
+			initMexcContractDepth(environment, symbol)
 		}
 	}
 	wsHandler := func(event []byte) {
@@ -111,7 +111,7 @@ func WsDepthServeMexc(markets *model.Markets, useFullDepthSub bool) (channels []
 				symbol := coin + model.UniStandardTail[marketType]
 				bidAsk := parseTicksMexc(symbol, resp.Ts, resp.Data.Version, resp.Data.Bids, resp.Data.Asks)
 				//fmt.Println(fmt.Sprintf(`%s %f %f ~ %f %f`, symbol, bidAsk.Bids[0].Price, bidAsk.Bids[0].Amount, bidAsk.Asks[0].Price, bidAsk.Asks[0].Amount))
-				if markets.SetBidAsk(symbol, model.Mexc, bidAsk) {
+				if environment.SetBidAsk(symbol, model.Mexc, bidAsk) {
 					funcHandlers := GetFunctions(model.Mexc, symbol)
 					if funcHandlers != nil {
 						funcHandlers.Range(func(function, value interface{}) bool {
@@ -166,7 +166,7 @@ func parseTicksMexc(symbol string, ts int, version int64, bidArray, asksArray []
 	return &model.BidAsk{Ts: ts, TsReceived: int(time.Now().UnixMilli()), UpdateId: version, Bids: bids, Asks: asks}
 }
 
-func initMexcContractDepth(markets *model.Markets, symbol string) {
+func initMexcContractDepth(environment *model.Environment, symbol string) {
 	_, _, _, dialectSymbol := model.GetFromStandard(model.Mexc, symbol)
 	path := fmt.Sprintf(`/api/v1/contract/depth/%s`, dialectSymbol)
 	respBytes, err := SignedRequestMexc(``, ``, http.MethodGet, contractRestUrl, path, nil, nil)
@@ -181,7 +181,7 @@ func initMexcContractDepth(markets *model.Markets, symbol string) {
 			string(respBytes), symbol, resp.Success, err))
 		return
 	}
-	markets.SetBidAsk(symbol, model.Mexc, parseTicksMexc(symbol, resp.Data.Timestamp, resp.Data.Version, resp.Data.Bids, resp.Data.Asks))
+	environment.SetBidAsk(symbol, model.Mexc, parseTicksMexc(symbol, resp.Data.Timestamp, resp.Data.Version, resp.Data.Bids, resp.Data.Asks))
 }
 
 // endregion

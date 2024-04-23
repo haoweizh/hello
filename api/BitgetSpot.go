@@ -50,7 +50,7 @@ func getMarketsBitgetSpot() (marketInfos map[string]*model.MarketInfo) {
 	return marketInfos
 }
 
-func WsDepthServeBitgetSpot(markets *model.Markets) (channels []chan struct{}, err error) {
+func WsDepthServeBitgetSpot(environment *model.Environment) (channels []chan struct{}, err error) {
 	bookWsHandler := func(event []byte) {
 		//util.Notice(fmt.Sprintf("bitget spot ws book ticker: %s", event))
 		if len(event) == 4 {
@@ -85,11 +85,11 @@ func WsDepthServeBitgetSpot(markets *model.Markets) (channels []chan struct{}, e
 			bidAsk.Asks = asks
 			bidAsk.Ts, _ = strconv.Atoi(bookWsResp.Data[0].Ts)
 			bidAsk.UpdateId, _ = strconv.ParseInt(bookWsResp.Data[0].Ts, 10, 64)
-			haveOld, old := markets.GetBidAsk(symbol, model.BitgetSpot)
+			haveOld, old := environment.GetBidAsk(symbol, model.BitgetSpot)
 			if haveOld && old.UpdateId > bidAsk.UpdateId {
 				return
 			}
-			if markets.SetBidAsk(symbol, model.BitgetSpot, &bidAsk) {
+			if environment.SetBidAsk(symbol, model.BitgetSpot, &bidAsk) {
 				funcHandlers := GetFunctions(model.BitgetSpot, symbol)
 				if funcHandlers != nil {
 					funcHandlers.Range(func(function, value interface{}) bool {
@@ -178,7 +178,7 @@ func getBalanceBitgetSpot(key string, secret string) (success bool, balances []*
 		balance.AvailableWithBorrow, _ = strconv.ParseFloat(account.Available, 64)
 		balance.Amount = balance.AvailableWithBorrow + balance.FrozenAmount - balance.Borrow
 		priceGet, price := GetPriceForce(key, secret, balance.Coin+model.UniStandardTail[model.MarketTypeSpot], model.BitgetSpot)
-		//priceGet, bidAsk := model.AppMarkets.GetBidAsk(balance.Coin+model.UniStandardTail[model.MarketTypeSpot], model.BitgetSpot)
+		//priceGet, bidAsk := model.AppEnvironment.GetBidAsk(balance.Coin+model.UniStandardTail[model.MarketTypeSpot], model.BitgetSpot)
 		if priceGet {
 			balance.UsdValue = balance.Amount * price
 		}

@@ -273,7 +273,7 @@ func initStatus(account *model.Account, setting *model.Setting, absentRevert boo
 func initTradeLine(account *model.Account, setting *model.Setting, status *CarryStatus, doRevert bool) {
 	standardScoreBuy := math.Max(standardScoreOpen, setting.OpenShortMargin)
 	standardScoreSell := math.Max(standardScoreOpen, setting.OpenShortMargin)
-	getTick, ticks := model.AppMarkets.GetBidAsk(setting.Symbol, setting.Market)
+	getTick, ticks := model.AppEnvironment.GetBidAsk(setting.Symbol, setting.Market)
 	price := 0.0
 	if getTick {
 		price = ticks.Asks[0].Price
@@ -477,7 +477,7 @@ func equalCoin(coin string, statuses []*CarryStatus) (isEqual bool, holdingInU f
 		}
 		holding += status.Holding
 		holdStr += fmt.Sprintf(`[%s %s %f]`, status.market, status.symbol, status.Holding)
-		getTick, tick := model.AppMarkets.GetBidAsk(status.symbol, status.market)
+		getTick, tick := model.AppEnvironment.GetBidAsk(status.symbol, status.market)
 		getFunding, rate, _ := api.GetFundingRate(status.account.Key, status.account.Secret, status.market, status.symbol)
 		if !getTick || !getFunding {
 			noTicks += coin + status.market
@@ -611,7 +611,7 @@ func equalCoin(coin string, statuses []*CarryStatus) (isEqual bool, holdingInU f
 			amount = math.Min(90000000, math.Abs(holding))
 		}
 		amount = math.Min(amount, compLimitInU/price)
-		getTick, tick := model.AppMarkets.GetBidAsk(equalStatus.symbol, equalStatus.market)
+		getTick, tick := model.AppEnvironment.GetBidAsk(equalStatus.symbol, equalStatus.market)
 		if !getTick {
 			equalStatus.AvailableBuy, equalStatus.AvailableSell = 0, 0
 			util.Notice(`no tick when equal return %s %s %s`, coin, equalStatus.symbol, equalStatus.market)
@@ -696,7 +696,7 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 		return
 	}
 	for _, settingRelate := range settings {
-		tickGet, tickRelate := model.AppMarkets.GetBidAsk(settingRelate.Symbol, settingRelate.Market)
+		tickGet, tickRelate := model.AppEnvironment.GetBidAsk(settingRelate.Symbol, settingRelate.Market)
 		if !tickGet || setting.ID == settingRelate.ID ||
 			(model.AppConfig.Env != `test` && million-int64(tickRelate.Ts) > 1000) {
 			continue
@@ -747,7 +747,7 @@ func breakMarkPrice(account *model.Account, setting *model.Setting, price float6
 		marketInfo = v.(*model.MarketInfo)
 	}
 	if marketInfo != nil && orderSide == model.OrderSideBuy && marketInfo.BuyLimitPriceRatio > 0 {
-		markPriceInfo := model.AppMarkets.GetMarkPriceInfo(setting.Symbol, setting.Market)
+		markPriceInfo := model.AppEnvironment.GetMarkPriceInfo(setting.Symbol, setting.Market)
 		if markPriceInfo == nil {
 			util.Notice(fmt.Sprintf("币种：%s 市场 %s 有限价条件，但是没有标记价格", setting.Symbol, setting.Market))
 			api.GetMarkPrice(account, setting.Market, setting.Symbol)
@@ -763,7 +763,7 @@ func breakMarkPrice(account *model.Account, setting *model.Setting, price float6
 			return true
 		}
 	} else if marketInfo != nil && orderSide == model.OrderSideSell && marketInfo.SellLimitPriceRatio > 0 {
-		markPriceInfo := model.AppMarkets.GetMarkPriceInfo(setting.Symbol, setting.Market)
+		markPriceInfo := model.AppEnvironment.GetMarkPriceInfo(setting.Symbol, setting.Market)
 		if markPriceInfo == nil {
 			util.Notice(fmt.Sprintf("币种：%s 市场 %s 有限价条件，但是没有标记价格", setting.Symbol, setting.Market))
 			api.GetMarkPrice(account, setting.Market, setting.Symbol)

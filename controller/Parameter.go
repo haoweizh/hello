@@ -73,7 +73,7 @@ func ParameterServe() {
 //		_, balances, _, _ := api.GetBalances(account.Key, account.Secret, account.Market)
 //		for _, balance := range balances {
 //			symbol := strings.ToUpper(balance.Coin + `_USDT`)
-//			_, tick := model.AppMarkets.GetBidAsk(symbol, account.Market)
+//			_, tick := model.AppEnvironment.GetBidAsk(symbol, account.Market)
 //			if tick == nil || tick.Bids[0].Price*balance.Amount < 20 {
 //				continue
 //			}
@@ -764,7 +764,7 @@ func GetParameters(c *gin.Context) {
 //	util.Notice(`controller refreshing`)
 //	api.InitApp()
 //	for _, market := range api.GetMarkets() {
-//		channels, _ := model.AppMarkets.WsDepth.Load(market)
+//		channels, _ := model.AppEnvironment.MsgChanTick.Load(market)
 //		if channels != nil {
 //			carry.ResetChannels(market, channels.([]chan struct{}))
 //		}

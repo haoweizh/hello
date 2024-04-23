@@ -35,7 +35,7 @@ var ProcessFollow = func(setting *model.Setting, tick *model.BidAsk) {
 	account := model.AppConfig.GetAccounts(setting.Market)[0]
 	now := util.GetNowUnixMillion()
 	maintaining, _ := model.ChannelMaintaining.Load(setting.Market)
-	_, tickOrder := model.AppMarkets.GetBidAsk(setting.SymbolRelated, setting.MarketRelated)
+	_, tickOrder := model.AppEnvironment.GetBidAsk(setting.SymbolRelated, setting.MarketRelated)
 	if tick == nil || tick.Asks == nil || len(tick.Asks) == 0 || tick.Bids == nil || len(tick.Bids) == 0 || model.AppConfig.Handle != `1` ||
 		tickOrder == nil || tickOrder.Asks == nil || tickOrder.Bids == nil || len(tickOrder.Bids) == 0 || len(tickOrder.Asks) == 0 || account == nil ||
 		(maintaining != nil && maintaining.(bool)) || (model.AppConfig.Env != `test` && (now-int64(tick.Ts) > 1000) || (now-int64(tickOrder.Ts) > 1000)) {

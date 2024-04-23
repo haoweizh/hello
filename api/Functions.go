@@ -26,7 +26,7 @@ func SetRequireReset(market string) {
 	maintaining, _ := model.ChannelMaintaining.Load(market)
 	if maintaining == nil || !maintaining.(bool) {
 		util.Notice(`require reset %s`, market)
-		initTime, getTime := model.AppMarkets.WsInitTime.Load(market)
+		initTime, getTime := model.AppEnvironment.WsInitTime.Load(market)
 		if getTime && initTime != nil {
 			checkTime := initTime.(time.Time).Add(time.Millisecond * time.Duration(model.AppConfig.Delay*5))
 			if util.GetNow().After(checkTime) {
@@ -54,13 +54,13 @@ func GetTradeMaxOKEX(key, secret, symbol string, expireSecond int64) (success bo
 	return success, maxBuy, maxSell
 }
 
-func RequireKLineReset(markets *model.Markets, market string) (needReset bool) {
+func RequireKLineReset(environment *model.Environment, market string) (needReset bool) {
 	settings := GetSettings(model.FunctionKLine, market)
 	if settings == nil {
 		return false
 	}
 	settings.Range(func(symbol, setting any) bool {
-		_, candle := markets.GetKLine(symbol.(string), market)
+		_, candle := environment.GetKLine(symbol.(string), market)
 		if candle == nil || candle.Begin.Add(time.Duration(candle.Seconds)*time.Second).UnixMilli()+int64(model.AppConfig.Delay) <
 			time.Now().UnixMilli() {
 			needReset = true
@@ -71,7 +71,7 @@ func RequireKLineReset(markets *model.Markets, market string) (needReset bool) {
 	return needReset
 }
 
-func RequireDepthChanReset(markets *model.Markets, market string) bool {
+func RequireDepthChanReset(environment *model.Environment, market string) bool {
 	needReset, ok := requireReset.Load(market)
 	if ok && needReset != nil && needReset.(bool) {
 		requireReset.Store(market, false)
@@ -86,7 +86,7 @@ func RequireDepthChanReset(markets *model.Markets, market string) bool {
 		if len(strings.Trim(symbol, ` `)) == 0 {
 			validSymbolNum++
 		}
-		_, bidAsk := markets.GetBidAsk(symbol, market)
+		_, bidAsk := environment.GetBidAsk(symbol, market)
 		if bidAsk == nil {
 			continue
 		}
@@ -398,13 +398,13 @@ func GetMultiCandle(account *model.Account, market string, slotSeconds int, begi
 
 // GetPriceForce 返回tick价格
 func GetPriceForce(_, _, symbol, market string) (result bool, price float64) {
-	getBidAsk, bidAsk := model.AppMarkets.GetBidAsk(symbol, market)
+	getBidAsk, bidAsk := model.AppEnvironment.GetBidAsk(symbol, market)
 	if getBidAsk && bidAsk != nil {
 		return true, bidAsk.Bids[0].Price
 	}
 	markets := GetMarkets()
 	for _, m := range markets {
-		getBidAsk, bidAsk = model.AppMarkets.GetBidAsk(symbol, m)
+		getBidAsk, bidAsk = model.AppEnvironment.GetBidAsk(symbol, m)
 		if getBidAsk && bidAsk != nil {
 			return true, bidAsk.Bids[0].Price
 		}
@@ -1218,7 +1218,7 @@ func CreateAccountWsServer(market string) {
 	}
 }
 
-func CreateKLineWS(market string) (channels []chan struct{}) {
+func CreateMarketKLineWS(market string) (channels []chan struct{}) {
 	util.Notice(" create KLine ws chan for " + market)
 	switch market {
 	case model.BinanceSpot:
@@ -1227,7 +1227,7 @@ func CreateKLineWS(market string) (channels []chan struct{}) {
 	return
 }
 
-func CreateMarketDepthServer(markets *model.Markets, market string) (
+func CreateMarketTickerWS(environment *model.Environment, market string) (
 	channels []chan struct{}) {
 	util.Notice(" create depth chan for " + market)
 	channels = make([]chan struct{}, 1)
@@ -1242,23 +1242,23 @@ func CreateMarketDepthServer(markets *model.Markets, market string) (
 	case model.OKEX:
 		channels, err = WsDepthServeOKEX(GetMarketSymbols(model.OKEX))
 	case model.BinanceSpot, model.BinanceMargin:
-		channels, err = WsDepthServeBinance(markets, market)
+		channels, err = WsDepthServeBinance(environment, market)
 	case model.BinancePerp:
-		channels, err = WsDepthServeBinancePerp(markets)
+		channels, err = WsDepthServeBinancePerp(environment)
 	case model.HuobiPerp:
-		channels, err = WsDepthServeHuobiPerp(markets)
+		channels, err = WsDepthServeHuobiPerp(environment)
 	case model.Bybit:
-		channels, err = WsDepthServeBybit(markets)
+		channels, err = WsDepthServeBybit(environment)
 	case model.HuobiSpot:
-		channels, err = WsDepthServeHuobiSpot(markets)
+		channels, err = WsDepthServeHuobiSpot(environment)
 	case model.Ftx:
-		channels, err = WsDepthServeFtx(markets)
+		channels, err = WsDepthServeFtx(environment)
 	case model.Mexc:
-		channels, err = WsDepthServeMexc(markets, true)
+		channels, err = WsDepthServeMexc(environment, true)
 	case model.BitgetSpot:
-		channels, err = WsDepthServeBitgetSpot(markets)
+		channels, err = WsDepthServeBitgetSpot(environment)
 	case model.BitgetPerp:
-		channels, err = WsDepthServeBitgetPerp(markets)
+		channels, err = WsDepthServeBitgetPerp(environment)
 	}
 	if err != nil {
 		util.Notice(market + ` can not create depth server ` + err.Error())

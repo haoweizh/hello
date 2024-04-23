@@ -68,7 +68,7 @@ var subscribeHandlerHuobi = func(market string, connection *websocket.Conn, subs
 	return err
 }
 
-func WsDepthServeHuobiSpot(markets *model.Markets) (channels []chan struct{}, err error) {
+func WsDepthServeHuobiSpot(environment *model.Environment) (channels []chan struct{}, err error) {
 	wsHandler := func(event []byte) {
 		res := util.UnGzip(event)
 		responseJson, jsonErr := util.NewJSON(res)
@@ -105,11 +105,11 @@ func WsDepthServeHuobiSpot(markets *model.Markets) (channels []chan struct{}, er
 						Market: model.HuobiSpot, Symbol: symbol}},
 					Asks: []model.Tick{{Price: tickJson.Get("ask").MustFloat64(), Amount: tickJson.Get("askSize").MustFloat64(),
 						Market: model.HuobiSpot, Symbol: symbol}}}
-				haveOld, old := markets.GetBidAsk(symbol, model.HuobiSpot)
+				haveOld, old := environment.GetBidAsk(symbol, model.HuobiSpot)
 				if haveOld && old.UpdateId > bidAsk.UpdateId {
 					return
 				}
-				if markets.SetBidAsk(symbol, model.HuobiSpot, &bidAsk) {
+				if environment.SetBidAsk(symbol, model.HuobiSpot, &bidAsk) {
 					funcHandlers := GetFunctions(model.HuobiSpot, symbol)
 					if funcHandlers != nil {
 						funcHandlers.Range(func(function, value interface{}) bool {
@@ -174,11 +174,11 @@ func WsDepthServeHuobiSpot(markets *model.Markets) (channels []chan struct{}, er
 			bidAsk.Bids = []model.Tick{{Price: bidPrice, Amount: bidAmount, Market: model.HuobiSpot, Symbol: symbol}}
 			bidAsk.Asks = []model.Tick{{Price: askPrice, Amount: askAmount, Market: model.HuobiSpot, Symbol: symbol}}
 
-			haveOld, old := markets.GetBidAsk(symbol, model.HuobiSpot)
+			haveOld, old := environment.GetBidAsk(symbol, model.HuobiSpot)
 			if haveOld && old.UpdateId > bidAsk.UpdateId {
 				return
 			}
-			if markets.SetBidAsk(symbol, model.HuobiPerp, &bidAsk) {
+			if environment.SetBidAsk(symbol, model.HuobiPerp, &bidAsk) {
 				funcHandlers := GetFunctions(model.HuobiPerp, symbol)
 				if funcHandlers != nil {
 					funcHandlers.Range(func(function, value interface{}) bool {
@@ -619,7 +619,7 @@ func getBalanceHuobiSpot(key string, secret string) (success bool, balances []*m
 		balances = make([]*model.Balance, 0)
 		for _, balance := range balanceMap {
 			balance.Amount = balance.AvailableWithBorrow + balance.FrozenAmount - balance.Borrow
-			priceGet, bidAsk := model.AppMarkets.GetBidAsk(balance.Coin+`usdt`, model.HuobiSpot)
+			priceGet, bidAsk := model.AppEnvironment.GetBidAsk(balance.Coin+`usdt`, model.HuobiSpot)
 			if priceGet {
 				balance.UsdValue = balance.Amount * bidAsk.Bids[0].Price
 			}

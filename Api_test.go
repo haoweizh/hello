@@ -118,7 +118,7 @@ func TestWs(t *testing.T) {
 	model.NewConfig()
 	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
 	//api.InitMarketInfos()
-	api.CreateMarketDepthServer(model.AppMarkets, market)
+	api.CreateMarketTickerWS(model.AppEnvironment, market)
 	select {}
 }
 
@@ -134,14 +134,14 @@ func Test_WsAndOrderApi(t *testing.T) {
 	api.InitMarketInfos(model.Gate)
 	account := model.AppConfig.GetAccounts(market)[0]
 	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
-	api.CreateMarketDepthServer(model.AppMarkets, market)
+	api.CreateMarketTickerWS(model.AppEnvironment, market)
 	for _, symbol := range symbols {
 		api.CancelOrders(account.Key, account.Secret, market, symbol)
 		getTick := false
 		var tick *model.BidAsk
 		for !getTick {
 			time.Sleep(time.Minute * 5)
-			getTick, tick = model.AppMarkets.GetBidAsk(symbol, market)
+			getTick, tick = model.AppEnvironment.GetBidAsk(symbol, market)
 		}
 		price := tick.Bids[len(tick.Bids)-1].Price * 1.05
 		amount := 20 / price

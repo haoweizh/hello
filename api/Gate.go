@@ -227,7 +227,7 @@ var tickerHandler = gateWs.NewCallBack(func(msg *gateWs.UpdateMsg) {
 			Bids: []model.Tick{{Price: bidPrice, Amount: bidAmount, Market: model.Gate, Symbol: symbol}},
 			Asks: []model.Tick{{Price: askPrice, Amount: askAmount, Market: model.Gate, Symbol: symbol}}}
 	}
-	markets := model.AppMarkets
+	markets := model.AppEnvironment
 	haveOld, old := markets.GetBidAsk(symbol, model.Gate)
 	if haveOld && old.Ts > bidAsk.Ts {
 		return
@@ -265,7 +265,7 @@ var markPriceHandler = gateWs.NewCallBack(func(msg *gateWs.UpdateMsg) {
 			symbol := coin + model.UniStandardTail[model.MarketTypePerp]
 			price, _ := strconv.ParseFloat(update.MarkPrice, 64)
 			ticker := &model.MarkPriceInfo{MarkPrice: price, Ts: int(msg.TimeMs)}
-			markets := model.AppMarkets
+			markets := model.AppEnvironment
 			markets.SetMarkPriceInfo(symbol, model.Gate, ticker)
 		}
 	}
@@ -758,7 +758,7 @@ func placeOrderGate(key, secret string, order *model.Order, orderSide, orderType
 
 func getMaxLoanGate(symbol string) (success bool, maxLoan float64) {
 	v, _ := util.LoadSyncMap(model.MarketInfos, model.Gate, symbol)
-	_, tickRelated := model.AppMarkets.GetBidAsk(symbol, model.Gate)
+	_, tickRelated := model.AppEnvironment.GetBidAsk(symbol, model.Gate)
 	if tickRelated != nil && v != nil {
 		maxLoan = v.(*model.MarketInfo).BorrowUsdtMax / tickRelated.Bids[0].Price
 	}
@@ -789,7 +789,7 @@ func SetGateBidAsk(key, secret, symbol string) {
 	if err != nil {
 		panicGateError(key, "setFutureTicker", err)
 	}
-	result, oldBidAsk := model.AppMarkets.GetBidAsk(symbol, model.Gate)
+	result, oldBidAsk := model.AppEnvironment.GetBidAsk(symbol, model.Gate)
 	if result && float64(oldBidAsk.Ts) > orderBook.Update*1000 || orderBook.Bids == nil || len(orderBook.Bids) < 1 ||
 		orderBook.Asks == nil || len(orderBook.Asks) < 1 {
 		return
@@ -802,7 +802,7 @@ func SetGateBidAsk(key, secret, symbol string) {
 		TsReceived: int(time.Now().UnixNano() / int64(time.Millisecond)),
 		Bids:       []model.Tick{{Price: bidPrice, Amount: bidAmount, Market: model.Gate, Symbol: symbol}},
 		Asks:       []model.Tick{{Price: askPrice, Amount: askAmount, Market: model.Gate, Symbol: symbol}}}
-	model.AppMarkets.SetBidAsk(symbol, model.Gate, &bidAsk)
+	model.AppEnvironment.SetBidAsk(symbol, model.Gate, &bidAsk)
 }
 
 func queryOrderGate(key, secret string, order *model.Order) {

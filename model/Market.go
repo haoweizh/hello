@@ -40,14 +40,16 @@ type Rule struct {
 	Delay  float64
 }
 
-type Markets struct {
-	markPriceInfos   sync.Map // symbol - market - ticker 行情包含标记价格
-	bidAsks          sync.Map // symbol - market - bidAsk
-	kLines           sync.Map // symbol - market - *candle
-	WsDepth, WSKLine sync.Map // market - []chan struct{}
-	WsInitTime       sync.Map // market - time
-	Connections      sync.Map // market - map[*websocket.Conn]bool for depth connections only
-	AccountConns     sync.Map // market*accountKey - *websocket.Conn
+type Environment struct {
+	markPriceInfos sync.Map // symbol - market - ticker 行情包含标记价格
+	bidAsks        sync.Map // symbol - market - bidAsk
+	kLines         sync.Map // symbol - market - *candle
+	MsgChanTick    sync.Map // market - []chan struct{}
+	MsgChanKLine   sync.Map // market - []chan struct{}
+	WsInitTime     sync.Map // market - time
+	SocketsTick    sync.Map // market - map[*websocket.Conn]bool for depth sockets
+	SocketsKLine   sync.Map // market - map[*websocket.Conn]bool for kline sockets
+	AccountConns   sync.Map // market*accountKey - *websocket.Conn
 }
 
 type MarkPriceInfo struct {
@@ -55,11 +57,11 @@ type MarkPriceInfo struct {
 	Ts        int // time in unix epoch millionSeconds
 }
 
-func (markets *Markets) SetMarkPriceInfo(symbol, marketName string, ticker *MarkPriceInfo) {
-	value, _ := markets.markPriceInfos.Load(symbol)
+func (environment *Environment) SetMarkPriceInfo(symbol, marketName string, ticker *MarkPriceInfo) {
+	value, _ := environment.markPriceInfos.Load(symbol)
 	if value == nil {
 		value = &sync.Map{}
-		markets.markPriceInfos.Store(symbol, value)
+		environment.markPriceInfos.Store(symbol, value)
 	}
 	oldTicker := value.(*sync.Map)
 	last, _ := oldTicker.Load(marketName)
@@ -68,8 +70,8 @@ func (markets *Markets) SetMarkPriceInfo(symbol, marketName string, ticker *Mark
 	}
 }
 
-func (markets *Markets) GetMarkPriceInfo(symbol, marketName string) *MarkPriceInfo {
-	value, _ := markets.markPriceInfos.Load(symbol)
+func (environment *Environment) GetMarkPriceInfo(symbol, marketName string) *MarkPriceInfo {
+	value, _ := environment.markPriceInfos.Load(symbol)
 	if value != nil {
 		item, _ := value.(*sync.Map).Load(marketName)
 		if item != nil {
@@ -79,7 +81,7 @@ func (markets *Markets) GetMarkPriceInfo(symbol, marketName string) *MarkPriceIn
 	return nil
 }
 
-func (markets *Markets) ToStringBidAsk(bidAsk *BidAsk) (result string) {
+func (environment *Environment) ToStringBidAsk(bidAsk *BidAsk) (result string) {
 	if bidAsk == nil || bidAsk.Bids == nil || bidAsk.Asks == nil {
 		return ``
 	}
@@ -93,8 +95,8 @@ func (markets *Markets) ToStringBidAsk(bidAsk *BidAsk) (result string) {
 	return
 }
 
-func (markets *Markets) GetKLine(symbol, market string) (result bool, candle *Candle) {
-	value, _ := markets.kLines.Load(symbol)
+func (environment *Environment) GetKLine(symbol, market string) (result bool, candle *Candle) {
+	value, _ := environment.kLines.Load(symbol)
 	if value != nil {
 		item, _ := value.(*sync.Map).Load(market)
 		if item != nil {
@@ -104,11 +106,11 @@ func (markets *Markets) GetKLine(symbol, market string) (result bool, candle *Ca
 	return false, nil
 }
 
-func (markets *Markets) SetCandle(symbol, market string, candle *Candle) bool {
-	value, _ := markets.kLines.Load(symbol)
+func (environment *Environment) SetCandle(symbol, market string, candle *Candle) bool {
+	value, _ := environment.kLines.Load(symbol)
 	if value == nil {
 		value = &sync.Map{}
-		markets.kLines.Store(symbol, value)
+		environment.kLines.Store(symbol, value)
 	}
 	symbolCandle := value.(*sync.Map)
 	last, _ := symbolCandle.Load(market)
@@ -119,8 +121,8 @@ func (markets *Markets) SetCandle(symbol, market string, candle *Candle) bool {
 	return false
 }
 
-func (markets *Markets) GetBidAsk(symbol, market string) (result bool, bidAsk *BidAsk) {
-	value, _ := markets.bidAsks.Load(symbol)
+func (environment *Environment) GetBidAsk(symbol, market string) (result bool, bidAsk *BidAsk) {
+	value, _ := environment.bidAsks.Load(symbol)
 	if value != nil {
 		item, _ := value.(*sync.Map).Load(market)
 		if item != nil {
@@ -130,7 +132,7 @@ func (markets *Markets) GetBidAsk(symbol, market string) (result bool, bidAsk *B
 	return false, nil
 }
 
-func (markets *Markets) SetBidAsk(symbol, marketName string, bidAsk *BidAsk) bool {
+func (environment *Environment) SetBidAsk(symbol, marketName string, bidAsk *BidAsk) bool {
 	if bidAsk == nil || bidAsk.Bids == nil || bidAsk.Asks == nil || bidAsk.Bids.Len() == 0 || bidAsk.Asks.Len() == 0 {
 		//util.SocketInfo(fmt.Sprintf(`do not set nil or empty bid ask %s %s data:%v`, marketName, symbol, bidAsk))
 		return false
@@ -157,10 +159,10 @@ func (markets *Markets) SetBidAsk(symbol, marketName string, bidAsk *BidAsk) boo
 	//		}
 	//	}
 	//}
-	value, _ := markets.bidAsks.Load(symbol)
+	value, _ := environment.bidAsks.Load(symbol)
 	if value == nil {
 		value = &sync.Map{}
-		markets.bidAsks.Store(symbol, value)
+		environment.bidAsks.Store(symbol, value)
 	}
 	oldBidAsk := value.(*sync.Map)
 	last, _ := oldBidAsk.Load(marketName)

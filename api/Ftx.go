@@ -48,7 +48,7 @@ func maintainChannelFtx(subscribes []interface{}) {
 					continue
 				}
 				standardSymbol := coin + model.UniStandardTail[marketType]
-				_, bidAsk := model.AppMarkets.GetBidAsk(standardSymbol, model.Ftx)
+				_, bidAsk := model.AppEnvironment.GetBidAsk(standardSymbol, model.Ftx)
 				if bidAsk == nil || time.Now().UnixMilli()-int64(bidAsk.Ts) > 120000 {
 					conn, ok := ftxSymbolConnection.Load(standardSymbol)
 					if conn != nil && ok {
@@ -118,7 +118,7 @@ var subscribeHandlerFtx = func(market string, connection *websocket.Conn, subscr
 	return err
 }
 
-func WsDepthServeFtx(markets *model.Markets) ([]chan struct{}, error) {
+func WsDepthServeFtx(environment *model.Environment) ([]chan struct{}, error) {
 	wsHandler := func(event []byte) {
 		responseJson, err := util.NewJSON(event)
 		if err != nil {
@@ -130,9 +130,9 @@ func WsDepthServeFtx(markets *model.Markets) ([]chan struct{}, error) {
 		}
 		msgType := responseJson.Get(`channel`).MustString()
 		if msgType == `orderbook` {
-			handleDepthFtx(markets, responseJson)
+			handleDepthFtx(environment, responseJson)
 		} else if msgType == `ticker` {
-			handleTickerFtx(markets, responseJson)
+			handleTickerFtx(environment, responseJson)
 		}
 	}
 	//subType := model.SubscribeDepth
@@ -143,7 +143,7 @@ func WsDepthServeFtx(markets *model.Markets) ([]chan struct{}, error) {
 	return WebSocketClient(model.Ftx, wsFtx, subscribes, subscribeHandlerFtx, wsHandler, wsStepFtx)
 }
 
-func handleTickerFtx(markets *model.Markets, response *simplejson.Json) {
+func handleTickerFtx(environment *model.Environment, response *simplejson.Json) {
 	if response == nil {
 		return
 	}
@@ -172,7 +172,7 @@ func handleTickerFtx(markets *model.Markets, response *simplejson.Json) {
 	//	if handler != nil {
 	//		setting := model.GetSetting(function, model.Ftx, standardSymbol)
 	//		if setting != nil && setting.Function == model.FunctionCross {
-	//			getUsdTick, usdtBidAsk := markets.GetBidAsk(`USDT_USDT`, model.Ftx)
+	//			getUsdTick, usdtBidAsk := environment.GetBidAsk(`USDT_USDT`, model.Ftx)
 	//			if getUsdTick && bidAsk.Asks.Len() > 0 && bidAsk.Bids.Len() > 0 {
 	//				bidAsk.Asks[0].Price /= usdtBidAsk.Asks[0].Price
 	//				bidAsk.Bids[0].Price /= usdtBidAsk.Asks[0].Price
@@ -181,7 +181,7 @@ func handleTickerFtx(markets *model.Markets, response *simplejson.Json) {
 	//		}
 	//	}
 	//}
-	if markets.SetBidAsk(standardSymbol, model.Ftx, bidAsk) {
+	if environment.SetBidAsk(standardSymbol, model.Ftx, bidAsk) {
 		funcHandlers := GetFunctions(model.Ftx, standardSymbol)
 		if funcHandlers != nil {
 			funcHandlers.Range(func(function, value interface{}) bool {
@@ -195,7 +195,7 @@ func handleTickerFtx(markets *model.Markets, response *simplejson.Json) {
 	}
 }
 
-func handleDepthFtx(markets *model.Markets, response *simplejson.Json) {
+func handleDepthFtx(environment *model.Environment, response *simplejson.Json) {
 	if response == nil {
 		return
 	}
@@ -224,7 +224,7 @@ func handleDepthFtx(markets *model.Markets, response *simplejson.Json) {
 				bidAsk.Asks = append(bidAsk.Asks, model.Tick{Price: price, Amount: size, Market: model.Ftx, Symbol: standardSymbol})
 			}
 		} else if dataType == `update` {
-			_, oldBidAsk := markets.GetBidAsk(standardSymbol, model.Ftx)
+			_, oldBidAsk := environment.GetBidAsk(standardSymbol, model.Ftx)
 			if oldBidAsk == nil {
 				util.SocketInfo(fmt.Sprintf(`fatal: can not have old bidask %s %s`, model.Ftx, standardSymbol))
 				oldBidAsk = &model.BidAsk{Ts: int(data.Get(`time`).MustFloat64() * 1000),
@@ -266,7 +266,7 @@ func handleDepthFtx(markets *model.Markets, response *simplejson.Json) {
 		//	if handler != nil {
 		//		setting := model.GetSetting(function, model.Ftx, standardSymbol)
 		//		if setting != nil && setting.Function == model.FunctionCross {
-		//			getUsdTick, usdtBidAsk := markets.GetBidAsk(`USDT_USDT`, model.Ftx)
+		//			getUsdTick, usdtBidAsk := environment.GetBidAsk(`USDT_USDT`, model.Ftx)
 		//			if getUsdTick && bidAsk.Asks.Len() > 0 && bidAsk.Bids.Len() > 0 {
 		//				bidAsk.Asks[0].Price /= usdtBidAsk.Asks[0].Price
 		//				bidAsk.Bids[0].Price /= usdtBidAsk.Asks[0].Price
@@ -275,7 +275,7 @@ func handleDepthFtx(markets *model.Markets, response *simplejson.Json) {
 		//		}
 		//	}
 		//}
-		if markets.SetBidAsk(standardSymbol, model.Ftx, bidAsk) {
+		if environment.SetBidAsk(standardSymbol, model.Ftx, bidAsk) {
 			funcHandlers := GetFunctions(model.Ftx, standardSymbol)
 			if funcHandlers != nil {
 				funcHandlers.Range(func(function, value interface{}) bool {

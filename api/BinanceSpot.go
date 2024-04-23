@@ -107,7 +107,7 @@ func WsKLineBinance(market string) ([]chan struct{}, error) {
 		candle.Volume, _ = strconv.ParseFloat(result.Get(`v`).MustString(), 64)
 		candle.VolumeQuote, _ = strconv.ParseFloat(result.Get(`q`).MustString(), 64)
 		model.KLineChan <- candle
-		model.AppMarkets.SetCandle(candle.Symbol, candle.Market, candle)
+		model.AppEnvironment.SetCandle(candle.Symbol, candle.Market, candle)
 	}
 	klineSubs := GetKLineSubs(market)
 	chans, err := WebSocketClient(market, wsBinance+`stream`, klineSubs,
@@ -118,7 +118,7 @@ func WsKLineBinance(market string) ([]chan struct{}, error) {
 	return chans, err
 }
 
-func WsDepthServeBinance(marketConns *model.Markets, market string) (channels []chan struct{}, err error) {
+func WsDepthServeBinance(environment *model.Environment, market string) (channels []chan struct{}, err error) {
 	subType := model.SubscribeTicker
 	wsHandlerBinance := func(event []byte) {
 		result, wsErr := util.NewJSON(event)
@@ -146,14 +146,14 @@ func WsDepthServeBinance(marketConns *model.Markets, market string) (channels []
 		if market == model.BinanceMargin {
 			standardSymbol = coin + model.UniStandardTail[model.MarketTypeSpot]
 		}
-		haveOld, old := marketConns.GetBidAsk(standardSymbol, market)
+		haveOld, old := environment.GetBidAsk(standardSymbol, market)
 		if haveOld && old.UpdateId > updateId {
 			return
 		}
 		if strings.Contains(subscribe, `@depth`) {
-			handleDepthBinance(marketConns, result, market, standardSymbol, updateId)
+			handleDepthBinance(environment, result, market, standardSymbol, updateId)
 		} else if strings.Contains(subscribe, `@bookTicker`) {
-			handleTickerBinance(marketConns, result, market, standardSymbol, updateId)
+			handleTickerBinance(environment, result, market, standardSymbol, updateId)
 		}
 	}
 	spotSubs := GetWSSubscribes(market, subType)
@@ -180,7 +180,7 @@ var subscribeHandlerBinance = func(market string, connection *websocket.Conn, su
 	return err
 }
 
-func handleTickerBinance(markets *model.Markets, json *simplejson.Json, market, standardSymbol string, updateId int64) {
+func handleTickerBinance(environment *model.Environment, json *simplejson.Json, market, standardSymbol string, updateId int64) {
 	bidPrice, _ := strconv.ParseFloat(json.Get(`b`).MustString(), 64)
 	bidAmount, _ := strconv.ParseFloat(json.Get(`B`).MustString(), 64)
 	askPrice, _ := strconv.ParseFloat(json.Get(`a`).MustString(), 64)
@@ -194,11 +194,11 @@ func handleTickerBinance(markets *model.Markets, json *simplejson.Json, market, 
 		bidAsk := model.BidAsk{Ts: ts, TsReceived: now, UpdateId: updateId,
 			Bids: []model.Tick{{Price: bidPrice, Amount: bidAmount, Market: market, Symbol: standardSymbol}},
 			Asks: []model.Tick{{Price: askPrice, Amount: askAmount, Market: market, Symbol: standardSymbol}}}
-		haveOld, old := markets.GetBidAsk(standardSymbol, market)
+		haveOld, old := environment.GetBidAsk(standardSymbol, market)
 		if haveOld && old.UpdateId > bidAsk.UpdateId {
 			return
 		}
-		if markets.SetBidAsk(standardSymbol, market, &bidAsk) {
+		if environment.SetBidAsk(standardSymbol, market, &bidAsk) {
 			funcHandlers := GetFunctions(market, standardSymbol)
 			if funcHandlers != nil {
 				funcHandlers.Range(func(function, value interface{}) bool {
@@ -213,7 +213,7 @@ func handleTickerBinance(markets *model.Markets, json *simplejson.Json, market, 
 	}
 }
 
-func handleDepthBinance(markets *model.Markets, json *simplejson.Json, market, standardSymbol string, updateId int64) {
+func handleDepthBinance(environment *model.Environment, json *simplejson.Json, market, standardSymbol string, updateId int64) {
 	now := int(util.GetNowUnixMillion())
 	bidAsk := model.BidAsk{UpdateId: updateId, Ts: now, TsReceived: now}
 	var bids, asks []interface{}
@@ -241,7 +241,7 @@ func handleDepthBinance(markets *model.Markets, json *simplejson.Json, market, s
 	}
 	sort.Sort(bidAsk.Asks)
 	sort.Sort(sort.Reverse(bidAsk.Bids))
-	if markets.SetBidAsk(standardSymbol, market, &bidAsk) {
+	if environment.SetBidAsk(standardSymbol, market, &bidAsk) {
 		funcHandlers := GetFunctions(market, standardSymbol)
 		if funcHandlers != nil {
 			funcHandlers.Range(func(function, value interface{}) bool {
@@ -272,7 +272,7 @@ func maintainChannelBinance(market string, subscribes []interface{}) {
 					continue
 				}
 				symbol := coin + model.UniStandardTail[marketType]
-				_, bidAsk := model.AppMarkets.GetBidAsk(symbol, market)
+				_, bidAsk := model.AppEnvironment.GetBidAsk(symbol, market)
 				if bidAsk == nil || time.Now().UnixMilli()-int64(bidAsk.Ts) > 180000 {
 					timeoutNum++
 					if bidAsk == nil {

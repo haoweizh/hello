@@ -115,11 +115,11 @@ func getMarketsBybitPerp(marketInfos map[string]*model.MarketInfo) {
 	}
 }
 
-func parseBookOrder(markets *model.Markets, bookWsResp *dtos.BybitBookWsResp, symbol string) {
+func parseBookOrder(environment *model.Environment, bookWsResp *dtos.BybitBookWsResp, symbol string) {
 	bidAsk := model.BidAsk{TsReceived: int(time.Now().UnixNano() / int64(time.Millisecond))}
 	bidAsk.Ts = int(bookWsResp.Ts)
 	bidAsk.UpdateId = bookWsResp.Data.Seq
-	haveOld, old := markets.GetBidAsk(symbol, model.Bybit)
+	haveOld, old := environment.GetBidAsk(symbol, model.Bybit)
 	if bookWsResp.Type == "snapshot" {
 		if len(bookWsResp.Data.B) == 0 || len(bookWsResp.Data.A) == 0 {
 			util.Notice(fmt.Sprintf(`bybit no book data %s`, bookWsResp.Data.S))
@@ -172,7 +172,7 @@ func parseBookOrder(markets *model.Markets, bookWsResp *dtos.BybitBookWsResp, sy
 	if haveOld && old.Ts > bidAsk.Ts {
 		return
 	}
-	if markets.SetBidAsk(symbol, model.Bybit, &bidAsk) {
+	if environment.SetBidAsk(symbol, model.Bybit, &bidAsk) {
 		funcHandlers := GetFunctions(model.Bybit, symbol)
 		if funcHandlers != nil {
 			funcHandlers.Range(func(function, value interface{}) bool {
@@ -186,7 +186,7 @@ func parseBookOrder(markets *model.Markets, bookWsResp *dtos.BybitBookWsResp, sy
 	}
 }
 
-func WsDepthServeBybit(markets *model.Markets) (channels []chan struct{}, err error) {
+func WsDepthServeBybit(environment *model.Environment) (channels []chan struct{}, err error) {
 	spotBookWsHandler := func(event []byte) {
 		//fmt.Println(fmt.Sprintf("spot book data: %s", event))
 		bookWsResp := &dtos.BybitBookWsResp{}
@@ -204,7 +204,7 @@ func WsDepthServeBybit(markets *model.Markets) (channels []chan struct{}, err er
 				return
 			}
 			symbol := coin + model.UniStandardTail[model.MarketTypeSpot]
-			parseBookOrder(markets, bookWsResp, symbol)
+			parseBookOrder(environment, bookWsResp, symbol)
 		}
 	}
 	perpBookWsHandler := func(event []byte) {
@@ -224,7 +224,7 @@ func WsDepthServeBybit(markets *model.Markets) (channels []chan struct{}, err er
 				return
 			}
 			symbol := coin + model.UniStandardTail[model.MarketTypePerp]
-			parseBookOrder(markets, bookWsResp, symbol)
+			parseBookOrder(environment, bookWsResp, symbol)
 		}
 	}
 	channels = make([]chan struct{}, 0)
@@ -355,7 +355,7 @@ func getBalanceBybit(key string, secret string) (success bool, balances []*model
 				balance.AvailableWithBorrow = math.Max(0, balance.Amount) + canBorrow
 				usdValue, _ := strconv.ParseFloat(coinInfo.UsdValue, 64)
 				if usdValue == 0 {
-					priceGet, bidAsk := model.AppMarkets.GetBidAsk(balance.Coin+model.UniStandardTail[model.MarketTypeSpot], model.Bybit)
+					priceGet, bidAsk := model.AppEnvironment.GetBidAsk(balance.Coin+model.UniStandardTail[model.MarketTypeSpot], model.Bybit)
 					if priceGet {
 						usdValue = balance.Amount * bidAsk.Bids[0].Price
 					}

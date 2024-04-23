@@ -87,7 +87,7 @@ const TopCross = `top_cross`
 var AppDB *gorm.DB
 var AppRedis *redis.Client
 var AppConfig *Config
-var AppMarkets = &Markets{}
+var AppEnvironment = &Environment{}
 var ChannelMaintaining sync.Map // market - bool
 var KLineChan = make(chan *Candle, 100)
 var DialectTail = map[string]map[string]string{

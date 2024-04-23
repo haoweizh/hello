@@ -48,7 +48,7 @@ func maintainAccountConnOKEX() {
 				if account == nil {
 					continue
 				}
-				value, _ := util.LoadSyncMap(&model.AppMarkets.AccountConns, model.OKEX, account.Key)
+				value, _ := util.LoadSyncMap(&model.AppEnvironment.AccountConns, model.OKEX, account.Key)
 				if value == nil {
 					util.Notice(fmt.Sprintf(`-test ok ws- no private connection %s`, account.Key))
 					continue
@@ -106,7 +106,7 @@ func reSubscribe(subscribes []interface{}) {
 	//}
 	//wrongArray := getWrongs()
 	//util.Notice(fmt.Sprintf(`>>>>>>>>wrong symbol %v %d`, wrongArray, len(wrongArray)))
-	value, _ := model.AppMarkets.Connections.Load(model.OKEX)
+	value, _ := model.AppEnvironment.SocketsTick.Load(model.OKEX)
 	if value == nil {
 		return
 	}
@@ -129,7 +129,7 @@ func reSubscribe(subscribes []interface{}) {
 			continue
 		}
 		symbol := coin + model.UniStandardTail[marketType]
-		success, bidAsk := model.AppMarkets.GetBidAsk(symbol, model.OKEX)
+		success, bidAsk := model.AppEnvironment.GetBidAsk(symbol, model.OKEX)
 		if !success || bidAsk == nil || time.Now().UnixMilli()-int64(bidAsk.Ts) > 60000000 {
 			if bidAsk == nil {
 				util.Notice(`bid ask nil okex ` + symbol)
@@ -200,7 +200,7 @@ func handleMsgOKEX(channel chan *simplejson.Json, symbol string) {
 		success := false
 		var bidAsk *model.BidAsk
 		if action == `update` {
-			_, bidAsk = model.AppMarkets.GetBidAsk(symbol, model.OKEX)
+			_, bidAsk = model.AppEnvironment.GetBidAsk(symbol, model.OKEX)
 			if bidAsk != nil {
 				success, bidAsk = handleBooksUpdate(symbol, data, bidAsk)
 			}
@@ -217,7 +217,7 @@ func handleMsgOKEX(channel chan *simplejson.Json, symbol string) {
 		//将最佳买一卖一的数量转换为币种的真实数量
 		_, bidAsk.Bids[0].Amount = model.ParseRealAmount(model.OKEX, symbol, bidAsk.Bids[0].Amount)
 		_, bidAsk.Asks[0].Amount = model.ParseRealAmount(model.OKEX, symbol, bidAsk.Asks[0].Amount)
-		if model.AppMarkets.SetBidAsk(symbol, model.OKEX, bidAsk) {
+		if model.AppEnvironment.SetBidAsk(symbol, model.OKEX, bidAsk) {
 			funcHandlers := GetFunctions(model.OKEX, symbol)
 			if funcHandlers != nil {
 				funcHandlers.Range(func(function, value interface{}) bool {
@@ -279,7 +279,7 @@ var wsAccountHandlerOKEX = func(event []byte) {
 				if account == nil {
 					continue
 				}
-				value, _ := util.LoadSyncMap(&model.AppMarkets.AccountConns, model.OKEX, account.Key)
+				value, _ := util.LoadSyncMap(&model.AppEnvironment.AccountConns, model.OKEX, account.Key)
 				if value == nil {
 					continue
 				}
@@ -646,7 +646,7 @@ func PlacePairOKEX(account *model.Account, symbolBuy, symbolSell, orderType stri
 	subscribeMap[`id`] = strconv.FormatInt(time.Now().UnixNano(), 10)
 	subscribeMap["op"] = "batch-orders"
 	msg := util.JsonEncodeToByte(subscribeMap)
-	value, _ := util.LoadSyncMap(&model.AppMarkets.AccountConns, model.OKEX, account.Key)
+	value, _ := util.LoadSyncMap(&model.AppEnvironment.AccountConns, model.OKEX, account.Key)
 	if value == nil {
 		errMsg = fmt.Sprintf(`fail to get connection %s`, account.Key)
 		util.Notice(errMsg)
@@ -721,7 +721,7 @@ func placeOrderOKEX(account *model.Account, isWs bool, order *model.Order) {
 		wsOrderMsg := util.JsonEncodeToByte(subscribeMap)
 		util.SocketInfo(`ws order ` + string(wsOrderMsg))
 		order.Status = model.CarryStatusWorking
-		value, _ := util.LoadSyncMap(&model.AppMarkets.AccountConns, model.OKEX, account.Key)
+		value, _ := util.LoadSyncMap(&model.AppEnvironment.AccountConns, model.OKEX, account.Key)
 		if value == nil {
 			util.Notice(fmt.Sprintf(`-test ok ws-fail to get private connection %s`, account.Key))
 			order.Status = model.CarryStatusFail
@@ -1469,7 +1469,7 @@ func getMaxSizeOKEX(key, secret, symbol string) (success bool, maxBuy, maxSell f
 		maxSell, _ = strconv.ParseFloat(data[`maxSell`].(string), 64)
 		_, marketType, _, _ := model.GetFromStandard(model.Kucoin, symbol)
 		if marketType == model.MarketTypeSpot {
-			ok, bidAsk := model.AppMarkets.GetBidAsk(symbol, model.OKEX)
+			ok, bidAsk := model.AppEnvironment.GetBidAsk(symbol, model.OKEX)
 			if ok {
 				maxSell = maxSell / bidAsk.Asks[0].Price
 				//util.Info(`get max sell %f after price %f %s`, maxSell, bidAsk.Asks[0].Price, symbol)

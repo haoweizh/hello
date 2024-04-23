@@ -69,7 +69,7 @@ func setBitgetPositionMode(key, secret string) {
 	}
 }
 
-func WsDepthServeBitgetPerp(markets *model.Markets) (channels []chan struct{}, err error) {
+func WsDepthServeBitgetPerp(environment *model.Environment) (channels []chan struct{}, err error) {
 	bookWsHandler := func(event []byte) {
 		//util.Notice(fmt.Sprintf("bitget perp ws book ticker: %s", event))
 		if len(event) == 4 {
@@ -104,11 +104,11 @@ func WsDepthServeBitgetPerp(markets *model.Markets) (channels []chan struct{}, e
 			bidAsk.Asks = asks
 			bidAsk.Ts, _ = strconv.Atoi(bookWsResp.Data[0].Ts)
 			bidAsk.UpdateId, _ = strconv.ParseInt(bookWsResp.Data[0].Ts, 10, 64)
-			haveOld, old := markets.GetBidAsk(symbol, model.BitgetPerp)
+			haveOld, old := environment.GetBidAsk(symbol, model.BitgetPerp)
 			if haveOld && old.UpdateId > bidAsk.UpdateId {
 				return
 			}
-			if markets.SetBidAsk(symbol, model.BitgetPerp, &bidAsk) {
+			if environment.SetBidAsk(symbol, model.BitgetPerp, &bidAsk) {
 				//util.Info(fmt.Sprintf("perp symbol: %s now bidAsk: %v", symbol, bidAsk))
 				funcHandlers := GetFunctions(model.BitgetPerp, symbol)
 				if funcHandlers != nil {
@@ -143,7 +143,7 @@ func WsDepthServeBitgetPerp(markets *model.Markets) (channels []chan struct{}, e
 				symbol := coin + model.UniStandardTail[model.MarketTypePerp]
 				price, _ := strconv.ParseFloat(tickerData.MarkPrice, 64)
 				ticker := &model.MarkPriceInfo{MarkPrice: price, Ts: int(tickerData.SystemTime)}
-				markets.SetMarkPriceInfo(symbol, model.BitgetPerp, ticker)
+				environment.SetMarkPriceInfo(symbol, model.BitgetPerp, ticker)
 				rate, _ := strconv.ParseFloat(tickerData.CapitalRate, 64)
 				fundingRate := &model.FundingRate{
 					Rate:       rate,

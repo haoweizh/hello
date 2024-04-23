@@ -36,7 +36,7 @@ var subscribeHandlerHuobiPerp = func(market string, connection *websocket.Conn, 
 	return err
 }
 
-func WsDepthServeHuobiPerp(markets *model.Markets) ([]chan struct{}, error) {
+func WsDepthServeHuobiPerp(environment *model.Environment) ([]chan struct{}, error) {
 	wsMsgHandler := func(event []byte) {
 		res := util.UnGzip(event)
 		responseJson, err := util.NewJSON(res)
@@ -47,7 +47,7 @@ func WsDepthServeHuobiPerp(markets *model.Markets) ([]chan struct{}, error) {
 			pingMap := make(map[string]interface{})
 			pingMap["pong"] = responseJson.Get(`ping`).MustInt()
 			pingParams := util.JsonEncodeToByte(pingMap)
-			value, _ := model.AppMarkets.Connections.Load(model.HuobiPerp)
+			value, _ := model.AppEnvironment.SocketsTick.Load(model.HuobiPerp)
 			connections := value.(map[*websocket.Conn]bool)
 			for connection := range connections {
 				if connection == nil {
@@ -90,7 +90,7 @@ func WsDepthServeHuobiPerp(markets *model.Markets) ([]chan struct{}, error) {
 				symbol = strings.ToLower(splits[1])
 				sort.Sort(bidAsk.Asks)
 				sort.Sort(sort.Reverse(bidAsk.Bids))
-				if markets.SetBidAsk(symbol, model.HuobiPerp, &bidAsk) {
+				if environment.SetBidAsk(symbol, model.HuobiPerp, &bidAsk) {
 					funcHandlers := GetFunctions(model.HuobiPerp, symbol)
 					if funcHandlers != nil {
 						funcHandlers.Range(func(function, value interface{}) bool {
