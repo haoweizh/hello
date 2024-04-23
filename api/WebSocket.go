@@ -139,7 +139,6 @@ func chanHandler(market string, stopChan chan struct{}, connection *websocket.Co
 
 func WsAccountClient(key, market, url string, msgHandler MsgHandler) (connection *websocket.Conn, err error) {
 	util.Notice(market + ` create account channel ` + url)
-	util.DelSyncMap(&model.AppEnvironment.AccountConns, market, key)
 	connection, err = newConnection(url)
 	if err != nil {
 		util.Info("can not create web socket" + err.Error())
