@@ -46,7 +46,7 @@ type Markets struct {
 	kLines           sync.Map // symbol - market - *candle
 	WsDepth, WSKLine sync.Map // market - []chan struct{}
 	WsInitTime       sync.Map // market - time
-	Connections      sync.Map // market - []*websocket.Conn for depth connections only
+	Connections      sync.Map // market - map[*websocket.Conn]bool for depth connections only
 	AccountConns     sync.Map // market*accountKey - *websocket.Conn
 }
 

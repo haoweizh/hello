@@ -99,12 +99,13 @@ func WsKLineBinance(market string) ([]chan struct{}, error) {
 			standardSymbol = coin + model.UniStandardTail[model.MarketTypeSpot]
 		}
 		result = result.Get(`k`)
-		candle := &model.Candle{Market: market, Symbol: standardSymbol, Begin: time.Unix(result.Get(`t`).MustInt64(), 0), Seconds: 1}
+		candle := &model.Candle{Market: market, Symbol: standardSymbol, Begin: time.UnixMilli(result.Get(`t`).MustInt64()), Seconds: 1}
 		candle.PriceOpen, _ = strconv.ParseFloat(result.Get(`o`).MustString(), 64)
 		candle.PriceClose, _ = strconv.ParseFloat(result.Get(`c`).MustString(), 64)
 		candle.PriceHigh, _ = strconv.ParseFloat(result.Get(`h`).MustString(), 64)
 		candle.PriceLow, _ = strconv.ParseFloat(result.Get(`l`).MustString(), 64)
 		candle.Volume, _ = strconv.ParseFloat(result.Get(`v`).MustString(), 64)
+		candle.VolumeQuote, _ = strconv.ParseFloat(result.Get(`q`).MustString(), 64)
 		model.KLineChan <- candle
 		model.AppMarkets.SetCandle(candle.Symbol, candle.Market, candle)
 	}

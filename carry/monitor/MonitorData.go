@@ -16,11 +16,10 @@ var DataMonitor = &sync.Map{}
 
 type AggregationCandle struct {
 	slideRing                                            *SlideRing
-	timeStart, timeEnd                                   *time.Time
-	timeInterval                                         time.Duration
-	priceHigh, priceLow                                  float64
-	priceStart, priceCurrent, priceIncrease, priceChange float64
-	volume                                               float64
+	Start, End                                           *time.Time
+	TimeInterval                                         time.Duration
+	PriceHigh, PriceLow, Volume                          float64
+	PriceStart, PriceCurrent, PriceIncrease, PriceChange float64
 }
 
 func (aggregationCandle *AggregationCandle) refresh() {
@@ -33,7 +32,7 @@ func (aggregationCandle *AggregationCandle) refresh() {
 		} else if tempCurrent != nil {
 			start := tempStart.(*model.Candle)
 			current := tempCurrent.(*model.Candle)
-			if start.Begin.Add(aggregationCandle.timeInterval).Before(current.Begin) {
+			if start.Begin.Add(aggregationCandle.TimeInterval).Before(current.Begin) {
 				aggregationCandle.slideRing.remove()
 			}
 		}
@@ -42,31 +41,34 @@ func (aggregationCandle *AggregationCandle) refresh() {
 	if tempStart == nil || tempCurrent == nil {
 		return
 	}
-	aggregationCandle.timeStart = &tempStart.(*model.Candle).Begin
-	aggregationCandle.timeEnd = &tempCurrent.(*model.Candle).Begin
-	aggregationCandle.priceStart = tempStart.(*model.Candle).PriceOpen
-	aggregationCandle.priceCurrent = tempCurrent.(*model.Candle).PriceClose
-	aggregationCandle.volume = 0
+	aggregationCandle.Start = &tempStart.(*model.Candle).Begin
+	aggregationCandle.End = &tempCurrent.(*model.Candle).Begin
+	aggregationCandle.PriceStart = tempStart.(*model.Candle).PriceOpen
+	aggregationCandle.PriceCurrent = tempCurrent.(*model.Candle).PriceClose
+	aggregationCandle.Volume = 0
 	for i := aggregationCandle.slideRing.start; i < aggregationCandle.slideRing.current; i++ {
 		candleIndex := aggregationCandle.slideRing.data[i]
 		if candleIndex != nil {
-			aggregationCandle.volume += candleIndex.(*model.Candle).Volume
-			if aggregationCandle.priceHigh < candleIndex.(*model.Candle).PriceHigh {
-				aggregationCandle.priceHigh = candleIndex.(*model.Candle).PriceHigh
+			aggregationCandle.Volume += candleIndex.(*model.Candle).VolumeQuote
+			if aggregationCandle.PriceHigh < candleIndex.(*model.Candle).PriceHigh {
+				aggregationCandle.PriceHigh = candleIndex.(*model.Candle).PriceHigh
 			}
-			if aggregationCandle.priceLow > candleIndex.(*model.Candle).PriceLow || aggregationCandle.priceLow == 0 {
-				aggregationCandle.priceLow = candleIndex.(*model.Candle).PriceLow
+			if aggregationCandle.PriceLow > candleIndex.(*model.Candle).PriceLow || aggregationCandle.PriceLow == 0 {
+				aggregationCandle.PriceLow = candleIndex.(*model.Candle).PriceLow
 			}
 		}
 	}
-	aggregationCandle.priceChange = aggregationCandle.priceHigh - aggregationCandle.priceLow
-	aggregationCandle.priceIncrease = aggregationCandle.priceCurrent - aggregationCandle.priceStart
+	aggregationCandle.PriceChange = aggregationCandle.PriceHigh - aggregationCandle.PriceLow
+	aggregationCandle.PriceIncrease = aggregationCandle.PriceCurrent - aggregationCandle.PriceStart
 }
 
 func (aggregationCandle *AggregationCandle) handle(candle *model.Candle) {
-	if candle.Begin.Before(*aggregationCandle.timeEnd) {
+	if (*aggregationCandle).End == nil {
+		aggregationCandle.End = &candle.Begin
+	}
+	if candle.Begin.Before(*aggregationCandle.End) {
 		util.Info(fmt.Sprintf(`ignore passed by %s %s %s<%s`,
-			candle.Market, candle.Symbol, candle.Begin.String(), aggregationCandle.timeEnd))
+			candle.Market, candle.Symbol, candle.Begin.String(), aggregationCandle.End))
 		return
 	}
 	aggregationCandle.slideRing.add(candle)
@@ -74,22 +76,22 @@ func (aggregationCandle *AggregationCandle) handle(candle *model.Candle) {
 		aggregationCandle.refresh()
 		return
 	}
-	aggregationCandle.timeEnd = &candle.Begin
-	aggregationCandle.priceCurrent = candle.PriceClose
-	aggregationCandle.volume += candle.Volume
+	aggregationCandle.End = &candle.Begin
+	aggregationCandle.PriceCurrent = candle.PriceClose
+	aggregationCandle.Volume += candle.VolumeQuote
 	for {
 		tempStart, _ := aggregationCandle.slideRing.get()
 		if tempStart == nil {
 			if !aggregationCandle.slideRing.remove() {
 				break
 			}
-		} else if tempStart.(*model.Candle).Begin.Add(aggregationCandle.timeInterval).Before(*aggregationCandle.timeEnd) {
-			aggregationCandle.volume -= tempStart.(*model.Candle).Volume
-			if aggregationCandle.priceHigh == candle.PriceHigh {
-				aggregationCandle.priceHigh = 0
+		} else if tempStart.(*model.Candle).Begin.Add(aggregationCandle.TimeInterval).Before(*aggregationCandle.End) {
+			aggregationCandle.Volume -= tempStart.(*model.Candle).VolumeQuote
+			if aggregationCandle.PriceHigh == candle.PriceHigh {
+				aggregationCandle.PriceHigh = 0
 			}
-			if aggregationCandle.priceLow == candle.PriceLow {
-				aggregationCandle.priceLow = 0
+			if aggregationCandle.PriceLow == candle.PriceLow {
+				aggregationCandle.PriceLow = 0
 			}
 			aggregationCandle.slideRing.remove()
 		} else {
@@ -98,30 +100,30 @@ func (aggregationCandle *AggregationCandle) handle(candle *model.Candle) {
 	}
 	tempStart, tempCurrent := aggregationCandle.slideRing.get()
 	if tempStart == nil || tempCurrent == nil {
-		aggregationCandle.volume = candle.Volume
-		aggregationCandle.timeStart = &candle.Begin
-		aggregationCandle.priceStart = candle.PriceHigh
-		aggregationCandle.priceHigh = candle.PriceHigh
-		aggregationCandle.priceLow = candle.PriceLow
-		aggregationCandle.priceIncrease = 0
-		aggregationCandle.priceChange = 0
+		aggregationCandle.Volume = candle.VolumeQuote
+		aggregationCandle.Start = &candle.Begin
+		aggregationCandle.PriceStart = candle.PriceHigh
+		aggregationCandle.PriceHigh = candle.PriceHigh
+		aggregationCandle.PriceLow = candle.PriceLow
+		aggregationCandle.PriceIncrease = 0
+		aggregationCandle.PriceChange = 0
 		util.Info(fmt.Sprintf(`reset from slide ring with candle %s %s %s`, candle.Market, candle.Symbol, candle.Begin.String()))
 		return
 	}
-	aggregationCandle.timeStart = &tempStart.(*model.Candle).Begin
-	aggregationCandle.priceStart = tempStart.(*model.Candle).PriceOpen
-	if aggregationCandle.priceHigh == 0 {
-		aggregationCandle.priceHigh = math.Max(tempStart.(*model.Candle).PriceHigh, candle.PriceHigh)
-	} else if aggregationCandle.priceHigh < candle.PriceHigh {
-		aggregationCandle.priceHigh = candle.PriceHigh
+	aggregationCandle.Start = &tempStart.(*model.Candle).Begin
+	aggregationCandle.PriceStart = tempStart.(*model.Candle).PriceOpen
+	if aggregationCandle.PriceHigh == 0 {
+		aggregationCandle.PriceHigh = math.Max(tempStart.(*model.Candle).PriceHigh, candle.PriceHigh)
+	} else if aggregationCandle.PriceHigh < candle.PriceHigh {
+		aggregationCandle.PriceHigh = candle.PriceHigh
 	}
-	if aggregationCandle.priceLow == 0 {
-		aggregationCandle.priceLow = math.Min(tempStart.(*model.Candle).PriceLow, candle.PriceLow)
-	} else if aggregationCandle.priceLow > candle.PriceLow {
-		aggregationCandle.priceLow = candle.PriceLow
+	if aggregationCandle.PriceLow == 0 {
+		aggregationCandle.PriceLow = math.Min(tempStart.(*model.Candle).PriceLow, candle.PriceLow)
+	} else if aggregationCandle.PriceLow > candle.PriceLow {
+		aggregationCandle.PriceLow = candle.PriceLow
 	}
-	aggregationCandle.priceChange = aggregationCandle.priceHigh - aggregationCandle.priceLow
-	aggregationCandle.priceIncrease = aggregationCandle.priceCurrent - aggregationCandle.priceStart
+	aggregationCandle.PriceChange = aggregationCandle.PriceHigh - aggregationCandle.PriceLow
+	aggregationCandle.PriceIncrease = aggregationCandle.PriceCurrent - aggregationCandle.PriceStart
 }
 
 func KLineServer() {
@@ -133,7 +135,7 @@ func KLineServer() {
 		}
 		settings.Range(func(symbol, setting any) bool {
 			util.StoreSyncMap(DataMonitor, &AggregationCandle{
-				timeInterval: time.Duration(setting.(*model.Setting).Seconds) * time.Second, slideRing: &SlideRing{}},
+				TimeInterval: time.Duration(setting.(*model.Setting).Seconds) * time.Second, slideRing: &SlideRing{}},
 				market, symbol.(string))
 			return true
 		})
@@ -144,7 +146,7 @@ func KLineServer() {
 		if success && aggregationCandle != nil {
 			aggregationCandle.(*AggregationCandle).handle(candle)
 			jsonBytes, err := json.Marshal(aggregationCandle)
-			if err != nil {
+			if err == nil {
 				fmt.Println(string(jsonBytes))
 				api.AppWSManager.Send(jsonBytes, nil)
 			}

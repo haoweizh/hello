@@ -110,7 +110,10 @@ func reSubscribe(subscribes []interface{}) {
 	if value == nil {
 		return
 	}
-	connections := value.([]*websocket.Conn)
+	connections := make([]*websocket.Conn, 0)
+	for conn := range value.(map[*websocket.Conn]bool) {
+		connections = append(connections, conn)
+	}
 	//if len(wrongArray) > len(connections)*5 {
 	//	requireReset.Store(model.OKEX, true)
 	//	util.Notice(fmt.Sprintf(`require reset all okex channel, wrong symbol %d`, len(wrongArray)))

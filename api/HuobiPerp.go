@@ -48,8 +48,8 @@ func WsDepthServeHuobiPerp(markets *model.Markets) ([]chan struct{}, error) {
 			pingMap["pong"] = responseJson.Get(`ping`).MustInt()
 			pingParams := util.JsonEncodeToByte(pingMap)
 			value, _ := model.AppMarkets.Connections.Load(model.HuobiPerp)
-			connections := value.([]*websocket.Conn)
-			for _, connection := range connections {
+			connections := value.(map[*websocket.Conn]bool)
+			for connection := range connections {
 				if connection == nil {
 					continue
 				}

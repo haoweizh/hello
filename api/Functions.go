@@ -865,6 +865,7 @@ func PlaceOrder(key, secret, orderSide, orderType, market, symbol, orderParam st
 }
 
 func GetKLineSubs(market string) (subs []interface{}) {
+	PrepareSettings()
 	settings := GetSettings(model.FunctionKLine, market)
 	if settings == nil {
 		return nil
@@ -874,7 +875,7 @@ func GetKLineSubs(market string) (subs []interface{}) {
 	case model.BinanceSpot:
 		settings.Range(func(symbol, value any) bool {
 			_, _, _, dialectSymbol := model.GetFromStandard(market, symbol.(string))
-			subs = append(subs, dialectSymbol+`@kline_1s`)
+			subs = append(subs, strings.ToLower(dialectSymbol)+`@kline_1s`)
 			return true
 		})
 	}

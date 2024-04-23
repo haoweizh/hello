@@ -5,20 +5,15 @@ import (
 )
 
 type Candle struct {
-	Market     string    `gorm:"index:market_symbol_begin_seconds,unique"`
-	Symbol     string    `gorm:"index:market_symbol_begin_seconds,unique"`
-	Begin      time.Time `gorm:"index:market_symbol_begin_seconds,unique"`
-	Seconds    int       `gorm:"index:market_symbol_begin_seconds,unique"` // period of seconds
-	PriceOpen  float64
-	PriceClose float64
-	PriceHigh  float64
-	PriceLow   float64
-	Volume     float64
-	N, M       float64 // n value for turtle
-	NVolume    float64 // 用n值的平滑计算方法计算的交易量
-	ID         uint    `gorm:"primary_key"`
-	CreatedAt  time.Time
-	UpdatedAt  time.Time
+	Market                                     string    `gorm:"index:market_symbol_begin_seconds,unique"`
+	Symbol                                     string    `gorm:"index:market_symbol_begin_seconds,unique"`
+	Begin                                      time.Time `gorm:"index:market_symbol_begin_seconds,unique"`
+	Seconds                                    int       `gorm:"index:market_symbol_begin_seconds,unique"` // period of seconds
+	PriceOpen, PriceClose, PriceHigh, PriceLow float64
+	Volume, VolumeQuote, N, M, NVolume         float64 // 用n值的平滑计算方法计算的交易量
+	ID                                         uint    `gorm:"primary_key"`
+	CreatedAt                                  time.Time
+	UpdatedAt                                  time.Time
 }
 
 type SortedCandle struct {

@@ -48,7 +48,7 @@ package deprecated
 //		Open   float64     `json:"open"`   // 开盘价
 //		Close  float64     `json:"close"`  // 收盘价,当K线为最晚的一根时，是最新成交价
 //		Low    float64     `json:"low"`    // 最低价
-//		High   float64     `json:"high"`   // 最高价
+//		PriceHigh   float64     `json:"high"`   // 最高价
 //		Vol    float64     `json:"vol"`    // 成交额, 即 sum(每一笔成交价 * 该笔的成交量)
 //		Bids   [][]float64 `json:"bids"`
 //		Asks   [][]float64 `json:"asks"`
