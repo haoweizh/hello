@@ -207,6 +207,7 @@ func Maintain() {
 	for {
 		if MaintainMarketChan() {
 			time.Sleep(time.Minute * 2)
+			util.Info(`after wait 2 minute`)
 		}
 	}
 }

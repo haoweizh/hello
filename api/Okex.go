@@ -290,7 +290,7 @@ var wsAccountHandlerOKEX = func(event []byte) {
 			}
 		}
 	}
-	util.Info(fmt.Sprintf(`channel msg %s`, string(event)))
+	//util.Info(fmt.Sprintf(`channel msg %s`, string(event)))
 	if responseJson.Get(`data`) == nil || len(responseJson.Get(`data`).MustArray()) == 0 {
 		return
 	}

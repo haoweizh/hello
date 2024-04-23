@@ -142,7 +142,7 @@ func WsAccountClient(key, market, url string, msgHandler MsgHandler) (connection
 	util.DelSyncMap(&model.AppEnvironment.AccountConns, market, key)
 	connection, err = newConnection(url)
 	if err != nil {
-		util.SocketInfo("can not create web socket" + err.Error())
+		util.Info("can not create web socket" + err.Error())
 		return nil, err
 	}
 	util.StoreSyncMap(&model.AppEnvironment.AccountConns, connection, market, key)
