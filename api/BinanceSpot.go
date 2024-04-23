@@ -74,7 +74,7 @@ func getMarketsBinance(account *model.Account, market, marketType string) (marke
 	return marketInfos
 }
 
-func WsKLineBinance(market string) ([]chan struct{}, error) {
+func WsKLineBinance(environment *model.Environment, market string) (socketMap map[*websocket.Conn]bool, msgChans []chan struct{}, connectErr error) {
 	msgHandler := func(event []byte) {
 		result, wsErr := util.NewJSON(event)
 		if wsErr != nil {
@@ -109,16 +109,15 @@ func WsKLineBinance(market string) ([]chan struct{}, error) {
 		model.KLineChan <- candle
 		model.AppEnvironment.SetCandle(candle.Symbol, candle.Market, candle)
 	}
-	klineSubs := GetKLineSubs(market)
-	chans, err := WebSocketClient(market, wsBinance+`stream`, klineSubs,
+	socketMap, msgChans, connectErr = WebSocketClient(market, wsBinance+`stream`, GetKLineSubs(market),
 		subscribeHandlerBinance, msgHandler, wsStepBinance)
-	if err != nil {
-		util.SocketInfo(`fail to create binance spot kline conn %s`, err.Error())
-	}
-	return chans, err
+	environment.SocketsKLine.Store(market, socketMap)
+	environment.MsgChanKLine.Store(market, msgChans)
+	return
 }
 
-func WsDepthServeBinance(environment *model.Environment, market string) (channels []chan struct{}, err error) {
+func WsDepthServeBinance(environment *model.Environment, market string) (
+	socketMap map[*websocket.Conn]bool, msgChans []chan struct{}, connectErr error) {
 	subType := model.SubscribeTicker
 	wsHandlerBinance := func(event []byte) {
 		result, wsErr := util.NewJSON(event)
@@ -156,13 +155,11 @@ func WsDepthServeBinance(environment *model.Environment, market string) (channel
 			handleTickerBinance(environment, result, market, standardSymbol, updateId)
 		}
 	}
-	spotSubs := GetWSSubscribes(market, subType)
-	spotChans, spotErr := WebSocketClient(market, wsBinance+`stream`, spotSubs,
+	socketMap, msgChans, connectErr = WebSocketClient(market, wsBinance+`stream`, GetWSSubscribes(market, subType),
 		subscribeHandlerBinance, wsHandlerBinance, wsStepBinance)
-	if spotErr != nil {
-		util.SocketInfo(`fail to create binance spot conn %s`, spotErr.Error())
-	}
-	return spotChans, err
+	environment.SocketsTick.Store(market, socketMap)
+	environment.MsgChanTick.Store(market, msgChans)
+	return
 }
 
 var subscribeHandlerBinance = func(market string, connection *websocket.Conn, subscribes []interface{}) error {

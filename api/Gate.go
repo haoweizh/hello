@@ -133,7 +133,9 @@ func TransferGate(key string, secret string, transferType, currency string, amou
 		param.To = "futures"
 		_, res, endErr := client.WalletApi.Transfer(ctx, param)
 		if endErr != nil {
-			util.Notice(fmt.Sprintf(`fail to transfer status %s`, res.Status))
+			if res != nil {
+				util.Notice(fmt.Sprintf(`fail to transfer status %s`, res.Status))
+			}
 			panicGateError(key, "transferGate", endErr)
 		}
 	} else if transferType == "UMFUTURE_MAIN" {
@@ -375,9 +377,10 @@ func _() (err error) {
 	return err
 }
 
-func WsDepthServeGateNew() (channels []chan struct{}, err error) {
+func WsDepthServeGateNew(environment *model.Environment, market string) (socketMap map[*websocket.Conn]bool, msgChans []chan struct{}, connectErr error) {
 	var spotSubs, spotOrderBookSubs, futureSubs []interface{}
-	channels = make([]chan struct{}, 0)
+	socketMap = make(map[*websocket.Conn]bool)
+	msgChans = make([]chan struct{}, 0)
 	symbols := GetMarketSymbols(model.Gate)
 	for symbol := range symbols {
 		if strings.LastIndex(symbol, model.UniStandardTail[model.MarketTypeSpot]) == len(symbol)-len(model.UniStandardTail[model.MarketTypeSpot]) &&
@@ -389,31 +392,45 @@ func WsDepthServeGateNew() (channels []chan struct{}, err error) {
 			futureSubs = append(futureSubs, symbol)
 		}
 	}
-	spotOrderBookChannels, spotOrderBookErr := WebSocketClient(model.Gate, gateWs.BaseUrl, spotOrderBookSubs, subscribeHandler, wsHandler, 100)
+	spotOrderBookSockets, spotOrderBookChannels, spotOrderBookErr := WebSocketClient(model.Gate, gateWs.BaseUrl, spotOrderBookSubs, subscribeHandler, wsHandler, 100)
 	if spotOrderBookErr == nil {
 		util.Info(`finish connect public gate spot order book ws `)
-		channels = append(channels, spotOrderBookChannels...)
+		msgChans = append(msgChans, spotOrderBookChannels...)
+		for conn, b := range spotOrderBookSockets {
+			socketMap[conn] = b
+		}
 	}
 	time.Sleep(time.Second * 1)
-	spotBookTickerChannels, spotBookTickerErr := WebSocketClient(model.Gate, gateWs.BaseUrl, spotSubs, subscribeHandler, wsHandler, 30)
+	spotBookTickerSockets, spotBookTickerChannels, spotBookTickerErr := WebSocketClient(model.Gate, gateWs.BaseUrl, spotSubs, subscribeHandler, wsHandler, 30)
 	if spotBookTickerErr == nil {
 		util.Info(`finish connect public gate spot book ticker ws `)
-		channels = append(channels, spotBookTickerChannels...)
+		msgChans = append(msgChans, spotBookTickerChannels...)
+		for conn, b := range spotBookTickerSockets {
+			socketMap[conn] = b
+		}
 	}
 	time.Sleep(time.Second * 1)
-	perpBookTickerChannels, perpBookTickerErr := WebSocketClient(model.Gate, gateWs.FuturesUsdtUrl, futureSubs, subscribeHandler, wsHandler, 30)
+	perpBookTickerSockets, perpBookTickerChannels, perpBookTickerErr := WebSocketClient(model.Gate, gateWs.FuturesUsdtUrl, futureSubs, subscribeHandler, wsHandler, 30)
 	if perpBookTickerErr == nil {
 		util.Info(`finish connect public gate perp book ticker ws `)
-		channels = append(channels, perpBookTickerChannels...)
+		msgChans = append(msgChans, perpBookTickerChannels...)
+		for conn, b := range perpBookTickerSockets {
+			socketMap[conn] = b
+		}
 	}
 	time.Sleep(time.Second * 1)
-	perpMarkPriceChannels, perpMarkPriceErr := WebSocketClient(model.Gate, gateWs.FuturesUsdtUrl, futureSubs, subscribeMarkPriceHandler, wsHandler, 30)
+	perpMarkPriceSockets, perpMarkPriceChannels, perpMarkPriceErr := WebSocketClient(model.Gate, gateWs.FuturesUsdtUrl, futureSubs, subscribeMarkPriceHandler, wsHandler, 30)
 	if perpMarkPriceErr == nil {
 		util.Info(`finish connect public gate perp mark price ws `)
-		channels = append(channels, perpMarkPriceChannels...)
+		msgChans = append(msgChans, perpMarkPriceChannels...)
+		for conn, b := range perpMarkPriceSockets {
+			socketMap[conn] = b
+		}
 	}
 	go maintainChannelGate()
-	return channels, err
+	environment.SocketsTick.Store(market, socketMap)
+	environment.MsgChanTick.Store(market, msgChans)
+	return
 }
 
 var wsHandler = func(event []byte) {
@@ -521,11 +538,11 @@ func maintainChannelGate() {
 		go func() {
 			for {
 				time.Sleep(time.Second * 10)
-				if err := SendToAllConnections(model.Gate, util.JsonEncodeToByte(map[string]interface{}{"time": time.Now().Unix(), "channel": "spot.ping"})); err != nil {
+				if err := SendToAllTickerSockets(model.Gate, util.JsonEncodeToByte(map[string]interface{}{"time": time.Now().Unix(), "channel": "spot.ping"})); err != nil {
 					util.SocketInfo("gate channel ping error " + err.Error())
 				}
 				time.Sleep(time.Second * 1)
-				if err := SendToAllConnections(model.Gate, util.JsonEncodeToByte(map[string]interface{}{"time": time.Now().Unix(), "channel": "futures.ping"})); err != nil {
+				if err := SendToAllTickerSockets(model.Gate, util.JsonEncodeToByte(map[string]interface{}{"time": time.Now().Unix(), "channel": "futures.ping"})); err != nil {
 					util.SocketInfo("gate channel ping error " + err.Error())
 				}
 			}
@@ -570,9 +587,7 @@ func getPositionsGate(key string, secret string) (success bool, positions []*mod
 	client, ctx := getClientGate(key, secret)
 	positionList, _, positionsErr := client.FuturesApi.ListPositions(ctx, `usdt`, nil)
 	if positionsErr != nil {
-		if positionsErr != nil {
-			panicGateError(key, `getPositionsGate`, positionsErr)
-		}
+		panicGateError(key, `getPositionsGate`, positionsErr)
 		time.Sleep(time.Minute)
 		util.SocketInfo(`fail to refresh future balance gate`)
 		return getPositionsGate(key, secret)

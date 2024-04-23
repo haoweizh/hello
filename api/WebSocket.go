@@ -39,7 +39,7 @@ func SendToConnection(market string, connection *websocket.Conn, msg []byte) (er
 	return err
 }
 
-func SendToAllConnections(market string, msg []byte) (err error) {
+func SendToAllTickerSockets(market string, msg []byte) (err error) {
 	defer wsLock.Unlock()
 	wsLock.Lock()
 	value, _ := model.AppEnvironment.SocketsTick.Load(market)
@@ -171,9 +171,9 @@ func WsAccountClient(key, market, url string, msgHandler MsgHandler) (connection
 }
 
 func WebSocketClient(market, url string, subscribes []interface{}, subHandler SubscribeHandler,
-	msgHandler MsgHandler, step int) (msgChans []chan struct{}, connectErr error) {
+	msgHandler MsgHandler, step int) (socketMap map[*websocket.Conn]bool, msgChans []chan struct{}, connectErr error) {
 	util.Notice(market + ` create depth channel ` + url)
-	sockets := make(map[*websocket.Conn]bool)
+	socketMap = make(map[*websocket.Conn]bool)
 	msgChans = make([]chan struct{}, 0)
 	var stepSubscribes []interface{}
 	for i := 0; subscribes != nil && i*step < len(subscribes); i++ {
@@ -185,9 +185,9 @@ func WebSocketClient(market, url string, subscribes []interface{}, subHandler Su
 		connection, err := newConnection(url)
 		if err != nil || connection == nil {
 			if err != nil {
-				util.SocketInfo("can not create web socket" + err.Error())
+				util.SocketInfo(fmt.Sprintf("can not create web socket %s %s %s", market, url, err.Error()))
 			}
-			return nil, connectErr
+			return nil, nil, err
 		}
 		connection.SetPingHandler(func(appData string) error {
 			return connection.WriteControl(websocket.PongMessage, []byte(appData), time.Now().Add(time.Minute))
@@ -198,10 +198,9 @@ func WebSocketClient(market, url string, subscribes []interface{}, subHandler Su
 			_ = subHandler(market, connection, stepSubscribes)
 		}
 		msgChans = append(msgChans, stopChan)
-		sockets[connection] = true
+		socketMap[connection] = true
 	}
-	model.AppEnvironment.SocketsTick.Store(market, sockets)
-	util.Info(fmt.Sprintf(`ws client add conns %s %d`, market, len(sockets)))
+	util.Info(fmt.Sprintf(`ws client add conns %s sockets %d msgChans %d`, market, len(socketMap), len(msgChans)))
 	return
 }
 

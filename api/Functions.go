@@ -2,6 +2,7 @@ package api
 
 import (
 	"fmt"
+	"github.com/gorilla/websocket"
 	"hello/model"
 	"hello/util"
 	"strconv"
@@ -54,7 +55,13 @@ func GetTradeMaxOKEX(key, secret, symbol string, expireSecond int64) (success bo
 	return success, maxBuy, maxSell
 }
 
-func RequireKLineReset(environment *model.Environment, market string) (needReset bool) {
+func RequireKLineReset(environment *model.Environment, market string) bool {
+	needReset, ok := requireReset.Load(market)
+	if ok && needReset != nil && needReset.(bool) {
+		requireReset.Store(market, false)
+		util.Notice(`clear need reset for market: ` + market)
+		return true
+	}
 	settings := GetSettings(model.FunctionKLine, market)
 	if settings == nil {
 		return false
@@ -68,7 +75,7 @@ func RequireKLineReset(environment *model.Environment, market string) (needReset
 		}
 		return true
 	})
-	return needReset
+	return needReset.(bool)
 }
 
 func RequireDepthChanReset(environment *model.Environment, market string) bool {
@@ -1218,17 +1225,21 @@ func CreateAccountWsServer(market string) {
 	}
 }
 
-func CreateMarketKLineWS(market string) (channels []chan struct{}) {
+func CreateMarketKLineWS(environment *model.Environment, market string) (socketMap map[*websocket.Conn]bool, channels []chan struct{}) {
 	util.Notice(" create KLine ws chan for " + market)
+	model.ChannelMaintaining.Store(market, true)
 	switch market {
 	case model.BinanceSpot:
-		channels, _ = WsKLineBinance(market)
+		socketMap, channels, _ = WsKLineBinance(environment, market)
 	}
+	model.AppEnvironment.WsInitTime.Store(market, util.GetNow())
+	model.ChannelMaintaining.Store(market, false)
 	return
 }
 
 func CreateMarketTickerWS(environment *model.Environment, market string) (
-	channels []chan struct{}) {
+	socketMap map[*websocket.Conn]bool, channels []chan struct{}) {
+	model.ChannelMaintaining.Store(market, true)
 	util.Notice(" create depth chan for " + market)
 	channels = make([]chan struct{}, 1)
 	var err error
@@ -1238,32 +1249,34 @@ func CreateMarketTickerWS(environment *model.Environment, market string) (
 	case model.KucoinPerp:
 		channels, err = WsDepthServeKucoinPerp()
 	case model.Gate:
-		channels, err = WsDepthServeGateNew()
+		socketMap, channels, err = WsDepthServeGateNew(environment, market)
 	case model.OKEX:
-		channels, err = WsDepthServeOKEX(GetMarketSymbols(model.OKEX))
+		socketMap, channels, err = WsDepthServeOKEX(environment, market, GetMarketSymbols(model.OKEX))
 	case model.BinanceSpot, model.BinanceMargin:
-		channels, err = WsDepthServeBinance(environment, market)
+		socketMap, channels, err = WsDepthServeBinance(environment, market)
 	case model.BinancePerp:
-		channels, err = WsDepthServeBinancePerp(environment)
+		socketMap, channels, err = WsDepthServeBinancePerp(environment, market)
 	case model.HuobiPerp:
-		channels, err = WsDepthServeHuobiPerp(environment)
+		socketMap, channels, err = WsDepthServeHuobiPerp(environment, market)
 	case model.Bybit:
-		channels, err = WsDepthServeBybit(environment)
+		socketMap, channels, err = WsDepthServeBybit(environment, market)
 	case model.HuobiSpot:
-		channels, err = WsDepthServeHuobiSpot(environment)
+		socketMap, channels, err = WsDepthServeHuobiSpot(environment, market)
 	case model.Ftx:
-		channels, err = WsDepthServeFtx(environment)
+		socketMap, channels, err = WsDepthServeFtx(environment, market)
 	case model.Mexc:
-		channels, err = WsDepthServeMexc(environment, true)
+		socketMap, channels, err = WsDepthServeMexc(environment, market, true)
 	case model.BitgetSpot:
-		channels, err = WsDepthServeBitgetSpot(environment)
+		socketMap, channels, err = WsDepthServeBitgetSpot(environment, market)
 	case model.BitgetPerp:
-		channels, err = WsDepthServeBitgetPerp(environment)
+		socketMap, channels, err = WsDepthServeBitgetPerp(environment, market)
 	}
 	if err != nil {
 		util.Notice(market + ` can not create depth server ` + err.Error())
 	}
-	return channels
+	model.AppEnvironment.WsInitTime.Store(market, util.GetNow())
+	model.ChannelMaintaining.Store(market, false)
+	return socketMap, channels
 }
 
 func SendMails(title, msg string) {

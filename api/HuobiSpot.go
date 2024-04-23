@@ -68,7 +68,7 @@ var subscribeHandlerHuobi = func(market string, connection *websocket.Conn, subs
 	return err
 }
 
-func WsDepthServeHuobiSpot(environment *model.Environment) (channels []chan struct{}, err error) {
+func WsDepthServeHuobiSpot(environment *model.Environment, market string) (socketMap map[*websocket.Conn]bool, msgChans []chan struct{}, connectErr error) {
 	wsHandler := func(event []byte) {
 		res := util.UnGzip(event)
 		responseJson, jsonErr := util.NewJSON(res)
@@ -80,7 +80,7 @@ func WsDepthServeHuobiSpot(environment *model.Environment) (channels []chan stru
 			pingMap := make(map[string]interface{})
 			pingMap["pong"] = responseJson.Get(`ping`).MustInt()
 			pingParams := util.JsonEncodeToByte(pingMap)
-			if err := SendToAllConnections(model.HuobiSpot, pingParams); err != nil {
+			if err := SendToAllTickerSockets(model.HuobiSpot, pingParams); err != nil {
 				util.SocketInfo("huobi server ping client error " + err.Error())
 			}
 		} else {
@@ -135,7 +135,7 @@ func WsDepthServeHuobiSpot(environment *model.Environment) (channels []chan stru
 			pingMap := make(map[string]interface{})
 			pingMap["pong"] = responseJson.Get(`ping`).MustInt()
 			pingParams := util.JsonEncodeToByte(pingMap)
-			if wsErr := SendToAllConnections(model.HuobiSpot, pingParams); wsErr != nil {
+			if wsErr := SendToAllTickerSockets(model.HuobiSpot, pingParams); wsErr != nil {
 				util.SocketInfo("HuobiFuture server ping client error " + wsErr.Error())
 			}
 		} else {
@@ -150,7 +150,6 @@ func WsDepthServeHuobiSpot(environment *model.Environment) (channels []chan stru
 			}
 			symbol = strings.ToLower(splits[1])
 			now := int(time.Now().UnixNano() / int64(time.Millisecond))
-
 			bidAsk := model.BidAsk{Ts: responseJson.Get(`ts`).MustInt(), TsReceived: now, UpdateId: tickJson.Get("ts").MustInt64()}
 			bid := tickJson.Get(`bid`).MustArray()
 			ask := tickJson.Get(`ask`).MustArray()
@@ -173,7 +172,6 @@ func WsDepthServeHuobiSpot(environment *model.Environment) (channels []chan stru
 			}
 			bidAsk.Bids = []model.Tick{{Price: bidPrice, Amount: bidAmount, Market: model.HuobiSpot, Symbol: symbol}}
 			bidAsk.Asks = []model.Tick{{Price: askPrice, Amount: askAmount, Market: model.HuobiSpot, Symbol: symbol}}
-
 			haveOld, old := environment.GetBidAsk(symbol, model.HuobiSpot)
 			if haveOld && old.UpdateId > bidAsk.UpdateId {
 				return
@@ -201,20 +199,25 @@ func WsDepthServeHuobiSpot(environment *model.Environment) (channels []chan stru
 			spotSubscribes = append(spotSubscribes, subscribe)
 		}
 	}
-	channels, channelErr := WebSocketClient(model.HuobiSpot, wsHuobi, spotSubscribes, subscribeHandlerHuobi, wsHandler, wsStepHuobi)
-	if channelErr != nil {
-		util.SocketInfo(`fail to create huobi conn %s`, channelErr.Error())
-	}
-	dmChannels, dmChannelErr := WebSocketClient(model.HuobiSpot, wsHuobiFuture, futureSubscribes, subscribeHandlerHuobi,
-		wsHandlerDM, wsStepHuobi)
-	if dmChannelErr != nil {
-		util.SocketInfo(`fail to create HuobiFuture %s`, dmChannelErr.Error())
-	} else {
-		for _, channel := range channels {
-			dmChannels = append(dmChannels, channel)
+	socketMap = make(map[*websocket.Conn]bool)
+	msgChans = make([]chan struct{}, 0)
+	spotSockets, channels, channelErr := WebSocketClient(model.HuobiSpot, wsHuobi, spotSubscribes, subscribeHandlerHuobi, wsHandler, wsStepHuobi)
+	dmSockets, dmChannels, dmChannelErr := WebSocketClient(model.HuobiSpot, wsHuobiFuture, futureSubscribes, subscribeHandlerHuobi, wsHandlerDM, wsStepHuobi)
+	if channelErr == nil {
+		msgChans = append(msgChans, channels...)
+		for conn, b := range spotSockets {
+			socketMap[conn] = b
 		}
 	}
-	return channels, err
+	if dmChannelErr == nil {
+		msgChans = append(msgChans, dmChannels...)
+		for conn, b := range dmSockets {
+			socketMap[conn] = b
+		}
+	}
+	environment.SocketsTick.Store(market, socketMap)
+	environment.MsgChanTick.Store(market, msgChans)
+	return
 }
 
 func getMarketsHuobiSpot(key, secret string) (marketInfos map[string]*model.MarketInfo) {

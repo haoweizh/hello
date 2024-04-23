@@ -72,7 +72,7 @@ func maintainChannelOKEX(subscribes []interface{}) {
 		}()
 		for {
 			time.Sleep(time.Second * 25)
-			err := SendToAllConnections(model.OKEX, []byte(`ping`))
+			err := SendToAllTickerSockets(model.OKEX, []byte(`ping`))
 			if err != nil {
 				util.SocketInfo("okex server ping client error " + err.Error())
 			}
@@ -138,7 +138,7 @@ func reSubscribe(subscribes []interface{}) {
 			}
 			SetRequireReset(model.OKEX)
 			return
-		} else if success && bidAsk != nil && time.Now().UnixMilli()-int64(bidAsk.Ts) > 30000000 {
+		} else if time.Now().UnixMilli()-int64(bidAsk.Ts) > 30000000 {
 			subArray = append(subArray, map[string]string{`channel`: chanelOKEX, `instId`: dialectSymbol})
 		}
 	}
@@ -147,7 +147,7 @@ func reSubscribe(subscribes []interface{}) {
 		return
 	}
 	subscribeMap[`args`] = subArray
-	if err := SendToAllConnections(model.OKEX, util.JsonEncodeToByte(subscribeMap)); err != nil {
+	if err := SendToAllTickerSockets(model.OKEX, util.JsonEncodeToByte(subscribeMap)); err != nil {
 		util.Notice("okex can not unsubscribe " + err.Error())
 	}
 	time.Sleep(time.Second * 3)
@@ -354,17 +354,18 @@ func WsAccountServeOKEX() {
 	}
 }
 
-func WsDepthServeOKEX(symbols map[string]bool) (channels []chan struct{}, err error) {
+func WsDepthServeOKEX(environment *model.Environment, market string, symbols map[string]bool) (socketMap map[*websocket.Conn]bool, msgChans []chan struct{}, connectErr error) {
 	for s := range symbols {
 		if msgChanOKEX[s] == nil {
 			msgChanOKEX[s] = make(chan *simplejson.Json, 1000)
 			go handleMsgOKEX(msgChanOKEX[s], s)
 		}
 	}
-	subChannels, errPublic := WebSocketClient(model.OKEX, wsOKEX, GetWSSubscribes(model.OKEX, model.SubscribeDepth),
+	socketMap, msgChans, connectErr = WebSocketClient(model.OKEX, wsOKEX, GetWSSubscribes(model.OKEX, model.SubscribeDepth),
 		subscribeHandlerOKEX, wsHandlerOKEX, wsStepOKEX)
-	util.Info(`finish connect public okex connections %d`, len(subChannels))
-	return subChannels, errPublic
+	environment.SocketsTick.Store(market, socketMap)
+	environment.MsgChanTick.Store(market, msgChans)
+	return
 }
 
 func handleBooksUpdate(symbol string, data map[string]interface{}, bidAsk *model.BidAsk) (

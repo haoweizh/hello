@@ -50,7 +50,7 @@ func getMarketsBitgetSpot() (marketInfos map[string]*model.MarketInfo) {
 	return marketInfos
 }
 
-func WsDepthServeBitgetSpot(environment *model.Environment) (channels []chan struct{}, err error) {
+func WsDepthServeBitgetSpot(environment *model.Environment, market string) (socketMap map[*websocket.Conn]bool, msgChans []chan struct{}, connectErr error) {
 	bookWsHandler := func(event []byte) {
 		//util.Notice(fmt.Sprintf("bitget spot ws book ticker: %s", event))
 		if len(event) == 4 {
@@ -103,23 +103,17 @@ func WsDepthServeBitgetSpot(environment *model.Environment) (channels []chan str
 			}
 		}
 	}
-	channels = make([]chan struct{}, 0)
 	spotSubscribes := make([]interface{}, 0)
 	symbols := GetMarketSymbols(model.BitgetSpot)
 	for symbol := range symbols {
 		spotSubscribes = append(spotSubscribes, symbol)
 	}
-	spotBookChannels, spotBookErr := WebSocketClient(model.BitgetSpot, bitgetSpotWsUrl,
+	socketMap, msgChans, connectErr = WebSocketClient(market, bitgetSpotWsUrl,
 		spotSubscribes, subscribeHandlerBitgetSpotBookTicker, bookWsHandler, 30)
-	if spotBookErr == nil {
-		util.Info(`finish connect public Bitget spot book wss `)
-		channels = append(channels, spotBookChannels...)
-	} else {
-		util.Notice(`fail to connect public Bitget spot book wss `)
-		return nil, spotBookErr
-	}
 	go maintainChannelBitgetSpot()
-	return channels, nil
+	environment.SocketsTick.Store(market, socketMap)
+	environment.MsgChanTick.Store(market, msgChans)
+	return
 }
 
 var subscribeHandlerBitgetSpotBookTicker = func(market string, connection *websocket.Conn, subscribes []interface{}) error {
@@ -151,7 +145,7 @@ func maintainChannelBitgetSpot() {
 		go func() {
 			for {
 				time.Sleep(time.Second * 20)
-				if err := SendToAllConnections(model.BitgetSpot, []byte(`ping`)); err != nil {
+				if err := SendToAllTickerSockets(model.BitgetSpot, []byte(`ping`)); err != nil {
 					util.Info("bitget spot channel ping error " + err.Error())
 				}
 			}

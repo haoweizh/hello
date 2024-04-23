@@ -40,7 +40,7 @@ func maintainChannelMexc(subscribes []interface{}) {
 		go func() {
 			for true {
 				time.Sleep(time.Second * 10)
-				if err := SendToAllConnections(model.Mexc, []byte(`{"method": "ping"}`)); err != nil {
+				if err := SendToAllTickerSockets(model.Mexc, []byte(`{"method": "ping"}`)); err != nil {
 					util.SocketInfo("mexc channel ping error " + err.Error())
 				}
 			}
@@ -64,7 +64,7 @@ func maintainChannelMexc(subscribes []interface{}) {
 				if bidAsk == nil || time.Now().UnixMilli()-int64(bidAsk.Ts) > 180000 {
 					needReset = true
 					break
-				} else if bidAsk != nil && time.Now().UnixMilli()-int64(bidAsk.Ts) > 120000 {
+				} else if time.Now().UnixMilli()-int64(bidAsk.Ts) > 120000 {
 					if err := SendToConnection(model.Mexc, conn.(*websocket.Conn), []byte(subscribe.(string))); err != nil {
 						util.SocketInfo(" mexc can not subscribe %s %s", subscribe, err.Error())
 					}
@@ -80,7 +80,7 @@ func maintainChannelMexc(subscribes []interface{}) {
 	}
 }
 
-func WsDepthServeMexc(environment *model.Environment, useFullDepthSub bool) (channels []chan struct{}, err error) {
+func WsDepthServeMexc(environment *model.Environment, market string, useFullDepthSub bool) (socketMap map[*websocket.Conn]bool, msgChans []chan struct{}, connectErr error) {
 	symbols := GetMarketSymbols(model.Mexc)
 	if !useFullDepthSub {
 		limiter := time.Tick(time.Millisecond * 100)
@@ -92,7 +92,7 @@ func WsDepthServeMexc(environment *model.Environment, useFullDepthSub bool) (cha
 	wsHandler := func(event []byte) {
 		newJson, wsErr := util.NewJSON(event)
 		if wsErr != nil {
-			util.SocketInfo(`MEXC fail to unmarshal json ` + err.Error())
+			util.SocketInfo(`MEXC fail to unmarshal json ` + wsErr.Error())
 			return
 		}
 		channel, _ := newJson.Get("channel").String()
@@ -127,12 +127,15 @@ func WsDepthServeMexc(environment *model.Environment, useFullDepthSub bool) (cha
 		}
 	}
 	if !useFullDepthSub { // 订阅contract深度增量
-		return WebSocketClient(model.Mexc, mexcContractWSUrl,
+		socketMap, msgChans, connectErr = WebSocketClient(market, mexcContractWSUrl,
 			GetWSSubscribes(model.Mexc, mexcContractDepthIncSubType), subscribeHandlerMexc, wsHandler, wsStepMexc)
 	} else { // 订阅contract 5档深度全量
-		return WebSocketClient(model.Mexc, mexcContractWSUrl, GetWSSubscribes(model.Mexc, mexcContractDepthFullSubType),
+		socketMap, msgChans, connectErr = WebSocketClient(market, mexcContractWSUrl, GetWSSubscribes(model.Mexc, mexcContractDepthFullSubType),
 			subscribeHandlerMexc, wsHandler, wsStepMexc)
 	}
+	environment.SocketsTick.Store(market, socketMap)
+	environment.MsgChanTick.Store(market, msgChans)
+	return
 }
 
 func parseTicksMexc(symbol string, ts int, version int64, bidArray, asksArray [][]float64) *model.BidAsk {

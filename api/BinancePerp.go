@@ -151,7 +151,7 @@ func WsAccountServeBinancePerp() {
 	}
 }
 
-func WsDepthServeBinancePerp(environment *model.Environment) (channels []chan struct{}, err error) {
+func WsDepthServeBinancePerp(environment *model.Environment, market string) (socketMap map[*websocket.Conn]bool, msgChans []chan struct{}, connectErr error) {
 	subType := model.SubscribeTicker
 	//subType := model.SubscribeDepth+ `,` + model.SubscribeMarkPrice
 	wsHandlerBinancePerp := func(event []byte) {
@@ -184,14 +184,11 @@ func WsDepthServeBinancePerp(environment *model.Environment) (channels []chan st
 			handleMarkPriceBinancePerp(environment, result, standardSymbol)
 		}
 	}
-	channels = make([]chan struct{}, 0)
-	perpSubs := GetWSSubscribes(model.BinancePerp, subType)
-	perpChans, perpErr := WebSocketClient(model.BinancePerp, wsBinancePerp, perpSubs,
+	socketMap, msgChans, connectErr = WebSocketClient(market, wsBinancePerp, GetWSSubscribes(market, subType),
 		subscribeHandlerBinancePerp, wsHandlerBinancePerp, wsStepBinancePerp)
-	if perpErr != nil {
-		util.SocketInfo(`fail to create binance perp conn %s`, perpErr.Error())
-	}
-	return perpChans, err
+	environment.SocketsTick.Store(market, socketMap)
+	environment.MsgChanTick.Store(market, msgChans)
+	return
 }
 
 var subscribeHandlerBinancePerp = func(market string, connection *websocket.Conn, subscribes []interface{}) error {

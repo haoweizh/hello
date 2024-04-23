@@ -33,7 +33,7 @@ func maintainChannelFtx(subscribes []interface{}) {
 		go func() {
 			for true {
 				time.Sleep(time.Second * 10)
-				if sendErr := SendToAllConnections(model.Ftx, []byte(`{"op":"ping"}`)); sendErr != nil {
+				if sendErr := SendToAllTickerSockets(model.Ftx, []byte(`{"op":"ping"}`)); sendErr != nil {
 					util.SocketInfo("ftx server ping client error " + sendErr.Error())
 				}
 			}
@@ -118,7 +118,7 @@ var subscribeHandlerFtx = func(market string, connection *websocket.Conn, subscr
 	return err
 }
 
-func WsDepthServeFtx(environment *model.Environment) ([]chan struct{}, error) {
+func WsDepthServeFtx(environment *model.Environment, market string) (socketMap map[*websocket.Conn]bool, msgChans []chan struct{}, err error) {
 	wsHandler := func(event []byte) {
 		responseJson, err := util.NewJSON(event)
 		if err != nil {
@@ -138,9 +138,12 @@ func WsDepthServeFtx(environment *model.Environment) ([]chan struct{}, error) {
 	//subType := model.SubscribeDepth
 	subType := model.SubscribeDepth + `,` + model.SubscribeTicker
 	subscribes := GetWSSubscribes(model.Ftx, subType)
-	subscribes = append(subscribes, GetWSSubscribe(model.Ftx, `USDT_USDT`, model.SubscribeDepth))
-	subscribes = append(subscribes, GetWSSubscribe(model.Ftx, `USDT_USDT`, model.SubscribeTicker))
-	return WebSocketClient(model.Ftx, wsFtx, subscribes, subscribeHandlerFtx, wsHandler, wsStepFtx)
+	subscribes = append(subscribes, GetWSSubscribe(market, `USDT_USDT`, model.SubscribeDepth))
+	subscribes = append(subscribes, GetWSSubscribe(market, `USDT_USDT`, model.SubscribeTicker))
+	socketMap, msgChans, err = WebSocketClient(market, wsFtx, subscribes, subscribeHandlerFtx, wsHandler, wsStepFtx)
+	environment.SocketsTick.Store(market, socketMap)
+	environment.MsgChanTick.Store(market, msgChans)
+	return
 }
 
 func handleTickerFtx(environment *model.Environment, response *simplejson.Json) {
@@ -223,7 +226,7 @@ func handleDepthFtx(environment *model.Environment, response *simplejson.Json) {
 				size, _ := item.([]interface{})[1].(json.Number).Float64()
 				bidAsk.Asks = append(bidAsk.Asks, model.Tick{Price: price, Amount: size, Market: model.Ftx, Symbol: standardSymbol})
 			}
-		} else if dataType == `update` {
+		} else {
 			_, oldBidAsk := environment.GetBidAsk(standardSymbol, model.Ftx)
 			if oldBidAsk == nil {
 				util.SocketInfo(fmt.Sprintf(`fatal: can not have old bidask %s %s`, model.Ftx, standardSymbol))

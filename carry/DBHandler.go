@@ -132,23 +132,14 @@ func MaintainMarketChan() (reset bool) {
 	for _, market := range api.GetMarkets() {
 		depthChans, _ := model.AppEnvironment.MsgChanTick.Load(market)
 		marketReset := false
-		clearDepthConns := false
 		if depthChans == nil || len(depthChans.([]chan struct{})) == 0 {
 			marketReset = true
-			model.AppEnvironment.MsgChanTick.Store(market, api.CreateMarketTickerWS(model.AppEnvironment, market))
-			model.AppEnvironment.WsInitTime.Store(market, util.GetNow())
-			util.Notice(fmt.Sprintf("%s create new depth channel ", market))
+			api.CreateMarketTickerWS(model.AppEnvironment, market)
 		} else if api.RequireDepthChanReset(model.AppEnvironment, market) {
 			reset = true
 			marketReset = true
-			clearDepthConns = true
-			util.Notice(fmt.Sprintf("%s require new depth channel ", market))
-			model.ChannelMaintaining.Store(market, true)
 			ClearChannels(market, &model.AppEnvironment.MsgChanTick)
-			model.AppEnvironment.MsgChanTick.Store(market, api.CreateMarketTickerWS(model.AppEnvironment, market))
-			model.AppEnvironment.WsInitTime.Store(market, util.GetNow())
-			model.ChannelMaintaining.Store(market, false)
-			util.Notice(market + " reset depth channel done")
+			api.CreateMarketTickerWS(model.AppEnvironment, market)
 		}
 		accounts := model.AppConfig.GetAccounts(market)
 		for _, account := range accounts {
@@ -159,7 +150,6 @@ func MaintainMarketChan() (reset bool) {
 		}
 		settings := api.GetSettings(model.FunctionKLine, market)
 		doKLine := false
-		clearKLineConns := false
 		if settings != nil {
 			settings.Range(func(symbol, setting any) bool {
 				doKLine = true
@@ -169,21 +159,12 @@ func MaintainMarketChan() (reset bool) {
 		if doKLine {
 			klineWS, _ := model.AppEnvironment.MsgChanKLine.Load(market)
 			if klineWS == nil || len(klineWS.([]chan struct{})) == 0 {
-				model.AppEnvironment.MsgChanKLine.Store(market, api.CreateMarketKLineWS(market))
-				util.Notice(fmt.Sprintf("create new kline channel %s", market))
+				api.CreateMarketKLineWS(model.AppEnvironment, market)
 			} else if api.RequireKLineReset(model.AppEnvironment, market) {
 				reset = true
-				clearKLineConns = true
-				util.Notice(fmt.Sprintf("%s require new kline channel ", market))
-				model.ChannelMaintaining.Store(market, true)
 				ClearChannels(market, &model.AppEnvironment.MsgChanKLine)
-				model.AppEnvironment.MsgChanTick.Store(market, api.CreateMarketKLineWS(market))
-				model.ChannelMaintaining.Store(market, false)
-				util.Notice(market + " reset depth channel done")
+				api.CreateMarketKLineWS(model.AppEnvironment, market)
 			}
-		}
-		if clearKLineConns && clearDepthConns {
-			model.AppEnvironment.SocketsTick.Delete(market)
 		}
 	}
 	return reset

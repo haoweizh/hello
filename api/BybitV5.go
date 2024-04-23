@@ -70,7 +70,7 @@ func getMarketsBybitSpot(marketInfos map[string]*model.MarketInfo) {
 
 func getMarketsBybitPerp(marketInfos map[string]*model.MarketInfo) {
 	cursor := "init"
-	for true {
+	for {
 		param := map[string]interface{}{"category": "linear", "limit": "1000"}
 		if cursor != "" && cursor != "init" {
 			param["cursor"] = cursor
@@ -186,7 +186,7 @@ func parseBookOrder(environment *model.Environment, bookWsResp *dtos.BybitBookWs
 	}
 }
 
-func WsDepthServeBybit(environment *model.Environment) (channels []chan struct{}, err error) {
+func WsDepthServeBybit(environment *model.Environment, market string) (socketMap map[*websocket.Conn]bool, msgChans []chan struct{}, connectErr error) {
 	spotBookWsHandler := func(event []byte) {
 		//fmt.Println(fmt.Sprintf("spot book data: %s", event))
 		bookWsResp := &dtos.BybitBookWsResp{}
@@ -227,7 +227,8 @@ func WsDepthServeBybit(environment *model.Environment) (channels []chan struct{}
 			parseBookOrder(environment, bookWsResp, symbol)
 		}
 	}
-	channels = make([]chan struct{}, 0)
+	msgChans = make([]chan struct{}, 0)
+	socketMap = make(map[*websocket.Conn]bool)
 	symbols := GetMarketSymbols(model.Bybit)
 	spotSubscribes := make([]interface{}, 0)
 	futureSubscribes := make([]interface{}, 0)
@@ -242,21 +243,27 @@ func WsDepthServeBybit(environment *model.Environment) (channels []chan struct{}
 			spotSubscribes = append(spotSubscribes, dialectSymbol)
 		}
 	}
-	spotBookChannels, spotBookErr := WebSocketClient(model.Bybit, bybitSpotPubWsUrl,
+	spotBookSockets, spotBookChannels, spotBookErr := WebSocketClient(model.Bybit, bybitSpotPubWsUrl,
 		spotSubscribes, subscribeHandlerBybit, spotBookWsHandler, 10)
 	if spotBookErr == nil {
-		util.Info(`finish connect public bybit spot book wss `)
-		channels = append(channels, spotBookChannels...)
+		msgChans = append(msgChans, spotBookChannels...)
+		for conn, b := range spotBookSockets {
+			socketMap[conn] = b
+		}
 	}
-	perpBookChannels, perpBookErr := WebSocketClient(model.Bybit, bybitPerpPubWsUrl,
+	perpBookSockets, perpBookChannels, perpBookErr := WebSocketClient(market, bybitPerpPubWsUrl,
 		futureSubscribes, subscribeHandlerBybit, perpBookWsHandler, 10)
 	if perpBookErr == nil {
-		util.Info(`finish connect public bybit perp book wss `)
-		channels = append(channels, perpBookChannels...)
+		msgChans = append(msgChans, perpBookChannels...)
+		for conn, b := range perpBookSockets {
+			socketMap[conn] = b
+		}
 	}
 	time.Sleep(time.Second * 1)
 	go maintainChannelBybit()
-	return channels, nil
+	environment.SocketsTick.Store(market, socketMap)
+	environment.MsgChanTick.Store(market, msgChans)
+	return
 }
 
 var subscribeHandlerBybit = func(market string, connection *websocket.Conn, subscribes []interface{}) error {
@@ -284,7 +291,7 @@ func maintainChannelBybit() {
 		go func() {
 			for true {
 				time.Sleep(time.Second * 20)
-				if err := SendToAllConnections(model.Bybit, []byte(`{"op": "ping"}`)); err != nil {
+				if err := SendToAllTickerSockets(model.Bybit, []byte(`{"op": "ping"}`)); err != nil {
 					util.Notice("bybit channel ping error " + err.Error())
 				}
 			}
@@ -373,7 +380,7 @@ func getBalanceBybit(key string, secret string) (success bool, balances []*model
 func getPositionsBybit(key, secret string) (success bool, positions []*model.Position, posBalance float64) {
 	cursor := "init"
 	positions = make([]*model.Position, 0)
-	for true {
+	for {
 		param := map[string]interface{}{"category": "linear", "settleCoin": "USDT", "limit": "200"}
 		if cursor != "" && cursor != "init" {
 			param["cursor"] = cursor
@@ -415,7 +422,6 @@ func getPositionsBybit(key, secret string) (success bool, positions []*model.Pos
 			return true, positions, 0
 		}
 	}
-	return true, positions, 0
 }
 
 func SignedRequestBybit(key, secret, method, host, path string, body map[string]interface{}) ([]byte, error) {

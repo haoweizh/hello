@@ -69,7 +69,7 @@ func setBitgetPositionMode(key, secret string) {
 	}
 }
 
-func WsDepthServeBitgetPerp(environment *model.Environment) (channels []chan struct{}, err error) {
+func WsDepthServeBitgetPerp(environment *model.Environment, market string) (socketMap map[*websocket.Conn]bool, msgChans []chan struct{}, connectErr error) {
 	bookWsHandler := func(event []byte) {
 		//util.Notice(fmt.Sprintf("bitget perp ws book ticker: %s", event))
 		if len(event) == 4 {
@@ -154,33 +154,39 @@ func WsDepthServeBitgetPerp(environment *model.Environment) (channels []chan str
 			}
 		}
 	}
-	channels = make([]chan struct{}, 0)
+	msgChans = make([]chan struct{}, 0)
+	socketMap = make(map[*websocket.Conn]bool)
 	symbols := GetMarketSymbols(model.BitgetPerp)
 	futureSubscribes := make([]interface{}, 0)
 	for symbol := range symbols {
 		futureSubscribes = append(futureSubscribes, symbol)
 	}
-	markPriceChannels, markPriceErr := WebSocketClient(model.BitgetPerp, bitgetPerpWsUrl,
+	markPriceSockets, markPriceChannels, markPriceErr := WebSocketClient(market, bitgetPerpWsUrl,
 		futureSubscribes, subscribeHandlerBitgetPerpMarkPrice, markPriceWsHandler, 30)
 	if markPriceErr == nil {
-		util.Info(`finish connect public Bitget mark price wss `)
-		channels = append(channels, markPriceChannels...)
+		msgChans = append(msgChans, markPriceChannels...)
+		for conn, b := range markPriceSockets {
+			socketMap[conn] = b
+		}
 	} else {
-		util.Notice(`fail to connect public Bitget mark price wss `)
-		return nil, markPriceErr
+		return nil, nil, markPriceErr
 	}
 	time.Sleep(time.Second * 1)
-	perpBookChannels, perpBookErr := WebSocketClient(model.BitgetPerp, bitgetPerpWsUrl,
+	perpBookSockets, perpBookChannels, perpBookErr := WebSocketClient(market, bitgetPerpWsUrl,
 		futureSubscribes, subscribeHandlerBitgetPerpBookTicker, bookWsHandler, 30)
 	if perpBookErr == nil {
 		util.Info(`finish connect public Bitget perp book wss `)
-		channels = append(channels, perpBookChannels...)
+		msgChans = append(msgChans, perpBookChannels...)
+		for conn, b := range perpBookSockets {
+			socketMap[conn] = b
+		}
 	} else {
-		util.Notice(`fail to connect public Bitget perp book wss `)
-		return nil, perpBookErr
+		return nil, nil, perpBookErr
 	}
 	go maintainChannelBitgetPerp()
-	return channels, nil
+	environment.SocketsTick.Store(market, socketMap)
+	environment.MsgChanTick.Store(market, msgChans)
+	return
 }
 
 var subscribeHandlerBitgetPerpBookTicker = func(market string, connection *websocket.Conn, subscribes []interface{}) error {
@@ -235,7 +241,7 @@ func maintainChannelBitgetPerp() {
 		go func() {
 			for {
 				time.Sleep(time.Second * 20)
-				if err := SendToAllConnections(model.BitgetPerp, []byte(`ping`)); err != nil {
+				if err := SendToAllTickerSockets(model.BitgetPerp, []byte(`ping`)); err != nil {
 					util.Info("bitget perp channel ping error " + err.Error())
 				}
 			}
