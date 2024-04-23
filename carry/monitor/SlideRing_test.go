@@ -38,3 +38,12 @@ func Test_Map(t *testing.T) {
 		fmt.Println(candle)
 	}
 }
+
+func TestRange(t *testing.T) {
+	testMap := map[string]string{}
+	testMap = nil
+	for s, s2 := range testMap {
+		fmt.Println(s, s2)
+	}
+	fmt.Println(`done`)
+}
