@@ -32,7 +32,7 @@ func (aggregationCandle *AggregationCandle) refresh() {
 		} else if tempCurrent != nil {
 			start := tempStart.(*model.Candle)
 			current := tempCurrent.(*model.Candle)
-			if start.Begin.Add(aggregationCandle.TimeInterval).Before(current.Begin) {
+			if start != nil && current != nil && start.Begin.Add(aggregationCandle.TimeInterval).Before(current.Begin) {
 				aggregationCandle.slideRing.remove()
 			}
 		}
@@ -141,15 +141,21 @@ func KLineServer() {
 		})
 	}
 	for {
-		candle := <-model.KLineChan
-		aggregationCandle, success := util.LoadSyncMap(DataMonitor, candle.Market, candle.Symbol)
-		if success && aggregationCandle != nil {
-			aggregationCandle.(*AggregationCandle).handle(candle)
-			jsonBytes, err := json.Marshal(aggregationCandle)
-			if err == nil {
-				fmt.Println(string(jsonBytes))
-				api.AppWSManager.Send(jsonBytes, nil)
-			}
+		select {
+		case candle := <-model.KLineChan:
+			go func() {
+				aggregationCandle, success := util.LoadSyncMap(DataMonitor, candle.Market, candle.Symbol)
+				if success && aggregationCandle != nil {
+					aggregationCandle.(*AggregationCandle).handle(candle)
+					jsonBytes, err := json.Marshal(aggregationCandle)
+					if err == nil {
+						fmt.Println(string(jsonBytes))
+						api.AppWSManager.Send(jsonBytes, nil)
+					}
+				}
+			}()
+		case <-time.After(time.Second * 10):
+			fmt.Println(`KLineServer 10s`)
 		}
 	}
 }

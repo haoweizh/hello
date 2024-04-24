@@ -89,7 +89,7 @@ var AppRedis *redis.Client
 var AppConfig *Config
 var AppEnvironment = &Environment{}
 var ChannelMaintaining sync.Map // market - bool
-var KLineChan = make(chan *Candle, 100)
+var KLineChan = make(chan *Candle, 2)
 var DialectTail = map[string]map[string]string{
 	MarketTypeSpot:   {Gate: `_USDT`, Ftx: `/USD`, OKEX: `-USDT`, Bybit: `USDT`, BinanceSpot: `USDT`, KucoinSpot: `-USDT`, BitgetSpot: `USDT_SPBL`}, // BinanceMargin: `USDT`
 	MarketTypePerp:   {Gate: `_USDT`, Ftx: `-PERP`, OKEX: `-USDT-SWAP`, Bybit: `USDT`, BinancePerp: `USDT`, Mexc: `_USDT`, KucoinPerp: `USDTM`, BitgetPerp: `USDT_UMCBL`},

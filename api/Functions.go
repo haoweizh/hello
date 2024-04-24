@@ -55,7 +55,7 @@ func GetTradeMaxOKEX(key, secret, symbol string, expireSecond int64) (success bo
 	return success, maxBuy, maxSell
 }
 
-func RequireKLineReset(environment *model.Environment, market string) bool {
+func RequireKLineReset(environment *model.Environment, market string) (reset bool) {
 	needReset, ok := requireReset.Load(market)
 	if ok && needReset != nil && needReset.(bool) {
 		requireReset.Store(market, false)
@@ -70,12 +70,12 @@ func RequireKLineReset(environment *model.Environment, market string) bool {
 		_, candle := environment.GetKLine(symbol.(string), market)
 		if candle == nil || candle.Begin.Add(time.Duration(candle.Seconds)*time.Second).UnixMilli()+int64(model.AppConfig.Delay) <
 			time.Now().UnixMilli() {
-			needReset = true
+			reset = true
 			return false
 		}
 		return true
 	})
-	return needReset.(bool)
+	return reset
 }
 
 func RequireDepthChanReset(environment *model.Environment, market string) bool {

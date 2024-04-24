@@ -21,6 +21,8 @@ var apiClientsGate = make(map[string]*gateApi.APIClient)
 var apiCtxGate = make(map[string]context.Context)
 var channelMaintainingGate = false
 
+const wsStepGate = 100
+
 func getClientGate(key, secret string) (apiClient *gateApi.APIClient, ctx context.Context) {
 	if apiClientsGate[key] == nil {
 		apiClientsGate[key] = gateApi.NewAPIClient(gateApi.NewConfiguration())
@@ -392,7 +394,7 @@ func WsDepthServeGateNew(environment *model.Environment, market string) (socketM
 			futureSubs = append(futureSubs, symbol)
 		}
 	}
-	spotOrderBookSockets, spotOrderBookChannels, spotOrderBookErr := WebSocketClient(model.Gate, gateWs.BaseUrl, spotOrderBookSubs, subscribeHandler, wsHandler, 100)
+	spotOrderBookSockets, spotOrderBookChannels, spotOrderBookErr := WebSocketClient(model.Gate, gateWs.BaseUrl, spotOrderBookSubs, subscribeHandler, wsHandler, wsStepGate)
 	if spotOrderBookErr == nil {
 		util.Info(`finish connect public gate spot order book ws `)
 		msgChans = append(msgChans, spotOrderBookChannels...)
@@ -401,7 +403,7 @@ func WsDepthServeGateNew(environment *model.Environment, market string) (socketM
 		}
 	}
 	time.Sleep(time.Second * 1)
-	spotBookTickerSockets, spotBookTickerChannels, spotBookTickerErr := WebSocketClient(model.Gate, gateWs.BaseUrl, spotSubs, subscribeHandler, wsHandler, 30)
+	spotBookTickerSockets, spotBookTickerChannels, spotBookTickerErr := WebSocketClient(model.Gate, gateWs.BaseUrl, spotSubs, subscribeHandler, wsHandler, wsStepGate)
 	if spotBookTickerErr == nil {
 		util.Info(`finish connect public gate spot book ticker ws `)
 		msgChans = append(msgChans, spotBookTickerChannels...)
@@ -410,7 +412,7 @@ func WsDepthServeGateNew(environment *model.Environment, market string) (socketM
 		}
 	}
 	time.Sleep(time.Second * 1)
-	perpBookTickerSockets, perpBookTickerChannels, perpBookTickerErr := WebSocketClient(model.Gate, gateWs.FuturesUsdtUrl, futureSubs, subscribeHandler, wsHandler, 30)
+	perpBookTickerSockets, perpBookTickerChannels, perpBookTickerErr := WebSocketClient(model.Gate, gateWs.FuturesUsdtUrl, futureSubs, subscribeHandler, wsHandler, wsStepGate)
 	if perpBookTickerErr == nil {
 		util.Info(`finish connect public gate perp book ticker ws `)
 		msgChans = append(msgChans, perpBookTickerChannels...)
@@ -419,7 +421,7 @@ func WsDepthServeGateNew(environment *model.Environment, market string) (socketM
 		}
 	}
 	time.Sleep(time.Second * 1)
-	perpMarkPriceSockets, perpMarkPriceChannels, perpMarkPriceErr := WebSocketClient(model.Gate, gateWs.FuturesUsdtUrl, futureSubs, subscribeMarkPriceHandler, wsHandler, 30)
+	perpMarkPriceSockets, perpMarkPriceChannels, perpMarkPriceErr := WebSocketClient(model.Gate, gateWs.FuturesUsdtUrl, futureSubs, subscribeMarkPriceHandler, wsHandler, wsStepGate)
 	if perpMarkPriceErr == nil {
 		util.Info(`finish connect public gate perp mark price ws `)
 		msgChans = append(msgChans, perpMarkPriceChannels...)
