@@ -149,13 +149,10 @@ func KLineServer() {
 					aggregationCandle.(*AggregationCandle).handle(candle)
 					jsonBytes, err := json.Marshal(aggregationCandle)
 					if err == nil {
-						fmt.Println(string(jsonBytes))
 						api.AppWSManager.Send(jsonBytes, nil)
 					}
 				}
 			}()
-		case <-time.After(time.Second * 10):
-			fmt.Println(`KLineServer 10s`)
 		}
 	}
 }

@@ -309,7 +309,6 @@ func GetCoinBalanceBybit(key, secret, accountType string) (balances []*model.Bal
 		time.Sleep(time.Minute)
 		return GetCoinBalanceBybit(key, secret, accountType)
 	} else {
-		fmt.Println(string(httpResp))
 		util.SocketInfo(fmt.Sprintf("get spot balance bybit success, %s resp: %s ", key[:5], httpResp))
 	}
 	balances = make([]*model.Balance, 0)

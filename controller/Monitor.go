@@ -1,7 +1,6 @@
 package controller
 
 import (
-	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 	uuid "github.com/satori/go.uuid"
@@ -18,8 +17,8 @@ func monitorEntry(c *gin.Context) {
 
 func MonitorTrade(c *gin.Context) {
 	wsHandler := func(client *api.WSAgent, event []byte) {
-		received := string(event)
-		fmt.Println(`receive from ws ` + received)
+		//received := string(event)
+		//fmt.Println(`receive from ws ` + received)
 		//Manager.Broadcast <- jsonMessage
 		//if strings.Contains(received, `refresh`) && model.StatusChanged {
 		//	content := model.StatusInfo()
