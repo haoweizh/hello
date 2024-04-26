@@ -454,14 +454,14 @@ func GetMarketEquity(index int) (msg string) {
 		if accounts[market] == nil {
 			continue
 		}
-		util.Notice(fmt.Sprintf(`try to get value for %s account %s`, market, accounts[market].Key[:5]))
+		//util.Notice(fmt.Sprintf(`try to get value for %s account %s`, market, accounts[market].Key[:5]))
 		_, _, equity, _ := GetBalances(accounts[market].Key, accounts[market].Secret, market)
 		if equity == 0 && !accounts[market].IsUnified {
 			_, _, equity, _ = GetPositions(accounts[market].Key, accounts[market].Secret, market)
 		}
 		inAll += equity
 		msg += fmt.Sprintf("%s: %f\n", market, equity)
-		util.Notice(fmt.Sprintf(`try to get value done %s account %s %s`, market, accounts[market].Key[:5], msg))
+		//util.Notice(fmt.Sprintf(`try to get value done %s account %s %s`, market, accounts[market].Key[:5], msg))
 	}
 	msg += fmt.Sprintf("账户总权益InUsd: %f\n", inAll)
 	getEquityTime.Store(index, time.Now())
