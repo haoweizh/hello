@@ -27,8 +27,7 @@ func getSettingMonitors(c *gin.Context) {
 	}
 	var settingMonitors []*monitor.SettingMonitor
 	model.AppDB.Where("mail_address = ?", user.(string)).Find(&settingMonitors)
-	c.JSON(http.StatusBadRequest, map[string]interface{}{`status`: `fail`, `msg`: fmt.Sprintf(`get settings %d`, len(settingMonitors)),
-		`data`: settingMonitors})
+	c.JSON(http.StatusOK, map[string]interface{}{`status`: `ok`, `msg`: `success`, `data`: settingMonitors})
 }
 
 func addSettingMonitor(c *gin.Context) {
@@ -47,7 +46,7 @@ func addSettingMonitor(c *gin.Context) {
 	}
 	settingMonitor.MailAddress = user.(string)
 	model.AppDB.Save(&settingMonitor)
-	c.JSON(http.StatusOK, map[string]interface{}{`status`: `fail`, `msg`: fmt.Sprintf(`rows add %s`, data), `data`: "{}"})
+	c.JSON(http.StatusOK, map[string]interface{}{`status`: `ok`, `msg`: `success`, `data`: "{}"})
 }
 
 func removeSettingMonitor(c *gin.Context) {
@@ -63,7 +62,7 @@ func removeSettingMonitor(c *gin.Context) {
 		return
 	}
 	rowNum := model.AppDB.Delete(&monitor.SettingMonitor{}, id).RowsAffected
-	c.JSON(http.StatusOK, map[string]interface{}{`status`: `ok`, `msg`: fmt.Sprintf(`delete success %d`, rowNum), `data`: "{}"})
+	c.JSON(http.StatusOK, map[string]interface{}{`status`: `ok`, `msg`: `success`, `data`: fmt.Sprintf("{NUM:%d}", rowNum)})
 }
 
 func MonitorTrade(c *gin.Context) {
