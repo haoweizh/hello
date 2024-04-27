@@ -34,7 +34,7 @@ func login(c *gin.Context) {
 	userName, getUser := c.GetPostForm(`user`)
 	if !getCode || !getUser {
 		c.JSON(http.StatusBadRequest, map[string]interface{}{
-			`status`: `fail`, `msg`: `code and user is required`, `data`: nil})
+			`status`: `fail`, `msg`: `code and user is required`, `data`: "{}"})
 		return
 	}
 	code, ok := userNames.Load(userName)
@@ -45,28 +45,28 @@ func login(c *gin.Context) {
 			if err == nil {
 				userNames.Delete(userName)
 				codes.Delete(value)
-				c.JSON(http.StatusOK, map[string]interface{}{`status`: `ok`, `msg`: `登录成功`, `data`: nil})
+				c.JSON(http.StatusOK, map[string]interface{}{`status`: `ok`, `msg`: `登录成功`, `data`: "{}"})
 				return
 			}
 		} else {
-			c.JSON(http.StatusBadRequest, map[string]interface{}{`status`: `fail`, `msg`: `验证码错误或过期`, `data`: nil})
+			c.JSON(http.StatusBadRequest, map[string]interface{}{`status`: `fail`, `msg`: `验证码错误或过期`, `data`: "{}"})
 		}
 	} else {
-		c.JSON(http.StatusBadRequest, map[string]interface{}{`status`: `fail`, `msg`: `用户不存在`, `data`: nil})
+		c.JSON(http.StatusBadRequest, map[string]interface{}{`status`: `fail`, `msg`: `用户不存在`, `data`: "{}"})
 	}
-	c.JSON(http.StatusBadRequest, map[string]interface{}{`status`: `fail`, `msg`: `登陆失败`, `data`: nil})
+	c.JSON(http.StatusBadRequest, map[string]interface{}{`status`: `fail`, `msg`: `登陆失败`, `data`: "{}"})
 }
 
 func GetCode(c *gin.Context) {
 	userName, get := c.GetPostForm(`user`)
 	if !get {
-		c.JSON(http.StatusBadRequest, map[string]interface{}{`status`: `fail`, `msg`: `user is required`, `data`: nil})
+		c.JSON(http.StatusBadRequest, map[string]interface{}{`status`: `fail`, `msg`: `user is required`, `data`: "{}"})
 		return
 	}
 	waitTime := (util.GetNowUnixMillion() - codeGenTime) / 1000
 	if waitTime < 30 {
 		waitTime = 30 - waitTime
-		c.JSON(http.StatusBadRequest, map[string]interface{}{`status`: `fail`, `msg`: fmt.Sprintf(`还要等待 %d 秒才能再次发送`, waitTime), `data`: nil})
+		c.JSON(http.StatusBadRequest, map[string]interface{}{`status`: `fail`, `msg`: fmt.Sprintf(`还要等待 %d 秒才能再次发送`, waitTime), `data`: "{}"})
 	} else {
 		codeGenTime = util.GetNowUnixMillion()
 		rnd := rand.New(rand.NewSource(time.Now().UnixNano()))
@@ -80,9 +80,9 @@ func GetCode(c *gin.Context) {
 		if err != nil {
 			msg := fmt.Sprintf(`fail to send mail to %s err %s`, userName, err.Error())
 			util.Notice(msg)
-			c.JSON(http.StatusBadRequest, map[string]interface{}{`status`: `fail`, `msg`: msg, `data`: nil})
+			c.JSON(http.StatusBadRequest, map[string]interface{}{`status`: `fail`, `msg`: msg, `data`: "{}"})
 		} else {
-			c.JSON(http.StatusOK, map[string]interface{}{`status`: `fail`, `msg`: `调用成功，请查收邮箱，如果没有，检查日志`, `data`: nil})
+			c.JSON(http.StatusOK, map[string]interface{}{`status`: `fail`, `msg`: `调用成功，请查收邮箱，如果没有，检查日志`, `data`: "{}"})
 		}
 	}
 }
