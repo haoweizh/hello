@@ -22,47 +22,48 @@ func getSettingMonitors(c *gin.Context) {
 	session := sessions.Default(c)
 	user := session.Get(`user`)
 	if user == nil || user == `` {
-		c.JSON(http.StatusNotAcceptable, `require login`)
+		c.JSON(http.StatusBadRequest, map[string]interface{}{`status`: `fail`, `msg`: `require login`, `data`: nil})
 		return
 	}
 	var settingMonitors []*monitor.SettingMonitor
 	model.AppDB.Where("mail_address = ?", user.(string)).Find(&settingMonitors)
-	c.JSON(http.StatusOK, settingMonitors)
+	c.JSON(http.StatusBadRequest, map[string]interface{}{`status`: `fail`, `msg`: fmt.Sprintf(`get settings %d`, len(settingMonitors)),
+		`data`: settingMonitors})
 }
 
 func addSettingMonitor(c *gin.Context) {
 	session := sessions.Default(c)
 	user := session.Get(`user`)
 	if user == nil || user == `` {
-		c.JSON(http.StatusNotAcceptable, `require login`)
+		c.JSON(http.StatusBadRequest, map[string]interface{}{`status`: `fail`, `msg`: `require login`, `data`: nil})
 		return
 	}
 	settingMonitor := monitor.SettingMonitor{}
 	data := c.PostForm(`data`)
 	err := json.Unmarshal([]byte(data), &settingMonitor)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, `wrong json format to unmarshal setting monitor`)
+		c.JSON(http.StatusBadRequest, map[string]interface{}{`status`: `fail`, `msg`: `wrong json format to unmarshal setting monitor`, `data`: nil})
 		return
 	}
 	settingMonitor.MailAddress = user.(string)
 	model.AppDB.Save(&settingMonitor)
-	c.JSON(http.StatusOK, fmt.Sprintf(`rows add %s`, data))
+	c.JSON(http.StatusOK, map[string]interface{}{`status`: `fail`, `msg`: fmt.Sprintf(`rows add %s`, data), `data`: nil})
 }
 
 func removeSettingMonitor(c *gin.Context) {
 	session := sessions.Default(c)
 	user := session.Get(`user`)
 	if user == nil || user == `` {
-		c.JSON(http.StatusNotAcceptable, `require login`)
+		c.JSON(http.StatusBadRequest, map[string]interface{}{`status`: `fail`, `msg`: `require login`, `data`: nil})
 		return
 	}
 	id, getId := c.GetPostForm(`id`)
 	if !getId {
-		c.JSON(http.StatusNotAcceptable, `require id`)
+		c.JSON(http.StatusBadRequest, map[string]interface{}{`status`: `fail`, `msg`: `require id`, `data`: nil})
 		return
 	}
 	rowNum := model.AppDB.Delete(&monitor.SettingMonitor{}, id).RowsAffected
-	c.JSON(http.StatusOK, rowNum)
+	c.JSON(http.StatusOK, map[string]interface{}{`status`: `ok`, `msg`: fmt.Sprintf(`delete success %d`, rowNum), `data`: nil})
 }
 
 func MonitorTrade(c *gin.Context) {
@@ -80,7 +81,7 @@ func MonitorTrade(c *gin.Context) {
 	}
 	value, getId := c.GetPostForm(`id`)
 	if !getId {
-		c.JSON(http.StatusNotAcceptable, `require id`)
+		c.JSON(http.StatusBadRequest, map[string]interface{}{`status`: `fail`, `msg`: `require id`, `data`: nil})
 		return
 	}
 	session := sessions.Default(c)
@@ -88,11 +89,11 @@ func MonitorTrade(c *gin.Context) {
 	settingMonitor := &monitor.SettingMonitor{}
 	model.AppDB.Where("id = ?", value).First(settingMonitor)
 	if settingMonitor == nil {
-		c.JSON(http.StatusNotAcceptable, `id match nil monitor setting`)
+		c.JSON(http.StatusBadRequest, map[string]interface{}{`status`: `fail`, `msg`: `id match nil monitor setting`, `data`: nil})
 		return
 	}
 	if sessionValue == nil || sessionValue.(string) != settingMonitor.MailAddress {
-		c.JSON(http.StatusNotAcceptable, `require login`)
+		c.JSON(http.StatusBadRequest, map[string]interface{}{`status`: `fail`, `msg`: `require login`, `data`: nil})
 		return
 	}
 	conn, err := (&websocket.Upgrader{
