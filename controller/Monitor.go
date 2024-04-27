@@ -22,7 +22,7 @@ func getSettingMonitors(c *gin.Context) {
 	session := sessions.Default(c)
 	user := session.Get(`user`)
 	if user == nil || user == `` {
-		c.String(http.StatusNotAcceptable, `require login`)
+		c.JSON(http.StatusNotAcceptable, `require login`)
 		return
 	}
 	var settingMonitors []*monitor.SettingMonitor
@@ -34,7 +34,7 @@ func addSettingMonitor(c *gin.Context) {
 	session := sessions.Default(c)
 	user := session.Get(`user`)
 	if user == nil || user == `` {
-		c.String(http.StatusNotAcceptable, `require login`)
+		c.JSON(http.StatusNotAcceptable, `require login`)
 		return
 	}
 	settingMonitor := monitor.SettingMonitor{}
@@ -46,17 +46,21 @@ func addSettingMonitor(c *gin.Context) {
 	}
 	settingMonitor.MailAddress = user.(string)
 	model.AppDB.Save(&settingMonitor)
-	c.String(http.StatusOK, fmt.Sprintf(`rows add %s`, data))
+	c.JSON(http.StatusOK, fmt.Sprintf(`rows add %s`, data))
 }
 
 func removeSettingMonitor(c *gin.Context) {
 	session := sessions.Default(c)
 	user := session.Get(`user`)
 	if user == nil || user == `` {
-		c.String(http.StatusNotAcceptable, `require login`)
+		c.JSON(http.StatusNotAcceptable, `require login`)
 		return
 	}
-	id := c.Query(`id`)
+	id, getId := c.GetPostForm(`id`)
+	if !getId {
+		c.JSON(http.StatusNotAcceptable, `require id`)
+		return
+	}
 	rowNum := model.AppDB.Delete(&monitor.SettingMonitor{}, id).RowsAffected
 	c.JSON(http.StatusOK, rowNum)
 }
@@ -74,17 +78,21 @@ func MonitorTrade(c *gin.Context) {
 		//	api.ChanCmd <- `run`
 		//}
 	}
-	value := c.Query(`id`)
+	value, getId := c.GetPostForm(`id`)
+	if !getId {
+		c.JSON(http.StatusNotAcceptable, `require id`)
+		return
+	}
 	session := sessions.Default(c)
 	sessionValue := session.Get(`user`)
 	settingMonitor := &monitor.SettingMonitor{}
 	model.AppDB.Where("id = ?", value).First(settingMonitor)
 	if settingMonitor == nil {
-		c.String(http.StatusNotAcceptable, `id match nil monitor setting`)
+		c.JSON(http.StatusNotAcceptable, `id match nil monitor setting`)
 		return
 	}
 	if sessionValue == nil || sessionValue.(string) != settingMonitor.MailAddress {
-		c.String(http.StatusNotAcceptable, `require login`)
+		c.JSON(http.StatusNotAcceptable, `require login`)
 		return
 	}
 	conn, err := (&websocket.Upgrader{

@@ -30,8 +30,12 @@ func checkCode(code string) (valid bool) {
 
 func login(c *gin.Context) {
 	session := sessions.Default(c)
-	value := c.Query(`code`)
-	userName := c.Query(`user`)
+	value, getCode := c.GetPostForm(`code`)
+	userName, getUser := c.GetPostForm(`user`)
+	if !getCode || !getUser {
+		c.JSON(http.StatusBadRequest, `code and user is required`)
+		return
+	}
 	code, ok := userNames.Load(userName)
 	if ok && code != nil {
 		if checkCode(value) && code.(string) == value {
@@ -40,24 +44,28 @@ func login(c *gin.Context) {
 			if err == nil {
 				userNames.Delete(userName)
 				codes.Delete(value)
-				c.String(http.StatusOK, `登录成功`)
+				c.JSON(http.StatusOK, `登录成功`)
 				return
 			}
 		} else {
-			c.String(http.StatusOK, `验证码错误或过期`)
+			c.JSON(http.StatusOK, `验证码错误或过期`)
 		}
 	} else {
-		c.String(http.StatusForbidden, `用户不存在`)
+		c.JSON(http.StatusForbidden, `用户不存在`)
 	}
-	c.String(http.StatusForbidden, `登陆失败`)
+	c.JSON(http.StatusForbidden, `登陆失败`)
 }
 
 func GetCode(c *gin.Context) {
-	userName := c.Query(`user`)
+	userName, get := c.GetPostForm(`user`)
+	if !get {
+		c.JSON(http.StatusBadRequest, `user is required`)
+		return
+	}
 	waitTime := (util.GetNowUnixMillion() - codeGenTime) / 1000
 	if waitTime < 30 {
 		waitTime = 30 - waitTime
-		c.String(http.StatusOK, fmt.Sprintf(`还要等待 %d 秒才能再次发送`, waitTime))
+		c.JSON(http.StatusOK, fmt.Sprintf(`还要等待 %d 秒才能再次发送`, waitTime))
 	} else {
 		codeGenTime = util.GetNowUnixMillion()
 		rnd := rand.New(rand.NewSource(time.Now().UnixNano()))
@@ -71,9 +79,9 @@ func GetCode(c *gin.Context) {
 		if err != nil {
 			msg := fmt.Sprintf(`fail to send mail to %s err %s`, userName, err.Error())
 			util.Notice(msg)
-			c.String(http.StatusBadRequest, msg)
+			c.JSON(http.StatusBadRequest, msg)
 		} else {
-			c.String(http.StatusOK, `调用成功，请查收邮箱，如果没有，检查日志`)
+			c.JSON(http.StatusOK, `调用成功，请查收邮箱，如果没有，检查日志`)
 		}
 	}
 }
