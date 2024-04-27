@@ -54,7 +54,30 @@ export async function updateRule(options?: { [key: string]: any }) {
   });
 }
 export async function login(options?: { [key: string]: any }) {
-  return request<API.NoticeIconList>('/api/notices', {
+  return request<API.NoticeIconList>('/api/login', {
+    method: 'POST',
+    ...(options || {}),
+  });
+}
+
+/** 发送验证码1 POST /api/login/captcha */
+export async function getFakeCaptcha(
+  // 叠加生成的Param类型 (非body参数swagger默认没有生成对象)
+  params: API.getFakeCaptchaParams,
+  options?: { [key: string]: any },
+) {
+  return request<API.FakeCaptcha>('/api/pw', {
+    method: 'POST',
+    params: {
+      ...params,
+    },
+    // ...(options || {}),
+  });
+}
+
+/** 此处后端没有提供注释 GET /api/notices */
+export async function getMonitors(options?: { [key: string]: any }) {
+  return request<API.NoticeIconList>('/api/get_monitors', {
     method: 'GET',
     ...(options || {}),
   });
