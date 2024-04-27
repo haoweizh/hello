@@ -2,7 +2,6 @@ package controller
 
 import (
 	"encoding/json"
-	"fmt"
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
@@ -62,7 +61,7 @@ func removeSettingMonitor(c *gin.Context) {
 		return
 	}
 	rowNum := model.AppDB.Delete(&monitor.SettingMonitor{}, id).RowsAffected
-	c.JSON(http.StatusOK, map[string]interface{}{`status`: `ok`, `msg`: `success`, `data`: fmt.Sprintf("{NUM:%d}", rowNum)})
+	c.JSON(http.StatusOK, map[string]interface{}{`status`: `ok`, `msg`: `success`, `data`: map[string]interface{}{`NUM`: rowNum}})
 }
 
 func MonitorTrade(c *gin.Context) {
