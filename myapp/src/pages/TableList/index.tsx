@@ -107,6 +107,7 @@ const TableList: React.FC = () => {
    * */
   const intl = useIntl();
 
+  // @ts-ignore
   const columns: ProColumns<API.RuleListItem>[] = [
     {
       title: (
@@ -241,6 +242,7 @@ const TableList: React.FC = () => {
     },
   ];
 
+  // @ts-ignore
   return (
     <PageContainer>
       <ProTable<API.RuleListItem, API.PageParams>
