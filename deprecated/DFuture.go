@@ -109,7 +109,7 @@ package deprecated
 ////	timeStr := strconv.FormatInt(util.GetNowUnixMillion(), 10)
 ////	toBeSign := fmt.Sprintf(`%s&%s&%s`, key, timeStr, secret)
 ////	hash := hmac.New(md5.New, []byte(secret))
-////	hash.Write([]byte(toBeSign))
+////	hash.WriteServe([]byte(toBeSign))
 ////	sign := hex.EncodeToString(hash.Sum(nil))
 ////	headers := map[string]string{`accessKey`: key, `accessTime`: timeStr, "token": sign, "Content-Type": "application/json"}
 ////	uri := model.AppConfig.RestUrls[model.DFuture] + path

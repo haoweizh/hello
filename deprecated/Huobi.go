@@ -276,7 +276,7 @@ package deprecated
 //	strParam := util.ComposeParams(param)
 //	toBeSign := fmt.Sprintf("%s\n%s\n%s\n%s", method, host, path, strParam)
 //	hash := hmac.New(sha256.New, []byte(secret))
-//	hash.Write([]byte(toBeSign))
+//	hash.WriteServe([]byte(toBeSign))
 //	sign := url.QueryEscape(base64.StdEncoding.EncodeToString(hash.Sum(nil)))
 //	param["Signature"] = sign
 //	requestUrl := fmt.Sprintf(`https://%s%s?%s`, host, path, util.ComposeParams(param))

@@ -95,7 +95,7 @@ package deprecated
 //
 //func SignedRequestCoinpark(key, secret, method, path, cmds string) []byte {
 //	hash := hmac.New(md5.New, []byte(secret))
-//	hash.Write([]byte(cmds))
+//	hash.WriteServe([]byte(cmds))
 //	sign := hex.EncodeToString(hash.Sum(nil))
 //	postData := &url.Values{}
 //	postData.Set("cmds", cmds)

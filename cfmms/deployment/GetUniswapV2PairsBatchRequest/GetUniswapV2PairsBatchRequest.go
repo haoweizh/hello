@@ -61,8 +61,8 @@ func DeployGetUniswapV2PairsBatchRequest(auth *bind.TransactOpts, backend bind.C
 
 // GetUniswapV2PairsBatchRequest is an auto generated Go binding around an Ethereum contract.
 type GetUniswapV2PairsBatchRequest struct {
-	GetUniswapV2PairsBatchRequestCaller     // Read-only binding to the contract
-	GetUniswapV2PairsBatchRequestTransactor // Write-only binding to the contract
+	GetUniswapV2PairsBatchRequestCaller     // ReadServe-only binding to the contract
+	GetUniswapV2PairsBatchRequestTransactor // WriteServe-only binding to the contract
 	GetUniswapV2PairsBatchRequestFilterer   // Log filterer for contract events
 }
 

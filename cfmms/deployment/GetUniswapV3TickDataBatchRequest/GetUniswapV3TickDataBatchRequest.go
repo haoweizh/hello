@@ -61,8 +61,8 @@ func DeployGetUniswapV3TickDataBatchRequest(auth *bind.TransactOpts, backend bin
 
 // GetUniswapV3TickDataBatchRequest is an auto generated Go binding around an Ethereum contract.
 type GetUniswapV3TickDataBatchRequest struct {
-	GetUniswapV3TickDataBatchRequestCaller     // Read-only binding to the contract
-	GetUniswapV3TickDataBatchRequestTransactor // Write-only binding to the contract
+	GetUniswapV3TickDataBatchRequestCaller     // ReadServe-only binding to the contract
+	GetUniswapV3TickDataBatchRequestTransactor // WriteServe-only binding to the contract
 	GetUniswapV3TickDataBatchRequestFilterer   // Log filterer for contract events
 }
 

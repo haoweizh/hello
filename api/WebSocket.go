@@ -1,7 +1,6 @@
 package api
 
 import (
-	"encoding/json"
 	"fmt"
 	"github.com/gorilla/websocket"
 	"hello/model"
@@ -14,16 +13,9 @@ import (
 
 type OrderHandler func(order *model.Order)
 type MsgHandler func(message []byte)
-type WSMsgHandler func(client *WSAgent, message []byte)
 type SubscribeHandler func(market string, connection *websocket.Conn, subscribes []interface{}) error
 
 var wsLock sync.Mutex
-
-var AppWSManager = WSManager{
-	Register:    make(chan *WSAgent),
-	Unregister:  make(chan *WSAgent),
-	Connections: make(map[*WSAgent]bool),
-}
 
 func SendToConnection(market string, connection *websocket.Conn, msg []byte) (err error) {
 	defer wsLock.Unlock()
@@ -197,117 +189,4 @@ func WebSocketClient(market, url string, subscribes []interface{}, subHandler Su
 	}
 	util.Info(fmt.Sprintf(`ws client add conns %s sockets %d msgChans %d`, market, len(socketMap), len(msgChans)))
 	return
-}
-
-type WSManager struct {
-	Connections map[*WSAgent]bool
-	Register    chan *WSAgent
-	Unregister  chan *WSAgent
-}
-
-type WSAgent struct {
-	ID        string
-	Socket    *websocket.Conn
-	ChanWrite chan []byte
-	ChanRead  chan []byte
-	Manager   *WSManager
-	Pinged    bool
-	Timer     *time.Timer
-}
-
-type Message struct {
-	Sender    string `json:"sender,omitempty"`
-	Recipient string `json:"recipient,omitempty"`
-	Content   string `json:"content,omitempty"`
-}
-
-func (manager *WSManager) Start() {
-	for {
-		select {
-		case conn := <-manager.Register:
-			manager.Connections[conn] = true
-			jsonMessage, _ := json.Marshal(&Message{Content: "/A new socket has connected."})
-			manager.Send(jsonMessage, conn)
-			util.Info(fmt.Sprintf(`after registerd %d`, len(manager.Connections)))
-		case agent := <-manager.Unregister:
-			if _, ok := manager.Connections[agent]; ok {
-				agent.Close()
-				delete(manager.Connections, agent)
-				jsonMessage, _ := json.Marshal(&Message{Content: "/A socket has disconnected."})
-				manager.Send(jsonMessage, agent)
-				util.Info(fmt.Sprintf(`after unregister %d`, len(manager.Connections)))
-			}
-		}
-	}
-}
-
-func (manager *WSManager) Send(message []byte, ignore *WSAgent) {
-	for conn := range manager.Connections {
-		if conn != ignore {
-			conn.ChanWrite <- message
-		}
-	}
-}
-
-func (agent *WSAgent) Close() {
-	close(agent.ChanRead)
-	close(agent.ChanWrite)
-	_ = agent.Socket.Close()
-}
-
-func (agent *WSAgent) Read(msgHandler WSMsgHandler) {
-	defer func() {
-		agent.Manager.Unregister <- agent
-	}()
-	go func() {
-		for {
-			_, message, err := agent.Socket.ReadMessage()
-			if err != nil {
-				break
-			}
-			agent.ChanRead <- message
-		}
-	}()
-	for {
-		select {
-		case message, ok := <-agent.ChanRead:
-			if !ok {
-				return
-			}
-			jsonMessage, _ := json.Marshal(&Message{Sender: agent.ID, Content: string(message)})
-			if strings.Contains(string(jsonMessage), `ping`) {
-				agent.Pinged = true
-			}
-			if msgHandler != nil {
-				msgHandler(agent, jsonMessage)
-			}
-		case <-agent.Timer.C:
-			agent.Timer.Reset(300 * time.Second)
-			if agent.Pinged {
-				agent.Pinged = false
-			} else {
-				agent.Manager.Unregister <- agent
-				util.Info(`time out without ping`)
-				return
-			}
-		}
-	}
-}
-
-func (agent *WSAgent) Write() {
-	defer func() {
-		agent.Manager.Unregister <- agent
-	}()
-	for {
-		select {
-		case message, ok := <-agent.ChanWrite:
-			if !ok {
-				return
-			}
-			err := agent.Socket.WriteMessage(websocket.TextMessage, message)
-			if err != nil {
-				util.Notice(fmt.Sprintf(`fail to send ws msg %s return %s`, message, err.Error()))
-			}
-		}
-	}
 }

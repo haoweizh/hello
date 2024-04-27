@@ -11,7 +11,6 @@ import (
 	"hello/regret"
 	"hello/regret/Grid"
 	"hello/util"
-	"math/rand"
 	"net/http"
 	"os"
 	"sort"
@@ -20,8 +19,6 @@ import (
 	"time"
 )
 
-var codeGenTime int64
-var codes = make(map[string]bool)
 var simulating = false
 var candling = false
 
@@ -50,6 +47,10 @@ func ParameterServe() {
 	router.GET(`mine`, mindZeroAddr)
 	router.GET(`monitor`, MonitorTrade)
 	router.GET(`entry`, monitorEntry)
+	router.GET(`login`, login)
+	router.GET(`get_monitors`, getSettingMonitors)
+	router.GET(`add_monitor`, addSettingMonitor)
+	router.GET(`remove_monitor`, removeSettingMonitor)
 	var err error
 	if model.AppConfig.Port == `443` {
 		err = router.RunTLS(":"+model.AppConfig.Port, `./server.pem`, `./server.key`)
@@ -61,31 +62,6 @@ func ParameterServe() {
 		os.Exit(1)
 	}
 }
-
-//func clearSpot(c *gin.Context) {
-//	accounts := model.GetAccounts(0)
-//	util.Notice(fmt.Sprintf(`get accounts %d`, len(accounts)))
-//	for _, account := range accounts {
-//		if account == nil || (account.Market != model.Gate && account.Market != model.BinanceSpot) {
-//			continue
-//		}
-//		util.Notice(fmt.Sprintf(`start to clear account %s %s`, account.Market, account.Key))
-//		_, balances, _, _ := api.GetBalances(account.Key, account.Secret, account.Market)
-//		for _, balance := range balances {
-//			symbol := strings.ToUpper(balance.Coin + `_USDT`)
-//			_, tick := model.AppEnvironment.GetBidAsk(symbol, account.Market)
-//			if tick == nil || tick.Bids[0].Price*balance.Amount < 20 {
-//				continue
-//			}
-//			order := api.PlaceOrder(account.Key, account.Secret, model.OrderSideSell, model.OrderTypeLimit, account.Market, symbol,
-//				``, tick.Bids[0].Price*0.98, tick.Bids[0].Price*0.98, balance.Amount*0.98, false, nil, nil)
-//			util.Notice(fmt.Sprintf(`sell %s amt %f at %f orderId %s`, order.Symbol, order.Amount, order.Price, order.OrderId))
-//			time.Sleep(time.Second)
-//		}
-//	}
-//	c.String(http.StatusOK, `done`)
-//}
-
 func setSimulating(value bool) {
 	simulating = value
 }
@@ -122,40 +98,6 @@ func autoSimulate(market, coins string, begin, end time.Time, strBegin, strEnd s
 		strBegin, strEnd, useNear, near, far, limit, allLimit), `auto`)
 }
 
-func simulateGXZQ(c *gin.Context) {
-	session := sessions.Default(c)
-	value := c.Query(`code`)
-	if codes[value] {
-		session.Set(`code`, value)
-		_ = session.Save()
-	}
-	sessionValue := session.Get(`code`)
-	if sessionValue == nil || !codes[sessionValue.(string)] {
-		c.String(http.StatusForbidden, `no right`)
-		return
-	}
-	market := c.Query(`market`)
-	if market == `` {
-		market = model.GXZQ
-	}
-	strBegin := `2021-01-01T00:00:00+00:00`
-	strEnd := `2023-01-01T00:00:00+00:00`
-	//coins := `CZCE.FG,DCE.jm,DCE.eb,CZCE.TA,SHFE.fu,DCE.p,CZCE.SF,SHFE.hc,DCE.v,DCE.y`
-	coins := `DOGE,SOL,MATIC,CHZ,LINK,ADA,BNB,FIL,SUSHI,AXS,ATOM,WAVES`
-	for i := 3; i <= 21; i++ {
-		sign := fmt.Sprintf(`market%s,coins%s,seconds86400,%s~%s,far%d,near%d,limit%d,allLimit%d,useNear%v`,
-			market, coins, strBegin, strEnd, i*2, i, 3, -1, true)
-		regret.CutTail(market, coins, sign)
-		util.Notice(`done cut tail %s %s %s`, market, coins, sign)
-		sign = fmt.Sprintf(`market%s,coins%s,seconds86400,%s~%s,far%d,near%d,limit%d,allLimit%d,useNear%v`,
-			market, coins, strBegin, strEnd, i*2, i, 3, -1, false)
-		regret.CutTail(market, coins, sign)
-		util.Notice(`done cut tail %s %s %s`, market, coins, sign)
-	}
-	util.Notice(`done cut tail all`)
-	c.String(http.StatusOK, `done`)
-}
-
 func simulateGrid(c *gin.Context) {
 	if model.AppConfig.Simulation != `on` {
 		c.String(http.StatusOK, `do not support simulate`)
@@ -184,16 +126,11 @@ func simulateGrid(c *gin.Context) {
 	//seconds, errSeconds := strconv.ParseInt(strSeconds, 10, 64)
 	strBegin := c.Query(`begin`) + `T00:00:00+00:00`
 	strEnd := c.Query(`end`) + `T00:00:00+00:00`
-	begin, errBegin := time.Parse(time.RFC3339, strBegin)
-	end, errEnd := time.Parse(time.RFC3339, strEnd)
+	begin, _ := time.Parse(time.RFC3339, strBegin)
+	end, _ := time.Parse(time.RFC3339, strEnd)
 	session := sessions.Default(c)
-	value := c.Query(`code`)
-	if codes[value] {
-		session.Set(`code`, value)
-		_ = session.Save()
-	}
-	sessionValue := session.Get(`code`)
-	if sessionValue == nil || !codes[sessionValue.(string)] || errBegin != nil || errEnd != nil {
+	sessionValue := session.Get(`user`)
+	if sessionValue != `haoweizh@qq.com` {
 		strNew = `false`
 	}
 	coinArr := strings.Split(coins, `,`)
@@ -227,19 +164,43 @@ func simulateGrid(c *gin.Context) {
 	c.String(http.StatusOK, `done`)
 }
 
+func simulateGXZQ(c *gin.Context) {
+	session := sessions.Default(c)
+	sessionValue := session.Get(`user`)
+	if sessionValue != `haoweizh@qq.com` {
+		c.String(http.StatusForbidden, `no right`)
+		return
+	}
+	market := c.Query(`market`)
+	if market == `` {
+		market = model.GXZQ
+	}
+	strBegin := `2021-01-01T00:00:00+00:00`
+	strEnd := `2023-01-01T00:00:00+00:00`
+	//coins := `CZCE.FG,DCE.jm,DCE.eb,CZCE.TA,SHFE.fu,DCE.p,CZCE.SF,SHFE.hc,DCE.v,DCE.y`
+	coins := `DOGE,SOL,MATIC,CHZ,LINK,ADA,BNB,FIL,SUSHI,AXS,ATOM,WAVES`
+	for i := 3; i <= 21; i++ {
+		sign := fmt.Sprintf(`market%s,coins%s,seconds86400,%s~%s,far%d,near%d,limit%d,allLimit%d,useNear%v`,
+			market, coins, strBegin, strEnd, i*2, i, 3, -1, true)
+		regret.CutTail(market, coins, sign)
+		util.Notice(`done cut tail %s %s %s`, market, coins, sign)
+		sign = fmt.Sprintf(`market%s,coins%s,seconds86400,%s~%s,far%d,near%d,limit%d,allLimit%d,useNear%v`,
+			market, coins, strBegin, strEnd, i*2, i, 3, -1, false)
+		regret.CutTail(market, coins, sign)
+		util.Notice(`done cut tail %s %s %s`, market, coins, sign)
+	}
+	util.Notice(`done cut tail all`)
+	c.String(http.StatusOK, `done`)
+}
+
 func mindZeroAddr(c *gin.Context) {
 	session := sessions.Default(c)
-	value := c.Query(`code`)
-	if codes[value] {
-		session.Set(`code`, value)
-		_ = session.Save()
+	sessionValue := session.Get(`user`)
+	if sessionValue != `haoweizh@qq.com` {
+		c.String(http.StatusForbidden, `no right`)
+		return
 	}
-	sessionValue := session.Get(`code`)
-	if sessionValue == nil || !codes[sessionValue.(string)] {
-		c.String(http.StatusUnauthorized, `not authorized`)
-	} else {
-		c.String(http.StatusOK, util.RunMindZeroAddr(6, 11, 4))
-	}
+	c.String(http.StatusOK, util.RunMindZeroAddr(6, 11, 4))
 }
 
 // simulate
@@ -316,13 +277,8 @@ func simulate(c *gin.Context) {
 		allLimit = limit
 	}
 	session := sessions.Default(c)
-	value := c.Query(`code`)
-	if codes[value] {
-		session.Set(`code`, value)
-		_ = session.Save()
-	}
-	sessionValue := session.Get(`code`)
-	if sessionValue == nil || !codes[sessionValue.(string)] {
+	sessionValue := session.Get(`user`)
+	if sessionValue != `haoweizh@qq.com` {
 		strNew = `false`
 	} else if auto == `true` && strNew == `true` {
 		for i := 3; i <= 25; i++ {
@@ -422,15 +378,11 @@ func getCandles(c *gin.Context) {
 	}
 	defer setCandling(false)
 	setCandling(true)
+
 	session := sessions.Default(c)
-	value := c.Query(`code`)
-	if codes[value] {
-		session.Set(`code`, value)
-		_ = session.Save()
-	}
-	sessionValue := session.Get(`code`)
-	if sessionValue == nil || !codes[sessionValue.(string)] {
-		c.String(http.StatusUnauthorized, `wrong code`)
+	sessionValue := session.Get(`user`)
+	if sessionValue != `haoweizh@qq.com` {
+		c.String(http.StatusUnauthorized, `not logged in`)
 		return
 	}
 	start := time.Date(2018, 1, 1, 0, 0, 0, 0, time.UTC)
@@ -627,42 +579,6 @@ func crossPage(c *gin.Context) {
 	}
 	crossInfo := model.GetMonitorInfo(indexStr, model.FunctionCross)
 	c.HTML(http.StatusOK, `balance.gohtml`, gin.H{`cross`: crossInfo})
-}
-
-func GetCode(c *gin.Context) {
-	waitTime := (util.GetNowUnixMillion() - codeGenTime) / 1000
-	indexStr := c.Query(`index`)
-	if waitTime < 30 {
-		waitTime = 30 - waitTime
-		c.String(http.StatusOK, fmt.Sprintf(`还要等待 %d 秒才能再次发送`, waitTime))
-	} else if len(indexStr) > 0 {
-		index, _ := strconv.ParseInt(indexStr, 10, 64)
-		accountFtx := model.AppConfig.GetAccounts(model.Ftx)[index]
-		balances := api.GetTransfers(accountFtx.Key, accountFtx.Secret, model.Ftx)
-		for _, balance := range balances {
-			model.AppDB.Save(balance)
-		}
-		accountOk := model.AppConfig.GetAccounts(model.OKEX)[index]
-		balances = api.GetTransfers(accountOk.Key, accountOk.Secret, model.OKEX)
-		for _, balance := range balances {
-			model.AppDB.Save(balance)
-		}
-	} else {
-		codeGenTime = util.GetNowUnixMillion()
-		rnd := rand.New(rand.NewSource(time.Now().UnixNano()))
-		rnd = rand.New(rand.NewSource(rnd.Int63()))
-		code := fmt.Sprintf("%06v", rnd.Int31n(1000000))
-		if len(codes) < 1000 {
-			codes[code] = true
-		} else {
-			codes = make(map[string]bool)
-		}
-		//ip, _ := util.ExternalIP()
-		//verifyUrl := fmt.Sprintf(`http://%s:8080/set?pw=%s`, ip, code)
-		go api.SendMails(`启动验证码`, `验证码是 `+code)
-		util.Notice(fmt.Sprintf(`code is %s`, code))
-		c.String(http.StatusOK, `调用成功，请查收邮箱，如果没有，检查日志`)
-	}
 }
 
 func createTurtleLines(function, market string, account *model.Account) (msg string, size int) {

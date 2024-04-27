@@ -98,7 +98,7 @@ package deprecated
 //func genSign(key, secret, reqTime, parameters string) string {
 //	toBeSign := key + reqTime + parameters
 //	hash := hmac.New(sha256.New, []byte(secret))
-//	hash.Write([]byte(toBeSign))
+//	hash.WriteServe([]byte(toBeSign))
 //	return hex.EncodeToString(hash.Sum(nil))
 //}
 //

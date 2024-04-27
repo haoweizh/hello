@@ -22,7 +22,7 @@
 
         function WorkStatus() {
             if ("WebSocket" in window) {
-                const ws = new WebSocket("ws://" + window.location.host + ":" + window.location.port + "/monitor");
+                const ws = new WebSocket("ws://" + window.location.host + ":" + window.location.port + "/monitor?id=1");
                 let pingInterval = {}
                 let refreshInterval = {}
                 ws.onopen = function () {

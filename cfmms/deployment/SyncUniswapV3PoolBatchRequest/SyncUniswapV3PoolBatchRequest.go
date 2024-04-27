@@ -61,8 +61,8 @@ func DeploySyncUniswapV3PoolBatchRequest(auth *bind.TransactOpts, backend bind.C
 
 // SyncUniswapV3PoolBatchRequest is an auto generated Go binding around an Ethereum contract.
 type SyncUniswapV3PoolBatchRequest struct {
-	SyncUniswapV3PoolBatchRequestCaller     // Read-only binding to the contract
-	SyncUniswapV3PoolBatchRequestTransactor // Write-only binding to the contract
+	SyncUniswapV3PoolBatchRequestCaller     // ReadServe-only binding to the contract
+	SyncUniswapV3PoolBatchRequestTransactor // WriteServe-only binding to the contract
 	SyncUniswapV3PoolBatchRequestFilterer   // Log filterer for contract events
 }
 

@@ -1,7 +1,6 @@
 package monitor
 
 import (
-	"encoding/json"
 	"fmt"
 	"hello/api"
 	"hello/model"
@@ -13,6 +12,19 @@ import (
 )
 
 var DataMonitor = &sync.Map{}
+
+type SettingMonitor struct {
+	MailAddress     string `gorm:"index:address_market_symbol,unique"`
+	Market          string `gorm:"index:address_market_symbol,unique"`
+	Symbol          string `gorm:"index:address_market_symbol,unique"`
+	IntervalSeconds int
+	WarnChange      float64
+	WarnIncrease    float64
+	WarnVolume      float64
+	ID              uint `gorm:"primary_key"`
+	CreatedAt       time.Time
+	UpdatedAt       time.Time
+}
 
 type AggregationCandle struct {
 	slideRing                                            *SlideRing
@@ -147,10 +159,7 @@ func KLineServer() {
 				aggregationCandle, success := util.LoadSyncMap(DataMonitor, candle.Market, candle.Symbol)
 				if success && aggregationCandle != nil {
 					aggregationCandle.(*AggregationCandle).handle(candle)
-					jsonBytes, err := json.Marshal(aggregationCandle)
-					if err == nil {
-						api.AppWSManager.Send(jsonBytes, nil)
-					}
+					AppWSManager.Send(candle.Market, candle.Symbol, aggregationCandle.(*AggregationCandle))
 				}
 			}()
 		}

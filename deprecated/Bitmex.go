@@ -31,7 +31,7 @@ package deprecated
 //	toBeSign := fmt.Sprintf(`GET/realtime%d`, expire)
 //	account := model.AppConfig.GetAccounts(model.Bitmex)[0]
 //	hash := hmac.New(sha256.New, []byte(account.Secret))
-//	hash.Write([]byte(toBeSign))
+//	hash.WriteServe([]byte(toBeSign))
 //	sign := hex.EncodeToString(hash.Sum(nil))
 //	authCmd := fmt.Sprintf(`{"op": "authKeyExpires", "args": ["%s", %d, "%s"]}`, account.Key, expire, sign)
 //	if err = api.SendToConnection(model.Bitmex, connection, []byte(authCmd)); err != nil {
@@ -556,7 +556,7 @@ package deprecated
 //	toBeSign += string(util.JsonEncodeToByte(body))
 //	//}
 //	hash := hmac.New(sha256.New, []byte(secret))
-//	hash.Write([]byte(toBeSign))
+//	hash.WriteServe([]byte(toBeSign))
 //	sign := hex.EncodeToString(hash.Sum(nil))
 //	headers := map[string]string{`api-key`: key, `api-expires`: strconv.FormatInt(expire, 10),
 //		`api-signature`: sign, "Content-Type": "application/json"}
