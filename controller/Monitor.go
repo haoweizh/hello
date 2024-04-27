@@ -27,7 +27,7 @@ func getSettingMonitors(c *gin.Context) {
 	}
 	var settingMonitors []*monitor.SettingMonitor
 	model.AppDB.Where("mail_address = ?", user.(string)).Find(&settingMonitors)
-	c.JSON(http.StatusOK, map[string]interface{}{`status`: `ok`, `msg`: `success`, `data`: settingMonitors})
+	c.JSON(http.StatusOK, map[string]interface{}{`status`: `ok`, `msg`: `success`, `data`: map[string]interface{}{`monitors`: settingMonitors}})
 }
 
 func addSettingMonitor(c *gin.Context) {
