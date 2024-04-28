@@ -2,11 +2,13 @@ package controller
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 	uuid "github.com/satori/go.uuid"
 	"hello/model"
+	"hello/util"
 	"net/http"
 	"strconv"
 	"time"
@@ -27,6 +29,12 @@ func getSettingMonitors(c *gin.Context) {
 	}
 	var settingMonitors []*model.SettingMonitor
 	model.AppDB.Where("mail_address = ?", user.(string)).Find(&settingMonitors)
+	marshal, err := json.Marshal(settingMonitors)
+	if err != nil {
+		return
+	} else {
+		util.Info(`get setting monitors: %s`, string(marshal))
+	}
 	c.JSON(http.StatusOK, map[string]interface{}{`status`: `ok`, `msg`: `success`, `data`: map[string]interface{}{`monitors`: settingMonitors}})
 }
 
@@ -63,6 +71,7 @@ func addSettingMonitor(c *gin.Context) {
 	model.AppDB.Where("mail_address = ? and market = ? and symbol = ?",
 		user.(string), settingMonitor.Market, settingMonitor.Symbol).Find(&settingMonitors)
 	if len(settingMonitors) > 0 {
+		util.Info(`add setting monitor: %s %s %s`, settingMonitors[0].Market, settingMonitors[0].Symbol, settingMonitors[0].MailAddress)
 		c.JSON(http.StatusOK, map[string]interface{}{`status`: `ok`, `msg`: `success`, `data`: settingMonitors[0]})
 	} else {
 		c.JSON(http.StatusOK, map[string]interface{}{`status`: `fail`, `msg`: `fail to insert`, `data`: map[string]interface{}{}})
@@ -81,7 +90,8 @@ func removeSettingMonitor(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, map[string]interface{}{`status`: `fail`, `msg`: `require id`, `data`: map[string]interface{}{}})
 		return
 	}
-	rowNum := model.AppDB.Delete(&model.SettingMonitor{}, id).RowsAffected
+	rowNum := model.AppDB.Where("id = ?", id).Delete(&model.SettingMonitor{}).RowsAffected
+	util.Info(fmt.Sprintf(`delete %s return %d`, id, rowNum))
 	c.JSON(http.StatusOK, map[string]interface{}{`status`: `ok`, `msg`: `success`, `data`: map[string]interface{}{`NUM`: rowNum}})
 }
 

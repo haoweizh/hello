@@ -88,8 +88,10 @@ func (manager *WSManager) AddAgent(wsAgent *WSAgent) {
 }
 
 func (agent *WSAgent) Close() {
-	close(agent.ChanRead)
-	_ = agent.Socket.Close()
+	go func() {
+		close(agent.ChanRead)
+		_ = agent.Socket.Close()
+	}()
 }
 
 func (agent *WSAgent) ReadServe(msgHandler WSMsgHandler) {
