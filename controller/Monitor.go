@@ -89,8 +89,7 @@ func MonitorTrade(c *gin.Context) {
 	value := c.Query(`id`)
 	session := sessions.Default(c)
 	sessionValue := session.Get(`user`)
-	//sessionValue = `haoweizh@qq.com`
-	//value := `2`
+	sessionValue = `57059329@qq.com`
 	settingMonitor := &model.SettingMonitor{}
 	model.AppDB.Where("id = ?", value).First(settingMonitor)
 	if settingMonitor == nil {
