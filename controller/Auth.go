@@ -50,9 +50,11 @@ func login(c *gin.Context) {
 			}
 		} else {
 			c.JSON(http.StatusOK, map[string]interface{}{`status`: `fail`, `msg`: `验证码错误或过期`, `data`: map[string]interface{}{}})
+			return
 		}
 	} else {
 		c.JSON(http.StatusOK, map[string]interface{}{`status`: `fail`, `msg`: `用户不存在`, `data`: map[string]interface{}{}})
+		return
 	}
 	c.JSON(http.StatusOK, map[string]interface{}{`status`: `fail`, `msg`: `登陆失败`, `data`: map[string]interface{}{}})
 }
@@ -67,6 +69,7 @@ func GetCode(c *gin.Context) {
 	if waitTime < 30 {
 		waitTime = 30 - waitTime
 		c.JSON(http.StatusOK, map[string]interface{}{`status`: `fail`, `msg`: fmt.Sprintf(`还要等待 %d 秒才能再次发送`, waitTime), `data`: map[string]interface{}{}})
+		return
 	} else {
 		codeGenTime = util.GetNowUnixMillion()
 		rnd := rand.New(rand.NewSource(time.Now().UnixNano()))
@@ -81,8 +84,10 @@ func GetCode(c *gin.Context) {
 			msg := fmt.Sprintf(`fail to send mail to %s err %s`, userName, err.Error())
 			util.Notice(msg)
 			c.JSON(http.StatusBadRequest, map[string]interface{}{`status`: `fail`, `msg`: msg, `data`: map[string]interface{}{}})
+			return
 		} else {
 			c.JSON(http.StatusOK, map[string]interface{}{`status`: `ok`, `msg`: `success`, `data`: map[string]interface{}{}})
+			return
 		}
 	}
 }
