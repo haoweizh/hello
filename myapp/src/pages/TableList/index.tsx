@@ -174,6 +174,7 @@ const TableList: React.FC = () => {
           const success = await handleAdd(value as API.RuleListItem);
           if (success) {
             handleModalOpen(false);
+            refresh();
             if (actionRef.current) {
               actionRef.current.reload();
             }
