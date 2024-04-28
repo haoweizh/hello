@@ -1,6 +1,7 @@
 package model
 
 import (
+	"encoding/json"
 	"fmt"
 	"sync"
 	"testing"
@@ -45,4 +46,27 @@ func TestRange(t *testing.T) {
 		fmt.Println(s, s2)
 	}
 	fmt.Println(`done`)
+}
+
+func Test_unmarshal(t *testing.T) {
+	sm := &SettingMonitor{
+		MailAddress:     "haoweizh@qq.com",
+		Market:          "binanceSpot",
+		Symbol:          "BTC_PERP",
+		IntervalSeconds: 0,
+		WarnChange:      0,
+		WarnIncrease:    0,
+		WarnVolume:      0,
+	}
+	marshal, err := json.Marshal(sm)
+	if err != nil {
+		return
+	}
+	fmt.Println(string(marshal))
+	var sm1 *SettingMonitor
+	err = json.Unmarshal(marshal, &sm1)
+	if err != nil {
+		return
+	}
+	fmt.Println(sm1.Market)
 }

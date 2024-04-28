@@ -45,7 +45,14 @@ func addSettingMonitor(c *gin.Context) {
 	}
 	settingMonitor.MailAddress = user.(string)
 	model.AppDB.Save(&settingMonitor)
-	c.JSON(http.StatusOK, map[string]interface{}{`status`: `ok`, `msg`: `success`, `data`: map[string]interface{}{}})
+	var settingMonitors []*model.SettingMonitor
+	model.AppDB.Where("mail_address = ? and market = ? and symbol = ?",
+		user.(string), settingMonitor.Market, settingMonitor.Symbol).Find(&settingMonitors)
+	if len(settingMonitors) > 0 {
+		c.JSON(http.StatusOK, map[string]interface{}{`status`: `ok`, `msg`: `success`, `data`: settingMonitors[0]})
+	} else {
+		c.JSON(http.StatusOK, map[string]interface{}{`status`: `fail`, `msg`: `fail to insert`, `data`: map[string]interface{}{}})
+	}
 }
 
 func removeSettingMonitor(c *gin.Context) {
@@ -77,13 +84,16 @@ func MonitorTrade(c *gin.Context) {
 		//	api.ChanCmd <- `run`
 		//}
 	}
-	value, getId := c.GetPostForm(`id`)
-	if !getId {
-		c.JSON(http.StatusBadRequest, map[string]interface{}{`status`: `fail`, `msg`: `require id`, `data`: map[string]interface{}{}})
-		return
-	}
+	//c.Get()
+	value := c.Query(`id`)
+	//if !getId {
+	//	c.JSON(http.StatusBadRequest, map[string]interface{}{`status`: `fail`, `msg`: `require id`, `data`: map[string]interface{}{}})
+	//	return
+	//}
 	session := sessions.Default(c)
 	sessionValue := session.Get(`user`)
+	sessionValue = `haoweizh@qq.com`
+	//value := `2`
 	settingMonitor := &model.SettingMonitor{}
 	model.AppDB.Where("id = ?", value).First(settingMonitor)
 	if settingMonitor == nil {

@@ -56,7 +56,7 @@ func ParameterServe() {
 	router.GET(`gxzq`, simulateGXZQ)
 	router.GET(`candles`, getCandles)
 	router.GET(`mine`, mindZeroAddr)
-	router.POST(`monitor`, MonitorTrade)
+	router.GET(`monitor`, MonitorTrade)
 	router.GET(`entry`, monitorEntry)
 	router.POST(`login`, login)
 	router.POST(`get_monitors`, getSettingMonitors)
