@@ -76,16 +76,11 @@ func (manager *WSManager) AddAgent(wsAgent *WSAgent) {
 		mapSymbol = &sync.Map{}
 		mapMarket.(*sync.Map).Store(monitorSetting.Symbol, mapSymbol)
 	}
-	mapAddress, _ := mapSymbol.(*sync.Map).Load(monitorSetting.MailAddress)
-	if mapAddress == nil {
-		mapAddress = &sync.Map{}
-		mapSymbol.(*sync.Map).Store(monitorSetting.MailAddress, wsAgent)
-	}
-	oldAgent, _ := mapAddress.(*sync.Map).Load(monitorSetting.MailAddress)
+	oldAgent, _ := mapSymbol.(*sync.Map).Load(monitorSetting.MailAddress)
 	if oldAgent != nil {
 		oldAgent.(*WSAgent).Close()
 	}
-	mapAddress.(*sync.Map).Store(monitorSetting.MailAddress, wsAgent)
+	mapSymbol.(*sync.Map).Store(monitorSetting.MailAddress, wsAgent)
 	//jsonMessage, _ := json.Marshal(&Message{Content: "/A new socket has connected."})
 	//manager.Send(jsonMessage, agent)
 	util.Info(fmt.Sprintf(`after register %s %s %s`,
