@@ -153,7 +153,7 @@ const TableList: React.FC = () => {
                   size={"small"}
                   bordered
                 >
-                  <WsData id={item.ID}/>
+                  <WsData item={item}/>
                 </List>
               </div>
             )

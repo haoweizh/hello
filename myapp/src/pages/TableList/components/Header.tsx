@@ -35,39 +35,39 @@ const Header:React.FC<iHeader> = (props)=>{
 
   return (
     <Flex justify={'space-between'} >
-      <Flex justify={"space-around"}  style={{fontSize: "10px", maxWidth:"400px"}} gap={10}>
+      <Flex justify={"space-around"}  style={{fontSize: "11px", maxWidth:"400px"}} gap={10}>
        <div>
          <Flex >
-           <Text style={{fontSize:"10px"}}>Symbol:</Text>
-           <Text  style={{fontSize:"10px"}} type={'danger'}>{item.Symbol}</Text>
+           <Text style={{fontSize:"11px"}}>Symbol:</Text>
+           <Text  style={{fontSize:"11px"}} type={'danger'}>{item.Symbol}</Text>
          </Flex>
          <Flex >
-           <Text  style={{fontSize:"10px"}} >Market:</Text>
-           <Text  style={{fontSize:"10px"}} type={'danger'}>{item.Market}</Text>
+           <Text  style={{fontSize:"11px"}} >Market:</Text>
+           <Text  style={{fontSize:"11px"}} type={'danger'}>{item.Market}</Text>
          </Flex>
          <Flex >
-           <Text  style={{fontSize:"10px"}}>IntervalSeconds:</Text>
-           <Text  style={{fontSize:"10px"}} type={'danger'}>{item.IntervalSeconds}</Text>
+           <Text  style={{fontSize:"11px"}}>IntervalSeconds:</Text>
+           <Text  style={{fontSize:"11px"}} type={'danger'}>{item.IntervalSeconds}</Text>
          </Flex>
          <Flex>
-           <Text  style={{fontSize:"10px"}}>WarnChange:</Text>
-           <Text  style={{fontSize:"10px"}} type={'danger'}>{item.WarnChange}</Text>
+           <Text  style={{fontSize:"11px"}}>WarnChange:</Text>
+           <Text  style={{fontSize:"11px"}} type={'danger'}>{item.WarnChange}</Text>
          </Flex>
        </div>
 
         <div>
 
           <Flex >
-            <Text  style={{fontSize:"10px"}}>WarnIncrease:</Text>
-            <Text   style={{fontSize:"10px"}} type={'danger'}>{item.WarnIncrease}</Text>
+            <Text  style={{fontSize:"11px"}}>WarnIncrease:</Text>
+            <Text   style={{fontSize:"11px"}} type={'danger'}>{item.WarnIncrease}</Text>
           </Flex>
           <Flex >
-            <Text  style={{fontSize:"10px"}} >WarnVolume:</Text>
-            <Text  style={{fontSize:"10px"}} type={'danger'}>{item.WarnVolume}</Text>
+            <Text  style={{fontSize:"11px"}} >WarnVolume:</Text>
+            <Text  style={{fontSize:"11px"}} type={'danger'}>{item.WarnVolume}</Text>
           </Flex>
           <Flex >
-            <Text  style={{fontSize:"10px"}}>CreateTime:</Text>
-            <Text  style={{fontSize:"10px"}} type={'danger'}>{moment(item.CreatedAt).format("YYYY-MM-DD HH:mm:ss")}</Text>
+            <Text  style={{fontSize:"11px"}}>CreateTime:</Text>
+            <Text  style={{fontSize:"11px"}} type={'danger'}>{moment(item.CreatedAt).format("YYYY-MM-DD HH:mm:ss")}</Text>
           </Flex>
         </div>
 
