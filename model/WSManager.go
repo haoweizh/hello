@@ -13,8 +13,7 @@ import (
 type WSMsgHandler func(client *WSAgent, message []byte)
 
 type WSManager struct {
-	WSAgents   *sync.Map // sync.Map[market]*sync.Map[symbol]*sync.Map[mailAddress] *WSAgent
-	Unregister chan *WSAgent
+	WSAgents *sync.Map // sync.Map[market]*sync.Map[symbol]*sync.Map[mailAddress] *WSAgent
 }
 
 type WSAgent struct {
@@ -25,6 +24,19 @@ type WSAgent struct {
 	Pinged          bool
 	SettingMonitor  *SettingMonitor
 	AggregateCandle *AggregateCandle
+}
+
+type SettingMonitor struct {
+	MailAddress     string `gorm:"index:address_market_symbol,unique"`
+	Market          string `gorm:"index:address_market_symbol,unique"`
+	Symbol          string `gorm:"index:address_market_symbol,unique"`
+	IntervalSeconds int
+	WarnChange      float64
+	WarnIncrease    float64
+	WarnVolume      float64
+	ID              uint `gorm:"primary_key"`
+	CreatedAt       time.Time
+	UpdatedAt       time.Time
 }
 
 type Message struct {
