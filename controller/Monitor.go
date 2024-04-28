@@ -2,6 +2,7 @@ package controller
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
@@ -98,6 +99,7 @@ func MonitorTrade(c *gin.Context) {
 	}
 	if sessionValue == nil || sessionValue.(string) != settingMonitor.MailAddress {
 		c.JSON(http.StatusBadRequest, map[string]interface{}{`status`: `fail`, `msg`: `require login`, `data`: map[string]interface{}{}})
+		fmt.Println(fmt.Sprintf(`session value %s != %s db address`, sessionValue, settingMonitor.MailAddress))
 		return
 	}
 	conn, err := (&websocket.Upgrader{
