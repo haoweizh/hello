@@ -14,6 +14,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -75,7 +76,7 @@ func getMarketsBinance(account *model.Account, market, marketType string) (marke
 }
 
 func WsKLineBinance(environment *model.Environment, market string) (socketMap map[*websocket.Conn]bool, msgChans []chan struct{}, connectErr error) {
-	msgHandler := func(event []byte) {
+	KLineMsgHandlerBinanceSpot := func(event []byte) {
 		result, wsErr := util.NewJSON(event)
 		if wsErr != nil {
 			util.Notice(`binance fail to unmarshal json ` + wsErr.Error())
@@ -109,15 +110,24 @@ func WsKLineBinance(environment *model.Environment, market string) (socketMap ma
 		model.KLineChan <- candle
 		model.AppEnvironment.SetCandle(candle.Symbol, candle.Market, candle)
 	}
-	socketMap, msgChans, connectErr = WebSocketClient(market, wsBinance+`stream`, GetKLineSubs(market),
-		subscribeHandlerBinance, msgHandler, wsStepBinance)
-	environment.SocketsKLine.Store(market, socketMap)
+	mapMarket, _ := environment.WsManager.WSAgents.Load(market)
+	subs := make([]interface{}, 0)
+	mapMarket.(*sync.Map).Range(func(symbol, mapSymbol any) bool {
+		switch market {
+		case model.BinanceSpot:
+			_, _, _, dialectSymbol := model.GetFromStandard(market, symbol.(string))
+			subs = append(subs, strings.ToLower(dialectSymbol)+`@kline_1s`)
+		}
+		return true
+	})
+	socketMap, msgChans, connectErr = WebSocketClient(market, wsBinance+`stream`, subs,
+		subscribeHandlerBinance, KLineMsgHandlerBinanceSpot, wsStepBinance)
 	environment.MsgChanKLine.Store(market, msgChans)
 	return
 }
 
-func WsDepthServeBinance(environment *model.Environment, market string) (
-	socketMap map[*websocket.Conn]bool, msgChans []chan struct{}, connectErr error) {
+func WsDepthServeBinance(environment *model.Environment, market string) (socketMap map[*websocket.Conn]bool,
+	msgChans []chan struct{}, connectErr error) {
 	subType := model.SubscribeTicker
 	wsHandlerBinance := func(event []byte) {
 		result, wsErr := util.NewJSON(event)

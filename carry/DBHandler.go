@@ -148,25 +148,18 @@ func MaintainMarketChan() (reset bool) {
 				api.CreateAccountWsServer(market)
 			}
 		}
-		settings := api.GetSettings(model.FunctionKLine, market)
-		doKLine := false
-		if settings != nil {
-			settings.Range(func(symbol, setting any) bool {
-				doKLine = true
-				return false
-			})
-		}
-		if doKLine {
-			klineWS, _ := model.AppEnvironment.MsgChanKLine.Load(market)
-			if klineWS == nil || len(klineWS.([]chan struct{})) == 0 {
-				api.CreateMarketKLineWS(model.AppEnvironment, market)
-			} else if api.RequireKLineReset(model.AppEnvironment, market) {
-				reset = true
-				ClearChannels(market, &model.AppEnvironment.MsgChanKLine)
-				api.CreateMarketKLineWS(model.AppEnvironment, market)
-			}
-		}
 	}
+	model.AppEnvironment.WsManager.WSAgents.Range(func(market, value interface{}) bool {
+		klineWS, _ := model.AppEnvironment.MsgChanKLine.Load(market)
+		if klineWS == nil || len(klineWS.([]chan struct{})) == 0 {
+			api.CreateMarketKLineWS(model.AppEnvironment, market.(string))
+		} else if api.RequireKLineReset(model.AppEnvironment, market.(string)) {
+			reset = true
+			ClearChannels(market.(string), &model.AppEnvironment.MsgChanKLine)
+			api.CreateMarketKLineWS(model.AppEnvironment, market.(string))
+		}
+		return true
+	})
 	return reset
 }
 
@@ -195,7 +188,7 @@ func Maintain() {
 	//go MaintainBalance()
 	go MaintainTransFee()
 	api.InitApp(true)
-	go monitor.KLineServer()
+	go monitor.KLineServer(model.AppEnvironment)
 	//go func() {
 	//	for true {
 	//		time.Sleep(time.Hour * 24)

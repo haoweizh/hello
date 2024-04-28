@@ -48,8 +48,8 @@ type Environment struct {
 	MsgChanKLine   sync.Map // market - []chan struct{}
 	WsInitTime     sync.Map // market - time
 	SocketsTick    sync.Map // market - map[*websocket.Conn]bool for depth sockets
-	SocketsKLine   sync.Map // market - map[*websocket.Conn]bool for kline sockets
 	AccountConns   sync.Map // market*accountKey - *websocket.Conn
+	WsManager      *WSManager
 }
 
 type MarkPriceInfo struct {

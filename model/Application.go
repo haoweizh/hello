@@ -67,7 +67,6 @@ const FunctionCross = `cross`
 const FunctionQueue = `queue`
 const FunctionFollow = `follow`
 const TurtleTypeChange = `change`
-const FunctionKLine = `kline`
 const MarketTypePerp = `perp`
 const MarketTypeSpot = `spot`
 const MarketTypeMargin = `margin`
@@ -87,13 +86,7 @@ const TopCross = `top_cross`
 var AppDB *gorm.DB
 var AppRedis *redis.Client
 var AppConfig *Config
-var AppEnvironment = &Environment{}
-
-var AppWSManager = WSManager{
-	Register:    make(chan *WSAgent),
-	Unregister:  make(chan *WSAgent),
-	Connections: &sync.Map{},
-}
+var AppEnvironment = &Environment{WsManager: &WSManager{WSAgents: &sync.Map{}}}
 
 var ChannelMaintaining sync.Map // market - bool
 var KLineChan = make(chan *Candle, 2)

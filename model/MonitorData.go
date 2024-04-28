@@ -1,11 +1,8 @@
 package model
 
 import (
-	"sync"
 	"time"
 )
-
-var DataMonitor = &sync.Map{}
 
 type SettingMonitor struct {
 	MailAddress     string `gorm:"index:address_market_symbol,unique"`

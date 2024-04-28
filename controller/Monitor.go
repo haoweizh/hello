@@ -8,6 +8,7 @@ import (
 	uuid "github.com/satori/go.uuid"
 	"hello/model"
 	"net/http"
+	"time"
 )
 
 func monitorEntry(c *gin.Context) {
@@ -104,9 +105,11 @@ func MonitorTrade(c *gin.Context) {
 		Socket:         conn,
 		ChanRead:       make(chan []byte),
 		Pinged:         true,
-		Manager:        &model.AppWSManager,
+		Manager:        model.AppEnvironment.WsManager,
 		SettingMonitor: settingMonitor,
+		AggregateCandle: &model.AggregateCandle{
+			TimeInterval: time.Duration(settingMonitor.IntervalSeconds) * time.Second, SlideRing: &model.SlideRing{}},
 	}
-	wsAgent.Manager.Register <- wsAgent
+	model.AppEnvironment.WsManager.AddAgent(wsAgent)
 	go wsAgent.ReadServe(wsHandler)
 }

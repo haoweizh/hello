@@ -30,7 +30,6 @@ func main() {
 	//	DB:       0,
 	//})
 	go controller.ParameterServe()
-	go model.AppWSManager.Start()
 	carry.Maintain()
 	select {}
 }

@@ -62,11 +62,11 @@ func RequireKLineReset(environment *model.Environment, market string) (reset boo
 		util.Notice(`clear need reset for market: ` + market)
 		return true
 	}
-	settings := GetSettings(model.FunctionKLine, market)
-	if settings == nil {
-		return false
+	mapMarket, _ := environment.WsManager.WSAgents.Load(market)
+	if mapMarket == nil {
+		return reset
 	}
-	settings.Range(func(symbol, setting any) bool {
+	mapMarket.(*sync.Map).Range(func(symbol, mapSymbol any) bool {
 		_, candle := environment.GetKLine(symbol.(string), market)
 		if candle == nil || candle.Begin.Add(time.Duration(candle.Seconds)*time.Second).UnixMilli()+int64(model.AppConfig.Delay) <
 			time.Now().UnixMilli() {
@@ -871,24 +871,6 @@ func PlaceOrder(key, secret, orderSide, orderType, market, symbol, orderParam st
 	return order
 }
 
-func GetKLineSubs(market string) (subs []interface{}) {
-	PrepareSettings()
-	settings := GetSettings(model.FunctionKLine, market)
-	if settings == nil {
-		return nil
-	}
-	subs = make([]interface{}, 0)
-	switch market {
-	case model.BinanceSpot:
-		settings.Range(func(symbol, value any) bool {
-			_, _, _, dialectSymbol := model.GetFromStandard(market, symbol.(string))
-			subs = append(subs, strings.ToLower(dialectSymbol)+`@kline_1s`)
-			return true
-		})
-	}
-	return
-}
-
 func GetWSSubscribes(market, subType string) []interface{} {
 	symbols := GetMarketSymbols(market)
 	subscribes := make([]interface{}, 0)
@@ -1226,14 +1208,11 @@ func CreateAccountWsServer(market string) {
 }
 
 func CreateMarketKLineWS(environment *model.Environment, market string) (socketMap map[*websocket.Conn]bool, channels []chan struct{}) {
-	util.Notice(" create KLine ws chan for " + market)
-	model.ChannelMaintaining.Store(market, true)
 	switch market {
 	case model.BinanceSpot:
+		util.Notice(" create KLine ws chan for " + market)
 		socketMap, channels, _ = WsKLineBinance(environment, market)
 	}
-	model.AppEnvironment.WsInitTime.Store(market, util.GetNow())
-	model.ChannelMaintaining.Store(market, false)
 	return
 }
 
