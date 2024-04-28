@@ -110,14 +110,6 @@ func autoSimulate(market, coins string, begin, end time.Time, strBegin, strEnd s
 }
 
 func currentUser(c *gin.Context) {
-	session := sessions.Default(c)
-	value := session.Get(`user`)
-	fmt.Println(value)
-	session.Set(`user`, `work`)
-	err := session.Save()
-	if err != nil {
-		return
-	}
 	c.String(http.StatusOK, `{"data": {"name": "Serati Ma","avatar":
 		"https://gw.alipayobjects.com/zos/rmsportal/BiazfanxmamNRoxxVxka.png","userid": "00000001","email": "antdesign@alipay.com",
 		"signature": "海纳百川，有容乃大","title": "交互专家","group": "蚂蚁金服－某某某事业群－某某平台部－某某技术部－UED","tags": 
