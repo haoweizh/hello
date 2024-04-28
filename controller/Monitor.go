@@ -86,13 +86,9 @@ func MonitorTrade(c *gin.Context) {
 	}
 	//c.Get()
 	value := c.Query(`id`)
-	//if !getId {
-	//	c.JSON(http.StatusBadRequest, map[string]interface{}{`status`: `fail`, `msg`: `require id`, `data`: map[string]interface{}{}})
-	//	return
-	//}
 	session := sessions.Default(c)
 	sessionValue := session.Get(`user`)
-	sessionValue = `haoweizh@qq.com`
+	//sessionValue = `haoweizh@qq.com`
 	//value := `2`
 	settingMonitor := &model.SettingMonitor{}
 	model.AppDB.Where("id = ?", value).First(settingMonitor)
