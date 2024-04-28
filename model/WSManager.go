@@ -54,13 +54,10 @@ func (manager *WSManager) RemoveAgent(market, symbol, address string) {
 	if mapSymbol == nil {
 		return
 	}
-	mapAddress, _ := mapSymbol.(*sync.Map).Load(address)
-	if mapAddress != nil {
-		agent, _ := mapAddress.(*sync.Map).Load(address)
-		mapAddress.(*sync.Map).Delete(address)
-		if agent != nil {
-			agent.(*WSAgent).Close()
-		}
+	wsAgent, _ := mapSymbol.(*sync.Map).Load(address)
+	if wsAgent != nil {
+		mapSymbol.(*sync.Map).Delete(address)
+		wsAgent.(*WSAgent).Close()
 	}
 }
 
