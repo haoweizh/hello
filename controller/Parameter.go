@@ -31,6 +31,16 @@ func ParameterServe() {
 	router.Use(sessions.Sessions("mysession", store))
 	_ = router.SetTrustedProxies(nil)
 	router.LoadHTMLGlob("templates/*")
+	router.Use(func(c *gin.Context) {
+		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
+		c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
+		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, X-Max")
+		c.Writer.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE, UPDATE")
+		if c.Request.Method == "OPTIONS" {
+			c.AbortWithStatus(200)
+		}
+		c.Next()
+	})
 	router.GET("/", GetParameters)
 	//router.GET(`refresh`, RefreshParameters)
 	//router.GET(`test`, testSpeed)
