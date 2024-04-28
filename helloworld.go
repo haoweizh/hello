@@ -4,7 +4,6 @@ import (
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"hello/carry"
-	"hello/carry/monitor"
 	"hello/controller"
 	"hello/model"
 	"hello/util"
@@ -31,7 +30,7 @@ func main() {
 	//	DB:       0,
 	//})
 	go controller.ParameterServe()
-	go monitor.AppWSManager.Start()
+	go model.AppWSManager.Start()
 	carry.Maintain()
 	select {}
 }

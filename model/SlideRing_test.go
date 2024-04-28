@@ -1,8 +1,7 @@
-package monitor
+package model
 
 import (
 	"fmt"
-	"hello/model"
 	"sync"
 	"testing"
 )
@@ -26,15 +25,15 @@ func Test_ClearSpot(t *testing.T) {
 }
 
 func Test_Map(t *testing.T) {
-	candle1 := &model.Candle{Market: `market1`}
-	candle2 := &model.Candle{Market: `market2`}
-	value := map[*model.Candle]bool{candle1: true, candle2: true}
+	candle1 := &Candle{Market: `market1`}
+	candle2 := &Candle{Market: `market2`}
+	value := map[*Candle]bool{candle1: true, candle2: true}
 	m := sync.Map{}
 	m.Store(`1`, value)
 	afterLoad, _ := m.Load(`1`)
-	delete(afterLoad.(map[*model.Candle]bool), candle2)
+	delete(afterLoad.(map[*Candle]bool), candle2)
 	afterDel, _ := m.Load(`1`)
-	for candle := range afterDel.(map[*model.Candle]bool) {
+	for candle := range afterDel.(map[*Candle]bool) {
 		fmt.Println(candle)
 	}
 }

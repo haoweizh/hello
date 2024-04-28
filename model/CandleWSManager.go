@@ -1,4 +1,4 @@
-package monitor
+package model
 
 import (
 	"encoding/json"
@@ -33,12 +33,6 @@ type Message struct {
 	Content   string `json:"content,omitempty"`
 }
 
-var AppWSManager = WSManager{
-	Register:    make(chan *WSAgent),
-	Unregister:  make(chan *WSAgent),
-	Connections: &sync.Map{},
-}
-
 func (manager *WSManager) Start() {
 	for {
 		select {
@@ -71,7 +65,7 @@ func (manager *WSManager) Start() {
 }
 
 // Send TODO enhance aggregationCandle
-func (manager *WSManager) Send(market, symbol string, aggregationCandle *AggregationCandle) {
+func (manager *WSManager) Send(market, symbol string, aggregationCandle *AggregateCandle) {
 	agent, ok := util.LoadSyncMap(manager.Connections, market, symbol)
 	if !ok || agent == nil {
 		return

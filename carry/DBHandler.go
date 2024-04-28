@@ -186,7 +186,7 @@ func Maintain() {
 	_ = model.AppDB.AutoMigrate(&model.Order{})
 	_ = model.AppDB.AutoMigrate(&model.Balance{})
 	_ = model.AppDB.AutoMigrate(&model.Candle{})
-	_ = model.AppDB.AutoMigrate(&monitor.SettingMonitor{})
+	_ = model.AppDB.AutoMigrate(&model.SettingMonitor{})
 	//model.HandlerMap[model.FunctionDCarry] = dreprecated2.ProcessDCarry
 	//model.HandlerMap[model.FunctionHang] = dreprecated2.ProcessHang
 	//api.CancelOrders(model.AppConfig.FtxKey, model.AppConfig.FtxSecret, model.Ftx, `LINK-PERP`)

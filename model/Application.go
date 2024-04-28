@@ -88,6 +88,13 @@ var AppDB *gorm.DB
 var AppRedis *redis.Client
 var AppConfig *Config
 var AppEnvironment = &Environment{}
+
+var AppWSManager = WSManager{
+	Register:    make(chan *WSAgent),
+	Unregister:  make(chan *WSAgent),
+	Connections: &sync.Map{},
+}
+
 var ChannelMaintaining sync.Map // market - bool
 var KLineChan = make(chan *Candle, 2)
 var DialectTail = map[string]map[string]string{
@@ -249,6 +256,6 @@ func GetMarketToday(market string) (today time.Time, strToday string) {
 func (config *Config) ToString() string {
 	str := "markets-carry cost:\n"
 	str += fmt.Sprintf("delay: %f\n", config.Delay)
-	str += fmt.Sprintf("handle: %s\n", config.Handle)
+	str += fmt.Sprintf("Handle: %s\n", config.Handle)
 	return str
 }

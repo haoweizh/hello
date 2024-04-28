@@ -6,7 +6,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 	uuid "github.com/satori/go.uuid"
-	"hello/carry/monitor"
 	"hello/model"
 	"net/http"
 )
@@ -24,7 +23,7 @@ func getSettingMonitors(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, map[string]interface{}{`status`: `fail`, `msg`: `require login`, `data`: map[string]interface{}{}})
 		return
 	}
-	var settingMonitors []*monitor.SettingMonitor
+	var settingMonitors []*model.SettingMonitor
 	model.AppDB.Where("mail_address = ?", user.(string)).Find(&settingMonitors)
 	c.JSON(http.StatusOK, map[string]interface{}{`status`: `ok`, `msg`: `success`, `data`: map[string]interface{}{`monitors`: settingMonitors}})
 }
@@ -36,7 +35,7 @@ func addSettingMonitor(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, map[string]interface{}{`status`: `fail`, `msg`: `require login`, `data`: map[string]interface{}{}})
 		return
 	}
-	settingMonitor := monitor.SettingMonitor{}
+	settingMonitor := model.SettingMonitor{}
 	data := c.PostForm(`data`)
 	err := json.Unmarshal([]byte(data), &settingMonitor)
 	if err != nil {
@@ -60,12 +59,12 @@ func removeSettingMonitor(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, map[string]interface{}{`status`: `fail`, `msg`: `require id`, `data`: map[string]interface{}{}})
 		return
 	}
-	rowNum := model.AppDB.Delete(&monitor.SettingMonitor{}, id).RowsAffected
+	rowNum := model.AppDB.Delete(&model.SettingMonitor{}, id).RowsAffected
 	c.JSON(http.StatusOK, map[string]interface{}{`status`: `ok`, `msg`: `success`, `data`: map[string]interface{}{`NUM`: rowNum}})
 }
 
 func MonitorTrade(c *gin.Context) {
-	wsHandler := func(client *monitor.WSAgent, event []byte) {
+	wsHandler := func(client *model.WSAgent, event []byte) {
 		//received := string(event)
 		//fmt.Println(`receive from ws ` + received)
 		//Manager.Broadcast <- jsonMessage
@@ -84,7 +83,7 @@ func MonitorTrade(c *gin.Context) {
 	}
 	session := sessions.Default(c)
 	sessionValue := session.Get(`user`)
-	settingMonitor := &monitor.SettingMonitor{}
+	settingMonitor := &model.SettingMonitor{}
 	model.AppDB.Where("id = ?", value).First(settingMonitor)
 	if settingMonitor == nil {
 		c.JSON(http.StatusBadRequest, map[string]interface{}{`status`: `fail`, `msg`: `id match nil monitor setting`, `data`: map[string]interface{}{}})
@@ -100,12 +99,12 @@ func MonitorTrade(c *gin.Context) {
 		http.NotFound(c.Writer, c.Request)
 		return
 	}
-	wsAgent := &monitor.WSAgent{
+	wsAgent := &model.WSAgent{
 		ID:             uuid.NewV4().String(),
 		Socket:         conn,
 		ChanRead:       make(chan []byte),
 		Pinged:         true,
-		Manager:        &monitor.AppWSManager,
+		Manager:        &model.AppWSManager,
 		SettingMonitor: settingMonitor,
 	}
 	wsAgent.Manager.Register <- wsAgent
