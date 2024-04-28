@@ -15,7 +15,7 @@ interface iHeader  {
 }
 const Header:React.FC<iHeader> = (props)=>{
 
-  const { refresh} = useRequest<API.MonitorListResp>(getMonitors);
+
 
   const {item,onDel} = props;
   const handleDel = async (ID: number) => {
@@ -23,7 +23,9 @@ const Header:React.FC<iHeader> = (props)=>{
   };
   const confirm: PopconfirmProps['onConfirm'] = (e) => {
     handleDel(item.ID);
-    refresh();
+    if (onDel) {
+      onDel();
+    }
   };
 
   const cancel: PopconfirmProps['onCancel'] = (e) => {

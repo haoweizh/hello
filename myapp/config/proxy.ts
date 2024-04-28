@@ -23,6 +23,10 @@ export default {
 
       changeOrigin: true,
     },
+    // "/socket.io": {
+    //   "target": "ws://47.74.31.113:8075/monitor",
+    //   "ws": true,
+    // }
   },
 
   /**

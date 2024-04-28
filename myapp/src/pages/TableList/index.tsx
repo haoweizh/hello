@@ -148,7 +148,7 @@ const TableList: React.FC = () => {
             return (
               <div className="list">
                 <List
-                  header={<Header item={item} />}
+                  header={<Header item={item} onDel={()=>refresh()} />}
                   footer={null}
                   size={"small"}
                   bordered

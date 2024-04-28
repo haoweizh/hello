@@ -10,16 +10,20 @@ interface iWsData  {
 const WsData:React.FC<iWsData> = (props)=>{
 
   const {id} = props;
-  const socket = io("ws://47.74.31.113:8075/monitor",{
-    query:{
-      id:id
-    },
+  let ws = new WebSocket("ws://47.74.31.113:8075/monitor?id="+id);
+  ws.onopen = function(evt) {
+    console.log("Connection open ...");
+    ws.send("Hello WebSockets!");
+  };
 
-  });
-  socket.on("connect", () => {
-    console.log("connect");
-  });
+  ws.onmessage = function(evt) {
+    console.log( "Received Message: " + evt.data);
+    ws.close();
+  };
 
+  ws.onclose = function(evt) {
+    console.log("Connection closed.");
+  };
 
   return (
     <div>
