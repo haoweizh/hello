@@ -245,7 +245,153 @@ const TableList: React.FC = () => {
   // @ts-ignore
   return (
     <PageContainer>
-        <h1>hello </h1>
+      <ProTable<API.RuleListItem, API.PageParams>
+        headerTitle={intl.formatMessage({
+          id: 'pages.searchTable.title',
+          defaultMessage: 'Enquiry form',
+        })}
+        actionRef={actionRef}
+        rowKey="key"
+        search={{
+          labelWidth: 120,
+        }}
+        toolBarRender={() => [
+          <Button
+            type="primary"
+            key="primary"
+            onClick={() => {
+              handleModalOpen(true);
+            }}
+          >
+            <PlusOutlined /> <FormattedMessage id="pages.searchTable.new" defaultMessage="New" />
+          </Button>,
+        ]}
+        request={rule}
+        columns={columns}
+        rowSelection={{
+          onChange: (_, selectedRows) => {
+            setSelectedRows(selectedRows);
+          },
+        }}
+      />
+      {selectedRowsState?.length > 0 && (
+        <FooterToolbar
+          extra={
+            <div>
+              <FormattedMessage id="pages.searchTable.chosen" defaultMessage="Chosen" />{' '}
+              <a style={{ fontWeight: 600 }}>{selectedRowsState.length}</a>{' '}
+              <FormattedMessage id="pages.searchTable.item" defaultMessage="项" />
+              &nbsp;&nbsp;
+              <span>
+                <FormattedMessage
+                  id="pages.searchTable.totalServiceCalls"
+                  defaultMessage="Total number of service calls"
+                />{' '}
+                {selectedRowsState.reduce((pre, item) => pre + item.callNo!, 0)}{' '}
+                <FormattedMessage id="pages.searchTable.tenThousand" defaultMessage="万" />
+              </span>
+            </div>
+          }
+        >
+          <Button
+            onClick={async () => {
+              await handleRemove(selectedRowsState);
+              setSelectedRows([]);
+              actionRef.current?.reloadAndRest?.();
+            }}
+          >
+            <FormattedMessage
+              id="pages.searchTable.batchDeletion"
+              defaultMessage="Batch deletion"
+            />
+          </Button>
+          <Button type="primary">
+            <FormattedMessage
+              id="pages.searchTable.batchApproval"
+              defaultMessage="Batch approval"
+            />
+          </Button>
+        </FooterToolbar>
+      )}
+      <ModalForm
+        title={intl.formatMessage({
+          id: 'pages.searchTable.createForm.newRule',
+          defaultMessage: 'New rule',
+        })}
+        width="400px"
+        open={createModalOpen}
+        onOpenChange={handleModalOpen}
+        onFinish={async (value) => {
+          const success = await handleAdd(value as API.RuleListItem);
+          if (success) {
+            handleModalOpen(false);
+            if (actionRef.current) {
+              actionRef.current.reload();
+            }
+          }
+        }}
+      >
+        <ProFormText
+          rules={[
+            {
+              required: true,
+              message: (
+                <FormattedMessage
+                  id="pages.searchTable.ruleName"
+                  defaultMessage="Rule name is required"
+                />
+              ),
+            },
+          ]}
+          width="md"
+          name="name"
+        />
+        <ProFormTextArea width="md" name="desc" />
+      </ModalForm>
+      <UpdateForm
+        onSubmit={async (value) => {
+          const success = await handleUpdate(value);
+          if (success) {
+            handleUpdateModalOpen(false);
+            setCurrentRow(undefined);
+            if (actionRef.current) {
+              actionRef.current.reload();
+            }
+          }
+        }}
+        onCancel={() => {
+          handleUpdateModalOpen(false);
+          if (!showDetail) {
+            setCurrentRow(undefined);
+          }
+        }}
+        updateModalOpen={updateModalOpen}
+        values={currentRow || {}}
+      />
+
+      <Drawer
+        width={600}
+        open={showDetail}
+        onClose={() => {
+          setCurrentRow(undefined);
+          setShowDetail(false);
+        }}
+        closable={false}
+      >
+        {currentRow?.name && (
+          <ProDescriptions<API.RuleListItem>
+            column={2}
+            title={currentRow?.name}
+            request={async () => ({
+              data: currentRow || {},
+            })}
+            params={{
+              id: currentRow?.name,
+            }}
+            columns={columns as ProDescriptionsItemProps<API.RuleListItem>[]}
+          />
+        )}
+      </Drawer>
     </PageContainer>
   );
 };

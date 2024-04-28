@@ -41,6 +41,8 @@ declare namespace API {
   };
 
   type LoginParams = {
+    email?: string;
+    captcha?: string;
     username?: string;
     password?: string;
     autoLogin?: boolean;
@@ -49,6 +51,7 @@ declare namespace API {
 
   type LoginResult = {
     status?: string;
+    msg?: string;
     type?: string;
     currentAuthority?: string;
   };

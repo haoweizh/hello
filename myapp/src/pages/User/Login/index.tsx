@@ -91,6 +91,8 @@ const Login: React.FC = () => {
   const intl = useIntl();
 
   const fetchUserInfo = async () => {
+    // fake user info
+
     const userInfo = await initialState?.fetchUserInfo?.();
     if (userInfo) {
       flushSync(() => {
@@ -105,8 +107,6 @@ const Login: React.FC = () => {
   const handleSubmit = async (values: API.LoginParams) => {
     try {
       // 登录
-      console.log(values);
-
       const msg = await login({ ...values, type });
       if (msg.status === 'ok') {
         const defaultLoginSuccessMessage = intl.formatMessage({
@@ -115,11 +115,12 @@ const Login: React.FC = () => {
         });
         message.success(defaultLoginSuccessMessage);
 
-        //TODO: getMonitors
         await fetchUserInfo();
         const urlParams = new URL(window.location.href).searchParams;
         history.push(urlParams.get('redirect') || '/');
         return;
+      } else {
+        message.error(msg.msg);
       }
       console.log(msg);
       // 如果失败去设置用户错误信息
@@ -327,9 +328,14 @@ const Login: React.FC = () => {
                   },
                 ]}
                 onGetCaptcha={async (email) => {
-                  const result = await getFakeCaptcha({
-                    mail: email,
-                  });
+                  const result = await getFakeCaptcha(
+                    {
+                      mail: email,
+                    },
+                    {
+                      requestType: 'form',
+                    },
+                  );
                   if (!result) {
                     return;
                   }

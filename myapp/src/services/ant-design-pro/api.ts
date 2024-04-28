@@ -34,8 +34,8 @@ export async function removeRule(options?: { [key: string]: any }) {
 }
 /** 此处后端没有提供注释 GET /api/notices */
 export async function rule(options?: { [key: string]: any }) {
-  return request<API.NoticeIconList>('/api/notices', {
-    method: 'GET',
+  return request<API.NoticeIconList>('/api/get_monitors', {
+    method: 'POST',
     ...(options || {}),
   });
 }
@@ -53,25 +53,27 @@ export async function updateRule(options?: { [key: string]: any }) {
     ...(options || {}),
   });
 }
-export async function login(options?: { [key: string]: any }) {
-  return request<API.NoticeIconList>('/api/login', {
-    method: 'POST',
-    ...(options || {}),
-  });
-}
+// export async function login(options?: { [key: string]: any }) {
+//   return request<API.NoticeIconList>('/api/login', {
+//     method: 'POST',
+//     headers: { "Content-Type": "multipart/form-data" },
+//     data:{
+//       user:params.mail,
+//       code:params.code,
+//     }
+//   });
+// }
+//
 
-/** 发送验证码1 POST /api/login/captcha */
-export async function getFakeCaptcha(
-  // 叠加生成的Param类型 (非body参数swagger默认没有生成对象)
-  params: API.getFakeCaptchaParams,
-  options?: { [key: string]: any },
-) {
-  return request<API.FakeCaptcha>('/api/pw', {
+export async function login(body: API.LoginParams, options?: { [key: string]: any }) {
+  return request<API.LoginResult>('/api/login', {
     method: 'POST',
-    params: {
-      ...params,
+    headers: { 'Content-Type': 'multipart/form-data' },
+    data: {
+      code: body.captcha,
+      user: body.email,
     },
-    // ...(options || {}),
+    ...(options || {}),
   });
 }
 

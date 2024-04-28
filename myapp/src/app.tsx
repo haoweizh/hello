@@ -5,6 +5,7 @@ import type { Settings as LayoutSettings } from '@ant-design/pro-components';
 import { SettingDrawer } from '@ant-design/pro-components';
 import type { RunTimeLayoutConfig } from '@umijs/max';
 import { Link, history } from '@umijs/max';
+import cookie from 'react-cookies';
 import defaultSettings from '../config/defaultSettings';
 import { errorConfig } from './requestErrorConfig';
 const isDev = process.env.NODE_ENV === 'development';
@@ -33,6 +34,13 @@ export async function getInitialState(): Promise<{
   // 如果不是登录页面，执行
   const { location } = history;
   if (location.pathname !== loginPath) {
+    const isLogin = cookie.load('mysession');
+
+    // 没有cookie 就跳转到登录页面
+    if (!isLogin) {
+      history.push(loginPath);
+    }
+
     const currentUser = await fetchUserInfo();
     return {
       fetchUserInfo,
@@ -57,9 +65,11 @@ export const layout: RunTimeLayoutConfig = ({ initialState, setInitialState }) =
         return <AvatarDropdown>{avatarChildren}</AvatarDropdown>;
       },
     },
-    waterMarkProps: {
-      content: initialState?.currentUser?.name,
-    },
+    // 水印
+    // waterMarkProps: {
+    //   content: initialState?.currentUser?.name,
+    // },
+    waterMarkProps: {},
     footerRender: () => <Footer />,
     onPageChange: () => {
       const { location } = history;
