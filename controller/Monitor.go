@@ -2,13 +2,13 @@ package controller
 
 import (
 	"encoding/json"
-	"fmt"
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 	uuid "github.com/satori/go.uuid"
 	"hello/model"
 	"net/http"
+	"strconv"
 	"time"
 )
 
@@ -37,12 +37,25 @@ func addSettingMonitor(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, map[string]interface{}{`status`: `fail`, `msg`: `require login`, `data`: map[string]interface{}{}})
 		return
 	}
-	settingMonitor := model.SettingMonitor{}
+	value := make(map[string]string)
 	data := c.PostForm(`data`)
-	err := json.Unmarshal([]byte(data), &settingMonitor)
+	err := json.Unmarshal([]byte(data), &value)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, map[string]interface{}{`status`: `fail`, `msg`: `wrong json format to unmarshal setting monitor`, `data`: map[string]interface{}{}})
 		return
+	}
+	warnChange, _ := strconv.ParseFloat(value[`WarnChange`], 64)
+	warnIncrease, _ := strconv.ParseFloat(value[`WarnIncrease`], 64)
+	warnVolume, _ := strconv.ParseFloat(value[`WarnVolume`], 64)
+	intervalSeconds, _ := strconv.Atoi(value[`IntervalSeconds`])
+	settingMonitor := model.SettingMonitor{
+		MailAddress:     user.(string),
+		Market:          value[`Market`],
+		Symbol:          value[`Symbol`],
+		IntervalSeconds: intervalSeconds,
+		WarnChange:      warnChange,
+		WarnIncrease:    warnIncrease,
+		WarnVolume:      warnVolume,
 	}
 	settingMonitor.MailAddress = user.(string)
 	model.AppDB.Save(&settingMonitor)
@@ -85,22 +98,18 @@ func MonitorTrade(c *gin.Context) {
 		//	api.ChanCmd <- `run`
 		//}
 	}
-	//c.Get()
 	value := c.Query(`id`)
-	session := sessions.Default(c)
-	sessionValue := session.Get(`user`)
-	sessionValue = `57059329@qq.com`
 	settingMonitor := &model.SettingMonitor{}
 	model.AppDB.Where("id = ?", value).First(settingMonitor)
 	if settingMonitor == nil {
 		c.JSON(http.StatusBadRequest, map[string]interface{}{`status`: `fail`, `msg`: `id match nil monitor setting`, `data`: map[string]interface{}{}})
 		return
 	}
-	if sessionValue == nil || sessionValue.(string) != settingMonitor.MailAddress {
-		c.JSON(http.StatusBadRequest, map[string]interface{}{`status`: `fail`, `msg`: `require login`, `data`: map[string]interface{}{}})
-		fmt.Println(fmt.Sprintf(`session value %s != %s db address`, sessionValue, settingMonitor.MailAddress))
-		return
-	}
+	//if sessionValue == nil || sessionValue.(string) != settingMonitor.MailAddress {
+	//	c.JSON(http.StatusBadRequest, map[string]interface{}{`status`: `fail`, `msg`: `require login`, `data`: map[string]interface{}{}})
+	//	fmt.Println(fmt.Sprintf(`session value %s != %s db address`, sessionValue, settingMonitor.MailAddress))
+	//	return
+	//}
 	conn, err := (&websocket.Upgrader{
 		CheckOrigin: func(r *http.Request) bool { return true }}).Upgrade(c.Writer, c.Request, nil)
 	if err != nil {

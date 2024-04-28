@@ -27,8 +27,6 @@ const RegretTurtleGridAmount = 1000
 func ParameterServe() {
 	gin.SetMode(gin.ReleaseMode)
 	router := gin.Default()
-	store := cookie.NewStore([]byte("secretKey&^%&^$&^%)*()9878687"))
-	router.Use(sessions.Sessions("mysession", store))
 	_ = router.SetTrustedProxies(nil)
 	router.LoadHTMLGlob("templates/*")
 	router.Use(func(c *gin.Context) {
@@ -41,6 +39,8 @@ func ParameterServe() {
 		}
 		c.Next()
 	})
+	store := cookie.NewStore([]byte("secretKey&^%&^$&^%)*()9878687"))
+	router.Use(sessions.Sessions("mysession", store))
 	router.GET("/", GetParameters)
 	//router.GET(`refresh`, RefreshParameters)
 	//router.GET(`test`, testSpeed)
@@ -110,6 +110,14 @@ func autoSimulate(market, coins string, begin, end time.Time, strBegin, strEnd s
 }
 
 func currentUser(c *gin.Context) {
+	session := sessions.Default(c)
+	value := session.Get(`user`)
+	fmt.Println(value)
+	session.Set(`user`, `work`)
+	err := session.Save()
+	if err != nil {
+		return
+	}
 	c.String(http.StatusOK, `{"data": {"name": "Serati Ma","avatar":
 		"https://gw.alipayobjects.com/zos/rmsportal/BiazfanxmamNRoxxVxka.png","userid": "00000001","email": "antdesign@alipay.com",
 		"signature": "海纳百川，有容乃大","title": "交互专家","group": "蚂蚁金服－某某某事业群－某某平台部－某某技术部－UED","tags": 
