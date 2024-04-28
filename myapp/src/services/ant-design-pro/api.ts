@@ -20,9 +20,11 @@ export async function outLogin(options?: { [key: string]: any }) {
 
 /** 此处后端没有提供注释 GET /api/notices */
 export async function addRule(options?: { [key: string]: any }) {
-  return request<API.NoticeIconList>('/api/notices', {
-    method: 'GET',
-    ...(options || {}),
+  return request<API.NoticeIconList>('/api/add_monitor', {
+    method: 'POST',
+    headers: { 'Content-Type': 'multipart/form-data' },
+    data:options,
+
   });
 }
 /** 此处后端没有提供注释 GET /api/notices */
@@ -79,8 +81,17 @@ export async function login(body: API.LoginParams, options?: { [key: string]: an
 
 /** 此处后端没有提供注释 GET /api/notices */
 export async function getMonitors(options?: { [key: string]: any }) {
-  return request<API.NoticeIconList>('/api/get_monitors', {
-    method: 'GET',
+  return request<API.MonitorList>('/api/get_monitors', {
+    method: 'POST',
     ...(options || {}),
+  });
+}
+
+
+export async function removeMonitors(options?: { id: number }) {
+  return request<API.MonitorList>('/api/remove_monitor', {
+    method: 'POST',
+    headers: { 'Content-Type': 'multipart/form-data' },
+    data:options
   });
 }

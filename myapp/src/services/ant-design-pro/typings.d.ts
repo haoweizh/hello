@@ -79,6 +79,26 @@ declare namespace API {
     success?: boolean;
   };
 
+
+  type MonitorItem = {
+    MailAddress: string
+    Market: string
+    Symbol: string
+    IntervalSeconds: number
+    WarnChange: number
+    WarnIncrease: number
+    WarnVolume: number
+    ID: number
+    CreatedAt: string
+    UpdatedAt: string
+  }
+  type MonitorListResp = {
+    data?:MonitorList
+  }
+  type MonitorList = {
+    monitors:MonitorItem[]
+  }
+
   type PageParams = {
     current?: number;
     pageSize?: number;

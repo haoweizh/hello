@@ -212,7 +212,7 @@
       },
       "post": {
         "tags": ["rule"],
-        "description": "新建规则",
+        "description": "新建配置",
         "operationId": "addRule",
         "responses": {
           "200": {
@@ -239,7 +239,7 @@
       },
       "put": {
         "tags": ["rule"],
-        "description": "新建规则",
+        "description": "新建配置",
         "operationId": "updateRule",
         "responses": {
           "200": {
