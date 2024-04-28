@@ -25,6 +25,7 @@ export async function addRule(options?: { [key: string]: any }) {
     method: 'POST',
     headers: { 'Content-Type': 'multipart/form-data' },
     data:{
+      data:JSON.stringify(options)
     },
 
   });

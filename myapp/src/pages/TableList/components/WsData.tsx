@@ -34,7 +34,6 @@ const WsData: React.FC<iWsData> = (props) => {
   const {item} = props;
   const [data, setData] = useState<WsResDataProps>()
 
-
   const ws = useMemo(() => {
     let ws = new WebSocket("ws://47.74.31.113:8075/monitor?id=" + item.ID);
     ws.onopen = function (evt) {
@@ -72,7 +71,7 @@ const WsData: React.FC<iWsData> = (props) => {
       {
         data && (
           <>
-            <div style={{fontSize:"12px", display:'flex',flexDirection:"column", flexWrap:"wrap"}}>
+            <div style={{fontSize:"12px", display:'flex', flexWrap:"wrap", gap:"6px", padding:"8px"}}>
             <span>PriceIncrease:{data?.PriceIncrease}</span>
             <span>PriceChange:{data?.PriceChange}</span>
             <span>PriceCurrent:{data?.PriceCurrent}</span>

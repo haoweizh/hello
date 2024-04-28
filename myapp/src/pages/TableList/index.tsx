@@ -29,10 +29,14 @@ import "./index.less"
 const handleAdd = async (fields: API.RuleListItem) => {
   const hide = message.loading('正在添加');
   try {
-    await addRule({...fields});
-    hide();
-    message.success('Added successfully');
-    return true;
+    const res = await addRule({...fields});
+    if (res.status == "ok"){
+      hide();
+      message.success('Added successfully');
+      return true;
+    }else {
+      message.error('Adding failed'+res.msg);
+    }
   } catch (error) {
     hide();
     message.error('Adding failed, please try again!');

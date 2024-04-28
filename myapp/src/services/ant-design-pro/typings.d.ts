@@ -76,6 +76,7 @@ declare namespace API {
     data?: NoticeIconItem[];
     /** 列表的内容总数 */
     total?: number;
+    msg:string;
     success?: boolean;
   };
 
