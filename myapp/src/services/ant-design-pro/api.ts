@@ -1,6 +1,7 @@
 // @ts-ignore
 /* eslint-disable */
 import { request } from '@umijs/max';
+import qs from 'qs';
 
 /** 获取当前的用户 GET /api/currentUser */
 export async function currentUser(options?: { [key: string]: any }) {
@@ -23,7 +24,8 @@ export async function addRule(options?: { [key: string]: any }) {
   return request<API.NoticeIconList>('/api/add_monitor', {
     method: 'POST',
     headers: { 'Content-Type': 'multipart/form-data' },
-    data:options,
+    data:{
+    },
 
   });
 }

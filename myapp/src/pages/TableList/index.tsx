@@ -195,7 +195,7 @@ const TableList: React.FC = () => {
           ]}
           placeholder={'请输入Symbol'}
           width="md"
-          name="symbol"
+          name="Symbol"
         />
         <ProFormText
           rules={[
@@ -211,7 +211,7 @@ const TableList: React.FC = () => {
           ]}
           placeholder={'请输入IntervalSeconds'}
           width="md"
-          name="intervalSeconds"
+          name="IntervalSeconds"
         />
         <ProFormText
           rules={[
@@ -227,7 +227,7 @@ const TableList: React.FC = () => {
           ]}
           width="md"
           placeholder={'请输入Market'}
-          name="market"
+          name="Market"
         />
         <ProFormText
           rules={[
@@ -243,7 +243,7 @@ const TableList: React.FC = () => {
           ]}
           width="md"
           placeholder={'请输入WarnChange'}
-          name="warnChange"
+          name="WarnChange"
         />
         <ProFormText
           rules={[
