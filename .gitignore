@@ -13,3 +13,46 @@ cfmms/abi
 cfmms/abi_go
 /qodana.sarif.json
 /qodana.yaml
+
+
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# dependencies
+myapp/**/node_modules
+# roadhog-api-doc ignore
+myapp/src/utils/request-temp.js
+myapp/_roadhog-api-doc
+
+# production
+myapp/dist
+
+# misc
+myapp/.DS_Store
+myapp/npm-debug.log*
+myapp/yarn-error.log
+
+myapp/coverage
+myapp/.idea
+myapp/yarn.lock
+myapp/package-lock.json
+myapp/*bak
+myapp/.vscode
+
+
+# visual studio code
+myapp/.history
+myapp/*.log
+myapp/functions/*
+myapp/.temp/**
+
+# umi
+myapp/.umi
+myapp/.umi-production
+myapp/.umi-test
+
+# screenshot
+myapp/screenshot
+myapp/.firebase
+myapp/.eslintcache
+
+myapp/build
