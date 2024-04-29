@@ -11,7 +11,6 @@ import (
 	"hello/util"
 	"net/http"
 	"strconv"
-	"time"
 )
 
 func monitorEntry(c *gin.Context) {
@@ -133,8 +132,6 @@ func MonitorTrade(c *gin.Context) {
 		Pinged:         true,
 		Manager:        model.AppEnvironment.WsManager,
 		SettingMonitor: settingMonitor,
-		AggregateCandle: &model.AggregateCandle{
-			TimeInterval: time.Duration(settingMonitor.IntervalSeconds) * time.Second, SlideRing: &model.SlideRing{}},
 	}
 	model.AppEnvironment.WsManager.AddAgent(wsAgent)
 	go wsAgent.ReadServe(wsHandler)

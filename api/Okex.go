@@ -1207,8 +1207,8 @@ func getTransferOKEX(key, secret string) (balances []*model.Balance) {
 	return balances
 }
 
-func parsePositionOKEX(value map[string]interface{}) (success bool, position *model.Position) {
-	position = &model.Position{Market: model.OKEX}
+func parsePositionOKEX(value map[string]interface{}) (success bool, position *Position) {
+	position = &Position{Market: model.OKEX}
 	if value[`lever`] != nil && value[`lever`] != `` { // 杠杆倍数，不适用于期权
 		position.LeverRate, _ = strconv.ParseInt(value[`lever`].(string), 10, 64)
 	}
@@ -1319,7 +1319,7 @@ func parseBalanceOKEX(value map[string]interface{}) (balance *model.Balance) {
 }
 
 // margin: 可用保证金
-func getBalanceOKEX(key, secret string) (success bool, balances []*model.Balance, totalInUsd float64, collateral *model.Collateral) {
+func getBalanceOKEX(key, secret string) (success bool, balances []*model.Balance, totalInUsd float64, collateral *Collateral) {
 	response, _ := sendSignRequestOKEX(key, secret, http.MethodGet, `/api/v5/account/balance`, nil, nil)
 	responseJson, err := util.NewJSON(response)
 	if err != nil || responseJson == nil || responseJson.GetPath(`data`) == nil || responseJson.Get(`code`).MustString() != `0` {
@@ -1335,7 +1335,7 @@ func getBalanceOKEX(key, secret string) (success bool, balances []*model.Balance
 	if data[`totalEq`] != nil {
 		totalInUsd, _ = strconv.ParseFloat(data[`totalEq`].(string), 64)
 	}
-	collateral = &model.Collateral{}
+	collateral = &Collateral{}
 	if data[`adjEq`] != nil {
 		collateral.Available, _ = strconv.ParseFloat(data[`adjEq`].(string), 64) // 可用保证金
 	}
@@ -1427,7 +1427,7 @@ func _(key, secret, symbol string) (price float64) {
 }
 
 // 目前只支持永续
-func getPositionsOKEX(key, secret string) (success bool, positions []*model.Position) {
+func getPositionsOKEX(key, secret string) (success bool, positions []*Position) {
 	param := map[string]interface{}{`instType`: `SWAP`}
 	responseBody, _ := sendSignRequestOKEX(key, secret, http.MethodGet, `/api/v5/account/positions`, param, nil)
 	responseJson, err := util.NewJSON(responseBody)
@@ -1436,7 +1436,7 @@ func getPositionsOKEX(key, secret string) (success bool, positions []*model.Posi
 		time.Sleep(time.Minute)
 		return getPositionsOKEX(key, secret)
 	}
-	positions = make([]*model.Position, 0)
+	positions = make([]*Position, 0)
 	positionArray, arrayErr := responseJson.Get(`data`).Array()
 	if arrayErr != nil {
 		util.Notice(`fail to get okex positions %s`, arrayErr.Error())

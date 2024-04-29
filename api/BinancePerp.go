@@ -451,7 +451,7 @@ func cancelOrdersBinancePerp(key, secret string, symbol string) bool {
 }
 
 // sdk暂不支持该接口
-func getPositionsBinancePerp(key, secret string) (success bool, positions []*model.Position, accountValue, availableU float64) {
+func getPositionsBinancePerp(key, secret string) (success bool, positions []*Position, accountValue, availableU float64) {
 	responseBody := signedRequestBinance(key, secret, model.BinancePerp, http.MethodGet,
 		restBinancePerp+"/fapi/v2/account", true, nil)
 	positionJson, err := util.NewJSON(responseBody)
@@ -464,7 +464,7 @@ func getPositionsBinancePerp(key, secret string) (success bool, positions []*mod
 	unrealizedProfit := 0.0
 	var data []interface{}
 	if success {
-		positions = make([]*model.Position, 0)
+		positions = make([]*Position, 0)
 		totalBalanceJson := positionJson.Get(`totalWalletBalance`).MustString()
 		totalUnrealizedProfitJson := positionJson.Get(`totalUnrealizedProfit`).MustString()
 		availableJson := positionJson.Get(`availableBalance`).MustString()
@@ -474,7 +474,7 @@ func getPositionsBinancePerp(key, secret string) (success bool, positions []*mod
 		availableU, _ = strconv.ParseFloat(availableJson, 64)
 		data, err = positionJson.Get("positions").Array()
 		for _, item := range data {
-			position := &model.Position{Market: model.BinancePerp, Ts: util.GetNowUnixMillion()}
+			position := &Position{Market: model.BinancePerp, Ts: util.GetNowUnixMillion()}
 			value := item.(map[string]interface{})
 			if value[`symbol`] != nil {
 				isSuccess, _, coin := model.GetCoinFromDialect(model.BinancePerp, value[`symbol`].(string))

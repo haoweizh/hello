@@ -314,7 +314,7 @@ type KucoinPositionModel struct {
 
 type PositionsModel []*KucoinPositionModel
 
-func getPositionsKucoinPerp(key string, secret string) (success bool, positions []*model.Position, accountValue, availableU float64) {
+func getPositionsKucoinPerp(key string, secret string) (success bool, positions []*Position, accountValue, availableU float64) {
 	//params := make(map[string]string)
 	//params["currency"] = `USDT`
 	//accountResp, accountErr := kucoinFutureClient("", "", "").AccountOverview(params)

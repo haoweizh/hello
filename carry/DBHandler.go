@@ -149,17 +149,26 @@ func MaintainMarketChan() (reset bool) {
 			}
 		}
 	}
-	model.AppEnvironment.WsManager.WSAgents.Range(func(market, value interface{}) bool {
+	var settingMonitors []*model.SettingMonitor
+	model.AppDB.Find(&settingMonitors)
+	kLines := make(map[string]map[string]bool)
+	monitor.RefreshSettingMonitors(model.AppEnvironment, settingMonitors)
+	for _, settingMonitor := range settingMonitors {
+		if kLines[settingMonitor.Market] == nil {
+			kLines[settingMonitor.Market] = make(map[string]bool)
+		}
+		kLines[settingMonitor.Market][settingMonitor.Symbol] = true
+	}
+	for market, symbols := range kLines {
 		klineWS, _ := model.AppEnvironment.MsgChanKLine.Load(market)
 		if klineWS == nil || len(klineWS.([]chan struct{})) == 0 {
-			api.CreateMarketKLineWS(model.AppEnvironment, market.(string))
-		} else if api.RequireKLineReset(model.AppEnvironment, market.(string)) {
+			api.CreateMarketKLineWS(model.AppEnvironment, market, symbols)
+		} else if api.RequireKLineReset(model.AppEnvironment, market) {
 			reset = true
-			ClearChannels(market.(string), &model.AppEnvironment.MsgChanKLine)
-			api.CreateMarketKLineWS(model.AppEnvironment, market.(string))
+			ClearChannels(market, &model.AppEnvironment.MsgChanKLine)
+			api.CreateMarketKLineWS(model.AppEnvironment, market, symbols)
 		}
-		return true
-	})
+	}
 	return reset
 }
 

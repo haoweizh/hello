@@ -61,10 +61,10 @@ var wsCross = true
 
 type contractMarket struct {
 	key, market          string
-	collateralsAvailable float64                    // 可用保证金U数
-	contractValueInU     float64                    // 当前价格下开仓总额，以U计算
-	accountValueInU      float64                    // 期货权益InU
-	positions            map[string]*model.Position // symbol/position
+	collateralsAvailable float64                  // 可用保证金U数
+	contractValueInU     float64                  // 当前价格下开仓总额，以U计算
+	accountValueInU      float64                  // 期货权益InU
+	positions            map[string]*api.Position // symbol/position
 }
 
 type spotMarket struct {
@@ -72,7 +72,7 @@ type spotMarket struct {
 	availableU      float64
 	accountValueInU float64
 	balances        map[string]*model.Balance // symbol/balance
-	collateral      *model.Collateral
+	collateral      *api.Collateral
 }
 
 type CarryStatus struct {

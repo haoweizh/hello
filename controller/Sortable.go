@@ -1,4 +1,4 @@
-package model
+package controller
 
 type Sortable struct {
 	Key   string

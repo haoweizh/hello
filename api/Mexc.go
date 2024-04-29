@@ -333,7 +333,7 @@ func getFundingRateMexc(key, secret, symbol string) (fundingRate *model.FundingR
 	return
 }
 
-func getPositionsMexc(key, secret string) (success bool, positions []*model.Position, accountValue, availableU float64) {
+func getPositionsMexc(key, secret string) (success bool, positions []*Position, accountValue, availableU float64) {
 	valueResponse, valueErr := SignedRequestMexc(key, secret, http.MethodGet, contractRestUrl,
 		"/api/v1/private/account/assets", nil, nil)
 	posResponse, posErr := SignedRequestMexc(key, secret, http.MethodGet, contractRestUrl,
@@ -363,10 +363,10 @@ func getPositionsMexc(key, secret string) (success bool, positions []*model.Posi
 			}
 		}
 	}
-	positions = make([]*model.Position, 0)
+	positions = make([]*Position, 0)
 	posArray := positionJson.Get(`data`).MustArray()
 	for _, item := range posArray {
-		position := &model.Position{Market: model.Mexc, Ts: util.GetNowUnixMillion()}
+		position := &Position{Market: model.Mexc, Ts: util.GetNowUnixMillion()}
 		pos := item.(map[string]interface{})
 		if pos[`symbol`] != nil {
 			isSuccess, _, coin := model.GetCoinFromDialect(model.Mexc, pos[`symbol`].(string))

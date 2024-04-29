@@ -29,7 +29,7 @@ const spotAccount = "spot"
 const marginAccountHuobi = `super-margin`
 
 var huobiAccountMap = make(map[string]map[string]string) //key-type-accountId
-var huobiPositionMap = make(map[string]*model.Position)
+var huobiPositionMap = make(map[string]*Position)
 
 type HuobiMessage struct {
 	Ping   int    `json:"ping"`
@@ -535,7 +535,7 @@ func queryOrderHuobiSpot(key, secret, orderId string) (order *model.Order) {
 //	SignedRequestHuobi(key, secret, http.MethodPost, restHuobi, "/v2/account/transfer", postData)
 //}
 
-func getPositionsHuobiPerp(key string, secret string) (success bool, positions []*model.Position, accountValue, availableU float64) {
+func getPositionsHuobiPerp(key string, secret string) (success bool, positions []*Position, accountValue, availableU float64) {
 	postData := make(map[string]interface{})
 	postData["margin_account"] = "USDT"
 	response := SignedRequestHuobi(key, secret, http.MethodPost, restHuobiFuture, "/linear-swap-api/v1/swap_cross_account_position_info", postData)
@@ -545,11 +545,11 @@ func getPositionsHuobiPerp(key string, secret string) (success bool, positions [
 		util.SocketInfo(`fail to get HuobiFuture balance`)
 		return getPositionsHuobiPerp(key, secret)
 	}
-	positions = make([]*model.Position, 0)
+	positions = make([]*Position, 0)
 	contracts := responseJson.Get(`data`).Get(`positions`).MustArray()
 	accountValue = responseJson.Get(`data`).Get(`margin_balance`).MustFloat64()
 	availableU = responseJson.Get(`data`).Get(`margin_available`).MustFloat64()
-	positionMap := make(map[string]*model.Position)
+	positionMap := make(map[string]*Position)
 	for _, contract := range contracts {
 		item := contract.(map[string]interface{})
 		if item[`contract_code`] == nil {
@@ -557,7 +557,7 @@ func getPositionsHuobiPerp(key string, secret string) (success bool, positions [
 		}
 		currency := strings.ToLower(item[`contract_code`].(string))
 		if positionMap[currency] == nil {
-			positionMap[currency] = &model.Position{Market: model.HuobiSpot, Ts: util.GetNowUnixMillion(),
+			positionMap[currency] = &Position{Market: model.HuobiSpot, Ts: util.GetNowUnixMillion(),
 				Currency: currency, DirectionDetail: make(map[string]float64)}
 		}
 		if item[`cost_open`] != nil {

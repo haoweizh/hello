@@ -113,7 +113,7 @@ func AdjustPosHolding(key, secret string, setting *model.Setting, data *model.Tu
 		util.Notice(fmt.Sprintf(`fail to adjust position holdings %s %s`, setting.Market, setting.Symbol))
 		return
 	}
-	posMap := make(map[string]*model.Position)
+	posMap := make(map[string]*Position)
 	for _, pos := range marketPos {
 		posMap[strings.ToUpper(pos.Currency)] = pos
 	}
@@ -346,8 +346,8 @@ func GetTurtleData(account *model.Account, function, market, symbol string, far,
 	posValue, _ := positionsCache.Load(account.Key)
 	if posValue != nil {
 		holdingValue, _ := posValue.(*sync.Map).Load(symbol)
-		if holdingValue != nil && holdingValue.(*model.Position).Holding != 0 {
-			util.Notice(fmt.Sprintf(`not removed %s %s %f`, account.Key, symbol, holdingValue.(*model.Position).Holding))
+		if holdingValue != nil && holdingValue.(*Position).Holding != 0 {
+			util.Notice(fmt.Sprintf(`not removed %s %s %f`, account.Key, symbol, holdingValue.(*Position).Holding))
 			removed = false
 		}
 	}

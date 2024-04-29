@@ -17,13 +17,12 @@ type WSManager struct {
 }
 
 type WSAgent struct {
-	ID              string
-	Socket          *websocket.Conn
-	ChanRead        chan []byte
-	Manager         *WSManager
-	Pinged          bool
-	SettingMonitor  *SettingMonitor
-	AggregateCandle *AggregateCandle
+	ID             string
+	Socket         *websocket.Conn
+	ChanRead       chan []byte
+	Manager        *WSManager
+	Pinged         bool
+	SettingMonitor *SettingMonitor
 }
 
 type SettingMonitor struct {

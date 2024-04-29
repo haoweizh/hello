@@ -321,7 +321,7 @@ func GetCoinBalanceBybit(key, secret, accountType string) (balances []*model.Bal
 	return balances
 }
 
-func getBalanceBybit(key string, secret string) (success bool, balances []*model.Balance, totalInUsd float64, collateral *model.Collateral) {
+func getBalanceBybit(key string, secret string) (success bool, balances []*model.Balance, totalInUsd float64, collateral *Collateral) {
 	//marketInfos := model.GetMarketInfos(model.Bybit, model.MarketTypeSpot)
 	//coinsStr := make([]string, 0)
 	//for symbol, value := range marketInfos {
@@ -348,7 +348,7 @@ func getBalanceBybit(key string, secret string) (success bool, balances []*model
 		if account.AccountType == "UNIFIED" {
 			collateralAvailable, _ := strconv.ParseFloat(account.TotalAvailableBalance, 64)
 			totalMaintenanceMargin, _ := strconv.ParseFloat(account.TotalMaintenanceMargin, 64)
-			collateral = &model.Collateral{Available: collateralAvailable, Occupied: totalMaintenanceMargin}
+			collateral = &Collateral{Available: collateralAvailable, Occupied: totalMaintenanceMargin}
 			for _, coinInfo := range account.Coin {
 				balance := &model.Balance{AccountId: key, BalanceTime: util.GetNow(), Market: model.Bybit, Coin: coinInfo.Coin}
 				balance.Borrow, _ = strconv.ParseFloat(coinInfo.BorrowAmount, 64)
@@ -376,9 +376,9 @@ func getBalanceBybit(key string, secret string) (success bool, balances []*model
 	return true, balances, totalInUsd, collateral
 }
 
-func getPositionsBybit(key, secret string) (success bool, positions []*model.Position, posBalance float64) {
+func getPositionsBybit(key, secret string) (success bool, positions []*Position, posBalance float64) {
 	cursor := "init"
-	positions = make([]*model.Position, 0)
+	positions = make([]*Position, 0)
 	for {
 		param := map[string]interface{}{"category": "linear", "settleCoin": "USDT", "limit": "200"}
 		if cursor != "" && cursor != "init" {
@@ -400,7 +400,7 @@ func getPositionsBybit(key, secret string) (success bool, positions []*model.Pos
 			}
 			_, _, coin := model.GetCoinFromDialect(model.Bybit, contract.Symbol)
 			currency := coin + model.UniStandardTail[model.MarketTypePerp]
-			position := &model.Position{Market: model.Bybit, Ts: util.GetNowUnixMillion(), Currency: currency}
+			position := &Position{Market: model.Bybit, Ts: util.GetNowUnixMillion(), Currency: currency}
 			if contract.Side == "Buy" {
 				position.Holding, _ = strconv.ParseFloat(contract.Size, 64)
 			} else if contract.Side == "Sell" {

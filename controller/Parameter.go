@@ -603,7 +603,7 @@ func crossPage(c *gin.Context) {
 
 func createTurtleLines(function, market string, account *model.Account) (msg string, size int) {
 	settingMap := api.GetSettings(function, market)
-	lines := make([]*model.Sortable, 0)
+	lines := make([]*Sortable, 0)
 	commonLines := make([]string, 0)
 	if settingMap == nil {
 		return
@@ -636,7 +636,7 @@ func createTurtleLines(function, market string, account *model.Account) (msg str
 			msgValue, _ := util.LoadSyncMap(&model.CarryInfo, account.Key, msgKey)
 			if msgValue != nil {
 				size++
-				sortable := &model.Sortable{Key: symbol.(string), Value: msgValue.(string) + "\n"}
+				sortable := &Sortable{Key: symbol.(string), Value: msgValue.(string) + "\n"}
 				_, _, coin, _ := model.GetFromStandard(market, symbol.(string))
 				if model.CommonCoins[strings.ToLower(coin)] {
 					commonLines = append(commonLines, msgValue.(string))
@@ -647,7 +647,7 @@ func createTurtleLines(function, market string, account *model.Account) (msg str
 		}
 		return true
 	})
-	sortedLines := &model.SortableArray{Array: lines}
+	sortedLines := &SortableArray{Array: lines}
 	sort.Sort(sortedLines)
 	for _, line := range sortedLines.Array {
 		msg += line.Value.(string)

@@ -470,7 +470,7 @@ func GetMarketEquity(index int) (msg string) {
 }
 
 func GetBalances(key, secret, market string) (
-	success bool, balances []*model.Balance, totalInUsd float64, collateral *model.Collateral) {
+	success bool, balances []*model.Balance, totalInUsd float64, collateral *Collateral) {
 	lock, _ := balanceLock.Load(key)
 	if lock == nil {
 		lock = &sync.Mutex{}
@@ -661,7 +661,7 @@ func QueryOrderById(key, secret, market, symbol, orderType, orderId string) (ord
 // GetPositions
 // accountValue: 账户权益
 // availableU: 可用usd
-func GetPositions(key, secret, market string) (success bool, positions []*model.Position, accountValue, availableU float64) {
+func GetPositions(key, secret, market string) (success bool, positions []*Position, accountValue, availableU float64) {
 	lock, _ := positionLock.Load(key)
 	if lock == nil {
 		lock = &sync.Mutex{}
@@ -1207,11 +1207,12 @@ func CreateAccountWsServer(market string) {
 	}
 }
 
-func CreateMarketKLineWS(environment *model.Environment, market string) (socketMap map[*websocket.Conn]bool, channels []chan struct{}) {
+func CreateMarketKLineWS(environment *model.Environment, market string, symbols map[string]bool) (
+	socketMap map[*websocket.Conn]bool, channels []chan struct{}) {
 	switch market {
 	case model.BinanceSpot:
 		util.Notice(" create KLine ws chan for " + market)
-		socketMap, channels, _ = WsKLineBinance(environment, market)
+		socketMap, channels, _ = WsKLineBinanceSpot(environment, market, symbols)
 	}
 	return
 }

@@ -167,7 +167,7 @@ func WsDepthServeHuobiPerp(environment *model.Environment, market string) (socke
 //	return true, balances
 //}
 
-func getHoldingHuobiPerp(key, secret, symbolSide string) (position *model.Position) {
+func getHoldingHuobiPerp(key, secret, symbolSide string) (position *Position) {
 	responseBody := SignedRequestHuobiPerp(key, secret, model.HuobiPerp, `POST`, `/api/v1/contract_position_info`, nil)
 	accountJson, err := util.NewJSON(responseBody)
 	if err != nil || accountJson == nil || strings.ToLower(accountJson.Get(`status`).MustString()) != `ok` {
@@ -199,7 +199,7 @@ func getHoldingHuobiPerp(key, secret, symbolSide string) (position *model.Positi
 			if symbol != symbolSide {
 				continue
 			}
-			position = &model.Position{Market: model.HuobiPerp, Ts: util.GetNowUnixMillion(), Currency: symbol}
+			position = &Position{Market: model.HuobiPerp, Ts: util.GetNowUnixMillion(), Currency: symbol}
 			if holding[`volume`] != nil { // 持仓量
 				position.Holding, _ = holding[`volume`].(json.Number).Float64()
 			}

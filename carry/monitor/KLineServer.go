@@ -7,44 +7,66 @@ import (
 	"hello/model"
 	"hello/util"
 	"sync"
+	"time"
 )
+
+func RefreshSettingMonitors(environment *model.Environment, settingMonitors []*model.SettingMonitor) {
+	if environment.AggregateCandles == nil {
+		environment.AggregateCandles = &sync.Map{}
+	}
+	for _, monitor := range settingMonitors {
+		mapSymbol, _ := environment.AggregateCandles.Load(monitor.Market)
+		if mapSymbol == nil {
+			mapSymbol = &sync.Map{}
+			environment.AggregateCandles.Store(monitor.Market, mapSymbol)
+		}
+		mapAddress, _ := mapSymbol.(*sync.Map).Load(monitor.Symbol)
+		if mapAddress == nil {
+			mapAddress = &sync.Map{}
+			mapSymbol.(*sync.Map).Store(monitor.Symbol, mapAddress)
+		}
+		aggregateCandle, _ := mapAddress.(*sync.Map).Load(monitor.MailAddress)
+		if aggregateCandle == nil {
+			mapAddress.(*sync.Map).Store(monitor.MailAddress, &model.AggregateCandle{
+				TimeInterval: time.Duration(monitor.IntervalSeconds) * time.Second, SlideRing: &model.SlideRing{}})
+		}
+	}
+}
 
 func KLineServer(environment *model.Environment) {
 	for {
 		select {
 		case candle := <-model.KLineChan:
-			go func() {
-				environment.WsManager.WSAgents.Range(func(market, marketMap interface{}) bool {
-					if marketMap == nil || candle.Market != market {
-						return true
-					}
-					marketMap.(*sync.Map).Range(func(symbol, symbolMap interface{}) bool {
-						if symbolMap == nil || candle.Symbol != symbol {
-							return true
-						}
-						symbolMap.(*sync.Map).Range(func(mailAddress, value interface{}) bool {
-							if value == nil {
-								return true
+			symbolCandles, _ := environment.AggregateCandles.Load(candle.Market)
+			if symbolCandles == nil {
+				continue
+			}
+			addressCandle, _ := symbolCandles.(*sync.Map).Load(candle.Symbol)
+			if addressCandle == nil {
+				continue
+			}
+			var addressAgents interface{}
+			symbolAgents, _ := environment.WsManager.WSAgents.Load(candle.Market)
+			if symbolAgents != nil {
+				addressAgents, _ = symbolAgents.(*sync.Map).Load(candle.Symbol)
+			}
+			addressCandle.(*sync.Map).Range(func(address, aggregateCandle any) bool {
+				aggregateCandle.(*model.AggregateCandle).Handle(candle)
+				jsonBytes, err := json.Marshal(aggregateCandle)
+				if err == nil {
+					addressAgents.(*sync.Map).Range(func(address, agent interface{}) bool {
+						go func() {
+							err = agent.(*model.WSAgent).Socket.WriteMessage(websocket.TextMessage, jsonBytes)
+							if err != nil {
+								environment.WsManager.RemoveAgent(candle.Market, candle.Symbol, address.(string))
+								util.Notice(fmt.Sprintf(`fail to send ws msg return, unregister %s`, err.Error()))
 							}
-							aggregateCandle := value.(*model.WSAgent).AggregateCandle
-							if aggregateCandle != nil {
-								aggregateCandle.Handle(candle)
-								jsonBytes, err := json.Marshal(aggregateCandle)
-								if err == nil {
-									err = value.(*model.WSAgent).Socket.WriteMessage(websocket.TextMessage, jsonBytes)
-									if err != nil {
-										environment.WsManager.RemoveAgent(market.(string), symbol.(string), mailAddress.(string))
-										util.Notice(fmt.Sprintf(`fail to send ws msg return, unregister %s`, err.Error()))
-									}
-								}
-							}
-							return true
-						})
+						}()
 						return true
 					})
-					return true
-				})
-			}()
+				}
+				return true
+			})
 		}
 	}
 }

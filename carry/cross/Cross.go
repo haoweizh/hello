@@ -20,7 +20,7 @@ func createContractMarket(key, secret, market string) (cm *contractMarket) {
 	settings := api.GetSettings(model.FunctionCross, market)
 	if success {
 		cm = &contractMarket{key: key, market: market}
-		cm.positions = make(map[string]*model.Position)
+		cm.positions = make(map[string]*api.Position)
 		for _, position := range positions {
 			cm.positions[position.Currency] = position
 			if settings != nil {
@@ -1119,7 +1119,7 @@ func placeStatus(status *CarryStatus, price float64, amount float64) {
 		position := valueContract.(*contractMarket).positions[status.symbol]
 		originFreeAbs := 0.0
 		if position == nil {
-			position = &model.Position{Holding: amount, EntryPrice: price, Market: status.market, Currency: status.setting.Symbol}
+			position = &api.Position{Holding: amount, EntryPrice: price, Market: status.market, Currency: status.setting.Symbol}
 			valueContract.(*contractMarket).positions[status.symbol] = position
 		} else {
 			originFreeAbs = math.Abs(position.Holding)

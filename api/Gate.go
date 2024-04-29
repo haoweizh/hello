@@ -552,7 +552,7 @@ func maintainChannelGate() {
 	}
 }
 
-func getBalanceGate(key string, secret string) (success bool, balances []*model.Balance, totalInUsd float64, collateral *model.Collateral) {
+func getBalanceGate(key string, secret string) (success bool, balances []*model.Balance, totalInUsd float64, collateral *Collateral) {
 	client, ctx := getClientGate(key, secret)
 	portfolioAccount, _, portfolioErr := client.UnifiedApi.ListUnifiedAccounts(ctx, nil)
 	if portfolioErr != nil {
@@ -568,7 +568,7 @@ func getBalanceGate(key string, secret string) (success bool, balances []*model.
 	totalInUsd, _ = strconv.ParseFloat(portfolioAccount.UnifiedAccountTotalEquity, 64)
 	collateralAvailable, _ := strconv.ParseFloat(portfolioAccount.TotalAvailableMargin, 64)
 	totalMaintenanceMargin, _ := strconv.ParseFloat(portfolioAccount.TotalMaintenanceMargin, 64)
-	collateral = &model.Collateral{Available: collateralAvailable, Occupied: totalMaintenanceMargin}
+	collateral = &Collateral{Available: collateralAvailable, Occupied: totalMaintenanceMargin}
 	balances = make([]*model.Balance, 0)
 	for coin, item := range portfolioAccount.Balances {
 		balance := &model.Balance{AccountId: key, BalanceTime: util.GetNow(), Market: model.Gate, Coin: coin}
@@ -585,7 +585,7 @@ func getBalanceGate(key string, secret string) (success bool, balances []*model.
 	return true, balances, totalInUsd, collateral
 }
 
-func getPositionsGate(key string, secret string) (success bool, positions []*model.Position) {
+func getPositionsGate(key string, secret string) (success bool, positions []*Position) {
 	client, ctx := getClientGate(key, secret)
 	positionList, _, positionsErr := client.FuturesApi.ListPositions(ctx, `usdt`, nil)
 	if positionsErr != nil {
@@ -594,14 +594,14 @@ func getPositionsGate(key string, secret string) (success bool, positions []*mod
 		util.SocketInfo(`fail to refresh future balance gate`)
 		return getPositionsGate(key, secret)
 	}
-	positions = make([]*model.Position, 0)
+	positions = make([]*Position, 0)
 	for _, item := range positionList {
 		getCoin, _, coin := model.GetCoinFromDialect(model.Gate, item.Contract)
 		if !getCoin {
 			continue
 		}
 		currency := coin + model.UniStandardTail[model.MarketTypePerp]
-		position := &model.Position{Market: model.Gate, Ts: util.GetNowUnixMillion(), Currency: currency}
+		position := &Position{Market: model.Gate, Ts: util.GetNowUnixMillion(), Currency: currency}
 		_, realAmount := model.ParseRealAmount(model.Gate, currency, float64(item.Size))
 		position.Holding = realAmount
 		position.LeverRate, _ = strconv.ParseInt(item.CrossLeverageLimit, 10, 64)

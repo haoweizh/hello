@@ -249,7 +249,7 @@ func maintainChannelBitgetPerp() {
 	}
 }
 
-func getPositionsBitgetPerp(key, secret string) (success bool, positions []*model.Position, accountValue, availableU float64) {
+func getPositionsBitgetPerp(key, secret string) (success bool, positions []*Position, accountValue, availableU float64) {
 	client := dtos.BitgetRestClient{BaseUrl: bitgetRestUrl, Passphrase: model.AppConfig.Phase, ApiKey: key, ApiSecretKey: secret}
 	assetHttpResp, assetHttpErr := client.DoGet("/api/mix/v1/account/accounts", map[string]string{"productType": "umcbl"})
 	bitgetAssertResp := &dtos.BitgetAssertResp{}
@@ -279,14 +279,14 @@ func getPositionsBitgetPerp(key, secret string) (success bool, positions []*mode
 			availableU += availableUsdt
 		}
 	}
-	positions = make([]*model.Position, 0)
+	positions = make([]*Position, 0)
 	for _, contract := range bitgetPositionResp.Data {
 		isSuccess, _, coin := model.GetCoinFromDialect(model.BitgetPerp, contract.Symbol)
 		if !isSuccess {
 			continue
 		}
 		currency := coin + model.UniStandardTail[model.MarketTypePerp]
-		position := &model.Position{Market: model.BitgetPerp, Ts: util.GetNowUnixMillion(), Currency: currency}
+		position := &Position{Market: model.BitgetPerp, Ts: util.GetNowUnixMillion(), Currency: currency}
 		position.Direction = contract.HoldSide
 		total, _ := strconv.ParseFloat(contract.Total, 64)
 		if total == 0 {

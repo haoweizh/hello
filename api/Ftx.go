@@ -546,7 +546,7 @@ func queryOrderFtx(key, secret, orderId string) (order *model.Order) {
 	return
 }
 
-func getPositionsFtx(key, secret string) (success bool, positions []*model.Position, posBalance float64) {
+func getPositionsFtx(key, secret string) (success bool, positions []*Position, posBalance float64) {
 	response, _ := SignedRequestFtx(key, secret, `GET`, `/positions`, nil, nil)
 	positionJson, err := util.NewJSON(response)
 	if err != nil || positionJson == nil || positionJson.Get(`success`).MustBool() != true {
@@ -556,11 +556,11 @@ func getPositionsFtx(key, secret string) (success bool, positions []*model.Posit
 	}
 	success = positionJson.Get(`success`).MustBool()
 	positionJson = positionJson.Get(`result`)
-	positions = make([]*model.Position, 0)
+	positions = make([]*Position, 0)
 	if positionJson != nil {
 		data := positionJson.MustArray()
 		for _, item := range data {
-			position := &model.Position{Market: model.Ftx, Ts: util.GetNowUnixMillion()}
+			position := &Position{Market: model.Ftx, Ts: util.GetNowUnixMillion()}
 			parsePositionFtx(position, item.(map[string]interface{}))
 			if position.Holding != 0 {
 				positions = append(positions, position)
@@ -690,7 +690,7 @@ func GetFundingRatesFtx(key, secret, symbol string) (fundingRate *model.FundingR
 	return fundingRate
 }
 
-func parsePositionFtx(position *model.Position, item map[string]interface{}) {
+func parsePositionFtx(position *Position, item map[string]interface{}) {
 	if item[`entryPrice`] != nil {
 		position.EntryPrice, _ = item[`entryPrice`].(json.Number).Float64()
 	}
