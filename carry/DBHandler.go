@@ -174,30 +174,30 @@ func MaintainMarketChan() (reset bool) {
 
 func Maintain() {
 	util.Notice("start carrying")
-	model.HandlerMap[model.FunctionTurtle] = Turtle.ProcessTurtle
-	model.HandlerMap[model.FunctionCross] = cross.ProcessCross
-	model.HandlerMap[model.FunctionHang] = hang.ProcessHang
-	model.HandlerMap[model.FunctionCombineTurtle] = Turtle.ProcessCombineTurtle
-	model.HandlerMap[model.FunctionGrid] = grid.ProcessGrid
-	model.HandlerMap[model.FunctionQueue] = queue.ProcessQueue
-	model.HandlerMap[model.FunctionFollow] = follow.ProcessFollow
+	model.TickHandlers[model.FunctionTurtle] = Turtle.ProcessTurtle
+	model.TickHandlers[model.FunctionCross] = cross.ProcessCross
+	model.TickHandlers[model.FunctionHang] = hang.ProcessHang
+	model.TickHandlers[model.FunctionCombineTurtle] = Turtle.ProcessCombineTurtle
+	model.TickHandlers[model.FunctionGrid] = grid.ProcessGrid
+	model.TickHandlers[model.FunctionQueue] = queue.ProcessQueue
+	model.TickHandlers[model.FunctionFollow] = follow.ProcessFollow
 	model.AccountHandlerMap[model.FunctionGrid] = grid.ProcessGridOrder
 	model.AccountHandlerMap[model.FunctionQueue] = queue.ProcessQueueLiq
 	model.AccountHandlerMap[model.FunctionCross] = cross.PostOrderCross
+	model.CandleHandlers[model.FunctionMonitorKLine] = monitor.ProcessMonitor
 	_ = model.AppDB.AutoMigrate(&model.Setting{})
 	_ = model.AppDB.AutoMigrate(&model.Order{})
 	_ = model.AppDB.AutoMigrate(&model.Balance{})
 	_ = model.AppDB.AutoMigrate(&model.Candle{})
 	_ = model.AppDB.AutoMigrate(&model.SettingMonitor{})
-	//model.HandlerMap[model.FunctionDCarry] = dreprecated2.ProcessDCarry
-	//model.HandlerMap[model.FunctionHang] = dreprecated2.ProcessHang
+	//model.TickHandlers[model.FunctionDCarry] = dreprecated2.ProcessDCarry
+	//model.TickHandlers[model.FunctionHang] = dreprecated2.ProcessHang
 	//api.CancelOrders(model.AppConfig.FtxKey, model.AppConfig.FtxSecret, model.Ftx, `LINK-PERP`)
 	//go CheckPastRefresh()
 	//go util.StartMidNightTimer(CancelAllOrders)
 	//go MaintainBalance()
 	go MaintainTransFee()
 	api.InitApp(true)
-	go monitor.KLineServer(model.AppEnvironment)
 	//go func() {
 	//	for true {
 	//		time.Sleep(time.Hour * 24)

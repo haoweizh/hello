@@ -12,8 +12,9 @@ import (
 )
 
 type PostOrder func(order *Order) // 处理下单后的函数
-var HandlerMap = make(map[string]CarryHandler)
+var TickHandlers = make(map[string]CarryHandler)
 var AccountHandlerMap = make(map[string]WsOrderHandler)
+var CandleHandlers = make(map[string]CandleHandler)
 
 var CarryInfo sync.Map        // userKey - function - msg
 var monitorInfo = &sync.Map{} // userIndex - table - syncMap[string -array[]string]
@@ -66,6 +67,7 @@ const FunctionTurtleNormal = `turtle_normal`
 const FunctionCross = `cross`
 const FunctionQueue = `queue`
 const FunctionFollow = `follow`
+const FunctionMonitorKLine = `monitor_kline`
 const TurtleTypeChange = `change`
 const MarketTypePerp = `perp`
 const MarketTypeSpot = `spot`
@@ -88,7 +90,6 @@ var AppConfig *Config
 var AppEnvironment = &Environment{WsManager: &WSManager{WSAgents: &sync.Map{}}, AggregateCandles: &sync.Map{}}
 
 var ChannelMaintaining sync.Map // market - bool
-var KLineChan = make(chan *Candle, 200)
 var DialectTail = map[string]map[string]string{
 	MarketTypeSpot:   {Gate: `_USDT`, Ftx: `/USD`, OKEX: `-USDT`, Bybit: `USDT`, BinanceSpot: `USDT`, KucoinSpot: `-USDT`, BitgetSpot: `USDT_SPBL`}, // BinanceMargin: `USDT`
 	MarketTypePerp:   {Gate: `_USDT`, Ftx: `-PERP`, OKEX: `-USDT-SWAP`, Bybit: `USDT`, BinancePerp: `USDT`, Mexc: `_USDT`, KucoinPerp: `USDTM`, BitgetPerp: `USDT_UMCBL`},

@@ -106,7 +106,7 @@ func PrepareSettings() {
 			functions = &sync.Map{}
 		}
 		if !model.IgnoreFunctions[setting.Function] {
-			functions.Store(setting.Function, model.HandlerMap[setting.Function])
+			functions.Store(setting.Function, model.TickHandlers[setting.Function])
 		}
 		util.StoreSyncMap(localHandlers, functions, setting.Market, strings.TrimSpace(setting.Symbol))
 		var settings *sync.Map

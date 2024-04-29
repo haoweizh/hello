@@ -107,8 +107,11 @@ func WsKLineBinanceSpot(environment *model.Environment, market string, symbols m
 		candle.PriceLow, _ = strconv.ParseFloat(result.Get(`l`).MustString(), 64)
 		candle.Volume, _ = strconv.ParseFloat(result.Get(`v`).MustString(), 64)
 		candle.VolumeQuote, _ = strconv.ParseFloat(result.Get(`q`).MustString(), 64)
-		model.KLineChan <- candle
-		model.AppEnvironment.SetCandle(candle.Symbol, candle.Market, candle)
+		if model.AppEnvironment.SetCandle(candle.Symbol, candle.Market, candle) {
+			for _, handler := range model.CandleHandlers {
+				handler(environment, candle)
+			}
+		}
 	}
 	subs := make([]interface{}, 0)
 	for symbol := range symbols {

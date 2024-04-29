@@ -4,6 +4,8 @@ import (
 	"time"
 )
 
+type CandleHandler func(environment *Environment, candle *Candle)
+
 type Candle struct {
 	Market                                     string    `gorm:"index:market_symbol_begin_seconds,unique"`
 	Symbol                                     string    `gorm:"index:market_symbol_begin_seconds,unique"`

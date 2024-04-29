@@ -33,40 +33,33 @@ func RefreshSettingMonitors(environment *model.Environment, settingMonitors []*m
 	}
 }
 
-func KLineServer(environment *model.Environment) {
-	for {
-		select {
-		case candle := <-model.KLineChan:
-			symbolCandles, _ := environment.AggregateCandles.Load(candle.Market)
-			if symbolCandles == nil {
-				continue
-			}
-			addressCandle, _ := symbolCandles.(*sync.Map).Load(candle.Symbol)
-			if addressCandle == nil {
-				continue
-			}
-			var addressAgents interface{}
-			symbolAgents, _ := environment.WsManager.WSAgents.Load(candle.Market)
-			if symbolAgents != nil {
-				addressAgents, _ = symbolAgents.(*sync.Map).Load(candle.Symbol)
-			}
-			addressCandle.(*sync.Map).Range(func(address, aggregateCandle any) bool {
-				aggregateCandle.(*model.AggregateCandle).Handle(candle)
-				jsonBytes, err := json.Marshal(aggregateCandle)
-				if err == nil && addressAgents != nil {
-					addressAgents.(*sync.Map).Range(func(address, agent interface{}) bool {
-						go func() {
-							err = agent.(*model.WSAgent).Socket.WriteMessage(websocket.TextMessage, jsonBytes)
-							if err != nil {
-								environment.WsManager.RemoveAgent(candle.Market, candle.Symbol, address.(string))
-								util.Notice(fmt.Sprintf(`fail to send ws msg return, unregister %s`, err.Error()))
-							}
-						}()
-						return true
-					})
+var ProcessMonitor = func(environment *model.Environment, candle *model.Candle) {
+	symbolCandles, _ := environment.AggregateCandles.Load(candle.Market)
+	if symbolCandles == nil {
+		return
+	}
+	addressCandle, _ := symbolCandles.(*sync.Map).Load(candle.Symbol)
+	if addressCandle == nil {
+		return
+	}
+	var addressAgents interface{}
+	symbolAgents, _ := environment.WsManager.WSAgents.Load(candle.Market)
+	if symbolAgents != nil {
+		addressAgents, _ = symbolAgents.(*sync.Map).Load(candle.Symbol)
+	}
+	addressCandle.(*sync.Map).Range(func(address, aggregateCandle any) bool {
+		aggregateCandle.(*model.AggregateCandle).Handle(candle)
+		jsonBytes, err := json.Marshal(aggregateCandle)
+		if err == nil && addressAgents != nil {
+			addressAgents.(*sync.Map).Range(func(address, agent interface{}) bool {
+				err = agent.(*model.WSAgent).Socket.WriteMessage(websocket.TextMessage, jsonBytes)
+				if err != nil {
+					environment.WsManager.RemoveAgent(candle.Market, candle.Symbol, address.(string))
+					util.Notice(fmt.Sprintf(`fail to send ws msg return, unregister %s`, err.Error()))
 				}
 				return true
 			})
 		}
-	}
+		return true
+	})
 }

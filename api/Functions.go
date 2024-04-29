@@ -98,7 +98,7 @@ func RequireDepthChanReset(environment *model.Environment, market string) bool {
 		}
 	}
 	needReset = float64(validSymbolNum) < float64(len(symbols))*0.8 || len(symbols)-validSymbolNum > 50
-	for funcName := range model.HandlerMap {
+	for funcName := range model.TickHandlers {
 		settings := GetSettings(funcName, market)
 		if settings == nil {
 			continue
