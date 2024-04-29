@@ -105,6 +105,7 @@ func (agent *WSAgent) ReadServe(msgHandler WSMsgHandler) {
 			if err != nil {
 				break
 			}
+			util.Info(fmt.Sprintf(`receive %s`, string(message)))
 			agent.ChanRead <- message
 		}
 	}()
