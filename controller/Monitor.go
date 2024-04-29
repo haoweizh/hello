@@ -7,6 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 	uuid "github.com/satori/go.uuid"
+	"hello/api"
 	"hello/model"
 	"hello/util"
 	"net/http"
@@ -55,6 +56,29 @@ func addSettingMonitor(c *gin.Context) {
 	warnIncrease, _ := strconv.ParseFloat(value[`WarnIncrease`], 64)
 	warnVolume, _ := strconv.ParseFloat(value[`WarnVolume`], 64)
 	intervalSeconds, _ := strconv.Atoi(value[`IntervalSeconds`])
+	if value[`Market`] != model.BinanceSpot {
+		c.JSON(http.StatusOK, map[string]interface{}{`status`: `fail`, `msg`: `只支持` + model.BinanceSpot, `data`: map[string]interface{}{}})
+		return
+	}
+	marketInfo, _ := util.LoadSyncMap(model.MarketInfos, value[`Market`], value[`Symbol`])
+	if marketInfo == nil {
+		marketInit := false
+		model.MarketInfos.Range(func(key, marketInfo any) bool {
+			if key != nil && key.(string)[0:len(value[`Market`])] == value[`Market`] {
+				marketInit = true
+				return false
+			}
+			return true
+		})
+		if !marketInit {
+			api.InitMarketInfos(value[`Market`])
+			marketInfo, _ = util.LoadSyncMap(model.MarketInfos, value[`Market`], value[`Symbol`])
+		}
+		if marketInfo == nil {
+			c.JSON(http.StatusOK, map[string]interface{}{`status`: `fail`, `msg`: `wrong market or symbol`, `data`: map[string]interface{}{}})
+			return
+		}
+	}
 	settingMonitor := model.SettingMonitor{
 		MailAddress:     user.(string),
 		Market:          value[`Market`],
