@@ -61,6 +61,11 @@ func RequireKLineReset(environment *model.Environment, market string, symbols ma
 		if candle == nil || candle.Begin.Add(time.Duration(candle.Seconds)*time.Second).UnixMilli()+int64(model.AppConfig.Delay) <
 			time.Now().UnixMilli() {
 			reset = true
+			if candle == nil {
+				util.Notice(`RequireKLineReset symbol %s nil candle`, symbol)
+			} else {
+				util.Notice(`RequireKLineReset symbol %s candle time %s`, symbol, candle.Begin.String())
+			}
 			break
 		}
 	}

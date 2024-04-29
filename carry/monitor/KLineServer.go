@@ -27,6 +27,7 @@ func RefreshSettingMonitors(environment *model.Environment, settingMonitors []*m
 		}
 		aggregateCandle, _ := mapAddress.(*sync.Map).Load(monitor.MailAddress)
 		if aggregateCandle == nil {
+			util.Notice(fmt.Sprintf(`create new aggregate for %s %s %s`, monitor.Market, monitor.Symbol, monitor.MailAddress))
 			mapAddress.(*sync.Map).Store(monitor.MailAddress, &model.AggregateCandle{
 				TimeInterval: time.Duration(monitor.IntervalSeconds) * time.Second, SlideRing: &model.SlideRing{}})
 		}

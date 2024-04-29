@@ -57,11 +57,11 @@ func (aggregationCandle *AggregateCandle) refresh() {
 }
 
 func (aggregationCandle *AggregateCandle) Handle(candle *Candle) {
-	if (*aggregationCandle).End == nil {
+	if aggregationCandle.End == nil {
 		aggregationCandle.End = &candle.Begin
 	}
 	if candle.Begin.Before(*aggregationCandle.End) {
-		util.Info(fmt.Sprintf(`ignore passed by %s %s %s<%s`,
+		util.Notice(fmt.Sprintf(`ignore passed by %s %s %s<%s`,
 			candle.Market, candle.Symbol, candle.Begin.String(), aggregationCandle.End))
 		return
 	}

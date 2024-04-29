@@ -58,6 +58,7 @@ func (manager *WSManager) RemoveAgent(market, symbol, address string) {
 		mapSymbol.(*sync.Map).Delete(address)
 		wsAgent.(*WSAgent).Close()
 	}
+	util.Notice(fmt.Sprintf(`remove agent %s %s %s`, market, symbol, address))
 }
 
 func (manager *WSManager) AddAgent(wsAgent *WSAgent) {
@@ -82,7 +83,7 @@ func (manager *WSManager) AddAgent(wsAgent *WSAgent) {
 	mapSymbol.(*sync.Map).Store(monitorSetting.MailAddress, wsAgent)
 	//jsonMessage, _ := json.Marshal(&Message{Content: "/A new socket has connected."})
 	//manager.Send(jsonMessage, agent)
-	util.Info(fmt.Sprintf(`after register %s %s %s`,
+	util.Notice(fmt.Sprintf(`add agent %s %s %s`,
 		monitorSetting.Market, monitorSetting.Symbol, monitorSetting.MailAddress))
 }
 
