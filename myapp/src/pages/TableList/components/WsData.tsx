@@ -1,9 +1,12 @@
 // @ts-nocheck
-import React, {useMemo, useState} from "react";
+import React, {useCallback, useEffect,useMemo, useState} from "react";
 
-import {io} from "socket.io-client";
+import useWebSocket from 'react-use-websocket';
+
+import { Manager } from "socket.io-client";
 import {abs} from "stylis";
 import moment from "moment";
+import {Tag} from "antd";
 
 
 interface iWsData {
@@ -34,24 +37,34 @@ const WsData: React.FC<iWsData> = (props) => {
   const {item} = props;
   const [data, setData] = useState<WsResDataProps>()
 
-  const ws = useMemo(() => {
-    let ws = new WebSocket("ws://47.74.31.113:8075/monitor?id=" + item.ID);
-    ws.onopen = function (evt) {
-      console.log("Connection open ...");
-      ws.send("Hello WebSockets!");
-    };
+  // This can also be an async getter function. See notes below on Async Urls.
+  const socketUrl = 'ws://47.74.31.113:8075/monitor?id='+item.ID;
 
-    ws.onmessage = function (evt) {
-      console.log("Received Message: " + evt.data);
-      setData(JSON.parse(evt.data))
-      ws.close();
-    };
+  const {
+    sendMessage,
+    sendJsonMessage,
+    lastMessage,
+    lastJsonMessage,
+    readyState,
+    getWebSocket,
+  } = useWebSocket(socketUrl, {
+    onOpen: () => console.log('opened'),
+    //Will attempt to reconnect on all close events, such as server shutting down
+    shouldReconnect: (closeEvent) => true,
+    heartbeat: {
+      message: 'ping',
+      returnMessage: 'pong',
+      timeout: 60000, // 1 minute, if no response is received, the connection will be closed
+      interval: 60000, // every 25 seconds, a ping message will be sent
+    },
+  });
 
-    ws.onclose = function (evt) {
-      console.log("Connection closed.");
-    };
+  useEffect(() => {
+    setData(lastJsonMessage)
 
-  }, [item.ID]);
+  }, [lastJsonMessage]);
+
+
 
 
   const isHighLight = useMemo(() => {
@@ -71,6 +84,9 @@ const WsData: React.FC<iWsData> = (props) => {
       {
         data && (
           <>
+            {
+              readyState ?   <Tag color="success">连接</Tag>:  <Tag color="error">断开</Tag>
+            }
             <div style={{fontSize:"12px", display:'flex', flexWrap:"wrap", gap:"6px", padding:"8px"}}>
             <span>PriceIncrease:{data?.PriceIncrease}</span>
             <span>PriceChange:{data?.PriceChange}</span>
