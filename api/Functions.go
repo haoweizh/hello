@@ -55,26 +55,16 @@ func GetTradeMaxOKEX(key, secret, symbol string, expireSecond int64) (success bo
 	return success, maxBuy, maxSell
 }
 
-func RequireKLineReset(environment *model.Environment, market string) (reset bool) {
-	needReset, ok := requireReset.Load(market)
-	if ok && needReset != nil && needReset.(bool) {
-		requireReset.Store(market, false)
-		util.Notice(`clear need reset for market: ` + market)
-		return true
-	}
-	mapMarket, _ := environment.WsManager.WSAgents.Load(market)
-	if mapMarket == nil {
-		return reset
-	}
-	mapMarket.(*sync.Map).Range(func(symbol, mapSymbol any) bool {
-		_, candle := environment.GetKLine(symbol.(string), market)
+func RequireKLineReset(environment *model.Environment, market string, symbols map[string]bool) (reset bool) {
+	for symbol := range symbols {
+		_, candle := environment.GetKLine(symbol, market)
 		if candle == nil || candle.Begin.Add(time.Duration(candle.Seconds)*time.Second).UnixMilli()+int64(model.AppConfig.Delay) <
 			time.Now().UnixMilli() {
 			reset = true
-			return false
+			break
 		}
-		return true
-	})
+	}
+	util.Notice(`RequireKLineReset %s %v`, market, reset)
 	return reset
 }
 

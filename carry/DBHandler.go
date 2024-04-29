@@ -163,7 +163,7 @@ func MaintainMarketChan() (reset bool) {
 		klineWS, _ := model.AppEnvironment.MsgChanKLine.Load(market)
 		if klineWS == nil || len(klineWS.([]chan struct{})) == 0 {
 			api.CreateMarketKLineWS(model.AppEnvironment, market, symbols)
-		} else if api.RequireKLineReset(model.AppEnvironment, market) {
+		} else if api.RequireKLineReset(model.AppEnvironment, market, symbols) {
 			reset = true
 			ClearChannels(market, &model.AppEnvironment.MsgChanKLine)
 			api.CreateMarketKLineWS(model.AppEnvironment, market, symbols)
