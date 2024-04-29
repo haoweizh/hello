@@ -53,7 +53,7 @@ func KLineServer(environment *model.Environment) {
 			addressCandle.(*sync.Map).Range(func(address, aggregateCandle any) bool {
 				aggregateCandle.(*model.AggregateCandle).Handle(candle)
 				jsonBytes, err := json.Marshal(aggregateCandle)
-				if err == nil {
+				if err == nil && addressAgents != nil {
 					addressAgents.(*sync.Map).Range(func(address, agent interface{}) bool {
 						go func() {
 							err = agent.(*model.WSAgent).Socket.WriteMessage(websocket.TextMessage, jsonBytes)
