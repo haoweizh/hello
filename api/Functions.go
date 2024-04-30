@@ -125,8 +125,8 @@ func RequireDepthChanReset(environment *model.Environment, market string) bool {
 			return true
 		})
 	}
-	util.Info(fmt.Sprintf(`RequireDepthChanReset %s %d  %f valid %d in %d needReset %v`,
-		market, now, model.AppConfig.Delay, validSymbolNum, len(symbols), needReset))
+	util.Info(fmt.Sprintf(`RequireDepthChanReset %d  %f valid %d in %d %s needReset %v`,
+		now, model.AppConfig.Delay, validSymbolNum, len(symbols), market, needReset))
 	return needReset.(bool)
 }
 
