@@ -18,12 +18,12 @@ export interface WsResDataProps {
   SlideRing: SlideRing
   Start: string
   End: string
-  TimeInterval: number
-  PriceHigh: number
-  PriceLow: number
+  TimeInterval: string
+  PriceHigh: string
+  PriceLow: string
   Volume: number
-  PriceStart: number
-  PriceCurrent: number
+  PriceStart: string
+  PriceCurrent: string
   PriceIncrease: number
   PriceChange: number
 }
@@ -103,16 +103,27 @@ const WsData: React.FC<iWsData> = (props) => {
               readyState ?   <Tag color="success">连接</Tag>:  <Tag color="error">断开</Tag>
             }
             <div style={{fontSize:"15px", display:'flex', flexWrap:"wrap", gap:"6px", padding:"8px"}}>
-            <span>PriceIncrease:{data?.PriceIncrease}</span>
-            <span>PriceChange:{data?.PriceChange}</span>
-            <span>PriceCurrent:{data?.PriceCurrent}</span>
-            <span>PriceStart:{data?.PriceStart}</span>
-            <span>PriceHigh:{data?.PriceHigh}</span>
-            <span>PriceLow:{data?.PriceLow}</span>
-            <span>Volume:{data?.Volume}</span>
-            <span>TimeInterval:{data?.TimeInterval}</span>
-            <span>Start:{moment(data?.Start).format("YYYY-MM-DD HH:mm:ss")}</span>
-            <span>End:{moment(data?.End).format("YYYY-MM-DD HH:mm:ss")}</span>
+
+              {
+                Object.keys(data).map((key, index) => {
+                  return (
+                    <div key={index}>
+                      <span>{key}:{data[key]}</span>
+                    </div>
+                  )
+                })
+              }
+
+            {/*<span>PriceIncrease:{data?.PriceIncrease}</span>*/}
+            {/*<span>PriceChange:{data?.PriceChange}</span>*/}
+            {/*<span>PriceCurrent:{data?.PriceCurrent}</span>*/}
+            {/*<span>PriceStart:{data?.PriceStart}</span>*/}
+            {/*<span>PriceHigh:{data?.PriceHigh}</span>*/}
+            {/*<span>PriceLow:{data?.PriceLow}</span>*/}
+            {/*<span>Volume:{data?.Volume}</span>*/}
+            {/*<span>TimeInterval:{data?.TimeInterval}</span>*/}
+            {/*<span>Start:{moment(data?.Start).format("YYYY-MM-DD HH:mm:ss")}</span>*/}
+            {/*<span>End:{moment(data?.End).format("YYYY-MM-DD HH:mm:ss")}</span>*/}
             {/*<span>SlideRing:{data?.SlideRing}</span>*/}
             </div>
           </>
