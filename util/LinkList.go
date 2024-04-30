@@ -16,7 +16,7 @@ func (linkList *LinkList) Insert(nodeCurrent, nodeAdd *Node) {
 		return
 	}
 	if nodeCurrent.Next == nil {
-		linkList.AddTailData(nodeAdd)
+		linkList.AddTail(nodeAdd)
 		return
 	}
 	nodeAdd.Prev = nodeCurrent
@@ -28,8 +28,7 @@ func (linkList *LinkList) Insert(nodeCurrent, nodeAdd *Node) {
 	linkList.Len++
 }
 
-func (linkList *LinkList) AddHeadData(data interface{}) {
-	node := &Node{Data: data}
+func (linkList *LinkList) AddHead(node *Node) {
 	if linkList.Head == nil || linkList.Tail == nil {
 		linkList.Head = node
 		linkList.Tail = node
@@ -41,8 +40,7 @@ func (linkList *LinkList) AddHeadData(data interface{}) {
 	linkList.Len++
 }
 
-func (linkList *LinkList) AddTailData(data interface{}) bool {
-	node := &Node{Data: data}
+func (linkList *LinkList) AddTail(node *Node) bool {
 	if linkList.Head == nil || linkList.Tail == nil {
 		linkList.Head = node
 		linkList.Tail = node

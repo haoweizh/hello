@@ -64,7 +64,7 @@ func (aggregationCandle *AggregateCandle) Handle(candle *Candle) {
 	nodeCurrent := aggregationCandle.LinkList.Tail
 	for {
 		if nodeCurrent == nil {
-			aggregationCandle.LinkList.AddHeadData(candle)
+			aggregationCandle.LinkList.AddHead(&util.Node{Data: candle})
 			break
 		} else if nodeCurrent.Data.(*Candle).Begin.Before(candle.Begin) {
 			aggregationCandle.LinkList.Insert(nodeCurrent, &util.Node{Data: candle})
