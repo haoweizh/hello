@@ -18,12 +18,12 @@ export interface WsResDataProps {
   SlideRing: SlideRing
   Start: string
   End: string
-  TimeInterval: number
-  PriceHigh: number
-  PriceLow: number
+  TimeInterval: string
+  PriceHigh: string
+  PriceLow: string
   Volume: number
-  PriceStart: number
-  PriceCurrent: number
+  PriceStart: string
+  PriceCurrent: string
   PriceIncrease: number
   PriceChange: number
 }
