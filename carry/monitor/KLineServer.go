@@ -57,7 +57,7 @@ var ProcessMonitor = func(environment *model.Environment, candle *model.Candle) 
 			`成交`: fmt.Sprintf(`%d秒 %.0e`, aggregateCandle.TimeInterval/time.Second, aggregateCandle.VolumeQuote),
 			`价格`: fmt.Sprintf(`%.4e-%.4e 变化%.2f 涨幅%.2f`,
 				aggregateCandle.PriceLow, aggregateCandle.PriceHigh, aggregateCandle.PriceChange, aggregateCandle.PriceIncrease),
-			`PriceChange`: aggregateCandle.PriceChange, `PriceIncrease`: aggregateCandle.PriceIncrease}
+			`PriceChange`: aggregateCandle.PriceChange, `PriceIncrease`: aggregateCandle.PriceIncrease, `Volume`: aggregateCandle.VolumeQuote}
 		jsonBytes, err := json.Marshal(formatedData)
 		if err == nil && addressAgents != nil {
 			addressAgents.(*sync.Map).Range(func(address, agent interface{}) bool {
