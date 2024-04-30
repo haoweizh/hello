@@ -54,7 +54,9 @@ func (aggregationCandle *AggregateCandle) refresh() {
 }
 
 func (aggregationCandle *AggregateCandle) Handle(candle *Candle) {
-	if candle.Begin.Add(aggregationCandle.TimeInterval).Before(time.Now()) {
+	if aggregationCandle.End == nil {
+		aggregationCandle.End = &candle.Begin
+	} else if candle.Begin.Add(aggregationCandle.TimeInterval).Before(*aggregationCandle.End) {
 		util.Notice(fmt.Sprintf(`ignore passed by %s %s %s`,
 			candle.Market, candle.Symbol, candle.Begin.String()))
 		return
