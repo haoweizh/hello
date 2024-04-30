@@ -756,7 +756,7 @@ func breakMarkPrice(account *model.Account, setting *model.Setting, price float6
 		bidMaxPrice := markPriceInfo.MarkPrice * (1 + marketInfo.BuyLimitPriceRatio)
 		bidMinPrice := markPriceInfo.MarkPrice * (1 - marketInfo.BuyLimitPriceRatio)
 		if price > bidMaxPrice || price < bidMinPrice {
-			if time.Now().Second() == 0 {
+			if time.Now().Minute() == 0 && time.Now().Second() == 0 {
 				util.Info(fmt.Sprintf("币种：%s %s 被限买价，买上浮：%f，标记价：%f，限最高买价：%f，限最低买价：%f，当前最佳买价：%f",
 					setting.Market, setting.Symbol, marketInfo.BuyLimitPriceRatio, markPriceInfo.MarkPrice, bidMaxPrice, bidMinPrice, price))
 			}

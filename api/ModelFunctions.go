@@ -495,7 +495,7 @@ func GetCoinSettings(function string) *sync.Map {
 
 func GetMarkets() []string {
 	if appSettings == nil || len(appSettings) == 0 {
-		util.Notice(`load setting GetMarkets`)
+		//util.Notice(`load setting GetMarkets`)
 		return nil
 	}
 	return appMarkets
