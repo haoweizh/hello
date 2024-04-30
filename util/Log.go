@@ -65,7 +65,7 @@ func initLog(path string) (*log.Logger, *os.File, error) {
 //		if !strings.Contains(f.Name(), strDate) {
 //			rmErr := os.Remove(logRoot + f.Name())
 //			if rmErr != nil {
-//				fmt.Println(logRoot + f.Name() + "can not remove " + rmErr.Error())
+//				fmt.Println(logRoot + f.Name() + "can not Remove " + rmErr.Error())
 //			}
 //		}
 //		return nil

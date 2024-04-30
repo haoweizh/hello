@@ -1,117 +1,114 @@
 package model
 
 import (
+	"fmt"
+	"hello/util"
 	"time"
 )
 
 type AggregateCandle struct {
-	SlideRing                                            *SlideRing
+	LinkList                                             *util.LinkList
 	Start, End                                           *time.Time
 	TimeInterval                                         time.Duration
-	PriceHigh, PriceLow, Volume                          float64
+	PriceHigh, PriceLow, VolumeQuote                     float64
 	PriceStart, PriceCurrent, PriceIncrease, PriceChange float64
 }
 
 func (aggregationCandle *AggregateCandle) refresh() {
 	for {
-		tempStart, tempCurrent := aggregationCandle.SlideRing.get()
-		if tempStart == nil {
-			if !aggregationCandle.SlideRing.remove() {
-				break
-			}
-		} else if tempCurrent != nil {
-			start := tempStart.(*Candle)
-			current := tempCurrent.(*Candle)
-			if start != nil && current != nil && start.Begin.Add(aggregationCandle.TimeInterval).Before(current.Begin) {
-				aggregationCandle.SlideRing.remove()
+		nodeHead := aggregationCandle.LinkList.Head
+		nodeTail := aggregationCandle.LinkList.Tail
+		if nodeHead == nil || nodeTail == nil {
+			break
+		} else {
+			if nodeHead.Data.(*Candle).Begin.Add(aggregationCandle.TimeInterval).Before(nodeTail.Data.(*Candle).Begin) {
+				aggregationCandle.LinkList.RemoveHead()
 			}
 		}
 	}
-	tempStart, tempCurrent := aggregationCandle.SlideRing.get()
-	if tempStart == nil || tempCurrent == nil {
+	node := aggregationCandle.LinkList.Head
+	if node == nil {
 		return
 	}
-	aggregationCandle.Start = &tempStart.(*Candle).Begin
-	aggregationCandle.End = &tempCurrent.(*Candle).Begin
-	aggregationCandle.PriceStart = tempStart.(*Candle).PriceOpen
-	aggregationCandle.PriceCurrent = tempCurrent.(*Candle).PriceClose
-	aggregationCandle.Volume = 0
-	for i := aggregationCandle.SlideRing.start; i < aggregationCandle.SlideRing.current; i++ {
-		candleIndex := aggregationCandle.SlideRing.data[i]
-		if candleIndex != nil {
-			aggregationCandle.Volume += candleIndex.(*Candle).VolumeQuote
-			if aggregationCandle.PriceHigh < candleIndex.(*Candle).PriceHigh {
-				aggregationCandle.PriceHigh = candleIndex.(*Candle).PriceHigh
+	aggregationCandle.Start = &node.Data.(*Candle).Begin
+	aggregationCandle.End = &node.Data.(*Candle).Begin
+	aggregationCandle.PriceStart = node.Data.(*Candle).PriceOpen
+	aggregationCandle.PriceCurrent = node.Data.(*Candle).PriceClose
+	aggregationCandle.PriceHigh = node.Data.(*Candle).PriceHigh
+	aggregationCandle.PriceLow = node.Data.(*Candle).PriceLow
+	aggregationCandle.VolumeQuote = 0
+	for {
+		if node == nil {
+			break
+		} else {
+			aggregationCandle.VolumeQuote += node.Data.(*Candle).VolumeQuote
+			if aggregationCandle.PriceHigh < node.Data.(*Candle).PriceHigh {
+				aggregationCandle.PriceHigh = node.Data.(*Candle).PriceHigh
 			}
-			if aggregationCandle.PriceLow > candleIndex.(*Candle).PriceLow || aggregationCandle.PriceLow == 0 {
-				aggregationCandle.PriceLow = candleIndex.(*Candle).PriceLow
+			if aggregationCandle.PriceLow > node.Data.(*Candle).PriceLow || aggregationCandle.PriceLow == 0 {
+				aggregationCandle.PriceLow = node.Data.(*Candle).PriceLow
 			}
+			node = node.Next
 		}
 	}
-	aggregationCandle.PriceChange = aggregationCandle.PriceHigh - aggregationCandle.PriceLow
-	aggregationCandle.PriceIncrease = aggregationCandle.PriceCurrent - aggregationCandle.PriceStart
 }
 
 func (aggregationCandle *AggregateCandle) Handle(candle *Candle) {
-	//if aggregationCandle.End == nil {
-	//	aggregationCandle.End = &candle.Begin
-	//}
-	//if candle.Begin.Before(*aggregationCandle.End) {
-	//	util.Notice(fmt.Sprintf(`ignore passed by %s %s %s<%s`,
-	//		candle.Market, candle.Symbol, candle.Begin.String(), aggregationCandle.End))
-	//	return
-	//}
-	//aggregationCandle.SlideRing.add(candle)
-	//if rand.Float64() > 0.999 {
-	//	aggregationCandle.refresh()
-	//	return
-	//}
-	//aggregationCandle.End = &candle.Begin
-	//aggregationCandle.PriceCurrent = candle.PriceClose
-	//aggregationCandle.Volume += candle.VolumeQuote
-	//for {
-	//	tempStart, _ := aggregationCandle.SlideRing.get()
-	//	if tempStart == nil {
-	//		if !aggregationCandle.SlideRing.remove() {
-	//			break
-	//		}
-	//	} else if tempStart.(*Candle).Begin.Add(aggregationCandle.TimeInterval).Before(*aggregationCandle.End) {
-	//		aggregationCandle.Volume -= tempStart.(*Candle).VolumeQuote
-	//		if aggregationCandle.PriceHigh == candle.PriceHigh {
-	//			aggregationCandle.PriceHigh = 0
-	//		}
-	//		if aggregationCandle.PriceLow == candle.PriceLow {
-	//			aggregationCandle.PriceLow = 0
-	//		}
-	//		aggregationCandle.SlideRing.remove()
-	//	} else {
-	//		break
-	//	}
-	//}
-	//tempStart, tempCurrent := aggregationCandle.SlideRing.get()
-	//if tempStart == nil || tempCurrent == nil {
-	//	aggregationCandle.Volume = candle.VolumeQuote
-	//	aggregationCandle.Start = &candle.Begin
-	//	aggregationCandle.PriceStart = candle.PriceHigh
-	//	aggregationCandle.PriceHigh = candle.PriceHigh
-	//	aggregationCandle.PriceLow = candle.PriceLow
-	//	aggregationCandle.PriceIncrease = 0
-	//	aggregationCandle.PriceChange = 0
-	//	util.Info(fmt.Sprintf(`reset from slide ring with candle %s %s %s`, candle.Market, candle.Symbol, candle.Begin.String()))
-	//	return
-	//}
-	//aggregationCandle.Start = &tempStart.(*Candle).Begin
-	//aggregationCandle.PriceStart = tempStart.(*Candle).PriceOpen
-	//if aggregationCandle.PriceHigh == 0 {
-	//	aggregationCandle.PriceHigh = math.Max(tempStart.(*Candle).PriceHigh, candle.PriceHigh)
-	//} else if aggregationCandle.PriceHigh < candle.PriceHigh {
-	//	aggregationCandle.PriceHigh = candle.PriceHigh
-	//}
-	//if aggregationCandle.PriceLow == 0 {
-	//	aggregationCandle.PriceLow = math.Min(tempStart.(*Candle).PriceLow, candle.PriceLow)
-	//} else if aggregationCandle.PriceLow > candle.PriceLow {
-	//	aggregationCandle.PriceLow = candle.PriceLow
-	//}
-	//aggregationCandle.PriceChange = aggregationCandle.PriceHigh - aggregationCandle.PriceLow
-	//aggregationCandle.PriceIncrease = aggregationCandle.PriceCurrent - aggregationCandle.PriceStart
+	if candle.Begin.Add(aggregationCandle.TimeInterval * time.Second).Before(time.Now()) {
+		util.Notice(fmt.Sprintf(`ignore passed by %s %s %s`,
+			candle.Market, candle.Symbol, candle.Begin.String()))
+		return
+	}
+	nodeCurrent := aggregationCandle.LinkList.Tail
+	for {
+		if nodeCurrent == nil {
+			aggregationCandle.LinkList.AddHeadData(candle)
+			break
+		} else if nodeCurrent.Data.(*Candle).Begin.Before(candle.Begin) {
+			aggregationCandle.LinkList.Insert(nodeCurrent, &util.Node{Data: candle})
+			break
+		} else {
+			util.Notice(fmt.Sprintf(`wrong candle sequence %s %s %s > %s`,
+				candle.Market, candle.Symbol, nodeCurrent.Data.(*Candle).Begin.String(), candle.Begin.String()))
+			nodeCurrent = nodeCurrent.Prev
+		}
+	}
+	aggregationCandle.End = &candle.Begin
+	aggregationCandle.PriceCurrent = candle.PriceClose
+	aggregationCandle.VolumeQuote += candle.VolumeQuote
+	needRefresh := false
+	for {
+		head := aggregationCandle.LinkList.Head
+		if head == nil {
+			break
+		} else if head.Data.(*Candle).Begin.Add(aggregationCandle.TimeInterval).Before(*aggregationCandle.End) {
+			aggregationCandle.VolumeQuote -= head.Data.(*Candle).VolumeQuote
+			if aggregationCandle.PriceHigh == candle.PriceHigh {
+				needRefresh = true
+			}
+			if aggregationCandle.PriceLow == candle.PriceLow {
+				needRefresh = true
+			}
+			aggregationCandle.LinkList.RemoveHead()
+		} else {
+			break
+		}
+	}
+	headData := aggregationCandle.LinkList.Head.Data.(*Candle)
+	aggregationCandle.Start = &headData.Begin
+	aggregationCandle.PriceStart = headData.PriceOpen
+	if needRefresh == true {
+		util.Notice(fmt.Sprintf(`refresh link list %s %s seconds %s len %d`,
+			candle.Market, candle.Symbol, aggregationCandle.TimeInterval.String(), aggregationCandle.LinkList.Len))
+		aggregationCandle.refresh()
+	} else {
+		if aggregationCandle.PriceHigh < candle.PriceHigh {
+			aggregationCandle.PriceHigh = candle.PriceHigh
+		}
+		if aggregationCandle.PriceLow == 0 || aggregationCandle.PriceLow > candle.PriceLow {
+			aggregationCandle.PriceLow = candle.PriceLow
+		}
+	}
+	aggregationCandle.PriceChange = (aggregationCandle.PriceHigh - aggregationCandle.PriceLow) / aggregationCandle.PriceCurrent
+	aggregationCandle.PriceIncrease = (aggregationCandle.PriceCurrent - aggregationCandle.PriceStart) / aggregationCandle.PriceCurrent
 }

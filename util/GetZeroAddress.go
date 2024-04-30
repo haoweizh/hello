@@ -80,10 +80,10 @@ func getZeroAddr(patterns []*regexp.Regexp, nonce uint64) {
 			}
 			value, _ := contractNum.Load(patterns[i].String())
 			if value != nil {
-				contracts := append(value.([]string), fmt.Sprintf(`%s get %s`, time.Now().String(), contract))
+				contracts := append(value.([]string), fmt.Sprintf(`%s Get %s`, time.Now().String(), contract))
 				contractNum.Store(patterns[i].String(), contracts)
 			} else {
-				contractNum.Store(patterns[i].String(), []string{fmt.Sprintf(`%s get %s`, time.Now().String(), contract)})
+				contractNum.Store(patterns[i].String(), []string{fmt.Sprintf(`%s Get %s`, time.Now().String(), contract)})
 			}
 			if i == len(patterns)-1 {
 				if atomic.AddInt64(&number, -1) < 0 {

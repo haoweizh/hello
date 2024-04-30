@@ -106,7 +106,6 @@ func (agent *WSAgent) ReadServe(msgHandler WSMsgHandler) {
 			if err != nil {
 				break
 			}
-			util.Info(fmt.Sprintf(`receive %s`, string(message)))
 			agent.ChanRead <- message
 		}
 	}()
@@ -118,7 +117,6 @@ func (agent *WSAgent) ReadServe(msgHandler WSMsgHandler) {
 			}
 			jsonMessage, _ := json.Marshal(&Message{Sender: agent.ID, Content: string(message)})
 			if strings.Contains(string(jsonMessage), `ping`) {
-				util.Info(`receive ping`)
 				agent.Pinged = true
 			}
 			if msgHandler != nil {

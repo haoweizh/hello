@@ -77,7 +77,6 @@ func getMarketsBinance(account *model.Account, market, marketType string) (marke
 func WsKLineBinanceSpot(environment *model.Environment, market string, symbols map[string]bool) (
 	socketMap map[*websocket.Conn]bool, msgChans []chan struct{}, connectErr error) {
 	KLineMsgHandlerBinanceSpot := func(event []byte) {
-		fmt.Println(string(event))
 		result, wsErr := util.NewJSON(event)
 		if wsErr != nil {
 			util.Notice(`binance fail to unmarshal json ` + wsErr.Error())
