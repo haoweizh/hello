@@ -48,17 +48,32 @@ const WsData: React.FC<iWsData> = (props) => {
     readyState,
     getWebSocket,
   } = useWebSocket(socketUrl, {
-    onOpen: () => console.log('opened'),
+    onOpen: () => {
+      sendMessage("hello")
+    },
     //Will attempt to reconnect on all close events, such as server shutting down
     shouldReconnect: (closeEvent) => true,
-    heartbeat: {
-      message: 'ping',
-      returnMessage: 'pong',
-      timeout: 60000, // 1 minute, if no response is received, the connection will be closed
-      interval: 60000, // every 25 seconds, a ping message will be sent
-    },
+    // heartbeat: {
+    //   message: 'ping',
+    //   returnMessage: 'pong',
+    //   timeout: 60000, // 1 minute, if no response is received, the connection will be closed
+    //   interval: 10000, // every 25 seconds, a ping message will be sent
+    // },
+    // heartbeat:true
   });
 
+  // Ping every 60 second
+  const HEARTBEAT_INTERVAL = 60000;
+
+  useEffect(() => {
+    // Start heartbeat interval
+    const heartbeatInterval = setInterval(() => {
+      sendMessage("ping");
+    }, HEARTBEAT_INTERVAL);
+
+    // Clean up interval on component unmount
+    return () => clearInterval(heartbeatInterval);
+  }, [sendJsonMessage]);
   useEffect(() => {
     setData(lastJsonMessage)
 
@@ -87,7 +102,7 @@ const WsData: React.FC<iWsData> = (props) => {
             {
               readyState ?   <Tag color="success">连接</Tag>:  <Tag color="error">断开</Tag>
             }
-            <div style={{fontSize:"12px", display:'flex', flexWrap:"wrap", gap:"6px", padding:"8px"}}>
+            <div style={{fontSize:"15px", display:'flex', flexWrap:"wrap", gap:"6px", padding:"8px"}}>
             <span>PriceIncrease:{data?.PriceIncrease}</span>
             <span>PriceChange:{data?.PriceChange}</span>
             <span>PriceCurrent:{data?.PriceCurrent}</span>
