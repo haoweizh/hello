@@ -35,11 +35,10 @@ const Header:React.FC<iHeader> = (props)=>{
 
   return (
     <Flex justify={'space-between'} >
-      <Flex justify={"space-around"}  style={{fontSize: "15px", maxWidth:"400px"}} gap={10}>
-       <div>
+      <Flex wrap={'wrap'} style={{fontSize: "15px", maxWidth:"400px"}} gap={10}>
          <Flex >
            <Text style={{fontSize:"15px"}}>Symbol:</Text>
-           <Text  style={{fontSize:"15px"}} type={'danger'}>{item.Symbol}</Text>
+           <Text style={{fontSize:"15px"}} type={'danger'}>{item.Symbol}</Text>
          </Flex>
          <Flex >
            <Text  style={{fontSize:"15px"}} >Market:</Text>
@@ -53,10 +52,6 @@ const Header:React.FC<iHeader> = (props)=>{
            <Text  style={{fontSize:"15px"}}>WarnChange:</Text>
            <Text  style={{fontSize:"15px"}} type={'danger'}>{item.WarnChange}</Text>
          </Flex>
-       </div>
-
-        <div>
-
           <Flex >
             <Text  style={{fontSize:"15px"}}>WarnIncrease:</Text>
             <Text   style={{fontSize:"15px"}} type={'danger'}>{item.WarnIncrease}</Text>
@@ -69,8 +64,6 @@ const Header:React.FC<iHeader> = (props)=>{
             <Text  style={{fontSize:"15px"}}>CreateTime:</Text>
             <Text  style={{fontSize:"15px"}} type={'danger'}>{moment(item.CreatedAt).format("YYYY-MM-DD HH:mm:ss")}</Text>
           </Flex>
-        </div>
-
 
       </Flex>
 
