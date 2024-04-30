@@ -177,6 +177,7 @@ func WebSocketClient(market, url string, subscribes []interface{}, subHandler Su
 			return nil, nil, err
 		}
 		connection.SetPingHandler(func(appData string) error {
+			fmt.Println("Ping received, sending Pong" + appData)
 			return connection.WriteControl(websocket.PongMessage, []byte(appData), time.Now().Add(time.Minute))
 		})
 		stopChan := make(chan struct{}, 2)
