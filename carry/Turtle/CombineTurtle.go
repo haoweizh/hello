@@ -95,7 +95,7 @@ var ProcessCombineTurtle = func(settingCombine *model.Setting, tick *model.BidAs
 	}
 	model.ResetBig(dataCombine, dataNormal)
 	msgKey := model.GetMsgKey(model.FunctionCombineTurtle, market, symbol)
-	msg := fmt.Sprintf("[%d-%d %d:%d]%s N-VolumeQuote %f 可开%v龟仓数%d(海龟%v 龟汤%v) 币种数:%d/%d满币%v bid-ask %e %e \n",
+	msg := fmt.Sprintf("[%d-%d %d:%d]%s N-Volume %f 可开%v龟仓数%d(海龟%v 龟汤%v) 币种数:%d/%d满币%v bid-ask %e %e \n",
 		dataCombine.TurtleTime.Month(), dataCombine.TurtleTime.Day(), time.Now().Hour(), time.Now().Minute(), msgKey,
 		dataCombine.NVolume, canOpen, int64(turtleSymbolNum), canStartTurtle, canStartCombine, int(turtleCoins),
 		int(settingCombine.AmountLimit), turtleCoins >= settingCombine.AmountLimit, tick.Bids[0].Price, tick.Asks[0].Price)

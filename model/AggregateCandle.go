@@ -54,7 +54,7 @@ func (aggregationCandle *AggregateCandle) refresh() {
 }
 
 func (aggregationCandle *AggregateCandle) Handle(candle *Candle) {
-	if candle.Begin.Add(aggregationCandle.TimeInterval * time.Second).Before(time.Now()) {
+	if candle.Begin.Add(aggregationCandle.TimeInterval).Before(time.Now()) {
 		util.Notice(fmt.Sprintf(`ignore passed by %s %s %s`,
 			candle.Market, candle.Symbol, candle.Begin.String()))
 		return
@@ -73,9 +73,6 @@ func (aggregationCandle *AggregateCandle) Handle(candle *Candle) {
 			nodeCurrent = nodeCurrent.Prev
 		}
 	}
-	aggregationCandle.End = &candle.Begin
-	aggregationCandle.PriceCurrent = candle.PriceClose
-	aggregationCandle.VolumeQuote += candle.VolumeQuote
 	needRefresh := false
 	for {
 		head := aggregationCandle.LinkList.Head
@@ -94,12 +91,19 @@ func (aggregationCandle *AggregateCandle) Handle(candle *Candle) {
 			break
 		}
 	}
+	if aggregationCandle.LinkList.Head == nil || aggregationCandle.LinkList.Tail == nil {
+		return
+	}
 	headData := aggregationCandle.LinkList.Head.Data.(*Candle)
+	tailData := aggregationCandle.LinkList.Tail.Data.(*Candle)
 	aggregationCandle.Start = &headData.Begin
+	aggregationCandle.End = &tailData.Begin
 	aggregationCandle.PriceStart = headData.PriceOpen
+	aggregationCandle.PriceCurrent = tailData.PriceClose
+	aggregationCandle.VolumeQuote += candle.VolumeQuote
 	if needRefresh == true {
-		util.Notice(fmt.Sprintf(`refresh link list %s %s seconds %s len %d`,
-			candle.Market, candle.Symbol, aggregationCandle.TimeInterval.String(), aggregationCandle.LinkList.Len))
+		util.Notice(fmt.Sprintf(`refresh link list %s %s seconds %f len %d`,
+			candle.Market, candle.Symbol, aggregationCandle.TimeInterval.Seconds(), aggregationCandle.LinkList.Len))
 		aggregationCandle.refresh()
 	} else {
 		if aggregationCandle.PriceHigh < candle.PriceHigh {
