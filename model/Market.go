@@ -116,6 +116,7 @@ func (environment *Environment) SetCandle(symbol, market string, candle *Candle)
 	symbolCandle := value.(*sync.Map)
 	last, _ := symbolCandle.Load(market)
 	if last == nil || last.(*Candle).Begin.Before(candle.Begin) {
+		util.Notice(fmt.Sprintf(`set candle to %s %s %s`, symbol, market, candle.Begin.String()))
 		symbolCandle.Store(market, candle)
 		return true
 	}
