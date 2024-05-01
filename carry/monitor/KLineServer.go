@@ -15,25 +15,22 @@ import (
 var aggregatePool = &sync.Map{} // market*symbol*interval*HH:MM - *AggregateCandle
 
 func RefreshSettingMonitors(environment *model.Environment, settingMonitors []*model.SettingMonitor) {
-	if environment.AggregateCandles == nil {
-		environment.AggregateCandles = &sync.Map{}
-	}
+	environment.MonitorSettings = &sync.Map{}
 	for _, monitor := range settingMonitors {
-		mapSymbol, _ := environment.AggregateCandles.Load(monitor.Market)
+		mapSymbol, _ := environment.MonitorSettings.Load(monitor.Market)
 		if mapSymbol == nil {
 			mapSymbol = &sync.Map{}
-			environment.AggregateCandles.Store(monitor.Market, mapSymbol)
+			environment.MonitorSettings.Store(monitor.Market, mapSymbol)
 		}
 		mapInterval, _ := mapSymbol.(*sync.Map).Load(monitor.Symbol)
 		if mapInterval == nil {
 			mapInterval = &sync.Map{}
 			mapSymbol.(*sync.Map).Store(monitor.Symbol, mapInterval)
 		}
-		aggregateCandle, _ := mapInterval.(*sync.Map).Load(monitor.IntervalSeconds)
-		if aggregateCandle == nil {
+		intervalMonitors, _ := mapInterval.(*sync.Map).Load(monitor.IntervalSeconds)
+		if intervalMonitors == nil {
 			util.Notice(fmt.Sprintf(`create new aggregate for %s %s %s`, monitor.Market, monitor.Symbol, monitor.MailAddress))
-			mapInterval.(*sync.Map).Store(monitor.MailAddress, &model.AggregateCandle{
-				Market: monitor.Market, Symbol: monitor.Symbol, TimeInterval: monitor.IntervalSeconds})
+			mapInterval.(*sync.Map).Store(monitor.MailAddress, monitor)
 		}
 	}
 }
@@ -74,20 +71,12 @@ func GetPooledAggregate(candle *model.Candle, interval int) (pooledAggregate *mo
 }
 
 var ProcessMonitor = func(environment *model.Environment, candle *model.Candle) {
-	symbolCandles, _ := environment.AggregateCandles.Load(candle.Market)
-	if symbolCandles == nil {
+	symbolMonitors, _ := environment.MonitorSettings.Load(candle.Market)
+	if symbolMonitors == nil {
 		return
 	}
-	intervalCandles, _ := symbolCandles.(*sync.Map).Load(candle.Symbol)
-	if intervalCandles == nil {
-		return
-	}
-	symbolAggregate, _ := environment.AggregateCandles.Load(candle.Market)
-	if symbolAggregate == nil {
-		return
-	}
-	intervalAggregate, _ := symbolAggregate.(*sync.Map).Load(candle.Symbol)
-	if intervalAggregate == nil {
+	intervalMonitors, _ := symbolMonitors.(*sync.Map).Load(candle.Symbol)
+	if intervalMonitors == nil {
 		return
 	}
 	minuteAggregate := &model.AggregateCandle{
@@ -100,7 +89,7 @@ var ProcessMonitor = func(environment *model.Environment, candle *model.Candle) 
 		PriceStart:   candle.PriceOpen,
 		PriceCurrent: candle.PriceClose}
 	aggregatePool.Store(minuteAggregate.GetKey(), minuteAggregate)
-	intervalAggregate.(*sync.Map).Range(func(interval, agent any) bool {
+	intervalMonitors.(*sync.Map).Range(func(interval, monitor any) bool {
 		pooledAggregate := GetPooledAggregate(candle, interval.(int))
 		pooledAggregate.PriceCurrent = candle.PriceClose
 		pooledAggregate.End = &candle.CreatedAt
@@ -118,7 +107,7 @@ var ProcessMonitor = func(environment *model.Environment, candle *model.Candle) 
 		if addressAgents == nil {
 			return true
 		}
-		addressAgents.(*sync.Map).Range(func(key, address any) bool {
+		addressAgents.(*sync.Map).Range(func(address, agent any) bool {
 			formatedData := map[string]interface{}{
 				`开始`: fmt.Sprintf(`%s %.4e`, pooledAggregate.Start.Format(`2006-01-02 15:04:05`), pooledAggregate.PriceStart),
 				`结束`: fmt.Sprintf(`%s %.4e`, pooledAggregate.End.Format(`2006-01-02 15:04:05`), pooledAggregate.PriceCurrent),

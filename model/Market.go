@@ -41,16 +41,16 @@ type Rule struct {
 }
 
 type Environment struct {
-	markPriceInfos   sync.Map  // symbol - market - ticker 行情包含标记价格
-	bidAsks          sync.Map  // symbol - market - bidAsk
-	kLines           sync.Map  // symbol - market - *candle
-	MsgChanTick      sync.Map  // market - []chan struct{}
-	MsgChanKLine     sync.Map  // market - []chan struct{}
-	WsInitTime       sync.Map  // market - time
-	SocketsTick      sync.Map  // market - map[*websocket.Conn]bool for depth sockets
-	AccountConns     sync.Map  // market*accountKey - *websocket.Conn
-	AggregateCandles *sync.Map // sync.Map[market]*sync.Map[symbol]*sync.Map[interval] *AggregateCandles
-	WsManager        *WSManager
+	markPriceInfos  sync.Map  // symbol - market - ticker 行情包含标记价格
+	bidAsks         sync.Map  // symbol - market - bidAsk
+	kLines          sync.Map  // symbol - market - *candle
+	MsgChanTick     sync.Map  // market - []chan struct{}
+	MsgChanKLine    sync.Map  // market - []chan struct{}
+	WsInitTime      sync.Map  // market - time
+	SocketsTick     sync.Map  // market - map[*websocket.Conn]bool for depth sockets
+	AccountConns    sync.Map  // market*accountKey - *websocket.Conn
+	MonitorSettings *sync.Map // sync.Map[market]*sync.Map[symbol]*sync.Map[interval] *MonitorSetting
+	WsManager       *WSManager
 }
 
 type MarkPriceInfo struct {
