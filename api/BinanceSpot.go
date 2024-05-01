@@ -99,16 +99,17 @@ func WsKLineBinanceSpot(environment *model.Environment, market string, symbols m
 		if market == model.BinanceMargin {
 			standardSymbol = coin + model.UniStandardTail[model.MarketTypeSpot]
 		}
+		createdAt := time.UnixMilli(result.Get(`E`).MustInt64())
 		result = result.Get(`k`)
-		candle := &model.Candle{Market: market, Symbol: standardSymbol,
-			Begin: time.UnixMilli(result.Get(`t`).MustInt64()), Seconds: 60}
+		candle := &model.Candle{Market: market, Symbol: standardSymbol, CreatedAt: createdAt,
+			Begin: time.UnixMilli(result.Get(`t`).MustInt64()), Seconds: 60,
+			End: time.UnixMilli(result.Get(`T`).MustInt64())}
 		candle.PriceOpen, _ = strconv.ParseFloat(result.Get(`o`).MustString(), 64)
 		candle.PriceClose, _ = strconv.ParseFloat(result.Get(`c`).MustString(), 64)
 		candle.PriceHigh, _ = strconv.ParseFloat(result.Get(`h`).MustString(), 64)
 		candle.PriceLow, _ = strconv.ParseFloat(result.Get(`l`).MustString(), 64)
 		candle.Volume, _ = strconv.ParseFloat(result.Get(`v`).MustString(), 64)
 		candle.VolumeQuote, _ = strconv.ParseFloat(result.Get(`q`).MustString(), 64)
-		candle.CreatedAt = time.UnixMilli(result.Get(`E`).MustInt64())
 		if model.AppEnvironment.SetCandle(candle.Symbol, candle.Market, candle) {
 			for _, handler := range model.CandleHandlers {
 				handler(environment, candle)

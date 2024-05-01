@@ -9,7 +9,7 @@ type CandleHandler func(environment *Environment, candle *Candle)
 type Candle struct {
 	Market                                     string    `gorm:"index:market_symbol_begin_seconds,unique"`
 	Symbol                                     string    `gorm:"index:market_symbol_begin_seconds,unique"`
-	Begin                                      time.Time `gorm:"index:market_symbol_begin_seconds,unique"`
+	Begin, End                                 time.Time `gorm:"index:market_symbol_begin_seconds,unique"`
 	Seconds                                    int       `gorm:"index:market_symbol_begin_seconds,unique"` // period of seconds
 	PriceOpen, PriceClose, PriceHigh, PriceLow float64
 	Volume, VolumeQuote, N, M, NVolume         float64 // 用n值的平滑计算方法计算的交易量

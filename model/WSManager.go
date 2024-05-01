@@ -64,7 +64,7 @@ func (manager *WSManager) AddAgent(wsAgent *WSAgent) {
 		strconv.Itoa(monitorSetting.IntervalSeconds))
 	if addressAgents == nil {
 		addressAgents = &sync.Map{}
-		util.StoreSyncMap(manager.WSAgents, monitorSetting.Market, monitorSetting.Symbol, strconv.Itoa(monitorSetting.IntervalSeconds))
+		util.StoreSyncMap(manager.WSAgents, addressAgents, monitorSetting.Market, monitorSetting.Symbol, strconv.Itoa(monitorSetting.IntervalSeconds))
 	}
 	oldAgent, _ := addressAgents.(*sync.Map).Load(monitorSetting.MailAddress)
 	if oldAgent != nil {

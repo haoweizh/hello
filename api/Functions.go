@@ -58,13 +58,13 @@ func GetTradeMaxOKEX(key, secret, symbol string, expireSecond int64) (success bo
 func RequireKLineReset(environment *model.Environment, market string, symbols map[string]bool) (reset bool) {
 	for symbol := range symbols {
 		_, candle := environment.GetKLine(symbol, market)
-		if candle == nil || candle.Begin.Add(time.Duration(candle.Seconds)*time.Second).UnixMilli()+int64(model.AppConfig.Delay) <
+		if candle == nil || candle.CreatedAt.Add(time.Duration(candle.Seconds)*time.Second).UnixMilli()+int64(model.AppConfig.Delay) <
 			time.Now().UnixMilli() {
 			reset = true
 			if candle == nil {
 				util.Notice(`RequireKLineReset symbol %s nil candle`, symbol)
 			} else {
-				util.Notice(`RequireKLineReset symbol %s candle time %s`, symbol, candle.Begin.String())
+				util.Notice(`RequireKLineReset symbol %s candle time %s`, symbol, candle.CreatedAt.String())
 			}
 			break
 		}
