@@ -161,7 +161,7 @@ package deprecated
 //	}
 //	now := util.GetNowUnixMillion()
 //	maintaining, ok := model.ChannelMaintaining.Load(setting.Market)
-//	if setting == nil || tick == nil || tick.Asks == nil || tick.Bids == nil || model.AppConfig.Handle != `1` ||
+//	if setting == nil || tick == nil || tick.Asks == nil || tick.Bids == nil || model.AppConfig.HandleLink != `1` ||
 //		(ok && maintaining.(bool)) || now-int64(tick.Ts) > 1000 {
 //		return
 //	}

@@ -151,8 +151,8 @@ package deprecated
 //		posDis[posStr[i]], _ = strconv.ParseFloat(parameters[i*3+1], 64)
 //		amount[posStr[i]], _ = strconv.ParseFloat(parameters[i*3+2], 64)
 //	}
-//	if util.GetNowUnixMillion()-int64(tick.Ts) > 1000 || model.AppConfig.Handle != `1` || model.AppPause {
-//		util.Notice(fmt.Sprintf(`[status]%s is pause:%v`, model.AppConfig.Handle, model.AppPause))
+//	if util.GetNowUnixMillion()-int64(tick.Ts) > 1000 || model.AppConfig.HandleLink != `1` || model.AppPause {
+//		util.Notice(fmt.Sprintf(`[status]%s is pause:%v`, model.AppConfig.HandleLink, model.AppPause))
 //		CancelHang(model.KeyDefault, model.SecretDefault, setting.Market, setting.Symbol)
 //		return
 //	}

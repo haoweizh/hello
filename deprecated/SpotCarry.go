@@ -141,7 +141,7 @@ package deprecated
 //	million := util.GetNowUnixMillion()
 //	if tick == nil || tickRelated == nil || tick.Asks == nil || tick.Bids == nil ||
 //		tickRelated.Asks == nil || tickRelated.Bids == nil || setting == nil ||
-//		model.AppPause || (model.AppConfig.Env != `test` && (model.AppConfig.Handle != `1` ||
+//		model.AppPause || (model.AppConfig.Env != `test` && (model.AppConfig.HandleLink != `1` ||
 //		(million-int64(tickRelated.Ts) > 2000 || million-int64(tick.Ts) > 2000 || million-int64(tick.Ts) > 25))) {
 //		return
 //	}

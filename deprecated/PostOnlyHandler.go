@@ -10,7 +10,7 @@ package deprecated
 //
 //var PostonlyHandler = func(setting *model.Setting, tick *model.BidAsk) {
 //	orderPostonly := model.AppMarkets.RemoveBmPendingOrder()
-//	if setting == nil || model.AppConfig.Handle != `1` || orderPostonly == nil {
+//	if setting == nil || model.AppConfig.HandleLink != `1` || orderPostonly == nil {
 //		return
 //	}
 //	startTime := util.GetNowUnixMillion()

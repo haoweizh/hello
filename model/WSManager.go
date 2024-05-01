@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/gorilla/websocket"
 	"hello/util"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -13,7 +14,7 @@ import (
 type WSMsgHandler func(client *WSAgent, message []byte)
 
 type WSManager struct {
-	WSAgents *sync.Map // sync.Map[market]*sync.Map[symbol]*sync.Map[mailAddress] *WSAgent
+	WSAgents *sync.Map // market*symbol*interval - *sync.Map[mailAddress] *WSAgent
 }
 
 type WSAgent struct {
@@ -26,10 +27,10 @@ type WSAgent struct {
 }
 
 type SettingMonitor struct {
-	MailAddress     string `gorm:"index:address_market_symbol,unique"`
-	Market          string `gorm:"index:address_market_symbol,unique"`
-	Symbol          string `gorm:"index:address_market_symbol,unique"`
-	IntervalSeconds int
+	MailAddress     string `gorm:"index:address_market_symbol_interval,unique"`
+	Market          string `gorm:"index:address_market_symbol_interval,unique"`
+	Symbol          string `gorm:"index:address_market_symbol_interval,unique"`
+	IntervalSeconds int    `gorm:"index:address_market_symbol_interval,unique"`
 	WarnChange      float64
 	WarnIncrease    float64
 	WarnVolume      float64
@@ -44,21 +45,14 @@ type Message struct {
 	Content   string `json:"content,omitempty"`
 }
 
-func (manager *WSManager) RemoveAgent(market, symbol, address string) {
-	mapMarket, _ := manager.WSAgents.Load(market)
-	if mapMarket == nil {
-		return
-	}
-	mapSymbol, _ := mapMarket.(*sync.Map).Load(symbol)
-	if mapSymbol == nil {
-		return
-	}
-	wsAgent, _ := mapSymbol.(*sync.Map).Load(address)
+func (manager *WSManager) RemoveAgent(market, symbol string, interval int, address string) {
+	addressAgents, _ := util.LoadSyncMap(manager.WSAgents, market, symbol, strconv.Itoa(interval))
+	wsAgent, _ := addressAgents.(*sync.Map).Load(address)
 	if wsAgent != nil {
-		mapSymbol.(*sync.Map).Delete(address)
+		addressAgents.(*sync.Map).Delete(address)
 		wsAgent.(*WSAgent).Close()
 	}
-	util.Notice(fmt.Sprintf(`remove agent %s %s %s`, market, symbol, address))
+	util.Notice(fmt.Sprintf(`remove agent %s %s %d %s`, market, symbol, interval, address))
 }
 
 func (manager *WSManager) AddAgent(wsAgent *WSAgent) {
@@ -66,25 +60,21 @@ func (manager *WSManager) AddAgent(wsAgent *WSAgent) {
 	if manager.WSAgents == nil {
 		manager.WSAgents = &sync.Map{}
 	}
-	mapMarket, _ := manager.WSAgents.Load(monitorSetting.Market)
-	if mapMarket == nil {
-		mapMarket = &sync.Map{}
-		manager.WSAgents.Store(monitorSetting.Market, mapMarket)
+	addressAgents, _ := util.LoadSyncMap(manager.WSAgents, monitorSetting.Market, monitorSetting.Symbol,
+		strconv.Itoa(monitorSetting.IntervalSeconds))
+	if addressAgents == nil {
+		addressAgents = &sync.Map{}
+		util.StoreSyncMap(manager.WSAgents, monitorSetting.Market, monitorSetting.Symbol, strconv.Itoa(monitorSetting.IntervalSeconds))
 	}
-	mapSymbol, _ := mapMarket.(*sync.Map).Load(monitorSetting.Symbol)
-	if mapSymbol == nil {
-		mapSymbol = &sync.Map{}
-		mapMarket.(*sync.Map).Store(monitorSetting.Symbol, mapSymbol)
-	}
-	oldAgent, _ := mapSymbol.(*sync.Map).Load(monitorSetting.MailAddress)
+	oldAgent, _ := addressAgents.(*sync.Map).Load(monitorSetting.MailAddress)
 	if oldAgent != nil {
 		oldAgent.(*WSAgent).Close()
 	}
-	mapSymbol.(*sync.Map).Store(monitorSetting.MailAddress, wsAgent)
+	addressAgents.(*sync.Map).Store(monitorSetting.MailAddress, wsAgent)
 	//jsonMessage, _ := json.Marshal(&Message{Content: "/A new socket has connected."})
 	//manager.Send(jsonMessage, agent)
-	util.Notice(fmt.Sprintf(`add agent %s %s %s`,
-		monitorSetting.Market, monitorSetting.Symbol, monitorSetting.MailAddress))
+	util.Notice(fmt.Sprintf(`add agent %s %s %d %s`,
+		monitorSetting.Market, monitorSetting.Symbol, monitorSetting.IntervalSeconds, monitorSetting.MailAddress))
 }
 
 func (agent *WSAgent) Close() {
@@ -97,7 +87,8 @@ func (agent *WSAgent) Close() {
 func (agent *WSAgent) ReadServe(msgHandler WSMsgHandler) {
 	defer func() {
 		if agent.SettingMonitor != nil {
-			agent.Manager.RemoveAgent(agent.SettingMonitor.Market, agent.SettingMonitor.Symbol, agent.SettingMonitor.MailAddress)
+			agent.Manager.RemoveAgent(agent.SettingMonitor.Market, agent.SettingMonitor.Symbol,
+				agent.SettingMonitor.IntervalSeconds, agent.SettingMonitor.MailAddress)
 		}
 	}()
 	go func() {

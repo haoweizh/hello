@@ -100,13 +100,15 @@ func WsKLineBinanceSpot(environment *model.Environment, market string, symbols m
 			standardSymbol = coin + model.UniStandardTail[model.MarketTypeSpot]
 		}
 		result = result.Get(`k`)
-		candle := &model.Candle{Market: market, Symbol: standardSymbol, Begin: time.UnixMilli(result.Get(`t`).MustInt64()), Seconds: 1}
+		candle := &model.Candle{Market: market, Symbol: standardSymbol,
+			Begin: time.UnixMilli(result.Get(`t`).MustInt64()), Seconds: 60}
 		candle.PriceOpen, _ = strconv.ParseFloat(result.Get(`o`).MustString(), 64)
 		candle.PriceClose, _ = strconv.ParseFloat(result.Get(`c`).MustString(), 64)
 		candle.PriceHigh, _ = strconv.ParseFloat(result.Get(`h`).MustString(), 64)
 		candle.PriceLow, _ = strconv.ParseFloat(result.Get(`l`).MustString(), 64)
 		candle.Volume, _ = strconv.ParseFloat(result.Get(`v`).MustString(), 64)
 		candle.VolumeQuote, _ = strconv.ParseFloat(result.Get(`q`).MustString(), 64)
+		candle.CreatedAt = time.UnixMilli(result.Get(`E`).MustInt64())
 		if model.AppEnvironment.SetCandle(candle.Symbol, candle.Market, candle) {
 			for _, handler := range model.CandleHandlers {
 				handler(environment, candle)
@@ -116,7 +118,7 @@ func WsKLineBinanceSpot(environment *model.Environment, market string, symbols m
 	subs := make([]interface{}, 0)
 	for symbol := range symbols {
 		_, _, _, dialectSymbol := model.GetFromStandard(market, symbol)
-		subs = append(subs, strings.ToLower(dialectSymbol)+`@kline_1s`)
+		subs = append(subs, strings.ToLower(dialectSymbol)+`@kline_1m`)
 	}
 	socketMap, msgChans, connectErr = WebSocketClient(market, wsBinance+`stream`, subs,
 		subscribeHandlerBinance, KLineMsgHandlerBinanceSpot, wsStepBinance)

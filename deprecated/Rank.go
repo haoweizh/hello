@@ -76,7 +76,7 @@ package deprecated
 //		util.Notice(fmt.Sprintf(`[tick not good]%s %s`, setting.Market, setting.Symbol))
 //		return
 //	}
-//	if model.AppConfig.Handle != `1` || model.AppPause {
+//	if model.AppConfig.HandleLink != `1` || model.AppPause {
 //		return
 //	}
 //	delay := util.GetNowUnixMillion() - int64(tick.Ts)

@@ -28,7 +28,7 @@ package deprecated
 //var ProcessHang = func(setting *model.Setting, tick *model.BidAsk) {
 //	marketInfo := model.GetMarketInfo(setting.Market, setting.Symbol)
 //	if marketInfo == nil || setting == nil || tick == nil || tick.Asks == nil || tick.Bids == nil || getHanging() ||
-//		model.AppConfig.Handle != `1` || model.AppPause || util.GetNowUnixMillion()-int64(tick.Ts) > 40 {
+//		model.AppConfig.HandleLink != `1` || model.AppPause || util.GetNowUnixMillion()-int64(tick.Ts) > 40 {
 //		return
 //	}
 //	account := model.AppConfig.GetAccounts(setting.Market)[0]

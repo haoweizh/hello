@@ -249,6 +249,6 @@ func GetMarketToday(market string) (today time.Time, strToday string) {
 func (config *Config) ToString() string {
 	str := "markets-carry cost:\n"
 	str += fmt.Sprintf("delay: %f\n", config.Delay)
-	str += fmt.Sprintf("Handle: %s\n", config.Handle)
+	str += fmt.Sprintf("HandleLink: %s\n", config.Handle)
 	return str
 }

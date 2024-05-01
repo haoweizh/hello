@@ -55,7 +55,7 @@ package deprecated
 //	_, tickRelated := model.AppMarkets.GetBidAsk(setting.SymbolRelated, setting.MarketRelated)
 //	million := util.GetNowUnixMillion()
 //	if tickD == nil || tickRelated == nil || tickD.Asks == nil || tickRelated.Asks == nil ||
-//		model.AppConfig.Handle != `1` || model.AppPause || (model.AppConfig.Env != `test` &&
+//		model.AppConfig.HandleLink != `1` || model.AppPause || (model.AppConfig.Env != `test` &&
 //		(million-int64(tickRelated.Ts) > 2000 || million-int64(tickD.Ts) > 2000 || million-int64(tickD.Ts) > 25)) {
 //		return
 //	}

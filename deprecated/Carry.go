@@ -293,7 +293,7 @@ package deprecated
 //}
 //
 //var ProcessCarry = func(setting *model.Setting, tick *model.BidAsk) {
-//	if !doCarry && model.AppConfig.Handle == `1` {
+//	if !doCarry && model.AppConfig.HandleLink == `1` {
 //		go clearCarryBalance()
 //		doCarry = true
 //		return
@@ -316,7 +316,7 @@ package deprecated
 //	exit := false
 //	if tickPerp == nil || tickRelated == nil || tickPerp.Asks == nil || tickPerp.Bids == nil ||
 //		tickRelated.Asks == nil || tickRelated.Bids == nil || setting == nil || model.AppPause ||
-//		(model.AppConfig.Env != `test` && model.AppConfig.Handle != `1`) || setting.Valid == false {
+//		(model.AppConfig.Env != `test` && model.AppConfig.HandleLink != `1`) || setting.Valid == false {
 //		exit = true
 //	}
 //	switch setting.Market {

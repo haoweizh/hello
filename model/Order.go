@@ -23,7 +23,7 @@ type Order struct {
 	OrderId           string `gorm:"unique"`
 	OrderSide         string
 	OrderType         string
-	RefreshType       string // 1: near refresh 2: far refresh
+	RefreshType       string // 1: near refreshLink 2: far refreshLink
 	Status            string
 	Symbol            string
 	OrderTime         time.Time
