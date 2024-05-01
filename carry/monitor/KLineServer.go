@@ -50,7 +50,7 @@ func GetPooledAggregate(candle *model.Candle, interval int) (pooledAggregate *mo
 	}
 	util.Notice(fmt.Sprintf(`create pooled candle %s %s %d:%d %d`,
 		candle.Market, candle.Symbol, historyTime.Hour(), historyTime.Minute(), interval))
-	for begin := historyTime; begin.Before(candle.Begin); begin.Add(time.Minute) {
+	for begin := historyTime; begin.Before(candle.Begin); {
 		key := fmt.Sprintf(`%s*%s*%d*%d:%d`,
 			candle.Market, candle.Symbol, 60, begin.Hour(), begin.Minute())
 		temp, _ := aggregatePool.Load(key)
@@ -66,6 +66,7 @@ func GetPooledAggregate(candle *model.Candle, interval int) (pooledAggregate *mo
 			pooledAggregate.VolumeQuote += temp.(*model.AggregateCandle).VolumeQuote
 			pooledAggregate.PriceCurrent = temp.(*model.AggregateCandle).PriceCurrent
 		}
+		begin = begin.Add(time.Minute)
 	}
 	aggregatePool.Store(pooledAggregate.GetKey(), pooledAggregate)
 	return pooledAggregate
