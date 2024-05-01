@@ -108,6 +108,9 @@ var ProcessMonitor = func(environment *model.Environment, candle *model.Candle) 
 			return true
 		}
 		addressAgents.(*sync.Map).Range(func(address, agent any) bool {
+			if agent == nil {
+				return true
+			}
 			formatedData := map[string]interface{}{
 				`开始`: fmt.Sprintf(`%s %.4e`, pooledAggregate.Start.Format(`2006-01-02 15:04:05`), pooledAggregate.PriceStart),
 				`结束`: fmt.Sprintf(`%s %.4e`, pooledAggregate.End.Format(`2006-01-02 15:04:05`), pooledAggregate.PriceCurrent),
