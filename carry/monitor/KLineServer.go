@@ -17,21 +17,22 @@ var aggregatePool = &sync.Map{} // market*symbol*interval*HH:MM - *AggregateCand
 func RefreshSettingMonitors(environment *model.Environment, settingMonitors []*model.SettingMonitor) {
 	environment.MonitorSettings = &sync.Map{}
 	for _, monitor := range settingMonitors {
-		mapSymbol, _ := environment.MonitorSettings.Load(monitor.Market)
-		if mapSymbol == nil {
-			mapSymbol = &sync.Map{}
-			environment.MonitorSettings.Store(monitor.Market, mapSymbol)
+		symbolMonitor, _ := environment.MonitorSettings.Load(monitor.Market)
+		if symbolMonitor == nil {
+			symbolMonitor = &sync.Map{}
+			environment.MonitorSettings.Store(monitor.Market, symbolMonitor)
 		}
-		mapInterval, _ := mapSymbol.(*sync.Map).Load(monitor.Symbol)
-		if mapInterval == nil {
-			mapInterval = &sync.Map{}
-			mapSymbol.(*sync.Map).Store(monitor.Symbol, mapInterval)
+		intervalMonitor, _ := symbolMonitor.(*sync.Map).Load(monitor.Symbol)
+		if intervalMonitor == nil {
+			intervalMonitor = &sync.Map{}
+			symbolMonitor.(*sync.Map).Store(monitor.Symbol, intervalMonitor)
 		}
-		intervalMonitors, _ := mapInterval.(*sync.Map).Load(monitor.IntervalSeconds)
+		intervalMonitors, _ := intervalMonitor.(*sync.Map).Load(monitor.IntervalSeconds)
 		if intervalMonitors == nil {
-			util.Notice(fmt.Sprintf(`create new aggregate for %s %s %s`, monitor.Market, monitor.Symbol, monitor.MailAddress))
-			mapInterval.(*sync.Map).Store(monitor.MailAddress, monitor)
+			intervalMonitors = &sync.Map{}
+			intervalMonitor.(*sync.Map).Store(monitor.IntervalSeconds, intervalMonitors)
 		}
+		intervalMonitors.(*sync.Map).Store(monitor.MailAddress, monitor)
 	}
 }
 
@@ -89,7 +90,7 @@ var ProcessMonitor = func(environment *model.Environment, candle *model.Candle) 
 		PriceStart:   candle.PriceOpen,
 		PriceCurrent: candle.PriceClose}
 	aggregatePool.Store(minuteAggregate.GetKey(), minuteAggregate)
-	intervalMonitors.(*sync.Map).Range(func(interval, monitor any) bool {
+	intervalMonitors.(*sync.Map).Range(func(interval, value any) bool {
 		intervalStr, err := strconv.Atoi(interval.(string))
 		if err != nil {
 			return true
