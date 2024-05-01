@@ -40,13 +40,3 @@ func (order *Order) HaveId() (result bool) {
 	}
 	return true
 }
-
-func GetOppositeSide(side string) (oppoSide string) {
-	if side == OrderSideBuy {
-		return OrderSideSell
-	}
-	if side == OrderSideSell {
-		return OrderSideBuy
-	}
-	return ``
-}
