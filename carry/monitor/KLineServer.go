@@ -90,7 +90,11 @@ var ProcessMonitor = func(environment *model.Environment, candle *model.Candle) 
 		PriceCurrent: candle.PriceClose}
 	aggregatePool.Store(minuteAggregate.GetKey(), minuteAggregate)
 	intervalMonitors.(*sync.Map).Range(func(interval, monitor any) bool {
-		pooledAggregate := GetPooledAggregate(candle, interval.(int))
+		intervalStr, err := strconv.Atoi(interval.(string))
+		if err != nil {
+			return true
+		}
+		pooledAggregate := GetPooledAggregate(candle, intervalStr)
 		pooledAggregate.PriceCurrent = candle.PriceClose
 		pooledAggregate.End = &candle.CreatedAt
 		pooledAggregate.VolumeQuote += candle.VolumeQuote
