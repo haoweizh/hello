@@ -58,6 +58,8 @@ func GetPooledAggregate(candle *model.Candle, interval int) (pooledAggregate *mo
 			if pooledAggregate.PriceStart == 0 {
 				pooledAggregate.PriceStart = temp.(*model.AggregateCandle).PriceStart
 			}
+			util.Notice(fmt.Sprintf(`get minute candle %s start price %f %f`,
+				key, pooledAggregate.PriceStart, temp.(*model.AggregateCandle).PriceStart))
 			if pooledAggregate.PriceLow == 0 {
 				pooledAggregate.PriceLow = temp.(*model.AggregateCandle).PriceLow
 			}
@@ -65,6 +67,8 @@ func GetPooledAggregate(candle *model.Candle, interval int) (pooledAggregate *mo
 			pooledAggregate.PriceLow = math.Min(pooledAggregate.PriceLow, temp.(*model.AggregateCandle).PriceLow)
 			pooledAggregate.VolumeQuote += temp.(*model.AggregateCandle).VolumeQuote
 			pooledAggregate.PriceCurrent = temp.(*model.AggregateCandle).PriceCurrent
+		} else {
+			util.Notice(fmt.Sprintf(` fail to get minute candle %s`, key))
 		}
 		begin = begin.Add(time.Minute)
 	}
@@ -117,8 +121,8 @@ var ProcessMonitor = func(environment *model.Environment, candle *model.Candle) 
 				`开始`: fmt.Sprintf(`%s %.4e`, pooledAggregate.Start.Format(`2006-01-02 15:04:05`), pooledAggregate.PriceStart),
 				`结束`: fmt.Sprintf(`%s %.4e`, pooledAggregate.End.Format(`2006-01-02 15:04:05`), pooledAggregate.PriceCurrent),
 				`成交`: fmt.Sprintf(`%d秒 %.0e`, pooledAggregate.TimeInterval, pooledAggregate.VolumeQuote),
-				`价格`: fmt.Sprintf(`%.4e-%.4e 变化%.2f 涨幅%.2f`, pooledAggregate.PriceLow,
-					pooledAggregate.PriceHigh, pooledAggregate.PriceChange, pooledAggregate.PriceIncrease),
+				`价格`: fmt.Sprintf(`%.4e-%.4e 变化%.2f‰ 涨幅%.2f‰`, pooledAggregate.PriceLow,
+					pooledAggregate.PriceHigh, pooledAggregate.PriceChange*1000, pooledAggregate.PriceIncrease*1000),
 				`PriceChange`: pooledAggregate.PriceChange, `PriceIncrease`: pooledAggregate.PriceIncrease,
 				`Volume`: pooledAggregate.VolumeQuote}
 			jsonBytes, err := json.Marshal(formatedData)

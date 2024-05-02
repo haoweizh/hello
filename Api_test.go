@@ -656,3 +656,10 @@ func Test_wallet(t *testing.T) {
 	fmt.Println(order1.DealPrice)
 	fmt.Println(order1.Status)
 }
+
+func Test_transfer(t *testing.T) {
+	response, _ := util.HttpRequest(http.MethodPost, `https://user.api.it120.cc/user/apiExtUserCash/list`,
+		`page=1&pageSize=50&mobile=19525266383&aggregate=`, map[string]string{`x-token`: `7404f54e-4675-48ee-94bc-113e772c96ed`,
+			`Content-Type`: `application/x-www-form-urlencoded`}, 10000)
+	fmt.Println(string(response))
+}
