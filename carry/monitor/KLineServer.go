@@ -58,8 +58,8 @@ func GetPooledAggregate(candle *model.Candle, interval int) (pooledAggregate *mo
 			if pooledAggregate.PriceStart == 0 {
 				pooledAggregate.PriceStart = temp.(*model.AggregateCandle).PriceStart
 			}
-			util.Notice(fmt.Sprintf(`get minute candle %s start price %f %f`,
-				key, pooledAggregate.PriceStart, temp.(*model.AggregateCandle).PriceStart))
+			util.Notice(fmt.Sprintf(`get minute candle %s start price %f %f candle begin %s`,
+				key, pooledAggregate.PriceStart, temp.(*model.AggregateCandle).PriceStart, candle.Begin.String()))
 			if pooledAggregate.PriceLow == 0 {
 				pooledAggregate.PriceLow = temp.(*model.AggregateCandle).PriceLow
 			}
