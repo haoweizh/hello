@@ -88,6 +88,7 @@ var ProcessMonitor = func(environment *model.Environment, candle *model.Candle) 
 	minuteAggregate := &model.AggregateCandle{
 		Market:       candle.Market,
 		Symbol:       candle.Symbol,
+		TimeInterval: 60,
 		Start:        &candle.Begin,
 		PriceHigh:    candle.PriceHigh,
 		PriceLow:     candle.PriceLow,
