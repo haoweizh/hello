@@ -40,10 +40,10 @@ const Header:React.FC<iHeader> = (props)=>{
            <Text style={{fontSize:"15px"}}>Symbol:</Text>
            <Text style={{fontSize:"15px"}} type={'danger'}>{item.Symbol}</Text>
          </Flex>
-         <Flex >
-           <Text  style={{fontSize:"15px"}} >Market:</Text>
-           <Text  style={{fontSize:"15px"}} type={'danger'}>{item.Market}</Text>
-         </Flex>
+         {/*<Flex >*/}
+         {/*  <Text  style={{fontSize:"15px"}} >Market:</Text>*/}
+         {/*  <Text  style={{fontSize:"15px"}} type={'danger'}>{item.Market}</Text>*/}
+         {/*</Flex>*/}
          <Flex >
            <Text  style={{fontSize:"15px"}}>IntervalSeconds:</Text>
            <Text  style={{fontSize:"15px"}} type={'danger'}>{item.IntervalSeconds}</Text>

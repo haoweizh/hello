@@ -83,7 +83,7 @@ declare namespace API {
 
   type MonitorItem = {
     MailAddress: string
-    Market: string
+    // Market: string
     Symbol: string
     IntervalSeconds: number
     WarnChange: number

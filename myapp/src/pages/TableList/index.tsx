@@ -192,12 +192,12 @@ const TableList: React.FC = () => {
               message: (
                 <FormattedMessage
                   id="pages.searchTable.ruleName"
-                  defaultMessage="Symbol is required"
+                  defaultMessage="币种 is required"
                 />
               ),
             },
           ]}
-          placeholder={'请输入Symbol'}
+          placeholder={'请输入币种'}
           width="md"
           name="Symbol"
         />
@@ -213,10 +213,26 @@ const TableList: React.FC = () => {
               ),
             },
           ]}
-          placeholder={'请输入IntervalSeconds'}
+          placeholder={'请输入监控时间段(秒)'}
           width="md"
           name="IntervalSeconds"
         />
+        {/*<ProFormText*/}
+        {/*  rules={[*/}
+        {/*    {*/}
+        {/*      required: true,*/}
+        {/*      message: (*/}
+        {/*        <FormattedMessage*/}
+        {/*          id="pages.searchTable.ruleName"*/}
+        {/*          defaultMessage="Market name is required"*/}
+        {/*        />*/}
+        {/*      ),*/}
+        {/*    },*/}
+        {/*  ]}*/}
+        {/*  width="md"*/}
+        {/*  placeholder={'请输入Market'}*/}
+        {/*  name="Market"*/}
+        {/*/>*/}
         <ProFormText
           rules={[
             {
@@ -224,29 +240,13 @@ const TableList: React.FC = () => {
               message: (
                 <FormattedMessage
                   id="pages.searchTable.ruleName"
-                  defaultMessage="Market name is required"
+                  defaultMessage="振幅is required"
                 />
               ),
             },
           ]}
           width="md"
-          placeholder={'请输入Market'}
-          name="Market"
-        />
-        <ProFormText
-          rules={[
-            {
-              required: true,
-              message: (
-                <FormattedMessage
-                  id="pages.searchTable.ruleName"
-                  defaultMessage="WarnChange name is required"
-                />
-              ),
-            },
-          ]}
-          width="md"
-          placeholder={'请输入WarnChange'}
+          placeholder={'请输入预警振幅'}
           name="WarnChange"
         />
         <ProFormText
@@ -256,13 +256,13 @@ const TableList: React.FC = () => {
               message: (
                 <FormattedMessage
                   id="pages.searchTable.ruleName"
-                  defaultMessage="WarnIncrease name is required"
+                  defaultMessage="涨幅is required"
                 />
               ),
             },
           ]}
           width="md"
-          placeholder={'请输入WarnIncrease'}
+          placeholder={'请输入预警涨幅'}
           name="WarnIncrease"
         />
         <ProFormText
@@ -272,13 +272,13 @@ const TableList: React.FC = () => {
               message: (
                 <FormattedMessage
                   id="pages.searchTable.ruleName"
-                  defaultMessage="WarnVolume name is required"
+                  defaultMessage="成交量 is required"
                 />
               ),
             },
           ]}
           width="md"
-          placeholder={'请输入WarnVolume'}
+          placeholder={'请输入预警成交量'}
           name="WarnVolume"
         />
       </ModalForm>

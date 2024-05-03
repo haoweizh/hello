@@ -12,6 +12,7 @@ import (
 	"hello/util"
 	"net/http"
 	"strconv"
+	"strings"
 )
 
 func monitorEntry(c *gin.Context) {
@@ -56,10 +57,8 @@ func addSettingMonitor(c *gin.Context) {
 	warnIncrease, _ := strconv.ParseFloat(value[`WarnIncrease`], 64)
 	warnVolume, _ := strconv.ParseFloat(value[`WarnVolume`], 64)
 	intervalSeconds, _ := strconv.Atoi(value[`IntervalSeconds`])
-	if value[`Market`] != model.BinanceSpot {
-		c.JSON(http.StatusOK, map[string]interface{}{`status`: `fail`, `msg`: `只支持` + model.BinanceSpot, `data`: map[string]interface{}{}})
-		return
-	}
+	value[`Market`] = model.BinanceSpot
+	value[`Symbol`] = strings.ToUpper(value[`Symbol`]) + model.UniStandardTail[value[`Market`]]
 	marketInfo, _ := util.LoadSyncMap(model.MarketInfos, value[`Market`], value[`Symbol`])
 	if marketInfo == nil {
 		marketInit := false
