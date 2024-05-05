@@ -65,6 +65,8 @@ func GetPooledAggregate(candle *model.Candle, interval int) (pooledAggregate *mo
 			}
 			pooledAggregate.PriceHigh = math.Max(pooledAggregate.PriceHigh, temp.(*model.AggregateCandle).PriceHigh)
 			pooledAggregate.PriceLow = math.Min(pooledAggregate.PriceLow, temp.(*model.AggregateCandle).PriceLow)
+			util.Notice(fmt.Sprintf(`pooled add volume %s %s start %s %f + minute volume %f`,
+				candle.Symbol, interval, pooledAggregate.Start.String(), pooledAggregate.VolumeQuote, temp.(*model.AggregateCandle).VolumeQuote))
 			pooledAggregate.VolumeQuote += temp.(*model.AggregateCandle).VolumeQuote
 			pooledAggregate.PriceCurrent = temp.(*model.AggregateCandle).PriceCurrent
 		} else {
@@ -100,6 +102,8 @@ var ProcessMonitor = func(environment *model.Environment, candle *model.Candle) 
 		pooledAggregate := GetPooledAggregate(candle, interval.(int))
 		pooledAggregate.PriceCurrent = candle.PriceClose
 		pooledAggregate.End = &candle.CreatedAt
+		util.Notice(fmt.Sprintf(`final pooled volume %s %f add %f`,
+			pooledAggregate.GetKey(), pooledAggregate.VolumeQuote, candle.VolumeQuote))
 		pooledAggregate.VolumeQuote += candle.VolumeQuote
 		pooledAggregate.PriceHigh = math.Max(pooledAggregate.PriceHigh, candle.PriceHigh)
 		if pooledAggregate.PriceLow == 0 {

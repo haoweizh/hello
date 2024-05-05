@@ -25,15 +25,15 @@ const wsStepBinance = 20
 var maintainingAccountConnBinance = false
 var channelMaintainingBinance = false
 
-func getMarketsBinance(account *model.Account, market, marketType string) (marketInfos map[string]*model.MarketInfo) {
-	util.Notice(fmt.Sprintf("start to getMarketsBinance %s", account.Key))
+func GetMarketsBinance(account *model.Account, market, marketType string) (marketInfos map[string]*model.MarketInfo) {
+	util.Notice(fmt.Sprintf("start to GetMarketsBinance %s", account.Key))
 	marketInfos = make(map[string]*model.MarketInfo)
 	client := binance.NewClient(account.Key, account.Secret)
 	exchangeInfo, err := client.NewExchangeInfoService().Do(context.Background())
 	if err != nil {
-		util.Notice(fmt.Sprintf("getMarketsBinance %s err: %s %v休息五分钟", account.Key, err.Error(), exchangeInfo))
+		util.Notice(fmt.Sprintf("GetMarketsBinance %s err: %s %v休息五分钟", account.Key, err.Error(), exchangeInfo))
 		time.Sleep(time.Minute * 5)
-		return getMarketsBinance(account, market, marketType)
+		return GetMarketsBinance(account, market, marketType)
 	}
 	for _, item := range exchangeInfo.Symbols {
 		if item.Status != "TRADING" || item.QuoteAsset != model.DialectTail[marketType][market] ||
