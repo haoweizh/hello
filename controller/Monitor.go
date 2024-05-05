@@ -58,7 +58,7 @@ func addSettingMonitor(c *gin.Context) {
 	warnVolume, _ := strconv.ParseFloat(value[`WarnVolume`], 64)
 	intervalSeconds, _ := strconv.Atoi(value[`IntervalSeconds`])
 	value[`Market`] = model.BinanceSpot
-	value[`Symbol`] = strings.ToUpper(value[`Symbol`]) + model.UniStandardTail[model.UniStandardTail[model.MarketTypeSpot]]
+	value[`Symbol`] = strings.ToUpper(value[`Symbol`]) + `_USDT`
 	marketInfo, _ := util.LoadSyncMap(model.MarketInfos, value[`Market`], value[`Symbol`])
 	if marketInfo == nil {
 		marketInit := false
