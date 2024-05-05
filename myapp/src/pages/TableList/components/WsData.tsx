@@ -1,8 +1,11 @@
 // @ts-nocheck
-import React, {useEffect, useMemo, useState} from "react";
+import React, {useCallback, useEffect,useMemo, useState} from "react";
 
 import useWebSocket from 'react-use-websocket';
+
+import { Manager } from "socket.io-client";
 import {abs} from "stylis";
+import moment from "moment";
 import {Tag} from "antd";
 
 
@@ -35,7 +38,7 @@ const WsData: React.FC<iWsData> = (props) => {
   const [data, setData] = useState<WsResDataProps>()
 
   // This can also be an async getter function. See notes below on Async Urls.
-  const socketUrl = 'ws://47.74.31.113:8075/monitor?id=' + item.ID;
+  const socketUrl = 'ws://47.74.31.113:8075/monitor?id='+item.ID;
 
   const {
     sendMessage,
@@ -77,11 +80,13 @@ const WsData: React.FC<iWsData> = (props) => {
   }, [lastJsonMessage]);
 
 
+
+
   const isHighLight = useMemo(() => {
     if (
       (data?.PriceChange > item.WarnChange) &&
-      // (data?.PriceIncrease > item.WarnIncrease && data?.PriceIncrease > 0) &&
-      (abs(data?.PriceIncrease) > item.WarnIncrease) && // data?.PriceIncrease < 0) &&
+      (data?.PriceIncrease > item.WarnIncrease && data?.PriceIncrease > 0) &&
+      // (abs(data?.PriceIncrease) > item.WarnIncrease && data?.PriceIncrease < 0) &&
       (data?.Volume > item.WarnVolume)) {
       return true;
     } else {
@@ -90,14 +95,14 @@ const WsData: React.FC<iWsData> = (props) => {
   }, [item.ID, data])
 
   return (
-    <div style={{backgroundColor: isHighLight ? "green" : ""}}>
+    <div style={{backgroundColor: isHighLight? "green":""}}>
       {
         data && (
           <>
             {
-              readyState ? <Tag color="success">连接</Tag> : <Tag color="error">断开</Tag>
+              readyState ?   <Tag color="success">连接</Tag>:  <Tag color="error">断开</Tag>
             }
-            <div style={{fontSize: "15px", display: 'flex', flexWrap: "wrap", gap: "6px", padding: "8px"}}>
+            <div style={{fontSize:"15px", display:'flex', flexWrap:"wrap", gap:"6px", padding:"8px"}}>
 
               {
                 Object.keys(data).map((key, index) => {
@@ -109,17 +114,17 @@ const WsData: React.FC<iWsData> = (props) => {
                 })
               }
 
-              {/*<span>PriceIncrease:{data?.PriceIncrease}</span>*/}
-              {/*<span>PriceChange:{data?.PriceChange}</span>*/}
-              {/*<span>PriceCurrent:{data?.PriceCurrent}</span>*/}
-              {/*<span>PriceStart:{data?.PriceStart}</span>*/}
-              {/*<span>PriceHigh:{data?.PriceHigh}</span>*/}
-              {/*<span>PriceLow:{data?.PriceLow}</span>*/}
-              {/*<span>Volume:{data?.Volume}</span>*/}
-              {/*<span>TimeInterval:{data?.TimeInterval}</span>*/}
-              {/*<span>Start:{moment(data?.Start).format("YYYY-MM-DD HH:mm:ss")}</span>*/}
-              {/*<span>End:{moment(data?.End).format("YYYY-MM-DD HH:mm:ss")}</span>*/}
-              {/*<span>SlideRing:{data?.SlideRing}</span>*/}
+            {/*<span>PriceIncrease:{data?.PriceIncrease}</span>*/}
+            {/*<span>PriceChange:{data?.PriceChange}</span>*/}
+            {/*<span>PriceCurrent:{data?.PriceCurrent}</span>*/}
+            {/*<span>PriceStart:{data?.PriceStart}</span>*/}
+            {/*<span>PriceHigh:{data?.PriceHigh}</span>*/}
+            {/*<span>PriceLow:{data?.PriceLow}</span>*/}
+            {/*<span>Volume:{data?.Volume}</span>*/}
+            {/*<span>TimeInterval:{data?.TimeInterval}</span>*/}
+            {/*<span>Start:{moment(data?.Start).format("YYYY-MM-DD HH:mm:ss")}</span>*/}
+            {/*<span>End:{moment(data?.End).format("YYYY-MM-DD HH:mm:ss")}</span>*/}
+            {/*<span>SlideRing:{data?.SlideRing}</span>*/}
             </div>
           </>
         )
