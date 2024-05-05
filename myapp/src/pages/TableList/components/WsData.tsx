@@ -84,8 +84,8 @@ const WsData: React.FC<iWsData> = (props) => {
 
   const isHighLight = useMemo(() => {
     if (
-      (data?.PriceChange > item.WarnChange) &&
-      (data?.PriceIncrease > item.WarnIncrease && data?.PriceIncrease > 0) &&
+      (data?.PriceChange >= item.WarnChange) &&
+      (data?.PriceIncrease > item.WarnIncrease && data?.PriceIncrease >= 0) &&
       // (abs(data?.PriceIncrease) > item.WarnIncrease && data?.PriceIncrease < 0) &&
       (data?.Volume > item.WarnVolume)) {
       return true;
