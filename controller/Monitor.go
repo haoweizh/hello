@@ -88,15 +88,18 @@ func addSettingMonitor(c *gin.Context) {
 		WarnVolume:      warnVolume,
 	}
 	settingMonitor.MailAddress = user.(string)
-	model.AppDB.Save(&settingMonitor)
-	var settingMonitors []*model.SettingMonitor
-	model.AppDB.Where("mail_address = ? and market = ? and symbol = ?",
-		user.(string), settingMonitor.Market, settingMonitor.Symbol).Find(&settingMonitors)
-	if len(settingMonitors) > 0 {
-		util.Info(`add setting monitor: %s %s %s`, settingMonitors[0].Market, settingMonitors[0].Symbol, settingMonitors[0].MailAddress)
-		c.JSON(http.StatusOK, map[string]interface{}{`status`: `ok`, `msg`: `success`, `data`: settingMonitors[0]})
+	if model.AppDB.Save(&settingMonitor).RowsAffected > 0 {
+		util.Info(`add setting monitor: %s %s %s`, settingMonitor.Market, settingMonitor.Symbol, settingMonitor.MailAddress)
+		c.JSON(http.StatusOK, map[string]interface{}{`status`: `ok`, `msg`: `success insert`, `data`: settingMonitor})
 	} else {
-		c.JSON(http.StatusOK, map[string]interface{}{`status`: `fail`, `msg`: `fail to insert`, `data`: map[string]interface{}{}})
+		affected := model.AppDB.Model(&settingMonitor).Where("mail_address = ? and market = ? and symbol = ?",
+			user.(string), settingMonitor.Market, settingMonitor.Symbol).Updates(map[string]interface{}{
+			`interval_seconds`: intervalSeconds, `warn_change`: warnChange, `warn_increase`: warnIncrease, `warn_volume`: warnVolume}).RowsAffected
+		if affected > 0 {
+			c.JSON(http.StatusOK, map[string]interface{}{`status`: `ok`, `msg`: `success update`, `data`: settingMonitor})
+		} else {
+			c.JSON(http.StatusOK, map[string]interface{}{`status`: `fail`, `msg`: `fail to insert or update`, `data`: map[string]interface{}{}})
+		}
 	}
 }
 
