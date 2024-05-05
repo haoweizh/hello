@@ -42,10 +42,10 @@ func getSettingMonitors(c *gin.Context) {
 func addSettingMonitor(c *gin.Context) {
 	session := sessions.Default(c)
 	user := session.Get(`user`)
-	//if user == nil || user == `` {
-	//	c.JSON(http.StatusBadRequest, map[string]interface{}{`status`: `fail`, `msg`: `require login`, `data`: map[string]interface{}{}})
-	//	return
-	//}
+	if user == nil || user == `` {
+		c.JSON(http.StatusBadRequest, map[string]interface{}{`status`: `fail`, `msg`: `require login`, `data`: map[string]interface{}{}})
+		return
+	}
 	value := make(map[string]string)
 	data := c.PostForm(`data`)
 	err := json.Unmarshal([]byte(data), &value)
