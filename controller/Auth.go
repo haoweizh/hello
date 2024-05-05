@@ -8,6 +8,7 @@ import (
 	"hello/util"
 	"math/rand"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 )
@@ -37,6 +38,7 @@ func login(c *gin.Context) {
 			`status`: `fail`, `msg`: `code and user is required`, `data`: map[string]interface{}{}})
 		return
 	}
+	userName = strings.ToLower(userName)
 	code, ok := userNames.Load(userName)
 	if ok && code != nil {
 		if checkCode(value) && code.(string) == value {
@@ -65,6 +67,7 @@ func GetCode(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, map[string]interface{}{`status`: `fail`, `msg`: `user is required`, `data`: map[string]interface{}{}})
 		return
 	}
+	userName = strings.ToLower(userName)
 	waitTime := (util.GetNowUnixMillion() - codeGenTime) / 1000
 	if waitTime < 30 {
 		waitTime = 30 - waitTime
