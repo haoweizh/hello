@@ -65,7 +65,7 @@ func GetPooledAggregate(candle *model.Candle, interval int) (pooledAggregate *mo
 			}
 			pooledAggregate.PriceHigh = math.Max(pooledAggregate.PriceHigh, temp.(*model.AggregateCandle).PriceHigh)
 			pooledAggregate.PriceLow = math.Min(pooledAggregate.PriceLow, temp.(*model.AggregateCandle).PriceLow)
-			util.Notice(fmt.Sprintf(`pooled add volume %s %s start %s %f + minute volume %f`,
+			util.Notice(fmt.Sprintf(`pooled add volume %s %d start %s %f + minute volume %f`,
 				candle.Symbol, interval, pooledAggregate.Start.String(), pooledAggregate.VolumeQuote, temp.(*model.AggregateCandle).VolumeQuote))
 			pooledAggregate.VolumeQuote += temp.(*model.AggregateCandle).VolumeQuote
 			pooledAggregate.PriceCurrent = temp.(*model.AggregateCandle).PriceCurrent
@@ -130,6 +130,7 @@ var ProcessMonitor = func(environment *model.Environment, candle *model.Candle) 
 					pooledAggregate.PriceHigh, pooledAggregate.PriceChange*1000, pooledAggregate.PriceIncrease*1000),
 				`PriceChange`: pooledAggregate.PriceChange, `PriceIncrease`: pooledAggregate.PriceIncrease,
 				`Volume`: pooledAggregate.VolumeQuote}
+			util.Notice(fmt.Sprintf(`send ws msg %s %v`, pooledAggregate.GetKey(), formatedData))
 			jsonBytes, err := json.Marshal(formatedData)
 			err = agent.(*model.WSAgent).Socket.WriteMessage(websocket.TextMessage, jsonBytes)
 			if err != nil {
