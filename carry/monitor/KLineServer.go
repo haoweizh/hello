@@ -48,8 +48,8 @@ func GetPooledAggregate(candle *model.Candle, interval int) (pooledAggregate *mo
 	if value != nil {
 		return value.(*model.AggregateCandle)
 	}
-	util.Notice(fmt.Sprintf(`create pooled candle %s %s %d:%d %d`,
-		candle.Market, candle.Symbol, historyTime.Hour(), historyTime.Minute(), interval))
+	//util.Notice(fmt.Sprintf(`create pooled candle %s %s %d:%d %d`,
+	//	candle.Market, candle.Symbol, historyTime.Hour(), historyTime.Minute(), interval))
 	for begin := historyTime; begin.Before(candle.Begin); {
 		key := fmt.Sprintf(`%s*%s*%d*%d:%d`,
 			candle.Market, candle.Symbol, 60, begin.Hour(), begin.Minute())
@@ -58,8 +58,8 @@ func GetPooledAggregate(candle *model.Candle, interval int) (pooledAggregate *mo
 			if pooledAggregate.PriceStart == 0 {
 				pooledAggregate.PriceStart = temp.(*model.AggregateCandle).PriceStart
 			}
-			util.Notice(fmt.Sprintf(`get minute candle %s start price %f %f candle begin %s`,
-				key, pooledAggregate.PriceStart, temp.(*model.AggregateCandle).PriceStart, candle.Begin.String()))
+			//util.Notice(fmt.Sprintf(`get minute candle %s start price %f %f candle begin %s`,
+			//	key, pooledAggregate.PriceStart, temp.(*model.AggregateCandle).PriceStart, candle.Begin.String()))
 			if pooledAggregate.PriceLow == 0 {
 				pooledAggregate.PriceLow = temp.(*model.AggregateCandle).PriceLow
 			}

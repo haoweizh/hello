@@ -42,10 +42,10 @@ func getSettingMonitors(c *gin.Context) {
 func addSettingMonitor(c *gin.Context) {
 	session := sessions.Default(c)
 	user := session.Get(`user`)
-	if user == nil || user == `` {
-		c.JSON(http.StatusBadRequest, map[string]interface{}{`status`: `fail`, `msg`: `require login`, `data`: map[string]interface{}{}})
-		return
-	}
+	//if user == nil || user == `` {
+	//	c.JSON(http.StatusBadRequest, map[string]interface{}{`status`: `fail`, `msg`: `require login`, `data`: map[string]interface{}{}})
+	//	return
+	//}
 	value := make(map[string]string)
 	data := c.PostForm(`data`)
 	err := json.Unmarshal([]byte(data), &value)
@@ -58,7 +58,7 @@ func addSettingMonitor(c *gin.Context) {
 	warnVolume, _ := strconv.ParseFloat(value[`WarnVolume`], 64)
 	intervalSeconds, _ := strconv.Atoi(value[`IntervalSeconds`])
 	value[`Market`] = model.BinanceSpot
-	value[`Symbol`] = strings.ToUpper(value[`Symbol`]) + model.UniStandardTail[value[`Market`]]
+	value[`Symbol`] = strings.ToUpper(value[`Symbol`]) + model.UniStandardTail[model.UniStandardTail[model.MarketTypeSpot]]
 	marketInfo, _ := util.LoadSyncMap(model.MarketInfos, value[`Market`], value[`Symbol`])
 	if marketInfo == nil {
 		marketInit := false
