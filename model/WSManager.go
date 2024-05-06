@@ -116,17 +116,23 @@ func (agent *WSAgent) Update(aggregateCandle *AggregateCandle) {
 	if agent.Data == nil {
 		agent.Data = make(map[string]*time.Time)
 	}
+	needSend := false
 	for key, t := range agent.Data {
-		if t == nil || t.Add(time.Minute*5).After(time.Now()) {
+		if t == nil || t.Add(time.Minute*5).Before(time.Now()) {
 			delete(agent.Data, key)
+			needSend = true
 		}
 	}
 	key := fmt.Sprintf(`%s*%s*%d`, aggregateCandle.Market, aggregateCandle.Symbol, aggregateCandle.TimeInterval)
 	if agent.Data[key] == nil {
 		current := time.Now()
 		agent.Data[key] = &current
+		needSend = true
 	}
-	util.Notice(fmt.Sprintf(`send ws msg %s %v`, aggregateCandle.GetKey(), agent.Data))
+	util.Notice(fmt.Sprintf(`send ws msg %s need %v %v`, aggregateCandle.GetKey(), needSend, agent.Data))
+	if !needSend {
+		return
+	}
 	jsonBytes, err := json.Marshal(agent.Data)
 	err = agent.Socket.WriteMessage(websocket.TextMessage, jsonBytes)
 	if err != nil {
