@@ -1,13 +1,10 @@
 package monitor
 
 import (
-	"encoding/json"
 	"fmt"
-	"github.com/gorilla/websocket"
 	"hello/model"
 	"hello/util"
 	"math"
-	"strconv"
 	"sync"
 	"time"
 )
@@ -27,12 +24,12 @@ func RefreshSettingMonitors(environment *model.Environment, settingMonitors []*m
 			intervalMonitor = &sync.Map{}
 			symbolMonitor.(*sync.Map).Store(monitor.Symbol, intervalMonitor)
 		}
-		intervalMonitors, _ := intervalMonitor.(*sync.Map).Load(monitor.IntervalSeconds)
-		if intervalMonitors == nil {
-			intervalMonitors = &sync.Map{}
-			intervalMonitor.(*sync.Map).Store(monitor.IntervalSeconds, intervalMonitors)
+		addressMonitors, _ := intervalMonitor.(*sync.Map).Load(monitor.IntervalSeconds)
+		if addressMonitors == nil {
+			addressMonitors = &sync.Map{}
+			intervalMonitor.(*sync.Map).Store(monitor.IntervalSeconds, addressMonitors)
 		}
-		intervalMonitors.(*sync.Map).Store(monitor.MailAddress, monitor)
+		addressMonitors.(*sync.Map).Store(monitor.MailAddress, monitor)
 	}
 }
 
@@ -98,6 +95,9 @@ var ProcessMonitor = func(environment *model.Environment, candle *model.Candle) 
 		PriceCurrent: candle.PriceClose}
 	aggregatePool.Store(minuteAggregate.GetKey(), minuteAggregate)
 	intervalMonitors.(*sync.Map).Range(func(interval, value any) bool {
+		if value == nil {
+			return true
+		}
 		pooledAggregate := GetPooledAggregate(candle, interval.(int))
 		pooledAggregate.PriceCurrent = candle.PriceClose
 		pooledAggregate.End = &candle.CreatedAt
@@ -110,31 +110,17 @@ var ProcessMonitor = func(environment *model.Environment, candle *model.Candle) 
 		}
 		pooledAggregate.PriceIncrease = (pooledAggregate.PriceCurrent - pooledAggregate.PriceStart) / pooledAggregate.PriceCurrent
 		pooledAggregate.PriceChange = (pooledAggregate.PriceHigh - pooledAggregate.PriceLow) / pooledAggregate.PriceCurrent
-		addressAgents, _ := util.LoadSyncMap(environment.WsManager.WSAgents, candle.Market, candle.Symbol,
-			strconv.Itoa(interval.(int)))
-		if addressAgents == nil {
-			return true
-		}
-		addressAgents.(*sync.Map).Range(func(address, agent any) bool {
+		value.(*sync.Map).Range(func(address, monitor any) bool {
+			if address == nil || monitor == nil || pooledAggregate.VolumeQuote < monitor.(*model.SettingMonitor).WarnVolume ||
+				pooledAggregate.PriceIncrease < monitor.(*model.SettingMonitor).WarnIncrease ||
+				pooledAggregate.PriceChange < monitor.(*model.SettingMonitor).WarnChange {
+				return true
+			}
+			agent, _ := environment.WsManager.WSAgents.Load(address)
 			if agent == nil {
 				return true
 			}
-			formatedData := map[string]interface{}{
-				`开始`: fmt.Sprintf(`%s %.4e`, pooledAggregate.Start.Format(`2006-01-02 15:04:05`), pooledAggregate.PriceStart),
-				`结束`: fmt.Sprintf(`%s %.4e`, pooledAggregate.End.Format(`2006-01-02 15:04:05`), pooledAggregate.PriceCurrent),
-				`成交`: fmt.Sprintf(`%d秒 %.0e`, pooledAggregate.TimeInterval, pooledAggregate.VolumeQuote),
-				`价格`: fmt.Sprintf(`%.4e-%.4e 变化%.2f‰ 涨幅%.2f‰`, pooledAggregate.PriceLow,
-					pooledAggregate.PriceHigh, pooledAggregate.PriceChange*1000, pooledAggregate.PriceIncrease*1000),
-				`PriceChange`: pooledAggregate.PriceChange, `PriceIncrease`: pooledAggregate.PriceIncrease,
-				`Volume`: pooledAggregate.VolumeQuote}
-			util.Notice(fmt.Sprintf(`send ws msg %s %v`, pooledAggregate.GetKey(), formatedData))
-			jsonBytes, err := json.Marshal(formatedData)
-			err = agent.(*model.WSAgent).Socket.WriteMessage(websocket.TextMessage, jsonBytes)
-			if err != nil {
-				environment.WsManager.RemoveAgent(candle.Market, candle.Symbol, interval.(int), address.(string))
-				util.Notice(fmt.Sprintf(`fail to send ws msg return, unregister %s %s %d %s %s`,
-					candle.Market, candle.Symbol, interval, address.(string), err.Error()))
-			}
+			agent.(*model.WSAgent).Update(pooledAggregate)
 			return true
 		})
 		return true

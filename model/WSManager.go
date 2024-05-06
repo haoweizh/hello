@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"github.com/gorilla/websocket"
 	"hello/util"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -14,7 +13,7 @@ import (
 type WSMsgHandler func(client *WSAgent, message []byte)
 
 type WSManager struct {
-	WSAgents *sync.Map // market*symbol*interval - *sync.Map[mailAddress] *WSAgent
+	WSAgents *sync.Map // mailAddress - *WSAgent
 }
 
 type WSAgent struct {
@@ -24,6 +23,7 @@ type WSAgent struct {
 	Manager        *WSManager
 	Pinged         bool
 	SettingMonitor *SettingMonitor
+	Data           map[string]*time.Time // key: market*symbol*Interval value:*time
 }
 
 type SettingMonitor struct {
@@ -46,10 +46,9 @@ type Message struct {
 }
 
 func (manager *WSManager) RemoveAgent(market, symbol string, interval int, address string) {
-	addressAgents, _ := util.LoadSyncMap(manager.WSAgents, market, symbol, strconv.Itoa(interval))
-	wsAgent, _ := addressAgents.(*sync.Map).Load(address)
+	wsAgent, _ := manager.WSAgents.Load(address)
 	if wsAgent != nil {
-		addressAgents.(*sync.Map).Delete(address)
+		manager.WSAgents.Delete(address)
 		wsAgent.(*WSAgent).Close()
 	}
 	util.Notice(fmt.Sprintf(`remove agent %s %s %d %s`, market, symbol, interval, address))
@@ -60,17 +59,11 @@ func (manager *WSManager) AddAgent(wsAgent *WSAgent) {
 	if manager.WSAgents == nil {
 		manager.WSAgents = &sync.Map{}
 	}
-	addressAgents, _ := util.LoadSyncMap(manager.WSAgents, monitorSetting.Market, monitorSetting.Symbol,
-		strconv.Itoa(monitorSetting.IntervalSeconds))
-	if addressAgents == nil {
-		addressAgents = &sync.Map{}
-		util.StoreSyncMap(manager.WSAgents, addressAgents, monitorSetting.Market, monitorSetting.Symbol, strconv.Itoa(monitorSetting.IntervalSeconds))
-	}
-	oldAgent, _ := addressAgents.(*sync.Map).Load(monitorSetting.MailAddress)
+	oldAgent, _ := manager.WSAgents.Load(monitorSetting.MailAddress)
 	if oldAgent != nil {
 		oldAgent.(*WSAgent).Close()
 	}
-	addressAgents.(*sync.Map).Store(monitorSetting.MailAddress, wsAgent)
+	manager.WSAgents.Store(monitorSetting.MailAddress, wsAgent)
 	//jsonMessage, _ := json.Marshal(&Message{Content: "/A new socket has connected."})
 	//manager.Send(jsonMessage, agent)
 	util.Notice(fmt.Sprintf(`add agent %s %s %d %s`,
@@ -121,5 +114,30 @@ func (agent *WSAgent) ReadServe(msgHandler WSMsgHandler) {
 				return
 			}
 		}
+	}
+}
+
+func (agent *WSAgent) Update(aggregateCandle *AggregateCandle) {
+	if agent.Data == nil {
+		agent.Data = make(map[string]*time.Time)
+	}
+	for key, t := range agent.Data {
+		if t == nil || t.Add(time.Minute*5).After(time.Now()) {
+			delete(agent.Data, key)
+		}
+	}
+	key := fmt.Sprintf(`%s*%s*%d`, aggregateCandle.Market, aggregateCandle.Symbol, aggregateCandle.TimeInterval)
+	if agent.Data[key] == nil {
+		current := time.Now()
+		agent.Data[key] = &current
+	}
+	util.Notice(fmt.Sprintf(`send ws msg %s %v`, aggregateCandle.GetKey(), agent.Data))
+	jsonBytes, err := json.Marshal(agent.Data)
+	err = agent.Socket.WriteMessage(websocket.TextMessage, jsonBytes)
+	if err != nil && agent.SettingMonitor != nil {
+		settingMonitor := agent.SettingMonitor
+		agent.Manager.RemoveAgent(settingMonitor.Market, settingMonitor.Symbol, settingMonitor.IntervalSeconds, settingMonitor.MailAddress)
+		util.Notice(fmt.Sprintf(`fail to send ws msg return, unregister %s %s %d %s %s`,
+			settingMonitor.Market, settingMonitor.Symbol, settingMonitor.IntervalSeconds, settingMonitor.MailAddress, err.Error()))
 	}
 }

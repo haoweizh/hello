@@ -9,6 +9,17 @@ import (
 	"testing"
 )
 
+func Test_MapDel(t *testing.T) {
+	data := map[string]interface{}{`1`: 1, `2`: 2, `3`: 3}
+	for s := range data {
+		if s == `2` {
+			delete(data, s)
+		}
+		data[`4`] = 4
+	}
+	fmt.Println(data)
+}
+
 func Test_initMonitors(t *testing.T) {
 	model.NewConfig()
 	intervals := []int{300, 900, 3600, 14400, 86400}
