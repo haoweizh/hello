@@ -96,7 +96,13 @@ func (agent *WSAgent) ReadServe(msgHandler WSMsgHandler) {
 			}
 			jsonMessage, _ := json.Marshal(&Message{Sender: agent.ID, Content: string(message)})
 			if strings.Contains(string(jsonMessage), `ping`) {
-				agent.Pinged = true
+				err := agent.Socket.WriteMessage(websocket.TextMessage, []byte(`pong`))
+				if err != nil {
+					agent.Manager.RemoveAgent(agent.Address)
+					util.Notice(fmt.Sprintf(`fail to send ws msg return, unregister %s %s`, agent.Address, err.Error()))
+				} else {
+					agent.Pinged = true
+				}
 			}
 			if msgHandler != nil {
 				msgHandler(agent, jsonMessage)
