@@ -133,18 +133,7 @@ func MonitorTrade(c *gin.Context) {
 		//	api.ChanCmd <- `run`
 		//}
 	}
-	value := c.Query(`id`)
-	settingMonitor := &model.SettingMonitor{}
-	model.AppDB.Where("id = ?", value).First(settingMonitor)
-	if settingMonitor == nil {
-		c.JSON(http.StatusBadRequest, map[string]interface{}{`status`: `fail`, `msg`: `id match nil monitor setting`, `data`: map[string]interface{}{}})
-		return
-	}
-	//if sessionValue == nil || sessionValue.(string) != settingMonitor.MailAddress {
-	//	c.JSON(http.StatusBadRequest, map[string]interface{}{`status`: `fail`, `msg`: `require login`, `data`: map[string]interface{}{}})
-	//	fmt.Println(fmt.Sprintf(`session value %s != %s db address`, sessionValue, settingMonitor.MailAddress))
-	//	return
-	//}
+	value := c.Query(`address`)
 	conn, err := (&websocket.Upgrader{
 		CheckOrigin: func(r *http.Request) bool { return true }}).Upgrade(c.Writer, c.Request, nil)
 	if err != nil {
@@ -152,12 +141,12 @@ func MonitorTrade(c *gin.Context) {
 		return
 	}
 	wsAgent := &model.WSAgent{
-		ID:             uuid.NewV4().String(),
-		Socket:         conn,
-		ChanRead:       make(chan []byte),
-		Pinged:         true,
-		Manager:        model.AppEnvironment.WsManager,
-		SettingMonitor: settingMonitor,
+		ID:       uuid.NewV4().String(),
+		Socket:   conn,
+		ChanRead: make(chan []byte),
+		Pinged:   true,
+		Manager:  model.AppEnvironment.WsManager,
+		Address:  value,
 	}
 	model.AppEnvironment.WsManager.AddAgent(wsAgent)
 	go wsAgent.ReadServe(wsHandler)
