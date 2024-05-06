@@ -49,7 +49,7 @@ type Environment struct {
 	WsInitTime      sync.Map  // market - time
 	SocketsTick     sync.Map  // market - map[*websocket.Conn]bool for depth sockets
 	AccountConns    sync.Map  // market*accountKey - *websocket.Conn
-	MonitorSettings *sync.Map // sync.Map[market]*sync.Map[symbol]*sync.Map[interval]address
+	MonitorSettings *sync.Map // sync.Map[market]*sync.Map[symbol]*sync.Map[interval]*sync.Map[address]*MonitorSetting
 	WsManager       *WSManager
 }
 
