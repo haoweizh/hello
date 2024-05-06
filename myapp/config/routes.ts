@@ -52,6 +52,12 @@ export default [
     component: './TableList',
   },
   {
+    name: '监控列表',
+    icon: 'table',
+    path: '/new-list',
+    component: './NewList',
+  },
+  {
     path: '/',
     redirect: '/welcome',
   },

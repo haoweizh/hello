@@ -20,6 +20,8 @@ import {useRequest} from "@@/plugin-request";
 import WsData from "./components/WsData";
 import Header from "@/pages/TableList/components/Header";
 import "./index.less"
+import useWebSocket from "react-use-websocket";
+import {WsResDataProps} from "@/pages/TableList/components/WsData";
 
 /**
  * @en-US Add node
@@ -121,11 +123,59 @@ const TableList: React.FC = () => {
 
   const {data, error, loading, refresh} = useRequest<API.MonitorListResp>(getMonitors);
 
+  const [wsData, setWsData] = useState<{
+    [property: string]: any;
+  }>({})
+
+
   const [form] = Form.useForm();
   // console.log(data?.monitors);
 
   const monitors = data?.monitors;
-  console.log(monitors);
+  // This can also be an async getter function. See notes below on Async Urls.
+  const socketUrl = 'ws://47.74.31.113:8073/monitor?address=57059329@qq.com';
+
+  const {
+    sendMessage,
+    sendJsonMessage,
+    lastMessage,
+    lastJsonMessage,
+    readyState,
+    getWebSocket,
+  } = useWebSocket(socketUrl, {
+    onOpen: () => {
+      sendMessage("hello")
+    },
+    //Will attempt to reconnect on all close events, such as server shutting down
+    shouldReconnect: (closeEvent) => true,
+    // heartbeat: {
+    //   message: 'ping',
+    //   returnMessage: 'pong',
+    //   timeout: 60000, // 1 minute, if no response is received, the connection will be closed
+    //   interval: 10000, // every 25 seconds, a ping message will be sent
+    // },
+    // heartbeat:true
+  });
+
+  // Ping every 60 second
+  const HEARTBEAT_INTERVAL = 60000;
+
+  useEffect(() => {
+    // Start heartbeat interval
+    const heartbeatInterval = setInterval(() => {
+      sendMessage("ping");
+    }, HEARTBEAT_INTERVAL);
+
+    // Clean up interval on component unmount
+    return () => clearInterval(heartbeatInterval);
+  }, [sendJsonMessage]);
+  useEffect(() => {
+    if (lastJsonMessage){
+      console.log(Object.keys(lastJsonMessage));
+    }
+    lastJsonMessage && setWsData(lastJsonMessage)
+  }, [lastJsonMessage]);
+
 
   useEffect(() => {
 
@@ -147,9 +197,6 @@ const TableList: React.FC = () => {
       </Affix>
       <Flex vertical gap={'middle'}>
         {
-          monitors && monitors.map((item: API.MonitorItem) => {
-
-            return (
               <div className="list">
                 {/*<List*/}
                 {/*  header={<Header item={item} onDel={()=>refresh()} />}*/}
@@ -162,19 +209,28 @@ const TableList: React.FC = () => {
                 <div style={{fontSize: "15px", display: 'flex', flexWrap: "wrap", gap: "6px", padding: "8px"}}>
 
                   {
-                    Object.keys(data).map((key, index) => {
+                    Object.keys(wsData).length > 0 && Object.keys(wsData).map((key, index) => {
                       return (
                         <div key={index}>
-                          <span>{key}:{data[key]}</span>
+                          <span>{key}:{wsData[key]}</span>
                         </div>
                       )
                     })
                   }
 
+                  {/*<span>PriceIncrease:{data?.PriceIncrease}</span>*/}
+                  {/*<span>PriceChange:{data?.PriceChange}</span>*/}
+                  {/*<span>PriceCurrent:{data?.PriceCurrent}</span>*/}
+                  {/*<span>PriceStart:{data?.PriceStart}</span>*/}
+                  {/*<span>PriceHigh:{data?.PriceHigh}</span>*/}
+                  {/*<span>PriceLow:{data?.PriceLow}</span>*/}
+                  {/*<span>Volume:{data?.Volume}</span>*/}
+                  {/*<span>TimeInterval:{data?.TimeInterval}</span>*/}
+                  {/*<span>Start:{moment(data?.Start).format("YYYY-MM-DD HH:mm:ss")}</span>*/}
+                  {/*<span>End:{moment(data?.End).format("YYYY-MM-DD HH:mm:ss")}</span>*/}
+                  {/*<span>SlideRing:{data?.SlideRing}</span>*/}
                 </div>
               </div>
-            )
-          })
         }
       </Flex>
       <ModalForm
