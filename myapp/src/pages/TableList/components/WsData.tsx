@@ -38,46 +38,46 @@ const WsData: React.FC<iWsData> = (props) => {
   const [data, setData] = useState<WsResDataProps>()
 
   // This can also be an async getter function. See notes below on Async Urls.
-  const socketUrl = 'ws://47.74.31.113:8075/monitor?id='+item.ID;
+  // const socketUrl = 'ws://47.74.31.113:8075/monitor?id='+item.ID;
 
-  const {
-    sendMessage,
-    sendJsonMessage,
-    lastMessage,
-    lastJsonMessage,
-    readyState,
-    getWebSocket,
-  } = useWebSocket(socketUrl, {
-    onOpen: () => {
-      sendMessage("hello")
-    },
-    //Will attempt to reconnect on all close events, such as server shutting down
-    shouldReconnect: (closeEvent) => true,
-    // heartbeat: {
-    //   message: 'ping',
-    //   returnMessage: 'pong',
-    //   timeout: 60000, // 1 minute, if no response is received, the connection will be closed
-    //   interval: 10000, // every 25 seconds, a ping message will be sent
-    // },
-    // heartbeat:true
-  });
+  // const {
+  //   sendMessage,
+  //   sendJsonMessage,
+  //   lastMessage,
+  //   lastJsonMessage,
+  //   readyState,
+  //   getWebSocket,
+  // } = useWebSocket(socketUrl, {
+  //   onOpen: () => {
+  //     sendMessage("hello")
+  //   },
+  //   //Will attempt to reconnect on all close events, such as server shutting down
+  //   shouldReconnect: (closeEvent) => true,
+  //   // heartbeat: {
+  //   //   message: 'ping',
+  //   //   returnMessage: 'pong',
+  //   //   timeout: 60000, // 1 minute, if no response is received, the connection will be closed
+  //   //   interval: 10000, // every 25 seconds, a ping message will be sent
+  //   // },
+  //   // heartbeat:true
+  // });
 
   // Ping every 60 second
   const HEARTBEAT_INTERVAL = 60000;
-
-  useEffect(() => {
-    // Start heartbeat interval
-    const heartbeatInterval = setInterval(() => {
-      sendMessage("ping");
-    }, HEARTBEAT_INTERVAL);
-
-    // Clean up interval on component unmount
-    return () => clearInterval(heartbeatInterval);
-  }, [sendJsonMessage]);
-  useEffect(() => {
-    setData(lastJsonMessage)
-
-  }, [lastJsonMessage]);
+  //
+  // useEffect(() => {
+  //   // Start heartbeat interval
+  //   const heartbeatInterval = setInterval(() => {
+  //     sendMessage("ping");
+  //   }, HEARTBEAT_INTERVAL);
+  //
+  //   // Clean up interval on component unmount
+  //   return () => clearInterval(heartbeatInterval);
+  // }, [sendJsonMessage]);
+  // useEffect(() => {
+  //   setData(lastJsonMessage)
+  //
+  // }, [lastJsonMessage]);
 
 
 

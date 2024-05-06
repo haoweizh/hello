@@ -151,27 +151,14 @@ const TableList: React.FC = () => {
 
             return (
               <div className="list">
-                {/*<List*/}
-                {/*  header={<Header item={item} onDel={()=>refresh()} />}*/}
-                {/*  footer={null}*/}
-                {/*  size={"small"}*/}
-                {/*  bordered*/}
-                {/*>*/}
-                {/*  <WsData item={item}/>*/}
-                {/*</List>*/}
-                <div style={{fontSize: "15px", display: 'flex', flexWrap: "wrap", gap: "6px", padding: "8px"}}>
-
-                  {
-                    Object.keys(data).map((key, index) => {
-                      return (
-                        <div key={index}>
-                          <span>{key}:{data[key]}</span>
-                        </div>
-                      )
-                    })
-                  }
-
-                </div>
+                <List
+                  header={<Header item={item} onDel={()=>refresh()} />}
+                  footer={null}
+                  size={"small"}
+                  bordered
+                >
+                  <WsData item={item}/>
+                </List>
               </div>
             )
           })
