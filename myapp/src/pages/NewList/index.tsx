@@ -132,8 +132,10 @@ const TableList: React.FC = () => {
   // console.log(data?.monitors);
 
   const monitors = data?.monitors;
+
+  const user = localStorage.getItem("user");
   // This can also be an async getter function. See notes below on Async Urls.
-  const socketUrl = 'ws://47.74.31.113:8073/monitor?address=57059329@qq.com';
+  const socketUrl = 'ws://47.74.31.113:8073/monitor?address=' + user;
 
   const {
     sendMessage,

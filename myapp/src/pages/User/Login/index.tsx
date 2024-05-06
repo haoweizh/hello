@@ -113,6 +113,7 @@ const Login: React.FC = () => {
           id: 'pages.login.success',
           defaultMessage: '登录成功！',
         });
+        localStorage.setItem('user', values?.email as string);
         message.success(defaultLoginSuccessMessage);
 
         await fetchUserInfo();
