@@ -149,7 +149,10 @@ const TableList: React.FC = () => {
       sendMessage("hello")
     },
     //Will attempt to reconnect on all close events, such as server shutting down
-    shouldReconnect: (closeEvent) => true,
+    shouldReconnect: (closeEvent) => {
+      console.log(`close for ` + closeEvent.reason)
+      return true
+    },
     // heartbeat: {
     //   message: 'ping',
     //   returnMessage: 'pong',
@@ -160,7 +163,7 @@ const TableList: React.FC = () => {
   });
 
   // Ping every 60 second
-  const HEARTBEAT_INTERVAL = 60000;
+  const HEARTBEAT_INTERVAL = 90000;
 
   useEffect(() => {
     // Start heartbeat interval
