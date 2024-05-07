@@ -10,7 +10,6 @@ const Data:React.FC = ()=>{
   const user = localStorage.getItem("user");
   // This can also be an async getter function. See notes below on Async Urls.
   const socketUrl = 'ws://47.74.31.113:8075/monitor?address=' + user;
-
   const {
     sendMessage,
     sendJsonMessage,
@@ -20,36 +19,39 @@ const Data:React.FC = ()=>{
     getWebSocket,
   } = useWebSocket(socketUrl, {
     onOpen: () => {
-      sendMessage("hello")
+      sendMessage("ping")
     },
     //Will attempt to reconnect on all close events, such as server shutting down
-    shouldReconnect: (closeEvent) => true,
-    // heartbeat: {
-    //   message: 'ping',
-    //   returnMessage: 'pong',
-    //   timeout: 60000, // 1 minute, if no response is received, the connection will be closed
-    //   interval: 10000, // every 25 seconds, a ping message will be sent
-    // },
-    // heartbeat:true
+    // shouldReconnect: (closeEvent) => true,
+    heartbeat: {
+      message: 'ping',
+      returnMessage: 'pong',
+      timeout: 60000, // 1 minute, if no response is received, the connection will be closed
+      interval: 10000, // every 25 seconds, a ping message will be sent
+    },
   });
 
-  // Ping every 60 second
-  const HEARTBEAT_INTERVAL = 60000;
+  // // Ping every 60 second
+  // const HEARTBEAT_INTERVAL = 60000;
+  //
+  //
+  // useEffect(() => {
+  //   let heartbeatInterval = undefined
+  //     // Start heartbeat interval
+  //      heartbeatInterval = setInterval(() => {
+  //        console.log(222);
+  //        sendMessage("ping");
+  //     }, HEARTBEAT_INTERVAL);
+  //
+  //   // Clean up interval on component unmount
+  //   return () => clearInterval(heartbeatInterval);
+  // }, []);
 
   useEffect(() => {
-    // Start heartbeat interval
-    const heartbeatInterval = setInterval(() => {
-      sendMessage("ping");
-    }, HEARTBEAT_INTERVAL);
-
-    // Clean up interval on component unmount
-    return () => clearInterval(heartbeatInterval);
-  }, [sendJsonMessage]);
-  useEffect(() => {
-    if (lastJsonMessage){
-      console.log(Object.keys(lastJsonMessage));
+    console.log(lastJsonMessage);
+    if (lastJsonMessage && Object.keys(lastJsonMessage).length > 0){
+      lastJsonMessage && setWsData(lastJsonMessage)
     }
-    lastJsonMessage && setWsData(lastJsonMessage)
   }, [lastJsonMessage]);
 
   return (
