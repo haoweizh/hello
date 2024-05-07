@@ -135,7 +135,7 @@ const TableList: React.FC = () => {
 
   const user = localStorage.getItem("user");
   // This can also be an async getter function. See notes below on Async Urls.
-  const socketUrl = 'ws://47.74.31.113:8075/monitor?address=' + user;
+  const socketUrl = 'ws://47.74.31.113:8073/monitor?address=' + user;
 
   const {
     sendMessage,
@@ -149,10 +149,7 @@ const TableList: React.FC = () => {
       sendMessage("hello")
     },
     //Will attempt to reconnect on all close events, such as server shutting down
-    shouldReconnect: (closeEvent) => {
-      console.log(`close for ` + closeEvent.reason)
-      return false
-    },
+    shouldReconnect: (closeEvent) => true,
     // heartbeat: {
     //   message: 'ping',
     //   returnMessage: 'pong',
@@ -163,7 +160,7 @@ const TableList: React.FC = () => {
   });
 
   // Ping every 60 second
-  const HEARTBEAT_INTERVAL = 90000;
+  const HEARTBEAT_INTERVAL = 60000;
 
   useEffect(() => {
     // Start heartbeat interval
