@@ -95,7 +95,7 @@ func (agent *WSAgent) ReadServe(msgHandler WSMsgHandler) {
 				return
 			}
 			jsonMessage, _ := json.Marshal(&Message{Sender: agent.ID, Content: string(message)})
-			if strings.Contains(string(jsonMessage), `ping`) {
+			if strings.Contains(string(jsonMessage), `ping`) || strings.Contains(string(jsonMessage), `hello`) {
 				err := agent.Socket.WriteMessage(websocket.TextMessage, []byte(`pong`))
 				if err != nil {
 					agent.Manager.RemoveAgent(agent.Address)
