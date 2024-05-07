@@ -67,7 +67,8 @@ func (manager *WSManager) Update(address string, aggregateCandle *AggregateCandl
 			agent.(*WSAgent).Data[key] = &current
 			needSend = true
 		}
-		//util.Notice(fmt.Sprintf(`send ws msg %s need %v %v`, aggregateCandle.GetKey(), needSend, agent.Data))
+		util.Notice(fmt.Sprintf(`send ws msg %s need %v %v %v`,
+			aggregateCandle.GetKey(), needSend, agent.(*WSAgent), agent.(*WSAgent).Data))
 		if !needSend {
 			return true
 		}
