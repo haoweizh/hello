@@ -136,9 +136,9 @@ func (agent *WSAgent) Update(aggregateCandle *AggregateCandle) {
 		needSend = true
 	}
 	util.Notice(fmt.Sprintf(`send ws msg %s need %v %v`, aggregateCandle.GetKey(), needSend, agent.Data))
-	if !needSend {
-		return
-	}
+	//if !needSend {
+	//	return
+	//}
 	jsonBytes, err := json.Marshal(agent.Data)
 	err = agent.Socket.WriteMessage(websocket.TextMessage, jsonBytes)
 	if err != nil {
