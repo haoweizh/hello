@@ -98,8 +98,8 @@ func (agent *WSAgent) ReadServe(msgHandler WSMsgHandler) {
 			if strings.Contains(string(jsonMessage), `ping`) || strings.Contains(string(jsonMessage), `hello`) {
 				err := agent.Socket.WriteMessage(websocket.TextMessage, []byte(`pong`))
 				if err != nil {
-					agent.Manager.RemoveAgent(agent.Address)
 					util.Notice(fmt.Sprintf(`fail to send ws msg return, unregister %s %s`, agent.Address, err.Error()))
+					return
 				} else {
 					agent.Pinged = true
 				}
@@ -112,13 +112,13 @@ func (agent *WSAgent) ReadServe(msgHandler WSMsgHandler) {
 				agent.Pinged = false
 				err := agent.Socket.WriteMessage(websocket.TextMessage, []byte(`ping`))
 				if err != nil {
-					agent.Manager.RemoveAgent(agent.Address)
-					util.Notice(fmt.Sprintf(`fail to send ws ping return, unregister %s %s`, agent.Address, err.Error()))
+					util.Notice(fmt.Sprintf(`timer trigger fail ping return %s %s`, agent.Address, err.Error()))
+					return
 				} else {
 					agent.Pinged = true
 				}
 			} else {
-				util.Info(`time out without ping`)
+				util.Notice(`time out without ping`)
 				return
 			}
 		}
@@ -150,6 +150,6 @@ func (agent *WSAgent) Update(aggregateCandle *AggregateCandle) {
 	err = agent.Socket.WriteMessage(websocket.TextMessage, jsonBytes)
 	if err != nil {
 		agent.Manager.RemoveAgent(agent.Address)
-		util.Notice(fmt.Sprintf(`fail to send ws msg return, unregister %s %s`, agent.Address, err.Error()))
+		util.Notice(fmt.Sprintf(`fail to send ws update , unregister %s %s`, agent.Address, err.Error()))
 	}
 }
