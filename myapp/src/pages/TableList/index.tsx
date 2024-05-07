@@ -128,6 +128,8 @@ const TableList: React.FC = () => {
   const monitors = data?.monitors;
   console.log(monitors);
 
+  console.log('111');
+
   useEffect(() => {
 
     if (createModalOpen){
