@@ -13,7 +13,7 @@ import (
 type WSMsgHandler func(client *WSAgent, message []byte)
 
 type WSManager struct {
-	WSAgents *sync.Map // mailAddress - *WSAgent
+	WSAgents *sync.Map // mailAddress - sync[*WSAgent]bool
 }
 
 type WSAgent struct {
@@ -45,27 +45,67 @@ type Message struct {
 	Content   string `json:"content,omitempty"`
 }
 
-func (manager *WSManager) RemoveAgent(address string) {
-	wsAgent, _ := manager.WSAgents.Load(address)
-	if wsAgent != nil {
-		manager.WSAgents.Delete(address)
-		wsAgent.(*WSAgent).Close()
+func (manager *WSManager) Update(address string, aggregateCandle *AggregateCandle) {
+	agents, _ := manager.WSAgents.Load(address)
+	if agents == nil {
+		return
 	}
-	util.Notice(fmt.Sprintf(`remove agent %s`, address))
+	agents.(*sync.Map).Range(func(agent, value any) bool {
+		if agent.(*WSAgent).Data == nil {
+			agent.(*WSAgent).Data = make(map[string]*time.Time)
+		}
+		needSend := false
+		for key, t := range agent.(*WSAgent).Data {
+			if t == nil || t.Add(time.Minute*5).Before(time.Now()) {
+				delete(agent.(*WSAgent).Data, key)
+				needSend = true
+			}
+		}
+		key := fmt.Sprintf(`%s*%d`, aggregateCandle.Symbol, aggregateCandle.TimeInterval)
+		if agent.(*WSAgent).Data[key] == nil {
+			current := time.Now()
+			agent.(*WSAgent).Data[key] = &current
+			needSend = true
+		}
+		//util.Notice(fmt.Sprintf(`send ws msg %s need %v %v`, aggregateCandle.GetKey(), needSend, agent.Data))
+		if !needSend {
+			return true
+		}
+		jsonBytes, err := json.Marshal(agent.(*WSAgent).Data)
+		err = agent.(*WSAgent).Socket.WriteMessage(websocket.TextMessage, jsonBytes)
+		if err != nil {
+			manager.RemoveAgent(address, agent.(*WSAgent))
+			util.Notice(fmt.Sprintf(`fail to send ws update , unregister %s %v %s`, address, agent, err.Error()))
+		}
+		return true
+	})
+}
+
+func (manager *WSManager) RemoveAgent(address string, wsAgent *WSAgent) {
+	agents, _ := manager.WSAgents.Load(address)
+	if agents != nil {
+		wsAgent.Close()
+		agents.(*sync.Map).Delete(wsAgent)
+	}
+	util.Notice(fmt.Sprintf(`remove agent %s %v`, address, wsAgent))
 }
 
 func (manager *WSManager) AddAgent(wsAgent *WSAgent) {
 	if manager.WSAgents == nil {
 		manager.WSAgents = &sync.Map{}
 	}
-	oldAgent, _ := manager.WSAgents.Load(wsAgent.Address)
-	if oldAgent != nil {
-		oldAgent.(*WSAgent).Close()
+	agents, _ := manager.WSAgents.Load(wsAgent.Address)
+	if agents == nil {
+		agents = &sync.Map{}
+		manager.WSAgents.Store(wsAgent.Address, agents)
 	}
-	manager.WSAgents.Store(wsAgent.Address, wsAgent)
+	agents.(*sync.Map).Store(wsAgent, true)
 	//jsonMessage, _ := json.Marshal(&Message{Content: "/A new socket has connected."})
 	//manager.Send(jsonMessage, agent)
-	util.Notice(fmt.Sprintf(`add agent %s`, wsAgent.Address))
+	agents.(*sync.Map).Range(func(key, value any) bool {
+		util.Notice(fmt.Sprintf(`got agent %s %v`, wsAgent.Address, key))
+		return true
+	})
 }
 
 func (agent *WSAgent) Close() {
@@ -77,7 +117,7 @@ func (agent *WSAgent) Close() {
 
 func (agent *WSAgent) ReadServe(msgHandler WSMsgHandler) {
 	defer func() {
-		agent.Manager.RemoveAgent(agent.Address)
+		agent.Manager.RemoveAgent(agent.Address, agent)
 	}()
 	go func() {
 		for {
@@ -122,34 +162,5 @@ func (agent *WSAgent) ReadServe(msgHandler WSMsgHandler) {
 				return
 			}
 		}
-	}
-}
-
-func (agent *WSAgent) Update(aggregateCandle *AggregateCandle) {
-	if agent.Data == nil {
-		agent.Data = make(map[string]*time.Time)
-	}
-	needSend := false
-	for key, t := range agent.Data {
-		if t == nil || t.Add(time.Minute*5).Before(time.Now()) {
-			delete(agent.Data, key)
-			needSend = true
-		}
-	}
-	key := fmt.Sprintf(`%s*%s*%d`, aggregateCandle.Market, aggregateCandle.Symbol, aggregateCandle.TimeInterval)
-	if agent.Data[key] == nil {
-		current := time.Now()
-		agent.Data[key] = &current
-		needSend = true
-	}
-	//util.Notice(fmt.Sprintf(`send ws msg %s need %v %v`, aggregateCandle.GetKey(), needSend, agent.Data))
-	if !needSend {
-		return
-	}
-	jsonBytes, err := json.Marshal(agent.Data)
-	err = agent.Socket.WriteMessage(websocket.TextMessage, jsonBytes)
-	if err != nil {
-		agent.Manager.RemoveAgent(agent.Address)
-		util.Notice(fmt.Sprintf(`fail to send ws update , unregister %s %s`, agent.Address, err.Error()))
 	}
 }

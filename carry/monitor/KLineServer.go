@@ -116,11 +116,7 @@ var ProcessMonitor = func(environment *model.Environment, candle *model.Candle) 
 				pooledAggregate.PriceChange < monitor.(*model.SettingMonitor).WarnChange {
 				return true
 			}
-			agent, _ := environment.WsManager.WSAgents.Load(address)
-			if agent == nil {
-				return true
-			}
-			agent.(*model.WSAgent).Update(pooledAggregate)
+			environment.WsManager.Update(address.(string), pooledAggregate)
 			return true
 		})
 		return true
