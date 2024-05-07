@@ -151,7 +151,7 @@ const TableList: React.FC = () => {
     //Will attempt to reconnect on all close events, such as server shutting down
     shouldReconnect: (closeEvent) => {
       console.log(`close for ` + closeEvent.reason)
-      return true
+      return false
     },
     // heartbeat: {
     //   message: 'ping',
