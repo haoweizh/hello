@@ -107,9 +107,16 @@ func (agent *WSAgent) ReadServe(msgHandler WSMsgHandler) {
 			if msgHandler != nil {
 				msgHandler(agent, jsonMessage)
 			}
-		case <-time.After(300 * time.Second):
+		case <-time.After(20 * time.Second):
 			if agent.Pinged {
 				agent.Pinged = false
+				err := agent.Socket.WriteMessage(websocket.TextMessage, []byte(`ping`))
+				if err != nil {
+					agent.Manager.RemoveAgent(agent.Address)
+					util.Notice(fmt.Sprintf(`fail to send ws ping return, unregister %s %s`, agent.Address, err.Error()))
+				} else {
+					agent.Pinged = true
+				}
 			} else {
 				util.Info(`time out without ping`)
 				return
