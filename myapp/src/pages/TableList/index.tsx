@@ -20,6 +20,7 @@ import {useRequest} from "@@/plugin-request";
 import WsData from "./components/WsData";
 import Header from "@/pages/TableList/components/Header";
 import "./index.less"
+import Data from "@/pages/TableList/components/Data";
 
 /**
  * @en-US Add node
@@ -144,6 +145,7 @@ const TableList: React.FC = () => {
         }}>
           Add Config
         </Button>
+        <Data></Data>
       </Affix>
       <Flex vertical gap={'middle'}>
         {

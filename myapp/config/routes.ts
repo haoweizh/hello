@@ -22,12 +22,12 @@ export default [
       },
     ],
   },
-  {
-    path: '/welcome',
-    name: 'welcome',
-    icon: 'smile',
-    component: './Welcome',
-  },
+  // {
+  //   path: '/welcome',
+  //   name: 'welcome',
+  //   icon: 'smile',
+  //   component: './Welcome',
+  // },
   {
     path: '/admin',
     name: 'admin',
@@ -51,15 +51,15 @@ export default [
     path: '/list',
     component: './TableList',
   },
-  {
-    name: '监控列表',
-    icon: 'table',
-    path: '/new-list',
-    component: './NewList',
-  },
+  // {
+  //   name: '监控列表',
+  //   icon: 'table',
+  //   path: '/new-list',
+  //   component: './NewList',
+  // },
   {
     path: '/',
-    redirect: '/welcome',
+    redirect: '/list',
   },
   {
     path: '*',
