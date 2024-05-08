@@ -60,14 +60,12 @@ func (manager *WSManager) Update(address string, aggregateCandle *AggregateCandl
 			}
 		}
 		key := fmt.Sprintf(`%s*%s*%d`, aggregateCandle.Market, aggregateCandle.Symbol, aggregateCandle.TimeInterval)
-		if agent.(*WSAgent).Data[key] == nil {
-			agent.(*WSAgent).Data[key] = &SettingMonitor{
-				MailAddress:     address,
-				Market:          aggregateCandle.Market,
-				Symbol:          aggregateCandle.Symbol,
-				IntervalSeconds: aggregateCandle.TimeInterval,
-				CreatedAt:       time.Now()}
-		}
+		agent.(*WSAgent).Data[key] = &SettingMonitor{
+			MailAddress:     address,
+			Market:          aggregateCandle.Market,
+			Symbol:          aggregateCandle.Symbol,
+			IntervalSeconds: aggregateCandle.TimeInterval,
+			CreatedAt:       time.Now()}
 		util.Notice(fmt.Sprintf(`send ws msg %s need %v %v`,
 			aggregateCandle.GetKey(), agent.(*WSAgent), agent.(*WSAgent).Data))
 		jsonBytes, err := json.Marshal(agent.(*WSAgent).Data)
