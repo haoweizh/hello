@@ -34,7 +34,8 @@ type SettingMonitor struct {
 	WarnChange      float64
 	WarnIncrease    float64
 	WarnVolume      float64
-	ID              uint `gorm:"primary_key"`
+	ID              uint  `gorm:"primary_key"`
+	WarnAt          int64 // warn at time in million seconds
 	CreatedAt       time.Time
 	UpdatedAt       time.Time
 }
@@ -65,7 +66,8 @@ func (manager *WSManager) Update(address string, aggregateCandle *AggregateCandl
 			Market:          aggregateCandle.Market,
 			Symbol:          aggregateCandle.Symbol,
 			IntervalSeconds: aggregateCandle.TimeInterval,
-			CreatedAt:       time.Now()}
+			CreatedAt:       time.Now(),
+			WarnAt:          time.Now().UnixMilli()}
 		util.Notice(fmt.Sprintf(`send ws msg %s need %v %v`,
 			aggregateCandle.GetKey(), agent.(*WSAgent), agent.(*WSAgent).Data))
 		jsonBytes, err := json.Marshal(agent.(*WSAgent).Data)
