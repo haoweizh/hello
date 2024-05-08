@@ -84,9 +84,10 @@ func addSettingMonitor(c *gin.Context) {
 	warnChange, _ := strconv.ParseFloat(value[`WarnChange`], 64)
 	warnIncrease, _ := strconv.ParseFloat(value[`WarnIncrease`], 64)
 	warnVolume, _ := strconv.ParseFloat(value[`WarnVolume`], 64)
+	volume24, _ := strconv.ParseFloat(value[`Volume24`], 64)
 	intervalSeconds, _ := strconv.Atoi(value[`IntervalSeconds`])
 	value[`Market`] = model.BinanceSpot
-	value[`Symbol`] = strings.ToUpper(value[`Symbol`]) + `_USDT`
+	value[`Symbol`] = strings.ToUpper(strings.Trim(value[`Symbol`], ` `)) + `_USDT`
 	marketInfo, _ := util.LoadSyncMap(model.MarketInfos, value[`Market`], value[`Symbol`])
 	if marketInfo == nil {
 		marketInit := false
@@ -114,15 +115,25 @@ func addSettingMonitor(c *gin.Context) {
 		WarnChange:      warnChange,
 		WarnIncrease:    warnIncrease,
 		WarnVolume:      warnVolume,
+		Volume24:        volume24,
 	}
 	settingMonitor.MailAddress = user.(string)
-	if model.AppDB.Save(&settingMonitor).RowsAffected > 0 {
+	if value[`Symbol`] == `_USDT` {
+		affected := model.AppDB.Model(&settingMonitor).Where("mail_address=? and market=? and interval_seconds=?",
+			user.(string), settingMonitor.Market, settingMonitor.IntervalSeconds).Updates(map[string]interface{}{
+			`volume24`: volume24, `warn_change`: warnChange, `warn_increase`: warnIncrease, `warn_volume`: warnVolume}).RowsAffected
+		if affected > 0 {
+			c.JSON(http.StatusOK, map[string]interface{}{`status`: `ok`, `msg`: `success update`, `data`: settingMonitor})
+		} else {
+			c.JSON(http.StatusOK, map[string]interface{}{`status`: `fail`, `msg`: `fail to insert or update`, `data`: map[string]interface{}{}})
+		}
+	} else if model.AppDB.Save(&settingMonitor).RowsAffected > 0 {
 		util.Info(`add setting monitor: %s %s %s`, settingMonitor.Market, settingMonitor.Symbol, settingMonitor.MailAddress)
 		c.JSON(http.StatusOK, map[string]interface{}{`status`: `ok`, `msg`: `success insert`, `data`: settingMonitor})
 	} else {
-		affected := model.AppDB.Model(&settingMonitor).Where("mail_address = ? and market = ? and symbol = ?",
-			user.(string), settingMonitor.Market, settingMonitor.Symbol).Updates(map[string]interface{}{
-			`interval_seconds`: intervalSeconds, `warn_change`: warnChange, `warn_increase`: warnIncrease, `warn_volume`: warnVolume}).RowsAffected
+		affected := model.AppDB.Model(&settingMonitor).Where("mail_address=? and market=? and symbol=? and interval_seconds=?",
+			user.(string), settingMonitor.Market, settingMonitor.Symbol, intervalSeconds).Updates(map[string]interface{}{
+			`volume24`: volume24, `warn_change`: warnChange, `warn_increase`: warnIncrease, `warn_volume`: warnVolume}).RowsAffected
 		if affected > 0 {
 			c.JSON(http.StatusOK, map[string]interface{}{`status`: `ok`, `msg`: `success update`, `data`: settingMonitor})
 		} else {
