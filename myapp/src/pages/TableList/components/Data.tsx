@@ -62,7 +62,7 @@ const Data:React.FC = ()=>{
           Object.keys(wsData).length > 0 && Object.keys(wsData).map((key, index) => {
             return (
               <div key={index}>
-                <span>{key}:{wsData[key]}</span>
+                <span>{key}:{JSON.stringify(wsData[key])}</span>
               </div>
             )
           })
