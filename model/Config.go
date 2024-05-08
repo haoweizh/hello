@@ -10,7 +10,7 @@ import (
 )
 
 type Config struct {
-	Delay                                                                                            float64
+	Delay, TurtleRateCommon, TurtleRateNonCommon                                                     float64
 	KucoinSpot, MetricTick                                                                           bool
 	KucoinRelatedKey, KucoinRelatedSecret, KucoinFutureKey, KucoinFutureSecret                       string
 	KucoinCarryClose, KucoinCarryRate, Simulation, Equal                                             string

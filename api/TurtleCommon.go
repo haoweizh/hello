@@ -726,16 +726,12 @@ func CanOpenCombine(settingCombine, settingNormal *model.Setting, dataTurtle *mo
 		canOpen = true
 		canStartCombine = true
 		canStartTurtle = true
-		if settingCombine.Seconds == 14400 {
-			lowRate = 1.1
-		} else {
-			lowRate = 1.18
+		if model.AppConfig.TurtleRateCommon > 0 {
+			lowRate = model.AppConfig.TurtleRateCommon
 		}
 	} else {
-		if settingCombine.Seconds == 14400 {
-			lowRate = 1.2
-		} else {
-			lowRate = 1.35
+		if model.AppConfig.TurtleRateNonCommon > 0 {
+			lowRate = model.AppConfig.TurtleRateNonCommon
 		}
 		settingsNormal.Range(sumTurtle)
 		settingsCombine.Range(sumCombineOnly)
