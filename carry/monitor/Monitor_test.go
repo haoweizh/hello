@@ -43,3 +43,17 @@ func Test_initMonitors(t *testing.T) {
 			`Content-Type`: `application/x-www-form-urlencoded`}, 10000)
 	fmt.Println(string(response))
 }
+
+func doFail() {
+	defer func() {
+		if recover() != nil {
+			fmt.Println(`fail`)
+		}
+	}()
+	a := 0
+	a = 5 / a
+}
+func Test_recovery(t *testing.T) {
+	doFail()
+	fmt.Println(`recovery`)
+}
