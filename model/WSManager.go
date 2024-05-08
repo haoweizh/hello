@@ -72,7 +72,7 @@ func (manager *WSManager) Update(address string, aggregateCandle *AggregateCandl
 		err = agent.(*WSAgent).Socket.WriteMessage(websocket.TextMessage, jsonBytes)
 		if err != nil {
 			//manager.RemoveAgent(address, agent.(*WSAgent))
-			util.Notice(fmt.Sprintf(`fail to send ws update , unregister %s %v %s`, address, agent, err.Error()))
+			util.Notice(fmt.Sprintf(`fail to send ws update %s %v %s`, address, agent, err.Error()))
 		}
 		return true
 	})
