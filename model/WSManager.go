@@ -22,8 +22,8 @@ type WSAgent struct {
 	ChanRead chan []byte
 	Manager  *WSManager
 	Pinged   bool
-	Address  string                // mail address
-	Data     map[string]*time.Time // key: market*symbol*Interval value:*time
+	Address  string                     // mail address
+	Data     map[string]*SettingMonitor // key: market*symbol*Interval value:*SettingMonitor
 }
 
 type SettingMonitor struct {
@@ -52,26 +52,24 @@ func (manager *WSManager) Update(address string, aggregateCandle *AggregateCandl
 	}
 	agents.(*sync.Map).Range(func(agent, value any) bool {
 		if agent.(*WSAgent).Data == nil {
-			agent.(*WSAgent).Data = make(map[string]*time.Time)
+			agent.(*WSAgent).Data = make(map[string]*SettingMonitor)
 		}
-		needSend := false
-		for key, t := range agent.(*WSAgent).Data {
-			if t == nil || t.Add(time.Minute*5).Before(time.Now()) {
+		for key, settingMonitor := range agent.(*WSAgent).Data {
+			if settingMonitor == nil || settingMonitor.CreatedAt.Add(time.Hour*24).Before(time.Now()) {
 				delete(agent.(*WSAgent).Data, key)
-				needSend = true
 			}
 		}
-		key := fmt.Sprintf(`%s*%d`, aggregateCandle.Symbol, aggregateCandle.TimeInterval)
+		key := fmt.Sprintf(`%s*%s*%d`, aggregateCandle.Market, aggregateCandle.Symbol, aggregateCandle.TimeInterval)
 		if agent.(*WSAgent).Data[key] == nil {
-			current := time.Now()
-			agent.(*WSAgent).Data[key] = &current
-			needSend = true
+			agent.(*WSAgent).Data[key] = &SettingMonitor{
+				MailAddress:     address,
+				Market:          aggregateCandle.Market,
+				Symbol:          aggregateCandle.Symbol,
+				IntervalSeconds: aggregateCandle.TimeInterval,
+				CreatedAt:       time.Now()}
 		}
-		util.Notice(fmt.Sprintf(`send ws msg %s need %v %v %v`,
-			aggregateCandle.GetKey(), needSend, agent.(*WSAgent), agent.(*WSAgent).Data))
-		if !needSend {
-			return true
-		}
+		util.Notice(fmt.Sprintf(`send ws msg %s need %v %v`,
+			aggregateCandle.GetKey(), agent.(*WSAgent), agent.(*WSAgent).Data))
 		jsonBytes, err := json.Marshal(agent.(*WSAgent).Data)
 		err = agent.(*WSAgent).Socket.WriteMessage(websocket.TextMessage, jsonBytes)
 		if err != nil {
