@@ -30,6 +30,7 @@ func GetMarketsBinance(account *model.Account, market, marketType string) (marke
 	marketInfos = make(map[string]*model.MarketInfo)
 	client := binance.NewClient(account.Key, account.Secret)
 	exchangeInfo, err := client.NewExchangeInfoService().Do(context.Background())
+	stats, _ := client.NewListPriceChangeStatsService().Do(context.Background())
 	if err != nil {
 		util.Notice(fmt.Sprintf("GetMarketsBinance %s err: %s %v休息五分钟", account.Key, err.Error(), exchangeInfo))
 		time.Sleep(time.Minute * 5)
@@ -70,6 +71,19 @@ func GetMarketsBinance(account *model.Account, market, marketType string) (marke
 			}
 		}
 		marketInfos[marketInfo.Name] = marketInfo
+	}
+	for _, stat := range stats {
+		if stat == nil {
+			continue
+		}
+		success, marketType, coin := model.GetCoinFromDialect(model.BinanceSpot, stat.Symbol)
+		if !success {
+			continue
+		}
+		name := coin + model.UniStandardTail[marketType]
+		if marketInfos[name] != nil {
+			marketInfos[name].TradeAmount, _ = strconv.ParseFloat(stat.QuoteVolume, 64)
+		}
 	}
 	return marketInfos
 }

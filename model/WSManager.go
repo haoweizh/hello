@@ -14,6 +14,7 @@ type WSMsgHandler func(client *WSAgent, message []byte)
 
 type WSManager struct {
 	WSAgents *sync.Map // mailAddress - sync[*WSAgent]bool
+	Data     *sync.Map // mailAddress - sync[market*symbol*Interval]SettingMonitor
 }
 
 type WSAgent struct {
@@ -22,8 +23,7 @@ type WSAgent struct {
 	ChanRead chan []byte
 	Manager  *WSManager
 	Pinged   bool
-	Address  string                     // mail address
-	Data     map[string]*SettingMonitor // key: market*symbol*Interval value:*SettingMonitor
+	Address  string // mail address
 }
 
 type SettingMonitor struct {
@@ -34,7 +34,9 @@ type SettingMonitor struct {
 	WarnChange      float64
 	WarnIncrease    float64
 	WarnVolume      float64
-	ID              uint `gorm:"primary_key"`
+	Volume24        float64
+	WarnAt          int64 // warn at time in million-seconds
+	ID              uint  `gorm:"primary_key"`
 	CreatedAt       time.Time
 	UpdatedAt       time.Time
 }
@@ -45,37 +47,51 @@ type Message struct {
 	Content   string `json:"content,omitempty"`
 }
 
+var wsLock = sync.Mutex{}
+
 func (manager *WSManager) Update(address string, aggregateCandle *AggregateCandle) {
 	agents, _ := manager.WSAgents.Load(address)
 	if agents == nil {
 		return
 	}
+	if manager.Data == nil {
+		manager.Data = &sync.Map{}
+	}
 	agents.(*sync.Map).Range(func(agent, value any) bool {
-		if agent.(*WSAgent).Data == nil {
-			agent.(*WSAgent).Data = make(map[string]*SettingMonitor)
+		data, _ := manager.Data.Load(address)
+		if data == nil {
+			data = &sync.Map{}
+			manager.Data.Store(address, data)
 		}
-		for key, settingMonitor := range agent.(*WSAgent).Data {
-			if settingMonitor == nil || settingMonitor.CreatedAt.Add(time.Hour*24).Before(time.Now()) {
-				delete(agent.(*WSAgent).Data, key)
+		data.(*sync.Map).Range(func(key, value any) bool {
+			if value.(SettingMonitor).CreatedAt.Add(time.Hour * 24).Before(time.Now()) {
+				data.(*sync.Map).Delete(key)
 			}
-		}
+			return true
+		})
 		key := fmt.Sprintf(`%s*%s*%d`, aggregateCandle.Market, aggregateCandle.Symbol, aggregateCandle.TimeInterval)
-		if agent.(*WSAgent).Data[key] == nil {
-			agent.(*WSAgent).Data[key] = &SettingMonitor{
-				MailAddress:     address,
-				Market:          aggregateCandle.Market,
-				Symbol:          aggregateCandle.Symbol,
-				IntervalSeconds: aggregateCandle.TimeInterval,
-				CreatedAt:       time.Now()}
-		}
-		util.Notice(fmt.Sprintf(`send ws msg %s need %v %v`,
-			aggregateCandle.GetKey(), agent.(*WSAgent), agent.(*WSAgent).Data))
-		jsonBytes, err := json.Marshal(agent.(*WSAgent).Data)
+		data.(*sync.Map).Store(key, SettingMonitor{
+			MailAddress:     address,
+			Market:          aggregateCandle.Market,
+			Symbol:          aggregateCandle.Symbol,
+			IntervalSeconds: aggregateCandle.TimeInterval,
+			CreatedAt:       time.Now(),
+			WarnAt:          time.Now().UnixMilli()})
+		msg := make(map[string]SettingMonitor)
+		data.(*sync.Map).Range(func(key, value any) bool {
+			msg[key.(string)] = value.(SettingMonitor)
+			return true
+		})
+		//util.Notice(fmt.Sprintf(`send ws msg %s need %v %v`,
+		//	aggregateCandle.GetKey(), agent.(*WSAgent), msg))
+		jsonBytes, err := json.Marshal(msg)
+		wsLock.Lock()
 		err = agent.(*WSAgent).Socket.WriteMessage(websocket.TextMessage, jsonBytes)
 		if err != nil {
 			//manager.RemoveAgent(address, agent.(*WSAgent))
-			util.Notice(fmt.Sprintf(`fail to send ws update , unregister %s %v %s`, address, agent, err.Error()))
+			util.Notice(fmt.Sprintf(`fail to send ws update %s %v %s`, address, agent, err.Error()))
 		}
+		wsLock.Unlock()
 		return true
 	})
 }

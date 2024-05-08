@@ -1,7 +1,9 @@
-package monitor
+package main
 
 import (
 	"fmt"
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
 	"hello/api"
 	"hello/model"
 	"hello/util"
@@ -56,4 +58,35 @@ func doFail() {
 func Test_recovery(t *testing.T) {
 	doFail()
 	fmt.Println(`recovery`)
+}
+
+func Test_fullMonitors(t *testing.T) {
+	model.NewConfig()
+	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
+	_ = model.AppDB.AutoMigrate(&model.SettingMonitor{})
+	//account := model.AppConfig.GetAccounts(model.BinanceSpot)[0]
+	api.InitMarketInfos(model.BinanceSpot)
+	addresses := []string{`haoweizh@qq.com`, `57059329@qq.com`, `158553808@qq.com`, `148392942@qq.com`, `759775226@qq.com`}
+	model.MarketInfos.Range(func(key, value any) bool {
+		for _, address := range addresses {
+			monitor := &model.SettingMonitor{
+				MailAddress: address, Market: model.BinanceSpot,
+				Symbol:          value.(*model.MarketInfo).Name,
+				IntervalSeconds: 300,
+				WarnChange:      0.02,
+				WarnIncrease:    0.01,
+				WarnVolume:      200000,
+				Volume24:        10000}
+			model.AppDB.Save(monitor)
+			monitor = &model.SettingMonitor{
+				MailAddress: address, Market: model.BinanceSpot,
+				Symbol:          value.(*model.MarketInfo).Name,
+				IntervalSeconds: 3600,
+				WarnChange:      0.05,
+				WarnIncrease:    0.03,
+				WarnVolume:      2000000,
+				Volume24:        10000}
+		}
+		return true
+	})
 }

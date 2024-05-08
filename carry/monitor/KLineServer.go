@@ -2,6 +2,7 @@ package monitor
 
 import (
 	"fmt"
+	"hello/api"
 	"hello/model"
 	"hello/util"
 	"math"
@@ -10,10 +11,18 @@ import (
 )
 
 var aggregatePool = &sync.Map{} // market*symbol*interval*HH:MM - *AggregateCandle
+var lastRefreshTime = sync.Map{}
 
 func RefreshSettingMonitors(environment *model.Environment, settingMonitors []*model.SettingMonitor) {
 	environment.MonitorSettings = &sync.Map{}
 	for _, monitor := range settingMonitors {
+		refreshTime, _ := lastRefreshTime.Load(monitor.Market)
+		if refreshTime == nil || refreshTime.(*time.Time).Add(time.Hour).Before(time.Now()) {
+			api.InitMarketInfos(monitor.Market)
+			temp := time.Now()
+			lastRefreshTime.Store(monitor.Market, &temp)
+			continue
+		}
 		symbolMonitor, _ := environment.MonitorSettings.Load(monitor.Market)
 		if symbolMonitor == nil {
 			symbolMonitor = &sync.Map{}
@@ -65,8 +74,8 @@ func GetPooledAggregate(candle *model.Candle, interval int) (pooledAggregate *mo
 			pooledAggregate.PriceLow = math.Min(pooledAggregate.PriceLow, temp.(*model.AggregateCandle).PriceLow)
 			pooledAggregate.VolumeQuote += temp.(*model.AggregateCandle).VolumeQuote
 			pooledAggregate.PriceCurrent = temp.(*model.AggregateCandle).PriceCurrent
-		} else {
-			util.Notice(fmt.Sprintf(` fail to get minute candle %s`, key))
+			//} else {
+			//	util.Notice(fmt.Sprintf(` fail to get minute candle %s`, key))
 		}
 		begin = begin.Add(time.Minute)
 	}
@@ -111,9 +120,11 @@ var ProcessMonitor = func(environment *model.Environment, candle *model.Candle) 
 		pooledAggregate.PriceIncrease = (pooledAggregate.PriceCurrent - pooledAggregate.PriceStart) / pooledAggregate.PriceCurrent
 		pooledAggregate.PriceChange = (pooledAggregate.PriceHigh - pooledAggregate.PriceLow) / pooledAggregate.PriceCurrent
 		value.(*sync.Map).Range(func(address, monitor any) bool {
+			marketInfo, _ := util.LoadSyncMap(model.MarketInfos, monitor.(*model.SettingMonitor).Market, monitor.(*model.SettingMonitor).Symbol)
 			if address == nil || monitor == nil || pooledAggregate.VolumeQuote < monitor.(*model.SettingMonitor).WarnVolume ||
 				pooledAggregate.PriceIncrease < monitor.(*model.SettingMonitor).WarnIncrease ||
-				pooledAggregate.PriceChange < monitor.(*model.SettingMonitor).WarnChange {
+				pooledAggregate.PriceChange < monitor.(*model.SettingMonitor).WarnChange || marketInfo == nil ||
+				marketInfo.(*model.MarketInfo).TradeAmount < monitor.(*model.SettingMonitor).Volume24 {
 				return true
 			}
 			environment.WsManager.Update(address.(string), pooledAggregate)
