@@ -73,7 +73,7 @@ func (manager *WSManager) Update(address string, aggregateCandle *AggregateCandl
 		jsonBytes, err := json.Marshal(agent.(*WSAgent).Data)
 		err = agent.(*WSAgent).Socket.WriteMessage(websocket.TextMessage, jsonBytes)
 		if err != nil {
-			manager.RemoveAgent(address, agent.(*WSAgent))
+			//manager.RemoveAgent(address, agent.(*WSAgent))
 			util.Notice(fmt.Sprintf(`fail to send ws update , unregister %s %v %s`, address, agent, err.Error()))
 		}
 		return true
@@ -108,10 +108,12 @@ func (manager *WSManager) AddAgent(wsAgent *WSAgent) {
 }
 
 func (agent *WSAgent) Close() {
-	go func() {
-		close(agent.ChanRead)
-		_ = agent.Socket.Close()
+	defer func() {
+		if recover() != nil {
+		}
 	}()
+	close(agent.ChanRead)
+	_ = agent.Socket.Close()
 }
 
 func (agent *WSAgent) ReadServe(msgHandler WSMsgHandler) {
