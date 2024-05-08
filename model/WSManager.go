@@ -34,8 +34,9 @@ type SettingMonitor struct {
 	WarnChange      float64
 	WarnIncrease    float64
 	WarnVolume      float64
+	Volume24        float64
+	WarnAt          int64 // warn at time in million-seconds
 	ID              uint  `gorm:"primary_key"`
-	WarnAt          int64 // warn at time in million seconds
 	CreatedAt       time.Time
 	UpdatedAt       time.Time
 }
