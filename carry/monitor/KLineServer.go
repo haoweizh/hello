@@ -74,8 +74,8 @@ func GetPooledAggregate(candle *model.Candle, interval int) (pooledAggregate *mo
 			pooledAggregate.PriceLow = math.Min(pooledAggregate.PriceLow, temp.(*model.AggregateCandle).PriceLow)
 			pooledAggregate.VolumeQuote += temp.(*model.AggregateCandle).VolumeQuote
 			pooledAggregate.PriceCurrent = temp.(*model.AggregateCandle).PriceCurrent
-		} else {
-			util.Notice(fmt.Sprintf(` fail to get minute candle %s`, key))
+			//} else {
+			//	util.Notice(fmt.Sprintf(` fail to get minute candle %s`, key))
 		}
 		begin = begin.Add(time.Minute)
 	}

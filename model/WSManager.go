@@ -82,8 +82,8 @@ func (manager *WSManager) Update(address string, aggregateCandle *AggregateCandl
 			msg[key.(string)] = value.(SettingMonitor)
 			return true
 		})
-		util.Notice(fmt.Sprintf(`send ws msg %s need %v %v`,
-			aggregateCandle.GetKey(), agent.(*WSAgent), msg))
+		//util.Notice(fmt.Sprintf(`send ws msg %s need %v %v`,
+		//	aggregateCandle.GetKey(), agent.(*WSAgent), msg))
 		jsonBytes, err := json.Marshal(msg)
 		wsLock.Lock()
 		err = agent.(*WSAgent).Socket.WriteMessage(websocket.TextMessage, jsonBytes)

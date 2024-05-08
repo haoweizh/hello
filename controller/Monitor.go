@@ -21,6 +21,34 @@ func monitorEntry(c *gin.Context) {
 	c.HTML(http.StatusOK, `monitor.gohtml`, nil)
 }
 
+func InitFullMonitors(c *gin.Context) {
+	api.InitMarketInfos(model.BinanceSpot)
+	addresses := []string{`haoweizh@qq.com`, `57059329@qq.com`, `158553808@qq.com`, `148392942@qq.com`, `759775226@qq.com`}
+	model.MarketInfos.Range(func(key, value any) bool {
+		for _, address := range addresses {
+			monitor := &model.SettingMonitor{
+				MailAddress: address, Market: model.BinanceSpot,
+				Symbol:          value.(*model.MarketInfo).Name,
+				IntervalSeconds: 300,
+				WarnChange:      0.02,
+				WarnIncrease:    0.01,
+				WarnVolume:      200000,
+				Volume24:        10000}
+			model.AppDB.Save(monitor)
+			monitor = &model.SettingMonitor{
+				MailAddress: address, Market: model.BinanceSpot,
+				Symbol:          value.(*model.MarketInfo).Name,
+				IntervalSeconds: 3600,
+				WarnChange:      0.05,
+				WarnIncrease:    0.03,
+				WarnVolume:      2000000,
+				Volume24:        10000}
+		}
+		return true
+	})
+	c.JSON(http.StatusOK, map[string]interface{}{`status`: `ok`, `msg`: `success`, `data`: map[string]interface{}{}})
+}
+
 func getSettingMonitors(c *gin.Context) {
 	session := sessions.Default(c)
 	user := session.Get(`user`)
