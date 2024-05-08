@@ -17,7 +17,7 @@ func RefreshSettingMonitors(environment *model.Environment, settingMonitors []*m
 	environment.MonitorSettings = &sync.Map{}
 	for _, monitor := range settingMonitors {
 		refreshTime, _ := lastRefreshTime.Load(monitor.Market)
-		if refreshTime == nil && refreshTime.(*time.Time).Add(time.Hour).Before(time.Now()) {
+		if refreshTime == nil || refreshTime.(*time.Time).Add(time.Hour).Before(time.Now()) {
 			api.InitMarketInfos(monitor.Market)
 			temp := time.Now()
 			lastRefreshTime.Store(monitor.Market, &temp)
