@@ -2,9 +2,7 @@ import React, {useEffect, useState} from "react";
 import useWebSocket from "react-use-websocket";
 
 const Data:React.FC = ()=>{
-  const [wsData, setWsData] = useState<{
-    [property: string]: any;
-  }>({})
+  const [wsData, setWsData] = useState({})
 
 
   const user = localStorage.getItem("user");
@@ -31,29 +29,49 @@ const Data:React.FC = ()=>{
     },
   });
 
-  // // Ping every 60 second
-  // const HEARTBEAT_INTERVAL = 60000;
-  //
-  //
-  // useEffect(() => {
-  //   let heartbeatInterval = undefined
-  //     // Start heartbeat interval
-  //      heartbeatInterval = setInterval(() => {
-  //        console.log(222);
-  //        sendMessage("ping");
-  //     }, HEARTBEAT_INTERVAL);
-  //
-  //   // Clean up interval on component unmount
-  //   return () => clearInterval(heartbeatInterval);
-  // }, []);
+
 
   useEffect(() => {
     console.log(lastJsonMessage);
+
     if (lastJsonMessage && Object.keys(lastJsonMessage).length > 0){
-      lastJsonMessage && setWsData(lastJsonMessage)
+      console.log(lastJsonMessage);
+      const dataArray = Object.entries(lastJsonMessage).map(([key, value]) => ({ key, ...value }));
+
+// 按照 CreatedAt 属性排序数组
+      dataArray.sort((a, b) => new Date(a.CreatedAt).getTime() - new Date(b.CreatedAt).getTime());
+      console.log(dataArray);
+
+// 从排序后的数组中提取每个条目的键值对
+      const sortedData = dataArray.reduce((acc, { key, ...rest }) => {
+        acc[key] = rest;
+        return acc;
+      }, {});
+      const sortObj = new Map();
+
+      dataArray.forEach(item=>{
+        // @ts-ignore
+        // sortObj[item.key] = item;
+        sortObj.set(item.key, item);
+
+      })
+
+      // const res = Object.fromEntries(sortedData);
+      console.log(sortObj);
+
+      let tempArr = {}
+
+      // @ts-ignore
+      sortObj && sortObj.forEach((value:any, key:any) => {
+        // @ts-ignore
+        tempArr[key] = value;
+      })
+
+      lastJsonMessage && setWsData(tempArr)
     }
   }, [lastJsonMessage]);
 
+  // @ts-ignore
   return (
     <div>
       <div style={{fontSize: "15px",backgroundColor:"#ccc", display: 'flex', flexWrap: "wrap", gap: "6px", padding: "8px"}}>
@@ -61,12 +79,15 @@ const Data:React.FC = ()=>{
         {
           Object.keys(wsData).length > 0 && Object.keys(wsData).map((key, index) => {
             return (
-              <div key={index}>
-                <span>{key}:{JSON.stringify(wsData[key])}</span>
+              <div key={index} style={{display:'flex', flexDirection:"column" ,flexWrap:"wrap"}}>
+                <span>{key}:{JSON.stringify({
+                  Symbol: wsData[key].Symbol,
+                  IntervalSeconds:wsData[key].IntervalSeconds,
+                  CreatedAt:wsData[key].CreatedAt.substr(0, 19),
+                })}</span>
               </div>
             )
-          })
-        }
+        })}
 
         {/*<span>PriceIncrease:{data?.PriceIncrease}</span>*/}
         {/*<span>PriceChange:{data?.PriceChange}</span>*/}

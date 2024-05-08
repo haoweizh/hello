@@ -126,9 +126,8 @@ const TableList: React.FC = () => {
   // console.log(data?.monitors);
 
   const monitors = data?.monitors;
-  console.log(monitors);
 
-  console.log('111');
+  console.log(monitors);
 
   useEffect(() => {
 
