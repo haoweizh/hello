@@ -23,7 +23,7 @@ func monitorEntry(c *gin.Context) {
 
 func InitFullMonitors(c *gin.Context) {
 	api.InitMarketInfos(model.BinanceSpot)
-	addresses := []string{`haoweizh@qq.com`, `57059329@qq.com`, `158553808@qq.com`, `148392942@qq.com`, `759775226@qq.com`}
+	addresses := []string{`12525887325@qq.com`, `2307902301@qq.com`, `2879913919@qq.com`}
 	model.MarketInfos.Range(func(key, value any) bool {
 		for _, address := range addresses {
 			monitor := &model.SettingMonitor{
@@ -33,7 +33,7 @@ func InitFullMonitors(c *gin.Context) {
 				WarnChange:      0.02,
 				WarnIncrease:    0.01,
 				WarnVolume:      200000,
-				Volume24:        10000}
+				Volume24:        2000000}
 			model.AppDB.Save(monitor)
 			monitor = &model.SettingMonitor{
 				MailAddress: address, Market: model.BinanceSpot,
@@ -42,7 +42,7 @@ func InitFullMonitors(c *gin.Context) {
 				WarnChange:      0.05,
 				WarnIncrease:    0.03,
 				WarnVolume:      2000000,
-				Volume24:        10000}
+				Volume24:        2000000}
 		}
 		return true
 	})

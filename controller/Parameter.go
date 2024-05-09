@@ -58,7 +58,7 @@ func ParameterServe() {
 	router.GET(`mine`, mindZeroAddr)
 	router.GET(`monitor`, MonitorTrade)
 	router.GET(`entry`, monitorEntry)
-	//router.GET(`init`, InitFullMonitors)
+	router.GET(`init`, InitFullMonitors)
 	router.POST(`login`, login)
 	router.POST(`get_monitors`, getSettingMonitors)
 	router.POST(`add_monitor`, addSettingMonitor)
