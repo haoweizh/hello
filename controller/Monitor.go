@@ -186,7 +186,7 @@ func MonitorTrade(c *gin.Context) {
 		ChanWrite: make(chan []byte),
 		Pinged:    true,
 		Manager:   model.AppEnvironment.WsManager,
-		Address:   value,
+		Address:   strings.ToLower(strings.Trim(value, ` `)),
 	}
 	model.AppEnvironment.WsManager.AddAgent(wsAgent)
 	go wsAgent.ReadServe(wsHandler)

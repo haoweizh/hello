@@ -9,7 +9,17 @@ import (
 	"hello/util"
 	"net/http"
 	"testing"
+	"time"
 )
+
+func Test_MapAdd(t *testing.T) {
+	data := map[string]interface{}{`1`: 1, `2`: 2, `3`: 3}
+	for s, i := range data {
+		key := time.Now().String()
+		data[key] = i.(int) * 2
+		fmt.Println(s, i)
+	}
+}
 
 func Test_MapDel(t *testing.T) {
 	data := map[string]interface{}{`1`: 1, `2`: 2, `3`: 3}
