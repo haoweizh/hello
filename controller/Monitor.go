@@ -22,8 +22,15 @@ func monitorEntry(c *gin.Context) {
 }
 
 func InitFullMonitors(c *gin.Context) {
+	session := sessions.Default(c)
+	user := session.Get(`user`)
+	if user == nil || user != `haoweizh@qq.com` {
+		c.JSON(http.StatusBadRequest, map[string]interface{}{`status`: `fail`, `msg`: `require login`, `data`: map[string]interface{}{}})
+		return
+	}
+	str := c.Query(`addresses`)
 	api.InitMarketInfos(model.BinanceSpot)
-	addresses := []string{`12525887325@qq.com`, `2307902301@qq.com`, `2879913919@qq.com`}
+	addresses := strings.Split(str, `,`)
 	model.MarketInfos.Range(func(key, value any) bool {
 		for _, address := range addresses {
 			monitor := &model.SettingMonitor{
