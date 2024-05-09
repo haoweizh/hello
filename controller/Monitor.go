@@ -180,13 +180,15 @@ func MonitorTrade(c *gin.Context) {
 		return
 	}
 	wsAgent := &model.WSAgent{
-		ID:       uuid.NewV4().String(),
-		Socket:   conn,
-		ChanRead: make(chan []byte),
-		Pinged:   true,
-		Manager:  model.AppEnvironment.WsManager,
-		Address:  value,
+		ID:        uuid.NewV4().String(),
+		Socket:    conn,
+		ChanRead:  make(chan []byte),
+		ChanWrite: make(chan []byte),
+		Pinged:    true,
+		Manager:   model.AppEnvironment.WsManager,
+		Address:   value,
 	}
 	model.AppEnvironment.WsManager.AddAgent(wsAgent)
 	go wsAgent.ReadServe(wsHandler)
+	go wsAgent.WriteServe()
 }

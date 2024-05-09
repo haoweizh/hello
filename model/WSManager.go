@@ -18,12 +18,12 @@ type WSManager struct {
 }
 
 type WSAgent struct {
-	ID       string
-	Socket   *websocket.Conn
-	ChanRead chan []byte
-	Manager  *WSManager
-	Pinged   bool
-	Address  string // mail address
+	ID                  string
+	Socket              *websocket.Conn
+	ChanRead, ChanWrite chan []byte
+	Manager             *WSManager
+	Pinged              bool
+	Address             string // mail address
 }
 
 type SettingMonitor struct {
@@ -46,8 +46,6 @@ type Message struct {
 	Recipient string `json:"recipient,omitempty"`
 	Content   string `json:"content,omitempty"`
 }
-
-var wsLock = sync.Mutex{}
 
 func (manager *WSManager) Update(address string, aggregateCandle *AggregateCandle) {
 	agents, _ := manager.WSAgents.Load(address)
@@ -85,13 +83,9 @@ func (manager *WSManager) Update(address string, aggregateCandle *AggregateCandl
 		//util.Notice(fmt.Sprintf(`send ws msg %s need %v %v`,
 		//	aggregateCandle.GetKey(), agent.(*WSAgent), msg))
 		jsonBytes, err := json.Marshal(msg)
-		wsLock.Lock()
-		err = agent.(*WSAgent).Socket.WriteMessage(websocket.TextMessage, jsonBytes)
-		if err != nil {
-			//manager.RemoveAgent(address, agent.(*WSAgent))
-			util.Notice(fmt.Sprintf(`fail to send ws update %s %v %s`, address, agent, err.Error()))
+		if err == nil {
+			agent.(*WSAgent).ChanWrite <- jsonBytes
 		}
-		wsLock.Unlock()
 		return true
 	})
 }
@@ -129,7 +123,24 @@ func (agent *WSAgent) Close() {
 		}
 	}()
 	close(agent.ChanRead)
+	close(agent.ChanWrite)
 	_ = agent.Socket.Close()
+}
+
+func (agent *WSAgent) WriteServe() {
+	for {
+		select {
+		case message, ok := <-agent.ChanWrite:
+			if !ok {
+				return
+			}
+			err := agent.Socket.WriteMessage(websocket.TextMessage, message)
+			if err != nil {
+				//manager.RemoveAgent(address, agent.(*WSAgent))
+				util.Notice(fmt.Sprintf(`fail to send ws update %v %s`, agent, err.Error()))
+			}
+		}
+	}
 }
 
 func (agent *WSAgent) ReadServe(msgHandler WSMsgHandler) {
@@ -153,13 +164,8 @@ func (agent *WSAgent) ReadServe(msgHandler WSMsgHandler) {
 			}
 			jsonMessage, _ := json.Marshal(&Message{Sender: agent.ID, Content: string(message)})
 			if strings.Contains(string(jsonMessage), `ping`) || strings.Contains(string(jsonMessage), `hello`) {
-				err := agent.Socket.WriteMessage(websocket.TextMessage, []byte(`pong`))
-				if err != nil {
-					util.Notice(fmt.Sprintf(`fail to send ws msg return, unregister %s %s`, agent.Address, err.Error()))
-					return
-				} else {
-					agent.Pinged = true
-				}
+				agent.ChanWrite <- []byte(`pong`)
+				agent.Pinged = true
 			}
 			if msgHandler != nil {
 				msgHandler(agent, jsonMessage)
@@ -167,13 +173,7 @@ func (agent *WSAgent) ReadServe(msgHandler WSMsgHandler) {
 		case <-time.After(20 * time.Second):
 			if agent.Pinged {
 				agent.Pinged = false
-				err := agent.Socket.WriteMessage(websocket.TextMessage, []byte(`ping`))
-				if err != nil {
-					util.Notice(fmt.Sprintf(`timer trigger fail ping return %s %s`, agent.Address, err.Error()))
-					return
-				} else {
-					agent.Pinged = true
-				}
+				agent.ChanWrite <- []byte(`ping`)
 			} else {
 				util.Notice(`time out without ping`)
 				return
