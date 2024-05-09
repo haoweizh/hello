@@ -74,13 +74,13 @@ func (manager *WSManager) WrapSend(address string) {
 		})
 		return true
 	})
-	agents.(*sync.Map).Range(func(agent, value any) bool {
-		jsonBytes, err := json.Marshal(msg)
-		if err == nil {
+	jsonBytes, err := json.Marshal(msg)
+	if err == nil {
+		agents.(*sync.Map).Range(func(agent, value any) bool {
 			agent.(*WSAgent).ChanWrite <- jsonBytes
-		}
-		return true
-	})
+			return true
+		})
+	}
 }
 
 func (manager *WSManager) Update(address string, aggregateCandle *AggregateCandle) (duplicated bool) {
