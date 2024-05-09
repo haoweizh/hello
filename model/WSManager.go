@@ -47,43 +47,16 @@ type Message struct {
 	Content   string `json:"content,omitempty"`
 }
 
-func (manager *WSManager) Update(address string, aggregateCandle *AggregateCandle) {
-	if manager.Data == nil {
-		manager.Data = &sync.Map{}
+func (manager *WSManager) WrapSend(address string) {
+	agents, _ := manager.WSAgents.Load(address)
+	if agents == nil {
+		return
 	}
 	data, _ := manager.Data.Load(address)
 	if data == nil {
-		data = &sync.Map{}
-		manager.Data.Store(address, data)
+		return
 	}
 	msg := make(map[string]SettingMonitor)
-	keyAggregate := fmt.Sprintf(`%s*%s*%d`, aggregateCandle.Market, aggregateCandle.Symbol, aggregateCandle.TimeInterval)
-	warned := false
-	value, _ := data.(*sync.Map).Load(keyAggregate)
-	if value == nil {
-		value = &sync.Map{}
-		data.(*sync.Map).Store(keyAggregate, value)
-	}
-	value.(*sync.Map).Range(func(createdAt, settingMonitor any) bool {
-		if settingMonitor == nil {
-			return true
-		}
-		if createdAt.(*time.Time).Add(time.Minute * 5).After(time.Now()) {
-			warned = true
-			return false
-		}
-		return true
-	})
-	if !warned {
-		temp := time.Now()
-		value.(*sync.Map).Store(&temp, SettingMonitor{
-			MailAddress:     address,
-			Market:          aggregateCandle.Market,
-			Symbol:          aggregateCandle.Symbol,
-			IntervalSeconds: aggregateCandle.TimeInterval,
-			CreatedAt:       time.Now(),
-			WarnAt:          time.Now().UnixMilli()})
-	}
 	data.(*sync.Map).Range(func(key, value any) bool {
 		if value == nil {
 			return true
@@ -94,16 +67,13 @@ func (manager *WSManager) Update(address string, aggregateCandle *AggregateCandl
 			}
 			if createdAt.(*time.Time).Add(time.Hour * 24).Before(time.Now()) {
 				value.(*sync.Map).Delete(createdAt)
+			} else {
+				msg[fmt.Sprintf(`%v%v`, key, createdAt)] = settingMonitor.(SettingMonitor)
 			}
-			msg[fmt.Sprintf(`%v%v`, key, createdAt)] = settingMonitor.(SettingMonitor)
 			return true
 		})
 		return true
 	})
-	agents, _ := manager.WSAgents.Load(address)
-	if agents == nil || warned {
-		return
-	}
 	agents.(*sync.Map).Range(func(agent, value any) bool {
 		jsonBytes, err := json.Marshal(msg)
 		if err == nil {
@@ -111,6 +81,44 @@ func (manager *WSManager) Update(address string, aggregateCandle *AggregateCandl
 		}
 		return true
 	})
+}
+
+func (manager *WSManager) Update(address string, aggregateCandle *AggregateCandle) (duplicated bool) {
+	if manager.Data == nil {
+		manager.Data = &sync.Map{}
+	}
+	data, _ := manager.Data.Load(address)
+	if data == nil {
+		data = &sync.Map{}
+		manager.Data.Store(address, data)
+	}
+	keyAggregate := fmt.Sprintf(`%s*%s*%d`, aggregateCandle.Market, aggregateCandle.Symbol, aggregateCandle.TimeInterval)
+	value, _ := data.(*sync.Map).Load(keyAggregate)
+	if value == nil {
+		value = &sync.Map{}
+		data.(*sync.Map).Store(keyAggregate, value)
+	}
+	value.(*sync.Map).Range(func(createdAt, settingMonitor any) bool {
+		if settingMonitor == nil {
+			return true
+		}
+		if createdAt.(*time.Time).Add(time.Minute * 5).After(time.Now()) {
+			duplicated = true
+			return false
+		}
+		return true
+	})
+	if !duplicated {
+		temp := time.Now()
+		value.(*sync.Map).Store(&temp, SettingMonitor{
+			MailAddress:     address,
+			Market:          aggregateCandle.Market,
+			Symbol:          aggregateCandle.Symbol,
+			IntervalSeconds: aggregateCandle.TimeInterval,
+			CreatedAt:       time.Now(),
+			WarnAt:          time.Now().UnixMilli()})
+	}
+	return duplicated
 }
 
 func (manager *WSManager) RemoveAgent(address string, wsAgent *WSAgent) {
@@ -187,7 +195,7 @@ func (agent *WSAgent) ReadServe(msgHandler WSMsgHandler) {
 			}
 			jsonMessage, _ := json.Marshal(&Message{Sender: agent.ID, Content: string(message)})
 			if strings.Contains(string(jsonMessage), `ping`) || strings.Contains(string(jsonMessage), `hello`) {
-				agent.ChanWrite <- []byte(`pong`)
+				agent.Manager.WrapSend(agent.Address)
 				agent.Pinged = true
 			}
 			if msgHandler != nil {

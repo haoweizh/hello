@@ -127,7 +127,9 @@ var ProcessMonitor = func(environment *model.Environment, candle *model.Candle) 
 				marketInfo.(*model.MarketInfo).TradeAmount < monitor.(*model.SettingMonitor).Volume24 {
 				return true
 			}
-			environment.WsManager.Update(address.(string), pooledAggregate)
+			if !environment.WsManager.Update(address.(string), pooledAggregate) {
+				environment.WsManager.WrapSend(address.(string))
+			}
 			return true
 		})
 		return true
