@@ -89,6 +89,7 @@ declare namespace API {
     WarnChange: number
     WarnIncrease: number
     WarnVolume: number
+    Volume24: number
     ID: number
     CreatedAt: string
     UpdatedAt: string

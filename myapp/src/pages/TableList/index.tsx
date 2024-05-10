@@ -191,7 +191,7 @@ const TableList: React.FC = () => {
         <ProFormText
           rules={[
             {
-              required: true,
+              required: false,
               message: (
                 <FormattedMessage
                   id="pages.searchTable.ruleName"
@@ -220,22 +220,6 @@ const TableList: React.FC = () => {
           width="md"
           name="IntervalSeconds"
         />
-        {/*<ProFormText*/}
-        {/*  rules={[*/}
-        {/*    {*/}
-        {/*      required: true,*/}
-        {/*      message: (*/}
-        {/*        <FormattedMessage*/}
-        {/*          id="pages.searchTable.ruleName"*/}
-        {/*          defaultMessage="Market name is required"*/}
-        {/*        />*/}
-        {/*      ),*/}
-        {/*    },*/}
-        {/*  ]}*/}
-        {/*  width="md"*/}
-        {/*  placeholder={'请输入Market'}*/}
-        {/*  name="Market"*/}
-        {/*/>*/}
         <ProFormText
           rules={[
             {
@@ -284,6 +268,22 @@ const TableList: React.FC = () => {
           placeholder={'请输入预警成交量'}
           name="WarnVolume"
         />
+        <ProFormText
+        rules={[
+          {
+            required: true,
+            message: (
+              <FormattedMessage
+                id="pages.searchTable.ruleName"
+                defaultMessage="Volume24 is required"
+              />
+            ),
+          },
+        ]}
+        width="md"
+        placeholder={'请输入Volume24'}
+        name="Volume24"
+      />
       </ModalForm>
     </>
   );

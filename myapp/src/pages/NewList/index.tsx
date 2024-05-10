@@ -352,6 +352,22 @@ const TableList: React.FC = () => {
           placeholder={'请输入预警成交量'}
           name="WarnVolume"
         />
+        <ProFormText
+          rules={[
+            {
+              required: true,
+              message: (
+                <FormattedMessage
+                  id="pages.searchTable.ruleName"
+                  defaultMessage="Volume24 is required"
+                />
+              ),
+            },
+          ]}
+          width="md"
+          placeholder={'请输入Volume24限制'}
+          name="Volume24"
+        />
       </ModalForm>
     </>
   );

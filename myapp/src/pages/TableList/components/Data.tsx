@@ -80,19 +80,17 @@ const Data: React.FC = () => {
         // display: 'flex',
         // flexWrap: "wrap",
         gap: "6px",
-        height:'100px',
-        overflowY:"scroll",
+        height: '500px',
+        overflowY: "scroll",
         padding: "8px"
       }}>
         {
           Object.keys(wsData).length > 0 && Object.keys(wsData).map((key, index) => {
             return (
               <div className="list">
-              <List>
-                {/*<span>*/}
+                <List>
                   {wsData[key].CreatedAt.substr(0, 19)} {wsData[key].Symbol}-{wsData[key].IntervalSeconds}
-                {/*</span>*/}
-              </List>
+                </List>
               </div>
             )
           })

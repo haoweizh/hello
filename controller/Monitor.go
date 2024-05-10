@@ -95,23 +95,25 @@ func addSettingMonitor(c *gin.Context) {
 	intervalSeconds, _ := strconv.Atoi(value[`IntervalSeconds`])
 	value[`Market`] = model.BinanceSpot
 	value[`Symbol`] = strings.ToUpper(strings.Trim(value[`Symbol`], ` `)) + `_USDT`
-	marketInfo, _ := util.LoadSyncMap(model.MarketInfos, value[`Market`], value[`Symbol`])
-	if marketInfo == nil {
-		marketInit := false
-		model.MarketInfos.Range(func(key, marketInfo any) bool {
-			if key != nil && key.(string)[0:len(value[`Market`])] == value[`Market`] {
-				marketInit = true
-				return false
-			}
-			return true
-		})
-		if !marketInit {
-			api.InitMarketInfos(value[`Market`])
-			marketInfo, _ = util.LoadSyncMap(model.MarketInfos, value[`Market`], value[`Symbol`])
-		}
+	if value[`Symbol`] != `_USDT` {
+		marketInfo, _ := util.LoadSyncMap(model.MarketInfos, value[`Market`], value[`Symbol`])
 		if marketInfo == nil {
-			c.JSON(http.StatusOK, map[string]interface{}{`status`: `fail`, `msg`: `wrong market or symbol`, `data`: map[string]interface{}{}})
-			return
+			marketInit := false
+			model.MarketInfos.Range(func(key, marketInfo any) bool {
+				if key != nil && key.(string)[0:len(value[`Market`])] == value[`Market`] {
+					marketInit = true
+					return false
+				}
+				return true
+			})
+			if !marketInit {
+				api.InitMarketInfos(value[`Market`])
+				marketInfo, _ = util.LoadSyncMap(model.MarketInfos, value[`Market`], value[`Symbol`])
+			}
+			if marketInfo == nil {
+				c.JSON(http.StatusOK, map[string]interface{}{`status`: `fail`, `msg`: `wrong market or symbol`, `data`: map[string]interface{}{}})
+				return
+			}
 		}
 	}
 	settingMonitor := model.SettingMonitor{
