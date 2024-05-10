@@ -80,6 +80,8 @@ const Data: React.FC = () => {
         // display: 'flex',
         // flexWrap: "wrap",
         gap: "6px",
+        height:'100px',
+        overflowY:"scroll",
         padding: "8px"
       }}>
         {
