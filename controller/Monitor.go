@@ -29,6 +29,12 @@ func InitFullMonitors(c *gin.Context) {
 		return
 	}
 	str := c.Query(`addresses`)
+	strSeconds := c.Query(`seconds`)
+	seconds, err := strconv.Atoi(strSeconds)
+	if err != nil {
+		c.JSON(http.StatusOK, map[string]interface{}{`status`: `fail`, `msg`: `wrong seconds ` + err.Error(), `data`: map[string]interface{}{}})
+		return
+	}
 	api.InitMarketInfos(model.BinanceSpot)
 	addresses := strings.Split(str, `,`)
 	model.MarketInfos.Range(func(key, value any) bool {
@@ -36,20 +42,12 @@ func InitFullMonitors(c *gin.Context) {
 			monitor := &model.SettingMonitor{
 				MailAddress: address, Market: model.BinanceSpot,
 				Symbol:          value.(*model.MarketInfo).Name,
-				IntervalSeconds: 300,
+				IntervalSeconds: seconds,
 				WarnChange:      0.02,
 				WarnIncrease:    0.01,
 				WarnVolume:      200000,
 				Volume24:        2000000}
 			model.AppDB.Save(monitor)
-			monitor = &model.SettingMonitor{
-				MailAddress: address, Market: model.BinanceSpot,
-				Symbol:          value.(*model.MarketInfo).Name,
-				IntervalSeconds: 3600,
-				WarnChange:      0.05,
-				WarnIncrease:    0.03,
-				WarnVolume:      2000000,
-				Volume24:        2000000}
 		}
 		return true
 	})
