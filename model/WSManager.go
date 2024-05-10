@@ -56,9 +56,11 @@ func (manager *WSManager) WrapSend(address string) {
 	if data == nil {
 		return
 	}
-	msg := map[string]SettingMonitor{time.Now().String(): {
-		Symbol:    "最后更新时间",
-		CreatedAt: time.Time{},
+	now := time.Now()
+	msg := map[string]SettingMonitor{now.String(): {
+		Symbol:          "最后更新时间",
+		IntervalSeconds: now.Second(),
+		CreatedAt:       now,
 	}}
 	data.(*sync.Map).Range(func(key, value any) bool {
 		if value == nil {
