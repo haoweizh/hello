@@ -200,6 +200,7 @@ func (agent *WSAgent) ReadServe(msgHandler WSMsgHandler) {
 			}
 			jsonMessage, _ := json.Marshal(&Message{Sender: agent.ID, Content: string(message)})
 			if strings.Contains(string(jsonMessage), `ping`) || strings.Contains(string(jsonMessage), `hello`) {
+				agent.ChanWrite <- []byte(`pong`)
 				agent.Manager.WrapSend(agent.Address)
 				agent.Pinged = true
 			}
