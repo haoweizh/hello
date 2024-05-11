@@ -20,8 +20,20 @@ const Data: React.FC = () => {
     onOpen: () => {
       sendMessage("ping")
     },
+    onMessage: (data) => {
+      if (data.data == "ping") {
+        sendMessage("pong")
+      }
+    },
+    onClose: (event) => {
+      console.log('---------------------------' + event);
+    },
     //Will attempt to reconnect on all close events, such as server shutting down
-    // shouldReconnect: (closeEvent) => true,
+    shouldReconnect: (closeEvent) => {
+
+      console.log('---------------------------' + event);
+      return true;
+    },
     heartbeat: {
       message: 'ping',
       returnMessage: 'pong',

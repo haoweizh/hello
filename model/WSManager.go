@@ -202,11 +202,11 @@ func (agent *WSAgent) ReadServe(msgHandler WSMsgHandler) {
 			if strings.Contains(string(jsonMessage), `ping`) || strings.Contains(string(jsonMessage), `hello`) {
 				agent.ChanWrite <- []byte(`pong`)
 				agent.Manager.WrapSend(agent.Address)
-				agent.Pinged = true
 			}
 			if msgHandler != nil {
 				msgHandler(agent, jsonMessage)
 			}
+			agent.Pinged = true
 		case <-time.After(20 * time.Second):
 			if agent.Pinged {
 				agent.Pinged = false
