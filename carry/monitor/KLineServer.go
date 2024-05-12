@@ -51,7 +51,7 @@ func GetPooledAggregate(candle *model.Candle, interval int) (pooledAggregate *mo
 		TimeInterval: interval,
 	}
 	value, _ := aggregatePool.Load(pooledAggregate.GetKey())
-	if value != nil {
+	if value != nil && value.(*model.AggregateCandle).Start.Equal(historyTime) {
 		pooledAggregate.PriceLow = value.(*model.AggregateCandle).PriceLow
 		pooledAggregate.PriceHigh = value.(*model.AggregateCandle).PriceHigh
 		pooledAggregate.PriceStart = value.(*model.AggregateCandle).PriceStart
@@ -63,7 +63,7 @@ func GetPooledAggregate(candle *model.Candle, interval int) (pooledAggregate *mo
 		key := fmt.Sprintf(`%s*%s*%d*%d:%d`,
 			candle.Market, candle.Symbol, 60, begin.Hour(), begin.Minute())
 		temp, _ := aggregatePool.Load(key)
-		if temp != nil {
+		if temp != nil && temp.(*model.AggregateCandle).Start.Equal(begin) {
 			if pooledAggregate.PriceStart == 0 {
 				pooledAggregate.PriceStart = temp.(*model.AggregateCandle).PriceStart
 			}
