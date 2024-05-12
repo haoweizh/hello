@@ -49,7 +49,7 @@ type Message struct {
 
 func (manager *WSManager) WrapSend(address string) {
 	agents, _ := manager.WSAgents.Load(address)
-	if agents == nil {
+	if agents == nil || manager.Data == nil {
 		return
 	}
 	data, _ := manager.Data.Load(address)
