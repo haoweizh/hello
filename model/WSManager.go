@@ -114,6 +114,8 @@ func (manager *WSManager) Update(address string, aggregateCandle *AggregateCandl
 		return true
 	})
 	if !duplicated {
+		util.Notice(fmt.Sprintf(`update new aggregate %s %f %f %f`,
+			keyAggregate, aggregateCandle.PriceIncrease, aggregateCandle.PriceChange, aggregateCandle.VolumeQuote))
 		temp := time.Now()
 		value.(*sync.Map).Store(&temp, SettingMonitor{
 			MailAddress:     address,
