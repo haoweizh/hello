@@ -52,33 +52,34 @@ func (manager *WSManager) WrapSend(address string) {
 	if agents == nil || manager.Data == nil {
 		return
 	}
-	data, _ := manager.Data.Load(address)
-	if data == nil {
-		return
-	}
 	now := time.Now()
 	msg := map[string]SettingMonitor{now.String(): {
 		Symbol:          "最后更新时间",
 		IntervalSeconds: now.Second(),
 		CreatedAt:       now,
 	}}
-	data.(*sync.Map).Range(func(key, value any) bool {
-		if value == nil {
-			return true
-		}
-		value.(*sync.Map).Range(func(createdAt, settingMonitor any) bool {
-			if settingMonitor == nil {
+	if manager.Data != nil {
+		data, _ := manager.Data.Load(address)
+		if data != nil {
+			data.(*sync.Map).Range(func(key, value any) bool {
+				if value == nil {
+					return true
+				}
+				value.(*sync.Map).Range(func(createdAt, settingMonitor any) bool {
+					if settingMonitor == nil {
+						return true
+					}
+					if createdAt.(*time.Time).Add(time.Hour * 24).Before(time.Now()) {
+						value.(*sync.Map).Delete(createdAt)
+					} else {
+						msg[fmt.Sprintf(`%v%v`, key, createdAt)] = settingMonitor.(SettingMonitor)
+					}
+					return true
+				})
 				return true
-			}
-			if createdAt.(*time.Time).Add(time.Hour * 24).Before(time.Now()) {
-				value.(*sync.Map).Delete(createdAt)
-			} else {
-				msg[fmt.Sprintf(`%v%v`, key, createdAt)] = settingMonitor.(SettingMonitor)
-			}
-			return true
-		})
-		return true
-	})
+			})
+		}
+	}
 	jsonBytes, err := json.Marshal(msg)
 	if err == nil {
 		agents.(*sync.Map).Range(func(agent, value any) bool {
