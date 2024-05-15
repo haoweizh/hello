@@ -48,6 +48,11 @@ type Message struct {
 }
 
 func (manager *WSManager) WrapSend(address string) {
+	defer func() {
+		if r := recover(); r != nil {
+			util.Notice(`recovered from panic`)
+		}
+	}()
 	agents, _ := manager.WSAgents.Load(address)
 	if agents == nil || manager.Data == nil {
 		return
@@ -158,7 +163,8 @@ func (manager *WSManager) AddAgent(wsAgent *WSAgent) {
 
 func (agent *WSAgent) Close() {
 	defer func() {
-		if recover() != nil {
+		if r := recover(); r != nil {
+			util.Notice(`recovered from panic`)
 		}
 	}()
 	close(agent.ChanRead)
@@ -185,6 +191,9 @@ func (agent *WSAgent) WriteServe() {
 func (agent *WSAgent) ReadServe(msgHandler WSMsgHandler) {
 	defer func() {
 		agent.Manager.RemoveAgent(agent.Address, agent)
+		if r := recover(); r != nil {
+			util.Notice(`recovered from panic`)
+		}
 	}()
 	go func() {
 		for {

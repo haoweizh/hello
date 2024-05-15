@@ -58,16 +58,18 @@ func Test_initMonitors(t *testing.T) {
 
 func doFail() {
 	defer func() {
-		if recover() != nil {
+		if r := recover(); r != nil {
 			fmt.Println(`fail`)
 		}
+		fmt.Println(`finish`)
 	}()
 	a := 0
 	a = 5 / a
 }
+
 func Test_recovery(t *testing.T) {
 	doFail()
-	fmt.Println(`recovery`)
+	fmt.Println(`recovery back`)
 }
 
 func Test_fullMonitors(t *testing.T) {
