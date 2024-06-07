@@ -576,17 +576,48 @@ func Test_transferInner(t *testing.T) {
 	}
 }
 
-func Test_ClearSpot(t *testing.T) {
+func Test_LimitReport(t *testing.T) {
 	model.NewConfig()
-	key := model.AppConfig.BitgetKey
-	secret := model.AppConfig.BitmexSecret
-	market := model.BitgetSpot
-	_, balances, _, _ := api.GetBalances(key, secret, market)
-	for _, balance := range balances {
-		order := api.PlaceOrder(key, secret, model.OrderSideSell, model.OrderTypeMarket, market, strings.ToUpper(balance.Coin+`_USDT`),
-			``, 44444, 44444, balance.Amount, false, nil, nil)
-		fmt.Println(fmt.Sprintf(`sell %s amt %f at %f orderId %s`, order.Symbol, order.Amount, order.Price, order.OrderId))
-		time.Sleep(time.Second)
+	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
+	market := model.OKEX
+	rows, _ := model.AppDB.Model(&model.Order{}).Select(`symbol`).Where(`market=? and order_type=? and status=? and created_at>?`,
+		market, model.OrderTypeLimit, model.CarryStatusSuccess, `2024-01-01`).Group(`symbol`).Rows()
+	buyAmount := make(map[string]float64)
+	buyU := make(map[string]float64)
+	sellAmount := make(map[string]float64)
+	sellU := make(map[string]float64)
+	for rows.Next() {
+		var symbol string
+		err := rows.Scan(&symbol)
+		time2024 := time.Unix(1704038400, 0)
+		if err == nil {
+			var order model.Order
+			model.AppDB.Where(`market=? and order_type=? and status=? and created_at>? and symbol=? and function=?`,
+				market, model.OrderTypeLimit, model.CarryStatusSuccess, `2024-01-01`, symbol, model.Close).
+				Order(`created_at desc`).Limit(1).Find(&order)
+			if order.CreatedAt.After(time2024) {
+				var orders []model.Order
+				model.AppDB.Where(`market=? and order_type=? and status=? and symbol=? and created_at<=?`,
+					market, model.OrderTypeLimit, model.CarryStatusSuccess, symbol, order.CreatedAt).Order(`created_at desc`).Find(&orders)
+				for _, value := range orders {
+					if value.Function == model.Close && value.CreatedAt.Before(time2024) {
+						break
+					}
+					if value.OrderSide == model.OrderSideBuy {
+						buyAmount[symbol] += value.Amount
+						buyU[symbol] += value.Amount * value.Price
+					} else {
+						sellAmount[symbol] += value.Amount
+						sellU[symbol] += value.Amount * value.Price
+					}
+				}
+			}
+		}
+	}
+	for symbol, _ := range buyAmount {
+		if buyU[symbol] > 0 && sellAmount[symbol] > 0 && sellU[symbol] > 0 {
+			util.InfoSync(fmt.Sprintf(`,%s,%s,%f,%f,%f,%f`, market, symbol, buyAmount[symbol], buyU[symbol], sellAmount[symbol], sellU[symbol]))
+		}
 	}
 }
 
