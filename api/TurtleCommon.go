@@ -766,7 +766,7 @@ func CanOpenCombine(settingCombine, settingNormal *model.Setting, dataTurtle *mo
 	if dataTurtle.Liquidated {
 		canStartTurtle = false
 	}
-	if dataTurtle.HighNear < lowRate*dataTurtle.LowNear {
+	if dataTurtle.HighFar < lowRate*dataTurtle.LowFar {
 		canStartCombine = false
 	}
 	return canOpen, canStartCombine, canStartTurtle, turtleSymbolNum, inAll
