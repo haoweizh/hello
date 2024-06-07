@@ -665,3 +665,27 @@ func Test_transfer(t *testing.T) {
 			`Content-Type`: `application/x-www-form-urlencoded`}, 10000)
 	fmt.Println(string(response))
 }
+
+func Test_GateSols(t *testing.T) {
+	model.NewConfig()
+	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
+	rows, _ := model.AppDB.Model(&model.Setting{}).Select(`distinct coin`).Rows()
+	var coin string
+	index := 0
+	coins := make([]string, 0)
+	for rows.Next() {
+		err := rows.Scan(&coin)
+		if err != nil {
+			return
+		}
+		res, _ := util.HttpRequest(http.MethodGet, `https://www.gate.io/json_svr/coin/tip/`+coin, ``, nil, 1000)
+		fmt.Println(fmt.Sprintf(`%d %s`, index, coin))
+		index++
+		if strings.Contains(string(res), `explorer.solana.com`) {
+			coins = append(coins, coin)
+		} else if !strings.Contains(string(res), `Success`) {
+			fmt.Println(coin + ` fail` + string(res))
+		}
+	}
+	fmt.Println(coins)
+}
