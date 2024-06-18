@@ -691,6 +691,16 @@ func Test_wallet(t *testing.T) {
 }
 
 func Test_transfer(t *testing.T) {
+	timeStr := "2023-04-05 15:04:05"
+	// 定义一个用于接收解析结果的time.Time变量
+	//t1 := time.Time{}
+	// 解析字符串为time.Time
+	t1, err := time.Parse("2006-01-02 15:04:05", timeStr)
+	if err != nil {
+		fmt.Printf("解析时间失败: %v\n", err)
+		return
+	}
+	fmt.Printf("解析得到的时间: %v\n", t1)
 	response, _ := util.HttpRequest(http.MethodPost, `https://user.api.it120.cc/user/apiExtUserCash/list`,
 		`page=1&pageSize=50&mobile=19525266383&aggregate=`, map[string]string{`x-token`: `7404f54e-4675-48ee-94bc-113e772c96ed`,
 			`Content-Type`: `application/x-www-form-urlencoded`}, 10000)

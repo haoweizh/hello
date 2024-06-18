@@ -598,8 +598,8 @@ func getBalanceBinanceSpot(key string, secret string) (success bool, balances []
 
 // getPriceBinanceSpot
 func _(key, secret, symbol string) (success bool, price float64) {
-	success, _, _, dialectSymbol := model.GetFromStandard(model.BinanceSpot, symbol)
-	if !success {
+	suc, _, _, dialectSymbol := model.GetFromStandard(model.BinanceSpot, symbol)
+	if !suc {
 		return false, 0
 	}
 	client := binance.NewClient(key, secret)
@@ -650,4 +650,85 @@ func queryOrderBinanceSpot(key, secret, symbol string, orderId string) (order *m
 		order = parseOrderBinanceSpotSdk(orderResp)
 	}
 	return
+}
+
+func parseTransfer(value map[string]interface{}) (balance *model.Balance, external bool) {
+	balance = &model.Balance{}
+	if value[`id`] != nil {
+		balance.ID = value[`id`].(string)
+	}
+	if value[`coin`] != nil {
+		balance.Coin = value[`coin`].(string)
+	}
+	if value[`amount`] != nil {
+		balance.Amount, _ = strconv.ParseFloat(value[`amount`].(string), 64)
+	}
+	if value[`status`] != nil {
+		balance.Status = value[`status`].(json.Number).String()
+	}
+	if value[`address`] != nil {
+		balance.Address = value[`address`].(string)
+	}
+	if value[`txId`] != nil {
+		balance.TransactionId = value[`txId`].(string)
+	}
+	if value[`applyTime`] != nil {
+		balance.CreatedAt, _ = time.Parse(time.DateTime, value[`applyTime`].(string))
+	}
+	if value[`insertTime`] != nil {
+		insertTime, timeErr := value[`insertTime`].(json.Number).Int64()
+		if timeErr == nil {
+			balance.CreatedAt = time.Unix(insertTime, 0)
+		}
+	}
+	if value[`completeTime`] != nil {
+		balance.UpdatedAt, _ = time.Parse(time.DateTime, value[`completeTime`].(string))
+	}
+	if value[`transferType`] != nil {
+		transferType, typeErr := value[`transferType`].(json.Number).Int64()
+		if typeErr == nil {
+			if transferType == 0 {
+				external = true
+			}
+		}
+	}
+	return balance, external
+}
+
+// GetWithdrawInfo
+// status 0:Email Sent,1:Cancelled 2:Awaiting Approval 3:Rejected 4:Processing 5:Failure 6:Completed
+// transferType: 1 for internal transfer, 0 for external transfer
+func GetWithdrawInfo(market, key, secret string) (balances []*model.Balance) {
+	balances = make([]*model.Balance, 0)
+	responseBody := signedRequestBinance(key, secret, model.BinanceSpot, http.MethodGet, restBinance+`/sapi/v1/capital/withdraw/history`, true, nil)
+	withdrawJson, withdrawErr := util.NewJSON(responseBody)
+	if withdrawErr == nil {
+		for _, data := range withdrawJson.MustArray() {
+			if data == nil {
+				continue
+			}
+			balance, external := parseTransfer(data.(map[string]interface{}))
+			if balance != nil && external == true {
+				balance.Action = -1
+				balance.Market = market
+				balances = append(balances, balance)
+			}
+		}
+	}
+	responseBody = signedRequestBinance(key, secret, model.BinanceSpot, http.MethodGet, restBinance+`/sapi/v1/capital/deposit/hisrec`, true, nil)
+	depositJson, depositErr := util.NewJSON(responseBody)
+	if depositErr == nil {
+		for _, data := range depositJson.MustArray() {
+			if data == nil {
+				continue
+			}
+			balance, external := parseTransfer(data.(map[string]interface{}))
+			if balance != nil && external == true {
+				balance.Action = 1
+				balance.Market = market
+				balances = append(balances, balance)
+			}
+		}
+	}
+	return balances
 }

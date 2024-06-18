@@ -59,6 +59,7 @@ func ParameterServe() {
 	router.GET(`monitor`, MonitorTrade)
 	router.GET(`entry`, monitorEntry)
 	router.GET(`init`, InitFullMonitors)
+	router.GET(`withdraws`, getWithdraws)
 	router.POST(`login`, login)
 	router.POST(`get_monitors`, getSettingMonitors)
 	router.POST(`add_monitor`, addSettingMonitor)
@@ -222,6 +223,31 @@ func mindZeroAddr(c *gin.Context) {
 		return
 	}
 	c.String(http.StatusOK, util.RunMindZeroAddr(6, 11, 4))
+}
+
+func getWithdraws(c *gin.Context) {
+	session := sessions.Default(c)
+	sessionValue := session.Get(`user`)
+	if sessionValue != `haoweizh@qq.com` {
+		c.String(http.StatusUnauthorized, `need login`)
+		return
+	}
+	accounts := model.GetAccounts(0)
+	var result string
+	for _, account := range accounts {
+		if account == nil {
+			continue
+		}
+		balances := api.GetTransfers(account.Key, account.Secret, account.Market)
+		for _, balance := range balances {
+			if balance == nil {
+				continue
+			}
+			result += fmt.Sprintf("%.0f %s %s %s %f add:%s txId %s status %s \n",
+				balance.Action, balance.CreatedAt, balance.Market, balance.Coin, balance.Amount, balance.Address, balance.TransactionId, balance.Status)
+		}
+	}
+	c.String(http.StatusOK, result)
 }
 
 // simulate

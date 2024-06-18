@@ -525,6 +525,8 @@ func GetTransfers(key, secret, market string) (balances []*model.Balance) {
 		return getTransferFtx(key, secret)
 	case model.OKEX:
 		return getTransferOKEX(key, secret)
+	case model.BinanceSpot, model.BinancePerp, model.BinanceMargin:
+		return GetWithdrawInfo(market, key, secret)
 	}
 	return balances
 }

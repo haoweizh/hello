@@ -1298,6 +1298,10 @@ func parseBalanceOKEX(value map[string]interface{}) (balance *model.Balance) {
 			balance.Status = model.CarryStatusSuccess
 		}
 	}
+	if value[`ts`] != nil {
+		ts, _ := strconv.ParseInt(value[`ts`].(string), 10, 64)
+		balance.CreatedAt = time.Unix(ts/1000, 0)
+	}
 	// for balance
 	//if value[`availEq`] != nil && value[`availEq`] != `` {
 	//	balance.Available, _ = strconv.ParseFloat(value[`availEq`].(string), 64)
