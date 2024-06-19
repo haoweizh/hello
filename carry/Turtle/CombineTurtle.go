@@ -10,6 +10,7 @@ import (
 )
 
 // ProcessCombineTurtle
+// setting.CloseShortMargin 是否下单的价格倍率限制
 // setting.GridAmount 当前已经持仓数量
 // setting.Chance 当前开仓的个数
 // setting.PriceX 上一次开仓的价格

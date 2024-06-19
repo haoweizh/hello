@@ -721,18 +721,11 @@ func CanOpenCombine(settingCombine, settingNormal *model.Setting, dataTurtle *mo
 	//	}
 	//	return true
 	//}
-	lowRate := 1.3
 	if model.CommonTurtleSymbols[settingCombine.Symbol] {
 		canOpen = true
 		canStartCombine = true
 		canStartTurtle = true
-		if model.AppConfig.TurtleRateCommon > 0 {
-			lowRate = model.AppConfig.TurtleRateCommon
-		}
 	} else {
-		if model.AppConfig.TurtleRateNonCommon > 0 {
-			lowRate = model.AppConfig.TurtleRateNonCommon
-		}
 		settingsNormal.Range(sumTurtle)
 		settingsCombine.Range(sumCombineOnly)
 		if settingNormal.MarketRelated == model.TurtleTypeChange && settingCombine.MarketRelated == model.TurtleTypeChange {
@@ -766,7 +759,7 @@ func CanOpenCombine(settingCombine, settingNormal *model.Setting, dataTurtle *mo
 	if dataTurtle.Liquidated {
 		canStartTurtle = false
 	}
-	if dataTurtle.HighFar < lowRate*dataTurtle.LowFar {
+	if dataTurtle.HighFar < settingCombine.CloseShortMargin*dataTurtle.LowFar {
 		canStartCombine = false
 	}
 	return canOpen, canStartCombine, canStartTurtle, turtleSymbolNum, inAll

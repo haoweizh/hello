@@ -176,12 +176,13 @@ func handleCombineSettings(mumSetting *model.Setting, topMarketInfos map[string]
 		valueNormal, _ := normalMap.Load(info.Name)
 		settingCombine := &model.Setting{Valid: true, Function: model.FunctionCombineTurtle, Market: mumSetting.Market,
 			Symbol: info.Name, ChanceLimit: mumSetting.ChanceLimitCombine, AmountRate: mumSetting.AmountRateCombine,
-			AmountLimit: mumSetting.AmountLimit, Far: mumSetting.FarCombine, Near: mumSetting.NearCombine,
-			Seconds: mumSetting.SecondsCombine, MarketRelated: mumSetting.MarketRelated, WSType: model.WSTypeTicker}
+			AmountLimit: mumSetting.AmountLimit, CloseShortMargin: mumSetting.CloseShortMargin, Far: mumSetting.FarCombine,
+			Near: mumSetting.NearCombine, Seconds: mumSetting.SecondsCombine, MarketRelated: mumSetting.MarketRelated,
+			WSType: model.WSTypeTicker}
 		settingNormal := &model.Setting{Valid: true, Function: model.FunctionTurtleNormal, Market: mumSetting.Market,
 			Symbol: info.Name, ChanceLimit: mumSetting.ChanceLimit, AmountRate: mumSetting.AmountRate,
-			AmountLimit: mumSetting.AmountLimit, Far: mumSetting.Far, Near: mumSetting.Near, Seconds: mumSetting.Seconds,
-			MarketRelated: mumSetting.MarketRelated, WSType: model.WSTypeTicker}
+			AmountLimit: mumSetting.AmountLimit, CloseShortMargin: mumSetting.CloseShortMargin, Far: mumSetting.Far,
+			Near: mumSetting.Near, Seconds: mumSetting.Seconds, MarketRelated: mumSetting.MarketRelated, WSType: model.WSTypeTicker}
 		if valueCombine == nil {
 			util.Notice(`add combine %s %v`, mumSetting.Market, info.Name)
 			accounts := model.AppConfig.GetAccounts(mumSetting.Market)
@@ -213,8 +214,9 @@ func handleCombineSettings(mumSetting *model.Setting, topMarketInfos map[string]
 		normalValue, _ := normalMap.Load(symbol)
 		if normalValue == nil {
 			normalSetting = &model.Setting{Valid: true, Function: model.FunctionTurtleNormal, Market: mumSetting.Market,
-				Symbol: symbol.(string), ChanceLimit: mumSetting.ChanceLimit, AmountRate: mumSetting.AmountRate, WSType: model.WSTypeTicker,
-				AmountLimit: mumSetting.AmountLimit, Far: mumSetting.Far, Near: mumSetting.Near, Seconds: mumSetting.Seconds}
+				Symbol: symbol.(string), ChanceLimit: mumSetting.ChanceLimit, AmountRate: mumSetting.AmountRate,
+				WSType: model.WSTypeTicker, AmountLimit: mumSetting.AmountLimit, CloseShortMargin: mumSetting.CloseShortMargin,
+				Far: mumSetting.Far, Near: mumSetting.Near, Seconds: mumSetting.Seconds}
 			model.AppDB.Save(normalSetting)
 		} else {
 			normalSetting = normalValue.(*model.Setting)
@@ -235,9 +237,10 @@ func handleCombineSettings(mumSetting *model.Setting, topMarketInfos map[string]
 		var combineSetting *model.Setting
 		combineValue, _ := combineMap.Load(symbol)
 		if combineValue == nil {
-			combineSetting = &model.Setting{Valid: true, Function: model.FunctionCombineTurtle, Market: mumSetting.Market, WSType: model.WSTypeTicker,
-				Symbol: symbol.(string), ChanceLimit: mumSetting.ChanceLimitCombine, AmountRate: mumSetting.AmountRateCombine,
-				AmountLimit: mumSetting.AmountLimit, Far: mumSetting.FarCombine, Near: mumSetting.NearCombine, Seconds: mumSetting.SecondsCombine}
+			combineSetting = &model.Setting{Valid: true, Function: model.FunctionCombineTurtle, Market: mumSetting.Market,
+				WSType: model.WSTypeTicker, Symbol: symbol.(string), ChanceLimit: mumSetting.ChanceLimitCombine,
+				AmountRate: mumSetting.AmountRateCombine, AmountLimit: mumSetting.AmountLimit, CloseShortMargin: mumSetting.CloseShortMargin,
+				Far: mumSetting.FarCombine, Near: mumSetting.NearCombine, Seconds: mumSetting.SecondsCombine}
 			model.AppDB.Save(combineSetting)
 		} else {
 			combineSetting = combineValue.(*model.Setting)
@@ -361,43 +364,25 @@ func getDynamicMarketInfos(mumSetting *model.Setting, accounts []*model.Account,
 			}
 		}
 	}
-	if function == model.FunctionDynamicBoost {
-		marketInfo24hr := make(map[string]*model.MarketInfo)
-		num := 0
-		for i := 0; i < len(marketInfoArray) && num < lenData; i++ {
-			if marketInfoArray[i] != nil && topMarketInfos[marketInfoArray[i].Name] != nil {
-				marketInfo24hr[marketInfoArray[i].Name] = marketInfoArray[i]
-				num++
-				util.Notice(fmt.Sprintf(`keep topped %s %s %s index %d num %d`,
-					function, mumSetting.Market, marketInfoArray[i].Name, i, num))
-			} else {
-				util.Notice(fmt.Sprintf(`remove nil data %s %s %s index %d num %d`,
-					function, mumSetting.Market, marketInfoArray[i].Name, i, num))
-			}
+	sort.Sort(turtleDataArray)
+	for i := 0; i < turtleDataArray.Len(); i++ {
+		if i < turtleDataArray.Len()-lenData {
+			delete(topMarketInfos, turtleDataArray[i].Symbol)
+			util.Notice(fmt.Sprintf(`remove not topped last %s %s %d of %d NVolume %f left %d`,
+				mumSetting.Market, turtleDataArray[i].Symbol, i, lenData, turtleDataArray[i].NVolume, len(topMarketInfos)))
+		} else {
+			util.Notice(fmt.Sprintf(`keep topped %s %s last %d of %d NVolume %f left %d`,
+				mumSetting.Market, turtleDataArray[i].Symbol, i, lenData, turtleDataArray[i].NVolume, len(topMarketInfos)))
 		}
-		return marketInfo24hr
-	} else {
-		sort.Sort(turtleDataArray)
-		for i := 0; i < turtleDataArray.Len(); i++ {
-			if i < turtleDataArray.Len()-lenData {
-				delete(topMarketInfos, turtleDataArray[i].Symbol)
-				util.Notice(fmt.Sprintf(`remove not topped last %s %s %d of %d NVolume %f left %d`,
-					mumSetting.Market, turtleDataArray[i].Symbol, i, lenData, turtleDataArray[i].NVolume, len(topMarketInfos)))
-			} else {
-				util.Notice(fmt.Sprintf(`keep topped %s %s last %d of %d NVolume %f left %d`,
-					mumSetting.Market, turtleDataArray[i].Symbol, i, lenData, turtleDataArray[i].NVolume, len(topMarketInfos)))
-			}
-		}
-		return topMarketInfos
 	}
+	return topMarketInfos
 }
 
 func handleMarketDynamic(market string) (handled bool) {
 	settingDynamicTurtle := GetSetting(model.FunctionDynamicTurtle, market, ``)
 	settingDynamicCombine := GetSetting(model.FunctionDynamicCombine, market, ``)
-	settingDynamicBoost := GetSetting(model.FunctionDynamicBoost, market, ``)
 	accounts := model.AppConfig.GetAccounts(market)
-	if (settingDynamicTurtle == nil && settingDynamicCombine == nil && settingDynamicBoost == nil) ||
+	if (settingDynamicTurtle == nil && settingDynamicCombine == nil) ||
 		accounts == nil || len(accounts) == 0 {
 		return false
 	}
@@ -405,7 +390,8 @@ func handleMarketDynamic(market string) (handled bool) {
 	if settingDynamicCombine != nil {
 		topMarketInfos := getDynamicMarketInfos(settingDynamicCombine, accounts, settingDynamicCombine.Function, 55, 30)
 		handleCombineSettings(settingDynamicCombine, topMarketInfos)
-	} else if settingDynamicTurtle != nil {
+	}
+	if settingDynamicTurtle != nil {
 		topMarketInfos := getDynamicMarketInfos(settingDynamicTurtle, accounts, settingDynamicTurtle.Function, 55, 30)
 		handleSingleSettings(settingDynamicTurtle, topMarketInfos, model.FunctionTurtle)
 	}

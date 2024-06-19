@@ -209,8 +209,6 @@ func Test_Redis(t *testing.T) {
 
 func Test_BalAndPos(t *testing.T) {
 	model.NewConfig()
-	fmt.Println(model.AppConfig.TurtleRateCommon)
-	fmt.Println(model.AppConfig.TurtleRateNonCommon)
 	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
 	api.InitCrossMarketInfos([]string{model.BinancePerp, model.OKEX})
 	api.InitMarketInfos(model.OKEX)
