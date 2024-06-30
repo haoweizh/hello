@@ -250,14 +250,14 @@ func placeTurtleLong(account *model.Account, orderType string, data *model.Turtl
 	}
 	if orderType == model.OrderTypeLimit {
 		if setting.Chance < 0 {
-			priceChange = 1.8 * data.N
+			priceChange = 1.6 * data.N
 			price = math.Max(math.Max(setting.PriceX, data.HighFar)-priceChange, data.LowFar)
 		} else if setting.Chance == 0 {
-			price = data.LowFar + data.N/2
+			price = data.LowFar + data.N*0.4
 		} else if setting.Chance == 1 {
 			price = data.LowFar
 		} else if setting.Chance > 1 {
-			price = setting.PriceX - data.N/2
+			price = setting.PriceX - data.N*0.4
 		}
 	} else if orderType == model.OrderTypeStop {
 		priceInc := 0.0
@@ -266,10 +266,10 @@ func placeTurtleLong(account *model.Account, orderType string, data *model.Turtl
 			priceInc = v.(*model.MarketInfo).PriceIncrement
 		}
 		if setting.Chance > 0 {
-			if data.HighFar > setting.PriceX+data.N/2 {
+			if data.HighFar > setting.PriceX+data.N*0.4 {
 				price = data.HighFar + priceInc
 			} else {
-				price = setting.PriceX + data.N/2
+				price = setting.PriceX + data.N*0.4
 			}
 		} else if setting.Chance < 0 {
 			if data.UseNear {
@@ -354,14 +354,14 @@ func placeTurtleShort(account *model.Account, orderType string, data *model.Turt
 	}
 	if orderType == model.OrderTypeLimit {
 		if setting.Chance > 0 {
-			priceChange = 1.8 * data.N
+			priceChange = 1.6 * data.N
 			price = math.Min(math.Min(setting.PriceX, data.LowFar)+priceChange, data.HighFar)
 		} else if setting.Chance == 0 {
-			price = data.HighFar - data.N/2
+			price = data.HighFar - data.N*0.4
 		} else if setting.Chance == -1 {
 			price = data.HighFar
 		} else if setting.Chance < -1 {
-			price = setting.PriceX + data.N/2
+			price = setting.PriceX + data.N*0.4
 		}
 	} else if orderType == model.OrderTypeStop {
 		priceInc := 0.0
@@ -380,10 +380,10 @@ func placeTurtleShort(account *model.Account, orderType string, data *model.Turt
 				price = math.Max(data.HighFar, data.HighToday) - priceChange - priceInc
 			}
 		} else if setting.Chance < 0 {
-			if data.LowFar < setting.PriceX-data.N/2 {
+			if data.LowFar < setting.PriceX-data.N*0.4 {
 				price = data.LowFar - priceInc
 			} else {
-				price = setting.PriceX - data.N/2
+				price = setting.PriceX - data.N*0.4
 			}
 		} else if setting.Chance == 0 {
 			price -= priceInc
