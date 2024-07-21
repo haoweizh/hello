@@ -681,7 +681,7 @@ func CanOpenCombine(settingCombine, settingNormal *model.Setting, dataTurtle *mo
 	sumCombineOnly := func(symbol, value any) bool {
 		if value != nil {
 			valueSetting := value.(*model.Setting)
-			if !model.CommonTurtleSymbols[valueSetting.Symbol] {
+			if !model.CommonTurtleSymbols[valueSetting.Symbol] && valueSetting.Valid {
 				if valueSetting.Chance != 0 && valueSetting.Function == model.FunctionCombineTurtle {
 					normal := GetSetting(model.FunctionTurtleNormal, valueSetting.Market, valueSetting.Symbol)
 					if normal != nil && normal.Chance == 0 {
@@ -696,7 +696,7 @@ func CanOpenCombine(settingCombine, settingNormal *model.Setting, dataTurtle *mo
 	sumTurtle := func(symbol, value any) bool {
 		if value != nil {
 			valueSetting := value.(*model.Setting)
-			if !model.CommonTurtleSymbols[valueSetting.Symbol] {
+			if !model.CommonTurtleSymbols[valueSetting.Symbol] && valueSetting.Valid {
 				if valueSetting.Function == model.FunctionTurtleNormal {
 					if valueSetting.Chance > 0 {
 						turtleSymbolNum++
