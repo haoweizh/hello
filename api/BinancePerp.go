@@ -215,9 +215,9 @@ func handleTickerBinancePerp(environment *model.Environment, json *simplejson.Js
 	askAmount, _ := strconv.ParseFloat(json.Get(`A`).MustString(), 64)
 	ts := json.Get(`E`).MustInt()
 	now := int(time.Now().UnixNano() / int64(time.Millisecond))
-	if ts == 0 {
-		ts = now
-	}
+	//if ts == 0 {
+	//	ts = now
+	//}
 	if bidPrice > 0 && bidAmount > 0 && askPrice > 0 && askAmount > 0 {
 		bidAsk := model.BidAsk{Ts: ts, TsReceived: now, UpdateId: updateId,
 			Bids: []model.Tick{{Price: bidPrice, Amount: bidAmount, Market: model.BinancePerp, Symbol: standardSymbol}},
