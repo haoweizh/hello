@@ -289,7 +289,7 @@ func maintainChannelBybit() {
 	if !channelMaintainingBybit {
 		channelMaintainingBybit = true
 		go func() {
-			for true {
+			for {
 				time.Sleep(time.Second * 20)
 				if err := SendToAllTickerSockets(model.Bybit, []byte(`{"op": "ping"}`)); err != nil {
 					util.Notice("bybit channel ping error " + err.Error())

@@ -735,6 +735,7 @@ func placeOrderOKEX(account *model.Account, isWs bool, order *model.Order) {
 				util.Notice(fmt.Sprintf(`-test ok ws- success place okex ws order %s %s`, account.Key, order.Symbol))
 			}
 		}
+		order.OrderId = strconv.FormatInt(time.Now().UnixNano(), 10) + order.Symbol
 	} else {
 		responseBody, httpErr := sendSignRequestOKEX(account.Key, account.Secret, http.MethodPost, path, nil, postData)
 		util.Notice(fmt.Sprintf(`place okex %s return %s`, path, string(responseBody)))

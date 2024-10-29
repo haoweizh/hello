@@ -5,7 +5,6 @@ import (
 	"github.com/gorilla/websocket"
 	"hello/model"
 	"hello/util"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -833,9 +832,6 @@ func PlaceOrder(key, secret, orderSide, orderType, market, symbol, orderParam st
 		placeOrderGate(key, secret, order, orderSide, orderType, symbol, price, amount)
 	case model.OKEX:
 		placeOrderOKEX(account, isWs, order)
-		if isWs {
-			order.OrderId = strconv.FormatInt(time.Now().UnixNano(), 10) + symbol
-		}
 	case model.BinanceSpot:
 		placeOrderBinanceSpot(key, secret, order, orderSide, orderType, symbol, price, amount)
 	case model.BinancePerp:

@@ -56,9 +56,6 @@ var getMarketInfoMail sync.Map            // FormatCrossPair执行无法获取ma
 var placeTick sync.Map                    // market_symbol_orderSide:price_amount
 var doCross = false
 
-// var firstComp = false
-var wsCross = true
-
 type contractMarket struct {
 	key, market          string
 	collateralsAvailable float64                  // 可用保证金U数
@@ -205,7 +202,7 @@ func GetHoldings(accounts map[string]*model.Account) (holding [][]interface{}) {
 				} else if api.FilterCross(position.Market, position.Currency) || position.Holding == 0 {
 					valid = `filter`
 				}
-				if position != nil && position.Holding != 0 {
+				if position.Holding != 0 {
 					success, _, coin, _ := model.GetFromStandard(position.Market, position.Currency)
 					if success {
 						coinHold[coin] += position.Holding
@@ -326,14 +323,14 @@ func addCarryResult(key, market, msg string, success bool) {
 		}
 	} else {
 		carryFail.Store(key, fails+1)
-		if market == model.OKEX && wsCross {
-			go func() {
-				wsCross = false
-				util.Notice(fmt.Sprintf(`fail to order okex by ws, change ok ws cross for 10 mins`))
-				time.Sleep(time.Minute * 10)
-				wsCross = true
-			}()
-		}
+		//if market == model.OKEX && wsCross {
+		//	go func() {
+		//		wsCross = false
+		//		util.Notice(fmt.Sprintf(`fail to order okex by ws, change ok ws cross for 10 mins`))
+		//		time.Sleep(time.Minute * 10)
+		//		wsCross = true
+		//	}()
+		//}
 	}
 	if fails > 6 {
 		if strings.Trim(msg, " ") != "" {
