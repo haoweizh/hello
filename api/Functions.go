@@ -1199,8 +1199,7 @@ func CreateAccountWsServer(market string) {
 	case model.BinanceSpot:
 		go WsAccountServeBinanceSpot()
 	case model.OKEX:
-		WsAccountServeOKEX()
-		go maintainAccountConnOKEX()
+		go WsAccountServeOKEX()
 	}
 }
 

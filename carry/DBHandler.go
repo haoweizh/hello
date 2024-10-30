@@ -131,22 +131,12 @@ func ClearChannels(market string, chanMap *sync.Map) {
 func MaintainMarketChan() (reset bool) {
 	for _, market := range api.GetMarkets() {
 		depthChans, _ := model.AppEnvironment.MsgChanTick.Load(market)
-		marketReset := false
 		if depthChans == nil || len(depthChans.([]chan struct{})) == 0 {
-			marketReset = true
 			api.CreateMarketTickerWS(model.AppEnvironment, market)
 		} else if api.RequireDepthChanReset(model.AppEnvironment, market) {
 			reset = true
-			marketReset = true
 			ClearChannels(market, &model.AppEnvironment.MsgChanTick)
 			api.CreateMarketTickerWS(model.AppEnvironment, market)
-		}
-		accounts := model.AppConfig.GetAccounts(market)
-		for _, account := range accounts {
-			value, _ := util.LoadSyncMap(&model.AppEnvironment.AccountConns, market, account.Key)
-			if value == nil || marketReset {
-				api.CreateAccountWsServer(market)
-			}
 		}
 	}
 	var settingMonitors []*model.SettingMonitor
@@ -209,6 +199,9 @@ func Maintain() {
 	//}()
 	for {
 		MaintainMarketChan()
+		for _, market := range api.GetMarkets() {
+			api.CreateAccountWsServer(market)
+		}
 		time.Sleep(time.Minute * 2)
 	}
 }

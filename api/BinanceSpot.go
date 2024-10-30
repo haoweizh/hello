@@ -426,30 +426,23 @@ func WsAccountServeBinanceSpot() {
 	}
 	if !maintainingAccountConnBinance {
 		maintainingAccountConnBinance = true
-		created := true
-		for {
-			accounts := model.AppConfig.GetAccounts(model.BinanceSpot)
-			for _, account := range accounts {
-				if account == nil {
-					return
-				}
-				success, listenKey := RenewListenKeyBinanceSpot(account)
-				if success {
-					conn, err := WsAccountClient(account.Key, model.BinanceSpot, wsBinance+`ws/`+listenKey, wsAccountHandler)
-					if err != nil {
-						created = false
-						util.Notice(fmt.Sprintf(`fail to create account ws BinanceSpot %s`, err.Error()))
-						continue
-					}
-					util.StoreSyncMap(&model.AppEnvironment.AccountConns, conn, model.BinanceSpot, account.Key)
-				} else {
-					created = false
-				}
+		accounts := model.AppConfig.GetAccounts(model.BinanceSpot)
+		for _, account := range accounts {
+			if account == nil {
+				return
 			}
-			if created {
-				time.Sleep(time.Minute * 30)
-			} else {
-				time.Sleep(time.Minute * 3)
+			value, _ := util.LoadSyncMap(&model.AppEnvironment.AccountConns, model.BinanceSpot, account.Key)
+			if value != nil {
+				continue
+			}
+			success, listenKey := RenewListenKeyBinanceSpot(account)
+			if success {
+				conn, err := WsAccountClient(account.Key, model.BinanceSpot, wsBinance+`ws/`+listenKey, wsAccountHandler)
+				if err != nil {
+					util.Notice(fmt.Sprintf(`fail to create account ws BinanceSpot %s`, err.Error()))
+					continue
+				}
+				util.StoreSyncMap(&model.AppEnvironment.AccountConns, conn, model.BinanceSpot, account.Key)
 			}
 		}
 	}

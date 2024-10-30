@@ -325,9 +325,14 @@ var wsAccountHandlerOKEX = func(event []byte) {
 }
 
 func WsAccountServeOKEX() {
+	go maintainAccountConnOKEX()
 	accounts := model.AppConfig.GetAccounts(model.OKEX)
 	for _, account := range accounts {
 		if account == nil {
+			continue
+		}
+		value, _ := util.LoadSyncMap(&model.AppEnvironment.AccountConns, model.OKEX, account.Key)
+		if value != nil {
 			continue
 		}
 		conn, err := WsAccountClient(account.Key, model.OKEX, wsPrivateOKEX, wsAccountHandlerOKEX)

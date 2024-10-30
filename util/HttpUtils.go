@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net"
 	"net/http"
 	"net/mail"
@@ -116,7 +115,7 @@ func ComposeParams(body map[string]interface{}) (params string) {
 //	return bodyData, nil
 //}
 
-//	method: GET, POST, DELETE
+// HttpRequest method: GET, POST, DELETE
 func HttpRequest(method string, reqUrl string, body string, requestHeaders map[string]string, timeout int) ([]byte, error) {
 	req, createErr := http.NewRequest(method, reqUrl, strings.NewReader(body))
 	if createErr != nil {
@@ -128,6 +127,7 @@ func HttpRequest(method string, reqUrl string, body string, requestHeaders map[s
 			req.Header.Add(k, v)
 		}
 	}
+	req.Header.Add(`connection`, `Keep-Alive`)
 	ctx, cncl := context.WithTimeout(context.Background(), time.Second*time.Duration(timeout))
 	defer cncl()
 	resp, err := http.DefaultClient.Do(req.WithContext(ctx))
@@ -141,8 +141,9 @@ func HttpRequest(method string, reqUrl string, body string, requestHeaders map[s
 			Notice(`fail to request, return %s`, err.Error())
 		}
 	}(resp.Body)
-	bodyData, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
+	//bodyData, err := ioutil.ReadAll(resp.Body)
+	bodyData, readErr := io.ReadAll(resp.Body)
+	if readErr != nil {
 		SocketInfo("can not read message from request " + err.Error())
 		return nil, err
 	}
