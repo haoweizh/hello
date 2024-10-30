@@ -1024,7 +1024,7 @@ func placeCross(statusBuy, statusSell *CarryStatus, priceBuy, priceSell, amount 
 	util.Notice(fmt.Sprintf(`place cross %s %s -> %s %s at %f %f amount %f score %f hold %f buy %f hold %f sell %f`,
 		statusSell.market, statusSell.symbol, statusBuy.market, statusBuy.symbol, priceSell, priceBuy, amount,
 		score, statusBuy.Holding, statusBuy.TradeLineBuy, statusSell.Holding, statusSell.TradeLineSell))
-	if statusBuy.market == model.OKEX && statusSell.market == model.OKEX && wsCross {
+	if statusBuy.market == model.OKEX && statusSell.market == model.OKEX {
 		now := time.Now().UnixNano()
 		orderBuy := &model.Order{OrderSide: model.OrderSideBuy, OrderType: model.OrderTypeLimit, Market: model.OKEX,
 			Symbol: statusBuy.symbol, Price: priceBuy, Amount: amount, RefreshType: model.FunctionCross, OrderTime: util.GetNow(),
@@ -1056,7 +1056,7 @@ func placeCross(statusBuy, statusSell *CarryStatus, priceBuy, priceSell, amount 
 				orderParam = model.ReduceOnly
 			}
 			order := api.PlaceOrder(statusBuy.account.Key, statusBuy.account.Secret, model.OrderSideBuy, model.OrderTypeLimit,
-				statusBuy.market, statusBuy.symbol, orderParam, priceBuy, priceBuy, amount, wsCross, PostOrderCross, statusBuy.setting)
+				statusBuy.market, statusBuy.symbol, orderParam, priceBuy, priceBuy, amount, true, PostOrderCross, statusBuy.setting)
 			saveCross(order, statusBuy.setting.Coin, model.FunctionCross, statusBuy.TradeLineBuy, statusBuy.TradeLineSell, statusBuy.Holding)
 		}()
 		go func() {
@@ -1066,7 +1066,7 @@ func placeCross(statusBuy, statusSell *CarryStatus, priceBuy, priceSell, amount 
 			}
 			order := api.PlaceOrder(statusSell.account.Key, statusSell.account.Secret, model.OrderSideSell, model.OrderTypeLimit,
 				statusSell.market, statusSell.symbol, orderParam, priceSell, priceSell,
-				amount, wsCross, PostOrderCross, statusSell.setting)
+				amount, true, PostOrderCross, statusSell.setting)
 			saveCross(order, statusSell.setting.Coin, model.FunctionCross, statusSell.TradeLineBuy, statusSell.TradeLineSell, statusSell.Holding)
 		}()
 		time.Sleep(time.Second * 4)
