@@ -527,26 +527,28 @@ func Test_download(t *testing.T) {
 
 func Test_Orders(t *testing.T) {
 	model.NewConfig()
-	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
-	coin := `KLAY`
-	market := model.BitgetPerp
-	symbol := coin + model.UniStandardTail[model.MarketTypePerp]
-	api.InitMarketInfos(model.BitgetPerp)
-	account := model.GetAccounts(0)[model.BitgetPerp]
-	order := api.PlaceOrder(account.Key, account.Secret, model.OrderSideSell, model.OrderTypeLimit, model.BitgetPerp, symbol, model.ReduceOnly,
-		0.2206, 0.2206, 77.8, false, nil, nil)
+	api.CreateAccountWsServer(model.OKEX)
+	time.Sleep(time.Second * 3)
+	//model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
+	market := model.OKEX
+	symbol := `BTC_USDT`
+	api.InitMarketInfos(model.OKEX)
+	account := model.GetAccounts(0)[market]
+	order := api.PlaceOrder(account.Key, account.Secret, model.OrderSideSell, model.OrderTypeLimit, market, symbol, model.ReduceOnly,
+		88888.0000364, 88888.0000364, 0.01, true, nil, nil)
 	if order != nil {
 		fmt.Println(fmt.Sprintf(`place %s %s`, order.OrderId, order.Status))
 	}
-	order = api.QueryOrderById(account.Key, account.Secret, market, symbol, model.OrderTypeLimit, order.OrderId)
-	if order != nil {
-		fmt.Println(fmt.Sprintf(`query %s %s`, order.OrderId, order.Status))
-	}
-	api.CancelOrders(account.Key, account.Secret, market, symbol)
-	order = api.QueryOrderById(account.Key, account.Secret, market, symbol, model.OrderTypeLimit, order.OrderId)
-	if order != nil {
-		fmt.Println(fmt.Sprintf(`query %s %s`, order.OrderId, order.Status))
-	}
+	select {}
+	//order = api.QueryOrderById(account.Key, account.Secret, market, symbol, model.OrderTypeLimit, order.OrderId)
+	//if order != nil {
+	//	fmt.Println(fmt.Sprintf(`query %s %s`, order.OrderId, order.Status))
+	//}
+	//api.CancelOrders(account.Key, account.Secret, market, symbol)
+	//order = api.QueryOrderById(account.Key, account.Secret, market, symbol, model.OrderTypeLimit, order.OrderId)
+	//if order != nil {
+	//	fmt.Println(fmt.Sprintf(`query %s %s`, order.OrderId, order.Status))
+	//}
 }
 
 func Test_transferInner(t *testing.T) {
@@ -612,7 +614,7 @@ func Test_LimitReport(t *testing.T) {
 			}
 		}
 	}
-	for symbol, _ := range buyAmount {
+	for symbol := range buyAmount {
 		if buyU[symbol] > 0 && sellAmount[symbol] > 0 && sellU[symbol] > 0 {
 			util.InfoSync(fmt.Sprintf(`,%s,%s,%f,%f,%f,%f`, market, symbol, buyAmount[symbol], buyU[symbol], sellAmount[symbol], sellU[symbol]))
 		}

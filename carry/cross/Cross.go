@@ -1032,9 +1032,13 @@ func placeCross(statusBuy, statusSell *CarryStatus, priceBuy, priceSell, amount 
 			if statusBuy.reduceOnlyBuy {
 				orderParam = model.ReduceOnly
 			}
+			isWs := false
+			if statusBuy.market == model.OKEX {
+				isWs = true
+			}
 			order := api.PlaceOrder(statusBuy.account.Key, statusBuy.account.Secret, model.OrderSideBuy, model.OrderTypeLimit,
-				statusBuy.market, statusBuy.symbol, orderParam, priceBuy, priceBuy, amount, true, PostOrderCross, statusBuy.setting)
-			if statusBuy.market != model.OKEX {
+				statusBuy.market, statusBuy.symbol, orderParam, priceBuy, priceBuy, amount, isWs, PostOrderCross, statusBuy.setting)
+			if !isWs {
 				saveCross(order, statusBuy.setting.Coin, model.FunctionCross, statusBuy.TradeLineBuy, statusBuy.TradeLineSell, statusBuy.Holding)
 			}
 		}()
@@ -1043,10 +1047,14 @@ func placeCross(statusBuy, statusSell *CarryStatus, priceBuy, priceSell, amount 
 			if statusSell.reduceOnlySell {
 				orderParam = model.ReduceOnly
 			}
+			isWs := false
+			if statusBuy.market == model.OKEX {
+				isWs = true
+			}
 			order := api.PlaceOrder(statusSell.account.Key, statusSell.account.Secret, model.OrderSideSell, model.OrderTypeLimit,
 				statusSell.market, statusSell.symbol, orderParam, priceSell, priceSell,
-				amount, true, PostOrderCross, statusSell.setting)
-			if statusBuy.market != model.OKEX {
+				amount, isWs, PostOrderCross, statusSell.setting)
+			if !isWs {
 				saveCross(order, statusSell.setting.Coin, model.FunctionCross, statusSell.TradeLineBuy, statusSell.TradeLineSell, statusSell.Holding)
 			}
 		}()
