@@ -858,7 +858,7 @@ func PlaceOrder(key, secret, orderSide, orderType, market, symbol, orderParam st
 	util.Notice(fmt.Sprintf(`...%s %s %s return order at %d distance %d %s %s price %f %f amount %f %f trigger %f %f id %s`,
 		orderSide, market, symbol, end, end-start, order.Status, order.ErrCode, price, order.Price, amount, order.Amount,
 		triggerPrice, order.TriggerPrice, order.OrderId))
-	if postOrder != nil && setting != nil {
+	if postOrder != nil && setting != nil && !isWs {
 		go postOrder(order)
 	}
 	return order
