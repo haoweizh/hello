@@ -128,6 +128,23 @@ func ClearChannels(market string, chanMap *sync.Map) {
 	}
 }
 
+func MaintainAccountChan() {
+	for _, market := range api.GetMarkets() {
+		accounts := model.AppConfig.GetAccounts(market)
+		for _, account := range accounts {
+			if account == nil {
+				continue
+			}
+			value, _ := util.LoadSyncMap(&model.AppEnvironment.AccountConnMS, market, account.Key)
+			if value != nil && value.(int64)-time.Now().UnixMilli() < 60000 {
+				continue
+			}
+			util.DelSyncMap(&model.AppEnvironment.AccountConns, market, account.Key)
+			api.CreateAccountWsServer(market)
+		}
+	}
+}
+
 func MaintainMarketChan() (reset bool) {
 	for _, market := range api.GetMarkets() {
 		depthChans, _ := model.AppEnvironment.MsgChanTick.Load(market)
@@ -199,9 +216,7 @@ func Maintain() {
 	//}()
 	for {
 		MaintainMarketChan()
-		for _, market := range api.GetMarkets() {
-			api.CreateAccountWsServer(market)
-		}
+		MaintainAccountChan()
 		time.Sleep(time.Minute * 2)
 	}
 }

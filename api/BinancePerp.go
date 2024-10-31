@@ -27,7 +27,6 @@ const wsAccountBinancePerp = `wss://fstream.binance.com/ws/`
 const wsStepBinancePerp = 20
 
 var channelMaintainingBinancePerp = false
-var maintainingAccountConnBinancePerp = false
 
 func getMarketsBinancePerp(key, secret string) (marketInfos map[string]*model.MarketInfo) {
 	marketInfos = make(map[string]*model.MarketInfo)
@@ -106,7 +105,7 @@ func getMarketsBinancePerp(key, secret string) (marketInfos map[string]*model.Ma
 }
 
 func WsAccountServeBinancePerp() {
-	var wsAccountHandler = func(event []byte) {
+	var wsAccountHandler = func(market, key string, event []byte) {
 		result, wsErr := util.NewJSON(event)
 		if wsErr != nil {
 			util.Notice(`binancePerp fail to unmarshal account ws json ` + wsErr.Error())
@@ -129,26 +128,23 @@ func WsAccountServeBinancePerp() {
 			}
 		}
 	}
-	if !maintainingAccountConnBinancePerp {
-		maintainingAccountConnBinancePerp = true
-		accounts := model.AppConfig.GetAccounts(model.BinancePerp)
-		for _, account := range accounts {
-			if account == nil {
-				return
-			}
-			value, _ := util.LoadSyncMap(&model.AppEnvironment.AccountConns, model.BinancePerp, account.Key)
-			if value != nil {
+	accounts := model.AppConfig.GetAccounts(model.BinancePerp)
+	for _, account := range accounts {
+		if account == nil {
+			return
+		}
+		value, _ := util.LoadSyncMap(&model.AppEnvironment.AccountConns, model.BinancePerp, account.Key)
+		if value != nil {
+			continue
+		}
+		success, listenKey := renewListenKeyBinancePerp(account)
+		if success {
+			conn, err := WsAccountClient(model.BinancePerp, account.Key, wsAccountBinancePerp+listenKey, wsAccountHandler)
+			if err != nil {
+				util.Notice(fmt.Sprintf(`fail to create account ws binancePerp %s`, err.Error()))
 				continue
 			}
-			success, listenKey := renewListenKeyBinancePerp(account)
-			if success {
-				conn, err := WsAccountClient(account.Key, model.BinancePerp, wsAccountBinancePerp+listenKey, wsAccountHandler)
-				if err != nil {
-					util.Notice(fmt.Sprintf(`fail to create account ws binancePerp %s`, err.Error()))
-					continue
-				}
-				util.StoreSyncMap(&model.AppEnvironment.AccountConns, conn, model.BinancePerp, account.Key)
-			}
+			util.StoreSyncMap(&model.AppEnvironment.AccountConns, conn, model.BinancePerp, account.Key)
 		}
 	}
 }

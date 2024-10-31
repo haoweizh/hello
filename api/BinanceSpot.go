@@ -22,7 +22,6 @@ const restDataBinance = `https://data.binance.com`
 const wsBinance = "wss://stream.binance.com:9443/"
 const wsStepBinance = 20
 
-var maintainingAccountConnBinance = false
 var channelMaintainingBinance = false
 
 func GetMarketsBinance(account *model.Account, market, marketType string) (marketInfos map[string]*model.MarketInfo) {
@@ -402,7 +401,7 @@ func parseOrderBinance(market string, orderJson *simplejson.Json) (order *model.
 }
 
 func WsAccountServeBinanceSpot() {
-	var wsAccountHandler = func(event []byte) {
+	var wsAccountHandler = func(market, key string, event []byte) {
 		result, wsErr := util.NewJSON(event)
 		if wsErr != nil {
 			util.Notice(`binanceSpot fail to unmarshal account ws json ` + wsErr.Error())
@@ -424,26 +423,23 @@ func WsAccountServeBinanceSpot() {
 			}
 		}
 	}
-	if !maintainingAccountConnBinance {
-		maintainingAccountConnBinance = true
-		accounts := model.AppConfig.GetAccounts(model.BinanceSpot)
-		for _, account := range accounts {
-			if account == nil {
-				return
-			}
-			value, _ := util.LoadSyncMap(&model.AppEnvironment.AccountConns, model.BinanceSpot, account.Key)
-			if value != nil {
+	accounts := model.AppConfig.GetAccounts(model.BinanceSpot)
+	for _, account := range accounts {
+		if account == nil {
+			return
+		}
+		value, _ := util.LoadSyncMap(&model.AppEnvironment.AccountConns, model.BinanceSpot, account.Key)
+		if value != nil {
+			continue
+		}
+		success, listenKey := RenewListenKeyBinanceSpot(account)
+		if success {
+			conn, err := WsAccountClient(model.BinanceSpot, account.Key, wsBinance+`ws/`+listenKey, wsAccountHandler)
+			if err != nil {
+				util.Notice(fmt.Sprintf(`fail to create account ws BinanceSpot %s`, err.Error()))
 				continue
 			}
-			success, listenKey := RenewListenKeyBinanceSpot(account)
-			if success {
-				conn, err := WsAccountClient(account.Key, model.BinanceSpot, wsBinance+`ws/`+listenKey, wsAccountHandler)
-				if err != nil {
-					util.Notice(fmt.Sprintf(`fail to create account ws BinanceSpot %s`, err.Error()))
-					continue
-				}
-				util.StoreSyncMap(&model.AppEnvironment.AccountConns, conn, model.BinanceSpot, account.Key)
-			}
+			util.StoreSyncMap(&model.AppEnvironment.AccountConns, conn, model.BinanceSpot, account.Key)
 		}
 	}
 }

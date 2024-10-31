@@ -24,7 +24,7 @@ const OKSeparator = `Sep`
 const restOKEX = `https://www.okx.com`
 const wsOKEX = `wss://ws.okx.com:8443/ws/v5/public`
 const wsPrivateOKEX = `wss://ws.okx.com:8443/ws/v5/private`
-const wsStepOKEX = 30
+const wsStepOKEX = 90
 const ParamArrayOkex = `OK_ARRAY`
 const chanelOKEX = `bbo-tbt` //`books5`
 var lastSameTime = make(map[string]int64)
@@ -259,7 +259,11 @@ var wsHandlerOKEX = func(event []byte) {
 	}
 }
 
-var wsAccountHandlerOKEX = func(event []byte) {
+var wsAccountHandlerOKEX = func(market, key string, event []byte) {
+	if strings.Contains(string(event), `pong`) {
+		util.StoreSyncMap(&model.AppEnvironment.AccountConnMS, time.Now().UnixMilli(), model.OKEX, key)
+		return
+	}
 	responseJson, err := util.NewJSON(event)
 	if err != nil || responseJson == nil {
 		return
@@ -274,18 +278,10 @@ var wsAccountHandlerOKEX = func(event []byte) {
 				subArray = append(subArray, map[string]string{`channel`: `orders`, `instType`: `ANY`, `instId`: subscribes[j].(string)})
 			}
 			subscribeMap[`args`] = subArray
-			accounts := model.AppConfig.GetAccounts(model.OKEX)
-			for _, account := range accounts {
-				if account == nil {
-					continue
-				}
-				value, _ := util.LoadSyncMap(&model.AppEnvironment.AccountConns, model.OKEX, account.Key)
-				if value == nil {
-					continue
-				}
+			value, _ := util.LoadSyncMap(&model.AppEnvironment.AccountConns, model.OKEX, key)
+			if value != nil {
 				if err = SendToConnection(model.OKEX, value.(*websocket.Conn), util.JsonEncodeToByte(subscribeMap)); err != nil {
 					util.SocketInfo("-test ok ws-okex can not subscribe private " + err.Error())
-					continue
 				}
 			}
 		}
@@ -304,22 +300,15 @@ var wsAccountHandlerOKEX = func(event []byte) {
 		go func() {
 			order := parseOrderOKEX(value)
 			funcHandlers := GetFunctions(model.OKEX, order.Symbol)
-			if funcHandlers != nil {
-				funcHandlers.Range(func(function, value interface{}) bool {
-					if model.AccountHandlerMap[function.(string)] != nil {
-						if function.(string) == model.FunctionCross {
-							// 当前只针对错误订单进行处理
-							if strings.Trim(order.ErrCode, ` `) != `0` && !order.HaveId() {
-								go model.AccountHandlerMap[function.(string)](order)
-							}
-							util.Notice(fmt.Sprintf(`-test ok ws- get order to deal %v`, order))
-						} else {
-							go model.AccountHandlerMap[function.(string)](order)
-						}
-					}
-					return true
-				})
+			if funcHandlers == nil {
+				return
 			}
+			funcHandlers.Range(func(function, value interface{}) bool {
+				if model.AccountHandlerMap[function.(string)] != nil {
+					go model.AccountHandlerMap[function.(string)](order)
+				}
+				return true
+			})
 		}()
 	}
 }
@@ -335,7 +324,7 @@ func WsAccountServeOKEX() {
 		if value != nil {
 			continue
 		}
-		conn, err := WsAccountClient(account.Key, model.OKEX, wsPrivateOKEX, wsAccountHandlerOKEX)
+		conn, err := WsAccountClient(model.OKEX, account.Key, wsPrivateOKEX, wsAccountHandlerOKEX)
 		if err != nil {
 			util.Notice("can not create web socket " + err.Error())
 		} else if conn != nil {

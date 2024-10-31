@@ -379,7 +379,7 @@ func GetMultiCandle(account *model.Account, market string, slotSeconds int, begi
 			case model.GXZQ:
 				temp, isCache = getCandlesGXZQDB(symbol, begin, end, slotSeconds)
 			}
-			for j := 0; j < temp.Len(); j++ {
+			for j := 0; temp != nil && j < temp.Len(); j++ {
 				candles[j*len(settings)+i] = temp[j]
 			}
 			i++
@@ -1190,10 +1190,10 @@ func InitMarketInfos(market string) (success bool) {
 
 func CreateAccountWsServer(market string) {
 	switch market {
-	case model.BinancePerp:
-		go WsAccountServeBinancePerp()
-	case model.BinanceSpot:
-		go WsAccountServeBinanceSpot()
+	//case model.BinancePerp:
+	//	go WsAccountServeBinancePerp()
+	//case model.BinanceSpot:
+	//	go WsAccountServeBinanceSpot()
 	case model.OKEX:
 		go WsAccountServeOKEX()
 	}

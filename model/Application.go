@@ -87,7 +87,7 @@ const TopCross = `top_cross`
 var AppDB *gorm.DB
 var AppRedis *redis.Client
 var AppConfig *Config
-var AppEnvironment = &Environment{WsManager: &WSManager{WSAgents: &sync.Map{}}, MonitorSettings: &sync.Map{}}
+var AppEnvironment = &Environment{WsManager: &WSManager{WSAgents: &sync.Map{}}, MonitorSettings: &sync.Map{}, AccountConnMS: sync.Map{}}
 
 var ChannelMaintaining sync.Map // market - bool
 var DialectTail = map[string]map[string]string{

@@ -13,6 +13,7 @@ import (
 
 type OrderHandler func(order *model.Order)
 type MsgHandler func(message []byte)
+type AccountMsgHandler func(market, key string, message []byte)
 type SubscribeHandler func(market string, connection *websocket.Conn, subscribes []interface{}) error
 
 var wsLock sync.Mutex
@@ -129,7 +130,7 @@ func chanHandler(market string, stopChan chan struct{}, connection *websocket.Co
 	}
 }
 
-func WsAccountClient(key, market, url string, msgHandler MsgHandler) (connection *websocket.Conn, err error) {
+func WsAccountClient(market, key, url string, accountMsgHandler AccountMsgHandler) (connection *websocket.Conn, err error) {
 	util.Notice(market + ` create account channel ` + url)
 	connection, err = newConnection(url)
 	if err != nil {
@@ -149,8 +150,8 @@ func WsAccountClient(key, market, url string, msgHandler MsgHandler) (connection
 				util.Notice(fmt.Sprintf(`%s can not read from account ws: %s`, market, readErr.Error()))
 				return
 			}
-			if msgHandler != nil {
-				msgHandler(message)
+			if accountMsgHandler != nil {
+				accountMsgHandler(market, key, message)
 			}
 		}
 	}()
