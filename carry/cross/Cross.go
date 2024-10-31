@@ -1025,30 +1025,46 @@ func placeCross(statusBuy, statusSell *CarryStatus, priceBuy, priceSell, amount 
 		statusSell.market, statusSell.symbol, statusBuy.market, statusBuy.symbol, priceSell, priceBuy, amount,
 		score, statusBuy.Holding, statusBuy.TradeLineBuy, statusSell.Holding, statusSell.TradeLineSell))
 	if statusBuy.market == model.OKEX && statusSell.market == model.OKEX {
-		api.PlacePairOKEX(statusBuy.account, statusBuy.symbol, statusSell.symbol, model.OrderTypeLimit, priceBuy, priceSell, amount)
+		now := time.Now().UnixNano()
+		orderBuy := &model.Order{OrderSide: model.OrderSideBuy, OrderType: model.OrderTypeLimit, Market: model.OKEX,
+			Symbol: statusBuy.symbol, Price: priceBuy, Amount: amount, RefreshType: model.FunctionCross, OrderTime: util.GetNow(),
+			UnfilledQuantity: amount, AccountIndex: statusBuy.account.Index, Status: model.CarryStatusWorking, Function: model.Open,
+			OrderId: strconv.FormatInt(now, 10) + statusBuy.symbol, LineBuy: statusBuy.TradeLineBuy, LineSell: statusSell.TradeLineSell}
+		orderSell := &model.Order{OrderSide: model.OrderSideSell, OrderType: model.OrderTypeLimit, Market: model.OKEX,
+			Symbol: statusSell.symbol, Price: priceSell, Amount: amount, RefreshType: model.FunctionCross, OrderTime: util.GetNow(),
+			UnfilledQuantity: amount, AccountIndex: statusSell.account.Index, Status: model.CarryStatusWorking, Function: model.Open,
+			OrderId: strconv.FormatInt(now, 10) + statusSell.symbol, LineBuy: statusSell.TradeLineBuy, LineSell: statusSell.TradeLineSell}
+		if statusBuy.Holding*-1 >= amount {
+			orderBuy.Function = model.Close
+		}
+		if statusSell.Holding >= amount {
+			orderSell.Function = model.Close
+		}
+		orderBuy.Coin = statusBuy.setting.Coin
+		orderSell.Coin = statusSell.setting.Coin
+		success, msg := api.PlacePairOKEX(statusBuy.account, statusBuy.symbol, statusSell.symbol, model.OrderTypeLimit, priceBuy, priceSell, amount)
+		if !success {
+			orderBuy.Status, orderSell.Status = model.CarryStatusFail, model.CarryStatusFail
+			orderBuy.ErrCode, orderSell.ErrCode = msg, msg
+		}
+		PostOrderCross(orderBuy)
+		PostOrderCross(orderSell)
 	} else {
 		go func() {
 			orderParam := ``
 			if statusBuy.reduceOnlyBuy {
 				orderParam = model.ReduceOnly
 			}
-			order := api.PlaceOrder(statusBuy.account.Key, statusBuy.account.Secret, model.OrderSideBuy, model.OrderTypeLimit,
+			api.PlaceOrder(statusBuy.account.Key, statusBuy.account.Secret, model.OrderSideBuy, model.OrderTypeLimit,
 				statusBuy.market, statusBuy.symbol, orderParam, priceBuy, priceBuy, amount, true, PostOrderCross, statusBuy.setting)
-			if statusBuy.market != model.OKEX {
-				saveCross(order, statusBuy.setting.Coin, model.FunctionCross, statusBuy.TradeLineBuy, statusBuy.TradeLineSell, statusBuy.Holding)
-			}
 		}()
 		go func() {
 			orderParam := ``
 			if statusSell.reduceOnlySell {
 				orderParam = model.ReduceOnly
 			}
-			order := api.PlaceOrder(statusSell.account.Key, statusSell.account.Secret, model.OrderSideSell, model.OrderTypeLimit,
-				statusSell.market, statusSell.symbol, orderParam, priceSell, priceSell,
-				amount, true, PostOrderCross, statusSell.setting)
-			if statusBuy.market != model.OKEX {
-				saveCross(order, statusSell.setting.Coin, model.FunctionCross, statusSell.TradeLineBuy, statusSell.TradeLineSell, statusSell.Holding)
-			}
+			api.PlaceOrder(statusSell.account.Key, statusSell.account.Secret, model.OrderSideSell, model.OrderTypeLimit,
+				statusSell.market, statusSell.symbol, orderParam, priceSell, priceSell, amount, true, PostOrderCross, statusSell.setting)
 		}()
 		time.Sleep(time.Second * 4)
 	}
