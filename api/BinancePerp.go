@@ -26,7 +26,7 @@ const wsBinancePerp = `wss://fstream.binance.com/stream`
 const wsAccountBinancePerp = `wss://fstream.binance.com/ws/`
 const wsStepBinancePerp = 20
 
-var channelMaintainingBinancePerp = false
+var pingDepthBinancePerp = false
 
 func getMarketsBinancePerp(key, secret string) (marketInfos map[string]*model.MarketInfo) {
 	marketInfos = make(map[string]*model.MarketInfo)
@@ -182,8 +182,9 @@ func WsDepthServeBinancePerp(environment *model.Environment, market string) (soc
 			handleMarkPriceBinancePerp(environment, result, standardSymbol)
 		}
 	}
-	socketMap, msgChans, connectErr = WebSocketClient(market, wsBinancePerp, GetWSSubscribes(market, subType),
-		subscribeHandlerBinancePerp, wsHandlerBinancePerp, wsStepBinancePerp)
+	subscribes := GetWSSubscribes(market, subType)
+	socketMap, msgChans, connectErr = WebSocketClient(market, wsBinancePerp, subscribes, subscribeHandlerBinancePerp, wsHandlerBinancePerp, wsStepBinancePerp)
+	maintainChannelBinancePerp(subscribes)
 	environment.SocketsTick.Store(market, socketMap)
 	environment.MsgChanTick.Store(market, msgChans)
 	return
@@ -295,8 +296,8 @@ func handleDepthBinancePerp(environment *model.Environment, json *simplejson.Jso
 }
 
 func maintainChannelBinancePerp(subscribes []interface{}) {
-	if !channelMaintainingBinancePerp {
-		channelMaintainingBinancePerp = true
+	if !pingDepthBinancePerp {
+		pingDepthBinancePerp = true
 		for {
 			time.Sleep(time.Minute * 5)
 			err := PongAllConnectionsInterval(model.BinancePerp, 500)

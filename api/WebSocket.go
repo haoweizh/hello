@@ -137,7 +137,6 @@ func WsAccountClient(market, key, url string, accountMsgHandler AccountMsgHandle
 		util.Info("can not create web socket" + err.Error())
 		return nil, err
 	}
-	util.StoreSyncMap(&model.AppEnvironment.AccountConns, connection, market, key)
 	go func() {
 		for {
 			_, message, readErr := connection.ReadMessage()

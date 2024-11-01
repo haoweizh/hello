@@ -180,14 +180,6 @@ func Test_WsAndOrderApi(t *testing.T) {
 	select {}
 }
 
-func Test_AccountHandler(t *testing.T) {
-	model.NewConfig()
-	api.CreateAccountWsServer(model.BinancePerp)
-	for {
-		time.Sleep(time.Minute)
-	}
-}
-
 func Test_Redis(t *testing.T) {
 	model.NewConfig()
 	_, _, _, symbol := model.GetFromStandard(model.Gate, `BTC`)
@@ -525,30 +517,27 @@ func Test_download(t *testing.T) {
 	//-H 'Connection: keep-alive' \
 }
 
+func Test_WS(t *testing.T) {
+	model.NewConfig()
+	api.CreateMarketTickerWS(model.AppEnvironment, model.Bybit)
+	select {}
+}
+
 func Test_Orders(t *testing.T) {
 	model.NewConfig()
-	api.CreateAccountWsServer(model.OKEX)
-	time.Sleep(time.Second * 3)
-	//model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
-	market := model.OKEX
-	symbol := `BTC_USDT`
-	api.InitMarketInfos(model.OKEX)
-	account := model.GetAccounts(0)[market]
-	order := api.PlaceOrder(account.Key, account.Secret, model.OrderSideSell, model.OrderTypeLimit, market, symbol, model.ReduceOnly,
-		88888.0000364, 88888.0000364, 0.01, true, nil, nil)
-	if order != nil {
-		fmt.Println(fmt.Sprintf(`place %s %s`, order.OrderId, order.Status))
-	}
+	accounts := model.GetAccounts(0)
+	api.WsAccountServeBybit(accounts[model.Bybit])
+	//time.Sleep(time.Second * 3)
+	//market := model.OKEX
+	//symbol := `BTC_USDT`
+	//api.InitMarketInfos(model.OKEX)
+	//account := model.GetAccounts(0)[market]
+	//order := api.PlaceOrder(account.Key, account.Secret, model.OrderSideSell, model.OrderTypeLimit, market, symbol, model.ReduceOnly,
+	//	88888.0000364, 88888.0000364, 0.01, true, nil, nil)
+	//if order != nil {
+	//	fmt.Println(fmt.Sprintf(`place %s %s`, order.OrderId, order.Status))
+	//}
 	select {}
-	//order = api.QueryOrderById(account.Key, account.Secret, market, symbol, model.OrderTypeLimit, order.OrderId)
-	//if order != nil {
-	//	fmt.Println(fmt.Sprintf(`query %s %s`, order.OrderId, order.Status))
-	//}
-	//api.CancelOrders(account.Key, account.Secret, market, symbol)
-	//order = api.QueryOrderById(account.Key, account.Secret, market, symbol, model.OrderTypeLimit, order.OrderId)
-	//if order != nil {
-	//	fmt.Println(fmt.Sprintf(`query %s %s`, order.OrderId, order.Status))
-	//}
 }
 
 func Test_transferInner(t *testing.T) {

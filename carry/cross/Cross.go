@@ -1114,7 +1114,7 @@ var PostOrderCross = func(order *model.Order) {
 		return
 	}
 	account := model.AppConfig.GetAccountFromKeyIndex(order.Market, ``, order.AccountIndex)
-	if order.HaveId() && order.Status == model.CarryStatusSuccess {
+	if order.HaveId() && order.Status == model.CarryStatusSuccess && !order.IsWs {
 		addLastCarry(order, setting)
 		addCarryResult(account.Key, order.Market, ``, true)
 		model.AppDB.Save(order)

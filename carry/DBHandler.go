@@ -128,33 +128,44 @@ func ClearChannels(market string, chanMap *sync.Map) {
 	}
 }
 
-func MaintainAccountChan() {
-	for _, market := range api.GetMarkets() {
-		accounts := model.AppConfig.GetAccounts(market)
-		for _, account := range accounts {
-			if account == nil {
-				continue
-			}
-			value, _ := util.LoadSyncMap(&model.AppEnvironment.AccountConnMS, market, account.Key)
-			if value != nil && value.(int64)-time.Now().UnixMilli() < 60000 {
-				continue
-			}
+func MaintainAccountChan(market string) {
+	accounts := model.AppConfig.GetAccounts(market)
+	for _, account := range accounts {
+		if account == nil {
+			continue
+		}
+		valuePrivate, _ := util.LoadSyncMap(&model.AppEnvironment.AccountConnMS, market, account.Key)
+		valueTrade, _ := util.LoadSyncMap(&model.AppEnvironment.TradeConnMS, market, account.Key)
+		nowMilli := time.Now().UnixMilli()
+		if valuePrivate != nil && nowMilli-valuePrivate.(int64) > 60000 {
+			util.StoreSyncMap(&model.AppEnvironment.AccountConns, nowMilli, market, account.Key)
 			util.DelSyncMap(&model.AppEnvironment.AccountConns, market, account.Key)
-			api.CreateAccountWsServer(market)
+		}
+		if valueTrade != nil && nowMilli-valueTrade.(int64) > 60000 {
+			util.StoreSyncMap(&model.AppEnvironment.TradeConnMS, nowMilli, market, account.Key)
+			util.DelSyncMap(&model.AppEnvironment.TradeConns, market, account.Key)
+		}
+		switch market {
+		//case model.BinancePerp:
+		//	go WsAccountServeBinancePerp()
+		//case model.BinanceSpot:
+		//	go WsAccountServeBinanceSpot()
+		case model.OKEX:
+			api.WsAccountServeOKEX(account)
+		case model.Bybit:
+			api.WsAccountServeBybit(account)
 		}
 	}
 }
 
-func MaintainMarketChan() (reset bool) {
-	for _, market := range api.GetMarkets() {
-		depthChans, _ := model.AppEnvironment.MsgChanTick.Load(market)
-		if depthChans == nil || len(depthChans.([]chan struct{})) == 0 {
-			api.CreateMarketTickerWS(model.AppEnvironment, market)
-		} else if api.RequireDepthChanReset(model.AppEnvironment, market) {
-			reset = true
-			ClearChannels(market, &model.AppEnvironment.MsgChanTick)
-			api.CreateMarketTickerWS(model.AppEnvironment, market)
-		}
+func MaintainMarketChan(market string) (reset bool) {
+	depthChans, _ := model.AppEnvironment.MsgChanTick.Load(market)
+	if depthChans == nil || len(depthChans.([]chan struct{})) == 0 {
+		api.CreateMarketTickerWS(model.AppEnvironment, market)
+	} else if api.RequireDepthChanReset(model.AppEnvironment, market) {
+		reset = true
+		ClearChannels(market, &model.AppEnvironment.MsgChanTick)
+		api.CreateMarketTickerWS(model.AppEnvironment, market)
 	}
 	var settingMonitors []*model.SettingMonitor
 	model.AppDB.Find(&settingMonitors)
@@ -215,8 +226,10 @@ func Maintain() {
 	//	}
 	//}()
 	for {
-		MaintainMarketChan()
-		MaintainAccountChan()
+		for _, market := range api.GetMarkets() {
+			MaintainMarketChan(market)
+			MaintainAccountChan(market)
+		}
 		time.Sleep(time.Minute * 2)
 	}
 }

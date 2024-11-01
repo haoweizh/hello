@@ -98,10 +98,10 @@ func RequireDepthChanReset(environment *model.Environment, market string) bool {
 			//util.Notice(fmt.Sprintf(`RequireDepthChanReset valid %d %s %s %f<%f`,
 			//	validSymbolNum, market, symbol, delay, model.AppConfig.Delay))
 		} else {
-			//util.Info(fmt.Sprintf(`RequireDepthChanReset delay too long %s %s %f`, market, symbol, delay))
+			util.Info(fmt.Sprintf(`RequireDepthChanReset delay too long %s %s %f`, market, symbol, delay))
 		}
 	}
-	needReset = float64(validSymbolNum) < float64(len(symbols))*0.8 || len(symbols)-validSymbolNum > 50
+	needReset = float64(validSymbolNum) < float64(len(symbols))*0.8 || len(symbols)-validSymbolNum > 100
 	for funcName := range model.TickHandlers {
 		settings := GetSettings(funcName, market)
 		if settings == nil {
@@ -902,22 +902,6 @@ func GetWSSubscribes(market, subType string) []interface{} {
 		subscribes = append(subscribes, `position`)
 		subscribes = append(subscribes, `order`)
 	}
-	switch market {
-	case model.OKEX:
-		go maintainChannelOKEX(subscribes)
-	case model.BinanceSpot, model.BinanceMargin:
-		go maintainChannelBinance(market, subscribes)
-	case model.BinancePerp:
-		go maintainChannelBinancePerp(subscribes)
-	case model.Ftx:
-		go maintainChannelFtx(subscribes)
-	//case model.BybitPerp:
-	//	go maintainChannelBybitPerp(subscribes)
-	//case model.BybitSpot:
-	//	go maintainChannelBybitSpot(subscribes)
-	case model.Mexc:
-		go maintainChannelMexc(subscribes)
-	}
 	return subscribes
 }
 
@@ -1186,17 +1170,6 @@ func InitMarketInfos(market string) (success bool) {
 		util.StoreSyncMap(model.MarketInfos, info, market, symbol)
 	}
 	return success
-}
-
-func CreateAccountWsServer(market string) {
-	switch market {
-	//case model.BinancePerp:
-	//	go WsAccountServeBinancePerp()
-	//case model.BinanceSpot:
-	//	go WsAccountServeBinanceSpot()
-	case model.OKEX:
-		go WsAccountServeOKEX()
-	}
 }
 
 func CreateMarketKLineWS(environment *model.Environment, market string, symbols map[string]bool) (

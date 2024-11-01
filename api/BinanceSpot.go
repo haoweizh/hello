@@ -22,7 +22,7 @@ const restDataBinance = `https://data.binance.com`
 const wsBinance = "wss://stream.binance.com:9443/"
 const wsStepBinance = 20
 
-var channelMaintainingBinance = false
+var pingDepthBinanceSpot = false
 
 func GetMarketsBinance(account *model.Account, market, marketType string) (marketInfos map[string]*model.MarketInfo) {
 	util.Notice(fmt.Sprintf("start to GetMarketsBinance %s", account.Key))
@@ -179,8 +179,9 @@ func WsDepthServeBinance(environment *model.Environment, market string) (socketM
 			handleTickerBinance(environment, result, market, standardSymbol, updateId)
 		}
 	}
-	socketMap, msgChans, connectErr = WebSocketClient(market, wsBinance+`stream`, GetWSSubscribes(market, subType),
-		subscribeHandlerBinance, wsHandlerBinance, wsStepBinance)
+	subscribes := GetWSSubscribes(market, subType)
+	socketMap, msgChans, connectErr = WebSocketClient(market, wsBinance+`stream`, subscribes, subscribeHandlerBinance, wsHandlerBinance, wsStepBinance)
+	maintainChannelBinance(market, subscribes)
 	environment.SocketsTick.Store(market, socketMap)
 	environment.MsgChanTick.Store(market, msgChans)
 	return
@@ -277,8 +278,8 @@ func handleDepthBinance(environment *model.Environment, json *simplejson.Json, m
 }
 
 func maintainChannelBinance(market string, subscribes []interface{}) {
-	if !channelMaintainingBinance {
-		channelMaintainingBinance = true
+	if !pingDepthBinanceSpot {
+		pingDepthBinanceSpot = true
 		for {
 			time.Sleep(time.Minute * 5)
 			err := PongAllConnectionsInterval(market, 500)

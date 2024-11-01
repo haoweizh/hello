@@ -30,13 +30,13 @@ const (
 )
 
 var (
-	channelMaintainingMexc = false
-	mexcSymbolConnection   sync.Map
+	pingDepthMexc        = false
+	mexcSymbolConnection sync.Map
 )
 
 func maintainChannelMexc(subscribes []interface{}) {
-	if !channelMaintainingMexc {
-		channelMaintainingMexc = true
+	if !pingDepthMexc {
+		pingDepthMexc = true
 		go func() {
 			for true {
 				time.Sleep(time.Second * 10)
@@ -45,7 +45,7 @@ func maintainChannelMexc(subscribes []interface{}) {
 				}
 			}
 		}()
-		for true {
+		for {
 			time.Sleep(time.Minute * 3)
 			needReset := false
 			for _, subscribe := range subscribes {
@@ -126,13 +126,14 @@ func WsDepthServeMexc(environment *model.Environment, market string, useFullDept
 			}
 		}
 	}
+	subscribes := make([]interface{}, 0)
 	if !useFullDepthSub { // 订阅contract深度增量
-		socketMap, msgChans, connectErr = WebSocketClient(market, mexcContractWSUrl,
-			GetWSSubscribes(model.Mexc, mexcContractDepthIncSubType), subscribeHandlerMexc, wsHandler, wsStepMexc)
+		subscribes = GetWSSubscribes(model.Mexc, mexcContractDepthIncSubType)
 	} else { // 订阅contract 5档深度全量
-		socketMap, msgChans, connectErr = WebSocketClient(market, mexcContractWSUrl, GetWSSubscribes(model.Mexc, mexcContractDepthFullSubType),
-			subscribeHandlerMexc, wsHandler, wsStepMexc)
+		subscribes = GetWSSubscribes(model.Mexc, mexcContractDepthFullSubType)
 	}
+	socketMap, msgChans, connectErr = WebSocketClient(market, mexcContractWSUrl, subscribes, subscribeHandlerMexc, wsHandler, wsStepMexc)
+	maintainChannelMexc(subscribes)
 	environment.SocketsTick.Store(market, socketMap)
 	environment.MsgChanTick.Store(market, msgChans)
 	return

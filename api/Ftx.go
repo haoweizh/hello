@@ -38,7 +38,7 @@ func maintainChannelFtx(subscribes []interface{}) {
 				}
 			}
 		}()
-		for true {
+		for {
 			time.Sleep(time.Minute * 5)
 			needReset := false
 			for _, value := range subscribes {
@@ -143,6 +143,7 @@ func WsDepthServeFtx(environment *model.Environment, market string) (socketMap m
 	socketMap, msgChans, err = WebSocketClient(market, wsFtx, subscribes, subscribeHandlerFtx, wsHandler, wsStepFtx)
 	environment.SocketsTick.Store(market, socketMap)
 	environment.MsgChanTick.Store(market, msgChans)
+	maintainChannelFtx(subscribes)
 	return
 }
 

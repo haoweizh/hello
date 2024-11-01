@@ -22,10 +22,133 @@ import (
 const bybitRestUrl = "https://api.bybit.com"
 const bybitSpotPubWsUrl = "wss://stream.bybit.com/v5/public/spot"
 const bybitPerpPubWsUrl = "wss://stream.bybit.com/v5/public/linear"
+const bybitTradeWsUrl = "wss://stream.bybit.com/v5/trade"
+const bybitPriWsUrl = "wss://stream.bybit.com/v5/private"
 
-//const bybitPriWsUrl = "wss://stream.bybit.com/v5/private"
+var pingDepthBybit = false
+var pingPrivateBybit = false
+var wsStepBybit = 10
 
-var channelMaintainingBybit = false
+var wsTradeHandlerBybit = func(market, key string, event []byte) {
+	if strings.Contains(string(event), `pong`) {
+		util.StoreSyncMap(&model.AppEnvironment.TradeConnMS, time.Now().UnixMilli(), model.Bybit, key)
+		return
+	}
+}
+
+var wsAccountHandlerBybit = func(market, key string, event []byte) {
+	if strings.Contains(string(event), `pong`) {
+		util.StoreSyncMap(&model.AppEnvironment.AccountConnMS, time.Now().UnixMilli(), model.Bybit, key)
+		return
+	}
+	responseJson, err := util.NewJSON(event)
+	if err != nil || responseJson == nil {
+		return
+	}
+	//util.Info(fmt.Sprintf(`channel msg %s`, string(event)))
+	if responseJson.Get(`data`) == nil || len(responseJson.Get(`data`).MustArray()) == 0 {
+		return
+	}
+	errCode := responseJson.Get(`code`).MustString()
+	if errCode != `` && errCode != `0` {
+		util.Notice(fmt.Sprintf(`okex private channel error: %s`, string(event)))
+	}
+	data := responseJson.Get(`data`).MustArray()
+	for _, item := range data {
+		value := item.(map[string]interface{})
+		go func() {
+			order := parseOrderOKEX(value)
+			order.IsWs = true
+			funcHandlers := GetFunctions(model.OKEX, order.Symbol)
+			if funcHandlers == nil {
+				return
+			}
+			funcHandlers.Range(func(function, value interface{}) bool {
+				if model.AccountHandlerMap[function.(string)] != nil {
+					go model.AccountHandlerMap[function.(string)](order)
+				}
+				return true
+			})
+		}()
+	}
+}
+
+func maintainAccountConnBybit() {
+	if !pingPrivateBybit {
+		pingPrivateBybit = true
+		for {
+			time.Sleep(time.Second * 20)
+			accounts := model.AppConfig.GetAccounts(model.Bybit)
+			for _, account := range accounts {
+				if account == nil {
+					continue
+				}
+				value, _ := util.LoadSyncMap(&model.AppEnvironment.AccountConns, model.Bybit, account.Key)
+				if value != nil {
+					if err := SendToConnection(model.Bybit, value.(*websocket.Conn), []byte(`{"op": "ping"}`)); err != nil {
+						util.Notice("-test ok ws-bybit private ws ping client error " + err.Error())
+					}
+				} else {
+					util.Notice(fmt.Sprintf(`-test bybit ws- no private connection %s`, account.Key))
+				}
+				value, _ = util.LoadSyncMap(&model.AppEnvironment.TradeConns, model.Bybit, account.Key)
+				if value != nil {
+					if err := SendToConnection(model.Bybit, value.(*websocket.Conn), []byte(`{"op": "ping"}`)); err != nil {
+						util.Notice("-test ok ws-bybit trade ws ping client error " + err.Error())
+					}
+				} else {
+					util.Notice(fmt.Sprintf(`-test bybit ws- no trade connection %s`, account.Key))
+				}
+			}
+		}
+	}
+}
+
+func WsAccountServeBybit(account *model.Account) {
+	if account == nil {
+		return
+	}
+	valuePrivate, _ := util.LoadSyncMap(&model.AppEnvironment.AccountConns, model.Bybit, account.Key)
+	valueTrade, _ := util.LoadSyncMap(&model.AppEnvironment.TradeConns, model.Bybit, account.Key)
+	if valuePrivate != nil && valueTrade != nil {
+		return
+	}
+	connPrivate, errPrivate := WsAccountClient(model.Bybit, account.Key, bybitPriWsUrl, wsAccountHandlerBybit)
+	connTrade, errTrade := WsAccountClient(model.Bybit, account.Key, bybitTradeWsUrl, wsTradeHandlerBybit)
+	if errPrivate != nil {
+		util.Notice("can not create web socket " + errPrivate.Error())
+	}
+	util.StoreSyncMap(&model.AppEnvironment.AccountConns, connPrivate, model.Bybit, account.Key)
+	if errTrade != nil {
+		util.Notice("can not create web socket " + errTrade.Error())
+	}
+	util.StoreSyncMap(&model.AppEnvironment.TradeConns, connTrade, model.Bybit, account.Key)
+	loginMap := make(map[string]interface{})
+	loginMap[`op`] = `auth`
+	timestamp := time.Now().UnixMilli() + 1000
+	toBeSign := fmt.Sprintf(`GET/realtime%d`, timestamp)
+	hash := hmac.New(sha256.New, []byte(account.Secret))
+	hash.Write([]byte(toBeSign))
+	sign := hex.EncodeToString(hash.Sum(nil))
+	loginArray := []interface{}{account.Key, timestamp, sign}
+	loginMap[`args`] = loginArray
+	loginBytes := util.JsonEncodeToByte(loginMap)
+	if connPrivate != nil {
+		if err := SendToConnection(model.Bybit, connPrivate, loginBytes); err != nil {
+			util.Notice(fmt.Sprintf(`fail to login bybit private ws: %s return %s`, account.Key, err.Error()))
+		} else {
+			util.StoreSyncMap(&model.AppEnvironment.AccountConns, connPrivate, model.Bybit, account.Key)
+		}
+	}
+	if connTrade != nil {
+		if err := SendToConnection(model.Bybit, connTrade, loginBytes); err != nil {
+			util.Notice(fmt.Sprintf(`fail to login bybit trade ws: %s return %s`, account.Key, err.Error()))
+		} else {
+			util.StoreSyncMap(&model.AppEnvironment.TradeConns, connTrade, model.Bybit, account.Key)
+		}
+	}
+	go maintainAccountConnBybit()
+}
 
 func getMarketsBybit() (marketInfos map[string]*model.MarketInfo) {
 	marketInfos = make(map[string]*model.MarketInfo)
@@ -145,9 +268,6 @@ func parseBookOrder(environment *model.Environment, bookWsResp *dtos.BybitBookWs
 		} else {
 			for _, bidStr := range bookWsResp.Data.B {
 				bidAmount, _ := strconv.ParseFloat(bidStr[1], 64)
-				if bidAmount == 0 {
-					continue
-				}
 				bidPrice, _ := strconv.ParseFloat(bidStr[0], 64)
 				bid := model.Tick{Price: bidPrice, Amount: bidAmount, Market: model.Bybit, Symbol: symbol}
 				bidAsk.Bids = []model.Tick{bid}
@@ -159,9 +279,6 @@ func parseBookOrder(environment *model.Environment, bookWsResp *dtos.BybitBookWs
 			for _, askStr := range bookWsResp.Data.A {
 				askAmount, _ := strconv.ParseFloat(askStr[1], 64)
 				askPrice, _ := strconv.ParseFloat(askStr[0], 64)
-				if askAmount == 0 {
-					continue
-				}
 				ask := model.Tick{Price: askPrice, Amount: askAmount, Market: model.Bybit, Symbol: symbol}
 				bidAsk.Asks = []model.Tick{ask}
 			}
@@ -188,7 +305,6 @@ func parseBookOrder(environment *model.Environment, bookWsResp *dtos.BybitBookWs
 
 func WsDepthServeBybit(environment *model.Environment, market string) (socketMap map[*websocket.Conn]bool, msgChans []chan struct{}, connectErr error) {
 	spotBookWsHandler := func(event []byte) {
-		//fmt.Println(fmt.Sprintf("spot book data: %s", event))
 		bookWsResp := &dtos.BybitBookWsResp{}
 		jsonErr := json.Unmarshal(event, bookWsResp)
 		if jsonErr != nil {
@@ -208,7 +324,6 @@ func WsDepthServeBybit(environment *model.Environment, market string) (socketMap
 		}
 	}
 	perpBookWsHandler := func(event []byte) {
-		//fmt.Println(fmt.Sprintf("perp book data: %s", event))
 		bookWsResp := &dtos.BybitBookWsResp{}
 		jsonErr := json.Unmarshal(event, bookWsResp)
 		if jsonErr != nil {
@@ -244,7 +359,7 @@ func WsDepthServeBybit(environment *model.Environment, market string) (socketMap
 		}
 	}
 	spotBookSockets, spotBookChannels, spotBookErr := WebSocketClient(model.Bybit, bybitSpotPubWsUrl,
-		spotSubscribes, subscribeHandlerBybit, spotBookWsHandler, 10)
+		spotSubscribes, subscribeHandlerBybit, spotBookWsHandler, wsStepBybit)
 	if spotBookErr == nil {
 		msgChans = append(msgChans, spotBookChannels...)
 		for conn, b := range spotBookSockets {
@@ -252,7 +367,7 @@ func WsDepthServeBybit(environment *model.Environment, market string) (socketMap
 		}
 	}
 	perpBookSockets, perpBookChannels, perpBookErr := WebSocketClient(market, bybitPerpPubWsUrl,
-		futureSubscribes, subscribeHandlerBybit, perpBookWsHandler, 10)
+		futureSubscribes, subscribeHandlerBybit, perpBookWsHandler, wsStepBybit)
 	if perpBookErr == nil {
 		msgChans = append(msgChans, perpBookChannels...)
 		for conn, b := range perpBookSockets {
@@ -260,7 +375,19 @@ func WsDepthServeBybit(environment *model.Environment, market string) (socketMap
 		}
 	}
 	time.Sleep(time.Second * 1)
-	go maintainChannelBybit()
+	go func() {
+		if !pingDepthBybit {
+			pingDepthBybit = true
+			go func() {
+				for {
+					time.Sleep(time.Second * 20)
+					if err := SendToAllTickerSockets(model.Bybit, []byte(`{"req_id": "100001", "op": "ping"}`)); err != nil {
+						util.Notice("bybit channel ping error " + err.Error())
+					}
+				}
+			}()
+		}
+	}()
 	environment.SocketsTick.Store(market, socketMap)
 	environment.MsgChanTick.Store(market, msgChans)
 	return
@@ -283,20 +410,6 @@ var subscribeHandlerBybit = func(market string, connection *websocket.Conn, subs
 	util.Info(`bybit subscribed ` + string(subscribeMessage))
 	time.Sleep(100 * time.Millisecond)
 	return err
-}
-
-func maintainChannelBybit() {
-	if !channelMaintainingBybit {
-		channelMaintainingBybit = true
-		go func() {
-			for {
-				time.Sleep(time.Second * 20)
-				if err := SendToAllTickerSockets(model.Bybit, []byte(`{"op": "ping"}`)); err != nil {
-					util.Notice("bybit channel ping error " + err.Error())
-				}
-			}
-		}()
-	}
 }
 
 func GetCoinBalanceBybit(key, secret, accountType string) (balances []*model.Balance) {
