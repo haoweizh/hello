@@ -1057,7 +1057,7 @@ func placeCross(statusBuy, statusSell *CarryStatus, priceBuy, priceSell, amount 
 			}
 			order := api.PlaceOrder(statusBuy.account.Key, statusBuy.account.Secret, model.OrderSideBuy, model.OrderTypeLimit,
 				statusBuy.market, statusBuy.symbol, orderParam, priceBuy, priceBuy, amount, true, PostOrderCross, statusBuy.setting)
-			model.AppDB.Save(order)
+			saveCross(order, statusBuy.setting.Coin, model.FunctionCross, statusBuy.TradeLineBuy, statusBuy.TradeLineSell, statusBuy.Holding)
 		}()
 		go func() {
 			orderParam := ``
@@ -1066,7 +1066,7 @@ func placeCross(statusBuy, statusSell *CarryStatus, priceBuy, priceSell, amount 
 			}
 			order := api.PlaceOrder(statusSell.account.Key, statusSell.account.Secret, model.OrderSideSell, model.OrderTypeLimit,
 				statusSell.market, statusSell.symbol, orderParam, priceSell, priceSell, amount, true, PostOrderCross, statusSell.setting)
-			model.AppDB.Save(order)
+			saveCross(order, statusSell.setting.Coin, model.FunctionCross, statusSell.TradeLineBuy, statusSell.TradeLineSell, statusSell.Holding)
 		}()
 		time.Sleep(time.Second * 4)
 	}
