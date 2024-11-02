@@ -436,7 +436,6 @@ func WsDepthServeGateNew(environment *model.Environment, market string) (socketM
 }
 
 var wsHandler = func(event []byte) {
-	fmt.Println(fmt.Sprintf("ws resp：%s", event))
 	msg := &gateWs.UpdateMsg{}
 	if err := json.Unmarshal(event, msg); err != nil {
 		util.Notice(fmt.Sprintf("gate ws message Unmarshal err:%s", err.Error()))

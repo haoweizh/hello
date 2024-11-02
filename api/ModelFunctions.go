@@ -498,7 +498,7 @@ func GetCrossLen() int {
 		if crossLen == 0 {
 			crossLen = len(accounts)
 		} else if len(accounts) != crossLen {
-			fmt.Println(fmt.Sprintf(`wrong cross config %s accounts:%d`, market, len(accounts)))
+			util.Notice(fmt.Sprintf(`wrong cross config %s accounts:%d`, market, len(accounts)))
 			os.Exit(2)
 		}
 	}
