@@ -184,7 +184,7 @@ func WsDepthServeBinancePerp(environment *model.Environment, market string) (soc
 	}
 	subscribes := GetWSSubscribes(market, subType)
 	socketMap, msgChans, connectErr = WebSocketClient(market, wsBinancePerp, subscribes, subscribeHandlerBinancePerp, wsHandlerBinancePerp, wsStepBinancePerp)
-	go maintainChannelBinancePerp(subscribes)
+	go maintainChannelBinancePerp()
 	environment.SocketsTick.Store(market, socketMap)
 	environment.MsgChanTick.Store(market, msgChans)
 	return
@@ -295,32 +295,25 @@ func handleDepthBinancePerp(environment *model.Environment, json *simplejson.Jso
 	}
 }
 
-func maintainChannelBinancePerp(subscribes []interface{}) {
-	if !pingDepthBinancePerp {
-		pingDepthBinancePerp = true
-		for {
-			time.Sleep(time.Minute * 5)
-			err := PongAllConnectionsInterval(model.BinancePerp, 500)
-			if err != nil {
-				util.SocketInfo("pong binance perp server error " + err.Error())
+func maintainChannelBinancePerp() {
+	if pingDepthBinancePerp {
+		return
+	}
+	pingDepthBinancePerp = true
+	for {
+		time.Sleep(time.Minute * 5)
+		value, _ := model.AppEnvironment.SocketsTick.Load(model.BinancePerp)
+		if value == nil {
+			continue
+		}
+		connections := value.(map[*websocket.Conn]bool)
+		for connection := range connections {
+			if connection == nil {
+				continue
 			}
-			needReset := false
-			for _, subscribe := range subscribes {
-				dialectSymbol := strings.ToUpper(subscribe.(string)[0:strings.Index(subscribe.(string), `@`)])
-				success, marketType, coin := model.GetCoinFromDialect(model.BinancePerp, dialectSymbol)
-				if !success {
-					continue
-				}
-				_, bidAsk := model.AppEnvironment.GetBidAsk(coin+model.UniStandardTail[marketType], model.BinancePerp)
-				if bidAsk == nil || time.Now().UnixMilli()-int64(bidAsk.Ts) > 180000 {
-					util.Notice(fmt.Sprintf(`fail to get bidask binanceperp %s`, dialectSymbol))
-					SetRequireReset(model.BinancePerp)
-					needReset = true
-					break
-				}
-			}
-			if !needReset {
-				util.Info(`no need reset %s`, model.BinancePerp)
+			if writeError := connection.WriteControl(websocket.PongMessage, []byte{}, time.Now().Add(5*time.Second)); writeError != nil {
+				util.Notice(fmt.Sprintf(`fail to pong connection return: %s`, writeError.Error()))
+				SetRequireReset(model.BinancePerp)
 			}
 		}
 	}

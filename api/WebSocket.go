@@ -52,27 +52,6 @@ func SendToAllTickerSockets(market string, msg []byte) (err error) {
 	return err
 }
 
-func PongAllConnectionsInterval(market string, milliseconds int) (err error) {
-	value, _ := model.AppEnvironment.SocketsTick.Load(market)
-	if value == nil {
-		return
-	}
-	connections := value.(map[*websocket.Conn]bool)
-	for connection := range connections {
-		if connection == nil {
-			continue
-		}
-		deadline := time.Now().Add(5 * time.Second)
-		if writeError := connection.WriteControl(websocket.PongMessage, []byte{}, deadline); writeError != nil {
-			util.Notice(fmt.Sprintf(`fail to pong connection return: %s`, writeError.Error()))
-			SetRequireReset(market)
-			err = writeError
-		}
-		time.Sleep(time.Millisecond * time.Duration(milliseconds))
-	}
-	return err
-}
-
 func newConnection(url string) (*websocket.Conn, error) {
 	var connErr error
 	var c *websocket.Conn

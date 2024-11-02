@@ -181,7 +181,7 @@ func WsDepthServeBinance(environment *model.Environment, market string) (socketM
 	}
 	subscribes := GetWSSubscribes(market, subType)
 	socketMap, msgChans, connectErr = WebSocketClient(market, wsBinance+`stream`, subscribes, subscribeHandlerBinance, wsHandlerBinance, wsStepBinance)
-	go maintainChannelBinance(market, subscribes)
+	go maintainChannelBinance()
 	environment.SocketsTick.Store(market, socketMap)
 	environment.MsgChanTick.Store(market, msgChans)
 	return
@@ -277,39 +277,24 @@ func handleDepthBinance(environment *model.Environment, json *simplejson.Json, m
 	}
 }
 
-func maintainChannelBinance(market string, subscribes []interface{}) {
+func maintainChannelBinance() {
 	if !pingDepthBinanceSpot {
 		pingDepthBinanceSpot = true
 		for {
 			time.Sleep(time.Minute * 5)
-			err := PongAllConnectionsInterval(market, 500)
-			if err != nil {
-				util.SocketInfo("pong binance spot server error " + err.Error())
+			value, _ := model.AppEnvironment.SocketsTick.Load(model.BinanceSpot)
+			if value == nil {
+				continue
 			}
-			timeoutNum := 0
-			for _, subscribe := range subscribes {
-				dialectSymbol := strings.ToUpper(subscribe.(string)[0:strings.Index(subscribe.(string), `@`)])
-				success, marketType, coin := model.GetCoinFromDialect(market, dialectSymbol)
-				if !success {
+			connections := value.(map[*websocket.Conn]bool)
+			for connection := range connections {
+				if connection == nil {
 					continue
 				}
-				symbol := coin + model.UniStandardTail[marketType]
-				_, bidAsk := model.AppEnvironment.GetBidAsk(symbol, market)
-				if bidAsk == nil || time.Now().UnixMilli()-int64(bidAsk.Ts) > 180000 {
-					timeoutNum++
-					if bidAsk == nil {
-						util.Notice("binance spot subscribe nil " + symbol)
-					} else {
-						util.Notice(fmt.Sprintf(`binance spot subscribe timeout %s %d`,
-							symbol, time.Now().UnixMilli()-int64(bidAsk.Ts)))
-					}
+				if writeError := connection.WriteControl(websocket.PongMessage, []byte{}, time.Now().Add(5*time.Second)); writeError != nil {
+					util.Notice(fmt.Sprintf(`fail to pong connection return: %s`, writeError.Error()))
+					SetRequireReset(model.BinancePerp)
 				}
-			}
-			if len(subscribes) > 0 && timeoutNum*10 > len(subscribes) {
-				SetRequireReset(market)
-				util.Notice(`require reset binance spot %d in all %d`, timeoutNum, len(subscribes))
-			} else {
-				util.Info(`no need reset %s`, market)
 			}
 		}
 	}

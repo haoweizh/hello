@@ -520,7 +520,7 @@ func Test_download(t *testing.T) {
 
 func Test_WS(t *testing.T) {
 	model.NewConfig()
-	api.CreateMarketTickerWS(model.AppEnvironment, model.Bybit)
+	api.CreateMarketTickerWS(model.AppEnvironment, model.BinancePerp)
 	select {}
 }
 
