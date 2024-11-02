@@ -19,7 +19,7 @@ import (
 
 var apiClientsGate = make(map[string]*gateApi.APIClient)
 var apiCtxGate = make(map[string]context.Context)
-var channelMaintainingGate = false
+var pingGate = false
 
 const wsStepGate = 100
 
@@ -535,20 +535,18 @@ var subscribeHandler = func(market string, connection *websocket.Conn, subscribe
 }
 
 func maintainChannelGate() {
-	if !channelMaintainingGate {
-		channelMaintainingGate = true
-		go func() {
-			for {
-				time.Sleep(time.Second * 10)
-				if err := SendToAllTickerSockets(model.Gate, util.JsonEncodeToByte(map[string]interface{}{"time": time.Now().Unix(), "channel": "spot.ping"})); err != nil {
-					util.SocketInfo("gate channel ping error " + err.Error())
-				}
-				time.Sleep(time.Second * 1)
-				if err := SendToAllTickerSockets(model.Gate, util.JsonEncodeToByte(map[string]interface{}{"time": time.Now().Unix(), "channel": "futures.ping"})); err != nil {
-					util.SocketInfo("gate channel ping error " + err.Error())
-				}
-			}
-		}()
+	if pingGate {
+		return
+	}
+	pingGate = true
+	for {
+		time.Sleep(time.Second * 15)
+		if err := SendToAllTickerSockets(model.Gate, util.JsonEncodeToByte(map[string]interface{}{"time": time.Now().Unix(), "channel": "spot.ping"})); err != nil {
+			util.SocketInfo("gate channel ping error " + err.Error())
+		}
+		if err := SendToAllTickerSockets(model.Gate, util.JsonEncodeToByte(map[string]interface{}{"time": time.Now().Unix(), "channel": "futures.ping"})); err != nil {
+			util.SocketInfo("gate channel ping error " + err.Error())
+		}
 	}
 }
 
