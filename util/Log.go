@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"strconv"
+	"time"
 )
 
 var socket, info, notice, debug *log.Logger
@@ -130,6 +131,12 @@ func Info(format string, a ...interface{}) {
 	infoCount++
 	msg := `info   ` + fmt.Sprintf(format, a...)
 	logChan <- msg
+}
+
+func NoticeLess(format string, a ...interface{}) {
+	if time.Now().Second() == 0 {
+		Notice(format, a...)
+	}
 }
 
 func Notice(format string, a ...interface{}) {

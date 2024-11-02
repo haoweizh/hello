@@ -92,7 +92,7 @@ func createFromPosition(account *model.Account, setting *model.Setting, valueLim
 		}
 	}
 	if value == nil {
-		util.Notice(fmt.Sprintf(`nil contract market %s %s`, setting.Market, setting.Symbol))
+		util.NoticeLess(fmt.Sprintf(`nil contract market %s %s`, setting.Market, setting.Symbol))
 		return nil, false
 	}
 	cm := value.(*contractMarket)
@@ -156,7 +156,7 @@ func createFromBalance(account *model.Account, setting *model.Setting, valueLimi
 	}
 	success, price := api.GetPriceForce(account.Key, account.Secret, setting.Symbol, setting.Market)
 	if value == nil || !success || price == 0 {
-		util.Notice(fmt.Sprintf(`nil spot market %s %s getPrice %v %f`, setting.Market, setting.Symbol, success, price))
+		util.NoticeLess(fmt.Sprintf(`nil spot market %s %s getPrice %v %f`, setting.Market, setting.Symbol, success, price))
 		return nil, true
 	}
 	sm := value.(*spotMarket)
@@ -226,7 +226,7 @@ func initStatus(account *model.Account, setting *model.Setting, absentRevert boo
 		doRevert = true
 	}
 	if status == nil {
-		util.Notice(fmt.Sprintf(`fail to create status %s %s`, setting.Market, setting.Symbol))
+		util.NoticeLess(fmt.Sprintf(`fail to create status %s %s`, setting.Market, setting.Symbol))
 		return nil
 	}
 	_, status.FoundingRate, status.FundingRateUpdateTime = api.GetFundingRate(account.Key, account.Secret, setting.Market, setting.Symbol)
@@ -278,7 +278,7 @@ func initTradeLine(account *model.Account, setting *model.Setting, status *Carry
 	if getTick {
 		price = ticks.Asks[0].Price
 	} else {
-		util.Notice(`fail to get ticket %s %s`, setting.Market, setting.Symbol)
+		util.NoticeLess(`fail to get ticket %s %s`, setting.Market, setting.Symbol)
 	}
 	jumpOpen := 80.0
 	jumpClose := -20.0
@@ -472,7 +472,7 @@ func equalCoin(coin string, statuses []*CarryStatus) (isEqual bool, holdingInU f
 	noTicks := ``
 	for _, status := range statuses {
 		if status == nil {
-			util.Notice(`warning: fail to get one status %s`, coin)
+			util.NoticeLess(`warning: fail to get one status %s`, coin)
 			return false, 0, `fail to equal for one nil status`
 		}
 		holding += status.Holding
