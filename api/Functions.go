@@ -95,10 +95,10 @@ func RequireDepthChanReset(environment *model.Environment, market string) bool {
 		if delay < model.AppConfig.Delay {
 			validSymbolNum++
 			validSymbols[symbol] = true
-			//util.Notice(fmt.Sprintf(`RequireDepthChanReset valid %d %s %s %f<%f`,
+			//util.NoticeLess(fmt.Sprintf(`RequireDepthChanReset valid %d %s %s %f<%f`,
 			//	validSymbolNum, market, symbol, delay, model.AppConfig.Delay))
 		} else {
-			util.Info(fmt.Sprintf(`RequireDepthChanReset delay too long %s %s %f`, market, symbol, delay))
+			util.NoticeLess(fmt.Sprintf(`RequireDepthChanReset delay too long %s %s %f`, market, symbol, delay))
 		}
 	}
 	needReset = float64(validSymbolNum) < float64(len(symbols))*0.8 || len(symbols)-validSymbolNum > 50

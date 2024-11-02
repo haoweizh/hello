@@ -143,7 +143,7 @@ func WsDepthServeFtx(environment *model.Environment, market string) (socketMap m
 	socketMap, msgChans, err = WebSocketClient(market, wsFtx, subscribes, subscribeHandlerFtx, wsHandler, wsStepFtx)
 	environment.SocketsTick.Store(market, socketMap)
 	environment.MsgChanTick.Store(market, msgChans)
-	maintainChannelFtx(subscribes)
+	go maintainChannelFtx(subscribes)
 	return
 }
 

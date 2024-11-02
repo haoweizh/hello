@@ -181,7 +181,7 @@ func WsDepthServeBinance(environment *model.Environment, market string) (socketM
 	}
 	subscribes := GetWSSubscribes(market, subType)
 	socketMap, msgChans, connectErr = WebSocketClient(market, wsBinance+`stream`, subscribes, subscribeHandlerBinance, wsHandlerBinance, wsStepBinance)
-	maintainChannelBinance(market, subscribes)
+	go maintainChannelBinance(market, subscribes)
 	environment.SocketsTick.Store(market, socketMap)
 	environment.MsgChanTick.Store(market, msgChans)
 	return

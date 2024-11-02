@@ -133,7 +133,7 @@ func WsDepthServeMexc(environment *model.Environment, market string, useFullDept
 		subscribes = GetWSSubscribes(model.Mexc, mexcContractDepthFullSubType)
 	}
 	socketMap, msgChans, connectErr = WebSocketClient(market, mexcContractWSUrl, subscribes, subscribeHandlerMexc, wsHandler, wsStepMexc)
-	maintainChannelMexc(subscribes)
+	go maintainChannelMexc(subscribes)
 	environment.SocketsTick.Store(market, socketMap)
 	environment.MsgChanTick.Store(market, msgChans)
 	return

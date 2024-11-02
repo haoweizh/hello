@@ -358,7 +358,7 @@ func WsDepthServeOKEX(environment *model.Environment, market string, symbols map
 	}
 	subscribes := GetWSSubscribes(model.OKEX, model.SubscribeDepth)
 	socketMap, msgChans, connectErr = WebSocketClient(model.OKEX, wsOKEX, subscribes, subscribeHandlerOKEX, wsHandlerOKEX, wsStepOKEX)
-	maintainChannelOKEX(subscribes)
+	go maintainChannelOKEX(subscribes)
 	environment.SocketsTick.Store(market, socketMap)
 	environment.MsgChanTick.Store(market, msgChans)
 	return
@@ -1476,7 +1476,7 @@ func getMaxSizeOKEX(key, secret, symbol string) (success bool, maxBuy, maxSell f
 				maxSell = maxSell / bidAsk.Asks[0].Price
 				//util.Info(`get max sell %f after price %f %s`, maxSell, bidAsk.Asks[0].Price, symbol)
 			} else {
-				util.NoticeLess(`fail to get price from bidAsk %s`, symbol)
+				util.NoticeLess(`fail to get price from ok bidAsk %s`, symbol)
 			}
 		}
 	}
