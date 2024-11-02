@@ -1476,7 +1476,7 @@ func getMaxSizeOKEX(key, secret, symbol string) (success bool, maxBuy, maxSell f
 				maxSell = maxSell / bidAsk.Asks[0].Price
 				//util.Info(`get max sell %f after price %f %s`, maxSell, bidAsk.Asks[0].Price, symbol)
 			} else {
-				util.Notice(`fail to get price from bidAsk %s`, symbol)
+				util.NoticeLess(`fail to get price from bidAsk %s`, symbol)
 			}
 		}
 	}
