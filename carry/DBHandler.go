@@ -162,7 +162,7 @@ func MaintainMarketChan(market string) (reset bool) {
 	depthChans, _ := model.AppEnvironment.MsgChanTick.Load(market)
 	if depthChans == nil || len(depthChans.([]chan struct{})) == 0 {
 		api.CreateMarketTickerWS(model.AppEnvironment, market)
-	} else if api.RequireDepthChanReset(model.AppEnvironment, market) {
+	} else if api.RequireDepthChanReset(model.AppEnvironment, market) || time.Now().Second() == 0 {
 		reset = true
 		ClearChannels(market, &model.AppEnvironment.MsgChanTick)
 		api.CreateMarketTickerWS(model.AppEnvironment, market)

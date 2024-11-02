@@ -10,6 +10,7 @@ import (
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"hello/api"
+	"hello/carry"
 	"hello/model"
 	"hello/regret"
 	"hello/util"
@@ -525,18 +526,18 @@ func Test_WS(t *testing.T) {
 
 func Test_Orders(t *testing.T) {
 	model.NewConfig()
-	accounts := model.GetAccounts(0)
-	api.WsAccountServeBybit(accounts[model.Bybit])
-	time.Sleep(time.Second)
-	market := model.Bybit
-	symbol := `BTC_USDT`
-	api.InitMarketInfos(market)
-	account := model.GetAccounts(0)[market]
-	order := api.PlaceOrder(account.Key, account.Secret, model.OrderSideSell, model.OrderTypeLimit, market, symbol, model.ReduceOnly,
-		88888.0000364, 88888.0000364, 0.01, true, nil, nil)
-	if order != nil {
-		fmt.Println(fmt.Sprintf(`place %s %s`, order.OrderId, order.Status))
-	}
+	market := model.Gate
+	//accounts := model.GetAccounts(0)
+	carry.MaintainMarketChan(market)
+	//time.Sleep(time.Second)
+	//symbol := `BTC_USDT`
+	//api.InitMarketInfos(market)
+	//account := model.GetAccounts(0)[market]
+	//order := api.PlaceOrder(account.Key, account.Secret, model.OrderSideSell, model.OrderTypeLimit, market, symbol, model.ReduceOnly,
+	//	88888.0000364, 88888.0000364, 0.01, true, nil, nil)
+	//if order != nil {
+	//	fmt.Println(fmt.Sprintf(`place %s %s`, order.OrderId, order.Status))
+	//}
 	select {}
 }
 
