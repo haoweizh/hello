@@ -527,16 +527,16 @@ func Test_Orders(t *testing.T) {
 	model.NewConfig()
 	accounts := model.GetAccounts(0)
 	api.WsAccountServeBybit(accounts[model.Bybit])
-	//time.Sleep(time.Second * 3)
-	//market := model.OKEX
-	//symbol := `BTC_USDT`
-	//api.InitMarketInfos(model.OKEX)
-	//account := model.GetAccounts(0)[market]
-	//order := api.PlaceOrder(account.Key, account.Secret, model.OrderSideSell, model.OrderTypeLimit, market, symbol, model.ReduceOnly,
-	//	88888.0000364, 88888.0000364, 0.01, true, nil, nil)
-	//if order != nil {
-	//	fmt.Println(fmt.Sprintf(`place %s %s`, order.OrderId, order.Status))
-	//}
+	time.Sleep(time.Second)
+	market := model.Bybit
+	symbol := `BTC_USDT`
+	api.InitMarketInfos(market)
+	account := model.GetAccounts(0)[market]
+	order := api.PlaceOrder(account.Key, account.Secret, model.OrderSideSell, model.OrderTypeLimit, market, symbol, model.ReduceOnly,
+		88888.0000364, 88888.0000364, 0.01, true, nil, nil)
+	if order != nil {
+		fmt.Println(fmt.Sprintf(`place %s %s`, order.OrderId, order.Status))
+	}
 	select {}
 }
 

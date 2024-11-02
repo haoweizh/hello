@@ -34,6 +34,14 @@ var wsTradeHandlerBybit = func(market, key string, event []byte) {
 		util.StoreSyncMap(&model.AppEnvironment.TradeConnMS, time.Now().UnixMilli(), model.Bybit, key)
 		return
 	}
+	responseJson, err := util.NewJSON(event)
+	if err != nil || responseJson == nil {
+		return
+	}
+	code := responseJson.Get(`retCode`).MustInt()
+	if code != 0 {
+		util.Info(fmt.Sprintf(`[fatal error] fail to place bybit order %s`, string(event)))
+	}
 }
 
 var wsAccountHandlerBybit = func(market, key string, event []byte) {
@@ -689,24 +697,25 @@ func setBybitPerpLeverage(key, secret string) {
 	}
 }
 
-func placeOrderBybit(key, secret string, order *model.Order, orderSide, orderType, orderParam, symbol string, price, amount float64) {
+func placeOrderBybit(account *model.Account, isWs bool, order *model.Order, orderParam string) {
+	//}, orderSide, orderType, orderParam, symbol string, price, amount float64) {
 	reduceOnly := false
 	if orderParam == model.ReduceOnly {
 		reduceOnly = true
 	}
-	price, decimal := model.FormatPrice(model.Bybit, symbol, price)
-	amountStr := util.CutTailZero(fmt.Sprintf(`%f`, model.GetAmountInMarket(model.Bybit, symbol, amount, price, reduceOnly)))
+	price, decimal := model.FormatPrice(model.Bybit, order.Symbol, order.Price)
+	amountStr := util.CutTailZero(fmt.Sprintf(`%f`, model.GetAmountInMarket(model.Bybit, order.Symbol, order.Amount, price, reduceOnly)))
 	priceStr := util.CutTailZero(strconv.FormatFloat(price, 'f', decimal, 64))
-	_, marketType, _, dialectSymbol := model.GetFromStandard(model.Bybit, symbol)
+	_, marketType, _, dialectSymbol := model.GetFromStandard(model.Bybit, order.Symbol)
 	var tradeSide, tradeOrderType string
-	if orderSide == model.OrderSideBuy {
+	if order.OrderSide == model.OrderSideBuy {
 		tradeSide = "Buy"
 	} else {
 		tradeSide = "Sell"
 	}
-	if orderType == model.OrderTypeLimit {
+	if order.OrderType == model.OrderTypeLimit {
 		tradeOrderType = "Limit"
-	} else if orderType == model.OrderTypeMarket {
+	} else if order.OrderType == model.OrderTypeMarket {
 		tradeOrderType = "Market"
 	}
 	param := map[string]interface{}{
@@ -721,17 +730,34 @@ func placeOrderBybit(key, secret string, order *model.Order, orderSide, orderTyp
 	} else {
 		param["category"] = "spot"
 	}
-	httpResp, httpErr := SignedRequestBybit(key, secret, http.MethodPost, bybitRestUrl, "/v5/order/create", param)
-	bitgetOrderResp := &dtos.BybitOrderResp{}
-	jsonErr := json.Unmarshal(httpResp, bitgetOrderResp)
-	if bitgetOrderResp == nil || bitgetOrderResp.RetCode != 0 {
-		if bitgetOrderResp != nil {
-			order.ErrCode = strconv.Itoa(bitgetOrderResp.RetCode)
+	value, _ := util.LoadSyncMap(&model.AppEnvironment.TradeConns, model.Bybit, account.Key)
+	wsOrderSuccess := false
+	if isWs && value != nil {
+		requestId := strconv.FormatInt(time.Now().UnixNano(), 10) + order.Symbol
+		msgMap := map[string]interface{}{"reqId": requestId, `op`: "order.create", "args": []interface{}{param},
+			"header": map[string]string{"X-BAPI-TIMESTAMP": fmt.Sprintf(`%d`, time.Now().UnixMilli())}}
+		msg := util.JsonEncodeToByte(msgMap)
+		if err := SendToConnection(model.Bybit, value.(*websocket.Conn), msg); err != nil {
+			util.Notice(fmt.Sprintf(`fail to place bybit ws order %s %s`, string(msg), err.Error()))
+		} else {
+			order.OrderId = requestId
+			wsOrderSuccess = true
+			order.IsWs = true
 		}
-		util.Notice(fmt.Sprintf("fail to create bybit order request: %v resp: %s httpErr: %v, jsonErr: %v", param, httpResp, httpErr, jsonErr))
-	} else {
-		order.Status = model.CarryStatusWorking
-		order.OrderId = bitgetOrderResp.Result.OrderId
+	}
+	if !wsOrderSuccess {
+		httpResp, httpErr := SignedRequestBybit(account.Key, account.Secret, http.MethodPost, bybitRestUrl, "/v5/order/create", param)
+		bybitOrderResp := &dtos.BybitOrderResp{}
+		jsonErr := json.Unmarshal(httpResp, bybitOrderResp)
+		if bybitOrderResp == nil || bybitOrderResp.RetCode != 0 {
+			if bybitOrderResp != nil {
+				order.ErrCode = strconv.Itoa(bybitOrderResp.RetCode)
+			}
+			util.Notice(fmt.Sprintf("fail to create bybit order request: %v resp: %s httpErr: %v, jsonErr: %v", param, httpResp, httpErr, jsonErr))
+		} else {
+			order.Status = model.CarryStatusWorking
+			order.OrderId = bybitOrderResp.Result.OrderId
+		}
 	}
 }
 

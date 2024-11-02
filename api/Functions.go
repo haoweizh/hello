@@ -837,7 +837,7 @@ func PlaceOrder(key, secret, orderSide, orderType, market, symbol, orderParam st
 	case model.BinancePerp:
 		placeOrderBinancePerp(key, secret, order, orderSide, orderType, symbol, price, triggerPrice, amount)
 	case model.Bybit:
-		placeOrderBybit(key, secret, order, orderSide, orderType, orderParam, symbol, price, amount)
+		placeOrderBybit(account, isWs, order, orderParam)
 	case model.HuobiSpot:
 		placeOrderHuobiSpot(key, secret, order, orderSide, orderType, symbol, price, amount)
 	case model.HuobiPerp:
@@ -858,7 +858,7 @@ func PlaceOrder(key, secret, orderSide, orderType, market, symbol, orderParam st
 	util.Notice(fmt.Sprintf(`...%s %s %s return order at %d distance %d %s %s price %f %f amount %f %f trigger %f %f id %s`,
 		orderSide, market, symbol, end, end-start, order.Status, order.ErrCode, price, order.Price, amount, order.Amount,
 		triggerPrice, order.TriggerPrice, order.OrderId))
-	if postOrder != nil && setting != nil && !isWs {
+	if postOrder != nil && setting != nil {
 		go postOrder(order)
 	}
 	return order
