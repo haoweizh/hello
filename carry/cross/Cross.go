@@ -756,10 +756,8 @@ func breakMarkPrice(account *model.Account, setting *model.Setting, price float6
 		bidMaxPrice := markPriceInfo.MarkPrice * (1 + marketInfo.BuyLimitPriceRatio)
 		bidMinPrice := markPriceInfo.MarkPrice * (1 - marketInfo.BuyLimitPriceRatio)
 		if price > bidMaxPrice || price < bidMinPrice {
-			if time.Now().Minute() == 0 && time.Now().Second() == 0 {
-				util.Info(fmt.Sprintf("币种：%s %s 被限买价，买上浮：%f，标记价：%f，限最高买价：%f，限最低买价：%f，当前最佳买价：%f",
-					setting.Market, setting.Symbol, marketInfo.BuyLimitPriceRatio, markPriceInfo.MarkPrice, bidMaxPrice, bidMinPrice, price))
-			}
+			util.NoticeLess(fmt.Sprintf("币种：%s %s 被限买价，买上浮：%f，标记价：%f，限最高买价：%f，限最低买价：%f，当前最佳买价：%f",
+				setting.Market, setting.Symbol, marketInfo.BuyLimitPriceRatio, markPriceInfo.MarkPrice, bidMaxPrice, bidMinPrice, price))
 			return true
 		}
 	} else if marketInfo != nil && orderSide == model.OrderSideSell && marketInfo.SellLimitPriceRatio > 0 {
@@ -772,8 +770,8 @@ func breakMarkPrice(account *model.Account, setting *model.Setting, price float6
 		askMaxPrice := markPriceInfo.MarkPrice * (1 + marketInfo.SellLimitPriceRatio)
 		askMinPrice := markPriceInfo.MarkPrice * (1 - marketInfo.SellLimitPriceRatio)
 		if price > askMaxPrice || price < askMinPrice {
-			util.Info(fmt.Sprintf("币种：%s 被限卖价，卖下浮：%f，标记价：%f，限最高卖价：%f，限最低卖价：%f，当前最佳卖价：%f",
-				setting.Symbol, marketInfo.SellLimitPriceRatio, markPriceInfo.MarkPrice, askMaxPrice, askMinPrice, price))
+			util.NoticeLess(fmt.Sprintf("币种：%s %s 被限卖价，卖下浮：%f，标记价：%f，限最高卖价：%f，限最低卖价：%f，当前最佳卖价：%f",
+				setting.Market, setting.Symbol, marketInfo.SellLimitPriceRatio, markPriceInfo.MarkPrice, askMaxPrice, askMinPrice, price))
 			//perpAskPrice = askMinPrice
 			return true
 		}

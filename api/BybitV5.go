@@ -276,6 +276,9 @@ func parseBookOrder(environment *model.Environment, bookWsResp *dtos.BybitBookWs
 		} else {
 			for _, bidStr := range bookWsResp.Data.B {
 				bidAmount, _ := strconv.ParseFloat(bidStr[1], 64)
+				if bidAmount == 0 {
+					continue
+				}
 				bidPrice, _ := strconv.ParseFloat(bidStr[0], 64)
 				bid := model.Tick{Price: bidPrice, Amount: bidAmount, Market: model.Bybit, Symbol: symbol}
 				bidAsk.Bids = []model.Tick{bid}
@@ -287,6 +290,9 @@ func parseBookOrder(environment *model.Environment, bookWsResp *dtos.BybitBookWs
 			for _, askStr := range bookWsResp.Data.A {
 				askAmount, _ := strconv.ParseFloat(askStr[1], 64)
 				askPrice, _ := strconv.ParseFloat(askStr[0], 64)
+				if askAmount == 0 {
+					continue
+				}
 				ask := model.Tick{Price: askPrice, Amount: askAmount, Market: model.Bybit, Symbol: symbol}
 				bidAsk.Asks = []model.Tick{ask}
 			}

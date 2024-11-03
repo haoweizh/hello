@@ -46,8 +46,10 @@ func SendToAllTickerSockets(market string, msg []byte) (err error) {
 		}
 		if err = connection.WriteMessage(websocket.TextMessage, msg); err != nil {
 			SetRequireReset(market)
-			util.Notice(fmt.Sprintf(`fail to write to all connection %s %s return: %s`, market, msg, err.Error()))
 		}
+	}
+	if err != nil {
+		util.Notice(fmt.Sprintf(`fail to write to all connection %s %s return: %s`, market, msg, err.Error()))
 	}
 	return err
 }

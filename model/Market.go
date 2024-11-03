@@ -52,6 +52,8 @@ type Environment struct {
 	AccountConnMS   sync.Map  // market*accountKey - last success receive msg time in ms
 	TradeConns      sync.Map  // market*accountKey
 	TradeConnMS     sync.Map  // market*accountKey
+	GateWSSpot      sync.Map  // accountKey - *websocket.Conn
+	GateWSFuture    sync.Map  // accountKey - *websocket.Conn
 	MonitorSettings *sync.Map // sync.Map[market]*sync.Map[symbol]*sync.Map[interval]*sync.Map[address]*MonitorSetting
 	WsManager       *WSManager
 }
