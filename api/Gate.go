@@ -23,6 +23,7 @@ import (
 var apiClientsGate = make(map[string]*gateApi.APIClient)
 var apiCtxGate = make(map[string]context.Context)
 var pingGate = false
+var pingGatePrivate = false
 
 const wsStepGate = 100
 
@@ -279,11 +280,55 @@ var markPriceHandler = gateWs.NewCallBack(func(msg *gateWs.UpdateMsg) {
 	return
 })
 
-func GetSignatureGate(secret, channel string, requestParam []byte, ts int64) string {
-	hash := hmac.New(sha512.New, []byte(secret))
-	key := fmt.Sprintf("%s\n%s\n%s\n%d", "api", channel, string(requestParam), ts)
-	hash.Write([]byte(key))
-	return hex.EncodeToString(hash.Sum(nil))
+var wsAccountHandler = func(market, key string, event []byte) {
+
+}
+
+func maintainAccountChannelGate() {
+	if pingGatePrivate {
+		return
+	}
+	pingGatePrivate = true
+	for {
+		time.Sleep(time.Second * 20)
+		accounts := model.AppConfig.GetAccounts(model.Gate)
+		for _, account := range accounts {
+			wsSpot, _ := util.LoadSyncMap(&model.AppEnvironment.GateWSSpot, account.Key)
+			if wsSpot != nil {
+				if err := wsSpot.(*websocket.Conn).WriteMessage(websocket.TextMessage, []byte(fmt.Sprintf(
+					`{"time": %d, "channel" : "spot.ping"}`, time.Now().Unix()))); err != nil {
+					util.Notice(fmt.Sprintf("send account spot ping message err:%s %s", model.Gate, err.Error()))
+				}
+			}
+			//wsFuture, _ := util.LoadSyncMap(&model.AppEnvironment.GateWSFuture, account.Key)
+			//if wsFuture != nil {
+			//	if err := wsFuture.(*websocket.Conn).WriteMessage(websocket.TextMessage, []byte(fmt.Sprintf(
+			//		"{\"time\": %d}", time.Now().Unix()))); err != nil {
+			//	}
+			//}
+		}
+	}
+}
+
+func WSAccountServeGate(account *model.Account) {
+	if account == nil {
+		return
+	}
+	ts := time.Now().Unix()
+	hash := hmac.New(sha512.New, []byte(account.Secret))
+	hash.Write([]byte(fmt.Sprintf("api\nspot.login\n\n%d", ts)))
+	sign := hex.EncodeToString(hash.Sum(nil))
+	conn, err := WsAccountClient(model.Gate, account.Key, gateWs.BaseUrl, wsAccountHandler)
+	if err != nil || conn == nil {
+		util.Notice(fmt.Sprintf("gate wsAccount connect err: %s %s", err.Error(), account.Key))
+		return
+	}
+	msg := fmt.Sprintf(`{"time": %d,"channel": "spot.login","event": "api","payload": {"api_key": "%s"",
+    		"signature": "%s","timestamp": "%d","req_id": "request%d"}}`, ts, account.Key, sign, ts, ts)
+	if err := conn.WriteMessage(websocket.TextMessage, []byte(msg)); err != nil {
+		return
+	}
+	go maintainAccountChannelGate()
 }
 
 func WsDepthServeGateNew(environment *model.Environment, market string) (socketMap map[*websocket.Conn]bool, msgChans []chan struct{}, connectErr error) {
