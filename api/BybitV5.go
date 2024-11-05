@@ -23,7 +23,6 @@ const bybitRestUrl = "https://api.bybit.com"
 const bybitSpotPubWsUrl = "wss://stream.bybit.com/v5/public/spot"
 const bybitPerpPubWsUrl = "wss://stream.bybit.com/v5/public/linear"
 const bybitTradeWsUrl = "wss://stream.bybit.com/v5/trade"
-const bybitPriWsUrl = "wss://stream.bybit.com/v5/private"
 
 var pingDepthBybit = false
 var pingPrivateBybit = false
@@ -31,7 +30,10 @@ var wsStepBybit = 10
 
 var wsTradeHandlerBybit = func(market, key string, event []byte) {
 	if strings.Contains(string(event), `pong`) {
-		util.StoreSyncMap(&model.AppEnvironment.TradeConnMS, time.Now().UnixMilli(), model.Bybit, key)
+		value, _ := util.LoadSyncMap(&model.AppEnvironment.AccountConns, market, key)
+		if value != nil && value.(*model.WSConn).Conn != nil {
+			value.(*model.WSConn).LastMsgTime = time.Now().UnixMilli()
+		}
 		return
 	}
 	responseJson, err := util.NewJSON(event)
@@ -41,43 +43,6 @@ var wsTradeHandlerBybit = func(market, key string, event []byte) {
 	code := responseJson.Get(`retCode`).MustInt()
 	if code != 0 {
 		util.Info(fmt.Sprintf(`[fatal error] fail to place bybit order %s`, string(event)))
-	}
-}
-
-var wsAccountHandlerBybit = func(market, key string, event []byte) {
-	if strings.Contains(string(event), `pong`) {
-		util.StoreSyncMap(&model.AppEnvironment.AccountConnMS, time.Now().UnixMilli(), model.Bybit, key)
-		return
-	}
-	responseJson, err := util.NewJSON(event)
-	if err != nil || responseJson == nil {
-		return
-	}
-	//util.Info(fmt.Sprintf(`channel msg %s`, string(event)))
-	if responseJson.Get(`data`) == nil || len(responseJson.Get(`data`).MustArray()) == 0 {
-		return
-	}
-	errCode := responseJson.Get(`code`).MustString()
-	if errCode != `` && errCode != `0` {
-		util.Notice(fmt.Sprintf(`okex private channel error: %s`, string(event)))
-	}
-	data := responseJson.Get(`data`).MustArray()
-	for _, item := range data {
-		value := item.(map[string]interface{})
-		go func() {
-			order := parseOrderOKEX(value)
-			order.IsWs = true
-			funcHandlers := GetFunctions(model.OKEX, order.Symbol)
-			if funcHandlers == nil {
-				return
-			}
-			funcHandlers.Range(func(function, value interface{}) bool {
-				if model.AccountHandlerMap[function.(string)] != nil {
-					go model.AccountHandlerMap[function.(string)](order)
-				}
-				return true
-			})
-		}()
 	}
 }
 
@@ -92,16 +57,8 @@ func maintainAccountConnBybit() {
 					continue
 				}
 				value, _ := util.LoadSyncMap(&model.AppEnvironment.AccountConns, model.Bybit, account.Key)
-				if value != nil {
-					if err := SendToConnection(model.Bybit, value.(*websocket.Conn), []byte(`{"op": "ping"}`)); err != nil {
-						util.Notice("-test ok ws-bybit private ws ping client error " + err.Error())
-					}
-				} else {
-					util.Notice(fmt.Sprintf(`-test bybit ws- no private connection %s`, account.Key))
-				}
-				value, _ = util.LoadSyncMap(&model.AppEnvironment.TradeConns, model.Bybit, account.Key)
-				if value != nil {
-					if err := SendToConnection(model.Bybit, value.(*websocket.Conn), []byte(`{"op": "ping"}`)); err != nil {
+				if value != nil && value.(*model.WSConn) != nil {
+					if err := SendToConnection(model.Bybit, value.(*model.WSConn).Conn, []byte(`{"op": "ping"}`)); err != nil {
 						util.Notice("-test ok ws-bybit trade ws ping client error " + err.Error())
 					}
 				} else {
@@ -116,21 +73,14 @@ func WsAccountServeBybit(account *model.Account) {
 	if account == nil {
 		return
 	}
-	valuePrivate, _ := util.LoadSyncMap(&model.AppEnvironment.AccountConns, model.Bybit, account.Key)
-	valueTrade, _ := util.LoadSyncMap(&model.AppEnvironment.TradeConns, model.Bybit, account.Key)
-	if valuePrivate != nil && valueTrade != nil {
+	valueTrade, _ := util.LoadSyncMap(&model.AppEnvironment.AccountConns, model.Bybit, account.Key)
+	if valueTrade != nil && valueTrade.(*model.WSConn).Conn != nil && time.Now().UnixMilli()-valueTrade.(*model.WSConn).LastMsgTime < 6000 {
 		return
 	}
-	connPrivate, errPrivate := WsAccountClient(model.Bybit, account.Key, bybitPriWsUrl, wsAccountHandlerBybit)
 	connTrade, errTrade := WsAccountClient(model.Bybit, account.Key, bybitTradeWsUrl, wsTradeHandlerBybit)
-	if errPrivate != nil {
-		util.Notice("can not create web socket " + errPrivate.Error())
-	}
-	util.StoreSyncMap(&model.AppEnvironment.AccountConns, connPrivate, model.Bybit, account.Key)
 	if errTrade != nil {
 		util.Notice("can not create web socket " + errTrade.Error())
 	}
-	util.StoreSyncMap(&model.AppEnvironment.TradeConns, connTrade, model.Bybit, account.Key)
 	loginMap := make(map[string]interface{})
 	loginMap[`op`] = `auth`
 	timestamp := time.Now().UnixMilli() + 1000
@@ -141,18 +91,11 @@ func WsAccountServeBybit(account *model.Account) {
 	loginArray := []interface{}{account.Key, timestamp, sign}
 	loginMap[`args`] = loginArray
 	loginBytes := util.JsonEncodeToByte(loginMap)
-	if connPrivate != nil {
-		if err := SendToConnection(model.Bybit, connPrivate, loginBytes); err != nil {
-			util.Notice(fmt.Sprintf(`fail to login bybit private ws: %s return %s`, account.Key, err.Error()))
-		} else {
-			util.StoreSyncMap(&model.AppEnvironment.AccountConns, connPrivate, model.Bybit, account.Key)
-		}
-	}
 	if connTrade != nil {
 		if err := SendToConnection(model.Bybit, connTrade, loginBytes); err != nil {
 			util.Notice(fmt.Sprintf(`fail to login bybit trade ws: %s return %s`, account.Key, err.Error()))
 		} else {
-			util.StoreSyncMap(&model.AppEnvironment.TradeConns, connTrade, model.Bybit, account.Key)
+			util.StoreSyncMap(&model.AppEnvironment.AccountConns, &model.WSConn{Conn: connTrade}, model.Bybit, account.Key)
 		}
 	}
 	go maintainAccountConnBybit()
@@ -736,14 +679,14 @@ func placeOrderBybit(account *model.Account, isWs bool, order *model.Order, orde
 	} else {
 		param["category"] = "spot"
 	}
-	value, _ := util.LoadSyncMap(&model.AppEnvironment.TradeConns, model.Bybit, account.Key)
+	value, _ := util.LoadSyncMap(&model.AppEnvironment.AccountConns, model.Bybit, account.Key)
 	wsOrderSuccess := false
-	if isWs && value != nil {
+	if isWs && value != nil && value.(*model.WSConn).Conn != nil {
 		requestId := strconv.FormatInt(time.Now().UnixNano(), 10) + order.Symbol
 		msgMap := map[string]interface{}{"reqId": requestId, `op`: "order.create", "args": []interface{}{param},
 			"header": map[string]string{"X-BAPI-TIMESTAMP": fmt.Sprintf(`%d`, time.Now().UnixMilli())}}
 		msg := util.JsonEncodeToByte(msgMap)
-		if err := SendToConnection(model.Bybit, value.(*websocket.Conn), msg); err != nil {
+		if err := SendToConnection(model.Bybit, value.(*model.WSConn).Conn, msg); err != nil {
 			util.Notice(fmt.Sprintf(`fail to place bybit ws order %s %s`, string(msg), err.Error()))
 		} else {
 			order.OrderId = requestId

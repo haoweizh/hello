@@ -51,11 +51,11 @@ func maintainAccountConnOKEX() {
 				continue
 			}
 			value, _ := util.LoadSyncMap(&model.AppEnvironment.AccountConns, model.OKEX, account.Key)
-			if value == nil {
+			if value == nil || value.(*model.WSConn).Conn == nil {
 				util.Notice(fmt.Sprintf(`-test ok ws- no private connection %s`, account.Key))
 				continue
 			}
-			if err := SendToConnection(model.OKEX, value.(*websocket.Conn), []byte(`ping`)); err != nil {
+			if err := SendToConnection(model.OKEX, value.(*model.WSConn).Conn, []byte(`ping`)); err != nil {
 				util.Notice("-test ok ws-okex server ping client error " + err.Error())
 			}
 		}
@@ -234,7 +234,6 @@ func handleMsgOKEX(channel chan *simplejson.Json, symbol string) {
 	}
 }
 
-// lastPingTime := util.GetNow().Unix()
 var wsHandlerOKEX = func(event []byte) {
 	//now := util.GetNow().Unix()
 	//if now-lastPingTime > 25 { // ping okex server every 30 seconds
@@ -263,7 +262,10 @@ var wsHandlerOKEX = func(event []byte) {
 
 var wsAccountHandlerOKEX = func(market, key string, event []byte) {
 	if strings.Contains(string(event), `pong`) {
-		util.StoreSyncMap(&model.AppEnvironment.AccountConnMS, time.Now().UnixMilli(), model.OKEX, key)
+		value, _ := util.LoadSyncMap(&model.AppEnvironment.AccountConns, market, key)
+		if value != nil && value.(*model.WSConn).Conn != nil {
+			value.(*model.WSConn).LastMsgTime = time.Now().UnixMilli()
+		}
 		return
 	}
 	responseJson, err := util.NewJSON(event)
@@ -281,8 +283,8 @@ var wsAccountHandlerOKEX = func(market, key string, event []byte) {
 			}
 			subscribeMap[`args`] = subArray
 			value, _ := util.LoadSyncMap(&model.AppEnvironment.AccountConns, model.OKEX, key)
-			if value != nil {
-				if err = SendToConnection(model.OKEX, value.(*websocket.Conn), util.JsonEncodeToByte(subscribeMap)); err != nil {
+			if value != nil || value.(*model.WSConn).Conn == nil {
+				if err = SendToConnection(model.OKEX, value.(*model.WSConn).Conn, util.JsonEncodeToByte(subscribeMap)); err != nil {
 					util.SocketInfo("-test ok ws-okex can not subscribe private " + err.Error())
 				}
 			}
@@ -321,7 +323,7 @@ func WsAccountServeOKEX(account *model.Account) {
 		return
 	}
 	value, _ := util.LoadSyncMap(&model.AppEnvironment.AccountConns, model.OKEX, account.Key)
-	if value != nil {
+	if value != nil && value.(*model.WSConn).Conn != nil && time.Now().UnixMilli()-value.(*model.WSConn).LastMsgTime < 6000 {
 		return
 	}
 	conn, err := WsAccountClient(model.OKEX, account.Key, wsPrivateOKEX, wsAccountHandlerOKEX)
@@ -344,7 +346,7 @@ func WsAccountServeOKEX(account *model.Account) {
 		} else {
 			util.Notice(fmt.Sprintf(`login okex ws: %s`, account.Key))
 		}
-		util.StoreSyncMap(&model.AppEnvironment.AccountConns, conn, model.OKEX, account.Key)
+		util.StoreSyncMap(&model.AppEnvironment.AccountConns, &model.WSConn{Conn: conn}, model.OKEX, account.Key)
 	}
 	go maintainAccountConnOKEX()
 }
@@ -644,14 +646,14 @@ func PlacePairOKEX(account *model.Account, symbolBuy, symbolSell, orderType stri
 	subscribeMap["op"] = "batch-orders"
 	msg := util.JsonEncodeToByte(subscribeMap)
 	value, _ := util.LoadSyncMap(&model.AppEnvironment.AccountConns, model.OKEX, account.Key)
-	if value == nil {
+	if value == nil || value.(*model.WSConn).Conn == nil {
 		errMsg = fmt.Sprintf(`fail to get connection %s`, account.Key)
 		util.Notice(errMsg)
 		return false, errMsg
 	}
 	util.Notice(`place pair %s`, msg)
 	if model.AppConfig.Env != `test` {
-		err := SendToConnection(model.OKEX, value.(*websocket.Conn), msg)
+		err := SendToConnection(model.OKEX, value.(*model.WSConn).Conn, msg)
 		if err != nil {
 			errMsg = fmt.Sprintf(`-test ok ws-fail to send order ws %s return %s`, account.Key, err.Error())
 			util.Notice(errMsg)
@@ -719,18 +721,17 @@ func placeOrderOKEX(account *model.Account, isWs bool, order *model.Order) {
 		util.SocketInfo(`ws order ` + string(wsOrderMsg))
 		order.Status = model.CarryStatusWorking
 		value, _ := util.LoadSyncMap(&model.AppEnvironment.AccountConns, model.OKEX, account.Key)
-		if value == nil {
+		if value == nil || value.(*model.WSConn).Conn == nil {
 			util.Notice(fmt.Sprintf(`-test ok ws-fail to get private connection %s`, account.Key))
 			order.Status = model.CarryStatusFail
 		} else {
-			if err := SendToConnection(model.OKEX, value.(*websocket.Conn), wsOrderMsg); err != nil {
+			if err := SendToConnection(model.OKEX, value.(*model.WSConn).Conn, wsOrderMsg); err != nil {
 				util.Notice(fmt.Sprintf(`-test ok ws-fail to send order ws %s %s return %s`, account.Key, order.Symbol, err.Error()))
 				order.Status = model.CarryStatusFail
 			} else {
 				util.Notice(fmt.Sprintf(`-test ok ws- success place okex ws order %s %s`, account.Key, order.Symbol))
 			}
 		}
-		order.OrderId = strconv.FormatInt(time.Now().UnixNano(), 10) + order.Symbol
 	} else {
 		responseBody, httpErr := sendSignRequestOKEX(account.Key, account.Secret, http.MethodPost, path, nil, postData)
 		util.Notice(fmt.Sprintf(`place okex %s return %s`, path, string(responseBody)))

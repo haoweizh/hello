@@ -433,10 +433,8 @@ func liquidateBitgetPerp(account *model.Account) {
 				util.Notice(fmt.Sprintf(`do liquidate bitgetperp %s %s price %f hold %f`,
 					position.Currency, orderSide, position.EntryPrice, position.Holding))
 				order := api.PlaceOrder(account.Key, account.Secret, orderSide, model.OrderTypeMarket, model.BitgetPerp,
-					position.Currency, model.ReduceOnly, position.EntryPrice, position.EntryPrice, holding, false, nil, nil)
-				order.RefreshType = model.FunctionBitgetLiq
-				_, _, coin, _ := model.GetFromStandard(model.BitgetPerp, position.Currency)
-				saveCross(order, coin, model.FunctionBitgetLiq, 0, 0, position.Holding)
+					position.Currency, model.ReduceOnly, model.FunctionBitgetLiq, position.EntryPrice, position.EntryPrice, holding, false, nil, nil)
+				saveCross(order, 0, 0, position.Holding)
 			} else {
 				util.Notice(fmt.Sprintf(`not liquidate bitgetperp for big perp %s %f %f value %f`,
 					position.Currency, position.EntryPrice, position.Holding, position.EntryPrice*position.Holding))
@@ -445,9 +443,8 @@ func liquidateBitgetPerp(account *model.Account) {
 	}
 }
 
-func saveCross(order *model.Order, coin, refreshType string, lineBuy, lineSell, holding float64) {
+func saveCross(order *model.Order, lineBuy, lineSell, holding float64) {
 	if order != nil {
-		order.Coin = coin
 		order.LineBuy = lineBuy
 		order.LineSell = lineSell
 		order.Function = model.Open
@@ -456,7 +453,6 @@ func saveCross(order *model.Order, coin, refreshType string, lineBuy, lineSell, 
 				order.Function = model.Close
 			}
 		}
-		order.RefreshType = refreshType
 		model.AppDB.Save(order)
 	}
 }

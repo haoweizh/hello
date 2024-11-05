@@ -95,7 +95,7 @@ func placeHang(account *model.Account, setting *model.Setting, marketInfo *model
 		util.Notice(fmt.Sprintf(`hang %s %s steps: %f [%f-%f] %f %f`,
 			setting.Market, setting.Symbol, steps, tick.Bids[0].Price, tick.Asks[0].Price, price, amount))
 		order := api.PlaceOrder(account.Key, account.Secret, side, model.OrderTypeLimit, setting.Market,
-			setting.Symbol, ``, price, price, amount, false, nil, setting)
+			setting.Symbol, ``, model.FunctionHang, price, price, amount, false, nil, setting)
 		if order != nil {
 			order.Function = model.FunctionHang
 			model.AppDB.Save(order)
@@ -127,7 +127,7 @@ func handle(account *model.Account, setting *model.Setting, tick *model.BidAsk) 
 	if setting.CloseShortMargin > 0 && tick.Asks[0].Amount < 5000 && tick.Asks[0].Amount < setting.OpenShortMargin &&
 		side == model.OrderSideBuy && tick.Asks[0].Price < 0.1 { // 吃单拉价格模式
 		order := api.PlaceOrder(account.Key, account.Secret, side, model.OrderTypeLimit, setting.Market, setting.Symbol,
-			``, tick.Asks[0].Price, tick.Asks[0].Price, tick.Asks[0].Amount, false, nil, setting)
+			``, model.FunctionHang, tick.Asks[0].Price, tick.Asks[0].Price, tick.Asks[0].Amount, false, nil, setting)
 		if order != nil {
 			order.Function = model.FunctionHang
 			model.AppDB.Save(order)

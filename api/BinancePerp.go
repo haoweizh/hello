@@ -144,7 +144,7 @@ func WsAccountServeBinancePerp() {
 				util.Notice(fmt.Sprintf(`fail to create account ws binancePerp %s`, err.Error()))
 				continue
 			}
-			util.StoreSyncMap(&model.AppEnvironment.AccountConns, conn, model.BinancePerp, account.Key)
+			util.StoreSyncMap(&model.AppEnvironment.AccountConns, &model.WSConn{Conn: conn}, model.BinancePerp, account.Key)
 		}
 	}
 }

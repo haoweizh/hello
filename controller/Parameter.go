@@ -88,9 +88,6 @@ func autoSimulate(market, coins string, begin, end time.Time, strBegin, strEnd s
 	coinArray := strings.Split(coins, `,`)
 	settings := make(map[string]*model.Setting)
 	marketType := model.MarketTypePerp
-	if market == model.GXZQ {
-		marketType = model.MarketTypeFuture
-	}
 	for _, coin := range coinArray {
 		symbol := coin + model.UniStandardTail[marketType]
 		if useNear {
@@ -359,9 +356,6 @@ func simulate(c *gin.Context) {
 	settings := make(map[string]*model.Setting)
 	for i := 0; i < len(coinArray); i++ {
 		tail := model.UniStandardTail[model.MarketTypePerp]
-		if market == model.GXZQ {
-			tail = model.UniStandardTail[model.MarketTypeFuture]
-		}
 		symbol := coinArray[i] + tail
 		settings[symbol] = &model.Setting{Market: market, Symbol: symbol, AmountLimit: float64(limit), WSType: model.WSTypeTicker,
 			GridAmount: RegretTurtleGridAmount, Near: near, Far: far, Seconds: seconds, TradeCost: fee}

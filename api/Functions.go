@@ -5,6 +5,7 @@ import (
 	"github.com/gorilla/websocket"
 	"hello/model"
 	"hello/util"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -769,7 +770,7 @@ func MustPlaceOrder(key, secret, orderSide, orderType, market, symbol, orderPara
 			return orders
 		} else {
 			order := PlaceOrder(key, secret, orderSide, orderType, market, symbol,
-				orderParam, price, triggerPrice, amount, false, nil, setting)
+				orderParam, refreshType, price, triggerPrice, amount, false, nil, setting)
 			if order != nil && order.OrderId != `` && order.Status != model.CarryStatusFail {
 				order.RefreshType = refreshType
 				return []*model.Order{order}
@@ -794,7 +795,7 @@ func MustPlaceOrder(key, secret, orderSide, orderType, market, symbol, orderPara
 // PlaceOrder orderSide: OrderSideBuy OrderSideSell OrderSideLiquidateLong OrderSideLiquidateShort
 // orderType: OrderTypeLimit OrderTypeMarket
 // amount:如果是限价单或市价卖单，amount是左侧币种的数量，如果是市价买单，amount是右测币种的数量
-func PlaceOrder(key, secret, orderSide, orderType, market, symbol, orderParam string, price, triggerPrice,
+func PlaceOrder(key, secret, orderSide, orderType, market, symbol, orderParam, funcType string, price, triggerPrice,
 	amount float64, isWs bool, postOrder model.PostOrder, setting *model.Setting) (order *model.Order) {
 	start := util.GetNowUnixMillion()
 	markSide := model.OrderSideBuy
@@ -804,16 +805,17 @@ func PlaceOrder(key, secret, orderSide, orderType, market, symbol, orderParam st
 	case model.OrderSideSell, model.OrderSideLiquidateLong:
 		markSide = model.OrderSideSell
 	}
+	_, _, coin, _ := model.GetFromStandard(market, symbol)
 	if amount == 0 {
 		util.Notice(fmt.Sprintf(`can not place order with amount 0 , %s %s %s %s`, orderSide, orderType, market, symbol))
-		return &model.Order{OrderSide: markSide, OrderType: orderType, Market: market, Symbol: symbol,
-			Price: price, Amount: 0, OrderId: ``, ErrCode: ``, TriggerPrice: triggerPrice,
+		return &model.Order{OrderSide: markSide, OrderType: orderType, Market: market, Symbol: symbol, Coin: coin,
+			Price: price, Amount: 0, OrderId: ``, ErrCode: ``, TriggerPrice: triggerPrice, RefreshType: funcType,
 			Status: model.CarryStatusFail, DealAmount: 0, DealPrice: price, OrderTime: util.GetNow()}
 	}
 	account := model.AppConfig.GetAccountFromKeyIndex(market, key, -1)
-	order = &model.Order{OrderSide: markSide, OrderType: orderType, Market: market, Symbol: symbol, Price: price,
-		Amount: amount, DealAmount: 0, DealPrice: price, TriggerPrice: triggerPrice,
-		OrderTime: util.GetNow(), UnfilledQuantity: amount, AccountIndex: account.Index}
+	order = &model.Order{OrderId: strconv.FormatInt(time.Now().UnixMilli(), 10) + market + symbol, RefreshType: funcType,
+		OrderSide: markSide, OrderType: orderType, Market: market, Symbol: symbol, Price: price, Amount: amount, DealAmount: 0, Coin: coin,
+		DealPrice: price, TriggerPrice: triggerPrice, OrderTime: util.GetNow(), UnfilledQuantity: amount, AccountIndex: account.Index}
 	//util.Notice(fmt.Sprintf(`...%s %s %s before order %d amount: %f price:%f triggerPrice:%f`,
 	//	orderSide, market, symbol, start, amount, price, triggerPrice))
 	if model.AppConfig.Env == `test` {
@@ -821,15 +823,19 @@ func PlaceOrder(key, secret, orderSide, orderType, market, symbol, orderParam st
 	}
 	switch market {
 	case model.BitgetPerp:
+		isWs = false
 		placeOrderBitgetPerp(key, secret, order, orderSide, orderType, orderParam, symbol, price, amount)
 	case model.BitgetSpot:
+		isWs = false
 		placeOrderBitgetSpot(key, secret, order, orderSide, orderType, symbol, price, amount)
 	case model.KucoinSpot:
+		isWs = false
 		placeOrderKucoinSpot(order, orderSide, orderType, symbol, price, amount)
 	case model.KucoinPerp:
+		isWs = false
 		placeOrderKucoinPerp(order, orderSide, orderType, symbol, price, amount)
 	case model.Gate:
-		placeOrderGate(key, secret, order, orderSide, orderType, symbol, price, amount)
+		placeOrderGate(account, isWs, order, orderSide, orderType, symbol, price, amount)
 	case model.OKEX:
 		placeOrderOKEX(account, isWs, order)
 	case model.BinanceSpot:
@@ -839,12 +845,16 @@ func PlaceOrder(key, secret, orderSide, orderType, market, symbol, orderParam st
 	case model.Bybit:
 		placeOrderBybit(account, isWs, order, orderParam)
 	case model.HuobiSpot:
+		isWs = false
 		placeOrderHuobiSpot(key, secret, order, orderSide, orderType, symbol, price, amount)
 	case model.HuobiPerp:
+		isWs = false
 		placeOrderHuobiPerp(key, secret, order, orderSide, orderType, ``, symbol, price, price, amount)
 	case model.Ftx:
+		isWs = false
 		placeOrderFtx(order, key, secret, orderSide, orderType, orderParam, symbol, price, triggerPrice, amount)
 	case model.Mexc:
+		isWs = false
 		placeOrderMexc(key, secret, order, orderSide, orderType, symbol, price, amount)
 	}
 	if order.OrderId == "0" || strings.Trim(order.OrderId, ` `) == "" {
@@ -858,7 +868,9 @@ func PlaceOrder(key, secret, orderSide, orderType, market, symbol, orderParam st
 	util.Notice(fmt.Sprintf(`...%s %s %s return order at %d distance %d %s %s price %f %f amount %f %f trigger %f %f id %s`,
 		orderSide, market, symbol, end, end-start, order.Status, order.ErrCode, price, order.Price, amount, order.Amount,
 		triggerPrice, order.TriggerPrice, order.OrderId))
-	if postOrder != nil && setting != nil {
+	if isWs {
+		model.AppEnvironment.WSOrderMap.Store(order.OrderId, order)
+	} else if postOrder != nil && setting != nil {
 		go postOrder(order)
 	}
 	return order

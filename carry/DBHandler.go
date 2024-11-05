@@ -134,17 +134,6 @@ func MaintainAccountChan(market string) {
 		if account == nil {
 			continue
 		}
-		valuePrivate, _ := util.LoadSyncMap(&model.AppEnvironment.AccountConnMS, market, account.Key)
-		valueTrade, _ := util.LoadSyncMap(&model.AppEnvironment.TradeConnMS, market, account.Key)
-		nowMilli := time.Now().UnixMilli()
-		if valuePrivate != nil && nowMilli-valuePrivate.(int64) > 60000 {
-			util.StoreSyncMap(&model.AppEnvironment.AccountConns, nowMilli, market, account.Key)
-			util.DelSyncMap(&model.AppEnvironment.AccountConns, market, account.Key)
-		}
-		if valueTrade != nil && nowMilli-valueTrade.(int64) > 60000 {
-			util.StoreSyncMap(&model.AppEnvironment.TradeConnMS, nowMilli, market, account.Key)
-			util.DelSyncMap(&model.AppEnvironment.TradeConns, market, account.Key)
-		}
 		switch market {
 		//case model.BinancePerp:
 		//	go WsAccountServeBinancePerp()
@@ -154,6 +143,8 @@ func MaintainAccountChan(market string) {
 			api.WsAccountServeOKEX(account)
 		case model.Bybit:
 			api.WsAccountServeBybit(account)
+		case model.Gate:
+			api.WSAccountServeGate(account)
 		}
 	}
 }

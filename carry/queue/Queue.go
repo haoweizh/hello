@@ -96,7 +96,7 @@ func liqQueue(setting *model.Setting, data *DataQueue, tick, tickLiq *model.BidA
 			setting.Function, setting.MarketRelated, setting.SymbolRelated, model.OrderSideSell, holdInQuote,
 			holdInQuote/tickLiq.Bids[0].Price, tickLiq.Bids[0].Price*setting.RateRelated, setting.OpenShortMargin, tick.Bids[0].Price, tickLiq.Bids[0].Price))
 		order := api.PlaceOrder(data.accountLiq.Key, data.accountLiq.Secret, model.OrderSideSell, model.OrderTypeMarket,
-			setting.MarketRelated, setting.SymbolRelated, ``, tickLiq.Bids[0].Price, tickLiq.Bids[0].Price,
+			setting.MarketRelated, setting.SymbolRelated, ``, model.FunctionQueue, tickLiq.Bids[0].Price, tickLiq.Bids[0].Price,
 			holdInQuote/tickLiq.Bids[0].Price, false, nil, setting)
 		model.AppDB.Save(&order)
 		return true
@@ -105,7 +105,7 @@ func liqQueue(setting *model.Setting, data *DataQueue, tick, tickLiq *model.BidA
 			setting.Function, setting.MarketRelated, setting.SymbolRelated, model.OrderSideBuy, holdInQuote,
 			holdInQuote/tickLiq.Asks[0].Price, tick.Asks[0].Price-tickLiq.Asks[0].Price*setting.RateRelated, setting.OpenShortMargin, tick.Asks[0].Price, tickLiq.Asks[0].Price))
 		order := api.PlaceOrder(data.accountLiq.Key, data.accountLiq.Secret, model.OrderSideBuy, model.OrderTypeMarket,
-			setting.MarketRelated, setting.SymbolRelated, ``, tickLiq.Asks[0].Price, tickLiq.Asks[0].Price,
+			setting.MarketRelated, setting.SymbolRelated, ``, model.FunctionQueue, tickLiq.Asks[0].Price, tickLiq.Asks[0].Price,
 			math.Abs(holdInQuote)/tickLiq.Asks[0].Price, false, nil, setting)
 		model.AppDB.Save(&order)
 		return true

@@ -72,7 +72,6 @@ const TurtleTypeChange = `change`
 const MarketTypePerp = `perp`
 const MarketTypeSpot = `spot`
 const MarketTypeMargin = `margin`
-const MarketTypeFuture = `future`
 const FunctionDCarry = `dcarry`
 const FunctionComplement = `comp`
 const FunctionBitgetLiq = `liquidate`
@@ -88,18 +87,14 @@ var AppDB *gorm.DB
 var AppRedis *redis.Client
 var AppConfig *Config
 var AppEnvironment = &Environment{WsManager: &WSManager{WSAgents: &sync.Map{}}, MonitorSettings: &sync.Map{},
-	AccountConns: sync.Map{}, AccountConnMS: sync.Map{}, TradeConns: sync.Map{}, TradeConnMS: sync.Map{}, GateWSSpot: sync.Map{},
-	GateWSFuture: sync.Map{}}
+	AccountConns: sync.Map{}, WSRespChan: make(chan WSResp, 100)}
 
 var ChannelMaintaining sync.Map // market - bool
 var DialectTail = map[string]map[string]string{
-	MarketTypeSpot:   {Gate: `_USDT`, Ftx: `/USD`, OKEX: `-USDT`, Bybit: `USDT`, BinanceSpot: `USDT`, KucoinSpot: `-USDT`, BitgetSpot: `USDT_SPBL`}, // BinanceMargin: `USDT`
-	MarketTypePerp:   {Gate: `_USDT`, Ftx: `-PERP`, OKEX: `-USDT-SWAP`, Bybit: `USDT`, BinancePerp: `USDT`, Mexc: `_USDT`, KucoinPerp: `USDTM`, BitgetPerp: `USDT_UMCBL`},
-	MarketTypeFuture: {GXZQ: ``},
-	//MarketTypeMargin: {BinanceMargin: `USDT`, BinanceSpot: `USDT`},
+	MarketTypeSpot: {Gate: `_USDT`, Ftx: `/USD`, OKEX: `-USDT`, Bybit: `USDT`, BinanceSpot: `USDT`, KucoinSpot: `-USDT`, BitgetSpot: `USDT_SPBL`}, // BinanceMargin: `USDT`
+	MarketTypePerp: {Gate: `_USDT`, Ftx: `-PERP`, OKEX: `-USDT-SWAP`, Bybit: `USDT`, BinancePerp: `USDT`, Mexc: `_USDT`, KucoinPerp: `USDTM`, BitgetPerp: `USDT_UMCBL`},
 }
-var UniStandardTail = map[string]string{MarketTypeSpot: `_USDT`, MarketTypePerp: `_PERP`,
-	MarketTypeFuture: `_FUTURE`}
+var UniStandardTail = map[string]string{MarketTypeSpot: `_USDT`, MarketTypePerp: `_PERP`}
 
 func GetFromStandard(market, standardSymbol string) (success bool, marketType, coinValue, dialectSymbol string) {
 	if len(strings.Trim(standardSymbol, ` `)) == 0 {

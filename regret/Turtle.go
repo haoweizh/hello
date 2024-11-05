@@ -392,9 +392,6 @@ func CutTail(market, coins, sign string) {
 	coinArray := strings.Split(coins, `,`)
 	for _, coin := range coinArray {
 		symbol := strings.ToUpper(coin) + model.UniStandardTail[model.MarketTypePerp]
-		if market == model.GXZQ {
-			symbol = coin + model.UniStandardTail[model.MarketTypeFuture]
-		}
 		orders := make([]*model.Order, 0)
 		model.AppDB.Where(`refresh_type=? and function=? and symbol=? and (order_type=? or order_type=?)`,
 			model.FunctionSimulation, sign, symbol, model.OrderSideLiquidateShort, model.OrderSideLiquidateLong).
@@ -403,7 +400,7 @@ func CutTail(market, coins, sign string) {
 			delNum := model.AppDB.Where(`refresh_type=? and function=? and symbol=? and order_time>?`,
 				model.FunctionSimulation, sign, symbol, orders[0].OrderTime).Delete(&model.Order{}).RowsAffected
 			if delNum > 0 {
-				fmt.Println(fmt.Sprintf(`cut %s tail num %d`, symbol, delNum))
+				fmt.Println(fmt.Sprintf(`cut %s %s tail num %d`, market, symbol, delNum))
 			}
 		} else {
 			util.Info(fmt.Sprintf(`can not get orders from %s`, sign))
@@ -412,7 +409,7 @@ func CutTail(market, coins, sign string) {
 
 }
 
-func CreateReport(market, function string, coins []string) {
+func CreateReport(function string, coins []string) {
 	rows, _ := model.AppDB.Model(model.Order{}).Select(`function,symbol,order_side,sum(orders.deal_price*amount)/sum(amount),sum(amount),sum(grid_pos)`).
 		Where(`function = ?`, function).
 		Group(`function,symbol,order_side`).Order(`function`).Rows()
@@ -443,9 +440,6 @@ func CreateReport(market, function string, coins []string) {
 		line := function
 		for _, coin := range coins {
 			symbol = strings.ToUpper(coin) + model.UniStandardTail[model.MarketTypePerp]
-			if market == model.GXZQ {
-				symbol = coin + model.UniStandardTail[model.MarketTypeFuture]
-			}
 			priceBuy := resultPrice[function][symbol+`_buy`]
 			priceSell := resultPrice[function][symbol+`_sell`]
 			amtBuy := resultAmt[function][symbol+`_buy`]

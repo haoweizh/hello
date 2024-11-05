@@ -2,6 +2,7 @@ package model
 
 import (
 	"fmt"
+	"github.com/gorilla/websocket"
 	"hello/util"
 	"sync"
 	"time"
@@ -40,20 +41,27 @@ type Rule struct {
 	Delay  float64
 }
 
+type WSConn struct {
+	LastMsgTime int64 // last receive msg time in ms
+	Conn        *websocket.Conn
+}
+
+type WSResp struct {
+	RequestId, Msg string
+	Success        bool
+}
+
 type Environment struct {
-	markPriceInfos  sync.Map  // symbol - market - ticker 行情包含标记价格
-	bidAsks         sync.Map  // symbol - market - bidAsk
-	kLines          sync.Map  // symbol - market - *candle
-	MsgChanTick     sync.Map  // market - []chan struct{}
-	MsgChanKLine    sync.Map  // market - []chan struct{}
-	WsInitTime      sync.Map  // market - time
-	SocketsTick     sync.Map  // market - map[*websocket.Conn]bool for depth sockets
-	AccountConns    sync.Map  // market*accountKey - *websocket.Conn
-	AccountConnMS   sync.Map  // market*accountKey - last success receive msg time in ms
-	TradeConns      sync.Map  // market*accountKey
-	TradeConnMS     sync.Map  // market*accountKey
-	GateWSSpot      sync.Map  // accountKey - *websocket.Conn
-	GateWSFuture    sync.Map  // accountKey - *websocket.Conn
+	markPriceInfos  sync.Map // symbol - market - ticker 行情包含标记价格
+	bidAsks         sync.Map // symbol - market - bidAsk
+	kLines          sync.Map // symbol - market - *candle
+	MsgChanTick     sync.Map // market - []chan struct{}
+	MsgChanKLine    sync.Map // market - []chan struct{}
+	WsInitTime      sync.Map // market - time
+	SocketsTick     sync.Map // market - map[*websocket.Conn]bool for depth sockets
+	AccountConns    sync.Map // market*accountKey / Gate*marketType*accountKey - *WSConn;
+	WSOrderMap      sync.Map // orderId - *Order
+	WSRespChan      chan WSResp
 	MonitorSettings *sync.Map // sync.Map[market]*sync.Map[symbol]*sync.Map[interval]*sync.Map[address]*MonitorSetting
 	WsManager       *WSManager
 }
@@ -61,6 +69,26 @@ type Environment struct {
 type MarkPriceInfo struct {
 	MarkPrice float64
 	Ts        int // time in unix epoch millionSeconds
+}
+
+func (environment *Environment) HandleWSResp() {
+	for {
+		wsResp := <-environment.WSRespChan
+		value, _ := environment.WSOrderMap.Load(wsResp.RequestId)
+		if value != nil {
+			order := value.(*Order)
+			if wsResp.Success {
+				order.Status = CarryStatusWorking
+			} else {
+				order.Status = CarryStatusFail
+				order.ErrCode = wsResp.Msg
+			}
+			if AccountHandlerMap[order.RefreshType] != nil {
+				AccountHandlerMap[order.RefreshType](order)
+			}
+			environment.WSOrderMap.Delete(wsResp.RequestId)
+		}
+	}
 }
 
 func (environment *Environment) SetMarkPriceInfo(symbol, marketName string, ticker *MarkPriceInfo) {

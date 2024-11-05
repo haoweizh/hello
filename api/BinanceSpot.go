@@ -425,7 +425,7 @@ func WsAccountServeBinanceSpot() {
 				util.Notice(fmt.Sprintf(`fail to create account ws BinanceSpot %s`, err.Error()))
 				continue
 			}
-			util.StoreSyncMap(&model.AppEnvironment.AccountConns, conn, model.BinanceSpot, account.Key)
+			util.StoreSyncMap(&model.AppEnvironment.AccountConns, &model.WSConn{Conn: conn}, model.BinanceSpot, account.Key)
 		}
 	}
 }
