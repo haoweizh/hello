@@ -16,7 +16,6 @@ type Order struct {
 	UnfilledQuantity  float64 //未成交数量
 	GridPos           int64
 	AccountIndex      int // 记录配置账户序号index
-	IsWs              bool
 	Coin              string
 	ErrCode           string
 	Function          string

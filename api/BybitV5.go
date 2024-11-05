@@ -36,14 +36,23 @@ var wsTradeHandlerBybit = func(market, key string, event []byte) {
 		}
 		return
 	}
+	fmt.Println(string(event))
 	responseJson, err := util.NewJSON(event)
 	if err != nil || responseJson == nil {
 		return
 	}
-	code := responseJson.Get(`retCode`).MustInt()
-	if code != 0 {
-		util.Info(fmt.Sprintf(`[fatal error] fail to place bybit order %s`, string(event)))
+	if responseJson.Get(`op`).MustString() != `order.create` {
+		return
 	}
+	wsResp := model.WSResp{RequestId: responseJson.Get(`reqId`).MustString()}
+	code := responseJson.Get(`retCode`).MustString()
+	if code == `0` {
+		wsResp.Success = true
+	} else {
+		wsResp.Success = false
+		wsResp.Msg = code + responseJson.Get(`retMsg`).MustString()
+	}
+	model.AppEnvironment.WSRespChan <- wsResp
 }
 
 func maintainAccountConnBybit() {
@@ -680,21 +689,14 @@ func placeOrderBybit(account *model.Account, isWs bool, order *model.Order, orde
 		param["category"] = "spot"
 	}
 	value, _ := util.LoadSyncMap(&model.AppEnvironment.AccountConns, model.Bybit, account.Key)
-	wsOrderSuccess := false
 	if isWs && value != nil && value.(*model.WSConn).Conn != nil {
-		requestId := strconv.FormatInt(time.Now().UnixNano(), 10) + order.Symbol
-		msgMap := map[string]interface{}{"reqId": requestId, `op`: "order.create", "args": []interface{}{param},
+		msgMap := map[string]interface{}{"reqId": order.OrderId, `op`: "order.create", "args": []interface{}{param},
 			"header": map[string]string{"X-BAPI-TIMESTAMP": fmt.Sprintf(`%d`, time.Now().UnixMilli())}}
 		msg := util.JsonEncodeToByte(msgMap)
 		if err := SendToConnection(model.Bybit, value.(*model.WSConn).Conn, msg); err != nil {
 			util.Notice(fmt.Sprintf(`fail to place bybit ws order %s %s`, string(msg), err.Error()))
-		} else {
-			order.OrderId = requestId
-			wsOrderSuccess = true
-			order.IsWs = true
 		}
-	}
-	if !wsOrderSuccess {
+	} else {
 		httpResp, httpErr := SignedRequestBybit(account.Key, account.Secret, http.MethodPost, bybitRestUrl, "/v5/order/create", param)
 		bybitOrderResp := &dtos.BybitOrderResp{}
 		jsonErr := json.Unmarshal(httpResp, bybitOrderResp)
