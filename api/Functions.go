@@ -805,7 +805,7 @@ func PlaceOrder(key, secret, orderSide, orderType, market, symbol, orderParam, f
 	case model.OrderSideSell, model.OrderSideLiquidateLong:
 		markSide = model.OrderSideSell
 	}
-	_, _, coin, _ := model.GetFromStandard(market, symbol)
+	_, marketType, coin, _ := model.GetFromStandard(market, symbol)
 	if amount == 0 {
 		util.Notice(fmt.Sprintf(`can not place order with amount 0 , %s %s %s %s`, orderSide, orderType, market, symbol))
 		return &model.Order{OrderSide: markSide, OrderType: orderType, Market: market, Symbol: symbol, Coin: coin,
@@ -813,7 +813,7 @@ func PlaceOrder(key, secret, orderSide, orderType, market, symbol, orderParam, f
 			Status: model.CarryStatusFail, DealAmount: 0, DealPrice: price, OrderTime: util.GetNow()}
 	}
 	account := model.AppConfig.GetAccountFromKeyIndex(market, key, -1)
-	order = &model.Order{OrderId: strconv.FormatInt(time.Now().UnixMilli(), 10) + market + symbol, RefreshType: funcType,
+	order = &model.Order{OrderId: strconv.FormatInt(time.Now().UnixMilli(), 10) + market + coin + marketType, RefreshType: funcType,
 		OrderSide: markSide, OrderType: orderType, Market: market, Symbol: symbol, Price: price, Amount: amount, DealAmount: 0, Coin: coin,
 		DealPrice: price, TriggerPrice: triggerPrice, OrderTime: util.GetNow(), UnfilledQuantity: amount, AccountIndex: account.Index}
 	//util.Notice(fmt.Sprintf(`...%s %s %s before order %d amount: %f price:%f triggerPrice:%f`,
@@ -1208,7 +1208,7 @@ func CreateMarketTickerWS(environment *model.Environment, market string) (
 	case model.Gate:
 		socketMap, channels, err = WsDepthServeGateNew(environment, market)
 	case model.OKEX:
-		socketMap, channels, err = WsDepthServeOKEX(environment, market, GetMarketSymbols(model.OKEX))
+		socketMap, channels, err = WsDepthServeOKEX(environment)
 	case model.BinanceSpot, model.BinanceMargin:
 		socketMap, channels, err = WsDepthServeBinance(environment, market)
 	case model.BinancePerp:

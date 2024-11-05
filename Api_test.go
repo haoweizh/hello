@@ -14,7 +14,6 @@ import (
 	"hello/model"
 	"hello/regret"
 	"hello/util"
-	"math"
 	"math/rand"
 	"net/http"
 	"net/url"
@@ -525,17 +524,12 @@ func Test_WS(t *testing.T) {
 }
 
 func Test_Orders(t *testing.T) {
-	a := 0.01
-	b := 0.00001
-	fmt.Println(math.Floor(a / b))
-	formattedAmount := b * math.Round(a/b)
-	fmt.Println(formattedAmount)
 	model.NewConfig()
-	market := model.Gate
+	market := model.OKEX
 	//accounts := model.GetAccounts(0)
 	carry.MaintainAccountChan(market)
 	//time.Sleep(time.Second)
-	symbol := `BTC_PERP`
+	symbol := `BTC_USDT`
 	api.InitMarketInfos(market)
 	account := model.GetAccounts(0)[market]
 	order := api.PlaceOrder(account.Key, account.Secret, model.OrderSideBuy, model.OrderTypeLimit, market, symbol, model.ReduceOnly,

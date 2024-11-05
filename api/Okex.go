@@ -7,7 +7,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"github.com/bitly/go-simplejson"
 	"github.com/gorilla/websocket"
 	"hash/crc32"
 	"hello/model"
@@ -29,7 +28,6 @@ const ParamArrayOkex = `OK_ARRAY`
 const chanelOKEX = `bbo-tbt` //`books5`
 var lastSameTime = make(map[string]int64)
 var lastCarryTime = int64(0)
-var msgChanOKEX = make(map[string]chan *simplejson.Json)
 
 // var wrongs = make(map[string]bool)
 // var wrongLock sync.Mutex
@@ -191,60 +189,7 @@ var subscribeHandlerOKEX = func(market string, connection *websocket.Conn, subsc
 	return err
 }
 
-func handleMsgOKEX(channel chan *simplejson.Json, symbol string) {
-	var responseJson *simplejson.Json
-	for responseJson = range channel {
-		if len(channel) > 20 && time.Now().Second() == 0 && len(channel)%10 == 0 {
-			util.Notice(fmt.Sprintf(`%s current chan to be handle %d`, symbol, len(channel)))
-		}
-		action := responseJson.Get(`action`).MustString()
-		data := responseJson.Get(`data`).MustArray()[0].(map[string]interface{})
-		success := false
-		var bidAsk *model.BidAsk
-		if action == `update` {
-			_, bidAsk = model.AppEnvironment.GetBidAsk(symbol, model.OKEX)
-			if bidAsk != nil {
-				success, bidAsk = handleBooksUpdate(symbol, data, bidAsk)
-			}
-		} else if action == `snapshot` || responseJson.GetPath(`arg`, `channel`).MustString() == chanelOKEX {
-			//if action == `snapshot` {
-			//	util.Notice(fmt.Sprintf(`++++ %s initial ticker %v`, symbol, data))
-			//}
-			bidAsk = handleBooksOKEX(symbol, data)
-			success = true
-		}
-		if bidAsk == nil || bidAsk.Bids == nil || bidAsk.Asks == nil || bidAsk.Bids.Len() == 0 || bidAsk.Asks.Len() == 0 || !success {
-			continue
-		}
-		//将最佳买一卖一的数量转换为币种的真实数量
-		_, bidAsk.Bids[0].Amount = model.ParseRealAmount(model.OKEX, symbol, bidAsk.Bids[0].Amount)
-		_, bidAsk.Asks[0].Amount = model.ParseRealAmount(model.OKEX, symbol, bidAsk.Asks[0].Amount)
-		if model.AppEnvironment.SetBidAsk(symbol, model.OKEX, bidAsk) {
-			funcHandlers := GetFunctions(model.OKEX, symbol)
-			if funcHandlers != nil {
-				funcHandlers.Range(func(function, value interface{}) bool {
-					setting := GetSetting(function.(string), model.OKEX, symbol)
-					if setting != nil && value != nil && value.(model.CarryHandler) != nil {
-						go value.(model.CarryHandler)(setting, bidAsk)
-					}
-					return true
-				})
-			}
-		}
-	}
-}
-
 var wsHandlerOKEX = func(event []byte) {
-	//now := util.GetNow().Unix()
-	//if now-lastPingTime > 25 { // ping okex server every 30 seconds
-	//	lastPingTime = now
-	//	go func() {
-	//		err := sendToWs(model.OKEX, []byte(`ping`))
-	//		if err != nil {
-	//			util.SocketInfo("okex server ping client error " + err.Error())
-	//		}
-	//	}()
-	//}
 	responseJson, err := util.NewJSON(event)
 	if err != nil || responseJson == nil || responseJson.Get(`data`) == nil ||
 		len(responseJson.Get(`data`).MustArray()) == 0 ||
@@ -253,10 +198,38 @@ var wsHandlerOKEX = func(event []byte) {
 		return
 	}
 	dialectSymbol := responseJson.GetPath(`arg`, `instId`).MustString()
-	success, marketType, coin := model.GetCoinFromDialect(model.OKEX, dialectSymbol)
-	channel := msgChanOKEX[coin+model.UniStandardTail[marketType]]
-	if success && channel != nil {
-		channel <- responseJson
+	_, marketType, coin := model.GetCoinFromDialect(model.OKEX, dialectSymbol)
+	symbol := coin + model.UniStandardTail[marketType]
+	action := responseJson.Get(`action`).MustString()
+	data := responseJson.Get(`data`).MustArray()[0].(map[string]interface{})
+	success := false
+	var bidAsk *model.BidAsk
+	if action == `update` {
+		_, bidAsk = model.AppEnvironment.GetBidAsk(symbol, model.OKEX)
+		if bidAsk != nil {
+			success, bidAsk = handleBooksUpdate(symbol, data, bidAsk)
+		}
+	} else if action == `snapshot` || responseJson.GetPath(`arg`, `channel`).MustString() == chanelOKEX {
+		bidAsk = handleBooksOKEX(symbol, data)
+		success = true
+	}
+	if bidAsk == nil || bidAsk.Bids == nil || bidAsk.Asks == nil || bidAsk.Bids.Len() == 0 || bidAsk.Asks.Len() == 0 || !success {
+		return
+	}
+	//将最佳买一卖一的数量转换为币种的真实数量
+	_, bidAsk.Bids[0].Amount = model.ParseRealAmount(model.OKEX, symbol, bidAsk.Bids[0].Amount)
+	_, bidAsk.Asks[0].Amount = model.ParseRealAmount(model.OKEX, symbol, bidAsk.Asks[0].Amount)
+	if model.AppEnvironment.SetBidAsk(symbol, model.OKEX, bidAsk) {
+		funcHandlers := GetFunctions(model.OKEX, symbol)
+		if funcHandlers != nil {
+			funcHandlers.Range(func(function, value interface{}) bool {
+				setting := GetSetting(function.(string), model.OKEX, symbol)
+				if setting != nil && value != nil && value.(model.CarryHandler) != nil {
+					go value.(model.CarryHandler)(setting, bidAsk)
+				}
+				return true
+			})
+		}
 	}
 }
 
@@ -272,49 +245,20 @@ var wsAccountHandlerOKEX = func(market, key string, event []byte) {
 	if err != nil || responseJson == nil {
 		return
 	}
-	if responseJson.Get(`event`).MustString() == `login` {
-		subscribes := GetWSSubscribes(model.OKEX, model.SubscribeDepth)
-		for i := 0; i < len(subscribes); i += wsStepOKEX {
-			subscribeMap := make(map[string]interface{})
-			subscribeMap["op"] = "subscribe"
-			subArray := make([]map[string]string, 0)
-			for j := i; j < len(subscribes) && j < i+wsStepOKEX; j++ {
-				subArray = append(subArray, map[string]string{`channel`: `orders`, `instType`: `ANY`, `instId`: subscribes[j].(string)})
-			}
-			subscribeMap[`args`] = subArray
-			value, _ := util.LoadSyncMap(&model.AppEnvironment.AccountConns, model.OKEX, key)
-			if value != nil || value.(*model.WSConn).Conn == nil {
-				if err = SendToConnection(model.OKEX, value.(*model.WSConn).Conn, util.JsonEncodeToByte(subscribeMap)); err != nil {
-					util.SocketInfo("-test ok ws-okex can not subscribe private " + err.Error())
-				}
-			}
-		}
-	}
-	//util.Info(fmt.Sprintf(`channel msg %s`, string(event)))
-	if responseJson.Get(`data`) == nil || len(responseJson.Get(`data`).MustArray()) == 0 {
+	fmt.Println(string(event))
+	if responseJson.Get(`op`).MustString() != `batch-orders` {
 		return
 	}
-	errCode := responseJson.Get(`code`).MustString()
-	if errCode != `` && errCode != `0` {
-		util.Notice(fmt.Sprintf(`okex private channel error: %s`, string(event)))
-	}
-	data := responseJson.Get(`data`).MustArray()
-	for _, item := range data {
-		value := item.(map[string]interface{})
-		go func() {
-			order := parseOrderOKEX(value)
-			order.IsWs = true
-			funcHandlers := GetFunctions(model.OKEX, order.Symbol)
-			if funcHandlers == nil {
-				return
-			}
-			funcHandlers.Range(func(function, value interface{}) bool {
-				if model.AccountHandlerMap[function.(string)] != nil {
-					go model.AccountHandlerMap[function.(string)](order)
-				}
-				return true
-			})
-		}()
+	if responseJson.Get(`code`).MustString() == `0` {
+		model.AppEnvironment.WSRespChan <- model.WSResp{RequestId: responseJson.Get(`id`).MustString(), Success: true}
+	} else {
+		data := responseJson.Get(`data`).MustArray()
+		msg := ``
+		if len(data) > 0 {
+			value := data[0].(map[string]interface{})
+			msg = value[`sCode`].(string) + value[`sMsg`].(string)
+		}
+		model.AppEnvironment.WSRespChan <- model.WSResp{RequestId: responseJson.Get(`id`).MustString(), Success: false, Msg: msg}
 	}
 }
 
@@ -351,18 +295,12 @@ func WsAccountServeOKEX(account *model.Account) {
 	go maintainAccountConnOKEX()
 }
 
-func WsDepthServeOKEX(environment *model.Environment, market string, symbols map[string]bool) (socketMap map[*websocket.Conn]bool, msgChans []chan struct{}, connectErr error) {
-	for s := range symbols {
-		if msgChanOKEX[s] == nil {
-			msgChanOKEX[s] = make(chan *simplejson.Json, 1000)
-			go handleMsgOKEX(msgChanOKEX[s], s)
-		}
-	}
+func WsDepthServeOKEX(environment *model.Environment) (socketMap map[*websocket.Conn]bool, msgChans []chan struct{}, connectErr error) {
 	subscribes := GetWSSubscribes(model.OKEX, model.SubscribeDepth)
 	socketMap, msgChans, connectErr = WebSocketClient(model.OKEX, wsOKEX, subscribes, subscribeHandlerOKEX, wsHandlerOKEX, wsStepOKEX)
 	go maintainChannelOKEX(subscribes)
-	environment.SocketsTick.Store(market, socketMap)
-	environment.MsgChanTick.Store(market, msgChans)
+	environment.SocketsTick.Store(model.OKEX, socketMap)
+	environment.MsgChanTick.Store(model.OKEX, msgChans)
 	return
 }
 
@@ -642,7 +580,7 @@ func PlacePairOKEX(account *model.Account, symbolBuy, symbolSell, orderType stri
 		getWSOrderArgOKEX(account, symbolSell, model.OrderSideSell, orderType, priceSell, amount)}
 	subscribeMap := make(map[string]interface{})
 	subscribeMap[`args`] = subscribeArgs
-	subscribeMap[`id`] = strconv.FormatInt(time.Now().UnixNano(), 10)
+	subscribeMap[`id`] = strconv.FormatInt(time.Now().UnixMilli(), 10)
 	subscribeMap["op"] = "batch-orders"
 	msg := util.JsonEncodeToByte(subscribeMap)
 	value, _ := util.LoadSyncMap(&model.AppEnvironment.AccountConns, model.OKEX, account.Key)
@@ -712,9 +650,9 @@ func placeOrderOKEX(account *model.Account, isWs bool, order *model.Order) {
 	if isWs {
 		// 通过ws的symbol需要处理成方言，通过rest的无需处理，已统一在发送的函数中处理
 		_, _, _, dialectSymbol := model.GetFromStandard(model.OKEX, order.Symbol)
-		postData[`instId`] = dialectSymbol
+		postData[`instId`] = dialectSymbol[:3]
 		subscribeMap := make(map[string]interface{})
-		subscribeMap[`id`] = strconv.FormatInt(time.Now().UnixNano(), 10)
+		subscribeMap[`id`] = order.OrderId
 		subscribeMap["op"] = "batch-orders"
 		subscribeMap[`args`] = []map[string]interface{}{postData}
 		wsOrderMsg := util.JsonEncodeToByte(subscribeMap)
