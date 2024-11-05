@@ -245,7 +245,6 @@ var wsAccountHandlerOKEX = func(market, key string, event []byte) {
 	if err != nil || responseJson == nil {
 		return
 	}
-	fmt.Println(string(event))
 	if responseJson.Get(`op`).MustString() != `batch-orders` {
 		return
 	}
