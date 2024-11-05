@@ -649,7 +649,7 @@ func placeOrderOKEX(account *model.Account, isWs bool, order *model.Order) {
 	if isWs {
 		// 通过ws的symbol需要处理成方言，通过rest的无需处理，已统一在发送的函数中处理
 		_, _, _, dialectSymbol := model.GetFromStandard(model.OKEX, order.Symbol)
-		postData[`instId`] = dialectSymbol[:3]
+		postData[`instId`] = dialectSymbol
 		subscribeMap := make(map[string]interface{})
 		subscribeMap[`id`] = order.OrderId
 		subscribeMap["op"] = "batch-orders"
