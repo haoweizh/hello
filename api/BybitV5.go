@@ -36,7 +36,6 @@ var wsTradeHandlerBybit = func(market, key string, event []byte) {
 		}
 		return
 	}
-	fmt.Println(string(event))
 	responseJson, err := util.NewJSON(event)
 	if err != nil || responseJson == nil {
 		return
@@ -83,7 +82,7 @@ func WsAccountServeBybit(account *model.Account) {
 		return
 	}
 	valueTrade, _ := util.LoadSyncMap(&model.AppEnvironment.AccountConns, model.Bybit, account.Key)
-	if valueTrade != nil && valueTrade.(*model.WSConn).Conn != nil && time.Now().UnixMilli()-valueTrade.(*model.WSConn).LastMsgTime < 6000 {
+	if valueTrade != nil && valueTrade.(*model.WSConn).Conn != nil && time.Now().UnixMilli()-valueTrade.(*model.WSConn).LastMsgTime < 60000 {
 		return
 	}
 	connTrade, errTrade := WsAccountClient(model.Bybit, account.Key, bybitTradeWsUrl, wsTradeHandlerBybit)

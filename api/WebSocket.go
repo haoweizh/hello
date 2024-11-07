@@ -118,6 +118,10 @@ func WsAccountClient(market, key, url string, accountMsgHandler AccountMsgHandle
 		util.Info("can not create web socket" + err.Error())
 		return nil, err
 	}
+	connection.SetPingHandler(func(appData string) error {
+		accountMsgHandler(market, key, []byte(`ping pong received`))
+		return connection.WriteControl(websocket.PongMessage, []byte(appData), time.Now().Add(time.Minute))
+	})
 	go func() {
 		for {
 			_, message, readErr := connection.ReadMessage()
@@ -158,7 +162,6 @@ func WebSocketClient(market, url string, subscribes []interface{}, subHandler Su
 			return nil, nil, err
 		}
 		connection.SetPingHandler(func(appData string) error {
-			//fmt.Println(fmt.Sprintf("Ping received, sending Pong %s %s", appData, time.Now().String()))
 			return connection.WriteControl(websocket.PongMessage, []byte(appData), time.Now().Add(time.Minute))
 		})
 		stopChan := make(chan struct{}, 2)

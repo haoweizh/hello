@@ -266,7 +266,7 @@ func WsAccountServeOKEX(account *model.Account) {
 		return
 	}
 	value, _ := util.LoadSyncMap(&model.AppEnvironment.AccountConns, model.OKEX, account.Key)
-	if value != nil && value.(*model.WSConn).Conn != nil && time.Now().UnixMilli()-value.(*model.WSConn).LastMsgTime < 6000 {
+	if value != nil && value.(*model.WSConn).Conn != nil && time.Now().UnixMilli()-value.(*model.WSConn).LastMsgTime < 60000 {
 		return
 	}
 	conn, err := WsAccountClient(model.OKEX, account.Key, wsPrivateOKEX, wsAccountHandlerOKEX)

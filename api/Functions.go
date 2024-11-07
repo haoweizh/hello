@@ -839,9 +839,9 @@ func PlaceOrder(key, secret, orderSide, orderType, market, symbol, orderParam, f
 	case model.OKEX:
 		placeOrderOKEX(account, isWs, order)
 	case model.BinanceSpot:
-		placeOrderBinanceSpot(key, secret, order, orderSide, orderType, symbol, price, amount)
+		placeOrderBinanceSpot(account, isWs, order, orderSide, orderType, symbol, price, amount)
 	case model.BinancePerp:
-		placeOrderBinancePerp(key, secret, order, orderSide, orderType, symbol, price, triggerPrice, amount)
+		placeOrderBinancePerp(account, isWs, order, orderSide, orderType, symbol, price, triggerPrice, amount)
 	case model.Bybit:
 		placeOrderBybit(account, isWs, order, orderParam)
 	case model.HuobiSpot:

@@ -280,7 +280,7 @@ var markPriceHandler = gateWs.NewCallBack(func(msg *gateWs.UpdateMsg) {
 	return
 })
 
-var wsAccountHandler = func(market, key string, event []byte) {
+var wsAccountHandlerGate = func(market, key string, event []byte) {
 	responseJson, err := util.NewJSON(event)
 	if err != nil || responseJson == nil {
 		return
@@ -349,14 +349,14 @@ func WSAccountServeGate(account *model.Account) {
 	valueSpot, _ := util.LoadSyncMap(&model.AppEnvironment.AccountConns, model.Gate, model.MarketTypeSpot, account.Key)
 	valueFuture, _ := util.LoadSyncMap(&model.AppEnvironment.AccountConns, model.Gate, model.MarketTypePerp, account.Key)
 	if valueSpot != nil && valueFuture != nil && valueSpot.(*model.WSConn).Conn != nil && valueFuture.(*model.WSConn).Conn != nil &&
-		time.Now().UnixMilli()-valueSpot.(*model.WSConn).LastMsgTime < 6000 && time.Now().UnixMilli()-valueFuture.(*model.WSConn).LastMsgTime < 6000 {
+		time.Now().UnixMilli()-valueSpot.(*model.WSConn).LastMsgTime < 60000 && time.Now().UnixMilli()-valueFuture.(*model.WSConn).LastMsgTime < 60000 {
 		return
 	}
 	ts := time.Now().Unix()
 	hashSpot := hmac.New(sha512.New, []byte(account.Secret))
 	hashSpot.Write([]byte(fmt.Sprintf("api\nspot.login\n\n%d", ts)))
 	signSpot := hex.EncodeToString(hashSpot.Sum(nil))
-	connSpot, errSpot := WsAccountClient(model.Gate, account.Key, gateWs.BaseUrl, wsAccountHandler)
+	connSpot, errSpot := WsAccountClient(model.Gate, account.Key, gateWs.BaseUrl, wsAccountHandlerGate)
 	if errSpot != nil || connSpot == nil {
 		util.Notice(fmt.Sprintf("gate wsAccount connect errSpot: %s %s", errSpot.Error(), account.Key))
 		return
@@ -373,7 +373,7 @@ func WSAccountServeGate(account *model.Account) {
 	signFuture := hex.EncodeToString(hashFuture.Sum(nil))
 	msgFuture := fmt.Sprintf(`{"time": %d,"channel": "futures.login","event": "api","payload": {"api_key": "%s",
     		"signature": "%s","timestamp": "%d","req_id": "request%d"}}`, ts, account.Key, signFuture, ts, ts)
-	connFuture, errFuture := WsAccountClient(model.Gate, account.Key, gateWs.FuturesUsdtUrl, wsAccountHandler)
+	connFuture, errFuture := WsAccountClient(model.Gate, account.Key, gateWs.FuturesUsdtUrl, wsAccountHandlerGate)
 	if errFuture != nil || connFuture == nil {
 		util.Notice(fmt.Sprintf("gate wsAccount connect errFuture: %s %s", errFuture.Error(), account.Key))
 		return

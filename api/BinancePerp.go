@@ -23,9 +23,11 @@ import (
 
 const restBinancePerp = `https://fapi.binance.com`
 const wsBinancePerp = `wss://fstream.binance.com/stream`
-const wsAccountBinancePerp = `wss://fstream.binance.com/ws/`
+const wsBinancePerpApi = `wss://ws-fapi.binance.com/ws-fapi/v1`
+
 const wsStepBinancePerp = 20
 
+var pingActBinancePerp = false
 var pingDepthBinancePerp = false
 
 func getMarketsBinancePerp(key, secret string) (marketInfos map[string]*model.MarketInfo) {
@@ -104,49 +106,21 @@ func getMarketsBinancePerp(key, secret string) (marketInfos map[string]*model.Ma
 	return marketInfos
 }
 
-func WsAccountServeBinancePerp() {
-	var wsAccountHandler = func(market, key string, event []byte) {
-		result, wsErr := util.NewJSON(event)
-		if wsErr != nil {
-			util.Notice(`binancePerp fail to unmarshal account ws json ` + wsErr.Error())
-			return
-		}
-		if strings.EqualFold(result.Get(`e`).MustString(), `ORDER_TRADE_UPDATE`) {
-			result = result.Get(`o`)
-			order := parseOrderJsBinance(model.BinancePerp, result)
-			if !order.HaveId() {
-				return
-			}
-			funcHandlers := GetFunctions(model.BinancePerp, order.Symbol)
-			if funcHandlers != nil {
-				funcHandlers.Range(func(function, value interface{}) bool {
-					if model.AccountHandlerMap[function.(string)] != nil {
-						go model.AccountHandlerMap[function.(string)](order)
-					}
-					return true
-				})
-			}
-		}
+func WsActServeBinancePerp(account *model.Account) {
+	if account == nil {
+		return
 	}
-	accounts := model.AppConfig.GetAccounts(model.BinancePerp)
-	for _, account := range accounts {
-		if account == nil {
-			return
-		}
-		value, _ := util.LoadSyncMap(&model.AppEnvironment.AccountConns, model.BinancePerp, account.Key)
-		if value != nil {
-			continue
-		}
-		success, listenKey := renewListenKeyBinancePerp(account)
-		if success {
-			conn, err := WsAccountClient(model.BinancePerp, account.Key, wsAccountBinancePerp+listenKey, wsAccountHandler)
-			if err != nil {
-				util.Notice(fmt.Sprintf(`fail to create account ws binancePerp %s`, err.Error()))
-				continue
-			}
-			util.StoreSyncMap(&model.AppEnvironment.AccountConns, &model.WSConn{Conn: conn}, model.BinancePerp, account.Key)
-		}
+	value, _ := util.LoadSyncMap(&model.AppEnvironment.AccountConns, model.BinancePerp, account.Key)
+	if value != nil && value.(*model.WSConn).Conn != nil && time.Now().UnixMilli()-value.(*model.WSConn).LastMsgTime < 180000 {
+		return
 	}
+	conn, err := WsAccountClient(model.BinancePerp, account.Key, wsBinancePerpApi, wsActHandlerBinance)
+	if err != nil {
+		util.Notice(fmt.Sprintf(`fail to create account ws binancePerp %s`, err.Error()))
+		return
+	}
+	util.StoreSyncMap(&model.AppEnvironment.AccountConns, &model.WSConn{Conn: conn}, model.BinancePerp, account.Key)
+	go maintainActConnBinancePerp()
 }
 
 func WsDepthServeBinancePerp(environment *model.Environment, market string) (socketMap map[*websocket.Conn]bool, msgChans []chan struct{}, connectErr error) {
@@ -294,6 +268,25 @@ func handleDepthBinancePerp(environment *model.Environment, json *simplejson.Jso
 		}
 	}
 }
+func maintainActConnBinancePerp() {
+	if pingActBinancePerp {
+		return
+	}
+	pingActBinancePerp = true
+	for {
+		time.Sleep(time.Minute * 2)
+		accounts := model.AppConfig.GetAccounts(model.BinancePerp)
+		for _, account := range accounts {
+			value, _ := util.LoadSyncMap(&model.AppEnvironment.AccountConns, model.BinancePerp, account.Key)
+			if value == nil || value.(*model.WSConn).Conn == nil {
+				continue
+			}
+			if writeError := value.(*model.WSConn).Conn.WriteControl(websocket.PongMessage, []byte{}, time.Now().Add(5*time.Second)); writeError != nil {
+				util.Notice(fmt.Sprintf(`fail to pong connection return: %s`, writeError.Error()))
+			}
+		}
+	}
+}
 
 func maintainChannelBinancePerp() {
 	if pingDepthBinancePerp {
@@ -352,7 +345,7 @@ func getMarkPriceBinancePerp(account *model.Account, symbol string) (markPrice f
 // "autoclose-"开头的字符串: 系统强平订单
 // "adl_autoclose": ADL自动减仓订单
 // "settlement_autoclose-": 下架或交割的结算订单
-func placeOrderBinancePerp(key, secret string, order *model.Order, orderSide, orderType, symbol string, oriPrice, triggerPrice, amount float64) {
+func placeOrderBinancePerp(account *model.Account, isWS bool, order *model.Order, orderSide, orderType, symbol string, oriPrice, triggerPrice, amount float64) {
 	price, decimal := model.FormatPrice(model.BinancePerp, symbol, oriPrice)
 	priceStr := util.CutTailZero(strconv.FormatFloat(price, 'f', decimal, 64))
 	formattedAmount := model.GetAmountInMarket(model.BinancePerp, symbol, amount, price, false)
@@ -362,8 +355,40 @@ func placeOrderBinancePerp(key, secret string, order *model.Order, orderSide, or
 	stopPrice, stopDecimal := model.FormatPrice(model.BinancePerp, symbol, triggerPrice)
 	stopPriceStr := util.CutTailZero(strconv.FormatFloat(stopPrice, 'f', stopDecimal, 64))
 	order.TriggerPrice = stopPrice
-	if success {
-		client := futures.NewClient(key, secret)
+	if !success {
+		return
+	}
+	if isWS {
+		if orderSide == model.OrderSideBuy {
+			orderSide = string(futures.SideTypeBuy)
+		} else if orderSide == model.OrderSideSell {
+			orderSide = string(futures.SideTypeSell)
+		}
+		ts := time.Now().UnixMilli()
+		param := url.Values{}
+		param.Set("symbol", dialectSymbol)
+		param.Set("side", orderSide)
+		param.Set("type", strings.ToUpper(orderType))
+		param.Set("timeInForce", `GTC`)
+		param.Set(`price`, priceStr)
+		param.Set(`quantity`, amountStr)
+		param.Set(`apiKey`, account.Key)
+		param.Set(`timestamp`, fmt.Sprintf(`%d`, ts))
+		hash := hmac.New(sha256.New, []byte(account.Secret))
+		hash.Write([]byte(param.Encode()))
+		msg := fmt.Sprintf(`{"id": "%s","method": "order.place","params":{"symbol": "%s","side": "%s","type": "%s",
+			"timeInForce": "GTC","price": "%s","quantity": "%s","apiKey": "%s","signature": "%s","timestamp": %d}}`,
+			order.OrderId, dialectSymbol, orderSide, strings.ToUpper(orderType), priceStr, amountStr, account.Key,
+			hex.EncodeToString(hash.Sum(nil)), ts)
+		value, _ := util.LoadSyncMap(&model.AppEnvironment.AccountConns, model.BinancePerp, account.Key)
+		if value == nil || value.(*model.WSConn).Conn == nil {
+			return
+		}
+		if err := value.(*model.WSConn).Conn.WriteMessage(websocket.TextMessage, []byte(msg)); err != nil {
+			util.Notice(fmt.Sprintf(`fail to place binanceperp order return: %s`, err.Error()))
+		}
+	} else {
+		client := futures.NewClient(account.Key, account.Secret)
 		service := client.NewCreateOrderService().Symbol(dialectSymbol).Quantity(amountStr)
 		if orderSide == model.OrderSideBuy {
 			service.Side(futures.SideTypeBuy)
