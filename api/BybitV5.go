@@ -44,12 +44,12 @@ var wsTradeHandlerBybit = func(market, key string, event []byte) {
 		return
 	}
 	wsResp := model.WSResp{RequestId: responseJson.Get(`reqId`).MustString()}
-	code := responseJson.Get(`retCode`).MustString()
-	if code == `0` {
+	code := responseJson.Get(`retCode`).MustInt64()
+	if code == 0 {
 		wsResp.Success = true
 	} else {
 		wsResp.Success = false
-		wsResp.Msg = code + responseJson.Get(`retMsg`).MustString()
+		wsResp.Msg = fmt.Sprintf(`%d %s`, code, responseJson.Get(`retMsg`).MustString())
 	}
 	model.AppEnvironment.WSRespChan <- wsResp
 }

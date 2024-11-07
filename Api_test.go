@@ -525,7 +525,7 @@ func Test_WS(t *testing.T) {
 
 func Test_Orders(t *testing.T) {
 	model.NewConfig()
-	market := model.BinanceSpot
+	market := model.Bybit
 	//accounts := model.GetAccounts(0)
 	carry.MaintainAccountChan(market)
 	//time.Sleep(time.Second)

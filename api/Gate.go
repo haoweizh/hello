@@ -767,7 +767,7 @@ func placeOrderGate(account *model.Account, isWs bool, order *model.Order, order
 		}
 		util.SocketInfo(`create future order request: %v`, futuresOrder)
 		if isWs {
-			param := map[string]interface{}{`contract`: dialectSymbol[0:1], `size`: futuresOrder.Size,
+			param := map[string]interface{}{`contract`: dialectSymbol, `size`: futuresOrder.Size,
 				`price`: orderPriceStr, `tif`: `gtc`, `text`: `t-` + order.OrderId}
 			reqMap := map[string]interface{}{`time`: ts, `channel`: `futures.order_place`, `event`: `api`,
 				`payload`: map[string]interface{}{`req_id`: order.OrderId, `req_param`: param}}
