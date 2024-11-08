@@ -29,7 +29,7 @@ var pingPrivateBybit = false
 var wsStepBybit = 10
 
 var wsAccountHandlerBybit = func(market, key string, event []byte) {
-	util.NoticeLess(`bybit msg ` + string(event))
+	util.Notice(`bybit msg ` + string(event))
 	if strings.Contains(string(event), `pong`) {
 		value, _ := util.LoadSyncMap(&model.AppEnvironment.AccountConns, market, key)
 		if value != nil && value.(*model.WSConn).Conn != nil {
