@@ -299,13 +299,13 @@ func initTradeLine(account *model.Account, setting *model.Setting, status *Carry
 	status.TradeLineSell = math.Max(standardScoreSell*(0.5+jumpSell*status.RateInAll), lowestScore) - status.FoundingRate
 	status.TradeLineBuy *= account.CarryRate
 	status.TradeLineSell *= account.CarryRate
-	tradeLineExtra := getTradeLineExtra(setting.Coin, setting.CloseShortMargin)
-	if tradeLineExtra != nil {
-		status.TradeLineBuy += tradeLineExtra.buyExtra
-		status.TradeLineSell += tradeLineExtra.sellExtra
-	} else {
-		util.Notice(fmt.Sprintf(`fatal error fail to get trade line extra %s`, setting.Coin))
-	}
+	//tradeLineExtra := getTradeLineExtra(setting.Coin, setting.CloseShortMargin)
+	//if tradeLineExtra != nil {
+	//	status.TradeLineBuy += tradeLineExtra.buyExtra
+	//	status.TradeLineSell += tradeLineExtra.sellExtra
+	//} else {
+	//	util.Notice(fmt.Sprintf(`fatal error fail to get trade line extra %s`, setting.Coin))
+	//}
 	if doRevert || account.CarryClose {
 		if status.Holding > 0 {
 			status.TradeLineBuy = 1

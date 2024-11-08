@@ -22,7 +22,7 @@ import (
 const bybitRestUrl = "https://api.bybit.com"
 const bybitSpotPubWsUrl = "wss://stream.bybit.com/v5/public/spot"
 const bybitPerpPubWsUrl = "wss://stream.bybit.com/v5/public/linear"
-const bybitTradeWsUrl = "wss://stream.bybit.com/v5/trade"
+const bybitTradeWsUrl = "wss://stream.bybit.com/v5/trade?max_active_time=10m"
 
 var pingDepthBybit = false
 var pingPrivateBybit = false
@@ -58,7 +58,7 @@ func maintainAccountConnBybit() {
 	if !pingPrivateBybit {
 		pingPrivateBybit = true
 		for {
-			time.Sleep(time.Second * 20)
+			time.Sleep(time.Second * 10)
 			accounts := model.AppConfig.GetAccounts(model.Bybit)
 			for _, account := range accounts {
 				if account == nil {
@@ -66,11 +66,12 @@ func maintainAccountConnBybit() {
 				}
 				value, _ := util.LoadSyncMap(&model.AppEnvironment.AccountConns, model.Bybit, account.Key)
 				if value != nil && value.(*model.WSConn) != nil {
-					if err := SendToConnection(model.Bybit, value.(*model.WSConn).Conn, []byte(`{"op": "ping"}`)); err != nil {
+					if err := SendToConnection(model.Bybit, value.(*model.WSConn).Conn, []byte(`{ "req_id": "maintain","op": "ping"}`)); err != nil {
 						util.Notice("-test ok ws-bybit trade ws ping client error " + err.Error())
 					}
 				} else {
 					util.Notice(fmt.Sprintf(`-test bybit ws- no trade connection %s`, account.Key))
+					WsAccountServeBybit(account)
 				}
 			}
 		}

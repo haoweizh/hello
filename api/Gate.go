@@ -262,7 +262,7 @@ var markPriceHandler = gateWs.NewCallBack(func(msg *gateWs.UpdateMsg) {
 	if msg.Channel == gateWs.ChannelFutureTicker {
 		var tickers []gateWs.FuturesTicker
 		if err := json.Unmarshal(msg.Result, &tickers); err != nil {
-			util.Notice(fmt.Sprintf("future mark price Unmarshal err:%s %s %s", model.Gate, err.Error(), msg.Result))
+			util.NoticeLess(fmt.Sprintf("future mark price Unmarshal err:%s %s %s", model.Gate, err.Error(), msg.Result))
 			return
 		}
 		for _, update := range tickers {

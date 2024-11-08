@@ -42,7 +42,7 @@ func maintainAccountConnOKEX() {
 	}
 	pingingAccountOKEX = true
 	for {
-		time.Sleep(time.Second * 25)
+		time.Sleep(time.Second * 15)
 		accounts := model.AppConfig.GetAccounts(model.OKEX)
 		for _, account := range accounts {
 			if account == nil {
