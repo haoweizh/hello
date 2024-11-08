@@ -28,7 +28,7 @@ const wsBinanceSpotApi = `wss://ws-api.binance.com:443/ws-api/v3`
 const wsStepBinance = 20
 
 var pingDepthBinanceSpot = false
-var pingAccountBinanceSpot = false
+var pingAccountBinance = false
 
 func GetMarketsBinance(account *model.Account, market, marketType string) (marketInfos map[string]*model.MarketInfo) {
 	util.Notice(fmt.Sprintf("start to GetMarketsBinance %s", account.Key))
@@ -283,21 +283,27 @@ func handleDepthBinance(environment *model.Environment, json *simplejson.Json, m
 	}
 }
 
-func maintainAccountConnBinanceSpot() {
-	if pingAccountBinanceSpot {
+func maintainAccountConnBinance() {
+	if pingAccountBinance {
 		return
 	}
-	pingAccountBinanceSpot = true
+	pingAccountBinance = true
 	for {
 		time.Sleep(time.Minute * 2)
 		accounts := model.AppConfig.GetAccounts(model.BinanceSpot)
 		for _, account := range accounts {
-			value, _ := util.LoadSyncMap(&model.AppEnvironment.AccountConns, model.BinanceSpot, account.Key)
-			if value == nil || value.(*model.WSConn).Conn == nil {
-				continue
-			}
-			if writeError := value.(*model.WSConn).Conn.WriteControl(websocket.PongMessage, []byte{}, time.Now().Add(5*time.Second)); writeError != nil {
-				util.Notice(fmt.Sprintf(`fail to pong binancespot return: %s`, writeError.Error()))
+			valueSpot, _ := util.LoadSyncMap(&model.AppEnvironment.AccountConns, model.BinanceSpot, account.Key)
+			valuePerp, _ := util.LoadSyncMap(&model.AppEnvironment.AccountConns, model.BinancePerp, account.Key)
+			if valueSpot == nil || valueSpot.(*model.WSConn).Conn == nil || valuePerp == nil || valuePerp.(*model.WSConn).Conn == nil {
+				WsAccountServeBinance(account, model.BinanceSpot)
+				WsAccountServeBinance(account, model.BinancePerp)
+			} else {
+				if writeError := valueSpot.(*model.WSConn).Conn.WriteControl(websocket.PongMessage, []byte{}, time.Now().Add(5*time.Second)); writeError != nil {
+					util.Notice(fmt.Sprintf(`fail to pong binancespot return: %s`, writeError.Error()))
+				}
+				if writeError := valuePerp.(*model.WSConn).Conn.WriteControl(websocket.PongMessage, []byte{}, time.Now().Add(5*time.Second)); writeError != nil {
+					util.Notice(fmt.Sprintf(`fail to pong binancespot return: %s`, writeError.Error()))
+				}
 			}
 		}
 	}
@@ -467,21 +473,27 @@ var wsActHandlerBinance = func(market, key string, event []byte) {
 	model.AppEnvironment.WSRespChan <- wsResp
 }
 
-func WsAccountServeBinanceSpot(account *model.Account) {
+func WsAccountServeBinance(account *model.Account, market string) {
 	if account == nil {
 		return
 	}
-	value, _ := util.LoadSyncMap(&model.AppEnvironment.AccountConns, model.BinanceSpot, account.Key)
+	value, _ := util.LoadSyncMap(&model.AppEnvironment.AccountConns, market, account.Key)
 	if value != nil && value.(*model.WSConn).Conn != nil && time.Now().UnixMilli()-value.(*model.WSConn).LastMsgTime < 180000 {
 		return
 	}
-	conn, err := WsAccountClient(model.BinanceSpot, account.Key, wsBinanceSpotApi, wsActHandlerBinance)
+	apiUrl := ``
+	if market == model.BinanceSpot {
+		apiUrl = wsBinanceSpotApi
+	} else if market == model.BinancePerp {
+		apiUrl = wsBinancePerpApi
+	}
+	conn, err := WsAccountClient(model.BinanceSpot, account.Key, apiUrl, wsActHandlerBinance)
 	if err != nil {
-		util.Notice(fmt.Sprintf(`fail to create account ws BinanceSpot %s`, err.Error()))
+		util.Notice(fmt.Sprintf(`fail to create account ws %s %s`, market, err.Error()))
 		return
 	}
-	util.StoreSyncMap(&model.AppEnvironment.AccountConns, &model.WSConn{Conn: conn}, model.BinanceSpot, account.Key)
-	go maintainAccountConnBinanceSpot()
+	util.StoreSyncMap(&model.AppEnvironment.AccountConns, &model.WSConn{Conn: conn}, market, account.Key)
+	go maintainAccountConnBinance()
 }
 
 func RenewListenKeyBinanceSpot(account *model.Account) (success bool, listenKey string) {

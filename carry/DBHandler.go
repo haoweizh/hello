@@ -136,9 +136,9 @@ func MaintainAccountChan(market string) {
 		}
 		switch market {
 		case model.BinancePerp:
-			api.WsActServeBinancePerp(account)
+			api.WsAccountServeBinance(account, market)
 		case model.BinanceSpot:
-			api.WsAccountServeBinanceSpot(account)
+			api.WsAccountServeBinance(account, market)
 		case model.OKEX:
 			api.WsAccountServeOKEX(account)
 		case model.Bybit:

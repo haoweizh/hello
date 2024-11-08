@@ -50,11 +50,12 @@ func maintainAccountConnOKEX() {
 			}
 			value, _ := util.LoadSyncMap(&model.AppEnvironment.AccountConns, model.OKEX, account.Key)
 			if value == nil || value.(*model.WSConn).Conn == nil {
+				if err := SendToConnection(model.OKEX, value.(*model.WSConn).Conn, []byte(`ping`)); err != nil {
+					util.Notice("-test ok ws-okex server ping client error " + err.Error())
+				}
+			} else {
 				util.Notice(fmt.Sprintf(`-test ok ws- no private connection %s`, account.Key))
-				continue
-			}
-			if err := SendToConnection(model.OKEX, value.(*model.WSConn).Conn, []byte(`ping`)); err != nil {
-				util.Notice("-test ok ws-okex server ping client error " + err.Error())
+				WsAccountServeOKEX(account)
 			}
 		}
 	}

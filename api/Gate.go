@@ -324,12 +324,14 @@ func maintainAccountChannelGate() {
 		time.Sleep(time.Second * 20)
 		accounts := model.AppConfig.GetAccounts(model.Gate)
 		for _, account := range accounts {
+			success := true
 			wsSpot, _ := util.LoadSyncMap(&model.AppEnvironment.AccountConns, model.Gate, model.MarketTypeSpot, account.Key)
-			if wsSpot != nil {
+			if wsSpot != nil && wsSpot.(*model.WSConn).Conn != nil {
 				if err := wsSpot.(*model.WSConn).Conn.WriteMessage(websocket.TextMessage, []byte(fmt.Sprintf(
 					`{"time": %d, "channel" : "spot.ping"}`, time.Now().Unix()))); err != nil {
 					util.Notice(fmt.Sprintf("send account spot ping message err:%s %s", model.Gate, err.Error()))
 				}
+				success = false
 			}
 			wsFuture, _ := util.LoadSyncMap(&model.AppEnvironment.AccountConns, model.Gate, model.MarketTypePerp, account.Key)
 			if wsFuture != nil {
@@ -337,6 +339,10 @@ func maintainAccountChannelGate() {
 					`{"time": %d, "channel" : "futures.ping"}`, time.Now().Unix()))); err != nil {
 					util.Notice(fmt.Sprintf("send account futures ping message err:%s %s", model.Gate, err.Error()))
 				}
+				success = false
+			}
+			if !success {
+				WSAccountServeGate(account)
 			}
 		}
 	}

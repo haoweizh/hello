@@ -27,7 +27,6 @@ const wsBinancePerpApi = `wss://ws-fapi.binance.com/ws-fapi/v1`
 
 const wsStepBinancePerp = 20
 
-var pingActBinancePerp = false
 var pingDepthBinancePerp = false
 
 func getMarketsBinancePerp(key, secret string) (marketInfos map[string]*model.MarketInfo) {
@@ -104,23 +103,6 @@ func getMarketsBinancePerp(key, secret string) (marketInfos map[string]*model.Ma
 		}
 	}
 	return marketInfos
-}
-
-func WsActServeBinancePerp(account *model.Account) {
-	if account == nil {
-		return
-	}
-	value, _ := util.LoadSyncMap(&model.AppEnvironment.AccountConns, model.BinancePerp, account.Key)
-	if value != nil && value.(*model.WSConn).Conn != nil && time.Now().UnixMilli()-value.(*model.WSConn).LastMsgTime < 180000 {
-		return
-	}
-	conn, err := WsAccountClient(model.BinancePerp, account.Key, wsBinancePerpApi, wsActHandlerBinance)
-	if err != nil {
-		util.Notice(fmt.Sprintf(`fail to create account ws binancePerp %s`, err.Error()))
-		return
-	}
-	util.StoreSyncMap(&model.AppEnvironment.AccountConns, &model.WSConn{Conn: conn}, model.BinancePerp, account.Key)
-	go maintainActConnBinancePerp()
 }
 
 func WsDepthServeBinancePerp(environment *model.Environment, market string) (socketMap map[*websocket.Conn]bool, msgChans []chan struct{}, connectErr error) {
@@ -265,25 +247,6 @@ func handleDepthBinancePerp(environment *model.Environment, json *simplejson.Jso
 				}
 				return true
 			})
-		}
-	}
-}
-func maintainActConnBinancePerp() {
-	if pingActBinancePerp {
-		return
-	}
-	pingActBinancePerp = true
-	for {
-		time.Sleep(time.Minute * 2)
-		accounts := model.AppConfig.GetAccounts(model.BinancePerp)
-		for _, account := range accounts {
-			value, _ := util.LoadSyncMap(&model.AppEnvironment.AccountConns, model.BinancePerp, account.Key)
-			if value == nil || value.(*model.WSConn).Conn == nil {
-				continue
-			}
-			if writeError := value.(*model.WSConn).Conn.WriteControl(websocket.PongMessage, []byte{}, time.Now().Add(5*time.Second)); writeError != nil {
-				util.Notice(fmt.Sprintf(`fail to pong connection return: %s`, writeError.Error()))
-			}
 		}
 	}
 }
