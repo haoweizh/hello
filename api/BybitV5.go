@@ -28,7 +28,8 @@ var pingDepthBybit = false
 var pingPrivateBybit = false
 var wsStepBybit = 10
 
-var wsTradeHandlerBybit = func(market, key string, event []byte) {
+var wsAccountHandlerBybit = func(market, key string, event []byte) {
+	util.NoticeLess(`bybit msg ` + string(event))
 	if strings.Contains(string(event), `pong`) {
 		value, _ := util.LoadSyncMap(&model.AppEnvironment.AccountConns, market, key)
 		if value != nil && value.(*model.WSConn).Conn != nil {
@@ -66,7 +67,8 @@ func maintainAccountConnBybit() {
 				}
 				value, _ := util.LoadSyncMap(&model.AppEnvironment.AccountConns, model.Bybit, account.Key)
 				if value != nil && value.(*model.WSConn) != nil {
-					if err := SendToConnection(model.Bybit, value.(*model.WSConn).Conn, []byte(`{ "req_id": "maintain","op": "ping"}`)); err != nil {
+					if err := SendToConnection(model.Bybit, value.(*model.WSConn).Conn, []byte(fmt.Sprintf(
+						`{ "req_id": "maintain %d","op": "ping"}`, time.Now().UnixMilli()))); err != nil {
 						util.Notice("-test ok ws-bybit trade ws ping client error " + err.Error())
 					}
 				} else {
@@ -82,13 +84,13 @@ func WsAccountServeBybit(account *model.Account) {
 	if account == nil {
 		return
 	}
-	valueTrade, _ := util.LoadSyncMap(&model.AppEnvironment.AccountConns, model.Bybit, account.Key)
-	if valueTrade != nil && valueTrade.(*model.WSConn).Conn != nil && time.Now().UnixMilli()-valueTrade.(*model.WSConn).LastMsgTime < 60000 {
+	valueAccount, _ := util.LoadSyncMap(&model.AppEnvironment.AccountConns, model.Bybit, account.Key)
+	if valueAccount != nil && valueAccount.(*model.WSConn).Conn != nil && time.Now().UnixMilli()-valueAccount.(*model.WSConn).LastMsgTime < 60000 {
 		return
 	}
-	connTrade, errTrade := WsAccountClient(model.Bybit, account.Key, bybitTradeWsUrl, wsTradeHandlerBybit)
-	if errTrade != nil {
-		util.Notice("can not create web socket " + errTrade.Error())
+	connAccount, err := WsAccountClient(model.Bybit, account.Key, bybitTradeWsUrl, wsAccountHandlerBybit)
+	if err != nil {
+		util.Notice("can not create web socket " + err.Error())
 	}
 	loginMap := make(map[string]interface{})
 	loginMap[`op`] = `auth`
@@ -100,11 +102,11 @@ func WsAccountServeBybit(account *model.Account) {
 	loginArray := []interface{}{account.Key, timestamp, sign}
 	loginMap[`args`] = loginArray
 	loginBytes := util.JsonEncodeToByte(loginMap)
-	if connTrade != nil {
-		if err := SendToConnection(model.Bybit, connTrade, loginBytes); err != nil {
+	if connAccount != nil {
+		if err := SendToConnection(model.Bybit, connAccount, loginBytes); err != nil {
 			util.Notice(fmt.Sprintf(`fail to login bybit trade ws: %s return %s`, account.Key, err.Error()))
 		} else {
-			util.StoreSyncMap(&model.AppEnvironment.AccountConns, &model.WSConn{Conn: connTrade}, model.Bybit, account.Key)
+			util.StoreSyncMap(&model.AppEnvironment.AccountConns, &model.WSConn{Conn: connAccount}, model.Bybit, account.Key)
 		}
 	}
 	go maintainAccountConnBybit()
