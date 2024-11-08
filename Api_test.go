@@ -525,9 +525,10 @@ func Test_WS(t *testing.T) {
 
 func Test_Orders(t *testing.T) {
 	model.NewConfig()
-	market := model.Bybit
-	//accounts := model.GetAccounts(0)
-	carry.MaintainAccountChan(market)
+	market := model.BinanceSpot
+	accounts := model.GetAccounts(0)
+	api.GetMarketsBinance(accounts[market], model.BinanceSpot)
+	//carry.MaintainAccountChan(market)
 	//time.Sleep(time.Second)
 	symbol := `BTC_USDT`
 	api.InitMarketInfos(market)

@@ -30,7 +30,7 @@ const wsStepBinance = 20
 var pingDepthBinanceSpot = false
 var pingAccountBinance = false
 
-func GetMarketsBinance(account *model.Account, market, marketType string) (marketInfos map[string]*model.MarketInfo) {
+func GetMarketsBinance(account *model.Account, market string) (marketInfos map[string]*model.MarketInfo) {
 	util.Notice(fmt.Sprintf("start to GetMarketsBinance %s", account.Key))
 	marketInfos = make(map[string]*model.MarketInfo)
 	client := binance.NewClient(account.Key, account.Secret)
@@ -39,19 +39,13 @@ func GetMarketsBinance(account *model.Account, market, marketType string) (marke
 	if err != nil {
 		util.Notice(fmt.Sprintf("GetMarketsBinance %s err: %s %v休息五分钟", account.Key, err.Error(), exchangeInfo))
 		time.Sleep(time.Minute * 5)
-		return GetMarketsBinance(account, market, marketType)
+		return GetMarketsBinance(account, market)
 	}
 	for _, item := range exchangeInfo.Symbols {
-		if item.Status != "TRADING" || item.QuoteAsset != model.DialectTail[marketType][market] ||
-			(market == model.BinanceSpot && !item.IsSpotTradingAllowed) ||
-			(market == model.BinanceMargin && !item.IsMarginTradingAllowed) {
+		if item.Status != "TRADING" || item.QuoteAsset != model.DialectTail[model.MarketTypeSpot][market] || !item.IsMarginTradingAllowed {
 			continue
 		}
-		uniTail := model.UniStandardTail[marketType]
-		if marketType == model.MarketTypeMargin {
-			uniTail = model.UniStandardTail[model.MarketTypeSpot]
-		}
-		marketInfo := &model.MarketInfo{Market: market, MoneyMin: 10, Name: item.BaseAsset + uniTail}
+		marketInfo := &model.MarketInfo{Market: market, MoneyMin: 10, Name: item.BaseAsset + model.UniStandardTail[model.MarketTypeSpot]}
 		for _, data := range item.Filters {
 			filterType := data[`filterType`].(string)
 			if filterType == `PRICE_FILTER` {
@@ -487,7 +481,7 @@ func WsAccountServeBinance(account *model.Account, market string) {
 	} else if market == model.BinancePerp {
 		apiUrl = wsBinancePerpApi
 	}
-	conn, err := WsAccountClient(model.BinanceSpot, account.Key, apiUrl, wsActHandlerBinance)
+	conn, err := WsAccountClient(market, account.Key, apiUrl, wsActHandlerBinance)
 	if err != nil {
 		util.Notice(fmt.Sprintf(`fail to create account ws %s %s`, market, err.Error()))
 		return
@@ -635,27 +629,6 @@ func getBalanceBinanceSpot(key string, secret string) (success bool, balances []
 		balances = append(balances, balance)
 	}
 	return true, balances
-}
-
-// getPriceBinanceSpot
-func _(key, secret, symbol string) (success bool, price float64) {
-	suc, _, _, dialectSymbol := model.GetFromStandard(model.BinanceSpot, symbol)
-	if !suc {
-		return false, 0
-	}
-	client := binance.NewClient(key, secret)
-	resPrice, err := client.NewListPricesService().Symbol(dialectSymbol).Do(context.Background())
-	if err != nil && !strings.Contains(err.Error(), `-2010`) {
-		util.Notice(fmt.Sprintf("getPriceBinanceSpot err: %s standard %s dialect %s",
-			err.Error(), symbol, dialectSymbol))
-		time.Sleep(time.Minute)
-		return false, 0
-	}
-	if len(resPrice) > 0 {
-		price, err = strconv.ParseFloat(resPrice[0].Price, 64)
-		return err == nil, price
-	}
-	return true, 0
 }
 
 func queryOpenOrdersBinanceSpot(key, secret, symbol string) (orders []*model.Order) {

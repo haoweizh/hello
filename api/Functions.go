@@ -1129,9 +1129,7 @@ func InitMarketInfos(market string) (success bool) {
 	case model.HuobiSpot:
 		marketInfos = getMarketsHuobiSpot(accounts[0].Key, accounts[0].Secret)
 	case model.BinanceSpot:
-		marketInfos = GetMarketsBinance(accounts[0], market, model.MarketTypeSpot)
-	case model.BinanceMargin:
-		marketInfos = GetMarketsBinance(accounts[0], market, model.MarketTypeMargin)
+		marketInfos = GetMarketsBinance(accounts[0], market)
 	case model.BinancePerp:
 		marketInfos = getMarketsBinancePerp(accounts[0].Key, accounts[0].Secret)
 		go func() {

@@ -71,7 +71,8 @@ const FunctionMonitorKLine = `monitor_kline`
 const TurtleTypeChange = `change`
 const MarketTypePerp = `perp`
 const MarketTypeSpot = `spot`
-const MarketTypeMargin = `margin`
+
+// const MarketTypeMargin = `margin`
 const FunctionDCarry = `dcarry`
 const FunctionComplement = `comp`
 const FunctionBitgetLiq = `liquidate`
