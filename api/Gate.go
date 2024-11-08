@@ -297,8 +297,10 @@ var wsAccountHandlerGate = func(market, key string, event []byte) {
 	ts := responseJson.Get(`time_ms`).MustInt64()
 	if `futures.pong` == channel {
 		valueFuture.(*model.WSConn).LastMsgTime = ts
+		util.Notice(fmt.Sprintf(`set gate future time %d`, ts))
 	} else if `spot.pong` == channel {
 		valueSpot.(*model.WSConn).LastMsgTime = ts
+		util.Notice(fmt.Sprintf(`set gate spot time %d`, ts))
 	} else {
 		requestId := responseJson.Get(`request_id`).MustString()
 		result := responseJson.GetPath(`header`, `status`).MustString()
@@ -330,16 +332,16 @@ func maintainAccountChannelGate() {
 				if err := wsSpot.(*model.WSConn).Conn.WriteMessage(websocket.TextMessage, []byte(fmt.Sprintf(
 					`{"time": %d, "channel" : "spot.ping"}`, time.Now().Unix()))); err != nil {
 					util.Notice(fmt.Sprintf("send account spot ping message err:%s %s", model.Gate, err.Error()))
+					success = false
 				}
-				success = false
 			}
 			wsFuture, _ := util.LoadSyncMap(&model.AppEnvironment.AccountConns, model.Gate, model.MarketTypePerp, account.Key)
 			if wsFuture != nil {
 				if err := wsFuture.(*model.WSConn).Conn.WriteMessage(websocket.TextMessage, []byte(fmt.Sprintf(
 					`{"time": %d, "channel" : "futures.ping"}`, time.Now().Unix()))); err != nil {
 					util.Notice(fmt.Sprintf("send account futures ping message err:%s %s", model.Gate, err.Error()))
+					success = false
 				}
-				success = false
 			}
 			if !success {
 				WSAccountServeGate(account)
@@ -356,6 +358,7 @@ func WSAccountServeGate(account *model.Account) {
 	valueFuture, _ := util.LoadSyncMap(&model.AppEnvironment.AccountConns, model.Gate, model.MarketTypePerp, account.Key)
 	if valueSpot != nil && valueFuture != nil && valueSpot.(*model.WSConn).Conn != nil && valueFuture.(*model.WSConn).Conn != nil &&
 		time.Now().UnixMilli()-valueSpot.(*model.WSConn).LastMsgTime < 60000 && time.Now().UnixMilli()-valueFuture.(*model.WSConn).LastMsgTime < 60000 {
+		util.Notice(fmt.Sprintf(`no need to update gate act channel`))
 		return
 	}
 	ts := time.Now().Unix()
@@ -370,6 +373,7 @@ func WSAccountServeGate(account *model.Account) {
 	msgSpot := fmt.Sprintf(`{"time": %d,"channel": "spot.login","event": "api","payload": {"api_key": "%s",
     		"signature": "%s","timestamp": "%d","req_id": "request%d"}}`, ts, account.Key, signSpot, ts, ts)
 	if err := connSpot.WriteMessage(websocket.TextMessage, []byte(msgSpot)); err != nil {
+		util.Notice(fmt.Sprintf("send account spot login message err: %s %s", model.Gate, err.Error()))
 		util.DelSyncMap(&model.AppEnvironment.AccountConns, model.Gate, model.MarketTypeSpot, account.Key)
 	} else {
 		util.StoreSyncMap(&model.AppEnvironment.AccountConns, &model.WSConn{Conn: connSpot}, model.Gate, model.MarketTypeSpot, account.Key)
@@ -385,6 +389,7 @@ func WSAccountServeGate(account *model.Account) {
 		return
 	}
 	if err := connFuture.WriteMessage(websocket.TextMessage, []byte(msgFuture)); err != nil {
+		util.Notice(fmt.Sprintf("send account future login message err: %s %s", model.Gate, err.Error()))
 		util.DelSyncMap(&model.AppEnvironment.AccountConns, model.Gate, model.MarketTypePerp, account.Key)
 	} else {
 		util.StoreSyncMap(&model.AppEnvironment.AccountConns, &model.WSConn{Conn: connFuture}, model.Gate, model.MarketTypePerp, account.Key)
