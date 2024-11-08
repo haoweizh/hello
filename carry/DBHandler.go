@@ -110,13 +110,6 @@ func MaintainTransFee() {
 }
 
 func ClearChannels(market string, chanMap *sync.Map) {
-	accounts := model.AppConfig.GetAccounts(market)
-	for _, account := range accounts {
-		if account == nil {
-			continue
-		}
-		util.DelSyncMap(&model.AppEnvironment.AccountConns, market, account.Key)
-	}
 	if chanMap != nil {
 		channels, _ := chanMap.Load(market)
 		for i, channel := range channels.([]chan struct{}) {
@@ -153,7 +146,7 @@ func MaintainMarketChan(market string) (reset bool) {
 	depthChans, _ := model.AppEnvironment.MsgChanTick.Load(market)
 	if depthChans == nil || len(depthChans.([]chan struct{})) == 0 {
 		api.CreateMarketTickerWS(model.AppEnvironment, market)
-	} else if api.RequireDepthChanReset(model.AppEnvironment, market) || time.Now().Second() == 0 {
+	} else if api.RequireDepthChanReset(model.AppEnvironment, market) {
 		reset = true
 		ClearChannels(market, &model.AppEnvironment.MsgChanTick)
 		api.CreateMarketTickerWS(model.AppEnvironment, market)
