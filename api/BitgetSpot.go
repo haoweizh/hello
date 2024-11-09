@@ -96,7 +96,6 @@ func WsDepthServeBitgetSpot(environment *model.Environment, market string) (sock
 			util.SocketInfo(`bitget fail to unmarshal book ws data json ` + jsonErr.Error())
 			return
 		}
-		fmt.Println(fmt.Sprintf(`%d,%d %s`, time.Now().Second(), time.Now().UnixMilli(), string(event)))
 		bidAsk := parseBidAskBitget(bookWsResp, model.BitgetSpot, model.MarketTypeSpot)
 		if bidAsk == nil || bidAsk.Bids.Len() == 0 {
 			return
