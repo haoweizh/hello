@@ -92,7 +92,7 @@ func appendRelatedMarketsKucoin(key string, marketInfos map[string]*model.Market
 
 func WsDepthServeKucoinSpot() (channels []chan struct{}, err error) {
 	relatedClient := kucoinRelatedClient("", "", "")
-	relatedRsp, relatedErr := relatedClient.WebSocketPublicToken()
+	relatedRsp, relatedErr := relatedClient.WebSocketPublicToken(nil)
 	if relatedErr != nil {
 		util.SocketInfo(fmt.Sprintf("function: %s kucoin related websocket error:%s", "WsDepthServeKucoin", relatedErr))
 		return channels, relatedErr
@@ -203,7 +203,7 @@ func handleKucoinSpotWS(relatedMsg *kucoin.WebSocketDownstreamMessage) {
 
 func getBalanceKucoinSpot(key string, secret string) (success bool, balances []*model.Balance) {
 	if model.AppConfig.KucoinSpot {
-		accountResp, err := kucoinRelatedClient("", "", "").Accounts("", "trade")
+		accountResp, err := kucoinRelatedClient("", "", "").Accounts(nil, "", "trade")
 		if err != nil || accountResp.Code != "200000" {
 			util.SocketInfo(fmt.Sprintf("fail to refresh spot balance kucoin, err:%s, response:%v", err, accountResp))
 			time.Sleep(time.Minute * 5)
@@ -228,7 +228,7 @@ func getBalanceKucoinSpot(key string, secret string) (success bool, balances []*
 			balances = append(balances, balance)
 		}
 	} else {
-		accountResp, err := kucoinRelatedClient("", "", "").MarginAccount()
+		accountResp, err := kucoinRelatedClient("", "", "").MarginAccount(nil)
 		if err != nil || accountResp.Code != "200000" {
 			util.SocketInfo(fmt.Sprintf("fail to refresh margin balance kucoin, err:%s, response:%v", err, accountResp))
 			time.Sleep(time.Minute * 5)
@@ -270,7 +270,7 @@ func cancelOrdersKucoinSpot(symbol string) (result bool) {
 			param["tradeType"] = "MARGIN_TRADE"
 		}
 		param["symbol"] = dialectSymbol
-		apiResponse, err := kucoinRelatedClient("", "", "").CancelOrders(param)
+		apiResponse, err := kucoinRelatedClient("", "", "").CancelOrders(nil, param)
 		if err != nil || apiResponse.Code != "200000" {
 			util.SocketInfo(fmt.Sprintf("function: %s fail to cancel related orders kucoin, err:%s, response:%v", "cancelOrdersKucoin", err, apiResponse))
 			return false
@@ -327,7 +327,7 @@ func placeOrderKucoinSpot(order *model.Order, orderSide, orderType, symbol strin
 			createOrder.Price = util.CutTailZero(strconv.FormatFloat(priceSpot, 'f', decimalSpot, 64))
 			createOrder.Size = util.CutTailZero(fmt.Sprintf(`%f`, model.GetAmountInMarket(model.KucoinSpot, symbol, amount, price, false)))
 			util.SocketInfo(fmt.Sprintf(`create spot order request: %v`, createOrder))
-			spotOrderResponse, err := kucoinRelatedClient("", "", "").CreateOrder(createOrder)
+			spotOrderResponse, err := kucoinRelatedClient("", "", "").CreateOrder(nil, createOrder)
 			if err != nil || spotOrderResponse.Code != "200000" {
 				util.SocketInfo(fmt.Sprintf("function: %s fail to create spot order kucoin, err:%s, response:%v", "placeOrderKucoin", err, spotOrderResponse))
 				order.Status = model.CarryStatusFail
@@ -367,7 +367,7 @@ func placeOrderKucoinSpot(order *model.Order, orderSide, orderType, symbol strin
 			util.SocketInfo(fmt.Sprintf(`create margin order request: %v`, createOrder))
 			req := kucoin.NewRequest(http.MethodPost, "/api/v1/margin/order", createOrder)
 			//todo CreateMarginOrder
-			marginOrderResp, err := kucoinRelatedClient("", "", "").Call(req)
+			marginOrderResp, err := kucoinRelatedClient("", "", "").Call(nil, req)
 			if err != nil || marginOrderResp.Code != "200000" {
 				util.SocketInfo(fmt.Sprintf("function: %s fail to create margin order kucoin, err:%s, response:%v", "placeOrderKucoin", err, marginOrderResp))
 				order.Status = model.CarryStatusFail
@@ -398,7 +398,7 @@ func placeOrderKucoinSpot(order *model.Order, orderSide, orderType, symbol strin
 }
 
 func queryOrderKucoinSpot(symbol string, orderId string) (order *model.Order) {
-	orderResponse, respErr := kucoinRelatedClient("", "", "").Order(orderId)
+	orderResponse, respErr := kucoinRelatedClient("", "", "").Order(nil, orderId)
 	if respErr != nil || orderResponse.Code != "200000" {
 		util.SocketInfo(fmt.Sprintf("function: %s fail to query kucoin spot order , err:%s, response:%v", "queryOrderKucoinSpot", respErr, orderResponse))
 		return
