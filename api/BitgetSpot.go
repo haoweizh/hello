@@ -50,6 +50,45 @@ func getMarketsBitgetSpot() (marketInfos map[string]*model.MarketInfo) {
 	return marketInfos
 }
 
+func parseBidAskBitget(bookWsResp *dtos.BitgetBoosWsResp, market, marketType string) (bidAsk *model.BidAsk) {
+	if bookWsResp == nil || bookWsResp.Arg.InstType != "sp" {
+		return nil
+	}
+	switch bookWsResp.Action {
+	case `snapshot`:
+		if bookWsResp.Arg.InstId == "" || !util.EndWith(bookWsResp.Arg.InstId, "USDT") || bookWsResp.Data == nil {
+			return nil
+		}
+		symbol := bookWsResp.Arg.InstId[0:len(bookWsResp.Arg.InstId)-4] + model.UniStandardTail[marketType]
+		bidAsk = &model.BidAsk{TsReceived: int(time.Now().UnixNano() / int64(time.Millisecond))}
+		if len(bookWsResp.Data) > 1 ||
+			len(bookWsResp.Data[0].Bids) < 1 || len(bookWsResp.Data[0].Bids[0]) < 2 ||
+			len(bookWsResp.Data[0].Asks) < 1 || len(bookWsResp.Data[0].Asks[0]) < 2 {
+			return nil
+		}
+		bidPrice, _ := strconv.ParseFloat(bookWsResp.Data[0].Bids[0][0], 64)
+		bidAmount, _ := strconv.ParseFloat(bookWsResp.Data[0].Bids[0][1], 64)
+		bids := make([]model.Tick, 0)
+		bids = append(bids, model.Tick{Price: bidPrice, Amount: bidAmount, Market: market, Symbol: symbol})
+		bidAsk.Bids = bids
+		askPrice, _ := strconv.ParseFloat(bookWsResp.Data[0].Asks[0][0], 64)
+		askAmount, _ := strconv.ParseFloat(bookWsResp.Data[0].Asks[0][1], 64)
+		asks := make([]model.Tick, 0)
+		asks = append(asks, model.Tick{Price: askPrice, Amount: askAmount, Market: market, Symbol: symbol})
+		bidAsk.Asks = asks
+		bidAsk.Ts, _ = strconv.Atoi(bookWsResp.Data[0].Ts)
+		bidAsk.UpdateId, _ = strconv.ParseInt(bookWsResp.Data[0].Ts, 10, 64)
+	case `update`:
+
+	}
+	if bookWsResp.Action == "snapshot" {
+
+	} else {
+		//fmt.Println(fmt.Sprintf(`%d,%d %s`, time.Now().Second(), time.Now().UnixMilli(), string(event)))
+	}
+	return bidAsk
+}
+
 func WsDepthServeBitgetSpot(environment *model.Environment, market string) (socketMap map[*websocket.Conn]bool, msgChans []chan struct{}, connectErr error) {
 	bookWsHandler := func(event []byte) {
 		//util.Notice(fmt.Sprintf("bitget spot ws book ticker: %s", event))
@@ -62,49 +101,32 @@ func WsDepthServeBitgetSpot(environment *model.Environment, market string) (sock
 			util.SocketInfo(`bitget fail to unmarshal book ws data json ` + jsonErr.Error())
 			return
 		}
-		if bookWsResp.Arg.InstType == "sp" && bookWsResp.Action == "snapshot" {
-			if bookWsResp.Arg.InstId == "" || !util.EndWith(bookWsResp.Arg.InstId, "USDT") || bookWsResp.Data == nil {
-				return
-			}
-			symbol := bookWsResp.Arg.InstId[0:len(bookWsResp.Arg.InstId)-4] + model.UniStandardTail[model.MarketTypeSpot]
-			bidAsk := model.BidAsk{TsReceived: int(time.Now().UnixNano() / int64(time.Millisecond))}
-			if len(bookWsResp.Data) > 1 ||
-				len(bookWsResp.Data[0].Bids) < 1 || len(bookWsResp.Data[0].Bids[0]) < 2 ||
-				len(bookWsResp.Data[0].Asks) < 1 || len(bookWsResp.Data[0].Asks[0]) < 2 {
-				return
-			}
-			bidPrice, _ := strconv.ParseFloat(bookWsResp.Data[0].Bids[0][0], 64)
-			bidAmount, _ := strconv.ParseFloat(bookWsResp.Data[0].Bids[0][1], 64)
-			bids := make([]model.Tick, 0)
-			bids = append(bids, model.Tick{Price: bidPrice, Amount: bidAmount, Market: model.BitgetSpot, Symbol: symbol})
-			bidAsk.Bids = bids
-			askPrice, _ := strconv.ParseFloat(bookWsResp.Data[0].Asks[0][0], 64)
-			askAmount, _ := strconv.ParseFloat(bookWsResp.Data[0].Asks[0][1], 64)
-			asks := make([]model.Tick, 0)
-			asks = append(asks, model.Tick{Price: askPrice, Amount: askAmount, Market: model.BitgetSpot, Symbol: symbol})
-			bidAsk.Asks = asks
-			bidAsk.Ts, _ = strconv.Atoi(bookWsResp.Data[0].Ts)
-			bidAsk.UpdateId, _ = strconv.ParseInt(bookWsResp.Data[0].Ts, 10, 64)
-			haveOld, old := environment.GetBidAsk(symbol, model.BitgetSpot)
-			if haveOld && old.UpdateId > bidAsk.UpdateId {
-				return
-			}
-			if environment.SetBidAsk(symbol, model.BitgetSpot, &bidAsk) {
-				funcHandlers := GetFunctions(model.BitgetSpot, symbol)
-				if funcHandlers != nil {
-					funcHandlers.Range(func(function, value interface{}) bool {
-						setting := GetSetting(function.(string), model.BitgetSpot, symbol)
-						if setting != nil && value != nil && value.(model.CarryHandler) != nil {
-							go value.(model.CarryHandler)(setting, &bidAsk)
-						}
-						return true
-					})
-				}
+		fmt.Println(fmt.Sprintf(`%d,%d %s`, time.Now().Second(), time.Now().UnixMilli(), string(event)))
+		bidAsk := parseBidAskBitget(bookWsResp, model.BitgetSpot, model.MarketTypeSpot)
+		if bidAsk == nil || bidAsk.Bids.Len() == 0 {
+			return
+		}
+		symbol := bidAsk.Bids[0].Symbol
+		haveOld, old := environment.GetBidAsk(symbol, model.BitgetSpot)
+		if haveOld && old.UpdateId > bidAsk.UpdateId {
+			return
+		}
+		if environment.SetBidAsk(symbol, model.BitgetSpot, bidAsk) {
+			funcHandlers := GetFunctions(model.BitgetSpot, symbol)
+			if funcHandlers != nil {
+				funcHandlers.Range(func(function, value interface{}) bool {
+					setting := GetSetting(function.(string), model.BitgetSpot, symbol)
+					if setting != nil && value != nil && value.(model.CarryHandler) != nil {
+						go value.(model.CarryHandler)(setting, bidAsk)
+					}
+					return true
+				})
 			}
 		}
 	}
 	spotSubscribes := make([]interface{}, 0)
 	symbols := GetMarketSymbols(model.BitgetSpot)
+	symbols = map[string]bool{`MTL_USDT`: true}
 	for symbol := range symbols {
 		spotSubscribes = append(spotSubscribes, symbol)
 	}
@@ -125,7 +147,7 @@ var subscribeHandlerBitgetSpotBookTicker = func(market string, connection *webso
 			continue
 		}
 		symbol := strings.Split(dialectSymbol, "_")[0]
-		params = append(params, map[string]string{"instType": "sp", "channel": "books5", "instId": symbol})
+		params = append(params, map[string]string{"instType": "sp", "channel": "books1", "instId": symbol})
 	}
 	subscribeMap := make(map[string]interface{})
 	subscribeMap["op"] = "subscribe"

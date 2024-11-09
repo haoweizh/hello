@@ -35,7 +35,7 @@ func Test_MapDel(t *testing.T) {
 func Test_initMonitors(t *testing.T) {
 	model.NewConfig()
 	intervals := []int{300, 900, 3600, 14400, 86400}
-	marketInfos := api.GetMarketsBinance(model.GetAccounts(0)[model.BinanceSpot], model.BinanceSpot, model.MarketTypeSpot)
+	marketInfos := api.GetMarketsBinance(model.GetAccounts(0)[model.BinanceSpot], model.BinanceSpot)
 	for symbol := range marketInfos {
 		for _, interval := range intervals {
 			settingMonitor := model.SettingMonitor{

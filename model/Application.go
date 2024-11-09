@@ -21,6 +21,7 @@ var monitorInfo = &sync.Map{} // userIndex - table - syncMap[string -array[]stri
 var AppMetric = &MetricManager{}
 var IgnoreFunctions = map[string]bool{FunctionDynamicTurtle: true, FunctionTurtleNormal: true,
 	FunctionDynamicCombine: true, FunctionDynamicBoost: true}
+var NonRTTicker = map[string]bool{Bybit: true, BitgetSpot: true, BitgetPerp: true}
 
 const DefaultLeverage = 4
 const BitgetSpot = `bitgetspot`
