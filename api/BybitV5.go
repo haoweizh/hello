@@ -33,6 +33,7 @@ var wsAccountHandlerBybit = func(market, key string, event []byte) {
 		value, _ := util.LoadSyncMap(&model.AppEnvironment.AccountConns, market, key)
 		if value != nil && value.(*model.WSConn).Conn != nil {
 			value.(*model.WSConn).LastMsgTime = time.Now().UnixMilli()
+			util.Notice(fmt.Sprintf(`bybit success get pong msg %d`, value.(*model.WSConn).LastMsgTime))
 		}
 		return
 	}
@@ -69,6 +70,8 @@ func maintainAccountConnBybit() {
 					if err := SendToConnection(model.Bybit, value.(*model.WSConn).Conn, []byte(fmt.Sprintf(
 						`{ "req_id": "maintain %d","op": "ping"}`, time.Now().UnixMilli()))); err != nil {
 						util.Notice("-test ok ws-bybit trade ws ping client error " + err.Error())
+					} else {
+						util.Notice(`-test ok ws-bybit trade ws ping client success`)
 					}
 				} else {
 					util.Notice(fmt.Sprintf(`-test bybit ws- no trade connection %s`, account.Key))
@@ -105,6 +108,7 @@ func WsAccountServeBybit(account *model.Account) {
 		if err := SendToConnection(model.Bybit, connAccount, loginBytes); err != nil {
 			util.Notice(fmt.Sprintf(`fail to login bybit trade ws: %s return %s`, account.Key, err.Error()))
 		} else {
+			util.Notice(fmt.Sprintf(`store bybit act conn`))
 			util.StoreSyncMap(&model.AppEnvironment.AccountConns, &model.WSConn{Conn: connAccount}, model.Bybit, account.Key)
 		}
 	}

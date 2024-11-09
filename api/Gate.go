@@ -297,10 +297,8 @@ var wsAccountHandlerGate = func(market, key string, event []byte) {
 	ts := responseJson.Get(`time_ms`).MustInt64()
 	if `futures.pong` == channel {
 		valueFuture.(*model.WSConn).LastMsgTime = ts
-		util.Notice(fmt.Sprintf(`set gate future time %d`, ts))
 	} else if `spot.pong` == channel {
 		valueSpot.(*model.WSConn).LastMsgTime = ts
-		util.Notice(fmt.Sprintf(`set gate spot time %d`, ts))
 	} else {
 		requestId := responseJson.Get(`request_id`).MustString()
 		result := responseJson.GetPath(`header`, `status`).MustString()
@@ -358,7 +356,6 @@ func WSAccountServeGate(account *model.Account) {
 	valueFuture, _ := util.LoadSyncMap(&model.AppEnvironment.AccountConns, model.Gate, model.MarketTypePerp, account.Key)
 	if valueSpot != nil && valueFuture != nil && valueSpot.(*model.WSConn).Conn != nil && valueFuture.(*model.WSConn).Conn != nil &&
 		time.Now().UnixMilli()-valueSpot.(*model.WSConn).LastMsgTime < 60000 && time.Now().UnixMilli()-valueFuture.(*model.WSConn).LastMsgTime < 60000 {
-		util.Notice(fmt.Sprintf(`no need to update gate act channel`))
 		return
 	}
 	ts := time.Now().Unix()
