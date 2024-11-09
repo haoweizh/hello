@@ -81,11 +81,6 @@ func parseBidAskBitget(bookWsResp *dtos.BitgetBoosWsResp, market, marketType str
 	case `update`:
 
 	}
-	if bookWsResp.Action == "snapshot" {
-
-	} else {
-		//fmt.Println(fmt.Sprintf(`%d,%d %s`, time.Now().Second(), time.Now().UnixMilli(), string(event)))
-	}
 	return bidAsk
 }
 
@@ -126,7 +121,6 @@ func WsDepthServeBitgetSpot(environment *model.Environment, market string) (sock
 	}
 	spotSubscribes := make([]interface{}, 0)
 	symbols := GetMarketSymbols(model.BitgetSpot)
-	symbols = map[string]bool{`MTL_USDT`: true}
 	for symbol := range symbols {
 		spotSubscribes = append(spotSubscribes, symbol)
 	}
