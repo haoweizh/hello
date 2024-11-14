@@ -526,17 +526,18 @@ func Test_WS(t *testing.T) {
 func Test_Orders(t *testing.T) {
 	model.NewConfig()
 	market := model.BitgetPerp
-	symbol := `BTC_USDT`
+	symbol := `DOGE_PERP`
 	account := model.GetAccounts(0)[market]
-	api.GetPositions(account.Key, account.Secret, market)
+	//api.GetPositions(account.Key, account.Secret, market)
 	//api.GetBalances(account.Key, account.Secret, market)
 	//api.InitMarketInfos(market)
-	//order := api.PlaceOrder(account.Key, account.Secret, model.OrderSideBuy, model.OrderTypeLimit, market, symbol, model.ReduceOnly,
-	//	`test`, 75555.4400364, 75555.3300364, 0.0001000234, false, nil, nil)
+	//order := api.PlaceOrder(account.Key, account.Secret, model.OrderSideBuy, model.OrderTypeLimit, market, symbol, ``,
+	//	`test`, 0.4, 0.4, 14.4, false, nil, nil)
 	//if order != nil {
 	//	fmt.Println(fmt.Sprintf(`place %s %s`, order.OrderId, order.Status))
 	//}
-	//api.QueryOrderById(account.Key, account.Secret, market, symbol, model.OrderTypeLimit, "1240462022555672576")
+	api.QueryOrderById(account.Key, account.Secret, market, symbol, model.OrderTypeLimit, `1240925733664751638`)
+	// 1240922479115534375
 	fmt.Println(api.CancelOrders(account.Key, account.Secret, market, symbol))
 	select {}
 }
@@ -613,8 +614,11 @@ func Test_LimitReport(t *testing.T) {
 
 func Test_wallet(t *testing.T) {
 	model.NewConfig()
+	market := model.BitgetPerp
+	symbol := `ETH_PERP`
+	account := model.GetAccounts(0)[model.BitgetPerp]
+	_, rate, _ := api.GetFundingRate(account.Key, account.Secret, market, symbol)
 	var key, secret string
-	market := model.OKEX
 	switch market {
 	case model.Ftx:
 		key = model.AppConfig.FtxKey
@@ -640,7 +644,6 @@ func Test_wallet(t *testing.T) {
 	success, price := api.GetPriceForce(`LDBNB_USDT`, market)
 	success, price = api.GetPriceForce(`BTC_USDT`, market)
 	fmt.Println(fmt.Sprintf(`%v %f`, success, price))
-	symbol := `HNT_PERP`
 	//order := api.PlaceOrder(key, secret, model.OrderSideBuy, model.OrderTypeStop,
 	//	market, symbol, ``, 4444, 4444, 0.1, false, nil, nil)
 	//fmt.Println(order.OrderId)
@@ -649,7 +652,7 @@ func Test_wallet(t *testing.T) {
 	//	result, _, _ := api.CancelOrder(key, secret, market, symbol, m.OrderType, m.OrderId)
 	//	fmt.Println(result)
 	//}
-	_, rate, _ := api.GetFundingRate(key, secret, model.Bybit, symbol)
+	_, rate, _ = api.GetFundingRate(key, secret, model.Bybit, symbol)
 	_, rate, _ = api.GetFundingRate(key, secret, model.Bybit, `LOOKS_PERP`)
 	//// 1078113554871236864
 	////cancelResult := api.CancelOrders(key, secret, model.BybitSpot, `ETH-USDT`)

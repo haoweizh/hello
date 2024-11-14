@@ -239,7 +239,7 @@ type BitgetPerpOpenOrderResp struct {
 
 type BitgetFundingResp struct {
 	Code string `json:"code"`
-	Data struct {
+	Data []struct {
 		Symbol      string `json:"symbol"`
 		FundingRate string `json:"fundingRate"`
 	} `json:"data"`
@@ -252,27 +252,34 @@ type BitgetPerpOrderDetailResp struct {
 	Msg         string `json:"msg"`
 	RequestTime int64  `json:"requestTime"`
 	Data        struct {
-		Symbol       string  `json:"symbol"`
-		Size         float64 `json:"size"`
-		OrderId      string  `json:"orderId"`
-		ClientOid    string  `json:"clientOid"`
-		FilledQty    float64 `json:"filledQty"`
-		Fee          float64 `json:"fee"`
-		Price        float64 `json:"price"`
-		PriceAvg     float64 `json:"priceAvg"`
-		State        string  `json:"state"`
-		Side         string  `json:"side"`
-		TimeInForce  string  `json:"timeInForce"`
-		TotalProfits float64 `json:"totalProfits"`
-		PosSide      string  `json:"posSide"`
-		MarginCoin   string  `json:"marginCoin"`
-		FilledAmount float64 `json:"filledAmount"`
-		OrderType    string  `json:"orderType"`
-		Leverage     string  `json:"leverage"`
-		MarginMode   string  `json:"marginMode"`
-		ReduceOnly   bool    `json:"reduceOnly"`
-		CTime        string  `json:"cTime"`
-		UTime        string  `json:"uTime"`
+		Symbol                 string  `json:"symbol"`
+		Size                   float64 `json:"size"`
+		OrderId                string  `json:"orderId"`
+		ClientOid              string  `json:"clientOid"`
+		BaseVolume             string  `json:"baseVolume"`
+		Force                  string  `json:"force"`
+		PresetStopSurplusPrice string  `json:"presetStopSurplusPrice"`
+		PresetStopLossPrice    string  `json:"presetStopLossPrice"`
+		QuoteVolume            string  `json:"quoteVolume"`
+		EnterPointSource       string  `json:"enterPointSource"`
+		TradeSide              string  `json:"tradeSide"`
+		PosMode                string  `json:"posMode"`
+		OrderSource            string  `json:"orderSource"`
+		CancelReason           string  `json:"cancelReason"`
+		Fee                    float64 `json:"fee"`
+		Price                  float64 `json:"price"`
+		PriceAvg               float64 `json:"priceAvg"`
+		State                  string  `json:"state"`
+		Side                   string  `json:"side"`
+		TotalProfits           float64 `json:"totalProfits"`
+		PosSide                string  `json:"posSide"`
+		MarginCoin             string  `json:"marginCoin"`
+		OrderType              string  `json:"orderType"`
+		Leverage               string  `json:"leverage"`
+		MarginMode             string  `json:"marginMode"`
+		ReduceOnly             bool    `json:"reduceOnly"`
+		CTime                  string  `json:"cTime"`
+		UTime                  string  `json:"uTime"`
 	} `json:"data"`
 }
 
