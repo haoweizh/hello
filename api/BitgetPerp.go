@@ -263,9 +263,9 @@ func placeOrderBitgetPerp(key, secret string, order *model.Order, orderSide, ord
 		reduceOnly = true
 		reduceOnlyStr = `YES`
 	}
-	priceSpot, decimalSpot := model.FormatPrice(model.BitgetPerp, symbol, price)
-	amountStr := util.CutTailZero(fmt.Sprintf(`%f`, model.GetAmountInMarket(model.BitgetPerp, symbol, amount, priceSpot, reduceOnly)))
-	priceStr := util.CutTailZero(strconv.FormatFloat(priceSpot, 'f', decimalSpot, 64))
+	formattedPrice, decimalPrice := model.FormatPrice(model.BitgetPerp, symbol, price)
+	amountStr := util.CutTailZero(fmt.Sprintf(`%f`, model.GetAmountInMarket(model.BitgetPerp, symbol, amount, formattedPrice, reduceOnly)))
+	priceStr := util.CutTailZero(strconv.FormatFloat(formattedPrice, 'f', decimalPrice, 64))
 	ordType := ``
 	if orderType == model.OrderTypeMarket {
 		ordType = `market`
@@ -299,12 +299,14 @@ func placeOrderBitgetPerp(key, secret string, order *model.Order, orderSide, ord
 	}
 }
 
+// bitget中唯一保留的v1版本api，v2中没有按照symbol撤单，所以dialect symbol需要_UMCBL
 func cancelOrdersBitgetPerp(key, secret, symbol string) (result bool) {
 	success, _, _, dialectSymbol := model.GetFromStandard(model.BitgetPerp, symbol)
 	if !success {
 		util.Notice("fail to cancel bitget perp order, GetFromStandard: " + symbol)
 		return false
 	}
+	dialectSymbol += `_UMCBL`
 	client := dtos.BitgetRestClient{BaseUrl: bitgetRestUrl, Passphrase: model.AppConfig.Phase, ApiKey: key, ApiSecretKey: secret}
 	params := map[string]interface{}{
 		"symbol":     dialectSymbol,
@@ -335,30 +337,35 @@ func queryOrderBitgetPerp(key, secret, symbol string, orderId string) (order *mo
 		util.Notice("fail to query bitget perp order, GetFromStandard: " + symbol)
 		return order
 	}
-	order = &model.Order{Market: model.BitgetPerp, Status: model.CarryStatusWorking, OrderId: orderId, Symbol: dialectSymbol}
+	order = &model.Order{Market: model.BitgetPerp, Status: model.CarryStatusWorking, OrderId: orderId, Symbol: symbol}
 	client := dtos.BitgetRestClient{BaseUrl: bitgetRestUrl, Passphrase: model.AppConfig.Phase, ApiKey: key, ApiSecretKey: secret}
 	param := map[string]string{"symbol": dialectSymbol, "orderId": orderId, `productType`: `USDT-FUTURES`}
 	httpResp, httpErr := client.DoGet("/api/v2/mix/order/detail", param)
-	fmt.Println(string(httpResp))
-	fmt.Println(httpErr)
-	//orderDetailResp := &dtos.BitgetPerpOrderDetailResp{}
-	//perpJsonErr := json.Unmarshal(httpResp, orderDetailResp)
-	//if orderDetailResp == nil || orderDetailResp.Code != "00000" {
-	//	util.Notice(fmt.Sprintf("get bitget perp order detail error, resp: %s, httpErr: %v, jsonErr: %v", httpResp, httpErr, perpJsonErr))
-	//	return order
-	//} else {
-	//	order.DealPrice = orderDetailResp.Data.PriceAvg
-	//	order.DealAmount = orderDetailResp.Data.
-	//	intOrderTime, _ := strconv.ParseInt(orderDetailResp.Data.CTime, 10, 64)
-	//	order.OrderTime = time.UnixMilli(intOrderTime)
-	//	intUpdateTime, _ := strconv.ParseInt(orderDetailResp.Data.UTime, 10, 64)
-	//	order.OrderUpdateTime = time.UnixMilli(intUpdateTime)
-	//	order.UnfilledQuantity = orderDetailResp.Data.Size - orderDetailResp.Data.FilledQty
-	//	if orderDetailResp.Data.State == "canceled" {
-	//		order.Status = model.CarryStatusFail
-	//	} else if orderDetailResp.Data.State == "filled" || orderDetailResp.Data.State == "partially_filled" {
-	//		order.Status = model.CarryStatusSuccess
-	//	}
-	//}
+	orderDetailResp := &dtos.BitgetPerpOrderDetailResp{}
+	perpJsonErr := json.Unmarshal(httpResp, orderDetailResp)
+	if orderDetailResp == nil || orderDetailResp.Code != "00000" {
+		util.Notice(fmt.Sprintf("get bitget perp order detail error, resp: %s, httpErr: %v, jsonErr: %v", httpResp, httpErr, perpJsonErr))
+		return order
+	} else {
+		order.DealPrice, _ = strconv.ParseFloat(orderDetailResp.Data.PriceAvg, 64)
+		order.Amount, _ = strconv.ParseFloat(orderDetailResp.Data.Size, 64)
+		order.OrderId = orderDetailResp.Data.OrderId
+		order.DealAmount, _ = strconv.ParseFloat(orderDetailResp.Data.BaseVolume, 64)
+		order.Fee, _ = strconv.ParseFloat(orderDetailResp.Data.Fee, 64)
+		order.Price, _ = strconv.ParseFloat(orderDetailResp.Data.Price, 64)
+		order.OrderSide = orderDetailResp.Data.Side
+		order.OrderType = orderDetailResp.Data.OrderType
+		intOrderTime, _ := strconv.ParseInt(orderDetailResp.Data.CTime, 10, 64)
+		order.OrderTime = time.UnixMilli(intOrderTime)
+		intUpdateTime, _ := strconv.ParseInt(orderDetailResp.Data.UTime, 10, 64)
+		order.OrderUpdateTime = time.UnixMilli(intUpdateTime)
+		if orderDetailResp.Data.State == "canceled" {
+			order.Status = model.CarryStatusFail
+		} else if orderDetailResp.Data.State == "filled" {
+			order.Status = model.CarryStatusSuccess
+		} else if orderDetailResp.Data.State == "partially_filled" {
+			order.Status = model.CarryStatusWorking
+		}
+	}
 	return order
 }

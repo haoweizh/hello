@@ -526,18 +526,19 @@ func Test_WS(t *testing.T) {
 func Test_Orders(t *testing.T) {
 	model.NewConfig()
 	market := model.BitgetPerp
-	symbol := `DOGE_PERP`
+	symbol := `BTC_PERP`
 	account := model.GetAccounts(0)[market]
 	//api.GetPositions(account.Key, account.Secret, market)
 	//api.GetBalances(account.Key, account.Secret, market)
 	//api.InitMarketInfos(market)
 	//order := api.PlaceOrder(account.Key, account.Secret, model.OrderSideBuy, model.OrderTypeLimit, market, symbol, ``,
-	//	`test`, 0.4, 0.4, 14.4, false, nil, nil)
+	//	`test`, 0.29, 0.29, 24.4, false, nil, nil)
 	//if order != nil {
 	//	fmt.Println(fmt.Sprintf(`place %s %s`, order.OrderId, order.Status))
 	//}
-	api.QueryOrderById(account.Key, account.Secret, market, symbol, model.OrderTypeLimit, `1240925733664751638`)
-	// 1240922479115534375
+	//api.QueryOrderById(account.Key, account.Secret, market, symbol, model.OrderTypeLimit, order.OrderId)
+	// 1240955032711102467
+	api.CancelOrders(account.Key, account.Secret, market, symbol)
 	fmt.Println(api.CancelOrders(account.Key, account.Secret, market, symbol))
 	select {}
 }
