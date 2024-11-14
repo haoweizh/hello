@@ -26,7 +26,7 @@ func createContractMarket(key, secret, market string) (cm *contractMarket) {
 			if settings != nil {
 				value, ok := settings.Load(position.Currency)
 				if ok && value != nil {
-					_, price := api.GetPriceForce(key, secret, position.Currency, market)
+					_, price := api.GetPriceForce(position.Currency, market)
 					if price > 0 {
 						cm.contractValueInU += price * math.Abs(position.Holding)
 					} else {
@@ -96,7 +96,7 @@ func createFromPosition(account *model.Account, setting *model.Setting, valueLim
 		return nil, false
 	}
 	cm := value.(*contractMarket)
-	getPrice, price := api.GetPriceForce(account.Key, account.Secret, setting.Symbol, setting.Market)
+	getPrice, price := api.GetPriceForce(setting.Symbol, setting.Market)
 	if !getPrice || price == 0 {
 		//price = cm.positions[setting.Symbol].EntryPrice
 		//util.Notice(`no tick price, use position price %s %s %f`, setting.Market, setting.Symbol, price)
@@ -154,7 +154,7 @@ func createFromBalance(account *model.Account, setting *model.Setting, valueLimi
 		spotMarkets.Store(key, createSpotMarket(key, account.Secret, setting.Market))
 		value, ok = spotMarkets.Load(key)
 	}
-	success, price := api.GetPriceForce(account.Key, account.Secret, setting.Symbol, setting.Market)
+	success, price := api.GetPriceForce(setting.Symbol, setting.Market)
 	if value == nil || !success || price == 0 {
 		util.NoticeLess(fmt.Sprintf(`nil spot market %s %s getPrice %v %f`, setting.Market, setting.Symbol, success, price))
 		return nil, true

@@ -7,7 +7,6 @@ import (
 	"hello/carry/cross"
 	"hello/carry/follow"
 	"hello/carry/grid"
-	"hello/carry/hang"
 	"hello/carry/monitor"
 	"hello/carry/queue"
 	"hello/model"
@@ -178,7 +177,6 @@ func Maintain() {
 	util.Notice("start carrying")
 	model.TickHandlers[model.FunctionTurtle] = Turtle.ProcessTurtle
 	model.TickHandlers[model.FunctionCross] = cross.ProcessCross
-	model.TickHandlers[model.FunctionHang] = hang.ProcessHang
 	model.TickHandlers[model.FunctionCombineTurtle] = Turtle.ProcessCombineTurtle
 	model.TickHandlers[model.FunctionGrid] = grid.ProcessGrid
 	model.TickHandlers[model.FunctionQueue] = queue.ProcessQueue

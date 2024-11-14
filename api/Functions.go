@@ -399,7 +399,7 @@ func GetMultiCandle(account *model.Account, market string, slotSeconds int, begi
 }
 
 // GetPriceForce 返回tick价格
-func GetPriceForce(_, _, symbol, market string) (result bool, price float64) {
+func GetPriceForce(symbol, market string) (result bool, price float64) {
 	getBidAsk, bidAsk := model.AppEnvironment.GetBidAsk(symbol, market)
 	if getBidAsk && bidAsk != nil {
 		return true, bidAsk.Bids[0].Price
@@ -509,7 +509,7 @@ func GetBalances(key, secret, market string) (
 				totalInUsd += balance.Amount
 			} else {
 				symbolStandard := balance.Coin + model.UniStandardTail[model.MarketTypeSpot]
-				_, price := GetPriceForce(key, secret, symbolStandard, market)
+				_, price := GetPriceForce(symbolStandard, market)
 				totalInUsd += price * balance.Amount
 			}
 		}

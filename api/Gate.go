@@ -587,7 +587,7 @@ func getBalanceGate(key string, secret string) (success bool, balances []*model.
 		balance.Amount = balance.AvailableWithBorrow + balance.FrozenAmount - balance.Borrow
 		canBorrow := 0.0 //不允许借币
 		balance.AvailableWithBorrow = math.Max(0, balance.Amount) + canBorrow
-		_, price := GetPriceForce(key, secret, balance.Coin+model.UniStandardTail[model.MarketTypeSpot], model.Gate)
+		_, price := GetPriceForce(balance.Coin+model.UniStandardTail[model.MarketTypeSpot], model.Gate)
 		balance.UsdValue = balance.Amount * price
 		balances = append(balances, balance)
 	}

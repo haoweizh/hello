@@ -519,25 +519,25 @@ func Test_download(t *testing.T) {
 
 func Test_WS(t *testing.T) {
 	model.NewConfig()
-	api.CreateMarketTickerWS(model.AppEnvironment, model.BitgetSpot)
+	api.CreateMarketTickerWS(model.AppEnvironment, model.BitgetPerp)
 	select {}
 }
 
 func Test_Orders(t *testing.T) {
 	model.NewConfig()
-	market := model.BinanceSpot
-	accounts := model.GetAccounts(0)
-	api.GetMarketsBinance(accounts[market], model.BinanceSpot)
-	//carry.MaintainAccountChan(market)
-	//time.Sleep(time.Second)
+	market := model.BitgetPerp
 	symbol := `BTC_USDT`
-	api.InitMarketInfos(market)
 	account := model.GetAccounts(0)[market]
-	order := api.PlaceOrder(account.Key, account.Secret, model.OrderSideBuy, model.OrderTypeLimit, market, symbol, model.ReduceOnly,
-		`test`, 55555.0000364, 55555.0000364, 0.01, true, nil, nil)
-	if order != nil {
-		fmt.Println(fmt.Sprintf(`place %s %s`, order.OrderId, order.Status))
-	}
+	api.GetPositions(account.Key, account.Secret, market)
+	//api.GetBalances(account.Key, account.Secret, market)
+	//api.InitMarketInfos(market)
+	//order := api.PlaceOrder(account.Key, account.Secret, model.OrderSideBuy, model.OrderTypeLimit, market, symbol, model.ReduceOnly,
+	//	`test`, 75555.4400364, 75555.3300364, 0.0001000234, false, nil, nil)
+	//if order != nil {
+	//	fmt.Println(fmt.Sprintf(`place %s %s`, order.OrderId, order.Status))
+	//}
+	//api.QueryOrderById(account.Key, account.Secret, market, symbol, model.OrderTypeLimit, "1240462022555672576")
+	fmt.Println(api.CancelOrders(account.Key, account.Secret, market, symbol))
 	select {}
 }
 
@@ -637,8 +637,8 @@ func Test_wallet(t *testing.T) {
 	orderQuery0 := api.QueryOrderById(model.AppConfig.OkexKey, model.AppConfig.OkexSecret, model.OKEX,
 		`PERP_PERP`, model.OrderTypeStop, `677454279384674316`)
 	fmt.Println(orderQuery0.OrderId)
-	success, price := api.GetPriceForce(key, secret, `LDBNB_USDT`, market)
-	success, price = api.GetPriceForce(key, secret, `BTC_USDT`, market)
+	success, price := api.GetPriceForce(`LDBNB_USDT`, market)
+	success, price = api.GetPriceForce(`BTC_USDT`, market)
 	fmt.Println(fmt.Sprintf(`%v %f`, success, price))
 	symbol := `HNT_PERP`
 	//order := api.PlaceOrder(key, secret, model.OrderSideBuy, model.OrderTypeStop,

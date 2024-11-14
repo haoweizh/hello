@@ -87,7 +87,8 @@ type CarryStatus struct {
 	FundingRateUpdateTime         time.Time
 }
 
-func getTradeLineExtra(coin string, closeLine float64) (tradeLineExtra *TradeLineExtra) {
+// getTradeLineExtra
+func _(coin string, closeLine float64) (tradeLineExtra *TradeLineExtra) {
 	now := time.Now()
 	//value, ok := extras.Load(coin)
 	//if ok && value != nil && value.(*TradeLineExtra).updateTime.Add(time.Minute*10).After(now) {
@@ -164,13 +165,10 @@ func GetHoldings(accounts map[string]*model.Account) (holding [][]interface{}) {
 			uniAccounts[account.Key] = account
 		}
 	}
-	var defaultKey, defaultSecret string
 	for _, account := range uniAccounts {
 		if account == nil {
 			continue
 		}
-		defaultKey = account.Key
-		defaultSecret = account.Secret
 		value, ok := spotMarkets.Load(account.Key)
 		if ok && value != nil {
 			sm := value.(*spotMarket)
@@ -206,7 +204,7 @@ func GetHoldings(accounts map[string]*model.Account) (holding [][]interface{}) {
 					success, _, coin, _ := model.GetFromStandard(position.Market, position.Currency)
 					if success {
 						coinHold[coin] += position.Holding
-						_, price := api.GetPriceForce(account.Key, account.Secret, position.Currency, position.Market)
+						_, price := api.GetPriceForce(position.Currency, position.Market)
 						holdingLine := []interface{}{position.Market, coin, position.Currency,
 							position.Holding, math.Round(price * position.Holding), valid}
 						coinValue[coin] += math.Round(price * position.Holding)
@@ -230,7 +228,7 @@ func GetHoldings(accounts map[string]*model.Account) (holding [][]interface{}) {
 		coin := holding[i][1].(string)
 		market := holding[i][0].(string)
 		if coinPrice[coin] == 0 {
-			_, coinPrice[coin] = api.GetPriceForce(defaultKey, defaultSecret, coin+model.UniStandardTail[model.MarketTypeSpot], market)
+			_, coinPrice[coin] = api.GetPriceForce(coin+model.UniStandardTail[model.MarketTypeSpot], market)
 		}
 		money := math.Floor(coinHold[coin]*coinPrice[coin]/10) * 10
 		if money < 0 {

@@ -28,7 +28,7 @@ type MarketInfo struct {
 	PriceMax                                float64 //最高单价
 	TradeAmount                             float64 // 过去24小时以usd记交易额
 	MoneyMin                                float64 //最小下单金额需达到的计费货币数值
-	MoneyMax                                float64 //最大下单金额的计费货币数值
+	QuoteMax                                float64 //最大下单金额的计费货币数值
 	BorrowSizeMin                           float64 //最小借款数量
 	BorrowUsdtMax                           float64 //最大借款usdt数额
 	SizeMax, SizeMin                        float64 //最大最小下单数量，当CTValue=0（现货）时为交易币种数量，CTValue>0(永续)为张数，在使用时乘以CTValue转换成币数
@@ -120,7 +120,8 @@ func FormatPrice(market, symbol string, price float64) (formattedPrice float64, 
 	if v == nil || v.(*MarketInfo).SizeIncrement == 0 {
 		return 0, 0
 	}
-	return v.(*MarketInfo).PriceIncrement * math.Round(price/v.(*MarketInfo).PriceIncrement), v.(*MarketInfo).PriceDecimal
+	priceIncrement := v.(*MarketInfo).PriceIncrement
+	return priceIncrement * math.Round(price/priceIncrement), v.(*MarketInfo).PriceDecimal
 	//if orderSide == OrderSideBuy {
 	//	return marketInfo.PriceIncrement * math.Ceil(price/marketInfo.PriceIncrement), marketInfo.PriceDecimal
 	//} else {

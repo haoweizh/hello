@@ -15,12 +15,14 @@ import (
 )
 
 const bitgetRestUrl = "https://api.bitget.com"
-const bitgetSpotWsUrl = "wss://ws.bitget.com/spot/v1/stream"
+const bitgetPublic = "wss://ws.bitget.com/v2/ws/public"
+
+//const bitgetPrivate = `wss://ws.bitget.com/v2/ws/private`
 
 var channelMaintainingBitgetSpot = false
 
 func getMarketsBitgetSpot() (marketInfos map[string]*model.MarketInfo) {
-	httpResp, httpErr := util.HttpRequest(http.MethodGet, bitgetRestUrl+"/api/spot/v1/public/products", "", map[string]string{}, 30)
+	httpResp, httpErr := util.HttpRequest(http.MethodGet, bitgetRestUrl+"/api/v2/spot/public/symbols", "", map[string]string{}, 30)
 	spotResp := &dtos.BitgetSpotMarketResp{}
 	spotJsonErr := json.Unmarshal(httpResp, spotResp)
 	if spotResp == nil || spotResp.Code != "00000" {
@@ -32,34 +34,47 @@ func getMarketsBitgetSpot() (marketInfos map[string]*model.MarketInfo) {
 		if symbolInfo.Status != "online" || symbolInfo.QuoteCoin != "USDT" {
 			continue
 		}
-		symbol := symbolInfo.BaseCoin + model.UniStandardTail[model.MarketTypeSpot]
-		marketInfo := &model.MarketInfo{Name: symbol, Market: model.BitgetSpot}
-		priceDecimal, _ := strconv.Atoi(symbolInfo.PriceScale)
-		marketInfo.PriceDecimal = priceDecimal
-		marketInfo.PriceIncrement = 1 / math.Pow10(priceDecimal)
-		amountPrecision, _ := strconv.Atoi(symbolInfo.QuantityScale)
+		tail := model.UniStandardTail[model.MarketTypeSpot]
+		symbol := symbolInfo.BaseCoin + tail
+		marketInfo := &model.MarketInfo{Name: symbol, Market: model.BitgetSpot, CTCurrency: strings.ToUpper(symbolInfo.BaseCoin)}
+		marketInfo.PriceDecimal, _ = strconv.Atoi(symbolInfo.PricePrecision)
+		marketInfo.PriceIncrement = 1 / math.Pow10(marketInfo.PriceDecimal)
+		amountPrecision, _ := strconv.Atoi(symbolInfo.QuantityPrecision)
 		marketInfo.SizeIncrement = 1 / math.Pow10(amountPrecision)
 		marketInfo.SizeMin, _ = strconv.ParseFloat(symbolInfo.MinTradeAmount, 64)
 		if marketInfo.SizeMin == 0 {
 			marketInfo.SizeMin = marketInfo.SizeIncrement
 		}
 		marketInfo.SizeMax, _ = strconv.ParseFloat(symbolInfo.MaxTradeAmount, 64)
-		marketInfo.MoneyMin, _ = strconv.ParseFloat(symbolInfo.MinTradeUSDT, 64)
+		if tail == `_USDT` {
+			marketInfo.MoneyMin, _ = strconv.ParseFloat(symbolInfo.MinTradeUSDT, 64)
+		}
+		//marketInfo.BuyLimitPriceRatio, _ = strconv.ParseFloat(symbolInfo.BuyLimitPriceRatio, 64)
+		//marketInfo.SellLimitPriceRatio, _ = strconv.ParseFloat(symbolInfo.SellLimitPriceRatio, 64)
 		marketInfos[marketInfo.Name] = marketInfo
 	}
 	return marketInfos
 }
 
-func parseBidAskBitget(bookWsResp *dtos.BitgetBoosWsResp, market, marketType string) (bidAsk *model.BidAsk) {
-	if bookWsResp == nil || bookWsResp.Arg.InstType != "sp" {
+func parseBidAskBitget(bookWsResp *dtos.BitgetBoosWsResp) (bidAsk *model.BidAsk) {
+	if bookWsResp == nil {
 		return nil
 	}
+	market := model.BitgetSpot
+	if bookWsResp.Arg.InstType == `SPOT` {
+		market = model.BitgetSpot
+	} else if bookWsResp.Arg.InstType == `USDT-FUTURES` {
+		market = model.BitgetPerp
+	} else {
+		return nil
+	}
+	success, marketType, coin := model.GetCoinFromDialect(market, bookWsResp.Arg.InstId)
+	if !success {
+		return nil
+	}
+	symbol := coin + model.UniStandardTail[marketType]
 	switch bookWsResp.Action {
 	case `snapshot`:
-		if bookWsResp.Arg.InstId == "" || !util.EndWith(bookWsResp.Arg.InstId, "USDT") || bookWsResp.Data == nil {
-			return nil
-		}
-		symbol := bookWsResp.Arg.InstId[0:len(bookWsResp.Arg.InstId)-4] + model.UniStandardTail[marketType]
 		bidAsk = &model.BidAsk{TsReceived: int(time.Now().UnixNano() / int64(time.Millisecond))}
 		if len(bookWsResp.Data) > 1 ||
 			len(bookWsResp.Data[0].Bids) < 1 || len(bookWsResp.Data[0].Bids[0]) < 2 ||
@@ -84,63 +99,67 @@ func parseBidAskBitget(bookWsResp *dtos.BitgetBoosWsResp, market, marketType str
 	return bidAsk
 }
 
-func WsDepthServeBitgetSpot(environment *model.Environment, market string) (socketMap map[*websocket.Conn]bool, msgChans []chan struct{}, connectErr error) {
-	bookWsHandler := func(event []byte) {
-		//util.Notice(fmt.Sprintf("bitget spot ws book ticker: %s", event))
-		if len(event) == 4 {
-			return
-		}
-		bookWsResp := &dtos.BitgetBoosWsResp{}
-		jsonErr := json.Unmarshal(event, bookWsResp)
-		if jsonErr != nil {
-			util.SocketInfo(`bitget fail to unmarshal book ws data json ` + jsonErr.Error())
-			return
-		}
-		bidAsk := parseBidAskBitget(bookWsResp, model.BitgetSpot, model.MarketTypeSpot)
-		if bidAsk == nil || bidAsk.Bids.Len() == 0 {
-			return
-		}
-		symbol := bidAsk.Bids[0].Symbol
-		haveOld, old := environment.GetBidAsk(symbol, model.BitgetSpot)
-		if haveOld && old.UpdateId > bidAsk.UpdateId {
-			return
-		}
-		if environment.SetBidAsk(symbol, model.BitgetSpot, bidAsk) {
-			funcHandlers := GetFunctions(model.BitgetSpot, symbol)
-			if funcHandlers != nil {
-				funcHandlers.Range(func(function, value interface{}) bool {
-					setting := GetSetting(function.(string), model.BitgetSpot, symbol)
-					if setting != nil && value != nil && value.(model.CarryHandler) != nil {
-						go value.(model.CarryHandler)(setting, bidAsk)
-					}
-					return true
-				})
-			}
+func tickHandlerBitget(event []byte) {
+	bookWsResp := &dtos.BitgetBoosWsResp{}
+	jsonErr := json.Unmarshal(event, bookWsResp)
+	if jsonErr != nil {
+		//util.SocketInfo(`bitget fail to unmarshal book ws data json ` + jsonErr.Error())
+		return
+	}
+	bidAsk := parseBidAskBitget(bookWsResp)
+	if bidAsk == nil || bidAsk.Bids.Len() == 0 {
+		return
+	}
+	symbol := bidAsk.Bids[0].Symbol
+	market := bidAsk.Bids[0].Market
+	haveOld, old := model.AppEnvironment.GetBidAsk(symbol, market)
+	if haveOld && old.UpdateId > bidAsk.UpdateId {
+		return
+	}
+	if model.AppEnvironment.SetBidAsk(symbol, market, bidAsk) {
+		funcHandlers := GetFunctions(market, symbol)
+		if funcHandlers != nil {
+			funcHandlers.Range(func(function, value interface{}) bool {
+				setting := GetSetting(function.(string), market, symbol)
+				if setting != nil && value != nil && value.(model.CarryHandler) != nil {
+					go value.(model.CarryHandler)(setting, bidAsk)
+				}
+				return true
+			})
 		}
 	}
+}
+
+func WsDepthServeBitgetSpot(environment *model.Environment, market string) (socketMap map[*websocket.Conn]bool, msgChans []chan struct{}, connectErr error) {
 	spotSubscribes := make([]interface{}, 0)
 	symbols := GetMarketSymbols(model.BitgetSpot)
 	for symbol := range symbols {
 		spotSubscribes = append(spotSubscribes, symbol)
 	}
-	socketMap, msgChans, connectErr = WebSocketClient(market, bitgetSpotWsUrl,
-		spotSubscribes, subscribeHandlerBitgetSpotBookTicker, bookWsHandler, 30)
+	socketMap, msgChans, connectErr = WebSocketClient(market, bitgetPublic,
+		spotSubscribes, subscribeHandlerBitgetTicker, tickHandlerBitget, 40)
 	go maintainChannelBitgetSpot()
 	environment.SocketsTick.Store(market, socketMap)
 	environment.MsgChanTick.Store(market, msgChans)
 	return
 }
 
-var subscribeHandlerBitgetSpotBookTicker = func(market string, connection *websocket.Conn, subscribes []interface{}) error {
+var subscribeHandlerBitgetTicker = func(market string, connection *websocket.Conn, subscribes []interface{}) error {
 	var err error = nil
 	var params []map[string]string
 	for _, subscribe := range subscribes {
-		success, _, _, dialectSymbol := model.GetFromStandard(model.BitgetSpot, subscribe.(string))
+		success, _, _, dialectSymbol := model.GetFromStandard(market, subscribe.(string))
 		if !success {
 			continue
 		}
-		symbol := strings.Split(dialectSymbol, "_")[0]
-		params = append(params, map[string]string{"instType": "sp", "channel": "books1", "instId": symbol})
+		_, marketType, coin := model.GetCoinFromDialect(market, dialectSymbol)
+		instType := `spot`
+		if marketType == model.MarketTypePerp {
+			instType = `USDT-FUTURES`
+		} else if marketType == model.MarketTypeSpot {
+			instType = `SPOT`
+		}
+		params = append(params, map[string]string{"instType": instType, "channel": "books1", "instId": coin + model.DialectTail[marketType][market]})
 	}
 	subscribeMap := make(map[string]interface{})
 	subscribeMap["op"] = "subscribe"
@@ -150,7 +169,6 @@ var subscribeHandlerBitgetSpotBookTicker = func(market string, connection *webso
 		util.Info(" bitget can not subscribe %s %s", subscribeMessage, err.Error())
 	}
 	util.Info(`bitget subscribed ` + string(subscribeMessage))
-	time.Sleep(time.Second)
 	return err
 }
 
@@ -170,7 +188,7 @@ func maintainChannelBitgetSpot() {
 
 func getBalanceBitgetSpot(key string, secret string) (success bool, balances []*model.Balance) {
 	client := dtos.BitgetRestClient{BaseUrl: bitgetRestUrl, Passphrase: model.AppConfig.Phase, ApiKey: key, ApiSecretKey: secret}
-	httpResp, httpErr := client.DoGet("/api/spot/v1/account/assets", map[string]string{})
+	httpResp, httpErr := client.DoGet("/api/v2/spot/account/assets", map[string]string{})
 	bitgetBalanceResp := &dtos.BitgetBalanceResp{}
 	jsonErr := json.Unmarshal(httpResp, bitgetBalanceResp)
 	if bitgetBalanceResp == nil || bitgetBalanceResp.Code != "00000" {
@@ -182,11 +200,11 @@ func getBalanceBitgetSpot(key string, secret string) (success bool, balances []*
 	}
 	balances = make([]*model.Balance, 0)
 	for _, account := range bitgetBalanceResp.Data {
-		balance := &model.Balance{AccountId: key, BalanceTime: util.GetNow(), Market: model.BitgetSpot, Coin: account.CoinName}
+		balance := &model.Balance{AccountId: key, BalanceTime: util.GetNow(), Market: model.BitgetSpot, Coin: strings.ToUpper(account.CoinName)}
 		balance.FrozenAmount, _ = strconv.ParseFloat(account.Frozen, 64)
 		balance.AvailableWithBorrow, _ = strconv.ParseFloat(account.Available, 64)
 		balance.Amount = balance.AvailableWithBorrow + balance.FrozenAmount - balance.Borrow
-		priceGet, price := GetPriceForce(key, secret, balance.Coin+model.UniStandardTail[model.MarketTypeSpot], model.BitgetSpot)
+		priceGet, price := GetPriceForce(balance.Coin+model.UniStandardTail[model.MarketTypeSpot], model.BitgetSpot)
 		//priceGet, bidAsk := model.AppEnvironment.GetBidAsk(balance.Coin+model.UniStandardTail[model.MarketTypeSpot], model.BitgetSpot)
 		if priceGet {
 			balance.UsdValue = balance.Amount * price
@@ -212,15 +230,15 @@ func placeOrderBitgetSpot(key, secret string, order *model.Order, orderSide, ord
 		ordType = `limit`
 	}
 	client := dtos.BitgetRestClient{BaseUrl: bitgetRestUrl, Passphrase: model.AppConfig.Phase, ApiKey: key, ApiSecretKey: secret}
-	params := map[string]string{
+	params := map[string]interface{}{
 		"symbol":    dialectSymbol,
-		"force":     "normal",
-		"quantity":  amountStr,
+		"force":     "gtc",
+		"size":      amountStr,
 		"price":     priceStr,
 		"side":      orderSide,
 		"orderType": ordType,
 	}
-	httpResp, httpErr := client.DoPost("/api/spot/v1/trade/orders", string(util.JsonEncodeToByte(params)))
+	httpResp, httpErr := client.DoPost("/api/v2/spot/trade/place-order", string(util.JsonEncodeToByte(params)))
 	bitgetOrderResp := &dtos.BitgetOrderResp{}
 	jsonErr := json.Unmarshal(httpResp, bitgetOrderResp)
 	if bitgetOrderResp == nil {
@@ -241,10 +259,7 @@ func cancelOrdersBitgetSpot(key, secret, symbol string) (result bool) {
 		util.Notice("fail to cancel bitget spot order, GetFromStandard: " + symbol)
 		return false
 	}
-	params := map[string]interface{}{
-		"symbol": dialectSymbol,
-	}
-	httpResp, httpErr := client.DoPost("/api/spot/v1/trade/cancel-symbol-order", string(util.JsonEncodeToByte(params)))
+	httpResp, httpErr := client.DoPost("/api/v2/spot/trade/cancel-symbol-order", string(util.JsonEncodeToByte(map[string]interface{}{"symbol": dialectSymbol})))
 	if httpErr != nil {
 		util.Notice(fmt.Sprintf(`fail to post when cancelOrdersBitgetSpot %s`, httpErr.Error()))
 		return false
@@ -264,15 +279,9 @@ func cancelOrdersBitgetSpot(key, secret, symbol string) (result bool) {
 }
 
 func queryOrderBitgetSpot(key, secret, symbol string, orderId string) (order *model.Order) {
-	success, _, _, dialectSymbol := model.GetFromStandard(model.BitgetSpot, symbol)
-	if !success {
-		util.Notice("fail to query bitget spot order, GetFromStandard: " + symbol)
-		return order
-	}
 	order = &model.Order{Market: model.BitgetSpot, Status: model.CarryStatusWorking, OrderId: orderId, Symbol: symbol}
 	client := dtos.BitgetRestClient{BaseUrl: bitgetRestUrl, Passphrase: model.AppConfig.Phase, ApiKey: key, ApiSecretKey: secret}
-	params := map[string]string{"symbol": dialectSymbol, "orderId": orderId}
-	httpResp, httpErr := client.DoPost("/api/spot/v1/trade/orderInfo", string(util.JsonEncodeToByte(params)))
+	httpResp, httpErr := client.DoGet("/api/v2/spot/trade/orderInfo", map[string]string{`orderId`: orderId})
 	orderDetailResp := &dtos.BitgetSpotOrderDetailResp{}
 	perpJsonErr := json.Unmarshal(httpResp, orderDetailResp)
 	if orderDetailResp == nil || orderDetailResp.Code != "00000" {
@@ -281,12 +290,15 @@ func queryOrderBitgetSpot(key, secret, symbol string, orderId string) (order *mo
 	} else {
 		if len(orderDetailResp.Data) > 0 {
 			orderResp := orderDetailResp.Data[0]
-			order.DealPrice, _ = strconv.ParseFloat(orderResp.FillPrice, 64)
-			order.DealAmount, _ = strconv.ParseFloat(orderResp.FillQuantity, 64)
+			order.DealPrice, _ = strconv.ParseFloat(orderResp.PriceAvg, 64)
+			order.DealAmount, _ = strconv.ParseFloat(orderResp.BaseVolume, 64)
 			intOrderTime, _ := strconv.ParseInt(orderResp.CTime, 10, 64)
 			order.OrderTime = time.Unix(intOrderTime, 0)
-			amount, _ := strconv.ParseFloat(orderResp.Quantity, 64)
-			order.UnfilledQuantity = amount - order.DealAmount
+			order.Amount, _ = strconv.ParseFloat(orderResp.Size, 64)
+			order.Price, _ = strconv.ParseFloat(orderResp.Price, 64)
+			order.UnfilledQuantity = order.Amount - order.DealAmount
+			order.OrderId = orderResp.OrderId
+			order.OrderSide = orderResp.Side
 			if orderResp.Status == "cancelled" {
 				order.Status = model.CarryStatusFail
 			} else if orderResp.Status == "full_fill" || orderResp.Status == "partial_fill" {

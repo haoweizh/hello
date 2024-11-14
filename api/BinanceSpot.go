@@ -45,7 +45,8 @@ func GetMarketsBinance(account *model.Account, market string) (marketInfos map[s
 		if item.Status != "TRADING" || item.QuoteAsset != model.DialectTail[model.MarketTypeSpot][market] || !item.IsMarginTradingAllowed {
 			continue
 		}
-		marketInfo := &model.MarketInfo{Market: market, MoneyMin: 10, Name: item.BaseAsset + model.UniStandardTail[model.MarketTypeSpot]}
+		tail := model.UniStandardTail[model.MarketTypeSpot]
+		marketInfo := &model.MarketInfo{Market: market, Name: item.BaseAsset + tail}
 		for _, data := range item.Filters {
 			filterType := data[`filterType`].(string)
 			if filterType == `PRICE_FILTER` {
@@ -66,6 +67,8 @@ func GetMarketsBinance(account *model.Account, market string) (marketInfos map[s
 			} else if filterType == `MIN_NOTIONAL` {
 				if data[`minNotional`] != nil {
 					marketInfo.MoneyMin, _ = strconv.ParseFloat(data[`minNotional`].(string), 64)
+				} else if tail == `_USDT` {
+					marketInfo.MoneyMin = 10
 				}
 			}
 		}
@@ -576,7 +579,7 @@ func getBalanceBinanceMargin(key, secret string) (success bool, balances []*mode
 		}
 		if balance.UsdValue == 0 && balance.Amount > 0 {
 			symbolStandard := balance.Coin + model.UniStandardTail[model.MarketTypeSpot]
-			_, price := GetPriceForce(key, secret, symbolStandard, model.BinanceMargin)
+			_, price := GetPriceForce(symbolStandard, model.BinanceMargin)
 			balance.UsdValue = balance.Amount * price
 		}
 		balances = append(balances, balance)
@@ -617,7 +620,7 @@ func getBalanceBinanceSpot(key string, secret string) (success bool, balances []
 		}
 		if balance.UsdValue == 0 && balance.Amount > 0 {
 			symbolStandard := balance.Coin + model.UniStandardTail[model.MarketTypeSpot]
-			_, price := GetPriceForce(key, secret, symbolStandard, model.BinanceSpot)
+			_, price := GetPriceForce(symbolStandard, model.BinanceSpot)
 			balance.UsdValue = balance.Amount * price
 		}
 		//if asset[`netAsset`] != nil {

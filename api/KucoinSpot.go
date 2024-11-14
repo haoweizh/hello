@@ -88,6 +88,7 @@ func appendRelatedMarketsKucoin(key string, marketInfos map[string]*model.Market
 	//	marketInfos[marketInfo.Name] = marketInfo
 	//}
 	//relatedSettingMarkets = GetMarketSymbols(model.KucoinSpot)
+	util.NoticeLess(`%s %v`, key, marketInfos)
 }
 
 func WsDepthServeKucoinSpot() (channels []chan struct{}, err error) {
@@ -223,7 +224,7 @@ func getBalanceKucoinSpot(key string, secret string) (success bool, balances []*
 			balance.FrozenAmount, _ = strconv.ParseFloat(account.Holds, 64)
 			balance.Amount, _ = strconv.ParseFloat(account.Balance, 64)
 			balance.AvailableWithBorrow, _ = strconv.ParseFloat(account.Available, 64)
-			_, price := GetPriceForce(key, secret, balance.Coin+model.UniStandardTail[model.MarketTypeSpot], model.KucoinSpot)
+			_, price := GetPriceForce(balance.Coin+model.UniStandardTail[model.MarketTypeSpot], model.KucoinSpot)
 			balance.UsdValue = balance.Amount * price
 			balances = append(balances, balance)
 		}
@@ -252,7 +253,7 @@ func getBalanceKucoinSpot(key string, secret string) (success bool, balances []*
 			balance.AvailableWithBorrow = available + canBorrow
 			balance.Amount, _ = account.TotalBalance.Float64()
 			balance.Amount = balance.Amount - balance.Borrow
-			_, price := GetPriceForce(key, secret, balance.Coin+model.UniStandardTail[model.MarketTypeSpot], model.KucoinSpot)
+			_, price := GetPriceForce(balance.Coin+model.UniStandardTail[model.MarketTypeSpot], model.KucoinSpot)
 			balance.UsdValue = balance.Amount * price
 			balances = append(balances, balance)
 		}

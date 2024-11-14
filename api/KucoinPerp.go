@@ -157,7 +157,7 @@ func WsDepthServeKucoinPerp() (channels []chan struct{}, err error) {
 		}
 		client, token, channel, futureErr := getKucoinFutureWsClient()
 		if futureErr != nil {
-			util.SocketInfo(fmt.Sprintf("function: %s error: %s step:%d", "getKucoinFutureWsClient", futureErr.Error()), step)
+			util.SocketInfo(fmt.Sprintf("function: %s error: %s step:%d", "getKucoinFutureWsClient", futureErr.Error(), step))
 			continue
 		}
 		futureChannelError, futureMsg := kucoinFutureChannelConnect(client, token, channel)
@@ -362,6 +362,7 @@ func getPositionsKucoinPerp(key string, secret string) (success bool, positions 
 	//		positions = append(positions, position)
 	//	}
 	//}
+	util.SocketInfo(`%s %s`, key, secret)
 	return true, positions, accountValue, availableU
 }
 

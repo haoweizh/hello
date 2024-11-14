@@ -383,19 +383,11 @@ func GetTurtleData(account *model.Account, function, market, symbol string, far,
 		if marketInfo == nil {
 			util.Notice(`fail to get marketInfo %s %s`, market, symbol)
 			return nil, false
-		} else {
-			if marketInfo.CTValue == 0 {
-				data.AmountMin = marketInfo.SizeMin
-			} else {
-				data.AmountMin = marketInfo.SizeMin * marketInfo.CTValue
-			}
-			data.AmountMin = math.Max(data.AmountMin, 2*marketInfo.MoneyMin/data.LowFar)
 		}
 		if refreshDynamic {
 			util.StoreSyncMap(&TurtleDataSet, data, function, market, symbol, nowStr)
-			util.Notice(fmt.Sprintf(`set turtle %s %s %s %s Amount:%e AmountMin:%e N:%e %d:%e-%e %d:%e-%e %v`,
-				function, market, symbol, nowStr, data.Amount, data.AmountMin, data.N,
-				data.DaysNear, data.LowNear, data.HighNear, data.DaysFar, data.LowFar, data.HighFar, data))
+			util.Notice(fmt.Sprintf(`set turtle %s %s %s %s Amount:%e N:%e %d:%e-%e %d:%e-%e %v`,
+				function, market, symbol, nowStr, data.Amount, data.N, data.DaysNear, data.LowNear, data.HighNear, data.DaysFar, data.LowFar, data.HighFar, data))
 		}
 		util.Notice(fmt.Sprintf(`set data %s %s %s %f %f`, market, symbol, function, data.N, data.Amount))
 		return data, true

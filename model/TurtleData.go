@@ -11,7 +11,7 @@ type TurtleData struct {
 	UseNear, BreakLong, BreakShort, Liquidated, AdjustChecked, OrderCleared bool
 	TurtleTime, CheckUseApi, CheckTimeOpen, Expire                          time.Time
 	HighNear, LowNear, HighFar, LowFar, LowAdjust, HighAdjust               float64
-	HighToday, LowToday, N, M, NVolume, Amount, AmountMin                   float64
+	HighToday, LowToday, N, M, NVolume, Amount                              float64
 	DaysNear, DaysFar, DaysAdjust                                           int // CombineBig: -1小单，1大单，0未初始化
 	Big                                                                     int64
 	Symbol                                                                  string

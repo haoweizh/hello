@@ -10,16 +10,13 @@ import (
 	"math"
 	"net/http"
 	"strconv"
-	"strings"
 	"time"
 )
-
-const bitgetPerpWsUrl = "wss://ws.bitget.com/mix/v1/stream"
 
 var channelMaintainingBitgetPerp = false
 
 func getMarketsBitgetPerp() (marketInfos map[string]*model.MarketInfo) {
-	httpResp, httpErr := util.HttpRequest(http.MethodGet, bitgetRestUrl+"/api/mix/v1/market/contracts?productType=umcbl", "", map[string]string{}, 30)
+	httpResp, httpErr := util.HttpRequest(http.MethodGet, bitgetRestUrl+"/api/v2/mix/market/contracts?productType=USDT-FUTURES", "", map[string]string{}, 30)
 	perpResp := &dtos.BitgetPerpMarketResp{}
 	perpJsonErr := json.Unmarshal(httpResp, perpResp)
 	if perpResp == nil || perpResp.Code != "00000" {
@@ -42,7 +39,7 @@ func getMarketsBitgetPerp() (marketInfos map[string]*model.MarketInfo) {
 		//marketInfo.CTValue, _ = strconv.ParseFloat(perpInfo.ContractSize, 64)
 		marketInfo.BuyLimitPriceRatio, _ = strconv.ParseFloat(perpInfo.BuyLimitPriceRatio, 64)
 		marketInfo.SellLimitPriceRatio, _ = strconv.ParseFloat(perpInfo.SellLimitPriceRatio, 64)
-		marketInfo.MoneyMin = 5.0
+		marketInfo.MoneyMin, _ = strconv.ParseFloat(perpInfo.MinTradeUSDT, 64)
 		marketInfos[symbol] = marketInfo
 	}
 	return marketInfos
@@ -50,8 +47,8 @@ func getMarketsBitgetPerp() (marketInfos map[string]*model.MarketInfo) {
 
 func setBitgetPositionMode(key, secret string) {
 	client := dtos.BitgetRestClient{BaseUrl: bitgetRestUrl, Passphrase: model.AppConfig.Phase, ApiKey: key, ApiSecretKey: secret}
-	params := map[string]string{"productType": "umcbl", "holdMode": "single_hold"}
-	httpResp, httpErr := client.DoPost("/api/mix/v1/account/setPositionMode", string(util.JsonEncodeToByte(params)))
+	params := map[string]string{"productType": "USDT-FUTURES", "posMode": "one_way_mode"}
+	httpResp, httpErr := client.DoPost("/api/v2/mix/account/set-position-mode", string(util.JsonEncodeToByte(params)))
 	if httpErr != nil {
 		util.Notice(fmt.Sprintf(`fail to do post when setBitgetPositionMode %s`, httpErr.Error()))
 		return
@@ -70,85 +67,30 @@ func setBitgetPositionMode(key, secret string) {
 }
 
 func WsDepthServeBitgetPerp(environment *model.Environment, market string) (socketMap map[*websocket.Conn]bool, msgChans []chan struct{}, connectErr error) {
-	bookWsHandler := func(event []byte) {
-		//util.Notice(fmt.Sprintf("bitget perp ws book ticker: %s", event))
-		if len(event) == 4 {
-			return
-		}
-		bookWsResp := &dtos.BitgetBoosWsResp{}
-		jsonErr := json.Unmarshal(event, bookWsResp)
-		if jsonErr != nil {
-			util.SocketInfo(`bitget fail to unmarshal book ws data json ` + jsonErr.Error())
-			return
-		}
-		if bookWsResp.Arg.InstType == "mc" && bookWsResp.Action == "snapshot" {
-			if bookWsResp.Arg.InstId == "" || !util.EndWith(bookWsResp.Arg.InstId, "USDT") || bookWsResp.Data == nil {
-				return
-			}
-			symbol := bookWsResp.Arg.InstId[0:len(bookWsResp.Arg.InstId)-4] + model.UniStandardTail[model.MarketTypePerp]
-			bidAsk := model.BidAsk{TsReceived: int(time.Now().UnixNano() / int64(time.Millisecond))}
-			if len(bookWsResp.Data) > 1 ||
-				len(bookWsResp.Data[0].Bids) < 1 || len(bookWsResp.Data[0].Bids[0]) < 2 ||
-				len(bookWsResp.Data[0].Asks) < 1 || len(bookWsResp.Data[0].Asks[0]) < 2 {
-				return
-			}
-			bidPrice, _ := strconv.ParseFloat(bookWsResp.Data[0].Bids[0][0], 64)
-			bidAmount, _ := strconv.ParseFloat(bookWsResp.Data[0].Bids[0][1], 64)
-			bids := make([]model.Tick, 0)
-			bids = append(bids, model.Tick{Price: bidPrice, Amount: bidAmount, Market: model.BitgetPerp, Symbol: symbol})
-			bidAsk.Bids = bids
-			askPrice, _ := strconv.ParseFloat(bookWsResp.Data[0].Asks[0][0], 64)
-			askAmount, _ := strconv.ParseFloat(bookWsResp.Data[0].Asks[0][1], 64)
-			asks := make([]model.Tick, 0)
-			asks = append(asks, model.Tick{Price: askPrice, Amount: askAmount, Market: model.BitgetPerp, Symbol: symbol})
-			bidAsk.Asks = asks
-			bidAsk.Ts, _ = strconv.Atoi(bookWsResp.Data[0].Ts)
-			bidAsk.UpdateId, _ = strconv.ParseInt(bookWsResp.Data[0].Ts, 10, 64)
-			haveOld, old := environment.GetBidAsk(symbol, model.BitgetPerp)
-			if haveOld && old.UpdateId > bidAsk.UpdateId {
-				return
-			}
-			if environment.SetBidAsk(symbol, model.BitgetPerp, &bidAsk) {
-				//util.Info(fmt.Sprintf("perp symbol: %s now bidAsk: %v", symbol, bidAsk))
-				funcHandlers := GetFunctions(model.BitgetPerp, symbol)
-				if funcHandlers != nil {
-					funcHandlers.Range(func(function, value interface{}) bool {
-						setting := GetSetting(function.(string), model.BitgetPerp, symbol)
-						if setting != nil && value != nil && value.(model.CarryHandler) != nil {
-							go value.(model.CarryHandler)(setting, &bidAsk)
-						}
-						return true
-					})
-				}
-			}
-		}
-	}
 	markPriceWsHandler := func(event []byte) {
-		//util.Notice(fmt.Sprintf("ws data: %s", event))
-		if len(event) == 4 {
-			return
-		}
 		tickerWsResp := &dtos.BitgetTickerWsResp{}
 		jsonErr := json.Unmarshal(event, tickerWsResp)
 		if jsonErr != nil {
-			util.SocketInfo(`bitget fail to unmarshal ticker ws data json ` + jsonErr.Error())
+			//util.SocketInfo(`bitget fail to unmarshal ticker ws data json ` + jsonErr.Error())
 			return
 		}
-		if tickerWsResp.Arg.InstType == "mc" && tickerWsResp.Action == "snapshot" {
+		if tickerWsResp.Arg.InstType == "USDT-FUTURES" && tickerWsResp.Action == "snapshot" {
 			for _, tickerData := range tickerWsResp.Data {
-				if tickerData.SymbolId == "" {
+				if tickerData.Symbol == "" {
 					continue
 				}
-				_, _, coin := model.GetCoinFromDialect(model.BitgetPerp, tickerData.SymbolId)
+				_, _, coin := model.GetCoinFromDialect(model.BitgetPerp, tickerData.Symbol)
 				symbol := coin + model.UniStandardTail[model.MarketTypePerp]
 				price, _ := strconv.ParseFloat(tickerData.MarkPrice, 64)
-				ticker := &model.MarkPriceInfo{MarkPrice: price, Ts: int(tickerData.SystemTime)}
+				ts, _ := strconv.ParseInt(tickerData.Ts, 10, 64)
+				nextTs, _ := strconv.ParseInt(tickerData.NextFundingTime, 10, 64)
+				ticker := &model.MarkPriceInfo{MarkPrice: price, Ts: int(ts)}
 				environment.SetMarkPriceInfo(symbol, model.BitgetPerp, ticker)
-				rate, _ := strconv.ParseFloat(tickerData.CapitalRate, 64)
+				rate, _ := strconv.ParseFloat(tickerData.FundingRate, 64)
 				fundingRate := &model.FundingRate{
 					Rate:       rate,
-					UpdateTime: util.GetNow(),
-					ExpireTime: tickerData.NextSettleTime / 1000,
+					UpdateTime: time.UnixMilli(ts),
+					ExpireTime: nextTs / 1000,
 				}
 				model.SetFundingRate(model.BitgetPerp, symbol, fundingRate)
 			}
@@ -161,8 +103,8 @@ func WsDepthServeBitgetPerp(environment *model.Environment, market string) (sock
 	for symbol := range symbols {
 		futureSubscribes = append(futureSubscribes, symbol)
 	}
-	markPriceSockets, markPriceChannels, markPriceErr := WebSocketClient(market, bitgetPerpWsUrl,
-		futureSubscribes, subscribeHandlerBitgetPerpMarkPrice, markPriceWsHandler, 30)
+	markPriceSockets, markPriceChannels, markPriceErr := WebSocketClient(market, bitgetPublic,
+		futureSubscribes, subscribeHandlerBitgetPerpMarkPrice, markPriceWsHandler, 40)
 	if markPriceErr == nil {
 		msgChans = append(msgChans, markPriceChannels...)
 		for conn, b := range markPriceSockets {
@@ -171,9 +113,8 @@ func WsDepthServeBitgetPerp(environment *model.Environment, market string) (sock
 	} else {
 		return nil, nil, markPriceErr
 	}
-	time.Sleep(time.Second * 1)
-	perpBookSockets, perpBookChannels, perpBookErr := WebSocketClient(market, bitgetPerpWsUrl,
-		futureSubscribes, subscribeHandlerBitgetPerpBookTicker, bookWsHandler, 30)
+	perpBookSockets, perpBookChannels, perpBookErr := WebSocketClient(market, bitgetPublic,
+		futureSubscribes, subscribeHandlerBitgetTicker, tickHandlerBitget, 40)
 	if perpBookErr == nil {
 		util.Info(`finish connect public Bitget perp book wss `)
 		msgChans = append(msgChans, perpBookChannels...)
@@ -189,29 +130,6 @@ func WsDepthServeBitgetPerp(environment *model.Environment, market string) (sock
 	return
 }
 
-var subscribeHandlerBitgetPerpBookTicker = func(market string, connection *websocket.Conn, subscribes []interface{}) error {
-	var err error = nil
-	var params []map[string]string
-	for _, subscribe := range subscribes {
-		success, _, _, dialectSymbol := model.GetFromStandard(model.BitgetPerp, subscribe.(string))
-		if !success {
-			continue
-		}
-		symbol := strings.Split(dialectSymbol, "_")[0]
-		params = append(params, map[string]string{"instType": "mc", "channel": "books1", "instId": symbol})
-	}
-	subscribeMap := make(map[string]interface{})
-	subscribeMap["op"] = "subscribe"
-	subscribeMap["args"] = params
-	subscribeMessage := util.JsonEncodeToByte(subscribeMap)
-	if err = SendToConnection(model.BitgetPerp, connection, subscribeMessage); err != nil {
-		util.Info(" bitget can not subscribe %s %s", subscribeMessage, err.Error())
-	}
-	util.Info(`bitget subscribed ` + string(subscribeMessage))
-	time.Sleep(time.Second)
-	return err
-}
-
 var subscribeHandlerBitgetPerpMarkPrice = func(market string, connection *websocket.Conn, subscribes []interface{}) error {
 	var err error = nil
 	var params []map[string]string
@@ -220,8 +138,7 @@ var subscribeHandlerBitgetPerpMarkPrice = func(market string, connection *websoc
 		if !success {
 			continue
 		}
-		symbol := strings.Split(dialectSymbol, "_")[0]
-		params = append(params, map[string]string{"instType": "MC", "channel": "ticker", "instId": symbol})
+		params = append(params, map[string]string{"instType": "USDT-FUTURES", "channel": "ticker", "instId": dialectSymbol})
 	}
 	subscribeMap := make(map[string]interface{})
 	subscribeMap["op"] = "subscribe"
@@ -231,7 +148,6 @@ var subscribeHandlerBitgetPerpMarkPrice = func(market string, connection *websoc
 		util.Info(" bitget can not subscribe %s %s", subscribeMessage, err.Error())
 	}
 	util.Info(`bitget subscribed ` + string(subscribeMessage))
-	time.Sleep(time.Second)
 	return err
 }
 
@@ -251,7 +167,7 @@ func maintainChannelBitgetPerp() {
 
 func getPositionsBitgetPerp(key, secret string) (success bool, positions []*Position, accountValue, availableU float64) {
 	client := dtos.BitgetRestClient{BaseUrl: bitgetRestUrl, Passphrase: model.AppConfig.Phase, ApiKey: key, ApiSecretKey: secret}
-	assetHttpResp, assetHttpErr := client.DoGet("/api/mix/v1/account/accounts", map[string]string{"productType": "umcbl"})
+	assetHttpResp, assetHttpErr := client.DoGet("/api/v2/mix/account/accounts", map[string]string{"productType": "USDT-FUTURES"})
 	bitgetAssertResp := &dtos.BitgetAssertResp{}
 	jsonErr := json.Unmarshal(assetHttpResp, bitgetAssertResp)
 	if bitgetAssertResp == nil || bitgetAssertResp.Code != "00000" {
@@ -261,7 +177,7 @@ func getPositionsBitgetPerp(key, secret string) (success bool, positions []*Posi
 	} else {
 		util.SocketInfo(fmt.Sprintf("get bitgetperp asset success, resp: %s ", assetHttpResp))
 	}
-	positionHttpResp, positionHttpErr := client.DoGet("/api/mix/v1/position/allPosition", map[string]string{"productType": "umcbl"})
+	positionHttpResp, positionHttpErr := client.DoGet("/api/v2/mix/position/all-position", map[string]string{"productType": "USDT-FUTURES"})
 	bitgetPositionResp := &dtos.BitgetPositionResp{}
 	positionJsonErr := json.Unmarshal(positionHttpResp, bitgetPositionResp)
 	if bitgetPositionResp == nil || bitgetPositionResp.Code != "00000" {
@@ -301,8 +217,8 @@ func getPositionsBitgetPerp(key, secret string) (success bool, positions []*Posi
 			position.Holding = -1 * total
 		}
 		position.LeverRate = int64(contract.Leverage)
-		position.EntryPrice, _ = strconv.ParseFloat(contract.AverageOpenPrice, 64)
-		position.Margin, _ = strconv.ParseFloat(contract.Margin, 64)
+		position.EntryPrice, _ = strconv.ParseFloat(contract.OpenPriceAvg, 64)
+		position.Margin, _ = strconv.ParseFloat(contract.MarginSize, 64)
 		positions = append(positions, position)
 	}
 	if len(positions) == 0 && accountValue > 0 {
