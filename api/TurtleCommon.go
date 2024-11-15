@@ -462,7 +462,7 @@ func CalcTurtleData(account *model.Account, data *model.TurtleData, candles []*m
 		currentPeriod := data.TurtleTime.Add(time.Second * time.Duration(seconds*-i))
 		candle := findCandle(candles, currentPeriod)
 		if candle == nil || candle.PriceHigh == 0 || candle.PriceLow == 0 {
-			util.NoticeLess(`can not calc turtleDate as nil candle %s %s %s %d`,
+			util.Notice(`can not calc turtleDate as nil candle %s %s %s %d`,
 				market, data.Symbol, currentPeriod.String(), len(candles))
 			return
 		}
