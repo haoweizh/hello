@@ -179,6 +179,36 @@ func AdjustPosHolding(key, secret string, setting *model.Setting, data *model.Tu
 	model.AppDB.Save(setting)
 }
 
+func CheckActiveTrail(account *model.Account, setting *model.Setting, data *model.TurtleData, bidAsk *model.BidAsk) (trailed bool) {
+	if (data.OrderLong != nil && len(data.OrderLong) > 0 && data.OrderLong[0].OrderType == model.OrderTypeTrailStop) ||
+		(data.OrderShort != nil && len(data.OrderShort) > 0 && data.OrderShort[0].OrderType == model.OrderTypeTrailStop) {
+		return false
+	}
+	if setting.Chance > 0 && bidAsk.Bids[0].Price > data.LowLast*data.ActivationRate {
+		trailed = true
+		data.OrderShort = nil
+		data.OrderShort = MustPlaceOrder(account.Key, account.Secret, model.OrderSideSell, model.OrderTypeTrailStop, setting.Market, setting.Symbol, ``,
+			setting.Function, data.LowLast*data.ActivationRate, data.CallBackRatio, setting.GridAmount, nil)
+		for _, order := range data.OrderShort {
+			order.Function = model.Close
+			util.Notice(fmt.Sprintf(`success trail sell %s %s amt %f at %f ratio %f ordId %s`,
+				setting.Market, setting.Symbol, setting.GridAmount, data.LowLast*data.ActivationRate, data.CallBackRatio, order.OrderId))
+			go model.AppDB.Save(order)
+		}
+	} else if setting.Chance < 0 && bidAsk.Asks[0].Price < data.HighLast/data.ActivationRate {
+		trailed = true
+		data.OrderLong = nil
+		data.OrderLong = MustPlaceOrder(account.Key, account.Secret, model.OrderSideBuy, model.OrderTypeTrailStop, setting.Market, setting.Symbol, ``,
+			setting.Function, data.HighLast/data.ActivationRate, data.CallBackRatio, setting.GridAmount, nil)
+		for _, order := range data.OrderLong {
+			order.Function = model.Close
+			util.Notice(fmt.Sprintf(`success trail buy %s %s amt %f at %f ratio %f ordId %s`,
+				setting.Market, setting.Symbol, setting.GridAmount, data.HighLast/data.ActivationRate, data.CallBackRatio, order.OrderId))
+		}
+	}
+	return trailed
+}
+
 func HandleOrders(key, secret, market, symbol string, settings []*model.Setting, turtleData []*model.TurtleData,
 	tick *model.BidAsk) (checked bool) {
 	if (len(settings) != 2 && len(settings) != 1) || len(settings) != len(turtleData) {
@@ -271,7 +301,7 @@ func handleLastTurtleData(account *model.Account, function, market, symbol, last
 			valueCombine, _ := util.LoadSyncMap(&TurtleDataSet, model.FunctionCombineTurtle, market, symbol, lastTime)
 			if valueCombine != nil {
 				lastHandled = true
-				util.Notice(fmt.Sprintf(`handle last turtle combi %s %s %s %s`, function, market, symbol, lastTime))
+				util.Notice(fmt.Sprintf(`handle last turtle combine %s %s %s %s`, function, market, symbol, lastTime))
 				//CheckBreak(account, market, symbol, settings, turtles, nil)
 				clearTurtleOrders(account, settingCombine, valueCombine.(*model.TurtleData))
 				util.DelSyncMap(&TurtleDataSet, model.FunctionCombineTurtle, market, symbol, lastTime)
@@ -407,6 +437,10 @@ func CalcTurtleData(account *model.Account, data *model.TurtleData, candles []*m
 			return
 		}
 		getOne = true
+		if i == 1 {
+			data.HighLast = candle.PriceHigh
+			data.LowLast = candle.PriceLow
+		}
 		if candle.PriceHigh > data.HighFar && i <= data.DaysFar {
 			data.HighFar = candle.PriceHigh
 		}

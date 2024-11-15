@@ -65,9 +65,7 @@ var ProcessCombineTurtle = func(settingCombine *model.Setting, tick *model.BidAs
 		return
 	}
 	if time.Now().After(dataCombine.Expire) || time.Now().After(dataNormal.Expire) {
-		if time.Now().Second() == 0 {
-			util.Notice(fmt.Sprintf(`turtle data expired %s %s`, settingCombine.Market, settingCombine.Symbol))
-		}
+		util.NoticeLess(fmt.Sprintf(`turtle data expired %s %s`, settingCombine.Market, settingCombine.Symbol))
 		return
 	}
 	if !dataCombine.OrderCleared {
@@ -77,10 +75,8 @@ var ProcessCombineTurtle = func(settingCombine *model.Setting, tick *model.BidAs
 		return
 	}
 	if dataNormal.N == 0 || dataNormal.Amount == 0 || dataCombine.N == 0 || dataCombine.Amount == 0 {
-		if time.Now().Second() == 0 {
-			util.Notice(fmt.Sprintf(`invalid turtle data n %s %s %f %f %f %f`,
-				settingCombine.Market, settingCombine.Symbol, dataNormal.N, dataNormal.Amount, dataCombine.N, dataCombine.Amount))
-		}
+		util.NoticeLess(fmt.Sprintf(`invalid turtle data n %s %s %f %f %f %f`,
+			settingCombine.Market, settingCombine.Symbol, dataNormal.N, dataNormal.Amount, dataCombine.N, dataCombine.Amount))
 		return
 	}
 	turtleData := []*model.TurtleData{dataCombine, dataNormal}
@@ -90,7 +86,8 @@ var ProcessCombineTurtle = func(settingCombine *model.Setting, tick *model.BidAs
 	//}
 	canOpen, canStartCombine, canStartTurtle, turtleSymbolNum, turtleCoins := api.CanOpenCombine(settingCombine, settingNormal, dataNormal)
 	if api.HandleOrders(account.Key, account.Secret, market, symbol, settings, turtleData, tick) ||
-		api.CheckBreak(account, market, symbol, settings, turtleData, tick) {
+		api.CheckBreak(account, market, symbol, settings, turtleData, tick) ||
+		api.CheckActiveTrail(account, settingNormal, dataNormal, tick) {
 		//util.Notice(fmt.Sprintf(`combine return handle or break %s %s`, market, symbol))
 		return
 	}
@@ -282,11 +279,7 @@ func placeTurtleLong(account *model.Account, orderType string, data *model.Turtl
 					price = data.HighNear + priceInc
 				}
 			} else {
-				if data.LowToday > 0 {
-					price = math.Min(data.LowFar, data.LowToday) + priceChange + priceInc
-				} else {
-					price = data.LowFar + priceChange + priceInc
-				}
+				price = data.LowFar + priceChange + priceInc
 			}
 		} else if setting.Chance == 0 {
 			price += priceInc
@@ -375,14 +368,10 @@ func placeTurtleShort(account *model.Account, orderType string, data *model.Turt
 			priceInc = v.(*model.MarketInfo).PriceIncrement
 		}
 		if setting.Chance > 0 {
-			if data.UseNear {
-				if setting.PriceX-priceChange > data.LowNear {
-					price = setting.PriceX - priceChange
-				} else {
-					price = data.LowNear - priceInc
-				}
+			if setting.PriceX-priceChange > data.LowNear {
+				price = setting.PriceX - priceChange
 			} else {
-				price = math.Max(data.HighFar, data.HighToday) - priceChange - priceInc
+				price = data.LowNear - priceInc
 			}
 		} else if setting.Chance < 0 {
 			if data.LowFar < setting.PriceX-data.N*0.4 {
