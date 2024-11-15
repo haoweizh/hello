@@ -182,7 +182,7 @@ func AdjustPosHolding(key, secret string, setting *model.Setting, data *model.Tu
 func CheckActiveTrail(account *model.Account, setting *model.Setting, data *model.TurtleData, bidAsk *model.BidAsk) (trailed bool) {
 	if (data.OrderLong != nil && len(data.OrderLong) > 0 && data.OrderLong[0].OrderType == model.OrderTypeTrailStop) ||
 		(data.OrderShort != nil && len(data.OrderShort) > 0 && data.OrderShort[0].OrderType == model.OrderTypeTrailStop) ||
-		model.CommonTurtleSymbols[setting.Symbol] {
+		model.CommonTurtleSymbols[setting.Symbol] || int64(math.Abs(float64(setting.Chance))) < setting.ChanceLimit {
 		return false
 	}
 	if setting.Chance > 0 && data.LowLast*data.ActivationRate > 0 && bidAsk.Bids[0].Price > data.LowLast*data.ActivationRate {
