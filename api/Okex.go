@@ -624,7 +624,7 @@ func placeOrderOKEX(account *model.Account, isWs bool, order *model.Order) {
 	}
 	orderAmountReal, _ := strconv.ParseFloat(amount, 64)
 	_, order.Amount = model.ParseRealAmount(model.OKEX, order.Symbol, orderAmountReal)
-	if price == 0 || formattedAmount == 0 {
+	if (price == 0 && order.OrderType != model.OrderTypeTrailStop) || formattedAmount == 0 {
 		order.Status = model.CarryStatusFail
 		return
 	}
@@ -639,7 +639,9 @@ func placeOrderOKEX(account *model.Account, isWs bool, order *model.Order) {
 		path = `/api/v5/trade/order-algo`
 	} else if order.OrderType == model.OrderTypeTrailStop {
 		postData[`ordType`] = `move_order_stop`
-		postData[`activePx`] = priceStr
+		if price > 0 {
+			postData[`activePx`] = priceStr
+		}
 		postData[`callbackRatio`] = triggerPriceStr
 		postData[`algoClOrdId`] = fmt.Sprintf(`%d%s%d%s`, account.Index, OKSeparator, time.Now().Nanosecond(), order.OrderSide)
 		path = `/api/v5/trade/order-algo`

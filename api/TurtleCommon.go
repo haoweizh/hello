@@ -189,7 +189,7 @@ func CheckActiveTrail(account *model.Account, setting *model.Setting, data *mode
 		trailed = true
 		data.OrderShort = nil
 		data.OrderShort = MustPlaceOrder(account.Key, account.Secret, model.OrderSideSell, model.OrderTypeTrailStop, setting.Market, setting.Symbol, ``,
-			setting.Function, data.LowLast*data.ActivationRate, data.CallBackRatio, setting.GridAmount, nil)
+			setting.Function, 0, data.CallBackRatio, setting.GridAmount, nil)
 		for _, order := range data.OrderShort {
 			order.Function = model.Close
 			util.Notice(fmt.Sprintf(`success trail sell %s %s amt %f at %f ratio %f ordId %s`,
@@ -200,7 +200,7 @@ func CheckActiveTrail(account *model.Account, setting *model.Setting, data *mode
 		trailed = true
 		data.OrderLong = nil
 		data.OrderLong = MustPlaceOrder(account.Key, account.Secret, model.OrderSideBuy, model.OrderTypeTrailStop, setting.Market, setting.Symbol, ``,
-			setting.Function, data.HighLast/data.ActivationRate, data.CallBackRatio, setting.GridAmount, nil)
+			setting.Function, 0, data.CallBackRatio, setting.GridAmount, nil)
 		for _, order := range data.OrderLong {
 			order.Function = model.Close
 			util.Notice(fmt.Sprintf(`success trail buy %s %s amt %f at %f ratio %f ordId %s`,

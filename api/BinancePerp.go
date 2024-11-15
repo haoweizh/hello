@@ -373,7 +373,9 @@ func placeOrderBinancePerp(account *model.Account, isWS bool, order *model.Order
 		case model.OrderTypeTrailStop:
 			stopPriceStr = util.CutTailZero(strconv.FormatFloat(100*triggerPrice, 'f', 1, 64))
 			service.Type(futures.OrderTypeTrailingStopMarket)
-			service.ActivationPrice(priceStr)
+			if price > 0 {
+				service.ActivationPrice(priceStr)
+			}
 			service.CallbackRate(stopPriceStr)
 		}
 		orderResponse, err := service.Do(context.Background())
