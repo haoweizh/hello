@@ -12,7 +12,7 @@ type CarryHandler func(setting *Setting, bidAsk *BidAsk)
 type WsOrderHandler func(order *Order)
 
 type Setting struct {
-	Valid                                      bool
+	Valid, Liquidated                          bool
 	Function                                   string `gorm:"index:function_market_symbol,unique"`
 	Market                                     string `gorm:"index:function_market_symbol,unique"`
 	Symbol                                     string `gorm:"index:function_market_symbol,unique"`

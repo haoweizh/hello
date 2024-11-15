@@ -208,6 +208,11 @@ func CheckActiveTrail(account *model.Account, setting *model.Setting, data *mode
 			go model.AppDB.Save(order)
 		}
 	}
+	if trailed {
+		setting.Chance = 0
+		setting.Liquidated = true
+		model.AppDB.Save(setting)
+	}
 	return trailed
 }
 
@@ -305,12 +310,6 @@ func clearTurtleOrders(account *model.Account, setting *model.Setting, turtle *m
 	}
 	turtle.OrderLong = nil
 	turtle.OrderShort = nil
-	if len(trailBuys) == 0 {
-		trailBuys = nil
-	}
-	if len(trailSells) == 0 {
-		trailSells = nil
-	}
 	return trailBuys, trailSells
 }
 
@@ -426,8 +425,16 @@ func GetTurtleData(account *model.Account, function, market, symbol string, far,
 	}
 	if lastHandled {
 		data.CheckTimeOpen = time.Now()
-		data.OrderLong = trailBuys
-		data.OrderShort = trailSells
+		if trailBuys != nil {
+			for _, buyOrder := range trailBuys {
+				data.OrderAdjust[buyOrder.OrderId] = buyOrder
+			}
+		}
+		if trailSells != nil {
+			for _, sellOrder := range trailSells {
+				data.OrderAdjust[sellOrder.OrderId] = sellOrder
+			}
+		}
 	}
 	if data.Amount > 0 && data.N > 0 {
 		var marketInfo *model.MarketInfo

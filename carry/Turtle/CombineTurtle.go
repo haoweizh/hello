@@ -220,7 +220,7 @@ func handleBreak(setting *model.Setting, data *model.TurtleData, orders []*model
 	data.OrderShort = nil
 	model.AppDB.Model(setting).Where("market= ? and Symbol= ? and function= ?",
 		setting.Market, setting.Symbol, setting.Function).Updates(map[string]interface{}{
-		`price_x`: setting.PriceX, `chance`: setting.Chance, `grid_amount`: setting.GridAmount})
+		`price_x`: setting.PriceX, `chance`: setting.Chance, `grid_amount`: setting.GridAmount, `liquidated`: data.Liquidated})
 	util.Notice(fmt.Sprintf(`clear turtle buy when sell break %s %s %v`, setting.Market, setting.Symbol, orders))
 	return true
 }
