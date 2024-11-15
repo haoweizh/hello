@@ -34,7 +34,7 @@ var ProcessTurtle = func(setting *model.Setting, tick *model.BidAsk) {
 	}
 	account := model.AppConfig.GetAccounts(setting.Market)[0]
 	var data *model.TurtleData
-	data, _ = api.GetTurtleData(account, setting.Symbol, setting, true, setting.Chance == 0 && setting.SymbolRelated == model.SettingTurtleRemoved)
+	data, _ = api.GetTurtleData(account, setting, setting.Chance == 0 && setting.SymbolRelated == model.SettingTurtleRemoved)
 	if data == nil || setting == nil || model.AppConfig.Env == `test` || time.Now().After(data.Expire) {
 		if time.Now().Minute() == 0 && time.Now().Second() == 0 {
 			util.Notice(fmt.Sprintf(`fail to get turtle %s %s`, setting.Market, setting.Symbol))

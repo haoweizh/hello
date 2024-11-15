@@ -53,8 +53,8 @@ var ProcessCombineTurtle = func(settingCombine *model.Setting, tick *model.BidAs
 	if removed && time.Now().Minute() < 5 {
 		return
 	}
-	dataCombine, _ = api.GetTurtleData(account, settingCombine.Symbol, settingCombine, true, removed)
-	dataNormal, _ = api.GetTurtleData(account, settingNormal.Symbol, settingNormal, true, removed)
+	dataCombine, _ = api.GetTurtleData(account, settingCombine, removed)
+	dataNormal, _ = api.GetTurtleData(account, settingNormal, removed)
 	if dataCombine == nil || dataNormal == nil || settingCombine == nil || settingNormal == nil ||
 		model.AppConfig.Env == `test` || dataCombine.N == 0 || dataNormal.N == 0 {
 		if !removed && (time.Now().Minute() == 0 && time.Now().Second() == 0) {

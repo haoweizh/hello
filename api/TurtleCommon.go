@@ -346,24 +346,55 @@ func handleLastTurtleData(account *model.Account, function, market, symbol, last
 	return lastHandled, trailOrders
 }
 
-// GetTurtleData refreshDynamic false时代表仅作为检查是否有足够turtleData作为top market info使用，此时不会存在缓存中，否则会引起far near错误
-func GetTurtleData(account *model.Account, symbol string, setting *model.Setting, refreshDynamic, removed bool) (data *model.TurtleData, dataValid bool) {
-	if refreshDynamic {
-		var lock *sync.Mutex
-		lockValue, _ := util.LoadSyncMap(&getTurtleLock, account.Key, `refreshDynamic`)
-		if lockValue == nil {
-			lock = &sync.Mutex{}
-			util.Notice(fmt.Sprintf(`create lock %s %s`, account.Key, `refreshDynamic`))
-			util.StoreSyncMap(&getTurtleLock, lock, account.Key, `refreshDynamic`)
-		} else {
-			lock = lockValue.(*sync.Mutex)
-		}
-		defer lock.Unlock()
-		lock.Lock()
-	}
+func GetRankTurtleData(account *model.Account, symbol string, setting *model.Setting) (data *model.TurtleData, dataValid bool) {
 	now := time.Now()
 	nowPeriod, nowStr := model.GetNowPeriod(setting.Market, setting.Seconds, now)
-	value, ok := util.LoadSyncMap(&TurtleDataSet, setting.Function, setting.Market, symbol, nowStr)
+	data = &model.TurtleData{TurtleTime: nowPeriod, Expire: nowPeriod.Add(time.Second * time.Duration(setting.Seconds)),
+		IsBig: true, Symbol: symbol, DaysFar: int(setting.Far), DaysNear: int(setting.Near), DaysAdjust: 5,
+		OrderAdjust: make(map[string]*model.Order), CallBackRatio: 0.03, ActivationRate: 2}
+	util.Notice(fmt.Sprintf(`need to create turtle data rank %s %s %s %s %d`,
+		setting.Function, setting.Market, symbol, nowStr, setting.Far))
+	candles := getTurtleCandles(account, setting.Market, symbol, int(setting.Far), int(setting.Seconds), nowPeriod)
+	getOne, getAll := CalcTurtleData(account, data, candles, int(setting.Seconds), setting.Market, setting.Function, float64(setting.ChanceLimit), setting.AmountRate)
+	if !getOne {
+		util.Notice(fmt.Sprintf(`fail to getOne %s %s %d %d`, setting.Market, symbol, data.DaysFar, setting.Seconds))
+		return nil, false
+	} else if !getAll {
+		util.Notice(fmt.Sprintf(`fail to getAll %s %s %d %d`, setting.Market, symbol, data.DaysFar, setting.Seconds))
+		return nil, true
+	}
+	if data.Amount > 0 && data.N > 0 {
+		var marketInfo *model.MarketInfo
+		v, _ := util.LoadSyncMap(model.MarketInfos, setting.Market, symbol)
+		if v != nil {
+			marketInfo = v.(*model.MarketInfo)
+		}
+		if marketInfo == nil {
+			util.Notice(`fail to get marketInfo %s %s`, setting.Market, symbol)
+			return nil, false
+		}
+		util.Notice(fmt.Sprintf(`set data %s %s %s %f %f`, setting.Market, symbol, setting.Function, data.N, data.Amount))
+		return data, true
+	} else {
+		return nil, false
+	}
+}
+
+func GetTurtleData(account *model.Account, setting *model.Setting, removed bool) (data *model.TurtleData, dataValid bool) {
+	var lock *sync.Mutex
+	lockValue, _ := util.LoadSyncMap(&getTurtleLock, account.Key, `refreshDynamic`)
+	if lockValue == nil {
+		lock = &sync.Mutex{}
+		util.Notice(fmt.Sprintf(`create lock %s %s`, account.Key, `refreshDynamic`))
+		util.StoreSyncMap(&getTurtleLock, lock, account.Key, `refreshDynamic`)
+	} else {
+		lock = lockValue.(*sync.Mutex)
+	}
+	defer lock.Unlock()
+	lock.Lock()
+	now := time.Now()
+	nowPeriod, nowStr := model.GetNowPeriod(setting.Market, setting.Seconds, now)
+	value, ok := util.LoadSyncMap(&TurtleDataSet, setting.Function, setting.Market, setting.Symbol, nowStr)
 	lastHandled := false
 	var trailOrders []*model.Order
 	if ok && value != nil {
@@ -371,9 +402,9 @@ func GetTurtleData(account *model.Account, symbol string, setting *model.Setting
 	} else {
 		lastTime := time.Unix(now.Unix()-setting.Seconds, 0)
 		_, lastStr := model.GetNowPeriod(setting.Market, setting.Seconds, lastTime)
-		lastHandled, trailOrders = handleLastTurtleData(account, setting.Function, setting.Market, symbol, lastStr)
+		lastHandled, trailOrders = handleLastTurtleData(account, setting.Function, setting.Market, setting.Symbol, lastStr)
 	}
-	if refreshDynamic && !model.CommonTurtleSymbols[symbol] {
+	if !model.CommonTurtleSymbols[setting.Symbol] {
 		refreshValue, refreshOk := DynamicHandleTime.Load(setting.Market)
 		if !refreshOk || refreshValue == nil || refreshValue.(time.Time).Before(nowPeriod) {
 			if handleMarketDynamic(setting.Market) {
@@ -394,29 +425,29 @@ func GetTurtleData(account *model.Account, symbol string, setting *model.Setting
 	}
 	posValue, _ := positionsCache.Load(account.Key)
 	if posValue != nil {
-		holdingValue, _ := posValue.(*sync.Map).Load(symbol)
+		holdingValue, _ := posValue.(*sync.Map).Load(setting.Symbol)
 		if holdingValue != nil && holdingValue.(*Position).Holding != 0 {
-			util.Notice(fmt.Sprintf(`not removed %s %s %f`, account.Key, symbol, holdingValue.(*Position).Holding))
+			util.Notice(fmt.Sprintf(`not removed %s %s %f`, account.Key, setting.Symbol, holdingValue.(*Position).Holding))
 			removed = false
 		}
 	}
 	data = &model.TurtleData{TurtleTime: nowPeriod, Expire: nowPeriod.Add(time.Second * time.Duration(setting.Seconds)),
-		IsBig: true, Symbol: symbol, DaysFar: int(setting.Far), DaysNear: int(setting.Near), DaysAdjust: 5,
+		IsBig: true, Symbol: setting.Symbol, DaysFar: int(setting.Far), DaysNear: int(setting.Near), DaysAdjust: 5,
 		OrderAdjust: make(map[string]*model.Order), OrderCleared: lastHandled, CallBackRatio: 0.03, ActivationRate: 2}
 	if removed {
 		data.CheckTimeOpen = time.Now()
-		util.StoreSyncMap(&TurtleDataSet, data, setting.Function, setting.Market, symbol, nowStr)
+		util.StoreSyncMap(&TurtleDataSet, data, setting.Function, setting.Market, setting.Symbol, nowStr)
 		return data, false
 	}
-	util.Notice(fmt.Sprintf(`need to create turtle data %s %s %s %s %d refresh %v`,
-		setting.Function, setting.Market, symbol, nowStr, setting.Far, refreshDynamic))
-	candles := getTurtleCandles(account, setting.Market, symbol, int(setting.Far), int(setting.Seconds), nowPeriod)
+	util.Notice(fmt.Sprintf(`need to create turtle data %s %s %s %s %d`,
+		setting.Function, setting.Market, setting.Symbol, nowStr, setting.Far))
+	candles := getTurtleCandles(account, setting.Market, setting.Symbol, int(setting.Far), int(setting.Seconds), nowPeriod)
 	getOne, getAll := CalcTurtleData(account, data, candles, int(setting.Seconds), setting.Market, setting.Function, float64(setting.ChanceLimit), setting.AmountRate)
 	if !getOne {
-		util.Notice(fmt.Sprintf(`fail to getOne %s %s %d %d`, setting.Market, symbol, data.DaysFar, setting.Seconds))
+		util.Notice(fmt.Sprintf(`fail to getOne %s %s %d %d`, setting.Market, setting.Symbol, data.DaysFar, setting.Seconds))
 		return nil, false
 	} else if !getAll {
-		util.Notice(fmt.Sprintf(`fail to getAll %s %s %d %d`, setting.Market, symbol, data.DaysFar, setting.Seconds))
+		util.Notice(fmt.Sprintf(`fail to getAll %s %s %d %d`, setting.Market, setting.Symbol, data.DaysFar, setting.Seconds))
 		return nil, true
 	}
 	if lastHandled {
@@ -431,24 +462,22 @@ func GetTurtleData(account *model.Account, symbol string, setting *model.Setting
 	} else {
 		data.Liquidated = setting.Liquidated
 		util.Notice(fmt.Sprintf(`set turtle data liquidated to setting %s %s %s %v`,
-			setting.Function, symbol, setting.Market, setting.Liquidated))
+			setting.Function, setting.Symbol, setting.Market, setting.Liquidated))
 	}
 	if data.Amount > 0 && data.N > 0 {
 		var marketInfo *model.MarketInfo
-		v, _ := util.LoadSyncMap(model.MarketInfos, setting.Market, symbol)
+		v, _ := util.LoadSyncMap(model.MarketInfos, setting.Market, setting.Symbol)
 		if v != nil {
 			marketInfo = v.(*model.MarketInfo)
 		}
 		if marketInfo == nil {
-			util.Notice(`fail to get marketInfo %s %s`, setting.Market, symbol)
+			util.Notice(`fail to get marketInfo %s %s`, setting.Market, setting.Symbol)
 			return nil, false
 		}
-		if refreshDynamic {
-			util.StoreSyncMap(&TurtleDataSet, data, setting.Function, setting.Market, symbol, nowStr)
-			util.Notice(fmt.Sprintf(`set turtle %s %s %s %s Amount:%e N:%e %d:%e-%e %d:%e-%e %v`,
-				setting.Function, setting.Market, symbol, nowStr, data.Amount, data.N, data.DaysNear, data.LowNear, data.HighNear, data.DaysFar, data.LowFar, data.HighFar, data))
-		}
-		util.Notice(fmt.Sprintf(`set data %s %s %s %f %f`, setting.Market, symbol, setting.Function, data.N, data.Amount))
+		util.StoreSyncMap(&TurtleDataSet, data, setting.Function, setting.Market, setting.Symbol, nowStr)
+		util.Notice(fmt.Sprintf(`set turtle %s %s %s %s Amount:%e N:%e %d:%e-%e %d:%e-%e %v`,
+			setting.Function, setting.Market, setting.Symbol, nowStr, data.Amount, data.N, data.DaysNear, data.LowNear, data.HighNear, data.DaysFar, data.LowFar, data.HighFar, data))
+		util.Notice(fmt.Sprintf(`set data %s %s %s %f %f`, setting.Market, setting.Symbol, setting.Function, data.N, data.Amount))
 		return data, true
 	} else {
 		return nil, false
