@@ -184,7 +184,7 @@ func CheckActiveTrail(account *model.Account, setting *model.Setting, data *mode
 		(data.OrderShort != nil && len(data.OrderShort) > 0 && data.OrderShort[0].OrderType == model.OrderTypeTrailStop) {
 		return false
 	}
-	if setting.Chance > 0 && bidAsk.Bids[0].Price > data.LowLast*data.ActivationRate {
+	if setting.Chance > 0 && data.LowLast*data.ActivationRate > 0 && bidAsk.Bids[0].Price > data.LowLast*data.ActivationRate {
 		trailed = true
 		data.OrderShort = nil
 		data.OrderShort = MustPlaceOrder(account.Key, account.Secret, model.OrderSideSell, model.OrderTypeTrailStop, setting.Market, setting.Symbol, ``,
@@ -195,7 +195,7 @@ func CheckActiveTrail(account *model.Account, setting *model.Setting, data *mode
 				setting.Market, setting.Symbol, setting.GridAmount, data.LowLast*data.ActivationRate, data.CallBackRatio, order.OrderId))
 			go model.AppDB.Save(order)
 		}
-	} else if setting.Chance < 0 && bidAsk.Asks[0].Price < data.HighLast/data.ActivationRate {
+	} else if setting.Chance < 0 && data.ActivationRate > 0 && bidAsk.Asks[0].Price < data.HighLast/data.ActivationRate {
 		trailed = true
 		data.OrderLong = nil
 		data.OrderLong = MustPlaceOrder(account.Key, account.Secret, model.OrderSideBuy, model.OrderTypeTrailStop, setting.Market, setting.Symbol, ``,
