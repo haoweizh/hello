@@ -345,8 +345,7 @@ func getDynamicMarketInfos(mumSetting *model.Setting, accounts []*model.Account,
 					seconds = mumSetting.SecondsCombine
 				}
 				if near > 0 && far >= near && seconds > 0 {
-					turtleData, dataValid = GetTurtleData(accounts[0], function, mumSetting.Market, marketInfoArray[i].Name,
-						mumSetting.Far, mumSetting.Near, mumSetting.Seconds, mumSetting.ChanceLimit, mumSetting.AmountRate, false, false)
+					turtleData, dataValid = GetTurtleData(accounts[0], function, mumSetting, false, false)
 					if turtleData != nil {
 						topMarketInfos[marketInfoArray[i].Name] = marketInfoArray[i]
 						turtleDataArray = append(turtleDataArray, turtleData)
