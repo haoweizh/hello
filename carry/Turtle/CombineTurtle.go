@@ -97,11 +97,11 @@ var ProcessCombineTurtle = func(settingCombine *model.Setting, tick *model.BidAs
 		dataCombine.TurtleTime.Month(), dataCombine.TurtleTime.Day(), time.Now().Hour(), time.Now().Minute(), msgKey,
 		dataCombine.NVolume, canOpen, int64(turtleSymbolNum), canStartTurtle, canStartCombine, int(turtleCoins),
 		int(settingCombine.AmountLimit), turtleCoins >= settingCombine.AmountLimit, tick.Bids[0].Price, tick.Asks[0].Price)
-	msg += fmt.Sprintf("海龟:仓数/持仓量/开仓价 %d of %d/%e/%e 平过%v 数量 %e %s%d big:%d 日:%e-%e %d日:%e-%e N:%e\n",
+	msg += fmt.Sprintf("海龟:仓数/持仓量/开仓价 %d of %d/%e/%e 平过%v 数量 %e %s%v big:%d 日:%e-%e %d日:%e-%e N:%e\n",
 		settingNormal.Chance, settingNormal.ChanceLimit, settingNormal.GridAmount, settingNormal.PriceX, dataNormal.Liquidated,
 		dataNormal.Amount*float64(settingNormal.ChanceLimit), dataNormal.GetIds(), dataNormal.IsBig, dataNormal.DaysFar,
 		dataNormal.LowFar, dataNormal.HighFar, dataNormal.DaysNear, dataNormal.LowNear, dataNormal.HighNear, dataNormal.N)
-	msg += fmt.Sprintf("龟汤:仓数/持仓量/开仓价 %d of %d/%e/%e 平过%v 数量 %e %s%d big:%d 日:%e-%e %d日:%e-%e N:%e",
+	msg += fmt.Sprintf("龟汤:仓数/持仓量/开仓价 %d of %d/%e/%e 平过%v 数量 %e %s%v big:%d 日:%e-%e %d日:%e-%e N:%e",
 		settingCombine.Chance, settingCombine.ChanceLimit, settingCombine.GridAmount, settingCombine.PriceX, dataCombine.Liquidated,
 		dataCombine.Amount*float64(settingCombine.ChanceLimit), dataCombine.GetIds(), dataCombine.IsBig, dataCombine.DaysFar,
 		dataCombine.LowFar, dataCombine.HighFar, dataCombine.DaysNear, dataCombine.LowNear, dataCombine.HighNear, dataCombine.N)
@@ -189,8 +189,8 @@ func handleBreak(setting *model.Setting, data *model.TurtleData, orders []*model
 	util.Notice(fmt.Sprintf(`query %s break %s %s %s %d %s %s chances %d`,
 		setting.Function, setting.Market, setting.Symbol, orders[0].OrderSide, len(orders), orders[0].OrderId, orders[0].Function, setting.Chance))
 	if (orders[0].RefreshType != model.FunctionTurtleAdjust && orders[0].Function == model.Close) || orders[0].OrderType == model.OrderTypeTrailStop {
-		msg := fmt.Sprintf(`liquidate: %s %s chance:%d Amount:%e px:%e`,
-			setting.Market, setting.Symbol, setting.Chance, setting.GridAmount, setting.PriceX)
+		msg := fmt.Sprintf(`liquidate: %s %s chance:%d Amount:%e px:%e %s order type %s`,
+			setting.Market, setting.Symbol, setting.Chance, setting.GridAmount, setting.PriceX, orders[0].OrderSide, orders[0].OrderType)
 		go api.SendMails(`平`+setting.Market+setting.Symbol, msg)
 		setting.Chance = 0
 		setting.GridAmount = 0
@@ -200,8 +200,8 @@ func handleBreak(setting *model.Setting, data *model.TurtleData, orders []*model
 			data.Liquidated = true
 		}
 	} else if orders[0].Function == model.Open {
-		util.Notice(fmt.Sprintf(`加%s %s %s chance:%d Amount:%e px:%e`,
-			orders[0].OrderSide, setting.Market, setting.Symbol, setting.Chance, setting.GridAmount, setting.PriceX))
+		util.Notice(fmt.Sprintf(`加%s %s %s chance:%d Amount:%e px:%e order type %s`,
+			orders[0].OrderSide, setting.Market, setting.Symbol, setting.Chance, setting.GridAmount, setting.PriceX, orders[0].OrderType))
 		if orders[0].OrderSide == model.OrderSideSell {
 			setting.Chance--
 		} else if orders[0].OrderSide == model.OrderSideBuy {

@@ -181,7 +181,8 @@ func AdjustPosHolding(key, secret string, setting *model.Setting, data *model.Tu
 
 func CheckActiveTrail(account *model.Account, setting *model.Setting, data *model.TurtleData, bidAsk *model.BidAsk) (trailed bool) {
 	if (data.OrderLong != nil && len(data.OrderLong) > 0 && data.OrderLong[0].OrderType == model.OrderTypeTrailStop) ||
-		(data.OrderShort != nil && len(data.OrderShort) > 0 && data.OrderShort[0].OrderType == model.OrderTypeTrailStop) {
+		(data.OrderShort != nil && len(data.OrderShort) > 0 && data.OrderShort[0].OrderType == model.OrderTypeTrailStop) ||
+		model.CommonTurtleSymbols[setting.Symbol] {
 		return false
 	}
 	if setting.Chance > 0 && data.LowLast*data.ActivationRate > 0 && bidAsk.Bids[0].Price > data.LowLast*data.ActivationRate {
@@ -235,19 +236,33 @@ func HandleOrders(key, secret, market, symbol string, settings []*model.Setting,
 	return true
 }
 
-func clearTurtleOrders(account *model.Account, setting *model.Setting, turtle *model.TurtleData) {
+func clearTurtleOrders(account *model.Account, setting *model.Setting, turtle *model.TurtleData) (trailBuys, trailSells []*model.Order) {
 	longAmount := 0.0
 	shortAmount := 0.0
+	trailBuys = make([]*model.Order, 0)
+	trailSells = make([]*model.Order, 0)
 	for _, order := range turtle.OrderLong {
 		if order != nil {
-			longAmount += order.Amount
-			go MustCancel(account.Key, account.Secret, setting.Market, setting.Symbol, order.OrderType, order.OrderId, false)
+			if order.OrderType == model.OrderTypeTrailStop {
+				util.Notice(fmt.Sprintf(`get trail from last turtle data %s %s %s amt %f at %f ordId %s %s`,
+					order.Market, order.Symbol, order.OrderSide, order.Amount, order.Price, order.OrderId, order.Status))
+				trailBuys = append(trailBuys, order)
+			} else {
+				longAmount += order.Amount
+				go MustCancel(account.Key, account.Secret, setting.Market, setting.Symbol, order.OrderType, order.OrderId, false)
+			}
 		}
 	}
 	for _, order := range turtle.OrderShort {
 		if order != nil {
-			shortAmount += order.Amount
-			go MustCancel(account.Key, account.Secret, setting.Market, setting.Symbol, order.OrderType, order.OrderId, false)
+			if order.OrderType == model.OrderTypeTrailStop {
+				util.Notice(fmt.Sprintf(`get trail from last turtle data %s %s %s amt %f at %f ordId %s %s`,
+					order.Market, order.Symbol, order.OrderSide, order.Amount, order.Price, order.OrderId, order.Status))
+				trailSells = append(trailSells, order)
+			} else {
+				shortAmount += order.Amount
+				go MustCancel(account.Key, account.Secret, setting.Market, setting.Symbol, order.OrderType, order.OrderId, false)
+			}
 		}
 	}
 	for _, order := range turtle.OrderAdjust {
@@ -290,11 +305,18 @@ func clearTurtleOrders(account *model.Account, setting *model.Setting, turtle *m
 	}
 	turtle.OrderLong = nil
 	turtle.OrderShort = nil
+	if len(trailBuys) == 0 {
+		trailBuys = nil
+	}
+	if len(trailSells) == 0 {
+		trailSells = nil
+	}
+	return trailBuys, trailSells
 }
 
 var getTurtleLock = sync.Map{} // key - *sync.Mutex{}
 
-func handleLastTurtleData(account *model.Account, function, market, symbol, lastTime string) (lastHandled bool) {
+func handleLastTurtleData(account *model.Account, function, market, symbol, lastTime string) (lastHandled bool, trailBuys, trailSells []*model.Order) {
 	if function == model.FunctionCombineTurtle {
 		settingCombine := GetSetting(model.FunctionCombineTurtle, market, symbol)
 		settingNormal := GetSetting(model.FunctionTurtleNormal, market, symbol)
@@ -313,7 +335,7 @@ func handleLastTurtleData(account *model.Account, function, market, symbol, last
 			if valueNormal != nil {
 				lastHandled = true
 				util.Notice(fmt.Sprintf(`handle last turtle normal %s %s %s %s`, function, market, symbol, lastTime))
-				clearTurtleOrders(account, settingNormal, valueNormal.(*model.TurtleData))
+				trailBuys, trailSells = clearTurtleOrders(account, settingNormal, valueNormal.(*model.TurtleData))
 				util.DelSyncMap(&TurtleDataSet, model.FunctionTurtleNormal, market, symbol, lastTime)
 			}
 		}
@@ -325,7 +347,7 @@ func handleLastTurtleData(account *model.Account, function, market, symbol, last
 		clearTurtleOrders(account, GetSetting(function, market, symbol), valueTurtle.(*model.TurtleData))
 		util.StoreSyncMap(&TurtleDataSet, nil, function, market, symbol, lastTime)
 	}
-	return lastHandled
+	return lastHandled, trailBuys, trailSells
 }
 
 // GetTurtleData refreshDynamic false时代表仅作为检查是否有足够turtleData作为top market info使用，此时不会存在缓存中，否则会引起far near错误
@@ -348,12 +370,13 @@ func GetTurtleData(account *model.Account, function, market, symbol string, far,
 	nowPeriod, nowStr := model.GetNowPeriod(market, seconds, now)
 	value, ok := util.LoadSyncMap(&TurtleDataSet, function, market, symbol, nowStr)
 	lastHandled := false
+	var trailBuys, trailSells []*model.Order
 	if ok && value != nil {
 		return value.(*model.TurtleData), true
 	} else {
 		lastTime := time.Unix(now.Unix()-seconds, 0)
 		_, lastStr := model.GetNowPeriod(market, seconds, lastTime)
-		lastHandled = handleLastTurtleData(account, function, market, symbol, lastStr)
+		lastHandled, trailBuys, trailSells = handleLastTurtleData(account, function, market, symbol, lastStr)
 	}
 	if refreshDynamic && !model.CommonTurtleSymbols[symbol] {
 		refreshValue, refreshOk := DynamicHandleTime.Load(market)
@@ -403,6 +426,8 @@ func GetTurtleData(account *model.Account, function, market, symbol string, far,
 	}
 	if lastHandled {
 		data.CheckTimeOpen = time.Now()
+		data.OrderLong = trailBuys
+		data.OrderShort = trailSells
 	}
 	if data.Amount > 0 && data.N > 0 {
 		var marketInfo *model.MarketInfo
