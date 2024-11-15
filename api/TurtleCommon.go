@@ -211,6 +211,7 @@ func CheckActiveTrail(account *model.Account, setting *model.Setting, data *mode
 	if trailed {
 		setting.Chance = 0
 		setting.Liquidated = true
+		data.Liquidated = true
 		model.AppDB.Save(setting)
 	}
 	return trailed
