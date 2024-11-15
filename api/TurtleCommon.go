@@ -204,6 +204,7 @@ func CheckActiveTrail(account *model.Account, setting *model.Setting, data *mode
 			order.Function = model.Close
 			util.Notice(fmt.Sprintf(`success trail buy %s %s amt %f at %f ratio %f ordId %s`,
 				setting.Market, setting.Symbol, setting.GridAmount, data.HighLast/data.ActivationRate, data.CallBackRatio, order.OrderId))
+			go model.AppDB.Save(order)
 		}
 	}
 	return trailed
