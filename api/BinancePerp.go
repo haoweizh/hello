@@ -371,7 +371,6 @@ func placeOrderBinancePerp(account *model.Account, isWS bool, order *model.Order
 			service.StopPrice(stopPriceStr)
 			service.PriceProtect(true)
 		case model.OrderTypeTrailStop:
-			// 注意此处和binance文档中不同，需要额外乘以100
 			stopPriceStr = util.CutTailZero(strconv.FormatFloat(100*triggerPrice, 'f', 1, 64))
 			service.Type(futures.OrderTypeTrailingStopMarket)
 			service.ActivationPrice(priceStr)

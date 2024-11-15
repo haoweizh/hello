@@ -8,16 +8,17 @@ import (
 type TurtleData struct {
 	// useNear是否在海龟交易时使用lowDaysNear和highDaysNear和priceX作为触发条件
 	// adjustChecked在设置为true前，不允许使用本Data进行交易
-	UseNear, BreakLong, BreakShort, Liquidated, AdjustChecked, OrderCleared bool
-	TurtleTime, CheckUseApi, CheckTimeOpen, Expire                          time.Time
-	HighNear, LowNear, HighFar, LowFar, LowAdjust, HighAdjust               float64
-	HighToday, LowToday, N, M, NVolume, Amount                              float64
-	DaysNear, DaysFar, DaysAdjust                                           int // CombineBig: -1小单，1大单，0未初始化
-	Big                                                                     int64
-	Symbol                                                                  string
+	UseNear, BreakLong, BreakShort, Liquidated, AdjustChecked, OrderCleared, IsBig bool
+	TurtleTime, CheckUseApi, CheckTimeOpen, Expire                                 time.Time
+	HighNear, LowNear, HighFar, LowFar, LowAdjust, HighAdjust                      float64
+	HighToday, LowToday, N, M, NVolume, Amount                                     float64
+	// CallBackRatio: 跟踪单回撤比例 ActivationRate: 跟踪单激活比例
+	CallBackRatio, ActivationRate float64
+	DaysNear, DaysFar, DaysAdjust int // CombineBig: -1小单，1大单，0未初始化
+	Symbol                        string
+	OrderLong, OrderShort         []*Order
 	// 适应某些交易所单笔订单不能过大，大笔订单会拆分后下成多个，因价格超出无法下成的单为了不被取消，也归入orderAdjust
-	OrderLong, OrderShort []*Order
-	OrderAdjust           map[string]*Order
+	OrderAdjust map[string]*Order
 }
 
 type TurtleDataArray []*TurtleData
@@ -47,8 +48,8 @@ func (turtleData *TurtleData) GetIds() (ids string) {
 }
 
 func ResetBig(dataCombine, dataNormal *TurtleData) {
-	dataNormal.Big = 1
-	dataCombine.Big = -1
+	dataNormal.IsBig = true
+	dataCombine.IsBig = false
 }
 
 func (turtleData *TurtleData) ToString() (str string) {

@@ -393,13 +393,13 @@ func Test_initTurtleN(t *testing.T) {
 	model.NewConfig()
 	market := model.OKEX
 	account := model.AppConfig.GetAccounts(market)[0]
-	now := time.Now()
-	nowPeriod1, _ := model.GetNowPeriod(market, 86400, now)
+	//now := time.Now()
+	//nowPeriod1, _ := model.GetNowPeriod(market, 86400, now)
 	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
 	settings := map[string]*model.Setting{`SHIB_PERP`: {Market: market, Symbol: `SHIB_PERP`}}
 	api.GetMultiCandle(account, model.OKEX, 3600, time.Now().Add(time.Duration(-220)*time.Hour), time.Now(), settings, false)
-	api.GetCandleData(account, market, `GAS_PERP`, model.FunctionCombineTurtle, 18, 9, 86400,
-		5, 3, 0.1, nowPeriod1)
+	//api.CalcTurtleData(account, market, `GAS_PERP`, model.FunctionCombineTurtle, 18, 9, 86400,
+	//	5, 3, 0.1, nowPeriod1)
 	api.RenewListenKeyBinanceSpot(account)
 	//fmt.Println(model.AppConfig.OKPhase)
 	//orders := api.QueryOpenOrders(account.Key, account.Secret, market, `ARB_PERP`)

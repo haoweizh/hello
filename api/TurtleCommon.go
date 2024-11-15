@@ -264,34 +264,34 @@ func clearTurtleOrders(account *model.Account, setting *model.Setting, turtle *m
 var getTurtleLock = sync.Map{} // key - *sync.Mutex{}
 
 func handleLastTurtleData(account *model.Account, function, market, symbol, lastTime string) (lastHandled bool) {
-	var settings []*model.Setting
-	var turtles []*model.TurtleData
 	if function == model.FunctionCombineTurtle {
 		settingCombine := GetSetting(model.FunctionCombineTurtle, market, symbol)
 		settingNormal := GetSetting(model.FunctionTurtleNormal, market, symbol)
-		if settingCombine != nil && settingNormal != nil {
+		if settingCombine != nil {
 			valueCombine, _ := util.LoadSyncMap(&TurtleDataSet, model.FunctionCombineTurtle, market, symbol, lastTime)
-			valueNormal, _ := util.LoadSyncMap(&TurtleDataSet, model.FunctionTurtleNormal, market, symbol, lastTime)
-			if valueCombine != nil && valueNormal != nil {
+			if valueCombine != nil {
 				lastHandled = true
-				util.Notice(fmt.Sprintf(`handle last turtle %s %s %s %s`, function, market, symbol, lastTime))
-				settings = []*model.Setting{settingCombine, settingNormal}
-				turtles = []*model.TurtleData{valueCombine.(*model.TurtleData), valueNormal.(*model.TurtleData)}
+				util.Notice(fmt.Sprintf(`handle last turtle combi %s %s %s %s`, function, market, symbol, lastTime))
 				//CheckBreak(account, market, symbol, settings, turtles, nil)
-				clearTurtleOrders(account, settings[0], turtles[0])
-				clearTurtleOrders(account, settings[1], turtles[1])
+				clearTurtleOrders(account, settingCombine, valueCombine.(*model.TurtleData))
 				util.DelSyncMap(&TurtleDataSet, model.FunctionCombineTurtle, market, symbol, lastTime)
+			}
+		}
+		if settingNormal != nil {
+			valueNormal, _ := util.LoadSyncMap(&TurtleDataSet, model.FunctionTurtleNormal, market, symbol, lastTime)
+			if valueNormal != nil {
+				lastHandled = true
+				util.Notice(fmt.Sprintf(`handle last turtle normal %s %s %s %s`, function, market, symbol, lastTime))
+				clearTurtleOrders(account, settingNormal, valueNormal.(*model.TurtleData))
 				util.DelSyncMap(&TurtleDataSet, model.FunctionTurtleNormal, market, symbol, lastTime)
 			}
 		}
 	} else if function == model.FunctionTurtle {
-		settings = []*model.Setting{GetSetting(function, market, symbol)}
 		valueTurtle, _ := util.LoadSyncMap(&TurtleDataSet, function, market, symbol, lastTime)
 		lastHandled = true
 		util.Notice(fmt.Sprintf(`handle last turtle %s %s %s %s`, function, market, symbol, lastTime))
-		turtles = []*model.TurtleData{valueTurtle.(*model.TurtleData)}
 		//CheckBreak(account, market, symbol, settings, turtles, nil)
-		clearTurtleOrders(account, settings[0], turtles[0])
+		clearTurtleOrders(account, GetSetting(function, market, symbol), valueTurtle.(*model.TurtleData))
 		util.StoreSyncMap(&TurtleDataSet, nil, function, market, symbol, lastTime)
 	}
 	return lastHandled
@@ -351,18 +351,18 @@ func GetTurtleData(account *model.Account, function, market, symbol string, far,
 			removed = false
 		}
 	}
+	data = &model.TurtleData{TurtleTime: nowPeriod, Expire: nowPeriod.Add(time.Second * time.Duration(seconds)),
+		IsBig: true, Symbol: symbol, DaysFar: int(far), DaysNear: int(near), DaysAdjust: 5,
+		OrderAdjust: make(map[string]*model.Order), OrderCleared: lastHandled, CallBackRatio: 0.03, ActivationRate: 2}
 	if removed {
-		data = &model.TurtleData{TurtleTime: nowPeriod, Expire: nowPeriod.Add(time.Second * time.Duration(seconds)),
-			Symbol: symbol, Big: 1, DaysFar: int(far), DaysNear: int(near), DaysAdjust: 5,
-			OrderAdjust: make(map[string]*model.Order), OrderCleared: lastHandled, CheckTimeOpen: time.Now()}
+		data.CheckTimeOpen = time.Now()
 		util.StoreSyncMap(&TurtleDataSet, data, function, market, symbol, nowStr)
 		return data, false
 	}
 	util.Notice(fmt.Sprintf(`need to create turtle data %s %s %s %s %d refresh %v`,
 		function, market, symbol, nowStr, far, refreshDynamic))
-	var getOne, getAll bool
-	getOne, getAll, data = GetCandleData(account, market, symbol, function, int(far), int(near), int(seconds), 5,
-		float64(chanceLimit), amountRate, nowPeriod)
+	candles := getTurtleCandles(account, market, symbol, int(far), int(seconds), nowPeriod)
+	getOne, getAll := CalcTurtleData(account, data, candles, int(seconds), market, function, float64(chanceLimit), amountRate)
 	if !getOne {
 		util.Notice(fmt.Sprintf(`fail to getOne %s %s %d %d`, market, symbol, data.DaysFar, seconds))
 		return nil, false
@@ -370,7 +370,6 @@ func GetTurtleData(account *model.Account, function, market, symbol string, far,
 		util.Notice(fmt.Sprintf(`fail to getAll %s %s %d %d`, market, symbol, data.DaysFar, seconds))
 		return nil, true
 	}
-	data.OrderCleared = lastHandled
 	if lastHandled {
 		data.CheckTimeOpen = time.Now()
 	}
@@ -396,39 +395,34 @@ func GetTurtleData(account *model.Account, function, market, symbol string, far,
 	}
 }
 
-func GetCandleData(account *model.Account, market, symbol, function string, far, near, seconds, adjust int,
-	chanceLimit, amountRate float64, nowPeriod time.Time) (getOne, getAll bool, data *model.TurtleData) {
-	candles := getTurtleCandles(account, market, symbol, far, seconds, nowPeriod)
-	data = &model.TurtleData{TurtleTime: nowPeriod, Expire: nowPeriod.Add(time.Second * time.Duration(seconds)), Big: 1,
-		Symbol: symbol, DaysFar: far, DaysNear: near, DaysAdjust: adjust, OrderAdjust: make(map[string]*model.Order), OrderCleared: false}
+func CalcTurtleData(account *model.Account, data *model.TurtleData, candles []*model.Candle, seconds int, market, function string, chanceLimit, amountRate float64) (
+	getOne, getAll bool) {
 	priceClose := 0.0
-	for i := 1; i <= far; i++ {
-		currentPeriod := nowPeriod.Add(time.Second * time.Duration(seconds*-i))
+	for i := 1; i <= data.DaysFar; i++ {
+		currentPeriod := data.TurtleTime.Add(time.Second * time.Duration(seconds*-i))
 		candle := findCandle(candles, currentPeriod)
 		if candle == nil || candle.PriceHigh == 0 || candle.PriceLow == 0 {
-			if time.Now().Second() == 0 {
-				util.Notice(`can not calc turtleDate as nil candle %s %s %s %d`,
-					market, symbol, currentPeriod.String(), len(candles))
-			}
+			util.NoticeLess(`can not calc turtleDate as nil candle %s %s %s %d`,
+				market, data.Symbol, currentPeriod.String(), len(candles))
 			return
 		}
 		getOne = true
-		if candle.PriceHigh > data.HighFar && i <= far {
+		if candle.PriceHigh > data.HighFar && i <= data.DaysFar {
 			data.HighFar = candle.PriceHigh
 		}
-		if (data.LowFar == 0 || data.LowFar > candle.PriceLow) && i <= far {
+		if (data.LowFar == 0 || data.LowFar > candle.PriceLow) && i <= data.DaysFar {
 			data.LowFar = candle.PriceLow
 		}
-		if candle.PriceHigh > data.HighNear && i <= near {
+		if candle.PriceHigh > data.HighNear && i <= data.DaysNear {
 			data.HighNear = candle.PriceHigh
 		}
-		if (data.LowNear == 0 || data.LowNear > candle.PriceLow) && i <= near {
+		if (data.LowNear == 0 || data.LowNear > candle.PriceLow) && i <= data.DaysNear {
 			data.LowNear = candle.PriceLow
 		}
-		if candle.PriceHigh > data.HighAdjust && i <= adjust {
+		if candle.PriceHigh > data.HighAdjust && i <= data.DaysAdjust {
 			data.HighAdjust = candle.PriceHigh
 		}
-		if (data.LowAdjust == 0 || data.LowAdjust > candle.PriceLow) && i <= adjust {
+		if (data.LowAdjust == 0 || data.LowAdjust > candle.PriceLow) && i <= data.DaysAdjust {
 			data.LowAdjust = candle.PriceLow
 		}
 		if i == 1 {
@@ -438,7 +432,7 @@ func GetCandleData(account *model.Account, market, symbol, function string, far,
 			data.M = candle.M
 			priceClose = candle.PriceClose
 			data.Amount = CalcTurtleAmount(account, data.N, amountRate, candle)
-			util.Info(fmt.Sprintf(`calc amt %s %s %s %f %f %f`, market, symbol, function, data.N, amountRate, data.Amount))
+			util.Info(fmt.Sprintf(`calc amt %s %s %s %f %f %f`, market, data.Symbol, function, data.N, amountRate, data.Amount))
 		}
 	}
 	if function == model.FunctionTurtle || function == model.FunctionTurtleNormal {
@@ -446,7 +440,7 @@ func GetCandleData(account *model.Account, market, symbol, function string, far,
 	} else if function == model.FunctionCombineTurtle {
 		data.UseNear = false
 	}
-	if model.CommonTurtleSymbols[symbol] {
+	if model.CommonTurtleSymbols[data.Symbol] {
 		if function == model.FunctionCombineTurtle {
 			data.Amount = math.Min(data.Amount, 1920000/priceClose/chanceLimit)
 		} else {
