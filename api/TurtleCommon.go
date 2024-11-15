@@ -57,6 +57,7 @@ func ClearOrders(key, secret, market, symbol string, keepTypes map[string]bool) 
 	orders := QueryOpenOrders(key, secret, market, symbol)
 	for _, order := range orders {
 		if keepTypes != nil && keepTypes[order.OrderType] {
+			util.Notice(`keep order from ClearOrders %s %s %s %s`, market, symbol, order.OrderId, order.OrderType)
 			continue
 		}
 		if order != nil {
