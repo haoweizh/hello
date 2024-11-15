@@ -198,7 +198,10 @@ func handleBreak(setting *model.Setting, data *model.TurtleData, orders []*model
 		setting.Chance = 0
 		setting.GridAmount = 0
 		setting.PriceX = 0
-		data.Liquidated = true
+		// OrderTypeTrailStop会在不同TurtleData周期之间继承，所以在下单的时候设定已平仓，在成交以后不再设定，这样可以让继承OrderTypeTrailStop的周期正常开仓。
+		if orders[0].OrderType != model.OrderTypeTrailStop {
+			data.Liquidated = true
+		}
 	} else if orders[0].Function == model.Open {
 		util.Notice(fmt.Sprintf(`加%s %s %s chance:%d Amount:%e px:%e`,
 			orders[0].OrderSide, setting.Market, setting.Symbol, setting.Chance, setting.GridAmount, setting.PriceX))
