@@ -162,7 +162,12 @@ func WebSocketClient(market, url string, subscribes []interface{}, subHandler Su
 			return nil, nil, err
 		}
 		connection.SetPingHandler(func(appData string) error {
-			return connection.WriteControl(websocket.PongMessage, []byte(appData), time.Now().Add(time.Minute))
+			errPing := connection.WriteControl(websocket.PongMessage, []byte(appData), time.Now().Add(time.Minute))
+			if errPing != nil {
+				util.Notice(fmt.Sprintf(`fail to handle ping %s %s %s`, market, url, errPing.Error()))
+				SetRequireReset(market)
+			}
+			return errPing
 		})
 		stopChan := make(chan struct{}, 2)
 		go chanHandler(market, stopChan, connection, msgHandler)

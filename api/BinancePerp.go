@@ -25,7 +25,7 @@ const restBinancePerp = `https://fapi.binance.com`
 const wsBinancePerp = `wss://fstream.binance.com/stream`
 const wsBinancePerpApi = `wss://ws-fapi.binance.com/ws-fapi/v1`
 
-const wsStepBinancePerp = 20
+const wsStepBinancePerp = 50
 
 var pingDepthBinancePerp = false
 
@@ -158,7 +158,6 @@ var subscribeHandlerBinancePerp = func(market string, connection *websocket.Conn
 	} else {
 		util.Info(fmt.Sprintf(`subscribe %s %s %d`, model.BinancePerp, subParamJson, len(subscribes)))
 	}
-	time.Sleep(time.Millisecond * 500)
 	return err
 }
 
