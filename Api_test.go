@@ -519,7 +519,12 @@ func Test_download(t *testing.T) {
 
 func Test_WS(t *testing.T) {
 	model.NewConfig()
-	api.CreateMarketTickerWS(model.AppEnvironment, model.BitgetPerp)
+	//api.CreateMarketTickerWS(model.AppEnvironment, model.BitgetPerp)
+	_, _, err := api.WsDepthServeBitgetPerp(model.AppEnvironment, model.BitgetPerp)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
 	select {}
 }
 

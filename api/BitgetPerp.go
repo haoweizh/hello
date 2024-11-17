@@ -100,13 +100,10 @@ func WsDepthServeBitgetPerp(environment *model.Environment, market string) (sock
 	}
 	msgChans = make([]chan struct{}, 0)
 	socketMap = make(map[*websocket.Conn]bool)
-	symbols := GetMarketSymbols(model.BitgetPerp)
-	futureSubscribes := make([]interface{}, 0)
-	for symbol := range symbols {
-		futureSubscribes = append(futureSubscribes, symbol)
-	}
+	depthSubs := GetWSSubscribes(market, model.SubscribeDepth)
+	marketPriceSubs := GetWSSubscribes(market, model.SubscribeMarkPrice)
 	markPriceSockets, markPriceChannels, markPriceErr := WebSocketClient(market, bitgetPublic,
-		futureSubscribes, subscribeHandlerBitgetPerpMarkPrice, markPriceWsHandler, wsStepBitget)
+		marketPriceSubs, subscribeHandlerBitget, markPriceWsHandler, wsStepBitget)
 	if markPriceErr == nil {
 		msgChans = append(msgChans, markPriceChannels...)
 		for conn, b := range markPriceSockets {
@@ -116,7 +113,7 @@ func WsDepthServeBitgetPerp(environment *model.Environment, market string) (sock
 		return nil, nil, markPriceErr
 	}
 	perpBookSockets, perpBookChannels, perpBookErr := WebSocketClient(market, bitgetPublic,
-		futureSubscribes, subscribeHandlerBitgetTicker, tickHandlerBitget, wsStepBitget)
+		depthSubs, subscribeHandlerBitget, tickHandlerBitget, wsStepBitget)
 	if perpBookErr == nil {
 		util.Info(`finish connect public Bitget perp book wss `)
 		msgChans = append(msgChans, perpBookChannels...)
@@ -130,27 +127,6 @@ func WsDepthServeBitgetPerp(environment *model.Environment, market string) (sock
 	environment.SocketsTick.Store(market, socketMap)
 	environment.MsgChanTick.Store(market, msgChans)
 	return
-}
-
-var subscribeHandlerBitgetPerpMarkPrice = func(market string, connection *websocket.Conn, subscribes []interface{}) error {
-	var err error = nil
-	var params []map[string]string
-	for _, subscribe := range subscribes {
-		success, _, _, dialectSymbol := model.GetFromStandard(model.BitgetPerp, subscribe.(string))
-		if !success {
-			continue
-		}
-		params = append(params, map[string]string{"instType": "USDT-FUTURES", "channel": "ticker", "instId": dialectSymbol})
-	}
-	subscribeMap := make(map[string]interface{})
-	subscribeMap["op"] = "subscribe"
-	subscribeMap["args"] = params
-	subscribeMessage := util.JsonEncodeToByte(subscribeMap)
-	if err = SendToConnection(model.BitgetPerp, connection, subscribeMessage); err != nil {
-		util.Info(" bitget can not subscribe %s %s", subscribeMessage, err.Error())
-	}
-	util.Info(`bitget subscribed ` + string(subscribeMessage))
-	return err
 }
 
 func maintainChannelBitgetPerp() {

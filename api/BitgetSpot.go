@@ -131,42 +131,27 @@ func tickHandlerBitget(event []byte) {
 }
 
 func WsDepthServeBitgetSpot(environment *model.Environment, market string) (socketMap map[*websocket.Conn]bool, msgChans []chan struct{}, connectErr error) {
-	spotSubscribes := make([]interface{}, 0)
-	symbols := GetMarketSymbols(model.BitgetSpot)
-	for symbol := range symbols {
-		spotSubscribes = append(spotSubscribes, symbol)
-	}
+	spotSubscribes := GetWSSubscribes(market, model.SubscribeDepth)
 	socketMap, msgChans, connectErr = WebSocketClient(market, bitgetPublic,
-		spotSubscribes, subscribeHandlerBitgetTicker, tickHandlerBitget, wsStepBitget)
+		spotSubscribes, subscribeHandlerBitget, tickHandlerBitget, wsStepBitget)
 	go maintainChannelBitgetSpot()
 	environment.SocketsTick.Store(market, socketMap)
 	environment.MsgChanTick.Store(market, msgChans)
 	return
 }
 
-var subscribeHandlerBitgetTicker = func(market string, connection *websocket.Conn, subscribes []interface{}) error {
+var subscribeHandlerBitget = func(market string, connection *websocket.Conn, subscribes []interface{}) error {
 	var err error = nil
 	var params []map[string]string
 	for _, subscribe := range subscribes {
-		success, _, _, dialectSymbol := model.GetFromStandard(market, subscribe.(string))
-		if !success {
-			continue
-		}
-		_, marketType, coin := model.GetCoinFromDialect(market, dialectSymbol)
-		instType := `spot`
-		if marketType == model.MarketTypePerp {
-			instType = `USDT-FUTURES`
-		} else if marketType == model.MarketTypeSpot {
-			instType = `SPOT`
-		}
-		params = append(params, map[string]string{"instType": instType, "channel": "books1", "instId": coin + model.DialectTail[marketType][market]})
+		params = append(params, subscribe.(map[string]string))
 	}
 	subscribeMap := make(map[string]interface{})
 	subscribeMap["op"] = "subscribe"
 	subscribeMap["args"] = params
 	subscribeMessage := util.JsonEncodeToByte(subscribeMap)
-	if err = SendToConnection(model.BitgetSpot, connection, subscribeMessage); err != nil {
-		util.Info(" bitget can not subscribe %s %s", subscribeMessage, err.Error())
+	if err = SendToConnection(market, connection, subscribeMessage); err != nil {
+		util.Info("%s can not subscribe %s %s", market, subscribeMessage, err.Error())
 	}
 	util.Info(`bitget subscribed ` + string(subscribeMessage))
 	return err
