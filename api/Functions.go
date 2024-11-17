@@ -102,7 +102,7 @@ func RequireDepthChanReset(environment *model.Environment, market string) bool {
 			util.NoticeLess(fmt.Sprintf(`RequireDepthChanReset delay too long %s %s %f`, market, symbol, delay))
 		}
 	}
-	needReset = float64(validSymbolNum) < float64(len(symbols))*0.6 || len(symbols)-validSymbolNum > 100
+	needReset = float64(validSymbolNum) < float64(len(symbols))*0.7 || len(symbols)-validSymbolNum > 200
 	for funcName := range model.TickHandlers {
 		settings := GetSettings(funcName, market)
 		if settings == nil {
