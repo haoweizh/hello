@@ -26,7 +26,8 @@ const bybitTradeWsUrl = "wss://stream.bybit.com/v5/trade?max_active_time=10m"
 
 var pingDepthBybit = false
 var pingPrivateBybit = false
-var wsStepBybit = 10
+
+const wsStepBybit = 10
 
 var wsAccountHandlerBybit = func(market, key string, event []byte) {
 	if strings.Contains(string(event), `pong`) {

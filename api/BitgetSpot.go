@@ -137,7 +137,7 @@ func WsDepthServeBitgetSpot(environment *model.Environment, market string) (sock
 		spotSubscribes = append(spotSubscribes, symbol)
 	}
 	socketMap, msgChans, connectErr = WebSocketClient(market, bitgetPublic,
-		spotSubscribes, subscribeHandlerBitgetTicker, tickHandlerBitget, 40)
+		spotSubscribes, subscribeHandlerBitgetTicker, tickHandlerBitget, wsStepBitget)
 	go maintainChannelBitgetSpot()
 	environment.SocketsTick.Store(market, socketMap)
 	environment.MsgChanTick.Store(market, msgChans)

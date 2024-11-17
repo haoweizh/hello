@@ -13,6 +13,8 @@ import (
 	"time"
 )
 
+const wsStepBitget = 40
+
 var channelMaintainingBitgetPerp = false
 
 func getMarketsBitgetPerp() (marketInfos map[string]*model.MarketInfo) {
@@ -104,7 +106,7 @@ func WsDepthServeBitgetPerp(environment *model.Environment, market string) (sock
 		futureSubscribes = append(futureSubscribes, symbol)
 	}
 	markPriceSockets, markPriceChannels, markPriceErr := WebSocketClient(market, bitgetPublic,
-		futureSubscribes, subscribeHandlerBitgetPerpMarkPrice, markPriceWsHandler, 40)
+		futureSubscribes, subscribeHandlerBitgetPerpMarkPrice, markPriceWsHandler, wsStepBitget)
 	if markPriceErr == nil {
 		msgChans = append(msgChans, markPriceChannels...)
 		for conn, b := range markPriceSockets {
@@ -114,7 +116,7 @@ func WsDepthServeBitgetPerp(environment *model.Environment, market string) (sock
 		return nil, nil, markPriceErr
 	}
 	perpBookSockets, perpBookChannels, perpBookErr := WebSocketClient(market, bitgetPublic,
-		futureSubscribes, subscribeHandlerBitgetTicker, tickHandlerBitget, 40)
+		futureSubscribes, subscribeHandlerBitgetTicker, tickHandlerBitget, wsStepBitget)
 	if perpBookErr == nil {
 		util.Info(`finish connect public Bitget perp book wss `)
 		msgChans = append(msgChans, perpBookChannels...)

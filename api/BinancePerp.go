@@ -25,8 +25,6 @@ const restBinancePerp = `https://fapi.binance.com`
 const wsBinancePerp = `wss://fstream.binance.com/stream`
 const wsBinancePerpApi = `wss://ws-fapi.binance.com/ws-fapi/v1`
 
-const wsStepBinancePerp = 50
-
 var pingDepthBinancePerp = false
 
 func getMarketsBinancePerp(key, secret string) (marketInfos map[string]*model.MarketInfo) {
@@ -139,7 +137,7 @@ func WsDepthServeBinancePerp(environment *model.Environment, market string) (soc
 		}
 	}
 	subscribes := GetWSSubscribes(market, subType)
-	socketMap, msgChans, connectErr = WebSocketClient(market, wsBinancePerp, subscribes, subscribeHandlerBinancePerp, wsHandlerBinancePerp, wsStepBinancePerp)
+	socketMap, msgChans, connectErr = WebSocketClient(market, wsBinancePerp, subscribes, subscribeHandlerBinancePerp, wsHandlerBinancePerp, wsStepBinance)
 	go maintainChannelBinancePerp()
 	environment.SocketsTick.Store(market, socketMap)
 	environment.MsgChanTick.Store(market, msgChans)
