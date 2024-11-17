@@ -142,9 +142,9 @@ func WsDepthServeBitgetSpot(environment *model.Environment, market string) (sock
 
 var subscribeHandlerBitget = func(market string, connection *websocket.Conn, subscribes []interface{}) error {
 	var err error = nil
-	var params []map[string]string
+	var params []string
 	for _, subscribe := range subscribes {
-		params = append(params, subscribe.(map[string]string))
+		params = append(params, subscribe.(string))
 	}
 	subscribeMap := make(map[string]interface{})
 	subscribeMap["op"] = "subscribe"
