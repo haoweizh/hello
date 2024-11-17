@@ -68,7 +68,7 @@ var subscribeHandlerHuobi = func(market string, connection *websocket.Conn, subs
 	return err
 }
 
-func WsDepthServeHuobiSpot(environment *model.Environment, market string) (socketMap map[*websocket.Conn]bool, msgChans []chan struct{}, connectErr error) {
+func WsTickServeHuobiSpot(environment *model.Environment, market string) (socketMap map[*websocket.Conn]bool, msgChans []chan struct{}, connectErr error) {
 	wsHandler := func(event []byte) {
 		res := util.UnGzip(event)
 		responseJson, jsonErr := util.NewJSON(res)
@@ -215,7 +215,7 @@ func WsDepthServeHuobiSpot(environment *model.Environment, market string) (socke
 			socketMap[conn] = b
 		}
 	}
-	environment.SocketsTick.Store(market, socketMap)
+	environment.ConnTick.Store(market, socketMap)
 	environment.MsgChanTick.Store(market, msgChans)
 	return
 }

@@ -87,7 +87,7 @@ var AppDB *gorm.DB
 var AppRedis *redis.Client
 var AppConfig *Config
 var AppEnvironment = &Environment{WsManager: &WSManager{WSAgents: &sync.Map{}}, MonitorSettings: &sync.Map{},
-	AccountConns: sync.Map{}, WSRespChan: make(chan WSResp, 100)}
+	ConnOrder: sync.Map{}, WSRespChan: make(chan WSResp, 100)}
 
 var ChannelMaintaining sync.Map // market - bool
 var DialectTail = map[string]map[string]string{

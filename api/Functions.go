@@ -73,7 +73,7 @@ func RequireKLineReset(environment *model.Environment, market string, symbols ma
 	return reset
 }
 
-func RequireDepthChanReset(environment *model.Environment, market string) bool {
+func RequireConnTickReset(environment *model.Environment, market string) bool {
 	needReset, ok := requireReset.Load(market)
 	if ok && needReset != nil && needReset.(bool) {
 		requireReset.Store(market, false)
@@ -96,10 +96,10 @@ func RequireDepthChanReset(environment *model.Environment, market string) bool {
 		if delay < model.AppConfig.Delay {
 			validSymbolNum++
 			validSymbols[symbol] = true
-			//util.NoticeLess(fmt.Sprintf(`RequireDepthChanReset valid %d %s %s %f<%f`,
+			//util.NoticeLess(fmt.Sprintf(`RequireConnTickReset valid %d %s %s %f<%f`,
 			//	validSymbolNum, market, symbol, delay, model.AppConfig.Delay))
 		} else {
-			util.NoticeLess(fmt.Sprintf(`RequireDepthChanReset delay too long %s %s %f`, market, symbol, delay))
+			util.NoticeLess(fmt.Sprintf(`RequireConnTickReset delay too long %s %s %f`, market, symbol, delay))
 		}
 	}
 	needReset = float64(validSymbolNum) < float64(len(symbols))*0.7 || len(symbols)-validSymbolNum > 200
@@ -125,7 +125,7 @@ func RequireDepthChanReset(environment *model.Environment, market string) bool {
 			return true
 		})
 	}
-	util.Info(fmt.Sprintf(`RequireDepthChanReset %d  %f valid %d in %d %s needReset %v`,
+	util.Info(fmt.Sprintf(`RequireConnTickReset %d  %f valid %d in %d %s needReset %v`,
 		now, model.AppConfig.Delay, validSymbolNum, len(symbols), market, needReset))
 	return needReset.(bool)
 }
@@ -1200,7 +1200,7 @@ func CreateMarketKLineWS(environment *model.Environment, market string, symbols 
 	return
 }
 
-func CreateMarketTickerWS(environment *model.Environment, market string) (
+func CreateWSTick(environment *model.Environment, market string) (
 	socketMap map[*websocket.Conn]bool, channels []chan struct{}) {
 	model.ChannelMaintaining.Store(market, true)
 	util.Notice(" create depth chan for " + market)
@@ -1208,31 +1208,31 @@ func CreateMarketTickerWS(environment *model.Environment, market string) (
 	var err error
 	switch market {
 	case model.KucoinSpot:
-		channels, err = WsDepthServeKucoinSpot()
+		channels, err = WsTickServeKucoinSpot()
 	case model.KucoinPerp:
-		channels, err = WsDepthServeKucoinPerp()
+		channels, err = WsTickServeKucoinPerp()
 	case model.Gate:
-		socketMap, channels, err = WsDepthServeGateNew(environment, market)
+		socketMap, channels, err = WsTickServeGateNew(environment, market)
 	case model.OKEX:
-		socketMap, channels, err = WsDepthServeOKEX(environment)
+		socketMap, channels, err = WsTickServeOKEX(environment)
 	case model.BinanceSpot, model.BinanceMargin:
-		socketMap, channels, err = WsDepthServeBinance(environment, market)
+		socketMap, channels, err = WsTickServeBinance(environment, market)
 	case model.BinancePerp:
-		socketMap, channels, err = WsDepthServeBinancePerp(environment, market)
+		socketMap, channels, err = WsTickServeBinancePerp(environment, market)
 	case model.HuobiPerp:
-		socketMap, channels, err = WsDepthServeHuobiPerp(environment, market)
+		socketMap, channels, err = WsTickServeHuobiPerp(environment, market)
 	case model.Bybit:
-		socketMap, channels, err = WsDepthServeBybit(environment, market)
+		socketMap, channels, err = WsTickServeBybit(environment, market)
 	case model.HuobiSpot:
-		socketMap, channels, err = WsDepthServeHuobiSpot(environment, market)
+		socketMap, channels, err = WsTickServeHuobiSpot(environment, market)
 	case model.Ftx:
-		socketMap, channels, err = WsDepthServeFtx(environment, market)
+		socketMap, channels, err = WsTickServeFtx(environment, market)
 	case model.Mexc:
-		socketMap, channels, err = WsDepthServeMexc(environment, market, true)
+		socketMap, channels, err = WsTickServeMexc(environment, market, true)
 	case model.BitgetSpot:
-		socketMap, channels, err = WsDepthServeBitgetSpot(environment, market)
+		socketMap, channels, err = WsTickServeBitgetSpot(environment, market)
 	case model.BitgetPerp:
-		socketMap, channels, err = WsDepthServeBitgetPerp(environment, market)
+		socketMap, channels, err = WsTickServeBitgetPerp(environment, market)
 	}
 	if err != nil {
 		util.Notice(market + ` can not create depth server ` + err.Error())

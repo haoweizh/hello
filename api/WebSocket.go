@@ -35,7 +35,7 @@ func SendToConnection(market string, connection *websocket.Conn, msg []byte) (er
 func SendToAllTickerSockets(market string, msg []byte) (err error) {
 	defer wsLock.Unlock()
 	wsLock.Lock()
-	value, _ := model.AppEnvironment.SocketsTick.Load(market)
+	value, _ := model.AppEnvironment.ConnTick.Load(market)
 	if value == nil {
 		return
 	}
@@ -126,7 +126,7 @@ func WsAccountClient(market, key, url string, accountMsgHandler AccountMsgHandle
 		for {
 			_, message, readErr := connection.ReadMessage()
 			if readErr != nil {
-				util.DelSyncMap(&model.AppEnvironment.AccountConns, market, key)
+				util.DelSyncMap(&model.AppEnvironment.ConnOrder, market, key)
 				closeErr := connection.Close()
 				if closeErr != nil {
 					util.Notice(fmt.Sprintf(`connection closed %s`, closeErr.Error()))

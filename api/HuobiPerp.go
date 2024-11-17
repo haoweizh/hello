@@ -36,7 +36,7 @@ var subscribeHandlerHuobiPerp = func(market string, connection *websocket.Conn, 
 	return err
 }
 
-func WsDepthServeHuobiPerp(environment *model.Environment, market string) (socketMap map[*websocket.Conn]bool, msgChans []chan struct{}, connectErr error) {
+func WsTickServeHuobiPerp(environment *model.Environment, market string) (socketMap map[*websocket.Conn]bool, msgChans []chan struct{}, connectErr error) {
 	wsMsgHandler := func(event []byte) {
 		res := util.UnGzip(event)
 		responseJson, err := util.NewJSON(res)
@@ -47,7 +47,7 @@ func WsDepthServeHuobiPerp(environment *model.Environment, market string) (socke
 			pingMap := make(map[string]interface{})
 			pingMap["pong"] = responseJson.Get(`ping`).MustInt()
 			pingParams := util.JsonEncodeToByte(pingMap)
-			value, _ := model.AppEnvironment.SocketsTick.Load(model.HuobiPerp)
+			value, _ := model.AppEnvironment.ConnTick.Load(model.HuobiPerp)
 			connections := value.(map[*websocket.Conn]bool)
 			for connection := range connections {
 				if connection == nil {
@@ -107,7 +107,7 @@ func WsDepthServeHuobiPerp(environment *model.Environment, market string) (socke
 	}
 	socketMap, msgChans, connectErr = WebSocketClient(market, wsHuobiPerp, GetWSSubscribes(model.HuobiPerp, model.SubscribeDepth),
 		subscribeHandlerHuobiPerp, wsMsgHandler, wsStepHuobi)
-	environment.SocketsTick.Store(market, socketMap)
+	environment.ConnTick.Store(market, socketMap)
 	environment.MsgChanTick.Store(market, msgChans)
 	return
 }

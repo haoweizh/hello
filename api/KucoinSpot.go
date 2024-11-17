@@ -91,7 +91,7 @@ func appendRelatedMarketsKucoin(key string, marketInfos map[string]*model.Market
 	util.NoticeLess(`%s %v`, key, marketInfos)
 }
 
-func WsDepthServeKucoinSpot() (channels []chan struct{}, err error) {
+func WsTickServeKucoinSpot() (channels []chan struct{}, err error) {
 	relatedClient := kucoinRelatedClient("", "", "")
 	relatedRsp, relatedErr := relatedClient.WebSocketPublicToken(nil)
 	if relatedErr != nil {

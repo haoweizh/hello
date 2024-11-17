@@ -80,7 +80,7 @@ func maintainChannelMexc(subscribes []interface{}) {
 	}
 }
 
-func WsDepthServeMexc(environment *model.Environment, market string, useFullDepthSub bool) (socketMap map[*websocket.Conn]bool, msgChans []chan struct{}, connectErr error) {
+func WsTickServeMexc(environment *model.Environment, market string, useFullDepthSub bool) (socketMap map[*websocket.Conn]bool, msgChans []chan struct{}, connectErr error) {
 	symbols := GetMarketSymbols(model.Mexc)
 	if !useFullDepthSub {
 		limiter := time.Tick(time.Millisecond * 100)
@@ -134,7 +134,7 @@ func WsDepthServeMexc(environment *model.Environment, market string, useFullDept
 	}
 	socketMap, msgChans, connectErr = WebSocketClient(market, mexcContractWSUrl, subscribes, subscribeHandlerMexc, wsHandler, wsStepMexc)
 	go maintainChannelMexc(subscribes)
-	environment.SocketsTick.Store(market, socketMap)
+	environment.ConnTick.Store(market, socketMap)
 	environment.MsgChanTick.Store(market, msgChans)
 	return
 }

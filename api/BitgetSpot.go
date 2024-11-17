@@ -130,12 +130,12 @@ func tickHandlerBitget(event []byte) {
 	}
 }
 
-func WsDepthServeBitgetSpot(environment *model.Environment, market string) (socketMap map[*websocket.Conn]bool, msgChans []chan struct{}, connectErr error) {
+func WsTickServeBitgetSpot(environment *model.Environment, market string) (socketMap map[*websocket.Conn]bool, msgChans []chan struct{}, connectErr error) {
 	spotSubscribes := GetWSSubscribes(market, model.SubscribeDepth)
 	socketMap, msgChans, connectErr = WebSocketClient(market, bitgetPublic,
 		spotSubscribes, subscribeHandlerBitget, tickHandlerBitget, wsStepBitget)
 	go maintainChannelBitgetSpot()
-	environment.SocketsTick.Store(market, socketMap)
+	environment.ConnTick.Store(market, socketMap)
 	environment.MsgChanTick.Store(market, msgChans)
 	return
 }

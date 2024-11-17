@@ -118,7 +118,7 @@ var subscribeHandlerFtx = func(market string, connection *websocket.Conn, subscr
 	return err
 }
 
-func WsDepthServeFtx(environment *model.Environment, market string) (socketMap map[*websocket.Conn]bool, msgChans []chan struct{}, err error) {
+func WsTickServeFtx(environment *model.Environment, market string) (socketMap map[*websocket.Conn]bool, msgChans []chan struct{}, err error) {
 	wsHandler := func(event []byte) {
 		responseJson, err := util.NewJSON(event)
 		if err != nil {
@@ -141,7 +141,7 @@ func WsDepthServeFtx(environment *model.Environment, market string) (socketMap m
 	subscribes = append(subscribes, GetWSSubscribe(market, `USDT_USDT`, model.SubscribeDepth))
 	subscribes = append(subscribes, GetWSSubscribe(market, `USDT_USDT`, model.SubscribeTicker))
 	socketMap, msgChans, err = WebSocketClient(market, wsFtx, subscribes, subscribeHandlerFtx, wsHandler, wsStepFtx)
-	environment.SocketsTick.Store(market, socketMap)
+	environment.ConnTick.Store(market, socketMap)
 	environment.MsgChanTick.Store(market, msgChans)
 	go maintainChannelFtx(subscribes)
 	return

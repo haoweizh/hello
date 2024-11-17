@@ -58,8 +58,8 @@ type Environment struct {
 	MsgChanTick     sync.Map // market - []chan struct{}
 	MsgChanKLine    sync.Map // market - []chan struct{}
 	WsInitTime      sync.Map // market - time
-	SocketsTick     sync.Map // market - map[*websocket.Conn]bool for depth sockets
-	AccountConns    sync.Map // market*accountKey / Gate*marketType*accountKey - *WSConn;
+	ConnTick        sync.Map // market - map[*websocket.Conn]bool for depth sockets
+	ConnOrder       sync.Map // market*accountKey / Gate*marketType*accountKey - *WSConn;
 	WSOrderMap      sync.Map // orderId - *Order
 	WSRespChan      chan WSResp
 	MonitorSettings *sync.Map // sync.Map[market]*sync.Map[symbol]*sync.Map[interval]*sync.Map[address]*MonitorSetting

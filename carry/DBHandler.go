@@ -120,35 +120,33 @@ func ClearChannels(market string, chanMap *sync.Map) {
 	}
 }
 
-func MaintainAccountChan(market string) {
+func MaintainConnOrders(market string) {
 	accounts := model.AppConfig.GetAccounts(market)
 	for _, account := range accounts {
 		if account == nil {
 			continue
 		}
 		switch market {
-		case model.BinancePerp:
-			api.WsAccountServeBinance(account, market)
-		case model.BinanceSpot:
-			api.WsAccountServeBinance(account, market)
+		case model.BinancePerp, model.BinanceSpot:
+			api.WsOrderServeBinance(account, market)
 		case model.OKEX:
-			api.WsAccountServeOKEX(account)
+			api.WsOrderServeOKEX(account)
 		case model.Bybit:
-			api.WsAccountServeBybit(account)
+			api.WsOrderServeBybit(account)
 		case model.Gate:
-			api.WSAccountServeGate(account)
+			api.WSOrderServeGate(account)
 		}
 	}
 }
 
-func MaintainMarketChan(market string) (reset bool) {
+func MaintainConnTicks(market string) (reset bool) {
 	depthChans, _ := model.AppEnvironment.MsgChanTick.Load(market)
 	if depthChans == nil || len(depthChans.([]chan struct{})) == 0 {
-		api.CreateMarketTickerWS(model.AppEnvironment, market)
-	} else if api.RequireDepthChanReset(model.AppEnvironment, market) {
+		api.CreateWSTick(model.AppEnvironment, market)
+	} else if api.RequireConnTickReset(model.AppEnvironment, market) {
 		reset = true
 		ClearChannels(market, &model.AppEnvironment.MsgChanTick)
-		api.CreateMarketTickerWS(model.AppEnvironment, market)
+		api.CreateWSTick(model.AppEnvironment, market)
 	}
 	var settingMonitors []*model.SettingMonitor
 	model.AppDB.Find(&settingMonitors)
@@ -160,14 +158,14 @@ func MaintainMarketChan(market string) (reset bool) {
 		}
 		kLines[settingMonitor.Market][settingMonitor.Symbol] = true
 	}
-	for market, symbols := range kLines {
-		klineWS, _ := model.AppEnvironment.MsgChanKLine.Load(market)
+	for marketKline, symbols := range kLines {
+		klineWS, _ := model.AppEnvironment.MsgChanKLine.Load(marketKline)
 		if klineWS == nil || len(klineWS.([]chan struct{})) == 0 {
-			api.CreateMarketKLineWS(model.AppEnvironment, market, symbols)
-		} else if api.RequireKLineReset(model.AppEnvironment, market, symbols) {
+			api.CreateMarketKLineWS(model.AppEnvironment, marketKline, symbols)
+		} else if api.RequireKLineReset(model.AppEnvironment, marketKline, symbols) {
 			reset = true
-			ClearChannels(market, &model.AppEnvironment.MsgChanKLine)
-			api.CreateMarketKLineWS(model.AppEnvironment, market, symbols)
+			ClearChannels(marketKline, &model.AppEnvironment.MsgChanKLine)
+			api.CreateMarketKLineWS(model.AppEnvironment, marketKline, symbols)
 		}
 	}
 	return reset
@@ -209,8 +207,8 @@ func Maintain() {
 	//}()
 	for {
 		for _, market := range api.GetMarkets() {
-			MaintainMarketChan(market)
-			MaintainAccountChan(market)
+			MaintainConnTicks(market)
+			MaintainConnOrders(market)
 		}
 		time.Sleep(time.Minute * 2)
 	}

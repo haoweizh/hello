@@ -68,7 +68,7 @@ func setBitgetPositionMode(key, secret string) {
 	}
 }
 
-func WsDepthServeBitgetPerp(environment *model.Environment, market string) (socketMap map[*websocket.Conn]bool, msgChans []chan struct{}, connectErr error) {
+func WsTickServeBitgetPerp(environment *model.Environment, market string) (socketMap map[*websocket.Conn]bool, msgChans []chan struct{}, connectErr error) {
 	markPriceWsHandler := func(event []byte) {
 		tickerWsResp := &dtos.BitgetTickerWsResp{}
 		jsonErr := json.Unmarshal(event, tickerWsResp)
@@ -124,7 +124,7 @@ func WsDepthServeBitgetPerp(environment *model.Environment, market string) (sock
 		return nil, nil, perpBookErr
 	}
 	go maintainChannelBitgetPerp()
-	environment.SocketsTick.Store(market, socketMap)
+	environment.ConnTick.Store(market, socketMap)
 	environment.MsgChanTick.Store(market, msgChans)
 	return
 }

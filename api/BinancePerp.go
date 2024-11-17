@@ -103,7 +103,7 @@ func getMarketsBinancePerp(key, secret string) (marketInfos map[string]*model.Ma
 	return marketInfos
 }
 
-func WsDepthServeBinancePerp(environment *model.Environment, market string) (socketMap map[*websocket.Conn]bool, msgChans []chan struct{}, connectErr error) {
+func WsTickServeBinancePerp(environment *model.Environment, market string) (socketMap map[*websocket.Conn]bool, msgChans []chan struct{}, connectErr error) {
 	subType := model.SubscribeTicker
 	//subType := model.SubscribeDepth+ `,` + model.SubscribeMarkPrice
 	wsHandlerBinancePerp := func(event []byte) {
@@ -139,7 +139,7 @@ func WsDepthServeBinancePerp(environment *model.Environment, market string) (soc
 	subscribes := GetWSSubscribes(market, subType)
 	socketMap, msgChans, connectErr = WebSocketClient(market, wsBinancePerp, subscribes, subscribeHandlerBinancePerp, wsHandlerBinancePerp, wsStepBinance)
 	go maintainChannelBinancePerp()
-	environment.SocketsTick.Store(market, socketMap)
+	environment.ConnTick.Store(market, socketMap)
 	environment.MsgChanTick.Store(market, msgChans)
 	return
 }
@@ -255,7 +255,7 @@ func maintainChannelBinancePerp() {
 	pingDepthBinancePerp = true
 	for {
 		time.Sleep(time.Minute * 5)
-		value, _ := model.AppEnvironment.SocketsTick.Load(model.BinancePerp)
+		value, _ := model.AppEnvironment.ConnTick.Load(model.BinancePerp)
 		if value == nil {
 			continue
 		}
@@ -340,7 +340,7 @@ func placeOrderBinancePerp(account *model.Account, isWS bool, order *model.Order
 			"timeInForce": "GTC","price": "%s","quantity": "%s","apiKey": "%s","signature": "%s","timestamp": %d}}`,
 			order.OrderId, dialectSymbol, orderSide, strings.ToUpper(orderType), priceStr, amountStr, account.Key,
 			hex.EncodeToString(hash.Sum(nil)), ts)
-		value, _ := util.LoadSyncMap(&model.AppEnvironment.AccountConns, model.BinancePerp, account.Key)
+		value, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrder, model.BinancePerp, account.Key)
 		if value == nil || value.(*model.WSConn).Conn == nil {
 			return
 		}

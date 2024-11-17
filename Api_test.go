@@ -117,10 +117,10 @@ func Test_getCommonMarketInfos(t *testing.T) {
 func TestWs(t *testing.T) {
 	market := model.Gate
 	model.NewConfig()
-	carry.MaintainAccountChan(market)
+	carry.MaintainConnOrders(market)
 	//model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
 	//api.InitMarketInfos()
-	//api.CreateMarketTickerWS(model.AppEnvironment, market)
+	//api.CreateWSTick(model.AppEnvironment, market)
 	select {}
 }
 
@@ -136,7 +136,7 @@ func Test_WsAndOrderApi(t *testing.T) {
 	api.InitMarketInfos(model.Gate)
 	account := model.AppConfig.GetAccounts(market)[0]
 	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
-	api.CreateMarketTickerWS(model.AppEnvironment, market)
+	api.CreateWSTick(model.AppEnvironment, market)
 	for _, symbol := range symbols {
 		api.CancelOrders(account.Key, account.Secret, market, symbol)
 		getTick := false
@@ -519,8 +519,8 @@ func Test_download(t *testing.T) {
 
 func Test_WS(t *testing.T) {
 	model.NewConfig()
-	//api.CreateMarketTickerWS(model.AppEnvironment, model.BitgetPerp)
-	_, _, err := api.WsDepthServeBitgetPerp(model.AppEnvironment, model.BitgetPerp)
+	//api.CreateWSTick(model.AppEnvironment, model.BitgetPerp)
+	_, _, err := api.WsTickServeBitgetPerp(model.AppEnvironment, model.BitgetPerp)
 	if err != nil {
 		fmt.Println(err)
 		return

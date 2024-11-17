@@ -132,7 +132,7 @@ func setFutureAutoDeposit() {
 	})
 }
 
-func WsDepthServeKucoinPerp() (channels []chan struct{}, err error) {
+func WsTickServeKucoinPerp() (channels []chan struct{}, err error) {
 	symbols := GetMarketSymbols(model.KucoinPerp)
 	futureSubscribes := make([]*kumex.WebSocketSubscribeMessage, 0)
 	for symbol := range symbols {
