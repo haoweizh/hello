@@ -539,7 +539,7 @@ func cancelOrdersBinance(key, secret, market, symbol string) bool {
 	} else if market == model.BinanceMargin {
 		_, err = client.NewCancelMarginOrderService().Symbol(dialectSymbol).Do(context.Background())
 	}
-	if err != nil && !strings.Contains(err.Error(), `-2010`) {
+	if err != nil && !strings.Contains(err.Error(), `-2010`) && !strings.Contains(err.Error(), `-2011`) {
 		util.Notice("cancelOrdersBinance err: " + err.Error() + " symbol: " + symbol + " marketType: " + marketType + " coin: " + coin + " But dialectSymbol: " + dialectSymbol)
 		return false
 	}

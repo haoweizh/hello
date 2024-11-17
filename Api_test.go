@@ -574,6 +574,8 @@ func Test_transferInner(t *testing.T) {
 }
 
 func Test_LimitReport(t *testing.T) {
+	_, _, _, symbol := model.GetFromStandard(model.BinanceSpot, `TKO_USDT`)
+	fmt.Println(symbol)
 	model.NewConfig()
 	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
 	market := model.OKEX
