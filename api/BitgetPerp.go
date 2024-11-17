@@ -15,8 +15,6 @@ import (
 
 const wsStepBitget = 40
 
-var channelMaintainingBitgetPerp = false
-
 func getMarketsBitgetPerp() (marketInfos map[string]*model.MarketInfo) {
 	httpResp, httpErr := util.HttpRequest(http.MethodGet, bitgetRestUrl+"/api/v2/mix/market/contracts?productType=USDT-FUTURES", "", map[string]string{}, 30)
 	perpResp := &dtos.BitgetPerpMarketResp{}
@@ -123,24 +121,9 @@ func WsTickServeBitgetPerp(environment *model.Environment, market string) (socke
 	} else {
 		return nil, nil, perpBookErr
 	}
-	go maintainChannelBitgetPerp()
 	environment.ConnTick.Store(market, socketMap)
 	environment.MsgChanTick.Store(market, msgChans)
 	return
-}
-
-func maintainChannelBitgetPerp() {
-	if !channelMaintainingBitgetPerp {
-		channelMaintainingBitgetPerp = true
-		go func() {
-			for {
-				time.Sleep(time.Second * 20)
-				if err := SendToAllTickerSockets(model.BitgetPerp, []byte(`ping`)); err != nil {
-					util.Info("bitget perp channel ping error " + err.Error())
-				}
-			}
-		}()
-	}
 }
 
 func getPositionsBitgetPerp(key, secret string) (success bool, positions []*Position, accountValue, availableU float64) {

@@ -25,8 +25,6 @@ const restBinancePerp = `https://fapi.binance.com`
 const wsBinancePerp = `wss://fstream.binance.com/stream`
 const wsBinancePerpApi = `wss://ws-fapi.binance.com/ws-fapi/v1`
 
-var pingDepthBinancePerp = false
-
 func getMarketsBinancePerp(key, secret string) (marketInfos map[string]*model.MarketInfo) {
 	marketInfos = make(map[string]*model.MarketInfo)
 	client := futures.NewClient(key, secret)
@@ -138,7 +136,6 @@ func WsTickServeBinancePerp(environment *model.Environment, market string) (sock
 	}
 	subscribes := GetWSSubscribes(market, subType)
 	socketMap, msgChans, connectErr = WebSocketClient(market, wsBinancePerp, subscribes, subscribeHandlerBinancePerp, wsHandlerBinancePerp, wsStepBinance)
-	go maintainChannelBinancePerp()
 	environment.ConnTick.Store(market, socketMap)
 	environment.MsgChanTick.Store(market, msgChans)
 	return
@@ -244,30 +241,6 @@ func handleDepthBinancePerp(environment *model.Environment, json *simplejson.Jso
 				}
 				return true
 			})
-		}
-	}
-}
-
-func maintainChannelBinancePerp() {
-	if pingDepthBinancePerp {
-		return
-	}
-	pingDepthBinancePerp = true
-	for {
-		time.Sleep(time.Minute * 5)
-		value, _ := model.AppEnvironment.ConnTick.Load(model.BinancePerp)
-		if value == nil {
-			continue
-		}
-		connections := value.(map[*websocket.Conn]bool)
-		for connection := range connections {
-			if connection == nil {
-				continue
-			}
-			if writeError := connection.WriteControl(websocket.PongMessage, []byte{}, time.Now().Add(5*time.Second)); writeError != nil {
-				util.Notice(fmt.Sprintf(`fail to pong connection return: %s`, writeError.Error()))
-				SetRequireReset(model.BinancePerp)
-			}
 		}
 	}
 }

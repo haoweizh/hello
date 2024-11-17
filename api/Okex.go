@@ -34,7 +34,6 @@ var lastCarryTime = int64(0)
 
 // var privateConnectionOKEX = make(map[string]*websocket.Conn) // key - connection
 var pingingAccountOKEX = false
-var pingDepthOKEX = false
 
 func maintainConnOrderOKEX() {
 	if pingingAccountOKEX {
@@ -57,26 +56,6 @@ func maintainConnOrderOKEX() {
 				util.Notice(fmt.Sprintf(`-test ok ws- no private connection %s`, account.Key))
 				WsOrderServeOKEX(account)
 			}
-		}
-	}
-}
-
-func maintainChannelOKEX(subscribes []interface{}) {
-	if pingDepthOKEX {
-		return
-	}
-	pingDepthOKEX = true
-	go func() {
-		for {
-			time.Sleep(time.Minute * 5)
-			reSubscribe(subscribes)
-		}
-	}()
-	for {
-		time.Sleep(time.Second * 25)
-		err := SendToAllTickerSockets(model.OKEX, []byte(`ping`))
-		if err != nil {
-			util.SocketInfo("okex server ping client error " + err.Error())
 		}
 	}
 }
@@ -148,7 +127,7 @@ func reSubscribe(subscribes []interface{}) {
 		return
 	}
 	subscribeMap[`args`] = subArray
-	if err := SendToAllTickerSockets(model.OKEX, util.JsonEncodeToByte(subscribeMap)); err != nil {
+	if err := SendToAllTickerSockets(model.OKEX, websocket.TextMessage, util.JsonEncodeToByte(subscribeMap)); err != nil {
 		util.Notice("okex can not unsubscribe " + err.Error())
 	}
 	time.Sleep(time.Second * 3)
@@ -298,7 +277,6 @@ func WsOrderServeOKEX(account *model.Account) {
 func WsTickServeOKEX(environment *model.Environment) (socketMap map[*websocket.Conn]bool, msgChans []chan struct{}, connectErr error) {
 	subscribes := GetWSSubscribes(model.OKEX, model.SubscribeDepth)
 	socketMap, msgChans, connectErr = WebSocketClient(model.OKEX, wsOKEX, subscribes, subscribeHandlerOKEX, wsHandlerOKEX, wsStepOKEX)
-	go maintainChannelOKEX(subscribes)
 	environment.ConnTick.Store(model.OKEX, socketMap)
 	environment.MsgChanTick.Store(model.OKEX, msgChans)
 	return

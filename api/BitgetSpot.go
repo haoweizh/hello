@@ -19,8 +19,6 @@ const bitgetPublic = "wss://ws.bitget.com/v2/ws/public"
 
 //const bitgetPrivate = `wss://ws.bitget.com/v2/ws/private`
 
-var channelMaintainingBitgetSpot = false
-
 func getMarketsBitgetSpot() (marketInfos map[string]*model.MarketInfo) {
 	httpResp, httpErr := util.HttpRequest(http.MethodGet, bitgetRestUrl+"/api/v2/spot/public/symbols", "", map[string]string{}, 30)
 	spotResp := &dtos.BitgetSpotMarketResp{}
@@ -134,7 +132,6 @@ func WsTickServeBitgetSpot(environment *model.Environment, market string) (socke
 	spotSubscribes := GetWSSubscribes(market, model.SubscribeDepth)
 	socketMap, msgChans, connectErr = WebSocketClient(market, bitgetPublic,
 		spotSubscribes, subscribeHandlerBitget, tickHandlerBitget, wsStepBitget)
-	go maintainChannelBitgetSpot()
 	environment.ConnTick.Store(market, socketMap)
 	environment.MsgChanTick.Store(market, msgChans)
 	return
@@ -155,20 +152,6 @@ var subscribeHandlerBitget = func(market string, connection *websocket.Conn, sub
 	}
 	util.Info(`bitget subscribed ` + string(subscribeMessage))
 	return err
-}
-
-func maintainChannelBitgetSpot() {
-	if !channelMaintainingBitgetSpot {
-		channelMaintainingBitgetSpot = true
-		go func() {
-			for {
-				time.Sleep(time.Second * 20)
-				if err := SendToAllTickerSockets(model.BitgetSpot, []byte(`ping`)); err != nil {
-					util.Info("bitget spot channel ping error " + err.Error())
-				}
-			}
-		}()
-	}
 }
 
 func getBalanceBitgetSpot(key string, secret string) (success bool, balances []*model.Balance) {

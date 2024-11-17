@@ -24,7 +24,6 @@ const bybitSpotPubWsUrl = "wss://stream.bybit.com/v5/public/spot"
 const bybitPerpPubWsUrl = "wss://stream.bybit.com/v5/public/linear"
 const bybitTradeWsUrl = "wss://stream.bybit.com/v5/trade?max_active_time=10m"
 
-var pingDepthBybit = false
 var pingPrivateBybit = false
 
 const wsStepBybit = 10
@@ -344,19 +343,6 @@ func WsTickServeBybit(environment *model.Environment, market string) (socketMap 
 		}
 	}
 	time.Sleep(time.Second * 1)
-	go func() {
-		if !pingDepthBybit {
-			pingDepthBybit = true
-			go func() {
-				for {
-					time.Sleep(time.Second * 20)
-					if err := SendToAllTickerSockets(model.Bybit, []byte(`{"req_id": "100001", "op": "ping"}`)); err != nil {
-						util.Notice("bybit channel ping error " + err.Error())
-					}
-				}
-			}()
-		}
-	}()
 	environment.ConnTick.Store(market, socketMap)
 	environment.MsgChanTick.Store(market, msgChans)
 	return

@@ -40,7 +40,7 @@ func maintainChannelMexc(subscribes []interface{}) {
 		go func() {
 			for true {
 				time.Sleep(time.Second * 10)
-				if err := SendToAllTickerSockets(model.Mexc, []byte(`{"method": "ping"}`)); err != nil {
+				if err := SendToAllTickerSockets(model.Mexc, websocket.TextMessage, []byte(`{"method": "ping"}`)); err != nil {
 					util.SocketInfo("mexc channel ping error " + err.Error())
 				}
 			}

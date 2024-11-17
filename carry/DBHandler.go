@@ -139,7 +139,7 @@ func MaintainConnOrders(market string) {
 	}
 }
 
-func MaintainConnTicks(market string) (reset bool) {
+func ManageConnTicks(market string) (reset bool) {
 	depthChans, _ := model.AppEnvironment.MsgChanTick.Load(market)
 	if depthChans == nil || len(depthChans.([]chan struct{})) == 0 {
 		api.CreateWSTick(model.AppEnvironment, market)
@@ -207,7 +207,8 @@ func Maintain() {
 	//}()
 	for {
 		for _, market := range api.GetMarkets() {
-			MaintainConnTicks(market)
+			go api.MaintainConnTick(market)
+			ManageConnTicks(market)
 			MaintainConnOrders(market)
 		}
 		time.Sleep(time.Minute * 2)

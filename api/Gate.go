@@ -22,7 +22,6 @@ import (
 
 var apiClientsGate = make(map[string]*gateApi.APIClient)
 var apiCtxGate = make(map[string]context.Context)
-var pingGate = false
 var pingGatePrivate = false
 
 const wsStepGate = 100
@@ -363,8 +362,11 @@ func WSOrderServeGate(account *model.Account) {
 	hashSpot.Write([]byte(fmt.Sprintf("api\nspot.login\n\n%d", ts)))
 	signSpot := hex.EncodeToString(hashSpot.Sum(nil))
 	connSpot, errSpot := WsAccountClient(model.Gate, account.Key, gateWs.BaseUrl, wsAccountHandlerGate)
-	if errSpot != nil || connSpot == nil {
+	if errSpot != nil {
 		util.Notice(fmt.Sprintf("gate wsAccount connect errSpot: %s %s", errSpot.Error(), account.Key))
+		return
+	}
+	if connSpot == nil {
 		return
 	}
 	msgSpot := fmt.Sprintf(`{"time": %d,"channel": "spot.login","event": "api","payload": {"api_key": "%s",
@@ -381,8 +383,11 @@ func WSOrderServeGate(account *model.Account) {
 	msgFuture := fmt.Sprintf(`{"time": %d,"channel": "futures.login","event": "api","payload": {"api_key": "%s",
     		"signature": "%s","timestamp": "%d","req_id": "request%d"}}`, ts, account.Key, signFuture, ts, ts)
 	connFuture, errFuture := WsAccountClient(model.Gate, account.Key, gateWs.FuturesUsdtUrl, wsAccountHandlerGate)
-	if errFuture != nil || connFuture == nil {
+	if errFuture != nil {
 		util.Notice(fmt.Sprintf("gate wsAccount connect errFuture: %s %s", errFuture.Error(), account.Key))
+		return
+	}
+	if connFuture == nil {
 		return
 	}
 	if err := connFuture.WriteMessage(websocket.TextMessage, []byte(msgFuture)); err != nil {
@@ -441,7 +446,6 @@ func WsTickServeGateNew(environment *model.Environment, market string) (socketMa
 			socketMap[conn] = b
 		}
 	}
-	go maintainChannelGate()
 	environment.ConnTick.Store(market, socketMap)
 	environment.MsgChanTick.Store(market, msgChans)
 	return
@@ -543,22 +547,6 @@ var subscribeHandler = func(market string, connection *websocket.Conn, subscribe
 		}
 	}
 	return err
-}
-
-func maintainChannelGate() {
-	if pingGate {
-		return
-	}
-	pingGate = true
-	for {
-		time.Sleep(time.Second * 15)
-		if err := SendToAllTickerSockets(model.Gate, util.JsonEncodeToByte(map[string]interface{}{"time": time.Now().Unix(), "channel": "spot.ping"})); err != nil {
-			util.SocketInfo("gate channel ping error " + err.Error())
-		}
-		if err := SendToAllTickerSockets(model.Gate, util.JsonEncodeToByte(map[string]interface{}{"time": time.Now().Unix(), "channel": "futures.ping"})); err != nil {
-			util.SocketInfo("gate channel ping error " + err.Error())
-		}
-	}
 }
 
 func getBalanceGate(key string, secret string) (success bool, balances []*model.Balance, totalInUsd float64, collateral *Collateral) {

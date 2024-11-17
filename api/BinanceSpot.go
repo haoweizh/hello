@@ -27,7 +27,6 @@ const wsBinance = "wss://stream.binance.com:9443/"
 const wsBinanceSpotApi = `wss://ws-api.binance.com:443/ws-api/v3`
 const wsStepBinance = 80
 
-var pingDepthBinanceSpot = false
 var pingAccountBinance = false
 
 func GetMarketsBinance(account *model.Account, market string) (marketInfos map[string]*model.MarketInfo) {
@@ -184,7 +183,6 @@ func WsTickServeBinance(environment *model.Environment, market string) (socketMa
 	}
 	subscribes := GetWSSubscribes(market, subType)
 	socketMap, msgChans, connectErr = WebSocketClient(market, wsBinance+`stream`, subscribes, subscribeHandlerBinance, wsHandlerBinance, wsStepBinance)
-	go maintainConnTickBinance()
 	environment.ConnTick.Store(market, socketMap)
 	environment.MsgChanTick.Store(market, msgChans)
 	return
@@ -300,29 +298,6 @@ func maintainConnOrderBinance() {
 				}
 				if writeError := valuePerp.(*model.WSConn).Conn.WriteControl(websocket.PongMessage, []byte{}, time.Now().Add(5*time.Second)); writeError != nil {
 					util.Notice(fmt.Sprintf(`fail to pong binancespot return: %s`, writeError.Error()))
-				}
-			}
-		}
-	}
-}
-
-func maintainConnTickBinance() {
-	if !pingDepthBinanceSpot {
-		pingDepthBinanceSpot = true
-		for {
-			time.Sleep(time.Minute * 5)
-			value, _ := model.AppEnvironment.ConnTick.Load(model.BinanceSpot)
-			if value == nil {
-				continue
-			}
-			connections := value.(map[*websocket.Conn]bool)
-			for connection := range connections {
-				if connection == nil {
-					continue
-				}
-				if writeError := connection.WriteControl(websocket.PongMessage, []byte{}, time.Now().Add(5*time.Second)); writeError != nil {
-					util.Notice(fmt.Sprintf(`fail to pong connection return: %s`, writeError.Error()))
-					SetRequireReset(model.BinancePerp)
 				}
 			}
 		}

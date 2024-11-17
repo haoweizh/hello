@@ -32,7 +32,7 @@ func SendToConnection(market string, connection *websocket.Conn, msg []byte) (er
 	return err
 }
 
-func SendToAllTickerSockets(market string, msg []byte) (err error) {
+func SendToAllTickerSockets(market string, msgType int, msg []byte) (err error) {
 	defer wsLock.Unlock()
 	wsLock.Lock()
 	value, _ := model.AppEnvironment.ConnTick.Load(market)
@@ -44,8 +44,14 @@ func SendToAllTickerSockets(market string, msg []byte) (err error) {
 		if connection == nil {
 			continue
 		}
-		if err = connection.WriteMessage(websocket.TextMessage, msg); err != nil {
-			SetRequireReset(market)
+		if msgType == websocket.TextMessage {
+			if err = connection.WriteMessage(msgType, msg); err != nil {
+				SetRequireReset(market)
+			}
+		} else if msgType == websocket.PongMessage || msgType == websocket.PingMessage {
+			if err = connection.WriteControl(msgType, msg, time.Now().Add(5*time.Second)); err != nil {
+				SetRequireReset(market)
+			}
 		}
 	}
 	if err != nil {
