@@ -952,12 +952,12 @@ func GetWSSubscribe(market, symbol, subType string) (subscribe interface{}) {
 			return []string{`ticker`, dialectSymbol}
 		}
 	case model.BitgetSpot:
-		return map[string]string{"instType": `SPOT`, "channel": "books1", "instId": dialectSymbol}
+		return fmt.Sprintf(`{"instType":"SPOT","channel":"books1","instId":"%s"}`, dialectSymbol)
 	case model.BitgetPerp:
 		if subType == model.SubscribeDepth {
-			return map[string]string{"instType": `USDT-FUTURES`, "channel": "books1", "instId": dialectSymbol}
+			return fmt.Sprintf(`{"instType":"USDT-FUTURES","channel":"books1","instId":"%s"}`, dialectSymbol)
 		} else if subType == model.SubscribeMarkPrice {
-			return map[string]string{"instType": `USDT-FUTURES`, "channel": "ticker", "instId": dialectSymbol}
+			return fmt.Sprintf(`{"instType":"USDT-FUTURES","channel":"ticker","instId":"%s"}`, dialectSymbol)
 		}
 	case model.DFuture:
 		return `dfuture.market.` + dialectSymbol + `.kline.1min`
