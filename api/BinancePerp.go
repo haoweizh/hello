@@ -108,9 +108,6 @@ var wsHandlerBinancePerp = func(market string, event []byte) {
 	}
 	subscribe, _ := result.Get("stream").String()
 	result = result.Get(`data`)
-	if subscribe != `btcusdt@bookTicker` {
-		fmt.Println(string(event))
-	}
 	if result == nil {
 		return
 	}
@@ -125,7 +122,7 @@ var wsHandlerBinancePerp = func(market string, event []byte) {
 	if strings.Contains(subscribe, `@depth`) {
 		bidAsk = parseTickDepthBinancePerp(result, standardSymbol, updateId)
 	} else if strings.Contains(subscribe, `@bookTicker`) {
-		bidAsk = handleTickBinancePerp(result, standardSymbol, updateId)
+		bidAsk = parseBookBinancePerp(result, standardSymbol, updateId)
 	} else if strings.Contains(subscribe, `@markPrice`) {
 		handleMarkPriceBinancePerp(model.AppEnvironment, result, standardSymbol)
 	}
@@ -147,7 +144,7 @@ var wsHandlerBinancePerp = func(market string, event []byte) {
 	}
 }
 
-func handleTickBinancePerp(json *simplejson.Json, standardSymbol string, updateId int64) (bidAsk *model.BidAsk) {
+func parseBookBinancePerp(json *simplejson.Json, standardSymbol string, updateId int64) (bidAsk *model.BidAsk) {
 	bidPrice, _ := strconv.ParseFloat(json.Get(`b`).MustString(), 64)
 	bidAmount, _ := strconv.ParseFloat(json.Get(`B`).MustString(), 64)
 	askPrice, _ := strconv.ParseFloat(json.Get(`a`).MustString(), 64)

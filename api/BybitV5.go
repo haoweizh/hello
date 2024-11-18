@@ -335,7 +335,6 @@ func WsTickServeBybit(market string) (socketMap map[*websocket.Conn]bool, msgCha
 	msgChans = make([]chan struct{}, 0)
 	socketMap = make(map[*websocket.Conn]bool)
 	symbols := GetMarketSymbols(model.Bybit)
-	symbols = map[string]bool{`BTC_PERP`: true, `BTC_USDT`: true}
 	spotSubBook := make([]interface{}, 0)
 	futureSubBook := make([]interface{}, 0)
 	futureSubTick := make([]interface{}, 0)

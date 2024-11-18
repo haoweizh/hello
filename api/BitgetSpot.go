@@ -97,7 +97,7 @@ func parseBidAskBitget(bookWsResp *dtos.BitgetBoosWsResp) (bidAsk *model.BidAsk)
 	return bidAsk
 }
 
-func tickHandlerBitget(market string, event []byte) {
+var tickHandlerBitget = func(market string, event []byte) {
 	bookWsResp := &dtos.BitgetBoosWsResp{}
 	jsonErr := json.Unmarshal(event, bookWsResp)
 	if jsonErr != nil {
@@ -125,15 +125,6 @@ func tickHandlerBitget(market string, event []byte) {
 			})
 		}
 	}
-}
-
-func WsTickServeBitgetSpot(environment *model.Environment, market string) (socketMap map[*websocket.Conn]bool, msgChans []chan struct{}, connectErr error) {
-	spotSubscribes := GetWSSubscribes(market, model.SubscribeDepth)
-	socketMap, msgChans, connectErr = WebSocketClient(market, bitgetPublic,
-		spotSubscribes, subscribeHandlerBitget, tickHandlerBitget, wsStepBitget)
-	environment.ConnTick.Store(market, socketMap)
-	environment.MsgChanTick.Store(market, msgChans)
-	return
 }
 
 var subscribeHandlerBitget = func(market string, connection *websocket.Conn, subscribes []interface{}) error {

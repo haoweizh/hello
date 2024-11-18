@@ -96,7 +96,7 @@ var markPriceWsHandler = func(market string, event []byte) {
 	}
 }
 
-func WsTickServeBitgetPerp(environment *model.Environment, market string) (socketMap map[*websocket.Conn]bool, msgChans []chan struct{}, connectErr error) {
+func WsTickServeBitgetPerp(market string) (socketMap map[*websocket.Conn]bool, msgChans []chan struct{}, connectErr error) {
 	msgChans = make([]chan struct{}, 0)
 	socketMap = make(map[*websocket.Conn]bool)
 	depthSubs := GetWSSubscribes(market, model.SubscribeDepth)
@@ -122,8 +122,6 @@ func WsTickServeBitgetPerp(environment *model.Environment, market string) (socke
 	} else {
 		return nil, nil, perpBookErr
 	}
-	environment.ConnTick.Store(market, socketMap)
-	environment.MsgChanTick.Store(market, msgChans)
 	return
 }
 

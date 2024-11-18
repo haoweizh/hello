@@ -545,6 +545,7 @@ func GetFundingRate(key, secret, market, symbol string) (success bool, rate floa
 	if fundingRate != nil && now < fundingRate.ExpireTime && fundingRate.UpdateTime.Add(time.Minute*5).After(time.Now()) {
 		return true, fundingRate.Rate, fundingRate.UpdateTime
 	}
+	util.Notice(fmt.Sprintf(`fail to get funding rate from ws %s %s`, market, symbol))
 	switch market {
 	//case model.Bitmex:
 	//	rate, expireTime = deprecated.getFundingRateBitmex(key, secret, symbol)

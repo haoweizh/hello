@@ -118,37 +118,28 @@ func CreateWSTick(environment *model.Environment, market string) (
 	switch market {
 	case model.Gate:
 		socketMap, channels, err = WsTickServeGateNew(market)
-		environment.ConnTick.Store(market, socketMap)
-		environment.MsgChanTick.Store(market, channels)
 	case model.OKEX:
-		subscribes := GetWSSubscribes(market, model.SubscribeDepth)
-		socketMap, channels, err = WebSocketClient(market, wsOKEX, subscribes, subscribeHandlerOKEX, wsHandlerOKEX, wsStepOKEX)
-		environment.ConnTick.Store(market, socketMap)
-		environment.MsgChanTick.Store(market, channels)
+		socketMap, channels, err = WebSocketClient(market, wsOKEX, GetWSSubscribes(market, model.SubscribeDepth),
+			subscribeHandlerOKEX, wsHandlerOKEX, wsStepOKEX)
 	case model.BinanceSpot, model.BinanceMargin:
-		subscribes := GetWSSubscribes(market, model.SubscribeTicker)
-		socketMap, channels, err = WebSocketClient(market, wsBinance+`stream`, subscribes, subscribeHandlerBinance, wsHandlerBinance, wsStepBinance)
-		environment.ConnTick.Store(market, socketMap)
-		environment.MsgChanTick.Store(market, channels)
+		socketMap, channels, err = WebSocketClient(market, wsBinance+`stream`, GetWSSubscribes(market, model.SubscribeTicker),
+			subscribeHandlerBinance, wsHandlerBinance, wsStepBinance)
 	case model.BinancePerp:
-		subscribes := GetWSSubscribes(market, model.SubscribeMarkPrice+`,`+model.SubscribeTicker)
-		socketMap, channels, err = WebSocketClient(market, wsBinancePerp, subscribes, subscribeHandlerBinance, wsHandlerBinancePerp, wsStepBinance)
-		environment.ConnTick.Store(market, socketMap)
-		environment.MsgChanTick.Store(market, channels)
+		socketMap, channels, err = WebSocketClient(market, wsBinancePerp, GetWSSubscribes(
+			market, model.SubscribeMarkPrice+`,`+model.SubscribeTicker), subscribeHandlerBinance, wsHandlerBinancePerp, wsStepBinance)
 	case model.HuobiPerp:
 		socketMap, channels, err = WebSocketClient(market, wsHuobiPerp, GetWSSubscribes(model.HuobiPerp, model.SubscribeDepth),
 			subscribeHandlerHuobiPerp, wsMsgHandler, wsStepHuobi)
-		environment.ConnTick.Store(market, socketMap)
-		environment.MsgChanTick.Store(market, channels)
 	case model.Bybit:
 		socketMap, channels, err = WsTickServeBybit(market)
-		environment.ConnTick.Store(market, socketMap)
-		environment.MsgChanTick.Store(market, channels)
 	case model.BitgetSpot:
-		socketMap, channels, err = WsTickServeBitgetSpot(environment, market)
+		socketMap, channels, err = WebSocketClient(market, bitgetPublic,
+			GetWSSubscribes(market, model.SubscribeDepth), subscribeHandlerBitget, tickHandlerBitget, wsStepBitget)
 	case model.BitgetPerp:
-		socketMap, channels, err = WsTickServeBitgetPerp(environment, market)
+		socketMap, channels, err = WsTickServeBitgetPerp(market)
 	}
+	environment.ConnTick.Store(market, socketMap)
+	environment.MsgChanTick.Store(market, channels)
 	if err != nil {
 		util.Notice(market + ` can not create depth server ` + err.Error())
 	}
