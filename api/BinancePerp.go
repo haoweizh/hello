@@ -12,7 +12,6 @@ import (
 	"github.com/gorilla/websocket"
 	"hello/model"
 	"hello/util"
-	"math/rand"
 	"net/http"
 	"net/url"
 	"sort"
@@ -101,92 +100,66 @@ func getMarketsBinancePerp(key, secret string) (marketInfos map[string]*model.Ma
 	return marketInfos
 }
 
-func WsTickServeBinancePerp(environment *model.Environment, market string) (socketMap map[*websocket.Conn]bool, msgChans []chan struct{}, connectErr error) {
-	subType := model.SubscribeTicker
-	//subType := model.SubscribeDepth+ `,` + model.SubscribeMarkPrice
-	wsHandlerBinancePerp := func(event []byte) {
-		result, wsErr := util.NewJSON(event)
-		if wsErr != nil {
-			util.Notice(`binance fail to unmarshal json ` + wsErr.Error())
-			return
-		}
-		subscribe, _ := result.Get("stream").String()
-		result = result.Get(`data`)
-		if result == nil {
-			return
-		}
-		dialectSymbol := result.Get(`s`).MustString()
-		success, _, coin := model.GetCoinFromDialect(model.BinancePerp, dialectSymbol)
-		if !success {
-			return
-		}
-		standardSymbol := coin + model.UniStandardTail[model.MarketTypePerp]
-		updateId := result.Get(`u`).MustInt64()
-		haveOld, old := environment.GetBidAsk(standardSymbol, model.BinancePerp)
-		if haveOld && old.UpdateId > updateId {
-			return
-		}
-		if strings.Contains(subscribe, `@depth`) {
-			handleDepthBinancePerp(environment, result, standardSymbol, updateId)
-		} else if strings.Contains(subscribe, `@bookTicker`) {
-			handleTickerBinancePerp(environment, result, standardSymbol, updateId)
-		} else if strings.Contains(subscribe, `@markPrice`) {
-			handleMarkPriceBinancePerp(environment, result, standardSymbol)
+var wsHandlerBinancePerp = func(market string, event []byte) {
+	result, wsErr := util.NewJSON(event)
+	if wsErr != nil {
+		util.Notice(`binance fail to unmarshal json ` + wsErr.Error())
+		return
+	}
+	subscribe, _ := result.Get("stream").String()
+	result = result.Get(`data`)
+	if subscribe != `btcusdt@bookTicker` {
+		fmt.Println(string(event))
+	}
+	if result == nil {
+		return
+	}
+	dialectSymbol := result.Get(`s`).MustString()
+	success, _, coin := model.GetCoinFromDialect(model.BinancePerp, dialectSymbol)
+	if !success {
+		return
+	}
+	standardSymbol := coin + model.UniStandardTail[model.MarketTypePerp]
+	updateId := result.Get(`u`).MustInt64()
+	var bidAsk *model.BidAsk
+	if strings.Contains(subscribe, `@depth`) {
+		bidAsk = parseTickDepthBinancePerp(result, standardSymbol, updateId)
+	} else if strings.Contains(subscribe, `@bookTicker`) {
+		bidAsk = handleTickBinancePerp(result, standardSymbol, updateId)
+	} else if strings.Contains(subscribe, `@markPrice`) {
+		handleMarkPriceBinancePerp(model.AppEnvironment, result, standardSymbol)
+	}
+	haveOld, old := model.AppEnvironment.GetBidAsk(standardSymbol, model.BinancePerp)
+	if haveOld && old.UpdateId > updateId {
+		return
+	}
+	if model.AppEnvironment.SetBidAsk(standardSymbol, model.BinancePerp, bidAsk) {
+		funcHandlers := GetFunctions(model.BinancePerp, standardSymbol)
+		if funcHandlers != nil {
+			funcHandlers.Range(func(function, value interface{}) bool {
+				setting := GetSetting(function.(string), model.BinancePerp, standardSymbol)
+				if setting != nil && value != nil && value.(model.CarryHandler) != nil {
+					go value.(model.CarryHandler)(setting, bidAsk)
+				}
+				return true
+			})
 		}
 	}
-	subscribes := GetWSSubscribes(market, subType)
-	socketMap, msgChans, connectErr = WebSocketClient(market, wsBinancePerp, subscribes, subscribeHandlerBinancePerp, wsHandlerBinancePerp, wsStepBinance)
-	environment.ConnTick.Store(market, socketMap)
-	environment.MsgChanTick.Store(market, msgChans)
-	return
 }
 
-var subscribeHandlerBinancePerp = func(market string, connection *websocket.Conn, subscribes []interface{}) error {
-	var err error = nil
-	subParam := make(map[string]interface{})
-	subParam["method"] = "SUBSCRIBE"
-	subParam["params"] = subscribes
-	subParam["id"] = int(rand.Float64() * 10000)
-	subParamJson, _ := json.Marshal(subParam)
-	if err = SendToConnection(market, connection, subParamJson); err != nil {
-		util.SocketInfo("binance perp can not subscribe %s %s", subParamJson, err.Error())
-	} else {
-		util.Info(fmt.Sprintf(`subscribe %s %s %d`, model.BinancePerp, subParamJson, len(subscribes)))
-	}
-	return err
-}
-
-func handleTickerBinancePerp(environment *model.Environment, json *simplejson.Json, standardSymbol string, updateId int64) {
+func handleTickBinancePerp(json *simplejson.Json, standardSymbol string, updateId int64) (bidAsk *model.BidAsk) {
 	bidPrice, _ := strconv.ParseFloat(json.Get(`b`).MustString(), 64)
 	bidAmount, _ := strconv.ParseFloat(json.Get(`B`).MustString(), 64)
 	askPrice, _ := strconv.ParseFloat(json.Get(`a`).MustString(), 64)
 	askAmount, _ := strconv.ParseFloat(json.Get(`A`).MustString(), 64)
 	ts := json.Get(`E`).MustInt()
 	now := int(time.Now().UnixNano() / int64(time.Millisecond))
-	//if ts == 0 {
-	//	ts = now
-	//}
 	if bidPrice > 0 && bidAmount > 0 && askPrice > 0 && askAmount > 0 {
-		bidAsk := model.BidAsk{Ts: ts, TsReceived: now, UpdateId: updateId,
+		bidAsk = &model.BidAsk{Ts: ts, TsReceived: now, UpdateId: updateId,
 			Bids: []model.Tick{{Price: bidPrice, Amount: bidAmount, Market: model.BinancePerp, Symbol: standardSymbol}},
 			Asks: []model.Tick{{Price: askPrice, Amount: askAmount, Market: model.BinancePerp, Symbol: standardSymbol}}}
-		haveOld, old := environment.GetBidAsk(standardSymbol, model.BinancePerp)
-		if haveOld && old.UpdateId > bidAsk.UpdateId {
-			return
-		}
-		if environment.SetBidAsk(standardSymbol, model.BinancePerp, &bidAsk) {
-			funcHandlers := GetFunctions(model.BinancePerp, standardSymbol)
-			if funcHandlers != nil {
-				funcHandlers.Range(func(function, value interface{}) bool {
-					setting := GetSetting(function.(string), model.BinancePerp, standardSymbol)
-					if setting != nil && value != nil && value.(model.CarryHandler) != nil {
-						go value.(model.CarryHandler)(setting, &bidAsk)
-					}
-					return true
-				})
-			}
-		}
 	}
+	return bidAsk
 }
 
 func handleMarkPriceBinancePerp(environment *model.Environment, json *simplejson.Json, standardSymbol string) {
@@ -195,15 +168,15 @@ func handleMarkPriceBinancePerp(environment *model.Environment, json *simplejson
 	rate, _ := strconv.ParseFloat(json.Get(`r`).MustString(), 64)
 	fundingRate := &model.FundingRate{
 		Rate:       rate,
-		UpdateTime: util.GetNow(),
+		UpdateTime: time.UnixMilli(json.Get(`E`).MustInt64()),
 		ExpireTime: json.Get(`T`).MustInt64() / 1000,
 	}
 	//util.Notice(fmt.Sprintf(`binance get market price %s %f %f %d`, standardSymbol, markPrice, rate, fundingRate.ExpireTime))
 	model.SetFundingRate(model.BinancePerp, standardSymbol, fundingRate)
 }
 
-func handleDepthBinancePerp(environment *model.Environment, json *simplejson.Json, standardSymbol string, updateId int64) {
-	bidAsk := model.BidAsk{UpdateId: updateId}
+func parseTickDepthBinancePerp(json *simplejson.Json, standardSymbol string, updateId int64) (bidAsk *model.BidAsk) {
+	bidAsk = &model.BidAsk{UpdateId: updateId}
 	var bids, asks []interface{}
 	bidAsk.Ts = json.Get(`E`).MustInt()
 	bidAsk.TsReceived = int(util.GetNowUnixMillion())
@@ -231,18 +204,7 @@ func handleDepthBinancePerp(environment *model.Environment, json *simplejson.Jso
 	}
 	sort.Sort(bidAsk.Asks)
 	sort.Sort(sort.Reverse(bidAsk.Bids))
-	if environment.SetBidAsk(standardSymbol, model.BinancePerp, &bidAsk) {
-		funcHandlers := GetFunctions(model.BinancePerp, standardSymbol)
-		if funcHandlers != nil {
-			funcHandlers.Range(func(function, value interface{}) bool {
-				setting := GetSetting(function.(string), model.BinancePerp, standardSymbol)
-				if setting != nil && value != nil && value.(model.CarryHandler) != nil {
-					go value.(model.CarryHandler)(setting, &bidAsk)
-				}
-				return true
-			})
-		}
-	}
+	return bidAsk
 }
 
 func renewListenKeyBinancePerp(account *model.Account) (success bool, listenKey string) {

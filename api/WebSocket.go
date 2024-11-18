@@ -12,7 +12,7 @@ import (
 )
 
 type OrderHandler func(order *model.Order)
-type MsgHandler func(message []byte)
+type MsgHandler func(market string, message []byte)
 type AccountMsgHandler func(market, key string, message []byte)
 type SubscribeHandler func(market string, connection *websocket.Conn, subscribes []interface{}) error
 
@@ -112,7 +112,7 @@ func chanHandler(market string, stopChan chan struct{}, connection *websocket.Co
 				return
 			}
 			//util.SocketInfo(string(message))
-			msgHandler(message)
+			msgHandler(market, message)
 		}
 	}
 }

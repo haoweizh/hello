@@ -520,7 +520,7 @@ func Test_download(t *testing.T) {
 func Test_WS(t *testing.T) {
 	model.NewConfig()
 	//api.CreateWSTick(model.AppEnvironment, model.BitgetPerp)
-	api.CreateWSTick(model.AppEnvironment, model.OKEX)
+	api.CreateWSTick(model.AppEnvironment, model.Bybit)
 	select {}
 }
 

@@ -200,8 +200,8 @@ func getMarketsBybitPerp(marketInfos map[string]*model.MarketInfo) {
 	}
 }
 
-func parseBookOrder(environment *model.Environment, bookWsResp *dtos.BybitBookWsResp, symbol string) {
-	bidAsk := model.BidAsk{TsReceived: int(time.Now().UnixNano() / int64(time.Millisecond))}
+func handleBookBybit(environment *model.Environment, bookWsResp *dtos.BybitBookWsResp, symbol string) {
+	bidAsk := &model.BidAsk{TsReceived: int(time.Now().UnixNano() / int64(time.Millisecond))}
 	bidAsk.Ts = int(bookWsResp.Ts)
 	bidAsk.UpdateId = bookWsResp.Data.Seq
 	haveOld, old := environment.GetBidAsk(symbol, model.Bybit)
@@ -254,16 +254,13 @@ func parseBookOrder(environment *model.Environment, bookWsResp *dtos.BybitBookWs
 	} else {
 		return
 	}
-	if haveOld && old.Ts > bidAsk.Ts {
-		return
-	}
-	if environment.SetBidAsk(symbol, model.Bybit, &bidAsk) {
+	if environment.SetBidAsk(symbol, model.Bybit, bidAsk) {
 		funcHandlers := GetFunctions(model.Bybit, symbol)
 		if funcHandlers != nil {
 			funcHandlers.Range(func(function, value interface{}) bool {
 				setting := GetSetting(function.(string), model.Bybit, symbol)
 				if setting != nil && value != nil && value.(model.CarryHandler) != nil {
-					go value.(model.CarryHandler)(setting, &bidAsk)
+					go value.(model.CarryHandler)(setting, bidAsk)
 				}
 				return true
 			})
@@ -271,63 +268,91 @@ func parseBookOrder(environment *model.Environment, bookWsResp *dtos.BybitBookWs
 	}
 }
 
-func WsTickServeBybit(environment *model.Environment, market string) (socketMap map[*websocket.Conn]bool, msgChans []chan struct{}, connectErr error) {
-	spotBookWsHandler := func(event []byte) {
-		bookWsResp := &dtos.BybitBookWsResp{}
-		jsonErr := json.Unmarshal(event, bookWsResp)
-		if jsonErr != nil {
-			util.Notice(`fail to unmarshal bybit spot book ws data json ` + jsonErr.Error())
+var spotBookWsHandler = func(market string, event []byte) {
+	bookWsResp := &dtos.BybitBookWsResp{}
+	jsonErr := json.Unmarshal(event, bookWsResp)
+	if jsonErr != nil {
+		util.Notice(`fail to unmarshal bybit spot book ws data json ` + jsonErr.Error())
+		return
+	}
+	if strings.Contains(bookWsResp.Topic, "orderbook") {
+		if bookWsResp.Data.S == "" {
 			return
 		}
-		if strings.Contains(bookWsResp.Topic, "orderbook") {
-			if bookWsResp.Data.S == "" {
-				return
-			}
-			success, _, coin := model.GetCoinFromDialect(model.Bybit, bookWsResp.Data.S)
-			if !success {
-				return
-			}
-			symbol := coin + model.UniStandardTail[model.MarketTypeSpot]
-			parseBookOrder(environment, bookWsResp, symbol)
-		}
-	}
-	perpBookWsHandler := func(event []byte) {
-		bookWsResp := &dtos.BybitBookWsResp{}
-		jsonErr := json.Unmarshal(event, bookWsResp)
-		if jsonErr != nil {
-			util.Notice(`fail to unmarshal bybit perp book ws data json ` + jsonErr.Error())
+		success, _, coin := model.GetCoinFromDialect(model.Bybit, bookWsResp.Data.S)
+		if !success {
 			return
 		}
-		if strings.Contains(bookWsResp.Topic, "orderbook") {
-			if bookWsResp.Data.S == "" {
-				return
-			}
-			success, _, coin := model.GetCoinFromDialect(model.Bybit, bookWsResp.Data.S)
-			if !success {
-				return
-			}
-			symbol := coin + model.UniStandardTail[model.MarketTypePerp]
-			parseBookOrder(environment, bookWsResp, symbol)
-		}
+		symbol := coin + model.UniStandardTail[model.MarketTypeSpot]
+		handleBookBybit(model.AppEnvironment, bookWsResp, symbol)
 	}
+}
+
+var tickHandlerBybit = func(market string, event []byte) {
+	tickResp := &dtos.BybitTickResp{}
+	jsonErr := json.Unmarshal(event, tickResp)
+	if jsonErr != nil {
+		util.Notice(`fail to unmarshal bybit perp tick ws data json ` + jsonErr.Error())
+		return
+	}
+	if strings.Contains(tickResp.Topic, "tickers") {
+		success, marketType, coin := model.GetCoinFromDialect(model.Bybit, tickResp.Data.Symbol)
+		if !success {
+			return
+		}
+		symbol := coin + model.UniStandardTail[marketType]
+		rate, _ := strconv.ParseFloat(tickResp.Data.FundingRate, 64)
+		nextFundingTime, _ := strconv.ParseInt(tickResp.Data.NextFundingTime, 10, 64)
+		model.SetFundingRate(model.Bybit, symbol, &model.FundingRate{
+			Rate:       rate,
+			UpdateTime: time.UnixMilli(tickResp.Ts),
+			ExpireTime: nextFundingTime / 1000,
+		})
+	}
+}
+
+var perpBookWsHandler = func(market string, event []byte) {
+	bookWsResp := &dtos.BybitBookWsResp{}
+	jsonErr := json.Unmarshal(event, bookWsResp)
+	if jsonErr != nil {
+		util.Notice(`fail to unmarshal bybit perp book ws data json ` + jsonErr.Error())
+		return
+	}
+	if strings.Contains(bookWsResp.Topic, "orderbook") {
+		if bookWsResp.Data.S == "" {
+			return
+		}
+		success, _, coin := model.GetCoinFromDialect(model.Bybit, bookWsResp.Data.S)
+		if !success {
+			return
+		}
+		symbol := coin + model.UniStandardTail[model.MarketTypePerp]
+		handleBookBybit(model.AppEnvironment, bookWsResp, symbol)
+	}
+}
+
+func WsTickServeBybit(market string) (socketMap map[*websocket.Conn]bool, msgChans []chan struct{}, connectErr error) {
 	msgChans = make([]chan struct{}, 0)
 	socketMap = make(map[*websocket.Conn]bool)
 	symbols := GetMarketSymbols(model.Bybit)
-	spotSubscribes := make([]interface{}, 0)
-	futureSubscribes := make([]interface{}, 0)
+	symbols = map[string]bool{`BTC_PERP`: true, `BTC_USDT`: true}
+	spotSubBook := make([]interface{}, 0)
+	futureSubBook := make([]interface{}, 0)
+	futureSubTick := make([]interface{}, 0)
 	for symbol := range symbols {
 		success, marketType, _, dialectSymbol := model.GetFromStandard(model.Bybit, symbol)
 		if !success {
 			continue
 		}
 		if marketType == model.MarketTypePerp {
-			futureSubscribes = append(futureSubscribes, dialectSymbol)
+			futureSubBook = append(futureSubBook, fmt.Sprintf("orderbook.1.%s", dialectSymbol))
+			futureSubTick = append(futureSubTick, fmt.Sprintf(`tickers.%s`, dialectSymbol))
 		} else {
-			spotSubscribes = append(spotSubscribes, dialectSymbol)
+			spotSubBook = append(spotSubBook, fmt.Sprintf("orderbook.1.%s", dialectSymbol))
 		}
 	}
 	spotBookSockets, spotBookChannels, spotBookErr := WebSocketClient(model.Bybit, bybitSpotPubWsUrl,
-		spotSubscribes, subscribeHandlerBybit, spotBookWsHandler, wsStepBybit)
+		spotSubBook, subscribeHandlerBybit, spotBookWsHandler, wsStepBybit)
 	if spotBookErr == nil {
 		msgChans = append(msgChans, spotBookChannels...)
 		for conn, b := range spotBookSockets {
@@ -335,35 +360,35 @@ func WsTickServeBybit(environment *model.Environment, market string) (socketMap 
 		}
 	}
 	perpBookSockets, perpBookChannels, perpBookErr := WebSocketClient(market, bybitPerpPubWsUrl,
-		futureSubscribes, subscribeHandlerBybit, perpBookWsHandler, wsStepBybit)
+		futureSubBook, subscribeHandlerBybit, perpBookWsHandler, wsStepBybit)
 	if perpBookErr == nil {
 		msgChans = append(msgChans, perpBookChannels...)
 		for conn, b := range perpBookSockets {
 			socketMap[conn] = b
 		}
 	}
-	time.Sleep(time.Second * 1)
-	environment.ConnTick.Store(market, socketMap)
-	environment.MsgChanTick.Store(market, msgChans)
+	perpTickConns, perpTickChans, perpTickErr := WebSocketClient(market, bybitPerpPubWsUrl,
+		futureSubTick, subscribeHandlerBybit, tickHandlerBybit, wsStepBybit)
+	if perpTickErr == nil {
+		msgChans = append(msgChans, perpTickChans...)
+		for conn, b := range perpTickConns {
+			socketMap[conn] = b
+		}
+	}
 	return
 }
 
 var subscribeHandlerBybit = func(market string, connection *websocket.Conn, subscribes []interface{}) error {
 	var err error = nil
-	var params []string
-	for _, subscribe := range subscribes {
-		params = append(params, fmt.Sprintf("orderbook.1.%s", subscribe.(string)))
-	}
 	subscribeMap := make(map[string]interface{})
 	subscribeMap["req_id"] = int(rand.Float64() * 10000)
 	subscribeMap["op"] = "subscribe"
-	subscribeMap["args"] = params
+	subscribeMap["args"] = subscribes
 	subscribeMessage := util.JsonEncodeToByte(subscribeMap)
 	if err = SendToConnection(model.Bybit, connection, subscribeMessage); err != nil {
 		util.Notice(" bybit can not subscribe %s %s", subscribeMessage, err.Error())
 	}
 	util.Info(`bybit subscribed ` + string(subscribeMessage))
-	time.Sleep(100 * time.Millisecond)
 	return err
 }
 

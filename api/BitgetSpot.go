@@ -97,7 +97,7 @@ func parseBidAskBitget(bookWsResp *dtos.BitgetBoosWsResp) (bidAsk *model.BidAsk)
 	return bidAsk
 }
 
-func tickHandlerBitget(event []byte) {
+func tickHandlerBitget(market string, event []byte) {
 	bookWsResp := &dtos.BitgetBoosWsResp{}
 	jsonErr := json.Unmarshal(event, bookWsResp)
 	if jsonErr != nil {
@@ -109,7 +109,6 @@ func tickHandlerBitget(event []byte) {
 		return
 	}
 	symbol := bidAsk.Bids[0].Symbol
-	market := bidAsk.Bids[0].Market
 	haveOld, old := model.AppEnvironment.GetBidAsk(symbol, market)
 	if haveOld && old.UpdateId > bidAsk.UpdateId {
 		return

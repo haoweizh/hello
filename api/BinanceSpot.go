@@ -89,48 +89,50 @@ func GetMarketsBinance(account *model.Account, market string) (marketInfos map[s
 	return marketInfos
 }
 
-func WsKLineBinanceSpot(environment *model.Environment, market string, symbols map[string]bool) (
-	socketMap map[*websocket.Conn]bool, msgChans []chan struct{}, connectErr error) {
-	KLineMsgHandlerBinanceSpot := func(event []byte) {
-		result, wsErr := util.NewJSON(event)
-		if wsErr != nil {
-			util.Notice(`binance fail to unmarshal json ` + wsErr.Error())
-			return
-		}
-		result = result.Get(`data`)
-		if result == nil {
-			return
-		}
-		subscribe, _ := result.Get("e").String()
-		dialectSymbol := result.Get(`s`).MustString()
-		if subscribe != `kline` {
-			return
-		}
-		success, _, coin := model.GetCoinFromDialect(market, dialectSymbol)
-		if !success {
-			return
-		}
-		standardSymbol := coin + model.UniStandardTail[model.MarketTypeSpot]
-		if market == model.BinanceMargin {
-			standardSymbol = coin + model.UniStandardTail[model.MarketTypeSpot]
-		}
-		createdAt := time.UnixMilli(result.Get(`E`).MustInt64())
-		result = result.Get(`k`)
-		candle := &model.Candle{Market: market, Symbol: standardSymbol, CreatedAt: createdAt,
-			Begin: time.UnixMilli(result.Get(`t`).MustInt64()), Seconds: 60,
-			End: time.UnixMilli(result.Get(`T`).MustInt64())}
-		candle.PriceOpen, _ = strconv.ParseFloat(result.Get(`o`).MustString(), 64)
-		candle.PriceClose, _ = strconv.ParseFloat(result.Get(`c`).MustString(), 64)
-		candle.PriceHigh, _ = strconv.ParseFloat(result.Get(`h`).MustString(), 64)
-		candle.PriceLow, _ = strconv.ParseFloat(result.Get(`l`).MustString(), 64)
-		candle.Volume, _ = strconv.ParseFloat(result.Get(`v`).MustString(), 64)
-		candle.VolumeQuote, _ = strconv.ParseFloat(result.Get(`q`).MustString(), 64)
-		if model.AppEnvironment.SetCandle(candle.Symbol, candle.Market, candle) {
-			for _, handler := range model.CandleHandlers {
-				handler(environment, candle)
-			}
+var KLineMsgHandlerBinanceSpot = func(market string, event []byte) {
+	result, wsErr := util.NewJSON(event)
+	if wsErr != nil {
+		util.Notice(`binance fail to unmarshal json ` + wsErr.Error())
+		return
+	}
+	result = result.Get(`data`)
+	if result == nil {
+		return
+	}
+	subscribe, _ := result.Get("e").String()
+	dialectSymbol := result.Get(`s`).MustString()
+	if subscribe != `kline` {
+		return
+	}
+	success, _, coin := model.GetCoinFromDialect(market, dialectSymbol)
+	if !success {
+		return
+	}
+	standardSymbol := coin + model.UniStandardTail[model.MarketTypeSpot]
+	if market == model.BinanceMargin {
+		standardSymbol = coin + model.UniStandardTail[model.MarketTypeSpot]
+	}
+	createdAt := time.UnixMilli(result.Get(`E`).MustInt64())
+	result = result.Get(`k`)
+	candle := &model.Candle{Market: market, Symbol: standardSymbol, CreatedAt: createdAt,
+		Begin: time.UnixMilli(result.Get(`t`).MustInt64()), Seconds: 60,
+		End: time.UnixMilli(result.Get(`T`).MustInt64())}
+	candle.PriceOpen, _ = strconv.ParseFloat(result.Get(`o`).MustString(), 64)
+	candle.PriceClose, _ = strconv.ParseFloat(result.Get(`c`).MustString(), 64)
+	candle.PriceHigh, _ = strconv.ParseFloat(result.Get(`h`).MustString(), 64)
+	candle.PriceLow, _ = strconv.ParseFloat(result.Get(`l`).MustString(), 64)
+	candle.Volume, _ = strconv.ParseFloat(result.Get(`v`).MustString(), 64)
+	candle.VolumeQuote, _ = strconv.ParseFloat(result.Get(`q`).MustString(), 64)
+	if model.AppEnvironment.SetCandle(candle.Symbol, candle.Market, candle) {
+		for _, handler := range model.CandleHandlers {
+			handler(model.AppEnvironment, candle)
 		}
 	}
+}
+
+func WsKLineBinanceSpot(environment *model.Environment, market string, symbols map[string]bool) (
+	socketMap map[*websocket.Conn]bool, msgChans []chan struct{}, connectErr error) {
+
 	subs := make([]interface{}, 0)
 	for symbol := range symbols {
 		_, _, _, dialectSymbol := model.GetFromStandard(market, symbol)
@@ -142,50 +144,41 @@ func WsKLineBinanceSpot(environment *model.Environment, market string, symbols m
 	return
 }
 
-func WsTickServeBinance(environment *model.Environment, market string) (socketMap map[*websocket.Conn]bool,
-	msgChans []chan struct{}, connectErr error) {
-	subType := model.SubscribeTicker
-	wsHandlerBinance := func(event []byte) {
-		result, wsErr := util.NewJSON(event)
-		if wsErr != nil {
-			util.Notice(`binance fail to unmarshal json ` + wsErr.Error())
-			return
-		}
-		subscribe, _ := result.Get("stream").String()
-		result = result.Get(`data`)
-		//data := new(binance.WsBookTickerEvent)
-		//wsErr := json.Unmarshal(event, &data)
-		if result == nil {
-			return
-		}
-		dialectSymbol := result.Get(`s`).MustString()
-		updateId := result.Get(`u`).MustInt64()
-		if strings.Contains(subscribe, `@depth`) {
-			updateId = result.Get(`lastUpdateId`).MustInt64()
-		}
-		success, _, coin := model.GetCoinFromDialect(market, dialectSymbol)
-		if !success {
-			return
-		}
-		standardSymbol := coin + model.UniStandardTail[model.MarketTypeSpot]
-		if market == model.BinanceMargin {
-			standardSymbol = coin + model.UniStandardTail[model.MarketTypeSpot]
-		}
-		haveOld, old := environment.GetBidAsk(standardSymbol, market)
-		if haveOld && old.UpdateId > updateId {
-			return
-		}
-		if strings.Contains(subscribe, `@depth`) {
-			handleDepthBinance(environment, result, market, standardSymbol, updateId)
-		} else if strings.Contains(subscribe, `@bookTicker`) {
-			handleTickerBinance(environment, result, market, standardSymbol, updateId)
-		}
+var wsHandlerBinance = func(market string, event []byte) {
+	result, wsErr := util.NewJSON(event)
+	if wsErr != nil {
+		util.Notice(`binance fail to unmarshal json ` + wsErr.Error())
+		return
 	}
-	subscribes := GetWSSubscribes(market, subType)
-	socketMap, msgChans, connectErr = WebSocketClient(market, wsBinance+`stream`, subscribes, subscribeHandlerBinance, wsHandlerBinance, wsStepBinance)
-	environment.ConnTick.Store(market, socketMap)
-	environment.MsgChanTick.Store(market, msgChans)
-	return
+	subscribe, _ := result.Get("stream").String()
+	result = result.Get(`data`)
+	//data := new(binance.WsBookTickerEvent)
+	//wsErr := json.Unmarshal(event, &data)
+	if result == nil {
+		return
+	}
+	dialectSymbol := result.Get(`s`).MustString()
+	updateId := result.Get(`u`).MustInt64()
+	if strings.Contains(subscribe, `@depth`) {
+		updateId = result.Get(`lastUpdateId`).MustInt64()
+	}
+	success, _, coin := model.GetCoinFromDialect(market, dialectSymbol)
+	if !success {
+		return
+	}
+	standardSymbol := coin + model.UniStandardTail[model.MarketTypeSpot]
+	if market == model.BinanceMargin {
+		standardSymbol = coin + model.UniStandardTail[model.MarketTypeSpot]
+	}
+	haveOld, old := model.AppEnvironment.GetBidAsk(standardSymbol, market)
+	if haveOld && old.UpdateId > updateId {
+		return
+	}
+	if strings.Contains(subscribe, `@depth`) {
+		handleDepthBinance(model.AppEnvironment, result, market, standardSymbol, updateId)
+	} else if strings.Contains(subscribe, `@bookTicker`) {
+		handleTickerBinance(model.AppEnvironment, result, market, standardSymbol, updateId)
+	}
 }
 
 var subscribeHandlerBinance = func(market string, connection *websocket.Conn, subscribes []interface{}) error {

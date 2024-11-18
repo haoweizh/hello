@@ -67,120 +67,51 @@ var subscribeHandlerHuobi = func(market string, connection *websocket.Conn, subs
 	}
 	return err
 }
-
-func WsTickServeHuobiSpot(environment *model.Environment, market string) (socketMap map[*websocket.Conn]bool, msgChans []chan struct{}, connectErr error) {
-	wsHandler := func(event []byte) {
-		res := util.UnGzip(event)
-		responseJson, jsonErr := util.NewJSON(res)
-		if jsonErr != nil {
-			util.Notice(fmt.Sprintf(`wsHandler fail to NewJson huobiSpot %s`, jsonErr.Error()))
-			return
-		}
-		if responseJson.Get(`ping`).MustInt() > 0 {
-			pingMap := make(map[string]interface{})
-			pingMap["pong"] = responseJson.Get(`ping`).MustInt()
-			pingParams := util.JsonEncodeToByte(pingMap)
-			if err := SendToAllTickerSockets(model.HuobiSpot, websocket.TextMessage, pingParams); err != nil {
-				util.SocketInfo("huobi server ping client error " + err.Error())
-			}
-		} else {
-			tickJson := responseJson.Get(`tick`)
-			if tickJson.Interface() == nil {
-				return
-			}
-			now := int(time.Now().UnixNano() / int64(time.Millisecond))
-			symbol := tickJson.Get("symbol").MustString()
-			//eg: market.xrpbtc.depth.step0 => xrp_btc 当下仅支持usdt交易
-			splits := strings.Split(symbol, `.`)
-			if len(splits) > 1 {
-				splitLen := len(splits[1])
-				if splits[1][splitLen-3:] == `usdt` {
-					symbol = splits[1][0 : splitLen-3]
-				}
-			}
-			if symbol != "" {
-				symbol = strings.ReplaceAll(symbol, "_", "")
-				bidAsk := model.BidAsk{Ts: responseJson.Get("ts").MustInt(), TsReceived: now, UpdateId: tickJson.Get("quoteTime").MustInt64(),
-					Bids: []model.Tick{{Price: tickJson.Get("bid").MustFloat64(), Amount: tickJson.Get("bidSize").MustFloat64(),
-						Market: model.HuobiSpot, Symbol: symbol}},
-					Asks: []model.Tick{{Price: tickJson.Get("ask").MustFloat64(), Amount: tickJson.Get("askSize").MustFloat64(),
-						Market: model.HuobiSpot, Symbol: symbol}}}
-				haveOld, old := environment.GetBidAsk(symbol, model.HuobiSpot)
-				if haveOld && old.UpdateId > bidAsk.UpdateId {
-					return
-				}
-				if environment.SetBidAsk(symbol, model.HuobiSpot, &bidAsk) {
-					funcHandlers := GetFunctions(model.HuobiSpot, symbol)
-					if funcHandlers != nil {
-						funcHandlers.Range(func(function, value interface{}) bool {
-							setting := GetSetting(function.(string), model.HuobiSpot, symbol)
-							if setting != nil && value != nil && value.(model.CarryHandler) != nil {
-								go value.(model.CarryHandler)(setting, &bidAsk)
-							}
-							return true
-						})
-					}
-				}
-			}
-		}
+var wsHandlerHuobiSpot = func(market string, event []byte) {
+	res := util.UnGzip(event)
+	responseJson, jsonErr := util.NewJSON(res)
+	if jsonErr != nil {
+		util.Notice(fmt.Sprintf(`wsHandlerGate fail to NewJson huobiSpot %s`, jsonErr.Error()))
+		return
 	}
-	wsHandlerDM := func(event []byte) {
-		res := util.UnGzip(event)
-		responseJson, jsonErr := util.NewJSON(res)
-		if jsonErr != nil {
-			util.Notice(fmt.Sprintf(`fail to NewJson wsHandlerDM huobi %s`, jsonErr.Error()))
+	if responseJson.Get(`ping`).MustInt() > 0 {
+		pingMap := make(map[string]interface{})
+		pingMap["pong"] = responseJson.Get(`ping`).MustInt()
+		pingParams := util.JsonEncodeToByte(pingMap)
+		if err := SendToAllTickerSockets(model.HuobiSpot, websocket.TextMessage, pingParams); err != nil {
+			util.SocketInfo("huobi server ping client error " + err.Error())
+		}
+	} else {
+		tickJson := responseJson.Get(`tick`)
+		if tickJson.Interface() == nil {
 			return
 		}
-		if responseJson.Get(`ping`).MustInt() > 0 {
-			pingMap := make(map[string]interface{})
-			pingMap["pong"] = responseJson.Get(`ping`).MustInt()
-			pingParams := util.JsonEncodeToByte(pingMap)
-			if wsErr := SendToAllTickerSockets(model.HuobiSpot, websocket.TextMessage, pingParams); wsErr != nil {
-				util.SocketInfo("HuobiFuture server ping client error " + wsErr.Error())
+		now := int(time.Now().UnixNano() / int64(time.Millisecond))
+		symbol := tickJson.Get("symbol").MustString()
+		//eg: market.xrpbtc.depth.step0 => xrp_btc 当下仅支持usdt交易
+		splits := strings.Split(symbol, `.`)
+		if len(splits) > 1 {
+			splitLen := len(splits[1])
+			if splits[1][splitLen-3:] == `usdt` {
+				symbol = splits[1][0 : splitLen-3]
 			}
-		} else {
-			tickJson := responseJson.Get(`tick`)
-			if tickJson.Interface() == nil {
-				return
-			}
-			symbol := responseJson.Get(`ch`).MustString()
-			splits := strings.Split(symbol, `.`)
-			if splits == nil || len(splits) <= 1 {
-				return
-			}
-			symbol = strings.ToLower(splits[1])
-			now := int(time.Now().UnixNano() / int64(time.Millisecond))
-			bidAsk := model.BidAsk{Ts: responseJson.Get(`ts`).MustInt(), TsReceived: now, UpdateId: tickJson.Get("ts").MustInt64()}
-			bid := tickJson.Get(`bid`).MustArray()
-			ask := tickJson.Get(`ask`).MustArray()
-			bidAsk.Bids = make([]model.Tick, 1)
-			bidAsk.Asks = make([]model.Tick, 1)
-			if bid == nil || len(bid) < 2 || ask == nil || len(ask) < 2 {
-				return
-			}
-			bidAmount, _ := bid[1].(json.Number).Float64()
-			bidPrice, _ := bid[0].(json.Number).Float64()
-			bidSuccess, bidAmount := model.ParseRealAmount(model.HuobiSpot, symbol, bidAmount)
-			if !bidSuccess {
-				return
-			}
-			askAmount, _ := ask[1].(json.Number).Float64()
-			askPrice, _ := ask[0].(json.Number).Float64()
-			askSuccess, askAmount := model.ParseRealAmount(model.HuobiSpot, symbol, askAmount)
-			if !askSuccess {
-				return
-			}
-			bidAsk.Bids = []model.Tick{{Price: bidPrice, Amount: bidAmount, Market: model.HuobiSpot, Symbol: symbol}}
-			bidAsk.Asks = []model.Tick{{Price: askPrice, Amount: askAmount, Market: model.HuobiSpot, Symbol: symbol}}
-			haveOld, old := environment.GetBidAsk(symbol, model.HuobiSpot)
+		}
+		if symbol != "" {
+			symbol = strings.ReplaceAll(symbol, "_", "")
+			bidAsk := model.BidAsk{Ts: responseJson.Get("ts").MustInt(), TsReceived: now, UpdateId: tickJson.Get("quoteTime").MustInt64(),
+				Bids: []model.Tick{{Price: tickJson.Get("bid").MustFloat64(), Amount: tickJson.Get("bidSize").MustFloat64(),
+					Market: model.HuobiSpot, Symbol: symbol}},
+				Asks: []model.Tick{{Price: tickJson.Get("ask").MustFloat64(), Amount: tickJson.Get("askSize").MustFloat64(),
+					Market: model.HuobiSpot, Symbol: symbol}}}
+			haveOld, old := model.AppEnvironment.GetBidAsk(symbol, model.HuobiSpot)
 			if haveOld && old.UpdateId > bidAsk.UpdateId {
 				return
 			}
-			if environment.SetBidAsk(symbol, model.HuobiPerp, &bidAsk) {
-				funcHandlers := GetFunctions(model.HuobiPerp, symbol)
+			if model.AppEnvironment.SetBidAsk(symbol, model.HuobiSpot, &bidAsk) {
+				funcHandlers := GetFunctions(model.HuobiSpot, symbol)
 				if funcHandlers != nil {
 					funcHandlers.Range(func(function, value interface{}) bool {
-						setting := GetSetting(function.(string), model.HuobiPerp, symbol)
+						setting := GetSetting(function.(string), model.HuobiSpot, symbol)
 						if setting != nil && value != nil && value.(model.CarryHandler) != nil {
 							go value.(model.CarryHandler)(setting, &bidAsk)
 						}
@@ -190,6 +121,76 @@ func WsTickServeHuobiSpot(environment *model.Environment, market string) (socket
 			}
 		}
 	}
+}
+
+var wsHandlerHuobiDM = func(market string, event []byte) {
+	res := util.UnGzip(event)
+	responseJson, jsonErr := util.NewJSON(res)
+	if jsonErr != nil {
+		util.Notice(fmt.Sprintf(`fail to NewJson wsHandlerHuobiDM huobi %s`, jsonErr.Error()))
+		return
+	}
+	if responseJson.Get(`ping`).MustInt() > 0 {
+		pingMap := make(map[string]interface{})
+		pingMap["pong"] = responseJson.Get(`ping`).MustInt()
+		pingParams := util.JsonEncodeToByte(pingMap)
+		if wsErr := SendToAllTickerSockets(model.HuobiSpot, websocket.TextMessage, pingParams); wsErr != nil {
+			util.SocketInfo("HuobiFuture server ping client error " + wsErr.Error())
+		}
+	} else {
+		tickJson := responseJson.Get(`tick`)
+		if tickJson.Interface() == nil {
+			return
+		}
+		symbol := responseJson.Get(`ch`).MustString()
+		splits := strings.Split(symbol, `.`)
+		if splits == nil || len(splits) <= 1 {
+			return
+		}
+		symbol = strings.ToLower(splits[1])
+		now := int(time.Now().UnixNano() / int64(time.Millisecond))
+		bidAsk := model.BidAsk{Ts: responseJson.Get(`ts`).MustInt(), TsReceived: now, UpdateId: tickJson.Get("ts").MustInt64()}
+		bid := tickJson.Get(`bid`).MustArray()
+		ask := tickJson.Get(`ask`).MustArray()
+		bidAsk.Bids = make([]model.Tick, 1)
+		bidAsk.Asks = make([]model.Tick, 1)
+		if bid == nil || len(bid) < 2 || ask == nil || len(ask) < 2 {
+			return
+		}
+		bidAmount, _ := bid[1].(json.Number).Float64()
+		bidPrice, _ := bid[0].(json.Number).Float64()
+		bidSuccess, bidAmount := model.ParseRealAmount(model.HuobiSpot, symbol, bidAmount)
+		if !bidSuccess {
+			return
+		}
+		askAmount, _ := ask[1].(json.Number).Float64()
+		askPrice, _ := ask[0].(json.Number).Float64()
+		askSuccess, askAmount := model.ParseRealAmount(model.HuobiSpot, symbol, askAmount)
+		if !askSuccess {
+			return
+		}
+		bidAsk.Bids = []model.Tick{{Price: bidPrice, Amount: bidAmount, Market: model.HuobiSpot, Symbol: symbol}}
+		bidAsk.Asks = []model.Tick{{Price: askPrice, Amount: askAmount, Market: model.HuobiSpot, Symbol: symbol}}
+		haveOld, old := model.AppEnvironment.GetBidAsk(symbol, model.HuobiSpot)
+		if haveOld && old.UpdateId > bidAsk.UpdateId {
+			return
+		}
+		if model.AppEnvironment.SetBidAsk(symbol, model.HuobiPerp, &bidAsk) {
+			funcHandlers := GetFunctions(model.HuobiPerp, symbol)
+			if funcHandlers != nil {
+				funcHandlers.Range(func(function, value interface{}) bool {
+					setting := GetSetting(function.(string), model.HuobiPerp, symbol)
+					if setting != nil && value != nil && value.(model.CarryHandler) != nil {
+						go value.(model.CarryHandler)(setting, &bidAsk)
+					}
+					return true
+				})
+			}
+		}
+	}
+}
+
+func WsTickServeHuobiSpot(environment *model.Environment, market string) (socketMap map[*websocket.Conn]bool, msgChans []chan struct{}, connectErr error) {
 	var spotSubscribes, futureSubscribes []interface{}
 	subscribes := GetWSSubscribes(model.HuobiSpot, model.SubscribeTicker)
 	for _, subscribe := range subscribes {
@@ -201,8 +202,8 @@ func WsTickServeHuobiSpot(environment *model.Environment, market string) (socket
 	}
 	socketMap = make(map[*websocket.Conn]bool)
 	msgChans = make([]chan struct{}, 0)
-	spotSockets, channels, channelErr := WebSocketClient(model.HuobiSpot, wsHuobi, spotSubscribes, subscribeHandlerHuobi, wsHandler, wsStepHuobi)
-	dmSockets, dmChannels, dmChannelErr := WebSocketClient(model.HuobiSpot, wsHuobiFuture, futureSubscribes, subscribeHandlerHuobi, wsHandlerDM, wsStepHuobi)
+	spotSockets, channels, channelErr := WebSocketClient(model.HuobiSpot, wsHuobi, spotSubscribes, subscribeHandlerHuobi, wsHandlerHuobiSpot, wsStepHuobi)
+	dmSockets, dmChannels, dmChannelErr := WebSocketClient(model.HuobiSpot, wsHuobiFuture, futureSubscribes, subscribeHandlerHuobi, wsHandlerHuobiDM, wsStepHuobi)
 	if channelErr == nil {
 		msgChans = append(msgChans, channels...)
 		for conn, b := range spotSockets {

@@ -66,36 +66,37 @@ func setBitgetPositionMode(key, secret string) {
 	}
 }
 
-func WsTickServeBitgetPerp(environment *model.Environment, market string) (socketMap map[*websocket.Conn]bool, msgChans []chan struct{}, connectErr error) {
-	markPriceWsHandler := func(event []byte) {
-		tickerWsResp := &dtos.BitgetTickerWsResp{}
-		jsonErr := json.Unmarshal(event, tickerWsResp)
-		if jsonErr != nil {
-			//util.SocketInfo(`bitget fail to unmarshal ticker ws data json ` + jsonErr.Error())
-			return
-		}
-		if tickerWsResp.Arg.InstType == "USDT-FUTURES" && tickerWsResp.Action == "snapshot" {
-			for _, tickerData := range tickerWsResp.Data {
-				if tickerData.Symbol == "" {
-					continue
-				}
-				_, _, coin := model.GetCoinFromDialect(model.BitgetPerp, tickerData.Symbol)
-				symbol := coin + model.UniStandardTail[model.MarketTypePerp]
-				price, _ := strconv.ParseFloat(tickerData.MarkPrice, 64)
-				ts, _ := strconv.ParseInt(tickerData.Ts, 10, 64)
-				nextTs, _ := strconv.ParseInt(tickerData.NextFundingTime, 10, 64)
-				ticker := &model.MarkPriceInfo{MarkPrice: price, Ts: int(ts)}
-				environment.SetMarkPriceInfo(symbol, model.BitgetPerp, ticker)
-				rate, _ := strconv.ParseFloat(tickerData.FundingRate, 64)
-				fundingRate := &model.FundingRate{
-					Rate:       rate,
-					UpdateTime: time.UnixMilli(ts),
-					ExpireTime: nextTs / 1000,
-				}
-				model.SetFundingRate(model.BitgetPerp, symbol, fundingRate)
+var markPriceWsHandler = func(market string, event []byte) {
+	tickerWsResp := &dtos.BitgetTickerWsResp{}
+	jsonErr := json.Unmarshal(event, tickerWsResp)
+	if jsonErr != nil {
+		//util.SocketInfo(`bitget fail to unmarshal ticker ws data json ` + jsonErr.Error())
+		return
+	}
+	if tickerWsResp.Arg.InstType == "USDT-FUTURES" && tickerWsResp.Action == "snapshot" {
+		for _, tickerData := range tickerWsResp.Data {
+			if tickerData.Symbol == "" {
+				continue
 			}
+			_, _, coin := model.GetCoinFromDialect(model.BitgetPerp, tickerData.Symbol)
+			symbol := coin + model.UniStandardTail[model.MarketTypePerp]
+			price, _ := strconv.ParseFloat(tickerData.MarkPrice, 64)
+			ts, _ := strconv.ParseInt(tickerData.Ts, 10, 64)
+			nextTs, _ := strconv.ParseInt(tickerData.NextFundingTime, 10, 64)
+			ticker := &model.MarkPriceInfo{MarkPrice: price, Ts: int(ts)}
+			model.AppEnvironment.SetMarkPriceInfo(symbol, model.BitgetPerp, ticker)
+			rate, _ := strconv.ParseFloat(tickerData.FundingRate, 64)
+			fundingRate := &model.FundingRate{
+				Rate:       rate,
+				UpdateTime: time.UnixMilli(ts),
+				ExpireTime: nextTs / 1000,
+			}
+			model.SetFundingRate(model.BitgetPerp, symbol, fundingRate)
 		}
 	}
+}
+
+func WsTickServeBitgetPerp(environment *model.Environment, market string) (socketMap map[*websocket.Conn]bool, msgChans []chan struct{}, connectErr error) {
 	msgChans = make([]chan struct{}, 0)
 	socketMap = make(map[*websocket.Conn]bool)
 	depthSubs := GetWSSubscribes(market, model.SubscribeDepth)

@@ -36,80 +36,73 @@ var subscribeHandlerHuobiPerp = func(market string, connection *websocket.Conn, 
 	return err
 }
 
-func WsTickServeHuobiPerp(environment *model.Environment, market string) (socketMap map[*websocket.Conn]bool, msgChans []chan struct{}, connectErr error) {
-	wsMsgHandler := func(event []byte) {
-		res := util.UnGzip(event)
-		responseJson, err := util.NewJSON(res)
-		if err != nil {
-			return
+var wsMsgHandler = func(market string, event []byte) {
+	res := util.UnGzip(event)
+	responseJson, err := util.NewJSON(res)
+	if err != nil {
+		return
+	}
+	if responseJson.Get(`ping`).MustInt() > 0 {
+		pingMap := make(map[string]interface{})
+		pingMap["pong"] = responseJson.Get(`ping`).MustInt()
+		pingParams := util.JsonEncodeToByte(pingMap)
+		value, _ := model.AppEnvironment.ConnTick.Load(model.HuobiPerp)
+		connections := value.(map[*websocket.Conn]bool)
+		for connection := range connections {
+			if connection == nil {
+				continue
+			}
+			if subErr := SendToConnection(model.HuobiPerp, connection, pingParams); subErr != nil {
+				util.SocketInfo("HuobiPerp server ping client error " + subErr.Error())
+			}
 		}
-		if responseJson.Get(`ping`).MustInt() > 0 {
-			pingMap := make(map[string]interface{})
-			pingMap["pong"] = responseJson.Get(`ping`).MustInt()
-			pingParams := util.JsonEncodeToByte(pingMap)
-			value, _ := model.AppEnvironment.ConnTick.Load(model.HuobiPerp)
-			connections := value.(map[*websocket.Conn]bool)
-			for connection := range connections {
-				if connection == nil {
-					continue
-				}
-				if subErr := SendToConnection(model.HuobiPerp, connection, pingParams); subErr != nil {
-					util.SocketInfo("HuobiPerp server ping client error " + subErr.Error())
-				}
+	} else {
+		responseJson = responseJson.Get(`tick`)
+		symbol := responseJson.Get(`ch`).MustString()
+		bidAsk := model.BidAsk{}
+		bids := responseJson.Get(`bids`).MustArray()
+		asks := responseJson.Get(`asks`).MustArray()
+		bidAsk.Bids = make([]model.Tick, len(bids))
+		bidAsk.Asks = make([]model.Tick, len(asks))
+		for i, item := range bids {
+			value := item.([]interface{})
+			if value == nil || len(value) < 2 {
+				continue
 			}
-		} else {
-			responseJson = responseJson.Get(`tick`)
-			symbol := responseJson.Get(`ch`).MustString()
-			bidAsk := model.BidAsk{}
-			bids := responseJson.Get(`bids`).MustArray()
-			asks := responseJson.Get(`asks`).MustArray()
-			bidAsk.Bids = make([]model.Tick, len(bids))
-			bidAsk.Asks = make([]model.Tick, len(asks))
-			for i, item := range bids {
-				value := item.([]interface{})
-				if value == nil || len(value) < 2 {
-					continue
-				}
-				price, _ := value[0].(json.Number).Float64()
-				amount, _ := value[1].(json.Number).Float64()
-				bidAsk.Bids[i] = model.Tick{Price: price, Amount: amount, Market: model.HuobiPerp, Symbol: symbol}
+			price, _ := value[0].(json.Number).Float64()
+			amount, _ := value[1].(json.Number).Float64()
+			bidAsk.Bids[i] = model.Tick{Price: price, Amount: amount, Market: model.HuobiPerp, Symbol: symbol}
+		}
+		for i, item := range asks {
+			value := item.([]interface{})
+			if value == nil || len(value) < 2 {
+				continue
 			}
-			for i, item := range asks {
-				value := item.([]interface{})
-				if value == nil || len(value) < 2 {
-					continue
-				}
-				price, _ := value[0].(json.Number).Float64()
-				amount, _ := value[1].(json.Number).Float64()
-				bidAsk.Asks[i] = model.Tick{Price: price, Amount: amount, Market: model.HuobiPerp, Symbol: symbol}
-			}
-			bidAsk.Ts = responseJson.Get(`ts`).MustInt()
-			bidAsk.TsReceived = int(util.GetNowUnixMillion())
-			splits := strings.Split(symbol, `.`)
-			if splits != nil && len(splits) > 1 {
-				symbol = strings.ToLower(splits[1])
-				sort.Sort(bidAsk.Asks)
-				sort.Sort(sort.Reverse(bidAsk.Bids))
-				if environment.SetBidAsk(symbol, model.HuobiPerp, &bidAsk) {
-					funcHandlers := GetFunctions(model.HuobiPerp, symbol)
-					if funcHandlers != nil {
-						funcHandlers.Range(func(function, value interface{}) bool {
-							setting := GetSetting(function.(string), model.HuobiPerp, symbol)
-							if setting != nil && value != nil && value.(model.CarryHandler) != nil {
-								go value.(model.CarryHandler)(setting, &bidAsk)
-							}
-							return true
-						})
-					}
+			price, _ := value[0].(json.Number).Float64()
+			amount, _ := value[1].(json.Number).Float64()
+			bidAsk.Asks[i] = model.Tick{Price: price, Amount: amount, Market: model.HuobiPerp, Symbol: symbol}
+		}
+		bidAsk.Ts = responseJson.Get(`ts`).MustInt()
+		bidAsk.TsReceived = int(util.GetNowUnixMillion())
+		splits := strings.Split(symbol, `.`)
+		if splits != nil && len(splits) > 1 {
+			symbol = strings.ToLower(splits[1])
+			sort.Sort(bidAsk.Asks)
+			sort.Sort(sort.Reverse(bidAsk.Bids))
+			if model.AppEnvironment.SetBidAsk(symbol, model.HuobiPerp, &bidAsk) {
+				funcHandlers := GetFunctions(model.HuobiPerp, symbol)
+				if funcHandlers != nil {
+					funcHandlers.Range(func(function, value interface{}) bool {
+						setting := GetSetting(function.(string), model.HuobiPerp, symbol)
+						if setting != nil && value != nil && value.(model.CarryHandler) != nil {
+							go value.(model.CarryHandler)(setting, &bidAsk)
+						}
+						return true
+					})
 				}
 			}
 		}
 	}
-	socketMap, msgChans, connectErr = WebSocketClient(market, wsHuobiPerp, GetWSSubscribes(model.HuobiPerp, model.SubscribeDepth),
-		subscribeHandlerHuobiPerp, wsMsgHandler, wsStepHuobi)
-	environment.ConnTick.Store(market, socketMap)
-	environment.MsgChanTick.Store(market, msgChans)
-	return
 }
 
 //func parseBalanceHuobiPerp(key string, data map[string]interface{}) (balance *model.Balance) {

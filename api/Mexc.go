@@ -80,6 +80,44 @@ func maintainChannelMexc(subscribes []interface{}) {
 	}
 }
 
+var wsHandlerMexc = func(market string, event []byte) {
+	newJson, wsErr := util.NewJSON(event)
+	if wsErr != nil {
+		util.SocketInfo(`MEXC fail to unmarshal json ` + wsErr.Error())
+		return
+	}
+	channel, _ := newJson.Get("channel").String()
+	ts, _ := newJson.Get("ts").Int64()
+	if ts != 0 && channel == `push.depth.full` {
+		resp := &dtos.MexcContractDepthWsResp{}
+		if json.Unmarshal(event, resp) == nil {
+			if resp == nil {
+				util.Notice(fmt.Sprintf("InvalidChannel in %+v", resp))
+				return
+			}
+			success, marketType, coin := model.GetCoinFromDialect(model.Mexc, resp.Symbol)
+			if !success {
+				return
+			}
+			symbol := coin + model.UniStandardTail[marketType]
+			bidAsk := parseTicksMexc(symbol, resp.Ts, resp.Data.Version, resp.Data.Bids, resp.Data.Asks)
+			//fmt.Println(fmt.Sprintf(`%s %f %f ~ %f %f`, symbol, bidAsk.Bids[0].Price, bidAsk.Bids[0].Amount, bidAsk.Asks[0].Price, bidAsk.Asks[0].Amount))
+			if model.AppEnvironment.SetBidAsk(symbol, model.Mexc, bidAsk) {
+				funcHandlers := GetFunctions(model.Mexc, symbol)
+				if funcHandlers != nil {
+					funcHandlers.Range(func(function, value interface{}) bool {
+						setting := GetSetting(function.(string), model.Mexc, symbol)
+						if setting != nil && value != nil && value.(model.CarryHandler) != nil {
+							go value.(model.CarryHandler)(setting, bidAsk)
+						}
+						return true
+					})
+				}
+			}
+		}
+	}
+}
+
 func WsTickServeMexc(environment *model.Environment, market string, useFullDepthSub bool) (socketMap map[*websocket.Conn]bool, msgChans []chan struct{}, connectErr error) {
 	symbols := GetMarketSymbols(model.Mexc)
 	if !useFullDepthSub {
@@ -89,50 +127,13 @@ func WsTickServeMexc(environment *model.Environment, market string, useFullDepth
 			initMexcContractDepth(environment, symbol)
 		}
 	}
-	wsHandler := func(event []byte) {
-		newJson, wsErr := util.NewJSON(event)
-		if wsErr != nil {
-			util.SocketInfo(`MEXC fail to unmarshal json ` + wsErr.Error())
-			return
-		}
-		channel, _ := newJson.Get("channel").String()
-		ts, _ := newJson.Get("ts").Int64()
-		if ts != 0 && channel == `push.depth.full` {
-			resp := &dtos.MexcContractDepthWsResp{}
-			if json.Unmarshal(event, resp) == nil {
-				if resp == nil {
-					util.Notice(fmt.Sprintf("InvalidChannel in %+v", resp))
-					return
-				}
-				success, marketType, coin := model.GetCoinFromDialect(model.Mexc, resp.Symbol)
-				if !success {
-					return
-				}
-				symbol := coin + model.UniStandardTail[marketType]
-				bidAsk := parseTicksMexc(symbol, resp.Ts, resp.Data.Version, resp.Data.Bids, resp.Data.Asks)
-				//fmt.Println(fmt.Sprintf(`%s %f %f ~ %f %f`, symbol, bidAsk.Bids[0].Price, bidAsk.Bids[0].Amount, bidAsk.Asks[0].Price, bidAsk.Asks[0].Amount))
-				if environment.SetBidAsk(symbol, model.Mexc, bidAsk) {
-					funcHandlers := GetFunctions(model.Mexc, symbol)
-					if funcHandlers != nil {
-						funcHandlers.Range(func(function, value interface{}) bool {
-							setting := GetSetting(function.(string), model.Mexc, symbol)
-							if setting != nil && value != nil && value.(model.CarryHandler) != nil {
-								go value.(model.CarryHandler)(setting, bidAsk)
-							}
-							return true
-						})
-					}
-				}
-			}
-		}
-	}
 	subscribes := make([]interface{}, 0)
 	if !useFullDepthSub { // 订阅contract深度增量
 		subscribes = GetWSSubscribes(model.Mexc, mexcContractDepthIncSubType)
 	} else { // 订阅contract 5档深度全量
 		subscribes = GetWSSubscribes(model.Mexc, mexcContractDepthFullSubType)
 	}
-	socketMap, msgChans, connectErr = WebSocketClient(market, mexcContractWSUrl, subscribes, subscribeHandlerMexc, wsHandler, wsStepMexc)
+	socketMap, msgChans, connectErr = WebSocketClient(market, mexcContractWSUrl, subscribes, subscribeHandlerMexc, wsHandlerMexc, wsStepMexc)
 	go maintainChannelMexc(subscribes)
 	environment.ConnTick.Store(market, socketMap)
 	environment.MsgChanTick.Store(market, msgChans)

@@ -272,8 +272,11 @@ var markPriceHandler = gateWs.NewCallBack(func(msg *gateWs.UpdateMsg) {
 			symbol := coin + model.UniStandardTail[model.MarketTypePerp]
 			price, _ := strconv.ParseFloat(update.MarkPrice, 64)
 			ticker := &model.MarkPriceInfo{MarkPrice: price, Ts: int(msg.TimeMs)}
-			markets := model.AppEnvironment
-			markets.SetMarkPriceInfo(symbol, model.Gate, ticker)
+			model.AppEnvironment.SetMarkPriceInfo(symbol, model.Gate, ticker)
+			rate, _ := strconv.ParseFloat(update.FundingRate, 64)
+			rateNext, _ := strconv.ParseFloat(update.FundingRateIndicative, 64)
+			model.SetFundingRate(model.Gate, symbol, &model.FundingRate{Rate: rate, RateNext: rateNext,
+				UpdateTime: time.Unix(msg.Time, 0), ExpireTime: 0})
 		}
 	}
 	return
@@ -399,11 +402,11 @@ func WSOrderServeGate(account *model.Account) {
 	go maintainConnOrderGate()
 }
 
-func WsTickServeGateNew(environment *model.Environment, market string) (socketMap map[*websocket.Conn]bool, msgChans []chan struct{}, connectErr error) {
+func WsTickServeGateNew(market string) (socketMap map[*websocket.Conn]bool, msgChans []chan struct{}, connectErr error) {
 	var spotSubs, spotOrderBookSubs, futureSubs []interface{}
 	socketMap = make(map[*websocket.Conn]bool)
 	msgChans = make([]chan struct{}, 0)
-	symbols := GetMarketSymbols(model.Gate)
+	symbols := GetMarketSymbols(market)
 	for symbol := range symbols {
 		if strings.LastIndex(symbol, model.UniStandardTail[model.MarketTypeSpot]) == len(symbol)-len(model.UniStandardTail[model.MarketTypeSpot]) &&
 			len(symbol)-len(model.UniStandardTail[model.MarketTypeSpot]) > 0 {
@@ -414,7 +417,7 @@ func WsTickServeGateNew(environment *model.Environment, market string) (socketMa
 			futureSubs = append(futureSubs, symbol)
 		}
 	}
-	//spotOrderBookSockets, spotOrderBookChannels, spotOrderBookErr := WebSocketClient(model.Gate, gateWs.BaseUrl, spotOrderBookSubs, subscribeHandler, wsHandler, wsStepGate)
+	//spotOrderBookSockets, spotOrderBookChannels, spotOrderBookErr := WebSocketClient(model.Gate, gateWs.BaseUrl, spotOrderBookSubs, subscribeHandler, wsHandlerGate, wsStepGate)
 	//if spotOrderBookErr == nil {
 	//	util.Info(`finish connect public gate spot order book ws `)
 	//	msgChans = append(msgChans, spotOrderBookChannels...)
@@ -422,7 +425,7 @@ func WsTickServeGateNew(environment *model.Environment, market string) (socketMa
 	//		socketMap[conn] = b
 	//	}
 	//}
-	spotBookTickerSockets, spotBookTickerChannels, spotBookTickerErr := WebSocketClient(model.Gate, gateWs.BaseUrl, spotSubs, subscribeHandler, wsHandler, wsStepGate)
+	spotBookTickerSockets, spotBookTickerChannels, spotBookTickerErr := WebSocketClient(model.Gate, gateWs.BaseUrl, spotSubs, subscribeHandler, wsHandlerGate, wsStepGate)
 	if spotBookTickerErr == nil {
 		util.Info(`finish connect public gate spot book ticker ws `)
 		msgChans = append(msgChans, spotBookTickerChannels...)
@@ -430,7 +433,7 @@ func WsTickServeGateNew(environment *model.Environment, market string) (socketMa
 			socketMap[conn] = b
 		}
 	}
-	perpBookTickerSockets, perpBookTickerChannels, perpBookTickerErr := WebSocketClient(model.Gate, gateWs.FuturesUsdtUrl, futureSubs, subscribeHandler, wsHandler, wsStepGate)
+	perpBookTickerSockets, perpBookTickerChannels, perpBookTickerErr := WebSocketClient(model.Gate, gateWs.FuturesUsdtUrl, futureSubs, subscribeHandler, wsHandlerGate, wsStepGate)
 	if perpBookTickerErr == nil {
 		util.Info(`finish connect public gate perp book ticker ws `)
 		msgChans = append(msgChans, perpBookTickerChannels...)
@@ -438,7 +441,7 @@ func WsTickServeGateNew(environment *model.Environment, market string) (socketMa
 			socketMap[conn] = b
 		}
 	}
-	perpMarkPriceSockets, perpMarkPriceChannels, perpMarkPriceErr := WebSocketClient(model.Gate, gateWs.FuturesUsdtUrl, futureSubs, subscribeMarkPriceHandler, wsHandler, wsStepGate)
+	perpMarkPriceSockets, perpMarkPriceChannels, perpMarkPriceErr := WebSocketClient(model.Gate, gateWs.FuturesUsdtUrl, futureSubs, subscribeMarkPriceHandler, wsHandlerGate, wsStepGate)
 	if perpMarkPriceErr == nil {
 		util.Info(`finish connect public gate perp mark price ws `)
 		msgChans = append(msgChans, perpMarkPriceChannels...)
@@ -446,12 +449,10 @@ func WsTickServeGateNew(environment *model.Environment, market string) (socketMa
 			socketMap[conn] = b
 		}
 	}
-	environment.ConnTick.Store(market, socketMap)
-	environment.MsgChanTick.Store(market, msgChans)
 	return
 }
 
-var wsHandler = func(event []byte) {
+var wsHandlerGate = func(market string, event []byte) {
 	msg := &gateWs.UpdateMsg{}
 	if err := json.Unmarshal(event, msg); err != nil {
 		util.Notice(fmt.Sprintf("gate ws message Unmarshal err:%s", err.Error()))

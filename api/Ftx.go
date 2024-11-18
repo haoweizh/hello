@@ -117,30 +117,30 @@ var subscribeHandlerFtx = func(market string, connection *websocket.Conn, subscr
 	}
 	return err
 }
+var wsHandlerFtx = func(market string, event []byte) {
+	responseJson, err := util.NewJSON(event)
+	if err != nil {
+		util.SocketInfo(`fail to unmarshal json ` + err.Error())
+		return
+	}
+	if responseJson == nil {
+		return
+	}
+	msgType := responseJson.Get(`channel`).MustString()
+	if msgType == `orderbook` {
+		handleDepthFtx(model.AppEnvironment, responseJson)
+	} else if msgType == `ticker` {
+		handleTickerFtx(model.AppEnvironment, responseJson)
+	}
+}
 
 func WsTickServeFtx(environment *model.Environment, market string) (socketMap map[*websocket.Conn]bool, msgChans []chan struct{}, err error) {
-	wsHandler := func(event []byte) {
-		responseJson, err := util.NewJSON(event)
-		if err != nil {
-			util.SocketInfo(`fail to unmarshal json ` + err.Error())
-			return
-		}
-		if responseJson == nil {
-			return
-		}
-		msgType := responseJson.Get(`channel`).MustString()
-		if msgType == `orderbook` {
-			handleDepthFtx(environment, responseJson)
-		} else if msgType == `ticker` {
-			handleTickerFtx(environment, responseJson)
-		}
-	}
 	//subType := model.SubscribeDepth
 	subType := model.SubscribeDepth + `,` + model.SubscribeTicker
 	subscribes := GetWSSubscribes(model.Ftx, subType)
 	subscribes = append(subscribes, GetWSSubscribe(market, `USDT_USDT`, model.SubscribeDepth))
 	subscribes = append(subscribes, GetWSSubscribe(market, `USDT_USDT`, model.SubscribeTicker))
-	socketMap, msgChans, err = WebSocketClient(market, wsFtx, subscribes, subscribeHandlerFtx, wsHandler, wsStepFtx)
+	socketMap, msgChans, err = WebSocketClient(market, wsFtx, subscribes, subscribeHandlerFtx, wsHandlerFtx, wsStepFtx)
 	environment.ConnTick.Store(market, socketMap)
 	environment.MsgChanTick.Store(market, msgChans)
 	go maintainChannelFtx(subscribes)
