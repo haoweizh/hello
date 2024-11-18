@@ -303,7 +303,7 @@ var tickHandlerBybit = func(market string, event []byte) {
 		symbol := coin + model.UniStandardTail[marketType]
 		rate, _ := strconv.ParseFloat(tickResp.Data.FundingRate, 64)
 		nextFundingTime, _ := strconv.ParseInt(tickResp.Data.NextFundingTime, 10, 64)
-		model.SetFundingRate(model.Bybit, symbol, &model.FundingRate{
+		SetFundingRate(model.Bybit, symbol, &model.FundingRate{
 			Rate:       rate,
 			UpdateTime: time.UnixMilli(tickResp.Ts),
 			ExpireTime: nextFundingTime / 1000,

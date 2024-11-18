@@ -229,13 +229,17 @@ func initStatus(account *model.Account, setting *model.Setting, absentRevert boo
 		util.NoticeLess(fmt.Sprintf(`fail to create status %s %s`, setting.Market, setting.Symbol))
 		return nil
 	}
-	_, status.FoundingRate, status.FundingRateUpdateTime = api.GetFundingRate(account.Key, account.Secret, setting.Market, setting.Symbol)
+	getFundingRate, rate := api.GetFundingRate(account.Key, account.Secret, setting.Market, setting.Symbol)
+	if getFundingRate {
+		status.FundingRate = rate.Rate
+		status.FundingRateUpdateTime = rate.UpdateTime
+	}
 	fundingKey := fmt.Sprintf(`funding_%s_%s`, setting.Market, setting.Symbol)
 	fundingTime, ok := notifyTime.Load(fundingKey)
-	if !(ok && fundingTime.(time.Time).Add(time.Minute*60).After(time.Now())) && math.Abs(status.FoundingRate) > 0.03 {
+	if !(ok && fundingTime.(time.Time).Add(time.Minute*60).After(time.Now())) && math.Abs(status.FundingRate) > 0.03 {
 		notifyTime.Store(fundingKey, time.Now())
 		go func() {
-			msg := fmt.Sprintf(`%s %f`, fundingKey, status.FoundingRate)
+			msg := fmt.Sprintf(`%s %f`, fundingKey, status.FundingRate)
 			err := util.SendMail(model.AppConfig.FromMail, model.AppConfig.FromMailAuth, `haoweizh@qq.com`, msg, msg)
 			if err != nil {
 				util.Notice(`fail to send mail msg %s %s`, msg, err.Error())
@@ -295,8 +299,8 @@ func initTradeLine(account *model.Account, setting *model.Setting, status *Carry
 		standardScoreSell = setting.CloseShortMargin
 		status.LimitSell = math.Min(status.LimitSell, status.Holding)
 	}
-	status.TradeLineBuy = math.Max(standardScoreBuy*(0.5+jumpBuy*status.RateInAll), lowestScore) + status.FoundingRate
-	status.TradeLineSell = math.Max(standardScoreSell*(0.5+jumpSell*status.RateInAll), lowestScore) - status.FoundingRate
+	status.TradeLineBuy = math.Max(standardScoreBuy*(0.5+jumpBuy*status.RateInAll), lowestScore) + status.FundingRate
+	status.TradeLineSell = math.Max(standardScoreSell*(0.5+jumpSell*status.RateInAll), lowestScore) - status.FundingRate
 	status.TradeLineBuy *= account.CarryRate
 	status.TradeLineSell *= account.CarryRate
 	//tradeLineExtra := getTradeLineExtra(setting.Coin, setting.CloseShortMargin)
@@ -478,16 +482,16 @@ func equalCoin(coin string, statuses []*CarryStatus) (isEqual bool, holdingInU f
 		holding += status.Holding
 		holdStr += fmt.Sprintf(`[%s %s %f]`, status.market, status.symbol, status.Holding)
 		getTick, tick := model.AppEnvironment.GetBidAsk(status.symbol, status.market)
-		getFunding, rate, _ := api.GetFundingRate(status.account.Key, status.account.Secret, status.market, status.symbol)
-		if !getTick || !getFunding {
+		getFunding, rate := api.GetFundingRate(status.account.Key, status.account.Secret, status.market, status.symbol)
+		if !getTick || !getFunding || rate == nil {
 			noTicks += coin + status.market
 			continue
 		}
 		tickTimes[status.market+status.symbol] = tick.Ts
 		bids = append(bids, model.Tick{Market: tick.Bids[0].Market, Symbol: tick.Bids[0].Symbol,
-			Amount: tick.Bids[0].Amount, Price: tick.Bids[0].Price * (1 + rate)})
+			Amount: tick.Bids[0].Amount, Price: tick.Bids[0].Price * (1 + rate.Rate)})
 		asks = append(asks, model.Tick{Market: tick.Asks[0].Market, Symbol: tick.Asks[0].Symbol,
-			Amount: tick.Asks[0].Amount, Price: tick.Asks[0].Price * (1 + rate)})
+			Amount: tick.Asks[0].Amount, Price: tick.Asks[0].Price * (1 + rate.Rate)})
 		bidStatus[fmt.Sprintf(`%s_%s`, status.market, status.symbol)] = status
 		askStatus[fmt.Sprintf(`%s_%s`, status.market, status.symbol)] = status
 		if price == 0 {
@@ -830,18 +834,18 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarrySta
 		model.AppMetric.AddCarry(mark, score, 0)
 	}
 	// 根据负资金费率进行权重调整,小于负万五的，负千分之几，就再乘以几
-	//tradeLineSell := carryStatus.TradeLineSell + carryStatusRelate.FoundingRate
-	//tradeLineBuy := carryStatus.TradeLineBuy - carryStatusRelate.FoundingRate
-	//tradeLineSellRelate := carryStatusRelate.TradeLineSell + carryStatus.FoundingRate
-	//tradeLineBuyRelate := carryStatusRelate.TradeLineBuy - carryStatus.FoundingRate
-	//if carryStatus.isSpot && !carryStatusRelate.isSpot && carryStatusRelate.market != model.Ftx && carryStatusRelate.FoundingRate < -0.005 {
-	//	temp := math.Min(7.5, 1000*math.Abs(carryStatusRelate.FoundingRate))/2 - 1
-	//	tradeLineBuyRelate += carryStatusRelate.FoundingRate * temp
-	//	tradeLineSellRelate -= carryStatusRelate.FoundingRate * temp
-	//} else if !carryStatus.isSpot && carryStatus.market != model.Ftx && carryStatusRelate.isSpot && carryStatus.FoundingRate < -0.005 {
-	//	temp := math.Min(7.5, 1000*math.Abs(carryStatus.FoundingRate))/2 - 1
-	//	tradeLineBuy += carryStatus.FoundingRate * temp
-	//	tradeLineSell -= carryStatus.FoundingRate * temp
+	//tradeLineSell := carryStatus.TradeLineSell + carryStatusRelate.FundingRate
+	//tradeLineBuy := carryStatus.TradeLineBuy - carryStatusRelate.FundingRate
+	//tradeLineSellRelate := carryStatusRelate.TradeLineSell + carryStatus.FundingRate
+	//tradeLineBuyRelate := carryStatusRelate.TradeLineBuy - carryStatus.FundingRate
+	//if carryStatus.isSpot && !carryStatusRelate.isSpot && carryStatusRelate.market != model.Ftx && carryStatusRelate.FundingRate < -0.005 {
+	//	temp := math.Min(7.5, 1000*math.Abs(carryStatusRelate.FundingRate))/2 - 1
+	//	tradeLineBuyRelate += carryStatusRelate.FundingRate * temp
+	//	tradeLineSellRelate -= carryStatusRelate.FundingRate * temp
+	//} else if !carryStatus.isSpot && carryStatus.market != model.Ftx && carryStatusRelate.isSpot && carryStatus.FundingRate < -0.005 {
+	//	temp := math.Min(7.5, 1000*math.Abs(carryStatus.FundingRate))/2 - 1
+	//	tradeLineBuy += carryStatus.FundingRate * temp
+	//	tradeLineSell -= carryStatus.FundingRate * temp
 	//}
 	valid, haveLimit, limit := checkTradeLine(carryStatusRelate, carryStatus, score, priceBid)
 	if valid {
@@ -878,16 +882,16 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarrySta
 		coinValueRelate += `永`
 	}
 	green := false
-	if math.Abs(carryStatusRelate.FoundingRate) > 0.001 || math.Abs(carryStatus.FoundingRate) > 0.001 {
+	if math.Abs(carryStatusRelate.FundingRate) > 0.001 || math.Abs(carryStatus.FundingRate) > 0.001 {
 		green = true
 	}
 	fundingStr, fundingStrRelate := ``, ``
 	if !carryStatus.isSpot {
-		fundingStr = fmt.Sprintf(`%.5f %d:%d`, 100*carryStatus.FoundingRate,
+		fundingStr = fmt.Sprintf(`%.5f %d:%d`, 100*carryStatus.FundingRate,
 			carryStatus.FundingRateUpdateTime.Hour(), carryStatus.FundingRateUpdateTime.Minute())
 	}
 	if !carryStatusRelate.isSpot {
-		fundingStrRelate = fmt.Sprintf(`%.5f %d:%d`, 100*carryStatusRelate.FoundingRate,
+		fundingStrRelate = fmt.Sprintf(`%.5f %d:%d`, 100*carryStatusRelate.FundingRate,
 			carryStatusRelate.FundingRateUpdateTime.Hour(), carryStatusRelate.FundingRateUpdateTime.Minute())
 	}
 	var infoValue []string

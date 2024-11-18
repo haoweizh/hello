@@ -520,7 +520,7 @@ func Test_download(t *testing.T) {
 func Test_WS(t *testing.T) {
 	model.NewConfig()
 	//api.CreateWSTick(model.AppEnvironment, model.BitgetPerp)
-	api.CreateWSTick(model.AppEnvironment, model.Bybit)
+	api.CreateWSTick(model.AppEnvironment, model.Gate)
 	select {}
 }
 
@@ -621,7 +621,7 @@ func Test_wallet(t *testing.T) {
 	market := model.BitgetPerp
 	symbol := `ETH_PERP`
 	account := model.GetAccounts(0)[model.BitgetPerp]
-	_, rate, _ := api.GetFundingRate(account.Key, account.Secret, market, symbol)
+	api.GetFundingRate(account.Key, account.Secret, market, symbol)
 	var key, secret string
 	switch market {
 	case model.Ftx:
@@ -656,8 +656,6 @@ func Test_wallet(t *testing.T) {
 	//	result, _, _ := api.CancelOrder(key, secret, market, symbol, m.OrderType, m.OrderId)
 	//	fmt.Println(result)
 	//}
-	_, rate, _ = api.GetFundingRate(key, secret, model.Bybit, symbol)
-	_, rate, _ = api.GetFundingRate(key, secret, model.Bybit, `LOOKS_PERP`)
 	//// 1078113554871236864
 	////cancelResult := api.CancelOrders(key, secret, model.BybitSpot, `ETH-USDT`)
 	////fmt.Println(cancelResult)
@@ -669,7 +667,6 @@ func Test_wallet(t *testing.T) {
 	orderBybit1 := api.QueryOrderById(key, secret, model.Bybit, `ETH-PERP`,
 		model.OrderTypeLimit, `d490a639-a5f7-499a-9248-142a93ddaf13`)
 	fmt.Println(orderBybit1.OrderId)
-	fmt.Println(fmt.Sprintf(`%f`, rate))
 	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
 	api.InitMarketInfos(model.Gate)
 	orderQuery := api.QueryOrderById(model.AppConfig.GateKey, model.AppConfig.GateSecret, model.Gate, `CFX_PERP`, model.OrderTypeLimit, `79852794326`)

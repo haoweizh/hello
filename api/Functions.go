@@ -530,11 +530,16 @@ func GetTransfers(key, secret, market string) (balances []*model.Balance) {
 	return balances
 }
 
-func GetFundingRate(key, secret, market, symbol string) (success bool, rate float64, updateTime time.Time) {
+func GetFundingRate(key, secret, market, symbol string) (success bool, rate *model.FundingRate) {
 	//非永续合约的资金费率为0
 	_, marketType, _, _ := model.GetFromStandard(market, symbol)
 	if marketType != model.MarketTypePerp {
-		return true, 0, util.GetNow()
+		return true, &model.FundingRate{
+			Rate:       0,
+			RateNext:   0,
+			UpdateTime: time.Time{},
+			ExpireTime: time.Now().Unix() + 86400,
+		}
 	}
 	value, ok := util.LoadSyncMap(model.FundingRates, market, symbol)
 	var fundingRate *model.FundingRate
@@ -542,8 +547,8 @@ func GetFundingRate(key, secret, market, symbol string) (success bool, rate floa
 		fundingRate = value.(*model.FundingRate)
 	}
 	now := util.GetNow().Unix()
-	if fundingRate != nil && now < fundingRate.ExpireTime && fundingRate.UpdateTime.Add(time.Minute*5).After(time.Now()) {
-		return true, fundingRate.Rate, fundingRate.UpdateTime
+	if fundingRate != nil && now < fundingRate.ExpireTime && fundingRate.UpdateTime.Add(time.Minute*5).After(time.Now()) && fundingRate.ExpireTime > 0 {
+		return true, fundingRate
 	}
 	util.Notice(fmt.Sprintf(`fail to get funding rate from ws %s %s`, market, symbol))
 	switch market {
@@ -568,14 +573,10 @@ func GetFundingRate(key, secret, market, symbol string) (success bool, rate floa
 		fundingRate = &model.FundingRate{Rate: 0, RateNext: 0, UpdateTime: util.GetNow(), ExpireTime: now + 300}
 	}
 	if fundingRate == nil || now > fundingRate.ExpireTime {
-		return false, 0, util.GetNow()
+		return false, nil
 	}
-	model.SetFundingRate(market, symbol, fundingRate)
-	value, _ = util.LoadSyncMap(model.FundingRates, market, symbol)
-	if value != nil {
-		return true, value.(*model.FundingRate).Rate, value.(*model.FundingRate).UpdateTime
-	}
-	return false, 0, util.GetNow()
+	SetFundingRate(market, symbol, fundingRate)
+	return true, fundingRate
 }
 
 // GetMaxLoan
@@ -1125,6 +1126,17 @@ func SetSymbolLeverage(account *model.Account, market, symbol string) (success b
 		return setSymbolLeverageOkx(account, symbol)
 	}
 	return false
+}
+
+func SetFundingRate(market, symbol string, fundingRate *model.FundingRate) {
+	if fundingRate.ExpireTime == 0 {
+		account := model.GetAccounts(0)[market]
+		getRate, rate := GetFundingRate(account.Key, account.Secret, market, symbol)
+		if getRate && rate != nil && rate.ExpireTime > 0 && rate.ExpireTime > time.Now().Unix() {
+			fundingRate.ExpireTime = rate.ExpireTime
+		}
+	}
+	util.StoreSyncMap(model.FundingRates, fundingRate, market, symbol)
 }
 
 //func InitCoinBalance(key, secret, function, market string) {

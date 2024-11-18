@@ -169,7 +169,7 @@ func handleMarkPriceBinancePerp(environment *model.Environment, json *simplejson
 		ExpireTime: json.Get(`T`).MustInt64() / 1000,
 	}
 	//util.Notice(fmt.Sprintf(`binance get market price %s %f %f %d`, standardSymbol, markPrice, rate, fundingRate.ExpireTime))
-	model.SetFundingRate(model.BinancePerp, standardSymbol, fundingRate)
+	SetFundingRate(model.BinancePerp, standardSymbol, fundingRate)
 }
 
 func parseTickDepthBinancePerp(json *simplejson.Json, standardSymbol string, updateId int64) (bidAsk *model.BidAsk) {

@@ -198,7 +198,7 @@ var wsHandlerOKEX = func(market string, event []byte) {
 		rateNext, _ := strconv.ParseFloat(data[`nextFundingRate`].(string), 64)
 		fundingTime, _ := strconv.ParseInt(data[`fundingTime`].(string), 10, 64)
 		ts, _ := strconv.ParseInt(data[`ts`].(string), 10, 64)
-		model.SetFundingRate(model.OKEX, symbol, &model.FundingRate{Rate: rate, RateNext: rateNext, ExpireTime: fundingTime / 1000, UpdateTime: time.UnixMilli(ts)})
+		SetFundingRate(model.OKEX, symbol, &model.FundingRate{Rate: rate, RateNext: rateNext, ExpireTime: fundingTime / 1000, UpdateTime: time.UnixMilli(ts)})
 	}
 	if bidAsk == nil || bidAsk.Bids == nil || bidAsk.Asks == nil || bidAsk.Bids.Len() == 0 || bidAsk.Asks.Len() == 0 || !success {
 		return

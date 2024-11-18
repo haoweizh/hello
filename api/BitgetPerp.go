@@ -91,7 +91,7 @@ var markPriceWsHandler = func(market string, event []byte) {
 				UpdateTime: time.UnixMilli(ts),
 				ExpireTime: nextTs / 1000,
 			}
-			model.SetFundingRate(model.BitgetPerp, symbol, fundingRate)
+			SetFundingRate(model.BitgetPerp, symbol, fundingRate)
 		}
 	}
 }
