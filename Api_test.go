@@ -520,11 +520,7 @@ func Test_download(t *testing.T) {
 func Test_WS(t *testing.T) {
 	model.NewConfig()
 	//api.CreateWSTick(model.AppEnvironment, model.BitgetPerp)
-	_, _, err := api.WsTickServeBitgetPerp(model.AppEnvironment, model.BitgetPerp)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
+	api.CreateWSTick(model.AppEnvironment, model.OKEX)
 	select {}
 }
 

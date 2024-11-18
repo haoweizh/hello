@@ -150,15 +150,16 @@ func reSubscribe(subscribes []interface{}) {
 	}
 }
 
+// books5首次推5档快照数据，以后定量推送，每100毫秒当5档快照数据有变化推送一次5档数据
+// bbo-tbt 首次推1档快照数据，以后定量推送，每10毫秒当1档快照数据有变化推送一次1档数据
 var subscribeHandlerOKEX = func(market string, connection *websocket.Conn, subscribes []interface{}) error {
 	var err error = nil
 	subscribeMap := make(map[string]interface{})
 	subscribeMap["op"] = "subscribe"
 	subArray := make([]map[string]string, 0)
 	for _, subscribe := range subscribes {
-		// books5首次推5档快照数据，以后定量推送，每100毫秒当5档快照数据有变化推送一次5档数据
-		// bbo-tbt 首次推1档快照数据，以后定量推送，每10毫秒当1档快照数据有变化推送一次1档数据
 		subArray = append(subArray, map[string]string{`channel`: chanelOKEX, `instId`: subscribe.(string)})
+		subArray = append(subArray, map[string]string{`channel`: `funding-rate`, `instId`: subscribe.(string)})
 	}
 	subscribeMap[`args`] = subArray
 	subscribeMessage := util.JsonEncodeToByte(subscribeMap)
@@ -192,6 +193,12 @@ var wsHandlerOKEX = func(event []byte) {
 	} else if action == `snapshot` || responseJson.GetPath(`arg`, `channel`).MustString() == chanelOKEX {
 		bidAsk = handleBooksOKEX(symbol, data)
 		success = true
+	} else if responseJson.GetPath(`arg`, `channel`).MustString() == `funding-rate` {
+		rate, _ := strconv.ParseFloat(data[`fundingRate`].(string), 64)
+		rateNext, _ := strconv.ParseFloat(data[`nextFundingRate`].(string), 64)
+		fundingTime, _ := strconv.ParseInt(data[`fundingTime`].(string), 10, 64)
+		ts, _ := strconv.ParseInt(data[`ts`].(string), 10, 64)
+		model.SetFundingRate(model.OKEX, symbol, &model.FundingRate{Rate: rate, RateNext: rateNext, ExpireTime: fundingTime / 1000, UpdateTime: time.UnixMilli(ts)})
 	}
 	if bidAsk == nil || bidAsk.Bids == nil || bidAsk.Asks == nil || bidAsk.Bids.Len() == 0 || bidAsk.Asks.Len() == 0 || !success {
 		return
@@ -272,14 +279,6 @@ func WsOrderServeOKEX(account *model.Account) {
 		util.StoreSyncMap(&model.AppEnvironment.ConnOrder, &model.WSConn{Conn: conn}, model.OKEX, account.Key)
 	}
 	go maintainConnOrderOKEX()
-}
-
-func WsTickServeOKEX(environment *model.Environment) (socketMap map[*websocket.Conn]bool, msgChans []chan struct{}, connectErr error) {
-	subscribes := GetWSSubscribes(model.OKEX, model.SubscribeDepth)
-	socketMap, msgChans, connectErr = WebSocketClient(model.OKEX, wsOKEX, subscribes, subscribeHandlerOKEX, wsHandlerOKEX, wsStepOKEX)
-	environment.ConnTick.Store(model.OKEX, socketMap)
-	environment.MsgChanTick.Store(model.OKEX, msgChans)
-	return
 }
 
 func handleBooksUpdate(symbol string, data map[string]interface{}, bidAsk *model.BidAsk) (
