@@ -196,23 +196,7 @@ func MaintainConnTick(market string) {
 	accounts := model.AppConfig.GetAccounts(market)
 	switch market {
 	case model.Gate:
-		go func() {
-			for {
-				time.Sleep(time.Second * 15)
-				connTick, _ := model.AppEnvironment.ConnTick.Load(market)
-				if connTick == nil {
-					continue
-				}
-				if err := SendToConnections(market, connTick.(map[*websocket.Conn]bool), websocket.TextMessage,
-					util.JsonEncodeToByte(map[string]interface{}{"time": time.Now().Unix(), "channel": "spot.ping"})); err != nil {
-					util.SocketInfo(fmt.Sprintf("tick conn maintain error %s %s", market, err.Error()))
-				}
-				if err := SendToConnections(market, connTick.(map[*websocket.Conn]bool), websocket.TextMessage,
-					util.JsonEncodeToByte(map[string]interface{}{"time": time.Now().Unix(), "channel": "futures.ping"})); err != nil {
-					util.SocketInfo(fmt.Sprintf("tick conn maintain error %s %s", market, err.Error()))
-				}
-			}
-		}()
+		go maintainConnOrderGate(accounts)
 	case model.OKEX:
 		go maintainConnOrderOKEX(accounts)
 	case model.BinanceSpot, model.BinancePerp, model.BinanceMargin:
