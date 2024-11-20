@@ -38,9 +38,13 @@ func maintainChannelMexc(subscribes []interface{}) {
 	if !pingDepthMexc {
 		pingDepthMexc = true
 		go func() {
-			for true {
+			for {
 				time.Sleep(time.Second * 10)
-				if err := SendToAllTickerSockets(model.Mexc, websocket.TextMessage, []byte(`{"method": "ping"}`)); err != nil {
+				value, _ := model.AppEnvironment.ConnTick.Load(model.Mexc)
+				if value == nil {
+					return
+				}
+				if err := SendToConnections(model.Mexc, value.(map[*websocket.Conn]bool), websocket.TextMessage, []byte(`{"method": "ping"}`)); err != nil {
 					util.SocketInfo("mexc channel ping error " + err.Error())
 				}
 			}

@@ -415,27 +415,35 @@ func parseOrderBinance(market string, orderJson *simplejson.Json) (order *model.
 	return order
 }
 
+var wsOrderUpdateBinance = func(market, key string, msg []byte) {
+	fmt.Println(string(msg))
+}
+
 var wsActHandlerBinance = func(market, key string, event []byte) {
+	msgGet := false
 	if strings.Contains(string(event), `ping`) {
+		msgGet = true
+	}
+	responseJson, err := util.NewJSON(event)
+	if err == nil && responseJson != nil {
+		wsResp := model.WSResp{RequestId: responseJson.Get(`id`).MustString()}
+		status := responseJson.Get(`status`).MustInt()
+		if status == 200 {
+			wsResp.Success = true
+		} else {
+			wsResp.Success = false
+			code := responseJson.GetPath(`error`, `code`).MustInt()
+			wsResp.Msg = fmt.Sprintf(`%d%s`, code, responseJson.GetPath(`error`, `msg`))
+		}
+		model.AppEnvironment.WSRespChan <- wsResp
+		msgGet = true
+	}
+	if msgGet {
 		value, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrder, market, key)
 		if value != nil && value.(*model.WSConn).Conn != nil {
 			value.(*model.WSConn).LastMsgTime = time.Now().UnixMilli()
 		}
 	}
-	responseJson, err := util.NewJSON(event)
-	if err != nil || responseJson == nil {
-		return
-	}
-	wsResp := model.WSResp{RequestId: responseJson.Get(`id`).MustString()}
-	status := responseJson.Get(`status`).MustInt()
-	if status == 200 {
-		wsResp.Success = true
-	} else {
-		wsResp.Success = false
-		code := responseJson.GetPath(`error`, `code`).MustInt()
-		wsResp.Msg = fmt.Sprintf(`%d%s`, code, responseJson.GetPath(`error`, `msg`))
-	}
-	model.AppEnvironment.WSRespChan <- wsResp
 }
 
 func WsOrderServeBinance(account *model.Account, market string) {

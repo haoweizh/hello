@@ -78,7 +78,11 @@ var wsHandlerHuobiSpot = func(market string, event []byte) {
 		pingMap := make(map[string]interface{})
 		pingMap["pong"] = responseJson.Get(`ping`).MustInt()
 		pingParams := util.JsonEncodeToByte(pingMap)
-		if err := SendToAllTickerSockets(model.HuobiSpot, websocket.TextMessage, pingParams); err != nil {
+		value, _ := model.AppEnvironment.ConnTick.Load(model.HuobiSpot)
+		if value == nil {
+			return
+		}
+		if err := SendToConnections(model.HuobiSpot, value.(map[*websocket.Conn]bool), websocket.TextMessage, pingParams); err != nil {
 			util.SocketInfo("huobi server ping client error " + err.Error())
 		}
 	} else {
@@ -134,7 +138,11 @@ var wsHandlerHuobiDM = func(market string, event []byte) {
 		pingMap := make(map[string]interface{})
 		pingMap["pong"] = responseJson.Get(`ping`).MustInt()
 		pingParams := util.JsonEncodeToByte(pingMap)
-		if wsErr := SendToAllTickerSockets(model.HuobiSpot, websocket.TextMessage, pingParams); wsErr != nil {
+		value, _ := model.AppEnvironment.ConnTick.Load(model.HuobiSpot)
+		if value == nil {
+			return
+		}
+		if wsErr := SendToConnections(model.HuobiSpot, value.(map[*websocket.Conn]bool), websocket.TextMessage, pingParams); wsErr != nil {
 			util.SocketInfo("HuobiFuture server ping client error " + wsErr.Error())
 		}
 	} else {

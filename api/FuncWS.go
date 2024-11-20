@@ -109,6 +109,43 @@ func CreateMarketKLineWS(environment *model.Environment, market string, symbols 
 	return
 }
 
+func CreateWsOrderUpdate(environment *model.Environment, market string) {
+	accounts := model.AppConfig.GetAccounts(market)
+	for _, account := range accounts {
+		if account == nil {
+			continue
+		}
+		var conn *websocket.Conn
+		var err error
+		switch market {
+		case model.BinancePerp:
+			_, listenKey := renewListenKeyBinancePerp(account)
+			conn, err = WsAccountClient(market, account.Key, fmt.Sprintf(`%s/ws/%s`, wsBinancePerp, listenKey), wsOrderUpdateBinance)
+		case model.OKEX:
+			//conn, err = WsAccountClient(market, account.Key, wsPrivateOKEX, wsOrderUpdateOKEX)
+		case model.Bybit:
+			//conn, err = WsAccountClient(market, account.Key, bybitStreamUrl+`/v5/private`)
+		}
+		if err == nil {
+			util.StoreSyncMap(&environment.ConnOrderUpdate, conn, market, account.Key)
+			initWsOrderUpdate(account, market, conn)
+		} else {
+			util.Notice(fmt.Sprintf("fail to create ws order update for %s %s", market, err.Error()))
+		}
+	}
+}
+
+func initWsOrderUpdate(account *model.Account, market string, conn *websocket.Conn) (success bool) {
+	switch market {
+	case model.BinancePerp:
+	case model.OKEX:
+		if !wsLogInOKEX(account, conn) {
+			return false
+		}
+	}
+	return true
+}
+
 func CreateWSTick(environment *model.Environment, market string) (
 	socketMap map[*websocket.Conn]bool, channels []chan struct{}) {
 	model.ChannelMaintaining.Store(market, true)
@@ -125,7 +162,7 @@ func CreateWSTick(environment *model.Environment, market string) (
 		socketMap, channels, err = WebSocketClient(market, wsBinance+`stream`, GetWSSubscribes(market, model.SubscribeTicker),
 			subscribeHandlerBinance, wsHandlerBinance, wsStepBinance)
 	case model.BinancePerp:
-		socketMap, channels, err = WebSocketClient(market, wsBinancePerp, GetWSSubscribes(
+		socketMap, channels, err = WebSocketClient(market, wsBinancePerp+`/stream`, GetWSSubscribes(
 			market, model.SubscribeMarkPrice+`,`+model.SubscribeTicker), subscribeHandlerBinance, wsHandlerBinancePerp, wsStepBinance)
 	case model.HuobiPerp:
 		socketMap, channels, err = WebSocketClient(market, wsHuobiPerp, GetWSSubscribes(model.HuobiPerp, model.SubscribeDepth),
@@ -156,58 +193,52 @@ func MaintainConnTick(market string) {
 		return
 	}
 	maintainingConnTick.Store(market, true)
+	accounts := model.AppConfig.GetAccounts(market)
 	switch market {
 	case model.Gate:
 		go func() {
 			for {
 				time.Sleep(time.Second * 15)
-				if err := SendToAllTickerSockets(market, websocket.TextMessage, util.JsonEncodeToByte(map[string]interface{}{"time": time.Now().Unix(), "channel": "spot.ping"})); err != nil {
+				connTick, _ := model.AppEnvironment.ConnTick.Load(market)
+				if connTick == nil {
+					continue
+				}
+				if err := SendToConnections(market, connTick.(map[*websocket.Conn]bool), websocket.TextMessage,
+					util.JsonEncodeToByte(map[string]interface{}{"time": time.Now().Unix(), "channel": "spot.ping"})); err != nil {
 					util.SocketInfo(fmt.Sprintf("tick conn maintain error %s %s", market, err.Error()))
 				}
-				if err := SendToAllTickerSockets(market, websocket.TextMessage, util.JsonEncodeToByte(map[string]interface{}{"time": time.Now().Unix(), "channel": "futures.ping"})); err != nil {
+				if err := SendToConnections(market, connTick.(map[*websocket.Conn]bool), websocket.TextMessage,
+					util.JsonEncodeToByte(map[string]interface{}{"time": time.Now().Unix(), "channel": "futures.ping"})); err != nil {
 					util.SocketInfo(fmt.Sprintf("tick conn maintain error %s %s", market, err.Error()))
 				}
 			}
 		}()
 	case model.OKEX:
-		subscribes := GetWSSubscribes(market, model.SubscribeDepth)
-		go func() {
-			for {
-				time.Sleep(time.Minute * 5)
-				reSubscribe(subscribes)
-			}
-		}()
-		go func() {
-			for {
-				time.Sleep(time.Second * 25)
-				if err := SendToAllTickerSockets(market, websocket.TextMessage, []byte(`ping`)); err != nil {
-					util.SocketInfo(fmt.Sprintf("tick conn maintain error %s %s", market, err.Error()))
-				}
-			}
-		}()
+		go maintainConnOrderOKEX(accounts)
 	case model.BinanceSpot, model.BinancePerp, model.BinanceMargin:
 		go func() {
 			for {
 				time.Sleep(time.Minute * 5)
-				if err := SendToAllTickerSockets(market, websocket.PongMessage, []byte(`ping`)); err != nil {
+				connTick, _ := model.AppEnvironment.ConnTick.Load(market)
+				if connTick == nil {
+					continue
+				}
+				if err := SendToConnections(market, connTick.(map[*websocket.Conn]bool), websocket.PongMessage, []byte(`ping`)); err != nil {
 					util.SocketInfo(fmt.Sprintf("tick conn maintain error %s %s", market, err.Error()))
 				}
 			}
 		}()
 	case model.Bybit:
-		go func() {
-			for {
-				time.Sleep(time.Second * 20)
-				if err := SendToAllTickerSockets(market, websocket.TextMessage, []byte(`{"req_id": "100001", "op": "ping"}`)); err != nil {
-					util.SocketInfo(fmt.Sprintf("tick conn maintain error %s %s", market, err.Error()))
-				}
-			}
-		}()
+		go maintainConnsBybit(accounts)
 	case model.BitgetSpot, model.BitgetPerp:
 		go func() {
 			for {
 				time.Sleep(time.Second * 20)
-				if err := SendToAllTickerSockets(market, websocket.TextMessage, []byte(`ping`)); err != nil {
+				connTick, _ := model.AppEnvironment.ConnTick.Load(market)
+				if connTick == nil {
+					continue
+				}
+				if err := SendToConnections(market, connTick.(map[*websocket.Conn]bool), websocket.TextMessage, []byte(`ping`)); err != nil {
 					util.SocketInfo(fmt.Sprintf("tick conn maintain error %s %s", market, err.Error()))
 				}
 			}

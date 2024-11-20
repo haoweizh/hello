@@ -31,9 +31,14 @@ func maintainChannelFtx(subscribes []interface{}) {
 	if !channelMaintainingFtx {
 		channelMaintainingFtx = true
 		go func() {
-			for true {
+			for {
 				time.Sleep(time.Second * 10)
-				if sendErr := SendToAllTickerSockets(model.Ftx, websocket.TextMessage, []byte(`{"op":"ping"}`)); sendErr != nil {
+				value, _ := model.AppEnvironment.ConnTick.Load(model.Ftx)
+				if value == nil {
+					return
+				}
+				connections := value.(map[*websocket.Conn]bool)
+				if sendErr := SendToConnections(model.Ftx, connections, websocket.TextMessage, []byte(`{"op":"ping"}`)); sendErr != nil {
 					util.SocketInfo("ftx server ping client error " + sendErr.Error())
 				}
 			}

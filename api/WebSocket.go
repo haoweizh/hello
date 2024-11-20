@@ -16,11 +16,16 @@ type MsgHandler func(market string, message []byte)
 type AccountMsgHandler func(market, key string, message []byte)
 type SubscribeHandler func(market string, connection *websocket.Conn, subscribes []interface{}) error
 
-var wsLock sync.Mutex
+var wsLock sync.Map // market - *sync.Mutex
 
 func SendToConnection(market string, connection *websocket.Conn, msg []byte) (err error) {
-	defer wsLock.Unlock()
-	wsLock.Lock()
+	lock, _ := wsLock.Load(market)
+	if lock == nil {
+		lock = &sync.Mutex{}
+		wsLock.Store(market, lock)
+	}
+	defer lock.(*sync.Mutex).Unlock()
+	lock.(*sync.Mutex).Lock()
 	if connection == nil {
 		util.Notice(`fail to write to nil connection`)
 		return
@@ -32,14 +37,14 @@ func SendToConnection(market string, connection *websocket.Conn, msg []byte) (er
 	return err
 }
 
-func SendToAllTickerSockets(market string, msgType int, msg []byte) (err error) {
-	defer wsLock.Unlock()
-	wsLock.Lock()
-	value, _ := model.AppEnvironment.ConnTick.Load(market)
-	if value == nil {
-		return
+func SendToConnections(market string, connections map[*websocket.Conn]bool, msgType int, msg []byte) (err error) {
+	lock, _ := wsLock.Load(market)
+	if lock == nil {
+		lock = &sync.Mutex{}
+		wsLock.Store(market, lock)
 	}
-	connections := value.(map[*websocket.Conn]bool)
+	defer lock.(*sync.Mutex).Unlock()
+	lock.(*sync.Mutex).Lock()
 	for connection := range connections {
 		if connection == nil {
 			continue
@@ -129,6 +134,12 @@ func WsAccountClient(market, key, url string, accountMsgHandler AccountMsgHandle
 		return connection.WriteControl(websocket.PongMessage, []byte(appData), time.Now().Add(time.Minute))
 	})
 	go func() {
+		defer func() {
+			closeErr := connection.Close()
+			if closeErr != nil {
+				util.Notice(fmt.Sprintf(`connection closed %s`, closeErr.Error()))
+			}
+		}()
 		for {
 			_, message, readErr := connection.ReadMessage()
 			if readErr != nil {

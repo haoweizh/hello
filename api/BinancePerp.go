@@ -21,7 +21,7 @@ import (
 )
 
 const restBinancePerp = `https://fapi.binance.com`
-const wsBinancePerp = `wss://fstream.binance.com/stream`
+const wsBinancePerp = `wss://fstream.binance.com`
 const wsBinancePerpApi = `wss://ws-fapi.binance.com/ws-fapi/v1`
 
 func getMarketsBinancePerp(key, secret string) (marketInfos map[string]*model.MarketInfo) {

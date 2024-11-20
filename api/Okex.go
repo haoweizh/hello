@@ -32,32 +32,40 @@ var lastCarryTime = int64(0)
 // var wrongs = make(map[string]bool)
 // var wrongLock sync.Mutex
 
-// var privateConnectionOKEX = make(map[string]*websocket.Conn) // key - connection
-var pingingAccountOKEX = false
-
-func maintainConnOrderOKEX() {
-	if pingingAccountOKEX {
-		return
-	}
-	pingingAccountOKEX = true
-	for {
-		time.Sleep(time.Second * 15)
-		accounts := model.AppConfig.GetAccounts(model.OKEX)
-		for _, account := range accounts {
-			if account == nil {
+func maintainConnOrderOKEX(accounts []*model.Account) {
+	subscribes := GetWSSubscribes(model.OKEX, model.SubscribeDepth)
+	go func() {
+		for {
+			time.Sleep(time.Minute * 5)
+			reSubscribe(subscribes)
+		}
+	}()
+	go func() {
+		for {
+			time.Sleep(time.Second * 20)
+			connTick, _ := model.AppEnvironment.ConnTick.Load(model.OKEX)
+			if connTick == nil {
 				continue
 			}
-			value, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrder, model.OKEX, account.Key)
-			if value != nil && value.(*model.WSConn).Conn != nil {
-				if err := SendToConnection(model.OKEX, value.(*model.WSConn).Conn, []byte(`ping`)); err != nil {
-					util.Notice("-test ok ws-okex server ping client error " + err.Error())
+			if err := SendToConnections(model.OKEX, connTick.(map[*websocket.Conn]bool), websocket.TextMessage, []byte(`ping`)); err != nil {
+				util.SocketInfo(fmt.Sprintf("tick conn maintain error %s %s", model.OKEX, err.Error()))
+			}
+			for _, account := range accounts {
+				if account == nil {
+					continue
 				}
-			} else {
-				util.Notice(fmt.Sprintf(`-test ok ws- no private connection %s`, account.Key))
-				WsOrderServeOKEX(account)
+				value, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrder, model.OKEX, account.Key)
+				if value != nil && value.(*model.WSConn).Conn != nil {
+					if err := SendToConnection(model.OKEX, value.(*model.WSConn).Conn, []byte(`ping`)); err != nil {
+						util.Notice("-test ok ws-okex server ping client error " + err.Error())
+					}
+				} else {
+					util.Notice(fmt.Sprintf(`-test ok ws- no private connection %s`, account.Key))
+					WsOrderServeOKEX(account)
+				}
 			}
 		}
-	}
+	}()
 }
 
 //func getWrongs() []string {
@@ -127,7 +135,12 @@ func reSubscribe(subscribes []interface{}) {
 		return
 	}
 	subscribeMap[`args`] = subArray
-	if err := SendToAllTickerSockets(model.OKEX, websocket.TextMessage, util.JsonEncodeToByte(subscribeMap)); err != nil {
+	connValue, _ := model.AppEnvironment.ConnTick.Load(model.OKEX)
+	if connValue == nil {
+		return
+	}
+	if err := SendToConnections(model.OKEX, connValue.(map[*websocket.Conn]bool), websocket.TextMessage,
+		util.JsonEncodeToByte(subscribeMap)); err != nil {
 		util.Notice("okex can not unsubscribe " + err.Error())
 	}
 	time.Sleep(time.Second * 3)
@@ -221,31 +234,73 @@ var wsHandlerOKEX = func(market string, event []byte) {
 }
 
 var wsAccountHandlerOKEX = func(market, key string, event []byte) {
-	if strings.Contains(string(event), `pong`) {
-		value, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrder, market, key)
-		if value != nil && value.(*model.WSConn).Conn != nil {
-			value.(*model.WSConn).LastMsgTime = time.Now().UnixMilli()
-		}
-		return
+	value, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrder, market, key)
+	if value != nil && value.(*model.WSConn).Conn != nil {
+		value.(*model.WSConn).LastMsgTime = time.Now().UnixMilli()
 	}
 	responseJson, err := util.NewJSON(event)
 	if err != nil || responseJson == nil {
 		return
 	}
-	if responseJson.Get(`op`).MustString() != `batch-orders` {
-		return
-	}
-	if responseJson.Get(`code`).MustString() == `0` {
-		model.AppEnvironment.WSRespChan <- model.WSResp{RequestId: responseJson.Get(`id`).MustString(), Success: true}
-	} else {
-		data := responseJson.Get(`data`).MustArray()
-		msg := ``
-		if len(data) > 0 {
-			value := data[0].(map[string]interface{})
-			msg = value[`sCode`].(string) + value[`sMsg`].(string)
+	if responseJson.Get(`event`).MustString() == `login` && responseJson.Get(`code`).MustString() == `0` {
+		value, success := util.LoadSyncMap(&model.AppEnvironment.ConnOrder, market, key)
+		if !success || value == nil || value.(*model.WSConn).Conn == nil {
+			return
 		}
-		model.AppEnvironment.WSRespChan <- model.WSResp{RequestId: responseJson.Get(`id`).MustString(), Success: false, Msg: msg}
+		err = value.(*model.WSConn).Conn.WriteJSON(map[string]interface{}{"op": "subscribe", "args": []interface{}{map[string]string{"channel": "orders", "instType": "SPOT"}}})
+		if err != nil {
+			util.Notice(fmt.Sprintf(`fail to sub %s spot order update`, market))
+			util.DelSyncMap(&model.AppEnvironment.ConnOrder, market, key)
+			return
+		}
+		err = value.(*model.WSConn).Conn.WriteJSON(map[string]interface{}{"op": "subscribe", "args": []interface{}{map[string]string{"channel": "orders", "instType": "SWAP"}}})
+		if err != nil {
+			util.Notice(fmt.Sprintf(`fail to sub %s swap order update`, market))
+			util.DelSyncMap(&model.AppEnvironment.ConnOrderUpdate, market, key)
+			return
+		}
 	}
+	if responseJson.GetPath(`arg`, `channel`).MustString() == `orders` {
+		data := responseJson.Get(`data`).MustArray()
+		for _, value := range data {
+			order := parseOrderOKEX(value.(map[string]interface{}))
+			fmt.Println(order)
+			fmt.Println(fmt.Sprintf(`%s %s amt %f fill %f at %f`, order.OrderId, order.Symbol, order.Amount, order.DealAmount, order.DealPrice))
+		}
+	}
+	if responseJson.Get(`op`).MustString() == `batch-orders` {
+		if responseJson.Get(`code`).MustString() == `0` {
+			model.AppEnvironment.WSRespChan <- model.WSResp{RequestId: responseJson.Get(`id`).MustString(), Success: true}
+		} else {
+			data := responseJson.Get(`data`).MustArray()
+			msg := ``
+			if len(data) > 0 {
+				value := data[0].(map[string]interface{})
+				msg = value[`sCode`].(string) + value[`sMsg`].(string)
+			}
+			model.AppEnvironment.WSRespChan <- model.WSResp{RequestId: responseJson.Get(`id`).MustString(), Success: false, Msg: msg}
+		}
+	}
+}
+
+func wsLogInOKEX(account *model.Account, conn *websocket.Conn) (success bool) {
+	loginMap := make(map[string]interface{})
+	loginMap[`op`] = `login`
+	timestamp := time.Now().Unix()
+	toBeSign := fmt.Sprintf(`%dGET/users/self/verify`, timestamp)
+	hash := hmac.New(sha256.New, []byte(account.Secret))
+	hash.Write([]byte(toBeSign))
+	sign := base64.StdEncoding.EncodeToString(hash.Sum(nil))
+	loginArray := []map[string]interface{}{{
+		`apiKey`: account.Key, `passphrase`: model.AppConfig.OKPhase, `timestamp`: timestamp, `sign`: sign}}
+	loginMap[`args`] = loginArray
+	if err := SendToConnection(model.OKEX, conn, util.JsonEncodeToByte(loginMap)); err != nil {
+		util.Notice(fmt.Sprintf(`fail to login okex ws: %s return %s`, account.Key, err.Error()))
+	} else {
+		success = true
+		util.Notice(fmt.Sprintf(`login okex ws: %s`, account.Key))
+	}
+	return
 }
 
 func WsOrderServeOKEX(account *model.Account) {
@@ -260,25 +315,10 @@ func WsOrderServeOKEX(account *model.Account) {
 	if err != nil {
 		util.Notice("can not create web socket " + err.Error())
 	} else if conn != nil {
-		loginMap := make(map[string]interface{})
-		loginMap[`op`] = `login`
-		timestamp := time.Now().Unix()
-		toBeSign := fmt.Sprintf(`%dGET/users/self/verify`, timestamp)
-		hash := hmac.New(sha256.New, []byte(account.Secret))
-		hash.Write([]byte(toBeSign))
-		sign := base64.StdEncoding.EncodeToString(hash.Sum(nil))
-		loginArray := []map[string]interface{}{{
-			`apiKey`: account.Key, `passphrase`: model.AppConfig.OKPhase, `timestamp`: timestamp, `sign`: sign}}
-		loginMap[`args`] = loginArray
-		err = SendToConnection(model.OKEX, conn, util.JsonEncodeToByte(loginMap))
-		if err != nil {
-			util.Notice(fmt.Sprintf(`fail to login okex ws: %s return %s`, account.Key, err.Error()))
-		} else {
-			util.Notice(fmt.Sprintf(`login okex ws: %s`, account.Key))
+		if wsLogInOKEX(account, conn) {
+			util.StoreSyncMap(&model.AppEnvironment.ConnOrder, &model.WSConn{Conn: conn}, model.OKEX, account.Key)
 		}
-		util.StoreSyncMap(&model.AppEnvironment.ConnOrder, &model.WSConn{Conn: conn}, model.OKEX, account.Key)
 	}
-	go maintainConnOrderOKEX()
 }
 
 func handleBooksUpdate(symbol string, data map[string]interface{}, bidAsk *model.BidAsk) (

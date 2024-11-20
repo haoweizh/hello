@@ -519,8 +519,10 @@ func Test_download(t *testing.T) {
 
 func Test_WS(t *testing.T) {
 	model.NewConfig()
-	//api.CreateWSTick(model.AppEnvironment, model.BitgetPerp)
-	api.CreateWSTick(model.AppEnvironment, model.Gate)
+	market := model.Bybit
+	carry.MaintainConnOrders(market)
+	// api.CreateWsOrderUpdate(model.AppEnvironment, market)
+	// api.CreateWSTick(model.AppEnvironment, model.Gate)
 	select {}
 }
 
