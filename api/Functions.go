@@ -872,6 +872,7 @@ func PlaceOrder(key, secret, orderSide, orderType, market, symbol, orderParam, f
 	if isWs {
 		model.AppEnvironment.WSOrderMap.Store(order.OrderId, order)
 	} else if postOrder != nil && setting != nil {
+		model.AppEnvironment.CrossOrders.Store(order.OrderId, order)
 		go postOrder(order)
 	}
 	return order

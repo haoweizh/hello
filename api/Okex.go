@@ -268,10 +268,23 @@ var wsAccountHandlerOKEX = func(market, key string, event []byte) {
 			fmt.Println(fmt.Sprintf(`%s %s amt %f fill %f at %f`, order.OrderId, order.Symbol, order.Amount, order.DealAmount, order.DealPrice))
 		}
 	}
-	if responseJson.Get(`op`).MustString() == `batch-orders` {
+	if responseJson.Get(`op`).MustString() == `order` {
+		wsResp := model.WSResp{RequestId: responseJson.Get(`id`).MustString()}
+		data := responseJson.Get(`data`).MustArray()
+		if len(data) > 0 {
+			value := data[0].(map[string]interface{})
+			wsResp.Msg = value[`sCode`].(string) + value[`sMsg`].(string)
+			wsResp.OrderId = value[`ordId`].(string)
+		}
+		if responseJson.Get(`code`).MustString() == `0` {
+			wsResp.Success = true
+		} else {
+			wsResp.Success = false
+		}
+		model.AppEnvironment.WSRespChan <- wsResp
+	} else if responseJson.Get(`op`).MustString() == `batch-orders` {
 		wsRespBuy := model.WSResp{RequestId: responseJson.Get(`id`).MustString() + model.OrderSideBuy}
 		wsRespSell := model.WSResp{RequestId: responseJson.Get(`id`).MustString() + model.OrderSideSell}
-		//data := responseJson.Get(`data`).MustArray()
 		if responseJson.Get(`code`).MustString() == `0` {
 			wsRespBuy.Success = true
 			wsRespSell.Success = true
@@ -282,13 +295,12 @@ var wsAccountHandlerOKEX = func(market, key string, event []byte) {
 		for _, value := range responseJson.Get(`data`).MustArray() {
 			data := value.(map[string]interface{})
 			if strings.Contains(data[`clOrdId`].(string), model.OrderSideBuy) {
-
+				wsRespBuy.OrderId = data[`ordId`].(string)
+			}
+			if strings.Contains(data[`clOrdId`].(string), model.OrderSideSell) {
+				wsRespSell.OrderId = data[`ordId`].(string)
 			}
 		}
-		//if len(data) > 0 {
-		//	value := data[0].(map[string]interface{})
-		//	msg = value[`sCode`].(string) + value[`sMsg`].(string)
-		//}
 		model.AppEnvironment.WSRespChan <- wsRespBuy
 		model.AppEnvironment.WSRespChan <- wsRespSell
 	}
@@ -684,7 +696,7 @@ func placeOrderOKEX(account *model.Account, isWs bool, order *model.Order) {
 		postData[`instId`] = dialectSymbol
 		subscribeMap := make(map[string]interface{})
 		subscribeMap[`id`] = order.OrderId
-		subscribeMap["op"] = "batch-orders"
+		subscribeMap["op"] = "order"
 		subscribeMap[`args`] = []map[string]interface{}{postData}
 		wsOrderMsg := util.JsonEncodeToByte(subscribeMap)
 		util.SocketInfo(`ws order ` + string(wsOrderMsg))

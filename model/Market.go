@@ -62,7 +62,8 @@ type Environment struct {
 	ConnTick        sync.Map // market - map[*websocket.Conn]bool for depth sockets
 	ConnOrder       sync.Map // market*accountKey / Gate*marketType*accountKey - *WSConn;
 	ConnOrderUpdate sync.Map // market*accountKey / Gate*marketType*accountKey - *WSConn;
-	WSOrderMap      sync.Map // orderId - *Order
+	WSOrderMap      sync.Map // requestId - *Order
+	CrossOrders     sync.Map // orderId - *Order
 	WSRespChan      chan WSResp
 	MonitorSettings *sync.Map // sync.Map[market]*sync.Map[symbol]*sync.Map[interval]*sync.Map[address]*MonitorSetting
 	WsManager       *WSManager
@@ -89,6 +90,7 @@ func (environment *Environment) HandleWSResp() {
 			if AccountHandlerMap[order.RefreshType] != nil {
 				AccountHandlerMap[order.RefreshType](order)
 			}
+			environment.CrossOrders.Store(wsResp.OrderId, order)
 			environment.WSOrderMap.Delete(wsResp.RequestId)
 		}
 	}

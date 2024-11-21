@@ -1130,6 +1130,18 @@ func placeStatus(status *CarryStatus, price float64, amount float64) {
 	util.StoreSyncMap(&lastCrosses, status.symbol, account.Key, status.market)
 }
 
+func handleCross(environment *model.Environment, orderId string) {
+	time.Sleep(time.Minute)
+	value, _ := environment.CrossOrders.Load(orderId)
+	if value != nil {
+		order := value.(*model.Order)
+		if order.Status == model.CarryStatusWorking && order.DealAmount < order.Amount {
+			fmt.Println(fmt.Sprintf(`order %s %s not deal %f`,
+				order.Market, order.Symbol, order.Amount-order.DealAmount))
+		}
+	}
+}
+
 var PostOrderCross = func(order *model.Order) {
 	if order == nil {
 		return
@@ -1139,6 +1151,7 @@ var PostOrderCross = func(order *model.Order) {
 		util.Notice(fmt.Sprintf(`fail to get setting %s %s %s`, model.FunctionCross, order.Market, order.Symbol))
 		return
 	}
+	go handleCross(model.AppEnvironment, order.OrderId)
 	model.AppDB.Save(order)
 	account := model.AppConfig.GetAccountFromKeyIndex(order.Market, ``, order.AccountIndex)
 	if order.HaveId() && order.Status == model.CarryStatusSuccess {
