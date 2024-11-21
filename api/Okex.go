@@ -234,6 +234,7 @@ var wsHandlerOKEX = func(market string, event []byte) {
 }
 
 var wsAccountHandlerOKEX = func(market, key string, event []byte) {
+	fmt.Println(string(event))
 	value, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrder, market, key)
 	if value != nil && value.(*model.WSConn).Conn != nil {
 		value.(*model.WSConn).LastMsgTime = time.Now().UnixMilli()
@@ -264,8 +265,11 @@ var wsAccountHandlerOKEX = func(market, key string, event []byte) {
 		data := responseJson.Get(`data`).MustArray()
 		for _, value := range data {
 			order := parseOrderOKEX(value.(map[string]interface{}))
-			fmt.Println(order)
-			fmt.Println(fmt.Sprintf(`%s %s amt %f fill %f at %f`, order.OrderId, order.Symbol, order.Amount, order.DealAmount, order.DealPrice))
+			crossOrder, _ := model.AppEnvironment.CrossOrders.Load(order.OrderId)
+			if crossOrder != nil {
+				crossOrder.(*model.Order).DealAmount = order.DealAmount
+				crossOrder.(*model.Order).Status = order.Status
+			}
 		}
 	}
 	if responseJson.Get(`op`).MustString() == `order` {
@@ -285,20 +289,19 @@ var wsAccountHandlerOKEX = func(market, key string, event []byte) {
 	} else if responseJson.Get(`op`).MustString() == `batch-orders` {
 		wsRespBuy := model.WSResp{RequestId: responseJson.Get(`id`).MustString() + model.OrderSideBuy}
 		wsRespSell := model.WSResp{RequestId: responseJson.Get(`id`).MustString() + model.OrderSideSell}
-		if responseJson.Get(`code`).MustString() == `0` {
-			wsRespBuy.Success = true
-			wsRespSell.Success = true
-		} else {
-			wsRespBuy.Success = false
-			wsRespSell.Success = false
-		}
 		for _, value := range responseJson.Get(`data`).MustArray() {
 			data := value.(map[string]interface{})
 			if strings.Contains(data[`clOrdId`].(string), model.OrderSideBuy) {
 				wsRespBuy.OrderId = data[`ordId`].(string)
+				if len(wsRespBuy.OrderId) > 0 {
+					wsRespBuy.Success = true
+				}
 			}
 			if strings.Contains(data[`clOrdId`].(string), model.OrderSideSell) {
 				wsRespSell.OrderId = data[`ordId`].(string)
+				if len(wsRespSell.OrderId) > 0 {
+					wsRespSell.Success = true
+				}
 			}
 		}
 		model.AppEnvironment.WSRespChan <- wsRespBuy
