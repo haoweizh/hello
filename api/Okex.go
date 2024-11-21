@@ -271,7 +271,7 @@ var wsAccountHandlerOKEX = func(market, key string, event []byte) {
 	if responseJson.Get(`op`).MustString() == `batch-orders` {
 		wsRespBuy := model.WSResp{RequestId: responseJson.Get(`id`).MustString() + model.OrderSideBuy}
 		wsRespSell := model.WSResp{RequestId: responseJson.Get(`id`).MustString() + model.OrderSideSell}
-		data := responseJson.Get(`data`).MustArray()
+		//data := responseJson.Get(`data`).MustArray()
 		if responseJson.Get(`code`).MustString() == `0` {
 			wsRespBuy.Success = true
 			wsRespSell.Success = true
