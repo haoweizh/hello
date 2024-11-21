@@ -426,7 +426,8 @@ var wsActHandlerBinance = func(market, key string, event []byte) {
 	}
 	responseJson, err := util.NewJSON(event)
 	if err == nil && responseJson != nil {
-		wsResp := model.WSResp{RequestId: responseJson.Get(`id`).MustString()}
+		wsResp := model.WSResp{RequestId: responseJson.Get(`id`).MustString(),
+			OrderId: responseJson.GetPath(`result`, `orderId`).MustString()}
 		status := responseJson.Get(`status`).MustInt()
 		if status == 200 {
 			wsResp.Success = true

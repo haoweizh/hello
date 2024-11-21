@@ -120,7 +120,8 @@ func ClearChannels(market string, chanMap *sync.Map) {
 	}
 }
 
-func MaintainConnOrders(market string) {
+func ManageConnOrders(market string) {
+	go api.MaintainConnOrder(market)
 	accounts := model.AppConfig.GetAccounts(market)
 	for _, account := range accounts {
 		if account == nil {
@@ -208,8 +209,7 @@ func Maintain() {
 	for {
 		for _, market := range api.GetMarkets() {
 			ManageConnTicks(market)
-			MaintainConnOrders(market)
-			api.MaintainConnTick(market)
+			ManageConnOrders(market)
 		}
 		time.Sleep(time.Minute * 2)
 	}

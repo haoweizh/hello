@@ -117,7 +117,7 @@ func Test_getCommonMarketInfos(t *testing.T) {
 func TestWs(t *testing.T) {
 	market := model.Gate
 	model.NewConfig()
-	carry.MaintainConnOrders(market)
+	carry.ManageConnOrders(market)
 	//model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
 	//api.InitMarketInfos()
 	//api.CreateWSTick(model.AppEnvironment, market)
@@ -519,8 +519,8 @@ func Test_download(t *testing.T) {
 
 func Test_WS(t *testing.T) {
 	model.NewConfig()
-	market := model.Bybit
-	carry.MaintainConnOrders(market)
+	market := model.Gate
+	carry.ManageConnOrders(market)
 	// api.CreateWsOrderUpdate(model.AppEnvironment, market)
 	// api.CreateWSTick(model.AppEnvironment, model.Gate)
 	select {}

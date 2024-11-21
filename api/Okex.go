@@ -269,17 +269,28 @@ var wsAccountHandlerOKEX = func(market, key string, event []byte) {
 		}
 	}
 	if responseJson.Get(`op`).MustString() == `batch-orders` {
+		wsRespBuy := model.WSResp{RequestId: responseJson.Get(`id`).MustString() + model.OrderSideBuy}
+		wsRespSell := model.WSResp{RequestId: responseJson.Get(`id`).MustString() + model.OrderSideSell}
+		data := responseJson.Get(`data`).MustArray()
 		if responseJson.Get(`code`).MustString() == `0` {
-			model.AppEnvironment.WSRespChan <- model.WSResp{RequestId: responseJson.Get(`id`).MustString(), Success: true}
+			wsRespBuy.Success = true
+			wsRespSell.Success = true
 		} else {
-			data := responseJson.Get(`data`).MustArray()
-			msg := ``
-			if len(data) > 0 {
-				value := data[0].(map[string]interface{})
-				msg = value[`sCode`].(string) + value[`sMsg`].(string)
-			}
-			model.AppEnvironment.WSRespChan <- model.WSResp{RequestId: responseJson.Get(`id`).MustString(), Success: false, Msg: msg}
+			wsRespBuy.Success = false
+			wsRespSell.Success = false
 		}
+		for _, value := range responseJson.Get(`data`).MustArray() {
+			data := value.(map[string]interface{})
+			if strings.Contains(data[`clOrdId`].(string), model.OrderSideBuy) {
+
+			}
+		}
+		//if len(data) > 0 {
+		//	value := data[0].(map[string]interface{})
+		//	msg = value[`sCode`].(string) + value[`sMsg`].(string)
+		//}
+		model.AppEnvironment.WSRespChan <- wsRespBuy
+		model.AppEnvironment.WSRespChan <- wsRespSell
 	}
 }
 
@@ -553,9 +564,9 @@ func sendSignRequestOKEX(key, secret, method, path string, param, body map[strin
 	return responseBody, err
 }
 
-func getWSOrderArgOKEX(account *model.Account, symbol, orderSide, orderType string, price, amount float64) (args map[string]interface{}) {
-	price, decimal := model.FormatPrice(model.OKEX, symbol, price)
-	priceStr := util.CutTailZero(strconv.FormatFloat(price, 'f', decimal, 64))
+func getWSOrderArgOKEX(account *model.Account, requestId, symbol, orderSide, orderType string, price, amount float64) (args map[string]interface{}) {
+	priceFormat, decimal := model.FormatPrice(model.OKEX, symbol, price)
+	priceStr := util.CutTailZero(strconv.FormatFloat(priceFormat, 'f', decimal, 64))
 	formattedAmount := model.GetAmountInMarket(model.OKEX, symbol, amount, price, false)
 	amountStrPerp := util.CutTailZero(fmt.Sprintf(`%f`, formattedAmount))
 	if orderType == model.OrderTypeMarket {
@@ -570,10 +581,11 @@ func getWSOrderArgOKEX(account *model.Account, symbol, orderSide, orderType stri
 	} else {
 		args[`clOrdId`] = fmt.Sprintf(`%d%s%d%s`, account.Index, OKSeparator, time.Now().Nanosecond(), orderSide)
 	}
+	args[`clOrdId`] = requestId + orderSide
 	return args
 }
 
-func PlacePairOKEX(account *model.Account, symbolBuy, symbolSell, orderType string, priceBuy, priceSell, amount float64) (success bool, errMsg string) {
+func PlacePairOKEX(account *model.Account, requestId, symbolBuy, symbolSell, orderType string, priceBuy, priceSell, amount float64) (success bool, errMsg string) {
 	if amount == 0 || priceBuy == 0 || priceSell == 0 {
 		errMsg = fmt.Sprintf(`error: wrong PlacePairOKEX amount %f buy at %f sell at %f`, amount, priceBuy, priceSell)
 		util.Notice(errMsg)
@@ -593,11 +605,11 @@ func PlacePairOKEX(account *model.Account, symbolBuy, symbolSell, orderType stri
 	lastSameTime[symbolSell] = now
 	lastCarryTime = now
 	subscribeArgs := []map[string]interface{}{
-		getWSOrderArgOKEX(account, symbolBuy, model.OrderSideBuy, orderType, priceBuy, amount),
-		getWSOrderArgOKEX(account, symbolSell, model.OrderSideSell, orderType, priceSell, amount)}
+		getWSOrderArgOKEX(account, requestId, symbolBuy, model.OrderSideBuy, orderType, priceBuy, amount),
+		getWSOrderArgOKEX(account, requestId, symbolSell, model.OrderSideSell, orderType, priceSell, amount)}
 	subscribeMap := make(map[string]interface{})
 	subscribeMap[`args`] = subscribeArgs
-	subscribeMap[`id`] = strconv.FormatInt(time.Now().UnixMilli(), 10)
+	subscribeMap[`id`] = requestId
 	subscribeMap["op"] = "batch-orders"
 	msg := util.JsonEncodeToByte(subscribeMap)
 	value, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrder, model.OKEX, account.Key)
@@ -646,7 +658,7 @@ func placeOrderOKEX(account *model.Account, isWs bool, order *model.Order) {
 		return
 	}
 	postData := map[string]interface{}{`instId`: order.Symbol, `tdMode`: `cross`, `side`: order.OrderSide,
-		`sz`: amount, `ordType`: order.OrderType, `tag`: OKEXTag}
+		`sz`: amount, `ordType`: order.OrderType, `tag`: OKEXTag, `clOrdId`: order.OrderId}
 	path := "/api/v5/trade/order"
 	if order.OrderType == model.OrderTypeStop {
 		postData[`ordType`] = `conditional`

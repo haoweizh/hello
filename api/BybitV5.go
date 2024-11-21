@@ -60,7 +60,8 @@ var wsOrderHandlerBybit = func(market, key string, event []byte) {
 	if responseJson.Get(`op`).MustString() != `order.create` {
 		return
 	}
-	wsResp := model.WSResp{RequestId: responseJson.Get(`reqId`).MustString()}
+	wsResp := model.WSResp{RequestId: responseJson.Get(`reqId`).MustString(),
+		OrderId: responseJson.GetPath(`data`, `orderId`).MustString()}
 	code := responseJson.Get(`retCode`).MustInt64()
 	if code == 0 {
 		wsResp.Success = true

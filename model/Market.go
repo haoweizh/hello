@@ -47,8 +47,9 @@ type WSConn struct {
 }
 
 type WSResp struct {
-	RequestId, Msg string
-	Success        bool
+	RequestId, Msg, OrderId string
+	DealAmount              float64
+	Success                 bool
 }
 
 type Environment struct {
@@ -78,6 +79,7 @@ func (environment *Environment) HandleWSResp() {
 		value, _ := environment.WSOrderMap.Load(wsResp.RequestId)
 		if value != nil {
 			order := value.(*Order)
+			order.OrderId = wsResp.OrderId
 			if wsResp.Success {
 				order.Status = CarryStatusWorking
 			} else {

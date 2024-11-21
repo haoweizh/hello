@@ -187,7 +187,7 @@ func CreateWSTick(environment *model.Environment, market string) (
 
 var maintainingConnTick = sync.Map{}
 
-func MaintainConnTick(market string) {
+func MaintainConnOrder(market string) {
 	value, _ := maintainingConnTick.Load(market)
 	if value != nil && value.(bool) {
 		return

@@ -282,6 +282,7 @@ var markPriceHandler = gateWs.NewCallBack(func(msg *gateWs.UpdateMsg) {
 })
 
 var wsPriHandlerGatePerp = func(market, key string, msg []byte) {
+	fmt.Println(fmt.Sprintf(`gate perp: %s`, string(msg)))
 	responseJson, err := util.NewJSON(msg)
 	if err != nil || responseJson == nil {
 		return
@@ -293,24 +294,58 @@ var wsPriHandlerGatePerp = func(market, key string, msg []byte) {
 	channel := responseJson.Get(`channel`).MustString()
 	ts := responseJson.Get(`time_ms`).MustInt64()
 	valueFuture.(*model.WSConn).LastMsgTime = ts
+	result := responseJson.GetPath(`header`, `status`).MustString()
 	if channel == `futures.orders` {
-
+		data := responseJson.Get(`result`).MustArray()
+		for _, datum := range data {
+			value := datum.(map[string]interface{})
+			order := &model.Order{OrderId: value[`id`].(string), Status: model.CarryStatusWorking}
+			size, _ := strconv.ParseFloat(value[`size`].(string), 64)
+			left, _ := strconv.ParseFloat(value[`left`].(string), 64)
+			if value[`status`] == `finished` {
+				order.Status = model.CarryStatusSuccess
+			}
+			order.DealAmount = math.Abs(size) - left
+			fmt.Println(fmt.Sprintf(`order: %v`, order))
+		}
 	} else {
 		channel = responseJson.GetPath(`header`, `channel`).MustString()
-		if channel == `futures.order_place` {
-			result := responseJson.GetPath(`header`, `status`).MustString()
+		if channel == `futures.order_place` && !responseJson.Get(`ack`).MustBool() {
 			requestId := responseJson.Get(`request_id`).MustString()
+			wsResp := model.WSResp{RequestId: requestId, OrderId: responseJson.GetPath(`data`, `result`, `id`).MustString()}
 			if result == `200` {
-				model.AppEnvironment.WSRespChan <- model.WSResp{RequestId: requestId, Success: true}
+				wsResp.Success = true
 			} else {
-				errs := responseJson.GetPath(`data`, `errs`, `message`).MustString()
-				model.AppEnvironment.WSRespChan <- model.WSResp{RequestId: requestId, Success: false, Msg: errs}
+				wsResp.Success = false
+				wsResp.Msg = responseJson.GetPath(`data`, `errs`, `message`).MustString()
+			}
+			model.AppEnvironment.WSRespChan <- wsResp
+		} else if channel == `futures.login` {
+			if result == `200` {
+				ts = time.Now().Unix()
+				gateAccounts := model.AppConfig.GetAccounts(model.Gate)
+				secret := ``
+				for _, account := range gateAccounts {
+					if account.Key == key {
+						secret = account.Secret
+					}
+				}
+				hashFuture := hmac.New(sha512.New, []byte(secret))
+				hashFuture.Write([]byte(fmt.Sprintf("channel=futures.orders&event=subscribe&time=%d", ts)))
+				sign := hex.EncodeToString(hashFuture.Sum(nil))
+				msgSend := fmt.Sprintf(`{"time":%d,"channel":"futures.orders","event":"subscribe","payload":["!all"],
+					"auth":{"method":"api_key","KEY":"%s","SIGN":"%s"}}`, ts, key, sign)
+				err := SendToConnection(model.Gate, valueFuture.(*model.WSConn).Conn, []byte(msgSend))
+				if err != nil {
+					util.DelSyncMap(&model.AppEnvironment.ConnOrder, model.Gate, model.MarketTypePerp, key, channel)
+				}
 			}
 		}
 	}
 }
 
 var wsPriHandlerGateSpot = func(market, key string, msg []byte) {
+	fmt.Println(fmt.Sprintf(`gate spot: %s`, string(msg)))
 	responseJson, err := util.NewJSON(msg)
 	if err != nil || responseJson == nil {
 		return
@@ -325,18 +360,37 @@ var wsPriHandlerGateSpot = func(market, key string, msg []byte) {
 	channel := responseJson.Get(`channel`).MustString()
 	ts := responseJson.Get(`time_ms`).MustInt64()
 	valueSpot.(*model.WSConn).LastMsgTime = ts
+	result := responseJson.GetPath(`header`, `status`).MustString()
 	if channel == `spot.orders` {
-
+		data := responseJson.Get(`result`).MustArray()
+		for _, datum := range data {
+			value := datum.(map[string]interface{})
+			order := &model.Order{OrderId: value[`id`].(string), Status: model.CarryStatusWorking}
+			order.DealAmount, _ = strconv.ParseFloat(value[`filled_total`].(string), 64)
+			if value[`finish_as`] == `filled` {
+				order.Status = model.CarryStatusSuccess
+			}
+			fmt.Println(fmt.Sprintf(`order: %v`, order))
+		}
 	} else {
 		channel = responseJson.GetPath(`header`, `channel`).MustString()
-		if channel == `spot.order_place` {
+		if channel == `spot.order_place` && !responseJson.Get(`ack`).MustBool() {
 			requestId := responseJson.Get(`request_id`).MustString()
-			result := responseJson.GetPath(`header`, `status`).MustString()
+			wsResp := model.WSResp{RequestId: requestId, OrderId: responseJson.GetPath(`data`, `result`, `id`).MustString()}
 			if result == `200` {
-				model.AppEnvironment.WSRespChan <- model.WSResp{RequestId: requestId, Success: true}
+				wsResp.Success = true
 			} else {
-				errs := responseJson.GetPath(`data`, `errs`, `message`).MustString()
-				model.AppEnvironment.WSRespChan <- model.WSResp{RequestId: requestId, Success: false, Msg: errs}
+				wsResp.Success = false
+				wsResp.Msg = responseJson.GetPath(`data`, `errs`, `message`).MustString()
+			}
+			model.AppEnvironment.WSRespChan <- wsResp
+		} else if channel == `spot.login` {
+			if result == `200` {
+				msgSend := fmt.Sprintf(`{"time":%d,"channel":"spot.orders","event":"subscribe","payload":["!all"]}`, time.Now().Unix())
+				err := SendToConnection(model.Gate, valueSpot.(*model.WSConn).Conn, []byte(msgSend))
+				if err != nil {
+					util.DelSyncMap(&model.AppEnvironment.ConnOrder, model.Gate, model.MarketTypeSpot, key, channel)
+				}
 			}
 		}
 	}
