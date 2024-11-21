@@ -167,7 +167,7 @@ func Test_WsAndOrderApi(t *testing.T) {
 		//order2 := api.PlaceOrder(account.Key, account.Secret, orderSide, orderType, market,
 		//	symbol, ``, ``, price, price, amount, false, true, nil, nil)
 		//fmt.Println(fmt.Sprintf(`5. place order return %v %v`, order1, order2))
-		api.PlacePairOKEX(account, symbol, symbol, model.OrderTypeLimit, price*0.9, price*1.1, amount)
+		api.PlacePairOKEX(account, `requestId`, symbol, symbol, model.OrderTypeLimit, price*0.9, price*1.1, amount)
 		api.CancelOrders(account.Key, account.Secret, market, symbol)
 		//if order1 != nil {
 		//	time.Sleep(time.Second)
@@ -520,29 +520,41 @@ func Test_download(t *testing.T) {
 func Test_WS(t *testing.T) {
 	model.NewConfig()
 	market := model.Gate
+	go model.AppEnvironment.HandleWSResp()
 	carry.ManageConnOrders(market)
+	symbol := `DOGE_PERP`
+	account := model.GetAccounts(0)[market]
+	//api.GetPositions(account.Key, account.Secret, market)
+	//api.GetBalances(account.Key, account.Secret, market)
+	api.InitMarketInfos(market)
+	order := api.PlaceOrder(account.Key, account.Secret, model.OrderSideSell, model.OrderTypeLimit, market, symbol, ``,
+		`test`, 0.29, 0.29, 24.4, true, nil, nil)
 	// api.CreateWsOrderUpdate(model.AppEnvironment, market)
 	// api.CreateWSTick(model.AppEnvironment, model.Gate)
+	fmt.Println(order)
 	select {}
 }
 
 func Test_Orders(t *testing.T) {
 	model.NewConfig()
-	market := model.BitgetPerp
-	symbol := `BTC_PERP`
+	market := model.Gate
+	symbol := `DOGE_USDT`
 	account := model.GetAccounts(0)[market]
 	//api.GetPositions(account.Key, account.Secret, market)
 	//api.GetBalances(account.Key, account.Secret, market)
-	//api.InitMarketInfos(market)
-	//order := api.PlaceOrder(account.Key, account.Secret, model.OrderSideBuy, model.OrderTypeLimit, market, symbol, ``,
-	//	`test`, 0.29, 0.29, 24.4, false, nil, nil)
+	api.InitMarketInfos(market)
+	order := api.PlaceOrder(account.Key, account.Secret, model.OrderSideBuy, model.OrderTypeLimit, market, symbol, ``,
+		`test`, 0.29, 0.29, 24.4, false, nil, nil)
 	//if order != nil {
 	//	fmt.Println(fmt.Sprintf(`place %s %s`, order.OrderId, order.Status))
 	//}
 	//api.QueryOrderById(account.Key, account.Secret, market, symbol, model.OrderTypeLimit, order.OrderId)
 	// 1240955032711102467
-	api.CancelOrders(account.Key, account.Secret, market, symbol)
-	fmt.Println(api.CancelOrders(account.Key, account.Secret, market, symbol))
+	//api.CancelOrders(account.Key, account.Secret, market, symbol)
+	// fmt.Println(api.CancelOrders(account.Key, account.Secret, market, symbol))
+
+	fmt.Println(order)
+
 	select {}
 }
 

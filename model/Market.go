@@ -87,11 +87,11 @@ func (environment *Environment) HandleWSResp() {
 				order.Status = CarryStatusFail
 				order.ErrCode = wsResp.Msg
 			}
+			environment.CrossOrders.Store(wsResp.OrderId, order)
+			environment.WSOrderMap.Delete(wsResp.RequestId)
 			if AccountHandlerMap[order.RefreshType] != nil {
 				AccountHandlerMap[order.RefreshType](order)
 			}
-			environment.CrossOrders.Store(wsResp.OrderId, order)
-			environment.WSOrderMap.Delete(wsResp.RequestId)
 		}
 	}
 }

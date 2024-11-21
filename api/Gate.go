@@ -282,7 +282,6 @@ var markPriceHandler = gateWs.NewCallBack(func(msg *gateWs.UpdateMsg) {
 })
 
 var wsPriHandlerGatePerp = func(market, key string, msg []byte) {
-	fmt.Println(fmt.Sprintf(`gate perp: %s`, string(msg)))
 	responseJson, err := util.NewJSON(msg)
 	if err != nil || responseJson == nil {
 		return
@@ -299,14 +298,15 @@ var wsPriHandlerGatePerp = func(market, key string, msg []byte) {
 		data := responseJson.Get(`result`).MustArray()
 		for _, datum := range data {
 			value := datum.(map[string]interface{})
-			order := &model.Order{OrderId: value[`id`].(string), Status: model.CarryStatusWorking}
-			size, _ := strconv.ParseFloat(value[`size`].(string), 64)
-			left, _ := strconv.ParseFloat(value[`left`].(string), 64)
-			if value[`status`] == `finished` {
-				order.Status = model.CarryStatusSuccess
+			order, _ := model.AppEnvironment.CrossOrders.Load(value["id"].(json.Number).String())
+			if order != nil {
+				size, _ := strconv.ParseFloat(value[`size`].(string), 64)
+				left, _ := strconv.ParseFloat(value[`left`].(string), 64)
+				if value[`status`] == `finished` {
+					order.(*model.Order).Status = model.CarryStatusSuccess
+				}
+				order.(*model.Order).DealAmount = math.Abs(size) - left
 			}
-			order.DealAmount = math.Abs(size) - left
-			fmt.Println(fmt.Sprintf(`order: %v`, order))
 		}
 	} else {
 		channel = responseJson.GetPath(`header`, `channel`).MustString()
@@ -345,7 +345,6 @@ var wsPriHandlerGatePerp = func(market, key string, msg []byte) {
 }
 
 var wsPriHandlerGateSpot = func(market, key string, msg []byte) {
-	fmt.Println(fmt.Sprintf(`gate spot: %s`, string(msg)))
 	responseJson, err := util.NewJSON(msg)
 	if err != nil || responseJson == nil {
 		return
@@ -365,12 +364,13 @@ var wsPriHandlerGateSpot = func(market, key string, msg []byte) {
 		data := responseJson.Get(`result`).MustArray()
 		for _, datum := range data {
 			value := datum.(map[string]interface{})
-			order := &model.Order{OrderId: value[`id`].(string), Status: model.CarryStatusWorking}
-			order.DealAmount, _ = strconv.ParseFloat(value[`filled_total`].(string), 64)
-			if value[`finish_as`] == `filled` {
-				order.Status = model.CarryStatusSuccess
+			order, _ := model.AppEnvironment.CrossOrders.Load(value[`id`].(string))
+			if order != nil {
+				order.(*model.Order).DealAmount, _ = strconv.ParseFloat(value[`filled_total`].(string), 64)
+				if value[`finish_as`] == `filled` {
+					order.(*model.Order).Status = model.CarryStatusSuccess
+				}
 			}
-			fmt.Println(fmt.Sprintf(`order: %v`, order))
 		}
 	} else {
 		channel = responseJson.GetPath(`header`, `channel`).MustString()
@@ -400,16 +400,15 @@ func maintainConnOrderGate(accounts []*model.Account) {
 	for {
 		time.Sleep(time.Second * 20)
 		connTick, _ := model.AppEnvironment.ConnTick.Load(model.Gate)
-		if connTick == nil {
-			continue
-		}
-		if err := SendToConnections(model.Gate, connTick.(map[*websocket.Conn]bool), websocket.TextMessage,
-			util.JsonEncodeToByte(map[string]interface{}{"time": time.Now().Unix(), "channel": "spot.ping"})); err != nil {
-			util.SocketInfo(fmt.Sprintf("tick conn maintain error %s %s", model.Gate, err.Error()))
-		}
-		if err := SendToConnections(model.Gate, connTick.(map[*websocket.Conn]bool), websocket.TextMessage,
-			util.JsonEncodeToByte(map[string]interface{}{"time": time.Now().Unix(), "channel": "futures.ping"})); err != nil {
-			util.SocketInfo(fmt.Sprintf("tick conn maintain error %s %s", model.Gate, err.Error()))
+		if connTick != nil {
+			if err := SendToConnections(model.Gate, connTick.(map[*websocket.Conn]bool), websocket.TextMessage,
+				util.JsonEncodeToByte(map[string]interface{}{"time": time.Now().Unix(), "channel": "spot.ping"})); err != nil {
+				util.SocketInfo(fmt.Sprintf("tick conn maintain error %s %s", model.Gate, err.Error()))
+			}
+			if err := SendToConnections(model.Gate, connTick.(map[*websocket.Conn]bool), websocket.TextMessage,
+				util.JsonEncodeToByte(map[string]interface{}{"time": time.Now().Unix(), "channel": "futures.ping"})); err != nil {
+				util.SocketInfo(fmt.Sprintf("tick conn maintain error %s %s", model.Gate, err.Error()))
+			}
 		}
 		for _, account := range accounts {
 			success := true
