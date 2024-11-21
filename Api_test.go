@@ -522,12 +522,12 @@ func Test_WS(t *testing.T) {
 	market := model.Gate
 	go model.AppEnvironment.HandleWSResp()
 	carry.ManageConnOrders(market)
-	symbol := `DOGE_PERP`
+	symbol := `DOGE_USDT`
 	account := model.GetAccounts(0)[market]
 	//api.GetPositions(account.Key, account.Secret, market)
 	//api.GetBalances(account.Key, account.Secret, market)
 	api.InitMarketInfos(market)
-	order := api.PlaceOrder(account.Key, account.Secret, model.OrderSideSell, model.OrderTypeLimit, market, symbol, ``,
+	order := api.PlaceOrder(account.Key, account.Secret, model.OrderSideBuy, model.OrderTypeLimit, market, symbol, ``,
 		`test`, 0.29, 0.29, 24.4, true, nil, nil)
 	// api.CreateWsOrderUpdate(model.AppEnvironment, market)
 	// api.CreateWSTick(model.AppEnvironment, model.Gate)

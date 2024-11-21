@@ -300,19 +300,20 @@ var wsPriHandlerGatePerp = func(market, key string, msg []byte) {
 			value := datum.(map[string]interface{})
 			order, _ := model.AppEnvironment.CrossOrders.Load(value["id"].(json.Number).String())
 			if order != nil {
-				size, _ := strconv.ParseFloat(value[`size`].(string), 64)
-				left, _ := strconv.ParseFloat(value[`left`].(string), 64)
+				size, _ := value[`size`].(json.Number).Float64()
+				left, _ := value[`left`].(json.Number).Float64()
 				if value[`status`] == `finished` {
 					order.(*model.Order).Status = model.CarryStatusSuccess
 				}
-				order.(*model.Order).DealAmount = math.Abs(size) - left
+				order.(*model.Order).DealAmount = math.Abs(size) - math.Abs(left)
 			}
 		}
 	} else {
 		channel = responseJson.GetPath(`header`, `channel`).MustString()
 		if channel == `futures.order_place` && !responseJson.Get(`ack`).MustBool() {
 			requestId := responseJson.Get(`request_id`).MustString()
-			wsResp := model.WSResp{RequestId: requestId, OrderId: responseJson.GetPath(`data`, `result`, `id`).MustString()}
+			idJson := responseJson.GetPath(`data`, `result`, `id`).MustInt()
+			wsResp := model.WSResp{RequestId: requestId, OrderId: strconv.Itoa(idJson)}
 			if result == `200` {
 				wsResp.Success = true
 			} else {
@@ -366,7 +367,8 @@ var wsPriHandlerGateSpot = func(market, key string, msg []byte) {
 			value := datum.(map[string]interface{})
 			order, _ := model.AppEnvironment.CrossOrders.Load(value[`id`].(string))
 			if order != nil {
-				order.(*model.Order).DealAmount, _ = strconv.ParseFloat(value[`filled_total`].(string), 64)
+				deal, _ := strconv.ParseFloat(value[`filled_total`].(string), 64)
+				order.(*model.Order).DealAmount = math.Abs(deal)
 				if value[`finish_as`] == `filled` {
 					order.(*model.Order).Status = model.CarryStatusSuccess
 				}
