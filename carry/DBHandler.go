@@ -190,7 +190,7 @@ func Maintain() {
 		for _, market := range api.GetMarkets() {
 			ManageConnTicks(market)
 			api.MaintainConns(market)
+			time.Sleep(time.Minute * 2)
 		}
-		time.Sleep(time.Minute * 2)
 	}
 }

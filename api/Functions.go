@@ -124,7 +124,7 @@ func RequireConnTickReset(environment *model.Environment, market string) bool {
 			return true
 		})
 	}
-	util.Info(fmt.Sprintf(`RequireConnTickReset %d  %f valid %d in %d %s needReset %v`,
+	util.Notice(fmt.Sprintf(`RequireConnTickReset %d  %f valid %d in %d %s needReset %v`,
 		now, model.AppConfig.Delay, validSymbolNum, len(symbols), market, needReset))
 	return needReset.(bool)
 }
