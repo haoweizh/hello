@@ -31,7 +31,7 @@ func SendToConnection(market string, connection *websocket.Conn, msg []byte) (er
 		return
 	}
 	if err = connection.WriteMessage(websocket.TextMessage, msg); err != nil {
-		SetRequireReset(market)
+		//SetRequireReset(market)
 		util.Notice(`fail to write to connection ` + market + string(msg) + err.Error())
 	}
 	return err
@@ -51,11 +51,11 @@ func SendToConnections(market string, connections map[*websocket.Conn]bool, msgT
 		}
 		if msgType == websocket.TextMessage {
 			if err = connection.WriteMessage(msgType, msg); err != nil {
-				SetRequireReset(market)
+				//SetRequireReset(market)
 			}
 		} else if msgType == websocket.PongMessage || msgType == websocket.PingMessage {
 			if err = connection.WriteControl(msgType, msg, time.Now().Add(5*time.Second)); err != nil {
-				SetRequireReset(market)
+				//SetRequireReset(market)
 			}
 		}
 	}
@@ -111,7 +111,7 @@ func chanHandler(market string, stopChan chan struct{}, connection *websocket.Co
 			_, message, err := connection.ReadMessage()
 			if err != nil {
 				if !strings.Contains(err.Error(), `EOF`) {
-					SetRequireReset(market)
+					//SetRequireReset(market)
 					util.Notice(fmt.Sprintf(`%s can not read from websocket: %s`, market, err.Error()))
 				}
 				return
@@ -182,7 +182,7 @@ func WebSocketClient(market, url string, subscribes []interface{}, subHandler Su
 			errPing := connection.WriteControl(websocket.PongMessage, []byte(appData), time.Now().Add(time.Minute))
 			if errPing != nil {
 				util.Notice(fmt.Sprintf(`fail to handle ping %s %s %s`, market, url, errPing.Error()))
-				SetRequireReset(market)
+				//SetRequireReset(market)
 			}
 			return errPing
 		})

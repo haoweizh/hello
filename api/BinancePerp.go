@@ -29,7 +29,7 @@ func MaintainConnsBinance(market string) {
 	for {
 		connTick, _ := model.AppEnvironment.ConnTick.Load(market)
 		if connTick != nil {
-			if err := SendToConnections(market, connTick.(map[*websocket.Conn]bool), websocket.PongMessage, []byte(`ping`)); err != nil {
+			if err := SendToConnections(market, connTick.(map[*websocket.Conn]bool), websocket.PongMessage, []byte(``)); err != nil {
 				util.Notice(fmt.Sprintf("tick conn maintain error %s %s", market, err.Error()))
 			}
 		}
