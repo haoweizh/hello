@@ -6,8 +6,11 @@ import (
 	"hello/model"
 	"hello/util"
 	"math"
+	"sync"
 	"time"
 )
+
+var debugMap sync.Map
 
 // ProcessCombineTurtle
 // setting.CloseShortMargin 是否下单的价格倍率限制
@@ -88,6 +91,11 @@ var ProcessCombineTurtle = func(settingCombine *model.Setting, tick *model.BidAs
 		api.CheckActiveTrail(account, settingNormal, dataNormal, tick) {
 		//util.Notice(fmt.Sprintf(`combine return handle or break %s %s`, market, symbol))
 		return
+	}
+	d, _ := debugMap.Load(symbol)
+	if d == nil {
+		debugMap.Store(symbol, 1)
+		util.Notice(fmt.Sprintf(`first time ` + symbol))
 	}
 	model.ResetBig(dataCombine, dataNormal)
 	msgKey := model.GetMsgKey(model.FunctionCombineTurtle, market, symbol)
