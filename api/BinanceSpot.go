@@ -23,11 +23,9 @@ import (
 
 const restBinance = `https://api.binance.com`
 const restDataBinance = `https://data.binance.com`
-const wsBinance = "wss://stream.binance.com:9443/"
+const wsBinance = "wss://stream.binance.com:9443"
 const wsBinanceSpotApi = `wss://ws-api.binance.com:443/ws-api/v3`
 const wsStepBinance = 80
-
-var pingAccountBinance = false
 
 func GetMarketsBinance(account *model.Account, market string) (marketInfos map[string]*model.MarketInfo) {
 	util.Notice(fmt.Sprintf("start to GetMarketsBinance %s", account.Key))
@@ -138,7 +136,7 @@ func WsKLineBinanceSpot(environment *model.Environment, market string, symbols m
 		_, _, _, dialectSymbol := model.GetFromStandard(market, symbol)
 		subs = append(subs, strings.ToLower(dialectSymbol)+`@kline_1m`)
 	}
-	socketMap, msgChans, connectErr = WebSocketClient(market, wsBinance+`stream`, subs,
+	socketMap, msgChans, connectErr = WebSocketClient(market, wsBinance+`/stream`, subs,
 		subscribeHandlerBinance, KLineMsgHandlerBinanceSpot, wsStepBinance)
 	environment.MsgChanKLine.Store(market, msgChans)
 	return
@@ -267,32 +265,6 @@ func handleDepthBinance(environment *model.Environment, json *simplejson.Json, m
 				}
 				return true
 			})
-		}
-	}
-}
-
-func maintainConnOrderBinance() {
-	if pingAccountBinance {
-		return
-	}
-	pingAccountBinance = true
-	for {
-		time.Sleep(time.Minute * 2)
-		accounts := model.AppConfig.GetAccounts(model.BinanceSpot)
-		for _, account := range accounts {
-			valueSpot, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrder, model.BinanceSpot, account.Key)
-			valuePerp, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrder, model.BinancePerp, account.Key)
-			if valueSpot == nil || valueSpot.(*model.WSConn).Conn == nil || valuePerp == nil || valuePerp.(*model.WSConn).Conn == nil {
-				WsOrderServeBinance(account, model.BinanceSpot)
-				WsOrderServeBinance(account, model.BinancePerp)
-			} else {
-				if writeError := valueSpot.(*model.WSConn).Conn.WriteControl(websocket.PongMessage, []byte{}, time.Now().Add(5*time.Second)); writeError != nil {
-					util.Notice(fmt.Sprintf(`fail to pong binancespot return: %s`, writeError.Error()))
-				}
-				if writeError := valuePerp.(*model.WSConn).Conn.WriteControl(websocket.PongMessage, []byte{}, time.Now().Add(5*time.Second)); writeError != nil {
-					util.Notice(fmt.Sprintf(`fail to pong binancespot return: %s`, writeError.Error()))
-				}
-			}
 		}
 	}
 }
@@ -467,7 +439,6 @@ func WsOrderServeBinance(account *model.Account, market string) {
 		return
 	}
 	util.StoreSyncMap(&model.AppEnvironment.ConnOrder, &model.WSConn{Conn: conn}, market, account.Key)
-	go maintainConnOrderBinance()
 }
 
 func RenewListenKeyBinanceSpot(account *model.Account) (success bool, listenKey string) {

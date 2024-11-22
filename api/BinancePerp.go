@@ -24,6 +24,33 @@ const restBinancePerp = `https://fapi.binance.com`
 const wsBinancePerp = `wss://fstream.binance.com`
 const wsBinancePerpApi = `wss://ws-fapi.binance.com/ws-fapi/v1`
 
+func MaintainConnsBinance(market string) {
+	for {
+		connTick, _ := model.AppEnvironment.ConnTick.Load(market)
+		if connTick != nil {
+			if err := SendToConnections(market, connTick.(map[*websocket.Conn]bool), websocket.PongMessage, []byte(`ping`)); err != nil {
+				util.SocketInfo(fmt.Sprintf("tick conn maintain error %s %s", market, err.Error()))
+			}
+		}
+		accounts := model.AppConfig.GetAccounts(market)
+		for _, account := range accounts {
+			success := false
+			value, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrder, market, account.Key)
+			if value != nil && value.(*model.WSConn).Conn != nil {
+				if writeError := value.(*model.WSConn).Conn.WriteControl(websocket.PongMessage, []byte{}, time.Now().Add(5*time.Second)); writeError != nil {
+					util.Notice(fmt.Sprintf(`fail to pong %s return: %s`, market, writeError.Error()))
+				} else {
+					success = true
+				}
+			}
+			if !success {
+				WsOrderServeBinance(account, market)
+			}
+		}
+		time.Sleep(time.Minute * 2)
+	}
+}
+
 func getMarketsBinancePerp(key, secret string) (marketInfos map[string]*model.MarketInfo) {
 	marketInfos = make(map[string]*model.MarketInfo)
 	client := futures.NewClient(key, secret)

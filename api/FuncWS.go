@@ -159,7 +159,7 @@ func CreateWSTick(environment *model.Environment, market string) (
 		socketMap, channels, err = WebSocketClient(market, wsOKEX, GetWSSubscribes(market, model.SubscribeDepth),
 			subscribeHandlerOKEX, wsHandlerOKEX, wsStepOKEX)
 	case model.BinanceSpot, model.BinanceMargin:
-		socketMap, channels, err = WebSocketClient(market, wsBinance+`stream`, GetWSSubscribes(market, model.SubscribeTicker),
+		socketMap, channels, err = WebSocketClient(market, wsBinance+`/stream`, GetWSSubscribes(market, model.SubscribeTicker),
 			subscribeHandlerBinance, wsHandlerBinance, wsStepBinance)
 	case model.BinancePerp:
 		socketMap, channels, err = WebSocketClient(market, wsBinancePerp+`/stream`, GetWSSubscribes(
@@ -199,19 +199,8 @@ func MaintainConns(market string) {
 		go maintainConnsGate(accounts)
 	case model.OKEX:
 		go maintainConnsOKEX(accounts)
-	case model.BinanceSpot, model.BinancePerp, model.BinanceMargin:
-		go func() {
-			for {
-				connTick, _ := model.AppEnvironment.ConnTick.Load(market)
-				if connTick == nil {
-					continue
-				}
-				if err := SendToConnections(market, connTick.(map[*websocket.Conn]bool), websocket.PongMessage, []byte(`ping`)); err != nil {
-					util.SocketInfo(fmt.Sprintf("tick conn maintain error %s %s", market, err.Error()))
-				}
-				time.Sleep(time.Minute * 5)
-			}
-		}()
+	case model.BinancePerp, model.BinanceSpot, model.BinanceMargin:
+		go MaintainConnsBinance(market)
 	case model.Bybit:
 		go maintainConnsBybit(accounts)
 	case model.BitgetSpot, model.BitgetPerp:
