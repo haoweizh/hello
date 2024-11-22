@@ -211,6 +211,7 @@ func CheckActiveTrail(account *model.Account, setting *model.Setting, data *mode
 		}
 	}
 	if trailed {
+		util.Notice(fmt.Sprintf(`%s %s trailed and clear setting to 0`, setting.Market, setting.Symbol))
 		setting.Chance = 0
 		setting.Liquidated = true
 		data.Liquidated = true
