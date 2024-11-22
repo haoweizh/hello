@@ -25,7 +25,7 @@ const restBinancePerp = `https://fapi.binance.com`
 const wsBinancePerp = `wss://fstream.binance.com`
 const wsBinancePerpApi = `wss://ws-fapi.binance.com/ws-fapi/v1`
 
-func MaintainConnsBinance(market string) {
+func MaintainConnsBinance(market string, accounts []*model.Account) {
 	for {
 		connTick, _ := model.AppEnvironment.ConnTick.Load(market)
 		if connTick != nil {

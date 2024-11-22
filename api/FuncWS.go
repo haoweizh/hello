@@ -200,7 +200,7 @@ func MaintainConns(market string) {
 	case model.OKEX:
 		go maintainConnsOKEX(accounts)
 	case model.BinancePerp, model.BinanceSpot, model.BinanceMargin:
-		go MaintainConnsBinance(market)
+		go MaintainConnsBinance(market, accounts)
 	case model.Bybit:
 		go maintainConnsBybit(accounts)
 	case model.BitgetSpot, model.BitgetPerp:
