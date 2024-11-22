@@ -12,6 +12,7 @@ import (
 	"github.com/gorilla/websocket"
 	"hello/model"
 	"hello/util"
+	"math"
 	"net/http"
 	"net/url"
 	"sort"
@@ -84,15 +85,27 @@ func getMarketsBinancePerp(key, secret string) (marketInfos map[string]*model.Ma
 					}
 					marketInfo.PriceDecimal = util.NumDecPlaces(marketInfo.PriceIncrement)
 				case `LOT_SIZE`:
-					if data[`minQty`] != nil {
-						marketInfo.SizeMin, _ = strconv.ParseFloat(data[`minQty`].(string), 64)
+					sizeMin, _ := strconv.ParseFloat(data[`minQty`].(string), 64)
+					sizeMax, _ := strconv.ParseFloat(data[`maxQty`].(string), 64)
+					sizeIncrement, _ := strconv.ParseFloat(data[`stepSize`].(string), 64)
+					marketInfo.SizeMin = math.Max(marketInfo.SizeMin, sizeMin)
+					if marketInfo.SizeMax == 0 {
+						marketInfo.SizeMax = sizeMax
+					} else {
+						marketInfo.SizeMax = math.Min(marketInfo.SizeMax, sizeMax)
 					}
-					if data[`maxQty`] != nil {
-						marketInfo.SizeMax, _ = strconv.ParseFloat(data[`maxQty`].(string), 64)
+					marketInfo.SizeIncrement = math.Max(marketInfo.SizeIncrement, sizeIncrement)
+				case `MARKET_LOT_SIZE`:
+					sizeMin, _ := strconv.ParseFloat(data[`minQty`].(string), 64)
+					sizeMax, _ := strconv.ParseFloat(data[`maxQty`].(string), 64)
+					sizeIncrement, _ := strconv.ParseFloat(data[`stepSize`].(string), 64)
+					marketInfo.SizeMin = math.Max(marketInfo.SizeMin, sizeMin)
+					if marketInfo.SizeMax == 0 {
+						marketInfo.SizeMax = sizeMax
+					} else {
+						marketInfo.SizeMax = math.Min(marketInfo.SizeMax, sizeMax)
 					}
-					if data[`stepSize`] != nil {
-						marketInfo.SizeIncrement, _ = strconv.ParseFloat(data[`stepSize`].(string), 64)
-					}
+					marketInfo.SizeIncrement = math.Max(marketInfo.SizeIncrement, sizeIncrement)
 				case `MIN_NOTIONAL`:
 					if data[`notional`] != nil {
 						marketInfo.MoneyMin, _ = strconv.ParseFloat(data[`notional`].(string), 64)
@@ -258,7 +271,7 @@ func getMarkPriceBinancePerp(account *model.Account, symbol string) (markPrice f
 	return markPrice
 }
 
-// OrderTypeTrailStop时 price: activationPrice; triggerPrice:
+// OrderTypeTrailStop时 price: activationPrice(目前不支持，只支持立即触发); triggerPrice: callBackRate
 // callbackRate min 0.001, max 0.05 where 0.01 for 1% 注意此处和binance文档中不同，需要额外乘以100
 // 特殊的自定义订单ID:
 // "autoclose-"开头的字符串: 系统强平订单
@@ -329,9 +342,9 @@ func placeOrderBinancePerp(account *model.Account, isWS bool, order *model.Order
 		case model.OrderTypeTrailStop:
 			stopPriceStr = util.CutTailZero(strconv.FormatFloat(100*triggerPrice, 'f', 1, 64))
 			service.Type(futures.OrderTypeTrailingStopMarket)
-			if price > 0 {
-				service.ActivationPrice(priceStr)
-			}
+			//if price > 0 {
+			//	service.ActivationPrice(priceStr)
+			//}
 			service.CallbackRate(stopPriceStr)
 		}
 		orderResponse, err := service.Do(context.Background())

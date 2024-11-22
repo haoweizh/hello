@@ -648,6 +648,7 @@ func PlacePairOKEX(account *model.Account, requestId, symbolBuy, symbolSell, ord
 	return true, ``
 }
 
+// orderType: move_order_stop 只支持立即触发
 // amount、price
 // 不能使用 fmt %v 因为有e+5 的情况；
 // 不能使用 fmt %f 因为有000后缀；
@@ -684,9 +685,9 @@ func placeOrderOKEX(account *model.Account, isWs bool, order *model.Order) {
 		path = `/api/v5/trade/order-algo`
 	} else if order.OrderType == model.OrderTypeTrailStop {
 		postData[`ordType`] = `move_order_stop`
-		if price > 0 {
-			postData[`activePx`] = priceStr
-		}
+		//if price > 0 {
+		//	postData[`activePx`] = priceStr
+		//}
 		postData[`callbackRatio`] = triggerPriceStr
 		postData[`algoClOrdId`] = fmt.Sprintf(`%d%s%d%s`, account.Index, OKSeparator, time.Now().Nanosecond(), order.OrderSide)
 		path = `/api/v5/trade/order-algo`

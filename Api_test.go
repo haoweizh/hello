@@ -521,8 +521,8 @@ func Test_download(t *testing.T) {
 
 func Test_Order(t *testing.T) {
 	model.NewConfig()
-	market := model.Bybit
-	symbol := `DOGE_PERP`
+	market := model.BinancePerp
+	symbol := `TROY_PERP`
 	go model.AppEnvironment.HandleWSResp()
 	api.MaintainConns(market)
 	//symbol := `DOGE_USDT`
@@ -530,9 +530,9 @@ func Test_Order(t *testing.T) {
 	//api.GetBalances(account.Key, account.Secret, market)
 	account := model.GetAccounts(0)[market]
 	api.InitMarketInfos(market)
-	time.Sleep(time.Second * 5)
-	order := api.PlaceOrder(account.Key, account.Secret, model.OrderSideBuy, model.OrderTypeLimit, market, symbol, ``,
-		`test`, 0.29, 0.29, 24.4, true, nil, nil)
+	//time.Sleep(time.Second * 5)
+	order := api.PlaceOrder(account.Key, account.Secret, model.OrderSideSell, model.OrderTypeTrailStop, market, symbol, ``,
+		`test`, 0.006, 0.03, 1000, false, nil, nil)
 	fmt.Println(order)
 	time.Sleep(time.Second * 11)
 	select {}
