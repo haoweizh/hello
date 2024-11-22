@@ -121,7 +121,7 @@ func placeQueue(setting *model.Setting, data *DataQueue, tick *model.BidAsk) (pl
 			data.baseAvaWithBow-10/tick.Asks[0].Price))
 		orders = api.MustPlaceOrder(data.account.Key, data.account.Secret, model.OrderSideSell, model.OrderTypeLimit, setting.Market,
 			setting.Symbol, ``, setting.Function, tick.Asks[0].Price, tick.Asks[0].Price,
-			data.baseAvaWithBow-10/tick.Asks[0].Price, setting)
+			data.baseAvaWithBow-10/tick.Asks[0].Price, setting, true)
 		for _, order := range orders {
 			if order == nil || !order.HaveId() {
 				continue
@@ -139,7 +139,7 @@ func placeQueue(setting *model.Setting, data *DataQueue, tick *model.BidAsk) (pl
 			(data.quoteAvaWithBow-10)/tick.Bids[0].Price))
 		orders = api.MustPlaceOrder(data.account.Key, data.account.Secret, model.OrderSideBuy, model.OrderTypeLimit, setting.Market,
 			setting.Symbol, ``, setting.Function, tick.Bids[0].Price, tick.Bids[0].Price,
-			(data.quoteAvaWithBow-10)/tick.Bids[0].Price, setting)
+			(data.quoteAvaWithBow-10)/tick.Bids[0].Price, setting, true)
 		for _, order := range orders {
 			if order == nil {
 				continue

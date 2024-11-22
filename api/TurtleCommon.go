@@ -150,7 +150,7 @@ func AdjustPosHolding(key, secret string, setting *model.Setting, data *model.Tu
 			}
 			if orderSide != `` {
 				orders = MustPlaceOrder(key, secret, orderSide, orderType, setting.Market, setting.Symbol, ``,
-					model.FunctionTurtleAdjust, priceDeal, price, math.Abs(posMap[setting.Symbol].Holding), setting)
+					model.FunctionTurtleAdjust, priceDeal, price, math.Abs(posMap[setting.Symbol].Holding), setting, true)
 			}
 			for _, order := range orders {
 				if order != nil {
@@ -189,7 +189,7 @@ func CheckActiveTrail(account *model.Account, setting *model.Setting, data *mode
 		trailed = true
 		data.OrderShort = nil
 		trails = MustPlaceOrder(account.Key, account.Secret, model.OrderSideSell, model.OrderTypeTrailStop, setting.Market, setting.Symbol, ``,
-			setting.Function, bidAsk.Bids[0].Price, data.CallBackRatio, setting.GridAmount, nil)
+			setting.Function, bidAsk.Bids[0].Price, data.CallBackRatio, setting.GridAmount, nil, true)
 		for _, order := range trails {
 			order.Function = model.Close
 			data.OrderAdjust[order.OrderId] = order
@@ -201,7 +201,7 @@ func CheckActiveTrail(account *model.Account, setting *model.Setting, data *mode
 		trailed = true
 		data.OrderLong = nil
 		trails = MustPlaceOrder(account.Key, account.Secret, model.OrderSideBuy, model.OrderTypeTrailStop, setting.Market, setting.Symbol, ``,
-			setting.Function, bidAsk.Asks[0].Price, data.CallBackRatio, setting.GridAmount, nil)
+			setting.Function, bidAsk.Asks[0].Price, data.CallBackRatio, setting.GridAmount, nil, true)
 		for _, order := range trails {
 			order.Function = model.Close
 			data.OrderAdjust[order.OrderId] = order

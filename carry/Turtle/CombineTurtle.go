@@ -6,11 +6,15 @@ import (
 	"hello/model"
 	"hello/util"
 	"math"
-	"sync"
 	"time"
 )
 
-var debugMap sync.Map
+//var debugMap sync.Map
+//d, _ := debugMap.Load(settingCombine.Symbol)
+//if d == nil {
+//debugMap.Store(settingCombine.Symbol, 1)
+//util.Notice(fmt.Sprintf(`first time %s %v %v %v`, settingCombine.Symbol, canOpen, canStartTurtle, canStartCombine))
+//}
 
 // ProcessCombineTurtle
 // setting.CloseShortMargin 是否下单的价格倍率限制
@@ -107,11 +111,6 @@ var ProcessCombineTurtle = func(settingCombine *model.Setting, tick *model.BidAs
 		dataCombine.Amount*float64(settingCombine.ChanceLimit), dataCombine.GetIds(), dataCombine.IsBig, dataCombine.DaysFar,
 		dataCombine.LowFar, dataCombine.HighFar, dataCombine.DaysNear, dataCombine.LowNear, dataCombine.HighNear, dataCombine.N)
 	util.StoreSyncMap(&model.CarryInfo, msg, account.Key, msgKey)
-	d, _ := debugMap.Load(symbol)
-	if d == nil {
-		debugMap.Store(symbol, 1)
-		util.Notice(fmt.Sprintf(`first time %s %v %v %v`, symbol, canOpen, canStartTurtle, canStartCombine))
-	}
 	placeCombineOrders(account, dataNormal, dataCombine, settingNormal, settingCombine, tick, canOpen, canStartTurtle, canStartCombine)
 	needClear := false
 	for i, setting := range settings {
@@ -310,7 +309,7 @@ func placeTurtleLong(account *model.Account, orderType string, data *model.Turtl
 			priceDeal = tick.Asks[0].Price * (1 + turtleTriggerDelta)
 		}
 		data.OrderLong = api.MustPlaceOrder(account.Key, account.Secret, model.OrderSideBuy, orderType, market, symbol, ``,
-			setting.Function, priceDeal, price, amount, nil)
+			setting.Function, priceDeal, price, amount, nil, true)
 		if data.OrderAdjust == nil {
 			data.OrderAdjust = make(map[string]*model.Order)
 		}
@@ -411,7 +410,7 @@ func placeTurtleShort(account *model.Account, orderType string, data *model.Turt
 			orderType, setting.Function, market, symbol, orderType, setting.Chance, canOpen, priceDeal, price, amount,
 			data.UseNear, setting.PriceX, data.N, setting.Seconds, data.LowNear, data.HighNear, data.LowFar, data.HighFar))
 		data.OrderShort = api.MustPlaceOrder(account.Key, account.Secret, model.OrderSideSell, orderType, market, symbol, ``,
-			setting.Function, priceDeal, price, amount, nil)
+			setting.Function, priceDeal, price, amount, nil, true)
 		if data.OrderAdjust == nil {
 			data.OrderAdjust = make(map[string]*model.Order)
 		}

@@ -122,6 +122,7 @@ func getMarketsBinancePerp(key, secret string) (marketInfos map[string]*model.Ma
 					}
 				}
 			}
+			//fmt.Println(fmt.Sprintf(`%s %f %f %f`, marketInfo.Name, marketInfo.SizeMax, marketInfo.SizeMin, marketInfo.SizeIncrement))
 			marketInfos[marketInfo.Name] = marketInfo
 		}
 	}

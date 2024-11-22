@@ -739,17 +739,19 @@ func GetStandardOrderType(market, dialectType string) (standardType string) {
 }
 
 func MustPlaceOrder(key, secret, orderSide, orderType, market, symbol, orderParam,
-	refreshType string, price, triggerPrice, amount float64, setting *model.Setting) (orders []*model.Order) {
-	var lock *sync.Mutex
-	lockValue, _ := mustPlaceLock.Load(key)
-	if lockValue == nil {
-		lock = &sync.Mutex{}
-		mustPlaceLock.Store(key, lock)
-	} else {
-		lock = lockValue.(*sync.Mutex)
+	refreshType string, price, triggerPrice, amount float64, setting *model.Setting, useLock bool) (orders []*model.Order) {
+	if useLock {
+		var lock *sync.Mutex
+		lockValue, _ := mustPlaceLock.Load(key)
+		if lockValue == nil {
+			lock = &sync.Mutex{}
+			mustPlaceLock.Store(key, lock)
+		} else {
+			lock = lockValue.(*sync.Mutex)
+		}
+		defer lock.Unlock()
+		lock.Lock()
 	}
-	defer lock.Unlock()
-	lock.Lock()
 	retry := 2
 	for i := 0; i < retry; i++ {
 		v, _ := util.LoadSyncMap(model.MarketInfos, market, symbol)
@@ -758,8 +760,8 @@ func MustPlaceOrder(key, secret, orderSide, orderType, market, symbol, orderPara
 			continue
 		}
 		if v.(*model.MarketInfo).SizeMax > 0 && amount > v.(*model.MarketInfo).SizeMax {
-			ordersLeft := MustPlaceOrder(key, secret, orderSide, orderType, market, symbol, orderParam, refreshType, price, triggerPrice, amount/2, setting)
-			orders = MustPlaceOrder(key, secret, orderSide, orderType, market, symbol, orderParam, refreshType, price, triggerPrice, amount/2, setting)
+			ordersLeft := MustPlaceOrder(key, secret, orderSide, orderType, market, symbol, orderParam, refreshType, price, triggerPrice, amount/2, setting, false)
+			orders = MustPlaceOrder(key, secret, orderSide, orderType, market, symbol, orderParam, refreshType, price, triggerPrice, amount/2, setting, false)
 			if ordersLeft == nil || len(ordersLeft) == 0 {
 				return orders
 			} else if orders == nil || len(orders) == 0 {
