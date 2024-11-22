@@ -187,7 +187,7 @@ func CreateWSTick(environment *model.Environment, market string) (
 
 var maintainingConnTick = sync.Map{}
 
-func MaintainConnOrder(market string) {
+func MaintainConns(market string) {
 	value, _ := maintainingConnTick.Load(market)
 	if value != nil && value.(bool) {
 		return
@@ -196,13 +196,12 @@ func MaintainConnOrder(market string) {
 	accounts := model.AppConfig.GetAccounts(market)
 	switch market {
 	case model.Gate:
-		go maintainConnOrderGate(accounts)
+		go maintainConnsGate(accounts)
 	case model.OKEX:
-		go maintainConnOrderOKEX(accounts)
+		go maintainConnsOKEX(accounts)
 	case model.BinanceSpot, model.BinancePerp, model.BinanceMargin:
 		go func() {
 			for {
-				time.Sleep(time.Minute * 5)
 				connTick, _ := model.AppEnvironment.ConnTick.Load(market)
 				if connTick == nil {
 					continue
@@ -210,6 +209,7 @@ func MaintainConnOrder(market string) {
 				if err := SendToConnections(market, connTick.(map[*websocket.Conn]bool), websocket.PongMessage, []byte(`ping`)); err != nil {
 					util.SocketInfo(fmt.Sprintf("tick conn maintain error %s %s", market, err.Error()))
 				}
+				time.Sleep(time.Minute * 5)
 			}
 		}()
 	case model.Bybit:
@@ -217,7 +217,6 @@ func MaintainConnOrder(market string) {
 	case model.BitgetSpot, model.BitgetPerp:
 		go func() {
 			for {
-				time.Sleep(time.Second * 20)
 				connTick, _ := model.AppEnvironment.ConnTick.Load(market)
 				if connTick == nil {
 					continue
@@ -225,6 +224,7 @@ func MaintainConnOrder(market string) {
 				if err := SendToConnections(market, connTick.(map[*websocket.Conn]bool), websocket.TextMessage, []byte(`ping`)); err != nil {
 					util.SocketInfo(fmt.Sprintf("tick conn maintain error %s %s", market, err.Error()))
 				}
+				time.Sleep(time.Second * 20)
 			}
 		}()
 	}

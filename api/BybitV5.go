@@ -34,17 +34,25 @@ var wsOrdUdtHandlerBybit = func(market, key string, msg []byte) {
 	if err != nil || responseJson == nil {
 		return
 	}
-	fmt.Println(string(msg))
 	if responseJson.Get(`op`).MustString() == `auth` && responseJson.Get(`success`).MustBool() {
 		err := SendToConnection(model.Bybit, value.(*model.WSConn).Conn, []byte(`{"op":"subscribe","args": ["order"]}`))
 		if err != nil {
 			util.DelSyncMap(&model.AppEnvironment.ConnOrderUpdate, market, key)
 		}
 	}
-	bybitOrderResp := &dtos.BybitOrderResp{}
-	jsonErr := json.Unmarshal(msg, &dtos.BybitOrderResp{})
+	orderResp := &dtos.BybitOrderUpdateResp{}
+	jsonErr := json.Unmarshal(msg, orderResp)
 	if jsonErr == nil {
-		fmt.Println(bybitOrderResp)
+		for _, data := range orderResp.Data {
+			order, _ := model.AppEnvironment.CrossOrders.Load(data.OrderId)
+			if order == nil {
+				continue
+			}
+			if data.OrderStatus == `Filled` {
+				order.(*model.Order).Status = model.CarryStatusSuccess
+			}
+			order.(*model.Order).DealAmount, _ = strconv.ParseFloat(data.CumExecQty, 64)
+		}
 	}
 }
 
@@ -74,14 +82,12 @@ var wsOrderHandlerBybit = func(market, key string, event []byte) {
 
 func maintainConnsBybit(accounts []*model.Account) {
 	for {
-		time.Sleep(time.Second * 20)
-		connTick, _ := model.AppEnvironment.ConnTick.Load(model.Bybit)
-		if connTick == nil {
-			continue
-		}
 		pingMsg := []byte(fmt.Sprintf(`{ "req_id": "maintain %d","op": "ping"}`, time.Now().UnixMilli()))
-		if err := SendToConnections(model.Bybit, connTick.(map[*websocket.Conn]bool), websocket.TextMessage, pingMsg); err != nil {
-			util.SocketInfo(fmt.Sprintf("tick conn maintain error %s %s", model.Bybit, err.Error()))
+		connTick, _ := model.AppEnvironment.ConnTick.Load(model.Bybit)
+		if connTick != nil {
+			if err := SendToConnections(model.Bybit, connTick.(map[*websocket.Conn]bool), websocket.TextMessage, pingMsg); err != nil {
+				util.Notice(fmt.Sprintf("tick conn maintain error %s %s", model.Bybit, err.Error()))
+			}
 		}
 		for _, account := range accounts {
 			if account == nil {
@@ -106,6 +112,7 @@ func maintainConnsBybit(accounts []*model.Account) {
 				WsOrderServeBybit(account)
 			}
 		}
+		time.Sleep(time.Second * 20)
 	}
 }
 

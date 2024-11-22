@@ -253,6 +253,57 @@ type BybitMarginModeResp struct {
 	} `json:"result"`
 }
 
+type BybitOrderUpdateResp struct {
+	Id           string `json:"id"`
+	Topic        string `json:"topic"`
+	CreationTime int64  `json:"creationTime"`
+	Data         []struct {
+		Symbol             string `json:"symbol"`
+		OrderId            string `json:"orderId"`
+		Side               string `json:"side"`
+		OrderType          string `json:"orderType"`
+		CancelType         string `json:"cancelType"`
+		Price              string `json:"price"`
+		Qty                string `json:"qty"`
+		OrderIv            string `json:"orderIv"`
+		TimeInForce        string `json:"timeInForce"`
+		OrderStatus        string `json:"orderStatus"`
+		OrderLinkId        string `json:"orderLinkId"`
+		LastPriceOnCreated string `json:"lastPriceOnCreated"`
+		ReduceOnly         bool   `json:"reduceOnly"`
+		LeavesQty          string `json:"leavesQty"`
+		LeavesValue        string `json:"leavesValue"`
+		CumExecQty         string `json:"cumExecQty"`
+		CumExecValue       string `json:"cumExecValue"`
+		AvgPrice           string `json:"avgPrice"`
+		BlockTradeId       string `json:"blockTradeId"`
+		PositionIdx        int    `json:"positionIdx"`
+		CumExecFee         string `json:"cumExecFee"`
+		ClosedPnl          string `json:"closedPnl"`
+		CreatedTime        string `json:"createdTime"`
+		UpdatedTime        string `json:"updatedTime"`
+		RejectReason       string `json:"rejectReason"`
+		StopOrderType      string `json:"stopOrderType"`
+		TpslMode           string `json:"tpslMode"`
+		TriggerPrice       string `json:"triggerPrice"`
+		TakeProfit         string `json:"takeProfit"`
+		StopLoss           string `json:"stopLoss"`
+		TpTriggerBy        string `json:"tpTriggerBy"`
+		SlTriggerBy        string `json:"slTriggerBy"`
+		TpLimitPrice       string `json:"tpLimitPrice"`
+		SlLimitPrice       string `json:"slLimitPrice"`
+		TriggerDirection   int    `json:"triggerDirection"`
+		TriggerBy          string `json:"triggerBy"`
+		CloseOnTrigger     bool   `json:"closeOnTrigger"`
+		Category           string `json:"category"`
+		PlaceType          string `json:"placeType"`
+		SmpType            string `json:"smpType"`
+		SmpGroup           int    `json:"smpGroup"`
+		SmpOrderId         string `json:"smpOrderId"`
+		FeeCurrency        string `json:"feeCurrency"`
+	} `json:"data"`
+}
+
 type BybitOrderResp struct {
 	RetCode int    `json:"retCode"`
 	RetMsg  string `json:"retMsg"`

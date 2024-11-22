@@ -398,9 +398,8 @@ var wsPriHandlerGateSpot = func(market, key string, msg []byte) {
 	}
 }
 
-func maintainConnOrderGate(accounts []*model.Account) {
+func maintainConnsGate(accounts []*model.Account) {
 	for {
-		time.Sleep(time.Second * 20)
 		connTick, _ := model.AppEnvironment.ConnTick.Load(model.Gate)
 		if connTick != nil {
 			if err := SendToConnections(model.Gate, connTick.(map[*websocket.Conn]bool), websocket.TextMessage,
@@ -413,13 +412,14 @@ func maintainConnOrderGate(accounts []*model.Account) {
 			}
 		}
 		for _, account := range accounts {
-			success := true
+			success := false
 			wsSpot, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrder, model.Gate, model.MarketTypeSpot, account.Key)
 			if wsSpot != nil && wsSpot.(*model.WSConn).Conn != nil {
 				if err := wsSpot.(*model.WSConn).Conn.WriteMessage(websocket.TextMessage, []byte(fmt.Sprintf(
 					`{"time": %d, "channel" : "spot.ping"}`, time.Now().Unix()))); err != nil {
 					util.Notice(fmt.Sprintf("send account spot ping message err:%s %s", model.Gate, err.Error()))
-					success = false
+				} else {
+					success = true
 				}
 			}
 			wsFuture, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrder, model.Gate, model.MarketTypePerp, account.Key)
@@ -427,13 +427,15 @@ func maintainConnOrderGate(accounts []*model.Account) {
 				if err := wsFuture.(*model.WSConn).Conn.WriteMessage(websocket.TextMessage, []byte(fmt.Sprintf(
 					`{"time": %d, "channel" : "futures.ping"}`, time.Now().Unix()))); err != nil {
 					util.Notice(fmt.Sprintf("send account futures ping message err:%s %s", model.Gate, err.Error()))
-					success = false
+				} else {
+					success = true
 				}
 			}
 			if !success {
 				WSOrderServeGate(account)
 			}
 		}
+		time.Sleep(time.Second * 20)
 	}
 }
 

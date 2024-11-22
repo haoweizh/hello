@@ -32,7 +32,7 @@ var lastCarryTime = int64(0)
 // var wrongs = make(map[string]bool)
 // var wrongLock sync.Mutex
 
-func maintainConnOrderOKEX(accounts []*model.Account) {
+func maintainConnsOKEX(accounts []*model.Account) {
 	subscribes := GetWSSubscribes(model.OKEX, model.SubscribeDepth)
 	go func() {
 		for {
@@ -42,28 +42,30 @@ func maintainConnOrderOKEX(accounts []*model.Account) {
 	}()
 	go func() {
 		for {
-			time.Sleep(time.Second * 20)
 			connTick, _ := model.AppEnvironment.ConnTick.Load(model.OKEX)
-			if connTick == nil {
-				continue
-			}
-			if err := SendToConnections(model.OKEX, connTick.(map[*websocket.Conn]bool), websocket.TextMessage, []byte(`ping`)); err != nil {
-				util.SocketInfo(fmt.Sprintf("tick conn maintain error %s %s", model.OKEX, err.Error()))
+			if connTick != nil {
+				if err := SendToConnections(model.OKEX, connTick.(map[*websocket.Conn]bool), websocket.TextMessage, []byte(`ping`)); err != nil {
+					util.SocketInfo(fmt.Sprintf("tick conn maintain error %s %s", model.OKEX, err.Error()))
+				}
 			}
 			for _, account := range accounts {
 				if account == nil {
 					continue
 				}
+				success := false
 				value, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrder, model.OKEX, account.Key)
 				if value != nil && value.(*model.WSConn).Conn != nil {
 					if err := SendToConnection(model.OKEX, value.(*model.WSConn).Conn, []byte(`ping`)); err != nil {
 						util.Notice("-test ok ws-okex server ping client error " + err.Error())
+						success = true
 					}
-				} else {
+				}
+				if !success {
 					util.Notice(fmt.Sprintf(`-test ok ws- no private connection %s`, account.Key))
 					WsOrderServeOKEX(account)
 				}
 			}
+			time.Sleep(time.Second * 20)
 		}
 	}()
 }
@@ -234,7 +236,6 @@ var wsHandlerOKEX = func(market string, event []byte) {
 }
 
 var wsAccountHandlerOKEX = func(market, key string, event []byte) {
-	fmt.Println(string(event))
 	value, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrder, market, key)
 	if value != nil && value.(*model.WSConn).Conn != nil {
 		value.(*model.WSConn).LastMsgTime = time.Now().UnixMilli()

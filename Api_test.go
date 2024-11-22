@@ -10,7 +10,6 @@ import (
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"hello/api"
-	"hello/carry"
 	"hello/model"
 	"hello/regret"
 	"hello/util"
@@ -117,7 +116,7 @@ func Test_getCommonMarketInfos(t *testing.T) {
 func TestWs(t *testing.T) {
 	market := model.Gate
 	model.NewConfig()
-	carry.ManageConnOrders(market)
+	api.MaintainConns(market)
 	//model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
 	//api.InitMarketInfos()
 	//api.CreateWSTick(model.AppEnvironment, market)
@@ -144,6 +143,9 @@ func Test_WsAndOrderApi(t *testing.T) {
 		for !getTick {
 			time.Sleep(time.Minute * 5)
 			getTick, tick = model.AppEnvironment.GetBidAsk(symbol, market)
+		}
+		if tick == nil {
+			continue
 		}
 		price := tick.Bids[len(tick.Bids)-1].Price * 1.05
 		amount := 20 / price
@@ -517,13 +519,31 @@ func Test_download(t *testing.T) {
 	//-H 'Connection: keep-alive' \
 }
 
-func Test_WS(t *testing.T) {
+func Test_Order(t *testing.T) {
+	model.NewConfig()
+	market := model.Bybit
+	symbol := `DOGE_PERP`
+	go model.AppEnvironment.HandleWSResp()
+	api.MaintainConns(market)
+	//symbol := `DOGE_USDT`
+	//api.GetPositions(account.Key, account.Secret, market)
+	//api.GetBalances(account.Key, account.Secret, market)
+	account := model.GetAccounts(0)[market]
+	api.InitMarketInfos(market)
+	time.Sleep(time.Second * 5)
+	order := api.PlaceOrder(account.Key, account.Secret, model.OrderSideBuy, model.OrderTypeLimit, market, symbol, ``,
+		`test`, 0.29, 0.29, 24.4, true, nil, nil)
+	fmt.Println(order)
+	time.Sleep(time.Second * 11)
+	select {}
+}
+
+func Test_WSOKPair(t *testing.T) {
 	model.NewConfig()
 	market := model.OKEX
 	go model.AppEnvironment.HandleWSResp()
-	carry.ManageConnOrders(market)
+	api.MaintainConns(market)
 	//symbol := `DOGE_USDT`
-	account := model.GetAccounts(0)[market]
 	//api.GetPositions(account.Key, account.Secret, market)
 	//api.GetBalances(account.Key, account.Secret, market)
 	api.InitMarketInfos(market)
@@ -531,35 +551,12 @@ func Test_WS(t *testing.T) {
 	//	`test`, 0.29, 0.29, 24.4, true, nil, nil)
 	time.Sleep(time.Second * 11)
 	requestId := fmt.Sprintf(`%d`, time.Now().UnixMilli())
-	api.PlacePairOKEX(account, requestId, `DOGE_USDT`, `DOGE_PERP`, model.OrderTypeLimit, 0.29, 0.55, 1000)
+	api.PlacePairOKEX(model.GetAccounts(0)[market], requestId, `DOGE_USDT`, `DOGE_PERP`, model.OrderTypeLimit, 0.29, 0.55, 1000)
 	model.AppEnvironment.WSOrderMap.Store(requestId+model.OrderSideBuy, &model.Order{OrderId: requestId + model.OrderSideBuy})
 	model.AppEnvironment.WSOrderMap.Store(requestId+model.OrderSideSell, &model.Order{OrderId: requestId + model.OrderSideSell})
 	// api.CreateWsOrderUpdate(model.AppEnvironment, market)
 	// api.CreateWSTick(model.AppEnvironment, model.Gate)
 	//fmt.Println(order)
-	select {}
-}
-
-func Test_Orders(t *testing.T) {
-	model.NewConfig()
-	market := model.Gate
-	symbol := `DOGE_USDT`
-	account := model.GetAccounts(0)[market]
-	//api.GetPositions(account.Key, account.Secret, market)
-	//api.GetBalances(account.Key, account.Secret, market)
-	api.InitMarketInfos(market)
-	order := api.PlaceOrder(account.Key, account.Secret, model.OrderSideBuy, model.OrderTypeLimit, market, symbol, ``,
-		`test`, 0.29, 0.29, 24.4, false, nil, nil)
-	//if order != nil {
-	//	fmt.Println(fmt.Sprintf(`place %s %s`, order.OrderId, order.Status))
-	//}
-	//api.QueryOrderById(account.Key, account.Secret, market, symbol, model.OrderTypeLimit, order.OrderId)
-	// 1240955032711102467
-	//api.CancelOrders(account.Key, account.Secret, market, symbol)
-	// fmt.Println(api.CancelOrders(account.Key, account.Secret, market, symbol))
-
-	fmt.Println(order)
-
 	select {}
 }
 

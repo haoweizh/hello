@@ -120,26 +120,6 @@ func ClearChannels(market string, chanMap *sync.Map) {
 	}
 }
 
-func ManageConnOrders(market string) {
-	go api.MaintainConnOrder(market)
-	accounts := model.AppConfig.GetAccounts(market)
-	for _, account := range accounts {
-		if account == nil {
-			continue
-		}
-		switch market {
-		case model.BinancePerp, model.BinanceSpot:
-			api.WsOrderServeBinance(account, market)
-		case model.OKEX:
-			api.WsOrderServeOKEX(account)
-		case model.Bybit:
-			api.WsOrderServeBybit(account)
-		case model.Gate:
-			api.WSOrderServeGate(account)
-		}
-	}
-}
-
 func ManageConnTicks(market string) (reset bool) {
 	depthChans, _ := model.AppEnvironment.MsgChanTick.Load(market)
 	if depthChans == nil || len(depthChans.([]chan struct{})) == 0 {
@@ -209,7 +189,7 @@ func Maintain() {
 	for {
 		for _, market := range api.GetMarkets() {
 			ManageConnTicks(market)
-			ManageConnOrders(market)
+			api.MaintainConns(market)
 		}
 		time.Sleep(time.Minute * 2)
 	}
