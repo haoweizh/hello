@@ -129,26 +129,26 @@ func ManageConnTicks(market string) (reset bool) {
 		ClearChannels(market, &model.AppEnvironment.MsgChanTick)
 		api.CreateWSTick(model.AppEnvironment, market)
 	}
-	var settingMonitors []*model.SettingMonitor
-	model.AppDB.Find(&settingMonitors)
-	kLines := make(map[string]map[string]bool)
-	monitor.RefreshSettingMonitors(model.AppEnvironment, settingMonitors)
-	for _, settingMonitor := range settingMonitors {
-		if kLines[settingMonitor.Market] == nil {
-			kLines[settingMonitor.Market] = make(map[string]bool)
-		}
-		kLines[settingMonitor.Market][settingMonitor.Symbol] = true
-	}
-	for marketKline, symbols := range kLines {
-		klineWS, _ := model.AppEnvironment.MsgChanKLine.Load(marketKline)
-		if klineWS == nil || len(klineWS.([]chan struct{})) == 0 {
-			api.CreateMarketKLineWS(model.AppEnvironment, marketKline, symbols)
-		} else if api.RequireKLineReset(model.AppEnvironment, marketKline, symbols) {
-			reset = true
-			ClearChannels(marketKline, &model.AppEnvironment.MsgChanKLine)
-			api.CreateMarketKLineWS(model.AppEnvironment, marketKline, symbols)
-		}
-	}
+	//var settingMonitors []*model.SettingMonitor
+	//model.AppDB.Find(&settingMonitors)
+	//kLines := make(map[string]map[string]bool)
+	//monitor.RefreshSettingMonitors(model.AppEnvironment, settingMonitors)
+	//for _, settingMonitor := range settingMonitors {
+	//	if kLines[settingMonitor.Market] == nil {
+	//		kLines[settingMonitor.Market] = make(map[string]bool)
+	//	}
+	//	kLines[settingMonitor.Market][settingMonitor.Symbol] = true
+	//}
+	//for marketKline, symbols := range kLines {
+	//	klineWS, _ := model.AppEnvironment.MsgChanKLine.Load(marketKline)
+	//	if klineWS == nil || len(klineWS.([]chan struct{})) == 0 {
+	//		api.CreateMarketKLineWS(model.AppEnvironment, marketKline, symbols)
+	//	} else if api.RequireKLineReset(model.AppEnvironment, marketKline, symbols) {
+	//		reset = true
+	//		ClearChannels(marketKline, &model.AppEnvironment.MsgChanKLine)
+	//		api.CreateMarketKLineWS(model.AppEnvironment, marketKline, symbols)
+	//	}
+	//}
 	return reset
 }
 
