@@ -45,7 +45,7 @@ func maintainConnsOKEX(accounts []*model.Account) {
 			connTick, _ := model.AppEnvironment.ConnTick.Load(model.OKEX)
 			if connTick != nil {
 				if err := SendToConnections(model.OKEX, connTick.(map[*websocket.Conn]bool), websocket.TextMessage, []byte(`ping`)); err != nil {
-					util.SocketInfo(fmt.Sprintf("tick conn maintain error %s %s", model.OKEX, err.Error()))
+					util.Notice(fmt.Sprintf("tick conn maintain error %s %s", model.OKEX, err.Error()))
 				}
 			}
 			for _, account := range accounts {

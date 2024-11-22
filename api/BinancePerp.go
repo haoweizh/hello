@@ -30,7 +30,7 @@ func MaintainConnsBinance(market string) {
 		connTick, _ := model.AppEnvironment.ConnTick.Load(market)
 		if connTick != nil {
 			if err := SendToConnections(market, connTick.(map[*websocket.Conn]bool), websocket.PongMessage, []byte(`ping`)); err != nil {
-				util.SocketInfo(fmt.Sprintf("tick conn maintain error %s %s", market, err.Error()))
+				util.Notice(fmt.Sprintf("tick conn maintain error %s %s", market, err.Error()))
 			}
 		}
 		accounts := model.AppConfig.GetAccounts(market)
@@ -45,6 +45,7 @@ func MaintainConnsBinance(market string) {
 				}
 			}
 			if !success {
+				util.Notice(fmt.Sprintf(`fail to pong %s return: %s`, market, account.Key))
 				WsOrderServeBinance(account, market)
 			}
 		}
