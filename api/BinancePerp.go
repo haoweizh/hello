@@ -32,22 +32,22 @@ func MaintainConnsBinance(market string, accounts []*model.Account) {
 				util.Notice(fmt.Sprintf("tick conn maintain error %s %s", market, err.Error()))
 			}
 		}
-		//accounts := model.AppConfig.GetAccounts(market)
-		//for _, account := range accounts {
-		//	success := false
-		//	value, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrder, market, account.Key)
-		//	if value != nil && value.(*model.WSConn).Conn != nil {
-		//		if writeError := value.(*model.WSConn).Conn.WriteControl(websocket.PongMessage, []byte{}, time.Now().Add(5*time.Second)); writeError != nil {
-		//			util.Notice(fmt.Sprintf(`fail to pong %s return: %s`, market, writeError.Error()))
-		//		} else {
-		//			success = true
-		//		}
-		//	}
-		//	if !success {
-		//		util.Notice(fmt.Sprintf(`fail to pong %s return: %s`, market, account.Key))
-		//		WsOrderServeBinance(account, market)
-		//	}
-		//}
+		for _, account := range accounts {
+			success := false
+			value, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrder, market, account.Key)
+			if value != nil && value.(*model.WSConn).Conn != nil {
+				if writeError := value.(*model.WSConn).Conn.WriteControl(websocket.PongMessage, []byte{}, time.Now().Add(5*time.Second)); writeError != nil {
+					util.Notice(fmt.Sprintf(`fail to pong %s return: %s`, market, writeError.Error()))
+				} else {
+					success = true
+				}
+			}
+			if !success {
+				util.Notice(fmt.Sprintf(`fail to pong %s return: %s`, market, account.Key))
+				util.DelSyncMap(&model.AppEnvironment.ConnOrder, market, account.Key)
+				WsOrderServeBinance(account, market)
+			}
+		}
 		time.Sleep(time.Minute * 2)
 	}
 }

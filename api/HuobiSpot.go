@@ -200,7 +200,7 @@ var wsHandlerHuobiDM = func(market string, event []byte) {
 
 func WsTickServeHuobiSpot(environment *model.Environment, market string) (socketMap map[*websocket.Conn]bool, msgChans []chan struct{}, connectErr error) {
 	var spotSubscribes, futureSubscribes []interface{}
-	subscribes := GetWSSubscribes(model.HuobiSpot, model.SubscribeTicker)
+	subscribes := GetWSSubscribes(model.HuobiSpot, []string{model.SubscribeTicker})
 	for _, subscribe := range subscribes {
 		if strings.Contains(subscribe.(string), "-") {
 			futureSubscribes = append(futureSubscribes, subscribe)

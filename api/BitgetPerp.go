@@ -99,8 +99,8 @@ var markPriceWsHandler = func(market string, event []byte) {
 func WsTickServeBitgetPerp(market string) (socketMap map[*websocket.Conn]bool, msgChans []chan struct{}, connectErr error) {
 	msgChans = make([]chan struct{}, 0)
 	socketMap = make(map[*websocket.Conn]bool)
-	depthSubs := GetWSSubscribes(market, model.SubscribeDepth)
-	marketPriceSubs := GetWSSubscribes(market, model.SubscribeMarkPrice)
+	depthSubs := GetWSSubscribes(market, []string{model.SubscribeDepth})
+	marketPriceSubs := GetWSSubscribes(market, []string{model.SubscribeMarkPrice})
 	markPriceSockets, markPriceChannels, markPriceErr := WebSocketClient(market, bitgetPublic,
 		marketPriceSubs, subscribeHandlerBitget, markPriceWsHandler, wsStepBitget)
 	if markPriceErr == nil {

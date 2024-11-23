@@ -33,7 +33,7 @@ var lastCarryTime = int64(0)
 // var wrongLock sync.Mutex
 
 func maintainConnsOKEX(accounts []*model.Account) {
-	subscribes := GetWSSubscribes(model.OKEX, model.SubscribeDepth)
+	subscribes := GetWSSubscribes(model.OKEX, []string{model.SubscribeDepth})
 	go func() {
 		for {
 			time.Sleep(time.Minute * 5)
@@ -48,23 +48,25 @@ func maintainConnsOKEX(accounts []*model.Account) {
 					util.Notice(fmt.Sprintf("tick conn maintain error %s %s", model.OKEX, err.Error()))
 				}
 			}
-			//for _, account := range accounts {
-			//	if account == nil {
-			//		continue
-			//	}
-			//	success := false
-			//	value, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrder, model.OKEX, account.Key)
-			//	if value != nil && value.(*model.WSConn).Conn != nil {
-			//		if err := SendToConnection(model.OKEX, value.(*model.WSConn).Conn, []byte(`ping`)); err != nil {
-			//			util.Notice("-test ok ws-okex server ping client error " + err.Error())
-			//			success = true
-			//		}
-			//	}
-			//	if !success {
-			//		util.Notice(fmt.Sprintf(`-test ok ws- no private connection %s`, account.Key))
-			//		WsOrderServeOKEX(account)
-			//	}
-			//}
+			for _, account := range accounts {
+				if account == nil {
+					continue
+				}
+				success := false
+				value, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrder, model.OKEX, account.Key)
+				if value != nil && value.(*model.WSConn).Conn != nil {
+					if err := SendToConnection(model.OKEX, value.(*model.WSConn).Conn, []byte(`ping`)); err != nil {
+						util.Notice("-test ok ws-okex server ping client error " + err.Error())
+					} else {
+						success = true
+					}
+				}
+				if !success {
+					util.Notice(fmt.Sprintf(`-test ok ws- no private connection %s`, account.Key))
+					util.DelSyncMap(&model.AppEnvironment.ConnOrder, model.OKEX, account.Key)
+					WsOrderServeOKEX(account)
+				}
+			}
 			time.Sleep(time.Second * 20)
 		}
 	}()

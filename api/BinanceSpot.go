@@ -423,22 +423,37 @@ func WsOrderServeBinance(account *model.Account, market string) {
 	if account == nil {
 		return
 	}
-	value, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrder, market, account.Key)
-	if value != nil && value.(*model.WSConn).Conn != nil && time.Now().UnixMilli()-value.(*model.WSConn).LastMsgTime < 180000 {
-		return
-	}
 	apiUrl := ``
 	if market == model.BinanceSpot {
 		apiUrl = wsBinanceSpotApi
 	} else if market == model.BinancePerp {
 		apiUrl = wsBinancePerpApi
 	}
-	conn, err := WsAccountClient(market, account.Key, apiUrl, wsActHandlerBinance)
-	if err != nil {
-		util.Notice(fmt.Sprintf(`fail to create account ws %s %s`, market, err.Error()))
-		return
+	value, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrder, market, account.Key)
+	if value == nil || value.(*model.WSConn).Conn == nil || time.Now().UnixMilli()-value.(*model.WSConn).LastMsgTime > 180000 {
+		conn, err := WsAccountClient(market, account.Key, apiUrl, wsActHandlerBinance)
+		if err != nil {
+			util.Notice(fmt.Sprintf(`fail to create account ws %s %s`, market, err.Error()))
+		}
+		util.StoreSyncMap(&model.AppEnvironment.ConnOrder, &model.WSConn{Conn: conn}, market, account.Key)
 	}
-	util.StoreSyncMap(&model.AppEnvironment.ConnOrder, &model.WSConn{Conn: conn}, market, account.Key)
+	valueUpdate, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrderUpdate, market, account.Key)
+	if valueUpdate == nil || valueUpdate.(*model.WSConn).Conn == nil || time.Now().UnixMilli()-valueUpdate.(*model.WSConn).LastMsgTime > 180000 {
+		var conn *websocket.Conn
+		var err error
+		if market == model.BinanceSpot {
+			_, listenKey := RenewListenKeyBinanceSpot(account)
+			conn, err = WsAccountClient(market, account.Key, fmt.Sprintf(`%s/ws/%s`, wsBinance, listenKey), wsOrderUpdateBinance)
+		} else if market == model.BinancePerp {
+			_, listenKey := renewListenKeyBinancePerp(account)
+			conn, err = WsAccountClient(market, account.Key, fmt.Sprintf(`%s/ws/%s`, wsBinancePerp, listenKey), wsOrderUpdateBinance)
+		}
+		if err == nil {
+			util.StoreSyncMap(&model.AppEnvironment.ConnOrderUpdate, &model.WSConn{Conn: conn}, market, account.Key)
+		} else {
+			util.Notice(fmt.Sprintf(`fail to create order update ws %s %s`, market, err.Error()))
+		}
+	}
 }
 
 func RenewListenKeyBinanceSpot(account *model.Account) (success bool, listenKey string) {

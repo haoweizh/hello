@@ -412,81 +412,75 @@ func maintainConnsGate(accounts []*model.Account) {
 			}
 		}
 		for _, account := range accounts {
-			success := false
+			successSpot := false
 			wsSpot, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrder, model.Gate, model.MarketTypeSpot, account.Key)
 			if wsSpot != nil && wsSpot.(*model.WSConn).Conn != nil {
 				if err := wsSpot.(*model.WSConn).Conn.WriteMessage(websocket.TextMessage, []byte(fmt.Sprintf(
 					`{"time": %d, "channel" : "spot.ping"}`, time.Now().Unix()))); err != nil {
 					util.Notice(fmt.Sprintf("send account spot ping message err:%s %s", model.Gate, err.Error()))
 				} else {
-					success = true
+					successSpot = true
 				}
 			}
+			if !successSpot {
+				util.DelSyncMap(&model.AppEnvironment.ConnOrder, model.Gate, model.MarketTypeSpot, account.Key)
+				WSOrderServeGate(account, model.MarketTypeSpot)
+			}
+			successPerp := false
 			wsFuture, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrder, model.Gate, model.MarketTypePerp, account.Key)
 			if wsFuture != nil {
 				if err := wsFuture.(*model.WSConn).Conn.WriteMessage(websocket.TextMessage, []byte(fmt.Sprintf(
 					`{"time": %d, "channel" : "futures.ping"}`, time.Now().Unix()))); err != nil {
 					util.Notice(fmt.Sprintf("send account futures ping message err:%s %s", model.Gate, err.Error()))
 				} else {
-					success = true
+					successPerp = true
 				}
 			}
-			if !success {
-				WSOrderServeGate(account)
+			if !successPerp {
+				util.DelSyncMap(&model.AppEnvironment.ConnOrder, model.Gate, model.MarketTypePerp, account.Key)
+				WSOrderServeGate(account, model.MarketTypePerp)
 			}
 		}
 		time.Sleep(time.Second * 20)
 	}
 }
 
-func WSOrderServeGate(account *model.Account) {
+func WSOrderServeGate(account *model.Account, marketType string) {
 	if account == nil {
 		return
 	}
-	valueSpot, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrder, model.Gate, model.MarketTypeSpot, account.Key)
-	valueFuture, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrder, model.Gate, model.MarketTypePerp, account.Key)
-	if valueSpot != nil && valueFuture != nil && valueSpot.(*model.WSConn).Conn != nil && valueFuture.(*model.WSConn).Conn != nil &&
-		time.Now().UnixMilli()-valueSpot.(*model.WSConn).LastMsgTime < 60000 && time.Now().UnixMilli()-valueFuture.(*model.WSConn).LastMsgTime < 60000 {
+	value, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrder, model.Gate, marketType, account.Key)
+	if value != nil && value.(*model.WSConn).Conn != nil && time.Now().UnixMilli()-value.(*model.WSConn).LastMsgTime < 60000 {
 		return
 	}
 	ts := time.Now().Unix()
-	hashSpot := hmac.New(sha512.New, []byte(account.Secret))
-	hashSpot.Write([]byte(fmt.Sprintf("api\nspot.login\n\n%d", ts)))
-	signSpot := hex.EncodeToString(hashSpot.Sum(nil))
-	connSpot, errSpot := WsAccountClient(model.Gate, account.Key, gateWs.BaseUrl, wsPriHandlerGateSpot)
-	if errSpot != nil {
-		util.Notice(fmt.Sprintf("gate wsAccount connect errSpot: %s %s", errSpot.Error(), account.Key))
+	hash := hmac.New(sha512.New, []byte(account.Secret))
+	var conn *websocket.Conn
+	var err error
+	logInCode := ``
+	if marketType == model.MarketTypeSpot {
+		logInCode = `spot`
+		conn, err = WsAccountClient(model.Gate, account.Key, gateWs.BaseUrl, wsPriHandlerGateSpot)
+	} else if marketType == model.MarketTypePerp {
+		logInCode = `futures`
+		conn, err = WsAccountClient(model.Gate, account.Key, gateWs.FuturesUsdtUrl, wsPriHandlerGatePerp)
+	}
+	if err != nil {
+		util.Notice(fmt.Sprintf("gate wsAccount connect errSpot: %s %s", err.Error(), account.Key))
 		return
 	}
-	if connSpot == nil {
+	if conn == nil {
 		return
 	}
-	msgSpot := fmt.Sprintf(`{"time": %d,"channel": "spot.login","event": "api","payload": {"api_key": "%s",
-    		"signature": "%s","timestamp": "%d","req_id": "request%d"}}`, ts, account.Key, signSpot, ts, ts)
-	if err := connSpot.WriteMessage(websocket.TextMessage, []byte(msgSpot)); err != nil {
-		util.Notice(fmt.Sprintf("send account spot login message err: %s %s", model.Gate, err.Error()))
+	hash.Write([]byte(fmt.Sprintf("api\n%s.login\n\n%d", logInCode, ts)))
+	sign := hex.EncodeToString(hash.Sum(nil))
+	msg := fmt.Sprintf(`{"time": %d,"channel": "%s.login","event": "api","payload": {"api_key": "%s",
+    		"signature": "%s","timestamp": "%d","req_id": "request%d"}}`, ts, logInCode, account.Key, sign, ts, ts)
+	if err = conn.WriteMessage(websocket.TextMessage, []byte(msg)); err != nil {
+		util.Notice(fmt.Sprintf("send account login message err: %s %s %s", model.Gate, marketType, err.Error()))
 		util.DelSyncMap(&model.AppEnvironment.ConnOrder, model.Gate, model.MarketTypeSpot, account.Key)
 	} else {
-		util.StoreSyncMap(&model.AppEnvironment.ConnOrder, &model.WSConn{Conn: connSpot}, model.Gate, model.MarketTypeSpot, account.Key)
-	}
-	hashFuture := hmac.New(sha512.New, []byte(account.Secret))
-	hashFuture.Write([]byte(fmt.Sprintf("api\nfutures.login\n\n%d", ts)))
-	signFuture := hex.EncodeToString(hashFuture.Sum(nil))
-	msgFuture := fmt.Sprintf(`{"time": %d,"channel": "futures.login","event": "api","payload": {"api_key": "%s",
-    		"signature": "%s","timestamp": "%d","req_id": "request%d"}}`, ts, account.Key, signFuture, ts, ts)
-	connFuture, errFuture := WsAccountClient(model.Gate, account.Key, gateWs.FuturesUsdtUrl, wsPriHandlerGatePerp)
-	if errFuture != nil {
-		util.Notice(fmt.Sprintf("gate wsAccount connect errFuture: %s %s", errFuture.Error(), account.Key))
-		return
-	}
-	if connFuture == nil {
-		return
-	}
-	if err := connFuture.WriteMessage(websocket.TextMessage, []byte(msgFuture)); err != nil {
-		util.Notice(fmt.Sprintf("send account future login message err: %s %s", model.Gate, err.Error()))
-		util.DelSyncMap(&model.AppEnvironment.ConnOrder, model.Gate, model.MarketTypePerp, account.Key)
-	} else {
-		util.StoreSyncMap(&model.AppEnvironment.ConnOrder, &model.WSConn{Conn: connFuture}, model.Gate, model.MarketTypePerp, account.Key)
+		util.StoreSyncMap(&model.AppEnvironment.ConnOrder, &model.WSConn{Conn: conn}, model.Gate, marketType, account.Key)
 	}
 }
 

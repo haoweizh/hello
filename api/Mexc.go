@@ -133,9 +133,9 @@ func WsTickServeMexc(environment *model.Environment, market string, useFullDepth
 	}
 	subscribes := make([]interface{}, 0)
 	if !useFullDepthSub { // 订阅contract深度增量
-		subscribes = GetWSSubscribes(model.Mexc, mexcContractDepthIncSubType)
+		subscribes = GetWSSubscribes(model.Mexc, []string{mexcContractDepthIncSubType})
 	} else { // 订阅contract 5档深度全量
-		subscribes = GetWSSubscribes(model.Mexc, mexcContractDepthFullSubType)
+		subscribes = GetWSSubscribes(model.Mexc, []string{mexcContractDepthFullSubType})
 	}
 	socketMap, msgChans, connectErr = WebSocketClient(market, mexcContractWSUrl, subscribes, subscribeHandlerMexc, wsHandlerMexc, wsStepMexc)
 	go maintainChannelMexc(subscribes)

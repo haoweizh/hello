@@ -140,9 +140,7 @@ var wsHandlerFtx = func(market string, event []byte) {
 }
 
 func WsTickServeFtx(environment *model.Environment, market string) (socketMap map[*websocket.Conn]bool, msgChans []chan struct{}, err error) {
-	//subType := model.SubscribeDepth
-	subType := model.SubscribeDepth + `,` + model.SubscribeTicker
-	subscribes := GetWSSubscribes(model.Ftx, subType)
+	subscribes := GetWSSubscribes(model.Ftx, []string{model.SubscribeDepth, model.SubscribeTicker})
 	subscribes = append(subscribes, GetWSSubscribe(market, `USDT_USDT`, model.SubscribeDepth))
 	subscribes = append(subscribes, GetWSSubscribe(market, `USDT_USDT`, model.SubscribeTicker))
 	socketMap, msgChans, err = WebSocketClient(market, wsFtx, subscribes, subscribeHandlerFtx, wsHandlerFtx, wsStepFtx)
