@@ -759,7 +759,11 @@ func MustPlaceOrder(key, secret, orderSide, orderType, market, symbol, orderPara
 			util.Notice(`fail to get market info when must place %s %s`, market, symbol)
 			continue
 		}
-		if v.(*model.MarketInfo).SizeMax > 0 && amount > v.(*model.MarketInfo).SizeMax {
+		sizeMax := v.(*model.MarketInfo).SizeMax
+		if orderType == model.OrderTypeTrailStop || orderType == model.OrderTypeMarket {
+			sizeMax = v.(*model.MarketInfo).SizeMaxMarket
+		}
+		if sizeMax > 0 && amount > sizeMax {
 			ordersLeft := MustPlaceOrder(key, secret, orderSide, orderType, market, symbol, orderParam, refreshType, price, triggerPrice, amount/2, setting, false)
 			orders = MustPlaceOrder(key, secret, orderSide, orderType, market, symbol, orderParam, refreshType, price, triggerPrice, amount/2, setting, false)
 			if ordersLeft == nil || len(ordersLeft) == 0 {

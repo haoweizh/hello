@@ -12,7 +12,6 @@ import (
 	"github.com/gorilla/websocket"
 	"hello/model"
 	"hello/util"
-	"math"
 	"net/http"
 	"net/url"
 	"sort"
@@ -86,27 +85,11 @@ func getMarketsBinancePerp(key, secret string) (marketInfos map[string]*model.Ma
 					}
 					marketInfo.PriceDecimal = util.NumDecPlaces(marketInfo.PriceIncrement)
 				case `LOT_SIZE`:
-					sizeMin, _ := strconv.ParseFloat(data[`minQty`].(string), 64)
-					sizeMax, _ := strconv.ParseFloat(data[`maxQty`].(string), 64)
-					sizeIncrement, _ := strconv.ParseFloat(data[`stepSize`].(string), 64)
-					marketInfo.SizeMin = math.Max(marketInfo.SizeMin, sizeMin)
-					if marketInfo.SizeMax == 0 {
-						marketInfo.SizeMax = sizeMax
-					} else {
-						marketInfo.SizeMax = math.Min(marketInfo.SizeMax, sizeMax)
-					}
-					marketInfo.SizeIncrement = math.Max(marketInfo.SizeIncrement, sizeIncrement)
+					marketInfo.SizeMin, _ = strconv.ParseFloat(data[`minQty`].(string), 64)
+					marketInfo.SizeMax, _ = strconv.ParseFloat(data[`maxQty`].(string), 64)
+					marketInfo.SizeIncrement, _ = strconv.ParseFloat(data[`stepSize`].(string), 64)
 				case `MARKET_LOT_SIZE`:
-					sizeMin, _ := strconv.ParseFloat(data[`minQty`].(string), 64)
-					sizeMax, _ := strconv.ParseFloat(data[`maxQty`].(string), 64)
-					sizeIncrement, _ := strconv.ParseFloat(data[`stepSize`].(string), 64)
-					marketInfo.SizeMin = math.Max(marketInfo.SizeMin, sizeMin)
-					if marketInfo.SizeMax == 0 {
-						marketInfo.SizeMax = sizeMax
-					} else {
-						marketInfo.SizeMax = math.Min(marketInfo.SizeMax, sizeMax)
-					}
-					marketInfo.SizeIncrement = math.Max(marketInfo.SizeIncrement, sizeIncrement)
+					marketInfo.SizeMaxMarket, _ = strconv.ParseFloat(data[`maxQty`].(string), 64)
 				case `MIN_NOTIONAL`:
 					if data[`notional`] != nil {
 						marketInfo.MoneyMin, _ = strconv.ParseFloat(data[`notional`].(string), 64)
