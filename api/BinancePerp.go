@@ -17,12 +17,16 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
 const restBinancePerp = `https://fapi.binance.com`
 const wsBinancePerp = `wss://fstream.binance.com`
 const wsBinancePerpApi = `wss://ws-fapi.binance.com/ws-fapi/v1`
+
+var listenKeys sync.Map // market*accountKey listenKey
+var listenTime sync.Map // listenKey - time
 
 func MaintainConnsBinance(market string, accounts []*model.Account) {
 	for {
@@ -33,18 +37,38 @@ func MaintainConnsBinance(market string, accounts []*model.Account) {
 			}
 		}
 		for _, account := range accounts {
-			success := false
+			success := true
+			errMsg := ``
 			value, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrder, market, account.Key)
 			if value != nil && value.(*model.WSConn).Conn != nil {
 				if writeError := value.(*model.WSConn).Conn.WriteControl(websocket.PongMessage, []byte{}, time.Now().Add(5*time.Second)); writeError != nil {
-					util.Notice(fmt.Sprintf(`fail to pong %s return: %s`, market, writeError.Error()))
-				} else {
-					success = true
+					util.DelSyncMap(&model.AppEnvironment.ConnOrder, market, account.Key)
+					errMsg = fmt.Sprintf(`fail to pong order %s return: %s`, market, writeError.Error())
+					success = false
 				}
+			} else {
+				success = false
+			}
+			valueUpdate, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrderUpdate, market, account.Key)
+			if valueUpdate != nil && valueUpdate.(*model.WSConn).Conn != nil {
+				if writeErr := valueUpdate.(*model.WSConn).Conn.WriteControl(websocket.PongMessage, []byte{}, time.Now().Add(5*time.Second)); writeErr != nil {
+					util.DelSyncMap(&model.AppEnvironment.ConnOrderUpdate, market, account.Key)
+					errMsg += fmt.Sprintf(`fail to pong update order %s return: %s`, market, writeErr.Error())
+					success = false
+				} else {
+					keyValue, _ := util.LoadSyncMap(&listenKeys, market, account.Key)
+					if keyValue != nil {
+						ts, _ := listenTime.Load(keyValue.(string))
+						if ts != nil && ts.(time.Time).Add(time.Minute*30).Before(time.Now()) {
+							ExtendListenKeyBinance(account, market, keyValue.(string))
+						}
+					}
+				}
+			} else {
+				success = false
 			}
 			if !success {
-				util.Notice(fmt.Sprintf(`fail to pong %s return: %s`, market, account.Key))
-				util.DelSyncMap(&model.AppEnvironment.ConnOrder, market, account.Key)
+				util.Notice(errMsg)
 				WsOrderServeBinance(account, market)
 			}
 		}
@@ -105,7 +129,6 @@ func getMarketsBinancePerp(key, secret string) (marketInfos map[string]*model.Ma
 					}
 				}
 			}
-			//fmt.Println(fmt.Sprintf(`%s %f %f %f`, marketInfo.Name, marketInfo.SizeMax, marketInfo.SizeMin, marketInfo.SizeIncrement))
 			marketInfos[marketInfo.Name] = marketInfo
 		}
 	}
@@ -229,18 +252,49 @@ func parseTickDepthBinancePerp(json *simplejson.Json, standardSymbol string, upd
 	return bidAsk
 }
 
-func renewListenKeyBinancePerp(account *model.Account) (success bool, listenKey string) {
-	signedRequestBinance(account.Key, account.Secret, model.BinancePerp, http.MethodDelete,
-		restBinancePerp+`/fapi/v1/listenKey`, true, nil)
-	response := signedRequestBinance(account.Key, account.Secret, model.BinancePerp, http.MethodPost,
-		restBinancePerp+`/fapi/v1/listenKey`, true, nil)
+func ExtendListenKeyBinance(account *model.Account, market, listenKey string) (success bool) {
+	if market == model.BinanceSpot {
+		res := signedRequestBinance(account.Key, account.Secret, market, http.MethodPut, restBinance+`/api/v3/userDataStream`, false, map[string]interface{}{`listenKey`: listenKey})
+		resJson, _ := util.NewJSON(res)
+		if resJson != nil && resJson.Get(`code`).MustInt() == 0 {
+			return true
+		}
+	} else {
+		res := signedRequestBinance(account.Key, account.Secret, market, http.MethodPut, restBinancePerp+`/fapi/v1/listenKey`, true, nil)
+		resJson, _ := util.NewJSON(res)
+		if resJson != nil && len(resJson.Get(`listenKey`).MustString()) > 0 {
+			resKey := resJson.Get(`listenKey`).MustString()
+			listenTime.Store(resKey, time.Now())
+			util.Notice(fmt.Sprintf("extend Listen Key: %s %s %s", listenKey, market, account.Key))
+			return true
+		}
+	}
+	return false
+}
+
+func RenewListenKeyBinance(account *model.Account, market string) (success bool, listenKey string) {
+	var response []byte
+	if market == model.BinanceSpot {
+		//signedRequestBinance(account.Key, account.Secret, model.BinanceSpot, http.MethodDelete,
+		//	restBinance+`/api/v3/userDataStream`, true, nil)
+		response = signedRequestBinance(account.Key, account.Secret, model.BinanceSpot, http.MethodPost,
+			restBinance+`/api/v3/userDataStream`, false, nil)
+	} else if market == model.BinancePerp {
+		signedRequestBinance(account.Key, account.Secret, model.BinancePerp, http.MethodDelete,
+			restBinancePerp+`/fapi/v1/listenKey`, true, nil)
+		response = signedRequestBinance(account.Key, account.Secret, model.BinancePerp, http.MethodPost,
+			restBinancePerp+`/fapi/v1/listenKey`, true, nil)
+	}
 	keyJson, _ := util.NewJSON(response)
 	if keyJson != nil && len(keyJson.Get(`listenKey`).MustString()) > 0 {
-		return true, keyJson.Get(`listenKey`).MustString()
+		listenKey = keyJson.Get(`listenKey`).MustString()
+		listenTime.Store(listenKey, time.Now())
+		util.StoreSyncMap(&listenKeys, listenKey, market, account.Key)
+		return true, listenKey
 	}
 	time.Sleep(time.Second * 3)
 	util.Notice(fmt.Sprintf(`fail to renew binanceperp listen key retry %s`, account.Key[0:5]))
-	renewListenKeyBinancePerp(account)
+	RenewListenKeyBinance(account, market)
 	return false, ``
 }
 

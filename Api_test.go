@@ -402,7 +402,6 @@ func Test_initTurtleN(t *testing.T) {
 	api.GetMultiCandle(account, model.OKEX, 3600, time.Now().Add(time.Duration(-220)*time.Hour), time.Now(), settings, false)
 	//api.CalcTurtleData(account, market, `GAS_PERP`, model.FunctionCombineTurtle, 18, 9, 86400,
 	//	5, 3, 0.1, nowPeriod1)
-	api.RenewListenKeyBinanceSpot(account)
 	//fmt.Println(model.AppConfig.OKPhase)
 	//orders := api.QueryOpenOrders(account.Key, account.Secret, market, `ARB_PERP`)
 	//fmt.Println(len(orders))
@@ -523,16 +522,17 @@ func Test_Order(t *testing.T) {
 	model.NewConfig()
 	market := model.BinancePerp
 	symbol := `TROY_PERP`
+	account := model.GetAccounts(0)[market]
+	//_, listKey := api.RenewListenKeyBinance(account, market)
+	//api.ExtendListenKeyBinance(account, market, listKey)
 	go model.AppEnvironment.HandleWSResp()
 	api.MaintainConns(market)
-	//symbol := `DOGE_USDT`
 	//api.GetPositions(account.Key, account.Secret, market)
 	//api.GetBalances(account.Key, account.Secret, market)
-	account := model.GetAccounts(0)[market]
 	api.InitMarketInfos(market)
-	//time.Sleep(time.Second * 5)
-	order := api.PlaceOrder(account.Key, account.Secret, model.OrderSideSell, model.OrderTypeTrailStop, market, symbol, ``,
-		`test`, 0.006, 0.03, 1000, false, nil, nil)
+	time.Sleep(time.Second * 5)
+	order := api.PlaceOrder(account.Key, account.Secret, model.OrderSideSell, model.OrderTypeLimit, market, symbol, ``,
+		`test`, 0.006, 0.03, 2500, true, nil, nil)
 	fmt.Println(order)
 	time.Sleep(time.Second * 11)
 	select {}

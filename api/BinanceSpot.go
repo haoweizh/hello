@@ -388,18 +388,30 @@ func parseOrderBinance(market string, orderJson *simplejson.Json) (order *model.
 }
 
 var wsOrderUpdateBinance = func(market, key string, msg []byte) {
-	fmt.Println(string(msg))
+	value, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrderUpdate, market, key)
+	if value != nil && value.(*model.WSConn).Conn != nil {
+		value.(*model.WSConn).LastMsgTime = time.Now().UnixMilli()
+	}
+	resJson, err := util.NewJSON(msg)
+	fmt.Println(resJson.Get(`e`).MustString())
+	if err != nil && resJson != nil && resJson.Get(`e`).MustString() == `ORDER_TRADE_UPDATE` {
+		order, _ := model.AppEnvironment.CrossOrders.Load(strconv.Itoa(resJson.GetPath(`o`, `i`).MustInt()))
+		if order != nil {
+			order.(*model.Order).DealAmount, _ = strconv.ParseFloat(resJson.GetPath(`o`, `z`).MustString(), 64)
+			fmt.Println(fmt.Sprintf("set %s deal %f", order.(*model.Order).OrderId, order.(*model.Order).DealAmount))
+		}
+	}
 }
 
 var wsActHandlerBinance = func(market, key string, event []byte) {
-	msgGet := false
-	if strings.Contains(string(event), `ping`) {
-		msgGet = true
+	value, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrder, market, key)
+	if value != nil && value.(*model.WSConn).Conn != nil {
+		value.(*model.WSConn).LastMsgTime = time.Now().UnixMilli()
 	}
 	responseJson, err := util.NewJSON(event)
 	if err == nil && responseJson != nil {
-		wsResp := model.WSResp{RequestId: responseJson.Get(`id`).MustString(),
-			OrderId: responseJson.GetPath(`result`, `orderId`).MustString()}
+		idInt := responseJson.GetPath(`result`, `orderId`).MustInt()
+		wsResp := model.WSResp{RequestId: responseJson.Get(`id`).MustString(), OrderId: strconv.Itoa(idInt)}
 		status := responseJson.Get(`status`).MustInt()
 		if status == 200 {
 			wsResp.Success = true
@@ -409,13 +421,6 @@ var wsActHandlerBinance = func(market, key string, event []byte) {
 			wsResp.Msg = fmt.Sprintf(`%d%s`, code, responseJson.GetPath(`error`, `msg`))
 		}
 		model.AppEnvironment.WSRespChan <- wsResp
-		msgGet = true
-	}
-	if msgGet {
-		value, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrder, market, key)
-		if value != nil && value.(*model.WSConn).Conn != nil {
-			value.(*model.WSConn).LastMsgTime = time.Now().UnixMilli()
-		}
 	}
 }
 
@@ -424,10 +429,13 @@ func WsOrderServeBinance(account *model.Account, market string) {
 		return
 	}
 	apiUrl := ``
+	streamUrl := ``
 	if market == model.BinanceSpot {
 		apiUrl = wsBinanceSpotApi
+		streamUrl = wsBinance
 	} else if market == model.BinancePerp {
 		apiUrl = wsBinancePerpApi
+		streamUrl = wsBinancePerp
 	}
 	value, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrder, market, account.Key)
 	if value == nil || value.(*model.WSConn).Conn == nil || time.Now().UnixMilli()-value.(*model.WSConn).LastMsgTime > 180000 {
@@ -439,36 +447,14 @@ func WsOrderServeBinance(account *model.Account, market string) {
 	}
 	valueUpdate, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrderUpdate, market, account.Key)
 	if valueUpdate == nil || valueUpdate.(*model.WSConn).Conn == nil || time.Now().UnixMilli()-valueUpdate.(*model.WSConn).LastMsgTime > 180000 {
-		var conn *websocket.Conn
-		var err error
-		if market == model.BinanceSpot {
-			_, listenKey := RenewListenKeyBinanceSpot(account)
-			conn, err = WsAccountClient(market, account.Key, fmt.Sprintf(`%s/ws/%s`, wsBinance, listenKey), wsOrderUpdateBinance)
-		} else if market == model.BinancePerp {
-			_, listenKey := renewListenKeyBinancePerp(account)
-			conn, err = WsAccountClient(market, account.Key, fmt.Sprintf(`%s/ws/%s`, wsBinancePerp, listenKey), wsOrderUpdateBinance)
-		}
+		_, listenKey := RenewListenKeyBinance(account, market)
+		conn, err := WsAccountClient(market, account.Key, fmt.Sprintf(`%s/ws/%s`, streamUrl, listenKey), wsOrderUpdateBinance)
 		if err == nil {
 			util.StoreSyncMap(&model.AppEnvironment.ConnOrderUpdate, &model.WSConn{Conn: conn}, market, account.Key)
 		} else {
 			util.Notice(fmt.Sprintf(`fail to create order update ws %s %s`, market, err.Error()))
 		}
 	}
-}
-
-func RenewListenKeyBinanceSpot(account *model.Account) (success bool, listenKey string) {
-	//signedRequestBinance(account.Key, account.Secret, model.BinanceSpot, http.MethodDelete,
-	//	restBinance+`/api/v3/userDataStream`, true, nil)
-	response := signedRequestBinance(account.Key, account.Secret, model.BinanceSpot, http.MethodPost,
-		restBinance+`/api/v3/userDataStream`, false, nil)
-	keyJson, _ := util.NewJSON(response)
-	if keyJson != nil && len(keyJson.Get(`listenKey`).MustString()) > 0 {
-		return true, keyJson.Get(`listenKey`).MustString()
-	}
-	time.Sleep(time.Second * 3)
-	util.Notice(fmt.Sprintf(`fail to renew binanceSpot listen key retry`))
-	RenewListenKeyBinanceSpot(account)
-	return false, ``
 }
 
 func cancelOrderBinance(key, secret, market, symbol, orderId string) (suc bool, order *model.Order) {
