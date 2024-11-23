@@ -1,6 +1,9 @@
 package api
 
 import (
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"github.com/gorilla/websocket"
@@ -16,8 +19,100 @@ import (
 
 const bitgetRestUrl = "https://api.bitget.com"
 const bitgetPublic = "wss://ws.bitget.com/v2/ws/public"
+const bitgetPrivate = `wss://ws.bitget.com/v2/ws/private`
 
-//const bitgetPrivate = `wss://ws.bitget.com/v2/ws/private`
+func maintainConnsBitget(market string, accounts []*model.Account) {
+	for {
+		connTick, _ := model.AppEnvironment.ConnTick.Load(market)
+		if connTick != nil {
+			if err := SendToConnections(market, connTick.(map[*websocket.Conn]bool), websocket.TextMessage, []byte(`ping`)); err != nil {
+				util.Notice(fmt.Sprintf("tick conn maintain error %s %s", market, err.Error()))
+			}
+		}
+		for _, account := range accounts {
+			success := false
+			valueUpdate, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrderUpdate, market, account.Key)
+			if valueUpdate != nil && valueUpdate.(*model.WSConn).Conn != nil {
+				if err := valueUpdate.(*model.WSConn).Conn.WriteMessage(websocket.TextMessage, []byte(`ping`)); err != nil {
+					util.Notice(fmt.Sprintf("order update conn maintain error %s %s", market, err.Error()))
+				} else {
+					success = true
+				}
+			}
+			if !success {
+				util.DelSyncMap(&model.AppEnvironment.ConnOrderUpdate, market, account.Key)
+				WsOrderServeBitgetSpot(market, account)
+			}
+		}
+		time.Sleep(time.Second * 20)
+	}
+}
+
+var wsOrderConnHandlerBitgetSpot = func(market, key string, event []byte) {
+	fmt.Println(string(event))
+	value, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrderUpdate, market, key)
+	if value == nil || value.(*model.WSConn).Conn == nil {
+		return
+	}
+	value.(*model.WSConn).LastMsgTime = time.Now().UnixMilli()
+	resJson, _ := util.NewJSON(event)
+	if resJson == nil {
+		return
+	}
+	instType := ``
+	if market == model.BitgetSpot {
+		instType = `SPOT`
+	} else if market == model.BitgetPerp {
+		instType = `USDT-FUTURES`
+	}
+	if resJson.Get(`event`).MustString() == `login` && resJson.Get(`code`).MustInt() == 0 {
+		err := SendToConnection(market, value.(*model.WSConn).Conn, []byte(
+			fmt.Sprintf(`{"op":"subscribe","args":[{"instType": "%s","channel":"orders","instId":"default"}]}`, instType)))
+		if err != nil {
+			util.DelSyncMap(&model.AppEnvironment.ConnOrderUpdate, market, key)
+		}
+	}
+	dataArray := resJson.Get(`data`).MustArray()
+	for _, data := range dataArray {
+		orderId := data.(map[string]interface{})[`orderId`]
+		order, _ := model.AppEnvironment.CrossOrders.Load(orderId.(string))
+		if order != nil {
+			dealAmtStr := data.(map[string]interface{})[`accBaseVolume`].(string)
+			order.(*model.Order).DealAmount, _ = strconv.ParseFloat(dealAmtStr, 64)
+		}
+	}
+}
+
+func wsLoginBitget(account *model.Account, conn *websocket.Conn) (success bool) {
+	ts := time.Now().Unix()
+	hash := hmac.New(sha256.New, []byte(account.Secret))
+	hash.Write([]byte(fmt.Sprintf(`%dGET/user/verify`, ts)))
+	sign := base64.StdEncoding.EncodeToString(hash.Sum(nil))
+	if err := conn.WriteMessage(websocket.TextMessage, []byte(fmt.Sprintf(
+		`{"op":"login","args":[{"apiKey":"%s","passphrase":"%s","timestamp":"%d","sign":"%s"}]}`,
+		account.Key, model.AppConfig.Phase, ts, sign))); err != nil {
+		return false
+	}
+	return true
+}
+
+func WsOrderServeBitgetSpot(market string, account *model.Account) {
+	if account == nil {
+		return
+	}
+	value, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrderUpdate, market, account.Key)
+	if value != nil && value.(*model.WSConn).Conn != nil && time.Now().UnixMilli()-value.(*model.WSConn).LastMsgTime < 60000 {
+		return
+	}
+	conn, err := WsAccountClient(market, account.Key, bitgetPrivate, wsOrderConnHandlerBitgetSpot)
+	if err != nil {
+		util.Notice("can not create web socket " + err.Error())
+	} else if conn != nil {
+		if wsLoginBitget(account, conn) {
+			util.StoreSyncMap(&model.AppEnvironment.ConnOrderUpdate, &model.WSConn{Conn: conn}, market, account.Key)
+		}
+	}
+}
 
 func getMarketsBitgetSpot() (marketInfos map[string]*model.MarketInfo) {
 	httpResp, httpErr := util.HttpRequest(http.MethodGet, bitgetRestUrl+"/api/v2/spot/public/symbols", "", map[string]string{}, 30)

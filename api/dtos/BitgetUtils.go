@@ -28,7 +28,7 @@ const (
 //	secretKey []byte
 //}
 
-func doSign(method string, requestPath string, body string, timesStamp string, secret []byte) string {
+func Sign(method string, requestPath string, body string, timesStamp string, secret []byte) string {
 	var payload strings.Builder
 	payload.WriteString(timesStamp)
 	payload.WriteString(method)
@@ -69,7 +69,7 @@ func (p *BitgetRestClient) DoPost(uri string, params string) ([]byte, error) {
 	timesStamp := strconv.FormatInt(time.Now().Unix()*1000, 10)
 	//body, _ := BuildJsonParams(params)
 
-	sign := doSign(http.MethodPost, uri, params, timesStamp, []byte(p.ApiSecretKey))
+	sign := Sign(http.MethodPost, uri, params, timesStamp, []byte(p.ApiSecretKey))
 	requestUrl := p.BaseUrl + uri
 
 	buffer := strings.NewReader(params)
@@ -109,7 +109,7 @@ func (p *BitgetRestClient) DoGet(uri string, params map[string]string) ([]byte, 
 	timesStamp := strconv.FormatInt(time.Now().Unix()*1000, 10)
 	body := BuildGetParams(params)
 
-	sign := doSign(http.MethodGet, uri, body, timesStamp, []byte(p.ApiSecretKey))
+	sign := Sign(http.MethodGet, uri, body, timesStamp, []byte(p.ApiSecretKey))
 
 	requestUrl := p.BaseUrl + uri + body
 

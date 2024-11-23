@@ -7,7 +7,6 @@ import (
 	"hello/util"
 	"strings"
 	"sync"
-	"time"
 )
 
 func GetWSSubscribes(market string, subTypes []string) []interface{} {
@@ -166,17 +165,6 @@ func MaintainConns(market string) {
 	case model.Bybit:
 		go maintainConnsBybit(accounts)
 	case model.BitgetSpot, model.BitgetPerp:
-		go func() {
-			for {
-				connTick, _ := model.AppEnvironment.ConnTick.Load(market)
-				if connTick == nil {
-					continue
-				}
-				if err := SendToConnections(market, connTick.(map[*websocket.Conn]bool), websocket.TextMessage, []byte(`ping`)); err != nil {
-					util.SocketInfo(fmt.Sprintf("tick conn maintain error %s %s", market, err.Error()))
-				}
-				time.Sleep(time.Second * 20)
-			}
-		}()
+		go maintainConnsBitget(market, accounts)
 	}
 }
