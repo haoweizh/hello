@@ -392,9 +392,8 @@ var wsOrderUpdateBinance = func(market, key string, msg []byte) {
 	if value != nil && value.(*model.WSConn).Conn != nil {
 		value.(*model.WSConn).LastMsgTime = time.Now().UnixMilli()
 	}
-	resJson, err := util.NewJSON(msg)
-	fmt.Println(resJson.Get(`e`).MustString())
-	if err != nil && resJson != nil && resJson.Get(`e`).MustString() == `ORDER_TRADE_UPDATE` {
+	resJson, _ := util.NewJSON(msg)
+	if resJson != nil && resJson.Get(`e`).MustString() == `ORDER_TRADE_UPDATE` {
 		order, _ := model.AppEnvironment.CrossOrders.Load(strconv.Itoa(resJson.GetPath(`o`, `i`).MustInt()))
 		if order != nil {
 			order.(*model.Order).DealAmount, _ = strconv.ParseFloat(resJson.GetPath(`o`, `z`).MustString(), 64)
