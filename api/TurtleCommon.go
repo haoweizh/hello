@@ -213,6 +213,7 @@ func CheckActiveTrail(account *model.Account, setting *model.Setting, data *mode
 	if trailed {
 		util.Notice(fmt.Sprintf(`%s %s trailed and clear setting to 0`, setting.Market, setting.Symbol))
 		setting.Chance = 0
+		setting.GridAmount = 0
 		setting.Liquidated = true
 		data.Liquidated = true
 		model.AppDB.Save(setting)
@@ -285,6 +286,7 @@ func clearTurtleOrders(account *model.Account, setting *model.Setting, turtle *m
 			}
 		} else {
 			setting.Chance = 0
+			setting.GridAmount = 0
 		}
 	}
 	if turtle.BreakShort && turtle.OrderShort != nil && len(turtle.OrderShort) > 0 {
@@ -298,6 +300,7 @@ func clearTurtleOrders(account *model.Account, setting *model.Setting, turtle *m
 			}
 		} else {
 			setting.Chance = 0
+			setting.GridAmount = 0
 		}
 	}
 	if broken {
