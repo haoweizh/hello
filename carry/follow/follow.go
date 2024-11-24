@@ -117,10 +117,10 @@ func placeLiq(account *model.Account, setting *model.Setting, tick, tickOrder *m
 	profitBuy := tick.Asks[0].Price*setting.RateRelated - tickOrder.Asks[0].Price
 	if holding > 0 && profitSell > setting.CloseShortMargin {
 		orderLiq = api.PlaceOrder(account.Key, account.Secret, model.OrderSideSell, model.OrderTypeMarket, setting.MarketRelated, setting.SymbolRelated, ``, model.FunctionFollow,
-			tickOrder.Bids[0].Price, tickOrder.Bids[0].Price, holding, false, nil, setting)
+			tickOrder.Bids[0].Price, tickOrder.Bids[0].Price, holding, false, nil)
 	} else if holding < 0 && profitBuy > setting.CloseShortMargin {
 		orderLiq = api.PlaceOrder(account.Key, account.Secret, model.OrderSideBuy, model.OrderTypeMarket, setting.MarketRelated, setting.SymbolRelated, ``, model.FunctionFollow,
-			tickOrder.Asks[0].Price, tickOrder.Asks[0].Price, math.Abs(holding), false, nil, setting)
+			tickOrder.Asks[0].Price, tickOrder.Asks[0].Price, math.Abs(holding), false, nil)
 	}
 	if orderLiq != nil && orderLiq.HaveId() {
 		followOrderTime = now
@@ -146,10 +146,10 @@ func placeFollow(account *model.Account, setting *model.Setting, tick, tickOrder
 	//}
 	if tickOrder.Bids[0].Price-setting.RateRelated*tick.Asks[0].Price >= 0 {
 		order = api.PlaceOrder(account.Key, account.Secret, model.OrderSideBuy, model.OrderTypeMarket, setting.MarketRelated, setting.SymbolRelated, ``, model.FunctionFollow,
-			tickOrder.Asks[0].Price, tickOrder.Asks[0].Price, setting.GridAmount, false, nil, setting)
+			tickOrder.Asks[0].Price, tickOrder.Asks[0].Price, setting.GridAmount, false, nil)
 	} else if tick.Bids[0].Price*setting.RateRelated-tickOrder.Asks[0].Price >= 0 {
 		order = api.PlaceOrder(account.Key, account.Secret, model.OrderSideSell, model.OrderTypeMarket, setting.MarketRelated, setting.SymbolRelated, ``, model.FunctionFollow,
-			tickOrder.Bids[0].Price, tickOrder.Bids[0].Price, setting.GridAmount, false, nil, setting)
+			tickOrder.Bids[0].Price, tickOrder.Bids[0].Price, setting.GridAmount, false, nil)
 	}
 	if order != nil && order.HaveId() {
 		ordPriceBid = tick.Bids[0].Price

@@ -308,8 +308,8 @@ func placeTurtleLong(account *model.Account, orderType string, data *model.Turtl
 			price = tick.Asks[0].Price
 			priceDeal = tick.Asks[0].Price * (1 + turtleTriggerDelta)
 		}
-		data.OrderLong = api.MustPlaceOrder(account.Key, account.Secret, model.OrderSideBuy, orderType, market, symbol, ``,
-			setting.Function, priceDeal, price, amount, nil, true)
+		data.OrderLong = api.MustPlaceOrder(account.Key, account.Secret, model.OrderSideBuy, orderType, market, symbol,
+			``, setting.Function, priceDeal, price, amount, true)
 		if data.OrderAdjust == nil {
 			data.OrderAdjust = make(map[string]*model.Order)
 		}
@@ -409,8 +409,8 @@ func placeTurtleShort(account *model.Account, orderType string, data *model.Turt
 		util.Notice(fmt.Sprintf(`place short %s %s %s %s %s %d %v at %e %e amt %e, useNear %v priceX %f n:%f seconds %d near %f %f far %f %f`,
 			orderType, setting.Function, market, symbol, orderType, setting.Chance, canOpen, priceDeal, price, amount,
 			data.UseNear, setting.PriceX, data.N, setting.Seconds, data.LowNear, data.HighNear, data.LowFar, data.HighFar))
-		data.OrderShort = api.MustPlaceOrder(account.Key, account.Secret, model.OrderSideSell, orderType, market, symbol, ``,
-			setting.Function, priceDeal, price, amount, nil, true)
+		data.OrderShort = api.MustPlaceOrder(account.Key, account.Secret, model.OrderSideSell, orderType, market, symbol,
+			``, setting.Function, priceDeal, price, amount, true)
 		if data.OrderAdjust == nil {
 			data.OrderAdjust = make(map[string]*model.Order)
 		}

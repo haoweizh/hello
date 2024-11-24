@@ -107,7 +107,7 @@ func Test_getCommonMarketInfos(t *testing.T) {
 	fmt.Println(priceStr)
 	order1 := api.PlaceOrder(model.AppConfig.BinanceKey, model.AppConfig.BinanceSecret, model.OrderSideBuy, model.OrderTypeLimit,
 		model.BinancePerp, `SOL_PERP`, ``, `test`,
-		19.407125, 19.407125, 100, false, nil, nil)
+		19.407125, 19.407125, 100, false, nil)
 	fmt.Println(order1.OrderId)
 	success, pos, value, u := api.GetPositions(model.AppConfig.GateKey, model.AppConfig.GateSecret, model.Gate)
 	fmt.Println(fmt.Sprintf(`%v %v %v %v`, success, pos, value, u))
@@ -150,7 +150,7 @@ func Test_WsAndOrderApi(t *testing.T) {
 		price := tick.Bids[len(tick.Bids)-1].Price * 1.05
 		amount := 20 / price
 		order := api.PlaceOrder(account.Key, account.Secret, orderSide, orderType, market,
-			symbol, ``, `test`, price, price, amount, false, nil, nil)
+			symbol, ``, `test`, price, price, amount, false, nil)
 		fmt.Println(fmt.Sprintf(`1. place order return %v`, order))
 		if order != nil && order.OrderId != `` {
 			queryOrder := api.QueryOrderById(account.Key, account.Secret, market, symbol, orderType, order.OrderId)
@@ -437,9 +437,8 @@ func Test_initTurtleN(t *testing.T) {
 	//end, _ := time.Parse(time.RFC3339, `2022-10-02T00:00:00+00:00`)
 	//setting := &model.Setting{Market: model.Ftx, Symbol: `RVN_PERP`, AmountLimit: 3, GridAmount: 10000}
 	//regret.ProcessCandles(setting.Market, setting.Symbol, start, end, setting)
-	order := api.PlaceOrder(model.AppConfig.BinanceKey, model.AppConfig.BinanceSecret, model.OrderSideSell,
-		model.OrderTypeStop, model.BinancePerp, `ETH_PERP`, ``, `test`, 1222, 1255, 0.1,
-		false, nil, nil)
+	order := api.PlaceOrder(model.AppConfig.BinanceKey, model.AppConfig.BinanceSecret, model.OrderSideSell, model.OrderTypeStop,
+		model.BinancePerp, `ETH_PERP`, ``, `test`, 1222, 1255, 0.1, false, nil)
 	fmt.Println(order.OrderId)
 	api.CancelOrder(model.AppConfig.BinanceKey, model.AppConfig.BinanceSecret, model.BinancePerp, `ETH_PERP`, ``, order.OrderId)
 	//today, _ := model.GetMarketToday(model.BinancePerp)
@@ -685,7 +684,7 @@ func Test_wallet(t *testing.T) {
 	orderQuery := api.QueryOrderById(model.AppConfig.GateKey, model.AppConfig.GateSecret, model.Gate, `CFX_PERP`, model.OrderTypeLimit, `79852794326`)
 	fmt.Println(orderQuery.OrderSide)
 	order1 := api.PlaceOrder(model.AppConfig.GateKey, model.AppConfig.GateSecret, model.OrderSideBuy, model.OrderTypeLimit,
-		model.Gate, `ETH_USDT`, ``, `test`, 2000, 2000, 0.1, false, nil, nil)
+		model.Gate, `ETH_USDT`, ``, `test`, 2000, 2000, 0.1, false, nil)
 	fmt.Println(order1.OrderId)
 	api.CancelOrders(model.AppConfig.GateKey, model.AppConfig.GateSecret, model.Gate, `ETH_USDT`)
 	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})

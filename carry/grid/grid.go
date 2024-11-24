@@ -124,7 +124,7 @@ func liqGrid(account *model.Account, setting *model.Setting, data *DataGrid, tic
 		util.Notice(fmt.Sprintf(`grid liq when openCode:%s %s %s holding %f at %f amt %f`,
 			setting.Market, setting.Symbol, side, data.Holding, price, data.Holding))
 		orders := api.MustPlaceOrder(account.Key, account.Secret, side, model.OrderTypeLimit, data.Market,
-			data.Symbol, ``, model.FunctionComplement, price, price, math.Abs(data.Holding), setting, true)
+			data.Symbol, ``, model.FunctionComplement, price, price, math.Abs(data.Holding), true)
 		for _, order := range orders {
 			model.AppDB.Save(order)
 		}
@@ -251,7 +251,7 @@ func placeGrid(account *model.Account, setting *model.Setting, data *DataGrid, t
 	priceShort := math.Min(tickRelate.Asks[0].Price*setting.RateRelated/2+tick.Asks[0].Price/2, tick.Asks[0].Price+setting.OpenShortMargin)
 	if data.OrderLong == nil {
 		data.OrderLong = api.MustPlaceOrder(account.Key, account.Secret, model.OrderSideBuy, model.OrderTypeLimit,
-			setting.Market, setting.Symbol, ``, model.FunctionGrid, priceLong, priceLong, setting.GridAmount, setting, true)
+			setting.Market, setting.Symbol, ``, model.FunctionGrid, priceLong, priceLong, setting.GridAmount, true)
 		util.Notice(fmt.Sprintf(`place grid buy %s %s at %f amt %f order %v`,
 			setting.Market, setting.Symbol, priceLong, setting.GridAmount, data.OrderLong))
 		for _, order := range data.OrderLong {
@@ -260,7 +260,7 @@ func placeGrid(account *model.Account, setting *model.Setting, data *DataGrid, t
 	}
 	if data.orderShort == nil {
 		data.orderShort = api.MustPlaceOrder(account.Key, account.Secret, model.OrderSideSell, model.OrderTypeLimit,
-			setting.Market, setting.Symbol, ``, model.FunctionGrid, priceShort, priceShort, setting.GridAmount, setting, true)
+			setting.Market, setting.Symbol, ``, model.FunctionGrid, priceShort, priceShort, setting.GridAmount, true)
 		util.Notice(fmt.Sprintf(`place grid sell %s %s at %f amt %f order %v`,
 			setting.Market, setting.Symbol, priceShort, setting.GridAmount, data.orderShort))
 		for _, order := range data.orderShort {

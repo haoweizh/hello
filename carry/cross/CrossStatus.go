@@ -432,7 +432,7 @@ func liquidateBitgetPerp(account *model.Account) {
 				util.Notice(fmt.Sprintf(`do liquidate bitgetperp %s %s price %f hold %f`,
 					position.Currency, orderSide, position.EntryPrice, position.Holding))
 				order := api.PlaceOrder(account.Key, account.Secret, orderSide, model.OrderTypeMarket, model.BitgetPerp,
-					position.Currency, model.ReduceOnly, model.FunctionBitgetLiq, position.EntryPrice, position.EntryPrice, holding, false, nil, nil)
+					position.Currency, model.ReduceOnly, model.FunctionBitgetLiq, position.EntryPrice, position.EntryPrice, holding, false, nil)
 				saveCross(order, 0, 0, position.Holding)
 			} else {
 				util.Notice(fmt.Sprintf(`not liquidate bitgetperp for big perp %s %f %f value %f`,

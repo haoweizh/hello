@@ -633,7 +633,7 @@ func equalCoin(coin string, statuses []*CarryStatus) (isEqual bool, holdingInU f
 			util.Notice(fmt.Sprintf(`do equal %s %s %s at %f %f %f %d amount %f holding %f worthU %f`,
 				coin, equalStatus.market, equalStatus.symbol, price, tick.Asks[0].Price, tick.Bids[0].Price, tick.Ts, amount, holding, holdingInU))
 			order := api.PlaceOrder(equalStatus.account.Key, equalStatus.account.Secret, orderSide, model.OrderTypeLimit,
-				equalStatus.market, equalStatus.symbol, ``, model.FunctionComplement, price, price, amount, false, nil, nil)
+				equalStatus.market, equalStatus.symbol, ``, model.FunctionComplement, price, price, amount, false, nil)
 			if order != nil && order.Status != model.CarryStatusFail {
 				if orderSide == model.OrderSideBuy {
 					equalStatus.Holding += amount
@@ -1043,15 +1043,13 @@ func placeCross(statusBuy, statusSell *CarryStatus, priceBuy, priceSell, amount 
 		}
 		orderBuy.Coin = statusBuy.setting.Coin
 		orderSell.Coin = statusSell.setting.Coin
+		model.AppEnvironment.WSOrderMap.Store(requestId+model.OrderSideBuy, orderBuy)
+		model.AppEnvironment.WSOrderMap.Store(requestId+model.OrderSideSell, orderSell)
 		success, msg := api.PlacePairOKEX(statusBuy.account, requestId, statusBuy.symbol, statusSell.symbol, model.OrderTypeLimit, priceBuy, priceSell, amount)
 		if !success {
 			orderBuy.Status, orderSell.Status = model.CarryStatusFail, model.CarryStatusFail
 			orderBuy.ErrCode, orderSell.ErrCode = msg, msg
 		}
-		model.AppEnvironment.WSOrderMap.Store(requestId+model.OrderSideBuy, orderBuy)
-		model.AppEnvironment.WSOrderMap.Store(requestId+model.OrderSideSell, orderSell)
-		model.AppDB.Save(orderBuy)
-		model.AppDB.Save(orderSell)
 	} else {
 		go func() {
 			orderParam := ``
@@ -1059,7 +1057,7 @@ func placeCross(statusBuy, statusSell *CarryStatus, priceBuy, priceSell, amount 
 				orderParam = model.ReduceOnly
 			}
 			api.PlaceOrder(statusBuy.account.Key, statusBuy.account.Secret, model.OrderSideBuy, model.OrderTypeLimit,
-				statusBuy.market, statusBuy.symbol, orderParam, model.FunctionCross, priceBuy, priceBuy, amount, true, PostOrderCross, statusBuy.setting)
+				statusBuy.market, statusBuy.symbol, orderParam, model.FunctionCross, priceBuy, priceBuy, amount, true, PostOrderCross)
 		}()
 		go func() {
 			orderParam := ``
@@ -1067,7 +1065,7 @@ func placeCross(statusBuy, statusSell *CarryStatus, priceBuy, priceSell, amount 
 				orderParam = model.ReduceOnly
 			}
 			api.PlaceOrder(statusSell.account.Key, statusSell.account.Secret, model.OrderSideSell, model.OrderTypeLimit,
-				statusSell.market, statusSell.symbol, orderParam, model.FunctionCross, priceSell, priceSell, amount, true, PostOrderCross, statusSell.setting)
+				statusSell.market, statusSell.symbol, orderParam, model.FunctionCross, priceSell, priceSell, amount, true, PostOrderCross)
 		}()
 		time.Sleep(time.Second * 4)
 	}

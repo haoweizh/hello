@@ -241,14 +241,14 @@ func placeTurtleOrders(key, secret string, turtleData *model.TurtleData, setting
 		turtleTriggerDelta := api.GetTurtleTriggerDelta(setting.Market)
 		if priceLong <= tick.Asks[0].Price {
 			turtleData.OrderLong = api.MustPlaceOrder(key, secret, orderSide, model.OrderTypeLimit, setting.Market, setting.Symbol, ``,
-				setting.Function, priceLong*(1+turtleTriggerDelta), priceLong, amount, setting, true)
+				setting.Function, priceLong*(1+turtleTriggerDelta), priceLong, amount, true)
 			for _, order := range turtleData.OrderLong {
 				turtleData.OrderAdjust[order.OrderId] = order
 			}
 			turtleData.BreakLong = true
 		} else {
 			turtleData.OrderLong = api.MustPlaceOrder(key, secret, orderSide, typeLong, setting.Market, setting.Symbol, ``,
-				setting.Function, priceLong*(1+turtleTriggerDelta), priceLong, amount, setting, true)
+				setting.Function, priceLong*(1+turtleTriggerDelta), priceLong, amount, true)
 		}
 		if turtleData.OrderLong != nil {
 			for _, order := range turtleData.OrderLong {
@@ -275,15 +275,15 @@ func placeTurtleOrders(key, secret string, turtleData *model.TurtleData, setting
 		turtleData.BreakShort = false
 		turtleTriggerDelta := api.GetTurtleTriggerDelta(setting.Market)
 		if priceShort >= tick.Bids[0].Price {
-			turtleData.OrderShort = api.MustPlaceOrder(key, secret, orderSide, model.OrderTypeLimit, setting.Market, setting.Symbol, ``,
-				setting.Function, priceShort*(1-turtleTriggerDelta), priceShort, amount, setting, true)
+			turtleData.OrderShort = api.MustPlaceOrder(key, secret, orderSide, model.OrderTypeLimit, setting.Market, setting.Symbol,
+				``, setting.Function, priceShort*(1-turtleTriggerDelta), priceShort, amount, true)
 			for _, order := range turtleData.OrderShort {
 				turtleData.OrderAdjust[order.OrderId] = order
 			}
 			turtleData.BreakShort = true
 		} else {
-			turtleData.OrderShort = api.MustPlaceOrder(key, secret, orderSide, typeShort, setting.Market, setting.Symbol, ``,
-				setting.Function, priceShort*(1-turtleTriggerDelta), priceShort, amount, setting, true)
+			turtleData.OrderShort = api.MustPlaceOrder(key, secret, orderSide, typeShort, setting.Market, setting.Symbol,
+				``, setting.Function, priceShort*(1-turtleTriggerDelta), priceShort, amount, true)
 		}
 		if turtleData.OrderShort != nil {
 			for _, order := range turtleData.OrderShort {

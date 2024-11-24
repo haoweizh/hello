@@ -739,7 +739,7 @@ func GetStandardOrderType(market, dialectType string) (standardType string) {
 }
 
 func MustPlaceOrder(key, secret, orderSide, orderType, market, symbol, orderParam,
-	refreshType string, price, triggerPrice, amount float64, setting *model.Setting, useLock bool) (orders []*model.Order) {
+	refreshType string, price, triggerPrice, amount float64, useLock bool) (orders []*model.Order) {
 	if useLock {
 		var lock *sync.Mutex
 		lockValue, _ := mustPlaceLock.Load(key)
@@ -764,8 +764,8 @@ func MustPlaceOrder(key, secret, orderSide, orderType, market, symbol, orderPara
 			sizeMax = v.(*model.MarketInfo).SizeMaxMarket
 		}
 		if sizeMax > 0 && amount > sizeMax {
-			ordersLeft := MustPlaceOrder(key, secret, orderSide, orderType, market, symbol, orderParam, refreshType, price, triggerPrice, amount/2, setting, false)
-			orders = MustPlaceOrder(key, secret, orderSide, orderType, market, symbol, orderParam, refreshType, price, triggerPrice, amount/2, setting, false)
+			ordersLeft := MustPlaceOrder(key, secret, orderSide, orderType, market, symbol, orderParam, refreshType, price, triggerPrice, amount/2, false)
+			orders = MustPlaceOrder(key, secret, orderSide, orderType, market, symbol, orderParam, refreshType, price, triggerPrice, amount/2, false)
 			if ordersLeft == nil || len(ordersLeft) == 0 {
 				return orders
 			} else if orders == nil || len(orders) == 0 {
@@ -776,8 +776,8 @@ func MustPlaceOrder(key, secret, orderSide, orderType, market, symbol, orderPara
 			}
 			return orders
 		} else {
-			order := PlaceOrder(key, secret, orderSide, orderType, market, symbol,
-				orderParam, refreshType, price, triggerPrice, amount, false, nil, setting)
+			order := PlaceOrder(key, secret, orderSide, orderType, market, symbol, orderParam, refreshType, price,
+				triggerPrice, amount, false, nil)
 			if order != nil && order.OrderId != `` && order.Status != model.CarryStatusFail {
 				order.RefreshType = refreshType
 				return []*model.Order{order}
@@ -803,7 +803,7 @@ func MustPlaceOrder(key, secret, orderSide, orderType, market, symbol, orderPara
 // orderType: OrderTypeLimit OrderTypeMarket
 // amount:如果是限价单或市价卖单，amount是左侧币种的数量，如果是市价买单，amount是右测币种的数量
 func PlaceOrder(key, secret, orderSide, orderType, market, symbol, orderParam, funcType string, price, triggerPrice,
-	amount float64, isWs bool, postOrder model.PostOrder, setting *model.Setting) (order *model.Order) {
+	amount float64, isWs bool, postOrder model.PostOrder) (order *model.Order) {
 	start := util.GetNowUnixMillion()
 	markSide := model.OrderSideBuy
 	switch orderSide {
@@ -827,6 +827,9 @@ func PlaceOrder(key, secret, orderSide, orderType, market, symbol, orderParam, f
 	//	orderSide, market, symbol, start, amount, price, triggerPrice))
 	if model.AppConfig.Env == `test` {
 		return
+	}
+	if isWs {
+		model.AppEnvironment.WSOrderMap.Store(order.OrderId, order)
 	}
 	switch market {
 	case model.BitgetPerp:
@@ -875,9 +878,7 @@ func PlaceOrder(key, secret, orderSide, orderType, market, symbol, orderParam, f
 	util.Notice(fmt.Sprintf(`...%s %s %s return order at %d distance %d %s %s price %f %f amount %f %f trigger %f %f id %s`,
 		orderSide, market, symbol, end, end-start, order.Status, order.ErrCode, price, order.Price, amount, order.Amount,
 		triggerPrice, order.TriggerPrice, order.OrderId))
-	if isWs {
-		model.AppEnvironment.WSOrderMap.Store(order.OrderId, order)
-	} else if postOrder != nil && setting != nil {
+	if !isWs && postOrder != nil {
 		model.AppEnvironment.CrossOrders.Store(order.OrderId, order)
 		go postOrder(order)
 	}
