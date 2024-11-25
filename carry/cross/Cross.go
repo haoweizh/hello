@@ -637,8 +637,8 @@ func equalCoin(coin string, statuses []*CarryStatus) (isEqual bool, holdingInU f
 		}
 		checkAmount := model.GetAmountInMarket(equalStatus.market, equalStatus.symbol, amount, price, reduceOnly)
 		if checkAmount > 0 {
-			util.Notice(fmt.Sprintf(`do equal %s %s %s at %f %f %f %d amount %f holding %f worthU %f`,
-				coin, equalStatus.market, equalStatus.symbol, price, tick.Asks[0].Price, tick.Bids[0].Price, tick.Ts, amount, holding, holdingInU))
+			util.Notice(fmt.Sprintf(`do equal %s %s %s at %f %f %f %d amount %f holding %f worthU %f status holding %f`,
+				coin, equalStatus.market, equalStatus.symbol, price, tick.Asks[0].Price, tick.Bids[0].Price, tick.Ts, amount, holding, holdingInU, equalStatus.Holding))
 			order := api.PlaceOrder(equalStatus.account.Key, equalStatus.account.Secret, orderSide, model.OrderTypeLimit,
 				equalStatus.market, equalStatus.symbol, ``, model.FunctionComplement, price, price, amount, false, nil)
 			if order != nil && order.Status != model.CarryStatusFail {
