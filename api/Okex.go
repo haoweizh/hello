@@ -689,13 +689,13 @@ func placeOrderOKEX(account *model.Account, isWs bool, order *model.Order) {
 		postData[`callbackRatio`] = triggerPriceStr
 		postData[`algoClOrdId`] = fmt.Sprintf(`%d%s%d%s`, account.Index, OKSeparator, time.Now().Nanosecond(), order.OrderSide)
 		path = `/api/v5/trade/order-algo`
-	} else if order.OrderType == model.OrderTypeLimit {
+	} else {
 		postData[`clOrdId`] = fmt.Sprintf(`%d%s%d%s`, account.Index, OKSeparator, time.Now().Nanosecond(), order.OrderSide)
 		postData[`px`] = priceStr
-	} else if order.OrderType == model.OrderTypeMarket {
-		postData[`clOrdId`] = fmt.Sprintf(`%d%s%d%s`, account.Index, OKSeparator, time.Now().Nanosecond(), order.OrderSide)
-		postData[`px`] = priceStr
-		postData[`tgtCcy`] = `base_ccy`
+		_, marketType, _, _ := model.GetFromStandard(order.Market, order.Symbol)
+		if order.OrderType == model.OrderTypeMarket && marketType == model.MarketTypeSpot {
+			postData[`tgtCcy`] = `base_ccy`
+		}
 	}
 	if isWs {
 		// 通过ws的symbol需要处理成方言，通过rest的无需处理，已统一在发送的函数中处理

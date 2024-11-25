@@ -1142,7 +1142,8 @@ func handleCross(account *model.Account, order *model.Order) {
 		return
 	}
 	leftAmt := order.Amount - order.DealAmount
-	if leftAmt > marketInfo.SizeMin {
+	leftAmtInMkt := model.GetAmountInMarket(order.Market, order.Symbol, leftAmt, order.Price, false)
+	if leftAmtInMkt > marketInfo.SizeMin {
 		orderSide := ``
 		if order.OrderSide == model.OrderSideBuy {
 			orderSide = model.OrderSideSell
