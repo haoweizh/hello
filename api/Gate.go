@@ -800,7 +800,7 @@ func placeOrderGate(account *model.Account, isWs bool, order *model.Order, order
 	if marketType == model.MarketTypeSpot {
 		relatedOrder := gateApi.Order{Price: orderPriceStr, Side: orderSide, CurrencyPair: dialectSymbol, Type: orderType, TimeInForce: tif}
 		relatedOrder.Account = "spot"
-		if orderType == model.OrderTypeMarket {
+		if orderType == model.OrderTypeMarket && orderSide == model.OrderSideBuy {
 			amount = amount * price
 		}
 		relatedOrder.Amount = util.CutTailZero(fmt.Sprintf(`%f`, model.GetAmountInMarket(model.Gate, symbol, amount, price, false)))
