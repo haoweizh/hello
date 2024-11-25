@@ -519,18 +519,18 @@ func Test_download(t *testing.T) {
 
 func Test_Order(t *testing.T) {
 	model.NewConfig()
-	market := model.Bybit
-	//symbol := `ASTR_USDT`
-	//account := model.GetAccounts(0)[market]
+	market := model.BitgetSpot
+	symbol := `BICO_USDT`
+	account := model.GetAccounts(0)[market]
 	//_, listKey := api.RenewListenKeyBinance(account, market)
 	//api.ExtendListenKeyBinance(account, market, listKey)
 	api.InitMarketInfos(market)
-	go model.AppEnvironment.HandleWSResp()
-	api.MaintainConns(market)
+	//go model.AppEnvironment.HandleWSResp()
+	//api.MaintainConns(market)
 	//time.Sleep(time.Second * 5)
-	//order := api.PlaceOrder(account.Key, account.Secret, model.OrderSideBuy, model.OrderTypeLimit, market, symbol, ``,
-	//	`test`, 0.066, 0.066, 200, true, nil, nil)
-	//fmt.Println(order)
+	order := api.PlaceOrder(account.Key, account.Secret, model.OrderSideSell, model.OrderTypeLimit, market, symbol, ``,
+		`test`, 0.3558, 0.3558, 152.996850, true, nil)
+	fmt.Println(order)
 	select {}
 }
 
