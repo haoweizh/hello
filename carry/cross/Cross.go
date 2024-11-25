@@ -1144,18 +1144,12 @@ func handleCross(account *model.Account, order *model.Order) {
 	leftAmt := order.Amount - order.DealAmount
 	leftAmtInMkt := model.GetAmountInMarket(order.Market, order.Symbol, leftAmt, order.Price, false)
 	if leftAmtInMkt > marketInfo.SizeMin {
-		orderSide := ``
-		if order.OrderSide == model.OrderSideBuy {
-			orderSide = model.OrderSideSell
-		} else if order.OrderSide == model.OrderSideSell {
-			orderSide = model.OrderSideBuy
-		}
-		compOrder := api.PlaceOrder(account.Key, account.Secret, orderSide, model.OrderTypeMarket, order.Market, order.Symbol,
+		compOrder := api.PlaceOrder(account.Key, account.Secret, order.OrderSide, model.OrderTypeMarket, order.Market, order.Symbol,
 			``, model.FunctionComplement, order.Price, order.Price, order.Amount-order.DealAmount, false, nil)
 		model.AppDB.Save(compOrder)
-		canceled, errCode, errMsg := api.CancelOrder(account.Key, account.Secret, order.Market, order.Symbol, order.OrderType, order.OrderId)
-		util.Notice(fmt.Sprintf(`post handle cancel order %s %s %s %v %s %s not deal %f, comp %v`,
-			order.Market, order.Symbol, order.OrderSide, canceled, errCode, errMsg, leftAmt, compOrder))
+		canceled, errCode, errMsg := api.CancelOrder(account.Key, account.Secret, order.Market, order.Symbol, model.OrderTypeLimit, order.OrderId)
+		util.Notice(fmt.Sprintf(`post handle cancel order side %s %s %s %v type %s code %s msg %s not deal %f, comp %v`,
+			order.Market, order.Symbol, order.OrderSide, canceled, order.OrderType, errCode, errMsg, leftAmt, compOrder))
 	} else {
 		util.Notice(fmt.Sprintf(`post handle done %s %s %s %s %f`,
 			order.Market, order.Symbol, order.OrderId, order.OrderType, order.DealAmount))
