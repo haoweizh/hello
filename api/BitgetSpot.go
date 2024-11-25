@@ -269,17 +269,20 @@ func getBalanceBitgetSpot(key string, secret string) (success bool, balances []*
 func placeOrderBitgetSpot(key, secret string, order *model.Order, orderSide, orderType, symbol string, price, amount float64) {
 	priceSpot, decimalSpot := model.FormatPrice(model.BitgetSpot, symbol, price)
 	priceStr := util.CutTailZero(strconv.FormatFloat(priceSpot, 'f', decimalSpot, 64))
+	ordType := ``
+	if orderType == model.OrderTypeMarket {
+		ordType = `market`
+		if orderSide == model.OrderSideBuy {
+			amount = amount * priceSpot
+		}
+	} else if orderType == model.OrderTypeLimit {
+		ordType = `limit`
+	}
 	amountStr := util.CutTailZero(fmt.Sprintf(`%f`, model.GetAmountInMarket(model.BitgetSpot, symbol, amount, priceSpot, false)))
 	success, _, _, dialectSymbol := model.GetFromStandard(model.BitgetSpot, symbol)
 	if !success {
 		util.Notice("fail to place spot order, GetFromStandard: " + symbol)
 		return
-	}
-	ordType := ``
-	if orderType == model.OrderTypeMarket {
-		ordType = `market`
-	} else if orderType == model.OrderTypeLimit {
-		ordType = `limit`
 	}
 	client := dtos.BitgetRestClient{BaseUrl: bitgetRestUrl, Passphrase: model.AppConfig.Phase, ApiKey: key, ApiSecretKey: secret}
 	params := map[string]interface{}{
