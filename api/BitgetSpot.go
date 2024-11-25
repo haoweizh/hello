@@ -49,7 +49,6 @@ func maintainConnsBitget(market string, accounts []*model.Account) {
 }
 
 var wsOrderConnHandlerBitgetSpot = func(market, key string, event []byte) {
-	fmt.Println(string(event))
 	value, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrderUpdate, market, key)
 	if value == nil || value.(*model.WSConn).Conn == nil {
 		return
