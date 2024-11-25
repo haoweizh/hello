@@ -541,7 +541,7 @@ func equalCoin(coin string, statuses []*CarryStatus) (isEqual bool, holdingInU f
 	if holdingInU > SmallInU {
 		orderSide = model.OrderSideSell
 		sort.Sort(sort.Reverse(bids))
-		util.Notice(fmt.Sprintf(`need equal no tick %s, %s sell holding %f worth %f  list %s %v`,
+		util.Notice(fmt.Sprintf(`need equal no tick %s, %s sell holding %f worth %f list %s %v`,
 			coin, noTicks, holding, holdingInU, holdStr, bids))
 		for i := 0; i < len(bids); i++ {
 			status := bidStatus[fmt.Sprintf(`%s_%s`, bids[i].Market, bids[i].Symbol)]
