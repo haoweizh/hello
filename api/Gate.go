@@ -785,6 +785,11 @@ func placeOrderGate(account *model.Account, isWs bool, order *model.Order, order
 	client, ctx := getClientGate(account.Key, account.Secret)
 	orderPrice, decimal := model.FormatPrice(model.Gate, symbol, price)
 	orderPriceStr := util.CutTailZero(strconv.FormatFloat(orderPrice, 'f', decimal, 64))
+	tif := `gtc`
+	if orderType == model.OrderTypeMarket {
+		orderPriceStr = `0`
+		tif = `ioc`
+	}
 	success, marketType, _, dialectSymbol := model.GetFromStandard(model.Gate, symbol)
 	order.Symbol = symbol
 	order.Price = orderPrice
@@ -793,13 +798,13 @@ func placeOrderGate(account *model.Account, isWs bool, order *model.Order, order
 	}
 	ts := time.Now().Unix()
 	if marketType == model.MarketTypeSpot {
-		relatedOrder := gateApi.Order{Price: orderPriceStr, Side: orderSide, CurrencyPair: dialectSymbol, Type: orderType}
+		relatedOrder := gateApi.Order{Price: orderPriceStr, Side: orderSide, CurrencyPair: dialectSymbol, Type: orderType, TimeInForce: tif}
 		relatedOrder.Account = "spot"
 		relatedOrder.Amount = util.CutTailZero(fmt.Sprintf(`%f`, model.GetAmountInMarket(model.Gate, symbol, amount, price, false)))
 		util.SocketInfo(`create spot order request: %v`, relatedOrder)
 		if isWs {
 			param := map[string]interface{}{"text": `t-` + order.OrderId, `currency_pair`: dialectSymbol, `type`: orderType,
-				`account`: `spot`, `side`: orderSide, `amount`: relatedOrder.Amount, `price`: orderPriceStr}
+				`account`: `spot`, `side`: orderSide, `amount`: relatedOrder.Amount, `price`: orderPriceStr, `time_in_force`: tif}
 			reqMap := map[string]interface{}{`time`: ts, `channel`: `spot.order_place`, `event`: `api`,
 				`payload`: map[string]interface{}{`req_id`: order.OrderId, `req_param`: param}}
 			wsOrderMsg := util.JsonEncodeToByte(reqMap)
@@ -823,9 +828,6 @@ func placeOrderGate(account *model.Account, isWs bool, order *model.Order, order
 				//order.Symbol = createOrder.CurrencyPair
 				secondUnix, _ := strconv.ParseInt(createOrder.CreateTime, 10, 64)
 				order.OrderTime = time.Unix(secondUnix, 0)
-				if orderPriceStr != createOrder.Price {
-					util.Notice(fmt.Sprintf(`diff spot price req %s resp %s`, orderPriceStr, createOrder.Price))
-				}
 				order.Price, _ = strconv.ParseFloat(createOrder.Price, 64)
 				order.OrderSide = createOrder.Side
 				order.Amount, _ = strconv.ParseFloat(createOrder.Amount, 64)
@@ -838,7 +840,7 @@ func placeOrderGate(account *model.Account, isWs bool, order *model.Order, order
 			}
 		}
 	} else if marketType == model.MarketTypePerp {
-		futuresOrder := gateApi.FuturesOrder{Price: orderPriceStr, Contract: dialectSymbol}
+		futuresOrder := gateApi.FuturesOrder{Price: orderPriceStr, Contract: dialectSymbol, Tif: tif}
 		futuresOrder.Size, _ = strconv.ParseInt(util.CutTailZero(
 			fmt.Sprintf(`%f`, model.GetAmountInMarket(model.Gate, symbol, amount, price, false))), 10, 64)
 		if orderSide == model.OrderSideSell {
@@ -847,7 +849,7 @@ func placeOrderGate(account *model.Account, isWs bool, order *model.Order, order
 		util.SocketInfo(`create future order request: %v`, futuresOrder)
 		if isWs {
 			param := map[string]interface{}{`contract`: dialectSymbol, `size`: futuresOrder.Size,
-				`price`: orderPriceStr, `tif`: `gtc`, `text`: `t-` + order.OrderId}
+				`price`: orderPriceStr, `tif`: tif, `text`: `t-` + order.OrderId}
 			reqMap := map[string]interface{}{`time`: ts, `channel`: `futures.order_place`, `event`: `api`,
 				`payload`: map[string]interface{}{`req_id`: order.OrderId, `req_param`: param}}
 			wsOrderMsg := util.JsonEncodeToByte(reqMap)
@@ -872,9 +874,6 @@ func placeOrderGate(account *model.Account, isWs bool, order *model.Order, order
 				}
 				order.OrderId = strconv.FormatInt(createFuturesOrder.Id, 10)
 				order.OrderTime = time.Unix(int64(createFuturesOrder.CreateTime), 0)
-				if orderPriceStr != createFuturesOrder.Price {
-					util.Notice(fmt.Sprintf(`diff future price req %s resp %s`, orderPriceStr, createFuturesOrder.Price))
-				}
 				order.Price, _ = strconv.ParseFloat(createFuturesOrder.Price, 64)
 				_, order.Amount = model.ParseRealAmount(model.Gate, order.Symbol, float64(createFuturesOrder.Size))
 				order.Status = model.CarryStatusWorking
