@@ -348,7 +348,7 @@ func ClearCross() {
 				return true
 			})
 			if leftOrders > 0 {
-				util.NoticeLess(`left orders is %d`, leftOrders)
+				util.Notice(`left orders is %d`, leftOrders)
 			} else {
 				break
 			}
