@@ -272,13 +272,13 @@ func placeOrderBitgetSpot(key, secret string, order *model.Order, orderSide, ord
 	ordType := ``
 	if orderType == model.OrderTypeMarket {
 		ordType = `market`
-		if orderSide == model.OrderSideBuy {
-			amount = amount * priceSpot
-		}
 	} else if orderType == model.OrderTypeLimit {
 		ordType = `limit`
 	}
 	amountStr := util.CutTailZero(fmt.Sprintf(`%f`, model.GetAmountInMarket(model.BitgetSpot, symbol, amount, priceSpot, false)))
+	if orderSide == model.OrderSideBuy && orderType == model.OrderTypeMarket {
+		amountStr = fmt.Sprintf(`%f`, amount*priceSpot)
+	}
 	success, _, _, dialectSymbol := model.GetFromStandard(model.BitgetSpot, symbol)
 	if !success {
 		util.Notice("fail to place spot order, GetFromStandard: " + symbol)

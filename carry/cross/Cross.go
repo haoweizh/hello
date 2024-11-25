@@ -1153,7 +1153,7 @@ func handleCross(account *model.Account, order *model.Order) {
 		compOrder := api.PlaceOrder(account.Key, account.Secret, order.OrderSide, model.OrderTypeMarket, order.Market, order.Symbol,
 			``, model.FunctionComplement, order.Price, order.Price, order.Amount-order.DealAmount, false, nil)
 		model.AppDB.Save(compOrder)
-		util.Notice(fmt.Sprintf(`post handle cancel order %s side %s %s %s %v type %s code %s msg %s not deal %f, comp %v`,
+		util.Notice(fmt.Sprintf(`post handle cancel order %s %s %s side %s %v type %s code %s msg %s not deal %f, comp %v`,
 			order.OrderId, order.Market, order.Symbol, order.OrderSide, canceled, order.OrderType, errCode, errMsg, leftAmt, compOrder))
 	} else {
 		util.Notice(fmt.Sprintf(`post handle done %s %s %s %s %f`,

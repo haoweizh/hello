@@ -519,8 +519,8 @@ func Test_download(t *testing.T) {
 
 func Test_Order(t *testing.T) {
 	model.NewConfig()
-	market := model.Gate
-	symbol := `RIFSOL_USDT`
+	market := model.BitgetSpot
+	symbol := `BENDOG_USDT`
 	account := model.GetAccounts(0)[market]
 	//_, listKey := api.RenewListenKeyBinance(account, market)
 	//api.ExtendListenKeyBinance(account, market, listKey)
@@ -528,8 +528,8 @@ func Test_Order(t *testing.T) {
 	//go model.AppEnvironment.HandleWSResp()
 	//api.MaintainConns(market)
 	//time.Sleep(time.Second * 5)
-	order := api.PlaceOrder(account.Key, account.Secret, model.OrderSideSell, model.OrderTypeLimit, market, symbol, ``,
-		`test`, 0.1, 0.1, 152.996850, false, nil)
+	order := api.PlaceOrder(account.Key, account.Secret, model.OrderSideBuy, model.OrderTypeMarket, market, symbol, ``,
+		`test`, 0.011788999999999999, 0.011788999999999999, 232.4550, false, nil)
 	api.CancelOrder(account.Key, account.Secret, market, symbol, model.OrderTypeLimit, order.OrderId)
 	fmt.Println(order)
 	select {}
