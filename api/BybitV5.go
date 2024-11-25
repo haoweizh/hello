@@ -752,12 +752,12 @@ func placeOrderBybit(account *model.Account, isWs bool, order *model.Order, orde
 		tradeOrderType = "Market"
 	}
 	param := map[string]interface{}{
-		"symbol":    dialectSymbol,
-		"side":      tradeSide,
-		"orderType": tradeOrderType,
-		"qty":       amountStr,
-		"price":     priceStr,
-	}
+		"symbol":     dialectSymbol,
+		"side":       tradeSide,
+		"orderType":  tradeOrderType,
+		"qty":        amountStr,
+		"price":      priceStr,
+		`marketUnit`: `baseCoin`}
 	if marketType == model.MarketTypePerp {
 		param["category"] = "linear"
 	} else {
