@@ -666,10 +666,6 @@ func placeOrderOKEX(account *model.Account, isWs bool, order *model.Order) {
 	amount := util.CutTailZero(fmt.Sprintf(`%f`, formattedAmount))
 	order.Price = price
 	order.TriggerPrice = priceTrigger
-	if order.OrderType == model.OrderTypeMarket {
-		usdAmount, _ := strconv.ParseFloat(amount, 64)
-		amount = util.CutTailZero(fmt.Sprintf(`%f`, usdAmount*order.Price))
-	}
 	orderAmountReal, _ := strconv.ParseFloat(amount, 64)
 	_, order.Amount = model.ParseRealAmount(model.OKEX, order.Symbol, orderAmountReal)
 	if (price == 0 && order.OrderType != model.OrderTypeTrailStop) || formattedAmount == 0 {
@@ -693,9 +689,13 @@ func placeOrderOKEX(account *model.Account, isWs bool, order *model.Order) {
 		postData[`callbackRatio`] = triggerPriceStr
 		postData[`algoClOrdId`] = fmt.Sprintf(`%d%s%d%s`, account.Index, OKSeparator, time.Now().Nanosecond(), order.OrderSide)
 		path = `/api/v5/trade/order-algo`
-	} else {
+	} else if order.OrderType == model.OrderTypeLimit {
 		postData[`clOrdId`] = fmt.Sprintf(`%d%s%d%s`, account.Index, OKSeparator, time.Now().Nanosecond(), order.OrderSide)
 		postData[`px`] = priceStr
+	} else if order.OrderType == model.OrderTypeMarket {
+		postData[`clOrdId`] = fmt.Sprintf(`%d%s%d%s`, account.Index, OKSeparator, time.Now().Nanosecond(), order.OrderSide)
+		postData[`px`] = priceStr
+		postData[`tgtCcy`] = `base_ccy`
 	}
 	if isWs {
 		// 通过ws的symbol需要处理成方言，通过rest的无需处理，已统一在发送的函数中处理
