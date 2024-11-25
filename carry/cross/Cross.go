@@ -341,13 +341,20 @@ func ClearCross() {
 				time.Sleep(time.Millisecond * 10)
 			}
 		}
+		for {
+			leftOrders := 0
+			model.AppEnvironment.CrossOrders.Range(func(k, v interface{}) bool {
+				leftOrders++
+				return true
+			})
+			if leftOrders > 0 {
+				util.NoticeLess(`left orders is %d`, leftOrders)
+			} else {
+				break
+			}
+			time.Sleep(time.Second * 10)
+		}
 		today := util.GetNow()
-		//if model.StartTime.Add(time.Minute * 5).After(today) {
-		//	util.Notice(fmt.Sprintf(`do not equal before start + 5 min %s`, model.StartTime.String()))
-		//	api.CheckSetProcessing(model.FunctionCross, model.FunctionCross, model.FunctionCross, false)
-		//	time.Sleep(time.Minute)
-		//	continue
-		//}
 		today = time.Date(today.Year(), today.Month(), today.Day(), 0, 0, 0, 0, today.Location())
 		carryRows, _ := model.AppDB.Model(model.Order{}).Select(`sum(price*abs(amount)),refresh_type`).
 			Where(`order_time>?`, today).Group(`refresh_type`).Rows()
@@ -379,7 +386,7 @@ func ClearCross() {
 			}
 		}
 		api.CheckSetProcessing(model.FunctionCross, model.FunctionCross, model.FunctionCross, false)
-		time.Sleep(time.Minute * 1)
+		time.Sleep(time.Hour * 1)
 	}
 }
 
@@ -1128,16 +1135,35 @@ func placeStatus(status *CarryStatus, price float64, amount float64) {
 	util.StoreSyncMap(&lastCrosses, status.symbol, account.Key, status.market)
 }
 
-func handleCross(environment *model.Environment, orderId string) {
+func handleCross(account *model.Account, order *model.Order) {
 	time.Sleep(time.Minute)
-	value, _ := environment.CrossOrders.Load(orderId)
-	if value != nil {
-		order := value.(*model.Order)
-		if order.Status == model.CarryStatusWorking && order.DealAmount < order.Amount {
-			fmt.Println(fmt.Sprintf(`order %s %s not deal %f`,
-				order.Market, order.Symbol, order.Amount-order.DealAmount))
-		}
+	model.AppDB.Save(order)
+	v, _ := util.LoadSyncMap(model.MarketInfos, order.Market, order.Symbol)
+	var marketInfo *model.MarketInfo
+	if v != nil {
+		marketInfo = v.(*model.MarketInfo)
+	} else {
+		return
 	}
+	leftAmt := order.Amount - order.DealAmount
+	if leftAmt > marketInfo.SizeMin {
+		orderSide := ``
+		if order.OrderSide == model.OrderSideBuy {
+			orderSide = model.OrderSideSell
+		} else if order.OrderSide == model.OrderSideSell {
+			orderSide = model.OrderSideBuy
+		}
+		compOrder := api.PlaceOrder(account.Key, account.Secret, orderSide, model.OrderTypeMarket, order.Market, order.Symbol,
+			``, model.FunctionComplement, order.Price, order.Price, order.Amount-order.DealAmount, false, nil)
+		model.AppDB.Save(compOrder)
+		canceled, errCode, errMsg := api.CancelOrder(account.Key, account.Secret, order.Market, order.Symbol, order.OrderType, order.OrderId)
+		util.Notice(fmt.Sprintf(`post handle cancel order %s %s %s %v %s %s not deal %f, comp %v`,
+			order.Market, order.Symbol, order.OrderSide, canceled, errCode, errMsg, leftAmt, compOrder))
+	} else {
+		util.Notice(fmt.Sprintf(`post handle done %s %s %s %s %f`,
+			order.Market, order.Symbol, order.OrderId, order.OrderType, order.DealAmount))
+	}
+	model.AppEnvironment.CrossOrders.Delete(order.OrderId)
 }
 
 var PostOrderCross = func(order *model.Order) {
@@ -1149,9 +1175,8 @@ var PostOrderCross = func(order *model.Order) {
 		util.Notice(fmt.Sprintf(`fail to get setting %s %s %s`, model.FunctionCross, order.Market, order.Symbol))
 		return
 	}
-	go handleCross(model.AppEnvironment, order.OrderId)
-	model.AppDB.Save(order)
 	account := model.AppConfig.GetAccountFromKeyIndex(order.Market, ``, order.AccountIndex)
+	go handleCross(account, order)
 	if order.HaveId() && order.Status == model.CarryStatusSuccess {
 		addLastCarry(order, setting)
 		addCarryResult(account.Key, order.Market, ``, true)

@@ -90,8 +90,8 @@ func (environment *Environment) HandleWSResp() {
 			}
 			environment.CrossOrders.Store(wsResp.OrderId, order)
 			environment.WSOrderMap.Delete(wsResp.RequestId)
-			util.Notice(fmt.Sprintf(`del request id %s store order order %s %s %s`,
-				wsResp.RequestId, order.Market, order.Symbol, order.OrderId))
+			util.Notice(fmt.Sprintf(`del request id %s store order %s %s type %s id %s`,
+				wsResp.RequestId, order.Market, order.Symbol, order.RefreshType, order.OrderId))
 			if AccountHandlerMap[order.RefreshType] != nil {
 				AccountHandlerMap[order.RefreshType](order)
 			}

@@ -193,6 +193,7 @@ func WebSocketClient(market, url string, subscribes []interface{}, subHandler Su
 		}
 		msgChans = append(msgChans, stopChan)
 		socketMap[connection] = true
+		time.Sleep(time.Millisecond * 10)
 	}
 	util.Info(fmt.Sprintf(`ws client add conns %s sockets %d msgChans %d`, market, len(socketMap), len(msgChans)))
 	return
