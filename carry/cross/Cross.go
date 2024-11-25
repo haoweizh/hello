@@ -814,10 +814,6 @@ func checkTradeLine(statusBuy, statusSell *CarryStatus, score, price float64) (v
 
 func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarryStatus, tick, tickRelate *model.BidAsk) (
 	statusBuy, statusSell *CarryStatus, amount, priceBuy, priceSell float64, tickBuy, tickSell *model.BidAsk) {
-	now := time.Now()
-	if now.Minute() <= 5 && (carryStatus.market == model.Ftx || carryStatusRelate.market == model.Ftx) {
-		return
-	}
 	stopStatus, okStatus := carryStop.Load(carryStatus.account.Key)
 	stopRelate, okRelate := carryStop.Load(carryStatusRelate.account.Key)
 	if (okStatus && stopStatus.(bool)) || (okRelate && stopRelate.(bool)) {
@@ -1255,6 +1251,12 @@ func FormatCrossPair(marketBuy, marketSell, symbolBuy, symbolSell string, amount
 	success, _, coin, _ = model.GetFromStandard(marketSell, symbolSell)
 	if success && marketInfoSell.CTCurrency == coin && marketInfoSell.CTValue > 0 {
 		incSell, minSell = incSell*marketInfoSell.CTValue, minSell*marketInfoSell.CTValue
+	}
+	if marketBuy == model.Bybit {
+		minBuy = math.Max(5.5/price, minBuy)
+	}
+	if marketSell == model.Bybit {
+		minSell = math.Max(5.5/price, minSell)
 	}
 	sizeInc := math.Max(incBuy, incSell)
 	formattedAmount = math.Floor(amount/sizeInc) * sizeInc

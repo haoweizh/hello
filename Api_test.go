@@ -519,14 +519,14 @@ func Test_download(t *testing.T) {
 
 func Test_Order(t *testing.T) {
 	model.NewConfig()
-	market := model.BitgetPerp
+	market := model.Bybit
 	//symbol := `ASTR_USDT`
 	//account := model.GetAccounts(0)[market]
 	//_, listKey := api.RenewListenKeyBinance(account, market)
 	//api.ExtendListenKeyBinance(account, market, listKey)
+	api.InitMarketInfos(market)
 	go model.AppEnvironment.HandleWSResp()
 	api.MaintainConns(market)
-	//api.InitMarketInfos(market)
 	//time.Sleep(time.Second * 5)
 	//order := api.PlaceOrder(account.Key, account.Secret, model.OrderSideBuy, model.OrderTypeLimit, market, symbol, ``,
 	//	`test`, 0.066, 0.066, 200, true, nil, nil)
