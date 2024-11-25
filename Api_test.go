@@ -519,7 +519,7 @@ func Test_download(t *testing.T) {
 
 func Test_Order(t *testing.T) {
 	model.NewConfig()
-	market := model.BitgetSpot
+	market := model.BinanceSpot
 	symbol := `BENDOG_USDT`
 	account := model.GetAccounts(0)[market]
 	//_, listKey := api.RenewListenKeyBinance(account, market)

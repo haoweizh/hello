@@ -61,7 +61,7 @@ func GetMarketsBinance(account *model.Account, market string) (marketInfos map[s
 				if data[`stepSize`] != nil {
 					marketInfo.SizeIncrement, _ = strconv.ParseFloat(data[`stepSize`].(string), 64)
 				}
-			} else if filterType == `MIN_NOTIONAL` {
+			} else if filterType == `NOTIONAL` {
 				if data[`minNotional`] != nil {
 					marketInfo.MoneyMin, _ = strconv.ParseFloat(data[`minNotional`].(string), 64)
 				} else if tail == `_USDT` {
