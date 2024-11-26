@@ -142,7 +142,7 @@ func WsKLineBinanceSpot(environment *model.Environment, market string, symbols m
 	return
 }
 
-var wsHandlerBinanceSpot = func(market string, event []byte) {
+var wsHandlerBinance = func(market string, event []byte) {
 	result, wsErr := util.NewJSON(event)
 	if wsErr != nil {
 		util.Notice(`binance fail to unmarshal json ` + wsErr.Error())

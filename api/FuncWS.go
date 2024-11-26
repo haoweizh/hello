@@ -12,7 +12,6 @@ import (
 func GetWSSubscribes(market string, subTypes []string) []interface{} {
 	symbols := GetMarketSymbols(market)
 	subscribes := make([]interface{}, 0)
-	symbols = map[string]bool{`BTC_PERP`: true}
 	for symbol := range symbols {
 		if len(strings.Trim(symbol, ` `)) == 0 {
 			continue
@@ -123,7 +122,7 @@ func CreateWSTick(environment *model.Environment, market string) (
 			subscribeHandlerOKEX, wsHandlerOKEX, wsStepOKEX)
 	case model.BinanceSpot, model.BinanceMargin:
 		socketMap, channels, err = WebSocketClient(market, wsBinance+`/stream`, GetWSSubscribes(market, []string{model.SubscribeTicker}),
-			subscribeHandlerBinance, wsHandlerBinanceSpot, wsStepBinance)
+			subscribeHandlerBinance, wsHandlerBinance, wsStepBinance)
 	case model.BinancePerp:
 		socketMap, channels, err = WebSocketClient(market, wsBinancePerp+`/stream`, GetWSSubscribes(
 			market, []string{model.SubscribeTicker, model.SubscribeMarkPrice}), subscribeHandlerBinance, wsHandlerBinancePerp, wsStepBinance)
