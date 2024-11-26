@@ -173,13 +173,17 @@ func (environment *Environment) GetBidAsk(market, symbol string) (result bool, b
 
 func (environment *Environment) SetBidAsk(market, symbol string, bidAsk *BidAsk) bool {
 	if bidAsk == nil || bidAsk.Bids == nil || bidAsk.Asks == nil || bidAsk.Bids.Len() == 0 || bidAsk.Asks.Len() == 0 {
-		//util.SocketInfo(fmt.Sprintf(`do not set nil or empty bid ask %s %s data:%v`, marketName, symbol, bidAsk))
+		if market == BinancePerp {
+			util.SocketInfo(fmt.Sprintf(`do not set nil or empty bid ask %s %s data:%v`, market, symbol, bidAsk))
+		}
 		return false
 	}
 	if bidAsk.Bids[0].Price >= bidAsk.Asks[0].Price || bidAsk.Bids[0].Price == 0 || bidAsk.Bids[0].Amount == 0 ||
 		bidAsk.Asks[0].Price == 0 || bidAsk.Asks[0].Amount == 0 {
-		util.NoticeLess(fmt.Sprintf(`do not set mistake %s %s bid %f ask %f data: %v`,
-			market, symbol, bidAsk.Bids[0].Price, bidAsk.Asks[0].Price, bidAsk))
+		if market == BinancePerp {
+			util.Notice(fmt.Sprintf(`do not set mistake %s %s bid %f ask %f data: %v`,
+				market, symbol, bidAsk.Bids[0].Price, bidAsk.Asks[0].Price, bidAsk))
+		}
 		return false
 	}
 	//_, _, coin, _ := GetFromStandard(marketName, symbol)
