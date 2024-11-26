@@ -58,6 +58,7 @@ func SendToConnections(market string, connections map[*websocket.Conn]bool, msgT
 				//SetRequireReset(market)
 			}
 		}
+		time.Sleep(time.Millisecond * 20)
 	}
 	if err != nil {
 		util.Notice(fmt.Sprintf(`fail to write to all connection %s %s return: %s`, market, msg, err.Error()))
@@ -183,6 +184,8 @@ func WebSocketClient(market, url string, subscribes []interface{}, subHandler Su
 			if errPing != nil {
 				util.Notice(fmt.Sprintf(`fail to handle ping %s %s %s`, market, url, errPing.Error()))
 				//SetRequireReset(market)
+			} else {
+				fmt.Println(fmt.Sprintf("success to handle ping %s %s ping data %s", market, url, appData))
 			}
 			return errPing
 		})

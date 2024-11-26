@@ -72,7 +72,7 @@ func MaintainConnsBinance(market string, accounts []*model.Account) {
 				WsOrderServeBinance(account, market)
 			}
 		}
-		time.Sleep(time.Minute * 2)
+		time.Sleep(time.Minute * 5)
 	}
 }
 
