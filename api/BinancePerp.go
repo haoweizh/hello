@@ -154,6 +154,11 @@ var wsHandlerBinancePerp = func(market string, event []byte) {
 		util.Notice(`binance fail to unmarshal json ` + wsErr.Error())
 		return
 	}
+	id := result.Get("id").MustInt()
+	if id > 0 {
+		subIdBinance.Store(id, false)
+		return
+	}
 	subscribe, _ := result.Get("stream").String()
 	result = result.Get(`data`)
 	if result == nil {

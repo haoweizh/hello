@@ -12,12 +12,12 @@ import (
 	"github.com/gorilla/websocket"
 	"hello/model"
 	"hello/util"
-	"math/rand"
 	"net/http"
 	"net/url"
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -25,7 +25,7 @@ const restBinance = `https://api.binance.com`
 const restDataBinance = `https://data.binance.com`
 const wsBinance = "wss://stream.binance.com:9443"
 const wsBinanceSpotApi = `wss://ws-api.binance.com:443/ws-api/v3`
-const wsStepBinance = 9
+const wsStepBinance = 60
 
 func GetMarketsBinance(account *model.Account, market string) (marketInfos map[string]*model.MarketInfo) {
 	util.Notice(fmt.Sprintf("start to GetMarketsBinance %s", account.Key))
@@ -142,10 +142,15 @@ func WsKLineBinanceSpot(environment *model.Environment, market string, symbols m
 	return
 }
 
-var wsHandlerBinance = func(market string, event []byte) {
+var wsHandlerBinanceSpot = func(market string, event []byte) {
 	result, wsErr := util.NewJSON(event)
 	if wsErr != nil {
 		util.Notice(`binance fail to unmarshal json ` + wsErr.Error())
+		return
+	}
+	id := result.Get(`id`).MustInt()
+	if id > 0 {
+		subIdBinance.Store(id, false)
 		return
 	}
 	subscribe, _ := result.Get("stream").String()
@@ -179,18 +184,30 @@ var wsHandlerBinance = func(market string, event []byte) {
 	}
 }
 
-var subscribeHandlerBinance = func(market string, connection *websocket.Conn, subscribes []interface{}) error {
-	var err error = nil
+var subIdBinance sync.Map
+
+var subscribeHandlerBinance = func(market string, connection *websocket.Conn, subscribes []interface{}) (err error) {
 	subParam := make(map[string]interface{})
 	subParam["method"] = "SUBSCRIBE"
 	subParam["params"] = subscribes
-	subParam["id"] = int(rand.Float64() * 10000)
+	txId := time.Now().UnixMilli()
+	subParam["id"] = txId
 	subParamJson, _ := json.Marshal(subParam)
-	if err = SendToConnection(market, connection, subParamJson); err != nil {
-		util.SocketInfo("binance spot can not subscribe %s %s", subParamJson, err.Error())
+	subIdBinance.Store(txId, true)
+	for {
+		if err = SendToConnection(market, connection, subParamJson); err != nil {
+			util.SocketInfo("binance spot can not subscribe %s %s", subParamJson, err.Error())
+		}
+		util.Notice(`%s send subscribe: %s `, market, subParamJson)
+		time.Sleep(time.Millisecond * 300)
+		loadIdBool, _ := subIdBinance.Load(txId)
+		if loadIdBool.(bool) {
+			break
+		} else {
+			fmt.Println(txId)
+			util.Notice(`%s retry subscribe %s `, market)
+		}
 	}
-	util.Notice(`%s send subscribe: %s `, market, subParamJson)
-	time.Sleep(time.Millisecond * 10)
 	return err
 }
 
