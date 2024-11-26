@@ -34,7 +34,7 @@ var ProcessGrid = func(setting *model.Setting, tick *model.BidAsk) {
 	account := model.AppConfig.GetAccounts(setting.Market)[0]
 	now := util.GetNowUnixMillion()
 	maintaining, _ := model.ChannelMaintaining.Load(setting.Market)
-	_, tickRelated := model.AppEnvironment.GetBidAsk(setting.SymbolRelated, setting.MarketRelated)
+	_, tickRelated := model.AppEnvironment.GetBidAsk(setting.MarketRelated, setting.SymbolRelated)
 	if tick == nil || tick.Asks == nil || tick.Bids == nil || model.AppConfig.Handle != `1` || account == nil ||
 		(maintaining != nil && maintaining.(bool)) || (model.AppConfig.Env != `test` && now-int64(tick.Ts) > 1000) ||
 		tickRelated == nil || tickRelated.Asks == nil || tickRelated.Bids == nil ||
@@ -292,7 +292,7 @@ var ProcessGridOrder = func(order *model.Order) {
 		return
 	}
 	for _, account := range accounts {
-		_, tickRelated := model.AppEnvironment.GetBidAsk(setting.SymbolRelated, setting.MarketRelated)
+		_, tickRelated := model.AppEnvironment.GetBidAsk(setting.MarketRelated, setting.SymbolRelated)
 		if account != nil && tickRelated != nil && tickRelated.Bids != nil && len(tickRelated.Bids) > 0 &&
 			tickRelated.Asks != nil && len(tickRelated.Asks) > 0 {
 			if order.Status == model.CarryStatusSuccess {

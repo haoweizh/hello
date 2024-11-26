@@ -168,7 +168,7 @@ var wsHandlerBinance = func(market string, event []byte) {
 	if market == model.BinanceMargin {
 		standardSymbol = coin + model.UniStandardTail[model.MarketTypeSpot]
 	}
-	haveOld, old := model.AppEnvironment.GetBidAsk(standardSymbol, market)
+	haveOld, old := model.AppEnvironment.GetBidAsk(market, standardSymbol)
 	if haveOld && old.UpdateId > updateId {
 		return
 	}
@@ -208,11 +208,11 @@ func handleTickerBinance(environment *model.Environment, json *simplejson.Json, 
 		bidAsk := model.BidAsk{Ts: ts, TsReceived: now, UpdateId: updateId,
 			Bids: []model.Tick{{Price: bidPrice, Amount: bidAmount, Market: market, Symbol: standardSymbol}},
 			Asks: []model.Tick{{Price: askPrice, Amount: askAmount, Market: market, Symbol: standardSymbol}}}
-		haveOld, old := environment.GetBidAsk(standardSymbol, market)
+		haveOld, old := environment.GetBidAsk(market, standardSymbol)
 		if haveOld && old.UpdateId > bidAsk.UpdateId {
 			return
 		}
-		if environment.SetBidAsk(standardSymbol, market, &bidAsk) {
+		if environment.SetBidAsk(market, standardSymbol, &bidAsk) {
 			funcHandlers := GetFunctions(market, standardSymbol)
 			if funcHandlers != nil {
 				funcHandlers.Range(func(function, value interface{}) bool {
@@ -255,7 +255,7 @@ func handleDepthBinance(environment *model.Environment, json *simplejson.Json, m
 	}
 	sort.Sort(bidAsk.Asks)
 	sort.Sort(sort.Reverse(bidAsk.Bids))
-	if environment.SetBidAsk(standardSymbol, market, &bidAsk) {
+	if environment.SetBidAsk(market, standardSymbol, &bidAsk) {
 		funcHandlers := GetFunctions(market, standardSymbol)
 		if funcHandlers != nil {
 			funcHandlers.Range(func(function, value interface{}) bool {

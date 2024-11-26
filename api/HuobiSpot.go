@@ -107,11 +107,11 @@ var wsHandlerHuobiSpot = func(market string, event []byte) {
 					Market: model.HuobiSpot, Symbol: symbol}},
 				Asks: []model.Tick{{Price: tickJson.Get("ask").MustFloat64(), Amount: tickJson.Get("askSize").MustFloat64(),
 					Market: model.HuobiSpot, Symbol: symbol}}}
-			haveOld, old := model.AppEnvironment.GetBidAsk(symbol, model.HuobiSpot)
+			haveOld, old := model.AppEnvironment.GetBidAsk(model.HuobiSpot, symbol)
 			if haveOld && old.UpdateId > bidAsk.UpdateId {
 				return
 			}
-			if model.AppEnvironment.SetBidAsk(symbol, model.HuobiSpot, &bidAsk) {
+			if model.AppEnvironment.SetBidAsk(model.HuobiSpot, symbol, &bidAsk) {
 				funcHandlers := GetFunctions(model.HuobiSpot, symbol)
 				if funcHandlers != nil {
 					funcHandlers.Range(func(function, value interface{}) bool {
@@ -179,11 +179,11 @@ var wsHandlerHuobiDM = func(market string, event []byte) {
 		}
 		bidAsk.Bids = []model.Tick{{Price: bidPrice, Amount: bidAmount, Market: model.HuobiSpot, Symbol: symbol}}
 		bidAsk.Asks = []model.Tick{{Price: askPrice, Amount: askAmount, Market: model.HuobiSpot, Symbol: symbol}}
-		haveOld, old := model.AppEnvironment.GetBidAsk(symbol, model.HuobiSpot)
+		haveOld, old := model.AppEnvironment.GetBidAsk(model.HuobiSpot, symbol)
 		if haveOld && old.UpdateId > bidAsk.UpdateId {
 			return
 		}
-		if model.AppEnvironment.SetBidAsk(symbol, model.HuobiPerp, &bidAsk) {
+		if model.AppEnvironment.SetBidAsk(model.HuobiPerp, symbol, &bidAsk) {
 			funcHandlers := GetFunctions(model.HuobiPerp, symbol)
 			if funcHandlers != nil {
 				funcHandlers.Range(func(function, value interface{}) bool {
@@ -631,7 +631,7 @@ func getBalanceHuobiSpot(key string, secret string) (success bool, balances []*m
 		balances = make([]*model.Balance, 0)
 		for _, balance := range balanceMap {
 			balance.Amount = balance.AvailableWithBorrow + balance.FrozenAmount - balance.Borrow
-			priceGet, bidAsk := model.AppEnvironment.GetBidAsk(balance.Coin+`usdt`, model.HuobiSpot)
+			priceGet, bidAsk := model.AppEnvironment.GetBidAsk(model.HuobiSpot, balance.Coin+`usdt`)
 			if priceGet {
 				balance.UsdValue = balance.Amount * bidAsk.Bids[0].Price
 			}

@@ -64,7 +64,7 @@ func maintainChannelMexc(subscribes []interface{}) {
 					continue
 				}
 				symbol := coin + model.UniStandardTail[marketType]
-				_, bidAsk := model.AppEnvironment.GetBidAsk(symbol, model.Mexc)
+				_, bidAsk := model.AppEnvironment.GetBidAsk(model.Mexc, symbol)
 				if bidAsk == nil || time.Now().UnixMilli()-int64(bidAsk.Ts) > 180000 {
 					needReset = true
 					break
@@ -105,8 +105,7 @@ var wsHandlerMexc = func(market string, event []byte) {
 			}
 			symbol := coin + model.UniStandardTail[marketType]
 			bidAsk := parseTicksMexc(symbol, resp.Ts, resp.Data.Version, resp.Data.Bids, resp.Data.Asks)
-			//fmt.Println(fmt.Sprintf(`%s %f %f ~ %f %f`, symbol, bidAsk.Bids[0].Price, bidAsk.Bids[0].Amount, bidAsk.Asks[0].Price, bidAsk.Asks[0].Amount))
-			if model.AppEnvironment.SetBidAsk(symbol, model.Mexc, bidAsk) {
+			if model.AppEnvironment.SetBidAsk(model.Mexc, symbol, bidAsk) {
 				funcHandlers := GetFunctions(model.Mexc, symbol)
 				if funcHandlers != nil {
 					funcHandlers.Range(func(function, value interface{}) bool {
@@ -190,7 +189,7 @@ func initMexcContractDepth(environment *model.Environment, symbol string) {
 			string(respBytes), symbol, resp.Success, err))
 		return
 	}
-	environment.SetBidAsk(symbol, model.Mexc, parseTicksMexc(symbol, resp.Data.Timestamp, resp.Data.Version, resp.Data.Bids, resp.Data.Asks))
+	environment.SetBidAsk(model.Mexc, symbol, parseTicksMexc(symbol, resp.Data.Timestamp, resp.Data.Version, resp.Data.Bids, resp.Data.Asks))
 }
 
 // endregion

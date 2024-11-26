@@ -33,7 +33,7 @@ var ProcessQueue = func(setting *model.Setting, tick *model.BidAsk) {
 	}
 	now := util.GetNowUnixMillion()
 	maintaining, _ := model.ChannelMaintaining.Load(setting.Market)
-	_, tickLiq := model.AppEnvironment.GetBidAsk(setting.SymbolRelated, setting.MarketRelated)
+	_, tickLiq := model.AppEnvironment.GetBidAsk(setting.MarketRelated, setting.SymbolRelated)
 	if tick == nil || tick.Asks == nil || len(tick.Asks) == 0 || tick.Bids == nil || len(tick.Bids) == 0 ||
 		model.AppConfig.Handle != `1` || tickLiq == nil || tickLiq.Asks == nil ||
 		tickLiq.Bids == nil || len(tickLiq.Bids) == 0 || len(tickLiq.Asks) == 0 ||
@@ -238,7 +238,7 @@ var ProcessQueueLiq = func(order *model.Order) {
 		return
 	}
 	for _, account := range accounts {
-		_, tickRelated := model.AppEnvironment.GetBidAsk(setting.SymbolRelated, setting.MarketRelated)
+		_, tickRelated := model.AppEnvironment.GetBidAsk(setting.MarketRelated, setting.SymbolRelated)
 		if account != nil && tickRelated != nil && tickRelated.Bids != nil && len(tickRelated.Bids) > 0 &&
 			tickRelated.Asks != nil && len(tickRelated.Asks) > 0 {
 			if order.Status == model.CarryStatusSuccess {

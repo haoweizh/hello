@@ -277,7 +277,7 @@ func initStatus(account *model.Account, setting *model.Setting, absentRevert boo
 func initTradeLine(account *model.Account, setting *model.Setting, status *CarryStatus, doRevert bool) {
 	standardScoreBuy := math.Max(standardScoreOpen, setting.OpenShortMargin)
 	standardScoreSell := math.Max(standardScoreOpen, setting.OpenShortMargin)
-	getTick, ticks := model.AppEnvironment.GetBidAsk(setting.Symbol, setting.Market)
+	getTick, ticks := model.AppEnvironment.GetBidAsk(setting.Market, setting.Symbol)
 	price := 0.0
 	if getTick {
 		price = ticks.Asks[0].Price
@@ -488,7 +488,7 @@ func equalCoin(coin string, statuses []*CarryStatus) (isEqual bool, holdingInU f
 		}
 		holding += status.Holding
 		holdStr += fmt.Sprintf(`[%s %s %f]`, status.market, status.symbol, status.Holding)
-		getTick, tick := model.AppEnvironment.GetBidAsk(status.symbol, status.market)
+		getTick, tick := model.AppEnvironment.GetBidAsk(status.market, status.symbol)
 		getFunding, rate := api.GetFundingRate(status.account.Key, status.account.Secret, status.market, status.symbol)
 		if !getTick || !getFunding || rate == nil {
 			noTicks += coin + status.market
@@ -622,7 +622,7 @@ func equalCoin(coin string, statuses []*CarryStatus) (isEqual bool, holdingInU f
 			amount = math.Min(90000000, math.Abs(holding))
 		}
 		amount = math.Min(amount, compLimitInU/price)
-		getTick, tick := model.AppEnvironment.GetBidAsk(equalStatus.symbol, equalStatus.market)
+		getTick, tick := model.AppEnvironment.GetBidAsk(equalStatus.market, equalStatus.symbol)
 		if !getTick {
 			equalStatus.AvailableBuy, equalStatus.AvailableSell = 0, 0
 			util.Notice(`no tick when equal return %s %s %s`, coin, equalStatus.symbol, equalStatus.market)
@@ -711,7 +711,7 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 		return
 	}
 	for _, settingRelate := range settings {
-		tickGet, tickRelate := model.AppEnvironment.GetBidAsk(settingRelate.Symbol, settingRelate.Market)
+		tickGet, tickRelate := model.AppEnvironment.GetBidAsk(settingRelate.Market, settingRelate.Symbol)
 		if !tickGet || setting.ID == settingRelate.ID || (!model.NonRTTicker[tick.Bids[0].Market] && model.NonRTTicker[tickRelate.Bids[0].Market]) ||
 			(model.AppConfig.Env != `test` && million-int64(tickRelate.Ts) > 80) {
 			continue

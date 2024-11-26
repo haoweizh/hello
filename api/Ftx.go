@@ -53,7 +53,7 @@ func maintainChannelFtx(subscribes []interface{}) {
 					continue
 				}
 				standardSymbol := coin + model.UniStandardTail[marketType]
-				_, bidAsk := model.AppEnvironment.GetBidAsk(standardSymbol, model.Ftx)
+				_, bidAsk := model.AppEnvironment.GetBidAsk(model.Ftx, standardSymbol)
 				if bidAsk == nil || time.Now().UnixMilli()-int64(bidAsk.Ts) > 120000 {
 					conn, ok := ftxSymbolConnection.Load(standardSymbol)
 					if conn != nil && ok {
@@ -188,7 +188,7 @@ func handleTickerFtx(environment *model.Environment, response *simplejson.Json) 
 	//		}
 	//	}
 	//}
-	if environment.SetBidAsk(standardSymbol, model.Ftx, bidAsk) {
+	if environment.SetBidAsk(model.Ftx, standardSymbol, bidAsk) {
 		funcHandlers := GetFunctions(model.Ftx, standardSymbol)
 		if funcHandlers != nil {
 			funcHandlers.Range(func(function, value interface{}) bool {
@@ -231,7 +231,7 @@ func handleDepthFtx(environment *model.Environment, response *simplejson.Json) {
 				bidAsk.Asks = append(bidAsk.Asks, model.Tick{Price: price, Amount: size, Market: model.Ftx, Symbol: standardSymbol})
 			}
 		} else {
-			_, oldBidAsk := environment.GetBidAsk(standardSymbol, model.Ftx)
+			_, oldBidAsk := environment.GetBidAsk(model.Ftx, standardSymbol)
 			if oldBidAsk == nil {
 				util.SocketInfo(fmt.Sprintf(`fatal: can not have old bidask %s %s`, model.Ftx, standardSymbol))
 				oldBidAsk = &model.BidAsk{Ts: int(data.Get(`time`).MustFloat64() * 1000),
@@ -282,7 +282,7 @@ func handleDepthFtx(environment *model.Environment, response *simplejson.Json) {
 		//		}
 		//	}
 		//}
-		if environment.SetBidAsk(standardSymbol, model.Ftx, bidAsk) {
+		if environment.SetBidAsk(model.Ftx, standardSymbol, bidAsk) {
 			funcHandlers := GetFunctions(model.Ftx, standardSymbol)
 			if funcHandlers != nil {
 				funcHandlers.Range(func(function, value interface{}) bool {

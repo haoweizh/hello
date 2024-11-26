@@ -266,7 +266,7 @@ func handleBookBybit(environment *model.Environment, bookWsResp *dtos.BybitBookW
 	bidAsk := &model.BidAsk{TsReceived: int(time.Now().UnixNano() / int64(time.Millisecond))}
 	bidAsk.Ts = int(bookWsResp.Ts)
 	bidAsk.UpdateId = bookWsResp.Data.Seq
-	haveOld, old := environment.GetBidAsk(symbol, model.Bybit)
+	haveOld, old := environment.GetBidAsk(model.Bybit, symbol)
 	if bookWsResp.Type == "snapshot" {
 		if len(bookWsResp.Data.B) == 0 || len(bookWsResp.Data.A) == 0 {
 			util.Notice(fmt.Sprintf(`bybit no book data %s`, bookWsResp.Data.S))
@@ -316,7 +316,7 @@ func handleBookBybit(environment *model.Environment, bookWsResp *dtos.BybitBookW
 	} else {
 		return
 	}
-	if environment.SetBidAsk(symbol, model.Bybit, bidAsk) {
+	if environment.SetBidAsk(model.Bybit, symbol, bidAsk) {
 		funcHandlers := GetFunctions(model.Bybit, symbol)
 		if funcHandlers != nil {
 			funcHandlers.Range(func(function, value interface{}) bool {
@@ -515,7 +515,7 @@ func getBalanceBybit(key string, secret string) (success bool, balances []*model
 				balance.AvailableWithBorrow = math.Max(0, balance.Amount) + canBorrow
 				usdValue, _ := strconv.ParseFloat(coinInfo.UsdValue, 64)
 				if usdValue == 0 {
-					priceGet, bidAsk := model.AppEnvironment.GetBidAsk(balance.Coin+model.UniStandardTail[model.MarketTypeSpot], model.Bybit)
+					priceGet, bidAsk := model.AppEnvironment.GetBidAsk(model.Bybit, balance.Coin+model.UniStandardTail[model.MarketTypeSpot])
 					if priceGet {
 						usdValue = balance.Amount * bidAsk.Bids[0].Price
 					}

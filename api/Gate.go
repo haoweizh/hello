@@ -234,11 +234,11 @@ var tickerHandler = gateWs.NewCallBack(func(msg *gateWs.UpdateMsg) {
 			Asks: []model.Tick{{Price: askPrice, Amount: askAmount, Market: model.Gate, Symbol: symbol}}}
 	}
 	markets := model.AppEnvironment
-	haveOld, old := markets.GetBidAsk(symbol, model.Gate)
+	haveOld, old := markets.GetBidAsk(model.Gate, symbol)
 	if haveOld && old.Ts > bidAsk.Ts {
 		return
 	}
-	if markets.SetBidAsk(symbol, model.Gate, &bidAsk) {
+	if markets.SetBidAsk(model.Gate, symbol, &bidAsk) {
 		funcHandlers := GetFunctions(model.Gate, symbol)
 		if funcHandlers != nil {
 			funcHandlers.Range(func(function, value interface{}) bool {
@@ -887,7 +887,7 @@ func placeOrderGate(account *model.Account, isWs bool, order *model.Order, order
 
 func getMaxLoanGate(symbol string) (success bool, maxLoan float64) {
 	v, _ := util.LoadSyncMap(model.MarketInfos, model.Gate, symbol)
-	_, tickRelated := model.AppEnvironment.GetBidAsk(symbol, model.Gate)
+	_, tickRelated := model.AppEnvironment.GetBidAsk(model.Gate, symbol)
 	if tickRelated != nil && v != nil {
 		maxLoan = v.(*model.MarketInfo).BorrowUsdtMax / tickRelated.Bids[0].Price
 	}
@@ -918,7 +918,7 @@ func SetGateBidAsk(key, secret, symbol string) {
 	if err != nil {
 		panicGateError(key, "setFutureTicker", err)
 	}
-	result, oldBidAsk := model.AppEnvironment.GetBidAsk(symbol, model.Gate)
+	result, oldBidAsk := model.AppEnvironment.GetBidAsk(model.Gate, symbol)
 	if result && float64(oldBidAsk.Ts) > orderBook.Update*1000 || orderBook.Bids == nil || len(orderBook.Bids) < 1 ||
 		orderBook.Asks == nil || len(orderBook.Asks) < 1 {
 		return
@@ -931,7 +931,7 @@ func SetGateBidAsk(key, secret, symbol string) {
 		TsReceived: int(time.Now().UnixNano() / int64(time.Millisecond)),
 		Bids:       []model.Tick{{Price: bidPrice, Amount: bidAmount, Market: model.Gate, Symbol: symbol}},
 		Asks:       []model.Tick{{Price: askPrice, Amount: askAmount, Market: model.Gate, Symbol: symbol}}}
-	model.AppEnvironment.SetBidAsk(symbol, model.Gate, &bidAsk)
+	model.AppEnvironment.SetBidAsk(model.Gate, symbol, &bidAsk)
 }
 
 func queryOrderGate(key, secret string, order *model.Order) {

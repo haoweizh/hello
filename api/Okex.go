@@ -121,7 +121,7 @@ func reSubscribe(subscribes []interface{}) {
 			continue
 		}
 		symbol := coin + model.UniStandardTail[marketType]
-		success, bidAsk := model.AppEnvironment.GetBidAsk(symbol, model.OKEX)
+		success, bidAsk := model.AppEnvironment.GetBidAsk(model.OKEX, symbol)
 		if !success || bidAsk == nil || time.Now().UnixMilli()-int64(bidAsk.Ts) > 60000000 {
 			if bidAsk == nil {
 				util.Notice(`bid ask nil okex ` + symbol)
@@ -203,7 +203,7 @@ var wsHandlerOKEX = func(market string, event []byte) {
 	success := false
 	var bidAsk *model.BidAsk
 	if action == `update` {
-		_, bidAsk = model.AppEnvironment.GetBidAsk(symbol, model.OKEX)
+		_, bidAsk = model.AppEnvironment.GetBidAsk(model.OKEX, symbol)
 		if bidAsk != nil {
 			success, bidAsk = handleBooksUpdate(symbol, data, bidAsk)
 		}
@@ -224,7 +224,7 @@ var wsHandlerOKEX = func(market string, event []byte) {
 	//将最佳买一卖一的数量转换为币种的真实数量
 	_, bidAsk.Bids[0].Amount = model.ParseRealAmount(model.OKEX, symbol, bidAsk.Bids[0].Amount)
 	_, bidAsk.Asks[0].Amount = model.ParseRealAmount(model.OKEX, symbol, bidAsk.Asks[0].Amount)
-	if model.AppEnvironment.SetBidAsk(symbol, model.OKEX, bidAsk) {
+	if model.AppEnvironment.SetBidAsk(model.OKEX, symbol, bidAsk) {
 		funcHandlers := GetFunctions(model.OKEX, symbol)
 		if funcHandlers != nil {
 			funcHandlers.Range(func(function, value interface{}) bool {
@@ -1461,7 +1461,7 @@ func getMaxSizeOKEX(key, secret, symbol string) (success bool, maxBuy, maxSell f
 		maxSell, _ = strconv.ParseFloat(data[`maxSell`].(string), 64)
 		_, marketType, _, _ := model.GetFromStandard(model.Kucoin, symbol)
 		if marketType == model.MarketTypeSpot {
-			ok, bidAsk := model.AppEnvironment.GetBidAsk(symbol, model.OKEX)
+			ok, bidAsk := model.AppEnvironment.GetBidAsk(model.OKEX, symbol)
 			if ok {
 				maxSell = maxSell / bidAsk.Asks[0].Price
 				//util.Info(`get max sell %f after price %f %s`, maxSell, bidAsk.Asks[0].Price, symbol)

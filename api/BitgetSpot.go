@@ -203,11 +203,11 @@ var tickHandlerBitget = func(market string, event []byte) {
 		return
 	}
 	symbol := bidAsk.Bids[0].Symbol
-	haveOld, old := model.AppEnvironment.GetBidAsk(symbol, market)
+	haveOld, old := model.AppEnvironment.GetBidAsk(market, symbol)
 	if haveOld && old.UpdateId > bidAsk.UpdateId {
 		return
 	}
-	if model.AppEnvironment.SetBidAsk(symbol, market, bidAsk) {
+	if model.AppEnvironment.SetBidAsk(market, symbol, bidAsk) {
 		funcHandlers := GetFunctions(market, symbol)
 		if funcHandlers != nil {
 			funcHandlers.Range(func(function, value interface{}) bool {

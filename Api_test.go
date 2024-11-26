@@ -142,7 +142,7 @@ func Test_WsAndOrderApi(t *testing.T) {
 		var tick *model.BidAsk
 		for !getTick {
 			time.Sleep(time.Minute * 5)
-			getTick, tick = model.AppEnvironment.GetBidAsk(symbol, market)
+			getTick, tick = model.AppEnvironment.GetBidAsk(market, symbol)
 		}
 		if tick == nil {
 			continue

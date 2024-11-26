@@ -89,7 +89,7 @@ var wsMsgHandler = func(market string, event []byte) {
 			symbol = strings.ToLower(splits[1])
 			sort.Sort(bidAsk.Asks)
 			sort.Sort(sort.Reverse(bidAsk.Bids))
-			if model.AppEnvironment.SetBidAsk(symbol, model.HuobiPerp, &bidAsk) {
+			if model.AppEnvironment.SetBidAsk(model.HuobiPerp, symbol, &bidAsk) {
 				funcHandlers := GetFunctions(model.HuobiPerp, symbol)
 				if funcHandlers != nil {
 					funcHandlers.Range(func(function, value interface{}) bool {

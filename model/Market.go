@@ -5,7 +5,6 @@ import (
 	"github.com/gorilla/websocket"
 	"hello/util"
 	"sync"
-	"time"
 )
 
 type KLinePoint struct {
@@ -54,7 +53,7 @@ type WSResp struct {
 
 type Environment struct {
 	markPriceInfos  sync.Map // symbol - market - ticker 行情包含标记价格
-	bidAsks         sync.Map // symbol - market - bidAsk
+	bidAsks         sync.Map // market*symbol - bidAsk
 	kLines          sync.Map // symbol - market - *candle
 	MsgChanTick     sync.Map // market - []chan struct{}
 	MsgChanKLine    sync.Map // market - []chan struct{}
@@ -164,28 +163,23 @@ func (environment *Environment) SetCandle(symbol, market string, candle *Candle)
 	return false
 }
 
-func (environment *Environment) GetBidAsk(symbol, market string) (result bool, bidAsk *BidAsk) {
-	value, _ := environment.bidAsks.Load(symbol)
+func (environment *Environment) GetBidAsk(market, symbol string) (result bool, bidAsk *BidAsk) {
+	value, _ := util.LoadSyncMap(&environment.bidAsks, market, symbol)
 	if value != nil {
-		item, _ := value.(*sync.Map).Load(market)
-		if item != nil {
-			return true, item.(*BidAsk)
-		}
+		return true, value.(*BidAsk)
 	}
 	return false, nil
 }
 
-func (environment *Environment) SetBidAsk(symbol, marketName string, bidAsk *BidAsk) bool {
+func (environment *Environment) SetBidAsk(market, symbol string, bidAsk *BidAsk) bool {
 	if bidAsk == nil || bidAsk.Bids == nil || bidAsk.Asks == nil || bidAsk.Bids.Len() == 0 || bidAsk.Asks.Len() == 0 {
 		//util.SocketInfo(fmt.Sprintf(`do not set nil or empty bid ask %s %s data:%v`, marketName, symbol, bidAsk))
 		return false
 	}
 	if bidAsk.Bids[0].Price >= bidAsk.Asks[0].Price || bidAsk.Bids[0].Price == 0 || bidAsk.Bids[0].Amount == 0 ||
 		bidAsk.Asks[0].Price == 0 || bidAsk.Asks[0].Amount == 0 {
-		if time.Now().Second() == 0 {
-			util.SocketInfo(fmt.Sprintf(`do not set mistake %s %s bid %f ask %f data: %v`,
-				marketName, symbol, bidAsk.Bids[0].Price, bidAsk.Asks[0].Price, bidAsk))
-		}
+		util.NoticeLess(fmt.Sprintf(`do not set mistake %s %s bid %f ask %f data: %v`,
+			market, symbol, bidAsk.Bids[0].Price, bidAsk.Asks[0].Price, bidAsk))
 		return false
 	}
 	//_, _, coin, _ := GetFromStandard(marketName, symbol)
@@ -202,19 +196,13 @@ func (environment *Environment) SetBidAsk(symbol, marketName string, bidAsk *Bid
 	//		}
 	//	}
 	//}
-	value, _ := environment.bidAsks.Load(symbol)
-	if value == nil {
-		value = &sync.Map{}
-		environment.bidAsks.Store(symbol, value)
+	last, _ := util.LoadSyncMap(&environment.bidAsks, market, symbol)
+	//if last == nil || last.(*BidAsk).Ts <= bidAsk.Ts {
+	util.StoreSyncMap(&environment.bidAsks, bidAsk, market, symbol)
+	if last != nil {
+		go AppMetric.AddTick(market, symbol, util.GetNow(), last.(*BidAsk), bidAsk)
 	}
-	oldBidAsk := value.(*sync.Map)
-	last, _ := oldBidAsk.Load(marketName)
-	if last == nil || last.(*BidAsk).Ts <= bidAsk.Ts {
-		oldBidAsk.Store(marketName, bidAsk)
-		if last != nil {
-			go AppMetric.AddTick(marketName, symbol, util.GetNow(), last.(*BidAsk), bidAsk)
-		}
-		return true
-	}
-	return false
+	return true
+	//}
+	//return false
 }

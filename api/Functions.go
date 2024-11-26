@@ -87,7 +87,7 @@ func RequireConnTickReset(environment *model.Environment, market string) bool {
 		if len(strings.Trim(symbol, ` `)) == 0 {
 			validSymbolNum++
 		}
-		_, bidAsk := environment.GetBidAsk(symbol, market)
+		_, bidAsk := environment.GetBidAsk(market, symbol)
 		if bidAsk == nil {
 			continue
 		}
@@ -399,13 +399,13 @@ func GetMultiCandle(account *model.Account, market string, slotSeconds int, begi
 
 // GetPriceForce 返回tick价格
 func GetPriceForce(symbol, market string) (result bool, price float64) {
-	getBidAsk, bidAsk := model.AppEnvironment.GetBidAsk(symbol, market)
+	getBidAsk, bidAsk := model.AppEnvironment.GetBidAsk(market, symbol)
 	if getBidAsk && bidAsk != nil {
 		return true, bidAsk.Bids[0].Price
 	}
 	markets := GetMarkets()
 	for _, m := range markets {
-		getBidAsk, bidAsk = model.AppEnvironment.GetBidAsk(symbol, m)
+		getBidAsk, bidAsk = model.AppEnvironment.GetBidAsk(m, symbol)
 		if getBidAsk && bidAsk != nil {
 			return true, bidAsk.Bids[0].Price
 		}

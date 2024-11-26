@@ -184,11 +184,11 @@ func handleKucoinSpotWS(relatedMsg *kucoin.WebSocketDownstreamMessage) {
 		Bids: []model.Tick{{Price: bidPrice, Amount: bidAmount, Market: model.KucoinSpot, Symbol: symbol}},
 		Asks: []model.Tick{{Price: askPrice, Amount: askAmount, Market: model.KucoinSpot, Symbol: symbol}}}
 	markets := model.AppEnvironment
-	haveOld, old := markets.GetBidAsk(symbol, model.KucoinSpot)
+	haveOld, old := markets.GetBidAsk(model.KucoinSpot, symbol)
 	if haveOld && old.UpdateId > bidAsk.UpdateId {
 		return
 	}
-	if markets.SetBidAsk(symbol, model.KucoinSpot, &bidAsk) {
+	if markets.SetBidAsk(model.KucoinSpot, symbol, &bidAsk) {
 		funcHandlers := GetFunctions(model.KucoinSpot, symbol)
 		if funcHandlers != nil {
 			funcHandlers.Range(func(function, value interface{}) bool {
