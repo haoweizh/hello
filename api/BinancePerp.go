@@ -149,7 +149,7 @@ func getMarketsBinancePerp(key, secret string) (marketInfos map[string]*model.Ma
 }
 
 var wsHandlerBinancePerp = func(market string, event []byte) {
-	fmt.Println(string(event))
+	//fmt.Println(string(event))
 	result, wsErr := util.NewJSON(event)
 	if wsErr != nil {
 		util.Notice(`binance fail to unmarshal json ` + wsErr.Error())
@@ -659,7 +659,8 @@ func queryOpenOrdersBinancePerp(key, secret, symbol string) (orders []*model.Ord
 	return
 }
 
-func parseOrderJsBinance(market string, json *simplejson.Json) (order *model.Order) {
+// parseOrderJsBinance
+func _(market string, json *simplejson.Json) (order *model.Order) {
 	if json == nil {
 		return nil
 	}
