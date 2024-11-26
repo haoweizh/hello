@@ -204,7 +204,6 @@ var subscribeHandlerBinance = func(market string, connection *websocket.Conn, su
 		if loadIdBool.(bool) {
 			break
 		} else {
-			fmt.Println(txId)
 			util.Notice(`%s retry subscribe %s `, market)
 		}
 	}

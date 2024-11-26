@@ -144,7 +144,7 @@ func HttpRequest(method string, reqUrl string, body string, requestHeaders map[s
 	//bodyData, err := ioutil.ReadAll(resp.Body)
 	bodyData, readErr := io.ReadAll(resp.Body)
 	if readErr != nil {
-		SocketInfo("can not read message from request " + err.Error())
+		SocketInfo("can not read message from request " + readErr.Error())
 		return nil, err
 	}
 	if resp.StatusCode != 200 {
