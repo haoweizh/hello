@@ -54,7 +54,8 @@ func GetTradeMaxOKEX(key, secret, symbol string, expireSecond int64) (success bo
 	return success, maxBuy, maxSell
 }
 
-func RequireKLineReset(environment *model.Environment, market string, symbols map[string]bool) (reset bool) {
+// RequireKLineReset
+func _(environment *model.Environment, market string, symbols map[string]bool) (reset bool) {
 	for symbol := range symbols {
 		_, candle := environment.GetKLine(symbol, market)
 		if candle == nil || candle.CreatedAt.Add(time.Duration(candle.Seconds)*time.Second).UnixMilli()+int64(model.AppConfig.Delay) <
@@ -97,8 +98,8 @@ func RequireConnTickReset(environment *model.Environment, market string) bool {
 			validSymbols[symbol] = true
 			//util.NoticeLess(fmt.Sprintf(`RequireConnTickReset valid %d %s %s %f<%f`,
 			//	validSymbolNum, market, symbol, delay, model.AppConfig.Delay))
-		} else {
-			util.NoticeLess(fmt.Sprintf(`RequireConnTickReset delay too long %s %s %f`, market, symbol, delay))
+		} else if market == model.BinancePerp {
+			util.Notice(fmt.Sprintf(`RequireConnTickReset delay too long %s %s %f`, market, symbol, delay))
 		}
 	}
 	needReset = float64(validSymbolNum) < float64(len(symbols))*0.7 || len(symbols)-validSymbolNum > 200
