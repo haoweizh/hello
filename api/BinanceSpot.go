@@ -190,7 +190,7 @@ var subscribeHandlerBinance = func(market string, connection *websocket.Conn, su
 		util.SocketInfo("binance spot can not subscribe %s %s", subParamJson, err.Error())
 	}
 	util.Notice(`%s send subscribe: %s `, market, subParamJson)
-	time.Sleep(time.Millisecond * 500)
+	time.Sleep(time.Millisecond * 10)
 	return err
 }
 

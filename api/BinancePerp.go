@@ -149,6 +149,7 @@ func getMarketsBinancePerp(key, secret string) (marketInfos map[string]*model.Ma
 }
 
 var wsHandlerBinancePerp = func(market string, event []byte) {
+	fmt.Println(string(event))
 	result, wsErr := util.NewJSON(event)
 	if wsErr != nil {
 		util.Notice(`binance fail to unmarshal json ` + wsErr.Error())
