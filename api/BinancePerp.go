@@ -173,11 +173,12 @@ var wsHandlerBinancePerp = func(market string, event []byte) {
 		bidAsk = parseBookBinancePerp(result, standardSymbol, updateId)
 	} else if strings.Contains(subscribe, `@markPrice`) {
 		handleMarkPriceBinancePerp(model.AppEnvironment, result, standardSymbol)
-	}
-	haveOld, old := model.AppEnvironment.GetBidAsk(standardSymbol, model.BinancePerp)
-	if haveOld && old.UpdateId > updateId {
 		return
 	}
+	//haveOld, old := model.AppEnvironment.GetBidAsk(standardSymbol, model.BinancePerp)
+	//if haveOld && old.UpdateId > updateId {
+	//	return
+	//}
 	if model.AppEnvironment.SetBidAsk(standardSymbol, model.BinancePerp, bidAsk) {
 		funcHandlers := GetFunctions(model.BinancePerp, standardSymbol)
 		if funcHandlers != nil {

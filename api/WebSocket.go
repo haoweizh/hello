@@ -184,8 +184,6 @@ func WebSocketClient(market, url string, subscribes []interface{}, subHandler Su
 			if errPing != nil {
 				util.Notice(fmt.Sprintf(`fail to handle ping %s %s %s`, market, url, errPing.Error()))
 				//SetRequireReset(market)
-			} else {
-				fmt.Println(fmt.Sprintf("success to handle ping %s %s ping data %s", market, url, appData))
 			}
 			return errPing
 		})
