@@ -97,7 +97,8 @@ func GetWSSubscribe(market, symbol, subType string) (subscribe interface{}) {
 	return ""
 }
 
-func CreateMarketKLineWS(environment *model.Environment, market string, symbols map[string]bool) (
+// CreateMarketKLineWS
+func _(environment *model.Environment, market string, symbols map[string]bool) (
 	socketMap map[*websocket.Conn]bool, channels []chan struct{}) {
 	switch market {
 	case model.BinanceSpot:
@@ -124,8 +125,7 @@ func CreateWSTick(environment *model.Environment, market string) (
 			subscribeHandlerBinance, wsHandlerBinance, wsStepBinance)
 	case model.BinancePerp:
 		socketMap, channels, err = WebSocketClient(market, wsBinancePerp+`/stream`, GetWSSubscribes(
-			market, []string{model.SubscribeTicker}), subscribeHandlerBinance, wsHandlerBinancePerp, wsStepBinance)
-		// model.SubscribeMarkPrice,
+			market, []string{model.SubscribeTicker, model.SubscribeMarkPrice}), subscribeHandlerBinance, wsHandlerBinancePerp, wsStepBinance)
 	case model.HuobiPerp:
 		socketMap, channels, err = WebSocketClient(market, wsHuobiPerp, GetWSSubscribes(model.HuobiPerp, []string{model.SubscribeDepth}),
 			subscribeHandlerHuobiPerp, wsMsgHandler, wsStepHuobi)
