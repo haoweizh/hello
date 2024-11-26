@@ -100,9 +100,10 @@ func RequireConnTickReset(environment *model.Environment, market string) bool {
 				util.Notice(fmt.Sprintf(`RequireConnTickReset valid %d %s %s %f<%f`,
 					validSymbolNum, market, symbol, delay, model.AppConfig.Delay))
 			}
-		} else if market == model.BinancePerp {
-			util.Notice(fmt.Sprintf(`RequireConnTickReset delay too long %s %s %f`, market, symbol, delay))
 		}
+		//else if market == model.BinancePerp {
+		//	util.Notice(fmt.Sprintf(`RequireConnTickReset delay too long %s %s %f`, market, symbol, delay))
+		//}
 	}
 	needReset = float64(validSymbolNum) < float64(len(symbols))*0.7 || len(symbols)-validSymbolNum > 200
 	for funcName := range model.TickHandlers {
