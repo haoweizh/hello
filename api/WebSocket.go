@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"strings"
 	"sync"
+	"time"
 )
 
 type OrderHandler func(order *model.Order)
@@ -180,8 +181,8 @@ func WebSocketClient(market, url string, subscribes []interface{}, subHandler Su
 			return nil, nil, err
 		}
 		connection.SetPingHandler(func(appData string) error {
-			//errPing := connection.WriteControl(websocket.PongMessage, []byte(appData), time.Now().Add(time.Minute))
-			errPing := connection.WriteMessage(websocket.PongMessage, []byte(appData))
+			errPing := connection.WriteControl(websocket.PongMessage, []byte(appData), time.Now().Add(time.Second*5))
+			//errPing := connection.WriteMessage(websocket.PongMessage, []byte(appData))
 			if errPing != nil {
 				util.Notice(fmt.Sprintf(`fail to handle ping %s %s %s`, market, url, errPing.Error()))
 				//SetRequireReset(market)
