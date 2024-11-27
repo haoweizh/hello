@@ -87,7 +87,7 @@ func RequireConnTickReset(environment *model.Environment, market string) bool {
 			return false
 		}
 	}
-	now := util.GetNowUnixMillion()
+	now := time.Now().UnixMilli()
 	validSymbolNum := 0
 	validSymbols := make(map[string]bool)
 	symbols := GetMarketSymbols(market)

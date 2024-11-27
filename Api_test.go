@@ -641,9 +641,9 @@ func Test_LimitReport(t *testing.T) {
 
 func Test_wallet(t *testing.T) {
 	model.NewConfig()
-	market := model.BitgetPerp
+	market := model.Bybit
 	symbol := `ETH_PERP`
-	account := model.GetAccounts(0)[model.BitgetPerp]
+	account := model.GetAccounts(0)[market]
 	api.GetFundingRate(account.Key, account.Secret, market, symbol)
 	var key, secret string
 	switch market {
