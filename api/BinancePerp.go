@@ -44,7 +44,7 @@ func MaintainConnsBinance(market string, accounts []*model.Account) {
 				if time.Now().UnixMilli()-value.(*model.WSConn).LastMsgTime > 480000 {
 					success = false
 				}
-				if writeError := value.(*model.WSConn).Conn.WriteControl(websocket.PongMessage, []byte{}, time.Now().Add(5*time.Second)); writeError != nil {
+				if writeError := value.(*model.WSConn).Conn.WriteMessage(websocket.PongMessage, []byte{}); writeError != nil {
 					util.DelSyncMap(&model.AppEnvironment.ConnOrder, market, account.Key)
 					errMsg = fmt.Sprintf(`fail to pong order %s return: %s`, market, writeError.Error())
 					success = false
@@ -57,7 +57,7 @@ func MaintainConnsBinance(market string, accounts []*model.Account) {
 				if time.Now().UnixMilli()-valueUpdate.(*model.WSConn).LastMsgTime > 480000 {
 					success = false
 				}
-				if writeErr := valueUpdate.(*model.WSConn).Conn.WriteControl(websocket.PongMessage, []byte{}, time.Now().Add(5*time.Second)); writeErr != nil {
+				if writeErr := valueUpdate.(*model.WSConn).Conn.WriteMessage(websocket.PongMessage, []byte{}); writeErr != nil {
 					util.DelSyncMap(&model.AppEnvironment.ConnOrderUpdate, market, account.Key)
 					errMsg += fmt.Sprintf(`fail to pong update order %s return: %s`, market, writeErr.Error())
 					success = false
@@ -78,7 +78,7 @@ func MaintainConnsBinance(market string, accounts []*model.Account) {
 				WsOrderServeBinance(account, market)
 			}
 		}
-		time.Sleep(time.Minute * 5)
+		time.Sleep(time.Minute * 1)
 	}
 }
 
@@ -190,7 +190,6 @@ var wsHandlerBinancePerp = func(market string, event []byte) {
 	}
 	haveOld, old := model.AppEnvironment.GetBidAsk(model.BinancePerp, standardSymbol)
 	if haveOld && old.UpdateId > updateId {
-		util.Info(`5test return %s success update id %d > %d`, market, old.UpdateId, updateId)
 		return
 	}
 	if model.AppEnvironment.SetBidAsk(model.BinancePerp, standardSymbol, bidAsk) {

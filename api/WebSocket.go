@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"strings"
 	"sync"
-	"time"
 )
 
 type OrderHandler func(order *model.Order)
@@ -54,7 +53,7 @@ func SendToConnections(market string, connections map[*websocket.Conn]bool, msgT
 				//SetRequireReset(market)
 			}
 		} else if msgType == websocket.PongMessage || msgType == websocket.PingMessage {
-			if err = connection.WriteControl(msgType, msg, time.Now().Add(5*time.Second)); err != nil {
+			if err = connection.WriteMessage(msgType, msg); err != nil {
 				//SetRequireReset(market)
 			}
 		}
@@ -134,7 +133,7 @@ func WsAccountClient(market, key, url string, accountMsgHandler AccountMsgHandle
 	}
 	connection.SetPingHandler(func(appData string) error {
 		accountMsgHandler(market, key, []byte(`ping pong received`))
-		return connection.WriteControl(websocket.PongMessage, []byte(appData), time.Now().Add(time.Minute))
+		return connection.WriteMessage(websocket.PongMessage, []byte(appData))
 	})
 	go func() {
 		defer func() {
@@ -182,10 +181,13 @@ func WebSocketClient(market, url string, subscribes []interface{}, subHandler Su
 			return nil, nil, err
 		}
 		connection.SetPingHandler(func(appData string) error {
-			errPing := connection.WriteControl(websocket.PongMessage, []byte(appData), time.Now().Add(time.Minute))
+			//errPing := connection.WriteControl(websocket.PongMessage, []byte(appData), time.Now().Add(time.Minute))
+			errPing := connection.WriteMessage(websocket.PongMessage, []byte(appData))
 			if errPing != nil {
 				util.Notice(fmt.Sprintf(`fail to handle ping %s %s %s`, market, url, errPing.Error()))
 				//SetRequireReset(market)
+			} else {
+				util.Info(fmt.Sprintf("success to handle ping %s %s %s", market, url, appData))
 			}
 			return errPing
 		})
