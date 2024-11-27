@@ -202,11 +202,16 @@ func (environment *Environment) SetBidAsk(market, symbol string, bidAsk *BidAsk)
 	//}
 	last, _ := util.LoadSyncMap(&environment.bidAsks, market, symbol)
 	if last == nil || last.(*BidAsk).Ts <= bidAsk.Ts {
+		if market == BinancePerp {
+			util.Info(fmt.Sprintf(`set bn tick %s %d`, symbol, bidAsk.Ts))
+		}
 		util.StoreSyncMap(&environment.bidAsks, bidAsk, market, symbol)
 		if last != nil {
 			go AppMetric.AddTick(market, symbol, util.GetNow(), last.(*BidAsk), bidAsk)
 		}
 		return true
+	} else {
+		util.Info(fmt.Sprintf(`no set old tick %s %d`, symbol, bidAsk.Ts))
 	}
 	return false
 }
