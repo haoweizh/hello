@@ -460,7 +460,7 @@ func WsOrderServeBinance(account *model.Account, market string) {
 		streamUrl = wsBinancePerp
 	}
 	value, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrder, market, account.Key)
-	if value == nil || value.(*model.WSConn).Conn == nil || time.Now().UnixMilli()-value.(*model.WSConn).LastMsgTime > 180000 {
+	if value == nil || value.(*model.WSConn).Conn == nil || time.Now().UnixMilli()-value.(*model.WSConn).LastMsgTime > 480000 {
 		conn, err := WsAccountClient(market, account.Key, apiUrl, wsActHandlerBinance)
 		if err != nil {
 			util.Notice(fmt.Sprintf(`fail to create account ws %s %s`, market, err.Error()))
@@ -468,7 +468,7 @@ func WsOrderServeBinance(account *model.Account, market string) {
 		util.StoreSyncMap(&model.AppEnvironment.ConnOrder, &model.WSConn{Conn: conn}, market, account.Key)
 	}
 	valueUpdate, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrderUpdate, market, account.Key)
-	if valueUpdate == nil || valueUpdate.(*model.WSConn).Conn == nil || time.Now().UnixMilli()-valueUpdate.(*model.WSConn).LastMsgTime > 180000 {
+	if valueUpdate == nil || valueUpdate.(*model.WSConn).Conn == nil || time.Now().UnixMilli()-valueUpdate.(*model.WSConn).LastMsgTime > 480000 {
 		_, listenKey := RenewListenKeyBinance(account, market)
 		conn, err := WsAccountClient(market, account.Key, fmt.Sprintf(`%s/ws/%s`, streamUrl, listenKey), wsOrderUpdateBinance)
 		if err == nil {
