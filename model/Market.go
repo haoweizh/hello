@@ -219,7 +219,7 @@ func (environment *Environment) SetBidAsk(market, symbol string, bidAsk *BidAsk)
 		}
 		return true
 	} else {
-		util.Info(fmt.Sprintf(`8 test return no set old tick %s %d %d`, symbol, bidAsk.Ts, last.(*BidAsk).Ts))
+		util.Info(fmt.Sprintf(`8 test return no set old tick %s %d`, symbol, last.(*BidAsk).Ts))
 	}
 	return false
 }
