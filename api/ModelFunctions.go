@@ -425,6 +425,7 @@ func InitApp(refreshDynamic bool) bool {
 		for _, account := range accounts {
 			go CancelAll(account.Key, account.Secret, market)
 		}
+		MaintainConns(market)
 	}
 	util.Notice(`finish load settings`)
 	settingLoading = false

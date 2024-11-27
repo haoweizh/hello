@@ -80,6 +80,13 @@ func RequireConnTickReset(environment *model.Environment, market string) bool {
 		util.Notice(`clear need reset for market: ` + market)
 		return true
 	}
+	initTime, _ := model.AppEnvironment.WsInitTime.Load(market)
+	if initTime != nil {
+		if initTime.(time.Time).Add(time.Minute * 2).After(time.Now()) {
+			util.Notice(`just reset %s no need %s`, market, initTime.(time.Time).String())
+			return false
+		}
+	}
 	now := util.GetNowUnixMillion()
 	validSymbolNum := 0
 	validSymbols := make(map[string]bool)
