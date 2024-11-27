@@ -125,8 +125,8 @@ func CreateWSTick(environment *model.Environment, market string) (
 			subscribeHandlerBinance, wsHandlerBinance, wsStepBinance)
 	case model.BinancePerp:
 		socketMap, channels, err = WebSocketClient(market, wsBinancePerp+`/stream`, GetWSSubscribes(
-			market, []string{model.SubscribeTicker, model.SubscribeMarkPrice}), subscribeHandlerBinance, wsHandlerBinancePerp, wsStepBinance)
-		//model.SubscribeDepth
+			market, []string{model.SubscribeTicker}), subscribeHandlerBinance, wsHandlerBinancePerp, wsStepBinance)
+		//model.SubscribeDepth, model.SubscribeMarkPrice
 	case model.HuobiPerp:
 		socketMap, channels, err = WebSocketClient(market, wsHuobiPerp, GetWSSubscribes(model.HuobiPerp, []string{model.SubscribeDepth}),
 			subscribeHandlerHuobiPerp, wsMsgHandler, wsStepHuobi)
