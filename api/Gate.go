@@ -420,10 +420,11 @@ func maintainConnsGate(accounts []*model.Account) {
 				util.JsonEncodeToByte(map[string]interface{}{"time": time.Now().Unix(), "channel": "spot.ping"})); err != nil {
 				util.SocketInfo(fmt.Sprintf("tick conn maintain error %s %s", model.Gate, err.Error()))
 			}
-			if err := SendToConnections(model.Gate, connTick.(map[*websocket.Conn]bool), websocket.TextMessage,
-				util.JsonEncodeToByte(map[string]interface{}{"time": time.Now().Unix(), "channel": "futures.ping"})); err != nil {
-				util.SocketInfo(fmt.Sprintf("tick conn maintain error %s %s", model.Gate, err.Error()))
-			}
+		}
+		connTickPerp, _ := model.AppEnvironment.ConnTick.Load(model.Gate + model.MarketTypePerp)
+		if err := SendToConnections(model.Gate, connTickPerp.(map[*websocket.Conn]bool), websocket.TextMessage,
+			util.JsonEncodeToByte(map[string]interface{}{"time": time.Now().Unix(), "channel": "futures.ping"})); err != nil {
+			util.SocketInfo(fmt.Sprintf("tick conn maintain error %s %s", model.Gate, err.Error()))
 		}
 		for _, account := range accounts {
 			successSpot := false
@@ -504,19 +505,14 @@ func WSOrderServeGate(account *model.Account, marketType string) {
 	}
 }
 
-func WsTickServeGateNew(market string) (socketMap map[*websocket.Conn]bool, msgChans []chan struct{}, connectErr error) {
-	var spotSubs, spotOrderBookSubs, futureSubs []interface{}
-	socketMap = make(map[*websocket.Conn]bool)
-	msgChans = make([]chan struct{}, 0)
+func WsTickServeGateSpot(market string) (socketMap map[*websocket.Conn]bool, msgChans []chan struct{}, connectErr error) {
+	var spotSubs []interface{}
 	symbols := GetMarketSymbols(market)
 	for symbol := range symbols {
 		if strings.LastIndex(symbol, model.UniStandardTail[model.MarketTypeSpot]) == len(symbol)-len(model.UniStandardTail[model.MarketTypeSpot]) &&
 			len(symbol)-len(model.UniStandardTail[model.MarketTypeSpot]) > 0 {
 			spotSubs = append(spotSubs, symbol)
-			spotOrderBookSubs = append(spotOrderBookSubs, []string{symbol, "5", "100ms"})
-		} else if strings.LastIndex(symbol, model.UniStandardTail[model.MarketTypePerp]) == len(symbol)-len(model.UniStandardTail[model.MarketTypePerp]) &&
-			len(symbol)-len(model.UniStandardTail[model.MarketTypePerp]) > 0 {
-			futureSubs = append(futureSubs, symbol)
+			//spotOrderBookSubs = append(spotOrderBookSubs, []string{symbol, "5", "100ms"})
 		}
 	}
 	//spotOrderBookSockets, spotOrderBookChannels, spotOrderBookErr := WebSocketClient(model.Gate, gateWs.BaseUrl, spotOrderBookSubs, subscribeHandler, wsHandlerGate, wsStepGate)
@@ -527,12 +523,18 @@ func WsTickServeGateNew(market string) (socketMap map[*websocket.Conn]bool, msgC
 	//		socketMap[conn] = b
 	//	}
 	//}
-	spotBookTickerSockets, spotBookTickerChannels, spotBookTickerErr := WebSocketClient(model.Gate, gateWs.BaseUrl, spotSubs, subscribeHandler, wsHandlerGate, wsStepGate)
-	if spotBookTickerErr == nil {
-		util.Info(`finish connect public gate spot book ticker ws `)
-		msgChans = append(msgChans, spotBookTickerChannels...)
-		for conn, b := range spotBookTickerSockets {
-			socketMap[conn] = b
+	return WebSocketClient(model.Gate, gateWs.BaseUrl, spotSubs, subscribeHandler, wsHandlerGate, wsStepGate)
+}
+
+func WsTickServeGatePerp(market string) (socketMap map[*websocket.Conn]bool, msgChans []chan struct{}, connectErr error) {
+	var futureSubs []interface{}
+	socketMap = make(map[*websocket.Conn]bool)
+	msgChans = make([]chan struct{}, 0)
+	symbols := GetMarketSymbols(market)
+	for symbol := range symbols {
+		if strings.LastIndex(symbol, model.UniStandardTail[model.MarketTypePerp]) == len(symbol)-len(model.UniStandardTail[model.MarketTypePerp]) &&
+			len(symbol)-len(model.UniStandardTail[model.MarketTypePerp]) > 0 {
+			futureSubs = append(futureSubs, symbol)
 		}
 	}
 	perpBookTickerSockets, perpBookTickerChannels, perpBookTickerErr := WebSocketClient(model.Gate, gateWs.FuturesUsdtUrl, futureSubs, subscribeHandler, wsHandlerGate, wsStepGate)

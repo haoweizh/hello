@@ -115,8 +115,11 @@ func CreateWSTick(environment *model.Environment, market string) (
 	channels = make([]chan struct{}, 1)
 	var err error
 	switch market {
-	case model.Gate:
-		socketMap, channels, err = WsTickServeGateNew(market)
+	case model.Gate: // Gate 代表spot；Gateperp 代表 futures
+		socketMap, channels, err = WsTickServeGateSpot(market)
+		socketMapPerp, channsPerp, _ := WsTickServeGatePerp(market)
+		environment.ConnTick.Store(market+model.MarketTypePerp, socketMapPerp)
+		environment.MsgChanTick.Store(market+model.MarketTypePerp, channsPerp)
 	case model.OKEX:
 		socketMap, channels, err = WebSocketClient(market, wsOKEX, GetWSSubscribes(market, []string{model.SubscribeDepth}),
 			subscribeHandlerOKEX, wsHandlerOKEX, wsStepOKEX)
