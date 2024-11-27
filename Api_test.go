@@ -531,6 +531,17 @@ func Test_Order(t *testing.T) {
 	//	`test`, 0.011788999999999999, 0.011788999999999999, 232.4550, false, nil)
 	//api.CancelOrder(account.Key, account.Secret, market, symbol, model.OrderTypeLimit, order.OrderId)
 	api.CreateWSTick(model.AppEnvironment, market)
+	go func() {
+		for {
+			connTick, _ := model.AppEnvironment.ConnTick.Load(market)
+			if connTick != nil {
+				if err := api.SendToConnections(market, connTick.(map[*websocket.Conn]bool), websocket.PongMessage, []byte(``)); err != nil {
+					util.Notice(fmt.Sprintf("tick conn maintain error %s %s", market, err.Error()))
+				}
+			}
+			time.Sleep(time.Second * 10)
+		}
+	}()
 	select {}
 }
 
