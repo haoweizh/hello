@@ -30,12 +30,12 @@ var listenTime sync.Map // listenKey - time
 
 func MaintainConnsBinance(market string, accounts []*model.Account) {
 	for {
-		//connTick, _ := model.AppEnvironment.ConnTick.Load(market)
-		//if connTick != nil {
-		//	if err := SendToConnections(market, connTick.(map[*websocket.Conn]bool), websocket.PongMessage, []byte(``)); err != nil {
-		//		util.Notice(fmt.Sprintf("tick conn maintain error %s %s", market, err.Error()))
-		//	}
-		//}
+		connTick, _ := model.AppEnvironment.ConnTick.Load(market)
+		if connTick != nil {
+			if err := SendToConnections(market, connTick.(map[*websocket.Conn]bool), websocket.PongMessage, []byte(``)); err != nil {
+				util.Notice(fmt.Sprintf("tick conn maintain error %s %s", market, err.Error()))
+			}
+		}
 		for _, account := range accounts {
 			success := true
 			errMsg := ``
@@ -157,22 +157,24 @@ func getMarketsBinancePerp(key, secret string) (marketInfos map[string]*model.Ma
 var wsHandlerBinancePerp = func(market string, event []byte) {
 	result, wsErr := util.NewJSON(event)
 	if wsErr != nil {
-		util.Notice(`binance fail to unmarshal json ` + wsErr.Error())
+		util.Info(`1test return fail to unmarshal json ` + wsErr.Error())
 		return
 	}
 	id := result.Get("id").MustInt()
 	if id > 0 {
 		subIdBinance.Store(id, false)
-		util.Notice(`%s success sub id %d`, market, id)
+		util.Info(`2test return %s success sub id %d`, market, id)
 	}
 	subscribe, _ := result.Get("stream").String()
 	result = result.Get(`data`)
 	if result == nil {
+		util.Info(`3test return fail to get data`)
 		return
 	}
 	dialectSymbol := result.Get(`s`).MustString()
 	success, _, coin := model.GetCoinFromDialect(model.BinancePerp, dialectSymbol)
 	if !success {
+		util.Info(`4test return fail to get symbol`)
 		return
 	}
 	standardSymbol := coin + model.UniStandardTail[model.MarketTypePerp]
