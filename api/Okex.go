@@ -55,6 +55,9 @@ func maintainConnsOKEX(accounts []*model.Account) {
 				success := false
 				value, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrder, model.OKEX, account.Key)
 				if value != nil && value.(*model.WSConn).Conn != nil {
+					if time.Now().UnixMilli()-value.(*model.WSConn).LastMsgTime > 60000 {
+						success = false
+					}
 					if err := SendToConnection(model.OKEX, value.(*model.WSConn).Conn, []byte(`ping`)); err != nil {
 						util.Notice("-test ok ws-okex server ping client error " + err.Error())
 					} else {

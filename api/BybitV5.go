@@ -97,6 +97,9 @@ func maintainConnsBybit(accounts []*model.Account) {
 			errMsg := ``
 			connOrder, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrder, model.Bybit, account.Key)
 			if connOrder != nil && connOrder.(*model.WSConn) != nil {
+				if time.Now().UnixMilli()-connOrder.(*model.WSConn).LastMsgTime > 180000 {
+					success = false
+				}
 				if err := SendToConnection(model.Bybit, connOrder.(*model.WSConn).Conn, pingMsg); err != nil {
 					errMsg += err.Error()
 					util.Notice("-ws-bybit trade ws ping client error " + err.Error())
@@ -105,7 +108,10 @@ func maintainConnsBybit(accounts []*model.Account) {
 				}
 			}
 			connOrderUpdate, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrderUpdate, model.Bybit, account.Key)
-			if connOrderUpdate != nil && connOrder.(*model.WSConn).Conn != nil {
+			if connOrderUpdate != nil && connOrderUpdate.(*model.WSConn).Conn != nil {
+				if time.Now().UnixMilli()-connOrderUpdate.(*model.WSConn).LastMsgTime > 180000 {
+					success = false
+				}
 				if err := SendToConnection(model.Bybit, connOrderUpdate.(*model.WSConn).Conn, pingMsg); err != nil {
 					errMsg += err.Error()
 					util.Notice("ws-bybit order update ws ping client error " + err.Error())

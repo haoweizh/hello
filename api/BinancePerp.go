@@ -75,7 +75,7 @@ func MaintainConnsBinance(market string, accounts []*model.Account) {
 			}
 			if !success {
 				util.Notice(errMsg)
-				//WsOrderServeBinance(account, market)
+				WsOrderServeBinance(account, market)
 			}
 		}
 		time.Sleep(time.Minute * 5)

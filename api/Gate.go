@@ -415,6 +415,9 @@ func maintainConnsGate(accounts []*model.Account) {
 			successSpot := false
 			wsSpot, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrder, model.Gate, model.MarketTypeSpot, account.Key)
 			if wsSpot != nil && wsSpot.(*model.WSConn).Conn != nil {
+				if time.Now().UnixMilli()-wsSpot.(*model.WSConn).LastMsgTime > 60000 {
+					successSpot = false
+				}
 				if err := wsSpot.(*model.WSConn).Conn.WriteMessage(websocket.TextMessage, []byte(fmt.Sprintf(
 					`{"time": %d, "channel" : "spot.ping"}`, time.Now().Unix()))); err != nil {
 					util.Notice(fmt.Sprintf("send account spot ping message err:%s %s", model.Gate, err.Error()))
@@ -429,6 +432,9 @@ func maintainConnsGate(accounts []*model.Account) {
 			successPerp := false
 			wsFuture, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrder, model.Gate, model.MarketTypePerp, account.Key)
 			if wsFuture != nil {
+				if time.Now().UnixMilli()-wsFuture.(*model.WSConn).LastMsgTime > 60000 {
+					successPerp = false
+				}
 				if err := wsFuture.(*model.WSConn).Conn.WriteMessage(websocket.TextMessage, []byte(fmt.Sprintf(
 					`{"time": %d, "channel" : "futures.ping"}`, time.Now().Unix()))); err != nil {
 					util.Notice(fmt.Sprintf("send account futures ping message err:%s %s", model.Gate, err.Error()))

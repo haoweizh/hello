@@ -33,6 +33,9 @@ func maintainConnsBitget(market string, accounts []*model.Account) {
 			success := false
 			valueUpdate, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrderUpdate, market, account.Key)
 			if valueUpdate != nil && valueUpdate.(*model.WSConn).Conn != nil {
+				if time.Now().UnixMilli()-valueUpdate.(*model.WSConn).LastMsgTime > 180000 {
+					success = false
+				}
 				if err := valueUpdate.(*model.WSConn).Conn.WriteMessage(websocket.TextMessage, []byte(`ping`)); err != nil {
 					util.Notice(fmt.Sprintf("order update conn maintain error %s %s", market, err.Error()))
 				} else {
