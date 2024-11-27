@@ -104,22 +104,24 @@ func chanHandler(market string, stopChan chan struct{}, connection *websocket.Co
 		}
 	}()
 	for {
-		select {
-		case <-stopChan:
-			util.Notice("get stop struct, return")
-			return
-		default:
-			_, message, err := connection.ReadMessage()
-			if err != nil {
-				if !strings.Contains(err.Error(), `EOF`) {
-					//SetRequireReset(market)
-					util.Notice(fmt.Sprintf(`%s can not read from websocket: %s`, market, err.Error()))
-				}
-				return
+		msgType, message, err := connection.ReadMessage()
+		if err != nil {
+			if !strings.Contains(err.Error(), `EOF`) {
+				//SetRequireReset(market)
+				util.Notice(fmt.Sprintf(`%s can not read from websocket: %s`, market, err.Error()))
 			}
-			//util.SocketInfo(string(message))
+			return
+		}
+		if msgType == websocket.TextMessage {
 			msgHandler(market, message)
 		}
+		//select {
+		////case <-stopChan:
+		////	util.Notice("get stop struct, return")
+		////	return
+		//default:
+		//
+		//}
 	}
 }
 
