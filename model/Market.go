@@ -5,7 +5,6 @@ import (
 	"github.com/gorilla/websocket"
 	"hello/util"
 	"sync"
-	"time"
 )
 
 type KLinePoint struct {
@@ -182,7 +181,7 @@ func (environment *Environment) SetBidAsk(market, symbol string, bidAsk *BidAsk)
 		return false
 	}
 	if bidAsk.Bids[0].Price >= bidAsk.Asks[0].Price || bidAsk.Bids[0].Price == 0 || bidAsk.Bids[0].Amount == 0 ||
-		bidAsk.Asks[0].Price == 0 || bidAsk.Asks[0].Amount == 0 || int64(bidAsk.Ts) > time.Now().UnixMilli() {
+		bidAsk.Asks[0].Price == 0 || bidAsk.Asks[0].Amount == 0 {
 		if market == BinancePerp {
 			util.Notice(fmt.Sprintf(`6test return do not set mistake %s %s bid %f ask %f data: %v ts %d`,
 				market, symbol, bidAsk.Bids[0].Price, bidAsk.Asks[0].Price, bidAsk, bidAsk.Ts))
