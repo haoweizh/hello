@@ -30,12 +30,12 @@ var listenTime sync.Map // listenKey - time
 
 func MaintainConnsBinance(market string, accounts []*model.Account) {
 	for {
-		connTick, _ := model.AppEnvironment.ConnTick.Load(market)
-		if connTick != nil {
-			if err := SendToConnections(market, connTick.(map[*websocket.Conn]bool), websocket.PongMessage, []byte(``)); err != nil {
-				util.Notice(fmt.Sprintf("tick conn maintain error %s %s", market, err.Error()))
-			}
-		}
+		//connTick, _ := model.AppEnvironment.ConnTick.Load(market)
+		//if connTick != nil {
+		//	if err := SendToConnections(market, connTick.(map[*websocket.Conn]bool), websocket.PongMessage, []byte(``)); err != nil {
+		//		util.Notice(fmt.Sprintf("tick conn maintain error %s %s", market, err.Error()))
+		//	}
+		//}
 		for _, account := range accounts {
 			success := true
 			errMsg := ``
