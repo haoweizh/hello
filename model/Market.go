@@ -172,7 +172,7 @@ func (environment *Environment) GetBidAsk(market, symbol string) (result bool, b
 	return false, nil
 }
 
-var testConn sync.Map
+//var testConn sync.Map
 
 func (environment *Environment) SetBidAsk(market, symbol string, bidAsk *BidAsk) bool {
 	if bidAsk == nil || bidAsk.Bids == nil || bidAsk.Asks == nil || bidAsk.Bids.Len() == 0 || bidAsk.Asks.Len() == 0 {
@@ -182,10 +182,10 @@ func (environment *Environment) SetBidAsk(market, symbol string, bidAsk *BidAsk)
 		return false
 	}
 	if bidAsk.Bids[0].Price >= bidAsk.Asks[0].Price || bidAsk.Bids[0].Price == 0 || bidAsk.Bids[0].Amount == 0 ||
-		bidAsk.Asks[0].Price == 0 || bidAsk.Asks[0].Amount == 0 {
+		bidAsk.Asks[0].Price == 0 || bidAsk.Asks[0].Amount == 0 || int64(bidAsk.Ts) > time.Now().UnixMilli() {
 		if market == BinancePerp {
-			util.Notice(fmt.Sprintf(`6test return do not set mistake %s %s bid %f ask %f data: %v`,
-				market, symbol, bidAsk.Bids[0].Price, bidAsk.Asks[0].Price, bidAsk))
+			util.Notice(fmt.Sprintf(`6test return do not set mistake %s %s bid %f ask %f data: %v ts %d`,
+				market, symbol, bidAsk.Bids[0].Price, bidAsk.Asks[0].Price, bidAsk, bidAsk.Ts))
 		}
 		return false
 	}
@@ -205,14 +205,14 @@ func (environment *Environment) SetBidAsk(market, symbol string, bidAsk *BidAsk)
 	//}
 	last, _ := util.LoadSyncMap(&environment.bidAsks, market, symbol)
 	if last == nil || last.(*BidAsk).Ts <= bidAsk.Ts {
-		if market == BinancePerp {
-			ts := fmt.Sprintf(`%s %d %d`, symbol, time.Now().Hour(), time.Now().Minute())
-			minBidAsk, _ := testConn.Load(ts)
-			if minBidAsk == nil {
-				testConn.Store(ts, bidAsk)
-				util.Info(fmt.Sprintf(`set bn tick %s %d`, symbol, bidAsk.Ts))
-			}
-		}
+		//if market == BinancePerp {
+		//	ts := fmt.Sprintf(`%s %d %d`, symbol, time.Now().Hour(), time.Now().Minute())
+		//	minBidAsk, _ := testConn.Load(ts)
+		//	if minBidAsk == nil {
+		//		testConn.Store(ts, bidAsk)
+		//		util.Info(fmt.Sprintf(`set bn tick %s %d`, symbol, bidAsk.Ts))
+		//	}
+		//}
 		util.StoreSyncMap(&environment.bidAsks, bidAsk, market, symbol)
 		if last != nil {
 			go AppMetric.AddTick(market, symbol, util.GetNow(), last.(*BidAsk), bidAsk)
