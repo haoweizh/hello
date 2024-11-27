@@ -36,7 +36,7 @@ var subscribeHandlerHuobiPerp = func(market string, connection *websocket.Conn, 
 	return err
 }
 
-var wsMsgHandler = func(market string, event []byte) {
+var wsMsgHandler = func(market string, conn *websocket.Conn, event []byte) {
 	res := util.UnGzip(event)
 	responseJson, err := util.NewJSON(res)
 	if err != nil {

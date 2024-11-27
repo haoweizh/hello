@@ -84,7 +84,7 @@ func maintainChannelMexc(subscribes []interface{}) {
 	}
 }
 
-var wsHandlerMexc = func(market string, event []byte) {
+var wsHandlerMexc = func(market string, conn *websocket.Conn, event []byte) {
 	newJson, wsErr := util.NewJSON(event)
 	if wsErr != nil {
 		util.SocketInfo(`MEXC fail to unmarshal json ` + wsErr.Error())

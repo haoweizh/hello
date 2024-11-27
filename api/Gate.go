@@ -294,7 +294,14 @@ var wsPriHandlerGatePerp = func(market, key string, msg []byte) {
 	ts := responseJson.Get(`time_ms`).MustInt64()
 	valueFuture.(*model.WSConn).LastMsgTime = ts
 	result := responseJson.GetPath(`header`, `status`).MustString()
-	if channel == `futures.orders` {
+	if channel == `futures.ping` {
+		err := valueFuture.(*model.WSConn).Conn.WriteMessage(websocket.TextMessage, []byte(fmt.Sprintf(
+			`{"time" : %d, "channel" : "futures.pong"}`, time.Now().Unix())))
+		if err != nil {
+			return
+		}
+		util.Notice(fmt.Sprintf(`gate futures order pong from %s`, string(msg)))
+	} else if channel == `futures.orders` {
 		data := responseJson.Get(`result`).MustArray()
 		for _, datum := range data {
 			value := datum.(map[string]interface{})
@@ -361,7 +368,14 @@ var wsPriHandlerGateSpot = func(market, key string, msg []byte) {
 	ts := responseJson.Get(`time_ms`).MustInt64()
 	valueSpot.(*model.WSConn).LastMsgTime = ts
 	result := responseJson.GetPath(`header`, `status`).MustString()
-	if channel == `spot.orders` {
+	if channel == `spot.ping` {
+		err := valueSpot.(*model.WSConn).Conn.WriteMessage(websocket.TextMessage, []byte(fmt.Sprintf(
+			`{"time" : %d, "channel" : "spot.pong"}`, time.Now().Unix())))
+		if err != nil {
+			return
+		}
+		util.Notice(fmt.Sprintf(`gate spot order pong from %s`, string(msg)))
+	} else if channel == `spot.orders` {
 		data := responseJson.Get(`result`).MustArray()
 		for _, datum := range data {
 			value := datum.(map[string]interface{})
@@ -540,7 +554,23 @@ func WsTickServeGateNew(market string) (socketMap map[*websocket.Conn]bool, msgC
 	return
 }
 
-var wsHandlerGate = func(market string, event []byte) {
+var wsHandlerGate = func(market string, conn *websocket.Conn, event []byte) {
+	respJson, _ := util.NewJSON(event)
+	if respJson != nil {
+		channel := respJson.Get(`channel`).MustString()
+		if strings.Contains(channel, `ping`) {
+			strBack := `spot.pong`
+			if strings.Contains(channel, `futures`) {
+				strBack = `futures.pong`
+			}
+			err := conn.WriteMessage(websocket.TextMessage, []byte(fmt.Sprintf(`{"time" : %d, "channel" : "%s"}`, time.Now().Unix(), strBack)))
+			if err != nil {
+				return
+			}
+			util.Notice(fmt.Sprintf("send ping message to channel %s %s from %s", market, channel, string(event)))
+			return
+		}
+	}
 	msg := &gateWs.UpdateMsg{}
 	if err := json.Unmarshal(event, msg); err != nil {
 		util.Notice(fmt.Sprintf("gate ws message Unmarshal err:%s", err.Error()))

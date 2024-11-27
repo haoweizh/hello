@@ -336,7 +336,7 @@ func handleBookBybit(environment *model.Environment, bookWsResp *dtos.BybitBookW
 	}
 }
 
-var spotBookWsHandler = func(market string, event []byte) {
+var spotBookWsHandler = func(market string, conn *websocket.Conn, event []byte) {
 	bookWsResp := &dtos.BybitBookWsResp{}
 	jsonErr := json.Unmarshal(event, bookWsResp)
 	if jsonErr != nil {
@@ -356,7 +356,7 @@ var spotBookWsHandler = func(market string, event []byte) {
 	}
 }
 
-var tickHandlerBybit = func(market string, event []byte) {
+var tickHandlerBybit = func(market string, conn *websocket.Conn, event []byte) {
 	tickResp := &dtos.BybitTickResp{}
 	jsonErr := json.Unmarshal(event, tickResp)
 	if jsonErr != nil {
@@ -379,7 +379,7 @@ var tickHandlerBybit = func(market string, event []byte) {
 	}
 }
 
-var perpBookWsHandler = func(market string, event []byte) {
+var perpBookWsHandler = func(market string, conn *websocket.Conn, event []byte) {
 	bookWsResp := &dtos.BybitBookWsResp{}
 	jsonErr := json.Unmarshal(event, bookWsResp)
 	if jsonErr != nil {

@@ -10,6 +10,7 @@ import (
 	"math"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -66,7 +67,15 @@ func setBitgetPositionMode(key, secret string) {
 	}
 }
 
-var markPriceWsHandler = func(market string, event []byte) {
+var markPriceWsHandler = func(market string, conn *websocket.Conn, event []byte) {
+	if strings.Contains(string(event), `ping`) {
+		err := conn.WriteMessage(websocket.TextMessage, []byte(`pong`))
+		if err != nil {
+			return
+		}
+		util.Notice(fmt.Sprintf("Bitget mark price ping: %s back pong", string(event)))
+		return
+	}
 	tickerWsResp := &dtos.BitgetTickerWsResp{}
 	jsonErr := json.Unmarshal(event, tickerWsResp)
 	if jsonErr != nil {

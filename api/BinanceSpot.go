@@ -87,7 +87,7 @@ func GetMarketsBinance(account *model.Account, market string) (marketInfos map[s
 	return marketInfos
 }
 
-var KLineMsgHandlerBinanceSpot = func(market string, event []byte) {
+var KLineMsgHandlerBinanceSpot = func(market string, conn *websocket.Conn, event []byte) {
 	result, wsErr := util.NewJSON(event)
 	if wsErr != nil {
 		util.Notice(`binance fail to unmarshal json ` + wsErr.Error())
@@ -142,7 +142,7 @@ func WsKLineBinanceSpot(environment *model.Environment, market string, symbols m
 	return
 }
 
-var wsHandlerBinance = func(market string, event []byte) {
+var wsHandlerBinance = func(market string, conn *websocket.Conn, event []byte) {
 	result, wsErr := util.NewJSON(event)
 	if wsErr != nil {
 		util.Notice(`binance fail to unmarshal json ` + wsErr.Error())

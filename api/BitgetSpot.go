@@ -194,7 +194,15 @@ func parseBidAskBitget(bookWsResp *dtos.BitgetBoosWsResp) (bidAsk *model.BidAsk)
 	return bidAsk
 }
 
-var tickHandlerBitget = func(market string, event []byte) {
+var tickHandlerBitget = func(market string, conn *websocket.Conn, event []byte) {
+	if strings.Contains(string(event), `ping`) {
+		err := conn.WriteMessage(websocket.TextMessage, []byte(`pong`))
+		if err != nil {
+			return
+		}
+		util.Notice(fmt.Sprintf("BitgetSpot ping: %s back pong", string(event)))
+		return
+	}
 	bookWsResp := &dtos.BitgetBoosWsResp{}
 	jsonErr := json.Unmarshal(event, bookWsResp)
 	if jsonErr != nil {

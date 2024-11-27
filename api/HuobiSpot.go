@@ -67,7 +67,7 @@ var subscribeHandlerHuobi = func(market string, connection *websocket.Conn, subs
 	}
 	return err
 }
-var wsHandlerHuobiSpot = func(market string, event []byte) {
+var wsHandlerHuobiSpot = func(market string, conn *websocket.Conn, event []byte) {
 	res := util.UnGzip(event)
 	responseJson, jsonErr := util.NewJSON(res)
 	if jsonErr != nil {
@@ -127,7 +127,7 @@ var wsHandlerHuobiSpot = func(market string, event []byte) {
 	}
 }
 
-var wsHandlerHuobiDM = func(market string, event []byte) {
+var wsHandlerHuobiDM = func(market string, conn *websocket.Conn, event []byte) {
 	res := util.UnGzip(event)
 	responseJson, jsonErr := util.NewJSON(res)
 	if jsonErr != nil {

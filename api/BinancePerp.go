@@ -154,7 +154,7 @@ func getMarketsBinancePerp(key, secret string) (marketInfos map[string]*model.Ma
 	return marketInfos
 }
 
-var wsHandlerBinancePerp = func(market string, event []byte) {
+var wsHandlerBinancePerp = func(market string, conn *websocket.Conn, event []byte) {
 	result, wsErr := util.NewJSON(event)
 	if wsErr != nil {
 		util.Info(`1test return fail to unmarshal json ` + wsErr.Error())

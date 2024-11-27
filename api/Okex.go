@@ -190,7 +190,7 @@ var subscribeHandlerOKEX = func(market string, connection *websocket.Conn, subsc
 	return err
 }
 
-var wsHandlerOKEX = func(market string, event []byte) {
+var wsHandlerOKEX = func(market string, conn *websocket.Conn, event []byte) {
 	responseJson, err := util.NewJSON(event)
 	if err != nil || responseJson == nil || responseJson.Get(`data`) == nil ||
 		len(responseJson.Get(`data`).MustArray()) == 0 ||

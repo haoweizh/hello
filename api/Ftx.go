@@ -122,7 +122,7 @@ var subscribeHandlerFtx = func(market string, connection *websocket.Conn, subscr
 	}
 	return err
 }
-var wsHandlerFtx = func(market string, event []byte) {
+var wsHandlerFtx = func(market string, conn *websocket.Conn, event []byte) {
 	responseJson, err := util.NewJSON(event)
 	if err != nil {
 		util.SocketInfo(`fail to unmarshal json ` + err.Error())
