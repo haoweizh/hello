@@ -172,7 +172,7 @@ func (environment *Environment) GetBidAsk(market, symbol string) (result bool, b
 	return false, nil
 }
 
-//var testConn sync.Map
+var testConn sync.Map
 
 func (environment *Environment) SetBidAsk(market, symbol string, bidAsk *BidAsk) bool {
 	if bidAsk == nil || bidAsk.Bids == nil || bidAsk.Asks == nil || bidAsk.Bids.Len() == 0 || bidAsk.Asks.Len() == 0 {
@@ -206,14 +206,14 @@ func (environment *Environment) SetBidAsk(market, symbol string, bidAsk *BidAsk)
 	util.StoreSyncMap(&environment.bidAsks, bidAsk, market, symbol)
 	last, _ := util.LoadSyncMap(&environment.bidAsks, market, symbol)
 	//if last == nil || last.(*BidAsk).Ts <= bidAsk.Ts {
-	//	//if market == BinancePerp {
-	//	//	ts := fmt.Sprintf(`%s %d %d`, symbol, time.Now().Hour(), time.Now().Minute())
-	//	//	minBidAsk, _ := testConn.Load(ts)
-	//	//	if minBidAsk == nil {
-	//	//		testConn.Store(ts, bidAsk)
-	//	//		util.Info(fmt.Sprintf(`set bn tick %s %d`, symbol, bidAsk.Ts))
-	//	//	}
-	//	//}
+	if market == BinancePerp {
+		ts := fmt.Sprintf(`%s %d %d`, symbol, time.Now().Hour(), time.Now().Minute())
+		minBidAsk, _ := testConn.Load(ts)
+		if minBidAsk == nil {
+			testConn.Store(ts, bidAsk)
+			util.Info(fmt.Sprintf(`set bn tick %s %d`, symbol, bidAsk.Ts))
+		}
+	}
 	//} else {
 	//	util.Info(fmt.Sprintf(`8 test return no set old tick %s %d <= %d`, symbol, last.(*BidAsk).Ts, bidAsk.Ts))
 	//}
