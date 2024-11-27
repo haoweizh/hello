@@ -422,9 +422,11 @@ func maintainConnsGate(accounts []*model.Account) {
 			}
 		}
 		connTickPerp, _ := model.AppEnvironment.ConnTick.Load(model.Gate + model.MarketTypePerp)
-		if err := SendToConnections(model.Gate, connTickPerp.(map[*websocket.Conn]bool), websocket.TextMessage,
-			util.JsonEncodeToByte(map[string]interface{}{"time": time.Now().Unix(), "channel": "futures.ping"})); err != nil {
-			util.SocketInfo(fmt.Sprintf("tick conn maintain error %s %s", model.Gate, err.Error()))
+		if connTickPerp != nil {
+			if err := SendToConnections(model.Gate, connTickPerp.(map[*websocket.Conn]bool), websocket.TextMessage,
+				util.JsonEncodeToByte(map[string]interface{}{"time": time.Now().Unix(), "channel": "futures.ping"})); err != nil {
+				util.SocketInfo(fmt.Sprintf("tick conn maintain error %s %s", model.Gate, err.Error()))
+			}
 		}
 		for _, account := range accounts {
 			successSpot := false
