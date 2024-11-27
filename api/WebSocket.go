@@ -58,7 +58,7 @@ func SendToConnections(market string, connections map[*websocket.Conn]bool, msgT
 				//SetRequireReset(market)
 			}
 		}
-		time.Sleep(time.Millisecond * 100)
+		//time.Sleep(time.Millisecond * 100)
 	}
 	if err != nil {
 		util.Notice(fmt.Sprintf(`fail to write to all connection %s %s return: %s`, market, msg, err.Error()))
@@ -194,7 +194,7 @@ func WebSocketClient(market, url string, subscribes []interface{}, subHandler Su
 		}
 		msgChans = append(msgChans, stopChan)
 		socketMap[connection] = true
-		time.Sleep(time.Millisecond * 100)
+		//time.Sleep(time.Millisecond * 100)
 	}
 	util.Info(fmt.Sprintf(`ws client add conns %s sockets %d msgChans %d`, market, len(socketMap), len(msgChans)))
 	return
