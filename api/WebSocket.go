@@ -72,7 +72,8 @@ func newConnection(url string) (*websocket.Conn, error) {
 	//for i := 0; i < 10; i++ {
 	util.SocketInfo("try to connect " + url)
 	dialer := &websocket.Dialer{
-		Proxy: http.ProxyFromEnvironment,
+		Proxy:          http.ProxyFromEnvironment,
+		ReadBufferSize: 8192,
 		//EnableCompression: true,
 	}
 	c, _, connErr = dialer.Dial(url, nil)
@@ -80,6 +81,7 @@ func newConnection(url string) (*websocket.Conn, error) {
 		//	break
 		if c != nil {
 			c.EnableWriteCompression(true)
+			c.SetReadLimit(1024 * 1024 * 128)
 			//c.SetCompressionLevel()
 		}
 	} else {
@@ -100,7 +102,7 @@ func chanHandler(market string, stopChan chan struct{}, connection *websocket.Co
 	defer func() {
 		err := connection.Close()
 		if err != nil {
-			util.Notice(fmt.Sprintf(`connection closed %s`, err.Error()))
+			util.Notice(fmt.Sprintf(`connection closed %s %s`, market, err.Error()))
 		}
 	}()
 	for {
@@ -181,7 +183,7 @@ func WebSocketClient(market, url string, subscribes []interface{}, subHandler Su
 			return nil, nil, err
 		}
 		connection.SetPingHandler(func(appData string) error {
-			errPing := connection.WriteControl(websocket.PongMessage, []byte(appData), time.Now().Add(time.Second*5))
+			errPing := connection.WriteControl(websocket.PongMessage, []byte(appData), time.Now().Add(time.Second*60))
 			//errPing := connection.WriteMessage(websocket.PongMessage, []byte(appData))
 			if errPing != nil {
 				util.Notice(fmt.Sprintf(`fail to handle ping %s %s %s`, market, url, errPing.Error()))
