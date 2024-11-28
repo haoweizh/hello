@@ -111,7 +111,7 @@ func MaintainTransFee() {
 func ClearChannels(market string, chanMap *sync.Map) {
 	if chanMap != nil {
 		channels, _ := chanMap.Load(market)
-		for i, channel := range channels.([]chan struct{}) {
+		for _, channel := range channels.([]chan struct{}) {
 			//util.Notice(`send to stop connection %s %d`, market, i)
 			channel <- struct{}{}
 			close(channel)
