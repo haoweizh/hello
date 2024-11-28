@@ -73,7 +73,7 @@ func newConnection(url string) (*websocket.Conn, error) {
 	util.SocketInfo("try to connect " + url)
 	dialer := &websocket.Dialer{
 		Proxy:          http.ProxyFromEnvironment,
-		ReadBufferSize: 8192,
+		ReadBufferSize: 1024 * 16,
 		//EnableCompression: true,
 	}
 	c, _, connErr = dialer.Dial(url, nil)
