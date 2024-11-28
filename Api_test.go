@@ -10,7 +10,6 @@ import (
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"hello/api"
-	"hello/carry"
 	"hello/model"
 	"hello/regret"
 	"hello/util"
@@ -525,15 +524,18 @@ func Test_Order(t *testing.T) {
 	//account := model.GetAccounts(0)[market]
 	//_, listKey := api.RenewListenKeyBinance(account, market)
 	//api.ExtendListenKeyBinance(account, market, listKey)
-	api.InitMarketInfos(model.OKEX)
+	//api.InitMarketInfos(model.OKEX)
 	//go model.AppEnvironment.HandleWSResp()
 	//api.MaintainConns(market)
 	//order := api.PlaceOrder(account.Key, account.Secret, model.OrderSideBuy, model.OrderTypeMarket, market, symbol, ``,
 	//	`test`, 0.011788999999999999, 0.011788999999999999, 232.4550, false, nil)
 	//api.CancelOrder(account.Key, account.Secret, market, symbol, model.OrderTypeLimit, order.OrderId)
-	markets := []string{model.BinancePerp, model.OKEX}
+	markets := []string{model.BinancePerp}
 	for _, mk := range markets {
-		go carry.ManageConnTicks(mk)
+		//go carry.ManageConnTicks(mk)
+		for i := 0; i < 10; i++ {
+			api.CreateWSTick(model.AppEnvironment, mk)
+		}
 	}
 	go func() {
 		for {

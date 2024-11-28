@@ -112,7 +112,7 @@ func ClearChannels(market string, chanMap *sync.Map) {
 	if chanMap != nil {
 		channels, _ := chanMap.Load(market)
 		for i, channel := range channels.([]chan struct{}) {
-			util.Notice(`send to stop connection %s %d`, market, i)
+			//util.Notice(`send to stop connection %s %d`, market, i)
 			channel <- struct{}{}
 			close(channel)
 		}
@@ -190,6 +190,6 @@ func Maintain() {
 		for _, market := range api.GetMarkets() {
 			go ManageConnTicks(market)
 		}
-		time.Sleep(time.Minute * 2)
+		time.Sleep(time.Minute * 1)
 	}
 }
