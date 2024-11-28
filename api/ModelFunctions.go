@@ -433,6 +433,21 @@ func InitApp(refreshDynamic bool) bool {
 }
 
 func GetMarketSymbols(market string) map[string]bool {
+	if model.AppConfig.Env == `test` {
+		if market == model.BinancePerp {
+			return map[string]bool{`1000BONK_PERP`: true, `1000SHIB_PERP`: true, `AAVE_PERP`: true, `ADA_PERP`: true, `APE_PERP`: true, `APT_PERP`: true, `ARB_PERP`: true, `ATOM_PERP`: true,
+				`AVAX_PERP`: true, `BTC_PERP`: true, `CRV_PERP`: true, `DOGE_PERP`: true, `DOT_PERP`: true, `ENA_PERP`: true, `ENS_PERP`: true, `ETHFI_PERP`: true, `ETH_PERP`: true, `FET_PERP`: true,
+				`FIL_PERP`: true, `FTM_PERP`: true, `GALA_PERP`: true, `GLM_PERP`: true, `GOAT_PERP`: true, `HBAR_PERP`: true, `INJ_PERP`: true, `JTO_PERP`: true, `KSM_PERP`: true, `MANA_PERP`: true,
+				`MOODENG_PERP`: true, `NEAR_PERP`: true, `NEIRO_PERP`: true, `NOT_PERP`: true, `OP_PERP`: true, `ORDI_PERP`: true, `SAND_PERP`: true, `SEI_PERP`: true, `SOL_PERP`: true, `STX_PERP`: true,
+				`SUI_PERP`: true, `TAO_PERP`: true, `TIA_PERP`: true, `TON_PERP`: true, `WIF_PERP`: true, `WLD_PERP`: true, `XLM_PERP`: true}
+		} else if market == model.OKEX {
+			return map[string]bool{`AAVE_PERP`: true, `ADA_PERP`: true, `ALGO_PERP`: true, `APT_PERP`: true, `ARB_PERP`: true, `ATOM_PERP`: true, `AVAX_PERP`: true, `BONK_PERP`: true,
+				`BTC_PERP`: true, `CRV_PERP`: true, `DOGE_PERP`: true, `DOGS_PERP`: true, `DOT_PERP`: true, `ENS_PERP`: true, `ETHFI_PERP`: true, `ETH_PERP`: true, `FIL_PERP`: true, `FTM_PERP`: true,
+				`GALA_PERP`: true, `GLM_PERP`: true, `GRASS_PERP`: true, `HBAR_PERP`: true, `JTO_PERP`: true, `KSM_PERP`: true, `MANA_PERP`: true, `MOODENG_PERP`: true, `NEAR_PERP`: true,
+				`NEIRO_PERP`: true, `NOT_PERP`: true, `OP_PERP`: true, `ORDI_PERP`: true, `PEOPLE_PERP`: true, `PEPE_PERP`: true, `POL_PERP`: true, `PUFFER_PERP`: true, `SAND_PERP`: true,
+				`SATS_PERP`: true, `SHIB_PERP`: true, `SOL_PERP`: true, `SUI_PERP`: true, `TIA_PERP`: true, `TON_PERP`: true, `TURBO_PERP`: true, `WIF_PERP`: true, `WLD_PERP`: true, `XLM_PERP`: true, `X_PERP`: true}
+		}
+	}
 	if appSettings == nil {
 		util.Notice(`load setting GetMarketSymbols %s`, market)
 		return nil

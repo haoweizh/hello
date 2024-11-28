@@ -10,6 +10,7 @@ import (
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"hello/api"
+	"hello/carry"
 	"hello/model"
 	"hello/regret"
 	"hello/util"
@@ -519,29 +520,29 @@ func Test_download(t *testing.T) {
 
 func Test_Order(t *testing.T) {
 	model.NewConfig()
-	market := model.BinancePerp
+	//market := model.BinancePerp
 	//symbol := `BENDOG_USDT`
 	//account := model.GetAccounts(0)[market]
 	//_, listKey := api.RenewListenKeyBinance(account, market)
 	//api.ExtendListenKeyBinance(account, market, listKey)
-	//api.InitMarketInfos(market)
+	api.InitMarketInfos(model.OKEX)
 	//go model.AppEnvironment.HandleWSResp()
 	//api.MaintainConns(market)
 	//order := api.PlaceOrder(account.Key, account.Secret, model.OrderSideBuy, model.OrderTypeMarket, market, symbol, ``,
 	//	`test`, 0.011788999999999999, 0.011788999999999999, 232.4550, false, nil)
 	//api.CancelOrder(account.Key, account.Secret, market, symbol, model.OrderTypeLimit, order.OrderId)
-	api.CreateWSTick(model.AppEnvironment, market)
-	//go func() {
-	//	for {
-	//		connTick, _ := model.AppEnvironment.ConnTick.Load(market)
-	//		if connTick != nil {
-	//			if err := api.SendToConnections(market, connTick.(map[*websocket.Conn]bool), websocket.PongMessage, []byte(``)); err != nil {
-	//				util.Notice(fmt.Sprintf("tick conn maintain error %s %s", market, err.Error()))
-	//			}
-	//		}
-	//		time.Sleep(time.Second * 10)
-	//	}
-	//}()
+	markets := []string{model.BinancePerp, model.OKEX}
+	for _, mk := range markets {
+		go carry.ManageConnTicks(mk)
+	}
+	go func() {
+		for {
+			for _, mk := range markets {
+				api.RequireConnTickReset(model.AppEnvironment, mk)
+			}
+			time.Sleep(2 * time.Minute)
+		}
+	}()
 	select {}
 }
 
