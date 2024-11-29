@@ -2,7 +2,6 @@ package api
 
 import (
 	"fmt"
-	"github.com/gorilla/websocket"
 	"hello/model"
 	"hello/util"
 	"strings"
@@ -99,7 +98,7 @@ func GetWSSubscribe(market, symbol, subType string) (subscribe interface{}) {
 
 // CreateMarketKLineWS
 func _(environment *model.Environment, market string, symbols map[string]bool) (
-	socketMap map[*websocket.Conn]bool, channels []chan struct{}) {
+	socketMap map[*model.WSConn]bool, channels []chan struct{}) {
 	switch market {
 	case model.BinanceSpot:
 		util.Notice(" create KLine ws chan for " + market)
@@ -109,7 +108,7 @@ func _(environment *model.Environment, market string, symbols map[string]bool) (
 }
 
 func CreateWSTick(environment *model.Environment, market string) (
-	socketMap map[*websocket.Conn]bool, channels []chan struct{}) {
+	socketMap map[*model.WSConn]bool, channels []chan struct{}) {
 	model.ChannelMaintaining.Store(market, true)
 	util.Notice(" create depth chan for " + market)
 	channels = make([]chan struct{}, 1)
@@ -121,22 +120,22 @@ func CreateWSTick(environment *model.Environment, market string) (
 		environment.ConnTick.Store(market+model.MarketTypePerp, socketMapPerp)
 		environment.MsgChanTick.Store(market+model.MarketTypePerp, channsPerp)
 	case model.OKEX:
-		socketMap, channels, err = WebSocketClient(market, wsOKEX, GetWSSubscribes(market, []string{model.SubscribeDepth}),
+		socketMap, channels, err = model.WebSocketClient(market, wsOKEX, GetWSSubscribes(market, []string{model.SubscribeDepth}),
 			subscribeHandlerOKEX, wsHandlerOKEX, wsStepOKEX)
 	case model.BinanceSpot, model.BinanceMargin:
-		socketMap, channels, err = WebSocketClient(market, wsBinance+`/stream`, GetWSSubscribes(market, []string{model.SubscribeTicker}),
+		socketMap, channels, err = model.WebSocketClient(market, wsBinance+`/stream`, GetWSSubscribes(market, []string{model.SubscribeTicker}),
 			subscribeHandlerBinance, wsHandlerBinance, wsStepBinance)
 	case model.BinancePerp:
-		socketMap, channels, err = WebSocketClient(market, wsBinancePerp+`/stream`, GetWSSubscribes(
+		socketMap, channels, err = model.WebSocketClient(market, wsBinancePerp+`/stream`, GetWSSubscribes(
 			market, []string{model.SubscribeTicker, model.SubscribeMarkPrice}), subscribeHandlerBinance, wsHandlerBinancePerp, wsStepBinance)
 		//model.SubscribeDepth
 	case model.HuobiPerp:
-		socketMap, channels, err = WebSocketClient(market, wsHuobiPerp, GetWSSubscribes(model.HuobiPerp, []string{model.SubscribeDepth}),
+		socketMap, channels, err = model.WebSocketClient(market, wsHuobiPerp, GetWSSubscribes(model.HuobiPerp, []string{model.SubscribeDepth}),
 			subscribeHandlerHuobiPerp, wsMsgHandler, wsStepHuobi)
 	case model.Bybit:
 		socketMap, channels, err = WsTickServeBybit(market)
 	case model.BitgetSpot:
-		socketMap, channels, err = WebSocketClient(market, bitgetPublic,
+		socketMap, channels, err = model.WebSocketClient(market, bitgetPublic,
 			GetWSSubscribes(market, []string{model.SubscribeDepth}), subscribeHandlerBitget, tickHandlerBitget, wsStepBitget)
 	case model.BitgetPerp:
 		socketMap, channels, err = WsTickServeBitgetPerp(market)

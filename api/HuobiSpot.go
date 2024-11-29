@@ -6,7 +6,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"github.com/gorilla/websocket"
 	"hello/model"
 	"hello/util"
 	"math"
@@ -53,21 +52,21 @@ type HuobiMessage struct {
 	} `json:"tick"`
 }
 
-var subscribeHandlerHuobi = func(market string, connection *websocket.Conn, subscribes []interface{}) error {
+var subscribeHandlerHuobi = func(market string, connection *model.WSConn, subscribes []interface{}) error {
 	var err error = nil
 	for _, v := range subscribes {
 		subscribeMap := make(map[string]interface{})
 		subscribeMap["id"] = strconv.Itoa(util.GetNow().Nanosecond())
 		subscribeMap["sub"] = v
 		subscribeMessage := util.JsonEncodeToByte(subscribeMap)
-		if err = connection.WriteMessage(websocket.TextMessage, subscribeMessage); err != nil {
+		if err = connection.WriteMsg(subscribeMessage); err != nil {
 			util.SocketInfo(" huobi can not subscribe %s %s", v, err.Error())
 		}
 		util.Info(`huobi subscribed ` + string(subscribeMessage))
 	}
 	return err
 }
-var wsHandlerHuobiSpot = func(market string, conn *websocket.Conn, event []byte) {
+var wsHandlerHuobiSpot = func(market string, conn *model.WSConn, event []byte) {
 	res := util.UnGzip(event)
 	responseJson, jsonErr := util.NewJSON(res)
 	if jsonErr != nil {
@@ -82,7 +81,7 @@ var wsHandlerHuobiSpot = func(market string, conn *websocket.Conn, event []byte)
 		if value == nil {
 			return
 		}
-		if err := SendToConnections(model.HuobiSpot, value.(map[*websocket.Conn]bool), websocket.TextMessage, pingParams); err != nil {
+		if err := model.SendToConnections(model.HuobiSpot, value.(map[*model.WSConn]bool), pingParams); err != nil {
 			util.SocketInfo("huobi server ping client error " + err.Error())
 		}
 	} else {
@@ -127,7 +126,7 @@ var wsHandlerHuobiSpot = func(market string, conn *websocket.Conn, event []byte)
 	}
 }
 
-var wsHandlerHuobiDM = func(market string, conn *websocket.Conn, event []byte) {
+var wsHandlerHuobiDM = func(market string, conn *model.WSConn, event []byte) {
 	res := util.UnGzip(event)
 	responseJson, jsonErr := util.NewJSON(res)
 	if jsonErr != nil {
@@ -142,7 +141,7 @@ var wsHandlerHuobiDM = func(market string, conn *websocket.Conn, event []byte) {
 		if value == nil {
 			return
 		}
-		if wsErr := SendToConnections(model.HuobiSpot, value.(map[*websocket.Conn]bool), websocket.TextMessage, pingParams); wsErr != nil {
+		if wsErr := model.SendToConnections(model.HuobiSpot, value.(map[*model.WSConn]bool), pingParams); wsErr != nil {
 			util.SocketInfo("HuobiFuture server ping client error " + wsErr.Error())
 		}
 	} else {
@@ -198,7 +197,7 @@ var wsHandlerHuobiDM = func(market string, conn *websocket.Conn, event []byte) {
 	}
 }
 
-func WsTickServeHuobiSpot(environment *model.Environment, market string) (socketMap map[*websocket.Conn]bool, msgChans []chan struct{}, connectErr error) {
+func WsTickServeHuobiSpot(environment *model.Environment, market string) (socketMap map[*model.WSConn]bool, msgChans []chan struct{}, connectErr error) {
 	var spotSubscribes, futureSubscribes []interface{}
 	subscribes := GetWSSubscribes(model.HuobiSpot, []string{model.SubscribeTicker})
 	for _, subscribe := range subscribes {
@@ -208,10 +207,10 @@ func WsTickServeHuobiSpot(environment *model.Environment, market string) (socket
 			spotSubscribes = append(spotSubscribes, subscribe)
 		}
 	}
-	socketMap = make(map[*websocket.Conn]bool)
+	socketMap = make(map[*model.WSConn]bool)
 	msgChans = make([]chan struct{}, 0)
-	spotSockets, channels, channelErr := WebSocketClient(model.HuobiSpot, wsHuobi, spotSubscribes, subscribeHandlerHuobi, wsHandlerHuobiSpot, wsStepHuobi)
-	dmSockets, dmChannels, dmChannelErr := WebSocketClient(model.HuobiSpot, wsHuobiFuture, futureSubscribes, subscribeHandlerHuobi, wsHandlerHuobiDM, wsStepHuobi)
+	spotSockets, channels, channelErr := model.WebSocketClient(model.HuobiSpot, wsHuobi, spotSubscribes, subscribeHandlerHuobi, wsHandlerHuobiSpot, wsStepHuobi)
+	dmSockets, dmChannels, dmChannelErr := model.WebSocketClient(model.HuobiSpot, wsHuobiFuture, futureSubscribes, subscribeHandlerHuobi, wsHandlerHuobiDM, wsStepHuobi)
 	if channelErr == nil {
 		msgChans = append(msgChans, channels...)
 		for conn, b := range spotSockets {

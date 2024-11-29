@@ -6,7 +6,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"github.com/gorilla/websocket"
 	"hello/api/dtos"
 	"hello/model"
 	"hello/util"
@@ -25,18 +24,15 @@ func maintainConnsBitget(market string, accounts []*model.Account) {
 	for {
 		connTick, _ := model.AppEnvironment.ConnTick.Load(market)
 		if connTick != nil {
-			if err := SendToConnections(market, connTick.(map[*websocket.Conn]bool), websocket.TextMessage, []byte(`ping`)); err != nil {
+			if err := model.SendToConnections(market, connTick.(map[*model.WSConn]bool), []byte(`ping`)); err != nil {
 				util.Notice(fmt.Sprintf("tick conn maintain error %s %s", market, err.Error()))
 			}
 		}
 		for _, account := range accounts {
 			success := false
 			valueUpdate, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrderUpdate, market, account.Key)
-			if valueUpdate != nil && valueUpdate.(*model.WSConn).Conn != nil {
-				if time.Now().UnixMilli()-valueUpdate.(*model.WSConn).LastMsgTime > 180000 {
-					success = false
-				}
-				if err := valueUpdate.(*model.WSConn).Conn.WriteMessage(websocket.TextMessage, []byte(`ping`)); err != nil {
+			if valueUpdate != nil {
+				if err := valueUpdate.(*model.WSConn).WriteMsg([]byte(`ping`)); err != nil {
 					util.Notice(fmt.Sprintf("order update conn maintain error %s %s", market, err.Error()))
 				} else {
 					success = true
@@ -44,19 +40,18 @@ func maintainConnsBitget(market string, accounts []*model.Account) {
 			}
 			if !success {
 				util.DelSyncMap(&model.AppEnvironment.ConnOrderUpdate, market, account.Key)
-				WsOrderServeBitgetSpot(market, account)
+				WsOrderServeBitget(market, account)
 			}
 		}
 		time.Sleep(time.Second * 20)
 	}
 }
 
-var wsOrderConnHandlerBitgetSpot = func(market, key string, event []byte) {
+var wsOrderConnHandlerBitget = func(market, key string, event []byte) {
 	value, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrderUpdate, market, key)
 	if value == nil || value.(*model.WSConn).Conn == nil {
 		return
 	}
-	value.(*model.WSConn).LastMsgTime = time.Now().UnixMilli()
 	resJson, _ := util.NewJSON(event)
 	if resJson == nil {
 		return
@@ -68,7 +63,7 @@ var wsOrderConnHandlerBitgetSpot = func(market, key string, event []byte) {
 		instType = `USDT-FUTURES`
 	}
 	if resJson.Get(`event`).MustString() == `login` && resJson.Get(`code`).MustInt() == 0 {
-		err := SendToConnection(market, value.(*model.WSConn).Conn, []byte(
+		err := model.SendToConnection(market, value.(*model.WSConn), []byte(
 			fmt.Sprintf(`{"op":"subscribe","args":[{"instType": "%s","channel":"orders","instId":"default"}]}`, instType)))
 		if err != nil {
 			util.DelSyncMap(&model.AppEnvironment.ConnOrderUpdate, market, key)
@@ -85,33 +80,28 @@ var wsOrderConnHandlerBitgetSpot = func(market, key string, event []byte) {
 	}
 }
 
-func wsLoginBitget(account *model.Account, conn *websocket.Conn) (success bool) {
+func wsLoginBitget(account *model.Account, conn *model.WSConn) (success bool) {
 	ts := time.Now().Unix()
 	hash := hmac.New(sha256.New, []byte(account.Secret))
 	hash.Write([]byte(fmt.Sprintf(`%dGET/user/verify`, ts)))
 	sign := base64.StdEncoding.EncodeToString(hash.Sum(nil))
-	if err := conn.WriteMessage(websocket.TextMessage, []byte(fmt.Sprintf(
-		`{"op":"login","args":[{"apiKey":"%s","passphrase":"%s","timestamp":"%d","sign":"%s"}]}`,
+	if err := conn.WriteMsg([]byte(fmt.Sprintf(`{"op":"login","args":[{"apiKey":"%s","passphrase":"%s","timestamp":"%d","sign":"%s"}]}`,
 		account.Key, model.AppConfig.Phase, ts, sign))); err != nil {
 		return false
 	}
 	return true
 }
 
-func WsOrderServeBitgetSpot(market string, account *model.Account) {
+func WsOrderServeBitget(market string, account *model.Account) {
 	if account == nil {
 		return
 	}
-	value, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrderUpdate, market, account.Key)
-	if value != nil && value.(*model.WSConn).Conn != nil && time.Now().UnixMilli()-value.(*model.WSConn).LastMsgTime < 60000 {
-		return
-	}
-	conn, err := WsAccountClient(market, account.Key, bitgetPrivate, wsOrderConnHandlerBitgetSpot)
+	conn, err := model.WsAccountClient(market, account.Key, bitgetPrivate, wsOrderConnHandlerBitget)
 	if err != nil {
 		util.Notice("can not create web socket " + err.Error())
 	} else if conn != nil {
 		if wsLoginBitget(account, conn) {
-			util.StoreSyncMap(&model.AppEnvironment.ConnOrderUpdate, &model.WSConn{Conn: conn}, market, account.Key)
+			util.StoreSyncMap(&model.AppEnvironment.ConnOrderUpdate, conn, market, account.Key)
 		}
 	}
 }
@@ -194,9 +184,9 @@ func parseBidAskBitget(bookWsResp *dtos.BitgetBoosWsResp) (bidAsk *model.BidAsk)
 	return bidAsk
 }
 
-var tickHandlerBitget = func(market string, conn *websocket.Conn, event []byte) {
+var tickHandlerBitget = func(market string, conn *model.WSConn, event []byte) {
 	if strings.Contains(string(event), `ping`) {
-		err := conn.WriteMessage(websocket.TextMessage, []byte(`pong`))
+		err := conn.WriteMsg([]byte(`pong`))
 		if err != nil {
 			return
 		}
@@ -232,7 +222,7 @@ var tickHandlerBitget = func(market string, conn *websocket.Conn, event []byte) 
 	}
 }
 
-var subscribeHandlerBitget = func(market string, connection *websocket.Conn, subscribes []interface{}) error {
+var subscribeHandlerBitget = func(market string, connection *model.WSConn, subscribes []interface{}) error {
 	var err error = nil
 	var params []string
 	for _, subscribe := range subscribes {
@@ -242,7 +232,7 @@ var subscribeHandlerBitget = func(market string, connection *websocket.Conn, sub
 	subscribeMap["op"] = "subscribe"
 	subscribeMap["args"] = params
 	subscribeMessage := util.JsonEncodeToByte(subscribeMap)
-	if err = SendToConnection(market, connection, subscribeMessage); err != nil {
+	if err = model.SendToConnection(market, connection, subscribeMessage); err != nil {
 		util.Info("%s can not subscribe %s %s", market, subscribeMessage, err.Error())
 	}
 	util.Info(`bitget subscribed ` + string(subscribeMessage))

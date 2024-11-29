@@ -533,9 +533,7 @@ func Test_Order(t *testing.T) {
 	markets := []string{model.BinancePerp}
 	for _, mk := range markets {
 		//go carry.ManageConnTicks(mk)
-		for i := 0; i < 10; i++ {
-			api.CreateWSTick(model.AppEnvironment, mk)
-		}
+		api.CreateWSTick(model.AppEnvironment, mk)
 	}
 	go func() {
 		for {

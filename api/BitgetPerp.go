@@ -3,7 +3,6 @@ package api
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/gorilla/websocket"
 	"hello/api/dtos"
 	"hello/model"
 	"hello/util"
@@ -67,9 +66,9 @@ func setBitgetPositionMode(key, secret string) {
 	}
 }
 
-var markPriceWsHandler = func(market string, conn *websocket.Conn, event []byte) {
+var markPriceWsHandler = func(market string, conn *model.WSConn, event []byte) {
 	if strings.Contains(string(event), `ping`) {
-		err := conn.WriteMessage(websocket.TextMessage, []byte(`pong`))
+		err := conn.WriteMsg([]byte(`pong`))
 		if err != nil {
 			return
 		}
@@ -105,12 +104,12 @@ var markPriceWsHandler = func(market string, conn *websocket.Conn, event []byte)
 	}
 }
 
-func WsTickServeBitgetPerp(market string) (socketMap map[*websocket.Conn]bool, msgChans []chan struct{}, connectErr error) {
+func WsTickServeBitgetPerp(market string) (socketMap map[*model.WSConn]bool, msgChans []chan struct{}, connectErr error) {
 	msgChans = make([]chan struct{}, 0)
-	socketMap = make(map[*websocket.Conn]bool)
+	socketMap = make(map[*model.WSConn]bool)
 	depthSubs := GetWSSubscribes(market, []string{model.SubscribeDepth})
 	marketPriceSubs := GetWSSubscribes(market, []string{model.SubscribeMarkPrice})
-	markPriceSockets, markPriceChannels, markPriceErr := WebSocketClient(market, bitgetPublic,
+	markPriceSockets, markPriceChannels, markPriceErr := model.WebSocketClient(market, bitgetPublic,
 		marketPriceSubs, subscribeHandlerBitget, markPriceWsHandler, wsStepBitget)
 	if markPriceErr == nil {
 		msgChans = append(msgChans, markPriceChannels...)
@@ -120,7 +119,7 @@ func WsTickServeBitgetPerp(market string) (socketMap map[*websocket.Conn]bool, m
 	} else {
 		return nil, nil, markPriceErr
 	}
-	perpBookSockets, perpBookChannels, perpBookErr := WebSocketClient(market, bitgetPublic,
+	perpBookSockets, perpBookChannels, perpBookErr := model.WebSocketClient(market, bitgetPublic,
 		depthSubs, subscribeHandlerBitget, tickHandlerBitget, wsStepBitget)
 	if perpBookErr == nil {
 		util.Info(`finish connect public Bitget perp book wss `)

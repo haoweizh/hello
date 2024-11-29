@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"github.com/adshao/go-binance/v2"
 	"github.com/bitly/go-simplejson"
-	"github.com/gorilla/websocket"
 	"hello/model"
 	"hello/util"
 	"net/http"
@@ -87,7 +86,7 @@ func GetMarketsBinance(account *model.Account, market string) (marketInfos map[s
 	return marketInfos
 }
 
-var KLineMsgHandlerBinanceSpot = func(market string, conn *websocket.Conn, event []byte) {
+var KLineMsgHandlerBinanceSpot = func(market string, conn *model.WSConn, event []byte) {
 	result, wsErr := util.NewJSON(event)
 	if wsErr != nil {
 		util.Notice(`binance fail to unmarshal json ` + wsErr.Error())
@@ -129,20 +128,20 @@ var KLineMsgHandlerBinanceSpot = func(market string, conn *websocket.Conn, event
 }
 
 func WsKLineBinanceSpot(environment *model.Environment, market string, symbols map[string]bool) (
-	socketMap map[*websocket.Conn]bool, msgChans []chan struct{}, connectErr error) {
+	socketMap map[*model.WSConn]bool, msgChans []chan struct{}, connectErr error) {
 
 	subs := make([]interface{}, 0)
 	for symbol := range symbols {
 		_, _, _, dialectSymbol := model.GetFromStandard(market, symbol)
 		subs = append(subs, strings.ToLower(dialectSymbol)+`@kline_1m`)
 	}
-	socketMap, msgChans, connectErr = WebSocketClient(market, wsBinance+`/stream`, subs,
+	socketMap, msgChans, connectErr = model.WebSocketClient(market, wsBinance+`/stream`, subs,
 		subscribeHandlerBinance, KLineMsgHandlerBinanceSpot, wsStepBinance)
 	environment.MsgChanKLine.Store(market, msgChans)
 	return
 }
 
-var wsHandlerBinance = func(market string, conn *websocket.Conn, event []byte) {
+var wsHandlerBinance = func(market string, conn *model.WSConn, event []byte) {
 	result, wsErr := util.NewJSON(event)
 	if wsErr != nil {
 		util.Notice(`binance fail to unmarshal json ` + wsErr.Error())
@@ -185,7 +184,7 @@ var wsHandlerBinance = func(market string, conn *websocket.Conn, event []byte) {
 
 var subIdBinance sync.Map
 
-var subscribeHandlerBinance = func(market string, connection *websocket.Conn, subscribes []interface{}) (err error) {
+var subscribeHandlerBinance = func(market string, connection *model.WSConn, subscribes []interface{}) (err error) {
 	subParam := make(map[string]interface{})
 	subParam["method"] = "SUBSCRIBE"
 	subParam["params"] = subscribes
@@ -194,7 +193,7 @@ var subscribeHandlerBinance = func(market string, connection *websocket.Conn, su
 	subParamJson, _ := json.Marshal(subParam)
 	subIdBinance.Store(txId, true)
 	for {
-		if err = SendToConnection(market, connection, subParamJson); err != nil {
+		if err = model.SendToConnection(market, connection, subParamJson); err != nil {
 			util.SocketInfo("binance spot can not subscribe %s %s", subParamJson, err.Error())
 		}
 		util.Notice(`%s send subscribe: %s `, market, subParamJson)
@@ -319,10 +318,10 @@ func placeOrderBinanceSpot(account *model.Account, isWs bool, order *model.Order
 			order.OrderId, dialectSymbol, orderSide, strings.ToUpper(orderType), priceStr, amountStr, account.Key,
 			hex.EncodeToString(hash.Sum(nil)), ts)
 		value, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrder, model.BinanceSpot, account.Key)
-		if value == nil || value.(*model.WSConn).Conn == nil {
+		if value == nil {
 			return
 		}
-		if err := value.(*model.WSConn).Conn.WriteMessage(websocket.TextMessage, []byte(msg)); err != nil {
+		if err := value.(*model.WSConn).WriteMsg([]byte(msg)); err != nil {
 			util.Notice(fmt.Sprintf(`fail to place binancespot order return: %s`, err.Error()))
 		}
 	} else {
@@ -403,10 +402,6 @@ func parseOrderBinance(market string, orderJson *simplejson.Json) (order *model.
 }
 
 var wsOrderUpdateBinance = func(market, key string, msg []byte) {
-	value, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrderUpdate, market, key)
-	if value != nil && value.(*model.WSConn).Conn != nil {
-		value.(*model.WSConn).LastMsgTime = time.Now().UnixMilli()
-	}
 	resJson, _ := util.NewJSON(msg)
 	if resJson == nil {
 		return
@@ -426,10 +421,6 @@ var wsOrderUpdateBinance = func(market, key string, msg []byte) {
 }
 
 var wsActHandlerBinance = func(market, key string, event []byte) {
-	value, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrder, market, key)
-	if value != nil && value.(*model.WSConn).Conn != nil {
-		value.(*model.WSConn).LastMsgTime = time.Now().UnixMilli()
-	}
 	responseJson, err := util.NewJSON(event)
 	if err == nil && responseJson != nil {
 		idInt := responseJson.GetPath(`result`, `orderId`).MustInt()
@@ -459,23 +450,18 @@ func WsOrderServeBinance(account *model.Account, market string) {
 		apiUrl = wsBinancePerpApi
 		streamUrl = wsBinancePerp
 	}
-	value, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrder, market, account.Key)
-	if value == nil || value.(*model.WSConn).Conn == nil || time.Now().UnixMilli()-value.(*model.WSConn).LastMsgTime > 480000 {
-		conn, err := WsAccountClient(market, account.Key, apiUrl, wsActHandlerBinance)
-		if err != nil {
-			util.Notice(fmt.Sprintf(`fail to create account ws %s %s`, market, err.Error()))
-		}
-		util.StoreSyncMap(&model.AppEnvironment.ConnOrder, &model.WSConn{Conn: conn}, market, account.Key)
+	conn, err := model.WsAccountClient(market, account.Key, apiUrl, wsActHandlerBinance)
+	if err != nil {
+		util.Notice(fmt.Sprintf(`fail to create account ws %s %s`, market, err.Error()))
+	} else {
+		util.StoreSyncMap(&model.AppEnvironment.ConnOrder, conn, market, account.Key)
 	}
-	valueUpdate, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrderUpdate, market, account.Key)
-	if valueUpdate == nil || valueUpdate.(*model.WSConn).Conn == nil || time.Now().UnixMilli()-valueUpdate.(*model.WSConn).LastMsgTime > 480000 {
-		_, listenKey := RenewListenKeyBinance(account, market)
-		conn, err := WsAccountClient(market, account.Key, fmt.Sprintf(`%s/ws/%s`, streamUrl, listenKey), wsOrderUpdateBinance)
-		if err == nil {
-			util.StoreSyncMap(&model.AppEnvironment.ConnOrderUpdate, &model.WSConn{Conn: conn}, market, account.Key)
-		} else {
-			util.Notice(fmt.Sprintf(`fail to create order update ws %s %s`, market, err.Error()))
-		}
+	_, listenKey := RenewListenKeyBinance(account, market)
+	connUpdate, errUpdate := model.WsAccountClient(market, account.Key, fmt.Sprintf(`%s/ws/%s`, streamUrl, listenKey), wsOrderUpdateBinance)
+	if errUpdate != nil {
+		util.Notice(fmt.Sprintf(`fail to create order update ws %s %s`, market, errUpdate.Error()))
+	} else {
+		util.StoreSyncMap(&model.AppEnvironment.ConnOrderUpdate, connUpdate, market, account.Key)
 	}
 }
 

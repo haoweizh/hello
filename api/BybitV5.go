@@ -6,7 +6,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"github.com/gorilla/websocket"
 	"github.com/satori/go.uuid"
 	"hello/api/dtos"
 	"hello/model"
@@ -27,15 +26,15 @@ const wsStepBybit = 10
 
 var wsOrdUdtHandlerBybit = func(market, key string, msg []byte) {
 	value, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrderUpdate, market, key)
-	if value != nil && value.(*model.WSConn).Conn != nil {
-		value.(*model.WSConn).LastMsgTime = time.Now().UnixMilli()
+	if value == nil {
+		return
 	}
 	responseJson, err := util.NewJSON(msg)
 	if err != nil || responseJson == nil {
 		return
 	}
 	if responseJson.Get(`op`).MustString() == `auth` && responseJson.Get(`success`).MustBool() {
-		err := SendToConnection(model.Bybit, value.(*model.WSConn).Conn, []byte(`{"op":"subscribe","args": ["order"]}`))
+		err := model.SendToConnection(model.Bybit, value.(*model.WSConn), []byte(`{"op":"subscribe","args": ["order"]}`))
 		if err != nil {
 			util.DelSyncMap(&model.AppEnvironment.ConnOrderUpdate, market, key)
 		}
@@ -57,10 +56,6 @@ var wsOrdUdtHandlerBybit = func(market, key string, msg []byte) {
 }
 
 var wsOrderHandlerBybit = func(market, key string, event []byte) {
-	value, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrder, market, key)
-	if value != nil && value.(*model.WSConn).Conn != nil {
-		value.(*model.WSConn).LastMsgTime = time.Now().UnixMilli()
-	}
 	responseJson, err := util.NewJSON(event)
 	if err != nil || responseJson == nil {
 		return
@@ -85,7 +80,7 @@ func maintainConnsBybit(accounts []*model.Account) {
 		pingMsg := []byte(fmt.Sprintf(`{ "req_id": "maintain %d","op": "ping"}`, time.Now().UnixMilli()))
 		connTick, _ := model.AppEnvironment.ConnTick.Load(model.Bybit)
 		if connTick != nil {
-			if err := SendToConnections(model.Bybit, connTick.(map[*websocket.Conn]bool), websocket.TextMessage, pingMsg); err != nil {
+			if err := model.SendToConnections(model.Bybit, connTick.(map[*model.WSConn]bool), pingMsg); err != nil {
 				util.Notice(fmt.Sprintf("tick conn maintain error %s %s", model.Bybit, err.Error()))
 			}
 		}
@@ -93,35 +88,32 @@ func maintainConnsBybit(accounts []*model.Account) {
 			if account == nil {
 				continue
 			}
-			success := false
+			success := true
 			errMsg := ``
 			connOrder, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrder, model.Bybit, account.Key)
-			if connOrder != nil && connOrder.(*model.WSConn) != nil {
-				if time.Now().UnixMilli()-connOrder.(*model.WSConn).LastMsgTime > 180000 {
-					success = false
-				}
-				if err := SendToConnection(model.Bybit, connOrder.(*model.WSConn).Conn, pingMsg); err != nil {
+			if connOrder != nil {
+				if err := model.SendToConnection(model.Bybit, connOrder.(*model.WSConn), pingMsg); err != nil {
 					errMsg += err.Error()
+					success = false
 					util.Notice("-ws-bybit trade ws ping client error " + err.Error())
-				} else {
-					success = true
 				}
+			} else {
+				success = false
 			}
 			connOrderUpdate, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrderUpdate, model.Bybit, account.Key)
-			if connOrderUpdate != nil && connOrderUpdate.(*model.WSConn).Conn != nil {
-				if time.Now().UnixMilli()-connOrderUpdate.(*model.WSConn).LastMsgTime > 180000 {
-					success = false
-				}
-				if err := SendToConnection(model.Bybit, connOrderUpdate.(*model.WSConn).Conn, pingMsg); err != nil {
+			if connOrderUpdate != nil {
+				if err := model.SendToConnection(model.Bybit, connOrderUpdate.(*model.WSConn), pingMsg); err != nil {
 					errMsg += err.Error()
+					success = false
 					util.Notice("ws-bybit order update ws ping client error " + err.Error())
-				} else {
-					success = true
 				}
+			} else {
+				success = false
 			}
 			if !success {
 				util.Notice("fail to ping ws bybit " + errMsg)
 				util.DelSyncMap(&model.AppEnvironment.ConnOrder, model.Bybit, account.Key)
+				util.DelSyncMap(&model.AppEnvironment.ConnOrderUpdate, model.Bybit, account.Key)
 				WsOrderServeBybit(account)
 			}
 		}
@@ -129,7 +121,7 @@ func maintainConnsBybit(accounts []*model.Account) {
 	}
 }
 
-func WsLogInBybit(account *model.Account, conn *websocket.Conn) (success bool) {
+func WsLogInBybit(account *model.Account, conn *model.WSConn) (success bool) {
 	loginMap := make(map[string]interface{})
 	loginMap[`op`] = `auth`
 	timestamp := time.Now().UnixMilli() + 1000
@@ -140,7 +132,7 @@ func WsLogInBybit(account *model.Account, conn *websocket.Conn) (success bool) {
 	loginArray := []interface{}{account.Key, timestamp, sign}
 	loginMap[`args`] = loginArray
 	loginBytes := util.JsonEncodeToByte(loginMap)
-	if err := SendToConnection(model.Bybit, conn, loginBytes); err != nil {
+	if err := model.SendToConnection(model.Bybit, conn, loginBytes); err != nil {
 		util.Notice(fmt.Sprintf(`fail to login bybit trade ws: %s return %s`, account.Key, err.Error()))
 	} else {
 		success = true
@@ -154,28 +146,22 @@ func WsOrderServeBybit(account *model.Account) {
 	}
 	valueOrder, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrder, model.Bybit, account.Key)
 	valueOrderUpdate, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrderUpdate, model.Bybit, account.Key)
-	valid := true
-	if valueOrder == nil || valueOrder.(*model.WSConn).Conn == nil || valueOrderUpdate == nil || valueOrderUpdate.(*model.WSConn).Conn == nil ||
-		time.Now().UnixMilli()-valueOrder.(*model.WSConn).LastMsgTime > 60000 || time.Now().UnixMilli()-valueOrderUpdate.(*model.WSConn).LastMsgTime > 60000 {
-		valid = false
-	}
-	if valid {
-		return
-	}
-	connOrder, errOrder := WsAccountClient(model.Bybit, account.Key, bybitTradeWsUrl, wsOrderHandlerBybit)
-	if errOrder != nil {
-		util.Notice("bybit can not create ws order " + errOrder.Error())
-	} else if connOrder != nil {
-		if WsLogInBybit(account, connOrder) {
-			util.StoreSyncMap(&model.AppEnvironment.ConnOrder, &model.WSConn{Conn: connOrder}, model.Bybit, account.Key)
+	if valueOrder == nil || valueOrderUpdate == nil {
+		connOrder, errOrder := model.WsAccountClient(model.Bybit, account.Key, bybitTradeWsUrl, wsOrderHandlerBybit)
+		if errOrder != nil {
+			util.Notice("bybit can not create ws order " + errOrder.Error())
+		} else if connOrder != nil {
+			if WsLogInBybit(account, connOrder) {
+				util.StoreSyncMap(&model.AppEnvironment.ConnOrder, connOrder, model.Bybit, account.Key)
+			}
 		}
-	}
-	connOrderUpdate, errOrderUpdate := WsAccountClient(model.Bybit, account.Key, bybitStreamUrl+`/v5/private`, wsOrdUdtHandlerBybit)
-	if errOrderUpdate != nil {
-		util.Notice("bybit can not create ws order update" + errOrderUpdate.Error())
-	} else if connOrderUpdate != nil {
-		if WsLogInBybit(account, connOrderUpdate) {
-			util.StoreSyncMap(&model.AppEnvironment.ConnOrderUpdate, &model.WSConn{Conn: connOrderUpdate}, model.Bybit, account.Key)
+		connOrderUpdate, errOrderUpdate := model.WsAccountClient(model.Bybit, account.Key, bybitStreamUrl+`/v5/private`, wsOrdUdtHandlerBybit)
+		if errOrderUpdate != nil {
+			util.Notice("bybit can not create ws order update" + errOrderUpdate.Error())
+		} else if connOrderUpdate != nil {
+			if WsLogInBybit(account, connOrderUpdate) {
+				util.StoreSyncMap(&model.AppEnvironment.ConnOrderUpdate, connOrderUpdate, model.Bybit, account.Key)
+			}
 		}
 	}
 }
@@ -336,7 +322,7 @@ func handleBookBybit(environment *model.Environment, bookWsResp *dtos.BybitBookW
 	}
 }
 
-var spotBookWsHandler = func(market string, conn *websocket.Conn, event []byte) {
+var spotBookWsHandler = func(market string, conn *model.WSConn, event []byte) {
 	bookWsResp := &dtos.BybitBookWsResp{}
 	jsonErr := json.Unmarshal(event, bookWsResp)
 	if jsonErr != nil {
@@ -356,7 +342,7 @@ var spotBookWsHandler = func(market string, conn *websocket.Conn, event []byte) 
 	}
 }
 
-var tickHandlerBybit = func(market string, conn *websocket.Conn, event []byte) {
+var tickHandlerBybit = func(market string, conn *model.WSConn, event []byte) {
 	tickResp := &dtos.BybitTickResp{}
 	jsonErr := json.Unmarshal(event, tickResp)
 	if jsonErr != nil {
@@ -379,7 +365,7 @@ var tickHandlerBybit = func(market string, conn *websocket.Conn, event []byte) {
 	}
 }
 
-var perpBookWsHandler = func(market string, conn *websocket.Conn, event []byte) {
+var perpBookWsHandler = func(market string, conn *model.WSConn, event []byte) {
 	bookWsResp := &dtos.BybitBookWsResp{}
 	jsonErr := json.Unmarshal(event, bookWsResp)
 	if jsonErr != nil {
@@ -399,9 +385,9 @@ var perpBookWsHandler = func(market string, conn *websocket.Conn, event []byte) 
 	}
 }
 
-func WsTickServeBybit(market string) (socketMap map[*websocket.Conn]bool, msgChans []chan struct{}, connectErr error) {
+func WsTickServeBybit(market string) (socketMap map[*model.WSConn]bool, msgChans []chan struct{}, connectErr error) {
 	msgChans = make([]chan struct{}, 0)
-	socketMap = make(map[*websocket.Conn]bool)
+	socketMap = make(map[*model.WSConn]bool)
 	symbols := GetMarketSymbols(model.Bybit)
 	spotSubBook := make([]interface{}, 0)
 	futureSubBook := make([]interface{}, 0)
@@ -418,7 +404,7 @@ func WsTickServeBybit(market string) (socketMap map[*websocket.Conn]bool, msgCha
 			spotSubBook = append(spotSubBook, fmt.Sprintf("orderbook.1.%s", dialectSymbol))
 		}
 	}
-	spotBookSockets, spotBookChannels, spotBookErr := WebSocketClient(model.Bybit, bybitStreamUrl+`/v5/public/spot`,
+	spotBookSockets, spotBookChannels, spotBookErr := model.WebSocketClient(model.Bybit, bybitStreamUrl+`/v5/public/spot`,
 		spotSubBook, subscribeHandlerBybit, spotBookWsHandler, wsStepBybit)
 	if spotBookErr == nil {
 		msgChans = append(msgChans, spotBookChannels...)
@@ -426,7 +412,7 @@ func WsTickServeBybit(market string) (socketMap map[*websocket.Conn]bool, msgCha
 			socketMap[conn] = b
 		}
 	}
-	perpBookSockets, perpBookChannels, perpBookErr := WebSocketClient(market, bybitStreamUrl+`/v5/public/linear`,
+	perpBookSockets, perpBookChannels, perpBookErr := model.WebSocketClient(market, bybitStreamUrl+`/v5/public/linear`,
 		futureSubBook, subscribeHandlerBybit, perpBookWsHandler, wsStepBybit)
 	if perpBookErr == nil {
 		msgChans = append(msgChans, perpBookChannels...)
@@ -434,7 +420,7 @@ func WsTickServeBybit(market string) (socketMap map[*websocket.Conn]bool, msgCha
 			socketMap[conn] = b
 		}
 	}
-	perpTickConns, perpTickChans, perpTickErr := WebSocketClient(market, bybitStreamUrl+`/v5/public/linear`,
+	perpTickConns, perpTickChans, perpTickErr := model.WebSocketClient(market, bybitStreamUrl+`/v5/public/linear`,
 		futureSubTick, subscribeHandlerBybit, tickHandlerBybit, wsStepBybit)
 	if perpTickErr == nil {
 		msgChans = append(msgChans, perpTickChans...)
@@ -445,14 +431,14 @@ func WsTickServeBybit(market string) (socketMap map[*websocket.Conn]bool, msgCha
 	return
 }
 
-var subscribeHandlerBybit = func(market string, connection *websocket.Conn, subscribes []interface{}) error {
+var subscribeHandlerBybit = func(market string, connection *model.WSConn, subscribes []interface{}) error {
 	var err error = nil
 	subscribeMap := make(map[string]interface{})
 	subscribeMap["req_id"] = int(rand.Float64() * 10000)
 	subscribeMap["op"] = "subscribe"
 	subscribeMap["args"] = subscribes
 	subscribeMessage := util.JsonEncodeToByte(subscribeMap)
-	if err = SendToConnection(model.Bybit, connection, subscribeMessage); err != nil {
+	if err = model.SendToConnection(model.Bybit, connection, subscribeMessage); err != nil {
 		util.Notice(" bybit can not subscribe %s %s", subscribeMessage, err.Error())
 	}
 	util.Info(`bybit subscribed ` + string(subscribeMessage))
@@ -774,7 +760,7 @@ func placeOrderBybit(account *model.Account, isWs bool, order *model.Order, orde
 		msgMap := map[string]interface{}{"reqId": order.OrderId, `op`: "order.create", "args": []interface{}{param},
 			"header": map[string]string{"X-BAPI-TIMESTAMP": fmt.Sprintf(`%d`, time.Now().UnixMilli())}}
 		msg := util.JsonEncodeToByte(msgMap)
-		if err := SendToConnection(model.Bybit, value.(*model.WSConn).Conn, msg); err != nil {
+		if err := model.SendToConnection(model.Bybit, value.(*model.WSConn), msg); err != nil {
 			util.Notice(fmt.Sprintf(`fail to place bybit ws order %s %s`, string(msg), err.Error()))
 		}
 	} else {

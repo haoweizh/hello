@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/bitly/go-simplejson"
-	"github.com/gorilla/websocket"
 	"hello/model"
 	"hello/util"
 	"math"
@@ -37,8 +36,8 @@ func maintainChannelFtx(subscribes []interface{}) {
 				if value == nil {
 					return
 				}
-				connections := value.(map[*websocket.Conn]bool)
-				if sendErr := SendToConnections(model.Ftx, connections, websocket.TextMessage, []byte(`{"op":"ping"}`)); sendErr != nil {
+				connections := value.(map[*model.WSConn]bool)
+				if sendErr := model.SendToConnections(model.Ftx, connections, []byte(`{"op":"ping"}`)); sendErr != nil {
 					util.SocketInfo("ftx server ping client error " + sendErr.Error())
 				}
 			}
@@ -63,13 +62,13 @@ func maintainChannelFtx(subscribes []interface{}) {
 							util.Notice(fmt.Sprintf(`GetDialectFromStandard timeout %s %d %d`,
 								standardSymbol, time.Now().UnixMilli()-int64(bidAsk.Ts), bidAsk.Ts))
 						}
-						if err := SendToConnection(model.Ftx, conn.(*websocket.Conn), []byte(cmdUnsub)); err != nil {
+						if err := model.SendToConnection(model.Ftx, conn.(*model.WSConn), []byte(cmdUnsub)); err != nil {
 							util.SocketInfo("ftx can not resubscribe " + err.Error())
 						}
 						time.Sleep(time.Second * 3)
 						cmdSub := fmt.Sprintf(`{"op": "subscribe", "channel": "%s", "market": "%s"}`,
 							subscribe[0], subscribe[1])
-						if err := SendToConnection(model.Ftx, conn.(*websocket.Conn), []byte(cmdSub)); err != nil {
+						if err := model.SendToConnection(model.Ftx, conn.(*model.WSConn), []byte(cmdSub)); err != nil {
 							util.SocketInfo("ftx can not resubscribe " + err.Error())
 						}
 						util.Notice(`send unsubscribe-subscribe %s %s %s`, model.Ftx, cmdUnsub, cmdSub)
@@ -91,7 +90,7 @@ func maintainChannelFtx(subscribes []interface{}) {
 	}
 }
 
-var subscribeHandlerFtx = func(market string, connection *websocket.Conn, subscribes []interface{}) (err error) {
+var subscribeHandlerFtx = func(market string, connection *model.WSConn, subscribes []interface{}) (err error) {
 	account := model.AppConfig.GetAccounts(model.Ftx)[0]
 	ts := time.Now().UnixNano() / int64(time.Millisecond)
 	toBeSign := fmt.Sprintf(`%dwebsocket_login`, ts)
@@ -99,10 +98,10 @@ var subscribeHandlerFtx = func(market string, connection *websocket.Conn, subscr
 	hash.Write([]byte(toBeSign))
 	sign := hex.EncodeToString(hash.Sum(nil))
 	authCmd := fmt.Sprintf(`{"op":"login","args":{"key":"%s","sign":"%s","time":%d}}`, account.Key, sign, ts)
-	if err = SendToConnection(model.Ftx, connection, []byte(authCmd)); err != nil {
+	if err = model.SendToConnection(model.Ftx, connection, []byte(authCmd)); err != nil {
 		util.SocketInfo("ftx can not auth " + err.Error())
 	}
-	if err = SendToConnection(model.Ftx, connection, []byte(`{"op": "subscribe", "channel": "fills"}`)); err != nil {
+	if err = model.SendToConnection(model.Ftx, connection, []byte(`{"op": "subscribe", "channel": "fills"}`)); err != nil {
 		util.SocketInfo("ftx can not subscribe fill " + err.Error())
 	}
 	for i := 0; i < len(subscribes); i++ {
@@ -114,7 +113,7 @@ var subscribeHandlerFtx = func(market string, connection *websocket.Conn, subscr
 		ftxSymbolConnection.Store(coin+model.UniStandardTail[marketType], connection)
 		subCmd := fmt.Sprintf(`{"op": "subscribe", "channel": "%s", "market": "%s"}`,
 			cmdSubscribe[0], cmdSubscribe[1])
-		if err = SendToConnection(model.Ftx, connection, []byte(subCmd)); err != nil {
+		if err = model.SendToConnection(model.Ftx, connection, []byte(subCmd)); err != nil {
 			util.SocketInfo("ftx can not subscribe " + err.Error())
 			return err
 		}
@@ -122,7 +121,7 @@ var subscribeHandlerFtx = func(market string, connection *websocket.Conn, subscr
 	}
 	return err
 }
-var wsHandlerFtx = func(market string, conn *websocket.Conn, event []byte) {
+var wsHandlerFtx = func(market string, conn *model.WSConn, event []byte) {
 	responseJson, err := util.NewJSON(event)
 	if err != nil {
 		util.SocketInfo(`fail to unmarshal json ` + err.Error())
@@ -139,11 +138,11 @@ var wsHandlerFtx = func(market string, conn *websocket.Conn, event []byte) {
 	}
 }
 
-func WsTickServeFtx(environment *model.Environment, market string) (socketMap map[*websocket.Conn]bool, msgChans []chan struct{}, err error) {
+func WsTickServeFtx(environment *model.Environment, market string) (socketMap map[*model.WSConn]bool, msgChans []chan struct{}, err error) {
 	subscribes := GetWSSubscribes(model.Ftx, []string{model.SubscribeDepth, model.SubscribeTicker})
 	subscribes = append(subscribes, GetWSSubscribe(market, `USDT_USDT`, model.SubscribeDepth))
 	subscribes = append(subscribes, GetWSSubscribe(market, `USDT_USDT`, model.SubscribeTicker))
-	socketMap, msgChans, err = WebSocketClient(market, wsFtx, subscribes, subscribeHandlerFtx, wsHandlerFtx, wsStepFtx)
+	socketMap, msgChans, err = model.WebSocketClient(market, wsFtx, subscribes, subscribeHandlerFtx, wsHandlerFtx, wsStepFtx)
 	environment.ConnTick.Store(market, socketMap)
 	environment.MsgChanTick.Store(market, msgChans)
 	go maintainChannelFtx(subscribes)

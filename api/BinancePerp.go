@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"github.com/adshao/go-binance/v2/futures"
 	"github.com/bitly/go-simplejson"
-	"github.com/gorilla/websocket"
 	"hello/model"
 	"hello/util"
 	"net/http"
@@ -31,54 +30,21 @@ var listenTime sync.Map // listenKey - time
 func MaintainConnsBinance(market string, accounts []*model.Account) {
 	for {
 		for _, account := range accounts {
-			success := true
-			errMsg := ``
 			value, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrder, market, account.Key)
-			if value != nil && value.(*model.WSConn).Conn != nil {
-				if time.Now().UnixMilli()-value.(*model.WSConn).LastMsgTime > 480000 {
-					success = false
-				}
-				if writeError := value.(*model.WSConn).Conn.WriteMessage(websocket.PongMessage, []byte{}); writeError != nil {
-					util.DelSyncMap(&model.AppEnvironment.ConnOrder, market, account.Key)
-					errMsg = fmt.Sprintf(`fail to pong order %s return: %s`, market, writeError.Error())
-					success = false
-				}
-			} else {
-				success = false
-			}
 			valueUpdate, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrderUpdate, market, account.Key)
-			if valueUpdate != nil && valueUpdate.(*model.WSConn).Conn != nil {
-				if time.Now().UnixMilli()-valueUpdate.(*model.WSConn).LastMsgTime > 480000 {
-					success = false
-				}
-				if writeErr := valueUpdate.(*model.WSConn).Conn.WriteMessage(websocket.PongMessage, []byte{}); writeErr != nil {
-					util.DelSyncMap(&model.AppEnvironment.ConnOrderUpdate, market, account.Key)
-					errMsg += fmt.Sprintf(`fail to pong update order %s return: %s`, market, writeErr.Error())
-					success = false
-				} else {
-					keyValue, _ := util.LoadSyncMap(&listenKeys, market, account.Key)
-					if keyValue != nil {
-						ts, _ := listenTime.Load(keyValue.(string))
-						if ts != nil && ts.(time.Time).Add(time.Minute*30).Before(time.Now()) {
-							ExtendListenKeyBinance(account, market, keyValue.(string))
-						}
+			if value != nil && valueUpdate != nil {
+				keyValue, _ := util.LoadSyncMap(&listenKeys, market, account.Key)
+				if keyValue != nil {
+					ts, _ := listenTime.Load(keyValue.(string))
+					if ts != nil && ts.(time.Time).Add(time.Minute*30).Before(time.Now()) {
+						ExtendListenKeyBinance(account, market, keyValue.(string))
 					}
 				}
 			} else {
-				success = false
-			}
-			if !success {
-				util.Notice(errMsg)
 				WsOrderServeBinance(account, market)
 			}
 		}
 		time.Sleep(time.Second * 30)
-		connTick, _ := model.AppEnvironment.ConnTick.Load(market)
-		if connTick != nil {
-			if err := SendToConnections(market, connTick.(map[*websocket.Conn]bool), websocket.PongMessage, []byte(``)); err != nil {
-				util.Notice(fmt.Sprintf("tick conn maintain error %s %s", market, err.Error()))
-			}
-		}
 	}
 }
 
@@ -154,7 +120,7 @@ func getMarketsBinancePerp(key, secret string) (marketInfos map[string]*model.Ma
 	return marketInfos
 }
 
-var wsHandlerBinancePerp = func(market string, conn *websocket.Conn, event []byte) {
+var wsHandlerBinancePerp = func(market string, conn *model.WSConn, event []byte) {
 	result, wsErr := util.NewJSON(event)
 	if wsErr != nil {
 		util.Info(`1test return fail to unmarshal json ` + wsErr.Error())
@@ -366,10 +332,10 @@ func placeOrderBinancePerp(account *model.Account, isWS bool, order *model.Order
 			order.OrderId, dialectSymbol, orderSide, strings.ToUpper(orderType), priceStr, amountStr, account.Key,
 			hex.EncodeToString(hash.Sum(nil)), ts)
 		value, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrder, model.BinancePerp, account.Key)
-		if value == nil || value.(*model.WSConn).Conn == nil {
+		if value == nil {
 			return
 		}
-		if err := value.(*model.WSConn).Conn.WriteMessage(websocket.TextMessage, []byte(msg)); err != nil {
+		if err := value.(*model.WSConn).WriteMsg([]byte(msg)); err != nil {
 			util.Notice(fmt.Sprintf(`fail to place binanceperp order return: %s`, err.Error()))
 		}
 	} else {

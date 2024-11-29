@@ -6,7 +6,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"github.com/gorilla/websocket"
 	"hello/model"
 	"hello/util"
 	"math"
@@ -20,14 +19,14 @@ import (
 const restHuobiPerp = `api.hbdm.vn`
 const wsHuobiPerp = `wss://api.hbdm.vn/ws`
 
-var subscribeHandlerHuobiPerp = func(market string, connection *websocket.Conn, subscribes []interface{}) error {
+var subscribeHandlerHuobiPerp = func(market string, connection *model.WSConn, subscribes []interface{}) error {
 	var err error = nil
 	for _, v := range subscribes {
 		subscribeMap := make(map[string]interface{})
 		subscribeMap["id"] = strconv.Itoa(util.GetNow().Nanosecond())
 		subscribeMap["sub"] = v
 		subscribeMessage := util.JsonEncodeToByte(subscribeMap)
-		if err = SendToConnection(model.HuobiPerp, connection, subscribeMessage); err != nil {
+		if err = model.SendToConnection(model.HuobiPerp, connection, subscribeMessage); err != nil {
 			util.SocketInfo("HuobiPerp can not subscribe " + err.Error())
 			return err
 		}
@@ -36,7 +35,7 @@ var subscribeHandlerHuobiPerp = func(market string, connection *websocket.Conn, 
 	return err
 }
 
-var wsMsgHandler = func(market string, conn *websocket.Conn, event []byte) {
+var wsMsgHandler = func(market string, conn *model.WSConn, event []byte) {
 	res := util.UnGzip(event)
 	responseJson, err := util.NewJSON(res)
 	if err != nil {
@@ -47,12 +46,12 @@ var wsMsgHandler = func(market string, conn *websocket.Conn, event []byte) {
 		pingMap["pong"] = responseJson.Get(`ping`).MustInt()
 		pingParams := util.JsonEncodeToByte(pingMap)
 		value, _ := model.AppEnvironment.ConnTick.Load(model.HuobiPerp)
-		connections := value.(map[*websocket.Conn]bool)
+		connections := value.(map[*model.WSConn]bool)
 		for connection := range connections {
 			if connection == nil {
 				continue
 			}
-			if subErr := SendToConnection(model.HuobiPerp, connection, pingParams); subErr != nil {
+			if subErr := model.SendToConnection(model.HuobiPerp, connection, pingParams); subErr != nil {
 				util.SocketInfo("HuobiPerp server ping client error " + subErr.Error())
 			}
 		}

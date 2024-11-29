@@ -11,7 +11,6 @@ import (
 	"github.com/antihax/optional"
 	gateApi "github.com/gateio/gateapi-go/v6"
 	gateWs "github.com/gateio/gatews/go"
-	"github.com/gorilla/websocket"
 	"hello/model"
 	"hello/util"
 	"math"
@@ -292,10 +291,9 @@ var wsPriHandlerGatePerp = func(market, key string, msg []byte) {
 	}
 	channel := responseJson.Get(`channel`).MustString()
 	ts := responseJson.Get(`time_ms`).MustInt64()
-	valueFuture.(*model.WSConn).LastMsgTime = ts
 	result := responseJson.GetPath(`header`, `status`).MustString()
 	if channel == `futures.ping` {
-		err := valueFuture.(*model.WSConn).Conn.WriteMessage(websocket.TextMessage, []byte(fmt.Sprintf(
+		err := valueFuture.(*model.WSConn).WriteMsg([]byte(fmt.Sprintf(
 			`{"time" : %d, "channel" : "futures.pong"}`, time.Now().Unix())))
 		if err != nil {
 			return
@@ -343,7 +341,7 @@ var wsPriHandlerGatePerp = func(market, key string, msg []byte) {
 				sign := hex.EncodeToString(hashFuture.Sum(nil))
 				msgSend := fmt.Sprintf(`{"time":%d,"channel":"futures.orders","event":"subscribe","payload":["!all"],
 					"auth":{"method":"api_key","KEY":"%s","SIGN":"%s"}}`, ts, key, sign)
-				err := SendToConnection(model.Gate, valueFuture.(*model.WSConn).Conn, []byte(msgSend))
+				err := model.SendToConnection(model.Gate, valueFuture.(*model.WSConn), []byte(msgSend))
 				if err != nil {
 					util.DelSyncMap(&model.AppEnvironment.ConnOrder, model.Gate, model.MarketTypePerp, key, channel)
 				}
@@ -365,11 +363,10 @@ var wsPriHandlerGateSpot = func(market, key string, msg []byte) {
 		return
 	}
 	channel := responseJson.Get(`channel`).MustString()
-	ts := responseJson.Get(`time_ms`).MustInt64()
-	valueSpot.(*model.WSConn).LastMsgTime = ts
+	//ts := responseJson.Get(`time_ms`).MustInt64()
 	result := responseJson.GetPath(`header`, `status`).MustString()
 	if channel == `spot.ping` {
-		err := valueSpot.(*model.WSConn).Conn.WriteMessage(websocket.TextMessage, []byte(fmt.Sprintf(
+		err := valueSpot.(*model.WSConn).WriteMsg([]byte(fmt.Sprintf(
 			`{"time" : %d, "channel" : "spot.pong"}`, time.Now().Unix())))
 		if err != nil {
 			return
@@ -403,7 +400,7 @@ var wsPriHandlerGateSpot = func(market, key string, msg []byte) {
 		} else if channel == `spot.login` {
 			if result == `200` {
 				msgSend := fmt.Sprintf(`{"time":%d,"channel":"spot.orders","event":"subscribe","payload":["!all"]}`, time.Now().Unix())
-				err := SendToConnection(model.Gate, valueSpot.(*model.WSConn).Conn, []byte(msgSend))
+				err := model.SendToConnection(model.Gate, valueSpot.(*model.WSConn), []byte(msgSend))
 				if err != nil {
 					util.DelSyncMap(&model.AppEnvironment.ConnOrder, model.Gate, model.MarketTypeSpot, key, channel)
 				}
@@ -416,48 +413,42 @@ func maintainConnsGate(accounts []*model.Account) {
 	for {
 		connTick, _ := model.AppEnvironment.ConnTick.Load(model.Gate)
 		if connTick != nil {
-			if err := SendToConnections(model.Gate, connTick.(map[*websocket.Conn]bool), websocket.TextMessage,
+			if err := model.SendToConnections(model.Gate, connTick.(map[*model.WSConn]bool),
 				util.JsonEncodeToByte(map[string]interface{}{"time": time.Now().Unix(), "channel": "spot.ping"})); err != nil {
 				util.SocketInfo(fmt.Sprintf("tick conn maintain error %s %s", model.Gate, err.Error()))
 			}
 		}
 		connTickPerp, _ := model.AppEnvironment.ConnTick.Load(model.Gate + model.MarketTypePerp)
 		if connTickPerp != nil {
-			if err := SendToConnections(model.Gate, connTickPerp.(map[*websocket.Conn]bool), websocket.TextMessage,
+			if err := model.SendToConnections(model.Gate, connTickPerp.(map[*model.WSConn]bool),
 				util.JsonEncodeToByte(map[string]interface{}{"time": time.Now().Unix(), "channel": "futures.ping"})); err != nil {
 				util.SocketInfo(fmt.Sprintf("tick conn maintain error %s %s", model.Gate, err.Error()))
 			}
 		}
 		for _, account := range accounts {
-			successSpot := false
+			successSpot := true
 			wsSpot, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrder, model.Gate, model.MarketTypeSpot, account.Key)
-			if wsSpot != nil && wsSpot.(*model.WSConn).Conn != nil {
-				if time.Now().UnixMilli()-wsSpot.(*model.WSConn).LastMsgTime > 60000 {
+			if wsSpot != nil {
+				if err := wsSpot.(*model.WSConn).WriteMsg([]byte(fmt.Sprintf(`{"time": %d, "channel" : "spot.ping"}`, time.Now().Unix()))); err != nil {
 					successSpot = false
-				}
-				if err := wsSpot.(*model.WSConn).Conn.WriteMessage(websocket.TextMessage, []byte(fmt.Sprintf(
-					`{"time": %d, "channel" : "spot.ping"}`, time.Now().Unix()))); err != nil {
 					util.Notice(fmt.Sprintf("send account spot ping message err:%s %s", model.Gate, err.Error()))
-				} else {
-					successSpot = true
 				}
+			} else {
+				successSpot = false
 			}
 			if !successSpot {
 				util.DelSyncMap(&model.AppEnvironment.ConnOrder, model.Gate, model.MarketTypeSpot, account.Key)
 				WSOrderServeGate(account, model.MarketTypeSpot)
 			}
-			successPerp := false
+			successPerp := true
 			wsFuture, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrder, model.Gate, model.MarketTypePerp, account.Key)
 			if wsFuture != nil {
-				if time.Now().UnixMilli()-wsFuture.(*model.WSConn).LastMsgTime > 60000 {
+				if err := wsFuture.(*model.WSConn).WriteMsg([]byte(fmt.Sprintf(`{"time": %d, "channel" : "futures.ping"}`, time.Now().Unix()))); err != nil {
+					util.Notice(fmt.Sprintf("send account futures ping message err:%s %s", model.Gate, err.Error()))
 					successPerp = false
 				}
-				if err := wsFuture.(*model.WSConn).Conn.WriteMessage(websocket.TextMessage, []byte(fmt.Sprintf(
-					`{"time": %d, "channel" : "futures.ping"}`, time.Now().Unix()))); err != nil {
-					util.Notice(fmt.Sprintf("send account futures ping message err:%s %s", model.Gate, err.Error()))
-				} else {
-					successPerp = true
-				}
+			} else {
+				successPerp = false
 			}
 			if !successPerp {
 				util.DelSyncMap(&model.AppEnvironment.ConnOrder, model.Gate, model.MarketTypePerp, account.Key)
@@ -472,21 +463,17 @@ func WSOrderServeGate(account *model.Account, marketType string) {
 	if account == nil {
 		return
 	}
-	value, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrder, model.Gate, marketType, account.Key)
-	if value != nil && value.(*model.WSConn).Conn != nil && time.Now().UnixMilli()-value.(*model.WSConn).LastMsgTime < 60000 {
-		return
-	}
 	ts := time.Now().Unix()
 	hash := hmac.New(sha512.New, []byte(account.Secret))
-	var conn *websocket.Conn
+	var conn *model.WSConn
 	var err error
 	logInCode := ``
 	if marketType == model.MarketTypeSpot {
 		logInCode = `spot`
-		conn, err = WsAccountClient(model.Gate, account.Key, gateWs.BaseUrl, wsPriHandlerGateSpot)
+		conn, err = model.WsAccountClient(model.Gate, account.Key, gateWs.BaseUrl, wsPriHandlerGateSpot)
 	} else if marketType == model.MarketTypePerp {
 		logInCode = `futures`
-		conn, err = WsAccountClient(model.Gate, account.Key, gateWs.FuturesUsdtUrl, wsPriHandlerGatePerp)
+		conn, err = model.WsAccountClient(model.Gate, account.Key, gateWs.FuturesUsdtUrl, wsPriHandlerGatePerp)
 	}
 	if err != nil {
 		util.Notice(fmt.Sprintf("gate wsAccount connect errSpot: %s %s", err.Error(), account.Key))
@@ -499,15 +486,14 @@ func WSOrderServeGate(account *model.Account, marketType string) {
 	sign := hex.EncodeToString(hash.Sum(nil))
 	msg := fmt.Sprintf(`{"time": %d,"channel": "%s.login","event": "api","payload": {"api_key": "%s",
     		"signature": "%s","timestamp": "%d","req_id": "request%d"}}`, ts, logInCode, account.Key, sign, ts, ts)
-	if err = conn.WriteMessage(websocket.TextMessage, []byte(msg)); err != nil {
+	if err = conn.WriteMsg([]byte(msg)); err != nil {
 		util.Notice(fmt.Sprintf("send account login message err: %s %s %s", model.Gate, marketType, err.Error()))
-		util.DelSyncMap(&model.AppEnvironment.ConnOrder, model.Gate, model.MarketTypeSpot, account.Key)
 	} else {
-		util.StoreSyncMap(&model.AppEnvironment.ConnOrder, &model.WSConn{Conn: conn}, model.Gate, marketType, account.Key)
+		util.StoreSyncMap(&model.AppEnvironment.ConnOrder, conn, model.Gate, marketType, account.Key)
 	}
 }
 
-func WsTickServeGateSpot(market string) (socketMap map[*websocket.Conn]bool, msgChans []chan struct{}, connectErr error) {
+func WsTickServeGateSpot(market string) (socketMap map[*model.WSConn]bool, msgChans []chan struct{}, connectErr error) {
 	var spotSubs []interface{}
 	symbols := GetMarketSymbols(market)
 	for symbol := range symbols {
@@ -525,12 +511,12 @@ func WsTickServeGateSpot(market string) (socketMap map[*websocket.Conn]bool, msg
 	//		socketMap[conn] = b
 	//	}
 	//}
-	return WebSocketClient(model.Gate, gateWs.BaseUrl, spotSubs, subscribeHandler, wsHandlerGate, wsStepGate)
+	return model.WebSocketClient(model.Gate, gateWs.BaseUrl, spotSubs, subscribeHandler, wsHandlerGate, wsStepGate)
 }
 
-func WsTickServeGatePerp(market string) (socketMap map[*websocket.Conn]bool, msgChans []chan struct{}, connectErr error) {
+func WsTickServeGatePerp(market string) (socketMap map[*model.WSConn]bool, msgChans []chan struct{}, connectErr error) {
 	var futureSubs []interface{}
-	socketMap = make(map[*websocket.Conn]bool)
+	socketMap = make(map[*model.WSConn]bool)
 	msgChans = make([]chan struct{}, 0)
 	symbols := GetMarketSymbols(market)
 	for symbol := range symbols {
@@ -539,7 +525,7 @@ func WsTickServeGatePerp(market string) (socketMap map[*websocket.Conn]bool, msg
 			futureSubs = append(futureSubs, symbol)
 		}
 	}
-	perpBookTickerSockets, perpBookTickerChannels, perpBookTickerErr := WebSocketClient(model.Gate, gateWs.FuturesUsdtUrl, futureSubs, subscribeHandler, wsHandlerGate, wsStepGate)
+	perpBookTickerSockets, perpBookTickerChannels, perpBookTickerErr := model.WebSocketClient(model.Gate, gateWs.FuturesUsdtUrl, futureSubs, subscribeHandler, wsHandlerGate, wsStepGate)
 	if perpBookTickerErr == nil {
 		util.Info(`finish connect public gate perp book ticker ws `)
 		msgChans = append(msgChans, perpBookTickerChannels...)
@@ -547,7 +533,7 @@ func WsTickServeGatePerp(market string) (socketMap map[*websocket.Conn]bool, msg
 			socketMap[conn] = b
 		}
 	}
-	perpMarkPriceSockets, perpMarkPriceChannels, perpMarkPriceErr := WebSocketClient(model.Gate, gateWs.FuturesUsdtUrl, futureSubs, subscribeMarkPriceHandler, wsHandlerGate, wsStepGate)
+	perpMarkPriceSockets, perpMarkPriceChannels, perpMarkPriceErr := model.WebSocketClient(model.Gate, gateWs.FuturesUsdtUrl, futureSubs, subscribeMarkPriceHandler, wsHandlerGate, wsStepGate)
 	if perpMarkPriceErr == nil {
 		util.Info(`finish connect public gate perp mark price ws `)
 		msgChans = append(msgChans, perpMarkPriceChannels...)
@@ -558,7 +544,7 @@ func WsTickServeGatePerp(market string) (socketMap map[*websocket.Conn]bool, msg
 	return
 }
 
-var wsHandlerGate = func(market string, conn *websocket.Conn, event []byte) {
+var wsHandlerGate = func(market string, conn *model.WSConn, event []byte) {
 	respJson, _ := util.NewJSON(event)
 	if respJson != nil {
 		channel := respJson.Get(`channel`).MustString()
@@ -567,11 +553,13 @@ var wsHandlerGate = func(market string, conn *websocket.Conn, event []byte) {
 			if strings.Contains(channel, `futures`) {
 				strBack = `futures.pong`
 			}
-			err := conn.WriteMessage(websocket.TextMessage, []byte(fmt.Sprintf(`{"time" : %d, "channel" : "%s"}`, time.Now().Unix(), strBack)))
-			if err != nil {
-				return
+			if conn != nil {
+				err := conn.WriteMsg([]byte(fmt.Sprintf(`{"time" : %d, "channel" : "%s"}`, time.Now().Unix(), strBack)))
+				if err != nil {
+					return
+				}
+				util.Notice(fmt.Sprintf("send ping message to channel %s %s from %s", market, channel, string(event)))
 			}
-			util.Notice(fmt.Sprintf("send ping message to channel %s %s from %s", market, channel, string(event)))
 			return
 		}
 	}
@@ -587,7 +575,7 @@ var wsHandlerGate = func(market string, conn *websocket.Conn, event []byte) {
 	}
 }
 
-var subscribeMarkPriceHandler = func(market string, connection *websocket.Conn, subscribes []interface{}) error {
+var subscribeMarkPriceHandler = func(market string, connection *model.WSConn, subscribes []interface{}) error {
 	var err error = nil
 	var symbols []string
 	for _, subscribe := range subscribes {
@@ -601,7 +589,7 @@ var subscribeMarkPriceHandler = func(market string, connection *websocket.Conn, 
 		"payload": symbols,
 	}
 	subscribeMessage := util.JsonEncodeToByte(subscribeMap)
-	if err = SendToConnection(model.Gate, connection, subscribeMessage); err != nil {
+	if err = model.SendToConnection(model.Gate, connection, subscribeMessage); err != nil {
 		util.SocketInfo(" gate can not subscribe perp symbols %s %s", subscribeMessage, err.Error())
 	}
 	util.Info(`gate subscribed ` + string(subscribeMessage))
@@ -609,7 +597,7 @@ var subscribeMarkPriceHandler = func(market string, connection *websocket.Conn, 
 	return err
 }
 
-var subscribeHandler = func(market string, connection *websocket.Conn, subscribes []interface{}) error {
+var subscribeHandler = func(market string, connection *model.WSConn, subscribes []interface{}) error {
 	var err error = nil
 	switch subscribes[0].(type) {
 	case string: //ticker订阅
@@ -628,7 +616,7 @@ var subscribeHandler = func(market string, connection *websocket.Conn, subscribe
 				"payload": symbols,
 			}
 			subscribeMessage := util.JsonEncodeToByte(subscribeMap)
-			if err = SendToConnection(model.Gate, connection, subscribeMessage); err != nil {
+			if err = model.SendToConnection(model.Gate, connection, subscribeMessage); err != nil {
 				util.SocketInfo(" gate can not subscribe perp symbols %s %s", subscribeMessage, err.Error())
 			}
 			util.Info(`gate subscribed ` + string(subscribeMessage))
@@ -646,7 +634,7 @@ var subscribeHandler = func(market string, connection *websocket.Conn, subscribe
 				"payload": symbols,
 			}
 			subscribeMessage := util.JsonEncodeToByte(subscribeMap)
-			if err = SendToConnection(model.Gate, connection, subscribeMessage); err != nil {
+			if err = model.SendToConnection(model.Gate, connection, subscribeMessage); err != nil {
 				util.SocketInfo(" gate can not subscribe spot symbols %s %s", subscribeMessage, err.Error())
 			}
 			util.Info(`gate subscribed ` + string(subscribeMessage))
@@ -663,7 +651,7 @@ var subscribeHandler = func(market string, connection *websocket.Conn, subscribe
 				"payload": subscribe,
 			}
 			subscribeMessage := util.JsonEncodeToByte(subscribeMap)
-			if err = SendToConnection(model.Gate, connection, subscribeMessage); err != nil {
+			if err = model.SendToConnection(model.Gate, connection, subscribeMessage); err != nil {
 				util.SocketInfo(" gate can not subscribe spot order book symbol %s %s", subscribeMessage, err.Error())
 			}
 			time.Sleep(10 * time.Millisecond)
@@ -853,7 +841,7 @@ func placeOrderGate(account *model.Account, isWs bool, order *model.Order, order
 			wsOrderMsg := util.JsonEncodeToByte(reqMap)
 			value, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrder, model.Gate, model.MarketTypeSpot, account.Key)
 			if value != nil && value.(*model.WSConn).Conn != nil {
-				if err := value.(*model.WSConn).Conn.WriteMessage(websocket.TextMessage, wsOrderMsg); err != nil {
+				if err := value.(*model.WSConn).WriteMsg(wsOrderMsg); err != nil {
 					util.Notice(fmt.Sprintf(`fail to order gate ws %s %s`, string(wsOrderMsg), err.Error()))
 				}
 			}
@@ -898,7 +886,7 @@ func placeOrderGate(account *model.Account, isWs bool, order *model.Order, order
 			wsOrderMsg := util.JsonEncodeToByte(reqMap)
 			value, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrder, model.Gate, model.MarketTypePerp, account.Key)
 			if value != nil && value.(*model.WSConn).Conn != nil {
-				if err := value.(*model.WSConn).Conn.WriteMessage(websocket.TextMessage, wsOrderMsg); err != nil {
+				if err := value.(*model.WSConn).WriteMsg(wsOrderMsg); err != nil {
 					util.Notice(fmt.Sprintf(`fail to order gate ws %s %s`, string(wsOrderMsg), err.Error()))
 				}
 			}

@@ -2,7 +2,6 @@ package model
 
 import (
 	"fmt"
-	"github.com/gorilla/websocket"
 	"hello/util"
 	"sync"
 )
@@ -38,11 +37,6 @@ type BidAsk struct {
 type Rule struct {
 	Margin float64
 	Delay  float64
-}
-
-type WSConn struct {
-	LastMsgTime int64 // last receive msg time in ms
-	Conn        *websocket.Conn
 }
 
 type WSResp struct {
