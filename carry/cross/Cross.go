@@ -1158,6 +1158,10 @@ func placeStatus(status *CarryStatus, price float64, amount float64) {
 
 func handleCross(account *model.Account, order *model.Order) {
 	time.Sleep(time.Minute)
+	if !order.HaveId() {
+		order.Status = model.CarryStatusFail
+		order.OrderId = fmt.Sprintf("%d%s%s", time.Now().UnixMilli(), order.Market, order.Symbol)
+	}
 	model.AppDB.Save(order)
 	v, _ := util.LoadSyncMap(model.MarketInfos, order.Market, order.Symbol)
 	var marketInfo *model.MarketInfo
@@ -1193,7 +1197,7 @@ var PostOrderCross = func(order *model.Order) {
 	}
 	account := model.AppConfig.GetAccountFromKeyIndex(order.Market, ``, order.AccountIndex)
 	go handleCross(account, order)
-	if order.HaveId() && order.Status == model.CarryStatusSuccess {
+	if order.HaveId() {
 		addLastCarry(order, setting)
 		addCarryResult(account.Key, order.Market, ``, true)
 	} else {
