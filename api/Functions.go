@@ -827,12 +827,12 @@ func PlaceOrder(key, secret, orderSide, orderType, market, symbol, orderParam, f
 		util.Notice(fmt.Sprintf(`can not place order with amount 0 , %s %s %s %s`, orderSide, orderType, market, symbol))
 		return &model.Order{OrderSide: markSide, OrderType: orderType, Market: market, Symbol: symbol, Coin: coin,
 			Price: price, Amount: 0, OrderId: ``, ErrCode: ``, TriggerPrice: triggerPrice, RefreshType: funcType,
-			Status: model.CarryStatusFail, DealAmount: 0, DealPrice: price, CreatedAt: util.GetNow()}
+			Status: model.CarryStatusFail, DealAmount: 0, DealPrice: price, OrderTime: util.GetNow()}
 	}
 	account := model.AppConfig.GetAccountFromKeyIndex(market, key, -1)
 	order = &model.Order{OrderId: strconv.FormatInt(time.Now().UnixMilli(), 10)[3:] + market + coin + marketType, RefreshType: funcType,
 		OrderSide: markSide, OrderType: orderType, Market: market, Symbol: symbol, Price: price, Amount: amount, DealAmount: 0, Coin: coin,
-		DealPrice: price, TriggerPrice: triggerPrice, CreatedAt: util.GetNow(), UnfilledQuantity: amount, AccountIndex: account.Index}
+		DealPrice: price, TriggerPrice: triggerPrice, OrderTime: util.GetNow(), UnfilledQuantity: amount, AccountIndex: account.Index}
 	//util.Notice(fmt.Sprintf(`...%s %s %s before order %d amount: %f price:%f triggerPrice:%f`,
 	//	orderSide, market, symbol, start, amount, price, triggerPrice))
 	if model.AppConfig.Env == `test` {
