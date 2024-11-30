@@ -760,7 +760,8 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 					return
 				}
 				nowTs := time.Now().UnixMilli()
-				util.Notice(fmt.Sprintf(`time mark %d %d %d`, time.Now().UnixMilli(), nowTs-int64(tick.Ts), nowTs-int64(tickRelate.Ts)))
+				util.Notice(fmt.Sprintf(`time mark %d %s %s %d %s %d`, time.Now().UnixMilli(), setting.Symbol,
+					tick.Bids[0].Market, nowTs-int64(tick.Ts), tickRelate.Bids[0].Market, nowTs-int64(tickRelate.Ts)))
 				placeCross(statusBuy, statusSell, priceBuy, priceSell, amount)
 				util.Notice(fmt.Sprintf(`%s %s %s %s`, placeBuyStr, placeBuyValue, placeSellStr, placeSellValue))
 				placeTick.Store(placeBuyStr, placeBuyValue)
