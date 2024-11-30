@@ -689,8 +689,6 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 	} else {
 		return
 	}
-	util.Notice(fmt.Sprintf(`delay 2 %s %s %d`,
-		tick.Bids[0].Market, tick.Bids[0].Symbol, int(million)-tick.Ts))
 	if !doCross && model.AppConfig.Handle == `1` {
 		go ClearCross()
 		doCross = true
@@ -715,28 +713,24 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 	tickLimit := 50
 	switch tick.Bids[0].Market {
 	case model.Gate, model.BitgetPerp, model.BitgetSpot:
-		tickLimit = 30
+		tickLimit = 10
 	case model.BinanceSpot, model.BinancePerp:
-		tickLimit = 20
+		tickLimit = 8
 	case model.Bybit, model.OKEX:
-		tickLimit = 60
+		tickLimit = 40
 	}
 	if int(million)-tick.Ts > tickLimit {
 		return
 	}
-	util.Notice(fmt.Sprintf(`delay 3 %s %s %d`,
-		tick.Bids[0].Market, tick.Bids[0].Symbol, int(million)-tick.Ts))
 	for _, settingRelate := range settings {
 		tickGet, tickRelate := model.AppEnvironment.GetBidAsk(settingRelate.Market, settingRelate.Symbol)
 		if !tickGet || setting.ID == settingRelate.ID || (!model.NonRTTicker[tick.Bids[0].Market] && model.NonRTTicker[tickRelate.Bids[0].Market]) {
 			continue
 		}
-		tickLimit += 30
+		tickLimit += 15
 		if int(million)-tickRelate.Ts > tickLimit {
 			continue
 		}
-		util.Notice(fmt.Sprintf(`delay 4 %s %s %s %d %d`,
-			tick.Bids[0].Market, tickRelate.Bids[0].Market, setting.Symbol, int(million)-tick.Ts, int(million)-tickRelate.Ts))
 		for i := api.GetCrossLen() - 1; i >= 0; i-- {
 			account := model.AppConfig.GetAccounts(setting.Market)[i]
 			accountRelate := model.AppConfig.GetAccounts(settingRelate.Market)[i]
