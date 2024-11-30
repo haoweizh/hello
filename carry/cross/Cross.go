@@ -713,11 +713,11 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 	tickLimit := 50
 	switch tick.Bids[0].Market {
 	case model.Gate, model.BitgetPerp, model.BitgetSpot:
-		tickLimit = 15
+		tickLimit = 30
 	case model.BinanceSpot, model.BinancePerp:
-		tickLimit = 10
+		tickLimit = 20
 	case model.Bybit, model.OKEX:
-		tickLimit = 50
+		tickLimit = 60
 	}
 	if int(million)-tick.Ts > tickLimit {
 		return
@@ -730,7 +730,7 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 		}
 		switch tickRelate.Bids[0].Market {
 		case model.Gate, model.BitgetPerp, model.BitgetSpot, model.BinanceSpot, model.BinancePerp:
-			tickLimit = 45
+			tickLimit = 50
 		case model.Bybit, model.OKEX:
 			tickLimit = 80
 		}
@@ -766,7 +766,9 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 					return
 				}
 				placeCross(statusBuy, statusSell, priceBuy, priceSell, amount)
-				util.Notice(fmt.Sprintf(`tick static store %s %s %s %s`,
+				nowTs := time.Now().UnixMilli()
+				util.Notice(fmt.Sprintf(`cross delay %s %d relate %s %d, %s %s %s %s`,
+					tick.Bids[0].Market, nowTs-int64(tick.Ts), tickRelate.Bids[0].Market, nowTs-int64(tickRelate.Ts),
 					placeBuyStr, placeBuyValue, placeSellStr, placeSellValue))
 				placeTick.Store(placeBuyStr, placeBuyValue)
 				placeTick.Store(placeSellStr, placeSellValue)
