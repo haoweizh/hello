@@ -713,13 +713,13 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 	tickLimit := 50
 	switch tick.Bids[0].Market {
 	case model.Gate, model.BitgetPerp, model.BitgetSpot, model.BinanceSpot, model.BinancePerp:
-		tickLimit = 50
+		tickLimit = 70
 	case model.Bybit, model.OKEX:
-		tickLimit = 80
+		tickLimit = 120
 	}
 	if int(million)-tick.Ts > tickLimit {
 		util.Notice(fmt.Sprintf(`tick valid not %s %s %d %d`,
-			tick.Bids[0].Market, tick.Bids[0].Market, setting.Symbol, int(million)-tick.Ts))
+			tick.Bids[0].Market, tick.Bids[0].Symbol, int(million)-tick.Ts, tickLimit))
 		return
 	}
 	for _, settingRelate := range settings {
