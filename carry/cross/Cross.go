@@ -712,15 +712,12 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 	}
 	tickLimit := 50
 	switch tick.Bids[0].Market {
-	case model.Gate, model.BitgetPerp, model.BitgetSpot:
-		tickLimit = 30
-	case model.BinanceSpot, model.BinancePerp:
-		tickLimit = 20
+	case model.Gate, model.BitgetPerp, model.BitgetSpot, model.BinanceSpot, model.BinancePerp:
+		tickLimit = 50
 	case model.Bybit, model.OKEX:
-		tickLimit = 60
+		tickLimit = 80
 	}
 	if int(million)-tick.Ts > tickLimit {
-		util.Notice(fmt.Sprintf(`tick too old %s %s %d %d`, setting.Market, setting.Symbol, int(million)-tick.Ts, tickLimit))
 		return
 	}
 	for _, settingRelate := range settings {
@@ -731,13 +728,15 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 		}
 		switch tickRelate.Bids[0].Market {
 		case model.Gate, model.BitgetPerp, model.BitgetSpot, model.BinanceSpot, model.BinancePerp:
-			tickLimit = 50
-		case model.Bybit, model.OKEX:
 			tickLimit = 80
+		case model.Bybit, model.OKEX:
+			tickLimit = 110
 		}
 		if int(million)-tick.Ts > tickLimit {
 			continue
 		}
+		util.Notice(fmt.Sprintf(`tick valid %s %s %d %d %d`,
+			tick.Bids[0].Market, tickRelate.Bids[0].Market, setting.Symbol, int(million)-tick.Ts, int(million)-tickRelate.Ts))
 		for i := api.GetCrossLen() - 1; i >= 0; i-- {
 			account := model.AppConfig.GetAccounts(setting.Market)[i]
 			accountRelate := model.AppConfig.GetAccounts(settingRelate.Market)[i]
