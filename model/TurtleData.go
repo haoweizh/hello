@@ -13,7 +13,7 @@ type TurtleData struct {
 	BreakLong, BreakShort, Liquidated, OrderCleared, IsBig    bool
 	TurtleTime, CheckUseApi, CheckTimeOpen, Expire            time.Time
 	HighNear, LowNear, HighFar, LowFar, LowAdjust, HighAdjust float64
-	HighLast, LowLast, N, M, NVolume, Amount                  float64
+	HighActTrail, LowActTrail, N, M, NVolume, Amount          float64
 	// CallBackRatio: 跟踪单回撤比例 ActivationRate: 跟踪单激活比例
 	CallBackRatio, ActivationRate float64
 	DaysNear, DaysFar, DaysAdjust int // CombineBig: -1小单，1大单，0未初始化

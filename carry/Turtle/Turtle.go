@@ -103,7 +103,7 @@ var ProcessTurtle = func(setting *model.Setting, tick *model.BidAsk) {
 		if data.UseNear {
 			priceShort = math.Max(setting.PriceX-priceChange, data.LowNear)
 		} else {
-			priceShort = math.Max(data.HighFar, data.HighLast) - priceChange
+			priceShort = math.Max(data.HighFar, data.HighActTrail) - priceChange
 		}
 		placeTurtleOrders(account.Key, account.Secret, data, setting, canOpenTurtle, chanceInAll, priceShort, priceLong, tick)
 		// 加仓一个单位
@@ -139,8 +139,8 @@ var ProcessTurtle = func(setting *model.Setting, tick *model.BidAsk) {
 		if data.UseNear {
 			priceLong = math.Min(setting.PriceX+priceChange, data.HighNear)
 		} else {
-			if data.LowLast > 0 {
-				priceLong = math.Min(data.LowFar, data.LowLast) + priceChange
+			if data.LowActTrail > 0 {
+				priceLong = math.Min(data.LowFar, data.LowActTrail) + priceChange
 			} else {
 				priceLong = data.LowFar + priceChange
 			}

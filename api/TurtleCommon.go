@@ -185,7 +185,7 @@ func CheckActiveTrail(account *model.Account, setting *model.Setting, data *mode
 		return false
 	}
 	var trails []*model.Order
-	if setting.Chance > 0 && data.LowLast*data.ActivationRate > 0 && bidAsk.Bids[0].Price > data.LowLast*data.ActivationRate {
+	if setting.Chance > 0 && data.LowActTrail*data.ActivationRate > 0 && bidAsk.Bids[0].Price > data.LowActTrail*data.ActivationRate {
 		trailed = true
 		data.OrderShort = nil
 		trails = MustPlaceOrder(account.Key, account.Secret, model.OrderSideSell, model.OrderTypeTrailStop, setting.Market, setting.Symbol, ``,
@@ -194,10 +194,10 @@ func CheckActiveTrail(account *model.Account, setting *model.Setting, data *mode
 			order.Function = model.Close
 			data.OrderAdjust[order.OrderId] = order
 			util.Notice(fmt.Sprintf(`success trail sell %s %s amt %f at %f ratio %f ordId %s`,
-				setting.Market, setting.Symbol, setting.GridAmount, data.LowLast*data.ActivationRate, data.CallBackRatio, order.OrderId))
+				setting.Market, setting.Symbol, setting.GridAmount, data.LowActTrail*data.ActivationRate, data.CallBackRatio, order.OrderId))
 			go model.AppDB.Save(order)
 		}
-	} else if setting.Chance < 0 && data.ActivationRate > 0 && bidAsk.Asks[0].Price < data.HighLast/data.ActivationRate {
+	} else if setting.Chance < 0 && data.ActivationRate > 0 && bidAsk.Asks[0].Price < data.HighActTrail/data.ActivationRate {
 		trailed = true
 		data.OrderLong = nil
 		trails = MustPlaceOrder(account.Key, account.Secret, model.OrderSideBuy, model.OrderTypeTrailStop, setting.Market, setting.Symbol, ``,
@@ -206,7 +206,7 @@ func CheckActiveTrail(account *model.Account, setting *model.Setting, data *mode
 			order.Function = model.Close
 			data.OrderAdjust[order.OrderId] = order
 			util.Notice(fmt.Sprintf(`success trail buy %s %s amt %f at %f ratio %f ordId %s`,
-				setting.Market, setting.Symbol, setting.GridAmount, data.HighLast/data.ActivationRate, data.CallBackRatio, order.OrderId))
+				setting.Market, setting.Symbol, setting.GridAmount, data.HighActTrail/data.ActivationRate, data.CallBackRatio, order.OrderId))
 			go model.AppDB.Save(order)
 		}
 	}
@@ -500,9 +500,11 @@ func CalcTurtleData(account *model.Account, data *model.TurtleData, candles []*m
 			return
 		}
 		getOne = true
-		if i == 1 {
-			data.HighLast = candle.PriceHigh
-			data.LowLast = candle.PriceLow
+		if candle.PriceHigh > data.HighActTrail && i <= 2 {
+			data.HighActTrail = candle.PriceHigh
+		}
+		if (data.LowActTrail == 0 || candle.PriceLow < data.HighActTrail) && i <= 2 {
+			data.LowActTrail = candle.PriceLow
 		}
 		if candle.PriceHigh > data.HighFar && i <= data.DaysFar {
 			data.HighFar = candle.PriceHigh
