@@ -838,7 +838,7 @@ func PlaceOrder(key, secret, orderSide, orderType, market, symbol, orderParam, f
 	if model.AppConfig.Env == `test` {
 		return
 	}
-	if isWs {
+	if isWs && (market == model.Gate || market == model.OKEX || market == model.Bybit || market == model.BinanceSpot || market == model.BinancePerp) {
 		model.AppEnvironment.WSOrderMap.Store(order.OrderId, order)
 	}
 	switch market {

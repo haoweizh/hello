@@ -759,11 +759,10 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 					util.Notice(fmt.Sprintf(`tick static %s %s`, placeSellStr, placeSellValue))
 					return
 				}
-				placeCross(statusBuy, statusSell, priceBuy, priceSell, amount)
 				nowTs := time.Now().UnixMilli()
-				util.Notice(fmt.Sprintf(`cross delay %s %d relate %s %d, %s %s %s %s`,
-					tick.Bids[0].Market, nowTs-int64(tick.Ts), tickRelate.Bids[0].Market, nowTs-int64(tickRelate.Ts),
-					placeBuyStr, placeBuyValue, placeSellStr, placeSellValue))
+				util.Notice(fmt.Sprintf(`time mark %d %d %d`, time.Now().UnixMilli(), nowTs-int64(tick.Ts), nowTs-int64(tickRelate.Ts)))
+				placeCross(statusBuy, statusSell, priceBuy, priceSell, amount)
+				util.Notice(fmt.Sprintf(`%s %s %s %s`, placeBuyStr, placeBuyValue, placeSellStr, placeSellValue))
 				placeTick.Store(placeBuyStr, placeBuyValue)
 				placeTick.Store(placeSellStr, placeSellValue)
 				return
@@ -1092,7 +1091,7 @@ func placeCross(statusBuy, statusSell *CarryStatus, priceBuy, priceSell, amount 
 			api.PlaceOrder(statusSell.account.Key, statusSell.account.Secret, model.OrderSideSell, model.OrderTypeLimit,
 				statusSell.market, statusSell.symbol, orderParam, model.FunctionCross, priceSell, priceSell, amount, true, PostOrderCross)
 		}()
-		time.Sleep(time.Second * 4)
+		time.Sleep(time.Millisecond * 100)
 	}
 	placeStatus(statusBuy, priceBuy, amount)
 	placeStatus(statusSell, priceSell, -1*amount)
