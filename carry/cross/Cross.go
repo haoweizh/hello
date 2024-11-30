@@ -717,11 +717,11 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 	case model.Bybit, model.OKEX:
 		tickLimit = 120
 	}
-	if int(million)-tick.Ts > tickLimit {
-		//util.Notice(fmt.Sprintf(`tick not valid %s %s %d %d`,
-		//	tick.Bids[0].Market, tick.Bids[0].Symbol, int(million)-tick.Ts, tickLimit))
-		return
-	}
+	//if int(million)-tick.Ts > tickLimit {
+	//	//util.Notice(fmt.Sprintf(`tick not valid %s %s %d %d`,
+	//	//	tick.Bids[0].Market, tick.Bids[0].Symbol, int(million)-tick.Ts, tickLimit))
+	//	return
+	//}
 	for _, settingRelate := range settings {
 		tickGet, tickRelate := model.AppEnvironment.GetBidAsk(settingRelate.Market, settingRelate.Symbol)
 		if !tickGet || setting.ID == settingRelate.ID || (!model.NonRTTicker[tick.Bids[0].Market] && model.NonRTTicker[tickRelate.Bids[0].Market]) ||
@@ -730,9 +730,9 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 		}
 		switch tickRelate.Bids[0].Market {
 		case model.Gate, model.BitgetPerp, model.BitgetSpot, model.BinanceSpot, model.BinancePerp:
-			tickLimit = 150
+			tickLimit = 250
 		case model.Bybit, model.OKEX:
-			tickLimit = 180
+			tickLimit = 280
 		}
 		if int(million)-tickRelate.Ts > tickLimit {
 			continue
