@@ -683,8 +683,6 @@ func equalCoin(coin string, statuses []*CarryStatus) (isEqual bool, holdingInU f
 // setting.CloseShortMargin CloseShortMargin作为开关舱标准价格
 var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 	million := time.Now().UnixMilli()
-	util.Notice(fmt.Sprintf(`delay 1 %s %s %d`,
-		tick.Bids[0].Market, tick.Bids[0].Symbol, int(million)-tick.Ts))
 	// 所有cross之间互斥
 	if !api.CheckSetProcessing(setting.Function, setting.Function, setting.Function, true) {
 		defer api.CheckSetProcessing(setting.Function, setting.Function, setting.Function, false)
