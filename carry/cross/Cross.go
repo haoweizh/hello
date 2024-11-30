@@ -682,18 +682,22 @@ func equalCoin(coin string, statuses []*CarryStatus) (isEqual bool, holdingInU f
 // setting.OpenShortMargin OpenShortMargin不等于0时作为开舱标准价格，否则使用通用价格
 // setting.CloseShortMargin CloseShortMargin作为开关舱标准价格
 var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
+	million := time.Now().UnixMilli()
+	util.Notice(fmt.Sprintf(`delay 1 %s %s %d`,
+		tick.Bids[0].Market, tick.Bids[0].Symbol, int(million)-tick.Ts))
 	// 所有cross之间互斥
 	if !api.CheckSetProcessing(setting.Function, setting.Function, setting.Function, true) {
 		defer api.CheckSetProcessing(setting.Function, setting.Function, setting.Function, false)
 	} else {
 		return
 	}
+	util.Notice(fmt.Sprintf(`delay 2 %s %s %d`,
+		tick.Bids[0].Market, tick.Bids[0].Symbol, int(million)-tick.Ts))
 	if !doCross && model.AppConfig.Handle == `1` {
 		go ClearCross()
 		doCross = true
 		return
 	}
-	million := util.GetNowUnixMillion()
 	coinSettings := api.GetCoinSettings(setting.Function)
 	var settings []*model.Setting
 	if coinSettings == nil {
@@ -722,6 +726,8 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 	//	//	tick.Bids[0].Market, tick.Bids[0].Symbol, int(million)-tick.Ts, tickLimit))
 	//	return
 	//}
+	util.Notice(fmt.Sprintf(`delay 3 %s %s %d`,
+		tick.Bids[0].Market, tick.Bids[0].Symbol, int(million)-tick.Ts))
 	for _, settingRelate := range settings {
 		tickGet, tickRelate := model.AppEnvironment.GetBidAsk(settingRelate.Market, settingRelate.Symbol)
 		if !tickGet || setting.ID == settingRelate.ID || (!model.NonRTTicker[tick.Bids[0].Market] && model.NonRTTicker[tickRelate.Bids[0].Market]) ||
@@ -734,11 +740,11 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 		case model.Bybit, model.OKEX:
 			tickLimit = 280
 		}
+		util.Notice(fmt.Sprintf(`delay 4 %s %s %d %d %d`,
+			tick.Bids[0].Market, tickRelate.Bids[0].Market, setting.Symbol, int(million)-tick.Ts, int(million)-tickRelate.Ts))
 		if int(million)-tickRelate.Ts > tickLimit {
 			continue
 		}
-		util.Notice(fmt.Sprintf(`tick valid %s %s %d %d %d`,
-			tick.Bids[0].Market, tickRelate.Bids[0].Market, setting.Symbol, int(million)-tick.Ts, int(million)-tickRelate.Ts))
 		for i := api.GetCrossLen() - 1; i >= 0; i-- {
 			account := model.AppConfig.GetAccounts(setting.Market)[i]
 			accountRelate := model.AppConfig.GetAccounts(settingRelate.Market)[i]
