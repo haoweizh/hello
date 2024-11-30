@@ -728,9 +728,9 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 		}
 		switch tickRelate.Bids[0].Market {
 		case model.Gate, model.BitgetPerp, model.BitgetSpot, model.BinanceSpot, model.BinancePerp:
-			tickLimit = 80
+			tickLimit = 100
 		case model.Bybit, model.OKEX:
-			tickLimit = 110
+			tickLimit = 130
 		}
 		if int(million)-tick.Ts > tickLimit {
 			continue
