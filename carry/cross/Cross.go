@@ -714,35 +714,29 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 	}
 	tickLimit := 50
 	switch tick.Bids[0].Market {
-	case model.Gate, model.BitgetPerp, model.BitgetSpot, model.BinanceSpot, model.BinancePerp:
-		tickLimit = 70
+	case model.Gate, model.BitgetPerp, model.BitgetSpot:
+		tickLimit = 30
+	case model.BinanceSpot, model.BinancePerp:
+		tickLimit = 20
 	case model.Bybit, model.OKEX:
-		tickLimit = 120
+		tickLimit = 60
 	}
-	//if int(million)-tick.Ts > tickLimit {
-	//	//util.Notice(fmt.Sprintf(`tick not valid %s %s %d %d`,
-	//	//	tick.Bids[0].Market, tick.Bids[0].Symbol, int(million)-tick.Ts, tickLimit))
-	//	return
-	//}
+	if int(million)-tick.Ts > tickLimit {
+		return
+	}
 	util.Notice(fmt.Sprintf(`delay 3 %s %s %d`,
 		tick.Bids[0].Market, tick.Bids[0].Symbol, int(million)-tick.Ts))
 	for _, settingRelate := range settings {
 		tickGet, tickRelate := model.AppEnvironment.GetBidAsk(settingRelate.Market, settingRelate.Symbol)
-		if !tickGet || setting.ID == settingRelate.ID || (!model.NonRTTicker[tick.Bids[0].Market] && model.NonRTTicker[tickRelate.Bids[0].Market]) ||
-			(model.AppConfig.Env != `test`) {
+		if !tickGet || setting.ID == settingRelate.ID || (!model.NonRTTicker[tick.Bids[0].Market] && model.NonRTTicker[tickRelate.Bids[0].Market]) {
 			continue
 		}
-		switch tickRelate.Bids[0].Market {
-		case model.Gate, model.BitgetPerp, model.BitgetSpot, model.BinanceSpot, model.BinancePerp:
-			tickLimit = 250
-		case model.Bybit, model.OKEX:
-			tickLimit = 280
-		}
-		util.Notice(fmt.Sprintf(`delay 4 %s %s %d %d %d`,
-			tick.Bids[0].Market, tickRelate.Bids[0].Market, setting.Symbol, int(million)-tick.Ts, int(million)-tickRelate.Ts))
+		tickLimit += 30
 		if int(million)-tickRelate.Ts > tickLimit {
 			continue
 		}
+		util.Notice(fmt.Sprintf(`delay 4 %s %s %s %d %d`,
+			tick.Bids[0].Market, tickRelate.Bids[0].Market, setting.Symbol, int(million)-tick.Ts, int(million)-tickRelate.Ts))
 		for i := api.GetCrossLen() - 1; i >= 0; i-- {
 			account := model.AppConfig.GetAccounts(setting.Market)[i]
 			accountRelate := model.AppConfig.GetAccounts(settingRelate.Market)[i]
