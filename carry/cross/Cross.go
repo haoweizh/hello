@@ -341,19 +341,12 @@ func ClearCross() {
 				time.Sleep(time.Millisecond * 10)
 			}
 		}
-		for {
-			leftOrders := 0
-			model.AppEnvironment.CrossOrders.Range(func(k, v interface{}) bool {
-				leftOrders++
-				return true
-			})
-			if leftOrders > 0 {
-				util.Notice(`left orders is %d`, leftOrders)
-			} else {
-				break
-			}
-			time.Sleep(time.Second * 10)
-		}
+		leftOrders := 0
+		model.AppEnvironment.CrossOrders.Range(func(k, v interface{}) bool {
+			leftOrders++
+			util.Notice(`left orders %d key %v %v`, leftOrders, k, v)
+			return true
+		})
 		today := util.GetNow()
 		today = time.Date(today.Year(), today.Month(), today.Day(), 0, 0, 0, 0, today.Location())
 		carryRows, _ := model.AppDB.Model(model.Order{}).Select(`sum(price*abs(amount)),refresh_type`).
