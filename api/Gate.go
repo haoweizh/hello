@@ -310,7 +310,10 @@ var wsPriHandlerGatePerp = func(market, key string, msg []byte) {
 				if value[`status`] == `finished` {
 					order.(*model.Order).Status = model.CarryStatusSuccess
 				}
+				preDeal := order.(*model.Order).DealAmount
 				order.(*model.Order).DealAmount = math.Abs(size) - math.Abs(left)
+				util.Notice(fmt.Sprintf(`update deal %s %s %s %f to %f`,
+					order.(*model.Order).Market, order.(*model.Order).Symbol, order.(*model.Order).OrderSide, preDeal, order.(*model.Order).DealAmount))
 			}
 		}
 	} else {
@@ -379,7 +382,10 @@ var wsPriHandlerGateSpot = func(market, key string, msg []byte) {
 			order, _ := model.AppEnvironment.CrossOrders.Load(value[`id`].(string))
 			if order != nil {
 				deal, _ := strconv.ParseFloat(value[`filled_total`].(string), 64)
+				preDeal := order.(*model.Order).DealAmount
 				order.(*model.Order).DealAmount = math.Abs(deal)
+				util.Notice(fmt.Sprintf(`update deal %s %s %s %f to %f`,
+					order.(*model.Order).Market, order.(*model.Order).Symbol, order.(*model.Order).OrderSide, preDeal, order.(*model.Order).DealAmount))
 				if value[`finish_as`] == `filled` {
 					order.(*model.Order).Status = model.CarryStatusSuccess
 				}
@@ -859,7 +865,7 @@ func placeOrderGate(account *model.Account, isWs bool, order *model.Order, order
 				//order.Symbol = createOrder.CurrencyPair
 				secondUnix, _ := strconv.ParseInt(createOrder.CreateTime, 10, 64)
 				order.OrderTime = time.Unix(secondUnix, 0)
-				order.Price, _ = strconv.ParseFloat(createOrder.Price, 64)
+				//order.Price, _ = strconv.ParseFloat(createOrder.Price, 64)
 				order.OrderSide = createOrder.Side
 				order.Amount, _ = strconv.ParseFloat(createOrder.Amount, 64)
 				order.OrderType = createOrder.Type

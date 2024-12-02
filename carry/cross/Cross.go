@@ -1152,6 +1152,9 @@ func handleCross(account *model.Account, order *model.Order) {
 		order.Status = model.CarryStatusFail
 		order.OrderId = fmt.Sprintf("%d%s%s", time.Now().UnixMilli(), order.Market, order.Symbol)
 	}
+	if order.Amount == order.DealAmount {
+		order.Status = model.CarryStatusSuccess
+	}
 	model.AppDB.Save(order)
 	v, _ := util.LoadSyncMap(model.MarketInfos, order.Market, order.Symbol)
 	var marketInfo *model.MarketInfo
@@ -1165,10 +1168,10 @@ func handleCross(account *model.Account, order *model.Order) {
 	if leftAmtInMkt > marketInfo.SizeMin && leftAmtInMkt*order.Price > marketInfo.MoneyMin {
 		canceled, errCode, errMsg := api.CancelOrder(account.Key, account.Secret, order.Market, order.Symbol, model.OrderTypeLimit, order.OrderId)
 		compOrder := api.PlaceOrder(account.Key, account.Secret, order.OrderSide, model.OrderTypeMarket, order.Market, order.Symbol,
-			``, model.FunctionComplement, order.Price, order.Price, order.Amount-order.DealAmount, false, nil)
+			``, model.FunctionComplement, order.Price, order.Price, leftAmt, false, nil)
 		model.AppDB.Save(compOrder)
-		util.Notice(fmt.Sprintf(`post handle cancel order %s %s %s side %s %v type %s code %s msg %s not deal %f, comp %v`,
-			order.OrderId, order.Market, order.Symbol, order.OrderSide, canceled, order.OrderType, errCode, errMsg, leftAmt, compOrder))
+		util.Notice(fmt.Sprintf(`post cancel %s %s %s side %s %v code %s msg %s not deal %f %f%`,
+			order.OrderId, order.Market, order.Symbol, order.OrderSide, canceled, errCode, errMsg, leftAmt, math.Round(100*leftAmt/order.Amount)))
 	} else {
 		util.Notice(fmt.Sprintf(`post handle done %s %s %s %s %f`,
 			order.Market, order.Symbol, order.OrderId, order.OrderType, order.DealAmount))

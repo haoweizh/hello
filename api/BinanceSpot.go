@@ -410,12 +410,18 @@ var wsOrderUpdateBinance = func(market, key string, msg []byte) {
 	case `ORDER_TRADE_UPDATE`:
 		order, _ := model.AppEnvironment.CrossOrders.Load(strconv.Itoa(resJson.GetPath(`o`, `i`).MustInt()))
 		if order != nil {
+			preDeal := order.(*model.Order).DealAmount
 			order.(*model.Order).DealAmount, _ = strconv.ParseFloat(resJson.GetPath(`o`, `z`).MustString(), 64)
+			util.Notice(fmt.Sprintf(`update deal %s %s %s %f to %f`,
+				order.(*model.Order).Market, order.(*model.Order).Symbol, order.(*model.Order).OrderSide, preDeal, order.(*model.Order).DealAmount))
 		}
 	case `executionReport`:
 		order, _ := model.AppEnvironment.CrossOrders.Load(strconv.Itoa(resJson.Get(`i`).MustInt()))
 		if order != nil {
+			preDeal := order.(*model.Order).DealAmount
 			order.(*model.Order).DealAmount, _ = strconv.ParseFloat(resJson.Get(`z`).MustString(), 64)
+			util.Notice(fmt.Sprintf(`update deal %s %s %s %f to %f`,
+				order.(*model.Order).Market, order.(*model.Order).Symbol, order.(*model.Order).OrderSide, preDeal, order.(*model.Order).DealAmount))
 		}
 	}
 }

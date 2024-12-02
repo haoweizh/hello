@@ -75,7 +75,10 @@ var wsOrderConnHandlerBitget = func(market, key string, event []byte) {
 		order, _ := model.AppEnvironment.CrossOrders.Load(orderId.(string))
 		if order != nil {
 			dealAmtStr := data.(map[string]interface{})[`accBaseVolume`].(string)
+			preDeal := order.(*model.Order).DealAmount
 			order.(*model.Order).DealAmount, _ = strconv.ParseFloat(dealAmtStr, 64)
+			util.Notice(fmt.Sprintf(`update deal %s %s %s %f to %f`,
+				order.(*model.Order).Market, order.(*model.Order).Symbol, order.(*model.Order).OrderSide, preDeal, order.(*model.Order).DealAmount))
 		}
 	}
 }

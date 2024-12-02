@@ -13,7 +13,7 @@ var socketFile, infoFile, noticeFile, debugFile *os.File
 var socketCount, infoCount, noticeCount int
 var DebugCount int
 var DoDebug = false
-var logChan = make(chan string, 100)
+var logChan = make(chan string, 10000)
 
 const logRoot = "./log/"
 

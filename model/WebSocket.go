@@ -68,7 +68,7 @@ func SendToConnections(market string, connections map[*WSConn]bool, msg []byte) 
 		}
 		err = connection.WriteMsg(msg)
 		if err != nil {
-			util.Notice(fmt.Sprintf(`fail to write to all connection %s %s return: %s`, market, msg, err.Error()))
+			util.Info(fmt.Sprintf(`fail to write to all connection %s %s return: %s`, market, msg, err.Error()))
 		}
 		//if msgType == websocket.MessageText {
 		//	if err = connection.WriteMessage(msgType, msg); err != nil {

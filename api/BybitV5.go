@@ -50,7 +50,11 @@ var wsOrdUdtHandlerBybit = func(market, key string, msg []byte) {
 			if data.OrderStatus == `Filled` {
 				order.(*model.Order).Status = model.CarryStatusSuccess
 			}
+			preDeal := order.(*model.Order).DealAmount
 			order.(*model.Order).DealAmount, _ = strconv.ParseFloat(data.CumExecQty, 64)
+			util.Notice(fmt.Sprintf(`update deal %s %s %s %f to %f`,
+				order.(*model.Order).Market, order.(*model.Order).Symbol, order.(*model.Order).OrderSide, preDeal, order.(*model.Order).DealAmount))
+
 		}
 	}
 }
