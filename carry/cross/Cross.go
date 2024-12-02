@@ -385,8 +385,6 @@ func ClearCross() {
 
 func equalAccounts() {
 	util.Notice(`...... enter clearing cross all`)
-	waitEqual := make(map[int]bool)
-	equalChannel := make(chan int, 1)
 	markets := api.GetMarkets()
 	//needWaitEqual := false // 是否需要进入等待环节
 	for i := 0; i < api.GetCrossLen(); i++ {
@@ -395,26 +393,12 @@ func equalAccounts() {
 		for _, market := range markets {
 			accounts[market] = indexAccounts[market]
 		}
-		waitEqual[i] = true
-		go equalAccount(i, equalChannel, accounts)
-	}
-	for {
-		index := <-equalChannel
-		waitEqual[index] = false
-		finish := true
-		for _, value := range waitEqual {
-			if value == true {
-				finish = false
-			}
-		}
-		if finish {
-			break
-		}
+		equalAccount(i, accounts)
 	}
 	util.Notice(`...... exit clearing cross all`)
 }
 
-func equalAccount(i int, equalChan chan int, accounts map[string]*model.Account) {
+func equalAccount(i int, accounts map[string]*model.Account) {
 	if accounts[model.BitgetPerp] != nil {
 		liquidateBitgetPerp(accounts[model.BitgetPerp])
 	}
@@ -456,7 +440,6 @@ func equalAccount(i int, equalChan chan int, accounts map[string]*model.Account)
 		})
 	}
 	lastCrosses = sync.Map{}
-	equalChan <- i
 	util.Notice(`...... exit clearing cross %d`, i)
 }
 
