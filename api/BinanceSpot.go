@@ -412,6 +412,7 @@ var wsOrderUpdateBinance = func(market, key string, msg []byte) {
 		if order != nil {
 			preDeal := order.(*model.Order).DealAmount
 			order.(*model.Order).DealAmount, _ = strconv.ParseFloat(resJson.GetPath(`o`, `z`).MustString(), 64)
+			order.(*model.Order).Status = model.GetOrderStatus(market, resJson.Get(`X`).MustString())
 			util.Notice(fmt.Sprintf(`update deal %s %s %s %f to %f`,
 				order.(*model.Order).Market, order.(*model.Order).Symbol, order.(*model.Order).OrderSide, preDeal, order.(*model.Order).DealAmount))
 		}
@@ -420,8 +421,9 @@ var wsOrderUpdateBinance = func(market, key string, msg []byte) {
 		if order != nil {
 			preDeal := order.(*model.Order).DealAmount
 			order.(*model.Order).DealAmount, _ = strconv.ParseFloat(resJson.Get(`z`).MustString(), 64)
-			util.Notice(fmt.Sprintf(`update deal %s %s %s %f to %f`,
-				order.(*model.Order).Market, order.(*model.Order).Symbol, order.(*model.Order).OrderSide, preDeal, order.(*model.Order).DealAmount))
+			order.(*model.Order).Status = model.GetOrderStatus(market, resJson.Get(`X`).MustString())
+			util.Notice(fmt.Sprintf(`update deal %s %s %s %f to %f %s`,
+				order.(*model.Order).Market, order.(*model.Order).Symbol, order.(*model.Order).OrderSide, preDeal, order.(*model.Order).DealAmount, order.(*model.Order).Status))
 		}
 	}
 }

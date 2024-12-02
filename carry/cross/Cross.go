@@ -1148,7 +1148,7 @@ func handleCross(account *model.Account, order *model.Order) {
 	}
 	leftAmt := order.Amount - order.DealAmount
 	leftAmtInMkt := model.GetAmountInMarket(order.Market, order.Symbol, leftAmt, order.Price, false)
-	if leftAmtInMkt > marketInfo.SizeMin && leftAmtInMkt*order.Price > marketInfo.MoneyMin {
+	if leftAmtInMkt > marketInfo.SizeMin && leftAmtInMkt*order.Price > marketInfo.MoneyMin && order.Status != model.CarryStatusSuccess {
 		canceled, errCode, errMsg := api.CancelOrder(account.Key, account.Secret, order.Market, order.Symbol, model.OrderTypeLimit, order.OrderId)
 		compOrder := api.PlaceOrder(account.Key, account.Secret, order.OrderSide, model.OrderTypeMarket, order.Market, order.Symbol,
 			``, model.FunctionComplement, order.Price, order.Price, leftAmt, false, nil)

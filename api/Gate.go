@@ -312,8 +312,9 @@ var wsPriHandlerGatePerp = func(market, key string, msg []byte) {
 				}
 				preDeal := order.(*model.Order).DealAmount
 				order.(*model.Order).DealAmount = math.Abs(size) - math.Abs(left)
-				util.Notice(fmt.Sprintf(`update deal %s %s %s %f to %f`,
-					order.(*model.Order).Market, order.(*model.Order).Symbol, order.(*model.Order).OrderSide, preDeal, order.(*model.Order).DealAmount))
+				util.Notice(fmt.Sprintf(`update deal %s %s %s %f to %f %s`,
+					order.(*model.Order).Market, order.(*model.Order).Symbol, order.(*model.Order).OrderSide, preDeal,
+					order.(*model.Order).DealAmount, order.(*model.Order).Status))
 			}
 		}
 	} else {
@@ -384,8 +385,9 @@ var wsPriHandlerGateSpot = func(market, key string, msg []byte) {
 				deal, _ := strconv.ParseFloat(value[`filled_total`].(string), 64)
 				preDeal := order.(*model.Order).DealAmount
 				order.(*model.Order).DealAmount = math.Abs(deal)
-				util.Notice(fmt.Sprintf(`update deal %s %s %s %f to %f`,
-					order.(*model.Order).Market, order.(*model.Order).Symbol, order.(*model.Order).OrderSide, preDeal, order.(*model.Order).DealAmount))
+				util.Notice(fmt.Sprintf(`update deal %s %s %s %f to %f %s`,
+					order.(*model.Order).Market, order.(*model.Order).Symbol, order.(*model.Order).OrderSide, preDeal,
+					order.(*model.Order).DealAmount, order.(*model.Order).Status))
 				if value[`finish_as`] == `filled` {
 					order.(*model.Order).Status = model.CarryStatusSuccess
 				}
