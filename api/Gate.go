@@ -866,8 +866,8 @@ func placeOrderGate(account *model.Account, isWs bool, order *model.Order, order
 				secondUnix, _ := strconv.ParseInt(createOrder.CreateTime, 10, 64)
 				order.OrderTime = time.Unix(secondUnix, 0)
 				//order.Price, _ = strconv.ParseFloat(createOrder.Price, 64)
+				//order.Amount, _ = strconv.ParseFloat(createOrder.Amount, 64)
 				order.OrderSide = createOrder.Side
-				order.Amount, _ = strconv.ParseFloat(createOrder.Amount, 64)
 				order.OrderType = createOrder.Type
 				if createOrder.Status == "cancelled" {
 					order.Status = model.CarryStatusFail
@@ -912,7 +912,7 @@ func placeOrderGate(account *model.Account, isWs bool, order *model.Order, order
 				order.OrderId = strconv.FormatInt(createFuturesOrder.Id, 10)
 				order.OrderTime = time.Unix(int64(createFuturesOrder.CreateTime), 0)
 				order.Price, _ = strconv.ParseFloat(createFuturesOrder.Price, 64)
-				_, order.Amount = model.ParseRealAmount(model.Gate, order.Symbol, float64(createFuturesOrder.Size))
+				//_, order.Amount = model.ParseRealAmount(model.Gate, order.Symbol, float64(createFuturesOrder.Size))
 				order.Status = model.CarryStatusWorking
 			}
 		}
