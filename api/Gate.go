@@ -311,8 +311,9 @@ var wsPriHandlerGatePerp = func(market, key string, msg []byte) {
 					order.(*model.Order).Status = model.CarryStatusSuccess
 				}
 				dialectSymbol := value[`contract`].(string)
-				_, marketType, coin := model.GetCoinFromDialect(market, dialectSymbol)
-				symbol := coin + model.UniStandardTail[marketType]
+				// 此处不同于gate标准的合约格式以_USDT结尾，而是以_USD结尾
+				coin := strings.Split(dialectSymbol, "_")[0]
+				symbol := coin + model.UniStandardTail[model.MarketTypePerp]
 				preDeal := order.(*model.Order).DealAmount
 				_, order.(*model.Order).DealAmount = model.ParseRealAmount(model.Gate, symbol, math.Abs(size)-math.Abs(left))
 				util.Notice(fmt.Sprintf(`update deal %s %s %s %f to %f %s`,

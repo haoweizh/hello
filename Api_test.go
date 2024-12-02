@@ -518,13 +518,17 @@ func Test_download(t *testing.T) {
 }
 
 func Test_Order(t *testing.T) {
+
+	market := model.Gate
+	_, marketType, coin := model.GetCoinFromDialect(market, `BTC_USD`)
+	symbol := coin + model.UniStandardTail[marketType]
+	fmt.Println(symbol)
 	model.NewConfig()
-	//market := model.BinancePerp
 	//symbol := `BENDOG_USDT`
 	//account := model.GetAccounts(0)[market]
 	//_, listKey := api.RenewListenKeyBinance(account, market)
 	//api.ExtendListenKeyBinance(account, market, listKey)
-	//api.InitMarketInfos(model.OKEX)
+	api.InitMarketInfos(model.Gate)
 	//go model.AppEnvironment.HandleWSResp()
 	//api.MaintainConns(market)
 	//order := api.PlaceOrder(account.Key, account.Secret, model.OrderSideBuy, model.OrderTypeMarket, market, symbol, ``,

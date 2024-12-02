@@ -413,8 +413,8 @@ var wsOrderUpdateBinance = func(market, key string, msg []byte) {
 			preDeal := order.(*model.Order).DealAmount
 			order.(*model.Order).DealAmount, _ = strconv.ParseFloat(resJson.GetPath(`o`, `z`).MustString(), 64)
 			order.(*model.Order).Status = model.GetOrderStatus(market, resJson.Get(`X`).MustString())
-			util.Notice(fmt.Sprintf(`update deal %s %s %s %f to %f`,
-				order.(*model.Order).Market, order.(*model.Order).Symbol, order.(*model.Order).OrderSide, preDeal, order.(*model.Order).DealAmount))
+			util.Notice(fmt.Sprintf(`update deal %s %s %s %f to %f %s`,
+				order.(*model.Order).Market, order.(*model.Order).Symbol, order.(*model.Order).OrderSide, preDeal, order.(*model.Order).DealAmount, order.(*model.Order).Status))
 		}
 	case `executionReport`:
 		order, _ := model.AppEnvironment.CrossOrders.Load(strconv.Itoa(resJson.Get(`i`).MustInt()))
