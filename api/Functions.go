@@ -238,8 +238,8 @@ func CancelOrder(key, secret, market, symbol, orderType, orderId string) (result
 	if model.AppConfig.Env == `test` {
 		return true, ``, `test cancel`
 	}
-	errCode = `market-not-supported ` + market
-	msg = `market not supported ` + market
+	errCode = `` + market
+	msg = `` + market
 	switch market {
 	case model.OKEX:
 		result, errCode, msg = cancelOrderOkex(key, secret, symbol, orderId, orderType)

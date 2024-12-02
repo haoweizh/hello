@@ -310,8 +310,11 @@ var wsPriHandlerGatePerp = func(market, key string, msg []byte) {
 				if value[`status`] == `finished` {
 					order.(*model.Order).Status = model.CarryStatusSuccess
 				}
+				dialectSymbol := value[`contract`].(string)
+				_, marketType, coin := model.GetCoinFromDialect(market, dialectSymbol)
+				symbol := coin + model.UniStandardTail[marketType]
 				preDeal := order.(*model.Order).DealAmount
-				order.(*model.Order).DealAmount = math.Abs(size) - math.Abs(left)
+				_, order.(*model.Order).DealAmount = model.ParseRealAmount(model.Gate, symbol, math.Abs(size)-math.Abs(left))
 				util.Notice(fmt.Sprintf(`update deal %s %s %s %f to %f %s`,
 					order.(*model.Order).Market, order.(*model.Order).Symbol, order.(*model.Order).OrderSide, preDeal,
 					order.(*model.Order).DealAmount, order.(*model.Order).Status))
@@ -383,8 +386,11 @@ var wsPriHandlerGateSpot = func(market, key string, msg []byte) {
 			order, _ := model.AppEnvironment.CrossOrders.Load(value[`id`].(string))
 			if order != nil {
 				deal, _ := strconv.ParseFloat(value[`filled_total`].(string), 64)
+				dealPrice, _ := strconv.ParseFloat(value[`avg_deal_price`].(string), 64)
 				preDeal := order.(*model.Order).DealAmount
-				order.(*model.Order).DealAmount = math.Abs(deal)
+				if dealPrice > 0 {
+					order.(*model.Order).DealAmount = math.Abs(deal / dealPrice)
+				}
 				util.Notice(fmt.Sprintf(`update deal %s %s %s %f to %f %s`,
 					order.(*model.Order).Market, order.(*model.Order).Symbol, order.(*model.Order).OrderSide, preDeal,
 					order.(*model.Order).DealAmount, order.(*model.Order).Status))
