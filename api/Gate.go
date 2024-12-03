@@ -324,6 +324,8 @@ var wsPriHandlerGatePerp = func(market, key string, msg []byte) {
 				util.Notice(fmt.Sprintf(`update deal %s %s %s %f to %f %s`,
 					order.(*model.Order).Market, order.(*model.Order).Symbol, order.(*model.Order).OrderSide, preDeal,
 					order.(*model.Order).DealAmount, order.(*model.Order).Status))
+			} else {
+				util.Notice(fmt.Sprintf(`no order stored %s %d %s`, market, value["id"].(json.Number).String(), string(msg)))
 			}
 		}
 	} else {
@@ -403,6 +405,8 @@ var wsPriHandlerGateSpot = func(market, key string, msg []byte) {
 				if value[`finish_as`] == `filled` {
 					order.(*model.Order).Status = model.CarryStatusSuccess
 				}
+			} else {
+				util.Notice(fmt.Sprintf(`no order stored %s %d %s`, market, value[`id`], string(msg)))
 			}
 		}
 	} else {

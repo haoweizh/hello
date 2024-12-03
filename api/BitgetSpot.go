@@ -82,6 +82,8 @@ var wsOrderConnHandlerBitget = func(market, key string, event []byte) {
 			}
 			util.Notice(fmt.Sprintf(`update deal %s %s %s %f to %f %s`,
 				order.(*model.Order).Market, order.(*model.Order).Symbol, order.(*model.Order).OrderSide, preDeal, order.(*model.Order).DealAmount, order.(*model.Order).Status))
+		} else {
+			util.Notice(fmt.Sprintf(`no order stored %s %v %s`, market, orderId, string(event)))
 		}
 	}
 }

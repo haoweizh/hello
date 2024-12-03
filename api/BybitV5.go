@@ -46,6 +46,8 @@ var wsOrdUdtHandlerBybit = func(market, key string, msg []byte) {
 			order, _ := model.AppEnvironment.CrossOrders.Load(data.OrderId)
 			if order == nil {
 				continue
+			} else {
+				util.Notice(fmt.Sprintf(`no order stored %s %d %s`, market, data.OrderId, string(msg)))
 			}
 			if data.OrderStatus == `Filled` {
 				order.(*model.Order).Status = model.CarryStatusSuccess
