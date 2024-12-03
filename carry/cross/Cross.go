@@ -1052,22 +1052,10 @@ func placeCross(statusBuy, statusSell *CarryStatus, priceBuy, priceSell, amount 
 			orderBuy.ErrCode, orderSell.ErrCode = msg, msg
 		}
 	} else {
-		go func() {
-			orderParam := ``
-			if statusBuy.reduceOnlyBuy {
-				orderParam = model.ReduceOnly
-			}
-			api.PlaceOrder(statusBuy.account.Key, statusBuy.account.Secret, model.OrderSideBuy, model.OrderTypeLimit,
-				statusBuy.market, statusBuy.symbol, orderParam, model.FunctionCross, priceBuy, priceBuy, amount, true, PostOrderCross)
-		}()
-		go func() {
-			orderParam := ``
-			if statusSell.reduceOnlySell {
-				orderParam = model.ReduceOnly
-			}
-			api.PlaceOrder(statusSell.account.Key, statusSell.account.Secret, model.OrderSideSell, model.OrderTypeLimit,
-				statusSell.market, statusSell.symbol, orderParam, model.FunctionCross, priceSell, priceSell, amount, true, PostOrderCross)
-		}()
+		go api.PlaceOrder(statusBuy.account.Key, statusBuy.account.Secret, model.OrderSideBuy, model.OrderTypeLimit,
+			statusBuy.market, statusBuy.symbol, ``, model.FunctionCross, priceBuy, priceBuy, amount, true, PostOrderCross)
+		go api.PlaceOrder(statusSell.account.Key, statusSell.account.Secret, model.OrderSideSell, model.OrderTypeLimit,
+			statusSell.market, statusSell.symbol, ``, model.FunctionCross, priceSell, priceSell, amount, true, PostOrderCross)
 		time.Sleep(time.Millisecond * 100)
 	}
 	placeStatus(statusBuy, priceBuy, amount)
