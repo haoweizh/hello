@@ -518,22 +518,20 @@ func Test_download(t *testing.T) {
 }
 
 func Test_Order(t *testing.T) {
-	l := len(strings.Trim(`0000`, `0`))
-	fmt.Println(l)
-	market := model.Gate
-	_, marketType, coin := model.GetCoinFromDialect(market, `BTC_USD`)
-	symbol := coin + model.UniStandardTail[marketType]
-	fmt.Println(symbol)
+	market := model.BitgetPerp
 	model.NewConfig()
-	//symbol := `BENDOG_USDT`
-	//account := model.GetAccounts(0)[market]
+	symbol := `BLUR_PERP`
+	account := model.GetAccounts(0)[market]
+	api.GetBitgetPosModes(account, symbol)
 	//_, listKey := api.RenewListenKeyBinance(account, market)
 	//api.ExtendListenKeyBinance(account, market, listKey)
-	api.InitMarketInfos(model.Gate)
+	api.InitMarketInfos(market)
 	//go model.AppEnvironment.HandleWSResp()
 	//api.MaintainConns(market)
-	//order := api.PlaceOrder(account.Key, account.Secret, model.OrderSideBuy, model.OrderTypeMarket, market, symbol, ``,
-	//	`test`, 0.011788999999999999, 0.011788999999999999, 232.4550, false, nil)
+	order := api.PlaceOrder(account.Key, account.Secret, model.OrderSideSell, model.OrderTypeLimit, market, symbol, ``,
+		`test`, 0.39, 0.39, 20, false, nil)
+	fmt.Println(order)
+	fmt.Println(order.Status)
 	//api.CancelOrder(account.Key, account.Secret, market, symbol, model.OrderTypeLimit, order.OrderId)
 	markets := []string{model.BinancePerp}
 	for _, mk := range markets {

@@ -1100,6 +1100,9 @@ func InitMarketInfos(market string) (success bool) {
 		marketInfos = getMarketsBitgetSpot()
 	case model.BitgetPerp:
 		marketInfos = getMarketsBitgetPerp()
+		for _, account := range accounts {
+			setBitgetPositionMode(account.Key, account.Secret)
+		}
 		setBitgetPositionMode(accounts[0].Key, accounts[0].Secret)
 	}
 	for _, setting := range appSettings {

@@ -45,6 +45,25 @@ func getMarketsBitgetPerp() (marketInfos map[string]*model.MarketInfo) {
 	return marketInfos
 }
 
+func GetBitgetPosModes(account *model.Account, symbol string) (mode string) {
+	_, _, _, dialectSymbol := model.GetFromStandard(model.BitgetPerp, symbol)
+	client := dtos.BitgetRestClient{BaseUrl: bitgetRestUrl, Passphrase: model.AppConfig.Phase, ApiKey: account.Key, ApiSecretKey: account.Secret}
+	params := map[string]string{"productType": "USDT-FUTURES", "marginCoin": "USDT", `symbol`: dialectSymbol}
+	httpResp, httpErr := client.DoGet("/api/v2/mix/account/account", params)
+	if httpErr != nil {
+		util.Notice(fmt.Sprintf(`fail to do post when setBitgetPositionMode %s`, httpErr.Error()))
+		return
+	}
+	jsonData, jsonErr := util.NewJSON(httpResp)
+	if jsonErr != nil {
+		util.Notice(fmt.Sprintf(`fail to NewJson when setBitgetPositionMode %s`, jsonErr.Error()))
+		return
+	}
+	data := jsonData.GetPath(`data`, `posMode`).MustString()
+	fmt.Println(data)
+	return data
+}
+
 func setBitgetPositionMode(key, secret string) {
 	client := dtos.BitgetRestClient{BaseUrl: bitgetRestUrl, Passphrase: model.AppConfig.Phase, ApiKey: key, ApiSecretKey: secret}
 	params := map[string]string{"productType": "USDT-FUTURES", "posMode": "one_way_mode"}
