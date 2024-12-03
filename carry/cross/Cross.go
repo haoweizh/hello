@@ -1226,8 +1226,6 @@ func FormatCrossPair(marketBuy, marketSell, symbolBuy, symbolSell string, amount
 		}
 		return
 	}
-	incBuy := marketInfoBuy.SizeIncrement
-	incSell := marketInfoSell.SizeIncrement
 	minBuy := marketInfoBuy.SizeMin
 	minSell := marketInfoSell.SizeMin
 	if marketBuy == model.Bybit {
@@ -1236,8 +1234,7 @@ func FormatCrossPair(marketBuy, marketSell, symbolBuy, symbolSell string, amount
 	if marketSell == model.Bybit {
 		minSell = math.Max(5.5/price, minSell)
 	}
-	sizeInc := math.Max(incBuy, incSell)
-	formattedAmount = math.Floor(amount/sizeInc) * sizeInc
+	formattedAmount = amount
 	if formattedAmount < math.Max(minBuy, minSell) {
 		return 0
 	}
