@@ -305,10 +305,11 @@ func placeOrderBitgetSpot(key, secret string, order *model.Order, orderSide, ord
 	jsonErr := json.Unmarshal(httpResp, bitgetOrderResp)
 	if bitgetOrderResp == nil {
 		util.Notice(fmt.Sprintf("fail to create bitget spot order no resp: %s httpErr: %v, jsonErr: %v", httpResp, httpErr, jsonErr))
-	} else if bitgetOrderResp.Code == "00000" {
+	} else if len(strings.Trim(bitgetOrderResp.Code, `0`)) == 0 {
 		order.Status = model.CarryStatusWorking
 		order.OrderId = bitgetOrderResp.Data.OrderId
 	} else {
+		order.Status = model.CarryStatusFail
 		order.ErrCode = bitgetOrderResp.Code
 		util.Notice(fmt.Sprintf("fail to create bitget spot order resp: %s httpErr: %v, jsonErr: %v", httpResp, httpErr, jsonErr))
 	}

@@ -258,12 +258,14 @@ func placeOrderBitgetPerp(key, secret string, order *model.Order, orderSide, ord
 	if bitgetOrderResp == nil {
 		util.Notice(fmt.Sprintf("fail to create bitget perp order no resp: %s httpErr: %v, jsonErr: %v", httpResp, httpErr, jsonErr))
 	} else {
-		if bitgetOrderResp.Code == "00000" || bitgetOrderResp.Code == "000000" {
+		if len(strings.Trim(bitgetOrderResp.Code, `0`)) == 0 {
 			order.Status = model.CarryStatusWorking
 			order.OrderId = bitgetOrderResp.Data.OrderId
+			order.ErrCode = bitgetOrderResp.Code
+		} else {
+			order.Status = model.CarryStatusFail
 		}
 		util.Notice(fmt.Sprintf("create bitget perp order resp: %s httpErr: %v, jsonErr: %v", httpResp, httpErr, jsonErr))
-		order.ErrCode = bitgetOrderResp.Code
 	}
 }
 

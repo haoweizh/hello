@@ -518,7 +518,8 @@ func Test_download(t *testing.T) {
 }
 
 func Test_Order(t *testing.T) {
-
+	l := len(strings.Trim(`0000`, `0`))
+	fmt.Println(l)
 	market := model.Gate
 	_, marketType, coin := model.GetCoinFromDialect(market, `BTC_USD`)
 	symbol := coin + model.UniStandardTail[marketType]
