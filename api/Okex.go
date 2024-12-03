@@ -793,6 +793,11 @@ func getMarketsOKEX(key, secret string) (marketInfos map[string]*model.MarketInf
 					if value[`ctValCcy`] != nil {
 						marketInfo.CTCurrency = value[`ctValCcy`].(string)
 					}
+					marketInfo.SizeMaxMarket, _ = strconv.ParseFloat(value[`maxMktSz`].(string), 64)
+					if marketInfo.CTValue > 0 {
+						marketInfo.SizeMaxMarket *= marketInfo.CTValue
+						marketInfo.SizeMin *= marketInfo.CTValue
+					}
 					marketInfos[marketInfo.Name] = marketInfo
 				}
 			}

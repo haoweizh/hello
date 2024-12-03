@@ -252,9 +252,8 @@ func initStatus(account *model.Account, setting *model.Setting, absentRevert boo
 		marketInfo = v.(*model.MarketInfo)
 	}
 	if marketInfo != nil && marketInfo.SizeMax > 0 {
-		_, amount := model.ParseRealAmount(setting.Market, setting.Symbol, marketInfo.SizeMax)
-		status.AvailableBuy = math.Min(status.AvailableBuy, amount)
-		status.AvailableSell = math.Min(status.AvailableSell, amount)
+		status.AvailableBuy = math.Min(status.AvailableBuy, marketInfo.SizeMax)
+		status.AvailableSell = math.Min(status.AvailableSell, marketInfo.SizeMax)
 		if status.market == model.Mexc { // mexc要求持仓不能超过1500张合约
 			status.AvailableBuy = math.Min(status.AvailableBuy, 1400*marketInfo.SizeIncrement-status.Holding)
 			status.AvailableSell = math.Min(status.AvailableSell, 1400*marketInfo.SizeIncrement+status.Holding)
@@ -1135,8 +1134,7 @@ func handleCross(account *model.Account, order *model.Order) {
 		return
 	}
 	leftAmt := order.Amount - order.DealAmount
-	leftAmtInMkt := model.GetAmountInMarket(order.Market, order.Symbol, leftAmt, order.Price, false)
-	if leftAmtInMkt > marketInfo.SizeMin && leftAmtInMkt*order.Price > marketInfo.MoneyMin && order.Status != model.CarryStatusSuccess {
+	if leftAmt > marketInfo.SizeMin && leftAmt*order.Price > marketInfo.MoneyMin && order.Status != model.CarryStatusSuccess {
 		canceled, errCode, errMsg := api.CancelOrder(account.Key, account.Secret, order.Market, order.Symbol, model.OrderTypeLimit, order.OrderId)
 		compOrder := api.PlaceOrder(account.Key, account.Secret, order.OrderSide, model.OrderTypeMarket, order.Market, order.Symbol,
 			``, model.FunctionComplement, order.Price, order.Price, leftAmt, false, nil)
@@ -1232,14 +1230,6 @@ func FormatCrossPair(marketBuy, marketSell, symbolBuy, symbolSell string, amount
 	incSell := marketInfoSell.SizeIncrement
 	minBuy := marketInfoBuy.SizeMin
 	minSell := marketInfoSell.SizeMin
-	success, _, coin, _ := model.GetFromStandard(marketBuy, symbolBuy)
-	if success && marketInfoBuy.CTCurrency == coin && marketInfoBuy.CTValue > 0 {
-		incBuy, minBuy = incBuy*marketInfoBuy.CTValue, minBuy*marketInfoBuy.CTValue
-	}
-	success, _, coin, _ = model.GetFromStandard(marketSell, symbolSell)
-	if success && marketInfoSell.CTCurrency == coin && marketInfoSell.CTValue > 0 {
-		incSell, minSell = incSell*marketInfoSell.CTValue, minSell*marketInfoSell.CTValue
-	}
 	if marketBuy == model.Bybit {
 		minBuy = math.Max(5.5/price, minBuy)
 	}

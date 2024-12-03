@@ -518,18 +518,17 @@ func Test_download(t *testing.T) {
 }
 
 func Test_Order(t *testing.T) {
-	market := model.BitgetPerp
+	market := model.Gate
 	model.NewConfig()
-	symbol := `BLUR_PERP`
+	symbol := `MOG_PERP`
 	account := model.GetAccounts(0)[market]
-	api.GetBitgetPosModes(account, symbol)
+	api.InitMarketInfos(market)
 	//_, listKey := api.RenewListenKeyBinance(account, market)
 	//api.ExtendListenKeyBinance(account, market, listKey)
-	api.InitMarketInfos(market)
 	//go model.AppEnvironment.HandleWSResp()
 	//api.MaintainConns(market)
-	order := api.PlaceOrder(account.Key, account.Secret, model.OrderSideSell, model.OrderTypeLimit, market, symbol, ``,
-		`test`, 0.39, 0.39, 20, false, nil)
+	order := api.PlaceOrder(account.Key, account.Secret, model.OrderSideBuy, model.OrderTypeLimit, market, symbol, ``,
+		`test`, 0.0000025, 0.0000025, 14000000, false, nil)
 	fmt.Println(order)
 	fmt.Println(order.Status)
 	//api.CancelOrder(account.Key, account.Secret, market, symbol, model.OrderTypeLimit, order.OrderId)

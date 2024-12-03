@@ -67,12 +67,17 @@ func appendFutureMarketGate(key, secret string, marketInfos map[string]*model.Ma
 		marketInfo.PriceIncrement = minPrice
 		marketInfo.PriceDecimal = util.NumDecPlaces(minPrice)
 		marketInfo.SizeMin = float64(contract.OrderSizeMin)
-		marketInfo.SizeIncrement = marketInfo.SizeMin
 		marketInfo.SizeMax = float64(contract.OrderSizeMax)
 		marketInfo.CTCurrency = coin
 		marketInfo.CTValue, _ = strconv.ParseFloat(contract.QuantoMultiplier, 64)
 		marketInfo.BuyLimitPriceRatio, _ = strconv.ParseFloat(contract.OrderPriceDeviate, 64)
 		marketInfo.SellLimitPriceRatio, _ = strconv.ParseFloat(contract.OrderPriceDeviate, 64)
+		// 数量颗粒度不随CTValue乘数而变化，故放在处理乘数之前
+		marketInfo.SizeIncrement = marketInfo.SizeMin
+		if marketInfo.CTValue > 0 {
+			marketInfo.SizeMin *= marketInfo.CTValue
+			marketInfo.SizeMax *= marketInfo.CTValue
+		}
 		marketInfos[marketInfo.Name] = marketInfo
 	}
 }

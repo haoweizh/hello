@@ -79,7 +79,7 @@ func GetMarketInfo(market, symbol string) (marketInfo *MarketInfo) {
 // ParseRealAmount 返回以币为单位的数量
 func ParseRealAmount(market, symbol string, amount float64) (success bool, realAmount float64) {
 	v, _ := util.LoadSyncMap(MarketInfos, market, symbol)
-	if v == nil || v.(*MarketInfo).SizeIncrement == 0 {
+	if v == nil {
 		return false, 0
 	}
 	if v.(*MarketInfo).CTValue == 0 {
@@ -92,7 +92,7 @@ func ParseRealAmount(market, symbol string, amount float64) (success bool, realA
 // amount: 搬砖程序中使用的币数量
 func GetAmountInMarket(market string, symbol string, amount, price float64, reduceOnly bool) (formattedAmount float64) {
 	marketInfo := GetMarketInfo(market, symbol)
-	if marketInfo == nil || marketInfo.SizeIncrement == 0 || marketInfo.SizeMin == 0 {
+	if marketInfo == nil || marketInfo.SizeIncrement == 0 || marketInfo.SizeMin == 0 || amount < marketInfo.SizeMin {
 		return 0
 	}
 	success, _, coin, _ := GetFromStandard(market, symbol)
@@ -111,8 +111,7 @@ func GetAmountInMarket(market string, symbol string, amount, price float64, redu
 	if reduceOnly && market == BitgetPerp {
 		return formattedAmount
 	}
-	if formattedAmount < marketInfo.SizeMin || marketInfo.SizeMin == 0 ||
-		(marketInfo.MoneyMin > 0 && marketInfo.MoneyMin > price*formattedAmount) {
+	if marketInfo.SizeMin == 0 || (marketInfo.MoneyMin > 0 && marketInfo.MoneyMin > price*formattedAmount) {
 		return 0
 	}
 	return formattedAmount
