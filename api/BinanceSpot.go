@@ -415,6 +415,8 @@ var wsOrderUpdateBinance = func(market, key string, msg []byte) {
 			order.(*model.Order).Status = model.GetOrderStatus(market, resJson.Get(`X`).MustString())
 			util.Notice(fmt.Sprintf(`update deal %s %s %s %f to %f %s`,
 				order.(*model.Order).Market, order.(*model.Order).Symbol, order.(*model.Order).OrderSide, preDeal, order.(*model.Order).DealAmount, order.(*model.Order).Status))
+		} else {
+			util.Notice(fmt.Sprintf(`no order stored %s %d %s`, market, resJson.Get(`i`).MustInt(), string(msg)))
 		}
 	case `executionReport`:
 		order, _ := model.AppEnvironment.CrossOrders.Load(strconv.Itoa(resJson.Get(`i`).MustInt()))
@@ -424,6 +426,8 @@ var wsOrderUpdateBinance = func(market, key string, msg []byte) {
 			order.(*model.Order).Status = model.GetOrderStatus(market, resJson.Get(`X`).MustString())
 			util.Notice(fmt.Sprintf(`update deal %s %s %s %f to %f %s`,
 				order.(*model.Order).Market, order.(*model.Order).Symbol, order.(*model.Order).OrderSide, preDeal, order.(*model.Order).DealAmount, order.(*model.Order).Status))
+		} else {
+			util.Notice(fmt.Sprintf(`no order stored %s %d %s`, market, resJson.Get(`i`).MustInt(), string(msg)))
 		}
 	}
 }
