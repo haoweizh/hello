@@ -401,7 +401,7 @@ var wsPriHandlerGateSpot = func(market, key string, msg []byte) {
 				preDeal := order.(*model.Order).DealAmount
 				if dealPrice > 0 {
 					dealAmount := math.Abs(deal / dealPrice)
-					if dealAmount > preDeal {
+					if dealAmount >= preDeal {
 						order.(*model.Order).DealAmount = dealAmount
 						util.Notice(fmt.Sprintf(`update deal %s %s %s %f to %f %s`,
 							order.(*model.Order).Market, order.(*model.Order).Symbol, order.(*model.Order).OrderSide, preDeal,
