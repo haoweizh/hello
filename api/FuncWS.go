@@ -187,9 +187,9 @@ func UpdateOrderDeal(market, orderId, status, msg string, dealAmount float64) {
 		}
 	}
 	if order != nil {
-		order.Status = status
 		preDeal := order.DealAmount
 		if dealAmount >= preDeal {
+			order.Status = status
 			order.DealAmount = dealAmount
 			util.Log(``, util.LogLevelInfo, ``, util.SystemCarry, fmt.Sprintf(`update deal at %d %s %s %s %f to %f %s`,
 				i, order.Market, order.Symbol, order.OrderSide, preDeal, order.DealAmount, order.Status))
