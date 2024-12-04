@@ -36,6 +36,11 @@ func logChanHandler() {
 	}))
 	for {
 		glcData := <-logChan
+		if len(logChan) > 9000 {
+			continue
+		} else if len(logChan) == 9000 {
+			cmn.Error(cmn.GlcData{Text: `log chan 9000`, LogLevel: `error`})
+		}
 		switch glcData.LogLevel {
 		case LogLevelError:
 			cmn.Error(glcData)

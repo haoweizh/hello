@@ -518,6 +518,14 @@ func Test_download(t *testing.T) {
 }
 
 func Test_Order(t *testing.T) {
+
+	var logChan = make(chan int64, 10000)
+	fmt.Println(len(logChan))
+	fmt.Println(cap(logChan))
+	for i := 0; i < 100; i++ {
+		logChan <- 3
+		fmt.Println(len(logChan))
+	}
 	market := model.Gate
 	model.NewConfig()
 	symbol := `MOG_PERP`
