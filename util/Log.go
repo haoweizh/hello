@@ -133,7 +133,9 @@ func InfoSync(msg string) {
 	//	}
 	//	info, infoFile, _ = initLog(getPath("info"))
 	//}
-	info.Println(msg)
+	//info.Println(msg)
+	logContent := &cmn.GlcData{Text: msg, Date: GetNow().String(), System: "infoSync"}
+	cmn.Info(logContent)
 }
 
 func Info(format string, a ...interface{}) {
