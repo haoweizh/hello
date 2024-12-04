@@ -441,26 +441,25 @@ func InitApp(refreshDynamic bool) bool {
 func initMarketMode(account *model.Account, market string) {
 	switch market {
 	case model.OKEX:
-		go func() {
-			accountMode := getAccountConfigOKEX(account.Key, account.Secret)
-			util.Log(``, util.LogLevelInfo, ``, util.SystemCarry, `okex config and set: `+accountMode)
-			if accountMode != `net_mode` {
-				setAccountModeOKEX(account.Key, account.Secret)
-			}
-			setLeverageOkx(account)
-		}()
+		accountMode := getAccountConfigOKEX(account.Key, account.Secret)
+		util.Log(``, util.LogLevelInfo, ``, util.SystemCarry, `okex config and set: `+accountMode)
+		if accountMode != `net_mode` {
+			setAccountModeOKEX(account.Key, account.Secret)
+		}
+		time.Sleep(time.Second)
+		setLeverageOkx(account)
 	case model.BinancePerp:
 		setPosSideBinancePerp(account.Key, account.Secret)
+		time.Sleep(time.Second)
 		setLeverageBinancePerp(account.Key, account.Secret)
 	case model.Gate:
 		setPosSideGate(account.Key, account.Secret)
+		time.Sleep(time.Second)
 		setMarginSettingGate(account.Key, account.Secret)
 	case model.Bybit:
-		go func() {
-			setBybitMarginLeverage(account.Key, account.Secret)
-			time.Sleep(time.Second)
-			setBybitPerpLeverage(account.Key, account.Secret)
-		}()
+		setBybitMarginLeverage(account.Key, account.Secret)
+		time.Sleep(time.Second)
+		setBybitPerpLeverage(account.Key, account.Secret)
 	case model.BitgetPerp:
 		setBitgetPositionMode(account.Key, account.Secret)
 	}
