@@ -1,4 +1,4 @@
-package api
+package deprecated
 
 //var relatedSettingMarkets = make(map[string]bool)
 

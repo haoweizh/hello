@@ -43,7 +43,7 @@ func maintainConnsOKEX(accounts []*model.Account) {
 		connTick, _ := model.AppEnvironment.ConnTick.Load(model.OKEX)
 		if connTick != nil {
 			if err := model.SendToConnections(model.OKEX, connTick.(map[*model.WSConn]bool), []byte(`ping`)); err != nil {
-				util.Notice(fmt.Sprintf("tick conn maintain error %s %s", model.OKEX, err.Error()))
+				util.Log(``, util.LogLevelError, ``, util.SystemAPI, fmt.Sprintf("tick conn maintain error %s %s", model.OKEX, err.Error()))
 			}
 		}
 		for _, account := range accounts {
@@ -54,14 +54,14 @@ func maintainConnsOKEX(accounts []*model.Account) {
 			value, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrder, model.OKEX, account.Key)
 			if value != nil {
 				if err := model.SendToConnection(model.OKEX, value.(*model.WSConn), []byte(`ping`)); err != nil {
-					util.Notice("-test ok ws-okex server ping client error " + err.Error())
+					util.Log(``, util.LogLevelError, ``, util.SystemAPI, "-test ok ws-okex server ping client error "+err.Error())
 					success = false
 				}
 			} else {
 				success = false
 			}
 			if !success {
-				util.Notice(fmt.Sprintf(`-test ok ws- no private connection %s`, account.Key))
+				util.Log(``, util.LogLevelError, ``, util.SystemAPI, fmt.Sprintf(`-test ok ws- no private connection %s`, account.Key))
 				util.DelSyncMap(&model.AppEnvironment.ConnOrder, model.OKEX, account.Key)
 				WsOrderServeOKEX(account)
 			}
@@ -122,9 +122,9 @@ func reSubscribe(subscribes []interface{}) {
 		success, bidAsk := model.AppEnvironment.GetBidAsk(model.OKEX, symbol)
 		if !success || bidAsk == nil || time.Now().UnixMilli()-int64(bidAsk.Ts) > 60000000 {
 			if bidAsk == nil {
-				util.Notice(`bid ask nil okex ` + symbol)
+				util.Log(``, util.LogLevelError, ``, util.SystemAPI, `bid ask nil okex `+symbol)
 			} else {
-				util.Notice(fmt.Sprintf(`bid ask too late okex %s %d %d`, symbol, time.Now().UnixMilli(), bidAsk.Ts))
+				util.Log(``, util.LogLevelError, ``, util.SystemAPI, fmt.Sprintf(`bid ask too late okex %s %d %d`, symbol, time.Now().UnixMilli(), bidAsk.Ts))
 			}
 			SetRequireReset(model.OKEX)
 			return
@@ -132,7 +132,7 @@ func reSubscribe(subscribes []interface{}) {
 			subArray = append(subArray, map[string]string{`channel`: chanelOKEX, `instId`: dialectSymbol})
 		}
 	}
-	util.Info(`no need reset %s`, model.OKEX)
+	util.Log(``, util.LogLevelInfo, ``, util.SystemAPI, fmt.Sprintf(`no need reset %s`, model.OKEX))
 	if len(subArray) == 0 {
 		return
 	}
@@ -142,7 +142,7 @@ func reSubscribe(subscribes []interface{}) {
 		return
 	}
 	if err := model.SendToConnections(model.OKEX, connValue.(map[*model.WSConn]bool), util.JsonEncodeToByte(subscribeMap)); err != nil {
-		util.Notice("okex can not unsubscribe " + err.Error())
+		util.Log(``, util.LogLevelError, ``, util.SystemAPI, "okex can not unsubscribe "+err.Error())
 	}
 	time.Sleep(time.Second * 3)
 	if len(connections) == 0 {
@@ -157,9 +157,9 @@ func reSubscribe(subscribes []interface{}) {
 		subscribe[`op`] = "subscribe"
 		subscribe[`args`] = []map[string]string{item}
 		if reSubErr := model.SendToConnection(model.OKEX, connection, util.JsonEncodeToByte(subscribe)); reSubErr != nil {
-			util.Notice("okex can not re-subscribe " + reSubErr.Error())
+			util.Log(``, util.LogLevelError, ``, util.SystemAPI, "okex can not re-subscribe "+reSubErr.Error())
 		} else {
-			util.Info(`okex resubscribe %s`, item[`instId`])
+			util.Log(``, util.LogLevelInfo, ``, util.SystemAPI, fmt.Sprintf(`okex resubscribe %s`, item[`instId`]))
 		}
 	}
 }
@@ -178,7 +178,7 @@ var subscribeHandlerOKEX = func(market string, connection *model.WSConn, subscri
 	subscribeMap[`args`] = subArray
 	subscribeMessage := util.JsonEncodeToByte(subscribeMap)
 	if err = model.SendToConnection(model.OKEX, connection, subscribeMessage); err != nil {
-		util.SocketInfo("okex can not subscribe " + err.Error())
+		util.Log(``, util.LogLevelError, ``, util.SystemAPI, "okex can not subscribe "+err.Error())
 		return err
 	}
 	return err
@@ -247,13 +247,13 @@ var wsAccountHandlerOKEX = func(market, key string, event []byte) {
 		}
 		err = value.(*model.WSConn).WriteJson(map[string]interface{}{"op": "subscribe", "args": []interface{}{map[string]string{"channel": "orders", "instType": "SPOT"}}})
 		if err != nil {
-			util.Notice(fmt.Sprintf(`fail to sub %s spot order update`, market))
+			util.Log(``, util.LogLevelError, ``, util.SystemAPI, fmt.Sprintf(`fail to sub %s spot order update`, market))
 			util.DelSyncMap(&model.AppEnvironment.ConnOrder, market, key)
 			return
 		}
 		err = value.(*model.WSConn).WriteJson(map[string]interface{}{"op": "subscribe", "args": []interface{}{map[string]string{"channel": "orders", "instType": "SWAP"}}})
 		if err != nil {
-			util.Notice(fmt.Sprintf(`fail to sub %s swap order update`, market))
+			util.Log(``, util.LogLevelError, ``, util.SystemAPI, fmt.Sprintf(`fail to sub %s swap order update`, market))
 			util.DelSyncMap(&model.AppEnvironment.ConnOrderUpdate, market, key)
 			return
 		}
@@ -269,12 +269,12 @@ var wsAccountHandlerOKEX = func(market, key string, event []byte) {
 				dealAmount := order.DealAmount
 				if dealAmount >= preDeal {
 					crossOrder.(*model.Order).DealAmount = dealAmount
-					util.Notice(fmt.Sprintf(`update deal %s %s %s %f to %f %s`,
+					util.Log(``, util.LogLevelInfo, ``, util.SystemCarry, fmt.Sprintf(`update deal %s %s %s %f to %f %s`,
 						crossOrder.(*model.Order).Market, crossOrder.(*model.Order).Symbol, crossOrder.(*model.Order).OrderSide,
 						preDeal, crossOrder.(*model.Order).DealAmount, crossOrder.(*model.Order).Status))
 				}
 			} else {
-				util.Notice(fmt.Sprintf(`no order stored %s %s %s`, market, order.OrderId, string(event)))
+				util.Log(``, util.LogLevelInfo, ``, util.SystemCarry, fmt.Sprintf(`no order stored %s %s %s`, market, order.OrderId, string(event)))
 			}
 		}
 	}
@@ -327,10 +327,10 @@ func wsLogInOKEX(account *model.Account, conn *model.WSConn) (success bool) {
 		`apiKey`: account.Key, `passphrase`: model.AppConfig.OKPhase, `timestamp`: timestamp, `sign`: sign}}
 	loginMap[`args`] = loginArray
 	if err := model.SendToConnection(model.OKEX, conn, util.JsonEncodeToByte(loginMap)); err != nil {
-		util.Notice(fmt.Sprintf(`fail to login okex ws: %s return %s`, account.Key, err.Error()))
+		util.Log(``, util.LogLevelError, ``, util.SystemAPI, fmt.Sprintf(`fail to login okex ws: %s return %s`, account.Key, err.Error()))
 	} else {
 		success = true
-		util.Notice(fmt.Sprintf(`login okex ws: %s`, account.Key))
+		util.Log(``, util.SystemAPI, ``, util.SystemAPI, fmt.Sprintf(`login okex ws: %s`, account.Key))
 	}
 	return
 }
@@ -341,7 +341,7 @@ func WsOrderServeOKEX(account *model.Account) {
 	}
 	conn, err := model.WsAccountClient(model.OKEX, account.Key, wsPrivateOKEX, wsAccountHandlerOKEX)
 	if err != nil {
-		util.Notice("can not create web socket " + err.Error())
+		util.Log(``, util.LogLevelError, ``, util.SystemAPI, "can not create web socket "+err.Error())
 	} else if conn != nil {
 		if wsLogInOKEX(account, conn) {
 			util.StoreSyncMap(&model.AppEnvironment.ConnOrder, conn, model.OKEX, account.Key)
@@ -457,7 +457,7 @@ func handleBooksUpdate(symbol string, data map[string]interface{}, bidAsk *model
 			}
 			//setWrong(symbol, true)
 			if !success && time.Now().Minute() == 0 && time.Now().Second() == 0 {
-				util.Info(fmt.Sprintf("%v ts %d checksum %s %s \n %v",
+				util.Log(``, util.LogLevelError, ``, util.SystemAPI, fmt.Sprintf("%v ts %d checksum %s %s \n %v",
 					success, bidAskUpdate.Ts, symbol, checkStr, data))
 			}
 		}
@@ -571,12 +571,7 @@ func sendSignRequestOKEX(key, secret, method, path string, param, body map[strin
 	responseBody, err := util.HttpRequest(method, u.String(), postContent, headers, 60)
 	logMsg := fmt.Sprintf(`okex key %s request %s body %s return %s`,
 		key, u.String(), toBeSign, string(responseBody))
-	if (strings.Contains(u.String(), `cancel`) || strings.Contains(u.String(), `/api/v5/trade/order`)) &&
-		method == http.MethodPost {
-		util.Notice(logMsg)
-	} else { //if !strings.Contains(u.String(), `balance`) && !strings.Contains(path, `positions`) {
-		util.SocketInfo(logMsg)
-	}
+	util.Log(``, util.LogLevelDebug, ``, util.SystemAPI, logMsg)
 	time.Sleep(time.Millisecond * 100)
 	return responseBody, err
 }
@@ -605,17 +600,17 @@ func getWSOrderArgOKEX(account *model.Account, requestId, symbol, orderSide, ord
 func PlacePairOKEX(account *model.Account, requestId, symbolBuy, symbolSell, orderType string, priceBuy, priceSell, amount float64) (success bool, errMsg string) {
 	if amount == 0 || priceBuy == 0 || priceSell == 0 {
 		errMsg = fmt.Sprintf(`error: wrong PlacePairOKEX amount %f buy at %f sell at %f`, amount, priceBuy, priceSell)
-		util.Notice(errMsg)
+		util.Log(``, util.LogLevelError, ``, util.SystemAPI, errMsg)
 		return false, errMsg
 	}
 	now := time.Now().UnixNano()
 	if time.Duration(now-lastCarryTime)/time.Millisecond < 50 {
 		errMsg = symbolBuy + ` ignore carry for last time < 50ms`
-		util.Notice(errMsg)
+		util.Log(``, util.LogLevelInfo, ``, util.SystemAPI, errMsg)
 		return false, errMsg
 	} else if time.Duration(now-lastSameTime[symbolBuy])/time.Millisecond < 200 {
 		errMsg = symbolBuy + ` ignore carry for same pair last time < 200ms`
-		util.Notice(errMsg)
+		util.Log(``, util.LogLevelInfo, ``, util.SystemAPI, errMsg)
 		return false, errMsg
 	}
 	lastSameTime[symbolBuy] = now
@@ -632,18 +627,18 @@ func PlacePairOKEX(account *model.Account, requestId, symbolBuy, symbolSell, ord
 	value, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrder, model.OKEX, account.Key)
 	if value == nil || value.(*model.WSConn).Conn == nil {
 		errMsg = fmt.Sprintf(`fail to get connection %s`, account.Key)
-		util.Notice(errMsg)
+		util.Log(``, util.LogLevelError, ``, util.SystemAPI, errMsg)
 		return false, errMsg
 	}
-	util.Notice(`place pair %s`, msg)
+	util.Log(``, util.LogLevelInfo, ``, util.SystemAPI, fmt.Sprintf(`place pair %s`, msg))
 	if model.AppConfig.Env != `test` {
 		err := model.SendToConnection(model.OKEX, value.(*model.WSConn), msg)
 		if err != nil {
 			errMsg = fmt.Sprintf(`-test ok ws-fail to send order ws %s return %s`, account.Key, err.Error())
-			util.Notice(errMsg)
+			util.Log(``, util.LogLevelError, ``, util.SystemAPI, errMsg)
 			return false, errMsg
 		} else {
-			util.Notice(fmt.Sprintf(`-test ok ws- success send ws order %s %s`, account.Key, msg))
+			util.Log(``, util.LogLevelInfo, ``, util.SystemAPI, fmt.Sprintf(`-test ok ws- success send ws order %s %s`, account.Key, msg))
 		}
 	}
 	return true, ``
@@ -705,23 +700,23 @@ func placeOrderOKEX(account *model.Account, isWs bool, order *model.Order) {
 		subscribeMap["op"] = "order"
 		subscribeMap[`args`] = []map[string]interface{}{postData}
 		wsOrderMsg := util.JsonEncodeToByte(subscribeMap)
-		util.SocketInfo(`ws order ` + string(wsOrderMsg))
+		util.Log(account.Key, util.LogLevelInfo, ``, util.SystemAPI, `ws order `+string(wsOrderMsg))
 		order.Status = model.CarryStatusWorking
 		value, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrder, model.OKEX, account.Key)
 		if value == nil || value.(*model.WSConn).Conn == nil {
-			util.Notice(fmt.Sprintf(`-test ok ws-fail to get private connection %s`, account.Key))
+			util.Log(account.Key, util.LogLevelError, ``, util.SystemAPI, fmt.Sprintf(`-test ok ws-fail to get private connection %s`, account.Key))
 			order.Status = model.CarryStatusFail
 		} else {
 			if err := model.SendToConnection(model.OKEX, value.(*model.WSConn), wsOrderMsg); err != nil {
-				util.Notice(fmt.Sprintf(`-test ok ws-fail to send order ws %s %s return %s`, account.Key, order.Symbol, err.Error()))
+				util.Log(account.Key, util.LogLevelError, ``, util.SystemAPI, fmt.Sprintf(`-test ok ws-fail to send order ws %s %s return %s`, account.Key, order.Symbol, err.Error()))
 				order.Status = model.CarryStatusFail
 			} else {
-				util.Notice(fmt.Sprintf(`-test ok ws- success place okex ws order %s %s`, account.Key, order.Symbol))
+				util.Log(account.Key, util.LogLevelInfo, ``, util.SystemAPI, fmt.Sprintf(`-test ok ws- success place okex ws order %s %s`, account.Key, order.Symbol))
 			}
 		}
 	} else {
 		responseBody, httpErr := sendSignRequestOKEX(account.Key, account.Secret, http.MethodPost, path, nil, postData)
-		util.Notice(fmt.Sprintf(`place okex %s return %s`, path, string(responseBody)))
+		util.Log(account.Key, util.LogLevelError, ``, util.SystemAPI, fmt.Sprintf(`place okex %s return %s`, path, string(responseBody)))
 		if httpErr != nil {
 			order.ErrCode = httpErr.Error()
 			return
@@ -845,7 +840,7 @@ func cancelAllOkex(key, secret string) {
 	}
 	for _, order := range orders {
 		result, errCode, msg := cancelOrderOkex(key, secret, order.Symbol, order.OrderId, order.OrderType)
-		util.Notice(fmt.Sprintf(`cancelAllOkex %s id %s type %s return %v code %s %s`,
+		util.Log(key, util.LogLevelInfo, ``, util.SystemAPI, fmt.Sprintf(`cancelAllOkex %s id %s type %s return %v code %s %s`,
 			order.Symbol, order.OrderId, order.OrderType, result, errCode, msg))
 	}
 }
@@ -872,7 +867,7 @@ func cancelOrdersOKEX(key, secret, symbol string) (result bool, code, msg string
 		}
 	}
 	if len(normalOrders) > 20 || len(algoOrders) > 10 || len(advOrders) > 10 {
-		util.Notice(fmt.Sprintf(`fatal error: too many normal order to be canceled normal: %d algo: %d adv:%d`,
+		util.Log(key, util.LogLevelError, ``, util.SystemAPI, fmt.Sprintf(`fatal error: too many normal order to be canceled normal: %d algo: %d adv:%d`,
 			len(normalOrders), len(algoOrders), len(advOrders)))
 	}
 	if len(normalOrders) > 0 {
@@ -1079,7 +1074,7 @@ func queryOpenOrdersOKEX(key, secret, symbol string, conditional bool) (orders [
 	orderJson, err := util.NewJSON(responseBody)
 	if err == nil {
 		if `50011` == strings.Trim(orderJson.Get(`code`).MustString(), ` `) {
-			util.Notice(`sleep 1 min and re-query orders when get code 50011`)
+			util.Log(key, util.LogLevelError, ``, util.SystemAPI, `sleep 1 min and re-query orders when get code 50011`)
 			time.Sleep(time.Minute)
 			return queryOpenOrdersOKEX(key, secret, symbol, conditional)
 		}
@@ -1235,9 +1230,6 @@ func parsePositionOKEX(value map[string]interface{}) (success bool, position *Po
 			pos, _ := strconv.ParseFloat(value[`pos`].(string), 64)
 			if marketType == model.MarketTypePerp {
 				success, position.Holding = model.ParseRealAmount(model.OKEX, position.Currency, pos)
-				if position.Currency == `LPT_PERP` {
-					util.Notice(fmt.Sprintf(`okex get postion %s %f to %f`, position.Currency, pos, position.Holding))
-				}
 			} else {
 				position.Holding = pos
 			}
@@ -1316,7 +1308,7 @@ func getBalanceOKEX(key, secret string) (success bool, balances []*model.Balance
 	response, _ := sendSignRequestOKEX(key, secret, http.MethodGet, `/api/v5/account/balance`, nil, nil)
 	responseJson, err := util.NewJSON(response)
 	if err != nil || responseJson == nil || responseJson.GetPath(`data`) == nil || responseJson.Get(`code`).MustString() != `0` {
-		util.SocketInfo(`fail to get okex balance `)
+		util.Log(key, util.LogLevelError, ``, util.SystemAPI, `fail to get okex balance `)
 		time.Sleep(time.Minute * 5)
 		return getBalanceOKEX(key, secret)
 	}
@@ -1425,14 +1417,14 @@ func getPositionsOKEX(key, secret string) (success bool, positions []*Position) 
 	responseBody, _ := sendSignRequestOKEX(key, secret, http.MethodGet, `/api/v5/account/positions`, param, nil)
 	responseJson, err := util.NewJSON(responseBody)
 	if err != nil || responseJson == nil || responseJson.Get(`code`).MustString() != `0` {
-		util.Notice(`fail to get okex positions `)
+		util.Log(key, util.LogLevelError, ``, util.SystemAPI, `fail to get okex positions `)
 		time.Sleep(time.Minute)
 		return getPositionsOKEX(key, secret)
 	}
 	positions = make([]*Position, 0)
 	positionArray, arrayErr := responseJson.Get(`data`).Array()
 	if arrayErr != nil {
-		util.Notice(`fail to get okex positions %s`, arrayErr.Error())
+		util.Log(key, util.LogLevelError, ``, util.SystemAPI, fmt.Sprintf(`fail to get okex positions %s`, arrayErr.Error()))
 		time.Sleep(time.Minute)
 		return getPositionsOKEX(key, secret)
 	}
@@ -1469,7 +1461,7 @@ func getMaxSizeOKEX(key, secret, symbol string) (success bool, maxBuy, maxSell f
 				maxSell = maxSell / bidAsk.Asks[0].Price
 				//util.Info(`get max sell %f after price %f %s`, maxSell, bidAsk.Asks[0].Price, symbol)
 			} else {
-				util.NoticeLess(`fail to get price from ok bidAsk %s`, symbol)
+				util.LogLess(key, util.LogLevelError, ``, util.SystemAPI, fmt.Sprintf(`fail to get price from ok bidAsk %s`, symbol))
 			}
 		}
 	}
@@ -1484,7 +1476,7 @@ func getFundingRateOKEX(key, secret, symbol string) (fundingRate *model.FundingR
 	fundingJson, fundingErr := util.NewJSON(response)
 	if fundingJson == nil || fundingJson.Get(`data`) == nil || fundingJson.Get(`data`).MustArray() == nil ||
 		len(fundingJson.Get(`data`).MustArray()) == 0 || fundingErr != nil {
-		util.Notice(fmt.Sprintf(`fail to getFundingRateOKEX %v`, fundingErr))
+		util.Log(key, util.LogLevelError, ``, util.SystemAPI, fmt.Sprintf(`fail to getFundingRateOKEX %v`, fundingErr))
 		return nil
 	}
 	data := fundingJson.Get(`data`).MustArray()[0].(map[string]interface{})
@@ -1547,7 +1539,7 @@ func getCandlesOKEX(account *model.Account, symbol string, before, after time.Ti
 		if redisErr == nil {
 			responseBody = util.UnGzip([]byte(temp))
 			isCache = true
-			util.Notice(fmt.Sprintf(`get candles from key %s %d`, redisKey, len(temp)))
+			util.Log(``, util.LogLevelInfo, ``, util.SystemAPI, fmt.Sprintf(`get candles from key %s %d`, redisKey, len(temp)))
 		}
 	}
 	if responseBody == nil {
@@ -1558,11 +1550,11 @@ func getCandlesOKEX(account *model.Account, symbol string, before, after time.Ti
 	if err != nil || candleJson == nil || candleJson.Get(`data`) == nil || len(candleJson.Get(`data`).MustArray()) == 0 {
 		if model.AppRedis != nil {
 			model.AppRedis.Del(context.Background(), redisKey)
-			util.Notice(fmt.Sprintf(`del redis key %s`, redisKey))
+			util.Log(``, util.LogLevelInfo, ``, util.SystemAPI, fmt.Sprintf(`del redis key %s`, redisKey))
 		}
 		return
 	} else if !isCache && model.AppRedis != nil {
-		util.Notice(fmt.Sprintf(`set candles to cache %s len %d`, redisKey, len(string(responseBody))))
+		util.Log(``, util.LogLevelInfo, ``, util.SystemAPI, fmt.Sprintf(`set candles to cache %s len %d`, redisKey, len(string(responseBody))))
 		model.AppRedis.Set(context.Background(), redisKey, util.Compress(responseBody), 0)
 	}
 	candleJsons := candleJson.Get(`data`).MustArray()

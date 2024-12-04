@@ -5,10 +5,7 @@ import (
 	"hello/api"
 	"hello/carry/Turtle"
 	"hello/carry/cross"
-	"hello/carry/follow"
-	"hello/carry/grid"
 	"hello/carry/monitor"
-	"hello/carry/queue"
 	"hello/model"
 	"hello/util"
 	"sync"
@@ -48,7 +45,7 @@ func _(key, secret string) {
 		//	model.AppDB.Save(&balance)
 		//}
 		//}
-		util.Notice(fmt.Sprintf(`get markets %d balances %d`, len(markets), len(balances)))
+		util.Log(``, util.LogLevelInfo, ``, util.SystemCarry, fmt.Sprintf(`get markets %d balances %d`, len(markets), len(balances)))
 		time.Sleep(time.Hour * 12)
 	}
 }
@@ -66,16 +63,16 @@ func MaintainTransFee() {
 				`created_at>? and created_at<? and status=? and refresh_type!=? and refresh_type!=? and refresh_type!=? and refresh_type!=?`,
 				lastDays2, lastMin10, model.CarryStatusWorking, model.FunctionDCarry, model.FunctionCross, model.FunctionComplement, model.FunctionSimulation).
 				Find(&orders)
-			util.Info(fmt.Sprintf(`--- get working orders %d %v %v`, len(orders), lastDays2, lastMin10))
+			util.Log(``, util.LogLevelInfo, ``, util.SystemCarry, fmt.Sprintf(`--- get working orders %d %v %v`, len(orders), lastDays2, lastMin10))
 			if len(orders) == 0 {
 				break
 			}
 			feeIndex += len(orders)
 			for i, value := range orders {
-				util.Info(fmt.Sprintf(`%d --- id %s`, i, value.OrderId))
+				util.Log(``, util.LogLevelInfo, ``, util.SystemCarry, fmt.Sprintf(`%d --- id %s`, i, value.OrderId))
 				account := model.AppConfig.GetAccountFromKeyIndex(value.Market, ``, value.AccountIndex)
 				if account == nil {
-					util.Notice(`can not maintain order status for nil account %s %s`, value.Market, value.AccountIndex)
+					util.Log(``, util.LogLevelError, ``, util.SystemCarry, fmt.Sprintf(`can not maintain order status for nil account %s %s`, value.Market, value.AccountIndex))
 					continue
 				}
 				order := api.QueryOrderById(account.Key, account.Secret, value.Market, value.Symbol, value.OrderType, value.OrderId)
@@ -98,7 +95,7 @@ func MaintainTransFee() {
 				}
 				value.DealPrice = order.DealPrice
 				model.AppDB.Save(&value)
-				util.Info(fmt.Sprintf(`save order %s %s %s %s status:%s update %s`,
+				util.Log(``, util.LogLevelInfo, ``, util.SystemCarry, fmt.Sprintf(`save order %s %s %s %s status:%s update %s`,
 					value.OrderId, value.Symbol, value.OrderSide, value.OrderTime.String(), value.Status, value.OrderUpdateTime.String()))
 				time.Sleep(time.Second)
 			}
@@ -153,15 +150,10 @@ func ManageConnTicks(market string) (reset bool) {
 }
 
 func Maintain() {
-	util.Notice("start carrying")
+	util.Log(``, util.LogLevelInfo, ``, util.SystemCarry, "start carrying")
 	model.TickHandlers[model.FunctionTurtle] = Turtle.ProcessTurtle
 	model.TickHandlers[model.FunctionCross] = cross.ProcessCross
 	model.TickHandlers[model.FunctionCombineTurtle] = Turtle.ProcessCombineTurtle
-	model.TickHandlers[model.FunctionGrid] = grid.ProcessGrid
-	model.TickHandlers[model.FunctionQueue] = queue.ProcessQueue
-	model.TickHandlers[model.FunctionFollow] = follow.ProcessFollow
-	model.AccountHandlerMap[model.FunctionGrid] = grid.ProcessGridOrder
-	model.AccountHandlerMap[model.FunctionQueue] = queue.ProcessQueueLiq
 	model.AccountHandlerMap[model.FunctionCross] = cross.PostOrderCross
 	model.CandleHandlers[model.FunctionMonitorKLine] = monitor.ProcessMonitor
 	_ = model.AppDB.AutoMigrate(&model.Setting{})

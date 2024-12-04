@@ -19,10 +19,10 @@ func Compress(content []byte) []byte {
 	var b bytes.Buffer
 	writer := gzip.NewWriter(&b)
 	if _, err := writer.Write(content); err != nil {
-		Notice(`fail to compress ` + err.Error())
+		Log(``, LogLevelError, ``, SystemOther, `fail to compress `+err.Error())
 	}
 	if err := writer.Close(); err != nil {
-		Notice(`fail to compress ` + err.Error())
+		Log(``, LogLevelError, ``, SystemOther, `fail to compress `+err.Error())
 	}
 	return b.Bytes()
 }
@@ -30,7 +30,8 @@ func Compress(content []byte) []byte {
 func UnGzip(byte []byte) []byte {
 	r, err := gzip.NewReader(bytes.NewBuffer(byte))
 	if err != nil {
-		Notice(fmt.Sprintf(`fail to un-compress %s, %d`, err.Error(), len(byte)))
+		Log(``, LogLevelError, ``, SystemOther,
+			fmt.Sprintf(`fail to un-compress %s, %d`, err.Error(), len(byte)))
 		return nil
 	}
 	var data, _ = io.ReadAll(r)
@@ -152,7 +153,7 @@ func DelSyncMap(syncMap *sync.Map, keys ...string) {
 
 func LoadSyncMap(syncMap *sync.Map, keys ...string) (interface{}, bool) {
 	if syncMap == nil {
-		Notice(fmt.Sprintf(`syncMap is nil %v`, keys))
+		Log(``, LogLevelError, ``, SystemOther, fmt.Sprintf(`syncMap is nil %v`, keys))
 		return nil, false
 	}
 	key := ``

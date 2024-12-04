@@ -25,7 +25,7 @@ func maintainConnsBitget(market string, accounts []*model.Account) {
 		connTick, _ := model.AppEnvironment.ConnTick.Load(market)
 		if connTick != nil {
 			if err := model.SendToConnections(market, connTick.(map[*model.WSConn]bool), []byte(`ping`)); err != nil {
-				util.Notice(fmt.Sprintf("tick conn maintain error %s %s", market, err.Error()))
+				util.Log(``, util.LogLevelError, ``, util.SystemAPI, fmt.Sprintf("tick conn maintain error %s %s", market, err.Error()))
 			}
 		}
 		for _, account := range accounts {
@@ -33,7 +33,7 @@ func maintainConnsBitget(market string, accounts []*model.Account) {
 			valueUpdate, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrderUpdate, market, account.Key)
 			if valueUpdate != nil {
 				if err := valueUpdate.(*model.WSConn).WriteMsg([]byte(`ping`)); err != nil {
-					util.Notice(fmt.Sprintf("order update conn maintain error %s %s", market, err.Error()))
+					util.Log(``, util.LogLevelError, ``, util.SystemAPI, fmt.Sprintf("order update conn maintain error %s %s", market, err.Error()))
 				} else {
 					success = true
 				}
@@ -82,11 +82,11 @@ var wsOrderConnHandlerBitget = func(market, key string, event []byte) {
 				if data.(map[string]interface{})[`status`].(string) != `filled` {
 					order.(*model.Order).Status = model.CarryStatusSuccess
 				}
-				util.Notice(fmt.Sprintf(`update deal %s %s %s %f to %f %s`,
+				util.Log(key, util.LogLevelInfo, ``, util.SystemAPI, fmt.Sprintf(`update deal %s %s %s %f to %f %s`,
 					order.(*model.Order).Market, order.(*model.Order).Symbol, order.(*model.Order).OrderSide, preDeal, order.(*model.Order).DealAmount, order.(*model.Order).Status))
 			}
 		} else {
-			util.Notice(fmt.Sprintf(`no order stored %s %v %s`, market, orderId, string(event)))
+			util.Log(key, util.LogLevelInfo, ``, util.SystemAPI, fmt.Sprintf(`no order stored %s %v %s`, market, orderId, string(event)))
 		}
 	}
 }
@@ -109,7 +109,7 @@ func WsOrderServeBitget(market string, account *model.Account) {
 	}
 	conn, err := model.WsAccountClient(market, account.Key, bitgetPrivate, wsOrderConnHandlerBitget)
 	if err != nil {
-		util.Notice("can not create web socket " + err.Error())
+		util.Log(``, util.LogLevelError, ``, util.SystemNetwork, "can not create web socket "+err.Error())
 	} else if conn != nil {
 		if wsLoginBitget(account, conn) {
 			util.StoreSyncMap(&model.AppEnvironment.ConnOrderUpdate, conn, market, account.Key)
@@ -122,7 +122,8 @@ func getMarketsBitgetSpot() (marketInfos map[string]*model.MarketInfo) {
 	spotResp := &dtos.BitgetSpotMarketResp{}
 	spotJsonErr := json.Unmarshal(httpResp, spotResp)
 	if spotResp == nil || spotResp.Code != "00000" {
-		util.Notice(fmt.Sprintf("get bitget spot market error, resp: %s, httpErr: %v, jsonErr: %v", httpResp, httpErr, spotJsonErr))
+		util.Log(``, util.LogLevelError, ``, util.SystemAPI, fmt.Sprintf(fmt.Sprintf(
+			"get bitget spot market error, resp: %s, httpErr: %v, jsonErr: %v", httpResp, httpErr, spotJsonErr)))
 		return
 	}
 	marketInfos = make(map[string]*model.MarketInfo)
@@ -201,7 +202,6 @@ var tickHandlerBitget = func(market string, conn *model.WSConn, event []byte) {
 		if err != nil {
 			return
 		}
-		util.Notice(fmt.Sprintf("BitgetSpot ping: %s back pong", string(event)))
 		return
 	}
 	bookWsResp := &dtos.BitgetBoosWsResp{}
@@ -244,9 +244,9 @@ var subscribeHandlerBitget = func(market string, connection *model.WSConn, subsc
 	subscribeMap["args"] = params
 	subscribeMessage := util.JsonEncodeToByte(subscribeMap)
 	if err = model.SendToConnection(market, connection, subscribeMessage); err != nil {
-		util.Info("%s can not subscribe %s %s", market, subscribeMessage, err.Error())
+		util.Log(``, util.LogLevelInfo, ``, util.SystemAPI, fmt.Sprintf("%s can not subscribe %s %s", market, subscribeMessage, err.Error()))
 	}
-	util.Info(`bitget subscribed ` + string(subscribeMessage))
+	util.Log(``, util.LogLevelInfo, ``, util.SystemAPI, `bitget subscribed `+string(subscribeMessage))
 	return err
 }
 
@@ -256,11 +256,12 @@ func getBalanceBitgetSpot(key string, secret string) (success bool, balances []*
 	bitgetBalanceResp := &dtos.BitgetBalanceResp{}
 	jsonErr := json.Unmarshal(httpResp, bitgetBalanceResp)
 	if bitgetBalanceResp == nil || bitgetBalanceResp.Code != "00000" {
-		util.SocketInfo(fmt.Sprintf("fail to refresh bitgetspot balance, resp: %s httpErr: %v, jsonErr: %v", httpResp, httpErr, jsonErr))
+		util.Log(``, util.LogLevelError, ``, util.SystemAPI, fmt.Sprintf(
+			"fail to refresh bitgetspot balance, resp: %s httpErr: %v, jsonErr: %v", httpResp, httpErr, jsonErr))
 		time.Sleep(time.Second * 2)
 		return getBalanceBitgetSpot(key, secret)
 	} else {
-		util.SocketInfo(fmt.Sprintf("get bitgetspot balance success, resp: %s ", httpResp))
+		util.Log(``, util.LogLevelInfo, ``, util.SystemAPI, fmt.Sprintf("get bitgetspot balance success, resp: %s ", httpResp))
 	}
 	balances = make([]*model.Balance, 0)
 	for _, account := range bitgetBalanceResp.Data {
@@ -293,7 +294,7 @@ func placeOrderBitgetSpot(key, secret string, order *model.Order, orderSide, ord
 	}
 	success, _, _, dialectSymbol := model.GetFromStandard(model.BitgetSpot, symbol)
 	if !success {
-		util.Notice("fail to place spot order, GetFromStandard: " + symbol)
+		util.Log(key, util.LogLevelError, ``, util.SystemAPI, "fail to place spot order, GetFromStandard: "+symbol)
 		return
 	}
 	client := dtos.BitgetRestClient{BaseUrl: bitgetRestUrl, Passphrase: model.AppConfig.Phase, ApiKey: key, ApiSecretKey: secret}
@@ -309,14 +310,14 @@ func placeOrderBitgetSpot(key, secret string, order *model.Order, orderSide, ord
 	bitgetOrderResp := &dtos.BitgetOrderResp{}
 	jsonErr := json.Unmarshal(httpResp, bitgetOrderResp)
 	if bitgetOrderResp == nil {
-		util.Notice(fmt.Sprintf("fail to create bitget spot order no resp: %s httpErr: %v, jsonErr: %v", httpResp, httpErr, jsonErr))
+		util.Log(key, util.LogLevelError, ``, util.SystemAPI, fmt.Sprintf("fail to create bitget spot order no resp: %s httpErr: %v, jsonErr: %v", httpResp, httpErr, jsonErr))
 	} else if len(strings.Trim(bitgetOrderResp.Code, `0`)) == 0 {
 		order.Status = model.CarryStatusWorking
 		order.OrderId = bitgetOrderResp.Data.OrderId
 	} else {
 		order.Status = model.CarryStatusFail
 		order.ErrCode = bitgetOrderResp.Code
-		util.Notice(fmt.Sprintf("fail to create bitget spot order resp: %s httpErr: %v, jsonErr: %v", httpResp, httpErr, jsonErr))
+		util.Log(key, util.LogLevelError, ``, util.SystemAPI, fmt.Sprintf("fail to create bitget spot order resp: %s httpErr: %v, jsonErr: %v", httpResp, httpErr, jsonErr))
 	}
 }
 
@@ -324,17 +325,17 @@ func cancelOrdersBitgetSpot(key, secret, symbol string) (result bool) {
 	client := dtos.BitgetRestClient{BaseUrl: bitgetRestUrl, Passphrase: model.AppConfig.Phase, ApiKey: key, ApiSecretKey: secret}
 	success, _, _, dialectSymbol := model.GetFromStandard(model.BitgetSpot, symbol)
 	if !success {
-		util.Notice("fail to cancel bitget spot order, GetFromStandard: " + symbol)
+		util.Log(key, util.LogLevelError, ``, util.SystemAPI, "fail to cancel bitget spot order, GetFromStandard: "+symbol)
 		return false
 	}
 	httpResp, httpErr := client.DoPost("/api/v2/spot/trade/cancel-symbol-order", string(util.JsonEncodeToByte(map[string]interface{}{"symbol": dialectSymbol})))
 	if httpErr != nil {
-		util.Notice(fmt.Sprintf(`fail to post when cancelOrdersBitgetSpot %s`, httpErr.Error()))
+		util.Log(key, util.LogLevelError, ``, util.SystemNetwork, fmt.Sprintf(`fail to post when cancelOrdersBitgetSpot %s`, httpErr.Error()))
 		return false
 	}
 	jsonData, jsonErr := util.NewJSON(httpResp)
 	if jsonErr != nil {
-		util.Notice(fmt.Sprintf(`fail to NewJson when cancelOrdersBitgetSpot %s`, jsonErr.Error()))
+		util.Log(key, util.LogLevelError, ``, util.SystemAPI, fmt.Sprintf(`fail to NewJson when cancelOrdersBitgetSpot %s`, jsonErr.Error()))
 		return false
 	}
 	if jsonData != nil {
@@ -353,7 +354,7 @@ func queryOrderBitgetSpot(key, secret, symbol string, orderId string) (order *mo
 	orderDetailResp := &dtos.BitgetSpotOrderDetailResp{}
 	perpJsonErr := json.Unmarshal(httpResp, orderDetailResp)
 	if orderDetailResp == nil || orderDetailResp.Code != "00000" {
-		util.Notice(fmt.Sprintf("get bitget spot order detail error, resp: %s, httpErr: %v, jsonErr: %v", httpResp, httpErr, perpJsonErr))
+		util.Log(key, util.LogLevelError, ``, util.SystemAPI, fmt.Sprintf("get bitget spot order detail error, resp: %s, httpErr: %v, jsonErr: %v", httpResp, httpErr, perpJsonErr))
 		return order
 	} else {
 		if len(orderDetailResp.Data) > 0 {

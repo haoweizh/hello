@@ -50,7 +50,7 @@ func (slideRing *SlideRing) Get() (start, current interface{}) {
 
 func (slideRing *SlideRing) Remove() (success bool) {
 	if slideRing.Start == slideRing.Current {
-		Notice(fmt.Sprintf(`sliding ring Start reach Current %d`, slideRing.Start))
+		Log(``, LogLevelInfo, ``, SystemCarry, fmt.Sprintf(`sliding ring Start reach Current %d`, slideRing.Start))
 		return false
 	}
 	slideRing.Start = (slideRing.Start + 1) % len(slideRing.Data)

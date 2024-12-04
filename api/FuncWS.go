@@ -51,15 +51,15 @@ func GetWSSubscribes(market string, subTypes []string) []interface{} {
 func GetWSSubscribe(market, symbol, subType string) (subscribe interface{}) {
 	_, _, _, dialectSymbol := model.GetFromStandard(market, symbol)
 	switch market {
-	case model.Mexc:
-		switch subType {
-		case mexcContractDepthIncSubType:
-			return fmt.Sprintf(`{"method":"sub.depth","param":{"symbol":"%s","compress":true}}`, dialectSymbol)
-		case mexcContractDepthFullSubType:
-			return fmt.Sprintf(`{"method":"sub.depth.full","param":{"symbol":"%s","limit":5}}`, dialectSymbol)
-		case mexcContractTickerSubType:
-			return fmt.Sprintf(`{"method":"sub.ticker","param":{"symbol":"%s"}}`, dialectSymbol)
-		}
+	//case model.Mexc:
+	//	switch subType {
+	//	case deprecated.mexcContractDepthIncSubType:
+	//		return fmt.Sprintf(`{"method":"sub.depth","param":{"symbol":"%s","compress":true}}`, dialectSymbol)
+	//	case deprecated.mexcContractDepthFullSubType:
+	//		return fmt.Sprintf(`{"method":"sub.depth.full","param":{"symbol":"%s","limit":5}}`, dialectSymbol)
+	//	case deprecated.mexcContractTickerSubType:
+	//		return fmt.Sprintf(`{"method":"sub.ticker","param":{"symbol":"%s"}}`, dialectSymbol)
+	//	}
 	case model.OKEX:
 		return dialectSymbol
 	case model.BinancePerp:
@@ -101,7 +101,7 @@ func _(environment *model.Environment, market string, symbols map[string]bool) (
 	socketMap map[*model.WSConn]bool, channels []chan struct{}) {
 	switch market {
 	case model.BinanceSpot:
-		util.Notice(" create KLine ws chan for " + market)
+		util.Log(``, util.LogLevelInfo, ``, util.SystemCarry, " create KLine ws chan for "+market)
 		socketMap, channels, _ = WsKLineBinanceSpot(environment, market, symbols)
 	}
 	return
@@ -110,7 +110,7 @@ func _(environment *model.Environment, market string, symbols map[string]bool) (
 func CreateWSTick(environment *model.Environment, market string) (
 	socketMap map[*model.WSConn]bool, channels []chan struct{}) {
 	model.ChannelMaintaining.Store(market, true)
-	util.Notice(" create depth chan for " + market)
+	util.Log(``, util.LogLevelInfo, ``, util.SystemCarry, " create depth chan for "+market)
 	channels = make([]chan struct{}, 1)
 	var err error
 	switch market {
@@ -129,9 +129,9 @@ func CreateWSTick(environment *model.Environment, market string) (
 		socketMap, channels, err = model.WebSocketClient(market, wsBinancePerp+`/stream`, GetWSSubscribes(
 			market, []string{model.SubscribeTicker, model.SubscribeMarkPrice}), subscribeHandlerBinance, wsHandlerBinancePerp, wsStepBinance)
 		//model.SubscribeDepth
-	case model.HuobiPerp:
-		socketMap, channels, err = model.WebSocketClient(market, wsHuobiPerp, GetWSSubscribes(model.HuobiPerp, []string{model.SubscribeDepth}),
-			subscribeHandlerHuobiPerp, wsMsgHandler, wsStepHuobi)
+	//case model.HuobiPerp:
+	//	socketMap, channels, err = model.WebSocketClient(market, deprecated.wsHuobiPerp, GetWSSubscribes(model.HuobiPerp, []string{model.SubscribeDepth}),
+	//		deprecated.subscribeHandlerHuobiPerp, deprecated.wsMsgHandler, deprecated.wsStepHuobi)
 	case model.Bybit:
 		socketMap, channels, err = WsTickServeBybit(market)
 	case model.BitgetSpot:
@@ -143,7 +143,7 @@ func CreateWSTick(environment *model.Environment, market string) (
 	environment.ConnTick.Store(market, socketMap)
 	environment.MsgChanTick.Store(market, channels)
 	if err != nil {
-		util.Notice(market + ` can not create depth server ` + err.Error())
+		util.Log(``, util.LogLevelError, ``, util.SystemCarry, market+` can not create depth server `+err.Error())
 	}
 	model.AppEnvironment.WsInitTime.Store(market, util.GetNow())
 	model.ChannelMaintaining.Store(market, false)

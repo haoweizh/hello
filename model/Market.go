@@ -71,7 +71,8 @@ func (environment *Environment) HandleWSResp() {
 	for {
 		wsResp := <-environment.WSRespChan
 		value, _ := environment.WSOrderMap.Load(wsResp.RequestId)
-		util.Notice(fmt.Sprintf(`get ws order req id %s`, wsResp.RequestId))
+		util.Log(``, util.LogLevelInfo, wsResp.OrderId, util.SystemCarry,
+			fmt.Sprintf(`get ws order req id %s`, wsResp.RequestId))
 		if value != nil {
 			order := value.(*Order)
 			order.OrderId = wsResp.OrderId
@@ -83,8 +84,9 @@ func (environment *Environment) HandleWSResp() {
 			}
 			environment.CrossOrders.Store(wsResp.OrderId, order)
 			environment.WSOrderMap.Delete(wsResp.RequestId)
-			util.Notice(fmt.Sprintf(`del request id %s store order %s %s type %s id %s`,
-				wsResp.RequestId, order.Market, order.Symbol, order.RefreshType, order.OrderId))
+			util.Log(``, util.LogLevelInfo, order.OrderId, util.SystemCarry,
+				fmt.Sprintf(`del request id %s store order %s %s type %s id %s`,
+					wsResp.RequestId, order.Market, order.Symbol, order.RefreshType, order.OrderId))
 			if AccountHandlerMap[order.RefreshType] != nil {
 				AccountHandlerMap[order.RefreshType](order)
 			}
@@ -169,17 +171,10 @@ func (environment *Environment) GetBidAsk(market, symbol string) (result bool, b
 
 func (environment *Environment) SetBidAsk(market, symbol string, bidAsk *BidAsk) bool {
 	if bidAsk == nil || bidAsk.Bids == nil || bidAsk.Asks == nil || bidAsk.Bids.Len() == 0 || bidAsk.Asks.Len() == 0 {
-		if market == BinancePerp {
-			util.Info(fmt.Sprintf(`5test return do not set nil or empty bid ask %s %s data:%v`, market, symbol, bidAsk))
-		}
 		return false
 	}
 	if bidAsk.Bids[0].Price >= bidAsk.Asks[0].Price || bidAsk.Bids[0].Price == 0 || bidAsk.Bids[0].Amount == 0 ||
 		bidAsk.Asks[0].Price == 0 || bidAsk.Asks[0].Amount == 0 {
-		if market == BinancePerp {
-			util.Notice(fmt.Sprintf(`6test return do not set mistake %s %s bid %f ask %f data: %v ts %d`,
-				market, symbol, bidAsk.Bids[0].Price, bidAsk.Asks[0].Price, bidAsk, bidAsk.Ts))
-		}
 		return false
 	}
 	//_, _, coin, _ := GetFromStandard(marketName, symbol)

@@ -21,7 +21,7 @@ func main() {
 	var err error
 	model.AppDB, err = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
 	if err != nil {
-		util.Notice(err.Error())
+		util.Log(``, util.LogLevelError, ``, util.SystemOther, err.Error())
 		return
 	}
 	//model.AppRedis = redis.NewClient(&redis.Options{

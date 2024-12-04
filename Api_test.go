@@ -278,7 +278,7 @@ func Test_DealGridSimulate(t *testing.T) {
 					fmt.Println(fmt.Sprintf(`cut %s tail num %d`, symbol, delNum))
 				}
 			} else {
-				util.Info(fmt.Sprintf(`can not get orders from %s %s grid 0`, model.BinancePerp, symbol))
+				util.Log(``, util.LogLevelError, ``, util.SystemCarry, fmt.Sprintf(`can not get orders from %s %s grid 0`, model.BinancePerp, symbol))
 			}
 			rows, _ := model.AppDB.Model(model.Order{}).Select(`symbol,order_side,sum(orders.deal_price*amount)/sum(amount),sum(amount)`).
 				Where(`function=? and symbol=?`, funcName, symbol).Group(`function,symbol,order_side`).Rows()
@@ -487,7 +487,7 @@ func downList(workId, pageId int) (fileNum int) {
 			fileValue := file.(map[string]interface{})[`content`]
 			if fileValue != nil {
 				if strings.Contains(strings.ToLower(fileValue.(string)), `review`) {
-					util.Notice(fmt.Sprintf(`%s`, fileValue))
+					util.Log(``, ``, ``, ``, fmt.Sprintf(`%s`, fileValue))
 					fmt.Println(fileValue.(string))
 					fileNum++
 				}
