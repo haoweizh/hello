@@ -308,28 +308,19 @@ var wsPriHandlerGatePerp = func(market, key string, msg []byte) {
 		data := responseJson.Get(`result`).MustArray()
 		for _, datum := range data {
 			value := datum.(map[string]interface{})
-			order, _ := model.AppEnvironment.CrossOrders.Load(value["id"].(json.Number).String())
-			if order != nil {
-				size, _ := value[`size`].(json.Number).Float64()
-				left, _ := value[`left`].(json.Number).Float64()
-				if value[`status`] == `finished` {
-					order.(*model.Order).Status = model.CarryStatusSuccess
-				}
-				dialectSymbol := value[`contract`].(string)
-				// 此处不同于gate标准的合约格式以_USDT结尾，而是以_USD结尾
-				coin := strings.Split(dialectSymbol, "_")[0]
-				symbol := coin + model.UniStandardTail[model.MarketTypePerp]
-				preDeal := order.(*model.Order).DealAmount
-				_, dealAmount := model.ParseRealAmount(model.Gate, symbol, math.Abs(size)-math.Abs(left))
-				if dealAmount >= preDeal {
-					order.(*model.Order).DealAmount = dealAmount
-					util.Log(``, util.LogLevelInfo, ``, util.SystemAPI, fmt.Sprintf(`update deal %s %s %s %f to %f %s`,
-						order.(*model.Order).Market, order.(*model.Order).Symbol, order.(*model.Order).OrderSide, preDeal,
-						order.(*model.Order).DealAmount, order.(*model.Order).Status))
-				}
-			} else {
-				util.Log(``, util.LogLevelInfo, ``, util.SystemAPI, fmt.Sprintf(`no order stored %s %d %s`, market, value["id"].(json.Number).String(), string(msg)))
+			size, _ := value[`size`].(json.Number).Float64()
+			left, _ := value[`left`].(json.Number).Float64()
+			dialectSymbol := value[`contract`].(string)
+			// 此处不同于gate标准的合约格式以_USDT结尾，而是以_USD结尾
+			coin := strings.Split(dialectSymbol, "_")[0]
+			symbol := coin + model.UniStandardTail[model.MarketTypePerp]
+			_, dealAmount := model.ParseRealAmount(model.Gate, symbol, math.Abs(size)-math.Abs(left))
+			status := model.CarryStatusWorking
+			if value[`status`] == `finished` {
+				status = model.CarryStatusSuccess
 			}
+			orderId := value["id"].(json.Number).String()
+			UpdateOrderDeal(market, orderId, status, string(msg), dealAmount)
 		}
 	} else {
 		channel = responseJson.GetPath(`header`, `channel`).MustString()
@@ -393,25 +384,16 @@ var wsPriHandlerGateSpot = func(market, key string, msg []byte) {
 		data := responseJson.Get(`result`).MustArray()
 		for _, datum := range data {
 			value := datum.(map[string]interface{})
-			order, _ := model.AppEnvironment.CrossOrders.Load(value[`id`].(string))
-			if order != nil {
-				deal, _ := strconv.ParseFloat(value[`filled_total`].(string), 64)
-				dealPrice, _ := strconv.ParseFloat(value[`avg_deal_price`].(string), 64)
-				preDeal := order.(*model.Order).DealAmount
-				if dealPrice > 0 {
-					dealAmount := math.Abs(deal / dealPrice)
-					if dealAmount >= preDeal {
-						order.(*model.Order).DealAmount = dealAmount
-						util.Log(``, util.LogLevelInfo, ``, util.SystemAPI, fmt.Sprintf(`update deal %s %s %s %f to %f %s`,
-							order.(*model.Order).Market, order.(*model.Order).Symbol, order.(*model.Order).OrderSide, preDeal,
-							order.(*model.Order).DealAmount, order.(*model.Order).Status))
-						if value[`finish_as`] == `filled` {
-							order.(*model.Order).Status = model.CarryStatusSuccess
-						}
-					}
-				}
-			} else {
-				util.Log(``, util.LogLevelInfo, ``, util.SystemAPI, fmt.Sprintf(`no order stored %s %d %s`, market, value[`id`], string(msg)))
+			orderId := value[`id`].(string)
+			status := model.CarryStatusWorking
+			if value[`finish_as`] == `filled` {
+				status = model.CarryStatusSuccess
+			}
+			deal, _ := strconv.ParseFloat(value[`filled_total`].(string), 64)
+			dealPrice, _ := strconv.ParseFloat(value[`avg_deal_price`].(string), 64)
+			if dealPrice > 0 {
+				dealAmount := math.Abs(deal / dealPrice)
+				UpdateOrderDeal(market, orderId, status, string(msg), dealAmount)
 			}
 		}
 	} else {

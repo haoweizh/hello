@@ -71,23 +71,13 @@ var wsOrderConnHandlerBitget = func(market, key string, event []byte) {
 	}
 	dataArray := resJson.Get(`data`).MustArray()
 	for _, data := range dataArray {
-		orderId := data.(map[string]interface{})[`orderId`]
-		order, _ := model.AppEnvironment.CrossOrders.Load(orderId.(string))
-		if order != nil {
-			dealAmtStr := data.(map[string]interface{})[`accBaseVolume`].(string)
-			preDeal := order.(*model.Order).DealAmount
-			dealAmount, _ := strconv.ParseFloat(dealAmtStr, 64)
-			if dealAmount >= preDeal {
-				order.(*model.Order).DealAmount = dealAmount
-				if data.(map[string]interface{})[`status`].(string) != `filled` {
-					order.(*model.Order).Status = model.CarryStatusSuccess
-				}
-				util.Log(key, util.LogLevelInfo, ``, util.SystemAPI, fmt.Sprintf(`update deal %s %s %s %f to %f %s`,
-					order.(*model.Order).Market, order.(*model.Order).Symbol, order.(*model.Order).OrderSide, preDeal, order.(*model.Order).DealAmount, order.(*model.Order).Status))
-			}
-		} else {
-			util.Log(key, util.LogLevelInfo, ``, util.SystemAPI, fmt.Sprintf(`no order stored %s %v %s`, market, orderId, string(event)))
+		orderId := data.(map[string]interface{})[`orderId`].(string)
+		dealAmount, _ := strconv.ParseFloat(data.(map[string]interface{})[`accBaseVolume`].(string), 64)
+		status := model.CarryStatusWorking
+		if data.(map[string]interface{})[`status`].(string) == `filled` {
+			status = model.CarryStatusSuccess
 		}
+		UpdateOrderDeal(market, orderId, status, string(event), dealAmount)
 	}
 }
 

@@ -43,22 +43,12 @@ var wsOrdUdtHandlerBybit = func(market, key string, msg []byte) {
 	jsonErr := json.Unmarshal(msg, orderResp)
 	if jsonErr == nil {
 		for _, data := range orderResp.Data {
-			order, _ := model.AppEnvironment.CrossOrders.Load(data.OrderId)
-			if order == nil {
-				continue
-			} else {
-				util.Log(key, util.LogLevelInfo, ``, util.SystemCarry, fmt.Sprintf(`no order stored %s %s %s`, market, data.OrderId, string(msg)))
-			}
+			status := model.CarryStatusWorking
 			if data.OrderStatus == `Filled` {
-				order.(*model.Order).Status = model.CarryStatusSuccess
+				status = model.CarryStatusSuccess
 			}
-			preDeal := order.(*model.Order).DealAmount
 			dealAmount, _ := strconv.ParseFloat(data.CumExecQty, 64)
-			if dealAmount >= preDeal {
-				order.(*model.Order).DealAmount = dealAmount
-				util.Log(key, util.LogLevelInfo, ``, util.SystemCarry, fmt.Sprintf(`update deal %s %s %s %f to %f`,
-					order.(*model.Order).Market, order.(*model.Order).Symbol, order.(*model.Order).OrderSide, preDeal, order.(*model.Order).DealAmount))
-			}
+			UpdateOrderDeal(market, data.OrderId, status, string(msg), dealAmount)
 		}
 	}
 }

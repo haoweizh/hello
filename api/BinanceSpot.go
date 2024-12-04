@@ -411,33 +411,15 @@ var wsOrderUpdateBinance = func(market, key string, msg []byte) {
 	}
 	switch resJson.Get(`e`).MustString() {
 	case `ORDER_TRADE_UPDATE`:
-		order, _ := model.AppEnvironment.CrossOrders.Load(strconv.Itoa(resJson.GetPath(`o`, `i`).MustInt()))
-		if order != nil {
-			preDeal := order.(*model.Order).DealAmount
-			dealAmount, _ := strconv.ParseFloat(resJson.GetPath(`o`, `z`).MustString(), 64)
-			if dealAmount >= preDeal {
-				order.(*model.Order).DealAmount = dealAmount
-				order.(*model.Order).Status = model.GetOrderStatus(market, resJson.Get(`X`).MustString())
-				util.Log(key, util.LogLevelInfo, order.(*model.Order).OrderId, util.SystemCarry, fmt.Sprintf(`update deal %s %s %s %f to %f %s`,
-					order.(*model.Order).Market, order.(*model.Order).Symbol, order.(*model.Order).OrderSide, preDeal, order.(*model.Order).DealAmount, order.(*model.Order).Status))
-			}
-		} else {
-			util.Log(key, util.LogLevelInfo, fmt.Sprintf(`%d`, resJson.Get(`i`).MustInt()), util.SystemCarry, fmt.Sprintf(`no order stored %s %s`, market, string(msg)))
-		}
+		orderId := strconv.Itoa(resJson.GetPath(`o`, `i`).MustInt())
+		dealAmount, _ := strconv.ParseFloat(resJson.GetPath(`o`, `z`).MustString(), 64)
+		status := model.GetOrderStatus(market, resJson.Get(`X`).MustString())
+		UpdateOrderDeal(market, orderId, status, string(msg), dealAmount)
 	case `executionReport`:
-		order, _ := model.AppEnvironment.CrossOrders.Load(strconv.Itoa(resJson.Get(`i`).MustInt()))
-		if order != nil {
-			preDeal := order.(*model.Order).DealAmount
-			dealAmount, _ := strconv.ParseFloat(resJson.Get(`z`).MustString(), 64)
-			if dealAmount >= preDeal {
-				order.(*model.Order).DealAmount = dealAmount
-				order.(*model.Order).Status = model.GetOrderStatus(market, resJson.Get(`X`).MustString())
-				util.Log(key, util.LogLevelInfo, order.(*model.Order).OrderId, util.SystemCarry, fmt.Sprintf(`update deal %s %s %s %f to %f %s`,
-					order.(*model.Order).Market, order.(*model.Order).Symbol, order.(*model.Order).OrderSide, preDeal, order.(*model.Order).DealAmount, order.(*model.Order).Status))
-			}
-		} else {
-			util.Log(key, util.LogLevelInfo, fmt.Sprintf(`%d`, resJson.Get(`i`).MustInt()), util.SystemCarry, fmt.Sprintf(`no order stored %s %d %s`, market, string(msg)))
-		}
+		orderId := strconv.Itoa(resJson.Get(`i`).MustInt())
+		dealAmount, _ := strconv.ParseFloat(resJson.Get(`z`).MustString(), 64)
+		status := model.GetOrderStatus(market, resJson.Get(`X`).MustString())
+		UpdateOrderDeal(market, orderId, status, string(msg), dealAmount)
 	}
 }
 

@@ -6,6 +6,7 @@ import (
 	"hello/util"
 	"strings"
 	"sync"
+	"time"
 )
 
 func GetWSSubscribes(market string, subTypes []string) []interface{} {
@@ -170,5 +171,30 @@ func MaintainConns(market string) {
 		go maintainConnsBybit(accounts)
 	case model.BitgetSpot, model.BitgetPerp:
 		go maintainConnsBitget(market, accounts)
+	}
+}
+
+func UpdateOrderDeal(market, orderId, status, msg string, dealAmount float64) {
+	var order *model.Order
+	i := 0
+	for ; i < 10; i++ {
+		data, _ := model.AppEnvironment.CrossOrders.Load(orderId)
+		if data != nil {
+			order = data.(*model.Order)
+			break
+		} else {
+			time.Sleep(3 * time.Second)
+		}
+	}
+	if order != nil {
+		order.Status = status
+		preDeal := order.DealAmount
+		if dealAmount >= preDeal {
+			order.DealAmount = dealAmount
+			util.Log(``, util.LogLevelInfo, ``, util.SystemCarry, fmt.Sprintf(`update deal at %d %s %s %s %f to %f %s`,
+				i, order.Market, order.Symbol, order.OrderSide, preDeal, order.DealAmount, order.Status))
+		}
+	} else {
+		util.Log(``, util.LogLevelError, ``, util.SystemCarry, fmt.Sprintf(`no order stored %s %s %s`, market, orderId, msg))
 	}
 }

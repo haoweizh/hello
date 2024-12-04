@@ -262,20 +262,7 @@ var wsAccountHandlerOKEX = func(market, key string, event []byte) {
 		data := responseJson.Get(`data`).MustArray()
 		for _, value := range data {
 			order := parseOrderOKEX(value.(map[string]interface{}))
-			crossOrder, _ := model.AppEnvironment.CrossOrders.Load(order.OrderId)
-			if crossOrder != nil {
-				crossOrder.(*model.Order).Status = order.Status
-				preDeal := crossOrder.(*model.Order).DealAmount
-				dealAmount := order.DealAmount
-				if dealAmount >= preDeal {
-					crossOrder.(*model.Order).DealAmount = dealAmount
-					util.Log(``, util.LogLevelInfo, ``, util.SystemCarry, fmt.Sprintf(`update deal %s %s %s %f to %f %s`,
-						crossOrder.(*model.Order).Market, crossOrder.(*model.Order).Symbol, crossOrder.(*model.Order).OrderSide,
-						preDeal, crossOrder.(*model.Order).DealAmount, crossOrder.(*model.Order).Status))
-				}
-			} else {
-				util.Log(``, util.LogLevelInfo, ``, util.SystemCarry, fmt.Sprintf(`no order stored %s %s %s`, market, order.OrderId, string(event)))
-			}
+			UpdateOrderDeal(market, order.OrderId, order.Status, ``, order.DealAmount)
 		}
 	}
 	if responseJson.Get(`op`).MustString() == `order` {
