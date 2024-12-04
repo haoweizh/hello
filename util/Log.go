@@ -36,7 +36,14 @@ func logChanHandler() {
 	}))
 	for {
 		glcData := <-logChan
-		cmn.Info(glcData)
+		switch glcData.LogLevel {
+		case LogLevelError:
+			cmn.Error(glcData)
+		case LogLevelInfo:
+			cmn.Info(glcData)
+		case LogLevelDebug:
+			cmn.Debug(glcData)
+		}
 	}
 }
 
