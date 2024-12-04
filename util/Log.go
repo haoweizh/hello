@@ -1,7 +1,6 @@
 package util
 
 import (
-	"fmt"
 	"github.com/gotoeasy/glang/cmn"
 	"time"
 )
@@ -42,7 +41,6 @@ func logChanHandler() {
 		} else if len(logChan) == 9000 {
 			cmn.Error(cmn.GlcData{Text: `log chan 9000`, LogLevel: `error`})
 		}
-		fmt.Println(len(logChan))
 		switch glcData.LogLevel {
 		case LogLevelError:
 			cmn.Error(glcData)
