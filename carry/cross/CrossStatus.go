@@ -21,7 +21,7 @@ const compLimitInU = 30000.0
 const compTooBig = 70000.0
 const InsufficientCodeBinance = `-2010`
 const SmallInU = 10
-const BitgetPosLimit = 130
+const BitgetPosLimit = 100 // 实测不能超过140
 
 // TradeLineExtra 由于comp比例过高或亏损过多，需要增加的额外开仓数额
 type TradeLineExtra struct {

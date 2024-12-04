@@ -518,17 +518,9 @@ func Test_download(t *testing.T) {
 }
 
 func Test_Order(t *testing.T) {
-
-	var logChan = make(chan int64, 10000)
-	fmt.Println(len(logChan))
-	fmt.Println(cap(logChan))
-	for i := 0; i < 100; i++ {
-		logChan <- 3
-		fmt.Println(len(logChan))
-	}
-	market := model.Gate
+	market := model.Bybit
 	model.NewConfig()
-	symbol := `MOG_PERP`
+	symbol := `DOGE_USDT`
 	account := model.GetAccounts(0)[market]
 	api.InitMarketInfos(market)
 	//_, listKey := api.RenewListenKeyBinance(account, market)
@@ -536,7 +528,7 @@ func Test_Order(t *testing.T) {
 	//go model.AppEnvironment.HandleWSResp()
 	//api.MaintainConns(market)
 	order := api.PlaceOrder(account.Key, account.Secret, model.OrderSideBuy, model.OrderTypeLimit, market, symbol, ``,
-		`test`, 0.0000025, 0.0000025, 14000000, false, nil)
+		`test`, 0.42034, 0.42034, 486.32283060000003, false, nil)
 	fmt.Println(order)
 	fmt.Println(order.Status)
 	//api.CancelOrder(account.Key, account.Secret, market, symbol, model.OrderTypeLimit, order.OrderId)

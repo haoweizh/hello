@@ -46,7 +46,8 @@ func getMarketsBitgetPerp() (marketInfos map[string]*model.MarketInfo) {
 	return marketInfos
 }
 
-func GetBitgetPosModes(account *model.Account, symbol string) (mode string) {
+// GetBitgetPosModes
+func _(account *model.Account, symbol string) (mode string) {
 	_, _, _, dialectSymbol := model.GetFromStandard(model.BitgetPerp, symbol)
 	client := dtos.BitgetRestClient{BaseUrl: bitgetRestUrl, Passphrase: model.AppConfig.Phase, ApiKey: account.Key, ApiSecretKey: account.Secret}
 	params := map[string]string{"productType": "USDT-FUTURES", "marginCoin": "USDT", `symbol`: dialectSymbol}

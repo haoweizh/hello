@@ -1051,37 +1051,13 @@ func InitMarketInfos(market string) (success bool) {
 	//	marketInfos = deprecated.getMarketsFtx(accounts[0].Key, accounts[0].Secret)
 	case model.OKEX:
 		marketInfos = getMarketsOKEX(accounts[0].Key, accounts[0].Secret)
-		for _, account := range accounts {
-			accountMode := getAccountConfigOKEX(account.Key, account.Secret)
-			util.Log(``, util.LogLevelInfo, ``, util.SystemCarry, `okex config and set: `+accountMode)
-			if accountMode != `net_mode` {
-				if !setAccountModeOKEX(account.Key, account.Secret) {
-					success = false
-				}
-			}
-		}
-		go func() {
-			for _, account := range accounts {
-				setLeverageOkx(account)
-			}
-		}()
 	//case model.HuobiSpot:
 	//	marketInfos = deprecated.getMarketsHuobiSpot(accounts[0].Key, accounts[0].Secret)
 	case model.BinanceSpot:
 		marketInfos = GetMarketsBinance(accounts[0], market)
 	case model.BinancePerp:
 		marketInfos = getMarketsBinancePerp(accounts[0].Key, accounts[0].Secret)
-		go func() {
-			for _, account := range accounts {
-				setPosSideBinancePerp(account.Key, account.Secret)
-				setLeverageBinancePerp(account.Key, account.Secret)
-			}
-		}()
 	case model.Gate:
-		for _, account := range accounts {
-			setPosSideGate(account.Key, account.Secret)
-			setMarginSettingGate(account.Key, account.Secret)
-		}
 		_, marketInfos = getMarketsGate(accounts[0].Key, accounts[0].Secret)
 	//case model.KucoinSpot:
 	//	marketInfos = deprecated.getMarketsKucoinSpot(accounts[0].Key)
@@ -1090,21 +1066,10 @@ func InitMarketInfos(market string) (success bool) {
 	//	deprecated.setFutureAutoDeposit()
 	case model.Bybit:
 		marketInfos = getMarketsBybit()
-		go func() {
-			for _, account := range accounts {
-				setBybitMarginLeverage(account.Key, account.Secret)
-				time.Sleep(time.Second)
-				setBybitPerpLeverage(account.Key, account.Secret)
-			}
-		}()
 	case model.BitgetSpot:
 		marketInfos = getMarketsBitgetSpot()
 	case model.BitgetPerp:
 		marketInfos = getMarketsBitgetPerp()
-		for _, account := range accounts {
-			setBitgetPositionMode(account.Key, account.Secret)
-		}
-		setBitgetPositionMode(accounts[0].Key, accounts[0].Secret)
 	}
 	for _, setting := range appSettings {
 		if setting.Market == market && marketInfos[setting.Symbol] == nil && strings.Trim(setting.Symbol, ` `) != `` {

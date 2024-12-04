@@ -429,12 +429,41 @@ func InitApp(refreshDynamic bool) bool {
 		accounts := model.AppConfig.GetAccounts(market)
 		for _, account := range accounts {
 			go CancelAll(account.Key, account.Secret, market)
+			go initMarketMode(account, market)
 		}
 		MaintainConns(market)
 	}
 	util.Log(``, util.LogLevelInfo, ``, util.SystemCarry, `finish load settings`)
 	settingLoading = false
 	return true
+}
+
+func initMarketMode(account *model.Account, market string) {
+	switch market {
+	case model.OKEX:
+		go func() {
+			accountMode := getAccountConfigOKEX(account.Key, account.Secret)
+			util.Log(``, util.LogLevelInfo, ``, util.SystemCarry, `okex config and set: `+accountMode)
+			if accountMode != `net_mode` {
+				setAccountModeOKEX(account.Key, account.Secret)
+			}
+			setLeverageOkx(account)
+		}()
+	case model.BinancePerp:
+		setPosSideBinancePerp(account.Key, account.Secret)
+		setLeverageBinancePerp(account.Key, account.Secret)
+	case model.Gate:
+		setPosSideGate(account.Key, account.Secret)
+		setMarginSettingGate(account.Key, account.Secret)
+	case model.Bybit:
+		go func() {
+			setBybitMarginLeverage(account.Key, account.Secret)
+			time.Sleep(time.Second)
+			setBybitPerpLeverage(account.Key, account.Secret)
+		}()
+	case model.BitgetPerp:
+		setBitgetPositionMode(account.Key, account.Secret)
+	}
 }
 
 func GetMarketSymbols(market string) map[string]bool {

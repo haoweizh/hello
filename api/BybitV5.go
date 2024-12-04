@@ -183,7 +183,7 @@ func getMarketsBybitSpot(marketInfos map[string]*model.MarketInfo) {
 		return
 	}
 	for _, symbolInfo := range spotResp.Result.List {
-		if symbolInfo.Status != "Trading" && symbolInfo.QuoteCoin != "USDT" {
+		if symbolInfo.Status != "Trading" || symbolInfo.QuoteCoin != "USDT" {
 			continue
 		}
 		symbol := symbolInfo.BaseCoin + model.UniStandardTail[model.MarketTypeSpot]
@@ -202,6 +202,9 @@ func getMarketsBybitSpot(marketInfos map[string]*model.MarketInfo) {
 		marketInfo.MoneyMin, _ = strconv.ParseFloat(symbolInfo.LotSizeFilter.MinOrderAmt, 64)
 		marketInfo.QuoteMax, _ = strconv.ParseFloat(symbolInfo.LotSizeFilter.MaxOrderAmt, 64)
 		marketInfos[marketInfo.Name] = marketInfo
+		if marketInfo.Name == `DOGE_USDT` {
+			fmt.Println(fmt.Sprintf(`%f %v`, marketInfo.SizeIncrement, symbolInfo))
+		}
 	}
 }
 
