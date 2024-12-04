@@ -13,7 +13,7 @@ import (
 var DoDebug = false
 var logChan = make(chan string, 10000)
 
-const logRoot = "./log/"
+//const logRoot = "./log/"
 
 func init() {
 	go logChanHandler()
