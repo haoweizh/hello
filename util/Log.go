@@ -3,9 +3,6 @@ package util
 import (
 	"fmt"
 	"github.com/gotoeasy/glang/cmn"
-	"log"
-	"os"
-	"strconv"
 	"time"
 )
 
@@ -54,18 +51,18 @@ func logChanHandler() {
 	}
 }
 
-func initLog(path string) (*log.Logger, *os.File, error) {
-	//removeOldFiles()
-	_, err := os.Stat(logRoot)
-	if err != nil && os.IsNotExist(err) {
-		_ = os.Mkdir(logRoot, os.ModePerm)
-	}
-	file, err := os.OpenFile(path, os.O_CREATE|os.O_APPEND|os.O_RDWR, os.ModePerm)
-	if err != nil {
-		return nil, nil, err
-	}
-	return log.New(file, "", log.Ldate|log.Ltime|log.Ldate|log.Lmicroseconds), file, nil
-}
+//func initLog(path string) (*log.Logger, *os.File, error) {
+//	//removeOldFiles()
+//	_, err := os.Stat(logRoot)
+//	if err != nil && os.IsNotExist(err) {
+//		_ = os.Mkdir(logRoot, os.ModePerm)
+//	}
+//	file, err := os.OpenFile(path, os.O_CREATE|os.O_APPEND|os.O_RDWR, os.ModePerm)
+//	if err != nil {
+//		return nil, nil, err
+//	}
+//	return log.New(file, "", log.Ldate|log.Ltime|log.Ldate|log.Lmicroseconds), file, nil
+//}
 
 //func removeOldFiles() {
 //	year, month, date := GetNow().Date()
@@ -91,12 +88,12 @@ func initLog(path string) (*log.Logger, *os.File, error) {
 //	}
 //}
 
-func getPath(name string) string {
-	year, month, date := GetNow().Date()
-	strDate := strconv.Itoa(year) + month.String() + strconv.Itoa(date)
-	strTime := strconv.Itoa(GetNow().Hour()) + "_" + strconv.Itoa(GetNow().Minute())
-	return logRoot + name + strDate + "_" + strTime + ".log"
-}
+//func getPath(name string) string {
+//	year, month, date := GetNow().Date()
+//	strDate := strconv.Itoa(year) + month.String() + strconv.Itoa(date)
+//	strTime := strconv.Itoa(GetNow().Hour()) + "_" + strconv.Itoa(GetNow().Minute())
+//	return logRoot + name + strDate + "_" + strTime + ".log"
+//}
 
 func SocketInfo(format string, a ...interface{}) {
 	//if socketCount%10000 == 0 {
