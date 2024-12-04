@@ -76,12 +76,15 @@ var wsOrderConnHandlerBitget = func(market, key string, event []byte) {
 		if order != nil {
 			dealAmtStr := data.(map[string]interface{})[`accBaseVolume`].(string)
 			preDeal := order.(*model.Order).DealAmount
-			order.(*model.Order).DealAmount, _ = strconv.ParseFloat(dealAmtStr, 64)
-			if data.(map[string]interface{})[`status`].(string) != `filled` {
-				order.(*model.Order).Status = model.CarryStatusSuccess
+			dealAmount, _ := strconv.ParseFloat(dealAmtStr, 64)
+			if dealAmount >= preDeal {
+				order.(*model.Order).DealAmount = dealAmount
+				if data.(map[string]interface{})[`status`].(string) != `filled` {
+					order.(*model.Order).Status = model.CarryStatusSuccess
+				}
+				util.Notice(fmt.Sprintf(`update deal %s %s %s %f to %f %s`,
+					order.(*model.Order).Market, order.(*model.Order).Symbol, order.(*model.Order).OrderSide, preDeal, order.(*model.Order).DealAmount, order.(*model.Order).Status))
 			}
-			util.Notice(fmt.Sprintf(`update deal %s %s %s %f to %f %s`,
-				order.(*model.Order).Market, order.(*model.Order).Symbol, order.(*model.Order).OrderSide, preDeal, order.(*model.Order).DealAmount, order.(*model.Order).Status))
 		} else {
 			util.Notice(fmt.Sprintf(`no order stored %s %v %s`, market, orderId, string(event)))
 		}

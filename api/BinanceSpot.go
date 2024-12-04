@@ -411,10 +411,13 @@ var wsOrderUpdateBinance = func(market, key string, msg []byte) {
 		order, _ := model.AppEnvironment.CrossOrders.Load(strconv.Itoa(resJson.GetPath(`o`, `i`).MustInt()))
 		if order != nil {
 			preDeal := order.(*model.Order).DealAmount
-			order.(*model.Order).DealAmount, _ = strconv.ParseFloat(resJson.GetPath(`o`, `z`).MustString(), 64)
-			order.(*model.Order).Status = model.GetOrderStatus(market, resJson.Get(`X`).MustString())
-			util.Notice(fmt.Sprintf(`update deal %s %s %s %f to %f %s`,
-				order.(*model.Order).Market, order.(*model.Order).Symbol, order.(*model.Order).OrderSide, preDeal, order.(*model.Order).DealAmount, order.(*model.Order).Status))
+			dealAmount, _ := strconv.ParseFloat(resJson.GetPath(`o`, `z`).MustString(), 64)
+			if dealAmount >= preDeal {
+				order.(*model.Order).DealAmount = dealAmount
+				order.(*model.Order).Status = model.GetOrderStatus(market, resJson.Get(`X`).MustString())
+				util.Notice(fmt.Sprintf(`update deal %s %s %s %f to %f %s`,
+					order.(*model.Order).Market, order.(*model.Order).Symbol, order.(*model.Order).OrderSide, preDeal, order.(*model.Order).DealAmount, order.(*model.Order).Status))
+			}
 		} else {
 			util.Notice(fmt.Sprintf(`no order stored %s %d %s`, market, resJson.Get(`i`).MustInt(), string(msg)))
 		}
@@ -422,10 +425,13 @@ var wsOrderUpdateBinance = func(market, key string, msg []byte) {
 		order, _ := model.AppEnvironment.CrossOrders.Load(strconv.Itoa(resJson.Get(`i`).MustInt()))
 		if order != nil {
 			preDeal := order.(*model.Order).DealAmount
-			order.(*model.Order).DealAmount, _ = strconv.ParseFloat(resJson.Get(`z`).MustString(), 64)
-			order.(*model.Order).Status = model.GetOrderStatus(market, resJson.Get(`X`).MustString())
-			util.Notice(fmt.Sprintf(`update deal %s %s %s %f to %f %s`,
-				order.(*model.Order).Market, order.(*model.Order).Symbol, order.(*model.Order).OrderSide, preDeal, order.(*model.Order).DealAmount, order.(*model.Order).Status))
+			dealAmount, _ := strconv.ParseFloat(resJson.Get(`z`).MustString(), 64)
+			if dealAmount >= preDeal {
+				order.(*model.Order).DealAmount = dealAmount
+				order.(*model.Order).Status = model.GetOrderStatus(market, resJson.Get(`X`).MustString())
+				util.Notice(fmt.Sprintf(`update deal %s %s %s %f to %f %s`,
+					order.(*model.Order).Market, order.(*model.Order).Symbol, order.(*model.Order).OrderSide, preDeal, order.(*model.Order).DealAmount, order.(*model.Order).Status))
+			}
 		} else {
 			util.Notice(fmt.Sprintf(`no order stored %s %d %s`, market, resJson.Get(`i`).MustInt(), string(msg)))
 		}

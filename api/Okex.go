@@ -266,10 +266,13 @@ var wsAccountHandlerOKEX = func(market, key string, event []byte) {
 			if crossOrder != nil {
 				crossOrder.(*model.Order).Status = order.Status
 				preDeal := crossOrder.(*model.Order).DealAmount
-				crossOrder.(*model.Order).DealAmount = order.DealAmount
-				util.Notice(fmt.Sprintf(`update deal %s %s %s %f to %f %s`,
-					crossOrder.(*model.Order).Market, crossOrder.(*model.Order).Symbol, crossOrder.(*model.Order).OrderSide,
-					preDeal, crossOrder.(*model.Order).DealAmount, crossOrder.(*model.Order).Status))
+				dealAmount := order.DealAmount
+				if dealAmount >= preDeal {
+					crossOrder.(*model.Order).DealAmount = dealAmount
+					util.Notice(fmt.Sprintf(`update deal %s %s %s %f to %f %s`,
+						crossOrder.(*model.Order).Market, crossOrder.(*model.Order).Symbol, crossOrder.(*model.Order).OrderSide,
+						preDeal, crossOrder.(*model.Order).DealAmount, crossOrder.(*model.Order).Status))
+				}
 			} else {
 				util.Notice(fmt.Sprintf(`no order stored %s %s %s`, market, order.OrderId, string(event)))
 			}

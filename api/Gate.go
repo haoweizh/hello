@@ -320,10 +320,13 @@ var wsPriHandlerGatePerp = func(market, key string, msg []byte) {
 				coin := strings.Split(dialectSymbol, "_")[0]
 				symbol := coin + model.UniStandardTail[model.MarketTypePerp]
 				preDeal := order.(*model.Order).DealAmount
-				_, order.(*model.Order).DealAmount = model.ParseRealAmount(model.Gate, symbol, math.Abs(size)-math.Abs(left))
-				util.Notice(fmt.Sprintf(`update deal %s %s %s %f to %f %s`,
-					order.(*model.Order).Market, order.(*model.Order).Symbol, order.(*model.Order).OrderSide, preDeal,
-					order.(*model.Order).DealAmount, order.(*model.Order).Status))
+				_, dealAmount := model.ParseRealAmount(model.Gate, symbol, math.Abs(size)-math.Abs(left))
+				if dealAmount >= preDeal {
+					order.(*model.Order).DealAmount = dealAmount
+					util.Notice(fmt.Sprintf(`update deal %s %s %s %f to %f %s`,
+						order.(*model.Order).Market, order.(*model.Order).Symbol, order.(*model.Order).OrderSide, preDeal,
+						order.(*model.Order).DealAmount, order.(*model.Order).Status))
+				}
 			} else {
 				util.Notice(fmt.Sprintf(`no order stored %s %d %s`, market, value["id"].(json.Number).String(), string(msg)))
 			}
@@ -397,13 +400,16 @@ var wsPriHandlerGateSpot = func(market, key string, msg []byte) {
 				dealPrice, _ := strconv.ParseFloat(value[`avg_deal_price`].(string), 64)
 				preDeal := order.(*model.Order).DealAmount
 				if dealPrice > 0 {
-					order.(*model.Order).DealAmount = math.Abs(deal / dealPrice)
-				}
-				util.Notice(fmt.Sprintf(`update deal %s %s %s %f to %f %s`,
-					order.(*model.Order).Market, order.(*model.Order).Symbol, order.(*model.Order).OrderSide, preDeal,
-					order.(*model.Order).DealAmount, order.(*model.Order).Status))
-				if value[`finish_as`] == `filled` {
-					order.(*model.Order).Status = model.CarryStatusSuccess
+					dealAmount := math.Abs(deal / dealPrice)
+					if dealAmount > preDeal {
+						order.(*model.Order).DealAmount = dealAmount
+						util.Notice(fmt.Sprintf(`update deal %s %s %s %f to %f %s`,
+							order.(*model.Order).Market, order.(*model.Order).Symbol, order.(*model.Order).OrderSide, preDeal,
+							order.(*model.Order).DealAmount, order.(*model.Order).Status))
+						if value[`finish_as`] == `filled` {
+							order.(*model.Order).Status = model.CarryStatusSuccess
+						}
+					}
 				}
 			} else {
 				util.Notice(fmt.Sprintf(`no order stored %s %d %s`, market, value[`id`], string(msg)))

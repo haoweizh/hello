@@ -47,16 +47,18 @@ var wsOrdUdtHandlerBybit = func(market, key string, msg []byte) {
 			if order == nil {
 				continue
 			} else {
-				util.Notice(fmt.Sprintf(`no order stored %s %d %s`, market, data.OrderId, string(msg)))
+				util.Notice(fmt.Sprintf(`no order stored %s %s %s`, market, data.OrderId, string(msg)))
 			}
 			if data.OrderStatus == `Filled` {
 				order.(*model.Order).Status = model.CarryStatusSuccess
 			}
 			preDeal := order.(*model.Order).DealAmount
-			order.(*model.Order).DealAmount, _ = strconv.ParseFloat(data.CumExecQty, 64)
-			util.Notice(fmt.Sprintf(`update deal %s %s %s %f to %f`,
-				order.(*model.Order).Market, order.(*model.Order).Symbol, order.(*model.Order).OrderSide, preDeal, order.(*model.Order).DealAmount))
-
+			dealAmount, _ := strconv.ParseFloat(data.CumExecQty, 64)
+			if dealAmount >= preDeal {
+				order.(*model.Order).DealAmount = dealAmount
+				util.Notice(fmt.Sprintf(`update deal %s %s %s %f to %f`,
+					order.(*model.Order).Market, order.(*model.Order).Symbol, order.(*model.Order).OrderSide, preDeal, order.(*model.Order).DealAmount))
+			}
 		}
 	}
 }

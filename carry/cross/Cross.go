@@ -346,6 +346,7 @@ func ClearCross() {
 			util.Notice(`left orders %d key %v %v`, leftOrders, k, v)
 			return true
 		})
+		model.AppEnvironment.CrossOrders = sync.Map{}
 		today := util.GetNow()
 		today = time.Date(today.Year(), today.Month(), today.Day(), 0, 0, 0, 0, today.Location())
 		carryRows, _ := model.AppDB.Model(model.Order{}).Select(`sum(price*abs(amount)),refresh_type`).
@@ -1148,6 +1149,7 @@ func handleCross(account *model.Account, order *model.Order) {
 	if v != nil {
 		marketInfo = v.(*model.MarketInfo)
 	} else {
+		util.Notice(fmt.Sprintf(`not found marketInfo %s %s`, order.Market, order.Symbol))
 		return
 	}
 	leftAmt := order.Amount - order.DealAmount
