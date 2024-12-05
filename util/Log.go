@@ -56,7 +56,8 @@ func LogChanHandler(apiUrl, serverName string) {
 		ApiUrl:           apiUrl,
 		Enable:           "true",
 		EnableConsoleLog: "false",
-		ServerName:       serverName,
+		//ServerName:       serverName,
+		System: serverName,
 	}))
 	for {
 		glcData := <-logChan
