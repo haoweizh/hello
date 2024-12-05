@@ -110,7 +110,7 @@ func _(coin string, closeLine float64) (tradeLineExtra *TradeLineExtra) {
 		}
 		err := crossRows.Close()
 		if err != nil {
-			util.Log(``, util.LogLevelError, ``, util.SystemOther, fmt.Sprintf(
+			model.Log(``, model.LogLevelError, ``, model.SystemOther, fmt.Sprintf(
 				`fail to close db query %s`, err.Error()))
 		}
 		// 当发生comp的单均利润小于closeShortMargin，同向comp占比越大，开仓line越高
@@ -122,7 +122,7 @@ func _(coin string, closeLine float64) (tradeLineExtra *TradeLineExtra) {
 				extra := math.Max(closeLine, 0.001) * math.Pow(amtRate, 3) * lossRate * 400000
 				extra = math.Max(extra, 3*lossRate)
 				tradeLineExtra.buyExtra = math.Min(extra, 0.4)
-				util.Log(``, util.LogLevelInfo, ``, util.SystemCarry, fmt.Sprintf(
+				model.Log(``, model.LogLevelInfo, ``, model.SystemCarry, fmt.Sprintf(
 					`comp extra buy %s compU %f compRate %f lossRate %f add %f`,
 					coin, crossValues[model.OrderSideBuy+model.FunctionComplement], amtRate, lossRate, extra))
 			}
@@ -135,7 +135,7 @@ func _(coin string, closeLine float64) (tradeLineExtra *TradeLineExtra) {
 				extra := math.Max(closeLine, 0.001) * math.Pow(amtRate, 3) * lossRate * 400000
 				extra = math.Max(extra, 3*lossRate)
 				tradeLineExtra.sellExtra = math.Min(extra, 0.4)
-				util.Log(``, util.LogLevelInfo, ``, util.SystemCarry, fmt.Sprintf(
+				model.Log(``, model.LogLevelInfo, ``, model.SystemCarry, fmt.Sprintf(
 					`comp extra sell %s compU %f compRate %f lossRate %f add %f`,
 					coin, crossValues[model.OrderSideSell+model.FunctionComplement], amtRate, lossRate, extra))
 			}
@@ -306,10 +306,10 @@ func GetCrossMarketValue(key, secret, market string, force bool) (inAllSpot, con
 }
 
 func pauseCarry(key string, seconds int) {
-	util.Log(``, util.LogLevelInfo, ``, util.SystemCarry, fmt.Sprintf(`%s carrying pause %v`, key, true))
+	model.Log(``, model.LogLevelInfo, ``, model.SystemCarry, fmt.Sprintf(`%s carrying pause %v`, key, true))
 	carryStop.Store(key, true)
 	time.Sleep(time.Second * time.Duration(seconds))
-	util.Log(``, util.LogLevelInfo, ``, util.SystemCarry, fmt.Sprintf(`%s carrying pause %v`, key, false))
+	model.Log(``, model.LogLevelInfo, ``, model.SystemCarry, fmt.Sprintf(`%s carrying pause %v`, key, false))
 	carryStop.Store(key, false)
 }
 
@@ -338,20 +338,20 @@ func addCarryResult(key, market, msg string, success bool) {
 		if strings.Trim(msg, " ") != "" {
 			go pauseCarry(key, 1800)
 		} else {
-			util.Log(``, util.LogLevelInfo, ``, util.SystemCarry, fmt.Sprintf(`key is nil pause all %s accounts`, market))
+			model.Log(``, model.LogLevelInfo, ``, model.SystemCarry, fmt.Sprintf(`key is nil pause all %s accounts`, market))
 			accounts := model.AppConfig.GetAccounts(market)
 			for _, account := range accounts {
 				go pauseCarry(account.Key, 1800)
 			}
 		}
-		util.Log(``, util.LogLevelInfo, ``, util.SystemCarry, fmt.Sprintf(`----------stop carry %s %d`, key, fails))
+		model.Log(``, model.LogLevelInfo, ``, model.SystemCarry, fmt.Sprintf(`----------stop carry %s %d`, key, fails))
 		carryFail.Store(key, 0)
 		go api.SendMails(`暂停下单`, market+`msg: `+msg)
 	} else if fails > 0 {
 		if strings.Trim(msg, ` `) != "" {
 			go pauseCarry(key, 300)
 		}
-		util.Log(``, util.LogLevelInfo, ``, util.SystemCarry, fmt.Sprintf(`---------- fail size %s %d`, key, fails))
+		model.Log(``, model.LogLevelInfo, ``, model.SystemCarry, fmt.Sprintf(`---------- fail size %s %d`, key, fails))
 	}
 }
 
@@ -391,12 +391,12 @@ func addLastCarry(order *model.Order, setting *model.Setting) {
 		}
 		model.AppDB.Model(&queryOrder).Where(`order_id=?`, queryOrder.OrderId).Updates(
 			map[string]interface{}{`deal_amount`: queryOrder.DealAmount, `deal_price`: queryOrder.DealPrice})
-		util.Log(``, util.LogLevelInfo, ``, util.SystemCarry, fmt.Sprintf(`query last %s %s %s %f index %d`,
+		model.Log(``, model.LogLevelInfo, ``, model.SystemCarry, fmt.Sprintf(`query last %s %s %s %f index %d`,
 			queryOrder.Symbol, queryOrder.OrderId, queryOrder.Status, queryOrder.DealAmount, index))
 		if queryOrder.DealAmount == 0 && order.Status != model.CarryStatusFail {
 			noDealNum++
 			if noDealNum > 3 {
-				util.Log(``, util.LogLevelInfo, ``, util.SystemCarry, fmt.Sprintf(`no deal order %s %s %d %d stop at %d`,
+				model.Log(``, model.LogLevelInfo, ``, model.SystemCarry, fmt.Sprintf(`no deal order %s %s %d %d stop at %d`,
 					setting.Market, setting.Symbol, len(orders), noDealNum, index))
 				setting.Valid = false
 				setting.UpdatedAt = now
@@ -432,13 +432,13 @@ func liquidateBitgetPerp(account *model.Account) {
 				if position.Holding > 0 {
 					orderSide = model.OrderSideSell
 				}
-				util.Log(account.Key, util.LogLevelInfo, ``, util.SystemCarry, fmt.Sprintf(`do liquidate bitgetperp %s %s price %f hold %f`,
+				model.Log(account.Key, model.LogLevelInfo, ``, model.SystemCarry, fmt.Sprintf(`do liquidate bitgetperp %s %s price %f hold %f`,
 					position.Currency, orderSide, position.EntryPrice, position.Holding))
 				order := api.PlaceOrder(account.Key, account.Secret, orderSide, model.OrderTypeMarket, model.BitgetPerp,
 					position.Currency, model.ReduceOnly, model.FunctionBitgetLiq, position.EntryPrice, position.EntryPrice, holding, false, nil)
 				saveCross(order, 0, 0, position.Holding)
 			} else {
-				util.Log(account.Key, util.LogLevelInfo, ``, util.SystemCarry, fmt.Sprintf(`not liquidate bitgetperp for big perp %s %f %f value %f`,
+				model.Log(account.Key, model.LogLevelInfo, ``, model.SystemCarry, fmt.Sprintf(`not liquidate bitgetperp for big perp %s %f %f value %f`,
 					position.Currency, position.EntryPrice, position.Holding, position.EntryPrice*position.Holding))
 			}
 		}

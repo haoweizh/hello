@@ -25,13 +25,13 @@ var USDs = map[string]bool{`USD`: true, `usd`: true, `USDT`: true, `usdt`: true,
 func SetRequireReset(market string) {
 	maintaining, _ := model.ChannelMaintaining.Load(market)
 	if maintaining == nil || !maintaining.(bool) {
-		util.Log(``, util.LogLevelInfo, ``, util.SystemCarry, fmt.Sprintf(`require reset %s`, market))
+		model.Log(``, model.LogLevelInfo, ``, model.SystemCarry, fmt.Sprintf(`require reset %s`, market))
 		initTime, getTime := model.AppEnvironment.WsInitTime.Load(market)
 		if getTime && initTime != nil {
 			checkTime := initTime.(time.Time).Add(time.Millisecond * time.Duration(model.AppConfig.Delay*5))
 			if util.GetNow().After(checkTime) {
 				requireReset.Store(market, true)
-				util.Log(``, util.LogLevelInfo, ``, util.SystemCarry, fmt.Sprintf(`ready to reset ws channel %s reset after %v`, market, checkTime))
+				model.Log(``, model.LogLevelInfo, ``, model.SystemCarry, fmt.Sprintf(`ready to reset ws channel %s reset after %v`, market, checkTime))
 			}
 		}
 	}
@@ -62,14 +62,14 @@ func _(environment *model.Environment, market string, symbols map[string]bool) (
 			time.Now().UnixMilli() {
 			reset = true
 			if candle == nil {
-				util.Log(``, util.LogLevelInfo, ``, util.SystemCarry, fmt.Sprintf(`RequireKLineReset symbol %s nil candle`, symbol))
+				model.Log(``, model.LogLevelInfo, ``, model.SystemCarry, fmt.Sprintf(`RequireKLineReset symbol %s nil candle`, symbol))
 			} else {
-				util.Log(``, util.LogLevelInfo, ``, util.SystemCarry, fmt.Sprintf(`RequireKLineReset symbol %s candle time %s`, symbol, candle.CreatedAt.String()))
+				model.Log(``, model.LogLevelInfo, ``, model.SystemCarry, fmt.Sprintf(`RequireKLineReset symbol %s candle time %s`, symbol, candle.CreatedAt.String()))
 			}
 			break
 		}
 	}
-	util.Log(``, util.LogLevelInfo, ``, util.SystemCarry, fmt.Sprintf(`RequireKLineReset %s %v`, market, reset))
+	model.Log(``, model.LogLevelInfo, ``, model.SystemCarry, fmt.Sprintf(`RequireKLineReset %s %v`, market, reset))
 	return reset
 }
 
@@ -77,13 +77,13 @@ func RequireConnTickReset(environment *model.Environment, market string) bool {
 	needReset, ok := requireReset.Load(market)
 	if ok && needReset != nil && needReset.(bool) {
 		requireReset.Store(market, false)
-		util.Log(``, util.LogLevelInfo, ``, util.SystemCarry, `clear need reset for market: `+market)
+		model.Log(``, model.LogLevelInfo, ``, model.SystemCarry, `clear need reset for market: `+market)
 		return true
 	}
 	initTime, _ := model.AppEnvironment.WsInitTime.Load(market)
 	if initTime != nil {
 		if initTime.(time.Time).Add(time.Minute * 2).After(time.Now()) {
-			util.Log(``, util.LogLevelInfo, ``, util.SystemCarry, fmt.Sprintf(`just reset %s no need %s`, market, initTime.(time.Time).String()))
+			model.Log(``, model.LogLevelInfo, ``, model.SystemCarry, fmt.Sprintf(`just reset %s no need %s`, market, initTime.(time.Time).String()))
 			return false
 		}
 	}
@@ -126,7 +126,7 @@ func RequireConnTickReset(environment *model.Environment, market string) bool {
 				return true
 			}
 			if setting.Function != model.FunctionCross && !validSymbols[setting.Symbol] {
-				util.Log(``, util.LogLevelInfo, ``, util.SystemCarry, fmt.Sprintf(`need reset for important time out %s %s %s`,
+				model.Log(``, model.LogLevelInfo, ``, model.SystemCarry, fmt.Sprintf(`need reset for important time out %s %s %s`,
 					market, setting.Function, setting.Symbol))
 				needReset = true
 				return false
@@ -134,7 +134,7 @@ func RequireConnTickReset(environment *model.Environment, market string) bool {
 			return true
 		})
 	}
-	util.Log(``, util.LogLevelInfo, ``, util.SystemCarry, fmt.Sprintf(`RequireConnTickReset %d  %f valid %d in %d %s needReset %v`,
+	model.Log(``, model.LogLevelInfo, ``, model.SystemCarry, fmt.Sprintf(`RequireConnTickReset %d  %f valid %d in %d %s needReset %v`,
 		now, model.AppConfig.Delay, validSymbolNum, len(symbols), market, needReset))
 	return needReset.(bool)
 }
@@ -154,7 +154,7 @@ func MustCancel(key, secret, market, symbol, orderType, orderId string, mustCanc
 	for i := 0; i < 4; i++ {
 		result, errCode, msg := CancelOrder(key, secret, market, symbol, orderType, orderId)
 		res = result
-		util.Log(key, util.LogLevelInfo, ``, util.SystemAPI, fmt.Sprintf(`[cancel] %s %s %s %s for %d times, return %t code %s msg %s `,
+		model.Log(key, model.LogLevelInfo, ``, model.SystemAPI, fmt.Sprintf(`[cancel] %s %s %s %s for %d times, return %t code %s msg %s `,
 			market, symbol, orderType, orderId, i, result, errCode, msg))
 		if result || !mustCancel || errCode == `0` {
 			time.Sleep(time.Millisecond * 50)
@@ -185,7 +185,7 @@ func CancelAll(key, secret, market string) {
 		orders := queryOpenOrdersBinanceSpot(key, secret, ``)
 		for _, order := range orders {
 			result, _ := cancelOrderBinance(key, secret, market, order.Symbol, order.OrderId)
-			util.Log(key, util.LogLevelInfo, ``, util.SystemAPI, fmt.Sprintf(`cancelAll Binance %s id %s return %v`,
+			model.Log(key, model.LogLevelInfo, ``, model.SystemAPI, fmt.Sprintf(`cancelAll Binance %s id %s return %v`,
 				order.Symbol, order.OrderId, result))
 			time.Sleep(time.Millisecond * 100)
 		}
@@ -193,7 +193,7 @@ func CancelAll(key, secret, market string) {
 		orders := queryOpenOrdersBinancePerp(key, secret, ``)
 		for _, order := range orders {
 			result := cancelOrderBinancePerp(key, secret, order.Symbol, order.OrderId)
-			util.Log(key, util.LogLevelInfo, ``, util.SystemAPI, fmt.Sprintf(`cancelAllBinancePerp %s id %s return %v`,
+			model.Log(key, model.LogLevelInfo, ``, model.SystemAPI, fmt.Sprintf(`cancelAllBinancePerp %s id %s return %v`,
 				order.Symbol, order.OrderId, result))
 			time.Sleep(time.Millisecond * 100)
 		}
@@ -229,7 +229,7 @@ func CancelOrders(key, secret, market, symbol string) (result bool) {
 		//	result = deprecated.cancelOrdersMexc(key, secret, symbol)
 	}
 	time.Sleep(time.Second * 2)
-	util.Log(key, util.LogLevelInfo, ``, util.SystemAPI, fmt.Sprintf(`cancel all orders %s %s return %v`, market, symbol, result))
+	model.Log(key, model.LogLevelInfo, ``, model.SystemAPI, fmt.Sprintf(`cancel all orders %s %s return %v`, market, symbol, result))
 	return result
 }
 
@@ -256,7 +256,7 @@ func CancelOrder(key, secret, market, symbol, orderType, orderId string) (result
 	case model.BinanceSpot:
 		result, _ = cancelOrderBinance(key, secret, market, symbol, orderId)
 	}
-	util.Log(key, util.LogLevelInfo, ``, util.SystemAPI, fmt.Sprintf(`[cancel %s %v %s %s]`, orderId, result, market, symbol))
+	model.Log(key, model.LogLevelInfo, ``, model.SystemAPI, fmt.Sprintf(`[cancel %s %v %s %s]`, orderId, result, market, symbol))
 	return result, errCode, msg
 }
 
@@ -349,7 +349,7 @@ func getCandle(account *model.Account, market, symbol string, slotSeconds int, b
 			msg = oldMsg.(string) + msg
 		}
 		if !isCache {
-			util.Log(``, util.LogLevelInfo, ``, util.SystemAPI, msg)
+			model.Log(``, model.LogLevelInfo, ``, model.SystemAPI, msg)
 			time.Sleep(time.Millisecond * 100)
 		}
 	}
@@ -560,7 +560,7 @@ func GetFundingRate(key, secret, market, symbol string) (success bool, rate *mod
 	if fundingRate != nil && now < fundingRate.ExpireTime && fundingRate.UpdateTime.Add(time.Minute*5).After(time.Now()) && fundingRate.ExpireTime > 0 {
 		return true, fundingRate
 	}
-	util.Log(``, util.LogLevelInfo, ``, util.SystemAPI, fmt.Sprintf(`fail to get funding rate from ws %s %s`, market, symbol))
+	model.Log(``, model.LogLevelInfo, ``, model.SystemAPI, fmt.Sprintf(`fail to get funding rate from ws %s %s`, market, symbol))
 	switch market {
 	//case model.Bitmex:
 	//	rate, expireTime = deprecated.getFundingRateBitmex(key, secret, symbol)
@@ -766,7 +766,7 @@ func MustPlaceOrder(key, secret, orderSide, orderType, market, symbol, orderPara
 	for i := 0; i < retry; i++ {
 		v, _ := util.LoadSyncMap(model.MarketInfos, market, symbol)
 		if v == nil {
-			util.Log(key, util.LogLevelError, ``, util.SystemAPI, fmt.Sprintf(`fail to get market info when must place %s %s`, market, symbol))
+			model.Log(key, model.LogLevelError, ``, model.SystemAPI, fmt.Sprintf(`fail to get market info when must place %s %s`, market, symbol))
 			continue
 		}
 		sizeMax := v.(*model.MarketInfo).SizeMax
@@ -794,7 +794,7 @@ func MustPlaceOrder(key, secret, orderSide, orderType, market, symbol, orderPara
 			} else { // binance perp 下单返回 -4005 代表数量太大，分两半继续下单
 				if order != nil && strings.Contains(order.ErrCode, `-4005`) {
 					v.(*model.MarketInfo).SizeMax = 0.52 * amount
-					util.Log(key, util.LogLevelError, ``, util.SystemAPI, fmt.Sprintf(`binance perp 下单返回 -4005 代表数量%f太大，减小marketInfo size max %f`,
+					model.Log(key, model.LogLevelError, ``, model.SystemAPI, fmt.Sprintf(`binance perp 下单返回 -4005 代表数量%f太大，减小marketInfo size max %f`,
 						amount, v.(*model.MarketInfo).SizeMax))
 				}
 				// <APIError> code=-2027, msg=Exceeded the maximum allowable position at current leverage.
@@ -802,7 +802,7 @@ func MustPlaceOrder(key, secret, orderSide, orderType, market, symbol, orderPara
 				//	break
 				//}
 				time.Sleep(time.Second * 10)
-				util.Log(key, util.LogLevelError, ``, util.SystemAPI, fmt.Sprintf(`fail to place order %d time, re order`, i))
+				model.Log(key, model.LogLevelError, ``, model.SystemAPI, fmt.Sprintf(`fail to place order %d time, re order`, i))
 			}
 		}
 	}
@@ -824,7 +824,7 @@ func PlaceOrder(key, secret, orderSide, orderType, market, symbol, orderParam, f
 	}
 	_, marketType, coin, _ := model.GetFromStandard(market, symbol)
 	if amount == 0 {
-		util.Log(key, util.LogLevelError, ``, util.SystemAPI, fmt.Sprintf(`can not place order with amount 0 , %s %s %s %s`, orderSide, orderType, market, symbol))
+		model.Log(key, model.LogLevelError, ``, model.SystemAPI, fmt.Sprintf(`can not place order with amount 0 , %s %s %s %s`, orderSide, orderType, market, symbol))
 		return &model.Order{OrderSide: markSide, OrderType: orderType, Market: market, Symbol: symbol, Coin: coin,
 			Price: price, Amount: 0, OrderId: ``, ErrCode: ``, TriggerPrice: triggerPrice, RefreshType: funcType,
 			Status: model.CarryStatusFail, DealAmount: 0, DealPrice: price, OrderTime: util.GetNow()}
@@ -885,7 +885,7 @@ func PlaceOrder(key, secret, orderSide, orderType, market, symbol, orderParam, f
 	}
 	order.TriggerPrice = triggerPrice
 	end := util.GetNowUnixMillion()
-	util.Log(key, util.LogLevelInfo, ``, util.SystemAPI, fmt.Sprintf(
+	model.Log(key, model.LogLevelInfo, ``, model.SystemAPI, fmt.Sprintf(
 		`...%s %s %s return order at %d distance %d %s %s price %f %f amount %f %f trigger %f %f id %s`,
 		orderSide, market, symbol, end, end-start, order.Status, order.ErrCode, price, order.Price, amount, order.Amount,
 		triggerPrice, order.TriggerPrice, order.OrderId))
@@ -994,7 +994,7 @@ func InitCrossMarketInfos(markets []string) {
 	}
 	model.AppDB.Model(&settingsDb).Where(`function=?`, model.FunctionCross).Updates(map[string]interface{}{`valid`: false})
 	for coin, infos := range infoPool {
-		util.Log(``, util.LogLevelInfo, ``, util.SystemCarry, fmt.Sprintf(`handle coin %s %d`, coin, len(infos)))
+		model.Log(``, model.LogLevelInfo, ``, model.SystemCarry, fmt.Sprintf(`handle coin %s %d`, coin, len(infos)))
 		scoreOpen := 0.015
 		scoreClose := 0.005
 		if len(infos) >= 2 {
@@ -1014,7 +1014,7 @@ func InitCrossMarketInfos(markets []string) {
 						OpenShortMargin:  scoreOpen,
 						CloseShortMargin: scoreClose,
 						SymbolRelated:    topCross}
-					util.Log(``, util.LogLevelInfo, ``, util.SystemAPI, fmt.Sprintf(`save setting %s %s %s %v`, info.Market, info.Name, coin, setting.Valid))
+					model.Log(``, model.LogLevelInfo, ``, model.SystemAPI, fmt.Sprintf(`save setting %s %s %s %v`, info.Market, info.Name, coin, setting.Valid))
 					model.AppDB.Save(setting)
 				} else {
 					model.AppDB.Model(&settingsDb).Where("market= ? and symbol= ? and function= ?",
@@ -1036,7 +1036,7 @@ func InitMarketInfos(market string) (success bool) {
 	if marketInfoInitializing {
 		return
 	}
-	util.Log(``, util.LogLevelInfo, ``, util.SystemCarry, fmt.Sprintf(`start to init market infos %s`, market))
+	model.Log(``, model.LogLevelInfo, ``, model.SystemCarry, fmt.Sprintf(`start to init market infos %s`, market))
 	marketInfoInitializing = true
 	defer func() {
 		marketInfoInitializing = false
@@ -1074,7 +1074,7 @@ func InitMarketInfos(market string) (success bool) {
 	for _, setting := range appSettings {
 		if setting.Market == market && marketInfos[setting.Symbol] == nil && strings.Trim(setting.Symbol, ` `) != `` {
 			setting.Valid = false
-			util.Log(``, util.LogLevelInfo, ``, util.SystemCarry, fmt.Sprintf(`warning %s %s un-list from market`, market, setting.Symbol))
+			model.Log(``, model.LogLevelInfo, ``, model.SystemCarry, fmt.Sprintf(`warning %s %s un-list from market`, market, setting.Symbol))
 		}
 	}
 	model.MarketInfos.Range(func(key, value any) bool {
@@ -1090,7 +1090,7 @@ func InitMarketInfos(market string) (success bool) {
 }
 
 func SendMails(title, msg string) {
-	util.Log(``, util.LogLevelInfo, ``, util.SystemAPI, fmt.Sprintf(`try to send mails %s %s`, title, msg))
+	model.Log(``, model.LogLevelInfo, ``, model.SystemAPI, fmt.Sprintf(`try to send mails %s %s`, title, msg))
 	toMails := strings.Split(model.AppConfig.Mail, `,`)
 	for _, mail := range toMails {
 		if len(strings.TrimSpace(mail)) == 0 {
@@ -1098,7 +1098,7 @@ func SendMails(title, msg string) {
 		}
 		err := util.SendMail(model.AppConfig.FromMail, model.AppConfig.FromMailAuth, mail, title, msg)
 		if err != nil {
-			util.Log(``, util.LogLevelInfo, ``, util.SystemAPI, fmt.Sprintf(`fail to send mail title %s msg %s to %s err %s`, title, msg, mail, err.Error()))
+			model.Log(``, model.LogLevelInfo, ``, model.SystemAPI, fmt.Sprintf(`fail to send mail title %s msg %s to %s err %s`, title, msg, mail, err.Error()))
 		}
 	}
 }

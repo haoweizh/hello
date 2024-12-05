@@ -2,6 +2,7 @@ package util
 
 import (
 	"fmt"
+	"hello/model"
 )
 
 type SlideRing struct {
@@ -50,7 +51,7 @@ func (slideRing *SlideRing) Get() (start, current interface{}) {
 
 func (slideRing *SlideRing) Remove() (success bool) {
 	if slideRing.Start == slideRing.Current {
-		Log(``, LogLevelInfo, ``, SystemCarry, fmt.Sprintf(`sliding ring Start reach Current %d`, slideRing.Start))
+		model.Log(``, model.LogLevelInfo, ``, model.SystemCarry, fmt.Sprintf(`sliding ring Start reach Current %d`, slideRing.Start))
 		return false
 	}
 	slideRing.Start = (slideRing.Start + 1) % len(slideRing.Data)

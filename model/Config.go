@@ -2,7 +2,6 @@ package model
 
 import (
 	"fmt"
-	"hello/util"
 	"os"
 	"strconv"
 	"strings"
@@ -13,7 +12,7 @@ type Config struct {
 	Delay                                                                                            float64
 	KucoinSpot, MetricTick                                                                           bool
 	KucoinRelatedKey, KucoinRelatedSecret, KucoinFutureKey, KucoinFutureSecret                       string
-	KucoinCarryClose, KucoinCarryRate, Simulation, Equal                                             string
+	KucoinCarryClose, KucoinCarryRate, Simulation, Equal, Log                                        string
 	GateKey, GateSecret, GateCarryClose, GateCarryRate                                               string
 	HuobiKey, HuobiSecret, HuobiCarryClose, HuobiCarryRate                                           string
 	OkexKey, OkexSecret, OkexCarryClose, OkexCarryRate                                               string
@@ -135,7 +134,7 @@ func (config *Config) GetAccounts(market string) []*Account {
 	accounts := make([]*Account, len(keys))
 	for i := 0; i < len(keys); i++ {
 		account := &Account{Key: keys[i], Secret: secrets[i], Index: i, Market: market, IsUnified: isUnified}
-		util.Log(``, util.LogLevelError, ``, util.SystemCarry, fmt.Sprintf(`create account %d %s %s`, account.Index, account.Market, account.Key))
+		Log(``, LogLevelError, ``, SystemCarry, fmt.Sprintf(`create account %d %s %s`, account.Index, account.Market, account.Key))
 		if market == Ftx {
 			account.FtxSubAccount = ftxSubAccounts[i]
 		}

@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/gorilla/websocket"
-	"hello/util"
 	"strings"
 	"sync"
 	"time"
@@ -50,7 +49,7 @@ type Message struct {
 func (manager *WSManager) WrapSend(address string) {
 	defer func() {
 		if r := recover(); r != nil {
-			util.Log(``, util.LogLevelError, ``, util.SystemNetwork, `recovered from panic`)
+			Log(``, LogLevelError, ``, SystemNetwork, `recovered from panic`)
 		}
 	}()
 	agents, _ := manager.WSAgents.Load(address)
@@ -120,7 +119,7 @@ func (manager *WSManager) Update(address string, aggregateCandle *AggregateCandl
 		return true
 	})
 	if !duplicated {
-		util.Log(``, util.LogLevelInfo, ``, util.SystemCarry, fmt.Sprintf(`update new aggregate %s %f %f %f`,
+		Log(``, LogLevelInfo, ``, SystemCarry, fmt.Sprintf(`update new aggregate %s %f %f %f`,
 			keyAggregate, aggregateCandle.PriceIncrease, aggregateCandle.PriceChange, aggregateCandle.VolumeQuote))
 		temp := time.Now()
 		value.(*sync.Map).Store(&temp, SettingMonitor{
@@ -140,7 +139,7 @@ func (manager *WSManager) RemoveAgent(address string, wsAgent *WSAgent) {
 		wsAgent.Close()
 		agents.(*sync.Map).Delete(wsAgent)
 	}
-	util.Log(``, util.LogLevelInfo, ``, util.SystemCarry, fmt.Sprintf(`remove agent %s %v`, address, wsAgent))
+	Log(``, LogLevelInfo, ``, SystemCarry, fmt.Sprintf(`remove agent %s %v`, address, wsAgent))
 }
 
 func (manager *WSManager) AddAgent(wsAgent *WSAgent) {
@@ -156,7 +155,7 @@ func (manager *WSManager) AddAgent(wsAgent *WSAgent) {
 	//jsonMessage, _ := json.Marshal(&Message{Content: "/A new socket has connected."})
 	//manager.Send(jsonMessage, agent)
 	agents.(*sync.Map).Range(func(key, value any) bool {
-		util.Log(``, util.LogLevelInfo, ``, util.SystemCarry, fmt.Sprintf(`got agent %s %v`, wsAgent.Address, key))
+		Log(``, LogLevelInfo, ``, SystemCarry, fmt.Sprintf(`got agent %s %v`, wsAgent.Address, key))
 		return true
 	})
 }
@@ -164,7 +163,7 @@ func (manager *WSManager) AddAgent(wsAgent *WSAgent) {
 func (agent *WSAgent) Close() {
 	defer func() {
 		if r := recover(); r != nil {
-			util.Log(``, util.LogLevelError, ``, util.SystemNetwork, `recovered from panic`)
+			Log(``, LogLevelError, ``, SystemNetwork, `recovered from panic`)
 		}
 	}()
 	close(agent.ChanRead)
@@ -182,7 +181,7 @@ func (agent *WSAgent) WriteServe() {
 			err := agent.Socket.WriteMessage(websocket.TextMessage, message)
 			if err != nil {
 				//manager.RemoveAgent(address, agent.(*WSAgent))
-				util.Log(``, util.LogLevelError, ``, util.SystemNetwork, fmt.Sprintf(`fail to send ws update %v %s`, agent, err.Error()))
+				Log(``, LogLevelError, ``, SystemNetwork, fmt.Sprintf(`fail to send ws update %v %s`, agent, err.Error()))
 			}
 		}
 	}
@@ -192,7 +191,7 @@ func (agent *WSAgent) ReadServe(msgHandler WSMsgHandler) {
 	defer func() {
 		agent.Manager.RemoveAgent(agent.Address, agent)
 		if r := recover(); r != nil {
-			util.Log(``, util.LogLevelError, ``, util.SystemNetwork, `recovered from panic`)
+			Log(``, LogLevelError, ``, SystemNetwork, `recovered from panic`)
 		}
 	}()
 	go func() {
@@ -224,7 +223,7 @@ func (agent *WSAgent) ReadServe(msgHandler WSMsgHandler) {
 				agent.Pinged = false
 				agent.ChanWrite <- []byte(`ping`)
 			} else {
-				util.Log(``, util.LogLevelError, ``, util.SystemNetwork, `time out without ping`)
+				Log(``, LogLevelError, ``, SystemNetwork, `time out without ping`)
 				return
 			}
 		}

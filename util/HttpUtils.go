@@ -5,6 +5,7 @@ import (
 	"crypto/tls"
 	"errors"
 	"fmt"
+	"hello/model"
 	"io"
 	"net"
 	"net/http"
@@ -119,7 +120,7 @@ func ComposeParams(body map[string]interface{}) (params string) {
 func HttpRequest(method string, reqUrl string, body string, requestHeaders map[string]string, timeout int) ([]byte, error) {
 	req, createErr := http.NewRequest(method, reqUrl, strings.NewReader(body))
 	if createErr != nil {
-		Log(``, LogLevelError, ``, SystemNetwork, `fail to request http`+createErr.Error())
+		model.Log(``, model.LogLevelError, ``, model.SystemNetwork, `fail to request http`+createErr.Error())
 		return nil, createErr
 	}
 	if requestHeaders != nil {
@@ -132,23 +133,23 @@ func HttpRequest(method string, reqUrl string, body string, requestHeaders map[s
 	defer cncl()
 	resp, err := http.DefaultClient.Do(req.WithContext(ctx))
 	if err != nil {
-		Log(``, LogLevelError, ``, SystemNetwork, "can not process request "+err.Error())
+		model.Log(``, model.LogLevelError, ``, model.SystemNetwork, "can not process request "+err.Error())
 		return nil, err
 	}
 	defer func(Body io.ReadCloser) {
 		err = Body.Close()
 		if err != nil {
-			Log(``, LogLevelError, ``, SystemNetwork, `fail to request, return `+err.Error())
+			model.Log(``, model.LogLevelError, ``, model.SystemNetwork, `fail to request, return `+err.Error())
 		}
 	}(resp.Body)
 	//bodyData, err := ioutil.ReadAll(resp.Body)
 	bodyData, readErr := io.ReadAll(resp.Body)
 	if readErr != nil {
-		Log(``, LogLevelError, ``, SystemNetwork, "can not read message from request "+readErr.Error())
+		model.Log(``, model.LogLevelError, ``, model.SystemNetwork, "can not read message from request "+readErr.Error())
 		return nil, err
 	}
 	if resp.StatusCode != 200 {
-		Log(``, LogLevelError, ``, SystemNetwork, fmt.Sprintf("%sHttpStatusCode:%d ,Desc:%s", reqUrl, resp.StatusCode, string(bodyData)))
+		model.Log(``, model.LogLevelError, ``, model.SystemNetwork, fmt.Sprintf("%sHttpStatusCode:%d ,Desc:%s", reqUrl, resp.StatusCode, string(bodyData)))
 	}
 	return bodyData, nil
 }
@@ -207,7 +208,7 @@ func SendMail(fromAddress, mailAuth, toAddress, subject, body string) (err error
 		return err
 	}
 	_ = c.Quit()
-	Log(``, LogLevelError, ``, ``, fmt.Sprintf(`%s to %s %s %s`,
+	model.Log(``, model.LogLevelError, ``, ``, fmt.Sprintf(`%s to %s %s %s`,
 		from.String(), to.String(), subject, message))
 	return err
 }

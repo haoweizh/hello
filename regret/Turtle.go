@@ -83,7 +83,7 @@ func createTurtleOrder(setting *model.Setting, candle *model.Candle, orderSide s
 			order.OrderType = model.OrderSideLiquidateLong
 		}
 	}
-	util.Log(``, util.LogLevelInfo, ``, util.SystemCarry, fmt.Sprintf(`create turtle %s at %s %s %d`,
+	model.Log(``, model.LogLevelInfo, ``, model.SystemCarry, fmt.Sprintf(`create turtle %s at %s %s %d`,
 		orderSide, candle.Begin.String(), candle.Symbol, setting.Chance))
 	return
 }
@@ -102,7 +102,7 @@ func calcTurtleOrders(setting *model.Setting, turtleData *TurtleData, useM bool)
 			}
 			posNumLong = 1
 		} else {
-			util.Log(``, util.LogLevelInfo, ``, util.SystemCarry, fmt.Sprintf(
+			model.Log(``, model.LogLevelInfo, ``, model.SystemCarry, fmt.Sprintf(
 				`no new open buy as %s liquated`, turtleData.begin.String()))
 		}
 		if !slotLiquidated[fmt.Sprintf(`%s_%s_%s_%s`, setting.Market, setting.Symbol, model.OrderSideSell, turtleData.begin.String())] {
@@ -112,7 +112,7 @@ func calcTurtleOrders(setting *model.Setting, turtleData *TurtleData, useM bool)
 			}
 			posNumShort = 1
 		} else {
-			util.Log(``, util.LogLevelInfo, ``, util.SystemCarry, fmt.Sprintf(
+			model.Log(``, model.LogLevelInfo, ``, model.SystemCarry, fmt.Sprintf(
 				`no new open sell as %s liquated`, turtleData.begin.String()))
 		}
 	} else if setting.Chance > 0 {
@@ -162,7 +162,7 @@ func handlePrice(turtleData *TurtleData, candle *model.Candle, settings map[stri
 	if settings != nil && candle != nil && settings[candle.Symbol] != nil {
 		setting = settings[candle.Symbol]
 	} else {
-		util.Log(``, util.LogLevelError, ``, util.SystemAPI, `fail to process handle price`)
+		model.Log(``, model.LogLevelError, ``, model.SystemAPI, `fail to process handle price`)
 		return
 	}
 	if !turtleData.useNear && candle.PriceHigh > turtleData.highFar {
@@ -196,7 +196,7 @@ func handlePrice(turtleData *TurtleData, candle *model.Candle, settings map[stri
 			setting.OpenShortMargin = 0
 			turtleData.liquidated = true
 			slotLiquidated[fmt.Sprintf(`%s_%s_%s_%s`, candle.Market, candle.Symbol, model.OrderSideBuy, turtleData.begin.String())] = true
-			util.Log(``, util.LogLevelInfo, ``, util.SystemCarry, fmt.Sprintf(
+			model.Log(``, model.LogLevelInfo, ``, model.SystemCarry, fmt.Sprintf(
 				`no new open after liquidated buy %s %s`, candle.Symbol, turtleData.begin.String()))
 		}
 		setting.PriceX = turtleData.orderLong.Price
@@ -206,7 +206,7 @@ func handlePrice(turtleData *TurtleData, candle *model.Candle, settings map[stri
 			setting.Market, setting.Symbol, sign, turtleData.orderLong.OrderSide, candle.Begin.Unix())
 		turtleData.orderLong.UnfilledQuantity = float64(currentChances)
 		turtleData.orderLong.Function = sign
-		util.Log(``, util.LogLevelInfo, ``, util.SystemCarry, fmt.Sprintf(
+		model.Log(``, model.LogLevelInfo, ``, model.SystemCarry, fmt.Sprintf(
 			`deal long chance %d 总仓 %d save order %s at %s`,
 			setting.Chance, currentChances, turtleData.orderLong.OrderId, turtleData.orderLong.OrderTime.String()))
 		model.AppDB.Save(turtleData.orderLong)
@@ -222,7 +222,7 @@ func handlePrice(turtleData *TurtleData, candle *model.Candle, settings map[stri
 			setting.OpenShortMargin = 0
 			turtleData.liquidated = true
 			slotLiquidated[fmt.Sprintf(`%s_%s_%s_%s`, candle.Market, candle.Symbol, model.OrderSideSell, turtleData.begin.String())] = true
-			util.Log(``, util.LogLevelInfo, ``, util.SystemCarry, fmt.Sprintf(
+			model.Log(``, model.LogLevelInfo, ``, model.SystemCarry, fmt.Sprintf(
 				`no new open after liquidated sell %s %s`, candle.Symbol, turtleData.begin.String()))
 		}
 		setting.PriceX = turtleData.orderShort.Price
@@ -232,7 +232,7 @@ func handlePrice(turtleData *TurtleData, candle *model.Candle, settings map[stri
 			setting.Market, setting.Symbol, sign, turtleData.orderShort.OrderSide, candle.Begin.Unix())
 		turtleData.orderShort.UnfilledQuantity = float64(currentChances)
 		turtleData.orderShort.Function = sign
-		util.Log(``, util.LogLevelInfo, ``, util.SystemCarry, fmt.Sprintf(`deal short chance %d 总仓 %d save order %s at %s`,
+		model.Log(``, model.LogLevelInfo, ``, model.SystemCarry, fmt.Sprintf(`deal short chance %d 总仓 %d save order %s at %s`,
 			setting.Chance, currentChances, turtleData.orderShort.OrderId, turtleData.orderShort.OrderTime.String()))
 		model.AppDB.Save(turtleData.orderShort)
 		turtleData.orderLong = nil
@@ -263,7 +263,7 @@ func ProcessCandles(start, end time.Time, far, allLimit int, useNear, useM bool,
 	turtleDataMap := make(map[string]*TurtleData)
 	slotLiquidated = make(map[string]bool)
 	if sortedCandles != nil && sortedCandles.Len() > 0 && sortedCandles[0] != nil && sortedCandles[len(sortedCandles)-1] != nil {
-		util.Log(``, util.LogLevelInfo, ``, util.SystemCarry, fmt.Sprintf(`get sorted candles from %s %s to %s %s`,
+		model.Log(``, model.LogLevelInfo, ``, model.SystemCarry, fmt.Sprintf(`get sorted candles from %s %s to %s %s`,
 			sortedCandles[0].Begin.String(), sortedCandles[0].Symbol,
 			sortedCandles[sortedCandles.Len()-1].Begin.String(), sortedCandles[sortedCandles.Len()-1].Symbol))
 	}
@@ -273,7 +273,7 @@ func ProcessCandles(start, end time.Time, far, allLimit int, useNear, useM bool,
 		duration, _ := time.ParseDuration(fmt.Sprintf(`-%ds`, int(setting.Seconds)*ago))
 		temp := api.CombineCandles(model.AppConfig.GetAccounts(market)[0], market, setting.Symbol, int(setting.Seconds),
 			start.Add(duration), end)
-		util.Log(``, util.LogLevelInfo, ``, util.SystemCarry, fmt.Sprintf(`get turtle candle %s %s %d setting chance %d`,
+		model.Log(``, model.LogLevelInfo, ``, model.SystemCarry, fmt.Sprintf(`get turtle candle %s %s %d setting chance %d`,
 			market, setting.Symbol, len(temp), setting.Chance))
 		calcLenN := 10
 		calcLenV := 20
@@ -301,7 +301,7 @@ func ProcessCandles(start, end time.Time, far, allLimit int, useNear, useM bool,
 			value, ok := absentTurtles.Load(fmt.Sprintf(`%s%d`, sortedCandles[i].Symbol, turtleTime.Unix()))
 			if !ok || value == nil || !value.(bool) {
 				absentTurtles.Store(fmt.Sprintf(`%s%d`, sortedCandles[i].Symbol, turtleTime.Unix()), true)
-				util.Log(``, util.LogLevelInfo, ``, util.SystemCarry, fmt.Sprintf(
+				model.Log(``, model.LogLevelInfo, ``, model.SystemCarry, fmt.Sprintf(
 					`fail to get turtle data parse time from %s to %s %s unix second %d`,
 					sortedCandles[i].Begin.String(), turtleKey, sortedCandles[i].Symbol, turtleTime.Unix()))
 			}
@@ -410,7 +410,7 @@ func CutTail(market, coins, sign string) {
 				fmt.Println(fmt.Sprintf(`cut %s %s tail num %d`, market, symbol, delNum))
 			}
 		} else {
-			util.Log(``, util.LogLevelError, ``, util.SystemCarry, fmt.Sprintf(`can not get orders from %s`, sign))
+			model.Log(``, model.LogLevelError, ``, model.SystemCarry, fmt.Sprintf(`can not get orders from %s`, sign))
 		}
 	}
 
@@ -457,6 +457,6 @@ func CreateReport(function string, coins []string) {
 			result += (priceSell - priceBuy) * amtBuy
 		}
 		line += fmt.Sprintf(`,%.2f`, result)
-		util.InfoSync(line)
+		model.InfoSync(line)
 	}
 }

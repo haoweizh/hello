@@ -6,7 +6,6 @@ import (
 	"hello/carry"
 	"hello/controller"
 	"hello/model"
-	"hello/util"
 	//_ "net/http/pprof"
 )
 
@@ -21,7 +20,7 @@ func main() {
 	var err error
 	model.AppDB, err = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
 	if err != nil {
-		util.Log(``, util.LogLevelError, ``, util.SystemOther, err.Error())
+		model.Log(``, model.LogLevelError, ``, model.SystemOther, err.Error())
 		return
 	}
 	//model.AppRedis = redis.NewClient(&redis.Options{

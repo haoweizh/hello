@@ -67,7 +67,7 @@ func getSettingMonitors(c *gin.Context) {
 	if err != nil {
 		return
 	} else {
-		util.Log(``, util.LogLevelInfo, ``, util.SystemCarry, fmt.Sprintf(`get setting monitors: %s`, string(marshal)))
+		model.Log(``, model.LogLevelInfo, ``, model.SystemCarry, fmt.Sprintf(`get setting monitors: %s`, string(marshal)))
 	}
 	c.JSON(http.StatusOK, map[string]interface{}{`status`: `ok`, `msg`: `success`, `data`: map[string]interface{}{`monitors`: settingMonitors}})
 }
@@ -135,7 +135,7 @@ func addSettingMonitor(c *gin.Context) {
 			c.JSON(http.StatusOK, map[string]interface{}{`status`: `fail`, `msg`: `fail to insert or update`, `data`: map[string]interface{}{}})
 		}
 	} else if model.AppDB.Save(&settingMonitor).RowsAffected > 0 {
-		util.Log(``, util.LogLevelInfo, ``, util.SystemCarry, fmt.Sprintf(
+		model.Log(``, model.LogLevelInfo, ``, model.SystemCarry, fmt.Sprintf(
 			`add setting monitor: %s %s %s`, settingMonitor.Market, settingMonitor.Symbol, settingMonitor.MailAddress))
 		c.JSON(http.StatusOK, map[string]interface{}{`status`: `ok`, `msg`: `success insert`, `data`: settingMonitor})
 	} else {
@@ -163,7 +163,7 @@ func removeSettingMonitor(c *gin.Context) {
 		return
 	}
 	rowNum := model.AppDB.Where("id = ?", id).Delete(&model.SettingMonitor{}).RowsAffected
-	util.Log(``, util.LogLevelInfo, ``, util.SystemCarry, fmt.Sprintf(`delete %s return %d`, id, rowNum))
+	model.Log(``, model.LogLevelInfo, ``, model.SystemCarry, fmt.Sprintf(`delete %s return %d`, id, rowNum))
 	c.JSON(http.StatusOK, map[string]interface{}{`status`: `ok`, `msg`: `success`, `data`: map[string]interface{}{`NUM`: rowNum}})
 }
 

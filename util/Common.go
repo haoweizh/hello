@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/bitly/go-simplejson"
+	"hello/model"
 	"io"
 	"math"
 	"net/url"
@@ -19,10 +20,10 @@ func Compress(content []byte) []byte {
 	var b bytes.Buffer
 	writer := gzip.NewWriter(&b)
 	if _, err := writer.Write(content); err != nil {
-		Log(``, LogLevelError, ``, SystemOther, `fail to compress `+err.Error())
+		model.Log(``, model.LogLevelError, ``, model.SystemOther, `fail to compress `+err.Error())
 	}
 	if err := writer.Close(); err != nil {
-		Log(``, LogLevelError, ``, SystemOther, `fail to compress `+err.Error())
+		model.Log(``, model.LogLevelError, ``, model.SystemOther, `fail to compress `+err.Error())
 	}
 	return b.Bytes()
 }
@@ -30,7 +31,7 @@ func Compress(content []byte) []byte {
 func UnGzip(byte []byte) []byte {
 	r, err := gzip.NewReader(bytes.NewBuffer(byte))
 	if err != nil {
-		Log(``, LogLevelError, ``, SystemOther,
+		model.Log(``, model.LogLevelError, ``, model.SystemOther,
 			fmt.Sprintf(`fail to un-compress %s, %d`, err.Error(), len(byte)))
 		return nil
 	}
@@ -153,7 +154,7 @@ func DelSyncMap(syncMap *sync.Map, keys ...string) {
 
 func LoadSyncMap(syncMap *sync.Map, keys ...string) (interface{}, bool) {
 	if syncMap == nil {
-		Log(``, LogLevelError, ``, SystemOther, fmt.Sprintf(`syncMap is nil %v`, keys))
+		model.Log(``, model.LogLevelError, ``, model.SystemOther, fmt.Sprintf(`syncMap is nil %v`, keys))
 		return nil, false
 	}
 	key := ``
