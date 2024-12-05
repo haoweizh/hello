@@ -210,7 +210,7 @@ func SendToConnections(market string, connections map[*model.WSConn]bool, msg []
 		if err != nil {
 			util.Log(``, util.LogLevelError, ``, util.SystemNetwork, fmt.Sprintf(
 				`fail to write to all connection %s %s return: %s`, market, msg, err.Error()))
-			RequireConnTickReset(model.AppEnvironment, market)
+			SetRequireReset(market)
 		}
 	}
 	return err

@@ -1,6 +1,7 @@
 package util
 
 import (
+	"fmt"
 	"github.com/gotoeasy/glang/cmn"
 	"log"
 	"os"
@@ -70,10 +71,10 @@ func LogChanHandler(apiUrl, serverName string) {
 			localCount++
 			localLogger.Println(glcData.Text)
 		} else {
-			if len(logChan) > 9000 {
+			if float64(len(logChan))/float64(cap(logChan)) > 0.9 {
 				continue
-			} else if len(logChan) == 9000 {
-				cmn.Error(cmn.GlcData{Text: `log chan 9000`, LogLevel: `error`})
+			} else if len(logChan) == cap(logChan)/2 {
+				cmn.Error(cmn.GlcData{Text: fmt.Sprintf(`log chan %d`, cap(logChan)/2), LogLevel: `error`})
 			}
 			switch glcData.LogLevel {
 			case LogLevelError:

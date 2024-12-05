@@ -69,7 +69,7 @@ type spotMarket struct {
 	availableU      float64
 	accountValueInU float64
 	balances        map[string]*model.Balance // symbol/balance
-	collateral      *api.Collateral
+	collateral      *model.Collateral
 }
 
 type CarryStatus struct {

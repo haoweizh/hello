@@ -474,7 +474,7 @@ func GetMarketEquity(index int) (msg string) {
 }
 
 func GetBalances(key, secret, market string) (
-	success bool, balances []*model.Balance, totalInUsd float64, collateral *Collateral) {
+	success bool, balances []*model.Balance, totalInUsd float64, collateral *model.Collateral) {
 	lock, _ := balanceLock.Load(key)
 	if lock == nil {
 		lock = &sync.Mutex{}

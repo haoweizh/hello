@@ -1227,14 +1227,15 @@ var PostOrderCross = func(order *model.Order) {
 					}
 					unknownFail = false
 				}
-				//case model.BinancePerp, model.BinanceSpot:
-				//	if strings.Contains(InsufficientCodeBinance, order.ErrCode) {
-				//		util.Notice(`reset binance trade max with %s account index %d`, order.ErrCode, order.AccountIndex)
-				//		spotMarkets.Delete(account.Key)
-				//		contractMarkets.Delete(account.Key)
-				//		initStatus(account, setting, true)
-				//		unknownFail = false
-				//	}
+			case model.BinancePerp, model.BinanceSpot:
+				if strings.Contains(InsufficientCodeBinance, order.ErrCode) {
+					util.Log(``, util.LogLevelError, ``, ``, fmt.Sprintf(
+						`reset binance trade max with %s account index %d`, order.ErrCode, order.AccountIndex))
+					spotMarkets.Delete(account.Key)
+					contractMarkets.Delete(account.Key)
+					initStatus(account, setting, true)
+					unknownFail = false
+				}
 			}
 			if ok && status != nil {
 				if order.OrderSide == model.OrderSideBuy {

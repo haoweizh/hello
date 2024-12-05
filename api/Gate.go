@@ -500,6 +500,7 @@ func WSOrderServeGate(account *model.Account, marketType string) {
 	if err = conn.WriteMsg([]byte(msg)); err != nil {
 		util.Log(``, util.LogLevelError, ``, util.SystemNetwork, fmt.Sprintf("send account login message err: %s %s %s", model.Gate, marketType, err.Error()))
 	} else {
+		util.Log(``, util.LogLevelInfo, ``, util.SystemNetwork, fmt.Sprintf("log in conn %s %s %s", model.Gate, marketType, msg))
 		util.StoreSyncMap(&model.AppEnvironment.ConnOrder, conn, model.Gate, marketType, account.Key)
 	}
 }
@@ -671,7 +672,7 @@ var subscribeHandler = func(market string, connection *model.WSConn, subscribes 
 	return err
 }
 
-func getBalanceGate(key string, secret string) (success bool, balances []*model.Balance, totalInUsd float64, collateral *Collateral) {
+func getBalanceGate(key string, secret string) (success bool, balances []*model.Balance, totalInUsd float64, collateral *model.Collateral) {
 	client, ctx := getClientGate(key, secret)
 	portfolioAccount, _, portfolioErr := client.UnifiedApi.ListUnifiedAccounts(ctx, nil)
 	if portfolioErr != nil {
@@ -687,7 +688,7 @@ func getBalanceGate(key string, secret string) (success bool, balances []*model.
 	totalInUsd, _ = strconv.ParseFloat(portfolioAccount.UnifiedAccountTotalEquity, 64)
 	collateralAvailable, _ := strconv.ParseFloat(portfolioAccount.TotalAvailableMargin, 64)
 	totalMaintenanceMargin, _ := strconv.ParseFloat(portfolioAccount.TotalMaintenanceMargin, 64)
-	collateral = &Collateral{Available: collateralAvailable, Occupied: totalMaintenanceMargin}
+	collateral = &model.Collateral{Available: collateralAvailable, Occupied: totalMaintenanceMargin}
 	balances = make([]*model.Balance, 0)
 	for coin, item := range portfolioAccount.Balances {
 		balance := &model.Balance{AccountId: key, BalanceTime: util.GetNow(), Market: model.Gate, Coin: coin}

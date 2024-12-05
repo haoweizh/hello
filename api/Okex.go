@@ -90,80 +90,6 @@ func maintainConnsOKEX(accounts []*model.Account) {
 //	}
 //}
 
-func reSubscribe(subscribes []interface{}) {
-	//if len(wrongs) == 0 {
-	//	return
-	//}
-	//wrongArray := getWrongs()
-	//util.Notice(fmt.Sprintf(`>>>>>>>>wrong symbol %v %d`, wrongArray, len(wrongArray)))
-	value, _ := model.AppEnvironment.ConnTick.Load(model.OKEX)
-	if value == nil {
-		return
-	}
-	connections := make([]*model.WSConn, 0)
-	for conn := range value.(map[*model.WSConn]bool) {
-		connections = append(connections, conn)
-	}
-	//if len(wrongArray) > len(connections)*5 {
-	//	requireReset.Store(model.OKEX, true)
-	//	util.Notice(fmt.Sprintf(`require reset all okex channel, wrong symbol %d`, len(wrongArray)))
-	//	return
-	//}
-	subscribeMap := make(map[string]interface{})
-	subscribeMap["op"] = "unsubscribe"
-	subArray := make([]map[string]string, 0)
-	for _, item := range subscribes {
-		dialectSymbol := item.(string)
-		getCoin, marketType, coin := model.GetCoinFromDialect(model.OKEX, dialectSymbol)
-		if !getCoin {
-			continue
-		}
-		symbol := coin + model.UniStandardTail[marketType]
-		success, bidAsk := model.AppEnvironment.GetBidAsk(model.OKEX, symbol)
-		if !success || bidAsk == nil || time.Now().UnixMilli()-int64(bidAsk.Ts) > 60000000 {
-			if bidAsk == nil {
-				util.Log(``, util.LogLevelError, ``, util.SystemAPI, `bid ask nil okex `+symbol)
-			} else {
-				util.Log(``, util.LogLevelError, ``, util.SystemAPI, fmt.Sprintf(`bid ask too late okex %s %d %d`, symbol, time.Now().UnixMilli(), bidAsk.Ts))
-			}
-			SetRequireReset(model.OKEX)
-			return
-		} else if time.Now().UnixMilli()-int64(bidAsk.Ts) > 30000000 {
-			subArray = append(subArray, map[string]string{`channel`: chanelOKEX, `instId`: dialectSymbol})
-		}
-	}
-	util.Log(``, util.LogLevelInfo, ``, util.SystemAPI, fmt.Sprintf(`no need reset %s`, model.OKEX))
-	if len(subArray) == 0 {
-		return
-	}
-	subscribeMap[`args`] = subArray
-	connValue, _ := model.AppEnvironment.ConnTick.Load(model.OKEX)
-	if connValue == nil {
-		return
-	}
-	if err := SendToConnections(model.OKEX, connValue.(map[*model.WSConn]bool), util.JsonEncodeToByte(subscribeMap)); err != nil {
-		util.Log(``, util.LogLevelError, ``, util.SystemAPI, "okex can not unsubscribe "+err.Error())
-	}
-	time.Sleep(time.Second * 3)
-	if len(connections) == 0 {
-		return
-	}
-	for i, item := range subArray {
-		connection := connections[i%len(connections)]
-		if connection == nil {
-			continue
-		}
-		subscribe := make(map[string]interface{})
-		subscribe[`op`] = "subscribe"
-		subscribe[`args`] = []map[string]string{item}
-		if reSubErr := SendToConnection(model.OKEX, connection, util.JsonEncodeToByte(subscribe)); reSubErr != nil {
-			util.Log(``, util.LogLevelError, ``, util.SystemAPI, "okex can not re-subscribe "+reSubErr.Error())
-		} else {
-			util.Log(``, util.LogLevelInfo, ``, util.SystemAPI, fmt.Sprintf(`okex resubscribe %s`, item[`instId`]))
-		}
-	}
-}
-
 // books5首次推5档快照数据，以后定量推送，每100毫秒当5档快照数据有变化推送一次5档数据
 // bbo-tbt 首次推1档快照数据，以后定量推送，每10毫秒当1档快照数据有变化推送一次1档数据
 var subscribeHandlerOKEX = func(market string, connection *model.WSConn, subscribes []interface{}) error {
@@ -313,11 +239,14 @@ func wsLogInOKEX(account *model.Account, conn *model.WSConn) (success bool) {
 	loginArray := []map[string]interface{}{{
 		`apiKey`: account.Key, `passphrase`: model.AppConfig.OKPhase, `timestamp`: timestamp, `sign`: sign}}
 	loginMap[`args`] = loginArray
-	if err := SendToConnection(model.OKEX, conn, util.JsonEncodeToByte(loginMap)); err != nil {
-		util.Log(``, util.LogLevelError, ``, util.SystemAPI, fmt.Sprintf(`fail to login okex ws: %s return %s`, account.Key, err.Error()))
+	msg := util.JsonEncodeToByte(loginMap)
+	if err := SendToConnection(model.OKEX, conn, msg); err != nil {
+		util.Log(``, util.LogLevelError, ``, util.SystemAPI, fmt.Sprintf(
+			`fail to login okex ws: %s return %s`, account.Key, err.Error()))
 	} else {
 		success = true
-		util.Log(``, util.SystemAPI, ``, util.SystemAPI, fmt.Sprintf(`login okex ws: %s`, account.Key))
+		util.Log(``, util.LogLevelInfo, ``, util.SystemNetwork, fmt.Sprintf(
+			"log in conn %s %s", model.OKEX, string(msg)))
 	}
 	return
 }
@@ -1291,7 +1220,7 @@ func parseBalanceOKEX(value map[string]interface{}) (balance *model.Balance) {
 }
 
 // margin: 可用保证金
-func getBalanceOKEX(key, secret string) (success bool, balances []*model.Balance, totalInUsd float64, collateral *Collateral) {
+func getBalanceOKEX(key, secret string) (success bool, balances []*model.Balance, totalInUsd float64, collateral *model.Collateral) {
 	response, _ := sendSignRequestOKEX(key, secret, http.MethodGet, `/api/v5/account/balance`, nil, nil)
 	responseJson, err := util.NewJSON(response)
 	if err != nil || responseJson == nil || responseJson.GetPath(`data`) == nil || responseJson.Get(`code`).MustString() != `0` {
@@ -1307,7 +1236,7 @@ func getBalanceOKEX(key, secret string) (success bool, balances []*model.Balance
 	if data[`totalEq`] != nil {
 		totalInUsd, _ = strconv.ParseFloat(data[`totalEq`].(string), 64)
 	}
-	collateral = &Collateral{}
+	collateral = &model.Collateral{}
 	if data[`adjEq`] != nil {
 		collateral.Available, _ = strconv.ParseFloat(data[`adjEq`].(string), 64) // 可用保证金
 	}

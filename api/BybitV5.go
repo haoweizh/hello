@@ -131,8 +131,11 @@ func WsLogInBybit(account *model.Account, conn *model.WSConn) (success bool) {
 	loginMap[`args`] = loginArray
 	loginBytes := util.JsonEncodeToByte(loginMap)
 	if err := SendToConnection(model.Bybit, conn, loginBytes); err != nil {
-		util.Log(account.Key, util.LogLevelError, ``, util.SystemAPI, fmt.Sprintf(`fail to login bybit trade ws: %s return %s`, account.Key, err.Error()))
+		util.Log(account.Key, util.LogLevelError, ``, util.SystemAPI, fmt.Sprintf(
+			`fail to login bybit trade ws: %s return %s`, account.Key, err.Error()))
 	} else {
+		util.Log(``, util.LogLevelInfo, ``, util.SystemNetwork, fmt.Sprintf(
+			"log in conn %s %s", model.Bybit, string(loginBytes)))
 		success = true
 	}
 	return success
@@ -466,7 +469,7 @@ func GetCoinBalanceBybit(key, secret, accountType string) (balances []*model.Bal
 	return balances
 }
 
-func getBalanceBybit(key string, secret string) (success bool, balances []*model.Balance, totalInUsd float64, collateral *Collateral) {
+func getBalanceBybit(key string, secret string) (success bool, balances []*model.Balance, totalInUsd float64, collateral *model.Collateral) {
 	//marketInfos := model.GetMarketInfos(model.Bybit, model.MarketTypeSpot)
 	//coinsStr := make([]string, 0)
 	//for symbol, value := range marketInfos {
@@ -493,7 +496,7 @@ func getBalanceBybit(key string, secret string) (success bool, balances []*model
 		if account.AccountType == "UNIFIED" {
 			collateralAvailable, _ := strconv.ParseFloat(account.TotalAvailableBalance, 64)
 			totalMaintenanceMargin, _ := strconv.ParseFloat(account.TotalMaintenanceMargin, 64)
-			collateral = &Collateral{Available: collateralAvailable, Occupied: totalMaintenanceMargin}
+			collateral = &model.Collateral{Available: collateralAvailable, Occupied: totalMaintenanceMargin}
 			for _, coinInfo := range account.Coin {
 				balance := &model.Balance{AccountId: key, BalanceTime: util.GetNow(), Market: model.Bybit, Coin: coinInfo.Coin}
 				balance.Borrow, _ = strconv.ParseFloat(coinInfo.BorrowAmount, 64)

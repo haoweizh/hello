@@ -1,4 +1,4 @@
-package api
+package model
 
 type Collateral struct {
 	Available float64 // 可用
