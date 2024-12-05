@@ -1178,7 +1178,11 @@ func handleCross(account *model.Account, order *model.Order) {
 		queryOrder := api.QueryOrderById(account.Key, account.Secret, order.Market, order.Symbol, order.OrderType, order.OrderId)
 		if queryOrder != nil {
 			leftAmt = queryOrder.Amount - queryOrder.DealAmount
-			if leftAmt > marketInfo.SizeMin && leftAmt*order.Price > marketInfo.MoneyMin && queryOrder.Status != model.CarryStatusSuccess {
+			queryDelay := false
+			if (order.Market == model.BitgetSpot || order.Market == model.BitgetPerp) && !canceled {
+				queryDelay = true
+			}
+			if leftAmt > marketInfo.SizeMin && leftAmt*order.Price > marketInfo.MoneyMin && queryOrder.Status != model.CarryStatusSuccess && !queryDelay {
 				compOrder := api.PlaceOrder(account.Key, account.Secret, order.OrderSide, model.OrderTypeMarket, order.Market, order.Symbol,
 					``, model.FunctionComplement, order.Price, order.Price, leftAmt, false, nil)
 				model.AppDB.Save(compOrder)
@@ -1188,6 +1192,9 @@ func handleCross(account *model.Account, order *model.Order) {
 				util.Log(account.Key, util.LogLevelInfo, ``, util.SystemCarry, fmt.Sprintf(`order update fail %s %s %s %f %f %f %v`,
 					order.OrderId, order.Market, order.Symbol, queryOrder.Amount, queryOrder.DealAmount, leftAmt, queryOrder))
 			}
+		} else {
+			util.Log(account.Key, util.LogLevelError, ``, util.SystemCarry, fmt.Sprintf(`order update fail query %s %s %s %s`,
+				order.Market, order.Symbol, order.OrderType, order.OrderId))
 		}
 	} else {
 		util.Log(account.Key, util.LogLevelInfo, ``, util.SystemCarry, fmt.Sprintf(`post handle done %s %s %s %s %f`,
@@ -1288,7 +1295,11 @@ func FormatCrossPair(marketBuy, marketSell, symbolBuy, symbolSell string, amount
 	if marketSell == model.Bybit {
 		minSell = math.Max(5.5/price, minSell)
 	}
-	formattedAmount = amount
+	amountBuy := model.GetAmountInMarket(marketBuy, symbolBuy, amount, price, false)
+	_, amountBuy = model.ParseRealAmount(marketBuy, symbolBuy, amountBuy)
+	amountSell := model.GetAmountInMarket(marketSell, symbolSell, amount, price, false)
+	_, amountSell = model.ParseRealAmount(marketSell, symbolSell, amountSell)
+	formattedAmount = math.Min(amountBuy, amountSell)
 	if formattedAmount < math.Max(minBuy, minSell) {
 		return 0
 	}

@@ -233,8 +233,8 @@ func UpdateOrderDeal(market, orderId, status, msg string, dealAmount float64) {
 		if dealAmount >= preDeal {
 			order.Status = status
 			order.DealAmount = dealAmount
-			util.Log(``, util.LogLevelInfo, ``, util.SystemCarry, fmt.Sprintf(`update deal at %d %s %s %s %f to %f %s`,
-				i, order.Market, order.Symbol, order.OrderSide, preDeal, order.DealAmount, order.Status))
+			util.Log(``, util.LogLevelInfo, ``, util.SystemCarry, fmt.Sprintf(`update deal %s at %d %s %s %s %f to %f %s`,
+				orderId, i, order.Market, order.Symbol, order.OrderSide, preDeal, order.DealAmount, order.Status))
 		}
 	} else {
 		util.Log(``, util.LogLevelError, ``, util.SystemCarry, fmt.Sprintf(`no order stored %s %s %s`, market, orderId, msg))
