@@ -1,8 +1,7 @@
-package model
+package util
 
 import (
 	"github.com/gotoeasy/glang/cmn"
-	"hello/util"
 	"log"
 	"os"
 	"strconv"
@@ -27,14 +26,8 @@ const LogLevelInfo = "info"
 const LogLevelDebug = "debug"
 const SystemOther = `other`
 const SystemAPI = "api"
-const SystemCarry = `carry`
+const SystemCarry = "carry"
 const SystemNetwork = "network"
-
-//const logRoot = "./log/"
-
-func init() {
-	go logChanHandler()
-}
 
 func initLog(path string) (*log.Logger, *os.File, error) {
 	//removeOldFiles()
@@ -50,22 +43,23 @@ func initLog(path string) (*log.Logger, *os.File, error) {
 }
 
 func getPath(name string) string {
-	year, month, date := util.GetNow().Date()
+	year, month, date := GetNow().Date()
 	strDate := strconv.Itoa(year) + month.String() + strconv.Itoa(date)
-	strTime := strconv.Itoa(util.GetNow().Hour()) + "_" + strconv.Itoa(util.GetNow().Minute())
+	strTime := strconv.Itoa(GetNow().Hour()) + "_" + strconv.Itoa(GetNow().Minute())
 	return logRoot + name + strDate + "_" + strTime + ".log"
 }
 
-func logChanHandler() {
+func LogChanHandler(apiUrl, serverName string) {
 	// 这里用手动初始化替代环境变量自动配置方式，更多选项详见GlcOptions字段说明
 	cmn.SetGlcClient(cmn.NewGlcClient(&cmn.GlcOptions{
-		ApiUrl:           AppConfig.Log,
+		ApiUrl:           apiUrl,
 		Enable:           "true",
 		EnableConsoleLog: "false",
 	}))
 	for {
 		glcData := <-logChan
-		if AppConfig.Log == `local` {
+		glcData.ServerName = serverName
+		if apiUrl == `local` {
 			if localCount%10000 == 0 {
 				if localFile != nil {
 					_ = localFile.Close()
@@ -94,13 +88,12 @@ func logChanHandler() {
 }
 
 func Log(accountKey, logLevel, traceId, systemName, content string) {
-	glcData := cmn.GlcData{Text: content, User: accountKey, Date: util.GetNow().String(), LogLevel: logLevel, TraceId: traceId, System: systemName}
-	glcData.ServerName = AppConfig.Port
+	glcData := cmn.GlcData{Text: content, User: accountKey, Date: GetNow().String(), LogLevel: logLevel, TraceId: traceId, System: systemName}
 	logChan <- glcData
 }
 
 func InfoSync(msg string) {
-	logContent := &cmn.GlcData{Text: msg, Date: util.GetNow().String(), System: "infoSync"}
+	logContent := &cmn.GlcData{Text: msg, Date: GetNow().String(), System: "infoSync"}
 	cmn.Info(logContent)
 }
 

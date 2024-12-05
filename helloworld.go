@@ -6,6 +6,7 @@ import (
 	"hello/carry"
 	"hello/controller"
 	"hello/model"
+	"hello/util"
 	//_ "net/http/pprof"
 )
 
@@ -20,7 +21,7 @@ func main() {
 	var err error
 	model.AppDB, err = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
 	if err != nil {
-		model.Log(``, model.LogLevelError, ``, model.SystemOther, err.Error())
+		util.Log(``, util.LogLevelError, ``, util.SystemOther, err.Error())
 		return
 	}
 	//model.AppRedis = redis.NewClient(&redis.Options{
@@ -30,6 +31,7 @@ func main() {
 	//})
 	go controller.ParameterServe()
 	go model.AppEnvironment.HandleWSResp()
+	go util.LogChanHandler(model.AppConfig.Log, model.AppConfig.Port)
 	carry.Maintain()
 	select {}
 }

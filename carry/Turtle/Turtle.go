@@ -28,7 +28,7 @@ var ProcessTurtle = func(setting *model.Setting, tick *model.BidAsk) {
 		return
 	}
 	if setting.Chance != 0 && setting.PriceX == 0 {
-		model.Log(``, model.LogLevelError, ``, model.SystemCarry, fmt.Sprintf(`no last priceX %s %s %d %e`,
+		util.Log(``, util.LogLevelError, ``, util.SystemCarry, fmt.Sprintf(`no last priceX %s %s %d %e`,
 			setting.Market, setting.Symbol, setting.Chance, setting.PriceX))
 		return
 	}
@@ -37,7 +37,7 @@ var ProcessTurtle = func(setting *model.Setting, tick *model.BidAsk) {
 	data, _ = api.GetTurtleData(account, setting, setting.Chance == 0 && setting.SymbolRelated == model.SettingTurtleRemoved)
 	if data == nil || setting == nil || model.AppConfig.Env == `test` || time.Now().After(data.Expire) {
 		if time.Now().Minute() == 0 && time.Now().Second() == 0 {
-			model.Log(``, model.LogLevelError, ``, model.SystemCarry, fmt.Sprintf(`fail to get turtle %s %s`, setting.Market, setting.Symbol))
+			util.Log(``, util.LogLevelError, ``, util.SystemCarry, fmt.Sprintf(`fail to get turtle %s %s`, setting.Market, setting.Symbol))
 		}
 		return
 	}
@@ -81,7 +81,7 @@ var ProcessTurtle = func(setting *model.Setting, tick *model.BidAsk) {
 			model.AppDB.Model(setting).Where("market= ? and Symbol= ? and function= ?",
 				setting.Market, setting.Symbol, setting.Function).Updates(map[string]interface{}{
 				`price_x`: setting.PriceX, `chance`: setting.Chance, `grid_amount`: setting.GridAmount})
-			model.Log(``, model.LogLevelInfo, ``, model.SystemCarry, fmt.Sprintf(
+			util.Log(``, util.LogLevelInfo, ``, util.SystemCarry, fmt.Sprintf(
 				`破%d日高点 %s %s chance:%d Amount:%e chanceInAll:%e short-long:%e %e px:%e N:%e`,
 				data.DaysFar, setting.Market, setting.Symbol, setting.Chance, setting.GridAmount, chanceInAll,
 				priceShort, priceLong, setting.PriceX, data.N))
@@ -93,7 +93,7 @@ var ProcessTurtle = func(setting *model.Setting, tick *model.BidAsk) {
 			model.AppDB.Model(setting).Where("market= ? and Symbol= ? and function= ?",
 				setting.Market, setting.Symbol, setting.Function).Updates(map[string]interface{}{
 				`price_x`: setting.PriceX, `chance`: setting.Chance, `grid_amount`: setting.GridAmount})
-			model.Log(``, model.LogLevelInfo, ``, model.SystemCarry, fmt.Sprintf(
+			util.Log(``, util.LogLevelInfo, ``, util.SystemCarry, fmt.Sprintf(
 				`破%d日低点 %s %s chance:%d Amount:%e chanceInAll:%d short-long:%e %e px:%e N:%e`,
 				data.DaysNear, setting.Market, setting.Symbol, setting.Chance, setting.GridAmount, int(chanceInAll),
 				priceShort, priceLong, setting.PriceX, data.N))
@@ -114,7 +114,7 @@ var ProcessTurtle = func(setting *model.Setting, tick *model.BidAsk) {
 			model.AppDB.Model(setting).Where("market= ? and Symbol= ? and function= ?",
 				setting.Market, setting.Symbol, setting.Function).Updates(map[string]interface{}{
 				`price_x`: setting.PriceX, `chance`: setting.Chance, `grid_amount`: setting.GridAmount})
-			model.Log(``, model.LogLevelInfo, ``, model.SystemCarry, fmt.Sprintf(
+			util.Log(``, util.LogLevelInfo, ``, util.SystemCarry, fmt.Sprintf(
 				`加多 %s %s chance:%d Amount:%e chanceInAll:%e short-long:%e %e px:%e N:%e`,
 				setting.Market, setting.Symbol, setting.Chance, setting.GridAmount, chanceInAll, priceShort, priceLong,
 				setting.PriceX, data.N))
@@ -131,7 +131,7 @@ var ProcessTurtle = func(setting *model.Setting, tick *model.BidAsk) {
 			model.AppDB.Model(setting).Where("market= ? and Symbol= ? and function= ?",
 				setting.Market, setting.Symbol, setting.Function).Updates(map[string]interface{}{
 				`price_x`: setting.PriceX, `chance`: setting.Chance, `grid_amount`: setting.GridAmount})
-			model.Log(``, model.LogLevelInfo, ``, model.SystemCarry, fmt.Sprintf(
+			util.Log(``, util.LogLevelInfo, ``, util.SystemCarry, fmt.Sprintf(
 				`liquidate long %s %s chance:%d Amount:%e chanceInAll:%d short-long:%e %e px:%e N:%e`,
 				setting.Market, setting.Symbol, setting.Chance, setting.GridAmount, int(chanceInAll), priceShort, priceLong,
 				setting.PriceX, data.N))
@@ -156,7 +156,7 @@ var ProcessTurtle = func(setting *model.Setting, tick *model.BidAsk) {
 			model.AppDB.Model(setting).Where("market= ? and Symbol= ? and function= ?",
 				setting.Market, setting.Symbol, setting.Function).Updates(map[string]interface{}{
 				`price_x`: setting.PriceX, `chance`: setting.Chance, `grid_amount`: setting.GridAmount})
-			model.Log(``, model.LogLevelInfo, ``, model.SystemCarry, fmt.Sprintf(
+			util.Log(``, util.LogLevelInfo, ``, util.SystemCarry, fmt.Sprintf(
 				`加空 %s %s chance:%d Amount:%e chanceInAll:%d short-long:%e %e px:%e N:%e`,
 				setting.Market, setting.Symbol, setting.Chance, setting.GridAmount, int(chanceInAll), priceShort, priceLong,
 				setting.PriceX, data.N))
@@ -173,7 +173,7 @@ var ProcessTurtle = func(setting *model.Setting, tick *model.BidAsk) {
 			model.AppDB.Model(setting).Where("market= ? and Symbol= ? and function= ?",
 				setting.Market, setting.Symbol, setting.Function).Updates(map[string]interface{}{
 				`price_x`: setting.PriceX, `chance`: setting.Chance, `grid_amount`: setting.GridAmount})
-			model.Log(``, model.LogLevelInfo, ``, model.SystemCarry, fmt.Sprintf(
+			util.Log(``, util.LogLevelInfo, ``, util.SystemCarry, fmt.Sprintf(
 				`liquidate short result: %s %s chance:%d Amount:%e chanceInAll:%d short-long:%e %e px:%e N:%e`,
 				setting.Market, setting.Symbol, int(setting.Chance), setting.GridAmount, int(chanceInAll), priceShort, priceLong,
 				setting.PriceX, data.N))
@@ -194,7 +194,7 @@ func handleTurtleBreak(key, secret string, setting *model.Setting, turtleData *m
 	}
 	if orderQuery != nil && len(orderQuery) > 0 {
 		time.Sleep(time.Second * 3)
-		model.Log(``, model.LogLevelInfo, ``, model.SystemCarry, fmt.Sprintf(
+		util.Log(``, util.LogLevelInfo, ``, util.SystemCarry, fmt.Sprintf(
 			`query turtle break %s %s %s %d`, setting.Market, setting.Symbol, orderSide, len(orderQuery)))
 		turtleTriggerDelta := api.GetTurtleTriggerDelta(setting.Market)
 		setting.PriceX = orderQuery[0].Price / (1 + turtleTriggerDelta)
@@ -217,7 +217,7 @@ func handleTurtleBreak(key, secret string, setting *model.Setting, turtleData *m
 				}
 			}
 		}
-		model.Log(``, model.LogLevelInfo, ``, model.SystemCarry, fmt.Sprintf(
+		util.Log(``, util.LogLevelInfo, ``, util.SystemCarry, fmt.Sprintf(
 			`clear %s %s opp-%s %v`, setting.Market, setting.Symbol, orderSide, orderCancel))
 	}
 }
@@ -232,12 +232,12 @@ func placeTurtleOrders(key, secret string, turtleData *model.TurtleData, setting
 		amount := turtleData.Amount
 		if setting.Chance < 0 {
 			amount = setting.GridAmount
-			model.Log(``, model.LogLevelInfo, ``, model.SystemCarry, fmt.Sprintf(
+			util.Log(``, util.LogLevelInfo, ``, util.SystemCarry, fmt.Sprintf(
 				`平空 %s %s chance:%d Amount:%e chanceInAll:%d short-long:%e %e px:%e N:%e`,
 				setting.Market, setting.Symbol, setting.Chance, amount, int(chanceInAll), priceShort,
 				priceLong, setting.PriceX, turtleData.N))
 		}
-		model.Log(``, model.LogLevelInfo, ``, model.SystemCarry, fmt.Sprintf(
+		util.Log(``, util.LogLevelInfo, ``, util.SystemCarry, fmt.Sprintf(
 			`%s %s place多单 at %e chance:%d Amount:%e priceX:%e chanceInAll-limit:%d %d
 			orderSide:%s h%d:%e h%d:%e l%d:%e l%d:%e coin limit:%d`,
 			setting.Market, setting.Symbol, priceLong, setting.Chance, amount, setting.PriceX, int(chanceInAll), int(setting.AmountLimit),
@@ -269,11 +269,11 @@ func placeTurtleOrders(key, secret string, turtleData *model.TurtleData, setting
 		amount := turtleData.Amount
 		if setting.Chance > 0 {
 			amount = setting.GridAmount
-			model.Log(``, model.LogLevelInfo, ``, model.SystemCarry, fmt.Sprintf(
+			util.Log(``, util.LogLevelInfo, ``, util.SystemCarry, fmt.Sprintf(
 				`平多 %s %s chance:%d Amount:%e currentNum:%d short-long:%e %e px:%e N:%e`,
 				setting.Market, setting.Symbol, setting.Chance, amount, int(chanceInAll), priceShort, priceLong, setting.PriceX, turtleData.N))
 		}
-		model.Log(``, model.LogLevelInfo, ``, model.SystemCarry, fmt.Sprintf(
+		util.Log(``, util.LogLevelInfo, ``, util.SystemCarry, fmt.Sprintf(
 			`%s %s place空单 at %e chance:%d Amount:%e priceX:%e currentNum-limit:%d %d orderSide:%s h%d:%e h%d:%e l%d:%e l%d:%e coin limit:%d`,
 			setting.Market, setting.Symbol, priceShort, setting.Chance, amount, setting.PriceX, int(chanceInAll), int(setting.AmountLimit),
 			orderSide, turtleData.DaysFar, turtleData.HighFar, turtleData.DaysNear, turtleData.HighNear,

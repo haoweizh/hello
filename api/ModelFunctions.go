@@ -84,7 +84,7 @@ func PrepareSettings() {
 	appSettings = []model.Setting{}
 	marketMap := make(map[string]bool)
 	model.AppDB.Where(`valid = ?`, true).Find(&appSettings)
-	model.Log(``, model.LogLevelInfo, ``, model.SystemCarry, fmt.Sprintf(`start to load settings %d`, len(appSettings)))
+	util.Log(``, util.LogLevelInfo, ``, util.SystemCarry, fmt.Sprintf(`start to load settings %d`, len(appSettings)))
 	for i := 0; i < len(appSettings); i++ {
 		setting := &appSettings[i]
 		value, ok := util.LoadSyncMap(symbolSettings, setting.Function, setting.Market)
@@ -142,7 +142,7 @@ func PrepareSettings() {
 			functionMarketSettings = &sync.Map{}
 		}
 		if setting.Function != model.FunctionCross {
-			model.Log(``, model.LogLevelInfo, ``, model.SystemCarry, fmt.Sprintf(`load setting %s %s %s %s %d %d`,
+			util.Log(``, util.LogLevelInfo, ``, util.SystemCarry, fmt.Sprintf(`load setting %s %s %s %s %d %d`,
 				setting.Function, setting.Market, setting.Symbol, setting.SymbolRelated, setting.Far, setting.Near))
 		}
 		functionMarketSettings.Store(setting.Symbol, setting)
@@ -184,7 +184,7 @@ func handleCombineSettings(mumSetting *model.Setting, topMarketInfos map[string]
 			AmountLimit: mumSetting.AmountLimit, CloseShortMargin: mumSetting.CloseShortMargin, Far: mumSetting.Far,
 			Near: mumSetting.Near, Seconds: mumSetting.Seconds, MarketRelated: mumSetting.MarketRelated, WSType: model.WSTypeTicker}
 		if valueCombine == nil {
-			model.Log(``, model.LogLevelInfo, ``, model.SystemCarry, fmt.Sprintf(`add combine %s %v`, mumSetting.Market, info.Name))
+			util.Log(``, util.LogLevelInfo, ``, util.SystemCarry, fmt.Sprintf(`add combine %s %v`, mumSetting.Market, info.Name))
 			accounts := model.AppConfig.GetAccounts(mumSetting.Market)
 			for _, account := range accounts {
 				if account != nil {
@@ -194,12 +194,12 @@ func handleCombineSettings(mumSetting *model.Setting, topMarketInfos map[string]
 		} else {
 			settingCombine = valueCombine.(*model.Setting)
 			settingCombine.SymbolRelated = ``
-			model.Log(``, model.LogLevelInfo, ``, model.SystemCarry, fmt.Sprintf(`add back combine %s %s of tops %d`, mumSetting.Market, info.Name, len(topMarketInfos)))
+			util.Log(``, util.LogLevelInfo, ``, util.SystemCarry, fmt.Sprintf(`add back combine %s %s of tops %d`, mumSetting.Market, info.Name, len(topMarketInfos)))
 		}
 		if valueNormal != nil {
 			settingNormal = valueNormal.(*model.Setting)
 			settingNormal.SymbolRelated = ``
-			model.Log(``, model.LogLevelInfo, ``, model.SystemCarry, fmt.Sprintf(`add back normal %s %s of tops %d`, mumSetting.Market, info.Name, len(topMarketInfos)))
+			util.Log(``, util.LogLevelInfo, ``, util.SystemCarry, fmt.Sprintf(`add back normal %s %s of tops %d`, mumSetting.Market, info.Name, len(topMarketInfos)))
 		}
 		combineMap.Store(info.Name, settingCombine)
 		normalMap.Store(info.Name, settingNormal)
@@ -226,7 +226,7 @@ func handleCombineSettings(mumSetting *model.Setting, topMarketInfos map[string]
 				setting.(*model.Setting).SymbolRelated = model.SettingTurtleRemoved
 			}
 			model.AppDB.Save(setting)
-			model.Log(``, model.LogLevelInfo, ``, model.SystemCarry, fmt.Sprintf(
+			util.Log(``, util.LogLevelInfo, ``, util.SystemCarry, fmt.Sprintf(
 				`remove setting combine %s %s`, setting.(*model.Setting).Market, setting.(*model.Setting).Symbol))
 		}
 		return true
@@ -251,7 +251,7 @@ func handleCombineSettings(mumSetting *model.Setting, topMarketInfos map[string]
 				setting.(*model.Setting).SymbolRelated = model.SettingTurtleRemoved
 			}
 			model.AppDB.Save(setting)
-			model.Log(``, model.LogLevelInfo, ``, model.SystemCarry, fmt.Sprintf(
+			util.Log(``, util.LogLevelInfo, ``, util.SystemCarry, fmt.Sprintf(
 				`remove setting turtle %s %s`, setting.(*model.Setting).Market, setting.(*model.Setting).Symbol))
 		}
 		return true
@@ -271,7 +271,7 @@ func handleSingleSettings(mumSetting *model.Setting, topMarketInfos map[string]*
 			AmountLimit: mumSetting.AmountLimit, Far: mumSetting.Far, Near: mumSetting.Near, Seconds: mumSetting.Seconds,
 			FarCombine: mumSetting.FarCombine, NearCombine: mumSetting.NearCombine, SecondsCombine: mumSetting.SecondsCombine}
 		if value == nil {
-			model.Log(``, model.LogLevelInfo, ``, model.SystemCarry, fmt.Sprintf(`add settingNew %v`, settingNew.Symbol))
+			util.Log(``, util.LogLevelInfo, ``, util.SystemCarry, fmt.Sprintf(`add settingNew %v`, settingNew.Symbol))
 			accounts := model.AppConfig.GetAccounts(mumSetting.Market)
 			for _, account := range accounts {
 				if account != nil {
@@ -281,7 +281,7 @@ func handleSingleSettings(mumSetting *model.Setting, topMarketInfos map[string]*
 		} else {
 			settingNew = value.(*model.Setting)
 			settingNew.SymbolRelated = ``
-			model.Log(``, model.LogLevelInfo, ``, model.SystemCarry, fmt.Sprintf(`add settingNew back %s`, info.Name))
+			util.Log(``, util.LogLevelInfo, ``, util.SystemCarry, fmt.Sprintf(`add settingNew back %s`, info.Name))
 		}
 		settingMap.Store(info.Name, settingNew)
 		model.AppDB.Save(settingNew)
@@ -295,7 +295,7 @@ func handleSingleSettings(mumSetting *model.Setting, topMarketInfos map[string]*
 			//}
 			setting.(*model.Setting).SymbolRelated = model.SettingTurtleRemoved
 			model.AppDB.Save(setting)
-			model.Log(``, model.LogLevelInfo, ``, model.SystemCarry, fmt.Sprintf(`remove setting%s`, setting.(*model.Setting).Symbol))
+			util.Log(``, util.LogLevelInfo, ``, util.SystemCarry, fmt.Sprintf(`remove setting%s`, setting.(*model.Setting).Symbol))
 		}
 		return true
 	})
@@ -316,7 +316,7 @@ func getSortedInfos(market string, num int) (marketInfoArray model.MarketInfoArr
 	sort.Sort(sort.Reverse(marketInfoArray))
 	for i := 0; i < num && i < len(marketInfoArray); i++ {
 		topInfos[marketInfoArray[i].Name] = marketInfoArray[i]
-		model.Log(``, model.LogLevelInfo, ``, model.SystemCarry, fmt.Sprintf(`get top market info to array %s %s trade amount %fu`,
+		util.Log(``, util.LogLevelInfo, ``, util.SystemCarry, fmt.Sprintf(`get top market info to array %s %s trade amount %fu`,
 			market, marketInfoArray[i].Name, marketInfoArray[i].TradeAmount))
 	}
 	return marketInfoArray, topInfos
@@ -351,16 +351,16 @@ func getDynamicMarketInfos(mumSetting *model.Setting, accounts []*model.Account,
 					if turtleData != nil {
 						topMarketInfos[marketInfoArray[i].Name] = marketInfoArray[i]
 						turtleDataArray = append(turtleDataArray, turtleData)
-						model.Log(``, model.LogLevelInfo, ``, model.SystemCarry, fmt.Sprintf(
+						util.Log(``, util.LogLevelInfo, ``, util.SystemCarry, fmt.Sprintf(
 							`get top turtle done %d of %d %s %s %d n:%f nVolume:%f`,
 							i, lenInfo, mumSetting.Market, marketInfoArray[i].Name, mumSetting.Seconds, turtleData.N, turtleData.NVolume))
 						break
 					} else if dataValid {
-						model.Log(``, model.LogLevelInfo, ``, model.SystemCarry, fmt.Sprintf(
+						util.Log(``, util.LogLevelInfo, ``, util.SystemCarry, fmt.Sprintf(
 							`get top turtle data fail for new coin reason`))
 						break
 					} else {
-						model.Log(``, model.LogLevelInfo, ``, model.SystemCarry, fmt.Sprintf(
+						util.Log(``, util.LogLevelInfo, ``, util.SystemCarry, fmt.Sprintf(
 							`get top turtle data fail %s %s`, mumSetting.Market, marketInfoArray[i].Name))
 						time.Sleep(time.Second)
 					}
@@ -372,10 +372,10 @@ func getDynamicMarketInfos(mumSetting *model.Setting, accounts []*model.Account,
 	for i := 0; i < turtleDataArray.Len(); i++ {
 		if i < turtleDataArray.Len()-lenData {
 			delete(topMarketInfos, turtleDataArray[i].Symbol)
-			model.Log(``, model.LogLevelInfo, ``, model.SystemCarry, fmt.Sprintf(`remove not topped last %s %s %d of %d NVolume %f left %d`,
+			util.Log(``, util.LogLevelInfo, ``, util.SystemCarry, fmt.Sprintf(`remove not topped last %s %s %d of %d NVolume %f left %d`,
 				mumSetting.Market, turtleDataArray[i].Symbol, i, lenData, turtleDataArray[i].NVolume, len(topMarketInfos)))
 		} else {
-			model.Log(``, model.LogLevelInfo, ``, model.SystemCarry, fmt.Sprintf(`keep topped %s %s last %d of %d NVolume %f left %d`,
+			util.Log(``, util.LogLevelInfo, ``, util.SystemCarry, fmt.Sprintf(`keep topped %s %s last %d of %d NVolume %f left %d`,
 				mumSetting.Market, turtleDataArray[i].Symbol, i, lenData, turtleDataArray[i].NVolume, len(topMarketInfos)))
 		}
 	}
@@ -401,7 +401,7 @@ func handleMarketDynamic(market string) (handled bool) {
 		handleSingleSettings(settingDynamicTurtle, topMarketInfos, model.FunctionTurtle)
 	}
 	DynamicHandleTime.Store(market, time.Now())
-	model.Log(``, model.LogLevelInfo, ``, model.SystemCarry, fmt.Sprintf(`handle Dynamic settings %s`, market))
+	util.Log(``, util.LogLevelInfo, ``, util.SystemCarry, fmt.Sprintf(`handle Dynamic settings %s`, market))
 	return true
 }
 
@@ -433,7 +433,7 @@ func InitApp(refreshDynamic bool) bool {
 		}
 		MaintainConns(market)
 	}
-	model.Log(``, model.LogLevelInfo, ``, model.SystemCarry, `finish load settings`)
+	util.Log(``, util.LogLevelInfo, ``, util.SystemCarry, `finish load settings`)
 	settingLoading = false
 	return true
 }
@@ -442,7 +442,7 @@ func initMarketMode(account *model.Account, market string) {
 	switch market {
 	case model.OKEX:
 		accountMode := getAccountConfigOKEX(account.Key, account.Secret)
-		model.Log(``, model.LogLevelInfo, ``, model.SystemCarry, `okex config and set: `+accountMode)
+		util.Log(``, util.LogLevelInfo, ``, util.SystemCarry, `okex config and set: `+accountMode)
 		if accountMode != `net_mode` {
 			setAccountModeOKEX(account.Key, account.Secret)
 		}
@@ -482,7 +482,7 @@ func GetMarketSymbols(market string) map[string]bool {
 		}
 	}
 	if appSettings == nil {
-		model.Log(``, model.LogLevelInfo, ``, model.SystemCarry, fmt.Sprintf(`load setting GetMarketSymbols %s`, market))
+		util.Log(``, util.LogLevelInfo, ``, util.SystemCarry, fmt.Sprintf(`load setting GetMarketSymbols %s`, market))
 		return nil
 	}
 	symbols := make(map[string]bool)
@@ -518,7 +518,7 @@ func GetMarketSymbols(market string) map[string]bool {
 
 func GetCoinSettings(function string) *sync.Map {
 	if appSettings == nil || coinSettings == nil {
-		model.Log(``, model.LogLevelInfo, ``, model.SystemCarry, fmt.Sprintf(`load setting GetCoinSettings %s`, function))
+		util.Log(``, util.LogLevelInfo, ``, util.SystemCarry, fmt.Sprintf(`load setting GetCoinSettings %s`, function))
 		return nil
 	}
 	value, ok := coinSettings.Load(function)
@@ -546,7 +546,7 @@ func GetCrossLen() int {
 		if crossLen == 0 {
 			crossLen = len(accounts)
 		} else if len(accounts) != crossLen {
-			model.Log(``, model.LogLevelInfo, ``, model.SystemCarry, fmt.Sprintf(`wrong cross config %s accounts:%d`, market, len(accounts)))
+			util.Log(``, util.LogLevelInfo, ``, util.SystemCarry, fmt.Sprintf(`wrong cross config %s accounts:%d`, market, len(accounts)))
 			os.Exit(2)
 		}
 	}

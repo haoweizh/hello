@@ -278,7 +278,7 @@ func Test_DealGridSimulate(t *testing.T) {
 					fmt.Println(fmt.Sprintf(`cut %s tail num %d`, symbol, delNum))
 				}
 			} else {
-				model.Log(``, model.LogLevelError, ``, model.SystemCarry, fmt.Sprintf(`can not get orders from %s %s grid 0`, model.BinancePerp, symbol))
+				util.Log(``, util.LogLevelError, ``, util.SystemCarry, fmt.Sprintf(`can not get orders from %s %s grid 0`, model.BinancePerp, symbol))
 			}
 			rows, _ := model.AppDB.Model(model.Order{}).Select(`symbol,order_side,sum(orders.deal_price*amount)/sum(amount),sum(amount)`).
 				Where(`function=? and symbol=?`, funcName, symbol).Group(`function,symbol,order_side`).Rows()
@@ -299,7 +299,7 @@ func Test_DealGridSimulate(t *testing.T) {
 	for symbol, funcMap := range result {
 		for _, funcName := range funcNames {
 			msg := fmt.Sprintf(`,%s,%s,%s,%s`, symbol, funcName, funcMap[funcName][`buy`], funcMap[funcName][`sell`])
-			model.InfoSync(msg)
+			util.InfoSync(msg)
 		}
 	}
 }
@@ -487,7 +487,7 @@ func downList(workId, pageId int) (fileNum int) {
 			fileValue := file.(map[string]interface{})[`content`]
 			if fileValue != nil {
 				if strings.Contains(strings.ToLower(fileValue.(string)), `review`) {
-					model.Log(``, ``, ``, ``, fmt.Sprintf(`%s`, fileValue))
+					util.Log(``, ``, ``, ``, fmt.Sprintf(`%s`, fileValue))
 					fmt.Println(fileValue.(string))
 					fileNum++
 				}
@@ -637,7 +637,7 @@ func Test_LimitReport(t *testing.T) {
 	}
 	for symbol := range buyAmount {
 		if buyU[symbol] > 0 && sellAmount[symbol] > 0 && sellU[symbol] > 0 {
-			model.InfoSync(fmt.Sprintf(`,%s,%s,%f,%f,%f,%f`, market, symbol, buyAmount[symbol], buyU[symbol], sellAmount[symbol], sellU[symbol]))
+			util.InfoSync(fmt.Sprintf(`,%s,%s,%f,%f,%f,%f`, market, symbol, buyAmount[symbol], buyU[symbol], sellAmount[symbol], sellU[symbol]))
 		}
 	}
 }

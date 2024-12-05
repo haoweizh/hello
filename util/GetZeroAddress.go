@@ -4,7 +4,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"github.com/ethereum/go-ethereum/crypto"
-	"hello/model"
 	"regexp"
 	"sync"
 	"sync/atomic"
@@ -92,7 +91,7 @@ func getZeroAddr(patterns []*regexp.Regexp, nonce uint64) {
 				}
 			}
 			privateKey := hex.EncodeToString(key.D.Bytes())
-			model.Log(``, model.LogLevelInfo, ``, model.SystemOther, fmt.Sprintf("Contract:\t%s\nAddress:\t%s\nPrivateKey:\t%s\n\n",
+			Log(``, LogLevelInfo, ``, SystemOther, fmt.Sprintf("Contract:\t%s\nAddress:\t%s\nPrivateKey:\t%s\n\n",
 				contract, address.Hex(), privateKey))
 		}
 	}

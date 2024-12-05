@@ -106,7 +106,7 @@ func GetFromStandard(market, standardSymbol string) (success bool, marketType, c
 			return true, mType, coin, coin + DialectTail[mType][market]
 		}
 	}
-	Log(``, LogLevelError, ``, SystemCarry,
+	util.Log(``, util.LogLevelError, ``, util.SystemCarry,
 		fmt.Sprintf(`fail to parse standard symbol %s %s`, market, standardSymbol))
 	return false, ``, ``, ``
 }
@@ -220,7 +220,7 @@ func NewConfig() {
 	AppConfig = &Config{KucoinSpot: true}
 	err := configor.Load(AppConfig, "./config.yml")
 	if err != nil {
-		Log(``, LogLevelError, ``, SystemOther, err.Error())
+		util.Log(``, util.LogLevelError, ``, util.SystemOther, err.Error())
 		return
 	}
 }

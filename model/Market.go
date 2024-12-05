@@ -71,7 +71,7 @@ func (environment *Environment) HandleWSResp() {
 	for {
 		wsResp := <-environment.WSRespChan
 		value, _ := environment.WSOrderMap.Load(wsResp.RequestId)
-		Log(``, LogLevelInfo, wsResp.OrderId, SystemCarry,
+		util.Log(``, util.LogLevelInfo, wsResp.OrderId, util.SystemCarry,
 			fmt.Sprintf(`get ws order req id %s`, wsResp.RequestId))
 		if value != nil {
 			order := value.(*Order)
@@ -84,7 +84,7 @@ func (environment *Environment) HandleWSResp() {
 			}
 			environment.CrossOrders.Store(wsResp.OrderId, order)
 			environment.WSOrderMap.Delete(wsResp.RequestId)
-			Log(``, LogLevelInfo, order.OrderId, SystemCarry,
+			util.Log(``, util.LogLevelInfo, order.OrderId, util.SystemCarry,
 				fmt.Sprintf(`del request id %s store order %s %s type %s id %s`,
 					wsResp.RequestId, order.Market, order.Symbol, order.RefreshType, order.OrderId))
 			if AccountHandlerMap[order.RefreshType] != nil {

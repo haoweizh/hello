@@ -73,19 +73,19 @@ func chanHandler(market string, stopChan chan struct{}, connection *WSConn, msgH
 	defer func() {
 		err := connection.Conn.Close(websocket.StatusNormalClosure, "")
 		if err != nil {
-			Log(``, LogLevelError, ``, SystemNetwork, fmt.Sprintf(`connection closed %s %s`, market, err.Error()))
+			util.Log(``, util.LogLevelError, ``, util.SystemNetwork, fmt.Sprintf(`connection closed %s %s`, market, err.Error()))
 		}
 	}()
 	for {
 		select {
 		case <-stopChan:
-			Log(``, LogLevelInfo, ``, SystemCarry, "get stop struct, return")
+			util.Log(``, util.LogLevelInfo, ``, util.SystemCarry, "get stop struct, return")
 			return
 		default:
 			msgType, message, err := connection.Conn.Read(context.Background())
 			if err != nil {
 				if !strings.Contains(err.Error(), `EOF`) {
-					Log(``, LogLevelError, ``, SystemNetwork, fmt.Sprintf(`%s can not read from websocket: %s`, market, err.Error()))
+					util.Log(``, util.LogLevelError, ``, util.SystemNetwork, fmt.Sprintf(`%s can not read from websocket: %s`, market, err.Error()))
 				}
 				return
 			}
@@ -97,10 +97,10 @@ func chanHandler(market string, stopChan chan struct{}, connection *WSConn, msgH
 }
 
 func WsAccountClient(market, key, url string, accountMsgHandler AccountMsgHandler) (connection *WSConn, err error) {
-	Log(key, LogLevelInfo, ``, SystemCarry, market+` create account channel `+url)
+	util.Log(key, util.LogLevelInfo, ``, util.SystemCarry, market+` create account channel `+url)
 	connection, err = newConnection(url)
 	if err != nil {
-		Log(``, LogLevelError, ``, SystemNetwork, url+"can not create web socket"+err.Error())
+		util.Log(``, util.LogLevelError, ``, util.SystemNetwork, url+"can not create web socket"+err.Error())
 		return nil, err
 	}
 	//connection.SetPingHandler(func(appData string) error {
@@ -111,7 +111,7 @@ func WsAccountClient(market, key, url string, accountMsgHandler AccountMsgHandle
 		defer func() {
 			closeErr := connection.Conn.Close(websocket.StatusNormalClosure, "")
 			if closeErr != nil {
-				Log(key, LogLevelError, ``, SystemNetwork,
+				util.Log(key, util.LogLevelError, ``, util.SystemNetwork,
 					fmt.Sprintf(`%s connection closed %s`, url, closeErr.Error()))
 			}
 		}()
@@ -119,7 +119,7 @@ func WsAccountClient(market, key, url string, accountMsgHandler AccountMsgHandle
 			_, message, readErr := connection.Conn.Read(context.Background())
 			if readErr != nil {
 				util.DelSyncMap(&AppEnvironment.ConnOrder, market, key)
-				Log(key, LogLevelError, ``, SystemNetwork,
+				util.Log(key, util.LogLevelError, ``, util.SystemNetwork,
 					fmt.Sprintf(`%s %s can not read from account ws: %s`, market, url, readErr.Error()))
 				return
 			}
@@ -133,7 +133,7 @@ func WsAccountClient(market, key, url string, accountMsgHandler AccountMsgHandle
 
 func WebSocketClient(market, url string, subscribes []interface{}, subHandler SubscribeHandler,
 	msgHandler MsgHandler, step int) (socketMap map[*WSConn]bool, msgChans []chan struct{}, connectErr error) {
-	Log(``, LogLevelInfo, ``, SystemCarry, market+` create depth channel `+url)
+	util.Log(``, util.LogLevelInfo, ``, util.SystemCarry, market+` create depth channel `+url)
 	socketMap = make(map[*WSConn]bool)
 	msgChans = make([]chan struct{}, 0)
 	var stepSubscribes []interface{}
@@ -146,7 +146,7 @@ func WebSocketClient(market, url string, subscribes []interface{}, subHandler Su
 		connection, err := newConnection(url)
 		if err != nil || connection == nil {
 			if err != nil {
-				Log(``, LogLevelError, ``, SystemNetwork,
+				util.Log(``, util.LogLevelError, ``, util.SystemNetwork,
 					fmt.Sprintf("can not create web socket %s %s %s", market, url, err.Error()))
 			}
 			return nil, nil, err
@@ -160,7 +160,7 @@ func WebSocketClient(market, url string, subscribes []interface{}, subHandler Su
 		socketMap[connection] = true
 		time.Sleep(time.Millisecond * 100)
 	}
-	Log(``, LogLevelInfo, ``, SystemCarry,
+	util.Log(``, util.LogLevelInfo, ``, util.SystemCarry,
 		fmt.Sprintf(`ws client add conns %s sockets %d msgChans %d`, market, len(socketMap), len(msgChans)))
 	return
 }

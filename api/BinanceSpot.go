@@ -27,13 +27,13 @@ const wsBinanceSpotApi = `wss://ws-api.binance.com:443/ws-api/v3`
 const wsStepBinance = 100
 
 func GetMarketsBinance(account *model.Account, market string) (marketInfos map[string]*model.MarketInfo) {
-	model.Log(account.Key, model.LogLevelError, ``, model.SystemAPI, fmt.Sprintf("GetMarketsBinance start to GetMarketsBinance %s", account.Key))
+	util.Log(account.Key, util.LogLevelError, ``, util.SystemAPI, fmt.Sprintf("GetMarketsBinance start to GetMarketsBinance %s", account.Key))
 	marketInfos = make(map[string]*model.MarketInfo)
 	client := binance.NewClient(account.Key, account.Secret)
 	exchangeInfo, err := client.NewExchangeInfoService().Do(context.Background())
 	stats, _ := client.NewListPriceChangeStatsService().Do(context.Background())
 	if err != nil {
-		model.Log(account.Key, model.LogLevelError, ``, model.SystemAPI,
+		util.Log(account.Key, util.LogLevelError, ``, util.SystemAPI,
 			fmt.Sprintf("GetMarketsBinance %s err: %s %v休息五分钟", account.Key, err.Error(), exchangeInfo))
 		time.Sleep(time.Minute * 5)
 		return GetMarketsBinance(account, market)
@@ -90,7 +90,7 @@ func GetMarketsBinance(account *model.Account, market string) (marketInfos map[s
 var KLineMsgHandlerBinanceSpot = func(market string, conn *model.WSConn, event []byte) {
 	result, wsErr := util.NewJSON(event)
 	if wsErr != nil {
-		model.Log(``, model.LogLevelError, ``, model.SystemAPI,
+		util.Log(``, util.LogLevelError, ``, util.SystemAPI,
 			`KLineMsgHandlerBinanceSpot binance fail to unmarshal json `+wsErr.Error())
 		return
 	}
@@ -146,7 +146,7 @@ func WsKLineBinanceSpot(environment *model.Environment, market string, symbols m
 var wsHandlerBinance = func(market string, conn *model.WSConn, event []byte) {
 	result, wsErr := util.NewJSON(event)
 	if wsErr != nil {
-		model.Log(``, model.LogLevelError, ``, model.SystemAPI,
+		util.Log(``, util.LogLevelError, ``, util.SystemAPI,
 			`wsHandlerBinance binance fail to unmarshal json `+wsErr.Error())
 		return
 	}
@@ -197,15 +197,15 @@ var subscribeHandlerBinance = func(market string, connection *model.WSConn, subs
 	subIdBinance.Store(txId, true)
 	for {
 		if err = SendToConnection(market, connection, subParamJson); err != nil {
-			model.Log(``, model.LogLevelError, ``, model.SystemAPI, fmt.Sprintf("subscribeHandlerBinance spot can not subscribe %s %s", subParamJson, err.Error()))
+			util.Log(``, util.LogLevelError, ``, util.SystemAPI, fmt.Sprintf("subscribeHandlerBinance spot can not subscribe %s %s", subParamJson, err.Error()))
 		}
-		model.Log(``, model.LogLevelInfo, ``, model.SystemCarry, fmt.Sprintf(`%s send subscribe: %s `, market, subParamJson))
+		util.Log(``, util.LogLevelInfo, ``, util.SystemCarry, fmt.Sprintf(`%s send subscribe: %s `, market, subParamJson))
 		time.Sleep(time.Millisecond * 300)
 		loadIdBool, _ := subIdBinance.Load(txId)
 		if loadIdBool.(bool) {
 			break
 		} else {
-			model.Log(``, model.LogLevelInfo, ``, model.SystemCarry, fmt.Sprintf(`%s retry subscribe %s `, market))
+			util.Log(``, util.LogLevelInfo, ``, util.SystemCarry, fmt.Sprintf(`%s retry subscribe %s `, market))
 		}
 	}
 	return err
@@ -325,7 +325,7 @@ func placeOrderBinanceSpot(account *model.Account, isWs bool, order *model.Order
 			return
 		}
 		if err := value.(*model.WSConn).WriteMsg([]byte(msg)); err != nil {
-			model.Log(account.Key, model.LogLevelError, ``, model.SystemAPI, fmt.Sprintf(`fail to place binancespot order return: %s`, err.Error()))
+			util.Log(account.Key, util.LogLevelError, ``, util.SystemAPI, fmt.Sprintf(`fail to place binancespot order return: %s`, err.Error()))
 		}
 	} else {
 		client := binance.NewClient(account.Key, account.Secret)
@@ -344,7 +344,7 @@ func placeOrderBinanceSpot(account *model.Account, isWs bool, order *model.Order
 		}
 		orderResponse, err := service.Do(context.Background())
 		if err != nil {
-			model.Log(account.Key, model.LogLevelError, ``, model.SystemAPI, fmt.Sprintf(`placeOrderBinanceSpot err: %s amount %s`, err.Error(), amountStr))
+			util.Log(account.Key, util.LogLevelError, ``, util.SystemAPI, fmt.Sprintf(`placeOrderBinanceSpot err: %s amount %s`, err.Error(), amountStr))
 			order.ErrCode = err.Error()
 			order.OrderId = ``
 		} else {
@@ -455,7 +455,7 @@ func WsOrderServeBinance(account *model.Account, market string) {
 	}
 	conn, err := model.WsAccountClient(market, account.Key, apiUrl, wsActHandlerBinance)
 	if err != nil {
-		model.Log(account.Key, model.LogLevelError, ``, model.SystemAPI, fmt.Sprintf(
+		util.Log(account.Key, util.LogLevelError, ``, util.SystemAPI, fmt.Sprintf(
 			`fail to create account ws %s %s`, market, err.Error()))
 	} else {
 		util.StoreSyncMap(&model.AppEnvironment.ConnOrder, conn, market, account.Key)
@@ -463,7 +463,7 @@ func WsOrderServeBinance(account *model.Account, market string) {
 	_, listenKey := RenewListenKeyBinance(account, market)
 	connUpdate, errUpdate := model.WsAccountClient(market, account.Key, fmt.Sprintf(`%s/ws/%s`, streamUrl, listenKey), wsOrderUpdateBinance)
 	if errUpdate != nil {
-		model.Log(account.Key, model.LogLevelError, ``, model.SystemAPI, fmt.Sprintf(
+		util.Log(account.Key, util.LogLevelError, ``, util.SystemAPI, fmt.Sprintf(
 			`fail to create order update ws %s %s`, market, errUpdate.Error()))
 	} else {
 		util.StoreSyncMap(&model.AppEnvironment.ConnOrderUpdate, connUpdate, market, account.Key)
@@ -502,7 +502,7 @@ func cancelOrdersBinance(key, secret, market, symbol string) bool {
 		_, err = client.NewCancelMarginOrderService().Symbol(dialectSymbol).Do(context.Background())
 	}
 	if err != nil && !strings.Contains(err.Error(), `-2010`) && !strings.Contains(err.Error(), `-2011`) {
-		model.Log(key, model.LogLevelError, ``, model.SystemAPI, "cancelOrdersBinance err: "+err.Error()+" symbol: "+
+		util.Log(key, util.LogLevelError, ``, util.SystemAPI, "cancelOrdersBinance err: "+err.Error()+" symbol: "+
 			symbol+" marketType: "+marketType+" coin: "+coin+" But dialectSymbol: "+dialectSymbol)
 		return false
 	}
@@ -513,12 +513,12 @@ func getBalanceBinanceMargin(key, secret string) (success bool, balances []*mode
 	client := binance.NewClient(key, secret)
 	balanceResp, err := client.NewGetMarginAccountService().Do(context.Background())
 	if err != nil {
-		model.Log(key, model.LogLevelError, ``, model.SystemAPI, fmt.Sprintf(`fail to refresh binance balance `+err.Error()))
+		util.Log(key, util.LogLevelError, ``, util.SystemAPI, fmt.Sprintf(`fail to refresh binance balance `+err.Error()))
 		time.Sleep(time.Minute * 5)
 		return getBalanceBinanceMargin(key, secret)
 	}
 	if !balanceResp.TradeEnabled {
-		model.Log(key, model.LogLevelInfo, ``, model.SystemAPI, fmt.Sprintf(`binance margin balance can not trade`))
+		util.Log(key, util.LogLevelInfo, ``, util.SystemAPI, fmt.Sprintf(`binance margin balance can not trade`))
 		return false, balances
 	}
 	balances = make([]*model.Balance, 0)
@@ -554,12 +554,12 @@ func getBalanceBinanceSpot(key string, secret string) (success bool, balances []
 	client := binance.NewClient(key, secret)
 	balanceResp, err := client.NewGetAccountService().Do(context.Background())
 	if err != nil {
-		model.Log(key, model.LogLevelError, ``, model.SystemAPI, fmt.Sprintf(`fail to refresh binance balance `+err.Error()))
+		util.Log(key, util.LogLevelError, ``, util.SystemAPI, fmt.Sprintf(`fail to refresh binance balance `+err.Error()))
 		time.Sleep(time.Minute * 5)
 		return getBalanceBinanceSpot(key, secret)
 	}
 	if !balanceResp.CanTrade {
-		model.Log(key, model.LogLevelInfo, ``, model.SystemAPI, fmt.Sprintf(`binance balance can not trade`))
+		util.Log(key, util.LogLevelInfo, ``, util.SystemAPI, fmt.Sprintf(`binance balance can not trade`))
 		return false, balances
 	}
 	balances = make([]*model.Balance, 0)
@@ -607,7 +607,7 @@ func queryOpenOrdersBinanceSpot(key, secret, symbol string) (orders []*model.Ord
 		}
 		resArray, err := listOpenOrderService.Do(context.Background())
 		if err != nil {
-			model.Log(key, model.LogLevelError, ``, model.SystemAPI, fmt.Sprintf(
+			util.Log(key, util.LogLevelError, ``, util.SystemAPI, fmt.Sprintf(
 				`queryOpenOrdersBinanceSpot err %s %s %s`, symbol, dialectSymbol, err.Error()))
 		}
 		for _, res := range resArray {
@@ -625,7 +625,7 @@ func queryOrderBinanceSpot(key, secret, symbol string, orderId string) (order *m
 		client := binance.NewClient(key, secret)
 		orderResp, err := client.NewGetOrderService().Symbol(dialectSymbol).OrderID(orderIdInt).Do(context.Background())
 		if err != nil {
-			model.Log(key, model.LogLevelError, ``, model.SystemAPI, fmt.Sprintf("queryOrderBinanceSpot err: "+err.Error()))
+			util.Log(key, util.LogLevelError, ``, util.SystemAPI, fmt.Sprintf("queryOrderBinanceSpot err: "+err.Error()))
 			return
 		}
 		order = parseOrderBinanceSpotSdk(orderResp)
