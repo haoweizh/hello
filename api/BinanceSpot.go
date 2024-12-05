@@ -196,7 +196,7 @@ var subscribeHandlerBinance = func(market string, connection *model.WSConn, subs
 	subParamJson, _ := json.Marshal(subParam)
 	subIdBinance.Store(txId, true)
 	for {
-		if err = model.SendToConnection(market, connection, subParamJson); err != nil {
+		if err = SendToConnection(market, connection, subParamJson); err != nil {
 			util.Log(``, util.LogLevelError, ``, util.SystemAPI, fmt.Sprintf("subscribeHandlerBinance spot can not subscribe %s %s", subParamJson, err.Error()))
 		}
 		util.Log(``, util.LogLevelInfo, ``, util.SystemCarry, fmt.Sprintf(`%s send subscribe: %s `, market, subParamJson))

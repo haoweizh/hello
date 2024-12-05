@@ -42,7 +42,7 @@ func maintainConnsOKEX(accounts []*model.Account) {
 	for {
 		connTick, _ := model.AppEnvironment.ConnTick.Load(model.OKEX)
 		if connTick != nil {
-			if err := model.SendToConnections(model.OKEX, connTick.(map[*model.WSConn]bool), []byte(`ping`)); err != nil {
+			if err := SendToConnections(model.OKEX, connTick.(map[*model.WSConn]bool), []byte(`ping`)); err != nil {
 				util.Log(``, util.LogLevelError, ``, util.SystemAPI, fmt.Sprintf("tick conn maintain error %s %s", model.OKEX, err.Error()))
 			}
 		}
@@ -53,7 +53,7 @@ func maintainConnsOKEX(accounts []*model.Account) {
 			success := true
 			value, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrder, model.OKEX, account.Key)
 			if value != nil {
-				if err := model.SendToConnection(model.OKEX, value.(*model.WSConn), []byte(`ping`)); err != nil {
+				if err := SendToConnection(model.OKEX, value.(*model.WSConn), []byte(`ping`)); err != nil {
 					util.Log(``, util.LogLevelError, ``, util.SystemAPI, "-test ok ws-okex server ping client error "+err.Error())
 					success = false
 				}
@@ -141,7 +141,7 @@ func reSubscribe(subscribes []interface{}) {
 	if connValue == nil {
 		return
 	}
-	if err := model.SendToConnections(model.OKEX, connValue.(map[*model.WSConn]bool), util.JsonEncodeToByte(subscribeMap)); err != nil {
+	if err := SendToConnections(model.OKEX, connValue.(map[*model.WSConn]bool), util.JsonEncodeToByte(subscribeMap)); err != nil {
 		util.Log(``, util.LogLevelError, ``, util.SystemAPI, "okex can not unsubscribe "+err.Error())
 	}
 	time.Sleep(time.Second * 3)
@@ -156,7 +156,7 @@ func reSubscribe(subscribes []interface{}) {
 		subscribe := make(map[string]interface{})
 		subscribe[`op`] = "subscribe"
 		subscribe[`args`] = []map[string]string{item}
-		if reSubErr := model.SendToConnection(model.OKEX, connection, util.JsonEncodeToByte(subscribe)); reSubErr != nil {
+		if reSubErr := SendToConnection(model.OKEX, connection, util.JsonEncodeToByte(subscribe)); reSubErr != nil {
 			util.Log(``, util.LogLevelError, ``, util.SystemAPI, "okex can not re-subscribe "+reSubErr.Error())
 		} else {
 			util.Log(``, util.LogLevelInfo, ``, util.SystemAPI, fmt.Sprintf(`okex resubscribe %s`, item[`instId`]))
@@ -177,7 +177,7 @@ var subscribeHandlerOKEX = func(market string, connection *model.WSConn, subscri
 	}
 	subscribeMap[`args`] = subArray
 	subscribeMessage := util.JsonEncodeToByte(subscribeMap)
-	if err = model.SendToConnection(model.OKEX, connection, subscribeMessage); err != nil {
+	if err = SendToConnection(model.OKEX, connection, subscribeMessage); err != nil {
 		util.Log(``, util.LogLevelError, ``, util.SystemAPI, "okex can not subscribe "+err.Error())
 		return err
 	}
@@ -313,7 +313,7 @@ func wsLogInOKEX(account *model.Account, conn *model.WSConn) (success bool) {
 	loginArray := []map[string]interface{}{{
 		`apiKey`: account.Key, `passphrase`: model.AppConfig.OKPhase, `timestamp`: timestamp, `sign`: sign}}
 	loginMap[`args`] = loginArray
-	if err := model.SendToConnection(model.OKEX, conn, util.JsonEncodeToByte(loginMap)); err != nil {
+	if err := SendToConnection(model.OKEX, conn, util.JsonEncodeToByte(loginMap)); err != nil {
 		util.Log(``, util.LogLevelError, ``, util.SystemAPI, fmt.Sprintf(`fail to login okex ws: %s return %s`, account.Key, err.Error()))
 	} else {
 		success = true
@@ -619,7 +619,7 @@ func PlacePairOKEX(account *model.Account, requestId, symbolBuy, symbolSell, ord
 	}
 	util.Log(``, util.LogLevelInfo, ``, util.SystemAPI, fmt.Sprintf(`place pair %s`, msg))
 	if model.AppConfig.Env != `test` {
-		err := model.SendToConnection(model.OKEX, value.(*model.WSConn), msg)
+		err := SendToConnection(model.OKEX, value.(*model.WSConn), msg)
 		if err != nil {
 			errMsg = fmt.Sprintf(`-test ok ws-fail to send order ws %s return %s`, account.Key, err.Error())
 			util.Log(``, util.LogLevelError, ``, util.SystemAPI, errMsg)
@@ -694,7 +694,7 @@ func placeOrderOKEX(account *model.Account, isWs bool, order *model.Order) {
 			util.Log(account.Key, util.LogLevelError, ``, util.SystemAPI, fmt.Sprintf(`-test ok ws-fail to get private connection %s`, account.Key))
 			order.Status = model.CarryStatusFail
 		} else {
-			if err := model.SendToConnection(model.OKEX, value.(*model.WSConn), wsOrderMsg); err != nil {
+			if err := SendToConnection(model.OKEX, value.(*model.WSConn), wsOrderMsg); err != nil {
 				util.Log(account.Key, util.LogLevelError, ``, util.SystemAPI, fmt.Sprintf(`-test ok ws-fail to send order ws %s %s return %s`, account.Key, order.Symbol, err.Error()))
 				order.Status = model.CarryStatusFail
 			} else {

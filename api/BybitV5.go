@@ -34,7 +34,7 @@ var wsOrdUdtHandlerBybit = func(market, key string, msg []byte) {
 		return
 	}
 	if responseJson.Get(`op`).MustString() == `auth` && responseJson.Get(`success`).MustBool() {
-		err := model.SendToConnection(model.Bybit, value.(*model.WSConn), []byte(`{"op":"subscribe","args": ["order"]}`))
+		err := SendToConnection(model.Bybit, value.(*model.WSConn), []byte(`{"op":"subscribe","args": ["order"]}`))
 		if err != nil {
 			util.DelSyncMap(&model.AppEnvironment.ConnOrderUpdate, market, key)
 		}
@@ -78,7 +78,7 @@ func maintainConnsBybit(accounts []*model.Account) {
 		pingMsg := []byte(fmt.Sprintf(`{ "req_id": "maintain %d","op": "ping"}`, time.Now().UnixMilli()))
 		connTick, _ := model.AppEnvironment.ConnTick.Load(model.Bybit)
 		if connTick != nil {
-			if err := model.SendToConnections(model.Bybit, connTick.(map[*model.WSConn]bool), pingMsg); err != nil {
+			if err := SendToConnections(model.Bybit, connTick.(map[*model.WSConn]bool), pingMsg); err != nil {
 				util.Log(``, util.LogLevelError, ``, util.SystemAPI, fmt.Sprintf("tick conn maintain error %s %s", model.Bybit, err.Error()))
 			}
 		}
@@ -90,7 +90,7 @@ func maintainConnsBybit(accounts []*model.Account) {
 			errMsg := ``
 			connOrder, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrder, model.Bybit, account.Key)
 			if connOrder != nil {
-				if err := model.SendToConnection(model.Bybit, connOrder.(*model.WSConn), pingMsg); err != nil {
+				if err := SendToConnection(model.Bybit, connOrder.(*model.WSConn), pingMsg); err != nil {
 					errMsg += err.Error()
 					success = false
 					util.Log(``, util.LogLevelError, ``, util.SystemAPI, "-ws-bybit trade ws ping client error "+err.Error())
@@ -100,7 +100,7 @@ func maintainConnsBybit(accounts []*model.Account) {
 			}
 			connOrderUpdate, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrderUpdate, model.Bybit, account.Key)
 			if connOrderUpdate != nil {
-				if err := model.SendToConnection(model.Bybit, connOrderUpdate.(*model.WSConn), pingMsg); err != nil {
+				if err := SendToConnection(model.Bybit, connOrderUpdate.(*model.WSConn), pingMsg); err != nil {
 					errMsg += err.Error()
 					success = false
 					util.Log(``, util.LogLevelError, ``, util.SystemAPI, "ws-bybit order update ws ping client error "+err.Error())
@@ -130,7 +130,7 @@ func WsLogInBybit(account *model.Account, conn *model.WSConn) (success bool) {
 	loginArray := []interface{}{account.Key, timestamp, sign}
 	loginMap[`args`] = loginArray
 	loginBytes := util.JsonEncodeToByte(loginMap)
-	if err := model.SendToConnection(model.Bybit, conn, loginBytes); err != nil {
+	if err := SendToConnection(model.Bybit, conn, loginBytes); err != nil {
 		util.Log(account.Key, util.LogLevelError, ``, util.SystemAPI, fmt.Sprintf(`fail to login bybit trade ws: %s return %s`, account.Key, err.Error()))
 	} else {
 		success = true
@@ -437,7 +437,7 @@ var subscribeHandlerBybit = func(market string, connection *model.WSConn, subscr
 	subscribeMap["op"] = "subscribe"
 	subscribeMap["args"] = subscribes
 	subscribeMessage := util.JsonEncodeToByte(subscribeMap)
-	if err = model.SendToConnection(model.Bybit, connection, subscribeMessage); err != nil {
+	if err = SendToConnection(model.Bybit, connection, subscribeMessage); err != nil {
 		util.Log(``, util.LogLevelError, ``, util.SystemAPI, fmt.Sprintf(" bybit can not subscribe %s %s", subscribeMessage, err.Error()))
 	}
 	util.Log(``, util.LogLevelInfo, ``, util.SystemAPI, `bybit subscribed `+string(subscribeMessage))
@@ -758,7 +758,7 @@ func placeOrderBybit(account *model.Account, isWs bool, order *model.Order, orde
 		msgMap := map[string]interface{}{"reqId": order.OrderId, `op`: "order.create", "args": []interface{}{param},
 			"header": map[string]string{"X-BAPI-TIMESTAMP": fmt.Sprintf(`%d`, time.Now().UnixMilli())}}
 		msg := util.JsonEncodeToByte(msgMap)
-		if err := model.SendToConnection(model.Bybit, value.(*model.WSConn), msg); err != nil {
+		if err := SendToConnection(model.Bybit, value.(*model.WSConn), msg); err != nil {
 			util.Log(account.Key, util.LogLevelError, ``, util.SystemAPI, fmt.Sprintf(`fail to place bybit ws order %s %s`, string(msg), err.Error()))
 		}
 	} else {

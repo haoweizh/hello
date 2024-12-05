@@ -7,7 +7,6 @@ import (
 	"github.com/coder/websocket"
 	"hello/util"
 	"strings"
-	"sync"
 	"time"
 )
 
@@ -15,8 +14,6 @@ type OrderHandler func(order *Order)
 type MsgHandler func(market string, conn *WSConn, message []byte)
 type AccountMsgHandler func(market, key string, message []byte)
 type SubscribeHandler func(market string, connection *WSConn, subscribes []interface{}) error
-
-var wsLock sync.Map // market - *sync.Mutex
 
 type WSConn struct {
 	Conn *websocket.Conn
@@ -34,52 +31,6 @@ func (wsConn *WSConn) WriteMsg(msg []byte) (err error) {
 func (wsConn *WSConn) WriteJson(body map[string]interface{}) (err error) {
 	jsonData, _ := json.Marshal(body)
 	return wsConn.WriteMsg(jsonData)
-}
-
-func SendToConnection(market string, connection *WSConn, msg []byte) (err error) {
-	lock, _ := wsLock.Load(market)
-	if lock == nil {
-		lock = &sync.Mutex{}
-		wsLock.Store(market, lock)
-	}
-	defer lock.(*sync.Mutex).Unlock()
-	lock.(*sync.Mutex).Lock()
-	if connection == nil {
-		util.Log(``, util.LogLevelError, ``, util.SystemNetwork, `fail to write to nil connection `+market)
-		return
-	}
-	if err = connection.WriteMsg(msg); err != nil {
-		util.Log(``, util.LogLevelError, ``, util.SystemNetwork, `fail to write to connection `+market+string(msg)+err.Error())
-	}
-	return err
-}
-
-func SendToConnections(market string, connections map[*WSConn]bool, msg []byte) (err error) {
-	lock, _ := wsLock.Load(market)
-	if lock == nil {
-		lock = &sync.Mutex{}
-		wsLock.Store(market, lock)
-	}
-	defer lock.(*sync.Mutex).Unlock()
-	lock.(*sync.Mutex).Lock()
-	for connection := range connections {
-		if connection == nil {
-			continue
-		}
-		err = connection.WriteMsg(msg)
-		if err != nil {
-			util.Log(``, util.LogLevelError, ``, util.SystemNetwork, fmt.Sprintf(`fail to write to all connection %s %s return: %s`, market, msg, err.Error()))
-		}
-		//if msgType == websocket.MessageText {
-		//	if err = connection.WriteMessage(msgType, msg); err != nil {
-		//	}
-		//} else if msgType == websocket.PongMessage || msgType == websocket.PingMessage {
-		//	if err = connection.WriteMessage(msgType, msg); err != nil {
-		//	}
-		//}
-		//time.Sleep(time.Millisecond * 100)
-	}
-	return err
 }
 
 func newConnection(url string) (conn *WSConn, err error) {
@@ -134,7 +85,6 @@ func chanHandler(market string, stopChan chan struct{}, connection *WSConn, msgH
 			msgType, message, err := connection.Conn.Read(context.Background())
 			if err != nil {
 				if !strings.Contains(err.Error(), `EOF`) {
-					//SetRequireReset(market)
 					util.Log(``, util.LogLevelError, ``, util.SystemNetwork, fmt.Sprintf(`%s can not read from websocket: %s`, market, err.Error()))
 				}
 				return
@@ -201,13 +151,6 @@ func WebSocketClient(market, url string, subscribes []interface{}, subHandler Su
 			}
 			return nil, nil, err
 		}
-		//connection.SetPingHandler(func(appData string) error {
-		//	errPing := connection.WriteControl(websocket.PongMessage, []byte(appData), time.Now().Add(time.Second*60))
-		//	if errPing != nil {
-		//		util.Notice(fmt.Sprintf(`fail to handle ping %s %s %s`, market, url, errPing.Error()))
-		//	}
-		//	return errPing
-		//})
 		stopChan := make(chan struct{}, 2)
 		go chanHandler(market, stopChan, connection, msgHandler)
 		if subHandler != nil {

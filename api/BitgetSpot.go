@@ -24,7 +24,7 @@ func maintainConnsBitget(market string, accounts []*model.Account) {
 	for {
 		connTick, _ := model.AppEnvironment.ConnTick.Load(market)
 		if connTick != nil {
-			if err := model.SendToConnections(market, connTick.(map[*model.WSConn]bool), []byte(`ping`)); err != nil {
+			if err := SendToConnections(market, connTick.(map[*model.WSConn]bool), []byte(`ping`)); err != nil {
 				util.Log(``, util.LogLevelError, ``, util.SystemAPI, fmt.Sprintf("tick conn maintain error %s %s", market, err.Error()))
 			}
 		}
@@ -63,7 +63,7 @@ var wsOrderConnHandlerBitget = func(market, key string, event []byte) {
 		instType = `USDT-FUTURES`
 	}
 	if resJson.Get(`event`).MustString() == `login` && resJson.Get(`code`).MustInt() == 0 {
-		err := model.SendToConnection(market, value.(*model.WSConn), []byte(
+		err := SendToConnection(market, value.(*model.WSConn), []byte(
 			fmt.Sprintf(`{"op":"subscribe","args":[{"instType": "%s","channel":"orders","instId":"default"}]}`, instType)))
 		if err != nil {
 			util.DelSyncMap(&model.AppEnvironment.ConnOrderUpdate, market, key)
@@ -233,7 +233,7 @@ var subscribeHandlerBitget = func(market string, connection *model.WSConn, subsc
 	subscribeMap["op"] = "subscribe"
 	subscribeMap["args"] = params
 	subscribeMessage := util.JsonEncodeToByte(subscribeMap)
-	if err = model.SendToConnection(market, connection, subscribeMessage); err != nil {
+	if err = SendToConnection(market, connection, subscribeMessage); err != nil {
 		util.Log(``, util.LogLevelInfo, ``, util.SystemAPI, fmt.Sprintf("%s can not subscribe %s %s", market, subscribeMessage, err.Error()))
 	}
 	util.Log(``, util.LogLevelInfo, ``, util.SystemAPI, `bitget subscribed `+string(subscribeMessage))
