@@ -55,10 +55,11 @@ func LogChanHandler(apiUrl, serverName string) {
 		ApiUrl:           apiUrl,
 		Enable:           "true",
 		EnableConsoleLog: "false",
+		ServerName:       serverName,
 	}))
 	for {
 		glcData := <-logChan
-		glcData.ServerName = serverName
+		//glcData.ServerName = serverName
 		if apiUrl == `local` {
 			if localCount%10000 == 0 {
 				if localFile != nil {
