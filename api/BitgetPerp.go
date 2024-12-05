@@ -362,6 +362,8 @@ func queryOrderBitgetPerp(key, secret, symbol string, orderId string) (order *mo
 		} else if orderDetailResp.Data.State == "partially_filled" {
 			order.Status = model.CarryStatusWorking
 		}
+		util.Log(key, util.LogLevelInfo, ``, util.SystemAPI, fmt.Sprintf(`%s %s %s query result:%s %f %v`,
+			order.Market, order.Symbol, order.OrderId, order.Status, order.DealAmount, orderDetailResp))
 	}
 	return order
 }
