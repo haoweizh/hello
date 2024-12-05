@@ -518,6 +518,12 @@ func getBalanceBybit(key string, secret string) (success bool, balances []*model
 			}
 		}
 	}
+	if collateral == nil {
+		util.Log(key, util.LogLevelError, ``, util.SystemAPI, fmt.Sprintf(
+			"fail to refresh spot balance bybit, resp: %s httpErr: %v, jsonErr: %v", httpResp, httpErr, jsonErr))
+		time.Sleep(time.Minute)
+		return getBalanceBybit(key, secret)
+	}
 	return true, balances, totalInUsd, collateral
 }
 
