@@ -102,7 +102,7 @@ func _(environment *model.Environment, market string, symbols map[string]bool) (
 	socketMap map[*model.WSConn]bool, channels []chan struct{}) {
 	switch market {
 	case model.BinanceSpot:
-		util.Log(``, util.LogLevelInfo, ``, util.SystemCarry, " create KLine ws chan for "+market)
+		util.Log(util.LogLevelInfo, " create KLine ws chan for "+market)
 		socketMap, channels, _ = WsKLineBinanceSpot(environment, market, symbols)
 	}
 	return
@@ -111,7 +111,7 @@ func _(environment *model.Environment, market string, symbols map[string]bool) (
 func CreateWSTick(environment *model.Environment, market string) (
 	socketMap map[*model.WSConn]bool, channels []chan struct{}) {
 	model.ChannelMaintaining.Store(market, true)
-	util.Log(``, util.LogLevelInfo, ``, util.SystemCarry, " create depth chan for "+market)
+	util.Log(util.LogLevelInfo, " create depth chan for "+market)
 	channels = make([]chan struct{}, 1)
 	var err error
 	switch market {
@@ -144,7 +144,7 @@ func CreateWSTick(environment *model.Environment, market string) (
 	environment.ConnTick.Store(market, socketMap)
 	environment.MsgChanTick.Store(market, channels)
 	if err != nil {
-		util.Log(``, util.LogLevelError, ``, util.SystemCarry, market+` can not create depth server `+err.Error())
+		util.Log(util.LogLevelError, market+` can not create depth server `+err.Error())
 	}
 	model.AppEnvironment.WsInitTime.Store(market, util.GetNow())
 	model.ChannelMaintaining.Store(market, false)
@@ -185,11 +185,11 @@ func SendToConnection(market string, connection *model.WSConn, msg []byte) (err 
 	defer lock.(*sync.Mutex).Unlock()
 	lock.(*sync.Mutex).Lock()
 	if connection == nil {
-		util.Log(``, util.LogLevelError, ``, util.SystemNetwork, `fail to write to nil connection `+market)
+		util.Log(util.LogLevelError, `fail to write to nil connection `+market)
 		return
 	}
 	if err = connection.WriteMsg(msg); err != nil {
-		util.Log(``, util.LogLevelError, ``, util.SystemNetwork, `fail to write to connection `+market+string(msg)+err.Error())
+		util.Log(util.LogLevelError, `fail to write to connection `+market+string(msg)+err.Error())
 	}
 	return err
 }
@@ -208,7 +208,7 @@ func SendToConnections(market string, connections map[*model.WSConn]bool, msg []
 		}
 		err = connection.WriteMsg(msg)
 		if err != nil {
-			util.Log(``, util.LogLevelError, ``, util.SystemNetwork, fmt.Sprintf(
+			util.Log(util.LogLevelError, fmt.Sprintf(
 				`fail to write to all connection %s %s return: %s`, market, msg, err.Error()))
 			SetRequireReset(market)
 		}
@@ -233,10 +233,10 @@ func UpdateOrderDeal(market, orderId, status, msg string, dealAmount float64) {
 		if dealAmount >= preDeal {
 			order.Status = status
 			order.DealAmount = dealAmount
-			util.Log(``, util.LogLevelInfo, ``, util.SystemCarry, fmt.Sprintf(`update deal %s at %d %s %s %s %f to %f %s`,
+			util.Log(util.LogLevelInfo, fmt.Sprintf(`update deal %s at %d %s %s %s %f to %f %s`,
 				orderId, i, order.Market, order.Symbol, order.OrderSide, preDeal, order.DealAmount, order.Status))
 		}
 	} else {
-		util.Log(``, util.LogLevelError, ``, util.SystemCarry, fmt.Sprintf(`no order stored %s %s %s`, market, orderId, msg))
+		util.Log(util.LogLevelError, fmt.Sprintf(`no order stored %s %s %s`, market, orderId, msg))
 	}
 }

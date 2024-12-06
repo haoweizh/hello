@@ -55,12 +55,10 @@ func getMarketsBinancePerp(key, secret string) (marketInfos map[string]*model.Ma
 	stats, errTicker := client.NewListPriceChangeStatsService().Do(context.Background())
 	if err != nil || errTicker != nil {
 		if err != nil {
-			util.Log(key, util.LogLevelError, ``, util.SystemOther,
-				fmt.Sprintf("getMarketsBinancePerp err: %s", err.Error()))
+			util.Log(util.LogLevelError, fmt.Sprintf("getMarketsBinancePerp err: %s", err.Error()))
 		}
 		if errTicker != nil {
-			util.Log(key, util.LogLevelError, ``, util.SystemOther,
-				fmt.Sprintf("getMarketsBinancePerp price err: %s", errTicker.Error()))
+			util.Log(util.LogLevelError, fmt.Sprintf("getMarketsBinancePerp price err: %s", errTicker.Error()))
 		}
 		time.Sleep(time.Minute * 5)
 		getMarketsBinancePerp(key, secret)
@@ -243,8 +241,7 @@ func ExtendListenKeyBinance(account *model.Account, market, listenKey string) (s
 		if resJson != nil && len(resJson.Get(`listenKey`).MustString()) > 0 {
 			resKey := resJson.Get(`listenKey`).MustString()
 			listenTime.Store(resKey, time.Now())
-			util.Log(account.Key, util.LogLevelInfo, ``, util.SystemAPI,
-				fmt.Sprintf("ExtendListenKeyBinance extend Listen Key: %s %s", listenKey, market))
+			util.Log(util.LogLevelInfo, fmt.Sprintf("ExtendListenKeyBinance extend Listen Key: %s %s", listenKey, market))
 			return true
 		}
 	}
@@ -272,7 +269,7 @@ func RenewListenKeyBinance(account *model.Account, market string) (success bool,
 		return true, listenKey
 	}
 	time.Sleep(time.Second * 3)
-	util.Log(account.Key, util.LogLevelError, ``, util.SystemAPI, `RenewListenKeyBinance fail to renew binanceperp listen key retry`)
+	util.Log(util.LogLevelError, `RenewListenKeyBinance fail to renew binanceperp listen key retry`)
 	RenewListenKeyBinance(account, market)
 	return false, ``
 }
@@ -335,7 +332,7 @@ func placeOrderBinancePerp(account *model.Account, isWS bool, order *model.Order
 			return
 		}
 		if err := value.(*model.WSConn).WriteMsg([]byte(msg)); err != nil {
-			util.Log(account.Key, util.LogLevelError, ``, util.SystemAPI,
+			util.Log(util.LogLevelError,
 				fmt.Sprintf(`placeOrderBinancePerp fail to place binanceperp order return: %s`, err.Error()))
 		}
 	} else {
@@ -368,8 +365,7 @@ func placeOrderBinancePerp(account *model.Account, isWS bool, order *model.Order
 		}
 		orderResponse, err := service.Do(context.Background())
 		if err != nil {
-			util.Log(account.Key, util.LogLevelError, "", util.SystemAPI,
-				"placeOrderBinancePerp err: "+err.Error())
+			util.Log(util.LogLevelError, "placeOrderBinancePerp err: "+err.Error())
 			order.OrderId = ``
 			order.ErrCode = err.Error()
 		} else {
@@ -392,12 +388,12 @@ func cancelOrderBinancePerp(key, secret, symbol, orderId string) bool {
 		if strings.Contains(err.Error(), `code=-2011`) {
 			return true
 		}
-		util.Log(key, util.LogLevelError, "", util.SystemAPI, `cancelOrderBinancePerp fail to cancel binanceperp order`+err.Error())
+		util.Log(util.LogLevelError, `cancelOrderBinancePerp fail to cancel binanceperp order`+err.Error())
 		return false
 	} else if res.Status == `CANCELED` {
 		return true
 	} else {
-		util.Log(key, util.LogLevelError, "", util.SystemAPI, fmt.Sprintf(`cancelOrderBinancePerp status %v`, res.Status))
+		util.Log(util.LogLevelError, fmt.Sprintf(`cancelOrderBinancePerp status %v`, res.Status))
 	}
 	return false
 }
@@ -413,7 +409,7 @@ func cancelOrdersBinancePerp(key, secret string, symbol string) bool {
 		if strings.Contains(err.Error(), `code=-2011`) {
 			return true
 		}
-		util.Log(key, util.LogLevelError, "", util.SystemAPI, `cancelOrdersBinancePerp fail to cancel orders `+err.Error())
+		util.Log(util.LogLevelError, `cancelOrdersBinancePerp fail to cancel orders `+err.Error())
 		return false
 	}
 	return true
@@ -425,7 +421,7 @@ func getPositionsBinancePerp(key, secret string) (success bool, positions []*Pos
 		restBinancePerp+"/fapi/v2/account", true, nil)
 	positionJson, err := util.NewJSON(responseBody)
 	if err != nil || positionJson == nil {
-		util.Log(key, util.LogLevelError, ``, util.SystemAPI, `getPositionsBinancePerp fail to refresh binance position `)
+		util.Log(util.LogLevelError, `getPositionsBinancePerp fail to refresh binance position `)
 		time.Sleep(time.Minute)
 		return getPositionsBinancePerp(key, secret)
 	}
@@ -464,12 +460,12 @@ func getPositionsBinancePerp(key, secret string) (success bool, positions []*Pos
 			positions = append(positions, position)
 		}
 	} else {
-		util.Log(key, util.LogLevelError, ``, util.SystemAPI, `getPositionsBinancePerp fail to refresh binance position `)
+		util.Log(util.LogLevelError, `getPositionsBinancePerp fail to refresh binance position `)
 		time.Sleep(time.Minute)
 		return getPositionsBinancePerp(key, secret)
 	}
 	if (unrealizedProfit != 0 && len(positions) == 0) || err != nil {
-		util.Log(key, util.LogLevelError, ``, util.SystemAPI,
+		util.Log(util.LogLevelError,
 			fmt.Sprintf(`getPositionsBinancePerp pos error binanceperp %f %f %f 0 pos items %d`, accountValue, availableU, unrealizedProfit, len(data)))
 		time.Sleep(time.Minute)
 		return getPositionsBinancePerp(key, secret)
@@ -518,26 +514,25 @@ func getCandlesBinance(account *model.Account, market, symbol string, begin, end
 		if err != nil {
 			errMsg = err.Error()
 		}
-		util.Log(account.Key, util.LogLevelError, ``, util.SystemAPI,
-			fmt.Sprintf(`getCandlesBinance fail to get binance kline %s %s %s %d %s`, symbol, begin.String(), end.String(), slotSeconds, errMsg))
+		util.Log(util.LogLevelError, fmt.Sprintf(`getCandlesBinance fail to get binance kline %s %s %s %d %s`,
+			symbol, begin.String(), end.String(), slotSeconds, errMsg))
 		return
 	}
 	items, itemErr := candleJson.Array()
 	if itemErr != nil || len(items) == 0 {
 		if model.AppRedis != nil {
 			model.AppRedis.Del(context.Background(), redisKey)
-			util.Log(account.Key, util.LogLevelError, ``, util.SystemAPI, fmt.Sprintf(`del redis key %s`, redisKey))
+			util.Log(util.LogLevelError, fmt.Sprintf(`del redis key %s`, redisKey))
 		}
 		if itemErr != nil {
 			errMsg = itemErr.Error()
 		}
-		util.Log(account.Key, util.LogLevelError, ``, util.SystemAPI,
-			fmt.Sprintf(`fail to get binance kline %s %s %s %d %s`, symbol, begin.String(), end.String(), slotSeconds, errMsg))
+		util.Log(util.LogLevelError, fmt.Sprintf(`fail to get binance kline %s %s %s %d %s`,
+			symbol, begin.String(), end.String(), slotSeconds, errMsg))
 		return
 	} else if !isCache && model.AppRedis != nil {
 		val := util.Compress(responseBody)
-		util.Log(account.Key, util.LogLevelError, ``, util.SystemAPI,
-			fmt.Sprintf(`set candles to cache %s len %d compress %d`, redisKey, len(responseBody), len(val)))
+		util.Log(util.LogLevelError, fmt.Sprintf(`set candles to cache %s len %d compress %d`, redisKey, len(responseBody), len(val)))
 		model.AppRedis.Set(context.Background(), redisKey, val, 0)
 	}
 	candles = make([]*model.Candle, 0)
@@ -582,22 +577,22 @@ func signedRequestBinance(key, secret, market, method, requestUrl string, withAp
 	logMsg := fmt.Sprintf(`signedRequestBinance binance key %s request %s body %v return %s`,
 		key, requestUrl, param, string(responseBody))
 	if strings.Contains(requestUrl, `/order`) {
-		util.Log(key, util.LogLevelInfo, ``, util.LogLevelDebug, logMsg)
+		util.Log(util.LogLevelInfo, logMsg)
 	} else if !strings.Contains(requestUrl, `exchangeInfo`) {
-		util.Log(key, util.LogLevelInfo, ``, util.LogLevelDebug, logMsg)
+		util.Log(util.LogLevelInfo, logMsg)
 	}
 	responseJson, err := util.NewJSON(responseBody)
 	if err != nil {
-		util.Log(key, util.LogLevelError, ``, util.SystemAPI, `signedRequestBinance fail to parse json `+err.Error())
+		util.Log(util.LogLevelError, `signedRequestBinance fail to parse json `+err.Error())
 		return nil
 	}
 	if responseJson == nil {
-		util.Log(key, util.LogLevelError, ``, util.SystemAPI, `signedRequestBinance no response data`)
+		util.Log(util.LogLevelError, `signedRequestBinance no response data`)
 		return nil
 	}
 	code := responseJson.Get(`code`).MustInt()
 	if code != 0 && code != -3027 && code != 200 && code != -2011 {
-		util.Log(key, util.LogLevelError, ``, util.SystemAPI, fmt.Sprintf(`signedRequestBinance request err %d`, code))
+		util.Log(util.LogLevelError, fmt.Sprintf(`signedRequestBinance request err %d`, code))
 	}
 	return responseBody
 }
@@ -607,8 +602,7 @@ func getFundingRateBinancePerp(key, secret, symbol string) (fundingRate *model.F
 	client := futures.NewClient(key, secret)
 	rateResp, err := client.NewPremiumIndexService().Symbol(dialectSymbol).Do(context.Background())
 	if err != nil {
-		util.Log(key, util.LogLevelError, "", util.SystemAPI,
-			err.Error()+" getFundingRateBinancePerp symbol: "+symbol+" marketType: "+marketType+" coin: "+coin+" But dialectSymbol: "+dialectSymbol)
+		util.Log(util.LogLevelError, err.Error()+" getFundingRateBinancePerp symbol: "+symbol+" marketType: "+marketType+" coin: "+coin+" But dialectSymbol: "+dialectSymbol)
 		return
 	}
 	rateStr := rateResp[0].LastFundingRate
@@ -631,7 +625,7 @@ func queryOpenOrdersBinancePerp(key, secret, symbol string) (orders []*model.Ord
 		}
 		resArray, err := listOpenOrderService.Do(context.Background())
 		if err != nil {
-			util.Log(key, util.LogLevelError, ``, util.SystemAPI, `queryOpenOrdersBinancePerp`+err.Error())
+			util.Log(util.LogLevelError, `queryOpenOrdersBinancePerp`+err.Error())
 		}
 		for _, res := range resArray {
 			order := &model.Order{Market: model.BinancePerp, Status: model.CarryStatusFail}
@@ -711,7 +705,7 @@ func queryOrderBinancePerp(key, secret, symbol string, orderId string) (order *m
 		orderResp, err := client.NewGetOrderService().Symbol(dialectSymbol).OrderID(orderIdInt).Do(context.Background())
 		order = &model.Order{Market: model.BinancePerp, Status: model.CarryStatusFail, OrderId: orderId}
 		if err != nil {
-			util.Log(key, util.LogLevelError, ``, util.SystemAPI,
+			util.Log(util.LogLevelError,
 				fmt.Sprintf("queryOrderBinancePerp err %s id %s  err %s", symbol, orderId, err.Error()))
 			if strings.Contains(err.Error(), `-2013`) {
 				return nil
@@ -727,7 +721,7 @@ func setPosSideBinancePerp(key, secret string) {
 	client := futures.NewClient(key, secret)
 	err := client.NewChangePositionModeService().DualSide(false).Do(context.Background())
 	if err != nil {
-		util.Log(key, util.LogLevelError, "", util.SystemAPI, `setPosSideBinancePerp`+err.Error())
+		util.Log(util.LogLevelError, `setPosSideBinancePerp`+err.Error())
 		return
 	}
 }
@@ -742,8 +736,7 @@ func _(key, secret, symbol string) (success bool, price float64) {
 	client := futures.NewClient(key, secret)
 	resPrice, err := client.NewListPricesService().Symbol(dialectSymbol).Do(context.Background())
 	if err != nil && !strings.Contains(err.Error(), `-2010`) {
-		util.Log(key, util.LogLevelError, ``, util.SystemAPI,
-			fmt.Sprintf("getPriceBinancePerp err: %s symbol %s %s", err.Error(), symbol, dialectSymbol))
+		util.Log(util.LogLevelError, fmt.Sprintf("getPriceBinancePerp err: %s symbol %s %s", err.Error(), symbol, dialectSymbol))
 		return false, 0
 	}
 	if len(resPrice) > 0 {
@@ -765,8 +758,8 @@ func setSymbolLeverageBinancePerp(account *model.Account, symbol string) (succes
 	}
 	_, err := client.NewChangeLeverageService().Symbol(dialectSymbol).Leverage(leverage).Do(context.Background())
 	if err != nil {
-		util.Log(account.Key, util.LogLevelError, ``, util.SystemAPI,
-			fmt.Sprintf(`setSymbolLeverageBinancePerp fail to set binanceperp leverage %s %d %s`, symbol, model.DefaultLeverage, err.Error()))
+		util.Log(util.LogLevelError, fmt.Sprintf(`setSymbolLeverageBinancePerp fail to set binanceperp leverage %s %d %s`,
+			symbol, model.DefaultLeverage, err.Error()))
 		return false
 	}
 	return true
@@ -798,8 +791,8 @@ func setLeverageBinancePerp(key, secret string) (success bool) {
 		}
 		_, err := client.NewChangeLeverageService().Symbol(dialectSymbol).Leverage(leverage).Do(context.Background())
 		if err != nil {
-			util.Log(key, util.LogLevelError, ``, util.SystemAPI,
-				fmt.Sprintf(`setLeverageBinancePerp fail to set binanceperp leverage %s %s %d %s`, key, symbol, model.DefaultLeverage, err.Error()))
+			util.Log(util.LogLevelError, fmt.Sprintf(`setLeverageBinancePerp fail to set binanceperp leverage %s %s %d %s`,
+				key, symbol, model.DefaultLeverage, err.Error()))
 			continue
 		}
 		time.Sleep(time.Minute)

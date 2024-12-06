@@ -42,13 +42,13 @@ var ProcessCombineTurtle = func(settingCombine *model.Setting, tick *model.BidAs
 	}
 	settingNormal := api.GetSetting(model.FunctionTurtleNormal, market, symbol)
 	if settingNormal == nil {
-		util.Log(``, util.LogLevelError, ``, util.SystemCarry, fmt.Sprintf(`combine return no normal setting from %s %s`, market, symbol))
+		util.Log(util.LogLevelError, fmt.Sprintf(`combine return no normal setting from %s %s`, market, symbol))
 		return
 	}
 	account := model.AppConfig.GetAccounts(market)[0]
 	if (settingCombine.Chance != 0 && settingCombine.PriceX == 0) || (settingNormal.Chance != 0 && settingNormal.PriceX == 0) {
 		if time.Now().Second() == 0 {
-			util.Log(``, util.LogLevelError, ``, util.SystemCarry, fmt.Sprintf(`combine return no last priceX %s %s %d %e %d %e`,
+			util.Log(util.LogLevelError, fmt.Sprintf(`combine return no last priceX %s %s %d %e %d %e`,
 				market, symbol, settingCombine.Chance, settingCombine.PriceX, settingNormal.Chance, settingNormal.PriceX))
 		}
 		return
@@ -65,22 +65,22 @@ var ProcessCombineTurtle = func(settingCombine *model.Setting, tick *model.BidAs
 	if dataCombine == nil || dataNormal == nil || settingCombine == nil || settingNormal == nil ||
 		model.AppConfig.Env == `test` || dataCombine.N == 0 || dataNormal.N == 0 {
 		if !removed && (time.Now().Minute() == 0 && time.Now().Second() == 0) {
-			util.Log(``, util.LogLevelError, ``, util.SystemCarry, fmt.Sprintf(`combine return no turtle combine turtle %s %s`, market, symbol))
+			util.Log(util.LogLevelError, fmt.Sprintf(`combine return no turtle combine turtle %s %s`, market, symbol))
 		}
 		return
 	}
 	if time.Now().After(dataCombine.Expire) || time.Now().After(dataNormal.Expire) {
-		util.LogLess(``, util.LogLevelError, ``, util.SystemCarry, fmt.Sprintf(`turtle data expired %s %s`, settingCombine.Market, settingCombine.Symbol))
+		util.LogLess(util.LogLevelError, fmt.Sprintf(`turtle data expired %s %s`, settingCombine.Market, settingCombine.Symbol))
 		return
 	}
 	if !dataCombine.OrderCleared {
 		api.ClearOrders(account.Key, account.Secret, market, symbol, map[string]bool{model.OrderTypeTrailStop: true})
 		dataCombine.OrderCleared = true
-		util.Log(``, util.LogLevelInfo, ``, util.SystemCarry, fmt.Sprintf(`combine return not cleared %s %s %v`, market, symbol, dataCombine.OrderCleared))
+		util.Log(util.LogLevelInfo, fmt.Sprintf(`combine return not cleared %s %s %v`, market, symbol, dataCombine.OrderCleared))
 		return
 	}
 	if dataNormal.N == 0 || dataNormal.Amount == 0 || dataCombine.N == 0 || dataCombine.Amount == 0 {
-		util.Log(``, util.LogLevelError, ``, util.SystemCarry, fmt.Sprintf(`invalid turtle data n %s %s %f %f %f %f`,
+		util.Log(util.LogLevelError, fmt.Sprintf(`invalid turtle data n %s %s %f %f %f %f`,
 			settingCombine.Market, settingCombine.Symbol, dataNormal.N, dataNormal.Amount, dataCombine.N, dataCombine.Amount))
 		return
 	}
@@ -191,7 +191,7 @@ func handleBreak(setting *model.Setting, data *model.TurtleData, orders []*model
 	if orders[0].TriggerPrice > 0 {
 		setting.PriceX = orders[0].TriggerPrice
 	}
-	util.Log(``, util.LogLevelInfo, ``, util.SystemCarry, fmt.Sprintf(`query %s break %s %s %s %d %s %s chances %d`,
+	util.Log(util.LogLevelInfo, fmt.Sprintf(`query %s break %s %s %s %d %s %s chances %d`,
 		setting.Function, setting.Market, setting.Symbol, orders[0].OrderSide, len(orders), orders[0].OrderId, orders[0].Function, setting.Chance))
 	if orders[0].RefreshType != model.FunctionTurtleAdjust && orders[0].Function == model.Close {
 		msg := fmt.Sprintf(`liquidate: %s %s chance:%d Amount:%e px:%e %s order type %s`,
@@ -205,7 +205,7 @@ func handleBreak(setting *model.Setting, data *model.TurtleData, orders []*model
 			data.Liquidated = true
 		}
 	} else if orders[0].Function == model.Open {
-		util.Log(``, util.LogLevelInfo, ``, util.SystemCarry, fmt.Sprintf(`加%s %s %s chance:%d Amount:%e px:%e order type %s`,
+		util.Log(util.LogLevelInfo, fmt.Sprintf(`加%s %s %s chance:%d Amount:%e px:%e order type %s`,
 			orders[0].OrderSide, setting.Market, setting.Symbol, setting.Chance, setting.GridAmount, setting.PriceX, orders[0].OrderType))
 		if orders[0].OrderSide == model.OrderSideSell {
 			setting.Chance--
@@ -226,7 +226,7 @@ func handleBreak(setting *model.Setting, data *model.TurtleData, orders []*model
 	model.AppDB.Model(setting).Where("market= ? and Symbol= ? and function= ?",
 		setting.Market, setting.Symbol, setting.Function).Updates(map[string]interface{}{
 		`price_x`: setting.PriceX, `chance`: setting.Chance, `grid_amount`: setting.GridAmount, `liquidated`: data.Liquidated})
-	util.Log(``, util.LogLevelInfo, ``, util.SystemCarry, fmt.Sprintf(`clear turtle buy when sell break %s %s %v`, setting.Market, setting.Symbol, orders))
+	util.Log(util.LogLevelInfo, fmt.Sprintf(`clear turtle buy when sell break %s %s %v`, setting.Market, setting.Symbol, orders))
 	return true
 }
 
@@ -240,7 +240,7 @@ func placeTurtleLong(account *model.Account, orderType string, data *model.Turtl
 		function = model.Close
 		amount = setting.GridAmount
 		if amount == 0 {
-			util.Log(``, util.LogLevelError, ``, util.SystemCarry, fmt.Sprintf(`fail to place short amt 0 from grid amt, set chance 0 %s %s %d`,
+			util.Log(util.LogLevelError, fmt.Sprintf(`fail to place short amt 0 from grid amt, set chance 0 %s %s %d`,
 				setting.Market, setting.Symbol, setting.Chance))
 			setting.Chance = 0
 			return
@@ -313,7 +313,7 @@ func placeTurtleLong(account *model.Account, orderType string, data *model.Turtl
 		if data.OrderAdjust == nil {
 			data.OrderAdjust = make(map[string]*model.Order)
 		}
-		util.Log(``, util.LogLevelInfo, ``, util.SystemCarry, fmt.Sprintf(
+		util.Log(util.LogLevelInfo, fmt.Sprintf(
 			`place long %s %s %s %s %s %d %v at %e %e amt %e, useNear %v priceX %f n:%f seconds %d near %f %f far %f %f`,
 			orderType, setting.Function, market, symbol, orderType, setting.Chance, canOpen, priceDeal, price, amount,
 			data.UseNear, setting.PriceX, data.N, setting.Seconds, data.LowNear, data.HighNear, data.LowFar, data.HighFar))
@@ -326,7 +326,7 @@ func placeTurtleLong(account *model.Account, orderType string, data *model.Turtl
 			}
 			go model.AppDB.Save(order)
 			if data.BreakLong && order.Status != model.CarryStatusSuccess {
-				util.Log(``, util.LogLevelInfo, ``, util.SystemCarry, fmt.Sprintf(
+				util.Log(util.LogLevelInfo, fmt.Sprintf(
 					`already break long move to adjust %s %v`, order.OrderId, order))
 				data.OrderAdjust[order.OrderId] = order
 			}
@@ -344,8 +344,8 @@ func placeTurtleShort(account *model.Account, orderType string, data *model.Turt
 		amount = setting.GridAmount
 		function = model.Close
 		if amount == 0 {
-			util.Log(``, util.LogLevelError, ``, util.SystemCarry, fmt.Sprintf(
-				`fail to place short amt 0 from grid amt, set chance 0 %s %s %d`, setting.Market, setting.Symbol, setting.Chance))
+			util.Log(util.LogLevelError, fmt.Sprintf(`fail to place short amt 0 from grid amt, set chance 0 %s %s %d`,
+				setting.Market, setting.Symbol, setting.Chance))
 			setting.Chance = 0
 			return
 		}
@@ -408,8 +408,7 @@ func placeTurtleShort(account *model.Account, orderType string, data *model.Turt
 			priceDeal = tick.Bids[0].Price * (1 - turtleTriggerDelta)
 			price = tick.Bids[0].Price
 		}
-		util.Log(``, util.LogLevelInfo, ``, util.SystemCarry, fmt.Sprintf(
-			`place short %s %s %s %s %s %d %v at %e %e amt %e, useNear %v priceX %f n:%f seconds %d near %f %f far %f %f`,
+		util.Log(util.LogLevelInfo, fmt.Sprintf(`place short %s %s %s %s %s %d %v at %e %e amt %e, useNear %v priceX %f n:%f seconds %d near %f %f far %f %f`,
 			orderType, setting.Function, market, symbol, orderType, setting.Chance, canOpen, priceDeal, price, amount,
 			data.UseNear, setting.PriceX, data.N, setting.Seconds, data.LowNear, data.HighNear, data.LowFar, data.HighFar))
 		data.OrderShort = api.MustPlaceOrder(account.Key, account.Secret, model.OrderSideSell, orderType, market, symbol,
@@ -426,8 +425,7 @@ func placeTurtleShort(account *model.Account, orderType string, data *model.Turt
 			}
 			go model.AppDB.Save(order)
 			if data.BreakShort && order.Status != model.CarryStatusSuccess {
-				util.Log(``, util.LogLevelInfo, ``, util.SystemCarry, fmt.Sprintf(
-					`already break short move to adjust %s %v`, order.OrderId, order))
+				util.Log(util.LogLevelInfo, fmt.Sprintf(`already break short move to adjust %s %v`, order.OrderId, order))
 				data.OrderAdjust[order.OrderId] = order
 			}
 		}

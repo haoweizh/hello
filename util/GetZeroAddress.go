@@ -91,7 +91,7 @@ func getZeroAddr(patterns []*regexp.Regexp, nonce uint64) {
 				}
 			}
 			privateKey := hex.EncodeToString(key.D.Bytes())
-			Log(``, LogLevelInfo, ``, SystemOther, fmt.Sprintf("Contract:\t%s\nAddress:\t%s\nPrivateKey:\t%s\n\n",
+			Log(LogLevelInfo, fmt.Sprintf("Contract:\t%s\nAddress:\t%s\nPrivateKey:\t%s\n\n",
 				contract, address.Hex(), privateKey))
 		}
 	}

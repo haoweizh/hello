@@ -1,11 +1,12 @@
 package model
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/coder/websocket"
+	//"github.com/coder/websocket"
+	"github.com/gorilla/websocket"
 	"hello/util"
+	"net/http"
 	"strings"
 	"time"
 )
@@ -20,12 +21,13 @@ type WSConn struct {
 }
 
 func (wsConn *WSConn) WriteMsg(msg []byte) (err error) {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
-	defer cancel()
+	//ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	//defer cancel()
 	if wsConn.Conn == nil {
 		return fmt.Errorf(`nil Conn`)
 	}
-	return wsConn.Conn.Write(ctx, websocket.MessageText, msg)
+	//return wsConn.Conn.Write(ctx, websocket.MessageText, msg)
+	return wsConn.Conn.WriteMessage(websocket.TextMessage, msg)
 }
 
 func (wsConn *WSConn) WriteJson(body map[string]interface{}) (err error) {
@@ -33,63 +35,66 @@ func (wsConn *WSConn) WriteJson(body map[string]interface{}) (err error) {
 	return wsConn.WriteMsg(jsonData)
 }
 
-func newConnection(url string) (conn *WSConn, err error) {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
-	defer cancel()
-	c, _, dialErr := websocket.Dial(ctx, url, &websocket.DialOptions{})
-	if dialErr == nil {
-		return &WSConn{Conn: c}, nil
-	}
-	return nil, dialErr
-}
-
-//func newConnection(url string) (*websocket.Conn, error) {
-//	var connErr error
-//	var c *websocket.Conn
-//	util.SocketInfo("try to connect " + url)
-//	dialer := &websocket.Dialer{
-//		Proxy:          http.ProxyFromEnvironment,
-//		ReadBufferSize: 1024 * 16,
+//func newWsCoder(url string) (conn *WSConn, err error) {
+//	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+//	defer cancel()
+//	c, _, dialErr := websocket.Dial(ctx, url, &websocket.DialOptions{})
+//	if dialErr == nil {
+//		return &WSConn{Conn: c}, nil
 //	}
-//	c, _, connErr = dialer.Dial(url, nil)
-//	if connErr == nil {
-//		if c != nil {
-//			c.EnableWriteCompression(true)
-//			c.SetReadLimit(1024 * 1024 * 128)
-//		}
-//	} else {
-//		util.SocketInfo(`can not create new connection ` + connErr.Error())
-//		if c != nil {
-//			_ = c.Close()
-//		}
-//	}
-//	if connErr != nil {
-//		return nil, connErr
-//	}
-//	return c, nil
+//	return nil, dialErr
 //}
+
+func newWsGorilla(url string) (*WSConn, error) {
+	var connErr error
+	var c *websocket.Conn
+	util.Log(util.LogLevelInfo, "try to connect "+url)
+	dialer := &websocket.Dialer{
+		Proxy:          http.ProxyFromEnvironment,
+		ReadBufferSize: 1024 * 32,
+	}
+	c, _, connErr = dialer.Dial(url, nil)
+	if connErr == nil {
+		if c != nil {
+			c.EnableWriteCompression(true)
+			c.SetReadLimit(1024 * 1024 * 128)
+		}
+	} else {
+		util.Log(util.LogLevelError, `can not create new connection `+connErr.Error())
+		if c != nil {
+			_ = c.Close()
+		}
+	}
+	if connErr != nil {
+		return nil, connErr
+	}
+	return &WSConn{Conn: c}, nil
+}
 
 func chanHandler(market string, stopChan chan struct{}, connection *WSConn, msgHandler MsgHandler) {
 	defer func() {
-		err := connection.Conn.Close(websocket.StatusNormalClosure, "")
+		//err := connection.Conn.Close(websocket.StatusNormalClosure, "")
+		err := connection.Conn.Close()
 		if err != nil {
-			util.Log(``, util.LogLevelError, ``, util.SystemNetwork, fmt.Sprintf(`connection closed %s %s`, market, err.Error()))
+			util.Log(util.LogLevelError, fmt.Sprintf(`connection closed %s %s`, market, err.Error()))
 		}
 	}()
 	for {
 		select {
 		case <-stopChan:
-			util.Log(``, util.LogLevelInfo, ``, util.SystemCarry, "get stop struct, return")
+			util.Log(util.LogLevelInfo, "get stop struct, return")
 			return
 		default:
-			msgType, message, err := connection.Conn.Read(context.Background())
+			//msgType, message, err := connection.Conn.Read(context.Background())
+			msgType, message, err := connection.Conn.ReadMessage()
 			if err != nil {
 				if !strings.Contains(err.Error(), `EOF`) {
-					util.Log(``, util.LogLevelError, ``, util.SystemNetwork, fmt.Sprintf(`%s can not read from websocket: %s`, market, err.Error()))
+					util.Log(util.LogLevelError, fmt.Sprintf(`%s can not read from websocket: %s`, market, err.Error()))
 				}
 				return
 			}
-			if msgType == websocket.MessageText {
+			//if msgType == websocket.MessageText {
+			if msgType == websocket.TextMessage {
 				msgHandler(market, connection, message)
 			}
 		}
@@ -97,30 +102,31 @@ func chanHandler(market string, stopChan chan struct{}, connection *WSConn, msgH
 }
 
 func WsAccountClient(market, key, url string, accountMsgHandler AccountMsgHandler) (connection *WSConn, err error) {
-	util.Log(key, util.LogLevelInfo, ``, util.SystemCarry, market+` create account channel `+url)
-	connection, err = newConnection(url)
+	util.Log(util.LogLevelInfo, market+` create account channel `+url)
+	connection, err = newWsGorilla(url)
 	if err != nil {
-		util.Log(``, util.LogLevelError, ``, util.SystemNetwork, url+"can not create web socket"+err.Error())
+		util.Log(util.LogLevelError, url+"can not create web socket"+err.Error())
 		return nil, err
 	}
-	//connection.SetPingHandler(func(appData string) error {
-	//	accountMsgHandler(market, key, []byte(`ping pong received`))
-	//	return connection.WriteMessage(websocket.PongMessage, []byte(appData))
-	//})
+	connection.Conn.SetPingHandler(func(appData string) error {
+		accountMsgHandler(market, key, []byte(`ping pong received`))
+		util.Log(util.LogLevelInfo, market+` create ping received `+appData)
+		return connection.Conn.WriteMessage(websocket.PongMessage, []byte(appData))
+	})
 	go func() {
 		defer func() {
-			closeErr := connection.Conn.Close(websocket.StatusNormalClosure, "")
+			//closeErr := connection.Conn.Close(websocket.StatusNormalClosure, "")
+			closeErr := connection.Conn.Close()
 			if closeErr != nil {
-				util.Log(key, util.LogLevelError, ``, util.SystemNetwork,
-					fmt.Sprintf(`%s connection closed %s`, url, closeErr.Error()))
+				util.Log(util.LogLevelError, fmt.Sprintf(`%s connection closed %s`, url, closeErr.Error()))
 			}
 		}()
 		for {
-			_, message, readErr := connection.Conn.Read(context.Background())
+			//_, message, readErr := connection.Conn.Read(context.Background())
+			_, message, readErr := connection.Conn.ReadMessage()
 			if readErr != nil {
 				util.DelSyncMap(&AppEnvironment.ConnOrder, market, key)
-				util.Log(key, util.LogLevelError, ``, util.SystemNetwork,
-					fmt.Sprintf(`%s %s can not read from account ws: %s`, market, url, readErr.Error()))
+				util.Log(util.LogLevelError, fmt.Sprintf(`%s %s can not read from account ws: %s`, market, url, readErr.Error()))
 				return
 			}
 			if accountMsgHandler != nil {
@@ -133,7 +139,7 @@ func WsAccountClient(market, key, url string, accountMsgHandler AccountMsgHandle
 
 func WebSocketClient(market, url string, subscribes []interface{}, subHandler SubscribeHandler,
 	msgHandler MsgHandler, step int) (socketMap map[*WSConn]bool, msgChans []chan struct{}, connectErr error) {
-	util.Log(``, util.LogLevelInfo, ``, util.SystemCarry, market+` create depth channel `+url)
+	util.Log(util.LogLevelInfo, market+` create depth channel `+url)
 	socketMap = make(map[*WSConn]bool)
 	msgChans = make([]chan struct{}, 0)
 	var stepSubscribes []interface{}
@@ -143,10 +149,10 @@ func WebSocketClient(market, url string, subscribes []interface{}, subHandler Su
 		} else {
 			stepSubscribes = subscribes[i*step:]
 		}
-		connection, err := newConnection(url)
+		connection, err := newWsGorilla(url)
 		if err != nil || connection == nil {
 			if err != nil {
-				util.Log(``, util.LogLevelError, ``, util.SystemNetwork,
+				util.Log(util.LogLevelError,
 					fmt.Sprintf("can not create web socket %s %s %s", market, url, err.Error()))
 			}
 			return nil, nil, err
@@ -160,7 +166,7 @@ func WebSocketClient(market, url string, subscribes []interface{}, subHandler Su
 		socketMap[connection] = true
 		time.Sleep(time.Millisecond * 100)
 	}
-	util.Log(``, util.LogLevelInfo, ``, util.SystemCarry,
+	util.Log(util.LogLevelInfo,
 		fmt.Sprintf(`ws client add conns %s sockets %d msgChans %d`, market, len(socketMap), len(msgChans)))
 	return
 }

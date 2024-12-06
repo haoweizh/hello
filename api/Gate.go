@@ -120,7 +120,7 @@ func setPosSideGate(key, secret string) {
 		panicGateError(key, "setPosSideGate", err)
 	}
 	marshal, _ := json.Marshal(mode)
-	util.Log(key, util.LogLevelInfo, ``, util.SystemAPI, fmt.Sprintf("set gate dual mode success,position: %s", marshal))
+	util.Log(util.LogLevelInfo, fmt.Sprintf("set gate dual mode success,position: %s", marshal))
 }
 
 func setMarginSettingGate(key, secret string) {
@@ -130,7 +130,7 @@ func setMarginSettingGate(key, secret string) {
 		panicGateError(key, "setMarginSettingGate", err)
 	}
 	marshal, _ := json.Marshal(mode)
-	util.Log(key, util.LogLevelInfo, ``, util.SystemAPI, fmt.Sprintf("set gate margin auto repay success,response: %s", marshal))
+	util.Log(util.LogLevelInfo, fmt.Sprintf("set gate margin auto repay success,response: %s", marshal))
 }
 
 func TransferGate(key string, secret string, transferType, currency string, amount float64) {
@@ -142,7 +142,7 @@ func TransferGate(key string, secret string, transferType, currency string, amou
 		_, res, endErr := client.WalletApi.Transfer(ctx, param)
 		if endErr != nil {
 			if res != nil {
-				util.Log(key, util.LogLevelError, ``, util.SystemAPI, fmt.Sprintf(`fail to transfer status %s`, res.Status))
+				util.Log(util.LogLevelError, fmt.Sprintf(`fail to transfer status %s`, res.Status))
 			}
 			panicGateError(key, "transferGate", endErr)
 		}
@@ -152,7 +152,7 @@ func TransferGate(key string, secret string, transferType, currency string, amou
 		_, res, err := client.WalletApi.Transfer(ctx, param)
 		if err != nil {
 			panicGateError(key, "transferGate", err)
-			util.Log(key, util.LogLevelError, ``, util.SystemAPI, fmt.Sprintf(`fail to transfer status %s`, res.Status))
+			util.Log(util.LogLevelError, fmt.Sprintf(`fail to transfer status %s`, res.Status))
 		}
 	}
 }
@@ -160,15 +160,15 @@ func TransferGate(key string, secret string, transferType, currency string, amou
 func panicGateError(key, function string, err error) {
 	var e gateApi.GateAPIError
 	if errors.As(err, &e) {
-		util.Log(key, util.LogLevelError, ``, util.SystemAPI, fmt.Sprintf("key %s function: %s Gate API error, label: %s, message: %s",
+		util.Log(util.LogLevelError, fmt.Sprintf("key %s function: %s Gate API error, label: %s, message: %s",
 			key, function, e.Label, e.Message))
 	}
-	util.Log(key, util.LogLevelError, ``, util.SystemAPI, function+err.Error())
+	util.Log(util.LogLevelError, function+err.Error())
 }
 
 var tickerHandler = gateWs.NewCallBack(func(msg *gateWs.UpdateMsg) {
 	if msg.Error != nil && (!strings.Contains(msg.Error.Message, "futures.ping") && !strings.Contains(msg.Error.Message, "spot.ping")) {
-		util.Log(``, util.LogLevelError, ``, util.SystemAPI, fmt.Sprintf("callback error in ticker: %s %s", msg.Channel, msg.Error.Error()))
+		util.Log(util.LogLevelError, fmt.Sprintf("callback error in ticker: %s %s", msg.Channel, msg.Error.Error()))
 		return
 	}
 	var bidAsk model.BidAsk
@@ -177,7 +177,7 @@ var tickerHandler = gateWs.NewCallBack(func(msg *gateWs.UpdateMsg) {
 	case gateWs.ChannelSpotBookTicker:
 		var update gateWs.SpotBookTickerMsg
 		if err := json.Unmarshal(msg.Result, &update); err != nil {
-			util.Log(``, util.LogLevelError, ``, util.SystemAPI, fmt.Sprintf("spot book ticker Unmarshal err:%s %s", model.Gate, err.Error()))
+			util.Log(util.LogLevelError, fmt.Sprintf("spot book ticker Unmarshal err:%s %s", model.Gate, err.Error()))
 			return
 		}
 		success, _, coin := model.GetCoinFromDialect(model.Gate, update.CurrencyPair)
@@ -197,7 +197,7 @@ var tickerHandler = gateWs.NewCallBack(func(msg *gateWs.UpdateMsg) {
 	case gateWs.ChannelSpotOrderBook:
 		var update gateWs.SpotUpdateAllDepthMsg
 		if err := json.Unmarshal(msg.Result, &update); err != nil {
-			util.Log(``, util.LogLevelError, ``, util.SystemAPI, fmt.Sprintf("spot book ticker Unmarshal err:%s %s", model.Gate, err.Error()))
+			util.Log(util.LogLevelError, fmt.Sprintf("spot book ticker Unmarshal err:%s %s", model.Gate, err.Error()))
 			return
 		}
 		success, _, coin := model.GetCoinFromDialect(model.Gate, update.CurrencyPair)
@@ -220,7 +220,7 @@ var tickerHandler = gateWs.NewCallBack(func(msg *gateWs.UpdateMsg) {
 	case gateWs.ChannelFutureBookTicker:
 		var update gateWs.FuturesBookTicker
 		if err := json.Unmarshal(msg.Result, &update); err != nil {
-			util.Log(``, util.LogLevelError, ``, util.SystemAPI, fmt.Sprintf("future book ticker Unmarshal err:%s %s", model.Gate, err.Error()))
+			util.Log(util.LogLevelError, fmt.Sprintf("future book ticker Unmarshal err:%s %s", model.Gate, err.Error()))
 			return
 		}
 		success, _, coin := model.GetCoinFromDialect(model.Gate, update.Contract)
@@ -258,13 +258,13 @@ var tickerHandler = gateWs.NewCallBack(func(msg *gateWs.UpdateMsg) {
 
 var markPriceHandler = gateWs.NewCallBack(func(msg *gateWs.UpdateMsg) {
 	if msg.Error != nil && (!strings.Contains(msg.Error.Message, "futures.ping") && !strings.Contains(msg.Error.Message, "spot.ping")) {
-		util.Log(``, util.LogLevelError, ``, util.SystemAPI, fmt.Sprintf("callback error: %s %s", msg.Channel, msg.Error.Error()))
+		util.Log(util.LogLevelError, fmt.Sprintf("callback error: %s %s", msg.Channel, msg.Error.Error()))
 		return
 	}
 	if msg.Channel == gateWs.ChannelFutureTicker {
 		var tickers []gateWs.FuturesTicker
 		if err := json.Unmarshal(msg.Result, &tickers); err != nil {
-			util.LogLess(``, util.LogLevelError, ``, util.SystemAPI, fmt.Sprintf("future mark price Unmarshal err:%s %s %s", model.Gate, err.Error(), msg.Result))
+			util.LogLess(util.LogLevelError, fmt.Sprintf("future mark price Unmarshal err:%s %s %s", model.Gate, err.Error(), msg.Result))
 			return
 		}
 		for _, update := range tickers {
@@ -303,7 +303,7 @@ var wsPriHandlerGatePerp = func(market, key string, msg []byte) {
 		if err != nil {
 			return
 		}
-		util.Log(``, util.LogLevelError, ``, util.SystemAPI, fmt.Sprintf(`gate futures order pong from %s`, string(msg)))
+		util.Log(util.LogLevelError, fmt.Sprintf(`gate futures order pong from %s`, string(msg)))
 	} else if channel == `futures.orders` {
 		data := responseJson.Get(`result`).MustArray()
 		for _, datum := range data {
@@ -426,14 +426,14 @@ func maintainConnsGate(accounts []*model.Account) {
 		if connTick != nil {
 			if err := SendToConnections(model.Gate, connTick.(map[*model.WSConn]bool),
 				util.JsonEncodeToByte(map[string]interface{}{"time": time.Now().Unix(), "channel": "spot.ping"})); err != nil {
-				util.Log(``, util.LogLevelError, ``, util.SystemAPI, fmt.Sprintf("tick conn maintain error %s %s", model.Gate, err.Error()))
+				util.Log(util.LogLevelError, fmt.Sprintf("tick conn maintain error %s %s", model.Gate, err.Error()))
 			}
 		}
 		connTickPerp, _ := model.AppEnvironment.ConnTick.Load(model.Gate + model.MarketTypePerp)
 		if connTickPerp != nil {
 			if err := SendToConnections(model.Gate, connTickPerp.(map[*model.WSConn]bool),
 				util.JsonEncodeToByte(map[string]interface{}{"time": time.Now().Unix(), "channel": "futures.ping"})); err != nil {
-				util.Log(``, util.LogLevelError, ``, util.SystemAPI, fmt.Sprintf("tick conn maintain error %s %s", model.Gate, err.Error()))
+				util.Log(util.LogLevelError, fmt.Sprintf("tick conn maintain error %s %s", model.Gate, err.Error()))
 			}
 		}
 		for _, account := range accounts {
@@ -442,7 +442,7 @@ func maintainConnsGate(accounts []*model.Account) {
 			if wsSpot != nil {
 				if err := wsSpot.(*model.WSConn).WriteMsg([]byte(fmt.Sprintf(`{"time": %d, "channel" : "spot.ping"}`, time.Now().Unix()))); err != nil {
 					successSpot = false
-					util.Log(``, util.LogLevelError, ``, util.SystemAPI, fmt.Sprintf("send account spot ping message err:%s %s", model.Gate, err.Error()))
+					util.Log(util.LogLevelError, fmt.Sprintf("send account spot ping message err:%s %s", model.Gate, err.Error()))
 				}
 			} else {
 				successSpot = false
@@ -455,7 +455,7 @@ func maintainConnsGate(accounts []*model.Account) {
 			wsFuture, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrder, model.Gate, model.MarketTypePerp, account.Key)
 			if wsFuture != nil {
 				if err := wsFuture.(*model.WSConn).WriteMsg([]byte(fmt.Sprintf(`{"time": %d, "channel" : "futures.ping"}`, time.Now().Unix()))); err != nil {
-					util.Log(``, util.LogLevelError, ``, util.SystemAPI, fmt.Sprintf("send account futures ping message err:%s %s", model.Gate, err.Error()))
+					util.Log(util.LogLevelError, fmt.Sprintf("send account futures ping message err:%s %s", model.Gate, err.Error()))
 					successPerp = false
 				}
 			} else {
@@ -487,7 +487,7 @@ func WSOrderServeGate(account *model.Account, marketType string) {
 		conn, err = model.WsAccountClient(model.Gate, account.Key, gateWs.FuturesUsdtUrl, wsPriHandlerGatePerp)
 	}
 	if err != nil {
-		util.Log(``, util.LogLevelError, ``, util.SystemNetwork, fmt.Sprintf("gate wsAccount connect errSpot: %s %s", err.Error(), account.Key))
+		util.Log(util.LogLevelError, fmt.Sprintf("gate wsAccount connect errSpot: %s %s", err.Error(), account.Key))
 		return
 	}
 	if conn == nil {
@@ -498,9 +498,9 @@ func WSOrderServeGate(account *model.Account, marketType string) {
 	msg := fmt.Sprintf(`{"time": %d,"channel": "%s.login","event": "api","payload": {"api_key": "%s",
     		"signature": "%s","timestamp": "%d","req_id": "request%d"}}`, ts, logInCode, account.Key, sign, ts, ts)
 	if err = conn.WriteMsg([]byte(msg)); err != nil {
-		util.Log(``, util.LogLevelError, ``, util.SystemNetwork, fmt.Sprintf("send account login message err: %s %s %s", model.Gate, marketType, err.Error()))
+		util.Log(util.LogLevelError, fmt.Sprintf("send account login message err: %s %s %s", model.Gate, marketType, err.Error()))
 	} else {
-		util.Log(``, util.LogLevelInfo, ``, util.SystemNetwork, fmt.Sprintf("log in conn %s %s %s", model.Gate, marketType, msg))
+		util.Log(util.LogLevelInfo, fmt.Sprintf("log in conn %s %s %s", model.Gate, marketType, msg))
 		util.StoreSyncMap(&model.AppEnvironment.ConnOrder, conn, model.Gate, marketType, account.Key)
 	}
 }
@@ -539,7 +539,7 @@ func WsTickServeGatePerp(market string) (socketMap map[*model.WSConn]bool, msgCh
 	}
 	perpBookTickerSockets, perpBookTickerChannels, perpBookTickerErr := model.WebSocketClient(model.Gate, gateWs.FuturesUsdtUrl, futureSubs, subscribeHandler, wsHandlerGate, wsStepGate)
 	if perpBookTickerErr == nil {
-		util.Log(``, util.LogLevelInfo, ``, util.SystemAPI, `finish connect public gate perp book ticker ws `)
+		util.Log(util.LogLevelInfo, `finish connect public gate perp book ticker ws `)
 		msgChans = append(msgChans, perpBookTickerChannels...)
 		for conn, b := range perpBookTickerSockets {
 			socketMap[conn] = b
@@ -547,7 +547,7 @@ func WsTickServeGatePerp(market string) (socketMap map[*model.WSConn]bool, msgCh
 	}
 	perpMarkPriceSockets, perpMarkPriceChannels, perpMarkPriceErr := model.WebSocketClient(model.Gate, gateWs.FuturesUsdtUrl, futureSubs, subscribeMarkPriceHandler, wsHandlerGate, wsStepGate)
 	if perpMarkPriceErr == nil {
-		util.Log(``, util.LogLevelInfo, ``, util.SystemAPI, `finish connect public gate perp mark price ws `)
+		util.Log(util.LogLevelInfo, `finish connect public gate perp mark price ws `)
 		msgChans = append(msgChans, perpMarkPriceChannels...)
 		for conn, b := range perpMarkPriceSockets {
 			socketMap[conn] = b
@@ -570,14 +570,14 @@ var wsHandlerGate = func(market string, conn *model.WSConn, event []byte) {
 				if err != nil {
 					return
 				}
-				util.Log(``, util.LogLevelInfo, ``, util.SystemAPI, fmt.Sprintf("send ping message to channel %s %s from %s", market, channel, string(event)))
+				util.Log(util.LogLevelInfo, fmt.Sprintf("send ping message to channel %s %s from %s", market, channel, string(event)))
 			}
 			return
 		}
 	}
 	msg := &gateWs.UpdateMsg{}
 	if err := json.Unmarshal(event, msg); err != nil {
-		util.Log(``, util.LogLevelError, ``, util.SystemAPI, fmt.Sprintf("gate ws message Unmarshal err:%s", err.Error()))
+		util.Log(util.LogLevelError, fmt.Sprintf("gate ws message Unmarshal err:%s", err.Error()))
 		return
 	}
 	if msg.Channel == gateWs.ChannelFutureTicker {
@@ -602,9 +602,9 @@ var subscribeMarkPriceHandler = func(market string, connection *model.WSConn, su
 	}
 	subscribeMessage := util.JsonEncodeToByte(subscribeMap)
 	if err = SendToConnection(model.Gate, connection, subscribeMessage); err != nil {
-		util.Log(``, util.LogLevelInfo, ``, util.SystemAPI, fmt.Sprintf("gate can not subscribe perp symbols %s %s", subscribeMessage, err.Error()))
+		util.Log(util.LogLevelInfo, fmt.Sprintf("gate can not subscribe perp symbols %s %s", subscribeMessage, err.Error()))
 	}
-	util.Log(``, util.LogLevelInfo, ``, util.SystemAPI, `gate subscribed `+string(subscribeMessage))
+	util.Log(util.LogLevelInfo, `gate subscribed `+string(subscribeMessage))
 	time.Sleep(500 * time.Millisecond)
 	return err
 }
@@ -629,9 +629,9 @@ var subscribeHandler = func(market string, connection *model.WSConn, subscribes 
 			}
 			subscribeMessage := util.JsonEncodeToByte(subscribeMap)
 			if err = SendToConnection(model.Gate, connection, subscribeMessage); err != nil {
-				util.Log(``, util.LogLevelError, ``, util.SystemAPI, fmt.Sprintf("gate can not subscribe perp symbols %s %s", subscribeMessage, err.Error()))
+				util.Log(util.LogLevelError, fmt.Sprintf("gate can not subscribe perp symbols %s %s", subscribeMessage, err.Error()))
 			}
-			util.Log(``, util.LogLevelInfo, ``, util.SystemAPI, `gate subscribed `+string(subscribeMessage))
+			util.Log(util.LogLevelInfo, `gate subscribed `+string(subscribeMessage))
 			time.Sleep(500 * time.Millisecond)
 		} else { //现货ticker订阅
 			var symbols []string
@@ -647,9 +647,9 @@ var subscribeHandler = func(market string, connection *model.WSConn, subscribes 
 			}
 			subscribeMessage := util.JsonEncodeToByte(subscribeMap)
 			if err = SendToConnection(model.Gate, connection, subscribeMessage); err != nil {
-				util.Log(``, util.LogLevelError, ``, util.SystemAPI, fmt.Sprintf("gate can not subscribe spot symbols %s %s", subscribeMessage, err.Error()))
+				util.Log(util.LogLevelError, fmt.Sprintf("gate can not subscribe spot symbols %s %s", subscribeMessage, err.Error()))
 			}
-			util.Log(``, util.LogLevelInfo, ``, util.SystemAPI, `gate subscribed `+string(subscribeMessage))
+			util.Log(util.LogLevelInfo, `gate subscribed `+string(subscribeMessage))
 			time.Sleep(500 * time.Millisecond)
 		}
 	case []string: //orderbook订阅
@@ -664,7 +664,7 @@ var subscribeHandler = func(market string, connection *model.WSConn, subscribes 
 			}
 			subscribeMessage := util.JsonEncodeToByte(subscribeMap)
 			if err = SendToConnection(model.Gate, connection, subscribeMessage); err != nil {
-				util.Log(``, util.LogLevelError, ``, util.SystemAPI, fmt.Sprintf("gate can not subscribe spot order book symbol %s %s", subscribeMessage, err.Error()))
+				util.Log(util.LogLevelError, fmt.Sprintf("gate can not subscribe spot order book symbol %s %s", subscribeMessage, err.Error()))
 			}
 			time.Sleep(10 * time.Millisecond)
 		}
@@ -678,11 +678,11 @@ func getBalanceGate(key string, secret string) (success bool, balances []*model.
 	if portfolioErr != nil {
 		panicGateError(key, "getBalanceGate", portfolioErr)
 		time.Sleep(time.Minute * 5)
-		util.Log(key, util.LogLevelError, ``, util.SystemAPI, `fail to refresh balance gate`)
+		util.Log(util.LogLevelError, `fail to refresh balance gate`)
 		return getBalanceGate(key, secret)
 	}
 	if portfolioAccount.Locked {
-		util.Log(key, util.LogLevelInfo, ``, util.SystemAPI, "portfolio account is locked")
+		util.Log(util.LogLevelInfo, "portfolio account is locked")
 		return false, balances, 0, nil
 	}
 	totalInUsd, _ = strconv.ParseFloat(portfolioAccount.UnifiedAccountTotalEquity, 64)
@@ -711,7 +711,7 @@ func getPositionsGate(key string, secret string) (success bool, positions []*Pos
 	if positionsErr != nil {
 		panicGateError(key, `getPositionsGate`, positionsErr)
 		time.Sleep(time.Minute)
-		util.Log(key, util.LogLevelError, ``, util.SystemAPI, `fail to refresh future balance gate`)
+		util.Log(util.LogLevelError, `fail to refresh future balance gate`)
 		return getPositionsGate(key, secret)
 	}
 	positions = make([]*Position, 0)
@@ -777,7 +777,7 @@ func cancelOrderGate(key, secret, symbol, orderId string) (result bool) {
 			return false
 		}
 		marshal, _ := json.Marshal(order)
-		util.Log(key, util.LogLevelInfo, ``, util.SystemAPI, fmt.Sprintf(`cancel related order response: %s`, marshal))
+		util.Log(util.LogLevelInfo, fmt.Sprintf(`cancel related order response: %s`, marshal))
 		return true
 	} else if success && marketType == model.MarketTypePerp {
 		order, _, err := client.FuturesApi.CancelFuturesOrder(ctx, `usdt`, orderId)
@@ -786,10 +786,10 @@ func cancelOrderGate(key, secret, symbol, orderId string) (result bool) {
 			return false
 		}
 		marshal, _ := json.Marshal(order)
-		util.Log(key, util.LogLevelInfo, ``, util.SystemAPI, fmt.Sprintf(`cancel future order response: %s`, marshal))
+		util.Log(util.LogLevelInfo, fmt.Sprintf(`cancel future order response: %s`, marshal))
 		return true
 	}
-	util.Log(``, util.LogLevelError, ``, util.SystemCarry, fmt.Sprintf(`cancel can not recognize gate symbol %s`, dialectSymbol))
+	util.Log(util.LogLevelError, fmt.Sprintf(`cancel can not recognize gate symbol %s`, dialectSymbol))
 	return false
 }
 
@@ -805,7 +805,7 @@ func cancelOrdersGate(key string, secret string, symbol string) (result bool) {
 			return false
 		}
 		marshal, _ := json.Marshal(orders)
-		util.Log(key, util.LogLevelInfo, ``, util.SystemAPI, fmt.Sprintf(`cancel related orders response: %s`, marshal))
+		util.Log(util.LogLevelInfo, fmt.Sprintf(`cancel related orders response: %s`, marshal))
 		return true
 	} else if success && marketType == model.MarketTypePerp {
 		orders, _, err := client.FuturesApi.CancelFuturesOrders(ctx, `usdt`, dialectSymbol, nil)
@@ -814,10 +814,10 @@ func cancelOrdersGate(key string, secret string, symbol string) (result bool) {
 			return false
 		}
 		marshal, _ := json.Marshal(orders)
-		util.Log(``, util.LogLevelInfo, ``, util.SystemAPI, fmt.Sprintf(`cancel future orders response: %s`, marshal))
+		util.Log(util.LogLevelInfo, fmt.Sprintf(`cancel future orders response: %s`, marshal))
 		return true
 	}
-	util.Log(``, util.LogLevelError, ``, util.SystemAPI, fmt.Sprintf(`cancel orders can not recognize gate symbol %s`, symbol))
+	util.Log(util.LogLevelError, fmt.Sprintf(`cancel orders can not recognize gate symbol %s`, symbol))
 	return false
 }
 
@@ -844,7 +844,7 @@ func placeOrderGate(account *model.Account, isWs bool, order *model.Order, order
 		if orderType == model.OrderTypeMarket && orderSide == model.OrderSideBuy {
 			relatedOrder.Amount = fmt.Sprintf(`%f`, amount*price)
 		}
-		util.Log(account.Key, util.LogLevelInfo, ``, util.SystemAPI, fmt.Sprintf(`create spot order request: %v`, relatedOrder))
+		util.Log(util.LogLevelInfo, fmt.Sprintf(`create spot order request: %v`, relatedOrder))
 		if isWs {
 			param := map[string]interface{}{"text": `t-` + order.OrderId, `currency_pair`: dialectSymbol, `type`: orderType,
 				`account`: `spot`, `side`: orderSide, `amount`: relatedOrder.Amount, `price`: orderPriceStr, `time_in_force`: tif}
@@ -854,7 +854,7 @@ func placeOrderGate(account *model.Account, isWs bool, order *model.Order, order
 			value, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrder, model.Gate, model.MarketTypeSpot, account.Key)
 			if value != nil && value.(*model.WSConn).Conn != nil {
 				if err := value.(*model.WSConn).WriteMsg(wsOrderMsg); err != nil {
-					util.Log(account.Key, util.LogLevelError, ``, util.SystemAPI, fmt.Sprintf(`fail to order gate ws %s %s`, string(wsOrderMsg), err.Error()))
+					util.Log(util.LogLevelError, fmt.Sprintf(`fail to order gate ws %s %s`, string(wsOrderMsg), err.Error()))
 				}
 			}
 		} else {
@@ -866,7 +866,7 @@ func placeOrderGate(account *model.Account, isWs bool, order *model.Order, order
 				order.ErrCode = err.Error()
 			} else {
 				orderResp, _ := json.Marshal(createOrder)
-				util.Log(account.Key, util.LogLevelInfo, ``, util.SystemAPI, fmt.Sprintf(`create spot order response: %s`, orderResp))
+				util.Log(util.LogLevelInfo, fmt.Sprintf(`create spot order response: %s`, orderResp))
 				order.OrderId = createOrder.Id
 				//order.Symbol = createOrder.CurrencyPair
 				secondUnix, _ := strconv.ParseInt(createOrder.CreateTime, 10, 64)
@@ -889,7 +889,7 @@ func placeOrderGate(account *model.Account, isWs bool, order *model.Order, order
 		if orderSide == model.OrderSideSell {
 			futuresOrder.Size = -1 * futuresOrder.Size
 		}
-		util.Log(account.Key, util.LogLevelInfo, ``, util.SystemAPI, fmt.Sprintf(`create future order request: %v`, futuresOrder))
+		util.Log(util.LogLevelInfo, fmt.Sprintf(`create future order request: %v`, futuresOrder))
 		if isWs {
 			param := map[string]interface{}{`contract`: dialectSymbol, `size`: futuresOrder.Size,
 				`price`: orderPriceStr, `tif`: tif, `text`: `t-` + order.OrderId}
@@ -899,7 +899,7 @@ func placeOrderGate(account *model.Account, isWs bool, order *model.Order, order
 			value, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrder, model.Gate, model.MarketTypePerp, account.Key)
 			if value != nil && value.(*model.WSConn).Conn != nil {
 				if err := value.(*model.WSConn).WriteMsg(wsOrderMsg); err != nil {
-					util.Log(account.Key, util.LogLevelError, ``, util.SystemAPI, fmt.Sprintf(`fail to order gate ws %s %s`, string(wsOrderMsg), err.Error()))
+					util.Log(util.LogLevelError, fmt.Sprintf(`fail to order gate ws %s %s`, string(wsOrderMsg), err.Error()))
 				}
 			}
 		} else {
@@ -911,9 +911,9 @@ func placeOrderGate(account *model.Account, isWs bool, order *model.Order, order
 				order.ErrCode = err.Error()
 			} else {
 				orderResp, _ := json.Marshal(createFuturesOrder)
-				util.Log(account.Key, util.LogLevelError, ``, util.SystemAPI, fmt.Sprintf(`create future order response: %s`, orderResp))
+				util.Log(util.LogLevelError, fmt.Sprintf(`create future order response: %s`, orderResp))
 				if createFuturesOrder.IsLiq {
-					util.Log(account.Key, util.LogLevelError, ``, util.SystemAPI, fmt.Sprintf("warning warning, blow up!!!"))
+					util.Log(util.LogLevelError, fmt.Sprintf("warning warning, blow up!!!"))
 				}
 				order.OrderId = strconv.FormatInt(createFuturesOrder.Id, 10)
 				order.OrderTime = time.Unix(int64(createFuturesOrder.CreateTime), 0)
@@ -997,7 +997,7 @@ func queryOrderGate(key, secret string, order *model.Order) {
 		order.OrderTime = time.Unix(int64(orderFuture.CreateTime), 0)
 		order.OrderUpdateTime = time.Unix(int64(orderFuture.FinishTime), 0)
 		_, order.DealAmount = model.ParseRealAmount(order.Market, order.Symbol, float64(orderFuture.Size-orderFuture.Left))
-		util.Log(key, util.LogLevelInfo, ``, util.SystemAPI, fmt.Sprintf(`%s %s %s query result:%s %f %v`,
+		util.Log(util.LogLevelInfo, fmt.Sprintf(`%s %s %s query result:%s %f %v`,
 			order.Market, order.Symbol, order.OrderId, order.Status, order.DealAmount, orderFuture))
 	} else if success && marketType == model.MarketTypeSpot {
 		orderSpot, _, err := client.SpotApi.GetOrder(ctx, order.OrderId, dialectSymbol, nil)
@@ -1022,7 +1022,7 @@ func queryOrderGate(key, secret string, order *model.Order) {
 		case `cancelled`:
 			order.Status = model.CarryStatusFail
 		}
-		util.Log(key, util.LogLevelInfo, ``, util.SystemAPI, fmt.Sprintf(`%s %s %s query result:%s %f %v`,
+		util.Log(util.LogLevelInfo, fmt.Sprintf(`%s %s %s query result:%s %f %v`,
 			order.Market, order.Symbol, order.OrderId, order.Status, order.DealAmount, orderSpot))
 	}
 }

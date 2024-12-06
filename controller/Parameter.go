@@ -101,9 +101,9 @@ func autoSimulate(market, coins string, begin, end time.Time, strBegin, strEnd s
 	sign := fmt.Sprintf(`market%s,coins%s,%s~%s,far%d,near%d,limit%d,allLimit%d,useNear%v,useM%vseconds%d`,
 		market, coins, strBegin, strEnd, far, near, limit, allLimit, useNear, useM, seconds)
 	delNum := model.AppDB.Where(`function=?`, sign).Delete(&model.Order{}).RowsAffected
-	util.Log(``, util.LogLevelInfo, ``, util.SystemCarry, fmt.Sprintf(`del %s %d rows affected`, sign, delNum))
+	util.Log(util.LogLevelInfo, fmt.Sprintf(`del %s %d rows affected`, sign, delNum))
 	regret.ProcessCandles(begin, end, far, allLimit, useNear, useM, market, sign, settings)
-	util.Log(``, util.LogLevelInfo, ``, util.SystemCarry, fmt.Sprintf(`auto simulation done %s`, sign))
+	util.Log(util.LogLevelInfo, fmt.Sprintf(`auto simulation done %s`, sign))
 	util.StoreSyncMap(&model.CarryInfo, fmt.Sprintf("done %s %s 使用回撤%v %d~%d 限制%d 总限制%d",
 		strBegin, strEnd, useNear, near, far, limit, allLimit), `auto`)
 }
@@ -174,12 +174,12 @@ func simulateGrid(c *gin.Context) {
 			for _, setting := range settings {
 				delNum := model.AppDB.Where(`function=? and market=? and symbol=? and order_time>? and order_time<?`,
 					setting.Function, market, setting.Symbol, strBegin, strEnd).Delete(&model.Order{}).RowsAffected
-				util.Log(``, util.LogLevelInfo, ``, util.SystemCarry, fmt.Sprintf(`del rows %d %s %s %s %s~%s`, delNum, setting.Function, market, setting.Symbol, strBegin, strEnd))
+				util.Log(util.LogLevelInfo, fmt.Sprintf(`del rows %d %s %s %s %s~%s`, delNum, setting.Function, market, setting.Symbol, strBegin, strEnd))
 				Grid.ProcessGrid(begin, end, setting, candles)
 			}
 		}
 	}
-	util.Log(``, util.LogLevelInfo, ``, util.SystemCarry, fmt.Sprintf(`done simulate grid %s %v`, market, coins))
+	util.Log(util.LogLevelInfo, fmt.Sprintf(`done simulate grid %s %v`, market, coins))
 	c.String(http.StatusOK, `done`)
 }
 
@@ -202,13 +202,13 @@ func simulateGXZQ(c *gin.Context) {
 		sign := fmt.Sprintf(`market%s,coins%s,seconds86400,%s~%s,far%d,near%d,limit%d,allLimit%d,useNear%v`,
 			market, coins, strBegin, strEnd, i*2, i, 3, -1, true)
 		regret.CutTail(market, coins, sign)
-		util.Log(``, util.LogLevelInfo, ``, util.SystemCarry, fmt.Sprintf(`done cut tail %s %s %s`, market, coins, sign))
+		util.Log(util.LogLevelInfo, fmt.Sprintf(`done cut tail %s %s %s`, market, coins, sign))
 		sign = fmt.Sprintf(`market%s,coins%s,seconds86400,%s~%s,far%d,near%d,limit%d,allLimit%d,useNear%v`,
 			market, coins, strBegin, strEnd, i*2, i, 3, -1, false)
 		regret.CutTail(market, coins, sign)
-		util.Log(``, util.LogLevelInfo, ``, util.SystemCarry, fmt.Sprintf(`done cut tail %s %s %s`, market, coins, sign))
+		util.Log(util.LogLevelInfo, fmt.Sprintf(`done cut tail %s %s %s`, market, coins, sign))
 	}
-	util.Log(``, util.LogLevelInfo, ``, util.SystemCarry, `done cut tail all`)
+	util.Log(util.LogLevelInfo, `done cut tail all`)
 	c.String(http.StatusOK, `done`)
 }
 
@@ -311,7 +311,7 @@ func simulate(c *gin.Context) {
 	}
 	sign := fmt.Sprintf(`market%s,coins%s,%s~%s,far%s,near%s,limit%s,allLimit%s,useNear%s,useM%v,seconds%s`,
 		market, coins, strBegin, strEnd, farStr, nearStr, strLimit, strAllLimit, strUseNear, useM, strSeconds)
-	util.Log(``, util.LogLevelInfo, ``, util.SystemCarry, fmt.Sprintf(`get simulation parameter %s auto%s`, sign, auto))
+	util.Log(util.LogLevelInfo, fmt.Sprintf(`get simulation parameter %s auto%s`, sign, auto))
 	limit, limitErr := strconv.ParseInt(strLimit, 10, 64)
 	if limitErr != nil {
 		limit = 3
@@ -333,7 +333,7 @@ func simulate(c *gin.Context) {
 			//autoSimulate(market, coins, begin, end, strBegin, strEnd, false, true, i, 2*i, 3, int(allLimit), int(seconds), fee)
 		}
 		util.StoreSyncMap(&model.CarryInfo, nil, `auto`)
-		util.Log(``, util.LogLevelInfo, ``, util.SystemCarry, fmt.Sprintf(`all auto simulation done fee %f`, fee))
+		util.Log(util.LogLevelInfo, fmt.Sprintf(`all auto simulation done fee %f`, fee))
 		c.String(http.StatusOK, fmt.Sprintf(`auto done fee %f`, fee))
 		return
 	}
@@ -364,7 +364,7 @@ func simulate(c *gin.Context) {
 		go model.AppDB.Where(`function=?`, sign).Delete(&model.Order{})
 		regret.ProcessCandles(begin, end, int(far), int(allLimit), useNear, useM, market, sign, settings)
 	} else {
-		util.Log(``, util.LogLevelInfo, ``, util.SystemCarry, fmt.Sprintf(`no need process simulate new %s`, strNew))
+		util.Log(util.LogLevelInfo, fmt.Sprintf(`no need process simulate new %s`, strNew))
 	}
 	orders := make([]*model.Order, 0)
 	model.AppDB.Where(`function=?`, sign).Order(`order_time asc`).Find(&orders)
@@ -548,7 +548,7 @@ func holdPage(c *gin.Context) {
 		}
 		err := carryRows.Close()
 		if err != nil {
-			util.Log(``, util.LogLevelError, ``, util.SystemCarry, fmt.Sprintf(`fail to close DB for carry rows`))
+			util.Log(util.LogLevelError, fmt.Sprintf(`fail to close DB for carry rows`))
 			return
 		}
 	}
@@ -577,7 +577,7 @@ func holdPage(c *gin.Context) {
 		}
 		err := carryRows.Close()
 		if err != nil {
-			util.Log(``, util.LogLevelInfo, ``, util.SystemOther, fmt.Sprintf(`fail to close DB for carry rows`))
+			util.Log(util.LogLevelInfo, fmt.Sprintf(`fail to close DB for carry rows`))
 			return
 		}
 	}

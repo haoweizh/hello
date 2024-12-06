@@ -90,8 +90,8 @@ func LogChanHandler(apiUrl, serverName string) {
 	}
 }
 
-func Log(accountKey, logLevel, traceId, systemName, content string) {
-	glcData := cmn.GlcData{Text: content, User: accountKey, Date: GetNow().String(), LogLevel: logLevel, TraceId: traceId, System: systemName}
+func Log(logLevel, content string) {
+	glcData := cmn.GlcData{Text: content, Date: GetNow().String(), LogLevel: logLevel}
 	logChan <- glcData
 }
 
@@ -100,8 +100,8 @@ func InfoSync(msg string) {
 	cmn.Info(logContent)
 }
 
-func LogLess(accountKey, logLevel, traceId, systemName, content string) {
+func LogLess(logLevel, content string) {
 	if time.Now().Second() == 0 {
-		Log(accountKey, logLevel, traceId, systemName, content)
+		Log(logLevel, content)
 	}
 }

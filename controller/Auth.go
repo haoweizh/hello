@@ -81,11 +81,11 @@ func GetCode(c *gin.Context) {
 		codeTime := time.Now()
 		codes.Store(code, &codeTime)
 		userNames.Store(userName, code)
-		util.Log(``, util.LogLevelInfo, ``, util.SystemCarry, fmt.Sprintf(`code is %s`, code))
+		util.Log(util.LogLevelInfo, fmt.Sprintf(`code is %s`, code))
 		err := util.SendMail(model.AppConfig.FromMail, model.AppConfig.FromMailAuth, userName, `验证码`, `验证码是 `+code)
 		if err != nil {
 			msg := fmt.Sprintf(`fail to send mail to %s err %s`, userName, err.Error())
-			util.Log(``, util.LogLevelError, ``, util.SystemCarry, msg)
+			util.Log(util.LogLevelError, msg)
 			c.JSON(http.StatusBadRequest, map[string]interface{}{`status`: `fail`, `msg`: msg, `data`: map[string]interface{}{}})
 			return
 		} else {

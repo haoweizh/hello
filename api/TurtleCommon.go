@@ -57,12 +57,12 @@ func ClearOrders(key, secret, market, symbol string, keepTypes map[string]bool) 
 	orders := QueryOpenOrders(key, secret, market, symbol)
 	for _, order := range orders {
 		if keepTypes != nil && keepTypes[order.OrderType] {
-			util.Log(``, util.LogLevelInfo, ``, util.SystemCarry, fmt.Sprintf(
+			util.Log(util.LogLevelInfo, fmt.Sprintf(
 				`keep order from ClearOrders %s %s %s %s`, market, symbol, order.OrderId, order.OrderType))
 			continue
 		}
 		if order != nil {
-			util.Log(``, util.LogLevelInfo, ``, util.SystemCarry, fmt.Sprintf(
+			util.Log(util.LogLevelInfo, fmt.Sprintf(
 				`cancel pending turtle order %s %s %s %s`, market, symbol, order.OrderId, order.OrderType))
 			MustCancel(key, secret, market, symbol, order.OrderType, order.OrderId, false)
 		}
@@ -101,7 +101,7 @@ func ClearExtraOrders(key, secret, market, symbol string, dataArray []*model.Tur
 		}
 		if keepOrders[order.OrderId] == nil && algoLimitOrders[order.OrderId] == nil {
 			result := MustCancel(key, secret, market, symbol, order.OrderType, order.OrderId, false)
-			util.Log(``, util.LogLevelInfo, ``, util.SystemCarry, fmt.Sprintf(
+			util.Log(util.LogLevelInfo, fmt.Sprintf(
 				`cancel extra order %s %s %s %s return %v`, market, symbol, order.OrderType, order.OrderId, result))
 		}
 	}
@@ -114,7 +114,7 @@ func AdjustPosHolding(key, secret string, setting *model.Setting, data *model.Tu
 	data.AdjustChecked = true
 	success, marketPos, _, _ := GetPositions(key, secret, setting.Market)
 	if !success {
-		util.Log(``, util.LogLevelInfo, ``, util.SystemCarry, fmt.Sprintf(
+		util.Log(util.LogLevelInfo, fmt.Sprintf(
 			`fail to adjust position holdings %s %s`, setting.Market, setting.Symbol))
 		return
 	}
@@ -125,8 +125,7 @@ func AdjustPosHolding(key, secret string, setting *model.Setting, data *model.Tu
 	if posMap[setting.Symbol] != nil { //setting.Chance和pos.Holding相乘小于零代表方向相反，此时设置为0
 		if float64(setting.Chance)*posMap[setting.Symbol].Holding <= 0 &&
 			math.Abs(posMap[setting.Symbol].Holding)*data.HighNear > 110 {
-			util.Log(``, util.LogLevelInfo, ``, util.SystemCarry, fmt.Sprintf(
-				`...place order to update turtle side %s %s %s holding %e grid amount %e chance %d`,
+			util.Log(util.LogLevelInfo, fmt.Sprintf(`...place order to update turtle side %s %s %s holding %e grid amount %e chance %d`,
 				setting.Market, setting.Symbol, setting.Function, posMap[setting.Symbol].Holding, setting.GridAmount, setting.Chance))
 			setting.GridAmount = 0
 			setting.Chance = 0
@@ -169,7 +168,7 @@ func AdjustPosHolding(key, secret string, setting *model.Setting, data *model.Tu
 				}
 			}
 		} else if setting.GridAmount != math.Abs(posMap[setting.Symbol].Holding) {
-			util.Log(``, util.LogLevelInfo, ``, util.SystemCarry, fmt.Sprintf(`update turtle grid Amount %s %s %e to %e`,
+			util.Log(util.LogLevelInfo, fmt.Sprintf(`update turtle grid Amount %s %s %e to %e`,
 				setting.Market, setting.Symbol, setting.GridAmount, posMap[setting.Symbol].Holding))
 			setting.GridAmount = math.Abs(posMap[setting.Symbol].Holding)
 		}
@@ -198,7 +197,7 @@ func CheckActiveTrail(account *model.Account, setting *model.Setting, data *mode
 		for _, order := range trails {
 			order.Function = model.Close
 			data.OrderAdjust[order.OrderId] = order
-			util.Log(``, util.LogLevelInfo, ``, util.SystemCarry, fmt.Sprintf(`success trail sell %s %s amt %f at %f ratio %f ordId %s`,
+			util.Log(util.LogLevelInfo, fmt.Sprintf(`success trail sell %s %s amt %f at %f ratio %f ordId %s`,
 				setting.Market, setting.Symbol, setting.GridAmount, data.LowActTrail*data.ActivationRate, data.CallBackRatio, order.OrderId))
 			go model.AppDB.Save(order)
 		}
@@ -210,14 +209,13 @@ func CheckActiveTrail(account *model.Account, setting *model.Setting, data *mode
 		for _, order := range trails {
 			order.Function = model.Close
 			data.OrderAdjust[order.OrderId] = order
-			util.Log(``, util.LogLevelInfo, ``, util.SystemCarry, fmt.Sprintf(`success trail buy %s %s amt %f at %f ratio %f ordId %s`,
+			util.Log(util.LogLevelInfo, fmt.Sprintf(`success trail buy %s %s amt %f at %f ratio %f ordId %s`,
 				setting.Market, setting.Symbol, setting.GridAmount, data.HighActTrail/data.ActivationRate, data.CallBackRatio, order.OrderId))
 			go model.AppDB.Save(order)
 		}
 	}
 	if trailed {
-		util.Log(``, util.LogLevelInfo, ``, util.SystemCarry, fmt.Sprintf(
-			`%s %s trailed and clear setting to 0`, setting.Market, setting.Symbol))
+		util.Log(util.LogLevelInfo, fmt.Sprintf(`%s %s trailed and clear setting to 0`, setting.Market, setting.Symbol))
 		setting.Chance = 0
 		setting.GridAmount = 0
 		setting.Liquidated = true
@@ -230,7 +228,7 @@ func CheckActiveTrail(account *model.Account, setting *model.Setting, data *mode
 func HandleOrders(key, secret, market, symbol string, settings []*model.Setting, turtleData []*model.TurtleData,
 	tick *model.BidAsk) (checked bool) {
 	if (len(settings) != 2 && len(settings) != 1) || len(settings) != len(turtleData) {
-		util.Log(``, util.LogLevelError, ``, util.SystemCarry, `wrong combine turtle parameter`)
+		util.Log(util.LogLevelError, `wrong combine turtle parameter`)
 		return false
 	}
 	if len(settings) == 1 {
@@ -271,7 +269,7 @@ func clearTurtleOrders(account *model.Account, setting *model.Setting, turtle *m
 	for _, order := range turtle.OrderAdjust {
 		if order != nil {
 			if order.OrderType == model.OrderTypeTrailStop {
-				util.Log(``, util.LogLevelInfo, ``, util.SystemCarry, fmt.Sprintf(`get trail from last turtle data %s %s %s amt %f at %f ordId %s %s`,
+				util.Log(util.LogLevelInfo, fmt.Sprintf(`get trail from last turtle data %s %s %s amt %f at %f ordId %s %s`,
 					order.Market, order.Symbol, order.OrderSide, order.Amount, order.Price, order.OrderId, order.Status))
 				trailOrders = append(trailOrders, order)
 			} else {
@@ -328,8 +326,7 @@ func handleLastTurtleData(account *model.Account, function, market, symbol, last
 			valueCombine, _ := util.LoadSyncMap(&TurtleDataSet, model.FunctionCombineTurtle, market, symbol, lastTime)
 			if valueCombine != nil {
 				lastHandled = true
-				util.Log(``, util.LogLevelInfo, ``, util.SystemCarry, fmt.Sprintf(
-					`handle last turtle combine %s %s %s %s`, function, market, symbol, lastTime))
+				util.Log(util.LogLevelInfo, fmt.Sprintf(`handle last turtle combine %s %s %s %s`, function, market, symbol, lastTime))
 				//CheckBreak(account, market, symbol, settings, turtles, nil)
 				clearTurtleOrders(account, settingCombine, valueCombine.(*model.TurtleData))
 				util.DelSyncMap(&TurtleDataSet, model.FunctionCombineTurtle, market, symbol, lastTime)
@@ -341,7 +338,7 @@ func handleLastTurtleData(account *model.Account, function, market, symbol, last
 			valueNormal, _ := util.LoadSyncMap(&TurtleDataSet, model.FunctionTurtleNormal, market, symbol, lastTime)
 			if valueNormal != nil {
 				lastHandled = true
-				util.Log(``, util.LogLevelInfo, ``, util.SystemCarry, fmt.Sprintf(
+				util.Log(util.LogLevelInfo, fmt.Sprintf(
 					`handle last turtle normal %s %s %s %s`, function, market, symbol, lastTime))
 				trailOrders = clearTurtleOrders(account, settingNormal, valueNormal.(*model.TurtleData))
 				util.DelSyncMap(&TurtleDataSet, model.FunctionTurtleNormal, market, symbol, lastTime)
@@ -350,7 +347,7 @@ func handleLastTurtleData(account *model.Account, function, market, symbol, last
 	} else if function == model.FunctionTurtle {
 		valueTurtle, _ := util.LoadSyncMap(&TurtleDataSet, function, market, symbol, lastTime)
 		lastHandled = true
-		util.Log(``, util.LogLevelInfo, ``, util.SystemCarry, fmt.Sprintf(
+		util.Log(util.LogLevelInfo, fmt.Sprintf(
 			`handle last turtle %s %s %s %s`, function, market, symbol, lastTime))
 		//CheckBreak(account, market, symbol, settings, turtles, nil)
 		clearTurtleOrders(account, GetSetting(function, market, symbol), valueTurtle.(*model.TurtleData))
@@ -365,17 +362,15 @@ func GetRankTurtleData(account *model.Account, symbol string, setting *model.Set
 	data = &model.TurtleData{TurtleTime: nowPeriod, Expire: nowPeriod.Add(time.Second * time.Duration(setting.Seconds)),
 		IsBig: true, Symbol: symbol, DaysFar: int(setting.Far), DaysNear: int(setting.Near), DaysAdjust: 5,
 		OrderAdjust: make(map[string]*model.Order), CallBackRatio: 0.03, ActivationRate: 2}
-	util.Log(``, util.LogLevelInfo, ``, util.SystemCarry, fmt.Sprintf(
+	util.Log(util.LogLevelInfo, fmt.Sprintf(
 		`need to create turtle data rank %s %s %s %s %d`, setting.Function, setting.Market, symbol, nowStr, setting.Far))
 	candles := getTurtleCandles(account, setting.Market, symbol, int(setting.Far), int(setting.Seconds), nowPeriod)
 	getOne, getAll := CalcTurtleData(account, data, candles, int(setting.Seconds), setting.Market, setting.Function, float64(setting.ChanceLimit), setting.AmountRate)
 	if !getOne {
-		util.Log(``, util.LogLevelError, ``, util.SystemCarry, fmt.Sprintf(
-			`fail to getOne %s %s %d %d`, setting.Market, symbol, data.DaysFar, setting.Seconds))
+		util.Log(util.LogLevelError, fmt.Sprintf(`fail to getOne %s %s %d %d`, setting.Market, symbol, data.DaysFar, setting.Seconds))
 		return nil, false
 	} else if !getAll {
-		util.Log(``, util.LogLevelError, ``, util.SystemCarry, fmt.Sprintf(
-			`fail to getAll %s %s %d %d`, setting.Market, symbol, data.DaysFar, setting.Seconds))
+		util.Log(util.LogLevelError, fmt.Sprintf(`fail to getAll %s %s %d %d`, setting.Market, symbol, data.DaysFar, setting.Seconds))
 		return nil, true
 	}
 	if data.Amount > 0 && data.N > 0 {
@@ -385,12 +380,10 @@ func GetRankTurtleData(account *model.Account, symbol string, setting *model.Set
 			marketInfo = v.(*model.MarketInfo)
 		}
 		if marketInfo == nil {
-			util.Log(``, util.LogLevelError, ``, util.SystemCarry, fmt.Sprintf(
-				`fail to get marketInfo %s %s`, setting.Market, symbol))
+			util.Log(util.LogLevelError, fmt.Sprintf(`fail to get marketInfo %s %s`, setting.Market, symbol))
 			return nil, false
 		}
-		util.Log(``, util.LogLevelInfo, ``, util.SystemCarry, fmt.Sprintf(
-			`set data %s %s %s %f %f`, setting.Market, symbol, setting.Function, data.N, data.Amount))
+		util.Log(util.LogLevelInfo, fmt.Sprintf(`set data %s %s %s %f %f`, setting.Market, symbol, setting.Function, data.N, data.Amount))
 		return data, true
 	} else {
 		return nil, false
@@ -402,7 +395,7 @@ func GetTurtleData(account *model.Account, setting *model.Setting, removed bool)
 	lockValue, _ := util.LoadSyncMap(&getTurtleLock, account.Key, `refreshDynamic`)
 	if lockValue == nil {
 		lock = &sync.Mutex{}
-		util.Log(``, util.LogLevelInfo, ``, util.SystemCarry, fmt.Sprintf(`create lock %s %s`, account.Key, `refreshDynamic`))
+		util.Log(util.LogLevelInfo, fmt.Sprintf(`create lock %s %s`, account.Key, `refreshDynamic`))
 		util.StoreSyncMap(&getTurtleLock, lock, account.Key, `refreshDynamic`)
 	} else {
 		lock = lockValue.(*sync.Mutex)
@@ -433,7 +426,7 @@ func GetTurtleData(account *model.Account, setting *model.Setting, removed bool)
 					for _, position := range positions {
 						posMap.Store(strings.ToUpper(position.Currency), position)
 					}
-					util.Log(``, util.LogLevelInfo, ``, util.SystemCarry, fmt.Sprintf(
+					util.Log(util.LogLevelInfo, fmt.Sprintf(
 						`update positions when refresh %s %s %d`, account.Key, setting.Market, len(positions)))
 					positionsCache.Store(account.Key, posMap)
 				}
@@ -445,7 +438,7 @@ func GetTurtleData(account *model.Account, setting *model.Setting, removed bool)
 	if posValue != nil {
 		holdingValue, _ := posValue.(*sync.Map).Load(setting.Symbol)
 		if holdingValue != nil && holdingValue.(*Position).Holding != 0 {
-			util.Log(``, util.LogLevelInfo, ``, util.SystemCarry, fmt.Sprintf(
+			util.Log(util.LogLevelInfo, fmt.Sprintf(
 				`not removed %s %s %f`, account.Key, setting.Symbol, holdingValue.(*Position).Holding))
 			removed = false
 		}
@@ -458,15 +451,15 @@ func GetTurtleData(account *model.Account, setting *model.Setting, removed bool)
 		util.StoreSyncMap(&TurtleDataSet, data, setting.Function, setting.Market, setting.Symbol, nowStr)
 		return data, false
 	}
-	util.Log(``, util.LogLevelInfo, ``, util.SystemCarry, fmt.Sprintf(`need to create turtle data %s %s %s %s %d`,
+	util.Log(util.LogLevelInfo, fmt.Sprintf(`need to create turtle data %s %s %s %s %d`,
 		setting.Function, setting.Market, setting.Symbol, nowStr, setting.Far))
 	candles := getTurtleCandles(account, setting.Market, setting.Symbol, int(setting.Far), int(setting.Seconds), nowPeriod)
 	getOne, getAll := CalcTurtleData(account, data, candles, int(setting.Seconds), setting.Market, setting.Function, float64(setting.ChanceLimit), setting.AmountRate)
 	if !getOne {
-		util.Log(``, util.LogLevelError, ``, util.SystemCarry, fmt.Sprintf(`fail to getOne %s %s %d %d`, setting.Market, setting.Symbol, data.DaysFar, setting.Seconds))
+		util.Log(util.LogLevelError, fmt.Sprintf(`fail to getOne %s %s %d %d`, setting.Market, setting.Symbol, data.DaysFar, setting.Seconds))
 		return nil, false
 	} else if !getAll {
-		util.Log(``, util.LogLevelError, ``, util.SystemCarry, fmt.Sprintf(`fail to getAll %s %s %d %d`, setting.Market, setting.Symbol, data.DaysFar, setting.Seconds))
+		util.Log(util.LogLevelError, fmt.Sprintf(`fail to getAll %s %s %d %d`, setting.Market, setting.Symbol, data.DaysFar, setting.Seconds))
 		return nil, true
 	}
 	if lastHandled {
@@ -480,7 +473,7 @@ func GetTurtleData(account *model.Account, setting *model.Setting, removed bool)
 		}
 	} else {
 		data.Liquidated = setting.Liquidated
-		util.Log(``, util.LogLevelInfo, ``, util.SystemCarry, fmt.Sprintf(`set turtle data liquidated to setting %s %s %s %v`,
+		util.Log(util.LogLevelInfo, fmt.Sprintf(`set turtle data liquidated to setting %s %s %s %v`,
 			setting.Function, setting.Symbol, setting.Market, setting.Liquidated))
 	}
 	if data.Amount > 0 && data.N > 0 {
@@ -490,13 +483,13 @@ func GetTurtleData(account *model.Account, setting *model.Setting, removed bool)
 			marketInfo = v.(*model.MarketInfo)
 		}
 		if marketInfo == nil {
-			util.Log(``, util.LogLevelError, ``, util.SystemCarry, fmt.Sprintf(`fail to get marketInfo %s %s`, setting.Market, setting.Symbol))
+			util.Log(util.LogLevelError, fmt.Sprintf(`fail to get marketInfo %s %s`, setting.Market, setting.Symbol))
 			return nil, false
 		}
 		util.StoreSyncMap(&TurtleDataSet, data, setting.Function, setting.Market, setting.Symbol, nowStr)
-		util.Log(``, util.LogLevelInfo, ``, util.SystemCarry, fmt.Sprintf(`set turtle %s %s %s %s Amount:%e N:%e %d:%e-%e %d:%e-%e %v`,
+		util.Log(util.LogLevelInfo, fmt.Sprintf(`set turtle %s %s %s %s Amount:%e N:%e %d:%e-%e %d:%e-%e %v`,
 			setting.Function, setting.Market, setting.Symbol, nowStr, data.Amount, data.N, data.DaysNear, data.LowNear, data.HighNear, data.DaysFar, data.LowFar, data.HighFar, data))
-		util.Log(``, util.LogLevelInfo, ``, util.SystemCarry, fmt.Sprintf(`set data %s %s %s %f %f`, setting.Market, setting.Symbol, setting.Function, data.N, data.Amount))
+		util.Log(util.LogLevelInfo, fmt.Sprintf(`set data %s %s %s %f %f`, setting.Market, setting.Symbol, setting.Function, data.N, data.Amount))
 		return data, true
 	} else {
 		return nil, false
@@ -510,8 +503,7 @@ func CalcTurtleData(account *model.Account, data *model.TurtleData, candles []*m
 		currentPeriod := data.TurtleTime.Add(time.Second * time.Duration(seconds*-i))
 		candle := findCandle(candles, currentPeriod)
 		if candle == nil || candle.PriceHigh == 0 || candle.PriceLow == 0 {
-			util.LogLess(``, util.LogLevelInfo, ``, util.SystemCarry, fmt.Sprintf(
-				`can not calc turtleDate as nil candle %s %s %s %d`,
+			util.LogLess(util.LogLevelInfo, fmt.Sprintf(`can not calc turtleDate as nil candle %s %s %s %d`,
 				market, data.Symbol, currentPeriod.String(), len(candles)))
 			return
 		}
@@ -547,7 +539,7 @@ func CalcTurtleData(account *model.Account, data *model.TurtleData, candles []*m
 			data.M = candle.M
 			priceClose = candle.PriceClose
 			data.Amount = CalcTurtleAmount(account, data.N, amountRate, candle)
-			util.Log(``, util.LogLevelInfo, ``, util.SystemCarry, fmt.Sprintf(
+			util.Log(util.LogLevelInfo, fmt.Sprintf(
 				`calc amt %s %s %s %f %f %f`, market, data.Symbol, function, data.N, amountRate, data.Amount))
 		}
 	}
@@ -608,7 +600,7 @@ func getTurtleCandles(account *model.Account, market, symbol string, far, second
 		lastCandle := sortedCandles.Value[len(sortedCandles.Value)-1]
 		lastCandle.N = (lastCandle2.N*float64(calcLenN-1) + lastCandle.PriceHigh - lastCandle.PriceLow) / float64(calcLenN)
 		lastCandle.NVolume = (lastCandle2.NVolume*float64(calcLenV-1) + lastCandle.Volume) / float64(calcLenV)
-		util.Log(``, util.LogLevelInfo, ``, util.SystemCarry, fmt.Sprintf(`base on last 2 candle %s %s far %d %d n-n %f %f nv-nv %f %f len %d volume len %d`,
+		util.Log(util.LogLevelInfo, fmt.Sprintf(`base on last 2 candle %s %s far %d %d n-n %f %f nv-nv %f %f len %d volume len %d`,
 			market, symbol, far, seconds, lastCandle2.N, lastCandle.N, lastCandle2.NVolume, lastCandle.NVolume, calcLenN, calcLenV))
 	}
 	return sortedCandles.Value
@@ -653,7 +645,7 @@ func findCandle(candles []*model.Candle, begin time.Time) (resultCandle *model.C
 		}
 	}
 	for _, candle := range candles {
-		util.Log(``, util.LogLevelInfo, ``, util.SystemCarry, fmt.Sprintf(`no found candle %s %s %s %s`,
+		util.Log(util.LogLevelInfo, fmt.Sprintf(`no found candle %s %s %s %s`,
 			candle.Market, candle.Symbol, begin.String(), candle.Begin.String()))
 	}
 	return nil
@@ -693,7 +685,7 @@ func SetTurtleOrderStatus(function, market, symbol, orderId, status string) {
 func CheckBreak(account *model.Account, market, symbol string, settings []*model.Setting, turtleData []*model.TurtleData,
 	tick *model.BidAsk) (useApi bool) {
 	if (len(settings) != 2 && len(settings) != 1) || len(settings) != len(turtleData) {
-		util.Log(``, util.LogLevelError, ``, util.SystemCarry, `wrong combine turtle parameter`)
+		util.Log(util.LogLevelError, `wrong combine turtle parameter`)
 		return false
 	}
 	if turtleData[0].CheckUseApi.Add(time.Minute * 10).Before(util.GetNow()) {
@@ -729,12 +721,12 @@ func CheckBreak(account *model.Account, market, symbol string, settings []*model
 							order.OrderType, order.OrderId)
 						if limitOrder != nil {
 							data.OrderAdjust[limitOrder.OrderId] = limitOrder
-							util.Log(``, util.LogLevelInfo, ``, util.SystemCarry, fmt.Sprintf(
-								`add okex created limit order into turtle adjust %s %s->%s`, order.Symbol, order.OrderId, limitOrder.OrderId))
+							util.Log(util.LogLevelInfo, fmt.Sprintf(`add okex created limit order into turtle adjust %s %s->%s`,
+								order.Symbol, order.OrderId, limitOrder.OrderId))
 						}
 					}
 				}
-				util.Log(``, util.LogLevelInfo, ``, util.SystemCarry, fmt.Sprintf(`order break long %s %s %s %d %e %e id %s usdApi %v`,
+				util.Log(util.LogLevelInfo, fmt.Sprintf(`order break long %s %s %s %d %e %e id %s usdApi %v`,
 					market, symbol, orderLong.OrderType, setting.Chance, orderLong.TriggerPrice, orderLong.Price, orderLong.OrderId, useApi))
 			}
 		}
@@ -756,12 +748,12 @@ func CheckBreak(account *model.Account, market, symbol string, settings []*model
 							order.OrderType, order.OrderId)
 						if limitOrder != nil {
 							data.OrderAdjust[limitOrder.OrderId] = limitOrder
-							util.Log(``, util.LogLevelInfo, ``, util.SystemCarry, fmt.Sprintf(
+							util.Log(util.LogLevelInfo, fmt.Sprintf(
 								`add okex created limit order into turtle adjust %s %s->%s`, order.Symbol, order.OrderId, limitOrder.OrderId))
 						}
 					}
 				}
-				util.Log(``, util.LogLevelInfo, ``, util.SystemCarry, fmt.Sprintf(
+				util.Log(util.LogLevelInfo, fmt.Sprintf(
 					`order break short %s %s %s %d %e %e id %s useApi %v`,
 					market, symbol, orderShort.OrderType, setting.Chance, orderShort.TriggerPrice, orderShort.Price, orderShort.OrderId, useApi))
 			}
