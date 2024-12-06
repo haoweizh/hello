@@ -51,7 +51,7 @@ func ParameterServe() {
 	router.GET(`cross`, crossPage)
 	router.GET(`hold`, holdPage)
 	router.GET(`tick`, tickPage)
-	router.GET(`cross_refresh`, crossRefresh)
+	//router.GET(`cross_refresh`, crossRefresh)
 	router.GET(`debug`, debug)
 	router.GET(`gxzq`, simulateGXZQ)
 	router.GET(`candles`, getCandles)
