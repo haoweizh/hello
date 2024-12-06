@@ -110,11 +110,8 @@ func ClearChannels(market string, chanMap *sync.Map) {
 		channels, _ := chanMap.Load(market)
 		for i, channel := range channels.([]chan struct{}) {
 			util.Log(util.LogLevelInfo, fmt.Sprintf(`send to stop connection %s %d`, market, i))
-			if channel != nil {
-				channel <- struct{}{}
-			} else {
-				util.Log(util.LogLevelError, fmt.Sprintf(`channel already closed %s %d`, market, i))
-			}
+			channel <- struct{}{}
+			close(channel)
 		}
 		chanMap.Delete(market)
 	}

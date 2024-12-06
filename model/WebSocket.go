@@ -90,7 +90,6 @@ func chanHandler(market string, stopChan chan struct{}, connection *WSConn, msgH
 		if err != nil {
 			util.Log(util.LogLevelError, fmt.Sprintf(`connection closed %s %s`, market, err.Error()))
 		}
-		close(stopChan)
 	}()
 	for {
 		select {
