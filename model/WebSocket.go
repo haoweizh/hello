@@ -111,7 +111,7 @@ func WsAccountClient(market, key, url string, accountMsgHandler AccountMsgHandle
 	connection.Conn.SetPingHandler(func(appData string) error {
 		accountMsgHandler(market, key, []byte(`ping pong received`))
 		util.Log(util.LogLevelInfo, market+` create ping received `+appData)
-		return connection.Conn.WriteMessage(websocket.PongMessage, []byte(appData))
+		return connection.Conn.WriteControl(websocket.PongMessage, []byte(appData), time.Now().Add(time.Second*10))
 	})
 	go func() {
 		defer func() {

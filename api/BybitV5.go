@@ -811,6 +811,8 @@ func cancelOrdersBybit(key, secret, symbol string) (result bool) {
 		code, _ := jsonData.Get("code").Int64()
 		if code == 0 {
 			return true
+		} else {
+			util.Log(util.LogLevelError, fmt.Sprintf("fail to cancel bybit order, code: %d %s", code, string(httpResp)))
 		}
 	}
 	return false

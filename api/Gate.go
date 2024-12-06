@@ -773,7 +773,7 @@ func cancelOrderGate(key, secret, symbol, orderId string) (result bool) {
 		param.Account = optional.NewString("spot")
 		order, _, err := client.SpotApi.CancelOrder(ctx, orderId, dialectSymbol, param)
 		if err != nil {
-			panicGateError(key, fmt.Sprintf("cancelSpotOrdersGate %s %s", dialectSymbol, orderId), err)
+			panicGateError(key, fmt.Sprintf("cancelSpotOrdersGate %s %s %v", dialectSymbol, orderId, order), err)
 			return false
 		}
 		marshal, _ := json.Marshal(order)
@@ -782,7 +782,7 @@ func cancelOrderGate(key, secret, symbol, orderId string) (result bool) {
 	} else if success && marketType == model.MarketTypePerp {
 		order, _, err := client.FuturesApi.CancelFuturesOrder(ctx, `usdt`, orderId)
 		if err != nil {
-			panicGateError(key, `cancelFutureOrderGate`, err)
+			panicGateError(key, fmt.Sprintf(`cancelFutureOrderGate %v`, order), err)
 			return false
 		}
 		marshal, _ := json.Marshal(order)
@@ -801,7 +801,7 @@ func cancelOrdersGate(key string, secret string, symbol string) (result bool) {
 		param.Account = optional.NewString("spot")
 		orders, _, err := client.SpotApi.CancelOrders(ctx, dialectSymbol, param)
 		if err != nil {
-			panicGateError(key, "cancelSpotOrdersGate", err)
+			panicGateError(key, fmt.Sprintf("cancelSpotOrdersGate %v", orders), err)
 			return false
 		}
 		marshal, _ := json.Marshal(orders)
@@ -810,7 +810,7 @@ func cancelOrdersGate(key string, secret string, symbol string) (result bool) {
 	} else if success && marketType == model.MarketTypePerp {
 		orders, _, err := client.FuturesApi.CancelFuturesOrders(ctx, `usdt`, dialectSymbol, nil)
 		if err != nil {
-			panicGateError(key, "cancelFutureOrdersGate", err)
+			panicGateError(key, fmt.Sprintf("cancelFutureOrdersGate %v", orders), err)
 			return false
 		}
 		marshal, _ := json.Marshal(orders)

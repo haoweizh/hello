@@ -332,6 +332,8 @@ func cancelOrdersBitgetSpot(key, secret, symbol string) (result bool) {
 		code, _ := jsonData.Get("code").String()
 		if code == "00000" {
 			return true
+		} else {
+			util.Log(util.LogLevelError, fmt.Sprintf("fail to cancel bitget spot order, code: %s %s", code, string(httpResp)))
 		}
 	}
 	return false
