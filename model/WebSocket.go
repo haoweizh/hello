@@ -59,7 +59,7 @@ func newWsGorilla(url string) (*WSConn, error) {
 			c.EnableWriteCompression(true)
 			c.SetReadLimit(1024 * 1024 * 128)
 			c.SetPingHandler(func(appData string) error {
-				util.Log(util.LogLevelInfo, fmt.Sprintf(`%s create ping received %s`, url, appData))
+				util.Log(util.LogLevelInfo, fmt.Sprintf(`%s ping received %s`, url, appData))
 				return c.WriteControl(websocket.PongMessage, []byte(appData), time.Now().Add(time.Second*10))
 			})
 		}
