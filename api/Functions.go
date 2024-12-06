@@ -96,7 +96,7 @@ func RequireConnTickReset(environment *model.Environment, market string) bool {
 		//	util.Notice(fmt.Sprintf(`RequireConnTickReset delay too long %s %s %f`, market, symbol, delay))
 		//}
 	}
-	needReset = float64(validSymbolNum) < float64(len(symbols))*0.8 && len(symbols)-validSymbolNum > 100
+	needReset = validSymbolNum*5 < 4*len(symbols) && len(symbols)-validSymbolNum > 100
 	for funcName := range model.TickHandlers {
 		settings := GetSettings(funcName, market)
 		if settings == nil {
@@ -119,7 +119,7 @@ func RequireConnTickReset(environment *model.Environment, market string) bool {
 			return true
 		})
 	}
-	util.Log(util.LogLevelInfo, fmt.Sprintf(`RequireConnTickReset %d  %f valid %d in %d %s needReset %v`,
+	util.Log(util.LogLevelInfo, fmt.Sprintf(`require conn tick reset %d  %f valid %d in %d %s needReset %v`,
 		now, model.AppConfig.Delay, validSymbolNum, len(symbols), market, needReset))
 	return needReset.(bool)
 }
