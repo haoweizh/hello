@@ -73,7 +73,7 @@ func createSpotMarket(key, secret, market string) (sm *spotMarket) {
 			}
 		}
 		if collateral != nil {
-			util.Log(util.LogLevelInfo, fmt.Sprintf(`collateral for sm available u %f to %f`,
+			util.Log(util.LogLevelInfo, fmt.Sprintf(`collateral for sm available u %s %f to %f`,
 				market, sm.availableU, collateral.Available))
 			sm.availableU = math.Min(sm.availableU, collateral.Available)
 		}
@@ -639,8 +639,8 @@ func equalCoin(coin string, statuses []*CarryStatus) (isEqual bool, holdingInU f
 			util.Log(util.LogLevelInfo, fmt.Sprintf(
 				`do equal %s %s %s at %f %f %f %d amount %f holding %f worthU %f status holding %f`,
 				coin, equalStatus.market, equalStatus.symbol, price, tick.Asks[0].Price, tick.Bids[0].Price, tick.Ts, amount, holding, holdingInU, equalStatus.Holding))
-			order := api.PlaceOrder(equalStatus.account.Key, equalStatus.account.Secret, orderSide, model.OrderTypeLimit,
-				equalStatus.market, equalStatus.symbol, ``, model.FunctionComplement, price, price, amount, false, nil)
+			order := api.PlaceOrder(equalStatus.account.Key, equalStatus.account.Secret, orderSide, model.OrderTypeMarket,
+				equalStatus.market, equalStatus.symbol, ``, model.FunctionCompAll, price, price, amount, false, nil)
 			if order != nil && order.Status != model.CarryStatusFail {
 				if orderSide == model.OrderSideBuy {
 					equalStatus.Holding += amount
