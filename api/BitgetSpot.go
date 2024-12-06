@@ -37,13 +37,13 @@ func maintainConnsBitget(market string, accounts []*model.Account) {
 			valueUpdate, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrderUpdate, market, account.Key)
 			if valueUpdate != nil {
 				if err := valueUpdate.(*model.WSConn).WriteMsg([]byte(`ping`)); err != nil {
+					valueUpdate.(*model.WSConn).Close()
 					util.Log(util.LogLevelError, fmt.Sprintf("order update conn maintain error %s %s", market, err.Error()))
 				} else {
 					success = true
 				}
 			}
 			if !success {
-				valueUpdate.(*model.WSConn).Close()
 				util.DelSyncMap(&model.AppEnvironment.ConnOrderUpdate, market, account.Key)
 				WsOrderServeBitget(market, account)
 			}
