@@ -90,8 +90,16 @@ func Test_ws(t *testing.T) {
 
 func Test_getCommonMarketInfos(t *testing.T) {
 	model.NewConfig()
-	account := model.AppConfig.GetAccounts(model.BinanceSpot)[0]
-	api.QueryOpenOrders(account.Key, account.Secret, model.BinanceSpot, `PEPE_USDT`)
+	market := model.Bybit
+	account := model.AppConfig.GetAccounts(market)[0]
+	symbol := `BTC_PERP`
+	api.CancelOrders(account.Key, account.Secret, market, symbol)
+	//api.CancelAll(account.Key, account.Secret, market)
+	//orders := api.QueryOpenOrders(account.Key, account.Secret, market, symbol)
+	//res, code, msg := api.CancelOrder(account.Key, account.Secret, market, symbol, ``, orders[0].OrderId)
+	//fmt.Println(res)
+	//fmt.Println(code, msg)
+	//fmt.Println(orders)
 	//model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
 	//api.InitCrossMarketInfos([]string{model.Gate})
 	api.InitMarketInfos(model.BinanceSpot)

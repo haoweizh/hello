@@ -423,7 +423,6 @@ func InitApp(refreshDynamic bool) bool {
 		PrepareSettings()
 	}
 	for _, market := range appMarkets {
-		SetRequireReset(market)
 		accounts := model.AppConfig.GetAccounts(market)
 		for _, account := range accounts {
 			go CancelAll(account.Key, account.Secret, market)

@@ -40,6 +40,10 @@ func maintainConnsOKEX(accounts []*model.Account) {
 	//	}
 	//}()
 	for {
+		if !CheckSetProcessing(model.FunctionConnMaintain, model.OKEX, ``, true) {
+			time.Sleep(2 * time.Second)
+			continue
+		}
 		connTick, _ := model.AppEnvironment.ConnTick.Load(model.OKEX)
 		if connTick != nil {
 			if err := SendToConnections(model.OKEX, connTick.(map[*model.WSConn]bool), []byte(`ping`)); err != nil {
@@ -56,6 +60,7 @@ func maintainConnsOKEX(accounts []*model.Account) {
 				if err := SendToConnection(model.OKEX, value.(*model.WSConn), []byte(`ping`)); err != nil {
 					util.Log(util.LogLevelError, "-test ok ws-okex server ping client error "+err.Error())
 					success = false
+					value.(*model.WSConn).Close()
 				}
 			} else {
 				success = false
@@ -66,6 +71,7 @@ func maintainConnsOKEX(accounts []*model.Account) {
 				WsOrderServeOKEX(account)
 			}
 		}
+		CheckSetProcessing(model.FunctionConnMaintain, model.OKEX, ``, false)
 		time.Sleep(time.Second * 20)
 	}
 }

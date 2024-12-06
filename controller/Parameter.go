@@ -600,10 +600,10 @@ func crossRefresh(c *gin.Context) {
 	param := c.Query(`markets`)
 	api.InitCrossMarketInfos(strings.Split(param, `,`))
 	api.PrepareSettings()
-	markets := api.GetMarkets()
-	for _, market := range markets {
-		api.SetRequireReset(market)
-	}
+	//markets := api.GetMarkets()
+	//for _, market := range markets {
+	//	api.SetRequireReset(market)
+	//}
 	c.String(http.StatusOK, `init cross markets done`)
 }
 

@@ -110,7 +110,13 @@ func _(environment *model.Environment, market string, symbols map[string]bool) (
 
 func CreateWSTick(environment *model.Environment, market string) (
 	socketMap map[*model.WSConn]bool, channels []chan struct{}) {
-	model.ChannelMaintaining.Store(market, true)
+	for {
+		locking := CheckSetProcessing(model.FunctionConnMaintain, market, ``, true)
+		if !locking {
+			break
+		}
+		time.Sleep(time.Second)
+	}
 	util.Log(util.LogLevelInfo, " create depth chan for "+market)
 	channels = make([]chan struct{}, 1)
 	var err error
@@ -147,7 +153,7 @@ func CreateWSTick(environment *model.Environment, market string) (
 		util.Log(util.LogLevelError, market+` can not create depth server `+err.Error())
 	}
 	model.AppEnvironment.WsInitTime.Store(market, util.GetNow())
-	model.ChannelMaintaining.Store(market, false)
+	CheckSetProcessing(model.FunctionConnMaintain, market, ``, false)
 	return socketMap, channels
 }
 
@@ -210,7 +216,7 @@ func SendToConnections(market string, connections map[*model.WSConn]bool, msg []
 		if err != nil {
 			util.Log(util.LogLevelError, fmt.Sprintf(
 				`fail to write to all connection %s %s return: %s`, market, msg, err.Error()))
-			SetRequireReset(market)
+			//SetRequireReset(market)
 		}
 	}
 	return err

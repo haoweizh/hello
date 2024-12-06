@@ -29,6 +29,10 @@ var listenTime sync.Map // listenKey - time
 
 func MaintainConnsBinance(market string, accounts []*model.Account) {
 	for {
+		if !CheckSetProcessing(model.FunctionConnMaintain, market, ``, true) {
+			time.Sleep(2 * time.Second)
+			continue
+		}
 		for _, account := range accounts {
 			value, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrder, market, account.Key)
 			valueUpdate, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrderUpdate, market, account.Key)
@@ -41,9 +45,12 @@ func MaintainConnsBinance(market string, accounts []*model.Account) {
 					}
 				}
 			} else {
+				value.(*model.WSConn).Close()
+				valueUpdate.(*model.WSConn).Close()
 				WsOrderServeBinance(account, market)
 			}
 		}
+		CheckSetProcessing(model.FunctionConnMaintain, market, ``, false)
 		time.Sleep(time.Second * 30)
 	}
 }

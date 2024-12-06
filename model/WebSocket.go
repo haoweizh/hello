@@ -20,6 +20,14 @@ type WSConn struct {
 	Conn *websocket.Conn
 }
 
+func (wsConn *WSConn) Close() {
+	err := wsConn.Conn.Close()
+	if err != nil {
+		util.Log(util.LogLevelError, `close conn err `+err.Error())
+		return
+	}
+}
+
 func (wsConn *WSConn) WriteMsg(msg []byte) (err error) {
 	//ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	//defer cancel()

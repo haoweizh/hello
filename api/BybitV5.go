@@ -64,7 +64,7 @@ var wsOrderHandlerBybit = func(market, key string, event []byte) {
 	wsResp := model.WSResp{RequestId: responseJson.Get(`reqId`).MustString(),
 		OrderId: responseJson.GetPath(`data`, `orderId`).MustString()}
 	code := responseJson.Get(`retCode`).MustInt64()
-	if code == 0 {
+	if code == 0 && responseJson.Get(`retMsg`).MustString() == `OK` {
 		wsResp.Success = true
 	} else {
 		wsResp.Success = false
@@ -75,6 +75,10 @@ var wsOrderHandlerBybit = func(market, key string, event []byte) {
 
 func maintainConnsBybit(accounts []*model.Account) {
 	for {
+		if !CheckSetProcessing(model.FunctionConnMaintain, model.Bybit, ``, true) {
+			time.Sleep(2 * time.Second)
+			continue
+		}
 		pingMsg := []byte(fmt.Sprintf(`{ "req_id": "maintain %d","op": "ping"}`, time.Now().UnixMilli()))
 		connTick, _ := model.AppEnvironment.ConnTick.Load(model.Bybit)
 		if connTick != nil {
@@ -109,12 +113,19 @@ func maintainConnsBybit(accounts []*model.Account) {
 				success = false
 			}
 			if !success {
+				if connOrderUpdate != nil {
+					connOrderUpdate.(*model.WSConn).Close()
+				}
+				if connOrder != nil {
+					connOrder.(*model.WSConn).Close()
+				}
 				util.Log(util.LogLevelError, "fail to ping ws bybit "+errMsg)
 				util.DelSyncMap(&model.AppEnvironment.ConnOrder, model.Bybit, account.Key)
 				util.DelSyncMap(&model.AppEnvironment.ConnOrderUpdate, model.Bybit, account.Key)
 				WsOrderServeBybit(account)
 			}
 		}
+		CheckSetProcessing(model.FunctionConnMaintain, model.Bybit, ``, true)
 		time.Sleep(time.Second * 20)
 	}
 }
@@ -651,7 +662,7 @@ func setBybitMarginLeverage(key, secret string) {
 	}
 	if jsonData != nil {
 		code, codeErr := jsonData.Get("retCode").Int()
-		if code != 0 || codeErr != nil {
+		if code != 0 || codeErr != nil || jsonData.Get(`retMsg`).MustString() != `OK` {
 			util.Log(util.LogLevelError, fmt.Sprintf("fail to set bybit margin leverage, resp: %s codeErr: %v", httpResp, codeErr))
 		}
 	}
@@ -678,7 +689,7 @@ func setSymbolLeverageBybit(account *model.Account, symbol string) (setSuc bool)
 		}
 		if jsonData != nil {
 			code, codeErr := jsonData.Get("retCode").Int()
-			if code != 0 || codeErr != nil {
+			if code != 0 || codeErr != nil || jsonData.Get(`retMsg`).MustString() != `OK` {
 				util.Log(util.LogLevelError, fmt.Sprintf("fail to set bybit perp leverage , resp: %s codeErr: %v", httpResp, codeErr))
 				return false
 			} else {
@@ -720,7 +731,7 @@ func setBybitPerpLeverage(key, secret string) {
 			}
 			if jsonData != nil {
 				code, codeErr := jsonData.Get("retCode").Int()
-				if code != 0 || codeErr != nil {
+				if code != 0 || codeErr != nil || jsonData.Get(`retMsg`).MustString() != `OK` {
 					util.Log(util.LogLevelError, fmt.Sprintf("fail to set bybit perp leverage , resp: %s codeErr: %v", httpResp, codeErr))
 				}
 			}
@@ -787,6 +798,56 @@ func placeOrderBybit(account *model.Account, isWs bool, order *model.Order, orde
 	}
 }
 
+func cancelAllBybit(key, secret, category string) (success bool) {
+	param := map[string]interface{}{"category": category}
+	if category == `linear` {
+		param[`settleCoin`] = `USDT`
+	}
+	httpResp, httpErr := SignedRequestBybit(key, secret, http.MethodPost, bybitRestUrl, "/v5/order/cancel-all", param)
+	if httpErr != nil {
+		util.Log(util.LogLevelError, fmt.Sprintf(`fail to do post when cancelOrdersBybit %s`, httpErr.Error()))
+		return
+	}
+	jsonData, jsonErr := util.NewJSON(httpResp)
+	if jsonErr != nil {
+		util.Log(util.LogLevelError, fmt.Sprintf(`fail to NewJson when cancelOrdersBybit %s`, jsonErr.Error()))
+		return
+	}
+	if jsonData != nil {
+		code, _ := jsonData.Get("retCode").Int64()
+		if code == 0 && jsonData.Get(`retMsg`).MustString() == `OK` {
+			return true
+		} else {
+			util.Log(util.LogLevelError, fmt.Sprintf("fail to cancel bybit order, code: %d %s", code, string(httpResp)))
+		}
+	}
+	return false
+}
+
+func cancelOrderBybit(key, secret, symbol, orderId string) (success bool) {
+	param := map[string]interface{}{"orderId": orderId}
+	_, marketType, _, dialectSymbol := model.GetFromStandard(model.Bybit, symbol)
+	if marketType == model.MarketTypePerp {
+		param["category"] = "linear"
+	} else {
+		param["category"] = "spot"
+	}
+	param["symbol"] = dialectSymbol
+	httpResp, httpErr := SignedRequestBybit(key, secret, http.MethodPost, bybitRestUrl, "/v5/order/cancel", param)
+	if httpErr != nil {
+		util.Log(util.LogLevelError, fmt.Sprintf(`fail to do post cancelOrderBybit %s`, httpErr.Error()))
+		return false
+	}
+	respJson, err := util.NewJSON(httpResp)
+	if err != nil {
+		util.Log(util.LogLevelError, fmt.Sprintf(`fail to NewJson when cancelOrderBybit %s`, err.Error()))
+	}
+	if respJson != nil && respJson.Get(`retCode`).MustInt() == 0 {
+		return true
+	}
+	return false
+}
+
 func cancelOrdersBybit(key, secret, symbol string) (result bool) {
 	_, marketType, _, dialectSymbol := model.GetFromStandard(model.Bybit, symbol)
 	param := map[string]interface{}{
@@ -808,8 +869,8 @@ func cancelOrdersBybit(key, secret, symbol string) (result bool) {
 		return
 	}
 	if jsonData != nil {
-		code, _ := jsonData.Get("code").Int64()
-		if code == 0 {
+		code, _ := jsonData.Get("retCode").Int64()
+		if code == 0 && jsonData.Get(`retMsg`).MustString() == `OK` {
 			return true
 		} else {
 			util.Log(util.LogLevelError, fmt.Sprintf("fail to cancel bybit order, code: %d %s", code, string(httpResp)))
@@ -844,6 +905,115 @@ func getFundingRateBybit(symbol string) (fundingRate *model.FundingRate) {
 		}
 	}
 	return fundingRate
+}
+
+func parseOrderBybit(value map[string]interface{}) (order *model.Order) {
+	if value == nil {
+		return nil
+	}
+	order = &model.Order{Market: model.Bybit}
+	if value[`orderId`] != nil && value[`orderId`].(string) != `0` && value[`orderId`].(string) != `` {
+		order.OrderId = value[`orderId`].(string)
+	}
+	if value[`symbol`] != nil {
+		_, marketType, coin := model.GetCoinFromDialect(model.Bybit, value[`symbol`].(string))
+		order.Symbol = coin + model.UniStandardTail[marketType]
+	}
+	if value[`price`] != nil && value[`price`] != `` {
+		order.Price, _ = strconv.ParseFloat(value[`price`].(string), 64)
+	}
+	if value[`qty`] != nil {
+		order.Amount, _ = strconv.ParseFloat(value[`qty`].(string), 64)
+	}
+	if strings.ToLower(value[`side`].(string)) == `buy` {
+		order.OrderSide = model.OrderSideBuy
+	} else if strings.ToLower(value[`side`].(string)) == `sell` {
+		order.OrderSide = model.OrderSideSell
+	}
+	if value[`avgPrice`] != nil && value[`avgPrice`] != `` {
+		order.DealPrice, _ = strconv.ParseFloat(value[`avgPrice`].(string), 64)
+	}
+	if value[`cumExecQty`] != nil && value[`cumExecQty`] != `` {
+		order.DealAmount, _ = strconv.ParseFloat(value[`cumExecQty`].(string), 64)
+	}
+	if value[`orderType`] != nil { // market：市价单 limit：限价单 post_only：只做maker单 fok：全部成交或立即取消 ioc：立即成交并取消剩余
+		switch strings.ToLower(value[`orderType`].(string)) {
+		case `market`:
+			order.OrderType = model.OrderTypeMarket
+		case `limit`:
+			order.OrderType = model.OrderTypeLimit
+		}
+	}
+	if value[`stopOrderType`] != nil {
+		switch strings.ToLower(value[`stopOrderType`].(string)) {
+		case `Stop`:
+			order.OrderType = model.OrderTypeStop
+		case `TrailingStop`:
+			order.OrderType = model.OrderTypeTrailStop
+		}
+	}
+	if value[`triggerPrice`] != nil && value[`triggerPrice`] != `` {
+		order.TriggerPrice, _ = strconv.ParseFloat(value[`triggerPrice`].(string), 64)
+	}
+	if value[`orderStatus`] != nil {
+		status := value[`orderStatus`].(string)
+		switch status {
+		case `New`, `PartiallyFilled`, `Untriggered`:
+			order.Status = model.CarryStatusWorking
+		case `Rejected`, `Deactivated`, `Cancelled`:
+			order.Status = model.CarryStatusFail
+		case `PartiallyFilledCanceled`, `Filled`:
+			order.Status = model.CarryStatusSuccess
+		default:
+			order.Status = model.CarryStatusFail
+		}
+	}
+	if value[`cumExecFee`] != nil && value[`cumExecFee`] != `` { // 订单交易手续费，平台向用户收取的交易手续费，手续费扣除 为负数。如： -0.01
+		order.Fee, _ = strconv.ParseFloat(value[`cumExecFee`].(string), 64)
+	}
+	if value[`createdTime`] != nil && value[`createdTime`] != `` {
+		ts, _ := strconv.ParseInt(value[`createdTime`].(string), 10, 64)
+		order.OrderTime = time.UnixMilli(ts)
+	}
+	if value[`1684738540561`] != nil && value[`1684738540561`] != `` {
+		ts, _ := strconv.ParseInt(value[`1684738540561`].(string), 10, 64)
+		order.OrderUpdateTime = time.UnixMilli(ts)
+	}
+	return order
+}
+
+func queryOpenOrdersBybit(key, secret, symbol string) (orders []*model.Order) {
+	param := make(map[string]interface{})
+	_, marketType, _, dialectSymbol := model.GetFromStandard(model.Bybit, symbol)
+	if marketType == model.MarketTypePerp {
+		param["category"] = "linear"
+	} else {
+		param["category"] = "spot"
+	}
+	param["symbol"] = dialectSymbol
+	httpResp, httpErr := SignedRequestBybit(key, secret, http.MethodGet, bybitRestUrl, "/v5/order/realtime", param)
+	if httpErr != nil {
+		util.Log(util.LogLevelError, `queryOpenOrdersBybit http err `+httpErr.Error())
+		return nil
+	}
+	respJson, jsonErr := util.NewJSON(httpResp)
+	if jsonErr != nil || respJson == nil {
+		msg := `queryOpenOrdersBybit json err `
+		if jsonErr != nil {
+			msg += jsonErr.Error()
+		}
+		util.Log(util.LogLevelError, msg)
+		return nil
+	}
+	array := respJson.GetPath(`result`, `list`).MustArray()
+	orders = make([]*model.Order, 0)
+	for _, data := range array {
+		order := parseOrderBybit(data.(map[string]interface{}))
+		if order != nil {
+			orders = append(orders, order)
+		}
+	}
+	return orders
 }
 
 func queryOrderBybit(key, secret, symbol, orderId string) *model.Order {

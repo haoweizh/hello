@@ -58,7 +58,7 @@ const OrderSideLiquidateLong = `liquidateLong`
 const OrderSideLiquidateShort = `liquidateShort`
 const FunctionSimulation = `simulation`
 const FunctionTurtle = `turtle`
-const FunctionGrid = `grid`
+const FunctionConnMaintain = `conn_maintaining`
 const FunctionTurtleAdjust = `turtle_adjust`
 const FunctionDynamicTurtle = `dynamic_turtle`
 const FunctionDynamicCombine = `dynamic_combine`
@@ -89,7 +89,6 @@ var AppConfig *Config
 var AppEnvironment = &Environment{WsManager: &WSManager{WSAgents: &sync.Map{}}, MonitorSettings: &sync.Map{},
 	ConnOrder: sync.Map{}, WSRespChan: make(chan WSResp, 100)}
 
-var ChannelMaintaining sync.Map // market - bool
 var DialectTail = map[string]map[string]string{
 	MarketTypeSpot: {Gate: `_USDT`, Ftx: `/USD`, OKEX: `-USDT`, Bybit: `USDT`, BinanceSpot: `USDT`, KucoinSpot: `-USDT`, BitgetSpot: `USDT`}, // BinanceMargin: `USDT`
 	MarketTypePerp: {Gate: `_USDT`, Ftx: `-PERP`, OKEX: `-USDT-SWAP`, Bybit: `USDT`, BinancePerp: `USDT`, Mexc: `_USDT`, KucoinPerp: `USDTM`, BitgetPerp: `USDT`},

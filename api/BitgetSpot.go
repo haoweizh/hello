@@ -22,6 +22,10 @@ const bitgetPrivate = `wss://ws.bitget.com/v2/ws/private`
 
 func maintainConnsBitget(market string, accounts []*model.Account) {
 	for {
+		if !CheckSetProcessing(model.FunctionConnMaintain, market, ``, true) {
+			time.Sleep(2 * time.Second)
+			continue
+		}
 		connTick, _ := model.AppEnvironment.ConnTick.Load(market)
 		if connTick != nil {
 			if err := SendToConnections(market, connTick.(map[*model.WSConn]bool), []byte(`ping`)); err != nil {
@@ -39,10 +43,12 @@ func maintainConnsBitget(market string, accounts []*model.Account) {
 				}
 			}
 			if !success {
+				valueUpdate.(*model.WSConn).Close()
 				util.DelSyncMap(&model.AppEnvironment.ConnOrderUpdate, market, account.Key)
 				WsOrderServeBitget(market, account)
 			}
 		}
+		CheckSetProcessing(model.FunctionConnMaintain, market, ``, false)
 		time.Sleep(time.Second * 20)
 	}
 }

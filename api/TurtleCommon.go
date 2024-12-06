@@ -419,7 +419,6 @@ func GetTurtleData(account *model.Account, setting *model.Setting, removed bool)
 		if !refreshOk || refreshValue == nil || refreshValue.(time.Time).Before(nowPeriod) {
 			if handleMarketDynamic(setting.Market) {
 				PrepareSettings()
-				SetRequireReset(setting.Market)
 				success, positions, _, _ := GetPositions(account.Key, account.Secret, setting.Market)
 				if success {
 					posMap := &sync.Map{}

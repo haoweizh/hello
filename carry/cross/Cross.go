@@ -699,10 +699,8 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 			settings = value.([]*model.Setting)
 		}
 	}
-	maintaining, ok := model.ChannelMaintaining.Load(setting.Market)
-	if tick == nil || tick.Asks == nil || tick.Bids == nil || setting == nil || (ok && maintaining.(bool)) ||
-		(model.AppConfig.Env != `test` && model.AppConfig.Handle != `1`) || setting.Valid == false ||
-		settings == nil || len(settings) == 0 {
+	if tick == nil || tick.Asks == nil || tick.Bids == nil || setting == nil || setting.Valid == false ||
+		(model.AppConfig.Env != `test` && model.AppConfig.Handle != `1`) || settings == nil || len(settings) == 0 {
 		return
 	}
 	tickLimit := 50

@@ -22,21 +22,6 @@ var okTradeMaxResetTime = &sync.Map{} // key - symbol - init time in second
 var okexCrossing = sync.Map{}         // symbol - bool
 var USDs = map[string]bool{`USD`: true, `usd`: true, `USDT`: true, `usdt`: true, `USDC`: true, `usdc`: true, `BUSD`: true, `busd`: true}
 
-func SetRequireReset(market string) {
-	maintaining, _ := model.ChannelMaintaining.Load(market)
-	if maintaining == nil || !maintaining.(bool) {
-		util.Log(util.LogLevelInfo, fmt.Sprintf(`require reset %s`, market))
-		initTime, getTime := model.AppEnvironment.WsInitTime.Load(market)
-		if getTime && initTime != nil {
-			checkTime := initTime.(time.Time).Add(time.Millisecond * time.Duration(model.AppConfig.Delay*5))
-			if util.GetNow().After(checkTime) {
-				requireReset.Store(market, true)
-				util.Log(util.LogLevelInfo, fmt.Sprintf(`ready to reset ws channel %s reset after %v`, market, checkTime))
-			}
-		}
-	}
-}
-
 func GetTradeMaxOKEX(key, secret, symbol string, expireSecond int64) (success bool, maxBuy, maxSell float64) {
 	v, ok := util.LoadSyncMap(tradeMax, key, symbol)
 	if expireSecond < 0 && ok && v != nil {
@@ -181,6 +166,9 @@ func CancelAll(key, secret, market string) {
 	switch market {
 	case model.OKEX:
 		cancelAllOkex(key, secret)
+	case model.Bybit:
+		cancelAllBybit(key, secret, `linear`)
+		cancelAllBybit(key, secret, `spot`)
 	case model.BinanceSpot:
 		orders := queryOpenOrdersBinanceSpot(key, secret, ``)
 		for _, order := range orders {
@@ -243,8 +231,8 @@ func CancelOrder(key, secret, market, symbol, orderType, orderId string) (result
 	switch market {
 	case model.OKEX:
 		result, errCode, msg = cancelOrderOkex(key, secret, symbol, orderId, orderType)
-	//case model.BybitPerp:
-	//	result, errCode, msg = cancelOrderBybitPerp(key, secret, symbol, orderId)
+	case model.Bybit:
+		result = cancelOrderBybit(key, secret, symbol, orderId)
 	//case model.BybitSpot:
 	//	result, errCode, msg = cancelOrderBybitSpot(key, secret, symbol, orderId)
 	//case model.Ftx:
@@ -575,12 +563,12 @@ func GetFundingRate(key, secret, market, symbol string) (success bool, rate *mod
 	//	fundingRate = deprecated.getFundingRateMexc(key, secret, symbol)
 	//case model.Ftx:
 	//	fundingRate = deprecated.GetFundingRatesFtx(key, secret, symbol)
+	//case model.Kucoin:
+	//	fundingRate = &model.FundingRate{Rate: 0, RateNext: 0, UpdateTime: util.GetNow(), ExpireTime: now + 300}
 	case model.BinancePerp:
 		fundingRate = getFundingRateBinancePerp(key, secret, symbol)
 	case model.Gate:
 		fundingRate = getFundingRateGate(key, secret, symbol)
-	case model.Kucoin:
-		fundingRate = &model.FundingRate{Rate: 0, RateNext: 0, UpdateTime: util.GetNow(), ExpireTime: now + 300}
 	}
 	if fundingRate == nil || now > fundingRate.ExpireTime {
 		return false, nil
@@ -609,6 +597,8 @@ func QueryOpenOrders(key, secret, market, symbol string) (orders []*model.Order)
 		for _, order := range temp {
 			orders = append(orders, order)
 		}
+	case model.Bybit:
+		orders = queryOpenOrdersBybit(key, secret, symbol)
 	//case model.Ftx:
 	//	orders = deprecated.queryOrdersFtx(key, secret, symbol, true)
 	//	for _, order := range deprecated.queryOrdersFtx(key, secret, symbol, false) {
