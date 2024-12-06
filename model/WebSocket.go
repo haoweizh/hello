@@ -58,6 +58,10 @@ func newWsGorilla(url string) (*WSConn, error) {
 		if c != nil {
 			c.EnableWriteCompression(true)
 			c.SetReadLimit(1024 * 1024 * 128)
+			c.SetPingHandler(func(appData string) error {
+				util.Log(util.LogLevelInfo, fmt.Sprintf(`%s create ping received %s`, url, appData))
+				return c.WriteControl(websocket.PongMessage, []byte(appData), time.Now().Add(time.Second*10))
+			})
 		}
 	} else {
 		util.Log(util.LogLevelError, `can not create new connection `+connErr.Error())
@@ -108,11 +112,6 @@ func WsAccountClient(market, key, url string, accountMsgHandler AccountMsgHandle
 		util.Log(util.LogLevelError, url+"can not create web socket"+err.Error())
 		return nil, err
 	}
-	connection.Conn.SetPingHandler(func(appData string) error {
-		accountMsgHandler(market, key, []byte(`ping pong received`))
-		util.Log(util.LogLevelInfo, market+` create ping received `+appData)
-		return connection.Conn.WriteControl(websocket.PongMessage, []byte(appData), time.Now().Add(time.Second*10))
-	})
 	go func() {
 		defer func() {
 			//closeErr := connection.Conn.Close(websocket.StatusNormalClosure, "")
@@ -152,8 +151,7 @@ func WebSocketClient(market, url string, subscribes []interface{}, subHandler Su
 		connection, err := newWsGorilla(url)
 		if err != nil || connection == nil {
 			if err != nil {
-				util.Log(util.LogLevelError,
-					fmt.Sprintf("can not create web socket %s %s %s", market, url, err.Error()))
+				util.Log(util.LogLevelError, fmt.Sprintf("can not create web socket %s %s %s", market, url, err.Error()))
 			}
 			return nil, nil, err
 		}

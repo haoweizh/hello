@@ -25,10 +25,6 @@ const logRoot = "./log/"
 const LogLevelError = "error"
 const LogLevelInfo = "info"
 const LogLevelDebug = "debug"
-const SystemOther = `other`
-const SystemAPI = "api"
-const SystemCarry = "carry"
-const SystemNetwork = "network"
 
 func initLog(path string) (*log.Logger, *os.File, error) {
 	//removeOldFiles()
