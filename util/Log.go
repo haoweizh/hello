@@ -87,12 +87,12 @@ func LogChanHandler(apiUrl, serverName string) {
 }
 
 func Log(logLevel, content string) {
-	glcData := cmn.GlcData{Text: content, Date: GetNow().String(), LogLevel: logLevel}
+	glcData := cmn.GlcData{Text: content, LogLevel: logLevel}
 	logChan <- glcData
 }
 
 func InfoSync(msg string) {
-	logContent := &cmn.GlcData{Text: msg, Date: GetNow().String(), System: "infoSync"}
+	logContent := &cmn.GlcData{Text: msg, System: "infoSync"}
 	cmn.Info(logContent)
 }
 

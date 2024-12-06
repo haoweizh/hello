@@ -948,6 +948,7 @@ const topMarketInfoLenCross = 30
 func InitCrossMarketInfos(markets []string) {
 	infoPool := make(map[string][]*model.MarketInfo) // coin - []marketInfos
 	topCoins := make(map[string]bool)
+	util.Log(util.LogLevelInfo, fmt.Sprintf(`begin to init cross market infos %v`, markets))
 	for _, market := range markets {
 		InitMarketInfos(market)
 		if market != model.OKEX && market != model.BinancePerp {
@@ -1026,7 +1027,7 @@ func InitMarketInfos(market string) (success bool) {
 	if marketInfoInitializing {
 		return
 	}
-	util.Log(util.LogLevelInfo, fmt.Sprintf(`start to init market infos %s`, market))
+	util.Log(util.LogLevelInfo, fmt.Sprintf(`begin to init market infos %s`, market))
 	marketInfoInitializing = true
 	defer func() {
 		marketInfoInitializing = false

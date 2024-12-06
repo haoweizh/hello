@@ -404,6 +404,7 @@ func handleMarketDynamic(market string) (handled bool) {
 }
 
 func InitApp(refreshDynamic bool) bool {
+	util.Log(util.LogLevelInfo, `begin to init app`)
 	if settingLoading {
 		return false
 	}
