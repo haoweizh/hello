@@ -2,7 +2,6 @@ package model
 
 import (
 	"fmt"
-	"hello/util"
 	"os"
 	"strconv"
 	"strings"
@@ -135,7 +134,6 @@ func (config *Config) GetAccounts(market string) []*Account {
 	accounts := make([]*Account, len(keys))
 	for i := 0; i < len(keys); i++ {
 		account := &Account{Key: keys[i], Secret: secrets[i], Index: i, Market: market, IsUnified: isUnified}
-		util.Log(util.LogLevelError, fmt.Sprintf(`create account %d %s %s`, account.Index, account.Market, account.Key))
 		if market == Ftx {
 			account.FtxSubAccount = ftxSubAccounts[i]
 		}
