@@ -7,7 +7,6 @@ import (
 	"github.com/gorilla/websocket"
 	"hello/util"
 	"net/http"
-	"strings"
 	"time"
 )
 
@@ -91,22 +90,22 @@ func chanHandler(market string, stopChan chan struct{}, connection *WSConn, msgH
 			util.Log(util.LogLevelError, fmt.Sprintf(`connection closed %s %s`, market, err.Error()))
 		}
 	}()
-	select {
-	case <-stopChan:
-		util.Log(util.LogLevelInfo, "get stop struct, return")
-		return
-	default:
-		//msgType, message, err := connection.Conn.Read(context.Background())
-		msgType, message, err := connection.Conn.ReadMessage()
-		if err != nil {
-			if !strings.Contains(err.Error(), `EOF`) {
-				util.Log(util.LogLevelError, fmt.Sprintf(`%s can not read from websocket: %s`, market, err.Error()))
-			}
+	for {
+		select {
+		case <-stopChan:
+			util.Log(util.LogLevelInfo, "get stop struct, return")
 			return
-		}
-		//if msgType == websocket.MessageText {
-		if msgType == websocket.TextMessage {
-			msgHandler(market, connection, message)
+		default:
+			//msgType, message, err := connection.Conn.Read(context.Background())
+			msgType, message, err := connection.Conn.ReadMessage()
+			if err != nil {
+				util.Log(util.LogLevelError, fmt.Sprintf(`%s can not read from websocket: %s`, market, err.Error()))
+				return
+			}
+			//if msgType == websocket.MessageText {
+			if msgType == websocket.TextMessage {
+				msgHandler(market, connection, message)
+			}
 		}
 	}
 }
