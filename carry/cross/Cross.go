@@ -72,6 +72,11 @@ func createSpotMarket(key, secret, market string) (sm *spotMarket) {
 				}
 			}
 		}
+		if collateral != nil {
+			util.Log(util.LogLevelInfo, fmt.Sprintf(`collateral for sm available u %f to %f`,
+				market, sm.availableU, collateral.Available))
+			sm.availableU = math.Min(sm.availableU, collateral.Available)
+		}
 	} else {
 		util.Log(util.LogLevelError, fmt.Sprintf(`fail to createSpotMarket %s %s`, market, key))
 		return nil
