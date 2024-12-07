@@ -24,7 +24,7 @@ const restBinance = `https://api.binance.com`
 const restDataBinance = `https://data.binance.com`
 const wsBinance = "wss://stream.binance.com:9443"
 const wsBinanceSpotApi = `wss://ws-api.binance.com:443/ws-api/v3`
-const wsStepBinance = 100
+const wsStepBinance = 30
 
 func GetMarketsBinance(account *model.Account, market string) (marketInfos map[string]*model.MarketInfo) {
 	util.Log(util.LogLevelError, fmt.Sprintf("GetMarketsBinance start to GetMarketsBinance %s", account.Key))

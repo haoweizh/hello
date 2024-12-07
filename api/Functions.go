@@ -604,6 +604,8 @@ func QueryOpenOrders(key, secret, market, symbol string) (orders []*model.Order)
 	//	for _, order := range deprecated.queryOrdersFtx(key, secret, symbol, false) {
 	//		orders = append(orders, order)
 	//	}
+	case model.Gate:
+		orders = queryOpenOrdersGate(key, secret, symbol)
 	case model.BinancePerp:
 		orders = queryOpenOrdersBinancePerp(key, secret, symbol)
 	case model.BinanceSpot:

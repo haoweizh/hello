@@ -526,10 +526,11 @@ func Test_download(t *testing.T) {
 }
 
 func Test_Order(t *testing.T) {
-	market := model.Bybit
+	market := model.Gate
 	model.NewConfig()
 	symbol := `DOGE_USDT`
 	account := model.GetAccounts(0)[market]
+	api.QueryOpenOrders(account.Key, account.Secret, market, symbol)
 	api.InitMarketInfos(market)
 	//_, listKey := api.RenewListenKeyBinance(account, market)
 	//api.ExtendListenKeyBinance(account, market, listKey)

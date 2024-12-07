@@ -90,7 +90,7 @@ func ParseRealAmount(market, symbol string, amount float64) (success bool, realA
 
 // GetAmountInMarket 返回交易所认可的下单数量，可能是币数、张数等
 // amount: 搬砖程序中使用的币数量
-func GetAmountInMarket(market string, symbol string, amount, price float64, reduceOnly bool) (formattedAmount float64) {
+func GetAmountInMarket(market, symbol string, amount, price float64, reduceOnly bool) (formattedAmount float64) {
 	marketInfo := GetMarketInfo(market, symbol)
 	if marketInfo == nil || marketInfo.SizeIncrement == 0 || marketInfo.SizeMin == 0 || amount < marketInfo.SizeMin {
 		return 0
