@@ -762,6 +762,23 @@ func parseOrderGateSpot(gateOrder *gateApi.Order) (order *model.Order) {
 
 func cancelAllGate(key, secret string) {
 	client, ctx := getClientGate(key, secret)
+	futureOrders, _, queryErr := client.FuturesApi.ListFuturesOrders(ctx, `usdt`, `open`, nil)
+	if queryErr != nil {
+		panicGateError(key, `cancelAllGate perp query`, queryErr)
+	} else {
+		contracts := make(map[string]bool)
+		for _, order := range futureOrders {
+			contracts[order.Contract] = true
+		}
+		for contract := range contracts {
+			cancelOrders, _, errPerp := client.FuturesApi.CancelFuturesOrders(ctx, `usdt`, contract, nil)
+			if errPerp != nil {
+				panicGateError(key, `cancelAllGate perp`, errPerp)
+			} else {
+				util.Log(util.LogLevelInfo, fmt.Sprintf("cancelAll orders success gate perp cancel %s %d", contract, len(cancelOrders)))
+			}
+		}
+	}
 	spotOrders, _, err := client.SpotApi.ListAllOpenOrders(ctx, nil)
 	if err != nil {
 		panicGateError(key, `queryOpenOrdersGate spot`, err)
@@ -772,24 +789,12 @@ func cancelAllGate(key, secret string) {
 		if errSpot != nil {
 			panicGateError(key, fmt.Sprintf("cancelSpotOrdersGate %v", cancelOrders), err)
 		} else {
-			util.Log(util.LogLevelInfo, fmt.Sprintf("cancelAll cancelOrders success gate spot cancel %d", len(cancelOrders)))
-		}
-	}
-	futureOrders, _, queryErr := client.FuturesApi.ListFuturesOrders(ctx, `usdt`, `open`, nil)
-	if queryErr != nil {
-		panicGateError(key, `cancelAllGate perp query`, queryErr)
-	} else {
-		for _, order := range futureOrders {
-			param := []string{`contract=` + order.Contract}
-			cancelOrders, _, errPerp := client.FuturesApi.CancelBatchFutureOrders(ctx, `usdt`, param)
-			if errPerp != nil {
-				panicGateError(key, `cancelAllGate perp`, errPerp)
-			} else {
-				util.Log(util.LogLevelInfo, fmt.Sprintf("cancel all orders success gate perp cancel %s %d", order.Contract, len(cancelOrders)))
-			}
+			util.Log(util.LogLevelInfo, fmt.Sprintf(
+				"cancelAll orders success gate spot cancel %s %d", order.CurrencyPair, len(cancelOrders)))
 		}
 	}
 }
+
 func queryOpenOrdersGate(key, secret, symbol string) (orders []*model.Order) {
 	client, ctx := getClientGate(key, secret)
 	gateOrders, _, err := client.SpotApi.ListAllOpenOrders(ctx, nil)
