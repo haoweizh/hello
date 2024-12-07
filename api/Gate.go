@@ -758,6 +758,29 @@ func parseOrderGateSpot(gateOrder *gateApi.Order) (order *model.Order) {
 	return order
 }
 
+func cancelAllGate(key, secret string) {
+	client, ctx := getClientGate(key, secret)
+	orders, _, errSpot := client.SpotApi.CancelBatchOrders(ctx, nil)
+	if errSpot != nil {
+		panicGateError(key, `cancelAllGate spot`, errSpot)
+	} else {
+		util.Log(util.LogLevelInfo, fmt.Sprintf("spot cancel %d", len(orders)))
+	}
+	futureOrders, _, queryErr := client.FuturesApi.ListFuturesOrders(ctx, `usdt`, `open`, nil)
+	if queryErr != nil {
+		panicGateError(key, `cancelAllGate perp query`, queryErr)
+	} else {
+		for _, order := range futureOrders {
+			param := []string{`contract=` + order.Contract}
+			cancelOrders, _, errPerp := client.FuturesApi.CancelBatchFutureOrders(ctx, `usdt`, param)
+			if errPerp != nil {
+				panicGateError(key, `cancelAllGate perp`, errPerp)
+			} else {
+				util.Log(util.LogLevelInfo, fmt.Sprintf("perp cancel %s %d", order.Contract, len(cancelOrders)))
+			}
+		}
+	}
+}
 func queryOpenOrdersGate(key, secret, symbol string) (orders []*model.Order) {
 	client, ctx := getClientGate(key, secret)
 	gateOrders, _, err := client.SpotApi.ListAllOpenOrders(ctx, nil)

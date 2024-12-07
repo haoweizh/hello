@@ -185,6 +185,8 @@ func CancelAll(key, secret, market string) {
 				order.Symbol, order.OrderId, result))
 			time.Sleep(time.Millisecond * 100)
 		}
+	case model.Gate:
+		cancelAllGate(key, secret)
 	}
 }
 
