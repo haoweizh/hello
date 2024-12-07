@@ -528,9 +528,10 @@ func Test_download(t *testing.T) {
 func Test_Order(t *testing.T) {
 	market := model.Gate
 	model.NewConfig()
-	symbol := `DOGE_USDT`
+	symbol := `DOGE_PERP`
 	account := model.GetAccounts(0)[market]
-	api.QueryOpenOrders(account.Key, account.Secret, market, symbol)
+	orders := api.QueryOpenOrders(account.Key, account.Secret, market, symbol)
+	fmt.Println(len(orders))
 	api.InitMarketInfos(market)
 	//_, listKey := api.RenewListenKeyBinance(account, market)
 	//api.ExtendListenKeyBinance(account, market, listKey)
@@ -541,20 +542,20 @@ func Test_Order(t *testing.T) {
 	fmt.Println(order)
 	fmt.Println(order.Status)
 	//api.CancelOrder(account.Key, account.Secret, market, symbol, model.OrderTypeLimit, order.OrderId)
-	markets := []string{model.BinancePerp}
-	for _, mk := range markets {
-		//go carry.ManageConnTicks(mk)
-		api.CreateWSTick(model.AppEnvironment, mk)
-	}
-	go func() {
-		for {
-			for _, mk := range markets {
-				api.RequireConnTickReset(model.AppEnvironment, mk)
-			}
-			time.Sleep(2 * time.Minute)
-		}
-	}()
-	select {}
+	//markets := []string{model.BinancePerp}
+	//for _, mk := range markets {
+	//	//go carry.ManageConnTicks(mk)
+	//	api.CreateWSTick(model.AppEnvironment, mk)
+	//}
+	//go func() {
+	//	for {
+	//		for _, mk := range markets {
+	//			api.RequireConnTickReset(model.AppEnvironment, mk)
+	//		}
+	//		time.Sleep(2 * time.Minute)
+	//	}
+	//}()
+	//select {}
 }
 
 func Test_WSOKPair(t *testing.T) {
