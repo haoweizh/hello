@@ -391,9 +391,11 @@ var wsPriHandlerGateSpot = func(market, key string, msg []byte) {
 			if value[`finish_as`] == `filled` {
 				status = model.CarryStatusSuccess
 			}
-			deal, _ := strconv.ParseFloat(value[`filled_amount`].(string), 64)
+			if value[`filled_amount`] != nil {
+				deal, _ := strconv.ParseFloat(value[`filled_amount`].(string), 64)
+				UpdateOrderDeal(market, orderId, status, string(msg), deal)
+			}
 			//dealPrice, _ := strconv.ParseFloat(value[`avg_deal_price`].(string), 64)
-			UpdateOrderDeal(market, orderId, status, string(msg), deal)
 		}
 	} else {
 		channel = responseJson.GetPath(`header`, `channel`).MustString()
