@@ -148,7 +148,7 @@ func (mr *MarketReceiver) MarketReceive(bufSize int) string {
 }
 func (or *OrderReceiver) OrderReceive(bufSize int) string {
 	buffer := make([]byte, bufSize)
-	C.receive_market(&or.receiver, (*C.char)(unsafe.Pointer(&buffer[0])))
+	C.receive_order(&or.receiver, (*C.char)(unsafe.Pointer(&buffer[0])))
 	return C.GoString((*C.char)(unsafe.Pointer(&buffer[0])))
 }
 
