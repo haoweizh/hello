@@ -7,7 +7,6 @@ import (
 	"github.com/gorilla/websocket"
 	"hello/util"
 	"net/http"
-	"strings"
 	"time"
 )
 
@@ -100,9 +99,7 @@ func chanHandler(market string, stopChan chan struct{}, connection *WSConn, msgH
 			//msgType, message, err := connection.Conn.Read(context.Background())
 			msgType, message, err := connection.Conn.ReadMessage()
 			if err != nil {
-				if !strings.Contains(err.Error(), `EOF`) {
-					util.Log(util.LogLevelError, fmt.Sprintf(`%s can not read from websocket: %s`, market, err.Error()))
-				}
+				util.Log(util.LogLevelError, fmt.Sprintf(`%s can not read from websocket: %s`, market, err.Error()))
 				return
 			}
 			//if msgType == websocket.MessageText {

@@ -314,7 +314,9 @@ var wsPriHandlerGatePerp = func(market, key string, msg []byte) {
 			// 此处不同于gate标准的合约格式以_USDT结尾，而是以_USD结尾
 			coin := strings.Split(dialectSymbol, "_")[0]
 			symbol := coin + model.UniStandardTail[model.MarketTypePerp]
-			_, dealAmount := model.ParseRealAmount(model.Gate, symbol, math.Abs(size)-math.Abs(left))
+			_, size = model.ParseRealAmount(model.Gate, symbol, size)
+			_, left = model.ParseRealAmount(model.Gate, symbol, left)
+			dealAmount := math.Abs(size) - math.Abs(left)
 			status := model.CarryStatusWorking
 			if value[`status`] == `finished` {
 				status = model.CarryStatusSuccess
@@ -389,12 +391,11 @@ var wsPriHandlerGateSpot = func(market, key string, msg []byte) {
 			if value[`finish_as`] == `filled` {
 				status = model.CarryStatusSuccess
 			}
-			deal, _ := strconv.ParseFloat(value[`filled_total`].(string), 64)
-			dealPrice, _ := strconv.ParseFloat(value[`avg_deal_price`].(string), 64)
-			if dealPrice > 0 {
-				dealAmount := math.Abs(deal / dealPrice)
-				UpdateOrderDeal(market, orderId, status, string(msg), dealAmount)
+			if value[`filled_amount`] != nil {
+				deal, _ := strconv.ParseFloat(value[`filled_amount`].(string), 64)
+				UpdateOrderDeal(market, orderId, status, string(msg), deal)
 			}
+			//dealPrice, _ := strconv.ParseFloat(value[`avg_deal_price`].(string), 64)
 		}
 	} else {
 		channel = responseJson.GetPath(`header`, `channel`).MustString()
@@ -679,7 +680,156 @@ var subscribeHandler = func(market string, connection *model.WSConn, subscribes 
 	return err
 }
 
-func getBalanceGate(key string, secret string) (success bool, balances []*model.Balance, totalInUsd float64, collateral *model.Collateral) {
+func parseOrderGatePerp(gateOrder *gateApi.FuturesOrder) (order *model.Order) {
+	if gateOrder == nil {
+		return nil
+	}
+	_, _, coin := model.GetCoinFromDialect(model.Gate, gateOrder.Contract)
+	order = &model.Order{Market: model.Gate, OrderId: fmt.Sprintf(`%d`, gateOrder.Id),
+		Symbol: coin + model.UniStandardTail[model.MarketTypePerp]}
+	order.OrderTime = time.Unix(int64(gateOrder.CreateTime), 0)
+	order.UpdatedAt = time.Unix(int64(gateOrder.FinishTime), 0)
+	if gateOrder.Status == `open` {
+		order.Status = model.CarryStatusWorking
+	} else if gateOrder.Status == `finished` {
+		switch gateOrder.FinishAs {
+		case `filled`:
+			order.Status = model.CarryStatusSuccess
+		case `cancelled`, `liquidated`, `ioc`, `auto_deleveraged`, `reduce_only`, `position_closed`, `reduce_out`:
+			order.Status = model.CarryStatusFail
+		}
+	}
+	order.DealPrice, _ = strconv.ParseFloat(gateOrder.FillPrice, 64)
+	if gateOrder.Size > 0 {
+		order.OrderSide = model.OrderSideBuy
+	} else if gateOrder.Size < 0 {
+		order.OrderSide = model.OrderSideSell
+	}
+	_, order.Amount = model.ParseRealAmount(model.Gate, order.Symbol, math.Abs(float64(gateOrder.Size)))
+	_, left := model.ParseRealAmount(model.Gate, order.Symbol, math.Abs(float64(gateOrder.Left)))
+	order.DealAmount = order.Amount - left
+	price, _ := strconv.ParseFloat(gateOrder.Price, 64)
+	if price > 0 {
+		order.Price = price
+	}
+	return order
+}
+func parseOrderGateSpot(gateOrder *gateApi.Order) (order *model.Order) {
+	if gateOrder == nil {
+		return nil
+	}
+	order = &model.Order{Market: model.Gate, OrderId: gateOrder.Id}
+	order.OrderTime = time.UnixMilli(gateOrder.CreateTimeMs)
+	if gateOrder.Side == "buy" {
+		order.OrderSide = model.OrderSideBuy
+	} else if gateOrder.Side == "sell" {
+		order.OrderSide = model.OrderSideSell
+	}
+	// Order status  - `open`: to be filled - `closed`: filled - `cancelled`: cancelled
+	switch gateOrder.Status {
+	case `open`:
+		order.Status = model.CarryStatusWorking
+	case `closed`:
+		order.Status = model.CarryStatusSuccess
+	case `cancelled`:
+		order.Status = model.CarryStatusFail
+	}
+	intCreateTime, _ := strconv.ParseInt(gateOrder.CreateTime, 10, 64)
+	intUpdateTime, _ := strconv.ParseInt(gateOrder.UpdateTime, 10, 64)
+	order.OrderTime = time.Unix(intCreateTime, 0)
+	order.OrderUpdateTime = time.Unix(intUpdateTime, 0)
+	// Order Type    - limit : Limit Order - market : Market Order
+	if gateOrder.Type == `limit` {
+		order.OrderType = model.OrderTypeLimit
+	} else if gateOrder.Type == `market` {
+		order.OrderType = model.OrderTypeMarket
+	}
+	order.Price, _ = strconv.ParseFloat(gateOrder.Price, 64)
+	_, _, coin := model.GetCoinFromDialect(model.Gate, gateOrder.CurrencyPair)
+	order.Symbol = coin + model.UniStandardTail[model.MarketTypeSpot]
+	// When `type` is limit, it refers to base currency.  For instance, `BTC_USDT` means `BTC`
+	// When `type` is `market`, it refers to different currency according to `side`
+	//- `side` : `buy` means quote currency, `BTC_USDT` means `USDT`
+	//- `side` : `sell` means base currency，`BTC_USDT` means `BTC`
+	order.Amount, _ = strconv.ParseFloat(gateOrder.Amount, 64)
+	if order.OrderType == model.OrderTypeMarket && order.OrderSide == model.OrderSideBuy {
+		order.Amount /= order.Price
+	}
+	order.DealAmount, _ = strconv.ParseFloat(gateOrder.FilledAmount, 64)
+	order.DealAmount = math.Abs(order.DealAmount)
+	order.DealPrice, _ = strconv.ParseFloat(gateOrder.AvgDealPrice, 64)
+	order.Fee, _ = strconv.ParseFloat(gateOrder.Fee, 64)
+	return order
+}
+
+func cancelAllGate(key, secret string) {
+	client, ctx := getClientGate(key, secret)
+	futureOrders, _, queryErr := client.FuturesApi.ListFuturesOrders(ctx, `usdt`, `open`, nil)
+	if queryErr != nil {
+		panicGateError(key, `cancelAllGate perp query`, queryErr)
+	} else {
+		contracts := make(map[string]bool)
+		for _, order := range futureOrders {
+			contracts[order.Contract] = true
+		}
+		for contract := range contracts {
+			cancelOrders, _, errPerp := client.FuturesApi.CancelFuturesOrders(ctx, `usdt`, contract, nil)
+			if errPerp != nil {
+				panicGateError(key, `cancelAllGate perp`, errPerp)
+			} else {
+				util.Log(util.LogLevelInfo, fmt.Sprintf("cancelAll orders success gate perp cancel %s %d", contract, len(cancelOrders)))
+			}
+		}
+	}
+	spotOrders, _, err := client.SpotApi.ListAllOpenOrders(ctx, nil)
+	if err != nil {
+		panicGateError(key, `queryOpenOrdersGate spot`, err)
+	}
+	for _, order := range spotOrders {
+		cancelOrders, _, errSpot := client.SpotApi.CancelOrders(ctx, order.CurrencyPair,
+			&gateApi.CancelOrdersOpts{Account: optional.NewString("spot")})
+		if errSpot != nil {
+			panicGateError(key, fmt.Sprintf("cancelSpotOrdersGate %v", cancelOrders), err)
+		} else {
+			util.Log(util.LogLevelInfo, fmt.Sprintf(
+				"cancelAll orders success gate spot cancel %s %d", order.CurrencyPair, len(cancelOrders)))
+		}
+	}
+}
+
+func queryOpenOrdersGate(key, secret, symbol string) (orders []*model.Order) {
+	client, ctx := getClientGate(key, secret)
+	gateOrders, _, err := client.SpotApi.ListAllOpenOrders(ctx, nil)
+	if err != nil {
+		panicGateError(key, `queryOpenOrdersGate spot`, err)
+	}
+	orders = make([]*model.Order, 0)
+	_, marketType, _, dialectSymbol := model.GetFromStandard(model.Gate, symbol)
+	if marketType == model.MarketTypeSpot {
+		for _, gateOrder := range gateOrders {
+			if gateOrder.CurrencyPair == dialectSymbol {
+				for _, data := range gateOrder.Orders {
+					order := parseOrderGateSpot(&data)
+					if order != nil {
+						orders = append(orders, order)
+					}
+				}
+			}
+		}
+	} else if marketType == model.MarketTypePerp {
+		futureOrders, _, futureErr := client.FuturesApi.ListFuturesOrders(ctx, `usdt`, `open`,
+			&gateApi.ListFuturesOrdersOpts{Contract: optional.NewString(dialectSymbol)})
+		if futureErr != nil {
+			panicGateError(key, `queryOpenOrdersGate future`, futureErr)
+		}
+		for _, futureOrder := range futureOrders {
+			orders = append(orders, parseOrderGatePerp(&futureOrder))
+		}
+	}
+	return
+}
+
+func getBalanceGate(key, secret string) (success bool, balances []*model.Balance, totalInUsd float64, collateral *model.Collateral) {
 	client, ctx := getClientGate(key, secret)
 	portfolioAccount, _, portfolioErr := client.UnifiedApi.ListUnifiedAccounts(ctx, nil)
 	if portfolioErr != nil {
@@ -804,8 +954,7 @@ func cancelOrdersGate(key string, secret string, symbol string) (result bool) {
 	client, ctx := getClientGate(key, secret)
 	success, marketType, _, dialectSymbol := model.GetFromStandard(model.Gate, symbol)
 	if success && marketType == model.MarketTypeSpot {
-		param := &gateApi.CancelOrdersOpts{}
-		param.Account = optional.NewString("spot")
+		param := &gateApi.CancelOrdersOpts{Account: optional.NewString("spot")}
 		orders, _, err := client.SpotApi.CancelOrders(ctx, dialectSymbol, param)
 		if err != nil {
 			panicGateError(key, fmt.Sprintf("cancelSpotOrdersGate %v", orders), err)
@@ -821,7 +970,7 @@ func cancelOrdersGate(key string, secret string, symbol string) (result bool) {
 			return false
 		}
 		marshal, _ := json.Marshal(orders)
-		util.Log(util.LogLevelInfo, fmt.Sprintf(`cancel future orders response: %s`, marshal))
+		util.Log(util.LogLevelInfo, fmt.Sprintf(`cancel future orders response: %d %s`, len(orders), marshal))
 		return true
 	}
 	util.Log(util.LogLevelError, fmt.Sprintf(`cancel orders can not recognize gate symbol %s`, symbol))
@@ -845,7 +994,7 @@ func placeOrderGate(account *model.Account, isWs bool, order *model.Order, order
 	}
 	ts := time.Now().Unix()
 	if marketType == model.MarketTypeSpot {
-		relatedOrder := gateApi.Order{Price: orderPriceStr, Side: orderSide, CurrencyPair: dialectSymbol, Type: orderType, TimeInForce: tif}
+		relatedOrder := gateApi.Order{Price: orderPriceStr, Side: orderSide, CurrencyPair: dialectSymbol, Type: orderType, TimeInForce: tif, AutoRepay: true}
 		relatedOrder.Account = "spot"
 		relatedOrder.Amount = util.CutTailZero(fmt.Sprintf(`%f`, model.GetAmountInMarket(model.Gate, symbol, amount, price, false)))
 		if orderType == model.OrderTypeMarket && orderSide == model.OrderSideBuy {
@@ -854,7 +1003,8 @@ func placeOrderGate(account *model.Account, isWs bool, order *model.Order, order
 		util.Log(util.LogLevelInfo, fmt.Sprintf(`create spot order request: %v`, relatedOrder))
 		if isWs {
 			param := map[string]interface{}{"text": `t-` + order.OrderId, `currency_pair`: dialectSymbol, `type`: orderType,
-				`account`: `spot`, `side`: orderSide, `amount`: relatedOrder.Amount, `price`: orderPriceStr, `time_in_force`: tif}
+				`account`: `spot`, `side`: orderSide, `amount`: relatedOrder.Amount, `price`: orderPriceStr,
+				`time_in_force`: tif, `auto_repay`: true}
 			reqMap := map[string]interface{}{`time`: ts, `channel`: `spot.order_place`, `event`: `api`,
 				`payload`: map[string]interface{}{`req_id`: order.OrderId, `req_param`: param}}
 			wsOrderMsg := util.JsonEncodeToByte(reqMap)
@@ -990,20 +1140,7 @@ func queryOrderGate(key, secret string, order *model.Order) {
 			panicGateError(key, "GetFuturesOrder", err)
 			return
 		}
-		order.DealPrice, _ = strconv.ParseFloat(orderFuture.FillPrice, 64)
-		if orderFuture.Status == `open` {
-			order.Status = model.CarryStatusWorking
-		} else if orderFuture.Status == `finished` {
-			switch orderFuture.FinishAs {
-			case `filled`:
-				order.Status = model.CarryStatusSuccess
-			case `cancelled`, `liquidated`, `ioc`, `auto_deleveraged`, `reduce_only`, `position_closed`, `reduce_out`:
-				order.Status = model.CarryStatusFail
-			}
-		}
-		order.OrderTime = time.Unix(int64(orderFuture.CreateTime), 0)
-		order.OrderUpdateTime = time.Unix(int64(orderFuture.FinishTime), 0)
-		_, order.DealAmount = model.ParseRealAmount(order.Market, order.Symbol, float64(orderFuture.Size-orderFuture.Left))
+		order = parseOrderGatePerp(&orderFuture)
 		util.Log(util.LogLevelInfo, fmt.Sprintf(`%s %s %s query result:%s %f %v`,
 			order.Market, order.Symbol, order.OrderId, order.Status, order.DealAmount, orderFuture))
 	} else if success && marketType == model.MarketTypeSpot {
@@ -1012,23 +1149,7 @@ func queryOrderGate(key, secret string, order *model.Order) {
 			panicGateError(key, "GetSpotOrder", err)
 			return
 		}
-		intCreateTime, _ := strconv.ParseInt(orderSpot.CreateTime, 10, 64)
-		intUpdateTime, _ := strconv.ParseInt(orderSpot.UpdateTime, 10, 64)
-		order.OrderTime = time.Unix(intCreateTime, 0)
-		order.OrderUpdateTime = time.Unix(intUpdateTime, 0)
-		order.DealAmount, _ = strconv.ParseFloat(orderSpot.FilledTotal, 64)
-		order.DealPrice, _ = strconv.ParseFloat(orderSpot.Price, 64)
-		if order.DealPrice > 0 {
-			order.DealAmount = order.DealAmount / order.DealPrice // FilledTotal是成交钱数，需要除以价格
-		}
-		switch orderSpot.Status {
-		case `open`:
-			order.Status = model.CarryStatusWorking
-		case `closed`:
-			order.Status = model.CarryStatusSuccess
-		case `cancelled`:
-			order.Status = model.CarryStatusFail
-		}
+		order = parseOrderGateSpot(&orderSpot)
 		util.Log(util.LogLevelInfo, fmt.Sprintf(`%s %s %s query result:%s %f %v`,
 			order.Market, order.Symbol, order.OrderId, order.Status, order.DealAmount, orderSpot))
 	}

@@ -96,7 +96,7 @@ func RequireConnTickReset(environment *model.Environment, market string) bool {
 		//	util.Notice(fmt.Sprintf(`RequireConnTickReset delay too long %s %s %f`, market, symbol, delay))
 		//}
 	}
-	needReset = float64(validSymbolNum) < float64(len(symbols))*0.85 || len(symbols)-validSymbolNum > 100
+	needReset = validSymbolNum*5 < 4*len(symbols) && len(symbols)-validSymbolNum > 100
 	for funcName := range model.TickHandlers {
 		settings := GetSettings(funcName, market)
 		if settings == nil {
@@ -119,7 +119,7 @@ func RequireConnTickReset(environment *model.Environment, market string) bool {
 			return true
 		})
 	}
-	util.Log(util.LogLevelInfo, fmt.Sprintf(`RequireConnTickReset %d  %f valid %d in %d %s needReset %v`,
+	util.Log(util.LogLevelInfo, fmt.Sprintf(`require conn tick reset %d  %f valid %d in %d %s needReset %v`,
 		now, model.AppConfig.Delay, validSymbolNum, len(symbols), market, needReset))
 	return needReset.(bool)
 }
@@ -173,7 +173,7 @@ func CancelAll(key, secret, market string) {
 		orders := queryOpenOrdersBinanceSpot(key, secret, ``)
 		for _, order := range orders {
 			result, _ := cancelOrderBinance(key, secret, market, order.Symbol, order.OrderId)
-			util.Log(util.LogLevelInfo, fmt.Sprintf(`cancelAll Binance %s id %s return %v`,
+			util.Log(util.LogLevelInfo, fmt.Sprintf(`cancelAll orders success BinanceSpot %s id %s return %v`,
 				order.Symbol, order.OrderId, result))
 			time.Sleep(time.Millisecond * 100)
 		}
@@ -181,10 +181,12 @@ func CancelAll(key, secret, market string) {
 		orders := queryOpenOrdersBinancePerp(key, secret, ``)
 		for _, order := range orders {
 			result := cancelOrderBinancePerp(key, secret, order.Symbol, order.OrderId)
-			util.Log(util.LogLevelInfo, fmt.Sprintf(`cancelAllBinancePerp %s id %s return %v`,
+			util.Log(util.LogLevelInfo, fmt.Sprintf(`cancelAll orders success BinancePerp %s id %s return %v`,
 				order.Symbol, order.OrderId, result))
 			time.Sleep(time.Millisecond * 100)
 		}
+	case model.Gate:
+		cancelAllGate(key, secret)
 	}
 }
 
@@ -217,7 +219,7 @@ func CancelOrders(key, secret, market, symbol string) (result bool) {
 		//	result = deprecated.cancelOrdersMexc(key, secret, symbol)
 	}
 	time.Sleep(time.Second * 2)
-	util.Log(util.LogLevelInfo, fmt.Sprintf(`cancel all orders %s %s return %v`, market, symbol, result))
+	util.Log(util.LogLevelInfo, fmt.Sprintf(`cancel symbol orders %s %s return %v`, market, symbol, result))
 	return result
 }
 
@@ -604,6 +606,8 @@ func QueryOpenOrders(key, secret, market, symbol string) (orders []*model.Order)
 	//	for _, order := range deprecated.queryOrdersFtx(key, secret, symbol, false) {
 	//		orders = append(orders, order)
 	//	}
+	case model.Gate:
+		orders = queryOpenOrdersGate(key, secret, symbol)
 	case model.BinancePerp:
 		orders = queryOpenOrdersBinancePerp(key, secret, symbol)
 	case model.BinanceSpot:

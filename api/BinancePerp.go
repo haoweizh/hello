@@ -45,8 +45,12 @@ func MaintainConnsBinance(market string, accounts []*model.Account) {
 					}
 				}
 			} else {
-				value.(*model.WSConn).Close()
-				valueUpdate.(*model.WSConn).Close()
+				if value != nil {
+					value.(*model.WSConn).Close()
+				}
+				if valueUpdate != nil {
+					valueUpdate.(*model.WSConn).Close()
+				}
 				WsOrderServeBinance(account, market)
 			}
 		}
