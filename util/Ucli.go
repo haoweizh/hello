@@ -56,7 +56,7 @@ func NewOrderPublisher(topic string) (*OrderPublisher, error) {
 	if cTopic == nil {
 		return nil, errors.New("NewOrderPublisher:trans go.msg to c.msg error")
 	}
-	var publisher C.struct_UltraOrdertPublisher
+	var publisher C.struct_UltraOrderPublisher
 	C.init_order_publisher(cTopic, &publisher)
 	return &OrderPublisher{
 		publisher: publisher,
