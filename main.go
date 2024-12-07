@@ -6,6 +6,10 @@ import (
 	"log"
 )
 
+/*
+*
+gcc -fPIC -shared -o libucli_ffi.dylib ucli_ffi.c
+*/
 func main() {
 	// Initialize market publisher
 	marketPublisher, err := util.NewMarketPublisher("market_topic")
