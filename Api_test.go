@@ -13,6 +13,7 @@ import (
 	"hello/model"
 	"hello/regret"
 	"hello/util"
+	"log"
 	"math/rand"
 	"net/http"
 	"net/url"
@@ -526,20 +527,22 @@ func Test_download(t *testing.T) {
 }
 
 func Test_Order(t *testing.T) {
-	market := model.Gate
+	market := model.BitgetSpot
 	model.NewConfig()
-	//symbol := `DOGE_PERP`
+	symbol := `SAGA_USDT`
 	account := model.GetAccounts(0)[market]
-	api.CancelAll(account.Key, account.Secret, market)
 
-	api.InitMarketInfos(market)
+	api.QueryOpenOrders(account.Key, account.Secret, market, ``)
+	//api.CancelAll(account.Key, account.Secret, market)
+	//api.InitMarketInfos(market)
+	//order := api.PlaceOrder(account.Key, account.Secret, model.OrderSideBuy, model.OrderTypeMarket, market, symbol, ``,
+	//	`test`, 2.7, 2.7, 2, false, nil)
+	//fmt.Println(order.OrderId)
+	api.QueryOrderById(account.Key, account.Secret, market, symbol, ``, `1249310068756389901`)
 	//_, listKey := api.RenewListenKeyBinance(account, market)
 	//api.ExtendListenKeyBinance(account, market, listKey)
 	//go model.AppEnvironment.HandleWSResp()
 	//api.MaintainConns(market)
-	//order := api.PlaceOrder(account.Key, account.Secret, model.OrderSideBuy, model.OrderTypeLimit, market, symbol, ``,
-	//	`test`, 0.42034, 0.42034, 486.32283060000003, false, nil)
-	//fmt.Println(order)
 	//fmt.Println(order.Status)
 	//api.CancelOrder(account.Key, account.Secret, market, symbol, model.OrderTypeLimit, order.OrderId)
 	//markets := []string{model.BinancePerp}
@@ -758,4 +761,34 @@ func Test_GateSols(t *testing.T) {
 		}
 	}
 	fmt.Println(coins)
+}
+
+func Test_C(t *testing.T) {
+	// Initialize market publisher
+	marketPublisher, err := util.NewMarketPublisher("market_topic")
+	if err != nil {
+
+		log.Fatalf("Failed to create market publisher: %v", err)
+	}
+	defer marketPublisher.Close()
+
+	// Publish a market message
+	err = marketPublisher.MarketPublish("Hello, Market!")
+	if err != nil {
+		log.Fatalf("Failed to publish market message: %v", err)
+	}
+
+	// Initialize market receiver
+	marketReceiver, err := util.NewMarketReceiver("market_topic")
+	if err != nil {
+		log.Fatalf("Failed to create market receiver: %v", err)
+	}
+	defer marketReceiver.Close()
+
+	// Receive a market message
+	message := marketReceiver.MarketReceive(1024)
+	if err != nil {
+		log.Fatalf("Failed to receive market message: %v", err)
+	}
+	fmt.Println("Received market message:", message)
 }
