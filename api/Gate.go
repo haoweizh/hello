@@ -316,7 +316,7 @@ var wsPriHandlerGatePerp = func(market, key string, msg []byte) {
 			symbol := coin + model.UniStandardTail[model.MarketTypePerp]
 			_, size = model.ParseRealAmount(model.Gate, symbol, size)
 			_, left = model.ParseRealAmount(model.Gate, symbol, left)
-			_, dealAmount := model.ParseRealAmount(model.Gate, symbol, math.Abs(size)-math.Abs(left))
+			dealAmount := math.Abs(size) - math.Abs(left)
 			status := model.CarryStatusWorking
 			if value[`status`] == `finished` {
 				status = model.CarryStatusSuccess
@@ -706,7 +706,8 @@ func parseOrderGatePerp(gateOrder *gateApi.FuturesOrder) (order *model.Order) {
 		order.OrderSide = model.OrderSideSell
 	}
 	_, order.Amount = model.ParseRealAmount(model.Gate, order.Symbol, math.Abs(float64(gateOrder.Size)))
-	_, order.DealAmount = model.ParseRealAmount(model.Gate, order.Symbol, math.Abs(float64(gateOrder.Left)))
+	_, left := model.ParseRealAmount(model.Gate, order.Symbol, math.Abs(float64(gateOrder.Left)))
+	order.DealAmount = order.Amount - left
 	price, _ := strconv.ParseFloat(gateOrder.Price, 64)
 	if price > 0 {
 		order.Price = price
@@ -755,6 +756,7 @@ func parseOrderGateSpot(gateOrder *gateApi.Order) (order *model.Order) {
 		order.Amount /= order.Price
 	}
 	order.DealAmount, _ = strconv.ParseFloat(gateOrder.FilledAmount, 64)
+	order.DealAmount = math.Abs(order.DealAmount)
 	order.DealPrice, _ = strconv.ParseFloat(gateOrder.AvgDealPrice, 64)
 	order.Fee, _ = strconv.ParseFloat(gateOrder.Fee, 64)
 	return order
