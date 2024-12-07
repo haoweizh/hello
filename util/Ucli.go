@@ -3,6 +3,7 @@ package util
 
 /*
 #cgo CFLAGS: -I${SRCDIR}/util
+#cgo LDFLAGS: -L${SRCDIR} -lucli_ffi
 #include "ucli_ffi.h"
 #include <stdlib.h>
 */
