@@ -173,7 +173,7 @@ func CancelAll(key, secret, market string) {
 		orders := queryOpenOrdersBinanceSpot(key, secret, ``)
 		for _, order := range orders {
 			result, _ := cancelOrderBinance(key, secret, market, order.Symbol, order.OrderId)
-			util.Log(util.LogLevelInfo, fmt.Sprintf(`cancelAll Binance %s id %s return %v`,
+			util.Log(util.LogLevelInfo, fmt.Sprintf(`cancelAll orders success BinanceSpot %s id %s return %v`,
 				order.Symbol, order.OrderId, result))
 			time.Sleep(time.Millisecond * 100)
 		}
@@ -181,7 +181,7 @@ func CancelAll(key, secret, market string) {
 		orders := queryOpenOrdersBinancePerp(key, secret, ``)
 		for _, order := range orders {
 			result := cancelOrderBinancePerp(key, secret, order.Symbol, order.OrderId)
-			util.Log(util.LogLevelInfo, fmt.Sprintf(`cancelAllBinancePerp %s id %s return %v`,
+			util.Log(util.LogLevelInfo, fmt.Sprintf(`cancelAll orders success BinancePerp %s id %s return %v`,
 				order.Symbol, order.OrderId, result))
 			time.Sleep(time.Millisecond * 100)
 		}
@@ -219,7 +219,7 @@ func CancelOrders(key, secret, market, symbol string) (result bool) {
 		//	result = deprecated.cancelOrdersMexc(key, secret, symbol)
 	}
 	time.Sleep(time.Second * 2)
-	util.Log(util.LogLevelInfo, fmt.Sprintf(`cancel all orders %s %s return %v`, market, symbol, result))
+	util.Log(util.LogLevelInfo, fmt.Sprintf(`cancel symbol orders %s %s return %v`, market, symbol, result))
 	return result
 }
 

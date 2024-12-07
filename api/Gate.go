@@ -760,11 +760,18 @@ func parseOrderGateSpot(gateOrder *gateApi.Order) (order *model.Order) {
 
 func cancelAllGate(key, secret string) {
 	client, ctx := getClientGate(key, secret)
-	orders, _, errSpot := client.SpotApi.CancelBatchOrders(ctx, nil)
-	if errSpot != nil {
-		panicGateError(key, `cancelAllGate spot`, errSpot)
-	} else {
-		util.Log(util.LogLevelInfo, fmt.Sprintf("spot cancel %d", len(orders)))
+	spotOrders, _, err := client.SpotApi.ListAllOpenOrders(ctx, nil)
+	if err != nil {
+		panicGateError(key, `queryOpenOrdersGate spot`, err)
+	}
+	for _, order := range spotOrders {
+		cancelOrders, _, errSpot := client.SpotApi.CancelOrders(ctx, order.CurrencyPair,
+			&gateApi.CancelOrdersOpts{Account: optional.NewString("spot")})
+		if errSpot != nil {
+			panicGateError(key, fmt.Sprintf("cancelSpotOrdersGate %v", cancelOrders), err)
+		} else {
+			util.Log(util.LogLevelInfo, fmt.Sprintf("cancelAll cancelOrders success gate spot cancel %d", len(cancelOrders)))
+		}
 	}
 	futureOrders, _, queryErr := client.FuturesApi.ListFuturesOrders(ctx, `usdt`, `open`, nil)
 	if queryErr != nil {
@@ -776,7 +783,7 @@ func cancelAllGate(key, secret string) {
 			if errPerp != nil {
 				panicGateError(key, `cancelAllGate perp`, errPerp)
 			} else {
-				util.Log(util.LogLevelInfo, fmt.Sprintf("perp cancel %s %d", order.Contract, len(cancelOrders)))
+				util.Log(util.LogLevelInfo, fmt.Sprintf("cancel all orders success gate perp cancel %s %d", order.Contract, len(cancelOrders)))
 			}
 		}
 	}
@@ -938,8 +945,7 @@ func cancelOrdersGate(key string, secret string, symbol string) (result bool) {
 	client, ctx := getClientGate(key, secret)
 	success, marketType, _, dialectSymbol := model.GetFromStandard(model.Gate, symbol)
 	if success && marketType == model.MarketTypeSpot {
-		param := &gateApi.CancelOrdersOpts{}
-		param.Account = optional.NewString("spot")
+		param := &gateApi.CancelOrdersOpts{Account: optional.NewString("spot")}
 		orders, _, err := client.SpotApi.CancelOrders(ctx, dialectSymbol, param)
 		if err != nil {
 			panicGateError(key, fmt.Sprintf("cancelSpotOrdersGate %v", orders), err)
@@ -955,7 +961,7 @@ func cancelOrdersGate(key string, secret string, symbol string) (result bool) {
 			return false
 		}
 		marshal, _ := json.Marshal(orders)
-		util.Log(util.LogLevelInfo, fmt.Sprintf(`cancel future orders response: %s`, marshal))
+		util.Log(util.LogLevelInfo, fmt.Sprintf(`cancel future orders response: %d %s`, len(orders), marshal))
 		return true
 	}
 	util.Log(util.LogLevelError, fmt.Sprintf(`cancel orders can not recognize gate symbol %s`, symbol))

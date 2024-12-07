@@ -761,7 +761,7 @@ func cancelAllOkex(key, secret string) {
 	}
 	for _, order := range orders {
 		result, errCode, msg := cancelOrderOkex(key, secret, order.Symbol, order.OrderId, order.OrderType)
-		util.Log(util.LogLevelInfo, fmt.Sprintf(`cancelAllOkex %s id %s type %s return %v code %s %s`,
+		util.Log(util.LogLevelInfo, fmt.Sprintf(`cancelAll orders success okex %s id %s type %s return %v code %s %s`,
 			order.Symbol, order.OrderId, order.OrderType, result, errCode, msg))
 	}
 }
