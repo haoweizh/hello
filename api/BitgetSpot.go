@@ -317,6 +317,68 @@ func placeOrderBitgetSpot(key, secret string, order *model.Order, orderSide, ord
 	}
 }
 
+func batchCancelBitgetSpot(key, secret string, orders []*model.Order) (result bool) {
+	client := dtos.BitgetRestClient{BaseUrl: bitgetRestUrl, Passphrase: model.AppConfig.Phase, ApiKey: key, ApiSecretKey: secret}
+	params := map[string]string{`batchMode`: `multiple`}
+	orderList := make(map[string]string)
+	for _, order := range orders {
+		orderList[`orderId`] = order.OrderId
+		_, _, _, dialectSymbol := model.GetFromStandard(model.BitgetSpot, order.Symbol)
+		orderList[`symbol`] = dialectSymbol
+	}
+	httpResp, httpErr := client.DoPost(`/api/v2/spot/trade/batch-cancel-order`, string(util.JsonEncodeToByte(params)))
+	if httpErr != nil {
+		util.Log(util.LogLevelError, fmt.Sprintf(`batchCancelBitgetSpot fail to post %s`, httpErr.Error()))
+		return false
+	}
+	jsonData, jsonErr := util.NewJSON(httpResp)
+	if jsonErr != nil {
+		util.Log(util.LogLevelError, fmt.Sprintf(`fail to NewJson when batchCancelBitgetSpot %s`, jsonErr.Error()))
+		return false
+	}
+	if jsonData != nil {
+		if jsonData.Get("message").MustString() == "success" {
+			util.Log(util.LogLevelInfo, fmt.Sprintf("success to batch cancel bitget spot order: %d",
+				len(jsonData.GetPath(`data`, `successList`).MustArray())))
+			return true
+		} else {
+			util.Log(util.LogLevelError, fmt.Sprintf("fail to batch cancel bitget spot order, code: %s %s",
+				jsonData.Get("code").MustString(), string(httpResp)))
+		}
+	}
+	return false
+}
+
+func cancelOrderBitgetSpot(key, secret, symbol, orderId string) (result bool) {
+	client := dtos.BitgetRestClient{BaseUrl: bitgetRestUrl, Passphrase: model.AppConfig.Phase, ApiKey: key, ApiSecretKey: secret}
+	success, _, _, dialectSymbol := model.GetFromStandard(model.BitgetSpot, symbol)
+	if !success {
+		util.Log(util.LogLevelError, "fail to cancel bitget spot order, GetFromStandard: "+symbol)
+		return false
+	}
+	param := map[string]string{`orderId`: orderId, `symbol`: dialectSymbol}
+	httpResp, httpErr := client.DoPost("/api/v2/spot/trade/cancel-order", string(util.JsonEncodeToByte(param)))
+	if httpErr != nil {
+		util.Log(util.LogLevelError, fmt.Sprintf(`fail to post when cancelOrderBitgetSpot %s`, httpErr.Error()))
+		return false
+	}
+	jsonData, jsonErr := util.NewJSON(httpResp)
+	if jsonErr != nil {
+		util.Log(util.LogLevelError, fmt.Sprintf(`fail to NewJson when cancelOrderBitgetSpot %s`, jsonErr.Error()))
+		return false
+	}
+	if jsonData != nil {
+		code, _ := jsonData.Get("code").String()
+		if code == "00000" {
+			util.Log(util.LogLevelInfo, fmt.Sprintf("success to cancel bitget spot order: %s", symbol))
+			return true
+		} else {
+			util.Log(util.LogLevelError, fmt.Sprintf("fail to cancel bitget spot order, code: %s %s", code, string(httpResp)))
+		}
+	}
+	return false
+}
+
 func cancelOrdersBitgetSpot(key, secret, symbol string) (result bool) {
 	client := dtos.BitgetRestClient{BaseUrl: bitgetRestUrl, Passphrase: model.AppConfig.Phase, ApiKey: key, ApiSecretKey: secret}
 	success, _, _, dialectSymbol := model.GetFromStandard(model.BitgetSpot, symbol)
@@ -337,6 +399,7 @@ func cancelOrdersBitgetSpot(key, secret, symbol string) (result bool) {
 	if jsonData != nil {
 		code, _ := jsonData.Get("code").String()
 		if code == "00000" {
+			util.Log(util.LogLevelInfo, fmt.Sprintf("success to cancel bitget spot order: %s", symbol))
 			return true
 		} else {
 			util.Log(util.LogLevelError, fmt.Sprintf("fail to cancel bitget spot order, code: %s %s", code, string(httpResp)))
@@ -345,35 +408,94 @@ func cancelOrdersBitgetSpot(key, secret, symbol string) (result bool) {
 	return false
 }
 
-func queryOrderBitgetSpot(key, secret, symbol string, orderId string) (order *model.Order) {
-	order = &model.Order{Market: model.BitgetSpot, Status: model.CarryStatusWorking, OrderId: orderId, Symbol: symbol}
+// parseOrderBitgetSpot 由于不同查询返回格式不同，price dealPrice amount等值再不同方法中分别设置
+func parseOrderBitgetSpot(resp *dtos.BitgetSpotOrderDetailResp) (orders []*model.Order) {
+	if resp == nil || resp.Data == nil || len(resp.Data) == 0 {
+		return nil
+	}
+	orders = make([]*model.Order, 0)
+	for _, orderResp := range resp.Data {
+		_, _, coin := model.GetCoinFromDialect(model.BitgetSpot, orderResp.Symbol)
+		order := &model.Order{Market: model.BitgetSpot, Status: model.CarryStatusWorking, OrderId: orderResp.OrderId,
+			Symbol: coin + model.UniStandardTail[model.MarketTypeSpot]}
+		intOrderTime, _ := strconv.ParseInt(orderResp.CTime, 10, 64)
+		order.OrderTime = time.UnixMilli(intOrderTime)
+		order.DealAmount, _ = strconv.ParseFloat(orderResp.BaseVolume, 64)
+		order.UnfilledQuantity = order.Amount - order.DealAmount
+		order.OrderSide = orderResp.Side
+		// 需要根据不同的查询api 用不同的返回值设置price dealPrice amount
+		order.Price, _ = strconv.ParseFloat(orderResp.PriceAvg, 64)
+		order.DealPrice, _ = strconv.ParseFloat(orderResp.BasePrice, 64)
+		order.Amount, _ = strconv.ParseFloat(orderResp.Size, 64)
+		if orderResp.OrderType == `limit` {
+			order.OrderType = model.OrderTypeLimit
+		} else if orderResp.OrderType == `market` {
+			order.OrderType = model.OrderTypeMarket
+			if order.Price > 0 {
+				order.Amount /= order.Price
+			}
+		}
+		switch orderResp.Status {
+		case `live`, `partially_filled`:
+			order.Status = model.CarryStatusWorking
+		case `cancelled`:
+			order.Status = model.CarryStatusFail
+		case `filled`:
+			order.Status = model.CarryStatusSuccess
+		}
+		orders = append(orders, order)
+	}
+	return orders
+}
+
+func queryOpenOrdersBitgetSpot(key, secret, symbol string) (orders []*model.Order) {
+	client := dtos.BitgetRestClient{BaseUrl: bitgetRestUrl, Passphrase: model.AppConfig.Phase, ApiKey: key, ApiSecretKey: secret}
+	var param map[string]string
+	if symbol != "" {
+		_, _, _, dialectSymbol := model.GetFromStandard(model.BitgetSpot, symbol)
+		param = map[string]string{"symbol": dialectSymbol}
+	}
+	httpResp, httpErr := client.DoGet("/api/v2/spot/trade/unfilled-orders", param)
+	if httpErr != nil {
+		util.Log(util.LogLevelError, fmt.Sprintf("fail to queryOpenOrdersBitgetSpot %s %s", symbol, httpErr.Error()))
+		return nil
+	}
+	orderDetailResp := &dtos.BitgetSpotOrderDetailResp{}
+	perpJsonErr := json.Unmarshal(httpResp, orderDetailResp)
+	if orderDetailResp == nil || orderDetailResp.Code != "00000" {
+		util.Log(util.LogLevelError, fmt.Sprintf("queryOpenOrdersBitgetSpot fail error http %v json %v resp %s", httpErr, perpJsonErr, httpResp))
+		return nil
+	}
+	orders = parseOrderBitgetSpot(orderDetailResp)
+	util.Log(util.LogLevelInfo, fmt.Sprintf("queryOpenOrdersBitgetSpot %s %d", symbol, len(orders)))
+	return orders
+}
+
+// queryOrderBitgetSpot 由于price dealPrice amount的计算方法不同，本查询中进行了修订
+func queryOrderBitgetSpot(key, secret, orderId string) (order *model.Order) {
 	client := dtos.BitgetRestClient{BaseUrl: bitgetRestUrl, Passphrase: model.AppConfig.Phase, ApiKey: key, ApiSecretKey: secret}
 	httpResp, httpErr := client.DoGet("/api/v2/spot/trade/orderInfo", map[string]string{`orderId`: orderId})
 	orderDetailResp := &dtos.BitgetSpotOrderDetailResp{}
 	perpJsonErr := json.Unmarshal(httpResp, orderDetailResp)
 	if orderDetailResp == nil || orderDetailResp.Code != "00000" {
 		util.Log(util.LogLevelError, fmt.Sprintf("get bitget spot order detail error, resp: %s, httpErr: %v, jsonErr: %v", httpResp, httpErr, perpJsonErr))
-		return order
-	} else {
-		if len(orderDetailResp.Data) > 0 {
-			orderResp := orderDetailResp.Data[0]
-			order.DealPrice, _ = strconv.ParseFloat(orderResp.PriceAvg, 64)
-			order.DealAmount, _ = strconv.ParseFloat(orderResp.BaseVolume, 64)
-			intOrderTime, _ := strconv.ParseInt(orderResp.CTime, 10, 64)
-			order.OrderTime = time.Unix(intOrderTime, 0)
-			order.Amount, _ = strconv.ParseFloat(orderResp.Size, 64)
-			order.Price, _ = strconv.ParseFloat(orderResp.Price, 64)
-			order.UnfilledQuantity = order.Amount - order.DealAmount
-			order.OrderId = orderResp.OrderId
-			order.OrderSide = orderResp.Side
-			if orderResp.Status == "cancelled" {
-				order.Status = model.CarryStatusFail
-			} else if orderResp.Status == "full_fill" || orderResp.Status == "partial_fill" {
-				order.Status = model.CarryStatusSuccess
-			}
-		}
+		return nil
 	}
-	util.Log(util.LogLevelInfo, fmt.Sprintf(`%s %s %s query result:%s %f %v`,
-		order.Market, order.Symbol, order.OrderId, order.Status, order.DealAmount, orderDetailResp))
-	return order
+	orders := parseOrderBitgetSpot(orderDetailResp)
+	if len(orders) == 0 {
+		return nil
+	}
+	order = orders[0]
+	order.Price, _ = strconv.ParseFloat(orderDetailResp.Data[0].Price, 64)
+	order.DealPrice, _ = strconv.ParseFloat(orderDetailResp.Data[0].PriceAvg, 64)
+	order.Amount, _ = strconv.ParseFloat(orderDetailResp.Data[0].Size, 64)
+	if order.Price == 0 {
+		order.Price = order.DealPrice
+	}
+	if orderDetailResp.Data[0].OrderType == `market` && orderDetailResp.Data[0].Side == `buy` {
+		order.Amount /= order.Price
+	}
+	util.Log(util.LogLevelInfo, fmt.Sprintf(`%s %s query result %s %s %f`,
+		orders[0].Market, orders[0].OrderId, orders[0].Symbol, orders[0].Status, orders[0].DealAmount))
+	return orders[0]
 }

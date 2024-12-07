@@ -283,6 +283,8 @@ type BitgetPerpOrderDetailResp struct {
 	} `json:"data"`
 }
 
+// BitgetSpotOrderDetailResp
+// 特别注意: price,priceAvg,basePrice在两个不同的查询中含义不同
 type BitgetSpotOrderDetailResp struct {
 	Code        string `json:"code"`
 	Msg         string `json:"msg"`
@@ -293,11 +295,12 @@ type BitgetSpotOrderDetailResp struct {
 		OrderId    string `json:"orderId"`
 		ClientOid  string `json:"clientOid"`
 		Price      string `json:"price"`
+		PriceAvg   string `json:"priceAvg"`
+		BasePrice  string `json:"basePrice"`
 		Size       string `json:"size"`
 		OrderType  string `json:"orderType"`
 		Side       string `json:"side"`
 		Status     string `json:"status"`
-		PriceAvg   string `json:"priceAvg"`
 		BaseVolume string `json:"baseVolume"`
 		CTime      string `json:"cTime"`
 	} `json:"data"`

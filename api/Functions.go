@@ -187,6 +187,10 @@ func CancelAll(key, secret, market string) {
 		}
 	case model.Gate:
 		cancelAllGate(key, secret)
+	case model.BitgetSpot:
+		// 只支持50个以内的order
+		orders := queryOpenOrdersBitgetSpot(key, secret, ``)
+		batchCancelBitgetSpot(key, secret, orders)
 	}
 }
 
@@ -235,7 +239,8 @@ func CancelOrder(key, secret, market, symbol, orderType, orderId string) (result
 		result, errCode, msg = cancelOrderOkex(key, secret, symbol, orderId, orderType)
 	case model.Bybit:
 		result = cancelOrderBybit(key, secret, symbol, orderId)
-	//case model.BybitSpot:
+	case model.BitgetSpot:
+		result = cancelOrderBitgetSpot(key, secret, symbol, orderId)
 	//	result, errCode, msg = cancelOrderBybitSpot(key, secret, symbol, orderId)
 	//case model.Ftx:
 	//	result = deprecated.cancelOrderFtx(key, secret, orderType, orderId)
@@ -601,6 +606,8 @@ func QueryOpenOrders(key, secret, market, symbol string) (orders []*model.Order)
 		}
 	case model.Bybit:
 		orders = queryOpenOrdersBybit(key, secret, symbol)
+	case model.BitgetSpot:
+		orders = queryOpenOrdersBitgetSpot(key, secret, symbol)
 	//case model.Ftx:
 	//	orders = deprecated.queryOrdersFtx(key, secret, symbol, true)
 	//	for _, order := range deprecated.queryOrdersFtx(key, secret, symbol, false) {
@@ -623,7 +630,7 @@ func QueryOrderById(key, secret, market, symbol, orderType, orderId string) (ord
 	case model.BitgetPerp:
 		order = queryOrderBitgetPerp(key, secret, symbol, orderId)
 	case model.BitgetSpot:
-		order = queryOrderBitgetSpot(key, secret, symbol, orderId)
+		order = queryOrderBitgetSpot(key, secret, orderId)
 	case model.Gate:
 		queryOrderGate(key, secret, order)
 	case model.OKEX:

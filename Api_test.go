@@ -529,16 +529,17 @@ func Test_download(t *testing.T) {
 func Test_Order(t *testing.T) {
 	market := model.BitgetSpot
 	model.NewConfig()
-	symbol := `SAGA_USDT`
+	symbol := `MOODENGETH_USDT`
 	account := model.GetAccounts(0)[market]
 
-	api.QueryOpenOrders(account.Key, account.Secret, market, ``)
+	orders := api.QueryOpenOrders(account.Key, account.Secret, market, ``)
 	//api.CancelAll(account.Key, account.Secret, market)
 	//api.InitMarketInfos(market)
 	//order := api.PlaceOrder(account.Key, account.Secret, model.OrderSideBuy, model.OrderTypeMarket, market, symbol, ``,
 	//	`test`, 2.7, 2.7, 2, false, nil)
 	//fmt.Println(order.OrderId)
-	api.QueryOrderById(account.Key, account.Secret, market, symbol, ``, `1249310068756389901`)
+	//api.QueryOrderById(account.Key, account.Secret, market, symbol, ``, `1249310068756389901`)
+	api.CancelOrder(account.Key, account.Secret, market, symbol, model.OrderTypeLimit, orders[0].OrderId)
 	//_, listKey := api.RenewListenKeyBinance(account, market)
 	//api.ExtendListenKeyBinance(account, market, listKey)
 	//go model.AppEnvironment.HandleWSResp()
