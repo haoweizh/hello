@@ -608,6 +608,8 @@ func QueryOpenOrders(key, secret, market, symbol string) (orders []*model.Order)
 		orders = queryOpenOrdersBybit(key, secret, symbol)
 	case model.BitgetSpot:
 		orders = queryOpenOrdersBitgetSpot(key, secret, symbol)
+	case model.BitgetPerp:
+		orders = queryOpenOrdersBitgetperp(key, secret, symbol)
 	//case model.Ftx:
 	//	orders = deprecated.queryOrdersFtx(key, secret, symbol, true)
 	//	for _, order := range deprecated.queryOrdersFtx(key, secret, symbol, false) {

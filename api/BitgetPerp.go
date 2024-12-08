@@ -323,6 +323,78 @@ func cancelOrdersBitgetPerp(key, secret, symbol string) (result bool) {
 	return false
 }
 
+// queryOpenOrdersBitgetperp目前只查询live
+// 若未指定，将查询所有状态live 等待成交（尚未有任何成交） live: 未成交；partially_filled：部分成交
+func queryOpenOrdersBitgetperp(key, secret, symbol string) (orders []*model.Order) {
+	success, _, _, dialectSymbol := model.GetFromStandard(model.BitgetPerp, symbol)
+	if !success {
+		util.Log(util.LogLevelError, "fail to query bitget perp order, GetFromStandard: "+symbol)
+		return nil
+	}
+	client := dtos.BitgetRestClient{BaseUrl: bitgetRestUrl, Passphrase: model.AppConfig.Phase, ApiKey: key, ApiSecretKey: secret}
+	params := map[string]string{`productType`: `USDT-FUTURES`, `symbol`: dialectSymbol}
+	httpResp, httpErr := client.DoGet(`/api/v2/mix/order/orders-pending`, params)
+	if httpErr != nil {
+		util.Log(util.LogLevelError, fmt.Sprintf(`fail to do get queryOpenOrdersBitgetperp %s`, httpErr.Error()))
+		return
+	}
+	jsonData, jsonErr := util.NewJSON(httpResp)
+	if jsonErr != nil {
+		util.Log(util.LogLevelError, fmt.Sprintf(`fail to marshal queryOpenOrdersBitgetperp %s`, jsonErr.Error()))
+		return nil
+	}
+	if jsonData.Get("msg").MustString() != `success` {
+		util.Log(util.LogLevelError, fmt.Sprintf(`fail to queryOpenOrdersBitgetperp return code %s msg %s`,
+			jsonData.Get("code").MustString(), jsonData.Get("msg").MustString()))
+		return nil
+	}
+	orders = []*model.Order{}
+	array := jsonData.GetPath(`data`, `entrustedList`).MustArray()
+	for _, data := range array {
+		value := data.(map[string]interface{})
+		order := &model.Order{Market: model.BitgetPerp, Symbol: symbol, OrderId: value[`orderId`].(string)}
+		if value[`size`] != nil {
+			order.Amount, _ = strconv.ParseFloat(value[`amount`].(string), 64)
+		}
+		if value[`baseVolume`] != nil {
+			order.DealAmount, _ = strconv.ParseFloat(value[`baseVolume`].(string), 64)
+		}
+		if value[`fee`] != nil {
+			order.Fee, _ = strconv.ParseFloat(value[`fee`].(string), 64)
+		}
+		if value[`price`] != nil {
+			order.Price, _ = strconv.ParseFloat(value[`price`].(string), 64)
+		}
+		if value[`priceAvg`] != nil {
+			order.DealPrice, _ = strconv.ParseFloat(value[`priceAvg`].(string), 64)
+		}
+		switch value[`status`] {
+		case `live`, `partially_filled`:
+			order.Status = model.CarryStatusWorking
+		case `canceled`:
+			order.Status = model.CarryStatusFail
+		case `filled`:
+			order.Status = model.CarryStatusSuccess
+		}
+		order.OrderSide = value[`side`].(string)
+		if value[`orderType`] == `limit` {
+			order.OrderType = model.OrderTypeLimit
+		} else if value[`orderType`] == `market` {
+			order.OrderType = model.OrderTypeMarket
+		}
+		if value[`cTime`] != nil {
+			cTime, _ := strconv.ParseInt(value[`cTime`].(string), 10, 64)
+			order.OrderTime = time.UnixMilli(cTime)
+		}
+		if value[`uTime`] != nil {
+			uTime, _ := strconv.ParseInt(value[`uTime`].(string), 10, 64)
+			order.OrderUpdateTime = time.UnixMilli(uTime)
+		}
+		orders = append(orders, order)
+	}
+	return orders
+}
+
 func queryOrderBitgetPerp(key, secret, symbol string, orderId string) (order *model.Order) {
 	success, _, _, dialectSymbol := model.GetFromStandard(model.BitgetPerp, symbol)
 	if !success {
