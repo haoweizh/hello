@@ -1,5 +1,12 @@
 hello
-
+# 关于生成.so或者.dylib的命令
+```
+ucli_ffi.c
+ucli_ffi.h
+//同目录下使用一下命令
+gcc -fPIC -shared -o libucli_ffi.so ucli_ffi.c
+gcc -dynamiclib -o libucli_ffi.dylib ucli_ffi.c
+```
 # 环境搭建
 
 1. rust (for foundry)
