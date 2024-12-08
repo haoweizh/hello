@@ -143,7 +143,7 @@ func createFromPosition(account *model.Account, setting *model.Setting, valueLim
 	if setting.Market == model.Gate {
 		spotValue, spotOk := spotMarkets.Load(key)
 		if spotValue != nil && spotOk && spotValue.(*spotMarket).collateral != nil && spotValue.(*spotMarket).collateral.Rate < 1.5 {
-			util.Log(util.LogLevelInfo, fmt.Sprintf(`set revert when %s rate %f`, setting.Market, value.(*spotMarket).collateral.Rate))
+			util.Log(util.LogLevelInfo, fmt.Sprintf(`set revert when %s rate %f`, setting.Market, spotValue.(*spotMarket).collateral.Rate))
 			doRevert = true
 		}
 	}
