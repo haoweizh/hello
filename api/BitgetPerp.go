@@ -310,7 +310,7 @@ func cancelOrderBitgetPerp(key, secret, symbol, orderId string) (result bool) {
 	if jsonData != nil {
 		code, _ := jsonData.Get("code").String()
 		if code == "00000" || code == `22001` {
-			util.Log(util.LogLevelInfo, fmt.Sprintf("success to cancel bitgetPerp order code %d", code))
+			util.Log(util.LogLevelInfo, fmt.Sprintf("success to cancel bitgetPerp order code %s", code))
 			return true
 		} else {
 			util.Log(util.LogLevelError, fmt.Sprintf("fail to cancelOrderBitgetPerp code %s msg %s %s",

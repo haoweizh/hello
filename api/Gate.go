@@ -845,7 +845,8 @@ func getBalanceGate(key, secret string) (success bool, balances []*model.Balance
 	totalInUsd, _ = strconv.ParseFloat(portfolioAccount.UnifiedAccountTotalEquity, 64)
 	collateralAvailable, _ := strconv.ParseFloat(portfolioAccount.TotalAvailableMargin, 64)
 	totalMaintenanceMargin, _ := strconv.ParseFloat(portfolioAccount.TotalMaintenanceMargin, 64)
-	collateral = &model.Collateral{Available: collateralAvailable, Occupied: totalMaintenanceMargin}
+	maintenanceRate, _ := strconv.ParseFloat(portfolioAccount.TotalMaintenanceMarginRate, 64)
+	collateral = &model.Collateral{Available: collateralAvailable, Occupied: totalMaintenanceMargin, Rate: maintenanceRate}
 	balances = make([]*model.Balance, 0)
 	for coin, item := range portfolioAccount.Balances {
 		balance := &model.Balance{AccountId: key, BalanceTime: util.GetNow(), Market: model.Gate, Coin: coin}
