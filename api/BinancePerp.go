@@ -427,7 +427,7 @@ func cancelOrdersBinancePerp(key, secret string, symbol string) bool {
 }
 
 // sdk暂不支持该接口
-func getPositionsBinancePerp(key, secret string) (success bool, positions []*Position, accountValue, availableU float64) {
+func getPositionsBinancePerp(key, secret string) (success bool, positions []*Position, accountValue, availableU, mmr float64) {
 	responseBody := signedRequestBinance(key, secret, model.BinancePerp, http.MethodGet,
 		restBinancePerp+"/fapi/v2/account", true, nil)
 	positionJson, err := util.NewJSON(responseBody)
@@ -443,11 +443,10 @@ func getPositionsBinancePerp(key, secret string) (success bool, positions []*Pos
 		positions = make([]*Position, 0)
 		totalBalanceJson := positionJson.Get(`totalWalletBalance`).MustString()
 		totalUnrealizedProfitJson := positionJson.Get(`totalUnrealizedProfit`).MustString()
-		availableJson := positionJson.Get(`availableBalance`).MustString()
 		unrealizedProfit, _ = strconv.ParseFloat(totalUnrealizedProfitJson, 64)
 		totalBalance, _ := strconv.ParseFloat(totalBalanceJson, 64)
 		accountValue = totalBalance + unrealizedProfit
-		availableU, _ = strconv.ParseFloat(availableJson, 64)
+		availableU, _ = strconv.ParseFloat(positionJson.Get(`availableBalance`).MustString(), 64)
 		data, err = positionJson.Get("positions").Array()
 		for _, item := range data {
 			position := &Position{Market: model.BinancePerp, Ts: util.GetNowUnixMillion()}
@@ -470,6 +469,8 @@ func getPositionsBinancePerp(key, secret string) (success bool, positions []*Pos
 			}
 			positions = append(positions, position)
 		}
+		totalMaintMargin, _ := strconv.ParseFloat(positionJson.Get("totalMaintMargin").MustString(), 64)
+		mmr = totalMaintMargin / accountValue
 	} else {
 		util.Log(util.LogLevelError, `getPositionsBinancePerp fail to refresh binance position `)
 		time.Sleep(time.Minute)
@@ -481,7 +482,7 @@ func getPositionsBinancePerp(key, secret string) (success bool, positions []*Pos
 		time.Sleep(time.Minute)
 		return getPositionsBinancePerp(key, secret)
 	}
-	return success, positions, accountValue, availableU
+	return success, positions, accountValue, availableU, mmr
 }
 
 // 1m 3m 5m 15m 30m 1h 2h 4h 6h 8h 12h 1d 3d 1w 1M

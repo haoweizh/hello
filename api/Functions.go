@@ -460,7 +460,7 @@ func GetMarketEquity(index int) (msg string) {
 		//util.Notice(fmt.Sprintf(`try to get value for %s account %s`, market, accounts[market].Key[:5]))
 		_, _, equity, _ := GetBalances(accounts[market].Key, accounts[market].Secret, market)
 		if equity == 0 && !accounts[market].IsUnified {
-			_, _, equity, _ = GetPositions(accounts[market].Key, accounts[market].Secret, market)
+			_, _, equity, _, _ = GetPositions(accounts[market].Key, accounts[market].Secret, market)
 		}
 		inAll += equity
 		msg += fmt.Sprintf("%s: %f\n", market, equity)
@@ -676,7 +676,7 @@ func QueryOrderById(key, secret, market, symbol, orderType, orderId string) (ord
 // GetPositions
 // accountValue: 账户权益
 // availableU: 可用usd
-func GetPositions(key, secret, market string) (success bool, positions []*Position, accountValue, availableU float64) {
+func GetPositions(key, secret, market string) (success bool, positions []*Position, accountValue, availableU, mmr float64) {
 	lock, _ := positionLock.Load(key)
 	if lock == nil {
 		lock = &sync.Mutex{}
@@ -689,40 +689,25 @@ func GetPositions(key, secret, market string) (success bool, positions []*Positi
 	}()
 	switch market {
 	case model.BitgetPerp:
-		success, positions, accountValue, availableU = getPositionsBitgetPerp(key, secret)
+		success, positions, accountValue, availableU, mmr = getPositionsBitgetPerp(key, secret)
 	case model.Gate:
 		_, _, total, collateral := getBalanceGate(key, secret)
 		success, positions = getPositionsGate(key, secret)
-		accountValue, availableU = total, collateral.Available
+		accountValue, availableU, mmr = total, collateral.Available, collateral.Rate
 	case model.BinancePerp:
-		success, positions, accountValue, availableU = getPositionsBinancePerp(key, secret)
+		success, positions, accountValue, availableU, mmr = getPositionsBinancePerp(key, secret)
 	case model.Bybit:
 		_, _, total, collateral := getBalanceBybit(key, secret)
 		success, positions, _ = getPositionsBybit(key, secret)
-		accountValue, availableU = total, collateral.Available
-	//case model.HuobiPerp:
-	//	success, positions, accountValue, availableU = deprecated.getPositionsHuobiPerp(key, secret)
-	//case model.Mexc:
-	//	success, positions, accountValue, availableU = deprecated.getPositionsMexc(key, secret)
-	//case model.KucoinPerp:
-	//	success, positions, accountValue, availableU = deprecated.getPositionsKucoinPerp(key, secret)
-	//case model.Ftx:
-	//	var balances []*model.Balance
-	//	success, balances, accountValue = deprecated.getBalanceFtx(key, secret)
-	//	for _, balance := range balances {
-	//		if strings.EqualFold(balance.Coin, `usd`) {
-	//			availableU += balance.Amount
-	//		}
-	//	}
-	//	success, positions, _ = deprecated.getPositionsFtx(key, secret)
+		accountValue, availableU, mmr = total, collateral.Available, collateral.Rate
 	case model.OKEX:
 		_, _, total, collateral := getBalanceOKEX(key, secret)
 		success, positions = getPositionsOKEX(key, secret)
-		accountValue, availableU = total, collateral.Available
+		accountValue, availableU, mmr = total, collateral.Available, collateral.Rate
 	}
 	//util.Notice(fmt.Sprintf(`get positions %s %s %f %f %d %v`,
 	//	market, key[:5], accountValue, availableU, len(positions), success))
-	return success, positions, accountValue, availableU
+	return success, positions, accountValue, availableU, mmr
 }
 
 func GetStandardOrderType(market, dialectType string) (standardType string) {

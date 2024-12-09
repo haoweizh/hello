@@ -507,6 +507,7 @@ func getBalanceBybit(key string, secret string) (success bool, balances []*model
 			maintenanceRate, _ := strconv.ParseFloat(account.AccountMMRate, 64)
 			collateralAvailable, _ := strconv.ParseFloat(account.TotalAvailableBalance, 64)
 			totalMaintenanceMargin, _ := strconv.ParseFloat(account.TotalMaintenanceMargin, 64)
+			totalInUsd, _ = strconv.ParseFloat(account.TotalEquity, 64)
 			collateral = &model.Collateral{Available: collateralAvailable, Occupied: totalMaintenanceMargin, Rate: maintenanceRate}
 			for _, coinInfo := range account.Coin {
 				balance := &model.Balance{AccountId: key, BalanceTime: util.GetNow(), Market: model.Bybit, Coin: coinInfo.Coin}
@@ -526,8 +527,6 @@ func getBalanceBybit(key string, secret string) (success bool, balances []*model
 					}
 				}
 				balance.UsdValue = usdValue
-				// 該幣種不能作為保證金的抵押品，則該數值為0
-				totalInUsd += usdValue
 				balances = append(balances, balance)
 			}
 		}

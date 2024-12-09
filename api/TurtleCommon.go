@@ -36,7 +36,7 @@ func CalcTurtleAmount(account *model.Account, n, amountRate float64, candle *mod
 	if accountValue == 0 {
 		switch candle.Market {
 		case model.BinancePerp:
-			_, _, accountValue, _ = GetPositions(account.Key, account.Secret, candle.Market)
+			_, _, accountValue, _, _ = GetPositions(account.Key, account.Secret, candle.Market)
 		case model.Ftx, model.OKEX:
 			_, _, accountValue, _ = GetBalances(account.Key, account.Secret, candle.Market)
 		}
@@ -112,7 +112,7 @@ func AdjustPosHolding(key, secret string, setting *model.Setting, data *model.Tu
 		return
 	}
 	data.AdjustChecked = true
-	success, marketPos, _, _ := GetPositions(key, secret, setting.Market)
+	success, marketPos, _, _, _ := GetPositions(key, secret, setting.Market)
 	if !success {
 		util.Log(util.LogLevelInfo, fmt.Sprintf(
 			`fail to adjust position holdings %s %s`, setting.Market, setting.Symbol))
@@ -419,7 +419,7 @@ func GetTurtleData(account *model.Account, setting *model.Setting, removed bool)
 		if !refreshOk || refreshValue == nil || refreshValue.(time.Time).Before(nowPeriod) {
 			if handleMarketDynamic(setting.Market) {
 				PrepareSettings()
-				success, positions, _, _ := GetPositions(account.Key, account.Secret, setting.Market)
+				success, positions, _, _, _ := GetPositions(account.Key, account.Secret, setting.Market)
 				if success {
 					posMap := &sync.Map{}
 					for _, position := range positions {

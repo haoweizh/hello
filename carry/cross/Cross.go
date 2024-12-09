@@ -14,9 +14,9 @@ import (
 )
 
 func createContractMarket(key, secret, market string) (cm *contractMarket) {
-	success, positions, accountValue, availableU := api.GetPositions(key, secret, market)
-	util.Log(util.LogLevelInfo, fmt.Sprintf(`get positions %s %s %v account value %f available u %f`,
-		market, key, success, accountValue, availableU))
+	success, positions, accountValue, availableU, mmr := api.GetPositions(key, secret, market)
+	util.Log(util.LogLevelInfo, fmt.Sprintf(`get positions %s %s %v account value %f available u %f maintain rate %f`,
+		market, key, success, accountValue, availableU, mmr))
 	settings := api.GetSettings(model.FunctionCross, market)
 	if success {
 		cm = &contractMarket{key: key, market: market}
@@ -39,6 +39,7 @@ func createContractMarket(key, secret, market string) (cm *contractMarket) {
 		}
 		cm.accountValueInU = accountValue
 		cm.collateralsAvailable = availableU
+		cm.mmr = mmr
 	} else {
 		util.Log(util.LogLevelError, fmt.Sprintf(`fail to createContractMarket %s %s`, market, key))
 		return nil
@@ -73,8 +74,8 @@ func createSpotMarket(key, secret, market string) (sm *spotMarket) {
 			}
 		}
 		if collateral != nil {
-			util.Log(util.LogLevelInfo, fmt.Sprintf(`collateral for sm available u %s %f to %f`,
-				market, sm.availableU, collateral.Available))
+			util.Log(util.LogLevelInfo, fmt.Sprintf(`collateral for sm available u %s %f to %f maintain rate %f`,
+				market, sm.availableU, collateral.Available, collateral.Rate))
 			sm.availableU = math.Min(sm.availableU, collateral.Available)
 		}
 	} else {
@@ -140,17 +141,14 @@ func createFromPosition(account *model.Account, setting *model.Setting, valueLim
 	}
 	rateLimitPosition := 2.8
 	rateLimitHolding := 0.28
-	spotValue, spotOk := spotMarkets.Load(key)
-	if spotValue != nil && spotOk && spotValue.(*spotMarket).collateral != nil {
-		switch setting.Market {
-		case model.OKEX, model.Gate:
-			if spotValue.(*spotMarket).collateral.Rate < 1.5 {
-				doRevert = true
-			}
-		case model.Bybit:
-			if spotValue.(*spotMarket).collateral.Rate > 0.7 {
-				doRevert = true
-			}
+	switch setting.Market {
+	case model.OKEX, model.Gate:
+		if cm.mmr < 1.5 {
+			doRevert = true
+		}
+	case model.Bybit, model.BitgetPerp, model.BinancePerp:
+		if cm.mmr > 0.66 {
+			doRevert = true
 		}
 	}
 	if cm.contractValueInU/cm.accountValueInU > rateLimitPosition || valueInUsd > valueLimit ||

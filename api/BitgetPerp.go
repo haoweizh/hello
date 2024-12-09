@@ -152,7 +152,7 @@ func WsTickServeBitgetPerp(market string) (socketMap map[*model.WSConn]bool, msg
 	return
 }
 
-func getPositionsBitgetPerp(key, secret string) (success bool, positions []*Position, accountValue, availableU float64) {
+func getPositionsBitgetPerp(key, secret string) (success bool, positions []*Position, accountValue, availableU, mmr float64) {
 	client := dtos.BitgetRestClient{BaseUrl: bitgetRestUrl, Passphrase: model.AppConfig.Phase, ApiKey: key, ApiSecretKey: secret}
 	assetHttpResp, assetHttpErr := client.DoGet("/api/v2/mix/account/accounts", map[string]string{"productType": "USDT-FUTURES"})
 	bitgetAssertResp := &dtos.BitgetAssertResp{}
@@ -177,13 +177,13 @@ func getPositionsBitgetPerp(key, secret string) (success bool, positions []*Posi
 	}
 	for _, asset := range bitgetAssertResp.Data {
 		if asset.MarginCoin == `USDT` {
-			availableUsdt, _ := strconv.ParseFloat(asset.Available, 64)
-			equityUsdt, _ := strconv.ParseFloat(asset.UsdtEquity, 64)
-			accountValue += equityUsdt
-			availableU += availableUsdt
+			availableU, _ = strconv.ParseFloat(asset.Available, 64)
+			accountValue, _ = strconv.ParseFloat(asset.AccountEquity, 64)
 		}
+		mmr, _ = strconv.ParseFloat(asset.CrossedRiskRate, 64)
 	}
 	positions = make([]*Position, 0)
+	margin := 0.0
 	for _, contract := range bitgetPositionResp.Data {
 		isSuccess, _, coin := model.GetCoinFromDialect(model.BitgetPerp, contract.Symbol)
 		if !isSuccess {
@@ -208,11 +208,13 @@ func getPositionsBitgetPerp(key, secret string) (success bool, positions []*Posi
 		position.EntryPrice, _ = strconv.ParseFloat(contract.OpenPriceAvg, 64)
 		position.Margin, _ = strconv.ParseFloat(contract.MarginSize, 64)
 		positions = append(positions, position)
+		marginSize, _ := strconv.ParseFloat(contract.MarginSize, 64)
+		margin = margin + marginSize
 	}
 	if len(positions) == 0 && accountValue > 0 {
 		util.Log(util.LogLevelError, fmt.Sprintf(`get pos error bitgetperp %d`, len(bitgetPositionResp.Data)))
 	}
-	return true, positions, accountValue, availableU
+	return true, positions, accountValue, availableU, mmr
 }
 
 func getFundingRateBitgetPerp(symbol string) (fundingRate *model.FundingRate) {

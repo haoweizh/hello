@@ -117,7 +117,7 @@ func Test_getCommonMarketInfos(t *testing.T) {
 		model.BinancePerp, `SOL_PERP`, ``, `test`,
 		19.407125, 19.407125, 100, false, nil)
 	fmt.Println(order1.OrderId)
-	success, pos, value, u := api.GetPositions(model.AppConfig.GateKey, model.AppConfig.GateSecret, model.Gate)
+	success, pos, value, u, _ := api.GetPositions(model.AppConfig.GateKey, model.AppConfig.GateSecret, model.Gate)
 	fmt.Println(fmt.Sprintf(`%v %v %v %v`, success, pos, value, u))
 }
 
@@ -241,13 +241,13 @@ func Test_BalAndPos(t *testing.T) {
 	//posMarkets := []string{model.OKEX, model.BybitPerp, model.Ftx}
 	for _, market := range posMarkets {
 		account := model.AppConfig.GetAccounts(market)[0]
-		success, positions, total, available := api.GetPositions(account.Key, account.Secret, market)
+		success, positions, total, available, _ := api.GetPositions(account.Key, account.Secret, market)
 		fmt.Println(fmt.Sprintf(`%v %f %f %d`, success, total, available, len(positions)))
 		for _, position := range positions {
 			fmt.Println(fmt.Sprintf(`%s %f`, position.Currency, position.Holding))
 			api.CancelOrders(account.Key, account.Secret, market, position.Currency)
 		}
-		success, positions, total, available = api.GetPositions(account.Key, account.Secret, market)
+		success, positions, total, available, _ = api.GetPositions(account.Key, account.Secret, market)
 		for _, position := range positions {
 			fmt.Println(fmt.Sprintf(`%s %f`, position.Currency, position.Holding))
 			api.CancelOrders(account.Key, account.Secret, market, position.Currency)
@@ -526,11 +526,11 @@ func Test_download(t *testing.T) {
 }
 
 func Test_Order(t *testing.T) {
-	market := model.Bybit
+	market := model.BinancePerp
 	model.NewConfig()
 	//symbol := `BTC_PERP`
 	account := model.GetAccounts(0)[market]
-	api.GetBalances(account.Key, account.Secret, market)
+	api.GetPositions(account.Key, account.Secret, market)
 	//api.CancelAll(account.Key, account.Secret, market)
 	//orders := api.QueryOpenOrders(account.Key, account.Secret, market, ``)
 	//api.CancelAll(account.Key, account.Secret, market)
