@@ -448,7 +448,7 @@ func sendSignRequestOKEX(key, secret, method, path string, param, body map[strin
 	u.Path += path
 	q := u.Query()
 	for k, v := range param {
-		value := fmt.Sprintf(`%#v`, v)
+		value := fmt.Sprintf(`%v`, v)
 		if k == `instId` {
 			_, _, _, value = model.GetFromStandard(model.OKEX, value)
 		}

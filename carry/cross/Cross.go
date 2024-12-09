@@ -945,7 +945,7 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarrySta
 			fmt.Sprintf(`%.0e`, carryStatusRelate.LimitSell),
 			fmt.Sprintf(`%.1f`, 100*scoreRelate),
 			fmt.Sprintf(`%.1f`, 100*score),
-			fmt.Sprintf(`%#v`, green)}
+			fmt.Sprintf(`%v`, green)}
 	} else {
 		mark = fmt.Sprintf(`%s|%s`, markRelate, mark)
 		infoValue = []string{coin, carryStatusRelate.market, coinValueRelate, fundingStrRelate,
@@ -960,7 +960,7 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarrySta
 			fmt.Sprintf(`%.0e`, carryStatus.LimitSell),
 			fmt.Sprintf(`%.1f`, 100*score),
 			fmt.Sprintf(`%.1f`, 100*scoreRelate),
-			fmt.Sprintf(`%#v`, green)}
+			fmt.Sprintf(`%v`, green)}
 	}
 	model.SetMonitorInfo(strconv.Itoa(index), model.FunctionCross, mark, infoValue)
 	if statusBuy == nil {

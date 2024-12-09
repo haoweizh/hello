@@ -153,7 +153,7 @@ func DelSyncMap(syncMap *sync.Map, keys ...string) {
 
 func LoadSyncMap(syncMap *sync.Map, keys ...string) (interface{}, bool) {
 	if syncMap == nil {
-		Log(LogLevelError, fmt.Sprintf(`syncMap is nil %#v`, keys))
+		Log(LogLevelError, fmt.Sprintf(`syncMap is nil %v`, keys))
 		return nil, false
 	}
 	key := ``

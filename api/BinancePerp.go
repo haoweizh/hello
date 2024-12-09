@@ -572,7 +572,7 @@ func signedRequestBinance(key, secret, market, method, requestUrl string, withAp
 			if itemKey == `symbol` {
 				_, _, _, itemValue = model.GetFromStandard(market, itemValue.(string))
 			}
-			param.Set(itemKey, fmt.Sprintf(`%#v`, itemValue))
+			param.Set(itemKey, fmt.Sprintf(`%v`, itemValue))
 		}
 	}
 	if withApiKey {

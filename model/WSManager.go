@@ -77,7 +77,7 @@ func (manager *WSManager) WrapSend(address string) {
 					if createdAt.(*time.Time).Add(time.Hour * 24).Before(time.Now()) {
 						value.(*sync.Map).Delete(createdAt)
 					} else {
-						msg[fmt.Sprintf(`%#v%#v`, key, createdAt)] = settingMonitor.(SettingMonitor)
+						msg[fmt.Sprintf(`%v%v`, key, createdAt)] = settingMonitor.(SettingMonitor)
 					}
 					return true
 				})
