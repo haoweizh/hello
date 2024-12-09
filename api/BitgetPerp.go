@@ -183,7 +183,6 @@ func getPositionsBitgetPerp(key, secret string) (success bool, positions []*Posi
 		mmr, _ = strconv.ParseFloat(asset.CrossedRiskRate, 64)
 	}
 	positions = make([]*Position, 0)
-	margin := 0.0
 	for _, contract := range bitgetPositionResp.Data {
 		isSuccess, _, coin := model.GetCoinFromDialect(model.BitgetPerp, contract.Symbol)
 		if !isSuccess {
@@ -208,8 +207,6 @@ func getPositionsBitgetPerp(key, secret string) (success bool, positions []*Posi
 		position.EntryPrice, _ = strconv.ParseFloat(contract.OpenPriceAvg, 64)
 		position.Margin, _ = strconv.ParseFloat(contract.MarginSize, 64)
 		positions = append(positions, position)
-		marginSize, _ := strconv.ParseFloat(contract.MarginSize, 64)
-		margin = margin + marginSize
 	}
 	if len(positions) == 0 && accountValue > 0 {
 		util.Log(util.LogLevelError, fmt.Sprintf(`get pos error bitgetperp %d`, len(bitgetPositionResp.Data)))
