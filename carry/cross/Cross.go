@@ -1176,11 +1176,11 @@ func handleCross(account *model.Account, order *model.Order) {
 		queryOrder := api.QueryOrderById(account.Key, account.Secret, order.Market, order.Symbol, order.OrderType, order.OrderId)
 		if queryOrder != nil {
 			leftAmt = queryOrder.Amount - queryOrder.DealAmount
-			queryDelay := false
-			if (order.Market == model.BitgetSpot || order.Market == model.BitgetPerp) && !canceled {
-				queryDelay = true
-			}
-			if leftAmt > marketInfo.SizeMin && leftAmt*order.Price > marketInfo.MoneyMin && queryOrder.Status != model.CarryStatusSuccess && !queryDelay {
+			//queryDelay := false
+			//if (order.Market == model.BitgetSpot || order.Market == model.BitgetPerp) && !canceled {
+			//	queryDelay = true
+			//}
+			if leftAmt > marketInfo.SizeMin && leftAmt*order.Price > marketInfo.MoneyMin && queryOrder.Status != model.CarryStatusSuccess {
 				compOrder := api.PlaceOrder(account.Key, account.Secret, order.OrderSide, model.OrderTypeMarket, order.Market, order.Symbol,
 					``, model.FunctionComplement, order.Price, order.Price, leftAmt, false, nil)
 				model.AppDB.Save(compOrder)
