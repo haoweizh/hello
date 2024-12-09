@@ -27,7 +27,7 @@ func RunMindZeroAddr(zeroLenFrom, zerosLenTo, concurrency int) (msg string) {
 	if mining {
 		contractNum.Range(func(key, value any) bool {
 			if value != nil {
-				msg += fmt.Sprintf("%v0 contracts got %d\n", key, len(value.([]string)))
+				msg += fmt.Sprintf("%#v0 contracts got %d\n", key, len(value.([]string)))
 				for _, s := range value.([]string) {
 					msg += fmt.Sprintf("%s\n", s)
 				}

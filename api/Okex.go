@@ -378,7 +378,7 @@ func handleBooksUpdate(symbol string, data map[string]interface{}, bidAsk *model
 			}
 			//setWrong(symbol, true)
 			if !success && time.Now().Minute() == 0 && time.Now().Second() == 0 {
-				util.Log(util.LogLevelError, fmt.Sprintf("%v ts %d checksum %s %s \n %v",
+				util.Log(util.LogLevelError, fmt.Sprintf("%#v ts %d checksum %s %s \n %#v",
 					success, bidAskUpdate.Ts, symbol, checkStr, data))
 			}
 		}
@@ -436,7 +436,7 @@ func handleBooksOKEX(symbol string, data map[string]interface{}) (bidAsk *model.
 	//	if compare == crcValue {
 	//		util.Notice(fmt.Sprintf(`right checksum snapshot %s %d`, symbol, bidAsk.Bids.Len()))
 	//	} else {
-	//		util.Notice(fmt.Sprintf("%v +++++++ checksum %s\n %s\n %v",
+	//		util.Notice(fmt.Sprintf("%#v +++++++ checksum %s\n %s\n %#v",
 	//			false, symbol, checkStr, data))
 	//	}
 	//}
@@ -448,7 +448,7 @@ func sendSignRequestOKEX(key, secret, method, path string, param, body map[strin
 	u.Path += path
 	q := u.Query()
 	for k, v := range param {
-		value := fmt.Sprintf(`%v`, v)
+		value := fmt.Sprintf(`%#v`, v)
 		if k == `instId` {
 			_, _, _, value = model.GetFromStandard(model.OKEX, value)
 		}
@@ -567,7 +567,7 @@ func PlacePairOKEX(account *model.Account, requestId, symbolBuy, symbolSell, ord
 
 // orderType: move_order_stop 只支持立即触发
 // amount、price
-// 不能使用 fmt %v 因为有e+5 的情况；
+// 不能使用 fmt %#v 因为有e+5 的情况；
 // 不能使用 fmt %f 因为有000后缀；
 // 不能使用 strconv.FormatFloat 因为有 2.00000001问题
 // priceStr := strconv.FormatFloat(order.Price, 'f', -1, 64)
@@ -761,7 +761,7 @@ func cancelAllOkex(key, secret string) {
 	}
 	for _, order := range orders {
 		result, errCode, msg := cancelOrderOkex(key, secret, order.Symbol, order.OrderId, order.OrderType)
-		util.Log(util.LogLevelInfo, fmt.Sprintf(`cancelAll orders success okex %s id %s type %s return %v code %s %s`,
+		util.Log(util.LogLevelInfo, fmt.Sprintf(`cancelAll orders success okex %s id %s type %s return %#v code %s %s`,
 			order.Symbol, order.OrderId, order.OrderType, result, errCode, msg))
 	}
 }
@@ -1397,7 +1397,7 @@ func getFundingRateOKEX(key, secret, symbol string) (fundingRate *model.FundingR
 	fundingJson, fundingErr := util.NewJSON(response)
 	if fundingJson == nil || fundingJson.Get(`data`) == nil || fundingJson.Get(`data`).MustArray() == nil ||
 		len(fundingJson.Get(`data`).MustArray()) == 0 || fundingErr != nil {
-		util.Log(util.LogLevelError, fmt.Sprintf(`fail to getFundingRateOKEX %v`, fundingErr))
+		util.Log(util.LogLevelError, fmt.Sprintf(`fail to getFundingRateOKEX %#v`, fundingErr))
 		return nil
 	}
 	data := fundingJson.Get(`data`).MustArray()[0].(map[string]interface{})

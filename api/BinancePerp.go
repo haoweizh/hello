@@ -404,7 +404,7 @@ func cancelOrderBinancePerp(key, secret, symbol, orderId string) bool {
 	} else if res.Status == `CANCELED` {
 		return true
 	} else {
-		util.Log(util.LogLevelError, fmt.Sprintf(`cancelOrderBinancePerp status %v`, res.Status))
+		util.Log(util.LogLevelError, fmt.Sprintf(`cancelOrderBinancePerp status %#v`, res.Status))
 	}
 	return false
 }
@@ -572,7 +572,7 @@ func signedRequestBinance(key, secret, market, method, requestUrl string, withAp
 			if itemKey == `symbol` {
 				_, _, _, itemValue = model.GetFromStandard(market, itemValue.(string))
 			}
-			param.Set(itemKey, fmt.Sprintf(`%v`, itemValue))
+			param.Set(itemKey, fmt.Sprintf(`%#v`, itemValue))
 		}
 	}
 	if withApiKey {
@@ -588,7 +588,7 @@ func signedRequestBinance(key, secret, market, method, requestUrl string, withAp
 		requestUrl = requestUrl + "?" + param.Encode()
 	}
 	responseBody, _ := util.HttpRequest(method, requestUrl, "", headers, 60)
-	logMsg := fmt.Sprintf(`signedRequestBinance binance key %s request %s body %v return %s`,
+	logMsg := fmt.Sprintf(`signedRequestBinance binance key %s request %s body %#v return %s`,
 		key, requestUrl, param, string(responseBody))
 	if strings.Contains(requestUrl, `/order`) {
 		util.Log(util.LogLevelInfo, logMsg)

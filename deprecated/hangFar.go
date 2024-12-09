@@ -152,7 +152,7 @@ package deprecated
 //		amount[posStr[i]], _ = strconv.ParseFloat(parameters[i*3+2], 64)
 //	}
 //	if util.GetNowUnixMillion()-int64(tick.Ts) > 1000 || model.AppConfig.HandleLink != `1` || model.AppPause {
-//		util.Notice(fmt.Sprintf(`[status]%s is pause:%v`, model.AppConfig.HandleLink, model.AppPause))
+//		util.Notice(fmt.Sprintf(`[status]%s is pause:%#v`, model.AppConfig.HandleLink, model.AppPause))
 //		CancelHang(model.KeyDefault, model.SecretDefault, setting.Market, setting.Symbol)
 //		return
 //	}

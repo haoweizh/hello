@@ -62,7 +62,7 @@ package deprecated
 //	//client := kucoinRelatedClient("", "", "")
 //	//resp, err := client.Symbols("")
 //	//if err != nil || resp.Code != "200000" {
-//	//	util.SocketInfo(fmt.Sprintf("key %s function: %s kucoin API error, response:%v", key, "appendRelatedMarketsKucoin", resp))
+//	//	util.SocketInfo(fmt.Sprintf("key %s function: %s kucoin API error, response:%#v", key, "appendRelatedMarketsKucoin", resp))
 //	//	return
 //	//}
 //	//symbols := KucoinSymbolsModel{}
@@ -90,7 +90,7 @@ package deprecated
 //	//	marketInfos[marketInfo.Name] = marketInfo
 //	//}
 //	//relatedSettingMarkets = GetMarketSymbols(model.KucoinSpot)
-//	util.NoticeLess(`%s %v`, key, marketInfos)
+//	util.NoticeLess(`%s %#v`, key, marketInfos)
 //}
 //
 //func WsTickServeKucoinSpot() (channels []chan struct{}, err error) {
@@ -208,7 +208,7 @@ package deprecated
 //	if model.AppConfig.KucoinSpot {
 //		accountResp, err := kucoinRelatedClient("", "", "").Accounts(nil, "", "trade")
 //		if err != nil || accountResp.Code != "200000" {
-//			util.SocketInfo(fmt.Sprintf("fail to refresh spot balance kucoin, err:%s, response:%v", err, accountResp))
+//			util.SocketInfo(fmt.Sprintf("fail to refresh spot balance kucoin, err:%s, response:%#v", err, accountResp))
 //			time.Sleep(time.Minute * 5)
 //			return getBalanceKucoinSpot(key, secret)
 //		}
@@ -233,7 +233,7 @@ package deprecated
 //	} else {
 //		accountResp, err := kucoinRelatedClient("", "", "").MarginAccount(nil)
 //		if err != nil || accountResp.Code != "200000" {
-//			util.SocketInfo(fmt.Sprintf("fail to refresh margin balance kucoin, err:%s, response:%v", err, accountResp))
+//			util.SocketInfo(fmt.Sprintf("fail to refresh margin balance kucoin, err:%s, response:%#v", err, accountResp))
 //			time.Sleep(time.Minute * 5)
 //			return getBalanceKucoinSpot(key, secret)
 //		}
@@ -275,7 +275,7 @@ package deprecated
 //		param["symbol"] = dialectSymbol
 //		apiResponse, err := kucoinRelatedClient("", "", "").CancelOrders(nil, param)
 //		if err != nil || apiResponse.Code != "200000" {
-//			util.SocketInfo(fmt.Sprintf("function: %s fail to cancel related orders kucoin, err:%s, response:%v", "cancelOrdersKucoin", err, apiResponse))
+//			util.SocketInfo(fmt.Sprintf("function: %s fail to cancel related orders kucoin, err:%s, response:%#v", "cancelOrdersKucoin", err, apiResponse))
 //			return false
 //		}
 //		orders := &kucoin.CancelOrderResultModel{}
@@ -329,15 +329,15 @@ package deprecated
 //			order.Price = priceSpot
 //			createOrder.Price = util.CutTailZero(strconv.FormatFloat(priceSpot, 'f', decimalSpot, 64))
 //			createOrder.Size = util.CutTailZero(fmt.Sprintf(`%f`, model.GetAmountInMarket(model.KucoinSpot, symbol, amount, price, false)))
-//			util.SocketInfo(fmt.Sprintf(`create spot order request: %v`, createOrder))
+//			util.SocketInfo(fmt.Sprintf(`create spot order request: %#v`, createOrder))
 //			spotOrderResponse, err := kucoinRelatedClient("", "", "").CreateOrder(nil, createOrder)
 //			if err != nil || spotOrderResponse.Code != "200000" {
-//				util.SocketInfo(fmt.Sprintf("function: %s fail to create spot order kucoin, err:%s, response:%v", "placeOrderKucoin", err, spotOrderResponse))
+//				util.SocketInfo(fmt.Sprintf("function: %s fail to create spot order kucoin, err:%s, response:%#v", "placeOrderKucoin", err, spotOrderResponse))
 //				order.Status = model.CarryStatusFail
 //				order.OrderId = ``
 //				return
 //			} else {
-//				util.SocketInfo(fmt.Sprintf(`create spot order response: %v`, spotOrderResponse))
+//				util.SocketInfo(fmt.Sprintf(`create spot order response: %#v`, spotOrderResponse))
 //				orderResult := &kucoin.CreateOrderResultModel{}
 //				respErr := spotOrderResponse.ReadData(orderResult)
 //				if respErr != nil {
@@ -367,17 +367,17 @@ package deprecated
 //			priceSpot, decimalSpot := model.FormatPrice(model.KucoinSpot, symbol, price)
 //			createOrder.Price = util.CutTailZero(strconv.FormatFloat(priceSpot, 'f', decimalSpot, 64))
 //			createOrder.Size = util.CutTailZero(fmt.Sprintf(`%f`, model.GetAmountInMarket(model.Kucoin, symbol, amount, price, false)))
-//			util.SocketInfo(fmt.Sprintf(`create margin order request: %v`, createOrder))
+//			util.SocketInfo(fmt.Sprintf(`create margin order request: %#v`, createOrder))
 //			req := kucoin.NewRequest(http.MethodPost, "/api/v1/margin/order", createOrder)
 //			//todo CreateMarginOrder
 //			marginOrderResp, err := kucoinRelatedClient("", "", "").Call(nil, req)
 //			if err != nil || marginOrderResp.Code != "200000" {
-//				util.SocketInfo(fmt.Sprintf("function: %s fail to create margin order kucoin, err:%s, response:%v", "placeOrderKucoin", err, marginOrderResp))
+//				util.SocketInfo(fmt.Sprintf("function: %s fail to create margin order kucoin, err:%s, response:%#v", "placeOrderKucoin", err, marginOrderResp))
 //				order.Status = model.CarryStatusFail
 //				order.OrderId = ``
 //				return
 //			} else {
-//				util.SocketInfo(fmt.Sprintf(`create margin order response: %v`, marginOrderResp))
+//				util.SocketInfo(fmt.Sprintf(`create margin order response: %#v`, marginOrderResp))
 //				orderResult := &kucoin.CreateOrderResultModel{}
 //				respErr := marginOrderResp.ReadData(orderResult)
 //				if respErr != nil {
@@ -403,7 +403,7 @@ package deprecated
 //func queryOrderKucoinSpot(symbol string, orderId string) (order *model.Order) {
 //	orderResponse, respErr := kucoinRelatedClient("", "", "").Order(nil, orderId)
 //	if respErr != nil || orderResponse.Code != "200000" {
-//		util.SocketInfo(fmt.Sprintf("function: %s fail to query kucoin spot order , err:%s, response:%v", "queryOrderKucoinSpot", respErr, orderResponse))
+//		util.SocketInfo(fmt.Sprintf("function: %s fail to query kucoin spot order , err:%s, response:%#v", "queryOrderKucoinSpot", respErr, orderResponse))
 //		return
 //	}
 //	orderResult := &kucoin.OrderModel{}

@@ -858,7 +858,7 @@ package deprecated
 //	bodyStr := string(util.JsonEncodeToByte(body))
 //	q := u.Query()
 //	for k, v := range param {
-//		value := fmt.Sprintf(`%v`, v)
+//		value := fmt.Sprintf(`%#v`, v)
 //		if k == `market` {
 //			_, _, _, value = model.GetFromStandard(model.Ftx, value)
 //		}

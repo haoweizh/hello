@@ -163,18 +163,18 @@ func (or *OrderReceiver) Close() {
 /* 调用方式
 marketPublisher, err := util.NewMarketPublisher("market_topic")
 	if err != nil {
-		log.Fatalf("Failed to create market publisher: %v", err)
+		log.Fatalf("Failed to create market publisher: %#v", err)
 	}
 	defer marketPublisher.Close()
 
 	err = marketPublisher.MarketPublish("Hello, Market!")
 	if err != nil {
-		log.Fatalf("Failed to publish market message: %v", err)
+		log.Fatalf("Failed to publish market message: %#v", err)
 	}
 
 	marketReceiver, err := util.NewMarketReceiver("market_topic")
 	if err != nil {
-		log.Fatalf("Failed to create market receiver: %v", err)
+		log.Fatalf("Failed to create market receiver: %#v", err)
 	}
 	defer marketReceiver.Close()
 

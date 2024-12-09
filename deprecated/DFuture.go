@@ -202,6 +202,6 @@ package deprecated
 //			position = &model.Position{Market: model.DFuture, Currency: symbol, Holding: amount}
 //		}
 //	}
-//	util.SocketInfo(fmt.Sprintf(`dfuture query %s return %v`, path, success))
+//	util.SocketInfo(fmt.Sprintf(`dfuture query %s return %#v`, path, success))
 //	return success, position
 //}

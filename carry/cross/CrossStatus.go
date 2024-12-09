@@ -304,10 +304,10 @@ func GetCrossMarketValue(key, secret, market string, force bool) (inAllSpot, con
 }
 
 func pauseCarry(key string, seconds int) {
-	util.Log(util.LogLevelInfo, fmt.Sprintf(`%s carrying pause %v`, key, true))
+	util.Log(util.LogLevelInfo, fmt.Sprintf(`%s carrying pause %#v`, key, true))
 	carryStop.Store(key, true)
 	time.Sleep(time.Second * time.Duration(seconds))
-	util.Log(util.LogLevelInfo, fmt.Sprintf(`%s carrying pause %v`, key, false))
+	util.Log(util.LogLevelInfo, fmt.Sprintf(`%s carrying pause %#v`, key, false))
 	carryStop.Store(key, false)
 }
 

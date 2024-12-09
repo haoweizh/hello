@@ -192,7 +192,8 @@ func getMarketsBybitSpot(marketInfos map[string]*model.MarketInfo) {
 	spotResp := &dtos.BybitSpotMarketResp{}
 	spotJsonErr := json.Unmarshal(httpResp, spotResp)
 	if spotResp == nil || spotResp.RetCode != 0 {
-		util.Log(util.LogLevelError, fmt.Sprintf("get bybit spot market error, resp: %s, httpErr: %v, jsonErr: %v", httpResp, httpErr, spotJsonErr))
+		util.Log(util.LogLevelError, fmt.Sprintf(
+			"get bybit spot market error, resp: %s, httpErr: %#v, jsonErr: %#v", httpResp, httpErr, spotJsonErr))
 		return
 	}
 	for _, symbolInfo := range spotResp.Result.List {
@@ -202,7 +203,7 @@ func getMarketsBybitSpot(marketInfos map[string]*model.MarketInfo) {
 		symbol := symbolInfo.BaseCoin + model.UniStandardTail[model.MarketTypeSpot]
 		marketInfo := &model.MarketInfo{Name: symbol, Market: model.Bybit}
 		if symbolInfo.PriceFilter.TickSize == "" {
-			util.Log(util.LogLevelError, fmt.Sprintf("币种：%s 价格步长为空 resp：%v", symbol, symbolInfo))
+			util.Log(util.LogLevelError, fmt.Sprintf("币种：%s 价格步长为空 resp：%#v", symbol, symbolInfo))
 			continue
 		}
 		priceIncrement, _ := strconv.ParseFloat(symbolInfo.PriceFilter.TickSize, 64)
@@ -232,7 +233,7 @@ func getMarketsBybitPerp(marketInfos map[string]*model.MarketInfo) {
 		perpJsonErr := json.Unmarshal(httpResp, perpResp)
 		if perpResp == nil || perpResp.RetCode != 0 {
 			util.Log(util.LogLevelError, fmt.Sprintf(
-				"get bybit perp market error, resp: %s, httpErr: %v, jsonErr: %v", httpResp, httpErr, perpJsonErr))
+				"get bybit perp market error, resp: %s, httpErr: %#v, jsonErr: %#v", httpResp, httpErr, perpJsonErr))
 			return
 		}
 		for _, perpInfo := range perpResp.Result.List {
@@ -246,12 +247,12 @@ func getMarketsBybitPerp(marketInfos map[string]*model.MarketInfo) {
 			marketInfo.PriceMax, _ = strconv.ParseFloat(perpInfo.PriceFilter.MaxPrice, 64)
 			priceMin, _ := strconv.ParseFloat(perpInfo.PriceFilter.MinPrice, 64)
 			if priceMin != marketInfo.PriceIncrement {
-				util.Log(util.LogLevelError, fmt.Sprintf("最小价格和价格步长不一致 perp info：%v", perpInfo))
+				util.Log(util.LogLevelError, fmt.Sprintf("最小价格和价格步长不一致 perp info：%#v", perpInfo))
 				continue
 			}
 			maxLeverage, _ := strconv.ParseFloat(perpInfo.LeverageFilter.MaxLeverage, 64)
 			if maxLeverage < model.DefaultLeverage {
-				util.Log(util.LogLevelError, fmt.Sprintf("最大杠杆小于%d perp info：%v", model.DefaultLeverage, perpInfo))
+				util.Log(util.LogLevelError, fmt.Sprintf("最大杠杆小于%d perp info：%#v", model.DefaultLeverage, perpInfo))
 				continue
 			}
 			marketInfo.SizeMin, _ = strconv.ParseFloat(perpInfo.LotSizeFilter.MinOrderQty, 64)
@@ -463,7 +464,8 @@ func GetCoinBalanceBybit(key, secret, accountType string) (balances []*model.Bal
 	balanceResp := &dtos.BybitBalanceCoinResp{}
 	jsonErr := json.Unmarshal(httpResp, balanceResp)
 	if balanceResp == nil || balanceResp.RetCode != 0 {
-		util.Log(util.LogLevelError, fmt.Sprintf("fail to refresh spot balance bybit, resp: %s httpErr: %v, jsonErr: %v", httpResp, httpErr, jsonErr))
+		util.Log(util.LogLevelError, fmt.Sprintf(
+			"fail to refresh spot balance bybit, resp: %s httpErr: %#v, jsonErr: %#v", httpResp, httpErr, jsonErr))
 		time.Sleep(time.Minute)
 		return GetCoinBalanceBybit(key, secret, accountType)
 	} else {
@@ -495,7 +497,8 @@ func getBalanceBybit(key string, secret string) (success bool, balances []*model
 	balanceResp := &dtos.BybitBalanceResp{}
 	jsonErr := json.Unmarshal(httpResp, balanceResp)
 	if balanceResp == nil || balanceResp.RetCode != 0 {
-		util.Log(util.LogLevelError, fmt.Sprintf("fail to refresh spot balance bybit, resp: %s httpErr: %v, jsonErr: %v", httpResp, httpErr, jsonErr))
+		util.Log(util.LogLevelError, fmt.Sprintf(
+			"fail to refresh spot balance bybit, resp: %s httpErr: %#v, jsonErr: %#v", httpResp, httpErr, jsonErr))
 		time.Sleep(time.Minute)
 		return getBalanceBybit(key, secret)
 	} else {
@@ -533,7 +536,7 @@ func getBalanceBybit(key string, secret string) (success bool, balances []*model
 	}
 	if collateral == nil {
 		util.Log(util.LogLevelError, fmt.Sprintf(
-			"fail to refresh spot balance bybit, resp: %s httpErr: %v, jsonErr: %v", httpResp, httpErr, jsonErr))
+			"fail to refresh spot balance bybit, resp: %s httpErr: %#v, jsonErr: %#v", httpResp, httpErr, jsonErr))
 		time.Sleep(time.Minute)
 		return getBalanceBybit(key, secret)
 	}
@@ -552,7 +555,7 @@ func getPositionsBybit(key, secret string) (success bool, positions []*Position,
 		positionResp := &dtos.BybitPositionResp{}
 		positionJsonErr := json.Unmarshal(positionHttpResp, positionResp)
 		if positionResp == nil || positionResp.RetCode != 0 {
-			util.Log(util.LogLevelError, fmt.Sprintf("fail to refresh perp position bybit, resp: %s httpErr: %v, jsonErr: %v",
+			util.Log(util.LogLevelError, fmt.Sprintf("fail to refresh perp position bybit, resp: %s httpErr: %#v, jsonErr: %#v",
 				positionHttpResp, positionHttpErr, positionJsonErr))
 			time.Sleep(time.Minute)
 			return getPositionsBybit(key, secret)
@@ -663,7 +666,7 @@ func setBybitMarginLeverage(key, secret string) {
 	if jsonData != nil {
 		code, codeErr := jsonData.Get("retCode").Int()
 		if code != 0 || codeErr != nil || jsonData.Get(`retMsg`).MustString() != `OK` {
-			util.Log(util.LogLevelError, fmt.Sprintf("fail to set bybit margin leverage, resp: %s codeErr: %v", httpResp, codeErr))
+			util.Log(util.LogLevelError, fmt.Sprintf("fail to set bybit margin leverage, resp: %s codeErr: %#v", httpResp, codeErr))
 		}
 	}
 	time.Sleep(time.Second * 5)
@@ -690,7 +693,7 @@ func setSymbolLeverageBybit(account *model.Account, symbol string) (setSuc bool)
 		if jsonData != nil {
 			code, codeErr := jsonData.Get("retCode").Int()
 			if code != 0 || codeErr != nil || jsonData.Get(`retMsg`).MustString() != `OK` {
-				util.Log(util.LogLevelError, fmt.Sprintf("fail to set bybit perp leverage , resp: %s codeErr: %v", httpResp, codeErr))
+				util.Log(util.LogLevelError, fmt.Sprintf("fail to set bybit perp leverage , resp: %s codeErr: %#v", httpResp, codeErr))
 				return false
 			} else {
 				return true
@@ -732,7 +735,7 @@ func setBybitPerpLeverage(key, secret string) {
 			if jsonData != nil {
 				code, codeErr := jsonData.Get("retCode").Int()
 				if code != 0 || codeErr != nil || jsonData.Get(`retMsg`).MustString() != `OK` {
-					util.Log(util.LogLevelError, fmt.Sprintf("fail to set bybit perp leverage , resp: %s codeErr: %v", httpResp, codeErr))
+					util.Log(util.LogLevelError, fmt.Sprintf("fail to set bybit perp leverage , resp: %s codeErr: %#v", httpResp, codeErr))
 				}
 			}
 			time.Sleep(time.Minute)
@@ -790,7 +793,7 @@ func placeOrderBybit(account *model.Account, isWs bool, order *model.Order, orde
 				order.ErrCode = strconv.Itoa(bybitOrderResp.RetCode)
 			}
 			util.Log(util.LogLevelError, fmt.Sprintf(
-				"fail to create bybit order request: %v resp: %s httpErr: %v, jsonErr: %v", param, httpResp, httpErr, jsonErr))
+				"fail to create bybit order request: %#v resp: %s httpErr: %#v, jsonErr: %#v", param, httpResp, httpErr, jsonErr))
 		} else {
 			order.Status = model.CarryStatusWorking
 			order.OrderId = bybitOrderResp.Result.OrderId
@@ -893,7 +896,7 @@ func getFundingRateBybit(symbol string) (fundingRate *model.FundingRate) {
 	perpJsonErr := json.Unmarshal(httpResp, bybitTickersResp)
 	if bybitTickersResp == nil || bybitTickersResp.RetCode != 0 {
 		util.Log(util.LogLevelError, fmt.Sprintf(
-			"get bybit perp funding rate error, resp: %s, httpErr: %v, jsonErr: %v", httpResp, httpErr, perpJsonErr))
+			"get bybit perp funding rate error, resp: %s, httpErr: %#v, jsonErr: %#v", httpResp, httpErr, perpJsonErr))
 		return
 	}
 	for _, ticker := range bybitTickersResp.Result.List {
@@ -1029,7 +1032,8 @@ func queryOrderBybit(key, secret, symbol, orderId string) *model.Order {
 	orderResp := &dtos.BybitOrderDetailResp{}
 	jsonErr := json.Unmarshal(httpResp, orderResp)
 	if orderResp == nil || orderResp.RetCode != 0 {
-		util.Log(util.LogLevelError, fmt.Sprintf("get bybit order detail error, resp: %s, httpErr: %v, jsonErr: %v", httpResp, httpErr, jsonErr))
+		util.Log(util.LogLevelError, fmt.Sprintf(
+			"get bybit order detail error, resp: %s, httpErr: %#v, jsonErr: %#v", httpResp, httpErr, jsonErr))
 		return nil
 	}
 	order := &model.Order{Market: model.Bybit, Status: model.CarryStatusWorking, OrderId: orderId, Symbol: symbol}
@@ -1047,7 +1051,7 @@ func queryOrderBybit(key, secret, symbol, orderId string) *model.Order {
 			order.Status = model.CarryStatusSuccess
 		} else {
 			util.Log(util.LogLevelError, fmt.Sprintf(
-				"unkown bybit order detail status, resp: %s, httpErr: %v, jsonErr: %v", httpResp, httpErr, jsonErr))
+				"unkown bybit order detail status, resp: %s, httpErr: %#v, jsonErr: %#v", httpResp, httpErr, jsonErr))
 		}
 	}
 	return order

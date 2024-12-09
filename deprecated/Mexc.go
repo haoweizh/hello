@@ -299,7 +299,7 @@ package deprecated
 //		requestUrl = requestUrl + "?" + parameters
 //	}
 //	responseBody, err := util.HttpRequest(method, requestUrl, bodyStr, headers, 60)
-//	logMsg := fmt.Sprintf(`Mexc key %s, request %s, headers %v, parameters %s, body %s, return %s err %+v`,
+//	logMsg := fmt.Sprintf(`Mexc key %s, request %s, headers %#v, parameters %s, body %s, return %s err %+v`,
 //		key, requestUrl, headers, parameters, body, string(responseBody), err)
 //	util.SocketInfo(logMsg)
 //	return responseBody, err
@@ -352,7 +352,7 @@ package deprecated
 //	positionJson, positionErr := util.NewJSON(posResponse)
 //	if valueJson == nil || !valueJson.Get(`success`).MustBool() || positionJson == nil ||
 //		!positionJson.Get(`success`).MustBool() || valueJsonErr != nil || positionErr != nil {
-//		util.Notice(fmt.Sprintf(`[contractGetPositionsMexc] Failed to get positions by key %s err %+v %+v %v %v`,
+//		util.Notice(fmt.Sprintf(`[contractGetPositionsMexc] Failed to get positions by key %s err %+v %+v %#v %#v`,
 //			key, valueJson, positionJson, valueJsonErr, positionErr))
 //		return getPositionsMexc(key, secret)
 //	}

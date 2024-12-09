@@ -77,7 +77,7 @@ func (manager *WSManager) WrapSend(address string) {
 					if createdAt.(*time.Time).Add(time.Hour * 24).Before(time.Now()) {
 						value.(*sync.Map).Delete(createdAt)
 					} else {
-						msg[fmt.Sprintf(`%v%v`, key, createdAt)] = settingMonitor.(SettingMonitor)
+						msg[fmt.Sprintf(`%#v%#v`, key, createdAt)] = settingMonitor.(SettingMonitor)
 					}
 					return true
 				})
@@ -140,7 +140,7 @@ func (manager *WSManager) RemoveAgent(address string, wsAgent *WSAgent) {
 		wsAgent.Close()
 		agents.(*sync.Map).Delete(wsAgent)
 	}
-	util.Log(util.LogLevelInfo, fmt.Sprintf(`remove agent %s %v`, address, wsAgent))
+	util.Log(util.LogLevelInfo, fmt.Sprintf(`remove agent %s %#v`, address, wsAgent))
 }
 
 func (manager *WSManager) AddAgent(wsAgent *WSAgent) {
@@ -156,7 +156,7 @@ func (manager *WSManager) AddAgent(wsAgent *WSAgent) {
 	//jsonMessage, _ := json.Marshal(&Message{Content: "/A new socket has connected."})
 	//manager.Send(jsonMessage, agent)
 	agents.(*sync.Map).Range(func(key, value any) bool {
-		util.Log(util.LogLevelInfo, fmt.Sprintf(`got agent %s %v`, wsAgent.Address, key))
+		util.Log(util.LogLevelInfo, fmt.Sprintf(`got agent %s %#v`, wsAgent.Address, key))
 		return true
 	})
 }
@@ -182,7 +182,7 @@ func (agent *WSAgent) WriteServe() {
 			err := agent.Socket.WriteMessage(websocket.TextMessage, message)
 			if err != nil {
 				//manager.RemoveAgent(address, agent.(*WSAgent))
-				util.Log(util.LogLevelError, fmt.Sprintf(`fail to send ws update %v %s`, agent, err.Error()))
+				util.Log(util.LogLevelError, fmt.Sprintf(`fail to send ws update %#v %s`, agent, err.Error()))
 			}
 		}
 	}

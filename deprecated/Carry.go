@@ -205,7 +205,7 @@ package deprecated
 //	resultPosition, positions, usdInFuture, _ := api.GetPositions(key, secret, market)
 //	setPosBal(key, usdInFuture)
 //	if !resultBalance || !resultPosition {
-//		util.Notice(`%s %s fatal error: can not get balance %v position %v`, key, market, resultBalance, resultPosition)
+//		util.Notice(`%s %s fatal error: can not get balance %#v position %#v`, key, market, resultBalance, resultPosition)
 //		return
 //	}
 //	balanceAllValue := 0.0
@@ -578,7 +578,7 @@ package deprecated
 //	if checkAmount > 0 {
 //		resultPerp := api.CancelOrders(key, secret, setting.Market, setting.Symbol)
 //		resultRelated := api.CancelOrders(key, secret, setting.Market, setting.SymbolRelated)
-//		util.Notice(fmt.Sprintf(`%s %s cancel all perp:%v related:%v >>>>>> equal %s %f, %s %f = %s %f`,
+//		util.Notice(fmt.Sprintf(`%s %s cancel all perp:%#v related:%#v >>>>>> equal %s %f, %s %f = %s %f`,
 //			key, setting.Market, resultPerp, resultRelated, setting.Symbol, amountPerp, setting.SymbolRelated, amountRelated, orderSide, amount))
 //		api.PlaceOrder(key, secret, orderSide, model.OrderTypeLimit, setting.Market, symbol, symbol,
 //			``, model.FunctionComplement, price, price, amount, true, true, nil, setting)
@@ -783,13 +783,13 @@ package deprecated
 //	if amount > 0 {
 //		util.Debug(fmt.Sprintf(`+++ usdRate: %f coinRate: %f %s symbol: %s %s
 //			usd available:%f amount %f balance.Amount: %f scoreHigh: %f setOpen: %f scoreLow: %f setClose: %f
-//			revertOpen: %f revertClose: %f do revert: %v`,
+//			revertOpen: %f revertClose: %f do revert: %#v`,
 //			localUsdRate, coinRate, key, setting.Symbol, sidePerp,
 //			localUsdAvailable, amount, balance.Amount, scoreOpen, setOpen, scoreClose, setClose,
 //			revertOpen, revertClose, carryClose))
 //	}
 //	model.SetCarryInfo(key, table+setting.Symbol,
-//		fmt.Sprintf("%s\n %v %f %f usdAva:%s usdRate:%s 计算%s %s %s %s 市场%s %s 资金费率:%s coinRate:%s 持仓:%s 可用:%s ",
+//		fmt.Sprintf("%s\n %#v %f %f usdAva:%s usdRate:%s 计算%s %s %s %s 市场%s %s 资金费率:%s coinRate:%s 持仓:%s 可用:%s ",
 //			setting.Symbol, scoreValid, setting.OpenShortMargin, setting.CloseShortMargin,
 //			strconv.FormatFloat(localUsdAvailable, 'f', 0, 64),
 //			strconv.FormatFloat(100*localUsdRate, 'f', 0, 64)+"%",

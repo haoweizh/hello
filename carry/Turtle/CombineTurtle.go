@@ -13,7 +13,7 @@ import (
 //d, _ := debugMap.Load(settingCombine.Symbol)
 //if d == nil {
 //debugMap.Store(settingCombine.Symbol, 1)
-//util.Notice(fmt.Sprintf(`first time %s %v %v %v`, settingCombine.Symbol, canOpen, canStartTurtle, canStartCombine))
+//util.Notice(fmt.Sprintf(`first time %s %#v %#v %#v`, settingCombine.Symbol, canOpen, canStartTurtle, canStartCombine))
 //}
 
 // ProcessCombineTurtle
@@ -74,7 +74,7 @@ var ProcessCombineTurtle = func(settingCombine *model.Setting, tick *model.BidAs
 	if !dataCombine.OrderCleared {
 		api.ClearOrders(account.Key, account.Secret, market, symbol, map[string]bool{model.OrderTypeTrailStop: true})
 		dataCombine.OrderCleared = true
-		util.Log(util.LogLevelInfo, fmt.Sprintf(`combine return not cleared %s %s %v`, market, symbol, dataCombine.OrderCleared))
+		util.Log(util.LogLevelInfo, fmt.Sprintf(`combine return not cleared %s %s %#v`, market, symbol, dataCombine.OrderCleared))
 		return
 	}
 	if dataNormal.N == 0 || dataNormal.Amount == 0 || dataCombine.N == 0 || dataCombine.Amount == 0 {
@@ -96,15 +96,15 @@ var ProcessCombineTurtle = func(settingCombine *model.Setting, tick *model.BidAs
 	}
 	model.ResetBig(dataCombine, dataNormal)
 	msgKey := model.GetMsgKey(model.FunctionCombineTurtle, market, symbol)
-	msg := fmt.Sprintf("[%d-%d %d:%d]%s N-Volume %f 可开%v龟仓数%d(海龟%v 龟汤%v) 币种数:%d/%d满币%v bid-ask %e %e \n",
+	msg := fmt.Sprintf("[%d-%d %d:%d]%s N-Volume %f 可开%#v龟仓数%d(海龟%#v 龟汤%#v) 币种数:%d/%d满币%#v bid-ask %e %e \n",
 		dataCombine.TurtleTime.Month(), dataCombine.TurtleTime.Day(), time.Now().Hour(), time.Now().Minute(), msgKey,
 		dataCombine.NVolume, canOpen, int64(turtleSymbolNum), canStartTurtle, canStartCombine, int(turtleCoins),
 		int(settingCombine.AmountLimit), turtleCoins >= settingCombine.AmountLimit, tick.Bids[0].Price, tick.Asks[0].Price)
-	msg += fmt.Sprintf("海龟:仓数/持仓量/开仓价 %d of %d/%e/%e 平过%v 数量 %e %s%v big:%d 日:%e-%e %d日:%e-%e N:%e\n",
+	msg += fmt.Sprintf("海龟:仓数/持仓量/开仓价 %d of %d/%e/%e 平过%#v 数量 %e %s%#v big:%d 日:%e-%e %d日:%e-%e N:%e\n",
 		settingNormal.Chance, settingNormal.ChanceLimit, settingNormal.GridAmount, settingNormal.PriceX, dataNormal.Liquidated,
 		dataNormal.Amount*float64(settingNormal.ChanceLimit), dataNormal.GetIds(), dataNormal.IsBig, dataNormal.DaysFar,
 		dataNormal.LowFar, dataNormal.HighFar, dataNormal.DaysNear, dataNormal.LowNear, dataNormal.HighNear, dataNormal.N)
-	msg += fmt.Sprintf("龟汤:仓数/持仓量/开仓价 %d of %d/%e/%e 平过%v 数量 %e %s%v big:%d 日:%e-%e %d日:%e-%e N:%e",
+	msg += fmt.Sprintf("龟汤:仓数/持仓量/开仓价 %d of %d/%e/%e 平过%#v 数量 %e %s%#v big:%d 日:%e-%e %d日:%e-%e N:%e",
 		settingCombine.Chance, settingCombine.ChanceLimit, settingCombine.GridAmount, settingCombine.PriceX, dataCombine.Liquidated,
 		dataCombine.Amount*float64(settingCombine.ChanceLimit), dataCombine.GetIds(), dataCombine.IsBig, dataCombine.DaysFar,
 		dataCombine.LowFar, dataCombine.HighFar, dataCombine.DaysNear, dataCombine.LowNear, dataCombine.HighNear, dataCombine.N)
@@ -224,7 +224,7 @@ func handleBreak(setting *model.Setting, data *model.TurtleData, orders []*model
 	model.AppDB.Model(setting).Where("market= ? and Symbol= ? and function= ?",
 		setting.Market, setting.Symbol, setting.Function).Updates(map[string]interface{}{
 		`price_x`: setting.PriceX, `chance`: setting.Chance, `grid_amount`: setting.GridAmount, `liquidated`: data.Liquidated})
-	util.Log(util.LogLevelInfo, fmt.Sprintf(`clear turtle buy when sell break %s %s %v`, setting.Market, setting.Symbol, orders))
+	util.Log(util.LogLevelInfo, fmt.Sprintf(`clear turtle buy when sell break %s %s %#v`, setting.Market, setting.Symbol, orders))
 	return true
 }
 
@@ -312,7 +312,7 @@ func placeTurtleLong(account *model.Account, orderType string, data *model.Turtl
 			data.OrderAdjust = make(map[string]*model.Order)
 		}
 		util.Log(util.LogLevelInfo, fmt.Sprintf(
-			`place long %s %s %s %s %s %d %v at %e %e amt %e, useNear %v priceX %f n:%f seconds %d near %f %f far %f %f`,
+			`place long %s %s %s %s %s %d %#v at %e %e amt %e, useNear %#v priceX %f n:%f seconds %d near %f %f far %f %f`,
 			orderType, setting.Function, market, symbol, orderType, setting.Chance, canOpen, priceDeal, price, amount,
 			data.UseNear, setting.PriceX, data.N, setting.Seconds, data.LowNear, data.HighNear, data.LowFar, data.HighFar))
 		for _, order := range data.OrderLong {
@@ -325,7 +325,7 @@ func placeTurtleLong(account *model.Account, orderType string, data *model.Turtl
 			go model.AppDB.Save(order)
 			if data.BreakLong && order.Status != model.CarryStatusSuccess {
 				util.Log(util.LogLevelInfo, fmt.Sprintf(
-					`already break long move to adjust %s %v`, order.OrderId, order))
+					`already break long move to adjust %s %#v`, order.OrderId, order))
 				data.OrderAdjust[order.OrderId] = order
 			}
 		}
@@ -406,7 +406,7 @@ func placeTurtleShort(account *model.Account, orderType string, data *model.Turt
 			priceDeal = tick.Bids[0].Price * (1 - turtleTriggerDelta)
 			price = tick.Bids[0].Price
 		}
-		util.Log(util.LogLevelInfo, fmt.Sprintf(`place short %s %s %s %s %s %d %v at %e %e amt %e, useNear %v priceX %f n:%f seconds %d near %f %f far %f %f`,
+		util.Log(util.LogLevelInfo, fmt.Sprintf(`place short %s %s %s %s %s %d %#v at %e %e amt %e, useNear %#v priceX %f n:%f seconds %d near %f %f far %f %f`,
 			orderType, setting.Function, market, symbol, orderType, setting.Chance, canOpen, priceDeal, price, amount,
 			data.UseNear, setting.PriceX, data.N, setting.Seconds, data.LowNear, data.HighNear, data.LowFar, data.HighFar))
 		data.OrderShort = api.MustPlaceOrder(account.Key, account.Secret, model.OrderSideSell, orderType, market, symbol,
@@ -423,7 +423,7 @@ func placeTurtleShort(account *model.Account, orderType string, data *model.Turt
 			}
 			go model.AppDB.Save(order)
 			if data.BreakShort && order.Status != model.CarryStatusSuccess {
-				util.Log(util.LogLevelInfo, fmt.Sprintf(`already break short move to adjust %s %v`, order.OrderId, order))
+				util.Log(util.LogLevelInfo, fmt.Sprintf(`already break short move to adjust %s %#v`, order.OrderId, order))
 				data.OrderAdjust[order.OrderId] = order
 			}
 		}

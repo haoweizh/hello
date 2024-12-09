@@ -98,13 +98,13 @@ func autoSimulate(market, coins string, begin, end time.Time, strBegin, strEnd s
 				GridAmount: RegretTurtleGridAmount, Seconds: int64(seconds), Near: int64(near), Far: int64(far), TradeCost: 0}
 		}
 	}
-	sign := fmt.Sprintf(`market%s,coins%s,%s~%s,far%d,near%d,limit%d,allLimit%d,useNear%v,useM%vseconds%d`,
+	sign := fmt.Sprintf(`market%s,coins%s,%s~%s,far%d,near%d,limit%d,allLimit%d,useNear%#v,useM%#vseconds%d`,
 		market, coins, strBegin, strEnd, far, near, limit, allLimit, useNear, useM, seconds)
 	delNum := model.AppDB.Where(`function=?`, sign).Delete(&model.Order{}).RowsAffected
 	util.Log(util.LogLevelInfo, fmt.Sprintf(`del %s %d rows affected`, sign, delNum))
 	regret.ProcessCandles(begin, end, far, allLimit, useNear, useM, market, sign, settings)
 	util.Log(util.LogLevelInfo, fmt.Sprintf(`auto simulation done %s`, sign))
-	util.StoreSyncMap(&model.CarryInfo, fmt.Sprintf("done %s %s 使用回撤%v %d~%d 限制%d 总限制%d",
+	util.StoreSyncMap(&model.CarryInfo, fmt.Sprintf("done %s %s 使用回撤%#v %d~%d 限制%d 总限制%d",
 		strBegin, strEnd, useNear, near, far, limit, allLimit), `auto`)
 }
 
@@ -179,7 +179,7 @@ func simulateGrid(c *gin.Context) {
 			}
 		}
 	}
-	util.Log(util.LogLevelInfo, fmt.Sprintf(`done simulate grid %s %v`, market, coins))
+	util.Log(util.LogLevelInfo, fmt.Sprintf(`done simulate grid %s %#v`, market, coins))
 	c.String(http.StatusOK, `done`)
 }
 
@@ -199,11 +199,11 @@ func simulateGXZQ(c *gin.Context) {
 	//coins := `CZCE.FG,DCE.jm,DCE.eb,CZCE.TA,SHFE.fu,DCE.p,CZCE.SF,SHFE.hc,DCE.v,DCE.y`
 	coins := `DOGE,SOL,MATIC,CHZ,LINK,ADA,BNB,FIL,SUSHI,AXS,ATOM,WAVES`
 	for i := 3; i <= 21; i++ {
-		sign := fmt.Sprintf(`market%s,coins%s,seconds86400,%s~%s,far%d,near%d,limit%d,allLimit%d,useNear%v`,
+		sign := fmt.Sprintf(`market%s,coins%s,seconds86400,%s~%s,far%d,near%d,limit%d,allLimit%d,useNear%#v`,
 			market, coins, strBegin, strEnd, i*2, i, 3, -1, true)
 		regret.CutTail(market, coins, sign)
 		util.Log(util.LogLevelInfo, fmt.Sprintf(`done cut tail %s %s %s`, market, coins, sign))
-		sign = fmt.Sprintf(`market%s,coins%s,seconds86400,%s~%s,far%d,near%d,limit%d,allLimit%d,useNear%v`,
+		sign = fmt.Sprintf(`market%s,coins%s,seconds86400,%s~%s,far%d,near%d,limit%d,allLimit%d,useNear%#v`,
 			market, coins, strBegin, strEnd, i*2, i, 3, -1, false)
 		regret.CutTail(market, coins, sign)
 		util.Log(util.LogLevelInfo, fmt.Sprintf(`done cut tail %s %s %s`, market, coins, sign))
@@ -309,7 +309,7 @@ func simulate(c *gin.Context) {
 	if useMStr == `true` {
 		useM = true
 	}
-	sign := fmt.Sprintf(`market%s,coins%s,%s~%s,far%s,near%s,limit%s,allLimit%s,useNear%s,useM%v,seconds%s`,
+	sign := fmt.Sprintf(`market%s,coins%s,%s~%s,far%s,near%s,limit%s,allLimit%s,useNear%s,useM%#v,seconds%s`,
 		market, coins, strBegin, strEnd, farStr, nearStr, strLimit, strAllLimit, strUseNear, useM, strSeconds)
 	util.Log(util.LogLevelInfo, fmt.Sprintf(`get simulation parameter %s auto%s`, sign, auto))
 	limit, limitErr := strconv.ParseInt(strLimit, 10, 64)
@@ -368,7 +368,7 @@ func simulate(c *gin.Context) {
 	}
 	orders := make([]*model.Order, 0)
 	model.AppDB.Where(`function=?`, sign).Order(`order_time asc`).Find(&orders)
-	msg += fmt.Sprintf("Get %d orders %s %v %s %s from %d settings\n",
+	msg += fmt.Sprintf("Get %d orders %s %#v %s %s from %d settings\n",
 		len(orders), strLimit, strUseNear, begin.String(), end.String(), len(settings))
 	msg += regret.ToString(orders, market, strLimit, RegretTurtleGridAmount, begin, end) + "\n"
 	c.String(http.StatusOK, msg)

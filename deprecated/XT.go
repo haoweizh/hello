@@ -37,7 +37,7 @@ package deprecated
 //	perpResp := &dtos.PerpMarketResp{}
 //	perpJsonErr := json.Unmarshal(perpHttpResp, perpResp)
 //	if perpResp == nil || perpResp.ReturnCode != 0 {
-//		util.Notice(fmt.Sprintf("get xt perp market error, resp: %s, httpErr: %v, jsonErr: %v", perpHttpResp, perpHttpErr, perpJsonErr))
+//		util.Notice(fmt.Sprintf("get xt perp market error, resp: %s, httpErr: %#v, jsonErr: %#v", perpHttpResp, perpHttpErr, perpJsonErr))
 //		return
 //	}
 //	for _, perpInfo := range perpResp.Result {
@@ -67,7 +67,7 @@ package deprecated
 //	spotResp := &dtos.SpotMarketResp{}
 //	spotJsonErr := json.Unmarshal(spotHttpResp, spotResp)
 //	if spotResp == nil || spotResp.Rc != 0 {
-//		util.Notice(fmt.Sprintf("get xt spot market error, resp: %s, httpErr: %v, jsonErr: %v", spotHttpResp, spotHttpErr, spotJsonErr))
+//		util.Notice(fmt.Sprintf("get xt spot market error, resp: %s, httpErr: %#v, jsonErr: %#v", spotHttpResp, spotHttpErr, spotJsonErr))
 //		return
 //	}
 //
@@ -252,7 +252,7 @@ package deprecated
 //					return
 //				}
 //				if markets.SetBidAsk(symbol, model.XT, &bidAsk) {
-//					//util.Info(fmt.Sprintf("perp symbol: %s now bidAsk: %v", symbol, bidAsk))
+//					//util.Info(fmt.Sprintf("perp symbol: %s now bidAsk: %#v", symbol, bidAsk))
 //					for function, handler := range model.GetFunctions(model.XT, symbol) {
 //						if handler != nil {
 //							settings := model.GetSetting(function, model.XT, symbol)
@@ -300,7 +300,7 @@ package deprecated
 //	//auth.SetUrlencode(true)
 //	//headers, headerErr := auth.CreatePayload(map[string]interface{}{})
 //	//if headerErr != nil {
-//	//	util.SocketInfo(fmt.Sprintf("fail to create xt spot http header, headerErr: %v", headerErr))
+//	//	util.SocketInfo(fmt.Sprintf("fail to create xt spot http header, headerErr: %#v", headerErr))
 //	//	return
 //	//}
 //	//httpResp, httpErr := util.HttpRequest(http.MethodGet, SpotBaseUrl+"/v4/balances", "", headers, 30)
@@ -308,7 +308,7 @@ package deprecated
 //	spotAccountResp := &dtos.BalanceResp{}
 //	jsonErr := json.Unmarshal(httpResp, spotAccountResp)
 //	if spotAccountResp == nil || spotAccountResp.Rc != 0 {
-//		util.SocketInfo(fmt.Sprintf("fail to refresh spot balance xt, resp: %s httpErr: %v, jsonErr: %v", httpResp, httpErr, jsonErr))
+//		util.SocketInfo(fmt.Sprintf("fail to refresh spot balance xt, resp: %s httpErr: %#v, jsonErr: %#v", httpResp, httpErr, jsonErr))
 //		time.Sleep(time.Second * 2)
 //		return getBalanceXT(key, secret)
 //	}
@@ -332,14 +332,14 @@ package deprecated
 //	auth.SetUrlencode(true)
 //	headers, headerErr := auth.CreatePayloadFuture(map[string]interface{}{})
 //	if headerErr != nil {
-//		util.SocketInfo(fmt.Sprintf("fail to create xt contract asset http header, headerErr: %v", headerErr))
+//		util.SocketInfo(fmt.Sprintf("fail to create xt contract asset http header, headerErr: %#v", headerErr))
 //		return
 //	}
 //	assetHttpResp, assetHttpErr := util.HttpRequest(http.MethodGet, PerpBaseUrl+"/future/user/v1/balance/list", "", headers, 30)
 //	xtContractAssetResp := &dtos.XtContractAssetResp{}
 //	jsonErr := json.Unmarshal(assetHttpResp, xtContractAssetResp)
 //	if xtContractAssetResp == nil || xtContractAssetResp.ReturnCode != 0 {
-//		util.SocketInfo(fmt.Sprintf("fail to refresh contract asset xt, resp: %s httpErr: %v, jsonErr: %v", assetHttpResp, assetHttpErr, jsonErr))
+//		util.SocketInfo(fmt.Sprintf("fail to refresh contract asset xt, resp: %s httpErr: %#v, jsonErr: %#v", assetHttpResp, assetHttpErr, jsonErr))
 //		time.Sleep(time.Second * 2)
 //		return getPositionsXT(key, secret)
 //	}
@@ -348,14 +348,14 @@ package deprecated
 //	positionAuth.SetUrlencode(true)
 //	positionHeaders, positionHeaderErr := positionAuth.CreatePayloadFuture(map[string]interface{}{})
 //	if positionHeaderErr != nil {
-//		util.SocketInfo(fmt.Sprintf("fail to create xt contract position http header, headerErr: %v", positionHeaderErr))
+//		util.SocketInfo(fmt.Sprintf("fail to create xt contract position http header, headerErr: %#v", positionHeaderErr))
 //		return
 //	}
 //	positionHttpResp, positionHttpErr := util.HttpRequest(http.MethodGet, PerpBaseUrl+"/future/user/v1/position/list", "", positionHeaders, 30)
 //	xtContractPositionResp := &dtos.XtContractPositionResp{}
 //	positionJsonErr := json.Unmarshal(positionHttpResp, xtContractPositionResp)
 //	if xtContractPositionResp == nil || xtContractPositionResp.ReturnCode != 0 {
-//		util.SocketInfo(fmt.Sprintf("fail to refresh contract position xt, resp: %s httpErr: %v, jsonErr: %v", positionHttpResp, positionHttpErr, positionJsonErr))
+//		util.SocketInfo(fmt.Sprintf("fail to refresh contract position xt, resp: %s httpErr: %#v, jsonErr: %#v", positionHttpResp, positionHttpErr, positionJsonErr))
 //		time.Sleep(time.Second * 2)
 //		return getPositionsXT(key, secret)
 //	}
@@ -433,14 +433,14 @@ package deprecated
 //		auth.SetUrlencode(true)
 //		headers, headerErr := auth.CreatePayloadFuture(body)
 //		if headerErr != nil {
-//			util.SocketInfo(fmt.Sprintf("fail to create xt contract order http header, headerErr: %v", headerErr))
+//			util.SocketInfo(fmt.Sprintf("fail to create xt contract order http header, headerErr: %#v", headerErr))
 //			return
 //		}
 //		httpResp, httpErr := util.HttpRequest(http.MethodPost, PerpBaseUrl+"/future/trade/v1/order/create", param.Encode(), headers, 30)
 //		xtContractOrderResp := &dtos.XtContractOrderResp{}
 //		jsonErr := json.Unmarshal(httpResp, xtContractOrderResp)
 //		if xtContractOrderResp == nil || xtContractOrderResp.ReturnCode != 0 {
-//			util.Notice(fmt.Sprintf("fail to create xt future order, resp: %s httpErr: %v, jsonErr: %v", httpResp, httpErr, jsonErr))
+//			util.Notice(fmt.Sprintf("fail to create xt future order, resp: %s httpErr: %#v, jsonErr: %#v", httpResp, httpErr, jsonErr))
 //		} else {
 //			order.Status = model.CarryStatusWorking
 //			//order.OrderId = strconv.FormatInt(xtContractOrderResp.Result, 10)
@@ -472,7 +472,7 @@ package deprecated
 //		//auth := dtos.NewAuth(dtos.SignedHttpAPI{Accesskey: key, Secretkey: secret}, "/v4/order", "POST")
 //		//headers, headerErr := auth.CreatePayload(body)
 //		//if headerErr != nil {
-//		//	util.SocketInfo(fmt.Sprintf("fail to create xt spot order header, headerErr: %v", headerErr))
+//		//	util.SocketInfo(fmt.Sprintf("fail to create xt spot order header, headerErr: %#v", headerErr))
 //		//	return
 //		//}
 //		//httpResp, httpErr := util.HttpRequest(http.MethodPost, SpotBaseUrl+"/v4/order", string(util.JsonEncodeToByte(body)), headers, 30)
@@ -480,7 +480,7 @@ package deprecated
 //		xtSpotOrderResp := &dtos.XtSpotOrderResp{}
 //		jsonErr := json.Unmarshal(httpResp, xtSpotOrderResp)
 //		if xtSpotOrderResp == nil || xtSpotOrderResp.Rc != 0 {
-//			util.Notice(fmt.Sprintf("fail to create xt spot order resp: %s httpErr: %v, jsonErr: %v", httpResp, httpErr, jsonErr))
+//			util.Notice(fmt.Sprintf("fail to create xt spot order resp: %s httpErr: %#v, jsonErr: %#v", httpResp, httpErr, jsonErr))
 //		} else {
 //			order.Status = model.CarryStatusWorking
 //			order.OrderId = xtSpotOrderResp.Result.OrderId
@@ -497,14 +497,14 @@ package deprecated
 //		auth.SetUrlencode(true)
 //		headers, headerErr := auth.CreatePayloadFuture(body)
 //		if headerErr != nil {
-//			util.SocketInfo(fmt.Sprintf("fail to create xt contract cancel order header, headerErr: %v", headerErr))
+//			util.SocketInfo(fmt.Sprintf("fail to create xt contract cancel order header, headerErr: %#v", headerErr))
 //			return
 //		}
 //		httpResp, httpErr := util.HttpRequest(http.MethodPost, PerpBaseUrl+"/future/trade/v1/order/cancel-all", postData.Encode(), headers, 30)
 //		xtContractCommonResp := &dtos.XtContractCommonResp{}
 //		jsonErr := json.Unmarshal(httpResp, xtContractCommonResp)
 //		if xtContractCommonResp == nil || xtContractCommonResp.ReturnCode != 0 {
-//			util.Notice(fmt.Sprintf("fail to cancel xt future order, resp: %s httpErr: %v, jsonErr: %v", httpResp, httpErr, jsonErr))
+//			util.Notice(fmt.Sprintf("fail to cancel xt future order, resp: %s httpErr: %#v, jsonErr: %#v", httpResp, httpErr, jsonErr))
 //			return false
 //		} else {
 //			return true
@@ -514,7 +514,7 @@ package deprecated
 //		//auth := dtos.NewAuth(dtos.SignedHttpAPI{Accesskey: key, Secretkey: secret}, "/v4/open-order", "DELETE")
 //		//headers, headerErr := auth.CreatePayload(body)
 //		//if headerErr != nil {
-//		//	util.SocketInfo(fmt.Sprintf("fail to create xt spot cancel order header, headerErr: %v", headerErr))
+//		//	util.SocketInfo(fmt.Sprintf("fail to create xt spot cancel order header, headerErr: %#v", headerErr))
 //		//	return
 //		//}
 //		//httpResp, httpErr := util.HttpRequest(http.MethodDelete, SpotBaseUrl+"/v4/open-order", string(util.JsonEncodeToByte(body)), headers, 30)
@@ -522,7 +522,7 @@ package deprecated
 //		xtCancelOrderResp := &dtos.XtCancelOrderResp{}
 //		jsonErr := json.Unmarshal(httpResp, xtCancelOrderResp)
 //		if xtCancelOrderResp == nil || xtCancelOrderResp.Rc != 0 {
-//			util.Notice(fmt.Sprintf("fail to cancel xt spot order, resp: %s httpErr: %v, jsonErr: %v", httpResp, httpErr, jsonErr))
+//			util.Notice(fmt.Sprintf("fail to cancel xt spot order, resp: %s httpErr: %#v, jsonErr: %#v", httpResp, httpErr, jsonErr))
 //			return false
 //		} else {
 //			return true
@@ -541,7 +541,7 @@ package deprecated
 //	xtFundingResp := &dtos.XtFundingResp{}
 //	jsonErr := json.Unmarshal(httpResp, xtFundingResp)
 //	if xtFundingResp == nil || xtFundingResp.ReturnCode != 0 {
-//		util.Notice(fmt.Sprintf("fail to get xt future funding, resp: %s httpErr: %v, jsonErr: %v", httpResp, httpErr, jsonErr))
+//		util.Notice(fmt.Sprintf("fail to get xt future funding, resp: %s httpErr: %#v, jsonErr: %#v", httpResp, httpErr, jsonErr))
 //	} else {
 //		rate, _ := strconv.ParseFloat(xtFundingResp.Result.FundingRate, 64)
 //		fundingRate = &model.FundingRate{
@@ -565,14 +565,14 @@ package deprecated
 //	auth.SetUrlencode(true)
 //	headers, headerErr := auth.CreatePayloadFuture(map[string]interface{}{})
 //	if headerErr != nil {
-//		util.SocketInfo(fmt.Sprintf("fail to open xt contract account header, headerErr: %v", headerErr))
+//		util.SocketInfo(fmt.Sprintf("fail to open xt contract account header, headerErr: %#v", headerErr))
 //		return
 //	}
 //	httpResp, httpErr := util.HttpRequest(http.MethodPost, PerpBaseUrl+"/future/user/v1/account/open", "", headers, 30)
 //	xtContractCommonResp := &dtos.XtContractCommonResp{}
 //	jsonErr := json.Unmarshal(httpResp, xtContractCommonResp)
 //	if xtContractCommonResp == nil || xtContractCommonResp.ReturnCode != 0 {
-//		util.Notice(fmt.Sprintf("fail to open xt contract account, resp: %s httpErr: %v, jsonErr: %v", httpResp, httpErr, jsonErr))
+//		util.Notice(fmt.Sprintf("fail to open xt contract account, resp: %s httpErr: %#v, jsonErr: %#v", httpResp, httpErr, jsonErr))
 //	}
 //}
 //
@@ -590,7 +590,7 @@ package deprecated
 //		}
 //		signHeaders, headerErr := auth.CreatePayload(body)
 //		if headerErr != nil {
-//			util.SocketInfo(fmt.Sprintf("fail to create xt spot header, headerErr: %v", headerErr))
+//			util.SocketInfo(fmt.Sprintf("fail to create xt spot header, headerErr: %#v", headerErr))
 //			return []byte(""), headerErr
 //		}
 //		headers = signHeaders

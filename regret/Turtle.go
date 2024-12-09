@@ -450,7 +450,7 @@ func CreateReport(function string, coins []string) {
 			amtBuy := resultAmt[function][symbol+`_buy`]
 			amtSell := resultAmt[function][symbol+`_sell`]
 			valid := amtBuy == 0 || amtSell == 0 || amtSell/amtBuy < 1.01 && amtBuy/amtSell > 0.99
-			line += fmt.Sprintf(`,%f,%f,%f,%f,%v,%.2f`,
+			line += fmt.Sprintf(`,%f,%f,%f,%f,%#v,%.2f`,
 				priceBuy, priceSell, amtBuy, amtSell, valid, (priceSell-priceBuy)*amtBuy)
 			result += (priceSell - priceBuy) * amtBuy
 		}

@@ -74,7 +74,7 @@ func ComposeParams(body map[string]interface{}) (params string) {
 		}
 		buf.WriteString(key)
 		buf.WriteByte('=')
-		buf.WriteString(fmt.Sprintf("%v", body[key]))
+		buf.WriteString(fmt.Sprintf("%#v", body[key]))
 		//buf.WriteString(body[key].(string))
 	}
 	return buf.String()

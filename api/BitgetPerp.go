@@ -20,7 +20,7 @@ func getMarketsBitgetPerp() (marketInfos map[string]*model.MarketInfo) {
 	perpResp := &dtos.BitgetPerpMarketResp{}
 	perpJsonErr := json.Unmarshal(httpResp, perpResp)
 	if perpResp == nil || perpResp.Code != "00000" {
-		util.Log(util.LogLevelError, fmt.Sprintf("get bitget perp market error, resp: %s, httpErr: %v, jsonErr: %v", httpResp, httpErr, perpJsonErr))
+		util.Log(util.LogLevelError, fmt.Sprintf("get bitget perp market error, resp: %s, httpErr: %#v, jsonErr: %#v", httpResp, httpErr, perpJsonErr))
 		return
 	}
 	marketInfos = make(map[string]*model.MarketInfo)
@@ -81,7 +81,7 @@ func setBitgetPositionMode(key, secret string) {
 	if jsonData != nil {
 		code, codeErr := jsonData.Get("code").String()
 		if code != "00000" || codeErr != nil {
-			util.Log(util.LogLevelError, fmt.Sprintf("fail to set Bitgetperp Position Mode, resp: %s codeErr: %v", httpResp, codeErr))
+			util.Log(util.LogLevelError, fmt.Sprintf("fail to set Bitgetperp Position Mode, resp: %s codeErr: %#v", httpResp, codeErr))
 		}
 	}
 }
@@ -158,7 +158,8 @@ func getPositionsBitgetPerp(key, secret string) (success bool, positions []*Posi
 	bitgetAssertResp := &dtos.BitgetAssertResp{}
 	jsonErr := json.Unmarshal(assetHttpResp, bitgetAssertResp)
 	if bitgetAssertResp == nil || bitgetAssertResp.Code != "00000" {
-		util.Log(util.LogLevelError, fmt.Sprintf("fail to refresh bitgetperp asset , resp: %s httpErr: %v, jsonErr: %v", assetHttpResp, assetHttpErr, jsonErr))
+		util.Log(util.LogLevelError, fmt.Sprintf("fail to refresh bitgetperp asset , resp: %s httpErr: %#v, jsonErr: %#v",
+			assetHttpResp, assetHttpErr, jsonErr))
 		time.Sleep(time.Minute)
 		return getPositionsBitgetPerp(key, secret)
 	} else {
@@ -168,7 +169,7 @@ func getPositionsBitgetPerp(key, secret string) (success bool, positions []*Posi
 	bitgetPositionResp := &dtos.BitgetPositionResp{}
 	positionJsonErr := json.Unmarshal(positionHttpResp, bitgetPositionResp)
 	if bitgetPositionResp == nil || bitgetPositionResp.Code != "00000" {
-		util.Log(util.LogLevelError, fmt.Sprintf("fail to refresh bitgetperp position, resp: %s httpErr: %v, jsonErr: %v",
+		util.Log(util.LogLevelError, fmt.Sprintf("fail to refresh bitgetperp position, resp: %s httpErr: %#v, jsonErr: %#v",
 			positionHttpResp, positionHttpErr, positionJsonErr))
 		time.Sleep(time.Minute)
 		return getPositionsBitgetPerp(key, secret)
@@ -226,7 +227,7 @@ func getFundingRateBitgetPerp(symbol string) (fundingRate *model.FundingRate) {
 	bitgetFundingResp := &dtos.BitgetFundingResp{}
 	perpJsonErr := json.Unmarshal(httpResp, bitgetFundingResp)
 	if bitgetFundingResp == nil || bitgetFundingResp.Code != "00000" {
-		util.Log(util.LogLevelError, fmt.Sprintf("get bitget perp funding rate error, %s resp: %s, httpErr: %v, jsonErr: %v",
+		util.Log(util.LogLevelError, fmt.Sprintf("get bitget perp funding rate error, %s resp: %s, httpErr: %#v, jsonErr: %#v",
 			symbol, httpResp, httpErr, perpJsonErr))
 		return
 	}
@@ -273,9 +274,10 @@ func placeOrderBitgetPerp(key, secret string, order *model.Order, orderSide, ord
 	httpResp, httpErr := client.DoPost("/api/v2/mix/order/place-order", string(util.JsonEncodeToByte(params)))
 	bitgetOrderResp := &dtos.BitgetOrderResp{}
 	jsonErr := json.Unmarshal(httpResp, bitgetOrderResp)
-	util.Log(util.LogLevelInfo, fmt.Sprintf(`place bitgetperp %v`, params))
+	util.Log(util.LogLevelInfo, fmt.Sprintf(`place bitgetperp %#v`, params))
 	if bitgetOrderResp == nil {
-		util.Log(util.LogLevelError, fmt.Sprintf("fail to create bitget perp order no resp: %s httpErr: %v, jsonErr: %v", httpResp, httpErr, jsonErr))
+		util.Log(util.LogLevelError, fmt.Sprintf("fail to create bitget perp order no resp: %s httpErr: %#v, jsonErr: %#v",
+			httpResp, httpErr, jsonErr))
 	} else {
 		if len(strings.Trim(bitgetOrderResp.Code, `0`)) == 0 {
 			order.Status = model.CarryStatusWorking
@@ -284,7 +286,8 @@ func placeOrderBitgetPerp(key, secret string, order *model.Order, orderSide, ord
 			order.ErrCode = bitgetOrderResp.Code
 			order.Status = model.CarryStatusFail
 		}
-		util.Log(util.LogLevelInfo, fmt.Sprintf("create bitget perp order resp: %s httpErr: %v, jsonErr: %v", httpResp, httpErr, jsonErr))
+		util.Log(util.LogLevelInfo, fmt.Sprintf("create bitget perp order resp: %s httpErr: %#v, jsonErr: %#v",
+			httpResp, httpErr, jsonErr))
 	}
 }
 
@@ -459,7 +462,7 @@ func queryOrderBitgetPerp(key, secret, symbol string, orderId string) (order *mo
 	perpJsonErr := json.Unmarshal(httpResp, orderDetailResp)
 	if orderDetailResp == nil || orderDetailResp.Code != "00000" {
 		util.Log(util.LogLevelError, fmt.Sprintf(
-			"get bitget perp order detail error, resp: %s, httpErr: %v, jsonErr: %v", httpResp, httpErr, perpJsonErr))
+			"get bitget perp order detail error, resp: %s, httpErr: %#v, jsonErr: %#v", httpResp, httpErr, perpJsonErr))
 		return order
 	} else {
 		order.DealPrice, _ = strconv.ParseFloat(orderDetailResp.Data.PriceAvg, 64)
@@ -481,7 +484,7 @@ func queryOrderBitgetPerp(key, secret, symbol string, orderId string) (order *mo
 		} else if orderDetailResp.Data.State == "partially_filled" {
 			order.Status = model.CarryStatusWorking
 		}
-		util.Log(util.LogLevelInfo, fmt.Sprintf(`%s %s %s query result:%s %f %v`,
+		util.Log(util.LogLevelInfo, fmt.Sprintf(`%s %s %s query result:%s %f %#v`,
 			order.Market, order.Symbol, order.OrderId, order.Status, order.DealAmount, orderDetailResp))
 	}
 	return order
