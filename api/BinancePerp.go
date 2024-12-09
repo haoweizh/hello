@@ -470,7 +470,9 @@ func getPositionsBinancePerp(key, secret string) (success bool, positions []*Pos
 			positions = append(positions, position)
 		}
 		totalMaintMargin, _ := strconv.ParseFloat(positionJson.Get("totalMaintMargin").MustString(), 64)
-		mmr = totalMaintMargin / accountValue
+		if accountValue > 0 {
+			mmr = totalMaintMargin / accountValue
+		}
 	} else {
 		util.Log(util.LogLevelError, `getPositionsBinancePerp fail to refresh binance position `)
 		time.Sleep(time.Minute)
