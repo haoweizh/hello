@@ -504,9 +504,10 @@ func getBalanceBybit(key string, secret string) (success bool, balances []*model
 	balances = make([]*model.Balance, 0)
 	for _, account := range balanceResp.Result.List {
 		if account.AccountType == "UNIFIED" {
+			maintenanceRate, _ := strconv.ParseFloat(account.AccountMMRate, 64)
 			collateralAvailable, _ := strconv.ParseFloat(account.TotalAvailableBalance, 64)
 			totalMaintenanceMargin, _ := strconv.ParseFloat(account.TotalMaintenanceMargin, 64)
-			collateral = &model.Collateral{Available: collateralAvailable, Occupied: totalMaintenanceMargin}
+			collateral = &model.Collateral{Available: collateralAvailable, Occupied: totalMaintenanceMargin, Rate: maintenanceRate}
 			for _, coinInfo := range account.Coin {
 				balance := &model.Balance{AccountId: key, BalanceTime: util.GetNow(), Market: model.Bybit, Coin: coinInfo.Coin}
 				balance.Borrow, _ = strconv.ParseFloat(coinInfo.BorrowAmount, 64)

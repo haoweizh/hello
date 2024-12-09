@@ -140,8 +140,18 @@ func createFromPosition(account *model.Account, setting *model.Setting, valueLim
 	}
 	rateLimitPosition := 2.8
 	rateLimitHolding := 0.28
-	if setting.Market == model.Gate {
-		rateLimitPosition = 1.3
+	spotValue, spotOk := spotMarkets.Load(key)
+	if spotValue != nil && spotOk && spotValue.(*spotMarket).collateral != nil {
+		switch setting.Market {
+		case model.OKEX, model.Gate:
+			if spotValue.(*spotMarket).collateral.Rate < 1.5 {
+				doRevert = true
+			}
+		case model.Bybit:
+			if spotValue.(*spotMarket).collateral.Rate > 0.7 {
+				doRevert = true
+			}
+		}
 	}
 	if cm.contractValueInU/cm.accountValueInU > rateLimitPosition || valueInUsd > valueLimit ||
 		valueInUsd/cm.accountValueInU > rateLimitHolding ||
@@ -203,8 +213,12 @@ func createFromBalance(account *model.Account, setting *model.Setting, valueLimi
 	if sm.balances[setting.Symbol] != nil && math.Abs(sm.balances[setting.Symbol].UsdValue) > valueLimit {
 		doRevert = true
 	}
-	if setting.Market == model.OKEX && sm.collateral != nil && sm.collateral.Rate < 10 {
+	if setting.Market == model.Bybit && sm.collateral != nil && sm.collateral.Rate > 0.7 {
+		doRevert = true
+	} else if setting.Market == model.OKEX && sm.collateral != nil && sm.collateral.Rate < 1.5 {
 		//(sm.collateral.Available-sm.collateral.Occupied)/sm.collateral.Available < 0.1) {
+		doRevert = true
+	} else if setting.Market == model.Gate && sm.collateral != nil && sm.collateral.Rate < 1.5 {
 		doRevert = true
 	}
 	return carryStatus, doRevert
@@ -384,7 +398,7 @@ func ClearCross() {
 			}
 		}
 		api.CheckSetProcessing(model.FunctionCross, model.FunctionCross, model.FunctionCross, false)
-		time.Sleep(time.Hour * 1)
+		time.Sleep(time.Minute * 30)
 	}
 }
 

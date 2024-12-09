@@ -1250,6 +1250,7 @@ func getBalanceOKEX(key, secret string) (success bool, balances []*model.Balance
 	}
 	if data[`mgnRatio`] != nil {
 		collateral.Rate, _ = strconv.ParseFloat(data[`mgnRatio`].(string), 64)
+		collateral.Rate /= 100
 	}
 	for _, item := range data[`details`].([]interface{}) {
 		balance := parseBalanceOKEX(item.(map[string]interface{}))

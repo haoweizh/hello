@@ -289,35 +289,90 @@ func placeOrderBitgetPerp(key, secret string, order *model.Order, orderSide, ord
 	}
 }
 
-// bitget中唯一保留的v1版本api，v2中没有按照symbol撤单，所以dialect symbol需要_UMCBL
+func cancelOrderBitgetPerp(key, secret, symbol, orderId string) (result bool) {
+	success, _, _, dialectSymbol := model.GetFromStandard(model.BitgetPerp, symbol)
+	if !success {
+		util.Log(util.LogLevelError, "fail to cancelOrderBitgetPerp GetFromStandard: "+symbol)
+		return false
+	}
+	client := dtos.BitgetRestClient{BaseUrl: bitgetRestUrl, Passphrase: model.AppConfig.Phase, ApiKey: key, ApiSecretKey: secret}
+	httpResp, httpErr := client.DoPost(`/api/v2/mix/order/cancel-order`, string(util.JsonEncodeToByte(map[string]string{
+		`productType`: `USDT-FUTURES`, `symbol`: dialectSymbol, `orderId`: orderId})))
+	if httpErr != nil {
+		util.Log(util.LogLevelError, fmt.Sprintf(`fail to cancelOrderBitgetPerp %s`, httpErr.Error()))
+		return false
+	}
+	jsonData, jsonErr := util.NewJSON(httpResp)
+	if jsonErr != nil {
+		util.Log(util.LogLevelError, fmt.Sprintf(`fail to NewJson when cancelOrderBitgetPerp %s`, jsonErr.Error()))
+		return false
+	}
+	if jsonData != nil {
+		code, _ := jsonData.Get("code").String()
+		if code == "00000" || code == `22001` {
+			util.Log(util.LogLevelInfo, fmt.Sprintf("success to cancel bitgetPerp order code %s", code))
+			return true
+		} else {
+			util.Log(util.LogLevelError, fmt.Sprintf("fail to cancelOrderBitgetPerp code %s msg %s %s",
+				code, jsonData.Get(`msg`).MustString(), string(httpResp)))
+		}
+	}
+	return false
+}
+
 func cancelOrdersBitgetPerp(key, secret, symbol string) (result bool) {
 	success, _, _, dialectSymbol := model.GetFromStandard(model.BitgetPerp, symbol)
 	if !success {
-		util.Log(util.LogLevelError, "fail to cancel bitget perp order, GetFromStandard: "+symbol)
+		util.Log(util.LogLevelError, "fail to cancelOrdersBitgetPerp GetFromStandard: "+symbol)
 		return false
 	}
-	dialectSymbol += `_UMCBL`
 	client := dtos.BitgetRestClient{BaseUrl: bitgetRestUrl, Passphrase: model.AppConfig.Phase, ApiKey: key, ApiSecretKey: secret}
-	params := map[string]interface{}{
-		"symbol":     dialectSymbol,
-		"marginCoin": "USDT",
-	}
-	httpResp, httpErr := client.DoPost("/api/mix/v1/order/cancel-symbol-orders", string(util.JsonEncodeToByte(params)))
+	httpResp, httpErr := client.DoPost(`/api/v2/mix/order/batch-cancel-orders`, string(util.JsonEncodeToByte(map[string]string{
+		`productType`: `USDT-FUTURES`, `symbol`: dialectSymbol})))
 	if httpErr != nil {
 		util.Log(util.LogLevelError, fmt.Sprintf(`fail to do post when cancelOrdersBitgetPerp %s`, httpErr.Error()))
-		return
+		return false
 	}
 	jsonData, jsonErr := util.NewJSON(httpResp)
 	if jsonErr != nil {
 		util.Log(util.LogLevelError, fmt.Sprintf(`fail to NewJson when cancelOrdersBitgetPerp %s`, jsonErr.Error()))
+		return false
+	}
+	if jsonData != nil {
+		code, _ := jsonData.Get("code").String()
+		if code == "00000" || code == `22001` {
+			util.Log(util.LogLevelInfo, fmt.Sprintf("success to cancel bitgetPerp orders code %s %d",
+				code, len(jsonData.GetPath(`data`, `successList`).MustArray())))
+			return true
+		} else {
+			util.Log(util.LogLevelError, fmt.Sprintf("fail to cancel bitget perp order, code: %s %s %s",
+				code, jsonData.Get("msg").MustString(), string(httpResp)))
+		}
+	}
+	return false
+}
+func cancelAllBitgetPerp(key, secret string) (result bool) {
+	client := dtos.BitgetRestClient{BaseUrl: bitgetRestUrl, Passphrase: model.AppConfig.Phase, ApiKey: key, ApiSecretKey: secret}
+	httpResp, httpErr := client.DoPost(`/api/v2/mix/order/cancel-all-orders`,
+		string(util.JsonEncodeToByte(map[string]string{`productType`: `USDT-FUTURES`})))
+	if httpErr != nil {
+		util.Log(util.LogLevelError, fmt.Sprintf(`fail to do post when cancelAllBitgetPerp %s`, httpErr.Error()))
+		return
+	}
+	jsonData, jsonErr := util.NewJSON(httpResp)
+	if jsonErr != nil {
+		util.Log(util.LogLevelError, fmt.Sprintf(`fail to NewJson when cancelAllBitgetPerp %s`, jsonErr.Error()))
 		return
 	}
 	if jsonData != nil {
 		code, _ := jsonData.Get("code").String()
 		if code == "00000" || code == `22001` {
+			util.Log(util.LogLevelInfo, fmt.Sprintf("success to cancelAllBitgetPerp code %s %d",
+				code, len(jsonData.GetPath(`data`, `successList`).MustArray())))
 			return true
 		} else {
-			util.Log(util.LogLevelError, fmt.Sprintf("fail to cancel bitget perp order, code: %s %s", code, string(httpResp)))
+			util.Log(util.LogLevelError, fmt.Sprintf("fail to cancelAllBitgetPerp, code: %s %s",
+				code, string(httpResp)))
 		}
 	}
 	return false
@@ -325,26 +380,20 @@ func cancelOrdersBitgetPerp(key, secret, symbol string) (result bool) {
 
 // queryOpenOrdersBitgetperp目前只查询live
 // 若未指定，将查询所有状态live 等待成交（尚未有任何成交） live: 未成交；partially_filled：部分成交
-func queryOpenOrdersBitgetperp(key, secret, symbol string) (orders []*model.Order) {
-	success, _, _, dialectSymbol := model.GetFromStandard(model.BitgetPerp, symbol)
-	if !success {
-		util.Log(util.LogLevelError, "fail to query bitget perp order, GetFromStandard: "+symbol)
-		return nil
-	}
+func queryOpenOrdersBitgetPerp(key, secret string) (orders []*model.Order) {
 	client := dtos.BitgetRestClient{BaseUrl: bitgetRestUrl, Passphrase: model.AppConfig.Phase, ApiKey: key, ApiSecretKey: secret}
-	params := map[string]string{`productType`: `USDT-FUTURES`, `symbol`: dialectSymbol}
-	httpResp, httpErr := client.DoGet(`/api/v2/mix/order/orders-pending`, params)
+	httpResp, httpErr := client.DoGet(`/api/v2/mix/order/orders-pending`, map[string]string{`productType`: `USDT-FUTURES`})
 	if httpErr != nil {
-		util.Log(util.LogLevelError, fmt.Sprintf(`fail to do get queryOpenOrdersBitgetperp %s`, httpErr.Error()))
+		util.Log(util.LogLevelError, fmt.Sprintf(`fail to do get queryOpenOrdersBitgetPerp %s`, httpErr.Error()))
 		return
 	}
 	jsonData, jsonErr := util.NewJSON(httpResp)
 	if jsonErr != nil {
-		util.Log(util.LogLevelError, fmt.Sprintf(`fail to marshal queryOpenOrdersBitgetperp %s`, jsonErr.Error()))
+		util.Log(util.LogLevelError, fmt.Sprintf(`fail to marshal queryOpenOrdersBitgetPerp %s`, jsonErr.Error()))
 		return nil
 	}
 	if jsonData.Get("msg").MustString() != `success` {
-		util.Log(util.LogLevelError, fmt.Sprintf(`fail to queryOpenOrdersBitgetperp return code %s msg %s`,
+		util.Log(util.LogLevelError, fmt.Sprintf(`fail to queryOpenOrdersBitgetPerp return code %s msg %s`,
 			jsonData.Get("code").MustString(), jsonData.Get("msg").MustString()))
 		return nil
 	}
@@ -352,9 +401,11 @@ func queryOpenOrdersBitgetperp(key, secret, symbol string) (orders []*model.Orde
 	array := jsonData.GetPath(`data`, `entrustedList`).MustArray()
 	for _, data := range array {
 		value := data.(map[string]interface{})
-		order := &model.Order{Market: model.BitgetPerp, Symbol: symbol, OrderId: value[`orderId`].(string)}
+		_, _, coin := model.GetCoinFromDialect(model.BitgetPerp, value[`symbol`].(string))
+		order := &model.Order{Market: model.BitgetPerp, Symbol: coin + model.UniStandardTail[model.MarketTypePerp],
+			OrderId: value[`orderId`].(string)}
 		if value[`size`] != nil {
-			order.Amount, _ = strconv.ParseFloat(value[`amount`].(string), 64)
+			order.Amount, _ = strconv.ParseFloat(value[`size`].(string), 64)
 		}
 		if value[`baseVolume`] != nil {
 			order.DealAmount, _ = strconv.ParseFloat(value[`baseVolume`].(string), 64)
