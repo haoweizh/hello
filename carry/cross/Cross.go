@@ -140,11 +140,17 @@ func createFromPosition(account *model.Account, setting *model.Setting, valueLim
 	}
 	rateLimitPosition := 2.8
 	rateLimitHolding := 0.28
-	if setting.Market == model.Gate {
-		spotValue, spotOk := spotMarkets.Load(key)
-		if spotValue != nil && spotOk && spotValue.(*spotMarket).collateral != nil && spotValue.(*spotMarket).collateral.Rate < 1.5 {
-			util.Log(util.LogLevelInfo, fmt.Sprintf(`set revert when %s rate %f`, setting.Market, spotValue.(*spotMarket).collateral.Rate))
-			doRevert = true
+	spotValue, spotOk := spotMarkets.Load(key)
+	if spotValue != nil && spotOk && spotValue.(*spotMarket).collateral != nil {
+		switch setting.Market {
+		case model.OKEX, model.Gate:
+			if spotValue.(*spotMarket).collateral.Rate < 1.5 {
+				doRevert = true
+			}
+		case model.Bybit:
+			if spotValue.(*spotMarket).collateral.Rate > 0.7 {
+				doRevert = true
+			}
 		}
 	}
 	if cm.contractValueInU/cm.accountValueInU > rateLimitPosition || valueInUsd > valueLimit ||
@@ -207,7 +213,9 @@ func createFromBalance(account *model.Account, setting *model.Setting, valueLimi
 	if sm.balances[setting.Symbol] != nil && math.Abs(sm.balances[setting.Symbol].UsdValue) > valueLimit {
 		doRevert = true
 	}
-	if setting.Market == model.OKEX && sm.collateral != nil && sm.collateral.Rate < 10 {
+	if setting.Market == model.Bybit && sm.collateral != nil && sm.collateral.Rate > 0.7 {
+		doRevert = true
+	} else if setting.Market == model.OKEX && sm.collateral != nil && sm.collateral.Rate < 1.5 {
 		//(sm.collateral.Available-sm.collateral.Occupied)/sm.collateral.Available < 0.1) {
 		doRevert = true
 	} else if setting.Market == model.Gate && sm.collateral != nil && sm.collateral.Rate < 1.5 {
