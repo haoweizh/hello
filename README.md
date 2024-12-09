@@ -7,6 +7,21 @@ ucli_ffi.h
 gcc -fPIC -shared -o libucli_ffi.so ucli_ffi.c
 gcc -dynamiclib -o libucli_ffi.dylib ucli_ffi.c
 ```
+# linux设置记录 
+ - 将so文件和.h文件放到/usr/local/lib/目录下
+ - 执行以下命令,确保把动态链接库连接到运行时环境
+```
+   echo "/usr/local/lib" | sudo tee /etc/ld.so.conf.d/ucli_ffi.conf
+   sudo ldconfig
+```
+ - 如果权限不足可以使用下面命令给予相应的权限
+```
+ sudo chmod 777 /usr/local/lib/libucli_ffi.so
+```
+ - 使用命令编译go文件
+```
+ CGO_CFLAGS="-I/usr/local/lib" CGO_LDFLAGS="-L/usr/local/lib -lucli_ffi" go build -ldflags "-w -s" -o /root/btcCarry/helloworld helloworld.go 
+```
 # 环境搭建
 
 1. rust (for foundry)
