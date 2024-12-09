@@ -396,9 +396,9 @@ func cancelOrderBinancePerp(key, secret, symbol, orderId string) bool {
 	orderNum, _ := strconv.ParseInt(orderId, 10, 64)
 	res, err := client.NewCancelOrderService().Symbol(dialectSymbol).OrderID(orderNum).Do(context.Background())
 	if err != nil {
-		if strings.Contains(err.Error(), `code=-2011`) {
-			return true
-		}
+		//if strings.Contains(err.Error(), `code=-2011`) {
+		//	return true
+		//}
 		util.Log(util.LogLevelError, `cancelOrderBinancePerp fail to cancel binanceperp order`+err.Error())
 		return false
 	} else if res.Status == `CANCELED` {

@@ -1157,6 +1157,8 @@ func handleCross(account *model.Account, order *model.Order) {
 	if !order.HaveId() {
 		order.Status = model.CarryStatusFail
 		order.OrderId = fmt.Sprintf("%d%s%s", time.Now().UnixMilli(), order.Market, order.Symbol)
+		util.Log(util.LogLevelError, fmt.Sprintf(`handleCorss no order id %s`, order.OrderId))
+		return
 	}
 	if order.Amount == order.DealAmount {
 		order.Status = model.CarryStatusSuccess
@@ -1176,11 +1178,11 @@ func handleCross(account *model.Account, order *model.Order) {
 		queryOrder := api.QueryOrderById(account.Key, account.Secret, order.Market, order.Symbol, order.OrderType, order.OrderId)
 		if queryOrder != nil {
 			leftAmt = queryOrder.Amount - queryOrder.DealAmount
-			//queryDelay := false
-			//if (order.Market == model.BitgetSpot || order.Market == model.BitgetPerp) && !canceled {
-			//	queryDelay = true
-			//}
-			if leftAmt > marketInfo.SizeMin && leftAmt*order.Price > marketInfo.MoneyMin && queryOrder.Status != model.CarryStatusSuccess {
+			queryDelay := false
+			if (order.Market == model.BitgetSpot || order.Market == model.BitgetPerp) && !canceled {
+				queryDelay = true
+			}
+			if leftAmt > marketInfo.SizeMin && leftAmt*order.Price > marketInfo.MoneyMin && queryOrder.Status != model.CarryStatusSuccess && !queryDelay {
 				compOrder := api.PlaceOrder(account.Key, account.Secret, order.OrderSide, model.OrderTypeMarket, order.Market, order.Symbol,
 					``, model.FunctionComplement, order.Price, order.Price, leftAmt, false, nil)
 				model.AppDB.Save(compOrder)
