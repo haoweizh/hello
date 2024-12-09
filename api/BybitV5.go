@@ -1039,6 +1039,7 @@ func queryOrderBybit(key, secret, symbol, orderId string) *model.Order {
 	order := &model.Order{Market: model.Bybit, Status: model.CarryStatusWorking, OrderId: orderId, Symbol: symbol}
 	for _, orderDetail := range orderResp.Result.List {
 		order.DealPrice, _ = strconv.ParseFloat(orderDetail.AvgPrice, 64)
+		order.Amount, _ = strconv.ParseFloat(orderDetail.Qty, 64)
 		order.DealAmount, _ = strconv.ParseFloat(orderDetail.CumExecQty, 64)
 		order.UnfilledQuantity, _ = strconv.ParseFloat(orderDetail.LeavesQty, 64)
 		intCreateTime, _ := strconv.ParseInt(orderDetail.CreatedTime, 10, 64)

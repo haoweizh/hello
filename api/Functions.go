@@ -641,34 +641,12 @@ func QueryOrderById(key, secret, market, symbol, orderType, orderId string) (ord
 		queryOrderGate(key, secret, order)
 	case model.OKEX:
 		order = queryOrderOKEX(key, secret, symbol, orderId, orderType)
-		return order
 	case model.BinanceSpot:
 		order = queryOrderBinanceSpot(key, secret, symbol, orderId)
 	case model.BinancePerp:
 		order = queryOrderBinancePerp(key, secret, symbol, orderId)
 	case model.Bybit:
 		order = queryOrderBybit(key, secret, symbol, orderId)
-		//case model.KucoinSpot:
-		//	order = deprecated.queryOrderKucoinSpot(symbol, orderId)
-		//case model.KucoinPerp:
-		//	order = deprecated.queryOrderKucoinPerp(symbol, orderId)
-		//case model.HuobiPerp:
-		//	order = deprecated.queryOrderHuobiPerp(key, secret, symbol, orderId)
-		//case model.HuobiSpot:
-		//	order = deprecated.queryOrderHuobiSpot(key, secret, orderId)
-		//case model.Ftx: // 查询是否是待成交状态，如果已成交或已取消，则ftx返回order not found信息，order为nil
-		//	if orderType == model.OrderTypeStop {
-		//		newOrderId := deprecated.queryTriggerOrderId(key, secret, orderId)
-		//		if newOrderId != `` {
-		//			return deprecated.queryOrderFtx(key, secret, newOrderId)
-		//		} else {
-		//			order.Status = deprecated.queryTriggerOrderFtx(key, secret, symbol, orderId)
-		//		}
-		//	} else {
-		//		return deprecated.queryOrderFtx(key, secret, orderId)
-		//	}
-		//case model.Mexc:
-		//	order = deprecated.queryOrderMexc(key, secret, symbol, orderId)
 	}
 	return order
 }
