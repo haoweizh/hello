@@ -80,6 +80,7 @@ func GetMarketInfo(market, symbol string) (marketInfo *MarketInfo) {
 func ParseRealAmount(market, symbol string, amount float64) (success bool, realAmount float64) {
 	v, _ := util.LoadSyncMap(MarketInfos, market, symbol)
 	if v == nil {
+		util.Log(util.LogLevelError, fmt.Sprintf(`ParseRealAmount fail no marketinfo %s %s`, market, symbol))
 		return false, 0
 	}
 	if v.(*MarketInfo).CTValue == 0 {

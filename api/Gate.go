@@ -1132,26 +1132,27 @@ func SetGateBidAsk(key, secret, symbol string) {
 	model.AppEnvironment.SetBidAsk(model.Gate, symbol, &bidAsk)
 }
 
-func queryOrderGate(key, secret string, order *model.Order) {
+func queryOrderGate(key, secret, symbol, orderId string) (order *model.Order) {
 	client, ctx := getClientGate(key, secret)
-	success, marketType, _, dialectSymbol := model.GetFromStandard(model.Gate, order.Symbol)
+	success, marketType, _, dialectSymbol := model.GetFromStandard(model.Gate, symbol)
 	if success && marketType == model.MarketTypePerp {
-		orderFuture, _, err := client.FuturesApi.GetFuturesOrder(ctx, `usdt`, order.OrderId)
+		orderFuture, _, err := client.FuturesApi.GetFuturesOrder(ctx, `usdt`, orderId)
 		if err != nil {
 			panicGateError(key, "GetFuturesOrder", err)
 			return
 		}
 		order = parseOrderGatePerp(&orderFuture)
-		util.Log(util.LogLevelInfo, fmt.Sprintf(`queryOrderGate query result %#v %#v`,
+		util.Log(util.LogLevelInfo, fmt.Sprintf(`queryOrderGate query result %#v \n %#v`,
 			order, orderFuture))
 	} else if success && marketType == model.MarketTypeSpot {
-		orderSpot, _, err := client.SpotApi.GetOrder(ctx, order.OrderId, dialectSymbol, nil)
+		orderSpot, _, err := client.SpotApi.GetOrder(ctx, orderId, dialectSymbol, nil)
 		if err != nil {
 			panicGateError(key, "GetSpotOrder", err)
 			return
 		}
 		order = parseOrderGateSpot(&orderSpot)
-		util.Log(util.LogLevelInfo, fmt.Sprintf(`queryOrderGate query result %#v %#v`,
+		util.Log(util.LogLevelInfo, fmt.Sprintf(`queryOrderGate query result %#v \n %#v`,
 			order, orderSpot))
 	}
+	return order
 }

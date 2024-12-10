@@ -630,15 +630,13 @@ func QueryOpenOrders(key, secret, market, symbol string) (orders []*model.Order)
 }
 
 func QueryOrderById(key, secret, market, symbol, orderType, orderId string) (order *model.Order) {
-	order = &model.Order{
-		OrderId: orderId, Symbol: symbol, Market: market, OrderType: orderType, Status: model.CarryStatusFail}
 	switch market {
 	case model.BitgetPerp:
 		order = queryOrderBitgetPerp(key, secret, symbol, orderId)
 	case model.BitgetSpot:
 		order = queryOrderBitgetSpot(key, secret, orderId)
 	case model.Gate:
-		queryOrderGate(key, secret, order)
+		order = queryOrderGate(key, secret, symbol, orderId)
 	case model.OKEX:
 		order = queryOrderOKEX(key, secret, symbol, orderId, orderType)
 	case model.BinanceSpot:
