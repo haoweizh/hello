@@ -1210,7 +1210,7 @@ var PostOrderCross = func(order *model.Order) {
 			case model.OKEX:
 				if InsufficientCodeOKEX[order.ErrCode] && setting != nil {
 					util.Log(util.LogLevelInfo, fmt.Sprintf(
-						`reset %s trade max with %s account index %s`, order.Market, order.ErrCode, order.AccountIndex))
+						`reset %s trade max with %s account index %d`, order.Market, order.ErrCode, order.AccountIndex))
 					getMax, maxBuy, maxSell := api.GetTradeMaxOKEX(account.Key, account.Secret, setting.Symbol, 0)
 					if getMax && ok && status != nil {
 						status.(*CarryStatus).LimitSell = math.Min(status.(*CarryStatus).LimitSell, maxSell)
