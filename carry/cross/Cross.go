@@ -422,14 +422,16 @@ func equalAccounts() {
 	markets := api.GetMarkets()
 	//needWaitEqual := false // 是否需要进入等待环节
 	for i := 0; i < api.GetCrossLen(); i++ {
-		accounts := make(map[string]*model.Account)
 		indexAccounts := model.GetAccounts(i)
 		for _, market := range markets {
-			accounts[market] = indexAccounts[market]
-			api.CancelAll(accounts[market].Key, accounts[market].Secret, market)
+			spotMarkets.Delete(indexAccounts[market].Key)
+			contractMarkets.Delete(indexAccounts[market].Key)
+			api.CancelAll(indexAccounts[market].Key, indexAccounts[market].Secret, market)
+			spotMarkets.Store(indexAccounts[market].Key, createSpotMarket(indexAccounts[market].Key, indexAccounts[market].Secret, market))
+			contractMarkets.Store(indexAccounts[market].Key, createContractMarket(indexAccounts[market].Key, indexAccounts[market].Secret, market))
 		}
 		waitEqual[i] = true
-		go equalAccount(i, equalChannel, accounts)
+		go equalAccount(i, equalChannel, indexAccounts)
 	}
 	for {
 		index := <-equalChannel
@@ -450,15 +452,6 @@ func equalAccounts() {
 func equalAccount(i int, equalChan chan int, accounts map[string]*model.Account) {
 	if accounts[model.BitgetPerp] != nil {
 		liquidateBitgetPerp(accounts[model.BitgetPerp])
-	}
-	keys := ``
-	for _, account := range accounts {
-		if account.Index != i {
-			continue
-		}
-		spotMarkets.Delete(account.Key)
-		contractMarkets.Delete(account.Key)
-		keys += account.Key + `,`
 	}
 	value := api.GetCoinSettings(model.FunctionCross)
 	if value != nil {
@@ -526,8 +519,8 @@ func getHolding(statuses []*CarryStatus) (bids, asks model.Ticks, bidStatus, ask
 
 // settings []*model.Setting, coinStatus map[string]map[string]map[string]*CarryStatus
 func equalCoin(coin string, statuses []*CarryStatus) (isEqual bool, holding float64, errMsg string) {
-	bids, asks, bidStatus, askStatus, value, price, holdStr := getHolding(statuses)
-	holding = value
+	bids, asks, bidStatus, askStatus, holdingValue, price, holdStr := getHolding(statuses)
+	holding = holdingValue
 	if math.Abs(holding) > compTooBig/price {
 		coinSettings := api.GetCoinSettings(model.FunctionCross)
 		if coinSettings != nil {
@@ -625,6 +618,8 @@ func equalCoin(coin string, statuses []*CarryStatus) (isEqual bool, holding floa
 	}
 	if math.Abs(holding) > SmallInU/price {
 		isEqual = false
+	} else {
+		isEqual = true
 	}
 	return isEqual, holding, errMsg
 }
