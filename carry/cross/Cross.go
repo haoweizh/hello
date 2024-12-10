@@ -182,9 +182,7 @@ func createFromBalance(account *model.Account, setting *model.Setting, valueLimi
 	sm := value.(*spotMarket)
 	limitBuy, limitSell, availableBuy := 0.0, 0.0, 0.0
 	if setting.Function == model.FunctionCross {
-		u := sm.availableU
-		actU := sm.accountValueInU
-		limitBuy = math.Min(u/5, actU/15) / price
+		limitBuy = math.Min(sm.availableU/5, sm.accountValueInU/15) / price
 	} else if setting.Function == model.FunctionQueue {
 		limitBuy = sm.availableU * 0.9 / price
 	}
@@ -424,16 +422,14 @@ func equalAccounts() {
 	markets := api.GetMarkets()
 	//needWaitEqual := false // 是否需要进入等待环节
 	for i := 0; i < api.GetCrossLen(); i++ {
+		accounts := make(map[string]*model.Account)
 		indexAccounts := model.GetAccounts(i)
 		for _, market := range markets {
-			spotMarkets.Delete(indexAccounts[market].Key)
-			contractMarkets.Delete(indexAccounts[market].Key)
-			api.CancelAll(indexAccounts[market].Key, indexAccounts[market].Secret, market)
-			spotMarkets.Store(indexAccounts[market].Key, createSpotMarket(indexAccounts[market].Key, indexAccounts[market].Secret, market))
-			contractMarkets.Store(indexAccounts[market].Key, createContractMarket(indexAccounts[market].Key, indexAccounts[market].Secret, market))
+			accounts[market] = indexAccounts[market]
+			api.CancelAll(accounts[market].Key, accounts[market].Secret, market)
 		}
 		waitEqual[i] = true
-		go equalAccount(i, equalChannel, indexAccounts)
+		go equalAccount(i, equalChannel, accounts)
 	}
 	for {
 		index := <-equalChannel
@@ -454,6 +450,15 @@ func equalAccounts() {
 func equalAccount(i int, equalChan chan int, accounts map[string]*model.Account) {
 	if accounts[model.BitgetPerp] != nil {
 		liquidateBitgetPerp(accounts[model.BitgetPerp])
+	}
+	keys := ``
+	for _, account := range accounts {
+		if account.Index != i {
+			continue
+		}
+		spotMarkets.Delete(account.Key)
+		contractMarkets.Delete(account.Key)
+		keys += account.Key + `,`
 	}
 	value := api.GetCoinSettings(model.FunctionCross)
 	if value != nil {
