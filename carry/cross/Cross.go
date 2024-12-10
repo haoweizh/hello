@@ -496,12 +496,12 @@ func equalAccount(i int, equalChan chan int, accounts map[string]*model.Account)
 	util.Log(util.LogLevelInfo, fmt.Sprintf(`...... exit clearing cross %d`, i))
 }
 
-func getHolding(coin string, statuses []*CarryStatus) (bids, asks model.Ticks, bidStatus, askStatus map[string]*CarryStatus, holding, price float64) {
+func getHolding(statuses []*CarryStatus) (bids, asks model.Ticks, bidStatus, askStatus map[string]*CarryStatus,
+	holding, price float64, holdStr string) {
 	bids = model.Ticks{}
 	asks = model.Ticks{}
 	bidStatus = make(map[string]*CarryStatus)
 	askStatus = make(map[string]*CarryStatus)
-	holdStr := ``
 	for _, status := range statuses {
 		if status == nil {
 			util.LogLess(util.LogLevelError, `warning: fail to get one status`)
@@ -524,14 +524,12 @@ func getHolding(coin string, statuses []*CarryStatus) (bids, asks model.Ticks, b
 			price = bids[0].Price
 		}
 	}
-	util.Log(util.LogLevelInfo, fmt.Sprintf(`need equal holding %s %f worth %f list %s`,
-		coin, holding, holding*price, holdStr))
-	return bids, asks, bidStatus, askStatus, holding, price
+	return bids, asks, bidStatus, askStatus, holding, price, holdStr
 }
 
 // settings []*model.Setting, coinStatus map[string]map[string]map[string]*CarryStatus
 func equalCoin(coin string, statuses []*CarryStatus) (isEqual bool, holdingInMoney float64, errMsg string) {
-	bids, asks, bidStatus, askStatus, holding, price := getHolding(coin, statuses)
+	bids, asks, bidStatus, askStatus, holding, price, holdStr := getHolding(statuses)
 	holdingInMoney = holding * price
 	if math.Abs(holdingInMoney) > compTooBig {
 		coinSettings := api.GetCoinSettings(model.FunctionCross)
@@ -556,6 +554,7 @@ func equalCoin(coin string, statuses []*CarryStatus) (isEqual bool, holdingInMon
 		if holdingInMoney < SmallInU {
 			break
 		}
+		util.Log(util.LogLevelInfo, fmt.Sprintf(`need equal holding %s %f worth %f list %s`, coin, holding, holdingInMoney, holdStr))
 		status := bidStatus[fmt.Sprintf(`%s_%s`, bids[i].Market, bids[i].Symbol)]
 		if status == nil {
 			util.Log(util.LogLevelError, fmt.Sprintf(`no status when holding in U: %f %s %s`, holdingInMoney, bids[i].Market, bids[i].Symbol))
@@ -585,13 +584,14 @@ func equalCoin(coin string, statuses []*CarryStatus) (isEqual bool, holdingInMon
 					status.market, status.symbol, status.AvailableSell, bids[i].Price, checkAmount)
 			}
 		}
-		holdingInMoney -= placeEqual(equalStatus, price, amount, model.OrderSideSell)
+		holdingInMoney += placeEqual(equalStatus, price, amount, model.OrderSideSell)
 	}
 	sort.Sort(asks)
 	for i := 0; i < len(asks); i++ {
 		if holdingInMoney > -SmallInU {
 			break
 		}
+		util.Log(util.LogLevelInfo, fmt.Sprintf(`need equal holding %s %f worth %f list %s`, coin, holding, holdingInMoney, holdStr))
 		status := askStatus[fmt.Sprintf(`%s_%s`, asks[i].Market, asks[i].Symbol)]
 		if status == nil {
 			util.Log(util.LogLevelError, fmt.Sprintf(`no status when holding in U: %f %s %s`, holdingInMoney, asks[i].Market, asks[i].Symbol))
