@@ -730,7 +730,11 @@ func parseOrderGateSpot(gateOrder *gateApi.Order) (order *model.Order) {
 	case `open`:
 		order.Status = model.CarryStatusWorking
 	case `closed`:
-		order.Status = model.CarryStatusSuccess
+		if gateOrder.FinishAs == `filled` {
+			order.Status = model.CarryStatusSuccess
+		} else {
+			order.Status = model.CarryStatusFail
+		}
 	case `cancelled`:
 		order.Status = model.CarryStatusFail
 	}

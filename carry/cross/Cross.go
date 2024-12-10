@@ -15,8 +15,8 @@ import (
 
 func createContractMarket(key, secret, market string) (cm *contractMarket) {
 	success, positions, accountValue, availableU, mmr := api.GetPositions(key, secret, market)
-	util.Log(util.LogLevelInfo, fmt.Sprintf(`get positions %s %s %#v account value %f available u %f maintain rate %f`,
-		market, key, success, accountValue, availableU, mmr))
+	util.Log(util.LogLevelInfo, fmt.Sprintf(`get positions %s %s %#v account value %f available u %f maintain rate %f positions %#v`,
+		market, key, success, accountValue, availableU, mmr, positions))
 	settings := api.GetSettings(model.FunctionCross, market)
 	if success {
 		cm = &contractMarket{key: key, market: market}
@@ -50,6 +50,7 @@ func createContractMarket(key, secret, market string) (cm *contractMarket) {
 func createSpotMarket(key, secret, market string) (sm *spotMarket) {
 	//util.Info(fmt.Sprintf(`create sm %s %s`, key[:5], market))
 	success, balances, totalInUsd, collateral := api.GetBalances(key, secret, market)
+	util.Log(util.LogLevelInfo, fmt.Sprintf(`create spot market %s %#v`, market, balances))
 	if success {
 		sm = &spotMarket{key: key, market: market}
 		sm.balances = make(map[string]*model.Balance)

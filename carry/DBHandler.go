@@ -50,7 +50,8 @@ func _(key, secret string) {
 	}
 }
 
-func MaintainTransFee() {
+// MaintainTransFee
+func _() {
 	for {
 		var orders []model.Order
 		for {
@@ -167,7 +168,7 @@ func Maintain() {
 	//go CheckPastRefresh()
 	//go util.StartMidNightTimer(CancelAllOrders)
 	//go MaintainBalance()
-	go MaintainTransFee()
+	//go MaintainTransFee()
 	api.InitApp(true)
 	//go func() {
 	//	for true {

@@ -957,9 +957,9 @@ func parseOrderBybit(value map[string]interface{}) (order *model.Order) {
 		switch status {
 		case `New`, `PartiallyFilled`, `Untriggered`:
 			order.Status = model.CarryStatusWorking
-		case `Rejected`, `Deactivated`, `Cancelled`:
+		case `Rejected`, `Deactivated`, `Cancelled`, `PartiallyFilledCanceled`:
 			order.Status = model.CarryStatusFail
-		case `PartiallyFilledCanceled`, `Filled`:
+		case `Filled`:
 			order.Status = model.CarryStatusSuccess
 		default:
 			order.Status = model.CarryStatusFail
@@ -1031,6 +1031,7 @@ func queryOrderBybit(key, secret, symbol, orderId string) *model.Order {
 	}
 	order := &model.Order{Market: model.Bybit, Status: model.CarryStatusWorking, OrderId: orderId, Symbol: symbol}
 	for _, orderDetail := range orderResp.Result.List {
+		order.Price, _ = strconv.ParseFloat(orderDetail.Price, 64)
 		order.DealPrice, _ = strconv.ParseFloat(orderDetail.AvgPrice, 64)
 		order.Amount, _ = strconv.ParseFloat(orderDetail.Qty, 64)
 		order.DealAmount, _ = strconv.ParseFloat(orderDetail.CumExecQty, 64)
@@ -1039,9 +1040,9 @@ func queryOrderBybit(key, secret, symbol, orderId string) *model.Order {
 		intUpdateTime, _ := strconv.ParseInt(orderDetail.UpdatedTime, 10, 64)
 		order.OrderTime = time.UnixMilli(intCreateTime)
 		order.OrderUpdateTime = time.UnixMilli(intUpdateTime)
-		if orderDetail.OrderStatus == "Cancelled" || orderDetail.OrderStatus == "Rejected" {
+		if orderDetail.OrderStatus == "Cancelled" || orderDetail.OrderStatus == "Rejected" || orderDetail.OrderStatus == "PartiallyFilledCanceled" {
 			order.Status = model.CarryStatusFail
-		} else if orderDetail.OrderStatus == "Filled" || orderDetail.OrderStatus == "PartiallyFilled" || orderDetail.OrderStatus == "PartiallyFilledCanceled" {
+		} else if orderDetail.OrderStatus == "Filled" {
 			order.Status = model.CarryStatusSuccess
 		} else {
 			util.Log(util.LogLevelError, fmt.Sprintf(
