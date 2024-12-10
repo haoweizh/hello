@@ -766,32 +766,26 @@ func Test_GateSols(t *testing.T) {
 	fmt.Println(coins)
 }
 
-//func Test_C(t *testing.T) {
-//	// Initialize market publisher
-//	marketPublisher, err := util.NewMarketPublisher("market_topic")
-//	if err != nil {
-//
-//		log.Fatalf("Failed to create market publisher: %#v", err)
-//	}
-//	defer marketPublisher.Close()
-//
-//	// Publish a market message
-//	err = marketPublisher.MarketPublish("Hello, Market!")
-//	if err != nil {
-//		log.Fatalf("Failed to publish market message: %#v", err)
-//	}
-//
-//	// Initialize market receiver
-//	marketReceiver, err := util.NewMarketReceiver("market_topic")
-//	if err != nil {
-//		log.Fatalf("Failed to create market receiver: %#v", err)
-//	}
-//	defer marketReceiver.Close()
-//
-//	// Receive a market message
-//	message := marketReceiver.MarketReceive(1024)
-//	if err != nil {
-//		log.Fatalf("Failed to receive market message: %#v", err)
-//	}
-//	fmt.Println("Received market message:", message)
-//}
+func Test_C(t *testing.T) {
+	// Initialize publishers and receivers
+	marketPublisher, _ := util.InitMarketPublisher("market_topic")
+	orderPublisher, _ := util.InitOrderPublisher("order_topic")
+	marketReceiver, _ := util.InitMarketReceiver("market_topic")
+	orderReceiver, _ := util.InitOrderReceiver("order_topic")
+
+	// Publish messages
+	marketPublisher.PublishMarket("Hello PublishMarket!")
+	orderPublisher.PublishOrder("Hello PublishOrder!")
+
+	// Receive messages
+	buf := make([]byte, 1024)
+	msgSize := marketReceiver.ReceiveMarket(buf)
+	if msgSize > 0 {
+		fmt.Printf("Received from market: %s\n", string(buf[:msgSize]))
+	}
+
+	msgSize = orderReceiver.ReceiveOrder(buf)
+	if msgSize > 0 {
+		fmt.Printf("Received from order: %s\n", string(buf[:msgSize]))
+	}
+}
