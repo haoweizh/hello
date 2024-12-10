@@ -358,12 +358,20 @@ func ClearCross() {
 				time.Sleep(time.Millisecond * 10)
 			}
 		}
-		leftOrders := 0
-		model.AppEnvironment.CrossOrders.Range(func(k, v interface{}) bool {
-			leftOrders++
-			util.Log(util.LogLevelInfo, fmt.Sprintf(`left orders %d key %#v %#v`, leftOrders, k, v))
-			return true
-		})
+		for {
+			leftOrders := 0
+			model.AppEnvironment.CrossOrders.Range(func(k, v interface{}) bool {
+				if time.Now().Unix()-v.(*model.Order).OrderTime.Unix() < 80 {
+					leftOrders++
+				}
+				util.Log(util.LogLevelInfo, fmt.Sprintf(`left orders %d key %v %#v`, leftOrders, k, v))
+				return true
+			})
+			if leftOrders == 0 {
+				break
+			}
+			time.Sleep(time.Second * 3)
+		}
 		model.AppEnvironment.CrossOrders = sync.Map{}
 		today := util.GetNow()
 		today = time.Date(today.Year(), today.Month(), today.Day(), 0, 0, 0, 0, today.Location())
