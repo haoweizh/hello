@@ -6,7 +6,8 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
-	"io/ioutil"
+	"hello/util"
+	"io"
 	"math"
 	"net/http"
 	"net/url"
@@ -68,13 +69,10 @@ func (p *BitgetRestClient) DoPost(uri string, params string) ([]byte, error) {
 	//}
 	timesStamp := strconv.FormatInt(time.Now().Unix()*1000, 10)
 	//body, _ := BuildJsonParams(params)
-
 	sign := Sign(http.MethodPost, uri, params, timesStamp, []byte(p.ApiSecretKey))
 	requestUrl := p.BaseUrl + uri
-
 	buffer := strings.NewReader(params)
 	request, err := http.NewRequest(http.MethodPost, requestUrl, buffer)
-
 	Headers(request, p.ApiKey, timesStamp, sign, p.Passphrase)
 	if err != nil {
 		return []byte(""), err
@@ -82,19 +80,22 @@ func (p *BitgetRestClient) DoPost(uri string, params string) ([]byte, error) {
 	client := http.Client{
 		Timeout: time.Duration(30) * time.Second,
 	}
-	response, err := client.Do(request)
-
+	var response *http.Response
+	response, err = client.Do(request)
 	if err != nil {
 		return []byte(""), err
 	}
-
-	defer response.Body.Close()
-
-	bodyStr, err := ioutil.ReadAll(response.Body)
+	defer func(Body io.ReadCloser) {
+		err = Body.Close()
+		if err != nil {
+			util.Log(util.LogLevelError, err.Error())
+		}
+	}(response.Body)
+	var bodyStr []byte
+	bodyStr, err = io.ReadAll(response.Body)
 	if err != nil {
 		return []byte(""), err
 	}
-
 	//responseBodyString := string(bodyStr)
 	return bodyStr, err
 }
@@ -108,11 +109,8 @@ func (p *BitgetRestClient) DoGet(uri string, params map[string]string) ([]byte, 
 	//}
 	timesStamp := strconv.FormatInt(time.Now().Unix()*1000, 10)
 	body := BuildGetParams(params)
-
 	sign := Sign(http.MethodGet, uri, body, timesStamp, []byte(p.ApiSecretKey))
-
 	requestUrl := p.BaseUrl + uri + body
-
 	request, err := http.NewRequest(http.MethodGet, requestUrl, nil)
 	if err != nil {
 		return []byte(""), err
@@ -121,19 +119,22 @@ func (p *BitgetRestClient) DoGet(uri string, params map[string]string) ([]byte, 
 	client := http.Client{
 		Timeout: time.Duration(30) * time.Second,
 	}
-	response, err := client.Do(request)
-
+	var response *http.Response
+	response, err = client.Do(request)
 	if err != nil {
 		return []byte(""), err
 	}
-
-	defer response.Body.Close()
-
-	bodyStr, err := ioutil.ReadAll(response.Body)
+	defer func(Body io.ReadCloser) {
+		err = Body.Close()
+		if err != nil {
+			util.Log(util.LogLevelError, err.Error())
+		}
+	}(response.Body)
+	var bodyStr []byte
+	bodyStr, err = io.ReadAll(response.Body)
 	if err != nil {
 		return []byte(""), err
 	}
-
 	//responseBodyString := string(bodyStr)
 	return bodyStr, err
 }
@@ -161,15 +162,11 @@ func BuildGetParams(params map[string]string) string {
 }
 
 func JSONToMap(str string) map[string]interface{} {
-
 	var tempMap map[string]interface{}
-
 	err := json.Unmarshal([]byte(str), &tempMap)
-
 	if err != nil {
 		//panic(err)
 	}
-
 	return tempMap
 }
 
@@ -198,7 +195,6 @@ func powerf(x float64, n int) float64 {
 
 func GetSignedInt(checksum string) string {
 	c, _ := strconv.ParseUint(checksum, 10, 64)
-
 	if c > math.MaxInt32 {
 		a := c - (1<<31-1)*2 - 2
 		return strconv.FormatUint(a, 10)

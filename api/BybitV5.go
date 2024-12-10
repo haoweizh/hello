@@ -468,8 +468,6 @@ func GetCoinBalanceBybit(key, secret, accountType string) (balances []*model.Bal
 			"fail to refresh spot balance bybit, resp: %s httpErr: %#v, jsonErr: %#v", httpResp, httpErr, jsonErr))
 		time.Sleep(time.Minute)
 		return GetCoinBalanceBybit(key, secret, accountType)
-	} else {
-		util.Log(util.LogLevelInfo, fmt.Sprintf("get spot balance bybit success, %s resp: %s ", key[:5], httpResp))
 	}
 	balances = make([]*model.Balance, 0)
 	for _, account := range balanceResp.Result.List {
@@ -501,8 +499,6 @@ func getBalanceBybit(key string, secret string) (success bool, balances []*model
 			"fail to refresh spot balance bybit, resp: %s httpErr: %#v, jsonErr: %#v", httpResp, httpErr, jsonErr))
 		time.Sleep(time.Minute)
 		return getBalanceBybit(key, secret)
-	} else {
-		util.Log(util.LogLevelInfo, fmt.Sprintf("get spot balance bybit success, %s resp: %s ", key[:5], httpResp))
 	}
 	balances = make([]*model.Balance, 0)
 	for _, account := range balanceResp.Result.List {
@@ -559,8 +555,6 @@ func getPositionsBybit(key, secret string) (success bool, positions []*Position,
 				positionHttpResp, positionHttpErr, positionJsonErr))
 			time.Sleep(time.Minute)
 			return getPositionsBybit(key, secret)
-		} else {
-			util.Log(util.LogLevelError, fmt.Sprintf("get perp position bybit success, resp: %s ", positionHttpResp))
 		}
 		for _, contract := range positionResp.Result.List {
 			if contract.TradeMode != 0 {
@@ -625,13 +619,12 @@ func SignedRequestBybit(key, secret, method, host, path string, body map[string]
 func WithdrawBybit(key, secret, coin, chain, address, amount string) bool {
 	param := map[string]interface{}{`chain`: chain, `coin`: coin, `amount`: amount,
 		`address`: address, `accountType`: `FUND`, `timestamp`: time.Now().UnixMilli()}
-	httpResp, httpErr := SignedRequestBybit(key, secret, http.MethodPost, bybitRestUrl,
+	_, httpErr := SignedRequestBybit(key, secret, http.MethodPost, bybitRestUrl,
 		`/v5/asset/withdraw/create`, param)
 	if httpErr != nil {
 		util.Log(util.LogLevelError, `fail to withdraw bybit`+httpErr.Error())
 		return false
 	} else {
-		util.Log(util.LogLevelInfo, string(httpResp))
 		return true
 	}
 }

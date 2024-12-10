@@ -141,7 +141,6 @@ func HttpRequest(method string, reqUrl string, body string, requestHeaders map[s
 			Log(LogLevelError, `fail to request, return `+err.Error())
 		}
 	}(resp.Body)
-	//bodyData, err := ioutil.ReadAll(resp.Body)
 	bodyData, readErr := io.ReadAll(resp.Body)
 	if readErr != nil {
 		Log(LogLevelError, "can not read message from request "+readErr.Error())

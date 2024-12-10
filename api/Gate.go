@@ -961,8 +961,7 @@ func cancelOrdersGate(key string, secret string, symbol string) (result bool) {
 			panicGateError(key, fmt.Sprintf("cancelOrdersGate %#v", orders), err)
 			return false
 		}
-		marshal, _ := json.Marshal(orders)
-		util.Log(util.LogLevelInfo, fmt.Sprintf(`cancel related orders response: %s`, marshal))
+		util.Log(util.LogLevelInfo, fmt.Sprintf(`cancelOrdersGate response: %#v`, orders))
 		return true
 	} else if success && marketType == model.MarketTypePerp {
 		orders, _, err := client.FuturesApi.CancelFuturesOrders(ctx, `usdt`, dialectSymbol, nil)
@@ -970,8 +969,7 @@ func cancelOrdersGate(key string, secret string, symbol string) (result bool) {
 			panicGateError(key, fmt.Sprintf("cancelFutureOrdersGate %#v", orders), err)
 			return false
 		}
-		marshal, _ := json.Marshal(orders)
-		util.Log(util.LogLevelInfo, fmt.Sprintf(`cancel future orders response: %d %s`, len(orders), marshal))
+		util.Log(util.LogLevelInfo, fmt.Sprintf(`cancel future orders response: %d %#v`, len(orders), orders))
 		return true
 	}
 	util.Log(util.LogLevelError, fmt.Sprintf(`cancel orders can not recognize gate symbol %s`, symbol))

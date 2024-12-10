@@ -588,13 +588,13 @@ func signedRequestBinance(key, secret, market, method, requestUrl string, withAp
 		requestUrl = requestUrl + "?" + param.Encode()
 	}
 	responseBody, _ := util.HttpRequest(method, requestUrl, "", headers, 60)
-	logMsg := fmt.Sprintf(`signedRequestBinance binance key %s request %s body %#v return %s`,
-		key, requestUrl, param, string(responseBody))
-	if strings.Contains(requestUrl, `/order`) {
-		util.Log(util.LogLevelInfo, logMsg)
-	} else if !strings.Contains(requestUrl, `exchangeInfo`) {
-		util.Log(util.LogLevelInfo, logMsg)
-	}
+	//logMsg := fmt.Sprintf(`signedRequestBinance binance key %s request %s body %#v return %s`,
+	//	key, requestUrl, param, string(responseBody))
+	//if strings.Contains(requestUrl, `/order`) {
+	//	util.Log(util.LogLevelInfo, logMsg)
+	//} else if !strings.Contains(requestUrl, `exchangeInfo`) {
+	//	util.Log(util.LogLevelInfo, logMsg)
+	//}
 	responseJson, err := util.NewJSON(responseBody)
 	if err != nil {
 		util.Log(util.LogLevelError, `signedRequestBinance fail to parse json `+err.Error())

@@ -256,8 +256,6 @@ func getBalanceBitgetSpot(key string, secret string) (success bool, balances []*
 			"fail to refresh bitgetspot balance, resp: %s httpErr: %#v, jsonErr: %#v", httpResp, httpErr, jsonErr))
 		time.Sleep(time.Second * 2)
 		return getBalanceBitgetSpot(key, secret)
-	} else {
-		util.Log(util.LogLevelInfo, fmt.Sprintf("get bitgetspot balance success, resp: %s ", httpResp))
 	}
 	balances = make([]*model.Balance, 0)
 	for _, account := range bitgetBalanceResp.Data {

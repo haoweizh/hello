@@ -490,10 +490,10 @@ func sendSignRequestOKEX(key, secret, method, path string, param, body map[strin
 	sign := base64.StdEncoding.EncodeToString(hash.Sum(nil))
 	headers[`OK-ACCESS-SIGN`] = sign
 	responseBody, err := util.HttpRequest(method, u.String(), postContent, headers, 60)
-	logMsg := fmt.Sprintf(`okex key %s request %s body %s return %s`,
-		key, u.String(), toBeSign, string(responseBody))
-	util.Log(util.LogLevelDebug, logMsg)
-	time.Sleep(time.Millisecond * 100)
+	//logMsg := fmt.Sprintf(`okex key %s request %s body %s return %s`,
+	//	key, u.String(), toBeSign, string(responseBody))
+	//util.Log(util.LogLevelDebug, logMsg)
+	//time.Sleep(time.Millisecond * 100)
 	return responseBody, err
 }
 
@@ -625,11 +625,11 @@ func placeOrderOKEX(account *model.Account, isWs bool, order *model.Order) {
 		order.Status = model.CarryStatusWorking
 		value, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrder, model.OKEX, account.Key)
 		if value == nil || value.(*model.WSConn).Conn == nil {
-			util.Log(util.LogLevelError, fmt.Sprintf(`-test ok ws-fail to get private connection %s`, account.Key))
+			util.Log(util.LogLevelError, fmt.Sprintf(`fail to get private connection when place okex order %s`, account.Key))
 			order.Status = model.CarryStatusFail
 		} else {
 			if err := SendToConnection(model.OKEX, value.(*model.WSConn), wsOrderMsg); err != nil {
-				util.Log(util.LogLevelError, fmt.Sprintf(`-test ok ws-fail to send order ws %s %s return %s`, account.Key, order.Symbol, err.Error()))
+				util.Log(util.LogLevelError, fmt.Sprintf(`fail to send ws place okex order %s %s return %s`, account.Key, order.Symbol, err.Error()))
 				order.Status = model.CarryStatusFail
 			} else {
 				util.Log(util.LogLevelInfo, fmt.Sprintf(`-test ok ws- success place okex ws order %s %s`, account.Key, order.Symbol))

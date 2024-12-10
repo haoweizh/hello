@@ -27,7 +27,6 @@ const wsBinanceSpotApi = `wss://ws-api.binance.com:443/ws-api/v3`
 const wsStepBinance = 30
 
 func GetMarketsBinance(account *model.Account, market string) (marketInfos map[string]*model.MarketInfo) {
-	util.Log(util.LogLevelError, fmt.Sprintf("GetMarketsBinance start to GetMarketsBinance %s", account.Key))
 	marketInfos = make(map[string]*model.MarketInfo)
 	client := binance.NewClient(account.Key, account.Secret)
 	exchangeInfo, err := client.NewExchangeInfoService().Do(context.Background())

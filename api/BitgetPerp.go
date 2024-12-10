@@ -162,8 +162,6 @@ func getPositionsBitgetPerp(key, secret string) (success bool, positions []*Posi
 			assetHttpResp, assetHttpErr, jsonErr))
 		time.Sleep(time.Minute)
 		return getPositionsBitgetPerp(key, secret)
-	} else {
-		util.Log(util.LogLevelError, fmt.Sprintf("get bitgetperp asset success, resp: %s ", assetHttpResp))
 	}
 	positionHttpResp, positionHttpErr := client.DoGet("/api/v2/mix/position/all-position", map[string]string{"productType": "USDT-FUTURES"})
 	bitgetPositionResp := &dtos.BitgetPositionResp{}
@@ -173,8 +171,6 @@ func getPositionsBitgetPerp(key, secret string) (success bool, positions []*Posi
 			positionHttpResp, positionHttpErr, positionJsonErr))
 		time.Sleep(time.Minute)
 		return getPositionsBitgetPerp(key, secret)
-	} else {
-		util.Log(util.LogLevelError, fmt.Sprintf("get bitgetperp position success, resp: %s ", positionHttpResp))
 	}
 	for _, asset := range bitgetAssertResp.Data {
 		if asset.MarginCoin == `USDT` {
@@ -342,7 +338,7 @@ func cancelOrdersBitgetPerp(key, secret, symbol string) (result bool) {
 	}
 	if jsonData != nil {
 		code, _ := jsonData.Get("code").String()
-		if code == "00000" || code == `22001` {
+		if code == "00000" {
 			util.Log(util.LogLevelInfo, fmt.Sprintf("success to cancel bitgetPerp orders code %s %d",
 				code, len(jsonData.GetPath(`data`, `successList`).MustArray())))
 			return true
@@ -368,7 +364,7 @@ func cancelAllBitgetPerp(key, secret string) (result bool) {
 	}
 	if jsonData != nil {
 		code, _ := jsonData.Get("code").String()
-		if code == "00000" || code == `22001` {
+		if code == "00000" {
 			util.Log(util.LogLevelInfo, fmt.Sprintf("success to cancelAllBitgetPerp code %s %d",
 				code, len(jsonData.GetPath(`data`, `successList`).MustArray())))
 			return true
@@ -484,8 +480,7 @@ func queryOrderBitgetPerp(key, secret, symbol string, orderId string) (order *mo
 		} else if orderDetailResp.Data.State == "partially_filled" {
 			order.Status = model.CarryStatusWorking
 		}
-		util.Log(util.LogLevelInfo, fmt.Sprintf(`%s %s %s query result:%s %f %#v`,
-			order.Market, order.Symbol, order.OrderId, order.Status, order.DealAmount, orderDetailResp))
+		util.Log(util.LogLevelInfo, fmt.Sprintf(`query result %#v %#v`, order, orderDetailResp))
 	}
 	return order
 }
