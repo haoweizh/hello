@@ -278,6 +278,7 @@ func initStatus(account *model.Account, setting *model.Setting, absentRevert boo
 	}
 	if setting.Market == model.OKEX {
 		success, maxBuy, maxSell := api.GetTradeMaxOKEX(account.Key, account.Secret, setting.Symbol, 600)
+		time.Sleep(time.Millisecond * 80)
 		if success {
 			status.AvailableBuy = math.Min(status.AvailableBuy, maxBuy)
 			status.AvailableSell = math.Min(status.AvailableSell, maxSell)
@@ -1185,10 +1186,10 @@ func handleCross(account *model.Account, order *model.Order) {
 					compOrder := api.PlaceOrder(account.Key, account.Secret, order.OrderSide, model.OrderTypeMarket, order.Market, order.Symbol,
 						``, model.FunctionComplement, order.Price, order.Price, leftAmt, false, nil)
 					model.AppDB.Save(compOrder)
-					util.Log(util.LogLevelInfo, fmt.Sprintf(`post comp from %#v \n %#v not deal %f 百分之%f`,
+					util.Log(util.LogLevelInfo, fmt.Sprintf(`post comp from %#v %#v not deal %f 百分之%f`,
 						order, compOrder, leftAmt, math.Round(100*leftAmt/order.Amount)))
 				} else {
-					util.Log(util.LogLevelInfo, fmt.Sprintf(`order update fail %#v left %f \n %#v`, order, leftAmt, queryOrder))
+					util.Log(util.LogLevelInfo, fmt.Sprintf(`order update fail %#v left %f %#v`, order, leftAmt, queryOrder))
 				}
 			} else {
 				util.Log(util.LogLevelError, fmt.Sprintf(`order update fail query %#v`, order))
