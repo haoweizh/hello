@@ -182,7 +182,9 @@ func createFromBalance(account *model.Account, setting *model.Setting, valueLimi
 	sm := value.(*spotMarket)
 	limitBuy, limitSell, availableBuy := 0.0, 0.0, 0.0
 	if setting.Function == model.FunctionCross {
-		limitBuy = math.Min(sm.availableU/5, sm.accountValueInU/15) / price
+		u := sm.availableU
+		actU := sm.accountValueInU
+		limitBuy = math.Min(u/5, actU/15) / price
 	} else if setting.Function == model.FunctionQueue {
 		limitBuy = sm.availableU * 0.9 / price
 	}
