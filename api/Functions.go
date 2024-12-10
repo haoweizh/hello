@@ -54,7 +54,7 @@ func _(environment *model.Environment, market string, symbols map[string]bool) (
 			break
 		}
 	}
-	util.Log(util.LogLevelInfo, fmt.Sprintf(`RequireKLineReset %s %v`, market, reset))
+	util.Log(util.LogLevelInfo, fmt.Sprintf(`RequireKLineReset %s %#v`, market, reset))
 	return reset
 }
 
@@ -119,7 +119,7 @@ func RequireConnTickReset(environment *model.Environment, market string) bool {
 			return true
 		})
 	}
-	util.Log(util.LogLevelInfo, fmt.Sprintf(`require conn tick reset %d  %f valid %d in %d %s needReset %v`,
+	util.Log(util.LogLevelInfo, fmt.Sprintf(`require conn tick reset %d  %f valid %d in %d %s needReset %#v`,
 		now, model.AppConfig.Delay, validSymbolNum, len(symbols), market, needReset))
 	return needReset.(bool)
 }
@@ -173,7 +173,7 @@ func CancelAll(key, secret, market string) {
 		orders := queryOpenOrdersBinanceSpot(key, secret, ``)
 		for _, order := range orders {
 			result, _ := cancelOrderBinance(key, secret, market, order.Symbol, order.OrderId)
-			util.Log(util.LogLevelInfo, fmt.Sprintf(`cancelAll orders success BinanceSpot %s id %s return %v`,
+			util.Log(util.LogLevelInfo, fmt.Sprintf(`cancelAll orders success BinanceSpot %s id %s return %#v`,
 				order.Symbol, order.OrderId, result))
 			time.Sleep(time.Millisecond * 100)
 		}
@@ -181,7 +181,7 @@ func CancelAll(key, secret, market string) {
 		orders := queryOpenOrdersBinancePerp(key, secret, ``)
 		for _, order := range orders {
 			result := cancelOrderBinancePerp(key, secret, order.Symbol, order.OrderId)
-			util.Log(util.LogLevelInfo, fmt.Sprintf(`cancelAll orders success BinancePerp %s id %s return %v`,
+			util.Log(util.LogLevelInfo, fmt.Sprintf(`cancelAll orders success BinancePerp %s id %s return %#v`,
 				order.Symbol, order.OrderId, result))
 			time.Sleep(time.Millisecond * 100)
 		}
@@ -225,7 +225,7 @@ func CancelOrders(key, secret, market, symbol string) (result bool) {
 		//	result = deprecated.cancelOrdersMexc(key, secret, symbol)
 	}
 	time.Sleep(time.Second * 2)
-	util.Log(util.LogLevelInfo, fmt.Sprintf(`cancel symbol orders %s %s return %v`, market, symbol, result))
+	util.Log(util.LogLevelInfo, fmt.Sprintf(`cancel symbol orders %s %s return %#v`, market, symbol, result))
 	return result
 }
 
@@ -255,7 +255,7 @@ func CancelOrder(key, secret, market, symbol, orderType, orderId string) (result
 	case model.BinanceSpot:
 		result, _ = cancelOrderBinance(key, secret, market, symbol, orderId)
 	}
-	util.Log(util.LogLevelInfo, fmt.Sprintf(`[cancel %s %v %s %s]`, orderId, result, market, symbol))
+	util.Log(util.LogLevelInfo, fmt.Sprintf(`[cancel %s %#v %s %s]`, orderId, result, market, symbol))
 	return result, errCode, msg
 }
 
@@ -395,7 +395,7 @@ func GetMultiCandle(account *model.Account, market string, slotSeconds int, begi
 			if !isCache {
 				time.Sleep(time.Millisecond * 100)
 			} else {
-				//util.Notice(fmt.Sprintf(`get candles from cache %s %s %v %v %d %d`,
+				//util.Notice(fmt.Sprintf(`get candles from cache %s %s %#v %#v %d %d`,
 				//	market, symbol, begin, end, count, slotSeconds))
 			}
 		}
@@ -460,7 +460,7 @@ func GetMarketEquity(index int) (msg string) {
 		//util.Notice(fmt.Sprintf(`try to get value for %s account %s`, market, accounts[market].Key[:5]))
 		_, _, equity, _ := GetBalances(accounts[market].Key, accounts[market].Secret, market)
 		if equity == 0 && !accounts[market].IsUnified {
-			_, _, equity, _ = GetPositions(accounts[market].Key, accounts[market].Secret, market)
+			_, _, equity, _, _ = GetPositions(accounts[market].Key, accounts[market].Secret, market)
 		}
 		inAll += equity
 		msg += fmt.Sprintf("%s: %f\n", market, equity)
@@ -522,7 +522,7 @@ func GetBalances(key, secret, market string) (
 			}
 		}
 	}
-	//util.Notice(fmt.Sprintf(`get balances %s %s %f %d %v`,
+	//util.Notice(fmt.Sprintf(`get balances %s %s %f %d %#v`,
 	//	market, key[:5], totalInUsd, len(balances), success))
 	return success, balances, totalInUsd, collateral
 }
@@ -641,34 +641,12 @@ func QueryOrderById(key, secret, market, symbol, orderType, orderId string) (ord
 		queryOrderGate(key, secret, order)
 	case model.OKEX:
 		order = queryOrderOKEX(key, secret, symbol, orderId, orderType)
-		return order
 	case model.BinanceSpot:
 		order = queryOrderBinanceSpot(key, secret, symbol, orderId)
 	case model.BinancePerp:
 		order = queryOrderBinancePerp(key, secret, symbol, orderId)
 	case model.Bybit:
 		order = queryOrderBybit(key, secret, symbol, orderId)
-		//case model.KucoinSpot:
-		//	order = deprecated.queryOrderKucoinSpot(symbol, orderId)
-		//case model.KucoinPerp:
-		//	order = deprecated.queryOrderKucoinPerp(symbol, orderId)
-		//case model.HuobiPerp:
-		//	order = deprecated.queryOrderHuobiPerp(key, secret, symbol, orderId)
-		//case model.HuobiSpot:
-		//	order = deprecated.queryOrderHuobiSpot(key, secret, orderId)
-		//case model.Ftx: // 查询是否是待成交状态，如果已成交或已取消，则ftx返回order not found信息，order为nil
-		//	if orderType == model.OrderTypeStop {
-		//		newOrderId := deprecated.queryTriggerOrderId(key, secret, orderId)
-		//		if newOrderId != `` {
-		//			return deprecated.queryOrderFtx(key, secret, newOrderId)
-		//		} else {
-		//			order.Status = deprecated.queryTriggerOrderFtx(key, secret, symbol, orderId)
-		//		}
-		//	} else {
-		//		return deprecated.queryOrderFtx(key, secret, orderId)
-		//	}
-		//case model.Mexc:
-		//	order = deprecated.queryOrderMexc(key, secret, symbol, orderId)
 	}
 	return order
 }
@@ -676,7 +654,7 @@ func QueryOrderById(key, secret, market, symbol, orderType, orderId string) (ord
 // GetPositions
 // accountValue: 账户权益
 // availableU: 可用usd
-func GetPositions(key, secret, market string) (success bool, positions []*Position, accountValue, availableU float64) {
+func GetPositions(key, secret, market string) (success bool, positions []*Position, accountValue, availableU, mmr float64) {
 	lock, _ := positionLock.Load(key)
 	if lock == nil {
 		lock = &sync.Mutex{}
@@ -689,40 +667,25 @@ func GetPositions(key, secret, market string) (success bool, positions []*Positi
 	}()
 	switch market {
 	case model.BitgetPerp:
-		success, positions, accountValue, availableU = getPositionsBitgetPerp(key, secret)
+		success, positions, accountValue, availableU, mmr = getPositionsBitgetPerp(key, secret)
 	case model.Gate:
 		_, _, total, collateral := getBalanceGate(key, secret)
 		success, positions = getPositionsGate(key, secret)
-		accountValue, availableU = total, collateral.Available
+		accountValue, availableU, mmr = total, collateral.Available, collateral.Rate
 	case model.BinancePerp:
-		success, positions, accountValue, availableU = getPositionsBinancePerp(key, secret)
+		success, positions, accountValue, availableU, mmr = getPositionsBinancePerp(key, secret)
 	case model.Bybit:
 		_, _, total, collateral := getBalanceBybit(key, secret)
 		success, positions, _ = getPositionsBybit(key, secret)
-		accountValue, availableU = total, collateral.Available
-	//case model.HuobiPerp:
-	//	success, positions, accountValue, availableU = deprecated.getPositionsHuobiPerp(key, secret)
-	//case model.Mexc:
-	//	success, positions, accountValue, availableU = deprecated.getPositionsMexc(key, secret)
-	//case model.KucoinPerp:
-	//	success, positions, accountValue, availableU = deprecated.getPositionsKucoinPerp(key, secret)
-	//case model.Ftx:
-	//	var balances []*model.Balance
-	//	success, balances, accountValue = deprecated.getBalanceFtx(key, secret)
-	//	for _, balance := range balances {
-	//		if strings.EqualFold(balance.Coin, `usd`) {
-	//			availableU += balance.Amount
-	//		}
-	//	}
-	//	success, positions, _ = deprecated.getPositionsFtx(key, secret)
+		accountValue, availableU, mmr = total, collateral.Available, collateral.Rate
 	case model.OKEX:
 		_, _, total, collateral := getBalanceOKEX(key, secret)
 		success, positions = getPositionsOKEX(key, secret)
-		accountValue, availableU = total, collateral.Available
+		accountValue, availableU, mmr = total, collateral.Available, collateral.Rate
 	}
-	//util.Notice(fmt.Sprintf(`get positions %s %s %f %f %d %v`,
+	//util.Notice(fmt.Sprintf(`get positions %s %s %f %f %d %#v`,
 	//	market, key[:5], accountValue, availableU, len(positions), success))
-	return success, positions, accountValue, availableU
+	return success, positions, accountValue, availableU, mmr
 }
 
 func GetStandardOrderType(market, dialectType string) (standardType string) {
@@ -965,7 +928,7 @@ const topMarketInfoLenCross = 30
 func InitCrossMarketInfos(markets []string) {
 	infoPool := make(map[string][]*model.MarketInfo) // coin - []marketInfos
 	topCoins := make(map[string]bool)
-	util.Log(util.LogLevelInfo, fmt.Sprintf(`begin to init cross market infos %v`, markets))
+	util.Log(util.LogLevelInfo, fmt.Sprintf(`begin to init cross market infos %#v`, markets))
 	for _, market := range markets {
 		InitMarketInfos(market)
 		if market != model.OKEX && market != model.BinancePerp {
@@ -1022,7 +985,7 @@ func InitCrossMarketInfos(markets []string) {
 						OpenShortMargin:  scoreOpen,
 						CloseShortMargin: scoreClose,
 						SymbolRelated:    topCross}
-					util.Log(util.LogLevelInfo, fmt.Sprintf(`save setting %s %s %s %v`, info.Market, info.Name, coin, setting.Valid))
+					util.Log(util.LogLevelInfo, fmt.Sprintf(`save setting %s %s %s %#v`, info.Market, info.Name, coin, setting.Valid))
 					model.AppDB.Save(setting)
 				} else {
 					model.AppDB.Model(&settingsDb).Where("market= ? and symbol= ? and function= ?",

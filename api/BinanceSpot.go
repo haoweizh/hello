@@ -33,7 +33,7 @@ func GetMarketsBinance(account *model.Account, market string) (marketInfos map[s
 	exchangeInfo, err := client.NewExchangeInfoService().Do(context.Background())
 	stats, _ := client.NewListPriceChangeStatsService().Do(context.Background())
 	if err != nil {
-		util.Log(util.LogLevelError, fmt.Sprintf("GetMarketsBinance %s err: %s %v休息五分钟", account.Key, err.Error(), exchangeInfo))
+		util.Log(util.LogLevelError, fmt.Sprintf("GetMarketsBinance %s err: %s %#v休息五分钟", account.Key, err.Error(), exchangeInfo))
 		time.Sleep(time.Minute * 5)
 		return GetMarketsBinance(account, market)
 	}

@@ -334,7 +334,7 @@ package deprecated
 //	if checkAmount > 0 {
 //		resultPerp := api.CancelOrders(key, secret, setting.Market, settingSymbol)
 //		resultRelated := api.CancelOrders(key, secret, setting.Market, symbolRelated)
-//		util.Notice(fmt.Sprintf(`%s cancel all perp:%v related:%v >>>>>> equal %s %f, %s %f = %s %f`,
+//		util.Notice(fmt.Sprintf(`%s cancel all perp:%#v related:%#v >>>>>> equal %s %f, %s %f = %s %f`,
 //			setting.Market, resultPerp, resultRelated, settingSymbol, amountPerp, symbolRelated, amountRelated, orderSide, amount))
 //		api.PlaceOrder(key, secret, orderSide, model.OrderTypeLimit, setting.Market, symbol, symbol,
 //			``, model.FunctionComplement, price, price, amount, true, true, nil)

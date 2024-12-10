@@ -61,6 +61,7 @@ type contractMarket struct {
 	collateralsAvailable float64                  // 可用保证金U数
 	contractValueInU     float64                  // 当前价格下开仓总额，以U计算
 	accountValueInU      float64                  // 期货权益InU
+	mmr                  float64                  // 维持保证金率
 	positions            map[string]*api.Position // symbol/position
 }
 
@@ -303,10 +304,10 @@ func GetCrossMarketValue(key, secret, market string, force bool) (inAllSpot, con
 }
 
 func pauseCarry(key string, seconds int) {
-	util.Log(util.LogLevelInfo, fmt.Sprintf(`%s carrying pause %v`, key, true))
+	util.Log(util.LogLevelInfo, fmt.Sprintf(`%s carrying pause %#v`, key, true))
 	carryStop.Store(key, true)
 	time.Sleep(time.Second * time.Duration(seconds))
-	util.Log(util.LogLevelInfo, fmt.Sprintf(`%s carrying pause %v`, key, false))
+	util.Log(util.LogLevelInfo, fmt.Sprintf(`%s carrying pause %#v`, key, false))
 	carryStop.Store(key, false)
 }
 
@@ -419,7 +420,7 @@ func liquidateBitgetPerp(account *model.Account) {
 	if v != nil && now-v.(int64) < 3600 {
 		return
 	}
-	success, positions, _, _ := api.GetPositions(account.Key, account.Secret, model.BitgetPerp)
+	success, positions, _, _, _ := api.GetPositions(account.Key, account.Secret, model.BitgetPerp)
 	if success {
 		liquidBitgetTime.Store(account.Key, now)
 		for _, position := range positions {

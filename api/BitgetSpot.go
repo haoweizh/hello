@@ -119,7 +119,7 @@ func getMarketsBitgetSpot() (marketInfos map[string]*model.MarketInfo) {
 	spotJsonErr := json.Unmarshal(httpResp, spotResp)
 	if spotResp == nil || spotResp.Code != "00000" {
 		util.Log(util.LogLevelError, fmt.Sprintf(fmt.Sprintf(
-			"get bitget spot market error, resp: %s, httpErr: %v, jsonErr: %v", httpResp, httpErr, spotJsonErr)))
+			"get bitget spot market error, resp: %s, httpErr: %#v, jsonErr: %#v", httpResp, httpErr, spotJsonErr)))
 		return
 	}
 	marketInfos = make(map[string]*model.MarketInfo)
@@ -253,7 +253,7 @@ func getBalanceBitgetSpot(key string, secret string) (success bool, balances []*
 	jsonErr := json.Unmarshal(httpResp, bitgetBalanceResp)
 	if bitgetBalanceResp == nil || bitgetBalanceResp.Code != "00000" {
 		util.Log(util.LogLevelError, fmt.Sprintf(
-			"fail to refresh bitgetspot balance, resp: %s httpErr: %v, jsonErr: %v", httpResp, httpErr, jsonErr))
+			"fail to refresh bitgetspot balance, resp: %s httpErr: %#v, jsonErr: %#v", httpResp, httpErr, jsonErr))
 		time.Sleep(time.Second * 2)
 		return getBalanceBitgetSpot(key, secret)
 	} else {
@@ -306,14 +306,16 @@ func placeOrderBitgetSpot(key, secret string, order *model.Order, orderSide, ord
 	bitgetOrderResp := &dtos.BitgetOrderResp{}
 	jsonErr := json.Unmarshal(httpResp, bitgetOrderResp)
 	if bitgetOrderResp == nil {
-		util.Log(util.LogLevelError, fmt.Sprintf("fail to create bitget spot order no resp: %s httpErr: %v, jsonErr: %v", httpResp, httpErr, jsonErr))
+		util.Log(util.LogLevelError, fmt.Sprintf(
+			"fail to create bitget spot order no resp: %s httpErr: %#v, jsonErr: %#v", httpResp, httpErr, jsonErr))
 	} else if len(strings.Trim(bitgetOrderResp.Code, `0`)) == 0 {
 		order.Status = model.CarryStatusWorking
 		order.OrderId = bitgetOrderResp.Data.OrderId
 	} else {
 		order.Status = model.CarryStatusFail
 		order.ErrCode = bitgetOrderResp.Code
-		util.Log(util.LogLevelError, fmt.Sprintf("fail to create bitget spot order resp: %s httpErr: %v, jsonErr: %v", httpResp, httpErr, jsonErr))
+		util.Log(util.LogLevelError, fmt.Sprintf(
+			"fail to create bitget spot order resp: %s httpErr: %#v, jsonErr: %#v", httpResp, httpErr, jsonErr))
 	}
 }
 
@@ -463,7 +465,8 @@ func queryOpenOrdersBitgetSpot(key, secret, symbol string) (orders []*model.Orde
 	orderDetailResp := &dtos.BitgetSpotOrderDetailResp{}
 	perpJsonErr := json.Unmarshal(httpResp, orderDetailResp)
 	if orderDetailResp == nil || orderDetailResp.Code != "00000" {
-		util.Log(util.LogLevelError, fmt.Sprintf("queryOpenOrdersBitgetSpot fail error http %v json %v resp %s", httpErr, perpJsonErr, httpResp))
+		util.Log(util.LogLevelError, fmt.Sprintf(
+			"queryOpenOrdersBitgetSpot fail error http %#v json %#v resp %s", httpErr, perpJsonErr, httpResp))
 		return nil
 	}
 	orders = parseOrderBitgetSpot(orderDetailResp)
@@ -478,7 +481,8 @@ func queryOrderBitgetSpot(key, secret, orderId string) (order *model.Order) {
 	orderDetailResp := &dtos.BitgetSpotOrderDetailResp{}
 	perpJsonErr := json.Unmarshal(httpResp, orderDetailResp)
 	if orderDetailResp == nil || orderDetailResp.Code != "00000" {
-		util.Log(util.LogLevelError, fmt.Sprintf("get bitget spot order detail error, resp: %s, httpErr: %v, jsonErr: %v", httpResp, httpErr, perpJsonErr))
+		util.Log(util.LogLevelError, fmt.Sprintf(
+			"get bitget spot order detail error, resp: %s, httpErr: %#v, jsonErr: %#v", httpResp, httpErr, perpJsonErr))
 		return nil
 	}
 	orders := parseOrderBitgetSpot(orderDetailResp)

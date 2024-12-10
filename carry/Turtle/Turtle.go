@@ -214,7 +214,7 @@ func handleTurtleBreak(key, secret string, setting *model.Setting, turtleData *m
 				}
 			}
 		}
-		util.Log(util.LogLevelInfo, fmt.Sprintf(`clear %s %s opp-%s %v`, setting.Market, setting.Symbol, orderSide, orderCancel))
+		util.Log(util.LogLevelInfo, fmt.Sprintf(`clear %s %s opp-%s %#v`, setting.Market, setting.Symbol, orderSide, orderCancel))
 	}
 }
 

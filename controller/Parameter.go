@@ -179,7 +179,7 @@ func simulateGrid(c *gin.Context) {
 			}
 		}
 	}
-	util.Log(util.LogLevelInfo, fmt.Sprintf(`done simulate grid %s %v`, market, coins))
+	util.Log(util.LogLevelInfo, fmt.Sprintf(`done simulate grid %s %#v`, market, coins))
 	c.String(http.StatusOK, `done`)
 }
 
@@ -474,10 +474,10 @@ func holdPage(c *gin.Context) {
 				strconv.FormatFloat(holdingSpot, 'f', 0, 64),
 				strconv.FormatFloat(holdingFuture, 'f', 0, 64),
 				strconv.FormatFloat(unrealizedPnl, 'f', 0, 64)})
-			inAll[0] += inAllSpot - keepInU
-			// 统一账户不算期货总价值
+			inAll[0] += contractAccountValue - keepInU
+			// 统一账户不算现货总价值
 			if !account.IsUnified {
-				inAll[0] += contractAccountValue
+				inAll[0] += inAllSpot
 			}
 			inAll[1] += inAllSpot
 			inAll[2] += contractAccountValue

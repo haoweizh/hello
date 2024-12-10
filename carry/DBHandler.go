@@ -63,7 +63,7 @@ func MaintainTransFee() {
 				`created_at>? and created_at<? and status=? and refresh_type!=? and refresh_type!=? and refresh_type!=? and refresh_type!=?`,
 				lastDays2, lastMin10, model.CarryStatusWorking, model.FunctionDCarry, model.FunctionCross, model.FunctionComplement, model.FunctionSimulation).
 				Find(&orders)
-			util.Log(util.LogLevelInfo, fmt.Sprintf(`--- get working orders %d %v %v`, len(orders), lastDays2, lastMin10))
+			util.Log(util.LogLevelInfo, fmt.Sprintf(`--- get working orders %d %#v %#v`, len(orders), lastDays2, lastMin10))
 			if len(orders) == 0 {
 				break
 			}

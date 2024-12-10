@@ -396,15 +396,15 @@ func cancelOrderBinancePerp(key, secret, symbol, orderId string) bool {
 	orderNum, _ := strconv.ParseInt(orderId, 10, 64)
 	res, err := client.NewCancelOrderService().Symbol(dialectSymbol).OrderID(orderNum).Do(context.Background())
 	if err != nil {
-		if strings.Contains(err.Error(), `code=-2011`) {
-			return true
-		}
+		//if strings.Contains(err.Error(), `code=-2011`) {
+		//	return true
+		//}
 		util.Log(util.LogLevelError, `cancelOrderBinancePerp fail to cancel binanceperp order`+err.Error())
 		return false
 	} else if res.Status == `CANCELED` {
 		return true
 	} else {
-		util.Log(util.LogLevelError, fmt.Sprintf(`cancelOrderBinancePerp status %v`, res.Status))
+		util.Log(util.LogLevelError, fmt.Sprintf(`cancelOrderBinancePerp status %#v`, res.Status))
 	}
 	return false
 }
@@ -427,7 +427,7 @@ func cancelOrdersBinancePerp(key, secret string, symbol string) bool {
 }
 
 // sdk暂不支持该接口
-func getPositionsBinancePerp(key, secret string) (success bool, positions []*Position, accountValue, availableU float64) {
+func getPositionsBinancePerp(key, secret string) (success bool, positions []*Position, accountValue, availableU, mmr float64) {
 	responseBody := signedRequestBinance(key, secret, model.BinancePerp, http.MethodGet,
 		restBinancePerp+"/fapi/v2/account", true, nil)
 	positionJson, err := util.NewJSON(responseBody)
@@ -443,11 +443,10 @@ func getPositionsBinancePerp(key, secret string) (success bool, positions []*Pos
 		positions = make([]*Position, 0)
 		totalBalanceJson := positionJson.Get(`totalWalletBalance`).MustString()
 		totalUnrealizedProfitJson := positionJson.Get(`totalUnrealizedProfit`).MustString()
-		availableJson := positionJson.Get(`availableBalance`).MustString()
 		unrealizedProfit, _ = strconv.ParseFloat(totalUnrealizedProfitJson, 64)
 		totalBalance, _ := strconv.ParseFloat(totalBalanceJson, 64)
 		accountValue = totalBalance + unrealizedProfit
-		availableU, _ = strconv.ParseFloat(availableJson, 64)
+		availableU, _ = strconv.ParseFloat(positionJson.Get(`availableBalance`).MustString(), 64)
 		data, err = positionJson.Get("positions").Array()
 		for _, item := range data {
 			position := &Position{Market: model.BinancePerp, Ts: util.GetNowUnixMillion()}
@@ -470,6 +469,10 @@ func getPositionsBinancePerp(key, secret string) (success bool, positions []*Pos
 			}
 			positions = append(positions, position)
 		}
+		totalMaintMargin, _ := strconv.ParseFloat(positionJson.Get("totalMaintMargin").MustString(), 64)
+		if accountValue > 0 {
+			mmr = totalMaintMargin / accountValue
+		}
 	} else {
 		util.Log(util.LogLevelError, `getPositionsBinancePerp fail to refresh binance position `)
 		time.Sleep(time.Minute)
@@ -481,7 +484,7 @@ func getPositionsBinancePerp(key, secret string) (success bool, positions []*Pos
 		time.Sleep(time.Minute)
 		return getPositionsBinancePerp(key, secret)
 	}
-	return success, positions, accountValue, availableU
+	return success, positions, accountValue, availableU, mmr
 }
 
 // 1m 3m 5m 15m 30m 1h 2h 4h 6h 8h 12h 1d 3d 1w 1M
@@ -585,7 +588,7 @@ func signedRequestBinance(key, secret, market, method, requestUrl string, withAp
 		requestUrl = requestUrl + "?" + param.Encode()
 	}
 	responseBody, _ := util.HttpRequest(method, requestUrl, "", headers, 60)
-	logMsg := fmt.Sprintf(`signedRequestBinance binance key %s request %s body %v return %s`,
+	logMsg := fmt.Sprintf(`signedRequestBinance binance key %s request %s body %#v return %s`,
 		key, requestUrl, param, string(responseBody))
 	if strings.Contains(requestUrl, `/order`) {
 		util.Log(util.LogLevelInfo, logMsg)

@@ -117,8 +117,8 @@ func Test_getCommonMarketInfos(t *testing.T) {
 		model.BinancePerp, `SOL_PERP`, ``, `test`,
 		19.407125, 19.407125, 100, false, nil)
 	fmt.Println(order1.OrderId)
-	success, pos, value, u := api.GetPositions(model.AppConfig.GateKey, model.AppConfig.GateSecret, model.Gate)
-	fmt.Println(fmt.Sprintf(`%v %v %v %v`, success, pos, value, u))
+	success, pos, value, u, _ := api.GetPositions(model.AppConfig.GateKey, model.AppConfig.GateSecret, model.Gate)
+	fmt.Println(fmt.Sprintf(`%#v %#v %#v %#v`, success, pos, value, u))
 }
 
 func TestWs(t *testing.T) {
@@ -159,34 +159,34 @@ func Test_WsAndOrderApi(t *testing.T) {
 		amount := 20 / price
 		order := api.PlaceOrder(account.Key, account.Secret, orderSide, orderType, market,
 			symbol, ``, `test`, price, price, amount, false, nil)
-		fmt.Println(fmt.Sprintf(`1. place order return %v`, order))
+		fmt.Println(fmt.Sprintf(`1. place order return %#v`, order))
 		if order != nil && order.OrderId != `` {
 			queryOrder := api.QueryOrderById(account.Key, account.Secret, market, symbol, orderType, order.OrderId)
-			fmt.Println(fmt.Sprintf(`2. query order %s return %s %s %v`, order.OrderId, queryOrder.OrderId, queryOrder.Status, queryOrder))
+			fmt.Println(fmt.Sprintf(`2. query order %s return %s %s %#v`, order.OrderId, queryOrder.OrderId, queryOrder.Status, queryOrder))
 		} else {
 			fmt.Println(fmt.Sprintf(`1. fail to place order`))
 			continue
 		}
 		//cancelResult, errCode, errMsg, cancelOrder := api.CancelOrder(account.Key, account.Secret, market, symbol,
 		//	orderType, order.OrderId)
-		//fmt.Println(fmt.Sprintf(`3. cancel %s return %v %s %s %v`, order.OrderId, cancelResult, errCode, errMsg, cancelOrder))
+		//fmt.Println(fmt.Sprintf(`3. cancel %s return %#v %s %s %#v`, order.OrderId, cancelResult, errCode, errMsg, cancelOrder))
 		//queryOrder := api.QueryOrderById(account.Key, account.Secret, market, symbol, orderType, order.OrderId)
-		//fmt.Println(fmt.Sprintf(`4. query order %s return %s %s %v`, order.OrderId, queryOrder.OrderId, queryOrder.Status, queryOrder))
+		//fmt.Println(fmt.Sprintf(`4. query order %s return %s %s %#v`, order.OrderId, queryOrder.OrderId, queryOrder.Status, queryOrder))
 		//order1 := api.PlaceOrder(account.Key, account.Secret, orderSide, orderType, market,
 		//	symbol, ``, ``, price, price, amount, false, true, nil, nil)
 		//order2 := api.PlaceOrder(account.Key, account.Secret, orderSide, orderType, market,
 		//	symbol, ``, ``, price, price, amount, false, true, nil, nil)
-		//fmt.Println(fmt.Sprintf(`5. place order return %v %v`, order1, order2))
+		//fmt.Println(fmt.Sprintf(`5. place order return %#v %#v`, order1, order2))
 		api.PlacePairOKEX(account, `requestId`, symbol, symbol, model.OrderTypeLimit, price*0.9, price*1.1, amount)
 		api.CancelOrders(account.Key, account.Secret, market, symbol)
 		//if order1 != nil {
 		//	time.Sleep(time.Second)
 		//	queryOrder = api.QueryOrderById(account.Key, account.Secret, market, symbol, orderType, order1.OrderId)
-		//	fmt.Println(fmt.Sprintf(`6. query order %s return %s %s %v`, order1.OrderId, queryOrder.OrderId, queryOrder.Status, queryOrder))
+		//	fmt.Println(fmt.Sprintf(`6. query order %s return %s %s %#v`, order1.OrderId, queryOrder.OrderId, queryOrder.Status, queryOrder))
 		//}
 		//if order2 != nil {
 		//	queryOrder = api.QueryOrderById(account.Key, account.Secret, market, symbol, orderType, order2.OrderId)
-		//	fmt.Println(fmt.Sprintf(`6. query order %s return %s %s %v`, order2.OrderId, queryOrder.OrderId, queryOrder.Status, queryOrder))
+		//	fmt.Println(fmt.Sprintf(`6. query order %s return %s %s %#v`, order2.OrderId, queryOrder.OrderId, queryOrder.Status, queryOrder))
 		//}
 	}
 	select {}
@@ -230,7 +230,7 @@ func Test_BalAndPos(t *testing.T) {
 	//for _, market := range balMarkets {
 	//	account := model.AppConfig.GetAccounts(market)[0]
 	//	success, balances, total, collateral := api.GetBalances(account.Key, account.Secret, market)
-	//	fmt.Println(fmt.Sprintf(`%v %f %v %d`, success, total, collateral, len(balances)))
+	//	fmt.Println(fmt.Sprintf(`%#v %f %#v %d`, success, total, collateral, len(balances)))
 	//	for _, balance := range balances {
 	//		if balance.Coin == `USDT` || balance.Coin == `USD` {
 	//			fmt.Println(fmt.Sprintf(`usd amount %s %f`, market, balance.Amount))
@@ -241,13 +241,13 @@ func Test_BalAndPos(t *testing.T) {
 	//posMarkets := []string{model.OKEX, model.BybitPerp, model.Ftx}
 	for _, market := range posMarkets {
 		account := model.AppConfig.GetAccounts(market)[0]
-		success, positions, total, available := api.GetPositions(account.Key, account.Secret, market)
-		fmt.Println(fmt.Sprintf(`%v %f %f %d`, success, total, available, len(positions)))
+		success, positions, total, available, _ := api.GetPositions(account.Key, account.Secret, market)
+		fmt.Println(fmt.Sprintf(`%#v %f %f %d`, success, total, available, len(positions)))
 		for _, position := range positions {
 			fmt.Println(fmt.Sprintf(`%s %f`, position.Currency, position.Holding))
 			api.CancelOrders(account.Key, account.Secret, market, position.Currency)
 		}
-		success, positions, total, available = api.GetPositions(account.Key, account.Secret, market)
+		success, positions, total, available, _ = api.GetPositions(account.Key, account.Secret, market)
 		for _, position := range positions {
 			fmt.Println(fmt.Sprintf(`%s %f`, position.Currency, position.Holding))
 			api.CancelOrders(account.Key, account.Secret, market, position.Currency)
@@ -351,24 +351,24 @@ func Test_CutTail(t *testing.T) {
 	market := model.BinancePerp
 	strBegin := `2023-02-22T00:00:00+00:00`
 	strEnd := `2024-2-22T00:00:00+00:00`
-	sign := fmt.Sprintf(`market%s,coins%s,%s~%s,far%d,near%d,limit%d,allLimit%d,useNear%v,useM%v,seconds86400`,
+	sign := fmt.Sprintf(`market%s,coins%s,%s~%s,far%d,near%d,limit%d,allLimit%d,useNear%#v,useM%#v,seconds86400`,
 		market, coins, strBegin, strEnd, 18, 9, 3, 10, true, false)
 	regret.CutTail(market, coins, sign)
-	sign = fmt.Sprintf(`market%s,coins%s,%s~%s,far%d,near%d,limit%d,allLimit%d,useNear%v,useM%v,seconds14400`,
+	sign = fmt.Sprintf(`market%s,coins%s,%s~%s,far%d,near%d,limit%d,allLimit%d,useNear%#v,useM%#v,seconds14400`,
 		market, coins, strBegin, strEnd, 50, 25, 3, 10, true, false)
 	regret.CutTail(market, coins, sign)
 	coins = `BTC`
-	sign = fmt.Sprintf(`market%s,coins%s,%s~%s,far%d,near%d,limit%d,allLimit%d,useNear%v,useM%v,seconds86400`,
+	sign = fmt.Sprintf(`market%s,coins%s,%s~%s,far%d,near%d,limit%d,allLimit%d,useNear%#v,useM%#v,seconds86400`,
 		market, coins, strBegin, strEnd, 22, 11, 3, 3, true, false)
 	regret.CutTail(market, coins, sign)
-	sign = fmt.Sprintf(`market%s,coins%s,%s~%s,far%d,near%d,limit%d,allLimit%d,useNear%v,useM%v,seconds14400`,
+	sign = fmt.Sprintf(`market%s,coins%s,%s~%s,far%d,near%d,limit%d,allLimit%d,useNear%#v,useM%#v,seconds14400`,
 		market, coins, strBegin, strEnd, 50, 25, 3, 3, true, false)
 	regret.CutTail(market, coins, sign)
 	coins = `ETH`
-	sign = fmt.Sprintf(`market%s,coins%s,%s~%s,far%d,near%d,limit%d,allLimit%d,useNear%v,useM%v,seconds86400`,
+	sign = fmt.Sprintf(`market%s,coins%s,%s~%s,far%d,near%d,limit%d,allLimit%d,useNear%#v,useM%#v,seconds86400`,
 		market, coins, strBegin, strEnd, 18, 9, 3, 3, true, false)
 	regret.CutTail(market, coins, sign)
-	sign = fmt.Sprintf(`market%s,coins%s,%s~%s,far%d,near%d,limit%d,allLimit%d,useNear%v,useM%v,seconds14400`,
+	sign = fmt.Sprintf(`market%s,coins%s,%s~%s,far%d,near%d,limit%d,allLimit%d,useNear%#v,useM%#v,seconds14400`,
 		market, coins, strBegin, strEnd, 32, 16, 3, 3, true, false)
 	regret.CutTail(market, coins, sign)
 	//coins := `CZCE.FG,DCE.jm,DCE.eb,CZCE.TA,SHFE.fu,DCE.p,CZCE.SF,SHFE.hc,DCE.v,DCE.y`
@@ -376,23 +376,23 @@ func Test_CutTail(t *testing.T) {
 	//coinNames := strings.Split(`CZCE.CY,CZCE.FG,CZCE.MA,CZCE.OI,CZCE.PF,CZCE.RM,CZCE.SA,CZCE.SF,CZCE.SM,CZCE.SR,CZCE.TA,CZCE.UR,CZCE.ZC,DCE.c,DCE.eb,DCE.eg,DCE.i,DCE.j,DCE.jm,DCE.l,DCE.m,DCE.p,DCE.pp,DCE.v,DCE.y,SHFE.bu,SHFE.cu,SHFE.fu,SHFE.hc,SHFE.pb,SHFE.rb,SHFE.ru`, `,`)
 	//for i := 3; i <= 25; i++ {
 	//	//coins = `ETH`
-	//	//sign := fmt.Sprintf(`market%s,coins%s,%s~%s,far%d,near%d,limit%d,allLimit%d,useNear%v,useM%v,seconds86400`,
+	//	//sign := fmt.Sprintf(`market%s,coins%s,%s~%s,far%d,near%d,limit%d,allLimit%d,useNear%#v,useM%#v,seconds86400`,
 	//	//	market, coins, strBegin, strEnd, i*2, i, 3, 10, true, false)
 	//	//regret.CutTail(market, coins, sign)
-	//	sign := fmt.Sprintf(`market%s,coins%s,%s~%s,far%d,near%d,limit%d,allLimit%d,useNear%v,useM%v,seconds14400,20`,
+	//	sign := fmt.Sprintf(`market%s,coins%s,%s~%s,far%d,near%d,limit%d,allLimit%d,useNear%#v,useM%#v,seconds14400,20`,
 	//		market, coins, strBegin, strEnd, i*2, i, 3, 10, false, false)
 	//	regret.CutTail(market, coins, sign)
-	//	//sign = fmt.Sprintf(`market%s,coins%s,%s~%s,far%d,near%d,limit%d,allLimit%d,useNear%v,useM%v,seconds86400`,
+	//	//sign = fmt.Sprintf(`market%s,coins%s,%s~%s,far%d,near%d,limit%d,allLimit%d,useNear%#v,useM%#v,seconds86400`,
 	//	//	market, coins, strBegin, strEnd, i*2, i, 3, 10, false, true)
 	//	//regret.CutTail(market, coins, sign)
 	//	//coins = `BTC`
-	//	//sign = fmt.Sprintf(`market%s,coins%s,%s~%s,far%d,near%d,limit%d,allLimit%d,useNear%v,useM%v,seconds14400`,
+	//	//sign = fmt.Sprintf(`market%s,coins%s,%s~%s,far%d,near%d,limit%d,allLimit%d,useNear%#v,useM%#v,seconds14400`,
 	//	//	market, coins, strBegin, strEnd, i*2, i, 3, 6, true, false)
 	//	//regret.CutTail(market, coins, sign)
-	//	//sign = fmt.Sprintf(`market%s,coins%s,%s~%s,far%d,near%d,limit%d,allLimit%d,useNear%v,useM%v,seconds14400`,
+	//	//sign = fmt.Sprintf(`market%s,coins%s,%s~%s,far%d,near%d,limit%d,allLimit%d,useNear%#v,useM%#v,seconds14400`,
 	//	//	market, coins, strBegin, strEnd, i*2, i, 3, 6, false, false)
 	//	//regret.CutTail(market, coins, sign)
-	//	//sign = fmt.Sprintf(`market%s,coins%s,%s~%s,far%d,near%d,limit%d,allLimit%d,useNear%v,useM%v,seconds14400`,
+	//	//sign = fmt.Sprintf(`market%s,coins%s,%s~%s,far%d,near%d,limit%d,allLimit%d,useNear%#v,useM%#v,seconds14400`,
 	//	//	market, coins, strBegin, strEnd, i*2, i, 3, 6, false, true)
 	//	//regret.CutTail(market, coins, sign)
 	//}
@@ -427,7 +427,7 @@ func Test_initTurtleN(t *testing.T) {
 
 	api.InitMarketInfos(model.Bybit)
 	suc, bals, inU, cor := api.GetBalances(model.AppConfig.BybitKey, model.AppConfig.BybitSecret, model.Bybit)
-	fmt.Println(fmt.Sprintf(`%v %f %v`, suc, inU, cor))
+	fmt.Println(fmt.Sprintf(`%#v %f %#v`, suc, inU, cor))
 	for _, bal := range bals {
 		fmt.Println(bal.Coin)
 		fmt.Println(bal.Amount)
@@ -526,11 +526,11 @@ func Test_download(t *testing.T) {
 }
 
 func Test_Order(t *testing.T) {
-	market := model.Bybit
+	market := model.BinancePerp
 	model.NewConfig()
 	//symbol := `BTC_PERP`
 	account := model.GetAccounts(0)[market]
-	api.GetBalances(account.Key, account.Secret, market)
+	api.GetPositions(account.Key, account.Secret, market)
 	//api.CancelAll(account.Key, account.Secret, market)
 	//orders := api.QueryOpenOrders(account.Key, account.Secret, market, ``)
 	//api.CancelAll(account.Key, account.Secret, market)
@@ -588,7 +588,7 @@ func Test_WSOKPair(t *testing.T) {
 func Test_transferInner(t *testing.T) {
 	model.NewConfig()
 	suc, bals, total, _ := api.GetBalances(model.AppConfig.GateKey, model.AppConfig.GateSecret, model.Gate)
-	fmt.Println(fmt.Sprintf(`%v total %f`, suc, total))
+	fmt.Println(fmt.Sprintf(`%#v total %f`, suc, total))
 	for _, bal := range bals {
 		api.TransferGate(model.AppConfig.GateKey, model.AppConfig.GateSecret, `MAIN_UMFUTURE`, bal.Coin, bal.Amount)
 	}
@@ -688,7 +688,7 @@ func Test_wallet(t *testing.T) {
 	fmt.Println(orderQuery0.OrderId)
 	success, price := api.GetPriceForce(`LDBNB_USDT`, market)
 	success, price = api.GetPriceForce(`BTC_USDT`, market)
-	fmt.Println(fmt.Sprintf(`%v %f`, success, price))
+	fmt.Println(fmt.Sprintf(`%#v %f`, success, price))
 	//order := api.PlaceOrder(key, secret, model.OrderSideBuy, model.OrderTypeStop,
 	//	market, symbol, ``, 4444, 4444, 0.1, false, nil, nil)
 	//fmt.Println(order.OrderId)
@@ -731,10 +731,10 @@ func Test_transfer(t *testing.T) {
 	// 解析字符串为time.Time
 	t1, err := time.Parse("2006-01-02 15:04:05", timeStr)
 	if err != nil {
-		fmt.Printf("解析时间失败: %v\n", err)
+		fmt.Printf("解析时间失败: %#v\n", err)
 		return
 	}
-	fmt.Printf("解析得到的时间: %v\n", t1)
+	fmt.Printf("解析得到的时间: %#v\n", t1)
 	response, _ := util.HttpRequest(http.MethodPost, `https://user.api.it120.cc/user/apiExtUserCash/list`,
 		`page=1&pageSize=50&mobile=19525266383&aggregate=`, map[string]string{`x-token`: `7404f54e-4675-48ee-94bc-113e772c96ed`,
 			`Content-Type`: `application/x-www-form-urlencoded`}, 10000)
@@ -770,27 +770,27 @@ func Test_GateSols(t *testing.T) {
 //	marketPublisher, err := util.NewMarketPublisher("market_topic")
 //	if err != nil {
 //
-//		log.Fatalf("Failed to create market publisher: %v", err)
+//		log.Fatalf("Failed to create market publisher: %#v", err)
 //	}
 //	defer marketPublisher.Close()
 //
 //	// Publish a market message
 //	err = marketPublisher.MarketPublish("Hello, Market!")
 //	if err != nil {
-//		log.Fatalf("Failed to publish market message: %v", err)
+//		log.Fatalf("Failed to publish market message: %#v", err)
 //	}
 //
 //	// Initialize market receiver
 //	marketReceiver, err := util.NewMarketReceiver("market_topic")
 //	if err != nil {
-//		log.Fatalf("Failed to create market receiver: %v", err)
+//		log.Fatalf("Failed to create market receiver: %#v", err)
 //	}
 //	defer marketReceiver.Close()
 //
 //	// Receive a market message
 //	message := marketReceiver.MarketReceive(1024)
 //	if err != nil {
-//		log.Fatalf("Failed to receive market message: %v", err)
+//		log.Fatalf("Failed to receive market message: %#v", err)
 //	}
 //	fmt.Println("Received market message:", message)
 //}

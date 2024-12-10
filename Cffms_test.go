@@ -33,7 +33,7 @@ func Test_Get_pairs_batch_request(t *testing.T) {
 	client, err := ethclient.Dial("https://eth-mainnet.g.alchemy.com/v2/p6QKOpJrOhTeRZ7OT1ufLKVCsqEoKzMG")
 	//client, err := ethclient.Dial("http://localhost:8545")
 	if err != nil {
-		fmt.Println(fmt.Sprintf("Failed to connect to the Ethereum client: %v", err))
+		fmt.Println(fmt.Sprintf("Failed to connect to the Ethereum client: %#v", err))
 	}
 	//fmt.Println("we have a connection")
 	factory := common.HexToAddress("0x5c69bee701ef814a2b6a3edd4b1652cb9cc5aa6f") //uniswapv2
@@ -51,7 +51,7 @@ func Test_Get_pairs_batch_request2(t *testing.T) {
 	//client, err := rpc.Dial("https://mainnet.infura.io/v3/07e58c6efd224b81a0839c1f8bbc3d98")
 	//client, err := rpc.Dial("https://mainnet.infura.io/v3/07e58c6efd224b81a0839c1f8bbc3d98")
 	if err != nil {
-		log.Fatalf("Could not connect to Infura: %v", err)
+		log.Fatalf("Could not connect to Infura: %#v", err)
 	}
 
 	type Block struct {
@@ -65,7 +65,7 @@ func Test_Get_pairs_batch_request2(t *testing.T) {
 		return
 	}
 
-	fmt.Printf("Latest block: %v\n", lastBlock.Number)
+	fmt.Printf("Latest block: %#v\n", lastBlock.Number)
 
 	type ByteData struct {
 		Data       string   `json:"data"`

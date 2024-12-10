@@ -14,9 +14,9 @@ import (
 )
 
 func createContractMarket(key, secret, market string) (cm *contractMarket) {
-	success, positions, accountValue, availableU := api.GetPositions(key, secret, market)
-	util.Log(util.LogLevelInfo, fmt.Sprintf(`get positions %s %s %v account value %f available u %f`,
-		market, key, success, accountValue, availableU))
+	success, positions, accountValue, availableU, mmr := api.GetPositions(key, secret, market)
+	util.Log(util.LogLevelInfo, fmt.Sprintf(`get positions %s %s %#v account value %f available u %f maintain rate %f`,
+		market, key, success, accountValue, availableU, mmr))
 	settings := api.GetSettings(model.FunctionCross, market)
 	if success {
 		cm = &contractMarket{key: key, market: market}
@@ -39,6 +39,7 @@ func createContractMarket(key, secret, market string) (cm *contractMarket) {
 		}
 		cm.accountValueInU = accountValue
 		cm.collateralsAvailable = availableU
+		cm.mmr = mmr
 	} else {
 		util.Log(util.LogLevelError, fmt.Sprintf(`fail to createContractMarket %s %s`, market, key))
 		return nil
@@ -73,8 +74,8 @@ func createSpotMarket(key, secret, market string) (sm *spotMarket) {
 			}
 		}
 		if collateral != nil {
-			util.Log(util.LogLevelInfo, fmt.Sprintf(`collateral for sm available u %s %f to %f`,
-				market, sm.availableU, collateral.Available))
+			util.Log(util.LogLevelInfo, fmt.Sprintf(`collateral for sm available u %s %f to %f maintain rate %f`,
+				market, sm.availableU, collateral.Available, collateral.Rate))
 			sm.availableU = math.Min(sm.availableU, collateral.Available)
 		}
 	} else {
@@ -140,17 +141,14 @@ func createFromPosition(account *model.Account, setting *model.Setting, valueLim
 	}
 	rateLimitPosition := 2.8
 	rateLimitHolding := 0.28
-	spotValue, spotOk := spotMarkets.Load(key)
-	if spotValue != nil && spotOk && spotValue.(*spotMarket).collateral != nil {
-		switch setting.Market {
-		case model.OKEX, model.Gate:
-			if spotValue.(*spotMarket).collateral.Rate < 1.5 {
-				doRevert = true
-			}
-		case model.Bybit:
-			if spotValue.(*spotMarket).collateral.Rate > 0.7 {
-				doRevert = true
-			}
+	switch setting.Market {
+	case model.OKEX, model.Gate:
+		if cm.mmr < 1.5 {
+			doRevert = true
+		}
+	case model.Bybit, model.BitgetPerp, model.BinancePerp:
+		if cm.mmr > 0.66 {
+			doRevert = true
 		}
 	}
 	if cm.contractValueInU/cm.accountValueInU > rateLimitPosition || valueInUsd > valueLimit ||
@@ -171,7 +169,7 @@ func createFromBalance(account *model.Account, setting *model.Setting, valueLimi
 	}
 	success, price := api.GetPriceForce(setting.Symbol, setting.Market)
 	if value == nil || !success || price == 0 {
-		util.LogLess(util.LogLevelError, fmt.Sprintf(`nil spot market %s %s getPrice %v %f`, setting.Market, setting.Symbol, success, price))
+		util.LogLess(util.LogLevelError, fmt.Sprintf(`nil spot market %s %s getPrice %#v %f`, setting.Market, setting.Symbol, success, price))
 		return nil, true
 	}
 	sm := value.(*spotMarket)
@@ -362,7 +360,7 @@ func ClearCross() {
 		leftOrders := 0
 		model.AppEnvironment.CrossOrders.Range(func(k, v interface{}) bool {
 			leftOrders++
-			util.Log(util.LogLevelInfo, fmt.Sprintf(`left orders %d key %v %v`, leftOrders, k, v))
+			util.Log(util.LogLevelInfo, fmt.Sprintf(`left orders %d key %#v %#v`, leftOrders, k, v))
 			return true
 		})
 		model.AppEnvironment.CrossOrders = sync.Map{}
@@ -462,7 +460,7 @@ func equalAccount(i int, equalChan chan int, accounts map[string]*model.Account)
 				coinEqual, leftHoldingInU, _ := equalCoin(coin.(string), equalStatuses)
 				if index > 0 {
 					util.Log(util.LogLevelInfo, fmt.Sprintf(
-						`equal coin %s account %d equal %v left hold u %f`, coin, i, coinEqual, leftHoldingInU))
+						`equal coin %s account %d equal %#v left hold u %f`, coin, i, coinEqual, leftHoldingInU))
 				}
 				if math.Abs(leftHoldingInU) < SmallInU || coinEqual {
 					break
@@ -554,7 +552,7 @@ func equalCoin(coin string, statuses []*CarryStatus) (isEqual bool, holdingInU f
 	if holdingInU > SmallInU {
 		orderSide = model.OrderSideSell
 		sort.Sort(sort.Reverse(bids))
-		util.Log(util.LogLevelInfo, fmt.Sprintf(`need equal no tick %s, %s sell holding %f worth %f list %s %v`,
+		util.Log(util.LogLevelInfo, fmt.Sprintf(`need equal no tick %s, %s sell holding %f worth %f list %s %#v`,
 			coin, noTicks, holding, holdingInU, holdStr, bids))
 		for i := 0; i < len(bids); i++ {
 			status := bidStatus[fmt.Sprintf(`%s_%s`, bids[i].Market, bids[i].Symbol)]
@@ -593,7 +591,7 @@ func equalCoin(coin string, statuses []*CarryStatus) (isEqual bool, holdingInU f
 	if holdingInU < -SmallInU {
 		orderSide = model.OrderSideBuy
 		sort.Sort(asks)
-		util.Log(util.LogLevelInfo, fmt.Sprintf(`need equal with hold %s, %s buy holding %f worth %f list %s %v`,
+		util.Log(util.LogLevelInfo, fmt.Sprintf(`need equal with hold %s, %s buy holding %f worth %f list %s %#v`,
 			coin, noTicks, holding, holdingInU, holdStr, asks))
 		for i := 0; i < len(asks); i++ {
 			status := askStatus[fmt.Sprintf(`%s_%s`, asks[i].Market, asks[i].Symbol)]
@@ -1159,6 +1157,8 @@ func handleCross(account *model.Account, order *model.Order) {
 	if !order.HaveId() {
 		order.Status = model.CarryStatusFail
 		order.OrderId = fmt.Sprintf("%d%s%s", time.Now().UnixMilli(), order.Market, order.Symbol)
+		util.Log(util.LogLevelError, fmt.Sprintf(`handleCorss no order id %s`, order.OrderId))
+		return
 	}
 	if order.Amount == order.DealAmount {
 		order.Status = model.CarryStatusSuccess
@@ -1178,18 +1178,14 @@ func handleCross(account *model.Account, order *model.Order) {
 		queryOrder := api.QueryOrderById(account.Key, account.Secret, order.Market, order.Symbol, order.OrderType, order.OrderId)
 		if queryOrder != nil {
 			leftAmt = queryOrder.Amount - queryOrder.DealAmount
-			queryDelay := false
-			if (order.Market == model.BitgetSpot || order.Market == model.BitgetPerp) && !canceled {
-				queryDelay = true
-			}
-			if leftAmt > marketInfo.SizeMin && leftAmt*order.Price > marketInfo.MoneyMin && queryOrder.Status != model.CarryStatusSuccess && !queryDelay {
+			if leftAmt > marketInfo.SizeMin && leftAmt*order.Price > marketInfo.MoneyMin && queryOrder.Status != model.CarryStatusSuccess && canceled {
 				compOrder := api.PlaceOrder(account.Key, account.Secret, order.OrderSide, model.OrderTypeMarket, order.Market, order.Symbol,
 					``, model.FunctionComplement, order.Price, order.Price, leftAmt, false, nil)
 				model.AppDB.Save(compOrder)
-				util.Log(util.LogLevelInfo, fmt.Sprintf(`post cancel %s %s %s side %s %v code %s msg %s not deal %f 百分之%f`,
+				util.Log(util.LogLevelInfo, fmt.Sprintf(`post cancel %s %s %s side %s %#v code %s msg %s not deal %f 百分之%f`,
 					order.OrderId, order.Market, order.Symbol, order.OrderSide, canceled, errCode, errMsg, leftAmt, math.Round(100*leftAmt/order.Amount)))
 			} else {
-				util.Log(util.LogLevelInfo, fmt.Sprintf(`order update fail %s %s %s %f %f %f %v`,
+				util.Log(util.LogLevelInfo, fmt.Sprintf(`order update fail %s %s %s %f %f left %f %#v`,
 					order.OrderId, order.Market, order.Symbol, queryOrder.Amount, queryOrder.DealAmount, leftAmt, queryOrder))
 			}
 		} else {
@@ -1276,12 +1272,12 @@ func FormatCrossPair(marketBuy, marketSell, symbolBuy, symbolSell string, amount
 	}
 	if marketInfoBuy == nil || marketInfoSell == nil {
 		util.Log(util.LogLevelInfo, fmt.Sprintf(
-			`format %s %s %s %s %v %v`, marketBuy, marketSell, symbolBuy, symbolSell, marketInfoBuy, marketInfoSell))
+			`format %s %s %s %s %#v %#v`, marketBuy, marketSell, symbolBuy, symbolSell, marketInfoBuy, marketInfoSell))
 		//api.InitMarketInfos()
 		marketInfoTime, ok := getMarketInfoMail.Load(`FormatCrossPair`)
 		if !(ok && marketInfoTime.(time.Time).Add(time.Minute*60).After(time.Now())) {
 			notifyTime.Store(`FormatCrossPair`, time.Now())
-			go api.SendMails(`FormatCrossPair removed symbols`, fmt.Sprintf(`format %s %s %s %s %v %v`,
+			go api.SendMails(`FormatCrossPair removed symbols`, fmt.Sprintf(`format %s %s %s %s %#v %#v`,
 				marketBuy, marketSell, symbolBuy, symbolSell, marketInfoBuy, marketInfoSell))
 		}
 		return

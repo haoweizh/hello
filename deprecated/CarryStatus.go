@@ -76,10 +76,10 @@ package deprecated
 //}
 //
 //func pauseCarry(key string) {
-//	util.Notice(`%s carrying pause %v`, key, true)
+//	util.Notice(`%s carrying pause %#v`, key, true)
 //	carryStop[key] = true
 //	time.Sleep(time.Minute * 30)
-//	util.Notice(`%s carrying pause %v`, key, false)
+//	util.Notice(`%s carrying pause %#v`, key, false)
 //	carryStop[key] = false
 //}
 //

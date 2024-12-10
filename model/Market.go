@@ -3,6 +3,7 @@ package model
 import (
 	"fmt"
 	"hello/util"
+	"strings"
 	"sync"
 )
 
@@ -73,6 +74,9 @@ func (environment *Environment) HandleWSResp() {
 		value, _ := environment.WSOrderMap.Load(wsResp.RequestId)
 		util.Log(util.LogLevelInfo, fmt.Sprintf(`get ws order req id %s`, wsResp.RequestId))
 		if value != nil {
+			if len(strings.Trim(wsResp.OrderId, ` `)) == 0 {
+				continue
+			}
 			order := value.(*Order)
 			order.OrderId = wsResp.OrderId
 			if wsResp.Success {

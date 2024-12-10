@@ -73,7 +73,7 @@ package deprecated
 //	client := kucoinFutureClient("", "", "")
 //	resp, err := client.ActiveContracts()
 //	if err != nil || resp.Code != "200000" {
-//		util.SocketInfo(fmt.Sprintf("key %s function: %s kucoin API error, response:%v", key, "appendFutureMarketKucoin", resp))
+//		util.SocketInfo(fmt.Sprintf("key %s function: %s kucoin API error, response:%#v", key, "appendFutureMarketKucoin", resp))
 //		return
 //	}
 //	contracts := KucoinContractsModels{}
@@ -323,10 +323,10 @@ package deprecated
 //	//contractResp, err := kucoinFutureClient(``, "", "").Positions()
 //	//if err != nil || accountErr != nil || accountResp.Code != "200000" || contractResp.Code != "200000" {
 //	//	if accountErr != nil {
-//	//		util.SocketInfo(fmt.Sprintf("fail to refresh future account kucoin, err:%s, response:%v", err, accountResp))
+//	//		util.SocketInfo(fmt.Sprintf("fail to refresh future account kucoin, err:%s, response:%#v", err, accountResp))
 //	//	}
 //	//	if err != nil {
-//	//		util.SocketInfo(fmt.Sprintf("fail to refresh future position kucoin, err:%s, response:%v", err, contractResp))
+//	//		util.SocketInfo(fmt.Sprintf("fail to refresh future position kucoin, err:%s, response:%#v", err, contractResp))
 //	//	}
 //	//	time.Sleep(time.Minute * 5)
 //	//	return getPositionsKucoinPerp(key, secret)
@@ -373,7 +373,7 @@ package deprecated
 //	if success && marketType == model.MarketTypePerp {
 //		apiResponse, err := kucoinFutureClient("", "", "").CancelOrders(dialectSymbol)
 //		if err != nil || apiResponse.Code != "200000" {
-//			util.SocketInfo(fmt.Sprintf("function: %s fail to cancel future orders kucoin, err:%s, response:%v", "cancelOrdersKucoin", err, apiResponse))
+//			util.SocketInfo(fmt.Sprintf("function: %s fail to cancel future orders kucoin, err:%s, response:%#v", "cancelOrdersKucoin", err, apiResponse))
 //			return false
 //		}
 //		orders := &kumex.CancelOrderResultModel{}
@@ -401,12 +401,12 @@ package deprecated
 //		//util.SocketInfo(fmt.Sprintf(`create future order request: %s`, params))
 //		futureOrderResp, err := kucoinFutureClient("", "", "").CreateOrder(params)
 //		if err != nil || futureOrderResp.Code != "200000" {
-//			util.SocketInfo(fmt.Sprintf("function: %s fail to create future order kucoin, err:%s, response:%v", "placeOrderKucoin", err, futureOrderResp))
+//			util.SocketInfo(fmt.Sprintf("function: %s fail to create future order kucoin, err:%s, response:%#v", "placeOrderKucoin", err, futureOrderResp))
 //			order.Status = model.CarryStatusFail
 //			order.OrderId = ``
 //			return
 //		} else {
-//			//util.SocketInfo(fmt.Sprintf(`create future order response: %v`, futureOrderResp))
+//			//util.SocketInfo(fmt.Sprintf(`create future order response: %#v`, futureOrderResp))
 //			orderResult := &kumex.CreateOrderResultModel{}
 //			respErr := futureOrderResp.ReadData(orderResult)
 //			if respErr != nil {
@@ -432,7 +432,7 @@ package deprecated
 //func queryOrderKucoinPerp(symbol string, orderId string) (order *model.Order) {
 //	orderResponse, respErr := kucoinFutureClient("", "", "").Order(orderId)
 //	if respErr != nil || orderResponse.Code != "200000" {
-//		util.SocketInfo(fmt.Sprintf("function: %s fail to query kucoin perp order , err:%s, response:%v", "queryOrderKucoinPerp", respErr, orderResponse))
+//		util.SocketInfo(fmt.Sprintf("function: %s fail to query kucoin perp order , err:%s, response:%#v", "queryOrderKucoinPerp", respErr, orderResponse))
 //		return
 //	}
 //	orderResult := &kumex.OrderModel{}

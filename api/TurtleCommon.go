@@ -36,7 +36,7 @@ func CalcTurtleAmount(account *model.Account, n, amountRate float64, candle *mod
 	if accountValue == 0 {
 		switch candle.Market {
 		case model.BinancePerp:
-			_, _, accountValue, _ = GetPositions(account.Key, account.Secret, candle.Market)
+			_, _, accountValue, _, _ = GetPositions(account.Key, account.Secret, candle.Market)
 		case model.Ftx, model.OKEX:
 			_, _, accountValue, _ = GetBalances(account.Key, account.Secret, candle.Market)
 		}
@@ -102,7 +102,7 @@ func ClearExtraOrders(key, secret, market, symbol string, dataArray []*model.Tur
 		if keepOrders[order.OrderId] == nil && algoLimitOrders[order.OrderId] == nil {
 			result := MustCancel(key, secret, market, symbol, order.OrderType, order.OrderId, false)
 			util.Log(util.LogLevelInfo, fmt.Sprintf(
-				`cancel extra order %s %s %s %s return %v`, market, symbol, order.OrderType, order.OrderId, result))
+				`cancel extra order %s %s %s %s return %#v`, market, symbol, order.OrderType, order.OrderId, result))
 		}
 	}
 }
@@ -112,7 +112,7 @@ func AdjustPosHolding(key, secret string, setting *model.Setting, data *model.Tu
 		return
 	}
 	data.AdjustChecked = true
-	success, marketPos, _, _ := GetPositions(key, secret, setting.Market)
+	success, marketPos, _, _, _ := GetPositions(key, secret, setting.Market)
 	if !success {
 		util.Log(util.LogLevelInfo, fmt.Sprintf(
 			`fail to adjust position holdings %s %s`, setting.Market, setting.Symbol))
@@ -419,7 +419,7 @@ func GetTurtleData(account *model.Account, setting *model.Setting, removed bool)
 		if !refreshOk || refreshValue == nil || refreshValue.(time.Time).Before(nowPeriod) {
 			if handleMarketDynamic(setting.Market) {
 				PrepareSettings()
-				success, positions, _, _ := GetPositions(account.Key, account.Secret, setting.Market)
+				success, positions, _, _, _ := GetPositions(account.Key, account.Secret, setting.Market)
 				if success {
 					posMap := &sync.Map{}
 					for _, position := range positions {
@@ -472,7 +472,7 @@ func GetTurtleData(account *model.Account, setting *model.Setting, removed bool)
 		}
 	} else {
 		data.Liquidated = setting.Liquidated
-		util.Log(util.LogLevelInfo, fmt.Sprintf(`set turtle data liquidated to setting %s %s %s %v`,
+		util.Log(util.LogLevelInfo, fmt.Sprintf(`set turtle data liquidated to setting %s %s %s %#v`,
 			setting.Function, setting.Symbol, setting.Market, setting.Liquidated))
 	}
 	if data.Amount > 0 && data.N > 0 {
@@ -486,7 +486,7 @@ func GetTurtleData(account *model.Account, setting *model.Setting, removed bool)
 			return nil, false
 		}
 		util.StoreSyncMap(&TurtleDataSet, data, setting.Function, setting.Market, setting.Symbol, nowStr)
-		util.Log(util.LogLevelInfo, fmt.Sprintf(`set turtle %s %s %s %s Amount:%e N:%e %d:%e-%e %d:%e-%e %v`,
+		util.Log(util.LogLevelInfo, fmt.Sprintf(`set turtle %s %s %s %s Amount:%e N:%e %d:%e-%e %d:%e-%e %#v`,
 			setting.Function, setting.Market, setting.Symbol, nowStr, data.Amount, data.N, data.DaysNear, data.LowNear, data.HighNear, data.DaysFar, data.LowFar, data.HighFar, data))
 		util.Log(util.LogLevelInfo, fmt.Sprintf(`set data %s %s %s %f %f`, setting.Market, setting.Symbol, setting.Function, data.N, data.Amount))
 		return data, true
@@ -725,7 +725,7 @@ func CheckBreak(account *model.Account, market, symbol string, settings []*model
 						}
 					}
 				}
-				util.Log(util.LogLevelInfo, fmt.Sprintf(`order break long %s %s %s %d %e %e id %s usdApi %v`,
+				util.Log(util.LogLevelInfo, fmt.Sprintf(`order break long %s %s %s %d %e %e id %s usdApi %#v`,
 					market, symbol, orderLong.OrderType, setting.Chance, orderLong.TriggerPrice, orderLong.Price, orderLong.OrderId, useApi))
 			}
 		}
@@ -753,7 +753,7 @@ func CheckBreak(account *model.Account, market, symbol string, settings []*model
 					}
 				}
 				util.Log(util.LogLevelInfo, fmt.Sprintf(
-					`order break short %s %s %s %d %e %e id %s useApi %v`,
+					`order break short %s %s %s %d %e %e id %s useApi %#v`,
 					market, symbol, orderShort.OrderType, setting.Chance, orderShort.TriggerPrice, orderShort.Price, orderShort.OrderId, useApi))
 			}
 		}
@@ -846,7 +846,7 @@ func CanOpenCombine(settingCombine, settingNormal *model.Setting, dataTurtle *mo
 			settingCombine.SymbolRelated != model.SettingTurtleRemoved && settingNormal.SymbolRelated != model.SettingTurtleRemoved)
 		//now := time.Now()
 		//if canOpen == false && now.Minute()%10 == 0 && now.Second() == 0 {
-		//	util.Notice(fmt.Sprintf(`can not open %s %s canCombine %v canTurtle %v turtle symbols %f inAll %f`,
+		//	util.Notice(fmt.Sprintf(`can not open %s %s canCombine %#v canTurtle %#v turtle symbols %f inAll %f`,
 		//		settingNormal.Market, settingNormal.Symbol, canStartCombine, canStartTurtle, turtleSymbolNum, inAll))
 		//}
 	}

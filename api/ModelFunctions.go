@@ -94,7 +94,7 @@ func PrepareSettings() {
 				setting = oldSetting.(*model.Setting)
 			}
 		}
-		//util.Notice(fmt.Sprintf(`load setting %s %s %s %v %d`,
+		//util.Notice(fmt.Sprintf(`load setting %s %s %s %#v %d`,
 		//	setting.Market, setting.Symbol, setting.Function, setting.Valid, setting.Chance))
 		marketMap[setting.Market] = true
 		value, ok = util.LoadSyncMap(localHandlers, setting.Market, setting.Symbol)
@@ -184,7 +184,7 @@ func handleCombineSettings(mumSetting *model.Setting, topMarketInfos map[string]
 			AmountLimit: mumSetting.AmountLimit, CloseShortMargin: mumSetting.CloseShortMargin, Far: mumSetting.Far,
 			Near: mumSetting.Near, Seconds: mumSetting.Seconds, MarketRelated: mumSetting.MarketRelated, WSType: model.WSTypeTicker}
 		if valueCombine == nil {
-			util.Log(util.LogLevelInfo, fmt.Sprintf(`add combine %s %v`, mumSetting.Market, info.Name))
+			util.Log(util.LogLevelInfo, fmt.Sprintf(`add combine %s %#v`, mumSetting.Market, info.Name))
 			accounts := model.AppConfig.GetAccounts(mumSetting.Market)
 			for _, account := range accounts {
 				if account != nil {
@@ -271,7 +271,7 @@ func handleSingleSettings(mumSetting *model.Setting, topMarketInfos map[string]*
 			AmountLimit: mumSetting.AmountLimit, Far: mumSetting.Far, Near: mumSetting.Near, Seconds: mumSetting.Seconds,
 			FarCombine: mumSetting.FarCombine, NearCombine: mumSetting.NearCombine, SecondsCombine: mumSetting.SecondsCombine}
 		if value == nil {
-			util.Log(util.LogLevelInfo, fmt.Sprintf(`add settingNew %v`, settingNew.Symbol))
+			util.Log(util.LogLevelInfo, fmt.Sprintf(`add settingNew %#v`, settingNew.Symbol))
 			accounts := model.AppConfig.GetAccounts(mumSetting.Market)
 			for _, account := range accounts {
 				if account != nil {
