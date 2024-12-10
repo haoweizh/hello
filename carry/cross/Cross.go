@@ -197,11 +197,9 @@ func createFromBalance(account *model.Account, setting *model.Setting, valueLimi
 		balance := sm.balances[setting.Symbol]
 		limitSell = math.Min(math.Max(balance.Amount, 0), balance.AvailableWithBorrow)
 		carryStatus.Holding = balance.Amount
-		carryStatus.AvailableSell = math.Max(carryStatus.AvailableSell, balance.Amount)
 		// 暂不支持借币
-		carryStatus.LimitSell = limitSell
+		carryStatus.LimitSell, carryStatus.AvailableSell = limitSell, limitSell
 		carryStatus.RateInAll = math.Abs(carryStatus.Holding * price / sm.accountValueInU)
-		carryStatus.AvailableSell = carryStatus.LimitSell
 	} else {
 		if absentRevert {
 			//doRevert = true
@@ -475,17 +473,16 @@ func equalAccount(i int, equalChan chan int, accounts map[string]*model.Account)
 				equalStatuses[j] = initStatus(account, setting, false)
 			}
 			for index := 0; index <= 10; index++ {
-				coinEqual, leftHoldingInU, errMsg := equalCoin(coin.(string), equalStatuses)
+				coinEqual, leftHolding, errMsg := equalCoin(coin.(string), equalStatuses)
 				if !coinEqual {
 					util.Log(util.LogLevelInfo, fmt.Sprintf(
-						`equal coin %s account %d equal %#v left hold u %f err %s`, coin, i, coinEqual, leftHoldingInU, errMsg))
-				}
-				if math.Abs(leftHoldingInU) < SmallInU || coinEqual {
+						`equal coin %s account %d equal %#v left hold %f err %s`, coin, i, coinEqual, leftHolding, errMsg))
+				} else {
 					break
 				}
 				if index == 10 {
 					api.SendMails(fmt.Sprintf(`fail equal after 10 time %s`, coin),
-						fmt.Sprintf(`%s holding %f`, coin, leftHoldingInU))
+						fmt.Sprintf(`%s holding %f`, coin, leftHolding))
 				}
 			}
 			return true
@@ -528,10 +525,10 @@ func getHolding(statuses []*CarryStatus) (bids, asks model.Ticks, bidStatus, ask
 }
 
 // settings []*model.Setting, coinStatus map[string]map[string]map[string]*CarryStatus
-func equalCoin(coin string, statuses []*CarryStatus) (isEqual bool, holdingInMoney float64, errMsg string) {
-	bids, asks, bidStatus, askStatus, holding, price, holdStr := getHolding(statuses)
-	holdingInMoney = holding * price
-	if math.Abs(holdingInMoney) > compTooBig {
+func equalCoin(coin string, statuses []*CarryStatus) (isEqual bool, holding float64, errMsg string) {
+	bids, asks, bidStatus, askStatus, value, price, holdStr := getHolding(statuses)
+	holding = value
+	if math.Abs(holding) > compTooBig/price {
 		coinSettings := api.GetCoinSettings(model.FunctionCross)
 		if coinSettings != nil {
 			value, _ := coinSettings.Load(coin)
@@ -539,25 +536,24 @@ func equalCoin(coin string, statuses []*CarryStatus) (isEqual bool, holdingInMon
 				for _, setting := range value.([]*model.Setting) {
 					setting.Valid = false
 					util.Log(util.LogLevelInfo, fmt.Sprintf(`too big comp %s %s %f %f`,
-						setting.Market, setting.Symbol, holdingInMoney, holding))
+						setting.Market, setting.Symbol, holding*price, holding))
 				}
 			}
 		}
-		api.SendMails(`too big to equal`, fmt.Sprintf(`%s holding in u %f`, coin, holdingInMoney))
-		return false, holdingInMoney, fmt.Sprintf(`too big comp %s %f %f`, coin, holdingInMoney, holding)
-	} else if math.Abs(holdingInMoney) < SmallInU {
-		return true, holdingInMoney, ``
+		api.SendMails(`too big to equal`, fmt.Sprintf(`%s holding in money %f`, coin, holding*price))
+		return false, holding, fmt.Sprintf(`too big comp %s %f`, coin, holding)
+	} else if math.Abs(holding) < SmallInU/price {
+		return true, holding, ``
 	}
 	var equalStatus *CarryStatus
 	sort.Sort(sort.Reverse(bids))
 	for i := 0; i < len(bids); i++ {
-		if holdingInMoney < SmallInU {
+		if holding < SmallInU/price {
 			break
 		}
-		util.Log(util.LogLevelInfo, fmt.Sprintf(`need equal holding %s %f worth %f list %s`, coin, holding, holdingInMoney, holdStr))
 		status := bidStatus[fmt.Sprintf(`%s_%s`, bids[i].Market, bids[i].Symbol)]
 		if status == nil {
-			util.Log(util.LogLevelError, fmt.Sprintf(`no status when holding in U: %f %s %s`, holdingInMoney, bids[i].Market, bids[i].Symbol))
+			util.Log(util.LogLevelError, fmt.Sprintf(`no status when holding: %f %s %s`, holding, bids[i].Market, bids[i].Symbol))
 			continue
 		}
 		if status.setting != nil && status.TradeLineSell > 0.5 {
@@ -580,21 +576,22 @@ func equalCoin(coin string, statuses []*CarryStatus) (isEqual bool, holdingInMon
 				//holding = status.AvailableSell
 				amount = status.AvailableSell
 			} else {
-				errMsg += fmt.Sprintf(`check amount 0 sell %s %s %f %f checked amount %f`,
-					status.market, status.symbol, status.AvailableSell, bids[i].Price, checkAmount)
+				util.Log(util.LogLevelError, fmt.Sprintf(`check 0 amount in %#v`, status))
+				continue
 			}
 		}
-		holdingInMoney += placeEqual(equalStatus, price, amount, model.OrderSideSell)
+		util.Log(util.LogLevelInfo, fmt.Sprintf(`need equal holding %s %f list %s equal status %#v`,
+			coin, holding, holdStr, equalStatus))
+		holding += placeEqual(equalStatus, price, amount, model.OrderSideSell)
 	}
 	sort.Sort(asks)
 	for i := 0; i < len(asks); i++ {
-		if holdingInMoney > -SmallInU {
+		if holding > -SmallInU/price {
 			break
 		}
-		util.Log(util.LogLevelInfo, fmt.Sprintf(`need equal holding %s %f worth %f list %s`, coin, holding, holdingInMoney, holdStr))
 		status := askStatus[fmt.Sprintf(`%s_%s`, asks[i].Market, asks[i].Symbol)]
 		if status == nil {
-			util.Log(util.LogLevelError, fmt.Sprintf(`no status when holding in U: %f %s %s`, holdingInMoney, asks[i].Market, asks[i].Symbol))
+			util.Log(util.LogLevelError, fmt.Sprintf(`no status when holding: %f %s %s`, holding, asks[i].Market, asks[i].Symbol))
 			continue
 		}
 		if status.setting != nil && status.TradeLineBuy > 0.5 {
@@ -618,19 +615,21 @@ func equalCoin(coin string, statuses []*CarryStatus) (isEqual bool, holdingInMon
 				//holding = status.AvailableBuy
 				amount = status.AvailableBuy
 			} else {
-				errMsg += fmt.Sprintf(`check amount 0 buy %s %s %f %f checked amount %f`,
-					status.market, status.symbol, status.AvailableBuy, asks[i].Price, checkAmount)
+				util.Log(util.LogLevelError, fmt.Sprintf(`check 0 amount in %#v`, status))
+				continue
 			}
 		}
-		holdingInMoney += placeEqual(equalStatus, price, amount, model.OrderSideBuy)
+		util.Log(util.LogLevelInfo, fmt.Sprintf(`need equal holding %s %f list %s equal status %#v`,
+			coin, holding, holdStr, equalStatus))
+		holding += placeEqual(equalStatus, price, amount, model.OrderSideBuy)
 	}
-	if math.Abs(holdingInMoney) > SmallInU {
+	if math.Abs(holding) > SmallInU/price {
 		isEqual = false
 	}
-	return isEqual, holdingInMoney, errMsg
+	return isEqual, holding, errMsg
 }
 
-func placeEqual(status *CarryStatus, price, amount float64, orderSide string) (orderInMoney float64) {
+func placeEqual(status *CarryStatus, price, amount float64, orderSide string) (dealAmount float64) {
 	if status == nil {
 		// 可能由于头寸太小，不满足所有市场的下单要求，而holdingU刚好大于10u，此时认为已平
 		util.Log(util.LogLevelError, fmt.Sprintf(`can not get status to equal`))
@@ -651,16 +650,14 @@ func placeEqual(status *CarryStatus, price, amount float64, orderSide string) (o
 			status.market, status.symbol, ``, model.FunctionCompAll, price, price, amount, false, nil)
 		if order != nil && order.Status != model.CarryStatusFail {
 			if orderSide == model.OrderSideBuy {
-				status.Holding += amount
-				orderInMoney += amount * price
+				dealAmount += amount
 			} else {
-				status.Holding -= amount
-				orderInMoney -= amount * price
+				dealAmount -= amount
 			}
 			saveCross(order, status.TradeLineBuy, status.TradeLineSell, status.Holding)
-			if status.market == model.Gate {
-				api.SetGateBidAsk(status.account.Key, status.account.Secret, status.symbol)
-			}
+			//if status.market == model.Gate {
+			//	api.SetGateBidAsk(status.account.Key, status.account.Secret, status.symbol)
+			//}
 			if orderSide == model.OrderSideSell {
 				placeStatus(status, price, -1*amount)
 			} else if orderSide == model.OrderSideBuy {
@@ -674,7 +671,7 @@ func placeEqual(status *CarryStatus, price, amount float64, orderSide string) (o
 			}
 		}
 	}
-	return orderInMoney
+	return dealAmount
 }
 
 // ProcessCross setting.Chance<0时该币种只关仓
@@ -1106,7 +1103,9 @@ func placeStatus(status *CarryStatus, price float64, amount float64) {
 			}
 			valueSpot.(*spotMarket).collateral.Available -= amount * price
 		}
-	} else if valueContract != nil {
+		status.AvailableSell += amount
+	}
+	if !status.isSpot && valueContract != nil {
 		position := valueContract.(*contractMarket).positions[status.symbol]
 		originFreeAbs := 0.0
 		if position == nil {
