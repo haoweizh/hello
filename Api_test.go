@@ -526,11 +526,12 @@ func Test_download(t *testing.T) {
 }
 
 func Test_Order(t *testing.T) {
-	market := model.BinancePerp
+	market := model.Gate
 	model.NewConfig()
-	//symbol := `BTC_PERP`
+	symbol := `AVAIL_USDT`
 	account := model.GetAccounts(0)[market]
-	api.GetPositions(account.Key, account.Secret, market)
+	api.QueryOrderById(account.Key, account.Secret, market, symbol, model.OrderTypeLimit, `749125502937`)
+	//api.GetPositions(account.Key, account.Secret, market)
 	//api.CancelAll(account.Key, account.Secret, market)
 	//orders := api.QueryOpenOrders(account.Key, account.Secret, market, ``)
 	//api.CancelAll(account.Key, account.Secret, market)
