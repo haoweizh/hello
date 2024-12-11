@@ -426,7 +426,6 @@ func equalAccounts() {
 		indexAccounts := model.GetAccounts(i)
 		for _, market := range markets {
 			accounts[market] = indexAccounts[market]
-			api.CancelAll(accounts[market].Key, accounts[market].Secret, market)
 		}
 		waitEqual[i] = true
 		go equalAccount(i, equalChannel, accounts)
@@ -451,14 +450,13 @@ func equalAccount(i int, equalChan chan int, accounts map[string]*model.Account)
 	if accounts[model.BitgetPerp] != nil {
 		liquidateBitgetPerp(accounts[model.BitgetPerp])
 	}
-	keys := ``
-	for _, account := range accounts {
+	for market, account := range accounts {
 		if account.Index != i {
 			continue
 		}
+		api.CancelAll(account.Key, account.Secret, market)
 		spotMarkets.Delete(account.Key)
 		contractMarkets.Delete(account.Key)
-		keys += account.Key + `,`
 	}
 	value := api.GetCoinSettings(model.FunctionCross)
 	if value != nil {
