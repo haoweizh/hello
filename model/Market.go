@@ -72,6 +72,14 @@ func (environment *Environment) HandleWSResp() {
 	for {
 		wsResp := <-environment.WSRespChan
 		value, _ := environment.WSOrderMap.Load(wsResp.RequestId)
+		if value == nil {
+			value, _ = environment.WSOrderMap.Load(wsResp.RequestId + OrderSideSell)
+			util.Log(util.LogLevelInfo, fmt.Sprintf(`get pair order sell %#v`, value))
+			if value == nil {
+				value, _ = environment.WSOrderMap.Load(wsResp.RequestId + OrderSideBuy)
+				util.Log(util.LogLevelInfo, fmt.Sprintf(`get pair order buy %#v`, value))
+			}
+		}
 		util.Log(util.LogLevelInfo, fmt.Sprintf(`get ws order req id %s`, wsResp.RequestId))
 		if value != nil {
 			if len(strings.Trim(wsResp.OrderId, ` `)) == 0 {
@@ -92,6 +100,8 @@ func (environment *Environment) HandleWSResp() {
 			if AccountHandlerMap[order.RefreshType] != nil {
 				AccountHandlerMap[order.RefreshType](order)
 			}
+		} else {
+			util.Log(util.LogLevelError, fmt.Sprintf(`no order for request id %s`, wsResp.RequestId))
 		}
 	}
 }
