@@ -5,6 +5,7 @@ import (
 	"hello/util"
 	"strings"
 	"sync"
+	"time"
 )
 
 type KLinePoint struct {
@@ -66,6 +67,23 @@ type Environment struct {
 type MarkPriceInfo struct {
 	MarkPrice float64
 	Ts        int // time in unix epoch millionSeconds
+}
+
+func (environment *Environment) HandleOldWSResp() {
+	for {
+		ts := time.Now().Unix()
+		environment.WSOrderMap.Range(func(key, value interface{}) bool {
+			if value == nil {
+				return true
+			}
+			orderTs := value.(*Order).OrderTime.Unix()
+			if ts-orderTs > 20 && ts-orderTs < 86400 {
+				util.Log(util.LogLevelInfo, fmt.Sprintf(`try to handle old and del %#v`, value))
+			}
+			return true
+		})
+		time.Sleep(time.Second * 10)
+	}
 }
 
 func (environment *Environment) HandleWSResp() {
