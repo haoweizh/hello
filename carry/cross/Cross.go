@@ -834,8 +834,8 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarrySta
 	stopStatus, okStatus := carryStop.Load(carryStatus.account.Key)
 	stopRelate, okRelate := carryStop.Load(carryStatusRelate.account.Key)
 	if (okStatus && stopStatus.(bool)) || (okRelate && stopRelate.(bool)) {
-		util.Log(util.LogLevelError, fmt.Sprintf(`stop carry for 10 times unknown carry %s or %s %s`,
-			carryStatus.account.Key, carryStatusRelate.account.Key, coin))
+		//util.Log(util.LogLevelError, fmt.Sprintf(`stop carry for 10 times unknown carry %s or %s %s`,
+		//	carryStatus.account.Key, carryStatusRelate.account.Key, coin))
 		return
 	}
 	var bidAmount, askAmount float64
