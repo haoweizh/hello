@@ -105,8 +105,7 @@ var markPriceWsHandler = func(market string, conn *model.WSConn, event []byte) {
 			if tickerData.Symbol == "" {
 				continue
 			}
-			_, _, coin := model.GetCoinFromDialect(model.BitgetPerp, tickerData.Symbol)
-			symbol := coin + model.UniStandardTail[model.MarketTypePerp]
+			_, _, symbol := model.GetFromDialect(model.BitgetPerp, model.MarketTypePerp, tickerData.Symbol)
 			price, _ := strconv.ParseFloat(tickerData.MarkPrice, 64)
 			ts, _ := strconv.ParseInt(tickerData.Ts, 10, 64)
 			nextTs, _ := strconv.ParseInt(tickerData.NextFundingTime, 10, 64)
@@ -181,11 +180,11 @@ func getPositionsBitgetPerp(key, secret string) (success bool, positions []*Posi
 	}
 	positions = make([]*Position, 0)
 	for _, contract := range bitgetPositionResp.Data {
-		isSuccess, _, coin := model.GetCoinFromDialect(model.BitgetPerp, contract.Symbol)
+		isSuccess, _, symbol := model.GetFromDialect(model.BitgetPerp, model.MarketTypePerp, contract.Symbol)
 		if !isSuccess {
 			continue
 		}
-		currency := coin + model.UniStandardTail[model.MarketTypePerp]
+		currency := symbol
 		position := &Position{Market: model.BitgetPerp, Ts: util.GetNowUnixMillion(), Currency: currency}
 		position.Direction = contract.HoldSide
 		total, _ := strconv.ParseFloat(contract.Total, 64)
@@ -264,6 +263,7 @@ func placeOrderBitgetPerp(key, secret string, order *model.Order, orderSide, ord
 		`marginMode`:  `crossed`,
 		"size":        amountStr,
 		"price":       priceStr,
+		"clientOid":   order.ClientOrdId,
 		"side":        orderSide,
 		"orderType":   ordType,
 		"reduceOnly":  reduceOnlyStr}
@@ -399,9 +399,8 @@ func queryOpenOrdersBitgetPerp(key, secret string) (orders []*model.Order) {
 	array := jsonData.GetPath(`data`, `entrustedList`).MustArray()
 	for _, data := range array {
 		value := data.(map[string]interface{})
-		_, _, coin := model.GetCoinFromDialect(model.BitgetPerp, value[`symbol`].(string))
-		order := &model.Order{Market: model.BitgetPerp, Symbol: coin + model.UniStandardTail[model.MarketTypePerp],
-			OrderId: value[`orderId`].(string), ClientOrdId: value[`clientOid`].(string)}
+		_, _, symbol := model.GetFromDialect(model.BitgetPerp, model.MarketTypePerp, value[`symbol`].(string))
+		order := &model.Order{Market: model.BitgetPerp, Symbol: symbol, OrderId: value[`orderId`].(string), ClientOrdId: value[`clientOid`].(string)}
 		if value[`size`] != nil {
 			order.Amount, _ = strconv.ParseFloat(value[`size`].(string), 64)
 		}

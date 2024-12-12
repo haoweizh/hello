@@ -58,16 +58,13 @@ func appendFutureMarketGate(key, secret string, marketInfos map[string]*model.Ma
 			continue
 		}
 		marketInfo := &model.MarketInfo{Market: model.Gate}
-		success, _, coin := model.GetCoinFromDialect(model.Gate, contract.Name)
-		if !success {
-			continue
-		}
-		marketInfo.Name = coin + model.UniStandardTail[model.MarketTypePerp]
+		_, coin, symbol := model.GetFromDialect(model.Gate, model.MarketTypePerp, contract.Name)
 		minPrice, _ := strconv.ParseFloat(contract.OrderPriceRound, 64)
 		marketInfo.PriceIncrement = minPrice
 		marketInfo.PriceDecimal = util.NumDecPlaces(minPrice)
 		marketInfo.SizeMin = float64(contract.OrderSizeMin)
 		marketInfo.SizeMax = float64(contract.OrderSizeMax)
+		marketInfo.Name = symbol
 		marketInfo.CTCurrency = coin
 		marketInfo.CTValue, _ = strconv.ParseFloat(contract.QuantoMultiplier, 64)
 		marketInfo.BuyLimitPriceRatio, _ = strconv.ParseFloat(contract.OrderPriceDeviate, 64)
@@ -93,12 +90,12 @@ func appendSpotMarketsGate(key, secret string, marketInfos map[string]*model.Mar
 		return
 	}
 	for _, spot := range spotCurrencyPairs {
-		success, _, coin := model.GetCoinFromDialect(model.Gate, spot.Id)
+		success, _, symbol := model.GetFromDialect(model.Gate, model.MarketTypeSpot, spot.Id)
 		if spot.TradeStatus != "tradable" || !success {
 			continue
 		}
 		marketInfo := &model.MarketInfo{Market: model.Gate}
-		marketInfo.Name = coin + model.UniStandardTail[model.MarketTypeSpot]
+		marketInfo.Name = symbol
 		marketInfo.PriceDecimal = int(spot.Precision)
 		marketInfo.PriceIncrement = 1 / math.Pow10(int(spot.Precision))
 		marketInfo.SizeIncrement = 1 / math.Pow10(int(spot.AmountPrecision))
@@ -180,11 +177,10 @@ var tickerHandler = gateWs.NewCallBack(func(msg *gateWs.UpdateMsg) {
 			util.Log(util.LogLevelError, fmt.Sprintf("spot book ticker Unmarshal err:%s %s", model.Gate, err.Error()))
 			return
 		}
-		success, _, coin := model.GetCoinFromDialect(model.Gate, update.CurrencyPair)
+		success, _, symbol := model.GetFromDialect(model.Gate, model.MarketTypeSpot, update.CurrencyPair)
 		if !success || len(strconv.Itoa(int(update.TimeInMilli))) != 13 {
 			return
 		}
-		symbol = coin + model.UniStandardTail[model.MarketTypeSpot]
 		now := int(time.Now().UnixNano() / int64(time.Millisecond))
 		bidPrice, _ := strconv.ParseFloat(update.Bid, 64)
 		bidAmount, _ := strconv.ParseFloat(update.BidSize, 64)
@@ -200,11 +196,10 @@ var tickerHandler = gateWs.NewCallBack(func(msg *gateWs.UpdateMsg) {
 			util.Log(util.LogLevelError, fmt.Sprintf("spot book ticker Unmarshal err:%s %s", model.Gate, err.Error()))
 			return
 		}
-		success, _, coin := model.GetCoinFromDialect(model.Gate, update.CurrencyPair)
+		success, _, symbol := model.GetFromDialect(model.Gate, model.MarketTypeSpot, update.CurrencyPair)
 		if !success || len(strconv.Itoa(int(update.TimeInMilli))) != 13 {
 			return
 		}
-		symbol = coin + model.UniStandardTail[model.MarketTypeSpot]
 		now := int(time.Now().UnixNano() / int64(time.Millisecond))
 		bidAsk = model.BidAsk{Ts: int(update.TimeInMilli), TsReceived: now, UpdateId: update.LastUpdateId,
 			Bids: []model.Tick{}, Asks: []model.Tick{}}
@@ -223,11 +218,10 @@ var tickerHandler = gateWs.NewCallBack(func(msg *gateWs.UpdateMsg) {
 			util.Log(util.LogLevelError, fmt.Sprintf("future book ticker Unmarshal err:%s %s", model.Gate, err.Error()))
 			return
 		}
-		success, _, coin := model.GetCoinFromDialect(model.Gate, update.Contract)
+		success, _, symbol := model.GetFromDialect(model.Gate, model.MarketTypePerp, update.Contract)
 		if !success || len(strconv.Itoa(int(update.TimeMillis))) != 13 {
 			return
 		}
-		symbol = coin + model.UniStandardTail[model.MarketTypePerp]
 		now := int(time.Now().UnixNano() / int64(time.Millisecond))
 		bidPrice, _ := strconv.ParseFloat(update.BestBidPrice, 64)
 		_, bidAmount := model.ParseRealAmount(model.Gate, symbol, float64(update.BestBidSize))
@@ -268,11 +262,10 @@ var markPriceHandler = gateWs.NewCallBack(func(msg *gateWs.UpdateMsg) {
 			return
 		}
 		for _, update := range tickers {
-			success, _, coin := model.GetCoinFromDialect(model.Gate, update.Contract)
+			success, _, symbol := model.GetFromDialect(model.Gate, model.MarketTypePerp, update.Contract)
 			if !success {
 				return
 			}
-			symbol := coin + model.UniStandardTail[model.MarketTypePerp]
 			price, _ := strconv.ParseFloat(update.MarkPrice, 64)
 			ticker := &model.MarkPriceInfo{MarkPrice: price, Ts: int(msg.TimeMs)}
 			model.AppEnvironment.SetMarkPriceInfo(symbol, model.Gate, ticker)
@@ -684,9 +677,8 @@ func parseOrderGatePerp(gateOrder *gateApi.FuturesOrder) (order *model.Order) {
 	if gateOrder == nil {
 		return nil
 	}
-	_, _, coin := model.GetCoinFromDialect(model.Gate, gateOrder.Contract)
-	order = &model.Order{Market: model.Gate, OrderId: fmt.Sprintf(`%d`, gateOrder.Id),
-		Symbol: coin + model.UniStandardTail[model.MarketTypePerp]}
+	_, _, symbol := model.GetFromDialect(model.Gate, model.MarketTypePerp, gateOrder.Contract)
+	order = &model.Order{Market: model.Gate, OrderId: fmt.Sprintf(`%d`, gateOrder.Id), Symbol: symbol}
 	order.OrderTime = time.Unix(int64(gateOrder.CreateTime), 0)
 	order.UpdatedAt = time.Unix(int64(gateOrder.FinishTime), 0)
 	if gateOrder.Status == `open` {
@@ -749,8 +741,7 @@ func parseOrderGateSpot(gateOrder *gateApi.Order) (order *model.Order) {
 		order.OrderType = model.OrderTypeMarket
 	}
 	order.Price, _ = strconv.ParseFloat(gateOrder.Price, 64)
-	_, _, coin := model.GetCoinFromDialect(model.Gate, gateOrder.CurrencyPair)
-	order.Symbol = coin + model.UniStandardTail[model.MarketTypeSpot]
+	_, _, order.Symbol = model.GetFromDialect(model.Gate, model.MarketTypeSpot, gateOrder.CurrencyPair)
 	// When `type` is limit, it refers to base currency.  For instance, `BTC_USDT` means `BTC`
 	// When `type` is `market`, it refers to different currency according to `side`
 	//- `side` : `buy` means quote currency, `BTC_USDT` means `USDT`
@@ -878,13 +869,12 @@ func getPositionsGate(key string, secret string) (success bool, positions []*Pos
 	}
 	positions = make([]*Position, 0)
 	for _, item := range positionList {
-		getCoin, _, coin := model.GetCoinFromDialect(model.Gate, item.Contract)
+		getCoin, _, symbol := model.GetFromDialect(model.Gate, model.MarketTypePerp, item.Contract)
 		if !getCoin {
 			continue
 		}
-		currency := coin + model.UniStandardTail[model.MarketTypePerp]
-		position := &Position{Market: model.Gate, Ts: util.GetNowUnixMillion(), Currency: currency}
-		_, realAmount := model.ParseRealAmount(model.Gate, currency, float64(item.Size))
+		position := &Position{Market: model.Gate, Ts: util.GetNowUnixMillion(), Currency: symbol}
+		_, realAmount := model.ParseRealAmount(model.Gate, symbol, float64(item.Size))
 		position.Holding = realAmount
 		position.LeverRate, _ = strconv.ParseInt(item.CrossLeverageLimit, 10, 64)
 		position.EntryPrice, _ = strconv.ParseFloat(item.EntryPrice, 64)

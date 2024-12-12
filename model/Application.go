@@ -106,15 +106,12 @@ func GetFromStandard(market, standardSymbol string) (success bool, marketType, c
 	return false, ``, ``, ``
 }
 
-// GetCoinFromDialect 注意如果交易所不同市场的symbol有相同的tail，此时marketType有可能匹配错误，慎用
-func GetCoinFromDialect(market, dialectSymbol string) (success bool, marketType, coin string) {
-	for mType, tails := range DialectTail {
-		if tails[market] == `` {
-			continue
-		}
-		if util.EndWith(dialectSymbol, tails[market]) {
-			return true, mType, dialectSymbol[0 : len(dialectSymbol)-len(tails[market])]
-		}
+func GetFromDialect(market, marketType, dialectSymbol string) (success bool, coin, standardSymbol string) {
+	if util.EndWith(dialectSymbol, DialectTail[marketType][market]) {
+		lenDialect := len(dialectSymbol)
+		lenTail := len(DialectTail[marketType][market])
+		coin = dialectSymbol[0 : lenDialect-lenTail]
+		return true, coin, coin + UniStandardTail[marketType]
 	}
 	return false, ``, ``
 }

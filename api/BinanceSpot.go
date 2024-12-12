@@ -73,13 +73,12 @@ func GetMarketsBinance(account *model.Account, market string) (marketInfos map[s
 		if stat == nil {
 			continue
 		}
-		success, marketType, coin := model.GetCoinFromDialect(model.BinanceSpot, stat.Symbol)
+		success, _, symbol := model.GetFromDialect(model.BinanceSpot, model.MarketTypeSpot, stat.Symbol)
 		if !success {
 			continue
 		}
-		name := coin + model.UniStandardTail[marketType]
-		if marketInfos[name] != nil {
-			marketInfos[name].TradeAmount, _ = strconv.ParseFloat(stat.QuoteVolume, 64)
+		if marketInfos[symbol] != nil {
+			marketInfos[symbol].TradeAmount, _ = strconv.ParseFloat(stat.QuoteVolume, 64)
 		}
 	}
 	return marketInfos
@@ -100,13 +99,9 @@ var KLineMsgHandlerBinanceSpot = func(market string, conn *model.WSConn, event [
 	if subscribe != `kline` {
 		return
 	}
-	success, _, coin := model.GetCoinFromDialect(market, dialectSymbol)
+	success, _, standardSymbol := model.GetFromDialect(market, model.MarketTypeSpot, dialectSymbol)
 	if !success {
 		return
-	}
-	standardSymbol := coin + model.UniStandardTail[model.MarketTypeSpot]
-	if market == model.BinanceMargin {
-		standardSymbol = coin + model.UniStandardTail[model.MarketTypeSpot]
 	}
 	createdAt := time.UnixMilli(result.Get(`E`).MustInt64())
 	result = result.Get(`k`)
@@ -140,10 +135,10 @@ func WsKLineBinanceSpot(environment *model.Environment, market string, symbols m
 	return
 }
 
-var wsHandlerBinance = func(market string, conn *model.WSConn, event []byte) {
+var wsHandlerBinanceSpot = func(market string, conn *model.WSConn, event []byte) {
 	result, wsErr := util.NewJSON(event)
 	if wsErr != nil {
-		util.Log(util.LogLevelError, `wsHandlerBinance binance fail to unmarshal json `+wsErr.Error())
+		util.Log(util.LogLevelError, `wsHandlerBinanceSpot binance fail to unmarshal json `+wsErr.Error())
 		return
 	}
 	id := result.Get(`id`).MustInt()
@@ -162,13 +157,9 @@ var wsHandlerBinance = func(market string, conn *model.WSConn, event []byte) {
 	if strings.Contains(subscribe, `@depth`) {
 		updateId = result.Get(`lastUpdateId`).MustInt64()
 	}
-	success, _, coin := model.GetCoinFromDialect(market, dialectSymbol)
+	success, _, standardSymbol := model.GetFromDialect(market, model.MarketTypeSpot, dialectSymbol)
 	if !success {
 		return
-	}
-	standardSymbol := coin + model.UniStandardTail[model.MarketTypeSpot]
-	if market == model.BinanceMargin {
-		standardSymbol = coin + model.UniStandardTail[model.MarketTypeSpot]
 	}
 	haveOld, old := model.AppEnvironment.GetBidAsk(market, standardSymbol)
 	if haveOld && old.UpdateId > updateId {
@@ -310,6 +301,7 @@ func placeOrderBinanceSpot(account *model.Account, isWs bool, order *model.Order
 		param.Set(`quantity`, amountStr)
 		param.Set(`apiKey`, account.Key)
 		param.Set(`timestamp`, fmt.Sprintf(`%d`, ts))
+		param.Set(`newClientOrderId`, order.ClientOrdId)
 		hash := hmac.New(sha256.New, []byte(account.Secret))
 		hash.Write([]byte(param.Encode()))
 		msg := fmt.Sprintf(`{"id": "%s","method": "order.place","params":{"symbol": "%s","side": "%s","type": "%s",
@@ -338,6 +330,7 @@ func placeOrderBinanceSpot(account *model.Account, isWs bool, order *model.Order
 			service.Price(priceStr)
 			service.TimeInForce(binance.TimeInForceTypeGTC)
 		}
+		service.NewClientOrderID(order.ClientOrdId)
 		orderResponse, err := service.Do(context.Background())
 		if err != nil {
 			util.Log(util.LogLevelError, fmt.Sprintf(`placeOrderBinanceSpot err: %s amount %s`, err.Error(), amountStr))
@@ -356,8 +349,7 @@ func parseOrderBinanceSpotSdk(orderResp *binance.Order) (order *model.Order) {
 	order = &model.Order{Market: model.BinanceSpot, Status: model.CarryStatusFail}
 	order.OrderId = strconv.FormatInt(orderResp.OrderID, 10)
 	order.ClientOrdId = orderResp.ClientOrderID
-	_, marketType, coin := model.GetCoinFromDialect(model.BinanceSpot, orderResp.Symbol)
-	order.Symbol = coin + model.UniStandardTail[marketType]
+	_, _, order.Symbol = model.GetFromDialect(model.BinanceSpot, model.MarketTypeSpot, orderResp.Symbol)
 	order.OrderSide = strings.ToLower(string(orderResp.Side))
 	order.OrderType = strings.ToLower(string(orderResp.Type))
 	order.Amount, _ = strconv.ParseFloat(orderResp.OrigQuantity, 64)
@@ -376,15 +368,12 @@ func parseOrderBinanceSpotSdk(orderResp *binance.Order) (order *model.Order) {
 }
 
 // 兼容spot margin
-func parseOrderBinance(market string, orderJson *simplejson.Json) (order *model.Order) {
+func parseOrderBinanceSpot(market string, orderJson *simplejson.Json) (order *model.Order) {
 	if orderJson == nil {
 		return nil
 	}
 	order = &model.Order{Market: market}
-	suc, _, coin := model.GetCoinFromDialect(market, orderJson.Get(`symbol`).MustString())
-	if suc {
-		order.Symbol = coin + model.UniStandardTail[model.MarketTypeSpot]
-	}
+	_, _, order.Symbol = model.GetFromDialect(market, model.MarketTypeSpot, orderJson.Get(`symbol`).MustString())
 	order.OrderId = strconv.Itoa(orderJson.Get("orderId").MustInt())
 	order.ClientOrdId = orderJson.Get(`clientOrderId`).MustString()
 	order.OrderTime = time.UnixMilli(orderJson.Get("transactTime").MustInt64())
@@ -478,7 +467,7 @@ func cancelOrderBinanceSpot(key, secret, market, symbol, orderId string) (suc bo
 		true, map[string]interface{}{`symbol`: symbol, `orderId`: orderId})
 	orderJson, err := util.NewJSON(responseBody)
 	if err == nil {
-		order = parseOrderBinance(market, orderJson)
+		order = parseOrderBinanceSpot(market, orderJson)
 		if order != nil && order.Status == model.CarryStatusFail {
 			return true, order
 		}

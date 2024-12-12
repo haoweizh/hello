@@ -154,18 +154,20 @@ func parseBidAskBitget(bookWsResp *dtos.BitgetBoosWsResp) (bidAsk *model.BidAsk)
 		return nil
 	}
 	market := model.BitgetSpot
+	marketType := model.MarketTypeSpot
 	if bookWsResp.Arg.InstType == `SPOT` {
 		market = model.BitgetSpot
+		marketType = model.MarketTypeSpot
 	} else if bookWsResp.Arg.InstType == `USDT-FUTURES` {
 		market = model.BitgetPerp
+		marketType = model.MarketTypePerp
 	} else {
 		return nil
 	}
-	success, marketType, coin := model.GetCoinFromDialect(market, bookWsResp.Arg.InstId)
+	success, _, symbol := model.GetFromDialect(market, marketType, bookWsResp.Arg.InstId)
 	if !success {
 		return nil
 	}
-	symbol := coin + model.UniStandardTail[marketType]
 	switch bookWsResp.Action {
 	case `snapshot`:
 		bidAsk = &model.BidAsk{TsReceived: int(time.Now().UnixNano() / int64(time.Millisecond))}
@@ -299,7 +301,7 @@ func placeOrderBitgetSpot(key, secret string, order *model.Order, orderSide, ord
 		"price":     priceStr,
 		"side":      orderSide,
 		"orderType": ordType,
-	}
+		"clientOid": order.ClientOrdId}
 	httpResp, httpErr := client.DoPost("/api/v2/spot/trade/place-order", string(util.JsonEncodeToByte(params)))
 	bitgetOrderResp := &dtos.BitgetOrderResp{}
 	jsonErr := json.Unmarshal(httpResp, bitgetOrderResp)
@@ -415,9 +417,9 @@ func parseOrderBitgetSpot(resp *dtos.BitgetSpotOrderDetailResp) (orders []*model
 	}
 	orders = make([]*model.Order, 0)
 	for _, orderResp := range resp.Data {
-		_, _, coin := model.GetCoinFromDialect(model.BitgetSpot, orderResp.Symbol)
+		_, _, symbol := model.GetFromDialect(model.BitgetSpot, model.MarketTypeSpot, orderResp.Symbol)
 		order := &model.Order{Market: model.BitgetSpot, Status: model.CarryStatusWorking, OrderId: orderResp.OrderId,
-			ClientOrdId: orderResp.ClientOid, Symbol: coin + model.UniStandardTail[model.MarketTypeSpot]}
+			ClientOrdId: orderResp.ClientOid, Symbol: symbol}
 		intOrderTime, _ := strconv.ParseInt(orderResp.CTime, 10, 64)
 		order.OrderTime = time.UnixMilli(intOrderTime)
 		order.DealAmount, _ = strconv.ParseFloat(orderResp.BaseVolume, 64)

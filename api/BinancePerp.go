@@ -119,13 +119,12 @@ func getMarketsBinancePerp(key, secret string) (marketInfos map[string]*model.Ma
 		if stat == nil {
 			continue
 		}
-		success, marketType, coin := model.GetCoinFromDialect(model.BinancePerp, stat.Symbol)
+		success, _, symbol := model.GetFromDialect(model.BinancePerp, model.MarketTypePerp, stat.Symbol)
 		if !success {
 			continue
 		}
-		name := coin + model.UniStandardTail[marketType]
-		if marketInfos[name] != nil {
-			marketInfos[name].TradeAmount, _ = strconv.ParseFloat(stat.QuoteVolume, 64)
+		if marketInfos[symbol] != nil {
+			marketInfos[symbol].TradeAmount, _ = strconv.ParseFloat(stat.QuoteVolume, 64)
 		}
 	}
 	return marketInfos
@@ -146,11 +145,10 @@ var wsHandlerBinancePerp = func(market string, conn *model.WSConn, event []byte)
 		return
 	}
 	dialectSymbol := result.Get(`s`).MustString()
-	success, _, coin := model.GetCoinFromDialect(model.BinancePerp, dialectSymbol)
+	success, _, standardSymbol := model.GetFromDialect(model.BinancePerp, model.MarketTypePerp, dialectSymbol)
 	if !success {
 		return
 	}
-	standardSymbol := coin + model.UniStandardTail[model.MarketTypePerp]
 	updateId := result.Get(`u`).MustInt64()
 	var bidAsk *model.BidAsk
 	if strings.Contains(subscribe, `@depth`) {
@@ -331,6 +329,7 @@ func placeOrderBinancePerp(account *model.Account, isWS bool, order *model.Order
 		param.Set(`price`, priceStr)
 		param.Set(`quantity`, amountStr)
 		param.Set(`apiKey`, account.Key)
+		param.Set(`newClientOrderId`, order.ClientOrdId)
 		param.Set(`timestamp`, fmt.Sprintf(`%d`, ts))
 		hash := hmac.New(sha256.New, []byte(account.Secret))
 		hash.Write([]byte(param.Encode()))
@@ -374,6 +373,7 @@ func placeOrderBinancePerp(account *model.Account, isWS bool, order *model.Order
 			//}
 			service.CallbackRate(stopPriceStr)
 		}
+		service.NewClientOrderID(order.ClientOrdId)
 		orderResponse, err := service.Do(context.Background())
 		if err != nil {
 			util.Log(util.LogLevelError, "placeOrderBinancePerp err: "+err.Error())
@@ -451,11 +451,11 @@ func getPositionsBinancePerp(key, secret string) (success bool, positions []*Pos
 			position := &Position{Market: model.BinancePerp, Ts: util.GetNowUnixMillion()}
 			value := item.(map[string]interface{})
 			if value[`symbol`] != nil {
-				isSuccess, _, coin := model.GetCoinFromDialect(model.BinancePerp, value[`symbol`].(string))
+				isSuccess, _, symbol := model.GetFromDialect(model.BinancePerp, model.MarketTypePerp, value[`symbol`].(string))
 				if !isSuccess {
 					continue
 				}
-				position.Currency = coin + model.UniStandardTail[model.MarketTypePerp]
+				position.Currency = symbol
 			}
 			if value[`positionAmt`] != nil {
 				position.Holding, _ = strconv.ParseFloat(value[`positionAmt`].(string), 64)
@@ -650,36 +650,36 @@ func queryOpenOrdersBinancePerp(key, secret, symbol string) (orders []*model.Ord
 }
 
 // parseOrderJsBinance
-func _(market string, json *simplejson.Json) (order *model.Order) {
-	if json == nil {
-		return nil
-	}
-	order = &model.Order{Market: market}
-	symbol := json.Get(`s`).MustString()
-	success, marketType, coin := model.GetCoinFromDialect(market, symbol)
-	if success {
-		order.Coin = coin
-		order.Symbol = coin + model.UniStandardTail[marketType]
-	}
-	if strings.EqualFold(json.Get(`S`).MustString(), model.OrderSideSell) {
-		order.OrderSide = model.OrderSideSell
-	} else if strings.EqualFold(json.Get(`S`).MustString(), model.OrderSideBuy) {
-		order.OrderSide = model.OrderSideBuy
-	}
-	order.OrderType = GetStandardOrderType(market, json.Get(`o`).MustString())
-	order.Amount, _ = strconv.ParseFloat(json.Get("q").MustString(), 64)
-	order.Price, _ = strconv.ParseFloat(json.Get(`p`).MustString(), 64)
-	order.DealPrice, _ = strconv.ParseFloat(json.Get("ap").MustString(), 64)
-	if marketType == model.MarketTypeSpot {
-		order.DealPrice, _ = strconv.ParseFloat(json.Get(`L`).MustString(), 64)
-	}
-	order.DealAmount, _ = strconv.ParseFloat(json.Get("z").MustString(), 64)
-	order.TriggerPrice, _ = strconv.ParseFloat(json.Get("sp").MustString(), 64)
-	order.OrderId = strconv.Itoa(json.Get("i").MustInt())
-	order.Fee, _ = strconv.ParseFloat(json.Get("n").MustString(), 64)
-	order.Status = model.GetOrderStatus(market, json.Get("X").MustString())
-	return order
-}
+//func _(market string, json *simplejson.Json) (order *model.Order) {
+//	if json == nil {
+//		return nil
+//	}
+//	order = &model.Order{Market: market}
+//	symbol := json.Get(`s`).MustString()
+//	success, marketType, coin := model.GetFromDialect(market, symbol)
+//	if success {
+//		order.Coin = coin
+//		order.Symbol = coin + model.UniStandardTail[marketType]
+//	}
+//	if strings.EqualFold(json.Get(`S`).MustString(), model.OrderSideSell) {
+//		order.OrderSide = model.OrderSideSell
+//	} else if strings.EqualFold(json.Get(`S`).MustString(), model.OrderSideBuy) {
+//		order.OrderSide = model.OrderSideBuy
+//	}
+//	order.OrderType = GetStandardOrderType(market, json.Get(`o`).MustString())
+//	order.Amount, _ = strconv.ParseFloat(json.Get("q").MustString(), 64)
+//	order.Price, _ = strconv.ParseFloat(json.Get(`p`).MustString(), 64)
+//	order.DealPrice, _ = strconv.ParseFloat(json.Get("ap").MustString(), 64)
+//	if marketType == model.MarketTypeSpot {
+//		order.DealPrice, _ = strconv.ParseFloat(json.Get(`L`).MustString(), 64)
+//	}
+//	order.DealAmount, _ = strconv.ParseFloat(json.Get("z").MustString(), 64)
+//	order.TriggerPrice, _ = strconv.ParseFloat(json.Get("sp").MustString(), 64)
+//	order.OrderId = strconv.Itoa(json.Get("i").MustInt())
+//	order.Fee, _ = strconv.ParseFloat(json.Get("n").MustString(), 64)
+//	order.Status = model.GetOrderStatus(market, json.Get("X").MustString())
+//	return order
+//}
 
 func parseOrderBinancePerp(res *futures.Order, order *model.Order) {
 	if res != nil {
@@ -688,8 +688,7 @@ func parseOrderBinancePerp(res *futures.Order, order *model.Order) {
 		} else if strings.Contains(strings.ToLower(string(res.Side)), `sell`) {
 			order.OrderSide = model.OrderSideSell
 		}
-		_, marketType, coin := model.GetCoinFromDialect(model.BinancePerp, res.Symbol)
-		order.Symbol = coin + model.UniStandardTail[marketType]
+		_, _, order.Symbol = model.GetFromDialect(model.BinancePerp, model.MarketTypePerp, res.Symbol)
 		order.Amount, _ = strconv.ParseFloat(res.OrigQuantity, 64)
 		order.Price, _ = strconv.ParseFloat(res.Price, 64)
 		order.DealPrice, _ = strconv.ParseFloat(res.AvgPrice, 64)

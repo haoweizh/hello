@@ -125,8 +125,11 @@ var wsHandlerOKEX = func(market string, conn *model.WSConn, event []byte) {
 		return
 	}
 	dialectSymbol := responseJson.GetPath(`arg`, `instId`).MustString()
-	_, marketType, coin := model.GetCoinFromDialect(model.OKEX, dialectSymbol)
-	symbol := coin + model.UniStandardTail[marketType]
+	marketType := model.MarketTypeSpot
+	if strings.Contains(dialectSymbol, `-USDT-SWAP`) {
+		marketType = model.MarketTypePerp
+	}
+	_, _, symbol := model.GetFromDialect(model.OKEX, marketType, dialectSymbol)
 	action := responseJson.Get(`action`).MustString()
 	data := responseJson.Get(`data`).MustArray()[0].(map[string]interface{})
 	success := false
@@ -689,11 +692,15 @@ func getMarketsOKEX(key, secret string) (marketInfos map[string]*model.MarketInf
 				value := info.(map[string]interface{})
 				if value[`instId`] != nil {
 					marketInfo := &model.MarketInfo{Market: model.OKEX}
-					success, marketType, coin := model.GetCoinFromDialect(model.OKEX, value[`instId`].(string))
+					marketType := model.MarketTypeSpot
+					if strings.Contains(value[`instId`].(string), `-USDT-SWAP`) {
+						marketType = model.MarketTypePerp
+					}
+					success, _, symbol := model.GetFromDialect(model.OKEX, marketType, value[`instId`].(string))
 					if !success {
 						continue
 					}
-					marketInfo.Name = coin + model.UniStandardTail[marketType]
+					marketInfo.Name = symbol
 					if value[`lotSz`] != nil {
 						marketInfo.SizeIncrement, _ = strconv.ParseFloat(value[`lotSz`].(string), 64)
 					}
@@ -728,21 +735,24 @@ func getMarketsOKEX(key, secret string) (marketInfos map[string]*model.MarketInf
 			for _, info := range marketJson.Get(`data`).MustArray() {
 				value := info.(map[string]interface{})
 				if value[`instId`] != nil {
-					success, marketType, coin := model.GetCoinFromDialect(model.OKEX, value[`instId`].(string))
+					marketType := model.MarketTypeSpot
+					if strings.Contains(value[`instId`].(string), `-USDT-SWAP`) {
+						marketType = model.MarketTypePerp
+					}
+					success, _, symbol := model.GetFromDialect(model.OKEX, marketType, value[`instId`].(string))
 					if !success {
 						continue
 					}
-					name := coin + model.UniStandardTail[marketType]
-					if marketInfos[name] == nil {
+					if marketInfos[symbol] == nil {
 						continue
 					}
 					if value[`volCcy24h`] != nil && value[`last`] != nil {
 						if marketType == model.MarketTypeSpot {
-							marketInfos[name].TradeAmount, _ = strconv.ParseFloat(value[`volCcy24h`].(string), 64)
-						} else if marketType == model.MarketTypePerp {
+							marketInfos[symbol].TradeAmount, _ = strconv.ParseFloat(value[`volCcy24h`].(string), 64)
+						} else {
 							vol, _ := strconv.ParseFloat(value[`volCcy24h`].(string), 64)
 							lastPriceOKx, _ := strconv.ParseFloat(value[`last`].(string), 64)
-							marketInfos[name].TradeAmount = vol * lastPriceOKx
+							marketInfos[symbol].TradeAmount = vol * lastPriceOKx
 						}
 					}
 				}
@@ -957,9 +967,13 @@ func parseOrderOKEX(value map[string]interface{}) (order *model.Order) {
 		}
 	}
 	if value[`instId`] != nil {
-		success, marketType, coin := model.GetCoinFromDialect(model.OKEX, value[`instId`].(string))
+		marketType := model.MarketTypeSpot
+		if strings.Contains(value[`instId`].(string), `-USDT-SWAP`) {
+			marketType = model.MarketTypePerp
+		}
+		success, _, symbol := model.GetFromDialect(model.OKEX, marketType, value[`instId`].(string))
 		if success {
-			order.Symbol = coin + model.UniStandardTail[marketType]
+			order.Symbol = symbol
 		} else {
 			return nil
 		}
@@ -1146,11 +1160,15 @@ func parsePositionOKEX(value map[string]interface{}) (success bool, position *Po
 		position.Margin, _ = strconv.ParseFloat(value[`margin`].(string), 64)
 	}
 	if value[`instId`] != nil { // 	产品ID，如 BTC-USD-180216
-		getCoin, marketType, coin := model.GetCoinFromDialect(model.OKEX, value[`instId`].(string))
+		marketType := model.MarketTypeSpot
+		if strings.Contains(value[`instId`].(string), `-USDT-SWAP`) {
+			marketType = model.MarketTypePerp
+		}
+		getCoin, _, symbol := model.GetFromDialect(model.OKEX, marketType, value[`instId`].(string))
 		if !getCoin {
 			return false, nil
 		}
-		position.Currency = coin + model.UniStandardTail[model.MarketTypePerp]
+		position.Currency = symbol
 		//posCcy 仓位资产币种，仅适用于币币杠杆仓位
 		if value[`pos`] != nil {
 			pos, _ := strconv.ParseFloat(value[`pos`].(string), 64)
