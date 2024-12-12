@@ -111,9 +111,9 @@ func GetFromDialect(market, marketType, dialectSymbol string) (success bool, coi
 		lenDialect := len(dialectSymbol)
 		lenTail := len(DialectTail[marketType][market])
 		coin = dialectSymbol[0 : lenDialect-lenTail]
+		util.Log(util.LogLevelDebug, fmt.Sprintf(`get from dialect %s %s %s %v %s %s`, market, marketType, dialectSymbol, success, coin, standardSymbol))
 		return true, coin, coin + UniStandardTail[marketType]
 	}
-	util.Log(util.LogLevelError, fmt.Sprintf(`fail to getFromDialect market %s %s %s`, market, marketType, dialectSymbol))
 	return false, ``, ``
 }
 

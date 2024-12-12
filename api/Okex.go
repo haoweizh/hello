@@ -129,7 +129,10 @@ var wsHandlerOKEX = func(market string, conn *model.WSConn, event []byte) {
 	if strings.Contains(dialectSymbol, `-USDT-SWAP`) {
 		marketType = model.MarketTypePerp
 	}
-	_, _, symbol := model.GetFromDialect(model.OKEX, marketType, dialectSymbol)
+	getSymbol, _, symbol := model.GetFromDialect(model.OKEX, marketType, dialectSymbol)
+	if !getSymbol {
+		return
+	}
 	action := responseJson.Get(`action`).MustString()
 	data := responseJson.Get(`data`).MustArray()[0].(map[string]interface{})
 	success := false

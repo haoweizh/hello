@@ -477,6 +477,8 @@ func GetMarketSymbols(market string) map[string]bool {
 				`GALA_PERP`: true, `GLM_PERP`: true, `GRASS_PERP`: true, `HBAR_PERP`: true, `JTO_PERP`: true, `KSM_PERP`: true, `MANA_PERP`: true, `MOODENG_PERP`: true, `NEAR_PERP`: true,
 				`NEIRO_PERP`: true, `NOT_PERP`: true, `OP_PERP`: true, `ORDI_PERP`: true, `PEOPLE_PERP`: true, `PEPE_PERP`: true, `POL_PERP`: true, `PUFFER_PERP`: true, `SAND_PERP`: true,
 				`SATS_PERP`: true, `SHIB_PERP`: true, `SOL_PERP`: true, `SUI_PERP`: true, `TIA_PERP`: true, `TON_PERP`: true, `TURBO_PERP`: true, `WIF_PERP`: true, `WLD_PERP`: true, `XLM_PERP`: true, `X_PERP`: true}
+		} else if market == model.Gate {
+			return map[string]bool{`AAVE_PERP`: true}
 		}
 	}
 	if appSettings == nil {

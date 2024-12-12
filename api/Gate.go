@@ -58,7 +58,10 @@ func appendFutureMarketGate(key, secret string, marketInfos map[string]*model.Ma
 			continue
 		}
 		marketInfo := &model.MarketInfo{Market: model.Gate}
-		_, coin, symbol := model.GetFromDialect(model.Gate, model.MarketTypePerp, contract.Name)
+		success, coin, symbol := model.GetFromDialect(model.Gate, model.MarketTypePerp, contract.Name)
+		if !success {
+			continue
+		}
 		minPrice, _ := strconv.ParseFloat(contract.OrderPriceRound, 64)
 		marketInfo.PriceIncrement = minPrice
 		marketInfo.PriceDecimal = util.NumDecPlaces(minPrice)

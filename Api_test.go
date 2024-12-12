@@ -124,10 +124,10 @@ func Test_getCommonMarketInfos(t *testing.T) {
 func TestWs(t *testing.T) {
 	market := model.Gate
 	model.NewConfig()
-	api.MaintainConns(market)
+	//api.MaintainConns(market)
 	//model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
 	//api.InitMarketInfos()
-	//api.CreateWSTick(model.AppEnvironment, market)
+	api.CreateWSTick(model.AppEnvironment, market)
 	select {}
 }
 
