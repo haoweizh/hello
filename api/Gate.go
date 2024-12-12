@@ -222,7 +222,7 @@ var tickerHandler = gateWs.NewCallBack(func(msg *gateWs.UpdateMsg) {
 			util.Log(util.LogLevelError, fmt.Sprintf("future book ticker Unmarshal err:%s %s", model.Gate, err.Error()))
 			return
 		}
-		success, _, symbol := model.GetFromDialect(model.Gate, model.MarketTypePerp, update.Contract)
+		success, _, symbol = model.GetFromDialect(model.Gate, model.MarketTypePerp, update.Contract)
 		if !success || len(strconv.Itoa(int(update.TimeMillis))) != 13 {
 			return
 		}
