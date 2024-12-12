@@ -379,6 +379,7 @@ func ClearCross() {
 			time.Sleep(time.Second * 3)
 		}
 		model.AppEnvironment.OrderIdOrders = sync.Map{}
+		model.AppEnvironment.ReqIdOrders = sync.Map{}
 		today := util.GetNow()
 		today = time.Date(today.Year(), today.Month(), today.Day(), 0, 0, 0, 0, today.Location())
 		carryRows, _ := model.AppDB.Model(model.Order{}).Select(`sum(price*abs(amount)),refresh_type`).
