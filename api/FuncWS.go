@@ -111,7 +111,7 @@ func _(environment *model.Environment, market string, symbols map[string]bool) (
 func CreateWSTick(environment *model.Environment, market string) (
 	socketMap map[*model.WSConn]bool, channels []chan struct{}) {
 	for {
-		locking := CheckSetProcessing(model.FunctionConnMaintain, market, ``, true)
+		locking := CheckSetProcessing(model.FunctionTickMaintain, market, ``, true)
 		if !locking {
 			break
 		}
@@ -153,7 +153,7 @@ func CreateWSTick(environment *model.Environment, market string) (
 		util.Log(util.LogLevelError, market+` can not create depth server `+err.Error())
 	}
 	model.AppEnvironment.WsInitTime.Store(market, util.GetNow())
-	CheckSetProcessing(model.FunctionConnMaintain, market, ``, false)
+	CheckSetProcessing(model.FunctionTickMaintain, market, ``, false)
 	return socketMap, channels
 }
 
