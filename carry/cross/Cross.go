@@ -1161,7 +1161,6 @@ func handleCross(account *model.Account, order *model.Order) {
 		model.AppDB.Save(compOrder)
 		util.Log(util.LogLevelInfo, fmt.Sprintf(`handleCorss no order post comp from %#v %#v not deal %f 百分之%f`,
 			order, compOrder, leftAmt, math.Round(100*leftAmt/order.Amount)))
-		return
 	} else if leftAmt > marketInfo.SizeMin && leftAmt*order.Price > marketInfo.MoneyMin && order.Status != model.CarryStatusSuccess && order.HaveId() {
 		canceled, errCode, errMsg := api.CancelOrder(account.Key, account.Secret, order.Market, order.Symbol, model.OrderTypeLimit, order.OrderId)
 		if !canceled {
