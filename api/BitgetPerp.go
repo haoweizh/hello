@@ -202,7 +202,10 @@ func getPositionsBitgetPerp(key, secret string) (success bool, positions []*Posi
 		position.LeverRate = int64(contract.Leverage)
 		position.EntryPrice, _ = strconv.ParseFloat(contract.OpenPriceAvg, 64)
 		position.Margin, _ = strconv.ParseFloat(contract.MarginSize, 64)
-		positions = append(positions, position)
+		if position.Holding != 0 {
+			positions = append(positions, position)
+			util.Log(util.LogLevelInfo, fmt.Sprintf(`get position bitgetperp %#v`, position))
+		}
 	}
 	if len(positions) == 0 && accountValue > 0 {
 		util.Log(util.LogLevelError, fmt.Sprintf(`get pos error bitgetperp %d`, len(bitgetPositionResp.Data)))

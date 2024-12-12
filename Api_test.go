@@ -528,9 +528,10 @@ func Test_download(t *testing.T) {
 func Test_Order(t *testing.T) {
 	market := model.OKEX
 	model.NewConfig()
-	api.InitMarketInfos(market)
+	//api.InitMarketInfos(market)
 	symbol := `COMP_PERP`
 	account := model.GetAccounts(0)[market]
+	api.GetBalances(account.Key, account.Secret, model.OKEX)
 	//api.GetPositions(account.Key, account.Secret, market)
 	//fmt.Println(order.OrderId)
 	//api.CancelOrder(account.Key, account.Secret, market, symbol, ``, order.OrderId)

@@ -466,7 +466,10 @@ func getPositionsBinancePerp(key, secret string) (success bool, positions []*Pos
 			if value[`unrealizedProfit`] != nil {
 				position.ProfitUnreal, _ = strconv.ParseFloat(value[`unrealizedProfit`].(string), 64)
 			}
-			positions = append(positions, position)
+			if position.Holding != 0 {
+				positions = append(positions, position)
+				util.Log(util.LogLevelInfo, fmt.Sprintf(`get position binanceperp %#v`, position))
+			}
 		}
 		totalMaintMargin, _ := strconv.ParseFloat(positionJson.Get("totalMaintMargin").MustString(), 64)
 		if accountValue > 0 {
