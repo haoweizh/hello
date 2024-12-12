@@ -1140,7 +1140,6 @@ func placeStatus(status *CarryStatus, price float64, amount float64) {
 
 func handleCross(account *model.Account, order *model.Order) {
 	time.Sleep(time.Minute)
-	model.AppDB.Save(order)
 	model.AppEnvironment.OrderIdOrders.Delete(order.OrderId)
 	if order.Amount == order.DealAmount {
 		order.Status = model.CarryStatusSuccess
@@ -1163,8 +1162,7 @@ func handleCross(account *model.Account, order *model.Order) {
 		util.Log(util.LogLevelInfo, fmt.Sprintf(`handleCorss no order post comp from %#v %#v not deal %f 百分之%f`,
 			order, compOrder, leftAmt, math.Round(100*leftAmt/order.Amount)))
 		return
-	}
-	if leftAmt > marketInfo.SizeMin && leftAmt*order.Price > marketInfo.MoneyMin && order.Status != model.CarryStatusSuccess && order.HaveId() {
+	} else if leftAmt > marketInfo.SizeMin && leftAmt*order.Price > marketInfo.MoneyMin && order.Status != model.CarryStatusSuccess && order.HaveId() {
 		canceled, errCode, errMsg := api.CancelOrder(account.Key, account.Secret, order.Market, order.Symbol, model.OrderTypeLimit, order.OrderId)
 		if !canceled {
 			util.Log(util.LogLevelInfo, fmt.Sprintf(`post cancel %v %s %s %s`, canceled, errCode, errMsg, order.OrderId))
@@ -1189,10 +1187,14 @@ func handleCross(account *model.Account, order *model.Order) {
 	} else {
 		if order.HaveId() {
 			util.Log(util.LogLevelInfo, fmt.Sprintf(`post handle done %#v`, order))
+			order.Status = model.CarryStatusSuccess
 		} else {
+			order.OrderId = fmt.Sprintf("%d%s%s", time.Now().UnixMilli(), order.Market, order.Symbol)
+			order.Status = model.CarryStatusFail
 			util.Log(util.LogLevelError, fmt.Sprintf(`handle have no id %#v`, order))
 		}
 	}
+	model.AppDB.Save(order)
 }
 
 var PostOrderCross = func(order *model.Order) {
