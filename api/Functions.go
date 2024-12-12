@@ -413,8 +413,15 @@ func GetPriceForce(symbol, market string) (result bool, price float64) {
 		return true, bidAsk.Bids[0].Price
 	}
 	markets := GetMarkets()
+	_, _, coin, _ := model.GetFromStandard(market, symbol)
+	symbolSpot := coin + model.UniStandardTail[model.MarketTypeSpot]
+	symbolPerp := coin + model.UniStandardTail[model.MarketTypePerp]
 	for _, m := range markets {
-		getBidAsk, bidAsk = model.AppEnvironment.GetBidAsk(m, symbol)
+		getBidAsk, bidAsk = model.AppEnvironment.GetBidAsk(m, symbolSpot)
+		if getBidAsk && bidAsk != nil {
+			return true, bidAsk.Bids[0].Price
+		}
+		getBidAsk, bidAsk = model.AppEnvironment.GetBidAsk(m, symbolPerp)
 		if getBidAsk && bidAsk != nil {
 			return true, bidAsk.Bids[0].Price
 		}
@@ -435,7 +442,8 @@ func GetPriceForce(symbol, market string) (result bool, price float64) {
 	}
 	lastPriceTime.Store(market+`_`+symbol, time.Now().Add(time.Second*14400))
 	lastPrice.Store(market+`_`+symbol, price)
-	return result, price
+	util.Log(util.LogLevelError, fmt.Sprintf(`fail to get price for %s %s`, market, symbol))
+	return false, price
 }
 
 var getEquityTime = &sync.Map{}

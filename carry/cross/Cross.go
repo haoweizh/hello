@@ -103,16 +103,15 @@ func createFromPosition(account *model.Account, setting *model.Setting, valueLim
 		return nil, false
 	}
 	cm := value.(*contractMarket)
-	getPrice, price := api.GetPriceForce(setting.Symbol, setting.Market)
-	if !getPrice || price == 0 {
-		//price = cm.positions[setting.Symbol].EntryPrice
-		//util.Notice(`no tick price, use position price %s %s %f`, setting.Market, setting.Symbol, price)
-		return nil, false
-	}
+	_, price := api.GetPriceForce(setting.Symbol, setting.Market)
 	limitAmount := 0.0
 	availableAmount := 0.0
-	limitAmount = math.Min(cm.accountValueInU/5, cm.collateralsAvailable) / price
-	availableAmount = cm.collateralsAvailable / price
+	if price > 0 {
+		limitAmount = math.Min(cm.accountValueInU/5, cm.collateralsAvailable) / price
+		availableAmount = cm.collateralsAvailable / price
+	} else {
+		doRevert = true
+	}
 	carryStatus = &CarryStatus{isSpot: false, market: setting.Market, symbol: setting.Symbol, account: account,
 		setting:       setting,
 		LimitSell:     limitAmount,
@@ -175,18 +174,18 @@ func createFromBalance(account *model.Account, setting *model.Setting, valueLimi
 		value, ok = spotMarkets.Load(key)
 	}
 	success, price := api.GetPriceForce(setting.Symbol, setting.Market)
-	if value == nil || !success || price == 0 {
+	if value == nil {
 		util.LogLess(util.LogLevelError, fmt.Sprintf(`nil spot market %s %s getPrice %#v %f`, setting.Market, setting.Symbol, success, price))
 		return nil, true
 	}
 	sm := value.(*spotMarket)
 	limitBuy, limitSell, availableBuy := 0.0, 0.0, 0.0
-	if setting.Function == model.FunctionCross {
+	if price > 0 {
 		limitBuy = math.Min(sm.availableU/5, sm.accountValueInU/15) / price
-	} else if setting.Function == model.FunctionQueue {
-		limitBuy = sm.availableU * 0.9 / price
+		availableBuy = sm.availableU / price
+	} else {
+		doRevert = true
 	}
-	availableBuy = sm.availableU / price
 	carryStatus = &CarryStatus{isSpot: true, market: setting.Market, symbol: setting.Symbol, account: account,
 		setting:       setting,
 		LimitSell:     0,
