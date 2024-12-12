@@ -72,13 +72,19 @@ type MarkPriceInfo struct {
 func (environment *Environment) HandleOldWSResp() {
 	for {
 		ts := time.Now().Unix()
-		environment.WSOrderMap.Range(func(key, value interface{}) bool {
+		environment.WSOrderMap.Range(func(requestId, value interface{}) bool {
 			if value == nil {
 				return true
 			}
 			orderTs := value.(*Order).OrderTime.Unix()
-			if ts-orderTs > 20 && ts-orderTs < 86400 {
+			if ts-orderTs > 20 && ts-orderTs < 86400 && strings.Contains(value.(*Order).OrderId, requestId.(string)) {
 				util.Log(util.LogLevelInfo, fmt.Sprintf(`try to handle old and del %#v`, value))
+				environment.CrossOrders.Store(requestId, value)
+				environment.WSOrderMap.Delete(requestId)
+				if AccountHandlerMap[value.(*Order).RefreshType] != nil {
+					value.(*Order).OrderId = ``
+					AccountHandlerMap[value.(*Order).RefreshType](value.(*Order))
+				}
 			}
 			return true
 		})
@@ -113,8 +119,8 @@ func (environment *Environment) HandleWSResp() {
 			}
 			environment.CrossOrders.Store(wsResp.OrderId, order)
 			environment.WSOrderMap.Delete(wsResp.RequestId)
-			util.Log(util.LogLevelInfo, fmt.Sprintf(`del request id %s store order %s %s type %s id %s`,
-				wsResp.RequestId, order.Market, order.Symbol, order.RefreshType, order.OrderId))
+			util.Log(util.LogLevelInfo, fmt.Sprintf(`del request store order %s %d %#v`,
+				wsResp.RequestId, time.Now().Unix()-order.OrderTime.Unix(), order))
 			if AccountHandlerMap[order.RefreshType] != nil {
 				AccountHandlerMap[order.RefreshType](order)
 			}
