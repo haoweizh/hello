@@ -304,9 +304,9 @@ func placeOrderBinanceSpot(account *model.Account, isWs bool, order *model.Order
 		hash := hmac.New(sha256.New, []byte(account.Secret))
 		hash.Write([]byte(param.Encode()))
 		msg := fmt.Sprintf(`{"id": "%s","method": "order.place","params":{"symbol": "%s","side": "%s","type": "%s",
-			"timeInForce": "GTC","price": "%s","quantity": "%s","apiKey": "%s","signature": "%s","timestamp": %d}}`,
+			"timeInForce": "GTC","price": "%s","quantity": "%s","apiKey": "%s","signature": "%s","timestamp": %d, "newClientOrderId": "%s"}}`,
 			order.ClientOrdId, dialectSymbol, orderSide, strings.ToUpper(orderType), priceStr, amountStr, account.Key,
-			hex.EncodeToString(hash.Sum(nil)), ts)
+			hex.EncodeToString(hash.Sum(nil)), ts, order.ClientOrdId)
 		value, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrder, model.BinanceSpot, account.Key)
 		if value == nil {
 			return
