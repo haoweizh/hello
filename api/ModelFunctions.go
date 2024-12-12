@@ -479,6 +479,8 @@ func GetMarketSymbols(market string) map[string]bool {
 				`SATS_PERP`: true, `SHIB_PERP`: true, `SOL_PERP`: true, `SUI_PERP`: true, `TIA_PERP`: true, `TON_PERP`: true, `TURBO_PERP`: true, `WIF_PERP`: true, `WLD_PERP`: true, `XLM_PERP`: true, `X_PERP`: true}
 		} else if market == model.Gate {
 			return map[string]bool{`AAVE_PERP`: true}
+		} else if market == model.Bybit {
+			return map[string]bool{`AAVE_USDT`: true}
 		}
 	}
 	if appSettings == nil {

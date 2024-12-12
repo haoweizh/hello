@@ -111,7 +111,9 @@ func GetFromDialect(market, marketType, dialectSymbol string) (success bool, coi
 		lenDialect := len(dialectSymbol)
 		lenTail := len(DialectTail[marketType][market])
 		coin = dialectSymbol[0 : lenDialect-lenTail]
-		util.Log(util.LogLevelDebug, fmt.Sprintf(`get from dialect %s %s %s %v %s %s`, market, marketType, dialectSymbol, success, coin, standardSymbol))
+		if market == Bybit && marketType == MarketTypeSpot {
+			util.Log(util.LogLevelDebug, fmt.Sprintf(`test bybit spot %s %s %s %v %s %s`, market, marketType, dialectSymbol, success, coin, standardSymbol))
+		}
 		return true, coin, coin + UniStandardTail[marketType]
 	}
 	return false, ``, ``
