@@ -172,7 +172,7 @@ func CancelAll(key, secret, market string) {
 	case model.BinanceSpot:
 		orders := queryOpenOrdersBinanceSpot(key, secret, ``)
 		for _, order := range orders {
-			result, _ := cancelOrderBinance(key, secret, market, order.Symbol, order.OrderId)
+			result, _ := cancelOrderBinanceSpot(key, secret, market, order.Symbol, order.OrderId)
 			util.Log(util.LogLevelInfo, fmt.Sprintf(`cancelAll orders success BinanceSpot %s id %s return %#v`,
 				order.Symbol, order.OrderId, result))
 			time.Sleep(time.Millisecond * 100)
@@ -253,7 +253,7 @@ func CancelOrder(key, secret, market, symbol, orderType, orderId string) (result
 	case model.BinancePerp:
 		result = cancelOrderBinancePerp(key, secret, symbol, orderId)
 	case model.BinanceSpot:
-		result, _ = cancelOrderBinance(key, secret, market, symbol, orderId)
+		result, _ = cancelOrderBinanceSpot(key, secret, market, symbol, orderId)
 	}
 	util.Log(util.LogLevelInfo, fmt.Sprintf(`[cancel %s %#v %s %s]`, orderId, result, market, symbol))
 	return result, errCode, msg
@@ -793,12 +793,11 @@ func PlaceOrder(key, secret, orderSide, orderType, market, symbol, orderParam, f
 	_, marketType, coin, _ := model.GetFromStandard(market, symbol)
 	if amount == 0 {
 		util.Log(util.LogLevelError, fmt.Sprintf(`can not place order with amount 0 , %s %s %s %s`, orderSide, orderType, market, symbol))
-		return &model.Order{OrderSide: markSide, OrderType: orderType, Market: market, Symbol: symbol, Coin: coin,
-			Price: price, Amount: 0, OrderId: ``, ErrCode: ``, TriggerPrice: triggerPrice, RefreshType: funcType,
-			Status: model.CarryStatusFail, DealAmount: 0, DealPrice: price, OrderTime: util.GetNow()}
+		return &model.Order{OrderSide: markSide, OrderType: orderType, Market: market, Symbol: symbol, Coin: coin, Price: price,
+			Amount: 0, TriggerPrice: triggerPrice, RefreshType: funcType, Status: model.CarryStatusFail, DealAmount: 0, DealPrice: price, OrderTime: util.GetNow()}
 	}
 	account := model.AppConfig.GetAccountFromKeyIndex(market, key, -1)
-	order = &model.Order{OrderId: strconv.FormatInt(time.Now().UnixMilli(), 10)[3:] + market + coin + marketType, RefreshType: funcType,
+	order = &model.Order{ClientOrdId: strconv.FormatInt(time.Now().UnixMilli(), 10)[3:] + market + coin + marketType, RefreshType: funcType,
 		OrderSide: markSide, OrderType: orderType, Market: market, Symbol: symbol, Price: price, Amount: amount, DealAmount: 0, Coin: coin,
 		DealPrice: price, TriggerPrice: triggerPrice, OrderTime: util.GetNow(), UnfilledQuantity: amount, AccountIndex: account.Index}
 	//util.Notice(fmt.Sprintf(`...%s %s %s before order %d amount: %f price:%f triggerPrice:%f`,
@@ -807,7 +806,7 @@ func PlaceOrder(key, secret, orderSide, orderType, market, symbol, orderParam, f
 		return
 	}
 	if isWs && (market == model.Gate || market == model.OKEX || market == model.Bybit || market == model.BinanceSpot || market == model.BinancePerp) {
-		model.AppEnvironment.WSOrderMap.Store(order.OrderId, order)
+		model.AppEnvironment.ReqIdOrders.Store(order.ClientOrdId, order)
 	}
 	switch market {
 	case model.BitgetPerp:
@@ -858,7 +857,9 @@ func PlaceOrder(key, secret, orderSide, orderType, market, symbol, orderParam, f
 		orderSide, market, symbol, end, end-start, order.Status, order.ErrCode, price, order.Price, amount, order.Amount,
 		triggerPrice, order.TriggerPrice, order.OrderId))
 	if !isWs && postOrder != nil {
-		model.AppEnvironment.CrossOrders.Store(order.OrderId, order)
+		if order.Status != model.CarryStatusFail {
+			model.AppEnvironment.OrderIdOrders.Store(order.OrderId, order)
+		}
 		go postOrder(order)
 	}
 	return order

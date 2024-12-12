@@ -21,6 +21,7 @@ type Order struct {
 	Function          string
 	Market            string
 	OrderId           string `gorm:"unique"`
+	ClientOrdId       string
 	OrderSide         string
 	OrderType         string
 	RefreshType       string // 1: near refreshLink 2: far refreshLink

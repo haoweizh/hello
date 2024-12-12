@@ -417,7 +417,7 @@ func parseOrderBitgetSpot(resp *dtos.BitgetSpotOrderDetailResp) (orders []*model
 	for _, orderResp := range resp.Data {
 		_, _, coin := model.GetCoinFromDialect(model.BitgetSpot, orderResp.Symbol)
 		order := &model.Order{Market: model.BitgetSpot, Status: model.CarryStatusWorking, OrderId: orderResp.OrderId,
-			Symbol: coin + model.UniStandardTail[model.MarketTypeSpot]}
+			ClientOrdId: orderResp.ClientOid, Symbol: coin + model.UniStandardTail[model.MarketTypeSpot]}
 		intOrderTime, _ := strconv.ParseInt(orderResp.CTime, 10, 64)
 		order.OrderTime = time.UnixMilli(intOrderTime)
 		order.DealAmount, _ = strconv.ParseFloat(orderResp.BaseVolume, 64)

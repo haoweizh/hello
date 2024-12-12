@@ -771,7 +771,7 @@ func placeOrderBybit(account *model.Account, isWs bool, order *model.Order, orde
 	}
 	value, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrder, model.Bybit, account.Key)
 	if isWs && value != nil && value.(*model.WSConn).Conn != nil {
-		msgMap := map[string]interface{}{"reqId": order.OrderId, `op`: "order.create", "args": []interface{}{param},
+		msgMap := map[string]interface{}{"reqId": order.ClientOrdId, `op`: "order.create", "args": []interface{}{param},
 			"header": map[string]string{"X-BAPI-TIMESTAMP": fmt.Sprintf(`%d`, time.Now().UnixMilli())}}
 		msg := util.JsonEncodeToByte(msgMap)
 		if err := SendToConnection(model.Bybit, value.(*model.WSConn), msg); err != nil {
@@ -908,7 +908,7 @@ func parseOrderBybit(value map[string]interface{}) (order *model.Order) {
 	if value == nil {
 		return nil
 	}
-	order = &model.Order{Market: model.Bybit}
+	order = &model.Order{Market: model.Bybit, ClientOrdId: value["orderLinkId"].(string)}
 	if value[`orderId`] != nil && value[`orderId`].(string) != `0` && value[`orderId`].(string) != `` {
 		order.OrderId = value[`orderId`].(string)
 	}
@@ -1031,6 +1031,7 @@ func queryOrderBybit(key, secret, symbol, orderId string) *model.Order {
 	}
 	order := &model.Order{Market: model.Bybit, Status: model.CarryStatusWorking, OrderId: orderId, Symbol: symbol}
 	for _, orderDetail := range orderResp.Result.List {
+		order.ClientOrdId = orderDetail.OrderLinkId
 		order.Price, _ = strconv.ParseFloat(orderDetail.Price, 64)
 		order.DealPrice, _ = strconv.ParseFloat(orderDetail.AvgPrice, 64)
 		order.Amount, _ = strconv.ParseFloat(orderDetail.Qty, 64)

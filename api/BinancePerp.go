@@ -336,7 +336,7 @@ func placeOrderBinancePerp(account *model.Account, isWS bool, order *model.Order
 		hash.Write([]byte(param.Encode()))
 		msg := fmt.Sprintf(`{"id": "%s","method": "order.place","params":{"symbol": "%s","side": "%s","type": "%s",
 			"timeInForce": "GTC","price": "%s","quantity": "%s","apiKey": "%s","signature": "%s","timestamp": %d}}`,
-			order.OrderId, dialectSymbol, orderSide, strings.ToUpper(orderType), priceStr, amountStr, account.Key,
+			order.ClientOrdId, dialectSymbol, orderSide, strings.ToUpper(orderType), priceStr, amountStr, account.Key,
 			hex.EncodeToString(hash.Sum(nil)), ts)
 		value, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrder, model.BinancePerp, account.Key)
 		if value == nil {
@@ -377,7 +377,6 @@ func placeOrderBinancePerp(account *model.Account, isWS bool, order *model.Order
 		orderResponse, err := service.Do(context.Background())
 		if err != nil {
 			util.Log(util.LogLevelError, "placeOrderBinancePerp err: "+err.Error())
-			order.OrderId = ``
 			order.ErrCode = err.Error()
 		} else {
 			orderedAmount, _ := strconv.ParseFloat(orderResponse.OrigQuantity, 64)
@@ -699,6 +698,7 @@ func parseOrderBinancePerp(res *futures.Order, order *model.Order) {
 		order.OrderUpdateTime = time.UnixMilli(res.UpdateTime)
 		order.Status = model.GetOrderStatus(model.BinancePerp, string(res.Status))
 		order.OrderId = strconv.FormatInt(res.OrderID, 10)
+		order.ClientOrdId = res.ClientOrderID
 		orderType := strings.Trim(string(res.Type), ` `)
 		order.OrderType = GetStandardOrderType(model.BinancePerp, orderType)
 		if order.Status != model.CarryStatusSuccess && order.Status != model.CarryStatusFail {

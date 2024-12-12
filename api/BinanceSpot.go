@@ -314,7 +314,7 @@ func placeOrderBinanceSpot(account *model.Account, isWs bool, order *model.Order
 		hash.Write([]byte(param.Encode()))
 		msg := fmt.Sprintf(`{"id": "%s","method": "order.place","params":{"symbol": "%s","side": "%s","type": "%s",
 			"timeInForce": "GTC","price": "%s","quantity": "%s","apiKey": "%s","signature": "%s","timestamp": %d}}`,
-			order.OrderId, dialectSymbol, orderSide, strings.ToUpper(orderType), priceStr, amountStr, account.Key,
+			order.ClientOrdId, dialectSymbol, orderSide, strings.ToUpper(orderType), priceStr, amountStr, account.Key,
 			hex.EncodeToString(hash.Sum(nil)), ts)
 		value, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrder, model.BinanceSpot, account.Key)
 		if value == nil {
@@ -342,7 +342,6 @@ func placeOrderBinanceSpot(account *model.Account, isWs bool, order *model.Order
 		if err != nil {
 			util.Log(util.LogLevelError, fmt.Sprintf(`placeOrderBinanceSpot err: %s amount %s`, err.Error(), amountStr))
 			order.ErrCode = err.Error()
-			order.OrderId = ``
 		} else {
 			order.OrderId = strconv.FormatInt(orderResponse.OrderID, 10)
 			order.Amount, _ = strconv.ParseFloat(orderResponse.OrigQuantity, 64)
@@ -356,6 +355,7 @@ func parseOrderBinanceSpotSdk(orderResp *binance.Order) (order *model.Order) {
 	}
 	order = &model.Order{Market: model.BinanceSpot, Status: model.CarryStatusFail}
 	order.OrderId = strconv.FormatInt(orderResp.OrderID, 10)
+	order.ClientOrdId = orderResp.ClientOrderID
 	_, marketType, coin := model.GetCoinFromDialect(model.BinanceSpot, orderResp.Symbol)
 	order.Symbol = coin + model.UniStandardTail[marketType]
 	order.OrderSide = strings.ToLower(string(orderResp.Side))
@@ -386,6 +386,7 @@ func parseOrderBinance(market string, orderJson *simplejson.Json) (order *model.
 		order.Symbol = coin + model.UniStandardTail[model.MarketTypeSpot]
 	}
 	order.OrderId = strconv.Itoa(orderJson.Get("orderId").MustInt())
+	order.ClientOrdId = orderJson.Get(`clientOrderId`).MustString()
 	order.OrderTime = time.UnixMilli(orderJson.Get("transactTime").MustInt64())
 	order.Price, _ = strconv.ParseFloat(orderJson.Get(`price`).MustString(), 64)
 	order.Amount, _ = strconv.ParseFloat(orderJson.Get("origQty").MustString(), 64)
@@ -466,7 +467,7 @@ func WsOrderServeBinance(account *model.Account, market string) {
 	}
 }
 
-func cancelOrderBinance(key, secret, market, symbol, orderId string) (suc bool, order *model.Order) {
+func cancelOrderBinanceSpot(key, secret, market, symbol, orderId string) (suc bool, order *model.Order) {
 	var path string
 	if market == model.BinanceSpot {
 		path = "/api/v3/order"

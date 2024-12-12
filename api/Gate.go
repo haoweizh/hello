@@ -1005,11 +1005,11 @@ func placeOrderGate(account *model.Account, isWs bool, order *model.Order, order
 		}
 		util.Log(util.LogLevelInfo, fmt.Sprintf(`create spot order request: %#v`, relatedOrder))
 		if isWs {
-			param := map[string]interface{}{"text": `t-` + order.OrderId, `currency_pair`: dialectSymbol, `type`: orderType,
+			param := map[string]interface{}{"text": `t-` + order.ClientOrdId, `currency_pair`: dialectSymbol, `type`: orderType,
 				`account`: `spot`, `side`: orderSide, `amount`: relatedOrder.Amount, `price`: orderPriceStr,
 				`time_in_force`: tif, `auto_repay`: true}
 			reqMap := map[string]interface{}{`time`: ts, `channel`: `spot.order_place`, `event`: `api`,
-				`payload`: map[string]interface{}{`req_id`: order.OrderId, `req_param`: param}}
+				`payload`: map[string]interface{}{`req_id`: order.ClientOrdId, `req_param`: param}}
 			wsOrderMsg := util.JsonEncodeToByte(reqMap)
 			value, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrder, model.Gate, model.MarketTypeSpot, account.Key)
 			if value != nil && value.(*model.WSConn).Conn != nil {
@@ -1022,7 +1022,6 @@ func placeOrderGate(account *model.Account, isWs bool, order *model.Order, order
 			if err != nil {
 				panicGateError(account.Key, "placeSpotOrderGate", err)
 				order.Status = model.CarryStatusFail
-				order.OrderId = ``
 				order.ErrCode = err.Error()
 			} else {
 				orderResp, _ := json.Marshal(createOrder)
@@ -1052,9 +1051,9 @@ func placeOrderGate(account *model.Account, isWs bool, order *model.Order, order
 		util.Log(util.LogLevelInfo, fmt.Sprintf(`create future order request: %#v`, futuresOrder))
 		if isWs {
 			param := map[string]interface{}{`contract`: dialectSymbol, `size`: futuresOrder.Size,
-				`price`: orderPriceStr, `tif`: tif, `text`: `t-` + order.OrderId}
+				`price`: orderPriceStr, `tif`: tif, `text`: `t-` + order.ClientOrdId}
 			reqMap := map[string]interface{}{`time`: ts, `channel`: `futures.order_place`, `event`: `api`,
-				`payload`: map[string]interface{}{`req_id`: order.OrderId, `req_param`: param}}
+				`payload`: map[string]interface{}{`req_id`: order.ClientOrdId, `req_param`: param}}
 			wsOrderMsg := util.JsonEncodeToByte(reqMap)
 			value, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrder, model.Gate, model.MarketTypePerp, account.Key)
 			if value != nil && value.(*model.WSConn).Conn != nil {
@@ -1067,7 +1066,6 @@ func placeOrderGate(account *model.Account, isWs bool, order *model.Order, order
 			if err != nil {
 				panicGateError(account.Key, "placeFutureOrderGate", err)
 				order.Status = model.CarryStatusFail
-				order.OrderId = ``
 				order.ErrCode = err.Error()
 			} else {
 				orderResp, _ := json.Marshal(createFuturesOrder)

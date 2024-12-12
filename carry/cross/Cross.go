@@ -366,7 +366,7 @@ func ClearCross() {
 		}
 		for {
 			leftOrders := 0
-			model.AppEnvironment.CrossOrders.Range(func(k, v interface{}) bool {
+			model.AppEnvironment.OrderIdOrders.Range(func(k, v interface{}) bool {
 				if time.Now().Unix()-v.(*model.Order).OrderTime.Unix() < 80 {
 					leftOrders++
 				}
@@ -378,7 +378,7 @@ func ClearCross() {
 			}
 			time.Sleep(time.Second * 3)
 		}
-		model.AppEnvironment.CrossOrders = sync.Map{}
+		model.AppEnvironment.OrderIdOrders = sync.Map{}
 		today := util.GetNow()
 		today = time.Date(today.Year(), today.Month(), today.Day(), 0, 0, 0, 0, today.Location())
 		carryRows, _ := model.AppDB.Model(model.Order{}).Select(`sum(price*abs(amount)),refresh_type`).
@@ -1051,11 +1051,11 @@ func placeCross(statusBuy, statusSell *CarryStatus, priceBuy, priceSell, amount 
 		orderBuy := &model.Order{OrderSide: model.OrderSideBuy, OrderType: model.OrderTypeLimit, Market: model.OKEX,
 			Symbol: statusBuy.symbol, Price: priceBuy, Amount: amount, RefreshType: model.FunctionCross, OrderTime: util.GetNow(),
 			UnfilledQuantity: amount, AccountIndex: statusBuy.account.Index, Status: model.CarryStatusWorking, Function: model.Open,
-			OrderId: requestId + statusBuy.symbol, LineBuy: statusBuy.TradeLineBuy, LineSell: statusSell.TradeLineSell}
+			ClientOrdId: requestId + statusBuy.symbol, LineBuy: statusBuy.TradeLineBuy, LineSell: statusSell.TradeLineSell}
 		orderSell := &model.Order{OrderSide: model.OrderSideSell, OrderType: model.OrderTypeLimit, Market: model.OKEX,
 			Symbol: statusSell.symbol, Price: priceSell, Amount: amount, RefreshType: model.FunctionCross, OrderTime: util.GetNow(),
 			UnfilledQuantity: amount, AccountIndex: statusSell.account.Index, Status: model.CarryStatusWorking, Function: model.Open,
-			OrderId: requestId + statusSell.symbol, LineBuy: statusSell.TradeLineBuy, LineSell: statusSell.TradeLineSell}
+			ClientOrdId: requestId + statusSell.symbol, LineBuy: statusSell.TradeLineBuy, LineSell: statusSell.TradeLineSell}
 		if statusBuy.Holding*-1 >= amount {
 			orderBuy.Function = model.Close
 		}
@@ -1064,8 +1064,8 @@ func placeCross(statusBuy, statusSell *CarryStatus, priceBuy, priceSell, amount 
 		}
 		orderBuy.Coin = statusBuy.setting.Coin
 		orderSell.Coin = statusSell.setting.Coin
-		model.AppEnvironment.WSOrderMap.Store(requestId+model.OrderSideBuy, orderBuy)
-		model.AppEnvironment.WSOrderMap.Store(requestId+model.OrderSideSell, orderSell)
+		model.AppEnvironment.ReqIdOrders.Store(requestId+model.OrderSideBuy, orderBuy)
+		model.AppEnvironment.ReqIdOrders.Store(requestId+model.OrderSideSell, orderSell)
 		success, msg := api.PlacePairOKEX(statusBuy.account, requestId, statusBuy.symbol, statusSell.symbol, model.OrderTypeLimit, priceBuy, priceSell, amount)
 		if !success {
 			orderBuy.Status, orderSell.Status = model.CarryStatusFail, model.CarryStatusFail
@@ -1140,6 +1140,8 @@ func placeStatus(status *CarryStatus, price float64, amount float64) {
 
 func handleCross(account *model.Account, order *model.Order) {
 	time.Sleep(time.Minute)
+	model.AppDB.Save(order)
+	model.AppEnvironment.OrderIdOrders.Delete(order.OrderId)
 	if order.Amount == order.DealAmount {
 		order.Status = model.CarryStatusSuccess
 	}
@@ -1152,7 +1154,7 @@ func handleCross(account *model.Account, order *model.Order) {
 		return
 	}
 	leftAmt := order.Amount - order.DealAmount
-	if !order.HaveId() {
+	if order.Status == model.CarryStatusFail {
 		order.Status = model.CarryStatusFail
 		order.OrderId = fmt.Sprintf("%d%s%s", time.Now().UnixMilli(), order.Market, order.Symbol)
 		compOrder := api.PlaceOrder(account.Key, account.Secret, order.OrderSide, model.OrderTypeMarket, order.Market, order.Symbol,
@@ -1160,35 +1162,37 @@ func handleCross(account *model.Account, order *model.Order) {
 		model.AppDB.Save(compOrder)
 		util.Log(util.LogLevelInfo, fmt.Sprintf(`handleCorss no order post comp from %#v %#v not deal %f 百分之%f`,
 			order, compOrder, leftAmt, math.Round(100*leftAmt/order.Amount)))
-	} else {
-		if leftAmt > marketInfo.SizeMin && leftAmt*order.Price > marketInfo.MoneyMin && order.Status != model.CarryStatusSuccess {
-			canceled, errCode, errMsg := api.CancelOrder(account.Key, account.Secret, order.Market, order.Symbol, model.OrderTypeLimit, order.OrderId)
-			if !canceled {
-				util.Log(util.LogLevelInfo, fmt.Sprintf(`post cancel %v %s %s %s`, canceled, errCode, errMsg, order.OrderId))
-			} else {
-				time.Sleep(time.Second * 10)
-				queryOrder := api.QueryOrderById(account.Key, account.Secret, order.Market, order.Symbol, order.OrderType, order.OrderId)
-				if queryOrder != nil {
-					leftAmt = queryOrder.Amount - queryOrder.DealAmount
-					if leftAmt > marketInfo.SizeMin && leftAmt*order.Price > marketInfo.MoneyMin && queryOrder.Status != model.CarryStatusSuccess {
-						compOrder := api.PlaceOrder(account.Key, account.Secret, order.OrderSide, model.OrderTypeMarket, order.Market, order.Symbol,
-							``, model.FunctionComplement, order.Price, order.Price, leftAmt, false, nil)
-						model.AppDB.Save(compOrder)
-						util.Log(util.LogLevelInfo, fmt.Sprintf(`post comp from %#v %#v not deal %f 百分之%f`,
-							order, compOrder, leftAmt, math.Round(100*leftAmt/order.Amount)))
-					} else {
-						util.Log(util.LogLevelInfo, fmt.Sprintf(`order update fail %#v left %f %#v`, order, leftAmt, queryOrder))
-					}
-				} else {
-					util.Log(util.LogLevelError, fmt.Sprintf(`order update fail query %#v`, order))
-				}
-			}
+		return
+	}
+	if leftAmt > marketInfo.SizeMin && leftAmt*order.Price > marketInfo.MoneyMin && order.Status != model.CarryStatusSuccess && order.HaveId() {
+		canceled, errCode, errMsg := api.CancelOrder(account.Key, account.Secret, order.Market, order.Symbol, model.OrderTypeLimit, order.OrderId)
+		if !canceled {
+			util.Log(util.LogLevelInfo, fmt.Sprintf(`post cancel %v %s %s %s`, canceled, errCode, errMsg, order.OrderId))
 		} else {
+			time.Sleep(time.Second * 10)
+			queryOrder := api.QueryOrderById(account.Key, account.Secret, order.Market, order.Symbol, order.OrderType, order.OrderId)
+			if queryOrder != nil {
+				leftAmt = queryOrder.Amount - queryOrder.DealAmount
+				if leftAmt > marketInfo.SizeMin && leftAmt*order.Price > marketInfo.MoneyMin && queryOrder.Status != model.CarryStatusSuccess {
+					compOrder := api.PlaceOrder(account.Key, account.Secret, order.OrderSide, model.OrderTypeMarket, order.Market, order.Symbol,
+						``, model.FunctionComplement, order.Price, order.Price, leftAmt, false, nil)
+					model.AppDB.Save(compOrder)
+					util.Log(util.LogLevelInfo, fmt.Sprintf(`post comp from %#v %#v not deal %f 百分之%f`,
+						order, compOrder, leftAmt, math.Round(100*leftAmt/order.Amount)))
+				} else {
+					util.Log(util.LogLevelInfo, fmt.Sprintf(`order update fail %#v left %f %#v`, order, leftAmt, queryOrder))
+				}
+			} else {
+				util.Log(util.LogLevelError, fmt.Sprintf(`order update fail query %#v`, order))
+			}
+		}
+	} else {
+		if order.HaveId() {
 			util.Log(util.LogLevelInfo, fmt.Sprintf(`post handle done %#v`, order))
+		} else {
+			util.Log(util.LogLevelError, fmt.Sprintf(`handle have no id %#v`, order))
 		}
 	}
-	model.AppDB.Save(order)
-	model.AppEnvironment.CrossOrders.Delete(order.OrderId)
 }
 
 var PostOrderCross = func(order *model.Order) {

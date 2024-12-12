@@ -226,7 +226,7 @@ func UpdateOrderDeal(market, orderId, status, msg string, dealAmount float64) {
 	var order *model.Order
 	i := 0
 	for ; i < 10; i++ {
-		data, _ := model.AppEnvironment.CrossOrders.Load(orderId)
+		data, _ := model.AppEnvironment.OrderIdOrders.Load(orderId)
 		if data != nil {
 			order = data.(*model.Order)
 			break

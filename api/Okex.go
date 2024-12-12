@@ -591,13 +591,13 @@ func placeOrderOKEX(account *model.Account, isWs bool, order *model.Order) {
 		return
 	}
 	postData := map[string]interface{}{`instId`: order.Symbol, `tdMode`: `cross`, `side`: order.OrderSide,
-		`sz`: amount, `ordType`: order.OrderType, `tag`: OKEXTag, `clOrdId`: order.OrderId}
+		`sz`: amount, `ordType`: order.OrderType, `tag`: OKEXTag, `clOrdId`: order.ClientOrdId}
 	path := "/api/v5/trade/order"
 	if order.OrderType == model.OrderTypeStop {
 		postData[`ordType`] = `conditional`
 		postData[`slOrdPx`] = priceStr
 		postData[`slTriggerPx`] = triggerPriceStr
-		postData[`algoClOrdId`] = fmt.Sprintf(`%d%s%d%s`, account.Index, OKSeparator, time.Now().Nanosecond(), order.OrderSide)
+		postData[`algoClOrdId`] = order.ClientOrdId
 		path = `/api/v5/trade/order-algo`
 	} else if order.OrderType == model.OrderTypeTrailStop {
 		postData[`ordType`] = `move_order_stop`
@@ -605,10 +605,10 @@ func placeOrderOKEX(account *model.Account, isWs bool, order *model.Order) {
 		//	postData[`activePx`] = priceStr
 		//}
 		postData[`callbackRatio`] = triggerPriceStr
-		postData[`algoClOrdId`] = fmt.Sprintf(`%d%s%d%s`, account.Index, OKSeparator, time.Now().Nanosecond(), order.OrderSide)
+		postData[`algoClOrdId`] = order.ClientOrdId
 		path = `/api/v5/trade/order-algo`
 	} else {
-		postData[`clOrdId`] = fmt.Sprintf(`%d%s%d%s`, account.Index, OKSeparator, time.Now().Nanosecond(), order.OrderSide)
+		postData[`clOrdId`] = order.ClientOrdId
 		postData[`px`] = priceStr
 		_, marketType, _, _ := model.GetFromStandard(order.Market, order.Symbol)
 		if order.OrderType == model.OrderTypeMarket && marketType == model.MarketTypeSpot {
@@ -620,7 +620,7 @@ func placeOrderOKEX(account *model.Account, isWs bool, order *model.Order) {
 		_, _, _, dialectSymbol := model.GetFromStandard(model.OKEX, order.Symbol)
 		postData[`instId`] = dialectSymbol
 		subscribeMap := make(map[string]interface{})
-		subscribeMap[`id`] = order.OrderId
+		subscribeMap[`id`] = order.ClientOrdId
 		subscribeMap["op"] = "order"
 		subscribeMap[`args`] = []map[string]interface{}{postData}
 		wsOrderMsg := util.JsonEncodeToByte(subscribeMap)
@@ -871,8 +871,10 @@ func parseOrderOKEX(value map[string]interface{}) (order *model.Order) {
 	order = &model.Order{Market: model.OKEX}
 	if value[`ordId`] != nil && value[`ordId`].(string) != `0` && value[`ordId`].(string) != `` {
 		order.OrderId = value[`ordId`].(string)
+		order.ClientOrdId = value[`clOrdId`].(string)
 	} else if value[`algoId`] != nil {
 		order.OrderId = value[`algoId`].(string)
+		order.ClientOrdId = value[`algoClOrdId`].(string)
 	}
 	if value[`px`] != nil && value[`px`] != `` {
 		order.Price, _ = strconv.ParseFloat(value[`px`].(string), 64)
@@ -1018,25 +1020,26 @@ func queryOpenOrdersOKEX(key, secret, symbol string, conditional bool) (orders [
 	return
 }
 
-func getAlgoOrderIdOKEX(key, secret, algoId string) (ordId string) {
+func getAlgoOrderIdOKEX(key, secret, algoId string) (ordId, clientOrderId string) {
 	param := map[string]interface{}{`algoId`: algoId, `ordType`: `conditional`}
 	responseBody, _ := sendSignRequestOKEX(key, secret, http.MethodGet, `/api/v5/trade/orders-algo-history`, param, nil)
 	orderJson, err := util.NewJSON(responseBody)
 	if err != nil || orderJson == nil || orderJson.Get(`data`) == nil || orderJson.Get(`code`).MustString() != `0` {
-		return ``
+		return ``, ``
 	}
 	orders := orderJson.Get(`data`).MustArray()
 	for _, item := range orders {
 		value := item.(map[string]interface{})
 		if value[`algoId`] == algoId {
-			return value[`ordId`].(string)
+			return value[`ordId`].(string), value[`algoClOrdId`].(string)
 		}
 	}
-	return ``
+	return ``, ``
 }
 
 func queryOrderOKEX(key, secret, symbol, orderId, orderType string) (order *model.Order) {
 	path := `/api/v5/trade/order`
+	var clientOrderId string
 	param := map[string]interface{}{"ordId": orderId, "instId": symbol}
 	if orderType == model.OrderTypeStop {
 		path = `/api/v5/trade/order-algo`
@@ -1052,13 +1055,12 @@ func queryOrderOKEX(key, secret, symbol, orderId, orderType string) (order *mode
 	}
 	if strings.Trim(orderJson.Get(`code`).MustString(), ` `) == `51603` {
 		if orderType == model.OrderTypeStop || orderType == model.OrderTypeTrailStop {
-			orderId = getAlgoOrderIdOKEX(key, secret, orderId)
+			orderId, clientOrderId = getAlgoOrderIdOKEX(key, secret, orderId)
 			if orderId != `` {
 				return queryOrderOKEX(key, secret, symbol, orderId, model.OrderTypeLimit)
 			}
 		}
-		return &model.Order{OrderId: orderId, OrderType: orderType,
-			Status: model.CarryStatusFail, Symbol: symbol}
+		return &model.Order{OrderId: orderId, ClientOrdId: clientOrderId, OrderType: orderType, Status: model.CarryStatusFail, Symbol: symbol}
 	}
 	orders := orderJson.Get("data").MustArray()
 	for _, item := range orders {
