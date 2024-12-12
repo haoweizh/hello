@@ -78,8 +78,9 @@ func (environment *Environment) HandleOldWSResp() {
 				return true
 			}
 			orderTs := value.(*Order).OrderTime.Unix()
-			if ts-orderTs > 20 && ts-orderTs < 86400 && !value.(*Order).HaveId() {
-				util.Log(util.LogLevelInfo, fmt.Sprintf(`try to handle old and del %#v`, value))
+			if ts-orderTs > 300 && ts-orderTs < 86400 && !value.(*Order).HaveId() {
+				util.Log(util.LogLevelInfo, fmt.Sprintf(`try to handle old and del %s %s req %s %#v`,
+					value.(*Order).Market, value.(*Order).Symbol, requestId, value))
 				environment.ReqIdOrders.Delete(requestId)
 				if AccountHandlerMap[value.(*Order).RefreshType] != nil {
 					AccountHandlerMap[value.(*Order).RefreshType](value.(*Order))

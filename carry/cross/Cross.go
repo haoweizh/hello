@@ -1154,7 +1154,6 @@ func handleCross(account *model.Account, order *model.Order) {
 	}
 	leftAmt := order.Amount - order.DealAmount
 	if order.Status == model.CarryStatusFail {
-		order.Status = model.CarryStatusFail
 		order.OrderId = fmt.Sprintf("%d%s%s", time.Now().UnixMilli(), order.Market, order.Symbol)
 		compOrder := api.PlaceOrder(account.Key, account.Secret, order.OrderSide, model.OrderTypeMarket, order.Market, order.Symbol,
 			``, model.FunctionComplement, order.Price, order.Price, leftAmt, false, nil)

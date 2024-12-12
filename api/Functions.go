@@ -799,7 +799,7 @@ func PlaceOrder(key, secret, orderSide, orderType, market, symbol, orderParam, f
 	account := model.AppConfig.GetAccountFromKeyIndex(market, key, -1)
 	order = &model.Order{ClientOrdId: strconv.FormatInt(time.Now().UnixMilli(), 10)[3:] + market + coin + marketType, RefreshType: funcType,
 		OrderSide: markSide, OrderType: orderType, Market: market, Symbol: symbol, Price: price, Amount: amount, DealAmount: 0, Coin: coin,
-		DealPrice: price, TriggerPrice: triggerPrice, OrderTime: util.GetNow(), UnfilledQuantity: amount, AccountIndex: account.Index}
+		DealPrice: price, TriggerPrice: triggerPrice, OrderTime: util.GetNow(), UnfilledQuantity: amount, AccountIndex: account.Index, Status: model.CarryStatusWorking}
 	//util.Notice(fmt.Sprintf(`...%s %s %s before order %d amount: %f price:%f triggerPrice:%f`,
 	//	orderSide, market, symbol, start, amount, price, triggerPrice))
 	if model.AppConfig.Env == `test` {
@@ -815,12 +815,6 @@ func PlaceOrder(key, secret, orderSide, orderType, market, symbol, orderParam, f
 	case model.BitgetSpot:
 		isWs = false
 		placeOrderBitgetSpot(key, secret, order, orderSide, orderType, symbol, price, amount)
-	//case model.KucoinSpot:
-	//	isWs = false
-	//	deprecated.placeOrderKucoinSpot(order, orderSide, orderType, symbol, price, amount)
-	//case model.KucoinPerp:
-	//	isWs = false
-	//	deprecated.placeOrderKucoinPerp(order, orderSide, orderType, symbol, price, amount)
 	case model.Gate:
 		placeOrderGate(account, isWs, order, orderSide, orderType, symbol, price, amount)
 	case model.OKEX:
@@ -831,36 +825,25 @@ func PlaceOrder(key, secret, orderSide, orderType, market, symbol, orderParam, f
 		placeOrderBinancePerp(account, isWs, order, orderSide, orderType, symbol, price, triggerPrice, amount)
 	case model.Bybit:
 		placeOrderBybit(account, isWs, order, orderParam)
-		//case model.HuobiSpot:
-		//	isWs = false
-		//	deprecated.placeOrderHuobiSpot(key, secret, order, orderSide, orderType, symbol, price, amount)
-		//case model.HuobiPerp:
-		//	isWs = false
-		//	deprecated.placeOrderHuobiPerp(key, secret, order, orderSide, orderType, ``, symbol, price, price, amount)
-		//case model.Ftx:
-		//	isWs = false
-		//	deprecated.placeOrderFtx(order, key, secret, orderSide, orderType, orderParam, symbol, price, triggerPrice, amount)
-		//case model.Mexc:
-		//	isWs = false
-		//	deprecated.placeOrderMexc(key, secret, order, orderSide, orderType, symbol, price, amount)
 	}
-	if order.OrderId == "0" || strings.Trim(order.OrderId, ` `) == "" {
-		order.Status = model.CarryStatusFail
-		order.OrderId = fmt.Sprintf(`%s_error_%d`, order.ErrCode, time.Now().UnixNano())
-	} else if order.Status == `` {
-		order.Status = model.CarryStatusWorking
-	}
-	order.TriggerPrice = triggerPrice
-	end := util.GetNowUnixMillion()
-	util.Log(util.LogLevelInfo, fmt.Sprintf(
-		`...%s %s %s return order at %d distance %d %s %s price %f %f amount %f %f trigger %f %f id %s`,
-		orderSide, market, symbol, end, end-start, order.Status, order.ErrCode, price, order.Price, amount, order.Amount,
-		triggerPrice, order.TriggerPrice, order.OrderId))
-	if !isWs && postOrder != nil {
-		if order.Status != model.CarryStatusFail {
-			model.AppEnvironment.OrderIdOrders.Store(order.OrderId, order)
+	if !isWs {
+		if order.OrderId == "0" || strings.Trim(order.OrderId, ` `) == "" {
+			order.Status = model.CarryStatusFail
+			order.OrderId = fmt.Sprintf(`%s_error_%d`, order.ErrCode, time.Now().UnixNano())
+		} else if order.Status == `` {
+			order.Status = model.CarryStatusWorking
 		}
-		go postOrder(order)
+		end := util.GetNowUnixMillion()
+		util.Log(util.LogLevelInfo, fmt.Sprintf(
+			`...%s %s %s return order at %d distance %d %s %s price %f %f amount %f %f trigger %f %f id %s`,
+			orderSide, market, symbol, end, end-start, order.Status, order.ErrCode, price, order.Price, amount, order.Amount,
+			triggerPrice, order.TriggerPrice, order.OrderId))
+		if postOrder != nil {
+			if order.Status != model.CarryStatusFail {
+				model.AppEnvironment.OrderIdOrders.Store(order.OrderId, order)
+			}
+			go postOrder(order)
+		}
 	}
 	return order
 }
