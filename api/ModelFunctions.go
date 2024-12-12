@@ -94,7 +94,7 @@ func PrepareSettings() {
 				setting = oldSetting.(*model.Setting)
 			}
 		}
-		//util.Notice(fmt.Sprintf(`load setting %s %s %s %#v %d`,
+		//util.Log(util.LogLevelInfo, fmt.Sprintf(`load setting %s %s %s %#v %d`,
 		//	setting.Market, setting.Symbol, setting.Function, setting.Valid, setting.Chance))
 		marketMap[setting.Market] = true
 		value, ok = util.LoadSyncMap(localHandlers, setting.Market, setting.Symbol)
@@ -155,6 +155,7 @@ func PrepareSettings() {
 		i++
 	}
 	appMarkets = localAppMarkets
+	util.Log(util.LogLevelInfo, fmt.Sprintf(`finish loading settings from markets %#v`, appMarkets))
 	coinSettings = localCoinSettings
 	handlers = localHandlers
 	symbolSettings = localSymbolSettings

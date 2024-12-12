@@ -119,6 +119,7 @@ func ClearChannels(market string, chanMap *sync.Map) {
 }
 
 func ManageConnTicks(market string) (reset bool) {
+	util.Log(util.LogLevelInfo, fmt.Sprintf(`manage conn ticks `+market))
 	depthChans, _ := model.AppEnvironment.MsgChanTick.Load(market)
 	if depthChans == nil || len(depthChans.([]chan struct{})) == 0 {
 		api.CreateWSTick(model.AppEnvironment, market)
