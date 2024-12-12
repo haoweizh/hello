@@ -451,7 +451,6 @@ var subscribeHandlerBybit = func(market string, connection *model.WSConn, subscr
 	if err = SendToConnection(model.Bybit, connection, subscribeMessage); err != nil {
 		util.Log(util.LogLevelError, fmt.Sprintf(" bybit can not subscribe %s %s", subscribeMessage, err.Error()))
 	}
-	util.Log(util.LogLevelInfo, `bybit subscribed `+string(subscribeMessage))
 	return err
 }
 

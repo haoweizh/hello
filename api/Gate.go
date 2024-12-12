@@ -173,6 +173,7 @@ var tickerHandler = gateWs.NewCallBack(func(msg *gateWs.UpdateMsg) {
 	}
 	var bidAsk model.BidAsk
 	var symbol string
+	success := true
 	switch msg.Channel {
 	case gateWs.ChannelSpotBookTicker:
 		var update gateWs.SpotBookTickerMsg
@@ -180,7 +181,7 @@ var tickerHandler = gateWs.NewCallBack(func(msg *gateWs.UpdateMsg) {
 			util.Log(util.LogLevelError, fmt.Sprintf("spot book ticker Unmarshal err:%s %s", model.Gate, err.Error()))
 			return
 		}
-		success, _, symbol := model.GetFromDialect(model.Gate, model.MarketTypeSpot, update.CurrencyPair)
+		success, _, symbol = model.GetFromDialect(model.Gate, model.MarketTypeSpot, update.CurrencyPair)
 		if !success || len(strconv.Itoa(int(update.TimeInMilli))) != 13 {
 			return
 		}
@@ -199,7 +200,7 @@ var tickerHandler = gateWs.NewCallBack(func(msg *gateWs.UpdateMsg) {
 			util.Log(util.LogLevelError, fmt.Sprintf("spot book ticker Unmarshal err:%s %s", model.Gate, err.Error()))
 			return
 		}
-		success, _, symbol := model.GetFromDialect(model.Gate, model.MarketTypeSpot, update.CurrencyPair)
+		success, _, symbol = model.GetFromDialect(model.Gate, model.MarketTypeSpot, update.CurrencyPair)
 		if !success || len(strconv.Itoa(int(update.TimeInMilli))) != 13 {
 			return
 		}
@@ -608,7 +609,6 @@ var subscribeMarkPriceHandler = func(market string, connection *model.WSConn, su
 	if err = SendToConnection(model.Gate, connection, subscribeMessage); err != nil {
 		util.Log(util.LogLevelInfo, fmt.Sprintf("gate can not subscribe perp symbols %s %s", subscribeMessage, err.Error()))
 	}
-	util.Log(util.LogLevelInfo, `gate subscribed `+string(subscribeMessage))
 	time.Sleep(500 * time.Millisecond)
 	return err
 }
@@ -635,7 +635,6 @@ var subscribeHandler = func(market string, connection *model.WSConn, subscribes 
 			if err = SendToConnection(model.Gate, connection, subscribeMessage); err != nil {
 				util.Log(util.LogLevelError, fmt.Sprintf("gate can not subscribe perp symbols %s %s", subscribeMessage, err.Error()))
 			}
-			util.Log(util.LogLevelInfo, `gate subscribed `+string(subscribeMessage))
 			time.Sleep(500 * time.Millisecond)
 		} else { //现货ticker订阅
 			var symbols []string
@@ -653,7 +652,6 @@ var subscribeHandler = func(market string, connection *model.WSConn, subscribes 
 			if err = SendToConnection(model.Gate, connection, subscribeMessage); err != nil {
 				util.Log(util.LogLevelError, fmt.Sprintf("gate can not subscribe spot symbols %s %s", subscribeMessage, err.Error()))
 			}
-			util.Log(util.LogLevelInfo, `gate subscribed `+string(subscribeMessage))
 			time.Sleep(500 * time.Millisecond)
 		}
 	case []string: //orderbook订阅

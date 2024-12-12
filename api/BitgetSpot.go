@@ -244,7 +244,6 @@ var subscribeHandlerBitget = func(market string, connection *model.WSConn, subsc
 	if err = SendToConnection(market, connection, subscribeMessage); err != nil {
 		util.Log(util.LogLevelInfo, fmt.Sprintf("%s can not subscribe %s %s", market, subscribeMessage, err.Error()))
 	}
-	util.Log(util.LogLevelInfo, `bitget subscribed `+string(subscribeMessage))
 	return err
 }
 

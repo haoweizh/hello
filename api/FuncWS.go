@@ -197,6 +197,7 @@ func SendToConnection(market string, connection *model.WSConn, msg []byte) (err 
 	if err = connection.WriteMsg(msg); err != nil {
 		util.Log(util.LogLevelError, `fail to write to connection `+market+string(msg)+err.Error())
 	}
+	util.Log(util.LogLevelDebug, fmt.Sprintf(`send to connection %s %s`, market, string(msg)))
 	return err
 }
 
