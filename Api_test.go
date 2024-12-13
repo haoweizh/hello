@@ -526,14 +526,13 @@ func Test_download(t *testing.T) {
 }
 
 func Test_Order(t *testing.T) {
-	fmt.Println(time.Now().UnixMilli())
-	fmt.Println(time.Now().UnixMicro())
-	market := model.OKEX
+	market := model.BitgetPerp
 	model.NewConfig()
 	//api.InitMarketInfos(market)
-	symbol := `COMP_PERP`
+	symbol := `ENJ_PERP`
 	account := model.GetAccounts(0)[market]
-	api.GetBalances(account.Key, account.Secret, model.OKEX)
+	api.InitMarketInfos(market)
+	api.PlaceOrder(account.Key, account.Secret, model.OrderSideBuy, model.OrderTypeMarket, market, symbol, model.ReduceOnly, `test`, 0.3864, 0.3864, 0.2, false, nil)
 	//api.GetPositions(account.Key, account.Secret, market)
 	//fmt.Println(order.OrderId)
 	//api.CancelOrder(account.Key, account.Secret, market, symbol, ``, order.OrderId)

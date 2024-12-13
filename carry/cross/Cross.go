@@ -354,6 +354,8 @@ func initTradeLine(account *model.Account, setting *model.Setting, status *Carry
 	}
 }
 
+var equaling = false
+
 func ClearCross() {
 	for doCross {
 		for {
@@ -363,6 +365,7 @@ func ClearCross() {
 				time.Sleep(time.Millisecond * 10)
 			}
 		}
+		equaling = true
 		model.AppEnvironment.ReqIdOrders = sync.Map{}
 		for {
 			leftOrders := 0
@@ -411,6 +414,7 @@ func ClearCross() {
 			}
 		}
 		api.CheckSetProcessing(model.FunctionCross, model.FunctionCross, model.FunctionCross, false)
+		equaling = false
 		time.Sleep(time.Minute * 30)
 	}
 }
@@ -1155,7 +1159,7 @@ func handleCross(account *model.Account, order *model.Order) {
 	leftAmt := order.Amount - order.DealAmount
 	if order.Status == model.CarryStatusFail {
 		order.OrderId = fmt.Sprintf("%d%s%s", time.Now().UnixMilli(), order.Market, order.Symbol)
-		if !api.GetProcessing(model.FunctionCross, model.FunctionCross, model.FunctionCross) {
+		if !equaling {
 			compOrder := api.PlaceOrder(account.Key, account.Secret, order.OrderSide, model.OrderTypeMarket, order.Market, order.Symbol,
 				``, model.FunctionComplement, order.Price, order.Price, leftAmt, false, nil)
 			model.AppDB.Save(compOrder)
@@ -1171,7 +1175,7 @@ func handleCross(account *model.Account, order *model.Order) {
 		if queryOrder != nil {
 			leftAmt = queryOrder.Amount - queryOrder.DealAmount
 			if leftAmt > marketInfo.SizeMin && leftAmt*order.Price > marketInfo.MoneyMin && queryOrder.Status != model.CarryStatusSuccess {
-				if !api.GetProcessing(model.FunctionCross, model.FunctionCross, model.FunctionCross) {
+				if !equaling {
 					compOrder := api.PlaceOrder(account.Key, account.Secret, order.OrderSide, model.OrderTypeMarket, order.Market, order.Symbol,
 						``, model.FunctionComplement, order.Price, order.Price, leftAmt, false, nil)
 					model.AppDB.Save(compOrder)
