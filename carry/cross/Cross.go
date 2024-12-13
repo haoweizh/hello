@@ -363,6 +363,7 @@ func ClearCross() {
 				time.Sleep(time.Millisecond * 10)
 			}
 		}
+		model.AppEnvironment.ReqIdOrders = sync.Map{}
 		for {
 			leftOrders := 0
 			model.AppEnvironment.OrderIdOrders.Range(func(k, v interface{}) bool {
@@ -378,7 +379,6 @@ func ClearCross() {
 			time.Sleep(time.Second * 3)
 		}
 		model.AppEnvironment.OrderIdOrders = sync.Map{}
-		model.AppEnvironment.ReqIdOrders = sync.Map{}
 		today := util.GetNow()
 		today = time.Date(today.Year(), today.Month(), today.Day(), 0, 0, 0, 0, today.Location())
 		carryRows, _ := model.AppDB.Model(model.Order{}).Select(`sum(price*abs(amount)),refresh_type`).
@@ -1155,11 +1155,15 @@ func handleCross(account *model.Account, order *model.Order) {
 	leftAmt := order.Amount - order.DealAmount
 	if order.Status == model.CarryStatusFail {
 		order.OrderId = fmt.Sprintf("%d%s%s", time.Now().UnixMilli(), order.Market, order.Symbol)
-		compOrder := api.PlaceOrder(account.Key, account.Secret, order.OrderSide, model.OrderTypeMarket, order.Market, order.Symbol,
-			``, model.FunctionComplement, order.Price, order.Price, leftAmt, false, nil)
-		model.AppDB.Save(compOrder)
-		util.Log(util.LogLevelInfo, fmt.Sprintf(`handleCorss no order post comp from %#v %#v not deal %f 百分之%f`,
-			order, compOrder, leftAmt, math.Round(100*leftAmt/order.Amount)))
+		if !api.GetProcessing(model.FunctionCross, model.FunctionCross, model.FunctionCross) {
+			compOrder := api.PlaceOrder(account.Key, account.Secret, order.OrderSide, model.OrderTypeMarket, order.Market, order.Symbol,
+				``, model.FunctionComplement, order.Price, order.Price, leftAmt, false, nil)
+			model.AppDB.Save(compOrder)
+			util.Log(util.LogLevelInfo, fmt.Sprintf(`handleCorss no order post comp from %#v %#v not deal %f 百分之%f`,
+				order, compOrder, leftAmt, math.Round(100*leftAmt/order.Amount)))
+		} else {
+			util.Log(util.LogLevelInfo, fmt.Sprintf(`comp all processing and ignore when fail %#v`, order))
+		}
 	} else if leftAmt > marketInfo.SizeMin && leftAmt*order.Price > marketInfo.MoneyMin && order.Status != model.CarryStatusSuccess && order.HaveId() {
 		canceled, errCode, errMsg := api.CancelOrder(account.Key, account.Secret, order.Market, order.Symbol, model.OrderTypeLimit, order.OrderId)
 		if !canceled {
@@ -1170,11 +1174,15 @@ func handleCross(account *model.Account, order *model.Order) {
 			if queryOrder != nil {
 				leftAmt = queryOrder.Amount - queryOrder.DealAmount
 				if leftAmt > marketInfo.SizeMin && leftAmt*order.Price > marketInfo.MoneyMin && queryOrder.Status != model.CarryStatusSuccess {
-					compOrder := api.PlaceOrder(account.Key, account.Secret, order.OrderSide, model.OrderTypeMarket, order.Market, order.Symbol,
-						``, model.FunctionComplement, order.Price, order.Price, leftAmt, false, nil)
-					model.AppDB.Save(compOrder)
-					util.Log(util.LogLevelInfo, fmt.Sprintf(`post comp from %#v %#v not deal %f 百分之%f`,
-						order, compOrder, leftAmt, math.Round(100*leftAmt/order.Amount)))
+					if !api.GetProcessing(model.FunctionCross, model.FunctionCross, model.FunctionCross) {
+						compOrder := api.PlaceOrder(account.Key, account.Secret, order.OrderSide, model.OrderTypeMarket, order.Market, order.Symbol,
+							``, model.FunctionComplement, order.Price, order.Price, leftAmt, false, nil)
+						model.AppDB.Save(compOrder)
+						util.Log(util.LogLevelInfo, fmt.Sprintf(`post comp from %#v %#v not deal %f 百分之%f`,
+							order, compOrder, leftAmt, math.Round(100*leftAmt/order.Amount)))
+					} else {
+						util.Log(util.LogLevelInfo, fmt.Sprintf(`comp all processing and ignore %#v`, order))
+					}
 				} else {
 					util.Log(util.LogLevelInfo, fmt.Sprintf(`order update fail %#v left %f %#v`, order, leftAmt, queryOrder))
 				}
@@ -1189,7 +1197,7 @@ func handleCross(account *model.Account, order *model.Order) {
 		} else {
 			order.OrderId = fmt.Sprintf("%d%s%s", time.Now().UnixMilli(), order.Market, order.Symbol)
 			order.Status = model.CarryStatusFail
-			util.Log(util.LogLevelError, fmt.Sprintf(`handle have no id %#v`, order))
+			util.Log(util.LogLevelError, fmt.Sprintf(`handle have no id %s %s %#v`, order.Market, order.Symbol, order))
 		}
 	}
 	model.AppDB.Save(order)

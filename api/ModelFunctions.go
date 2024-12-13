@@ -22,6 +22,14 @@ var settingLoading bool
 var processLock sync.Mutex
 var processing = &sync.Map{}
 
+func GetProcessing(function, market, symbol string) bool {
+	value, _ := util.LoadSyncMap(processing, function, market, symbol)
+	if value != nil {
+		return value.(bool)
+	}
+	return false
+}
+
 func CheckSetProcessing(function, market, symbol string, value bool) (before bool) {
 	processLock.Lock()
 	defer processLock.Unlock()
