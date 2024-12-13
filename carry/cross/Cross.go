@@ -1047,7 +1047,7 @@ func placeCross(statusBuy, statusSell *CarryStatus, priceBuy, priceSell, amount 
 		statusSell.market, statusSell.symbol, statusBuy.market, statusBuy.symbol, priceSell, priceBuy, amount,
 		score, statusBuy.Holding, statusBuy.TradeLineBuy, statusSell.Holding, statusSell.TradeLineSell))
 	if statusBuy.market == model.OKEX && statusSell.market == model.OKEX {
-		requestId := strconv.FormatInt(time.Now().UnixMilli(), 10)[3:] + model.OKEX
+		requestId := strconv.FormatInt(time.Now().UnixMicro(), 10)[3:]
 		orderBuy := &model.Order{OrderSide: model.OrderSideBuy, OrderType: model.OrderTypeLimit, Market: model.OKEX,
 			Symbol: statusBuy.symbol, Price: priceBuy, Amount: amount, RefreshType: model.FunctionCross, OrderTime: util.GetNow(),
 			UnfilledQuantity: amount, AccountIndex: statusBuy.account.Index, Status: model.CarryStatusWorking, Function: model.Open,

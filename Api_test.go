@@ -526,6 +526,8 @@ func Test_download(t *testing.T) {
 }
 
 func Test_Order(t *testing.T) {
+	fmt.Println(time.Now().UnixMilli())
+	fmt.Println(time.Now().UnixMicro())
 	market := model.OKEX
 	model.NewConfig()
 	//api.InitMarketInfos(market)

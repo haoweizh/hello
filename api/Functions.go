@@ -795,14 +795,14 @@ func PlaceOrder(key, secret, orderSide, orderType, market, symbol, orderParam, f
 	case model.OrderSideSell, model.OrderSideLiquidateLong:
 		markSide = model.OrderSideSell
 	}
-	_, marketType, coin, _ := model.GetFromStandard(market, symbol)
+	_, _, coin, _ := model.GetFromStandard(market, symbol)
 	if amount == 0 {
 		util.Log(util.LogLevelError, fmt.Sprintf(`can not place order with amount 0 , %s %s %s %s`, orderSide, orderType, market, symbol))
 		return &model.Order{OrderSide: markSide, OrderType: orderType, Market: market, Symbol: symbol, Coin: coin, Price: price,
 			Amount: 0, TriggerPrice: triggerPrice, RefreshType: funcType, Status: model.CarryStatusFail, DealAmount: 0, DealPrice: price, OrderTime: util.GetNow()}
 	}
 	account := model.AppConfig.GetAccountFromKeyIndex(market, key, -1)
-	order = &model.Order{ClientOrdId: strconv.FormatInt(time.Now().UnixMilli(), 10)[3:] + market + coin + marketType, RefreshType: funcType,
+	order = &model.Order{ClientOrdId: strconv.FormatInt(time.Now().UnixMicro(), 10)[3:], RefreshType: funcType,
 		OrderSide: markSide, OrderType: orderType, Market: market, Symbol: symbol, Price: price, Amount: amount, DealAmount: 0, Coin: coin,
 		DealPrice: price, TriggerPrice: triggerPrice, OrderTime: util.GetNow(), UnfilledQuantity: amount, AccountIndex: account.Index, Status: model.CarryStatusWorking}
 	//util.Notice(fmt.Sprintf(`...%s %s %s before order %d amount: %f price:%f triggerPrice:%f`,
