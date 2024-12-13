@@ -25,17 +25,17 @@ struct UltraOrderReceiver {
     void *inner;
 };
 
-extern struct UltraMarketPublisher* init_market_publisher(const char *topic);
+extern struct UltraMarketPublisher* init_market_publisher(const char *topic,unsigned int len);
 
-extern struct UltraOrderPublisher* init_order_publisher(const char *topic);
+extern struct UltraOrderPublisher* init_order_publisher(const char *topic,unsigned int len);
 
-extern struct UltraMarketReceiver* init_market_receiver(const char *topic);
+extern struct UltraMarketReceiver* init_market_receiver(const char *topic,unsigned int len);
 
-extern struct UltraOrderReceiver* init_order_receiver(const char *topic);
+extern struct UltraOrderReceiver* init_order_receiver(const char *topic,unsigned int len);
 
-extern void publish_market(struct UltraMarketPublisher *publisher, const char *msg);
+extern void publish_market(struct UltraMarketPublisher *publisher, const char *msg,unsigned int len);
 
-extern void publish_order(struct UltraOrderPublisher *publisher, const char *msg);
+extern void publish_order(struct UltraOrderPublisher *publisher, const char *msg,unsigned int len);
 
 extern unsigned int receive_market(struct UltraMarketReceiver *receiver, char *buf);
 

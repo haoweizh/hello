@@ -18,7 +18,7 @@ typedef struct {
 } ReceiverInner;
 
 // 初始化市场发布者
-struct UltraMarketPublisher* init_market_publisher(const char *topic) {
+struct UltraMarketPublisher* init_market_publisher(const char *topic,unsigned int len) {
     struct UltraMarketPublisher *publisher = malloc(sizeof(struct UltraMarketPublisher));
     if (!publisher) return NULL;
 
@@ -36,7 +36,7 @@ struct UltraMarketPublisher* init_market_publisher(const char *topic) {
 }
 
 // 初始化订单发布者
-struct UltraOrderPublisher* init_order_publisher(const char *topic) {
+struct UltraOrderPublisher* init_order_publisher(const char *topic,unsigned int len) {
     struct UltraOrderPublisher *publisher = malloc(sizeof(struct UltraOrderPublisher));
     if (!publisher) return NULL;
 
@@ -54,7 +54,7 @@ struct UltraOrderPublisher* init_order_publisher(const char *topic) {
 }
 
 // 初始化市场接收者
-struct UltraMarketReceiver* init_market_receiver(const char *topic) {
+struct UltraMarketReceiver* init_market_receiver(const char *topic,unsigned int len) {
     struct UltraMarketReceiver *receiver = malloc(sizeof(struct UltraMarketReceiver));
     if (!receiver) return NULL;
     receiver->topic = strdup(topic);
@@ -71,7 +71,7 @@ struct UltraMarketReceiver* init_market_receiver(const char *topic) {
 }
 
 // 初始化订单接收者
-struct UltraOrderReceiver* init_order_receiver(const char *topic) {
+struct UltraOrderReceiver* init_order_receiver(const char *topic,unsigned int len) {
     struct UltraOrderReceiver *receiver = malloc(sizeof(struct UltraOrderReceiver));
     if (!receiver) return NULL;
 
@@ -89,9 +89,9 @@ struct UltraOrderReceiver* init_order_receiver(const char *topic) {
 }
 
 // 发布市场消息
-void publish_market(struct UltraMarketPublisher *publisher, const char *msg) {
+void publish_market(struct UltraMarketPublisher *publisher, const char *msg,unsigned int len) {
     if (!publisher || !msg) return;
-    printf("publish_market msg:%s\n", msg);
+    printf("publish_market length: %d msg:%s \n", len,msg);
     PublisherInner *inner = (PublisherInner *)publisher->inner;
     if (inner->buffer) free(inner->buffer);
     inner->buffer = strdup(msg);
@@ -99,9 +99,9 @@ void publish_market(struct UltraMarketPublisher *publisher, const char *msg) {
 }
 
 // 发布订单消息
-void publish_order(struct UltraOrderPublisher *publisher, const char *msg) {
+void publish_order(struct UltraOrderPublisher *publisher, const char *msg,unsigned int len) {
     if (!publisher || !msg) return;
-    printf("publish_order msg:%s\n", msg);
+    printf("publish_order length: %d msg:%s \n", len,msg);
     PublisherInner *inner = (PublisherInner *)publisher->inner;
     if (inner->buffer) free(inner->buffer);
     inner->buffer = strdup(msg);

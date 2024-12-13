@@ -767,17 +767,19 @@ func Test_GateSols(t *testing.T) {
 
 func Test_C(t *testing.T) {
 	// Initialize publishers and receivers
-	marketPublisher, _ := util.InitMarketPublisher("market_topic")
-	orderPublisher, _ := util.InitOrderPublisher("order_topic")
-	marketReceiver, _ := util.InitMarketReceiver("market_topic")
-	orderReceiver, _ := util.InitOrderReceiver("order_topic")
+	marketPublisher, _ := util.InitMarketPublisher("BTCUSDT")
+	orderPublisher, _ := util.InitOrderPublisher("BTCUSDT")
+	marketReceiver, _ := util.InitMarketReceiver("BTCUSDT")
+	orderReceiver, _ := util.InitOrderReceiver("BTCUSDT")
 
 	// Publish messages
-	marketPublisher.PublishMarket("Hello PublishMarket!")
-	orderPublisher.PublishOrder("Hello PublishOrder!")
+	msg := "{\"id\": \"187d3cb2-942d-484c-8271-4e2141bbadb1\",\"method\": \"time\"}"
+	marketPublisher.PublishMarket(msg)
+	oderMsg := "{\"id\":\"1733748523668\",\"method\":\"order.place\",\"params\":{\"apiKey\":\"xxx\",\"newClientOrderId\":\"111\",\"newOrderRespType\":\"RESULT\",\"quantity\":\"1.00\",\"selfTradePreventionMode\":\"EXPIRE_MAKER\",\"side\":\"BUY\",\"signature\":\"xxx\",\"symbol\":\"BTCUSDT\",\"timestamp\":1733748523668,\"type\":\"MARKET\"}}"
+	orderPublisher.PublishOrder(oderMsg)
 
 	// Receive messages
-	buf := make([]byte, 1024)
+	buf := make([]byte, 4096)
 	msgSize := marketReceiver.ReceiveMarket(buf)
 	if msgSize > 0 {
 		fmt.Printf("Received from market: %s\n", string(buf[:msgSize]))
