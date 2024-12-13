@@ -245,9 +245,6 @@ func CancelOrder(key, secret, market, symbol, orderType, orderId string) (result
 		result = cancelOrderBitgetSpot(key, secret, symbol, orderId)
 	case model.BitgetPerp:
 		result = cancelOrderBitgetPerp(key, secret, symbol, orderId)
-	//	result, errCode, msg = cancelOrderBybitSpot(key, secret, symbol, orderId)
-	//case model.Ftx:
-	//	result = deprecated.cancelOrderFtx(key, secret, orderType, orderId)
 	case model.Gate:
 		result = cancelOrderGate(key, secret, symbol, orderId)
 	case model.BinancePerp:

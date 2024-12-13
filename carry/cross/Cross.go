@@ -1165,30 +1165,26 @@ func handleCross(account *model.Account, order *model.Order) {
 			util.Log(util.LogLevelInfo, fmt.Sprintf(`comp all processing and ignore when fail %#v`, order))
 		}
 	} else if leftAmt > marketInfo.SizeMin && leftAmt*order.Price > marketInfo.MoneyMin && order.Status != model.CarryStatusSuccess && order.HaveId() {
-		canceled, errCode, errMsg := api.CancelOrder(account.Key, account.Secret, order.Market, order.Symbol, model.OrderTypeLimit, order.OrderId)
-		if !canceled {
-			util.Log(util.LogLevelInfo, fmt.Sprintf(`post cancel %v %s %s %s`, canceled, errCode, errMsg, order.OrderId))
-		} else {
-			time.Sleep(time.Second * 10)
-			queryOrder := api.QueryOrderById(account.Key, account.Secret, order.Market, order.Symbol, order.OrderType, order.OrderId)
-			if queryOrder != nil {
-				leftAmt = queryOrder.Amount - queryOrder.DealAmount
-				if leftAmt > marketInfo.SizeMin && leftAmt*order.Price > marketInfo.MoneyMin && queryOrder.Status != model.CarryStatusSuccess {
-					if !api.GetProcessing(model.FunctionCross, model.FunctionCross, model.FunctionCross) {
-						compOrder := api.PlaceOrder(account.Key, account.Secret, order.OrderSide, model.OrderTypeMarket, order.Market, order.Symbol,
-							``, model.FunctionComplement, order.Price, order.Price, leftAmt, false, nil)
-						model.AppDB.Save(compOrder)
-						util.Log(util.LogLevelInfo, fmt.Sprintf(`post comp from %#v %#v not deal %f 百分之%f`,
-							order, compOrder, leftAmt, math.Round(100*leftAmt/order.Amount)))
-					} else {
-						util.Log(util.LogLevelInfo, fmt.Sprintf(`comp all processing and ignore %#v`, order))
-					}
+		api.CancelOrder(account.Key, account.Secret, order.Market, order.Symbol, model.OrderTypeLimit, order.OrderId)
+		time.Sleep(time.Second * 10)
+		queryOrder := api.QueryOrderById(account.Key, account.Secret, order.Market, order.Symbol, order.OrderType, order.OrderId)
+		if queryOrder != nil {
+			leftAmt = queryOrder.Amount - queryOrder.DealAmount
+			if leftAmt > marketInfo.SizeMin && leftAmt*order.Price > marketInfo.MoneyMin && queryOrder.Status != model.CarryStatusSuccess {
+				if !api.GetProcessing(model.FunctionCross, model.FunctionCross, model.FunctionCross) {
+					compOrder := api.PlaceOrder(account.Key, account.Secret, order.OrderSide, model.OrderTypeMarket, order.Market, order.Symbol,
+						``, model.FunctionComplement, order.Price, order.Price, leftAmt, false, nil)
+					model.AppDB.Save(compOrder)
+					util.Log(util.LogLevelInfo, fmt.Sprintf(`post comp from %#v %#v not deal %f 百分之%f`,
+						order, compOrder, leftAmt, math.Round(100*leftAmt/order.Amount)))
 				} else {
-					util.Log(util.LogLevelInfo, fmt.Sprintf(`order update fail %#v left %f %#v`, order, leftAmt, queryOrder))
+					util.Log(util.LogLevelInfo, fmt.Sprintf(`comp all processing and ignore %#v`, order))
 				}
 			} else {
-				util.Log(util.LogLevelError, fmt.Sprintf(`order update fail query %#v`, order))
+				util.Log(util.LogLevelInfo, fmt.Sprintf(`order update fail %#v left %f %#v`, order, leftAmt, queryOrder))
 			}
+		} else {
+			util.Log(util.LogLevelError, fmt.Sprintf(`order update fail query %#v`, order))
 		}
 	} else {
 		if order.HaveId() {

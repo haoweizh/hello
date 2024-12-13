@@ -840,6 +840,8 @@ func cancelOrderBybit(key, secret, symbol, orderId string) (success bool) {
 	}
 	if respJson != nil && respJson.Get(`retCode`).MustInt() == 0 {
 		return true
+	} else {
+		util.Log(util.LogLevelInfo, fmt.Sprintf(`fail to cancelOrder Bybit %#v`, respJson))
 	}
 	return false
 }

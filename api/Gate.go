@@ -931,7 +931,7 @@ func cancelOrderGate(key, secret, symbol, orderId string) (result bool) {
 			return false
 		}
 		marshal, _ := json.Marshal(order)
-		util.Log(util.LogLevelInfo, fmt.Sprintf(`cancel related order response: %s`, marshal))
+		util.Log(util.LogLevelInfo, fmt.Sprintf(`fail to cancel order gate spot response: %s`, marshal))
 		return true
 	} else if success && marketType == model.MarketTypePerp {
 		order, _, err := client.FuturesApi.CancelFuturesOrder(ctx, `usdt`, orderId)
@@ -940,7 +940,7 @@ func cancelOrderGate(key, secret, symbol, orderId string) (result bool) {
 			return false
 		}
 		marshal, _ := json.Marshal(order)
-		util.Log(util.LogLevelInfo, fmt.Sprintf(`cancel future order response: %s`, marshal))
+		util.Log(util.LogLevelInfo, fmt.Sprintf(`fail to cancel order gate future order response: %s`, marshal))
 		return true
 	}
 	util.Log(util.LogLevelError, fmt.Sprintf(`cancel can not recognize gate symbol %s`, dialectSymbol))

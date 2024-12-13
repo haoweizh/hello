@@ -403,7 +403,7 @@ func cancelOrderBinancePerp(key, secret, symbol, orderId string) bool {
 	} else if res.Status == `CANCELED` {
 		return true
 	} else {
-		util.Log(util.LogLevelError, fmt.Sprintf(`cancelOrderBinancePerp status %#v`, res.Status))
+		util.Log(util.LogLevelError, fmt.Sprintf(`fail to cancel order binanceperp %#v`, res))
 	}
 	return false
 }

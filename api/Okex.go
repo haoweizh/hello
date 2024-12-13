@@ -874,6 +874,7 @@ func cancelOrderOkex(key, secret, symbol string, orderId, orderType string) (res
 		}
 		return cancelResult, ``, ``
 	}
+	util.Log(util.LogLevelInfo, fmt.Sprintf(`fail to cancelOrder okex %#v`, orderJson))
 	return false, err.Error(), err.Error()
 }
 

@@ -471,6 +471,7 @@ func cancelOrderBinanceSpot(key, secret, market, symbol, orderId string) (suc bo
 			return true, order
 		}
 	}
+	util.Log(util.LogLevelError, fmt.Sprintf(`fail to cancel order binanceSpot %s`, string(responseBody)))
 	return false, nil
 }
 

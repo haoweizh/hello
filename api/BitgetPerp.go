@@ -314,7 +314,7 @@ func cancelOrderBitgetPerp(key, secret, symbol, orderId string) (result bool) {
 			util.Log(util.LogLevelInfo, fmt.Sprintf("success to cancel bitgetPerp order code %s", code))
 			return true
 		} else {
-			util.Log(util.LogLevelError, fmt.Sprintf("fail to cancelOrderBitgetPerp code %s msg %s %s",
+			util.Log(util.LogLevelError, fmt.Sprintf("fail to cancelOrder BitgetPerp code %s msg %s %s",
 				code, jsonData.Get(`msg`).MustString(), string(httpResp)))
 		}
 	}
