@@ -94,7 +94,7 @@ func PrepareSettings() {
 				setting = oldSetting.(*model.Setting)
 			}
 		}
-		//util.Notice(fmt.Sprintf(`load setting %s %s %s %#v %d`,
+		//util.Log(util.LogLevelInfo, fmt.Sprintf(`load setting %s %s %s %#v %d`,
 		//	setting.Market, setting.Symbol, setting.Function, setting.Valid, setting.Chance))
 		marketMap[setting.Market] = true
 		value, ok = util.LoadSyncMap(localHandlers, setting.Market, setting.Symbol)
@@ -155,6 +155,7 @@ func PrepareSettings() {
 		i++
 	}
 	appMarkets = localAppMarkets
+	util.Log(util.LogLevelInfo, fmt.Sprintf(`finish loading settings from markets %#v`, appMarkets))
 	coinSettings = localCoinSettings
 	handlers = localHandlers
 	symbolSettings = localSymbolSettings
@@ -477,6 +478,10 @@ func GetMarketSymbols(market string) map[string]bool {
 				`GALA_PERP`: true, `GLM_PERP`: true, `GRASS_PERP`: true, `HBAR_PERP`: true, `JTO_PERP`: true, `KSM_PERP`: true, `MANA_PERP`: true, `MOODENG_PERP`: true, `NEAR_PERP`: true,
 				`NEIRO_PERP`: true, `NOT_PERP`: true, `OP_PERP`: true, `ORDI_PERP`: true, `PEOPLE_PERP`: true, `PEPE_PERP`: true, `POL_PERP`: true, `PUFFER_PERP`: true, `SAND_PERP`: true,
 				`SATS_PERP`: true, `SHIB_PERP`: true, `SOL_PERP`: true, `SUI_PERP`: true, `TIA_PERP`: true, `TON_PERP`: true, `TURBO_PERP`: true, `WIF_PERP`: true, `WLD_PERP`: true, `XLM_PERP`: true, `X_PERP`: true}
+		} else if market == model.Gate {
+			return map[string]bool{`AAVE_PERP`: true}
+		} else if market == model.Bybit {
+			return map[string]bool{`AAVE_USDT`: true, `AAVE_PERP`: true}
 		}
 	}
 	if appSettings == nil {

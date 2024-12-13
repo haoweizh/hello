@@ -111,7 +111,7 @@ func _(environment *model.Environment, market string, symbols map[string]bool) (
 func CreateWSTick(environment *model.Environment, market string) (
 	socketMap map[*model.WSConn]bool, channels []chan struct{}) {
 	for {
-		locking := CheckSetProcessing(model.FunctionConnMaintain, market, ``, true)
+		locking := CheckSetProcessing(model.FunctionTickMaintain, market, ``, true)
 		if !locking {
 			break
 		}
@@ -131,7 +131,7 @@ func CreateWSTick(environment *model.Environment, market string) (
 			subscribeHandlerOKEX, wsHandlerOKEX, wsStepOKEX)
 	case model.BinanceSpot, model.BinanceMargin:
 		socketMap, channels, err = model.WebSocketClient(market, wsBinance+`/stream`, GetWSSubscribes(market, []string{model.SubscribeTicker}),
-			subscribeHandlerBinance, wsHandlerBinance, wsStepBinance)
+			subscribeHandlerBinance, wsHandlerBinanceSpot, wsStepBinance)
 	case model.BinancePerp:
 		socketMap, channels, err = model.WebSocketClient(market, wsBinancePerp+`/stream`, GetWSSubscribes(
 			market, []string{model.SubscribeTicker, model.SubscribeMarkPrice}), subscribeHandlerBinance, wsHandlerBinancePerp, wsStepBinance)
@@ -153,7 +153,7 @@ func CreateWSTick(environment *model.Environment, market string) (
 		util.Log(util.LogLevelError, market+` can not create depth server `+err.Error())
 	}
 	model.AppEnvironment.WsInitTime.Store(market, util.GetNow())
-	CheckSetProcessing(model.FunctionConnMaintain, market, ``, false)
+	CheckSetProcessing(model.FunctionTickMaintain, market, ``, false)
 	return socketMap, channels
 }
 
@@ -197,6 +197,7 @@ func SendToConnection(market string, connection *model.WSConn, msg []byte) (err 
 	if err = connection.WriteMsg(msg); err != nil {
 		util.Log(util.LogLevelError, `fail to write to connection `+market+string(msg)+err.Error())
 	}
+	//util.Log(util.LogLevelDebug, fmt.Sprintf(`send to connection %s %s`, market, string(msg)))
 	return err
 }
 
@@ -226,7 +227,7 @@ func UpdateOrderDeal(market, orderId, status, msg string, dealAmount float64) {
 	var order *model.Order
 	i := 0
 	for ; i < 10; i++ {
-		data, _ := model.AppEnvironment.CrossOrders.Load(orderId)
+		data, _ := model.AppEnvironment.OrderIdOrders.Load(orderId)
 		if data != nil {
 			order = data.(*model.Order)
 			break

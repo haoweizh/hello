@@ -5,6 +5,7 @@ import (
 	"hello/util"
 	"strings"
 	"sync"
+	"time"
 )
 
 type KLinePoint struct {
@@ -56,8 +57,8 @@ type Environment struct {
 	ConnTick        sync.Map // market - map[*websocket.Conn]bool for depth sockets
 	ConnOrder       sync.Map // market*accountKey / Gate*marketType*accountKey - *WSConn;
 	ConnOrderUpdate sync.Map // market*accountKey / Gate*marketType*accountKey - *WSConn;
-	WSOrderMap      sync.Map // requestId - *Order
-	CrossOrders     sync.Map // orderId - *Order
+	ReqIdOrders     sync.Map // requestId - *Order
+	OrderIdOrders   sync.Map // orderId - *Order
 	WSRespChan      chan WSResp
 	MonitorSettings *sync.Map // sync.Map[market]*sync.Map[symbol]*sync.Map[interval]*sync.Map[address]*MonitorSetting
 	WsManager       *WSManager
@@ -68,10 +69,41 @@ type MarkPriceInfo struct {
 	Ts        int // time in unix epoch millionSeconds
 }
 
+// HandleOldWSResp 用于处理ws下单，但没有返回orderId的情况，此时有可能有成交
+func (environment *Environment) HandleOldWSResp() {
+	for {
+		ts := time.Now().Unix()
+		environment.ReqIdOrders.Range(func(requestId, value interface{}) bool {
+			if value == nil {
+				return true
+			}
+			orderTs := value.(*Order).OrderTime.Unix()
+			if ts-orderTs > 300 && ts-orderTs < 86400 && !value.(*Order).HaveId() {
+				util.Log(util.LogLevelInfo, fmt.Sprintf(`try to handle old and del %s %s req %s %#v`,
+					value.(*Order).Market, value.(*Order).Symbol, requestId, value))
+				environment.ReqIdOrders.Delete(requestId)
+				if AccountHandlerMap[value.(*Order).RefreshType] != nil {
+					AccountHandlerMap[value.(*Order).RefreshType](value.(*Order))
+				}
+			}
+			return true
+		})
+		time.Sleep(time.Second * 10)
+	}
+}
+
 func (environment *Environment) HandleWSResp() {
 	for {
 		wsResp := <-environment.WSRespChan
-		value, _ := environment.WSOrderMap.Load(wsResp.RequestId)
+		value, _ := environment.ReqIdOrders.Load(wsResp.RequestId)
+		if value == nil {
+			value, _ = environment.ReqIdOrders.Load(wsResp.RequestId + OrderSideSell)
+			util.Log(util.LogLevelInfo, fmt.Sprintf(`get pair order sell %#v`, value))
+			if value == nil {
+				value, _ = environment.ReqIdOrders.Load(wsResp.RequestId + OrderSideBuy)
+				util.Log(util.LogLevelInfo, fmt.Sprintf(`get pair order buy %#v`, value))
+			}
+		}
 		util.Log(util.LogLevelInfo, fmt.Sprintf(`get ws order req id %s`, wsResp.RequestId))
 		if value != nil {
 			if len(strings.Trim(wsResp.OrderId, ` `)) == 0 {
@@ -81,17 +113,19 @@ func (environment *Environment) HandleWSResp() {
 			order.OrderId = wsResp.OrderId
 			if wsResp.Success {
 				order.Status = CarryStatusWorking
+				environment.OrderIdOrders.Store(wsResp.OrderId, order)
 			} else {
 				order.Status = CarryStatusFail
 				order.ErrCode = wsResp.Msg
 			}
-			environment.CrossOrders.Store(wsResp.OrderId, order)
-			environment.WSOrderMap.Delete(wsResp.RequestId)
-			util.Log(util.LogLevelInfo, fmt.Sprintf(`del request id %s store order %s %s type %s id %s`,
-				wsResp.RequestId, order.Market, order.Symbol, order.RefreshType, order.OrderId))
+			environment.ReqIdOrders.Delete(wsResp.RequestId)
+			util.Log(util.LogLevelInfo, fmt.Sprintf(`del request store order %s %d %#v`,
+				wsResp.RequestId, time.Now().Unix()-order.OrderTime.Unix(), order))
 			if AccountHandlerMap[order.RefreshType] != nil {
 				AccountHandlerMap[order.RefreshType](order)
 			}
+		} else {
+			util.Log(util.LogLevelError, fmt.Sprintf(`no order for request id %s`, wsResp.RequestId))
 		}
 	}
 }

@@ -103,16 +103,15 @@ func createFromPosition(account *model.Account, setting *model.Setting, valueLim
 		return nil, false
 	}
 	cm := value.(*contractMarket)
-	getPrice, price := api.GetPriceForce(setting.Symbol, setting.Market)
-	if !getPrice || price == 0 {
-		//price = cm.positions[setting.Symbol].EntryPrice
-		//util.Notice(`no tick price, use position price %s %s %f`, setting.Market, setting.Symbol, price)
-		return nil, false
-	}
+	_, price := api.GetPriceForce(setting.Symbol, setting.Market)
 	limitAmount := 0.0
 	availableAmount := 0.0
-	limitAmount = math.Min(cm.accountValueInU/5, cm.collateralsAvailable) / price
-	availableAmount = cm.collateralsAvailable / price
+	if price > 0 {
+		limitAmount = math.Min(cm.accountValueInU/5, cm.collateralsAvailable) / price
+		availableAmount = cm.collateralsAvailable / price
+	} else {
+		doRevert = true
+	}
 	carryStatus = &CarryStatus{isSpot: false, market: setting.Market, symbol: setting.Symbol, account: account,
 		setting:       setting,
 		LimitSell:     limitAmount,
@@ -175,18 +174,18 @@ func createFromBalance(account *model.Account, setting *model.Setting, valueLimi
 		value, ok = spotMarkets.Load(key)
 	}
 	success, price := api.GetPriceForce(setting.Symbol, setting.Market)
-	if value == nil || !success || price == 0 {
+	if value == nil {
 		util.LogLess(util.LogLevelError, fmt.Sprintf(`nil spot market %s %s getPrice %#v %f`, setting.Market, setting.Symbol, success, price))
 		return nil, true
 	}
 	sm := value.(*spotMarket)
 	limitBuy, limitSell, availableBuy := 0.0, 0.0, 0.0
-	if setting.Function == model.FunctionCross {
+	if price > 0 {
 		limitBuy = math.Min(sm.availableU/5, sm.accountValueInU/15) / price
-	} else if setting.Function == model.FunctionQueue {
-		limitBuy = sm.availableU * 0.9 / price
+		availableBuy = sm.availableU / price
+	} else {
+		doRevert = true
 	}
-	availableBuy = sm.availableU / price
 	carryStatus = &CarryStatus{isSpot: true, market: setting.Market, symbol: setting.Symbol, account: account,
 		setting:       setting,
 		LimitSell:     0,
@@ -366,7 +365,7 @@ func ClearCross() {
 		}
 		for {
 			leftOrders := 0
-			model.AppEnvironment.CrossOrders.Range(func(k, v interface{}) bool {
+			model.AppEnvironment.OrderIdOrders.Range(func(k, v interface{}) bool {
 				if time.Now().Unix()-v.(*model.Order).OrderTime.Unix() < 80 {
 					leftOrders++
 				}
@@ -378,7 +377,8 @@ func ClearCross() {
 			}
 			time.Sleep(time.Second * 3)
 		}
-		model.AppEnvironment.CrossOrders = sync.Map{}
+		model.AppEnvironment.OrderIdOrders = sync.Map{}
+		model.AppEnvironment.ReqIdOrders = sync.Map{}
 		today := util.GetNow()
 		today = time.Date(today.Year(), today.Month(), today.Day(), 0, 0, 0, 0, today.Location())
 		carryRows, _ := model.AppDB.Model(model.Order{}).Select(`sum(price*abs(amount)),refresh_type`).
@@ -834,8 +834,8 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarrySta
 	stopStatus, okStatus := carryStop.Load(carryStatus.account.Key)
 	stopRelate, okRelate := carryStop.Load(carryStatusRelate.account.Key)
 	if (okStatus && stopStatus.(bool)) || (okRelate && stopRelate.(bool)) {
-		util.Log(util.LogLevelError, fmt.Sprintf(`stop carry for 10 times unknown carry %s or %s %s`,
-			carryStatus.account.Key, carryStatusRelate.account.Key, coin))
+		//util.Log(util.LogLevelError, fmt.Sprintf(`stop carry for 10 times unknown carry %s or %s %s`,
+		//	carryStatus.account.Key, carryStatusRelate.account.Key, coin))
 		return
 	}
 	var bidAmount, askAmount float64
@@ -1051,11 +1051,11 @@ func placeCross(statusBuy, statusSell *CarryStatus, priceBuy, priceSell, amount 
 		orderBuy := &model.Order{OrderSide: model.OrderSideBuy, OrderType: model.OrderTypeLimit, Market: model.OKEX,
 			Symbol: statusBuy.symbol, Price: priceBuy, Amount: amount, RefreshType: model.FunctionCross, OrderTime: util.GetNow(),
 			UnfilledQuantity: amount, AccountIndex: statusBuy.account.Index, Status: model.CarryStatusWorking, Function: model.Open,
-			OrderId: requestId + statusBuy.symbol, LineBuy: statusBuy.TradeLineBuy, LineSell: statusSell.TradeLineSell}
+			ClientOrdId: requestId + statusBuy.symbol, LineBuy: statusBuy.TradeLineBuy, LineSell: statusSell.TradeLineSell}
 		orderSell := &model.Order{OrderSide: model.OrderSideSell, OrderType: model.OrderTypeLimit, Market: model.OKEX,
 			Symbol: statusSell.symbol, Price: priceSell, Amount: amount, RefreshType: model.FunctionCross, OrderTime: util.GetNow(),
 			UnfilledQuantity: amount, AccountIndex: statusSell.account.Index, Status: model.CarryStatusWorking, Function: model.Open,
-			OrderId: requestId + statusSell.symbol, LineBuy: statusSell.TradeLineBuy, LineSell: statusSell.TradeLineSell}
+			ClientOrdId: requestId + statusSell.symbol, LineBuy: statusSell.TradeLineBuy, LineSell: statusSell.TradeLineSell}
 		if statusBuy.Holding*-1 >= amount {
 			orderBuy.Function = model.Close
 		}
@@ -1064,8 +1064,8 @@ func placeCross(statusBuy, statusSell *CarryStatus, priceBuy, priceSell, amount 
 		}
 		orderBuy.Coin = statusBuy.setting.Coin
 		orderSell.Coin = statusSell.setting.Coin
-		model.AppEnvironment.WSOrderMap.Store(requestId+model.OrderSideBuy, orderBuy)
-		model.AppEnvironment.WSOrderMap.Store(requestId+model.OrderSideSell, orderSell)
+		model.AppEnvironment.ReqIdOrders.Store(requestId+model.OrderSideBuy, orderBuy)
+		model.AppEnvironment.ReqIdOrders.Store(requestId+model.OrderSideSell, orderSell)
 		success, msg := api.PlacePairOKEX(statusBuy.account, requestId, statusBuy.symbol, statusSell.symbol, model.OrderTypeLimit, priceBuy, priceSell, amount)
 		if !success {
 			orderBuy.Status, orderSell.Status = model.CarryStatusFail, model.CarryStatusFail
@@ -1140,12 +1140,7 @@ func placeStatus(status *CarryStatus, price float64, amount float64) {
 
 func handleCross(account *model.Account, order *model.Order) {
 	time.Sleep(time.Minute)
-	if !order.HaveId() {
-		order.Status = model.CarryStatusFail
-		order.OrderId = fmt.Sprintf("%d%s%s", time.Now().UnixMilli(), order.Market, order.Symbol)
-		util.Log(util.LogLevelError, fmt.Sprintf(`handleCorss no order id %s`, order.OrderId))
-		return
-	}
+	model.AppEnvironment.OrderIdOrders.Delete(order.OrderId)
 	if order.Amount == order.DealAmount {
 		order.Status = model.CarryStatusSuccess
 	}
@@ -1158,7 +1153,14 @@ func handleCross(account *model.Account, order *model.Order) {
 		return
 	}
 	leftAmt := order.Amount - order.DealAmount
-	if leftAmt > marketInfo.SizeMin && leftAmt*order.Price > marketInfo.MoneyMin && order.Status != model.CarryStatusSuccess {
+	if order.Status == model.CarryStatusFail {
+		order.OrderId = fmt.Sprintf("%d%s%s", time.Now().UnixMilli(), order.Market, order.Symbol)
+		compOrder := api.PlaceOrder(account.Key, account.Secret, order.OrderSide, model.OrderTypeMarket, order.Market, order.Symbol,
+			``, model.FunctionComplement, order.Price, order.Price, leftAmt, false, nil)
+		model.AppDB.Save(compOrder)
+		util.Log(util.LogLevelInfo, fmt.Sprintf(`handleCorss no order post comp from %#v %#v not deal %f 百分之%f`,
+			order, compOrder, leftAmt, math.Round(100*leftAmt/order.Amount)))
+	} else if leftAmt > marketInfo.SizeMin && leftAmt*order.Price > marketInfo.MoneyMin && order.Status != model.CarryStatusSuccess && order.HaveId() {
 		canceled, errCode, errMsg := api.CancelOrder(account.Key, account.Secret, order.Market, order.Symbol, model.OrderTypeLimit, order.OrderId)
 		if !canceled {
 			util.Log(util.LogLevelInfo, fmt.Sprintf(`post cancel %v %s %s %s`, canceled, errCode, errMsg, order.OrderId))
@@ -1181,10 +1183,16 @@ func handleCross(account *model.Account, order *model.Order) {
 			}
 		}
 	} else {
-		util.Log(util.LogLevelInfo, fmt.Sprintf(`post handle done %#v`, order))
+		if order.HaveId() {
+			util.Log(util.LogLevelInfo, fmt.Sprintf(`post handle done %#v`, order))
+			order.Status = model.CarryStatusSuccess
+		} else {
+			order.OrderId = fmt.Sprintf("%d%s%s", time.Now().UnixMilli(), order.Market, order.Symbol)
+			order.Status = model.CarryStatusFail
+			util.Log(util.LogLevelError, fmt.Sprintf(`handle have no id %#v`, order))
+		}
 	}
 	model.AppDB.Save(order)
-	model.AppEnvironment.CrossOrders.Delete(order.OrderId)
 }
 
 var PostOrderCross = func(order *model.Order) {

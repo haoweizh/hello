@@ -172,7 +172,7 @@ func CancelAll(key, secret, market string) {
 	case model.BinanceSpot:
 		orders := queryOpenOrdersBinanceSpot(key, secret, ``)
 		for _, order := range orders {
-			result, _ := cancelOrderBinance(key, secret, market, order.Symbol, order.OrderId)
+			result, _ := cancelOrderBinanceSpot(key, secret, market, order.Symbol, order.OrderId)
 			util.Log(util.LogLevelInfo, fmt.Sprintf(`cancelAll orders success BinanceSpot %s id %s return %#v`,
 				order.Symbol, order.OrderId, result))
 			time.Sleep(time.Millisecond * 100)
@@ -253,7 +253,7 @@ func CancelOrder(key, secret, market, symbol, orderType, orderId string) (result
 	case model.BinancePerp:
 		result = cancelOrderBinancePerp(key, secret, symbol, orderId)
 	case model.BinanceSpot:
-		result, _ = cancelOrderBinance(key, secret, market, symbol, orderId)
+		result, _ = cancelOrderBinanceSpot(key, secret, market, symbol, orderId)
 	}
 	util.Log(util.LogLevelInfo, fmt.Sprintf(`[cancel %s %#v %s %s]`, orderId, result, market, symbol))
 	return result, errCode, msg
@@ -413,8 +413,15 @@ func GetPriceForce(symbol, market string) (result bool, price float64) {
 		return true, bidAsk.Bids[0].Price
 	}
 	markets := GetMarkets()
+	_, _, coin, _ := model.GetFromStandard(market, symbol)
+	symbolSpot := coin + model.UniStandardTail[model.MarketTypeSpot]
+	symbolPerp := coin + model.UniStandardTail[model.MarketTypePerp]
 	for _, m := range markets {
-		getBidAsk, bidAsk = model.AppEnvironment.GetBidAsk(m, symbol)
+		getBidAsk, bidAsk = model.AppEnvironment.GetBidAsk(m, symbolSpot)
+		if getBidAsk && bidAsk != nil {
+			return true, bidAsk.Bids[0].Price
+		}
+		getBidAsk, bidAsk = model.AppEnvironment.GetBidAsk(m, symbolPerp)
 		if getBidAsk && bidAsk != nil {
 			return true, bidAsk.Bids[0].Price
 		}
@@ -435,7 +442,8 @@ func GetPriceForce(symbol, market string) (result bool, price float64) {
 	}
 	lastPriceTime.Store(market+`_`+symbol, time.Now().Add(time.Second*14400))
 	lastPrice.Store(market+`_`+symbol, price)
-	return result, price
+	util.Log(util.LogLevelError, fmt.Sprintf(`fail to get price for %s %s`, market, symbol))
+	return false, price
 }
 
 var getEquityTime = &sync.Map{}
@@ -793,21 +801,20 @@ func PlaceOrder(key, secret, orderSide, orderType, market, symbol, orderParam, f
 	_, marketType, coin, _ := model.GetFromStandard(market, symbol)
 	if amount == 0 {
 		util.Log(util.LogLevelError, fmt.Sprintf(`can not place order with amount 0 , %s %s %s %s`, orderSide, orderType, market, symbol))
-		return &model.Order{OrderSide: markSide, OrderType: orderType, Market: market, Symbol: symbol, Coin: coin,
-			Price: price, Amount: 0, OrderId: ``, ErrCode: ``, TriggerPrice: triggerPrice, RefreshType: funcType,
-			Status: model.CarryStatusFail, DealAmount: 0, DealPrice: price, OrderTime: util.GetNow()}
+		return &model.Order{OrderSide: markSide, OrderType: orderType, Market: market, Symbol: symbol, Coin: coin, Price: price,
+			Amount: 0, TriggerPrice: triggerPrice, RefreshType: funcType, Status: model.CarryStatusFail, DealAmount: 0, DealPrice: price, OrderTime: util.GetNow()}
 	}
 	account := model.AppConfig.GetAccountFromKeyIndex(market, key, -1)
-	order = &model.Order{OrderId: strconv.FormatInt(time.Now().UnixMilli(), 10)[3:] + market + coin + marketType, RefreshType: funcType,
+	order = &model.Order{ClientOrdId: strconv.FormatInt(time.Now().UnixMilli(), 10)[3:] + market + coin + marketType, RefreshType: funcType,
 		OrderSide: markSide, OrderType: orderType, Market: market, Symbol: symbol, Price: price, Amount: amount, DealAmount: 0, Coin: coin,
-		DealPrice: price, TriggerPrice: triggerPrice, OrderTime: util.GetNow(), UnfilledQuantity: amount, AccountIndex: account.Index}
+		DealPrice: price, TriggerPrice: triggerPrice, OrderTime: util.GetNow(), UnfilledQuantity: amount, AccountIndex: account.Index, Status: model.CarryStatusWorking}
 	//util.Notice(fmt.Sprintf(`...%s %s %s before order %d amount: %f price:%f triggerPrice:%f`,
 	//	orderSide, market, symbol, start, amount, price, triggerPrice))
 	if model.AppConfig.Env == `test` {
 		return
 	}
 	if isWs && (market == model.Gate || market == model.OKEX || market == model.Bybit || market == model.BinanceSpot || market == model.BinancePerp) {
-		model.AppEnvironment.WSOrderMap.Store(order.OrderId, order)
+		model.AppEnvironment.ReqIdOrders.Store(order.ClientOrdId, order)
 	}
 	switch market {
 	case model.BitgetPerp:
@@ -816,12 +823,6 @@ func PlaceOrder(key, secret, orderSide, orderType, market, symbol, orderParam, f
 	case model.BitgetSpot:
 		isWs = false
 		placeOrderBitgetSpot(key, secret, order, orderSide, orderType, symbol, price, amount)
-	//case model.KucoinSpot:
-	//	isWs = false
-	//	deprecated.placeOrderKucoinSpot(order, orderSide, orderType, symbol, price, amount)
-	//case model.KucoinPerp:
-	//	isWs = false
-	//	deprecated.placeOrderKucoinPerp(order, orderSide, orderType, symbol, price, amount)
 	case model.Gate:
 		placeOrderGate(account, isWs, order, orderSide, orderType, symbol, price, amount)
 	case model.OKEX:
@@ -832,34 +833,25 @@ func PlaceOrder(key, secret, orderSide, orderType, market, symbol, orderParam, f
 		placeOrderBinancePerp(account, isWs, order, orderSide, orderType, symbol, price, triggerPrice, amount)
 	case model.Bybit:
 		placeOrderBybit(account, isWs, order, orderParam)
-		//case model.HuobiSpot:
-		//	isWs = false
-		//	deprecated.placeOrderHuobiSpot(key, secret, order, orderSide, orderType, symbol, price, amount)
-		//case model.HuobiPerp:
-		//	isWs = false
-		//	deprecated.placeOrderHuobiPerp(key, secret, order, orderSide, orderType, ``, symbol, price, price, amount)
-		//case model.Ftx:
-		//	isWs = false
-		//	deprecated.placeOrderFtx(order, key, secret, orderSide, orderType, orderParam, symbol, price, triggerPrice, amount)
-		//case model.Mexc:
-		//	isWs = false
-		//	deprecated.placeOrderMexc(key, secret, order, orderSide, orderType, symbol, price, amount)
 	}
-	if order.OrderId == "0" || strings.Trim(order.OrderId, ` `) == "" {
-		order.Status = model.CarryStatusFail
-		order.OrderId = fmt.Sprintf(`%s_error_%d`, order.ErrCode, time.Now().UnixNano())
-	} else if order.Status == `` {
-		order.Status = model.CarryStatusWorking
-	}
-	order.TriggerPrice = triggerPrice
-	end := util.GetNowUnixMillion()
-	util.Log(util.LogLevelInfo, fmt.Sprintf(
-		`...%s %s %s return order at %d distance %d %s %s price %f %f amount %f %f trigger %f %f id %s`,
-		orderSide, market, symbol, end, end-start, order.Status, order.ErrCode, price, order.Price, amount, order.Amount,
-		triggerPrice, order.TriggerPrice, order.OrderId))
-	if !isWs && postOrder != nil {
-		model.AppEnvironment.CrossOrders.Store(order.OrderId, order)
-		go postOrder(order)
+	if !isWs {
+		if order.OrderId == "0" || strings.Trim(order.OrderId, ` `) == "" {
+			order.Status = model.CarryStatusFail
+			order.OrderId = fmt.Sprintf(`%s_error_%d`, order.ErrCode, time.Now().UnixNano())
+		} else if order.Status == `` {
+			order.Status = model.CarryStatusWorking
+		}
+		end := util.GetNowUnixMillion()
+		util.Log(util.LogLevelInfo, fmt.Sprintf(
+			`...%s %s %s return order at %d distance %d %s %s price %f %f amount %f %f trigger %f %f id %s`,
+			orderSide, market, symbol, end, end-start, order.Status, order.ErrCode, price, order.Price, amount, order.Amount,
+			triggerPrice, order.TriggerPrice, order.OrderId))
+		if postOrder != nil {
+			if order.Status != model.CarryStatusFail {
+				model.AppEnvironment.OrderIdOrders.Store(order.OrderId, order)
+			}
+			go postOrder(order)
+		}
 	}
 	return order
 }

@@ -125,8 +125,14 @@ var wsHandlerOKEX = func(market string, conn *model.WSConn, event []byte) {
 		return
 	}
 	dialectSymbol := responseJson.GetPath(`arg`, `instId`).MustString()
-	_, marketType, coin := model.GetCoinFromDialect(model.OKEX, dialectSymbol)
-	symbol := coin + model.UniStandardTail[marketType]
+	marketType := model.MarketTypeSpot
+	if strings.Contains(dialectSymbol, `-USDT-SWAP`) {
+		marketType = model.MarketTypePerp
+	}
+	getSymbol, _, symbol := model.GetFromDialect(model.OKEX, marketType, dialectSymbol)
+	if !getSymbol {
+		return
+	}
 	action := responseJson.Get(`action`).MustString()
 	data := responseJson.Get(`data`).MustArray()[0].(map[string]interface{})
 	success := false
@@ -198,19 +204,22 @@ var wsAccountHandlerOKEX = func(market, key string, event []byte) {
 		}
 	}
 	if responseJson.Get(`op`).MustString() == `order` {
-		wsResp := model.WSResp{RequestId: responseJson.Get(`id`).MustString()}
 		data := responseJson.Get(`data`).MustArray()
-		if len(data) > 0 {
-			value := data[0].(map[string]interface{})
+		for i, item := range data {
+			value := item.(map[string]interface{})
+			wsResp := model.WSResp{RequestId: responseJson.Get(`id`).MustString()}
 			wsResp.Msg = value[`sCode`].(string) + value[`sMsg`].(string)
 			wsResp.OrderId = value[`ordId`].(string)
+			if responseJson.Get(`code`).MustString() == `0` {
+				wsResp.Success = true
+			} else {
+				wsResp.Success = false
+			}
+			if i > 0 {
+				util.Log(util.LogLevelInfo, fmt.Sprintf("ok pair request %d %#v", i, wsResp))
+			}
+			model.AppEnvironment.WSRespChan <- wsResp
 		}
-		if responseJson.Get(`code`).MustString() == `0` {
-			wsResp.Success = true
-		} else {
-			wsResp.Success = false
-		}
-		model.AppEnvironment.WSRespChan <- wsResp
 	} else if responseJson.Get(`op`).MustString() == `batch-orders` {
 		wsRespBuy := model.WSResp{RequestId: responseJson.Get(`id`).MustString() + model.OrderSideBuy}
 		wsRespSell := model.WSResp{RequestId: responseJson.Get(`id`).MustString() + model.OrderSideSell}
@@ -588,13 +597,13 @@ func placeOrderOKEX(account *model.Account, isWs bool, order *model.Order) {
 		return
 	}
 	postData := map[string]interface{}{`instId`: order.Symbol, `tdMode`: `cross`, `side`: order.OrderSide,
-		`sz`: amount, `ordType`: order.OrderType, `tag`: OKEXTag, `clOrdId`: order.OrderId}
+		`sz`: amount, `ordType`: order.OrderType, `tag`: OKEXTag, `clOrdId`: order.ClientOrdId}
 	path := "/api/v5/trade/order"
 	if order.OrderType == model.OrderTypeStop {
 		postData[`ordType`] = `conditional`
 		postData[`slOrdPx`] = priceStr
 		postData[`slTriggerPx`] = triggerPriceStr
-		postData[`algoClOrdId`] = fmt.Sprintf(`%d%s%d%s`, account.Index, OKSeparator, time.Now().Nanosecond(), order.OrderSide)
+		postData[`algoClOrdId`] = order.ClientOrdId
 		path = `/api/v5/trade/order-algo`
 	} else if order.OrderType == model.OrderTypeTrailStop {
 		postData[`ordType`] = `move_order_stop`
@@ -602,10 +611,10 @@ func placeOrderOKEX(account *model.Account, isWs bool, order *model.Order) {
 		//	postData[`activePx`] = priceStr
 		//}
 		postData[`callbackRatio`] = triggerPriceStr
-		postData[`algoClOrdId`] = fmt.Sprintf(`%d%s%d%s`, account.Index, OKSeparator, time.Now().Nanosecond(), order.OrderSide)
+		postData[`algoClOrdId`] = order.ClientOrdId
 		path = `/api/v5/trade/order-algo`
 	} else {
-		postData[`clOrdId`] = fmt.Sprintf(`%d%s%d%s`, account.Index, OKSeparator, time.Now().Nanosecond(), order.OrderSide)
+		postData[`clOrdId`] = order.ClientOrdId
 		postData[`px`] = priceStr
 		_, marketType, _, _ := model.GetFromStandard(order.Market, order.Symbol)
 		if order.OrderType == model.OrderTypeMarket && marketType == model.MarketTypeSpot {
@@ -617,7 +626,7 @@ func placeOrderOKEX(account *model.Account, isWs bool, order *model.Order) {
 		_, _, _, dialectSymbol := model.GetFromStandard(model.OKEX, order.Symbol)
 		postData[`instId`] = dialectSymbol
 		subscribeMap := make(map[string]interface{})
-		subscribeMap[`id`] = order.OrderId
+		subscribeMap[`id`] = order.ClientOrdId
 		subscribeMap["op"] = "order"
 		subscribeMap[`args`] = []map[string]interface{}{postData}
 		wsOrderMsg := util.JsonEncodeToByte(subscribeMap)
@@ -686,11 +695,15 @@ func getMarketsOKEX(key, secret string) (marketInfos map[string]*model.MarketInf
 				value := info.(map[string]interface{})
 				if value[`instId`] != nil {
 					marketInfo := &model.MarketInfo{Market: model.OKEX}
-					success, marketType, coin := model.GetCoinFromDialect(model.OKEX, value[`instId`].(string))
+					marketType := model.MarketTypeSpot
+					if strings.Contains(value[`instId`].(string), `-USDT-SWAP`) {
+						marketType = model.MarketTypePerp
+					}
+					success, _, symbol := model.GetFromDialect(model.OKEX, marketType, value[`instId`].(string))
 					if !success {
 						continue
 					}
-					marketInfo.Name = coin + model.UniStandardTail[marketType]
+					marketInfo.Name = symbol
 					if value[`lotSz`] != nil {
 						marketInfo.SizeIncrement, _ = strconv.ParseFloat(value[`lotSz`].(string), 64)
 					}
@@ -725,21 +738,24 @@ func getMarketsOKEX(key, secret string) (marketInfos map[string]*model.MarketInf
 			for _, info := range marketJson.Get(`data`).MustArray() {
 				value := info.(map[string]interface{})
 				if value[`instId`] != nil {
-					success, marketType, coin := model.GetCoinFromDialect(model.OKEX, value[`instId`].(string))
+					marketType := model.MarketTypeSpot
+					if strings.Contains(value[`instId`].(string), `-USDT-SWAP`) {
+						marketType = model.MarketTypePerp
+					}
+					success, _, symbol := model.GetFromDialect(model.OKEX, marketType, value[`instId`].(string))
 					if !success {
 						continue
 					}
-					name := coin + model.UniStandardTail[marketType]
-					if marketInfos[name] == nil {
+					if marketInfos[symbol] == nil {
 						continue
 					}
 					if value[`volCcy24h`] != nil && value[`last`] != nil {
 						if marketType == model.MarketTypeSpot {
-							marketInfos[name].TradeAmount, _ = strconv.ParseFloat(value[`volCcy24h`].(string), 64)
-						} else if marketType == model.MarketTypePerp {
+							marketInfos[symbol].TradeAmount, _ = strconv.ParseFloat(value[`volCcy24h`].(string), 64)
+						} else {
 							vol, _ := strconv.ParseFloat(value[`volCcy24h`].(string), 64)
 							lastPriceOKx, _ := strconv.ParseFloat(value[`last`].(string), 64)
-							marketInfos[name].TradeAmount = vol * lastPriceOKx
+							marketInfos[symbol].TradeAmount = vol * lastPriceOKx
 						}
 					}
 				}
@@ -868,8 +884,10 @@ func parseOrderOKEX(value map[string]interface{}) (order *model.Order) {
 	order = &model.Order{Market: model.OKEX}
 	if value[`ordId`] != nil && value[`ordId`].(string) != `0` && value[`ordId`].(string) != `` {
 		order.OrderId = value[`ordId`].(string)
+		order.ClientOrdId = value[`clOrdId`].(string)
 	} else if value[`algoId`] != nil {
 		order.OrderId = value[`algoId`].(string)
+		order.ClientOrdId = value[`algoClOrdId`].(string)
 	}
 	if value[`px`] != nil && value[`px`] != `` {
 		order.Price, _ = strconv.ParseFloat(value[`px`].(string), 64)
@@ -952,9 +970,13 @@ func parseOrderOKEX(value map[string]interface{}) (order *model.Order) {
 		}
 	}
 	if value[`instId`] != nil {
-		success, marketType, coin := model.GetCoinFromDialect(model.OKEX, value[`instId`].(string))
+		marketType := model.MarketTypeSpot
+		if strings.Contains(value[`instId`].(string), `-USDT-SWAP`) {
+			marketType = model.MarketTypePerp
+		}
+		success, _, symbol := model.GetFromDialect(model.OKEX, marketType, value[`instId`].(string))
 		if success {
-			order.Symbol = coin + model.UniStandardTail[marketType]
+			order.Symbol = symbol
 		} else {
 			return nil
 		}
@@ -1015,25 +1037,26 @@ func queryOpenOrdersOKEX(key, secret, symbol string, conditional bool) (orders [
 	return
 }
 
-func getAlgoOrderIdOKEX(key, secret, algoId string) (ordId string) {
+func getAlgoOrderIdOKEX(key, secret, algoId string) (ordId, clientOrderId string) {
 	param := map[string]interface{}{`algoId`: algoId, `ordType`: `conditional`}
 	responseBody, _ := sendSignRequestOKEX(key, secret, http.MethodGet, `/api/v5/trade/orders-algo-history`, param, nil)
 	orderJson, err := util.NewJSON(responseBody)
 	if err != nil || orderJson == nil || orderJson.Get(`data`) == nil || orderJson.Get(`code`).MustString() != `0` {
-		return ``
+		return ``, ``
 	}
 	orders := orderJson.Get(`data`).MustArray()
 	for _, item := range orders {
 		value := item.(map[string]interface{})
 		if value[`algoId`] == algoId {
-			return value[`ordId`].(string)
+			return value[`ordId`].(string), value[`algoClOrdId`].(string)
 		}
 	}
-	return ``
+	return ``, ``
 }
 
 func queryOrderOKEX(key, secret, symbol, orderId, orderType string) (order *model.Order) {
 	path := `/api/v5/trade/order`
+	var clientOrderId string
 	param := map[string]interface{}{"ordId": orderId, "instId": symbol}
 	if orderType == model.OrderTypeStop {
 		path = `/api/v5/trade/order-algo`
@@ -1049,13 +1072,12 @@ func queryOrderOKEX(key, secret, symbol, orderId, orderType string) (order *mode
 	}
 	if strings.Trim(orderJson.Get(`code`).MustString(), ` `) == `51603` {
 		if orderType == model.OrderTypeStop || orderType == model.OrderTypeTrailStop {
-			orderId = getAlgoOrderIdOKEX(key, secret, orderId)
+			orderId, clientOrderId = getAlgoOrderIdOKEX(key, secret, orderId)
 			if orderId != `` {
 				return queryOrderOKEX(key, secret, symbol, orderId, model.OrderTypeLimit)
 			}
 		}
-		return &model.Order{OrderId: orderId, OrderType: orderType,
-			Status: model.CarryStatusFail, Symbol: symbol}
+		return &model.Order{OrderId: orderId, ClientOrdId: clientOrderId, OrderType: orderType, Status: model.CarryStatusFail, Symbol: symbol}
 	}
 	orders := orderJson.Get("data").MustArray()
 	for _, item := range orders {
@@ -1141,11 +1163,15 @@ func parsePositionOKEX(value map[string]interface{}) (success bool, position *Po
 		position.Margin, _ = strconv.ParseFloat(value[`margin`].(string), 64)
 	}
 	if value[`instId`] != nil { // 	产品ID，如 BTC-USD-180216
-		getCoin, marketType, coin := model.GetCoinFromDialect(model.OKEX, value[`instId`].(string))
+		marketType := model.MarketTypeSpot
+		if strings.Contains(value[`instId`].(string), `-USDT-SWAP`) {
+			marketType = model.MarketTypePerp
+		}
+		getCoin, _, symbol := model.GetFromDialect(model.OKEX, marketType, value[`instId`].(string))
 		if !getCoin {
 			return false, nil
 		}
-		position.Currency = coin + model.UniStandardTail[model.MarketTypePerp]
+		position.Currency = symbol
 		//posCcy 仓位资产币种，仅适用于币币杠杆仓位
 		if value[`pos`] != nil {
 			pos, _ := strconv.ParseFloat(value[`pos`].(string), 64)
@@ -1353,6 +1379,7 @@ func getPositionsOKEX(key, secret string) (success bool, positions []*Position) 
 		result, position := parsePositionOKEX(item.(map[string]interface{}))
 		if result && position.Holding != 0 {
 			positions = append(positions, position)
+			util.Log(util.LogLevelInfo, fmt.Sprintf(`get position okex %#v`, position))
 		}
 	}
 	return true, positions

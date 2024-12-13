@@ -49,25 +49,6 @@ func (marketInfoArray MarketInfoArray) Less(i, j int) bool {
 	return marketInfoArray[i].TradeAmount < marketInfoArray[j].TradeAmount
 }
 
-// GetMarketInfos
-func _(market, marketType string) (marketInfos map[string]*MarketInfo) {
-	marketInfos = make(map[string]*MarketInfo)
-	MarketInfos.Range(func(key, value any) bool {
-		if value == nil {
-			return true
-		}
-		if value.(*MarketInfo).Market == market {
-			symbol := value.(*MarketInfo).Name
-			_, mt, _ := GetCoinFromDialect(market, symbol)
-			if mt == marketType {
-				marketInfos[symbol] = value.(*MarketInfo)
-			}
-		}
-		return true
-	})
-	return
-}
-
 func GetMarketInfo(market, symbol string) (marketInfo *MarketInfo) {
 	v, _ := util.LoadSyncMap(MarketInfos, market, symbol)
 	if v == nil {

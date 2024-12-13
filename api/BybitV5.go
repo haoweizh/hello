@@ -346,11 +346,10 @@ var spotBookWsHandler = func(market string, conn *model.WSConn, event []byte) {
 		if bookWsResp.Data.S == "" {
 			return
 		}
-		success, _, coin := model.GetCoinFromDialect(model.Bybit, bookWsResp.Data.S)
+		success, _, symbol := model.GetFromDialect(model.Bybit, model.MarketTypeSpot, bookWsResp.Data.S)
 		if !success {
 			return
 		}
-		symbol := coin + model.UniStandardTail[model.MarketTypeSpot]
 		handleBookBybit(model.AppEnvironment, bookWsResp, symbol)
 	}
 }
@@ -363,11 +362,10 @@ var tickHandlerBybit = func(market string, conn *model.WSConn, event []byte) {
 		return
 	}
 	if strings.Contains(tickResp.Topic, "tickers") {
-		success, marketType, coin := model.GetCoinFromDialect(model.Bybit, tickResp.Data.Symbol)
+		success, _, symbol := model.GetFromDialect(model.Bybit, model.MarketTypePerp, tickResp.Data.Symbol)
 		if !success {
 			return
 		}
-		symbol := coin + model.UniStandardTail[marketType]
 		rate, _ := strconv.ParseFloat(tickResp.Data.FundingRate, 64)
 		nextFundingTime, _ := strconv.ParseInt(tickResp.Data.NextFundingTime, 10, 64)
 		SetFundingRate(model.Bybit, symbol, &model.FundingRate{
@@ -389,11 +387,10 @@ var perpBookWsHandler = func(market string, conn *model.WSConn, event []byte) {
 		if bookWsResp.Data.S == "" {
 			return
 		}
-		success, _, coin := model.GetCoinFromDialect(model.Bybit, bookWsResp.Data.S)
+		success, _, symbol := model.GetFromDialect(model.Bybit, model.MarketTypePerp, bookWsResp.Data.S)
 		if !success {
 			return
 		}
-		symbol := coin + model.UniStandardTail[model.MarketTypePerp]
 		handleBookBybit(model.AppEnvironment, bookWsResp, symbol)
 	}
 }
@@ -454,7 +451,6 @@ var subscribeHandlerBybit = func(market string, connection *model.WSConn, subscr
 	if err = SendToConnection(model.Bybit, connection, subscribeMessage); err != nil {
 		util.Log(util.LogLevelError, fmt.Sprintf(" bybit can not subscribe %s %s", subscribeMessage, err.Error()))
 	}
-	util.Log(util.LogLevelInfo, `bybit subscribed `+string(subscribeMessage))
 	return err
 }
 
@@ -560,8 +556,7 @@ func getPositionsBybit(key, secret string) (success bool, positions []*Position,
 			if contract.TradeMode != 0 {
 				continue
 			}
-			_, _, coin := model.GetCoinFromDialect(model.Bybit, contract.Symbol)
-			currency := coin + model.UniStandardTail[model.MarketTypePerp]
+			_, _, currency := model.GetFromDialect(model.Bybit, model.MarketTypePerp, contract.Symbol)
 			position := &Position{Market: model.Bybit, Ts: util.GetNowUnixMillion(), Currency: currency}
 			if contract.Side == "Buy" {
 				position.Holding, _ = strconv.ParseFloat(contract.Size, 64)
@@ -576,7 +571,10 @@ func getPositionsBybit(key, secret string) (success bool, positions []*Position,
 			position.BankruptcyPrice, _ = strconv.ParseFloat(contract.BustPrice, 64)
 			position.LiquidationPrice, _ = strconv.ParseFloat(contract.LiqPrice, 64)
 			position.Margin, _ = strconv.ParseFloat(contract.PositionMM, 64)
-			positions = append(positions, position)
+			if position.Holding != 0 {
+				positions = append(positions, position)
+				util.Log(util.LogLevelInfo, fmt.Sprintf(`get position bybit %#v`, position))
+			}
 		}
 		cursor = positionResp.Result.NextPageCursor
 		if cursor == "" {
@@ -758,12 +756,13 @@ func placeOrderBybit(account *model.Account, isWs bool, order *model.Order, orde
 		tradeOrderType = "Market"
 	}
 	param := map[string]interface{}{
-		"symbol":     dialectSymbol,
-		"side":       tradeSide,
-		"orderType":  tradeOrderType,
-		"qty":        amountStr,
-		"price":      priceStr,
-		`marketUnit`: `baseCoin`}
+		"symbol":      dialectSymbol,
+		"side":        tradeSide,
+		"orderType":   tradeOrderType,
+		"qty":         amountStr,
+		"price":       priceStr,
+		`marketUnit`:  `baseCoin`,
+		`orderLinkId`: order.ClientOrdId}
 	if marketType == model.MarketTypePerp {
 		param["category"] = "linear"
 	} else {
@@ -771,7 +770,7 @@ func placeOrderBybit(account *model.Account, isWs bool, order *model.Order, orde
 	}
 	value, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrder, model.Bybit, account.Key)
 	if isWs && value != nil && value.(*model.WSConn).Conn != nil {
-		msgMap := map[string]interface{}{"reqId": order.OrderId, `op`: "order.create", "args": []interface{}{param},
+		msgMap := map[string]interface{}{"reqId": order.ClientOrdId, `op`: "order.create", "args": []interface{}{param},
 			"header": map[string]string{"X-BAPI-TIMESTAMP": fmt.Sprintf(`%d`, time.Now().UnixMilli())}}
 		msg := util.JsonEncodeToByte(msgMap)
 		if err := SendToConnection(model.Bybit, value.(*model.WSConn), msg); err != nil {
@@ -904,17 +903,13 @@ func getFundingRateBybit(symbol string) (fundingRate *model.FundingRate) {
 	return fundingRate
 }
 
-func parseOrderBybit(value map[string]interface{}) (order *model.Order) {
+func parseOrderBybit(value map[string]interface{}, symbol string) (order *model.Order) {
 	if value == nil {
 		return nil
 	}
-	order = &model.Order{Market: model.Bybit}
+	order = &model.Order{Market: model.Bybit, ClientOrdId: value["orderLinkId"].(string), Symbol: symbol}
 	if value[`orderId`] != nil && value[`orderId`].(string) != `0` && value[`orderId`].(string) != `` {
 		order.OrderId = value[`orderId`].(string)
-	}
-	if value[`symbol`] != nil {
-		_, marketType, coin := model.GetCoinFromDialect(model.Bybit, value[`symbol`].(string))
-		order.Symbol = coin + model.UniStandardTail[marketType]
 	}
 	if value[`price`] != nil && value[`price`] != `` {
 		order.Price, _ = strconv.ParseFloat(value[`price`].(string), 64)
@@ -1005,7 +1000,7 @@ func queryOpenOrdersBybit(key, secret, symbol string) (orders []*model.Order) {
 	array := respJson.GetPath(`result`, `list`).MustArray()
 	orders = make([]*model.Order, 0)
 	for _, data := range array {
-		order := parseOrderBybit(data.(map[string]interface{}))
+		order := parseOrderBybit(data.(map[string]interface{}), symbol)
 		if order != nil {
 			orders = append(orders, order)
 		}
@@ -1031,6 +1026,7 @@ func queryOrderBybit(key, secret, symbol, orderId string) *model.Order {
 	}
 	order := &model.Order{Market: model.Bybit, Status: model.CarryStatusWorking, OrderId: orderId, Symbol: symbol}
 	for _, orderDetail := range orderResp.Result.List {
+		order.ClientOrdId = orderDetail.OrderLinkId
 		order.Price, _ = strconv.ParseFloat(orderDetail.Price, 64)
 		order.DealPrice, _ = strconv.ParseFloat(orderDetail.AvgPrice, 64)
 		order.Amount, _ = strconv.ParseFloat(orderDetail.Qty, 64)

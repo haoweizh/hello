@@ -349,7 +349,7 @@ func addCarryResult(key, market, msg string, success bool) {
 		if strings.Trim(msg, ` `) != "" {
 			go pauseCarry(key, 300)
 		}
-		util.Log(util.LogLevelInfo, fmt.Sprintf(`---------- fail size %s %d`, key, fails))
+		util.Log(util.LogLevelInfo, fmt.Sprintf(`---------- fail and pause %s %s %d`, key, msg, fails))
 	}
 }
 

@@ -105,8 +105,7 @@ var markPriceWsHandler = func(market string, conn *model.WSConn, event []byte) {
 			if tickerData.Symbol == "" {
 				continue
 			}
-			_, _, coin := model.GetCoinFromDialect(model.BitgetPerp, tickerData.Symbol)
-			symbol := coin + model.UniStandardTail[model.MarketTypePerp]
+			_, _, symbol := model.GetFromDialect(model.BitgetPerp, model.MarketTypePerp, tickerData.Symbol)
 			price, _ := strconv.ParseFloat(tickerData.MarkPrice, 64)
 			ts, _ := strconv.ParseInt(tickerData.Ts, 10, 64)
 			nextTs, _ := strconv.ParseInt(tickerData.NextFundingTime, 10, 64)
@@ -181,11 +180,11 @@ func getPositionsBitgetPerp(key, secret string) (success bool, positions []*Posi
 	}
 	positions = make([]*Position, 0)
 	for _, contract := range bitgetPositionResp.Data {
-		isSuccess, _, coin := model.GetCoinFromDialect(model.BitgetPerp, contract.Symbol)
+		isSuccess, _, symbol := model.GetFromDialect(model.BitgetPerp, model.MarketTypePerp, contract.Symbol)
 		if !isSuccess {
 			continue
 		}
-		currency := coin + model.UniStandardTail[model.MarketTypePerp]
+		currency := symbol
 		position := &Position{Market: model.BitgetPerp, Ts: util.GetNowUnixMillion(), Currency: currency}
 		position.Direction = contract.HoldSide
 		total, _ := strconv.ParseFloat(contract.Total, 64)
@@ -203,7 +202,10 @@ func getPositionsBitgetPerp(key, secret string) (success bool, positions []*Posi
 		position.LeverRate = int64(contract.Leverage)
 		position.EntryPrice, _ = strconv.ParseFloat(contract.OpenPriceAvg, 64)
 		position.Margin, _ = strconv.ParseFloat(contract.MarginSize, 64)
-		positions = append(positions, position)
+		if position.Holding != 0 {
+			positions = append(positions, position)
+			util.Log(util.LogLevelInfo, fmt.Sprintf(`get position bitgetperp %#v`, position))
+		}
 	}
 	if len(positions) == 0 && accountValue > 0 {
 		util.Log(util.LogLevelError, fmt.Sprintf(`get pos error bitgetperp %d`, len(bitgetPositionResp.Data)))
@@ -264,6 +266,7 @@ func placeOrderBitgetPerp(key, secret string, order *model.Order, orderSide, ord
 		`marginMode`:  `crossed`,
 		"size":        amountStr,
 		"price":       priceStr,
+		"clientOid":   order.ClientOrdId,
 		"side":        orderSide,
 		"orderType":   ordType,
 		"reduceOnly":  reduceOnlyStr}
@@ -399,9 +402,8 @@ func queryOpenOrdersBitgetPerp(key, secret string) (orders []*model.Order) {
 	array := jsonData.GetPath(`data`, `entrustedList`).MustArray()
 	for _, data := range array {
 		value := data.(map[string]interface{})
-		_, _, coin := model.GetCoinFromDialect(model.BitgetPerp, value[`symbol`].(string))
-		order := &model.Order{Market: model.BitgetPerp, Symbol: coin + model.UniStandardTail[model.MarketTypePerp],
-			OrderId: value[`orderId`].(string)}
+		_, _, symbol := model.GetFromDialect(model.BitgetPerp, model.MarketTypePerp, value[`symbol`].(string))
+		order := &model.Order{Market: model.BitgetPerp, Symbol: symbol, OrderId: value[`orderId`].(string), ClientOrdId: value[`clientOid`].(string)}
 		if value[`size`] != nil {
 			order.Amount, _ = strconv.ParseFloat(value[`size`].(string), 64)
 		}
@@ -464,6 +466,7 @@ func queryOrderBitgetPerp(key, secret, symbol string, orderId string) (order *mo
 		order.DealPrice, _ = strconv.ParseFloat(orderDetailResp.Data.PriceAvg, 64)
 		order.Amount, _ = strconv.ParseFloat(orderDetailResp.Data.Size, 64)
 		order.OrderId = orderDetailResp.Data.OrderId
+		order.ClientOrdId = orderDetailResp.Data.ClientOid
 		order.DealAmount, _ = strconv.ParseFloat(orderDetailResp.Data.BaseVolume, 64)
 		order.Fee, _ = strconv.ParseFloat(orderDetailResp.Data.Fee, 64)
 		order.Price, _ = strconv.ParseFloat(orderDetailResp.Data.Price, 64)
