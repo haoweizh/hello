@@ -535,6 +535,7 @@ func equalCoin(coin string, statuses []*CarryStatus) (isEqual bool, holding floa
 	var equalStatus *CarryStatus
 	sort.Sort(sort.Reverse(bids))
 	for i := 0; i < len(bids); i++ {
+		price = bids[i].Price
 		if holding < SmallInU/price {
 			break
 		}
@@ -569,6 +570,7 @@ func equalCoin(coin string, statuses []*CarryStatus) (isEqual bool, holding floa
 	}
 	sort.Sort(asks)
 	for i := 0; i < len(asks); i++ {
+		price = asks[i].Price
 		if holding > -SmallInU/price {
 			break
 		}
