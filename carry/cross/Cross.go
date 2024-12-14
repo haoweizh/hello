@@ -543,10 +543,6 @@ func equalCoin(coin string, statuses []*CarryStatus) (isEqual bool, holding floa
 			util.Log(util.LogLevelError, fmt.Sprintf(`no status when holding: %f %s %s`, holding, bids[i].Market, bids[i].Symbol))
 			continue
 		}
-		if status.setting != nil && status.TradeLineSell > 0.5 {
-			errMsg += fmt.Sprintf(`%s %s no equal on trade line sell %f`, status.market, status.symbol, status.TradeLineSell)
-			continue
-		}
 		checkAmount := model.GetAmountInMarket(status.market, status.symbol, math.Abs(holding), price, status.reduceOnlySell)
 		if checkAmount <= 0 {
 			errMsg += fmt.Sprintf(`check amount %s %s %f < 0`, status.market, status.symbol, checkAmount)
@@ -580,11 +576,6 @@ func equalCoin(coin string, statuses []*CarryStatus) (isEqual bool, holding floa
 		if status == nil {
 			util.Log(util.LogLevelError, fmt.Sprintf(`no status when holding: %f %s %s`, holding, asks[i].Market, asks[i].Symbol))
 			continue
-		}
-		if status.setting != nil && status.TradeLineBuy > 0.5 {
-			errMsg += fmt.Sprintf(`%s %s no equal on trade line buy %f`, status.market, status.symbol, status.TradeLineBuy)
-			continue
-
 		}
 		checkAmount := model.GetAmountInMarket(status.market, status.symbol, math.Abs(holding), price, status.reduceOnlyBuy)
 		if checkAmount <= 0 {
@@ -960,20 +951,22 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarrySta
 		amount = math.Min(amount, openValueLimit/priceSell)
 		amount = FormatCrossPair(statusBuy.market, statusSell.market, statusBuy.symbol, statusSell.symbol, amount, priceBuy)
 	}
-	if checkScoreLimit(carryStatus.market, carryStatus.symbol, carryStatusRelate.market, carryStatusRelate.symbol, amount, score, scoreRelate) {
+	if checkScoreLimit(carryStatus.market, carryStatus.symbol, carryStatusRelate.market, carryStatusRelate.symbol, score, scoreRelate) {
+		if carryStatus.setting.Valid || carryStatusRelate.setting.Valid {
+			util.Log(util.LogLevelError, fmt.Sprintf(`possible mismatch coin %s %s %s %s score %f %f`,
+				carryStatus.market, carryStatus.symbol, carryStatusRelate.market, carryStatusRelate.symbol, score, scoreRelate))
+		}
 		carryStatus.setting.Valid = false
 		carryStatusRelate.setting.Valid = false
-		util.LogLess(util.LogLevelError, fmt.Sprintf(`possible mismatch coin %s %s %s %s`,
-			carryStatus.market, carryStatus.symbol, carryStatusRelate.market, carryStatusRelate.symbol))
 		return nil, nil, 0, 0, 0, nil, nil
 	}
 	return statusBuy, statusSell, amount, priceBuy, priceSell, tickBuy, tickSell
 }
 
-func checkScoreLimit(market, symbol, marketRelate, symbolRelate string, amount, score, scoreRelate float64) (invalid bool) {
-	if amount > 0 && ((score > 0.3 || scoreRelate > 0.3) ||
+func checkScoreLimit(market, symbol, marketRelate, symbolRelate string, score, scoreRelate float64) (invalid bool) {
+	if (score > 0.3 || scoreRelate > 0.3) ||
 		((score > 0.07 || scoreRelate > 0.07) && (market == model.Gate || marketRelate == model.Gate)) ||
-		((score > 0.1 || scoreRelate > 0.1) && (!isValidSymbol(market, symbol) || !isValidSymbol(marketRelate, symbolRelate)))) {
+		((score > 0.1 || scoreRelate > 0.1) && (!isValidSymbol(market, symbol) || !isValidSymbol(marketRelate, symbolRelate))) {
 		invalid = true
 	}
 	checkKey := fmt.Sprintf(`%s_%s_%s_%s`, market, symbol, marketRelate, symbolRelate)

@@ -491,7 +491,7 @@ func GetMarketSymbols(market string) map[string]bool {
 	symbols := make(map[string]bool)
 	for _, value := range appSettings {
 		marketInfo, getMarketInfo := util.LoadSyncMap(model.MarketInfos, market, value.Symbol)
-		if value.Market == market && value.Valid && marketInfo != nil && getMarketInfo {
+		if value.Market == market && marketInfo != nil && getMarketInfo {
 			symbols[value.Symbol] = true
 		}
 	}
