@@ -961,6 +961,10 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarrySta
 		amount = FormatCrossPair(statusBuy.market, statusSell.market, statusBuy.symbol, statusSell.symbol, amount, priceBuy)
 	}
 	if checkScoreLimit(carryStatus.market, carryStatus.symbol, carryStatusRelate.market, carryStatusRelate.symbol, amount, score, scoreRelate) {
+		carryStatus.setting.Valid = false
+		carryStatusRelate.setting.Valid = false
+		util.LogLess(util.LogLevelError, fmt.Sprintf(`possible mismatch coin %s %s %s %s`,
+			carryStatus.market, carryStatus.symbol, carryStatusRelate.market, carryStatusRelate.symbol))
 		return nil, nil, 0, 0, 0, nil, nil
 	}
 	return statusBuy, statusSell, amount, priceBuy, priceSell, tickBuy, tickSell
@@ -1037,14 +1041,16 @@ func placeCross(statusBuy, statusSell *CarryStatus, priceBuy, priceSell, amount 
 		score, statusBuy.Holding, statusBuy.TradeLineBuy, statusSell.Holding, statusSell.TradeLineSell))
 	if statusBuy.market == model.OKEX && statusSell.market == model.OKEX {
 		requestId := strconv.FormatInt(time.Now().UnixMicro(), 10)[3:]
+		clientOrdIdBuy := requestId + `b`
+		clientOrdIdSell := requestId + `s`
 		orderBuy := &model.Order{OrderSide: model.OrderSideBuy, OrderType: model.OrderTypeLimit, Market: model.OKEX,
 			Symbol: statusBuy.symbol, Price: priceBuy, Amount: amount, RefreshType: model.FunctionCross, OrderTime: util.GetNow(),
 			UnfilledQuantity: amount, AccountIndex: statusBuy.account.Index, Status: model.CarryStatusWorking, Function: model.Open,
-			ClientOrdId: requestId + statusBuy.symbol, LineBuy: statusBuy.TradeLineBuy, LineSell: statusSell.TradeLineSell}
+			OrderId: clientOrdIdBuy, ClientOrdId: clientOrdIdBuy, LineBuy: statusBuy.TradeLineBuy, LineSell: statusSell.TradeLineSell}
 		orderSell := &model.Order{OrderSide: model.OrderSideSell, OrderType: model.OrderTypeLimit, Market: model.OKEX,
 			Symbol: statusSell.symbol, Price: priceSell, Amount: amount, RefreshType: model.FunctionCross, OrderTime: util.GetNow(),
 			UnfilledQuantity: amount, AccountIndex: statusSell.account.Index, Status: model.CarryStatusWorking, Function: model.Open,
-			ClientOrdId: requestId + statusSell.symbol, LineBuy: statusSell.TradeLineBuy, LineSell: statusSell.TradeLineSell}
+			OrderId: clientOrdIdSell, ClientOrdId: clientOrdIdSell, LineBuy: statusSell.TradeLineBuy, LineSell: statusSell.TradeLineSell}
 		if statusBuy.Holding*-1 >= amount {
 			orderBuy.Function = model.Close
 		}
@@ -1057,6 +1063,8 @@ func placeCross(statusBuy, statusSell *CarryStatus, priceBuy, priceSell, amount 
 		if success {
 			model.AppEnvironment.ReqIdOrders.Store(requestId+model.OrderSideBuy, orderBuy)
 			model.AppEnvironment.ReqIdOrders.Store(requestId+model.OrderSideSell, orderSell)
+			model.AppDB.Save(orderBuy)
+			model.AppDB.Save(orderSell)
 		} else {
 			orderBuy.Status, orderSell.Status = model.CarryStatusFail, model.CarryStatusFail
 			orderBuy.ErrCode, orderSell.ErrCode = msg, msg
@@ -1143,7 +1151,6 @@ func handleCross(account *model.Account, order *model.Order) {
 	}
 	leftAmt := order.Amount - order.DealAmount
 	if order.Status == model.CarryStatusFail {
-		order.OrderId = fmt.Sprintf("%d%s%s", time.Now().UnixMilli(), order.Market, order.Symbol)
 		compOrder(account, order, leftAmt)
 	} else if leftAmt > marketInfo.SizeMin && leftAmt*order.Price > marketInfo.MoneyMin && order.Status != model.CarryStatusSuccess && order.HaveId() {
 		time.Sleep(time.Minute)
@@ -1170,7 +1177,12 @@ func handleCross(account *model.Account, order *model.Order) {
 			util.Log(util.LogLevelError, fmt.Sprintf(`handle have no id %s %s %#v`, order.Market, order.Symbol, order))
 		}
 	}
-	model.AppDB.Save(order)
+	if order.ClientOrdId != `` {
+		model.AppDB.Model(order).Where("client_ord_id = ?", order.ClientOrdId).Updates(map[string]interface{}{
+			`deal_amount`: order.DealAmount, `deal_price`: order.DealPrice, `err_code`: order.ErrCode, `order_id`: order.OrderId, `status`: order.Status, `order_time`: order.OrderTime})
+	} else {
+		util.Log(util.LogLevelError, fmt.Sprintf(`no client order id when handle cross %#v`, order))
+	}
 }
 
 var PostOrderCross = func(order *model.Order) {

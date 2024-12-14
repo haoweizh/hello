@@ -616,6 +616,18 @@ func Test_LimitReport(t *testing.T) {
 	fmt.Println(symbol)
 	model.NewConfig()
 	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
+	order := &model.Order{
+		DealAmount:  10,
+		DealPrice:   11,
+		ErrCode:     "1",
+		OrderId:     "test1",
+		ClientOrdId: "1730118883773671207BTC_PERP",
+		Status:      "working",
+		OrderTime:   time.Now(),
+	}
+	model.AppDB.Model(order).Where("client_ord_id = ?", order.ClientOrdId).Updates(map[string]interface{}{
+		`deal_amount`: order.DealAmount, `deal_price`: order.DealPrice, `err_code`: order.ErrCode, `order_id`: order.OrderId, `status`: order.Status, `order_time`: order.OrderTime})
+
 	market := model.OKEX
 	rows, _ := model.AppDB.Model(&model.Order{}).Select(`symbol`).Where(`market=? and order_type=? and status=? and created_at>?`,
 		market, model.OrderTypeLimit, model.CarryStatusSuccess, `2024-01-01`).Group(`symbol`).Rows()

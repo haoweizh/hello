@@ -30,7 +30,7 @@ func main() {
 	//	DB:       0,
 	//})
 	go controller.ParameterServe()
-	go model.AppEnvironment.HandleOldWSResp()
+	//go model.AppEnvironment.HandleOldWSResp()
 	go model.AppEnvironment.HandleWSResp()
 	go util.LogChanHandler(model.AppConfig.Log, model.AppConfig.Port)
 	carry.Maintain()
