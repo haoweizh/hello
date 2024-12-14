@@ -538,7 +538,7 @@ func PlacePairOKEX(account *model.Account, requestId, symbolBuy, symbolSell, ord
 		errMsg = symbolBuy + ` ignore carry for last time < 50ms`
 		util.Log(util.LogLevelInfo, errMsg)
 		return false, errMsg
-	} else if time.Duration(now-lastSameTime[symbolBuy])/time.Millisecond < 200 {
+	} else if time.Duration(now-lastSameTime[symbolBuy])/time.Millisecond < 100 {
 		errMsg = symbolBuy + ` ignore carry for same pair last time < 200ms`
 		util.Log(util.LogLevelInfo, errMsg)
 		return false, errMsg

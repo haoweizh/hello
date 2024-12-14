@@ -87,7 +87,7 @@ func createSpotMarket(key, secret, market string) (sm *spotMarket) {
 }
 
 // absentRevert: 当cm或sm中没有这个symbol时，是否设置成revert模式
-func createFromPosition(account *model.Account, setting *model.Setting, valueLimit float64, absentRevert bool) (carryStatus *CarryStatus, doRevert bool) {
+func createFromPosition(account *model.Account, setting *model.Setting, valueLimit float64) (carryStatus *CarryStatus, doRevert bool) {
 	key := account.Key
 	value, ok := contractMarkets.Load(key)
 	if value == nil || !ok {
@@ -129,11 +129,6 @@ func createFromPosition(account *model.Account, setting *model.Setting, valueLim
 		if carryStatus.Holding > 0 {
 			carryStatus.AvailableSell = math.Max(availableAmount, carryStatus.Holding)
 		}
-	} else {
-		if absentRevert {
-			//doRevert = true
-		}
-		//util.Info(fmt.Sprintf(`symbol absent revert %s %s`, setting.Market, setting.Symbol))
 	}
 	// bitgetperp可以开仓或减仓，不越过0反向开仓
 	if setting.Market == model.BitgetPerp && cm.positions[setting.Symbol] != nil {
@@ -166,7 +161,7 @@ func createFromPosition(account *model.Account, setting *model.Setting, valueLim
 }
 
 // absentRevert: 当cm或sm中没有这个symbol时，是否设置成revert模式
-func createFromBalance(account *model.Account, setting *model.Setting, valueLimit float64, absentRevert bool) (carryStatus *CarryStatus, doRevert bool) {
+func createFromBalance(account *model.Account, setting *model.Setting, valueLimit float64) (carryStatus *CarryStatus, doRevert bool) {
 	key := account.Key
 	value, ok := spotMarkets.Load(key)
 	if value == nil || !ok {
@@ -199,15 +194,6 @@ func createFromBalance(account *model.Account, setting *model.Setting, valueLimi
 		// 暂不支持借币
 		carryStatus.LimitSell, carryStatus.AvailableSell = limitSell, limitSell
 		carryStatus.RateInAll = math.Abs(carryStatus.Holding * price / sm.accountValueInU)
-	} else {
-		if absentRevert {
-			//doRevert = true
-		}
-		// warning: bybit现货偶发出现实际持有某个币种，但是sm.balances中没有该币种
-		//if setting.Market == model.Bybit {
-		//	util.Info(fmt.Sprintf(`symbol absent revert %s %s %d`, setting.Market, setting.Symbol, len(sm.balances)))
-		//	return nil, true
-		//}
 	}
 	usdLowLine := math.Min(100000, 0.2*sm.accountValueInU)
 	if sm.availableU < usdLowLine || carryStatus.RateInAll > 0.2 {
@@ -228,7 +214,7 @@ func createFromBalance(account *model.Account, setting *model.Setting, valueLimi
 }
 
 // absentRevert: 当cm或sm中没有这个symbol时，是否设置成revert模式
-func initStatus(account *model.Account, setting *model.Setting, absentRevert bool) (status *CarryStatus) {
+func initStatus(account *model.Account, setting *model.Setting) (status *CarryStatus) {
 	if setting == nil {
 		return
 	}
@@ -240,9 +226,9 @@ func initStatus(account *model.Account, setting *model.Setting, absentRevert boo
 		localLimit /= 10
 	}
 	if marketType == model.MarketTypeSpot {
-		status, doRevert = createFromBalance(account, setting, localLimit, absentRevert)
+		status, doRevert = createFromBalance(account, setting, localLimit)
 	} else if marketType == model.MarketTypePerp {
-		status, doRevert = createFromPosition(account, setting, localLimit, absentRevert)
+		status, doRevert = createFromPosition(account, setting, localLimit)
 	}
 	if setting.Chance < 0 {
 		doRevert = true
@@ -381,7 +367,6 @@ func ClearCross() {
 			}
 			time.Sleep(time.Second * 3)
 		}
-		model.AppEnvironment.OrderIdOrders = sync.Map{}
 		today := util.GetNow()
 		today = time.Date(today.Year(), today.Month(), today.Day(), 0, 0, 0, 0, today.Location())
 		carryRows, _ := model.AppDB.Model(model.Order{}).Select(`sum(price*abs(amount)),refresh_type`).
@@ -472,7 +457,7 @@ func equalAccount(i int, equalChan chan int, accounts map[string]*model.Account)
 					util.Log(util.LogLevelError, `can not equal`)
 					continue
 				}
-				equalStatuses[j] = initStatus(account, setting, false)
+				equalStatuses[j] = initStatus(account, setting)
 			}
 			for index := 0; index <= 10; index++ {
 				coinEqual, leftHolding, errMsg := equalCoin(coin.(string), equalStatuses)
@@ -1068,10 +1053,11 @@ func placeCross(statusBuy, statusSell *CarryStatus, priceBuy, priceSell, amount 
 		}
 		orderBuy.Coin = statusBuy.setting.Coin
 		orderSell.Coin = statusSell.setting.Coin
-		model.AppEnvironment.ReqIdOrders.Store(requestId+model.OrderSideBuy, orderBuy)
-		model.AppEnvironment.ReqIdOrders.Store(requestId+model.OrderSideSell, orderSell)
 		success, msg := api.PlacePairOKEX(statusBuy.account, requestId, statusBuy.symbol, statusSell.symbol, model.OrderTypeLimit, priceBuy, priceSell, amount)
-		if !success {
+		if success {
+			model.AppEnvironment.ReqIdOrders.Store(requestId+model.OrderSideBuy, orderBuy)
+			model.AppEnvironment.ReqIdOrders.Store(requestId+model.OrderSideSell, orderSell)
+		} else {
 			orderBuy.Status, orderSell.Status = model.CarryStatusFail, model.CarryStatusFail
 			orderBuy.ErrCode, orderSell.ErrCode = msg, msg
 		}
@@ -1080,10 +1066,10 @@ func placeCross(statusBuy, statusSell *CarryStatus, priceBuy, priceSell, amount 
 			statusBuy.market, statusBuy.symbol, ``, model.FunctionCross, priceBuy, priceBuy, amount, true, PostOrderCross)
 		go api.PlaceOrder(statusSell.account.Key, statusSell.account.Secret, model.OrderSideSell, model.OrderTypeLimit,
 			statusSell.market, statusSell.symbol, ``, model.FunctionCross, priceSell, priceSell, amount, true, PostOrderCross)
-		time.Sleep(time.Millisecond * 100)
 	}
 	placeStatus(statusBuy, priceBuy, amount)
 	placeStatus(statusSell, priceSell, -1*amount)
+	time.Sleep(time.Millisecond * 100)
 }
 
 func placeStatus(status *CarryStatus, price float64, amount float64) {
@@ -1138,12 +1124,11 @@ func placeStatus(status *CarryStatus, price float64, amount float64) {
 		}
 	}
 	account := model.AppConfig.GetAccountFromKeyIndex(status.market, status.account.Key, -1)
-	initStatus(account, status.setting, true)
+	initStatus(account, status.setting)
 	util.StoreSyncMap(&lastCrosses, status.symbol, account.Key, status.market)
 }
 
 func handleCross(account *model.Account, order *model.Order) {
-	time.Sleep(time.Minute)
 	model.AppEnvironment.OrderIdOrders.Delete(order.OrderId)
 	if order.Amount == order.DealAmount {
 		order.Status = model.CarryStatusSuccess
@@ -1159,31 +1144,16 @@ func handleCross(account *model.Account, order *model.Order) {
 	leftAmt := order.Amount - order.DealAmount
 	if order.Status == model.CarryStatusFail {
 		order.OrderId = fmt.Sprintf("%d%s%s", time.Now().UnixMilli(), order.Market, order.Symbol)
-		if !equaling {
-			compOrder := api.PlaceOrder(account.Key, account.Secret, order.OrderSide, model.OrderTypeMarket, order.Market, order.Symbol,
-				``, model.FunctionComplement, order.Price, order.Price, leftAmt, false, nil)
-			model.AppDB.Save(compOrder)
-			util.Log(util.LogLevelInfo, fmt.Sprintf(`handleCorss no order post comp from %#v %#v not deal %f 百分之%f`,
-				order, compOrder, leftAmt, math.Round(100*leftAmt/order.Amount)))
-		} else {
-			util.Log(util.LogLevelInfo, fmt.Sprintf(`comp all processing and ignore when fail %#v`, order))
-		}
+		compOrder(account, order, leftAmt)
 	} else if leftAmt > marketInfo.SizeMin && leftAmt*order.Price > marketInfo.MoneyMin && order.Status != model.CarryStatusSuccess && order.HaveId() {
+		time.Sleep(time.Minute)
 		api.CancelOrder(account.Key, account.Secret, order.Market, order.Symbol, model.OrderTypeLimit, order.OrderId)
 		time.Sleep(time.Second * 10)
 		queryOrder := api.QueryOrderById(account.Key, account.Secret, order.Market, order.Symbol, order.OrderType, order.OrderId)
 		if queryOrder != nil {
 			leftAmt = queryOrder.Amount - queryOrder.DealAmount
 			if leftAmt > marketInfo.SizeMin && leftAmt*order.Price > marketInfo.MoneyMin && queryOrder.Status != model.CarryStatusSuccess {
-				if !equaling {
-					compOrder := api.PlaceOrder(account.Key, account.Secret, order.OrderSide, model.OrderTypeMarket, order.Market, order.Symbol,
-						``, model.FunctionComplement, order.Price, order.Price, leftAmt, false, nil)
-					model.AppDB.Save(compOrder)
-					util.Log(util.LogLevelInfo, fmt.Sprintf(`post comp from %#v %#v not deal %f 百分之%f`,
-						order, compOrder, leftAmt, math.Round(100*leftAmt/order.Amount)))
-				} else {
-					util.Log(util.LogLevelInfo, fmt.Sprintf(`comp all processing and ignore %#v`, order))
-				}
+				compOrder(account, order, leftAmt)
 			} else {
 				util.Log(util.LogLevelInfo, fmt.Sprintf(`order update fail %#v left %f %#v`, order, leftAmt, queryOrder))
 			}
@@ -1239,19 +1209,15 @@ var PostOrderCross = func(order *model.Order) {
 						`reset binance trade max with %s account index %d`, order.ErrCode, order.AccountIndex))
 					spotMarkets.Delete(account.Key)
 					contractMarkets.Delete(account.Key)
-					initStatus(account, setting, true)
+					initStatus(account, setting)
 					unknownFail = false
-				}
-			}
-			if ok && status != nil {
-				if order.OrderSide == model.OrderSideBuy {
-					status.(*CarryStatus).TradeLineBuy = 1
-				} else if order.OrderSide == model.OrderSideSell {
-					status.(*CarryStatus).TradeLineSell = 1
 				}
 			}
 			util.Log(util.LogLevelInfo, fmt.Sprintf(
 				`set 1 trade line after fail %s %s %s`, setting.Market, setting.Symbol, order.OrderSide))
+			if status != nil {
+				initTradeLine(account, setting, status.(*CarryStatus), true)
+			}
 		}
 		if unknownFail {
 			addCarryResult(account.Key, order.Market, order.ErrCode, false)
@@ -1259,6 +1225,27 @@ var PostOrderCross = func(order *model.Order) {
 			addCarryResult(account.Key, order.Market, ``, true)
 		}
 	}
+}
+
+func compOrder(account *model.Account, order *model.Order, leftAmt float64) {
+	for {
+		if !api.CheckSetProcessing(model.FunctionCross, model.FunctionCross, model.FunctionCross, true) {
+			break
+		} else {
+			time.Sleep(time.Millisecond * 10)
+		}
+	}
+	if !equaling {
+		comp := api.PlaceOrder(account.Key, account.Secret, order.OrderSide, model.OrderTypeMarket, order.Market, order.Symbol,
+			``, model.FunctionComplement, order.Price, order.Price, leftAmt, false, nil)
+		model.AppDB.Save(comp)
+		util.Log(util.LogLevelInfo, fmt.Sprintf(`post comp from %#v %#v not deal %f 百分之%f`,
+			order, comp, leftAmt, math.Round(100*leftAmt/order.Amount)))
+	} else {
+		util.Log(util.LogLevelInfo, fmt.Sprintf(`comp all processing and ignore %#v`, order))
+	}
+	time.Sleep(time.Millisecond * 100)
+	api.CheckSetProcessing(model.FunctionCross, model.FunctionCross, model.FunctionCross, false)
 }
 
 // FormatCrossPair 不支持以BTC或ETH计价的交易对，只支持USD类

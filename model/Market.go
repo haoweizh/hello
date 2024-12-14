@@ -104,7 +104,6 @@ func (environment *Environment) HandleWSResp() {
 				util.Log(util.LogLevelInfo, fmt.Sprintf(`get pair order buy %#v`, value))
 			}
 		}
-		util.Log(util.LogLevelInfo, fmt.Sprintf(`get ws order req id %s`, wsResp.RequestId))
 		if value != nil {
 			if len(strings.Trim(wsResp.OrderId, ` `)) == 0 {
 				continue
@@ -119,8 +118,8 @@ func (environment *Environment) HandleWSResp() {
 				order.ErrCode = wsResp.Msg
 			}
 			environment.ReqIdOrders.Delete(wsResp.RequestId)
-			util.Log(util.LogLevelInfo, fmt.Sprintf(`del request store order %s %d %#v`,
-				wsResp.RequestId, time.Now().Unix()-order.OrderTime.Unix(), order))
+			util.Log(util.LogLevelInfo, fmt.Sprintf(`del request store order %s %s %s %s %s %d %#v`,
+				order.Market, order.Coin, order.Symbol, order.OrderSide, wsResp.RequestId, time.Now().Unix()-order.OrderTime.Unix(), order))
 			if AccountHandlerMap[order.RefreshType] != nil {
 				AccountHandlerMap[order.RefreshType](order)
 			}

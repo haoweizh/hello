@@ -802,7 +802,7 @@ func PlaceOrder(key, secret, orderSide, orderType, market, symbol, orderParam, f
 			Amount: 0, TriggerPrice: triggerPrice, RefreshType: funcType, Status: model.CarryStatusFail, DealAmount: 0, DealPrice: price, OrderTime: util.GetNow()}
 	}
 	account := model.AppConfig.GetAccountFromKeyIndex(market, key, -1)
-	order = &model.Order{ClientOrdId: strconv.FormatInt(time.Now().UnixMicro(), 10)[3:], RefreshType: funcType,
+	order = &model.Order{ClientOrdId: strconv.FormatInt(time.Now().UnixMicro(), 10)[3:] + orderSide[0:1], RefreshType: funcType,
 		OrderSide: markSide, OrderType: orderType, Market: market, Symbol: symbol, Price: price, Amount: amount, DealAmount: 0, Coin: coin,
 		DealPrice: price, TriggerPrice: triggerPrice, OrderTime: util.GetNow(), UnfilledQuantity: amount, AccountIndex: account.Index, Status: model.CarryStatusWorking}
 	//util.Notice(fmt.Sprintf(`...%s %s %s before order %d amount: %f price:%f triggerPrice:%f`,
@@ -812,6 +812,7 @@ func PlaceOrder(key, secret, orderSide, orderType, market, symbol, orderParam, f
 	}
 	if isWs && (market == model.Gate || market == model.OKEX || market == model.Bybit || market == model.BinanceSpot || market == model.BinancePerp) {
 		model.AppEnvironment.ReqIdOrders.Store(order.ClientOrdId, order)
+		util.Log(util.LogLevelInfo, fmt.Sprintf(`store order %s %s %s %s %s %#v`, market, coin, symbol, orderSide, order.ClientOrdId, order))
 	}
 	switch market {
 	case model.BitgetPerp:
