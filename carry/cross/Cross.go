@@ -1228,7 +1228,6 @@ func continueComp() {
 			}
 			if leftAmt > marketInfo.SizeMin && leftAmt*order.Price > marketInfo.MoneyMin && queryOrder.Status != model.CarryStatusSuccess {
 				result, _, _ := api.CancelOrder(account.Key, account.Secret, order.Market, order.Symbol, model.OrderTypeLimit, order.OrderId)
-				compOrders.Delete(order.OrderId)
 				if result {
 					orderComp := api.PlaceOrder(account.Key, account.Secret, order.OrderSide, model.OrderTypeLimit, order.Market, order.Symbol, ``,
 						order.RefreshType, price, price, leftAmt, false, nil)
@@ -1241,9 +1240,9 @@ func continueComp() {
 			} else {
 				util.Log(util.LogLevelInfo, fmt.Sprintf(`continueComp success comp no left %f/%f %s %s %#v`, leftAmt, order.Amount, order.Market, order.Symbol, queryOrder))
 			}
+			compOrders.Delete(order.OrderId)
 			return true
 		})
-
 		api.CheckSetProcessing(model.FunctionCross, model.FunctionCross, model.FunctionCross, false)
 		time.Sleep(time.Second * 10)
 	}
