@@ -1203,7 +1203,7 @@ func continueComp() {
 			if v != nil {
 				marketInfo = v.(*model.MarketInfo)
 			} else {
-				util.Log(util.LogLevelError, fmt.Sprintf(`not found marketInfo %s %s`, order.Market, order.Symbol))
+				util.Log(util.LogLevelError, fmt.Sprintf(`continueComp fail not found marketInfo %s %s`, order.Market, order.Symbol))
 				return true
 			}
 			account := model.AppConfig.GetAccountFromKeyIndex(order.Market, ``, order.AccountIndex)
@@ -1212,13 +1212,13 @@ func continueComp() {
 			if queryOrder != nil {
 				leftAmt = queryOrder.Amount - queryOrder.DealAmount
 			} else {
-				util.Log(util.LogLevelError, fmt.Sprintf(`fail to get comp order %s %s %s %#v`, order.Market, order.Symbol, order.OrderId, order))
+				util.Log(util.LogLevelError, fmt.Sprintf(`continueComp fail to get comp order %s %s %s %#v`, order.Market, order.Symbol, order.OrderId, order))
 				return true
 			}
 			price := order.Price
 			_, bidAsk := model.AppEnvironment.GetBidAsk(order.Market, order.Symbol)
 			if bidAsk == nil {
-				util.Log(util.LogLevelError, fmt.Sprintf(`can not get bidask for comp %s %s`, order.Market, order.Symbol))
+				util.Log(util.LogLevelError, fmt.Sprintf(`continueComp fail can not get bidask for comp %s %s`, order.Market, order.Symbol))
 			} else {
 				if order.OrderSide == model.OrderSideSell {
 					price = bidAsk.Bids[0].Price * (1 - compSlide)
@@ -1228,17 +1228,22 @@ func continueComp() {
 			}
 			if leftAmt > marketInfo.SizeMin && leftAmt*order.Price > marketInfo.MoneyMin && queryOrder.Status != model.CarryStatusSuccess {
 				result, _, _ := api.CancelOrder(account.Key, account.Secret, order.Market, order.Symbol, model.OrderTypeLimit, order.OrderId)
+				compOrders.Delete(order.OrderId)
 				if result {
 					orderComp := api.PlaceOrder(account.Key, account.Secret, order.OrderSide, model.OrderTypeLimit, order.Market, order.Symbol, ``,
 						order.RefreshType, price, price, leftAmt, false, nil)
 					compOrders.Store(orderComp.OrderId, orderComp)
+					model.AppDB.Save(orderComp)
+					util.Log(util.LogLevelError, fmt.Sprintf(`continueComp success on fail to comp %s %s %#v new comp %#v`, order.Market, order.Symbol, order, orderComp))
+				} else {
+					util.Log(util.LogLevelError, fmt.Sprintf(`continueComp fail to cancel %s %s %s %#v`, order.Market, order.Symbol, order.OrderId, order))
 				}
-				util.Log(util.LogLevelError, fmt.Sprintf(`fail to comp %s %s %#v new comp %#v`, order.Market, order.Symbol, order, order))
 			} else {
-				util.Log(util.LogLevelInfo, fmt.Sprintf(`success comp no left %f/%f %s %s %#v`, leftAmt, order.Amount, order.Market, order.Symbol, queryOrder))
+				util.Log(util.LogLevelInfo, fmt.Sprintf(`continueComp success comp no left %f/%f %s %s %#v`, leftAmt, order.Amount, order.Market, order.Symbol, queryOrder))
 			}
 			return true
 		})
+
 		api.CheckSetProcessing(model.FunctionCross, model.FunctionCross, model.FunctionCross, false)
 		time.Sleep(time.Second * 10)
 	}
