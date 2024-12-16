@@ -1207,6 +1207,9 @@ func continueComp() {
 			queryOrder := api.QueryOrderById(account.Key, account.Secret, order.Market, order.Symbol, order.OrderType, order.OrderId)
 			if queryOrder != nil {
 				leftAmt = queryOrder.Amount - queryOrder.DealAmount
+			} else {
+				util.Log(util.LogLevelError, fmt.Sprintf(`fail to get comp order %s %s %s %#v`, order.Market, order.Symbol, order.OrderId, order))
+				return true
 			}
 			price := order.Price
 			_, bidAsk := model.AppEnvironment.GetBidAsk(order.Market, order.Symbol)

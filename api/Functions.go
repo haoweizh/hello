@@ -651,6 +651,7 @@ func QueryOrderById(key, secret, market, symbol, orderType, orderId string) (ord
 	case model.Bybit:
 		order = queryOrderBybit(key, secret, symbol, orderId)
 	}
+	util.Log(util.LogLevelInfo, fmt.Sprintf(`query by id %s %s %s %#v`, market, symbol, orderId, order))
 	return order
 }
 
