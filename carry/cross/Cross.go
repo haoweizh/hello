@@ -352,6 +352,7 @@ func ClearCross() {
 			}
 		}
 		equaling = true
+		compOrders = &sync.Map{}
 		model.AppEnvironment.ReqIdOrders = sync.Map{}
 		for {
 			leftOrders := 0
@@ -535,7 +536,7 @@ func equalCoin(coin string, statuses []*CarryStatus) (isEqual bool, holding floa
 	var equalStatus *CarryStatus
 	sort.Sort(sort.Reverse(bids))
 	for i := 0; i < len(bids); i++ {
-		price = bids[i].Price
+		price = bids[i].Price * (1 - compSlide)
 		if holding < SmallInU/price {
 			break
 		}
@@ -570,7 +571,7 @@ func equalCoin(coin string, statuses []*CarryStatus) (isEqual bool, holding floa
 	}
 	sort.Sort(asks)
 	for i := 0; i < len(asks); i++ {
-		price = asks[i].Price
+		price = asks[i].Price * (1 + compSlide)
 		if holding > -SmallInU/price {
 			break
 		}
@@ -628,9 +629,10 @@ func placeEqual(status *CarryStatus, price, amount float64, orderSide string) (d
 	checkAmount := model.GetAmountInMarket(status.market, status.symbol, amount, price, reduceOnly)
 	if checkAmount > 0 {
 		util.Log(util.LogLevelInfo, fmt.Sprintf(`do equal %f %f %#v`, price, amount, status))
-		order := api.PlaceOrder(status.account.Key, status.account.Secret, orderSide, model.OrderTypeMarket,
+		order := api.PlaceOrder(status.account.Key, status.account.Secret, orderSide, model.OrderTypeLimit,
 			status.market, status.symbol, ``, model.FunctionCompAll, price, price, amount, false, nil)
 		if order != nil && order.Status != model.CarryStatusFail {
+			compOrders.Store(order.OrderId, order)
 			if orderSide == model.OrderSideBuy {
 				dealAmount += amount
 			} else {
@@ -669,6 +671,7 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 	}
 	if !doCross && model.AppConfig.Handle == `1` {
 		go ClearCross()
+		go continueComp()
 		doCross = true
 		return
 	}
@@ -1054,7 +1057,8 @@ func placeCross(statusBuy, statusSell *CarryStatus, priceBuy, priceSell, amount 
 		}
 		orderBuy.Coin = statusBuy.setting.Coin
 		orderSell.Coin = statusSell.setting.Coin
-		success, msg := api.PlacePairOKEX(statusBuy.account, requestId, statusBuy.symbol, statusSell.symbol, model.OrderTypeLimit, priceBuy, priceSell, amount)
+		success, msg := api.PlacePairOKEX(statusBuy.account, requestId, statusBuy.symbol, statusSell.symbol, model.OrderTypeLimit,
+			priceBuy*(1+crossSlide), priceSell*(1-crossSlide), amount)
 		if success {
 			model.AppEnvironment.ReqIdOrders.Store(requestId+model.OrderSideBuy, orderBuy)
 			model.AppEnvironment.ReqIdOrders.Store(requestId+model.OrderSideSell, orderSell)
@@ -1065,10 +1069,10 @@ func placeCross(statusBuy, statusSell *CarryStatus, priceBuy, priceSell, amount 
 			orderBuy.ErrCode, orderSell.ErrCode = msg, msg
 		}
 	} else {
-		go api.PlaceOrder(statusBuy.account.Key, statusBuy.account.Secret, model.OrderSideBuy, model.OrderTypeLimit,
-			statusBuy.market, statusBuy.symbol, ``, model.FunctionCross, priceBuy, priceBuy, amount, true, PostOrderCross)
-		go api.PlaceOrder(statusSell.account.Key, statusSell.account.Secret, model.OrderSideSell, model.OrderTypeLimit,
-			statusSell.market, statusSell.symbol, ``, model.FunctionCross, priceSell, priceSell, amount, true, PostOrderCross)
+		go api.PlaceOrder(statusBuy.account.Key, statusBuy.account.Secret, model.OrderSideBuy, model.OrderTypeLimit, statusBuy.market,
+			statusBuy.symbol, ``, model.FunctionCross, priceBuy*(1+crossSlide), priceBuy*(1+crossSlide), amount, true, PostOrderCross)
+		go api.PlaceOrder(statusSell.account.Key, statusSell.account.Secret, model.OrderSideSell, model.OrderTypeLimit, statusSell.market,
+			statusSell.symbol, ``, model.FunctionCross, priceSell*(1-crossSlide), priceSell*(1-crossSlide), amount, true, PostOrderCross)
 	}
 	placeStatus(statusBuy, priceBuy, amount)
 	placeStatus(statusSell, priceSell, -1*amount)
@@ -1180,6 +1184,55 @@ func handleCross(account *model.Account, order *model.Order) {
 	}
 }
 
+func continueComp() {
+	for {
+		compOrders.Range(func(key, value interface{}) bool {
+			if value == nil {
+				return true
+			}
+			order := value.(*model.Order)
+			if order.OrderTime.Add(time.Minute).After(time.Now()) {
+				return true
+			}
+			var marketInfo *model.MarketInfo
+			v, _ := util.LoadSyncMap(model.MarketInfos, order.Market, order.Symbol)
+			if v != nil {
+				marketInfo = v.(*model.MarketInfo)
+			} else {
+				util.Log(util.LogLevelError, fmt.Sprintf(`not found marketInfo %s %s`, order.Market, order.Symbol))
+				return true
+			}
+			account := model.AppConfig.GetAccountFromKeyIndex(order.Market, ``, order.AccountIndex)
+			leftAmt := order.Amount
+			queryOrder := api.QueryOrderById(account.Key, account.Secret, order.Market, order.Symbol, order.OrderType, order.OrderId)
+			if queryOrder != nil {
+				leftAmt = queryOrder.Amount - queryOrder.DealAmount
+			}
+			price := order.Price
+			_, bidAsk := model.AppEnvironment.GetBidAsk(order.Market, order.Symbol)
+			if bidAsk == nil {
+				util.Log(util.LogLevelError, fmt.Sprintf(`can not get bidask for comp %s %s`, order.Market, order.Symbol))
+			} else {
+				if order.OrderSide == model.OrderSideSell {
+					price = bidAsk.Bids[0].Price * (1 - compSlide)
+				} else {
+					price = bidAsk.Asks[0].Price * (1 + compSlide)
+				}
+			}
+			if leftAmt > marketInfo.SizeMin && leftAmt*order.Price > marketInfo.MoneyMin && queryOrder.Status != model.CarryStatusSuccess {
+				orderComp := api.PlaceOrder(account.Key, account.Secret, order.OrderSide, model.OrderTypeLimit, order.Market, order.Symbol, ``,
+					order.RefreshType, price, price, leftAmt, false, nil)
+				compOrders.Store(orderComp.OrderId, orderComp)
+				util.Log(util.LogLevelError, fmt.Sprintf(`fail to comp %s %s %#v new comp %#v`, order.Market, order.Symbol, order, order))
+			} else {
+				util.Log(util.LogLevelInfo, fmt.Sprintf(`success comp no left %f/%f %s %s %#v`, leftAmt, order.Amount, order.Market, order.Symbol, queryOrder))
+			}
+			return true
+		})
+		time.Sleep(time.Second * 10)
+	}
+}
+
 var PostOrderCross = func(order *model.Order) {
 	if order == nil {
 		return
@@ -1243,8 +1296,15 @@ func compOrder(account *model.Account, order *model.Order, leftAmt float64) {
 		}
 	}
 	if !equaling {
-		comp := api.PlaceOrder(account.Key, account.Secret, order.OrderSide, model.OrderTypeMarket, order.Market, order.Symbol,
-			``, model.FunctionComplement, order.Price, order.Price, leftAmt, false, nil)
+		price := order.Price
+		if order.OrderSide == model.OrderSideSell {
+			price = price * (1 - compSlide)
+		} else {
+			price = price * (1 + compSlide)
+		}
+		comp := api.PlaceOrder(account.Key, account.Secret, order.OrderSide, model.OrderTypeLimit, order.Market, order.Symbol,
+			``, model.FunctionComplement, price, price, leftAmt, false, nil)
+		compOrders.Store(comp.OrderId, comp)
 		model.AppDB.Save(comp)
 		util.Log(util.LogLevelInfo, fmt.Sprintf(`post comp from %#v %#v not deal %f 百分之%f`,
 			order, comp, leftAmt, math.Round(100*leftAmt/order.Amount)))

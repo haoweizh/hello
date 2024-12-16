@@ -19,6 +19,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 )
@@ -670,12 +671,45 @@ func Test_LimitReport(t *testing.T) {
 	}
 }
 
+func add(value *sync.Map) {
+	time.Sleep(time.Second * 2)
+	value.Store(4, true)
+	fmt.Println(`add 4`)
+}
+
+func remove(value *sync.Map) {
+	time.Sleep(time.Second * 2)
+	value.Delete(2)
+	fmt.Println(`remove 2`)
+}
+
+func Test_map(t *testing.T) {
+	valueMap := &sync.Map{}
+	valueMap.Store(1, true)
+	valueMap.Store(2, true)
+	valueMap.Store(3, true)
+	go add(valueMap)
+	go remove(valueMap)
+	valueMap.Range(func(key, value interface{}) bool {
+		fmt.Println(key, value)
+		time.Sleep(time.Second * 5)
+		valueMap.Delete(3)
+		return true
+	})
+	fmt.Println(`-------`)
+	valueMap.Range(func(key, value interface{}) bool {
+		fmt.Println(key, value)
+		return true
+	})
+	select {}
+}
+
 func Test_wallet(t *testing.T) {
 	model.NewConfig()
 	market := model.Bybit
-	symbol := `ETH_PERP`
-	account := model.GetAccounts(0)[market]
-	api.GetFundingRate(account.Key, account.Secret, market, symbol)
+	symbol := `MOCA_USDT`
+	//account := model.GetAccounts(0)[market]
+	//api.GetFundingRate(account.Key, account.Secret, market, symbol)
 	var key, secret string
 	switch market {
 	case model.Ftx:
@@ -696,8 +730,7 @@ func Test_wallet(t *testing.T) {
 	//for _, order := range orders {
 	//	fmt.Println(order.OrderId)
 	//}
-	orderQuery0 := api.QueryOrderById(model.AppConfig.OkexKey, model.AppConfig.OkexSecret, model.OKEX,
-		`PERP_PERP`, model.OrderTypeStop, `677454279384674316`)
+	orderQuery0 := api.QueryOrderById(key, secret, market, symbol, model.OrderTypeMarket, `1841956120781220352`)
 	fmt.Println(orderQuery0.OrderId)
 	success, price := api.GetPriceForce(`LDBNB_USDT`, market)
 	success, price = api.GetPriceForce(`BTC_USDT`, market)

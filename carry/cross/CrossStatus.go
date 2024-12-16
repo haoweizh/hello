@@ -22,6 +22,8 @@ const compTooBig = 70000.0
 const InsufficientCodeBinance = `-2010`
 const SmallInU = 10
 const BitgetPosLimit = 100 // 实测不能超过140
+const crossSlide = 0.0005
+const compSlide = 0.003
 
 // TradeLineExtra 由于comp比例过高或亏损过多，需要增加的额外开仓数额
 type TradeLineExtra struct {
@@ -47,6 +49,7 @@ var liquidBitgetTime = &sync.Map{}        // key - unix second int64
 var lastOrderIndex = &sync.Map{}          // market - symbol - index int
 var lastOrders = &sync.Map{}              // market - symbol - []*Order
 var lastCrosses sync.Map                  // key*market:symbol
+var compOrders = &sync.Map{}              // orderId - comp order
 var spotMarkets, contractMarkets sync.Map // key - spotMarket/contractMarket
 var carryStatusMap = &sync.Map{}          // coin*market*symbol*key / CarryStatus
 var carryFail sync.Map                    // key fail num
