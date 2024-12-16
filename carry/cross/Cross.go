@@ -1297,10 +1297,15 @@ func compOrder(account *model.Account, order *model.Order, leftAmt float64) {
 	}
 	if !equaling {
 		price := order.Price
-		if order.OrderSide == model.OrderSideSell {
-			price = price * (1 - compSlide)
+		_, bidAsk := model.AppEnvironment.GetBidAsk(order.Market, order.Symbol)
+		if bidAsk == nil {
+			util.Log(util.LogLevelError, fmt.Sprintf(`can not get bidask for comp %s %s`, order.Market, order.Symbol))
 		} else {
-			price = price * (1 + compSlide)
+			if order.OrderSide == model.OrderSideSell {
+				price = bidAsk.Bids[0].Price * (1 - compSlide)
+			} else {
+				price = bidAsk.Asks[0].Price * (1 + compSlide)
+			}
 		}
 		comp := api.PlaceOrder(account.Key, account.Secret, order.OrderSide, model.OrderTypeLimit, order.Market, order.Symbol,
 			``, model.FunctionComplement, price, price, leftAmt, false, nil)
