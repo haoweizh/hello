@@ -1186,6 +1186,10 @@ func handleCross(account *model.Account, order *model.Order) {
 
 func continueComp() {
 	for {
+		if !api.CheckSetProcessing(model.FunctionCross, model.FunctionCross, model.FunctionCross, true) {
+			time.Sleep(time.Second * 10)
+			continue
+		}
 		compOrders.Range(func(key, value interface{}) bool {
 			if value == nil {
 				return true
@@ -1223,15 +1227,19 @@ func continueComp() {
 				}
 			}
 			if leftAmt > marketInfo.SizeMin && leftAmt*order.Price > marketInfo.MoneyMin && queryOrder.Status != model.CarryStatusSuccess {
-				orderComp := api.PlaceOrder(account.Key, account.Secret, order.OrderSide, model.OrderTypeLimit, order.Market, order.Symbol, ``,
-					order.RefreshType, price, price, leftAmt, false, nil)
-				compOrders.Store(orderComp.OrderId, orderComp)
+				result, _, _ := api.CancelOrder(account.Key, account.Secret, order.Market, order.Symbol, model.OrderTypeLimit, order.OrderId)
+				if result {
+					orderComp := api.PlaceOrder(account.Key, account.Secret, order.OrderSide, model.OrderTypeLimit, order.Market, order.Symbol, ``,
+						order.RefreshType, price, price, leftAmt, false, nil)
+					compOrders.Store(orderComp.OrderId, orderComp)
+				}
 				util.Log(util.LogLevelError, fmt.Sprintf(`fail to comp %s %s %#v new comp %#v`, order.Market, order.Symbol, order, order))
 			} else {
 				util.Log(util.LogLevelInfo, fmt.Sprintf(`success comp no left %f/%f %s %s %#v`, leftAmt, order.Amount, order.Market, order.Symbol, queryOrder))
 			}
 			return true
 		})
+		api.CheckSetProcessing(model.FunctionCross, model.FunctionCross, model.FunctionCross, false)
 		time.Sleep(time.Second * 10)
 	}
 }
