@@ -188,9 +188,15 @@ func createFromBalance(account *model.Account, setting *model.Setting, valueLimi
 		AvailableSell: 0,
 		AvailableBuy:  availableBuy}
 	if sm.balances[setting.Symbol] != nil {
-		balance := sm.balances[setting.Symbol]
+		var balance *model.Balance
+		related := strings.Trim(setting.SymbolRelated, ` `)
+		if len(related) > 0 {
+			balance = sm.balances[related]
+		} else {
+			balance = sm.balances[setting.Symbol]
+		}
 		limitSell = math.Min(math.Max(balance.Amount, 0), balance.AvailableWithBorrow)
-		carryStatus.Holding = balance.Amount
+		carryStatus.Holding = balance.Amount / setting.GridAmount
 		// 暂不支持借币
 		carryStatus.LimitSell, carryStatus.AvailableSell = limitSell, limitSell
 		carryStatus.RateInAll = math.Abs(carryStatus.Holding * price / sm.accountValueInU)
@@ -410,6 +416,8 @@ func equalAccounts() {
 	waitEqual := make(map[int]bool)
 	equalChannel := make(chan int, 1)
 	markets := api.GetMarkets()
+	api.InitCrossMarketInfos(markets)
+	api.PrepareSettings()
 	//needWaitEqual := false // 是否需要进入等待环节
 	for i := 0; i < api.GetCrossLen(); i++ {
 		accounts := make(map[string]*model.Account)
@@ -492,7 +500,7 @@ func getHolding(statuses []*CarryStatus) (bids, asks model.Ticks, bidStatus, ask
 			util.LogLess(util.LogLevelError, `warning: fail to get one status`)
 			continue
 		}
-		holding += status.Holding
+		holding += status.Holding * status.setting.GridAmount
 		holdStr += fmt.Sprintf(`[%s %s %f]`, status.market, status.symbol, status.Holding)
 		getTick, tick := model.AppEnvironment.GetBidAsk(status.market, status.symbol)
 		getFunding, rate := api.GetFundingRate(status.account.Key, status.account.Secret, status.market, status.symbol)
@@ -661,6 +669,9 @@ func placeEqual(status *CarryStatus, price, amount float64, orderSide string) (d
 // ProcessCross setting.Chance<0时该币种只关仓
 // setting.OpenShortMargin OpenShortMargin不等于0时作为开舱标准价格，否则使用通用价格
 // setting.CloseShortMargin CloseShortMargin作为开关舱标准价格
+// setting.SymbolRelated 用作不同名称的搬砖时，对应交易所市场内现货的symbol，用户更新holding
+// setting.GridAmount 用作不同名称的搬砖时，symbol的交易量对应的coin的交易量
+// setting.PriceX 用作不同名称的搬砖时，symbol的交易价格对应的coin的交易价格
 var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 	million := time.Now().UnixMilli()
 	// 所有cross之间互斥
