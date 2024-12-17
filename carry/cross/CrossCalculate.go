@@ -9,6 +9,8 @@ import (
 	"time"
 )
 
+// calcAmount
+// 返回amount是经过gridAmount乘数计算之后的数量，用以针对1000PEPE与PEPE这类币种的对冲交易.priceX与gridAmount相对应
 func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarryStatus, tick, tickRelate *model.BidAsk) (
 	statusBuy, statusSell *CarryStatus, amount, priceBuy, priceSell float64, tickBuy, tickSell *model.BidAsk) {
 	stopStatus, okStatus := carryStop.Load(carryStatus.account.Key)
@@ -23,17 +25,15 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarrySta
 	priceBidRelate := tickRelate.Bids[0].Price
 	priceAsk := tick.Asks[0].Price
 	priceBid := tick.Bids[0].Price
-	amountBidRelate := tickRelate.Bids[0].Amount
-	amountAskRelate := tickRelate.Asks[0].Amount
-	amountBid := tick.Bids[0].Amount
-	amountAsk := tick.Asks[0].Amount
-	score := (priceBid - priceAskRelate) / math.Max(priceBid, priceAskRelate)
-	scoreRelate := (priceBidRelate - priceAsk) / math.Max(priceAsk, priceBidRelate)
+	priceX := carryStatus.setting.PriceX
+	priceXRelate := carryStatus.setting.PriceX
+	score := (priceBid/priceX - priceAskRelate/priceXRelate) / math.Max(priceBid/priceX, priceAskRelate/priceXRelate)
+	scoreRelate := (priceBidRelate/priceXRelate - priceAsk/priceX) / math.Max(priceAsk/priceX, priceBidRelate/priceXRelate)
 	mark := fmt.Sprintf(`%s_%s|%s_%s`, carryStatus.market, carryStatus.symbol, carryStatusRelate.market, carryStatusRelate.symbol)
 	if score > 0.01 && util.DoDebug {
 		model.AppMetric.AddCarry(mark, score, 0)
 	}
-	valid, limit := checkTradeLine(carryStatusRelate, carryStatus, score)
+	valid, _ := checkTradeLine(carryStatusRelate, carryStatus, score)
 	if valid {
 		statusSell = carryStatus
 		statusBuy = carryStatusRelate
@@ -41,10 +41,10 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarrySta
 		tickBuy = tickRelate
 		priceSell = priceBid
 		priceBuy = priceAskRelate
-		askAmount = amountBid
-		bidAmount = amountAskRelate
+		askAmount = tick.Bids[0].Amount
+		bidAmount = tickRelate.Asks[0].Amount
 	} else {
-		valid, limit = checkTradeLine(carryStatus, carryStatusRelate, scoreRelate)
+		valid, _ = checkTradeLine(carryStatus, carryStatusRelate, scoreRelate)
 		if valid {
 			statusSell = carryStatusRelate
 			statusBuy = carryStatus
@@ -52,8 +52,8 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarrySta
 			tickBuy = tick
 			priceSell = priceBidRelate
 			priceBuy = priceAsk
-			askAmount = amountBidRelate
-			bidAmount = amountAsk
+			askAmount = tickRelate.Bids[0].Amount
+			bidAmount = tick.Asks[0].Amount
 		}
 	}
 	// 为了同一对交易对冲不出现两次，对前后进行排序
@@ -129,14 +129,7 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarrySta
 	if !(ok && lastSymbol != nil && lastSymbol.(string) == statusSell.symbol) {
 		initLimitBuyAndSell(statusSell, statusSell.setting, priceSell)
 	}
-	amount = math.Min(math.Min(statusBuy.LimitBuy, bidAmount), math.Min(statusSell.LimitSell, askAmount))
-	if amount > 0 {
-		if limit > 0 {
-			amount = math.Min(amount, limit)
-		}
-		amount = math.Min(amount, openValueLimit/priceSell)
-		amount = FormatCrossPair(statusBuy.market, statusSell.market, statusBuy.symbol, statusSell.symbol, amount, priceBuy)
-	}
+	amount = FormatCrossPair(statusBuy, statusSell, bidAmount, askAmount, priceBuy)
 	if checkScoreLimit(carryStatus.market, carryStatus.symbol, carryStatusRelate.market, carryStatusRelate.symbol, score, scoreRelate) {
 		if carryStatus.setting.Valid || carryStatusRelate.setting.Valid {
 			util.Log(util.LogLevelError, fmt.Sprintf(`possible mismatch coin %s %s %s %s score %f %f`,

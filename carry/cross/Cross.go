@@ -840,32 +840,34 @@ func initLimitBuyAndSell(status *CarryStatus, setting *model.Setting, price floa
 
 func placeCross(statusBuy, statusSell *CarryStatus, priceBuy, priceSell, amount float64) {
 	score := (priceSell - priceBuy) / math.Max(priceBuy, priceSell)
+	amountBuy := amount / statusBuy.setting.GridAmount
+	amountSell := amount / statusSell.setting.GridAmount
 	util.Log(util.LogLevelInfo, fmt.Sprintf(
-		`place cross %s %s -> %s %s at %f %f amount %f score %f hold %f buy %f hold %f sell %f`,
-		statusSell.market, statusSell.symbol, statusBuy.market, statusBuy.symbol, priceSell, priceBuy, amount,
-		score, statusBuy.Holding, statusBuy.TradeLineBuy, statusSell.Holding, statusSell.TradeLineSell))
+		`place cross %s %s -> %s %s at %f %f amount %f %f %f score %f hold %f buy %f hold %f sell %f`,
+		statusSell.market, statusSell.symbol, statusBuy.market, statusBuy.symbol, priceSell, priceBuy, amount, amountBuy,
+		amountSell, score, statusBuy.Holding, statusBuy.TradeLineBuy, statusSell.Holding, statusSell.TradeLineSell))
 	if statusBuy.market == model.OKEX && statusSell.market == model.OKEX {
 		requestId := strconv.FormatInt(time.Now().UnixMicro(), 10)[3:]
 		clientOrdIdBuy := requestId + `b`
 		clientOrdIdSell := requestId + `s`
 		orderBuy := &model.Order{OrderSide: model.OrderSideBuy, OrderType: model.OrderTypeLimit, Market: model.OKEX,
-			Symbol: statusBuy.symbol, Price: priceBuy, Amount: amount, RefreshType: model.FunctionCross, OrderTime: util.GetNow(),
-			UnfilledQuantity: amount, AccountIndex: statusBuy.account.Index, Status: model.CarryStatusWorking, Function: model.Open,
+			Symbol: statusBuy.symbol, Price: priceBuy, Amount: amountBuy, RefreshType: model.FunctionCross, OrderTime: util.GetNow(),
+			UnfilledQuantity: amountBuy, AccountIndex: statusBuy.account.Index, Status: model.CarryStatusWorking, Function: model.Open,
 			OrderId: clientOrdIdBuy, ClientOrdId: clientOrdIdBuy, LineBuy: statusBuy.TradeLineBuy, LineSell: statusSell.TradeLineSell}
 		orderSell := &model.Order{OrderSide: model.OrderSideSell, OrderType: model.OrderTypeLimit, Market: model.OKEX,
-			Symbol: statusSell.symbol, Price: priceSell, Amount: amount, RefreshType: model.FunctionCross, OrderTime: util.GetNow(),
-			UnfilledQuantity: amount, AccountIndex: statusSell.account.Index, Status: model.CarryStatusWorking, Function: model.Open,
+			Symbol: statusSell.symbol, Price: priceSell, Amount: amountSell, RefreshType: model.FunctionCross, OrderTime: util.GetNow(),
+			UnfilledQuantity: amountSell, AccountIndex: statusSell.account.Index, Status: model.CarryStatusWorking, Function: model.Open,
 			OrderId: clientOrdIdSell, ClientOrdId: clientOrdIdSell, LineBuy: statusSell.TradeLineBuy, LineSell: statusSell.TradeLineSell}
-		if statusBuy.Holding*-1 >= amount {
+		if statusBuy.Holding*-1 >= amountBuy {
 			orderBuy.Function = model.Close
 		}
-		if statusSell.Holding >= amount {
+		if statusSell.Holding >= amountSell {
 			orderSell.Function = model.Close
 		}
 		orderBuy.Coin = statusBuy.setting.Coin
 		orderSell.Coin = statusSell.setting.Coin
 		success, msg := api.PlacePairOKEX(statusBuy.account, requestId, statusBuy.symbol, statusSell.symbol, model.OrderTypeLimit,
-			priceBuy*(1+crossSlide), priceSell*(1-crossSlide), amount)
+			priceBuy*(1+crossSlide), priceSell*(1-crossSlide), amountBuy, amountSell)
 		if success {
 			model.AppEnvironment.ReqIdOrders.Store(requestId+model.OrderSideBuy, orderBuy)
 			model.AppEnvironment.ReqIdOrders.Store(requestId+model.OrderSideSell, orderSell)
@@ -877,12 +879,12 @@ func placeCross(statusBuy, statusSell *CarryStatus, priceBuy, priceSell, amount 
 		}
 	} else {
 		go api.PlaceOrder(statusBuy.account.Key, statusBuy.account.Secret, model.OrderSideBuy, model.OrderTypeLimit, statusBuy.market,
-			statusBuy.symbol, ``, model.FunctionCross, priceBuy*(1+crossSlide), priceBuy*(1+crossSlide), amount, true, PostOrderCross)
+			statusBuy.symbol, ``, model.FunctionCross, priceBuy*(1+crossSlide), priceBuy*(1+crossSlide), amountBuy, true, PostOrderCross)
 		go api.PlaceOrder(statusSell.account.Key, statusSell.account.Secret, model.OrderSideSell, model.OrderTypeLimit, statusSell.market,
-			statusSell.symbol, ``, model.FunctionCross, priceSell*(1-crossSlide), priceSell*(1-crossSlide), amount, true, PostOrderCross)
+			statusSell.symbol, ``, model.FunctionCross, priceSell*(1-crossSlide), priceSell*(1-crossSlide), amountSell, true, PostOrderCross)
 	}
-	placeStatus(statusBuy, priceBuy, amount)
-	placeStatus(statusSell, priceSell, -1*amount)
+	placeStatus(statusBuy, priceBuy, amountBuy)
+	placeStatus(statusSell, priceSell, -1*amountSell)
 	time.Sleep(time.Millisecond * 100)
 }
 
@@ -1146,56 +1148,51 @@ func compOrder(account *model.Account, order *model.Order, leftAmt float64) {
 }
 
 // FormatCrossPair 不支持以BTC或ETH计价的交易对，只支持USD类
-func FormatCrossPair(marketBuy, marketSell, symbolBuy, symbolSell string, amount, price float64) (
-	formattedAmount float64) {
-	v, _ := util.LoadSyncMap(model.MarketInfos, marketBuy, symbolBuy)
+func FormatCrossPair(statusBuy, statusSell *CarryStatus, bidAmount, askAmount, price float64) (formattedAmount float64) {
+	v, _ := util.LoadSyncMap(model.MarketInfos, statusBuy.setting.Market, statusBuy.setting.Symbol)
 	var marketInfoBuy, marketInfoSell *model.MarketInfo
 	if v != nil {
 		marketInfoBuy = v.(*model.MarketInfo)
 	}
-	v, _ = util.LoadSyncMap(model.MarketInfos, marketSell, symbolSell)
+	v, _ = util.LoadSyncMap(model.MarketInfos, statusSell.setting.Market, statusSell.setting.Symbol)
 	if v != nil {
 		marketInfoSell = v.(*model.MarketInfo)
 	}
 	if marketInfoBuy == nil || marketInfoSell == nil {
 		util.Log(util.LogLevelInfo, fmt.Sprintf(
-			`format %s %s %s %s %#v %#v`, marketBuy, marketSell, symbolBuy, symbolSell, marketInfoBuy, marketInfoSell))
+			`format %s %s %s %s %#v %#v`, statusBuy.market, statusSell.market, statusBuy.symbol, statusSell.symbol, marketInfoBuy, marketInfoSell))
 		//api.InitMarketInfos()
 		marketInfoTime, ok := getMarketInfoMail.Load(`FormatCrossPair`)
 		if !(ok && marketInfoTime.(time.Time).Add(time.Minute*60).After(time.Now())) {
 			notifyTime.Store(`FormatCrossPair`, time.Now())
 			go api.SendMails(`FormatCrossPair removed symbols`, fmt.Sprintf(`format %s %s %s %s %#v %#v`,
-				marketBuy, marketSell, symbolBuy, symbolSell, marketInfoBuy, marketInfoSell))
+				statusBuy.market, statusSell.market, statusBuy.symbol, statusSell.symbol, marketInfoBuy, marketInfoSell))
 		}
 		return
 	}
+	formattedAmount = math.Min(math.Min(statusBuy.LimitBuy, bidAmount)*statusBuy.setting.GridAmount,
+		math.Min(statusSell.LimitSell, askAmount)*statusSell.setting.GridAmount)
+	formattedAmount = math.Min(formattedAmount, statusSell.setting.GridAmount*openValueLimit/price)
 	minBuy := marketInfoBuy.SizeMin
 	minSell := marketInfoSell.SizeMin
-	if marketBuy == model.Bybit {
+	if statusBuy.setting.Market == model.Bybit {
 		minBuy = math.Max(5.5/price, minBuy)
 	}
-	if marketSell == model.Bybit {
+	if statusSell.setting.Market == model.Bybit {
 		minSell = math.Max(5.5/price, minSell)
 	}
-	amountBuy := model.GetAmountInMarket(marketBuy, symbolBuy, amount, price, false)
-	_, amountBuy = model.ParseRealAmount(marketBuy, symbolBuy, amountBuy)
-	amountSell := model.GetAmountInMarket(marketSell, symbolSell, amount, price, false)
-	_, amountSell = model.ParseRealAmount(marketSell, symbolSell, amountSell)
-	formattedAmount = math.Min(amountBuy, amountSell)
-	if formattedAmount < math.Max(minBuy, minSell) {
-		return 0
+	if marketInfoBuy.MoneyMin > 0 {
+		minBuy = math.Max(minBuy, marketInfoBuy.MoneyMin/price)
 	}
-	if (marketInfoBuy.MoneyMin > 0 && formattedAmount*price < marketInfoBuy.MoneyMin) ||
-		(marketInfoSell.MoneyMin > 0 && formattedAmount*price < marketInfoSell.MoneyMin) {
-		return 0
+	if marketInfoSell.MoneyMin > 0 {
+		minSell = math.Max(minSell, marketInfoSell.MoneyMin/price)
 	}
-	if marketInfoSell.Market == model.Mexc {
-		formattedAmount = math.Min(formattedAmount, marketInfoSell.SizeIncrement*1000)
-	}
-	if marketInfoBuy.Market == model.Mexc {
-		formattedAmount = math.Min(formattedAmount, marketInfoBuy.SizeIncrement*1000)
-	}
-	if formattedAmount*price < 6 && (marketInfoSell.Market == model.Mexc || marketInfoBuy.Market == model.Mexc) {
+	//amountBuy := model.GetAmountInMarket(marketBuy, symbolBuy, amount, price, false)
+	//_, amountBuy = model.ParseRealAmount(marketBuy, symbolBuy, amountBuy)
+	//amountSell := model.GetAmountInMarket(marketSell, symbolSell, amount, price, false)
+	//_, amountSell = model.ParseRealAmount(marketSell, symbolSell, amountSell)
+	//formattedAmount = math.Min(amountBuy, amountSell)
+	if formattedAmount < math.Max(minBuy*statusBuy.setting.GridAmount, minSell*statusSell.setting.GridAmount) {
 		return 0
 	}
 	return formattedAmount

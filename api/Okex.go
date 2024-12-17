@@ -527,9 +527,10 @@ func getWSOrderArgOKEX(account *model.Account, requestId, symbol, orderSide, ord
 	return args
 }
 
-func PlacePairOKEX(account *model.Account, requestId, symbolBuy, symbolSell, orderType string, priceBuy, priceSell, amount float64) (success bool, errMsg string) {
-	if amount == 0 || priceBuy == 0 || priceSell == 0 {
-		errMsg = fmt.Sprintf(`error: wrong PlacePairOKEX amount %f buy at %f sell at %f`, amount, priceBuy, priceSell)
+func PlacePairOKEX(account *model.Account, requestId, symbolBuy, symbolSell, orderType string, priceBuy, priceSell,
+	amountBuy, amountSell float64) (success bool, errMsg string) {
+	if amountBuy == 0 || amountSell == 0 || priceBuy == 0 || priceSell == 0 {
+		errMsg = fmt.Sprintf(`error: wrong PlacePairOKEX buy %f at %f sell %f at %f`, amountBuy, priceBuy, amountSell, priceSell)
 		util.Log(util.LogLevelError, errMsg)
 		return false, errMsg
 	}
@@ -547,8 +548,8 @@ func PlacePairOKEX(account *model.Account, requestId, symbolBuy, symbolSell, ord
 	lastSameTime[symbolSell] = now
 	lastCarryTime = now
 	subscribeArgs := []map[string]interface{}{
-		getWSOrderArgOKEX(account, requestId, symbolBuy, model.OrderSideBuy, orderType, priceBuy, amount),
-		getWSOrderArgOKEX(account, requestId, symbolSell, model.OrderSideSell, orderType, priceSell, amount)}
+		getWSOrderArgOKEX(account, requestId, symbolBuy, model.OrderSideBuy, orderType, priceBuy, amountBuy),
+		getWSOrderArgOKEX(account, requestId, symbolSell, model.OrderSideSell, orderType, priceSell, amountSell)}
 	subscribeMap := make(map[string]interface{})
 	subscribeMap[`args`] = subscribeArgs
 	subscribeMap[`id`] = requestId
