@@ -24,8 +24,6 @@ type Setting struct {
 	PriceX, GridAmount                         float64
 	OpenShortMargin, CloseShortMargin          float64
 	AmountLimit, AmountRate, AmountRateCombine float64
-	TradeCost                                  float64
-	RateRelated                                float64
 	ID                                         uint `gorm:"primary_key"`
 	CreatedAt                                  time.Time
 	UpdatedAt                                  time.Time

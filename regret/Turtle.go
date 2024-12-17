@@ -73,12 +73,12 @@ func createTurtleOrder(setting *model.Setting, candle *model.Candle, orderSide s
 		CreatedAt:   candle.Begin,
 	}
 	if orderSide == model.OrderSideBuy {
-		order.DealPrice = price * (1 + setting.TradeCost)
+		order.DealPrice = price * (1 + 0.001)
 		if setting.Chance < 0 {
 			order.OrderType = model.OrderSideLiquidateShort
 		}
 	} else if orderSide == model.OrderSideSell {
-		order.DealPrice = price * (1 - setting.TradeCost)
+		order.DealPrice = price * (1 - 0.001)
 		if setting.Chance > 0 {
 			order.OrderType = model.OrderSideLiquidateLong
 		}
