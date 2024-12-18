@@ -1066,7 +1066,8 @@ func continueComp() {
 						compOrders.Store(orderComp.OrderId, orderComp)
 					}
 					model.AppDB.Save(orderComp)
-					util.Log(util.LogLevelError, fmt.Sprintf(`continueComp success on fail to comp %s %s %#v new comp %#v`, order.Market, order.Symbol, order, orderComp))
+					util.Log(util.LogLevelError, fmt.Sprintf(`continueComp success on fail to comp %s %s %f %f-%f %#v new comp %#v`,
+						order.Market, order.Symbol, price, bidAsk.Bids[0].Price, bidAsk.Asks[0].Price, order, orderComp))
 				} else {
 					util.Log(util.LogLevelError, fmt.Sprintf(`continueComp fail to cancel %s %s %s %#v`, order.Market, order.Symbol, order.OrderId, order))
 				}
