@@ -489,6 +489,8 @@ func equalAccount(i int, equalChan chan int, accounts map[string]*model.Account)
 	util.Log(util.LogLevelInfo, fmt.Sprintf(`...... exit clearing cross %d`, i))
 }
 
+// getHolding
+// 注意获取到的是经过gridAmount 和priceX调整过后的price和amount
 func getHolding(statuses []*CarryStatus) (bids, asks model.Ticks, bidStatus, askStatus map[string]*CarryStatus,
 	holding, price float64, holdStr string) {
 	bids = model.Ticks{}
@@ -514,7 +516,7 @@ func getHolding(statuses []*CarryStatus) (bids, asks model.Ticks, bidStatus, ask
 		bidStatus[fmt.Sprintf(`%s_%s`, status.market, status.symbol)] = status
 		askStatus[fmt.Sprintf(`%s_%s`, status.market, status.symbol)] = status
 		if price == 0 {
-			price = bids[0].Price
+			price = bids[0].Price / status.setting.PriceX
 		}
 	}
 	return bids, asks, bidStatus, askStatus, holding, price, holdStr
@@ -522,7 +524,7 @@ func getHolding(statuses []*CarryStatus) (bids, asks model.Ticks, bidStatus, ask
 
 // settings []*model.Setting, coinStatus map[string]map[string]map[string]*CarryStatus
 func equalCoin(coin string, statuses []*CarryStatus) (isEqual bool, holding float64, errMsg string) {
-	bids, asks, bidStatus, askStatus, holdingValue, price, holdStr := getHolding(statuses)
+	bids, asks, bidStatus, askStatus, holdingValue, holdingPrice, holdStr := getHolding(statuses)
 	util.Log(util.LogLevelInfo, fmt.Sprintf(`compare holding %s status num %d %s`, coin, len(statuses), holdStr))
 	if math.IsNaN(holdingValue) {
 		util.Log(util.LogLevelError, `hold value is NaN `)
@@ -535,7 +537,7 @@ func equalCoin(coin string, statuses []*CarryStatus) (isEqual bool, holding floa
 		return true, 0, ""
 	}
 	holding = holdingValue
-	if math.Abs(holding) > compTooBig/price {
+	if math.Abs(holding) > compTooBig/holdingPrice {
 		coinSettings := api.GetCoinSettings(model.FunctionCross)
 		if coinSettings != nil {
 			value, _ := coinSettings.Load(coin)
@@ -543,34 +545,34 @@ func equalCoin(coin string, statuses []*CarryStatus) (isEqual bool, holding floa
 				for _, setting := range value.([]*model.Setting) {
 					setting.Valid = false
 					util.Log(util.LogLevelInfo, fmt.Sprintf(`too big comp %s %s %f %f`,
-						setting.Market, setting.Symbol, holding*price, holding))
+						setting.Market, setting.Symbol, holding*holdingPrice, holding))
 				}
 			}
 		}
-		api.SendMails(`too big to equal`, fmt.Sprintf(`%s holding in money %f`, coin, holding*price))
+		api.SendMails(`too big to equal`, fmt.Sprintf(`%s holding in money %f`, coin, holding*holdingPrice))
 		return false, holding, fmt.Sprintf(`too big comp %s %f`, coin, holding)
-	} else if math.Abs(holding) < SmallInU/price {
+	} else if math.Abs(holding) < SmallInU/holdingPrice {
 		return true, holding, ``
 	}
 	var equalStatus *CarryStatus
 	sort.Sort(sort.Reverse(bids))
 	for i := 0; i < len(bids); i++ {
-		price = bids[i].Price * (1 - compSlide)
-		if holding > SmallInU/price {
+		price := bids[i].Price * (1 - compSlide)
+		if holding > SmallInU/holdingPrice {
 			status := bidStatus[fmt.Sprintf(`%s_%s`, bids[i].Market, bids[i].Symbol)]
 			if status == nil {
 				util.Log(util.LogLevelError, fmt.Sprintf(`no status when holding: %f %s %s`, holding, bids[i].Market, bids[i].Symbol))
 				continue
 			}
-			checkAmount := model.GetAmountInMarket(status.market, status.symbol, math.Abs(holding), price, status.reduceOnlySell)
+			checkAmount := model.GetAmountInMarket(status.market, status.symbol, math.Abs(holding/status.setting.GridAmount), price, status.reduceOnlySell)
 			if checkAmount <= 0 {
 				errMsg += fmt.Sprintf(`check amount %s %s %f < 0`, status.market, status.symbol, checkAmount)
 				continue
 			}
 			amount := 0.0
-			if status.AvailableSell > holding {
+			if status.AvailableSell > holding/status.setting.GridAmount {
 				equalStatus = status
-				amount = math.Abs(holding)
+				amount = math.Abs(holding) / status.setting.GridAmount
 			} else {
 				checkAmount = model.GetAmountInMarket(status.market, status.symbol, status.AvailableSell, price, status.reduceOnlySell)
 				if checkAmount > 0 && status.AvailableSell*price > SmallInU {
@@ -584,27 +586,27 @@ func equalCoin(coin string, statuses []*CarryStatus) (isEqual bool, holding floa
 			}
 			util.Log(util.LogLevelInfo, fmt.Sprintf(`need equal holding %s %f list %s equal status %#v`,
 				coin, holding, holdStr, equalStatus))
-			holding += placeEqual(equalStatus, price, amount, model.OrderSideSell)
+			holding += placeEqual(equalStatus, price, amount, model.OrderSideSell) * equalStatus.setting.GridAmount
 		}
 	}
 	sort.Sort(asks)
 	for i := 0; i < len(asks); i++ {
-		price = asks[i].Price * (1 + compSlide)
-		if holding < -SmallInU/price {
+		price := asks[i].Price * (1 + compSlide)
+		if holding < -SmallInU/holdingPrice {
 			status := askStatus[fmt.Sprintf(`%s_%s`, asks[i].Market, asks[i].Symbol)]
 			if status == nil {
 				util.Log(util.LogLevelError, fmt.Sprintf(`no status when holding: %f %s %s`, holding, asks[i].Market, asks[i].Symbol))
 				continue
 			}
-			checkAmount := model.GetAmountInMarket(status.market, status.symbol, math.Abs(holding), price, status.reduceOnlyBuy)
+			checkAmount := model.GetAmountInMarket(status.market, status.symbol, math.Abs(holding)/status.setting.GridAmount, price, status.reduceOnlyBuy)
 			if checkAmount <= 0 {
 				errMsg += fmt.Sprintf(`check amount %s %s %f < 0`, status.market, status.symbol, checkAmount)
 				continue
 			}
 			amount := 0.0
-			if math.IsNaN(status.AvailableBuy) || status.AvailableBuy > math.Abs(holding) {
+			if math.IsNaN(status.AvailableBuy) || status.AvailableBuy > math.Abs(holding)/status.setting.GridAmount {
 				equalStatus = status
-				amount = math.Abs(holding)
+				amount = math.Abs(holding) / status.setting.GridAmount
 			} else if !math.IsNaN(status.AvailableBuy) {
 				checkAmount = model.GetAmountInMarket(status.market, status.symbol, status.AvailableBuy, price, status.reduceOnlyBuy)
 				if checkAmount > 0 && status.AvailableBuy*price > SmallInU {
@@ -615,13 +617,15 @@ func equalCoin(coin string, statuses []*CarryStatus) (isEqual bool, holding floa
 					util.Log(util.LogLevelError, fmt.Sprintf(`check 0 amount in %#v`, status))
 					continue
 				}
+			} else {
+				continue
 			}
 			util.Log(util.LogLevelInfo, fmt.Sprintf(`need equal holding %s %f list %s equal status %#v`,
 				coin, holding, holdStr, equalStatus))
-			holding += placeEqual(equalStatus, price, amount, model.OrderSideBuy)
+			holding += placeEqual(equalStatus, price, amount, model.OrderSideBuy) * equalStatus.setting.GridAmount
 		}
 	}
-	if math.Abs(holding) > SmallInU/price {
+	if math.Abs(holding) > SmallInU/holdingPrice {
 		isEqual = false
 	} else {
 		isEqual = true
