@@ -129,7 +129,8 @@ func PrepareSettings() {
 		}
 		if !exist {
 			settingArray = append(settingArray.([]*model.Setting), setting)
-			//util.Notice(fmt.Sprintf(`add setting array %s %s %d`, setting.Market, setting.Symbol, len(settingArray.([]*model.Setting))))
+			util.Log(util.LogLevelInfo, fmt.Sprintf(`add setting array %s %s %s %d %#v`,
+				setting.Coin, setting.Market, setting.Symbol, len(settingArray.([]*model.Setting)), settingArray))
 			settings.Store(setting.Coin, settingArray)
 		}
 		localCoinSettings.Store(setting.Function, settings)
