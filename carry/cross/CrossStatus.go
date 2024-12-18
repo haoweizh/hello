@@ -224,7 +224,11 @@ func GetHoldings(accounts map[string]*model.Account) (holding [][]interface{}) {
 	}
 	for i := len(holding) - 1; i >= 0; i-- {
 		for j := 0; j < i; j++ {
-			if math.Abs(holding[j][4].(float64)) < math.Abs(holding[j+1][4].(float64)) {
+			if holding[j][5] == holding[j+1][5] {
+				if math.Abs(holding[j][4].(float64)) < math.Abs(holding[j+1][4].(float64)) {
+					holding[j], holding[j+1] = holding[j+1], holding[j]
+				}
+			} else if holding[j+1][5] == `false` {
 				holding[j], holding[j+1] = holding[j+1], holding[j]
 			}
 		}
