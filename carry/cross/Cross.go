@@ -495,15 +495,10 @@ func getHolding(statuses []*CarryStatus) (bids, asks model.Ticks, bidStatus, ask
 	asks = model.Ticks{}
 	bidStatus = make(map[string]*CarryStatus)
 	askStatus = make(map[string]*CarryStatus)
-	doPrint := false
 	for _, status := range statuses {
 		if status == nil {
 			util.LogLess(util.LogLevelError, `warning: fail to get one status`)
 			continue
-		}
-		_, _, coin, _ := model.GetFromStandard(status.market, status.symbol)
-		if coin != status.setting.Coin {
-			doPrint = true
 		}
 		holding += status.Holding * status.setting.GridAmount
 		holdStr += fmt.Sprintf(`[%s %s %f]`, status.market, status.symbol, status.Holding)
@@ -522,15 +517,13 @@ func getHolding(statuses []*CarryStatus) (bids, asks model.Ticks, bidStatus, ask
 			price = bids[0].Price
 		}
 	}
-	if doPrint {
-		util.Log(util.LogLevelInfo, `get coin change holding `+holdStr)
-	}
 	return bids, asks, bidStatus, askStatus, holding, price, holdStr
 }
 
 // settings []*model.Setting, coinStatus map[string]map[string]map[string]*CarryStatus
 func equalCoin(coin string, statuses []*CarryStatus) (isEqual bool, holding float64, errMsg string) {
 	bids, asks, bidStatus, askStatus, holdingValue, price, holdStr := getHolding(statuses)
+	util.Log(util.LogLevelInfo, fmt.Sprintf(`compare holding %s %s`, coin, holdStr))
 	if math.IsNaN(holdingValue) {
 		util.Log(util.LogLevelError, `hold value is NaN `)
 		for _, status := range bidStatus {
