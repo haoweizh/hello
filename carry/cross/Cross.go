@@ -467,6 +467,8 @@ func equalAccount(i int, equalChan chan int, accounts map[string]*model.Account)
 					continue
 				}
 				equalStatuses[j] = initStatus(account, setting)
+				util.Log(util.LogLevelInfo, fmt.Sprintf(`init status %s %s %s %#v`,
+					coin.(string), setting.Market, setting.Symbol, equalStatuses[j]))
 			}
 			for index := 0; index <= 10; index++ {
 				coinEqual, leftHolding, errMsg := equalCoin(coin.(string), equalStatuses)
