@@ -523,7 +523,7 @@ func getHolding(statuses []*CarryStatus) (bids, asks model.Ticks, bidStatus, ask
 		}
 	}
 	if doPrint {
-		util.Log(util.LogLevelInfo, `get holding `+holdStr)
+		util.Log(util.LogLevelInfo, `get coin change holding `+holdStr)
 	}
 	return bids, asks, bidStatus, askStatus, holding, price, holdStr
 }
