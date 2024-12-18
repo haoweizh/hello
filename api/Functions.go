@@ -969,6 +969,7 @@ func InitCrossMarketInfos(markets []string) {
 						`valid`:              true,
 						`open_short_margin`:  scoreOpen,
 						`close_short_margin`: scoreClose})
+					util.Log(util.LogLevelInfo, fmt.Sprintf(`update setting to valid %s %s`, info.Market, info.Name))
 				}
 			}
 		} else if len(infos) == 1 && infos[0].Name[0:2] == `10` {

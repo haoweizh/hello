@@ -462,13 +462,11 @@ func equalAccount(i int, equalChan chan int, accounts map[string]*model.Account)
 			equalStatuses := make([]*CarryStatus, len(settings.([]*model.Setting)))
 			for j, setting := range settings.([]*model.Setting) {
 				account := accounts[setting.Market]
-				if setting == nil || len(coin.(string)) == 0 || coin != setting.Symbol[0:len(coin.(string))] || account == nil {
+				if setting == nil || len(coin.(string)) == 0 || account == nil {
 					util.Log(util.LogLevelError, `can not equal`)
 					continue
 				}
 				equalStatuses[j] = initStatus(account, setting)
-				util.Log(util.LogLevelInfo, fmt.Sprintf(`init status %s %s %s %#v`,
-					coin.(string), setting.Market, setting.Symbol, equalStatuses[j]))
 			}
 			for index := 0; index <= 10; index++ {
 				coinEqual, leftHolding, errMsg := equalCoin(coin.(string), equalStatuses)
@@ -525,7 +523,7 @@ func getHolding(statuses []*CarryStatus) (bids, asks model.Ticks, bidStatus, ask
 // settings []*model.Setting, coinStatus map[string]map[string]map[string]*CarryStatus
 func equalCoin(coin string, statuses []*CarryStatus) (isEqual bool, holding float64, errMsg string) {
 	bids, asks, bidStatus, askStatus, holdingValue, price, holdStr := getHolding(statuses)
-	util.Log(util.LogLevelInfo, fmt.Sprintf(`compare holding %s %s`, coin, holdStr))
+	util.Log(util.LogLevelInfo, fmt.Sprintf(`compare holding %s status num %d %s`, coin, len(statuses), holdStr))
 	if math.IsNaN(holdingValue) {
 		util.Log(util.LogLevelError, `hold value is NaN `)
 		for _, status := range bidStatus {

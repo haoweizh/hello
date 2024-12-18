@@ -142,8 +142,8 @@ func PrepareSettings() {
 		if functionMarketSettings == nil {
 			functionMarketSettings = &sync.Map{}
 		}
-		util.Log(util.LogLevelInfo, fmt.Sprintf(`load setting %s %s %s %s %d %d %f %f %v`,
-			setting.Function, setting.Market, setting.Symbol, setting.SymbolRelated, setting.Far, setting.Near, setting.PriceX, setting.GridAmount, setting))
+		//util.Log(util.LogLevelInfo, fmt.Sprintf(`load setting %s %s %s %s %d %d %f %f %v`,
+		//	setting.Function, setting.Market, setting.Symbol, setting.SymbolRelated, setting.Far, setting.Near, setting.PriceX, setting.GridAmount, setting))
 		functionMarketSettings.Store(setting.Symbol, setting)
 		util.StoreSyncMap(localSymbolSettings, functionMarketSettings, setting.Function, setting.Market)
 	}
