@@ -523,6 +523,16 @@ func getHolding(statuses []*CarryStatus) (bids, asks model.Ticks, bidStatus, ask
 // settings []*model.Setting, coinStatus map[string]map[string]map[string]*CarryStatus
 func equalCoin(coin string, statuses []*CarryStatus) (isEqual bool, holding float64, errMsg string) {
 	bids, asks, bidStatus, askStatus, holdingValue, price, holdStr := getHolding(statuses)
+	if !math.IsNaN(holdingValue) {
+		util.Log(util.LogLevelError, `hold value is NaN `)
+		for _, status := range bidStatus {
+			util.Log(util.LogLevelError, fmt.Sprintf(`hold value is NaN %#v %#v`, status.setting.GridAmount, status.setting.PriceX))
+		}
+		for _, status := range askStatus {
+			util.Log(util.LogLevelError, fmt.Sprintf(`hold value is NaN %#v %#v`, status.setting.GridAmount, status.setting.PriceX))
+		}
+		return true, 0, ""
+	}
 	holding = holdingValue
 	if math.Abs(holding) > compTooBig/price {
 		coinSettings := api.GetCoinSettings(model.FunctionCross)
