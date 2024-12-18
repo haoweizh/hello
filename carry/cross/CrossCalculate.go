@@ -26,7 +26,7 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarrySta
 	priceAsk := tick.Asks[0].Price
 	priceBid := tick.Bids[0].Price
 	priceX := carryStatus.setting.PriceX
-	priceXRelate := carryStatus.setting.PriceX
+	priceXRelate := carryStatusRelate.setting.PriceX
 	score := (priceBid/priceX - priceAskRelate/priceXRelate) / math.Max(priceBid/priceX, priceAskRelate/priceXRelate)
 	scoreRelate := (priceBidRelate/priceXRelate - priceAsk/priceX) / math.Max(priceAsk/priceX, priceBidRelate/priceXRelate)
 	mark := fmt.Sprintf(`%s_%s|%s_%s`, carryStatus.market, carryStatus.symbol, carryStatusRelate.market, carryStatusRelate.symbol)
