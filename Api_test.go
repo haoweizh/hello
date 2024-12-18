@@ -178,7 +178,7 @@ func Test_WsAndOrderApi(t *testing.T) {
 		//order2 := api.PlaceOrder(account.Key, account.Secret, orderSide, orderType, market,
 		//	symbol, ``, ``, price, price, amount, false, true, nil, nil)
 		//fmt.Println(fmt.Sprintf(`5. place order return %#v %#v`, order1, order2))
-		api.PlacePairOKEX(account, `requestId`, symbol, symbol, model.OrderTypeLimit, price*0.9, price*1.1, amount)
+		//api.PlacePairOKEX(account, `requestId`, symbol, symbol, model.OrderTypeLimit, price*0.9, price*1.1, amount)
 		api.CancelOrders(account.Key, account.Secret, market, symbol)
 		//if order1 != nil {
 		//	time.Sleep(time.Second)
@@ -578,7 +578,7 @@ func Test_WSOKPair(t *testing.T) {
 	//	`test`, 0.29, 0.29, 24.4, true, nil, nil)
 	time.Sleep(time.Second * 11)
 	requestId := fmt.Sprintf(`%d`, time.Now().UnixMilli())
-	api.PlacePairOKEX(model.GetAccounts(0)[market], requestId, `DOGE_USDT`, `DOGE_PERP`, model.OrderTypeLimit, 0.29, 0.55, 1000)
+	//api.PlacePairOKEX(model.GetAccounts(0)[market], requestId, `DOGE_USDT`, `DOGE_PERP`, model.OrderTypeLimit, 0.29, 0.55, 1000)
 	model.AppEnvironment.ReqIdOrders.Store(requestId+model.OrderSideBuy, &model.Order{OrderId: requestId + model.OrderSideBuy})
 	model.AppEnvironment.ReqIdOrders.Store(requestId+model.OrderSideSell, &model.Order{OrderId: requestId + model.OrderSideSell})
 	// api.CreateWsOrderUpdate(model.AppEnvironment, market)
@@ -790,6 +790,7 @@ func Test_transfer(t *testing.T) {
 func Test_GateSols(t *testing.T) {
 	model.NewConfig()
 	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
+	api.PrepareSettings()
 	rows, _ := model.AppDB.Model(&model.Setting{}).Select(`distinct coin`).Rows()
 	var coin string
 	index := 0
