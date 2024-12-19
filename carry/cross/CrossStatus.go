@@ -11,13 +11,17 @@ import (
 	"time"
 )
 
+const holdingLimitInU = 10000.0
+const openValueLimit = 2000.0
+const compLimitInU = 3000.0
+
+// const holdingLimitInU = 500000.0
+// const openValueLimit = 2000.0
+// const compLimitInU = 30000.0
 const lowestScore = -0.02
 const standardScoreOpen = 0.002 // 开仓标准利润,不得小于0
 // const standardScoreClose = 0.01 // 平仓标准利润,不得小于0
 const lastOrderLength = 8
-const holdingLimitInU = 500000.0
-const openValueLimit = 2000.0
-const compLimitInU = 30000.0
 const compTooBig = 70000.0
 const InsufficientCodeBinance = `-2010`
 const SmallInU = 10
