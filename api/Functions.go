@@ -943,7 +943,7 @@ func InitCrossMarketInfos(markets []string) {
 	for _, setting := range settingsDb {
 		settingsDbMap[fmt.Sprintf(`%s_%s_%s`, setting.Function, setting.Market, setting.Symbol)] = setting
 	}
-	model.AppDB.Model(&settingsDb).Where(`function=?`, model.FunctionCross).Updates(map[string]interface{}{`valid`: false})
+	//model.AppDB.Model(&settingsDb).Where(`function=?`, model.FunctionCross).Updates(map[string]interface{}{`valid`: false})
 	for coin, infos := range infoPool {
 		util.Log(util.LogLevelInfo, fmt.Sprintf(`handle coin %s %d`, coin, len(infos)))
 		scoreOpen := 0.015

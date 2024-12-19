@@ -99,7 +99,7 @@ func createFromPosition(account *model.Account, setting *model.Setting, valueLim
 		}
 	}
 	if value == nil {
-		util.LogLess(util.LogLevelError, fmt.Sprintf(`nil contract market %s %s`, setting.Market, setting.Symbol))
+		util.Log(util.LogLevelError, fmt.Sprintf(`nil contract market %s %s`, setting.Market, setting.Symbol))
 		return nil, false
 	}
 	cm := value.(*contractMarket)
@@ -170,7 +170,7 @@ func createFromBalance(account *model.Account, setting *model.Setting, valueLimi
 	}
 	success, price := api.GetPriceForce(setting.Symbol, setting.Market)
 	if value == nil {
-		util.LogLess(util.LogLevelError, fmt.Sprintf(`nil spot market %s %s getPrice %#v %f`, setting.Market, setting.Symbol, success, price))
+		util.Log(util.LogLevelError, fmt.Sprintf(`nil spot market %s %s getPrice %#v %f`, setting.Market, setting.Symbol, success, price))
 		return nil, true
 	}
 	sm := value.(*spotMarket)
@@ -240,7 +240,7 @@ func initStatus(account *model.Account, setting *model.Setting) (status *CarrySt
 		doRevert = true
 	}
 	if status == nil {
-		util.LogLess(util.LogLevelError, fmt.Sprintf(`fail to create status %s %s`, setting.Market, setting.Symbol))
+		util.Log(util.LogLevelError, fmt.Sprintf(`fail to create status %s %s`, setting.Market, setting.Symbol))
 		return nil
 	}
 	getFundingRate, rate := api.GetFundingRate(account.Key, account.Secret, setting.Market, setting.Symbol)
@@ -499,8 +499,8 @@ func getHolding(statuses []*CarryStatus) (bids, asks model.Ticks, bidStatus, ask
 	askStatus = make(map[string]*CarryStatus)
 	for _, status := range statuses {
 		if status == nil {
-			util.LogLess(util.LogLevelError, `warning: fail to get one status`)
-			continue
+			util.Log(util.LogLevelError, `warning: fail to get one status`)
+			return
 		}
 		holding += status.Holding * status.setting.GridAmount
 		holdStr += fmt.Sprintf(`[%s %s %f]`, status.market, status.symbol, status.Holding)
@@ -1050,8 +1050,13 @@ func continueComp() {
 			}
 			price := order.Price
 			_, bidAsk := model.AppEnvironment.GetBidAsk(order.Market, order.Symbol)
-			if bidAsk == nil {
+			if bidAsk == nil || time.Now().UnixMilli()-int64(bidAsk.Ts) > 60000 {
 				util.Log(util.LogLevelError, fmt.Sprintf(`continueComp fail can not get bidask for comp %s %s`, order.Market, order.Symbol))
+				if order.OrderSide == model.OrderSideSell {
+					price = price * (1 - compSlide)
+				} else {
+					price = price * (1 + compSlide)
+				}
 			} else {
 				if order.OrderSide == model.OrderSideSell {
 					price = bidAsk.Bids[0].Price * (1 - compSlide)
@@ -1069,8 +1074,8 @@ func continueComp() {
 						compOrders.Store(orderComp.OrderId, orderComp)
 					}
 					model.AppDB.Save(orderComp)
-					util.Log(util.LogLevelError, fmt.Sprintf(`continueComp success on fail to comp %s %s %f %f-%f %#v new comp %#v`,
-						order.Market, order.Symbol, price, bidAsk.Bids[0].Price, bidAsk.Asks[0].Price, order, orderComp))
+					util.Log(util.LogLevelError, fmt.Sprintf(`continueComp success on fail to comp %s %s %f %f-%f ts %d %#v new comp %#v`,
+						order.Market, order.Symbol, price, bidAsk.Bids[0].Price, bidAsk.Asks[0].Price, bidAsk.Ts, order, orderComp))
 				} else {
 					util.Log(util.LogLevelError, fmt.Sprintf(`continueComp fail to cancel %s %s %s %#v`, order.Market, order.Symbol, order.OrderId, order))
 				}
