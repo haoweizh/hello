@@ -527,11 +527,12 @@ func Test_download(t *testing.T) {
 }
 
 func Test_Order(t *testing.T) {
-	market := model.BitgetPerp
+	market := model.Bybit
 	model.NewConfig()
 	//api.InitMarketInfos(market)
 	symbol := `ENJ_PERP`
 	account := model.GetAccounts(0)[market]
+	api.GetBalances(account.Key, account.Secret, market)
 	api.InitMarketInfos(market)
 	api.PlaceOrder(account.Key, account.Secret, model.OrderSideBuy, model.OrderTypeMarket, market, symbol, model.ReduceOnly, `test`, 0.3864, 0.3864, 0.2, false, nil)
 	//api.GetPositions(account.Key, account.Secret, market)

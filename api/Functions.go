@@ -564,23 +564,14 @@ func GetFundingRate(key, secret, market, symbol string) (success bool, rate *mod
 	if fundingRate != nil && now < fundingRate.ExpireTime && fundingRate.UpdateTime.Add(time.Minute*5).After(time.Now()) && fundingRate.ExpireTime > 0 {
 		return true, fundingRate
 	}
-	util.LogLess(util.LogLevelInfo, fmt.Sprintf(`fail to get funding rate from ws %s %s`, market, symbol))
+	util.Log(util.LogLevelInfo, fmt.Sprintf(`fail to get funding rate from ws %s %s`, market, symbol))
 	switch market {
-	//case model.Bitmex:
-	//	rate, expireTime = deprecated.getFundingRateBitmex(key, secret, symbol)
-	//	model.SetFundingRate(market, symbol, &model.FundingRate{Rate: rate, ExpireTime: expireTime, UpdateTime: now})
 	case model.BitgetPerp:
 		fundingRate = getFundingRateBitgetPerp(symbol)
 	case model.Bybit:
 		fundingRate = getFundingRateBybit(symbol)
 	case model.OKEX:
 		fundingRate = getFundingRateOKEX(key, secret, symbol)
-	//case model.Mexc:
-	//	fundingRate = deprecated.getFundingRateMexc(key, secret, symbol)
-	//case model.Ftx:
-	//	fundingRate = deprecated.GetFundingRatesFtx(key, secret, symbol)
-	//case model.Kucoin:
-	//	fundingRate = &model.FundingRate{Rate: 0, RateNext: 0, UpdateTime: util.GetNow(), ExpireTime: now + 300}
 	case model.BinancePerp:
 		fundingRate = getFundingRateBinancePerp(key, secret, symbol)
 	case model.Gate:
@@ -1076,13 +1067,13 @@ func SetSymbolLeverage(account *model.Account, market, symbol string) (success b
 }
 
 func SetFundingRate(market, symbol string, fundingRate *model.FundingRate) {
-	if fundingRate.ExpireTime == 0 {
-		account := model.GetAccounts(0)[market]
-		getRate, rate := GetFundingRate(account.Key, account.Secret, market, symbol)
-		if getRate && rate != nil && rate.ExpireTime > 0 && rate.ExpireTime > time.Now().Unix() {
-			fundingRate.ExpireTime = rate.ExpireTime
-		}
-	}
+	//if fundingRate.ExpireTime == 0 {
+	//account := model.GetAccounts(0)[market]
+	//getRate, rate := GetFundingRate(account.Key, account.Secret, market, symbol)
+	//if getRate && rate != nil && rate.ExpireTime > 0 && rate.ExpireTime > time.Now().Unix() {
+	//	fundingRate.ExpireTime = rate.ExpireTime
+	//}
+	//}
 	util.StoreSyncMap(model.FundingRates, fundingRate, market, symbol)
 }
 

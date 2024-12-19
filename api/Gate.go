@@ -1090,7 +1090,8 @@ func getFundingRateGate(key, secret, symbol string) (fundingRate *model.FundingR
 	contract, _, err := client.FuturesApi.GetFuturesContract(ctx, `usdt`, dialectSymbol)
 	if err != nil {
 		panicGateError(key, "getFundingRateGate", err)
-		return nil
+		time.Sleep(time.Minute)
+		return getFundingRateGate(key, secret, symbol)
 	}
 	rate, _ := strconv.ParseFloat(contract.FundingRate, 64)
 	return &model.FundingRate{

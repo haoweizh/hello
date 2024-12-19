@@ -217,7 +217,6 @@ func getFundingRateBitgetPerp(symbol string) (fundingRate *model.FundingRate) {
 	success, _, _, dialectSymbol := model.GetFromStandard(model.BitgetPerp, symbol)
 	if !success {
 		util.Log(util.LogLevelError, "fail to get perp funding rate , GetFromStandard: "+symbol)
-		return
 	}
 	path := `/api/v2/mix/market/current-fund-rate`
 	httpResp, httpErr := util.HttpRequest(http.MethodGet, fmt.Sprintf(`%s%s?symbol=%s&productType=%s`,
@@ -227,7 +226,8 @@ func getFundingRateBitgetPerp(symbol string) (fundingRate *model.FundingRate) {
 	if bitgetFundingResp == nil || bitgetFundingResp.Code != "00000" {
 		util.Log(util.LogLevelError, fmt.Sprintf("get bitget perp funding rate error, %s resp: %s, httpErr: %#v, jsonErr: %#v",
 			symbol, httpResp, httpErr, perpJsonErr))
-		return
+		time.Sleep(time.Minute)
+		return getFundingRateBitgetPerp(symbol)
 	}
 	if len(bitgetFundingResp.Data) == 0 {
 		return &model.FundingRate{Rate: 0, UpdateTime: util.GetNow(), ExpireTime: util.GetNow().Unix() + 3600} //没有过期时间

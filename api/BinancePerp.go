@@ -619,7 +619,8 @@ func getFundingRateBinancePerp(key, secret, symbol string) (fundingRate *model.F
 	rateResp, err := client.NewPremiumIndexService().Symbol(dialectSymbol).Do(context.Background())
 	if err != nil {
 		util.Log(util.LogLevelError, err.Error()+" getFundingRateBinancePerp symbol: "+symbol+" marketType: "+marketType+" coin: "+coin+" But dialectSymbol: "+dialectSymbol)
-		return
+		time.Sleep(time.Minute)
+		return getFundingRateBinancePerp(key, secret, symbol)
 	}
 	rateStr := rateResp[0].LastFundingRate
 	rate, _ := strconv.ParseFloat(rateStr, 64)

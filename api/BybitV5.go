@@ -891,7 +891,8 @@ func getFundingRateBybit(symbol string) (fundingRate *model.FundingRate) {
 	if bybitTickersResp == nil || bybitTickersResp.RetCode != 0 {
 		util.Log(util.LogLevelError, fmt.Sprintf(
 			"get bybit perp funding rate error, resp: %s, httpErr: %#v, jsonErr: %#v", httpResp, httpErr, perpJsonErr))
-		return
+		time.Sleep(time.Minute)
+		return getFundingRateBybit(symbol)
 	}
 	for _, ticker := range bybitTickersResp.Result.List {
 		rate, _ := strconv.ParseFloat(ticker.FundingRate, 64)

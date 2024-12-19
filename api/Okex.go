@@ -1427,7 +1427,8 @@ func getFundingRateOKEX(key, secret, symbol string) (fundingRate *model.FundingR
 	if fundingJson == nil || fundingJson.Get(`data`) == nil || fundingJson.Get(`data`).MustArray() == nil ||
 		len(fundingJson.Get(`data`).MustArray()) == 0 || fundingErr != nil {
 		util.Log(util.LogLevelError, fmt.Sprintf(`fail to getFundingRateOKEX %#v`, fundingErr))
-		return nil
+		time.Sleep(time.Minute)
+		return getFundingRateOKEX(key, secret, symbol)
 	}
 	data := fundingJson.Get(`data`).MustArray()[0].(map[string]interface{})
 	rate, _ := strconv.ParseFloat(data[`fundingRate`].(string), 64)
