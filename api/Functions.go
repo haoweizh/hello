@@ -943,7 +943,7 @@ func InitCrossMarketInfos(markets []string) {
 	}
 	//model.AppDB.Model(&settingsDb).Where(`function=?`, model.FunctionCross).Updates(map[string]interface{}{`valid`: false})
 	for coin, infos := range infoPool {
-		util.Log(util.LogLevelInfo, fmt.Sprintf(`handle coin %s %d`, coin, len(infos)))
+		//util.Log(util.LogLevelInfo, fmt.Sprintf(`handle coin %s %d`, coin, len(infos)))
 		scoreOpen := 0.015
 		scoreClose := 0.005
 		if len(infos) >= 2 {
@@ -967,7 +967,7 @@ func InitCrossMarketInfos(markets []string) {
 						`valid`:              true,
 						`open_short_margin`:  scoreOpen,
 						`close_short_margin`: scoreClose})
-					util.Log(util.LogLevelInfo, fmt.Sprintf(`update setting to valid %s %s`, info.Market, info.Name))
+					//util.Log(util.LogLevelInfo, fmt.Sprintf(`update setting to valid %s %s`, info.Market, info.Name))
 				}
 			}
 		} else if len(infos) == 1 && infos[0].Name[0:2] == `10` {
@@ -981,7 +981,7 @@ func InitCrossMarketInfos(markets []string) {
 				OpenShortMargin:  scoreOpen,
 				CloseShortMargin: scoreClose,
 				PriceX:           1, GridAmount: 1}
-			util.Log(util.LogLevelInfo, fmt.Sprintf(`save setting %s %s %s %#v`, infos[0].Market, infos[0].Name, coin, setting.Valid))
+			//util.Log(util.LogLevelInfo, fmt.Sprintf(`save setting %s %s %s %#v`, infos[0].Market, infos[0].Name, coin, setting.Valid))
 			model.AppDB.Save(setting)
 		}
 	}
