@@ -192,7 +192,7 @@ func GetHoldings(accounts map[string]*model.Account) (holding [][]interface{}) {
 						fmt.Sprintf(`%.2f`, balance.Amount), math.Round(balance.UsdValue), valid})
 					coinHold[balance.Coin] += balance.Amount
 					coinValue[balance.Coin] += math.Round(balance.UsdValue)
-					volume[balance.Coin] += math.Abs(coinValue[balance.Coin])
+					volume[balance.Coin] += math.Abs(balance.UsdValue)
 				}
 			}
 		}
@@ -215,7 +215,7 @@ func GetHoldings(accounts map[string]*model.Account) (holding [][]interface{}) {
 						holdingLine := []interface{}{position.Market, coin, position.Currency,
 							position.Holding, math.Round(price * position.Holding), valid}
 						coinValue[coin] += math.Round(price * position.Holding)
-						volume[coin] += math.Abs(coinValue[coin])
+						volume[coin] += math.Abs(price * position.Holding)
 						if price > 0 {
 							coinPrice[coin] = price
 						}
