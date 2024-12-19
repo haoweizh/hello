@@ -613,14 +613,13 @@ func signedRequestBinance(key, secret, market, method, requestUrl string, withAp
 	return responseBody
 }
 
-func getFundingRateBinancePerp(key, secret, symbol string) (fundingRate *model.FundingRate) {
+func getFundingRateBinancePerp(key, secret, symbol string) (success bool, fundingRate *model.FundingRate) {
 	_, marketType, coin, dialectSymbol := model.GetFromStandard(model.BinancePerp, symbol)
 	client := futures.NewClient(key, secret)
 	rateResp, err := client.NewPremiumIndexService().Symbol(dialectSymbol).Do(context.Background())
 	if err != nil {
 		util.Log(util.LogLevelError, err.Error()+" getFundingRateBinancePerp symbol: "+symbol+" marketType: "+marketType+" coin: "+coin+" But dialectSymbol: "+dialectSymbol)
-		time.Sleep(time.Minute)
-		return getFundingRateBinancePerp(key, secret, symbol)
+		return false, nil
 	}
 	rateStr := rateResp[0].LastFundingRate
 	rate, _ := strconv.ParseFloat(rateStr, 64)

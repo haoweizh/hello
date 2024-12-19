@@ -1084,20 +1084,16 @@ func getMaxLoanGate(symbol string) (success bool, maxLoan float64) {
 	return true, maxLoan
 }
 
-func getFundingRateGate(key, secret, symbol string) (fundingRate *model.FundingRate) {
+func getFundingRateGate(key, secret, symbol string) (success bool, fundingRate *model.FundingRate) {
 	client, ctx := getClientGate(key, secret)
 	_, _, _, dialectSymbol := model.GetFromStandard(model.Gate, symbol)
 	contract, _, err := client.FuturesApi.GetFuturesContract(ctx, `usdt`, dialectSymbol)
 	if err != nil {
 		panicGateError(key, "getFundingRateGate", err)
-		time.Sleep(time.Minute)
-		return getFundingRateGate(key, secret, symbol)
+		return false, nil
 	}
 	rate, _ := strconv.ParseFloat(contract.FundingRate, 64)
-	return &model.FundingRate{
-		Rate:       rate,
-		UpdateTime: time.Now(),
-		ExpireTime: int64(contract.FundingNextApply)}
+	return true, &model.FundingRate{Rate: rate, UpdateTime: time.Now(), ExpireTime: int64(contract.FundingNextApply)}
 }
 
 // SetGateBidAsk 用于处理永续合约买卖一不准确（现货无需，因为订阅方式不同）

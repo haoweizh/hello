@@ -877,9 +877,9 @@ func cancelOrdersBybit(key, secret, symbol string) (result bool) {
 	return false
 }
 
-func getFundingRateBybit(symbol string) (fundingRate *model.FundingRate) {
-	success, _, _, dialectSymbol := model.GetFromStandard(model.Bybit, symbol)
-	if !success {
+func getFundingRateBybit(symbol string) (success bool, fundingRate *model.FundingRate) {
+	successSymbol, _, _, dialectSymbol := model.GetFromStandard(model.Bybit, symbol)
+	if !successSymbol {
 		util.Log(util.LogLevelError, "fail to get bybit perp funding rate, GetFromStandard: "+symbol)
 		return
 	}
@@ -891,8 +891,7 @@ func getFundingRateBybit(symbol string) (fundingRate *model.FundingRate) {
 	if bybitTickersResp == nil || bybitTickersResp.RetCode != 0 {
 		util.Log(util.LogLevelError, fmt.Sprintf(
 			"get bybit perp funding rate error, resp: %s, httpErr: %#v, jsonErr: %#v", httpResp, httpErr, perpJsonErr))
-		time.Sleep(time.Minute)
-		return getFundingRateBybit(symbol)
+		return false, nil
 	}
 	for _, ticker := range bybitTickersResp.Result.List {
 		rate, _ := strconv.ParseFloat(ticker.FundingRate, 64)
@@ -903,7 +902,7 @@ func getFundingRateBybit(symbol string) (fundingRate *model.FundingRate) {
 			ExpireTime: nextFundingTime / 1000,
 		}
 	}
-	return fundingRate
+	return true, fundingRate
 }
 
 func parseOrderBybit(value map[string]interface{}, symbol string) (order *model.Order) {
