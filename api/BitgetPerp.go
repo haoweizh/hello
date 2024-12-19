@@ -217,6 +217,7 @@ func getFundingRateBitgetPerp(symbol string) (fundingRate *model.FundingRate) {
 	success, _, _, dialectSymbol := model.GetFromStandard(model.BitgetPerp, symbol)
 	if !success {
 		util.Log(util.LogLevelError, "fail to get perp funding rate , GetFromStandard: "+symbol)
+		return
 	}
 	path := `/api/v2/mix/market/current-fund-rate`
 	httpResp, httpErr := util.HttpRequest(http.MethodGet, fmt.Sprintf(`%s%s?symbol=%s&productType=%s`,
