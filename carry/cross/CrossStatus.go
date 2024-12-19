@@ -227,16 +227,16 @@ func GetHoldings(accounts map[string]*model.Account) (holding [][]interface{}) {
 	}
 	for i := len(holding) - 1; i >= 0; i-- {
 		for j := 0; j < i; j++ {
-			//if holding[j][5] == holding[j+1][5] {
-			//if math.Abs(holding[j][4].(float64)) < math.Abs(holding[j+1][4].(float64)) {
-			//	holding[j], holding[j+1] = holding[j+1], holding[j]
-			//}
 			if volume[holding[j][1].(string)] < volume[holding[j+1][1].(string)] {
 				holding[j], holding[j+1] = holding[j+1], holding[j]
 			}
-			//} else if holding[j+1][5] == `false` {
-			//	holding[j], holding[j+1] = holding[j+1], holding[j]
-			//}
+		}
+	}
+	for i := len(holding) - 1; i >= 0; i-- {
+		for j := 0; j < i; j++ {
+			if holding[j][5] == `true` && holding[j+1][5] == `false` {
+				holding[j], holding[j+1] = holding[j+1], holding[j]
+			}
 		}
 	}
 	for i := range holding {
@@ -251,9 +251,7 @@ func GetHoldings(accounts map[string]*model.Account) (holding [][]interface{}) {
 		}
 		holding[i] = append(holding[i], money)
 		holding[i] = append(holding[i], math.Round(coinValue[coin]/10)*10)
-		util.Log(util.LogLevelInfo, fmt.Sprintf(`rank %s %d volume %f %#v`, coin, i, volume[coin], holding[i]))
 	}
-	util.Log(util.LogLevelInfo, `rank done `)
 	return
 }
 
