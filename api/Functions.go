@@ -567,15 +567,21 @@ func GetFundingRate(key, secret, market, symbol string) (success bool, rate *mod
 	util.Log(util.LogLevelInfo, fmt.Sprintf(`fail to get funding rate from ws %s %s`, market, symbol))
 	switch market {
 	case model.BitgetPerp:
-		success, fundingRate = getFundingRateBitgetPerp(symbol)
+		fundingRate = getFundingRateBitgetPerp(symbol)
 	case model.Bybit:
-		success, fundingRate = getFundingRateBybit(symbol)
+		fundingRate = getFundingRateBybit(symbol)
 	case model.OKEX:
-		success, fundingRate = getFundingRateOKEX(key, secret, symbol)
+		fundingRate = getFundingRateOKEX(key, secret, symbol)
+	//case model.Mexc:
+	//	fundingRate = deprecated.getFundingRateMexc(key, secret, symbol)
+	//case model.Ftx:
+	//	fundingRate = deprecated.GetFundingRatesFtx(key, secret, symbol)
+	//case model.Kucoin:
+	//	fundingRate = &model.FundingRate{Rate: 0, RateNext: 0, UpdateTime: util.GetNow(), ExpireTime: now + 300}
 	case model.BinancePerp:
-		success, fundingRate = getFundingRateBinancePerp(key, secret, symbol)
+		fundingRate = getFundingRateBinancePerp(key, secret, symbol)
 	case model.Gate:
-		success, fundingRate = getFundingRateGate(key, secret, symbol)
+		fundingRate = getFundingRateGate(key, secret, symbol)
 	}
 	if fundingRate == nil || now > fundingRate.ExpireTime {
 		time.Sleep(time.Minute)

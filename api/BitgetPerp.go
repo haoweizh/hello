@@ -213,7 +213,7 @@ func getPositionsBitgetPerp(key, secret string) (success bool, positions []*Posi
 	return true, positions, accountValue, availableU, mmr
 }
 
-func getFundingRateBitgetPerp(symbol string) (success bool, fundingRate *model.FundingRate) {
+func getFundingRateBitgetPerp(symbol string) (fundingRate *model.FundingRate) {
 	success, _, _, dialectSymbol := model.GetFromStandard(model.BitgetPerp, symbol)
 	if !success {
 		util.Log(util.LogLevelError, "fail to get perp funding rate , GetFromStandard: "+symbol)
@@ -230,11 +230,11 @@ func getFundingRateBitgetPerp(symbol string) (success bool, fundingRate *model.F
 		return
 	}
 	if len(bitgetFundingResp.Data) == 0 {
-		return false, &model.FundingRate{Rate: 0, UpdateTime: util.GetNow(), ExpireTime: util.GetNow().Unix() + 3600} //没有过期时间
+		return &model.FundingRate{Rate: 0, UpdateTime: util.GetNow(), ExpireTime: util.GetNow().Unix() + 3600} //没有过期时间
 	}
 	data := bitgetFundingResp.Data[0]
 	rate, _ := strconv.ParseFloat(data.FundingRate, 64)
-	return true, &model.FundingRate{Rate: rate, UpdateTime: util.GetNow(), ExpireTime: util.GetNow().Unix() + 3600} //没有过期时间
+	return &model.FundingRate{Rate: rate, UpdateTime: util.GetNow(), ExpireTime: util.GetNow().Unix() + 3600} //没有过期时间
 }
 
 func placeOrderBitgetPerp(key, secret string, order *model.Order, orderSide, orderType, orderParam, symbol string, price, amount float64) {
