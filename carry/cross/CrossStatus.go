@@ -165,6 +165,7 @@ func GetHoldings(accounts map[string]*model.Account) (holding [][]interface{}) {
 	coinValue := make(map[string]float64)
 	coinPrice := make(map[string]float64)
 	uniAccounts := make(map[string]*model.Account)
+	volume := make(map[string]float64)
 	for _, account := range accounts {
 		if account != nil {
 			uniAccounts[account.Key] = account
@@ -191,6 +192,7 @@ func GetHoldings(accounts map[string]*model.Account) (holding [][]interface{}) {
 						fmt.Sprintf(`%.2f`, balance.Amount), math.Round(balance.UsdValue), valid})
 					coinHold[balance.Coin] += balance.Amount
 					coinValue[balance.Coin] += math.Round(balance.UsdValue)
+					volume[balance.Coin] += math.Abs(coinValue[balance.Coin])
 				}
 			}
 		}
@@ -213,6 +215,7 @@ func GetHoldings(accounts map[string]*model.Account) (holding [][]interface{}) {
 						holdingLine := []interface{}{position.Market, coin, position.Currency,
 							position.Holding, math.Round(price * position.Holding), valid}
 						coinValue[coin] += math.Round(price * position.Holding)
+						volume[coin] += math.Abs(coinValue[coin])
 						if price > 0 {
 							coinPrice[coin] = price
 						}
@@ -225,7 +228,10 @@ func GetHoldings(accounts map[string]*model.Account) (holding [][]interface{}) {
 	for i := len(holding) - 1; i >= 0; i-- {
 		for j := 0; j < i; j++ {
 			if holding[j][5] == holding[j+1][5] {
-				if math.Abs(holding[j][4].(float64)) < math.Abs(holding[j+1][4].(float64)) {
+				//if math.Abs(holding[j][4].(float64)) < math.Abs(holding[j+1][4].(float64)) {
+				//	holding[j], holding[j+1] = holding[j+1], holding[j]
+				//}
+				if volume[holding[j][1].(string)] < volume[holding[j+1][1].(string)] {
 					holding[j], holding[j+1] = holding[j+1], holding[j]
 				}
 			} else if holding[j+1][5] == `false` {
