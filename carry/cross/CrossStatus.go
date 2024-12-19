@@ -163,7 +163,6 @@ func GetHoldings(accounts map[string]*model.Account) (holding [][]interface{}) {
 	holding = make([][]interface{}, 0)
 	coinHold := make(map[string]float64)
 	coinValue := make(map[string]float64)
-	coinPrice := make(map[string]float64)
 	uniAccounts := make(map[string]*model.Account)
 	volume := make(map[string]float64)
 	for _, account := range accounts {
@@ -216,9 +215,6 @@ func GetHoldings(accounts map[string]*model.Account) (holding [][]interface{}) {
 							position.Holding, math.Round(price * position.Holding), valid}
 						coinValue[coin] += math.Round(price * position.Holding)
 						volume[coin] += math.Abs(price * position.Holding)
-						if price > 0 {
-							coinPrice[coin] = price
-						}
 						holding = append(holding, holdingLine)
 					}
 				}
@@ -242,15 +238,14 @@ func GetHoldings(accounts map[string]*model.Account) (holding [][]interface{}) {
 	for i := range holding {
 		coin := holding[i][1].(string)
 		market := holding[i][0].(string)
-		if coinPrice[coin] == 0 {
-			_, coinPrice[coin] = api.GetPriceForce(coin+model.UniStandardTail[model.MarketTypeSpot], market)
-		}
-		money := math.Floor(coinHold[coin]*coinPrice[coin]/10) * 10
+		_, price := api.GetPriceForce(coin+model.UniStandardTail[model.MarketTypeSpot], market)
+		money := math.Floor(coinHold[coin]*price/10) * 10
 		if money < 0 {
-			money = math.Ceil(coinHold[coin]*coinPrice[coin]/10) * 10
+			money = math.Ceil(coinHold[coin]*price/10) * 10
 		}
 		holding[i] = append(holding[i], money)
 		holding[i] = append(holding[i], math.Round(coinValue[coin]/10)*10)
+		holding[i] = append(holding[i], price)
 	}
 	return
 }
