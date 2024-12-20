@@ -146,14 +146,62 @@ func GetHoldings(accounts map[string]*model.Account) (holding [][]interface{}) {
 	holding = make([][]interface{}, 0)
 	coinHold := make(map[string]float64)
 	coinValue := make(map[string]float64)
-	uniAccounts := make(map[string]*model.Account)
 	volume := make(map[string]float64)
-	for _, account := range accounts {
-		if account != nil {
-			uniAccounts[account.Key] = account
-		}
+	coinSettings := api.GetCoinSettings(model.FunctionCross)
+	if coinSettings == nil {
+		return
 	}
-	for _, account := range uniAccounts {
+	coinSettings.Range(func(coin, value interface{}) bool {
+		if value == nil {
+			return true
+		}
+		settings := value.([]*model.Setting)
+		for _, setting := range settings {
+			account := accounts[setting.Market]
+			valid := `false`
+			_, marketType, _, _ := model.GetFromStandard(setting.Market, setting.Symbol)
+			if marketType == model.MarketTypeSpot {
+				smValue, _ := spotMarkets.Load(account.Key)
+				balance := smValue.(*spotMarket).balances[coin.(string)]
+				if (balance != nil && balance.Amount > 0) || !setting.Valid {
+					if setting.Valid {
+						valid = `true`
+					}
+					amount := 0.0
+					usdValue := 0.0
+					if balance != nil {
+						amount = balance.Amount
+						usdValue = balance.UsdValue
+					}
+					holding = append(holding, []interface{}{setting.Market, coin.(string), setting.Symbol,
+						fmt.Sprintf(`%.2f`, amount), math.Round(usdValue), valid, setting.MarketRelated})
+					coinHold[coin.(string)] += amount
+					coinValue[coin.(string)] += math.Round(usdValue)
+					volume[coin.(string)] += math.Abs(usdValue)
+				}
+			} else if marketType == model.MarketTypePerp {
+				cm, _ := contractMarkets.Load(account.Key)
+				position := cm.(*contractMarket).positions[setting.Symbol]
+				if (position != nil && position.Holding != 0) || !setting.Valid {
+					if setting.Valid {
+						valid = `true`
+					}
+					posHolding := 0.0
+					if position != nil {
+						posHolding = position.Holding
+					}
+					coinHold[coin.(string)] += posHolding
+					_, price := api.GetPriceForce(setting.Symbol, setting.Market)
+					coinValue[coin.(string)] += math.Round(price * posHolding)
+					volume[coin.(string)] += math.Abs(price * posHolding)
+					holding = append(holding, []interface{}{setting.Market, coin, position.Currency,
+						posHolding, math.Round(price * posHolding), valid, setting.MarketRelated})
+				}
+			}
+		}
+		return true
+	})
+	for _, account := range accounts {
 		if account == nil {
 			continue
 		}
@@ -167,12 +215,11 @@ func GetHoldings(accounts map[string]*model.Account) (holding [][]interface{}) {
 					msg := ``
 					setting := api.GetSetting(model.FunctionCross, balance.Market, symbol)
 					if setting != nil {
-						if setting.Valid {
-							valid = `true`
-						}
-						msg = setting.MarketRelated
+						continue
 					} else if api.FilterCross(balance.Market, symbol) || balance.Amount == 0 {
 						valid = `filter`
+					} else {
+						valid = `extra`
 					}
 					holding = append(holding, []interface{}{balance.Market, balance.Coin, symbol,
 						fmt.Sprintf(`%.2f`, balance.Amount), math.Round(balance.UsdValue), valid, msg})
@@ -190,18 +237,14 @@ func GetHoldings(accounts map[string]*model.Account) (holding [][]interface{}) {
 				setting := api.GetSetting(model.FunctionCross, position.Market, position.Currency)
 				msg := ``
 				if setting != nil {
-					if setting.Valid {
-						valid = `true`
-					}
-					msg = setting.MarketRelated
+					continue
 				} else if api.FilterCross(position.Market, position.Currency) || position.Holding == 0 {
 					valid = `filter`
+				} else {
+					valid = `extra`
 				}
 				if position.Holding != 0 {
 					success, _, coin, _ := model.GetFromStandard(position.Market, position.Currency)
-					if setting != nil {
-						coin = setting.Coin
-					}
 					if success {
 						coinHold[coin] += position.Holding
 						_, price := api.GetPriceForce(position.Currency, position.Market)
