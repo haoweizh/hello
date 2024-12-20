@@ -216,7 +216,7 @@ func createFromBalance(account *model.Account, setting *model.Setting, valueLimi
 	}
 	if setting.Market == model.Bybit && sm.collateral != nil && sm.collateral.Rate > 0.7 {
 		doRevert = true
-	} else if setting.Market == model.OKEX && sm.collateral != nil && sm.collateral.Rate < 1.5 {
+	} else if setting.Market == model.OKEX && (sm.collateral != nil && sm.collateral.Rate < 1.5) {
 		//(sm.collateral.Available-sm.collateral.Occupied)/sm.collateral.Available < 0.1) {
 		doRevert = true
 	} else if setting.Market == model.Gate && sm.collateral != nil && sm.collateral.Rate < 1.5 {
@@ -455,6 +455,7 @@ func equalAccounts() {
 }
 
 func equalAccount(i int, equalChan chan int, accounts map[string]*model.Account) {
+	util.Log(util.LogLevelInfo, fmt.Sprintf(`begin to equal account %d `, i))
 	if accounts[model.BitgetPerp] != nil {
 		liquidateBitgetPerp(accounts[model.BitgetPerp])
 	}

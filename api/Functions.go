@@ -982,11 +982,12 @@ func InitCrossMarketInfos(markets []string) {
 					OpenShortMargin:  scoreOpen,
 					CloseShortMargin: scoreClose,
 					PriceX:           1, GridAmount: 1}
-				//util.Log(util.LogLevelInfo, fmt.Sprintf(`save setting %s %s %s %#v`, infos[0].Market, infos[0].Name, coin, setting.Valid))
+				util.Log(util.LogLevelInfo, fmt.Sprintf(`save setting %s %s %s %#v`, infos[0].Market, infos[0].Name, coin, setting.Valid))
 				model.AppDB.Save(setting)
 			}
 		}
 	}
+	util.Log(util.LogLevelInfo, fmt.Sprintf(`end to init cross market infos`))
 }
 
 var marketInfoInitializing = false
