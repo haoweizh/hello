@@ -62,6 +62,8 @@ func createSpotMarket(key, secret, market string) (sm *spotMarket) {
 			sm.balances[symbol] = balance
 			if strings.EqualFold(balance.Coin, `usd`) || strings.EqualFold(balance.Coin, `usdt`) {
 				sm.availableU += math.Min(balance.Amount, balance.AvailableWithBorrow)
+				util.Log(util.LogLevelInfo, fmt.Sprintf(`create spot %s %s %f %f`,
+					market, balance.Coin, balance.Amount, balance.AvailableWithBorrow))
 			}
 			// 可用usd数量需要减去现有所有借币负债总额
 			if balance.UsdValue < 0 {
