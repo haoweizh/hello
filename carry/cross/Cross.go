@@ -223,8 +223,8 @@ func createFromBalance(account *model.Account, setting *model.Setting, valueLimi
 		doRevert = true
 	}
 	if doRevert {
-		util.Log(util.LogLevelError, fmt.Sprintf(`do revert true %s %s value big balance %f %f %f %#v %f %f`,
-			setting.Market, setting.Symbol, sm.availableU, usdLowLine, carryStatus.RateInAll, sm.balances[setting.Symbol], valueLimit, sm.collateral.Rate))
+		util.Log(util.LogLevelError, fmt.Sprintf(`do revert true %s %s value big balance %#v %f %f %f`,
+			setting.Market, setting.Symbol, sm, usdLowLine, carryStatus.RateInAll, valueLimit))
 	}
 	return carryStatus, doRevert
 }
