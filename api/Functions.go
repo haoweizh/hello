@@ -971,18 +971,20 @@ func InitCrossMarketInfos(markets []string) {
 				}
 			}
 		} else if len(infos) == 1 && infos[0].Name[0:2] == `10` {
-			setting := &model.Setting{
-				Valid:            true,
-				Function:         model.FunctionCross,
-				WSType:           model.WSTypeTicker,
-				Market:           infos[0].Market,
-				Symbol:           infos[0].Name,
-				Coin:             coin,
-				OpenShortMargin:  scoreOpen,
-				CloseShortMargin: scoreClose,
-				PriceX:           1, GridAmount: 1}
-			//util.Log(util.LogLevelInfo, fmt.Sprintf(`save setting %s %s %s %#v`, infos[0].Market, infos[0].Name, coin, setting.Valid))
-			model.AppDB.Save(setting)
+			if settingsDbMap[fmt.Sprintf(`%s_%s_%s`, model.FunctionCross, infos[0].Market, infos[0].Name)] == nil {
+				setting := &model.Setting{
+					Valid:            true,
+					Function:         model.FunctionCross,
+					WSType:           model.WSTypeTicker,
+					Market:           infos[0].Market,
+					Symbol:           infos[0].Name,
+					Coin:             coin,
+					OpenShortMargin:  scoreOpen,
+					CloseShortMargin: scoreClose,
+					PriceX:           1, GridAmount: 1}
+				//util.Log(util.LogLevelInfo, fmt.Sprintf(`save setting %s %s %s %#v`, infos[0].Market, infos[0].Name, coin, setting.Valid))
+				model.AppDB.Save(setting)
+			}
 		}
 	}
 }
