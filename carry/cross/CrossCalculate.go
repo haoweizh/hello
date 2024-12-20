@@ -137,8 +137,8 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarrySta
 		}
 		carryStatus.setting.Valid = false
 		carryStatusRelate.setting.Valid = false
-		carryStatus.setting.MarketRelated = fmt.Sprintf(`价差过大 %e:%e`, tick.Bids[0].Price, tick.Asks[0].Price)
-		carryStatusRelate.setting.MarketRelated = fmt.Sprintf(`价差过大 %e:%e`, tickRelate.Bids[0].Price, tickRelate.Asks[0].Price)
+		carryStatus.setting.MarketRelated = fmt.Sprintf(`价差过大 %s %s %f %f`, carryStatusRelate.market, carryStatusRelate.symbol, score, scoreRelate)
+		carryStatusRelate.setting.MarketRelated = fmt.Sprintf(`价差过大 %s %s %f %f`, carryStatus.market, carryStatus.symbol, scoreRelate, score)
 		return nil, nil, 0, 0, 0, nil, nil
 	}
 	return statusBuy, statusSell, amount, priceBuy, priceSell, tickBuy, tickSell
