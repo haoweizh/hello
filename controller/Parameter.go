@@ -546,8 +546,8 @@ func holdPage(c *gin.Context) {
 					strconv.FormatFloat(crossCount[date][key], 'f', 0, 64), ``})
 			}
 		}
-		err := carryRows.Close()
-		if err != nil {
+		errDb := carryRows.Close()
+		if errDb != nil {
 			util.Log(util.LogLevelError, fmt.Sprintf(`fail to close DB for carry rows`))
 			return
 		}

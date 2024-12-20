@@ -544,6 +544,7 @@ func equalCoin(coin string, statuses []*CarryStatus) (isEqual bool, holding floa
 			if value != nil {
 				for _, setting := range value.([]*model.Setting) {
 					setting.Valid = false
+					setting.MarketRelated = `too big comp when equal`
 					util.Log(util.LogLevelInfo, fmt.Sprintf(`too big comp %s %s %f %f`,
 						setting.Market, setting.Symbol, holding*holdingPrice, holding))
 				}

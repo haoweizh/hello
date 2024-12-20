@@ -109,9 +109,12 @@ func (environment *Environment) HandleWSResp() {
 				continue
 			}
 			order := value.(*Order)
-			order.OrderId = wsResp.OrderId
+			if len(strings.Trim(wsResp.OrderId, ` `)) < 4 {
+				wsResp.Success = false
+			}
 			if wsResp.Success {
 				order.Status = CarryStatusWorking
+				order.OrderId = wsResp.OrderId
 				environment.OrderIdOrders.Store(wsResp.OrderId, order)
 			} else {
 				order.Status = CarryStatusFail

@@ -185,14 +185,18 @@ func GetHoldings(accounts map[string]*model.Account) (holding [][]interface{}) {
 				if balance != nil && balance.Amount != 0 {
 					symbol := balance.Coin + model.UniStandardTail[model.MarketTypeSpot]
 					valid := `false`
+					msg := ``
 					setting := api.GetSetting(model.FunctionCross, balance.Market, symbol)
-					if setting != nil && setting.Valid {
-						valid = `true`
+					if setting != nil {
+						if setting.Valid {
+							valid = `true`
+						}
+						msg = setting.MarketRelated
 					} else if api.FilterCross(balance.Market, symbol) || balance.Amount == 0 {
 						valid = `filter`
 					}
 					holding = append(holding, []interface{}{balance.Market, balance.Coin, symbol,
-						fmt.Sprintf(`%.2f`, balance.Amount), math.Round(balance.UsdValue), valid})
+						fmt.Sprintf(`%.2f`, balance.Amount), math.Round(balance.UsdValue), valid, msg})
 					coinHold[balance.Coin] += balance.Amount
 					coinValue[balance.Coin] += math.Round(balance.UsdValue)
 					volume[balance.Coin] += math.Abs(balance.UsdValue)
@@ -205,8 +209,12 @@ func GetHoldings(accounts map[string]*model.Account) (holding [][]interface{}) {
 			for _, position := range cm.positions {
 				valid := `false`
 				setting := api.GetSetting(model.FunctionCross, position.Market, position.Currency)
-				if setting != nil && setting.Valid {
-					valid = `true`
+				msg := ``
+				if setting != nil {
+					if setting.Valid {
+						valid = `true`
+					}
+					msg = setting.MarketRelated
 				} else if api.FilterCross(position.Market, position.Currency) || position.Holding == 0 {
 					valid = `filter`
 				}
@@ -216,7 +224,7 @@ func GetHoldings(accounts map[string]*model.Account) (holding [][]interface{}) {
 						coinHold[coin] += position.Holding
 						_, price := api.GetPriceForce(position.Currency, position.Market)
 						holdingLine := []interface{}{position.Market, coin, position.Currency,
-							position.Holding, math.Round(price * position.Holding), valid}
+							position.Holding, math.Round(price * position.Holding), valid, msg}
 						coinValue[coin] += math.Round(price * position.Holding)
 						volume[coin] += math.Abs(price * position.Holding)
 						holding = append(holding, holdingLine)
@@ -401,6 +409,7 @@ func addLastCarry(order *model.Order, setting *model.Setting) {
 				util.Log(util.LogLevelInfo, fmt.Sprintf(`no deal order %s %s %d %d stop at %d`,
 					setting.Market, setting.Symbol, len(orders), noDealNum, index))
 				setting.Valid = false
+				setting.MarketRelated = fmt.Sprintf(`trade fail %d`, noDealNum)
 				setting.UpdatedAt = now
 				util.StoreSyncMap(lastOrders, make([]*model.Order, lastOrderLength), setting.Market, setting.Symbol)
 				util.StoreSyncMap(lastOrderIndex, 0, setting.Market, setting.Symbol)
