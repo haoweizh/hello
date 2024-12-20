@@ -215,6 +215,13 @@ func (environment *Environment) SetBidAsk(market, symbol string, bidAsk *BidAsk)
 		bidAsk.Asks[0].Price == 0 || bidAsk.Asks[0].Amount == 0 {
 		return false
 	}
+	if market == BinanceSpot && symbol == `PENGU_USDT` {
+		ts := time.Now().UnixMilli()
+		msg := fmt.Sprintf(`test delay %d local %d remote %d delay %d %f %f %f %f`,
+			len(bidAsk.Bids), ts, bidAsk.Ts, ts-int64(bidAsk.Ts), bidAsk.Bids[0].Price, bidAsk.Asks[0].Price, bidAsk.Bids[0].Amount, bidAsk.Asks[0].Amount)
+		fmt.Println(msg)
+		util.LogLess(util.LogLevelDebug, msg)
+	}
 	//_, _, coin, _ := GetFromStandard(marketName, symbol)
 	//if len(coin) > 4 && coin[:4] == `1000` {
 	//	settings := api.GetSettingsFromCoin(coin[4:])
