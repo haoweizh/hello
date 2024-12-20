@@ -218,7 +218,7 @@ func createFromBalance(account *model.Account, setting *model.Setting, valueLimi
 	}
 	if setting.Market == model.Bybit && sm.collateral != nil && sm.collateral.Rate > 0.7 {
 		doRevert = true
-	} else if setting.Market == model.OKEX && (sm.collateral != nil && sm.collateral.Rate < 1.5) {
+	} else if setting.Market == model.OKEX && sm.collateral != nil && sm.collateral.Rate < 1.5 {
 		//(sm.collateral.Available-sm.collateral.Occupied)/sm.collateral.Available < 0.1) {
 		doRevert = true
 	} else if setting.Market == model.Gate && sm.collateral != nil && sm.collateral.Rate < 1.5 {
@@ -741,7 +741,7 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 	}
 	for _, settingRelate := range settings {
 		tickGet, tickRelate := model.AppEnvironment.GetBidAsk(settingRelate.Market, settingRelate.Symbol)
-		if !tickGet || setting.ID == settingRelate.ID || (!model.NonRTTicker[tick.Bids[0].Market] && model.NonRTTicker[tickRelate.Bids[0].Market]) {
+		if !tickGet || setting.ID == settingRelate.ID || (!model.NonRTTicker[tick.Bids[0].Market] && model.NonRTTicker[tickRelate.Bids[0].Market]) || !settingRelate.Valid {
 			continue
 		}
 		tickLimit += 10000
