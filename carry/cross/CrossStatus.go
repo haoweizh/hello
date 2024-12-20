@@ -199,6 +199,9 @@ func GetHoldings(accounts map[string]*model.Account) (holding [][]interface{}) {
 				}
 				if position.Holding != 0 {
 					success, _, coin, _ := model.GetFromStandard(position.Market, position.Currency)
+					if setting != nil {
+						coin = setting.Coin
+					}
 					if success {
 						coinHold[coin] += position.Holding
 						_, price := api.GetPriceForce(position.Currency, position.Market)

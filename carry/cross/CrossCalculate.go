@@ -147,7 +147,7 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarrySta
 }
 
 func checkScoreLimit(market, symbol, marketRelate, symbolRelate string, score, scoreRelate float64) (invalid bool) {
-	if score > 0.07 || scoreRelate > 0.07 {
+	if score > 0.2 || scoreRelate > 0.2 {
 		invalid = true
 	}
 	checkKey := fmt.Sprintf(`%s_%s_%s_%s`, market, symbol, marketRelate, symbolRelate)
