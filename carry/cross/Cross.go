@@ -700,7 +700,6 @@ func placeEqual(status *CarryStatus, price, amount float64, orderSide string) (d
 // setting.GridAmount 用作不同名称的搬砖时，symbol的交易量对应的coin的交易量
 // setting.PriceX 用作不同名称的搬砖时，symbol的交易价格对应的coin的交易价格
 var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
-	million := time.Now().UnixMilli()
 	// 所有cross之间互斥
 	if !api.CheckSetProcessing(setting.Function, setting.Function, setting.Function, true) {
 		defer api.CheckSetProcessing(setting.Function, setting.Function, setting.Function, false)
@@ -736,6 +735,7 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 	case model.Bybit, model.OKEX:
 		tickLimit = 40
 	}
+	million := time.Now().UnixMilli()
 	if int(million)-tick.Ts > tickLimit {
 		return
 	}
