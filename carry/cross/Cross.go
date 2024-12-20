@@ -110,6 +110,7 @@ func createFromPosition(account *model.Account, setting *model.Setting, valueLim
 		limitAmount = math.Min(cm.accountValueInU/5, cm.collateralsAvailable) / price
 		availableAmount = cm.collateralsAvailable / price
 	} else {
+		util.Log(util.LogLevelError, fmt.Sprintf(`do revert true %s %s price 0`, setting.Market, setting.Symbol))
 		doRevert = true
 	}
 	carryStatus = &CarryStatus{isSpot: false, market: setting.Market, symbol: setting.Symbol, account: account,
@@ -145,16 +146,20 @@ func createFromPosition(account *model.Account, setting *model.Setting, valueLim
 	switch setting.Market {
 	case model.OKEX, model.Gate:
 		if cm.mmr < 1.5 {
+			util.Log(util.LogLevelError, fmt.Sprintf(`do revert true %s %s mmr %f`, setting.Market, setting.Symbol, cm.mmr))
 			doRevert = true
 		}
 	case model.Bybit, model.BitgetPerp, model.BinancePerp:
 		if cm.mmr > 0.66 {
+			util.Log(util.LogLevelError, fmt.Sprintf(`do revert true %s %s mmr %f`, setting.Market, setting.Symbol, cm.mmr))
 			doRevert = true
 		}
 	}
 	if cm.contractValueInU/cm.accountValueInU > rateLimitPosition || valueInUsd > valueLimit ||
 		valueInUsd/cm.accountValueInU > rateLimitHolding ||
 		(setting.Market == model.BitgetPerp && len(cm.positions) > BitgetPosLimit) {
+		util.Log(util.LogLevelError, fmt.Sprintf(`do revert true %s %s value big %f %f %f %f %f %f`,
+			setting.Market, setting.Symbol, cm.contractValueInU, cm.accountValueInU, rateLimitPosition, valueInUsd, valueLimit, rateLimitHolding))
 		doRevert = true
 	}
 	return carryStatus, doRevert
@@ -179,6 +184,7 @@ func createFromBalance(account *model.Account, setting *model.Setting, valueLimi
 		limitBuy = math.Min(sm.availableU/5, sm.accountValueInU/15) / price
 		availableBuy = sm.availableU / price
 	} else {
+		util.Log(util.LogLevelError, fmt.Sprintf(`do revert true %s %s price 0`, setting.Market, setting.Symbol))
 		doRevert = true
 	}
 	carryStatus = &CarryStatus{isSpot: true, market: setting.Market, symbol: setting.Symbol, account: account,
@@ -215,6 +221,10 @@ func createFromBalance(account *model.Account, setting *model.Setting, valueLimi
 		doRevert = true
 	} else if setting.Market == model.Gate && sm.collateral != nil && sm.collateral.Rate < 1.5 {
 		doRevert = true
+	}
+	if doRevert {
+		util.Log(util.LogLevelError, fmt.Sprintf(`do revert true %s %s value big balance %f %f %f %#v %f %f`,
+			setting.Market, setting.Symbol, sm.availableU, usdLowLine, carryStatus.RateInAll, sm.balances[setting.Symbol], valueLimit, sm.collateral.Rate))
 	}
 	return carryStatus, doRevert
 }

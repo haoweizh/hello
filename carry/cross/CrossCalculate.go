@@ -134,20 +134,20 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarrySta
 		if carryStatus.setting.Valid || carryStatusRelate.setting.Valid {
 			util.Log(util.LogLevelError, fmt.Sprintf(`possible mismatch coin %s %s %s %s score %f %f`,
 				carryStatus.market, carryStatus.symbol, carryStatusRelate.market, carryStatusRelate.symbol, score, scoreRelate))
+			carryStatus.setting.Valid = false
+			carryStatusRelate.setting.Valid = false
+			carryStatus.setting.MarketRelated = fmt.Sprintf(`价差过大 %s %s %d‰ %d‰`,
+				carryStatusRelate.market, carryStatusRelate.symbol, int(1000*score), int(1000*scoreRelate))
+			carryStatusRelate.setting.MarketRelated = fmt.Sprintf(`价差过大 %s %s %d‰ %d‰`,
+				carryStatus.market, carryStatus.symbol, int(1000*scoreRelate), int(1000*score))
 		}
-		carryStatus.setting.Valid = false
-		carryStatusRelate.setting.Valid = false
-		carryStatus.setting.MarketRelated = fmt.Sprintf(`价差过大 %s %s %f %f`, carryStatusRelate.market, carryStatusRelate.symbol, score, scoreRelate)
-		carryStatusRelate.setting.MarketRelated = fmt.Sprintf(`价差过大 %s %s %f %f`, carryStatus.market, carryStatus.symbol, scoreRelate, score)
 		return nil, nil, 0, 0, 0, nil, nil
 	}
 	return statusBuy, statusSell, amount, priceBuy, priceSell, tickBuy, tickSell
 }
 
 func checkScoreLimit(market, symbol, marketRelate, symbolRelate string, score, scoreRelate float64) (invalid bool) {
-	if (score > 0.3 || scoreRelate > 0.3) ||
-		((score > 0.07 || scoreRelate > 0.07) && (market == model.Gate || marketRelate == model.Gate)) ||
-		((score > 0.1 || scoreRelate > 0.1) && (!isValidSymbol(market, symbol) || !isValidSymbol(marketRelate, symbolRelate))) {
+	if score > 0.07 || scoreRelate > 0.07 {
 		invalid = true
 	}
 	checkKey := fmt.Sprintf(`%s_%s_%s_%s`, market, symbol, marketRelate, symbolRelate)
