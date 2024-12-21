@@ -762,27 +762,29 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 			statusBuy, statusSell, amount, priceBuy, priceSell, tickBuy, tickSell :=
 				calcAmount(i, setting.Coin, status.(*CarryStatus), statusRelate.(*CarryStatus), tick, tickRelate)
 			if amount > 0 {
-				placeBuyStr := fmt.Sprintf(`%s_%s_%s`, statusBuy.market, statusBuy.symbol, model.OrderSideBuy)
-				placeSellStr := fmt.Sprintf(`%s_%s_%s`, statusSell.market, statusSell.symbol, model.OrderSideSell)
-				placeBuyValue := fmt.Sprintf(`%f_%f`, tickBuy.Asks[0].Price, tickBuy.Asks[0].Amount)
-				placeSellValue := fmt.Sprintf(`%f_%f`, tickSell.Bids[0].Price, tickSell.Bids[0].Amount)
-				value, ok := placeTick.Load(placeBuyStr)
-				if ok && value != nil && value.(string) == placeBuyValue {
-					util.Log(util.LogLevelInfo, fmt.Sprintf(`tick static %s %s`, placeBuyStr, placeBuyValue))
-					return
-				}
-				value, ok = placeTick.Load(placeSellStr)
-				if ok && value != nil && value.(string) == placeSellValue {
-					util.Log(util.LogLevelInfo, fmt.Sprintf(`tick static %s %s`, placeSellStr, placeSellValue))
-					return
-				}
+				//placeBuyStr := fmt.Sprintf(`%s_%s_%s`, statusBuy.market, statusBuy.symbol, model.OrderSideBuy)
+				//placeSellStr := fmt.Sprintf(`%s_%s_%s`, statusSell.market, statusSell.symbol, model.OrderSideSell)
+				//placeBuyValue := fmt.Sprintf(`tick status %s %s %f_%f`, tickBuy.Asks[0].Market, tickBuy.Asks[0].Symbol, tickBuy.Asks[0].Price, tickBuy.Asks[0].Amount)
+				//placeSellValue := fmt.Sprintf(`tick status %s %s %f_%f`, tickSell.Bids[0].Market, tickSell.Bids[0].Symbol, tickSell.Bids[0].Price, tickSell.Bids[0].Amount)
+				//value, ok := placeTick.Load(placeBuyStr)
+				//if ok && value != nil && value.(string) == placeBuyValue {
+				//	util.Log(util.LogLevelInfo, fmt.Sprintf(`tick static %s %s`, placeBuyStr, placeBuyValue))
+				//	return
+				//}
+				//value, ok = placeTick.Load(placeSellStr)
+				//if ok && value != nil && value.(string) == placeSellValue {
+				//	util.Log(util.LogLevelInfo, fmt.Sprintf(`tick static %s %s`, placeSellStr, placeSellValue))
+				//	return
+				//}
 				nowTs := time.Now().UnixMilli()
-				util.Log(util.LogLevelInfo, fmt.Sprintf(`time mark %d %s %s %d %s %d`, time.Now().UnixMilli(), setting.Symbol,
-					tick.Bids[0].Market, nowTs-int64(tick.Ts), tickRelate.Bids[0].Market, nowTs-int64(tickRelate.Ts)))
+				util.Log(util.LogLevelInfo, fmt.Sprintf(`time mark %d %s status %s tick %s %f = %f %d <- status %s tick %s %f = %f %d`,
+					time.Now().UnixMilli(), setting.Symbol,
+					statusBuy.market, tickBuy.Asks[0].Market, tickBuy.Asks[0].Price, priceBuy, nowTs-int64(tickBuy.Ts),
+					statusSell.market, tickSell.Bids[0].Market, tickSell.Bids[0].Price, priceSell, nowTs-int64(tickRelate.Ts)))
 				placeCross(statusBuy, statusSell, priceBuy, priceSell, amount)
-				util.Log(util.LogLevelInfo, fmt.Sprintf(`%s %s %s %s`, placeBuyStr, placeBuyValue, placeSellStr, placeSellValue))
-				placeTick.Store(placeBuyStr, placeBuyValue)
-				placeTick.Store(placeSellStr, placeSellValue)
+				//util.Log(util.LogLevelInfo, fmt.Sprintf(`%s %s %s %s`, placeBuyStr, placeBuyValue, placeSellStr, placeSellValue))
+				//placeTick.Store(placeBuyStr, placeBuyValue)
+				//placeTick.Store(placeSellStr, placeSellValue)
 				return
 			}
 		}
