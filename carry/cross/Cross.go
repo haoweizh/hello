@@ -800,7 +800,7 @@ func breakMarkPrice(account *model.Account, setting *model.Setting, price float6
 	if marketInfo != nil && orderSide == model.OrderSideBuy && marketInfo.BuyLimitPriceRatio > 0 {
 		markPriceInfo := model.AppEnvironment.GetMarkPriceInfo(setting.Symbol, setting.Market)
 		if markPriceInfo == nil {
-			util.Log(util.LogLevelError, fmt.Sprintf(
+			util.LogLess(util.LogLevelError, fmt.Sprintf(
 				"币种：%s 市场 %s 有限价条件，但是没有标记价格", setting.Symbol, setting.Market))
 			api.GetMarkPrice(account, setting.Market, setting.Symbol)
 			return true
@@ -815,7 +815,7 @@ func breakMarkPrice(account *model.Account, setting *model.Setting, price float6
 	} else if marketInfo != nil && orderSide == model.OrderSideSell && marketInfo.SellLimitPriceRatio > 0 {
 		markPriceInfo := model.AppEnvironment.GetMarkPriceInfo(setting.Symbol, setting.Market)
 		if markPriceInfo == nil {
-			util.Log(util.LogLevelError, fmt.Sprintf("币种：%s 市场 %s 有限价条件，但是没有标记价格", setting.Symbol, setting.Market))
+			util.LogLess(util.LogLevelError, fmt.Sprintf("币种：%s 市场 %s 有限价条件，但是没有标记价格", setting.Symbol, setting.Market))
 			api.GetMarkPrice(account, setting.Market, setting.Symbol)
 			return true
 		}
