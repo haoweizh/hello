@@ -1121,42 +1121,45 @@ var PostOrderCross = func(order *model.Order) {
 		addLastCarry(order, setting)
 		addCarryResult(account.Key, order.Market, ``, true)
 	} else {
-		unknownFail := true
-		if account != nil {
-			status, ok := util.LoadSyncMap(carryStatusMap, setting.Coin, setting.Market, setting.Symbol, account.Key)
-			switch order.Market {
-			case model.OKEX:
-				if InsufficientCodeOKEX[order.ErrCode] && setting != nil {
-					util.Log(util.LogLevelInfo, fmt.Sprintf(
-						`reset %s trade max with %s account index %d`, order.Market, order.ErrCode, order.AccountIndex))
-					getMax, maxBuy, maxSell := api.GetTradeMaxOKEX(account.Key, account.Secret, setting.Symbol, 0)
-					if getMax && ok && status != nil {
-						status.(*CarryStatus).LimitSell = math.Min(status.(*CarryStatus).LimitSell, maxSell)
-						status.(*CarryStatus).LimitBuy = math.Min(status.(*CarryStatus).LimitBuy, maxBuy)
-					}
-					unknownFail = false
-				}
-			case model.BinancePerp, model.BinanceSpot:
-				if strings.Contains(InsufficientCodeBinance, order.ErrCode) {
-					util.Log(util.LogLevelError, fmt.Sprintf(
-						`reset binance trade max with %s account index %d`, order.ErrCode, order.AccountIndex))
-					spotMarkets.Delete(account.Key)
-					contractMarkets.Delete(account.Key)
-					initStatus(account, setting)
-					unknownFail = false
-				}
-			}
-			util.Log(util.LogLevelInfo, fmt.Sprintf(
-				`set 1 trade line after fail %s %s %s`, setting.Market, setting.Symbol, order.OrderSide))
-			if status != nil {
-				initTradeLine(account, setting, status.(*CarryStatus), true)
-			}
-		}
-		if unknownFail {
-			addCarryResult(account.Key, order.Market, order.ErrCode, false)
-		} else {
-			addCarryResult(account.Key, order.Market, ``, true)
-		}
+		setting.Valid = false
+		setting.MarketRelated = fmt.Sprintf(`下单失败 %s %s %s`, order.OrderId, order.ErrCode, time.Now().Format("2006-01-02 15:04:05"))
+		//addCarryResult(account.Key, order.Market, ``, false)
+		//unknownFail := true
+		//if account != nil {
+		//	status, ok := util.LoadSyncMap(carryStatusMap, setting.Coin, setting.Market, setting.Symbol, account.Key)
+		//	switch order.Market {
+		//	case model.OKEX:
+		//		if InsufficientCodeOKEX[order.ErrCode] && setting != nil {
+		//			util.Log(util.LogLevelInfo, fmt.Sprintf(
+		//				`reset %s trade max with %s account index %d`, order.Market, order.ErrCode, order.AccountIndex))
+		//			getMax, maxBuy, maxSell := api.GetTradeMaxOKEX(account.Key, account.Secret, setting.Symbol, 0)
+		//			if getMax && ok && status != nil {
+		//				status.(*CarryStatus).LimitSell = math.Min(status.(*CarryStatus).LimitSell, maxSell)
+		//				status.(*CarryStatus).LimitBuy = math.Min(status.(*CarryStatus).LimitBuy, maxBuy)
+		//			}
+		//			unknownFail = false
+		//		}
+		//	case model.BinancePerp, model.BinanceSpot:
+		//		if strings.Contains(InsufficientCodeBinance, order.ErrCode) {
+		//			util.Log(util.LogLevelError, fmt.Sprintf(
+		//				`reset binance trade max with %s account index %d`, order.ErrCode, order.AccountIndex))
+		//			spotMarkets.Delete(account.Key)
+		//			contractMarkets.Delete(account.Key)
+		//			initStatus(account, setting)
+		//			unknownFail = false
+		//		}
+		//	}
+		//	util.Log(util.LogLevelInfo, fmt.Sprintf(
+		//		`set 1 trade line after fail %s %s %s`, setting.Market, setting.Symbol, order.OrderSide))
+		//	if status != nil {
+		//		initTradeLine(account, setting, status.(*CarryStatus), true)
+		//	}
+		//}
+		//if unknownFail {
+		//	addCarryResult(account.Key, order.Market, order.ErrCode, false)
+		//} else {
+		//	addCarryResult(account.Key, order.Market, ``, true)
+		//}
 	}
 }
 
