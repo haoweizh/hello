@@ -474,7 +474,9 @@ func holdPage(c *gin.Context) {
 				strconv.FormatFloat(holdingSpot, 'f', 0, 64),
 				strconv.FormatFloat(holdingFuture, 'f', 0, 64),
 				strconv.FormatFloat(unrealizedPnl, 'f', 0, 64)})
-			inAll[0] += contractAccountValue - keepInU
+			if account.Market != model.BinanceSpot && account.Market != model.BitgetSpot {
+				inAll[0] += contractAccountValue - keepInU
+			}
 			// 统一账户不算现货总价值
 			if !account.IsUnified && account.Market != model.BinancePerp && account.Market != model.BitgetPerp {
 				inAll[0] += inAllSpot
