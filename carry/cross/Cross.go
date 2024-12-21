@@ -522,9 +522,9 @@ func getHolding(statuses []*CarryStatus) (bids, asks model.Ticks, bidStatus, ask
 		if !getTick || !getFunding || rate == nil {
 			continue
 		}
-		bids = append(bids, model.Tick{Market: tick.Bids[0].Market, Symbol: tick.Bids[0].Symbol,
+		bids = append(bids, model.Tick{Ts: tick.Ts, Market: tick.Bids[0].Market, Symbol: tick.Bids[0].Symbol,
 			Amount: tick.Bids[0].Amount, Price: tick.Bids[0].Price * (1 + rate.Rate)})
-		asks = append(asks, model.Tick{Market: tick.Asks[0].Market, Symbol: tick.Asks[0].Symbol,
+		asks = append(asks, model.Tick{Ts: tick.Ts, Market: tick.Asks[0].Market, Symbol: tick.Asks[0].Symbol,
 			Amount: tick.Asks[0].Amount, Price: tick.Asks[0].Price * (1 + rate.Rate)})
 		bidStatus[fmt.Sprintf(`%s_%s`, status.market, status.symbol)] = status
 		askStatus[fmt.Sprintf(`%s_%s`, status.market, status.symbol)] = status
@@ -598,8 +598,8 @@ func equalCoin(coin string, statuses []*CarryStatus) (isEqual bool, holding floa
 					continue
 				}
 			}
-			util.Log(util.LogLevelInfo, fmt.Sprintf(`need equal holding %s %f list %s equal status %#v`,
-				coin, holding, holdStr, equalStatus))
+			util.Log(util.LogLevelInfo, fmt.Sprintf(`need equal holding %s %f list %s tick ts %d equal status %#v`,
+				coin, holding, holdStr, time.Now().UnixMilli()-int64(bids[i].Ts), equalStatus))
 			holding += placeEqual(equalStatus, price, amount, model.OrderSideSell) * equalStatus.setting.GridAmount
 		}
 	}
@@ -634,8 +634,8 @@ func equalCoin(coin string, statuses []*CarryStatus) (isEqual bool, holding floa
 			} else {
 				continue
 			}
-			util.Log(util.LogLevelInfo, fmt.Sprintf(`need equal holding %s %f list %s equal status %#v`,
-				coin, holding, holdStr, equalStatus))
+			util.Log(util.LogLevelInfo, fmt.Sprintf(`need equal holding %s %f list %s tick ts %d equal status %#v`,
+				coin, holding, holdStr, time.Now().UnixMilli()-int64(asks[i].Ts), equalStatus))
 			holding += placeEqual(equalStatus, price, amount, model.OrderSideBuy) * equalStatus.setting.GridAmount
 		}
 	}

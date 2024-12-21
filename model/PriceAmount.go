@@ -6,6 +6,7 @@ type Tick struct {
 	Id                  string
 	Market, Symbol      string
 	PriceStr, AmountStr string
+	Ts                  int // unix time in million-seconds
 	Price, Amount       float64
 }
 
