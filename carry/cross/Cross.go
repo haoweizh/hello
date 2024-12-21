@@ -744,7 +744,7 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 		if !tickGet || setting.ID == settingRelate.ID || (!model.NonRTTicker[tick.Bids[0].Market] && model.NonRTTicker[tickRelate.Bids[0].Market]) || !settingRelate.Valid {
 			continue
 		}
-		tickLimit += 10000
+		tickLimit += 1000
 		if int(million)-tickRelate.Ts > tickLimit {
 			continue
 		}
@@ -777,10 +777,10 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 				//	return
 				//}
 				nowTs := time.Now().UnixMilli()
-				util.Log(util.LogLevelInfo, fmt.Sprintf(`time mark %d %s status %s tick %s %f = %f %d <- status %s tick %s %f = %f %d`,
-					time.Now().UnixMilli(), setting.Symbol,
-					statusBuy.market, tickBuy.Asks[0].Market, tickBuy.Asks[0].Price, priceBuy, nowTs-int64(tickBuy.Ts),
-					statusSell.market, tickSell.Bids[0].Market, tickSell.Bids[0].Price, priceSell, nowTs-int64(tickRelate.Ts)))
+				util.Log(util.LogLevelInfo, fmt.Sprintf(`time mark %s amt %f status %s %s tick %s %f = %f %f %d <- status %s %s tick %s %f = %f %f %d`,
+					time.Now().String(), amount,
+					statusBuy.symbol, statusBuy.market, tickBuy.Asks[0].Market, tickBuy.Asks[0].Price, priceBuy, tickBuy.Asks[0].Amount, nowTs-int64(tickBuy.Ts),
+					statusSell.symbol, statusSell.market, tickSell.Bids[0].Market, tickSell.Bids[0].Price, priceSell, tickSell.Bids[0].Amount, nowTs-int64(tickSell.Ts)))
 				placeCross(statusBuy, statusSell, priceBuy, priceSell, amount)
 				//util.Log(util.LogLevelInfo, fmt.Sprintf(`%s %s %s %s`, placeBuyStr, placeBuyValue, placeSellStr, placeSellValue))
 				//placeTick.Store(placeBuyStr, placeBuyValue)
