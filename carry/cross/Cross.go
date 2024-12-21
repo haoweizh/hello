@@ -419,7 +419,7 @@ func ClearCross() {
 		}
 		api.CheckSetProcessing(model.FunctionCross, model.FunctionCross, model.FunctionCross, false)
 		equaling = false
-		time.Sleep(time.Minute * 30)
+		time.Sleep(time.Minute * 60)
 	}
 }
 
