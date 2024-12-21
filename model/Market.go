@@ -215,44 +215,13 @@ func (environment *Environment) SetBidAsk(market, symbol string, bidAsk *BidAsk)
 		bidAsk.Asks[0].Price == 0 || bidAsk.Asks[0].Amount == 0 {
 		return false
 	}
-	//if market == BinanceSpot && symbol == `PENGU_USDT` {
-	//	ts := time.Now().UnixMilli()
-	//	msg := fmt.Sprintf(`test delay %d local %d remote %d delay %d [%f ... %f] [%f %f]`,
-	//		len(bidAsk.Bids), ts, bidAsk.Ts, ts-int64(bidAsk.Ts), bidAsk.Bids[0].Price, bidAsk.Asks[0].Price, bidAsk.Bids[0].Amount, bidAsk.Asks[0].Amount)
-	//	//fmt.Println(time.Now().String() + msg)
-	//	util.LogLess(util.LogLevelDebug, msg)
-	//}
-	//_, _, coin, _ := GetFromStandard(marketName, symbol)
-	//if len(coin) > 4 && coin[:4] == `1000` {
-	//	settings := api.GetSettingsFromCoin(coin[4:])
-	//	if settings != nil && len(settings) > 0 {
-	//		for i := 0; i < bidAsk.Bids.Len(); i++ {
-	//			bidAsk.Bids[0].PriceDiv1000 = bidAsk.Bids[0].Price / 1000
-	//			bidAsk.Bids[0].AmountMul1000 = bidAsk.Bids[0].Amount * 1000
-	//		}
-	//		for i := 0; i < bidAsk.Asks.Len(); i++ {
-	//			bidAsk.Asks[0].PriceDiv1000 = bidAsk.Asks[0].Price / 1000
-	//			bidAsk.Asks[0].AmountMul1000 = bidAsk.Asks[0].Amount * 1000
-	//		}
-	//	}
-	//}
 	last, _ := util.LoadSyncMap(&environment.bidAsks, market, symbol)
 	if last == nil || last.(*BidAsk).Ts <= bidAsk.Ts {
-		//if market == BinancePerp {
-		//	ts := fmt.Sprintf(`%s %d %d`, symbol, time.Now().Hour(), time.Now().Minute())
-		//	minBidAsk, _ := testConn.Load(ts)
-		//	if minBidAsk == nil {
-		//		testConn.Store(ts, bidAsk)
-		//		util.Info(fmt.Sprintf(`set bn tick %s %d`, symbol, bidAsk.Ts))
-		//	}
-		//}
 		if last != nil {
 			go AppMetric.AddTick(market, symbol, util.GetNow(), last.(*BidAsk), bidAsk)
 		}
 		util.StoreSyncMap(&environment.bidAsks, bidAsk, market, symbol)
 		return true
-	} else {
-		//	util.Info(fmt.Sprintf(`8 test return no set old tick %s %d <= %d`, symbol, last.(*BidAsk).Ts, bidAsk.Ts))
 	}
 	return false
 }

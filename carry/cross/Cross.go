@@ -777,7 +777,7 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 				//	return
 				//}
 				nowTs := time.Now().UnixMilli()
-				util.Log(util.LogLevelInfo, fmt.Sprintf(`time mark %s amt %f status %s %s tick %s %f = %f %f %d <- status %s %s tick %s %f = %f %f %d`,
+				util.Log(util.LogLevelInfo, fmt.Sprintf(`time mark %s amt %e status %s %s tick %s %e = %e %e %d <- status %s %s tick %s %e = %e %e %d`,
 					time.Now().String(), amount,
 					statusBuy.symbol, statusBuy.market, tickBuy.Asks[0].Market, tickBuy.Asks[0].Price, priceBuy, tickBuy.Asks[0].Amount, nowTs-int64(tickBuy.Ts),
 					statusSell.symbol, statusSell.market, tickSell.Bids[0].Market, tickSell.Bids[0].Price, priceSell, tickSell.Bids[0].Amount, nowTs-int64(tickSell.Ts)))
