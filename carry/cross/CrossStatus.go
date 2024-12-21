@@ -163,6 +163,9 @@ func GetHoldings(accounts map[string]*model.Account) (holding [][]interface{}) {
 			if marketType == model.MarketTypeSpot {
 				smValue, _ := spotMarkets.Load(account.Key)
 				balance := smValue.(*spotMarket).balances[coin.(string)]
+				if setting.Coin == `STARL` {
+					util.Log(util.LogLevelInfo, fmt.Sprintf("start to STARL %v %#v", setting.Valid, balance))
+				}
 				if (balance != nil && balance.Amount > 0) || !setting.Valid {
 					if setting.Valid {
 						valid = `true`
@@ -178,6 +181,9 @@ func GetHoldings(accounts map[string]*model.Account) (holding [][]interface{}) {
 					coinHold[coin.(string)] += amount
 					coinValue[coin.(string)] += math.Round(usdValue)
 					volume[coin.(string)] += math.Abs(usdValue)
+					if coin.(string) == `STARL` {
+						util.Log(util.LogLevelInfo, fmt.Sprintf("end to STARL %v %#v", coin, coinHold[coin.(string)]))
+					}
 				}
 			} else if marketType == model.MarketTypePerp {
 				cm, _ := contractMarkets.Load(account.Key)
