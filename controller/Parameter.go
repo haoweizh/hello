@@ -457,17 +457,17 @@ func holdPage(c *gin.Context) {
 		if account != nil {
 			inAllSpot, contractAccountValue, holdingSpot, holdingFuture, unrealizedPnl, keepInU :=
 				cross.GetCrossMarketValue(account.Key, account.Secret, account.Market, force == `true`)
-			duplicated := false
-			for _, value := range marketValues {
-				if (strings.Contains(value[0], `binance`) && strings.Contains(account.Market, `binance`)) ||
-					(strings.Contains(value[0], `bitget`) && strings.Contains(account.Market, `bitget`)) {
-					duplicated = true
-					break
-				}
-			}
-			if duplicated {
-				continue
-			}
+			//duplicated := false
+			//for _, value := range marketValues {
+			//	if (strings.Contains(value[0], `binance`) && strings.Contains(account.Market, `binance`)) ||
+			//		(strings.Contains(value[0], `bitget`) && strings.Contains(account.Market, `bitget`)) {
+			//		duplicated = true
+			//		break
+			//	}
+			//}
+			//if duplicated {
+			//	continue
+			//}
 			marketValues = append(marketValues, []string{account.Market,
 				strconv.FormatFloat(inAllSpot, 'f', 0, 64),
 				strconv.FormatFloat(contractAccountValue, 'f', 0, 64),
