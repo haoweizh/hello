@@ -142,6 +142,8 @@ func _(coin string, closeLine float64) (tradeLineExtra *TradeLineExtra) {
 	return
 }
 
+var smTime, cmTime time.Time
+
 func GetHoldings(accounts map[string]*model.Account) (holding [][]interface{}) {
 	holding = make([][]interface{}, 0)
 	coinHold := make(map[string]float64)
@@ -162,6 +164,11 @@ func GetHoldings(accounts map[string]*model.Account) (holding [][]interface{}) {
 			_, marketType, _, _ := model.GetFromStandard(setting.Market, setting.Symbol)
 			if marketType == model.MarketTypeSpot {
 				smValue, _ := spotMarkets.Load(account.Key)
+				if smValue == nil || time.Now().Unix()-smTime.Unix() > 300 {
+					smValue = createSpotMarket(account.Key, account.Secret, setting.Market)
+					spotMarkets.Store(account.Key, smValue)
+					smTime = time.Now()
+				}
 				balance := smValue.(*spotMarket).balances[setting.Symbol]
 				if (balance != nil && balance.Amount > 0) || !setting.Valid {
 					if setting.Valid {
@@ -181,6 +188,11 @@ func GetHoldings(accounts map[string]*model.Account) (holding [][]interface{}) {
 				}
 			} else if marketType == model.MarketTypePerp {
 				cm, _ := contractMarkets.Load(account.Key)
+				if cm == nil || time.Now().Unix()-cmTime.Unix() > 300 {
+					cm = createContractMarket(account.Key, account.Secret, setting.Market)
+					contractMarkets.Store(account.Key, cm)
+					cmTime = time.Now()
+				}
 				position := cm.(*contractMarket).positions[setting.Symbol]
 				if (position != nil && position.Holding != 0) || !setting.Valid {
 					if setting.Valid {
