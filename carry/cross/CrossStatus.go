@@ -165,6 +165,13 @@ func GetHoldings(accounts map[string]*model.Account) (holding [][]interface{}) {
 				balance := smValue.(*spotMarket).balances[setting.Coin]
 				if setting.Coin == `STARL` {
 					util.Log(util.LogLevelInfo, fmt.Sprintf("start to STARL %v %v %#v", setting.Coin, setting.Valid, balance))
+					i := 0
+					for _, bal := range smValue.(*spotMarket).balances {
+						i++
+						if i < 10 {
+							util.Log(util.LogLevelInfo, fmt.Sprintf("balance %#v", bal))
+						}
+					}
 				}
 				if (balance != nil && balance.Amount > 0) || !setting.Valid {
 					if setting.Valid {
