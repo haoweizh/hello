@@ -715,12 +715,6 @@ func placeEqual(status *CarryStatus, price, amount float64, orderSide string) (d
 // setting.GridAmount 用作不同名称的搬砖时，symbol的交易量对应的coin的交易量
 // setting.PriceX 用作不同名称的搬砖时，symbol的交易价格对应的coin的交易价格
 var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
-	// 所有cross之间互斥
-	if !api.CheckSetProcessing(model.FunctionCross, model.FunctionCross, model.FunctionCross, true) {
-		defer api.CheckSetProcessing(model.FunctionCross, model.FunctionCross, model.FunctionCross, false)
-	} else {
-		return
-	}
 	if !doCross && model.AppConfig.Handle == `1` {
 		go ClearCross()
 		go continueComp()
@@ -796,7 +790,13 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 					time.Now().String(), amount,
 					statusBuy.symbol, statusBuy.market, tickBuy.Asks[0].Market, tickBuy.Asks[0].Price, priceBuy, tickBuy.Asks[0].Amount, nowTs-int64(tickBuy.Ts),
 					statusSell.symbol, statusSell.market, tickSell.Bids[0].Market, tickSell.Bids[0].Price, priceSell, tickSell.Bids[0].Amount, nowTs-int64(tickSell.Ts)))
-				placeCross(statusBuy, statusSell, priceBuy, priceSell, amount)
+				// 所有cross之间互斥
+				if !api.CheckSetProcessing(model.FunctionCross, model.FunctionCross, model.FunctionCross, true) {
+					placeCross(statusBuy, statusSell, priceBuy, priceSell, amount)
+					api.CheckSetProcessing(model.FunctionCross, model.FunctionCross, model.FunctionCross, false)
+				} else {
+					util.Log(util.LogLevelInfo, `time mark other processing ignore cross`)
+				}
 				//util.Log(util.LogLevelInfo, fmt.Sprintf(`%s %s %s %s`, placeBuyStr, placeBuyValue, placeSellStr, placeSellValue))
 				//placeTick.Store(placeBuyStr, placeBuyValue)
 				//placeTick.Store(placeSellStr, placeSellValue)
