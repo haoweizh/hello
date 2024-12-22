@@ -81,6 +81,7 @@ func PrepareSettings() {
 	localSymbolSettings := &sync.Map{}
 	localHandlers := &sync.Map{}
 	coinSettings = &sync.Map{}
+	util.Log(util.LogLevelInfo, fmt.Sprintf("Settings loaded %#v", coinSettings))
 	appSettings = []model.Setting{}
 	marketMap := make(map[string]bool)
 	model.AppDB.Where(`valid = ?`, true).Find(&appSettings)
@@ -111,21 +112,22 @@ func PrepareSettings() {
 		util.StoreSyncMap(localHandlers, functions, setting.Market, strings.TrimSpace(setting.Symbol))
 		var settings *sync.Map
 		value, ok = coinSettings.Load(setting.Function)
-		if ok {
+		if ok && value != nil {
 			settings = value.(*sync.Map)
-		}
-		if settings == nil {
+		} else {
 			settings = &sync.Map{}
+			coinSettings.Store(setting.Function, settings)
 		}
 		settingArray, _ := settings.Load(setting.Coin)
 		if settingArray == nil {
 			settingArray = make([]*model.Setting, 0)
 		}
 		settingArray = append(settingArray.([]*model.Setting), setting)
-		//util.Log(util.LogLevelInfo, fmt.Sprintf(`add setting array %s %s %s %v %d %#v`,
-		//	setting.Coin, setting.Market, setting.Symbol, setting.Valid, len(settingArray.([]*model.Setting)), setting))
+		if setting.Coin == `FIRE` || setting.MarketRelated != `` || !setting.Valid {
+			util.Log(util.LogLevelInfo, fmt.Sprintf(`add setting array under monitor %s %s %s %v %d %s`,
+				setting.Coin, setting.Market, setting.Symbol, setting.Valid, len(settingArray.([]*model.Setting)), setting.MarketRelated))
+		}
 		settings.Store(setting.Coin, settingArray)
-		coinSettings.Store(setting.Function, settings)
 		var functionMarketSettings *sync.Map
 		value, ok = util.LoadSyncMap(localSymbolSettings, setting.Function, setting.Market)
 		if ok {
