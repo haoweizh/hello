@@ -10,7 +10,7 @@ import (
 
 type Config struct {
 	Delay                                                                                            float64
-	KucoinSpot, MetricTick                                                                           bool
+	Debug, KucoinSpot, MetricTick                                                                    bool
 	KucoinRelatedKey, KucoinRelatedSecret, KucoinFutureKey, KucoinFutureSecret                       string
 	KucoinCarryClose, KucoinCarryRate, Simulation, Equal, Log                                        string
 	GateKey, GateSecret, GateCarryClose, GateCarryRate                                               string
