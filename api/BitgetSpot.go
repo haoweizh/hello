@@ -213,10 +213,6 @@ var tickHandlerBitget = func(market string, conn *model.WSConn, event []byte) {
 		return
 	}
 	symbol := bidAsk.Bids[0].Symbol
-	haveOld, old := model.AppEnvironment.GetBidAsk(market, symbol)
-	if haveOld && old.UpdateId > bidAsk.UpdateId {
-		return
-	}
 	if model.AppEnvironment.SetBidAsk(market, symbol, bidAsk) {
 		funcHandlers := GetFunctions(market, symbol)
 		if funcHandlers != nil {

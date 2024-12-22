@@ -236,10 +236,6 @@ var tickerHandler = gateWs.NewCallBack(func(msg *gateWs.UpdateMsg) {
 			Asks: []model.Tick{{Price: askPrice, Amount: askAmount, Market: model.Gate, Symbol: symbol}}}
 	}
 	markets := model.AppEnvironment
-	haveOld, old := markets.GetBidAsk(model.Gate, symbol)
-	if haveOld && old.Ts > bidAsk.Ts {
-		return
-	}
 	if markets.SetBidAsk(model.Gate, symbol, &bidAsk) {
 		funcHandlers := GetFunctions(model.Gate, symbol)
 		if funcHandlers != nil {

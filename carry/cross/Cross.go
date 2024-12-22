@@ -522,9 +522,9 @@ func getHolding(statuses []*CarryStatus) (bids, asks model.Ticks, bidStatus, ask
 		if !getTick || !getFunding || rate == nil {
 			continue
 		}
-		bids = append(bids, model.Tick{Ts: tick.Ts, Market: tick.Bids[0].Market, Symbol: tick.Bids[0].Symbol,
+		bids = append(bids, model.Tick{Ts: int64(tick.Ts), Market: tick.Bids[0].Market, Symbol: tick.Bids[0].Symbol,
 			Amount: tick.Bids[0].Amount, Price: tick.Bids[0].Price * (1 + rate.Rate)})
-		asks = append(asks, model.Tick{Ts: tick.Ts, Market: tick.Asks[0].Market, Symbol: tick.Asks[0].Symbol,
+		asks = append(asks, model.Tick{Ts: int64(tick.Ts), Market: tick.Asks[0].Market, Symbol: tick.Asks[0].Symbol,
 			Amount: tick.Asks[0].Amount, Price: tick.Asks[0].Price * (1 + rate.Rate)})
 		bidStatus[fmt.Sprintf(`%s_%s`, status.market, status.symbol)] = status
 		askStatus[fmt.Sprintf(`%s_%s`, status.market, status.symbol)] = status
@@ -599,7 +599,7 @@ func equalCoin(coin string, statuses []*CarryStatus) (isEqual bool, holding floa
 				}
 			}
 			util.Log(util.LogLevelInfo, fmt.Sprintf(`need equal holding %s %f list %s tick ts %d equal status %#v`,
-				coin, holding, holdStr, time.Now().UnixMilli()-int64(bids[i].Ts), equalStatus))
+				coin, holding, holdStr, time.Now().UnixMilli()-bids[i].Ts, equalStatus))
 			holding += placeEqual(equalStatus, price, amount, model.OrderSideSell) * equalStatus.setting.GridAmount
 		}
 	}
@@ -635,7 +635,7 @@ func equalCoin(coin string, statuses []*CarryStatus) (isEqual bool, holding floa
 				continue
 			}
 			util.Log(util.LogLevelInfo, fmt.Sprintf(`need equal holding %s %f list %s tick ts %d equal status %#v`,
-				coin, holding, holdStr, time.Now().UnixMilli()-int64(asks[i].Ts), equalStatus))
+				coin, holding, holdStr, time.Now().UnixMilli()-asks[i].Ts, equalStatus))
 			holding += placeEqual(equalStatus, price, amount, model.OrderSideBuy) * equalStatus.setting.GridAmount
 		}
 	}
@@ -923,8 +923,9 @@ func placeCross(statusBuy, statusSell *CarryStatus, priceBuy, priceSell, amount 
 		go api.PlaceOrder(statusSell.account.Key, statusSell.account.Secret, model.OrderSideSell, model.OrderTypeLimit, statusSell.market,
 			statusSell.symbol, ``, model.FunctionCross, priceSell*(1-crossSlide), priceSell*(1-crossSlide), amountSell, true, PostOrderCross)
 	}
-	placeStatus(statusBuy, priceBuy, amountBuy)
-	placeStatus(statusSell, priceSell, -1*amountSell)
+	// 按照比实际下单数量大的数量计入，以免计入数量太少造成未来的可卖不足
+	placeStatus(statusBuy, priceBuy, amountBuy*(1+compSlide))
+	placeStatus(statusSell, priceSell, -1*amountSell*(1+compSlide))
 	time.Sleep(time.Millisecond * 100)
 }
 

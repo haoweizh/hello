@@ -161,10 +161,6 @@ var wsHandlerBinanceSpot = func(market string, conn *model.WSConn, event []byte)
 	if !success {
 		return
 	}
-	haveOld, old := model.AppEnvironment.GetBidAsk(market, standardSymbol)
-	if haveOld && old.UpdateId > updateId {
-		return
-	}
 	if strings.Contains(subscribe, `@depth`) {
 		handleDepthBinance(model.AppEnvironment, result, market, standardSymbol, updateId)
 	} else if strings.Contains(subscribe, `@bookTicker`) {
@@ -211,10 +207,6 @@ func handleTickerBinance(environment *model.Environment, json *simplejson.Json, 
 		bidAsk := model.BidAsk{Ts: ts, TsReceived: now, UpdateId: updateId,
 			Bids: []model.Tick{{Price: bidPrice, Amount: bidAmount, Market: market, Symbol: standardSymbol}},
 			Asks: []model.Tick{{Price: askPrice, Amount: askAmount, Market: market, Symbol: standardSymbol}}}
-		haveOld, old := environment.GetBidAsk(market, standardSymbol)
-		if haveOld && old.UpdateId > bidAsk.UpdateId {
-			return
-		}
 		if environment.SetBidAsk(market, standardSymbol, &bidAsk) {
 			funcHandlers := GetFunctions(market, standardSymbol)
 			if funcHandlers != nil {
