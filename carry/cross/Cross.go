@@ -744,7 +744,7 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 		if !tickGet || setting.ID == settingRelate.ID || (!model.NonRTTicker[tick.Bids[0].Market] && model.NonRTTicker[tickRelate.Bids[0].Market]) || !settingRelate.Valid {
 			continue
 		}
-		tickLimit += 1000
+		tickLimit += 10000
 		if int(million)-tickRelate.Ts > tickLimit {
 			continue
 		}

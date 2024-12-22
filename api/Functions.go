@@ -938,10 +938,15 @@ func InitCrossMarketInfos(markets []string) {
 	var settingsDb []*model.Setting
 	model.AppDB.Find(&settingsDb)
 	settingsDbMap := make(map[string]*model.Setting)
+	model.AppDB.Model(&settingsDb).Where(`function=?`, model.FunctionCross).Updates(map[string]interface{}{`liquidated`: true})
 	for _, setting := range settingsDb {
+		info, _ := util.LoadSyncMap(model.MarketInfos, setting.Market, setting.Symbol)
+		if info == nil {
+			model.AppDB.Model(&settingsDb).Where(`function=? and market=? and symbol=?`, model.FunctionCross, setting.Market, setting.Symbol).
+				Updates(map[string]interface{}{`liquidated`: false})
+		}
 		settingsDbMap[fmt.Sprintf(`%s_%s_%s`, setting.Function, setting.Market, setting.Symbol)] = setting
 	}
-	//model.AppDB.Model(&settingsDb).Where(`function=?`, model.FunctionCross).Updates(map[string]interface{}{`valid`: false})
 	for coin, infos := range infoPool {
 		util.Log(util.LogLevelInfo, fmt.Sprintf(`handle coin %s %d`, coin, len(infos)))
 		scoreOpen := 0.015
@@ -961,13 +966,6 @@ func InitCrossMarketInfos(markets []string) {
 						PriceX:           1, GridAmount: 1}
 					util.Log(util.LogLevelInfo, fmt.Sprintf(`save setting %s %s %s %#v`, info.Market, info.Name, coin, setting.Valid))
 					model.AppDB.Save(setting)
-				} else {
-					//model.AppDB.Model(&settingsDb).Where("market= ? and symbol= ? and function= ?",
-					//	info.Market, info.Name, model.FunctionCross).Updates(map[string]interface{}{
-					//	`valid`:              true,
-					//	`open_short_margin`:  scoreOpen,
-					//	`close_short_margin`: scoreClose})
-					//util.Log(util.LogLevelInfo, fmt.Sprintf(`update setting to valid %s %s`, info.Market, info.Name))
 				}
 			}
 		} else if len(infos) == 1 && infos[0].Name[0:2] == `10` {
