@@ -1036,7 +1036,7 @@ func handleCross(account *model.Account, order *model.Order) {
 
 func continueComp() {
 	for {
-		if !api.CheckSetProcessing(model.FunctionCross, model.FunctionCross, model.FunctionCross, true) {
+		if equaling {
 			time.Sleep(time.Second * 10)
 			continue
 		}
@@ -1102,7 +1102,6 @@ func continueComp() {
 			}
 			return true
 		})
-		api.CheckSetProcessing(model.FunctionCross, model.FunctionCross, model.FunctionCross, false)
 		time.Sleep(time.Second * 10)
 	}
 }
@@ -1165,13 +1164,6 @@ var PostOrderCross = func(order *model.Order) {
 }
 
 func compOrder(account *model.Account, order *model.Order, leftAmt float64) {
-	for {
-		if !api.CheckSetProcessing(model.FunctionCross, model.FunctionCross, model.FunctionCross, true) {
-			break
-		} else {
-			time.Sleep(time.Millisecond * 10)
-		}
-	}
 	if !equaling {
 		price := order.Price
 		_, bidAsk := model.AppEnvironment.GetBidAsk(order.Market, order.Symbol)
@@ -1194,7 +1186,6 @@ func compOrder(account *model.Account, order *model.Order, leftAmt float64) {
 		util.Log(util.LogLevelInfo, fmt.Sprintf(`comp all processing and ignore %#v`, order))
 	}
 	time.Sleep(time.Millisecond * 100)
-	api.CheckSetProcessing(model.FunctionCross, model.FunctionCross, model.FunctionCross, false)
 }
 
 // FormatCrossPair 不支持以BTC或ETH计价的交易对，只支持USD类
