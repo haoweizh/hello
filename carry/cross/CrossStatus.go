@@ -211,14 +211,12 @@ func GetHoldings(accounts map[string]*model.Account) (holding [][]interface{}) {
 			for _, balance := range sm.balances {
 				if balance != nil && balance.Amount != 0 {
 					symbol := balance.Coin + model.UniStandardTail[model.MarketTypeSpot]
-					valid := `false`
+					valid := `extra`
 					setting := api.GetSetting(model.FunctionCross, balance.Market, symbol)
 					if setting != nil {
 						continue
 					} else if api.FilterCross(balance.Market, symbol) || balance.Amount == 0 {
 						valid = `filter`
-					} else {
-						valid = `extra`
 					}
 					holding = append(holding, []interface{}{balance.Market, balance.Coin, symbol,
 						fmt.Sprintf(`%.2f`, balance.Amount), math.Round(balance.UsdValue), valid, `未纳入监管`})

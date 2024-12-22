@@ -80,7 +80,7 @@ func PrepareSettings() {
 	defer lockRefreshSetting.Unlock()
 	localSymbolSettings := &sync.Map{}
 	localHandlers := &sync.Map{}
-	localCoinSettings := &sync.Map{}
+	coinSettings = &sync.Map{}
 	appSettings = []model.Setting{}
 	marketMap := make(map[string]bool)
 	model.AppDB.Where(`valid = ?`, true).Find(&appSettings)
@@ -110,7 +110,7 @@ func PrepareSettings() {
 		}
 		util.StoreSyncMap(localHandlers, functions, setting.Market, strings.TrimSpace(setting.Symbol))
 		var settings *sync.Map
-		value, ok = localCoinSettings.Load(setting.Function)
+		value, ok = coinSettings.Load(setting.Function)
 		if ok {
 			settings = value.(*sync.Map)
 		}
@@ -125,7 +125,7 @@ func PrepareSettings() {
 		util.Log(util.LogLevelInfo, fmt.Sprintf(`add setting array %s %s %s %v %d %#v`,
 			setting.Coin, setting.Market, setting.Symbol, setting.Valid, len(settingArray.([]*model.Setting)), setting))
 		settings.Store(setting.Coin, settingArray)
-		localCoinSettings.Store(setting.Function, settings)
+		coinSettings.Store(setting.Function, settings)
 		var functionMarketSettings *sync.Map
 		value, ok = util.LoadSyncMap(localSymbolSettings, setting.Function, setting.Market)
 		if ok {
@@ -146,8 +146,7 @@ func PrepareSettings() {
 		i++
 	}
 	appMarkets = localAppMarkets
-	util.Log(util.LogLevelInfo, fmt.Sprintf(`finish loading settings from markets %#v %v -> %v`, appMarkets, coinSettings, localCoinSettings))
-	coinSettings = localCoinSettings
+	util.Log(util.LogLevelInfo, fmt.Sprintf(`finish loading settings from markets %#v %+v`, appMarkets, coinSettings))
 	handlers = localHandlers
 	symbolSettings = localSymbolSettings
 }
