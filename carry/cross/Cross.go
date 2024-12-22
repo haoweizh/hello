@@ -468,7 +468,6 @@ func equalAccount(i int, equalChan chan int, accounts map[string]*model.Account)
 	value := api.GetCoinSettings(model.FunctionCross)
 	if value != nil {
 		value.Range(func(coin, settings interface{}) bool {
-			initSuccess := true
 			equalStatuses := make([]*CarryStatus, len(settings.([]*model.Setting)))
 			for j, setting := range settings.([]*model.Setting) {
 				account := accounts[setting.Market]
@@ -476,15 +475,9 @@ func equalAccount(i int, equalChan chan int, accounts map[string]*model.Account)
 					util.Log(util.LogLevelError, `can not equal`)
 					continue
 				}
-				getPrice, _ := api.GetPriceForce(setting.Symbol, setting.Market)
-				if getPrice {
-					initSuccess = false
-					util.Log(util.LogLevelError, fmt.Sprintf(`can not equal when no price %s %s`, setting.Market, setting.Symbol))
-				} else {
-					equalStatuses[j] = initStatus(account, setting)
-				}
+				equalStatuses[j] = initStatus(account, setting)
 			}
-			for index := 0; index <= 10 && initSuccess; index++ {
+			for index := 0; index <= 10; index++ {
 				coinEqual, leftHolding, errMsg := equalCoin(coin.(string), equalStatuses)
 				if !coinEqual {
 					util.Log(util.LogLevelInfo, fmt.Sprintf(
