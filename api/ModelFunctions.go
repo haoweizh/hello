@@ -516,7 +516,6 @@ func GetCoinSettings(function string) *sync.Map {
 		util.Log(util.LogLevelError, fmt.Sprintf(`load setting GetCoinSettings %s`, function))
 		return nil
 	}
-	util.Log(util.LogLevelInfo, fmt.Sprintf(`load coin settings from %#v`, coinSettings))
 	value, ok := coinSettings.Load(function)
 	if ok {
 		return value.(*sync.Map)

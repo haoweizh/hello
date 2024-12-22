@@ -405,17 +405,10 @@ func ClearCross() {
 		if err != nil {
 			continue
 		}
-		msg := fmt.Sprintf(`comp %f cross %f`, compInU, crossInU)
+		msg := fmt.Sprintf(`comp compare cross %f %f`, compInU, crossInU)
 		util.Log(util.LogLevelInfo, msg)
 		if model.AppConfig.Handle == `1` {
-			if (compInU > 55000 && compInU/(compInU+crossInU) > 0.33) && model.AppConfig.Equal != `true` {
-				model.AppConfig.Handle = `0`
-				title := `comp too much set handle 0`
-				util.Log(util.LogLevelInfo, title)
-				api.SendMails(title, msg)
-			} else {
-				equalAccounts()
-			}
+			equalAccounts()
 		}
 		api.CheckSetProcessing(model.FunctionCross, model.FunctionCross, model.FunctionCross, false)
 		equaling = false
