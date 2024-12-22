@@ -468,6 +468,7 @@ func equalAccount(i int, equalChan chan int, accounts map[string]*model.Account)
 	value := api.GetCoinSettings(model.FunctionCross)
 	if value != nil {
 		value.Range(func(coin, settings interface{}) bool {
+			initSuccess := true
 			equalStatuses := make([]*CarryStatus, len(settings.([]*model.Setting)))
 			for j, setting := range settings.([]*model.Setting) {
 				account := accounts[setting.Market]
@@ -475,9 +476,23 @@ func equalAccount(i int, equalChan chan int, accounts map[string]*model.Account)
 					util.Log(util.LogLevelError, `can not equal`)
 					continue
 				}
-				equalStatuses[j] = initStatus(account, setting)
+				delay := 0
+				for {
+					getPrice, _ := api.GetPriceForce(setting.Symbol, setting.Market)
+					if getPrice || delay > 100 {
+						break
+					}
+					delay++
+					util.Log(util.LogLevelInfo, fmt.Sprintf(`not yet get tick for %s %s %d`, setting.Market, setting.Symbol, delay))
+					time.Sleep(time.Second * 3)
+				}
+				if delay > 100 {
+					initSuccess = false
+				} else {
+					equalStatuses[j] = initStatus(account, setting)
+				}
 			}
-			for index := 0; index <= 10; index++ {
+			for index := 0; index <= 10 && initSuccess; index++ {
 				coinEqual, leftHolding, errMsg := equalCoin(coin.(string), equalStatuses)
 				if !coinEqual {
 					util.Log(util.LogLevelInfo, fmt.Sprintf(
@@ -704,9 +719,6 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 	if !api.CheckSetProcessing(model.FunctionCross, model.FunctionCross, model.FunctionCross, true) {
 		defer api.CheckSetProcessing(model.FunctionCross, model.FunctionCross, model.FunctionCross, false)
 	} else {
-		if equaling {
-			util.LogLess(util.LogLevelInfo, fmt.Sprintf(`clear cross working exit %s %s %s`, setting.Function, setting.Market, setting.Symbol))
-		}
 		return
 	}
 	if !doCross && model.AppConfig.Handle == `1` {

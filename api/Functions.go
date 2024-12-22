@@ -409,36 +409,36 @@ func GetPriceForce(symbol, market string) (result bool, price float64) {
 	if getBidAsk && bidAsk != nil {
 		return true, bidAsk.Bids[0].Price
 	}
-	markets := GetMarkets()
-	_, _, coin, _ := model.GetFromStandard(market, symbol)
-	symbolSpot := coin + model.UniStandardTail[model.MarketTypeSpot]
-	symbolPerp := coin + model.UniStandardTail[model.MarketTypePerp]
-	for _, m := range markets {
-		getBidAsk, bidAsk = model.AppEnvironment.GetBidAsk(m, symbolSpot)
-		if getBidAsk && bidAsk != nil {
-			return true, bidAsk.Bids[0].Price
-		}
-		getBidAsk, bidAsk = model.AppEnvironment.GetBidAsk(m, symbolPerp)
-		if getBidAsk && bidAsk != nil {
-			return true, bidAsk.Bids[0].Price
-		}
-	}
-	value, okPrice := lastPrice.Load(market + `_` + symbol)
-	priceTime, okTime := lastPriceTime.Load(market + `_` + symbol)
-	if okPrice && okTime && value != nil && priceTime.(time.Time).Add(time.Minute*10).After(time.Now()) {
-		return true, value.(float64)
-	}
-	coins := strings.Split(symbol, `_`)
-	if len(coins) == 2 && coins[0] == coins[1] {
-		return true, 1
-	}
-	marketInfo := model.GetMarketInfo(market, symbol)
-	if marketInfo == nil {
-		//util.Info(fmt.Sprintf(`not in market infos %s %s %s %s`, market, symbol, key, secret[0:1]))
-		return false, 0
-	}
-	lastPriceTime.Store(market+`_`+symbol, time.Now().Add(time.Second*14400))
-	lastPrice.Store(market+`_`+symbol, price)
+	//markets := GetMarkets()
+	//_, _, coin, _ := model.GetFromStandard(market, symbol)
+	//symbolSpot := coin + model.UniStandardTail[model.MarketTypeSpot]
+	//symbolPerp := coin + model.UniStandardTail[model.MarketTypePerp]
+	//for _, m := range markets {
+	//	getBidAsk, bidAsk = model.AppEnvironment.GetBidAsk(m, symbolSpot)
+	//	if getBidAsk && bidAsk != nil {
+	//		return true, bidAsk.Bids[0].Price
+	//	}
+	//	getBidAsk, bidAsk = model.AppEnvironment.GetBidAsk(m, symbolPerp)
+	//	if getBidAsk && bidAsk != nil {
+	//		return true, bidAsk.Bids[0].Price
+	//	}
+	//}
+	//value, okPrice := lastPrice.Load(market + `_` + symbol)
+	//priceTime, okTime := lastPriceTime.Load(market + `_` + symbol)
+	//if okPrice && okTime && value != nil && priceTime.(time.Time).Add(time.Minute*10).After(time.Now()) {
+	//	return true, value.(float64)
+	//}
+	//coins := strings.Split(symbol, `_`)
+	//if len(coins) == 2 && coins[0] == coins[1] {
+	//	return true, 1
+	//}
+	//marketInfo := model.GetMarketInfo(market, symbol)
+	//if marketInfo == nil {
+	//	//util.Info(fmt.Sprintf(`not in market infos %s %s %s %s`, market, symbol, key, secret[0:1]))
+	//	return false, 0
+	//}
+	//lastPriceTime.Store(market+`_`+symbol, time.Now().Add(time.Second*14400))
+	//lastPrice.Store(market+`_`+symbol, price)
 	util.Log(util.LogLevelError, fmt.Sprintf(`fail to get price for %s %s`, market, symbol))
 	return false, price
 }
