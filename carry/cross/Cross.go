@@ -720,6 +720,12 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 		(model.AppConfig.Env != `test` && model.AppConfig.Handle != `1`) || settings == nil || len(settings) == 0 {
 		return
 	}
+	canOrder := false
+	// 所有cross之间互斥
+	if !api.CheckSetProcessing(model.FunctionCross, model.FunctionCross, model.FunctionCross, true) {
+		api.CheckSetProcessing(model.FunctionCross, model.FunctionCross, model.FunctionCross, false)
+		canOrder = true
+	}
 	tickLimit := 50
 	switch tick.Bids[0].Market {
 	case model.Gate, model.BitgetPerp, model.BitgetSpot:
@@ -771,16 +777,17 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 				//	return
 				//}
 				nowTs := time.Now().UnixMilli()
-				util.Log(util.LogLevelInfo, fmt.Sprintf(`time mark %s amt %e status %s %s tick %s %e = %e %e %d <- status %s %s tick %s %e = %e %e %d`,
-					time.Now().String(), amount,
-					statusBuy.symbol, statusBuy.market, tickBuy.Asks[0].Market, tickBuy.Asks[0].Price, priceBuy, tickBuy.Asks[0].Amount, nowTs-int64(tickBuy.Ts),
-					statusSell.symbol, statusSell.market, tickSell.Bids[0].Market, tickSell.Bids[0].Price, priceSell, tickSell.Bids[0].Amount, nowTs-int64(tickSell.Ts)))
-				// 所有cross之间互斥
-				if !api.CheckSetProcessing(model.FunctionCross, model.FunctionCross, model.FunctionCross, true) {
+				if canOrder {
 					placeCross(statusBuy, statusSell, priceBuy, priceSell, amount)
-					api.CheckSetProcessing(model.FunctionCross, model.FunctionCross, model.FunctionCross, false)
+					util.Log(util.LogLevelInfo, fmt.Sprintf(`time mark %s amt %e status %s %s tick %s %e = %e %e %d <- status %s %s tick %s %e = %e %e %d`,
+						time.Now().String(), amount,
+						statusBuy.symbol, statusBuy.market, tickBuy.Asks[0].Market, tickBuy.Asks[0].Price, priceBuy, tickBuy.Asks[0].Amount, nowTs-int64(tickBuy.Ts),
+						statusSell.symbol, statusSell.market, tickSell.Bids[0].Market, tickSell.Bids[0].Price, priceSell, tickSell.Bids[0].Amount, nowTs-int64(tickSell.Ts)))
 				} else {
-					util.Log(util.LogLevelInfo, `time mark other processing ignore cross`)
+					util.Log(util.LogLevelInfo, fmt.Sprintf(`time mark ignore %s amt %e status %s %s tick %s %e = %e %e %d <- status %s %s tick %s %e = %e %e %d`,
+						time.Now().String(), amount,
+						statusBuy.symbol, statusBuy.market, tickBuy.Asks[0].Market, tickBuy.Asks[0].Price, priceBuy, tickBuy.Asks[0].Amount, nowTs-int64(tickBuy.Ts),
+						statusSell.symbol, statusSell.market, tickSell.Bids[0].Market, tickSell.Bids[0].Price, priceSell, tickSell.Bids[0].Amount, nowTs-int64(tickSell.Ts)))
 				}
 				//util.Log(util.LogLevelInfo, fmt.Sprintf(`%s %s %s %s`, placeBuyStr, placeBuyValue, placeSellStr, placeSellValue))
 				//placeTick.Store(placeBuyStr, placeBuyValue)
