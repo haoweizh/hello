@@ -122,6 +122,7 @@ var ProcessCombineTurtle = func(settingCombine *model.Setting, tick *model.BidAs
 	if needClear {
 		api.ClearExtraOrders(account.Key, account.Secret, market, symbol, turtleData)
 	}
+	time.Sleep(time.Second * 5)
 }
 
 func placeCombineOrders(account *model.Account, dataNormal, dataCombine *model.TurtleData, settingNormal,
