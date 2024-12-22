@@ -365,10 +365,9 @@ func ClearCross() {
 		for {
 			if !api.CheckSetProcessing(model.FunctionCross, model.FunctionCross, model.FunctionCross, true) {
 				break
-			} else {
-				time.Sleep(time.Millisecond * 10)
 			}
 		}
+		util.Log(util.LogLevelInfo, fmt.Sprintf("begin to clear cross %s", model.FunctionCross))
 		equaling = true
 		compOrders = &sync.Map{}
 		model.AppEnvironment.ReqIdOrders = sync.Map{}
