@@ -483,11 +483,6 @@ func equalAccount(i int, equalChan chan int, accounts map[string]*model.Account)
 					util.Log(util.LogLevelInfo, fmt.Sprintf(
 						`equal coin %s account %d equal %#v left hold %f err %s`, coin, i, coinEqual, leftHolding, errMsg))
 				} else {
-					if coin.(string) == `FIRE` {
-						for _, item := range settings.([]*model.Setting) {
-							util.Log(util.LogLevelInfo, fmt.Sprintf(`FIRE value equals %s %v`, item.MarketRelated, item.Valid))
-						}
-					}
 					break
 				}
 				if index == 10 {

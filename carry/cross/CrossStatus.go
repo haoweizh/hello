@@ -166,6 +166,8 @@ func GetHoldings(accounts map[string]*model.Account) (holding [][]interface{}) {
 				if (balance != nil && balance.Amount > 0) || !setting.Valid {
 					if setting.Valid {
 						valid = `true`
+					} else {
+						util.Log(util.LogLevelInfo, fmt.Sprintf("setting still false %#v", setting))
 					}
 					amount := 0.0
 					usdValue := 0.0

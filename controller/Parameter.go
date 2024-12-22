@@ -496,24 +496,20 @@ func holdPage(c *gin.Context) {
 	duration, _ := time.ParseDuration(`-96h`)
 	timeBegin := time.Now().Add(duration)
 	timeBegin = time.Date(timeBegin.Year(), timeBegin.Month(), timeBegin.Day(), 0, 0, 0, 0, timeBegin.Location())
-	failRows, _ := model.AppDB.Model(model.Order{}).Select(`market,account_index,order_side,date(order_time),refresh_type,count(*)`).
-		Where(`status=?`, `fail`).Group(`market,order_side,date(order_time),account_index,refresh_type`).
+	compRows, _ := model.AppDB.Model(model.Order{}).Select(`market,order_side,date(order_time),sum(price*abs(amount))`).
+		Where(`refresh_type=? and account_index=?`, `comp`, indexStr).Group(`market,order_side,date(order_time)`).
 		Order(`date(order_time) desc,market`).Rows()
-	failData := make(map[string]float64) // market - account_index - side - date - fail count
-	if failRows != nil {
-		for failRows.Next() {
-			var marketName, side, date, amountType, refreshType string
-			var orderNum float64
-			_ = failRows.Scan(&marketName, &amountType, &side, &date, &refreshType, &orderNum)
+	compData := make(map[string]float64) // market - account_index - side - date - fail count
+	if compRows != nil {
+		for compRows.Next() {
+			var marketName, side, date string
+			var compMoney float64
+			_ = compRows.Scan(&marketName, &side, &date, &compMoney)
 			dates := strings.Split(date, `-`)
 			date = fmt.Sprintf(`%s-%s`, dates[1], dates[2])
 			date = date[0:strings.Index(date, `T`)]
-			key := fmt.Sprintf(`%s-%s-%s-%s-%s`, marketName, amountType, side, date, refreshType)
-			for _, account := range queryAccounts {
-				if account != nil && account.Key == amountType {
-					failData[key] = orderNum
-				}
-			}
+			key := fmt.Sprintf(`%s-%s-%s`, marketName, side, date)
+			compData[key] = compMoney
 		}
 	}
 	carryRows, _ := model.AppDB.Model(model.Order{}).Select(`account_index,order_side,sum(price*abs(amount)),date(order_time),count(*),refresh_type`).
@@ -548,37 +544,33 @@ func holdPage(c *gin.Context) {
 					strconv.FormatFloat(crossCount[date][key], 'f', 0, 64), ``})
 			}
 		}
-		errDb := carryRows.Close()
-		if errDb != nil {
+		if carryRows.Close() != nil {
 			util.Log(util.LogLevelError, fmt.Sprintf(`fail to close DB for carry rows`))
 			return
 		}
 	}
-	carryRows, _ = model.AppDB.Model(model.Order{}).Select(`market,account_index,order_side,sum(price*abs(amount)),date(order_time),refresh_type,count(*)`).
-		Where(`refresh_type!=?`, model.FunctionSimulation).Group(`market,order_side,date(order_time),account_index,refresh_type`).Order(`date(order_time) desc, market`).Rows()
+	carryRows, _ = model.AppDB.Model(model.Order{}).Select(`market,order_side,sum(price*abs(amount)),date(order_time),refresh_type,count(*)`).
+		Where(`refresh_type!=? and account_index=?`, model.FunctionSimulation, indexStr).Group(
+		`market,order_side,date(order_time),refresh_type`).Order(`date(order_time) desc, market`).Rows()
 	if carryRows != nil {
 		for carryRows.Next() {
 			var marketName, side, date, refreshType string
-			var value, orderNum, failRate float64
-			var accountIdx int
-			_ = carryRows.Scan(&marketName, &accountIdx, &side, &value, &date, &refreshType, &orderNum)
+			var value, orderNum float64
+			_ = carryRows.Scan(&marketName, &side, &value, &date, &refreshType, &orderNum)
 			dates := strings.Split(date, `-`)
 			date = fmt.Sprintf(`%s-%s`, dates[1], dates[2])
 			date = date[0:strings.Index(date, `T`)]
-			key := fmt.Sprintf(`%s-%d-%s-%s-%s`, marketName, accountIdx, side, date, refreshType)
-			account := model.AppConfig.GetAccountFromKeyIndex(marketName, ``, accountIdx)
-			if account != nil && model.AppConfig.GetAccounts(marketName)[index].Key == account.Key {
-				if orderNum > 0 {
-					failRate = 100 * failData[key] / orderNum
-				}
-				tradeInfo = append(tradeInfo, []string{marketName, date, side,
-					strconv.FormatFloat(value, 'f', 0, 64), refreshType,
-					strconv.FormatFloat(orderNum, 'f', 0, 64),
-					strconv.FormatFloat(failRate, 'f', 2, 64)})
+			key := fmt.Sprintf(`%s-%s-%s`, marketName, side, date)
+			compRate := 0.0
+			if compData[key] > 0 {
+				compRate = value / compData[key]
 			}
+			tradeInfo = append(tradeInfo, []string{marketName, date, side,
+				strconv.FormatFloat(value, 'f', 0, 64), refreshType,
+				strconv.FormatFloat(orderNum, 'f', 0, 64),
+				strconv.FormatFloat(compRate, 'f', 2, 64)})
 		}
-		err := carryRows.Close()
-		if err != nil {
+		if carryRows.Close() != nil {
 			util.Log(util.LogLevelInfo, fmt.Sprintf(`fail to close DB for carry rows`))
 			return
 		}
