@@ -273,7 +273,8 @@ func GetHoldings(accounts map[string]*model.Account) (holding [][]interface{}) {
 	for i := range holding {
 		coin := holding[i][1].(string)
 		market := holding[i][0].(string)
-		_, price := api.GetPriceForce(coin+model.UniStandardTail[model.MarketTypeSpot], market)
+		symbol := holding[i][2].(string)
+		_, price := api.GetPriceForce(symbol, market)
 		money := math.Floor(coinHold[coin]*price/10) * 10
 		if money < 0 {
 			money = math.Ceil(coinHold[coin]*price/10) * 10
