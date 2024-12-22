@@ -375,10 +375,10 @@ func ClearCross() {
 		for {
 			leftOrders := 0
 			model.AppEnvironment.OrderIdOrders.Range(func(k, v interface{}) bool {
-				if time.Now().Unix()-v.(*model.Order).OrderTime.Unix() < 80 {
+				if time.Now().Unix()-v.(*model.Order).OrderTime.Unix() < 60 {
 					leftOrders++
 				}
-				util.Log(util.LogLevelInfo, fmt.Sprintf(`left orders %d key %v %#v`, leftOrders, k, v))
+				util.Log(util.LogLevelInfo, fmt.Sprintf(`left orders in order id orders %d key %v %#v`, leftOrders, k, v))
 				return true
 			})
 			if leftOrders == 0 {
@@ -401,11 +401,12 @@ func ClearCross() {
 				crossInU = amountInU
 			}
 		}
+		msg := fmt.Sprintf(`comp compare cross %f %f`, compInU, crossInU)
 		err := carryRows.Close()
 		if err != nil {
+			util.Log(util.LogLevelError, `fail to close db conn`+err.Error())
 			continue
 		}
-		msg := fmt.Sprintf(`comp compare cross %f %f`, compInU, crossInU)
 		util.Log(util.LogLevelInfo, msg)
 		if model.AppConfig.Handle == `1` {
 			equalAccounts()
