@@ -109,12 +109,14 @@ func _() {
 func ClearChannels(market string, chanMap *sync.Map) {
 	if chanMap != nil {
 		channels, _ := chanMap.Load(market)
-		for i, channel := range channels.([]chan struct{}) {
-			util.Log(util.LogLevelInfo, fmt.Sprintf(`send to stop connection %s %d`, market, i))
-			channel <- struct{}{}
-			close(channel)
+		if channels != nil {
+			for i, channel := range channels.([]chan struct{}) {
+				util.Log(util.LogLevelInfo, fmt.Sprintf(`send to stop connection %s %d`, market, i))
+				channel <- struct{}{}
+				close(channel)
+			}
+			chanMap.Delete(market)
 		}
-		chanMap.Delete(market)
 	}
 }
 
