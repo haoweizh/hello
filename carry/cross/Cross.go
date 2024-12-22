@@ -403,17 +403,17 @@ func ClearCross() {
 				crossInU = amountInU
 			}
 		}
-		msg := fmt.Sprintf(`comp compare cross %f %f`, compInU, crossInU)
 		err := carryRows.Close()
 		if err != nil {
 			util.Log(util.LogLevelError, `fail to close db conn`+err.Error())
-			continue
 		}
+		msg := fmt.Sprintf(`comp compare cross %f %f`, compInU, crossInU)
 		util.Log(util.LogLevelInfo, msg)
 		if model.AppConfig.Handle == `1` {
 			equalAccounts()
 		}
 		api.CheckSetProcessing(model.FunctionCross, model.FunctionCross, model.FunctionCross, false)
+		util.Log(util.LogLevelInfo, "end to clear cross get set true")
 		equaling = false
 		time.Sleep(time.Minute * 60)
 	}
@@ -701,13 +701,15 @@ func placeEqual(status *CarryStatus, price, amount float64, orderSide string) (d
 // setting.PriceX 用作不同名称的搬砖时，symbol的交易价格对应的coin的交易价格
 var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 	// 所有cross之间互斥
-	if !api.CheckSetProcessing(setting.Function, setting.Function, setting.Function, true) {
-		defer api.CheckSetProcessing(setting.Function, setting.Function, setting.Function, false)
+	if !api.CheckSetProcessing(model.FunctionCross, model.FunctionCross, model.FunctionCross, true) {
+		defer api.CheckSetProcessing(model.FunctionCross, model.FunctionCross, model.FunctionCross, false)
 	} else {
+		if equaling {
+			util.LogLess(util.LogLevelInfo, fmt.Sprintf(`clear cross working exit %s %s %s`, setting.Function, setting.Market, setting.Symbol))
+		}
 		return
 	}
 	if !doCross && model.AppConfig.Handle == `1` {
-		util.Log(util.LogLevelInfo, fmt.Sprintf("begin to clear cross once %s", model.FunctionCross))
 		go ClearCross()
 		go continueComp()
 		doCross = true
