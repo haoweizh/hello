@@ -1381,7 +1381,7 @@ func getPositionsOKEX(key, secret string) (success bool, positions []*Position) 
 		result, position := parsePositionOKEX(item.(map[string]interface{}))
 		if result && position.Holding != 0 {
 			positions = append(positions, position)
-			util.Log(util.LogLevelInfo, fmt.Sprintf(`get position okex %#v`, position))
+			//util.Log(util.LogLevelInfo, fmt.Sprintf(`get position okex %#v`, position))
 		}
 	}
 	return true, positions

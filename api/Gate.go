@@ -884,7 +884,7 @@ func getPositionsGate(key string, secret string) (success bool, positions []*Pos
 		position.Margin = math.Max(currentMargin, initialMargin)
 		if position.Holding != 0 {
 			positions = append(positions, position)
-			util.Log(util.LogLevelInfo, fmt.Sprintf(`get position gate %#v`, position))
+			//util.Log(util.LogLevelInfo, fmt.Sprintf(`get position gate %#v`, position))
 		}
 	}
 	return true, positions

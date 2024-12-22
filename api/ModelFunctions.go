@@ -122,8 +122,8 @@ func PrepareSettings() {
 			settingArray = make([]*model.Setting, 0)
 		}
 		settingArray = append(settingArray.([]*model.Setting), setting)
-		util.Log(util.LogLevelInfo, fmt.Sprintf(`add setting array %s %s %s %v %d %#v`,
-			setting.Coin, setting.Market, setting.Symbol, setting.Valid, len(settingArray.([]*model.Setting)), setting))
+		//util.Log(util.LogLevelInfo, fmt.Sprintf(`add setting array %s %s %s %v %d %#v`,
+		//	setting.Coin, setting.Market, setting.Symbol, setting.Valid, len(settingArray.([]*model.Setting)), setting))
 		settings.Store(setting.Coin, settingArray)
 		coinSettings.Store(setting.Function, settings)
 		var functionMarketSettings *sync.Map
@@ -134,8 +134,6 @@ func PrepareSettings() {
 		if functionMarketSettings == nil {
 			functionMarketSettings = &sync.Map{}
 		}
-		//util.Log(util.LogLevelInfo, fmt.Sprintf(`load setting %s %s %s %s %d %d %f %f %v`,
-		//	setting.Function, setting.Market, setting.Symbol, setting.SymbolRelated, setting.Far, setting.Near, setting.PriceX, setting.GridAmount, setting))
 		functionMarketSettings.Store(setting.Symbol, setting)
 		util.StoreSyncMap(localSymbolSettings, functionMarketSettings, setting.Function, setting.Market)
 	}

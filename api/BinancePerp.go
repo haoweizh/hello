@@ -464,7 +464,7 @@ func getPositionsBinancePerp(key, secret string) (success bool, positions []*Pos
 			}
 			if position.Holding != 0 {
 				positions = append(positions, position)
-				util.Log(util.LogLevelInfo, fmt.Sprintf(`get position binanceperp %#v`, position))
+				//util.Log(util.LogLevelInfo, fmt.Sprintf(`get position binanceperp %#v`, position))
 			}
 		}
 		totalMaintMargin, _ := strconv.ParseFloat(positionJson.Get("totalMaintMargin").MustString(), 64)

@@ -948,7 +948,7 @@ func InitCrossMarketInfos(markets []string) {
 		settingsDbMap[fmt.Sprintf(`%s_%s_%s`, setting.Function, setting.Market, setting.Symbol)] = setting
 	}
 	for coin, infos := range infoPool {
-		util.Log(util.LogLevelInfo, fmt.Sprintf(`handle coin %s %d`, coin, len(infos)))
+		//util.Log(util.LogLevelInfo, fmt.Sprintf(`handle coin %s %d`, coin, len(infos)))
 		scoreOpen := 0.015
 		scoreClose := 0.005
 		if len(infos) >= 2 {

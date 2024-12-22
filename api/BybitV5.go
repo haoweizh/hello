@@ -573,7 +573,7 @@ func getPositionsBybit(key, secret string) (success bool, positions []*Position,
 			position.Margin, _ = strconv.ParseFloat(contract.PositionMM, 64)
 			if position.Holding != 0 {
 				positions = append(positions, position)
-				util.Log(util.LogLevelInfo, fmt.Sprintf(`get position bybit %#v`, position))
+				//util.Log(util.LogLevelInfo, fmt.Sprintf(`get position bybit %#v`, position))
 			}
 		}
 		cursor = positionResp.Result.NextPageCursor
