@@ -483,11 +483,12 @@ func equalAccount(i int, equalChan chan int, accounts map[string]*model.Account)
 						break
 					}
 					delay++
-					util.Log(util.LogLevelInfo, fmt.Sprintf(`not yet get tick for %s %s %d`, setting.Market, setting.Symbol, delay))
+					util.Log(util.LogLevelInfo, fmt.Sprintf(`not yet get tick for %d %s %s`, delay, setting.Market, setting.Symbol))
 					time.Sleep(time.Second * 3)
 				}
 				if delay > 100 {
 					initSuccess = false
+					util.Log(util.LogLevelError, fmt.Sprintf(`can not equal when no price %s %s`, setting.Market, setting.Symbol))
 				} else {
 					equalStatuses[j] = initStatus(account, setting)
 				}
