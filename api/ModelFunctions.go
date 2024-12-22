@@ -121,18 +121,10 @@ func PrepareSettings() {
 		if settingArray == nil {
 			settingArray = make([]*model.Setting, 0)
 		}
-		exist := false
-		for _, item := range settingArray.([]*model.Setting) {
-			if item.Market == setting.Market && item.Symbol == setting.Symbol && item.Function == setting.Function {
-				exist = true
-			}
-		}
-		if !exist {
-			settingArray = append(settingArray.([]*model.Setting), setting)
-			util.Log(util.LogLevelInfo, fmt.Sprintf(`add setting array %s %s %s %d %#v`,
-				setting.Coin, setting.Market, setting.Symbol, len(settingArray.([]*model.Setting)), settingArray))
-			settings.Store(setting.Coin, settingArray)
-		}
+		settingArray = append(settingArray.([]*model.Setting), setting)
+		util.Log(util.LogLevelInfo, fmt.Sprintf(`add setting array %s %s %s %v %d %#v`,
+			setting.Coin, setting.Market, setting.Symbol, setting.Valid, len(settingArray.([]*model.Setting)), setting))
+		settings.Store(setting.Coin, settingArray)
 		localCoinSettings.Store(setting.Function, settings)
 		var functionMarketSettings *sync.Map
 		value, ok = util.LoadSyncMap(localSymbolSettings, setting.Function, setting.Market)
@@ -154,7 +146,7 @@ func PrepareSettings() {
 		i++
 	}
 	appMarkets = localAppMarkets
-	util.Log(util.LogLevelInfo, fmt.Sprintf(`finish loading settings from markets %#v`, appMarkets))
+	util.Log(util.LogLevelInfo, fmt.Sprintf(`finish loading settings from markets %#v %v -> %v`, appMarkets, coinSettings, localCoinSettings))
 	coinSettings = localCoinSettings
 	handlers = localHandlers
 	symbolSettings = localSymbolSettings
@@ -521,10 +513,11 @@ func GetMarketSymbols(market string) map[string]bool {
 //}
 
 func GetCoinSettings(function string) *sync.Map {
-	if appSettings == nil || coinSettings == nil {
-		util.Log(util.LogLevelInfo, fmt.Sprintf(`load setting GetCoinSettings %s`, function))
+	if coinSettings == nil {
+		util.Log(util.LogLevelError, fmt.Sprintf(`load setting GetCoinSettings %s`, function))
 		return nil
 	}
+	util.Log(util.LogLevelInfo, fmt.Sprintf(`load coin settings from %#v`, coinSettings))
 	value, ok := coinSettings.Load(function)
 	if ok {
 		return value.(*sync.Map)
