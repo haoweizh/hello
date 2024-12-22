@@ -565,10 +565,13 @@ func holdPage(c *gin.Context) {
 			if compData[key] > 0 {
 				compRate = 100 * compData[key] / value
 			}
+			compStr := ``
+			if refreshType == model.FunctionCross {
+				compStr = strconv.FormatFloat(compRate, 'f', 2, 64)
+			}
 			tradeInfo = append(tradeInfo, []string{marketName, date, side,
 				strconv.FormatFloat(value, 'f', 0, 64), refreshType,
-				strconv.FormatFloat(orderNum, 'f', 0, 64),
-				strconv.FormatFloat(compRate, 'f', 2, 64)})
+				strconv.FormatFloat(orderNum, 'f', 0, 64), compStr})
 		}
 		if carryRows.Close() != nil {
 			util.Log(util.LogLevelInfo, fmt.Sprintf(`fail to close DB for carry rows`))
