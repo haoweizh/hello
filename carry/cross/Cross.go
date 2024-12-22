@@ -476,17 +476,8 @@ func equalAccount(i int, equalChan chan int, accounts map[string]*model.Account)
 					util.Log(util.LogLevelError, `can not equal`)
 					continue
 				}
-				delay := 0
-				for {
-					getPrice, _ := api.GetPriceForce(setting.Symbol, setting.Market)
-					if getPrice || delay > 1 {
-						break
-					}
-					delay++
-					util.Log(util.LogLevelInfo, fmt.Sprintf(`not yet get tick for %d %s %s`, delay, setting.Market, setting.Symbol))
-					time.Sleep(time.Second * 3)
-				}
-				if delay > 1 {
+				getPrice, _ := api.GetPriceForce(setting.Symbol, setting.Market)
+				if getPrice {
 					initSuccess = false
 					util.Log(util.LogLevelError, fmt.Sprintf(`can not equal when no price %s %s`, setting.Market, setting.Symbol))
 				} else {
