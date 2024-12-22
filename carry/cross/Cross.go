@@ -361,10 +361,12 @@ func initTradeLine(account *model.Account, setting *model.Setting, status *Carry
 var equaling = false
 
 func ClearCross() {
-	for doCross {
+	for {
 		for {
 			if !api.CheckSetProcessing(model.FunctionCross, model.FunctionCross, model.FunctionCross, true) {
 				break
+			} else {
+				time.Sleep(time.Millisecond * 10)
 			}
 		}
 		util.Log(util.LogLevelInfo, fmt.Sprintf("begin to clear cross %s", model.FunctionCross))
