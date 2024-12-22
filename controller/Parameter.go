@@ -563,7 +563,7 @@ func holdPage(c *gin.Context) {
 			key := fmt.Sprintf(`%s-%s-%s`, marketName, side, date)
 			compRate := 0.0
 			if compData[key] > 0 {
-				compRate = value / compData[key]
+				compRate = 100 * compData[key] / value
 			}
 			tradeInfo = append(tradeInfo, []string{marketName, date, side,
 				strconv.FormatFloat(value, 'f', 0, 64), refreshType,

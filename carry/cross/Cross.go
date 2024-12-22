@@ -527,6 +527,10 @@ func getHolding(statuses []*CarryStatus) (bids, asks model.Ticks, bidStatus, ask
 		if price == 0 {
 			price = bids[0].Price / status.setting.PriceX
 		}
+		if !status.setting.Valid {
+			status.setting.Valid = true
+			util.Log(util.LogLevelError, fmt.Sprintf(`setting still invalid %s %s %s %#v`, status.market, status.symbol, status.setting.Coin, status.setting))
+		}
 	}
 	return bids, asks, bidStatus, askStatus, holding, price, holdStr
 }
