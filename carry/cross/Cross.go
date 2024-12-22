@@ -362,6 +362,7 @@ var equaling = false
 
 func ClearCross() {
 	for {
+		util.Log(util.LogLevelInfo, fmt.Sprintf("begin to clear cross %s", model.FunctionCross))
 		for {
 			if !api.CheckSetProcessing(model.FunctionCross, model.FunctionCross, model.FunctionCross, true) {
 				break
@@ -369,7 +370,7 @@ func ClearCross() {
 				time.Sleep(time.Millisecond * 10)
 			}
 		}
-		util.Log(util.LogLevelInfo, fmt.Sprintf("begin to clear cross %s", model.FunctionCross))
+		util.Log(util.LogLevelInfo, "begin to clear cross get set true")
 		equaling = true
 		compOrders = &sync.Map{}
 		model.AppEnvironment.ReqIdOrders = sync.Map{}
@@ -702,6 +703,7 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 		return
 	}
 	if !doCross && model.AppConfig.Handle == `1` {
+		util.Log(util.LogLevelInfo, fmt.Sprintf("begin to clear cross once %s", model.FunctionCross))
 		go ClearCross()
 		go continueComp()
 		doCross = true
