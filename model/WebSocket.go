@@ -76,21 +76,33 @@ func (wsConn *WSConn) WriteJson(body map[string]interface{}) (err error) {
 	return wsConn.WriteMsg(jsonData)
 }
 
-//func newWsCoder(url string) (conn *WSConn, err error) {
-//	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
-//	defer cancel()
-//	c, _, dialErr := websocket.Dial(ctx, url, &websocket.DialOptions{})
-//	if dialErr == nil {
-//		return &WSConn{Conn: c}, nil
+//	func newWsCoder(url string) (conn *WSConn, err error) {
+//		ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+//		defer cancel()
+//		c, _, dialErr := websocket.Dial(ctx, url, &websocket.DialOptions{})
+//		if dialErr == nil {
+//			return &WSConn{Conn: c}, nil
+//		}
+//		return nil, dialErr
 //	}
-//	return nil, dialErr
-//}
-
-func initChannel(url, market string) (*WSConn, error) {
+//
+// initChannel 初始化一个通道，根据给定的URL、市场类型和使用类型来选择合适的通道类型。
+// 这个函数主要目的是根据不同的市场和使用类型，选择不同的WebSocket连接方式。
+// 参数:
+//
+//	url - 要连接的WebSocket URL。
+//	market - 市场类型，例如BinanceSpot、BinancePerp等。
+//	useType - 使用类型，根据此参数和AppConfig.UseType的值决定使用哪种连接方式。1为market 2为order
+//
+// 返回值:
+//
+//	*WSConn - 成功时返回一个WebSocket连接指针。
+//	error - 如果初始化过程中遇到任何问题，则返回错误。
+func initChannel(url, market string, useType int) (*WSConn, error) {
 	if AppConfig.UseType == "1" {
 		switch market {
 		case BinanceSpot, BinancePerp, BinanceMargin:
-			return newTsChannel(url, "bf")
+			return newTsChannel(url, "bf", useType)
 		default:
 			return newWsGorillaChannel(url)
 		}
@@ -104,13 +116,14 @@ func initChannel(url, market string) (*WSConn, error) {
 //
 //	url - 用于连接的URL，如果为market，则创建市场数据通道，否则创建交易数据通道。
 //	tsCode - 用于标识特定交易或市场数据的代码。
+//	useType -用于判断是market单还是order单，market为1 order为2
 //
 // 返回值:
 //
 //	*WSConn - 一个指向WSConn对象的指针，该对象代表创建的通道。
 //	error - 如果创建过程中发生错误，则返回该错误。
-func newTsChannel(url, tsCode string) (*WSConn, error) {
-	if strings.Contains(url, "/stream") {
+func newTsChannel(url, tsCode string, useType int) (*WSConn, error) {
+	if useType == 1 {
 		marketPublisher, err := util.InitMarketPublisher(tsCode + "_m_sub")
 		if err != nil {
 			return nil, err
@@ -121,11 +134,11 @@ func newTsChannel(url, tsCode string) (*WSConn, error) {
 		}
 		return &WSConn{
 			Conn:            nil,
-			useType:         1,
+			useType:         useType,
 			MarketPublisher: marketPublisher,
 			MarketReceiver:  marketReceiver,
 		}, nil
-	} else if strings.Contains(url, "/ws-api") {
+	} else if useType == 2 {
 		orderPublisher, err := util.InitOrderPublisher(tsCode + "_order_sub")
 		if err != nil {
 			return nil, err
@@ -136,7 +149,7 @@ func newTsChannel(url, tsCode string) (*WSConn, error) {
 		}
 		return &WSConn{
 			Conn:           nil,
-			useType:        2,
+			useType:        useType,
 			OrderPublisher: orderPublisher,
 			OrderReceiver:  orderReceiver,
 		}, nil
@@ -215,7 +228,7 @@ func chanHandler(market string, stopChan chan struct{}, connection *WSConn, msgH
 
 func WsAccountClient(market, key, url string, accountMsgHandler AccountMsgHandler) (connection *WSConn, err error) {
 	util.Log(util.LogLevelInfo, market+` create account channel `+url)
-	connection, err = initChannel(url, market)
+	connection, err = initChannel(url, market, 2)
 	if err != nil {
 		util.Log(util.LogLevelError, url+"can not create web socket"+err.Error())
 		return nil, err
@@ -270,7 +283,7 @@ func WebSocketClient(market, url string, subscribes []interface{}, subHandler Su
 		} else {
 			stepSubscribes = subscribes[i*step:]
 		}
-		connection, err := initChannel(url, market)
+		connection, err := initChannel(url, market, 1)
 		if err != nil || connection == nil {
 			if err != nil {
 				util.Log(util.LogLevelError, fmt.Sprintf("can not create web socket %s %s %s", market, url, err.Error()))
