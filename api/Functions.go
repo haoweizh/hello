@@ -524,6 +524,10 @@ func GetBalances(key, secret, market string) (
 				symbolStandard := balance.Coin + model.UniStandardTail[model.MarketTypeSpot]
 				_, price := GetPriceForce(symbolStandard, market)
 				totalInUsd += price * balance.Amount
+				if price == 0 {
+					util.Log(util.LogLevelInfo, fmt.Sprintf(`can not get usd value for %s %s %s value%f amt %f`,
+						key, market, symbolStandard, totalInUsd, balance.Amount))
+				}
 			}
 		}
 	}
