@@ -375,6 +375,7 @@ func ClearCross() {
 		util.Log(util.LogLevelInfo, "begin to clear cross get set true")
 		equaling = true
 		compOrders.Clear()
+		carryStatusMap.Clear()
 		model.AppEnvironment.ReqIdOrders = sync.Map{}
 		for {
 			leftOrders := 0
