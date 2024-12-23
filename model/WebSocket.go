@@ -3,6 +3,8 @@ package model
 import (
 	"encoding/json"
 	"fmt"
+	"sync"
+
 	//"github.com/coder/websocket"
 	"github.com/gorilla/websocket"
 	"hello/util"
@@ -27,14 +29,27 @@ func (wsConn *WSConn) Close() {
 	}
 }
 
+var lockMap sync.Map // market - *sync.Mutex
+
 func (wsConn *WSConn) WriteMsg(msg []byte) (err error) {
 	//ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	//defer cancel()
+	value, _ := lockMap.Load(wsConn)
+	var connLock *sync.Mutex
+	if value == nil {
+		connLock = &sync.Mutex{}
+		lockMap.Store(wsConn, connLock)
+	} else {
+		connLock = value.(*sync.Mutex)
+	}
+	connLock.Lock()
+	defer connLock.Unlock()
 	if wsConn.Conn == nil {
 		return fmt.Errorf(`nil Conn`)
 	}
 	//return wsConn.Conn.Write(ctx, websocket.MessageText, msg)
-	return wsConn.Conn.WriteMessage(websocket.TextMessage, msg)
+	err = wsConn.Conn.WriteMessage(websocket.TextMessage, msg)
+	return
 }
 
 func (wsConn *WSConn) WriteJson(body map[string]interface{}) (err error) {

@@ -372,7 +372,7 @@ func ClearCross() {
 		}
 		util.Log(util.LogLevelInfo, "begin to clear cross get set true")
 		equaling = true
-		compOrders = &sync.Map{}
+		compOrders.Clear()
 		model.AppEnvironment.ReqIdOrders = sync.Map{}
 		for {
 			leftOrders := 0
@@ -720,11 +720,11 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 		(model.AppConfig.Env != `test` && model.AppConfig.Handle != `1`) || settings == nil || len(settings) == 0 {
 		return
 	}
-	canOrder := false
 	// 所有cross之间互斥
 	if !api.CheckSetProcessing(model.FunctionCross, model.FunctionCross, model.FunctionCross, true) {
-		api.CheckSetProcessing(model.FunctionCross, model.FunctionCross, model.FunctionCross, false)
-		canOrder = true
+		defer api.CheckSetProcessing(model.FunctionCross, model.FunctionCross, model.FunctionCross, false)
+	} else {
+		return
 	}
 	tickLimit := 50
 	switch tick.Bids[0].Market {
@@ -777,18 +777,11 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 				//	return
 				//}
 				nowTs := time.Now().UnixMilli()
-				if canOrder {
-					placeCross(statusBuy, statusSell, priceBuy, priceSell, amount)
-					util.Log(util.LogLevelInfo, fmt.Sprintf(`time mark %s amt %e status %s %s tick %s %e = %e %e %d <- status %s %s tick %s %e = %e %e %d`,
-						time.Now().String(), amount,
-						statusBuy.symbol, statusBuy.market, tickBuy.Asks[0].Market, tickBuy.Asks[0].Price, priceBuy, tickBuy.Asks[0].Amount, nowTs-int64(tickBuy.Ts),
-						statusSell.symbol, statusSell.market, tickSell.Bids[0].Market, tickSell.Bids[0].Price, priceSell, tickSell.Bids[0].Amount, nowTs-int64(tickSell.Ts)))
-				} else {
-					util.Log(util.LogLevelInfo, fmt.Sprintf(`time mark ignore %s amt %e status %s %s tick %s %e = %e %e %d <- status %s %s tick %s %e = %e %e %d`,
-						time.Now().String(), amount,
-						statusBuy.symbol, statusBuy.market, tickBuy.Asks[0].Market, tickBuy.Asks[0].Price, priceBuy, tickBuy.Asks[0].Amount, nowTs-int64(tickBuy.Ts),
-						statusSell.symbol, statusSell.market, tickSell.Bids[0].Market, tickSell.Bids[0].Price, priceSell, tickSell.Bids[0].Amount, nowTs-int64(tickSell.Ts)))
-				}
+				placeCross(statusBuy, statusSell, priceBuy, priceSell, amount)
+				util.Log(util.LogLevelInfo, fmt.Sprintf(`time mark %s amt %e status %s %s tick %s %e = %e %e %d <- status %s %s tick %s %e = %e %e %d`,
+					time.Now().String(), amount,
+					statusBuy.symbol, statusBuy.market, tickBuy.Asks[0].Market, tickBuy.Asks[0].Price, priceBuy, tickBuy.Asks[0].Amount, nowTs-int64(tickBuy.Ts),
+					statusSell.symbol, statusSell.market, tickSell.Bids[0].Market, tickSell.Bids[0].Price, priceSell, tickSell.Bids[0].Amount, nowTs-int64(tickSell.Ts)))
 				//util.Log(util.LogLevelInfo, fmt.Sprintf(`%s %s %s %s`, placeBuyStr, placeBuyValue, placeSellStr, placeSellValue))
 				//placeTick.Store(placeBuyStr, placeBuyValue)
 				//placeTick.Store(placeSellStr, placeSellValue)
@@ -1043,10 +1036,6 @@ func handleCross(account *model.Account, order *model.Order) {
 
 func continueComp() {
 	for {
-		if equaling {
-			time.Sleep(time.Second * 10)
-			continue
-		}
 		compOrders.Range(func(key, value interface{}) bool {
 			if value == nil {
 				return true
@@ -1092,6 +1081,9 @@ func continueComp() {
 				result, _, _ := api.CancelOrder(account.Key, account.Secret, order.Market, order.Symbol, model.OrderTypeLimit, order.OrderId)
 				if result {
 					compOrders.Delete(order.OrderId)
+					if equaling {
+						return false
+					}
 					orderComp := api.PlaceOrder(account.Key, account.Secret, order.OrderSide, model.OrderTypeLimit, order.Market, order.Symbol, ``,
 						order.RefreshType, price, price, leftAmt, false, nil)
 					if orderComp != nil && orderComp.Status != model.CarryStatusFail {
