@@ -1093,6 +1093,7 @@ func SetFundingRate(market, symbol string, fundingRate *model.FundingRate) {
 	//	fundingRate.ExpireTime = rate.ExpireTime
 	//}
 	//}
+	util.Log(util.LogLevelInfo, fmt.Sprintf(`set funding rate %s %s %#v`, market, symbol, fundingRate))
 	util.StoreSyncMap(model.FundingRates, fundingRate, market, symbol)
 }
 
