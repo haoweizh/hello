@@ -295,6 +295,8 @@ func initStatus(account *model.Account, setting *model.Setting) (status *CarrySt
 	}
 	status.LimitBuy = math.Min(status.LimitBuy, status.AvailableBuy)
 	status.LimitSell = math.Min(status.LimitSell, status.AvailableSell)
+	util.Log(util.LogLevelInfo, fmt.Sprintf(`init status set fundingrate %s %s %s %f %s`,
+		account.Key, setting.Market, setting.Symbol, status.FundingRate, status.FundingRateUpdateTime.String()))
 	initTradeLine(account, setting, status, doRevert)
 	util.StoreSyncMap(carryStatusMap, status, setting.Coin, setting.Market, setting.Symbol, account.Key)
 	return

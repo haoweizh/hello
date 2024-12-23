@@ -258,7 +258,7 @@ var markPriceHandler = gateWs.NewCallBack(func(msg *gateWs.UpdateMsg) {
 	if msg.Channel == gateWs.ChannelFutureTicker {
 		var tickers []gateWs.FuturesTicker
 		if err := json.Unmarshal(msg.Result, &tickers); err != nil {
-			util.LogLess(util.LogLevelError, fmt.Sprintf("future mark price Unmarshal err:%s %s %s", model.Gate, err.Error(), msg.Result))
+			//util.LogLess(util.LogLevelError, fmt.Sprintf("future mark price Unmarshal err:%s %s %s", model.Gate, err.Error(), msg.Result))
 			return
 		}
 		for _, update := range tickers {
@@ -271,9 +271,8 @@ var markPriceHandler = gateWs.NewCallBack(func(msg *gateWs.UpdateMsg) {
 			model.AppEnvironment.SetMarkPriceInfo(symbol, model.Gate, ticker)
 			rate, _ := strconv.ParseFloat(update.FundingRate, 64)
 			rateNext, _ := strconv.ParseFloat(update.FundingRateIndicative, 64)
-			util.Log(util.LogLevelInfo, fmt.Sprintf("future mark price %s %s %s %d", model.Gate, symbol, update.Contract, msg.Time))
 			SetFundingRate(model.Gate, symbol, &model.FundingRate{Rate: rate, RateNext: rateNext,
-				UpdateTime: time.Unix(msg.Time, 0), ExpireTime: 0})
+				UpdateTime: time.UnixMilli(msg.TimeMs), ExpireTime: 0})
 		}
 	}
 	return
