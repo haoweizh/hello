@@ -112,7 +112,6 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarrySta
 			fmt.Sprintf(`%.1f`, 100*scoreRelate),
 			fmt.Sprintf(`%v`, green)}
 	}
-	go model.SetMonitorInfo(strconv.Itoa(index), model.FunctionCross, mark, infoValue)
 	if statusBuy == nil {
 		return nil, nil, 0, 0, 0, nil, nil
 	}
@@ -129,7 +128,12 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarrySta
 	if !(ok && lastSymbol != nil && lastSymbol.(string) == statusSell.symbol) {
 		initLimitBuyAndSell(statusSell, statusSell.setting, priceSell)
 	}
+	go model.SetMonitorInfo(strconv.Itoa(index), model.FunctionCross, mark, infoValue)
 	amount = FormatCrossPair(statusBuy, statusSell, bidAmount, askAmount, priceBuy)
+	if amount <= 0 && green {
+		util.Log(util.LogLevelInfo, fmt.Sprintf(`limit sell amount 0 %s %s %f at %f-> %s %s %f at %f`,
+			statusSell.market, statusSell.symbol, statusSell.LimitSell, priceSell, statusBuy.market, statusBuy.account.Key, statusBuy.LimitBuy, priceBuy))
+	}
 	if checkScoreLimit(carryStatus.market, carryStatus.symbol, carryStatusRelate.market, carryStatusRelate.symbol, score, scoreRelate) {
 		if carryStatus.setting.Valid || carryStatusRelate.setting.Valid {
 			util.Log(util.LogLevelError, fmt.Sprintf(`possible mismatch coin %s %s %s %s score %f %f`,
