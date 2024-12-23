@@ -127,7 +127,7 @@ func WsTickServeBitgetPerp(market string) (socketMap map[*model.WSConn]bool, msg
 	socketMap = make(map[*model.WSConn]bool)
 	depthSubs := GetWSSubscribes(market, []string{model.SubscribeDepth})
 	marketPriceSubs := GetWSSubscribes(market, []string{model.SubscribeMarkPrice})
-	markPriceSockets, markPriceChannels, markPriceErr := model.WebSocketClient(market, bitgetPublic,
+	markPriceSockets, markPriceChannels, markPriceErr := model.WsPublicClient(market, bitgetPublic,
 		marketPriceSubs, subscribeHandlerBitget, markPriceWsHandler, wsStepBitget)
 	if markPriceErr == nil {
 		msgChans = append(msgChans, markPriceChannels...)
@@ -137,7 +137,7 @@ func WsTickServeBitgetPerp(market string) (socketMap map[*model.WSConn]bool, msg
 	} else {
 		return nil, nil, markPriceErr
 	}
-	perpBookSockets, perpBookChannels, perpBookErr := model.WebSocketClient(market, bitgetPublic,
+	perpBookSockets, perpBookChannels, perpBookErr := model.WsPublicClient(market, bitgetPublic,
 		depthSubs, subscribeHandlerBitget, tickHandlerBitget, wsStepBitget)
 	if perpBookErr == nil {
 		util.Log(util.LogLevelInfo, `finish connect public Bitget perp book wss `)

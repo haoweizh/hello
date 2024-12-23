@@ -25,7 +25,7 @@ package deprecated
 //var socketLockBitmex sync.Mutex
 //var prePriceB, prePriceA, prePriceB10, prePriceA10 float64
 //
-//var subscribeHandlerBitmex = func(connection *websocket.Conn, subscribes []interface{}) error {
+//var subscribeHandlerBitmex = func(connection *websocket.conn, subscribes []interface{}) error {
 //	var err error = nil
 //	expire := util.GetNow().Unix() + 5
 //	toBeSign := fmt.Sprintf(`GET/realtime%d`, expire)
@@ -50,7 +50,7 @@ package deprecated
 //
 //func WsDepthServeBitmex(markets *model.Markets, orderHandler api.OrderHandler) ([]chan struct{}, error) {
 //	lastPingTime := util.GetNow().Unix()
-//	wsHandler := func(connection *websocket.Conn, event []byte, orderHandler api.OrderHandler) {
+//	wsHandler := func(connection *websocket.conn, event []byte, orderHandler api.OrderHandler) {
 //		socketLockBitmex.Lock()
 //		defer socketLockBitmex.Unlock()
 //		if util.GetNow().Unix()-lastPingTime > 30 { // ping bitmex server every 5 seconds

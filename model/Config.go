@@ -9,21 +9,22 @@ import (
 )
 
 type Config struct {
-	Delay                                                                                            float64
-	Debug, KucoinSpot, MetricTick                                                                    bool
-	KucoinRelatedKey, KucoinRelatedSecret, KucoinFutureKey, KucoinFutureSecret                       string
-	KucoinCarryClose, KucoinCarryRate, Simulation, Equal, Log, UseType                               string
-	GateKey, GateSecret, GateCarryClose, GateCarryRate                                               string
-	HuobiKey, HuobiSecret, HuobiCarryClose, HuobiCarryRate                                           string
-	OkexKey, OkexSecret, OkexCarryClose, OkexCarryRate                                               string
-	FtxKey, FtxSecret, FtxCarryClose, FtxCarryRate, RedisAddr, RedisPassword                         string
-	BybitKey, BybitSecret, BybitCarryClose, BybitCarryRate                                           string
-	BinanceKey, BinanceSecret, BinanceCarryClose, BinanceCarryRate                                   string
-	CoinparkKey, CoinparkSecret, CoinparkCarryClose, CoinparkCarryRate                               string
-	BitgetKey, BitgetSecret, BitgetCarryClose, BitgetCarryRate                                       string
-	MexcKey, MexcSecret, MexcCarryClose, MexcCarryRate                                               string
-	BitmexKey, BitmexSecret, BitmexCarryClose, BitmexCarryRate, FtxSubAccount, Phase                 string
-	OKPhase, Handle, Mail, FromMail, FromMailAuth, Port, WalletKey, DBConnection, Env, FutureAddress string
+	Delay                         float64
+	Debug, KucoinSpot, MetricTick bool
+	// SpecialChan 1 代表使用特殊通道
+	SpecialChan                                                                                                   string
+	KucoinRelatedKey, KucoinRelatedSecret, KucoinFutureKey, KucoinFutureSecret                                    string
+	KucoinCarryClose, KucoinCarryRate, Simulation, Equal, Log, GateKey, GateSecret, GateCarryClose, GateCarryRate string
+	HuobiKey, HuobiSecret, HuobiCarryClose, HuobiCarryRate                                                        string
+	OkexKey, OkexSecret, OkexCarryClose, OkexCarryRate                                                            string
+	FtxKey, FtxSecret, FtxCarryClose, FtxCarryRate, RedisAddr, RedisPassword                                      string
+	BybitKey, BybitSecret, BybitCarryClose, BybitCarryRate                                                        string
+	BinanceKey, BinanceSecret, BinanceCarryClose, BinanceCarryRate                                                string
+	CoinparkKey, CoinparkSecret, CoinparkCarryClose, CoinparkCarryRate                                            string
+	BitgetKey, BitgetSecret, BitgetCarryClose, BitgetCarryRate                                                    string
+	MexcKey, MexcSecret, MexcCarryClose, MexcCarryRate                                                            string
+	BitmexKey, BitmexSecret, BitmexCarryClose, BitmexCarryRate, FtxSubAccount, Phase                              string
+	OKPhase, Handle, Mail, FromMail, FromMailAuth, Port, WalletKey, DBConnection, Env, FutureAddress              string
 }
 
 type Account struct {

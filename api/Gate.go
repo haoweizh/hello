@@ -482,10 +482,10 @@ func WSOrderServeGate(account *model.Account, marketType string) {
 	logInCode := ``
 	if marketType == model.MarketTypeSpot {
 		logInCode = `spot`
-		conn, err = model.WsAccountClient(model.Gate, account.Key, gateWs.BaseUrl, wsPriHandlerGateSpot)
+		conn, err = model.WsPrivateClient(model.Gate, account.Key, gateWs.BaseUrl, wsPriHandlerGateSpot)
 	} else if marketType == model.MarketTypePerp {
 		logInCode = `futures`
-		conn, err = model.WsAccountClient(model.Gate, account.Key, gateWs.FuturesUsdtUrl, wsPriHandlerGatePerp)
+		conn, err = model.WsPrivateClient(model.Gate, account.Key, gateWs.FuturesUsdtUrl, wsPriHandlerGatePerp)
 	}
 	if err != nil {
 		util.Log(util.LogLevelError, fmt.Sprintf("gate wsAccount connect errSpot: %s %s", err.Error(), account.Key))
@@ -516,7 +516,7 @@ func WsTickServeGateSpot(market string) (socketMap map[*model.WSConn]bool, msgCh
 			//spotOrderBookSubs = append(spotOrderBookSubs, []string{symbol, "5", "100ms"})
 		}
 	}
-	//spotOrderBookSockets, spotOrderBookChannels, spotOrderBookErr := WebSocketClient(model.Gate, gateWs.BaseUrl, spotOrderBookSubs, subscribeHandler, wsHandlerGate, wsStepGate)
+	//spotOrderBookSockets, spotOrderBookChannels, spotOrderBookErr := WsPublicClient(model.Gate, gateWs.BaseUrl, spotOrderBookSubs, subscribeHandler, wsHandlerGate, wsStepGate)
 	//if spotOrderBookErr == nil {
 	//	util.Info(`finish connect public gate spot order book ws `)
 	//	msgChans = append(msgChans, spotOrderBookChannels...)
@@ -524,7 +524,7 @@ func WsTickServeGateSpot(market string) (socketMap map[*model.WSConn]bool, msgCh
 	//		socketMap[conn] = b
 	//	}
 	//}
-	return model.WebSocketClient(model.Gate, gateWs.BaseUrl, spotSubs, subscribeHandler, wsHandlerGate, wsStepGate)
+	return model.WsPublicClient(model.Gate, gateWs.BaseUrl, spotSubs, subscribeHandler, wsHandlerGate, wsStepGate)
 }
 
 func WsTickServeGatePerp(market string) (socketMap map[*model.WSConn]bool, msgChans []chan struct{}, connectErr error) {
@@ -538,7 +538,7 @@ func WsTickServeGatePerp(market string) (socketMap map[*model.WSConn]bool, msgCh
 			futureSubs = append(futureSubs, symbol)
 		}
 	}
-	perpBookTickerSockets, perpBookTickerChannels, perpBookTickerErr := model.WebSocketClient(model.Gate, gateWs.FuturesUsdtUrl, futureSubs, subscribeHandler, wsHandlerGate, wsStepGate)
+	perpBookTickerSockets, perpBookTickerChannels, perpBookTickerErr := model.WsPublicClient(model.Gate, gateWs.FuturesUsdtUrl, futureSubs, subscribeHandler, wsHandlerGate, wsStepGate)
 	if perpBookTickerErr == nil {
 		util.Log(util.LogLevelInfo, `finish connect public gate perp book ticker ws `)
 		msgChans = append(msgChans, perpBookTickerChannels...)
@@ -546,7 +546,7 @@ func WsTickServeGatePerp(market string) (socketMap map[*model.WSConn]bool, msgCh
 			socketMap[conn] = b
 		}
 	}
-	perpMarkPriceSockets, perpMarkPriceChannels, perpMarkPriceErr := model.WebSocketClient(model.Gate, gateWs.FuturesUsdtUrl, futureSubs, subscribeMarkPriceHandler, wsHandlerGate, wsStepGate)
+	perpMarkPriceSockets, perpMarkPriceChannels, perpMarkPriceErr := model.WsPublicClient(model.Gate, gateWs.FuturesUsdtUrl, futureSubs, subscribeMarkPriceHandler, wsHandlerGate, wsStepGate)
 	if perpMarkPriceErr == nil {
 		util.Log(util.LogLevelInfo, `finish connect public gate perp mark price ws `)
 		msgChans = append(msgChans, perpMarkPriceChannels...)
@@ -1000,7 +1000,7 @@ func placeOrderGate(account *model.Account, isWs bool, order *model.Order, order
 				`payload`: map[string]interface{}{`req_id`: order.ClientOrdId, `req_param`: param}}
 			wsOrderMsg := util.JsonEncodeToByte(reqMap)
 			value, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrder, model.Gate, model.MarketTypeSpot, account.Key)
-			if value != nil && value.(*model.WSConn).Conn != nil {
+			if value != nil {
 				if err := value.(*model.WSConn).WriteMsg(wsOrderMsg); err != nil {
 					util.Log(util.LogLevelError, fmt.Sprintf(`fail to order gate ws %s %s`, string(wsOrderMsg), err.Error()))
 				}
@@ -1044,7 +1044,7 @@ func placeOrderGate(account *model.Account, isWs bool, order *model.Order, order
 				`payload`: map[string]interface{}{`req_id`: order.ClientOrdId, `req_param`: param}}
 			wsOrderMsg := util.JsonEncodeToByte(reqMap)
 			value, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrder, model.Gate, model.MarketTypePerp, account.Key)
-			if value != nil && value.(*model.WSConn).Conn != nil {
+			if value != nil {
 				if err := value.(*model.WSConn).WriteMsg(wsOrderMsg); err != nil {
 					util.Log(util.LogLevelError, fmt.Sprintf(`fail to order gate ws %s %s`, string(wsOrderMsg), err.Error()))
 				}

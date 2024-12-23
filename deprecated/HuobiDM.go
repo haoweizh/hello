@@ -23,7 +23,7 @@ package deprecated
 //const restHuobiDM = `api.hbdm.vn`
 //const wsHuobiDM = `wss://api.hbdm.vn/ws`
 //
-//var subscribeHandlerHuobiDM = func(connection *websocket.Conn, subscribes []interface{}) error {
+//var subscribeHandlerHuobiDM = func(connection *websocket.conn, subscribes []interface{}) error {
 //	var err error = nil
 //	for _, v := range subscribes {
 //		subscribeMap := make(map[string]interface{})
@@ -40,7 +40,7 @@ package deprecated
 //}
 //
 //func WsDepthServeHuobiDM(markets *model.Markets, orderHandler api.OrderHandler) ([]chan struct{}, error) {
-//	wsHandler := func(connection *websocket.Conn, event []byte, orderHandler api.OrderHandler) {
+//	wsHandler := func(connection *websocket.conn, event []byte, orderHandler api.OrderHandler) {
 //		res := util.UnGzip(event)
 //		responseJson, _ := util.NewJSON(res)
 //		if responseJson.Get(`ping`).MustInt() > 0 {

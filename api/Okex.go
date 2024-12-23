@@ -180,7 +180,7 @@ var wsAccountHandlerOKEX = func(market, key string, event []byte) {
 	}
 	if responseJson.Get(`event`).MustString() == `login` && responseJson.Get(`code`).MustString() == `0` {
 		value, success := util.LoadSyncMap(&model.AppEnvironment.ConnOrder, market, key)
-		if !success || value == nil || value.(*model.WSConn).Conn == nil {
+		if !success || value == nil {
 			return
 		}
 		err = value.(*model.WSConn).WriteJson(map[string]interface{}{"op": "subscribe", "args": []interface{}{map[string]string{"channel": "orders", "instType": "SPOT"}}})
@@ -269,7 +269,7 @@ func WsOrderServeOKEX(account *model.Account) {
 	if account == nil {
 		return
 	}
-	conn, err := model.WsAccountClient(model.OKEX, account.Key, wsPrivateOKEX, wsAccountHandlerOKEX)
+	conn, err := model.WsPrivateClient(model.OKEX, account.Key, wsPrivateOKEX, wsAccountHandlerOKEX)
 	if err != nil {
 		util.Log(util.LogLevelError, "can not create web socket "+err.Error())
 	} else if conn != nil {
@@ -556,7 +556,7 @@ func PlacePairOKEX(account *model.Account, requestId, symbolBuy, symbolSell, ord
 	subscribeMap["op"] = "batch-orders"
 	msg := util.JsonEncodeToByte(subscribeMap)
 	value, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrder, model.OKEX, account.Key)
-	if value == nil || value.(*model.WSConn).Conn == nil {
+	if value == nil {
 		errMsg = fmt.Sprintf(`fail to get connection %s`, account.Key)
 		util.Log(util.LogLevelError, errMsg)
 		return false, errMsg
@@ -634,7 +634,7 @@ func placeOrderOKEX(account *model.Account, isWs bool, order *model.Order) {
 		util.Log(util.LogLevelInfo, `ws order `+string(wsOrderMsg))
 		order.Status = model.CarryStatusWorking
 		value, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrder, model.OKEX, account.Key)
-		if value == nil || value.(*model.WSConn).Conn == nil {
+		if value == nil {
 			util.Log(util.LogLevelError, fmt.Sprintf(`fail to get private connection when place okex order %s`, account.Key))
 			order.Status = model.CarryStatusFail
 		} else {

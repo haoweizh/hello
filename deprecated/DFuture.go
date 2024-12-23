@@ -23,7 +23,7 @@ package deprecated
 //
 //var lastDepthPingDFuture = util.GetNowUnixMillion()
 //
-//var subscribeHandlerDFuture = func(connection *websocket.Conn, subscribes []interface{}) error {
+//var subscribeHandlerDFuture = func(connection *websocket.conn, subscribes []interface{}) error {
 //	var err error = nil
 //	for _, subscribe := range subscribes {
 //		subMsg := fmt.Sprintf(`{"id": "id1", "includeDfutureDay": "1", sub:"%s"}`, subscribe)
@@ -35,7 +35,7 @@ package deprecated
 //}
 //
 //func WsDepthServeDFuture(markets *model.Markets, orderHandler api.OrderHandler) ([]chan struct{}, error) {
-//	wsHandler := func(connection *websocket.Conn, event []byte, orderHandler api.OrderHandler) {
+//	wsHandler := func(connection *websocket.conn, event []byte, orderHandler api.OrderHandler) {
 //		responseJson, err := util.NewJSON(event)
 //		if err != nil {
 //			util.SocketInfo(`fail to unmarshal DFuture json ` + err.Error())

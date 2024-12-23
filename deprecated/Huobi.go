@@ -55,7 +55,7 @@ package deprecated
 //	} `json:"tick"`
 //}
 //
-//var subscribeHandlerHuobi = func(connection *websocket.Conn, subscribes []interface{}) error {
+//var subscribeHandlerHuobi = func(connection *websocket.conn, subscribes []interface{}) error {
 //	var err error = nil
 //	for _, v := range subscribes {
 //		subscribeMap := make(map[string]interface{})
@@ -71,7 +71,7 @@ package deprecated
 //}
 //
 //func WsDepthServeHuobi(markets *model.Markets, orderHandler api.OrderHandler) (channels []chan struct{}, err error) {
-//	wsHandler := func(connection *websocket.Conn, event []byte, orderHandler api.OrderHandler) {
+//	wsHandler := func(connection *websocket.conn, event []byte, orderHandler api.OrderHandler) {
 //		res := util.UnGzip(event)
 //		responseJson, _ := util.NewJSON(res)
 //		if responseJson.Get(`ping`).MustInt() > 0 {
@@ -121,7 +121,7 @@ package deprecated
 //			}
 //		}
 //	}
-//	wsHandlerDM := func(connection *websocket.Conn, event []byte, orderHandler api.OrderHandler) {
+//	wsHandlerDM := func(connection *websocket.conn, event []byte, orderHandler api.OrderHandler) {
 //		res := util.UnGzip(event)
 //		responseJson, _ := util.NewJSON(res)
 //		if responseJson.Get(`ping`).MustInt() > 0 {

@@ -151,7 +151,7 @@ package deprecated
 //	}
 //}
 //
-//var subscribeHandlerXT = func(connection *websocket.Conn, subscribes []interface{}, keyChannel string) error {
+//var subscribeHandlerXT = func(connection *websocket.conn, subscribes []interface{}, keyChannel string) error {
 //	var err error = nil
 //	var params []string
 //	for _, subscribe := range subscribes {
@@ -171,7 +171,7 @@ package deprecated
 //}
 //
 //func WsDepthServeXT(markets *model.Markets, orderHandler OrderHandler) (channels []chan struct{}, err error) {
-//	markPriceWsHandler := func(connection *websocket.Conn, event []byte, orderHandler OrderHandler) {
+//	markPriceWsHandler := func(connection *websocket.conn, event []byte, orderHandler OrderHandler) {
 //		if len(event) == 4 {
 //			return
 //		}
@@ -201,7 +201,7 @@ package deprecated
 //			}
 //		}
 //	}
-//	bookWsHandler := func(connection *websocket.Conn, event []byte, orderHandler OrderHandler) {
+//	bookWsHandler := func(connection *websocket.conn, event []byte, orderHandler OrderHandler) {
 //		if len(event) == 4 {
 //			return
 //		}
@@ -265,7 +265,7 @@ package deprecated
 //			}
 //		}
 //	}
-//	//spotBookUpdateWsHandler := func(connection *websocket.Conn, event []byte, orderHandler OrderHandler) {
+//	//spotBookUpdateWsHandler := func(connection *websocket.conn, event []byte, orderHandler OrderHandler) {
 //	//
 //	//}
 //	channels = make([]chan struct{}, 0)

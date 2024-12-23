@@ -19,10 +19,13 @@ type MsgHandler func(market string, conn *WSConn, message []byte)
 type AccountMsgHandler func(market, key string, message []byte)
 type SubscribeHandler func(market string, connection *WSConn, subscribes []interface{}) error
 
+const ChanTypeMarket = "market"
+const ChanTypeOrder = "order"
+
 type WSConn struct {
-	Conn *websocket.Conn
-	//默认0 使用ws  1 使用特殊通道market 2使用特殊通道order
-	useType          int
+	conn *websocket.Conn
+	//默认0 使用ws  ChanTypeMarket 使用特殊通道market WSTypeOrder使用特殊通道order
+	WSType           string
 	MarketPublisher  *util.MarketPublisher
 	MarketSubscriber []byte
 	MarketReceiver   *util.MarketReceiver
@@ -30,15 +33,15 @@ type WSConn struct {
 	OrderReceiver    *util.OrderReceiver
 }
 
-func (wsConn *WSConn) Close() error {
-	if wsConn.useType == 0 {
-		err := wsConn.Conn.Close()
+func (wsConn *WSConn) Close() {
+	if AppConfig.SpecialChan != `1` {
+		err := wsConn.conn.Close()
 		if err != nil {
 			util.Log(util.LogLevelError, `close conn err `+err.Error())
-			return err
+			return
 		}
 	}
-	return nil
+	return
 }
 
 var lockMap sync.Map // market - *sync.Mutex
@@ -56,18 +59,18 @@ func (wsConn *WSConn) WriteMsg(msg []byte) (err error) {
 	}
 	connLock.Lock()
 	defer connLock.Unlock()
-	if wsConn.Conn == nil {
-		return fmt.Errorf(`nil Conn`)
+	if wsConn.conn == nil {
+		return fmt.Errorf(`nil conn`)
 	}
-	if wsConn.useType == 0 {
-		err = wsConn.Conn.WriteMessage(websocket.TextMessage, msg)
-	} else if wsConn.useType == 1 {
-		wsConn.MarketPublisher.PublishMarket(string(msg))
+	if AppConfig.SpecialChan != `1` {
+		err = wsConn.conn.WriteMessage(websocket.TextMessage, msg)
+	} else if wsConn.WSType == ChanTypeMarket {
+		err = wsConn.MarketPublisher.PublishMarket(string(msg))
 		wsConn.MarketSubscriber = msg
-	} else if wsConn.useType == 2 {
-		wsConn.OrderPublisher.PublishOrder(string(msg))
+	} else if wsConn.WSType == ChanTypeOrder {
+		err = wsConn.OrderPublisher.PublishOrder(string(msg))
 	}
-	//return wsConn.Conn.Write(ctx, websocket.MessageText, msg)
+	//return wsConn.conn.Write(ctx, websocket.MessageText, msg)
 	return
 }
 
@@ -81,28 +84,28 @@ func (wsConn *WSConn) WriteJson(body map[string]interface{}) (err error) {
 //		defer cancel()
 //		c, _, dialErr := websocket.Dial(ctx, url, &websocket.DialOptions{})
 //		if dialErr == nil {
-//			return &WSConn{Conn: c}, nil
+//			return &WSConn{conn: c}, nil
 //		}
 //		return nil, dialErr
 //	}
-//
+
 // initChannel 初始化一个通道，根据给定的URL、市场类型和使用类型来选择合适的通道类型。
 // 这个函数主要目的是根据不同的市场和使用类型，选择不同的WebSocket连接方式。
 // 参数:
 //
 //	url - 要连接的WebSocket URL。
 //	market - 市场类型，例如BinanceSpot、BinancePerp等。
-//	useType - 使用类型，根据此参数和AppConfig.UseType的值决定使用哪种连接方式。1为market 2为order
+//	WSType - 使用类型，根据此参数和AppConfig.UseType的值决定使用哪种连接方式。1为market 2为order
 //
 // 返回值:
 //
 //	*WSConn - 成功时返回一个WebSocket连接指针。
 //	error - 如果初始化过程中遇到任何问题，则返回错误。
-func initChannel(url, market string, useType int) (*WSConn, error) {
-	if AppConfig.UseType == "1" {
+func initChannel(url, market, wsType string) (*WSConn, error) {
+	if AppConfig.SpecialChan == "1" {
 		switch market {
 		case BinanceSpot, BinancePerp, BinanceMargin:
-			return newTsChannel(url, "bf", useType)
+			return newTsChannel(url, "bf", wsType)
 		default:
 			return newWsGorillaChannel(url)
 		}
@@ -116,46 +119,47 @@ func initChannel(url, market string, useType int) (*WSConn, error) {
 //
 //	url - 用于连接的URL，如果为market，则创建市场数据通道，否则创建交易数据通道。
 //	tsCode - 用于标识特定交易或市场数据的代码。
-//	useType -用于判断是market单还是order单，market为1 order为2
+//	WSType -用于判断是market单还是order单，market为1 order为2
 //
 // 返回值:
 //
 //	*WSConn - 一个指向WSConn对象的指针，该对象代表创建的通道。
 //	error - 如果创建过程中发生错误，则返回该错误。
-func newTsChannel(url, tsCode string, useType int) (*WSConn, error) {
-	if useType == 1 {
-		marketPublisher, err := util.InitMarketPublisher(tsCode + "_m_sub")
-		if err != nil {
-			return nil, err
+func newTsChannel(url, tsCode, wsType string) (*WSConn, error) {
+	if wsType == ChanTypeMarket {
+		marketPublisher, errPub := util.InitMarketPublisher(tsCode + "_m_sub")
+		if errPub != nil {
+			return nil, errPub
 		}
-		marketReceiver, err := util.InitMarketReceiver(tsCode + "_m_pub")
-		if err != nil {
-			return nil, err
+		marketReceiver, errRec := util.InitMarketReceiver(tsCode + "_m_pub")
+		if errRec != nil {
+			return nil, errRec
 		}
 		return &WSConn{
-			Conn:            nil,
-			useType:         useType,
+			conn:            nil,
+			WSType:          wsType,
 			MarketPublisher: marketPublisher,
 			MarketReceiver:  marketReceiver,
 		}, nil
-	} else if useType == 2 {
-		orderPublisher, err := util.InitOrderPublisher(tsCode + "_order_sub")
-		if err != nil {
-			return nil, err
+	} else if wsType == ChanTypeOrder {
+		orderPublisher, errPub := util.InitOrderPublisher(tsCode + "_order_sub")
+		if errPub != nil {
+			return nil, errPub
 		}
-		orderReceiver, err := util.InitOrderReceiver(tsCode + "_order_pub")
-		if err != nil {
-			return nil, err
+		orderReceiver, errRec := util.InitOrderReceiver(tsCode + "_order_pub")
+		if errRec != nil {
+			return nil, errRec
 		}
 		return &WSConn{
-			Conn:           nil,
-			useType:        useType,
+			conn:           nil,
+			WSType:         wsType,
 			OrderPublisher: orderPublisher,
 			OrderReceiver:  orderReceiver,
 		}, nil
 	}
 	return nil, errors.New(fmt.Sprintf("url %s not support %s Init Publisher or Receiver", url, tsCode))
 }
+
 func newWsGorillaChannel(url string) (*WSConn, error) {
 	var connErr error
 	var c *websocket.Conn
@@ -183,15 +187,13 @@ func newWsGorillaChannel(url string) (*WSConn, error) {
 	if connErr != nil {
 		return nil, connErr
 	}
-	return &WSConn{Conn: c}, nil
+	return &WSConn{conn: c}, nil
 }
-func chanHandler(market string, stopChan chan struct{}, connection *WSConn, msgHandler MsgHandler) {
+
+func publicHandler(market string, stopChan chan struct{}, connection *WSConn, msgHandler MsgHandler) {
 	defer func() {
-		//err := connection.Conn.Close(websocket.StatusNormalClosure, "")
-		err := connection.Close()
-		if err != nil {
-			util.Log(util.LogLevelError, fmt.Sprintf(`connection closed %s %s`, market, err.Error()))
-		}
+		//err := connection.conn.Close(websocket.StatusNormalClosure, "")
+		connection.Close()
 	}()
 	for {
 		select {
@@ -199,9 +201,9 @@ func chanHandler(market string, stopChan chan struct{}, connection *WSConn, msgH
 			util.Log(util.LogLevelInfo, "get stop struct, return")
 			return
 		default:
-			if connection.useType == 0 {
-				//msgType, message, err := connection.Conn.Read(context.Background())
-				msgType, message, err := connection.Conn.ReadMessage()
+			if AppConfig.SpecialChan != "1" {
+				//msgType, message, err := connection.conn.Read(context.Background())
+				msgType, message, err := connection.conn.ReadMessage()
 				if err != nil {
 					util.Log(util.LogLevelError, fmt.Sprintf(`%s can not read from websocket: %s`, market, err.Error()))
 					return
@@ -210,14 +212,17 @@ func chanHandler(market string, stopChan chan struct{}, connection *WSConn, msgH
 				if msgType == websocket.TextMessage {
 					msgHandler(market, connection, message)
 				}
-			} else if connection.useType == 1 {
+			} else if connection.WSType == ChanTypeMarket {
 				buf := make([]byte, 4096)
 				msgSize := connection.MarketReceiver.ReceiveMarket(buf)
 				if msgSize > 0 {
 					if needReconnection(buf[:msgSize]) {
-						util.Log(util.LogLevelInfo, fmt.Sprintf(`market %s %s  reconnect`, market, buf[:msgSize]))
-						connection.MarketPublisher.PublishMarket(string(connection.MarketSubscriber))
-					} else {
+						util.Log(util.LogLevelInfo, fmt.Sprintf(`chan need reconnect market %s %s`, market, buf[:msgSize]))
+						err := connection.MarketPublisher.PublishMarket(string(connection.MarketSubscriber))
+						if err != nil {
+							util.Log(util.LogLevelInfo, fmt.Sprintf(`%s can not publish market %s`, market, err.Error()))
+						}
+					} else if msgHandler != nil {
 						msgHandler(market, connection, buf[:msgSize])
 					}
 				}
@@ -226,25 +231,22 @@ func chanHandler(market string, stopChan chan struct{}, connection *WSConn, msgH
 	}
 }
 
-func WsAccountClient(market, key, url string, accountMsgHandler AccountMsgHandler) (connection *WSConn, err error) {
+func WsPrivateClient(market, key, url string, accountMsgHandler AccountMsgHandler) (connection *WSConn, err error) {
 	util.Log(util.LogLevelInfo, market+` create account channel `+url)
-	connection, err = initChannel(url, market, 2)
+	connection, err = initChannel(url, market, ChanTypeOrder)
 	if err != nil {
 		util.Log(util.LogLevelError, url+"can not create web socket"+err.Error())
 		return nil, err
 	}
 	go func() {
 		defer func() {
-			//closeErr := connection.Conn.Close(websocket.StatusNormalClosure, "")
-			closeErr := connection.Close()
-			if closeErr != nil {
-				util.Log(util.LogLevelError, fmt.Sprintf(`%s connection closed %s`, url, closeErr.Error()))
-			}
+			//closeErr := connection.conn.Close(websocket.StatusNormalClosure, "")
+			connection.Close()
 		}()
 		for {
-			if connection.useType == 0 {
-				//_, message, readErr := connection.Conn.Read(context.Background())
-				_, message, readErr := connection.Conn.ReadMessage()
+			if AppConfig.SpecialChan != `1` {
+				//_, message, readErr := connection.conn.Read(context.Background())
+				_, message, readErr := connection.conn.ReadMessage()
 				if readErr != nil {
 					util.DelSyncMap(&AppEnvironment.ConnOrder, market, key)
 					util.Log(util.LogLevelError, fmt.Sprintf(`%s %s can not read from account ws: %s`, market, url, readErr.Error()))
@@ -253,16 +255,14 @@ func WsAccountClient(market, key, url string, accountMsgHandler AccountMsgHandle
 				if accountMsgHandler != nil {
 					accountMsgHandler(market, key, message)
 				}
-			} else if connection.useType == 2 {
+			} else if connection.WSType == ChanTypeOrder {
 				buf := make([]byte, 4096)
 				msgSize := connection.OrderReceiver.ReceiveOrder(buf)
 				if msgSize > 0 {
 					if needReconnection(buf[:msgSize]) {
 						util.Log(util.LogLevelInfo, fmt.Sprintf(`order %s %s reconnect`, market, buf[:msgSize]))
-					} else {
-						if accountMsgHandler != nil {
-							accountMsgHandler(market, key, buf[:msgSize])
-						}
+					} else if accountMsgHandler != nil {
+						accountMsgHandler(market, key, buf[:msgSize])
 					}
 				}
 			}
@@ -271,7 +271,7 @@ func WsAccountClient(market, key, url string, accountMsgHandler AccountMsgHandle
 	return connection, nil
 }
 
-func WebSocketClient(market, url string, subscribes []interface{}, subHandler SubscribeHandler,
+func WsPublicClient(market, url string, subscribes []interface{}, subHandler SubscribeHandler,
 	msgHandler MsgHandler, step int) (socketMap map[*WSConn]bool, msgChans []chan struct{}, connectErr error) {
 	util.Log(util.LogLevelInfo, market+` create depth channel `+url)
 	socketMap = make(map[*WSConn]bool)
@@ -283,7 +283,7 @@ func WebSocketClient(market, url string, subscribes []interface{}, subHandler Su
 		} else {
 			stepSubscribes = subscribes[i*step:]
 		}
-		connection, err := initChannel(url, market, 1)
+		connection, err := initChannel(url, market, ChanTypeMarket)
 		if err != nil || connection == nil {
 			if err != nil {
 				util.Log(util.LogLevelError, fmt.Sprintf("can not create web socket %s %s %s", market, url, err.Error()))
@@ -291,7 +291,7 @@ func WebSocketClient(market, url string, subscribes []interface{}, subHandler Su
 			return nil, nil, err
 		}
 		stopChan := make(chan struct{}, 2)
-		go chanHandler(market, stopChan, connection, msgHandler)
+		go publicHandler(market, stopChan, connection, msgHandler)
 		if subHandler != nil {
 			_ = subHandler(market, connection, stepSubscribes)
 		}
@@ -303,6 +303,7 @@ func WebSocketClient(market, url string, subscribes []interface{}, subHandler Su
 		fmt.Sprintf(`ws client add conns %s sockets %d msgChans %d`, market, len(socketMap), len(msgChans)))
 	return
 }
+
 func needReconnection(buf []byte) bool {
 	if strings.Contains(string(buf), "{\"ctlOp\":\"Reconnection\"}") {
 		return true

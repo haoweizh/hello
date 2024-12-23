@@ -55,7 +55,7 @@ func maintainConnsBitget(market string, accounts []*model.Account) {
 
 var wsOrderConnHandlerBitget = func(market, key string, event []byte) {
 	value, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrderUpdate, market, key)
-	if value == nil || value.(*model.WSConn).Conn == nil {
+	if value == nil {
 		return
 	}
 	resJson, _ := util.NewJSON(event)
@@ -103,7 +103,7 @@ func WsOrderServeBitget(market string, account *model.Account) {
 	if account == nil {
 		return
 	}
-	conn, err := model.WsAccountClient(market, account.Key, bitgetPrivate, wsOrderConnHandlerBitget)
+	conn, err := model.WsPrivateClient(market, account.Key, bitgetPrivate, wsOrderConnHandlerBitget)
 	if err != nil {
 		util.Log(util.LogLevelError, "can not create web socket "+err.Error())
 	} else if conn != nil {

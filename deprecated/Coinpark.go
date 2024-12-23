@@ -21,7 +21,7 @@ package deprecated
 //const restCoinPark = "https://api.coinpark.cc/v1"
 //const wsCoinPark = "wss://push.coinpark.cc/"
 //
-//var subscribeHandlerCoinpark = func(connection *websocket.Conn, subscribes []interface{}) error {
+//var subscribeHandlerCoinpark = func(connection *websocket.conn, subscribes []interface{}) error {
 //	var err error = nil
 //	for _, v := range subscribes {
 //		subscribeMap := make(map[string]interface{})
@@ -38,7 +38,7 @@ package deprecated
 //}
 //
 //func WsDepthServeCoinpark(markets *model.Markets, orderHandler api.OrderHandler) ([]chan struct{}, error) {
-//	wsHandler := func(connection *websocket.Conn, event []byte, orderHandler api.OrderHandler) {
+//	wsHandler := func(connection *websocket.conn, event []byte, orderHandler api.OrderHandler) {
 //		depthJson, err := util.NewJSON(event)
 //		if err != nil {
 //			util.SocketInfo(`fail to unmarshal coinpark json ` + err.Error())

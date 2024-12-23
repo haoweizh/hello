@@ -127,22 +127,22 @@ func CreateWSTick(environment *model.Environment, market string) (
 		environment.ConnTick.Store(market+model.MarketTypePerp, socketMapPerp)
 		environment.MsgChanTick.Store(market+model.MarketTypePerp, channsPerp)
 	case model.OKEX:
-		socketMap, channels, err = model.WebSocketClient(market, wsOKEX, GetWSSubscribes(market, []string{model.SubscribeDepth}),
+		socketMap, channels, err = model.WsPublicClient(market, wsOKEX, GetWSSubscribes(market, []string{model.SubscribeDepth}),
 			subscribeHandlerOKEX, wsHandlerOKEX, wsStepOKEX)
 	case model.BinanceSpot, model.BinanceMargin:
-		socketMap, channels, err = model.WebSocketClient(market, wsBinance+`/stream`, GetWSSubscribes(market, []string{model.SubscribeTicker}),
+		socketMap, channels, err = model.WsPublicClient(market, wsBinance+`/stream`, GetWSSubscribes(market, []string{model.SubscribeTicker}),
 			subscribeHandlerBinance, wsHandlerBinanceSpot, wsStepBinance)
 	case model.BinancePerp:
-		socketMap, channels, err = model.WebSocketClient(market, wsBinancePerp+`/stream`, GetWSSubscribes(
+		socketMap, channels, err = model.WsPublicClient(market, wsBinancePerp+`/stream`, GetWSSubscribes(
 			market, []string{model.SubscribeTicker, model.SubscribeMarkPrice}), subscribeHandlerBinance, wsHandlerBinancePerp, wsStepBinance)
 		//model.SubscribeDepth
 	//case model.HuobiPerp:
-	//	socketMap, channels, err = model.WebSocketClient(market, deprecated.wsHuobiPerp, GetWSSubscribes(model.HuobiPerp, []string{model.SubscribeDepth}),
+	//	socketMap, channels, err = model.WsPublicClient(market, deprecated.wsHuobiPerp, GetWSSubscribes(model.HuobiPerp, []string{model.SubscribeDepth}),
 	//		deprecated.subscribeHandlerHuobiPerp, deprecated.wsMsgHandler, deprecated.wsStepHuobi)
 	case model.Bybit:
 		socketMap, channels, err = WsTickServeBybit(market)
 	case model.BitgetSpot:
-		socketMap, channels, err = model.WebSocketClient(market, bitgetPublic,
+		socketMap, channels, err = model.WsPublicClient(market, bitgetPublic,
 			GetWSSubscribes(market, []string{model.SubscribeDepth}), subscribeHandlerBitget, tickHandlerBitget, wsStepBitget)
 	case model.BitgetPerp:
 		socketMap, channels, err = WsTickServeBitgetPerp(market)
