@@ -22,19 +22,23 @@ type SubscribeHandler func(market string, connection *WSConn, subscribes []inter
 type WSConn struct {
 	Conn *websocket.Conn
 	//默认0 使用ws  1 使用特殊通道market 2使用特殊通道order
-	useType         int
-	MarketPublisher *util.MarketPublisher
-	MarketReceiver  *util.MarketReceiver
-	OrderPublisher  *util.OrderPublisher
-	OrderReceiver   *util.OrderReceiver
+	useType          int
+	MarketPublisher  *util.MarketPublisher
+	MarketSubscriber []byte
+	MarketReceiver   *util.MarketReceiver
+	OrderPublisher   *util.OrderPublisher
+	OrderReceiver    *util.OrderReceiver
 }
 
-func (wsConn *WSConn) Close() {
-	err := wsConn.Conn.Close()
-	if err != nil {
-		util.Log(util.LogLevelError, `close conn err `+err.Error())
-		return
+func (wsConn *WSConn) Close() error {
+	if wsConn.useType == 0 {
+		err := wsConn.Conn.Close()
+		if err != nil {
+			util.Log(util.LogLevelError, `close conn err `+err.Error())
+			return err
+		}
 	}
+	return nil
 }
 
 var lockMap sync.Map // market - *sync.Mutex
@@ -59,6 +63,7 @@ func (wsConn *WSConn) WriteMsg(msg []byte) (err error) {
 		err = wsConn.Conn.WriteMessage(websocket.TextMessage, msg)
 	} else if wsConn.useType == 1 {
 		wsConn.MarketPublisher.PublishMarket(string(msg))
+		wsConn.MarketSubscriber = msg
 	} else if wsConn.useType == 2 {
 		wsConn.OrderPublisher.PublishOrder(string(msg))
 	}
@@ -81,7 +86,7 @@ func (wsConn *WSConn) WriteJson(body map[string]interface{}) (err error) {
 //	return nil, dialErr
 //}
 
-func chooseChannel(url, market string) (*WSConn, error) {
+func initChannel(url, market string) (*WSConn, error) {
 	if AppConfig.UseType == "1" {
 		switch market {
 		case BinanceSpot, BinancePerp, BinanceMargin:
@@ -170,11 +175,9 @@ func newWsGorillaChannel(url string) (*WSConn, error) {
 func chanHandler(market string, stopChan chan struct{}, connection *WSConn, msgHandler MsgHandler) {
 	defer func() {
 		//err := connection.Conn.Close(websocket.StatusNormalClosure, "")
-		if connection.useType == 0 {
-			err := connection.Conn.Close()
-			if err != nil {
-				util.Log(util.LogLevelError, fmt.Sprintf(`connection closed %s %s`, market, err.Error()))
-			}
+		err := connection.Close()
+		if err != nil {
+			util.Log(util.LogLevelError, fmt.Sprintf(`connection closed %s %s`, market, err.Error()))
 		}
 	}()
 	for {
@@ -198,13 +201,12 @@ func chanHandler(market string, stopChan chan struct{}, connection *WSConn, msgH
 				buf := make([]byte, 4096)
 				msgSize := connection.MarketReceiver.ReceiveMarket(buf)
 				if msgSize > 0 {
-					msgHandler(market, connection, buf[:msgSize])
-				}
-			} else if connection.useType == 2 {
-				buf := make([]byte, 4096)
-				msgSize := connection.OrderReceiver.ReceiveOrder(buf)
-				if msgSize > 0 {
-					msgHandler(market, connection, buf[:msgSize])
+					if needReconnection(buf[:msgSize]) {
+						util.Log(util.LogLevelInfo, fmt.Sprintf(`market %s %s  reconnect`, market, buf[:msgSize]))
+						connection.MarketPublisher.PublishMarket(string(connection.MarketSubscriber))
+					} else {
+						msgHandler(market, connection, buf[:msgSize])
+					}
 				}
 			}
 		}
@@ -213,7 +215,7 @@ func chanHandler(market string, stopChan chan struct{}, connection *WSConn, msgH
 
 func WsAccountClient(market, key, url string, accountMsgHandler AccountMsgHandler) (connection *WSConn, err error) {
 	util.Log(util.LogLevelInfo, market+` create account channel `+url)
-	connection, err = newWsGorillaChannel(url)
+	connection, err = initChannel(url, market)
 	if err != nil {
 		util.Log(util.LogLevelError, url+"can not create web socket"+err.Error())
 		return nil, err
@@ -221,21 +223,35 @@ func WsAccountClient(market, key, url string, accountMsgHandler AccountMsgHandle
 	go func() {
 		defer func() {
 			//closeErr := connection.Conn.Close(websocket.StatusNormalClosure, "")
-			closeErr := connection.Conn.Close()
+			closeErr := connection.Close()
 			if closeErr != nil {
 				util.Log(util.LogLevelError, fmt.Sprintf(`%s connection closed %s`, url, closeErr.Error()))
 			}
 		}()
 		for {
-			//_, message, readErr := connection.Conn.Read(context.Background())
-			_, message, readErr := connection.Conn.ReadMessage()
-			if readErr != nil {
-				util.DelSyncMap(&AppEnvironment.ConnOrder, market, key)
-				util.Log(util.LogLevelError, fmt.Sprintf(`%s %s can not read from account ws: %s`, market, url, readErr.Error()))
-				return
-			}
-			if accountMsgHandler != nil {
-				accountMsgHandler(market, key, message)
+			if connection.useType == 0 {
+				//_, message, readErr := connection.Conn.Read(context.Background())
+				_, message, readErr := connection.Conn.ReadMessage()
+				if readErr != nil {
+					util.DelSyncMap(&AppEnvironment.ConnOrder, market, key)
+					util.Log(util.LogLevelError, fmt.Sprintf(`%s %s can not read from account ws: %s`, market, url, readErr.Error()))
+					return
+				}
+				if accountMsgHandler != nil {
+					accountMsgHandler(market, key, message)
+				}
+			} else if connection.useType == 2 {
+				buf := make([]byte, 4096)
+				msgSize := connection.OrderReceiver.ReceiveOrder(buf)
+				if msgSize > 0 {
+					if needReconnection(buf[:msgSize]) {
+						util.Log(util.LogLevelInfo, fmt.Sprintf(`order %s %s reconnect`, market, buf[:msgSize]))
+					} else {
+						if accountMsgHandler != nil {
+							accountMsgHandler(market, key, buf[:msgSize])
+						}
+					}
+				}
 			}
 		}
 	}()
@@ -254,7 +270,7 @@ func WebSocketClient(market, url string, subscribes []interface{}, subHandler Su
 		} else {
 			stepSubscribes = subscribes[i*step:]
 		}
-		connection, err := chooseChannel(url, market)
+		connection, err := initChannel(url, market)
 		if err != nil || connection == nil {
 			if err != nil {
 				util.Log(util.LogLevelError, fmt.Sprintf("can not create web socket %s %s %s", market, url, err.Error()))
@@ -273,4 +289,10 @@ func WebSocketClient(market, url string, subscribes []interface{}, subHandler Su
 	util.Log(util.LogLevelInfo,
 		fmt.Sprintf(`ws client add conns %s sockets %d msgChans %d`, market, len(socketMap), len(msgChans)))
 	return
+}
+func needReconnection(buf []byte) bool {
+	if strings.Contains(string(buf), "{\"ctlOp\":\"Reconnection\"}") {
+		return true
+	}
+	return false
 }
