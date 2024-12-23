@@ -365,17 +365,12 @@ var equaling = false
 func ClearCross() {
 	for {
 		util.Log(util.LogLevelInfo, fmt.Sprintf("begin to clear cross %s", model.FunctionCross))
-		for {
-			if !api.CheckSetProcessing(model.FunctionCross, model.FunctionCross, model.FunctionCross, true) {
-				break
-			} else {
-				time.Sleep(time.Millisecond * 10)
-			}
-		}
 		util.Log(util.LogLevelInfo, "begin to clear cross get set true")
 		equaling = true
 		compOrders.Clear()
 		carryStatusMap.Clear()
+		spotMarkets.Clear()
+		contractMarkets.Clear()
 		model.AppEnvironment.ReqIdOrders = sync.Map{}
 		for {
 			leftOrders := 0
@@ -415,7 +410,6 @@ func ClearCross() {
 		if model.AppConfig.Handle == `1` {
 			equalAccounts()
 		}
-		api.CheckSetProcessing(model.FunctionCross, model.FunctionCross, model.FunctionCross, false)
 		util.Log(util.LogLevelInfo, "end to clear cross get set true")
 		equaling = false
 		time.Sleep(time.Minute * 60)
@@ -465,8 +459,6 @@ func equalAccount(i int, equalChan chan int, accounts map[string]*model.Account)
 			continue
 		}
 		api.CancelAll(account.Key, account.Secret, market)
-		spotMarkets.Delete(account.Key)
-		contractMarkets.Delete(account.Key)
 	}
 	value := api.GetCoinSettings(model.FunctionCross)
 	if value != nil {
@@ -719,13 +711,13 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 			settings = value.([]*model.Setting)
 		}
 	}
-	if tick == nil || tick.Asks == nil || tick.Bids == nil || setting == nil || setting.Valid == false ||
+	if tick == nil || tick.Asks == nil || tick.Bids == nil || setting == nil || setting.Valid == false || equaling ||
 		(model.AppConfig.Env != `test` && model.AppConfig.Handle != `1`) || settings == nil || len(settings) == 0 {
 		return
 	}
-	// 所有cross之间互斥
-	if !api.CheckSetProcessing(model.FunctionCross, model.FunctionCross, model.FunctionCross, true) {
-		defer api.CheckSetProcessing(model.FunctionCross, model.FunctionCross, model.FunctionCross, false)
+	// 同一个coin cross之间互斥
+	if !api.CheckSetProcessing(model.FunctionCross, model.FunctionCross, setting.Coin, true) {
+		defer api.CheckSetProcessing(model.FunctionCross, model.FunctionCross, setting.Coin, false)
 	} else {
 		return
 	}
