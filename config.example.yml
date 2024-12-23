@@ -20,3 +20,6 @@ okexkey: okexkey1,okexkey2,okexkey3
 okexsecret: okexsecret1,okexsecret2,okexsecret3
 gatekey: gatekey1,gatekey2,gatekey3
 gatesecret: gatesecret1,gatesecret2,gatesecret3
+log: 
+#1表示使用币安特殊通道 0表示不使用
+usetype: 1

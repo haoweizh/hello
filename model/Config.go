@@ -12,7 +12,7 @@ type Config struct {
 	Delay                                                                                            float64
 	Debug, KucoinSpot, MetricTick                                                                    bool
 	KucoinRelatedKey, KucoinRelatedSecret, KucoinFutureKey, KucoinFutureSecret                       string
-	KucoinCarryClose, KucoinCarryRate, Simulation, Equal, Log                                        string
+	KucoinCarryClose, KucoinCarryRate, Simulation, Equal, Log, UseType                               string
 	GateKey, GateSecret, GateCarryClose, GateCarryRate                                               string
 	HuobiKey, HuobiSecret, HuobiCarryClose, HuobiCarryRate                                           string
 	OkexKey, OkexSecret, OkexCarryClose, OkexCarryRate                                               string
