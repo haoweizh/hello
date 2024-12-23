@@ -183,6 +183,13 @@ func GetMonitorInfo(index, table string) (valueArray [][]string) {
 			}
 		}
 	}
+	for i := len(valueArray) - 1; i > 0; i-- {
+		for j := 0; j < i; j++ {
+			if valueArray[j][17] == `false` {
+				valueArray[j], valueArray[i] = valueArray[i], valueArray[j]
+			}
+		}
+	}
 	return valueArray
 }
 
