@@ -80,7 +80,7 @@ func PrepareSettings() {
 	defer lockRefreshSetting.Unlock()
 	localSymbolSettings := &sync.Map{}
 	localHandlers := &sync.Map{}
-	coinSettings = &sync.Map{}
+	coinSettings.Clear()
 	util.Log(util.LogLevelInfo, fmt.Sprintf("Settings loaded %#v", coinSettings))
 	appSettings = []model.Setting{}
 	marketMap := make(map[string]bool)
