@@ -704,6 +704,9 @@ func getMarketsOKEX(key, secret string) (marketInfos map[string]*model.MarketInf
 					if !success {
 						continue
 					}
+					if value[`state`] != nil || value[`state`].(string) != `live` {
+						continue
+					}
 					marketInfo.Name = symbol
 					if value[`lotSz`] != nil {
 						marketInfo.SizeIncrement, _ = strconv.ParseFloat(value[`lotSz`].(string), 64)

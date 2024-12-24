@@ -29,6 +29,9 @@ func getMarketsBitgetPerp() (marketInfos map[string]*model.MarketInfo) {
 			perpInfo.OffTime != "-1" || perpInfo.LimitOpenTime != "-1" {
 			continue
 		}
+		if perpInfo.SymbolStatus != `listed` && perpInfo.SymbolStatus != `normal` {
+			continue
+		}
 		symbol := perpInfo.BaseCoin + model.UniStandardTail[model.MarketTypePerp]
 		marketInfo := &model.MarketInfo{Market: model.BitgetPerp, Name: symbol, CTCurrency: perpInfo.BaseCoin}
 		marketInfo.PriceDecimal, _ = strconv.Atoi(perpInfo.PricePlace)
