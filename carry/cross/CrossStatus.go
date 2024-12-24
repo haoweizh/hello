@@ -6,7 +6,6 @@ import (
 	"hello/model"
 	"hello/util"
 	"math"
-	"strings"
 	"sync"
 	"time"
 )
@@ -49,11 +48,8 @@ var lastCrosses sync.Map                  // key*market:symbol
 var compOrders = &sync.Map{}              // orderId - comp order
 var spotMarkets, contractMarkets sync.Map // key - spotMarket/contractMarket
 var carryStatusMap = &sync.Map{}          // coin*market*symbol*key / CarryStatus
-var carryFail sync.Map                    // key fail num
-var carryStop sync.Map                    // key bool
 var notifyTime sync.Map                   // 1. market_symbol_market_symbol/time 2. funding_market_symbol/time
 var getMarketInfoMail sync.Map            // FormatCrossPair执行无法获取marketInfo时发送邮件，key为FormatCrossPair，value是当时时间
-var placeTick sync.Map                    // market_symbol_orderSide:price_amount
 var doCross = false
 
 type contractMarket struct {
@@ -351,50 +347,9 @@ func GetCrossMarketValue(key, secret, market string, force bool) (inAllSpot, con
 	return
 }
 
-func pauseCarry(key string, seconds int) {
-	util.Log(util.LogLevelInfo, fmt.Sprintf(`%s carrying pause %#v`, key, true))
-	carryStop.Store(key, true)
-	time.Sleep(time.Second * time.Duration(seconds))
-	util.Log(util.LogLevelInfo, fmt.Sprintf(`%s carrying pause %#v`, key, false))
-	carryStop.Store(key, false)
-}
-
-func addCarryResult(key, market, msg string, success bool) {
-	value, ok := carryFail.Load(key)
-	fails := 0
-	if ok {
-		fails = value.(int)
-	}
-	if success {
-		if fails > 0 {
-			carryFail.Store(key, fails-1)
-		}
-	} else {
-		carryFail.Store(key, fails+1)
-	}
-	if fails > 6 {
-		if strings.Trim(msg, " ") != "" {
-			go pauseCarry(key, 1800)
-		} else {
-			util.Log(util.LogLevelInfo, fmt.Sprintf(`key is nil pause all %s accounts`, market))
-			accounts := model.AppConfig.GetAccounts(market)
-			for _, account := range accounts {
-				go pauseCarry(account.Key, 1800)
-			}
-		}
-		util.Log(util.LogLevelInfo, fmt.Sprintf(`----------stop carry %s %d`, key, fails))
-		carryFail.Store(key, 0)
-		go api.SendMails(`暂停下单`, market+`msg: `+msg)
-	} else if fails > 0 {
-		if strings.Trim(msg, ` `) != "" {
-			go pauseCarry(key, 300)
-		}
-		util.Log(util.LogLevelInfo, fmt.Sprintf(`---------- fail and pause %s %s %d`, key, msg, fails))
-	}
-}
-
 // 某个交易对过去8次交易不成交次数达到3，暂停下单
-func addLastCarry(order *model.Order, setting *model.Setting) {
+// addLastCarry
+func _(order *model.Order, setting *model.Setting) {
 	if order == nil || setting == nil {
 		return
 	}

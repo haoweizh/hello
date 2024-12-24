@@ -718,11 +718,11 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 	tickLimit := 50
 	switch tick.Bids[0].Market {
 	case model.Gate, model.BitgetPerp, model.BitgetSpot:
-		tickLimit = 10
+		tickLimit = 20
 	case model.BinanceSpot, model.BinancePerp:
-		tickLimit = 8
+		tickLimit = 10
 	case model.Bybit, model.OKEX:
-		tickLimit = 40
+		tickLimit = 60
 	}
 	million := time.Now().UnixMilli()
 	if int(million)-tick.Ts > tickLimit {
@@ -748,8 +748,11 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 			if status == nil || statusRelate == nil || status == statusRelate || !okStatus || !okRelate {
 				continue
 			}
-			statusBuy, statusSell, amount, priceBuy, priceSell, tickBuy, tickSell :=
+			delay, statusBuy, statusSell, amount, priceBuy, priceSell, tickBuy, tickSell :=
 				calcAmount(i, setting.Coin, status.(*CarryStatus), statusRelate.(*CarryStatus), tick, tickRelate)
+			if delay {
+				return
+			}
 			if amount > 0 {
 				//placeBuyStr := fmt.Sprintf(`%s_%s_%s`, statusBuy.market, statusBuy.symbol, model.OrderSideBuy)
 				//placeSellStr := fmt.Sprintf(`%s_%s_%s`, statusSell.market, statusSell.symbol, model.OrderSideSell)
@@ -1105,10 +1108,7 @@ var PostOrderCross = func(order *model.Order) {
 	}
 	account := model.AppConfig.GetAccountFromKeyIndex(order.Market, ``, order.AccountIndex)
 	go handleCross(account, order)
-	if order.HaveId() {
-		addLastCarry(order, setting)
-		addCarryResult(account.Key, order.Market, ``, true)
-	} else {
+	if !order.HaveId() {
 		setting.Valid = false
 		setting.MarketRelated = fmt.Sprintf(`下单失败 %s %s %s`, order.OrderId, order.ErrCode, time.Now().Format("2006-01-02 15:04:05"))
 		//addCarryResult(account.Key, order.Market, ``, false)

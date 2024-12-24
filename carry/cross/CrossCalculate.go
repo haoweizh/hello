@@ -13,21 +13,17 @@ import (
 // calcAmount
 // 返回amount是经过gridAmount乘数计算之后的数量，用以针对1000PEPE与PEPE这类币种的对冲交易.priceX与gridAmount相对应
 func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarryStatus, tick, tickRelate *model.BidAsk) (
-	statusBuy, statusSell *CarryStatus, amount, priceBuy, priceSell float64, tickBuy, tickSell *model.BidAsk) {
-	stopStatus, okStatus := carryStop.Load(carryStatus.account.Key)
-	stopRelate, okRelate := carryStop.Load(carryStatusRelate.account.Key)
-	if (okStatus && stopStatus.(bool)) || (okRelate && stopRelate.(bool)) {
-		//util.Log(util.LogLevelError, fmt.Sprintf(`stop carry for 10 times unknown carry %s or %s %s`,
-		//	carryStatus.account.Key, carryStatusRelate.account.Key, coin))
-		return
-	}
+	delay bool, statusBuy, statusSell *CarryStatus, amount, priceBuy, priceSell float64, tickBuy, tickSell *model.BidAsk) {
 	var bidAmount, askAmount float64
 	marketInfo := model.GetMarketInfo(carryStatus.market, carryStatus.symbol)
 	marketInfoRelate := model.GetMarketInfo(carryStatusRelate.market, carryStatusRelate.symbol)
 	_, useRest, fundingRate := api.GetFundingRate(carryStatus.account.Key, carryStatus.account.Secret, carryStatus.market, carryStatus.symbol)
 	_, useRestRelate, fundingRateRelate := api.GetFundingRate(carryStatusRelate.account.Key, carryStatusRelate.account.Secret, carryStatusRelate.market, carryStatusRelate.symbol)
-	if marketInfo == nil || marketInfoRelate == nil || fundingRate == nil || fundingRateRelate == nil || useRest || useRestRelate {
-		return nil, nil, 0, 0, 0, nil, nil
+	if useRest || useRestRelate {
+		return true, nil, nil, 0, 0, 0, nil, nil
+	}
+	if marketInfo == nil || marketInfoRelate == nil || fundingRate == nil || fundingRateRelate == nil {
+		return false, nil, nil, 0, 0, 0, nil, nil
 	}
 	deltaRate := fundingRate.Rate * FundingRateBase * 3600000 / float64(marketInfo.FundingRateInterval)
 	deltaRateRelate := fundingRateRelate.Rate * FundingRateBase * 3600000 / float64(marketInfoRelate.FundingRateInterval)
@@ -91,13 +87,13 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarrySta
 	fundingStr, fundingStrRelate := ``, ``
 	if !carryStatus.isSpot {
 		updateTime := fundingRate.UpdateTime.In(loc)
-		fundingStr = fmt.Sprintf(`%.5f %.0f周期%d %d:%d`, 100*fundingRate.Rate,
-			FundingRateBase, marketInfo.FundingRateInterval/3600000, updateTime.Hour(), updateTime.Minute())
+		fundingStr = fmt.Sprintf(`%d:%d %.0f %.0f周期%d %d:%d`,
+			util.GetNow().Hour(), util.GetNow().Minute(), 100*fundingRate.Rate, FundingRateBase, marketInfo.FundingRateInterval/3600000, updateTime.Hour(), updateTime.Minute())
 	}
 	if !carryStatusRelate.isSpot {
 		updateTime := fundingRateRelate.UpdateTime.In(loc)
-		fundingStrRelate = fmt.Sprintf(`%.5f %.0f/周期%d %d:%d`, 100*fundingRateRelate.Rate,
-			FundingRateBase, marketInfoRelate.FundingRateInterval/3600000, updateTime.Hour(), updateTime.Minute())
+		fundingStrRelate = fmt.Sprintf(`%d:%d %.5f %.0f/周期%d %d:%d`,
+			util.GetNow().Hour(), util.GetNow().Minute(), 100*fundingRateRelate.Rate, FundingRateBase, marketInfoRelate.FundingRateInterval/3600000, updateTime.Hour(), updateTime.Minute())
 	}
 	var infoValue []string
 	if mark < markRelate {
@@ -132,11 +128,11 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarrySta
 			fmt.Sprintf(`%v`, green)}
 	}
 	if statusBuy == nil {
-		return nil, nil, 0, 0, 0, nil, nil
+		return false, nil, nil, 0, 0, 0, nil, nil
 	}
 	if breakMarkPrice(statusBuy.account, statusBuy.setting, priceBuy, model.OrderSideBuy) ||
 		breakMarkPrice(statusSell.account, statusSell.setting, priceSell, model.OrderSideSell) {
-		return nil, nil, 0, 0, 0, nil, nil
+		return false, nil, nil, 0, 0, 0, nil, nil
 	}
 	// 如果上一次交易不是本交易对，但上一次交易很可能影响了资金状况，需要对本carryStatus的可买卖数量进行调整
 	lastSymbol, ok := util.LoadSyncMap(&lastCrosses, statusBuy.account.Key, statusBuy.market)
@@ -160,9 +156,9 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarrySta
 			carryStatusRelate.setting.MarketRelated = fmt.Sprintf(`价差过大 %s %s %d‰ %d‰ %s`,
 				carryStatus.market, carryStatus.symbol, int(1000*scoreRelate), int(1000*score), time.Now().Format("2006-01-02 15:04:05"))
 		}
-		return nil, nil, 0, 0, 0, nil, nil
+		return false, nil, nil, 0, 0, 0, nil, nil
 	}
-	return statusBuy, statusSell, amount, priceBuy, priceSell, tickBuy, tickSell
+	return false, statusBuy, statusSell, amount, priceBuy, priceSell, tickBuy, tickSell
 }
 
 func checkScoreLimit(market, symbol, marketRelate, symbolRelate string, score, scoreRelate float64) (invalid bool) {

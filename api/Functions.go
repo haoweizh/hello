@@ -15,8 +15,6 @@ var positionLock = sync.Map{}    // key - locker
 var mustPlaceLock = &sync.Map{}  // key - *sync.Mutex{}
 var mustCancelLock = &sync.Map{} // key - *sync.Mutex{}
 var requireReset sync.Map
-var lastPrice = sync.Map{}            // market_symbol, price
-var lastPriceTime = sync.Map{}        // market_symbol, Time
 var tradeMax = &sync.Map{}            // key - symbol - [maxBuy, maxSell][]float64
 var okTradeMaxResetTime = &sync.Map{} // key - symbol - init time in second
 var okexCrossing = sync.Map{}         // symbol - bool
@@ -572,7 +570,7 @@ func GetFundingRate(key, secret, market, symbol string) (success, useRest bool, 
 		fundingRate = value.(*model.FundingRate)
 	}
 	now := time.Now().Unix()
-	if fundingRate != nil && now < fundingRate.ExpireTime && now-fundingRate.UpdateTime.Unix() < 300 {
+	if fundingRate != nil && now < fundingRate.ExpireTime && now-fundingRate.UpdateTime.Unix() < 900 {
 		return true, false, fundingRate
 	}
 	if fundingRate == nil {
@@ -592,11 +590,12 @@ func GetFundingRate(key, secret, market, symbol string) (success, useRest bool, 
 	case model.Gate:
 		fundingRate = getFundingRateGate(key, secret, symbol)
 	}
-	util.Log(util.LogLevelInfo, fmt.Sprintf(`get funding rate from rest %s %s %#v`, market, symbol, fundingRate))
 	if fundingRate == nil || now > fundingRate.ExpireTime {
 		time.Sleep(time.Minute)
 		return false, true, nil
 	}
+	util.Log(util.LogLevelInfo, fmt.Sprintf(`get funding rate from rest %s %s %#v`, market, symbol, fundingRate))
+	time.Sleep(time.Millisecond * 200)
 	SetFundingRate(market, symbol, fundingRate)
 	return true, true, fundingRate
 }
@@ -1097,7 +1096,6 @@ func SetFundingRate(market, symbol string, fundingRate *model.FundingRate) {
 	//}
 	//}
 	if fundingRate != nil && fundingRate.ExpireTime > time.Now().Unix() {
-		fmt.Println(fmt.Sprintf(`set funding rate %d`, fundingRate.ExpireTime-time.Now().Unix()))
 		util.StoreSyncMap(model.FundingRates, fundingRate, market, symbol)
 	}
 }
