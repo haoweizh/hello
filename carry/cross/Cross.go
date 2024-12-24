@@ -496,8 +496,14 @@ func getHolding(statuses []*CarryStatus) (bids, asks model.Ticks, bidStatus, ask
 		if !getTick || !getFunding || fundingRate == nil || marketInfo == nil {
 			continue
 		}
-		priceBid := tick.Bids[0].Price * (1 + fundingRate.Rate*FundingRateBase*3600000/float64(marketInfo.FundingRateInterval))
-		priceAsk := tick.Asks[0].Price * (1 + fundingRate.Rate*FundingRateBase*3600000/float64(marketInfo.FundingRateInterval))
+		deltaRate := fundingRate.Rate * FundingRateBase * 3600000 / float64(marketInfo.FundingRateInterval)
+		if deltaRate > 1.1 || deltaRate < 0.9 {
+			deltaRate = 1
+			util.Log(util.LogLevelError, fmt.Sprintf(`fatal error funding rate break %s %s %#v %d`,
+				status.market, status.symbol, fundingRate, marketInfo.FundingRateInterval))
+		}
+		priceBid := tick.Bids[0].Price * (1 + deltaRate)
+		priceAsk := tick.Asks[0].Price * (1 + deltaRate)
 		bids = append(bids, model.Tick{Ts: int64(tick.Ts), Market: tick.Bids[0].Market, Symbol: tick.Bids[0].Symbol,
 			Amount: tick.Bids[0].Amount, Price: priceBid})
 		asks = append(asks, model.Tick{Ts: int64(tick.Ts), Market: tick.Asks[0].Market, Symbol: tick.Asks[0].Symbol,

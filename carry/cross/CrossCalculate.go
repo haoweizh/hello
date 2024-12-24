@@ -29,10 +29,18 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarrySta
 	if marketInfo == nil || marketInfoRelate == nil || fundingRate == nil || fundingRateRelate == nil {
 		return nil, nil, 0, 0, 0, nil, nil
 	}
-	priceAskRelate := tickRelate.Asks[0].Price * (1 + fundingRateRelate.Rate*FundingRateBase*3600000/float64(marketInfoRelate.FundingRateInterval))
-	priceBidRelate := tickRelate.Bids[0].Price * (1 + fundingRateRelate.Rate*FundingRateBase*3600000/float64(marketInfoRelate.FundingRateInterval))
-	priceAsk := tick.Asks[0].Price * (1 + fundingRate.Rate*FundingRateBase*3600000/float64(marketInfo.FundingRateInterval))
-	priceBid := tick.Bids[0].Price * (1 + fundingRate.Rate*FundingRateBase*3600000/float64(marketInfo.FundingRateInterval))
+	deltaRate := fundingRate.Rate * FundingRateBase * 3600000 / float64(marketInfo.FundingRateInterval)
+	deltaRateRelate := fundingRateRelate.Rate * FundingRateBase * 3600000 / float64(marketInfoRelate.FundingRateInterval)
+	if deltaRate > 1.1 || deltaRate < 0.9 || deltaRateRelate > 1.1 || deltaRateRelate < 0.9 {
+		deltaRate = 1
+		deltaRateRelate = 1
+		util.Log(util.LogLevelError, fmt.Sprintf(`fatal error funding rate break %s %s %s %s %#v %#v %d %d`,
+			carryStatus.market, carryStatus.symbol, carryStatusRelate.market, carryStatusRelate.symbol, fundingRate, fundingRateRelate, marketInfo.FundingRateInterval, marketInfoRelate.FundingRateInterval))
+	}
+	priceAskRelate := tickRelate.Asks[0].Price * (1 + deltaRateRelate)
+	priceBidRelate := tickRelate.Bids[0].Price * (1 + deltaRateRelate)
+	priceAsk := tick.Asks[0].Price * (1 + deltaRate)
+	priceBid := tick.Bids[0].Price * (1 + deltaRate)
 	priceX := carryStatus.setting.PriceX
 	priceXRelate := carryStatusRelate.setting.PriceX
 	score := (priceBid/priceX - priceAskRelate/priceXRelate) / math.Max(priceBid/priceX, priceAskRelate/priceXRelate)
@@ -83,12 +91,12 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarrySta
 	fundingStr, fundingStrRelate := ``, ``
 	if !carryStatus.isSpot {
 		updateTime := fundingRate.UpdateTime.In(loc)
-		fundingStr = fmt.Sprintf(`%.5f %d周期%d %d:%d`, 100*fundingRate.Rate,
+		fundingStr = fmt.Sprintf(`%.5f %.0f周期%d %d:%d`, 100*fundingRate.Rate,
 			FundingRateBase, marketInfo.FundingRateInterval/3600000, updateTime.Hour(), updateTime.Minute())
 	}
 	if !carryStatusRelate.isSpot {
 		updateTime := fundingRateRelate.UpdateTime.In(loc)
-		fundingStrRelate = fmt.Sprintf(`%.5f %d/周期%d %d:%d`, 100*fundingRateRelate.Rate,
+		fundingStrRelate = fmt.Sprintf(`%.5f %.0f/周期%d %d:%d`, 100*fundingRateRelate.Rate,
 			FundingRateBase, marketInfoRelate.FundingRateInterval/36000, updateTime.Hour(), updateTime.Minute())
 	}
 	var infoValue []string
