@@ -369,11 +369,13 @@ var tickHandlerBybit = func(market string, conn *model.WSConn, event []byte) {
 		}
 		rate, _ := strconv.ParseFloat(tickResp.Data.FundingRate, 64)
 		nextFundingTime, _ := strconv.ParseInt(tickResp.Data.NextFundingTime, 10, 64)
-		SetFundingRate(model.Bybit, symbol, &model.FundingRate{
-			Rate:       rate,
-			UpdateTime: time.UnixMilli(tickResp.Ts),
-			ExpireTime: nextFundingTime / 1000,
-		})
+		if nextFundingTime > time.Now().Unix() {
+			SetFundingRate(model.Bybit, symbol, &model.FundingRate{
+				Rate:       rate,
+				UpdateTime: time.UnixMilli(tickResp.Ts),
+				ExpireTime: nextFundingTime / 1000,
+			})
+		}
 	}
 }
 

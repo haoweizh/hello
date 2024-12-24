@@ -555,7 +555,7 @@ func GetTransfers(key, secret, market string) (balances []*model.Balance) {
 	return balances
 }
 
-func GetFundingRate(key, secret, market, symbol string) (success bool, rate *model.FundingRate) {
+func GetFundingRate(key, secret, market, symbol string, wsOnly bool) (success bool, rate *model.FundingRate) {
 	//非永续合约的资金费率为0
 	_, marketType, _, _ := model.GetFromStandard(market, symbol)
 	if marketType != model.MarketTypePerp {
@@ -579,6 +579,9 @@ func GetFundingRate(key, secret, market, symbol string) (success bool, rate *mod
 		util.Log(util.LogLevelInfo, fmt.Sprintf(`get funding rate fail from ws nil %s %s %#v`, market, symbol, fundingRate))
 	} else {
 		util.Log(util.LogLevelInfo, fmt.Sprintf(`get funding rate fail from ws %s %s %d %#v`, market, symbol, now-fundingRate.UpdateTime.Unix(), fundingRate))
+	}
+	if wsOnly {
+		return false, nil
 	}
 	switch market {
 	case model.BitgetPerp:
@@ -1102,7 +1105,9 @@ func SetFundingRate(market, symbol string, fundingRate *model.FundingRate) {
 	//	fundingRate.ExpireTime = rate.ExpireTime
 	//}
 	//}
-	util.StoreSyncMap(model.FundingRates, fundingRate, market, symbol)
+	if fundingRate != nil && fundingRate.ExpireTime > time.Now().Unix() {
+		util.StoreSyncMap(model.FundingRates, fundingRate, market, symbol)
+	}
 }
 
 //func InitCoinBalance(key, secret, function, market string) {
