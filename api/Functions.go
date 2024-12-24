@@ -571,11 +571,15 @@ func GetFundingRate(key, secret, market, symbol string) (success bool, rate *mod
 	if ok && value != nil {
 		fundingRate = value.(*model.FundingRate)
 	}
-	now := util.GetNow().Unix()
-	if fundingRate != nil && (fundingRate.ExpireTime == 0 || now < fundingRate.ExpireTime) && time.Now().Unix()-fundingRate.UpdateTime.Unix() < 300 {
+	now := time.Now().Unix()
+	if fundingRate != nil && now < fundingRate.ExpireTime && now-fundingRate.UpdateTime.Unix() < 300 {
 		return true, fundingRate
 	}
-	util.Log(util.LogLevelInfo, fmt.Sprintf(`get funding rate fail from ws %s %s %#v`, market, symbol, fundingRate))
+	if fundingRate == nil {
+		util.Log(util.LogLevelInfo, fmt.Sprintf(`get funding rate fail from ws nil %s %s %#v`, market, symbol, fundingRate))
+	} else {
+		util.Log(util.LogLevelInfo, fmt.Sprintf(`get funding rate fail from ws %s %s %d %#v`, market, symbol, now-fundingRate.UpdateTime.Unix(), fundingRate))
+	}
 	switch market {
 	case model.BitgetPerp:
 		fundingRate = getFundingRateBitgetPerp(symbol)
