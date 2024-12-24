@@ -31,10 +31,10 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarrySta
 	}
 	deltaRate := fundingRate.Rate * FundingRateBase * 3600000 / float64(marketInfo.FundingRateInterval)
 	deltaRateRelate := fundingRateRelate.Rate * FundingRateBase * 3600000 / float64(marketInfoRelate.FundingRateInterval)
-	if deltaRate > 1.1 || deltaRate < 0.9 || deltaRateRelate > 1.1 || deltaRateRelate < 0.9 {
-		deltaRate = 1
-		deltaRateRelate = 1
-		util.Log(util.LogLevelError, fmt.Sprintf(`fatal error funding rate break %s %s %s %s %#v %#v %d %d`,
+	if deltaRate > 0.1 || deltaRate < -0.1 || deltaRateRelate > 0.1 || deltaRateRelate < -0.1 {
+		deltaRate = 0
+		deltaRateRelate = 0
+		util.Log(util.LogLevelError, fmt.Sprintf(`fatal error funding rate break both %s %s %s %s %#v %#v %d %d`,
 			carryStatus.market, carryStatus.symbol, carryStatusRelate.market, carryStatusRelate.symbol, fundingRate, fundingRateRelate, marketInfo.FundingRateInterval, marketInfoRelate.FundingRateInterval))
 	}
 	priceAskRelate := tickRelate.Asks[0].Price * (1 + deltaRateRelate)
