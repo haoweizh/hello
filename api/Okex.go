@@ -709,7 +709,7 @@ func getMarketsOKEX(key, secret string) (marketInfos map[string]*model.MarketInf
 					if !success {
 						continue
 					}
-					if value[`state`] != nil || value[`state`].(string) != `live` {
+					if value[`state`] == nil || value[`state`].(string) != `live` {
 						continue
 					}
 					marketInfo.Symbol = symbol
