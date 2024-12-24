@@ -124,7 +124,7 @@ func Test_getCommonMarketInfos(t *testing.T) {
 }
 
 func TestWs(t *testing.T) {
-	market := model.BinanceSpot
+	market := model.Bybit
 	model.NewConfig()
 	//api.MaintainConns(market)
 	//model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
@@ -144,7 +144,6 @@ func Test_WsAndOrderApi(t *testing.T) {
 	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
 	api.InitMarketInfos(model.Gate)
 	account := model.AppConfig.GetAccounts(market)[0]
-	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
 	api.CreateWSTick(model.AppEnvironment, market)
 	for _, symbol := range symbols {
 		api.CancelOrders(account.Key, account.Secret, market, symbol)

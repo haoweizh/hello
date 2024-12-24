@@ -572,7 +572,7 @@ func GetFundingRate(key, secret, market, symbol string) (success bool, rate *mod
 		fundingRate = value.(*model.FundingRate)
 	}
 	now := util.GetNow().Unix()
-	if fundingRate != nil && now < fundingRate.ExpireTime && time.Now().Unix()-fundingRate.UpdateTime.Unix() < 300 {
+	if fundingRate != nil && (fundingRate.ExpireTime == 0 || now < fundingRate.ExpireTime) && time.Now().Unix()-fundingRate.UpdateTime.Unix() < 300 {
 		return true, fundingRate
 	}
 	util.Log(util.LogLevelInfo, fmt.Sprintf(`get funding rate fail from ws %s %s %#v`, market, symbol, fundingRate))
