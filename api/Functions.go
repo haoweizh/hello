@@ -555,11 +555,11 @@ func GetTransfers(key, secret, market string) (balances []*model.Balance) {
 	return balances
 }
 
-func GetFundingRate(key, secret, market, symbol string, wsOnly bool) (success bool, rate *model.FundingRate) {
+func GetFundingRate(key, secret, market, symbol string) (success, useRest bool, rate *model.FundingRate) {
 	//非永续合约的资金费率为0
 	_, marketType, _, _ := model.GetFromStandard(market, symbol)
 	if marketType != model.MarketTypePerp {
-		return true, &model.FundingRate{
+		return true, false, &model.FundingRate{
 			Rate:       0,
 			RateNext:   0,
 			UpdateTime: time.Time{},
@@ -573,15 +573,12 @@ func GetFundingRate(key, secret, market, symbol string, wsOnly bool) (success bo
 	}
 	now := time.Now().Unix()
 	if fundingRate != nil && now < fundingRate.ExpireTime && now-fundingRate.UpdateTime.Unix() < 300 {
-		return true, fundingRate
+		return true, false, fundingRate
 	}
 	if fundingRate == nil {
 		util.Log(util.LogLevelInfo, fmt.Sprintf(`get funding rate fail from ws nil %s %s %#v`, market, symbol, fundingRate))
 	} else {
 		util.Log(util.LogLevelInfo, fmt.Sprintf(`get funding rate fail from ws %s %s %d %#v`, market, symbol, now-fundingRate.UpdateTime.Unix(), fundingRate))
-	}
-	if wsOnly {
-		return false, nil
 	}
 	switch market {
 	case model.BitgetPerp:
@@ -590,12 +587,6 @@ func GetFundingRate(key, secret, market, symbol string, wsOnly bool) (success bo
 		fundingRate = getFundingRateBybit(symbol)
 	case model.OKEX:
 		fundingRate = getFundingRateOKEX(key, secret, symbol)
-	//case model.Mexc:
-	//	fundingRate = deprecated.getFundingRateMexc(key, secret, symbol)
-	//case model.Ftx:
-	//	fundingRate = deprecated.GetFundingRatesFtx(key, secret, symbol)
-	//case model.Kucoin:
-	//	fundingRate = &model.FundingRate{Rate: 0, RateNext: 0, UpdateTime: util.GetNow(), ExpireTime: now + 300}
 	case model.BinancePerp:
 		fundingRate = getFundingRateBinancePerp(key, secret, symbol)
 	case model.Gate:
@@ -604,10 +595,10 @@ func GetFundingRate(key, secret, market, symbol string, wsOnly bool) (success bo
 	util.Log(util.LogLevelInfo, fmt.Sprintf(`get funding rate from rest %s %s %#v`, market, symbol, fundingRate))
 	if fundingRate == nil || now > fundingRate.ExpireTime {
 		time.Sleep(time.Minute)
-		return false, nil
+		return false, true, nil
 	}
 	SetFundingRate(market, symbol, fundingRate)
-	return true, fundingRate
+	return true, true, fundingRate
 }
 
 // GetMaxLoan
@@ -1106,6 +1097,7 @@ func SetFundingRate(market, symbol string, fundingRate *model.FundingRate) {
 	//}
 	//}
 	if fundingRate != nil && fundingRate.ExpireTime > time.Now().Unix() {
+		fmt.Println(fmt.Sprintf(`set funding rate %d`, fundingRate.ExpireTime-time.Now().Unix()))
 		util.StoreSyncMap(model.FundingRates, fundingRate, market, symbol)
 	}
 }

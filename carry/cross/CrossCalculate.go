@@ -24,9 +24,9 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarrySta
 	var bidAmount, askAmount float64
 	marketInfo := model.GetMarketInfo(carryStatus.market, carryStatus.symbol)
 	marketInfoRelate := model.GetMarketInfo(carryStatusRelate.market, carryStatusRelate.symbol)
-	_, fundingRate := api.GetFundingRate(carryStatus.account.Key, carryStatus.account.Secret, carryStatus.market, carryStatus.symbol, true)
-	_, fundingRateRelate := api.GetFundingRate(carryStatusRelate.account.Key, carryStatusRelate.account.Secret, carryStatusRelate.market, carryStatusRelate.symbol, true)
-	if marketInfo == nil || marketInfoRelate == nil || fundingRate == nil || fundingRateRelate == nil {
+	_, useRest, fundingRate := api.GetFundingRate(carryStatus.account.Key, carryStatus.account.Secret, carryStatus.market, carryStatus.symbol)
+	_, useRestRelate, fundingRateRelate := api.GetFundingRate(carryStatusRelate.account.Key, carryStatusRelate.account.Secret, carryStatusRelate.market, carryStatusRelate.symbol)
+	if marketInfo == nil || marketInfoRelate == nil || fundingRate == nil || fundingRateRelate == nil || useRest || useRestRelate {
 		return nil, nil, 0, 0, 0, nil, nil
 	}
 	deltaRate := fundingRate.Rate * FundingRateBase * 3600000 / float64(marketInfo.FundingRateInterval)

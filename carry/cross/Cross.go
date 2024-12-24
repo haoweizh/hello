@@ -494,7 +494,7 @@ func getHolding(statuses []*CarryStatus) (bids, asks model.Ticks, bidStatus, ask
 		holdStr += fmt.Sprintf(`[%s %s %f]`, status.market, status.symbol, status.Holding)
 		marketInfo := model.GetMarketInfo(status.market, status.symbol)
 		getTick, tick := model.AppEnvironment.GetBidAsk(status.market, status.symbol)
-		getFunding, fundingRate := api.GetFundingRate(status.account.Key, status.account.Secret, status.market, status.symbol, false)
+		getFunding, _, fundingRate := api.GetFundingRate(status.account.Key, status.account.Secret, status.market, status.symbol)
 		if !getTick || !getFunding || fundingRate == nil || marketInfo == nil {
 			continue
 		}
