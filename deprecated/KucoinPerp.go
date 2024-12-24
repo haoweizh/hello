@@ -92,7 +92,7 @@ package deprecated
 //		}
 //
 //		marketInfo := &model.MarketInfo{Market: model.KucoinPerp}
-//		marketInfo.Name = contract.BaseCurrency + model.UniStandardTail[model.MarketTypePerp]
+//		marketInfo.Symbol = contract.BaseCurrency + model.UniStandardTail[model.MarketTypePerp]
 //		marketInfo.PriceIncrement = contract.TickSize
 //		marketInfo.PriceDecimal = util.NumDecPlaces(contract.TickSize)
 //		marketInfo.SizeMin = contract.LotSize
@@ -101,7 +101,7 @@ package deprecated
 //		marketInfo.SizeMax = contract.MaxOrderQty
 //		//marketInfo.PriceMax = contract.MaxPrice
 //		marketInfo.CTValue = contract.Multiplier
-//		marketInfos[marketInfo.Name] = marketInfo
+//		marketInfos[marketInfo.Symbol] = marketInfo
 //	}
 //}
 //

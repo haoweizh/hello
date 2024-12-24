@@ -201,7 +201,7 @@ func getMarketsBybitSpot(marketInfos map[string]*model.MarketInfo) {
 			continue
 		}
 		symbol := symbolInfo.BaseCoin + model.UniStandardTail[model.MarketTypeSpot]
-		marketInfo := &model.MarketInfo{Name: symbol, Market: model.Bybit}
+		marketInfo := &model.MarketInfo{Symbol: symbol, Market: model.Bybit}
 		if symbolInfo.PriceFilter.TickSize == "" {
 			util.Log(util.LogLevelError, fmt.Sprintf("币种：%s 价格步长为空 resp：%#v", symbol, symbolInfo))
 			continue
@@ -215,7 +215,7 @@ func getMarketsBybitSpot(marketInfos map[string]*model.MarketInfo) {
 		marketInfo.SizeMax, _ = strconv.ParseFloat(symbolInfo.LotSizeFilter.MaxOrderQty, 64)
 		marketInfo.MoneyMin, _ = strconv.ParseFloat(symbolInfo.LotSizeFilter.MinOrderAmt, 64)
 		marketInfo.QuoteMax, _ = strconv.ParseFloat(symbolInfo.LotSizeFilter.MaxOrderAmt, 64)
-		marketInfos[marketInfo.Name] = marketInfo
+		marketInfos[marketInfo.Symbol] = marketInfo
 	}
 }
 
@@ -241,7 +241,8 @@ func getMarketsBybitPerp(marketInfos map[string]*model.MarketInfo) {
 				continue
 			}
 			symbol := perpInfo.BaseCoin + model.UniStandardTail[model.MarketTypePerp]
-			marketInfo := &model.MarketInfo{Name: symbol, Market: model.Bybit}
+			marketInfo := &model.MarketInfo{Symbol: symbol, Market: model.Bybit}
+			marketInfo.FundingRateInterval = perpInfo.FundingInterval * 60000
 			marketInfo.PriceIncrement, _ = strconv.ParseFloat(perpInfo.PriceFilter.TickSize, 64)
 			marketInfo.PriceDecimal, _ = strconv.Atoi(perpInfo.PriceScale)
 			marketInfo.PriceMax, _ = strconv.ParseFloat(perpInfo.PriceFilter.MaxPrice, 64)

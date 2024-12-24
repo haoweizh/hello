@@ -73,13 +73,13 @@ package deprecated
 //		}
 //		marketInfo := &model.MarketInfo{Market: model.Kucoin}
 //		// TODO 此处需要确保kucoin的现货和期货的tail不同，否则marketTYpe不可用
-//		marketInfo.Name = coin + model.UniStandardTail[marketType]
+//		marketInfo.Symbol = coin + model.UniStandardTail[marketType]
 //		marketInfo.PriceIncrement, _ = strconv.ParseFloat(related.PriceIncrement, 64)
 //		marketInfo.PriceDecimal = util.NumDecPlaces(marketInfo.PriceIncrement)
 //		marketInfo.SizeMin, _ = strconv.ParseFloat(related.BaseMinSize, 64)
 //		marketInfo.SizeMax, _ = strconv.ParseFloat(related.BaseMaxSize, 64)
 //		marketInfo.SizeIncrement, _ = strconv.ParseFloat(related.BaseIncrement, 64)
-//		marketInfos[marketInfo.Name] = marketInfo
+//		marketInfos[marketInfo.Symbol] = marketInfo
 //	}
 //	relatedSettingMarkets = model.GetMarketSymbols(model.Kucoin)
 //}
@@ -138,7 +138,7 @@ package deprecated
 //			continue
 //		}
 //		marketInfo := &model.MarketInfo{Market: model.Kucoin}
-//		marketInfo.Name = contract.BaseCurrency + model.UniStandardTail[model.MarketTypePerp]
+//		marketInfo.Symbol = contract.BaseCurrency + model.UniStandardTail[model.MarketTypePerp]
 //		marketInfo.PriceIncrement = contract.TickSize
 //		marketInfo.PriceDecimal = util.NumDecPlaces(contract.TickSize)
 //		marketInfo.SizeMin = contract.LotSize
@@ -147,7 +147,7 @@ package deprecated
 //		marketInfo.SizeMax = contract.MaxOrderQty
 //		//marketInfo.PriceMax = contract.MaxPrice
 //		marketInfo.CTValue = contract.Multiplier
-//		marketInfos[marketInfo.Name] = marketInfo
+//		marketInfos[marketInfo.Symbol] = marketInfo
 //	}
 //}
 

@@ -23,7 +23,7 @@ var IgnoreFunctions = map[string]bool{FunctionDynamicTurtle: true, FunctionTurtl
 	FunctionDynamicCombine: true, FunctionDynamicBoost: true}
 var NonRTTicker = map[string]bool{Bybit: true, BitgetSpot: true, BitgetPerp: true}
 
-const DefaultLeverage = 4
+const DefaultLeverage = 3
 const BitgetSpot = `bitgetspot`
 const BitgetPerp = `bitgetperp`
 const Kucoin = `kucoin`
@@ -78,7 +78,6 @@ const WSTypeTicker = `ticker`
 const Open = `open`
 const Close = `close`
 const ReduceOnly = `reduceOnly`
-const TopCross = `top_cross`
 
 var AppDB *gorm.DB
 var AppRedis *redis.Client

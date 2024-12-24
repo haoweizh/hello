@@ -91,10 +91,11 @@ func Test_ws(t *testing.T) {
 
 func Test_getCommonMarketInfos(t *testing.T) {
 	model.NewConfig()
-	market := model.Bybit
+	market := model.BitgetPerp
 	account := model.AppConfig.GetAccounts(market)[0]
 	symbol := `BTC_PERP`
-	api.CancelOrders(account.Key, account.Secret, market, symbol)
+	api.SetSymbolLeverage(account, market, symbol)
+	//api.CancelOrders(account.Key, account.Secret, market, symbol)
 	//api.CancelAll(account.Key, account.Secret, market)
 	//orders := api.QueryOpenOrders(account.Key, account.Secret, market, symbol)
 	//res, code, msg := api.CancelOrder(account.Key, account.Secret, market, symbol, ``, orders[0].OrderId)
@@ -103,7 +104,7 @@ func Test_getCommonMarketInfos(t *testing.T) {
 	//fmt.Println(orders)
 	//model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
 	//api.InitCrossMarketInfos([]string{model.Gate})
-	api.InitMarketInfos(model.BinanceSpot)
+	api.InitMarketInfos(market)
 	api.InitMarketInfos(model.BinancePerp)
 	model.MarketInfos.Range(func(key, value any) bool {
 		if value != nil && value.(*model.MarketInfo).PriceIncrement < 0.0000001 {

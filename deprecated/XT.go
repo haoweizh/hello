@@ -49,7 +49,7 @@ package deprecated
 //			continue
 //		}
 //		symbol := perpInfo.BaseCoin + model.GetPerpTail(model.XT)
-//		marketInfo := &model.MarketInfo{Name: symbol, CTCurrency: perpInfo.BaseCoin}
+//		marketInfo := &model.MarketInfo{Symbol: symbol, CTCurrency: perpInfo.BaseCoin}
 //		marketInfo.PriceDecimal = perpInfo.PricePrecision
 //		marketInfo.PriceIncrement = 1 / math.Pow10(marketInfo.PriceDecimal)
 //		marketInfo.SizeMin, _ = strconv.ParseFloat(perpInfo.MinQty, 64)
@@ -88,7 +88,7 @@ package deprecated
 //		}
 //
 //		marketInfo := &model.MarketInfo{}
-//		marketInfo.Name = symbolInfo.Symbol
+//		marketInfo.Symbol = symbolInfo.Symbol
 //		marketInfo.PriceDecimal = symbolInfo.PricePrecision
 //		for _, filter := range symbolInfo.Filters {
 //			if filter.Filter == "PRICE" {
@@ -133,7 +133,7 @@ package deprecated
 //		if marketInfo.SizeMin == 0 {
 //			marketInfo.SizeMin = marketInfo.SizeIncrement
 //		}
-//		marketInfos[marketInfo.Name] = marketInfo
+//		marketInfos[marketInfo.Symbol] = marketInfo
 //	}
 //}
 //

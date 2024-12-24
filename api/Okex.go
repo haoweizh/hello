@@ -707,7 +707,7 @@ func getMarketsOKEX(key, secret string) (marketInfos map[string]*model.MarketInf
 					if value[`state`] != nil || value[`state`].(string) != `live` {
 						continue
 					}
-					marketInfo.Name = symbol
+					marketInfo.Symbol = symbol
 					if value[`lotSz`] != nil {
 						marketInfo.SizeIncrement, _ = strconv.ParseFloat(value[`lotSz`].(string), 64)
 					}
@@ -736,7 +736,7 @@ func getMarketsOKEX(key, secret string) (marketInfos map[string]*model.MarketInf
 						marketInfo.SizeMaxMarket *= marketInfo.CTValue
 						marketInfo.SizeMin *= marketInfo.CTValue
 					}
-					marketInfos[marketInfo.Name] = marketInfo
+					marketInfos[marketInfo.Symbol] = marketInfo
 				}
 			}
 			for _, info := range marketJson.Get(`data`).MustArray() {

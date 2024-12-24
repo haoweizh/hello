@@ -241,7 +241,7 @@ package deprecated
 //			if value["symbol"] == nil || value["api-trading"].(string) == "disabled" || value["quote-currency"].(string) != "usdt" {
 //				continue
 //			}
-//			marketInfo := &model.MarketInfo{Market: model.HuobiSpot, Name: value["symbol"].(string)}
+//			marketInfo := &model.MarketInfo{Market: model.HuobiSpot, Symbol: value["symbol"].(string)}
 //			if value["price-precision"] != nil {
 //				priceDecimal, _ := value["price-precision"].(json.Number).Int64()
 //				marketInfo.PriceDecimal = int(priceDecimal)
@@ -253,7 +253,7 @@ package deprecated
 //			amountPrecision, _ := value["amount-precision"].(json.Number).Int64()
 //			marketInfo.SizeIncrement = 1 / math.Pow10(int(amountPrecision))
 //			marketInfo.MoneyMin = 10
-//			marketInfos[marketInfo.Name] = marketInfo
+//			marketInfos[marketInfo.Symbol] = marketInfo
 //		}
 //	} else {
 //		time.Sleep(time.Minute * 5)
@@ -268,7 +268,7 @@ package deprecated
 //			if value["support_margin_mode"].(string) != "all" && value["support_margin_mode"].(string) != "cross" {
 //				continue
 //			}
-//			marketInfo := &model.MarketInfo{Market: model.HuobiSpot, Name: strings.ToLower(value["contract_code"].(string))}
+//			marketInfo := &model.MarketInfo{Market: model.HuobiSpot, Symbol: strings.ToLower(value["contract_code"].(string))}
 //			if value["symbol"] != nil {
 //				marketInfo.CTCurrency = strings.ToLower(value["symbol"].(string))
 //			}
@@ -281,7 +281,7 @@ package deprecated
 //			}
 //			marketInfo.SizeIncrement = 1
 //			marketInfo.SizeMin = 1
-//			marketInfos[marketInfo.Name] = marketInfo
+//			marketInfos[marketInfo.Symbol] = marketInfo
 //		}
 //	}
 //	return marketInfos

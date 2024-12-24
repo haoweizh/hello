@@ -220,7 +220,7 @@ package deprecated
 //			if value["symbol"] == nil || value["api-trading"].(string) == "disabled" || value["quote-currency"].(string) != `usdt` {
 //				continue
 //			}
-//			marketInfo := &model.MarketInfo{Market: model.Huobi, Name: value["symbol"].(string)}
+//			marketInfo := &model.MarketInfo{Market: model.Huobi, Symbol: value["symbol"].(string)}
 //			if value["price-precision"] != nil {
 //				priceDecimal, _ := value["price-precision"].(json.Number).Int64()
 //				marketInfo.PriceDecimal = int(priceDecimal)
@@ -231,7 +231,7 @@ package deprecated
 //			}
 //			amountPrecision, _ := value["amount-precision"].(json.Number).Int64()
 //			marketInfo.SizeIncrement = 1 / math.Pow10(int(amountPrecision))
-//			marketInfos[marketInfo.Name] = marketInfo
+//			marketInfos[marketInfo.Symbol] = marketInfo
 //		}
 //	}
 //	futureResponseBody := SignedRequestHuobi(key, secret, http.MethodGet, restHuobiFuture, `/linear-swap-api/v1/swap_contract_info`, nil)
@@ -243,7 +243,7 @@ package deprecated
 //			if value["support_margin_mode"].(string) != "all" && value["support_margin_mode"].(string) != "cross" {
 //				continue
 //			}
-//			marketInfo := &model.MarketInfo{Market: model.Huobi, Name: strings.ToLower(value["contract_code"].(string))}
+//			marketInfo := &model.MarketInfo{Market: model.Huobi, Symbol: strings.ToLower(value["contract_code"].(string))}
 //			if value["symbol"] != nil {
 //				marketInfo.CTCurrency = strings.ToLower(value["symbol"].(string))
 //			}
@@ -256,7 +256,7 @@ package deprecated
 //			}
 //			marketInfo.SizeIncrement = 1
 //			marketInfo.SizeMin = 1
-//			marketInfos[marketInfo.Name] = marketInfo
+//			marketInfos[marketInfo.Symbol] = marketInfo
 //		}
 //	}
 //	return marketInfos

@@ -15,6 +15,21 @@ import (
 
 const wsStepBitget = 40
 
+func setFundingIntervalBitgetPerp(marketInfos map[string]*model.MarketInfo) {
+	for _, marketInfo := range marketInfos {
+		_, _, _, dialectSymbol := model.GetFromStandard(model.BinancePerp, marketInfo.Symbol)
+		fundingResp, _ := util.HttpRequest(http.MethodGet, bitgetRestUrl+
+			`/api/v2/mix/market/funding-time?productType=USDT-FUTURES&symbol=`+dialectSymbol, ``, map[string]string{}, 30)
+		fundingJson, _ := util.NewJSON(fundingResp)
+		if fundingJson != nil && fundingJson.Get(`msg`).MustString() == `success` {
+			data := fundingJson.Get(`data`).MustArray()
+			interval, _ := strconv.ParseInt(data[0].(map[string]any)[`ratePeriod`].(string), 10, 64)
+			marketInfo.FundingRateInterval = int(interval) * 3600000
+		}
+		time.Sleep(time.Millisecond * 100)
+	}
+}
+
 func getMarketsBitgetPerp() (marketInfos map[string]*model.MarketInfo) {
 	httpResp, httpErr := util.HttpRequest(http.MethodGet, bitgetRestUrl+"/api/v2/mix/market/contracts?productType=USDT-FUTURES", "", map[string]string{}, 30)
 	perpResp := &dtos.BitgetPerpMarketResp{}
@@ -33,7 +48,7 @@ func getMarketsBitgetPerp() (marketInfos map[string]*model.MarketInfo) {
 			continue
 		}
 		symbol := perpInfo.BaseCoin + model.UniStandardTail[model.MarketTypePerp]
-		marketInfo := &model.MarketInfo{Market: model.BitgetPerp, Name: symbol, CTCurrency: perpInfo.BaseCoin}
+		marketInfo := &model.MarketInfo{Market: model.BitgetPerp, Symbol: symbol, CTCurrency: perpInfo.BaseCoin}
 		marketInfo.PriceDecimal, _ = strconv.Atoi(perpInfo.PricePlace)
 		priceEndStep, _ := strconv.ParseFloat(perpInfo.PriceEndStep, 64)
 		marketInfo.PriceIncrement = priceEndStep * (1 / math.Pow10(marketInfo.PriceDecimal))
@@ -45,6 +60,7 @@ func getMarketsBitgetPerp() (marketInfos map[string]*model.MarketInfo) {
 		marketInfo.MoneyMin, _ = strconv.ParseFloat(perpInfo.MinTradeUSDT, 64)
 		marketInfos[symbol] = marketInfo
 	}
+	go setFundingIntervalBitgetPerp(marketInfos)
 	return marketInfos
 }
 
@@ -66,6 +82,39 @@ func _(account *model.Account, symbol string) (mode string) {
 	data := jsonData.GetPath(`data`, `posMode`).MustString()
 	fmt.Println(data)
 	return data
+}
+
+var settingBitget = false
+
+func setLeverageBitgetPerp(account *model.Account) (success bool) {
+	if settingBitget {
+		return
+	}
+	defer func() {
+		settingBitget = false
+	}()
+	settingBitget = true
+	symbols := GetMarketSymbols(model.BitgetPerp)
+	for symbol := range symbols {
+		setSymbolLeverageBitgetPerp(account, symbol)
+		time.Sleep(time.Minute)
+	}
+	return true
+}
+
+func setSymbolLeverageBitgetPerp(account *model.Account, symbol string) (success bool) {
+	_, _, _, dialectSymbol := model.GetFromStandard(model.BitgetPerp, symbol)
+	client := dtos.BitgetRestClient{BaseUrl: bitgetRestUrl, Passphrase: model.AppConfig.Phase, ApiKey: account.Key, ApiSecretKey: account.Secret}
+	params := map[string]string{"productType": "USDT-FUTURES", "symbol": dialectSymbol, `marginCoin`: `usdt`, `leverage`: strconv.Itoa(model.DefaultLeverage)}
+	postResp, _ := client.DoPost(`/api/v2/mix/account/set-leverage`, string(util.JsonEncodeToByte(params)))
+	if postResp != nil {
+		postJson, _ := util.NewJSON(postResp)
+		if postJson.Get(`msg`).MustString() == `success` {
+			return true
+		}
+	}
+	util.Log(util.LogLevelError, fmt.Sprintf(`fail to setLeverageBitgetPerp %s`, symbol))
+	return false
 }
 
 func setBitgetPositionMode(key, secret string) {

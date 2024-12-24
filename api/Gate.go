@@ -63,11 +63,12 @@ func appendFutureMarketGate(key, secret string, marketInfos map[string]*model.Ma
 			continue
 		}
 		minPrice, _ := strconv.ParseFloat(contract.OrderPriceRound, 64)
+		marketInfo.FundingRateInterval = int(contract.FundingInterval) * 1000
 		marketInfo.PriceIncrement = minPrice
 		marketInfo.PriceDecimal = util.NumDecPlaces(minPrice)
 		marketInfo.SizeMin = float64(contract.OrderSizeMin)
 		marketInfo.SizeMax = float64(contract.OrderSizeMax)
-		marketInfo.Name = symbol
+		marketInfo.Symbol = symbol
 		marketInfo.CTCurrency = coin
 		marketInfo.CTValue, _ = strconv.ParseFloat(contract.QuantoMultiplier, 64)
 		marketInfo.BuyLimitPriceRatio, _ = strconv.ParseFloat(contract.OrderPriceDeviate, 64)
@@ -78,7 +79,7 @@ func appendFutureMarketGate(key, secret string, marketInfos map[string]*model.Ma
 			marketInfo.SizeMin *= marketInfo.CTValue
 			marketInfo.SizeMax *= marketInfo.CTValue
 		}
-		marketInfos[marketInfo.Name] = marketInfo
+		marketInfos[marketInfo.Symbol] = marketInfo
 	}
 }
 
@@ -98,7 +99,7 @@ func appendSpotMarketsGate(key, secret string, marketInfos map[string]*model.Mar
 			continue
 		}
 		marketInfo := &model.MarketInfo{Market: model.Gate}
-		marketInfo.Name = symbol
+		marketInfo.Symbol = symbol
 		marketInfo.PriceDecimal = int(spot.Precision)
 		marketInfo.PriceIncrement = 1 / math.Pow10(int(spot.Precision))
 		marketInfo.SizeIncrement = 1 / math.Pow10(int(spot.AmountPrecision))
@@ -110,6 +111,17 @@ func appendSpotMarketsGate(key, secret string, marketInfos map[string]*model.Mar
 			marketInfo.SizeMin, _ = strconv.ParseFloat(spot.MinBaseAmount, 64)
 		}
 		marketInfos[spot.Id] = marketInfo
+	}
+}
+
+func setSymbolLeverageGate(account *model.Account, symbol string) {
+	_, _, _, dialectSymbol := model.GetFromStandard(model.Gate, symbol)
+	client, ctx := getClientGate(account.Key, account.Secret)
+	pos, _, err := client.FuturesApi.UpdatePositionLeverage(ctx, `usdt`, dialectSymbol, strconv.Itoa(model.DefaultLeverage),
+		&gateApi.UpdatePositionLeverageOpts{CrossLeverageLimit: optional.NewString(strconv.Itoa(model.DefaultLeverage))})
+	if err == nil {
+		fmt.Println(pos.CrossLeverageLimit)
+		fmt.Println(pos.Leverage)
 	}
 }
 

@@ -41,7 +41,7 @@ func InitFullMonitors(c *gin.Context) {
 		for _, address := range addresses {
 			monitor := &model.SettingMonitor{
 				MailAddress: address, Market: model.BinanceSpot,
-				Symbol:          value.(*model.MarketInfo).Name,
+				Symbol:          value.(*model.MarketInfo).Symbol,
 				IntervalSeconds: seconds,
 				WarnChange:      0.02,
 				WarnIncrease:    0.01,

@@ -495,7 +495,7 @@ package deprecated
 //		}
 //		i++
 //		symbol := coin + model.UniStandardTail[marketType]
-//		marketInfos[symbol] = &model.MarketInfo{Market: model.Mexc, Name: symbol, CTCurrency: symbolInfo.BaseCoin,
+//		marketInfos[symbol] = &model.MarketInfo{Market: model.Mexc, Symbol: symbol, CTCurrency: symbolInfo.BaseCoin,
 //			SizeIncrement:  symbolInfo.ContractSize, //此处记录了一张合约中有多少币数，而非美元数
 //			PriceIncrement: symbolInfo.PriceUnit,
 //			CTValue:        0, // 由于张数中没有美元和币种之间的转换，故为0

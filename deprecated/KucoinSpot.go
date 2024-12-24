@@ -38,7 +38,7 @@ package deprecated
 //
 //type KucoinSymbolModel struct {
 //	Symbol          string `json:"symbol"`
-//	Name            string `json:"name"`
+//	Symbol            string `json:"name"`
 //	BaseCurrency    string `json:"baseCurrency"`
 //	QuoteCurrency   string `json:"quoteCurrency"`
 //	Market          string `json:"market"`
@@ -80,14 +80,14 @@ package deprecated
 //	//	}
 //	//	marketInfo := &model.MarketInfo{Market: model.KucoinSpot}
 //	//	// TODO 此处需要确保kucoin的现货和期货的tail不同，否则marketTYpe不可用
-//	//	marketInfo.Name = coin + model.UniStandardTail[marketType]
+//	//	marketInfo.Symbol = coin + model.UniStandardTail[marketType]
 //	//	marketInfo.PriceIncrement, _ = strconv.ParseFloat(related.PriceIncrement, 64)
 //	//	marketInfo.PriceDecimal = util.NumDecPlaces(marketInfo.PriceIncrement)
 //	//	marketInfo.SizeMin, _ = strconv.ParseFloat(related.BaseMinSize, 64)
 //	//	marketInfo.SizeMax, _ = strconv.ParseFloat(related.BaseMaxSize, 64)
 //	//	marketInfo.SizeIncrement, _ = strconv.ParseFloat(related.BaseIncrement, 64)
 //	//	marketInfo.MoneyMin, _ = strconv.ParseFloat(related.MinFunds, 64)
-//	//	marketInfos[marketInfo.Name] = marketInfo
+//	//	marketInfos[marketInfo.Symbol] = marketInfo
 //	//}
 //	//relatedSettingMarkets = GetMarketSymbols(model.KucoinSpot)
 //	util.NoticeLess(`%s %#v`, key, marketInfos)

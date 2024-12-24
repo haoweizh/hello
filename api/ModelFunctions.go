@@ -163,19 +163,19 @@ func handleCombineSettings(mumSetting *model.Setting, topMarketInfos map[string]
 		normalMap = value.(*sync.Map)
 	}
 	for _, info := range topMarketInfos {
-		valueCombine, _ := combineMap.Load(info.Name)
-		valueNormal, _ := normalMap.Load(info.Name)
+		valueCombine, _ := combineMap.Load(info.Symbol)
+		valueNormal, _ := normalMap.Load(info.Symbol)
 		settingCombine := &model.Setting{Valid: true, Function: model.FunctionCombineTurtle, Market: mumSetting.Market,
-			Symbol: info.Name, ChanceLimit: mumSetting.ChanceLimitCombine, AmountRate: mumSetting.AmountRateCombine,
+			Symbol: info.Symbol, ChanceLimit: mumSetting.ChanceLimitCombine, AmountRate: mumSetting.AmountRateCombine,
 			AmountLimit: mumSetting.AmountLimit, CloseShortMargin: mumSetting.CloseShortMargin, Far: mumSetting.FarCombine,
 			Near: mumSetting.NearCombine, Seconds: mumSetting.SecondsCombine, MarketRelated: mumSetting.MarketRelated,
 			WSType: model.WSTypeTicker}
 		settingNormal := &model.Setting{Valid: true, Function: model.FunctionTurtleNormal, Market: mumSetting.Market,
-			Symbol: info.Name, ChanceLimit: mumSetting.ChanceLimit, AmountRate: mumSetting.AmountRate,
+			Symbol: info.Symbol, ChanceLimit: mumSetting.ChanceLimit, AmountRate: mumSetting.AmountRate,
 			AmountLimit: mumSetting.AmountLimit, CloseShortMargin: mumSetting.CloseShortMargin, Far: mumSetting.Far,
 			Near: mumSetting.Near, Seconds: mumSetting.Seconds, MarketRelated: mumSetting.MarketRelated, WSType: model.WSTypeTicker}
 		if valueCombine == nil {
-			util.Log(util.LogLevelInfo, fmt.Sprintf(`add combine %s %#v`, mumSetting.Market, info.Name))
+			util.Log(util.LogLevelInfo, fmt.Sprintf(`add combine %s %#v`, mumSetting.Market, info.Symbol))
 			accounts := model.AppConfig.GetAccounts(mumSetting.Market)
 			for _, account := range accounts {
 				if account != nil {
@@ -185,15 +185,15 @@ func handleCombineSettings(mumSetting *model.Setting, topMarketInfos map[string]
 		} else {
 			settingCombine = valueCombine.(*model.Setting)
 			settingCombine.SymbolRelated = ``
-			util.Log(util.LogLevelInfo, fmt.Sprintf(`add back combine %s %s of tops %d`, mumSetting.Market, info.Name, len(topMarketInfos)))
+			util.Log(util.LogLevelInfo, fmt.Sprintf(`add back combine %s %s of tops %d`, mumSetting.Market, info.Symbol, len(topMarketInfos)))
 		}
 		if valueNormal != nil {
 			settingNormal = valueNormal.(*model.Setting)
 			settingNormal.SymbolRelated = ``
-			util.Log(util.LogLevelInfo, fmt.Sprintf(`add back normal %s %s of tops %d`, mumSetting.Market, info.Name, len(topMarketInfos)))
+			util.Log(util.LogLevelInfo, fmt.Sprintf(`add back normal %s %s of tops %d`, mumSetting.Market, info.Symbol, len(topMarketInfos)))
 		}
-		combineMap.Store(info.Name, settingCombine)
-		normalMap.Store(info.Name, settingNormal)
+		combineMap.Store(info.Symbol, settingCombine)
+		normalMap.Store(info.Symbol, settingNormal)
 		model.AppDB.Save(settingCombine)
 		model.AppDB.Save(settingNormal)
 	}
@@ -256,8 +256,8 @@ func handleSingleSettings(mumSetting *model.Setting, topMarketInfos map[string]*
 		settingMap = value.(*sync.Map)
 	}
 	for _, info := range topMarketInfos {
-		value, _ = settingMap.Load(info.Name)
-		settingNew := &model.Setting{Valid: true, Function: function, Market: mumSetting.Market, Symbol: info.Name, WSType: model.WSTypeTicker,
+		value, _ = settingMap.Load(info.Symbol)
+		settingNew := &model.Setting{Valid: true, Function: function, Market: mumSetting.Market, Symbol: info.Symbol, WSType: model.WSTypeTicker,
 			ChanceLimit: mumSetting.ChanceLimit, AmountRate: mumSetting.AmountRate, AmountRateCombine: mumSetting.AmountRateCombine,
 			AmountLimit: mumSetting.AmountLimit, Far: mumSetting.Far, Near: mumSetting.Near, Seconds: mumSetting.Seconds,
 			FarCombine: mumSetting.FarCombine, NearCombine: mumSetting.NearCombine, SecondsCombine: mumSetting.SecondsCombine}
@@ -272,9 +272,9 @@ func handleSingleSettings(mumSetting *model.Setting, topMarketInfos map[string]*
 		} else {
 			settingNew = value.(*model.Setting)
 			settingNew.SymbolRelated = ``
-			util.Log(util.LogLevelInfo, fmt.Sprintf(`add settingNew back %s`, info.Name))
+			util.Log(util.LogLevelInfo, fmt.Sprintf(`add settingNew back %s`, info.Symbol))
 		}
-		settingMap.Store(info.Name, settingNew)
+		settingMap.Store(info.Symbol, settingNew)
 		model.AppDB.Save(settingNew)
 	}
 	settingMap.Range(func(symbol, setting interface{}) bool {
@@ -306,9 +306,9 @@ func getSortedInfos(market string, num int) (marketInfoArray model.MarketInfoArr
 	})
 	sort.Sort(sort.Reverse(marketInfoArray))
 	for i := 0; i < num && i < len(marketInfoArray); i++ {
-		topInfos[marketInfoArray[i].Name] = marketInfoArray[i]
+		topInfos[marketInfoArray[i].Symbol] = marketInfoArray[i]
 		util.Log(util.LogLevelInfo, fmt.Sprintf(`get top market info to array %s %s trade amount %fu`,
-			market, marketInfoArray[i].Name, marketInfoArray[i].TradeAmount))
+			market, marketInfoArray[i].Symbol, marketInfoArray[i].TradeAmount))
 	}
 	return marketInfoArray, topInfos
 }
@@ -319,8 +319,8 @@ func getDynamicMarketInfos(mumSetting *model.Setting, accounts []*model.Account,
 	turtleDataArray := model.TurtleDataArray{}
 	marketInfoArray, _ := getSortedInfos(mumSetting.Market, lenInfo)
 	for i := 0; i < marketInfoArray.Len() && len(topMarketInfos) < lenInfo; i++ {
-		_, marketType, coinValue, _ := model.GetFromStandard(mumSetting.Market, marketInfoArray[i].Name)
-		if strings.EqualFold(marketType, model.MarketTypePerp) && !model.CommonTurtleSymbols[marketInfoArray[i].Name] &&
+		_, marketType, coinValue, _ := model.GetFromStandard(mumSetting.Market, marketInfoArray[i].Symbol)
+		if strings.EqualFold(marketType, model.MarketTypePerp) && !model.CommonTurtleSymbols[marketInfoArray[i].Symbol] &&
 			!model.NoTurtleCoins[strings.ToLower(coinValue)] {
 			tried := false
 			var turtleData *model.TurtleData
@@ -330,7 +330,7 @@ func getDynamicMarketInfos(mumSetting *model.Setting, accounts []*model.Account,
 				far := mumSetting.Far
 				near := mumSetting.Near
 				seconds := mumSetting.Seconds
-				//checkSetting := &model.Setting{Function: function, Market: mumSetting.Market, Symbol: marketInfoArray[i].Name,
+				//checkSetting := &model.Setting{Function: function, Market: mumSetting.Market, Symbol: marketInfoArray[i].Symbol,
 				//	Far: mumSetting.Far, Near: mumSetting.Near, Seconds: mumSetting.Seconds, AmountRate: mumSetting.AmountRate}
 				if function == model.FunctionDynamicCombine && far*seconds < mumSetting.FarCombine*mumSetting.SecondsCombine {
 					far = mumSetting.FarCombine
@@ -338,19 +338,19 @@ func getDynamicMarketInfos(mumSetting *model.Setting, accounts []*model.Account,
 					seconds = mumSetting.SecondsCombine
 				}
 				if near > 0 && far >= near && seconds > 0 {
-					turtleData, dataValid = GetRankTurtleData(accounts[0], marketInfoArray[i].Name, mumSetting)
+					turtleData, dataValid = GetRankTurtleData(accounts[0], marketInfoArray[i].Symbol, mumSetting)
 					if turtleData != nil {
-						topMarketInfos[marketInfoArray[i].Name] = marketInfoArray[i]
+						topMarketInfos[marketInfoArray[i].Symbol] = marketInfoArray[i]
 						turtleDataArray = append(turtleDataArray, turtleData)
 						util.Log(util.LogLevelInfo, fmt.Sprintf(
 							`get top turtle done %d of %d %s %s %d n:%f nVolume:%f`,
-							i, lenInfo, mumSetting.Market, marketInfoArray[i].Name, mumSetting.Seconds, turtleData.N, turtleData.NVolume))
+							i, lenInfo, mumSetting.Market, marketInfoArray[i].Symbol, mumSetting.Seconds, turtleData.N, turtleData.NVolume))
 						break
 					} else if dataValid {
 						util.Log(util.LogLevelInfo, fmt.Sprintf(`get top turtle data fail for new coin reason`))
 						break
 					} else {
-						util.Log(util.LogLevelInfo, fmt.Sprintf(`get top turtle data fail %s %s`, mumSetting.Market, marketInfoArray[i].Name))
+						util.Log(util.LogLevelInfo, fmt.Sprintf(`get top turtle data fail %s %s`, mumSetting.Market, marketInfoArray[i].Symbol))
 						time.Sleep(time.Second)
 					}
 				}
@@ -451,6 +451,7 @@ func initMarketMode(account *model.Account, market string) {
 		setBybitPerpLeverage(account.Key, account.Secret)
 	case model.BitgetPerp:
 		setBitgetPositionMode(account.Key, account.Secret)
+		setLeverageBitgetPerp(account)
 	}
 }
 

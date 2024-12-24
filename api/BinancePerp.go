@@ -64,6 +64,7 @@ func getMarketsBinancePerp(key, secret string) (marketInfos map[string]*model.Ma
 	client := futures.NewClient(key, secret)
 	exchangeInfo, err := client.NewExchangeInfoService().Do(context.Background())
 	stats, errTicker := client.NewListPriceChangeStatsService().Do(context.Background())
+	fundingInfos, _ := client.NewFundingRateInfoService().Do(context.Background())
 	if err != nil || errTicker != nil {
 		if err != nil {
 			util.Log(util.LogLevelError, fmt.Sprintf("getMarketsBinancePerp err: %s", err.Error()))
@@ -81,8 +82,8 @@ func getMarketsBinancePerp(key, secret string) (marketInfos map[string]*model.Ma
 		}
 		if item.ContractType == `PERPETUAL` && item.Status == "TRADING" && item.QuoteAsset == model.DialectTail[model.MarketTypePerp][model.BinancePerp] {
 			symbol := item.BaseAsset + model.UniStandardTail[model.MarketTypePerp]
-			marketInfo := &model.MarketInfo{Market: model.BinancePerp, Name: symbol, MoneyMin: 5}
-			marketInfos[marketInfo.Name] = marketInfo
+			marketInfo := &model.MarketInfo{Market: model.BinancePerp, Symbol: symbol, MoneyMin: 5, FundingRateInterval: 8 * 3600000}
+			marketInfos[marketInfo.Symbol] = marketInfo
 			for _, data := range item.Filters {
 				filterType := data[`filterType`].(string)
 				switch filterType {
@@ -112,7 +113,7 @@ func getMarketsBinancePerp(key, secret string) (marketInfos map[string]*model.Ma
 					}
 				}
 			}
-			marketInfos[marketInfo.Name] = marketInfo
+			marketInfos[marketInfo.Symbol] = marketInfo
 		}
 	}
 	for _, stat := range stats {
@@ -125,6 +126,15 @@ func getMarketsBinancePerp(key, secret string) (marketInfos map[string]*model.Ma
 		}
 		if marketInfos[symbol] != nil {
 			marketInfos[symbol].TradeAmount, _ = strconv.ParseFloat(stat.QuoteVolume, 64)
+		}
+	}
+	for _, info := range fundingInfos {
+		success, _, symbol := model.GetFromDialect(model.BinancePerp, model.MarketTypePerp, info.Symbol)
+		if !success {
+			continue
+		}
+		if marketInfos[symbol] != nil {
+			marketInfos[symbol].FundingRateInterval = int(info.FundingIntervalHours) * 3600000
 		}
 	}
 	return marketInfos

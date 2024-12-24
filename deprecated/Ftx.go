@@ -652,7 +652,7 @@ package deprecated
 //				if !success {
 //					continue
 //				}
-//				marketInfo.Name = coin + model.UniStandardTail[marketType]
+//				marketInfo.Symbol = coin + model.UniStandardTail[marketType]
 //			} else {
 //				continue
 //			}
@@ -673,7 +673,7 @@ package deprecated
 //			if value[`volumeUsd24h`] != nil {
 //				marketInfo.TradeAmount, _ = value[`volumeUsd24h`].(json.Number).Float64()
 //			}
-//			marketInfos[marketInfo.Name] = marketInfo
+//			marketInfos[marketInfo.Symbol] = marketInfo
 //		}
 //	}
 //	return

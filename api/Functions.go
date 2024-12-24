@@ -935,12 +935,12 @@ func InitCrossMarketInfos(markets []string) {
 		if value == nil {
 			return true
 		}
-		success, _, coin, _ := model.GetFromStandard(value.(*model.MarketInfo).Market, value.(*model.MarketInfo).Name)
+		success, _, coin, _ := model.GetFromStandard(value.(*model.MarketInfo).Market, value.(*model.MarketInfo).Symbol)
 		if success && coin != `` {
 			if infoPool[coin] == nil {
 				infoPool[coin] = make([]*model.MarketInfo, 0)
 			}
-			if !FilterCross(value.(*model.MarketInfo).Market, value.(*model.MarketInfo).Name) {
+			if !FilterCross(value.(*model.MarketInfo).Market, value.(*model.MarketInfo).Symbol) {
 				infoPool[coin] = append(infoPool[coin], value.(*model.MarketInfo))
 			}
 		}
@@ -964,34 +964,34 @@ func InitCrossMarketInfos(markets []string) {
 		scoreClose := 0.005
 		if len(infos) >= 2 {
 			for _, info := range infos {
-				if settingsDbMap[fmt.Sprintf(`%s_%s_%s`, model.FunctionCross, info.Market, info.Name)] == nil {
+				if settingsDbMap[fmt.Sprintf(`%s_%s_%s`, model.FunctionCross, info.Market, info.Symbol)] == nil {
 					setting := &model.Setting{
 						Valid:            true,
 						Function:         model.FunctionCross,
 						WSType:           model.WSTypeTicker,
 						Market:           info.Market,
-						Symbol:           info.Name,
+						Symbol:           info.Symbol,
 						Coin:             coin,
 						OpenShortMargin:  scoreOpen,
 						CloseShortMargin: scoreClose,
 						PriceX:           1, GridAmount: 1}
-					util.Log(util.LogLevelInfo, fmt.Sprintf(`save setting %s %s %s %#v`, info.Market, info.Name, coin, setting.Valid))
+					util.Log(util.LogLevelInfo, fmt.Sprintf(`save setting %s %s %s %#v`, info.Market, info.Symbol, coin, setting.Valid))
 					model.AppDB.Save(setting)
 				}
 			}
-		} else if len(infos) == 1 && infos[0].Name[0:2] == `10` {
-			if settingsDbMap[fmt.Sprintf(`%s_%s_%s`, model.FunctionCross, infos[0].Market, infos[0].Name)] == nil {
+		} else if len(infos) == 1 && infos[0].Symbol[0:2] == `10` {
+			if settingsDbMap[fmt.Sprintf(`%s_%s_%s`, model.FunctionCross, infos[0].Market, infos[0].Symbol)] == nil {
 				setting := &model.Setting{
 					Valid:            true,
 					Function:         model.FunctionCross,
 					WSType:           model.WSTypeTicker,
 					Market:           infos[0].Market,
-					Symbol:           infos[0].Name,
+					Symbol:           infos[0].Symbol,
 					Coin:             coin,
 					OpenShortMargin:  scoreOpen,
 					CloseShortMargin: scoreClose,
 					PriceX:           1, GridAmount: 1}
-				util.Log(util.LogLevelInfo, fmt.Sprintf(`save setting %s %s %s %#v`, infos[0].Market, infos[0].Name, coin, setting.Valid))
+				util.Log(util.LogLevelInfo, fmt.Sprintf(`save setting %s %s %s %#v`, infos[0].Market, infos[0].Symbol, coin, setting.Valid))
 				model.AppDB.Save(setting)
 			}
 		}
@@ -1081,6 +1081,8 @@ func SetSymbolLeverage(account *model.Account, market, symbol string) (success b
 		return setSymbolLeverageBybit(account, symbol)
 	case model.OKEX:
 		return setSymbolLeverageOkx(account, symbol)
+	case model.BitgetPerp:
+		return setSymbolLeverageBitgetPerp(account, symbol)
 	}
 	return false
 }

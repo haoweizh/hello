@@ -83,7 +83,7 @@ func Test_fullMonitors(t *testing.T) {
 		for _, address := range addresses {
 			monitor := &model.SettingMonitor{
 				MailAddress: address, Market: model.BinanceSpot,
-				Symbol:          value.(*model.MarketInfo).Name,
+				Symbol:          value.(*model.MarketInfo).Symbol,
 				IntervalSeconds: 300,
 				WarnChange:      0.02,
 				WarnIncrease:    0.01,
@@ -92,7 +92,7 @@ func Test_fullMonitors(t *testing.T) {
 			model.AppDB.Save(monitor)
 			monitor = &model.SettingMonitor{
 				MailAddress: address, Market: model.BinanceSpot,
-				Symbol:          value.(*model.MarketInfo).Name,
+				Symbol:          value.(*model.MarketInfo).Symbol,
 				IntervalSeconds: 3600,
 				WarnChange:      0.05,
 				WarnIncrease:    0.03,
