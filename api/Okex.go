@@ -1193,7 +1193,7 @@ func parsePositionOKEX(value map[string]interface{}) (success bool, position *Po
 		}
 	}
 	//pos 持仓数量
-	return true, position
+	return success, position
 }
 
 func parseBalanceOKEX(value map[string]interface{}) (balance *model.Balance) {

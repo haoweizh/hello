@@ -575,7 +575,7 @@ func GetFundingRate(key, secret, market, symbol string) (success bool, rate *mod
 	if fundingRate != nil && now < fundingRate.ExpireTime && time.Now().Unix()-fundingRate.UpdateTime.Unix() < 300 {
 		return true, fundingRate
 	}
-	util.Log(util.LogLevelInfo, fmt.Sprintf(`fail to get funding rate from ws %s %s`, market, symbol))
+	util.Log(util.LogLevelInfo, fmt.Sprintf(`get funding rate fail from ws %s %s %#v`, market, symbol, fundingRate))
 	switch market {
 	case model.BitgetPerp:
 		fundingRate = getFundingRateBitgetPerp(symbol)
@@ -594,6 +594,7 @@ func GetFundingRate(key, secret, market, symbol string) (success bool, rate *mod
 	case model.Gate:
 		fundingRate = getFundingRateGate(key, secret, symbol)
 	}
+	util.Log(util.LogLevelInfo, fmt.Sprintf(`get funding rate from rest %s %s %#v`, market, symbol, fundingRate))
 	if fundingRate == nil || now > fundingRate.ExpireTime {
 		time.Sleep(time.Minute)
 		return false, nil

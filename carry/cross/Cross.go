@@ -259,6 +259,8 @@ func initStatus(account *model.Account, setting *model.Setting) (status *CarrySt
 	var marketInfo *model.MarketInfo
 	if v != nil {
 		marketInfo = v.(*model.MarketInfo)
+	} else {
+		return nil
 	}
 	if marketInfo != nil && marketInfo.SizeMax > 0 {
 		status.AvailableBuy = math.Min(status.AvailableBuy, marketInfo.SizeMax)

@@ -302,7 +302,7 @@ var markPriceHandler = gateWs.NewCallBack(func(msg *gateWs.UpdateMsg) {
 			rate, _ := strconv.ParseFloat(update.FundingRate, 64)
 			rateNext, _ := strconv.ParseFloat(update.FundingRateIndicative, 64)
 			SetFundingRate(model.Gate, symbol, &model.FundingRate{Rate: rate, RateNext: rateNext,
-				UpdateTime: time.UnixMilli(msg.TimeMs), ExpireTime: 0})
+				UpdateTime: time.UnixMilli(msg.TimeMs), ExpireTime: time.Now().Unix() + 3600})
 		}
 	}
 	return
