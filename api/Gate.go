@@ -134,9 +134,10 @@ func setLeverageGate(account *model.Account) (success bool) {
 func setSymbolLeverageGate(account *model.Account, symbol string) (success bool) {
 	_, _, _, dialectSymbol := model.GetFromStandard(model.Gate, symbol)
 	client, ctx := getClientGate(account.Key, account.Secret)
-	_, _, err := client.FuturesApi.UpdatePositionLeverage(ctx, `usdt`, dialectSymbol, `0`,
+	pos, _, err := client.FuturesApi.UpdatePositionLeverage(ctx, `usdt`, dialectSymbol, `0`,
 		&gateApi.UpdatePositionLeverageOpts{CrossLeverageLimit: optional.NewString(strconv.Itoa(model.DefaultLeverage))})
 	if err == nil {
+		util.Log(util.LogLevelInfo, fmt.Sprintf("set leverage success gate %s to %s", symbol, pos.CrossLeverageLimit))
 		return true
 	}
 	return false

@@ -97,7 +97,7 @@ func setLeverageBitgetPerp(account *model.Account) (success bool) {
 	symbols := GetMarketSymbols(model.BitgetPerp)
 	for symbol := range symbols {
 		setSymbolLeverageBitgetPerp(account, symbol)
-		time.Sleep(time.Minute)
+		time.Sleep(time.Second * 5)
 	}
 	return true
 }
@@ -110,6 +110,7 @@ func setSymbolLeverageBitgetPerp(account *model.Account, symbol string) (success
 	if postResp != nil {
 		postJson, _ := util.NewJSON(postResp)
 		if postJson.Get(`msg`).MustString() == `success` {
+			util.Log(util.LogLevelInfo, fmt.Sprintf("set leverage success gate %s to %d", symbol, model.DefaultLeverage))
 			return true
 		}
 	}
