@@ -490,22 +490,26 @@ func getHolding(statuses []*CarryStatus) (bids, asks model.Ticks, bidStatus, ask
 		}
 		holding += status.Holding * status.setting.GridAmount
 		holdStr += fmt.Sprintf(`[%s %s %f]`, status.market, status.symbol, status.Holding)
+		marketInfo := model.GetMarketInfo(status.market, status.symbol)
 		getTick, tick := model.AppEnvironment.GetBidAsk(status.market, status.symbol)
-		getFunding, rate := api.GetFundingRate(status.account.Key, status.account.Secret, status.market, status.symbol)
-		if !getTick || !getFunding || rate == nil {
+		getFunding, fundingRate := api.GetFundingRate(status.account.Key, status.account.Secret, status.market, status.symbol)
+		if !getTick || !getFunding || fundingRate == nil || marketInfo == nil {
 			continue
 		}
+		priceBid := tick.Bids[0].Price * (1 + fundingRate.Rate*FundingRateBase*3600000/float64(marketInfo.FundingRateInterval))
+		priceAsk := tick.Asks[0].Price * (1 + fundingRate.Rate*FundingRateBase*3600000/float64(marketInfo.FundingRateInterval))
 		bids = append(bids, model.Tick{Ts: int64(tick.Ts), Market: tick.Bids[0].Market, Symbol: tick.Bids[0].Symbol,
-			Amount: tick.Bids[0].Amount, Price: tick.Bids[0].Price * (1 + rate.Rate)})
+			Amount: tick.Bids[0].Amount, Price: priceBid})
 		asks = append(asks, model.Tick{Ts: int64(tick.Ts), Market: tick.Asks[0].Market, Symbol: tick.Asks[0].Symbol,
-			Amount: tick.Asks[0].Amount, Price: tick.Asks[0].Price * (1 + rate.Rate)})
+			Amount: tick.Asks[0].Amount, Price: priceAsk})
 		bidStatus[fmt.Sprintf(`%s_%s`, status.market, status.symbol)] = status
 		askStatus[fmt.Sprintf(`%s_%s`, status.market, status.symbol)] = status
 		if price == 0 {
 			price = bids[0].Price / status.setting.PriceX
 		}
 		if !status.setting.Valid {
-			util.Log(util.LogLevelError, fmt.Sprintf(`setting still invalid %s %s %s %#v`, status.market, status.symbol, status.setting.Coin, status.setting))
+			util.Log(util.LogLevelError, fmt.Sprintf(`setting still invalid %s %s %s funding %f interval %d %#v`,
+				status.market, status.symbol, status.setting.Coin, fundingRate.Rate, marketInfo.FundingRateInterval, status.setting))
 			status.setting.Valid = true
 		}
 	}
@@ -808,8 +812,7 @@ func breakMarkPrice(account *model.Account, setting *model.Setting, price float6
 	return false
 }
 
-func checkTradeLine(statusBuy, statusSell *CarryStatus, marketInfoBuy, marketInfoSell *model.MarketInfo,
-	fundingRateBuy, fundingRateSell *model.FundingRate, score float64) (valid bool, limit float64) {
+func checkTradeLine(statusBuy, statusSell *CarryStatus, score float64) (valid bool, limit float64) {
 	if statusBuy.Holding >= 0 && statusSell.Holding <= 0 {
 		return score > statusBuy.TradeLineBuy && score > statusSell.TradeLineSell, limit
 	} else {

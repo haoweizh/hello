@@ -22,10 +22,17 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarrySta
 		return
 	}
 	var bidAmount, askAmount float64
-	priceAskRelate := tickRelate.Asks[0].Price
-	priceBidRelate := tickRelate.Bids[0].Price
-	priceAsk := tick.Asks[0].Price
-	priceBid := tick.Bids[0].Price
+	marketInfo := model.GetMarketInfo(carryStatus.market, carryStatus.symbol)
+	marketInfoRelate := model.GetMarketInfo(carryStatusRelate.market, carryStatusRelate.symbol)
+	_, fundingRate := api.GetFundingRate(carryStatus.account.Key, carryStatus.account.Secret, carryStatus.market, carryStatus.symbol)
+	_, fundingRateRelate := api.GetFundingRate(carryStatusRelate.account.Key, carryStatusRelate.account.Secret, carryStatusRelate.market, carryStatusRelate.symbol)
+	if marketInfo == nil || marketInfoRelate == nil || fundingRate == nil || fundingRateRelate == nil {
+		return nil, nil, 0, 0, 0, nil, nil
+	}
+	priceAskRelate := tickRelate.Asks[0].Price * (1 + fundingRateRelate.Rate*FundingRateBase*3600000/float64(marketInfoRelate.FundingRateInterval))
+	priceBidRelate := tickRelate.Bids[0].Price * (1 + fundingRateRelate.Rate*FundingRateBase*3600000/float64(marketInfoRelate.FundingRateInterval))
+	priceAsk := tick.Asks[0].Price * (1 + fundingRate.Rate*FundingRateBase*3600000/float64(marketInfo.FundingRateInterval))
+	priceBid := tick.Bids[0].Price * (1 + fundingRate.Rate*FundingRateBase*3600000/float64(marketInfo.FundingRateInterval))
 	priceX := carryStatus.setting.PriceX
 	priceXRelate := carryStatusRelate.setting.PriceX
 	score := (priceBid/priceX - priceAskRelate/priceXRelate) / math.Max(priceBid/priceX, priceAskRelate/priceXRelate)
@@ -34,14 +41,7 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarrySta
 	if score > 0.01 && util.DoDebug {
 		model.AppMetric.AddCarry(mark, score, 0)
 	}
-	marketInfo := model.GetMarketInfo(carryStatus.market, carryStatus.symbol)
-	marketInfoRelate := model.GetMarketInfo(carryStatusRelate.market, carryStatusRelate.symbol)
-	_, fundingRate := api.GetFundingRate(carryStatus.account.Key, carryStatus.account.Secret, carryStatus.market, carryStatus.symbol)
-	_, fundingRateRelate := api.GetFundingRate(carryStatusRelate.account.Key, carryStatusRelate.account.Secret, carryStatusRelate.market, carryStatusRelate.symbol)
-	if marketInfo == nil || marketInfoRelate == nil || fundingRate == nil || fundingRateRelate == nil {
-		return nil, nil, 0, 0, 0, nil, nil
-	}
-	valid, _ := checkTradeLine(carryStatusRelate, carryStatus, marketInfoRelate, marketInfo, fundingRateRelate, fundingRate, score)
+	valid, _ := checkTradeLine(carryStatusRelate, carryStatus, score)
 	if valid {
 		statusSell = carryStatus
 		statusBuy = carryStatusRelate
@@ -52,7 +52,7 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarrySta
 		askAmount = tick.Bids[0].Amount
 		bidAmount = tickRelate.Asks[0].Amount
 	} else {
-		valid, _ = checkTradeLine(carryStatus, carryStatusRelate, marketInfo, marketInfoRelate, fundingRate, fundingRateRelate, scoreRelate)
+		valid, _ = checkTradeLine(carryStatus, carryStatusRelate, scoreRelate)
 		if valid {
 			statusSell = carryStatusRelate
 			statusBuy = carryStatus
@@ -79,14 +79,17 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarrySta
 	if math.Abs(fundingRateRelate.Rate) > 0.001 || math.Abs(fundingRate.Rate) > 0.001 {
 		green = true
 	}
+	loc, _ := time.LoadLocation("Asia/Shanghai")
 	fundingStr, fundingStrRelate := ``, ``
 	if !carryStatus.isSpot {
-		fundingStr = fmt.Sprintf(`%.5f %d:%d`, 100*fundingRate.Rate,
-			fundingRate.UpdateTime.Hour(), fundingRate.UpdateTime.Minute())
+		updateTime := fundingRate.UpdateTime.In(loc)
+		fundingStr = fmt.Sprintf(`%.5f %d周期%d %d:%d`, 100*fundingRate.Rate,
+			FundingRateBase, marketInfo.FundingRateInterval/3600000, updateTime.Hour(), updateTime.Minute())
 	}
 	if !carryStatusRelate.isSpot {
-		fundingStrRelate = fmt.Sprintf(`%.5f %d:%d`, 100*fundingRateRelate.Rate,
-			fundingRateRelate.UpdateTime.Hour(), fundingRateRelate.UpdateTime.Minute())
+		updateTime := fundingRateRelate.UpdateTime.In(loc)
+		fundingStrRelate = fmt.Sprintf(`%.5f %d/周期%d %d:%d`, 100*fundingRateRelate.Rate,
+			FundingRateBase, marketInfoRelate.FundingRateInterval/36000, updateTime.Hour(), updateTime.Minute())
 	}
 	var infoValue []string
 	if mark < markRelate {

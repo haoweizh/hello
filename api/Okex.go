@@ -700,7 +700,7 @@ func getMarketsOKEX(key, secret string) (marketInfos map[string]*model.MarketInf
 			for _, info := range basicJson.Get(`data`).MustArray() {
 				value := info.(map[string]interface{})
 				if value[`instId`] != nil {
-					marketInfo := &model.MarketInfo{Market: model.OKEX}
+					marketInfo := &model.MarketInfo{Market: model.OKEX, FundingRateInterval: 8 * 3600000}
 					marketType := model.MarketTypeSpot
 					if strings.Contains(value[`instId`].(string), `-USDT-SWAP`) {
 						marketType = model.MarketTypePerp

@@ -201,7 +201,7 @@ func getMarketsBybitSpot(marketInfos map[string]*model.MarketInfo) {
 			continue
 		}
 		symbol := symbolInfo.BaseCoin + model.UniStandardTail[model.MarketTypeSpot]
-		marketInfo := &model.MarketInfo{Symbol: symbol, Market: model.Bybit}
+		marketInfo := &model.MarketInfo{Symbol: symbol, Market: model.Bybit, FundingRateInterval: 8 * 3600000}
 		if symbolInfo.PriceFilter.TickSize == "" {
 			util.Log(util.LogLevelError, fmt.Sprintf("币种：%s 价格步长为空 resp：%#v", symbol, symbolInfo))
 			continue
@@ -241,7 +241,7 @@ func getMarketsBybitPerp(marketInfos map[string]*model.MarketInfo) {
 				continue
 			}
 			symbol := perpInfo.BaseCoin + model.UniStandardTail[model.MarketTypePerp]
-			marketInfo := &model.MarketInfo{Symbol: symbol, Market: model.Bybit}
+			marketInfo := &model.MarketInfo{Symbol: symbol, Market: model.Bybit, FundingRateInterval: 8 * 3600000}
 			marketInfo.FundingRateInterval = perpInfo.FundingInterval * 60000
 			marketInfo.PriceIncrement, _ = strconv.ParseFloat(perpInfo.PriceFilter.TickSize, 64)
 			marketInfo.PriceDecimal, _ = strconv.Atoi(perpInfo.PriceScale)

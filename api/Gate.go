@@ -57,7 +57,7 @@ func appendFutureMarketGate(key, secret string, marketInfos map[string]*model.Ma
 		if !contract.EnableCredit {
 			continue
 		}
-		marketInfo := &model.MarketInfo{Market: model.Gate}
+		marketInfo := &model.MarketInfo{Market: model.Gate, FundingRateInterval: 8 * 3600000}
 		success, coin, symbol := model.GetFromDialect(model.Gate, model.MarketTypePerp, contract.Name)
 		if !success {
 			continue
@@ -98,7 +98,7 @@ func appendSpotMarketsGate(key, secret string, marketInfos map[string]*model.Mar
 		if spot.TradeStatus != "tradable" || !success {
 			continue
 		}
-		marketInfo := &model.MarketInfo{Market: model.Gate}
+		marketInfo := &model.MarketInfo{Market: model.Gate, FundingRateInterval: 8 * 3600000}
 		marketInfo.Symbol = symbol
 		marketInfo.PriceDecimal = int(spot.Precision)
 		marketInfo.PriceIncrement = 1 / math.Pow10(int(spot.Precision))

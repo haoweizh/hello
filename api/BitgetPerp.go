@@ -48,7 +48,7 @@ func getMarketsBitgetPerp() (marketInfos map[string]*model.MarketInfo) {
 			continue
 		}
 		symbol := perpInfo.BaseCoin + model.UniStandardTail[model.MarketTypePerp]
-		marketInfo := &model.MarketInfo{Market: model.BitgetPerp, Symbol: symbol, CTCurrency: perpInfo.BaseCoin}
+		marketInfo := &model.MarketInfo{Market: model.BitgetPerp, Symbol: symbol, CTCurrency: perpInfo.BaseCoin, FundingRateInterval: 8 * 3600000}
 		marketInfo.PriceDecimal, _ = strconv.Atoi(perpInfo.PricePlace)
 		priceEndStep, _ := strconv.ParseFloat(perpInfo.PriceEndStep, 64)
 		marketInfo.PriceIncrement = priceEndStep * (1 / math.Pow10(marketInfo.PriceDecimal))
