@@ -114,23 +114,15 @@ func appendSpotMarketsGate(key, secret string, marketInfos map[string]*model.Mar
 	}
 }
 
-var settingGate = false
-
 func setLeverageGate(account *model.Account) (success bool) {
-	if settingGate {
-		return false
-	}
-	defer func() {
-		settingGate = false
-	}()
-	settingGate = true
 	symbols := GetMarketSymbols(model.Gate)
 	for symbol := range symbols {
 		setSymbolLeverageGate(account, symbol)
-		time.Sleep(time.Second * 2)
+		time.Sleep(time.Millisecond * 200)
 	}
 	return true
 }
+
 func setSymbolLeverageGate(account *model.Account, symbol string) (success bool) {
 	_, _, _, dialectSymbol := model.GetFromStandard(model.Gate, symbol)
 	client, ctx := getClientGate(account.Key, account.Secret)

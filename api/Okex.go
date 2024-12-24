@@ -1316,20 +1316,11 @@ func setAccountModeOKEX(key, secret string) (success bool) {
 	return true
 }
 
-var settingOkx = false
-
 func setLeverageOkx(account *model.Account) (success bool) {
-	if settingOkx {
-		return
-	}
-	defer func() {
-		settingOkx = false
-	}()
-	settingOkx = true
 	symbols := GetMarketSymbols(model.OKEX)
 	for symbol := range symbols {
 		setSymbolLeverageOkx(account, symbol)
-		time.Sleep(time.Minute)
+		time.Sleep(time.Millisecond * 200)
 	}
 	return true
 }

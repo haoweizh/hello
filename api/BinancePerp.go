@@ -787,16 +787,7 @@ func setSymbolLeverageBinancePerp(account *model.Account, symbol string) (succes
 	return true
 }
 
-var settingBinancePerp = false
-
 func setLeverageBinancePerp(key, secret string) (success bool) {
-	if settingBinancePerp {
-		return
-	}
-	defer func() {
-		settingBinancePerp = false
-	}()
-	settingBinancePerp = true
 	symbols := GetMarketSymbols(model.BinancePerp)
 	for symbol, value := range symbols {
 		if value == false {
@@ -817,7 +808,7 @@ func setLeverageBinancePerp(key, secret string) (success bool) {
 				key, symbol, model.DefaultLeverage, err.Error()))
 			continue
 		}
-		time.Sleep(time.Minute)
+		time.Sleep(time.Millisecond * 200)
 	}
 	return true
 }

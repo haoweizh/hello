@@ -663,7 +663,6 @@ func setBybitMarginLeverage(key, secret string) {
 			util.Log(util.LogLevelError, fmt.Sprintf("fail to set bybit margin leverage, resp: %s codeErr: %#v", httpResp, codeErr))
 		}
 	}
-	time.Sleep(time.Second * 5)
 }
 
 func setSymbolLeverageBybit(account *model.Account, symbol string) (setSuc bool) {
@@ -697,16 +696,7 @@ func setSymbolLeverageBybit(account *model.Account, symbol string) (setSuc bool)
 	return false
 }
 
-var settingBybit = false
-
 func setBybitPerpLeverage(key, secret string) {
-	if settingBybit {
-		return
-	}
-	defer func() {
-		settingBybit = false
-	}()
-	settingBybit = true
 	symbols := GetMarketSymbols(model.Bybit)
 	for symbol := range symbols {
 		success, marketType, _, dialectSymbol := model.GetFromStandard(model.Bybit, symbol)
@@ -732,7 +722,7 @@ func setBybitPerpLeverage(key, secret string) {
 					util.Log(util.LogLevelError, fmt.Sprintf("fail to set bybit perp leverage , resp: %s codeErr: %#v", httpResp, codeErr))
 				}
 			}
-			time.Sleep(time.Minute)
+			time.Sleep(time.Millisecond * 200)
 		}
 	}
 }

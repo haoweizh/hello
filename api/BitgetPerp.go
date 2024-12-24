@@ -84,20 +84,11 @@ func _(account *model.Account, symbol string) (mode string) {
 	return data
 }
 
-var settingBitget = false
-
 func setLeverageBitgetPerp(account *model.Account) (success bool) {
-	if settingBitget {
-		return
-	}
-	defer func() {
-		settingBitget = false
-	}()
-	settingBitget = true
 	symbols := GetMarketSymbols(model.BitgetPerp)
 	for symbol := range symbols {
 		setSymbolLeverageBitgetPerp(account, symbol)
-		time.Sleep(time.Second * 5)
+		time.Sleep(time.Millisecond * 200)
 	}
 	return true
 }
