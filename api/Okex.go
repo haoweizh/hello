@@ -149,6 +149,11 @@ var wsHandlerOKEX = func(market string, conn *model.WSConn, event []byte) {
 		rate, _ := strconv.ParseFloat(data[`fundingRate`].(string), 64)
 		rateNext, _ := strconv.ParseFloat(data[`nextFundingRate`].(string), 64)
 		fundingTime, _ := strconv.ParseInt(data[`fundingTime`].(string), 10, 64)
+		fundingTimeNext, _ := strconv.ParseInt(data[`nextFundingTime`].(string), 10, 64)
+		marketInfo := model.GetMarketInfo(model.OKEX, symbol)
+		if marketInfo != nil {
+			marketInfo.FundingRateInterval = int(fundingTimeNext - fundingTime)
+		}
 		ts, _ := strconv.ParseInt(data[`ts`].(string), 10, 64)
 		SetFundingRate(model.OKEX, symbol, &model.FundingRate{Rate: rate, RateNext: rateNext, ExpireTime: fundingTime / 1000, UpdateTime: time.UnixMilli(ts)})
 		return
@@ -1436,11 +1441,15 @@ func getFundingRateOKEX(key, secret, symbol string) (fundingRate *model.FundingR
 	rate, _ := strconv.ParseFloat(data[`fundingRate`].(string), 64)
 	//rateNext, _ := strconv.ParseFloat(data[`nextFundingRate`].(string), 64)
 	rateTime, _ := strconv.ParseInt(data[`fundingTime`].(string), 10, 64)
-	rateTime /= 1000
+	fundingTimeNext, _ := strconv.ParseInt(data[`nextFundingTime`].(string), 10, 64)
+	marketInfo := model.GetMarketInfo(model.OKEX, symbol)
+	if marketInfo != nil {
+		marketInfo.FundingRateInterval = int(fundingTimeNext - rateTime)
+	}
 	return &model.FundingRate{
 		Rate:       rate,
 		UpdateTime: util.GetNow(),
-		ExpireTime: rateTime}
+		ExpireTime: rateTime / 1000}
 }
 
 func getMaxLoanOKEX(key, secret, symbol string) (success bool, maxLoan float64) {
