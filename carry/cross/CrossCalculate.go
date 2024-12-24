@@ -2,6 +2,7 @@ package cross
 
 import (
 	"fmt"
+	"hello/api"
 	"hello/model"
 	"hello/util"
 	"math"
@@ -33,7 +34,14 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarrySta
 	if score > 0.01 && util.DoDebug {
 		model.AppMetric.AddCarry(mark, score, 0)
 	}
-	valid, _ := checkTradeLine(carryStatusRelate, carryStatus, score)
+	marketInfo := model.GetMarketInfo(carryStatus.market, carryStatus.symbol)
+	marketInfoRelate := model.GetMarketInfo(carryStatusRelate.market, carryStatusRelate.symbol)
+	_, fundingRate := api.GetFundingRate(carryStatus.account.Key, carryStatus.account.Secret, carryStatus.market, carryStatus.symbol)
+	_, fundingRateRelate := api.GetFundingRate(carryStatusRelate.account.Key, carryStatusRelate.account.Secret, carryStatusRelate.market, carryStatusRelate.symbol)
+	if marketInfo == nil || marketInfoRelate == nil || fundingRate == nil || fundingRateRelate == nil {
+		return nil, nil, 0, 0, 0, nil, nil
+	}
+	valid, _ := checkTradeLine(carryStatusRelate, carryStatus, marketInfoRelate, marketInfo, fundingRateRelate, fundingRate, score)
 	if valid {
 		statusSell = carryStatus
 		statusBuy = carryStatusRelate
@@ -44,7 +52,7 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarrySta
 		askAmount = tick.Bids[0].Amount
 		bidAmount = tickRelate.Asks[0].Amount
 	} else {
-		valid, _ = checkTradeLine(carryStatus, carryStatusRelate, scoreRelate)
+		valid, _ = checkTradeLine(carryStatus, carryStatusRelate, marketInfo, marketInfoRelate, fundingRate, fundingRateRelate, scoreRelate)
 		if valid {
 			statusSell = carryStatusRelate
 			statusBuy = carryStatus
@@ -68,17 +76,17 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarrySta
 		coinValueRelate += `永`
 	}
 	green := false
-	if math.Abs(carryStatusRelate.FundingRate) > 0.001 || math.Abs(carryStatus.FundingRate) > 0.001 {
+	if math.Abs(fundingRateRelate.Rate) > 0.001 || math.Abs(fundingRate.Rate) > 0.001 {
 		green = true
 	}
 	fundingStr, fundingStrRelate := ``, ``
 	if !carryStatus.isSpot {
-		fundingStr = fmt.Sprintf(`%.5f %d:%d`, 100*carryStatus.FundingRate,
-			carryStatus.FundingRateUpdateTime.Hour(), carryStatus.FundingRateUpdateTime.Minute())
+		fundingStr = fmt.Sprintf(`%.5f %d:%d`, 100*fundingRate.Rate,
+			fundingRate.UpdateTime.Hour(), fundingRate.UpdateTime.Minute())
 	}
 	if !carryStatusRelate.isSpot {
-		fundingStrRelate = fmt.Sprintf(`%.5f %d:%d`, 100*carryStatusRelate.FundingRate,
-			carryStatusRelate.FundingRateUpdateTime.Hour(), carryStatusRelate.FundingRateUpdateTime.Minute())
+		fundingStrRelate = fmt.Sprintf(`%.5f %d:%d`, 100*fundingRateRelate.Rate,
+			fundingRateRelate.UpdateTime.Hour(), fundingRateRelate.UpdateTime.Minute())
 	}
 	var infoValue []string
 	if mark < markRelate {

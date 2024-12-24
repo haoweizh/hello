@@ -255,23 +255,6 @@ func initStatus(account *model.Account, setting *model.Setting) (status *CarrySt
 		util.Log(util.LogLevelError, fmt.Sprintf(`fail to create status %s %s`, setting.Market, setting.Symbol))
 		return nil
 	}
-	getFundingRate, rate := api.GetFundingRate(account.Key, account.Secret, setting.Market, setting.Symbol)
-	if getFundingRate {
-		status.FundingRate = rate.Rate
-		status.FundingRateUpdateTime = rate.UpdateTime
-	}
-	fundingKey := fmt.Sprintf(`funding_%s_%s`, setting.Market, setting.Symbol)
-	fundingTime, ok := notifyTime.Load(fundingKey)
-	if !(ok && fundingTime.(time.Time).Add(time.Minute*60).After(time.Now())) && math.Abs(status.FundingRate) > 0.03 {
-		notifyTime.Store(fundingKey, time.Now())
-		go func() {
-			msg := fmt.Sprintf(`%s %f`, fundingKey, status.FundingRate)
-			err := util.SendMail(model.AppConfig.FromMail, model.AppConfig.FromMailAuth, `haoweizh@qq.com`, msg, msg)
-			if err != nil {
-				util.Log(util.LogLevelError, fmt.Sprintf(`fail to send mail msg %s %s`, msg, err.Error()))
-			}
-		}()
-	}
 	v, _ := util.LoadSyncMap(model.MarketInfos, setting.Market, setting.Symbol)
 	var marketInfo *model.MarketInfo
 	if v != nil {
@@ -295,8 +278,7 @@ func initStatus(account *model.Account, setting *model.Setting) (status *CarrySt
 	}
 	status.LimitBuy = math.Min(status.LimitBuy, status.AvailableBuy)
 	status.LimitSell = math.Min(status.LimitSell, status.AvailableSell)
-	util.Log(util.LogLevelInfo, fmt.Sprintf(`init status set fundingrate %s %s %s %f %s`,
-		account.Key, setting.Market, setting.Symbol, status.FundingRate, status.FundingRateUpdateTime.String()))
+	util.Log(util.LogLevelInfo, fmt.Sprintf(`init status set %s %s %s`, account.Key, setting.Market, setting.Symbol))
 	initTradeLine(account, setting, status, doRevert)
 	util.StoreSyncMap(carryStatusMap, status, setting.Coin, setting.Market, setting.Symbol, account.Key)
 	return
@@ -327,8 +309,8 @@ func initTradeLine(account *model.Account, setting *model.Setting, status *Carry
 		standardScoreSell = setting.CloseShortMargin
 		status.LimitSell = math.Min(status.LimitSell, status.Holding)
 	}
-	status.TradeLineBuy = math.Max(standardScoreBuy*(0.5+jumpBuy*status.RateInAll), lowestScore) + status.FundingRate
-	status.TradeLineSell = math.Max(standardScoreSell*(0.5+jumpSell*status.RateInAll), lowestScore) - status.FundingRate
+	status.TradeLineBuy = math.Max(standardScoreBuy*(0.5+jumpBuy*status.RateInAll), lowestScore)
+	status.TradeLineSell = math.Max(standardScoreSell*(0.5+jumpSell*status.RateInAll), lowestScore)
 	status.TradeLineBuy *= account.CarryRate
 	status.TradeLineSell *= account.CarryRate
 	//tradeLineExtra := getTradeLineExtra(setting.Coin, setting.CloseShortMargin)
@@ -826,7 +808,8 @@ func breakMarkPrice(account *model.Account, setting *model.Setting, price float6
 	return false
 }
 
-func checkTradeLine(statusBuy, statusSell *CarryStatus, score float64) (valid bool, limit float64) {
+func checkTradeLine(statusBuy, statusSell *CarryStatus, marketInfoBuy, marketInfoSell *model.MarketInfo,
+	fundingRateBuy, fundingRateSell *model.FundingRate, score float64) (valid bool, limit float64) {
 	if statusBuy.Holding >= 0 && statusSell.Holding <= 0 {
 		return score > statusBuy.TradeLineBuy && score > statusSell.TradeLineSell, limit
 	} else {
