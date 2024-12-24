@@ -114,15 +114,32 @@ func appendSpotMarketsGate(key, secret string, marketInfos map[string]*model.Mar
 	}
 }
 
-func setSymbolLeverageGate(account *model.Account, symbol string) {
+var settingGate = false
+
+func setLeverageGate(account *model.Account) (success bool) {
+	if settingGate {
+		return false
+	}
+	defer func() {
+		settingGate = false
+	}()
+	settingGate = true
+	symbols := GetMarketSymbols(model.Gate)
+	for symbol := range symbols {
+		setSymbolLeverageGate(account, symbol)
+		time.Sleep(time.Second * 2)
+	}
+	return true
+}
+func setSymbolLeverageGate(account *model.Account, symbol string) (success bool) {
 	_, _, _, dialectSymbol := model.GetFromStandard(model.Gate, symbol)
 	client, ctx := getClientGate(account.Key, account.Secret)
-	pos, _, err := client.FuturesApi.UpdatePositionLeverage(ctx, `usdt`, dialectSymbol, strconv.Itoa(model.DefaultLeverage),
+	_, _, err := client.FuturesApi.UpdatePositionLeverage(ctx, `usdt`, dialectSymbol, `0`,
 		&gateApi.UpdatePositionLeverageOpts{CrossLeverageLimit: optional.NewString(strconv.Itoa(model.DefaultLeverage))})
 	if err == nil {
-		fmt.Println(pos.CrossLeverageLimit)
-		fmt.Println(pos.Leverage)
+		return true
 	}
+	return false
 }
 
 func setPosSideGate(key, secret string) {

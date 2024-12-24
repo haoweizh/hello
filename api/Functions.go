@@ -1083,6 +1083,8 @@ func SetSymbolLeverage(account *model.Account, market, symbol string) (success b
 		return setSymbolLeverageOkx(account, symbol)
 	case model.BitgetPerp:
 		return setSymbolLeverageBitgetPerp(account, symbol)
+	case model.Gate:
+		return setSymbolLeverageGate(account, symbol)
 	}
 	return false
 }

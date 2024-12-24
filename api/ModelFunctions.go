@@ -445,6 +445,7 @@ func initMarketMode(account *model.Account, market string) {
 		setPosSideGate(account.Key, account.Secret)
 		time.Sleep(time.Second)
 		setMarginSettingGate(account.Key, account.Secret)
+		setLeverageGate(account)
 	case model.Bybit:
 		setBybitMarginLeverage(account.Key, account.Secret)
 		time.Sleep(time.Second)

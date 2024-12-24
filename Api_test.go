@@ -91,9 +91,9 @@ func Test_ws(t *testing.T) {
 
 func Test_getCommonMarketInfos(t *testing.T) {
 	model.NewConfig()
-	market := model.BitgetPerp
+	market := model.Gate
 	account := model.AppConfig.GetAccounts(market)[0]
-	symbol := `BTC_PERP`
+	symbol := `SOL_PERP`
 	api.SetSymbolLeverage(account, market, symbol)
 	//api.CancelOrders(account.Key, account.Secret, market, symbol)
 	//api.CancelAll(account.Key, account.Secret, market)
@@ -104,23 +104,23 @@ func Test_getCommonMarketInfos(t *testing.T) {
 	//fmt.Println(orders)
 	//model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
 	//api.InitCrossMarketInfos([]string{model.Gate})
-	api.InitMarketInfos(market)
-	api.InitMarketInfos(model.BinancePerp)
-	model.MarketInfos.Range(func(key, value any) bool {
-		if value != nil && value.(*model.MarketInfo).PriceIncrement < 0.0000001 {
-			fmt.Println(key.(string))
-		}
-		return true
-	})
-	price, decimal := model.FormatPrice(model.BinancePerp, `SOL_PERP`, 19.407125)
-	priceStr := util.CutTailZero(strconv.FormatFloat(price, 'f', decimal, 64))
-	fmt.Println(priceStr)
-	order1 := api.PlaceOrder(model.AppConfig.BinanceKey, model.AppConfig.BinanceSecret, model.OrderSideBuy, model.OrderTypeLimit,
-		model.BinancePerp, `SOL_PERP`, ``, `test`,
-		19.407125, 19.407125, 100, false, nil)
-	fmt.Println(order1.OrderId)
-	success, pos, value, u, _ := api.GetPositions(model.AppConfig.GateKey, model.AppConfig.GateSecret, model.Gate)
-	fmt.Println(fmt.Sprintf(`%#v %#v %#v %#v`, success, pos, value, u))
+	//api.InitMarketInfos(market)
+	//api.InitMarketInfos(model.BinancePerp)
+	//model.MarketInfos.Range(func(key, value any) bool {
+	//	if value != nil && value.(*model.MarketInfo).PriceIncrement < 0.0000001 {
+	//		fmt.Println(key.(string))
+	//	}
+	//	return true
+	//})
+	//price, decimal := model.FormatPrice(model.BinancePerp, `SOL_PERP`, 19.407125)
+	//priceStr := util.CutTailZero(strconv.FormatFloat(price, 'f', decimal, 64))
+	//fmt.Println(priceStr)
+	//order1 := api.PlaceOrder(model.AppConfig.BinanceKey, model.AppConfig.BinanceSecret, model.OrderSideBuy, model.OrderTypeLimit,
+	//	model.BinancePerp, `SOL_PERP`, ``, `test`,
+	//	19.407125, 19.407125, 100, false, nil)
+	//fmt.Println(order1.OrderId)
+	//success, pos, value, u, _ := api.GetPositions(model.AppConfig.GateKey, model.AppConfig.GateSecret, model.Gate)
+	//fmt.Println(fmt.Sprintf(`%#v %#v %#v %#v`, success, pos, value, u))
 }
 
 func TestWs(t *testing.T) {
@@ -823,10 +823,15 @@ func Test_C(t *testing.T) {
 
 	// Publish messages
 	msg := "{\"id\": \"187d3cb2-942d-484c-8271-4e2141bbadb1\",\"method\": \"time\"}"
-	marketPublisher.PublishMarket(msg)
+	err := marketPublisher.PublishMarket(msg)
+	if err != nil {
+		return
+	}
 	oderMsg := "{\"id\":\"1733748523668\",\"method\":\"order.place\",\"params\":{\"apiKey\":\"xxx\",\"newClientOrderId\":\"111\",\"newOrderRespType\":\"RESULT\",\"quantity\":\"1.00\",\"selfTradePreventionMode\":\"EXPIRE_MAKER\",\"side\":\"BUY\",\"signature\":\"xxx\",\"symbol\":\"BTCUSDT\",\"timestamp\":1733748523668,\"type\":\"MARKET\"}}"
-	orderPublisher.PublishOrder(oderMsg)
-
+	errP := orderPublisher.PublishOrder(oderMsg)
+	if errP != nil {
+		return
+	}
 	// Receive messages
 	buf := make([]byte, 4096)
 	msgSize := marketReceiver.ReceiveMarket(buf)
