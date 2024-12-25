@@ -349,7 +349,6 @@ var equaling = false
 func ClearCross() {
 	for {
 		util.Log(util.LogLevelInfo, fmt.Sprintf("begin to clear cross %s", model.FunctionCross))
-		util.Log(util.LogLevelInfo, "begin to clear cross get set true")
 		equaling = true
 		compOrders.Clear()
 		carryStatusMap.Clear()
@@ -394,7 +393,7 @@ func ClearCross() {
 		if model.AppConfig.Handle == `1` {
 			equalAccounts()
 		}
-		util.Log(util.LogLevelInfo, "end to clear cross get set true")
+		util.Log(util.LogLevelInfo, "end to clear cross get set false")
 		equaling = false
 		time.Sleep(time.Minute * 60)
 	}
@@ -727,7 +726,8 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 	}
 	ts2 := time.Now().UnixMilli()
 	if int(ts2)-tick.Ts > tickLimit {
-		util.LogLess(util.LogLevelError, fmt.Sprintf(`abandon tick limit %s delay %d limit %d`, tick.Bids[0].Market, int(ts2-ts1), int(ts2)-tick.Ts))
+		util.LogLess(util.LogLevelError, fmt.Sprintf(`abandon tick limit %s %s %s delay %d limit %d %v`,
+			setting.Coin, tick.Bids[0].Market, tick.Bids[0].Symbol, int(ts2-ts1), int(ts2)-tick.Ts, equaling))
 		return
 	}
 	for _, settingRelate := range settings {
@@ -737,7 +737,8 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 		}
 		tickLimit += 10000
 		if int(ts2)-tickRelate.Ts > tickLimit {
-			util.LogLess(util.LogLevelError, fmt.Sprintf(`abandon tick limit %s delay %d limit %d`, tick.Bids[0].Market, int(ts2-ts1), int(ts2)-tickRelate.Ts))
+			util.LogLess(util.LogLevelError, fmt.Sprintf(`abandon tick limit %s %s %s delay %d limit %d %v`,
+				setting.Coin, tick.Bids[0].Market, tick.Bids[0].Symbol, int(ts2-ts1), int(ts2)-tickRelate.Ts, equaling))
 			continue
 		}
 		for i := api.GetCrossLen() - 1; i >= 0; i-- {

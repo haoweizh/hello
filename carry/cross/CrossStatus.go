@@ -152,6 +152,7 @@ func GetHoldings(accounts map[string]*model.Account) (holding [][]interface{}) {
 			return true
 		}
 		settings := value.([]*model.Setting)
+		util.Log(util.LogLevelInfo, fmt.Sprintf("getHoldings coid len settings %s %d", coin, len(settings)))
 		for _, setting := range settings {
 			if !setting.Valid {
 				monitorCoins[setting.Coin] = true
