@@ -19,14 +19,36 @@ type MsgHandler func(market string, conn *WSConn, message []byte)
 type AccountMsgHandler func(market, key string, message []byte)
 type SubscribeHandler func(market string, connection *WSConn, subscribes []interface{}) error
 
-const ChanTypeMarket = "market"
-const ChanTypeOrder = "order"
-const ChanTypeWS = "ws"
+// ChannelType 定义通道类型的枚举
+type ChannelType int
+
+const (
+	// ChanTypeWS 表示WebSocket相关的通道类型 0
+	ChanTypeWS ChannelType = iota
+	// ChanTypeMarket 表示市场相关的通道类型 1
+	ChanTypeMarket
+	// ChanTypeOrder 表示订单相关的通道类型 2
+	ChanTypeOrder
+)
+
+// String 方法用于将 ChannelType 转换为字符串表示
+func (ct ChannelType) String() string {
+	switch ct {
+	case ChanTypeMarket:
+		return "market"
+	case ChanTypeOrder:
+		return "order"
+	case ChanTypeWS:
+		return "ws"
+	default:
+		return "unknown"
+	}
+}
 
 type WSConn struct {
 	conn *websocket.Conn
 	//默认ws 使用ws  ChanTypeMarket 使用特殊通道market WSTypeOrder使用特殊通道order
-	WSType           string
+	WSType           ChannelType
 	MarketPublisher  *util.MarketPublisher
 	MarketSubscriber []byte
 	MarketReceiver   *util.MarketReceiver
@@ -102,7 +124,7 @@ func (wsConn *WSConn) WriteJson(body map[string]interface{}) (err error) {
 //
 //	*WSConn - 成功时返回一个WebSocket连接指针。
 //	error - 如果初始化过程中遇到任何问题，则返回错误。
-func initChannel(url, market, wsType string) (*WSConn, error) {
+func initChannel(url, market string, wsType ChannelType) (*WSConn, error) {
 	if AppConfig.SpecialChan == "1" {
 		switch market {
 		case BinanceSpot, BinancePerp, BinanceMargin:
@@ -126,7 +148,7 @@ func initChannel(url, market, wsType string) (*WSConn, error) {
 //
 //	*WSConn - 一个指向WSConn对象的指针，该对象代表创建的通道。
 //	error - 如果创建过程中发生错误，则返回该错误。
-func newTsChannel(url, tsCode, wsType string) (*WSConn, error) {
+func newTsChannel(url, tsCode string, wsType ChannelType) (*WSConn, error) {
 	if wsType == ChanTypeMarket {
 		marketPublisher, errPub := util.InitMarketPublisher(tsCode + "_m_sub")
 		if errPub != nil {
