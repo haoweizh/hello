@@ -347,7 +347,7 @@ func initTradeLine(account *model.Account, setting *model.Setting, status *Carry
 func ClearCross() {
 	for {
 		model.AppConfig.CrossEqualing = true
-		util.Log(util.LogLevelInfo, fmt.Sprintf("begin to clear cross %s %v", model.FunctionCross, model.AppConfig.CrossEqualing))
+		util.Log(util.LogLevelInfo, fmt.Sprintf("begin to clearing cross get set %s %v", model.FunctionCross, model.AppConfig.CrossEqualing))
 		compOrders.Clear()
 		carryStatusMap.Clear()
 		spotMarkets.Clear()
@@ -392,7 +392,7 @@ func ClearCross() {
 			equalAccounts()
 		}
 		model.AppConfig.CrossEqualing = false
-		util.Log(util.LogLevelInfo, fmt.Sprintf("end to clear cross get set %v", model.AppConfig.CrossEqualing))
+		util.Log(util.LogLevelInfo, fmt.Sprintf("end to clearing cross get set %v", model.AppConfig.CrossEqualing))
 		time.Sleep(time.Minute * 60)
 	}
 }
@@ -431,7 +431,7 @@ func equalAccounts() {
 }
 
 func equalAccount(i int, equalChan chan int, accounts map[string]*model.Account) {
-	util.Log(util.LogLevelInfo, fmt.Sprintf(`begin to equal account %d `, i))
+	util.Log(util.LogLevelInfo, fmt.Sprintf(`begin to clearing cross %d `, i))
 	if accounts[model.BitgetPerp] != nil {
 		liquidateBitgetPerp(accounts[model.BitgetPerp])
 	}

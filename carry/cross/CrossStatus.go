@@ -281,7 +281,6 @@ func GetHoldings(accounts map[string]*model.Account) (holding [][]interface{}) {
 		holding[i] = append(holding[i], math.Round(coinValue[coin]/10)*10)
 		holding[i] = append(holding[i], price)
 	}
-	util.Log(util.LogLevelInfo, fmt.Sprintf("getHoldings all coid len settings %d", len(holding)))
 	return
 }
 
