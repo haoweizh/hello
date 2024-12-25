@@ -27,11 +27,6 @@ import (
 var ProcessCombineTurtle = func(settingCombine *model.Setting, tick *model.BidAsk) {
 	market := settingCombine.Market
 	symbol := settingCombine.Symbol
-	if !api.CheckSetProcessing(settingCombine.Function, market, symbol, true) {
-		defer api.CheckSetProcessing(settingCombine.Function, market, symbol, false)
-	} else {
-		return
-	}
 	now := util.GetNowUnixMillion()
 	success, _, _, _ := model.GetFromStandard(market, symbol)
 	if settingCombine == nil || tick == nil || tick.Asks == nil || tick.Bids == nil || model.AppConfig.Handle != `1` ||
@@ -41,6 +36,11 @@ var ProcessCombineTurtle = func(settingCombine *model.Setting, tick *model.BidAs
 	settingNormal := api.GetSetting(model.FunctionTurtleNormal, market, symbol)
 	if settingNormal == nil {
 		util.Log(util.LogLevelError, fmt.Sprintf(`combine return no normal setting from %s %s`, market, symbol))
+		return
+	}
+	if !api.CheckSetProcessing(settingCombine.Function, market, symbol, true) {
+		defer api.CheckSetProcessing(settingCombine.Function, market, symbol, false)
+	} else {
 		return
 	}
 	account := model.AppConfig.GetAccounts(market)[0]

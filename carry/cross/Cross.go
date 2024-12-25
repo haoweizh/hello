@@ -710,8 +710,8 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 		return
 	}
 	// 同一个coin cross之间互斥
-	if !api.CheckSetProcessing(model.FunctionCross, model.FunctionCross, setting.Coin, true) {
-		defer api.CheckSetProcessing(model.FunctionCross, model.FunctionCross, setting.Coin, false)
+	if !api.CheckSetCross(setting.Coin, true) {
+		defer api.CheckSetCross(setting.Coin, false)
 	} else {
 		return
 	}

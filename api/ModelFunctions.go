@@ -21,16 +21,38 @@ var crossLen int
 var settingLoading bool
 var processLock sync.Mutex
 var processing = &sync.Map{}
+var crossLocks sync.Map
 
-func CheckSetProcessing(function, market, symbol string, value bool) (before bool) {
+func CheckSetCross(coin string, requestValue bool) (before bool) {
+	var lock *sync.Mutex
+	coinLock, _ := crossLocks.Load(coin)
+	if coinLock != nil {
+		lock = coinLock.(*sync.Mutex)
+	} else {
+		lock = &sync.Mutex{}
+		crossLocks.Store(coin, lock)
+	}
+	lock.Lock()
+	defer lock.Unlock()
+	beforeValue, _ := processing.Load(coin)
+	if beforeValue != nil {
+		before = beforeValue.(bool)
+	}
+	if requestValue == false || before == false {
+		processing.Store(coin, requestValue)
+	}
+	return before
+}
+
+func CheckSetProcessing(function, market, symbol string, requestValue bool) (before bool) {
 	processLock.Lock()
 	defer processLock.Unlock()
 	v, ok := util.LoadSyncMap(processing, function, market, symbol)
 	if ok && v != nil {
 		before = v.(bool)
 	}
-	if value == false || before == false {
-		util.StoreSyncMap(processing, value, function, market, symbol)
+	if requestValue == false || before == false {
+		util.StoreSyncMap(processing, requestValue, function, market, symbol)
 	}
 	return before
 }

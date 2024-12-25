@@ -89,11 +89,15 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarrySta
 		updateTime := fundingRate.UpdateTime.In(loc)
 		fundingStr = fmt.Sprintf(`%d:%d %.0f %.0f周期%d %d:%d`,
 			util.GetNow().Hour(), util.GetNow().Minute(), 100*fundingRate.Rate, FundingRateBase, marketInfo.FundingRateInterval/3600000, updateTime.Hour(), updateTime.Minute())
+	} else {
+		fundingStr = fmt.Sprintf(`%d:%d`, util.GetNow().Hour(), util.GetNow().Minute())
 	}
 	if !carryStatusRelate.isSpot {
 		updateTime := fundingRateRelate.UpdateTime.In(loc)
 		fundingStrRelate = fmt.Sprintf(`%d:%d %.5f %.0f/周期%d %d:%d`,
 			util.GetNow().Hour(), util.GetNow().Minute(), 100*fundingRateRelate.Rate, FundingRateBase, marketInfoRelate.FundingRateInterval/3600000, updateTime.Hour(), updateTime.Minute())
+	} else {
+		fundingStrRelate = fmt.Sprintf(`%d:%d`, util.GetNow().Hour(), util.GetNow().Minute())
 	}
 	var infoValue []string
 	if mark < markRelate {

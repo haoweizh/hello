@@ -91,21 +91,9 @@ func Test_ws(t *testing.T) {
 
 func Test_getCommonMarketInfos(t *testing.T) {
 	model.NewConfig()
-	market := model.Gate
-	account := model.AppConfig.GetAccounts(market)[0]
-	symbol := `SOL_PERP`
-	api.SetSymbolLeverage(account, market, symbol)
-	//api.CancelOrders(account.Key, account.Secret, market, symbol)
-	//api.CancelAll(account.Key, account.Secret, market)
-	//orders := api.QueryOpenOrders(account.Key, account.Secret, market, symbol)
-	//res, code, msg := api.CancelOrder(account.Key, account.Secret, market, symbol, ``, orders[0].OrderId)
-	//fmt.Println(res)
-	//fmt.Println(code, msg)
-	//fmt.Println(orders)
-	//model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
-	//api.InitCrossMarketInfos([]string{model.Gate})
-	//api.InitMarketInfos(market)
-	//api.InitMarketInfos(model.BinancePerp)
+	market := model.OKEX
+	//account := model.AppConfig.GetAccounts(market)[0]
+	api.InitMarketInfos(market)
 	//model.MarketInfos.Range(func(key, value any) bool {
 	//	if value != nil && value.(*model.MarketInfo).PriceIncrement < 0.0000001 {
 	//		fmt.Println(key.(string))
@@ -124,7 +112,7 @@ func Test_getCommonMarketInfos(t *testing.T) {
 }
 
 func TestWs(t *testing.T) {
-	market := model.Bybit
+	market := model.Gate
 	model.NewConfig()
 	//api.MaintainConns(market)
 	//model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
