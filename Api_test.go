@@ -91,7 +91,7 @@ func Test_ws(t *testing.T) {
 
 func Test_getCommonMarketInfos(t *testing.T) {
 	model.NewConfig()
-	market := model.OKEX
+	market := model.BitgetPerp
 	//account := model.AppConfig.GetAccounts(market)[0]
 	api.InitMarketInfos(market)
 	//model.MarketInfos.Range(func(key, value any) bool {

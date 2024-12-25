@@ -41,15 +41,14 @@ type TradeLineExtra struct {
 var InsufficientCodeOKEX = map[string]bool{`51008`: true, `51119`: true, `51120`: true, `51131`: true, `51502`: true,
 	`58350`: true, `59108`: true, `59200`: true}
 
-var liquidBitgetTime = &sync.Map{}        // key - unix second int64
-var lastOrderIndex = &sync.Map{}          // market - symbol - index int
-var lastOrders = &sync.Map{}              // market - symbol - []*Order
-var lastCrosses sync.Map                  // key*market:symbol
-var compOrders = &sync.Map{}              // orderId - comp order
-var spotMarkets, contractMarkets sync.Map // key - spotMarket/contractMarket
-var carryStatusMap = &sync.Map{}          // coin*market*symbol*key / CarryStatus
-var notifyTime sync.Map                   // 1. market_symbol_market_symbol/time 2. funding_market_symbol/time
-var getMarketInfoMail sync.Map            // FormatCrossPair执行无法获取marketInfo时发送邮件，key为FormatCrossPair，value是当时时间
+var liquidBitgetTime = &sync.Map{} // key - unix second int64
+var lastOrderIndex = &sync.Map{}   // market - symbol - index int
+var lastOrders = &sync.Map{}       // market - symbol - []*Order
+var compOrders = &sync.Map{}       // orderId - comp order
+var spotMarkets = &sync.Map{}      // key - spotMarket
+var contractMarkets = &sync.Map{}  // key - contractMarket
+var carryStatusMap = &sync.Map{}   // coin*market*symbol*key / CarryStatus
+var notifyTime = &sync.Map{}       // 1. market_symbol_market_symbol/time 2. funding_market_symbol/time
 var doCross = false
 
 type contractMarket struct {

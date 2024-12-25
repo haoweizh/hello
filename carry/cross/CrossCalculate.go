@@ -140,15 +140,6 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarrySta
 		breakMarkPrice(statusSell.account, statusSell.setting, priceSell, model.OrderSideSell) {
 		return false, nil, nil, 0, 0, 0, nil, nil
 	}
-	// 如果上一次交易不是本交易对，但上一次交易很可能影响了资金状况，需要对本carryStatus的可买卖数量进行调整
-	lastSymbol, ok := util.LoadSyncMap(&lastCrosses, statusBuy.account.Key, statusBuy.market)
-	if !(ok && lastSymbol != nil && lastSymbol.(string) == statusBuy.symbol) {
-		initLimitBuyAndSell(statusBuy, statusBuy.setting, priceBuy)
-	}
-	lastSymbol, ok = util.LoadSyncMap(&lastCrosses, statusSell.account.Key, statusSell.market)
-	if !(ok && lastSymbol != nil && lastSymbol.(string) == statusSell.symbol) {
-		initLimitBuyAndSell(statusSell, statusSell.setting, priceSell)
-	}
 	amount = FormatCrossPair(statusBuy, statusSell, bidAmount, askAmount, priceBuy)
 	if checkScoreLimit(carryStatus.market, carryStatus.symbol, carryStatusRelate.market, carryStatusRelate.symbol, score, scoreRelate) {
 		if carryStatus.setting.Valid || carryStatusRelate.setting.Valid {

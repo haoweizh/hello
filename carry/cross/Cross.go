@@ -469,7 +469,6 @@ func equalAccount(i int, equalChan chan int, accounts map[string]*model.Account)
 			return true
 		})
 	}
-	lastCrosses = sync.Map{}
 	equalChan <- i
 	util.Log(util.LogLevelInfo, fmt.Sprintf(`...... exit clearing cross %d`, i))
 }
@@ -844,35 +843,6 @@ func checkTradeLine(statusBuy, statusSell *CarryStatus, score float64) (valid bo
 	}
 }
 
-func initLimitBuyAndSell(status *CarryStatus, setting *model.Setting, price float64) {
-	if status.isSpot {
-		value, ok := spotMarkets.Load(status.account.Key)
-		if !ok || value == nil { // 此时正在进行每分钟的清理找平
-			return
-		}
-		sm := value.(*spotMarket)
-		status.LimitBuy = math.Min(status.LimitBuy, math.Min(openValueLimit, math.Min(sm.availableU/5, sm.accountValueInU/15))/price)
-		balance := sm.balances[setting.Symbol]
-		if balance != nil {
-			status.LimitSell = math.Min(status.LimitSell, math.Min(math.Min(math.Max(balance.Amount, 0), balance.AvailableWithBorrow), openValueLimit/price))
-		} else {
-			status.LimitSell = 0
-		}
-	} else {
-		value, ok := contractMarkets.Load(status.account.Key)
-		if value == nil || !ok {
-			return
-		}
-		cm := value.(*contractMarket)
-		limitAmount := math.Min(cm.accountValueInU/5, math.Min(cm.collateralsAvailable, openValueLimit)) / price
-		availableAmount := cm.collateralsAvailable / price
-		status.LimitSell = math.Min(status.LimitSell, limitAmount)
-		status.LimitBuy = math.Min(status.LimitBuy, limitAmount)
-		status.AvailableSell = math.Min(status.AvailableSell, availableAmount)
-		status.AvailableBuy = math.Min(status.AvailableBuy, availableAmount)
-	}
-}
-
 func placeCross(statusBuy, statusSell *CarryStatus, priceBuy, priceSell, amount float64) {
 	score := (priceSell - priceBuy) / math.Max(priceBuy, priceSell)
 	amountBuy := amount / statusBuy.setting.GridAmount
@@ -977,7 +947,6 @@ func placeStatus(status *CarryStatus, price float64, amount float64) {
 	}
 	account := model.AppConfig.GetAccountFromKeyIndex(status.market, status.account.Key, -1)
 	initStatus(account, status.setting)
-	util.StoreSyncMap(&lastCrosses, status.symbol, account.Key, status.market)
 }
 
 func handleCross(account *model.Account, order *model.Order) {
@@ -1193,13 +1162,6 @@ func FormatCrossPair(statusBuy, statusSell *CarryStatus, bidAmount, askAmount, p
 	if marketInfoBuy == nil || marketInfoSell == nil {
 		util.Log(util.LogLevelInfo, fmt.Sprintf(
 			`format %s %s %s %s %#v %#v`, statusBuy.market, statusSell.market, statusBuy.symbol, statusSell.symbol, marketInfoBuy, marketInfoSell))
-		//api.InitMarketInfos()
-		marketInfoTime, ok := getMarketInfoMail.Load(`FormatCrossPair`)
-		if !(ok && marketInfoTime.(time.Time).Add(time.Minute*60).After(time.Now())) {
-			notifyTime.Store(`FormatCrossPair`, time.Now())
-			go api.SendMails(`FormatCrossPair removed symbols`, fmt.Sprintf(`format %s %s %s %s %#v %#v`,
-				statusBuy.market, statusSell.market, statusBuy.symbol, statusSell.symbol, marketInfoBuy, marketInfoSell))
-		}
 		return
 	}
 	formattedAmount = math.Min(math.Min(statusBuy.LimitBuy, bidAmount)*statusBuy.setting.GridAmount,
