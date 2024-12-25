@@ -10,66 +10,9 @@ import (
 	"time"
 )
 
-// calcAmount
-// 返回amount是经过gridAmount乘数计算之后的数量，用以针对1000PEPE与PEPE这类币种的对冲交易.priceX与gridAmount相对应
-func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarryStatus, tick, tickRelate *model.BidAsk) (
-	delay bool, statusBuy, statusSell *CarryStatus, amount, priceBuy, priceSell float64, tickBuy, tickSell *model.BidAsk) {
-	var bidAmount, askAmount float64
-	marketInfo := model.GetMarketInfo(carryStatus.market, carryStatus.symbol)
-	marketInfoRelate := model.GetMarketInfo(carryStatusRelate.market, carryStatusRelate.symbol)
-	_, useRest, fundingRate := api.GetFundingRate(carryStatus.account.Key, carryStatus.account.Secret, carryStatus.market, carryStatus.symbol)
-	_, useRestRelate, fundingRateRelate := api.GetFundingRate(carryStatusRelate.account.Key, carryStatusRelate.account.Secret, carryStatusRelate.market, carryStatusRelate.symbol)
-	if useRest || useRestRelate {
-		return true, nil, nil, 0, 0, 0, nil, nil
-	}
-	if marketInfo == nil || marketInfoRelate == nil || fundingRate == nil || fundingRateRelate == nil {
-		return false, nil, nil, 0, 0, 0, nil, nil
-	}
-	deltaRate := fundingRate.Rate * FundingRateBase * 3600000 / float64(marketInfo.FundingRateInterval)
-	deltaRateRelate := fundingRateRelate.Rate * FundingRateBase * 3600000 / float64(marketInfoRelate.FundingRateInterval)
-	if deltaRate > 0.1 || deltaRate < -0.1 || deltaRateRelate > 0.1 || deltaRateRelate < -0.1 {
-		deltaRate = 0
-		deltaRateRelate = 0
-		util.Log(util.LogLevelError, fmt.Sprintf(`fatal error funding rate break both %s %s %s %s %#v %#v %d %d`,
-			carryStatus.market, carryStatus.symbol, carryStatusRelate.market, carryStatusRelate.symbol, fundingRate, fundingRateRelate, marketInfo.FundingRateInterval, marketInfoRelate.FundingRateInterval))
-	}
-	priceAskRelate := tickRelate.Asks[0].Price * (1 + deltaRateRelate)
-	priceBidRelate := tickRelate.Bids[0].Price * (1 + deltaRateRelate)
-	priceAsk := tick.Asks[0].Price * (1 + deltaRate)
-	priceBid := tick.Bids[0].Price * (1 + deltaRate)
-	priceX := carryStatus.setting.PriceX
-	priceXRelate := carryStatusRelate.setting.PriceX
-	score := (priceBid/priceX - priceAskRelate/priceXRelate) / math.Max(priceBid/priceX, priceAskRelate/priceXRelate)
-	scoreRelate := (priceBidRelate/priceXRelate - priceAsk/priceX) / math.Max(priceAsk/priceX, priceBidRelate/priceXRelate)
-	mark := fmt.Sprintf(`%s_%s|%s_%s`, carryStatus.market, carryStatus.symbol, carryStatusRelate.market, carryStatusRelate.symbol)
-	if score > 0.01 && util.DoDebug {
-		model.AppMetric.AddCarry(mark, score, 0)
-	}
-	valid, _ := checkTradeLine(carryStatusRelate, carryStatus, score)
-	if valid {
-		statusSell = carryStatus
-		statusBuy = carryStatusRelate
-		tickSell = tick
-		tickBuy = tickRelate
-		priceSell = priceBid
-		priceBuy = priceAskRelate
-		askAmount = tick.Bids[0].Amount
-		bidAmount = tickRelate.Asks[0].Amount
-	} else {
-		valid, _ = checkTradeLine(carryStatus, carryStatusRelate, scoreRelate)
-		if valid {
-			statusSell = carryStatusRelate
-			statusBuy = carryStatus
-			tickSell = tickRelate
-			tickBuy = tick
-			priceSell = priceBidRelate
-			priceBuy = priceAsk
-			askAmount = tickRelate.Bids[0].Amount
-			bidAmount = tick.Asks[0].Amount
-		}
-	}
+func generateMonitorMsg(index int, coin string, score, scoreRelate float64, carryStatus, carryStatusRelate *CarryStatus, marketInfo, marketInfoRelate *model.MarketInfo, fundingRate, fundingRateRelate *model.FundingRate) {
 	// 为了同一对交易对冲不出现两次，对前后进行排序
-	mark = fmt.Sprintf(`%s-%s`, carryStatus.market, carryStatus.symbol)
+	mark := fmt.Sprintf(`%s-%s`, carryStatus.market, carryStatus.symbol)
 	markRelate := fmt.Sprintf(`%s-%s`, carryStatusRelate.market, carryStatusRelate.symbol)
 	coinValue := coin
 	if !carryStatus.isSpot {
@@ -131,6 +74,65 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarrySta
 			fmt.Sprintf(`%.1f`, 100*scoreRelate),
 			fmt.Sprintf(`%v`, green)}
 	}
+	go model.SetMonitorInfo(strconv.Itoa(index), model.FunctionCross, mark, infoValue)
+}
+
+// calcAmount
+// 返回amount是经过gridAmount乘数计算之后的数量，用以针对1000PEPE与PEPE这类币种的对冲交易.priceX与gridAmount相对应
+func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarryStatus, tick, tickRelate *model.BidAsk) (
+	delay bool, statusBuy, statusSell *CarryStatus, amount, priceBuy, priceSell float64, tickBuy, tickSell *model.BidAsk) {
+	var bidAmount, askAmount float64
+	marketInfo := model.GetMarketInfo(carryStatus.market, carryStatus.symbol)
+	marketInfoRelate := model.GetMarketInfo(carryStatusRelate.market, carryStatusRelate.symbol)
+	_, useRest, fundingRate := api.GetFundingRate(carryStatus.account.Key, carryStatus.account.Secret, carryStatus.market, carryStatus.symbol)
+	_, useRestRelate, fundingRateRelate := api.GetFundingRate(carryStatusRelate.account.Key, carryStatusRelate.account.Secret, carryStatusRelate.market, carryStatusRelate.symbol)
+	if marketInfo == nil || marketInfoRelate == nil || fundingRate == nil || fundingRateRelate == nil || useRest || useRestRelate {
+		return useRest || useRestRelate, nil, nil, 0, 0, 0, nil, nil
+	}
+	deltaRate := fundingRate.Rate * FundingRateBase * 3600000 / float64(marketInfo.FundingRateInterval)
+	deltaRateRelate := fundingRateRelate.Rate * FundingRateBase * 3600000 / float64(marketInfoRelate.FundingRateInterval)
+	if deltaRate > 0.1 || deltaRate < -0.1 || deltaRateRelate > 0.1 || deltaRateRelate < -0.1 {
+		deltaRate = 0
+		deltaRateRelate = 0
+		util.Log(util.LogLevelError, fmt.Sprintf(`fatal error funding rate break both %s %s %s %s %#v %#v %d %d`,
+			carryStatus.market, carryStatus.symbol, carryStatusRelate.market, carryStatusRelate.symbol, fundingRate, fundingRateRelate, marketInfo.FundingRateInterval, marketInfoRelate.FundingRateInterval))
+	}
+	priceAskRelate := tickRelate.Asks[0].Price * (1 + deltaRateRelate)
+	priceBidRelate := tickRelate.Bids[0].Price * (1 + deltaRateRelate)
+	priceAsk := tick.Asks[0].Price * (1 + deltaRate)
+	priceBid := tick.Bids[0].Price * (1 + deltaRate)
+	priceX := carryStatus.setting.PriceX
+	priceXRelate := carryStatusRelate.setting.PriceX
+	score := (priceBid/priceX - priceAskRelate/priceXRelate) / math.Max(priceBid/priceX, priceAskRelate/priceXRelate)
+	scoreRelate := (priceBidRelate/priceXRelate - priceAsk/priceX) / math.Max(priceAsk/priceX, priceBidRelate/priceXRelate)
+	generateMonitorMsg(index, coin, score, scoreRelate, carryStatus, carryStatusRelate, marketInfo, marketInfoRelate, fundingRate, fundingRateRelate)
+	mark := fmt.Sprintf(`%s_%s|%s_%s`, carryStatus.market, carryStatus.symbol, carryStatusRelate.market, carryStatusRelate.symbol)
+	if score > 0.01 && util.DoDebug {
+		model.AppMetric.AddCarry(mark, score, 0)
+	}
+	valid, _ := checkTradeLine(carryStatusRelate, carryStatus, score)
+	if valid {
+		statusSell = carryStatus
+		statusBuy = carryStatusRelate
+		tickSell = tick
+		tickBuy = tickRelate
+		priceSell = priceBid
+		priceBuy = priceAskRelate
+		askAmount = tick.Bids[0].Amount
+		bidAmount = tickRelate.Asks[0].Amount
+	} else {
+		valid, _ = checkTradeLine(carryStatus, carryStatusRelate, scoreRelate)
+		if valid {
+			statusSell = carryStatusRelate
+			statusBuy = carryStatus
+			tickSell = tickRelate
+			tickBuy = tick
+			priceSell = priceBidRelate
+			priceBuy = priceAsk
+			askAmount = tickRelate.Bids[0].Amount
+			bidAmount = tick.Asks[0].Amount
+		}
+	}
 	if statusBuy == nil {
 		return false, nil, nil, 0, 0, 0, nil, nil
 	}
@@ -147,7 +149,6 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarrySta
 	if !(ok && lastSymbol != nil && lastSymbol.(string) == statusSell.symbol) {
 		initLimitBuyAndSell(statusSell, statusSell.setting, priceSell)
 	}
-	go model.SetMonitorInfo(strconv.Itoa(index), model.FunctionCross, mark, infoValue)
 	amount = FormatCrossPair(statusBuy, statusSell, bidAmount, askAmount, priceBuy)
 	if checkScoreLimit(carryStatus.market, carryStatus.symbol, carryStatusRelate.market, carryStatusRelate.symbol, score, scoreRelate) {
 		if carryStatus.setting.Valid || carryStatusRelate.setting.Valid {

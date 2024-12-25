@@ -159,6 +159,7 @@ func GetHoldings(accounts map[string]*model.Account) (holding [][]interface{}) {
 			account := accounts[setting.Market]
 			valid := `false`
 			_, marketType, _, _ := model.GetFromStandard(setting.Market, setting.Symbol)
+			_, price := api.GetPriceForce(setting.Symbol, setting.Market)
 			if marketType == model.MarketTypeSpot {
 				smValue, _ := spotMarkets.Load(account.Key)
 				balance := smValue.(*spotMarket).balances[setting.Symbol]
@@ -173,6 +174,9 @@ func GetHoldings(accounts map[string]*model.Account) (holding [][]interface{}) {
 					if balance != nil {
 						amount = balance.Amount
 						usdValue = balance.UsdValue
+						if usdValue == 0 && amount > 0 {
+							usdValue = price * amount
+						}
 					}
 					holding = append(holding, []interface{}{setting.Market, coin.(string), setting.Symbol,
 						fmt.Sprintf(`%.2f`, amount), math.Round(usdValue), valid, setting.MarketRelated})
@@ -192,7 +196,6 @@ func GetHoldings(accounts map[string]*model.Account) (holding [][]interface{}) {
 						posHolding = position.Holding
 					}
 					coinHold[coin.(string)] += posHolding * setting.GridAmount
-					_, price := api.GetPriceForce(setting.Symbol, setting.Market)
 					coinValue[coin.(string)] += math.Round(price * posHolding)
 					volume[coin.(string)] += math.Abs(price * posHolding)
 					holding = append(holding, []interface{}{setting.Market, coin, setting.Symbol, posHolding,
@@ -275,11 +278,6 @@ func GetHoldings(accounts map[string]*model.Account) (holding [][]interface{}) {
 		market := holding[i][0].(string)
 		symbol := holding[i][2].(string)
 		_, price := api.GetPriceForce(symbol, market)
-		money := math.Floor(coinHold[coin]*price/10) * 10
-		if money < 0 {
-			money = math.Ceil(coinHold[coin]*price/10) * 10
-		}
-		holding[i] = append(holding[i], money)
 		holding[i] = append(holding[i], math.Round(coinValue[coin]/10)*10)
 		holding[i] = append(holding[i], price)
 	}

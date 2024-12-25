@@ -457,7 +457,7 @@ func equalAccount(i int, equalChan chan int, accounts map[string]*model.Account)
 				equalStatuses[j] = initStatus(account, setting)
 			}
 			for index := 0; index <= 10; index++ {
-				coinEqual, leftHolding, errMsg := equalCoin(coin.(string), equalStatuses)
+				coinEqual, leftHolding, errMsg := equalCoin(i, coin.(string), equalStatuses)
 				if !coinEqual {
 					util.Log(util.LogLevelInfo, fmt.Sprintf(
 						`equal coin %s account %d equal %#v left hold %f err %s`, coin, i, coinEqual, leftHolding, errMsg))
@@ -525,9 +525,9 @@ func getHolding(statuses []*CarryStatus) (bids, asks model.Ticks, bidStatus, ask
 }
 
 // settings []*model.Setting, coinStatus map[string]map[string]map[string]*CarryStatus
-func equalCoin(coin string, statuses []*CarryStatus) (isEqual bool, holding float64, errMsg string) {
+func equalCoin(index int, coin string, statuses []*CarryStatus) (isEqual bool, holding float64, errMsg string) {
 	bids, asks, bidStatus, askStatus, holdingValue, holdingPrice, holdStr := getHolding(statuses)
-	util.Log(util.LogLevelInfo, fmt.Sprintf(`compare holding %s status num %d %s`, coin, len(statuses), holdStr))
+	util.Log(util.LogLevelInfo, fmt.Sprintf(`compare holding %s status num index %d %d %s`, coin, index, len(statuses), holdStr))
 	if math.IsNaN(holdingValue) {
 		util.Log(util.LogLevelError, `hold value is NaN `)
 		for _, status := range bidStatus {
@@ -709,6 +709,7 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 		(model.AppConfig.Env != `test` && model.AppConfig.Handle != `1`) || settings == nil || len(settings) == 0 {
 		return
 	}
+	ts1 := time.Now().UnixMilli()
 	// 同一个coin cross之间互斥
 	if !api.CheckSetCross(setting.Coin, true) {
 		defer api.CheckSetCross(setting.Coin, false)
@@ -724,8 +725,9 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 	case model.Bybit, model.OKEX:
 		tickLimit = 60
 	}
-	million := time.Now().UnixMilli()
-	if int(million)-tick.Ts > tickLimit {
+	ts2 := time.Now().UnixMilli()
+	if int(ts2)-tick.Ts > tickLimit {
+		util.LogLess(util.LogLevelError, fmt.Sprintf(`abandon tick limit %s delay %d limit %d`, tick.Bids[0].Market, int(ts2-ts1), int(ts2)-tick.Ts))
 		return
 	}
 	for _, settingRelate := range settings {
@@ -734,7 +736,8 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 			continue
 		}
 		tickLimit += 10000
-		if int(million)-tickRelate.Ts > tickLimit {
+		if int(ts2)-tickRelate.Ts > tickLimit {
+			util.LogLess(util.LogLevelError, fmt.Sprintf(`abandon tick limit %s delay %d limit %d`, tick.Bids[0].Market, int(ts2-ts1), int(ts2)-tickRelate.Ts))
 			continue
 		}
 		for i := api.GetCrossLen() - 1; i >= 0; i-- {
