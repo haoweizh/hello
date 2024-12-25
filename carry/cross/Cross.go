@@ -348,8 +348,8 @@ var equaling = false
 
 func ClearCross() {
 	for {
-		util.Log(util.LogLevelInfo, fmt.Sprintf("begin to clear cross %s", model.FunctionCross))
 		equaling = true
+		util.Log(util.LogLevelInfo, fmt.Sprintf("begin to clear cross %s %v", model.FunctionCross, equaling))
 		compOrders.Clear()
 		carryStatusMap.Clear()
 		spotMarkets.Clear()
@@ -393,8 +393,8 @@ func ClearCross() {
 		if model.AppConfig.Handle == `1` {
 			equalAccounts()
 		}
-		util.Log(util.LogLevelInfo, "end to clear cross get set false")
 		equaling = false
+		util.Log(util.LogLevelInfo, fmt.Sprintf("end to clear cross get set %v", equaling))
 		time.Sleep(time.Minute * 60)
 	}
 }
