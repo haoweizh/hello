@@ -63,7 +63,7 @@ func (wsConn *WSConn) WriteMsg(msg []byte) (err error) {
 	if wsConn.conn == nil {
 		return fmt.Errorf(`nil conn`)
 	}
-	if AppConfig.SpecialChan != `1` {
+	if wsConn.WSType == ChanTypeWS {
 		err = wsConn.conn.WriteMessage(websocket.TextMessage, msg)
 	} else if wsConn.WSType == ChanTypeMarket {
 		err = wsConn.MarketPublisher.PublishMarket(string(msg))
