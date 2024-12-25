@@ -176,7 +176,7 @@ func GetHoldings(accounts map[string]*model.Account) (holding [][]interface{}) {
 					}
 					holding = append(holding, []interface{}{setting.Market, coin.(string), setting.Symbol,
 						fmt.Sprintf(`%.2f`, amount), math.Round(usdValue), valid, setting.MarketRelated})
-					coinHold[coin.(string)] += amount
+					coinHold[coin.(string)] += amount * setting.GridAmount
 					coinValue[coin.(string)] += math.Round(usdValue)
 					volume[coin.(string)] += math.Abs(usdValue)
 				}
@@ -191,7 +191,7 @@ func GetHoldings(accounts map[string]*model.Account) (holding [][]interface{}) {
 					if position != nil {
 						posHolding = position.Holding
 					}
-					coinHold[coin.(string)] += posHolding
+					coinHold[coin.(string)] += posHolding * setting.GridAmount
 					_, price := api.GetPriceForce(setting.Symbol, setting.Market)
 					coinValue[coin.(string)] += math.Round(price * posHolding)
 					volume[coin.(string)] += math.Abs(price * posHolding)
