@@ -9,8 +9,8 @@ import (
 )
 
 type Config struct {
-	Delay                         float64
-	Debug, KucoinSpot, MetricTick bool
+	Delay                                        float64
+	Debug, KucoinSpot, MetricTick, CrossEqualing bool
 	// SpecialChan 1 代表使用特殊通道
 	SpecialChan                                                                                                   string
 	KucoinRelatedKey, KucoinRelatedSecret, KucoinFutureKey, KucoinFutureSecret                                    string
