@@ -21,10 +21,11 @@ type SubscribeHandler func(market string, connection *WSConn, subscribes []inter
 
 const ChanTypeMarket = "market"
 const ChanTypeOrder = "order"
+const ChanTypeWS = "ws"
 
 type WSConn struct {
 	conn *websocket.Conn
-	//默认0 使用ws  ChanTypeMarket 使用特殊通道market WSTypeOrder使用特殊通道order
+	//默认ws 使用ws  ChanTypeMarket 使用特殊通道market WSTypeOrder使用特殊通道order
 	WSType           string
 	MarketPublisher  *util.MarketPublisher
 	MarketSubscriber []byte
@@ -34,7 +35,7 @@ type WSConn struct {
 }
 
 func (wsConn *WSConn) Close() {
-	if AppConfig.SpecialChan != `1` {
+	if wsConn.WSType == ChanTypeWS {
 		err := wsConn.conn.Close()
 		if err != nil {
 			util.Log(util.LogLevelError, `close conn err `+err.Error())
@@ -187,7 +188,7 @@ func newWsGorillaChannel(url string) (*WSConn, error) {
 	if connErr != nil {
 		return nil, connErr
 	}
-	return &WSConn{conn: c}, nil
+	return &WSConn{conn: c, WSType: ChanTypeWS}, nil
 }
 
 func publicHandler(market string, stopChan chan struct{}, connection *WSConn, msgHandler MsgHandler) {
@@ -201,7 +202,7 @@ func publicHandler(market string, stopChan chan struct{}, connection *WSConn, ms
 			util.Log(util.LogLevelInfo, "get stop struct, return")
 			return
 		default:
-			if AppConfig.SpecialChan != "1" {
+			if connection.WSType == ChanTypeWS {
 				//msgType, message, err := connection.conn.Read(context.Background())
 				msgType, message, err := connection.conn.ReadMessage()
 				if err != nil {
@@ -244,7 +245,7 @@ func WsPrivateClient(market, key, url string, accountMsgHandler AccountMsgHandle
 			connection.Close()
 		}()
 		for {
-			if AppConfig.SpecialChan != `1` {
+			if connection.WSType == ChanTypeWS {
 				//_, message, readErr := connection.conn.Read(context.Background())
 				_, message, readErr := connection.conn.ReadMessage()
 				if readErr != nil {
