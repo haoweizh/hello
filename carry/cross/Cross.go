@@ -724,8 +724,10 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 	}
 	ts2 := time.Now().UnixMilli()
 	if int(ts2)-tick.Ts > tickLimit {
-		util.LogLess(util.LogLevelError, fmt.Sprintf(`abandon tick limit %s %s %s delay %d limit %d %v`,
-			setting.Coin, tick.Bids[0].Market, tick.Bids[0].Symbol, int(ts2-ts1), int(ts2)-tick.Ts, model.AppConfig.CrossEqualing))
+		if ts2-ts1 > 3 {
+			util.LogLess(util.LogLevelError, fmt.Sprintf(`abandon tick limit %s %s %s delay %d limit %d %v`,
+				setting.Coin, tick.Bids[0].Market, tick.Bids[0].Symbol, int(ts2-ts1), int(ts2)-tick.Ts, model.AppConfig.CrossEqualing))
+		}
 		return
 	}
 	for _, settingRelate := range settings {
@@ -735,8 +737,10 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 		}
 		tickLimit += 10000
 		if int(ts2)-tickRelate.Ts > tickLimit {
-			util.LogLess(util.LogLevelError, fmt.Sprintf(`abandon tick limit %s %s %s delay %d limit %d %v`,
-				setting.Coin, tick.Bids[0].Market, tick.Bids[0].Symbol, int(ts2-ts1), int(ts2)-tickRelate.Ts, model.AppConfig.CrossEqualing))
+			if ts2-ts1 > 3 {
+				util.LogLess(util.LogLevelError, fmt.Sprintf(`abandon tick limit %s %s %s delay %d limit %d %v`,
+					setting.Coin, tick.Bids[0].Market, tick.Bids[0].Symbol, int(ts2-ts1), int(ts2)-tickRelate.Ts, model.AppConfig.CrossEqualing))
+			}
 			continue
 		}
 		for i := api.GetCrossLen() - 1; i >= 0; i-- {
