@@ -166,6 +166,9 @@ func GetHoldings(accounts map[string]*model.Account) (holding [][]interface{}) {
 				if (balance != nil && balance.Amount > 0) || !setting.Valid {
 					if setting.Valid {
 						valid = `true`
+						if !setting.Liquidated {
+							valid = `removed`
+						}
 					} else {
 						util.Log(util.LogLevelInfo, fmt.Sprintf("setting still false %#v", setting))
 					}
@@ -190,6 +193,9 @@ func GetHoldings(accounts map[string]*model.Account) (holding [][]interface{}) {
 				if (position != nil && position.Holding != 0) || !setting.Valid {
 					if setting.Valid {
 						valid = `true`
+					}
+					if !setting.Liquidated {
+						valid = `removed`
 					}
 					posHolding := 0.0
 					if position != nil {
