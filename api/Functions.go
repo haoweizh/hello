@@ -445,7 +445,6 @@ var getEquityTime = &sync.Map{}
 var equityMsg = &sync.Map{}
 
 func GetMarketEquity(index int) (msg string) {
-	markets := GetMarkets()
 	accounts := model.GetAccounts(index)
 	if accounts == nil {
 		return
@@ -456,7 +455,7 @@ func GetMarketEquity(index int) (msg string) {
 		return valueMsg.(string)
 	}
 	inAll := 0.0
-	for _, market := range markets {
+	for _, market := range model.AppEnvironment.Markets {
 		if accounts[market] == nil {
 			continue
 		}
@@ -665,7 +664,7 @@ func QueryOrderById(key, secret, market, symbol, orderType, orderId string) (ord
 // GetPositions
 // accountValue: 账户权益
 // availableU: 可用usd
-func GetPositions(key, secret, market string) (success bool, positions []*Position, accountValue, availableU, mmr float64) {
+func GetPositions(key, secret, market string) (success bool, positions []*model.Position, accountValue, availableU, mmr float64) {
 	lock, _ := positionLock.Load(key)
 	if lock == nil {
 		lock = &sync.Mutex{}
@@ -1039,7 +1038,7 @@ func InitMarketInfos(market string) (success bool) {
 	case model.BitgetPerp:
 		marketInfos = getMarketsBitgetPerp()
 	}
-	for _, setting := range appSettings {
+	for _, setting := range model.AppEnvironment.Settings {
 		if setting.Market == market && marketInfos[setting.Symbol] == nil && strings.Trim(setting.Symbol, ` `) != `` {
 			setting.Valid = false
 			util.Log(util.LogLevelInfo, fmt.Sprintf(`warning %s %s un-list from market`, market, setting.Symbol))

@@ -18,7 +18,7 @@ var balanceMaintainDay = util.GetNow()
 // MaintainBalance
 func _(key, secret string) {
 	for {
-		markets := api.GetMarkets()
+		markets := model.AppEnvironment.Markets
 		balances := make([]*model.Balance, 0)
 		balanceTime := util.GetNow()
 		duration, _ := time.ParseDuration(`-24h`)
@@ -164,25 +164,24 @@ func Maintain() {
 	_ = model.AppDB.AutoMigrate(&model.Balance{})
 	_ = model.AppDB.AutoMigrate(&model.Candle{})
 	_ = model.AppDB.AutoMigrate(&model.SettingMonitor{})
-	//model.TickHandlers[model.FunctionDCarry] = dreprecated2.ProcessDCarry
-	//model.TickHandlers[model.FunctionHang] = dreprecated2.ProcessHang
-	//api.CancelOrders(model.AppConfig.FtxKey, model.AppConfig.FtxSecret, model.Ftx, `LINK-PERP`)
 	//go CheckPastRefresh()
 	//go util.StartMidNightTimer(CancelAllOrders)
 	//go MaintainBalance()
 	//go MaintainTransFee()
 	api.InitApp(true)
-	//go func() {
-	//	for true {
-	//		time.Sleep(time.Hour * 24)
-	//		markets := api.GetMarkets()
-	//		for _, market := range markets {
-	//			api.InitMarketInfos(market)
-	//		}
-	//	}
-	//}()
+	initCross := false
+	for _, market := range model.AppEnvironment.Markets {
+		crossSettings := api.GetSettings(model.FunctionCross, market)
+		if crossSettings != nil {
+			initCross = true
+		}
+	}
+	if initCross && model.AppConfig.Handle == `1` {
+		go cross.ClearCross()
+		go cross.ContinueComp()
+	}
 	for {
-		for _, market := range api.GetMarkets() {
+		for _, market := range model.AppEnvironment.Markets {
 			go ManageConnTicks(market)
 		}
 		time.Sleep(time.Minute * 1)

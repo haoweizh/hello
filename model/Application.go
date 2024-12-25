@@ -83,7 +83,7 @@ var AppDB *gorm.DB
 var AppRedis *redis.Client
 var AppConfig *Config
 var AppEnvironment = &Environment{WsManager: &WSManager{WSAgents: &sync.Map{}}, MonitorSettings: &sync.Map{},
-	ConnOrder: sync.Map{}, WSRespChan: make(chan WSResp, 100)}
+	ConnOrder: sync.Map{}, WSRespChan: make(chan WSResp, 100), CrossEqualing: false}
 
 var DialectTail = map[string]map[string]string{
 	MarketTypeSpot: {Gate: `_USDT`, Ftx: `/USD`, OKEX: `-USDT`, Bybit: `USDT`, BinanceSpot: `USDT`, KucoinSpot: `-USDT`, BitgetSpot: `USDT`}, // BinanceMargin: `USDT`

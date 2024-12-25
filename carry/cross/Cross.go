@@ -20,7 +20,7 @@ func createContractMarket(key, secret, market string) (cm *contractMarket) {
 	settings := api.GetSettings(model.FunctionCross, market)
 	if success {
 		cm = &contractMarket{key: key, market: market}
-		cm.positions = make(map[string]*api.Position)
+		cm.positions = make(map[string]*model.Position)
 		for _, position := range positions {
 			cm.positions[position.Currency] = position
 			if settings != nil {
@@ -346,8 +346,8 @@ func initTradeLine(account *model.Account, setting *model.Setting, status *Carry
 
 func ClearCross() {
 	for {
-		model.AppConfig.CrossEqualing = true
-		util.Log(util.LogLevelInfo, fmt.Sprintf("begin to clearing cross get set %s %v", model.FunctionCross, model.AppConfig.CrossEqualing))
+		model.AppEnvironment.CrossEqualing = true
+		util.Log(util.LogLevelInfo, fmt.Sprintf("begin to clearing cross get set %s %v", model.FunctionCross, model.AppEnvironment.CrossEqualing))
 		compOrders.Clear()
 		carryStatusMap.Clear()
 		spotMarkets.Clear()
@@ -391,8 +391,8 @@ func ClearCross() {
 		if model.AppConfig.Handle == `1` {
 			equalAccounts()
 		}
-		model.AppConfig.CrossEqualing = false
-		util.Log(util.LogLevelInfo, fmt.Sprintf("end to clearing cross get set %v", model.AppConfig.CrossEqualing))
+		model.AppEnvironment.CrossEqualing = false
+		util.Log(util.LogLevelInfo, fmt.Sprintf("end to clearing cross get set %v", model.AppEnvironment.CrossEqualing))
 		time.Sleep(time.Minute * 60)
 	}
 }
@@ -401,14 +401,13 @@ func equalAccounts() {
 	util.Log(util.LogLevelInfo, `...... enter clearing cross all`)
 	waitEqual := make(map[int]bool)
 	equalChannel := make(chan int, 1)
-	markets := api.GetMarkets()
-	api.InitCrossMarketInfos(markets)
+	api.InitCrossMarketInfos(model.AppEnvironment.Markets)
 	api.PrepareSettings()
 	//needWaitEqual := false // 是否需要进入等待环节
 	for i := 0; i < api.GetCrossLen(); i++ {
 		accounts := make(map[string]*model.Account)
 		indexAccounts := model.GetAccounts(i)
-		for _, market := range markets {
+		for _, market := range model.AppEnvironment.Markets {
 			accounts[market] = indexAccounts[market]
 		}
 		waitEqual[i] = true
@@ -685,12 +684,6 @@ func placeEqual(status *CarryStatus, price, amount float64, orderSide string) (d
 // setting.GridAmount 用作不同名称的搬砖时，symbol的交易量对应的coin的交易量
 // setting.PriceX 用作不同名称的搬砖时，symbol的交易价格对应的coin的交易价格
 var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
-	if !doCross && model.AppConfig.Handle == `1` {
-		go ClearCross()
-		go continueComp()
-		doCross = true
-		return
-	}
 	coinSettings := api.GetCoinSettings(setting.Function)
 	var settings []*model.Setting
 	if coinSettings == nil {
@@ -701,7 +694,7 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 			settings = value.([]*model.Setting)
 		}
 	}
-	if tick == nil || tick.Asks == nil || tick.Bids == nil || setting == nil || setting.Valid == false || model.AppConfig.CrossEqualing ||
+	if tick == nil || tick.Asks == nil || tick.Bids == nil || setting == nil || setting.Valid == false || model.AppEnvironment.CrossEqualing ||
 		(model.AppConfig.Env != `test` && model.AppConfig.Handle != `1`) || settings == nil || len(settings) == 0 {
 		return
 	}
@@ -724,7 +717,7 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 	ts2 := time.Now().UnixMilli()
 	if int(ts2)-tick.Ts > tickLimit || ts2-ts1 > 3 {
 		util.LogLess(util.LogLevelError, fmt.Sprintf(`abandon tick limit %s %s %s delay %d limit %d %v`,
-			setting.Coin, tick.Bids[0].Market, tick.Bids[0].Symbol, int(ts2-ts1), int(ts2)-tick.Ts, model.AppConfig.CrossEqualing))
+			setting.Coin, tick.Bids[0].Market, tick.Bids[0].Symbol, int(ts2-ts1), int(ts2)-tick.Ts, model.AppEnvironment.CrossEqualing))
 		return
 	}
 	for _, settingRelate := range settings {
@@ -735,7 +728,7 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 		tickLimit += 10000
 		if int(ts2)-tickRelate.Ts > tickLimit {
 			util.LogLess(util.LogLevelError, fmt.Sprintf(`abandon tick limit %s %s %s delay %d limit %d %v`,
-				setting.Coin, tick.Bids[0].Market, tick.Bids[0].Symbol, int(ts2-ts1), int(ts2)-tickRelate.Ts, model.AppConfig.CrossEqualing))
+				setting.Coin, tick.Bids[0].Market, tick.Bids[0].Symbol, int(ts2-ts1), int(ts2)-tickRelate.Ts, model.AppEnvironment.CrossEqualing))
 			continue
 		}
 		for i := api.GetCrossLen() - 1; i >= 0; i-- {
@@ -921,7 +914,7 @@ func placeStatus(status *CarryStatus, price float64, amount float64) {
 		position := valueContract.(*contractMarket).positions[status.symbol]
 		originFreeAbs := 0.0
 		if position == nil {
-			position = &api.Position{Holding: amount, EntryPrice: price, Market: status.market, Currency: status.setting.Symbol}
+			position = &model.Position{Holding: amount, EntryPrice: price, Market: status.market, Currency: status.setting.Symbol}
 			valueContract.(*contractMarket).positions[status.symbol] = position
 		} else {
 			originFreeAbs = math.Abs(position.Holding)
@@ -998,7 +991,7 @@ func handleCross(account *model.Account, order *model.Order) {
 	}
 }
 
-func continueComp() {
+func ContinueComp() {
 	for {
 		compOrders.Range(func(key, value interface{}) bool {
 			if value == nil {
@@ -1045,7 +1038,7 @@ func continueComp() {
 				result, _, _ := api.CancelOrder(account.Key, account.Secret, order.Market, order.Symbol, model.OrderTypeLimit, order.OrderId)
 				if result {
 					compOrders.Delete(order.OrderId)
-					if model.AppConfig.CrossEqualing {
+					if model.AppEnvironment.CrossEqualing {
 						return false
 					}
 					orderComp := api.PlaceOrder(account.Key, account.Secret, order.OrderSide, model.OrderTypeLimit, order.Market, order.Symbol, ``,
@@ -1124,7 +1117,7 @@ var PostOrderCross = func(order *model.Order) {
 }
 
 func compOrder(account *model.Account, order *model.Order, leftAmt float64) {
-	if !model.AppConfig.CrossEqualing {
+	if !model.AppEnvironment.CrossEqualing {
 		price := order.Price
 		_, bidAsk := model.AppEnvironment.GetBidAsk(order.Market, order.Symbol)
 		if bidAsk == nil {

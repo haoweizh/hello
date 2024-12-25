@@ -49,15 +49,14 @@ var spotMarkets = &sync.Map{}      // key - spotMarket
 var contractMarkets = &sync.Map{}  // key - contractMarket
 var carryStatusMap = &sync.Map{}   // coin*market*symbol*key / CarryStatus
 var notifyTime = &sync.Map{}       // 1. market_symbol_market_symbol/time 2. funding_market_symbol/time
-var doCross = false
 
 type contractMarket struct {
 	key, market          string
-	collateralsAvailable float64                  // 可用保证金U数
-	contractValueInU     float64                  // 当前价格下开仓总额，以U计算
-	accountValueInU      float64                  // 期货权益InU
-	mmr                  float64                  // 维持保证金率
-	positions            map[string]*api.Position // symbol/position
+	collateralsAvailable float64                    // 可用保证金U数
+	contractValueInU     float64                    // 当前价格下开仓总额，以U计算
+	accountValueInU      float64                    // 期货权益InU
+	mmr                  float64                    // 维持保证金率
+	positions            map[string]*model.Position // symbol/position
 }
 
 type spotMarket struct {

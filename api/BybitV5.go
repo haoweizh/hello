@@ -355,7 +355,8 @@ var spotBookWsHandler = func(market string, conn *model.WSConn, event []byte) {
 	}
 }
 
-var tickHandlerBybit = func(market string, conn *model.WSConn, event []byte) {
+// tickHandlerBybit
+var _ = func(market string, conn *model.WSConn, event []byte) {
 	tickResp := &dtos.BybitTickResp{}
 	jsonErr := json.Unmarshal(event, tickResp)
 	if jsonErr != nil {
@@ -369,7 +370,6 @@ var tickHandlerBybit = func(market string, conn *model.WSConn, event []byte) {
 		}
 		rate, _ := strconv.ParseFloat(tickResp.Data.FundingRate, 64)
 		nextFundingTime, _ := strconv.ParseInt(tickResp.Data.NextFundingTime, 10, 64)
-		fmt.Println(string(event))
 		if nextFundingTime > time.Now().Unix() {
 			SetFundingRate(model.Bybit, symbol, &model.FundingRate{
 				Rate:       rate,
@@ -539,9 +539,9 @@ func getBalanceBybit(key string, secret string) (success bool, balances []*model
 	return true, balances, totalInUsd, collateral
 }
 
-func getPositionsBybit(key, secret string) (success bool, positions []*Position, posBalance float64) {
+func getPositionsBybit(key, secret string) (success bool, positions []*model.Position, posBalance float64) {
 	cursor := "init"
-	positions = make([]*Position, 0)
+	positions = make([]*model.Position, 0)
 	for {
 		param := map[string]interface{}{"category": "linear", "settleCoin": "USDT", "limit": "200"}
 		if cursor != "" && cursor != "init" {
@@ -561,7 +561,7 @@ func getPositionsBybit(key, secret string) (success bool, positions []*Position,
 				continue
 			}
 			_, _, currency := model.GetFromDialect(model.Bybit, model.MarketTypePerp, contract.Symbol)
-			position := &Position{Market: model.Bybit, Ts: util.GetNowUnixMillion(), Currency: currency}
+			position := &model.Position{Market: model.Bybit, Ts: util.GetNowUnixMillion(), Currency: currency}
 			if contract.Side == "Buy" {
 				position.Holding, _ = strconv.ParseFloat(contract.Size, 64)
 			} else if contract.Side == "Sell" {

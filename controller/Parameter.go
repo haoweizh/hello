@@ -679,9 +679,8 @@ func createTurtleLines(function, market string, account *model.Account) (msg str
 
 func GetParameters(c *gin.Context) {
 	msg := api.GetMarketEquity(0)
-	markets := api.GetMarkets()
 	userKeys := make([]string, 0)
-	for _, market := range markets {
+	for _, market := range model.AppEnvironment.Markets {
 		account := model.AppConfig.GetAccounts(market)[0]
 		userKeys = append(userKeys, account.Key)
 		msgTurtle, sizeTurtle := createTurtleLines(model.FunctionTurtle, market, account)

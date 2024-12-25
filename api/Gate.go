@@ -877,7 +877,7 @@ func getBalanceGate(key, secret string) (success bool, balances []*model.Balance
 	return true, balances, totalInUsd, collateral
 }
 
-func getPositionsGate(key string, secret string) (success bool, positions []*Position) {
+func getPositionsGate(key string, secret string) (success bool, positions []*model.Position) {
 	client, ctx := getClientGate(key, secret)
 	positionList, _, positionsErr := client.FuturesApi.ListPositions(ctx, `usdt`, nil)
 	if positionsErr != nil {
@@ -886,13 +886,13 @@ func getPositionsGate(key string, secret string) (success bool, positions []*Pos
 		util.Log(util.LogLevelError, `fail to refresh future balance gate`)
 		return getPositionsGate(key, secret)
 	}
-	positions = make([]*Position, 0)
+	positions = make([]*model.Position, 0)
 	for _, item := range positionList {
 		getCoin, _, symbol := model.GetFromDialect(model.Gate, model.MarketTypePerp, item.Contract)
 		if !getCoin {
 			continue
 		}
-		position := &Position{Market: model.Gate, Ts: util.GetNowUnixMillion(), Currency: symbol}
+		position := &model.Position{Market: model.Gate, Ts: util.GetNowUnixMillion(), Currency: symbol}
 		_, realAmount := model.ParseRealAmount(model.Gate, symbol, float64(item.Size))
 		position.Holding = realAmount
 		position.LeverRate, _ = strconv.ParseInt(item.CrossLeverageLimit, 10, 64)

@@ -1,4 +1,4 @@
-package api
+package model
 
 type Position struct {
 	Market                   string

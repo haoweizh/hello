@@ -195,7 +195,7 @@ func WsTickServeBitgetPerp(market string) (socketMap map[*model.WSConn]bool, msg
 	return
 }
 
-func getPositionsBitgetPerp(key, secret string) (success bool, positions []*Position, accountValue, availableU, mmr float64) {
+func getPositionsBitgetPerp(key, secret string) (success bool, positions []*model.Position, accountValue, availableU, mmr float64) {
 	client := dtos.BitgetRestClient{BaseUrl: bitgetRestUrl, Passphrase: model.AppConfig.Phase, ApiKey: key, ApiSecretKey: secret}
 	assetHttpResp, assetHttpErr := client.DoGet("/api/v2/mix/account/accounts", map[string]string{"productType": "USDT-FUTURES"})
 	bitgetAssertResp := &dtos.BitgetAssertResp{}
@@ -222,14 +222,14 @@ func getPositionsBitgetPerp(key, secret string) (success bool, positions []*Posi
 		}
 		mmr, _ = strconv.ParseFloat(asset.CrossedRiskRate, 64)
 	}
-	positions = make([]*Position, 0)
+	positions = make([]*model.Position, 0)
 	for _, contract := range bitgetPositionResp.Data {
 		isSuccess, _, symbol := model.GetFromDialect(model.BitgetPerp, model.MarketTypePerp, contract.Symbol)
 		if !isSuccess {
 			continue
 		}
 		currency := symbol
-		position := &Position{Market: model.BitgetPerp, Ts: util.GetNowUnixMillion(), Currency: currency}
+		position := &model.Position{Market: model.BitgetPerp, Ts: util.GetNowUnixMillion(), Currency: currency}
 		position.Direction = contract.HoldSide
 		total, _ := strconv.ParseFloat(contract.Total, 64)
 		if total == 0 {

@@ -15,8 +15,6 @@ var DynamicHandleTime = &sync.Map{} // market - handle time.Time
 var symbolSettings = &sync.Map{}    // function*market - map[symbol]*setting
 var handlers = &sync.Map{}          //market*symbol / *sync.Map:map[function]carryHandler
 var coinSettings = &sync.Map{}      // function / *sync.Map:map[coin][]*model.Setting
-var appSettings []model.Setting
-var appMarkets []string
 var crossLen int
 var settingLoading bool
 var processLock sync.Mutex
@@ -106,11 +104,11 @@ var lockRefreshSetting sync.Mutex
 func PrepareSettings() {
 	lockRefreshSetting.Lock()
 	defer lockRefreshSetting.Unlock()
-	localSymbolSettings := &sync.Map{}
-	localHandlers := &sync.Map{}
+	symbolSettings.Clear()
+	handlers.Clear()
 	coinSettings.Clear()
 	util.Log(util.LogLevelInfo, fmt.Sprintf("Settings loaded %#v", coinSettings))
-	appSettings = []model.Setting{}
+	var appSettings []model.Setting
 	marketMap := make(map[string]bool)
 	model.AppDB.Where(`valid = ?`, true).Find(&appSettings)
 	util.Log(util.LogLevelInfo, fmt.Sprintf(`start to load settings %d`, len(appSettings)))
@@ -126,7 +124,7 @@ func PrepareSettings() {
 		//util.Log(util.LogLevelInfo, fmt.Sprintf(`load setting %s %s %s %#v %d`,
 		//	setting.Market, setting.Symbol, setting.Function, setting.Valid, setting.Chance))
 		marketMap[setting.Market] = true
-		value, ok = util.LoadSyncMap(localHandlers, setting.Market, setting.Symbol)
+		value, ok = util.LoadSyncMap(handlers, setting.Market, setting.Symbol)
 		var functions *sync.Map
 		if ok {
 			functions = value.(*sync.Map)
@@ -137,7 +135,7 @@ func PrepareSettings() {
 		if !model.IgnoreFunctions[setting.Function] {
 			functions.Store(setting.Function, model.TickHandlers[setting.Function])
 		}
-		util.StoreSyncMap(localHandlers, functions, setting.Market, strings.TrimSpace(setting.Symbol))
+		util.StoreSyncMap(handlers, functions, setting.Market, strings.TrimSpace(setting.Symbol))
 		var settings *sync.Map
 		value, ok = coinSettings.Load(setting.Function)
 		if ok && value != nil {
@@ -157,7 +155,7 @@ func PrepareSettings() {
 		}
 		settings.Store(setting.Coin, settingArray)
 		var functionMarketSettings *sync.Map
-		value, ok = util.LoadSyncMap(localSymbolSettings, setting.Function, setting.Market)
+		value, ok = util.LoadSyncMap(symbolSettings, setting.Function, setting.Market)
 		if ok {
 			functionMarketSettings = value.(*sync.Map)
 		}
@@ -165,7 +163,7 @@ func PrepareSettings() {
 			functionMarketSettings = &sync.Map{}
 		}
 		functionMarketSettings.Store(setting.Symbol, setting)
-		util.StoreSyncMap(localSymbolSettings, functionMarketSettings, setting.Function, setting.Market)
+		util.StoreSyncMap(symbolSettings, functionMarketSettings, setting.Function, setting.Market)
 	}
 	localAppMarkets := make([]string, len(marketMap))
 	i := 0
@@ -173,10 +171,9 @@ func PrepareSettings() {
 		localAppMarkets[i] = key
 		i++
 	}
-	appMarkets = localAppMarkets
-	util.Log(util.LogLevelInfo, fmt.Sprintf(`finish loading settings from markets %#v %+v`, appMarkets, coinSettings))
-	handlers = localHandlers
-	symbolSettings = localSymbolSettings
+	model.AppEnvironment.Settings = appSettings
+	model.AppEnvironment.Markets = localAppMarkets
+	util.Log(util.LogLevelInfo, fmt.Sprintf(`finish loading settings from markets %#v %+v`, model.AppEnvironment.Markets, coinSettings))
 }
 
 func handleCombineSettings(mumSetting *model.Setting, topMarketInfos map[string]*model.MarketInfo) {
@@ -429,7 +426,7 @@ func InitApp(refreshDynamic bool) bool {
 	}
 	PrepareSettings()
 	handled := false
-	for _, market := range appMarkets {
+	for _, market := range model.AppEnvironment.Markets {
 		if refreshDynamic {
 			if handleMarketDynamic(market) {
 				handled = true
@@ -442,7 +439,7 @@ func InitApp(refreshDynamic bool) bool {
 	if handled {
 		PrepareSettings()
 	}
-	for _, market := range appMarkets {
+	for _, market := range model.AppEnvironment.Markets {
 		accounts := model.AppConfig.GetAccounts(market)
 		for _, account := range accounts {
 			go CancelAll(account.Key, account.Secret, market)
@@ -502,12 +499,12 @@ func GetMarketSymbols(market string) map[string]bool {
 			return map[string]bool{`ADA_USDT`: true}
 		}
 	}
-	if appSettings == nil {
+	if model.AppEnvironment.Settings == nil {
 		util.Log(util.LogLevelInfo, fmt.Sprintf(`load setting GetMarketSymbols %s`, market))
 		return nil
 	}
 	symbols := make(map[string]bool)
-	for _, value := range appSettings {
+	for _, value := range model.AppEnvironment.Settings {
 		marketInfo, getMarketInfo := util.LoadSyncMap(model.MarketInfos, market, value.Symbol)
 		if value.Market == market && marketInfo != nil && getMarketInfo {
 			symbols[value.Symbol] = true
@@ -549,20 +546,11 @@ func GetCoinSettings(function string) *sync.Map {
 	return nil
 }
 
-func GetMarkets() []string {
-	if appSettings == nil || len(appSettings) == 0 {
-		//util.Notice(`load setting GetMarkets`)
-		return nil
-	}
-	return appMarkets
-}
-
 func GetCrossLen() int {
 	if crossLen > 0 {
 		return crossLen
 	}
-	markets := GetMarkets()
-	for _, market := range markets {
+	for _, market := range model.AppEnvironment.Markets {
 		accounts := model.AppConfig.GetAccounts(market)
 		if crossLen == 0 {
 			crossLen = len(accounts)
