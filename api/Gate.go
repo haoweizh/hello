@@ -1118,7 +1118,7 @@ func getFundingRateGate(key, secret, symbol string) (fundingRate *model.FundingR
 }
 
 // SetGateBidAsk 用于处理永续合约买卖一不准确（现货无需，因为订阅方式不同）
-func SetGateBidAsk(key, secret, symbol string) {
+func _(key, secret, symbol string) {
 	client, ctx := getClientGate(key, secret)
 	_, _, _, dialectSymbol := model.GetFromStandard(model.Gate, symbol)
 	orderBook, _, err := client.FuturesApi.ListFuturesOrderBook(ctx, `usdt`, dialectSymbol,
