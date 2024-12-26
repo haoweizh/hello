@@ -56,6 +56,7 @@
     <th>方向</th>
     <th>价格</th>
     <th>数量</th>
+    <th>金额</th>
     <th>类型</th>
     <th>err code</th>
     {{range $i, $value := $.orders}}
@@ -69,6 +70,7 @@
             <td>{{index $value 6}}</td>
             <td>{{index $value 7}}</td>
             <td>{{index $value 8}}</td>
+            <td>{{index $value 9}}</td>
         </tr>
     {{end}}
 </table>

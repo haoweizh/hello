@@ -165,7 +165,7 @@ func createFromPosition(account *model.Account, setting *model.Setting, valueLim
 	}
 	if cm.contractValueInU/cm.accountValueInU > rateLimitPosition || valueInUsd > valueLimit ||
 		valueInUsd/cm.accountValueInU > rateLimitHolding ||
-		(setting.Market == model.BitgetPerp && len(cm.positions) > BitgetPosLimit) {
+		(setting.Market == model.BitgetPerp && (len(cm.positions) > BitgetPosLimit) && carryStatus.Holding != 0) {
 		util.Log(util.LogLevelError, fmt.Sprintf(`do revert true %s %s value big %f %f %f %f %f %f pos len %d`,
 			setting.Market, setting.Symbol, cm.contractValueInU, cm.accountValueInU, rateLimitPosition, valueInUsd, valueLimit, rateLimitHolding, len(cm.positions)))
 		doRevert = true
@@ -897,9 +897,13 @@ func placeCross(statusBuy, statusSell *CarryStatus, priceBuy, priceSell, amount 
 		go api.PlaceOrder(statusSell.account.Key, statusSell.account.Secret, model.OrderSideSell, model.OrderTypeLimit, statusSell.market,
 			statusSell.symbol, ``, model.FunctionCross, priceSell*(1-crossSlide), priceSell*(1-crossSlide), amountSell, true, PostOrderCross)
 	}
-	// 按照比实际下单数量大的数量计入，以免计入数量太少造成未来的可卖不足
-	placeStatus(statusBuy, priceBuy, amountBuy*(1+compSlide))
-	placeStatus(statusSell, priceSell, -1*amountSell*(1+compSlide))
+	// 买入现货时要交手续费，故而实际到手少于下单量，校准以免未来买单时数量不足
+	_, marketType, _, _ := model.GetFromStandard(statusBuy.market, statusBuy.symbol)
+	if marketType == model.MarketTypeSpot {
+		amountBuy = amountBuy * 0.9992
+	}
+	placeStatus(statusBuy, priceBuy, amountBuy)
+	placeStatus(statusSell, priceSell, -1*amountSell)
 	time.Sleep(time.Millisecond * 100)
 }
 
