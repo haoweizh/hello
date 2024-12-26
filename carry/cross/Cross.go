@@ -453,8 +453,8 @@ func equalAccount(i int, equalChan chan int, accounts map[string]*model.Account)
 				}
 				equalStatuses[j] = initStatus(account, setting)
 			}
+			coinCrossing.Store(coin.(string), false)
 			for index := 0; index <= 10; index++ {
-				coinCrossing.Store(coin.(string), false)
 				coinEqual, leftHolding, errMsg := equalCoin(i, coin.(string), equalStatuses)
 				if !coinEqual {
 					util.Log(util.LogLevelInfo, fmt.Sprintf(
