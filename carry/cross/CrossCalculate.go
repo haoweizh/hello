@@ -30,14 +30,14 @@ func generateMonitorMsg(index int, coin string, score, scoreRelate float64, carr
 	fundingStr, fundingStrRelate := ``, ``
 	if !carryStatus.isSpot {
 		updateTime := fundingRate.UpdateTime.In(loc)
-		fundingStr = fmt.Sprintf(`%d:%d %.0f %dH %d:%d`,
+		fundingStr = fmt.Sprintf(`%d:%d %e %dH %d:%d`,
 			util.GetNow().Hour(), util.GetNow().Minute(), 100*fundingRate.Rate, marketInfo.FundingRateInterval/3600000, updateTime.Hour(), updateTime.Minute())
 	} else {
 		fundingStr = fmt.Sprintf(`%d:%d`, util.GetNow().Hour(), util.GetNow().Minute())
 	}
 	if !carryStatusRelate.isSpot {
 		updateTime := fundingRateRelate.UpdateTime.In(loc)
-		fundingStrRelate = fmt.Sprintf(`%d:%d %.5f %dH %d:%d`,
+		fundingStrRelate = fmt.Sprintf(`%d:%d %e %dH %d:%d`,
 			util.GetNow().Hour(), util.GetNow().Minute(), 100*fundingRateRelate.Rate, marketInfoRelate.FundingRateInterval/3600000, updateTime.Hour(), updateTime.Minute())
 	} else {
 		fundingStrRelate = fmt.Sprintf(`%d:%d`, util.GetNow().Hour(), util.GetNow().Minute())
