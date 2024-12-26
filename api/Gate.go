@@ -118,14 +118,14 @@ func appendSpotMarketsGate(key, secret string, marketInfos map[string]*model.Mar
 func setLeverageGate(account *model.Account) (success bool) {
 	symbols := GetMarketSymbols(model.Gate)
 	for symbol := range symbols {
-		setSymbolLeverageGate(account, symbol)
+		setSymbolLeverageGate(account, symbol, model.DefaultLeverage)
 		time.Sleep(time.Millisecond * 200)
 	}
 	return true
 }
 
 // setSymbolLeverageGate 设置杠杆率和risk limit
-func setSymbolLeverageGate(account *model.Account, symbol string) (success bool) {
+func setSymbolLeverageGate(account *model.Account, symbol string, leverage int) (success bool) {
 	_, _, _, dialectSymbol := model.GetFromStandard(model.Gate, symbol)
 	client, ctx := getClientGate(account.Key, account.Secret)
 	pos, _, errLeverage := client.FuturesApi.UpdatePositionLeverage(ctx, `usdt`, dialectSymbol, `0`,
@@ -139,14 +139,18 @@ func setSymbolLeverageGate(account *model.Account, symbol string) (success bool)
 	}
 	maxLimit := 0.0
 	for _, tier := range tiers {
-		leverage, parseErr := strconv.ParseFloat(tier.LeverageMax, 64)
+		tierLeverage, parseErr := strconv.ParseFloat(tier.LeverageMax, 64)
 		if parseErr != nil {
 			continue
 		}
-		if leverage >= model.DefaultLeverage {
+		if tierLeverage >= model.DefaultLeverage {
 			limit, _ := strconv.ParseFloat(tier.RiskLimit, 64)
 			maxLimit = math.Max(maxLimit, limit)
 		}
+	}
+	if maxLimit < 100000 && leverage == 3 {
+		util.Log(util.LogLevelInfo, fmt.Sprintf(`gate set leverage 2 to %s limit %f`, symbol, maxLimit))
+		return setSymbolLeverageGate(account, symbol, 2)
 	}
 	strMaxLimit := strconv.Itoa(int(maxLimit))
 	limit, _, errLimit := client.FuturesApi.UpdatePositionRiskLimit(ctx, `usdt`, dialectSymbol, strMaxLimit)
@@ -154,7 +158,7 @@ func setSymbolLeverageGate(account *model.Account, symbol string) (success bool)
 		panicGateError(account.Key, `UpdatePositionRiskLimit`, errLimit)
 		return false
 	}
-	fmt.Println(limit)
+	model.AppEnvironment.RiskLimitsGate.Store(symbol, limit)
 	return true
 }
 

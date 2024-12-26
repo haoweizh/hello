@@ -59,6 +59,7 @@ type Environment struct {
 	ConnOrderUpdate sync.Map // market*accountKey / Gate*marketType*accountKey - *WSConn;
 	ReqIdOrders     sync.Map // requestId - *Order
 	OrderIdOrders   sync.Map // orderId - *Order
+	RiskLimitsGate  sync.Map // symbol - money in usdt
 	WSRespChan      chan WSResp
 	MonitorSettings *sync.Map // sync.Map[market]*sync.Map[symbol]*sync.Map[interval]*sync.Map[address]*MonitorSetting
 	WsManager       *WSManager

@@ -110,6 +110,12 @@ func createFromPosition(account *model.Account, setting *model.Setting, valueLim
 	availableAmount := 0.0
 	if price > 0 {
 		limitAmount = math.Min(cm.accountValueInU/5, cm.collateralsAvailable) / price
+		if setting.Market == model.Gate {
+			ristLimit, loaded := model.AppEnvironment.RiskLimitsGate.Load(setting.Symbol)
+			if loaded {
+				limitAmount = math.Min(limitAmount, ristLimit.(float64))
+			}
+		}
 		availableAmount = cm.collateralsAvailable / price
 	} else {
 		util.Log(util.LogLevelError, fmt.Sprintf(`do revert true %s %s price 0`, setting.Market, setting.Symbol))

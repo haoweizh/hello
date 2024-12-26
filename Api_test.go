@@ -209,6 +209,8 @@ func Test_Sync(t *testing.T) {
 	testMap.Store(`1`, false)
 	replaced = testMap.CompareAndSwap(`1`, false, true)
 	fmt.Println(replaced)
+	value, _ := testMap.Load(`1`)
+	fmt.Println(value)
 }
 
 func Test_BalAndPos(t *testing.T) {
