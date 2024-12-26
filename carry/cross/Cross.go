@@ -853,6 +853,13 @@ func checkTradeLine(statusBuy, statusSell *CarryStatus, score float64) (valid bo
 }
 
 func placeCross(statusBuy, statusSell *CarryStatus, priceBuy, priceSell, amount float64) {
+	_, marketType, _, _ := model.GetFromStandard(statusBuy.market, statusBuy.symbol)
+	if marketType == model.MarketTypeSpot {
+		priceBuy = priceBuy * (1 + crossSpotBuySlide)
+	} else {
+		priceBuy = priceBuy * (1 + crossSlide)
+	}
+	priceSell = priceSell * (1 - crossSlide)
 	score := (priceSell - priceBuy) / math.Max(priceBuy, priceSell)
 	amountBuy := amount / statusBuy.setting.GridAmount
 	amountSell := amount / statusSell.setting.GridAmount
@@ -881,7 +888,7 @@ func placeCross(statusBuy, statusSell *CarryStatus, priceBuy, priceSell, amount 
 		orderBuy.Coin = statusBuy.setting.Coin
 		orderSell.Coin = statusSell.setting.Coin
 		success, msg := api.PlacePairOKEX(statusBuy.account, requestId, statusBuy.symbol, statusSell.symbol, model.OrderTypeLimit,
-			priceBuy*(1+crossSlide), priceSell*(1-crossSlide), amountBuy, amountSell)
+			priceBuy, priceSell, amountBuy, amountSell)
 		if success {
 			model.AppEnvironment.ReqIdOrders.Store(requestId+model.OrderSideBuy, orderBuy)
 			model.AppEnvironment.ReqIdOrders.Store(requestId+model.OrderSideSell, orderSell)
@@ -893,12 +900,11 @@ func placeCross(statusBuy, statusSell *CarryStatus, priceBuy, priceSell, amount 
 		}
 	} else {
 		go api.PlaceOrder(statusBuy.account.Key, statusBuy.account.Secret, model.OrderSideBuy, model.OrderTypeLimit, statusBuy.market,
-			statusBuy.symbol, ``, model.FunctionCross, priceBuy*(1+crossSlide), priceBuy*(1+crossSlide), amountBuy, true, PostOrderCross)
+			statusBuy.symbol, ``, model.FunctionCross, priceBuy, priceBuy, amountBuy, true, PostOrderCross)
 		go api.PlaceOrder(statusSell.account.Key, statusSell.account.Secret, model.OrderSideSell, model.OrderTypeLimit, statusSell.market,
-			statusSell.symbol, ``, model.FunctionCross, priceSell*(1-crossSlide), priceSell*(1-crossSlide), amountSell, true, PostOrderCross)
+			statusSell.symbol, ``, model.FunctionCross, priceSell, priceSell, amountSell, true, PostOrderCross)
 	}
 	// 买入现货时要交手续费，故而实际到手少于下单量，校准以免未来买单时数量不足
-	_, marketType, _, _ := model.GetFromStandard(statusBuy.market, statusBuy.symbol)
 	if marketType == model.MarketTypeSpot {
 		amountBuy = amountBuy * 0.9992
 	}
@@ -1054,7 +1060,7 @@ func ContinueComp() {
 					price = bidAsk.Asks[0].Price * (1 + compSlide)
 				}
 			}
-			if leftAmt > marketInfo.SizeMin && leftAmt*order.Price > marketInfo.MoneyMin && queryOrder.Status != model.CarryStatusSuccess {
+			if leftAmt > marketInfo.SizeMin && leftAmt*order.Price > math.Max(10, marketInfo.MoneyMin) && queryOrder.Status != model.CarryStatusSuccess {
 				result, _, _ := api.CancelOrder(account.Key, account.Secret, order.Market, order.Symbol, model.OrderTypeLimit, order.OrderId)
 				if result {
 					compOrders.Delete(order.OrderId)
