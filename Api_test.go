@@ -200,6 +200,17 @@ func Test_Redis(t *testing.T) {
 	}
 }
 
+func Test_Sync(t *testing.T) {
+	testMap := sync.Map{}
+	replaced := testMap.CompareAndSwap(`1`, false, true)
+	fmt.Println(replaced)
+	replaced = testMap.CompareAndSwap(`1`, true, true)
+	fmt.Println(replaced)
+	testMap.Store(`1`, false)
+	replaced = testMap.CompareAndSwap(`1`, false, true)
+	fmt.Println(replaced)
+}
+
 func Test_BalAndPos(t *testing.T) {
 	model.NewConfig()
 	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})

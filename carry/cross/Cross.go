@@ -352,6 +352,7 @@ func ClearCross() {
 		carryStatusMap.Clear()
 		spotMarkets.Clear()
 		contractMarkets.Clear()
+		coinCrossing.Clear()
 		model.AppEnvironment.ReqIdOrders = sync.Map{}
 		for {
 			leftOrders := 0
@@ -453,6 +454,7 @@ func equalAccount(i int, equalChan chan int, accounts map[string]*model.Account)
 				equalStatuses[j] = initStatus(account, setting)
 			}
 			for index := 0; index <= 10; index++ {
+				coinCrossing.Store(coin.(string), false)
 				coinEqual, leftHolding, errMsg := equalCoin(i, coin.(string), equalStatuses)
 				if !coinEqual {
 					util.Log(util.LogLevelInfo, fmt.Sprintf(
@@ -704,9 +706,7 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 	if !replaced {
 		return
 	}
-	defer func() {
-		coinCrossing.Store(setting.Coin, false)
-	}()
+	defer coinCrossing.Store(setting.Coin, false)
 	tickLimit := 50
 	switch tick.Bids[0].Market {
 	case model.Gate, model.BitgetPerp, model.BitgetSpot:
