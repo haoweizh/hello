@@ -111,9 +111,9 @@ func createFromPosition(account *model.Account, setting *model.Setting, valueLim
 	if price > 0 {
 		limitAmount = math.Min(cm.accountValueInU/5, cm.collateralsAvailable) / price
 		if setting.Market == model.Gate {
-			ristLimit, loaded := model.AppEnvironment.RiskLimitsGate.Load(setting.Symbol)
+			riskLimit, loaded := model.AppEnvironment.RiskLimitsGate.Load(setting.Symbol)
 			if loaded {
-				limitAmount = math.Min(limitAmount, ristLimit.(float64))
+				limitAmount = math.Min(limitAmount, riskLimit.(float64))
 			}
 		}
 		availableAmount = cm.collateralsAvailable / price
@@ -481,7 +481,10 @@ func equalAccount(i int, equalChan chan int, accounts map[string]*model.Account)
 }
 
 // getHolding
-// 注意获取到的是经过gridAmount 和priceX调整过后的price和amount
+// 注意:
+//
+//		1.获取到的是经过gridAmount 和priceX调整过后的price和amount
+//	 2.获得到的价格是经过funding rate加权后的价格，实际下单时要进行还原
 func getHolding(statuses []*CarryStatus) (bids, asks model.Ticks, bidStatus, askStatus map[string]*CarryStatus,
 	holding, price float64, holdStr string) {
 	bids = model.Ticks{}
@@ -563,7 +566,11 @@ func equalCoin(index int, coin string, statuses []*CarryStatus) (isEqual bool, h
 	var equalStatus *CarryStatus
 	sort.Sort(sort.Reverse(bids))
 	for i := 0; i < len(bids); i++ {
-		price := bids[i].Price * (1 - compSlide)
+		getBid, bidAsk := model.AppEnvironment.GetBidAsk(bids[i].Market, bids[i].Symbol)
+		if !getBid {
+			continue
+		}
+		price := bidAsk.Bids[0].Price * (1 - compSlide)
 		if holding > SmallInU/holdingPrice {
 			status := bidStatus[fmt.Sprintf(`%s_%s`, bids[i].Market, bids[i].Symbol)]
 			if status == nil {
@@ -597,7 +604,11 @@ func equalCoin(index int, coin string, statuses []*CarryStatus) (isEqual bool, h
 	}
 	sort.Sort(asks)
 	for i := 0; i < len(asks); i++ {
-		price := asks[i].Price * (1 + compSlide)
+		getAsk, bidAsk := model.AppEnvironment.GetBidAsk(asks[i].Market, asks[i].Symbol)
+		if !getAsk {
+			continue
+		}
+		price := bidAsk.Asks[0].Price * (1 + compSlide)
 		if holding < -SmallInU/holdingPrice {
 			status := askStatus[fmt.Sprintf(`%s_%s`, asks[i].Market, asks[i].Symbol)]
 			if status == nil {

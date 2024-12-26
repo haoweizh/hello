@@ -153,12 +153,12 @@ func setSymbolLeverageGate(account *model.Account, symbol string, leverage int) 
 		return setSymbolLeverageGate(account, symbol, 2)
 	}
 	strMaxLimit := strconv.Itoa(int(maxLimit))
-	limit, _, errLimit := client.FuturesApi.UpdatePositionRiskLimit(ctx, `usdt`, dialectSymbol, strMaxLimit)
+	_, _, errLimit := client.FuturesApi.UpdatePositionRiskLimit(ctx, `usdt`, dialectSymbol, strMaxLimit)
 	if errLimit != nil {
 		panicGateError(account.Key, `UpdatePositionRiskLimit`, errLimit)
 		return false
 	}
-	model.AppEnvironment.RiskLimitsGate.Store(symbol, limit)
+	model.AppEnvironment.RiskLimitsGate.Store(symbol, maxLimit)
 	return true
 }
 

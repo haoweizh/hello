@@ -116,8 +116,8 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarrySta
 		statusBuy = carryStatusRelate
 		tickSell = tick
 		tickBuy = tickRelate
-		priceSell = priceBid
-		priceBuy = priceAskRelate
+		priceSell = tick.Bids[0].Price
+		priceBuy = tickRelate.Asks[0].Price
 		askAmount = tick.Bids[0].Amount
 		bidAmount = tickRelate.Asks[0].Amount
 	} else {
@@ -127,8 +127,8 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarrySta
 			statusBuy = carryStatus
 			tickSell = tickRelate
 			tickBuy = tick
-			priceSell = priceBidRelate
-			priceBuy = priceAsk
+			priceSell = tickRelate.Bids[0].Price
+			priceBuy = tick.Asks[0].Price
 			askAmount = tickRelate.Bids[0].Amount
 			bidAmount = tick.Asks[0].Amount
 		}
