@@ -74,12 +74,11 @@ type CarryStatus struct {
 	reduceOnlyBuy, reduceOnlySell bool
 	setting                       *model.Setting
 	account                       *model.Account
-	// 最大可开仓买卖数（有机会），用于cross
-	LimitSell, LimitBuy         float64
-	AvailableSell, AvailableBuy float64 // 最大可买卖数（不管有无机会，能下的数量),用于comp
-	TradeLineBuy, TradeLineSell float64 // 买卖盈利线（可为负数）
-	Holding                     float64
-	RateInAll                   float64 // 现货：该币种占总权益的比例；永续：以开仓价算该币种持仓占保证金百分比
+	LimitSell, LimitBuy           float64 // 未经过setting.GridAmount处理过的原始下单数量限制，用于comp
+	AvailableSell, AvailableBuy   float64 // 未经过setting.GridAmount处理过的原始最大可买卖数（不管有无机会，能下的数量),用于comp
+	TradeLineBuy, TradeLineSell   float64 // 买卖盈利线（可为负数）
+	Holding                       float64 // 未经过setting.GridAmount处理过的原始持仓数量
+	RateInAll                     float64 // 现货：该币种占总权益的比例；永续：以开仓价算该币种持仓占保证金百分比
 }
 
 // getTradeLineExtra

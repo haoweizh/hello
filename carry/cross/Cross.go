@@ -203,14 +203,9 @@ func createFromBalance(account *model.Account, setting *model.Setting, valueLimi
 		AvailableBuy:  availableBuy}
 	if sm.balances[setting.Symbol] != nil {
 		var balance *model.Balance
-		related := strings.Trim(setting.SymbolRelated, ` `)
-		if len(related) > 0 {
-			balance = sm.balances[related]
-		} else {
-			balance = sm.balances[setting.Symbol]
-		}
+		balance = sm.balances[setting.Symbol]
 		limitSell = math.Min(math.Max(balance.Amount, 0), balance.AvailableWithBorrow)
-		carryStatus.Holding = balance.Amount / setting.GridAmount
+		carryStatus.Holding = balance.Amount
 		// 暂不支持借币
 		carryStatus.LimitSell, carryStatus.AvailableSell = limitSell, limitSell
 		carryStatus.RateInAll = math.Abs(carryStatus.Holding * price / sm.accountValueInU)
