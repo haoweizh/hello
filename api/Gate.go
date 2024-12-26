@@ -114,6 +114,7 @@ func appendSpotMarketsGate(key, secret string, marketInfos map[string]*model.Mar
 	}
 }
 
+// setLeverageGate 设置杠杆和risk limit
 func setLeverageGate(account *model.Account) (success bool) {
 	symbols := GetMarketSymbols(model.Gate)
 	for symbol := range symbols {
@@ -123,16 +124,38 @@ func setLeverageGate(account *model.Account) (success bool) {
 	return true
 }
 
+// setSymbolLeverageGate 设置杠杆率和risk limit
 func setSymbolLeverageGate(account *model.Account, symbol string) (success bool) {
 	_, _, _, dialectSymbol := model.GetFromStandard(model.Gate, symbol)
 	client, ctx := getClientGate(account.Key, account.Secret)
-	pos, _, err := client.FuturesApi.UpdatePositionLeverage(ctx, `usdt`, dialectSymbol, `0`,
+	pos, _, errLeverage := client.FuturesApi.UpdatePositionLeverage(ctx, `usdt`, dialectSymbol, `0`,
 		&gateApi.UpdatePositionLeverageOpts{CrossLeverageLimit: optional.NewString(strconv.Itoa(model.DefaultLeverage))})
-	if err == nil {
+	if errLeverage == nil {
 		util.Log(util.LogLevelInfo, fmt.Sprintf("set leverage success gate %s to %s %s", symbol, pos.CrossLeverageLimit, account.Key))
-		return true
 	}
-	return false
+	tiers, _, errTiers := client.FuturesApi.ListRiskLimitTiers(ctx, `usdt`, dialectSymbol)
+	if errTiers != nil {
+		return false
+	}
+	maxLimit := 0.0
+	for _, tier := range tiers {
+		leverage, parseErr := strconv.ParseFloat(tier.LeverageMax, 64)
+		if parseErr != nil {
+			continue
+		}
+		if leverage >= model.DefaultLeverage {
+			limit, _ := strconv.ParseFloat(tier.RiskLimit, 64)
+			maxLimit = math.Max(maxLimit, limit)
+		}
+	}
+	strMaxLimit := strconv.Itoa(int(maxLimit))
+	limit, _, errLimit := client.FuturesApi.UpdatePositionRiskLimit(ctx, `usdt`, dialectSymbol, strMaxLimit)
+	if errLimit != nil {
+		panicGateError(account.Key, `UpdatePositionRiskLimit`, errLimit)
+		return false
+	}
+	fmt.Println(limit)
+	return true
 }
 
 func setPosSideGate(key, secret string) {

@@ -19,34 +19,6 @@ var crossLen int
 var settingLoading bool
 var processLock sync.Mutex
 var processing = &sync.Map{}
-var crossLocks sync.Map
-
-func CheckSetCross(coin string, requestValue bool) (before bool) {
-
-	// 使用 sync.Map 的 LoadOrStore 方法来确保锁的创建是线程安全的
-	lock, loaded := crossLocks.LoadOrStore(coin, &sync.Mutex{})
-	if !loaded {
-		// 如果是新创建的锁，确保它是 *sync.Mutex 类型
-		lock = lock.(*sync.Mutex)
-	}
-
-	// 获取锁
-	lock.(*sync.Mutex).Lock()
-	defer lock.(*sync.Mutex).Unlock()
-
-	// 处理 processing 的加载和类型断言
-	beforeValue, loaded := processing.Load(coin)
-	if loaded {
-		before = beforeValue.(bool)
-	}
-
-	// 优化逻辑判断，确保只在必要时更新 processing
-	if requestValue != before {
-		processing.Store(coin, requestValue)
-	}
-
-	return before
-}
 
 func CheckSetProcessing(function, market, symbol string, requestValue bool) (before bool) {
 	processLock.Lock()

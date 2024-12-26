@@ -700,11 +700,13 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 	}
 	ts1 := time.Now().UnixMilli()
 	// 同一个coin cross之间互斥
-	if !api.CheckSetCross(setting.Coin, true) {
-		defer api.CheckSetCross(setting.Coin, false)
-	} else {
+	value, loaded := coinCrossing.LoadOrStore(setting.Coin, true)
+	if loaded && value.(bool) {
 		return
 	}
+	defer func() {
+		coinCrossing.Store(setting.Coin, false)
+	}()
 	tickLimit := 50
 	switch tick.Bids[0].Market {
 	case model.Gate, model.BitgetPerp, model.BitgetSpot:
