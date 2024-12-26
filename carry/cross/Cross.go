@@ -1089,7 +1089,7 @@ var PostOrderCross = func(order *model.Order) {
 	}
 	account := model.AppConfig.GetAccountFromKeyIndex(order.Market, ``, order.AccountIndex)
 	go handleCross(account, order)
-	if !order.HaveId() {
+	if !order.HaveId() || order.ErrCode != `` || order.Status == model.CarryStatusFail {
 		setting.Valid = false
 		setting.MarketRelated = fmt.Sprintf(`下单失败 %s %s %s`, order.OrderId, order.ErrCode, time.Now().Format("2006-01-02 15:04:05"))
 		//addCarryResult(account.Key, order.Market, ``, false)

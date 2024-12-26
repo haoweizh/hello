@@ -25,7 +25,7 @@ const lastOrderLength = 8
 const compTooBig = 70000.0
 const InsufficientCodeBinance = `-2010`
 const SmallInU = 10
-const BitgetPosLimit = 100 // 实测不能超过140
+const BitgetPosLimit = 130 // 实测不能超过140
 const crossSlide = 0.0005
 const compSlide = 0.003
 
