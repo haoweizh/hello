@@ -700,8 +700,8 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 	}
 	ts1 := time.Now().UnixMilli()
 	// 同一个coin cross之间互斥
-	value, loaded := coinCrossing.LoadOrStore(setting.Coin, true)
-	if loaded && value.(bool) {
+	replaced := coinCrossing.CompareAndSwap(setting.Coin, false, true)
+	if !replaced {
 		return
 	}
 	defer func() {
