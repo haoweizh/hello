@@ -47,6 +47,32 @@
         </tr>
     {{end}}
 </table>
+<h4>近期失败下单</h4>
+<table border="1" cellspacing="0">
+    <th>id</th>
+    <th>市场</th>
+    <th>symbol</th>
+    <th>时间</th>
+    <th>方向</th>
+    <th>价格</th>
+    <th>数量</th>
+    <th>类型</th>
+    <th>err code</th>
+    {{range $i, $value := $.orders}}
+        <tr>
+            <td>{{index $value 0}}</td>
+            <td>{{index $value 1}}</td>
+            <td>{{index $value 2}}</td>
+            <td>{{index $value 3}}</td>
+            <td>{{index $value 4}}</td>
+            <td>{{index $value 5}}</td>
+            <td>{{index $value 6}}</td>
+            <td>{{index $value 7}}</td>
+            <td>{{index $value 8}}</td>
+            <td>{{index $value 9}}</td>
+        </tr>
+    {{end}}
+</table>
 <h4>持仓表</h4>
 <table border="1" cellspacing="0">
     <th>market</th>

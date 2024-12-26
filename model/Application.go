@@ -162,12 +162,12 @@ var orderStatusMap = map[string]map[string]string{ // market - market status - u
 		`triggered`: CarryStatusSuccess},
 }
 
-func GetMonitorInfo(index, table string) (valueArray [][]string) {
+func GetMonitorInfo(index, table string) (orderArray [][]string) {
 	v, ok := util.LoadSyncMap(monitorInfo, index, table)
 	if !ok || v == nil {
 		return
 	}
-	valueArray = make([][]string, 0)
+	valueArray := make([][]string, 0)
 	v.(*sync.Map).Range(func(key, value any) bool {
 		if value == nil {
 			return true
@@ -177,19 +177,23 @@ func GetMonitorInfo(index, table string) (valueArray [][]string) {
 	})
 	for i := len(valueArray) - 1; i > 0; i-- {
 		for j := 0; j < i; j++ {
-			if valueArray[j][0] > valueArray[i][0] {
-				valueArray[j], valueArray[i] = valueArray[i], valueArray[j]
+			if valueArray[j][0] >= valueArray[j+1][0] {
+				valueArray[j], valueArray[j+1] = valueArray[j+1], valueArray[j]
 			}
 		}
 	}
-	for i := len(valueArray) - 1; i > 0; i-- {
-		for j := 0; j < i; j++ {
-			if valueArray[j][17] == `false` {
-				valueArray[j], valueArray[i] = valueArray[i], valueArray[j]
-			}
+	orderArray = make([][]string, 0)
+	for i := 0; i < len(valueArray); i++ {
+		if valueArray[i][17] == `true` {
+			orderArray = append(orderArray, valueArray[i])
 		}
 	}
-	return valueArray
+	for i := 0; i < len(valueArray); i++ {
+		if valueArray[i][17] == `false` {
+			orderArray = append(orderArray, valueArray[i])
+		}
+	}
+	return orderArray
 }
 
 func SetMonitorInfo(index, table, item string, value []string) {

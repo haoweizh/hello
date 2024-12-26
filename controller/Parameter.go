@@ -549,6 +549,20 @@ func holdPage(c *gin.Context) {
 			return
 		}
 	}
+	orders := make([][]string, 0)
+	carryRows, _ = model.AppDB.Model(model.Order{}).Select(`order_id,market,symbol,order_time,order_side,price,amount,refresh_type,err_code`).
+		Where(`account_index=? and err_code!=?`, indexStr, ``).Order(`date(order_time) desc`).Limit(100).Rows()
+	if carryRows != nil {
+		for carryRows.Next() {
+			var orderId, market, symbol, orderSide, refreshType, errCode string
+			var orderTime time.Time
+			var price, amount float64
+			_ = carryRows.Scan(&orderId, &market, &symbol, &orderTime, &orderSide, &price, &amount, &refreshType, &errCode)
+			orders = append(orders, []string{orderId, market, symbol, fmt.Sprintf(`%d-%d %d:%d:%d`,
+				orderTime.Month(), orderTime.Day(), orderTime.Hour(), orderTime.Minute(), orderTime.Second()), orderSide,
+				fmt.Sprintf(`%f`, price), fmt.Sprintf(`%e`, amount), refreshType, errCode})
+		}
+	}
 	carryRows, _ = model.AppDB.Model(model.Order{}).Select(`market,order_side,sum(price*abs(amount)),date(order_time),refresh_type,count(*)`).
 		Where(`refresh_type!=? and account_index=?`, model.FunctionSimulation, indexStr).Group(
 		`market,order_side,date(order_time),refresh_type`).Order(`date(order_time) desc, market`).Rows()
@@ -579,7 +593,7 @@ func holdPage(c *gin.Context) {
 		}
 	}
 	c.HTML(http.StatusOK, `hold.gohtml`, gin.H{
-		`marketValue`: marketValues, `trade`: tradeInfo, `holdings`: cross.GetHoldings(queryAccounts)})
+		`marketValue`: marketValues, `trade`: tradeInfo, `orders`: orders, `holdings`: cross.GetHoldings(queryAccounts)})
 }
 
 func crossRefresh(c *gin.Context) {

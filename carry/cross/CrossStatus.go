@@ -11,7 +11,7 @@ import (
 )
 
 const FundingRateBase = 16.0
-const holdingLimitInU = 10000.0
+const holdingLimitInU = 100000.0
 const openValueLimit = 2000.0
 const compLimitInU = 3000.0
 
