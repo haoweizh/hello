@@ -302,7 +302,7 @@ func initTradeLine(account *model.Account, setting *model.Setting, status *Carry
 	} else {
 		util.LogLess(util.LogLevelError, fmt.Sprintf(`fail to get ticket %s %s`, setting.Market, setting.Symbol))
 	}
-	jumpOpen := 80.0
+	jumpOpen := 50.0
 	jumpClose := -20.0
 	jumpBuy := jumpOpen
 	jumpSell := jumpOpen
@@ -746,7 +746,7 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 		if !tickGet || setting.ID == settingRelate.ID || (!model.NonRTTicker[tick.Bids[0].Market] && model.NonRTTicker[tickRelate.Bids[0].Market]) || !settingRelate.Valid {
 			continue
 		}
-		tickLimit += 500
+		tickLimit += 2000
 		if int(ts2)-tickRelate.Ts > tickLimit {
 			util.LogLess(util.LogLevelError, fmt.Sprintf(`abandon tick limit relate %s %s %s limit %d %v`,
 				setting.Coin, tick.Bids[0].Market, tick.Bids[0].Symbol, int(ts2)-tickRelate.Ts, model.AppEnvironment.CrossEqualing))
