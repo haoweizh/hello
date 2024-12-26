@@ -76,11 +76,11 @@ func createSpotMarket(key, secret, market string) (sm *spotMarket) {
 				}
 			}
 		}
-		if collateral != nil {
-			util.Log(util.LogLevelInfo, fmt.Sprintf(`collateral for sm available u %s %f to %f maintain rate %f`,
-				market, sm.availableU, collateral.Available, collateral.Rate))
-			sm.availableU = math.Min(sm.availableU, collateral.Available)
-		}
+		//if collateral != nil {
+		//	util.Log(util.LogLevelInfo, fmt.Sprintf(`collateral for sm available u %s %f to %f maintain rate %f`,
+		//		market, sm.availableU, collateral.Available, collateral.Rate))
+		//	sm.availableU = math.Min(sm.availableU, collateral.Available)
+		//}
 	} else {
 		util.Log(util.LogLevelError, fmt.Sprintf(`fail to createSpotMarket %s %s`, market, key))
 		return nil
@@ -210,7 +210,7 @@ func createFromBalance(account *model.Account, setting *model.Setting, valueLimi
 		carryStatus.LimitSell, carryStatus.AvailableSell = limitSell, limitSell
 		carryStatus.RateInAll = math.Abs(carryStatus.Holding * price / sm.accountValueInU)
 	}
-	usdLowLine := math.Min(100000, 0.2*sm.accountValueInU)
+	usdLowLine := math.Min(100000, 0.1*sm.accountValueInU)
 	if sm.availableU < usdLowLine || carryStatus.RateInAll > 0.2 {
 		doRevert = true
 	}
