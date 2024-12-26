@@ -724,14 +724,14 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 		return
 	}
 	defer coinCrossing.Store(setting.Coin, false)
-	tickLimit := 50
+	tickLimit := 20
 	switch tick.Bids[0].Market {
 	case model.Gate, model.BitgetPerp, model.BitgetSpot:
-		tickLimit = 20
+		tickLimit = 15
 	case model.BinanceSpot, model.BinancePerp:
-		tickLimit = 10
+		tickLimit = 7
 	case model.Bybit, model.OKEX:
-		tickLimit = 60
+		tickLimit = 45
 	}
 	ts2 := time.Now().UnixMilli()
 	if int(ts2)-tick.Ts > tickLimit || ts2-ts1 > 3 {
@@ -744,7 +744,7 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 		if !tickGet || setting.ID == settingRelate.ID || (!model.NonRTTicker[tick.Bids[0].Market] && model.NonRTTicker[tickRelate.Bids[0].Market]) || !settingRelate.Valid {
 			continue
 		}
-		tickLimit += 10000
+		tickLimit += 1000
 		if int(ts2)-tickRelate.Ts > tickLimit {
 			util.LogLess(util.LogLevelError, fmt.Sprintf(`abandon tick limit %s %s %s delay %d limit %d %v`,
 				setting.Coin, tick.Bids[0].Market, tick.Bids[0].Symbol, int(ts2-ts1), int(ts2)-tickRelate.Ts, model.AppEnvironment.CrossEqualing))
