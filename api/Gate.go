@@ -115,50 +115,76 @@ func appendSpotMarketsGate(key, secret string, marketInfos map[string]*model.Mar
 }
 
 // setLeverageGate 设置杠杆和risk limit
-func setLeverageGate(account *model.Account) (success bool) {
+func setLeverageGate(account *model.Account, leverMax, leverMin int, limit float64) (success bool) {
 	symbols := GetMarketSymbols(model.Gate)
 	for symbol := range symbols {
-		setSymbolLeverageGate(account, symbol, model.DefaultLeverage)
+		setSymbolLeverageGate(account, symbol, leverMax, leverMin, limit)
 		time.Sleep(time.Millisecond * 200)
 	}
 	return true
 }
 
+type Tier struct {
+	LeverageMax float64
+	RiskLimit   float64
+}
+
 // setSymbolLeverageGate 设置杠杆率和risk limit
-func setSymbolLeverageGate(account *model.Account, symbol string, leverage int) (success bool) {
+func setSymbolLeverageGate(account *model.Account, symbol string, leverMax, leverMin int, limit float64) (success bool) {
 	_, _, _, dialectSymbol := model.GetFromStandard(model.Gate, symbol)
 	client, ctx := getClientGate(account.Key, account.Secret)
-	pos, _, errLeverage := client.FuturesApi.UpdatePositionLeverage(ctx, `usdt`, dialectSymbol, `0`,
-		&gateApi.UpdatePositionLeverageOpts{CrossLeverageLimit: optional.NewString(strconv.Itoa(model.DefaultLeverage))})
-	if errLeverage == nil {
-		util.Log(util.LogLevelInfo, fmt.Sprintf("set leverage success gate %s to %s %s", symbol, pos.CrossLeverageLimit, account.Key))
-	}
 	tiers, _, errTiers := client.FuturesApi.ListRiskLimitTiers(ctx, `usdt`, dialectSymbol)
 	if errTiers != nil {
 		return false
 	}
-	maxLimit := 0.0
+	tierArray := make([]*Tier, 0)
 	for _, tier := range tiers {
 		tierLeverage, parseErr := strconv.ParseFloat(tier.LeverageMax, 64)
 		if parseErr != nil {
 			continue
 		}
-		if tierLeverage >= model.DefaultLeverage {
-			limit, _ := strconv.ParseFloat(tier.RiskLimit, 64)
-			maxLimit = math.Max(maxLimit, limit)
+		tierLimit, _ := strconv.ParseFloat(tier.RiskLimit, 64)
+		tierArray = append(tierArray, &Tier{LeverageMax: tierLeverage, RiskLimit: tierLimit})
+	}
+	for i := 0; i < len(tierArray); i++ {
+		for j := len(tierArray) - 1; j > i; j-- {
+			if tierArray[j].LeverageMax > tierArray[j-1].LeverageMax {
+				tierArray[j], tierArray[j-1] = tierArray[j-1], tierArray[j]
+			}
 		}
 	}
-	if maxLimit < 100000 && leverage == 3 {
-		util.Log(util.LogLevelInfo, fmt.Sprintf(`gate set leverage 2 to %s limit %f`, symbol, maxLimit))
-		return setSymbolLeverageGate(account, symbol, 2)
+	leverSet := 0
+	for i := leverMax; i >= leverMin && leverSet == 0; i-- {
+		for j := 0; j < len(tierArray); j++ {
+			if tierArray[j].LeverageMax >= float64(i) && tierArray[j].RiskLimit >= limit {
+				leverSet = i
+				break
+			}
+		}
 	}
-	strMaxLimit := strconv.Itoa(int(maxLimit))
+	if leverSet == 0 {
+		for i := len(tierArray) - 1; i >= 0; i-- {
+			if tierArray[i].LeverageMax >= float64(leverMin) {
+				leverSet = int(tierArray[i].LeverageMax)
+				limit = tierArray[i].RiskLimit
+				break
+			}
+		}
+	}
+	pos, _, errLeverage := client.FuturesApi.UpdatePositionLeverage(ctx, `usdt`, dialectSymbol, `0`,
+		&gateApi.UpdatePositionLeverageOpts{CrossLeverageLimit: optional.NewString(strconv.Itoa(leverSet))})
+	if errLeverage == nil {
+		util.Log(util.LogLevelInfo, fmt.Sprintf("set leverage success gate %s to %s %s", symbol, pos.CrossLeverageLimit, account.Key))
+	}
+	strMaxLimit := strconv.FormatFloat(limit, 'f', 0, 64)
 	_, _, errLimit := client.FuturesApi.UpdatePositionRiskLimit(ctx, `usdt`, dialectSymbol, strMaxLimit)
 	if errLimit != nil {
 		panicGateError(account.Key, `UpdatePositionRiskLimit`, errLimit)
 		return false
 	}
-	model.AppEnvironment.RiskLimitsGate.Store(symbol, maxLimit)
+	util.Log(util.LogLevelInfo, fmt.Sprintf(`set gate lever and risk %s %s %d %f`,
+		account.Key, symbol, leverSet, limit))
+	util.StoreSyncMap(&model.AppEnvironment.RiskLimitsGate, limit, account.Key, symbol)
 	return true
 }
 

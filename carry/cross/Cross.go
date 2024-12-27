@@ -111,7 +111,7 @@ func createFromPosition(account *model.Account, setting *model.Setting, valueLim
 	if price > 0 {
 		limitAmount = math.Min(cm.accountValueInU/5, cm.collateralsAvailable) / price
 		if setting.Market == model.Gate {
-			riskLimit, loaded := model.AppEnvironment.RiskLimitsGate.Load(setting.Symbol)
+			riskLimit, loaded := util.LoadSyncMap(&model.AppEnvironment.RiskLimitsGate, account.Key, setting.Symbol)
 			if loaded {
 				limitAmount = math.Min(limitAmount, riskLimit.(float64))
 			}
@@ -836,15 +836,20 @@ func breakMarkPrice(account *model.Account, setting *model.Setting, price float6
 func checkTradeLine(statusBuy, statusSell *CarryStatus, score float64) (valid bool, limit float64) {
 	if statusBuy.Holding >= 0 && statusSell.Holding <= 0 {
 		return score > statusBuy.TradeLineBuy && score > statusSell.TradeLineSell, limit
+	} else if statusBuy.Holding < 0 && statusSell.Holding > 0 {
+		if score > statusBuy.TradeLineBuy {
+			return true, math.Min(limit, math.Abs(statusBuy.Holding))
+		}
+		if score > statusSell.TradeLineSell {
+			return true, math.Min(limit, statusSell.Holding)
+		}
+		return false, 0
 	} else {
 		marketDis := (statusBuy.TradeLineBuy + statusSell.TradeLineSell) / 2
-		if score > marketDis {
-			return true, limit
-		}
-		if statusBuy.account.CarryClose && statusBuy.Holding < 0 {
+		if statusBuy.Holding < 0 {
 			limit = math.Min(limit, math.Abs(statusBuy.Holding))
 		}
-		if statusSell.account.CarryClose && statusSell.Holding > 0 {
+		if statusSell.Holding > 0 {
 			limit = math.Min(limit, statusSell.Holding)
 		}
 		return score > marketDis, limit

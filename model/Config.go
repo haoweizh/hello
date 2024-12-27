@@ -12,26 +12,27 @@ type Config struct {
 	Delay                         float64
 	Debug, KucoinSpot, MetricTick bool
 	// SpecialChan 1 代表使用特殊通道
-	SpecialChan                                                                                                   string
-	KucoinRelatedKey, KucoinRelatedSecret, KucoinFutureKey, KucoinFutureSecret                                    string
-	KucoinCarryClose, KucoinCarryRate, Simulation, Equal, Log, GateKey, GateSecret, GateCarryClose, GateCarryRate string
-	HuobiKey, HuobiSecret, HuobiCarryClose, HuobiCarryRate                                                        string
-	OkexKey, OkexSecret, OkexCarryClose, OkexCarryRate                                                            string
-	FtxKey, FtxSecret, FtxCarryClose, FtxCarryRate, RedisAddr, RedisPassword                                      string
-	BybitKey, BybitSecret, BybitCarryClose, BybitCarryRate                                                        string
-	BinanceKey, BinanceSecret, BinanceCarryClose, BinanceCarryRate                                                string
-	CoinparkKey, CoinparkSecret, CoinparkCarryClose, CoinparkCarryRate                                            string
-	BitgetKey, BitgetSecret, BitgetCarryClose, BitgetCarryRate                                                    string
-	MexcKey, MexcSecret, MexcCarryClose, MexcCarryRate                                                            string
-	BitmexKey, BitmexSecret, BitmexCarryClose, BitmexCarryRate, FtxSubAccount, Phase                              string
-	OKPhase, Handle, Mail, FromMail, FromMailAuth, Port, WalletKey, DBConnection, Env, FutureAddress              string
+	SpecialChan                                                                                      string
+	KucoinRelatedKey, KucoinRelatedSecret, KucoinFutureKey, KucoinFutureSecret                       string
+	KucoinCarryClose, KucoinCarryRate, Simulation, Equal, Log                                        string
+	GateKey, GateSecret, GateCarryClose, GateCarryRate, GateLeverMax, GateLeverMin, GateRiskLimit    string
+	HuobiKey, HuobiSecret, HuobiCarryClose, HuobiCarryRate                                           string
+	OkexKey, OkexSecret, OkexCarryClose, OkexCarryRate                                               string
+	FtxKey, FtxSecret, FtxCarryClose, FtxCarryRate, RedisAddr, RedisPassword                         string
+	BybitKey, BybitSecret, BybitCarryClose, BybitCarryRate                                           string
+	BinanceKey, BinanceSecret, BinanceCarryClose, BinanceCarryRate                                   string
+	CoinparkKey, CoinparkSecret, CoinparkCarryClose, CoinparkCarryRate                               string
+	BitgetKey, BitgetSecret, BitgetCarryClose, BitgetCarryRate                                       string
+	MexcKey, MexcSecret, MexcCarryClose, MexcCarryRate                                               string
+	BitmexKey, BitmexSecret, BitmexCarryClose, BitmexCarryRate, FtxSubAccount, Phase                 string
+	OKPhase, Handle, Mail, FromMail, FromMailAuth, Port, WalletKey, DBConnection, Env, FutureAddress string
 }
 
 type Account struct {
-	Index                              int // 账户索引
+	Index, GateLeverMax, GateLeverMin  int // 账户索引
 	Market, Key, Secret, FtxSubAccount string
 	CarryClose, IsUnified              bool
-	CarryRate                          float64
+	CarryRate, GateRiskLimit           float64
 }
 
 var appAccounts []map[string]*Account // account index/map/account
@@ -62,7 +63,7 @@ func (config *Config) GetAccounts(market string) []*Account {
 		return value.([]*Account)
 	}
 	isUnified := false
-	var rateValues, closeValues, keys, secrets, ftxSubAccounts []string
+	var rateValues, closeValues, keys, secrets, ftxSubAccounts, gateLeverMax, gateLeverMin, gateRiskLimit []string
 	switch market {
 	case GXZQ:
 		keys = []string{``}
@@ -87,6 +88,14 @@ func (config *Config) GetAccounts(market string) []*Account {
 		secrets = strings.Split(config.GateSecret, `,`)
 		closeValues = strings.Split(config.GateCarryClose, `,`)
 		rateValues = strings.Split(config.GateCarryRate, `,`)
+		gateLeverMax = strings.Split(config.GateLeverMax, `,`)
+		gateLeverMin = strings.Split(config.GateLeverMin, `,`)
+		gateRiskLimit = strings.Split(config.GateRiskLimit, `,`)
+		if len(keys) != len(gateLeverMin) || len(gateLeverMin) != len(gateLeverMax) || len(gateLeverMax) != len(gateRiskLimit) {
+			fmt.Println(fmt.Sprintf(`wrong config format %s keys:%d lever min:%d lever max:%d limit:%d`,
+				market, len(keys), len(gateLeverMin), len(gateLeverMax), len(gateRiskLimit)))
+			os.Exit(1)
+		}
 	case Ftx:
 		isUnified = true
 		keys = strings.Split(config.FtxKey, `,`)
@@ -137,6 +146,11 @@ func (config *Config) GetAccounts(market string) []*Account {
 		account := &Account{Key: keys[i], Secret: secrets[i], Index: i, Market: market, IsUnified: isUnified}
 		if market == Ftx {
 			account.FtxSubAccount = ftxSubAccounts[i]
+		}
+		if market == Gate {
+			account.GateLeverMax, _ = strconv.Atoi(gateLeverMax[i])
+			account.GateLeverMin, _ = strconv.Atoi(gateLeverMin[i])
+			account.GateRiskLimit, _ = strconv.ParseFloat(gateRiskLimit[i], 64)
 		}
 		account.CarryClose, _ = strconv.ParseBool(closeValues[i])
 		account.CarryRate, _ = strconv.ParseFloat(rateValues[i], 64)

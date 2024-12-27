@@ -531,15 +531,16 @@ func Test_Order(t *testing.T) {
 	market := model.Gate
 	model.NewConfig()
 	//api.InitMarketInfos(market)
-	symbol := `ENJ_PERP`
+	symbol := `GMT_PERP`
 	account := model.GetAccounts(0)[market]
 	api.SetSymbolLeverage(account, market, symbol)
-	if time.Now().Year() > 2003 {
-		return
-	}
-	api.GetBalances(account.Key, account.Secret, market)
+	//if time.Now().Year() > 2003 {
+	//	return
+	//}
+	//api.GetBalances(account.Key, account.Secret, market)
 	api.InitMarketInfos(market)
-	api.PlaceOrder(account.Key, account.Secret, model.OrderSideBuy, model.OrderTypeMarket, market, symbol, model.ReduceOnly, `test`, 0.3864, 0.3864, 0.2, false, nil)
+	order1 := api.PlaceOrder(account.Key, account.Secret, model.OrderSideSell, model.OrderTypeLimit, market, symbol, ``, `test`, 7.3213375, 7.3213375, 2, false, nil)
+	fmt.Println(fmt.Sprintf(`%#v`, order1))
 	//api.GetPositions(account.Key, account.Secret, market)
 	//fmt.Println(order.OrderId)
 	//api.CancelOrder(account.Key, account.Secret, market, symbol, ``, order.OrderId)
@@ -595,6 +596,9 @@ func Test_WSOKPair(t *testing.T) {
 
 func Test_transferInner(t *testing.T) {
 	model.NewConfig()
+	market := model.Gate
+	accounts := model.AppConfig.GetAccounts(market)
+	fmt.Println(accounts)
 	suc, bals, total, _ := api.GetBalances(model.AppConfig.GateKey, model.AppConfig.GateSecret, model.Gate)
 	fmt.Println(fmt.Sprintf(`%#v total %f`, suc, total))
 	for _, bal := range bals {
@@ -816,6 +820,15 @@ func Test_GateSols(t *testing.T) {
 		}
 	}
 	fmt.Println(coins)
+}
+
+func Test_SetLeverage(t *testing.T) {
+	market := model.Gate
+	model.NewConfig()
+	//api.InitMarketInfos(market)
+	symbol := `GMT_PERP`
+	account := model.GetAccounts(0)[market]
+	api.SetSymbolLeverage(account, market, symbol)
 }
 
 func Test_C(t *testing.T) {
