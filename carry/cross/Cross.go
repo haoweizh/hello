@@ -846,10 +846,10 @@ func checkTradeLine(statusBuy, statusSell *CarryStatus, score float64) (valid bo
 		return false, 0
 	} else {
 		marketDis := (statusBuy.TradeLineBuy + statusSell.TradeLineSell) / 2
-		if statusBuy.Holding < 0 {
+		if statusBuy.account.CarryClose && statusBuy.Holding < 0 {
 			limit = math.Min(limit, math.Abs(statusBuy.Holding))
 		}
-		if statusSell.Holding > 0 {
+		if statusSell.account.CarryClose && statusSell.Holding > 0 {
 			limit = math.Min(limit, statusSell.Holding)
 		}
 		return score > marketDis, limit
