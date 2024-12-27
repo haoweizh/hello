@@ -27,7 +27,7 @@ const InsufficientCodeBinance = `-2010`
 const SmallInU = 10
 const BitgetPosLimit = 130 // 实测不能超过140
 const crossSlide = 0.0005
-const crossSpotBuySlide = 0.002
+const crossSpotBuySlide = 0.001
 const compSlide = 0.003
 
 // TradeLineExtra 由于comp比例过高或亏损过多，需要增加的额外开仓数额
