@@ -569,7 +569,7 @@ func GetFundingRate(key, secret, market, symbol string) (success, useRest bool, 
 		fundingRate = value.(*model.FundingRate)
 	}
 	now := time.Now().Unix()
-	if fundingRate != nil && now < fundingRate.ExpireTime && now-fundingRate.UpdateTime.Unix() < 900 {
+	if fundingRate != nil && now < fundingRate.ExpireTime && now-fundingRate.UpdateTime.Unix() < 300 {
 		return true, false, fundingRate
 	}
 	if fundingRate == nil {

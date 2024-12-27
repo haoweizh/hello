@@ -355,8 +355,7 @@ var spotBookWsHandler = func(market string, conn *model.WSConn, event []byte) {
 	}
 }
 
-// tickHandlerBybit
-var _ = func(market string, conn *model.WSConn, event []byte) {
+var tickHandlerBybit = func(market string, conn *model.WSConn, event []byte) {
 	tickResp := &dtos.BybitTickResp{}
 	jsonErr := json.Unmarshal(event, tickResp)
 	if jsonErr != nil {
@@ -371,11 +370,13 @@ var _ = func(market string, conn *model.WSConn, event []byte) {
 		rate, _ := strconv.ParseFloat(tickResp.Data.FundingRate, 64)
 		nextFundingTime, _ := strconv.ParseInt(tickResp.Data.NextFundingTime, 10, 64)
 		if nextFundingTime > time.Now().Unix() {
-			SetFundingRate(model.Bybit, symbol, &model.FundingRate{
+			fundingRate := &model.FundingRate{
 				Rate:       rate,
 				UpdateTime: time.UnixMilli(tickResp.Ts),
 				ExpireTime: nextFundingTime / 1000,
-			})
+			}
+			util.Log(util.LogLevelInfo, fmt.Sprintf(`set funding rate from bybit %s %#v`, symbol, fundingRate))
+			SetFundingRate(model.Bybit, symbol, fundingRate)
 		}
 	}
 }
@@ -434,14 +435,14 @@ func WsTickServeBybit(market string) (socketMap map[*model.WSConn]bool, msgChans
 			socketMap[conn] = b
 		}
 	}
-	//perpTickConns, perpTickChans, perpTickErr := model.WsPublicClient(market, bybitStreamUrl+`/v5/public/linear`,
-	//	futureSubTick, subscribeHandlerBybit, tickHandlerBybit, wsStepBybit)
-	//if perpTickErr == nil {
-	//	msgChans = append(msgChans, perpTickChans...)
-	//	for conn, b := range perpTickConns {
-	//		socketMap[conn] = b
-	//	}
-	//}
+	perpTickConns, perpTickChans, perpTickErr := model.WsPublicClient(market, bybitStreamUrl+`/v5/public/linear`,
+		futureSubTick, subscribeHandlerBybit, tickHandlerBybit, wsStepBybit)
+	if perpTickErr == nil {
+		msgChans = append(msgChans, perpTickChans...)
+		for conn, b := range perpTickConns {
+			socketMap[conn] = b
+		}
+	}
 	return
 }
 
