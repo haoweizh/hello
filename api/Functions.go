@@ -94,7 +94,7 @@ func RequireConnTickReset(environment *model.Environment, market string) bool {
 		//	util.Notice(fmt.Sprintf(`RequireConnTickReset delay too long %s %s %f`, market, symbol, delay))
 		//}
 	}
-	needReset = validSymbolNum*10 < 9*len(symbols) && len(symbols)-validSymbolNum > 50
+	needReset = validSymbolNum*7 < 6*len(symbols) && len(symbols)-validSymbolNum > 50
 	for funcName := range model.TickHandlers {
 		settings := GetSettings(funcName, market)
 		if settings == nil {
@@ -1092,7 +1092,7 @@ func SetSymbolLeverage(account *model.Account, market, symbol string) (success b
 	case model.BitgetPerp:
 		return setSymbolLeverageBitgetPerp(account, symbol)
 	case model.Gate:
-		return setSymbolLeverageGate(account, symbol, 3, 2, 100000)
+		return setSymbolLeverageGate(account, symbol, 3, 2, 10000)
 	}
 	return false
 }
