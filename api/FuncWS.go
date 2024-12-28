@@ -52,15 +52,6 @@ func GetWSSubscribes(market string, subTypes []string) []interface{} {
 func GetWSSubscribe(market, symbol, subType string) (subscribe interface{}) {
 	_, _, _, dialectSymbol := model.GetFromStandard(market, symbol)
 	switch market {
-	//case model.Mexc:
-	//	switch subType {
-	//	case deprecated.mexcContractDepthIncSubType:
-	//		return fmt.Sprintf(`{"method":"sub.depth","param":{"symbol":"%s","compress":true}}`, dialectSymbol)
-	//	case deprecated.mexcContractDepthFullSubType:
-	//		return fmt.Sprintf(`{"method":"sub.depth.full","param":{"symbol":"%s","limit":5}}`, dialectSymbol)
-	//	case deprecated.mexcContractTickerSubType:
-	//		return fmt.Sprintf(`{"method":"sub.ticker","param":{"symbol":"%s"}}`, dialectSymbol)
-	//	}
 	case model.OKEX:
 		return dialectSymbol
 	case model.BinancePerp:
@@ -123,9 +114,9 @@ func CreateWSTick(environment *model.Environment, market string) (
 	switch market {
 	case model.Gate: // Gate 代表spot；Gateperp 代表 futures
 		socketMap, channels, err = WsTickServeGateSpot(market)
-		socketMapPerp, channsPerp, _ := WsTickServeGatePerp(market)
+		socketMapPerp, chansPerp, _ := WsTickServeGatePerp(market)
 		environment.ConnTick.Store(market+model.MarketTypePerp, socketMapPerp)
-		environment.MsgChanTick.Store(market+model.MarketTypePerp, channsPerp)
+		environment.MsgChanTick.Store(market+model.MarketTypePerp, chansPerp)
 	case model.OKEX:
 		socketMap, channels, err = model.WsPublicClient(market, wsOKEX, GetWSSubscribes(market, []string{model.SubscribeDepth}),
 			subscribeHandlerOKEX, wsHandlerOKEX, wsStepOKEX)

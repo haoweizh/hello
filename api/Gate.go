@@ -174,13 +174,13 @@ func setSymbolLeverageGate(account *model.Account, symbol string, leverMax, leve
 	_, _, errLeverage := client.FuturesApi.UpdatePositionLeverage(ctx, `usdt`, dialectSymbol, `0`,
 		&gateApi.UpdatePositionLeverageOpts{CrossLeverageLimit: optional.NewString(strconv.FormatFloat(leverSet, 'f', 1, 64))})
 	if errLeverage != nil {
-		panicGateError(fmt.Sprintf(`%s %f`, symbol, leverSet), `UpdatePositionLeverage`, errLeverage)
+		panicGateError(fmt.Sprintf(`%s %f %s`, symbol, leverSet, account.Key), `UpdatePositionLeverage`, errLeverage)
 		return false
 	}
 	strMaxLimit := strconv.FormatFloat(limit, 'f', 0, 64)
 	_, _, errLimit := client.FuturesApi.UpdatePositionRiskLimit(ctx, `usdt`, dialectSymbol, strMaxLimit)
 	if errLimit != nil {
-		panicGateError(fmt.Sprintf(`%s %s`, symbol, strMaxLimit), `UpdatePositionRiskLimit`, errLimit)
+		panicGateError(fmt.Sprintf(`%s %s %s`, symbol, strMaxLimit, account.Key), `UpdatePositionRiskLimit`, errLimit)
 		return false
 	}
 	util.Log(util.LogLevelInfo, fmt.Sprintf(`set gate lever and risk %s %s %d %f`,
@@ -283,11 +283,23 @@ var tickerHandler = gateWs.NewCallBack(func(msg *gateWs.UpdateMsg) {
 		now := int(time.Now().UnixNano() / int64(time.Millisecond))
 		bidAsk = model.BidAsk{Ts: int(update.TimeInMilli), TsReceived: now, UpdateId: update.LastUpdateId,
 			Bids: []model.Tick{}, Asks: []model.Tick{}}
+		getLast, last := model.AppEnvironment.GetBidAsk(model.Gate, symbol)
 		for i := 0; i < len(update.Bid) && i < len(update.Ask); i++ {
-			bidPrice, _ := strconv.ParseFloat(update.Bid[0][0], 64)
-			bidAmount, _ := strconv.ParseFloat(update.Bid[0][1], 64)
-			askPrice, _ := strconv.ParseFloat(update.Ask[0][0], 64)
-			askAmount, _ := strconv.ParseFloat(update.Ask[0][1], 64)
+			var bidPrice, askPrice, bidAmount, askAmount float64
+			if update.Bid[0][0] == `` && getLast && len(update.Bid) == 1 && last != nil {
+				bidPrice = last.Bids[0].Price
+				bidAmount = last.Bids[0].Amount
+			} else {
+				bidPrice, _ = strconv.ParseFloat(update.Bid[0][0], 64)
+				bidAmount, _ = strconv.ParseFloat(update.Bid[0][1], 64)
+			}
+			if update.Ask[0][0] == `` && getLast && len(update.Ask) == 1 && last != nil {
+				askPrice = last.Asks[0].Price
+				askAmount = last.Asks[0].Amount
+			} else {
+				askPrice, _ = strconv.ParseFloat(update.Ask[0][0], 64)
+				askAmount, _ = strconv.ParseFloat(update.Ask[0][1], 64)
+			}
 			bidAsk.Bids = append(bidAsk.Bids, model.Tick{Price: bidPrice, Amount: bidAmount, Market: model.Gate, Symbol: symbol})
 			bidAsk.Asks = append(bidAsk.Asks, model.Tick{Price: askPrice, Amount: askAmount, Market: model.Gate, Symbol: symbol})
 		}
@@ -614,7 +626,8 @@ func WsTickServeGatePerp(market string) (socketMap map[*model.WSConn]bool, msgCh
 			futureSubs = append(futureSubs, symbol)
 		}
 	}
-	perpBookTickerSockets, perpBookTickerChannels, perpBookTickerErr := model.WsPublicClient(model.Gate, gateWs.FuturesUsdtUrl, futureSubs, subscribeHandler, wsHandlerGate, wsStepGate)
+	perpBookTickerSockets, perpBookTickerChannels, perpBookTickerErr := model.WsPublicClient(
+		model.Gate, gateWs.FuturesUsdtUrl, futureSubs, subscribeHandler, wsHandlerGate, wsStepGate)
 	if perpBookTickerErr == nil {
 		util.Log(util.LogLevelInfo, `finish connect public gate perp book ticker ws `)
 		msgChans = append(msgChans, perpBookTickerChannels...)
@@ -622,7 +635,8 @@ func WsTickServeGatePerp(market string) (socketMap map[*model.WSConn]bool, msgCh
 			socketMap[conn] = b
 		}
 	}
-	perpMarkPriceSockets, perpMarkPriceChannels, perpMarkPriceErr := model.WsPublicClient(model.Gate, gateWs.FuturesUsdtUrl, futureSubs, subscribeMarkPriceHandler, wsHandlerGate, wsStepGate)
+	perpMarkPriceSockets, perpMarkPriceChannels, perpMarkPriceErr := model.WsPublicClient(
+		model.Gate, gateWs.FuturesUsdtUrl, futureSubs, subscribeMarkPriceHandler, wsHandlerGate, wsStepGate)
 	if perpMarkPriceErr == nil {
 		util.Log(util.LogLevelInfo, `finish connect public gate perp mark price ws `)
 		msgChans = append(msgChans, perpMarkPriceChannels...)

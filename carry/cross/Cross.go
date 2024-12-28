@@ -154,12 +154,14 @@ func createFromPosition(account *model.Account, setting *model.Setting, valueLim
 	switch setting.Market {
 	case model.OKEX, model.Gate:
 		if cm.mmr < 1.5 {
-			util.Log(util.LogLevelError, fmt.Sprintf(`do revert true %s %s mmr %f`, setting.Market, setting.Symbol, cm.mmr))
+			util.Log(util.LogLevelError, fmt.Sprintf(`do revert true %s %s %s mmr %f`,
+				account.Key, setting.Market, setting.Symbol, cm.mmr))
 			doRevert = true
 		}
 	case model.Bybit, model.BitgetPerp, model.BinancePerp:
 		if cm.mmr > 0.66 {
-			util.Log(util.LogLevelError, fmt.Sprintf(`do revert true %s %s mmr %f`, setting.Market, setting.Symbol, cm.mmr))
+			util.Log(util.LogLevelError, fmt.Sprintf(`do revert true %s %s %s mmr %f`,
+				account.Key, setting.Market, setting.Symbol, cm.mmr))
 			doRevert = true
 		}
 	}
@@ -297,7 +299,7 @@ func initTradeLine(account *model.Account, setting *model.Setting, status *Carry
 	} else {
 		util.LogLess(util.LogLevelError, fmt.Sprintf(`fail to get ticket %s %s`, setting.Market, setting.Symbol))
 	}
-	jumpOpen := 50.0
+	jumpOpen := 30.0
 	jumpClose := -20.0
 	jumpBuy := jumpOpen
 	jumpSell := jumpOpen
@@ -1095,7 +1097,7 @@ var PostOrderCross = func(order *model.Order) {
 	go handleCross(account, order)
 	if !order.HaveId() || order.ErrCode != `` || order.Status == model.CarryStatusFail {
 		setting.Valid = false
-		setting.MarketRelated = fmt.Sprintf(`下单失败 %s %s %s`, order.OrderId, order.ErrCode, time.Now().Format("2006-01-02 15:04:05"))
+		setting.MarketRelated = fmt.Sprintf(`下单失败 %s %s %s`, order.OrderId, order.ErrCode, order.OrderTime.Format(time.DateTime))
 		//addCarryResult(account.Key, order.Market, ``, false)
 		//unknownFail := true
 		//if account != nil {

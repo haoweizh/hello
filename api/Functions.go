@@ -94,7 +94,7 @@ func RequireConnTickReset(environment *model.Environment, market string) bool {
 		//	util.Notice(fmt.Sprintf(`RequireConnTickReset delay too long %s %s %f`, market, symbol, delay))
 		//}
 	}
-	needReset = validSymbolNum*5 < 4*len(symbols) && len(symbols)-validSymbolNum > 100
+	needReset = validSymbolNum*10 < 9*len(symbols) && len(symbols)-validSymbolNum > 50
 	for funcName := range model.TickHandlers {
 		settings := GetSettings(funcName, market)
 		if settings == nil {
@@ -960,6 +960,17 @@ func InitCrossMarketInfos(markets []string) {
 		scoreOpen := 0.015
 		scoreClose := 0.005
 		if len(infos) >= 2 {
+			havePerp := false
+			for _, info := range infos {
+				_, marketType, _, _ := model.GetFromStandard(info.Market, info.Symbol)
+				if marketType == model.MarketTypePerp {
+					havePerp = true
+					break
+				}
+			}
+			if !havePerp {
+				continue
+			}
 			for _, info := range infos {
 				if settingsDbMap[fmt.Sprintf(`%s_%s_%s`, model.FunctionCross, info.Market, info.Symbol)] == nil {
 					setting := &model.Setting{
