@@ -770,20 +770,6 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 				return
 			}
 			if amount > 0 {
-				//placeBuyStr := fmt.Sprintf(`%s_%s_%s`, statusBuy.market, statusBuy.symbol, model.OrderSideBuy)
-				//placeSellStr := fmt.Sprintf(`%s_%s_%s`, statusSell.market, statusSell.symbol, model.OrderSideSell)
-				//placeBuyValue := fmt.Sprintf(`tick status %s %s %f_%f`, tickBuy.Asks[0].Market, tickBuy.Asks[0].Symbol, tickBuy.Asks[0].Price, tickBuy.Asks[0].Amount)
-				//placeSellValue := fmt.Sprintf(`tick status %s %s %f_%f`, tickSell.Bids[0].Market, tickSell.Bids[0].Symbol, tickSell.Bids[0].Price, tickSell.Bids[0].Amount)
-				//value, ok := placeTick.Load(placeBuyStr)
-				//if ok && value != nil && value.(string) == placeBuyValue {
-				//	util.Log(util.LogLevelInfo, fmt.Sprintf(`tick static %s %s`, placeBuyStr, placeBuyValue))
-				//	return
-				//}
-				//value, ok = placeTick.Load(placeSellStr)
-				//if ok && value != nil && value.(string) == placeSellValue {
-				//	util.Log(util.LogLevelInfo, fmt.Sprintf(`tick static %s %s`, placeSellStr, placeSellValue))
-				//	return
-				//}
 				nowTs := time.Now().UnixMilli()
 				placeCross(statusBuy, statusSell, priceBuy, priceSell, amount)
 				util.Log(util.LogLevelInfo, fmt.Sprintf(`time mark %s amt %e status %s %s tick %s %e = %e %e %d <- status %s %s tick %s %e = %e %e %d`,
@@ -791,9 +777,6 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 					statusBuy.symbol, statusBuy.market, tickBuy.Asks[0].Market, tickBuy.Asks[0].Price, priceBuy, tickBuy.Asks[0].Amount, nowTs-int64(tickBuy.Ts),
 					statusSell.symbol, statusSell.market, tickSell.Bids[0].Market, tickSell.Bids[0].Price, priceSell, tickSell.Bids[0].Amount, nowTs-int64(tickSell.Ts)))
 				time.Sleep(time.Millisecond * 100)
-				//util.Log(util.LogLevelInfo, fmt.Sprintf(`%s %s %s %s`, placeBuyStr, placeBuyValue, placeSellStr, placeSellValue))
-				//placeTick.Store(placeBuyStr, placeBuyValue)
-				//placeTick.Store(placeSellStr, placeSellValue)
 				return
 			}
 		}
