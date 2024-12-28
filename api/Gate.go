@@ -167,7 +167,6 @@ func setSymbolLeverageGate(account *model.Account, symbol string, leverMax, leve
 	}
 	for i := len(tierArray) - 1; i >= 0; i-- {
 		if tierArray[i].LeverageMax >= leverSet {
-			leverSet = tierArray[i].LeverageMax
 			limit = tierArray[i].RiskLimit
 			break
 		}
@@ -175,7 +174,7 @@ func setSymbolLeverageGate(account *model.Account, symbol string, leverMax, leve
 	_, _, errLeverage := client.FuturesApi.UpdatePositionLeverage(ctx, `usdt`, dialectSymbol, `0`,
 		&gateApi.UpdatePositionLeverageOpts{CrossLeverageLimit: optional.NewString(strconv.FormatFloat(leverSet, 'f', 1, 64))})
 	if errLeverage != nil {
-		panicGateError(fmt.Sprintf(`%s %d`, symbol, leverSet), `UpdatePositionLeverage`, errLeverage)
+		panicGateError(fmt.Sprintf(`%s %f`, symbol, leverSet), `UpdatePositionLeverage`, errLeverage)
 		return false
 	}
 	strMaxLimit := strconv.FormatFloat(limit, 'f', 0, 64)
