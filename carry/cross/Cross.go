@@ -350,7 +350,13 @@ func initTradeLine(account *model.Account, setting *model.Setting, status *Carry
 func ClearCross() {
 	for {
 		model.AppEnvironment.CrossEqualing = true
-		util.Log(util.LogLevelInfo, fmt.Sprintf("begin to clearing cross get set %s %v", model.FunctionCross, model.AppEnvironment.CrossEqualing))
+		doEqual := false
+		if time.Now().Unix()-model.AppEnvironment.CrossEqualTime.Unix() > 3600 {
+			doEqual = true
+			model.AppEnvironment.CrossEqualTime = time.Now()
+		}
+		util.Log(util.LogLevelInfo, fmt.Sprintf("begin to clearing cross get set %s %v do equal %v",
+			model.FunctionCross, model.AppEnvironment.CrossEqualing, doEqual))
 		compOrders.Clear()
 		carryStatusMap.Clear()
 		spotMarkets.Clear()
@@ -393,15 +399,15 @@ func ClearCross() {
 		msg := fmt.Sprintf(`comp compare cross %f %f`, compInU, crossInU)
 		util.Log(util.LogLevelInfo, msg)
 		if model.AppConfig.Handle == `1` {
-			equalAccounts()
+			equalAccounts(doEqual)
 		}
 		model.AppEnvironment.CrossEqualing = false
 		util.Log(util.LogLevelInfo, fmt.Sprintf("end to clearing cross get set %v", model.AppEnvironment.CrossEqualing))
-		time.Sleep(time.Minute * 60)
+		time.Sleep(time.Minute * 30)
 	}
 }
 
-func equalAccounts() {
+func equalAccounts(doEqual bool) {
 	util.Log(util.LogLevelInfo, `...... enter clearing cross all`)
 	waitEqual := make(map[int]bool)
 	equalChannel := make(chan int, 1)
@@ -415,7 +421,7 @@ func equalAccounts() {
 			accounts[market] = indexAccounts[market]
 		}
 		waitEqual[i] = true
-		go equalAccount(i, equalChannel, accounts)
+		go equalAccount(i, equalChannel, accounts, doEqual)
 	}
 	for {
 		index := <-equalChannel
@@ -433,7 +439,7 @@ func equalAccounts() {
 	util.Log(util.LogLevelInfo, `...... exit clearing cross all`)
 }
 
-func equalAccount(i int, equalChan chan int, accounts map[string]*model.Account) {
+func equalAccount(i int, equalChan chan int, accounts map[string]*model.Account, doEqual bool) {
 	util.Log(util.LogLevelInfo, fmt.Sprintf(`begin to clearing cross %d `, i))
 	if accounts[model.BitgetPerp] != nil {
 		liquidateBitgetPerp(accounts[model.BitgetPerp])
@@ -457,7 +463,7 @@ func equalAccount(i int, equalChan chan int, accounts map[string]*model.Account)
 				equalStatuses[j] = initStatus(account, setting)
 			}
 			coinCrossing.Store(coin.(string), false)
-			for index := 0; index <= 10; index++ {
+			for index := 0; index <= 10 && doEqual; index++ {
 				coinEqual, leftHolding, errMsg := equalCoin(i, coin.(string), equalStatuses)
 				if !coinEqual {
 					util.Log(util.LogLevelInfo, fmt.Sprintf(

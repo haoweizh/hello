@@ -66,6 +66,7 @@ type Environment struct {
 	Markets         []string
 	Settings        []Setting
 	CrossEqualing   bool
+	CrossEqualTime  time.Time
 }
 
 type MarkPriceInfo struct {

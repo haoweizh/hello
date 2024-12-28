@@ -171,16 +171,16 @@ func setSymbolLeverageGate(account *model.Account, symbol string, leverMax, leve
 			break
 		}
 	}
-	_, _, errLeverage := client.FuturesApi.UpdatePositionLeverage(ctx, `usdt`, dialectSymbol, `0`,
-		&gateApi.UpdatePositionLeverageOpts{CrossLeverageLimit: optional.NewString(strconv.FormatFloat(leverSet, 'f', 1, 64))})
-	if errLeverage != nil {
-		panicGateError(fmt.Sprintf(`%s %f %s`, symbol, leverSet, account.Key), `UpdatePositionLeverage`, errLeverage)
-		return false
-	}
 	strMaxLimit := strconv.FormatFloat(limit, 'f', 0, 64)
 	_, _, errLimit := client.FuturesApi.UpdatePositionRiskLimit(ctx, `usdt`, dialectSymbol, strMaxLimit)
 	if errLimit != nil {
 		panicGateError(fmt.Sprintf(`%s %s %s`, symbol, strMaxLimit, account.Key), `UpdatePositionRiskLimit`, errLimit)
+		return false
+	}
+	_, _, errLeverage := client.FuturesApi.UpdatePositionLeverage(ctx, `usdt`, dialectSymbol, `0`,
+		&gateApi.UpdatePositionLeverageOpts{CrossLeverageLimit: optional.NewString(strconv.FormatFloat(leverSet, 'f', 1, 64))})
+	if errLeverage != nil {
+		panicGateError(fmt.Sprintf(`%s %f %s`, symbol, leverSet, account.Key), `UpdatePositionLeverage`, errLeverage)
 		return false
 	}
 	util.Log(util.LogLevelInfo, fmt.Sprintf(`set gate lever and risk %s %s %f %f`,
