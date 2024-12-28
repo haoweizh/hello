@@ -691,6 +691,13 @@ func placeEqual(status *CarryStatus, price, amount float64, orderSide string) (d
 	return dealAmount
 }
 
+func inFundingTime() (in bool) {
+	if time.Now().Hour()%4 == 0 && time.Now().Minute() <= 5 {
+		return true
+	}
+	return false
+}
+
 // ProcessCross setting.Chance<0时该币种只关仓
 // setting.OpenShortMargin OpenShortMargin不等于0时作为开舱标准价格，否则使用通用价格
 // setting.CloseShortMargin CloseShortMargin作为开关舱标准价格
@@ -708,11 +715,11 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 			settings = value.([]*model.Setting)
 		}
 	}
+	ts1 := time.Now().UnixMilli()
 	if tick == nil || tick.Asks == nil || tick.Bids == nil || setting == nil || setting.Valid == false || model.AppEnvironment.CrossEqualing ||
-		(model.AppConfig.Env != `test` && model.AppConfig.Handle != `1`) || settings == nil || len(settings) == 0 {
+		(model.AppConfig.Env != `test` && model.AppConfig.Handle != `1`) || settings == nil || len(settings) == 0 || inFundingTime() {
 		return
 	}
-	ts1 := time.Now().UnixMilli()
 	// 同一个coin cross之间互斥
 	replaced := coinCrossing.CompareAndSwap(setting.Coin, false, true)
 	if !replaced {
