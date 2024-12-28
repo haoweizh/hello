@@ -29,10 +29,10 @@ type Config struct {
 }
 
 type Account struct {
-	Index, GateLeverMax, GateLeverMin  int // 账户索引
-	Market, Key, Secret, FtxSubAccount string
-	CarryClose, IsUnified              bool
-	CarryRate, GateRiskLimit           float64
+	Index                                                int // 账户索引
+	Market, Key, Secret, FtxSubAccount                   string
+	CarryClose, IsUnified                                bool
+	CarryRate, GateLeverMax, GateLeverMin, GateRiskLimit float64
 }
 
 var appAccounts []map[string]*Account // account index/map/account
@@ -148,8 +148,8 @@ func (config *Config) GetAccounts(market string) []*Account {
 			account.FtxSubAccount = ftxSubAccounts[i]
 		}
 		if market == Gate {
-			account.GateLeverMax, _ = strconv.Atoi(gateLeverMax[i])
-			account.GateLeverMin, _ = strconv.Atoi(gateLeverMin[i])
+			account.GateLeverMax, _ = strconv.ParseFloat(gateLeverMax[i], 64)
+			account.GateLeverMin, _ = strconv.ParseFloat(gateLeverMin[i], 64)
 			account.GateRiskLimit, _ = strconv.ParseFloat(gateRiskLimit[i], 64)
 		}
 		account.CarryClose, _ = strconv.ParseBool(closeValues[i])

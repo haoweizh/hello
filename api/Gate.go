@@ -115,7 +115,7 @@ func appendSpotMarketsGate(key, secret string, marketInfos map[string]*model.Mar
 }
 
 // setLeverageGate 设置杠杆和risk limit
-func setLeverageGate(account *model.Account, leverMax, leverMin int, limit float64) (success bool) {
+func setLeverageGate(account *model.Account, leverMax, leverMin float64, limit float64) (success bool) {
 	symbols := GetMarketSymbols(model.Gate)
 	for symbol := range symbols {
 		setSymbolLeverageGate(account, symbol, leverMax, leverMin, limit)
@@ -130,7 +130,7 @@ type Tier struct {
 }
 
 // setSymbolLeverageGate 设置杠杆率和risk limit
-func setSymbolLeverageGate(account *model.Account, symbol string, leverMax, leverMin int, limit float64) (success bool) {
+func setSymbolLeverageGate(account *model.Account, symbol string, leverMax, leverMin float64, limit float64) (success bool) {
 	_, _, _, dialectSymbol := model.GetFromStandard(model.Gate, symbol)
 	client, ctx := getClientGate(account.Key, account.Secret)
 	tiers, _, errTiers := client.FuturesApi.ListRiskLimitTiers(ctx, `usdt`, dialectSymbol)
@@ -153,10 +153,10 @@ func setSymbolLeverageGate(account *model.Account, symbol string, leverMax, leve
 			}
 		}
 	}
-	leverSet := 0
+	leverSet := 0.0
 	for i := leverMax; i >= leverMin && leverSet == 0; i-- {
 		for j := 0; j < len(tierArray); j++ {
-			if tierArray[j].LeverageMax >= float64(i) && tierArray[j].RiskLimit >= limit {
+			if tierArray[j].LeverageMax >= i && tierArray[j].RiskLimit >= limit {
 				leverSet = i
 				break
 			}
@@ -166,14 +166,14 @@ func setSymbolLeverageGate(account *model.Account, symbol string, leverMax, leve
 		leverSet = leverMin
 	}
 	for i := len(tierArray) - 1; i >= 0; i-- {
-		if tierArray[i].LeverageMax >= float64(leverSet) {
-			leverSet = int(tierArray[i].LeverageMax)
+		if tierArray[i].LeverageMax >= leverSet {
+			leverSet = tierArray[i].LeverageMax
 			limit = tierArray[i].RiskLimit
 			break
 		}
 	}
 	_, _, errLeverage := client.FuturesApi.UpdatePositionLeverage(ctx, `usdt`, dialectSymbol, `0`,
-		&gateApi.UpdatePositionLeverageOpts{CrossLeverageLimit: optional.NewString(strconv.Itoa(leverSet))})
+		&gateApi.UpdatePositionLeverageOpts{CrossLeverageLimit: optional.NewString(strconv.FormatFloat(leverSet, 'f', 1, 64))})
 	if errLeverage != nil {
 		panicGateError(fmt.Sprintf(`%s %d`, symbol, leverSet), `UpdatePositionLeverage`, errLeverage)
 		return false

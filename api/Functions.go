@@ -1081,7 +1081,7 @@ func SetSymbolLeverage(account *model.Account, market, symbol string) (success b
 	case model.BitgetPerp:
 		return setSymbolLeverageBitgetPerp(account, symbol)
 	case model.Gate:
-		return setSymbolLeverageGate(account, symbol, 4, 2, 100000)
+		return setSymbolLeverageGate(account, symbol, 3, 2, 100000)
 	}
 	return false
 }
