@@ -1103,6 +1103,8 @@ var PostOrderCross = func(order *model.Order) {
 		if status != nil {
 			status.(*CarryStatus).TradeLineSell = 1
 			status.(*CarryStatus).TradeLineBuy = 1
+			status.(*CarryStatus).LimitSell = 0
+			status.(*CarryStatus).LimitBuy = 0
 			util.Log(util.LogLevelError, fmt.Sprintf(`set trade line 1 fail order %s %s %s %s`,
 				account.Key, order.OrderId, order.ErrCode, order.OrderTime.Format(time.DateTime)))
 		}
