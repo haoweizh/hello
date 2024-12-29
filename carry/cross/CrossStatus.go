@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-const FundingRateBase = 12.0
+// const FundingRateBase = 12.0
 const holdingLimitInU = 100000.0
 const openValueLimit = 2000.0
 const compLimitInU = 3000.0
@@ -93,8 +93,7 @@ func handledFRate(account *model.Account, market, symbol string, interval int) (
 		util.Log(util.LogLevelError, fmt.Sprintf(`funding rate expired %s %s %d %d`, market, symbol, fundingRate.ExpireTime, interval))
 		leftHours = 2
 	}
-	leftRate := (1 - leftHours/hours) * (1 - leftHours/hours)
-	handledFr = fundingRate.Rate * leftRate * FundingRateBase / hours
+	handledFr = fundingRate.Rate * (1 - leftHours/hours) * (1 - leftHours/hours)
 	if handledFr > 0.1 || handledFr < -0.1 {
 		got = false
 		util.Log(util.LogLevelError, fmt.Sprintf(`fatal error funding rate break %s %s %f %#v %d`,
