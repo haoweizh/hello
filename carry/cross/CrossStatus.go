@@ -82,6 +82,28 @@ type CarryStatus struct {
 	RateInAll                     float64 // 现货：该币种占总权益的比例；永续：以开仓价算该币种持仓占保证金百分比
 }
 
+func handledFRate(account *model.Account, market, symbol string, interval int) (got, delayed bool, fundingRate *model.FundingRate, handledFr float64) {
+	got, delayed, fundingRate = api.GetFundingRate(account.Key, account.Secret, market, symbol)
+	if !got {
+		return
+	}
+	hours := float64(interval) / 3600000
+	leftHours := float64(fundingRate.ExpireTime-time.Now().Unix()) / 3600
+	if fundingRate.ExpireTime < time.Now().Unix() {
+		util.Log(util.LogLevelError, fmt.Sprintf(`funding rate expired %s %s %d %d`, market, symbol, fundingRate.ExpireTime, interval))
+		leftHours = 2
+	}
+	leftRate := (1 - leftHours/hours) * (1 - leftHours/hours)
+	handledFr = fundingRate.Rate * leftRate * FundingRateBase / hours
+	if handledFr > 0.1 || handledFr < -0.1 {
+		got = false
+		util.Log(util.LogLevelError, fmt.Sprintf(`fatal error funding rate break %s %s %f %#v %d`,
+			market, symbol, handledFr, fundingRate, interval))
+		return
+	}
+	return
+}
+
 // getTradeLineExtra
 func _(coin string, closeLine float64) (tradeLineExtra *TradeLineExtra) {
 	now := time.Now()

@@ -503,18 +503,15 @@ func getHolding(statuses []*CarryStatus) (bids, asks model.Ticks, bidStatus, ask
 		holdStr += fmt.Sprintf(`[%s %s %f]`, status.market, status.symbol, status.Holding)
 		marketInfo := model.GetMarketInfo(status.market, status.symbol)
 		getTick, tick := model.AppEnvironment.GetBidAsk(status.market, status.symbol)
-		getFunding, _, fundingRate := api.GetFundingRate(status.account.Key, status.account.Secret, status.market, status.symbol)
-		if !getTick || !getFunding || fundingRate == nil || marketInfo == nil {
+		if !getTick || marketInfo == nil {
 			continue
 		}
-		deltaRate := fundingRate.Rate * FundingRateBase * 3600000 / float64(marketInfo.FundingRateInterval)
-		if deltaRate > 0.1 || deltaRate < -0.1 {
-			deltaRate = 0
-			util.Log(util.LogLevelError, fmt.Sprintf(`fatal error funding rate break %s %s %f %#v %d`,
-				status.market, status.symbol, deltaRate, fundingRate, marketInfo.FundingRateInterval))
+		getFunding, _, _, handledRate := handledFRate(status.account, status.market, status.symbol, marketInfo.FundingRateInterval)
+		if !getFunding {
+			continue
 		}
-		priceBid := tick.Bids[0].Price * (1 + deltaRate)
-		priceAsk := tick.Asks[0].Price * (1 + deltaRate)
+		priceBid := tick.Bids[0].Price * (1 + handledRate)
+		priceAsk := tick.Asks[0].Price * (1 + handledRate)
 		bids = append(bids, model.Tick{Ts: int64(tick.Ts), Market: tick.Bids[0].Market, Symbol: tick.Bids[0].Symbol,
 			Amount: tick.Bids[0].Amount, Price: priceBid})
 		asks = append(asks, model.Tick{Ts: int64(tick.Ts), Market: tick.Asks[0].Market, Symbol: tick.Asks[0].Symbol,
@@ -526,7 +523,7 @@ func getHolding(statuses []*CarryStatus) (bids, asks model.Ticks, bidStatus, ask
 		}
 		if !status.setting.Valid {
 			util.Log(util.LogLevelError, fmt.Sprintf(`setting still invalid %s %s %s funding %f interval %d %#v`,
-				status.market, status.symbol, status.setting.Coin, fundingRate.Rate, marketInfo.FundingRateInterval, status.setting))
+				status.market, status.symbol, status.setting.Coin, handledRate, marketInfo.FundingRateInterval, status.setting))
 			status.setting.Valid = true
 		}
 	}

@@ -2,7 +2,6 @@ package cross
 
 import (
 	"fmt"
-	"hello/api"
 	"hello/model"
 	"hello/util"
 	"math"
@@ -84,23 +83,18 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarrySta
 	var bidAmount, askAmount float64
 	marketInfo := model.GetMarketInfo(carryStatus.market, carryStatus.symbol)
 	marketInfoRelate := model.GetMarketInfo(carryStatusRelate.market, carryStatusRelate.symbol)
-	_, useRest, fundingRate := api.GetFundingRate(carryStatus.account.Key, carryStatus.account.Secret, carryStatus.market, carryStatus.symbol)
-	_, useRestRelate, fundingRateRelate := api.GetFundingRate(carryStatusRelate.account.Key, carryStatusRelate.account.Secret, carryStatusRelate.market, carryStatusRelate.symbol)
-	if marketInfo == nil || marketInfoRelate == nil || fundingRate == nil || fundingRateRelate == nil || useRest || useRestRelate {
+	if marketInfo == nil || marketInfoRelate == nil {
+		return false, nil, nil, 0, 0, 0, nil, nil
+	}
+	gotFr, useRest, fundingRate, handledRate := handledFRate(carryStatus.account, carryStatus.market, carryStatus.symbol, marketInfo.FundingRateInterval)
+	gotFrRelate, useRestRelate, fundingRateRelate, handledRateRelate := handledFRate(carryStatusRelate.account, carryStatusRelate.market, carryStatusRelate.symbol, marketInfoRelate.FundingRateInterval)
+	if !gotFr || !gotFrRelate || useRest || useRestRelate {
 		return useRest || useRestRelate, nil, nil, 0, 0, 0, nil, nil
 	}
-	deltaRate := fundingRate.Rate * FundingRateBase * 3600000 / float64(marketInfo.FundingRateInterval)
-	deltaRateRelate := fundingRateRelate.Rate * FundingRateBase * 3600000 / float64(marketInfoRelate.FundingRateInterval)
-	if deltaRate > 0.1 || deltaRate < -0.1 || deltaRateRelate > 0.1 || deltaRateRelate < -0.1 {
-		deltaRate = 0
-		deltaRateRelate = 0
-		util.Log(util.LogLevelError, fmt.Sprintf(`fatal error funding rate break both %s %s %s %s %#v %#v %d %d`,
-			carryStatus.market, carryStatus.symbol, carryStatusRelate.market, carryStatusRelate.symbol, fundingRate, fundingRateRelate, marketInfo.FundingRateInterval, marketInfoRelate.FundingRateInterval))
-	}
-	priceAskRelate := tickRelate.Asks[0].Price * (1 + deltaRateRelate)
-	priceBidRelate := tickRelate.Bids[0].Price * (1 + deltaRateRelate)
-	priceAsk := tick.Asks[0].Price * (1 + deltaRate)
-	priceBid := tick.Bids[0].Price * (1 + deltaRate)
+	priceAskRelate := tickRelate.Asks[0].Price * (1 + handledRateRelate)
+	priceBidRelate := tickRelate.Bids[0].Price * (1 + handledRateRelate)
+	priceAsk := tick.Asks[0].Price * (1 + handledRate)
+	priceBid := tick.Bids[0].Price * (1 + handledRate)
 	priceX := carryStatus.setting.PriceX
 	priceXRelate := carryStatusRelate.setting.PriceX
 	score := (priceBid/priceX - priceAskRelate/priceXRelate) / math.Max(priceBid/priceX, priceAskRelate/priceXRelate)

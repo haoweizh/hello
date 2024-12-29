@@ -716,10 +716,14 @@ func Test_map(t *testing.T) {
 
 func Test_wallet(t *testing.T) {
 	model.NewConfig()
-	market := model.Bybit
-	symbol := `MOCA_USDT`
-	//account := model.GetAccounts(0)[market]
-	//api.GetFundingRate(account.Key, account.Secret, market, symbol)
+	market := model.BitgetPerp
+	symbol := `BTC_PERP`
+	account := model.GetAccounts(0)[market]
+	_, _, rate := api.GetFundingRate(account.Key, account.Secret, market, symbol)
+	if rate != nil {
+		fmt.Println(rate.ExpireTime)
+		return
+	}
 	var key, secret string
 	switch market {
 	case model.Ftx:

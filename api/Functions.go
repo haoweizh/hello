@@ -578,8 +578,16 @@ func GetFundingRate(key, secret, market, symbol string) (success, useRest bool, 
 		util.Log(util.LogLevelInfo, fmt.Sprintf(`get funding rate fail from ws %s %s %d %#v`, market, symbol, now-fundingRate.UpdateTime.Unix(), fundingRate))
 	}
 	switch market {
-	case model.BitgetPerp:
-		fundingRate = getFundingRateBitgetPerp(symbol)
+	case model.BitgetPerp: // bitgetPerp rest接口无发获取expire time，要么直接返回，要么使用原有的
+		if fundingRate != nil && now-fundingRate.UpdateTime.Unix() < 300 {
+			return true, false, fundingRate
+		} else {
+			newFRate := getFundingRateBitgetPerp(symbol)
+			if fundingRate != nil {
+				newFRate.ExpireTime = fundingRate.ExpireTime
+			}
+			fundingRate = newFRate
+		}
 	case model.Bybit:
 		fundingRate = getFundingRateBybit(symbol)
 	case model.OKEX:
@@ -1098,16 +1106,18 @@ func SetSymbolLeverage(account *model.Account, market, symbol string) (success b
 }
 
 func SetFundingRate(market, symbol string, fundingRate *model.FundingRate) {
-	//if fundingRate.ExpireTime == 0 {
-	//account := model.GetAccounts(0)[market]
-	//getRate, rate := GetFundingRate(account.Key, account.Secret, market, symbol)
-	//if getRate && rate != nil && rate.ExpireTime > 0 && rate.ExpireTime > time.Now().Unix() {
-	//	fundingRate.ExpireTime = rate.ExpireTime
-	//}
-	//}
-	if fundingRate != nil && fundingRate.ExpireTime > time.Now().Unix() {
-		util.StoreSyncMap(model.FundingRates, fundingRate, market, symbol)
+	if fundingRate == nil {
+		return
 	}
+	if fundingRate.ExpireTime == 0 {
+		if market == model.BitgetPerp || market == model.Gate {
+			value, _ := util.LoadSyncMap(model.FundingRates, market, symbol)
+			if value != nil {
+				fundingRate.ExpireTime = value.(*model.FundingRate).ExpireTime
+			}
+		}
+	}
+	util.StoreSyncMap(model.FundingRates, fundingRate, market, symbol)
 }
 
 //func InitCoinBalance(key, secret, function, market string) {

@@ -274,11 +274,11 @@ func getFundingRateBitgetPerp(symbol string) (fundingRate *model.FundingRate) {
 		return
 	}
 	if len(bitgetFundingResp.Data) == 0 {
-		return &model.FundingRate{Rate: 0, UpdateTime: util.GetNow(), ExpireTime: util.GetNow().Unix() + 3600} //没有过期时间
+		return &model.FundingRate{Rate: 0, UpdateTime: util.GetNow(), ExpireTime: 0} //没有过期时间
 	}
 	data := bitgetFundingResp.Data[0]
 	rate, _ := strconv.ParseFloat(data.FundingRate, 64)
-	return &model.FundingRate{Rate: rate, UpdateTime: util.GetNow(), ExpireTime: util.GetNow().Unix() + 3600} //没有过期时间
+	return &model.FundingRate{Rate: rate, UpdateTime: util.GetNow(), ExpireTime: 0} //没有过期时间
 }
 
 func placeOrderBitgetPerp(key, secret string, order *model.Order, orderSide, orderType, orderParam, symbol string, price, amount float64) {
