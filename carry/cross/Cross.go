@@ -1102,8 +1102,13 @@ var PostOrderCross = func(order *model.Order) {
 	account := model.AppConfig.GetAccountFromKeyIndex(order.Market, ``, order.AccountIndex)
 	go handleCross(account, order)
 	if !order.HaveId() || order.ErrCode != `` || order.Status == model.CarryStatusFail {
-		setting.Valid = false
-		setting.MarketRelated = fmt.Sprintf(`下单失败 %s %s %s`, order.OrderId, order.ErrCode, order.OrderTime.Format(time.DateTime))
+		status, _ := util.LoadSyncMap(carryStatusMap, setting.Coin, setting.Market, setting.Symbol, account.Key)
+		if status != nil {
+			status.(*CarryStatus).TradeLineSell = 1
+			status.(*CarryStatus).TradeLineBuy = 1
+			util.Log(util.LogLevelError, fmt.Sprintf(`set trade line 1 fail order %s %s %s %s`,
+				account.Key, order.OrderId, order.ErrCode, order.OrderTime.Format(time.DateTime)))
+		}
 		//addCarryResult(account.Key, order.Market, ``, false)
 		//unknownFail := true
 		//if account != nil {
