@@ -118,8 +118,11 @@ func appendSpotMarketsGate(key, secret string, marketInfos map[string]*model.Mar
 func setLeverageGate(account *model.Account, leverMax, leverMin float64, limit float64) (success bool) {
 	symbols := GetMarketSymbols(model.Gate)
 	for symbol := range symbols {
-		setSymbolLeverageGate(account, symbol, leverMax, leverMin, limit)
-		time.Sleep(time.Millisecond * 200)
+		_, marketType, _, _ := model.GetFromStandard(model.Gate, symbol)
+		if marketType == model.MarketTypePerp {
+			setSymbolLeverageGate(account, symbol, leverMax, leverMin, limit)
+			time.Sleep(time.Millisecond * 200)
+		}
 	}
 	return true
 }
@@ -165,11 +168,17 @@ func setSymbolLeverageGate(account *model.Account, symbol string, leverMax, leve
 	if leverSet == 0 {
 		leverSet = leverMin
 	}
+	insideTiers := false
 	for i := len(tierArray) - 1; i >= 0; i-- {
 		if tierArray[i].LeverageMax >= leverSet {
 			limit = tierArray[i].RiskLimit
+			insideTiers = true
 			break
 		}
+	}
+	if !insideTiers {
+		limit = tierArray[0].RiskLimit
+		leverSet = tierArray[0].LeverageMax
 	}
 	strMaxLimit := strconv.FormatFloat(limit, 'f', 0, 64)
 	_, _, errLimit := client.FuturesApi.UpdatePositionRiskLimit(ctx, `usdt`, dialectSymbol, strMaxLimit)

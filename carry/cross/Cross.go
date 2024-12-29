@@ -700,7 +700,7 @@ func placeEqual(status *CarryStatus, price, amount float64, orderSide string) (d
 }
 
 func inFundingTime() (in bool) {
-	if time.Now().Hour()%4 == 0 && time.Now().Minute() <= 5 {
+	if time.Now().Hour()%4 == 0 && time.Now().Minute() <= 2 {
 		return true
 	}
 	return false

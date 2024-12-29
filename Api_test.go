@@ -826,7 +826,7 @@ func Test_SetLeverage(t *testing.T) {
 	market := model.Gate
 	model.NewConfig()
 	//api.InitMarketInfos(market)
-	symbol := `POPCAT_PERP`
+	symbol := `AURORA_PERP`
 	account := model.GetAccounts(0)[market]
 	api.SetSymbolLeverage(account, market, symbol)
 }
