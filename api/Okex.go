@@ -39,11 +39,10 @@ func maintainConnsOKEX(accounts []*model.Account) {
 	//		reSubscribe(subscribes)
 	//	}
 	//}()
+	for _, account := range accounts {
+		model.AppEnvironment.PriConnecting.Store(model.OKEX+account.Key, false)
+	}
 	for {
-		if !CheckSetProcessing(model.FunctionConnMaintain, model.OKEX, ``, true) {
-			time.Sleep(2 * time.Second)
-			continue
-		}
 		connTick, _ := model.AppEnvironment.ConnTick.Load(model.OKEX)
 		if connTick != nil {
 			if err := SendToConnections(model.OKEX, connTick.(map[*model.WSConn]bool), []byte(`ping`)); err != nil {
@@ -71,7 +70,6 @@ func maintainConnsOKEX(accounts []*model.Account) {
 				WsOrderServeOKEX(account)
 			}
 		}
-		CheckSetProcessing(model.FunctionConnMaintain, model.OKEX, ``, false)
 		time.Sleep(time.Second * 20)
 	}
 }
@@ -274,6 +272,11 @@ func WsOrderServeOKEX(account *model.Account) {
 	if account == nil {
 		return
 	}
+	replaced := model.AppEnvironment.PriConnecting.CompareAndSwap(model.OKEX+account.Key, false, true)
+	if !replaced {
+		return
+	}
+	defer model.AppEnvironment.PriConnecting.Store(model.OKEX+account.Key, false)
 	conn, err := model.WsPrivateClient(model.OKEX, account.Key, wsPrivateOKEX, wsAccountHandlerOKEX)
 	if err != nil {
 		util.Log(util.LogLevelError, "can not create web socket "+err.Error())
@@ -649,6 +652,9 @@ func placeOrderOKEX(account *model.Account, isWs bool, order *model.Order) {
 			} else {
 				util.Log(util.LogLevelInfo, fmt.Sprintf(`-test ok ws- success place okex ws order %s %s`, account.Key, order.Symbol))
 			}
+		}
+		if order.Status == model.CarryStatusFail {
+			HandleWsOrderConnFail(account, model.OKEX, order)
 		}
 	} else {
 		responseBody, httpErr := sendSignRequestOKEX(account.Key, account.Secret, http.MethodPost, path, nil, postData)

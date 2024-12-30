@@ -74,11 +74,10 @@ var wsOrderHandlerBybit = func(market, key string, event []byte) {
 }
 
 func maintainConnsBybit(accounts []*model.Account) {
+	for _, account := range accounts {
+		model.AppEnvironment.PriConnecting.Store(model.Bybit+account.Key, false)
+	}
 	for {
-		if !CheckSetProcessing(model.FunctionConnMaintain, model.Bybit, ``, true) {
-			time.Sleep(2 * time.Second)
-			continue
-		}
 		pingMsg := []byte(fmt.Sprintf(`{ "req_id": "maintain %d","op": "ping"}`, time.Now().UnixMilli()))
 		connTick, _ := model.AppEnvironment.ConnTick.Load(model.Bybit)
 		if connTick != nil {
@@ -125,7 +124,6 @@ func maintainConnsBybit(accounts []*model.Account) {
 				WsOrderServeBybit(account)
 			}
 		}
-		CheckSetProcessing(model.FunctionConnMaintain, model.Bybit, ``, true)
 		time.Sleep(time.Second * 20)
 	}
 }
@@ -155,6 +153,11 @@ func WsOrderServeBybit(account *model.Account) {
 	if account == nil {
 		return
 	}
+	replaced := model.AppEnvironment.PriConnecting.CompareAndSwap(model.Bybit+account.Key, false, true)
+	if !replaced {
+		return
+	}
+	defer model.AppEnvironment.PriConnecting.Store(model.Bybit+account.Key, false)
 	valueOrder, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrder, model.Bybit, account.Key)
 	valueOrderUpdate, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrderUpdate, model.Bybit, account.Key)
 	if valueOrder == nil || valueOrderUpdate == nil {
@@ -764,12 +767,20 @@ func placeOrderBybit(account *model.Account, isWs bool, order *model.Order, orde
 		param["category"] = "spot"
 	}
 	value, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrder, model.Bybit, account.Key)
-	if isWs && value != nil {
-		msgMap := map[string]interface{}{"reqId": order.ClientOrdId, `op`: "order.create", "args": []interface{}{param},
-			"header": map[string]string{"X-BAPI-TIMESTAMP": fmt.Sprintf(`%d`, time.Now().UnixMilli())}}
-		msg := util.JsonEncodeToByte(msgMap)
-		if err := SendToConnection(model.Bybit, value.(*model.WSConn), msg); err != nil {
-			util.Log(util.LogLevelError, fmt.Sprintf(`fail to place bybit ws order %s %s`, string(msg), err.Error()))
+	if isWs {
+		if value != nil {
+			msgMap := map[string]interface{}{"reqId": order.ClientOrdId, `op`: "order.create", "args": []interface{}{param},
+				"header": map[string]string{"X-BAPI-TIMESTAMP": fmt.Sprintf(`%d`, time.Now().UnixMilli())}}
+			msg := util.JsonEncodeToByte(msgMap)
+			if err := SendToConnection(model.Bybit, value.(*model.WSConn), msg); err != nil {
+				order.Status = model.CarryStatusFail
+				util.Log(util.LogLevelError, fmt.Sprintf(`fail to place bybit ws order %s %s`, string(msg), err.Error()))
+			}
+		} else {
+			order.Status = model.CarryStatusFail
+		}
+		if order.Status == model.CarryStatusFail {
+			HandleWsOrderConnFail(account, model.Bybit, order)
 		}
 	} else {
 		httpResp, httpErr := SignedRequestBybit(account.Key, account.Secret, http.MethodPost, bybitRestUrl, "/v5/order/create", param)

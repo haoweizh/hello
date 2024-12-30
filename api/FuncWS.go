@@ -148,14 +148,24 @@ func CreateWSTick(environment *model.Environment, market string) (
 	return socketMap, channels
 }
 
-var maintainingConnTick = sync.Map{}
-
-func MaintainConns(market string) {
-	value, _ := maintainingConnTick.Load(market)
-	if value != nil && value.(bool) {
-		return
+func HandleWsOrderConnFail(account *model.Account, market string, order *model.Order) {
+	wsResp := model.WSResp{RequestId: order.ClientOrdId, Msg: `connection error market ok`, Success: false}
+	model.AppEnvironment.WSRespChan <- wsResp
+	switch market {
+	case model.Gate:
+		_, marketType, _, _ := model.GetFromStandard(market, order.Symbol)
+		WSOrderServeGate(account, marketType)
+	case model.OKEX:
+		WsOrderServeOKEX(account)
+	case model.BinancePerp, model.BinanceSpot, model.BinanceMargin:
+		WsOrderServeBinance(account, market)
+	case model.Bybit:
+		WsOrderServeBybit(account)
+	case model.BitgetSpot, model.BitgetPerp:
+		WsOrderServeBitget(market, account)
 	}
-	maintainingConnTick.Store(market, true)
+}
+func MaintainConns(market string) {
 	accounts := model.AppConfig.GetAccounts(market)
 	switch market {
 	case model.Gate:

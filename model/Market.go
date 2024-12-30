@@ -67,6 +67,7 @@ type Environment struct {
 	Settings        []Setting
 	CrossEqualing   bool
 	CrossEqualTime  time.Time
+	PriConnecting   sync.Map // accountKey * market - bool
 }
 
 type MarkPriceInfo struct {

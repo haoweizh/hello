@@ -300,10 +300,15 @@ func placeOrderBinanceSpot(account *model.Account, isWs bool, order *model.Order
 			hex.EncodeToString(hash.Sum(nil)), ts, order.ClientOrdId)
 		value, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrder, model.BinanceSpot, account.Key)
 		if value == nil {
-			return
+			order.Status = model.CarryStatusFail
+		} else {
+			if err := value.(*model.WSConn).WriteMsg([]byte(msg)); err != nil {
+				order.Status = model.CarryStatusFail
+				util.Log(util.LogLevelError, fmt.Sprintf(`fail to place binancespot order return: %s`, err.Error()))
+			}
 		}
-		if err := value.(*model.WSConn).WriteMsg([]byte(msg)); err != nil {
-			util.Log(util.LogLevelError, fmt.Sprintf(`fail to place binancespot order return: %s`, err.Error()))
+		if order.Status == model.CarryStatusFail {
+			HandleWsOrderConnFail(account, model.BinanceSpot, order)
 		}
 	} else {
 		client := binance.NewClient(account.Key, account.Secret)
@@ -420,6 +425,11 @@ func WsOrderServeBinance(account *model.Account, market string) {
 	if account == nil {
 		return
 	}
+	replaced := model.AppEnvironment.PriConnecting.CompareAndSwap(market+account.Key, false, true)
+	if !replaced {
+		return
+	}
+	defer model.AppEnvironment.PriConnecting.Store(market+account.Key, false)
 	apiUrl := ``
 	streamUrl := ``
 	if market == model.BinanceSpot {

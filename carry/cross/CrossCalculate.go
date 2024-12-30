@@ -76,6 +76,33 @@ func generateMonitorMsg(index int, coin string, score, scoreRelate float64, carr
 	go model.SetMonitorInfo(strconv.Itoa(index), model.FunctionCross, mark, infoValue)
 }
 
+func checkGridLine(statusBuy, statusSell *CarryStatus, score float64) {
+
+}
+
+func checkTradeLine(statusBuy, statusSell *CarryStatus, score float64) (valid bool, limit float64) {
+	if statusBuy.Holding >= 0 && statusSell.Holding <= 0 {
+		return score > statusBuy.TradeLineBuy && score > statusSell.TradeLineSell, limit
+	} else if statusBuy.Holding < 0 && statusSell.Holding > 0 {
+		if score > statusBuy.TradeLineBuy {
+			return true, math.Min(limit, math.Abs(statusBuy.Holding))
+		}
+		if score > statusSell.TradeLineSell {
+			return true, math.Min(limit, statusSell.Holding)
+		}
+		return false, 0
+	} else {
+		marketDis := (statusBuy.TradeLineBuy + statusSell.TradeLineSell) / 2
+		if statusBuy.account.CarryClose && statusBuy.Holding < 0 {
+			limit = math.Min(limit, math.Abs(statusBuy.Holding))
+		}
+		if statusSell.account.CarryClose && statusSell.Holding > 0 {
+			limit = math.Min(limit, statusSell.Holding)
+		}
+		return score > marketDis, limit
+	}
+}
+
 // calcAmount
 // 返回amount是经过gridAmount乘数计算之后的数量，用以针对1000PEPE与PEPE这类币种的对冲交易.priceX与gridAmount相对应
 func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarryStatus, tick, tickRelate *model.BidAsk) (

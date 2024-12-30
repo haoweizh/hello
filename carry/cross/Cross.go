@@ -754,8 +754,8 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 		}
 		tickLimit += 2000
 		if int(ts1)-tickRelate.Ts > tickLimit {
-			util.LogLess(util.LogLevelError, fmt.Sprintf(`abandon tick limit relate %s %s %s limit %v`,
-				setting.Coin, tick.Bids[0].Market, tick.Bids[0].Symbol, model.AppEnvironment.CrossEqualing))
+			//util.LogLess(util.LogLevelError, fmt.Sprintf(`abandon tick limit relate %s %s %s limit %v`,
+			//	setting.Coin, tick.Bids[0].Market, tick.Bids[0].Symbol, model.AppEnvironment.CrossEqualing))
 			continue
 		}
 		for i := api.GetCrossLen() - 1; i >= 0; i-- {
@@ -826,29 +826,6 @@ func breakMarkPrice(account *model.Account, setting *model.Setting, price float6
 		}
 	}
 	return false
-}
-
-func checkTradeLine(statusBuy, statusSell *CarryStatus, score float64) (valid bool, limit float64) {
-	if statusBuy.Holding >= 0 && statusSell.Holding <= 0 {
-		return score > statusBuy.TradeLineBuy && score > statusSell.TradeLineSell, limit
-	} else if statusBuy.Holding < 0 && statusSell.Holding > 0 {
-		if score > statusBuy.TradeLineBuy {
-			return true, math.Min(limit, math.Abs(statusBuy.Holding))
-		}
-		if score > statusSell.TradeLineSell {
-			return true, math.Min(limit, statusSell.Holding)
-		}
-		return false, 0
-	} else {
-		marketDis := (statusBuy.TradeLineBuy + statusSell.TradeLineSell) / 2
-		if statusBuy.account.CarryClose && statusBuy.Holding < 0 {
-			limit = math.Min(limit, math.Abs(statusBuy.Holding))
-		}
-		if statusSell.account.CarryClose && statusSell.Holding > 0 {
-			limit = math.Min(limit, statusSell.Holding)
-		}
-		return score > marketDis, limit
-	}
 }
 
 func placeCross(statusBuy, statusSell *CarryStatus, priceBuy, priceSell, amount float64) {

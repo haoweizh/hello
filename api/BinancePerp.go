@@ -28,11 +28,10 @@ var listenKeys sync.Map // market*accountKey listenKey
 var listenTime sync.Map // listenKey - time
 
 func MaintainConnsBinance(market string, accounts []*model.Account) {
+	for _, account := range accounts {
+		model.AppEnvironment.PriConnecting.Store(market+account.Key, false)
+	}
 	for {
-		if !CheckSetProcessing(model.FunctionConnMaintain, market, ``, true) {
-			time.Sleep(2 * time.Second)
-			continue
-		}
 		for _, account := range accounts {
 			value, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrder, market, account.Key)
 			valueUpdate, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrderUpdate, market, account.Key)
@@ -54,7 +53,6 @@ func MaintainConnsBinance(market string, accounts []*model.Account) {
 				WsOrderServeBinance(account, market)
 			}
 		}
-		CheckSetProcessing(model.FunctionConnMaintain, market, ``, false)
 		time.Sleep(time.Second * 30)
 	}
 }
@@ -345,11 +343,16 @@ func placeOrderBinancePerp(account *model.Account, isWS bool, order *model.Order
 			hex.EncodeToString(hash.Sum(nil)), ts, order.ClientOrdId)
 		value, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrder, model.BinancePerp, account.Key)
 		if value == nil {
-			return
+			order.Status = model.CarryStatusFail
+		} else {
+			if err := value.(*model.WSConn).WriteMsg([]byte(msg)); err != nil {
+				order.Status = model.CarryStatusFail
+				util.Log(util.LogLevelError,
+					fmt.Sprintf(`placeOrderBinancePerp fail to place binanceperp order return: %s`, err.Error()))
+			}
 		}
-		if err := value.(*model.WSConn).WriteMsg([]byte(msg)); err != nil {
-			util.Log(util.LogLevelError,
-				fmt.Sprintf(`placeOrderBinancePerp fail to place binanceperp order return: %s`, err.Error()))
+		if order.Status == model.CarryStatusFail {
+			HandleWsOrderConnFail(account, model.BinancePerp, order)
 		}
 	} else {
 		client := futures.NewClient(account.Key, account.Secret)

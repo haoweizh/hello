@@ -21,11 +21,10 @@ const bitgetPublic = "wss://ws.bitget.com/v2/ws/public"
 const bitgetPrivate = `wss://ws.bitget.com/v2/ws/private`
 
 func maintainConnsBitget(market string, accounts []*model.Account) {
+	for _, account := range accounts {
+		model.AppEnvironment.PriConnecting.Store(market+account.Key, false)
+	}
 	for {
-		if !CheckSetProcessing(model.FunctionConnMaintain, market, ``, true) {
-			time.Sleep(2 * time.Second)
-			continue
-		}
 		connTick, _ := model.AppEnvironment.ConnTick.Load(market)
 		if connTick != nil {
 			if err := SendToConnections(market, connTick.(map[*model.WSConn]bool), []byte(`ping`)); err != nil {
@@ -48,7 +47,6 @@ func maintainConnsBitget(market string, accounts []*model.Account) {
 				WsOrderServeBitget(market, account)
 			}
 		}
-		CheckSetProcessing(model.FunctionConnMaintain, market, ``, false)
 		time.Sleep(time.Second * 20)
 	}
 }
@@ -103,6 +101,11 @@ func WsOrderServeBitget(market string, account *model.Account) {
 	if account == nil {
 		return
 	}
+	replaced := model.AppEnvironment.PriConnecting.CompareAndSwap(market+account.Key, false, true)
+	if !replaced {
+		return
+	}
+	defer model.AppEnvironment.PriConnecting.Store(market+account.Key, false)
 	conn, err := model.WsPrivateClient(market, account.Key, bitgetPrivate, wsOrderConnHandlerBitget)
 	if err != nil {
 		util.Log(util.LogLevelError, "can not create web socket "+err.Error())

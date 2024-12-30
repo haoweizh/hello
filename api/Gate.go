@@ -512,11 +512,11 @@ var wsPriHandlerGateSpot = func(market, key string, msg []byte) {
 }
 
 func maintainConnsGate(accounts []*model.Account) {
+	for _, account := range accounts {
+		model.AppEnvironment.PriConnecting.Store(model.Gate+model.MarketTypeSpot+account.Key, false)
+		model.AppEnvironment.PriConnecting.Store(model.Gate+model.MarketTypePerp+account.Key, false)
+	}
 	for {
-		if !CheckSetProcessing(model.FunctionConnMaintain, model.Gate, ``, true) {
-			time.Sleep(2 * time.Second)
-			continue
-		}
 		connTick, _ := model.AppEnvironment.ConnTick.Load(model.Gate)
 		if connTick != nil {
 			if err := SendToConnections(model.Gate, connTick.(map[*model.WSConn]bool),
@@ -563,7 +563,6 @@ func maintainConnsGate(accounts []*model.Account) {
 				WSOrderServeGate(account, model.MarketTypePerp)
 			}
 		}
-		CheckSetProcessing(model.FunctionConnMaintain, model.Gate, ``, false)
 		time.Sleep(time.Second * 20)
 	}
 }
@@ -572,6 +571,11 @@ func WSOrderServeGate(account *model.Account, marketType string) {
 	if account == nil {
 		return
 	}
+	replaced := model.AppEnvironment.PriConnecting.CompareAndSwap(model.Gate+marketType+account.Key, false, true)
+	if !replaced {
+		return
+	}
+	defer model.AppEnvironment.PriConnecting.Store(model.Gate+marketType+account.Key, false)
 	ts := time.Now().Unix()
 	hash := hmac.New(sha512.New, []byte(account.Secret))
 	var conn *model.WSConn
@@ -1101,8 +1105,14 @@ func placeOrderGate(account *model.Account, isWs bool, order *model.Order, order
 			value, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrder, model.Gate, model.MarketTypeSpot, account.Key)
 			if value != nil {
 				if err := value.(*model.WSConn).WriteMsg(wsOrderMsg); err != nil {
+					order.Status = model.CarryStatusFail
 					util.Log(util.LogLevelError, fmt.Sprintf(`fail to order gate ws %s %s`, string(wsOrderMsg), err.Error()))
 				}
+			} else {
+				order.Status = model.CarryStatusFail
+			}
+			if order.Status == model.CarryStatusFail {
+				HandleWsOrderConnFail(account, model.Gate, order)
 			}
 		} else {
 			createOrder, _, err := client.SpotApi.CreateOrder(ctx, relatedOrder)
@@ -1145,8 +1155,14 @@ func placeOrderGate(account *model.Account, isWs bool, order *model.Order, order
 			value, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrder, model.Gate, model.MarketTypePerp, account.Key)
 			if value != nil {
 				if err := value.(*model.WSConn).WriteMsg(wsOrderMsg); err != nil {
+					order.Status = model.CarryStatusFail
 					util.Log(util.LogLevelError, fmt.Sprintf(`fail to order gate ws %s %s`, string(wsOrderMsg), err.Error()))
 				}
+			} else {
+				order.Status = model.CarryStatusFail
+			}
+			if order.Status == model.CarryStatusFail {
+				HandleWsOrderConnFail(account, model.Gate, order)
 			}
 		} else {
 			createFuturesOrder, _, err := client.FuturesApi.CreateFuturesOrder(ctx, `usdt`, futuresOrder)
