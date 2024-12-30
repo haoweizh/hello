@@ -12,7 +12,7 @@ type Config struct {
 	Delay                         float64
 	Debug, KucoinSpot, MetricTick bool
 	// SpecialChan 1 代表使用特殊通道
-	SpecialChan                                                                                      string
+	SpecialChan, Cross                                                                               string
 	KucoinRelatedKey, KucoinRelatedSecret, KucoinFutureKey, KucoinFutureSecret                       string
 	KucoinCarryClose, KucoinCarryRate, Simulation, Equal, Log                                        string
 	GateKey, GateSecret, GateCarryClose, GateCarryRate, GateLeverMax, GateLeverMin, GateRiskLimit    string

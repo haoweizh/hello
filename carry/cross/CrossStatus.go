@@ -49,6 +49,7 @@ var compOrders = &sync.Map{}       // orderId - comp order
 var spotMarkets = &sync.Map{}      // key - spotMarket
 var contractMarkets = &sync.Map{}  // key - contractMarket
 var carryStatusMap = &sync.Map{}   // coin*market*symbol*key / CarryStatus
+var carryCoinMap = &sync.Map{}     // coin*accountIndex - *carryCoin
 var notifyTime = &sync.Map{}       // 1. market_symbol_market_symbol/time 2. funding_market_symbol/time
 var coinCrossing = &sync.Map{}
 
@@ -80,6 +81,13 @@ type CarryStatus struct {
 	TradeLineBuy, TradeLineSell   float64 // 买卖盈利线（可为负数）
 	Holding                       float64 // 未经过setting.GridAmount处理过的原始持仓数量
 	RateInAll                     float64 // 现货：该币种占总权益的比例；永续：以开仓价算该币种持仓占保证金百分比
+}
+
+type CarryCoin struct {
+	Coin         string
+	Holding      float64
+	CurrentStep  int     // 网格搬砖中表示当前持仓所属的n值
+	MoneyPerStep float64 // 网格搬砖中每一档位以定价币为单位的金额
 }
 
 func handledFRate(account *model.Account, market, symbol string, interval int) (got, delayed bool, fundingRate *model.FundingRate, handledFr float64) {

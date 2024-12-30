@@ -362,6 +362,7 @@ func ClearCross() {
 		spotMarkets.Clear()
 		contractMarkets.Clear()
 		coinCrossing.Clear()
+		carryCoinMap.Clear()
 		model.AppEnvironment.ReqIdOrders = sync.Map{}
 		for {
 			leftOrders := 0
@@ -439,6 +440,28 @@ func equalAccounts(doEqual bool) {
 	util.Log(util.LogLevelInfo, `...... exit clearing cross all`)
 }
 
+func createCarryCoin(accounts map[string]*model.Account, coin string, settings []*model.Setting) (carryCoin *CarryCoin) {
+	carryCoin = &CarryCoin{
+		Coin:         coin,
+		CurrentStep:  0,
+		Holding:      0,
+		MoneyPerStep: 0,
+	}
+	bidHolding := 0.0
+	for _, setting := range settings {
+		value, get := util.LoadSyncMap(carryStatusMap, setting.Coin, setting.Market, setting.Symbol, accounts[setting.Market].Key)
+		if value == nil || !get {
+			return nil
+		}
+		status := value.(*CarryStatus)
+		if status.Holding > 0 {
+			bidHolding += status.Holding * status.setting.GridAmount
+		}
+	}
+	carryCoin.Holding = bidHolding
+	return
+}
+
 func equalAccount(i int, equalChan chan int, accounts map[string]*model.Account, doEqual bool) {
 	util.Log(util.LogLevelInfo, fmt.Sprintf(`begin to clearing cross %d `, i))
 	if accounts[model.BitgetPerp] != nil {
@@ -476,6 +499,8 @@ func equalAccount(i int, equalChan chan int, accounts map[string]*model.Account,
 						fmt.Sprintf(`%s holding %f`, coin, leftHolding))
 				}
 			}
+			coinCarry := createCarryCoin(accounts, coin.(string), settings.([]*model.Setting))
+			util.StoreSyncMap(carryCoinMap, coinCarry, coin.(string), strconv.Itoa(i))
 			return true
 		})
 	}
@@ -488,12 +513,11 @@ func equalAccount(i int, equalChan chan int, accounts map[string]*model.Account,
 //
 //		1.获取到的是经过gridAmount 和priceX调整过后的price和amount
 //	 2.获得到的价格是经过funding rate加权后的价格，实际下单时要进行还原
-func getHolding(statuses []*CarryStatus) (bids, asks model.Ticks, bidStatus, askStatus map[string]*CarryStatus,
+func getHolding(statuses []*CarryStatus) (bids, asks model.Ticks, statusMap map[string]*CarryStatus,
 	holding, price float64, holdStr string) {
 	bids = model.Ticks{}
 	asks = model.Ticks{}
-	bidStatus = make(map[string]*CarryStatus)
-	askStatus = make(map[string]*CarryStatus)
+	statusMap = make(map[string]*CarryStatus)
 	for _, status := range statuses {
 		if status == nil {
 			util.Log(util.LogLevelError, `warning: fail to get one status`)
@@ -516,8 +540,7 @@ func getHolding(statuses []*CarryStatus) (bids, asks model.Ticks, bidStatus, ask
 			Amount: tick.Bids[0].Amount, Price: priceBid})
 		asks = append(asks, model.Tick{Ts: int64(tick.Ts), Market: tick.Asks[0].Market, Symbol: tick.Asks[0].Symbol,
 			Amount: tick.Asks[0].Amount, Price: priceAsk})
-		bidStatus[fmt.Sprintf(`%s_%s`, status.market, status.symbol)] = status
-		askStatus[fmt.Sprintf(`%s_%s`, status.market, status.symbol)] = status
+		statusMap[fmt.Sprintf(`%s_%s`, status.market, status.symbol)] = status
 		if price == 0 {
 			price = bids[0].Price / status.setting.PriceX
 		}
@@ -527,19 +550,16 @@ func getHolding(statuses []*CarryStatus) (bids, asks model.Ticks, bidStatus, ask
 			status.setting.Valid = true
 		}
 	}
-	return bids, asks, bidStatus, askStatus, holding, price, holdStr
+	return bids, asks, statusMap, holding, price, holdStr
 }
 
 // settings []*model.Setting, coinStatus map[string]map[string]map[string]*CarryStatus
 func equalCoin(index int, coin string, statuses []*CarryStatus) (isEqual bool, holding float64, errMsg string) {
-	bids, asks, bidStatus, askStatus, holdingValue, holdingPrice, holdStr := getHolding(statuses)
+	bids, asks, statusMap, holdingValue, holdingPrice, holdStr := getHolding(statuses)
 	util.Log(util.LogLevelInfo, fmt.Sprintf(`compare holding %s status num index %d %d %s`, coin, index, len(statuses), holdStr))
 	if math.IsNaN(holdingValue) {
 		util.Log(util.LogLevelError, `hold value is NaN `)
-		for _, status := range bidStatus {
-			util.Log(util.LogLevelError, fmt.Sprintf(`hold value is NaN %#v %#v`, status.setting.GridAmount, status.setting.PriceX))
-		}
-		for _, status := range askStatus {
+		for _, status := range statusMap {
 			util.Log(util.LogLevelError, fmt.Sprintf(`hold value is NaN %#v %#v`, status.setting.GridAmount, status.setting.PriceX))
 		}
 		return true, 0, ""
@@ -572,7 +592,7 @@ func equalCoin(index int, coin string, statuses []*CarryStatus) (isEqual bool, h
 		}
 		price := bidAsk.Bids[0].Price * (1 - compSlide)
 		if holding > SmallInU/holdingPrice {
-			status := bidStatus[fmt.Sprintf(`%s_%s`, bids[i].Market, bids[i].Symbol)]
+			status := statusMap[fmt.Sprintf(`%s_%s`, bids[i].Market, bids[i].Symbol)]
 			if status == nil {
 				util.Log(util.LogLevelError, fmt.Sprintf(`no status when holding: %f %s %s`, holding, bids[i].Market, bids[i].Symbol))
 				continue
@@ -610,7 +630,7 @@ func equalCoin(index int, coin string, statuses []*CarryStatus) (isEqual bool, h
 		}
 		price := bidAsk.Asks[0].Price * (1 + compSlide)
 		if holding < -SmallInU/holdingPrice {
-			status := askStatus[fmt.Sprintf(`%s_%s`, asks[i].Market, asks[i].Symbol)]
+			status := statusMap[fmt.Sprintf(`%s_%s`, asks[i].Market, asks[i].Symbol)]
 			if status == nil {
 				util.Log(util.LogLevelError, fmt.Sprintf(`no status when holding: %f %s %s`, holding, asks[i].Market, asks[i].Symbol))
 				continue
@@ -734,13 +754,15 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 	tickLimit := 50
 	switch tick.Bids[0].Market {
 	case model.Gate, model.BitgetPerp, model.BitgetSpot:
-		tickLimit = 15
-	case model.BinanceSpot, model.BinancePerp:
-		tickLimit = 10
+		tickLimit = 50
+	case model.BinanceSpot:
+		tickLimit = 20
+	case model.BinancePerp:
+		tickLimit = 20
 	case model.OKEX:
-		tickLimit = 35
-	case model.Bybit:
 		tickLimit = 60
+	case model.Bybit:
+		tickLimit = 70
 	}
 	if int(ts1)-tick.Ts > tickLimit {
 		//util.LogLess(util.LogLevelError, fmt.Sprintf(`abandon tick limit %s %s %s limit %d %v`,
@@ -766,11 +788,12 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 			}
 			status, okStatus := util.LoadSyncMap(carryStatusMap, setting.Coin, setting.Market, setting.Symbol, account.Key)
 			statusRelate, okRelate := util.LoadSyncMap(carryStatusMap, settingRelate.Coin, settingRelate.Market, settingRelate.Symbol, accountRelate.Key)
-			if status == nil || statusRelate == nil || status == statusRelate || !okStatus || !okRelate {
+			carryCoin, _ := util.LoadSyncMap(carryCoinMap, setting.Coin, strconv.Itoa(i))
+			if status == nil || statusRelate == nil || status == statusRelate || carryCoin == nil || !okStatus || !okRelate {
 				continue
 			}
 			delay, statusBuy, statusSell, amount, priceBuy, priceSell, tickBuy, tickSell :=
-				calcAmount(i, setting.Coin, status.(*CarryStatus), statusRelate.(*CarryStatus), tick, tickRelate)
+				calcAmount(i, setting.Coin, status.(*CarryStatus), statusRelate.(*CarryStatus), carryCoin.(*CarryCoin), tick, tickRelate)
 			if delay {
 				return
 			}
@@ -1151,7 +1174,8 @@ func compOrder(account *model.Account, order *model.Order, leftAmt float64) {
 }
 
 // FormatCrossPair 不支持以BTC或ETH计价的交易对，只支持USD类
-func FormatCrossPair(statusBuy, statusSell *CarryStatus, bidAmount, askAmount, price float64) (formattedAmount float64) {
+// amountLimit=0表示无限制
+func FormatCrossPair(statusBuy, statusSell *CarryStatus, bidAmount, askAmount, amountLimit, price float64) (formattedAmount float64) {
 	v, _ := util.LoadSyncMap(model.MarketInfos, statusBuy.setting.Market, statusBuy.setting.Symbol)
 	var marketInfoBuy, marketInfoSell *model.MarketInfo
 	if v != nil {
@@ -1169,6 +1193,9 @@ func FormatCrossPair(statusBuy, statusSell *CarryStatus, bidAmount, askAmount, p
 	formattedAmount = math.Min(math.Min(statusBuy.LimitBuy, bidAmount)*statusBuy.setting.GridAmount,
 		math.Min(statusSell.LimitSell, askAmount)*statusSell.setting.GridAmount)
 	formattedAmount = math.Min(formattedAmount, statusSell.setting.GridAmount*openValueLimit/price)
+	if amountLimit > 0 {
+		formattedAmount = math.Min(formattedAmount, amountLimit)
+	}
 	minBuy := marketInfoBuy.SizeMin
 	minSell := marketInfoSell.SizeMin
 	if statusBuy.setting.Market == model.Bybit {
