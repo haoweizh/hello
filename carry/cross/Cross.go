@@ -501,6 +501,7 @@ func equalAccount(i int, equalChan chan int, accounts map[string]*model.Account,
 			}
 			coinCarry := createCarryCoin(accounts, coin.(string), settings.([]*model.Setting))
 			util.StoreSyncMap(carryCoinMap, coinCarry, coin.(string), strconv.Itoa(i))
+			util.Log(util.LogLevelInfo, fmt.Sprintf(`store carry coin %s %d %#v`, coin.(string), i, coinCarry))
 			return true
 		})
 	}
@@ -790,6 +791,9 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 			statusRelate, okRelate := util.LoadSyncMap(carryStatusMap, settingRelate.Coin, settingRelate.Market, settingRelate.Symbol, accountRelate.Key)
 			carryCoin, _ := util.LoadSyncMap(carryCoinMap, setting.Coin, strconv.Itoa(i))
 			if status == nil || statusRelate == nil || status == statusRelate || carryCoin == nil || !okStatus || !okRelate {
+				if carryCoin == nil {
+					util.Log(util.LogLevelInfo, fmt.Sprintf(`fail to get carry coin %s %d`, setting.Coin, i))
+				}
 				continue
 			}
 			delay, statusBuy, statusSell, amount, priceBuy, priceSell, tickBuy, tickSell :=

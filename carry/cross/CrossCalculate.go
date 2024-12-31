@@ -90,12 +90,15 @@ func checkTradeLine(statusBuy, statusSell *CarryStatus, carryCoin *CarryCoin, pr
 	crossLimit := openValueLimit / priceBuy * statusBuy.setting.GridAmount
 	coinLimit := carryCoin.MoneyPerStep / priceBuy * statusBuy.setting.GridAmount
 	if statusBuy.Holding*priceBuy >= -1*smallHolding && statusSell.Holding*priceSell <= smallHolding { // 开仓
+		util.Log(util.LogLevelInfo, fmt.Sprintf(`check trade line 1`))
 		if model.AppConfig.Cross == crossGrid {
+			util.Log(util.LogLevelInfo, fmt.Sprintf(`check trade line 2`))
 			if carryCoin.CurrentStep >= len(stepScores)-2 {
 				return false, 0
 			}
 			return score > stepScores[carryCoin.CurrentStep+2], coinLimit
 		} else {
+			util.Log(util.LogLevelInfo, fmt.Sprintf(`check trade line 3`))
 			return score > statusBuy.TradeLineBuy && score > statusSell.TradeLineSell, crossLimit
 		}
 	} else if statusBuy.Holding*priceBuy < -1*smallHolding && statusSell.Holding*priceSell > smallHolding { // 平仓
