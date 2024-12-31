@@ -87,6 +87,10 @@ func generateMonitorMsg(index int, coin string, score, scoreRelate float64, carr
 
 // checkTradeLine 返回limit=0表示无限制
 func checkTradeLine(statusBuy, statusSell *CarryStatus, carryCoin *CarryCoin, priceBuy, priceSell, score float64) (valid bool, limit float64) {
+	if carryCoin == nil {
+		util.Log(util.LogLevelError, `check trade line 0`)
+		return
+	}
 	crossLimit := openValueLimit / priceBuy * statusBuy.setting.GridAmount
 	coinLimit := carryCoin.MoneyPerStep / priceBuy * statusBuy.setting.GridAmount
 	if statusBuy.Holding*priceBuy >= -1*smallHolding && statusSell.Holding*priceSell <= smallHolding { // 开仓
