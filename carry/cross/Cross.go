@@ -263,6 +263,7 @@ func initStatus(account *model.Account, setting *model.Setting) (status *CarrySt
 	if v != nil {
 		marketInfo = v.(*model.MarketInfo)
 	} else {
+		util.Log(util.LogLevelError, fmt.Sprintf(`fail to create status get marketInfo %s %s`, setting.Market, setting.Symbol))
 		return nil
 	}
 	if marketInfo != nil && marketInfo.SizeMax > 0 {
@@ -486,7 +487,7 @@ func equalAccount(i int, equalChan chan int, accounts map[string]*model.Account,
 				}
 				equalStatuses[j] = initStatus(account, setting)
 				if equalStatuses[j] == nil {
-					util.Log(util.LogLevelError, fmt.Sprintf(`store carry nil coin init nil %s %s %s %s %d`,
+					util.Log(util.LogLevelError, fmt.Sprintf(`store carry nil coin %s %s %s %s %d`,
 						setting.Coin, setting.Market, setting.Symbol, account.Key, account.Index))
 				}
 			}
@@ -505,9 +506,8 @@ func equalAccount(i int, equalChan chan int, accounts map[string]*model.Account,
 				}
 			}
 			coinCarry := createCarryCoin(accounts, coin.(string), settings.([]*model.Setting))
-			util.StoreSyncMap(carryCoinMap, coinCarry, coin.(string), strconv.Itoa(i))
-			if coinCarry == nil {
-				util.Log(util.LogLevelInfo, fmt.Sprintf(`store carry nil coin %s %d %#v`, coin.(string), i, coinCarry))
+			if coinCarry != nil {
+				util.StoreSyncMap(carryCoinMap, coinCarry, coin.(string), strconv.Itoa(i))
 			}
 			return true
 		})

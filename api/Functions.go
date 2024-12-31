@@ -957,7 +957,8 @@ func InitCrossMarketInfos(markets []string) {
 	model.AppDB.Model(&settingsDb).Where(`function=?`, model.FunctionCross).Updates(map[string]interface{}{`liquidated`: true})
 	for _, setting := range settingsDb {
 		info, _ := util.LoadSyncMap(model.MarketInfos, setting.Market, setting.Symbol)
-		if info == nil && setting.Liquidated {
+		if info == nil {
+			util.Log(util.LogLevelInfo, fmt.Sprintf(`update to not liquidated %s %s`, setting.Market, setting.Symbol))
 			model.AppDB.Model(&settingsDb).Where(`function=? and market=? and symbol=?`, model.FunctionCross, setting.Market, setting.Symbol).
 				Updates(map[string]interface{}{`liquidated`: false})
 		}
