@@ -451,6 +451,7 @@ func createCarryCoin(accounts map[string]*model.Account, coin string, settings [
 	for _, setting := range settings {
 		value, get := util.LoadSyncMap(carryStatusMap, setting.Coin, setting.Market, setting.Symbol, accounts[setting.Market].Key)
 		if value == nil || !get {
+			util.Log(util.LogLevelError, fmt.Sprintf(`store carry nil coin %s %s %s %s`, setting.Coin, setting.Market, setting.Symbol, accounts[setting.Market].Key))
 			return nil
 		}
 		status := value.(*CarryStatus)
@@ -484,6 +485,10 @@ func equalAccount(i int, equalChan chan int, accounts map[string]*model.Account,
 					continue
 				}
 				equalStatuses[j] = initStatus(account, setting)
+				if equalStatuses[j] == nil {
+					util.Log(util.LogLevelError, fmt.Sprintf(`store carry nil coin init nil %s %s %s %s %d`,
+						setting.Coin, setting.Market, setting.Symbol, account.Key, account.Index))
+				}
 			}
 			coinCrossing.Store(coin.(string), false)
 			for index := 0; index <= 10 && doEqual; index++ {
@@ -793,9 +798,6 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 			statusRelate, getRelate := util.LoadSyncMap(carryStatusMap, settingRelate.Coin, settingRelate.Market, settingRelate.Symbol, accountRelate.Key)
 			carryCoin, getCoin := util.LoadSyncMap(carryCoinMap, setting.Coin, strconv.Itoa(i))
 			if status == nil || statusRelate == nil || status == statusRelate || carryCoin == nil || !getStatus || !getRelate || !getCoin {
-				if carryCoin == nil {
-					util.Log(util.LogLevelInfo, fmt.Sprintf(`fail to get carry coin %s %d`, setting.Coin, i))
-				}
 				continue
 			}
 			delay, statusBuy, statusSell, amount, priceBuy, priceSell, tickBuy, tickSell :=
