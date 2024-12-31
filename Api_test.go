@@ -528,12 +528,12 @@ func Test_download(t *testing.T) {
 }
 
 func Test_Order(t *testing.T) {
-	market := model.Gate
+	market := model.BinanceSpot
 	model.NewConfig()
 	//api.InitMarketInfos(market)
 	symbol := `GMT_PERP`
 	account := model.GetAccounts(0)[market]
-	api.SetSymbolLeverage(account, market, symbol)
+	//api.SetSymbolLeverage(account, market, symbol)
 	//if time.Now().Year() > 2003 {
 	//	return
 	//}

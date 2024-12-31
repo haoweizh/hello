@@ -56,7 +56,6 @@ const OrderSideLiquidateLong = `liquidateLong`
 const OrderSideLiquidateShort = `liquidateShort`
 const FunctionSimulation = `simulation`
 const FunctionTurtle = `turtle`
-const FunctionConnMaintain = `conn_maintaining`
 const FunctionTickMaintain = `tick_maintaining`
 const FunctionTurtleAdjust = `turtle_adjust`
 const FunctionDynamicTurtle = `dynamic_turtle`
@@ -182,14 +181,20 @@ func GetMonitorInfo(index, table string) (orderArray [][]string) {
 			}
 		}
 	}
-	orderArray = make([][]string, 0)
+	monitorCoins := make(map[string]bool)
 	for i := 0; i < len(valueArray); i++ {
 		if valueArray[i][17] == `true` {
+			monitorCoins[valueArray[i][0]] = true
+		}
+	}
+	orderArray = make([][]string, 0)
+	for i := 0; i < len(valueArray); i++ {
+		if monitorCoins[valueArray[i][0]] {
 			orderArray = append(orderArray, valueArray[i])
 		}
 	}
 	for i := 0; i < len(valueArray); i++ {
-		if valueArray[i][17] == `false` {
+		if !monitorCoins[valueArray[i][0]] {
 			orderArray = append(orderArray, valueArray[i])
 		}
 	}
