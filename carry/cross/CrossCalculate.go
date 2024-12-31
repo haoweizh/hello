@@ -101,7 +101,7 @@ func checkTradeLine(statusBuy, statusSell *CarryStatus, carryCoin *CarryCoin, pr
 	} else if statusBuy.Holding*priceBuy < -1*smallHolding && statusSell.Holding*priceSell > smallHolding { // 平仓
 		if model.AppConfig.Cross == crossGrid {
 			limit = math.Min(math.Abs(statusBuy.Holding)*statusBuy.setting.GridAmount, statusSell.Holding*statusSell.setting.GridAmount)
-			return score > stepScores[carryCoin.CurrentStep], math.Min(limit, coinLimit)
+			return score > -1*stepScores[carryCoin.CurrentStep], math.Min(limit, coinLimit)
 		} else {
 			if score > statusBuy.TradeLineBuy {
 				return true, math.Min(math.Abs(statusBuy.Holding)*statusBuy.setting.GridAmount, crossLimit)
@@ -183,9 +183,6 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarrySta
 	if breakMarkPrice(statusBuy.account, statusBuy.setting, priceBuy, model.OrderSideBuy) ||
 		breakMarkPrice(statusSell.account, statusSell.setting, priceSell, model.OrderSideSell) {
 		return false, nil, nil, 0, 0, 0, nil, nil
-	}
-	if amountLimit > 0 {
-		askAmount = math.Min(askAmount, amountLimit)
 	}
 	amount = FormatCrossPair(statusBuy, statusSell, bidAmount, askAmount, amountLimit, priceBuy)
 	if checkScoreLimit(carryStatus.market, carryStatus.symbol, carryStatusRelate.market, carryStatusRelate.symbol, score, scoreRelate) {
