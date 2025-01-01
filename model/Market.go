@@ -223,7 +223,7 @@ func (environment *Environment) SetBidAsk(market, symbol string, bidAsk *BidAsk)
 	}
 	last, _ := util.LoadSyncMap(&environment.bidAsks, market, symbol)
 	if last == nil || last.(*BidAsk).Ts <= bidAsk.Ts {
-		if last != nil && AppConfig.Debug {
+		if last != nil && AppConfig.Debug && int64(bidAsk.Ts)-time.Now().UnixMilli() < 100 {
 			go AppMetric.AddTick(market, symbol, util.GetNow(), last.(*BidAsk), bidAsk)
 		}
 		util.StoreSyncMap(&environment.bidAsks, bidAsk, market, symbol)
