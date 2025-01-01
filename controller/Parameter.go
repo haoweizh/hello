@@ -457,23 +457,15 @@ func holdPage(c *gin.Context) {
 		if account != nil {
 			inAllSpot, contractAccountValue, holdingSpot, holdingFuture, unrealizedPnl :=
 				cross.GetCrossMarketValue(account.Key, account.Secret, account.Market, force == `true`)
-			//duplicated := false
-			//for _, value := range marketValues {
-			//	if (strings.Contains(value[0], `binance`) && strings.Contains(account.Market, `binance`)) ||
-			//		(strings.Contains(value[0], `bitget`) && strings.Contains(account.Market, `bitget`)) {
-			//		duplicated = true
-			//		break
-			//	}
-			//}
-			//if duplicated {
-			//	continue
-			//}
 			marketValues = append(marketValues, []string{account.Market,
 				strconv.FormatFloat(inAllSpot, 'f', 0, 64),
 				strconv.FormatFloat(contractAccountValue, 'f', 0, 64),
 				strconv.FormatFloat(holdingSpot, 'f', 0, 64),
 				strconv.FormatFloat(holdingFuture, 'f', 0, 64),
 				strconv.FormatFloat(unrealizedPnl, 'f', 0, 64)})
+			if account.Market != model.BinanceSpot && account.Market != model.BitgetSpot {
+				inAll[0] += contractAccountValue
+			}
 			// 统一账户不算现货总价值
 			if !account.IsUnified && account.Market != model.BinancePerp && account.Market != model.BitgetPerp {
 				inAll[0] += inAllSpot
