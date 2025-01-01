@@ -537,7 +537,7 @@ func getBalanceBinanceMargin(key, secret string) (success bool, balances []*mode
 	return true, balances
 }
 
-func getBalanceBinanceSpot(key string, secret string) (success bool, balances []*model.Balance) {
+func getBalanceBinanceSpot(key string, secret string) (success bool, totalInUsdt float64, balances []*model.Balance) {
 	client := binance.NewClient(key, secret)
 	balanceResp, err := client.NewGetAccountService().Do(context.Background())
 	if err != nil {
@@ -547,7 +547,7 @@ func getBalanceBinanceSpot(key string, secret string) (success bool, balances []
 	}
 	if !balanceResp.CanTrade {
 		util.Log(util.LogLevelInfo, fmt.Sprintf(`binance balance can not trade`))
-		return false, balances
+		return false, 0, balances
 	}
 	balances = make([]*model.Balance, 0)
 	for _, data := range balanceResp.Balances {
@@ -581,7 +581,32 @@ func getBalanceBinanceSpot(key string, secret string) (success bool, balances []
 		//}
 		balances = append(balances, balance)
 	}
-	return true, balances
+	btcResp := signedRequestBinance(key, secret, model.BinanceSpot, http.MethodGet,
+		restBinance+`/api/v3/avgPrice?symbol=BTCUSDT`, false, nil)
+	btcPrice := 0.0
+	btcValue := 0.0
+	if btcResp != nil {
+		btcJson, _ := util.NewJSON(btcResp)
+		if btcJson != nil {
+			btcPrice, _ = strconv.ParseFloat(btcJson.Get(`price`).MustString(), 64)
+		}
+	}
+	walletResp := signedRequestBinance(key, secret, model.BinanceSpot, http.MethodGet,
+		restBinance+`/sapi/v1/asset/wallet/balance`, true, nil)
+	if walletResp != nil {
+		walletJson, _ := util.NewJSON(walletResp)
+		for _, item := range walletJson.MustArray() {
+			if item == nil {
+				continue
+			}
+			wallet := item.(map[string]interface{})
+			if wallet[`walletName`] != nil && wallet[`walletName`].(string) == `Spot` {
+				btcValue, _ = strconv.ParseFloat(wallet[`balance`].(string), 64)
+			}
+		}
+	}
+	totalInUsdt = btcValue * btcPrice
+	return true, totalInUsdt, balances
 }
 
 func queryOpenOrdersBinanceSpot(key, secret, symbol string) (orders []*model.Order) {

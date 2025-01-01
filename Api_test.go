@@ -91,9 +91,11 @@ func Test_ws(t *testing.T) {
 
 func Test_getCommonMarketInfos(t *testing.T) {
 	model.NewConfig()
-	market := model.BitgetPerp
-	//account := model.AppConfig.GetAccounts(market)[0]
-	api.InitMarketInfos(market)
+	market := model.BinanceSpot
+	account := model.AppConfig.GetAccounts(market)[0]
+	_, _, total, _ := api.GetBalances(account.Key, account.Secret, market)
+	fmt.Println(total)
+	//api.InitMarketInfos(market)
 	//model.MarketInfos.Range(func(key, value any) bool {
 	//	if value != nil && value.(*model.MarketInfo).PriceIncrement < 0.0000001 {
 	//		fmt.Println(key.(string))

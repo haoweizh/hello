@@ -761,12 +761,14 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 	defer coinCrossing.Store(setting.Coin, false)
 	tickLimit := 50
 	switch tick.Bids[0].Market {
-	case model.Gate, model.BitgetPerp, model.BitgetSpot:
+	case model.Gate:
 		tickLimit = 50
+	case model.BitgetSpot, model.BitgetPerp:
+		tickLimit = 30
 	case model.BinanceSpot:
-		tickLimit = 20
+		tickLimit = 15
 	case model.BinancePerp:
-		tickLimit = 20
+		tickLimit = 15
 	case model.OKEX:
 		tickLimit = 60
 	case model.Bybit:

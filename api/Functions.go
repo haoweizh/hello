@@ -500,7 +500,7 @@ func GetBalances(key, secret, market string) (
 	case model.OKEX:
 		success, balances, totalInUsd, collateral = getBalanceOKEX(key, secret)
 	case model.BinanceSpot:
-		success, balances = getBalanceBinanceSpot(key, secret)
+		success, totalInUsd, balances = getBalanceBinanceSpot(key, secret)
 	case model.BinanceMargin:
 		success, balances = getBalanceBinanceMargin(key, secret)
 	case model.Bybit:
@@ -513,7 +513,7 @@ func GetBalances(key, secret, market string) (
 		//	success, balances = deprecated.getBalanceKucoinSpot(key, secret)
 	}
 	accounts := model.AppConfig.GetAccounts(market)
-	if len(accounts) > 0 && !accounts[0].IsUnified {
+	if len(accounts) > 0 && !accounts[0].IsUnified && totalInUsd == 0 {
 		for _, balance := range balances {
 			if USDs[balance.Coin] {
 				totalInUsd += balance.Amount
