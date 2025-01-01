@@ -85,9 +85,10 @@ type CarryStatus struct {
 
 type CarryCoin struct {
 	Coin         string
-	Holding      float64
 	CurrentStep  int     // 网格搬砖中表示当前持仓所属的n值
+	Holding      float64 // 当前持仓数量
 	MoneyPerStep float64 // 网格搬砖中每一档位以定价币为单位的金额
+	MoneyCurStep float64 // 当前档位已开仓金额
 }
 
 func handledFRate(account *model.Account, market, symbol string, interval int) (got, delayed bool, fundingRate *model.FundingRate, handledFr float64) {
@@ -320,7 +321,7 @@ func GetHoldings(accounts map[string]*model.Account) (holding [][]interface{}) {
 
 // GetCrossMarketValue keepInU: 不计入总价值的保留不交易币种
 func GetCrossMarketValue(key, secret, market string, force bool) (inAllSpot, contractAccountValue, holdingSpot,
-	holdingFuture, unRealizedPnl, keepInU float64) {
+	holdingFuture, unRealizedPnl float64) {
 	value, ok := spotMarkets.Load(key)
 	if (!ok || value == nil) && force {
 		switch market {
@@ -344,14 +345,6 @@ func GetCrossMarketValue(key, secret, market string, force bool) (inAllSpot, con
 					}
 					return true
 				})
-			}
-			if sm.balances != nil {
-				//if sm.balances[`FTT_USDT`] != nil {
-				//	keepInU += sm.balances[`FTT_USDT`].UsdValue
-				//}
-				if sm.balances[`BTC_USDT`] != nil {
-					keepInU += sm.balances[`BTC_USDT`].UsdValue
-				}
 			}
 		}
 	}

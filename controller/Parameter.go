@@ -455,7 +455,7 @@ func holdPage(c *gin.Context) {
 	inAll := []float64{0, 0, 0, 0, 0, 0}
 	for _, account := range queryAccounts {
 		if account != nil {
-			inAllSpot, contractAccountValue, holdingSpot, holdingFuture, unrealizedPnl, keepInU :=
+			inAllSpot, contractAccountValue, holdingSpot, holdingFuture, unrealizedPnl :=
 				cross.GetCrossMarketValue(account.Key, account.Secret, account.Market, force == `true`)
 			//duplicated := false
 			//for _, value := range marketValues {
@@ -474,9 +474,6 @@ func holdPage(c *gin.Context) {
 				strconv.FormatFloat(holdingSpot, 'f', 0, 64),
 				strconv.FormatFloat(holdingFuture, 'f', 0, 64),
 				strconv.FormatFloat(unrealizedPnl, 'f', 0, 64)})
-			if account.Market != model.BinanceSpot && account.Market != model.BitgetSpot {
-				inAll[0] += contractAccountValue - keepInU
-			}
 			// 统一账户不算现货总价值
 			if !account.IsUnified && account.Market != model.BinancePerp && account.Market != model.BitgetPerp {
 				inAll[0] += inAllSpot
