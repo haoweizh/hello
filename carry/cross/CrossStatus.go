@@ -91,6 +91,17 @@ type CarryCoin struct {
 	MoneyCurStep float64 // 当前档位已开仓金额
 }
 
+func (carryCoin *CarryCoin) AddTrade(statusBuy, statusSell *CarryStatus, priceBuy, priceSell, amountBuy float64) {
+	if statusBuy.Holding*priceBuy >= -smallHolding && statusSell.Holding*priceSell <= smallHolding { // 加仓
+		carryCoin.MoneyCurStep += amountBuy * priceBuy
+	} else if statusBuy.Holding*priceBuy < -smallHolding && statusSell.Holding*priceSell > smallHolding {
+		carryCoin.MoneyCurStep -= amountBuy * priceBuy
+	}
+	if carryCoin.MoneyCurStep > carryCoin.MoneyPerStep {
+
+	}
+}
+
 func handledFRate(account *model.Account, market, symbol string, interval int) (got, delayed bool, fundingRate *model.FundingRate, handledFr float64) {
 	got, delayed, fundingRate = api.GetFundingRate(account.Key, account.Secret, market, symbol)
 	if !got {
