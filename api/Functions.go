@@ -762,8 +762,10 @@ func MustPlaceOrder(key, secret, orderSide, orderType, market, symbol, orderPara
 			sizeMax = v.(*model.MarketInfo).SizeMaxMarket
 		}
 		if sizeMax > 0 && amount > sizeMax {
-			ordersLeft := MustPlaceOrder(key, secret, orderSide, orderType, market, symbol, orderParam, refreshType, price, triggerPrice, amount/2, false)
-			orders = MustPlaceOrder(key, secret, orderSide, orderType, market, symbol, orderParam, refreshType, price, triggerPrice, amount/2, false)
+			ordersLeft := MustPlaceOrder(key, secret, orderSide, orderType, market, symbol, orderParam, refreshType, price,
+				triggerPrice, sizeMax, false)
+			orders = MustPlaceOrder(key, secret, orderSide, orderType, market, symbol, orderParam, refreshType, price,
+				triggerPrice, amount-sizeMax, false)
 			if ordersLeft == nil || len(ordersLeft) == 0 {
 				return orders
 			} else if orders == nil || len(orders) == 0 {
